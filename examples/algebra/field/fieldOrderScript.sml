@@ -13,7 +13,6 @@ val _ = new_theory "fieldOrder";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -63,7 +62,7 @@ open GaussTheory;
    field_order_property  |- !r. FiniteField r ==> !x. x IN R+ ==> 0 < forder x /\ (x ** forder x = #1)
    field_order_eqn       |- !r. Field r ==> !x. x ** forder x = #1
    field_order_minimal   |- !r. Field r ==> !x n. 0 < n /\ n < forder x ==> x ** n <> #1
-   field_order_alt       |- !r. Field r ==> !n. 0 < n ==> !x. (forder x = n) <=>
+   field_order_thm       |- !r. Field r ==> !n. 0 < n ==> !x. (forder x = n) <=>
                                             (x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1
    field_nonzero_exp_eq  |- !r. Field r ==> !x. x IN R+ ==> !m n. m < forder x /\ n < forder x ==>
                                                             ((x ** m = x ** n) <=> (m = n))
@@ -195,12 +194,12 @@ val field_order_minimal = store_thm(
 
 (* Theorem: Field r ==> !n. 0 < n ==>
             !x. (forder x = n) <=> ((x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1) *)
-(* Proof: by order_alt, field_nonzero_mult_property *)
-val field_order_alt = store_thm(
-  "field_order_alt",
+(* Proof: by order_thm, field_nonzero_mult_property *)
+val field_order_thm = store_thm(
+  "field_order_thm",
   ``!r:'a field. Field r ==> !n. 0 < n ==>
    !x. (forder x = n) <=> ((x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1)``,
-  rw[order_alt, field_nonzero_mult_property]);
+  rw[order_thm, field_nonzero_mult_property]);
 
 (* Theorem: Field r ==> !x. x IN R+ ==>
             !m n. m < forder x /\ n < forder x ==> ((x ** m = x ** n) <=> (m = n)) *)
@@ -340,7 +339,7 @@ val field_order_eq_1 = store_thm(
          = (-#1) * (-#1)      by field_exp_small
          = #1 * #1            by field_mult_neg_neg
          = #1                 by field_mult_one_one
-     Hence forder #1 = 2      by field_order_alt
+     Hence forder #1 = 2      by field_order_thm
 *)
 val field_order_neg_one = store_thm(
   "field_order_neg_one",
@@ -353,7 +352,7 @@ val field_order_neg_one = store_thm(
   `-#1 IN R /\ -#1 IN R+` by rw[] >>
   `(-#1) ** 1 <> #1` by rw[] >>
   `(-#1) ** 2 = #1` by rw[field_exp_small] >>
-  rw[field_order_alt, DECIDE``!m. 0 < m /\ m < 2 ==> (m = 1)``]);
+  rw[field_order_thm, DECIDE``!m. 0 < m /\ m < 2 ==> (m = 1)``]);
 
 (* Theorem: Field r ==> !x. x IN R /\ 0 < order r.prod x ==> !n. x ** n = x ** (n MOD (order r.prod x) *)
 (* Proof:

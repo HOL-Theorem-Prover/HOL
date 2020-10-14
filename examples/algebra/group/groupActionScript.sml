@@ -43,20 +43,21 @@ open dividesTheory gcdTheory;
 
 Group action
 ============
-. action f is a map from Group g to Target set A, satisfying some conditions.
-. The action induces an equivalence relation "reach" on Target set A.
+. action f is a map from Group g to target set X, satisfying some conditions.
+. The action induces an equivalence relation "reach" on target set X.
 . The equivalent classes of "reach" on A are called orbits.
-. Due to this partition, CARD A = SIGMA CARD orbits.
+. Due to this partition, CARD X = SIGMA CARD orbits.
 . As equivalent classes are non-empty, minimum CARD orbit = 1.
 . These singleton orbits have a 1-1 correspondence with a special set on A:
   the fixed_points. The main result is:
-  CARD A = CARD fixed_points + SIGMA (CARD non-singleton orbits).
+  CARD X = CARD fixed_points + SIGMA (CARD non-singleton orbits).
 
   When group action is applied to necklaces, Z[n] enters into the picture.
   The cyclic Z[n] of modular addition is the group for necklaces of n beads.
 
 Rework
 ======
+. name target set Xs X, with points x, y, use a, b as group elements.
 . keep x, y as group elements, a, b as set A elements.
 . orbit is defined as image, with one less parameter.
 . orbits is named, replacing TargetPartition.
@@ -69,202 +70,202 @@ Rework
 (* Group Action Documentation                                                *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
-   (g act A) f    = action f g A
-   (a ~~ b) f g   = reach f g a b
+   (g act X) f    = action f g X
+   (x ~~ y) f g   = reach f g x y
 *)
 (* Definitions and Theorems (# are exported):
 
    Helper Theorems:
 
    Group action:
-   action_def       |- !f g A. (g act A) f <=> !a. a IN A ==>
-                               (!x. x IN G ==> f x a IN A) /\ (f #e a = a) /\
-                                !x y. x IN G /\ y IN G ==> (f x (f y a) = f (x * y) a)
-   action_closure   |- !f g A. (g act A) f ==> !x a. x IN G /\ a IN A ==> f x a IN A
-   action_compose   |- !f g A. (g act A) f ==>
-                       !x y a. x IN G /\ y IN G /\ a IN A ==> (f x (f y a) = f (x * y) a)
-   action_id        |- !f g A. (g act A) f ==> !a. a IN A ==> (f #e a = a)
-   action_reverse   |- !f g A. Group g /\ (g act A) f ==>
-                       !a b x. x IN G /\ a IN A /\ b IN A /\ (f x a = b) ==> (f ( |/ x) b = a)
-   action_trans     |- !f g A. (g act A) f ==> !a b c x y. x IN G /\ y IN G /\
-                       a IN A /\ b IN A /\ c IN A /\ (f x a = b) /\ (f y b = c) ==> (f (y * x) a = c)
+   action_def       |- !f g X. (g act X) f <=> !x. x IN X ==>
+                               (!a. a IN G ==> f a x IN X) /\ f #e x = x /\
+                                !a b. a IN G /\ b IN G ==> f a (f b x) = f (a * b) x
+   action_closure   |- !f g X. (g act X) f ==> !a x. a IN G /\ x IN X ==> f a x IN X
+   action_compose   |- !f g X. (g act X) f ==>
+                       !a b x. a IN G /\ b IN G /\ x IN X ==> f a (f b x) = f (a * b) x
+   action_id        |- !f g X. (g act X) f ==> !x. x IN X ==> f #e x = x
+   action_reverse   |- !f g X. Group g /\ (g act X) f ==>
+                       !a x y. a IN G /\ x IN X /\ y IN X /\ f a x = y ==> f ( |/ a) y = x
+   action_trans     |- !f g X. (g act X) f ==> !a b x y z. a IN G /\ b IN G /\
+                       x IN X /\ y IN X /\ z IN X /\ f a x = y /\ f b y = z ==> f (b * a) x = z
 
    Group action induces an equivalence relation:
-   reach_def    |- !f g a b. (a ~~ b) f g <=> ?x. x IN G /\ f x a = b
-   reach_refl   |- !f g A a. Group g /\ (g act A) f /\ a IN A ==> (a ~~ a) f g
-   reach_sym    |- !f g A a b. Group g /\ (g act A) f /\ a IN A /\ b IN A /\ (a ~~ b) f g ==> (b ~~ a) f g
-   reach_trans  |- !f g A a b c. Group g /\ (g act A) f /\ a IN A /\ b IN A /\ c IN A /\
-                                 (a ~~ b) f g /\ (b ~~ c) f g ==> (a ~~ c) f g
-   reach_equiv  |- !f g A. Group g /\ (g act A) f ==> reach f g equiv_on A
+   reach_def    |- !f g x y. (x ~~ y) f g <=> ?a. a IN G /\ f a x = b
+   reach_refl   |- !f g X x. Group g /\ (g act X) f /\ x IN X ==> (x ~~ x) f g
+   reach_sym    |- !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN X /\ (x ~~ y) f g ==> (y ~~ x) f g
+   reach_trans  |- !f g X x y z. Group g /\ (g act X) f /\ x IN X /\ y IN X /\ z IN X /\
+                                 (x ~~ y) f g /\ (y ~~ z) f g ==> (x ~~ z) f g
+   reach_equiv  xx|- !f g X. Group g /\ (g act X) f ==> reach f g equiv_on X
 
    Orbits as equivalence classes of Group action:
-   orbit_def           |- !f g a. orbit f g a = IMAGE (\x. f x a) G
-   orbit_alt           |- !f g a. orbit f g a = {f x a | x IN G}
-   orbit_element       |- !f g a b. b IN orbit f g a <=> (a ~~ b) f g
+   orbit_def           |- !f g x. orbit f g x = IMAGE (\a. f a x) G
+   orbit_alt           |- !f g x. orbit f g x = {f a x | a IN G}
+   orbit_element       |- !f g x y. y IN orbit f g x <=> (x ~~ y) f g
    orbit_has_action_element
-                       |- !f g x a. x IN G ==> f x a IN orbit f g a
-   orbit_has_self      |- !f g A a. Group g /\ (g act A) f /\ a IN A ==> a IN orbit f g a
-   orbit_subset_target |- !f g A a. (g act A) f /\ a IN A ==> orbit f g a SUBSET A
+                       |- !f g x a. a IN G ==> f a x IN orbit f g x
+   orbit_has_self      |- !f g X x. Group g /\ (g act X) f /\ x IN X ==> x IN orbit f g x
+   orbit_subset_target |- !f g X x. (g act X) f /\ x IN X ==> orbit f g x SUBSET X
    orbit_element_in_target
-                       |- !f g A a b. (g act A) f /\ a IN A /\ b IN orbit f g a ==> b IN A
-   orbit_finite        |- !f g a. FINITE G ==> FINITE (orbit f g a)
+                       |- !f g X x y. (g act X) f /\ x IN X /\ y IN orbit f g x ==> y IN X
+   orbit_finite        |- !f g X. FINITE G ==> FINITE (orbit f g x)
    orbit_finite_by_target
-                       |- !f g A a. (g act A) f /\ a IN A /\ FINITE A ==> FINITE (orbit f g a)
-   orbit_eq_equiv_class|- !f g A a. (g act A) f /\ a IN A ==>
-                                    orbit f g a = equiv_class (reach f g) A a
-   orbit_eq_orbit      |- !f g A a b. Group g /\ (g act A) f /\ a IN A /\ b IN A ==>
-                                     (orbit f g a = orbit f g b <=> (a ~~ b) f g)
+                       |- !f g X x. (g act X) f /\ x IN X /\ FINITE X ==> FINITE (orbit f g x)
+   orbit_eq_equiv_class|- !f g X x. (g act X) f /\ x IN X ==>
+                                    orbit f g x = equiv_class (reach f g) X x
+   orbit_eq_orbit      |- !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN X ==>
+                                     (orbit f g x = orbit f g y <=> (x ~~ y) f g)
 
    Partition by Group action:
-   orbits_def          |- !f g A. orbits f g A = IMAGE (orbit f g) A
-   orbits_alt          |- !f g A. orbits f g A = {orbit f g a | a IN A}
-   orbits_element      |- !f g A e. e IN orbits f g A <=> ?a. a IN A /\ e = orbit f g a
-   orbits_eq_partition |- !f g A. (g act A) f ==> orbits f g A = partition (reach f g) A
-   orbits_finite       |- !f g A. FINITE A ==> FINITE (orbits f g A)
-   orbits_element_finite   |- !f g A. (g act A) f /\ FINITE A ==> EVERY_FINITE (orbits f g A)
-   orbits_element_nonempty |- !f g A. Group g /\ (g act A) f ==> !e. e IN orbits f g A ==> e <> {}
-   orbits_element_subset   |- !f g A e. (g act A) f /\ e IN orbits f g A ==> e SUBSET A
-   orbits_element_element  |- !f g A e a. (g act A) f /\ e IN orbits f g A /\ a IN e ==> a IN A
-   orbit_is_orbits_element |- !f g A a. a IN A ==> orbit f g a IN orbits f g A
-   orbits_element_is_orbit |- !f g A e a. Group g /\ (g act A) f /\ e IN orbits f g A /\ a IN e ==>
-                                          e = orbit f g a
+   orbits_def          |- !f g X. orbits f g X = IMAGE (orbit f g) X
+   orbits_alt          |- !f g X. orbits f g X = {orbit f g x | x IN X}
+   orbits_element      |- !f g X e. e IN orbits f g X <=> ?x. x IN X /\ e = orbit f g x
+   orbits_eq_partition |- !f g X. (g act X) f ==> orbits f g X = partition (reach f g) X
+   orbits_finite       |- !f g X. FINITE X ==> FINITE (orbits f g X)
+   orbits_element_finite   |- !f g X. (g act X) f /\ FINITE X ==> EVERY_FINITE (orbits f g X)
+   orbits_element_nonempty |- !f g X. Group g /\ (g act X) f ==> !e. e IN orbits f g X ==> e <> {}
+   orbits_element_subset   |- !f g X e. (g act X) f /\ e IN orbits f g X ==> e SUBSET X
+   orbits_element_element  |- !f g X e x. (g act X) f /\ e IN orbits f g X /\ x IN e ==> x IN X
+   orbit_is_orbits_element |- !f g X x. x IN X ==> orbit f g x IN orbits f g X
+   orbits_element_is_orbit |- !f g X e x. Group g /\ (g act X) f /\ e IN orbits f g X /\ x IN e ==>
+                                          e = orbit f g x
 
    Target size and orbit size:
-   action_to_orbit_surj        |- !f g A a. (g act A) f /\ a IN A ==> SURJ (\x. f x a) G (orbit f g a)
-   orbit_finite_inj_card_eq    |- !f g A a. (g act A) f /\ a IN A /\ FINITE A /\
-                                            INJ (\x. f x a) G (orbit f g a) ==>
-                                            CARD (orbit f g a) = CARD G
-   target_card_by_partition    |- !f g A a. Group g /\ (g act A) f /\ FINITE A ==>
-                                            CARD A = SIGMA CARD (orbits f g A)
+   action_to_orbit_surj        |- !f g X x. (g act X) f /\ x IN X ==> SURJ (\a. f a x) G (orbit f g x)
+   orbit_finite_inj_card_eq    |- !f g X x. (g act X) f /\ x IN X /\ FINITE X /\
+                                            INJ (\a. f a x) G (orbit f g x) ==>
+                                            CARD (orbit f g x) = CARD G
+   target_card_by_partition    |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+                                          CARD X = SIGMA CARD (orbits f g X)
    orbits_equal_size_partition_equal_size
-                               |- !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-                                           (!a. a IN A ==> CARD (orbit f g a) = n) ==>
-                                            !e. e IN orbits f g A ==> CARD e = n
-   orbits_equal_size_property  |- !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-                                           (!a. a IN A ==> CARD (orbit f g a) = n) ==>
-                                            n divides CARD A
+                               |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+                                           (!x. x IN X ==> CARD (orbit f g x) = n) ==>
+                                            !e. e IN orbits f g X ==> CARD e = n
+   orbits_equal_size_property  |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+                                           (!x. x IN X ==> CARD (orbit f g x) = n) ==>
+                                            n divides CARD X
    orbits_size_factor_partition_factor
-                               |- !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-                                           (!a. a IN A ==> n divides CARD (orbit f g a)) ==>
-                                            !e. e IN orbits f g A ==> n divides CARD e
-   orbits_size_factor_property |- !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-                                           (!a. a IN A ==> n divides CARD (orbit f g a)) ==>
-                                            n divides CARD A
+                               |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+                                           (!x. x IN X ==> n divides CARD (orbit f g x)) ==>
+                                            !e. e IN orbits f g X ==> n divides CARD e
+   orbits_size_factor_property |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+                                           (!x. x IN X ==> n divides CARD (orbit f g x)) ==>
+                                            n divides CARD X
 
    Stabilizer as invariant:
-   stabilizer_def        |- !f g a. stabilizer f g a = {x | x IN G /\ (f x a = a)}
-   stabilizer_element    |- !f g a x. x IN stabilizer f g a <=> x IN G /\ (f x a = a)
-   stabilizer_subset     |- !f g a. stabilizer f g a SUBSET G
-   stabilizer_has_id     |- !f g A a. Group g /\ (g act A) f /\ a IN A ==> #e IN stabilizer f g a
-   stabilizer_nonempty   |- !f g A a. Group g /\ (g act A) f /\ a IN A ==> stabilizer f g a <> {}
-   stabilizer_as_image   |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                      stabilizer f g a = IMAGE (\x. if f x a = a then x else #e) G
+   stabilizer_def        |- !f g x. stabilizer f g x = {a | a IN G /\ f a x = x}
+   stabilizer_element    |- !f g x a. a IN stabilizer f g x <=> a IN G /\ f a x = x
+   stabilizer_subset     |- !f g x. stabilizer f g x SUBSET G
+   stabilizer_has_id     |- !f g X x. Group g /\ (g act X) f /\ x IN X ==> #e IN stabilizer f g x
+   stabilizer_nonempty   |- !f g X x. Group g /\ (g act X) f /\ x IN X ==> stabilizer f g x <> {}
+   stabilizer_as_image   |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                      stabilizer f g x = IMAGE (\x. if f a x = x then a else #e) G
 
    Stabilizer subgroup:
-   StabilizerGroup_def            |- !f g a. StabilizerGroup f g a =
-                                             <|carrier := stabilizer f g a; op := $*; id := #e|>
-   stabilizer_group_property      |- !f g a. ((StabilizerGroup f g a).carrier = stabilizer f g a) /\
-                                             ((StabilizerGroup f g a).op = $* ) /\
-                                             ((StabilizerGroup f g a).id = #e)
-   stabilizer_group_carrier       |- !f g a. (StabilizerGroup f g a).carrier = stabilizer f g a
-   stabilizer_group_id            |- !f g a. (StabilizerGroup f g a).id = #e
-   stabilizer_group_group         |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                               Group (StabilizerGroup f g a)
-   stabilizer_group_subgroup      |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                               StabilizerGroup f g a <= g
-   stabilizer_group_finite_group  |- !f g A a. FiniteGroup g /\ (g act A) f /\ a IN A ==>
-                                               FiniteGroup (StabilizerGroup f g a)
-   stabilizer_group_card_divides  |- !f g A a. FiniteGroup g /\ (g act A) f /\ a IN A ==>
-                                               CARD (stabilizer f g a) divides CARD G
+   StabilizerGroup_def            |- !f g x. StabilizerGroup f g x =
+                                             <|carrier := stabilizer f g x; op := $*; id := #e|>
+   stabilizer_group_property      |- !f g X. ((StabilizerGroup f g x).carrier = stabilizer f g x) /\
+                                             ((StabilizerGroup f g x).op = $* ) /\
+                                             ((StabilizerGroup f g x).id = #e)
+   stabilizer_group_carrier       |- !f g X. (StabilizerGroup f g x).carrier = stabilizer f g x
+   stabilizer_group_id            |- !f g X. (StabilizerGroup f g x).id = #e
+   stabilizer_group_group         |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                               Group (StabilizerGroup f g x)
+   stabilizer_group_subgroup      |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                               StabilizerGroup f g x <= g
+   stabilizer_group_finite_group  |- !f g X x. FiniteGroup g /\ (g act X) f /\ x IN X ==>
+                                               FiniteGroup (StabilizerGroup f g x)
+   stabilizer_group_card_divides  |- !f g X x. FiniteGroup g /\ (g act X) f /\ x IN X ==>
+                                               CARD (stabilizer f g x) divides CARD G
 
    Orbit-Stabilizer Theorem:
-   orbit_stabilizer_map_good |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                !x y. x IN G /\ y IN G /\ (f x a = f y a) ==>
-                                      (x * stabilizer f g a = y * stabilizer f g a)
-   orbit_stabilizer_map_inj  |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                !x y. x IN G /\ y IN G /\ (x * stabilizer f g a = y * stabilizer f g a) ==>
-                                      (f x a = f y a)
-   action_match_condition    |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                !x y. x IN G /\ y IN G ==> ((f x a = f y a) <=> |/ x * y IN stabilizer f g a)
-   action_match_condition_alt|- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                !x y::G. f x a = f y a <=> |/ x * y IN stabilizer f g a
-   stabilizer_conjugate      |- !f g A a x. Group g /\ (g act A) f /\ a IN A /\ x IN G ==>
-                                            (conjugate g x (stabilizer f g a) = stabilizer f g (f x a))
-   act_by_def                |- !f g a b. (a ~~ b) f g ==> act_by f g a b IN G /\ (f (act_by f g a b) a = b)
-   action_reachable_coset    |- !f g A a b. Group g /\ (g act A) f /\ a IN A /\ b IN orbit f g a ==>
-                                (act_by f g a b * stabilizer f g a = {x | x IN G /\ (f x a = b)})
-   action_reachable_coset_alt|- !f g A a b. Group g /\ (g act A) f /\ a IN A /\ b IN orbit f g a ==>
-                                !x. x IN G /\ (f x a = b) ==> (x * stabilizer f g a = {y | y IN G /\ (f y a = b)})
-   orbit_stabilizer_cosets_bij     |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                      BIJ (\b. act_by f g a b * stabilizer f g a)
-                                          (orbit f g a)
-                                          {x * stabilizer f g a | x | x IN G}
-   orbit_stabilizer_cosets_bij_alt |- !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-                                      BIJ (\b. act_by f g a b * stabilizer f g a)
-                                          (orbit f g a)
-                                          (CosetPartition g (StabilizerGroup f g a))
-   orbit_stabilizer_thm      |- !f g A a. FiniteGroup g /\ (g act A) f /\ a IN A /\ FINITE A ==>
-                                          (CARD G = CARD (orbit f g a) * CARD (stabilizer f g a))
+   orbit_stabilizer_map_good |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                !a b. a IN G /\ b IN G /\ f a x = f b x ==>
+                                      (a * stabilizer f g x = b * stabilizer f g x)
+   orbit_stabilizer_map_inj  |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                !a b. a IN G /\ b IN G /\ (a * stabilizer f g x = b * stabilizer f g x) ==>
+                                      f a x = f b x
+   action_match_condition    |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                !a b. a IN G /\ b IN G ==> (f a x = f b x <=> |/ x * y IN stabilizer f g x)
+   action_match_condition_alt|- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                !x y::G. f a x = f b x <=> |/ x * y IN stabilizer f g x
+   stabilizer_conjugate      |- !f g X x a. Group g /\ (g act X) f /\ x IN X /\ a IN G ==>
+                                            (conjugate g a (stabilizer f g x) = stabilizer f g (f a x))
+   act_by_def                |- !f g x y. (x ~~ y) f g ==> act_by f g x y IN G /\ f (act_by f g x y) x = y
+   action_reachable_coset    |- !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN orbit f g x ==>
+                                (act_by f g x y * stabilizer f g x = {a | a IN G /\ f a x = y})
+   action_reachable_coset_alt|- !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN orbit f g x ==>
+                                !a. a IN G /\ f a x = y ==> a * stabilizer f g x = {b | b IN G /\ f b x = y}
+   orbit_stabilizer_cosets_bij     |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                      BIJ (\y. act_by f g x y * stabilizer f g x)
+                                          (orbit f g x)
+                                          {a * stabilizer f g x | a | a IN G}
+   orbit_stabilizer_cosets_bij_alt |- !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+                                      BIJ (\y. act_by f g x y * stabilizer f g x)
+                                          (orbit f g x)
+                                          (CosetPartition g (StabilizerGroup f g x))
+   orbit_stabilizer_thm      |- !f g X x. FiniteGroup g /\ (g act X) f /\ x IN X /\ FINITE X ==>
+                                          (CARD G = CARD (orbit f g x) * CARD (stabilizer f g x))
    orbit_card_divides_target_card
-                             |- !f g A a. FiniteGroup g /\ (g act A) f /\ a IN A /\ FINITE A ==>
-                                          CARD (orbit f g a) divides CARD G
+                             |- !f g X x. FiniteGroup g /\ (g act X) f /\ x IN X /\ FINITE X ==>
+                                          CARD (orbit f g x) divides CARD G
 
    Fixed Points of action:
-   fixed_points_def          |- !f g A. fixed_points f g A = {a | a IN A /\ !x. x IN G ==> (f x a = a)}
-   fixed_points_element      |- !f g A a. a IN fixed_points f g A <=>
-                                          a IN A /\ !x. x IN G ==> (f x a = a)
-   fixed_points_subset       |- !f g A. fixed_points f g A SUBSET A
-   fixed_points_finite       |- !f g A. FINITE A ==> FINITE (fixed_points f g A)
+   fixed_points_def          |- !f g X. fixed_points f g X = {x | x IN X /\ !a. a IN G ==> f a x = x}
+   fixed_points_element      |- !f g X x. x IN fixed_points f g X <=>
+                                          x IN X /\ !a. a IN G ==> f a x = x
+   fixed_points_subset       |- !f g X. fixed_points f g X SUBSET X
+   fixed_points_finite       |- !f g X. FINITE X ==> FINITE (fixed_points f g X)
    fixed_points_element_element
-                             |- !f g A a. a IN fixed_points f g A ==> a IN A
-   fixed_points_orbit_sing   |- !f g A. Group g /\ (g act A) f ==>
-                                !a. a IN fixed_points f g A <=> <=> a IN A /\ orbit f g a = {a}
-   orbit_sing_fixed_points   |- !f g A. (g act A) f ==>
-                                !a. a IN A /\ orbit f g a = {a} ==> a IN fixed_points f g A
+                             |- !f g X x. x IN fixed_points f g X ==> x IN X
+   fixed_points_orbit_sing   |- !f g X. Group g /\ (g act X) f ==>
+                                !x. x IN fixed_points f g X <=> <=> x IN X /\ orbit f g x = {x}
+   orbit_sing_fixed_points   |- !f g X. (g act X) f ==>
+                                !x. x IN X /\ orbit f g x = {x} ==> x IN fixed_points f g X
    fixed_points_orbit_iff_sing
-                             |- !f g A. Group g /\ (g act A) f ==>
-                                !a. a IN A ==> (a IN fixed_points f g A <=> SING (orbit f g a))
+                             |- !f g X. Group g /\ (g act X) f ==>
+                                !x. x IN X ==> (x IN fixed_points f g X <=> SING (orbit f g x))
    non_fixed_points_orbit_not_sing
-                             |- !f g A. Group g /\ (g act A) f ==>
-                                !a. a IN A DIFF fixed_points f g A <=> a IN A /\ ~SING (orbit f g a)
-   non_fixed_points_card     |- !f g A. FINITE A ==>
-                                CARD (A DIFF fixed_points f g A) = CARD A - CARD (fixed_points f g A)
+                             |- !f g X. Group g /\ (g act X) f ==>
+                                !x. x IN X DIFF fixed_points f g X <=> x IN X /\ ~SING (orbit f g x)
+   non_fixed_points_card     |- !f g X. FINITE X ==>
+                                CARD (X DIFF fixed_points f g X) = CARD X - CARD (fixed_points f g X)
 
    Target Partition by orbits:
-   sing_orbits_def                  |- !f g A. sing_orbits f g A = {e | e IN orbits f g A /\ SING e}
-   multi_orbits_def                 |- !f g A. multi_orbits f g A = {e | e IN orbits f g A /\ ~SING e}
-   sing_orbits_element              |- !f g A e. e IN sing_orbits f g A <=> e IN orbits f g A /\ SING e
-   sing_orbits_subset               |- !f g A. sing_orbits f g A SUBSET orbits f g A
-   sing_orbits_finite               |- !f g A. FINITE A ==> FINITE (sing_orbits f g A)
-   sing_orbits_element_subset       |- !f g A e. (g act A) f /\ e IN sing_orbits f g A ==> e SUBSET A
-   sing_orbits_element_finite       |- !f g A e. e IN sing_orbits f g A ==> FINITE e
-   sing_orbits_element_card         |- !f g A e. e IN sing_orbits f g A ==> CARD e = 1
-   sing_orbits_element_choice       |- !f g A. Group g /\ (g act A) f ==>
-                                       !e. e IN sing_orbits f g A ==> CHOICE e IN fixed_points f g A
-   multi_orbits_element             |- !f g A e. e IN multi_orbits f g A <=> e IN orbits f g A /\ ~SING e
-   multi_orbits_subset              |- !f g A. multi_orbits f g A SUBSET orbits f g A
-   multi_orbits_finite              |- !f g A. FINITE A ==> FINITE (multi_orbits f g A)
-   multi_orbits_element_subset      |- !f g A e. (g act A) f /\ e IN multi_orbits f g A ==> e SUBSET A
-   multi_orbits_element_finite      |- !f g A e. (g act A) f /\ FINITE A /\ e IN multi_orbits f g A ==> FINITE e
-   target_orbits_disjoint           |- !f g A. DISJOINT (sing_orbits f g A) (multi_orbits f g A)
-   target_orbits_union              |- !f g A. orbits f g A = sing_orbits f g A UNION multi_orbits f g A
-   target_card_by_orbit_types       |- !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-                                       (CARD A = CARD (sing_orbits f g A) + SIGMA CARD (multi_orbits f g A))
-   sing_orbits_to_fixed_points_inj  |- !f g A. Group g /\ (g act A) f ==>
-                                               INJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A)
-   sing_orbits_to_fixed_points_surj |- !f g A. Group g /\ (g act A) f ==>
-                                               SURJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g
-   sing_orbits_to_fixed_points_bij  |- !f g A. Group g /\ (g act A) f ==>
-                                               BIJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A)
-   sing_orbits_card_eqn             |- !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-                                               (CARD (sing_orbits f g A) = CARD (fixed_points f g A))
-   target_card_by_fixed_points      |- !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-                                              (CARD A = CARD (fixed_points f g A) +
-                                                        SIGMA CARD (multi_orbits f g A))
+   sing_orbits_def                  |- !f g X. sing_orbits f g X = {e | e IN orbits f g X /\ SING e}
+   multi_orbits_def                 |- !f g X. multi_orbits f g X = {e | e IN orbits f g X /\ ~SING e}
+   sing_orbits_element              |- !f g X e. e IN sing_orbits f g X <=> e IN orbits f g X /\ SING e
+   sing_orbits_subset               |- !f g X. sing_orbits f g X SUBSET orbits f g X
+   sing_orbits_finite               |- !f g X. FINITE X ==> FINITE (sing_orbits f g X)
+   sing_orbits_element_subset       |- !f g X e. (g act X) f /\ e IN sing_orbits f g X ==> e SUBSET X
+   sing_orbits_element_finite       |- !f g X e. e IN sing_orbits f g X ==> FINITE e
+   sing_orbits_element_card         |- !f g X e. e IN sing_orbits f g X ==> CARD e = 1
+   sing_orbits_element_choice       |- !f g X. Group g /\ (g act X) f ==>
+                                       !e. e IN sing_orbits f g X ==> CHOICE e IN fixed_points f g X
+   multi_orbits_element             |- !f g X e. e IN multi_orbits f g X <=> e IN orbits f g X /\ ~SING e
+   multi_orbits_subset              |- !f g X. multi_orbits f g X SUBSET orbits f g X
+   multi_orbits_finite              |- !f g X. FINITE X ==> FINITE (multi_orbits f g X)
+   multi_orbits_element_subset      |- !f g X e. (g act X) f /\ e IN multi_orbits f g X ==> e SUBSET X
+   multi_orbits_element_finite      |- !f g X e. (g act X) f /\ FINITE X /\ e IN multi_orbits f g X ==> FINITE e
+   target_orbits_disjoint           |- !f g X. DISJOINT (sing_orbits f g X) (multi_orbits f g X)
+   target_orbits_union              |- !f g X. orbits f g X = sing_orbits f g X UNION multi_orbits f g X
+   target_card_by_orbit_types       |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+                                       (CARD X = CARD (sing_orbits f g X) + SIGMA CARD (multi_orbits f g X))
+   sing_orbits_to_fixed_points_inj  |- !f g X. Group g /\ (g act X) f ==>
+                                               INJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X)
+   sing_orbits_to_fixed_points_surj |- !f g X. Group g /\ (g act X) f ==>
+                                               SURJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g
+   sing_orbits_to_fixed_points_bij  |- !f g X. Group g /\ (g act X) f ==>
+                                               BIJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X)
+   sing_orbits_card_eqn             |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+                                               (CARD (sing_orbits f g X) = CARD (fixed_points f g X))
+   target_card_by_fixed_points      |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+                                              (CARD X = CARD (fixed_points f g X) +
+                                                        SIGMA CARD (multi_orbits f g X))
    target_card_and_fixed_points_congruence
-                                    |- !f g A n. Group g /\ (g act A) f /\ FINITE A /\ 0 < n /\
-                                                (!e. e IN multi_orbits f g A ==> CARD e = n) ==>
-                                                 CARD A MOD n = CARD (fixed_points f g A) MOD n
+                                    |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\ 0 < n /\
+                                                (!e. e IN multi_orbits f g X ==> CARD e = n) ==>
+                                                 CARD X MOD n = CARD (fixed_points f g X) MOD n
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -275,279 +276,289 @@ Rework
 (* Group action                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-(* An action from group g to a set A is a map f: G x A -> A such that
-   (0)   [is a map] f (x in G)(a in A) in A
-   (1)  [id action] f (e in G)(a in A) = a
-   (2) [composable] f (x in G)(f (y in G)(a in A)) =
-                    f (g.op (x in G)(y in G))(a in A)
+(* An action from group g to a set X is a map f: G x X -> X such that
+   (0)   [is a map] f (a IN G)(x IN X) in X
+   (1)  [id action] f (e in G)(x IN X) = x
+   (2) [composable] f (a IN G)(f (b in G)(x IN X)) =
+                    f (g.op (a IN G)(b in G))(x IN X)
 *)
-val action_def = Define`
-    action f (g:'a group) (A:'b -> bool) =
-       !a. a IN A ==> (!x. x IN G ==> f x a IN A) /\
-                      (f #e a = a) /\
-                      (!x y. x IN G /\ y IN G ==> (f x (f y a) = f (x * y) a))
-`;
+Definition action_def:
+    action f (g:'a group) (X:'b -> bool) =
+       !x. x IN X ==> (!a. a IN G ==> f a x IN X) /\
+                      f #e x = x /\
+                      (!a b. a IN G /\ b IN G ==> f a (f b x) = f (a * b) x)
+End
 
 (* Overload on action *)
-val _ = overload_on("act", ``\(g:'a group) (A:'b -> bool) f. action f g A``);
+val _ = overload_on("act", ``\(g:'a group) (X:'b -> bool) f. action f g X``);
 val _ = set_fixity "act" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (*
 > action_def;
-val it = |- !(f :'a -> 'b -> 'b) (g :'a group) (A :'b -> bool).
-     (g act A) f <=> !(a :'b). a IN A ==>
-       (!(x :'a). x IN G ==> f x a IN A) /\ (f #e a = a) /\
-       !(x :'a) (y :'a). x IN G /\ y IN G ==> (f x (f y a) = f ((x * y) :'a) a): thm
+val it = |- !(f :'a -> 'b -> 'b) (g :'a group) (X :'b -> bool).
+     (g act X) f <=> !(x :'b). x IN X ==>
+       (!(a :'a). a IN G ==> f a x IN X) /\ f #e x = x /\
+       !(a :'a) (b :'a). a IN G /\ b IN G ==> (f a (f b x) = f ((a * b) :'a) x): thm
 > action_def |> ISPEC ``$o``;
-val it = |- !g' A. (g' act A) $o <=>
-            !a. a IN A ==>
-              (!x. x IN g'.carrier ==> x o a IN A) /\ g'.id o a = a /\
-               !x y. x IN g'.carrier /\ y IN g'.carrier ==> x o y o a = g'.op x y o a: thm
+val it = |- !g' X. (g' act A) $o <=>
+            !x. x IN X ==>
+              (!a. a IN g'.carrier ==> a o x IN X) /\ g'.id o x = x /\
+               !a b. a IN g'.carrier /\ b IN g'.carrier ==> a o b o x = g'.op a b o x: thm
 *)
-
-(* export simple result -- bad idea for huge expansion. *)
-(* val _ = export_rewrites["action_def"]; *)
 
 (* ------------------------------------------------------------------------- *)
 (* Action Properties                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-(* Theorem: [Closure] (g act A) f ==> !x a. x IN G /\ a IN A ==> f x a IN A *)
+(* Theorem: [Closure]
+            (g act X) f ==> !a x. a IN G /\ x IN X ==> f a x IN X *)
 (* Proof: by action_def. *)
-val action_closure = store_thm(
-  "action_closure",
-  ``!f g (A:'b -> bool). (g act A) f ==> !x a. x IN G /\ a IN A ==> f x a IN A``,
-  rw[action_def]);
+Theorem action_closure:
+  !f g X. (g act X) f ==> !a x. a IN G /\ x IN X ==> f a x IN X
+Proof
+  rw[action_def]
+QED
 
-(* Theorem: [Compose] (g act A) f ==> !x y a. x IN G /\ y IN G /\ a IN A ==> (f x (f y a) = f (x * y) a) *)
+(* Theorem: [Compose]
+            (g act X) f ==> !a b x. a IN G /\ b IN G /\ x IN X ==> f a (f b x) = f (a * b) x *)
 (* Proof: by action_def. *)
-val action_compose = store_thm(
-  "action_compose",
-  ``!f g (A:'b -> bool). (g act A) f ==> !x y a. x IN G /\ y IN G /\ a IN A ==> (f x (f y a) = f (x * y) a)``,
-  rw[action_def]);
+Theorem action_compose:
+  !f g X. (g act X) f ==> !a b x. a IN G /\ b IN G /\ x IN X ==> f a (f b x) = f (a * b) x
+Proof
+  rw[action_def]
+QED
 
-(* Theorem: [Identity] (g act A) f ==> !a. a IN A ==> (f #e a = a) *)
+(* Theorem: [Identity]
+            (g act X) f ==> !x. x IN X ==> f #e x = x *)
 (* Proof: by action_def. *)
-val action_id = store_thm(
-  "action_id",
-  ``!f g (A:'b -> bool). (g act A) f ==> !a. a IN A ==> (f #e a = a)``,
-  rw[action_def]);
+Theorem action_id:
+  !f g X. (g act X) f ==> !x. x IN X ==> f #e x = x
+Proof
+  rw[action_def]
+QED
 (* This is essentially reach_refl *)
 
-(* Theorem: Group g /\ (g act A) f ==>
-           !a b x. x IN G /\ a IN A /\ b IN A /\(f x a = b) ==> (f ( |/ x) b = a) *)
+(* Theorem: Group g /\ (g act X) f ==>
+            !a x y. a IN G /\ x IN X /\ y IN X /\ f a x = y ==> f ( |/ a) y = x *)
 (* Proof:
-   Note |/ x IN G        by group_inv_element
-     f ( |/ x) b
-   = f ( |/ x) (f x a)   by b = f x a
-   = f ( |/ x * x) a     by action_compose
-   = f #e a              by group_linv
-   = a                   by action_id
+   Note |/ a IN G        by group_inv_element
+     f ( |/ a) y
+   = f ( |/ a) (f a x)   by y = f a x
+   = f ( |/ a * a) x     by action_compose
+   = f #e x              by group_linv
+   = x                   by action_id
 *)
-val action_reverse = store_thm(
-  "action_reverse",
-  ``!f g (A:'b -> bool). Group g /\ (g act A) f ==>
-   !a b x. x IN G /\ a IN A /\ b IN A /\(f x a = b) ==> (f ( |/ x) b = a)``,
-  rw[action_def]);
+Theorem action_reverse:
+  !f g X. Group g /\ (g act X) f ==>
+          !a x y. a IN G /\ x IN X /\ y IN X /\ f a x = y ==> f ( |/ a) y = x
+Proof
+  rw[action_def]
+QED
 (* This is essentially reach_sym *)
 
-(* Theorem: (g act A) f ==> !a b c x y. x IN G /\ y IN G /\
-            a IN A /\ b IN A /\ c IN A /\ (f x a = b) /\ (f y b = c) ==> (f (y * x) a = c) *)
+(* Theorem: (g act X) f ==> !a b x y z. a IN G /\ b IN G /\
+            x IN X /\ y IN X /\ z IN X /\ f a x = y /\ f b y = z ==> f (b * a) x = z *)
 (* Proof:
-     f (y * x) a
-   = f y (f x a)     by action_compose
-   = f y b           by b = f x a
-   = c               by c = f y b
+     f (b * a) x
+   = f b (f a x)     by action_compose
+   = f b y           by y = f a x
+   = z               by z = f b y
 *)
-val action_trans = store_thm(
-  "action_trans",
-  ``!f g (A:'b -> bool). (g act A) f ==> !a b c x y. x IN G /\ y IN G /\
-       a IN A /\ b IN A /\ c IN A /\ (f x a = b) /\ (f y b = c) ==> (f (y * x) a = c)``,
-  rw[action_def]);
+Theorem action_trans:
+  !f g X. (g act X) f ==> !a b x y z. a IN G /\ b IN G /\
+          x IN X /\ y IN X /\ z IN X /\ f a x = y /\ f b y = z ==> f (b * a) x = z
+Proof
+  rw[action_def]
+QED
 (* This is essentially reach_trans *)
 
 (* ------------------------------------------------------------------------- *)
 (* Group action induces an equivalence relation.                             *)
 (* ------------------------------------------------------------------------- *)
 
-(* Define reach to relate two action points a and b in A *)
-val reach_def = Define`
-    reach f (g:'a group) (a:'b) (b:'b) = ?x. x IN G /\ (f x a = b)
+(* Define reach to relate two action points a and y IN X *)
+val reach_def = zDefine`
+    reach f (g:'a group) (x:'b) (y:'b) = ?a. a IN G /\ f a x = y
 `;
+(* Note: use zDefine as this is not effective. *)
 
 (* Overload reach relation *)
-val _ = temp_overload_on("~~", ``\(a:'b) (b:'b) f (g:'a group). reach f g a b``);
+val _ = temp_overload_on("~~", ``\(x:'b) (y:'b) f (g:'a group). reach f g x y``);
 (* Make reach an infix. *)
 val _ = set_fixity "~~" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (*
 > reach_def;
-val it = |- !f g a b. (a ~~ b) f g <=> ?x. x IN G /\ (f x a = b): thm
+val it = |- !f g x y. (x ~~ y) f g <=> ?a. a IN G /\ f a x = y
 *)
 
 (* Theorem: [Reach is Reflexive]
-            Group g /\ (g act A) f /\ a IN A ==> (a ~~ a) f g  *)
+            Group g /\ (g act X) f /\ x IN X ==> (x ~~ x) f g  *)
 (* Proof:
-   Note f #e a = a         by action_id
+   Note f #e x = x         by action_id
     and #e in G            by group_id_element
-   Thus (a reach a) f g    by reach_def, take x = #e.
+   Thus (x ~~ x) f g       by reach_def, take x = #e.
 *)
-val reach_refl = store_thm(
-  "reach_refl",
-  ``!f g (A:'b -> bool) a. Group g /\ (g act A) f /\ a IN A ==> (a ~~ a) f g``,
-  metis_tac[reach_def, action_id, group_id_element]);
+Theorem reach_refl:
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==> (x ~~ x) f g
+Proof
+  metis_tac[reach_def, action_id, group_id_element]
+QED
 
 (* Theorem: [Reach is Symmetric]
-            Group g /\ (g act A) f /\ a IN A /\ b IN A /\ (a ~~ b) f g ==> (b ~~ a) f g *)
+            Group g /\ (g act X) f /\ x IN X /\ y IN X /\ (x ~~ y) f g ==> (y ~~ x) f g *)
 (* Proof:
-   Note ?x. x IN G /\ f x a = b     by reach_def, (a ~~ b) f g
-    ==> f ( |/ x) b = a             by action_reverse
-    and |/ x IN G                   by group_inv_element
-   Thus (b ~~ a) f g                by reach_def
+   Note ?a. a IN G /\ f a x = y     by reach_def, (x ~~ y) f g
+    ==> f ( |/ a) y = x             by action_reverse
+    and |/ a IN G                   by group_inv_element
+   Thus (y ~~ x) f g                by reach_def
 *)
-val reach_sym = store_thm(
-  "reach_sym",
-  ``!f g (A:'b -> bool) a b. Group g /\ (g act A) f /\ a IN A /\ b IN A /\ (a ~~ b) f g ==> (b ~~ a) f g``,
-  metis_tac[reach_def, action_reverse, group_inv_element]);
+Theorem reach_sym:
+  !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN X /\ (x ~~ y) f g ==> (y ~~ x) f g
+Proof
+  metis_tac[reach_def, action_reverse, group_inv_element]
+QED
 
 (* Theorem: [Reach is Transitive]
-            Group g /\ (g act A) f /\ a IN A /\ b IN A /\ c IN A /\
-            (a ~~ b) f g /\ (b ~~ c) f g ==> (a ~~ c) f g *)
+            Group g /\ (g act X) f /\ x IN X /\ y IN X /\ z IN X /\
+            (x ~~ y) f g /\ (y ~~ z) f g ==> (x ~~ z) f g *)
 (* Proof:
-   Note ?x. x IN G /\ f x a = b       by reach_def, (a ~~ b) f g
-    and ?y. y IN G /\ f y b = c       by reach_def, (b ~~ c) f g
-   Thus f (y * x) a = c               by action_trans
-    and y * x IN G                    by group_op_element
-    ==> (a reach c) f g               by reach_def
+   Note ?a. a IN G /\ f a x = y       by reach_def, (x ~~ y) f g
+    and ?b. b IN G /\ f b y = z       by reach_def, (y ~~ z) f g
+   Thus f (b * a) x = z               by action_trans
+    and b * a IN G                    by group_op_element
+    ==> (x ~~ z) f g                  by reach_def
 *)
-val reach_trans = store_thm(
-  "reach_trans",
-  ``!f g (A:'b -> bool) a b c. Group g /\ (g act A) f /\ a IN A /\ b IN A /\ c IN A /\
-        (a ~~ b) f g /\ (b ~~ c) f g ==> (a ~~ c) f g``,
+Theorem reach_trans:
+  !f g X x y z. Group g /\ (g act X) f /\ x IN X /\ y IN X /\ z IN X /\
+                (x ~~ y) f g /\ (y ~~ z) f g ==> (x ~~ z) f g
+Proof
   rw[reach_def] >>
-  metis_tac[action_trans, group_op_element]);
+  metis_tac[action_trans, group_op_element]
+QED
 
-(* Theorem: Reach is an equivalence relation on target set A.
-            Group g /\ (g act A) f ==> (reach f g) equiv_on A *)
+(* Theorem: Reach is an equivalence relation on target set X.
+            Group g /\ (g act X) f ==> (reach f g) equiv_on X *)
 (* Proof:
    By Reach being Reflexive, Symmetric and Transitive.
 *)
-val reach_equiv = store_thm(
-  "reach_equiv",
-  ``!f g (A:'b -> bool). Group g /\ (g act A) f ==> (reach f g) equiv_on A``,
+Theorem reach_equiv:
+  !f g X. Group g /\ (g act X) f ==> (reach f g) equiv_on X
+Proof
   rw_tac std_ss[equiv_on_def] >-
   metis_tac[reach_refl] >-
   metis_tac[reach_sym] >>
-  metis_tac[reach_trans]);
+  metis_tac[reach_trans]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Orbits as equivalence classes.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-(* Orbit of action for a: those that can be reached by taking x in G. *)
+(* Orbit of action for a: those that can be reached by taking a IN G. *)
 Definition orbit_def:
-   orbit (f:'a -> 'b -> 'b) (g:'a group) (a:'b) = IMAGE (\x. f x a) G
+   orbit (f:'a -> 'b -> 'b) (g:'a group) (x:'b) = IMAGE (\a. f a x) G
 End
 (* Note: define as IMAGE for evaluation when f and g are concrete. *)
 (*
 > orbit_def |> ISPEC ``$o``;
-val it = |- !g' a. orbit $o g' a = IMAGE (\x. x o a) g'.carrier: thm
+val it = |- !g' x. orbit $o g' x = IMAGE (\a. a o x) g'.carrier: thm
 *)
 
-(* Theorem: orbit f g a = {f x a | x IN G} *)
+(* Theorem: orbit f g x = {f a x | a IN G} *)
 (* Proof: by orbit_def, EXTENSION. *)
 Theorem orbit_alt:
-  !f g a. orbit f g a = {f x a | x IN G}
+  !f g x. orbit f g x = {f a x | a IN G}
 Proof
   simp[orbit_def, EXTENSION]
 QED
 
-(* Theorem: b IN orbit f g a <=> (a ~~ b) f g *)
+(* Theorem: y IN orbit f g x <=> (x ~~ y) f g *)
 (* Proof:
-       b IN orbit f g a
-   <=> ?x. x IN G /\ (b = f x a)   by orbit_def, IN_IMAGE
-   <=> (a ~~ b) f g                by reach_def
+       y IN orbit f g x
+   <=> ?a. a IN G /\ (y = f a x)   by orbit_def, IN_IMAGE
+   <=> (x ~~ y) f g                by reach_def
 *)
 Theorem orbit_element:
-  !f g a b. b IN orbit f g a <=> (a ~~ b) f g
+  !f g x y. y IN orbit f g x <=> (x ~~ y) f g
 Proof
   simp[orbit_def, reach_def] >>
   metis_tac[]
 QED
 
-(* Theorem: x IN G ==> f x a IN (orbit f g a) *)
+(* Theorem: a IN G ==> f a x IN (orbit f g x) *)
 (* Proof: by orbit_def *)
 Theorem orbit_has_action_element:
-  !f g x a. x IN G ==> f x a IN (orbit f g a)
+  !f g x a. a IN G ==> f a x IN (orbit f g x)
 Proof
   simp[orbit_def] >>
   metis_tac[]
 QED
 
-(* Theorem: Group g /\ (g act A) f /\ a IN A ==> a IN orbit f g a *)
+(* Theorem: Group g /\ (g act X) f /\ x IN X ==> x IN orbit f g x *)
 (* Proof:
-   Let b = orbit $o g a.
+   Let b = orbit f g x.
    Note #e IN G            by group_id_element
-     so #e o a IN b        by orbit_has_action_element
-    and #e o a = a         by action_id, a IN A
-   thus a IN b             by above
+     so #e o x IN b        by orbit_has_action_element
+    and #e o x = x         by action_id, x IN X
+   thus x IN b             by above
 *)
 Theorem orbit_has_self:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==> a IN orbit f g a
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==> x IN orbit f g x
 Proof
   metis_tac[orbit_has_action_element, group_id_element, action_id]
 QED
 
-(* Theorem: orbits are subsets of target set.
-            (g act A) f /\ a IN A ==> (orbit f g a) SUBSET A *)
+(* Theorem: orbits are subsets of the target set.
+            (g act X) f /\ x IN X ==> (orbit f g x) SUBSET X *)
 (* Proof: orbit_def, SUBSET_DEF, action_closure. *)
 Theorem orbit_subset_target:
-  !f g A a. (g act A) f /\ a IN A ==> (orbit f g a) SUBSET A
+  !f g X x. (g act X) f /\ x IN X ==> (orbit f g x) SUBSET X
 Proof
   rw[orbit_def, SUBSET_DEF] >>
   metis_tac[action_closure]
 QED
 
-(* Theorem: orbits elements are in target set.
-             (g act A) f /\ a IN A /\ b IN (orbit f g a) ==> b IN A *)
+(* Theorem: orbits elements are in the target set.
+            (g act X) f /\ x IN X /\ y IN (orbit f g x) ==> y IN X *)
 (* Proof: orbit_subset_target, SUBSET_DEF. *)
 Theorem orbit_element_in_target:
-  !f g A a b. (g act A) f /\ a IN A /\ b IN (orbit f g a) ==> b IN A
+  !f g X x y. (g act X) f /\ x IN X /\ y IN (orbit f g x) ==> y IN X
 Proof
   metis_tac[orbit_subset_target, SUBSET_DEF]
 QED
 
-(* Theorem: FINITE G ==> FINITE (orbit f g a) *)
+(* Theorem: FINITE G ==> FINITE (orbit f g x) *)
 (* Proof: by orbit_def, IMAGE_FINITE. *)
 Theorem orbit_finite:
-  !f (g:'a group) a. FINITE G ==> FINITE (orbit f g a)
+  !f (g:'a group) x. FINITE G ==> FINITE (orbit f g x)
 Proof
   simp[orbit_def]
 QED
 
-(* Theorem: (g act A) f /\ a IN A /\ FINITE A ==> FINITE (orbit f g a) *)
+(* Theorem: (g act X) f /\ x IN X /\ FINITE X ==> FINITE (orbit f g x) *)
 (* Proof: by orbit_subset_target, SUBSET_FINITE. *)
 Theorem orbit_finite_by_target:
-  !f g A a. (g act A) f /\ a IN A /\ FINITE A ==> FINITE (orbit f g a)
+  !f g X x. (g act X) f /\ x IN X /\ FINITE X ==> FINITE (orbit f g x)
 Proof
   metis_tac[orbit_subset_target, SUBSET_FINITE]
 QED
 
-(* Theorem: (g act A) f /\ a IN A ==> (orbit f g a = equiv_class (reach f g) A a) *)
+(* Theorem: (g act X) f /\ x IN X ==> orbit f g x = equiv_class (reach f g) X x *)
 (* Proof: by orbit_def, reach_def, action_closure. *)
 Theorem orbit_eq_equiv_class:
-  !f g A a. (g act A) f /\ a IN A ==> (orbit f g a = equiv_class (reach f g) A a)
+  !f g X x. (g act X) f /\ x IN X ==> orbit f g x = equiv_class (reach f g) X x
 Proof
   simp[orbit_def, reach_def, EXTENSION] >>
   metis_tac[action_closure]
 QED
 
-(* Theorem: Group g /\ (g act A) f /\ a IN A /\ b IN A ==>
-            (orbit f g a = orbit f g b <=> (a ~~ b) f g) *)
+(* Theorem: Group g /\ (g act X) f /\ x IN X /\ y IN X ==>
+            (orbit f g x = orbit f g y <=> (x ~~ y) f g) *)
 (* Proof: by orbit_eq_equiv_class, reach_equiv, equiv_class_eq. *)
 Theorem orbit_eq_orbit:
-  !f g A a b. Group g /\ (g act A) f /\ a IN A /\ b IN A ==>
-               (orbit f g a = orbit f g b <=> (a ~~ b) f g)
+  !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN X ==>
+              (orbit f g x = orbit f g y <=> (x ~~ y) f g)
 Proof
   metis_tac[orbit_eq_equiv_class, reach_equiv, equiv_class_eq]
 QED
@@ -558,336 +569,345 @@ QED
 
 (* The collection of orbits of target points. *)
 Definition orbits_def:
-   orbits f (g:'a group) A = IMAGE (orbit f g) A
+   orbits f (g:'a group) X = IMAGE (orbit f g) X
 End
 (* Note: define as IMAGE for evaluation when f and g are concrete. *)
 (*
 > orbits_def |> ISPEC ``$o``;
-val it = |- !g' A. orbits $o g' A = IMAGE (orbit $o g') A: thm
+val it = |- !g' X. orbits $o g' X = IMAGE (orbit $o g') X: thm
 *)
 
-(* Theorem: orbits f g A = {orbit f g a | a | a IN A} *)
+(* Theorem: orbits f g X = {orbit f g x | x | x IN X} *)
 (* Proof: by orbits_def, EXTENSION. *)
 Theorem orbits_alt:
-  !f g A. orbits f g A = {orbit f g a | a | a IN A}
+  !f g X. orbits f g X = {orbit f g x | x | x IN X}
 Proof
   simp[orbits_def, EXTENSION]
 QED
 
-(* Theorem: e IN orbits f g A <=> ?a. a IN A /\ e = orbit f g a *)
+(* Theorem: e IN orbits f g X <=> ?x. x IN X /\ e = orbit f g x *)
 (* Proof: by orbits_def, IN_IMAGE. *)
 Theorem orbits_element:
-  !f g A e. e IN orbits f g A <=> ?a. a IN A /\ e = orbit f g a
+  !f g X e. e IN orbits f g X <=> ?x. x IN X /\ e = orbit f g x
 Proof
   simp[orbits_def] >>
   metis_tac[]
 QED
 
-(* Theorem: (g act A) f ==> orbits f g A = partition (reach f g) A *)
+(* Theorem: (g act X) f ==> orbits f g X = partition (reach f g) X *)
 (* Proof:
    By EXTENSION,
-       e IN orbits f g A
-   <=> ?a. a IN A /\ e = orbit f g a     by orbits_element
-   <=> ?a. a IN A /\ e = equiv_class (reach f g) A a
-                                         by orbit_eq_equiv_class, (g act A) f
-   <=> e IN partition (reach f g) A)     by partition_element
+       e IN orbits f g X
+   <=> ?x. x IN X /\ e = orbit f g x     by orbits_element
+   <=> ?x. x IN X /\ e = equiv_class (reach f g) X x
+                                         by orbit_eq_equiv_class, (g act X) f
+   <=> e IN partition (reach f g) X)     by partition_element
 *)
 Theorem orbits_eq_partition:
-  !f g A. (g act A) f ==> orbits f g A = partition (reach f g) A
+  !f g X. (g act X) f ==> orbits f g X = partition (reach f g) X
 Proof
   rw[EXTENSION] >>
   metis_tac[orbits_element, orbit_eq_equiv_class, partition_element]
 QED
 
 (* Theorem: orbits = target partition is FINITE.
-            FINITE A ==> FINITE (orbits f g A) *)
+            FINITE X ==> FINITE (orbits f g X) *)
 (* Proof: by orbits_def, IMAGE_FINITE *)
 Theorem orbits_finite:
-  !f g A. FINITE A ==> FINITE (orbits f g A)
+  !f g X. FINITE X ==> FINITE (orbits f g X)
 Proof
   simp[orbits_def]
 QED
 
-(* Theorem: For e IN (orbits f g A), FINITE A ==> FINITE e
-            (g act A) f /\ FINITE A ==> EVERY_FINITE (orbits f g A) *)
+(* Theorem: For e IN (orbits f g X), FINITE X ==> FINITE e
+            (g act X) f /\ FINITE X ==> EVERY_FINITE (orbits f g X) *)
 (* Proof: by orbits_eq_partition, FINITE_partition. *)
 Theorem orbits_element_finite:
-  !f g A. (g act A) f /\ FINITE A ==> EVERY_FINITE (orbits f g A)
+  !f g X. (g act X) f /\ FINITE X ==> EVERY_FINITE (orbits f g X)
 Proof
   metis_tac[orbits_eq_partition, FINITE_partition]
 QED
 (*
 orbit_finite_by_target;
-|- !f g A a. (g act A) f /\ a IN A /\ FINITE A ==> FINITE (orbit f g a): thm
+|- !f g X x. (g act X) f /\ x IN X /\ FINITE X ==> FINITE (orbit f g x): thm
 *)
 
-(* Theorem: For e IN (orbits f g A), e <> EMPTY
-            Group g /\ (g act A) f ==> !e. e IN orbits f g A ==> e <> EMPTY *)
+(* Theorem: For e IN (orbits f g X), e <> EMPTY
+            Group g /\ (g act X) f ==> !e. e IN orbits f g X ==> e <> EMPTY *)
 (* Proof: by orbits_eq_partition, reach_equiv, EMPTY_NOT_IN_partition. *)
 Theorem orbits_element_nonempty:
-  !f g A. Group g /\ (g act A) f ==> !e. e IN orbits f g A ==> e <> EMPTY
+  !f g X. Group g /\ (g act X) f ==> !e. e IN orbits f g X ==> e <> EMPTY
 Proof
   simp[orbits_eq_partition, reach_equiv, EMPTY_NOT_IN_partition]
 QED
 (*
 orbit_has_self;
-|- !f g A a. Group g /\ (g act A) f /\ a IN A ==> a IN orbit f g a: thm
+|- !f g X x. Group g /\ (g act X) f /\ x IN X ==> x IN orbit f g x: thm
 *)
 
 (* Theorem: orbits elements are subset of target.
-            (g act A) f /\ e IN orbits f g A ==> e SUBSET A *)
+            (g act X) f /\ e IN orbits f g X ==> e SUBSET X *)
 (* Proof: by orbits_eq_partition, partition_SUBSET. *)
 Theorem orbits_element_subset:
-  !f g A e. (g act A) f /\ e IN orbits f g A ==> e SUBSET A
+  !f g X e. (g act X) f /\ e IN orbits f g X ==> e SUBSET X
 Proof
   metis_tac[orbits_eq_partition, partition_SUBSET]
 QED
 (*
 orbit_subset_target;
-|- !f g A a. (g act A) f /\ a IN A ==> orbit f g a SUBSET A: thm
+|- !f g X x. (g act X) f /\ x IN X ==> orbit f g x SUBSET X: thm
 *)
 
 (* Theorem: Elements in element of orbits are also in target.
-            (g act A) f /\ e IN orbits f g A /\ a IN e ==> a IN A *)
+            (g act X) f /\ e IN orbits f g X /\ x IN e ==> x IN X *)
 (* Proof: by orbits_element_subset, SUBSET_DEF *)
 Theorem orbits_element_element:
-  !f g A e a. (g act A) f /\ e IN orbits f g A /\ a IN e ==> a IN A
+  !f g X e x. (g act X) f /\ e IN orbits f g X /\ x IN e ==> x IN X
 Proof
   metis_tac[orbits_element_subset, SUBSET_DEF]
 QED
 (*
 orbit_element_in_target;
-|- !f g A a b. (g act A) f /\ a IN A /\ b IN orbit f g a ==> b IN A: thm
+|- !f g X x y. (g act X) f /\ x IN X /\ y IN orbit f g x ==> y IN X: thm
 *)
 
-(* Theorem: a IN A ==> (orbit f g a) IN (orbits f g A) *)
+(* Theorem: x IN X ==> (orbit f g x) IN (orbits f g X) *)
 (* Proof: by orbits_def, IN_IMAGE. *)
 Theorem orbit_is_orbits_element:
-  !f g A a. a IN A ==> (orbit f g a) IN (orbits f g A)
+  !f g X x. x IN X ==> (orbit f g x) IN (orbits f g X)
 Proof
   simp[orbits_def]
 QED
 
 (* Theorem: Elements of orbits are orbits of its own element.
-            Group g /\ (g act A) f /\ e IN orbits f g A /\ a IN e ==> e = orbit f g a *)
+            Group g /\ (g act X) f /\ e IN orbits f g X /\ x IN e ==> e = orbit f g x *)
 (* Proof:
    By orbits_def, this is to show:
-   a IN A /\ b IN orbit f g a ==> orbit f g a = orbit f g b
+   x IN X /\ y IN orbit f g x ==> orbit f g x = orbit f g y
 
-   Note b IN A                       by orbit_element_in_target
-    and (a ~~ b) f g                 by orbit_element
-    ==> orbit f g a = orbit f g b    by orbit_eq_orbit
+   Note y IN X                       by orbit_element_in_target
+    and (x ~~ y) f g                 by orbit_element
+    ==> orbit f g x = orbit f g y    by orbit_eq_orbit
 *)
 Theorem orbits_element_is_orbit:
-  !f g A e a. Group g /\ (g act A) f /\ e IN orbits f g A /\
-               a IN e ==> e = orbit f g a
+  !f g X e x. Group g /\ (g act X) f /\ e IN orbits f g X /\
+              x IN e ==> e = orbit f g x
 Proof
   rw[orbits_def] >>
   metis_tac[orbit_element_in_target, orbit_element, orbit_eq_orbit]
 QED
 (*
 orbits_element;
-|- !f g A e. e IN orbits f g A <=> ?a. a IN A /\ e = orbit f g a: thm
+|- !f g X e. e IN orbits f g X <=> ?x. x IN X /\ e = orbit f g x: thm
 *)
 
 (* ------------------------------------------------------------------------- *)
 (* Target size and orbit size.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-(* Theorem: For action f g A, all a in G are reachable, belong to some orbit,
-            (g act A) f /\ a IN A ==> SURJ (\x. f x a) G (orbit f g a). *)
+(* Theorem: For action f g X, all a in G are reachable, belong to some orbit,
+            (g act X) f /\ x IN X ==> SURJ (\a. f a x) G (orbit f g x). *)
 (* Proof:
    This should follow from the fact that reach induces a partition, and
    the partition elements are orbits (orbit_is_orbits_element).
 
    By action_def, orbit_def, SURJ_DEF, this is to show:
-   (1) a IN A /\ x IN G ==> ?y. f x a = f y a /\ y IN G
-       True by taking y = x.
-   (2) a IN A /\ x IN G ==> ?y. y IN G /\ f y a = f x a
-       True by taking y = x.
+   (1) x IN X /\ a IN G ==> ?b. f a x = f b x /\ b IN G
+       True by taking b = a.
+   (2) x IN X /\ a IN G ==> ?b. b IN G /\ f b x = f a x
+       True by taking b = a.
 *)
 Theorem action_to_orbit_surj:
-  !f g A a. (g act A) f /\ a IN A ==> SURJ (\x. f x a) G (orbit f g a)
+  !f g X x. (g act X) f /\ x IN X ==> SURJ (\a. f a x) G (orbit f g x)
 Proof
   rw[action_def, orbit_def, SURJ_DEF] >> metis_tac[]
 QED
 
-(* Theorem: If (\x. f x a) is INJ into orbit for action,
+(* Theorem: If (\a. f a x) is INJ into orbit for action,
             then orbit is same size as the group.
-            (g act A) f /\ FINITE A /\ a IN A /\
-            INJ (\x. f x a) G (orbit f g a) ==> CARD (orbit f g a) = CARD G *)
+            (g act X) f /\ FINITE X /\ x IN X /\
+            INJ (\a. f a x) G (orbit f g x) ==> CARD (orbit f g x) = CARD G *)
 (* Proof:
-   Note SURJ (\x. f x a) G (orbit f g a)     by action_to_orbit_surj
-   With INJ (\x. f x a) G (orbit f g a)      by given
-    ==> BIJ (\x. f x a) G (orbit f g a)      by BIJ_DEF
-    Now (orbit f g a) SUBSET A               by orbit_subset_target
-     so FINITE (orbit f g a)                 by SUBSET_FINITE, FINITE A
+   Note SURJ (\a. f a x) G (orbit f g x)     by action_to_orbit_surj
+   With INJ (\a. f a x) G (orbit f g x)      by given
+    ==> BIJ (\a. f a x) G (orbit f g x)      by BIJ_DEF
+    Now (orbit f g x) SUBSET X               by orbit_subset_target
+     so FINITE (orbit f g x)                 by SUBSET_FINITE, FINITE X
     ==> FINITE G                             by FINITE_INJ
-   Thus CARD (orbit f g a) = CARD G          by FINITE_BIJ_CARD_EQ
+   Thus CARD (orbit f g x) = CARD G          by FINITE_BIJ_CARD_EQ
 *)
 Theorem orbit_finite_inj_card_eq:
-  !f g A a. (g act A) f /\ a IN A /\ FINITE A /\
-      INJ (\x. f x a) G (orbit f g a) ==> CARD (orbit f g a) = CARD G
+  !f g X x. (g act X) f /\ x IN X /\ FINITE X /\
+            INJ (\a. f a x) G (orbit f g x) ==> CARD (orbit f g x) = CARD G
 Proof
   metis_tac[action_to_orbit_surj, BIJ_DEF,
             orbit_subset_target, SUBSET_FINITE, FINITE_INJ, FINITE_BIJ_CARD_EQ]
 QED
 
-(* Theorem: For FINITE A, CARD A = SUM of CARD partitions in (orbits f g A).
-            Group g /\ (g act A) f /\ FINITE A ==> CARD A = SIGMA CARD (orbits f g A) *)
+(* Theorem: For FINITE X, CARD X = SUM of CARD partitions in (orbits f g X).
+            Group g /\ (g act X) f /\ FINITE X ==>
+            CARD X = SIGMA CARD (orbits f g X) *)
 (* Proof:
    With orbits_eq_partition, reach_equiv, apply
    partition_CARD
    |- !R s. R equiv_on s /\ FINITE s ==> CARD s = SIGMA CARD (partition R s)
 *)
 Theorem target_card_by_partition:
-  !f g A a. Group g /\ (g act A) f /\ FINITE A ==> CARD A = SIGMA CARD (orbits f g A)
+  !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+          CARD X = SIGMA CARD (orbits f g X)
 Proof
   metis_tac[orbits_eq_partition, reach_equiv, partition_CARD]
 QED
 
-(* Theorem: If for all a IN A, CARD (orbit f g a) = n,
-            then (orbits f g A) has pieces with equal size of n.
-            Group g /\ (g act A) f /\ FINITE A /\
-            (!a. a IN A ==> CARD (orbit f g a) = n) ==>
-            (!e. e IN orbits f g A ==> CARD e = n) *)
+(* Theorem: If for all x IN X, CARD (orbit f g x) = n,
+            then (orbits f g X) has pieces with equal size of n.
+            Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> CARD (orbit f g x) = n) ==>
+            (!e. e IN orbits f g X ==> CARD e = n) *)
 (* Proof:
-   Note !a. a IN e ==> (e = orbit f g a)     by orbits_element_is_orbit
-   Thus ?b. b IN e                           by orbits_element_nonempty, MEMBER_NOT_EMPTY
-    But b IN A                               by orbits_element_element
+   Note !x. x IN e ==> (e = orbit f g x)     by orbits_element_is_orbit
+   Thus ?y. y IN e                           by orbits_element_nonempty, MEMBER_NOT_EMPTY
+    But y IN X                               by orbits_element_element
      so CARD e = n                           by given implication.
 *)
 Theorem orbits_equal_size_partition_equal_size:
-  !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-             (!a. a IN A ==> CARD (orbit f g a) = n) ==>
-             (!e. e IN orbits f g A ==> CARD e = n)
+  !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> CARD (orbit f g x) = n) ==>
+            (!e. e IN orbits f g X ==> CARD e = n)
 Proof
   metis_tac[orbits_element_is_orbit, orbits_element_nonempty,
             MEMBER_NOT_EMPTY, orbits_element_element]
 QED
 
-(* Theorem: If for all a IN A, CARD (orbit f g a) = n, then n divides CARD A.
-            Group g /\ (g act A) f /\ FINITE A /\
-            (!a. a IN A ==> CARD (orbit f g a) = n) ==> n divides (CARD A) *)
+(* Theorem: If for all x IN X, CARD (orbit f g x) = n, then n divides CARD X.
+            Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> CARD (orbit f g x) = n) ==> n divides (CARD X) *)
 (* Proof:
-   Note !e. e IN orbits f g A ==> CARD e = n by orbits_equal_size_partition_equal_size
-   Thus CARD A
-      = n * CARD (partition (reach f g) A)   by orbits_eq_partition, reach_equiv, equal_partition_CARD
-      = CARD (partition (reach f g) A) * n   by MULT_SYM
-     so n divides (CARD A)                   by divides_def
+   Let R = reach f g.
+   Note !e. e IN orbits f g X ==> CARD e = n by orbits_equal_size_partition_equal_size
+    and R equiv_on X                  by reach_equiv
+    and orbits f g X = partition R X  by orbits_eq_partition
+   Thus n divides CARD X
+      = n * CARD (partition R X)      by equal_partition_card
+      = CARD (partition R X) * n      by MULT_SYM
+     so n divides (CARD X)            by divides_def
+   The last part is simplified by:
+
+equal_partition_factor;
+|- !R s n. FINITE s /\ R equiv_on s /\ (!e. e IN partition R s ==> CARD e = n) ==>
+          n divides CARD s
 *)
 Theorem orbits_equal_size_property:
-  !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-             (!a. a IN A ==> (CARD (orbit f g a) = n)) ==> n divides (CARD A)
+  !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> (CARD (orbit f g x) = n)) ==> n divides (CARD X)
 Proof
   rpt strip_tac >>
   imp_res_tac orbits_equal_size_partition_equal_size >>
-  `CARD A = n * CARD (partition (reach f g) A)` by rw[orbits_eq_partition, reach_equiv, equal_partition_CARD] >>
-  metis_tac[divides_def, MULT_COMM]
+  metis_tac[orbits_eq_partition, reach_equiv, equal_partition_factor]
 QED
 
-(* Theorem: If for all a IN A, n divides CARD (orbit f g a),
-            then n divides size of elements in orbits f g A.
-            Group g /\ (g act A) f /\ FINITE A /\
-            (!a. a IN A ==> n divides (CARD (orbit f g a))) ==>
-            (!e. e IN orbits f g A ==> n divides (CARD e)) *)
+(* Theorem: If for all x IN X, n divides CARD (orbit f g x),
+            then n divides size of elements in orbits f g X.
+            Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> n divides (CARD (orbit f g x))) ==>
+            (!e. e IN orbits f g X ==> n divides (CARD e)) *)
 (* Proof:
-   Note !a. a IN e ==> (e = orbit f g a) by orbits_element_is_orbit
-   Thus ?b. b IN e                       by orbits_element_nonempty, MEMBER_NOT_EMPTY
-    But b IN A                           by orbits_element_element
+   Note !x. x IN e ==> (e = orbit f g x) by orbits_element_is_orbit
+   Thus ?y. y IN e                       by orbits_element_nonempty, MEMBER_NOT_EMPTY
+    But y IN X                           by orbits_element_element
      so n divides (CARD e)               by given implication.
 *)
 Theorem orbits_size_factor_partition_factor:
-  !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-             (!a. a IN A ==> n divides (CARD (orbit f g a))) ==>
-             (!e. e IN orbits f g A ==> n divides (CARD e))
+  !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> n divides (CARD (orbit f g x))) ==>
+            (!e. e IN orbits f g X ==> n divides (CARD e))
 Proof
   metis_tac[orbits_element_is_orbit, orbits_element_nonempty,
             MEMBER_NOT_EMPTY, orbits_element_element]
 QED
 
-(* Theorem: If for all a IN A, n divides (orbit f g a), then n divides CARD A.
-            Group g /\ (g act A) f /\ FINITE A /\
-            (!a. a IN A ==> n divides (CARD (orbit f g a))) ==> n divides (CARD A) *)
+(* Theorem: If for all x IN X, n divides (orbit f g x), then n divides CARD X.
+            Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> n divides (CARD (orbit f g x))) ==> n divides (CARD X) *)
 (* Proof:
-   Note !e. e IN orbits f g A ==> n divides (CARD e)
+   Note !e. e IN orbits f g X ==> n divides (CARD e)
                                    by orbits_size_factor_partition_factor
-    and reach f g equiv_on A       by reach_equiv
-   Thus n divides (CARD A)         by orbits_eq_partition, factor_partition_CARD
+    and reach f g equiv_on X       by reach_equiv
+   Thus n divides (CARD X)         by orbits_eq_partition, factor_partition_card
 *)
 Theorem orbits_size_factor_property:
-  !f g A n. Group g /\ (g act A) f /\ FINITE A /\
-             (!a. a IN A ==> n divides (CARD (orbit f g a))) ==> n divides (CARD A)
+  !f g X n. Group g /\ (g act X) f /\ FINITE X /\
+            (!x. x IN X ==> n divides (CARD (orbit f g x))) ==> n divides (CARD X)
 Proof
   metis_tac[orbits_size_factor_partition_factor,
-            orbits_eq_partition, reach_equiv, factor_partition_CARD]
+            orbits_eq_partition, reach_equiv, factor_partition_card]
 QED
 
 (* ------------------------------------------------------------------------- *)
 (* Stabilizer as invariant.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-(* Stabilizer of action: for a IN A, the group elements that fixes a. *)
+(* Stabilizer of action: for x IN X, the group elements that fixes x. *)
 val stabilizer_def = zDefine`
-    stabilizer f (g:'a group) (a:'b) = {x | x IN G /\ f x a = a }
+    stabilizer f (g:'a group) (x:'b) = {a | a IN G /\ f a x = x }
 `;
 (* Note: use zDefine as this is not effective for computation. *)
 (*
 > stabilizer_def |> ISPEC ``$o``;
-val it = |- !g' a. stabilizer $o g' a = {x | x IN g'.carrier /\ x o a = a}: thm
+val it = |- !g' x. stabilizer $o g' x = {a | a IN G'.carrier /\ a o x = x}: thm
 *)
 
-(* Theorem: x IN stabilizer f g a ==> x IN G /\ (f x a = a) *)
+(* Theorem: a IN stabilizer f g x ==> a IN G /\ f a x = x *)
 (* Proof: by stabilizer_def *)
 Theorem stabilizer_element:
-  !f g a x. x IN stabilizer f g a <=> x IN G /\ (f x a = a)
+  !f g x a. a IN stabilizer f g x <=> a IN G /\ f a x = x
 Proof
   simp[stabilizer_def]
 QED
 
-(* Theorem: The (stabilizer f g a) is a subset of G. *)
+(* Theorem: The (stabilizer f g x) is a subset of G. *)
 (* Proof: by stabilizer_element, SUBSET_DEF *)
 Theorem stabilizer_subset:
-  !f g a. (stabilizer f g a) SUBSET G
+  !f g x. (stabilizer f g x) SUBSET G
 Proof
   simp[stabilizer_element, SUBSET_DEF]
 QED
 
-(* Theorem: (stabilizer f g a) has #e.
-            Group g /\ (g act A) f /\ a IN A ==> #e IN stabilizer f g a *)
+(* Theorem: (stabilizer f g x) has #e.
+            Group g /\ (g act X) f /\ x IN X ==> #e IN stabilizer f g x *)
 (* Proof:
    Note #e IN G                   by group_id_element
-    and f #e a = a                by action_id
-     so #e IN stabilizer f g a    by stabilizer_element
+    and f #e x = x                by action_id
+     so #e IN stabilizer f g x    by stabilizer_element
 *)
 Theorem stabilizer_has_id:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==> #e IN stabilizer f g a
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==> #e IN stabilizer f g x
 Proof
   metis_tac[stabilizer_element, action_id, group_id_element]
 QED
-(* This means (stabilizer f g a) is non-empty *)
+(* This means (stabilizer f g x) is non-empty *)
 
-(* Theorem: (stabilizer f g a) is nonempty.
-            Group g /\ (g act A) f /\ a IN A ==> stabilizer f g a <> EMPTY *)
+(* Theorem: (stabilizer f g x) is nonempty.
+            Group g /\ (g act X) f /\ x IN X ==> stabilizer f g x <> EMPTY *)
 (* Proof: by stabilizer_has_id, MEMBER_NOT_EMPTY. *)
 Theorem stabilizer_nonempty:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==> stabilizer f g a <> EMPTY
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==> stabilizer f g x <> EMPTY
 Proof
   metis_tac[stabilizer_has_id, MEMBER_NOT_EMPTY]
 QED
 
-(* Theorem: Group g /\ (g act A) f /\ a IN A ==>
-            stabilizer f g a = IMAGE (\x. if (f x a = a) then x else #e) G *)
+(* Theorem: Group g /\ (g act X) f /\ x IN X ==>
+            stabilizer f g x = IMAGE (\a. if f a x = x then a else #e) G *)
 (* Proof:
    By stabilizer_def, EXTENSION, this is to show:
-   (1) x IN G /\ f x a = a ==> ?y. x = (if f y a = a then y else #e) /\ y IN G
-       This is true by taking y = x.
-   (2) x IN G ==> (if f x a = a then x else #e) IN G, true   by group_id_element
-   (3) f (if f x a = a then x else #e) a = a, true           by action_id
+   (1) a IN G /\ f a x = x ==> ?b. a = (if f b x = x then b else #e) /\ b IN G
+       This is true by taking b = a.
+   (2) a IN G ==> (if f a x = x then a else #e) IN G, true   by group_id_element
+   (3) f (if f a x = x then a else #e) x = x, true           by action_id
 *)
 Theorem stabilizer_as_image:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-             stabilizer f g a = IMAGE (\x. if (f x a = a) then x else #e) G
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+            stabilizer f g x = IMAGE (\a. if f a x = x then a else #e) G
 Proof
   (rw[stabilizer_def, EXTENSION] >> metis_tac[group_id_element, action_id])
 QED
@@ -899,8 +919,8 @@ QED
 
 (* Define the stabilizer group, the restriction of group G to stabilizer. *)
 Definition StabilizerGroup_def:
-    StabilizerGroup f (g:'a group) (a:'b) =
-      <| carrier := stabilizer f g a;
+    StabilizerGroup f (g:'a group) (x:'b) =
+      <| carrier := stabilizer f g x;
               op := g.op;
               id := #e
        |>
@@ -909,9 +929,9 @@ End
 (* Theorem: StabilizerGroup properties. *)
 (* Proof: by StabilizerGroup_def. *)
 Theorem stabilizer_group_property:
-  !f g a. (StabilizerGroup f g a).carrier = stabilizer f g a /\
-          (StabilizerGroup f g a).op = g.op /\
-          (StabilizerGroup f g a).id = #e
+  !f g x. (StabilizerGroup f g x).carrier = stabilizer f g x /\
+          (StabilizerGroup f g x).op = g.op /\
+          (StabilizerGroup f g x).id = #e
 Proof
   simp[StabilizerGroup_def]
 QED
@@ -919,7 +939,7 @@ QED
 (* Theorem: StabilizerGroup carrier. *)
 (* Proof: by StabilizerGroup_def. *)
 Theorem stabilizer_group_carrier:
-  !f g a. (StabilizerGroup f g a).carrier = stabilizer f g a
+  !f g x. (StabilizerGroup f g x).carrier = stabilizer f g x
 Proof
   simp[StabilizerGroup_def]
 QED
@@ -927,83 +947,83 @@ QED
 (* Theorem: StabilizerGroup identity. *)
 (* Proof: by StabilizerGroup_def. *)
 Theorem stabilizer_group_id:
-  !f g a. (StabilizerGroup f g a).id = g.id
+  !f g x. (StabilizerGroup f g x).id = g.id
 Proof
   simp[StabilizerGroup_def]
 QED
 
-(* Theorem: If g is a Group, f g A is an action, StabilizerGroup f g a is a Group.
-            Group g /\ (g act A) f /\ a IN A ==> Group (StabilizerGroup f g a) *)
+(* Theorem: If g is a Group, f g X is an action, StabilizerGroup f g x is a Group.
+            Group g /\ (g act X) f /\ x IN X ==> Group (StabilizerGroup f g x) *)
 (* Proof:
    By group_def_alt, StabilizerGroup_def, stabilizer_def, action_def, this is to show:
-   (1) x IN G /\ y IN G /\ f x a = a /\ f y a = a ==> f (x * y) a = a
-         f (x * y) a
-       = f x (f y a)         by action_compose
-       = f x a               by f y a = a
-       = a                   by f x a = a
-   (2) x IN G /\ f x a = a ==> ?y. (y IN G /\ (f y a = a)) /\ (y * x = #e)
-       Let y = |/ x.
-       Then y * x = #e       by group_linv
+   (1) a IN G /\ b IN G /\ f a x = x /\ f b x = x ==> f (a * b) x = x
+         f (a * b) x
+       = f a (f b x)         by action_compose
+       = f a x               by f b x = x
+       = a                   by f a x = x
+   (2) a IN G /\ f a x = x ==> ?b. b IN G /\ f b x = x /\ b * a = #e
+       Let b = |/ a.
+       Then b * a = #e       by group_linv
          f ( |/x) a
-       = f ( |/x) (f x a)    by f x a = a
+       = f ( |/x) (f a x)    by f a x = x
        = f ( |/x * x) a      by action_def
        = f (#e) a            by group_linv
        = a                   by action_def
 *)
 Theorem stabilizer_group_group:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==> Group (StabilizerGroup f g a)
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==> Group (StabilizerGroup f g x)
 Proof
   rw_tac std_ss[group_def_alt, StabilizerGroup_def, stabilizer_def,
                 action_def, GSPECIFICATION] >> prove_tac[]
 QED
 
-(* Theorem: If g is Group, f g A is an action, then StabilizerGroup f g a is a subgroup of g.
-            Group g /\ (g act A) f /\ a IN A ==> (StabilizerGroup f g a) <= g *)
+(* Theorem: If g is Group, f g X is an action, then StabilizerGroup f g x is a subgroup of g.
+            Group g /\ (g act X) f /\ x IN X ==> (StabilizerGroup f g x) <= g *)
 (* Proof:
    By Subgroup_def, stabilizer_group_property, this is to show:
-   (1) a IN A ==> Group (StabilizerGroup f g a), true by stabilizer_group_group
-   (2) stabilizer f g a SUBSET G, true                by stabilizer_subset
+   (1) x IN X ==> Group (StabilizerGroup f g x), true by stabilizer_group_group
+   (2) stabilizer f g x SUBSET G, true                by stabilizer_subset
 *)
 Theorem stabilizer_group_subgroup:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==> (StabilizerGroup f g a) <= g
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==> (StabilizerGroup f g x) <= g
 Proof
   metis_tac[Subgroup_def, stabilizer_group_property, stabilizer_group_group, stabilizer_subset]
 QED
 
-(* Theorem: If g is FINITE Group, StabilizerGroup f g a is a FINITE Group.
-            FiniteGroup g /\ (g act A) f /\ a IN A ==> FiniteGroup (StabilizerGroup f g a) *)
+(* Theorem: If g is FINITE Group, StabilizerGroup f g x is a FINITE Group.
+            FiniteGroup g /\ (g act X) f /\ x IN X ==> FiniteGroup (StabilizerGroup f g x) *)
 (* Proof:
    By FiniteGroup_def, stabilizer_group_property, this is to show:
-   (1) a IN A ==> Group (StabilizerGroup f g a), true          by stabilizer_group_group
-   (2) FINITE G /\ a IN A ==> FINITE (stabilizer f g a), true  by stabilizer_subset and SUBSET_FINITE
+   (1) x IN X ==> Group (StabilizerGroup f g x), true          by stabilizer_group_group
+   (2) FINITE G /\ x IN X ==> FINITE (stabilizer f g x), true  by stabilizer_SUBSET, SUBSET_FINITE
 *)
 Theorem stabilizer_group_finite_group:
-  !f g A a. FiniteGroup g /\ (g act A) f /\ a IN A ==>
-            FiniteGroup (StabilizerGroup f g a)
+  !f g X x. FiniteGroup g /\ (g act X) f /\ x IN X ==>
+            FiniteGroup (StabilizerGroup f g x)
 Proof
   rw_tac std_ss[FiniteGroup_def, stabilizer_group_property] >-
   metis_tac[stabilizer_group_group] >>
   metis_tac[stabilizer_subset, SUBSET_FINITE]
 QED
 
-(* Theorem: If g is FINITE Group, CARD (stabilizer f g a) divides CARD G.
-            FiniteGroup g /\ (g act A) f /\ a IN A ==>
-            CARD (stabilizer f g a) divides (CARD G) *)
+(* Theorem: If g is FINITE Group, CARD (stabilizer f g x) divides CARD G.
+            FiniteGroup g /\ (g act X) f /\ x IN X ==>
+            CARD (stabilizer f g x) divides (CARD G) *)
 (* Proof:
-   By Lagrange's Theorem, and (StabilizerGroup f g a) is a subgroup of g.
+   By Lagrange's Theorem, and (StabilizerGroup f g x) is a subgroup of g.
 
-   Note (StabilizerGroup f g a) <= g                         by stabilizer_group_subgroup
-    and (StabilizerGroup f g a).carrier = stabilizer f g a   by stabilizer_group_property
-    but (stabilizer f g a) SUBSET G                          by stabilizer_subset
-  Thus CARD (stabilizer f g a) divides (CARD G)              by Lagrange_thm
+   Note (StabilizerGroup f g x) <= g                         by stabilizer_group_subgroup
+    and (StabilizerGroup f g x).carrier = stabilizer f g x   by stabilizer_group_property
+    but (stabilizer f g x) SUBSET G                          by stabilizer_subset
+  Thus CARD (stabilizer f g x) divides (CARD G)              by Lagrange_thm
 *)
 Theorem stabilizer_group_card_divides:
-  !f (g:'a group) A a. FiniteGroup g /\ (g act A) f /\ a IN A ==>
-                       CARD (stabilizer f g a) divides (CARD G)
+  !f (g:'a group) X x. FiniteGroup g /\ (g act X) f /\ x IN X ==>
+                       CARD (stabilizer f g x) divides (CARD G)
 Proof
   rpt (stripDup[FiniteGroup_def]) >>
-  `(StabilizerGroup f g a) <= g` by metis_tac[stabilizer_group_subgroup] >>
-  `(StabilizerGroup f g a).carrier = stabilizer f g a` by rw[stabilizer_group_property] >>
+  `(StabilizerGroup f g x) <= g` by metis_tac[stabilizer_group_subgroup] >>
+  `(StabilizerGroup f g x).carrier = stabilizer f g x` by rw[stabilizer_group_property] >>
   metis_tac[stabilizer_subset, Lagrange_thm]
 QED
 
@@ -1012,187 +1032,190 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Theorem: The map from orbit to coset of stabilizer is well-defined.
-            Group g /\ (g act A) f /\ a IN A ==>
-            !x y. x IN G /\ y IN G /\ (f x a = f y a) ==>
-                  x * (stabilizer f g a) = y * (stabilizer f g a) *)
+            Group g /\ (g act X) f /\ x IN X ==>
+            !a b. a IN G /\ b IN G /\ f a x = f b x ==>
+                  a * (stabilizer f g x) = b * (stabilizer f g x) *)
 (* Proof:
-   Note StabilizerGroup f g a <= g         by stabilizer_group_subgroup
-    and (StabilizerGroup f g a).carrier
-      = stabilizer f g a                   by stabilizer_group_property
+   Note StabilizerGroup f g x <= g         by stabilizer_group_subgroup
+    and (StabilizerGroup f g x).carrier
+      = stabilizer f g x                   by stabilizer_group_property
    By subgroup_coset_eq, this is to show:
-      ( |/y * x) IN (stabilizer f g a)
+      ( |/b * a) IN (stabilizer f g x)
 
-   Note ( |/y * x) IN G        by group_inv_element, group_op_element
-        f ( |/y * x) a
-      = f ( |/y) (f x a)       by action_compose
-      = f ( |/y) (f y a)       by given
-      = f ( |/y * y) a         by action_compose
-      = f #e a                 by group_linv
-      = a                      by action_id
-   Hence  ( |/y * x) IN (stabilizer f g a)
+   Note ( |/b * a) IN G        by group_inv_element, group_op_element
+        f ( |/b * a) x
+      = f ( |/b) (f a x)       by action_compose
+      = f ( |/b) (f b x)       by given
+      = f ( |/b * b) x         by action_compose
+      = f #e x                 by group_linv
+      = x                      by action_id
+   Hence  ( |/b * a) IN (stabilizer f g x)
                                by stabilizer_element
 *)
 Theorem orbit_stabilizer_map_good:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-            !x y. x IN G /\ y IN G /\ f x a = f y a ==>
-                  x * (stabilizer f g a) = y * (stabilizer f g a)
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+            !a b. a IN G /\ b IN G /\ f a x = f b x ==>
+                  a * (stabilizer f g x) = b * (stabilizer f g x)
 Proof
   rpt strip_tac >>
-  `StabilizerGroup f g a <= g` by metis_tac[stabilizer_group_subgroup] >>
-  `(StabilizerGroup f g a).carrier = stabilizer f g a` by rw[stabilizer_group_property] >>
+  `StabilizerGroup f g x <= g` by metis_tac[stabilizer_group_subgroup] >>
+  `(StabilizerGroup f g x).carrier = stabilizer f g x` by rw[stabilizer_group_property] >>
   fs[action_def] >>
-  `( |/y * x) IN (stabilizer f g a)` suffices_by metis_tac[subgroup_coset_eq] >>
-  `f ( |/y * x) a = f ( |/y) (f x a)` by rw[action_compose] >>
-  `_ = f ( |/y) (f y a)` by asm_rewrite_tac[] >>
-  `_ = f ( |/y * y) a` by rw[] >>
-  `_ = f #e a` by rw[] >>
-  `_ = a` by rw[] >>
+  `( |/b * a) IN (stabilizer f g x)` suffices_by metis_tac[subgroup_coset_eq] >>
+  `f ( |/b * a) x = f ( |/b) (f a x)` by rw[action_compose] >>
+  `_ = f ( |/b) (f b x)` by asm_rewrite_tac[] >>
+  `_ = f ( |/b * b) x` by rw[] >>
+  `_ = f #e x` by rw[] >>
+  `_ = x` by rw[] >>
   rw[stabilizer_element]
 QED
 
 (* Theorem: The map from orbit to coset of stabilizer is injective.
-            Group g /\ (g act A) f /\ a IN A ==>
-            !x y. x IN G /\ y IN G /\
-                  x * (stabilizer f g a) = y * (stabilizer f g a) ==> f x a = f y a *)
+            Group g /\ (g act X) f /\ x IN X ==>
+            !a b. a IN G /\ b IN G /\
+                  a * (stabilizer f g x) = b * (stabilizer f g x) ==> f a x = f b x *)
 (* Proof:
-   Note x * (stabilizer f g a) = y * (stabilizer f g a)
-    ==> ( |/y * x) IN (stabilizer f g a)   by subgroup_coset_eq
-    ==> f ( |/y * x) a = a                 by stabilizer_element
-       f x a
+   Note a * (stabilizer f g x) = b * (stabilizer f g x)
+    ==> ( |/b * a) IN (stabilizer f g x)   by subgroup_coset_eq
+    ==> f ( |/b * a) x = x                 by stabilizer_element
+       f a x
      = f (#e * x) a            by group_lid
-     = f ((y * |/ y) * x) a    by group_rinv
-     = f (y * ( |/y * x)) a    by group_assoc
-     = f y (f ( |/y * x) a)    by action_compose
-     = f y a                   by above, a = f ( |/y * x) a
+     = f ((b * |/ b) * a) x    by group_rinv
+     = f (b * ( |/b * a)) x    by group_assoc
+     = f b (f ( |/b * a) x)    by action_compose
+     = f b x                   by above, x = f ( |/b * a) x
 *)
 Theorem orbit_stabilizer_map_inj:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-            !x y. x IN G /\ y IN G /\
-                  x * (stabilizer f g a) = y * (stabilizer f g a) ==>
-                  f x a = f y a
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+            !a b. a IN G /\ b IN G /\
+                  a * (stabilizer f g x) = b * (stabilizer f g x) ==>
+                  f a x = f b x
 Proof
   rpt strip_tac >>
-  `StabilizerGroup f g a <= g` by metis_tac[stabilizer_group_subgroup] >>
-  `(StabilizerGroup f g a).carrier = stabilizer f g a` by rw[stabilizer_group_property] >>
-  `( |/y * x) IN (stabilizer f g a)` by metis_tac[subgroup_coset_eq] >>
-  `f ( |/y * x) a = a` by fs[stabilizer_element] >>
-  `|/y * x IN G` by rw[] >>
-  `f x a = f (#e * x) a` by rw[] >>
-  `_ = f ((y * |/ y) * x) a` by rw_tac std_ss[group_rinv] >>
-  `_ = f (y * ( |/ y * x)) a` by rw[group_assoc] >>
-  `_ = f y (f ( |/y * x) a)` by metis_tac[action_compose] >>
+  `StabilizerGroup f g x <= g` by metis_tac[stabilizer_group_subgroup] >>
+  `(StabilizerGroup f g x).carrier = stabilizer f g x` by rw[stabilizer_group_property] >>
+  `( |/b * a) IN (stabilizer f g x)` by metis_tac[subgroup_coset_eq] >>
+  `f ( |/b * a) x = x` by fs[stabilizer_element] >>
+  `|/b * a IN G` by rw[] >>
+  `f a x = f (#e * a) x` by rw[] >>
+  `_ = f ((b * |/ b) * a) x` by rw_tac std_ss[group_rinv] >>
+  `_ = f (b * ( |/ b * a)) x` by rw[group_assoc] >>
+  `_ = f b (f ( |/ b * a) x)` by metis_tac[action_compose] >>
   metis_tac[]
 QED
 
-(* Theorem: For action f g A /\ a IN A,
-            if x, y IN G, f x a = f y a <=> 1/x * y IN (stabilizer f g a).
-            Group g /\ (g act A) f /\ a IN A ==>
-            !x y. x IN G /\ y IN G ==>
-                 (f x a = f y a <=> ( |/ x * y) IN (stabilizer f g a))  *)
+(* Theorem: For action f g X /\ x IN X,
+            if x, y IN G, f a x = f b x <=> 1/a * b IN (stabilizer f g x).
+            Group g /\ (g act X) f /\ x IN X ==>
+            !a b. a IN G /\ b IN G ==>
+                 (f a x = f b x <=> ( |/ a * b) IN (stabilizer f g x))  *)
 (* Proof:
-   If part: (f x a = f y a) ==> ( |/ x * y) IN (stabilizer f g a)
-      Note |/ x IN G                by group_inv_element
-       and |/ x * y IN G            by group_op_element
-           f ( |/ x * y) a
-         = f ( |/ x) (f y a)        by action_compose
-         = a                        by action_closure, action_reverse
-      Thus ( |/ x * y) IN (stabilizer f g a)
+   If part: f a x = f b x ==> ( |/ a * b) IN (stabilizer f g x)
+      Let y = f b x, so f a x = y.
+      then y IN X                   by action_closure
+       and f ( |/ a) y = x          by action_reverse [1]
+      Note |/ a IN G                by group_inv_element
+       and |/ a * b IN G            by group_op_element
+           f ( |/ a * b) x
+         = f ( |/ a) (f b x)        by action_compose
+         = x                        by [1] above
+      Thus ( |/ a * b) IN (stabilizer f g x)
                                     by stabilizer_element
-   Only-if part: ( |/ x * y) IN (stabilizer f g a) ==> (f x a = f y a)
-      Note ( |/ x * y) IN G /\
-           (f ( |/ x * y) a = a)    by stabilizer_element
-           f x a
-         = f x (f ( |/x * y) a)     by above
-         = f (x * ( |/ x * y)) a    by action_compose
-         = f ((x * |/ x) * y) a     by group_assoc, group_inv_element
-         = f (#e * y) a             by group_rinv
-         = f y a                    by group_lid
+   Only-if part: ( |/ a * b) IN (stabilizer f g x) ==> f a x = f b x
+      Note ( |/ a * b) IN G /\
+           f ( |/ a * b) x = x      by stabilizer_element
+           f a x
+         = f a (f ( |/a * b) x)     by above
+         = f (a * ( |/ a * b)) x    by action_compose
+         = f ((a * |/ a) * b) x     by group_assoc, group_inv_element
+         = f (#e * b) x             by group_rinv
+         = f b x                    by group_lid
 *)
 Theorem action_match_condition:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-            !x y. x IN G /\ y IN G ==>
-                  (f x a = f y a <=> ( |/ x * y) IN (stabilizer f g a))
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+            !a b. a IN G /\ b IN G ==>
+                  (f a x = f b x <=> ( |/ a * b) IN (stabilizer f g x))
 Proof
   rw[EQ_IMP_THM] >| [
-    `|/ x IN G /\ |/ x * y IN G` by rw[] >>
-    `f ( |/ x * y) a = f ( |/ x) (f y a)` by metis_tac[action_compose] >>
-    `_ = a` by metis_tac[action_closure, action_reverse] >>
+    `|/ a IN G /\ |/ a * b IN G` by rw[] >>
+    `f ( |/ a * b) x = f ( |/ a) (f b x)` by metis_tac[action_compose] >>
+    `_ = x` by metis_tac[action_closure, action_reverse] >>
     rw[stabilizer_element],
-    `( |/ x * y) IN G /\ (f ( |/ x * y) a = a)` by metis_tac[stabilizer_element] >>
-    `f x a = f x (f ( |/x * y) a)` by rw[] >>
-    `_ = f (x * ( |/ x * y)) a` by metis_tac[action_compose] >>
-    `_ = f ((x * |/ x) * y) a` by rw[group_assoc] >>
+    `( |/ a * b) IN G /\ f ( |/ a * b) x = x` by metis_tac[stabilizer_element] >>
+    `f a x = f a (f ( |/a * b) x)` by rw[] >>
+    `_ = f (a * ( |/ a * b)) x` by metis_tac[action_compose] >>
+    `_ = f ((a * |/ a) * b) x` by rw[group_assoc] >>
     rw[]
   ]
 QED
 
 (* Alternative form of the same theorem. *)
 Theorem action_match_condition_alt:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-            !x y::G. f x a = f y a <=> ( |/ x * y) IN (stabilizer f g a)
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+            !a b::G. f a x = f b x <=> ( |/ a * b) IN (stabilizer f g x)
 Proof
   metis_tac[action_match_condition]
 QED
 
 (* Theorem: stabilizers of points in same orbit:
-            x * (stabilizer f g a) * 1/x = stabilizer f g (f x a).
-            Group g /\ (g act A) f /\ a IN A /\ x IN G ==>
-            conjugate g x (stabilizer f g a) = stabilizer f g (f x a) *)
+            a * (stabilizer f g x) * 1/a = stabilizer f g (f a x).
+            Group g /\ (g act X) f /\ x IN X /\ a IN G ==>
+            conjugate g a (stabilizer f g x) = stabilizer f g (f a x) *)
 (* Proof:
    In Section 1.12 of Volume I of [Jacobson] N.Jacobson, Basic Algebra, 1980.
    [Artin] E. Artin, Galois Theory 1942.
 
    By conjugate_def, stabilizer_def, this is to show:
-   (1) z IN G /\ f z a = a ==> x * z * |/ x IN G
-       Note |/ x   IN G                  by group_inv_element
-       Thus x * z * |/ x IN G            by group_op_element
-   (2) z IN G /\ f z a = a ==> f (x * z * |/ x) (f x a) = f x a
-       Note x * z * |/ x IN G            by group_inv_element
-         f (x * z * |/ x) (f x a)
-       = f (x * z * |/ x * x) a          by action_compose
-       = f ((x * z) * ( |/ x * x)) a     by group_assoc
-       = f ((x * z) * #e) a              by group_linv
-       = f (x * z) a                     by group_rid
-       = f x (f z a)                     by action_compose
-       = f x a                           by a = f z a
-   (3) x' IN G /\ f x' (f x a) = f x a ==> ?z. (x' = x * z * |/ x) /\ z IN G /\ (f z a = a)
-       Let z = |/ x * x' * x.
-       Note |/ x IN G                    by group_inv_element
+   (1) z IN G /\ f z x = x ==> a * z * |/ a IN G
+       Note |/ a   IN G                  by group_inv_element
+       Thus a * z * |/ a IN G            by group_op_element
+   (2) z IN G /\ f z x = x ==> f (a * z * |/ a) (f a x) = f a x
+       Note a * z * |/ a IN G            by group_inv_element
+         f (a * z * |/ a) (f a x)
+       = f (a * z * |/ a * a) x          by action_compose
+       = f ((a * z) * ( |/ a * a)) x     by group_assoc
+       = f ((a * z) * #e) x              by group_linv
+       = f (a * z) x                     by group_rid
+       = f a (f z x)                     by action_compose
+       = f a x                           by x = f z x
+   (3) b IN G /\ f b (f a x) = f a x ==> ?z. b = a * z * |/ a /\ z IN G /\ f z x = x
+       Let z = |/ a * b * a.
+       Note |/ a IN G                    by group_inv_element
          so z IN G                       by group_op_element
-         x * z * |/ x
-       = x * ( |/ x * x' * x) * |/ x     by notation
-       = (x * ( |/ x)) * x' * x * |/ x   by group_assoc
-       = (x * ( |/ x)) * (x' * x * |/ x) by group_assoc
-       = (x * |/ x) * x' * (x * |/ x)    by group_assoc
-       = #e * x' * #e                    by group_rinv
-       = x'                              by group_lid, group_rid
-         f z a
-       = f ( |/ x * x' * x) a            by notation
-       = f ( |/ x * (x' * x)) a          by group_assoc
-       = f ( |/ x) (f (x' * x) a)        by action_compose
-       = f ( |/ x) (f x' (f x a))        by action_compose
-       = f ( |/ x) (f x a)               by given f x' (f x a) = f x a
-       = f ( |/ x * x) a                 by action_compose
-       = f #e a                          by group_linv
-       = a                               by action_id
+         a * z * |/ a
+       = a * ( |/ a * b * a) * |/ a      by notation
+       = (a * ( |/ a)) * b * a * |/ a    by group_assoc
+       = (a * ( |/ a)) * (b * a * |/ a)  by group_assoc
+       = (a * |/ a) * b * (a * |/ a)     by group_assoc
+       = #e * b * #e                     by group_rinv
+       = b                               by group_lid, group_rid
+         f z x
+       = f ( |/ a * b * a) x             by notation
+       = f ( |/ a * (b * a)) x           by group_assoc
+       = f ( |/ a) (f (b * a) x)         by action_compose
+       = f ( |/ a) (f b (f a x))         by action_compose
+       = f ( |/ a) (f a x)               by given f b (f a x) = f a x
+       = f ( |/ a * a) x                 by action_compose
+       = f #e x                          by group_linv
+       = x                               by action_id
 *)
 Theorem stabilizer_conjugate:
-  !f g A a x. Group g /\ (g act A) f /\ a IN A /\ x IN G ==>
-              conjugate g x (stabilizer f g a) = stabilizer f g (f x a)
+  !f g X x a. Group g /\ (g act X) f /\ x IN X /\ a IN G ==>
+              conjugate g a (stabilizer f g x) = stabilizer f g (f a x)
 Proof
   rw[conjugate_def, stabilizer_def, EXTENSION, EQ_IMP_THM] >-
   rw[] >-
- (`x * z * |/ x IN G` by rw[] >>
-  `f (x * z * |/ x) (f x a) = f (x * z * |/ x * x) a` by metis_tac[action_compose] >>
-  `_ = f ((x * z) * ( |/ x * x)) a` by rw[group_assoc] >>
-  `_ = f (x * z) a` by rw[] >>
+ (`a * z * |/ a IN G` by rw[] >>
+  `f (a * z * |/ a) (f a x) = f (a * z * |/ a * a) x` by metis_tac[action_compose] >>
+  `_ = f ((a * z) * ( |/ a * a)) x` by rw[group_assoc] >>
+  `_ = f (a * z) x` by rw[] >>
   metis_tac[action_compose]) >>
-  qexists_tac `|/x * x' * x` >>
+  qexists_tac `|/a * x' * a` >>
   rw[] >| [
-    `x * ( |/ x * x' * x) * |/ x = (x * |/ x) * x' * (x * |/ x)` by rw[group_assoc] >>
+    `a * ( |/ a * x' * a) * |/ a = (a * |/ a) * x' * (a * |/ a)` by rw[group_assoc] >>
     rw[],
-    `|/ x IN G /\ x' * x IN G` by rw[] >>
-    `f ( |/ x * x' * x) a = f ( |/ x * (x' * x)) a` by rw[group_assoc] >>
+    `|/ a IN G /\ x' * a IN G` by rw[] >>
+    `f ( |/ a * x' * a) x = f ( |/ a * (x' * a)) x` by rw[group_assoc] >>
     metis_tac[action_compose, group_linv, action_id]
   ]
 QED
@@ -1201,12 +1224,12 @@ QED
 
 (* Extract the existence element of reach *)
 (* - reach_def;
-> val it = |- !f g x y. reach f g a b <=> ?x. x IN G /\ (f x a = b) :  thm
+> val it = |- !f g x y. (x ~~ y) f g <=> ?a. a IN G /\ f a x = y:  thm
 *)
 
-(* Existence of act_by: the x in reach f g a b, such that x IN G /\ f x a = b. *)
+(* Existence of act_by: the x in reach f g X b, such that a IN G /\ f a x = b. *)
 val lemma = prove(
-  ``!f (g:'a group) (a:'b) (b:'b). ?x. reach f g a b ==> x IN G /\ (f x a = b)``,
+  ``!f (g:'a group) (x:'b) (y:'b). ?a. reach f g x y ==> a IN G /\ f a x = y``,
   metis_tac[reach_def]);
 (*
 - SKOLEM_THM;
@@ -1217,212 +1240,215 @@ val act_by_def = new_specification(
     ["act_by"],
     lemma |> SIMP_RULE bool_ss [SKOLEM_THM]
           |> CONV_RULE (RENAME_VARS_CONV ["t"] (* to allow rename of f' back to f *)
-             THENC BINDER_CONV (RENAME_VARS_CONV ["f", "g", "a", "b"])));
+             THENC BINDER_CONV (RENAME_VARS_CONV ["f", "g", "x", "y"])));
 (*
-val act_by_def = |- !f g a b. (a ~~ b) f g ==> act_by f g a b IN G /\ (f (act_by f g a b) a = b): thm
+val act_by_def = |- !f g x y.
+          (x ~~ y) f g ==> act_by f g x y IN G /\ f (act_by f g x y) x = y: thm
 *)
 
 (* Theorem: The reachable set from a to b is the coset act_by b of (stabilizer a).
-            Group g /\ (g act A) f /\ a IN A /\ b IN orbit f g a ==>
-            (act_by f g a b) * (stabilizer f g a) = {x | x IN G /\ (f x a = b)} *)
+            Group g /\ (g act X) f /\ x IN X /\ y IN orbit f g x ==>
+            (act_by f g x y) * (stabilizer f g x) = {a | a IN G /\ f a x = y} *)
 (* Proof:
    By orbit_element, coset_def, this is to show:
-   (1) z IN stabilizer f g a ==> act_by f g a b * z IN G
-       Note act_by f g a b IN G          by act_by_def
+   (1) z IN stabilizer f g x ==> act_by f g x y * z IN G
+       Note act_by f g x y IN G          by act_by_def
         and z IN G                       by stabilizer_element
-         so act_by f g a b * z IN G      by group_op_element
-   (2) z IN stabilizer f g a ==> f (act_by f g a b * z) a = b
-       Note act_by f g a b IN G          by act_by_def
+         so act_by f g x y * z IN G      by group_op_element
+   (2) z IN stabilizer f g x ==> f (act_by f g x y * z) x = y
+       Note act_by f g x y IN G          by act_by_def
         and z IN G                       by stabilizer_element
-         f (act_by f g a b * z) a
-       = f (act_by f g a b) (f z a)      by action_compose
-       = f (act_by f g a b) a            by stabilizer_element
-       = b                               by act_by_def
-   (3) (a ~~ f x a) f g /\ x IN G ==> ?z. (x = act_by f g a (f x a) * z) /\ z IN stabilizer f g a
-       Let y = act_by f g a (f x a)
-       Then y IN G /\ (f y a = f x a)       by act_by_def
-        and |/ y * x IN (stabilizer f g a)  by action_match_condition
-        Let z = |/ y * x
-           y * z
-         = y * ( |/ y * x)        by notation
-         = (y * |/ y) * x         by group_assoc
-         = #e * x                 by group_rinv
-         = x                      by group_lid
+         f (act_by f g x y * z) x
+       = f (act_by f g x y) (f z x)      by action_compose
+       = f (act_by f g x y) x            by stabilizer_element
+       = y                               by act_by_def
+   (3) (x ~~ f a x) f g /\ a IN G ==> ?z. a = act_by f g x (f a x) * z /\ z IN stabilizer f g x
+       Let b = act_by f g x (f a x)
+       Then b IN G /\ (f b x = f a x)       by act_by_def
+        and |/ b * a IN (stabilizer f g x)  by action_match_condition
+        Let z = |/ b * a, to show: a = b * z.
+           b * z
+         = b * ( |/ b * a)        by notation
+         = (b * |/ b) * a         by group_assoc
+         = #e * a                 by group_rinv
+         = a                      by group_lid
 *)
 Theorem action_reachable_coset:
-  !f g A a b. Group g /\ (g act A) f /\ a IN A /\ b IN orbit f g a ==>
-             (act_by f g a b) * (stabilizer f g a) = {x | x IN G /\ (f x a = b)}
+  !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN orbit f g x ==>
+              (act_by f g x y) * (stabilizer f g x) = {a | a IN G /\ f a x = y}
 Proof
   rw[orbit_element, coset_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[act_by_def, stabilizer_element, group_op_element] >-
   metis_tac[act_by_def, action_compose, stabilizer_element] >>
-  qabbrev_tac `y = act_by f g a (f x a)` >>
-  `y IN G /\ (f y a = f x a)` by rw[act_by_def, Abbr`y`] >>
-  `|/ y * x IN (stabilizer f g a)` by metis_tac[action_match_condition] >>
-  qexists_tac `|/ y * x` >>
-  `y * ( |/ y * x) = (y * |/ y) * x` by rw[group_assoc] >>
-  `_ = x` by rw[] >>
+  qabbrev_tac `b = act_by f g x (f x' x)` >>
+  `b IN G /\ (f b x = f x' x)` by rw[act_by_def, Abbr`b`] >>
+  `|/ b * x' IN (stabilizer f g x)` by metis_tac[action_match_condition] >>
+  qexists_tac `|/ b * x'` >>
+  `b * ( |/ b * x') = (b * |/ b) * x'` by rw[group_assoc] >>
+  `_ = x'` by rw[] >>
   rw[]
 QED
 
 (* Another formulation of the same result. *)
 
-(* Theorem: The reachable set from a to b is the coset act_by b of (stabilizer a).
-            Group g /\ (g act A) f /\ a IN A /\ b IN orbit f g a ==>
-            !x. x IN G /\ (f x a = b) ==>
-                x * (stabilizer f g a) = {y | y IN G /\ (f y a = b)} *)
+(* Theorem: The reachable set from x to y is the coset act_by y of (stabilizer x).
+            Group g /\ (g act X) f /\ x IN X /\ y IN orbit f g x ==>
+            !a. a IN G /\ f a x = y ==>
+                a * (stabilizer f g x) = {b | b IN G /\ f b x = y} *)
 (* Proof:
    By orbit_element, coset_def, this is to show:
-   (1) z IN stabilizer f g a ==> x * z IN G
+   (1) z IN stabilizer f g x ==> a * z IN G
        Note z IN G            by stabilizer_element
-         so x * z IN G        by group_op_element
-   (2) z IN stabilizer f g a ==> f (x * z) a = f x a
-       Note f z a = a         by stabilizer_element
-         f (x * z) a
-       = f x (f z a)          by action_compose
-       = f x a                by above
-   (3) x' IN G /\ f x a = f x' a ==> ?z. (x' = x * z) /\ z IN stabilizer f g a
-       Let z = |/ x * x'.
-         x * z
-       = x * ( |/ x * x')     by notation
-       = (x * |/ x) * x'      by group_assoc
-       = #e * x'              by group_rinv
-       = x'                   by group_lid
-       Hence z IN stabilizer f g a,
-                              by action_match_condition, f x a = f x' a
+         so a * z IN G        by group_op_element
+   (2) z IN stabilizer f g x ==> f (a * z) x = f a x
+       Note f z x = x         by stabilizer_element
+         f (a * z) x
+       = f a (f z x)          by action_compose
+       = f a x                by above
+   (3) b IN G /\ f a x = f b a ==> ?z. b = a * z /\ z IN stabilizer f g x
+       Let z = |/ a * b.
+         a * z
+       = a * ( |/ a * b)      by notation
+       = (a * |/ a) * b       by group_assoc
+       = #e * b               by group_rinv
+       = b                    by group_lid
+       Hence z IN stabilizer f g x,
+                              by action_match_condition, f a x = f b x
 *)
 Theorem action_reachable_coset_alt:
-  !f g A a b. Group g /\ (g act A) f /\ a IN A /\ b IN orbit f g a ==>
-              !x. x IN G /\ (f x a = b) ==>
-                  x * (stabilizer f g a) = {y | y IN G /\ (f y a = b)}
+  !f g X x y. Group g /\ (g act X) f /\ x IN X /\ y IN orbit f g x ==>
+              !a. a IN G /\ f a x = y ==>
+                  a * (stabilizer f g x) = {b | b IN G /\ f b x = y}
 Proof
   rw[orbit_element, coset_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[stabilizer_element, group_op_element] >-
   metis_tac[stabilizer_element, action_compose] >>
-  qexists_tac `|/ x * x'` >>
+  qexists_tac `|/ a * x'` >>
   rpt strip_tac >-
   rw[GSYM group_assoc] >>
   metis_tac[action_match_condition]
 QED
 
 (* Theorem: Elements of (orbit a) and cosets of (stabilizer a) are one-to-one.
-            Group g /\ (g act A) f /\ a IN A ==>
-            BIJ (\b.  (act_by f g a b) * (stabilizer f g a))
-                (orbit f g a)
-                {x * (stabilizer f g a) | x IN G} *)
+            Group g /\ (g act X) f /\ x IN X ==>
+            BIJ (\y. (act_by f g x y) * (stabilizer f g x))
+                (orbit f g x)
+                {a * (stabilizer f g x) | a IN G} *)
 (* Proof:
    By BIJ_DEF, INJ_DEF, SURJ_DEF, this is to show:
-   (1) b IN orbit f g a ==> ?x. (act_by f g a b * stabilizer f g a = x * stabilizer f g a) /\ x IN G
-       Let x = act_by f g a b.
-       Note (a ~~ b) f g         by orbit_element, b IN orbit f g a
-       Thus x IN G               by act_by_def, x = act_by f g a b
-   (2) b IN orbit f g a /\ b' IN orbit f g a /\
-       act_by f g a b * stabilizer f g a = act_by f g a b' * stabilizer f g a ==> b = b'
-       Note (a ~~ b) f g /\ (a ~~ b') f g                 by orbit_element
-        and act_by f g a b IN G /\ act_by f g a b' IN G   by act_by_def
-       Thus b
-          = f (act_by f g a b) a        by act_by_def
-          = f (act_by f g a b') a       by orbit_stabilizer_map_inj
-          = b'                          by act_by_def
+   (1) y IN orbit f g x ==> ?a. (act_by f g x y * stabilizer f g x = a * stabilizer f g x) /\ a IN G
+       Take a = act_by f g x y.
+       Note (x ~~ y) f g         by orbit_element, y IN orbit f g x
+       Thus a IN G               by act_by_def
+   (2) y IN orbit f g x /\ z IN orbit f g x /\
+       act_by f g x y * stabilizer f g x = act_by f g x z * stabilizer f g x ==> y = z
+       Note (x ~~ y) f g /\ (x ~~ z) f g                 by orbit_element
+        and act_by f g x y IN G /\ act_by f g x z IN G   by act_by_def
+       Thus y
+          = f (act_by f g x y) x        by act_by_def
+          = f (act_by f g x z) x        by orbit_stabilizer_map_inj
+          = z                           by act_by_def
    (3) same as (1)
-   (4) x' IN G ==> ?b. b IN orbit f g a /\ (act_by f g a b * stabilizer f g a = x' * stabilizer f g a)
-       Let b = f x' a.
-       Then (a ~~ b) f g                by reach_def
-        and b IN A                      by action_closure
-         so b IN orbit f g a            by orbit_element
-       Let x = act_by f g a b.
-       Then f x a = b = f x' a          by act_by_def
-        ==> x * stabilizer f g a = x' * stabilizer f g a
+   (4) a IN G ==> ?y. y IN orbit f g x /\ (act_by f g x y * stabilizer f g x = a * stabilizer f g x)
+       Take y = f a x.
+       Then (x ~~ y) f g                by reach_def
+        and y IN X                      by action_closure
+         so y IN orbit f g x            by orbit_element
+       Let b = act_by f g x y.
+       Then f a x = y = f b x           by act_by_def
+        ==> a * stabilizer f g x = b * stabilizer f g x
                                         by orbit_stabilizer_map_good
 *)
 Theorem orbit_stabilizer_cosets_bij:
-  !f g A a. Group g /\ (g act A) f /\ a IN A ==>
-            BIJ (\b. (act_by f g a b) * (stabilizer f g a))
-                (orbit f g a)
-                {x * (stabilizer f g a) | x IN G}
+  !f g X x. Group g /\ (g act X) f /\ x IN X ==>
+            BIJ (\y. (act_by f g x y) * (stabilizer f g x))
+                (orbit f g x)
+                {a * (stabilizer f g x) | a IN G}
 Proof
   rw[BIJ_DEF, INJ_DEF, SURJ_DEF, EQ_IMP_THM] >-
   metis_tac[orbit_element, act_by_def] >-
   metis_tac[orbit_stabilizer_map_inj, orbit_element, act_by_def] >-
   metis_tac[orbit_element, act_by_def] >>
-  qexists_tac `f x' a` >>
+  qexists_tac `f a x` >>
   rpt strip_tac >-
   metis_tac[orbit_element, reach_def, action_closure] >>
-  `(a ~~ (f x' a)) f g` by metis_tac[reach_def] >>
+  `(x ~~ (f a x)) f g` by metis_tac[reach_def] >>
   metis_tac[orbit_stabilizer_map_good, act_by_def]
 QED
 
 (* The above version is not using CosetPartition. *)
 
 (* Theorem: Elements of (orbit x) and cosets of (stabilizer x) are one-to-one.
-            Group g /\ (g act A) f /\ a IN A ==>
-            BIJ (\b. (act_by f g a b) * (stabilizer f g a))
-                (orbit f g a)
-                (CosetPartition g (StabilizerGroup f g a) *)
+            Group g /\ (g act X) f /\ x IN X ==>
+            BIJ (\y. (act_by f g x y) * (stabilizer f g x))
+                (orbit f g x)
+                (CosetPartition g (StabilizerGroup f g x) *)
 (* Proof:
    By CosetPartition_def, partition_def, inCoset_def,
       StabilizerGroup_def, BIJ_DEF, INJ_DEF, SURJ_DEF, this is to show:
-   (1) b IN orbit f g a ==>
-          ?x. x IN G /\ (act_by f g a b * stabilizer f g a = {y | y IN G /\ y IN x * stabilizer f g a})
-       Let z = act_by f g a b, and put x = z.
-       Note (a ~~ b) f g        by orbit_element
-        and z IN G              by act_by_def,
-       By coset_def, IMAGE_DEF, EXTENSION, this is to show:
-          z IN G /\ z' IN stabilizer f g a ==> z * z' IN G
-       Now z' IN G              by stabilizer_element
-       Thus z * z' IN G         by group_op_element
-   (2) b IN orbit f g a /\ b' IN orbit f g a /\
-         act_by f g a b * stabilizer f g a = act_by f g a b' * stabilizer f g a ==> b = b'
-       Note (a ~~ b) f g /\ (a ~~ b') f g                  by orbit_element
-        and act_by f g a b IN G /\ act_by f g a b' IN G    by act_by_def
-        ==> f (act_by f g a b) a = f (act_by f g a b') a   by orbit_stabilizer_map_inj
-         so b = b'                                         by act_by_def
+   (1) y IN orbit f g x ==>
+          ?a. a IN G /\ (act_by f g x y * stabilizer f g x = {b | b IN G /\ b IN a * stabilizer f g x})
+       Let c = act_by f g x y, and put a = c.
+       Note (x ~~ y) f g        by orbit_element
+        and c IN G              by act_by_def,
+       By coset_def, EXTENSION, this is to show:
+          (?z. a = c * z /\ z IN stabilizer f g x) <=>
+          a IN G /\ ?z. a = c * z /\ z IN stabilizer f g x
+       Need to show: c * z IN G.
+       Now z IN G               by stabilizer_element
+       Thus c * z IN G          by group_op_element
+   (2) y IN orbit f g x /\ z IN orbit f g x /\
+         act_by f g x y * stabilizer f g x = act_by f g x z * stabilizer f g x ==> y = z
+       Note (x ~~ y) f g /\ (x ~~ z) f g                  by orbit_element
+        and act_by f g x y IN G /\ act_by f g x z IN G    by act_by_def
+        ==> f (act_by f g x y) x = f (act_by f g x z) x   by orbit_stabilizer_map_inj
+         so y = z                                         by act_by_def
    (3) same as (1)
-   (4) x' IN G /\ x = {y | y IN G /\ y IN x' * stabilizer f g a} ==>
-         ?b. b IN orbit f g a /\ (act_by f g a b * stabilizer f g a = x)
-       Let b = f x' a.
-       Note (a ~~ b) f g        by reach_def
-        and act_by f g a b IN G /\ (f (act_by f g a b) a = f x' a)  by act_by_def
-        ==> act_by f g a b * (stabilizer f g a)
-          = x' * (stabilizer f g a)   by orbit_stabilizer_map_good
+   (4) a IN G /\ s = {y | y IN G /\ y IN a * stabilizer f g x} ==>
+         ?y. y IN orbit f g x /\ (act_by f g x y * stabilizer f g x = s)
+       Let y = f a x.
+       Note (x ~~ y) f g             by reach_def
+        and act_by f g x y IN G /\ (f (act_by f g x y) x = f a x)  by act_by_def
+        ==> act_by f g x y * (stabilizer f g x)
+          = a * (stabilizer f g x)   by orbit_stabilizer_map_good
       By EXTENSION, this is to show:
-         !x''. x'' IN x' * stabilizer f g a ==> x'' IN G
-      Note x'' IN IMAGE (\z. x'' * z) (stabilizer f g a)  by coset_def
-      Thus ?z. z IN (stabilizer f g a) /\ (x'' = x' * z)  by IN_IMAGE
-       Now z IN G                                         by stabilizer_element
-      Thus x'' = x' * z IN G                              by group_op_element
+         !b. b IN a * stabilizer f g x ==> b IN G
+      Note b IN IMAGE (\z. a * z) (stabilizer f g x)     by coset_def
+      Thus ?z. z IN (stabilizer f g x) /\ (b = a * z)    by IN_IMAGE
+       Now z IN G                                        by stabilizer_element
+      Thus b = a * z IN G                                by group_op_element
 *)
 Theorem orbit_stabilizer_cosets_bij_alt:
-  !f g A a.
-     Group g /\ (g act A) f /\ a IN A ==>
-     BIJ (\b. (act_by f g a b) * (stabilizer f g a))
-         (orbit f g a)
-         (CosetPartition g (StabilizerGroup f g a))
+  !f g X x.
+     Group g /\ (g act X) f /\ x IN X ==>
+     BIJ (\y. (act_by f g x y) * (stabilizer f g x))
+         (orbit f g x)
+         (CosetPartition g (StabilizerGroup f g x))
 Proof
   simp_tac (srw_ss()) [CosetPartition_def, partition_def, inCoset_def,
                        StabilizerGroup_def, BIJ_DEF, INJ_DEF, SURJ_DEF] >>
   rpt strip_tac >| [
-    qabbrev_tac `z = act_by f g a b` >>
+    qabbrev_tac `z = act_by f g x y` >>
     qexists_tac `z` >>
-    `(a ~~ b) f g` by metis_tac[orbit_element] >>
+    `(x ~~ y) f g` by metis_tac[orbit_element] >>
     `z IN G` by rw[act_by_def, Abbr`z`] >>
     asm_simp_tac (srw_ss()) [EXTENSION, EQ_IMP_THM] >>
     rw[coset_def, IMAGE_DEF, EXTENSION] >>
     metis_tac[stabilizer_element, group_op_element],
     metis_tac[orbit_element, orbit_stabilizer_map_inj, act_by_def],
-    qabbrev_tac `z = act_by f g a b` >>
+    qabbrev_tac `z = act_by f g x y` >>
     qexists_tac `z` >>
-    `(a ~~ b) f g` by metis_tac[orbit_element] >>
+    `(x ~~ y) f g` by metis_tac[orbit_element] >>
     `z IN G` by rw[act_by_def, Abbr`z`] >>
     rw[coset_def, IMAGE_DEF, EXTENSION] >>
     metis_tac[stabilizer_element, group_op_element],
-    rename [‘X ∈ G’, ‘_ ∈ X * stabilizer f g a’] >>
-    qexists_tac `f X a` >>
+    rename [‘x'' ∈ G’, ‘_ ∈ a * stabilizer f g x’] >>
+    qexists_tac `f a x` >>
     rpt strip_tac >- metis_tac[orbit_element, action_closure, reach_def] >>
-    qabbrev_tac `b = f X a` >>
-    `(a ~~ b) f g` by metis_tac[reach_def] >>
-    `act_by f g a b IN G /\ (f (act_by f g a b) a = f X a)` by rw[act_by_def] >>
-    `act_by f g a b * (stabilizer f g a) = X * (stabilizer f g a)`
+    qabbrev_tac `y = f a x` >>
+    `(x ~~ y) f g` by metis_tac[reach_def] >>
+    `act_by f g x y IN G /\ (f (act_by f g x y) x = f a x)` by rw[act_by_def] >>
+    `act_by f g x y * (stabilizer f g x) = a * (stabilizer f g x)`
       by metis_tac[orbit_stabilizer_map_good] >>
     asm_simp_tac (srw_ss()) [EXTENSION, EQ_IMP_THM] >>
     metis_tac[coset_def, IN_IMAGE, stabilizer_element, group_op_element]
@@ -1430,49 +1456,49 @@ Proof
 QED
 
 (* Theorem: [Orbit-Stabilizer Theorem]
-            FiniteGroup g /\ (g act A) f /\ a IN A /\ FINITE A ==>
-            CARD G = CARD (orbit f g a) * CARD (stabilizer f g a) *)
+            FiniteGroup g /\ (g act X) f /\ x IN X /\ FINITE X ==>
+            CARD G = CARD (orbit f g x) * CARD (stabilizer f g x) *)
 (* Proof:
-   Let h = StabilizerGroup f g a
+   Let h = StabilizerGroup f g x
    Then h <= g                          by stabilizer_group_subgroup
-    and H = stabilizer f g a            by stabilizer_group_property
+    and H = stabilizer f g x            by stabilizer_group_property
    Note CosetPartition g h = partition (inCoset g h) G  by CosetPartition_def
      so FINITE (CosetPartition g h)     by FINITE_partition
-   Note FINITE_partition = IMAGE (\x. f x a) G  by orbit_def
-     so FINITE (orbit f g a)            by IMAGE_FINITE
+   Note FINITE_partition = IMAGE (\a. f a x) G  by orbit_def
+     so FINITE (orbit f g x)            by IMAGE_FINITE
 
      CARD G
    = CARD H * CARD (CosetPartition g h)            by Lagrange_identity, h <= g
-   = CARD (stabilizer f g a) * CARD (orbit f g a)  by orbit_stabilizer_cosets_bij_alt, FINITE_BIJ_CARD_EQ
-   = CARD (orbit f g a) * CARD (stabilizer f g a)  by MULT_COMM
+   = CARD (stabilizer f g x) * CARD (orbit f g x)  by orbit_stabilizer_cosets_bij_alt, FINITE_BIJ_CARD_EQ
+   = CARD (orbit f g x) * CARD (stabilizer f g x)  by MULT_COMM
 *)
 Theorem orbit_stabilizer_thm:
-  !f (g:'a group) A a. FiniteGroup g /\ (g act A) f /\ a IN A /\ FINITE A ==>
-                       CARD G = CARD (orbit f g a) * CARD (stabilizer f g a)
+  !f (g:'a group) X x. FiniteGroup g /\ (g act X) f /\ x IN X /\ FINITE X ==>
+                       CARD G = CARD (orbit f g x) * CARD (stabilizer f g x)
 Proof
   rpt (stripDup[FiniteGroup_def]) >>
-  `StabilizerGroup f g a <= g` by metis_tac[stabilizer_group_subgroup] >>
-  `(StabilizerGroup f g a).carrier = stabilizer f g a` by rw[stabilizer_group_property] >>
-  `FINITE (CosetPartition g (StabilizerGroup f g a))` by metis_tac[CosetPartition_def, FINITE_partition] >>
-  `FINITE (orbit f g a)` by rw[orbit_def] >>
-  `CARD G = CARD (stabilizer f g a) * CARD (CosetPartition g (StabilizerGroup f g a))` by metis_tac[Lagrange_identity] >>
-  `_ = CARD (stabilizer f g a) * CARD (orbit f g a)` by metis_tac[orbit_stabilizer_cosets_bij_alt, FINITE_BIJ_CARD_EQ] >>
+  `StabilizerGroup f g x <= g` by metis_tac[stabilizer_group_subgroup] >>
+  `(StabilizerGroup f g x).carrier = stabilizer f g x` by rw[stabilizer_group_property] >>
+  `FINITE (CosetPartition g (StabilizerGroup f g x))` by metis_tac[CosetPartition_def, FINITE_partition] >>
+  `FINITE (orbit f g x)` by rw[orbit_def] >>
+  `CARD G = CARD (stabilizer f g x) * CARD (CosetPartition g (StabilizerGroup f g x))` by metis_tac[Lagrange_identity] >>
+  `_ = CARD (stabilizer f g x) * CARD (orbit f g x)` by metis_tac[orbit_stabilizer_cosets_bij_alt, FINITE_BIJ_CARD_EQ] >>
   rw[]
 QED
 
 (* This is a major milestone! *)
 
-(* Theorem: FiniteGroup g /\ (g act A) f /\ a IN A /\ FINITE A ==>
-            CARD (orbit f g a) divides CARD G *)
+(* Theorem: FiniteGroup g /\ (g act X) f /\ x IN X /\ FINITE X ==>
+            CARD (orbit f g x) divides CARD G *)
 (* Proof:
-   Let b = orbit f g a,
-       c = stabilizer f g a.
+   Let b = orbit f g x,
+       c = stabilizer f g x.
    Note CARD G = CARD b * CARD c         by orbit_stabilizer_thm
    Thus (CARD b) divides (CARD G)        by divides_def
 *)
 Theorem orbit_card_divides_target_card:
-  !f (g:'a group) A a. FiniteGroup g /\ (g act A) f /\ a IN A /\ FINITE A ==>
-                       CARD (orbit f g a) divides CARD G
+  !f (g:'a group) X x. FiniteGroup g /\ (g act X) f /\ x IN X /\ FINITE X ==>
+                       CARD (orbit f g x) divides CARD G
 Proof
   prove_tac[orbit_stabilizer_thm, divides_def, MULT_COMM]
 QED
@@ -1486,7 +1512,7 @@ Fixed Points have singleton orbits -- although it is not defined in this way,
 this property is the theorem fixed_points_orbit_sing.
 
 This important property of fixed points gives this simple trick:
-to count how many singleton orbits, just count the set (fixed_points f g A).
+to count how many singleton orbits, just count the set (fixed_points f g X).
 
 Since orbits are equivalent classes, they cannot be empty, hence singleton
 orbits are the simplest type. For equivalent classes:
@@ -1498,69 +1524,69 @@ CARD Target = SUM CARD (orbits)
 
 (* Fixed points of action: those points fixed by all group elements. *)
 val fixed_points_def = zDefine`
-   fixed_points f (g:'a group) (A:'b -> bool) =
-      {a | a IN A /\ !x. x IN G ==> f x a = a }
+   fixed_points f (g:'a group) (X:'b -> bool) =
+      {x | x IN X /\ !a. a IN G ==> f a x = x }
 `;
 (* Note: use zDefine as this is not effective for computation. *)
 (*
 > fixed_points_def |> ISPEC ``$o``;
-|- !g' A. fixed_points $o g' A = {a | a IN A /\ !x. x IN g'.carrier ==> x o a = a}: thm
+|- !g' X. fixed_points $o g' X = {x | x IN X /\ !a. a IN G'.carrier ==> a o x = x}: thm
 *)
 
 (* Theorem: Fixed point elements:
-            a IN (fixed_points f g A) <=> a IN A /\ !x. x IN G ==> f x a = a *)
+            x IN (fixed_points f g X) <=> x IN X /\ !a. a IN G ==> f a x = x *)
 (* Proof: by fixed_points_def. *)
 Theorem fixed_points_element:
-  !f g A a. a IN (fixed_points f g A) <=> a IN A /\ !x. x IN G ==> f x a = a
+  !f g X x. x IN (fixed_points f g X) <=> x IN X /\ !a. a IN G ==> f a x = x
 Proof
   simp[fixed_points_def]
 QED
 
 (* Theorem: Fixed points are subsets of target set.
-            (fixed_points f g A) SUBSET A *)
+            (fixed_points f g X) SUBSET X *)
 (* Proof: by fixed_points_def, SUBSET_DEF. *)
 Theorem fixed_points_subset:
-  !f g A. (fixed_points f g A) SUBSET A
+  !f g X. (fixed_points f g X) SUBSET X
 Proof
   simp[fixed_points_def, SUBSET_DEF]
 QED
 
 (* Theorem: Fixed points are finite.
-            FINITE A ==> FINITE (fixed_points f g A) *)
+            FINITE X ==> FINITE (fixed_points f g X) *)
 (* Proof: by fixed_points_subset, SUBSET_FINITE. *)
 Theorem fixed_points_finite:
-  !f g A. FINITE A ==> FINITE (fixed_points f g A)
+  !f g X. FINITE X ==> FINITE (fixed_points f g X)
 Proof
   metis_tac[fixed_points_subset, SUBSET_FINITE]
 QED
 
-(* Theorem: a IN fixed_points f g A ==> a IN A *)
+(* Theorem: x IN fixed_points f g X ==> x IN X *)
 (* Proof: by fixed_points_def *)
 Theorem fixed_points_element_element:
-  !f g A a. a IN fixed_points f g A ==> a IN A
+  !f g X x. x IN fixed_points f g X ==> x IN X
 Proof
   simp[fixed_points_def]
 QED
 
 (* Fixed Points have singleton orbits, or those with stabilizer = whole group. *)
 
-(* Theorem: Group g /\ (g act A) f ==>
-           !a. a IN fixed_points f g A <=> (a IN A /\ orbit f g a = {a}) *)
+(* Theorem: Group g /\ (g act X) f ==>
+            !x. x IN fixed_points f g X <=> x IN X /\ orbit f g x = {x} *)
 (* Proof:
    By fixed_points_def, orbit_def, EXTENSION, this is to show:
-   (1) x' IN G /\ (!x. x IN G ==> (f x a = a)) ==> f x' a = a
+   (1) a IN G /\ (!a. a IN G ==> f a x = x) ==> f a x = x
        This is true                by the included implication
-   (2) (!x. x IN G ==> (f x a = a)) ==> ?x. x IN G /\ (f x a = a)
-       Take x = #e,
-       Then x IN G                 by group_id_element
-        and f x a = a              by implication
-   (3) (g act A) f /\ x IN G ==> f x a = a
+   (2) (!a. a IN G ==> f a x = x) ==> ?a. a IN G /\ x = f a x
+       Take a = #e,
+       Then a IN G                 by group_id_element
+        and f a x = x              by implication
+   (3) (g act X) f /\ a IN G ==> f a x = x
        This is true                by action_closure
 *)
 Theorem fixed_points_orbit_sing:
-  !f g A. Group g /\ (g act A) f ==>
-          !a. a IN fixed_points f g A <=>
-             (a IN A /\ orbit f g a = {a})
+  !f g X. Group g /\ (g act X) f ==>
+          !x. x IN fixed_points f g X <=>
+             x IN X /\ orbit f g x = {x}
 Proof
   rw[fixed_points_def, orbit_def, EXTENSION, EQ_IMP_THM] >-
   rw_tac std_ss[] >-
@@ -1568,70 +1594,70 @@ Proof
   metis_tac[action_closure]
 QED
 
-(* Theorem: For action f g A, a IN A, (orbit f g a = {a}) ==> a IN fixed_points f g A *)
+(* Theorem: For action f g X, x IN X, (orbit f g x = {x}) ==> x IN fixed_points f g X *)
 (* Proof:
    By fixed_points_def, orbit_def, EXTENSION, this is to prove:
-   (g act A) f /\ a IN A /\ x IN G /\
-     !x. x IN A /\ (?x'. x' IN G /\ (f x' a = x)) <=> (x = a) ==> f x a = a
+   (g act X) f /\ x IN X /\ a IN G /\
+     !x. x IN X /\ (?b. b IN G /\ (f b x = x) <=> a = b) ==> f a x = x
    This is true by action_closure.
 *)
 Theorem orbit_sing_fixed_points:
-  !f g A. (g act A) f ==>
-          !a. a IN A /\ orbit f g a = {a} ==> a IN fixed_points f g A
+  !f g X. (g act X) f ==>
+          !x. x IN X /\ orbit f g x = {x} ==> x IN fixed_points f g X
 Proof
   rw[fixed_points_def, orbit_def, EXTENSION] >>
   metis_tac[action_closure]
 QED
 (* This is weaker than the previous theorem. *)
 
-(* Theorem: Group g /\ (g act A) f ==>
-           !a. a IN fixed_points f g A <=> SING (orbit f g a)) *)
+(* Theorem: Group g /\ (g act X) f ==>
+           !x. x IN fixed_points f g X <=> SING (orbit f g x)) *)
 (* Proof:
    By SING_DEF, this is to show:
-   If part: a IN fixed_points f g A ==>?x. (orbit f g a) = {x}
-      Take x = a, then true              by fixed_points_orbit_sing
-   Only-if part: (orbit f g a) = {x} ==> a IN fixed_points f g A
-      Note a IN (orbit f g a)            by orbit_has_self
+   If part: x IN fixed_points f g X ==> ?z. (orbit f g x) = {a}
+      Take z = x, then true              by fixed_points_orbit_sing
+   Only-if part: (orbit f g x) = {x} ==> x IN fixed_points f g X
+      Note a IN (orbit f g x)            by orbit_has_self
       Thus x = a                         by IN_SING
-        so a IN fixed_points f g A       by fixed_points_orbit_sing
+        so x IN fixed_points f g X       by fixed_points_orbit_sing
 *)
 Theorem fixed_points_orbit_iff_sing:
-  !f g A. Group g /\ (g act A) f ==>
-          !a. a IN A ==> (a IN fixed_points f g A <=> SING (orbit f g a))
+  !f g X. Group g /\ (g act X) f ==>
+          !x. x IN X ==> (x IN fixed_points f g X <=> SING (orbit f g x))
 Proof
   metis_tac[fixed_points_orbit_sing, orbit_has_self, SING_DEF, IN_SING]
 QED
 
-(* Theorem: Group g /\ (g act A) f ==>
-            !a. a IN (A DIFF fixed_points f g A) <=>
-                a IN A /\ ~ SING (orbit f g a))  *)
+(* Theorem: Group g /\ (g act X) f ==>
+            !x. x IN (X DIFF fixed_points f g X) <=>
+                x IN X /\ ~ SING (orbit f g x))  *)
 (* Proof:
-       a IN (A DIFF fixed_points f g A)
-   <=> a IN A /\ a NOTIN (fixed_points f g A)  by IN_DIFF
-   <=> a IN A /\ ~ SING (orbit f g a))         by fixed_points_orbit_iff_sing
+       x IN (X DIFF fixed_points f g X)
+   <=> x IN X /\ x NOTIN (fixed_points f g X)  by IN_DIFF
+   <=> x IN X /\ ~ SING (orbit f g x))         by fixed_points_orbit_iff_sing
 *)
 Theorem non_fixed_points_orbit_not_sing:
-  !f g A. Group g /\ (g act A) f ==>
-          !a. a IN (A DIFF fixed_points f g A) <=>
-              a IN A /\ ~ SING (orbit f g a)
+  !f g X. Group g /\ (g act X) f ==>
+          !x. x IN (X DIFF fixed_points f g X) <=>
+              x IN X /\ ~ SING (orbit f g x)
 Proof
   metis_tac[IN_DIFF, fixed_points_orbit_iff_sing]
 QED
 
-(* Theorem: FINITE A ==> CARD (A DIFF fixed_points f g A) =
-                         CARD A - CARD (fixed_points f g A) *)
+(* Theorem: FINITE X ==> CARD (X DIFF fixed_points f g X) =
+                         CARD X - CARD (fixed_points f g X) *)
 (* Proof:
-   Let fp = fixed_points f g A.
-   Note fp SUBSET A                by fixed_points_subset
-   Thus A INTER fp = fp            by SUBSET_INTER_ABSORPTION
-     CARD (A DIFF bp)
-   = CARD A - CARD (A INTER fp)    by CARD_DIFF
-   = CARD A - CARD fp              by SUBSET_INTER_ABSORPTION
+   Let fp = fixed_points f g X.
+   Note fp SUBSET X                by fixed_points_subset
+   Thus X INTER fp = fp            by SUBSET_INTER_ABSORPTION
+     CARD (X DIFF bp)
+   = CARD X - CARD (X INTER fp)    by CARD_DIFF
+   = CARD X - CARD fp              by SUBSET_INTER_ABSORPTION
 *)
 Theorem non_fixed_points_card:
-  !f g A. FINITE A ==>
-          CARD (A DIFF fixed_points f g A) =
-          CARD A - CARD (fixed_points f g A)
+  !f g X. FINITE X ==>
+          CARD (X DIFF fixed_points f g X) =
+          CARD X - CARD (fixed_points f g X)
 Proof
   metis_tac[CARD_DIFF, fixed_points_subset,
             SUBSET_INTER_ABSORPTION, SUBSET_FINITE, INTER_COMM]
@@ -1643,304 +1669,304 @@ QED
 
 (* Define singleton and non-singleton orbits *)
 val sing_orbits_def = zDefine`
-    sing_orbits f (g:'a group) (A:'b -> bool) = { e | e IN (orbits f g A) /\ SING e }
+    sing_orbits f (g:'a group) (X:'b -> bool) = { e | e IN (orbits f g X) /\ SING e }
 `;
 val multi_orbits_def = zDefine`
-    multi_orbits f (g:'a group) (A:'b -> bool) = { e | e IN (orbits f g A) /\ ~ SING e }
+    multi_orbits f (g:'a group) (X:'b -> bool) = { e | e IN (orbits f g X) /\ ~ SING e }
 `;
 (* Note: use zDefine as this is not effective for computation. *)
 
-(* Theorem: e IN sing_orbits f g A <=> e IN (orbits f g A) /\ SING e *)
+(* Theorem: e IN sing_orbits f g X <=> e IN (orbits f g X) /\ SING e *)
 (* Proof: by sing_orbits_def *)
 Theorem sing_orbits_element:
-  !f g A e. e IN sing_orbits f g A <=> e IN (orbits f g A) /\ SING e
+  !f g X e. e IN sing_orbits f g X <=> e IN (orbits f g X) /\ SING e
 Proof
   simp[sing_orbits_def]
 QED
 
-(* Theorem: (sing_orbits f g A) SUBSET (orbits f g A) *)
+(* Theorem: (sing_orbits f g X) SUBSET (orbits f g X) *)
 (* Proof: by sing_orbits_element, SUBSET_DEF *)
 Theorem sing_orbits_subset:
-  !f g A. (sing_orbits f g A) SUBSET (orbits f g A)
+  !f g X. (sing_orbits f g X) SUBSET (orbits f g X)
 Proof
   simp[sing_orbits_element, SUBSET_DEF]
 QED
 
-(* Theorem: FINITE A ==> FINITE (sing_orbits f g A) *)
+(* Theorem: FINITE X ==> FINITE (sing_orbits f g X) *)
 (* Proof: by sing_orbits_subset, orbits_finite, SUBSET_FINITE *)
 Theorem sing_orbits_finite:
-  !f g A. FINITE A ==> FINITE (sing_orbits f g A)
+  !f g X. FINITE X ==> FINITE (sing_orbits f g X)
 Proof
   metis_tac[sing_orbits_subset, orbits_finite, SUBSET_FINITE]
 QED
 
-(* Theorem: For (g act A) f, elements of (sing_orbits f g A) are subsets of A.
-            (g act A) f /\ e IN (sing_orbits f g A) ==> e SUBSET A *)
+(* Theorem: For (g act X) f, elements of (sing_orbits f g X) are subsets of X.
+            (g act X) f /\ e IN (sing_orbits f g X) ==> e SUBSET X *)
 (* Proof: by sing_orbits_element, orbits_element_subset *)
 Theorem sing_orbits_element_subset:
-  !f g A e. (g act A) f /\ e IN (sing_orbits f g A) ==> e SUBSET A
+  !f g X e. (g act X) f /\ e IN (sing_orbits f g X) ==> e SUBSET X
 Proof
   metis_tac[sing_orbits_element, orbits_element_subset]
 QED
 
-(* Theorem: e IN (sing_orbits f g A) ==> FINITE e *)
+(* Theorem: e IN (sing_orbits f g X) ==> FINITE e *)
 (* Proof: by sing_orbits_element, SING_FINITE *)
 Theorem sing_orbits_element_finite:
-  !f g A e. e IN (sing_orbits f g A) ==> FINITE e
+  !f g X e. e IN (sing_orbits f g X) ==> FINITE e
 Proof
   simp[sing_orbits_element, SING_FINITE]
 QED
 
-(* Theorem: e IN (sing_orbits f g A) ==> CARD e = 1 *)
+(* Theorem: e IN (sing_orbits f g X) ==> CARD e = 1 *)
 (* Proof: by sing_orbits_element, SING_DEF, CARD_SING *)
 Theorem sing_orbits_element_card:
-  !f g A e. e IN (sing_orbits f g A) ==> CARD e = 1
+  !f g X e. e IN (sing_orbits f g X) ==> CARD e = 1
 Proof
   metis_tac[sing_orbits_element, SING_DEF, CARD_SING]
 QED
 
-(* Theorem: Group g /\ (g act A) f ==>
-            !e. e IN (sing_orbits f g A) ==> CHOICE e IN fixed_points f g A *)
+(* Theorem: Group g /\ (g act X) f ==>
+            !e. e IN (sing_orbits f g X) ==> CHOICE e IN fixed_points f g X *)
 (* Proof:
-   Note e IN orbits f g A /\ SING e  by sing_orbits_element
-   Thus ?a. e = {a}                  by SING_DEF
-    ==> a IN e /\ (CHOICE e = a)     by IN_SING, CHOICE_SING
-     so e = orbit f g a              by orbits_element_is_orbit, a IN e
-    and a IN A                       by orbits_element_element
-    ==> a IN fixed_points f g A      by orbit_sing_fixed_points
+   Note e IN orbits f g X /\ SING e  by sing_orbits_element
+   Thus ?x. e = {x}                  by SING_DEF
+    ==> x IN e /\ (CHOICE e = x)     by IN_SING, CHOICE_SING
+     so e = orbit f g x              by orbits_element_is_orbit, x IN e
+    and x IN X                       by orbits_element_element
+    ==> x IN fixed_points f g X      by orbit_sing_fixed_points
 *)
 Theorem sing_orbits_element_choice:
-  !f g A. Group g /\ (g act A) f ==>
-          !e. e IN (sing_orbits f g A) ==> CHOICE e IN fixed_points f g A
+  !f g X. Group g /\ (g act X) f ==>
+          !e. e IN (sing_orbits f g X) ==> CHOICE e IN fixed_points f g X
 Proof
   rw[sing_orbits_element] >>
-  `?a. e = {a}` by rw[GSYM SING_DEF] >>
-  `a IN e /\ (CHOICE e = a)` by rw[] >>
-  `e = orbit f g a` by metis_tac[orbits_element_is_orbit] >>
+  `?x. e = {x}` by rw[GSYM SING_DEF] >>
+  `x IN e /\ CHOICE e = x` by rw[] >>
+  `e = orbit f g x` by metis_tac[orbits_element_is_orbit] >>
   metis_tac[orbit_sing_fixed_points, orbits_element_element]
 QED
 
-(* Theorem: e IN multi_orbits f g A <=> e IN (orbits f g A) /\ ~SING e *)
+(* Theorem: e IN multi_orbits f g X <=> e IN (orbits f g X) /\ ~SING e *)
 (* Proof: by multi_orbits_def *)
 Theorem multi_orbits_element:
-  !f g A e. e IN multi_orbits f g A <=> e IN (orbits f g A) /\ ~SING e
+  !f g X e. e IN multi_orbits f g X <=> e IN (orbits f g X) /\ ~SING e
 Proof
   simp[multi_orbits_def]
 QED
 
-(* Theorem: (multi_orbits f g A) SUBSET (orbits f g A) *)
+(* Theorem: (multi_orbits f g X) SUBSET (orbits f g X) *)
 (* Proof: by multi_orbits_element, SUBSET_DEF *)
 Theorem multi_orbits_subset:
-  !f g A. (multi_orbits f g A) SUBSET (orbits f g A)
+  !f g X. (multi_orbits f g X) SUBSET (orbits f g X)
 Proof
   simp[multi_orbits_element, SUBSET_DEF]
 QED
 
-(* Theorem: FINITE A ==> FINITE (multi_orbits f g A) *)
+(* Theorem: FINITE X ==> FINITE (multi_orbits f g X) *)
 (* Proof: by multi_orbits_subset, orbits_finite, SUBSET_FINITE *)
 Theorem multi_orbits_finite:
-  !f g A. FINITE A ==> FINITE (multi_orbits f g A)
+  !f g X. FINITE X ==> FINITE (multi_orbits f g X)
 Proof
   metis_tac[multi_orbits_subset, orbits_finite, SUBSET_FINITE]
 QED
 
-(* Theorem: For (g act A) f, elements of (multi_orbits f g A) are subsets of A.
-            (g act A) f /\ e IN (multi_orbits f g A) ==> e SUBSET A *)
+(* Theorem: For (g act X) f, elements of (multi_orbits f g X) are subsets of X.
+            (g act X) f /\ e IN (multi_orbits f g X) ==> e SUBSET X *)
 (* Proof: by multi_orbits_element, orbits_element_subset *)
 Theorem multi_orbits_element_subset:
-  !f g A e. (g act A) f /\ e IN (multi_orbits f g A) ==> e SUBSET A
+  !f g X e. (g act X) f /\ e IN (multi_orbits f g X) ==> e SUBSET X
 Proof
   metis_tac[multi_orbits_element, orbits_element_subset]
 QED
 
-(* Theorem: (g act A) f /\ e IN (multi_orbits f g A) ==> FINITE e *)
+(* Theorem: (g act X) f /\ e IN (multi_orbits f g X) ==> FINITE e *)
 (* Proof: by multi_orbits_element, orbits_element_finite *)
 Theorem multi_orbits_element_finite:
-  !f g A e. (g act A) f /\ FINITE A /\ e IN (multi_orbits f g A) ==> FINITE e
+  !f g X e. (g act X) f /\ FINITE X /\ e IN (multi_orbits f g X) ==> FINITE e
 Proof
   metis_tac[multi_orbits_element, orbits_element_finite]
 QED
 
 (* Theorem: sing_orbits and multi_orbits are disjoint.
-            DISJOINT (sing_orbits f g A) (multi_orbits f g A) *)
+            DISJOINT (sing_orbits f g X) (multi_orbits f g X) *)
 (* Proof: by sing_orbits_def, multi_orbits_def, DISJOINT_DEF. *)
 Theorem target_orbits_disjoint:
-  !f g A. DISJOINT (sing_orbits f g A) (multi_orbits f g A)
+  !f g X. DISJOINT (sing_orbits f g X) (multi_orbits f g X)
 Proof
   rw[sing_orbits_def, multi_orbits_def, DISJOINT_DEF, EXTENSION] >>
   metis_tac[]
 QED
 
 (* Theorem: orbits = sing_orbits + multi_orbits.
-            orbits f g A = (sing_orbits f g A) UNION (multi_orbits f g A) *)
+            orbits f g X = (sing_orbits f g X) UNION (multi_orbits f g X) *)
 (* Proof: by sing_orbits_def, multi_orbits_def. *)
 Theorem target_orbits_union:
-  !f g A. orbits f g A = (sing_orbits f g A) UNION (multi_orbits f g A)
+  !f g X. orbits f g X = (sing_orbits f g X) UNION (multi_orbits f g X)
 Proof
   rw[sing_orbits_def, multi_orbits_def, EXTENSION] >>
   metis_tac[]
 QED
 
-(* Theorem: For (g act A) f, CARD A = CARD sing_orbits + SIGMA CARD multi_orbits.
-            Group g /\ (g act A) f /\ FINITE A ==>
-            (CARD A = CARD (sing_orbits f g A) + SIGMA CARD (multi_orbits f g A)) *)
+(* Theorem: For (g act X) f, CARD X = CARD sing_orbits + SIGMA CARD multi_orbits.
+            Group g /\ (g act X) f /\ FINITE X ==>
+            (CARD X = CARD (sing_orbits f g X) + SIGMA CARD (multi_orbits f g X)) *)
 (* Proof:
-   Let s = sing_orbits f g A, t = multi_orbits f g A.
+   Let s = sing_orbits f g X, t = multi_orbits f g X.
    Note FINITE s                   by sing_orbits_finite
     and FINITE t                   by multi_orbits_finite
    also s INTER t = {}             by target_orbits_disjoint, DISJOINT_DEF
 
-     CARD A
-   = SIGMA CARD (orbits f g A)     by target_card_by_partition
+     CARD X
+   = SIGMA CARD (orbits f g X)     by target_card_by_partition
    = SIGMA CARD (s UNION t)        by target_orbits_union
    = SIGMA CARD s + SIGMA CARD t   by SUM_IMAGE_UNION, SUM_IMAGE_EMPTY
    = 1 * CARD s + SIGMA CARD t     by sing_orbits_element_card, SIGMA_CARD_CONSTANT
    = CARD s + SIGMA CARD t         by MULT_LEFT_1
 *)
 Theorem target_card_by_orbit_types:
-  !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-          CARD A = CARD (sing_orbits f g A) + SIGMA CARD (multi_orbits f g A)
+  !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+          CARD X = CARD (sing_orbits f g X) + SIGMA CARD (multi_orbits f g X)
 Proof
   rpt strip_tac >>
-  qabbrev_tac `s = sing_orbits f g A` >>
-  qabbrev_tac `t = multi_orbits f g A` >>
+  qabbrev_tac `s = sing_orbits f g X` >>
+  qabbrev_tac `t = multi_orbits f g X` >>
   `FINITE s` by rw[sing_orbits_finite, Abbr`s`] >>
   `FINITE t` by rw[multi_orbits_finite, Abbr`t`] >>
   `s INTER t = {}` by rw[target_orbits_disjoint, GSYM DISJOINT_DEF, Abbr`s`, Abbr`t`] >>
-  `CARD A = SIGMA CARD (orbits f g A)` by rw_tac std_ss[target_card_by_partition] >>
+  `CARD X = SIGMA CARD (orbits f g X)` by rw_tac std_ss[target_card_by_partition] >>
   `_ = SIGMA CARD (s UNION t)` by rw_tac std_ss[target_orbits_union] >>
   `_ = SIGMA CARD s + SIGMA CARD t` by rw[SUM_IMAGE_UNION, SUM_IMAGE_EMPTY] >>
   `_ = 1 * CARD s + SIGMA CARD t` by metis_tac[sing_orbits_element_card, SIGMA_CARD_CONSTANT] >>
   rw[]
 QED
 
-(* Theorem: The map: e IN (sing_orbits f g A) --> a IN (fixed_points f g A)
-               where e = {a} is injective.
-            Group g /\ (g act A) f ==>
-            INJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A) *)
+(* Theorem: The map: e IN (sing_orbits f g X) --> x IN (fixed_points f g X)
+               where e = {x} is injective.
+            Group g /\ (g act X) f ==>
+            INJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X) *)
 (* Proof:
    By INJ_DEF, this is to show:
-   (1) e IN sing_orbits f g A ==> CHOICE e IN fixed_points f g A
+   (1) e IN sing_orbits f g X ==> CHOICE e IN fixed_points f g X
        This is true                    by sing_orbits_element_choice
-   (2) e IN sing_orbits f g A /\ e' IN sing_orbits f g A /\ CHOICE e = CHOICE e' ==> e = e'
+   (2) e IN sing_orbits f g X /\ e' IN sing_orbits f g X /\ CHOICE e = CHOICE e' ==> e = e'
        Note SING e /\ SING e'          by sing_orbits_element
        Thus this is true               by SING_DEF, CHOICE_SING.
 *)
 Theorem sing_orbits_to_fixed_points_inj:
-  !f g A. Group g /\ (g act A) f ==>
-          INJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A)
+  !f g X. Group g /\ (g act X) f ==>
+          INJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X)
 Proof
   rw[INJ_DEF] >-
   rw[sing_orbits_element_choice] >>
   metis_tac[sing_orbits_element, SING_DEF, CHOICE_SING]
 QED
 
-(* Theorem: The map: e IN (sing_orbits f g A) --> a IN (fixed_points f g A)
-               where e = {a} is surjective.
-            Group g /\ (g act A) f ==>
-            SURJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A) *)
+(* Theorem: The map: e IN (sing_orbits f g X) --> x IN (fixed_points f g X)
+               where e = {x} is surjective.
+            Group g /\ (g act X) f ==>
+            SURJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X) *)
 (* Proof:
    By SURJ_DEF, this is to show:
-   (1) e IN sing_orbits f g A ==> CHOICE e IN fixed_points f g A
+   (1) e IN sing_orbits f g X ==> CHOICE e IN fixed_points f g X
        This is true                      by sing_orbits_element_choice
-   (2) x IN fixed_points f g A ==> ?e. e IN sing_orbits f g A /\ (CHOICE e = x)
-       Note x IN A                       by fixed_points_element
+   (2) x IN fixed_points f g X ==> ?e. e IN sing_orbits f g X /\ (CHOICE e = x)
+       Note x IN X                       by fixed_points_element
         and orbit f g x = {x}            by fixed_points_orbit_sing
        Take e = {x},
        Then CHOICE e = x                 by CHOICE_SING
         and SING e                       by SING_DEF
-        and e IN orbits f g A            by orbit_is_orbits_element
-        ==> e IN sing_orbits f g A       by sing_orbits_element
+        and e IN orbits f g X            by orbit_is_orbits_element
+        ==> e IN sing_orbits f g X       by sing_orbits_element
 *)
 Theorem sing_orbits_to_fixed_points_surj:
-  !f g A. Group g /\ (g act A) f ==>
-          SURJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A)
+  !f g X. Group g /\ (g act X) f ==>
+          SURJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X)
 Proof
   rw[SURJ_DEF] >-
   rw[sing_orbits_element_choice] >>
-  `x IN A` by metis_tac[fixed_points_element] >>
+  `x IN X` by metis_tac[fixed_points_element] >>
   `orbit f g x = {x}` by metis_tac[fixed_points_orbit_sing] >>
   qexists_tac `{x}` >>
   simp[sing_orbits_element] >>
   metis_tac[orbit_is_orbits_element]
 QED
 
-(* Theorem: The map: e IN (sing_orbits f g A) --> a IN (fixed_points f g A)
-               where e = {a} is bijective.
-            Group g /\ (g act A) f ==>
-            BIJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A) *)
+(* Theorem: The map: e IN (sing_orbits f g X) --> x IN (fixed_points f g X)
+               where e = {x} is bijective.
+            Group g /\ (g act X) f ==>
+            BIJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X) *)
 (* Proof:
    By sing_orbits_to_fixed_points_inj,
       sing_orbits_to_fixed_points_surj, BIJ_DEF.
    True since the map is shown to be both injective and surjective.
 *)
 Theorem sing_orbits_to_fixed_points_bij:
-  !f g A. Group g /\ (g act A) f ==>
-          BIJ (\e. CHOICE e) (sing_orbits f g A) (fixed_points f g A)
+  !f g X. Group g /\ (g act X) f ==>
+          BIJ (\e. CHOICE e) (sing_orbits f g X) (fixed_points f g X)
 Proof
   simp[BIJ_DEF, sing_orbits_to_fixed_points_surj,
                 sing_orbits_to_fixed_points_inj]
 QED
 
-(* Theorem: For (g act A) f, sing_orbits is the same size as fixed_points f g A,
-            Group g /\ (g act A) f /\ FINITE A ==>
-            CARD (sing_orbits f g A) = CARD (fixed_points f g A) *)
+(* Theorem: For (g act X) f, sing_orbits is the same size as fixed_points f g X,
+            Group g /\ (g act X) f /\ FINITE X ==>
+            CARD (sing_orbits f g X) = CARD (fixed_points f g X) *)
 (* Proof:
-   Let s = sing_orbits f g A, t = fixed_points f g A.
-   Note s SUBSET (orbits f g A)    by sing_orbits_subset
-    and t SUBSET A                 by fixed_points_subset
+   Let s = sing_orbits f g X, t = fixed_points f g X.
+   Note s SUBSET (orbits f g X)    by sing_orbits_subset
+    and t SUBSET X                 by fixed_points_subset
    Also FINITE s                   by orbits_finite, SUBSET_FINITE
     and FINITE t                   by SUBSET_FINITE
    With BIJ (\e. CHOICE e) s t     by sing_orbits_to_fixed_points_bij
     ==> CARD s = CARD t            by FINITE_BIJ_CARD_EQ
 *)
 Theorem sing_orbits_card_eqn:
-  !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-          CARD (sing_orbits f g A) = CARD (fixed_points f g A)
+  !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+          CARD (sing_orbits f g X) = CARD (fixed_points f g X)
 Proof
   rpt strip_tac >>
-  `(sing_orbits f g A) SUBSET (orbits f g A)` by rw[sing_orbits_subset] >>
-  `(fixed_points f g A) SUBSET A` by rw[fixed_points_subset] >>
+  `(sing_orbits f g X) SUBSET (orbits f g X)` by rw[sing_orbits_subset] >>
+  `(fixed_points f g X) SUBSET X` by rw[fixed_points_subset] >>
   metis_tac[sing_orbits_to_fixed_points_bij, FINITE_BIJ_CARD_EQ, SUBSET_FINITE, orbits_finite]
 QED
 
-(* Theorem: For (g act A) f, CARD A = CARD fixed_points + SIGMA CARD multi_orbits.
-            Group g /\ (g act A) f /\ FINITE A ==>
-            CARD A = CARD (fixed_points f g A) + SIGMA CARD (multi_orbits f g A) *)
+(* Theorem: For (g act X) f, CARD X = CARD fixed_points + SIGMA CARD multi_orbits.
+            Group g /\ (g act X) f /\ FINITE X ==>
+            CARD X = CARD (fixed_points f g X) + SIGMA CARD (multi_orbits f g X) *)
 (* Proof:
-   Let s = sing_orbits f g A, t = multi_orbits f g A.
-     CARD A
+   Let s = sing_orbits f g X, t = multi_orbits f g X.
+     CARD X
    = CARD s + SIGMA CARD t                       by target_card_by_orbit_types
-   = CARD (fixed_points f g A) + SIGMA CARD t    by sing_orbits_card_eqn
+   = CARD (fixed_points f g X) + SIGMA CARD t    by sing_orbits_card_eqn
 *)
 Theorem target_card_by_fixed_points:
-  !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-          CARD A = CARD (fixed_points f g A) + SIGMA CARD (multi_orbits f g A)
+  !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+          CARD X = CARD (fixed_points f g X) + SIGMA CARD (multi_orbits f g X)
 Proof
   metis_tac[target_card_by_orbit_types, sing_orbits_card_eqn]
 QED
 
-(* Theorem:  Group g /\ (g act A) f /\ FINITE A /\ 0 < n /\
-             (!e. e IN multi_orbits f g A ==> (CARD e = n)) ==>
-             (CARD A MOD n = CARD (fixed_points f g A) MOD n) *)
+(* Theorem:  Group g /\ (g act X) f /\ FINITE X /\ 0 < n /\
+             (!e. e IN multi_orbits f g X ==> (CARD e = n)) ==>
+             (CARD X MOD n = CARD (fixed_points f g X) MOD n) *)
 (* Proof:
-   Let s = fixed_points f g A,
-       t = multi_orbits f g A.
+   Let s = fixed_points f g X,
+       t = multi_orbits f g X.
    Note FINITE t                         by multi_orbits_finite
-       (CARD A) MOD n
+       (CARD X) MOD n
      = (CARD s + SIGMA CARD t) MOD n     by target_card_by_fixed_points
      = (CARD s + n * CARD t) MOD n       by SIGMA_CARD_CONSTANT, FINITE t
      = (CARD t * n + CARD s) MOD n       by ADD_COMM, MULT_COMM
      = (CARD s) MOD n                    by MOD_TIMES
 *)
 Theorem target_card_and_fixed_points_congruence:
-  !f g A n. Group g /\ (g act A) f /\ FINITE A /\ 0 < n /\
-            (!e. e IN multi_orbits f g A ==> (CARD e = n)) ==>
-            CARD A MOD n = CARD (fixed_points f g A) MOD n
+  !f g X n. Group g /\ (g act X) f /\ FINITE X /\ 0 < n /\
+            (!e. e IN multi_orbits f g X ==> (CARD e = n)) ==>
+            CARD X MOD n = CARD (fixed_points f g X) MOD n
 Proof
   rpt strip_tac >>
   imp_res_tac target_card_by_fixed_points >>
-  `_ = CARD (fixed_points f g A) + n * CARD (multi_orbits f g A)`
+  `_ = CARD (fixed_points f g X) + n * CARD (multi_orbits f g X)`
      by rw[multi_orbits_finite, SIGMA_CARD_CONSTANT] >>
   fs[]
 QED

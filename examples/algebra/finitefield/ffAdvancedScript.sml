@@ -13,7 +13,6 @@ val _ = new_theory "ffAdvanced";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -1606,7 +1605,7 @@ val field_primitives_element_property = store_thm(
        and x = z ** m <> #1     by field_order_minimal
       Thus x ** 1 <> #1         by field_exp_1
        but x ** 2 = #1          by above
-     Hence forder x = 2         by field_order_alt
+     Hence forder x = 2         by field_order_thm
         or x = -#1              by finite_field_order_eq_2
 *)
 val finite_field_neg_one_alt = store_thm(
@@ -1633,7 +1632,7 @@ val finite_field_neg_one_alt = store_thm(
   `x IN R` by rw[field_nonzero_element] >>
   `m < CARD R+` by rw[DIV_LESS, field_nonzero_card_pos, Abbr`m`] >>
   `x ** 1 <> #1` by rw[field_order_minimal, Abbr`x`] >>
-  `forder x = 2` by metis_tac[field_order_alt, DECIDE``0 < 2 /\ !m. 0 < m /\ m < 2 ==> (m = 1)``] >>
+  `forder x = 2` by metis_tac[field_order_thm, DECIDE``0 < 2 /\ !m. 0 < m /\ m < 2 ==> (m = 1)``] >>
   rw[finite_field_order_eq_2]);
 
 (* Theorem: FiniteField r ==> (-#1 = if char r = 2 then #1 else (primitive r) ** ((CARD R+) DIV 2)) *)

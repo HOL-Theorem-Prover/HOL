@@ -129,11 +129,12 @@ open dividesTheory gcdTheory;
    PRODUCT_WITH_GCD_ONE     |- !n x y. coprime n x /\ coprime n y ==> coprime n (x * y)
    MOD_WITH_GCD_ONE         |- !n x. 0 < n /\ coprime n x ==> coprime n (x MOD n)
    GCD_ONE_PROPERTY         |- !n x. 1 < n /\ coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k
-   GCD_MOD_MULT_INV         |- !n x. 1 < n /\ coprime n x /\ 0 < x /\ x < n ==>
-                               ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)
-   GEN_MULT_INV_DEF         |- !n x. 1 < n /\ coprime n x /\ 0 < x /\ x < n ==>
-                               0 < GCD_MOD_MUL_INV n x /\ GCD_MOD_MUL_INV n x < n /\
-                               coprime n (GCD_MOD_MUL_INV n x) /\ ((GCD_MOD_MUL_INV n x * x) MOD n = 1)
+   GCD_MOD_MULT_INV         |- !n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+                                 ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)
+   GEN_MULT_INV_DEF         |- !n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+                                     0 < GCD_MOD_MUL_INV n x /\ GCD_MOD_MUL_INV n x < n /\
+                                     coprime n (GCD_MOD_MUL_INV n x) /\
+                                     ((GCD_MOD_MUL_INV n x * x) MOD n = 1)
 
    More GCD and LCM Theorems:
    GCD_PROPERTY        |- !a b c. (c = gcd a b) <=> c divides a /\ c divides b /\
@@ -1625,7 +1626,7 @@ val GCD_ONE_PROPERTY = store_thm(
   `g divides 1` by metis_tac[DIVIDES_ADD_2] >>
   metis_tac[DIVIDES_ONE]);
 
-(* Theorem: For n > 1, (gcd n x = 1) /\ 0 < x < n ==>
+(* Theorem: For n > 1, 0 < x < n /\ (gcd n x = 1) ==>
             ?y. 0 < y /\ y < n /\ gcd n y = 1 /\ y*x MOD n = 1 *)
 (* Proof:
        gcd n x = 1
@@ -1642,7 +1643,7 @@ val GCD_ONE_PROPERTY = store_thm(
 *)
 val GCD_MOD_MULT_INV = store_thm(
   "GCD_MOD_MULT_INV",
-  ``!n x. 1 < n /\ (gcd n x = 1) /\ 0 < x /\ x < n ==> ?y. 0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
+  ``!n x. 1 < n /\ 0 < x /\ x < n /\ (gcd n x = 1) ==> ?y. 0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
   rpt strip_tac >>
   `?k. ((k*x) MOD n = 1) /\ (gcd n k = 1)` by rw_tac std_ss[GCD_ONE_PROPERTY] >>
   `0 < n` by decide_tac >>
@@ -1656,7 +1657,7 @@ val GCD_MOD_MULT_INV = store_thm(
 
 (* Convert this into an existence definition *)
 val lemma = prove(
-  ``!n x. ?y. 1 < n /\ (gcd n x = 1) /\ 0 < x /\ x < n ==>
+  ``!n x. ?y. 1 < n /\ 0 < x /\ x < n /\ (gcd n x = 1) ==>
               0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
   metis_tac[GCD_MOD_MULT_INV]);
 
@@ -1665,7 +1666,7 @@ val GEN_MULT_INV_DEF = new_specification(
   ["GCD_MOD_MUL_INV"],
   SIMP_RULE (srw_ss()) [SKOLEM_THM] lemma);
 (* > val GEN_MULT_INV_DEF =
-    |- !n x. 1 < n /\ coprime n x /\ 0 < x /\ x < n ==>
+    |- !n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
        0 < GCD_MOD_MUL_INV n x /\ GCD_MOD_MUL_INV n x < n /\ coprime n (GCD_MOD_MUL_INV n x) /\
        ((GCD_MOD_MUL_INV n x * x) MOD n = 1) : thm *)
 

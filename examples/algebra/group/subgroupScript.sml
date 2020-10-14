@@ -117,6 +117,9 @@ open helperSetTheory;
    coset_def         |- !g X a. a * X = IMAGE (\z. a * z) X
    left_coset_def    |- !g X a. left_coset g X a = a * X
    right_coset_def   |- !g X a. X * a = IMAGE (\z. z * a) X
+   coset_alt         |- !g a X. a * X = {a * z | z IN X}
+   left_coset_alt    |- !g X a. left_coset g X a = {a * z | z IN X}
+   right_coset_alt   |- !g X a. X * a = {z * a | z IN X}
    coset_property    |- !g a. Group g /\ a IN G ==> !X. X SUBSET G ==> a * X SUBSET G
    coset_empty       |- !g a. Group g /\ a IN G ==> (a * {} = {})
    coset_element     |- !g X a. a IN G ==> !x. x IN a * X <=> ?y. y IN X /\ (x = a * y)
@@ -599,6 +602,19 @@ val right_coset_def = Define `
 (* set overloading after all above defintions. *)
 val _ = overload_on ("*", ``coset g``);
 val _ = overload_on ("*", ``right_coset g``);
+
+(* Derive theorems. *)
+val coset_alt = save_thm("coset_alt",
+    coset_def |> SIMP_RULE bool_ss [IMAGE_DEF]);
+(* val coset_alt = |- !g a X. a * X = {a * z | z IN X}: thm *)
+
+val left_coset_alt = save_thm("left_coset_alt",
+    left_coset_def |> REWRITE_RULE [coset_alt]);
+(* val left_coset_alt = |- !g X a. left_coset g X a = {a * z | z IN X}: thm *)
+
+val right_coset_alt = save_thm("right_coset_alt",
+    right_coset_def |> SIMP_RULE bool_ss [IMAGE_DEF]);
+(* val right_coset_alt = |- !g X a. X * a = {z * a | z IN X}: thm *)
 
 (* Theorem: a * X SUBSET G *)
 (* Proof: by definition. *)

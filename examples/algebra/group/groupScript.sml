@@ -144,6 +144,9 @@ open helperNumTheory helperSetTheory;
                             #e IN G /\
                             (!x. x IN G ==> (#e * x = x)) /\ !x. x IN G ==> ?y. y IN G /\ (y * x = #e)
    group_def_by_inverse |- !g. Group g <=> Monoid g /\ !x. x IN G ==> ?y. y IN G /\ (y * x = #e)
+   group_alt            |- !g. Group g <=>
+                            (!x y::G. x * y IN G) /\ (!x y z::G. x * y * z = x * (y * z)) /\
+                            #e IN G /\ (!x::G. #e * x = x) /\ !x::G. |/ x IN G /\ |/ x * x = #e
 
    Transformation of Group structure by modifying carrier (for field).
    including_def   |- !g z. including g z = <|carrier := G UNION {z}; op := $*; id := #e|>
@@ -998,6 +1001,25 @@ val group_def_by_inverse = store_thm(
   `z * y * x = z * (y * x)` by rw_tac std_ss[monoid_assoc] >>
   `x = z` by metis_tac[monoid_lid, monoid_rid] >>
   metis_tac[monoid_invertibles_element]);
+
+(* Alternative concise definition of a group. *)
+
+(* Theorem: Group g <=>
+            (!x y::G. x * y IN G) /\
+            (!x y z::G. x * y * z = x * (y * z)) /\
+             #e IN G /\ (!x::G. #e * x = x) /\
+             !x::G. |/ x IN G /\ |/ x * x = #e *)
+(* Proof: by group_def_alt, group_inv_element. *)
+Theorem group_alt:
+  !(g:'a group). Group g <=>
+          (!x y::G. x * y IN G) /\ (* closure *)
+          (!x y z::G. x * y * z = x * (y * z)) /\ (* associativity *)
+          #e IN G /\ (!x::G. #e * x = x) /\ (* identity *)
+          !x::G. |/ x IN G /\ |/ x * x = #e
+Proof
+  rw[group_def_alt, group_inv_element, EQ_IMP_THM] >>
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Transformation of Group structure by modifying carrier.                   *)

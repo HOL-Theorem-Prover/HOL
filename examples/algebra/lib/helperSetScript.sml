@@ -296,9 +296,11 @@ open gcdTheory; (* for P_EUCLIDES *)
    partition_elements     |- !R s. partition R s = IMAGE (\x. equiv_class R s x) s
    partition_as_image     |- !R s. partition R s = IMAGE (\x. equiv_class R s x) s
    partition_cong         |- !R1 R2 s1 s2. (R1 = R2) /\ (s1 = s2) ==> (partition R1 s1 = partition R2 s2)
-   equal_partition_CARD   |- !R s n. FINITE s /\ R equiv_on s /\
+   equal_partition_card   |- !R s n. FINITE s /\ R equiv_on s /\
                              (!e. e IN partition R s ==> (CARD e = n)) ==> (CARD s = n * CARD (partition R s))
-   factor_partition_CARD  |- !R s n. FINITE s /\ R equiv_on s /\
+   equal_partition_factor |- !R s n. FINITE s /\ R equiv_on s /\
+                             (!e. e IN partition R s ==> CARD e = n) ==> n divides CARD s
+   factor_partition_card  |- !R s n. FINITE s /\ R equiv_on s /\
                              (!e. e IN partition R s ==> n divides CARD e) ==> n divides CARD s
 
    pair_disjoint_subset        |- !s t. t SUBSET s /\ PAIR_DISJOINT s ==> PAIR_DISJOINT t
@@ -3469,11 +3471,22 @@ val partition_cong = store_thm(
      so CARD s = SIGMA CARD (partition R s)  by partition_CARD
                = n * CARD (partition R s)    by SIGMA_CARD_CONSTANT
 *)
-val equal_partition_CARD = store_thm(
-  "equal_partition_CARD",
+val equal_partition_card = store_thm(
+  "equal_partition_card",
   ``!R s n. FINITE s /\ R equiv_on s /\ (!e. e IN partition R s ==> (CARD e = n)) ==>
            (CARD s = n * CARD (partition R s))``,
   rw_tac std_ss[partition_CARD, FINITE_partition, GSYM SIGMA_CARD_CONSTANT]);
+
+(* Theorem: When the partitions are equal size of n, CARD s = n * CARD (partition of s).
+           FINITE s /\ R equiv_on s /\ (!e. e IN partition R s ==> (CARD e = n)) ==>
+           n divides (CARD s) *)
+(* Proof: by equal_partition_card, divides_def. *)
+Theorem equal_partition_factor:
+  !R s n. FINITE s /\ R equiv_on s /\ (!e. e IN partition R s ==> (CARD e = n)) ==>
+          n divides (CARD s)
+Proof
+  metis_tac[equal_partition_card, divides_def, MULT_COMM]
+QED
 
 (* Theorem: When the partition size has a factor n, then n divides CARD s.
             FINITE s /\ R equiv_on s /\
@@ -3485,8 +3498,8 @@ val equal_partition_CARD = store_thm(
     ==> n divides SIGMA CARD (partition R s)  by SIGMA_CARD_FACTOR
    Hence n divdes CARD s                      by above
 *)
-val factor_partition_CARD = store_thm(
-  "factor_partition_CARD",
+val factor_partition_card = store_thm(
+  "factor_partition_card",
   ``!R s n. FINITE s /\ R equiv_on s /\
    (!e. e IN partition R s ==> n divides (CARD e)) ==> n divides (CARD s)``,
   metis_tac[FINITE_partition, partition_CARD, SIGMA_CARD_FACTOR]);
