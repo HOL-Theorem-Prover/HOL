@@ -57,7 +57,8 @@ open helperListTheory; (* for LENGTH_NON_NIL, LIST_TO_SET_SING_IFF *)
 (*
 
    Necklace:
-   necklace_def      |- !n a. necklace n a = {ls | LENGTH ls = n /\ set ls SUBSET count a}
+   necklace_def      |- !n a. necklace n a =
+                              {ls | LENGTH ls = n /\ set ls SUBSET count a}
    necklace_element  |- !n a ls. ls IN necklace n a <=>
                                  LENGTH ls = n /\ set ls SUBSET count a
    necklace_length   |- !n a ls. ls IN necklace n a ==> LENGTH ls = n

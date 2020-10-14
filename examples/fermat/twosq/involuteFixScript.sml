@@ -1124,7 +1124,7 @@ QED
     and !e. e IN (partition R t) ==> (CARD e = 2)
                           by mates_partition_element_card
    Thus CARD t = 2 * CARD (partition R t)
-                          by equal_partition_CARD
+                          by equal_partition_card
      so EVEN (CARD t)     by EVEN_DOUBLE
 *)
 Theorem mates_card_even:
@@ -1136,7 +1136,7 @@ Proof
   qabbrev_tac `R = pair_by f` >>
   `FINITE t` by rw[mates_finite, Abbr`t`] >>
   `R equiv_on t` by rw[fpair_equiv_on_mates, Abbr`R`, Abbr`t`] >>
-  `CARD t = 2 * CARD (partition R t)` by rw[equal_partition_CARD] >>
+  `CARD t = 2 * CARD (partition R t)` by rw[equal_partition_card] >>
   fs[EVEN_DOUBLE]
 QED
 

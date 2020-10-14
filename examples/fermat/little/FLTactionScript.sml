@@ -40,6 +40,7 @@ val _ = new_theory "FLTaction";
 (* val _ = load "FLTnecklaceTheory"; *)
 open helperNumTheory helperSetTheory;
 open arithmeticTheory pred_setTheory;
+(* val _ = load "helperFunctionTheory"; *)
 open helperFunctionTheory; (* for prime_power_divisor, PRIME_EXP_FACTOR *)
 
 open cycleTheory;
@@ -535,7 +536,7 @@ QED
        This is true            by monocoloured_cycle
    (2) x IN monocoloured n a ==> cycle 0 x = x
        This is true            by cycle_0
-   (3) x IN monocoloured n a /\  c < n /\ b < n ==> cycle c (cycle b x) = cycle ((c + b) MOD n) x
+   (3) x IN monocoloured n a /\ c < n /\ b < n ==> cycle c (cycle b x) = cycle ((c + b) MOD n) x
        Note x IN necklace n a  by monocoloured_necklace
         and LENGTH x = n       by necklace_length
        Hence the result        by cycle_addition
@@ -546,8 +547,8 @@ Proof
   rw[action_def, Zadd_def] >-
   simp[monocoloured_cycle] >-
   simp[cycle_0] >>
-  `a' IN necklace n a` by rw[monocoloured_necklace] >>
-  `LENGTH a' = n` by metis_tac[necklace_length] >>
+  `x IN necklace n a` by rw[monocoloured_necklace] >>
+  `LENGTH x = n` by metis_tac[necklace_length] >>
   fs[cycle_addition]
 QED
 
@@ -556,8 +557,8 @@ QED
 (* Theorem: 0 < n /\ ls IN (monocoloured n a) ==>
             SING (orbit cycle (Zadd n) ls) *)
 (* Proof:
-   Let A = monocoloured n a,
-       b = orbit cycle (Zadd n) A ls.
+   Let X = monocoloured n a,
+       b = orbit cycle (Zadd n) X ls.
    By SING_DEF, to show: ?x. b = {x}.
    Take x = ls. By ONE_ELEMENT_SING, this is to show:
    (1) b <> {}
@@ -568,7 +569,7 @@ QED
          so cycle k ls = ls        by cycle_1_fix
 
 > orbit_alt |> ISPEC ``cycle`` |> ISPEC ``Zadd n`` |> SIMP_RULE bool_ss [Zadd_carrier, IN_COUNT];
-|- !a. orbit cycle (Zadd n) a = {cycle x a | x < n}: thm
+|- !x. orbit cycle (Zadd n) x = {cycle a x | a < n}: thm
 *)
 Theorem monocoloured_orbit_sing:
   !n a ls. 0 < n /\ ls IN (monocoloured n a) ==>
@@ -597,25 +598,25 @@ QED
 (* Idea: ls IN (monocoloured n a) <=> CARD (orbit cycle (Zadd n) ls) = 1 *)
 
 (* Theorem: 0 < n /\ ls IN (necklace n a) ==>
-     (ls IN (monocoloured n a) <=> orbit cycle (Zadd n) ls = {ls}) *)
+            (ls IN (monocoloured n a) <=> orbit cycle (Zadd n) ls = {ls}) *)
 (* Proof:
-   Let A = monocoloured n a,
+   Let X = monocoloured n a,
        s = necklace n a,
        b = orbit cycle (Zadd n) ls.
-   If part: ls IN A ==> b = {ls}
+   If part: ls IN X ==> b = {ls}
       By ONE_ELEMENT_SING, this is to show:
       (1) b <> {}
           Note ls IN b             by cycle_orbit_element, cycle_0, 0 < n
             so b <> {}             by MEMBER_NOT_EMPTY
       (2) !k. k IN b ==> (k = ls)
-          Note cycle 1 ls = ls     by monocoloured_cycle_1, ls IN A
+          Note cycle 1 ls = ls     by monocoloured_cycle_1, ls IN X
            and k IN b
            ==> ?j. k = cycle j ls  by cycle_orbit_element
                      = ls          by cycle_1_fix
-   Only-if part: b = {ls} ==> ls IN A.
+   Only-if part: b = {ls} ==> ls IN X.
       If n = 1,
-         Then A = s                by monocoloured_1
-         hence ls IN A             by ls IN s
+         Then X = s                by monocoloured_1
+         hence ls IN X             by ls IN s
       If n <> 1, then 1 < n        by 0 < n, n <> 1
          Note cycle 1 ls IN b      by cycle_orbit_element
            so cycle 1 ls = ls      by IN_SING
@@ -628,7 +629,7 @@ Theorem monocoloured_iff_orbit_sing:
            (ls IN (monocoloured n a) <=> orbit cycle (Zadd n) ls = {ls})
 Proof
   rpt strip_tac >>
-  qabbrev_tac `A = monocoloured n a` >>
+  qabbrev_tac `X = monocoloured n a` >>
   qabbrev_tac `s = necklace n a` >>
   qabbrev_tac `b = orbit cycle (Zadd n) ls` >>
   (rewrite_tac[EQ_IMP_THM] >> rpt strip_tac) >| [
@@ -637,30 +638,30 @@ Proof
     `cycle 1 ls = ls` by metis_tac[monocoloured_cycle_1] >>
     metis_tac[cycle_orbit_element, cycle_1_fix],
     Cases_on `n = 1` >-
-    fs[monocoloured_1, Abbr`A`, Abbr`s`] >>
+    fs[monocoloured_1, Abbr`X`, Abbr`s`] >>
     `1 < n` by decide_tac >>
     `cycle 1 ls = ls` by metis_tac[cycle_orbit_element, IN_SING] >>
     `ls <> []` by metis_tac[necklace_not_nil] >>
     `SING (set ls)` by rw[cycle_1_set_sing] >>
-    simp[monocoloured_element, Abbr`A`]
+    simp[monocoloured_element, Abbr`X`]
   ]
 QED
 
 (* Theorem: 0 < n /\ ls IN (necklace n a) ==>
-     (ls IN (monocoloured n a) <=> CARD (orbit cycle (Zadd n) ls) = 1) *)
+           (ls IN (monocoloured n a) <=> CARD (orbit cycle (Zadd n) ls) = 1) *)
 (* Proof:
-   Let A = monocoloured n a,
+   Let X = monocoloured n a,
        s = necklace n a,
        b = orbit cycle (Zadd n) ls.
-   If part: ls IN A ==> CARD b = 1
+   If part: ls IN X ==> CARD b = 1
       Note b = {ls}        by monocoloured_iff_orbit_sing
         so CARD b = 1      by CARD_SING
-   Only-if part: CARD b = 1 ==> ls IN A.
+   Only-if part: CARD b = 1 ==> ls IN X.
       Note FINITE b        by cycle_orbit_finite
        ==> SING b          by CARD_EQ_1, FINITE b
        Now ls IN b         by cycle_orbit_element, cycle_0, 0 < n
       Thus b = {ls}        by SING_DEF, IN_SING
-       ==> ls IN A         by monocoloured_iff_orbit_sing
+       ==> ls IN X         by monocoloured_iff_orbit_sing
 *)
 Theorem monocoloured_iff_orbit_card_1:
   !n a ls. 0 < n /\ ls IN (necklace n a) ==>
@@ -668,14 +669,14 @@ Theorem monocoloured_iff_orbit_card_1:
 Proof
   rw[EQ_IMP_THM] >-
   metis_tac[monocoloured_iff_orbit_sing, CARD_SING] >>
-  qabbrev_tac `A = monocoloured n a` >>
+  qabbrev_tac `X = monocoloured n a` >>
   qabbrev_tac `s = necklace n a` >>
   qabbrev_tac `b = orbit cycle (Zadd n) ls` >>
   `FINITE b` by metis_tac[cycle_orbit_finite] >>
   `SING b` by fs[CARD_EQ_1] >>
   `ls IN b` by metis_tac[cycle_orbit_element, cycle_0] >>
   `b = {ls}` by metis_tac[SING_DEF, IN_SING] >>
-  simp[monocoloured_iff_orbit_sing, Abbr`A`]
+  simp[monocoloured_iff_orbit_sing, Abbr`X`]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -699,32 +700,32 @@ QED
 
 (* Theorem: prime p ==> p divides (a ** p - a) *)
 (* Proof:
-   Let A = multicoloured p a,
+   Let X = multicoloured p a,
        b = (\ls. orbit cycle (Zadd p) ls).
    Note 0 < p                      by PRIME_POS
-    and FINITE A                   by multicoloured_finite
-   with CARD A = a ** p - a        by multicoloured_card, 0 < p
+    and FINITE X                   by multicoloured_finite
+   with CARD X = a ** p - a        by multicoloured_card, 0 < p
    Also Group (Zadd p)             by Zadd_group, 0 < p
    with (Zadd p act A) cycle       by cycle_action_on_multicoloured, 0 < p
-   then !ls. ls IN A ==>
+   then !ls. ls IN X ==>
              (CARD (b ls) = p)     by rw[multicoloured_orbit_card_prime
-   thus p divides CARD A           by orbits_equal_size_property
+   thus p divides CARD X           by orbits_equal_size_property
      or p divides (a ** p - a)     by above
 
 orbits_equal_size_property |> ISPEC ``cycle`` |> ISPEC ``Zadd p``;
-|- !A n. Group (Zadd p) /\ (Zadd p act A) cycle /\ FINITE A /\
-         (!x. x IN A ==> CARD (orbit cycle (Zadd p) x) = n) ==> n divides CARD A
+|- !X n. Group (Zadd p) /\ (Zadd p act X) cycle /\ FINITE X /\
+         (!x. x IN X ==> CARD (orbit cycle (Zadd p) x) = n) ==> n divides CARD X
 *)
 Theorem fermat_little_thm:
   !p a. prime p ==> p divides (a ** p - a)
 Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
-  qabbrev_tac `A = multicoloured p a` >>
-  `FINITE A` by rw[multicoloured_finite, Abbr`A`] >>
-  `CARD A = a ** p - a` by rw[multicoloured_card, Abbr`A`] >>
+  qabbrev_tac `X = multicoloured p a` >>
+  `FINITE X` by rw[multicoloured_finite, Abbr`X`] >>
+  `CARD X = a ** p - a` by rw[multicoloured_card, Abbr`X`] >>
   `Group (Zadd p)` by rw[Zadd_group] >>
-  `(Zadd p act A) cycle` by rw[cycle_action_on_multicoloured, Abbr`A`] >>
+  `(Zadd p act X) cycle` by rw[cycle_action_on_multicoloured, Abbr`X`] >>
   metis_tac[multicoloured_orbit_card_prime, orbits_equal_size_property]
 QED
 
@@ -734,39 +735,39 @@ QED
 (* Theorem: prime p ==> a ** (p ** n) MOD p = a MOD p *)
 (* Proof:
    Let q = p ** n,
-       A = multicoloured q a,
+       X = multicoloured q a,
        b = (\ls. orbit cycle (Zadd q) ls).
    Note 0 < p                      by PRIME_POS
      so 0 < q                      by ZERO_LT_EXP
-   Note FINITE A                   by multicoloured_finite
+   Note FINITE X                   by multicoloured_finite
     and Group (Zadd q)             by Zadd_group, 0 < q
    also (Zadd q act A) cycle       by cycle_action_on_multicoloured, 0 < q
-    and CARD A = a ** q - a        by multicoloured_card, 0 < q
-    and !ls. ls IN A ==>
+    and CARD X = a ** q - a        by multicoloured_card, 0 < q
+    and !ls. ls IN X ==>
         p divides (CARD (b ls))    by multicoloured_orbit_card_prime_exp
-     so p divides (CARD A)         by orbits_size_factor_property
+     so p divides (CARD X)         by orbits_size_factor_property
    Thus (a ** q - a) MOD p = 0     by DIVIDES_MOD_0, 0 < p
     Now a <= a ** q                by EXP_LE, 0 < q
     ==> a ** q MOD p = a MOD p     by MOD_EQ, 0 < p
 
 orbits_size_factor_property |> ISPEC ``cycle`` |> ISPEC ``Zadd p``;
-|- !A n. Group (Zadd p) /\ (Zadd p act A) cycle /\ FINITE A /\
-         (!x. x IN A ==> n divides CARD (orbit cycle (Zadd p) x)) ==>
-         n divides CARD A
+|- !X n. Group (Zadd p) /\ (Zadd p act X) cycle /\ FINITE X /\
+         (!x. x IN X ==> n divides CARD (orbit cycle (Zadd p) x)) ==>
+         n divides CARD X
 *)
 Theorem fermat_little_exp:
   !p n a. prime p ==> a ** (p ** n) MOD p = a MOD p
 Proof
   rpt strip_tac >>
   qabbrev_tac `q = p ** n` >>
-  qabbrev_tac `A = multicoloured q a` >>
+  qabbrev_tac `X = multicoloured q a` >>
   `0 < p` by rw[PRIME_POS] >>
   `0 < q` by rw[ZERO_LT_EXP, Abbr`q`] >>
-  `FINITE A` by rw[multicoloured_finite, Abbr`A`] >>
+  `FINITE X` by rw[multicoloured_finite, Abbr`X`] >>
   `Group (Zadd q)` by rw[Zadd_group] >>
-  `(Zadd q act A) cycle` by rw[cycle_action_on_multicoloured, Abbr`A`] >>
-  `CARD A = a ** q - a` by rw[multicoloured_card, Abbr`A`] >>
-  `!ls. ls IN A ==> p divides (CARD (orbit cycle (Zadd q) ls))` by metis_tac[multicoloured_orbit_card_prime_exp] >>
+  `(Zadd q act X) cycle` by rw[cycle_action_on_multicoloured, Abbr`X`] >>
+  `CARD X = a ** q - a` by rw[multicoloured_card, Abbr`X`] >>
+  `!ls. ls IN X ==> p divides (CARD (orbit cycle (Zadd q) ls))` by metis_tac[multicoloured_orbit_card_prime_exp] >>
   imp_res_tac orbits_size_factor_property >>
   `(a ** q - a) MOD p = 0` by metis_tac[DIVIDES_MOD_0] >>
   rfs[MOD_EQ, EXP_LE]

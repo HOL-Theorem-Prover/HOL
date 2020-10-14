@@ -163,7 +163,7 @@ open gcdTheory; (* for PRIME_GCD *)
                                    CARD (associate ls) = p
    multicoloured_partition_element_card_prime
                        |- !p a e. prime p /\ e IN multicoloured_partition p a ==> CARD e = p
-   fermat_little_3     |- !p a. prime p ==> p divides a ** p - a
+   fermat_little_3     |- !p a. prime p ==> a ** p MOD p = a MOD p
 
 *)
 
@@ -1160,24 +1160,26 @@ Proof
   metis_tac[multicoloured_associate_card_prime]
 QED
 
-(* Idea: For prime p, p divides (a^p - a). *)
+(* Idea: For prime p, a^p MDD p = a MOD p. *)
 
 (* Theorem: prime p ==> p divides (a ** p - a) *)
 (* Proof:
-   Note 0 < p                     by PRIME_POS
+   Note 0 < p                      by PRIME_POS
    Let s = multicoloured p a,
        ps = partition similar s.
-   Then FINITE s                  by multicoloured_finite
-    and CARD s = a ** p - a       by multicoloured_card
-    Now !e. e IN ps               by multicoloured_partition_def
+   Then FINITE s                   by multicoloured_finite
+    and CARD s = a ** p - a        by multicoloured_card
+    Now !e. e IN ps                by multicoloured_partition_def
         ==> e IN (multicoloured_partition p a)
-        ==> CARD e = p          by multicoloured_partition_element_card_prime
-   Note similar equiv_on s        by similar_equiv_on_multicoloured
-   Thus CARD s = p * CARD ps      by equal_partition_CARD
-     or p divides (a ** p - a)    by divides_def, MULT_COMM
+        ==> CARD e = p             by multicoloured_partition_element_card_prime
+   Note similar equiv_on s         by similar_equiv_on_multicoloured
+   Thus p divides CARD s           by equal_partition_factor
+     so (a ** p - a) MOD p = 0     by DIVIDES_MOD_0, 0 < p
+    Now a <= a ** p                by EXP_LE, 0 < p
+    ==> a ** p MOD p = a MOD p     by MOD_EQ, 0 < p
 *)
 Theorem fermat_little_3:
-  !p a. prime p ==> p divides (a ** p - a)
+  !p a. prime p ==> a ** p MOD p = a MOD p
 Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
@@ -1186,8 +1188,9 @@ Proof
   `FINITE s` by rw[multicoloured_finite, Abbr`s`] >>
   `CARD s = a ** p - a` by rw[multicoloured_card, Abbr`s`] >>
   `!e. e IN ps ==> CARD e = p` by metis_tac[multicoloured_partition_def, multicoloured_partition_element_card_prime] >>
-  `CARD s = p * CARD ps` by metis_tac[similar_equiv_on_multicoloured, equal_partition_CARD] >>
-  metis_tac[divides_def, MULT_COMM]
+  `p divides (a ** p - a)` by metis_tac[similar_equiv_on_multicoloured, equal_partition_factor] >>
+  `a <= a ** p` by rw[EXP_LE] >>
+  metis_tac[DIVIDES_MOD_0, MOD_EQ]
 QED
 
 
