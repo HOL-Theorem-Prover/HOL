@@ -71,7 +71,7 @@ fun write_evalscript smlfun (vnno,pnno,anno) file =
     val file2 = mlquote (file ^ "_goal")
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
-     "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
+     "val tactictoe_goal = aiLib.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tttEval" ^ ";",
      assign_tnn "tactictoe_vo" vnno,
      assign_tnn "tactictoe_po" pnno,
