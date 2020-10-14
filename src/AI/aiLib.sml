@@ -753,11 +753,56 @@ fun strip_binop binop tm = case strip_comb tm of
     else [tm]
   | _ => [tm]
 
+
+local open HOLsexp SharingTables in
+
+(* -------------------------------------------------------------------------
+   Exporting terms
+   ------------------------------------------------------------------------- *)
+
+fun pp_tml tml =
+  let
+    val ed = {unnamed_terms = tml, named_terms = [], unnamed_types = [],
+              named_types = [], theorems = []}
+    val sdo = build_sharing_data ed
+    val sexp = enc_sdata sdo
+  in
+    HOLsexp.printer sexp
+  end
+
+fun export_terml file tml =
+  let
+    val tml' = filter uptodate_term tml
+    val _ = if length tml <> length tml'
+            then print_endline "Warning: out-of-date terms are not exported"
+            else ()
+    val ostrm = Portable.open_out file
+  in
+    (PP.prettyPrint (curry TextIO.output ostrm, 75) (pp_tml tml');
+     TextIO.closeOut ostrm)
+  end
+
+fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)
+
+
+(* -------------------------------------------------------------------------
+   Importing terms
+   ------------------------------------------------------------------------- *)
+
+fun import_terml file =
+  let
+    val t = HOLsexp.fromFile file
+    val sdo = valOf (dec_sdata {with_strings = fn _ => (),
+                                with_stridty = fn _ => ()} t)
+  in
+    #unnamed_terms (export_from_sharing_data sdo)
+  end
+
+fun import_goal file = let val l = import_terml file in (tl l, hd l) end
+
 (* ------------------------------------------------------------------------
    S-expressions
    ------------------------------------------------------------------------ *)
-
-local open HOLsexp SharingTables in
 
 (* basic encoding *)
 

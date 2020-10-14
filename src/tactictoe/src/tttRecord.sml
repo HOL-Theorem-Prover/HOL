@@ -97,14 +97,7 @@ fun record_tactic (tac,stac) g =
     incr n_tactic_replayed;
     (
     if op_mem goal_eq g gl then () else
-    calls_glob :=
-      {
-      stac = stac, ortho = stac, time = t,
-      ig = g, ogl = gl,
-      loc = ((current_theory (), (!savestate_level) - 1), !name_glob),
-      fea = fea_of_goal true g
-      }
-      :: !calls_glob);
+    calls_glob := (stac,g,gl) :: !calls_glob);
     (gl,v)
   end
   handle Interrupt => raise Interrupt
@@ -184,14 +177,42 @@ fun start_record_proof name =
   debug ("Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name)
   )
 
+fun proof_descendants deptop gtop = (* avoid looping *)
+  let 
+    val drtop = ref (HOLset.empty goal_compare)
+    fun loop dr dep g = 
+      if not (dmem g dep) then () else
+      let 
+        val _ = dr := HOLset.add (!dr,g)
+        val gl = dfind g dep in
+      in
+        app proof_descendants dr dep g
+      end 
+  in
+    loop drtop deptop gtop; HOLset.listItems (!drtop)
+  end
+
 fun end_record_proof name g =
   let
-    val l1 = (rev (!calls_glob))
+    (* number goals *) 
+    val goalset = mk_fast_set goal_compare (map #2 (!calls_glob))
+    val goalnd = dnew goal_compare (number_snd 0 goalset)
+    (* dependencies *)
+    val dep = dnew goal_compare (map (fn (_,ig,ogl) => (ig,ogl)) (!calls_glob))
+    (* *) 
+    val mk_call (stac,ig,ogl) = 
+      {
+      stac = stac,
+      loc = ...,
+      gn =     ,
+      gdepn = (* includes gn *)
+      }
+    (* precompute symweight *)
     val feal1 = List.concat (map #fea l1)
     val feal2 = mk_fast_set Int.compare feal1
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
     val tacfea = total_time tacfea_time
-      (map (fn x => (#ortho x,#fea x))) (#calls tacdata)
+      (map (fn x => (#ortho x, #fea x))) (#calls tacdata)
     val tacsymweight =
       total_time learn_tfidf_time
         (learn_tfidf_symfreq (length tacfea) feal2) (#symfreq tacdata)

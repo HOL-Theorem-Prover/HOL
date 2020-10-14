@@ -118,7 +118,7 @@ val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
 fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
-  (call as {stac,ortho,time,ig,ogl,loc,fea}) =
+  (call as {stac,loc,fea}) =
   let
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time
@@ -138,8 +138,7 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
     case neworthoo of NONE => call | SOME newortho =>
-      {stac = stac, ortho = newortho, time = time,
-       ig = ig, ogl = ogl, loc = loc, fea = fea}
+      {stac = newortho, loc = loc, fea = fea}
   end
   handle Interrupt => raise Interrupt | _ =>
     (debug "error: orthogonalize"; call)

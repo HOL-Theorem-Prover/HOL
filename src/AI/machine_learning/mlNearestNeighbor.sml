@@ -109,7 +109,22 @@ fun dep_call calldep call =
     (rev (!rl))
   end
 
-fun add_calldep calldep n calls =
+(* 
+1) select the proof location
+2) select the goals in the dependencies 
+*)
+fun mk_dloc l = dregroup loc_compare (map (fn x => (#loc x,x)) l)
+
+fun dep_call dloc call =
+  let
+    val loc = #loc call
+    val gnl = HOLset.fromList Int.compare (#gnl call)
+    val calll = dfind loc dloc handle NotFound => []
+  in
+    filter (fn x => HOLSet.member (#gn x) gnl)
+  end
+
+fun add_calldep dloc n calls =
   let
     val l1 = List.concat (map (fn x => x :: dep_call calldep x) calls)
     val l2 = mk_sameorder_set call_compare l1
