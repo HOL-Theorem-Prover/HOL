@@ -284,11 +284,10 @@ open gcdTheory; (* for P_EUCLIDES *)
    Modulo Inverse:
    GCD_LINEAR          |- !j k. 0 < j ==> ?p q. p * j = q * k + gcd j k
    EUCLID_LEMMA        |- !p x y. prime p ==> (((x * y) MOD p = 0) <=> (x MOD p = 0) \/ (y MOD p = 0))
-   MOD_MULT_LCANCEL    |- !p x y z. prime p ==>
-                               ((x * y) MOD p = (x * z) MOD p) /\ x MOD p <> 0 ==> (y MOD p = z MOD p)
-   MOD_MULT_RCANCEL    |- !p x y z. prime p ==>
-                              ((y * x) MOD p = (z * x) MOD p) /\ x MOD p <> 0 ==>
-                               (y MOD p = z MOD p)
+   MOD_MULT_LCANCEL    |- !p x y z. prime p /\ (x * y) MOD p = (x * z) MOD p /\ x MOD p <> 0 ==>
+                                    y MOD p = z MOD p
+   MOD_MULT_RCANCEL    |- !p x y z. prime p /\ (y * x) MOD p = (z * x) MOD p /\ x MOD p <> 0 ==>
+                                    y MOD p = z MOD p
    MOD_MULT_INV_EXISTS |- !p x. prime p /\ 0 < x /\ x < p ==> ?y. 0 < y /\ y < p /\ ((y * x) MOD p = 1)
    MOD_MULT_INV_DEF    |- !p x. prime p /\ 0 < x /\ x < p ==>
                            0 < MOD_MULT_INV p x /\ MOD_MULT_INV p x < p /\ ((MOD_MULT_INV p x * x) MOD p = 1)
@@ -3210,31 +3209,28 @@ val EUCLID_LEMMA = store_thm(
    First prove the theorem assuming z <= y,
    then use the same proof for y <= z.
 *)
-val MOD_MULT_LCANCEL1 = prove(
-  ``!p x y z. (prime p) /\ (z <= y) ==> (((x * y) MOD p = (x * z) MOD p) /\ x MOD p <> 0 ==> (y MOD p = z MOD p))``,
+Theorem MOD_MULT_LCANCEL:
+  !p x y z. prime p /\ (x * y) MOD p = (x * z) MOD p /\ x MOD p <> 0 ==> y MOD p = z MOD p
+Proof
   rpt strip_tac >>
+  `!a b c. c <= b /\ (a * b) MOD p = (a * c) MOD p /\ a MOD p <> 0 ==> b MOD p = c MOD p` by
+  (rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
-  `((x*y) - (x*z)) MOD p = 0` by rw[MOD_EQ_DIFF] >>
-  `(x*(y - z)) MOD p = 0` by rw[LEFT_SUB_DISTRIB] >>
-  metis_tac[EUCLID_LEMMA, MOD_EQ]);
-val MOD_MULT_LCANCEL = store_thm(
-  "MOD_MULT_LCANCEL",
-  ``!p x y z. prime p ==> (((x * y) MOD p = (x * z) MOD p) /\ x MOD p <> 0 ==> (y MOD p = z MOD p))``,
-  rpt strip_tac >>
-  Cases_on `z <= y` >| [
-    all_tac,
-    `y <= z` by decide_tac
-  ] >>
-  metis_tac[MOD_MULT_LCANCEL1]);
+  `(a * b - a * c) MOD p = 0` by rw[MOD_EQ_DIFF] >>
+  `(a * (b - c)) MOD p = 0` by rw[LEFT_SUB_DISTRIB] >>
+  metis_tac[EUCLID_LEMMA, MOD_EQ]) >>
+  Cases_on `z <= y` >-
+  metis_tac[] >>
+  `y <= z` by decide_tac >>
+  metis_tac[]
+QED
 
-(* Theorem: prime p ==>
-            ((y * x) MOD p = (z * x) MOD p) /\ x MOD p <> 0 ==>
-             (y MOD p = z MOD p) *)
+(* Theorem: prime p /\ (y * x) MOD p = (z * x) MOD p /\ x MOD p <> 0 ==>
+            y MOD p = z MOD p *)
 (* Proof: by MOD_MULT_LCANCEL, MULT_COMM *)
 Theorem MOD_MULT_RCANCEL:
-  !p x y z. prime p ==>
-             ((y * x) MOD p = (z * x) MOD p) /\ x MOD p <> 0 ==>
-             (y MOD p = z MOD p)
+  !p x y z. prime p /\ (y * x) MOD p = (z * x) MOD p /\ x MOD p <> 0 ==>
+            y MOD p = z MOD p
 Proof
   metis_tac[MOD_MULT_LCANCEL, MULT_COMM]
 QED

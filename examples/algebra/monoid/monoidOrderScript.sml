@@ -35,7 +35,6 @@ val _ = new_theory "monoidOrder";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -71,11 +70,12 @@ open primePowerTheory;
    Definitions:
    period_def      |- !g x k. period g x k <=> 0 < k /\ (x ** k = #e)
    order_def       |- !g x. ord x = case OLEAST k. period g x k of NONE => 0 | SOME k => k
+   order_alt       |- !g x. ord x = case OLEAST k. 0 < k /\ x ** k = #e of NONE => 0 | SOME k => k
    order_property  |- !g x. x ** ord x = #e
    order_period    |- !g x. 0 < ord x ==> period g x (ord x)
    order_minimal   |- !g x n. 0 < n /\ n < ord x ==> x ** n <> #e
    order_eq_0      |- !g x. (ord x = 0) <=> !n. 0 < n ==> x ** n <> #e
-   order_alt       |- !g x n. 0 < n ==>
+   order_thm       |- !g x n. 0 < n ==>
                       ((ord x = n) <=> (x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e)
 
 #  monoid_order_id         |- !g. Monoid g ==> (ord #e = 1)
@@ -157,6 +157,13 @@ val order_def = zDefine`
 `;
 (* use zDefine here since these are not computationally effective. *)
 
+(* Expand order_def with period_def. *)
+val order_alt = save_thm(
+  "order_alt", REWRITE_RULE [period_def] order_def);
+(* val order_alt =
+   |- !g x. order g x =
+            case OLEAST k. 0 < k /\ x ** k = #e of NONE => 0 | SOME k => k: thm *)
+
 (* overloading on Monoid Order *)
 val _ = overload_on ("ord", ``order g``);
 
@@ -218,8 +225,8 @@ val order_eq_0 = store_thm(
       (2) 0 < n /\ 0 < n' /\ x ** n = #e /\ x ** n' = #e /\ ... ==> n' = n
           The assumptions implies ~(n' < n), and ~(n < n'), hence n' = n.
 *)
-val order_alt = store_thm(
-  "order_alt",
+val order_thm = store_thm(
+  "order_thm",
   ``!g:'a monoid x:'a. !n. 0 < n ==>
     ((ord x = n) <=> (x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e)``,
   rw[EQ_IMP_THM] >-
@@ -238,12 +245,12 @@ val order_alt = store_thm(
    Since #e IN G        by monoid_id_element
    and   #e ** 1 = #e  by monoid_exp_1
    Obviously, 0 < 1 and there is no m such that 0 < m < 1
-   hence true by order_alt
+   hence true by order_thm
 *)
 val monoid_order_id = store_thm(
   "monoid_order_id",
   ``!g:'a monoid. Monoid g ==> (ord #e = 1)``,
-  rw[order_alt, DECIDE``!m . ~(0 < m /\ m < 1)``]);
+  rw[order_thm, DECIDE``!m . ~(0 < m /\ m < 1)``]);
 
 (* export simple result *)
 val _ = export_rewrites ["monoid_order_id"];
@@ -503,7 +510,7 @@ val monoid_order_divisor = store_thm(
   rw[] >>
   `x ** (ord x) = #e` by rw[order_property] >>
   `(x ** k) ** m = #e` by metis_tac[monoid_exp_mult] >>
-  `(!h. 0 < h /\ h < m ==> (x ** k) ** h <> #e)` suffices_by metis_tac[order_alt] >>
+  `(!h. 0 < h /\ h < m ==> (x ** k) ** h <> #e)` suffices_by metis_tac[order_thm] >>
   rpt strip_tac >>
   `h <> 0` by decide_tac >>
   `k <> 0 /\ k * h <> 0` by metis_tac[MULT, MULT_EQ_0] >>

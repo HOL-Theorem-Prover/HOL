@@ -13,7 +13,6 @@ val _ = new_theory "groupOrder";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -62,7 +61,7 @@ open groupTheory groupMapTheory subgroupTheory;
    group_exp_mod          |- !g. Group g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD ord x)
 
    Characterization of Group Order:
-   group_order_alt        |- !g n. 0 < n ==>
+   group_order_thm        |- !g n. 0 < n ==>
                              !x. (ord x = n) <=> (x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e
    group_order_unique     |- !g. Group g ==> !x. x IN G ==>
                              !m n. m < ord x /\ n < ord x ==> (x ** m = x ** n) ==> (m = n)
@@ -306,12 +305,12 @@ val group_exp_mod = store_thm(
 (* A characterization of group order without reference to period. *)
 
 (* Theorem: If 0 < n, ord x = n iff x ** n = #e with 0 < n, and !m < n, x ** m <> #e. *)
-(* Proof: true by order_alt. *)
-val group_order_alt = store_thm(
-  "group_order_alt",
+(* Proof: true by order_thm. *)
+val group_order_thm = store_thm(
+  "group_order_thm",
   ``!g:'a group. !n. 0 < n ==>
    !x. (ord x = n) <=> (x ** n = #e) /\ (!m. 0 < m /\ m < n ==> (x ** m) <> #e)``,
-  rw[order_alt]);
+  rw[order_thm]);
 
 (* Theorem: For Group g, m, n < (ord x), x ** m = x ** n ==> m = n *)
 (* Proof:

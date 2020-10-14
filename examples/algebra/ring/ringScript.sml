@@ -24,7 +24,6 @@ val _ = new_theory "ring";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -2659,12 +2658,12 @@ val ring_num_char_coprime_nonzero = store_thm(
 
 (* Theorem: Ring r ==> !n. 0 < n ==>
             ((char r = n) <=> (##n = #0) /\ (!m. 0 < m /\ m < n ==> ##m <> #0)) *)
-(* Proof: by char_def, order_alt *)
+(* Proof: by char_def, order_thm *)
 val ring_char_alt = store_thm(
   "ring_char_alt",
   ``!r:'a ring. Ring r ==> !n. 0 < n ==>
    ((char r = n) <=> (##n = #0) /\ (!m. 0 < m /\ m < n ==> ##m <> #0))``,
-  rw[char_def, order_alt]);
+  rw[char_def, order_thm]);
 
 (* Theorem: Ring r /\ #1 <> #0 ==> ((-#1 = #1) <=> (char r = 2)) *)
 (* Proof:
