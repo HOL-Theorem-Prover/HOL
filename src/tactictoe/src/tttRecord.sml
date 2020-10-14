@@ -96,7 +96,7 @@ fun record_tactic (tac,stac) g =
   let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
     if op_mem goal_eq g gl then () else
-    calls_glob := (stac,g,gl) :: !calls_glob; 
+    calls_glob := (stac,g,gl) :: !calls_glob;
     (gl,v)
   end
   handle Interrupt => raise Interrupt
@@ -179,7 +179,7 @@ fun end_record_proof name =
     (* transforming into a call *)
     val precalls = number_snd 0 (rev (!calls_glob))
     val parentd = dregroup goal_compare (map_fst (fn (_,g,_) => g) precalls)
-    fun find_parents gl = 
+    fun find_parents gl =
       let fun f x = dfind x parentd handle NotFound => [] in
         mk_fast_set Int.compare (List.concat (map f gl))
       end
@@ -224,7 +224,7 @@ fun ttt_save_state () =
   in
     if !savestate_level = 0
     then PolyML.SaveState.saveState savestate_file
-    else PolyML.SaveState.saveChild (savestate_file, 
+    else PolyML.SaveState.saveChild (savestate_file,
       (!savestate_level div 50) + 1)
   end
   else ()

@@ -9,7 +9,7 @@
 structure tttTrain :> tttTrain =
 struct
 
-open HolKernel boolLib Abbrev aiLib mlNeuralNetwork smlLexer smlParser 
+open HolKernel boolLib Abbrev aiLib mlNeuralNetwork smlLexer smlParser
   mlTacticData mlTreeNeuralNetwork tttToken
 
 val ERR = mk_HOL_ERR "tttTrain"
@@ -121,15 +121,15 @@ fun nntm_of_applyexp e = case e of
 
 val stacnntmd = ref (dempty String.compare)
 
-fun nntm_of_stac stac = 
+fun nntm_of_stac stac =
   dfind stac (!stacnntmd) handle NotFound =>
-  let 
+  let
     fun f x = if mem x [termarg_placeholder,thmlarg_placeholder]
               then "tttToken." ^ x
-              else x 
+              else x
     val newstac = String.concatWith " " (map f (partial_sml_lexer stac))
     val r = nntm_of_applyexp (extract_applyexp (extract_smlexp newstac))
-  in 
+  in
     stacnntmd := dadd stac r (!stacnntmd); r
   end
 
@@ -145,16 +145,16 @@ fun nntm_of_statepol (g,stac) =
 
 val gstacarg_cat = mk_var ("gstacarg_cat", rpt_fun_type 3 alpha);
 
-fun thm_of_thmid s = 
+fun thm_of_thmid s =
   snd (valOf (smlExecute.thm_of_sml (mlThmData.dbfetch_of_thmid s)))
   handle Option => raise ERR "thm_of_thmid" ""
 
 fun nntm_of_arg arg = case arg of
     Sthml [s] => nntm_of_goal (dest_thm (thm_of_thmid s))
-  | _ => raise ERR "nntm_of_arg" "not supported" 
- 
+  | _ => raise ERR "nntm_of_arg" "not supported"
+
 fun nntm_of_statearg ((g,stac),arg) =
-  mk_comb (ahead, 
+  mk_comb (ahead,
     mk_binop gstacarg_cat (nntm_of_gstac (g,stac), nntm_of_arg arg))
 
 (* ------------------------------------------------------------------------

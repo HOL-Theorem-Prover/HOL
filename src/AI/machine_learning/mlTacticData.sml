@@ -43,7 +43,7 @@ val empty_tacdata : tacdata =
    Exporting tactic data
    ------------------------------------------------------------------------- *)
 
-fun loc_to_string (s,i1,i2) = 
+fun loc_to_string (s,i1,i2) =
   String.concatWith " " [s, its i1, its i2]
 
 fun ilts il = String.concatWith " " (map its il)
@@ -62,7 +62,7 @@ fun export_calls file calls1 =
   end
 
 fun export_tacdata thy file tacdata =
-  let 
+  let
     fun test (x,_,_) = (x = thy)
     val calls = filter (test o fst) (dlist (#calld tacdata))
   in

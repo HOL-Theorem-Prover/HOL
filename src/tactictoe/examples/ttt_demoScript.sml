@@ -33,7 +33,7 @@ val ex1 = store_thm("ex1",
 
 open listTheory
 
-(* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); 
+(* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``);
    ttt_mini ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
 val ex2 = store_thm("ex2",
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``,
@@ -65,10 +65,10 @@ open sum_numTheory
 (* ttt  ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``); *)
 val ex5 = store_thm("ex5",
   ``!n. 2 * SUM (n+1) I = n * (n+1)``,
-   Induct THENL 
-   [REWRITE_TAC [numeralTheory.numeral_distrib] THEN SRW_TAC [] [SUM_1], 
-    ASM_SIMP_TAC (srw_ss () ++ ARITH_ss) [ADD_CLAUSES] THEN 
-      SRW_TAC [ARITH_ss] [SUM_def] THEN 
+   Induct THENL
+   [REWRITE_TAC [numeralTheory.numeral_distrib] THEN SRW_TAC [] [SUM_1],
+    ASM_SIMP_TAC (srw_ss () ++ ARITH_ss) [ADD_CLAUSES] THEN
+      SRW_TAC [ARITH_ss] [SUM_def] THEN
       SRW_TAC [ARITH_ss] [MULT_CLAUSES]]
 );
 

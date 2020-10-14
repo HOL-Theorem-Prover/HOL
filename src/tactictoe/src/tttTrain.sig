@@ -2,7 +2,7 @@ signature tttTrain =
 sig
 
   include Abbrev
-  
+
   type token = tttToken.token
   type tnn =  mlTreeNeuralNetwork.tnn
 

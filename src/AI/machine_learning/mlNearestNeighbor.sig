@@ -22,7 +22,7 @@ sig
   val thmknn_wdep: symweight * thmid afea -> int -> fea -> thmid list
   val tacknn: symweight * stac afea -> int -> fea -> stac list
   val callknn: symweight * (loc * call) afea -> int -> fea -> (loc * call) list
-  val add_calldep: (loc,call) Redblackmap.dict -> int -> 
+  val add_calldep: (loc,call) Redblackmap.dict -> int ->
     (loc * call) list -> (loc * call) list
 
   (* for comparison with tree neural networks *)

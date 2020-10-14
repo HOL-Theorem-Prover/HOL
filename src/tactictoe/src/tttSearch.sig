@@ -43,10 +43,10 @@ sig
      vnno: tnn option, pnno: tnn option, anno: tnn option}
 
   val starttree_of_goal : searchobj -> goal -> tree
-  val starttree_of_gstacarg : searchobj -> 
+  val starttree_of_gstacarg : searchobj ->
     goal * string * tttToken.token list -> tree
 
   val search_loop : searchobj -> int option -> tree -> searchstatus * tree
   val search : searchobj -> goal -> proofstatus * tree
-  
+
 end

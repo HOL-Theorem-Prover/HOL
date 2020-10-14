@@ -100,7 +100,7 @@ fun unsafe_prettify_proof proof =
       in
         if length set = 1
         then loop p ^ " " ^ sthen ^ " " ^ hd set
-        else loop p ^ " " ^ sthenl ^ " " ^ 
+        else loop p ^ " " ^ sthenl ^ " " ^
              "[" ^ String.concatWith ",  " sl ^ "]"
       end
     val body = loop proof
@@ -114,11 +114,11 @@ fun unsafe_prettify_proof proof =
 
 fun safe_prettify_proof proof = case proof of
     Tactic (s,_) => "(" ^ s ^ ")"
-  | Then (p1,p2) => safe_prettify_proof p1 ^ " " ^ 
+  | Then (p1,p2) => safe_prettify_proof p1 ^ " " ^
     sthen ^ " " ^ safe_prettify_proof p2
   | Thenl (p,pl) =>
     let val sl = map safe_prettify_proof pl in
-      safe_prettify_proof p ^ " " ^ sthenl ^ " " ^  
+      safe_prettify_proof p ^ " " ^ sthenl ^ " " ^
       "[" ^ String.concatWith ", " sl ^ "]"
     end
 

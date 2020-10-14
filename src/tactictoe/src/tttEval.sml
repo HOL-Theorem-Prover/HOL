@@ -31,12 +31,12 @@ fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 fun ttt_eval (thmdata,tacdata) nnol goal =
   let
     val mem = !hide_flag
-    val _ = hide_flag := false 
+    val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
       (main_tactictoe (thmdata,tacdata) nnol) goal
-      handle Interrupt => raise Interrupt 
+      handle Interrupt => raise Interrupt
         | e => (print_endline "Error"; raise e)
   in
     print_status status;
@@ -104,7 +104,7 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val _ = app mkDir_err [ttt_eval_dir, expdir, outdir]
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl'
-    fun f x = readl x handle 
+    fun f x = readl x handle
         Interrupt => raise Interrupt
       | _         => (print_endline x; [])
     val filel1 = List.concat (map f pbl)
@@ -152,7 +152,8 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval"
-val _ = run_evalscript_thyl smlfun "october14" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl smlfun "october14-2"
+  (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -184,18 +185,18 @@ val argdir = gendir ^ "/arg";
 fun prefix s = SOME (gendir ^ "/tnn" ^ s);
 val (vnno,pnno,anno) = triple_of_list (map prefix ["val","pol","arg"]);
 
-fun read_ex dir = 
+fun read_ex dir =
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
   end;
 
-val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^ 
+val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^
   mlquote expdir ^ "," ^ its 0 ^ ")";
-val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^ 
+val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^
   mlquote expdir ^ "," ^ its 1 ^ ")";
 
-fun train_dir limit dir name = 
-  let 
+fun train_dir limit dir name =
+  let
     val ex1 = read_ex dir
     val _ = print_endline (its (length ex1))
     val ex2 = filter (fn x => term_size (fst (hd x)) < limit) ex1

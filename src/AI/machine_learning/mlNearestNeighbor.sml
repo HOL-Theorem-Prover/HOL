@@ -105,7 +105,7 @@ fun dep_call calld ((thy,thmn,gn),{stac,ogl,fea}) =
     fun lookup x = ((thy,thmn,x), dfind (thy,thmn,x) calld)
     val loopd = HOLset.fromList Int.compare [gn]
   in
-    app (dep_call_g rl lookup loopd) ogl; 
+    app (dep_call_g rl lookup loopd) ogl;
     mk_sameorder_set (snd_compare call_compare) (rev (!rl))
   end
 

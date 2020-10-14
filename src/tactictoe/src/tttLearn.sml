@@ -24,7 +24,7 @@ fun abstract_stac stac =
   if is_thmlstac stac orelse is_termstac stac then NONE else
   case abstract_thml stac of
     SOME (thmlstac,_) => SOME thmlstac
-  | NONE => 
+  | NONE =>
     (if not (!learn_abstract_term) then NONE else
     case abstract_term stac of
       SOME (termstac,_) => SOME termstac
@@ -61,15 +61,15 @@ fun respace s = String.concatWith " " (partial_sml_lexer s)
 fun unterm_var_alt v =
   let val (vs,ty) = dest_var v in [vs, respace vs] end
 
-fun pred_svar n goal = 
+fun pred_svar n goal =
   first_n n (map unterm_var (find_terms is_var (snd goal)))
 
-fun pred_svar_alt n goal = 
-  let 
+fun pred_svar_alt n goal =
+  let
     val vl1 = find_terms is_var (snd goal)
     val vl2 = List.concat (map unterm_var_alt vl1)
   in
-    first_n (2 * n) vl2 
+    first_n (2 * n) vl2
   end
 
 fun order_stac tacdata ostac stacl =
@@ -87,9 +87,9 @@ fun order_stac tacdata ostac stacl =
    ------------------------------------------------------------------------- *)
 
 fun inst_arg (thmidl,sterml) stac =
-  if is_thmlstac stac then 
+  if is_thmlstac stac then
     [(stac, inst_thml thmidl stac)]
-  else if is_termstac stac then  
+  else if is_termstac stac then
     map (fn x => (stac, inst_term x stac)) sterml
   else [(stac,stac)]
 
@@ -137,7 +137,7 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     val _ = debug ("test time: " ^ rts t)
     val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
-    case newstaco of NONE => icall | 
+    case newstaco of NONE => icall |
       SOME newstac => (loc, {stac = newstac, ogl = ogl, fea = fea})
   end
   handle Interrupt => raise Interrupt | _ =>

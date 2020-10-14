@@ -96,15 +96,15 @@ fun eval_goal vnn g =
     val tm1 = nntm_of_stateval g
     val tm2 = mask_unknown_val vnn tm1
   in
-    infer_tnn_basic vnn tm2 
+    infer_tnn_basic vnn tm2
   end
 
-fun reward_of_goal vnno g = 
+fun reward_of_goal vnno g =
   if not (isSome vnno) then 1.0 else eval_goal (valOf vnno) g
 
 (* policy *)
-fun eval_stac pnn g stac = 
-  let 
+fun eval_stac pnn g stac =
+  let
     val tm1 = nntm_of_statepol (g,stac)
     val tm2 = mask_unknown_pol pnn tm1
   in
@@ -112,10 +112,10 @@ fun eval_stac pnn g stac =
   end
 
 fun reorder_stacl g pnn stacl =
-  let 
+  let
     val (stacl1,stacl2) = part_n 16 stacl
     fun f x = eval_stac pnn g (fst x)
-    val stacl1e = map_assoc f stacl1 
+    val stacl1e = map_assoc f stacl1
     val stacl1o = map fst (dict_sort compare_rmax stacl1e)
   in
     stacl1o @ stacl2
@@ -123,10 +123,10 @@ fun reorder_stacl g pnn stacl =
 
 fun reorder_pol g pnno stacl =
   if not (isSome pnno) then stacl else reorder_stacl g (valOf pnno) stacl
-  
+
 (* argument *)
 fun eval_arg ann g stac arg =
-  let 
+  let
     val tm1 = nntm_of_statearg ((g,stac),arg)
     val tm2 = mask_unknown_arg ann tm1
   in
@@ -135,12 +135,12 @@ fun eval_arg ann g stac arg =
 
 fun reorder_arg anno g stac argl =
   if not (isSome anno) then argl else
-  let 
+  let
     fun f x = eval_arg (valOf anno) g stac x
     val argle = map_assoc f argl
   in
     map fst (dict_sort compare_rmax argle)
-  end 
+  end
 
 (* -------------------------------------------------------------------------
    Search tree
@@ -399,7 +399,7 @@ fun goal_create searchobj goal =
   in
     {
     goal = goal,
-    gvis = 1.0, gsum = reward_of_goal (#vnno searchobj) goal, 
+    gvis = 1.0, gsum = reward_of_goal (#vnno searchobj) goal,
     gstatus = backstatus_stacv stacv,
     stacv = stacv,
     siblingd = dempty (list_compare goal_compare)
@@ -417,7 +417,7 @@ fun node_create (tree,searchobj) gl (pid,(gn,sn,anl)) =
     val cid = (gn,sn,anl) :: pid
     val node =
       {
-      nvis = 1.0, nsum = backreward_allgoalv cgoalv, 
+      nvis = 1.0, nsum = backreward_allgoalv cgoalv,
       nstatus = backstatus_goalv cgoalv,
       goalv = cgoalv,
       parentd = dadd pgoal () (#parentd node)
@@ -506,7 +506,7 @@ fun search_loop startsearchobj nlimito starttree =
     val timer = Timer.startRealTimer ()
     fun loop n searchobj tree =
       if isSome nlimito andalso n >= valOf nlimito
-        then (SearchTimeout,tree) 
+        then (SearchTimeout,tree)
       else if not (isSome nlimito) andalso
         Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
         then (SearchTimeout,tree)
@@ -625,7 +625,7 @@ fun starttree_of_goal searchobj goal =
 fun goal_create_stacv searchobj (goal,stacv) =
   {
   goal = goal,
-  gvis = 1.0, gsum = 0.0, 
+  gvis = 1.0, gsum = 0.0,
   gstatus = backstatus_stacv stacv ,
   stacv = stacv,
   siblingd = dempty (list_compare goal_compare)
@@ -633,11 +633,11 @@ fun goal_create_stacv searchobj (goal,stacv) =
 
 fun argtree_add_tokenl (tree,id) (tokenl,atyl) =
   if null tokenl then tree else
-  let val node = 
-    {token = hd tokenl, 
+  let val node =
+    {token = hd tokenl,
      atyl = atyl, svis = 0.0, ssum = 0.0, sstatus = StacFresh}
   in
-    argtree_add_tokenl (dadd (0 :: id) node tree, 0 :: id) 
+    argtree_add_tokenl (dadd (0 :: id) node tree, 0 :: id)
     (tl tokenl, tl atyl)
   end
 
@@ -649,7 +649,7 @@ fun starttree_of_gstacarg searchobj (goal,stac,tokenl) =
     val stacv = Vector.fromList [argtree2]
     val goalv = Vector.fromList [goal_create_stacv searchobj (goal,stacv)]
     val root =
-      {nvis = 1.0, nsum = 0.0, 
+      {nvis = 1.0, nsum = 0.0,
        nstatus = backstatus_goalv goalv,
        goalv = goalv,
        parentd = dempty goal_compare}

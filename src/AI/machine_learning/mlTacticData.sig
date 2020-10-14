@@ -15,9 +15,9 @@ sig
     taccov : (stac,int) Redblackmap.dict,
     symfreq : (int,int) Redblackmap.dict
     }
-  val empty_tacdata : tacdata 
-  
-  (* I/O *)  
+  val empty_tacdata : tacdata
+
+  (* I/O *)
   val export_calls : string -> (loc * call) list -> unit
   val import_calls : string -> (loc * call) list
   val import_tacdata : string list -> tacdata

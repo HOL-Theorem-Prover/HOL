@@ -65,7 +65,7 @@ fun select_tacfea tacdata gfea =
     val calld = #calld tacdata
     val calls = dlist calld
     val callfea = map_assoc (#fea o snd) calls
-    val symweight = learn_tfidf_symfreq_nofilter (dlength calld) 
+    val symweight = learn_tfidf_symfreq_nofilter (dlength calld)
       (#symfreq tacdata)
     val sel1 = callknn (symweight,callfea) (!ttt_presel_radius) gfea
     val sel2 = add_calldep calld (!ttt_presel_radius) sel1
@@ -149,8 +149,8 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   end
 
 fun main_tactictoe (thmdata,tacdata) nnol goal =
-  let 
-    val searchobj = build_searchobj (thmdata,tacdata) nnol goal 
+  let
+    val searchobj = build_searchobj (thmdata,tacdata) nnol goal
     val _ = print_endline "search"
   in
     search searchobj goal
@@ -161,7 +161,7 @@ fun main_tactictoe (thmdata,tacdata) nnol goal =
    ------------------------------------------------------------------------- *)
 
 val ministacl =
-  ref 
+  ref
   [
   "metisTools.METIS_TAC " ^ thmlarg_placeholder,
   "BasicProvers.Induct_on " ^ termarg_placeholder,
@@ -287,7 +287,7 @@ fun tactictoe_mini_aux goal =
   let
     val cthyl = current_theory () :: ancestry (current_theory ())
     val thmdata = hidef create_thmdata ()
-    val (proofstatus,_) = hidef 
+    val (proofstatus,_) = hidef
       (main_tactictoe_mini thmdata (NONE,NONE,NONE)) goal
     val (staco,tac) = read_status proofstatus
   in

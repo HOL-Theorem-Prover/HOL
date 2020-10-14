@@ -12,7 +12,7 @@ sig
 
   val write_evalscript : string -> nnfiles -> string -> unit
   val run_evalscript : string -> string -> nnfiles -> string -> unit
-  val run_evalscript_thyl : string -> string -> bool * int -> 
+  val run_evalscript_thyl : string -> string -> bool * int ->
     nnfiles -> string list -> unit
 
   (* statistics *)
