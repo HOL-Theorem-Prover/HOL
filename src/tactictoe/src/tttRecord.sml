@@ -95,9 +95,8 @@ fun write_info thy =
 fun record_tactic (tac,stac) g =
   let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
-    (
     if op_mem goal_eq g gl then () else
-    calls_glob := (stac,g,gl) :: !calls_glob);
+    calls_glob := (stac,g,gl) :: !calls_glob; 
     (gl,v)
   end
   handle Interrupt => raise Interrupt
@@ -171,58 +170,39 @@ fun fetch s reps =
 
 fun start_record_proof name =
   (
-  incr n_proof;
-  calls_glob := [];
-  name_glob := name;
+  incr n_proof; calls_glob := [];
   debug ("Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name)
   )
 
-fun proof_descendants deptop gtop = (* avoid looping *)
-  let 
-    val drtop = ref (HOLset.empty goal_compare)
-    fun loop dr dep g = 
-      if not (dmem g dep) then () else
-      let 
-        val _ = dr := HOLset.add (!dr,g)
-        val gl = dfind g dep in
-      in
-        app proof_descendants dr dep g
-      end 
-  in
-    loop drtop deptop gtop; HOLset.listItems (!drtop)
-  end
-
-fun end_record_proof name g =
+fun end_record_proof name =
   let
-    (* number goals *) 
-    val goalset = mk_fast_set goal_compare (map #2 (!calls_glob))
-    val goalnd = dnew goal_compare (number_snd 0 goalset)
-    (* dependencies *)
-    val dep = dnew goal_compare (map (fn (_,ig,ogl) => (ig,ogl)) (!calls_glob))
-    (* *) 
-    val mk_call (stac,ig,ogl) = 
-      {
-      stac = stac,
-      loc = ...,
-      gn =     ,
-      gdepn = (* includes gn *)
-      }
+    (* transforming into a call *)
+    val precalls = number_snd 0 (rev (!calls_glob))
+    val parentd = dregroup goal_compare (map_fst (fn (_,g,_) => g) precalls)
+    fun find_parents gl = 
+      let fun f x = dfind x parentd handle NotFound => [] in
+        mk_fast_set Int.compare (List.concat (map f gl))
+      end
+    fun init_call ((stac,g,gl),n) = ((g,gl),
+      (
+      (current_theory (), (!savestate_level) - 1, n),
+      {stac= stac, ogl = find_parents gl, fea = fea_of_goal true g}
+      ))
+    val icalls1 = map init_call precalls
     (* precompute symweight *)
-    val feal1 = List.concat (map #fea l1)
+    val feal1 = List.concat (map (#fea o snd o snd) icalls1)
     val feal2 = mk_fast_set Int.compare feal1
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
+    val calld = #calld tacdata
     val tacfea = total_time tacfea_time
-      (map (fn x => (#ortho x, #fea x))) (#calls tacdata)
-    val tacsymweight =
-      total_time learn_tfidf_time
-        (learn_tfidf_symfreq (length tacfea) feal2) (#symfreq tacdata)
-    val l2 =
-      if !record_ortho_flag
-      then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
-      else l1
-    val newtacdata = foldl ttt_update_tacdata tacdata l2
+      (map (fn (_,x) => (#stac x, #fea x))) (dlist calld)
+    val tacsymweight = total_time learn_tfidf_time
+      (learn_tfidf_symfreq (dlength calld) feal2) (#symfreq tacdata)
+    val icalls2 = if not (!record_ortho_flag) then map snd icalls1 else
+      map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) icalls1
+    val newtacdata = foldl ttt_update_tacdata tacdata icalls2
   in
-    debug ("saving " ^ int_to_string (length l2) ^ " labels");
+    debug ("saving " ^ int_to_string (length icalls2) ^ " calls");
     tacdata_glob := newtacdata
   end
 
@@ -280,7 +260,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
           val (r,t) = add_time tac1 g
           val _ = record_time := !record_time + t;
           val _ = debug ("record time: " ^ Real.toString t)
-          val _ = total_time learn_time (end_record_proof name) g
+          val _ = total_time learn_time end_record_proof name
         in
           if null (fst r) then r
           else (debug "error: record_proof: not null"; tac2 g)

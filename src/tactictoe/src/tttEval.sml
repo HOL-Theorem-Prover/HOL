@@ -152,7 +152,7 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval"
-val _ = run_evalscript_thyl smlfun "august30" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl smlfun "october14" (true,30) (NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
