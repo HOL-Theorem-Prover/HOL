@@ -92,7 +92,7 @@ fun unsafe_prettify_proof proof =
           decll_ref := decll @ (!decll_ref);
           smart_space news
         end
-    | Then (p1,p2) => loop p1 ^ " THEN\n  " ^ loop p2
+    | Then (p1,p2) => loop p1 ^ " " ^ sthen ^ " " ^ loop p2
     | Thenl (p,pl) =>
       let
         val sl = map loop pl
