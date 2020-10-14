@@ -109,7 +109,7 @@ fun unsafe_prettify_proof proof =
   in
     if null decls
     then body
-    else "let " ^ String.concatWith "  " decls ^ "in " ^ body ^ "end"
+    else "let " ^ String.concatWith "  " decls ^ " in " ^ body ^ "end"
   end
 
 fun safe_prettify_proof proof = case proof of
