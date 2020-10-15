@@ -1,8 +1,13 @@
 HOLyHammer is a machine learning for theorem proving framework.
+It automatically selects suitable premises (theorems) for the current goal and
+translates them together with the goal to automated theorem provers (ATPs).
+The final proof is reconstructed by calling Metis on the premises appearing in
+the ATP proof.
 
 Usage (requires at least one installed external prover):
   load "holyHammer"; open holyHammer;
-  holyhammer ``1+1=2``;
+  hh ([],``1+1=2``);
+  holyhammer ``1+1=2``; (* alternatively *)
 
 Install external provers:
   1) Download provers
@@ -14,13 +19,13 @@ Install external provers:
   - Vampire 4.2.2 (latest version should work too):
       Linux binary: https://vprover.github.io/download.html
       Source: https://github.com/vprover/vampire
-      Installing Vampire produces the binary file "vampire_rel_master_3993" 
+      Installing Vampire produces the binary file "vampire_rel_master_3993"
       in the top directory.
-  2) Prover binaries should be copied or linked in 
+  2) Prover binaries should be copied or linked in
      the directory src/holyhammer/provers.
      They should be respectively renamed to eprover, z3 and vampire.
-  3) Make sure you have the permission to execute them (chmod +x)
+  3) Make sure you have the permission to execute them (chmod +x).
 
 Questions:
   If you have any question, you can send an email to
-  email@thibaultgauthier.fr
+  email@thibaultgauthier.fr.
