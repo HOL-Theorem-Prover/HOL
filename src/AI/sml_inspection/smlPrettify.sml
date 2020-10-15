@@ -58,15 +58,12 @@ fun elim_infix sl = case sl of
 
 fun drop_struct long =
   let
-    val l = String.tokens (fn x => x = #".") long
-    val short = last l
+    val short = last (String.tokens (fn x => x = #".") long)
     val lower = String.translate (Char.toString o Char.toLower) short
   in
-    if is_local_value lower andalso
-       is_pointer_eq long lower
+    if is_local_value lower andalso is_pointer_eq long lower
       then lower
-    else if is_local_value short andalso
-       is_pointer_eq long short
+    else if is_local_value short andalso is_pointer_eq long short
       then short
     else long
   end
