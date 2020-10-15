@@ -74,7 +74,7 @@ open groupActionTheory;
                                    CARD (orbit cycle (Zadd p) (multicoloured p a) ls) = p
 
    Application:
-   Fermat_Little_Theorem   |- !p a. prime p ==> p divides a ** p - a
+   Fermat_Little_Theorem   |- !p a. prime p ==> a ** p MOD p = a MOD p
 
 *)
 
@@ -136,42 +136,47 @@ val multicoloured_orbit_card_prime = FLTactionTheory.multicoloured_orbit_card_pr
 
 (* Theorem: prime p ==> p divides (a ** p - a) *)
 (* Proof:
-   Let A = multicoloured p a,
+   Let X = multicoloured p a,
        b = (\ls. orbit cycle (Zadd p) ls).
    Note 0 < p                      by PRIME_POS
-    and FINITE A                   by multicoloured_finite
-   with CARD A = a ** p - a        by multicoloured_card, 0 < p
+    and FINITE X                   by multicoloured_finite
+   with CARD X = a ** p - a        by multicoloured_card, 0 < p
    Also Group (Zadd p)             by Zadd_group, 0 < p
    with (Zadd p act A) cycle       by cycle_action_on_multicoloured, 0 < p
-   then !ls. ls IN A ==> CARD (b ls) = p
-                                   by multicoloured_orbit_card_prime
-   thus p divides CARD A           by orbits_equal_size_property
+   then !ls. ls IN X ==>
+             (CARD (b ls) = p)     by rw[multicoloured_orbit_card_prime
+   thus p divides CARD X           by orbits_equal_size_property
      or p divides (a ** p - a)     by above
+     so (a ** p - a) MOD p = 0     by DIVIDES_MOD_0, 0 < p
+    Now a <= a ** p                by EXP_LE, 0 < p
+    ==> a ** p MOD p = a MOD p     by MOD_EQ, 0 < p
 
 orbits_equal_size_property |> ISPEC ``cycle`` |> ISPEC ``Zadd p``;
-|- !A n. Group (Zadd p) /\ (Zadd p act A) cycle /\ FINITE A /\
-         (!x. x IN A ==> CARD (orbit cycle (Zadd p) A x) = n) ==> n divides CARD A
+|- !X n. Group (Zadd p) /\ (Zadd p act X) cycle /\ FINITE X /\
+         (!x. x IN X ==> CARD (orbit cycle (Zadd p) x) = n) ==> n divides CARD X
 *)
 Theorem Fermat_Little_Theorem:
-  !p a. prime p ==> p divides (a ** p - a)
+  !p a. prime p ==> a ** p MOD p = a MOD p
 Proof
   rpt strip_tac >>
   (* prime p is positive *)
   `0 < p` by rw[PRIME_POS] >>
-  (* let A = the set of multicoloured necklaces *)
-  qabbrev_tac `A = multicoloured p a` >>
-  (* set A is finite *)
-  `FINITE A` by rw[multicoloured_finite, Abbr`A`] >>
-  (* and cardinality of A is known *)
-  `CARD A = a ** p - a` by rw[multicoloured_card, Abbr`A`] >>
+  (* let X = the set of multicoloured necklaces *)
+  qabbrev_tac `X = multicoloured p a` >>
+  (* set X is finite *)
+  `FINITE X` by rw[multicoloured_finite, Abbr`X`] >>
+  (* and cardinality of X is known *)
+  `CARD X = a ** p - a` by rw[multicoloured_card, Abbr`X`] >>
   (* Modulo p is an additive group, by 0 < p *)
   `Group (Zadd p)` by rw[Zadd_group] >>
-  (* and acts on A by cycle *)
-  `(Zadd p act A) cycle` by rw[cycle_action_on_multicoloured, Abbr`A`] >>
-  (* then all orbits of multicoloured necklaces has size = p *)
+  (* and acts on X by cycle *)
+  `(Zadd p act X) cycle` by rw[cycle_action_on_multicoloured, Abbr`X`] >>
+  (* then all orbits of multicoloured necklaces has size equal to p *)
   imp_res_tac multicoloured_orbit_card_prime >>
-  (* therefore prime p divides the cardinality of A *)
-  metis_tac[orbits_equal_size_property]
+  (* therefore prime p divides the cardinality of X *)
+  `p divides (a ** p - a)` by metis_tac[orbits_equal_size_property] >>
+  (* or a ** p and a have the same remainder in modulo p *)
+  metis_tac[DIVIDES_MOD_0, EXP_LE, MOD_EQ]
 QED
 
 

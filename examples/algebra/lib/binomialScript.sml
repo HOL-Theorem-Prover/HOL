@@ -51,7 +51,7 @@ C:\jc\www\ml\hol\info\Hol\examples\miller\RSA\binomialScript.sml
    binomial_def        |- (binomial 0 0 = 1) /\ (!n. binomial (SUC n) 0 = 1) /\
                           (!k. binomial 0 (SUC k) = 0) /\
                           !n k. binomial (SUC n) (SUC k) = binomial n k + binomial n (SUC k)
-   binomail_alt        |- !n k. binomial n 0 = 1 /\ binomial 0 (k + 1) = 0 /\
+   binomial_alt        |- !n k. binomial n 0 = 1 /\ binomial 0 (k + 1) = 0 /\
                                 binomial (n + 1) (k + 1) = binomial n k + binomial n (k + 1)
    binomial_less_0     |- !n k. n < k ==> (binomial n k = 0)
    binomial_n_0        |- !n. binomial n 0 = 1
@@ -159,7 +159,7 @@ val binomial_def = Define`
 
 (* Theorem: alternative definition of C(n,k). *)
 (* Proof: by binomial_def. *)
-Theorem binomail_alt:
+Theorem binomial_alt:
   !n k. (binomial n 0 = 1) /\
          (binomial 0 (k + 1) = 0) /\
          (binomial (n + 1) (k + 1) = binomial n k + binomial n (k + 1))
