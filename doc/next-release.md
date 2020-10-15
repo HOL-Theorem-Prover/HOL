@@ -70,10 +70,6 @@ New features:
 
     Thanks to Hrutvik Kanabar for the implementation of this feature.
 
-* A weaker version of TacticToe relying on a few selected tactics
-  that does not require any recording is available under the names
-  `tactictoe_mini` and `ttt_mini`.
-
 Bugs fixed:
 -----------
 
