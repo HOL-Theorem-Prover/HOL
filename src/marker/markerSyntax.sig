@@ -34,4 +34,7 @@ sig
   val is_using : term -> bool
   val DEST_USING : thm -> thm
 
+  val Case_tm : term
+  val dest_Case : term -> term
+
 end

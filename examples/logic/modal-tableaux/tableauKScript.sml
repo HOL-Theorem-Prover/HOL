@@ -10,7 +10,6 @@ open HolKernel Parse boolLib bossLib;
 
 open pairTheory pred_setTheory listTheory
 open sortingTheory
-open mp_then
 val _ = new_theory "tableauK";
 
 Datatype: form = Var num | NVar num | Conj form form | Disj form form
@@ -470,13 +469,17 @@ Definition is_box_def[simp]:
 End
 
 Inductive tableauR:
+[~conj:]
   (∀p s f1 f2.
       tableauR (p ++ [f1;f2] ++ s) r ⇒
       tableauR (p ++ [Conj f1 f2] ++ s) r) ∧
+[~disj1:]
   (∀p s f1 f2.
       tableauR (p ++ [f1] ++ s) r ⇒ tableauR (p ++ [Disj f1 f2] ++ s) r) ∧
+[~disj2:]
   (∀p s f1 f2.
       tableauR (p ++ [f2] ++ s) r ⇒ tableauR (p ++ [Disj f1 f2] ++ s) r) ∧
+[~diam:]
   (∀G.
       (∀f. MEM f G ⇒ ¬is_conj f ∧ ¬is_disj f) ∧ (∃f. MEM f G ∧ is_dia f) ∧
       contradiction G = NONE ∧
@@ -485,6 +488,7 @@ Inductive tableauR:
                rs
      ⇒
       tableauR G (Nd (unvar G) rs)) ∧
+[~open:]
   (∀G. (∀f. MEM f G ⇒ is_literal f ∨ is_box f) ∧ contradiction G = NONE ⇒
        tableauR G (Nd (unvar G) []))
 End
@@ -523,7 +527,7 @@ Theorem scmap_EQ_SOME:
   ∀l r. scmap f l = SOME r ⇔
         LENGTH l = LENGTH r ∧ ∀i. i < LENGTH l ⇒ f (EL i l) = SOME (EL i r)
 Proof
-  Induct >> simp[AllCaseEqs(), PULL_EXISTS] >- metis_tac[] >>
+  Induct >> simp[AllCaseEqs(), PULL_EXISTS] >>
   rw[] >> Cases_on ‘f h’ >> simp[]
   >- (disj2_tac >> qexists_tac‘0’ >> simp[]) >>
   Cases_on ‘r’ >> simp[] >> simp[Once FORALL_NUM, SimpRHS] >> simp[] >>
@@ -580,17 +584,17 @@ Proof
   ho_match_mp_tac tableau_ind >> qx_gen_tac ‘G’ >> strip_tac >>
   ONCE_REWRITE_TAC [tableau_def] >>
   simp[AllCaseEqs()] >> rw[]
-  >- (irule (last (CONJUNCTS tableauR_rules)) >> rw[] >> fs[EVERY_MEM])
+  >- (irule tableauR_open >> rw[] >> fs[EVERY_MEM])
   >- (reverse (Cases_on ‘∃f. MEM (Dia f) G’)
       >- (‘undia G = []’
            by (Cases_on ‘undia G’ >> simp[] >>
                ‘∃df. MEM df (undia G)’ by simp[EXISTS_OR_THM] >>
                fs[MEM_undia] >> rfs[]) >>
           fs[] >> rw[] >>
-          irule (last (CONJUNCTS tableauR_rules)) >> rw[] >>
+          irule tableauR_open >> rw[] >>
           fs[conjsplit_EQ_NONE, disjsplit_EQ_NONE] >> Cases_on ‘f’ >>
           fs[] >> rfs[]) >>
-      (* K rule *) irule (el 4 (CONJUNCTS tableauR_rules)) >> rw[]
+      (* K rule *) irule tableauR_diam >> rw[]
       >- (fs[conjsplit_EQ_NONE] >> Cases_on ‘f’ >> rfs[])
       >- (fs[disjsplit_EQ_NONE] >> Cases_on ‘f’ >> rfs[])
       >- metis_tac[is_dia_def] >>
@@ -731,7 +735,7 @@ Proof
           ‘¬MEM ϕ Γ’ by metis_tac[] >>
           fs[FILTER_APPEND_DISTRIB] >>
           qexists_tac ‘Nd (unvar Γ) []’ >>
-          irule (last (CONJUNCTS tableauR_rules)) >>
+          irule tableauR_open >>
           fs[contradiction_EQ_NONE] >> Cases >> simp[] >>
           metis_tac[is_conj_def, is_disj_def, is_dia_def]) >>
       pop_assum strip_assume_tac >>
@@ -739,8 +743,7 @@ Proof
       fs[FILTER_APPEND_DISTRIB, DISJ_IMP_THM, FORALL_AND_THM, unbox_APPEND]>>
       drule_then strip_assume_tac contradiction_EQ_NONE_APPEND >>
       drule_then (drule_then (drule_then drule))
-                 (SIMP_RULE bool_ss [PULL_EXISTS]
-                    (el 4 (CONJUNCTS tableauR_rules))) >>
+                 (SIMP_RULE bool_ss [PULL_EXISTS] tableauR_diam) >>
       disch_then (fn th =>
       ‘∃ts. LIST_REL (λf r. tableauR (dest_dia f :: unbox Γ) r)
             (FILTER is_dia Γ) ts’

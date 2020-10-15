@@ -168,7 +168,7 @@ val _ = add_rule {fixity = Suffix 2100,
                   paren_style = OnlyIfNecessary,
                   pp_elements = [TOK "⁻¹"]}
 val _ = overload_on ("⁻¹", ``REVERSE : pm -> pm``)
-val _ = TeX_notation {hol="⁻¹", TeX= ("\\ensuremath{\\sp{-1}}", 1)}
+val _ = TeX_notation {hol="⁻¹", TeX= ("\\HOLTokenInverse{}", 1)}
 
 val is_pmact_def = Define`
   is_pmact (f:pm -> 'a -> 'a) <=>

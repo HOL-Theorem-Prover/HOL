@@ -9,7 +9,8 @@ all: $(UOFILES) selftest.exe
 FinalTag-sig.uo: FinalTag-sig.sml Nonce.ui $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<
 
-FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo KernelSig.ui
+FinalTerm-sig.uo: FinalTerm-sig.sml $(dprot $(SIGOBJ)/HOLset.ui) Lib.uo \
+                  KernelSig.ui
 	$(HOLMOSMLC) -c -toplevel $<
 
 FinalType-sig.uo: FinalType-sig.sml Lib.ui

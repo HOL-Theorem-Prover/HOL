@@ -44,6 +44,7 @@ sig
 (* Support for persistent theories *)
 
   val adjoin_to_theory       : thy_addon -> unit
+  val adjoin_after_completion: (unit -> HOLPP.pretty) -> unit
   val quote_adjoin_to_theory : string quotation -> string quotation -> unit
   val export_theory          : unit -> unit
 

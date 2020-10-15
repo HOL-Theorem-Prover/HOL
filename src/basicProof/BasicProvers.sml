@@ -1055,15 +1055,17 @@ val bool_ss = boolSimps.bool_ss;
        just when a datatype is declared.
  ---------------------------------------------------------------------------*)
 
-val (srw_ss : simpset ref) = ref bool_ss
+val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
+                              ++ boolSimps.NORMEQ_ss
+                              ++ boolSimps.ABBREV_ss
+                              ++ boolSimps.LABEL_CONG_ss
+
+val (srw_ss : simpset ref) = ref initial_simpset
 
 val srw_ss_initialised = ref false;
 
 datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
-val pending_updates = ref (map ADD_SSFRAG [combinSimps.COMBIN_ss,
-                                           boolSimps.NORMEQ_ss,
-                                           boolSimps.ABBREV_ss,
-                                           boolSimps.LABEL_CONG_ss]);
+val pending_updates = ref ([] : update list)
 
 fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
   | apply_update (REMOVE_RWT n, ss) = ss -* [n]
@@ -1086,22 +1088,8 @@ fun augment_srw_ss ssdl =
       pending_updates := !pending_updates @ map ADD_SSFRAG ssdl;
 
 fun diminish_srw_ss names =
-    if !srw_ss_initialised then
-      srw_ss := simpLib.remove_ssfrags names (!srw_ss)
-    else
-      let
-        open simpLib
-        fun foldthis (upd, keep) =
-            case upd of
-                ADD_SSFRAG ssf =>
-                (case frag_name ssf of
-                     NONE => upd::keep
-                   | SOME n => if mem n names then keep else upd::keep)
-              | _ => upd::keep
-        val keep = foldr foldthis [] (!pending_updates)
-      in
-        pending_updates := keep
-      end;
+    (initialise_srw_ss();
+     srw_ss := simpLib.remove_ssfrags names (!srw_ss))
 
 fun temp_delsimps names =
     if !srw_ss_initialised then

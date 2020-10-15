@@ -155,6 +155,9 @@ sig
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
 
+  (* name cases of an induction theorem *)
+  val name_ind_cases : term list -> thm -> thm
+
   (* more simplification variants *)
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
   val simp : thm list -> tactic
@@ -166,6 +169,10 @@ sig
   val rw : thm list -> tactic
   val fs : thm list -> tactic
   val rfs : thm list -> tactic
+  val gs : thm list -> tactic
+  val gvs : thm list -> tactic
+  val gns : thm list -> tactic
+  val gnvs : thm list -> tactic
 
   (* without loss of generality (from wlogLib) *)
   val wlog_then : term quotation ->

@@ -19,3 +19,14 @@ s2`
 (* ` *)
 `^(fromMLnum nm) (* *) `;
 (* (*  *) `;*)
+
+Inductive even:
+[~0[simp]:] even 0 /\
+(!n. even n ==> odd (n + 1)) /\
+[even_suc:]
+  (!m. odd m ==> even (m + 1))
+End
+
+Definition foo:
+  foo x = if x < 2 then 1 else x * foo (x - 1)
+End

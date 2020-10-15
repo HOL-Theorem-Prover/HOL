@@ -2,10 +2,10 @@
 
 INCLUDES = $(protect $(HOLDIR)/tools/cmp/)
 
-DEPS = $(dprot $(HOLDIR)/bin/unquote) input expected
+DEPS = $(dprot $(HOLDIR)/bin/unquote) input expected-$(ML_SYSNAME)
 
 all: $(DEPS)
 	$(protect $(HOLDIR)/bin/unquote) < input > output
-	$(protect $(HOLDIR)/tools/cmp/cmp.exe) output expected
+	$(protect $(HOLDIR)/tools/cmp/cmp.exe) output expected-$(ML_SYSNAME)
 
 EXTRA_CLEANS = output

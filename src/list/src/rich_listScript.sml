@@ -724,6 +724,12 @@ Proof
   srw_tac[][IS_SUFFIX_APPEND] >> Q.EXISTS_TAC ‘a::l’ >> srw_tac[][]
 QED
 
+Theorem IS_SUFFIX_APPEND1:
+  !l1 l2 l. IS_SUFFIX l2 l ==> IS_SUFFIX (l1 ++ l2) l
+Proof
+  Induct >> fs[IS_SUFFIX_CONS]
+QED
+
 Theorem IS_SUFFIX_TRANS:
   !l1 l2 l3. IS_SUFFIX l1 l2 /\ IS_SUFFIX l2 l3 ==> IS_SUFFIX l1 l3
 Proof

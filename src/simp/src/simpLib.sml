@@ -751,9 +751,35 @@ fun ASM_SIMP_TAC0 ss =
 fun ASM_SIMP_TAC ss = markerLib.mk_require_tac (ASM_SIMP_TAC0 ss)
 val asm_simp_tac = ASM_SIMP_TAC
 
+(* differs from default strip_assume_tac base in that it doesn't call
+   OPPOSITE_TAC or DISCARD_TAC.
+
+   Both are reasonable omissions: OPPOSITE_TAC detects mutually
+   contradictory assumptions; we'd hope that simplification will turn
+   one or the other into F, which is then caught by CONTR_TAC.
+   DISCARD_TAC drops duplicates. This should turn into T, which we can
+   dischard if droptrues is true.
+*)
+
+type simptac_config = {strip : bool, elimvars : bool, droptrues : bool}
+
+fun BF_ASSUME_TAC backp th (g as (asl,w)) =
+    if backp then ([(asl @ [concl th], w)],
+                   fn resths => PROVE_HYP th (hd resths))
+    else ASSUME_TAC th g
+
+fun caa_tac0 backp (c : simptac_config) th =
+    let
+      val base = FIRST [CONTR_TAC th, ACCEPT_TAC th,
+                        BF_ASSUME_TAC backp th]
+    in
+      if #droptrues c andalso concl th ~~ boolSyntax.T then ALL_TAC
+      else base
+    end
+
 local
-   (* differs only in that it doesn't call OPPOSITE_TAC or DISCARD_TAC *)
-   fun caa_tac th = FIRST [CONTR_TAC th, ACCEPT_TAC th, ASSUME_TAC th]
+   val caa_tac = caa_tac0 false
+                          {elimvars = false, droptrues = false, strip = false}
    val STRIP_ASSUME_TAC' = REPEAT_TCL STRIP_THM_THEN caa_tac
    fun drop r =
       fn n =>
@@ -784,6 +810,36 @@ in
    val NO_STRIP_REV_FULL_SIMP_TAC =
        markerLib.mk_require_tac o rev_full_tac caa_tac
 end
+
+fun stdcon (c : simptac_config) th =
+    if #elimvars c andalso eliminable (concl th) then VSUBST_TAC th
+    else
+      (if #strip c then REPEAT_TCL STRIP_THM_THEN else I) (caa_tac0 true c) th
+
+fun psr (cfg : simptac_config) ss =
+    pop_assum (fn th =>
+                  ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+
+fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
+
+fun global_simp_tac cfg ss =
+    markerLib.mk_require_tac (
+      markerLib.ABBRS_THEN (
+        markerLib.LLABEL_RES_THEN (
+          fn thl =>
+             let
+               val ss' = ss ++ rewrites thl
+             in
+               rpt (CHANGED_TAC (allasms cfg ss')) THEN
+               ASM_SIMP_TAC ss' []
+             end
+        )
+      )
+    )
+
+
+
+
 
 fun track f x =
  let val _ = (used_rewrites := [])

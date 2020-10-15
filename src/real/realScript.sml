@@ -723,27 +723,35 @@ val REAL_LE_INV = store_thm("REAL_LE_INV",
  Term `!x. 0 <= x ==> 0 <= inv(x)`,
   REWRITE_TAC[REAL_LE_INV_EQ]);;
 
-val REAL_LE_ADDR = store_thm("REAL_LE_ADDR",
-  “!x y. x <= x + y = 0 <= y”,
+Theorem REAL_LE_ADDR[simp]:
+  !x y. x <= x + y = 0 <= y
+Proof
   REPEAT GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [“x:real”, “0”, “y:real”] REAL_LE_LADD)) THEN
-  REWRITE_TAC[REAL_ADD_RID]);
+  REWRITE_TAC[REAL_ADD_RID]
+QED
 
-val REAL_LE_ADDL = store_thm("REAL_LE_ADDL",
-  “!x y. y <= x + y = 0 <= x”,
+Theorem REAL_LE_ADDL[simp]:
+  !x y. y <= x + y = 0 <= x
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-  MATCH_ACCEPT_TAC REAL_LE_ADDR);
+  MATCH_ACCEPT_TAC REAL_LE_ADDR
+QED
 
-val REAL_LT_ADDR = store_thm("REAL_LT_ADDR",
-  “!x y. x < x + y = 0 < y”,
+Theorem REAL_LT_ADDR[simp]:
+  !x y. x < x + y = 0 < y
+Proof
   REPEAT GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [“x:real”, “0”, “y:real”] REAL_LT_LADD)) THEN
-  REWRITE_TAC[REAL_ADD_RID]);
+  REWRITE_TAC[REAL_ADD_RID]
+QED
 
-val REAL_LT_ADDL = store_thm("REAL_LT_ADDL",
-  “!x y. y < x + y = 0 < x”,
+Theorem REAL_LT_ADDL[simp]:
+  !x y. y < x + y = 0 < x
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-  MATCH_ACCEPT_TAC REAL_LT_ADDR);
+  MATCH_ACCEPT_TAC REAL_LT_ADDR
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove homomorphisms for the inclusion map                                 *)

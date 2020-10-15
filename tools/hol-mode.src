@@ -117,7 +117,15 @@ evaluations.")
       (lambda ()
         (let ((pthm-point
                (save-excursion
-                 (re-search-forward "^Proof\\|^Theorem\\|^Triviality" nil t))))
+                 (let ((ok t))
+                   (while
+                       (and ok
+                            (re-search-forward
+                             "^Proof\\|^Theorem\\|^Triviality" nil t))
+                     (let ((ppss (syntax-ppss)))
+                       (if (or (nth 3 ppss) (nth 4 ppss)) nil
+                         (setq ok nil))))
+                   (not ok)))))
           (if (and pthm-point (equal (match-string 0) "Proof"))
               (progn (goto-char (match-beginning 0))
                      (setq hol-term-end-delim "Proof"))
@@ -149,7 +157,7 @@ evaluations.")
           (setq hol-beg-pos (point))))))
 
 (defun hol-term-at-point ()
-  (let ((s (thing-at-point 'hol-term)))
+  (let ((s (thing-at-point 'hol-term t)))
     (with-hol-locpragma hol-beg-pos s)))
 
 (defun hol-buffer-ok (string)

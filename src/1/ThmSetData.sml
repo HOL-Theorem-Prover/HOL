@@ -138,7 +138,10 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
       in
         List.app appthis ds
       end
-  fun loadfn {data,thyname} = apply_deltas thyname (dropBads (read name data))
+  fun loadfn {thyname, data = data_opt} =
+      case data_opt of
+          NONE => ()
+        | SOME data => apply_deltas thyname (dropBads (read name data))
   fun uptodate_thmdelta (ADD (s,th)) = uptodate_thm th
     | uptodate_thmdelta _ = true
   fun neqbinding s1 (ADD ({Thy,Name},_)) =

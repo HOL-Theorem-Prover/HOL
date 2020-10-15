@@ -34,3 +34,5 @@ src/temporal/src
 !!examples/temporal_deep
 [mosml]!!examples/temporal_deep/src/model_check
 [poly]!!examples/temporal_deep/src/examples
+!!examples/computability/kolmog
+!!examples/computability/recdegrees

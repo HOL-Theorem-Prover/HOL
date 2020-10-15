@@ -272,9 +272,9 @@ fun new {thydataty, load, other_tds, merge} =
 
     fun onload thyname =
       case segment_data{thyname = thyname} of
-          NONE => ()
+          NONE => load {thyname = thyname, data = NONE}
         | SOME s =>
-            load {thyname = thyname, data = s}
+            load {thyname = thyname, data = SOME s}
 
     fun hook0 td =
       case segment_data {thyname = current_theory()} of
@@ -300,7 +300,7 @@ fun new {thydataty, load, other_tds, merge} =
                    hook0 td)
 
     fun export s =
-      (load {thyname = current_theory(), data = s};
+      (load {thyname = current_theory(), data = SOME s};
        LTD.write_data_update {thydataty = thydataty, data = todata s})
 
   in
@@ -308,5 +308,22 @@ fun new {thydataty, load, other_tds, merge} =
     List.app onload (ancestry "-");
     {export = export, segment_data = segment_data}
   end
+
+fun bind NONE f = NONE
+  | bind (SOME a) f = f a
+
+fun mmap f [] = SOME []
+  | mmap f (h::t) =
+    bind (f h) (fn h' => bind (mmap f t) (fn t' => SOME (h'::t')))
+
+fun dest_list d t =
+    case t of
+        List ts => mmap d ts
+      | _ => NONE
+
+fun mk_list m ts = List (map m ts)
+
+fun dest_string (String s) = SOME s
+  | dest_string _ = NONE
 
 end

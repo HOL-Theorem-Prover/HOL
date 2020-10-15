@@ -271,19 +271,22 @@ type segment = {thid    : thyid,                               (* unique id  *)
                 facts   : (string * thmkind) list,  (* stored ax,def,and thm *)
                 thydata : ThyDataMap,                   (* extra theory data *)
                 adjoin  : thy_addon list,              (*  extras for export *)
+                adjoinpc: (unit -> PP.pretty) list,
                 mldeps  : string HOLset.set}
 local
   open FunctionalRecordUpdate
-  fun seg_mkUp z = makeUpdate5 z
+  fun seg_mkUp z = makeUpdate6 z
 in
   fun update_seg z = let
-    fun from adjoin facts mldeps thid thydata =
-      {adjoin=adjoin, facts=facts, mldeps=mldeps, thid=thid, thydata=thydata}
+    fun from adjoin adjoinpc facts mldeps thid thydata =
+      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
+       thid=thid, thydata=thydata}
     (* fields in reverse order to above *)
-    fun from' thydata thid mldeps facts adjoin =
-      {adjoin=adjoin, facts=facts, mldeps=mldeps, thid=thid, thydata=thydata}
-    fun to f {adjoin, facts, mldeps, thid, thydata} =
-      f adjoin facts mldeps thid thydata
+    fun from' thydata thid mldeps facts adjoinpc adjoin =
+      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
+       thid=thid, thydata=thydata}
+    fun to f {adjoin, adjoinpc, facts, mldeps, thid, thydata} =
+      f adjoin adjoinpc facts mldeps thid thydata
   in
     seg_mkUp (from, from', to)
   end z
@@ -301,10 +304,11 @@ end (* local *)
  * gets created (the file is only created on export).                        *
  *---------------------------------------------------------------------------*)
 
-fun fresh_segment s :segment = {thid=new_thyid s,  facts=[],  adjoin=[],
-                               thydata = empty_datamap,
-                               mldeps = HOLset.empty String.compare};
+fun empty_segment_value thid =
+    {adjoin=[], adjoinpc = [], facts=[],thid=thid, thydata = empty_datamap,
+     mldeps = HOLset.empty String.compare}
 
+fun fresh_segment s :segment = empty_segment_value (new_thyid s)
 
 local val CT = ref (fresh_segment "scratch")
 in
@@ -395,6 +399,9 @@ end;
 fun new_addon a (s as {adjoin, ...} : segment) =
   update_seg s (U #adjoin (a::adjoin)) $$
 
+fun new_addonpc a (s as {adjoinpc, ...} : segment) =
+    update_seg s (U #adjoinpc (a::adjoinpc)) $$
+
 fun add_ML_dep s (seg as {mldeps, ...} : segment) =
   update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
 
@@ -438,8 +445,8 @@ fun del_binding name (s as {facts,...} : segment) =
 
 fun zap_segment s (thy : segment) =
     (Type.del_segment s; Term.del_segment s;
-     {adjoin=[], facts=[],thid= #thid thy, thydata = empty_datamap,
-      mldeps = HOLset.empty String.compare})
+     empty_segment_value (#thid thy)
+     )
 
 (*---------------------------------------------------------------------------
        Wrappers for functions that alter the segment.
@@ -469,6 +476,7 @@ in
 
   fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
   val adjoin_to_theory  = inCT new_addon
+  val adjoin_after_completion = inCT new_addonpc
   val zapCT             = inCT zap_segment
 
 end;
@@ -945,7 +953,7 @@ local
 in
 fun export_theory () = let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
-  val {thid,facts,adjoin,thydata,mldeps,...} = scrubCT()
+  val {thid,facts,adjoin,adjoinpc,thydata,mldeps,...} = scrubCT()
   val concat = String.concat
   val thyname = thyid_name thid
   val name = thyname^"Theory"
@@ -985,6 +993,7 @@ fun export_theory () = let
        definitions = D,
        theorems = T,
        struct_ps = struct_ps,
+       struct_pcps = adjoinpc,
        thydata = mungethydata thydata,
        mldeps = HOLset.listItems mldeps}
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso

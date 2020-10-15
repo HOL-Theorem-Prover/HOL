@@ -77,7 +77,7 @@ fun maybe_add_simpls tyi =
 
 fun load_from_disk {thyname, data} =
   case data of
-      ThyDataSexp.List tyi_sexps =>
+      SOME (ThyDataSexp.List tyi_sexps) =>
       let
         val tyis = List.mapPartial fromSEXP tyi_sexps
       in
@@ -90,6 +90,7 @@ fun load_from_disk {thyname, data} =
                  " corrupted data entries");
               ignore (write tyis))
       end
+    | NONE => ()
     | _ => HOL_WARNING "TypeBase" "load_from_disk"
                        ("{thyname=" ^ thyname ^ "}: " ^
                         "data completely corrupted")

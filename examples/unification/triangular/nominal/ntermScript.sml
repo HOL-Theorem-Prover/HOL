@@ -257,52 +257,29 @@ val nterm_case_eq = Q.store_thm(
   ‘∀p. p == c2 <=> p == c1’ suffices_by simp[] >>
   metis_tac[permeq_def]);
 
-local open TypeBase open TypeBasePure open Drule in
-val _ = write [mk_datatype_info {
-  ax = ORIG nterm_rec_exists,
-  induction = ORIG nterm_induction,
-  case_def = LIST_CONJ
-  (let val (n::rest) = CONJUNCTS nterm_case_rewrites
-   in n::Sus_case1::rest end),
-  case_cong = nterm_case_cong,
-  case_eq = nterm_case_eq,
-  nchotomy = nterm_nchotomy,
-  size = SOME (``nterm_size``,ORIG nterm_size_def),
-  encode = NONE,
-  lift = NONE,
-  one_one = NONE,
-  distinct = NONE (* SOME ntermeq_thm *),
-  fields = [],
-  accessors = [],
-  updates = [],
-  destructors = [],
-  recognizers = []
-}] end
-
-val _ = adjoin_to_theory {
-  sig_ps = NONE,
-  struct_ps = SOME (fn _ => PP.add_string
-"local open TypeBase open TypeBasePure open Drule in\
-\ val _ = write [mk_datatype_info {\
-\  ax = ORIG nterm_rec_exists,\
-\  induction = ORIG nterm_induction,\
-\  case_def = LIST_CONJ\
-\  (let val (n::rest) = CONJUNCTS nterm_case_rewrites\
-\   in n::Sus_case1::rest end),\
-\  case_cong = nterm_case_cong,\n\
-\  case_eq = nterm_case_eq,\n\
-\  nchotomy = nterm_nchotomy,\
-\  size = SOME (``nterm_size``,ORIG nterm_size_def),\
-\  encode = NONE,\
-\  lift = NONE,\
-\  one_one = NONE,\
-\  distinct = NONE,\
-\  fields = [],\
-\  accessors = [],\
-\  destructors = [],\
-\  recognizers = [],\
-\  updates = []\
-\}] end\n")}
+local open TypeBase TypeBasePure Drule
+in
+val _ = export [
+    mk_datatype_info {
+      ax = ORIG nterm_rec_exists,
+      induction = ORIG nterm_induction,
+      case_def = LIST_CONJ
+                 (let val (n::rest) = CONJUNCTS nterm_case_rewrites
+                  in n::Sus_case1::rest end),
+      case_cong = nterm_case_cong,
+      case_eq = nterm_case_eq,
+      nchotomy = nterm_nchotomy,
+      size = SOME (``nterm_size``,ORIG nterm_size_def),
+      encode = NONE,
+      lift = NONE,
+      one_one = NONE,
+      distinct = NONE (* SOME ntermeq_thm *),
+      fields = [],
+      accessors = [],
+      updates = [],
+      destructors = [],
+      recognizers = []}]
+end (* local *)
 
 val SELECT_permeq_REFL = RWstore_thm(
 "SELECT_permeq_REFL",

@@ -102,8 +102,8 @@ val _ = add_rule { fixity = Suffix 2100,
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK "^*"],
                    term_name = "RTC" }
-val _ = Unicode.unicode_version {u = UTF8.chr 0x20F0, tmnm = "RTC"}
-val _ = TeX_notation {hol = UTF8.chr 0x20F0, TeX = ("\\HOLTokenSupStar{}", 1)}
+val _ = Unicode.unicode_version {u = UTF8.chr 0xA673, tmnm = "RTC"}
+val _ = TeX_notation {hol = UTF8.chr 0xA673, TeX = ("\\HOLTokenSupStar{}", 1)}
 val _ = TeX_notation {hol = "^*", TeX = ("\\HOLTokenSupStar{}", 1)}
 
 val RC_DEF = new_definition(
@@ -576,6 +576,27 @@ val EXTEND_RTC_TC_EQN = store_thm(
   HO_MATCH_MP_TAC TC_INDUCT THEN
   PROVE_TAC[RTC_RULES, RTC_TRANSITIVE, transitive_def,
               RTC_RULES_RIGHT1]);
+
+Theorem EXTEND_RTC_TC_RIGHT1:
+  !R x y z. RTC R x y /\ R y z ==> TC R x z
+Proof
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC `!x y. RTC R x y ==> !z. R y z ==> TC R x z` THEN1
+        MESON_TAC [] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 THEN
+  MESON_TAC [TC_RULES]
+QED
+
+Theorem EXTEND_RTC_TC_RIGHT1_EQN:
+  !R x z. TC R x z = ?y. (RTC R x y /\ R y z)
+Proof
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC `!x z. TC R x z ==> ?y. RTC R x y /\ R y z` THEN1
+        MESON_TAC [EXTEND_RTC_TC_RIGHT1] THEN
+  HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 THEN
+  PROVE_TAC[RTC_RULES, RTC_TRANSITIVE, transitive_def,
+              RTC_RULES_RIGHT1]
+QED
 
 val reflexive_RC_identity = store_thm(
   "reflexive_RC_identity",

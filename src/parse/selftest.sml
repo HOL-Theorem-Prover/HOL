@@ -498,6 +498,7 @@ fun check (s1,s2) =
 val f = PrecAnalysis.check_for_listreductions check
 
 open term_grammar_dtype GrammarSpecials
+val S = HOLPP.add_string
 fun prmsp {nilstr,cons,sep} = "{" ^ nilstr ^ "," ^ cons ^ "," ^ sep ^ "}"
 fun prlr (s1,s2,sp) = "(" ^ s1 ^ ", " ^ s2 ^ ", " ^ prmsp sp ^ ")"
 fun prlist p l = "[" ^ String.concatWith ", " (map p l) ^ "]"
@@ -519,10 +520,10 @@ fun listredn_test (nm, input, input', expected1, testseq) =
       val _ = tprint ("check_for_listreductions (" ^ nm ^ ")")
       fun kont result =
           (tprint ("remove_listrels (" ^ nm ^ ")");
-           require_msg_eq (input', testseq) prrm_result
+           require_msg_eq (input', testseq) (S o prrm_result)
                           (rmlistrels result) input)
     in
-      require_msg_eqk expected1 prlrs f kont input
+      require_msg_eqk expected1 (S o prlrs) f kont input
     end
 val bare_let = [TOK "let", TM, TOK "in", TM]
 val suffix_let = [TM, TOK "let", TM, TOK "in"]
@@ -917,7 +918,7 @@ val _ = let
       single o QUOTE
   fun test (s,expected) =
       (tprint ("listspec-suffix: " ^ s);
-       require_msg_eq expected (fn s => s) testfn s)
+       require_msg_eq expected HOLPP.add_string testfn s)
 in
   List.app (ignore o test) [
     ("x {y}", "(top x (icons y inil))"),

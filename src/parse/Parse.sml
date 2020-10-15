@@ -210,11 +210,6 @@ type grammarDB_info = type_grammar.grammar * term_grammar.grammar
 val grammarDB_value =
     ref (Binarymap.mkDict String.compare :(string,grammarDB_info)Binarymap.dict)
 fun grammarDB s = Binarymap.peek (!grammarDB_value, s)
-fun grammarDB_fold f acc = Binarymap.foldl f acc (!grammarDB_value)
-fun grammarDB_insert (s, i) =
-  grammarDB_value := Binarymap.insert(!grammarDB_value, s, i)
-
-val _ = grammarDB_insert("min", min_grammars)
 
 fun minprint t = let
   fun default t = let
@@ -1079,114 +1074,52 @@ in
 end;
 
 
-(*---------------------------------------------------------------------------
+(* ----------------------------------------------------------------------
      Updating the global and local grammars when a theory file is
      loaded.
+   ---------------------------------------------------------------------- *)
 
-     The function "update_grms" updates both the local and global
-     grammars by pointer swapping. Ugh! Relies on fact that no
-     other state than that of the current global grammars changes
-     in a call to f.
-
-     TODO: handle exceptions coming from application of "f" to "x"
-           and print out informative messages.
- ---------------------------------------------------------------------------*)
-
-fun update_grms f x = let
-  val _ = f x                          (* update global grammars *)
-    handle HOL_ERR {origin_structure, origin_function, message} =>
-      (WARN "update_grms"
-       ("Update to global grammar failed in "^origin_function^
-        " with message: "^message^"\nproceeding anyway."))
-
-  val (tyG, tmG) = current_grammars()  (* save global grm. values *)
-  val (tyL0,tmL0) = current_lgrms()    (* read local grm. values *)
-  val _ = the_type_grammar := tyL0     (* mv locals into globals *)
-  val _ = the_term_grammar := tmL0
-  val _ = f x                          (* update global (really local) grms *)
-    handle HOL_ERR {origin_structure, origin_function, message} =>
-      (WARN "update_grms"
-       ("Update to local grammar failed in "^origin_function^
-        " with message: "^message^"\nproceeding anyway."))
-  val (tyL1, tmL1) = current_grammars()
-  val _ = the_lty_grm := tyL1          (* mv updates into locals *)
-  val _ = the_ltm_grm := tmL1
-in
-  the_type_grammar := tyG;             (* restore global grm. values *)
-  the_term_grammar := tmG
-end
-
-fun gparents thyname =
+fun gparents {thyname} =
   case GrammarAncestry.ancestry {thy = thyname} of
       [] => parents thyname
     | thys => thys
 
-fun gancestry thynm =
-  let
-    fun recurse acc seen worklist =
-      case worklist of
-          [] => acc
-        | thynm :: rest =>
+val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
+     DB = grammarDB0, parents = gparents} =
+    let
+      fun apply (tyuds, tmuds) (tyG, tmG) =
+          (type_grammar.apply_deltas tyuds tyG,
+           term_grammar.add_deltas tmuds tmG)
+      fun side_effect deltas =
           let
-            val unseen_ps =
-                List.filter (fn thy => not (HOLset.member(seen,thy)))
-                            (gparents thynm)
+            val (tyG, tmG) = apply deltas (!the_type_grammar, !the_term_grammar)
           in
-            recurse (HOLset.add(acc,thynm))
-                    (HOLset.addList(seen, unseen_ps))
-                    (unseen_ps @ rest)
+            the_type_grammar := tyG;
+            the_term_grammar := tmG;
+            type_grammar_changed := true;
+            term_grammar_changed := true
           end
-    val empty_strset = HOLset.empty String.compare
-  in
-    recurse empty_strset empty_strset (gparents thynm)
-  end
+    in
+      AncestryData.make {
+        tag = "grammar",
+        initial_values = [("min", min_grammars)],
+        get_delta = GrammarDeltas.thy_deltas,
+        delta_side_effects = side_effect,
+        apply_delta = apply
+      }
+    end
 
-fun merge_into (gname, (G, gset)) =
-  let
-    fun apply (tyuds, tmuds) (tyG, tmG) =
-      (type_grammar.apply_deltas tyuds tyG, term_grammar.add_deltas tmuds tmG)
-    datatype action =
-             Visit of string
-           | Apply of type_grammar.delta list * term_grammar.user_delta list
-    fun recurse (G, gset) worklist =
-      case worklist of
-          [] => (G, gset)
-        | Visit thy :: rest =>
-          let
-            val parents0 = gparents thy
-            val parents =
-                List.filter (fn thy => not (HOLset.member(gset,thy))) parents0
-            val uds = GrammarDeltas.thy_deltas {thyname = thy}
-          in
-            recurse (G, HOLset.add(gset, thy))
-                    (map Visit parents @ (Apply uds :: rest))
-          end
-        | Apply uds :: rest => recurse (apply uds G, gset) rest
-  in
-    recurse (G, gset) [Visit gname]
-  end
+fun grammarDB thyname = SOME (grammarDB0 thyname)
 
-fun merge_grammars slist =
-  case slist of
-      [] => raise ERROR "merge_grammars" "Empty grammar list"
-    | h::t =>
-      let
-        val g = valOf (grammarDB h)
-          handle Option => raise ERROR "merge_grammars" ("No such theory: "^h)
-      in
-        List.foldl merge_into (g, gancestry h) t |> #1
-      end
 
 fun set_grammar_ancestry slist =
-  let
-    val (tyg,tmg) = merge_grammars slist
-  in
-    GrammarAncestry.set_ancestry slist;
-    the_type_grammar := tyg;
-    the_term_grammar := tmg;
-    type_grammar_changed := true;
-    term_grammar_changed := true
-  end
+    let val (tyg,tmg) = set_grammar_ancestry0 slist
+    in
+      the_type_grammar := tyg;
+      the_term_grammar := tmg;
+      type_grammar_changed := true;
+      term_grammar_changed := true
+    end
 
 local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
@@ -1202,70 +1135,18 @@ in
                                     (!grm_updates)))
   else ();
   grm_updates := [];
-  adjoin_to_theory
-  {sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
-   struct_ps = SOME (fn _ =>
-     let val B  = PP.block CONSISTENT
-         val IB = PP.block INCONSISTENT
-         open PP
-         fun pr_sml_list pfun L =
-           B 0 [add_string "[",
-                IB 1 (PP.pr_list pfun [add_string ",", add_break(0,0)]  L),
-                add_string "]"]
-         fun pp_update(f,x,topt) =
-             if isSome topt andalso not (Theory.uptodate_term (valOf topt))
-             then B 0 []
-             else
-               B 5 [
-                 add_string "val _ = update_grms", add_break(1,0),
-                 add_string f, add_break(1,0),
-                 B 0 [add_string x]
-               ]
-     in
-       B 0 [
-         add_string "local open GrammarSpecials Parse",
-         NL,
-         add_string "  fun UTOFF f = Feedback.trace(\"Parse.unicode_trace_\
-                    \off_complaints\",0)f",
-         NL,
-         add_string "in", NL,
-         add_string ("val " ^thyname ^ "_grammars = merge_grammars ["),
-         IB 0
-            (pr_list (add_string o quote)
-                     [add_string ",", add_break(1,0)]
-                     (gparents (current_theory()))),
-         add_string "]", NL,
-         add_string ("local"),
-         NL,
-         add_string ("val (tyUDs, tmUDs) = "^
-                     "GrammarDeltas.thy_deltas{thyname="^ quote thyname^"}"),
-         NL,
-         add_string ("val addtmUDs = term_grammar.add_deltas tmUDs"),
-         NL,
-         add_string ("val addtyUDs = type_grammar.apply_deltas tyUDs"),
-         NL, add_string ("in"), NL,
-
-         add_string ("val " ^ thyname ^ "_grammars = "), add_break(1,2),
-         add_string ("Portable.## (addtyUDs,addtmUDs) " ^
-                     thyname ^ "_grammars"),
-         NL,
-
-         add_string (String.concat
-             ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
-              thyname, "_grammars)"]),
-         NL,
-
-         add_string (String.concat
-             ["val _ = Parse.temp_set_grammars ("^
-              "addtyUDs (Parse.type_grammar()), ",
-              "addtmUDs (Parse.term_grammar()))"]), NL,
-         add_string "end (* addUDs local *)", NL,
-
-         add_string "end", NL
-       ]
-     end)}
- end
+  adjoin_to_theory {
+    sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
+    struct_ps = NONE
+  };
+  adjoin_after_completion (
+    fn () =>
+       PP.add_string ("val " ^ thyname ^
+                      "_grammars = valOf (Parse.grammarDB {thyname = " ^
+                      quote thyname ^ "})\n")
+  )
 end
+end (* local *)
 
 val _ = let
   val rawpp_thm =

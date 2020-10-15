@@ -77,6 +77,7 @@ fun nftest (r as (n,c,t1,t2)) =
       require_msg (check t2) (pr t2) test (t1,t2)
     end
 fun simpl ths = SIMP_CONV (BasicProvers.srw_ss()) ths
+fun asimpl ths = SIMP_CONV (BasicProvers.srw_ss() ++ numSimps.ARITH_ss) ths
 val simp = simpl []
 val _ = List.app nftest [
       ("MULCANON01", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
@@ -149,6 +150,9 @@ val _ = List.app nftest [
       ("MULRELNORM14", simp, “x <> 0 /\ 0 < x ==> inv x < 1r”,
        “x <> 0 /\ 0 < x ==> 1 < x”),
       ("MULRELNORM15", simp, “2r * x = 1/2 * z”, “4 * x = z”),
+      ("MULRELNORM16", asimpl [ASSUME “m < lg : num”],
+       “inv (2 pow m) < 2 * inv (2 pow lg)”,
+       “2 pow lg < 2 * 2 pow m”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
