@@ -4,6 +4,13 @@ struct
 open Theory Lib Feedback
 datatype 'd action = Visit of string | Apply of 'd
 
+type ('delta,'value) adata_info = {
+  tag : string, initial_values : (string * 'value) list,
+  get_delta : {thyname : string} -> 'delta,
+  apply_delta : 'delta -> 'value -> 'value,
+  delta_side_effects : 'delta -> unit
+}
+
 val ERR = mk_HOL_ERR "AncestryData"
 
 fun smem s e = HOLset.member(s,e)
@@ -55,7 +62,7 @@ fun merge (info : ('d,'v) info) thys : 'v =
         end
 
 
-fun make input_arguments =
+fun make (input_arguments : ('delta,'value) adata_info) =
     let
       val {tag, get_delta, apply_delta, ...} = input_arguments
       val {initial_values, delta_side_effects, ...} = input_arguments

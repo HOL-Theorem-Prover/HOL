@@ -12,6 +12,20 @@ type term     = Term.term
 type hol_type = Type.hol_type
 type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
+type struct_info_record = {
+   theory      : string*Arbnum.num*Arbnum.num,
+   parents     : (string*Arbnum.num*Arbnum.num) list,
+   types       : (string*int) list,
+   constants   : (string*hol_type) list,
+   axioms      : (string * thm) list,
+   definitions : (string * thm) list,
+   theorems    : (string * thm) list,
+   struct_ps   : (unit -> PP.pretty) option list,
+   struct_pcps : (unit -> PP.pretty) list,
+   mldeps      : string list,
+   thydata     : string list * Term.term list *
+                 (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
+ }
 
 open Feedback Lib Portable Dep;
 
@@ -196,7 +210,7 @@ fun mlower s m =
       NONE => raise Fail ("Couldn't print Theory" ^ s)
     | SOME(_, (_, ps)) => PP.block PP.CONSISTENT 0 ps
 
-fun pp_struct info_record = let
+fun pp_struct (info_record : struct_info_record) = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, axioms,
        definitions,theorems,types,constants,struct_ps,
@@ -310,7 +324,7 @@ end
  *---------------------------------------------------------------------------*)
 
 
-fun pp_thydata info_record = let
+fun pp_thydata (info_record : struct_info_record) = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0,
        thydata = (thydata_strings,thydata_tms, thydata), mldeps,
