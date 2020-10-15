@@ -91,12 +91,12 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     (* parsing *)
     val _ = print_endline "parsing"
     val pstacl = preparse_stacl (!prioritize_stacl)
-    val thm_parse_dict = dnew String.compare 
+    val thm_parse_dict = dnew String.compare
       (preparse_thmidl (map fst thmfea))
-    val tac_parse_dict = dnew String.compare 
+    val tac_parse_dict = dnew String.compare
       (pstacl @ preparse_stacl (map fst tacfea))
     fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl
-      handle NotFound => 
+      handle NotFound =>
         raise ERR "parse_thmidl" (String.concatWith " " thmidl)
     fun parse_stac stac = dfind stac tac_parse_dict
       handle NotFound => raise ERR "parse_stac" stac

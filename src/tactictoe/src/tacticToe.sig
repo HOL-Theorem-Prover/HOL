@@ -15,8 +15,8 @@ sig
 
   val clean_ttt_tacdata_cache : unit -> unit
   val set_timeout : real -> unit
-  val prioritize_stacl : string list ref 
-  (* tactics on prioritize_stacl are added to tactictoe and 
+  val prioritize_stacl : string list ref
+  (* tactics on prioritize_stacl are added to tactictoe and
      first tactics on the list are applied first *)
 
   val ttt : tactic
