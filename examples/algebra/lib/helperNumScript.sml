@@ -260,6 +260,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    prime_power_divides_iff  |- !p. prime p ==> !m n. p ** m divides p ** n <=> m <= n
    divides_self_power       |- !n p. 0 < n /\ 1 < p ==> p divides p ** n
    divides_eq_thm      |- !a b. a divides b /\ 0 < b /\ b < 2 * a ==> (b = a)
+   factor_eq_cofactor  |- !m n. 0 < m /\ m divides n ==> (m = n DIV m <=> n = m ** 2)
    euclid_prime        |- !p a b. prime p /\ p divides a * b ==> p divides a \/ p divides b
    euclid_coprime      |- !a b c. (gcd a b = 1) /\ b divides a * c ==> b divides c
 
@@ -2874,6 +2875,29 @@ Proof
   `0 < k` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
   `k < 2` by metis_tac[LT_MULT_RCANCEL] >>
   `k = 1` by decide_tac >>
+  simp[]
+QED
+
+(* Idea: factor equals cofactor iff the number is a square of the factor. *)
+
+(* Theorem: 0 < m /\ m divides n ==> (m = n DIV m <=> n = m ** 2) *)
+(* Proof:
+        n
+      = n DIV m * m + n MOD m    by DIVISION, 0 < m
+      = n DIV m * m + 0          by DIVIDES_MOD_0, m divides n
+      = n DIV m * m              by ADD_0
+   If m = n DIV m,
+     then n = m * m = m ** 2     by EXP_2
+   If n = m ** 2,
+     then n = m * m              by EXP_2
+       so m = n DIV m            by EQ_MULT_RCANCEL
+*)
+Theorem factor_eq_cofactor:
+  !m n. 0 < m /\ m divides n ==> (m = n DIV m <=> n = m ** 2)
+Proof
+  rw[EQ_IMP_THM] >>
+  `n = n DIV m * m + n MOD m` by rw[DIVISION] >>
+  `_ = m * m + 0` by metis_tac[DIVIDES_MOD_0] >>
   simp[]
 QED
 
