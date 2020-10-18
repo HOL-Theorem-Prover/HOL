@@ -95,7 +95,7 @@ val {export = export_rule_induction, ...} =
     ThmSetData.new_exporter {
       settype = "rule_induction",
       efns = {
-        add = fn {named_thms,...} => app (add_rule_induction o #2) named_thms,
+        add = fn {named_thm,...} => add_rule_induction (#2 named_thm),
         remove = fn _ => ()
       }
     }
@@ -127,7 +127,7 @@ val {export = export_mono, ...} =
     ThmSetData.new_exporter {
       settype = "mono",
       efns = {
-        add = fn {named_thms,...} => app (add_mono_thm o #2) named_thms,
+        add = fn {named_thm,...} => add_mono_thm (#2 named_thm),
         remove = fn _ => ()
       }
     }

@@ -33,6 +33,9 @@ sig
   val delsimps        : string list -> unit
   val temp_delsimps   : string list -> unit
   val thy_ssfrag      : string -> simpLib.ssfrag
+  (*val simpsetDB       : {thyname : string} -> simpset
+  val temp_set_simpset_ancestry : string list -> unit
+  val set_simpset_ancestry : string list -> unit *)
 
   (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic

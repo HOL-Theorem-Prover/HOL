@@ -375,7 +375,7 @@ open LoadableThyData
 val {export,...} =
     ThmSetData.new_exporter {
       settype = "compute",
-      efns = {add = (fn {named_thms,...} => add_funs (map #2 named_thms)),
+      efns = {add = (fn {named_thm,...} => add_funs [#2 named_thm]),
               remove = fn _ => ()}
     }
 val add_persistent_funs = app export

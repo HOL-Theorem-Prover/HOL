@@ -97,8 +97,8 @@ fun write1 d = write_deltas [d]
    ---------------------------------------------------------------------- *)
 
 type exportfns =
-     { add : {thy : string, named_thms : (thname * thm) list} -> unit,
-       remove : {thy : string, removes : string list} -> unit}
+     { add : {thy : string, named_thm : (thname * thm)} -> unit,
+       remove : {thy : string, remove : string} -> unit}
 
 type tabledata = ({thyname:string}->setdelta list) * exportfns
 
@@ -132,9 +132,8 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
                       ("Bad add command, with name: "^name_toString s); NONE))
   fun apply_deltas thyname ds =
       let
-        fun appthis (ADD (s,th)) =
-               add {thy = thyname, named_thms = [(s, th)]}
-          | appthis (REMOVE s) = remove {thy = thyname, removes =  [s]}
+        fun appthis (ADD (s,th)) = add {thy = thyname, named_thm = (s, th)}
+          | appthis (REMOVE s) = remove {thy = thyname, remove =  s}
       in
         List.app appthis ds
       end
@@ -190,7 +189,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun export p (* name * thm *) =
       let
       in
-        add {thy = current_theory(), named_thms = [p]};
+        add {thy = current_theory(), named_thm = p};
         export_deltasexp (write1 (ADD p))
       end
 
@@ -204,14 +203,14 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun delete s = let
     val data = write1 (REMOVE s)
   in
-    remove {thy = current_theory(), removes = [s]};
+    remove {thy = current_theory(), remove = s};
     export_deltasexp data
   end
 
   fun store_attrfun {attrname,name,thm} = export (mk_store_name_safe name,thm)
   fun local_attrfun {attrname,name,thm} =
-    add {thy = current_theory(),
-         named_thms = [({Thy = current_theory(), Name = name},thm)]}
+    add {named_thm = ({Thy = current_theory(), Name = name},thm),
+         thy = current_theory()}
 in
   data_map := Symtab.update(name,(segdata, efns)) (!data_map);
   ThmAttribute.register_attribute (

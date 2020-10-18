@@ -594,8 +594,8 @@ fun new_exporter nm add del =
       val {export,...} =
           ThmSetData.new_exporter {
             settype = nm,
-            efns = {add = fn {named_thms,...} => List.app (add o #2) named_thms,
-                    remove = fn {removes,...} => List.app del removes}
+            efns = {add = fn {named_thm,...} => add (#2 named_thm),
+                    remove = fn {remove,...} => del remove}
           }
     in
       export

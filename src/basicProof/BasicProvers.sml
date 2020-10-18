@@ -1125,8 +1125,8 @@ open LoadableThyData
 val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
-fun add_rewrites thyname (thms : (KernelSig.kernelname * thm) list) = let
-  val ssfrag = simpLib.named_rewrites_with_names thyname thms
+fun add_rewrite thyname named_thm = let
+  val ssfrag = simpLib.named_rewrites_with_names thyname [named_thm]
   open Binarymap
 in
   augment_srw_ss [ssfrag];
@@ -1143,13 +1143,23 @@ val {export,delete} =
     ThmSetData.new_exporter {
       settype = "simp",
       efns = {
-        add = fn {thy,named_thms} => add_rewrites thy named_thms,
-        remove = fn {removes, ...} => temp_delsimps removes
+        add = fn {named_thm,thy} => add_rewrite thy named_thm,
+        remove = fn {remove, ...} => temp_delsimps [remove]
       }
     }
 
 fun export_rewrites slist = List.app export slist
 
 fun delsimps names = List.app delete names
-
+(*
+val { merge, DB, parents, set_parents } =
+    let
+      fun get_delta{thyname} =
+          ThmSetData.theory_data{settype = "simp", thy = thyname}
+    in
+      AncestryData.make {tag = "simp.parents",
+                         initial_values = [("combin", initial_simpset)],
+                         get_delta = get_delta,
+                         apply_delta =
+*)
 end

@@ -6,8 +6,8 @@ sig
   type thname = KernelSig.kernelname
   datatype setdelta = ADD of thname * thm | REMOVE of string
   type exportfns =
-       { add : {thy : string, named_thms : (thname * thm) list} -> unit,
-         remove : {thy : string, removes : string list} -> unit}
+       { add : {thy : string, named_thm : thname * thm} -> unit,
+         remove : {thy : string, remove : string} -> unit}
   val added_thms : setdelta list -> thm list
 
   val new_exporter :

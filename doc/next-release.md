@@ -300,6 +300,8 @@ Incompatibilities:
     Calls to `temp_delsimps` can be used to remove automatic rewrites
     as necessary.
 
+*   The SML API for `ThmSetData` has changed; user-provided call-backs that apply set-changes (additions and removals of theorems) are only ever called with single changes at once rather than lists, so the required types for these call-backs has changed to reflect this.
+
 * * * * *
 
 <div class="footer">
