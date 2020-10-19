@@ -1265,7 +1265,7 @@ fun interruptkill worker =
            then (OS.Process.sleep (Time.fromReal 0.0001); loop (n-1))
            else (print_endline "Warning: thread killed"; Thread.kill worker)
      in
-       loop 10
+       loop 1000000
      end
 
 (* ------------------------------------------------------------------------
