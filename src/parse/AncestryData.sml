@@ -97,7 +97,7 @@ fun make (input_arguments : ('delta,'value) adata_info) =
                         !apply_delta_hook ps
                       end
                     | SOME data => (
-                      case dest_list dest_string data of
+                      case list_decode string_decode data of
                           NONE => raise ERR "AncestryData"
                                         ("make("^tag^") got bad ancestor sexp")
                         | SOME sl =>
@@ -126,7 +126,7 @@ fun make (input_arguments : ('delta,'value) adata_info) =
       fun parents thyname =
           case parent_segment_data thyname of
               NONE => Theory.parents (#thyname thyname)
-            | SOME t => valOf (dest_list dest_string t)
+            | SOME t => valOf (list_decode string_decode t)
       val info = {get_delta = get_delta,
                   dblookup = valueDB,
                   apply_delta = apply_delta,

@@ -24,6 +24,7 @@ datatype t =
        | Bool of bool
        | Char of char
        | Option of t option
+       | KName of KernelSig.kernelname
 
 fun pp_sexp typ tmp thp s =
   let
@@ -53,6 +54,20 @@ fun pp_sexp typ tmp thp s =
           block INCONSISTENT 1 [
             add_string "(", add_string "SOME",
             add_break(1,0), pp s, add_string ")"
+          ]
+      | KName {Thy,Name} =>
+          block CONSISTENT 1 [
+            add_string "{",
+            block CONSISTENT 0 [
+              add_string "Thy = ", add_break (1, 2),
+              add_string ("\"" ^ String.toString Thy ^ "\""),
+              add_string ","
+            ],
+            add_break (1,0),
+            block CONSISTENT 0 [
+              add_string "Name = ", add_break(1,2),
+              add_string ("\"" ^ String.toString Name ^ "\"")
+            ], add_string "}"
           ]
   end
 
@@ -116,6 +131,12 @@ fun compare (s1, s2) =
     | (_, Char _) => GREATER
 
     | (Option opt1, Option opt2) => Lib.option_compare compare (opt1, opt2)
+    | (Option _, _) => LESS
+    | (_, Option _) => GREATER
+
+    | (KName {Thy=th1,Name=n1}, KName{Thy=th2,Name=n2}) =>
+      Lib.pair_compare (String.compare, String.compare) ((th1,n1), (th2,n2))
+
 
 fun update_alist (kv, es) =
   let
@@ -232,6 +253,9 @@ fun write (wrt as {strings,terms}) s =
                                  else HOLsexp.Nil) b
     | Option NONE => tag "none" (fn () => HOLsexp.Nil) ()
     | Option (SOME s) => tag "some" (write wrt) s
+    | KName {Thy,Name} => HOLsexp.pair_encode (HOLsexp.Integer o strings,
+                                               HOLsexp.Integer o strings)
+                                              (Thy,Name)
 
 fun reader (rd as {strings,terms}) s = (* necessary eta-expansion! *)
   let
@@ -252,7 +276,9 @@ fun reader (rd as {strings,terms}) s = (* necessary eta-expansion! *)
         (tagged_decode "some" (reader rd) >> SOME >> Option) ||
         (tagged_decode "none" (fn d => if d = HOLsexp.Nil then
                                          SOME (Option NONE)
-                                       else NONE))
+                                       else NONE)) ||
+        (pair_decode (int_decode >> strings, int_decode >> strings) >~
+         (fn (thy,name) => SOME (KName {Thy=thy,Name=name})))
   in
     core s
   end
@@ -316,14 +342,43 @@ fun mmap f [] = SOME []
   | mmap f (h::t) =
     bind (f h) (fn h' => bind (mmap f t) (fn t' => SOME (h'::t')))
 
-fun dest_list d t =
+fun list_decode d t =
     case t of
         List ts => mmap d ts
       | _ => NONE
 
 fun mk_list m ts = List (map m ts)
 
-fun dest_string (String s) = SOME s
-  | dest_string _ = NONE
+fun string_decode (String s) = SOME s
+  | string_decode _ = NONE
+
+fun fail t = NONE
+fun first decoders =
+    case decoders of
+        [] => fail
+      | d::ds => d || first ds
+
+fun require_tag s t =
+    case t of
+        Sym s' => if s = s' then SOME () else NONE
+      | _ => NONE
+
+type 'a dec = t -> 'a option
+
+val pair_decode : 'a dec * 'b dec -> ('a*'b) dec =
+    fn (d1,d2) => fn t =>
+       case t of
+           List [e1,e2] => Option.mapPartial
+                             (fn r1 => Option.map (fn r2 => (r1,r2)) (d2 e2))
+                             (d1 e1)
+         | _ => NONE
+fun pair_encode (e1,e2) (x,y) = List [e1 x, e2 y]
+
+
+fun tag_decode s d =
+    pair_decode (require_tag s, d) >> (fn ((),r) => r)
+
+fun tag_encode s e x = pair_encode (Sym, e) (s, x)
+
 
 end

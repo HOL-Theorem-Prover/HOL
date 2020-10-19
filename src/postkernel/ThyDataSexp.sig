@@ -13,6 +13,7 @@ datatype t =
        | Bool of bool
        | Char of char
        | Option of t option
+       | KName of KernelSig.kernelname
 
 val uptodate : t -> bool
 val compare : t * t -> order
@@ -38,8 +39,18 @@ val new : {thydataty : string,
 val pp_sexp : Type.hol_type PP.pprinter -> Term.term PP.pprinter ->
               Thm.thm PP.pprinter -> t PP.pprinter
 
-val dest_string : t -> string option
-val dest_list : (t -> 'a option) -> t -> 'a list option
+type 'a dec = t -> 'a option
+val string_decode : string dec
+val list_decode : 'a dec -> 'a list dec
 val mk_list : ('a -> t) -> 'a list -> t
+
+val pair_encode : ('a -> t) * ('b -> t) -> ('a * 'b) -> t
+val pair_decode : 'a dec * 'b dec -> ('a * 'b) dec
+val require_tag : string -> unit dec
+val tag_encode : string -> ('a -> t) -> ('a -> t)
+val tag_decode : string -> 'a dec -> 'a dec
+
+val || : 'a dec * 'a dec -> 'a dec
+val first : 'a dec list -> 'a dec
 
 end
