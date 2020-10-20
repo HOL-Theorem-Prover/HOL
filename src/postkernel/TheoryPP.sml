@@ -414,7 +414,9 @@ fun pp_thydata (info_record : struct_info_record) = let
       end
 in
   mlower ": dat" (lift HOLsexp.printer thysexp)
-end;
+end handle e as Interrupt => raise e
+         | e => raise ERR "pp_thydata"
+                      ("Caught exception: " ^ General.exnMessage e)
 
 
 
