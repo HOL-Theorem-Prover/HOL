@@ -199,15 +199,6 @@ sig
   val prettyprint_grammar : (grammar -> term -> term_pp_types.uprinter) ->
                             grammar -> term_pp_types.uprinter
 
-  val grammar_rule_reader : grammar_rule Coding.reader
-  val grammar_rule_encode : grammar_rule -> string
-  val user_delta_reader : (string -> term) -> user_delta Coding.reader
-  val user_delta_encode : (term -> string) -> user_delta -> string
-  val fixity_encode : fixity -> string
-  val fixity_reader : fixity Coding.reader
-  val grule_encode : grule -> string
-  val grule_reader : grule Coding.reader
-
   val debugprint : grammar -> term -> string
 
 end

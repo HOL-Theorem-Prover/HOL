@@ -4,9 +4,9 @@ struct
 open Theory Lib Feedback
 datatype 'd action = Visit of string | Apply of 'd
 
-type ('delta,'value) adata_info = {
+type ('delta,'value,'extra) adata_info = {
   tag : string, initial_values : (string * 'value) list,
-  get_delta : {thyname : string} -> 'delta,
+  extra : 'extra,
   apply_delta : 'delta -> 'value -> 'value,
   delta_side_effects : 'delta -> unit
 }
@@ -27,7 +27,7 @@ fun ancestry parents {thyname} =
 type ('d,'v) info =
      {get_delta : {thyname: string} -> 'd,
       dblookup : {thyname : string} -> 'v,
-      apply_delta : 'd -> 'v -> 'v,
+      apply_delta : 'd -> 'v -> 'v, tag : string,
       parents : {thyname : string} -> string list}
 
 fun merge_into (info:('d,'v)info) (thyname, (acc_v, visited)) =
@@ -51,20 +51,26 @@ fun merge_into (info:('d,'v)info) (thyname, (acc_v, visited)) =
     end
 
 fun merge (info : ('d,'v) info) thys : 'v =
-    case thys of
-        [] => raise mk_HOL_ERR "ThyDeltaMerge" "merge" "Empty ancestor list"
-      | h::t =>
-        let
-          val v0 = #dblookup info {thyname = h}
-          fun par_g s = #parents info {thyname = s}
-        in
-          #1 (List.foldl (merge_into info) (v0, ancestry par_g {thyname=h}) t)
-        end
-
-
-fun make (input_arguments : ('delta,'value) adata_info) =
     let
-      val {tag, get_delta, apply_delta, ...} = input_arguments
+      val _ = DPRINT ("Calling " ^ #tag info ^ ":merge[" ^
+                      String.concatWith ", " thys ^ "]")
+    in
+      case thys of
+          [] => raise mk_HOL_ERR "ThyDeltaMerge" "merge" "Empty ancestor list"
+        | h::t =>
+          let
+            val v0 = #dblookup info {thyname = h}
+            fun par_g s = #parents info {thyname = s}
+          in
+            #1 (List.foldl (merge_into info) (v0, ancestry par_g {thyname=h}) t)
+          end
+    end
+
+
+fun make (input_arguments: ('delta,'value,{thyname:string} -> 'delta)adata_info)
+    =
+    let
+      val {tag, extra = get_delta, apply_delta, ...} = input_arguments
       val {initial_values, delta_side_effects, ...} = input_arguments
       val value_table =
           ref (itlist Symtab.update initial_values Symtab.empty)
@@ -118,7 +124,7 @@ fun make (input_arguments : ('delta,'value) adata_info) =
               value_table := Symtab.update (thyname,v) (!value_table)
             end
 
-      val {export = parent_export, segment_data = parent_segment_data} =
+      val {export = parent_export, segment_data = parent_segment_data, ...} =
           ThyDataSexp.new {
             thydataty = tag, merge = fn {old,new} => new,
             load = onload, other_tds = fn (s,_) => SOME s
@@ -127,7 +133,7 @@ fun make (input_arguments : ('delta,'value) adata_info) =
           case parent_segment_data thyname of
               NONE => Theory.parents (#thyname thyname)
             | SOME t => valOf (list_decode string_decode t)
-      val info = {get_delta = get_delta,
+      val info = {get_delta = get_delta, tag = tag,
                   dblookup = valueDB,
                   apply_delta = apply_delta,
                   parents = parents}

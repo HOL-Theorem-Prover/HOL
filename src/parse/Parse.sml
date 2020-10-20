@@ -1103,7 +1103,7 @@ val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
       AncestryData.make {
         tag = "grammar",
         initial_values = [("min", min_grammars)],
-        get_delta = GrammarDeltas.thy_deltas,
+        extra = GrammarDeltas.thy_deltas,
         delta_side_effects = side_effect,
         apply_delta = apply
       }
@@ -1113,7 +1113,9 @@ fun grammarDB thyname = SOME (grammarDB0 thyname)
 
 
 fun set_grammar_ancestry slist =
-    let val (tyg,tmg) = set_grammar_ancestry0 slist
+    let
+      val _ = GrammarDeltas.clear_deltas()
+      val (tyg,tmg) = set_grammar_ancestry0 slist
     in
       the_type_grammar := tyg;
       the_term_grammar := tmg;

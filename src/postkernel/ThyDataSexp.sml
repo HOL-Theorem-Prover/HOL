@@ -175,6 +175,7 @@ fun sterms0 (s, acc as (strs,tms)) =
     | Thm th => (strs, concl th :: (hyp th @ tms))
     | Type ty => (strs, Term.mk_var("x", ty) :: tms)
     | Option (SOME s0) => sterms0 (s0, acc)
+    | KName{Thy,Name} => (Thy::Name::strs,tms)
     | _ => acc
 fun sterms s = sterms0 (s,([],[]))
 
@@ -242,20 +243,21 @@ fun write (wrt as {strings,terms}) s =
   case s of
       Int i => HOLsexp.Integer i
     | String s => HOLsexp.String s
-    | SharedString s => tag "str" (HOLsexp.Integer o strings) s
-    | List sl => tag "list" (HOLsexp.list_encode (write wrt)) sl
-    | Term tm => tag "tm" HOLsexp.String (terms tm)
-    | Type ty => tag "ty" HOLsexp.String (terms (Term.mk_var("x", ty)))
-    | Thm th => tag "th" (thmwrite terms) th
+    | SharedString s => tag "tag-str" (HOLsexp.Integer o strings) s
+    | List sl => HOLsexp.list_encode (write wrt) sl
+    | Term tm => tag "tag-tm" HOLsexp.String (terms tm)
+    | Type ty => tag "tag-ty" HOLsexp.String (terms (Term.mk_var("x", ty)))
+    | Thm th => tag "tag-th" (thmwrite terms) th
     | Sym s => HOLsexp.Symbol s
-    | Char c => tag "ch" (HOLsexp.Integer o Char.ord) c
-    | Bool b => tag "b" (fn b => if b then HOLsexp.Symbol "t"
-                                 else HOLsexp.Nil) b
-    | Option NONE => tag "none" (fn () => HOLsexp.Nil) ()
-    | Option (SOME s) => tag "some" (write wrt) s
-    | KName {Thy,Name} => HOLsexp.pair_encode (HOLsexp.Integer o strings,
-                                               HOLsexp.Integer o strings)
-                                              (Thy,Name)
+    | Char c => tag "tag-ch" (HOLsexp.Integer o Char.ord) c
+    | Bool b => tag "tag-b" (fn b => if b then HOLsexp.Symbol "t"
+                                     else HOLsexp.Symbol "f") b
+    | Option NONE => tag "tag-none" (fn () => HOLsexp.Nil) ()
+    | Option (SOME s) => tag "tag-some" (write wrt) s
+    | KName {Thy,Name} => tag "tag-knm"
+                              (HOLsexp.pair_encode (HOLsexp.Integer o strings,
+                                                    HOLsexp.Integer o strings))
+                              (Thy,Name)
 
 fun reader (rd as {strings,terms}) s = (* necessary eta-expansion! *)
   let
@@ -263,22 +265,26 @@ fun reader (rd as {strings,terms}) s = (* necessary eta-expansion! *)
     val core =
         (int_decode >> Int) ||
         (string_decode >> String) ||
-        (symbol_decode >> Sym) ||
-        (tagged_decode "list" (list_decode (reader rd)) >> List) ||
-        (tagged_decode "str" (int_decode >> strings >> SharedString)) ||
-        (tagged_decode "tm" string_decode >> terms >> Term) ||
-        (tagged_decode "ty" string_decode >> terms >> type_of >> Type) ||
-        (tagged_decode "th" (thmreader terms) >> Thm) ||
-        (tagged_decode "ch" int_decode >~ opt_chr >> Char) ||
-        (tagged_decode "b" (fn d => if d = HOLsexp.Nil then SOME (Bool false)
-                                    else if d = HOLsexp.Symbol "t" then
-                                      SOME (Bool true) else NONE)) ||
-        (tagged_decode "some" (reader rd) >> SOME >> Option) ||
-        (tagged_decode "none" (fn d => if d = HOLsexp.Nil then
+        (symbol_decode >> (fn s => if s = "nil" then List [] else Sym s)) ||
+        (tagged_decode "tag-str" (int_decode >> strings >> SharedString)) ||
+        (tagged_decode "tag-tm" string_decode >> terms >> Term) ||
+        (tagged_decode "tag-ty" string_decode >> terms >> type_of >> Type) ||
+        (tagged_decode "tag-th" (thmreader terms) >> Thm) ||
+        (tagged_decode "tag-ch" int_decode >~ opt_chr >> Char) ||
+        (tagged_decode "tag-b"
+                       (fn d => if d = HOLsexp.Symbol "f" then SOME (Bool false)
+                                else if d = HOLsexp.Symbol "t" then
+                                  SOME (Bool true)
+                                else NONE)) ||
+        (tagged_decode "tag-some" (reader rd) >> SOME >> Option) ||
+        (tagged_decode "tag-none" (fn d => if d = HOLsexp.Nil then
                                          SOME (Option NONE)
                                        else NONE)) ||
-        (pair_decode (int_decode >> strings, int_decode >> strings) >~
-         (fn (thy,name) => SOME (KName {Thy=thy,Name=name})))
+        (tagged_decode "tag-knm"
+                       (pair_decode (int_decode >> strings,
+                                     int_decode >> strings)) >~
+                       (fn (thy,name) => SOME (KName {Thy=thy,Name=name}))) ||
+        (list_decode (reader rd) >> List)
   in
     core s
   end
@@ -329,10 +335,13 @@ fun new {thydataty, load, other_tds, merge} =
       (load {thyname = current_theory(), data = SOME s};
        LTD.write_data_update {thydataty = thydataty, data = todata s})
 
+    fun set t =
+        LTD.set_theory_data{thydataty = thydataty, data = todata t}
+
   in
     register_hook ("ThmSetData.onload." ^ thydataty, hook);
     List.app onload (ancestry "-");
-    {export = export, segment_data = segment_data}
+    {export = export, segment_data = segment_data, set = set}
   end
 
 fun bind NONE f = NONE
@@ -352,6 +361,24 @@ fun mk_list m ts = List (map m ts)
 fun string_decode (String s) = SOME s
   | string_decode _ = NONE
 
+fun int_decode (Int i) = SOME i
+  | int_decode _ = NONE
+
+fun char_decode (Char c) = SOME c
+  | char_decode _ = NONE
+
+fun kname_decode (KName v) = SOME v
+  | kname_decode _ = NONE
+
+fun type_decode (Type ty) = SOME ty
+  | type_decode _ = NONE
+
+fun term_decode (Term tm) = SOME tm
+  | term_decode _ = NONE
+
+fun bool_decode (Bool b) = SOME b
+  | bool_decode _ = NONE
+
 fun fail t = NONE
 fun first decoders =
     case decoders of
@@ -364,6 +391,17 @@ fun require_tag s t =
       | _ => NONE
 
 type 'a dec = t -> 'a option
+type 'a enc = 'a -> t
+
+fun option_encode enc NONE = Option NONE
+  | option_encode enc (SOME x) = Option (SOME (enc x))
+fun option_decode dec t =
+    case t of
+        Option NONE => SOME NONE
+      | Option (SOME x) =>
+          (case dec x of NONE => NONE | SOME v => SOME (SOME v))
+      | _ => NONE
+
 
 val pair_decode : 'a dec * 'b dec -> ('a*'b) dec =
     fn (d1,d2) => fn t =>
@@ -374,11 +412,33 @@ val pair_decode : 'a dec * 'b dec -> ('a*'b) dec =
          | _ => NONE
 fun pair_encode (e1,e2) (x,y) = List [e1 x, e2 y]
 
+fun pair3_encode (e1,e2,e3) (x,y,z) = List [e1 x, e2 y, e3 z]
+fun pair3_decode (d1,d2,d3) t =
+    case t of
+        List [t1, t2, t3] => (case (d1 t1, d2 t2, d3 t3) of
+                                  (SOME x, SOME y, SOME z) => SOME (x,y,z)
+                                | _ => NONE)
+      | _ => NONE
 
-fun tag_decode s d =
-    pair_decode (require_tag s, d) >> (fn ((),r) => r)
+fun pair4_encode (e1,e2,e3,e4) (a,b,c,d) = List [e1 a, e2 b, e3 c, e4 d]
+fun pair4_decode (d1,d2,d3,d4) t =
+    case t of
+        List [t1,t2,t3,t4] =>
+        (case (d1 t1, d2 t2, d3 t3, d4 t4) of
+             (SOME a, SOME b, SOME c, SOME d) => SOME(a,b,c,d)
+           | _ => NONE)
+      | _ => NONE
 
-fun tag_encode s e x = pair_encode (Sym, e) (s, x)
+fun tag_decode s d t =
+    case t of
+        List [Sym s', t0] => if s = s' then d t0 else NONE
+      | List (Sym s' :: rest) => if s = s' then d (List rest) else NONE
+      | _ => NONE
 
+fun tag_encode s e x =
+    case e x of
+        List [t] => List [Sym s, List [t]]
+      | List els => List (Sym s :: els)
+      | t => List [Sym s, t]
 
 end

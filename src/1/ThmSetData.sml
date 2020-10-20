@@ -178,7 +178,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun check_thydelta (arg as (sexp,td)) = revise_data (hook td) arg
 
 
-  val {export = export_deltasexp, segment_data} =
+  val {export = export_deltasexp, segment_data, ...} =
       ThyDataSexp.new {merge = ThyDataSexp.append_merge, load = loadfn,
                        other_tds = check_thydelta, thydataty = name}
   fun opt2list (SOME x) = x | opt2list NONE = []

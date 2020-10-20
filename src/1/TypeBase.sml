@@ -137,7 +137,7 @@ fun check_thydelta (t, tdelta) =
       | _ => NONE
   end
 
-val {export = export_tyisexp, segment_data} = ThyDataSexp.new{
+val {export = export_tyisexp, segment_data, ...} = ThyDataSexp.new{
       thydataty = "TypeBase", load = load_from_disk, other_tds = check_thydelta,
       merge = ThyDataSexp.alist_merge
     }
