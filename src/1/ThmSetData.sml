@@ -56,12 +56,9 @@ fun read ty sexp =
       open ThyDataSexp
       fun decode1 sexp =
           case sexp of
-              List[SharedString thy, SharedString thnm] =>
-              let val nm = {Thy = thy, Name = thnm}
-              in
+              KName nm =>
                 (OK (ADD (nm,lookup_exn ty nm)) handle HOL_ERR _ => BAD_ADD nm)
-              end
-            | List [String nm] => OK (REMOVE nm)
+            | String nm => OK (REMOVE nm)
             | _ => raise ERR "read" ("Bad sexp for 1 update: "^sexp2string sexp)
     in
       case sexp of
@@ -72,9 +69,8 @@ fun read ty sexp =
 fun write_deltas ds =
     let
       open ThyDataSexp
-      fun mapthis (ADD({Thy,Name},th)) =
-          List[SharedString Thy, SharedString Name]
-        | mapthis (REMOVE s) = List[String s]
+      fun mapthis (ADD(knm,th)) = KName knm
+        | mapthis (REMOVE s) = String s
       val sexps = map mapthis ds
     in
       List sexps
