@@ -292,6 +292,10 @@ val _ = quietly new_type ("foo", 0)
 val _ = type_abbrev("baz", ``:foo``) handle _ => die ""
 val _ = OK()
 
+val _ = tprint "Testing ability to p/print current type grammar"
+val _ = require (check_result (fn _ => true)) type_grammar.prettyprint_grammar
+                (type_grammar ())
+
 
 (* pretty-printing tests - turn Unicode off *)
 val tpp = let open testutils
