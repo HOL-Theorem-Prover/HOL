@@ -322,8 +322,7 @@ local
   val ty = mk_thy_type{Thy = ct(), Tyop = "option", Args = [alpha --> beta]}
   val _ = tprint ("Testing p/printing of (min_grammar) (('a -> 'b) "^ct()^"$option)")
   val pfn =
-    PP.pp_to_string 70 (#1 (print_from_grammars min_grammars))
-                    |> raw_backend
+    PP.pp_to_string 70 (#1 (raw_backend print_from_grammars min_grammars))
                     |> unicode_off
   val s = pfn ty
 in
@@ -375,7 +374,8 @@ val _ = Lib.with_flag (testutils.linewidth, 30) tpp
 val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
 val _ = let
   open testutils
-  fun md f = trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f)
+  fun md f =
+      raw_backend (trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f))
   fun texp (i,out) = md tpp_expected
                         {testf = standard_tpp_message, input = i, output = out}
   val _ = temp_overload_on ("⊤", ``T``)
@@ -390,7 +390,7 @@ end
 val _ = print "** Tests with Unicode on\n"
 val _ = let
   open testutils
-  fun md f = trace ("Unicode", 1) f
+  fun md f = raw_backend $ trace ("Unicode", 1) f
 in
   app (md tpp) ["¬¬p", "¬p"]
 end
