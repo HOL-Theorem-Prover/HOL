@@ -365,19 +365,20 @@ fun pp_thydata (info_record : struct_info_record) = let
                       constants
       end
 
-  val enc_db = let open HOLsexp in
-                 pair_encode (Integer o write_string share_data,Symbol)
-               end
   val enc_dblist =
-     let open HOLsexp
-       fun check cl =
+     let
+       open HOLsexp
+       val enc_db = Integer o write_string share_data
+       val enc_dbl = list_encode enc_db
+       val check =
            List.mapPartial (fn (nm, _) => if is_temp_binding nm then NONE
-                                          else SOME (nm, cl))
-       val axl  = check "A" axioms
-       val defl = check "D" definitions
-       val thml = check "T" theorems
+                                          else SOME nm)
+       val axl  = check axioms
+       val defl = check definitions
+       val thml = check theorems
      in
-       tagged_encode "thm-classes" (list_encode enc_db) (axl@defl@thml)
+       tagged_encode "thm-classes"
+                     (pair3_encode (enc_dbl, enc_dbl, enc_dbl)) (axl,defl,thml)
      end
 
   fun chunks w s =
