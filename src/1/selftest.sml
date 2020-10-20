@@ -1187,9 +1187,10 @@ val _ = tprint "Checking error message on x + y < T parse (w/ints around)"
 val ptie = TermParse.preterm (term_grammar()) (type_grammar()) `x + y < T`
 val res = let
   open errormonad Preterm
-  infix >- >>
+  infix >~ >>
+  val op >~ = errormonad.bind
   val checked =
-      ptie >- (fn pt => typecheck_phase1 NONE pt >> overloading_resolution pt)
+      ptie >~ (fn pt => typecheck_phase1 NONE pt >> overloading_resolution pt)
 in
   case checked Pretype.Env.empty of
       Error (OvlNoType(s,_), _) => if s = "<" orelse s = "+" then OK()
