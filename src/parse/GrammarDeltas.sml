@@ -322,9 +322,9 @@ val grammar_rule_decode =
     (tag_decode "I" ifxrule_reader >> INFIX) ||
     (tag_decode "C" (list_decode rrule_decode) >> CLOSEFIX);
 
-fun delta_encode (TMD udelta) = user_delta_encode udelta
-  | delta_encode (TYD tydelta) = tydelta_encode tydelta
-val delta_decode = (user_delta_decode >> TMD) || (tydelta_decode >> TYD);
+fun gdelta_encode (TMD udelta) = user_delta_encode udelta
+  | gdelta_encode (TYD tydelta) = tydelta_encode tydelta
+val gdelta_decode = (user_delta_decode >> TMD) || (tydelta_decode >> TYD);
 
 fun check_delta (d: user_delta) =
   case d of
@@ -345,7 +345,7 @@ fun part tyds tmds gds =
 fun nopp s _ = HOLPP.add_string ("<" ^ s ^ ">")
 
 fun other_tds (t, thyevent) =
-    case list_decode delta_decode t of
+    case list_decode gdelta_decode t of
         NONE => raise Fail ("GrammarDelta: encoding failure: t = \n  " ^
                             HOLPP.pp_to_string 70
                              (pp_sexp (nopp"ty") (nopp"tm") (nopp"thm"))
@@ -357,7 +357,8 @@ fun other_tds (t, thyevent) =
           val (goodtmds, badtmds) = Lib.partition check_delta tmds
         in
           if null badtyds andalso null badtmds then NONE
-          else SOME (mk_list delta_encode (map TYD goodtyds @ map TMD goodtmds))
+          else
+            SOME (mk_list gdelta_encode (map TYD goodtyds @ map TMD goodtmds))
         end
 
 val {export, segment_data, set} = ThyDataSexp.new {
@@ -371,7 +372,7 @@ fun thy_deltas {thyname} =
     case segment_data {thyname = thyname} of
         NONE => ([], [])
       | SOME gds =>
-        case list_decode delta_decode gds of
+        case list_decode gdelta_decode gds of
             NONE => raise Fail "GrammarDelta: encoding failure 2"
           | SOME gds =>
             let
@@ -387,10 +388,10 @@ fun userdelta_toString ud =
     | CLR_OVL s => "clear_overloads_on(" ^ Lib.mlquote s ^ ")"
     | _ => ""
 
-fun record_tmdelta d = export (mk_list delta_encode [TMD d])
+fun record_tmdelta d = export (mk_list gdelta_encode [TMD d])
 
-fun record_tydelta d = export (mk_list delta_encode [TYD d])
+fun record_tydelta d = export (mk_list gdelta_encode [TYD d])
 
-fun clear_deltas() = set (mk_list delta_encode [])
+fun clear_deltas() = set (mk_list gdelta_encode [])
 
 end
