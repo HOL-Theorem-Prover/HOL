@@ -1087,12 +1087,12 @@ fun gparents {thyname} =
 val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
      DB = grammarDB0, parents = gparents} =
     let
-      fun apply (tyuds, tmuds) (tyG, tmG) =
-          (type_grammar.apply_deltas tyuds tyG,
-           term_grammar.add_deltas tmuds tmG)
-      fun side_effect deltas =
+      open GrammarDeltas
+      fun apply (TYD tyd) (tyG, tmG) = (type_grammar.apply_delta tyd tyG, tmG)
+        | apply (TMD tmd) (tyG, tmG) = (tyG, term_grammar.add_delta tmd tmG)
+      fun side_effect delta =
           let
-            val (tyG, tmG) = apply deltas (!the_type_grammar, !the_term_grammar)
+            val (tyG, tmG) = apply delta (!the_type_grammar, !the_term_grammar)
           in
             the_type_grammar := tyG;
             the_term_grammar := tmG;
@@ -1101,11 +1101,11 @@ val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
           end
     in
       AncestryData.make {
-        tag = "grammar",
-        initial_values = [("min", min_grammars)],
-        extra = GrammarDeltas.thy_deltas,
-        delta_side_effects = side_effect,
-        apply_delta = apply
+        info = {tag = "grammar",
+                initial_values = [("min", min_grammars)],
+                apply_delta = apply},
+        get_deltas = GrammarDeltas.thy_deltas,
+        delta_side_effects = side_effect
       }
     end
 

@@ -336,13 +336,10 @@ fun check_delta (d: user_delta) =
     | ADD_UPRINTER{pattern,...} => Term.uptodate_term pattern
     | _ => true
 
-fun part tyds tmds gds =
-    case gds of
-        [] => (List.rev tyds, List.rev tmds)
-      | TMD d :: rest => part tyds (d::tmds) rest
-      | TYD d :: rest => part (d::tyds) tmds rest
-
 fun nopp s _ = HOLPP.add_string ("<" ^ s ^ ">")
+
+fun check_gdelta (TMD tmd) = check_delta tmd
+  | check_gdelta (TYD tyd) = check_tydelta tyd
 
 fun other_tds (t, thyevent) =
     case list_decode gdelta_decode t of
@@ -352,13 +349,11 @@ fun other_tds (t, thyevent) =
                              t)
       | SOME gds =>
         let
-          val (tyds, tmds) = part [] [] gds
-          val (goodtyds, badtyds) = Lib.partition check_tydelta tyds
-          val (goodtmds, badtmds) = Lib.partition check_delta tmds
+          val (goodgds, badgds) = Lib.partition check_gdelta gds
         in
-          if null badtyds andalso null badtmds then NONE
+          if null badgds then NONE
           else
-            SOME (mk_list gdelta_encode (map TYD goodtyds @ map TMD goodtmds))
+            SOME (mk_list gdelta_encode goodgds)
         end
 
 val {export, segment_data, set} = ThyDataSexp.new {
@@ -370,15 +365,11 @@ val {export, segment_data, set} = ThyDataSexp.new {
 
 fun thy_deltas {thyname} =
     case segment_data {thyname = thyname} of
-        NONE => ([], [])
+        NONE => []
       | SOME gds =>
         case list_decode gdelta_decode gds of
             NONE => raise Fail "GrammarDelta: encoding failure 2"
-          | SOME gds =>
-            let
-            in
-              part [] [] gds
-            end
+          | SOME gds => gds
 
 
 

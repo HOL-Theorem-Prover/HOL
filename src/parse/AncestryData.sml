@@ -2,13 +2,11 @@ structure AncestryData :> AncestryData =
 struct
 
 open Theory Lib Feedback
-datatype 'd action = Visit of string | Apply of 'd
+datatype 'd action = Visit of string | Apply of 'd list
 
-type ('delta,'value,'extra) adata_info = {
+type ('delta,'value) adata_info = {
   tag : string, initial_values : (string * 'value) list,
-  extra : 'extra,
-  apply_delta : 'delta -> 'value -> 'value,
-  delta_side_effects : 'delta -> unit
+  apply_delta : 'delta -> 'value -> 'value
 }
 
 val ERR = mk_HOL_ERR "AncestryData"
@@ -25,14 +23,14 @@ fun ancestry parents {thyname} =
                       (HOLset.empty String.compare)
 
 type ('d,'v) info =
-     {get_delta : {thyname: string} -> 'd,
+     {get_deltas : {thyname: string} -> 'd list,
       dblookup : {thyname : string} -> 'v,
       apply_delta : 'd -> 'v -> 'v, tag : string,
       parents : {thyname : string} -> string list}
 
 fun merge_into (info:('d,'v)info) (thyname, (acc_v, visited)) =
     let
-      val {parents,get_delta,apply_delta,...} = info
+      val {parents,get_deltas,apply_delta,...} = info
       fun recurse (A, aset) worklist =
           case worklist of
               [] => (A, aset)
@@ -40,12 +38,13 @@ fun merge_into (info:('d,'v)info) (thyname, (acc_v, visited)) =
               let
                 val ps0 = parents {thyname = thy}
                 val ps = List.filter (not o smem aset) ps0
-                val delta = get_delta {thyname = thy}
+                val deltas = get_deltas {thyname = thy}
               in
                 recurse (A, sadd thy aset)
-                        (map Visit ps @ (Apply delta :: rest))
+                        (map Visit ps @ (Apply deltas :: rest))
               end
-            | Apply d :: rest => recurse (apply_delta d A, aset) rest
+            | Apply ds :: rest =>
+              recurse (rev_itlist apply_delta ds A, aset) rest
     in
       recurse (acc_v, visited) [Visit thyname]
     end
@@ -67,11 +66,9 @@ fun merge (info : ('d,'v) info) thys : 'v =
     end
 
 
-fun make (input_arguments: ('delta,'value,{thyname:string} -> 'delta)adata_info)
-    =
+fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
     let
-      val {tag, extra = get_delta, apply_delta, ...} = input_arguments
-      val {initial_values, delta_side_effects, ...} = input_arguments
+      val {tag, apply_delta, initial_values, ...} = info
       val value_table =
           ref (itlist Symtab.update initial_values Symtab.empty)
       fun valueDB {thyname} =
@@ -117,9 +114,9 @@ fun make (input_arguments: ('delta,'value,{thyname:string} -> 'delta)adata_info)
                             !apply_delta_hook sl
                           end
                     )
-              val uds = get_delta {thyname = thyname}
-              val _ = delta_side_effects uds
-              val v = apply_delta uds v0
+              val uds = get_deltas {thyname = thyname}
+              val _ = List.app delta_side_effects uds
+              val v = rev_itlist apply_delta uds v0
             in
               value_table := Symtab.update (thyname,v) (!value_table)
             end
@@ -133,7 +130,7 @@ fun make (input_arguments: ('delta,'value,{thyname:string} -> 'delta)adata_info)
           case parent_segment_data thyname of
               NONE => Theory.parents (#thyname thyname)
             | SOME t => valOf (list_decode string_decode t)
-      val info = {get_delta = get_delta, tag = tag,
+      val info = {get_deltas = get_deltas, tag = tag,
                   dblookup = valueDB,
                   apply_delta = apply_delta,
                   parents = parents}

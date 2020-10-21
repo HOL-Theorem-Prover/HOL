@@ -21,8 +21,7 @@ sig
   val gdelta_encode : gdelta enc
   val gdelta_decode : gdelta dec
 
-  val thy_deltas : {thyname : string} ->
-                   type_grammar.delta list * term_grammar.user_delta list
+  val thy_deltas : {thyname : string} -> gdelta list
   val record_tmdelta : term_grammar.user_delta -> unit
   val record_tydelta : type_grammar.delta -> unit
   val clear_deltas : unit -> unit
