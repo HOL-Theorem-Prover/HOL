@@ -16,7 +16,8 @@ sig
   val fullmake : { info : ('delta, 'value) adata_info,
                    sexps : { dec : 'delta ThmDataSexp.dec,
                              enc : 'delta ThmDataSexp.enc },
-                   apply_to_global : 'delta -> 'value -> 'value} ->
+                   globinfo : {apply_to_global : 'delta -> 'value -> 'value,
+                               initial_value : 'value}} ->
                  { merge : string list -> 'value,
                    DB : {thyname : string} -> 'value,
                    get_deltas : {thyname : string} -> 'delta list,
@@ -26,5 +27,4 @@ sig
                    get_global_value : unit -> 'value,
                    update_global_value : ('value -> 'value) -> unit }
 *)
-
 end

@@ -65,9 +65,54 @@ fun merge (info : ('d,'v) info) thys : 'v =
           end
     end
 
+fun parent_onload extras {thyname,data = data_opt} =
+    let
+      open ThyDataSexp
+      val {tag,apply_delta_hook,delta_side_effects,apply_delta,get_deltas,
+           value_table} =
+          extras
+    in
+      if thyname = "min" then ()
+      else
+        let
+          val v0 =
+              case data_opt of
+                  NONE =>
+                  let
+                    val ps = Theory.parents thyname
+                    val _ = DPRINT (tag ^ ":onload(" ^ thyname ^
+                                    ",NONE)\n with " ^
+                                    "parents = [" ^
+                                    String.concatWith ", " ps ^ "]\n")
+                  in
+                    !apply_delta_hook ps
+                  end
+                | SOME data => (
+                  case list_decode string_decode data of
+                      NONE => raise ERR "AncestryData"
+                                    ("make("^tag^") got bad ancestor sexp")
+                    | SOME sl =>
+                      let
+                        val _ = DPRINT (tag ^ ":onload(" ^ thyname ^
+                                        ",\nSOME [" ^
+                                        String.concatWith ", " sl ^ "])\n")
+                      in
+                        !apply_delta_hook sl
+                      end
+                )
+          val uds = get_deltas {thyname = thyname}
+          val _ = List.app delta_side_effects uds
+          val v = rev_itlist apply_delta uds v0
+        in
+          value_table := Symtab.update (thyname,v) (!value_table)
+        end
+    end
+
+
 
 fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
     let
+      open ThyDataSexp
       val {tag, apply_delta, initial_values, ...} = info
       val value_table =
           ref (itlist Symtab.update initial_values Symtab.empty)
@@ -78,53 +123,20 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
                              "): no such theory in ancestry: " ^ thyname)
             | SOME v => v
 
-      val parent_table = ref Symtab.empty
       val apply_delta_hook =
           ref (fn (ps : string list) =>
                   raise Fail "AncestryData: calling default hook")
-      open ThyDataSexp
-      fun onload {thyname,data = data_opt} =
-          if thyname = "min" then ()
-          else
-            let
-              val v0 =
-                  case data_opt of
-                      NONE =>
-                      let
-                        val ps = Theory.parents thyname
-                        val _ = DPRINT (tag ^ ":onload(" ^ thyname ^
-                                        ",NONE)\n with " ^
-                                        "parents = [" ^
-                                        String.concatWith ", " ps ^ "]\n")
-                      in
-                        !apply_delta_hook ps
-                      end
-                    | SOME data => (
-                      case list_decode string_decode data of
-                          NONE => raise ERR "AncestryData"
-                                        ("make("^tag^") got bad ancestor sexp")
-                        | SOME sl =>
-                          let
-                            val _ = DPRINT (tag ^ ":onload(" ^ thyname ^
-                                            ",\nSOME [" ^
-                                            String.concatWith ", " sl ^ "])\n")
-                            val _ = parent_table :=
-                                    Symtab.update (thyname,sl) (!parent_table)
-                          in
-                            !apply_delta_hook sl
-                          end
-                    )
-              val uds = get_deltas {thyname = thyname}
-              val _ = List.app delta_side_effects uds
-              val v = rev_itlist apply_delta uds v0
-            in
-              value_table := Symtab.update (thyname,v) (!value_table)
-            end
+      val parent_extras =
+          {tag = tag, apply_delta_hook = apply_delta_hook,
+           delta_side_effects = delta_side_effects,
+           apply_delta = apply_delta, get_deltas = get_deltas,
+           value_table = value_table}
 
-      val {export = parent_export, segment_data = parent_segment_data, ...} =
+      val {export = parent_export,
+           segment_data = parent_segment_data, ...} =
           ThyDataSexp.new {
             thydataty = tag, merge = fn {old,new} => new,
-            load = onload, other_tds = fn (s,_) => SOME s
+            load = parent_onload parent_extras, other_tds = fn (s,_) => SOME s
           }
       fun parents thyname =
           case parent_segment_data thyname of
@@ -147,5 +159,16 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
       {merge = merge info, DB = valueDB,
        parents = parents, set_parents = set_ancestry}
     end
+
+(*
+fun fullmake {info : ('delta,'value) adata_info, sexps, globinfo} =
+    let
+      val {apply_to_global,initial_value} = globinfo
+      val {initial_values, ...} = info
+      val value_ref = ref initial_value
+      val value_table =
+          ref (itlist Symtab.update initial_values Symtab.empty)
+*)
+
 
 end (* struct *)
