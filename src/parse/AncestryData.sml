@@ -28,31 +28,27 @@ type ('d,'v) info =
       apply_delta : 'd -> 'v -> 'v, tag : string,
       parents : {thyname : string} -> string list}
 
-fun merge_into (info:('d,'v)info) (thyname, (acc_v, visited)) =
-    let
-      val {parents,get_deltas,apply_delta,...} = info
-      fun recurse (A, aset) worklist =
-          case worklist of
-              [] => (A, aset)
-            | Visit thy :: rest =>
-              let
-                val ps0 = parents {thyname = thy}
-                val ps = List.filter (not o smem aset) ps0
-                val deltas = get_deltas {thyname = thy}
-              in
-                recurse (A, sadd thy aset)
-                        (map Visit ps @ (Apply deltas :: rest))
-              end
-            | Apply ds :: rest =>
-              recurse (rev_itlist apply_delta ds A, aset) rest
-    in
-      recurse (acc_v, visited) [Visit thyname]
-    end
-
 fun merge (info : ('d,'v) info) thys : 'v =
     let
       val _ = DPRINT ("Calling " ^ #tag info ^ ":merge[" ^
                       String.concatWith ", " thys ^ "]")
+      val {parents,get_deltas,apply_delta,...} = info
+      fun recurse (A, aset) worklist =
+          case worklist of
+              [] => A
+            | Visit thy :: rest =>
+              if smem aset thy then recurse (A, aset) rest
+              else
+                let
+                  val ps0 = parents {thyname = thy}
+                  val ps = List.filter (not o smem aset) ps0
+                  val deltas = get_deltas {thyname = thy}
+                in
+                  recurse (A, sadd thy aset)
+                          (map Visit ps @ (Apply deltas :: rest))
+                end
+            | Apply ds :: rest =>
+              recurse (rev_itlist apply_delta ds A, aset) rest
     in
       case thys of
           [] => raise mk_HOL_ERR "ThyDeltaMerge" "merge" "Empty ancestor list"
@@ -61,7 +57,7 @@ fun merge (info : ('d,'v) info) thys : 'v =
             val v0 = #dblookup info {thyname = h}
             fun par_g s = #parents info {thyname = s}
           in
-            #1 (List.foldl (merge_into info) (v0, ancestry par_g {thyname=h}) t)
+            recurse (v0, sadd h (ancestry par_g {thyname=h})) (map Visit t)
           end
     end
 
