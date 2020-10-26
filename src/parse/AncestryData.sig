@@ -8,14 +8,16 @@ sig
                get_deltas : {thyname:string} -> 'delta list,
                delta_side_effects : 'delta -> unit } ->
              { merge : string list -> 'value,
-               DB : {thyname : string} -> 'value,
+               DB : {thyname : string} -> 'value option,
                parents : {thyname : string} -> string list,
                set_parents : string list -> 'value
              }
+
 (*
-  val fullmake : { info : ('delta, 'value) adata_info,
-                   sexps : { dec : 'delta ThmDataSexp.dec,
-                             enc : 'delta ThmDataSexp.enc },
+  val fullmake : { adinfo : ('delta, 'value) adata_info,
+                   uptodate_delta : 'delta -> bool,
+                   sexps : { dec : 'delta ThyDataSexp.dec,
+                             enc : 'delta ThyDataSexp.enc },
                    globinfo : {apply_to_global : 'delta -> 'value -> 'value,
                                initial_value : 'value}} ->
                  { merge : string list -> 'value,
@@ -27,4 +29,5 @@ sig
                    get_global_value : unit -> 'value,
                    update_global_value : ('value -> 'value) -> unit }
 *)
+
 end

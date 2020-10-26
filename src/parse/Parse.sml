@@ -1106,7 +1106,7 @@ val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
       }
     end
 
-fun grammarDB thyname = SOME (grammarDB0 thyname)
+fun grammarDB thyname = grammarDB0 thyname
 
 
 fun set_grammar_ancestry slist =
