@@ -407,17 +407,18 @@ val IVT = store_thm("IVT",
 (* Intermediate value theorem where value at the left end is bigger          *)
 (*---------------------------------------------------------------------------*)
 
-val IVT2 = store_thm("IVT2",
-  “!f a b y. (a <= b) /\ (f(b) <= y /\ y <= f(a)) /\
-             (!x. a <= x /\ x <= b ==> $contl f x) ==>
-        ?x. a <= x /\ x <= b /\ (f(x) = y)”,
+Theorem IVT2:
+  !f a b y. a <= b /\ (f(b) <= y /\ y <= f(a)) /\
+            (!x. a <= x /\ x <= b ==> $contl f x) ==>
+            ?x. a <= x /\ x <= b /\ (f(x) = y)
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  MP_TAC(SPECL
-    [“\x:real. ~(f x)”, “a:real”, “b:real”, “~y”] IVT)
-  THEN BETA_TAC THEN ASM_REWRITE_TAC[REAL_LE_NEG, REAL_NEG_EQ, REAL_NEGNEG]
+  MP_TAC(Q.SPECL [‘\x:real. ~(f x)’, ‘a’, ‘b:real’, ‘-y’] IVT)
+  THEN BETA_TAC THEN ASM_REWRITE_TAC[REAL_LE_NEG, REAL_EQ_NEG, REAL_NEGNEG]
   THEN DISCH_THEN MATCH_MP_TAC THEN GEN_TAC THEN DISCH_TAC THEN
   MATCH_MP_TAC CONT_NEG THEN FIRST_ASSUM MATCH_MP_TAC THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove the simple combining theorems for differentiation                   *)
@@ -563,8 +564,9 @@ val DIFF_POW = store_thm("DIFF_POW",
 (* Now power of -1 (then differentiation of inverses follows from chain rule)*)
 (*---------------------------------------------------------------------------*)
 
-val DIFF_XM1 = store_thm("DIFF_XM1",
-  “!x. ~(x = &0) ==> ((\x. inv(x)) diffl (~(inv(x) pow 2)))(x)”,
+Theorem DIFF_XM1:
+  !x. x <> 0 ==> ((\x. inv(x)) diffl (-(inv(x) pow 2)))(x)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[diffl] THEN BETA_TAC THEN
   MATCH_MP_TAC LIM_TRANSFORM THEN
   EXISTS_TAC “\h. ~(inv(x + h) * inv(x))” THEN
@@ -581,7 +583,8 @@ val DIFF_XM1 = store_thm("DIFF_XM1",
      [REWRITE_TAC[REAL_LNEG_UNIQ] THEN DISCH_THEN SUBST_ALL_TAC THEN
       UNDISCH_TAC “abs(h) < abs(~h)” THEN
       REWRITE_TAC[ABS_NEG, REAL_LT_REFL], ALL_TAC] THEN
-    W(fn (asl,w) => MP_TAC(SPECL [“x * (x + h)”, lhs w, rhs w] REAL_EQ_LMUL)) THEN
+    W(fn (asl,w) => MP_TAC(SPECL [“x * (x + h)”, lhs w, rhs w]
+                           REAL_EQ_LMUL)) THEN
     ASM_REWRITE_TAC[REAL_ENTIRE] THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[GSYM REAL_NEG_LMUL, GSYM REAL_NEG_RMUL] THEN
     REWRITE_TAC[real_div, REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB] THEN
@@ -594,7 +597,7 @@ val DIFF_XM1 = store_thm("DIFF_XM1",
     REWRITE_TAC[MATCH_MP REAL_MUL_LINV (ASSUME “~(x = &0)”)] THEN
     REWRITE_TAC[REAL_MUL_LID, GSYM REAL_SUB_LDISTRIB] THEN
     REWRITE_TAC[REWRITE_RULE[REAL_NEG_SUB]
-      (AP_TERM “$~” (SPEC_ALL REAL_ADD_SUB))] THEN
+                (AP_TERM “$real_neg” (SPEC_ALL REAL_ADD_SUB))] THEN
     REWRITE_TAC[GSYM REAL_NEG_RMUL] THEN AP_TERM_TAC THEN
     MATCH_MP_TAC REAL_MUL_LINV THEN ASM_REWRITE_TAC[ABS_NZ],
 
@@ -609,7 +612,8 @@ val DIFF_XM1 = store_thm("DIFF_XM1",
     GEN_REWR_TAC LAND_CONV [GSYM REAL_ADD_RID] THEN
     CONV_TAC(EXACT_CONV(map (X_BETA_CONV “h:real”) [“x:real”, “h:real”])) THEN
     MATCH_MP_TAC LIM_ADD THEN BETA_TAC THEN REWRITE_TAC[LIM_CONST] THEN
-    MATCH_ACCEPT_TAC LIM_X]);
+    MATCH_ACCEPT_TAC LIM_X]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now differentiation of inverse and quotient                               *)
@@ -883,7 +887,7 @@ val CONT_ATTAINS2 = store_thm("CONT_ATTAINS2",
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
   DISCH_THEN(MP_TAC o CONJ (ASSUME “a <= b”)) THEN
   DISCH_THEN(X_CHOOSE_THEN “M:real” MP_TAC o MATCH_MP CONT_ATTAINS) THEN
-  BETA_TAC THEN DISCH_TAC THEN EXISTS_TAC “~M” THEN CONJ_TAC THENL
+  BETA_TAC THEN DISCH_TAC THEN Q.EXISTS_TAC ‘~M’ THEN CONJ_TAC THENL
    [GEN_TAC THEN GEN_REWR_TAC RAND_CONV [GSYM REAL_LE_NEG] THEN
     ASM_REWRITE_TAC[REAL_NEGNEG],
     ASM_REWRITE_TAC[GSYM REAL_NEG_EQ]]);
@@ -954,7 +958,7 @@ val DIFF_LDEC = store_thm("DIFF_LDEC",
       ?d. &0 < d /\ !h. &0 < h /\ h < d ==> f(x) < f(x - h)”,
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
   REWRITE_TAC[diffl, LIM, REAL_SUB_RZERO] THEN
-  DISCH_THEN(MP_TAC o SPEC “~l”) THEN
+  DISCH_THEN(Q.SPEC_THEN ‘~l’ MP_TAC) THEN
   ONCE_REWRITE_TAC[GSYM REAL_NEG_LT0] THEN ASM_REWRITE_TAC[REAL_NEGNEG] THEN
   REWRITE_TAC[REAL_NEG_LT0] THEN BETA_TAC THEN
   DISCH_THEN(X_CHOOSE_THEN “d:real” STRIP_ASSUME_TAC) THEN
@@ -1023,7 +1027,7 @@ val DIFF_LMIN = store_thm("DIFF_LMIN",
   “!f x l. ($diffl f l)(x) /\
            (?d. &0 < d /\ (!y. abs(x - y) < d ==> f(x) <= f(y))) ==> (l = &0)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
-  MP_TAC(SPECL [“\x:real. ~(f x)”, “x:real”, “~l”] DIFF_LMAX) THEN
+  MP_TAC(Q.SPECL [‘\x:real. ~(f x)’, ‘x:real’, ‘~l’] DIFF_LMAX) THEN
   BETA_TAC THEN REWRITE_TAC[REAL_LE_NEG, REAL_NEG_EQ0] THEN
   DISCH_THEN MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC DIFF_NEG THEN ASM_REWRITE_TAC[]);
@@ -1385,7 +1389,7 @@ val CONT_INJ_LEMMA2 = store_thm("CONT_INJ_LEMMA2",
             (!z. abs(z - x) <= d ==> f contl z) ==>
      ~(!z. abs(z - x) <= d ==> f(x) <= f(z))”,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  MP_TAC(SPECL [“\x:real. ~(f x)”, “\y. (g(~y):real)”, “x:real”, “d:real”]
+  MP_TAC(Q.SPECL [‘\x:real. ~(f x)’, ‘\y. (g(~y):real)’, ‘x:real’, ‘d:real’]
     CONT_INJ_LEMMA) THEN
   BETA_TAC THEN ASM_REWRITE_TAC[REAL_NEGNEG, REAL_LE_NEG] THEN
   DISCH_THEN MATCH_MP_TAC THEN

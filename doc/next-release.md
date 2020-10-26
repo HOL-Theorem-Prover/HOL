@@ -302,6 +302,19 @@ Incompatibilities:
 
 *   The SML API for `ThmSetData` has changed; user-provided call-backs that apply set-changes (additions and removals of theorems) are only ever called with single changes at once rather than lists, so the required types for these call-backs has changed to reflect this.
 
+*   Parsing of `~x` has been changed so that this is always preferentially interpreted as being a boolean operation.
+    This may break proofs over types with a numeric negation that use expressions such as
+
+           SPEC “~x” some_theorem
+
+    It is much better style to use `Q.SPEC ‘~x’ some_theorem`; and indeed one can also use `-` as a unary operator, so that `Q.SPEC ‘-x’ some_theorem` will also work.
+
+    If a big script is broken by this, one can reinstate the old behaviour by changing the grammar locally with
+
+           Overload "~"[local] = “numeric_negation_operator”
+
+    where the appropriate negation operator might be, *e.g.*, `“$real_neg”`.
+
 * * * * *
 
 <div class="footer">

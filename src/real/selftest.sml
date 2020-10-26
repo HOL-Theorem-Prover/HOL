@@ -45,6 +45,7 @@ val _ = List.app
           (fn (s1,s2) => tpp_expected
                            {testf=standard_tpp_message, input=s1, output=s2})
           [("realinv 2", "2⁻¹"), ("inv (TC R)", "R⁺ ᵀ")]
+val _ = tpp "¬p ∧ q"                                                   (* UOK *)
 
 fun UNCH_test (n,c,t) =
   shouldfail {checkexn = fn Conv.UNCHANGED => true | _ => false,

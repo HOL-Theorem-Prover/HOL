@@ -332,6 +332,8 @@ val _ = overload_on ("<",    Term `extreal_lt`);
 val _ = overload_on ("~",    Term `extreal_ainv`);
 val _ = overload_on ("numeric_negate",
                              Term `extreal_ainv`);
+Overload "~" = “bool$~”
+Overload "¬" = “bool$~” (* UOK *)
 val _ = overload_on ("inv",  Term `extreal_inv`);
 val _ = overload_on ("abs",  Term `extreal_abs`);
 val _ = overload_on ("logr", Term `extreal_logr`);
