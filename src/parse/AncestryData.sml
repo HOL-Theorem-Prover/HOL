@@ -185,6 +185,7 @@ fun gen_other_tds {tag,dec,enc,P} (t, thyevent) =
 
 fun fullmake (arg as {adinfo : ('delta,'value)adata_info,...}) =
     let
+      open ThyDataSexp
       val {adinfo, sexps, globinfo, uptodate_delta} = arg
       val {dec,enc} = sexps
       val {apply_to_global,initial_value} = globinfo
@@ -237,16 +238,16 @@ fun fullmake (arg as {adinfo : ('delta,'value)adata_info,...}) =
                            merge = (fn {old,new} => new),
                            load = parent_onload parent_extras,
                            other_tds = (fn (t,_) => SOME t)}
+      fun get_parents {thyname} =
+          case get_raw_parents {thyname=thyname} of
+              NONE => Theory.parents thyname
+            | SOME t => valOf (list_decode string_decode t)
 
       val info =
-          {get_deltas = get_deltas,
-           dblookup = raise Fail "Unimplemented",
-           apply_delta = apply_delta,
-           tag = tag,
-           parents = raise Fail "Unimplemented"}
+          {get_deltas = get_deltas, dblookup = valueDB,
+           apply_delta = apply_delta, tag = tag, parents = get_parents}
       fun set_ancestry sl =
           let
-            open ThyDataSexp
             val _ = set_raw_deltas (List [])
             val _ = export_raw_parents (List $ map String sl)
             val v = merge info sl
@@ -254,15 +255,16 @@ fun fullmake (arg as {adinfo : ('delta,'value)adata_info,...}) =
             Sref.update value_table (Symtab.update (current_theory(), v));
             v
           end
+      fun record_delta d = export_raw_delta (ThyDataSexp.List [enc d])
     in
       {merge = merge info, DB = valueDB,
        get_deltas = get_deltas,
-       record_delta = raise Fail "Unimplemented",
-       parents = parents,
+       record_delta = record_delta,
+       parents = get_parents,
        set_parents = set_ancestry,
        get_global_value = get_global_value,
        update_global_value = update_global_value}
     end
 
 
-end (* struct *)
+end; (* struct *)
