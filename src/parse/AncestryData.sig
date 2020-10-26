@@ -4,6 +4,17 @@ sig
     tag : string, initial_values : (string * 'value) list,
     apply_delta : 'delta -> 'value -> 'value
   }
+
+  type ('delta,'value) fullresult =
+       { merge : string list -> 'value,
+         DB : {thyname : string} -> 'value option,
+         get_deltas : {thyname : string} -> 'delta list,
+         record_delta : 'delta -> unit,
+         parents : {thyname : string} -> string list,
+         set_parents : string list -> 'value,
+         get_global_value : unit -> 'value,
+         update_global_value : ('value -> 'value) -> unit }
+
   val make : { info : ('delta, 'value) adata_info,
                get_deltas : {thyname:string} -> 'delta list,
                delta_side_effects : 'delta -> unit } ->
@@ -19,13 +30,6 @@ sig
                              enc : 'delta ThyDataSexp.enc },
                    globinfo : {apply_to_global : 'delta -> 'value -> 'value,
                                initial_value : 'value}} ->
-                 { merge : string list -> 'value,
-                   DB : {thyname : string} -> 'value option,
-                   get_deltas : {thyname : string} -> 'delta list,
-                   record_delta : 'delta -> unit,
-                   parents : {thyname : string} -> string list,
-                   set_parents : string list -> 'value,
-                   get_global_value : unit -> 'value,
-                   update_global_value : ('value -> 'value) -> unit }
+                 ('delta,'value) fullresult
 
 end

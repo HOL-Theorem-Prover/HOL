@@ -51,6 +51,16 @@ end;
 
 datatype read_result = OK of setdelta | BAD_ADD of thname
 
+fun raw_read1 ty sexp =
+    let
+      open ThyDataSexp
+    in
+      case sexp of
+          KName nm => Option.map (fn th => ADD (nm, th)) (lookup ty nm)
+        | String nm => SOME (REMOVE nm)
+        | _ => NONE
+    end
+
 fun read ty sexp =
     let
       open ThyDataSexp
@@ -66,15 +76,16 @@ fun read ty sexp =
         | _ => raise ERR "read" ("Bad sexp for type "^ty^": "^sexp2string sexp)
     end
 
-fun write_deltas ds =
+fun raw_write1 d =
     let
       open ThyDataSexp
-      fun mapthis (ADD(knm,th)) = KName knm
-        | mapthis (REMOVE s) = String s
-      val sexps = map mapthis ds
     in
-      List sexps
+      case d of
+          ADD(knm,th) => KName knm
+        | REMOVE s => String s
     end
+
+fun write_deltas ds = ThyDataSexp.List (map raw_write1 ds)
 
 fun write1 d = write_deltas [d]
 
@@ -215,5 +226,43 @@ in
   List.app onload (ancestry "-");
   {export = export_nameonly, delete = delete}
 end
+
+fun lift nm = {Thy = current_theory(), Name = nm}
+
+fun export_with_ancestry {settype,delta_ops} =
+    let
+      val {apply_to_global, uptodate_delta, initial_value, apply_delta} =
+          delta_ops
+      val adinfo = {tag = settype, initial_values = [("min", initial_value)],
+                    apply_delta = apply_delta}
+      val sexps = {dec = raw_read1 settype, enc = raw_write1}
+      val globinfo = {apply_to_global = apply_to_global,
+                      initial_value = initial_value}
+      val fullresult =
+          AncestryData.fullmake { adinfo = adinfo,
+                                  uptodate_delta = uptodate_delta,
+                                  sexps = sexps, globinfo = globinfo}
+      fun store_attrfun {attrname,name,thm} =
+          let val d = ADD(lift name,thm)
+          in
+            #record_delta fullresult d;
+            #update_global_value fullresult (apply_to_global d)
+          end
+      fun local_attrfun {attrname,name,thm} =
+          #update_global_value fullresult (apply_to_global (ADD(lift name,thm)))
+      fun efn_add {thy,named_thm} =
+          #update_global_value fullresult (apply_to_global (ADD named_thm))
+      fun efn_remove {thy,remove} =
+          #update_global_value fullresult (apply_to_global (REMOVE remove))
+      val efns = {add = efn_add, remove = efn_remove}
+    in
+      data_map := Symtab.update(settype, (#get_deltas fullresult, efns))
+                               (!data_map);
+      ThmAttribute.register_attribute (
+        settype, {storedf = store_attrfun, localf = local_attrfun}
+      );
+      fullresult
+    end
+
 
 end (* struct *)

@@ -183,7 +183,17 @@ fun gen_other_tds {tag,dec,enc,P} (t, thyevent) =
         end
       | _ => raise ERR "gen_other_tds" ("Bad encoding (2) for tag: "^tag)
 
-fun fullmake (arg as {adinfo : ('delta,'value)adata_info,...}) =
+type ('delta,'value) fullresult =
+     { merge : string list -> 'value,
+       DB : {thyname : string} -> 'value option,
+       get_deltas : {thyname : string} -> 'delta list,
+       record_delta : 'delta -> unit,
+       parents : {thyname : string} -> string list,
+       set_parents : string list -> 'value,
+       get_global_value : unit -> 'value,
+       update_global_value : ('value -> 'value) -> unit }
+
+fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
     let
       open ThyDataSexp
       val {adinfo, sexps, globinfo, uptodate_delta} = arg
@@ -246,6 +256,7 @@ fun fullmake (arg as {adinfo : ('delta,'value)adata_info,...}) =
       val info =
           {get_deltas = get_deltas, dblookup = valueDB,
            apply_delta = apply_delta, tag = tag, parents = get_parents}
+      val _ = apply_delta_hook := merge info
       fun set_ancestry sl =
           let
             val _ = set_raw_deltas (List [])
@@ -256,6 +267,10 @@ fun fullmake (arg as {adinfo : ('delta,'value)adata_info,...}) =
             v
           end
       fun record_delta d = export_raw_delta (ThyDataSexp.List [enc d])
+      fun onload s =
+          parent_onload parent_extras {thyname = s,
+                                       data = get_raw_parents {thyname = s}}
+      val _ = List.app onload (Theory.ancestry "-")
     in
       {merge = merge info, DB = valueDB,
        get_deltas = get_deltas,
