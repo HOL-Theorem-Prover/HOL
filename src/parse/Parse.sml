@@ -207,9 +207,6 @@ end
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 
 type grammarDB_info = type_grammar.grammar * term_grammar.grammar
-val grammarDB_value =
-    ref (Binarymap.mkDict String.compare :(string,grammarDB_info)Binarymap.dict)
-fun grammarDB s = Binarymap.peek (!grammarDB_value, s)
 
 fun minprint t = let
   fun default t = let
