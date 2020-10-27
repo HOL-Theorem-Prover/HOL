@@ -366,9 +366,3 @@ val map = map_nodes;
 val fold = fold_graph;
 
 end;
-
-structure Graph = Graph(
-  type key = string
-  val ord = String.compare
-  val pp = HOLPP.add_string o Portable.mlquote
-);

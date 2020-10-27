@@ -20,10 +20,10 @@ fun DPRINT s = if tdebug() > 0 then print ("* " ^s^"\n") else ()
 
 (* theory based topologically sorted ancestry *)
 fun tts_ancestry s : string list =
-    let val G = Graph.make (map (fn s => ((s,()), Theory.parents s))
-                                (ancestry s))
+    let val G = SymGraph.make (map (fn s => ((s,()), Theory.parents s))
+                                   (ancestry s))
     in
-      List.rev (Graph.topological_order G)
+      List.rev (SymGraph.topological_order G)
     end
 
 fun ancestry parents {thyname} =
