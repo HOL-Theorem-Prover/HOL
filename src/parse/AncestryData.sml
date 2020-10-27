@@ -18,6 +18,14 @@ val tdebug = get_tracefn "Theory.debug"
 
 fun DPRINT s = if tdebug() > 0 then print ("* " ^s^"\n") else ()
 
+(* theory based topologically sorted ancestry *)
+fun tts_ancestry s : string list =
+    let val G = Graph.make (map (fn s => ((s,()), Theory.parents s))
+                                (ancestry s))
+    in
+      List.rev (Graph.topological_order G)
+    end
+
 fun ancestry parents {thyname} =
     ImplicitGraph.bfs parents String.compare (fn _ => sadd) thyname
                       (HOLset.empty String.compare)
@@ -169,7 +177,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
             thyname = s, data = parent_segment_data {thyname = s}
           }
     in
-      List.app onload (Theory.ancestry "-");
+      List.app onload (tts_ancestry "-");
       {merge = merge info, DB = valueDB,
        parents = parents, set_parents = set_ancestry}
     end
@@ -281,7 +289,7 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
       fun onload s =
           parent_onload parent_extras {thyname = s,
                                        data = get_raw_parents {thyname = s}}
-      val _ = List.app onload (Theory.ancestry "-")
+      val _ = List.app onload (tts_ancestry "-")
     in
       {merge = merge info, DB = valueDB,
        get_deltas = get_deltas,
