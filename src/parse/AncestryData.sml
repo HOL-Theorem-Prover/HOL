@@ -16,7 +16,7 @@ fun sadd e s = HOLset.add(s,e)
 
 val tdebug = get_tracefn "Theory.debug"
 
-fun DPRINT s = if tdebug() > 0 then print s else ()
+fun DPRINT s = if tdebug() > 0 then print ("* " ^s^"\n") else ()
 
 fun ancestry parents {thyname} =
     ImplicitGraph.bfs parents String.compare (fn _ => sadd) thyname
@@ -33,14 +33,14 @@ fun fpluck f [] = NONE
                           NONE => Option.map (fn (v,r) => (v,h::r)) (fpluck f t)
                         | SOME v => SOME ((h,v),t)
 
-fun merge (info : ('d,'v) info) thys : 'v =
+fun merge (info : ('d,'v) info) thys : 'v option =
     let
       val _ = DPRINT ("Calling " ^ #tag info ^ ":merge[" ^
                       String.concatWith ", " thys ^ "]")
       val {parents,get_deltas,apply_delta,...} = info
       fun recurse (A, aset) worklist =
           case worklist of
-              [] => A
+              [] => SOME A
             | Visit thy :: rest =>
               if smem aset thy then recurse (A, aset) rest
               else
@@ -56,12 +56,10 @@ fun merge (info : ('d,'v) info) thys : 'v =
               recurse (rev_itlist apply_delta ds A, aset) rest
     in
       case thys of
-          [] => raise ERR "merge" "Empty ancestor list"
+          [] => NONE
         | _ => (
           case fpluck (fn thy => #dblookup info {thyname=thy}) thys of
-              NONE => raise ERR "merge"
-                            ("None of [ " ^ String.concatWith ", " thys ^
-                             "] has value for " ^ #tag info)
+              NONE => NONE
             | SOME ((h,v0),rest) =>
               let
                 fun par_g s = #parents info {thyname = s}
@@ -82,7 +80,7 @@ fun parent_onload extras {thyname,data = data_opt} =
       if thyname = "min" then ()
       else
         let
-          val v0 =
+          val v0_opt =
               case data_opt of
                   NONE =>
                   let
@@ -107,12 +105,18 @@ fun parent_onload extras {thyname,data = data_opt} =
                         !apply_delta_hook sl
                       end
                 )
-          val uds = get_deltas {thyname = thyname}
-          val _ = List.app delta_side_effects uds
-          val v = rev_itlist apply_delta uds v0
         in
-          Sref.update value_table (Symtab.update (thyname,v))
-        end
+            case v0_opt of
+                NONE => ()
+              | SOME v0 =>
+                let
+                  val uds = get_deltas {thyname = thyname}
+                  val _ = List.app delta_side_effects uds
+                  val v = rev_itlist apply_delta uds v0
+                in
+                  Sref.update value_table (Symtab.update (thyname,v))
+                end
+          end
     end
 
 
@@ -127,9 +131,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
           Symtab.lookup (Sref.value value_table) thyname
 
       (* calculates merged values in the "onload" hook *)
-      val apply_delta_hook =
-          ref (fn (ps : string list) =>
-                  raise Fail "AncestryData: calling default hook")
+      val apply_delta_hook = ref (fn ps => NONE)
       val parent_extras =
           {tag = tag, apply_delta_hook = apply_delta_hook,
            delta_side_effects = delta_side_effects,
@@ -154,12 +156,20 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
       fun set_ancestry sl =
           let
             val _ = parent_export (List $ map String sl)
-            val v = merge info sl
+            val vopt = merge info sl
           in
-            Sref.update value_table (Symtab.update (current_theory(), v));
-            v
+            (case vopt of
+                SOME v =>
+                Sref.update value_table (Symtab.update (current_theory(), v))
+              | NONE => ());
+            vopt
           end
+      fun onload s =
+          parent_onload parent_extras {
+            thyname = s, data = parent_segment_data {thyname = s}
+          }
     in
+      List.app onload (Theory.ancestry "-");
       {merge = merge info, DB = valueDB,
        parents = parents, set_parents = set_ancestry}
     end
@@ -184,12 +194,12 @@ fun gen_other_tds {tag,dec,enc,P} (t, thyevent) =
       | _ => raise ERR "gen_other_tds" ("Bad encoding (2) for tag: "^tag)
 
 type ('delta,'value) fullresult =
-     { merge : string list -> 'value,
+     { merge : string list -> 'value option,
        DB : {thyname : string} -> 'value option,
        get_deltas : {thyname : string} -> 'delta list,
        record_delta : 'delta -> unit,
        parents : {thyname : string} -> string list,
-       set_parents : string list -> 'value,
+       set_parents : string list -> 'value option,
        get_global_value : unit -> 'value,
        update_global_value : ('value -> 'value) -> unit }
 
@@ -232,9 +242,7 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
             )
 
       (* store parentage *)
-      val apply_delta_hook =
-          ref (fn (ps : string list) =>
-                  raise Fail "AncestryData: calling default hook")
+      val apply_delta_hook = ref (fn ps => NONE)
       fun delta_side_effects d =
           update_global_value (apply_to_global d)
       val parent_extras =
@@ -261,10 +269,13 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
           let
             val _ = set_raw_deltas (List [])
             val _ = export_raw_parents (List $ map String sl)
-            val v = merge info sl
+            val vopt = merge info sl
           in
-            Sref.update value_table (Symtab.update (current_theory(), v));
-            v
+            case vopt of
+                SOME v =>
+                Sref.update value_table (Symtab.update (current_theory(), v))
+              | NONE => ();
+            vopt
           end
       fun record_delta d = export_raw_delta (ThyDataSexp.List [enc d])
       fun onload s =

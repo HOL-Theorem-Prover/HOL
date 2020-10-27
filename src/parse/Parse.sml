@@ -1081,7 +1081,7 @@ fun gparents {thyname} =
       [] => parents thyname
     | thys => thys
 
-val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
+val {merge = merge_grammars0, set_parents = set_grammar_ancestry0,
      DB = grammarDB0, parents = gparents} =
     let
       open GrammarDeltas
@@ -1106,13 +1106,21 @@ val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
       }
     end
 
+fun merge_grammars sl =
+    case merge_grammars0 sl of
+        NONE => raise ERROR "merge_grammars"
+                      ("None of " ^ String.concatWith ", " sl ^
+                       " have defined grammars")
+      | SOME gv => gv
+
 fun grammarDB thyname = grammarDB0 thyname
 
 
 fun set_grammar_ancestry slist =
     let
       val _ = GrammarDeltas.clear_deltas()
-      val (tyg,tmg) = set_grammar_ancestry0 slist
+      val (tyg,tmg) = valOf (set_grammar_ancestry0 slist)
+                      handle Option => raise Fail "No merge for grammars!"
     in
       the_type_grammar := tyg;
       the_term_grammar := tmg;

@@ -31,6 +31,9 @@ fun mk_store_name_safe s =
                   ("Malformed name: " ^ s)
 
 fun lookup_exn ty {Thy,Name} = DB.fetch Thy Name
+fun mk_add s =
+    let val nm = mk_store_name_safe s in ADD(nm, lookup_exn "" nm) end
+
 
 fun lookup ty nm =
     SOME (lookup_exn ty nm)

@@ -9,6 +9,7 @@ sig
        { add : {thy : string, named_thm : thname * thm} -> unit,
          remove : {thy : string, remove : string} -> unit}
   val added_thms : setdelta list -> thm list
+  val mk_add : string -> setdelta
 
   val new_exporter :
       {settype : string, efns : exportfns} ->
