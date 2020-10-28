@@ -281,7 +281,8 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
           in
             case vopt of
                 SOME v =>
-                Sref.update value_table (Symtab.update (current_theory(), v))
+                (Sref.update value_table (Symtab.update (current_theory(), v));
+                 update_global_value (K v))
               | NONE => ();
             vopt
           end
