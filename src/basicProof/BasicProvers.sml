@@ -1186,4 +1186,7 @@ fun set_simpset_ancestry sl =
                             \nothing done"
       | SOME _ => ()
 
+fun temp_setsimpset ss = update_global_value (K (ss, true, []))
+val simpset_state = get_global_value
+
 end
