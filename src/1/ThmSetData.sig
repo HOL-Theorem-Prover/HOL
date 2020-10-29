@@ -22,12 +22,11 @@ sig
 
   val all_set_types : unit -> string list
 
+  type 'value ops = {apply_to_global : setdelta -> 'value -> 'value,
+                     uptodate_delta : setdelta -> bool, initial_value : 'value,
+                     apply_delta : setdelta -> 'value -> 'value}
   val export_with_ancestry:
-      {settype : string,
-       delta_ops : {apply_to_global : setdelta -> 'value -> 'value,
-                    uptodate_delta : setdelta -> bool, initial_value : 'value,
-                    apply_delta : setdelta -> 'value -> 'value}
-      } ->
+      {settype : string, delta_ops : 'value ops} ->
       (setdelta,'value) AncestryData.fullresult
 
 end
