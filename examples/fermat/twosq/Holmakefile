@@ -1,5 +1,5 @@
 # prefix to HOL examples
-LOC_PREFIX = ../../../../HOL/examples
+LOC_PREFIX = $(HOLDIR)/examples
 
 PRE_INCLUDES = $(LOC_PREFIX)/algebra/ring
 
