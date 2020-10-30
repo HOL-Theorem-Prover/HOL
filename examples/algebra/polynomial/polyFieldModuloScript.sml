@@ -4952,10 +4952,12 @@ Proof
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `f = \c:num. X - |c|` >>
   rw_tac std_ss[INJ_DEF, IN_PPOW, IN_DIFF, IN_SING] >| [
+    rename1 ‘s <> natural n’ >>
     `s SUBSET (IMAGE SUC (count n))` by rw[GSYM IN_POW] >>
     `FINITE (IMAGE f s)` by metis_tac[IMAGE_FINITE, SUBSET_FINITE, FINITE_COUNT] >>
     `(IMAGE f s) SUBSET (PolyRing r).carrier` by rw[poly_X_sub_c_image_poly_subset, Abbr`f`] >>
     rw[poly_prod_set_property],
+    rename1 ‘s IN POW (natural n)’ >>
     `!s t. FINITE s /\ MAX_SET s < char r /\ FINITE t /\ MAX_SET t < char r /\
              (PPROD (IMAGE f s) = PPROD (IMAGE f t)) ==> s SUBSET t` by
   (rw_tac std_ss[SUBSET_DEF, Abbr`f`] >>

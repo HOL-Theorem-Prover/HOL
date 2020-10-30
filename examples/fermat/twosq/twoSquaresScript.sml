@@ -1160,6 +1160,7 @@ Proof
   rw[fixed_points_def, mills_def, Zadd_element, EXTENSION] >>
   simp[EQ_IMP_THM] >>
   rpt strip_tac >| [
+    rename1 ‘x = (x',y,z)’ >>
     `~square p` by metis_tac[prime_non_square] >>
     `p MOD 4 <> 0` by decide_tac >>
     `zagier x = x` by metis_tac[FUNPOW_1, DECIDE``1 < 2``] >>
