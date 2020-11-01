@@ -364,8 +364,7 @@ in
     val write_datatype_info = add_datatype_info the_compset
 end
 
-val _ = TypeBase.register_update_fn
-          (fn tyis => (app write_datatype_info tyis; tyis))
+val _ = TypeBase.register_update_fn (fn tyi => (write_datatype_info tyi; tyi))
 
 (*---------------------------------------------------------------------------*)
 (* Usage note: call this before export_theory().                             *)

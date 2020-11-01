@@ -1138,8 +1138,7 @@ val temp_delsimps = update_global_value o temp_delsimps0;
 fun update_fn tyi =
   augment_srw_ss ([simpLib.tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 
-val () =
-  TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))
+val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 
 fun srw_ss () =
     (update_global_value init_state;

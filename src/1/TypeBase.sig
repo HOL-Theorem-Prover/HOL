@@ -12,12 +12,14 @@ sig
    (* Imperative database of datatype facts and associated operations. *)
 
    val theTypeBase        : unit -> typeBase
-   val write              : tyinfo list -> tyinfo list
-   val export             : tyinfo list -> unit
+   val thy_typebase       : {thyname : string} -> typeBase option
+   val thy_updates        : {thyname : string} -> tyinfo list
+   val write              : tyinfo list -> unit
+   val export             : tyinfo list -> unit (* includes write action *)
    val fetch              : hol_type -> tyinfo option
    val read               : {Thy :string, Tyop: string} -> tyinfo option
    val elts               : unit -> tyinfo list
-   val register_update_fn : (tyinfo list -> tyinfo list) -> unit
+   val register_update_fn : (tyinfo -> tyinfo) -> unit
 
    val axiom_of           : hol_type -> thm
    val induction_of       : hol_type -> thm
