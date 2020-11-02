@@ -105,7 +105,7 @@ val initial_tydb = TypeBasePure.empty
 
 val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
                    record_delta, get_deltas = thy_updates,
-                   update_global_value, ...} =
+                   merge = merge_typebases, update_global_value, ...} =
     let open TypeBasePure
     in
       AncestryData.fullmake{

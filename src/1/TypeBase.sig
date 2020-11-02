@@ -14,6 +14,7 @@ sig
    val theTypeBase        : unit -> typeBase
    val thy_typebase       : {thyname : string} -> typeBase option
    val thy_updates        : {thyname : string} -> tyinfo list
+   val merge_typebases    : string list -> typeBase option
    val write              : tyinfo list -> unit
    val export             : tyinfo list -> unit (* includes write action *)
    val fetch              : hol_type -> tyinfo option

@@ -1115,6 +1115,10 @@ val adresult as {DB,get_global_value,record_delta,update_global_value,...} =
       settype = "simp"
     };
 val get_deltas = #get_deltas adresult
+fun merge_simpsets ps =
+    case Option.map (#1 o quiet_messages init_state) (#merge adresult ps) of
+        NONE => simpLib.empty_ss
+      | SOME sset => sset
 
 fun augment_srw_ss0 ssdl ((sset, initp, upds):srw_state):srw_state =
     if initp then (foldl (fn (ssd,ss) => ss ++ ssd) sset ssdl, true, [])
@@ -1135,8 +1139,11 @@ fun temp_delsimps0 names (sset, initp, upds) =
       (sset, false, List.revAppend (map REMOVE_RWT names, upds))
 val temp_delsimps = update_global_value o temp_delsimps0;
 
+fun tyi_update tyi sset = sset ++ simpLib.tyi_to_ssdata tyi
 fun update_fn tyi =
   augment_srw_ss ([simpLib.tyi_to_ssdata tyi] handle HOL_ERR _ => [])
+fun augment_with_typebase tyb =
+    rev_itlist tyi_update $ TypeBasePure.listItems tyb
 
 val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 
@@ -1175,6 +1182,9 @@ fun apply_logged_updates {theories} simpset =
 fun do_logged_updates thys =
     update_global_value (ap13 (apply_logged_updates thys) o init_state)
 
+fun option_fold f NONE x = x
+  | option_fold f (SOME a) x = f a x
+
 fun SRW_TAC ssdl thl g = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
@@ -1200,7 +1210,7 @@ fun thy_ssfrag s =
                |> simpLib.rewrites
                |> simpLib.name_ss s
 
-fun thy_simpset s = Option.map #1 (DB {thyname=s})
+fun thy_simpset s = Option.map (#1 o init_state) (DB {thyname=s})
 
 fun temp_set_simpset_ancestry sl =
     case #merge adresult sl of
@@ -1218,5 +1228,11 @@ fun set_simpset_ancestry sl =
 
 fun temp_setsimpset ss = update_global_value (K (ss, true, []))
 val simpset_state = get_global_value
+fun recreate_sset_at_parentage ps =
+    ps |> merge_simpsets
+       |> option_fold augment_with_typebase (TypeBase.merge_typebases ps)
+       |> apply_logged_updates {theories = ps}
+       |> temp_setsimpset
+
 
 end
