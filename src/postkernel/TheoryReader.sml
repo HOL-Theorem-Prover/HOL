@@ -100,7 +100,9 @@ fun string_to_class "A" = SOME DB.Axm
   | string_to_class "D" = SOME DB.Def
   | string_to_class _ = NONE
 
-val class_decode = Option.mapPartial string_to_class o HOLsexp.symbol_decode
+fun class_decode c =
+    Option.map (List.map (fn i => (i,c))) o
+    HOLsexp.list_decode HOLsexp.int_decode
 
 fun load_thydata thyname path =
   let
@@ -128,7 +130,9 @@ fun load_thydata thyname path =
             SOME,
             tagged_decode "incorporate" SOME,
             tagged_decode "thm-classes" (
-              list_decode (pair_decode(int_decode, class_decode))
+              Option.map (fn (a,d,t) => a @ d @ t) o
+              pair3_decode (class_decode DB.Axm,  class_decode DB.Def,
+                            class_decode DB.Thm)
             ),
             tagged_decode "loadable-thydata" SOME
           )

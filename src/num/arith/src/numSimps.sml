@@ -166,7 +166,8 @@ val ARITH_RWTS_ss =
 (* first argument list of SRW_TAC                                            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
+val add_frags = BasicProvers.logged_addfrags {thyname = "numeral"}
+val _ = add_frags [REDUCE_ss, ARITH_RWTS_ss]
 
 
 (* ---------------------------------------------------------------------*
@@ -624,7 +625,7 @@ in
   merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
 end
 
-val _ = BasicProvers.augment_srw_ss [MOD_ss]
+val _ = add_frags [MOD_ss]
 
 (* ----------------------------------------------------------------------
     ARITH_NORM_ss

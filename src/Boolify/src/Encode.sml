@@ -222,12 +222,10 @@ fun define_encode ax db =
       Writing all the boolification information to the typebase.
  ---------------------------------------------------------------------------*)
 
-fun insert_encode {def, const_tyopl} tyinfol =
- case tyinfol
-  of [] => raise ERR "build_tyinfos" "empty tyinfo list"
-   | tyinfo::rst =>
-     let val first_tyname = TypeBasePure.ty_name_of tyinfo
-         fun ins_encode info encode_eqs =
+fun insert_encode {def, const_tyopl} tyinfo =
+    let
+      val first_tyname = TypeBasePure.ty_name_of tyinfo
+      fun ins_encode info encode_eqs =
           let val tyname = TypeBasePure.ty_name_of info
           in case assoc2 tyname const_tyopl
               of SOME(c,tyop) => TypeBasePure.put_encode(c,encode_eqs) info
@@ -236,24 +234,29 @@ fun insert_encode {def, const_tyopl} tyinfol =
                          raise ERR "build_tyinfos" "")
           end
      in
-       ins_encode tyinfo (TypeBasePure.ORIG def) ::
-       map (C ins_encode (TypeBasePure.COPY (first_tyname,def))) rst
-     end
-     handle HOL_ERR _ => tyinfol;
+       ins_encode tyinfo (TypeBasePure.ORIG def)
+    end
+    handle HOL_ERR _ => tyinfo;
 
-fun add_encode tyinfol =
-  if List.exists (Option.isSome o TypeBasePure.encode_of0) tyinfol
-   then tyinfol
-   else let
+fun is_copy (TypeBasePure.COPY _) = true
+  | is_copy _ = false
+
+fun add_encode tyinfo =
+  if Option.isSome (TypeBasePure.encode_of0 tyinfo) orelse
+     is_copy (TypeBasePure.axiom_of0 tyinfo)
+  then
+    tyinfo
+  else
+    let
       val db = TypeBase.theTypeBase ()
-      val recursion = TypeBasePure.axiom_of (hd tyinfol)
-      val tyname = TypeBasePure.ty_name_of (hd tyinfol)
+      val recursion = TypeBasePure.axiom_of tyinfo
+      val tyname = TypeBasePure.ty_name_of tyinfo
     in
-      case define_encode recursion db
-       of SOME s => insert_encode s tyinfol
+      case define_encode recursion db of
+          SOME s => insert_encode s tyinfo
         | NONE => (HOL_MESG("Couldn't define encode function for type "
                             ^Lib.quote (pair_string tyname))
-                   ; tyinfol)
+                  ; tyinfo)
     end;
 
 val () = TypeBase.register_update_fn add_encode;

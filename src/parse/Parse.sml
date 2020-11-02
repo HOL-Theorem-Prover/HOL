@@ -207,9 +207,6 @@ end
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 
 type grammarDB_info = type_grammar.grammar * term_grammar.grammar
-val grammarDB_value =
-    ref (Binarymap.mkDict String.compare :(string,grammarDB_info)Binarymap.dict)
-fun grammarDB s = Binarymap.peek (!grammarDB_value, s)
 
 fun minprint t = let
   fun default t = let
@@ -1084,15 +1081,15 @@ fun gparents {thyname} =
       [] => parents thyname
     | thys => thys
 
-val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
+val {merge = merge_grammars0, set_parents = set_grammar_ancestry0,
      DB = grammarDB0, parents = gparents} =
     let
-      fun apply (tyuds, tmuds) (tyG, tmG) =
-          (type_grammar.apply_deltas tyuds tyG,
-           term_grammar.add_deltas tmuds tmG)
-      fun side_effect deltas =
+      open GrammarDeltas
+      fun apply (TYD tyd) (tyG, tmG) = (type_grammar.apply_delta tyd tyG, tmG)
+        | apply (TMD tmd) (tyG, tmG) = (tyG, term_grammar.add_delta tmd tmG)
+      fun side_effect delta =
           let
-            val (tyG, tmG) = apply deltas (!the_type_grammar, !the_term_grammar)
+            val (tyG, tmG) = apply delta (!the_type_grammar, !the_term_grammar)
           in
             the_type_grammar := tyG;
             the_term_grammar := tmG;
@@ -1101,19 +1098,29 @@ val {merge = merge_grammars, set_parents = set_grammar_ancestry0,
           end
     in
       AncestryData.make {
-        tag = "grammar",
-        initial_values = [("min", min_grammars)],
-        get_delta = GrammarDeltas.thy_deltas,
-        delta_side_effects = side_effect,
-        apply_delta = apply
+        info = {tag = "grammar",
+                initial_values = [("min", min_grammars)],
+                apply_delta = apply},
+        get_deltas = GrammarDeltas.thy_deltas,
+        delta_side_effects = side_effect
       }
     end
 
-fun grammarDB thyname = SOME (grammarDB0 thyname)
+fun merge_grammars sl =
+    case merge_grammars0 sl of
+        NONE => raise ERROR "merge_grammars"
+                      ("None of " ^ String.concatWith ", " sl ^
+                       " have defined grammars")
+      | SOME gv => gv
+
+fun grammarDB thyname = grammarDB0 thyname
 
 
 fun set_grammar_ancestry slist =
-    let val (tyg,tmg) = set_grammar_ancestry0 slist
+    let
+      val _ = GrammarDeltas.clear_deltas()
+      val (tyg,tmg) = valOf (set_grammar_ancestry0 slist)
+                      handle Option => raise Fail "No merge for grammars!"
     in
       the_type_grammar := tyg;
       the_term_grammar := tmg;

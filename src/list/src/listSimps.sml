@@ -339,7 +339,7 @@ end
  ---------------------------------------------------------------------------*)
 
 val LIST_ss = BasicProvers.thy_ssfrag "list"
-val _ = BasicProvers.augment_srw_ss [LIST_EQ_ss]
+val _ = BasicProvers.logged_addfrags {thyname="list"} [LIST_EQ_ss]
 
 (*---------------------------------------------------------------------------
         For computeLib

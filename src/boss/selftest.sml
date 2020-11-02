@@ -411,3 +411,21 @@ val _ = test_tac_Case "is_rev rule ind"
       (name_ind_cases [F, T] f_ind)
     \\ rpt strip_tac)
 
+val ss = srw_ss()
+val _ = convtest ("standard simp on h::t = []", SIMP_CONV ss [],
+                  “h::t = [] : 'a list”, “F”)
+val _ = BasicProvers.recreate_sset_at_parentage (parents "list")
+val _ = shouldfail {checkexn = fn UNCHANGED => true | _ => false,
+                    printarg = K "after setting parents, same raises UNCHANGED",
+                    printresult = term_to_string,
+                    testfn = rhs o concl o SIMP_CONV (srw_ss()) []}
+                   “h::t = [] : 'a list”
+val _ = convtest ("adjusted simp_conv on set comprehension",
+                  SIMP_CONV (srw_ss()) [],
+                  “y IN {x | x < 10}”, “y < 10”)
+val _ = convtest ("stored simp_conv still fine on h::t = []", SIMP_CONV ss [],
+                  “h::t = [] : 'a list”, “F”)
+val _ = tprint "Tactic simp[] on set comprehension"
+val _ = require_msg (check_result (aconv “y < 10” o #2 o hd o #1))
+                    (term_to_string o #2 o hd o #1)
+                    (simp[]) ([], “y IN {x | x < 10}”)

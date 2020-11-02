@@ -377,7 +377,8 @@ val _ = let open computeLib in
           add_convs [(div_tm, 2, elim_common_factor)]
         end
 
-val _ = BasicProvers.augment_srw_ss [REAL_REDUCE_ss]
+val addfrags = BasicProvers.logged_addfrags {thyname = "real"}
+val _ = addfrags [REAL_REDUCE_ss]
 
 (* ----------------------------------------------------------------------
     REAL_ARITH_ss
@@ -815,7 +816,7 @@ val RMULCANON_ss = SSFRAG {
       ]
 }
 
-val _ = BasicProvers.augment_srw_ss [RMULCANON_ss]
+val _ = addfrags [RMULCANON_ss]
 
 local
   val x = mk_var("x", real_ty)
@@ -1139,6 +1140,6 @@ val RMULRELNORM_ss = SSFRAG {
   ]
 }
 
-val _ = BasicProvers.augment_srw_ss [RMULRELNORM_ss]
+val _ = addfrags [RMULRELNORM_ss]
 
 end

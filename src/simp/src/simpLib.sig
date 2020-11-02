@@ -71,6 +71,10 @@ sig
     dprocs: Traverse.reducer list,
      congs: thm list} -> ssfrag
 
+  val empty_ssfrag : ssfrag
+  val ssf_upd_rewrs : ((thname option * thm) list -> (thname option * thm) list)
+                      ->
+                      ssfrag -> ssfrag
   val frag_rewrites : ssfrag -> thm list
   val frag_name : ssfrag -> string option
 
@@ -127,6 +131,7 @@ sig
   val &&              : simpset * thm list -> simpset  (* infix *)
   val limit           : int -> simpset -> simpset
   val unlimit         : simpset -> simpset
+  val add_named_rwt   : (thname * thm) -> ssfrag -> ssfrag
 
   val add_weakener : weakener_data -> simpset -> simpset
 

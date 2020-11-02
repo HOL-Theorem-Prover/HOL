@@ -9,6 +9,7 @@ sig
        { add : {thy : string, named_thm : thname * thm} -> unit,
          remove : {thy : string, remove : string} -> unit}
   val added_thms : setdelta list -> thm list
+  val mk_add : string -> setdelta
 
   val new_exporter :
       {settype : string, efns : exportfns} ->
@@ -20,5 +21,12 @@ sig
   val data_exportfns : {settype:string} -> exportfns option
 
   val all_set_types : unit -> string list
+
+  type 'value ops = {apply_to_global : setdelta -> 'value -> 'value,
+                     uptodate_delta : setdelta -> bool, initial_value : 'value,
+                     apply_delta : setdelta -> 'value -> 'value}
+  val export_with_ancestry:
+      {settype : string, delta_ops : 'value ops} ->
+      (setdelta,'value) AncestryData.fullresult
 
 end

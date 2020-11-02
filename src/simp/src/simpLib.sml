@@ -104,6 +104,16 @@ fun SSFRAG {name,convs,rewrs,ac,filter,dprocs,congs} =
               filter = filter, dprocs = dprocs, congs = congs,
               relsimps = []}
 
+val empty_ssfrag = SSFRAG{name = NONE, rewrs = [], convs = [], ac = [],
+                          filter = NONE, dprocs = [], congs = []}
+fun ssf_upd_rewrs f (SSFRAG_CON s) =
+    let
+      val {name,rewrs,convs,ac,filter,dprocs,congs, relsimps} = s
+    in
+      SSFRAG_CON {name = name, rewrs = f rewrs, convs = convs, ac = ac,
+                  filter = filter, dprocs = dprocs, congs = congs,
+                  relsimps = relsimps}
+    end
 (*---------------------------------------------------------------------------*)
 (* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
@@ -141,6 +151,7 @@ fun relsimp_ss rsdata =
 fun D (SSFRAG_CON s) = s;
 fun frag_rewrites ssf = map #2 (#rewrs (D ssf))
 
+fun add_named_rwt nth ssfrag = ssf_upd_rewrs (cons (apfst SOME nth)) ssfrag
 
 fun merge_names list =
   itlist (fn (SOME x) =>

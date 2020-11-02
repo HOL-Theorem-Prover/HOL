@@ -6514,7 +6514,7 @@ in
     simpLib.SSFRAG
       {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
        dprocs = [], filter = NONE, rewrs = []}
-  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]
+  val _ = BasicProvers.logged_addfrags {thyname = "pred_set"} [SET_SPEC_ss]
 end
 `
 
