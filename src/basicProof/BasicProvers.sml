@@ -1144,6 +1144,37 @@ fun srw_ss () =
     (update_global_value init_state;
      #1 (get_global_value()))
 
+val update_log =
+    Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
+fun ap13 f (x,y,z) = (f x, y, z)
+fun logged_update {thyname} f =
+    (update_global_value (ap13 f);
+     Sref.update update_log (Symtab.cons_list (thyname,f)))
+
+fun logged_addfrags thy fgs =
+    List.app (fn f => logged_update thy (fn s => s ++ f)) fgs
+
+fun apply_logged_updates {theories} simpset =
+    let
+      open Binaryset
+      val allancs = List.foldl
+                      (fn (thy,s) => addList (add(s,thy), ancestry thy))
+                      (empty String.compare)
+                      theories
+      val G = SymGraph.make (map (fn s => ((s,()), Theory.parents s))
+                                 (Binaryset.listItems allancs))
+      val sorted_thys = List.rev (SymGraph.topological_order G)
+      fun app1 thy simpset =
+          case Symtab.lookup (Sref.value update_log) thy of
+              NONE => simpset
+            | SOME fs => List.foldr (fn (f,ss) => f ss) simpset fs
+    in
+      rev_itlist app1 sorted_thys simpset
+    end
+
+fun do_logged_updates thys =
+    update_global_value (ap13 (apply_logged_updates thys) o init_state)
+
 fun SRW_TAC ssdl thl g = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in

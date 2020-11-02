@@ -1696,7 +1696,7 @@ local
        WORD_GROUND_ss, BIT_ss, SIZES_ss, simpLib.rewrites [WORD_0_LS]]
 in
    val WORD_ss = simpLib.named_merge_ss "words" ssfrags
-   val _ = augment_srw_ss ssfrags
+   val _ = BasicProvers.logged_addfrags {thyname="words"} ssfrags
 end
 
 val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
