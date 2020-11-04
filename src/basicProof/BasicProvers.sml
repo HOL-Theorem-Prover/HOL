@@ -1104,12 +1104,41 @@ fun init_state (st as (sset,initp,upds)) =
       in
         HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done") init ()
       end
+fun opt_partition f g ls =
+    let
+      fun recurse As Bs ls =
+          case ls of
+              [] => (List.rev As, List.rev Bs)
+            | h::t => (case f h of
+                           SOME a => recurse (a::As) Bs t
+                         | NONE => (case g h of
+                                        SOME b => recurse As (b::Bs) t
+                                     | NONE => recurse As Bs t))
+    in
+      recurse [] [] ls
+    end
+
+fun finaliser {thyname} deltas (sset,initp,upds) =
+    let
+      fun toNamedAdd (ThmSetData.ADD p) = SOME p | toNamedAdd _ = NONE
+      fun toRM (ThmSetData.REMOVE s) = SOME s | toRM _ = NONE
+      val (adds,rms) = opt_partition toNamedAdd toRM deltas
+      val ssfrag = simpLib.named_rewrites_with_names thyname (List.rev adds)
+        (* List.rev here preserves old behaviour wrt to the way theorems were
+           added to the global simpset; it will only make a difference when
+           overall rewrite system is not confluent *)
+      val new_upds = ADD_SSFRAG ssfrag :: map REMOVE_RWT rms
+    in
+      if initp then (List.foldl apply_srw_update sset new_upds, true, [])
+      else (sset, false, List.revAppend(new_upds, upds))
+    end
 
 val adresult as {DB,get_global_value,record_delta,update_global_value,...} =
     ThmSetData.export_with_ancestry {
       delta_ops = {
         apply_delta = apply_delta,
         apply_to_global = apply_to_global,
+        thy_finaliser = SOME finaliser,
         initial_value = state0, uptodate_delta = K true
       },
       settype = "simp"

@@ -97,6 +97,7 @@ val {update_global_value = rule_ind_apply_global_update,
       settype = "rule_induction",
       delta_ops = {apply_to_global = apply_delta,
                    uptodate_delta = K true,
+                   thy_finaliser = NONE,
                    initial_value = Binarymap.mkDict KernelSig.name_compare,
                    apply_delta = apply_delta}
     }

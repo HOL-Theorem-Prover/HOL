@@ -28,8 +28,12 @@ sig
                    uptodate_delta : 'delta -> bool,
                    sexps : { dec : 'delta ThyDataSexp.dec,
                              enc : 'delta ThyDataSexp.enc },
-                   globinfo : {apply_to_global : 'delta -> 'value -> 'value,
-                               initial_value : 'value}} ->
+                   globinfo : {
+                     apply_to_global : 'delta -> 'value -> 'value,
+                     thy_finaliser : ({thyname:string} -> 'delta list ->
+                                      'value -> 'value) option,
+                     initial_value : 'value}
+                 } ->
                  ('delta,'value) fullresult
 
 end

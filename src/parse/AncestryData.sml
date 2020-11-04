@@ -119,7 +119,7 @@ fun parent_onload extras {thyname,data = data_opt} =
               | SOME v0 =>
                 let
                   val uds = get_deltas {thyname = thyname}
-                  val _ = List.app delta_side_effects uds
+                  val _ = delta_side_effects thyname uds
                   val v = rev_itlist apply_delta uds v0
                 in
                   Sref.update value_table (Symtab.update (thyname,v))
@@ -140,9 +140,10 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
 
       (* calculates merged values in the "onload" hook *)
       val apply_delta_hook = ref (fn ps => NONE)
+      fun side_effects thy = List.app delta_side_effects
       val parent_extras =
           {tag = tag, apply_delta_hook = apply_delta_hook,
-           delta_side_effects = delta_side_effects,
+           delta_side_effects = side_effects,
            apply_delta = apply_delta, get_deltas = get_deltas,
            value_table = value_table}
 
@@ -216,7 +217,7 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
       open ThyDataSexp
       val {adinfo, sexps, globinfo, uptodate_delta} = arg
       val {dec,enc} = sexps
-      val {apply_to_global,initial_value} = globinfo
+      val {apply_to_global,initial_value,thy_finaliser} = globinfo
       val {initial_values, tag, apply_delta, ...} = adinfo
 
       (* single global value *)
@@ -251,8 +252,10 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
 
       (* store parentage *)
       val apply_delta_hook = ref (fn ps => NONE)
-      fun delta_side_effects d =
-          update_global_value (apply_to_global d)
+      fun delta_side_effects thyname ds =
+          case thy_finaliser of
+              NONE => List.app (update_global_value o apply_to_global) ds
+            | SOME f => update_global_value (f {thyname=thyname} ds)
       val parent_extras =
           {tag = tag, apply_delta_hook = apply_delta_hook,
            delta_side_effects = delta_side_effects,

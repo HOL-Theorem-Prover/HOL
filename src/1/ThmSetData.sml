@@ -245,6 +245,8 @@ fun mk_raw (ADD(nm,_)) = rADD nm
   | mk_raw (REMOVE s) = rREMOVE s
 
 type 'value ops = {apply_to_global : setdelta -> 'value -> 'value,
+                   thy_finaliser : ({thyname:string} -> setdelta list ->
+                                    'value -> 'value) option,
                    uptodate_delta : setdelta -> bool, initial_value : 'value,
                    apply_delta : setdelta -> 'value -> 'value}
 fun raw_uptodate (rADD{Thy,Name}) = can (DB.fetch Thy) Name
@@ -253,14 +255,18 @@ fun raw_uptodate (rADD{Thy,Name}) = can (DB.fetch Thy) Name
 fun export_with_ancestry
       {settype,delta_ops:'value ops}:(setdelta,'value)AncestryData.fullresult =
     let
-      val {apply_to_global, uptodate_delta, initial_value, apply_delta} =
+      val {apply_to_global, uptodate_delta, initial_value, apply_delta,
+           thy_finaliser} =
           delta_ops
       fun raw_apply_delta d = apply_delta (cook d)
       fun raw_apply_global d = apply_to_global (cook d)
+      fun mk_raw_finaliser f thy ds = f thy (map cook ds)
+      val raw_finaliser = Option.map mk_raw_finaliser thy_finaliser
       val adinfo = {tag = settype, initial_values = [("min", initial_value)],
                     apply_delta = raw_apply_delta}
       val sexps = {dec = raw_read1 settype, enc = raw_write1}
       val globinfo = {apply_to_global = raw_apply_global,
+                      thy_finaliser = raw_finaliser,
                       initial_value = initial_value}
       fun uptodate rd = raw_uptodate rd andalso uptodate_delta (cook rd)
       val fullresult =

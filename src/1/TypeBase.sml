@@ -115,6 +115,7 @@ val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
         uptodate_delta = K true,
         sexps = { dec = fromSEXP, enc = toSEXP },
         globinfo = {apply_to_global = apply_to_global,
+                    thy_finaliser = NONE,
                     initial_value = initial_tydb}
       }
     end

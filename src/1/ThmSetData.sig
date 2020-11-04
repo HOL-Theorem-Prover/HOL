@@ -23,6 +23,8 @@ sig
   val all_set_types : unit -> string list
 
   type 'value ops = {apply_to_global : setdelta -> 'value -> 'value,
+                     thy_finaliser : ({thyname:string} -> setdelta list ->
+                                      'value -> 'value) option,
                      uptodate_delta : setdelta -> bool, initial_value : 'value,
                      apply_delta : setdelta -> 'value -> 'value}
   val export_with_ancestry:
