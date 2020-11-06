@@ -199,7 +199,11 @@ fun tyi_from_name s =
           case Binarymap.peek(privileged_abbrevs tyg, nm) of
               NONE => raise ERR "tyi_from_name"
                             ("Ty-grammar doesn't know name: "^nm)
-            | SOME thy => tyi_from_kid thy nm
+            | SOME thy =>
+              (case Binarymap.peek(parse_map tyg, {Thy = thy, Name = nm}) of
+                   NONE => raise ERR "tyi_from_name"
+                                 ("Ty-grammar has bad abbrev-map for name: "^nm)
+                 | SOME (TYOP {Thy,Tyop,...}) => tyi_from_kid Thy Tyop)
         end
       | [thy,nm] => tyi_from_kid thy nm
       | _ => raise ERR "tyi_from_name" ("Malformed tyname: "^s)
