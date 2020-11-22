@@ -2897,6 +2897,7 @@ End
    Update TypeBase
    -------------------------------------------------------------------------- *)
 
+Overload "case" = “llist_CASE”;
 val _ = TypeBase.export
   [TypeBasePure.mk_datatype_info
     {
