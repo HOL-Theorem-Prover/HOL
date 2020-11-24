@@ -82,7 +82,8 @@ fun run_buildheap dir core_flag file =
       else find_heapname dir file
     val cmd =
       String.concatWith " "
-        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @
+        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1",
+          "--maxheap=4000"] @
           filel @ [OS.Path.file file]
         @ [">",fileout])
   in
