@@ -457,7 +457,8 @@ local
       "word_slice", "word_extract", "word_asr", "word_lsr", "word_lsl",
       "word_ror", "word_rol", "word_rrx", "word_lsl_bv", "word_lsr_bv",
       "word_asr_bv", "word_ror_bv", "word_rol_bv", "word_lo", "word_ls",
-      "word_lt", "word_le", "saturate_n2w", "saturate_w2w", "saturate_add",
+      "word_lt", "word_le", "word_ge", "word_gt", "word_hi", "word_hs",
+      "saturate_n2w", "saturate_w2w", "saturate_add",
       "saturate_sub", "saturate_mul", "word_min", "word_max", "word_smin",
       "word_smax", "word_abs", "word_div", "word_quot", "word_mod", "word_rem",
       "word_sign_extend"]
@@ -498,8 +499,7 @@ local
        (s, map (pair "words")
                ["word_mul", "word_add", "word_sub", "word_1comp", "word_2comp",
                 "word_xor", "word_and", "word_or",
-                "word_xnor", "word_nand", "word_nor",
-                "word_ge", "word_gt", "word_hi", "word_hs"] @
+                "word_xnor", "word_nand", "word_nor"] @
            map (pair "arithmetic")
                ["+", "-", "*", "DIV", "DIV2", "EXP", "ODD", "EVEN",
                 "<=", ">=", "<", ">"])
