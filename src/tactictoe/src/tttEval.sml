@@ -129,8 +129,6 @@ run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 (* One theory
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
-tttSetup.record_ortho_flag := true;
-tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record_thy "list";
 
@@ -142,9 +140,9 @@ run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 (* Core theories
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
-tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := false;
 ttt_clean_record ();
+(* load_sigobj(); *)
 ttt_record ();
 
 load "tttEval"; open tttEval;

@@ -9,7 +9,7 @@ structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
 open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
-smlParallel smlParser mlTacticData
+smlParser mlTacticData
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 fun msg param s = if #verbose param then print_endline s else ()
