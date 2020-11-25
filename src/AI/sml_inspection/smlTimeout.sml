@@ -38,7 +38,7 @@ fun timeLimit t f x =
       )
     val result = self_wait ()
   in
-    release result
+    interruptkill watcher; release result
   end
 
 fun timeout t f x = timeLimit (Time.fromReal t) f x
