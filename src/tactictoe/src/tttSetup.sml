@@ -31,6 +31,7 @@ val ttt_presel_radius  = ref 500
    Recording
    ------------------------------------------------------------------------- *)
 
+val record_flag = ref true
 val record_savestate_flag  = ref false
 val record_ortho_flag      = ref true
 val record_prove_flag   = ref true
