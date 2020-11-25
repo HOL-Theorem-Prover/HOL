@@ -70,7 +70,7 @@ fun find_genscriptdep dir file =
   handle Interrupt => raise Interrupt
     | _ => raise ERR "find_genscriptdep" file
 
-buildheap_options = ref ""
+val buildheap_options = ref ""
 
 fun run_buildheap dir core_flag file =
   let
