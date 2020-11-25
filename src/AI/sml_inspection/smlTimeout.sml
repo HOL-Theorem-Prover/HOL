@@ -26,15 +26,19 @@ fun timeLimit t f x =
   let
     val resultref = ref NONE
     val worker = Thread.fork (fn () => resultref := SOME (capture f x), attrib)
-    fun collect_result () =
-      case !resultref of
-        NONE => Exn FunctionTimeout
-      | SOME (Exn Interrupt) => Exn FunctionTimeout
-      | SOME result => result
+    val watcher = Thread.fork (fn () =>
+      (OS.Process.sleep t; interruptkill worker), attrib)
+    fun self_wait () =
+      (
+      if Thread.isActive worker then self_wait () else
+    case !resultref of
+      NONE => Exn FunctionTimeout
+    | SOME (Exn Interrupt) => Exn FunctionTimeout
+    | SOME s => s
+      )
+    val result = self_wait ()
   in
-    OS.Process.sleep t;
-    interruptkill worker;
-    release (collect_result ())
+    release result
   end
 
 fun timeout t f x = timeLimit (Time.fromReal t) f x
@@ -50,8 +54,12 @@ end (* struct *)
 (* test
   load "smlTimeout"; open smlTimeout;
   fun loop () = loop ();
-  timeout 10.0 loop ();
-  fun f () = timeout 0.1 loop () handle FunctionTimeout => ();
-  List.tabulate (1000,fn _ => f ());
+  timeout 5.0 loop ();
+  fun g () = timeout 0.01 loop () handle FunctionTimeout => (); 
+  List.tabulate (1000, fn _ => g ());
+
+  load "aiLib"; open aiLib;
+  fun f () = 5;
+  add_time (timeout 1.0 f) ();
 *)
 
