@@ -222,15 +222,9 @@ fun ttt_save_state () =
   in
     
     if !savestate_level = 0
-    then 
-      (OS.Process.sleep (Time.fromReal 0.25); 
-       PolyML.SaveState.saveState savestate_file;
-       OS.Process.sleep (Time.fromReal 0.25))
-    else 
-      (OS.Process.sleep (Time.fromReal 0.25); 
-       PolyML.SaveState.saveChild (savestate_file,
-         (!savestate_level div 50) + 1);
-       OS.Process.sleep (Time.fromReal 0.25))
+    then PolyML.SaveState.saveState savestate_file
+    else PolyML.SaveState.saveChild (savestate_file,
+         (!savestate_level div 25) + 1)
   end
   else ()
   )
