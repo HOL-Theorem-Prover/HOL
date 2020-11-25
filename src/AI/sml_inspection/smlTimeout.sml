@@ -51,15 +51,16 @@ fun timeout_tactic t tac g =
 
 end (* struct *)
 
-(* test
-  load "smlTimeout"; open smlTimeout;
-  fun loop () = loop ();
-  timeout 5.0 loop ();
-  fun g () = timeout 0.01 loop () handle FunctionTimeout => (); 
-  List.tabulate (1000, fn _ => g ());
-
+(* tests
   load "aiLib"; open aiLib;
+  load "smlTimeout"; open smlTimeout;
+  
+  fun loop () = loop ();
+  fun g () = timeout 0.01 loop () handle FunctionTimeout => (); 
   fun f () = 5;
+  
+  List.tabulate (1000, fn _ => g ());
+  timeout 5.0 loop ();
   add_time (timeout 1.0 f) ();
 *)
 
