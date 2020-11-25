@@ -192,6 +192,7 @@ fun end_record_proof name =
     (* precompute symweight *)
     val feal1 = List.concat (map (#fea o snd o snd) icalls1)
     val feal2 = mk_fast_set Int.compare feal1
+    val _ = thmdata_glob := total_time create_thmdata_time create_thmdata ()
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
     val calld = #calld tacdata
     val tacfea = total_time tacfea_time
@@ -208,10 +209,7 @@ fun end_record_proof name =
 
 val savestate_dir = tactictoe_dir ^ "/savestate"
 
-fun ttt_before_save_state () =
-  let val _ = mkDir_err savestate_dir in
-    thmdata_glob := total_time create_thmdata_time create_thmdata ()
-  end
+fun ttt_before_save_state () = mkDir_err savestate_dir
 
 fun ttt_save_state () =
   (
@@ -250,10 +248,11 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
     val _ = save_goal g
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
+    val b1 = (not (!record_flag))
     val b2 = (not (!record_prove_flag) andalso pflag)
     val b3 = (not (!record_let_flag) andalso lflag)
     val result =
-      if b2 orelse b3 then
+      if b1 orelse b2 orelse b3 then
         (debug "record proof: ignored"; incr n_proof_ignored; tac2 g)
       else
         let

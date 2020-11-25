@@ -592,8 +592,7 @@ fun modified_program (h,d) p =
       val semicolon =
         if d = 0 andalso !is_thm_flag then
        ["; val _ = tttRecord.ttt_before_save_state ()",
-        "; val _ = aiLib.total_time tttRecord.ttt_save_state_time" ^
-        " tttRecord.ttt_save_state ()",
+        "; val _ = tttRecord.ttt_save_state ()",
         "; val _ = tttRecord.ttt_after_save_state ();"]
         else []
     in
@@ -923,6 +922,7 @@ fun output_header oc cthy =
   (* debugging *)
   reflect_flag oc "aiLib.debug_flag" debug_flag;
   (* recording *)
+  reflect_flag oc "tttSetup.record_flag" record_flag;
   reflect_flag oc "tttSetup.record_prove_flag" record_prove_flag;
   reflect_flag oc "tttSetup.record_let_flag" record_let_flag;
   reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;

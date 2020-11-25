@@ -14,6 +14,7 @@ sig
   val ttt_presel_radius  : int ref
 
   (* recording *)
+  val record_flag : bool ref
   val record_ortho_flag : bool ref
   val record_savestate_flag : bool ref
   val record_prove_flag : bool ref
