@@ -220,10 +220,17 @@ fun ttt_save_state () =
     val savestate_file = prefix ^ "_savestate"
     val _ = debug ("saving state to " ^ savestate_file)
   in
+    
     if !savestate_level = 0
-    then PolyML.SaveState.saveState savestate_file
-    else PolyML.SaveState.saveChild (savestate_file,
-      (!savestate_level div 50) + 1)
+    then 
+      (OS.Process.sleep (Time.fromReal 0.25); 
+       PolyML.SaveState.saveState savestate_file;
+       OS.Process.sleep (Time.fromReal 0.25))
+    else 
+      (OS.Process.sleep (Time.fromReal 0.25); 
+       PolyML.SaveState.saveChild (savestate_file,
+         (!savestate_level div 50) + 1);
+       OS.Process.sleep (Time.fromReal 0.25))
   end
   else ()
   )
