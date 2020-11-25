@@ -70,6 +70,8 @@ fun find_genscriptdep dir file =
   handle Interrupt => raise Interrupt
     | _ => raise ERR "find_genscriptdep" file
 
+buildheap_options = ref ""
+
 fun run_buildheap dir core_flag file =
   let
     val _ = mkDir_err dir
@@ -82,10 +84,11 @@ fun run_buildheap dir core_flag file =
       else find_heapname dir file
     val cmd =
       String.concatWith " "
-        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1",
-          "--maxheap=4000"] @
-          filel @ [OS.Path.file file]
-        @ [">",fileout])
+        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @ 
+         [!buildheap_options] @
+         filel @ 
+         [OS.Path.file file]  @
+         [">",fileout])
   in
     cmd_in_dir (OS.Path.dir file) cmd
   end
@@ -99,9 +102,10 @@ fun run_buildheap_nodep dir file =
     val fileout = dir ^ "/buildheap_" ^ bare file
     val state = HOLDIR ^ "/bin/hol.state0"
     val cmd = String.concatWith " "
-      ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"]
-      @ [OS.Path.file file]
-      @ [">",fileout])
+      ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @
+       [!buildheap_options] @
+       [OS.Path.file file] @
+       [">",fileout])
   in
     cmd_in_dir (OS.Path.dir file) cmd
   end

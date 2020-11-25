@@ -7,6 +7,7 @@ sig
   val find_genscriptdep : string -> string -> string list
   val run_buildheap : string -> bool -> string -> unit
   val run_buildheap_nodep : string -> string -> unit
+  val buildheap_options : string ref  
 
   val run_rm_script : bool -> string -> unit
 
