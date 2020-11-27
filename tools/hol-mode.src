@@ -840,27 +840,42 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
         (original-name (expand-file-name original-name0)))
-    (while (and (not (hol--looks-like-root-holdir dir))
-                (not (equal "/" dir)))
-      (setq dir (file-name-directory (directory-file-name dir))))
-    (if (equal "/" dir) nil
-      (let ((bindir
-             (file-name-as-directory
-              (concat (file-name-as-directory dir) "bin"))))
-      (cond
-       ((equal (file-name-directory original-name) bindir) nil)
-       ((file-exists-p (concat bindir "hol.state")) (concat bindir "hol"))
-       ((file-exists-p (concat bindir "hol.state0"))
-        (concat bindir "hol.bare")))))))
+    ;; check for lastmaker file
+    (if-let
+        (((file-readable-p ".HOLMK/lastmaker"))
+         ((> 500 (file-attribute-size (file-attributes ".HOLMK/lastmaker"))))
+         (lines (with-temp-buffer
+                  (insert-file-contents-literally ".HOLMK/lastmaker")
+                  (split-string (buffer-string) "\n" t)))
+         ((not (null lines)))
+         (dir (file-name-directory (car lines)))
+         (name (concat dir "hol"))
+         ((not (equal name original-name))))
+        (list (concat dir "hol") "(honouring last build in this directory)")
+      (while (and (not (hol--looks-like-root-holdir dir))
+                  (not (equal "/" dir)))
+        (setq dir (file-name-directory (directory-file-name dir))))
+      (if (equal "/" dir) nil
+        (let ((bindir
+               (file-name-as-directory
+                (concat (file-name-as-directory dir) "bin"))))
+          (cond
+           ((equal (file-name-directory original-name) bindir) nil)
+           ((file-exists-p (concat bindir "hol.state"))
+            (list (concat bindir "hol") "(as we are in its HOL directory)"))
+           ((file-exists-p (concat bindir "hol.state0"))
+            '((concat bindir "hol.bare")
+              "(as we are in its HOL directory and hol.state doesn't exist)"))))))))
 
 (defun hol--get-executable ()
   (let ((first-option (hol-executable-with-bare)))
     (or (let ((alternate
                (hol--find-alternate-executable default-directory first-option)))
           (if alternate
-              (progn (message "Using %s as HOL executable" alternate)
-                     (sleep-for 1)))
-          alternate)
+              (progn (message "Using %s as HOL executable %s"
+                              (car alternate) (cadr alternate))
+                     (sleep-for 1)
+                     (car alternate))))
         first-option)))
 
 (defun hol (&optional display-actions display-alist)
