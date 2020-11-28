@@ -192,7 +192,6 @@ fun end_record_proof name =
     (* precompute symweight *)
     val feal1 = List.concat (map (#fea o snd o snd) icalls1)
     val feal2 = mk_fast_set Int.compare feal1
-    val _ = thmdata_glob := total_time create_thmdata_time create_thmdata ()
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
     val calld = #calld tacdata
     val tacfea = total_time tacfea_time
@@ -209,7 +208,15 @@ fun end_record_proof name =
 
 val savestate_dir = tactictoe_dir ^ "/savestate"
 
-fun ttt_before_save_state () = mkDir_err savestate_dir
+fun ttt_before_save_state () = 
+  (
+  if !record_flag 
+    then thmdata_glob := total_time create_thmdata_time create_thmdata ()
+    else ();
+  if !record_savestate_flag 
+    then (mkDir_err savestate_dir; PolyML.fullGC ())
+    else () 
+  )
 
 fun ttt_save_state () =
   (
@@ -220,11 +227,9 @@ fun ttt_save_state () =
     val savestate_file = prefix ^ "_savestate"
     val _ = debug ("saving state to " ^ savestate_file)
   in
-    
     if !savestate_level = 0
     then PolyML.SaveState.saveState savestate_file
-    else PolyML.SaveState.saveChild (savestate_file,
-         (!savestate_level div 25) + 1)
+    else PolyML.SaveState.saveChild (savestate_file, !savestate_level)
   end
   else ()
   )
