@@ -290,8 +290,13 @@ fun end_record_thy thy =
   (
   print_endline "recording successful";
   write_info thy;
-  print_endline "exporting tactic data";
-  ttt_export_tacdata thy (!tacdata_glob);
+  if !record_flag
+  then 
+    (
+    ttt_export_tacdata thy (!tacdata_glob);
+    print_endline "exporting tactic data"
+    )
+  else ();
   if !record_savestate_flag
   then
     (mkDir_err (tactictoe_dir ^ "/savestate");

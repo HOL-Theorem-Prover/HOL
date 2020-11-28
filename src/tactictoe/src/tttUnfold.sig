@@ -11,6 +11,7 @@ sig
   (* recording *)
   val ttt_record_thy  : string -> unit
   val ttt_record : unit -> unit
+  val ttt_record_savestate : unit -> unit
   val ttt_clean_record : unit -> unit
 
 end
