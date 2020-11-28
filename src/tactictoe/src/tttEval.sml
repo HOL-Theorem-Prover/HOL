@@ -144,7 +144,7 @@ tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 aiLib.debug_flag := true;
 smlOpen.buildheap_options := "";
-(* load_sigobj (); *)
+load_sigobj ();
 ttt_record_savestate ();
 *)
 
