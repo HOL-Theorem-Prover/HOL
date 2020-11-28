@@ -144,12 +144,11 @@ tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 aiLib.debug_flag := true;
 smlOpen.buildheap_options := "";
-(* load "finite_mapTheory";
-   ttt_record_thy "finite_map"; *)
-ttt_clean_record ();
-(* load_sigobj(); *)
-ttt_record ();
+(* load_sigobj (); *)
+ttt_record_savestate ();
+*)
 
+(*
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
