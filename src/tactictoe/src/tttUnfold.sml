@@ -1132,7 +1132,7 @@ fun ttt_record_savestate () =
   let
     val _ = ttt_clean_record_but_tacdata ()
     val thyl1 = ttt_ancestry (current_theory ())
-    val ((),t) = add_time (app ttt_record_thy) thyl2
+    val ((),t) = add_time (app ttt_record_thy) thyl1
   in
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
