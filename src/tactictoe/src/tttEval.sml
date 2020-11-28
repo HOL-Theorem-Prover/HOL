@@ -137,17 +137,15 @@ tttSetup.ttt_search_time := 10.0;
 run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 *)
 
-(* Core theories
+(* List of theories
 load "tttUnfold"; open tttUnfold;
 load "aiLib"; open aiLib;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 aiLib.debug_flag := true;
 smlOpen.buildheap_options := "";
-load "finite_mapTheory";
-ttt_record_thy "finite_map";
-
-
+(* load "finite_mapTheory";
+   ttt_record_thy "finite_map"; *)
 ttt_clean_record ();
 (* load_sigobj(); *)
 ttt_record ();

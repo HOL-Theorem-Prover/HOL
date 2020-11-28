@@ -131,10 +131,11 @@ fun create_tacdata () =
       print_endline ("Missing tactic data: " ^  String.concatWith " " thyl3);
       print_endline "Run tttUnfold.ttt_record ()"
       )
-    val tacdata = import_tacdata filel
+    val (tacdata,t) = add_time import_tacdata filel
     val calln = dlength (#calld tacdata)
   in
-    print_endline ("Loading " ^ its calln ^ " tactic calls");
+    print_endline ("Loading " ^ its calln ^ " tactic calls in " ^ rts t ^
+      "seconds ");
     tacdata
   end
 
