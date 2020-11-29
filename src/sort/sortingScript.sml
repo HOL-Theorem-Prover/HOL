@@ -1029,6 +1029,14 @@ val QSORT_eq_if_PERM = store_thm(
   !l1 l2. (QSORT R l1 = QSORT R l2) = PERM l1 l2``,
 PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
 
+(* generalisation of the above *)
+Theorem SORTS_PERM_EQ:
+  !R. transitive R /\ antisymmetric R /\ SORTS f R ==>
+  !l1 l2. (f R l1 = f R l2) = PERM l1 l2
+Proof
+  PROVE_TAC[SORTED_PERM_EQ, PERM_SYM, PERM_TRANS, SORTS_DEF]
+QED
+
 Theorem SORTED_FILTER:
   !R ls P. transitive R /\ SORTED R ls ==> SORTED R (FILTER P ls)
 Proof
