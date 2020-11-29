@@ -136,10 +136,8 @@ ttt_record ();
 
 (*
 load "tttUnfold"; open tttUnfold;
-load "aiLib"; open aiLib;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
-aiLib.debug_flag := true;
 aiLib.load_sigobj ();
 ttt_clean_savestate ();
 ttt_record_savestate ();

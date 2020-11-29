@@ -1103,8 +1103,8 @@ fun ttt_record_thy thy =
 
 fun ttt_clean_temp () = 
   (
-  clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open")
-  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap")
+  clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
+  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
   clean_dir (tactictoe_dir ^ "/info")
   )
 
