@@ -14,7 +14,7 @@ val ERR = mk_HOL_ERR "smlTimeout"
 
 
 (* -------------------------------------------------------------------------
-   Interrupting a thread and busy waiting for them to continue.
+   Interrupt a thread and wait for it to terminate to continue.
    ------------------------------------------------------------------------- *)
 
 fun interruptkill worker =

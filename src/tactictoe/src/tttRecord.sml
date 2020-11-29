@@ -236,7 +236,7 @@ fun ttt_save_state () =
 
 fun ttt_after_save_state () = incr savestate_level
 
-fun save_goal g =
+fun save_goal lflag pflag g =
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
@@ -244,16 +244,18 @@ fun save_goal g =
       its ((!savestate_level) - 1)
     val _ = pbl_glob := prefix :: (!pbl_glob)
     val goal_file = prefix ^ "_goal"
+    val flags_file = prefix ^ "_flags"
     val _ = debug ("export goal to " ^ goal_file)
   in
-    export_goal goal_file g
+    export_goal goal_file g;
+    writel flags_file (map bts [lflag,pflag])
   end
 
 fun record_proof name lflag tac1 tac2 (g:goal) =
   let
-    val _ = save_goal g
-    val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
+    val _ = if !record_savestate_flag then save_goal lflag pflag g else () 
+    val _ = start_record_proof name
     val b1 = (not (!record_flag))
     val b2 = (not (!record_prove_flag) andalso pflag)
     val b3 = (not (!record_let_flag) andalso lflag)
