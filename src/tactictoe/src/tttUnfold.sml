@@ -1101,22 +1101,18 @@ fun ttt_record_thy thy =
     restore_scripts scriptorg
   end
 
-fun ttt_clean_record () =
+fun ttt_clean_temp () = 
   (
-  clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
-  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
-  clean_dir (tactictoe_dir ^ "/ttt_tacdata");
-  clean_dir (tactictoe_dir ^ "/savestate");
+  clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open")
+  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap")
   clean_dir (tactictoe_dir ^ "/info")
   )
 
-fun ttt_clean_record_but_tacdata () =
-  (
-  clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
-  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
-  clean_dir (tactictoe_dir ^ "/savestate");
-  clean_dir (tactictoe_dir ^ "/info")
-  )
+fun ttt_clean_record () =
+  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/ttt_tacdata"))
+
+fun ttt_clean_savestate () =
+  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/savestate"))
 
 fun ttt_record () =
   let
@@ -1130,7 +1126,7 @@ fun ttt_record () =
 (* used to record savestates with record_flag := false *)
 fun ttt_record_savestate () = 
   let
-    val _ = ttt_clean_record_but_tacdata ()
+    val _ = ttt_clean_savestate ()
     val thyl1 = ttt_ancestry (current_theory ())
     val ((),t) = add_time (app ttt_record_thy) thyl1
   in

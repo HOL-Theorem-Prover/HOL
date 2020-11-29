@@ -116,6 +116,35 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
 
+
+(* ------------------------------------------------------------------------
+   Record theory data
+   ------------------------------------------------------------------------ *)
+
+(*
+load "tttUnfold"; open tttUnfold;
+tttSetup.record_flag := true;
+tttSetup.record_savestate_flag := false;
+aiLib.load_sigobj ();
+ttt_clean_record ();
+ttt_record ();
+*)
+
+(* ------------------------------------------------------------------------
+   Record savestates
+   ------------------------------------------------------------------------ *)
+
+(*
+load "tttUnfold"; open tttUnfold;
+load "aiLib"; open aiLib;
+tttSetup.record_flag := false;
+tttSetup.record_savestate_flag := true;
+aiLib.debug_flag := true;
+aiLib.load_sigobj ();
+ttt_clean_savestate ();
+ttt_record_savestate ();
+*)
+
 (* ------------------------------------------------------------------------
    Evaluation runs
    ------------------------------------------------------------------------ *)
@@ -137,16 +166,7 @@ tttSetup.ttt_search_time := 10.0;
 run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 *)
 
-(* List of theories
-load "tttUnfold"; open tttUnfold;
-load "aiLib"; open aiLib;
-tttSetup.record_flag := false;
-tttSetup.record_savestate_flag := true;
-aiLib.debug_flag := true;
-smlOpen.buildheap_options := "";
-load_sigobj ();
-ttt_record_savestate ();
-*)
+
 
 (*
 load "tttEval"; open tttEval;
