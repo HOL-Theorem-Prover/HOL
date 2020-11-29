@@ -8,7 +8,8 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread aiLib smlExecute smlRedirect smlParallel
+open HolKernel boolLib Thread aiLib 
+  smlExecute smlRedirect smlParallel smlTimeout
   mlFeature mlThmData mlTacticData mlNearestNeighbor
   hhExportFof hhReconstruct hhTranslate hhTptp
 

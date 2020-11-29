@@ -1253,24 +1253,6 @@ fun normalize_distrib dis =
   end
 
 (* ------------------------------------------------------------------------
-   Parallelism (currently slowing functions inside threads)
-   ------------------------------------------------------------------------ *)
-
-(* small overhead due to waiting safely for the thread to close *)
-fun interruptkill worker =
-   if not (Thread.isActive worker) then () else
-     let
-       val _ = Thread.interrupt worker handle Thread _ => ()
-       fun loop n =
-         if not (Thread.isActive worker) then () else
-           if n > 0
-           then (OS.Process.sleep (Time.fromReal 0.0001); loop (n-1))
-           else (print_endline "Warning: thread killed"; Thread.kill worker)
-     in
-       loop 1000000
-     end
-
-(* ------------------------------------------------------------------------
    Theories of the standard library (sigobj)
    ------------------------------------------------------------------------ *)
 
