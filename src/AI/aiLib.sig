@@ -256,9 +256,6 @@ sig
   val export_goal : string -> goal -> unit
   val import_goal : string -> goal
 
-  (* thread *)
-  val interruptkill : Thread.thread -> unit
-
   (* sigobj *)
   val sigobj_theories : unit -> string list
   val load_sigobj : unit -> unit
