@@ -12,7 +12,6 @@ open HolKernel Abbrev boolLib aiLib Thread
 
 val ERR = mk_HOL_ERR "smlTimeout"
 
-
 (* -------------------------------------------------------------------------
    Interrupt a thread and wait for it to terminate to continue.
    ------------------------------------------------------------------------- *)
@@ -31,7 +30,7 @@ fun interruptkill worker =
      end
 
 (* -------------------------------------------------------------------------
-   Timeout with busy waiting watcher and main thread
+   Timeout with busy main thread
    ------------------------------------------------------------------------- *)
 
 exception FunctionTimeout
@@ -51,25 +50,18 @@ fun timeLimit t f x =
     val resultref = ref NONE
     fun worker_fun () = resultref := SOME (capture f x)
     val worker = Thread.fork (worker_fun, attrib)
-    fun watcher_fun x =
-      let 
-        val rt = Timer.startRealTimer () 
-        fun loop () = 
-          if not (Thread.isActive worker) then () else 
-          if Time.toReal (Timer.checkRealTimer rt) > t 
-          then interruptkill worker
-          else loop ()
-      in
-        loop ()
-      end
-    val watcher = Thread.fork (watcher_fun, [])
-    fun self_wait () =
-      if Thread.isActive worker then self_wait () else
-      case !resultref of
+    val rt = Timer.startRealTimer () 
+    fun loop () = 
+      if Thread.isActive worker then 
+        if Time.toReal (Timer.checkRealTimer rt) > t 
+        then interruptkill worker
+        else loop ()
+      else ()
+    val _ = loop ()
+    val result = case !resultref of
         NONE => Exn FunctionTimeout
       | SOME (Exn Interrupt) => Exn FunctionTimeout
       | SOME s => s
-    val result = self_wait ()
   in
     release result
   end
@@ -84,17 +76,21 @@ fun timeout_tactic t tac g =
 
 end (* struct *)
 
-(* tests
-  load "aiLib"; open aiLib;
-  load "smlTimeout"; open smlTimeout;
-  
-  fun loop () = loop ()
-  fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => (); 
-  fun f () = 5
-  
-  timeout 0.0 loop ();
-  add_time List.tabulate (1000, fn _ => g ());
-  add_time (timeout 1.0 f) ();
-  add_time g ();
+(* -------------------------------------------------------------------------
+   Tests
+   ------------------------------------------------------------------------- *)
+
+(* 
+load "aiLib"; open aiLib;
+load "smlTimeout"; open smlTimeout;
+
+fun loop () = loop ();
+fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => (); 
+fun f () = 5;
+
+timeout 0.0 loop ();
+add_time List.tabulate (1000, fn _ => g ());
+add_time (timeout 1.0 f) ();
+add_time g ();
 *)
 
