@@ -6,6 +6,7 @@ sig
   type tnn = mlTreeNeuralNetwork.tnn
   type nnfiles = string option * string option * string option
 
+  val prepare_global_data : (string * int) -> unit
   val ttt_eval : mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option * tnn option ->
     goal -> unit
