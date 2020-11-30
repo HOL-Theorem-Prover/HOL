@@ -10,7 +10,7 @@ struct
 
 open HolKernel Abbrev boolLib aiLib
   smlRedirect smlParallel smlOpen smlParser
-  mlTacticData mlTreeNeuralNetwork
+  mlThmData mlTacticData mlTreeNeuralNetwork
   tttSetup tttSearch tttRecord tacticToe tttBigSteps
 
 val ERR = mk_HOL_ERR "tttEval"
@@ -65,8 +65,21 @@ fun assign_tnn s fileo =
        mlquote (valOf fileo) ^ " );"
   else "val " ^ s ^ " = NONE : mlTreeNeuralNetwork.tnn option ;"
 
+fun prepare_global_data (thy,n) =
+  let 
+    val _ = print_endline ("prepare_data: " ^ thy ^ " " ^ its n)
+    val calls = mlTacticData.import_calls (ttt_tacdata_dir ^ "/" ^ thy)
+    val calls_before = filter (fn ((_,x,_),_) => x < n) calls
+  in
+    thmdata_glob := create_thmdata ();
+    tacdata_glob := foldl ttt_update_tacdata (!tacdata_glob) calls_before
+  end
+
 fun write_evalscript smlfun (vnno,pnno,anno) file =
   let
+    val sl = String.fields (fn x => x = #"_") (OS.Path.file file)
+    val thy = String.concatWith "_" (butlast sl)
+    val n = string_to_int (last sl)
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
     val sl =
@@ -80,6 +93,8 @@ fun write_evalscript smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "aiLib.debug_flag" debug_flag,
+     "val _ = tttEval.prepare_global_data (" ^ 
+        mlquote thy ^ "," ^ its n ^ ");",
      smlfun  ^ " " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
      "(tactictoe_vo, tactictoe_po, tactictoe_ao) " ^
@@ -90,10 +105,10 @@ fun write_evalscript smlfun (vnno,pnno,anno) file =
 
 fun bare file = OS.Path.base (OS.Path.file file)
 
-fun run_evalscript smlfun dir nnol file =
+fun run_evalscript smlfun outdir nnol file =
   (
   write_evalscript smlfun nnol file;
-  run_buildheap_nodep dir (file ^ "_eval.sml")
+  run_buildheap_nodep outdir (file ^ "_eval.sml")
   )
 
 fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
@@ -139,41 +154,46 @@ load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 aiLib.load_sigobj ();
-ttt_clean_savestate ();
-ttt_record_savestate ();
+ttt_record_savestate (); (* includes clean savestate *)
 *)
 
 (* ------------------------------------------------------------------------
-   Evaluation runs
+   Evaluation on one example
    ------------------------------------------------------------------------ *)
 
-(* One example
-load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_search_time := 5.0;
-run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
-*)
-
-(* One theory
-load "tttUnfold"; open tttUnfold;
-tttSetup.record_savestate_flag := true;
-aiLib.debug_flag := true;
-ttt_clean_record (); ttt_record_thy "list";
-
-load "tacticToe"; open tacticToe; tactictoe ``1+1=2``;
+(*
+load "tttEval"; open aiLib tttSetup tttEval;
+val smlfun = "tttEval.ttt_eval";
+val expname = "test1";
+val savestatedir = tactictoe_dir ^ "/savestate";
+val expdir = ttt_eval_dir ^ "/" ^ expname;
+val outdir = expdir ^ "/out"
+val _ = app mkDir_err [ttt_eval_dir, expdir, outdir];
+val file = savestatedir ^ "/" ^ "finite_map_170";
 tttSetup.ttt_search_time := 10.0;
-run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
+run_evalscript smlfun outdir (NONE,NONE,NONE) file;
 *)
 
+(* ------------------------------------------------------------------------
+   Evaluation on one theory
+   ------------------------------------------------------------------------ *)
 
+(* 
+load "tttEval"; open tttEval;
+tttSetup.ttt_search_time := 10.0;
+run_evalscript_thyl "arithmetic_1in10" false 1 ["arithmetic"];
+*)
+
+(* ------------------------------------------------------------------------
+   Evaluation on a list of theories
+   ------------------------------------------------------------------------ *)
 
 (*
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val smlfun = "tttEval.ttt_eval"
-val _ = run_evalscript_thyl smlfun "october14-2"
-  (true,30) (NONE,NONE,NONE) thyl;
+val smlfun = "tttEval.ttt_eval";
+run_evalscript_thyl smlfun "november30" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
