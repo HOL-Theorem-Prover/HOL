@@ -192,12 +192,12 @@ run_evalscript_thyl "arithmetic_1in10" false 1 ["arithmetic"];
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
-ttt_record_savestate ();
+ttt_record_savestate ();  (* rm -r savestate if argument list is too long *)
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "november30-2" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "november30-3" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
