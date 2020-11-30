@@ -62,6 +62,7 @@ fun timeLimit t f x =
       )
     val worker = Thread.fork (worker_fun, attrib_async)
     val b = ConditionVar.waitUntil (c,m,Time.now () + t)
+    val _ = Mutex.unlock m
     val _ = if b then () else interruptkill worker
     val result = case !resultref of
         NONE => Exn FunctionTimeout
