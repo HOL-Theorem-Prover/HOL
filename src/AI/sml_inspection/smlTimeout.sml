@@ -94,10 +94,10 @@ load "aiLib"; open aiLib;
 load "smlTimeout"; open smlTimeout;
 
 fun f () = 5;
-add_time (timeout 1.0 f) ();
+add_time (timeout 10.0 f) ();
 
 fun loop () = loop ();
-timeout 1.0 loop ();
+timeout 10.0 loop ();
 
 fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => (); 
 add_time List.tabulate (1000, fn _ => g ());

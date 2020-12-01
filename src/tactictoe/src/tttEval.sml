@@ -11,11 +11,29 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlRedirect smlParallel smlOpen smlParser
   mlThmData mlTacticData mlTreeNeuralNetwork
-  tttSetup tttSearch tttRecord tacticToe tttBigSteps
+  tttSetup tttSearch tttRecord tacticToe tttTrain tttBigSteps
 
 val ERR = mk_HOL_ERR "tttEval"
 
 type nnfiles = string option * string option * string option
+
+(* -------------------------------------------------------------------------
+   TNN value examples
+   ------------------------------------------------------------------------- *)
+
+fun is_proved tree = #nstatus (dfind [] tree) = NodeProved
+
+fun export_valueex file tree =
+  if not (is_proved tree) then () else 
+  let
+    val nodel = map snd (dlist tree)
+    fun f x = (nntm_of_stateval (#goal x), 
+               if #gstatus x = GoalProved then 1.0 else 0.0)
+    fun g x = vector_to_list (Vector.map f (#goalv x))
+    val exl = List.concat (map g nodel)
+  in
+    write_tnnex file (basicex_to_tnnex exl)
+  end
 
 (* -------------------------------------------------------------------------
    Evaluation function
@@ -28,7 +46,7 @@ fun print_status r = case r of
 
 fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
-fun ttt_eval (thmdata,tacdata) nnol goal =
+fun ttt_eval valuefile (thmdata,tacdata) nnol goal =
   let
     val mem = !hide_flag
     val _ = hide_flag := false
@@ -45,6 +63,7 @@ fun ttt_eval (thmdata,tacdata) nnol goal =
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
+    export_valueex valuefile tree;
     hide_flag := mem
   end
 
@@ -75,11 +94,12 @@ fun prepare_global_data (thy,n) =
     tacdata_glob := foldl ttt_update_tacdata (!tacdata_glob) calls_before
   end
 
-fun write_evalscript smlfun (vnno,pnno,anno) file =
+fun write_evalscript valuedir smlfun (vnno,pnno,anno) file =
   let
     val sl = String.fields (fn x => x = #"_") (OS.Path.file file)
     val thy = String.concatWith "_" (butlast sl)
     val n = string_to_int (last sl)
+    val valuefile = valuedir ^ "/" ^ thy ^ "_" ^ its n
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
     val sl =
@@ -95,7 +115,7 @@ fun write_evalscript smlfun (vnno,pnno,anno) file =
      sreflect_flag "aiLib.debug_flag" debug_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
-     smlfun  ^ " " ^
+     smlfun ^ " " ^ mlquote valuefile ^ " " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
      "(tactictoe_vo, tactictoe_po, tactictoe_ao) " ^
      "tactictoe_goal;"]
@@ -105,10 +125,10 @@ fun write_evalscript smlfun (vnno,pnno,anno) file =
 
 fun bare file = OS.Path.base (OS.Path.file file)
 
-fun run_evalscript smlfun outdir nnol file =
+fun run_evalscript smlfun expdir nnol file =
   (
-  write_evalscript smlfun nnol file;
-  run_buildheap_nodep outdir (file ^ "_eval.sml")
+  write_evalscript (expdir ^ "/value") smlfun nnol file;
+  run_buildheap_nodep (expdir ^ "/out") (file ^ "_eval.sml")
   )
 
 fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
@@ -116,7 +136,8 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val savestatedir = tactictoe_dir ^ "/savestate"
     val expdir = ttt_eval_dir ^ "/" ^ expname
     val outdir = expdir ^ "/out"
-    val _ = app mkDir_err [ttt_eval_dir, expdir, outdir]
+    val valuedir = expdir ^ "/value"
+    val _ = app mkDir_err [ttt_eval_dir, expdir, outdir, valuedir]
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl'
     fun f x = readl x handle
@@ -126,11 +147,10 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
     val (_,t) = add_time
-      (parapp_queue ncore (run_evalscript smlfun outdir nnol)) filel2
+      (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel2
   in
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
-
 
 (* ------------------------------------------------------------------------
    Record theory data
