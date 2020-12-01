@@ -84,7 +84,8 @@ fun log_eval s =
 
 val (parallel_result : string list option ref) = ref NONE
 
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, 
+  Thread.EnableBroadcastInterrupt true]
 
 fun parallel_call t fl =
   let

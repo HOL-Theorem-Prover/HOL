@@ -341,9 +341,8 @@ fun fof_axdef oc (name,thm) =
     fof_formula oc statement; osn oc ")."
   end
 
-fun fof_export_pb dir (cj,namethml) =
+fun fof_export_pbfile file (cj,namethml) = 
   let
-    val file = dir ^ "/atp_in"
     val oc = TextIO.openOut file
     val cval = collect_arity_pb (cj,namethml)
   in
@@ -354,6 +353,9 @@ fun fof_export_pb dir (cj,namethml) =
      TextIO.closeOut oc)
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
+
+fun fof_export_pb dir (cj,namethml) =
+  fof_export_pbfile (dir ^ "/atp_in") (cj,namethml)
 
 (* -------------------------------------------------------------------------
    This function is a work-in-progress.

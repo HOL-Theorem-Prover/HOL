@@ -17,6 +17,8 @@ val ERR = mk_HOL_ERR "tttEval"
 
 type nnfiles = string option * string option * string option
 
+val exportfof_flag = ref false
+
 (* -------------------------------------------------------------------------
    TNN value examples
    ------------------------------------------------------------------------- *)
@@ -35,6 +37,76 @@ fun export_valueex file tree =
     write_tnnex file (basicex_to_tnnex exl)
   end
 
+fun export_fof_one file (goal,b,id) = 
+  let 
+    val pbfile = file ^ 
+      (if b then "-proven" else "-unknown") ^ 
+      (if null id then "-top" else ("-" ^ string_of_id id))
+    val cj = list_mk_imp goal
+    val premises = mlNearestNeighbor.thmknn_wdep 
+      (!thmdata_glob) 128 (mlFeature.fea_of_goal true goal) 
+    val namethml = thml_of_namel premises
+  in
+    hhExportFof.fof_export_pbfile pbfile (cj,namethml)
+  end
+
+fun export_fof file tree =
+  let
+    val nodel = dlist tree
+    fun f id x = (#goal x, #gstatus x = GoalProved, id)    
+    fun g (id,x) = vector_to_list (Vector.map (f id) (#goalv x))
+    val pbl = List.concat (map g nodel)
+  in
+    app (export_fof_one file) pbl
+  end
+
+(* -------------------------------------------------------------------------
+   Reading the examples
+   ------------------------------------------------------------------------- *)
+
+(* 
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "aiLib"; open aiLib;
+load "tttSetup"; open tttSetup;
+val dir = ttt_eval_dir ^ "/december1/value";
+val files = map (fn x => dir ^ "/" ^ x) (listDir dir);
+fun f i x = 
+  (if i mod 100 = 0 then (print_endline (its i)) else ();
+  read_tnnex x);
+val allex = List.concat (mapi f files);
+length allex;
+
+fun train_fixed pct exl =
+  let
+    val (train,test) = part_pct pct (shuffle exl)
+    fun operl_of_tnnex exl =
+      List.concat (map operl_of_term (map fst (List.concat exl)))
+    val operl = operl_of_tnnex exl
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
+    val randtnn = random_tnn operdiml
+    val schedule =
+      [{ncore = 4, verbose = true,
+       learning_rate = 0.02, batch_size = 8, nepoch = 200}];
+    val tnn = train_tnn schedule randtnn (train,test)
+  in
+    tnn
+  end
+
+val tnn = train_fixed 1.0 allex;
+val tnndir = ttt_eval_dir ^ "/december1/tnn";
+val _ = mkDir_err tnndir;
+val tnnfile = tnndir ^ "/value";
+write_tnn tnnfile tnn;
+
+load "tttEval"; open tttEval;
+tttSetup.ttt_search_time := 30.0;
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val smlfun = "tttEval.ttt_eval";
+run_evalscript_thyl smlfun "december1-gen1" (true,30) 
+  (SOME tnnfile,NONE,NONE) thyl;
+
+*)
+
 (* -------------------------------------------------------------------------
    Evaluation function
    ------------------------------------------------------------------------- *)
@@ -46,8 +118,10 @@ fun print_status r = case r of
 
 fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
-fun ttt_eval valuefile (thmdata,tacdata) nnol goal =
+fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let
+    val valuefile = expdir ^ "/value/" ^ thy ^ "_" ^ its n
+    val pbfile = expdir ^ "/pb/" ^ thy ^ "_" ^ its n
     val mem = !hide_flag
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
@@ -64,6 +138,7 @@ fun ttt_eval valuefile (thmdata,tacdata) nnol goal =
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
     export_valueex valuefile tree;
+    if !exportfof_flag then export_fof pbfile tree else ();
     hide_flag := mem
   end
 
@@ -94,12 +169,11 @@ fun prepare_global_data (thy,n) =
     tacdata_glob := foldl ttt_update_tacdata (!tacdata_glob) calls_before
   end
 
-fun write_evalscript valuedir smlfun (vnno,pnno,anno) file =
+fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
   let
     val sl = String.fields (fn x => x = #"_") (OS.Path.file file)
     val thy = String.concatWith "_" (butlast sl)
     val n = string_to_int (last sl)
-    val valuefile = valuedir ^ "/" ^ thy ^ "_" ^ its n
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
     val sl =
@@ -113,9 +187,11 @@ fun write_evalscript valuedir smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "aiLib.debug_flag" debug_flag,
+     sreflect_flag "tttEval.exportfof_flag" exportfof_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
-     smlfun ^ " " ^ mlquote valuefile ^ " " ^
+     smlfun ^ " " ^ mlquote expdir ^ " " ^
+     "(" ^ mlquote thy ^ "," ^ its n ^ ") " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
      "(tactictoe_vo, tactictoe_po, tactictoe_ao) " ^
      "tactictoe_goal;"]
@@ -127,7 +203,7 @@ fun bare file = OS.Path.base (OS.Path.file file)
 
 fun run_evalscript smlfun expdir nnol file =
   (
-  write_evalscript (expdir ^ "/value") smlfun nnol file;
+  write_evalscript expdir smlfun nnol file;
   run_buildheap_nodep (expdir ^ "/out") (file ^ "_eval.sml")
   )
 
@@ -137,7 +213,8 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val expdir = ttt_eval_dir ^ "/" ^ expname
     val outdir = expdir ^ "/out"
     val valuedir = expdir ^ "/value"
-    val _ = app mkDir_err [ttt_eval_dir, expdir, outdir, valuedir]
+    val pbdir = expdir ^ "/pb"
+    val _ = app mkDir_err [ttt_eval_dir, expdir, outdir, valuedir, pbdir]
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl'
     fun f x = readl x handle
@@ -217,7 +294,8 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "november30-6" (true,30) (NONE,NONE,NONE) thyl;
+exportfof_flag := true;
+run_evalscript_thyl smlfun "december1-1" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
