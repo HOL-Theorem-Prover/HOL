@@ -47,7 +47,7 @@ fun export_fof_one file (goal,b,id) =
       (!thmdata_glob) 128 (mlFeature.fea_of_goal true goal) 
     val namethml = thml_of_namel premises
   in
-    hhExportFof.fof_export_pbfile pbfile (cj,namethml)
+    fof_export_pbfile pbfile (cj,namethml)
   end
 
 fun export_fof file tree =
@@ -138,7 +138,8 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
     export_valueex valuefile tree;
-    if !exportfof_flag then export_fof pbfile tree else ();
+    if !exportfof_flag andalso ancestry (current_theory ()
+    then export_fof pbfile tree else ();
     hide_flag := mem
   end
 
@@ -153,6 +154,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
 
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
 fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
+
 fun assign_tnn s fileo =
   if isSome fileo
   then "val " ^ s ^ " = SOME ( mlTreeNeuralNetwork.read_tnn " ^
@@ -215,7 +217,8 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val valuedir = expdir ^ "/value"
     val pbdir = expdir ^ "/pb"
     val _ = app mkDir_err [ttt_eval_dir, expdir, outdir, valuedir, pbdir]
-    val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
+    val thyl' = filter (fn x => not (mem x ["min","bool","marker","combin"])) 
+      thyl
     val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl'
     fun f x = readl x handle
         Interrupt => raise Interrupt
