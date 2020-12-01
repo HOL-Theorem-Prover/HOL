@@ -7,11 +7,11 @@ sig
   type nnfiles = string option * string option * string option
 
   val prepare_global_data : (string * int) -> unit
-  val ttt_eval : mlThmData.thmdata * mlTacticData.tacdata ->
+  val ttt_eval : string -> mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option * tnn option ->
     goal -> unit
 
-  val write_evalscript : string -> nnfiles -> string -> unit
+  val write_evalscript : string -> string -> nnfiles -> string -> unit
   val run_evalscript : string -> string -> nnfiles -> string -> unit
   val run_evalscript_thyl : string -> string -> bool * int ->
     nnfiles -> string list -> unit
