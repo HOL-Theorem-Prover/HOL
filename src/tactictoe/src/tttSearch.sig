@@ -18,6 +18,8 @@ sig
 
   type id = (int * int * int list) list
   val id_compare : id * id -> order
+  val string_of_id : id -> string
+
   type stac_record =
    {token : tttToken.token, atyl : tttToken.aty list,
     svis : real, ssum : real, sstatus : sstatus}
