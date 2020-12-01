@@ -46,11 +46,13 @@ val attrib_async = [Thread.InterruptState Thread.InterruptAsynchOnce,
   Thread.EnableBroadcastInterrupt true]
 
 val attrib_sync = [Thread.InterruptState Thread.InterruptSynch,
-  Thread.EnableBroadcastInterrupt false]
+  Thread.EnableBroadcastInterrupt true]
 
 fun timeLimit t f x =
   let
     val m = Mutex.mutex ()
+    val curattrib = Thread.getAttributes ()
+    val _ = Thread.setAttributes attrib_sync
     val _ = Mutex.lock m
     val c = ConditionVar.conditionVar ()
     val resultref = ref NONE
@@ -63,6 +65,7 @@ fun timeLimit t f x =
     val worker = Thread.fork (worker_fun, attrib_async)
     val b = ConditionVar.waitUntil (c,m,Time.now () + t)
     val _ = Mutex.unlock m
+    val _ = Thread.setAttributes curattrib
     val _ = if b then () else interruptkill worker
     val result = case !resultref of
         NONE => Exn FunctionTimeout
