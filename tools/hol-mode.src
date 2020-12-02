@@ -657,7 +657,7 @@ file to \"use\" first."
           (princ (concat string ";") (get-buffer buf))
           (goto-char (point-max))
           (comint-send-input)
-          (hol-recentre))
+          (hol-recentre 1))
       (comint-send-string buf (concat string ";\n")))))
 
 
