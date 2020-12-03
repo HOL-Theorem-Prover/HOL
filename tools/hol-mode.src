@@ -9,7 +9,7 @@
 ;;; lives.
 
 (require 'thingatpt)
-(require 'cl)
+(require 'cl-lib)
 (require 'subr-x)
 
 (defgroup hol nil
@@ -34,10 +34,10 @@
   :group 'hol
   :type '(file :must-match t))
 
-(defconst holdir
+(defconst hol-dir
   (file-name-directory
    (directory-file-name (file-name-directory hol-executable))))
-(setq load-path (cons (concat holdir "tools/") load-path))
+(setq load-path (cons (concat hol-dir "tools/") load-path))
 (require 'holscript-mode)
 
 (defcustom hol-new-buffer-style-default 'new-frame
@@ -204,20 +204,32 @@ process in it."
       (goto-char initial-point)
       (format " (*#loc %d %d *)\n" (- row 1) col))))
 
+(defun send-raw-string-to-hol (string echoit)
+  "Sends a string in the raw to HOL.  Not for interactive use."
+  (let ((buf (ensure-hol-buffer-ok)))
+    (if echoit
+        (with-current-buffer buf
+          (goto-char (point-max))
+          (princ (concat string ";") (get-buffer buf))
+          (goto-char (point-max))
+          (comint-send-input)
+          (hol-recentre 1))
+      (comint-send-string buf (concat string ";\n")))))
+
 (defun send-timed-string-to-hol (string echo-p &optional loud-opens)
   "Send STRING to HOL (with send-string-to-hol), and emit information about
 how long this took."
   (interactive)
   (send-raw-string-to-hol
-   "val hol_mode_time0 = #usr (Timer.checkCPUTimer Globals.hol_clock);" nil nil)
-  (send-string-to-hol string echo-p loud-opens)
+   "val hol_mode_time0 = #usr (Timer.checkCPUTimer Globals.hol_clock);" nil)
+  (send-string-to-hol string echo-p)
   (send-raw-string-to-hol
        "val _ = let val t = #usr (Timer.checkCPUTimer Globals.hol_clock)
                       val elapsed = Time.-(t, hol_mode_time0)
                 in
                       print (\"\\n*** Time taken: \"^
                              Time.toString elapsed^\"s\\n\")
-                  end" nil nil))
+                  end" nil))
 
 (defvar tactic-connective-regexp
   "[[:space:]]*\\(THEN1\\|THENL\\|THEN\\|>>\\|>|\\|>-\\|\\\\\\\\\\)[[:space:]]*[[(]?"
@@ -299,8 +311,8 @@ With a prefix ARG, uses `expandf' rather than `e'."
 
 (defun send-string-as-hol-goal (s)
   (let ((goal-string (format  "proofManagerLib.g `%s`" s)))
-    (send-raw-string-to-hol goal-string hol-echo-commands-p t)
-    (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil nil)))
+    (send-raw-string-to-hol goal-string hol-echo-commands-p)
+    (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil)))
 
 (defun count-text-match (regex string)
   (let ((case-fold-search nil)
@@ -337,8 +349,8 @@ the region contains no term-delimiters, then send region instead."
 (defun send-string-as-hol-goaltree (s)
   (let ((goal-string
          (format  "proofManagerLib.gt `%s` handle e => Raise e" s)))
-    (send-raw-string-to-hol goal-string hol-echo-commands-p t)
-    (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil nil)))
+    (send-raw-string-to-hol goal-string hol-echo-commands-p)
+    (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil)))
 
 
 (defun hol-do-goaltree (arg)
@@ -350,7 +362,7 @@ the region contains no backquotes, then send region instead."
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
-    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+    (if (or (and (is-region-active) (= (cl-count ?\` txt) 0))
             arg)
       (send-string-as-hol-goaltree txt)
     (send-string-as-hol-goaltree (hol-term-at-point)))))
@@ -398,8 +410,9 @@ With prefix argument, drop the goal afterwards."
   (if (not (string= string ""))
       (send-raw-string-to-hol
        (format "val %s = top_thm()" string)
-       hol-echo-commands-p t))
-  (if arg (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p nil)))
+       hol-echo-commands-p))
+  (if arg
+      (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p)))
 
 (defun hol-start-termination-proof (arg)
   "Send definition around point to HOL process as Defn.tgoal.
@@ -418,8 +431,9 @@ the region contains no term delimiters, then send region instead."
 
 (defun hol-send-string-as-termination-proof (str)
   (send-raw-string-to-hol
-   (concat
-    "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `" str "`) handle e => Raise e") nil t))
+   (concat "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `"
+           str "`) handle e => Raise e")
+   nil))
 
 (defun remove-sml-comments (end)
   (let (done (start (point)))
@@ -470,11 +484,9 @@ starts >%s%s<"
 (defun send-string-to-hol (string &optional echoit leave-loud-opens)
   "Send a string to HOL process."
   (let ((buf (ensure-hol-buffer-ok))
-        (tmpbuf (generate-new-buffer "*HOL temporary*"))
         (old-mark-active (is-region-active)))
     (unwind-protect
-        (save-excursion
-          (set-buffer tmpbuf)
+        (with-temp-buffer
           (holscript-mode)
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
@@ -573,7 +585,6 @@ starts >%s%s<"
           ;; send the string
           (goto-char (point-min))
             (send-buffer-to-hol-maybe-via-file echoit)))
-      (kill-buffer tmpbuf) ; kill buffer always (inside unwind-protect)
       )
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
@@ -642,56 +653,43 @@ file to \"use\" first."
                        (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
-            (send-raw-string-to-hol (format "use \"%s\"" fname) nil t)
+            (send-raw-string-to-hol (format "use \"%s\"" fname) nil)
             (setq hol-mode-to-delete fname))
-    (send-raw-string-to-hol (buffer-string) echoit t)))
-
-
-(defun send-raw-string-to-hol (string echoit newstart)
-  "Sends a string in the raw to HOL.  Not for interactive use."
-  (let ((buf (ensure-hol-buffer-ok)))
-    (if echoit
-        (save-excursion
-          (set-buffer buf)
-          (goto-char (point-max))
-          (princ (concat string ";") (get-buffer buf))
-          (goto-char (point-max))
-          (comint-send-input)
-          (hol-recentre 1))
-      (comint-send-string buf (concat string ";\n")))))
+    (send-raw-string-to-hol (buffer-string) echoit)))
 
 
 (defun hol-backup ()
   "Perform a HOL backup."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p))
 
 (defun hol-user-backup ()
   "Perform a HOL backup to a user-defined save-point."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.restore()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.restore()" hol-echo-commands-p))
 
 (defun hol-print-info ()
   "Show some information about the currently running HOL and the settings of hol-mode."
   (interactive)
   (send-raw-string-to-hol
    (concat "print_current_hol_status" "\""
-     hol-executable "\" \"" holmake-executable "\" ();") hol-echo-commands-p t))
+           hol-executable "\" \"" holmake-executable "\" ();")
+   hol-echo-commands-p))
 
 (defun hol-user-save-backup ()
   "Saves the current status of the proof for later backups to this point."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.save()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.save()" hol-echo-commands-p))
 
 (defun hol-print-goal ()
   "Print the current HOL goal."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.p()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.p()" hol-echo-commands-p))
 
 (defun hol-print-all-goals ()
   "Print all the current HOL goals."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.status()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.status()" hol-echo-commands-p))
 
 (defun hol-interrupt ()
   "Perform a HOL interrupt."
@@ -728,7 +726,7 @@ containing the HOL window."
   "Rotate the goal stack N times.  Once by default."
   (interactive "p")
   (send-raw-string-to-hol (format "proofManagerLib.r %d" arg)
-                          hol-echo-commands-p t))
+                          hol-echo-commands-p))
 
 (defun hol-scroll-up (arg)
   "Scrolls the HOL window."
@@ -750,7 +748,7 @@ containing the HOL window."
   "Gets HOL session to \"use\" a file."
   (interactive "fFile to use: ")
   (send-raw-string-to-hol (concat "use \"" filename "\";")
-                          hol-echo-commands-p nil))
+                          hol-echo-commands-p))
 
 (defun hol-load-string (s)
   "Loads the ML object file NAME.uo; checking that it isn't already loaded."
@@ -796,7 +794,7 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 (defun hol-mode-init-sml ()
    (hol-toggle-quiet-quietdec)
-   (send-raw-string-to-hol hol-mode-sml-init-command nil nil)
+   (send-raw-string-to-hol hol-mode-sml-init-command nil)
    (hol-toggle-quiet-quietdec))
 
 (defun turn-off-hol-font-lock (oldvar)
@@ -810,15 +808,13 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun holmake (&optional dir)
    (interactive "DRun Holmake in dir: ")
    (if (not (null dir))
-      (save-excursion
-         (set-buffer (get-buffer-create "*Holmake*"))
+      (with-current-buffer (get-buffer-create "*Holmake*")
          (delete-region (point-min) (point-max))
          (cd (expand-file-name dir)))
       )
    (let* ((buf (make-comint "Holmake"
                   holmake-executable nil "--qof" "-k")))
-      (save-excursion
-         (set-buffer buf)
+      (with-current-buffer buf
          (font-lock-mode 0)
          (make-local-variable 'font-lock-function)
          (setq font-lock-function 'turn-off-hol-font-lock)
@@ -834,8 +830,9 @@ region instead. With prefix ARG prompt for a file-name to load."
                  hol-executable))
 
 (defun hol--looks-like-root-holdir (dir)
-  (every (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
-          '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
+  (cl-every
+   (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
+   '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
 
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
@@ -912,7 +909,7 @@ region instead. With prefix ARG prompt for a file-name to load."
     (setq comint-scroll-to-bottom-on-output t)
     (hol-mode-init-sml)
     (send-raw-string-to-hol
-     "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil nil)
+     "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil)
 
     (if (eq (get-buffer hol-buffer-name) original-buffer)
         nil
@@ -980,9 +977,9 @@ region instead. With prefix ARG prompt for a file-name to load."
         (copy-region-as-hol-definition-quietly (region-beginning) (region-end))
       (let ((beg (point-min))
             (end (progn
-                   (while (looking-at "[[:space:]]*\n") (next-line))
+                   (while (looking-at "[[:space:]]*\n") (forward-line 1))
                    (search-backward "\n\n")
-                   (while (looking-at "[[:space:]]*\n") (next-line))
+                   (while (looking-at "[[:space:]]*\n") (forward-line 1))
                    (point))))
         (push-mark (point-min))
         (activate-mark t)
@@ -1013,13 +1010,13 @@ region instead. With prefix ARG prompt for a file-name to load."
    (format (concat "val _ = (%s := not (!%s);"
                    "print (\"*** %s now \" ^"
                    "Bool.toString (!%s)^\" ***\\n\"))")
-           s s s s) nil nil))
+           s s s s)
+   nil))
 
 (defun hol-toggle-var-quiet (s)
   "Toggles the boolean variable STRING."
   (send-raw-string-to-hol
-   (format "val _ = (%s := not (!%s));"
-           s s) nil nil))
+   (format "val _ = (%s := not (!%s));" s s) nil))
 
 (defun hol-toggle-trace (s &optional arg)
   "Toggles the trace variable STRING between zero and non-zero.  With prefix
@@ -1039,14 +1036,16 @@ argument N, sets the trace to that value in particular."
                       else (set_trace nm 1; print \"on\\n\")
                   end handle Option =>
                         print \"** No such trace var: \\\"%s\\\"\\n\""
-                 s s) nil nil))
+                 s s)
+         nil))
     (let ((n (prefix-numeric-value arg)))
       (message (format "Setting %s to %d" s n))
       (send-raw-string-to-hol
        (format "val _ = (set_trace \"%s\" %d; print \"** %s trace now %d\\n\")
                         handle HOL_ERR _ =>
                            print \"** No such trace var: \\\"%s\\\"\\n\""
-               s n s n s) nil nil))))
+               s n s n s)
+       nil))))
 
 (defun hol-toggle-unicode ()
   "Toggles the \"Unicode\" trace."
@@ -1137,14 +1136,14 @@ argument N, sets the trace to that value in particular."
   (send-raw-string-to-hol
    (concat
     "val _ = print (\"*** 'Quiet declaration' now \" ^"
-    "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")") nil nil)
+    "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")")
+   nil)
   (hol-toggle-var "Globals.interactive"))
 
 (defun hol-toggle-quiet-quietdec ()
   "Toggles quiet declarations in the interactive system."
   (interactive)
-  (send-raw-string-to-hol
-    "val _ = HOL_Interactive.toggle_quietdec()" nil nil)
+  (send-raw-string-to-hol "val _ = HOL_Interactive.toggle_quietdec()" nil)
   (hol-toggle-var-quiet "Globals.interactive"))
 
 (defun hol-toggle-show-times()
@@ -1177,17 +1176,18 @@ argument N, sets the trace to that value in particular."
     "(Parse.current_backend := PPBackEnd.raw_terminal;"
     "print \"*** PP Backend now \\\"raw\\\" ***\\n\")"
     "else (Parse.current_backend := PPBackEnd.emacs_terminal;"
-    "print \"*** PP Backend now \\\"emacs\\\" ***\\n\")") nil nil))
+    "print \"*** PP Backend now \\\"emacs\\\" ***\\n\")")
+   nil))
 
 (defun hol-restart-goal ()
   "Restarts the current goal."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.restart()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.restart()" hol-echo-commands-p))
 
 (defun hol-drop-goal ()
   "Drops the current goal."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p))
 
 (defun hol-open-string (prefixp)
   "Opens HOL modules, prompting for the name of the module to load.
@@ -1200,14 +1200,14 @@ printed out.  (That's assuming that quietdec is false to start with.)"
          (module-name (read-string prompt)))
     (hol-load-string module-name)
     (if prefixp (hol-toggle-quietdec))
-    (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p t)
+    (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p)
     (if prefixp (hol-toggle-quietdec))))
 
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
   (interactive "sTerm to match on: ")
   (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
-                          hol-echo-commands-p t))
+                          hol-echo-commands-p))
 
 (defun hol-check-dbselector (s)
   (if (string-prefix-p "'" s) (string-suffix-p "'" s)
@@ -1250,30 +1250,29 @@ or a term pattern, given without delimiters."
   "Does a DB.find on the given string and formats the result nicely."
   (interactive "sTheorem name part: ")
   (send-raw-string-to-hol (format "Hol_pp.print_find \"%s\"" tm)
-                          hol-echo-commands-p t))
+                          hol-echo-commands-p))
 
 (defun hol-db-check (ty)
   "Does a sanity check on the current theory."
   (interactive "sTheory name: ")
   (send-raw-string-to-hol (format "Sanity.sanity_check_theory \"%s\"" ty)
-                          hol-echo-commands-p t))
+                          hol-echo-commands-p))
 
 (defun hol-db-check-current ()
   "Does a sanity check on the current theory."
   (interactive)
-  (send-raw-string-to-hol "Sanity.sanity_check()"
-                          hol-echo-commands-p t))
+  (send-raw-string-to-hol "Sanity.sanity_check()" hol-echo-commands-p))
 
 (defun hol-db-find-consts (ty)
   "Does bossLib.find_consts on a given type and prints the result."
   (interactive "sType of constant: ")
   (send-raw-string-to-hol (format "bossLib.find_consts ``%s``" ty)
-                          hol-echo-commands-p t))
+                          hol-echo-commands-p))
 
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.drop_all()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.drop_all()" hol-echo-commands-p))
 
 (defun hol-subgoal-tactic (p)
   "Without a prefix argument, sends term at point (delimited by backquote
@@ -1341,7 +1340,7 @@ second is to show the new term.
      (progn
         (send-raw-string-to-hol
             (concat "loadPath := \"" (ml-quote epath) "\" :: !loadPath;")
-            nil nil)
+            nil)
         (message (concat "Load-path \"" epath "\" added.")))
      (progn (ding) (message "Not a directory!")))
 ))
@@ -1349,14 +1348,13 @@ second is to show the new term.
 
 (defun hol-show-current-load-paths ()
    (interactive)
-   (send-raw-string-to-hol "print_current_load_paths ()"
-   nil nil))
+   (send-raw-string-to-hol "print_current_load_paths ()" nil))
 
 (defun hol-type-info ()
    "Gives informations about the type of a term"
    (interactive)
    (let* ((txt (buffer-substring-no-properties (region-beginning) (region-end)))
-          (use-marked (and (is-region-active) (= (count ?\` txt) 0)))
+          (use-marked (and (is-region-active) (= (cl-count ?\` txt) 0)))
           (at-point-term (thing-at-point 'hol-term))
 
           (main-term (ml-quote (if use-marked txt at-point-term)))
@@ -1364,7 +1362,7 @@ second is to show the new term.
           (command-s (concat "print_type_of_in_context true "
                       (if use-marked (concat "(SOME \"" context-term "\")") "NONE")
                       " \"" main-term "\"")))
-   (send-raw-string-to-hol command-s nil nil)))
+   (send-raw-string-to-hol command-s nil)))
 
 
 (defun holpp-decode-color (code)
@@ -1442,14 +1440,13 @@ second is to show the new term.
   (let ((tmpbuf (or temp-hol-output-buf
                      (generate-new-buffer " *HOL output filter*)"))))
       (setq temp-hol-output-buf tmpbuf)
-      (save-excursion
-         (set-buffer tmpbuf)
-         (delete-region (point-min) (point-max)))))
+      (with-current-buffer tmpbuf
+        (delete-region (point-min) (point-max)))))
 
 (defun holpp-reset ()
   (interactive)
   (holpp-quiet-reset)
-  (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil nil))
+  (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil))
 
 ; this filter function is complicated by the fact that comint chunks
 ; output (in 1024 character chunks in my tests) and so doesn't
@@ -1467,8 +1464,7 @@ second is to show the new term.
                      (generate-new-buffer " *HOL output filter*)")))
          end)
     (setq temp-hol-output-buf tmpbuf)
-    (save-excursion
-      (set-buffer tmpbuf)
+    (with-current-buffer tmpbuf
       (unwind-protect
           (progn
             (goto-char (point-max))
@@ -1534,8 +1530,7 @@ second is to show the new term.
                      (generate-new-buffer " *HOLMAKE output filter*)")))
          end)
     (setq temp-holmake-output-buf tmpbuf)
-    (save-excursion
-      (set-buffer tmpbuf)
+    (with-current-buffer tmpbuf
       (unwind-protect
           (progn
             (goto-char (point-max))
