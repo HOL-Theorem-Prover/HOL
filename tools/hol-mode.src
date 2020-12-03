@@ -707,20 +707,19 @@ file to \"use\" first."
 (defun hol-recentre (arg)
   "Display the HOL window in such a way that it displays most text, with the
 cursor at the bottom.
-With prefix arg, orient the HOL window so as to put the cursor in the middle
-of the window, and keep the cursor in its current position.
+With prefix arg, instead orient the HOL window so as to put the cursor in
+the middle of the window, and keep the cursor in its current position.
 
 If the variable `hol-raise-on-recentre' is non-nil, also raise the frame
-containing the HOL window."
+containing the HOL window, but keep the current frame uppermost."
   (interactive "p")
   (let ((f (selected-frame)))
     (if (get-buffer-window hol-buffer-name t)
         (save-mark-and-excursion
-          (save-window-excursion
-            (select-window (get-buffer-window hol-buffer-name t))
-            (and hol-raise-on-recentre (progn (raise-frame) (raise-frame f)))
-            (if (= arg 1) (goto-char (point-max)))
-            (recenter (if (= arg 1) -1 nil)))))))
+          (select-window (get-buffer-window hol-buffer-name t))
+          (and hol-raise-on-recentre (progn (raise-frame) (raise-frame f)))
+          (if (= arg 1) (goto-char (point-max)))
+          (recenter (if (= arg 1) -1 nil))))))
 
 (defun hol-rotate (arg)
   "Rotate the goal stack N times.  Once by default."
