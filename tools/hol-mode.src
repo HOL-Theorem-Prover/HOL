@@ -871,7 +871,7 @@ region instead. With prefix ARG prompt for a file-name to load."
           (if alternate
               (progn (message "Using %s as HOL executable %s"
                               (car alternate) (cadr alternate))
-                     (sleep-for 1)
+                     (sleep-for 1 500)
                      (car alternate))))
         first-option)))
 
