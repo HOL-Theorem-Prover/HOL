@@ -244,9 +244,8 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val valuedir = expdir ^ "/value"
     val pbdir = expdir ^ "/pb"
     val _ = app mkDir_err [ttt_eval_dir, expdir, outdir, valuedir, pbdir]
-    val (thyl',thyl'') = partition (fn x => mem "combin" (ancestry x)) thyl
-    val _ = print_endline (String.concatWith " " thyl'')
-    val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl'
+    val (thyl',thyl'') = partition (fn x => mem x ["min","bool"]) thyl
+    val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl''
     fun f x = readl x handle
         Interrupt => raise Interrupt
       | _         => (print_endline x; [])
