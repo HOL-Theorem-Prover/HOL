@@ -776,7 +776,7 @@ fun export_terml file tml =
   let
     val tml' = filter uptodate_term tml
     val _ = if length tml <> length tml'
-            then print_endline "Warning: out-of-date terms are not exported"
+            then raise ERR "" "out-of-date terms"
             else ()
     val ostrm = Portable.open_out file
   in
@@ -784,8 +784,10 @@ fun export_terml file tml =
      TextIO.closeOut ostrm)
   end
 
-fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)
-
+fun export_goal file (goal as (asl,w)) = 
+  export_terml file (w :: asl)
+  handle HOL_ERR _ => 
+  print_endline "Warning: goal contained out-of-date terms (not exported it)"
 
 (* -------------------------------------------------------------------------
    Importing terms
@@ -865,6 +867,30 @@ fun write_data encf file tmdata =
 fun read_data decf file = valOf (decf (HOLsexp.fromFile file))
 
 end (* local *)
+
+(* -------------------------------------------------------------------------
+   Exporting problems as lists of list of terms
+   ------------------------------------------------------------------------- *)
+
+local open SharingTables HOLsexp in
+  fun enc_tml enc_tm = list_encode enc_tm
+  fun dec_tml dec_tm = list_decode dec_tm
+  fun enc_tmll enc_tm = list_encode (enc_tml enc_tm)
+  fun dec_tmll dec_tm = list_decode (dec_tml dec_tm)
+end
+
+fun write_pb file (gl,g) =
+  let val tmll = map (fn (asl,w) => w :: asl) (g :: gl) in
+    write_tmdata (enc_tmll, List.concat) file tmll
+  end
+
+fun read_pb file =
+  let 
+    val tmll = read_tmdata dec_tmll file
+    val gl = map (fn l => (tl l, hd l)) tmll
+  in
+    (tl gl, hd gl)
+  end
 
 (* ------------------------------------------------------------------------
    I/O
