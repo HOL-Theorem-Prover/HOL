@@ -838,7 +838,7 @@ region instead. With prefix ARG prompt for a file-name to load."
   (let ((dir (expand-file-name dir0))
         (original-name (expand-file-name original-name0)))
     ;; check for lastmaker file
-    (if-let
+    (if-let*
         (((file-readable-p ".HOLMK/lastmaker"))
          ((> 500 (file-attribute-size (file-attributes ".HOLMK/lastmaker"))))
          (lines (with-temp-buffer
