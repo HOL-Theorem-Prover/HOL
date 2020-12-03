@@ -255,6 +255,8 @@ sig
   val import_terml : string -> term list
   val export_goal : string -> goal -> unit
   val import_goal : string -> goal
+  val write_pb : string -> (goal list * goal) -> unit
+  val read_pb : string -> (goal list * goal)
 
   (* sigobj *)
   val sigobj_theories : unit -> string list

@@ -37,27 +37,31 @@ fun export_valueex file tree =
     write_tnnex file (basicex_to_tnnex exl)
   end
 
-fun export_fof_one file (goal,b,id) = 
+fun mk_info (id,gi,gstatus,gvis) =
+  ["Path: " ^ (if null id then "top" else string_of_id id),
+   "Goal: " ^ its gi,
+   "Status: " ^ (if gstatus = GoalProved then "proven" else "unknown"),
+   "Visits: " ^ rts gvis]
+
+fun export_pb pbprefix (g,(id,gi,gstatus,gvis)) = 
   let 
-    val pbfile = file ^ 
-      (if b then "-proven" else "-unknown") ^ 
-      (if null id then "-top" else ("-" ^ string_of_id id))
-    val cj = list_mk_imp goal
+    fun f id = if null id then "top" else string_of_id id
+    val pbfile = pbprefix ^ ("-" ^ f id) ^ "-" ^ its gi
     val premises = mlNearestNeighbor.thmknn_wdep 
-      (!thmdata_glob) 128 (mlFeature.fea_of_goal true goal) 
-    val namethml = thml_of_namel premises
+      (!thmdata_glob) 128 (mlFeature.fea_of_goal true g) 
+    val gl = map (dest_thm o snd) (thml_of_namel premises)
   in
-    hhExportFof.fof_export_pbfile pbfile (cj,namethml)
+    write_pb pbfile (gl,g);
+    writel (pbfile ^ ".info") (mk_info (id,gi,gstatus,gvis))
   end
 
-fun export_fof file tree =
+fun export_pbl pbprefix tree =
   let
-    val nodel = dlist tree
-    fun f id x = (#goal x, #gstatus x = GoalProved, id)    
-    fun g (id,x) = vector_to_list (Vector.map (f id) (#goalv x))
-    val pbl = List.concat (map g nodel)
+    fun f id (gi,x) = (#goal x, (id, gi, #gstatus x, #gvis x))    
+    fun g (id,x) = vector_to_list (Vector.mapi (f id) (#goalv x))
+    val pbl = List.concat (map g (dlist tree))
   in
-    app (export_fof_one file) pbl
+    app (export_pb pbprefix) pbl
   end
 
 (* -------------------------------------------------------------------------
@@ -121,7 +125,7 @@ fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let
     val valuefile = expdir ^ "/value/" ^ thy ^ "_" ^ its n
-    val pbfile = expdir ^ "/pb/" ^ thy ^ "_" ^ its n
+    val pbprefix = expdir ^ "/pb/" ^ thy ^ "_" ^ its n
     val mem = !hide_flag
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
@@ -138,7 +142,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
     export_valueex valuefile tree;
-    if !exportfof_flag then export_fof pbfile tree else ();
+    if !exportfof_flag then export_pbl pbprefix tree else ();
     hide_flag := mem
   end
 
@@ -297,7 +301,7 @@ tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 exportfof_flag := true;
-run_evalscript_thyl smlfun "december1-3" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december3" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
