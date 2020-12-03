@@ -37,6 +37,30 @@ fun export_valueex file tree =
     write_tnnex file (basicex_to_tnnex exl)
   end
 
+(* -------------------------------------------------------------------------
+   Exporting problems on intermediate goals
+   ------------------------------------------------------------------------- *)
+
+local open SharingTables HOLsexp in
+  fun enc_tml enc_tm = list_encode enc_tm
+  fun dec_tml dec_tm = list_decode dec_tm
+  fun enc_tmll enc_tm = list_encode (enc_tml enc_tm)
+  fun dec_tmll dec_tm = list_decode (dec_tml dec_tm)
+end
+
+fun write_pb file (gl,g) =
+  let val tmll = map (fn (asl,w) => w :: asl) (g :: gl) in
+    write_tmdata (enc_tmll, List.concat) file tmll
+  end
+
+fun read_pb file =
+  let 
+    val tmll = read_tmdata dec_tmll file
+    val gl = map (fn l => (tl l, hd l)) tmll
+  in
+    (tl gl, hd gl)
+  end
+
 fun mk_info (id,gi,gstatus,gvis) =
   ["Path: " ^ (if null id then "top" else string_of_id id),
    "Goal: " ^ its gi,
@@ -296,12 +320,13 @@ load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 ttt_record_savestate ();  (* rm -r savestate if argument list is too long *)
+
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 exportfof_flag := true;
-run_evalscript_thyl smlfun "december3" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december3-1" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
