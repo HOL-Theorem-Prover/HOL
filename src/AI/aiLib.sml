@@ -868,30 +868,6 @@ fun read_data decf file = valOf (decf (HOLsexp.fromFile file))
 
 end (* local *)
 
-(* -------------------------------------------------------------------------
-   Exporting problems as lists of list of terms
-   ------------------------------------------------------------------------- *)
-
-local open SharingTables HOLsexp in
-  fun enc_tml enc_tm = list_encode enc_tm
-  fun dec_tml dec_tm = list_decode dec_tm
-  fun enc_tmll enc_tm = list_encode (enc_tml enc_tm)
-  fun dec_tmll dec_tm = list_decode (dec_tml dec_tm)
-end
-
-fun write_pb file (gl,g) =
-  let val tmll = map (fn (asl,w) => w :: asl) (g :: gl) in
-    write_tmdata (enc_tmll, List.concat) file tmll
-  end
-
-fun read_pb file =
-  let 
-    val tmll = read_tmdata dec_tmll file
-    val gl = map (fn l => (tl l, hd l)) tmll
-  in
-    (tl gl, hd gl)
-  end
-
 (* ------------------------------------------------------------------------
    I/O
    ------------------------------------------------------------------------ *)
