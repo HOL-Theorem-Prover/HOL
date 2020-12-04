@@ -567,6 +567,38 @@ fun MAP_EVERY tacf lst = EVERY (map tacf lst)
 val map_every = MAP_EVERY
 fun MAP_FIRST tacf lst = FIRST (map tacf lst)
 
+(* ----------------------------------------------------------------------
+    FIRST_LT : tactic -> list_tactic
+
+    Given a list of goals, tries to apply tactic argument to all of
+    them in turn until it succeeds. This generates a new list of goals
+    consisting of the output of the successful tactic concatenated
+    with the remaining original goals.
+   ---------------------------------------------------------------------- *)
+
+fun FIRST_LT tac gs =
+    let
+      fun recurse pfx gs =
+          case gs of
+              [] => raise ERR "FIRST_LT" "No goal on which tactic succeeds"
+            | g::rest =>
+              case Lib.total tac g of
+                  NONE => recurse (g::pfx) rest
+                | SOME (sgs, vf) =>
+                  let
+                    fun V ths =
+                        let val (ms, rest) = Lib.split_after (length sgs) ths
+                            val (p,s) = Lib.split_after (length pfx) rest
+                        in
+                          p @ [vf ms] @ s
+                        end
+                  in
+                    (sgs @ List.revAppend(pfx,rest), V)
+                  end
+    in
+      recurse [] gs
+    end
+
 (*---------------------------------------------------------------------------
  * Uses first tactic that proves the goal.
  *    FIRST_PROVE [TAC1;...;TACn] =
