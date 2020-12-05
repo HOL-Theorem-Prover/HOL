@@ -355,10 +355,10 @@ fun collect_ex dir =
 
 val ttt_eval_string = "tttEval.ttt_eval"
 
-fun rlvalue_loop dir thyl (gen,maxgen) =
+fun rlvalue_loop expname thyl (gen,maxgen) =
   if gen > maxgen then () else
   let 
-    fun gendir x = dir ^ "-gen" ^ its x
+    fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
     fun valuedir x = gendir x ^ "/value"    
     val dirl = List.tabulate (gen,valuedir)
     val exl = List.concat (map collect_ex dirl)
@@ -369,24 +369,25 @@ fun rlvalue_loop dir thyl (gen,maxgen) =
     print_endline ("Generation " ^ its gen);
     run_evalscript_thyl ttt_eval_string (gendir gen) (true,30) 
     (SOME tnnfile,NONE,NONE) thyl;
-    rlvalue_loop dir thyl (gen+1,maxgen)
+    rlvalue_loop expname thyl (gen+1,maxgen)
   end
 
-fun rlvalue dir thyl maxgen =
+fun rlvalue expname thyl maxgen =
   (
   print_endline ("Generation 0"); 
-  run_evalscript_thyl ttt_eval_string (dir ^ "-gen0") (true,30) 
-  (NONE,NONE,NONE) thyl;
-  rlvalue_loop dir thyl (1,maxgen)
+  run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,30) 
+    (NONE,NONE,NONE) thyl;
+  rlvalue_loop expname thyl (1,maxgen)
   )
 
 (*
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-val prefixdir = "december5"
+val expname = "december5";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val maxgen = 2
-rlvalue prefixdir thyl maxgen;
+val maxgen = 2;
+rlvalue expname thyl maxgen;
+rlvalue_loop expname thyl (1,maxgen);
 *)
 
 
