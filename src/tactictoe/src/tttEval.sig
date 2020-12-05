@@ -23,4 +23,8 @@ sig
   val cumul_graph : real -> string -> unit
   val compare_stats : string list -> string -> unit
 
+  (* reinforcement learning for the value *)
+  val rlvalue : string -> string list -> int -> unit
+  val rlvalue_loop: string -> string list -> int * int -> unit
+
 end
