@@ -96,29 +96,27 @@ fun export_pbl pbprefix tree =
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "aiLib"; open aiLib;
 load "tttSetup"; open tttSetup;
-val dir = ttt_eval_dir ^ "/december1/value";
-val files = map (fn x => dir ^ "/" ^ x) (listDir dir);
-fun f i x = 
-  (if i mod 100 = 0 then (print_endline (its i)) else ();
-  read_tnnex x);
-val allex = List.concat (mapi f files);
+
+
+val ERR = mk_HOL_ERR "test";
+val arityd = ref (dempty String.compare)
+fun sexp_tm t = 
+  if is_comb t then 
+    let val (oper,argl) = strip_comb t in
+      arityd := dadd (fst (dest_var oper)) (length argl) (!arityd);
+      "(" ^ String.concatWith " " (map sexp_tm (oper :: argl)) ^ ")"
+    end
+  else if is_var t then fst (dest_var t) else raise ERR "sexp_tm" "";
+
+fun sexp_ex (t,rl) = 
+  sexp_tm (rand t) ^ "\n" ^ 
+  String.concatWith " " (map rts rl
+writel (ttt_eval_dir ^ "/december1/sexp_value") (map sexp_ex ex);
+
+
 length allex;
 
-fun train_fixed pct exl =
-  let
-    val (train,test) = part_pct pct (shuffle exl)
-    fun operl_of_tnnex exl =
-      List.concat (map operl_of_term (map fst (List.concat exl)))
-    val operl = operl_of_tnnex exl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
-    val randtnn = random_tnn operdiml
-    val schedule =
-      [{ncore = 4, verbose = true,
-       learning_rate = 0.02, batch_size = 8, nepoch = 200}];
-    val tnn = train_tnn schedule randtnn (train,test)
-  in
-    tnn
-  end
+
 
 val tnn = train_fixed 1.0 allex;
 val tnndir = ttt_eval_dir ^ "/december1/tnn";
@@ -242,8 +240,10 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val expdir = ttt_eval_dir ^ "/" ^ expname
     val outdir = expdir ^ "/out"
     val valuedir = expdir ^ "/value"
+    val tnndir = expdir ^ "/tnn"
     val pbdir = expdir ^ "/pb"
-    val _ = app mkDir_err [ttt_eval_dir, expdir, outdir, valuedir, pbdir]
+    val _ = app mkDir_err 
+      [ttt_eval_dir, expdir, outdir, valuedir, pbdir, tnndir]
     val (thyl',thyl'') = partition (fn x => mem x ["min","bool"]) thyl
     val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl''
     fun f x = readl x handle
@@ -325,8 +325,71 @@ tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 exportfof_flag := true;
-run_evalscript_thyl smlfun "december3-1" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december3-2" (true,30) (NONE,NONE,NONE) thyl;
 *)
+
+(* ------------------------------------------------------------------------
+   Reinforcement learning of the value of an intermediate goal.
+   ------------------------------------------------------------------------ *)
+
+fun train_fixed pct exl =
+  let
+    val (train,test) = part_pct pct (shuffle exl)
+    fun operl_of_tnnex exl =
+      List.concat (map operl_of_term (map fst (List.concat exl)))
+    val operl = operl_of_tnnex exl
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
+    val randtnn = random_tnn operdiml
+    val schedule =
+      [{ncore = 4, verbose = true,
+       learning_rate = 0.02, batch_size = 16, nepoch = 100}];
+    val tnn = train_tnn schedule randtnn (train,test)
+  in
+    tnn
+  end
+
+fun collect_ex dir = 
+  let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
+    List.concat (map read_tnnex filel)
+  end
+
+val ttt_eval_string = "tttEval.ttt_eval"
+
+fun rlvalue_loop dir thyl (gen,maxgen) =
+  if gen > maxgen then () else
+  let 
+    fun gendir x = dir ^ "-gen" ^ its x
+    fun valuedir x = gendir x ^ "/value"    
+    val dirl = List.tabulate (gen,valuedir)
+    val exl = List.concat (map collect_ex dirl)
+    val tnn = train_fixed 1.0 exl
+    val tnnfile = gendir (gen - 1) ^ "/tnn/value"
+    val _ = write_tnn tnnfile tnn
+  in
+    print_endline ("Generation " ^ its gen);
+    run_evalscript_thyl ttt_eval_string (gendir gen) (true,30) 
+    (SOME tnnfile,NONE,NONE) thyl;
+    rlvalue_loop dir thyl (gen+1,maxgen)
+  end
+
+fun rlvalue dir thyl maxgen =
+  (
+  print_endline ("Generation 0"); 
+  run_evalscript_thyl ttt_eval_string (dir ^ "-gen0") (true,30) 
+  (NONE,NONE,NONE) thyl;
+  rlvalue_loop dir thyl (1,maxgen)
+  )
+
+(*
+load "tttEval"; open tttEval;
+tttSetup.ttt_search_time := 30.0;
+val prefixdir = "december5"
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val maxgen = 2
+rlvalue prefixdir thyl maxgen;
+*)
+
+
 
 (* ------------------------------------------------------------------------
    Bigsteps / learning / bigsteps
