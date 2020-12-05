@@ -362,12 +362,12 @@ fun rlvalue_loop expname thyl (gen,maxgen) =
     fun valuedir x = gendir x ^ "/value"    
     val dirl = List.tabulate (gen,valuedir)
     val exl = List.concat (map collect_ex dirl)
-    val tnn = train_fixed 1.0 exl
     val tnnfile = gendir (gen - 1) ^ "/tnn/value"
-    val _ = write_tnn tnnfile tnn
+    val _ = if exists_file tnnfile then () (* for restarts *) else 
+      write_tnn tnnfile (train_fixed 1.0 exl)
   in
     print_endline ("Generation " ^ its gen);
-    run_evalscript_thyl ttt_eval_string (gendir gen) (true,30) 
+    run_evalscript_thyl ttt_eval_string (expname ^ "-gen" ^ its gen) (true,30) 
     (SOME tnnfile,NONE,NONE) thyl;
     rlvalue_loop expname thyl (gen+1,maxgen)
   end
