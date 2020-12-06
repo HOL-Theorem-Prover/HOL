@@ -23,11 +23,11 @@ QED
 
 Definition bar:
   bar x y ⇔
-  ∀z.
-    x + z < y + z ∧ let a = 2 * x ;
-                        b = 3 * z
-                    in
-                      a * b ≤ x
+    ∀z.
+      x + z < y + z ∧ let a = 2 * x ;
+                          b = 3 * z
+                      in
+                        a * b ≤ x
 End
 
 Theorem baz:

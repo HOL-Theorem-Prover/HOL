@@ -5,7 +5,7 @@
 
 (defun holscript-fixture-in (file sword-arg body)
   (with-temp-buffer
-    (insert-file-contents-literally (concat holdir "tools/mode-tests/" file))
+    (insert-file-contents-literally (concat hol-dir "tools/mode-tests/" file))
     (decode-coding-region (point-min) (point-max) 'utf-8-unix)
     (holscript-mode)
     (set-buffer-modified-p nil)
