@@ -1668,15 +1668,20 @@ second is to show the new term.
         (if (looking-at hol-term-begin-re) pos
           (if (looking-at hol-term-end-re) (match-end 0) pos))))))
 
-
-
-
+(defun hol-select-pattern-list-tactic (begin end)
+  (interactive "r")
+  (let ((tosend
+         (if (and begin (region-active-p))
+             (buffer-substring-no-properties begin end)
+           (format "[‘%s’]" (hol-term-at-point)))))
+    (send-raw-string-to-hol
+     (format "proofManagerLib.expand_list (Q.SELECT_GOAL_LT %s)" tosend)
+     hol-echo-commands-p)))
 
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
 (define-key global-map (kbd "C-M-h") 'hol-movement-map)
 (define-prefix-command 'holpp-map)
-(define-key hol-map "\M-p" 'holpp-map)
 
 
 (define-key hol-map "\C-c" 'hol-interrupt)
@@ -1686,6 +1691,8 @@ second is to show the new term.
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
 (define-key hol-map "\C-r" 'copy-region-as-hol-definition-quietly)
+(define-key hol-map "\M-p" 'hol-select-pattern-list-tactic)
+(define-key hol-map "\M-P" 'holpp-map)
 (define-key hol-map "\M-q" 'copy-region-as-hol-definition-real-quietly)
 (define-key hol-map "\M-t" 'hol-toggle-show-times)
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)

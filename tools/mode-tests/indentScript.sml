@@ -267,6 +267,4 @@ Inductive foob2:
   (l. foob (HD l) ==> foob (LAST l))
 End
 
-
-
 val _ = export_theory();

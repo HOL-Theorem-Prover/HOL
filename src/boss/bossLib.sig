@@ -145,6 +145,7 @@ sig
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val sg             : term quotation -> tactic
   val subgoal        : term quotation -> tactic
+  val >~             : ('a,'b)gentactic*term quotation list -> ('a,'b)gentactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 
