@@ -1669,6 +1669,12 @@ second is to show the new term.
           (if (looking-at hol-term-end-re) (match-end 0) pos))))))
 
 (defun hol-select-pattern-list-tactic (begin end)
+  "Send current region (which must include the delimiting square
+brackets) as argument to Q.SELECT_GOAL_LT, which list-tactic
+takes a list of patterns to use to select the desired current
+goal. If the region is not active, instead scan for a term in
+the surrounding text (as done by ‘hol-do-goal’ and
+‘hol-subgoal-tactic’)."
   (interactive "r")
   (let ((tosend
          (if (and begin (region-active-p))
