@@ -975,6 +975,29 @@ fun pp_term (G : grammar) TyG backend = let
           block INCONSISTENT 2 (recurse vsl)
         end
 
+    fun pr_vstrblock (tok, vsl0) =
+        let
+          fun prv vs = (pr_vstruct vs >> addbvs (free_vars (bv2term vs)))
+          fun mkSimple (Restricted{Bvar,...}) = Simple Bvar | mkSimple x = x
+          val (vsl, finisher) =
+              case can_print_vstructl vsl0 of
+                  SOME r => (map mkSimple vsl0,
+                             fn vs =>
+                                getbvs >- (fn old =>
+                                setbvs vs >>
+                                add_string res_quanop >>
+                                paren (r might_print endbinding) (
+                                  pr_term r Top Top Top (decdepth depth)
+                                ) >> setbvs old))
+                | NONE => (vsl0, fn vs => nothing)
+        in
+          getbvs >- (fn old =>
+          block INCONSISTENT 0 (
+            tok >> pr_list prv (add_break(1,0)) vsl >> finisher old >>
+            add_string endbinding
+          ))
+        end
+
     fun pr_abs tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val restr_binder =
@@ -1317,6 +1340,133 @@ fun pp_term (G : grammar) TyG backend = let
         end
     end
 
+    datatype atomf_outcomes =
+             AF_COMB of term * term * term
+             | AF_ABS of term
+             | AF_WITHRULE of grammar_rule *
+                           {fprec : int, fname : string, f : term} *
+                           term list (* args *) *
+                           term (* Rand *)
+             | AF_LIST of pp_element list * term
+    fun pr_atomf (f,args0) = let
+      (* the tm, Rator and Rand bindings that we began with are
+               overridden by the f and args values that may be the product of
+               oi_strip_comb.*)
+      val fname = atom_name f
+      (* val _ = PRINT ("pr_atomf: "^fname^" and "^
+                           Int.toString (length args0) ^ " args") *)
+      val tm = list_mk_comb (f, args0)
+      val Rator = rator tm
+      val (args,Rand) = front_last args0
+      val candidate_rules =
+          Option.map (List.filter (is_unicode_ok_rule o #3))
+                     (lookup_term fname)
+      (* val _ = PRINT ("pr_atomf: "^debugprint G tm^", "^
+                           (case candidate_rules of
+                               NONE => "rules = NONE"
+                             | SOME l =>
+                                 Int.toString (length l)^ " candidate rules"))
+       *)
+
+
+      val restr_binder =
+          find_partial (fn (b,s) => if s=fname then SOME b else NONE)
+                       restr_binders
+      val restr_binder_rule =
+          if isSome restr_binder andalso length args = 1 andalso
+             my_is_abs Rand
+          then let
+            val bindex = case valOf restr_binder of
+                             NONE => binder_to_string G LAMBDA
+                           | SOME s => s
+            val optrule = Option.map (List.filter (is_unicode_ok_rule o #3))
+                                     (lookup_term bindex)
+            fun ok_rule (_, _, r) =
+                case r of
+                    PREFIX(BINDER b) => true
+                  | otherwise => false
+          in
+            case optrule of
+                SOME (r::_) => if ok_rule r then SOME r else NONE
+              | otherwise => NONE
+          end
+          else NONE
+    in
+      case candidate_rules of
+          NONE =>
+          let
+          in
+            case restr_binder of
+                NONE => AF_COMB (tm, Rator, Rand)
+              | SOME NONE =>
+                if isSome restr_binder_rule then AF_ABS tm
+                else AF_COMB(tm, Rator, Rand)
+              | SOME (SOME fname) =>
+                if isSome restr_binder_rule then
+                  AF_WITHRULE(#3(valOf restr_binder_rule),
+                              {fprec = #1 (valOf restr_binder_rule),
+                               fname = fname,
+                               f = f}, args, Rand)
+                else
+                  AF_COMB(tm, Rator, Rand)
+          end
+        | SOME crules0 =>
+          let
+            datatype ruletype = Norm of (int * grammar_rule)
+                              | List of pp_element list
+            fun suitable_rule (prec, _, rule) =
+                case rule of
+                    INFIX(STD_infix(rrlist, _)) =>
+                    if check_rrec_args mkrels_infix (hd rrlist) args0 then
+                      SOME (Norm(prec, rule))
+                    else NONE
+                  | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
+                  | PREFIX (STD_prefix list) =>
+                    if check_rrec_args mkrels_prefix (hd list) args0 then
+                      SOME (Norm (prec, rule))
+                    else NONE
+                  | PREFIX (BINDER _) =>
+                    if my_is_abs Rand andalso length args = 0 then
+                      SOME (Norm(prec, rule))
+                    else NONE
+                  | SUFFIX (STD_suffix list) =>
+                    if check_rrec_args mkrels_suffix (hd list) args0 then
+                      SOME (Norm(prec, rule))
+                    else NONE
+                  | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
+                  | CLOSEFIX list =>
+                    let
+                      (* val _ = PRINT "suitable_rule: closefix check" *)
+                      val r = hd list
+                    in
+                      if term_name_is_lform (#term_name r) then
+                        ((* PRINT ("rule term-name is empty - testing " ^
+                               debugprint G tm); *)
+                          case find_lspec (#elements r) of
+                              SOME {nilstr,cons,...} =>
+                              if is_list G {nilstr=nilstr,cons=cons} tm then
+                                SOME (List (#elements r))
+                              else NONE
+                            | NONE => NONE)
+                      else if check_rrec_args mkrels_closefix r args0 then
+                        SOME (Norm(prec, rule))
+                      else NONE
+                    end
+                  | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
+                  | INFIX VSCONS => raise Fail "Can't happen 90213"
+          in
+            case List.mapPartial suitable_rule crules0 of
+                Norm (prec,rule) :: _ =>
+                AF_WITHRULE(rule, {fprec=prec, fname=fname, f=f}, args, Rand)
+              | List els :: _ =>
+                ((* PRINT "printing a List rule"; *)
+                 AF_LIST(els, tm)
+                )
+              | [] => (*(PRINT "No suitable rules, printing with pr_comb";*)
+                AF_COMB(tm, Rator, Rand)
+                        (* before PRINT "Finished pr_comb") *)
+          end
+    end (* pr_atomf *)
 
     fun pr_comb_with_rule frule fterm args Rand = let
       val {fname,fprec,f} = fterm
@@ -1437,27 +1587,63 @@ fun pp_term (G : grammar) TyG backend = let
             )
           )
         end
-      | PREFIX (BINDER lst) => let
-          val tok = case hd lst of
-                      LAMBDA => hd lambda (* should never happen *)
-                    | BinderString r => #tok r
-          fun find (bopt, s) = if bopt = SOME fname then SOME s else NONE
-          val restr_binder = find_partial find restr_binders
-          val (bvs, body) = strip_vstructs (SOME fname) restr_binder tm
-          val bvars_seen_here = List.concat (map (free_vars o bv2term) bvs)
+      | PREFIX (BINDER lst) =>
+        let
           val addparens =
             case rgrav of
               Prec(n, _) => n > fprec
             | _ => false
           val addparens = addparens orelse combpos = RandCP
-          val print_tok = if is_constish f then constann f tok
-                          else var_ann f tok
+          fun strip_binderblocks lst f fname tm =
+              let
+                val tok = case hd lst of
+                              LAMBDA => hd lambda (* should never happen *)
+                            | BinderString r => #tok r
+                fun find (bopt, s) = if bopt = SOME fname then SOME s else NONE
+                val restr_binder = find_partial find restr_binders
+                val (bvs, body) = strip_vstructs (SOME fname) restr_binder tm
+                val bvars_seen_here =
+                    List.concat (map (free_vars o bv2term) bvs)
+                val addparens =
+                    case rgrav of
+                        Prec(n, _) => n > fprec
+                      | _ => false
+                val addparens = addparens orelse combpos = RandCP
+                val print_tok = if is_constish f then constann f tok
+                                else var_ann f tok
+                val h = (print_tok, bvs)
+              in
+                case total dest_comb body of
+                    NONE => ([h], body)
+                  | SOME (Rator,Rand) =>
+                    let
+                      val (f, args) = strip_comb Rator
+                      val (oif, oiargs) =
+                          case oi_strip_comb' overload_info body of
+                              NONE => (f, args @ [Rand])
+                            | SOME (f, args) => (f, args)
+                    in
+                      if is_abs f then ([h], body)
+                      else
+                        case pr_atomf (oif, oiargs) of
+                            AF_WITHRULE(PREFIX(BINDER lst'), {fname,fprec,f}, _,
+                                        _) =>
+                            apfst (cons h)
+                                  (strip_binderblocks lst' f fname body)
+                          | _ => ([h], body)
+                    end
+              end
+          val (binding_blocks, deep_body) = strip_binderblocks lst f fname tm
         in
-          ptype_block (
+          getbvs >- (fn oldbvs =>
             paren (addparens orelse comb_show_type) (
-              block INCONSISTENT 2 (print_tok >> pr_vstructl bvs body)
-            )
-          )
+              block INCONSISTENT 2 (
+                block INCONSISTENT 2 (
+                  pr_list pr_vstrblock (add_break (1,0)) binding_blocks
+                ) >> add_break(1,0) >>
+                pr_term deep_body Top Top Top (decdepth depth)
+              )
+            ) >> setbvs oldbvs)
         end
       | CLOSEFIX lst => let
           val rr = hd lst
@@ -1472,142 +1658,15 @@ fun pp_term (G : grammar) TyG backend = let
         end
     end
 
-    datatype atomf_outcomes =
-             AF_COMB of term * term * term
-             | AF_WITHRULE of grammar_rule *
-                           {fprec : int, fname : string, f : term} *
-                           term list (* args *) *
-                           term (* Rand *)
-             | AF_LIST of pp_element list * term
     fun execute_outcome afo =
         case afo of
             AF_COMB(t1,t2,t3) => pr_comb t1 t2 t3
+          | AF_ABS t => pr_abs t
           | AF_WITHRULE (grule,frec,args,Rand) =>
               pr_comb_with_rule grule frec args Rand
           | AF_LIST (els, tm) =>
             (print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ())
 
-
-    fun pr_atomf (f,args0) = let
-      (* the tm, Rator and Rand bindings that we began with are
-               overridden by the f and args values that may be the product of
-               oi_strip_comb.*)
-      val fname = atom_name f
-      (* val _ = PRINT ("pr_atomf: "^fname^" and "^
-                           Int.toString (length args0) ^ " args") *)
-      val tm = list_mk_comb (f, args0)
-      val Rator = rator tm
-      val (args,Rand) = front_last args0
-      val candidate_rules =
-          Option.map (List.filter (is_unicode_ok_rule o #3))
-                     (lookup_term fname)
-      (* val _ = PRINT ("pr_atomf: "^debugprint G tm^", "^
-                           (case candidate_rules of
-                               NONE => "rules = NONE"
-                             | SOME l =>
-                                 Int.toString (length l)^ " candidate rules"))
-       *)
-
-
-      val restr_binder =
-          find_partial (fn (b,s) => if s=fname then SOME b else NONE)
-                       restr_binders
-      val restr_binder_rule =
-          if isSome restr_binder andalso length args = 1 andalso
-             my_is_abs Rand
-          then let
-            val bindex = case valOf restr_binder of
-                             NONE => binder_to_string G LAMBDA
-                           | SOME s => s
-            val optrule = Option.map (List.filter (is_unicode_ok_rule o #3))
-                                     (lookup_term bindex)
-            fun ok_rule (_, _, r) =
-                case r of
-                    PREFIX(BINDER b) => true
-                  | otherwise => false
-          in
-            case optrule of
-                SOME (r::_) => if ok_rule r then SOME r else NONE
-              | otherwise => NONE
-          end
-          else NONE
-    in
-      case candidate_rules of
-          NONE =>
-          let
-          in
-            case restr_binder of
-                NONE => pr_comb tm Rator Rand
-              | SOME NONE =>
-                if isSome restr_binder_rule then pr_abs tm
-                else pr_comb tm Rator Rand
-              | SOME (SOME fname) =>
-                if isSome restr_binder_rule then
-                  pr_comb_with_rule(#3(valOf restr_binder_rule))
-                                   {fprec = #1 (valOf restr_binder_rule),
-                                    fname = fname,
-                                    f = f} args Rand
-                else
-                  pr_comb tm Rator Rand
-          end
-        | SOME crules0 =>
-          let
-            datatype ruletype = Norm of (int * grammar_rule)
-                              | List of pp_element list
-            fun suitable_rule (prec, _, rule) =
-                case rule of
-                    INFIX(STD_infix(rrlist, _)) =>
-                    if check_rrec_args mkrels_infix (hd rrlist) args0 then
-                      SOME (Norm(prec, rule))
-                    else NONE
-                  | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
-                  | PREFIX (STD_prefix list) =>
-                    if check_rrec_args mkrels_prefix (hd list) args0 then
-                      SOME (Norm (prec, rule))
-                    else NONE
-                  | PREFIX (BINDER _) =>
-                    if my_is_abs Rand andalso length args = 0 then
-                      SOME (Norm(prec, rule))
-                    else NONE
-                  | SUFFIX (STD_suffix list) =>
-                    if check_rrec_args mkrels_suffix (hd list) args0 then
-                      SOME (Norm(prec, rule))
-                    else NONE
-                  | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
-                  | CLOSEFIX list =>
-                    let
-                      (* val _ = PRINT "suitable_rule: closefix check" *)
-                      val r = hd list
-                    in
-                      if term_name_is_lform (#term_name r) then
-                        ((* PRINT ("rule term-name is empty - testing " ^
-                               debugprint G tm); *)
-                          case find_lspec (#elements r) of
-                              SOME {nilstr,cons,...} =>
-                              if is_list G {nilstr=nilstr,cons=cons} tm then
-                                SOME (List (#elements r))
-                              else NONE
-                            | NONE => NONE)
-                      else if check_rrec_args mkrels_closefix r args0 then
-                        SOME (Norm(prec, rule))
-                      else NONE
-                    end
-                  | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
-                  | INFIX VSCONS => raise Fail "Can't happen 90213"
-          in
-            case List.mapPartial suitable_rule crules0 of
-                Norm (prec,rule) :: _ =>
-                pr_comb_with_rule
-                  rule
-                  {fprec = prec, fname=fname, f=f} args Rand
-              | List els :: _ =>
-                ((* PRINT "printing a List rule"; *)
-                  print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ())
-              | [] => (*(PRINT "No suitable rules, printing with pr_comb";*)
-                pr_comb tm Rator Rand
-                        (* before PRINT "Finished pr_comb") *)
-          end
-    end (* pr_atomf *)
 
 
     fun print_ty_antiq tm = let
@@ -1773,14 +1832,15 @@ fun pp_term (G : grammar) TyG backend = let
           fun is_atom tm = is_const tm orelse is_var tm
           fun maybe_pr_atomf () =
               if grammar_name G oif = SOME "case" then
-                pr_atomf (strip_comb tm)
+                execute_outcome (pr_atomf (strip_comb tm))
               else if overloadedp then
                 case oiargs of
                     [] => (* term is a comb, but it somehow overloads to a
                              single "constant" *)
                           pr_term oif pgrav lgrav rgrav depth
-                  | _ => pr_atomf (oif, oiargs)
-              else if is_var f then pr_atomf (f, args @ [Rand])
+                  | _ => execute_outcome (pr_atomf (oif, oiargs))
+              else if is_var f then
+                execute_outcome (pr_atomf (f, args @ [Rand]))
               else pr_comb tm Rator Rand
         in
           (* check for various literal and special forms *)
