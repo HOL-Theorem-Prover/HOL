@@ -1798,9 +1798,9 @@ fun pp_term (G : grammar) TyG backend = let
              pr_numeral NONE tm
            else fail) |||
           (fn _ => (if Literal.is_numeral Rand andalso
-              can_pr_numeral (SOME (atom_name Rator))
-           then pr_numeral (SOME Rator) Rand
-           else fail) handle HOL_ERR _ => fail) |||
+                       can_pr_numeral (SOME (atom_name Rator))
+                    then pr_numeral (SOME Rator) Rand
+                    else fail) handle HOL_ERR _ => fail) |||
 
           (* binders *)
           (fn _ => if my_is_abs tm then pr_abs tm else fail) |||
