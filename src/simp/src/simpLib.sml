@@ -769,7 +769,7 @@ val asm_simp_tac = ASM_SIMP_TAC
    contradictory assumptions; we'd hope that simplification will turn
    one or the other into F, which is then caught by CONTR_TAC.
    DISCARD_TAC drops duplicates. This should turn into T, which we can
-   dischard if droptrues is true.
+   discard if droptrues is true.
 *)
 
 type simptac_config = {strip : bool, elimvars : bool, droptrues : bool}
