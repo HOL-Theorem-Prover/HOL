@@ -46,10 +46,11 @@ fun dim_std (nlayer,dim) oper =
   dim_std_arity (nlayer,dim) (oper,arity_of oper)
 
 (* -------------------------------------------------------------------------
-   Random TNN
+   Initializiation of a random TNN
    ------------------------------------------------------------------------- *)
 
 type tnn = (term,nn) Redblackmap.dict
+type tnne = (term,int) Reblackmap.dict * nn vector
 
 fun oper_nn diml = case diml of
     [] => raise ERR "oper_nn" ""
@@ -62,6 +63,18 @@ fun random_tnn tnndim = dnew Term.compare (map_snd oper_nn tnndim)
 
 fun random_tnn_std (nlayer,dim) operl =
   random_tnn (map_assoc (dim_std (nlayer,dim)) operl)
+
+fun prepare_tnn tnn =
+  let 
+    val termnnl = dlist tnn 
+    val termid = dnew Term.compare (number_snd 0 (map fst termnnl))
+    val nnv = Vector.fromList (map snd termnnl)
+  in
+    (termid,nnv)
+  end
+  
+fun unprepare_tnn (termid,nnv) =
+  dnew Term.compare (combine (dkeys termid, vector_to_list nnv))
 
 (* -------------------------------------------------------------------------
    TNN I/O
@@ -132,7 +145,9 @@ fun order_subtm tml =
   end
 
 fun prepare_tnnex tnnex =
-  let fun f x = (order_subtm (map fst x), map_snd scale_out x) in
+  let  
+    fun f x = (order_subtm (map fst x), map_snd scale_out x) 
+  in
     map f tnnex
   end
 
@@ -165,6 +180,11 @@ fun mk_embedding_var (rv,ty) =
 (* -------------------------------------------------------------------------
    Forward propagation
    ------------------------------------------------------------------------- *)
+
+(* 
+[|(1,[]),(35,[2,4]),
+
+*)
 
 fun fp_oper tnn fpdict tm =
   let
@@ -343,9 +363,9 @@ fun train_tnn_schedule schedule tnn (train,test) =
       val _ = msg param ("ncore: " ^ its (#ncore param))
       val (pf,close_threadl) = parmap_gen (#ncore param)
       val newtnn = train_tnn_nepoch param pf 0 tnn (train,test)
-      val r = train_tnn_schedule m newtnn (train,test)
+      val _ = close_threadl () 
     in
-      (close_threadl (); r)
+      train_tnn_schedule m newtnn (train,test)
     end
 
 fun stats_head (oper,rll) =
