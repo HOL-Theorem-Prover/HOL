@@ -13,11 +13,11 @@ val _ = new_theory "invarianceResults";
 Theorem invariance_theorem:
   ∀U T. univ_rf U ==>
         ∃c. ∀x. core_complexity U x <=
-                core_complexity (λy. on2bl (recPhi [T;bl2n y])) x + c
+                core_complexity (λy. on2bl (recPhi [T;bl2n y])) x + SOME c
 Proof
   rw[univ_rf_def,core_complexity_def] >>  fs[univ_rf_def] >>
   `∃g. ∀x. on2bl (Phi T' x) = U (g++ (n2bl x))` by fs[] >>
-  qexists_tac‘SOME (LENGTH g)’ >> rw[]
+  qexists_tac‘LENGTH g’ >> rw[]
   >- (`univ_rf U` by fs[univ_rf_def] >>`{p| U p = SOME x} <> {}` by fs[univ_rf_nonempty] >> fs[])
   >- (`MIN_SET (IMAGE LENGTH {p | U p = SOME x}) ∈
         IMAGE LENGTH ({p | U p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
@@ -52,7 +52,7 @@ End
 
 Theorem clean_invariance_theorem:
   ∃c. ∀U V i. univ_rf U ∧ i ∈ indexes_of V ⇒
-              ∀x. core_complexity U x ≤ core_complexity V x + c U i
+              ∀x. core_complexity U x ≤ core_complexity V x + SOME (c U i)
 Proof
   rw[indexes_of_def] >>
   strip_assume_tac
