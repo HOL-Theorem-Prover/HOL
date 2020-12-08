@@ -692,31 +692,32 @@ val Req0 = markerLib.mk_Req0
 val ReqD = markerLib.mk_ReqD
 
 local open markerSyntax markerLib
-  fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
-  fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
+in
+fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
+fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
-  fun extract_excls (excls, rest) l =
-      case l of
-          [] => (List.rev excls, List.rev rest)
-        | th::ths => case markerLib.destExcl th of
-                         NONE => extract_excls (excls, th::rest) ths
-                       | SOME nm => extract_excls (nm::excls, rest) ths
+fun extract_excls (excls, rest) l =
+    case l of
+        [] => (List.rev excls, List.rev rest)
+      | th::ths => case markerLib.destExcl th of
+                       NONE => extract_excls (excls, th::rest) ths
+                     | SOME nm => extract_excls (nm::excls, rest) ths
 
-  fun process_tags ss thl =
+fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst) = Lib.partition is_AC rst
         val (excludes, rst) = extract_excls ([],[]) rst
     in
-     if null Congs andalso null ACs andalso null excludes then (ss,thl)
-     else (
-       ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                             ac=map unAC ACs, congs=map unCong Congs,
-                             convs=[],rewrs=[],filter=NONE,dprocs=[]}
-          -* excludes,
-       rst
-     )
+      if null Congs andalso null ACs andalso null excludes then (ss,thl)
+      else (
+        ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+                         ac=map unAC ACs, congs=map unCong Congs,
+                         convs=[],rewrs=[],filter=NONE,dprocs=[]}
+           -* excludes,
+        rst
+      )
     end
-in
+
 fun SIMP_CONV ss l tm =
   let val (ss', l') = process_tags ss l
   in TRY_CONV (SIMP_QCONV ss' l') tm
@@ -833,16 +834,17 @@ fun psr (cfg : simptac_config) ss =
 
 fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
 
-fun global_simp_tac cfg ss =
+fun global_simp_tac cfg ss0 =
     markerLib.mk_require_tac (
       markerLib.ABBRS_THEN (
         markerLib.LLABEL_RES_THEN (
           fn thl =>
              let
-               val ss' = ss ++ rewrites thl
+               val (ss1,thl') = process_tags ss0 thl
+               val ss = ss1 ++ rewrites thl'
              in
-               rpt (CHANGED_TAC (allasms cfg ss')) THEN
-               ASM_SIMP_TAC ss' []
+               rpt (CHANGED_TAC (allasms cfg ss)) THEN
+               ASM_SIMP_TAC ss []
              end
         )
       )

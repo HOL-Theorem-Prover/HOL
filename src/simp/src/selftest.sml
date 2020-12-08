@@ -372,6 +372,7 @@ val _ = let
        require_msg (testresult outgs) printgoals (VALID tac) ing)
   val T_t = “?x:'a. p”
   fun gs c = global_simp_tac c
+  val fs = full_simp_tac
   val gsc = {droptrues=true,elimvars=false,strip=true}
 in
   List.app (ignore o test) [
@@ -381,8 +382,14 @@ in
      [([“Abbrev (v <=> q /\ r)”, “~v”], “P F:bool”)]),
     ("simp_tac + Excl", simp_tac bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
      [([], T_t)]),
+    ("fs + Excl", fs bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
+     [([], T_t)]),
     ("gs + Excl", gs gsc bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
-     [([], T_t)])
+     [([], T_t)]),
+    ("fs + Excl (in assumptions)", fs bool_ss [Excl "EXISTS_SIMP"],
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
+    ("gs + Excl (in assumptions)", gs gsc bool_ss [Excl "EXISTS_SIMP"],
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)])
   ]
 end
 
