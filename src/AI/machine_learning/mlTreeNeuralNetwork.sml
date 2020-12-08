@@ -50,7 +50,7 @@ fun dim_std (nlayer,dim) oper =
    ------------------------------------------------------------------------- *)
 
 type tnn = (term,nn) Redblackmap.dict
-type tnne = (term,int) Reblackmap.dict * nn vector
+type tnne = (term,int) Redblackmap.dict * nn vector
 
 fun oper_nn diml = case diml of
     [] => raise ERR "oper_nn" ""
@@ -181,10 +181,7 @@ fun mk_embedding_var (rv,ty) =
    Forward propagation
    ------------------------------------------------------------------------- *)
 
-(* 
-[|(1,[]),(35,[2,4]),
-
-*)
+(* [|(1,[]),(35,[2,4]), *)
 
 fun fp_oper tnn fpdict tm =
   let
