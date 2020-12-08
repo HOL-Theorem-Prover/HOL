@@ -11,6 +11,7 @@ sig
   val diff_rvect     : vect -> vect -> vect
   val mult_rvect     : vect -> vect -> vect
   val scalar_product : vect -> vect -> real
+  val sp_vecl        : real list -> real list -> real
   val scalar_mult    : real -> vect -> vect
   val add_vectl      : vect list -> vect
   (* matrix *)
@@ -23,6 +24,7 @@ sig
   val mat_update   : 'a vector vector -> (int * int) * 'a -> 'a vector vector
   val mat_add      : mat -> mat -> mat
   val matl_add     : mat list -> mat
+  val matv_add     : mat vector -> mat
   val mat_transpose : 'a vector vector -> 'a vector vector
   val mat_random    : int * int -> mat
   (* input/output *)

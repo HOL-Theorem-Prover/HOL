@@ -34,7 +34,18 @@ fun mult_rvect v1 v2 =
     Vector.tabulate (Vector.length v1, f)
   end
 
-fun scalar_product v1 v2 = sum_rvect (mult_rvect v1 v2)
+fun sp_vecl l1 l2 = case (l1,l2) of
+    (a1 :: m1, a2 :: m2) => a1 * a2 + sp_vecl m1 m2 
+  | _ => 0.0
+
+fun scalar_product v1 v2 = 
+  let 
+    val sum = ref 0.0
+    fun f (i,x) = (sum := x * Vector.sub (v2,i) + !sum)
+  in
+    Vector.appi f v1;
+    !sum
+  end
 
 fun scalar_mult k v = Vector.map (fn x => k * x) v
 
@@ -77,6 +88,13 @@ fun matl_add ml = case ml of
     [] => raise ERR "mat_addl" ""
   | [m] => m
   | m :: contl => mat_add m (matl_add contl)
+
+fun matv_add mv =
+  let fun f i j = sum_real
+    (List.tabulate (Vector.length mv, fn k => mat_sub (Vector.sub (mv,k)) i j))
+  in
+    mat_tabulate f (mat_dim (Vector.sub (mv,0)))
+  end
 
 fun inv_dim (a,b) = (b,a)
 

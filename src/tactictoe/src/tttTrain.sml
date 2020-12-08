@@ -167,7 +167,8 @@ fun train_fixed pct exl =
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,8) x)) operl
+    val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,8) x)) operset
     val randtnn = random_tnn operdiml
     val schedule =
       [{ncore = 4, verbose = true,

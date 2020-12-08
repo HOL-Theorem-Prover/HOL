@@ -25,7 +25,6 @@ include Abbrev
 
   (* examples *)
   val stats_tnnex : tnnex -> string
-  val prepare_tnnex : tnnex -> tnnbatch
 
   (* I/O *)
   val write_tnn : string -> tnn -> unit

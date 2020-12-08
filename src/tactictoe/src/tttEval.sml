@@ -338,7 +338,8 @@ fun train_fixed pct exl =
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
+    val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operset
     val randtnn = random_tnn operdiml
     val schedule =
       [{ncore = 4, verbose = true,
@@ -379,6 +380,46 @@ fun rlvalue expname thyl maxgen =
     (NONE,NONE,NONE) thyl;
   rlvalue_loop expname thyl (1,maxgen)
   )
+
+(* training test 
+load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
+
+
+val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
+val valuedir = ttt_eval_dir ^ "/december5-gen0/value";
+val exl = collect_ex valuedir;
+stats_tnnex exl;
+val (_,t) = add_time prepare_tnnex exl;
+
+fun operl_of_tnnex exl =
+   List.concat (map operl_of_term (map fst (List.concat exl)));
+val operl = operl_of_tnnex exl;
+val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
+
+fun train_fixed schedule exl =
+  let
+    val (train,test) = part_pct 1.0 (shuffle exl)
+    fun operl_of_tnnex exl =
+      List.concat (map operl_of_term (map fst (List.concat exl)))
+    val operl = operl_of_tnnex exl
+    val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operset
+    val randtnn = random_tnn operdiml
+   
+    val tnn = train_tnn schedule randtnn (train,test)
+  in
+    tnn
+  end
+
+val schedule =
+    [{ncore = 8, verbose = true,
+     learning_rate = 0.02, batch_size = 16, nepoch = 1}];
+
+val tnn = train_fixed schedule exl;
+
+
+*)
+
 
 (*
 load "tttEval"; open tttEval;
