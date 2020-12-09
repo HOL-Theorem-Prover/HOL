@@ -111,7 +111,7 @@ endf
 let s:stripStart     = ')\|\]\|\['
 let s:stripEnd       = '(\|\['
 let s:stripBothWords = 'THEN[1L]\?\|by'
-let s:stripBoth      = ',\|<<\|>>\|++\|\\\\\|>-\|>|'
+let s:stripBoth      = ',\|<<\|>>\|++\|\\\\\|>-\|>|\|>\~'
 let s:delim          = '\_[[:space:]()]'
 
 fu! HOLExpand()
@@ -192,6 +192,18 @@ fu! HOLSelect(l,r)
   call search(a:r,"ce")
 endf
 
+fu! HOLPattern()
+  silent keepjumps normal pgg0
+  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\|\%('.s:stripBothWords.'\)\)\ze'.s:delim,'cWe')
+    silent keepjumps normal vgg0"_d
+  endw
+  while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*\%$','cW')
+    silent keepjumps normal vG$"_dgg0
+  endw
+  keepjumps normal iproofManagerLib.expand_list(Q.SELECT_GOAL_LT(
+  keepjumps normal G$a))
+endf
+
 if !(exists("maplocalleader"))
   let maplocalleader = "\\"
 endif
@@ -204,6 +216,7 @@ vn <silent> <LocalLeader>G :call YankThenHOLCall(function("HOLUQGoal"),[])<CR>
 vn <silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
 vn <silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
 vn <silent> <LocalLeader>F :call YankThenHOLCall(function("HOLSuffices"),[])<CR>
+vn <silent> <LocalLeader>P :call YankThenHOLCall(function("HOLPattern"),[])<CR>
 nm <silent><expr> <LocalLeader>l "V".maplocalleader."l"
 nm <silent><expr> <LocalLeader>L "V".maplocalleader."L"
 nm <silent><expr> <LocalLeader>s "V".maplocalleader."s"
@@ -213,6 +226,7 @@ nm <silent><expr> <LocalLeader>G "V".maplocalleader."G"
 nm <silent><expr> <LocalLeader>e "V".maplocalleader."e"
 nm <silent><expr> <LocalLeader>S "V".maplocalleader."S"
 nm <silent><expr> <LocalLeader>F "V".maplocalleader."F"
+nm <silent><expr> <LocalLeader>P "V".maplocalleader."P"
 nn <silent> <LocalLeader>R :<C-U>call HOLRotate()<CR>
 nn <silent> <LocalLeader>b :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
 nn <silent> <LocalLeader>B :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
