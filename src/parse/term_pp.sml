@@ -975,7 +975,7 @@ fun pp_term (G : grammar) TyG backend = let
           block INCONSISTENT 2 (recurse vsl)
         end
 
-    fun pr_vstrblock (tok, vsl0) =
+    fun pr_vstrblock (tok, _, vsl0) =
         let
           fun prv vs = (pr_vstruct vs >> addbvs (free_vars (bv2term vs)))
           fun mkSimple (Restricted{Bvar,...}) = Simple Bvar | mkSimple x = x
@@ -1611,7 +1611,7 @@ fun pp_term (G : grammar) TyG backend = let
                 val addparens = addparens orelse combpos = RandCP
                 val print_tok = if is_constish f then constann f tok
                                 else var_ann f tok
-                val h = (print_tok, bvs)
+                val h = (print_tok, UTF8.size tok, bvs)
               in
                 case total dest_comb body of
                     NONE => ([h], body)
@@ -1634,16 +1634,31 @@ fun pp_term (G : grammar) TyG backend = let
                     end
               end
           val (binding_blocks, deep_body) = strip_binderblocks lst f fname tm
-        in
-          getbvs >- (fn oldbvs =>
-            paren (addparens orelse comb_show_type) (
-              block INCONSISTENT 2 (
+          fun dflt() =
+            restore_bvars (
+              paren (addparens orelse comb_show_type) (
                 block INCONSISTENT 2 (
-                  pr_list pr_vstrblock (add_break (1,0)) binding_blocks
-                ) >> add_break(1,0) >>
-                pr_term deep_body Top Top Top (decdepth depth)
+                  block INCONSISTENT 2 (
+                    pr_list pr_vstrblock (add_break (1,0)) binding_blocks
+                  ) >> add_break(1,0) >>
+                        pr_term deep_body Top Top Top (decdepth depth)
+                )
               )
-            ) >> setbvs oldbvs)
+            )
+        in
+          case (binding_blocks,showtypes_v,showtypes) of
+              ([vb as (bpr,bsz,[Simple v])],false,false) =>
+              if is_var v andalso UTF8.size (#1 (dest_var v)) = 1 then
+                restore_bvars (
+                  paren addparens (
+                    block INCONSISTENT (bsz + UTF8.size endbinding + 2) (
+                      pr_vstrblock vb >> add_string " " >>
+                      pr_term deep_body Top Top Top (decdepth depth)
+                    )
+                  )
+                )
+              else dflt()
+          | _ => dflt()
         end
       | CLOSEFIX lst => let
           val rr = hd lst
