@@ -24,6 +24,8 @@ sig
   val mat_update   : 'a vector vector -> (int * int) * 'a -> 'a vector vector
   val mat_add      : mat -> mat -> mat
   val matl_add     : mat list -> mat
+  val mat_add_mem  : real ref vector vector -> real vector vector -> unit
+  val matl_add_mem : real ref vector vector -> real vector vector list -> unit
   val matv_add     : mat vector -> mat
   val mat_transpose : 'a vector vector -> 'a vector vector
   val mat_random    : int * int -> mat

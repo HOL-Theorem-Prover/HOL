@@ -387,6 +387,12 @@ load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
 val valuedir = ttt_eval_dir ^ "/december5-gen0/value";
+
+fun collect_ex dir = 
+  let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
+    List.concat (map read_tnnex filel)
+  end
+
 val exl = collect_ex valuedir;
 stats_tnnex exl;
 val (_,t) = add_time prepare_tnnex exl;
@@ -412,7 +418,7 @@ fun train_fixed schedule exl =
   end
 
 val schedule =
-    [{ncore = 8, verbose = true,
+    [{ncore = 4, verbose = true,
      learning_rate = 0.02, batch_size = 16, nepoch = 1}];
 
 val tnn = train_fixed schedule exl;

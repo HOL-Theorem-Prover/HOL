@@ -41,7 +41,7 @@ fun sp_vecl l1 l2 = case (l1,l2) of
 fun scalar_product v1 v2 = 
   let 
     val sum = ref 0.0
-    fun f (i,x) = (sum := x * Vector.sub (v2,i) + !sum)
+    fun f (i,x) = (sum := !sum + x * Vector.sub (v2,i))
   in
     Vector.appi f v1;
     !sum
@@ -62,6 +62,14 @@ fun mat_mult m inv =
   let fun f line = scalar_product line inv in Vector.map f m end
 
 fun mat_map f m = Vector.map (Vector.map f) m
+
+fun mat_app f m = 
+  let 
+    fun felem i (j,elem) = f i j
+    fun fline (i,line) = Vector.appi (felem i) line
+  in
+    Vector.appi fline m
+  end
 
 fun mat_tabulate f (linen,coln) =
   let fun mk_line i = Vector.tabulate (coln, f i) in
@@ -89,12 +97,28 @@ fun matl_add ml = case ml of
   | [m] => m
   | m :: contl => mat_add m (matl_add contl)
 
-fun matv_add mv =
-  let fun f i j = sum_real
-    (List.tabulate (Vector.length mv, fn k => mat_sub (Vector.sub (mv,k)) i j))
+
+fun mat_add_mem mem m =
+  let fun f i j = 
+    let val r = mat_sub mem i j in r := !r + mat_sub m i j end 
   in
-    mat_tabulate f (mat_dim (Vector.sub (mv,0)))
+    mat_app f mem
   end
+
+fun matl_add_mem mem ml = case ml of
+    [] => ()
+  | m :: cont => (mat_add_mem mem m; matl_add_mem mem cont)
+
+fun add_colrow mv i j =
+  let
+    val sum = ref 0.0 
+    fun g m = sum := !sum + (mat_sub m i j)  
+  in
+    Vector.app g mv; !sum
+  end
+
+fun matv_add mv = 
+  mat_tabulate (add_colrow mv) (mat_dim (Vector.sub (mv,0)))
 
 fun inv_dim (a,b) = (b,a)
 
