@@ -15,6 +15,14 @@ val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
+val dfind_alt = dfind
+val sum_dwll_alt = sum_dwll
+val update_nn_alt = update_nn
+
+fun dfind x y = Profile.profile "dfind" (dfind_alt x) y
+fun sum_dwll x = Profile.profile "sum_dwll" sum_dwll_alt x
+fun update_nn x y = Profile.profile "update_nn" (update_nn_alt x) y
+
 (* -------------------------------------------------------------------------
    Tools for computing the dimensions of neural network operators
    ------------------------------------------------------------------------- *)
@@ -180,8 +188,6 @@ fun mk_embedding_var (rv,ty) =
 (* -------------------------------------------------------------------------
    Forward propagation
    ------------------------------------------------------------------------- *)
-
-(* [|(1,[]),(35,[2,4]), *)
 
 fun fp_oper tnn fpdict tm =
   let
