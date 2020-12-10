@@ -595,4 +595,10 @@ fun SELECT_GOAL_LT pats = FIRST_LT (RENAME_TAC pats)
 
 fun (tac >~ pats) = tac THEN_LT SELECT_GOAL_LT pats
 
+fun SELECT_GOALS_LT pats = SELECT_LT (RENAME_TAC pats)
+
+fun SELECT_GOALS_LT_THEN pats tac = SELECT_LT (RENAME_TAC pats THEN tac)
+
+fun (tac >>~ pats) = tac THEN_LT SELECT_GOALS_LT pats
+
 end (* Q *)
