@@ -6,5 +6,16 @@ THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
 TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
 
-all: $(TARGETS)
+default: all
+
+sempre:
+	cd ../src &&\
+	Holmake sempre &&\
+	cd ../examples
+.PHONY: sempre
+
+theories: $(TARGETS)
+.PHONY: theories
+
+all: sempre $(TARGETS)
 .PHONY: all

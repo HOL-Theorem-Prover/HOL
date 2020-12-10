@@ -1,9 +1,25 @@
 #INCLUDES = $(POLYDIR)/basis/
 OPTIONS = QUIT_ON_FAILURE
+CLINE_OPTIONS=-j1
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
 TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
 
-all: $(TARGETS)
+default: all
+
+sempre:
+	cd ../sempre &&\
+        git clean -xfd &&\
+	./pull-dependencies core interactive &&\
+	ant core interactive &&\
+	cd ../src
+.PHONY: sempre
+
+all: sempre $(TARGETS)
 .PHONY: all
+
+clean: $(clean)
+	cd ../sempre &&\
+	git clean -xfd
+.PHONY: clean
