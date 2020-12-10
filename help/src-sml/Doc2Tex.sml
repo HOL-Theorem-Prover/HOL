@@ -92,7 +92,7 @@ fun print_verbblock (ss, ostr) =
       map (fn (a,b) => {redex = a, residue = b}) (mktheta(com,argl,argr))
   in
     out(ostr,"\\begin{Verbatim}[commandchars=" ^ String.concat[com,argl,argr] ^
-             "]\n");
+             "]");
     out(ostr, stringfindreplace.subst verbtheta (Substring.string ss));
     out(ostr, "\\end{Verbatim}\n")
   end
