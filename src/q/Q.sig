@@ -72,6 +72,10 @@ sig
   val SELECT_GOAL_LT         : tmquote list -> list_tactic
   val >~                     : ('a,'b)gentactic * tmquote list ->
                                ('a,'b)gentactic
+  val SELECT_GOALS_LT        : tmquote list -> list_tactic
+  val SELECT_GOALS_LT_THEN   : tmquote list -> tactic -> list_tactic
+  val >>~                    : ('a,'b)gentactic * tmquote list ->
+                               ('a,'b)gentactic
   val kRENAME_TAC            : tmquote list -> tactic -> tactic
   val coreRENAME_TAC         : tmquote list -> tactic -> tactic
 

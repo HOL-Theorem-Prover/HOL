@@ -166,6 +166,7 @@ val op suffices_by    = BasicProvers.suffices_by
 val sg                = BasicProvers.sg
 val subgoal           = BasicProvers.subgoal
 val op >~             = Q.>~
+val op >>~            = Q.>>~
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
