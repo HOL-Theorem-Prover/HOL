@@ -1,0 +1,241 @@
+# Types
+(rule $TypeNP (theorem) (ConstantFn en.theorem))
+# (rule $EntityNP1 ($PHRASE) (SimpleLexiconFn (type en.theorem)))
+
+(rule $TypeNP (domain) (ConstantFn en.domain))
+# (rule $EntityNP1 ($PHRASE) (SimpleLexiconFn (type en.domain)))
+
+(rule $TypeNP (effect) (ConstantFn en.effect))
+# (rule $EntityNP1 ($PHRASE) (SimpleLexiconFn (type en.effect)))
+
+(rule $TypeNP (operator) (ConstantFn en.operator))
+# (rule $EntityNP1 ($PHRASE) (SimpleLexiconFn (type en.operator)))
+
+(rule $TypeNP (side) (ConstantFn en.side))
+# (rule $EntityNP1 ($PHRASE) (SimpleLexiconFn (type en.side)))
+
+
+# Properties
+(rule $RelNP (domain) (ConstantFn (string theorem_domain)))
+(rule $RelNP (main operator) (ConstantFn (string theorem_main_operator)))
+(rule $RelNP (secondary operator) (ConstantFn (string theorem_sec_operator)))
+(rule $RelNP (side) (ConstantFn (string theorem_side)))
+
+(rule $VP (associates) (ConstantFn (string theorem_effect_associate)))
+(rule $VP (computes) (ConstantFn (string theorem_effect_compute)))
+(rule $VP (converts) (ConstantFn (string theorem_effect_convert)))
+(rule $VP (dissociates) (ConstantFn (string theorem_effect_dissociate)))
+(rule $VP (distributes) (ConstantFn (string theorem_effect_distribute)))
+(rule $VP (doubles) (ConstantFn (string theorem_effect_double)))
+(rule $VP (eliminates) (ConstantFn (string theorem_effect_eliminate)))
+(rule $VP (expands) (ConstantFn (string theorem_effect_expand)))
+(rule $VP (factorizes) (ConstantFn (string theorem_effect_factorize)))
+(rule $VP (halves) (ConstantFn (string theorem_effect_half)))
+(rule $VP (introduces) (ConstantFn (string theorem_effect_introduce)))
+(rule $VP (rotates) (ConstantFn (string theorem_effect_rotate)))
+(rule $VP (simplifies) (ConstantFn (string theorem_effect_simplify)))
+(rule $VP (splits) (ConstantFn (string theorem_effect_split)))
+(rule $VP (squares) (ConstantFn (string theorem_effect_square)))
+(rule $VP (symmetrizes) (ConstantFn (string theorem_effect_symmetry)))
+(rule $VP (zeros) (ConstantFn (string theorem_effect_zero)))
+
+# Entities
+# (added manually since SimpleLexiconFn doesn't appear to work in generate phase)
+(rule $EntityNP1 (numbers) (ConstantFn en.domain.num))
+(rule $EntityNP1 (the reals) (ConstantFn en.domain.real))
+
+(rule $EntityNP1 (cast) (ConstantFn en.operator.&))
+(rule $EntityNP1 (add) (ConstantFn en.operator.add))
+(rule $EntityNP1 (divide) (ConstantFn en.operator.divide))
+(rule $EntityNP1 (half) (ConstantFn en.operator.half))
+(rule $EntityNP1 (multiply) (ConstantFn en.operator.multiply))
+(rule $EntityNP1 (none) (ConstantFn en.operator.none))
+(rule $EntityNP1 (power) (ConstantFn en.operator.power))
+(rule $EntityNP1 (square) (ConstantFn en.operator.square))
+(rule $EntityNP1 (successor) (ConstantFn en.operator.suc))
+
+(rule $EntityNP1 (left) (ConstantFn en.side.left))
+(rule $EntityNP1 (right) (ConstantFn en.side.right))
+
+
+############################################################
+# Simplified General grammar
+#
+# SEMPRE's General grammar but without numeric properties, superlatives,
+# comparatives, aggregate, events, reverse relations, etc.
+
+(def @domain edu.stanford.nlp.sempre.overnight.SimpleWorld.domain)
+(def @singleton edu.stanford.nlp.sempre.overnight.SimpleWorld.singleton)
+(def @filter edu.stanford.nlp.sempre.overnight.SimpleWorld.filter)
+(def @getProperty edu.stanford.nlp.sempre.overnight.SimpleWorld.getProperty)
+(def @concat edu.stanford.nlp.sempre.overnight.SimpleWorld.concat)
+(def @arithOp edu.stanford.nlp.sempre.overnight.SimpleWorld.arithOp)
+(def @sortAndToString edu.stanford.nlp.sempre.overnight.SimpleWorld.sortAndToString)
+(def @listValue edu.stanford.nlp.sempre.overnight.SimpleWorld.listValue)
+
+############################################################
+# Base cases
+
+(when parse
+  # G1
+  # Generic values
+  (rule $EntityNP ($PHRASE) (NumberFn))
+  (rule $EntityNP ($PHRASE) (DateFn))
+
+  # Currently, just cheat and use the entities defined in the base grammar.
+  # In the future, want actually NER.
+  (rule $EntityNP ($EntityNP1) (IdentityFn))
+  (rule $EntityNP ($EntityNP2) (IdentityFn))
+  #(rule $EntityNP ($PHRASE) (FilterNerSpanFn PERSON ORGANIZATION LOCATION MISC))
+  #(rule $EntityNP ($PHRASE) (FilterPosTagFn span NNP))
+)
+
+(when (and parse general)
+  # G1
+  (rule $NP ($EntityNP) (IdentityFn))
+  # G2
+  (rule $NP ($TypeNP) (lambda t (call @getProperty (call @singleton (var t)) (string !type)))) # Unary
+)
+(when (and generate general)
+  (rule $UnaryNP ($TypeNP) (lambda t (call @getProperty (call @singleton (var t)) (string !type)))) # Unary
+)
+
+(when (and parse regex)
+  (rule $NP ($EntityNP) (IdentityFn))
+  (rule $NP ($TypeNP) (IdentityFn))
+)
+(when (and generate regex)
+  (rule $UnaryNP ($TypeNP) (IdentityFn))
+)
+
+############################################################
+# Complementizer phrase (filtering)
+
+(when (and parse general)
+  # R0
+  (rule $CP (that $VP) (lambda r (lambda s (call @filter (var s) (var r))))) # Vunary
+  # R1
+  (rule $CP (whose $RelNP is              $NP) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =)  (var n)))))) # Req
+  (rule $CP (whose $RelNP is not          $NP) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string !=) (var n)))))) # Rnot
+  # R2
+  (rule $CP (that     $VP/NP $NP) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =)  (var n)))))) # Vobj
+  (rule $CP (that not $VP/NP $NP) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string !=) (var n)))))) # Vobj-not
+)
+(when (and generate general)
+  # R0
+  (rule $CP00 (that $VP) (lambda r (lambda s (call @filter (var s) (var r))))) # Vunary
+  # R1
+  (rule $CP00 (whose $RelNP is $EntityNP1) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =) (var n)))))) # Req
+  (rule $CP1 (whose $RelNP is $NP0) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =) (var n)))))) # Req
+  (rule $CP0 (whose $RelNP is not $EntityNP1) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string !=) (var n)))))) # Rnot
+  # R2
+  (rule $CP00 (that $VP/NP $EntityNP1) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =) (var n)))))) # Vobj
+  (rule $CP0 (that not $VP/NP $EntityNP1) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string !=) (var n)))))) # Vobj-neg
+  (rule $CP1 (that $VP/NP $NP0) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =) (var n)))))) # Vobj
+  # R3
+  (rule $CP2 (that $VP/NP $NP1) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =) (var n)))))) # Vobj
+  (rule $CP2 (whose $RelNP is $NP1) (lambda r (lambda n (lambda s (call @filter (var s) (var r) (string =) (var n)))))) # Req
+)
+
+(when (and parse regex)
+  # I use modifier for negation, we did not have this negation in previous grammars
+  (rule $Modifier ($VP/NP $NP) (JoinFn forward betaReduce))
+  (rule $Modifier ($VP/NP1 $NP) (JoinFn forward betaReduce))
+  (rule $CP (that $Modifier) (IdentityFn))
+  (rule $CP (that not $Modifier) (lambda m (call + (string "~\(") (var m) (string "\)"))))
+)
+(when (and generate regex)
+  (rule $Modifier0 ($VP/NP $EntityNP1) (JoinFn forward betaReduce))
+  (rule $Modifier1 ($VP/NP $NP0) (JoinFn forward betaReduce))
+  (rule $Modifier0 ($VP/NP1 $EntityNP1) (JoinFn forward betaReduce))
+  (rule $Modifier1 ($VP/NP1 $NP0) (JoinFn forward betaReduce))
+  (rule $CP00 (that $Modifier0) (IdentityFn))
+  (rule $CP1 (that $Modifier1) (IdentityFn))
+  (rule $CP1 (that not $Modifier0) (lambda m (call + (string "~\(") (var m) (string "\)"))))
+)
+
+############################################################
+# Construct NPs from CPs
+
+(when (and parse general)
+  # G3
+  (rule $NPCP ($NP $CP) (JoinFn backward betaReduce))
+  (rule $NPCP ($NPCP and $CP) (JoinFn backward betaReduce))
+  (rule $NP ($NPCP) (IdentityFn)) 
+)
+(when (and generate general)
+  # G3
+  (rule $NP0 ($UnaryNP $CP00) (JoinFn backward betaReduce))
+  (rule $NP1 ($UnaryNP $CP0) (JoinFn backward betaReduce))
+  (rule $NP1 ($UnaryNP $CP1) (JoinFn backward betaReduce))
+  (rule $NPCP1 ($UnaryNP $CP00) (JoinFn backward betaReduce))
+  (rule $NP1 ($NPCP1 and $CP00) (JoinFn backward betaReduce)) 
+)
+
+# Regex
+(when (and parse regex)
+  (rule $CP ($CP and $CP) (lambda c1 (lambda c2 (call + (string "\(\(") (var c1) (string "\)&\(") (var c2) (string "\)\)")))))
+  (rule $NP ($NP $CP) (JoinFn betaReduce forward))
+)
+(when (and generate regex)
+  (rule $CP1 ($CP00 and $CP00) (lambda c1 (lambda c2 (call + (string "\(\(") (var c1) (string "\)&\(") (var c2) (string "\)\)")))))
+  (rule $NP1 ($UnaryNP $CP0) (JoinFn betaReduce forward))
+  (rule $NP1 ($UnaryNP $CP1) (JoinFn betaReduce forward))
+)
+
+############################################################
+# Transformations
+
+(when (and parse general)
+  # T1
+  (rule $NP ($RelNP of $NP) (lambda r (lambda s (call @getProperty (var s) (var r))))) # Tr
+  # T3
+  (rule $NP ($NP or $NP) (lambda n1 (lambda n2 (call @concat (var n1) (var n2))))) # Tdisj
+)
+(when (and generate general)
+  # T1
+  (rule $NP0 ($RelNP of $EntityNP1) (lambda r (lambda s (call @getProperty (var s) (var r))))) # Tr
+  # T3
+  (rule $NP0 ($EntityNP1 or $EntityNP2) (lambda n1 (lambda n2 (call @concat (var n1) (var n2))))) # Tdisj
+)
+
+(when (and parse regex)
+  (rule $NP ($NP or $NP) (lambda n1 (lambda n2 (call + (string "\(") (var n1) (string "|") (var n2) (string "\)")))))
+)
+(when (and generate regex)
+  # TODO - do we want "location of meeting"? I think not, probably only "area of california"??
+  (rule $NP0 ($EntityNP1 or $EntityNP2) (lambda n1 (lambda n2 (call + (string "\(") (var n1) (string "|") (var n2) (string "\)")))))
+)
+
+############################################################
+# Transformations: binary operators
+
+(when parse
+  # T4
+  (rule $BinaryOpRight ($BinaryOp $NP) (JoinFn betaReduce forward))
+  (rule $NP ($NP $BinaryOpRight) (JoinFn betaReduce backward))
+)
+(when generate
+  # T4
+  (rule $BinaryOpRight ($BinaryOp $EntityNP2) (JoinFn betaReduce forward))
+  (rule $NP0 ($EntityNP1 $BinaryOpRight) (JoinFn betaReduce backward))
+)
+
+############################################################
+# Top-level
+
+(when (and parse general)
+  (rule $ROOT ($NP) (lambda x (call @listValue (var x))))
+)
+(when (and generate general)
+  (rule $ROOT ($NP0) (lambda x (call @listValue (var x))))
+  (rule $ROOT ($NP1) (lambda x (call @listValue (var x))))
+)
+
+(when (and parse regex)
+  (rule $ROOT ($NP) (IdentityFn))
+)
+(when (and generate regex)
+  (rule $ROOT ($NP0) (IdentityFn))
+  (rule $ROOT ($NP1) (IdentityFn))
+)

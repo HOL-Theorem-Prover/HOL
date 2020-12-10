@@ -1,0 +1,50 @@
+{"lexeme": "POW_2", "formula": "en.theorem.POW_2", "type": "en.theorem"}
+{"lexeme": "GSYM POW_2", "formula": "en.theorem.GSYM_POW_2", "type": "en.theorem"}
+{"lexeme": "REAL", "formula": "en.theorem.REAL", "type": "en.theorem"}
+{"lexeme": "GSYM REAL", "formula": "en.theorem.GSYM_REAL", "type": "en.theorem"}
+{"lexeme": "REAL_ADD", "formula": "en.theorem.REAL_ADD", "type": "en.theorem"}
+{"lexeme": "GSYM REAL_ADD", "formula": "en.theorem.GSYM_REAL_ADD", "type": "en.theorem"}
+{"lexeme": "REAL_ADD_ASSOC", "formula": "en.theorem.REAL_ADD_ASSOC", "type": "en.theorem"}
+{"lexeme": "GSYM REAL_ADD_ASSOC", "formula": "en.theorem.GSYM_REAL_ADD_ASSOC", "type": "en.theorem"}
+{"lexeme": "REAL_ADD_LDISTRIB", "formula": "en.theorem.REAL_ADD_LDISTRIB", "type": "en.theorem"}
+{"lexeme": "GSYM REAL_ADD_LDISTRIB", "formula": "en.theorem.GSYM_REAL_ADD_LDISTRIB", "type": "en.theorem"}
+{"lexeme": "REAL_ADD_RDISTRIB", "formula": "en.theorem.REAL_ADD_RDISTRIB", "type": "en.theorem"}
+{"lexeme": "GSYM REAL_ADD_RDISTRIB", "formula": "en.theorem.GSYM_REAL_ADD_RDISTRIB", "type": "en.theorem"}
+{"lexeme": "REAL_ADD_SYM", "formula": "en.theorem.REAL_ADD_SYM", "type": "en.theorem"} "type": "en.theorem"}
+{"lexeme": "GSYM REAL_DIV_LZERO", "formula": "en.theorem.GSYM_REAL_DIV_LZERO", "type": "en.theorem"}
+{"lexeme": "REAL_DOUBLE", "formula": "en.theorem.REAL_DOUBLE", "type": "en.theorem"}
+{"lexeme": "GSYM REAL_DOUBLE", "formula": "en.theorem.GSYM_REAL_DOUBLE", "type": "en.theorem"}
+{"lexeme": "REAL_HALF_DOUBLE", "formula": "en.theorem.REAL_HALF_DOUBLE", "type": "en.theorem"}
+{"lexeme": "GSYM REAL_HALF_DOUBLE", "formula": "en.theorem.GSYM_REAL_HALF_DOUBLE", "type": "en.theorem"}
+{"lexeme": "REAL_MUL", "formula": "en.theorem.REAL_MUL", "type": "en.theorem"}
+{"lexeme": "GSYM REAL_MUL", "formula": "en.theorem.GSYM_REAL_MUL", "type": "en.theorem"}
+{"lexeme": "numbers", "formula": "en.domain.num", "type": "en.domain"}
+{"lexeme": "the reals", "formula": "en.domain.real", "type": "en.domain"}
+{"lexeme": "associate", "formula": "en.effect.associate", "type": "en.effect"}
+{"lexeme": "compute", "formula": "en.effect.compute", "type": "en.effect"}
+{"lexeme": "convert", "formula": "en.effect.convert", "type": "en.effect"}
+{"lexeme": "dissociate", "formula": "en.effect.dissociate", "type": "en.effect"}
+{"lexeme": "distribute", "formula": "en.effect.distribute", "type": "en.effect"}
+{"lexeme": "double", "formula": "en.effect.double", "type": "en.effect"}
+{"lexeme": "eliminate", "formula": "en.effect.eliminate", "type": "en.effect"}
+{"lexeme": "expand", "formula": "en.effect.expand", "type": "en.effect"}
+{"lexeme": "factorize", "formula": "en.effect.factorize", "type": "en.effect"}
+{"lexeme": "half", "formula": "en.effect.half", "type": "en.effect"}
+{"lexeme": "introduce", "formula": "en.effect.introduce", "type": "en.effect"}
+{"lexeme": "rotate", "formula": "en.effect.rotate", "type": "en.effect"}
+{"lexeme": "simplify", "formula": "en.effect.simplify", "type": "en.effect"}
+{"lexeme": "split", "formula": "en.effect.split", "type": "en.effect"}
+{"lexeme": "square", "formula": "en.effect.square", "type": "en.effect"}
+{"lexeme": "symmetry", "formula": "en.effect.symmetry", "type": "en.effect"}
+{"lexeme": "zero", "formula": "en.effect.zero", "type": "en.effect"}
+{"lexeme": "cast", "formula": "en.operator.&", "type": "en.operator"}
+{"lexeme": "add", "formula": "en.operator.add", "type": "en.operator"}
+{"lexeme": "divide", "formula": "en.operator.divide", "type": "en.operator"}
+{"lexeme": "half", "formula": "en.operator.half", "type": "en.operator"}
+{"lexeme": "multiply", "formula": "en.operator.multiply", "type": "en.operator"}
+{"lexeme": "none", "formula": "en.operator.none", "type": "en.operator"}
+{"lexeme": "power", "formula": "en.operator.power", "type": "en.operator"}
+{"lexeme": "square", "formula": "en.operator.square", "type": "en.operator"}
+{"lexeme": "successor", "formula": "en.operator.suc", "type": "en.operator"}
+{"lexeme": "left", "formula": "en.side.left", "type": "en.side"}
+{"lexeme": "right", "formula": "en.side.right", "type": "en.side"}
