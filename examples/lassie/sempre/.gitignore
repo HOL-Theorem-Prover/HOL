@@ -41,6 +41,8 @@ rdf
 int-output*
 int-backup
 interactive/.ipynb_checkpoints
+interactive/lassie.lexicon
+interactive/sempre-out-socket.sml
 # Community server logs
 community-server/data
 community-server/data-backup
