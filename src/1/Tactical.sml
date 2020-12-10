@@ -599,6 +599,41 @@ fun FIRST_LT tac gs =
       recurse [] gs
     end
 
+(* ----------------------------------------------------------------------
+    SELECT_LT : tactic -> list_tactic
+
+    Given a list of goals, tries to apply tactic argument to all of
+    them in turn. This generates a new list of goals consisting of the output
+    of the successful tactic applications concatenated with the remaining
+    original goals.
+    This is similar to FIRST_LT, but:
+      - if there are multiple goals for which the tactic succeeds, SELECT_LT
+        will apply the tactic to all these goals;
+      - if there is no goal for which the tactic succeeds, SELECT_LT will
+        not give an error - instead the goal state will simply remain unchanged.
+   ---------------------------------------------------------------------- *)
+
+fun SELECT_LT tac goals =
+  let fun recurse failed goals =
+    case goals of
+      [] => ([], List.rev failed, fn v => v)
+    | g::gs =>
+      (case Lib.total tac g of
+        NONE => recurse (g::failed) gs
+      | SOME (sgoals, valid) =>
+          let val (success, failed', vld) = recurse [] gs
+              fun validation thms =
+                let val (sgs, rest) = Lib.split_after (length sgoals) thms
+                    val (succ, rest) = Lib.split_after (length success) rest
+                    val (fail, rest) = Lib.split_after (length failed) rest
+                    val (fail', _) = Lib.split_after (length failed') rest
+                in fail @ [valid sgs] @ (vld (succ @ fail')) end
+          in
+            (sgoals @ success, List.revAppend(failed, failed'), validation)
+          end)
+      val (successful, failed, validation) = recurse [] goals
+  in (successful @ failed, validation) end
+
 (*---------------------------------------------------------------------------
  * Uses first tactic that proves the goal.
  *    FIRST_PROVE [TAC1;...;TACn] =
