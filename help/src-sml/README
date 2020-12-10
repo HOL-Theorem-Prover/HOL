@@ -29,16 +29,12 @@ the directory help/Docfiles. Each file must have the format
    <structure-name>.<id>.doc  or
    <structure-name>.doc
 
-If <id> is a symbolic identifier (not alphanumeric) then an alphanumeric
-name <alpha> has to be invented for it. Thus the file name will be
-<structure-name>.<alpha>.doc. The structure "Symbolic" must then be
-augmented as well, in order that the system can do the proper
-translations between <id> and <alpha>. See
+If <id> is a symbolic identifier (not alphanumeric) then an
+alphanumeric encoding of the name must be used. This name can be found
+by calling the function UC_ASCII_Encode.encode in a HOL session. The name
+must be separated from its structure name by two full-stops:
 
-    help/Docfiles/Parse.minus2.doc 
-
-for an example, noting well how alphanumeric variants are *not* used in
-the SEEALSO field. 
+   <structure-name>..<encoded-name>.doc
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 File mosml/src/doc/helpsigs/README
@@ -50,17 +46,17 @@ because of the filename name truncation in DOS.
 The program illustrates the use of several libraries.
 
 The main program is makebase.  It reads the signatures in directory
-mosml/lib/ and creates 
+mosml/lib/ and creates
 
     * a help database in helpsigs.val
     * an ASCII format version of the database in index.txt
     * a LaTeX format version of the database in ../index.tex
     * HTML versions of the signature files, and an identifier index,
       with hyperlinks, in directory htmlsigs
-    * a LaTeX format version of the signature files, with layout and 
-      \index{...} markup, in file ../texsigsigs.tex 
+    * a LaTeX format version of the signature files, with layout and
+      \index{...} markup, in file ../texsigsigs.tex
 
-To create the main program, type        
+To create the main program, type
 
         make
 

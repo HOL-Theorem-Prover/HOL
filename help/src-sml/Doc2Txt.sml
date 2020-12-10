@@ -139,8 +139,9 @@ in
 end
 
 fun do_one_file docdir destdir dname = let
-  val file = parse_file (OS.Path.concat(docdir, dname ^ ".doc"))
-  val outputstr = TextIO.openOut (OS.Path.concat(destdir, dname ^ ".txt"))
+  open OS.Path
+  val file = parse_file (concat(docdir, dname))
+  val outputstr = TextIO.openOut (concat(destdir, base dname ^ ".txt"))
 in
   print_docpart (file, outputstr);
   app (write_section outputstr) file;
@@ -153,11 +154,11 @@ fun main () =
     case CommandLine.arguments() of
       [docdir, destdir] => let
         val docfiles = find_docfiles docdir
-        open Binaryset
+        open Binarymap
         val (tick,finish) =
             Flash.initialise ("Directory "^docdir^": ", numItems docfiles)
       in
-        app (fn d => (do_one_file docdir destdir d; tick())) docfiles;
+        app (fn (_,d) => (do_one_file docdir destdir d; tick())) docfiles;
         finish();
         OS.Process.exit OS.Process.success
       end

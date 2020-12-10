@@ -185,12 +185,11 @@ val sections = [#"a", #"b", #"c", #"d", #"e", #"f", #"g", #"h",
 
 val current_section = ref 0; (* starting from A *)
 
-fun do_the_work dir dset outstr = let
-  fun appthis dnm = let
-    val _ = if !verbose then warn ("Processing "^dnm) else ()
-    val cname = core_dname dnm
-    val file = parse_file (OS.Path.concat(dir,dnm ^ ".doc"))
-               handle ParseError msg => die ("Parse error in "^dnm^": "^msg)
+fun do_the_work dir dmap outstr = let
+  fun appthis ((str,cname),dfile) = let
+    val _ = if !verbose then warn ("Processing "^dfile) else ()
+    val file = parse_file (OS.Path.concat(dir,dfile))
+               handle ParseError msg => die ("Parse error in "^dfile^": "^msg)
 
     val current_char = String.sub (cname,0)
     val section_char = List.nth (sections,!current_section)
@@ -206,10 +205,10 @@ fun do_the_work dir dset outstr = let
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
-  end handle e => die ("Exception raised (" ^ dnm ^ ".doc): " ^
+  end handle e => die ("Exception raised (" ^ dfile ^"): " ^
                        General.exnMessage e)
 in
-  Binaryset.app appthis dset
+  Binarymap.app appthis dmap
 end
 
 fun main () = let

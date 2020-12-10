@@ -151,7 +151,7 @@ fun mkbase (entries : Database.entry list) =
 fun mk_HOLdocfile_entry (dir,s) =
  let val content =String.substring(s,0,size s - 4)
  in
-    {comp=Database.Term(Symbolic.tosymb content, SOME"HOL"),
+    {comp=Database.Term(ParseDoc.decode_stem content, SOME"HOL"),
      file=normPath[dir,s], line=0}
  end
 
