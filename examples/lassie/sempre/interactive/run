@@ -59,7 +59,7 @@ def header(modules='core', codalabDependencies=nil)
   nil)
 end
 
-def figOpts; l(selo(:pooldir, 'execDir', 'exec', '_OUTPATH_'), o('overwriteExecDir'), o('addToView', 0)) end
+def figOpts; l(selo(:pooldir, 'execDir', 'exec', '_OUTPATH_'), o('overwriteExecDir'), o('addToView', 0), o('monitor', 'false')) end
 
 ############################################################
 # Unit tests
@@ -221,7 +221,7 @@ addMode('lassie', 'interactive semantic parsing for proving theorems in HOL4', l
   #rlwrap,
   header('core,interactive'),
   'edu.stanford.nlp.sempre.Main',
-  #figOpts,
+  figOpts,
   o('interactive'),
   o('masterType', 'edu.stanford.nlp.sempre.interactive.InteractiveMaster'),
 
@@ -236,7 +236,7 @@ addMode('lassie', 'interactive semantic parsing for proving theorems in HOL4', l
   o('HOLOntology.lexPath', "./#{$path}/lassie.lexicon"),
   # o('HOLOntology.seedGrammarPath', "./#{$path}/lassie.seed.grammar"),
   # o('HOLOntology.genGrammarPath', "./#{$path}/lassie.generated.grammar"),
-  
+
   o('Params.initWeightsRandomly', false),
   o('Grammar.binarizeRules', false),
   o('Grammar.useApplyFn', 'interactive.ApplyFn'),
