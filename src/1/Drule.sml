@@ -803,7 +803,6 @@ fun REORDER_ANTS_MOD f g th =
   in Lib.itlist DISCH (f ants) (g (SPEC_ALL uth)) end ;
 
 fun REORDER_ANTS f th = REORDER_ANTS_MOD f (fn c => c) th ;
-fun MODIFY_CONS g th = REORDER_ANTS_MOD (fn hs => hs) g th ;
 
 (*---------------------------------------------------------------------------*
  * Use the conclusion of the first theorem to delete a hypothesis of         *
