@@ -1,12 +1,6 @@
-#INCLUDES = $(POLYDIR)/basis/
-OPTIONS = QUIT_ON_FAILURE
 CLINE_OPTIONS=-j1
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
-TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
-
-default: all
+default: LassieTestTheory.sml
 
 sempre:
 	cd ../sempre &&\
@@ -16,10 +10,12 @@ sempre:
 	cd ../src
 .PHONY: sempre
 
-all: sempre $(TARGETS)
+LassieTestTheory.sml: sempre
+
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-clean: $(clean)
+sempre_clean: $(clean)
 	cd ../sempre &&\
 	git clean -xfd
-.PHONY: clean
+.PHONY: sempre_clean

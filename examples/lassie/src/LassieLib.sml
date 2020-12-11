@@ -39,11 +39,11 @@ struct
 
   val lastUtterance = ref "";
 
-  val HOLDIR =
+  (* val HOLDIR =
     let val lDir = getOSVar "HOLDIR" in
-    if (endsWith lDir #"/") then lDir else (lDir ^ "/") end;
+    if (endsWith lDir #"/") then lDir else (lDir ^ "/") end; *)
 
-  val LASSIEDIR = HOLDIR ^ ("examples/lassie");
+  val LASSIEDIR = Globals.HOLDIR ^ ("/examples/lassie");
 
   val historyPath = LASSIEDIR ^ "sempre/interactive/last-sempre-output.sml";
 
