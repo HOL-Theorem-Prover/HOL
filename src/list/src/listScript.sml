@@ -3636,13 +3636,21 @@ val SUM_MAP_PLUS = Q.store_thm("SUM_MAP_PLUS",
    ‘!f g ls. SUM (MAP (\x. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)’,
    NTAC 2 GEN_TAC >> Induct >> simp [SUM])
 
-val TAKE_LENGTH_ID_rwt = Q.store_thm("TAKE_LENGTH_ID_rwt",
-   ‘!l m. (m = LENGTH l) ==> (TAKE m l = l)’,
-   rw [TAKE_LENGTH_ID])
+Theorem TAKE_LENGTH_ID_rwt: !l m. (m = LENGTH l) ==> (TAKE m l = l)
+Proof rw [TAKE_LENGTH_ID]
+QED
 
-val TAKE_LENGTH_ID_rwt = Q.store_thm("TAKE_LENGTH_ID_rwt",
-   ‘!l m. (m = LENGTH l) ==> (TAKE m l = l)’,
-   rw [TAKE_LENGTH_ID])
+Theorem TAKE_LENGTH_ID_rwt2[simp]:
+   !l m. TAKE m l = l <=> LENGTH l <= m
+Proof
+  Induct >> simp[] >> Cases_on ‘m’ >> simp[]
+QED
+
+Theorem DROP_EQ_NIL_rwt[simp]:
+  !l m. DROP m l = [] <=> LENGTH l <= m
+Proof
+  Induct >> simp[] >> Cases_on ‘m’ >> simp[]
+QED
 
 val ZIP_DROP = Q.store_thm("ZIP_DROP",
    ‘!a b n. n <= LENGTH a /\ (LENGTH a = LENGTH b) ==>
