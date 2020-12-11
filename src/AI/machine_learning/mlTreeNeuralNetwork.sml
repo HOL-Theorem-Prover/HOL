@@ -15,6 +15,7 @@ val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
+(*
 val dfind_alt = dfind
 val sum_dwll_alt = sum_dwll
 val update_nn_alt = update_nn
@@ -22,6 +23,7 @@ val update_nn_alt = update_nn
 fun dfind x y = Profile.profile "dfind" (dfind_alt x) y
 fun sum_dwll x = Profile.profile "sum_dwll" sum_dwll_alt x
 fun update_nn x y = Profile.profile "update_nn" (update_nn_alt x) y
+*)
 
 (* -------------------------------------------------------------------------
    Tools for computing the dimensions of neural network operators
@@ -75,14 +77,14 @@ fun random_tnn_std (nlayer,dim) operl =
 fun prepare_tnn tnn =
   let 
     val termnnl = dlist tnn 
-    val termid = dnew Term.compare (number_snd 0 (map fst termnnl))
+    val operd = dnew Term.compare (number_snd 0 (map fst termnnl))
     val nnv = Vector.fromList (map snd termnnl)
   in
-    (termid,nnv)
+    (nnv,operd)
   end
   
-fun unprepare_tnn (termid,nnv) =
-  dnew Term.compare (combine (dkeys termid, vector_to_list nnv))
+fun unprepare_tnn (nnv,operd) =
+  dnew Term.compare (combine (dkeys operd, vector_to_list nnv))
 
 (* -------------------------------------------------------------------------
    TNN I/O
@@ -152,108 +154,115 @@ fun order_subtm tml =
     map snd subtml
   end
 
-fun prepare_tnnex tnnex =
-  let  
-    fun f x = (order_subtm (map fst x), map_snd scale_out x) 
+fun index_graph operd subtml =
+  let
+    val subtmil = number_snd 0 subtml
+    val subtmd = dnew Term.compare subtmil
+    fun f (subtm,i) = 
+      let val (oper,argl) = strip_comb subtm in
+        (i, (dfind oper operd, map (fn x => dfind x subtmd) argl))
+      end
+  in
+    (map f subtmil, subtmd)
+  end
+
+fun prepare_tnnex operd tnnex =
+  let fun f x = 
+    let 
+      val tml = map fst x
+      val (graph, subtmd) = index_graph operd (order_subtm tml) 
+      val ievl =
+        let fun g (tm,rl) = (dfind tm subtmd, scale_out rl) in
+          map g x
+        end
+    in
+      (graph,ievl)
+    end
   in
     map f tnnex
   end
 
 (* -------------------------------------------------------------------------
-   Fixed embedding
-   ------------------------------------------------------------------------- *)
-
-val embedding_prefix = "embedding_"
-
-fun is_embedding v =
-  is_var v andalso String.isPrefix embedding_prefix (fst (dest_var v))
-
-fun embed_nn v =
-  if is_embedding v then
-    let
-      val vs = fst (dest_var v)
-      val n1 = String.size embedding_prefix
-      val ntot = String.size vs
-      val es = String.substring (vs,n1,ntot-n1)
-      val e1 = string_to_reall es
-      val e2 = map (fn x => Vector.fromList [x]) e1
-    in
-      [{a = idactiv, da = didactiv, w = Vector.fromList e2}]
-    end
-  else msg_err "embed_nn" (tts v)
-
-fun mk_embedding_var (rv,ty) =
-  mk_var (embedding_prefix ^ reall_to_string (vector_to_list rv), ty)
-
-(* -------------------------------------------------------------------------
    Forward propagation
    ------------------------------------------------------------------------- *)
 
-fun fp_oper tnn fpdict tm =
+fun empty_fpv n = Vector.tabulate (n, fn _ => [])
+
+fun fp_oper tnn fpv (oper,argl) =
   let
-    val (f,argl) = strip_comb tm
-    val nn = (dfind f) tnn handle NotFound => embed_nn f
-    val invl = (map (fn x => #outnv (last (dfind x fpdict)))) argl
+    val nn = Vector.sub (tnn,oper)
+    fun nn_out x = #outnv (last (Vector.sub (fpv,x)))
+    val invl = map nn_out argl
     val inv = Vector.concat invl
   in
     fp_nn nn inv
   end
-  handle Subscript => msg_err "fp_oper" (tts tm)
+  handle Subscript => msg_err "fp_oper" (its oper)
 
-fun fp_tnn_aux tnn fpdict tml = case tml of
-    []      => fpdict
-  | tm :: m =>
-    let val fpdatal = fp_oper tnn fpdict tm in
-      fp_tnn_aux tnn (dadd tm fpdatal fpdict) m
+fun fp_tnn_loop tnn fpv graph = case graph of
+    []      => fpv
+  | (subtm,(oper,argl)) :: m =>
+    let 
+      val fpdatal = fp_oper tnn fpv (oper,argl) 
+      val newfpv = Vector.update (fpv,subtm,fpdatal)
+    in
+      fp_tnn_loop tnn newfpv m
     end
 
-fun fp_tnn tnn tml = fp_tnn_aux tnn (dempty Term.compare) tml
+fun fp_tnn tnn graph = 
+  fp_tnn_loop tnn (empty_fpv (length graph)) graph
 
 (* -------------------------------------------------------------------------
    Backward propagation
    ------------------------------------------------------------------------- *)
 
-fun sum_operdwll (oper,dwll) = [sum_dwll dwll]
+fun mat_add_cpl (m1,m2) = mat_add m1 m2
+
+fun update_wud wud (oper,operdwl) =
+  dadd oper (map mat_add_cpl (combine (operdwl, dfind oper wud))) wud
+  handle NotFound => 
+  dadd oper operdwl wud
+ 
+fun update_gradv ((subtm,doutnv),gradv) =
+  Vector.update (gradv, subtm, vect_add (Vector.sub (gradv,subtm)) doutnv)
 
 fun dimout_fpdatal fpdatal = Vector.length (#outnv (last fpdatal))
-fun dimout_tm fpdict tm = dimout_fpdatal (dfind tm fpdict)
+fun dimout_subtm fpv subtm = dimout_fpdatal (Vector.sub (fpv,subtm))
 
-fun bp_tnn_aux doutnvdict fpdict bpdict revtml = case revtml of
-    []      => dmap sum_operdwll bpdict
-  | tm :: m =>
+fun bp_tnn_loop fpv gradv wud revgraph = case revgraph of
+    [] => wud
+  | (subtm,(oper,argl)) :: m =>
     let
-      val (oper,argl) = strip_comb tm
-      val diml = map (dimout_tm fpdict) argl
-      val doutnvl = dfind tm doutnvdict
-      val doutnvsum = add_vectl doutnvl
-      fun f doutnv =
-        let
-          val fpdatal = dfind tm fpdict
-          val bpdatal = bp_nn_doutnv fpdatal doutnv
-          val dinv = vector_to_list (#dinv (hd bpdatal))
-          val dinvl = map Vector.fromList (part_group diml dinv)
-        in
-          (map #dw bpdatal, combine (argl,dinvl))
-        end
-      val (operdwl,tmdinvl) = f (add_vectl doutnvl)
-      val newdoutnvdict = dappendl tmdinvl doutnvdict
-      val newbpdict = dappend (oper,operdwl) bpdict
+      val diml = map (dimout_subtm fpv) argl
+      val grad = Vector.sub (gradv,subtm)
+      val fpdatal = Vector.sub (fpv,subtm)
+      val bpdatal = bp_nn_doutnv fpdatal grad
+      val dinv = vector_to_list (#dinv (hd bpdatal))
+      val dinvl = map Vector.fromList (part_group diml dinv)
+      val operdwl = map #dw bpdatal  
+      val newgradv = foldl update_gradv gradv (combine (argl,dinvl))
+      val newwud = update_wud wud (oper,operdwl)
     in
-      bp_tnn_aux newdoutnvdict fpdict newbpdict m
+      bp_tnn_loop fpv newgradv newwud m
     end
 
-fun bp_tnn fpdict (tml,tmevl) =
+fun zero_vect n = Vector.tabulate (n, fn _ => 0.0)   
+
+fun bp_tnn fpv (graph,ievl) =
   let
-    fun f (tm,ev) =
+    val gradv0 = 
+      Vector.tabulate (Vector.length fpv, 
+        fn subtm => zero_vect (dimout_subtm fpv subtm))
+    fun f (subtm,ev) =
       let
-        val fpdatal = dfind tm fpdict
+        val fpdatal = Vector.sub (fpv,subtm)
         val doutnv = diff_rvect ev (#outnv (last fpdatal))
       in
-        (tm,[doutnv])
+        (subtm,doutnv)
       end
-    val doutnvdict = dnew Term.compare (map f tmevl)
+    val gradv = foldl update_gradv gradv0 (map f ievl)
   in
-    bp_tnn_aux doutnvdict fpdict (dempty Term.compare) (rev tml)
+    bp_tnn_loop fpv gradv (dempty Int.compare) (rev graph)
   end
 
 (* -------------------------------------------------------------------------
@@ -262,71 +271,67 @@ fun bp_tnn fpdict (tml,tmevl) =
 
 fun infer_tnn tnn tml =
   let
-    val fpdict = fp_tnn tnn (order_subtm tml)
-    fun f x = descale_out (#outnv (last (dfind x fpdict)))
+    val (ptnn,operd) = prepare_tnn tnn
+    val (graph,subtmd) = index_graph operd (order_subtm tml) 
+    val fpv = fp_tnn ptnn graph
+    fun f x = descale_out (#outnv (last (Vector.sub (fpv,x))))
   in
-    map_assoc f tml
+    map_assoc (f o (fn x => dfind x subtmd)) tml
   end
 
 fun infer_tnn_basic tnn tm =
   singleton_of_list (snd (singleton_of_list (infer_tnn tnn [tm])))
 
-fun precomp_embed tnn tm =
-  let
-    val fpdict = fp_tnn tnn (order_subtm [tm])
-    val embedv = #outnv (last (dfind tm fpdict))
-  in
-    mk_embedding_var (embedv, type_of tm)
-  end
-
 (* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
 
-fun se_of fpdict (tm,ev) =
+fun se_of fpv (i,ev) =
   let
-    val fpdatal = dfind tm fpdict
-    val doutnv = diff_rvect ev (#outnv (last fpdatal))
-    val r1 = vector_to_list doutnv
+    val fpdatal = Vector.sub (fpv,i)
+    val grad = diff_rvect ev (#outnv (last fpdatal))
+    val r1 = vector_to_list grad
     val r2 = map (fn x => x * x) r1
   in
     Math.sqrt (average_real r2)
   end
 
-fun mse_of fpdict tmevl = average_real (map (se_of fpdict) tmevl)
+fun mse_of fpv ievl = average_real (map (se_of fpv) ievl)
 
-fun fp_loss tnn (tml,tmevl) = mse_of (fp_tnn tnn tml) tmevl
+fun fp_loss tnn (graph,ievl) = mse_of (fp_tnn tnn graph) ievl
 
-fun train_tnn_one tnn (tml,tmevl) =
+fun train_tnn_one tnn (graph,ievl) =
   let
-    val fpdict = fp_tnn tnn tml
-    val bpdict = bp_tnn fpdict (tml,tmevl)
+    val fpv = fp_tnn tnn graph
+    val wud = bp_tnn fpv (graph,ievl)
   in
-    (bpdict, mse_of fpdict tmevl)
+    (wud, mse_of fpv ievl)
   end
+
+fun sum_operdwll (oper,dwll) = sum_dwll dwll
+fun regroup_wud wudl =
+  dmap sum_operdwll (dregroup Int.compare (List.concat (map dlist wudl)))
 
 fun train_tnn_subbatch tnn subbatch =
-  let val (bpdictl,lossl) = split (map (train_tnn_one tnn) subbatch) in
-    (dmap sum_operdwll (dconcat Term.compare bpdictl), lossl)
+  let val (wudl,lossl) = split (map (train_tnn_one tnn) subbatch) in
+    (regroup_wud wudl, lossl)
   end
 
-fun update_oper param ((oper,dwll),tnn) =
-  if is_embedding oper then tnn else
+fun update_oper param ((oper,dwl),tnn) =
   let
-    val nn = dfind oper tnn
-    val dwl = sum_dwll dwll
+    val nn = Vector.sub (tnn,oper)
     val newnn = update_nn param nn dwl
   in
-    dadd oper newnn tnn
+    Vector.update (tnn,oper,newnn)
   end
 
 fun train_tnn_batch param pf tnn batch =
   let
     val subbatchl = cut_modulo (#ncore param) batch
-    val (bpdictl,lossll) = split (pf (train_tnn_subbatch tnn) subbatchl)
-    val bpdict = dconcat Term.compare bpdictl
+    val (wudl,lossll) = split (pf (train_tnn_subbatch tnn) subbatchl)
+    val wud = regroup_wud wudl
   in
-    (foldl (update_oper param) tnn (dlist bpdict),
+    (foldl (update_oper param) tnn (dlist wud),
      average_real (List.concat lossll))
   end
 
@@ -399,10 +404,14 @@ fun train_tnn schedule randtnn (trainex,testex) =
     val _ = print_endline ("\ntraining set: " ^ stats_tnnex trainex)
     val _ = print_endline ("testing set: " ^ stats_tnnex testex)
     val _ = print_endline ""
-    val (tnn,t) = add_time (train_tnn_schedule schedule randtnn)
-      (prepare_tnnex trainex, prepare_tnnex testex)
+    val (ptnn,operd) = prepare_tnn randtnn
+    val (ptrainex,ptestex) = 
+      (prepare_tnnex operd trainex, prepare_tnnex operd testex)
+   val (tnn,t) = add_time (train_tnn_schedule schedule ptnn)
+     (ptrainex, ptestex)
   in
-    print_endline ("Tree neural network training time: " ^ rts t); tnn
+    print_endline ("Tree neural network training time: " ^ rts t); 
+    unprepare_tnn (tnn,operd)
   end
 
 (* -------------------------------------------------------------------------
@@ -483,7 +492,9 @@ val traintnn_extspec =
 (*
 load "aiLib"; open aiLib;
 load "psTermGen"; open psTermGen;
+load "smlRedirect"; open smlRedirect;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+hide_in_file "load_errors" load "mlTreeNeuralNetwork";
 
 (* terms *)
 val vx = mk_var ("x",alpha);

@@ -14,6 +14,7 @@ sig
   val sp_vecl        : real list -> real list -> real
   val scalar_mult    : real -> vect -> vect
   val add_vectl      : vect list -> vect
+  val vect_add       : vect -> vect -> vect
   (* matrix *)
   val mat_mult     : mat -> vect -> vect
   val mat_smult    : real -> mat -> mat
