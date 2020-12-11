@@ -651,6 +651,8 @@ val NORMLIT_phase1 =
     PURE_REWRITE_CONV [NEG_FRAC, NEG_DENOM, NEG_INV, REAL_NEGNEG, INV_1OVER]
 val GCDELIM = REAL_REDUCE
 
+fun is_real_posliteral t =
+    is_real_literal t andalso not (is_negated t)
 fun is_real_fraction t =
     is_real_literal t orelse
     case Exn.capture dest_div t of
@@ -782,6 +784,20 @@ local
                            TRY_CONV (REWR_CONV NEG_MINUS1')) t
                         else PURE_REWRITE_CONV [REAL_MUL_ASSOC] t
         | _ => ALL_CONV t
+  fun elim1div t =
+      case total dest_div t of
+          NONE => ALL_CONV t
+        | SOME (l,r) => if is_real_literal l then
+                          if is_real_literal r then
+                            if is_negated r then REWR_CONV (cj 2 neg_rat) t
+                            else ALL_CONV t
+                          else REWR_CONV real_div t
+                        else REWR_CONV real_div t
+  fun elimdivs t =
+      case total dest_mult t of
+          SOME _ => BINOP_CONV elimdivs t
+        | NONE => if is_div t then (BINOP_CONV elimdivs THENC elim1div) t
+                  else ALL_CONV t
 in
   fun REALMULCANON t =
       let
@@ -789,12 +805,22 @@ in
             case total dest_mult t of
                 SOME(t1,t2) => strip (t2::A) t1
               | NONE => t::A
-        val (l,r) = dest_mult t handle HOL_ERR _ => raise UNCHANGED
-        val ts = strip [] (if is_real_fraction l then r else t)
+        val ((l,r),divp) = (dest_mult t, false) handle HOL_ERR _ =>
+                           (dest_div t, true) handle HOL_ERR _ =>
+                                                     raise UNCHANGED
+        fun is_baddiv t =
+            case Lib.total dest_div t of
+                NONE => false
+              | SOME (l,r) => not (is_real_literal l) orelse
+                              not (is_real_literal r) orelse is_negated r
+        val ts = strip [] (if is_real_fraction l andalso not divp then r
+                           else t)
       in
-        if List.exists (fn t => is_mult t orelse is_literalish t) ts orelse
+        if List.exists (fn t => is_literalish t orelse is_mult t orelse
+                                is_baddiv t) ts orelse
            not (oksort mulcompare ts)
         then
+          elimdivs THENC REWRITE_CONV [REAL_INV_MUL'] THENC
           AC_Sort.sort mulsort THENC
           TRY_CONV (REWR_CONV REAL_MUL_LID) THENC
           AC_Sort.sort mulsort THENC

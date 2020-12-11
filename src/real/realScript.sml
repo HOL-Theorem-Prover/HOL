@@ -1130,18 +1130,15 @@ val REAL_INV_MUL = store_thm("REAL_INV_MUL",
   GEN_REWR_TAC RAND_CONV  [GSYM REAL_MUL_LID] THEN
   BINOP_TAC THEN MATCH_MP_TAC REAL_MUL_LINV THEN ASM_REWRITE_TAC[]);
 
-(* Stronger version
-val REAL_INV_MUL = store_thm("REAL_INV_MUL",
- Term`!x y. inv(x * y) = inv(x) * inv(y)`,
+(* Stronger version *)
+Theorem REAL_INV_MUL':
+  !x y. inv(x * y) = inv(x) * inv(y)
+Proof
   REPEAT GEN_TAC THEN
-  MAP_EVERY ASM_CASES_TAC [Term`x = 0`, Term`y = 0`] THEN
+  MAP_EVERY Cases_on [‘x = 0’, ‘y = 0’] THEN
   ASM_REWRITE_TAC[REAL_INV_0, REAL_MUL_LZERO, REAL_MUL_RZERO] THEN
-  MATCH_MP_TAC REAL_MUL_LINV_UNIQ THEN
-  ONCE_REWRITE_TAC
-     [AC REAL_MUL_AC (Term`(a * b) * (c * d) = (a * c) * (b * d)`)] THEN
-  EVERY_ASSUM(SUBST1_TAC o MATCH_MP REAL_MUL_LINV) THEN
-  REWRITE_TAC[REAL_MUL_LID])
-*)
+  MATCH_MP_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []
+QED
 
 Theorem REAL_LE_LMUL:
   !x y z. 0 < x ==> ((x * y) <= (x * z) = y <= z)
