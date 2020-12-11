@@ -218,7 +218,7 @@ fun fp_tnn tnn graph =
 
 fun mat_add_cpl (m1,m2) = mat_add m1 m2
 
-fun update_wud wud (oper,operdwl) =
+fun update_wud ((oper,operdwl), wud) =
   dadd oper (map mat_add_cpl (combine (operdwl, dfind oper wud))) wud
   handle NotFound => 
   dadd oper operdwl wud
@@ -241,7 +241,7 @@ fun bp_tnn_loop fpv gradv wud revgraph = case revgraph of
       val dinvl = map Vector.fromList (part_group diml dinv)
       val operdwl = map #dw bpdatal  
       val newgradv = foldl update_gradv gradv (combine (argl,dinvl))
-      val newwud = update_wud wud (oper,operdwl)
+      val newwud = update_wud ((oper,operdwl), wud)
     in
       bp_tnn_loop fpv newgradv newwud m
     end
@@ -310,7 +310,7 @@ fun train_tnn_one tnn (graph,ievl) =
 
 fun sum_operdwll (oper,dwll) = sum_dwll dwll
 fun regroup_wud wudl =
-  dmap sum_operdwll (dregroup Int.compare (List.concat (map dlist wudl)))
+  foldl update_wud (hd wudl) (List.concat (map dlist (tl wudl)))
 
 fun train_tnn_subbatch tnn subbatch =
   let val (wudl,lossl) = split (map (train_tnn_one tnn) subbatch) in
@@ -484,7 +484,6 @@ val traintnn_extspec =
   }
 
 
-
 (* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"
    ------------------------------------------------------------------------- *)
@@ -492,9 +491,7 @@ val traintnn_extspec =
 (*
 load "aiLib"; open aiLib;
 load "psTermGen"; open psTermGen;
-load "smlRedirect"; open smlRedirect;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-hide_in_file "load_errors" load "mlTreeNeuralNetwork";
 
 (* terms *)
 val vx = mk_var ("x",alpha);
@@ -529,7 +526,7 @@ val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
 (* training *)
 val trainparam =
   {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 20};
+   learning_rate = 0.02, batch_size = 16, nepoch = 100};
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
