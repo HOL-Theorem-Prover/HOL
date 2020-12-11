@@ -19,10 +19,6 @@ include Abbrev
   val random_tnn : (term * int list) list -> tnn
   val random_tnn_std : (int * int) -> term list -> tnn
 
-  (* input term modifications *)
-  val mk_embedding_var : (real vector * hol_type) -> term
-  val precomp_embed : tnn -> term -> term
-
   (* examples *)
   val stats_tnnex : tnnex -> string
 

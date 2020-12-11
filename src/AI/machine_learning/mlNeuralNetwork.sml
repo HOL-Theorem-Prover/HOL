@@ -115,7 +115,8 @@ fun read_exl file = map ex_of_string (readl file)
 
 val biais = Vector.fromList [1.0]
 fun add_biais v = Vector.concat [biais,v]
-fun rm_biais v = Vector.fromList (tl (vector_to_list v))
+fun rm_biais v = 
+  Vector.tabulate (Vector.length v - 1, fn i => Vector.sub (v,i+1)) 
 
 (* -------------------------------------------------------------------------
   Forward propagation (fp) with memory of the steps
@@ -149,13 +150,16 @@ fun fp_nn nn v = case nn of
    Input has size j. Output has size i. Matrix has i lines and j columns.
    ------------------------------------------------------------------------- *)
 
+fun mult_rvect_da da v1 v2 =
+  let fun f i =  da (Vector.sub (v1,i)) * Vector.sub (v2,i) in
+    Vector.tabulate (Vector.length v1, f)
+  end
+
+
 fun bp_layer (fpdata:fpdata) doutnv =
   let
-    val doutv =
-      (* trick: uses (#outnv fpdata) instead of (#outv fpdata) *)
-      let val dav = Vector.map (#da (#layer fpdata)) (#outnv fpdata) in
-        mult_rvect dav doutnv
-      end
+    (* optimization trick *)
+    val doutv = mult_rvect_da (#da (#layer fpdata)) (#outnv fpdata) doutnv
     val w        = #w (#layer fpdata)
     fun dw_f i j = Vector.sub (#inv fpdata,j) * Vector.sub (doutv,i)
     val dw       = mat_tabulate dw_f (mat_dim w)
@@ -208,19 +212,22 @@ fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 
-fun clip (a,b) m =
-  let fun f x = if x < a then a else (if x > b then b else x) in
-    mat_map f m
+fun clip_float (a,b) x = 
+  if x < a then a else (if x > b then b else x)
+
+fun mat_add_weight lr m w =
+  let 
+    fun f i j = clip_float (~4.0,4.0) (mat_sub m i j + lr * mat_sub w i j) 
+  in
+    mat_tabulate f (mat_dim m)
   end
 
 fun update_layer param (layer, layerwu) =
   let
-    val coeff = #learning_rate param / Real.fromInt (#batch_size param)
-    val w0 = mat_smult coeff layerwu
-    val w1 = mat_add (#w layer) w0
-    val w2 = clip (~4.0,4.0) w1
+    val lr = #learning_rate param / Real.fromInt (#batch_size param)
   in
-    {a = #a layer, da = #da layer, w = w2}
+    {a = #a layer, da = #da layer, 
+     w = mat_add_weight lr (#w layer) layerwu}
   end
 
 fun update_nn param nn wu = map (update_layer param) (combine (nn,wu))

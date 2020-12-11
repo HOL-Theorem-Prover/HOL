@@ -97,7 +97,6 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "aiLib"; open aiLib;
 load "tttSetup"; open tttSetup;
 
-
 val ERR = mk_HOL_ERR "test";
 val arityd = ref (dempty String.compare)
 fun sexp_tm t = 
@@ -107,17 +106,11 @@ fun sexp_tm t =
       "(" ^ String.concatWith " " (map sexp_tm (oper :: argl)) ^ ")"
     end
   else if is_var t then fst (dest_var t) else raise ERR "sexp_tm" "";
-
 fun sexp_ex (t,rl) = 
   sexp_tm (rand t) ^ "\n" ^ 
   String.concatWith " " (map rts rl
 writel (ttt_eval_dir ^ "/december1/sexp_value") (map sexp_ex ex);
-
-
 length allex;
-
-
-
 val tnn = train_fixed 1.0 allex;
 val tnndir = ttt_eval_dir ^ "/december1/tnn";
 val _ = mkDir_err tnndir;
@@ -384,7 +377,6 @@ fun rlvalue expname thyl maxgen =
 (* training test 
 load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 
-
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
 val valuedir = ttt_eval_dir ^ "/december5-gen0/value";
 
@@ -394,8 +386,6 @@ fun collect_ex dir =
   end
 
 val exl = collect_ex valuedir;
-stats_tnnex exl;
-val (_,t) = add_time prepare_tnnex exl;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
@@ -418,11 +408,11 @@ fun train_fixed schedule exl =
   end
 
 val schedule =
-    [{ncore = 4, verbose = true,
+    [{ncore = 1, verbose = true,
      learning_rate = 0.02, batch_size = 16, nepoch = 1}];
 
 val tnn = train_fixed schedule exl;
-
+Profile.results ();
 
 *)
 
