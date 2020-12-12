@@ -420,6 +420,10 @@ val schedule =
      learning_rate = 0.01, batch_size = 16, nepoch = 50}
    ];
 
+val schedule =
+    [{ncore = 1, verbose = true,
+     learning_rate = 0.02, batch_size = 16, nepoch = 1}];
+
 val tnn = train_fixed schedule exl;
 Profile.results ();
 
