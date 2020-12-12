@@ -29,7 +29,7 @@ fun mask_unknown (tnn,dim) tm =
     val (oper,argl) = strip_comb tm
   in
     if dmem oper tnn
-    then list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl
+    then list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
     else mask_var
   end
 
