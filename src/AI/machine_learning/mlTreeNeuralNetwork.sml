@@ -203,7 +203,7 @@ fun fp_tnn tnn graph =
   fp_tnn_loop tnn (empty_fpv (length graph)) graph
 
 val fp_tnn_alt = fp_tnn
-fun fp_tnn tnn graph = Profile.profile "fp_tnn" (fp_tnn tnn) graph
+fun fp_tnn tnn graph = Profile.profile "fp_tnn" (fp_tnn_alt tnn) graph
 
 (* -------------------------------------------------------------------------
    Backward propagation
@@ -259,7 +259,7 @@ fun bp_tnn fpv (graph,ievl) =
   end
 
 val bp_tnn_alt = bp_tnn
-fun bp_tnn a b = Profile.profile "bp_tnn" (bp_tnn a) b
+fun bp_tnn a b = Profile.profile "bp_tnn" (bp_tnn_alt a) b
 
 (* -------------------------------------------------------------------------
    Inference
@@ -300,7 +300,7 @@ fun update_tnn param wud tnn =
   foldl (update_oper param) tnn (dlist wud)
  
 val update_tnn_alt = update_tnn
-fun update_tnn a b c = Profile.profile "bp_tnn" (update_tnn a b) c
+fun update_tnn a b c = Profile.profile "bp_tnn" (update_tnn_alt a b) c
 
 
 (* -------------------------------------------------------------------------
