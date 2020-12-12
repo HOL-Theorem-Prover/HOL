@@ -18,15 +18,19 @@ val ERR = mk_HOL_ERR "tttTrain"
    Mask unknown operators
    ------------------------------------------------------------------------- *)
 
+val mask_var = mk_var ("tactictoe_mask",alpha)
+fun mask_vect dim = Vector.tabulate (dim, fn _ => 0.0)
+
+fun add_mask_var dim tnn = 
+  dadd mask_var (mask_vect dim) tnn
+
 fun mask_unknown (tnn,dim) tm =
   let
     val (oper,argl) = strip_comb tm
   in
     if dmem oper tnn
-    then (list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
-          handle HOL_ERR _ => raise ERR "mask_unknown" (term_to_string tm))
-    else mk_embedding_var (Vector.fromList
-      (List.tabulate (dim,fn _ => 0.0)), alpha)
+    then list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl
+    else mask_var
   end
 
 val vhead = mk_var ("head_val", rpt_fun_type 2 alpha)

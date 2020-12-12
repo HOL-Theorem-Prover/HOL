@@ -15,16 +15,6 @@ val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
-(*
-val dfind_alt = dfind
-val sum_dwll_alt = sum_dwll
-val update_nn_alt = update_nn
-
-fun dfind x y = Profile.profile "dfind" (dfind_alt x) y
-fun sum_dwll x = Profile.profile "sum_dwll" sum_dwll_alt x
-fun update_nn x y = Profile.profile "update_nn" (update_nn_alt x) y
-*)
-
 (* -------------------------------------------------------------------------
    Tools for computing the dimensions of neural network operators
    ------------------------------------------------------------------------- *)
@@ -212,6 +202,9 @@ fun fp_tnn_loop tnn fpv graph = case graph of
 fun fp_tnn tnn graph = 
   fp_tnn_loop tnn (empty_fpv (length graph)) graph
 
+val fp_tnn_alt = fp_tnn
+fun fp_tnn tnn graph = Profile.profile "fp_tnn" (fp_tnn tnn) graph
+
 (* -------------------------------------------------------------------------
    Backward propagation
    ------------------------------------------------------------------------- *)
@@ -265,6 +258,9 @@ fun bp_tnn fpv (graph,ievl) =
     bp_tnn_loop fpv gradv (dempty Int.compare) (rev graph)
   end
 
+val bp_tnn_alt = bp_tnn
+fun bp_tnn a b = Profile.profile "bp_tnn" (bp_tnn a) b
+
 (* -------------------------------------------------------------------------
    Inference
    ------------------------------------------------------------------------- *)
@@ -282,8 +278,33 @@ fun infer_tnn tnn tml =
 fun infer_tnn_basic tnn tm =
   singleton_of_list (snd (singleton_of_list (infer_tnn tnn [tm])))
 
+
 (* -------------------------------------------------------------------------
-   Training
+   Updating weights
+   ------------------------------------------------------------------------- *)
+
+fun sum_operdwll (oper,dwll) = sum_dwll dwll
+fun regroup_wud wudl =
+  foldl update_wud (hd wudl) (List.concat (map dlist (tl wudl)))
+
+
+fun update_oper param ((oper,dwl),tnn) =
+  let
+    val nn = Vector.sub (tnn,oper)
+    val newnn = update_nn param nn dwl
+  in
+    Vector.update (tnn,oper,newnn)
+  end
+
+fun update_tnn param wud tnn = 
+  foldl (update_oper param) tnn (dlist wud)
+ 
+val update_tnn_alt = update_tnn
+fun update_tnn a b c = Profile.profile "bp_tnn" (update_tnn a b) c
+
+
+(* -------------------------------------------------------------------------
+   Compute of the loss on the test set
    ------------------------------------------------------------------------- *)
 
 fun se_of fpv (i,ev) =
@@ -300,6 +321,10 @@ fun mse_of fpv ievl = average_real (map (se_of fpv) ievl)
 
 fun fp_loss tnn (graph,ievl) = mse_of (fp_tnn tnn graph) ievl
 
+(* -------------------------------------------------------------------------
+   Training
+   ------------------------------------------------------------------------- *)
+
 fun train_tnn_one tnn (graph,ievl) =
   let
     val fpv = fp_tnn tnn graph
@@ -308,31 +333,18 @@ fun train_tnn_one tnn (graph,ievl) =
     (wud, mse_of fpv ievl)
   end
 
-fun sum_operdwll (oper,dwll) = sum_dwll dwll
-fun regroup_wud wudl =
-  foldl update_wud (hd wudl) (List.concat (map dlist (tl wudl)))
-
 fun train_tnn_subbatch tnn subbatch =
   let val (wudl,lossl) = split (map (train_tnn_one tnn) subbatch) in
     (regroup_wud wudl, lossl)
   end
-
-fun update_oper param ((oper,dwl),tnn) =
-  let
-    val nn = Vector.sub (tnn,oper)
-    val newnn = update_nn param nn dwl
-  in
-    Vector.update (tnn,oper,newnn)
-  end
-
+ 
 fun train_tnn_batch param pf tnn batch =
   let
     val subbatchl = cut_modulo (#ncore param) batch
     val (wudl,lossll) = split (pf (train_tnn_subbatch tnn) subbatchl)
     val wud = regroup_wud wudl
   in
-    (foldl (update_oper param) tnn (dlist wud),
-     average_real (List.concat lossll))
+    (update_tnn param wud tnn, average_real (List.concat lossll))
   end
 
 fun train_tnn_epoch param pf lossl tnn batchl = case batchl of

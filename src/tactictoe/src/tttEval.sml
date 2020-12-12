@@ -375,6 +375,8 @@ fun rlvalue expname thyl maxgen =
   )
 
 (* training test 
+fun mk_embedding_var x = T;
+
 load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
@@ -408,8 +410,15 @@ fun train_fixed schedule exl =
   end
 
 val schedule =
-    [{ncore = 1, verbose = true,
-     learning_rate = 0.02, batch_size = 16, nepoch = 1}];
+    [{ncore = 4, verbose = true,
+     learning_rate = 0.08, batch_size = 16, nepoch = 50},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.04, batch_size = 16, nepoch = 50},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.02, batch_size = 16, nepoch = 50},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.01, batch_size = 16, nepoch = 50}
+   ];
 
 val tnn = train_fixed schedule exl;
 Profile.results ();
