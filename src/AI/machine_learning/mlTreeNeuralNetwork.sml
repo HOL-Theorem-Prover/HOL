@@ -300,7 +300,7 @@ fun update_tnn param wud tnn =
   foldl (update_oper param) tnn (dlist wud)
  
 val update_tnn_alt = update_tnn
-fun update_tnn a b c = Profile.profile "bp_tnn" (update_tnn_alt a b) c
+fun update_tnn a b c = Profile.profile "update_tnn" (update_tnn_alt a b) c
 
 
 (* -------------------------------------------------------------------------
