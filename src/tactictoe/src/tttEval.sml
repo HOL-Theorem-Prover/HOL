@@ -375,7 +375,6 @@ fun rlvalue expname thyl maxgen =
   )
 
 (* training test 
-fun mk_embedding_var x = T;
 
 load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 
@@ -407,7 +406,7 @@ fun train_fixed schedule exl =
     val tnn = train_tnn schedule randtnn (train,test)
   in
     tnn
-  end
+  end;
 
 val schedule =
     [{ncore = 4, verbose = true,
