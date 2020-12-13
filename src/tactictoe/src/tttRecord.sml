@@ -165,7 +165,7 @@ fun fetch s reps =
   end
 
 (* ----------------------------------------------------------------------
-   Proof recording
+   Recording
    ---------------------------------------------------------------------- *)
 
 fun start_record_proof name =
@@ -206,6 +206,53 @@ fun end_record_proof name =
     tacdata_glob := newtacdata
   end
 
+(* ----------------------------------------------------------------------
+   Thm data I/O
+   ---------------------------------------------------------------------- *)
+
+val thmdata_dir = tactictoe_dir ^ "/thmdata"
+
+val namethm_glob = ref (dempty String.compare)
+
+local open SharingTables HOLsexp in
+fun enc_thmdata_one enc_tm = 
+  pair_encode (String, list_encode enc_tm)
+fun dec_thmdata_one dec_tm =
+  pair_decode (string_decode, list_decode dec_tm)
+fun enc_thmdata enc_tm = list_encode (enc_thmdata_one enc_tm)
+fun dec_thmdata dec_tm = list_decode (dec_thmdata_one dec_tm)
+fun tml_of_thmdata l = List.concat (map snd l)
+end
+
+fun tml_of_thm thm = let val (asl,w) = dest_thm thm in w :: asl end
+fun thm_of_tml tml = mk_thm (tl tml, hd tml)
+
+fun write_thmdata file thmdata =
+  write_tmdata (enc_thmdata, tml_of_thmdata) file (map_snd tml_of_thm thmdata)
+fun read_thmdata file =
+  map_snd thm_of_tml (read_tmdata dec_thmdata file)
+
+fun thm_compare (thm1,thm2) = goal_compare (dest_thm thm1, dest_thm thm2)
+
+fun export_thmdata () =
+  let 
+    val _ = mkDir_err thmdata_dir
+    val thmidl = map fst (snd (create_thmdata ()))
+    val file = thmdata_dir ^ "/" ^ current_theory () ^ "_" ^
+      its (!savestate_level)
+    val set = HOLset.fromList (cpl_compare String.compare thm_compare) 
+      (dlist (!namethm_glob))
+    val l1 = thml_of_namel thmidl
+    val l2 = filter (fn x => not (HOLset.member (set,x))) l1
+  in    
+    write_thmdata file l2;
+    namethm_glob := daddl l2 (!namethm_glob)
+  end
+
+(* ----------------------------------------------------------------------
+   Savestates
+   ---------------------------------------------------------------------- *)
+
 val savestate_dir = tactictoe_dir ^ "/savestate"
 
 fun ttt_before_save_state () = 
@@ -213,6 +260,7 @@ fun ttt_before_save_state () =
   if !record_flag 
     then thmdata_glob := total_time create_thmdata_time create_thmdata ()
     else ();
+  if !export_thmdata_flag then export_thmdata () else ();
   if !record_savestate_flag 
     then (mkDir_err savestate_dir; PolyML.fullGC ())
     else () 
@@ -250,6 +298,10 @@ fun save_goal lflag pflag g =
     export_goal goal_file g;
     writel flags_file (map bts [lflag,pflag])
   end
+
+(* ----------------------------------------------------------------------
+   Recording (continued)
+   ---------------------------------------------------------------------- *)
 
 fun record_proof name lflag tac1 tac2 (g:goal) =
   let
