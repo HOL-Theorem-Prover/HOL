@@ -927,6 +927,7 @@ fun output_header oc cthy =
   reflect_flag oc "tttSetup.record_let_flag" record_let_flag;
   reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
   reflect_flag oc "tttSetup.record_savestate_flag" record_savestate_flag;
+  reflect_flag oc "tttSetup.export_thmdata_flag" export_thmdata_flag;
   reflect_flag oc "tttSetup.learn_abstract_term" learn_abstract_term;
   reflect_time oc "tttSetup.record_tactic_time" record_tactic_time;
   reflect_time oc "tttSetup.record_proof_time" record_proof_time;
