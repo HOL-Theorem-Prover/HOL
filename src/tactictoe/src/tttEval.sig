@@ -6,7 +6,7 @@ sig
   type tnn = mlTreeNeuralNetwork.tnn
   type nnfiles = string option * string option * string option
 
-  val exportfof_flag : bool ref
+  val export_pb_flag : bool ref
 
   val prepare_global_data : (string * int) -> unit
   val ttt_eval : string -> (string * int) -> 
