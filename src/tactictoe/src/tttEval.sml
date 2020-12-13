@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "tttEval"
 
 type nnfiles = string option * string option * string option
 
-val exportfof_flag = ref false
+val export_pb_flag = ref false
 
 (* -------------------------------------------------------------------------
    TNN value examples
@@ -41,26 +41,6 @@ fun export_valueex file tree =
    Exporting problems on intermediate goals
    ------------------------------------------------------------------------- *)
 
-local open SharingTables HOLsexp in
-  fun enc_tml enc_tm = list_encode enc_tm
-  fun dec_tml dec_tm = list_decode dec_tm
-  fun enc_tmll enc_tm = list_encode (enc_tml enc_tm)
-  fun dec_tmll dec_tm = list_decode (dec_tml dec_tm)
-end
-
-fun write_pb file (gl,g) =
-  let val tmll = map (fn (asl,w) => w :: asl) (g :: gl) in
-    write_tmdata (enc_tmll, List.concat) file tmll
-  end
-
-fun read_pb file =
-  let 
-    val tmll = read_tmdata dec_tmll file
-    val gl = map (fn l => (tl l, hd l)) tmll
-  in
-    (tl gl, hd gl)
-  end
-
 fun mk_info (id,gi,gstatus,gvis) =
   ["Path: " ^ (if null id then "top" else string_of_id id),
    "Goal: " ^ its gi,
@@ -73,9 +53,9 @@ fun export_pb pbprefix (g,(id,gi,gstatus,gvis)) =
     val pbfile = pbprefix ^ ("-" ^ f id) ^ "-" ^ its gi
     val premises = mlNearestNeighbor.thmknn_wdep 
       (!thmdata_glob) 128 (mlFeature.fea_of_goal true g) 
-    val gl = map (dest_thm o snd) (thml_of_namel premises)
   in
-    write_pb pbfile (gl,g);
+    export_goal (pbfile ^ ".goal") g;
+    writel (pbfile ^ ".premises") premises;
     writel (pbfile ^ ".info") (mk_info (id,gi,gstatus,gvis))
   end
 
@@ -157,7 +137,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
     export_valueex valuefile tree;
-    if !exportfof_flag then export_pbl pbprefix tree else ();
+    if !export_pb_flag then export_pbl pbprefix tree else ();
     hide_flag := mem
   end
 
@@ -207,7 +187,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "aiLib.debug_flag" debug_flag,
-     sreflect_flag "tttEval.exportfof_flag" exportfof_flag,
+     sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      smlfun ^ " " ^ mlquote expdir ^ " " ^
@@ -296,7 +276,7 @@ fun ttt_record_thmdata () =
 
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := false;
-tttSetup.export_thmdata_flag := true:
+tttSetup.export_thmdata_flag := true;
 ttt_record_thmdata ();
 
 *)
