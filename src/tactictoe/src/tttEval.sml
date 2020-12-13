@@ -277,20 +277,46 @@ ttt_record_savestate (); (* includes clean savestate *)
 *)
 
 (* ------------------------------------------------------------------------
+   Export theorem data
+   ------------------------------------------------------------------------ *)
+
+(*
+load "tttUnfold"; open tttUnfold aiLib;
+
+fun ttt_ancestry thy =
+  filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
+
+fun ttt_record_thmdata () = 
+  let
+    val thyl1 = ttt_ancestry (current_theory ())
+    val ((),t) = add_time (app ttt_record_thy) thyl1
+  in
+    print_endline ("ttt_record time: " ^ rts_round 4 t)
+  end;
+
+tttSetup.record_flag := false;
+tttSetup.record_savestate_flag := false;
+tttSetup.export_thmdata_flag := true:
+ttt_record_thmdata ();
+
+*)
+
+
+(* ------------------------------------------------------------------------
    Evaluation on one example
    ------------------------------------------------------------------------ *)
 
 (*
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
-val expname = "test1";
+val expname = "test2";
 val savestatedir = tactictoe_dir ^ "/savestate";
 val expdir = ttt_eval_dir ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
 val _ = app mkDir_err [ttt_eval_dir, expdir, outdir];
-val file = savestatedir ^ "/" ^ "finite_map_170";
-tttSetup.ttt_search_time := 10.0;
-run_evalscript smlfun outdir (NONE,NONE,NONE) file;
+val file = savestatedir ^ "/" ^ "rich_list_280";
+tttSetup.ttt_search_time := 30.0;
+run_evalscript smlfun expdir (SOME vnnfile,NONE,NONE) file;
 *)
 
 (* ------------------------------------------------------------------------
@@ -317,7 +343,8 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december13-1" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december13-2-gen1" (true,30) 
+  (SOME vnnfile,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -402,7 +429,7 @@ rlvalue_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val valuedir = ttt_eval_dir ^ "/december5-gen0/value";
+val valuedir = ttt_eval_dir ^ "/december13-2/value";
 
 fun collect_ex dir = 
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
@@ -435,21 +462,17 @@ val schedule =
     [{ncore = 4, verbose = true,
      learning_rate = 0.08, batch_size = 16, nepoch = 50},
      {ncore = 4, verbose = true,
-     learning_rate = 0.04, batch_size = 16, nepoch = 50},
+     learning_rate = 0.08, batch_size = 32, nepoch = 50},
      {ncore = 4, verbose = true,
-     learning_rate = 0.02, batch_size = 16, nepoch = 50},
+     learning_rate = 0.08, batch_size = 24, nepoch = 50},
      {ncore = 4, verbose = true,
-     learning_rate = 0.01, batch_size = 16, nepoch = 50}
+     learning_rate = 0.08, batch_size = 128, nepoch = 50}
    ];
 
 
-val schedule =
-    [{ncore = 1, verbose = true,
-     learning_rate = 0.02, batch_size = 1, nepoch = 1}];
-
-Profile.reset_all ();
 val tnn = train_fixed schedule exl;
-Profile.results ();
+val vnnfile = ttt_eval_dir ^ "/december13-2/tnn/value";
+val _ = write_tnn vnnfile tnn;
 
 *)
 
