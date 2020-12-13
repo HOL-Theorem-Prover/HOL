@@ -19,10 +19,6 @@ val ERR = mk_HOL_ERR "tttTrain"
    ------------------------------------------------------------------------- *)
 
 val mask_var = mk_var ("tactictoe_mask",alpha)
-fun mask_vect dim = Vector.tabulate (dim, fn _ => 0.0)
-
-fun add_mask_var dim tnn = 
-  dadd mask_var (mask_vect dim) tnn
 
 fun mask_unknown tnn tm =
   let val (oper,argl) = strip_comb tm in

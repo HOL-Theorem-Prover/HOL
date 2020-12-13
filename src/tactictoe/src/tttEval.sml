@@ -317,8 +317,7 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-exportfof_flag := true;
-run_evalscript_thyl smlfun "december3-2" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december13-1" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -385,14 +384,13 @@ fun rlvalue expname thyl maxgen =
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
-aiLib.load_sigobj ();
 ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val expname = "december13";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val maxgen = 2;
+val maxgen = 1;
 rlvalue expname thyl maxgen;
 rlvalue_loop expname thyl (1,maxgen);
 *)
