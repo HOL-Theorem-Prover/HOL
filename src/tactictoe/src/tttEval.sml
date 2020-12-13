@@ -47,10 +47,9 @@ fun mk_info (id,gi,gstatus,gvis) =
    "Status: " ^ (if gstatus = GoalProved then "proven" else "unknown"),
    "Visits: " ^ rts gvis]
 
-fun export_pb pbprefix (g,(id,gi,gstatus,gvis)) = 
+fun export_pb pbprefix pbn (g,(id,gi,gstatus,gvis)) = 
   let 
-    fun f id = if null id then "top" else string_of_id id
-    val pbfile = pbprefix ^ ("-" ^ f id) ^ "-" ^ its gi
+    val pbfile = pbprefix ^ "-" ^ its pbn
     val premises = mlNearestNeighbor.thmknn_wdep 
       (!thmdata_glob) 128 (mlFeature.fea_of_goal true g) 
   in
@@ -61,11 +60,12 @@ fun export_pb pbprefix (g,(id,gi,gstatus,gvis)) =
 
 fun export_pbl pbprefix tree =
   let
+    val pbn = ref 0
     fun f id (gi,x) = (#goal x, (id, gi, #gstatus x, #gvis x))    
     fun g (id,x) = vector_to_list (Vector.mapi (f id) (#goalv x))
     val pbl = List.concat (map g (dlist tree))
   in
-    app (export_pb pbprefix) pbl
+    appi (export_pb pbprefix) pbl
   end
 
 (* -------------------------------------------------------------------------
@@ -321,10 +321,10 @@ ttt_record_savestate ();  (* rm -r savestate if argument list is too long *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
+export_pb_flag := true;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december13-2-gen1" (true,30) 
-  (SOME vnnfile,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december13-pb" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
