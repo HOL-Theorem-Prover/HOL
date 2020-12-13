@@ -24,33 +24,27 @@ fun mask_vect dim = Vector.tabulate (dim, fn _ => 0.0)
 fun add_mask_var dim tnn = 
   dadd mask_var (mask_vect dim) tnn
 
-fun mask_unknown (tnn,dim) tm =
-  let
-    val (oper,argl) = strip_comb tm
-  in
+fun mask_unknown tnn tm =
+  let val (oper,argl) = strip_comb tm in
     if dmem oper tnn
-    then list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
+    then list_mk_comb (oper, map (mask_unknown tnn) argl)
     else mask_var
   end
+
+val mask_unknown_val = mask_unknown
+val mask_unknown_pol = mask_unknown
+val mask_unknown_arg = mask_unknown
 
 val vhead = mk_var ("head_val", rpt_fun_type 2 alpha)
 val phead = mk_var ("head_pol", rpt_fun_type 2 alpha)
 val ahead = mk_var ("head_arg", rpt_fun_type 2 alpha)
 
-fun mask_unknown_val tnn tm =
-  let val dim = dimin_nn (dfind vhead tnn) in
-    mask_unknown (tnn,dim) tm
-  end
-
-fun mask_unknown_pol tnn tm =
-  let val dim = dimin_nn (dfind phead tnn) in
-    mask_unknown (tnn,dim) tm
-  end
-
-fun mask_unknown_arg tnn tm =
-  let val dim = dimin_nn (dfind ahead tnn) in
-    mask_unknown (tnn,dim) tm
-  end
+fun add_mask dim tnn =
+  dadd mask_var (random_nn (idactiv,didactiv) [0,dim]) tnn
+  
+fun add_mask_val tnn = add_mask (dimin_nn (dfind vhead tnn)) tnn
+fun add_mask_pol tnn = add_mask (dimin_nn (dfind phead tnn)) tnn
+fun add_mask_arg tnn = add_mask (dimin_nn (dfind ahead tnn)) tnn
 
 (* -------------------------------------------------------------------------
    Convert a goal to a neural network term

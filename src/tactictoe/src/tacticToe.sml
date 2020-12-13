@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlLexer smlParser smlExecute smlRedirect smlInfix
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
-  psMinimize tttSetup tttToken tttLearn tttSearch
+  psMinimize tttSetup tttToken tttLearn tttSearch tttTrain
 
 val ERR = mk_HOL_ERR "tacticToe"
 
@@ -142,7 +142,9 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   in
     {predtac = predtac, predarg = predarg,
      parsetoken = parsetoken,
-     vnno = vnno, pnno = pnno, anno = anno}
+     vnno = Option.map add_mask_val vnno, 
+     pnno = Option.map add_mask_pol pnno, 
+     anno = Option.map add_mask_arg anno}
   end
 
 fun main_tactictoe (thmdata,tacdata) nnol goal =

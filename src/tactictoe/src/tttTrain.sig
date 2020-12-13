@@ -9,6 +9,9 @@ sig
   val mask_unknown_val : tnn -> term -> term
   val mask_unknown_pol : tnn -> term -> term
   val mask_unknown_arg : tnn -> term -> term
+  val add_mask_val : tnn -> tnn
+  val add_mask_pol : tnn -> tnn
+  val add_mask_arg : tnn -> tnn
   val nntm_of_stateval : goal -> term
   val nntm_of_statepol : goal * string -> term
   val nntm_of_statearg : (goal * string) * token -> term
