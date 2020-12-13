@@ -315,6 +315,17 @@ Incompatibilities:
 
     where the appropriate negation operator might be, *e.g.*, `“$real_neg”`.
 
+*   Two new automatic theorems about `TAKE` and `DROP` have been added to `listTheory`:
+
+           TAKE_LENGTH_ID_rwt2
+           ⊢ ∀l m. TAKE m l = l ⇔ LENGTH l ≤ m
+
+           DROP_EQ_NIL_rwt
+           ⊢ ∀l m. DROP m l = [] ⇔ LENGTH l ≤ m
+
+    Use `Excl` or `{temp_,}delsimps` to remove these theorems from the simplifier as necessary.
+
+
 * * * * *
 
 <div class="footer">
