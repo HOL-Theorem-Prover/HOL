@@ -20,4 +20,8 @@ include Abbrev
   (* export a goal without any translation *)
   val fof_export_goal : string -> goal -> unit
 
+  (* tactictoe interface *)
+  val ttt_fof_extra : string -> unit
+  val ttt_fof_goal : string -> string -> (string * goal) -> unit
+
 end

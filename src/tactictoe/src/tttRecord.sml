@@ -225,12 +225,12 @@ fun tml_of_thmdata l = List.concat (map snd l)
 end
 
 fun tml_of_thm thm = let val (asl,w) = dest_thm thm in w :: asl end
-fun thm_of_tml tml = mk_thm (tl tml, hd tml)
+fun goal_of_tml tml = (tl tml, hd tml)
 
 fun write_thmdata file thmdata =
   write_tmdata (enc_thmdata, tml_of_thmdata) file (map_snd tml_of_thm thmdata)
 fun read_thmdata file =
-  map_snd thm_of_tml (read_tmdata dec_thmdata file)
+  map_snd goal_of_tml (read_tmdata dec_thmdata file)
 
 fun thm_compare (thm1,thm2) = goal_compare (dest_thm thm1, dest_thm thm2)
 
