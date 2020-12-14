@@ -34,6 +34,6 @@ include Abbrev
 
   (* Thmdata I/O *)
   val write_thmdata : string -> (string * thm) list -> unit 
-  val read_thmdata : string -> (string * thm) list
+  val read_thmdata : string -> (string * goal) list
 
 end

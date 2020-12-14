@@ -326,7 +326,7 @@ tttSetup.ttt_search_time := 30.0;
 export_pb_flag := true; (* export problems on subgoals *)
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december13-pb-3" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december13-pb-4" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------

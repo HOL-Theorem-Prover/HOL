@@ -240,7 +240,6 @@ fun fof_write_pb dir (thmid,(depthyl,depl)) =
     val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc  = TextIO.openOut file
     val tml = collect_tml (thmid :: depl)
-
   in
     (
     app (fn x => osn oc ("include('" ^ x ^ ".ax').")) depthyl;
@@ -251,6 +250,7 @@ fun fof_write_pb dir (thmid,(depthyl,depl)) =
     )
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
+
 
 (*
 load "hhExportFof"; open hhExportFof;
@@ -357,6 +357,23 @@ fun fof_export_pbfile file (cj,namethml) =
 fun fof_export_pb dir (cj,namethml) =
   fof_export_pbfile (dir ^ "/atp_in") (cj,namethml)
 
+
+(*
+load "holyHammer"; open holyhammer;
+load "hhExportFof"; open hhExportFof;
+load "mlThmData"; open mlThmData;
+load "mlFeature"; open mlFeature;
+val cj = ``1+1=2``;
+val goal : goal = ([],cj);
+val n = 32;
+load "mlNearestNeighbor"; open mlNearestNeighbor;
+val thmdata = create_thmdata ();
+val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
+val namethml = thml_of_namel premises;
+val hh_dir = HOLDIR ^ "/src/holyhammer";
+fof_export_pb hh_dir (cj,namethml);
+*)
+
 (* -------------------------------------------------------------------------
    This function is a work-in-progress.
    To be runned with all flag off to export a problem that is already
@@ -385,20 +402,52 @@ fun fof_export_goal file (axl,cj) =
     TextIO.closeOut oc
   end
 
+(* -------------------------------------------------------------------------
+   Export TacticToe problems to ATPs
+   ------------------------------------------------------------------------- *)
+
+fun ttt_fof_extra file =
+  let val oc  = TextIO.openOut file in
+    (fof_thmdef_extra oc; TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun ttt_translate_goal g =
+  let val tm = (gen_all o list_mk_imp) g in translate tm end
+
+fun ttt_fof_goaldef role oc (name,g) =
+  (os oc (fofpar ^ escape name ^ "," ^ role ^ ",");
+   fof_formula oc (ttt_translate_goal g); osn oc ").")
+
+fun ttt_collect_tml g = mk_term_set (atoms (ttt_translate_goal g))
+
+fun ttt_fof_arity oc tml =
+  let
+    val cval = mk_sameorder_set tma_compare
+      (List.concat (cval_extra :: map collect_arity_noapp tml))
+  in
+    app (fof_arityeq oc) cval
+  end
+  
+fun ttt_fof_goal file role (name,g) =
+  let val oc  = TextIO.openOut file in
+    (
+    ttt_fof_arity oc (ttt_collect_tml g);
+    ttt_fof_goaldef role oc (name,g);
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
 (*
-load "holyHammer"; open holyhammer;
-load "hhExportFof"; open hhExportFof;
-load "mlThmData"; open mlThmData;
-load "mlFeature"; open mlFeature;
-val cj = ``1+1=2``;
-val goal : goal = ([],cj);
-val n = 32;
-load "mlNearestNeighbor"; open mlNearestNeighbor;
-val thmdata = create_thmdata ();
-val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
-val namethml = thml_of_namel premises;
-val hh_dir = HOLDIR ^ "/src/holyhammer";
-fof_export_pb hh_dir (cj,namethml);
+load "tttRecord"; open tttRecord;
+
+val tactictoe_dir = HOLDIR ^ "/src/tactictoe";
+val thmdata_dir = tactictoe_dir ^ "/thmdata";
+val filel = aiLib.listDir thmdata_dir;
+
 *)
+
+
 
 end (* struct *)
