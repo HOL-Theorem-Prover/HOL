@@ -48,6 +48,7 @@ fun mk_info (id,gi,gstatus,gvis) =
    "Visits: " ^ rts gvis]
 
 fun export_pb pbprefix pbn (g,(id,gi,gstatus,gvis)) = 
+  if gvis < 8.5 then () else
   let 
     val pbfile = pbprefix ^ "-" ^ its pbn
     val premises = mlNearestNeighbor.thmknn_wdep 
@@ -324,7 +325,7 @@ tttSetup.ttt_search_time := 30.0;
 export_pb_flag := true;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december13-pb" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december13-pb-2" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
