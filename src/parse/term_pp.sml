@@ -95,7 +95,12 @@ val prettyprint_cases_dt = ref false;
 val _ = register_btrace ("pp_cases", prettyprint_cases)
 val _ = register_btrace ("pp_cases_dt", prettyprint_cases_dt)
 
-fun prettyprint_cases_name () = if !prettyprint_cases_dt then "dtcase" else "case";
+val {get = read_qblock_smash, ...} =
+    create_trace {name = "PP.qblock_smash_limit", max = 1000,
+                  initial = 4}
+
+fun prettyprint_cases_name () =
+    if !prettyprint_cases_dt then "dtcase" else "case";
 
 
 
@@ -1645,20 +1650,37 @@ fun pp_term (G : grammar) TyG backend = let
                 )
               )
             )
+          val all_simple_vars = List.all (fn (_, _, vs) =>
+                                             List.all (fn Simple v => is_var v
+                                                      | _ => false) vs)
+                                         binding_blocks
+          fun vsize (Simple v, A) = UTF8.size (#1 (dest_var v)) + A
+            | vsize (_,A) = A
+          fun bsize1 (_, sz, vs) =
+              sz (* qfier *) +
+              UTF8.size endbinding +
+              length vs (* spaces between vars + 1 after endbinding *) +
+              List.foldl vsize 0 vs
         in
-          case (binding_blocks,showtypes_v,showtypes) of
-              ([vb as (bpr,bsz,[Simple v])],false,false) =>
-              if is_var v andalso UTF8.size (#1 (dest_var v)) = 1 then
+          if all_simple_vars andalso not showtypes_v andalso not showtypes then
+            let
+              val bsz =
+                  List.foldl (fn (block,A) => bsize1 block + A) 0 binding_blocks
+            in
+              if bsz <= read_qblock_smash()
+              then
                 restore_bvars (
                   paren addparens (
-                    block INCONSISTENT (bsz + UTF8.size endbinding + 2) (
-                      pr_vstrblock vb >> add_string " " >>
+                    block INCONSISTENT bsz (
+                      pr_list pr_vstrblock (add_string " ") binding_blocks >>
+                      add_string " " >>
                       pr_term deep_body Top Top Top (decdepth depth)
                     )
                   )
                 )
               else dflt()
-          | _ => dflt()
+            end
+          else dflt()
         end
       | CLOSEFIX lst => let
           val rr = hd lst
