@@ -48,7 +48,7 @@ fun mk_info (id,gi,gstatus,gvis) =
    "Visits: " ^ rts gvis]
 
 fun export_pb pbprefix pbn (g,(id,gi,gstatus,gvis)) = 
-  if gvis < 8.5 then () else
+  if gvis < 16.5 then () else
   let 
     val pbfile = pbprefix ^ "-" ^ its pbn
     val premises = mlNearestNeighbor.thmknn_wdep 
@@ -60,6 +60,8 @@ fun export_pb pbprefix pbn (g,(id,gi,gstatus,gvis)) =
   end
 
 fun export_pbl pbprefix tree =
+  if not (can (smlExecute.tactic_of_sml 1.0) "metisTools.METIS_TAC []") 
+  then () else
   let
     val pbn = ref 0
     fun f id (gi,x) = (#goal x, (id, gi, #gstatus x, #gvis x))    
@@ -279,7 +281,6 @@ tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := false;
 tttSetup.export_thmdata_flag := true;
 ttt_record_thmdata ();
-
 *)
 
 
@@ -322,10 +323,10 @@ ttt_record_savestate ();  (* rm -r savestate if argument list is too long *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-export_pb_flag := true;
+export_pb_flag := true; (* export problems on subgoals *)
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december13-pb-2" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december13-pb-3" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
