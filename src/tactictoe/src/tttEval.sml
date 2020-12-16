@@ -271,7 +271,7 @@ fun ttt_ancestry thy =
 fun ttt_record_thmdata () = 
   let
     val thyl1 = ttt_ancestry (current_theory ())
-    val ((),t) = add_time (app ttt_record_thy) thyl1
+    val ((),t) = add_time (app ttt_record_thy) ["list"]
   in
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end;
