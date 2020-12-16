@@ -74,8 +74,7 @@ fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
-fun clean_dir dir = run_cmd ("rm " ^ dir ^ "/*")
-fun clean_rec_dir dir = run_cmd ("rm -r " ^ dir ^ "/*")
+fun clean_dir dir = (run_cmd ("rm -r " ^ dir); mkDir_err dir)
 
 (* ------------------------------------------------------------------------
    Comparisons
@@ -998,7 +997,7 @@ fun writel_atomic file sl =
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
-fun listDir dirName =
+fun listDir_all dirName =
   let
     val dir = OS.FileSys.openDir dirName
     fun read files = case OS.FileSys.readDir dir of
@@ -1008,6 +1007,9 @@ fun listDir dirName =
   in
     OS.FileSys.closeDir dir; r
   end
+
+fun listDir dirName =
+  filter (not o String.isPrefix ".") (listDir_all dirName)
 
 (* ------------------------------------------------------------------------
    Profiling
