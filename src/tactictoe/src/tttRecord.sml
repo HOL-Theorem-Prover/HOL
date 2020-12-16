@@ -240,7 +240,7 @@ fun export_thmdata () =
     val thmidl = map fst (snd (create_thmdata ()))
     val file = thmdata_dir ^ "/" ^ current_theory () ^ "_" ^
       its (!savestate_level)
-    val set = HOLset.fromList (cpl_compare String.compare thm_compare) 
+    val set = dset (cpl_compare String.compare thm_compare) 
       (dlist (!namethm_glob))
     fun test x = String.isPrefix (namespace_tag ^ "Theory") x 
     val thmidl_namespace = filter test thmidl
@@ -248,9 +248,9 @@ fun export_thmdata () =
       map_fst (fn x => current_theory () ^ "Theory." ^ x) 
         (DB.thms (current_theory ()))
     val l1 = namethm_curthy @ thml_of_namel thmidl_namespace
-    val l2 = filter (fn x => not (HOLset.member (set,x))) l1
+    val l2 = filter (fn x => not (dmem x set)) l1
   in    
-    write_thmdata file l1;
+    write_thmdata file l2;
     namethm_glob := daddl l2 (!namethm_glob)
   end
 
@@ -341,6 +341,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
 
 fun start_record_thy thy =
   (
+  namethm_glob := dempty String.compare;
   print_endline "importing tactic data";
   tacdata_glob := create_tacdata ()
   )
