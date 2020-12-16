@@ -4835,9 +4835,10 @@ is \holtxt{WHILE}-loops. The following equation is derived in theory
 \theoryimp{while}:
 %
 \begin{hol}
-\begin{verbatim}
-   WHILE  |- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x
-\end{verbatim}
+\begin{alltt}
+>>__ open whileTheory
+##thm WHILE
+\end{alltt}
 \end{hol}
 %
 Clearly, if \holtxt{P} in this theorem was instantiated to $\lambda
@@ -4867,10 +4868,9 @@ ones are mapped to \holtxt{ARB}. This function is used as the witness
 for \verb+f+ in the proof of the following theorem:
 %
 \begin{hol}
-\begin{verbatim}
-   ITERATION
-     |- !P g. ?f. !x. f x = if P x then x else f (g x)
-\end{verbatim}
+\begin{alltt}
+##thm ITERATION
+\end{alltt}
 \end{hol}
 %
 From this, it is a simple application of Skolemization and
@@ -4886,12 +4886,9 @@ a wellfounded relation for \verb+R+ is found and used to eliminate the
 constraints.
 %
 \begin{hol}
-\begin{verbatim}
-   WHILE_INDUCTION
-     |- !B C R.
-          WF R /\ (!s. B s ==> R (C s) s) ==>
-          !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v
-\end{verbatim}
+\begin{alltt}
+##thm WHILE_INDUCTION
+\end{alltt}
 \end{hol}
 %
 A more refined level of support is provided by the standard Hoare
@@ -4899,28 +4896,42 @@ Logic \holtxt{WHILE} rule, phrased in terms of Hoare triples
 (\holtxt{HOARE\_SPEC}).
 %
 \begin{hol}
-\begin{verbatim}
-   HOARE_SPEC_DEF
-     |- !P C Q. HOARE_SPEC P C Q = !s. P s ==> Q (C s)
-   WHILE_RULE
-     |- !R B C.
-           WF R /\ (!s. B s ==> R (C s) s) ==>
-           HOARE_SPEC (\s. P s /\ B s) C P ==>
-           HOARE_SPEC P (WHILE B C) (\s. P s /\ ~B s)
-\end{verbatim}
+\begin{alltt}
+##thm HOARE_SPEC_DEF
+##thm WHILE_RULE
+\end{alltt}
 \end{hol}
 %
 As a follow-on, an operator for finding the least number with property
 \verb+P+ is defined.
 %
 \begin{hol}
-\begin{verbatim}
-   LEAST_DEF  |- !P. $LEAST P = WHILE ($~ o P) SUC 0
-\end{verbatim}
+\begin{alltt}
+##thm LEAST_DEF
+\end{alltt}
 \end{hol}
 %
-A few theorems for reasoning about \holtxt{LEAST} may be found in
-theory \theoryimp{while}.
+The \holtxt{LEAST} constant is treated as a binder by the parser, which explains the special printing of the name above.
+Its use as a binder can be seen in:
+\begin{hol}
+\begin{alltt}
+##thm LEAST_LESS_EQ
+\end{alltt}
+\end{hol}
+A fundamental result, the operation of which is embodied in the tactic \ml{LEAST\_ELIM\_TAC} is:
+\begin{hol}
+\begin{alltt}
+##thm LEAST_ELIM
+\end{alltt}
+\end{hol}
+If one wants a specified result even when the predicate is everywhere false, the \holtxt{OLEAST} function (also treated as a binder by the parser and pretty-printer) may be helpful:
+\begin{hol}
+\begin{alltt}
+##thm OLEAST_def
+\end{alltt}
+\end{hol}
+
+More theorems for reasoning about \holtxt{LEAST}, \holtxt{OLEAST} and \holtxt{WHILE} may be found in theory \theoryimp{while}.
 
 
 %\section{Partial orders}
