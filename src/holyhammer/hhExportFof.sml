@@ -455,18 +455,21 @@ val foft_dir = tactictoe_dir ^ "/fof_theories";
 val _ = mkDir_err foft_dir;
 fun axt_to_fof (name,thm) =
   let val fileout = foft_dir ^ "/" ^ escape name in
-    ttt_fof_goal fileout "axiom" (name,(dest_thm thm))
+    ttt_fof_goal fileout "axiom" (name, dest_thm thm)
   end;
 fun axtl_to_fof thy =
   let val thmdata = map_fst (fn x => thy ^ "Theory." ^ x) (DB.thms thy) in
     app axt_to_fof thmdata
-  end
+  end;
+
+app axtl_to_fof (ancestry (current_theory ()));
+
 
 (* -------------------------------------------------------------------------
    Extra assumptions
    ------------------------------------------------------------------------- *)
 
-ttt_fof_extra (foft_dir ^ "/" ^ "fof_extra");
+ttt_fof_extra (tactictoe_dir ^ "/" ^ "fof_extra");
 
 (* -------------------------------------------------------------------------
    Axioms (current theory + namespace)
@@ -474,7 +477,7 @@ ttt_fof_extra (foft_dir ^ "/" ^ "fof_extra");
 
 val thmdata_dir = tactictoe_dir ^ "/thmdata";
 val filel = aiLib.listDir thmdata_dir;
-val fof_dir = tactictoe_dir ^ "/fof";
+val fof_dir = tactictoe_dir ^ "/fof_current_theory";
 val _ = mkDir_err fof_dir;
 fun ax_to_fof file (name,g) =
   let val fileout = fof_dir ^ "/" ^ file ^ "-" ^ (escape name) in
@@ -487,8 +490,6 @@ app axl_to_fof filel;
 (* -------------------------------------------------------------------------
    Conjectures
    ------------------------------------------------------------------------- *)
-
-(***  ***)
 
 val pb_dir = tactictoe_dir ^ "/eval/december13-pb-4/pb"
 val filel1 = aiLib.listDir pb_dir;
@@ -514,19 +515,28 @@ app cj_to_fof gl;
    ------------------------------------------------------------------------- *)
 
 val pb_dir = tactictoe_dir ^ "/eval/december13-pb-4/pb"
-val filel1 = aiLib.listDir pb_dir;
-val filel2 = filter (String.isSuffix ".premises") filel1;
-val filel3 = aiLib.listDir fof_dir;
-val topname = "list_500";
 
-fun find_axfile (thy,n) thmname = 
+fun find_axfile_curthy (thy,n) thmname = 
   if n < 0 then raise ERR "find_axfile" (thy ^ " " ^ thmname) else
     let val file = (thy ^ "_" ^ its n) ^ "-" ^ thmname in
       if exists_file (fof_dir ^ "/" ^ file)
       then file
-      else find_axfile (thy,(n-1)) thmname
-    end
-;
+      else find_axfile_curthy (thy,(n-1)) thmname
+    end;
+
+fun find_axfile (thy,n) thmname = 
+  let 
+    val thmthy = fst (split_string "Theory." (unescape thmname))
+  in
+    if mem thmthy [thy, mlThmData.namespace_tag]
+    then find_axfile_curthy (thy,n) thmname
+    else 
+      if exists_file (foft_dir ^ "/" ^ thmname) 
+      then thmname 
+      else raise ERR "find_axfile" thmname
+  end;
+
+
 fun convert_premises file = 
   let 
     val bare1 = fst (split_string "." file)
@@ -539,10 +549,10 @@ fun convert_premises file =
   in
     writel (bare1 ^ ".dep") newpremises
   end;
+
 val premisesl = filter (String.isSuffix ".premises") (aiLib.listDir pb_dir);
 val file = "list_331-450.premises";
-convert_premises ;
-
+convert_premises file;
 
 *)
 
