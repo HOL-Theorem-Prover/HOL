@@ -247,12 +247,10 @@ fun export_thmdata () =
     val namethm_curthy = 
       map_fst (fn x => current_theory () ^ "Theory." ^ x) 
         (DB.thms (current_theory ()))
-    val _ = if can (DB.fetch "list") "list_INDUCT" then 
-      raise ERR "export_thmdata" "" else () 
     val l1 = namethm_curthy @ thml_of_namel thmidl_namespace
     val l2 = filter (fn x => not (HOLset.member (set,x))) l1
   in    
-    write_thmdata file l2;
+    write_thmdata file l1;
     namethm_glob := daddl l2 (!namethm_glob)
   end
 
