@@ -265,13 +265,17 @@ ttt_record_savestate (); (* includes clean savestate *)
 (*
 load "tttUnfold"; open tttUnfold aiLib;
 
+val tactictoe_dir = HOLDIR ^ "/src/tactictoe";
+val thmdata_dir = tactictoe_dir ^ "/thmdata";
+val _ = clean_dir thmdata_dir;
+
 fun ttt_ancestry thy =
   filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
 
 fun ttt_record_thmdata () = 
   let
     val thyl1 = ttt_ancestry (current_theory ())
-    val ((),t) = add_time (app ttt_record_thy) ["list"]
+    val ((),t) = add_time (app ttt_record_thy) thyl1
   in
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end;
