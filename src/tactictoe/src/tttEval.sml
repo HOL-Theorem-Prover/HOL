@@ -62,12 +62,13 @@ fun export_pbl pbprefix tree =
   if not (can (smlExecute.tactic_of_sml 1.0) "metisTools.METIS_TAC []") 
   then () else
   let
-    val pbn = ref 0
     fun f id (gi,x) = (#goal x, (id, gi, #gstatus x, #gvis x))    
     fun g (id,x) = vector_to_list (Vector.mapi (f id) (#goalv x))
     val pbl = List.concat (map g (dlist tree))
+    fun cmp (a,b) = Real.compare (#4 (snd b),#4 (snd a))
+    val pbl_sorted = first_n 100 (dict_sort cmp pbl)
   in
-    appi (export_pb pbprefix) pbl
+    appi (export_pb pbprefix) pbl_sorted
   end
 
 (* -------------------------------------------------------------------------
@@ -322,14 +323,16 @@ run_evalscript_thyl "arithmetic_1in10" false 1 ["arithmetic"];
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
-ttt_record_savestate ();  (* rm -r savestate if argument list is too long *)
+aiLib.load_sigobj ();
+ttt_record_savestate (); (* also cleans the savestate directory *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-export_pb_flag := true; (* export problems on subgoals *)
+export_pb_flag := true;
+aiLib.load_sigobj ();
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december13-pb-4" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december16-full-pb-2" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
