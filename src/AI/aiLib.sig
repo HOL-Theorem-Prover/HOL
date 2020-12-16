@@ -47,7 +47,6 @@ sig
   val exists_file : string -> bool
   val remove_file : string -> unit
   val clean_dir : string -> unit
-  val clean_rec_dir : string -> unit
 
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
@@ -176,6 +175,7 @@ sig
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
   val listDir : string -> string list
+  val listDir_all : string -> string list
 
   (* parse *)
   val hd_string : string -> char

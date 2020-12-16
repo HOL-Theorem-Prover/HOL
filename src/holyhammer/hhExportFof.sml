@@ -484,7 +484,10 @@ fun ax_to_fof file (name,g) =
     ttt_fof_goal fileout "axiom" (name,g)
   end;
 fun axl_to_fof file =
-  app (ax_to_fof file) (read_thmdata (thmdata_dir ^ "/" ^ file));
+  app (ax_to_fof file) (read_thmdata (thmdata_dir ^ "/" ^ file))
+  handle Fail _ => print_endline file;
+
+val filel_alt = filter (String.isPrefix "list") filel;
 app axl_to_fof filel;
 
 (* -------------------------------------------------------------------------
