@@ -242,7 +242,12 @@ fun export_thmdata () =
       its (!savestate_level)
     val set = HOLset.fromList (cpl_compare String.compare thm_compare) 
       (dlist (!namethm_glob))
-    val l1 = thml_of_namel thmidl
+    fun test x = String.isPrefix (namespace_tag ^ "Theory") x 
+    val thmidl_namespace = filter test thmidl
+    val namethm_curthy = 
+      map_fst (fn x => current_theory () ^ "Theory." ^ x) 
+        (DB.thms (current_theory ()))
+    val l1 = namethm_curthy @ thml_of_namel thmidl_namespace
     val l2 = filter (fn x => not (HOLset.member (set,x))) l1
   in    
     write_thmdata file l2;

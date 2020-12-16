@@ -47,8 +47,7 @@ fun mk_info (id,gi,gstatus,gvis) =
    "Status: " ^ (if gstatus = GoalProved then "proven" else "unknown"),
    "Visits: " ^ rts gvis]
 
-fun export_pb pbprefix pbn (g,(id,gi,gstatus,gvis)) = 
-  if gvis < 16.5 then () else
+fun export_pb pbprefix pbn (g,(id,gi,gstatus,gvis)) =
   let 
     val pbfile = pbprefix ^ "-" ^ its pbn
     val premises = mlNearestNeighbor.thmknn_wdep 
