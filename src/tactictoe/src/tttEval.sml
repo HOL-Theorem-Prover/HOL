@@ -66,7 +66,7 @@ fun export_pbl pbprefix tree =
     fun g (id,x) = vector_to_list (Vector.mapi (f id) (#goalv x))
     val pbl = List.concat (map g (dlist tree))
     fun cmp (a,b) = Real.compare (#4 (snd b),#4 (snd a))
-    val pbl_sorted = first_n 100 (dict_sort cmp pbl)
+    val pbl_sorted = first_n 32 (dict_sort cmp pbl)
   in
     appi (export_pb pbprefix) pbl_sorted
   end
@@ -270,6 +270,7 @@ val tactictoe_dir = HOLDIR ^ "/src/tactictoe";
 val thmdata_dir = tactictoe_dir ^ "/thmdata";
 val _ = clean_dir thmdata_dir;
 
+aiLib.load_sigobj ();
 fun ttt_ancestry thy =
   filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
 
@@ -295,14 +296,14 @@ ttt_record_thmdata ();
 (*
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
-val expname = "test2";
+val expname = "test4";
 val savestatedir = tactictoe_dir ^ "/savestate";
 val expdir = ttt_eval_dir ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
 val _ = app mkDir_err [ttt_eval_dir, expdir, outdir];
-val file = savestatedir ^ "/" ^ "rich_list_280";
-tttSetup.ttt_search_time := 30.0;
-run_evalscript smlfun expdir (SOME vnnfile,NONE,NONE) file;
+val file = savestatedir ^ "/" ^ "real_topology_1024";
+tttSetup.ttt_search_time := 5.0;
+run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 *)
 
 (* ------------------------------------------------------------------------
@@ -327,12 +328,12 @@ aiLib.load_sigobj ();
 ttt_record_savestate (); (* also cleans the savestate directory *)
 
 load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 30.0;
-export_pb_flag := true;
+tttSetup.ttt_search_time := 5.0;
+export_pb_flag := false;
 aiLib.load_sigobj ();
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december16-full-pb-2" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "december17-full" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
