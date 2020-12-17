@@ -296,6 +296,11 @@ in
     (mktag "rmfrags [\"UNWIND\"] bool_ss -* BETA_CONV", ["BETA_CONV"],
      remove_ssfrags ["UNWIND"] bool_ss, unwind_beta_t, unwind_beta_t)
   ];
+  List.app (ignore o test0) [
+    (mktag "rmfrags [\"UNWIND\"] (bool_ss -* BETA_CONV)", [],
+     remove_ssfrags ["UNWIND"] (bool_ss -* ["BETA_CONV"]),
+     unwind_beta_t, unwind_beta_t)
+  ];
   List.app (ignore o excltest) [
     (mkex_tag "bool_ss & \"COND_CLAUSES.1\"", ["COND_CLAUSES.1"],
      T_t, T_t),
