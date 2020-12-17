@@ -1890,8 +1890,8 @@ Proof
     [GSYM arithmeticTheory.ADD1, ADD_CLAUSES]
 QED
 
-Theorem DROP_EQ_NIL:
- !ls n. (DROP n ls = []) = (LENGTH ls <= n)
+Theorem DROP_EQ_NIL[simp]:
+ !ls n. DROP n ls = [] <=> LENGTH ls <= n
 Proof
  Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC
 QED
@@ -3642,12 +3642,6 @@ QED
 
 Theorem TAKE_LENGTH_ID_rwt2[simp]:
    !l m. TAKE m l = l <=> LENGTH l <= m
-Proof
-  Induct >> simp[] >> Cases_on ‘m’ >> simp[]
-QED
-
-Theorem DROP_EQ_NIL_rwt[simp]:
-  !l m. DROP m l = [] <=> LENGTH l <= m
 Proof
   Induct >> simp[] >> Cases_on ‘m’ >> simp[]
 QED
