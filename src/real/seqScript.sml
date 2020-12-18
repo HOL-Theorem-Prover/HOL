@@ -1569,16 +1569,8 @@ val INCREASING_SEQ = store_thm
    >> POP_ASSUM MP_TAC
    >> REAL_ARITH_TAC);
 
-(* TODO: move the following 4 lemmas to arithmeticTheory *)
-val MAX_LE_X = store_thm
-  ("MAX_LE_X",
-   ``!m n k. MAX m n <= k = m <= k /\ n <= k``,
-   RW_TAC arith_ss [MAX_DEF]);
-
-val X_LE_MAX = store_thm
-  ("X_LE_MAX",
-   ``!m n k. k <= MAX m n = k <= m \/ k <= n``,
-   RW_TAC arith_ss [MAX_DEF]);
+Theorem X_LE_MAX[local] = cj 1 MAX_LE
+Theorem MAX_LE_X[local] = cj 2 MAX_LE
 
 val TRANSFORM_2D_NUM = store_thm
   ("TRANSFORM_2D_NUM",
@@ -1722,11 +1714,7 @@ val SUMS_ZERO = store_thm
    ``(K 0) sums 0``,
    RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]);
 
-val LT_SUC = store_thm
-  ("LT_SUC", ``!a b. a < SUC b = a < b \/ (a = b)``, DECIDE_TAC);
-
-val LE_SUC = store_thm
-  ("LE_SUC", ``!a b. a <= SUC b = a <= b \/ (a = SUC b)``, DECIDE_TAC);
+Theorem LT_SUC'[local] = DECIDE “!a b. a < SUC b = a < b \/ (a = b)”
 
 val K_PARTIAL = store_thm
   ("K_PARTIAL", ``!x. K x = \z. x``, RW_TAC std_ss [K_DEF]);
@@ -1996,7 +1984,7 @@ val SUMINF_2D = store_thm
        >> Induct_on `M` >- RW_TAC arith_ss []
        >> Strip
        >> Q.EXISTS_TAC `MAX (SUC c) (N M)`
-       >> RW_TAC arith_ss [X_LE_MAX, LT_SUC]
+       >> RW_TAC arith_ss [X_LE_MAX, LT_SUC']
        >> PROVE_TAC [LESS_EQ_REFL, LE])
    >> Strip
    >> MP_TAC (Q.SPECL [`h`, `c`] NUM_2D_BIJ_SMALL_SQUARE)
@@ -2033,7 +2021,7 @@ val SUMINF_2D = store_thm
    >> KILL_TAC
    >> RW_TAC std_ss []
    >> Induct_on `M` >- RW_TAC arith_ss [sum, SUM_ZERO]
-   >> RW_TAC arith_ss [sum, LT_SUC]
+   >> RW_TAC arith_ss [sum, LT_SUC']
    >> Q.PAT_X_ASSUM `a ==> b` K_TAC
    >> Know
       `!k'.
@@ -2065,7 +2053,7 @@ val SUMINF_2D = store_thm
    >> POP_ASSUM K_TAC
    >> Q.SPEC_TAC (`N M`, `l`)
    >> Induct >- RW_TAC real_ss [sum, SUM_0]
-   >> RW_TAC arith_ss [sum, LT_SUC]
+   >> RW_TAC arith_ss [sum, LT_SUC']
    >> Q.PAT_X_ASSUM `a ==> b` K_TAC
    >> Know
       `!k'.

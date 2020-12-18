@@ -319,7 +319,24 @@ val LESS_OR_EQ_ALT = store_thm ("LESS_OR_EQ_ALT",
     THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
     THEN ASM_REWRITE_TAC []) ;
 
+Theorem LT_SUC:
+  n < SUC m <=> n = 0 \/ ?n0. n = SUC n0 /\ n0 < m
+Proof
+  eq_tac >> Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES >>
+  rewrite_tac [LESS_0, prim_recTheory.LESS_MONO_EQ, NOT_SUC, INV_SUC_EQ]
+  >- (disch_then (irule_at (Pos last)) >> rewrite_tac[]) >>
+  strip_tac >> asm_rewrite_tac[]
+QED
 
+Theorem SUC_LT:
+  SUC n < m <=> ?m0. m = SUC m0 /\ n < m0
+Proof
+  eq_tac
+  >- (Q.SPEC_THEN ‘m’ STRUCT_CASES_TAC num_CASES >>
+      rewrite_tac[NOT_LESS_0, prim_recTheory.LESS_MONO_EQ] >>
+      disch_then (irule_at (Pos last)) >> rewrite_tac[]) >>
+  strip_tac >> asm_rewrite_tac [prim_recTheory.LESS_MONO_EQ]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)

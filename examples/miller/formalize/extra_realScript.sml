@@ -559,7 +559,7 @@ val SER_BIJ_COMPRESS1 = store_thm
            >> STRIP_TAC
            >> Q.EXISTS_TAC `SUC (MAX N (h n))`
            >> STRIP_TAC
-           >> DISCH_THEN (MP_TAC o REWRITE_RULE [LT_SUC])
+           >> DISCH_THEN (MP_TAC o REWRITE_RULE [prim_recTheory.LESS_THM])
            >> Know `!a b. a < SUC b <=> a <= b`
            >- (Cases >> STRIP_TAC >> KILL_TAC >> DECIDE_TAC)
            >> RW_TAC std_ss [X_LE_MAX]
@@ -728,7 +728,7 @@ val SER_BIJ_COMPRESS2 = store_thm
        >> STRIP_TAC
        >> Q.EXISTS_TAC `SUC (MAX N' (h n))`
        >> STRIP_TAC
-       >> DISCH_THEN (MP_TAC o REWRITE_RULE [LT_SUC])
+       >> DISCH_THEN (MP_TAC o REWRITE_RULE [prim_recTheory.LESS_THM])
        >> Know `!a b. a < SUC b <=> a <= b`
        >- (Cases >> STRIP_TAC >> KILL_TAC >> DECIDE_TAC)
        >> RW_TAC std_ss [X_LE_MAX]

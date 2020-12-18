@@ -1876,8 +1876,7 @@ Theorem DROP_LENGTH_TOO_LONG:
 Proof Induct THEN SRW_TAC [numSimps.ARITH_ss] []
 QED
 
-val LT_SUC = Q.prove(‘x < SUC y <=> x = 0 \/ ?x0. x = SUC x0 /\ x0 < y’,
-                     Cases_on ‘x’ >> simp[])
+Theorem LT_SUC[local] = arithmeticTheory.LT_SUC
 
 Theorem MEM_DROP:
   !x ls n. MEM x (DROP n ls) <=>
@@ -1895,10 +1894,6 @@ Theorem DROP_EQ_NIL[simp]:
 Proof
  Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC
 QED
-
-val LT_SUC = Q.prove(
-  ‘x < SUC y <=> (x = 0) \/ ?x0. (x = SUC x0) /\ x0 < y’,
-  Cases_on ‘x’ >> simp[]);
 
 Theorem HD_DROP:
   !n l. n < LENGTH l ==> (HD (DROP n l) = EL n l)
