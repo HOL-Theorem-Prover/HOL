@@ -3557,6 +3557,18 @@ Proof
   Induct >> rw [nub_def] >> metis_tac [nub_set]
 QED
 
+Theorem CARD_LIST_TO_SET_EQN:
+  CARD (LIST_TO_SET l) = LENGTH (nub l)
+Proof
+  metis_tac[nub_set, CARD_LIST_TO_SET_ALL_DISTINCT,
+            ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub]
+QED
+
+(* doesn't need to be simp, as nub_set is *)
+Theorem MEM_nub: MEM x (nub l) = MEM x l
+Proof simp[]
+QED
+
 val filter_helper = Q.prove (
    ‘!x l1 l2.
       ~MEM x l2 ==> (MEM x (FILTER (\x. x NOTIN set l2) l1) = MEM x l1)’,
@@ -3589,10 +3601,9 @@ val length_nub_append = Q.store_thm ("length_nub_append",
             LENGTH (nub l1) + LENGTH (nub (FILTER (\x. ~MEM x l1) l2))’,
    rw [GSYM ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub]
    >> fs [FINITE_LIST_TO_SET, CARD_UNION_EQN]
-   >> ASSUME_TAC (Q.SPECL [‘l1’, ‘l2’] card_eqn_help)
-   >> ‘CARD (set l1 INTER set l2) <= CARD (set l2)’
-   by metis_tac [CARD_INTER_LESS_EQ, FINITE_LIST_TO_SET, INTER_COMM]
-   >> RW_TAC arith_ss []);
+   >> simp[GSYM card_eqn_help]
+   >> ‘CARD (set l1 INTER set l2) <= CARD (set l2)’ suffices_by simp[]
+   >> metis_tac [CARD_INTER_LESS_EQ, FINITE_LIST_TO_SET, INTER_COMM]);
 
 val ALL_DISTINCT_DROP = Q.store_thm("ALL_DISTINCT_DROP",
    ‘!ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (DROP n ls)’,

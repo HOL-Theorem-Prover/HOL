@@ -964,7 +964,7 @@ val PROB_CANONICAL_INDUCT = store_thm
 val MEM_NIL_STEP = store_thm
   ("MEM_NIL_STEP",
    ``!l1 l2. ~MEM [] (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))``,
-   RW_TAC list_ss [APPEND_MEM, MEM_NIL_MAP_CONS]);
+   RW_TAC list_ss [MEM_NIL_MAP_CONS]);
 
 val PROB_SORTED_PREFIXFREE_MEM_NIL = store_thm
   ("PROB_SORTED_PREFIXFREE_MEM_NIL",

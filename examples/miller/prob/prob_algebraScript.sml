@@ -501,12 +501,12 @@ val PROB_EMBED_BASIC = store_thm
 val PROB_EMBED_NIL = store_thm
   ("PROB_EMBED_NIL",
    ``prob_embed [] = {}``,
-   PSET_TAC [prob_embed_def, MAP_MEM, MEM, EXTENSION]);
+   PSET_TAC [prob_embed_def, MEM_MAP, MEM, EXTENSION]);
 
 val PROB_EMBED_CONS = store_thm
   ("PROB_EMBED_CONS",
    ``!x xs. prob_embed (x :: xs) = prefix_set x UNION prob_embed xs``,
-   PSET_TAC [prob_embed_def, MAP_MEM, MEM, EXTENSION]
+   PSET_TAC [prob_embed_def, MEM_MAP, MEM, EXTENSION]
    >> PROVE_TAC []);
 
 val PROB_EMBED_TRANSPOSE = store_thm
@@ -519,7 +519,7 @@ val PROB_EMBED_APPEND = store_thm
   ("PROB_EMBED_APPEND",
    ``!l1 l2.
        prob_embed (APPEND l1 l2) = prob_embed l1 UNION prob_embed l2``,
-   PSET_TAC [IN_PROB_EMBED, APPEND_MEM, EXTENSION]
+   PSET_TAC [IN_PROB_EMBED, EXTENSION, MEM_APPEND]
    >> PROVE_TAC []);
 
 val PROB_EMBED_TLS = store_thm
@@ -527,7 +527,7 @@ val PROB_EMBED_TLS = store_thm
    ``!l b.
        (scons h t) IN prob_embed (MAP (CONS b) l) =
        (h = b) /\ t IN prob_embed l``,
-   PSET_TAC [IN_PROB_EMBED, MAP_MEM, EXTENSION]
+   PSET_TAC [IN_PROB_EMBED, MEM_MAP, EXTENSION]
    >> EQ_TAC
    >- (PSET_TAC [PREFIX_SET_SCONS, EXTENSION]
        >> PROVE_TAC [])
@@ -541,7 +541,7 @@ val PROB_CANON_PREFS_EMBED = store_thm
    STRIP_TAC
    >> Induct >- RW_TAC list_ss [prob_canon_prefs_def]
    >> RW_TAC list_ss [prob_canon_prefs_def]
-   >> PSET_TAC [prob_embed_def, MAP_MEM, MEM, GSYM PREFIX_SET_PREFIX_SUBSET,
+   >> PSET_TAC [prob_embed_def, MEM_MAP, MEM, GSYM PREFIX_SET_PREFIX_SUBSET,
                 EXTENSION]
    >> Q.PAT_X_ASSUM `!x. P x = Q x` K_TAC
    >> EQ_TAC >- PROVE_TAC []
@@ -567,11 +567,11 @@ val PROB_CANON1_EMBED = store_thm
   ("PROB_CANON1_EMBED",
    ``!l. prob_embed (prob_canon1 l) = prob_embed l``,
    REWRITE_TAC [prob_canon1_def]
-   >> Induct >- RW_TAC list_ss [FOLDR]
+   >> Induct >- RW_TAC list_ss []
    >> STRIP_TAC
    >> POP_ASSUM MP_TAC
    >> MP_TAC PROB_CANON_FIND_EMBED
-   >> RW_TAC list_ss [PROB_EMBED_CONS, FOLDR]);
+   >> RW_TAC list_ss [PROB_EMBED_CONS]);
 
 val PROB_CANON_MERGE_EMBED = store_thm
   ("PROB_CANON_MERGE_EMBED",
@@ -588,11 +588,11 @@ val PROB_CANON2_EMBED = store_thm
   ("PROB_CANON2_EMBED",
    ``!l. prob_embed (prob_canon2 l) = prob_embed l``,
    REWRITE_TAC [prob_canon2_def]
-   >> Induct >- RW_TAC list_ss [FOLDR]
+   >> Induct >- RW_TAC list_ss []
    >> STRIP_TAC
    >> POP_ASSUM MP_TAC
    >> MP_TAC PROB_CANON_MERGE_EMBED
-   >> RW_TAC list_ss [PROB_EMBED_CONS, FOLDR]);
+   >> RW_TAC list_ss [PROB_EMBED_CONS]);
 
 val PROB_CANON_EMBED = store_thm
   ("PROB_CANON_EMBED",
@@ -778,7 +778,7 @@ val PROB_ALGEBRA_HALFSPACE = store_thm
    ``!b. halfspace b IN (subsets prob_algebra)``,
    PSET_TAC [IN_PROB_ALGEBRA, EXTENSION]
    >> Q.EXISTS_TAC `[[b]]`
-   >> PSET_TAC [IN_PROB_EMBED, IN_HALFSPACE, MAP_MEM, MEM, prefix_set_def,
+   >> PSET_TAC [IN_PROB_EMBED, IN_HALFSPACE, MEM_MAP, MEM, prefix_set_def,
                 EXTENSION]);
 
 val PROB_ALGEBRA_BASIC = store_thm
@@ -1408,10 +1408,10 @@ val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
    >> RW_TAC std_ss []
    >> STRIP_TAC
    >> Know `x IN f n`
-   >- (RW_TAC std_ss [prob_embed_def, IN_UNIONL, MAP_MEM]
+   >- (RW_TAC std_ss [prob_embed_def, IN_UNIONL, MEM_MAP]
        >> PROVE_TAC [])
    >> Know `x IN f n'`
-   >- (RW_TAC std_ss [prob_embed_def, IN_UNIONL, MAP_MEM]
+   >- (RW_TAC std_ss [prob_embed_def, IN_UNIONL, MEM_MAP]
        >> PROVE_TAC [])
    >> REPEAT STRIP_TAC
    >> Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`n`, `n'`])

@@ -10,12 +10,7 @@ val _ = new_theory "extra_list";
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val sum_def = Define `(sum [] = (0:num)) /\ (sum (n :: ns) = n + sum ns)`;
-
 val prod_def = Define `(prod [] = (1:num)) /\ (prod (n :: ns) = n * prod ns)`;
-
-val kill_dups_def = Define
-  `kill_dups = FOLDR (\(h:'a) t. if MEM h t then t else h::t) []`;
 
 val list_def = Define `list = (EVERY : ('a -> bool) -> 'a list -> bool)`;
 
@@ -32,48 +27,12 @@ val MEM_NIL = store_thm
    >> RW_TAC std_ss [MEM]
    >> PROVE_TAC []);
 
-val MAP_ID = store_thm
-  ("MAP_ID",
-   ``!(l:'a list). MAP (\x. x) l = l``,
-   Induct >- RW_TAC list_ss []
-   >> RW_TAC list_ss []);
-
-val MAP_MEM = store_thm
-  ("MAP_MEM",
-   ``!(f:'a->'b) l x. MEM x (MAP f l) <=> ?y. MEM y l /\ (x = f y)``,
-   Induct_on `l` >- RW_TAC list_ss [MEM]
-   >> RW_TAC list_ss [MEM]
-   >> EQ_TAC >|
-   [RW_TAC list_ss [] >|
-    [PROVE_TAC [],
-     PROVE_TAC []],
-    PROVE_TAC []]);
-
-val APPEND_MEM = store_thm
-  ("APPEND_MEM",
-   ``!(x:'a) l1 l2. MEM x (APPEND l1 l2) <=> (MEM x l1 \/ MEM x l2)``,
-   Induct_on `l1` >- RW_TAC list_ss [MEM]
-   >> RW_TAC list_ss [MEM]
-   >> PROVE_TAC []);
-
 val MEM_NIL_MAP_CONS = store_thm
   ("MEM_NIL_MAP_CONS",
    ``!(x:'a) l. ~MEM [] (MAP (CONS x) l)``,
    STRIP_TAC
    >> Induct >- RW_TAC list_ss [MEM]
    >> RW_TAC list_ss [MEM]);
-
-val FILTER_TRUE = store_thm
-  ("FILTER_TRUE",
-   ``!(l:'a list). FILTER (\x. T) l = l``,
-   Induct >- RW_TAC list_ss [FILTER]
-   >> RW_TAC list_ss [FILTER]);
-
-val FILTER_FALSE = store_thm
-  ("FILTER_FALSE",
-   ``!(l:'a list). FILTER (\x. F) l = []``,
-   Induct >- RW_TAC list_ss [FILTER]
-   >> RW_TAC list_ss [FILTER]);
 
 val LENGTH_FILTER = store_thm
   ("LENGTH_FILTER",
@@ -82,20 +41,8 @@ val LENGTH_FILTER = store_thm
    >> Induct_on `l`
    >> RW_TAC list_ss [FILTER]);
 
-val FILTER_MEM = store_thm
-  ("FILTER_MEM",
-   ``!P (x:'a) l. MEM x (FILTER P l) ==> P x``,
-   NTAC 2 STRIP_TAC
-   >> Induct >- RW_TAC std_ss [MEM, FILTER]
-   >> (RW_TAC std_ss [MEM, FILTER] >> PROVE_TAC []));
-
-val MEM_FILTER = store_thm
-  ("MEM_FILTER",
-   ``!P l (x:'a). MEM x (FILTER P l) ==> MEM x l``,
-   STRIP_TAC
-   >> Induct >- RW_TAC list_ss [FILTER]
-   >> RW_TAC list_ss [FILTER, MEM]
-   >> PROVE_TAC []);
+Theorem FILTER_MEMP = MEM_FILTER |> iffLR |> cj 1
+Theorem MEM_FILTER_MEM = MEM_FILTER |> iffLR |> cj 2
 
 val FILTER_OUT_ELT = store_thm
   ("FILTER_OUT_ELT",
@@ -104,42 +51,6 @@ val FILTER_OUT_ELT = store_thm
    >> Induct >- RW_TAC list_ss [FILTER]
    >> (RW_TAC list_ss [MEM, FILTER]
          >> PROVE_TAC []));
-
-val IS_PREFIX_NIL = store_thm
-  ("IS_PREFIX_NIL",
-   ``!(x:'a list). IS_PREFIX x [] /\ (IS_PREFIX [] x <=> (x = []))``,
-   STRIP_TAC
-   >> Cases_on `x`
-   >> RW_TAC list_ss [IS_PREFIX]);
-
-val IS_PREFIX_REFL = store_thm
-  ("IS_PREFIX_REFL",
-   ``!(x:'a list). IS_PREFIX x x``,
-   Induct >> RW_TAC list_ss [IS_PREFIX]);
-
-val IS_PREFIX_ANTISYM = store_thm
-  ("IS_PREFIX_ANTISYM",
-   ``!(x:'a list) y. IS_PREFIX y x /\ IS_PREFIX x y ==> (x = y)``,
-    Induct >- RW_TAC list_ss [IS_PREFIX_NIL]
-    >> Cases_on `y` >- RW_TAC list_ss [IS_PREFIX_NIL]
-    >> ONCE_REWRITE_TAC [IS_PREFIX]
-    >> PROVE_TAC []);
-
-val IS_PREFIX_TRANS = store_thm
-  ("IS_PREFIX_TRANS",
-   ``!(x:'a list) y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z``,
-   Induct >- PROVE_TAC [IS_PREFIX_NIL]
-   >> Cases_on `y` >- RW_TAC list_ss [IS_PREFIX_NIL, IS_PREFIX]
-   >> Cases_on `z` >- RW_TAC list_ss [IS_PREFIX_NIL, IS_PREFIX]
-   >> RW_TAC list_ss [IS_PREFIX]
-   >> PROVE_TAC []);
-
-val IS_PREFIX_BUTLAST = store_thm
-  ("IS_PREFIX_BUTLAST",
-   ``!x:'a y. IS_PREFIX (x::y) (BUTLAST (x::y))``,
-   Induct_on `y`
-     >- RW_TAC list_ss [BUTLAST_CONS, IS_PREFIX]
-   >> RW_TAC list_ss [BUTLAST_CONS, IS_PREFIX]);
 
 val IS_PREFIX_LENGTH = store_thm
   ("IS_PREFIX_LENGTH",
@@ -201,21 +112,10 @@ val EXISTS_LONGEST = store_thm
    >> EXISTS_TAC ``if LENGTH z <= LENGTH x then x else (z:'a list)``
    >> ZAP_TAC std_ss [LESS_EQ_TRANS]);
 
-val SUM_CONST = store_thm
-  ("SUM_CONST",
-   ``!l c. (!x. MEM x l ==> (x = c)) ==> (sum l = LENGTH l * c)``,
-   Induct >- RW_TAC arith_ss [LENGTH, sum_def]
-   >> RW_TAC std_ss [LENGTH, sum_def, MEM, MULT]
-   >> PROVE_TAC [ADD_COMM]);
-
-val MEM_KILL_DUPS = store_thm
-  ("MEM_KILL_DUPS",
-   ``!l (x:'a). MEM x (kill_dups l) <=> MEM x l``,
-   Induct >- RW_TAC list_ss [MEM, kill_dups_def, FOLDR]
-   >> REWRITE_TAC [kill_dups_def, FOLDR]
-   >> RW_TAC std_ss [GSYM kill_dups_def, MEM]
-   >> Cases_on `x = h` >- RW_TAC std_ss []
-   >> RW_TAC std_ss []);
+Theorem SUM_CONST:
+  !l c. (!x. MEM x l ==> (x = c)) ==> (SUM l = LENGTH l * c)
+Proof Induct >> simp[SUM, MULT_CLAUSES] >> PROVE_TAC [MULT_COMM]
+QED
 
 val IN_LIST = store_thm
   ("IN_LIST",
@@ -406,39 +306,6 @@ Proof
  >> (ASSUME_TAC o Q.SPEC `x`) pair_CASES
  >> FULL_SIMP_TAC std_ss []
  >> Cases_on `q = h` >> RW_TAC std_ss []
-QED
-
-val MAKE_ALL_DISTINCT = Define
-  `(MAKE_ALL_DISTINCT [] = []) /\
-   (MAKE_ALL_DISTINCT (h::t) =
-     if MEM h t then MAKE_ALL_DISTINCT t else h::(MAKE_ALL_DISTINCT t))`;
-
-Theorem MAKE_ALL_DISTINCT_ALL_DISTINCT :
-    !l. ALL_DISTINCT l ==> (MAKE_ALL_DISTINCT l = l)
-Proof
-    Induct >> RW_TAC std_ss [MAKE_ALL_DISTINCT, ALL_DISTINCT]
-QED
-
-Theorem MEM_MAKE_ALL_DISTINCT :
-    !l x. MEM x (MAKE_ALL_DISTINCT l) = MEM x l
-Proof
-    Induct >> RW_TAC std_ss [MAKE_ALL_DISTINCT, MEM]
- >> METIS_TAC []
-QED
-
-Theorem ALL_DISTINCT_MAKE_ALL_DISTINCT :
-    !l. ALL_DISTINCT (MAKE_ALL_DISTINCT l)
-Proof
-    Induct
- >> RW_TAC std_ss [ALL_DISTINCT, MAKE_ALL_DISTINCT, MEM_MAKE_ALL_DISTINCT]
-QED
-
-Theorem MAKE_ALL_DISTINCT_EQ_NIL :
-    !l. (MAKE_ALL_DISTINCT l = []) <=> (l = [])
-Proof
-    Induct >> RW_TAC list_ss [MAKE_ALL_DISTINCT]
- >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
- >> FULL_SIMP_TAC list_ss []
 QED
 
 val _ = export_theory ();
