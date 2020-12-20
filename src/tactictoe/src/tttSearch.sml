@@ -211,6 +211,19 @@ fun before_stacfresh_aux accessf acc i =
 
 fun before_stacfresh accessf = before_stacfresh_aux accessf [] 0
   
+fun before_stacfresh_all_aux accessf acc i =
+  if not (can accessf i) then rev acc else
+  let
+    val stacrec = accessf i
+    val sstatus = #sstatus stacrec
+  in
+    case sstatus of
+      StacFresh => rev ((i,stacrec) :: acc)
+    | _ => before_stacfresh_all_aux accessf ((i,stacrec) :: acc) (i+1)
+  end
+
+fun before_stacfresh_all accessf = before_stacfresh_all_aux accessf [] 0
+
 fun select_stacrecl stacrecl pvis =
   let
     fun add_puct ((sn,{ssum,svis,...}),polv) =

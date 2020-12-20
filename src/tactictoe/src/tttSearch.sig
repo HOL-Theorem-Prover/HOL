@@ -34,7 +34,8 @@ sig
     parentd : (goal, unit) Redblackmap.dict}
   type tree = (id, node) Redblackmap.dict
 
-  val before_stacfresh : (int -> stac_record) -> (int * stac_record) list
+  val before_stacfresh_all : 
+    (int -> stac_record) -> (int * stac_record) list
 
  
   val backstatus_arg : sstatus list -> sstatus

@@ -48,14 +48,19 @@ fun export_argex file tree =
   let
     val nodel = map snd (dlist tree)
     fun f_arg g stac x = 
-      (nntm_of_statearg ((g,stac),#token x),
-       if #sstatus x = StacProved then [1.0] else [0.0])
+      if #svis x > 1.5 orelse #sstatus x = StacProved
+      then SOME (nntm_of_statearg ((g,stac),#token x),
+                 if #sstatus x = StacProved then [1.0] else [0.0])
+      else NONE
     fun f_argtree g x = 
       let 
         val stac = dest_stac (#token (dfind [] x))  
-        val argl = map snd (before_stacfresh (access_child x []))             
+        val argl = map snd (before_stacfresh_all 
+          (access_child x []))             
       in
-        map (f_arg g stac) argl
+        if length argl <= 1 
+        then []
+        else List.mapPartial (f_arg g stac) argl
       end
     fun f_goal x = List.concat (map
        (f_argtree (#goal x)) (vector_to_list (#stacv x)))
@@ -98,44 +103,6 @@ fun export_pbl pbprefix tree =
   in
     appi (export_pb pbprefix) pbl_sorted
   end
-
-(* -------------------------------------------------------------------------
-   Reading the examples
-   ------------------------------------------------------------------------- *)
-
-(* 
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "aiLib"; open aiLib;
-load "tttSetup"; open tttSetup;
-
-val ERR = mk_HOL_ERR "test";
-val arityd = ref (dempty String.compare)
-fun sexp_tm t = 
-  if is_comb t then 
-    let val (oper,argl) = strip_comb t in
-      arityd := dadd (fst (dest_var oper)) (length argl) (!arityd);
-      "(" ^ String.concatWith " " (map sexp_tm (oper :: argl)) ^ ")"
-    end
-  else if is_var t then fst (dest_var t) else raise ERR "sexp_tm" "";
-fun sexp_ex (t,rl) = 
-  sexp_tm (rand t) ^ "\n" ^ 
-  String.concatWith " " (map rts rl
-writel (ttt_eval_dir ^ "/december1/sexp_val") (map sexp_ex ex);
-length allex;
-val tnn = train_fixed 1.0 allex;
-val tnndir = ttt_eval_dir ^ "/december1/tnn";
-val _ = mkDir_err tnndir;
-val tnnfile = tnndir ^ "/val";
-write_tnn tnnfile tnn;
-
-load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 30.0;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december1-gen1" (true,30) 
-  (SOME tnnfile,NONE,NONE) thyl;
-
-*)
 
 (* -------------------------------------------------------------------------
    Evaluation function
@@ -356,16 +323,13 @@ run_evalscript_thyl "arithmetic_1in10" false 1 ["arithmetic"];
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
-aiLib.load_sigobj ();
 ttt_record_savestate (); (* also cleans the savestate directory *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-export_pb_flag := true;
-aiLib.load_sigobj ();
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "201217-full" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "201220-3" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -450,14 +414,17 @@ rlval_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val valdir = ttt_eval_dir ^ "/december13-2/val";
+val argdir = ttt_eval_dir ^ "/201220-3/arg";
 
 fun collect_ex dir = 
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
-  end
+  end;
 
-val exl = collect_ex valdir;
+val exl = filter (not o null) (collect_ex argdir);
+
+fun is_pos l = exists (exists (fn x => x > 0.5) o snd) l;
+val posexl = filter is_pos exl;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
@@ -492,8 +459,8 @@ val schedule =
 
 
 val tnn = train_fixed schedule exl;
-val vnnfile = ttt_eval_dir ^ "/december13-2/tnn/val";
-val _ = write_tnn vnnfile tnn;
+val tnnfile = ttt_eval_dir ^ "/december13-2/tnn/arg";
+val _ = write_tnn tnnfile tnn;
 
 *)
 
