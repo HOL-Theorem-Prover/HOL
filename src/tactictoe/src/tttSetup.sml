@@ -23,7 +23,7 @@ val ttt_eval_dir = tactictoe_dir ^ "/eval"
    Nearest neighbor parameters
    ------------------------------------------------------------------------- *)
 
-val ttt_thmlarg_radius = ref 16
+val ttt_thmlarg_radius = ref 32
 val ttt_ortho_radius   = ref 10
 val ttt_presel_radius  = ref 500
 
