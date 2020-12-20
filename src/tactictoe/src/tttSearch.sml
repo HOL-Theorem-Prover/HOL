@@ -197,7 +197,7 @@ fun expo_polv_aux ci (c:real) l = case l of
   | a :: m => (a,c) :: expo_polv_aux ci (ci * c) m
 fun expo_polv ci l = expo_polv_aux ci ci l
 
-fun before_stacfresh accessf acc i =
+fun before_stacfresh_aux accessf acc i =
   if not (can accessf i) then rev acc else
   let
     val stacrec = accessf i
@@ -205,10 +205,12 @@ fun before_stacfresh accessf acc i =
   in
     case sstatus of
       StacFresh => rev ((i,stacrec) :: acc)
-    | StacUndecided => before_stacfresh accessf ((i,stacrec) :: acc) (i+1)
-    | _ => before_stacfresh accessf acc (i+1)
+    | StacUndecided => before_stacfresh_aux accessf ((i,stacrec) :: acc) (i+1)
+    | _ => before_stacfresh_aux accessf acc (i+1)
   end
 
+fun before_stacfresh accessf = before_stacfresh_aux accessf [] 0
+  
 fun select_stacrecl stacrecl pvis =
   let
     fun add_puct ((sn,{ssum,svis,...}),polv) =
@@ -221,11 +223,9 @@ fun select_stacrecl stacrecl pvis =
     fst (hd l2)
   end
 
-(* hack /should be replaced by a nicer way to accessing children *)
+(* hack /should be replaced by a nicer way to access children *)
 fun select_accessf accessf pvis =
-  let val stacrecl = before_stacfresh accessf [] 0 in
-    select_stacrecl stacrecl pvis
-  end
+  select_stacrecl (before_stacfresh accessf) pvis
 
 (* -------------------------------------------------------------------------
    Select leaf in argument tree

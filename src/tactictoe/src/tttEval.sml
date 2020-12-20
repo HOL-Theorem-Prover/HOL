@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlRedirect smlParallel smlOpen smlParser
   mlThmData mlTacticData mlTreeNeuralNetwork
-  tttSetup tttSearch tttRecord tacticToe tttTrain tttBigSteps
+  tttSetup tttSearch tttRecord tacticToe tttToken tttTrain tttBigSteps
 
 val ERR = mk_HOL_ERR "tttEval"
 
@@ -25,7 +25,7 @@ val export_pb_flag = ref false
 
 fun is_proved tree = #nstatus (dfind [] tree) = NodeProved
 
-fun export_valueex file tree =
+fun export_valex file tree =
   if not (is_proved tree) then () else 
   let
     val nodel = map snd (dlist tree)
@@ -35,6 +35,34 @@ fun export_valueex file tree =
     val exl = List.concat (map g nodel)
   in
     write_tnnex file (basicex_to_tnnex exl)
+  end
+
+(* -------------------------------------------------------------------------
+   Argument policy examples
+   ------------------------------------------------------------------------- *)
+
+fun access_child argtree anl i = dfind (i :: anl) argtree
+
+fun export_argex file tree =
+  if not (is_proved tree) then () else 
+  let
+    val nodel = map snd (dlist tree)
+    fun f_arg g stac x = 
+      (nntm_of_statearg ((g,stac),#token x),
+       if #sstatus x = StacProved then [1.0] else [0.0])
+    fun f_argtree g x = 
+      let 
+        val stac = dest_stac (#token (dfind [] x))  
+        val argl = map snd (before_stacfresh (access_child x []))             
+      in
+        map (f_arg g stac) argl
+      end
+    fun f_goal x = List.concat (map
+       (f_argtree (#goal x)) (vector_to_list (#stacv x)))
+    fun f_node x = map f_goal (vector_to_list (#goalv x))
+    val exl = List.concat (map f_node nodel)
+  in
+    write_tnnex file exl
   end
 
 (* -------------------------------------------------------------------------
@@ -92,12 +120,12 @@ fun sexp_tm t =
 fun sexp_ex (t,rl) = 
   sexp_tm (rand t) ^ "\n" ^ 
   String.concatWith " " (map rts rl
-writel (ttt_eval_dir ^ "/december1/sexp_value") (map sexp_ex ex);
+writel (ttt_eval_dir ^ "/december1/sexp_val") (map sexp_ex ex);
 length allex;
 val tnn = train_fixed 1.0 allex;
 val tnndir = ttt_eval_dir ^ "/december1/tnn";
 val _ = mkDir_err tnndir;
-val tnnfile = tnndir ^ "/value";
+val tnnfile = tnndir ^ "/val";
 write_tnn tnnfile tnn;
 
 load "tttEval"; open tttEval;
@@ -122,8 +150,10 @@ fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
 fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let
-    val valuefile = expdir ^ "/value/" ^ thy ^ "_" ^ its n
-    val pbprefix = expdir ^ "/pb/" ^ thy ^ "_" ^ its n
+    val pbid = thy ^ "_" ^ its n
+    val valfile = expdir ^ "/val/" ^ pbid
+    val argfile = expdir ^ "/arg/" ^ pbid
+    val pbprefix = expdir ^ "/pb/" ^ pbid
     val mem = !hide_flag
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
@@ -139,7 +169,8 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
-    export_valueex valuefile tree;
+    export_valex valfile tree;
+    export_argex argfile tree;
     if !export_pb_flag then export_pbl pbprefix tree else ();
     hide_flag := mem
   end
@@ -215,11 +246,12 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val savestatedir = tactictoe_dir ^ "/savestate"
     val expdir = ttt_eval_dir ^ "/" ^ expname
     val outdir = expdir ^ "/out"
-    val valuedir = expdir ^ "/value"
+    val valdir = expdir ^ "/val"
+    val argdir = expdir ^ "/arg"
     val tnndir = expdir ^ "/tnn"
     val pbdir = expdir ^ "/pb"
     val _ = app mkDir_err 
-      [ttt_eval_dir, expdir, outdir, valuedir, pbdir, tnndir]
+      [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir]
     val (thyl',thyl'') = partition (fn x => mem x ["min","bool"]) thyl
     val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl''
     fun f x = readl x handle
@@ -328,12 +360,12 @@ aiLib.load_sigobj ();
 ttt_record_savestate (); (* also cleans the savestate directory *)
 
 load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 5.0;
-export_pb_flag := false;
+tttSetup.ttt_search_time := 30.0;
+export_pb_flag := true;
 aiLib.load_sigobj ();
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "december17-full" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "201217-full" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -371,29 +403,29 @@ fun collect_ex dir =
 
 val ttt_eval_string = "tttEval.ttt_eval"
 
-fun rlvalue_loop expname thyl (gen,maxgen) =
+fun rlval_loop expname thyl (gen,maxgen) =
   if gen > maxgen then () else
   let 
     fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
-    fun valuedir x = gendir x ^ "/value"    
-    val dirl = List.tabulate (gen,valuedir)
+    fun valdir x = gendir x ^ "/val"    
+    val dirl = List.tabulate (gen,valdir)
     val exl = List.concat (map collect_ex dirl)
-    val tnnfile = gendir (gen - 1) ^ "/tnn/value"
+    val tnnfile = gendir (gen - 1) ^ "/tnn/val"
     val _ = if exists_file tnnfile then () (* for restarts *) else 
       write_tnn tnnfile (train_fixed 1.0 exl)
   in
     print_endline ("Generation " ^ its gen);
     run_evalscript_thyl ttt_eval_string (expname ^ "-gen" ^ its gen) (true,30) 
     (SOME tnnfile,NONE,NONE) thyl;
-    rlvalue_loop expname thyl (gen+1,maxgen)
+    rlval_loop expname thyl (gen+1,maxgen)
   end
 
-fun rlvalue expname thyl maxgen =
+fun rlval expname thyl maxgen =
   (
   print_endline ("Generation 0"); 
   run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,30) 
     (NONE,NONE,NONE) thyl;
-  rlvalue_loop expname thyl (1,maxgen)
+  rlval_loop expname thyl (1,maxgen)
   )
 
 (*
@@ -407,8 +439,8 @@ tttSetup.ttt_search_time := 30.0;
 val expname = "december13";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val maxgen = 1;
-rlvalue expname thyl maxgen;
-rlvalue_loop expname thyl (1,maxgen);
+rlval expname thyl maxgen;
+rlval_loop expname thyl (1,maxgen);
 *)
 
 (* ------------------------------------------------------------------------
@@ -418,14 +450,14 @@ rlvalue_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val valuedir = ttt_eval_dir ^ "/december13-2/value";
+val valdir = ttt_eval_dir ^ "/december13-2/val";
 
 fun collect_ex dir = 
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
   end
 
-val exl = collect_ex valuedir;
+val exl = collect_ex valdir;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
@@ -460,7 +492,7 @@ val schedule =
 
 
 val tnn = train_fixed schedule exl;
-val vnnfile = ttt_eval_dir ^ "/december13-2/tnn/value";
+val vnnfile = ttt_eval_dir ^ "/december13-2/tnn/val";
 val _ = write_tnn vnnfile tnn;
 
 *)
