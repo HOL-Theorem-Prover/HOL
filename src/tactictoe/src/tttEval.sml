@@ -53,6 +53,7 @@ fun export_argex file tree =
                  if #sstatus x = StacProved then [1.0] else [0.0])
       else NONE
     fun f_argtree g x = 
+      if #sstatus (dfind [] x) <> StacProved then [] else
       let 
         val stac = dest_stac (#token (dfind [] x))  
         val argl = map snd (before_stacfresh_all 
@@ -329,7 +330,7 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "201220-3" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "201220-4" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
