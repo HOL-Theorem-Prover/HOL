@@ -330,7 +330,7 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "201220-4" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "201220-5" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -415,7 +415,8 @@ rlval_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val argdir = ttt_eval_dir ^ "/201220-3/arg";
+val expdir = ttt_eval_dir ^ "/201220-5"
+val argdir = expdir ^ "/arg";
 
 fun collect_ex dir = 
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
@@ -460,7 +461,8 @@ val schedule =
 
 
 val tnn = train_fixed schedule exl;
-val tnnfile = ttt_eval_dir ^ "/december13-2/tnn/arg";
+
+val tnnfile = expdir ^ "/tnn/arg";
 val _ = write_tnn tnnfile tnn;
 
 *)

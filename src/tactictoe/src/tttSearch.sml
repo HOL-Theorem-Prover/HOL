@@ -125,19 +125,16 @@ fun reorder_pol g pnno stacl =
   if not (isSome pnno) then stacl else reorder_stacl g (valOf pnno) stacl
 
 (* argument *)
-fun eval_arg ann g stac arg =
-  let
-    val tm1 = nntm_of_statearg ((g,stac),arg)
-    val tm2 = mask_unknown_arg ann tm1
-  in
-    infer_tnn_basic ann tm2
+fun eval_argl ann g stac argl =
+  let fun f x = mask_unknown_arg ann (nntm_of_statearg ((g,stac),x)) in
+    map (singleton_of_list o snd) (infer_tnn ann (map f argl))
   end
 
 fun reorder_arg anno g stac argl =
   if not (isSome anno) then argl else
   let
-    fun f x = eval_arg (valOf anno) g stac x
-    val argle = map_assoc f argl
+    val rl = eval_argl (valOf anno) g stac argl
+    val argle = combine (argl,rl)
   in
     map fst (dict_sort compare_rmax argle)
   end
