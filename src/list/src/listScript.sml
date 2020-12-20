@@ -2349,6 +2349,40 @@ SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]);
 
 
 (* ----------------------------------------------------------------------
+    FINITE set of lists
+   ---------------------------------------------------------------------- *)
+
+Theorem bounded_length_FINITE:
+  FINITE (UNIV:'a set) ==>
+  !m (s:'a list set). (!x. x IN s ==> LENGTH x <= m) ==> FINITE s
+Proof
+  strip_tac
+  \\ ho_match_mp_tac numTheory.INDUCTION
+  \\ rw[]
+  >- (
+    Cases_on`s` \\ fs[]
+    \\ `x = []` by metis_tac[] \\ rw[]
+    \\ Cases_on`t` \\ fs[] \\ metis_tac[] )
+  \\ `s SUBSET [] INSERT BIGUNION (IMAGE (\f. IMAGE (f o TL) s) (IMAGE CONS UNIV))`
+  by (
+    rw[SUBSET_DEF, PULL_EXISTS]
+    \\ res_tac
+    \\ Cases_on`x` \\ fs[]
+    \\ Q.EXISTS_TAC`a::l` \\ simp[] )
+  \\ match_mp_tac (MP_CANON SUBSET_FINITE)
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ rewrite_tac[FINITE_INSERT]
+  \\ match_mp_tac FINITE_BIGUNION
+  \\ simp[PULL_EXISTS]
+  \\ simp[IMAGE_COMPOSE]
+  \\ first_x_assum match_mp_tac
+  \\ Q.X_GEN_TAC`z`
+  \\ rw[PULL_EXISTS]
+  \\ res_tac
+  \\ Cases_on`x` \\ fs[]
+QED
+
+(* ----------------------------------------------------------------------
     isPREFIX
    ---------------------------------------------------------------------- *)
 
