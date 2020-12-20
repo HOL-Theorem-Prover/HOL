@@ -439,92 +439,96 @@ fun ttt_fof_goal file role (name,g) =
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
+
 (*
 load "tttRecord"; open tttRecord;
 load "aiLib"; open aiLib;
 load "hhExportFof"; open hhExportFof;
-
 val ERR = mk_HOL_ERR "test";
-val tactictoe_dir = HOLDIR ^ "/src/tactictoe";
+load_sigobj ();
 
 (* -------------------------------------------------------------------------
    Theories
    ------------------------------------------------------------------------- *)
 
+val tactictoe_dir = HOLDIR ^ "/src/tactictoe";
 val foft_dir = tactictoe_dir ^ "/fof_theories";
+
+fun ttt_fof_thy dir thy =
+  let
+    fun f (name,thm) =
+      let val fileout = dir ^ "/" ^ escape name in
+        ttt_fof_goal fileout "axiom" (name, dest_thm thm)
+      end
+    val thmdata = map_fst (fn x => thy ^ "Theory." ^ x) (DB.thms thy) 
+  in
+    app f thmdata
+  end
+
 val _ = clean_dir foft_dir;
-fun axt_to_fof (name,thm) =
-  let val fileout = foft_dir ^ "/" ^ escape name in
-    ttt_fof_goal fileout "axiom" (name, dest_thm thm)
-  end;
-fun axtl_to_fof thy =
-  let val thmdata = map_fst (fn x => thy ^ "Theory." ^ x) (DB.thms thy) in
-    app axt_to_fof thmdata
-  end;
-
-app axtl_to_fof (ancestry (current_theory ()));
-
-
-(* -------------------------------------------------------------------------
-   Extra assumptions
-   ------------------------------------------------------------------------- *)
-
+app (ttt_fof_thy foft_dir) (ancestry (current_theory ()));
 ttt_fof_extra (tactictoe_dir ^ "/" ^ "fof_extra");
 
 (* -------------------------------------------------------------------------
-   Axioms (current theory + namespace)
+   Current theories
    ------------------------------------------------------------------------- *)
 
 val thmdata_dir = tactictoe_dir ^ "/thmdata";
-val filel = aiLib.listDir thmdata_dir;
-val fof_dir = tactictoe_dir ^ "/fof_cthy";
-val _ = clean_dir fof_dir;
-fun ax_to_fof file (name,g) =
-  let val fileout = fof_dir ^ "/" ^ file ^ "-" ^ (escape name) in
-    ttt_fof_goal fileout "axiom" (name,g)
-  end;
-fun axl_to_fof file =
-  app (ax_to_fof file) (read_thmdata (thmdata_dir ^ "/" ^ file))
-  handle Fail _ => print_endline file;
+val fofc_dir = tactictoe_dir ^ "/fof_cthy";
+val _ = clean_dir fofc_dir;
 
-app axl_to_fof filel;
+fun ttt_fof_cthy dirin dirout =
+  let 
+    fun f_goal file (name,g) =
+      let val fileout = dirout ^ "/" ^ file ^ "-" ^ (escape name) in
+        ttt_fof_goal fileout "axiom" (name,g)
+      end
+    fun f file =
+      app (f_goal file) (read_thmdata (dirin ^ "/" ^ file))
+      handle _ => print_endline file
+  in
+    app f (aiLib.listDir dirin)
+  end;
+
+ttt_fof_cthy thmdata_dir fofc_dir;
 
 (* -------------------------------------------------------------------------
    Conjectures
    ------------------------------------------------------------------------- *)
 
-val pb_dir = tactictoe_dir ^ "/eval/december13-pb-4/pb"
-val filel1 = aiLib.listDir pb_dir;
-val filel2 = filter (String.isSuffix ".goal") filel1;
+val pb_dir = tactictoe_dir ^ "/eval/201217-full/pb";
+val filel = filter (String.isSuffix ".goal") (aiLib.listDir pb_dir);
+
 fun read_goal file =
   let 
     val (name,_) = split_string "." file
     val g = import_goal (pb_dir ^ "/" ^ file)
   in
-    (name,g)
+    SOME (name,g)
   end
+  handle HOL_ERR _ => (print_endline file; NONE)
 
-val gl = map read_goal filel2; (* takes a minute *)
+val gl = map read_goal filel; (* takes a minute *)
+val gl2 = List.mapPartial I gl;
+(* todo remove fof logroot and wot *)
 
 fun cj_to_fof (name,g) =
   let val fileout = pb_dir ^ "/" ^ name ^ ".cj" in
     ttt_fof_goal fileout "conjecture" (name,g)
   end;
-app cj_to_fof gl;
+app cj_to_fof gl2;
 
 (* -------------------------------------------------------------------------
    Map dependencies to axiom files 
    ------------------------------------------------------------------------- *)
 
-val pb_dir = tactictoe_dir ^ "/eval/december13-pb-4/pb"
-
-val fofd = dset String.compare (aiLib.listDir fof_dir);
+val fofcd = dset String.compare (aiLib.listDir fofc_dir);
 val foftd = dset String.compare (aiLib.listDir foft_dir);
 
 fun find_axfile_curthy (thy,n) thmname = 
-  if n < 0 then raise ERR "find_axfile" (thy ^ " " ^ thmname) else
+  if n < 0 then (print_endline (thy ^ " " ^ thmname); NONE) else
     let val file = (thy ^ "_" ^ its n) ^ "-" ^ thmname in
-      if dmem file fofd then file else 
+      if dmem file fofcd then SOME file else 
         find_axfile_curthy (thy,(n-1)) thmname
     end;
 
@@ -535,10 +539,9 @@ fun find_axfile (thy,n) thmname =
     if mem thmthy [thy, mlThmData.namespace_tag]
     then find_axfile_curthy (thy,n) thmname
     else 
-      if dmem thmname foftd then thmname else 
+      if dmem thmname foftd then SOME thmname else 
         raise ERR "find_axfile" thmname
   end;
-
 
 fun convert_premises i file = 
   let 
@@ -548,16 +551,26 @@ fun convert_premises i file =
     val thy = String.concatWith "_" (butlast sl)
     val n = string_to_int (last sl)
     val premises = map escape (readl (pb_dir ^ "/" ^ file))
-    val newpremises = map (find_axfile (thy,n)) premises
+    val newpremises = List.mapPartial (find_axfile (thy,n)) premises
+    val ext = if length premises = length newpremises 
+      then ".dep" else ".xdep"
+     val dirbare1 = pb_dir ^ "/" ^ bare1 
   in
+    if length premises <> length newpremises 
+    then (print_endline bare1; 
+      OS.FileSys.rename {old = dirbare1 ^ ".cj", new = dirbare1 ^ ".xcj"}
+      handle SysErr _ => ())
+    else ();
     if i mod 1000 = 0 then print_endline (its i) else ();
-    writel (pb_dir ^ "/" ^ bare1 ^ ".dep") newpremises
+    writel (pb_dir ^ "/" ^ bare1 ^ ext) newpremises
   end;
 
 val premisesl = filter (String.isSuffix ".premises") (aiLib.listDir pb_dir);
 val file = "list_331-450.premises";
 convert_premises file;
 appi convert_premises premisesl;
+
+(* remove wot, logroot, fcp, lbtree as post-processing *)
 *)
 
 
