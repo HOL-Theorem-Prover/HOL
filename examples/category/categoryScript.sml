@@ -29,6 +29,14 @@ srw_tac [][EQ_IMP_THM] >- (
   srw_tac [][] ) >>
 metis_tac [extensional_restrict]);
 
+Theorem BIJ_restrict[simp]:
+  BIJ (restrict f s) s t ⇔ BIJ f s t
+Proof
+  rw[BIJ_IFF_INV, restrict_def]
+  \\ rw[EQ_IMP_THM]
+  \\ metis_tac[]
+QED
+
 val _ = Hol_datatype`morphism = <|
   dom : α; cod : β; map : γ |>`;
 
@@ -715,6 +723,57 @@ fsrw_tac [][EXISTS_UNIQUE_THM] >>
 fsrw_tac [][FORALL_PROD,EXISTS_PROD] >>
 Cases_on `fg` >>
 metis_tac [iso_pair_between_objs_sym]);
+
+Theorem iso_objs_refl[simp]:
+  is_category c ∧ x ∈ c.obj ⇒ x ≅ x -: c
+Proof
+  rw[iso_objs_def]
+  \\ rw[iso_pair_between_objs_def, iso_pair_def]
+  \\ metis_tac[id_comp_id, id_composable_id, id_dom_cod]
+QED
+
+Theorem iso_objs_trans:
+  is_category c ∧
+  x ≅ y -: c ∧ y ≅ z -: c ⇒ x ≅ z -: c
+Proof
+  simp[iso_objs_def, PULL_EXISTS]
+  \\ qx_genl_tac[`f`,`g`,`h`,`i`]
+  \\ strip_tac
+  \\ fs[iso_pair_between_objs_def, iso_pair_def]
+  \\ qexists_tac`h o f -: c`
+  \\ qexists_tac`g o i -: c`
+  \\ `f ≈> h -: c` by fs[composable_in_def]
+  \\ `g ≈> f -: c` by (
+    imp_res_tac composable_obj
+    \\ rfs[compose_in_thm]
+    \\ rfs[composable_in_def, compose_in_thm, morphism_component_equality] )
+  \\ `i ≈> h -: c` by (
+    imp_res_tac composable_obj
+    \\ rfs[compose_in_thm]
+    \\ rfs[composable_in_def, compose_in_thm, morphism_component_equality] )
+  \\ `i ≈> g -: c` by fs[composable_in_def]
+  \\ conj_asm1_tac >- simp[compose_in_thm]
+  \\ conj_asm1_tac >- imp_res_tac composable_comp
+  \\ `(h o f -:c) o g o i -:c -: c = (h o (f o g -: c) -:c) o i -: c`
+  by ( dep_rewrite.DEP_REWRITE_TAC[comp_assoc]
+       \\ rfs[compose_in_thm, composable_in_def] )
+  \\ pop_assum SUBST1_TAC
+  \\ `(g o i -:c) o h o f -:c -: c = (g o (i o h -: c) -:c) o f -: c`
+  by (
+    dep_rewrite.DEP_REWRITE_TAC[comp_assoc]
+    \\ simp[]
+    \\ imp_res_tac composable_obj
+    \\ imp_res_tac composable_in_def
+    \\ fs[] \\ rfs[]
+    \\ simp[composable_in_def] )
+  \\ pop_assum SUBST1_TAC
+  \\ simp[]
+  \\ dep_rewrite.DEP_REWRITE_TAC[id_comp1]
+  \\ simp[]
+  \\ imp_res_tac composable_in_def
+  \\ simp[compose_in_thm, compose_thm]
+  \\ fs[]
+QED
 
 val iso_objs_objs = Q.store_thm(
 "iso_objs_objs",
