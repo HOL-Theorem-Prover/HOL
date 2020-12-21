@@ -640,6 +640,12 @@ val QSORT_PERM = Q.store_thm
    METIS_TAC [PERM_CONG]]);
 
 
+Theorem LENGTH_QSORT[simp]:
+  LENGTH (QSORT R l) = LENGTH l
+Proof
+  metis_tac[QSORT_PERM, PERM_LENGTH]
+QED
+
 (*---------------------------------------------------------------------------
  * The result list is sorted.
  *---------------------------------------------------------------------------*)
