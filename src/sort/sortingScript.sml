@@ -1530,4 +1530,18 @@ val sorted_filter = Q.store_thm("sorted_filter",
 
 end
 
+Theorem SORTED_ALL_DISTINCT_LIST_TO_SET_EQ:
+  !R. transitive R /\ antisymmetric R ==>
+  !l1 l2. SORTED R l1 /\ SORTED R l2 /\ ALL_DISTINCT l1 /\ ALL_DISTINCT l2 ==>
+  (set l1 = set l2 <=> l1 = l2)
+Proof
+  gen_tac \\ strip_tac
+  \\ Induct \\ simp[]
+  \\ gen_tac \\ Cases \\ simp[]
+  \\ simp[SORTED_EQ]
+  \\ strip_tac
+  \\ fs[EXTENSION]
+  \\ metis_tac[antisymmetric_def]
+QED
+
 val _ = export_theory();
