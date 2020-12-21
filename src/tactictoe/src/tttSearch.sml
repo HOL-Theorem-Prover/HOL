@@ -355,7 +355,7 @@ fun clean_stac_cache () = stac_cache :=
 fun apply_tac parsetoken tokenl goal =
   dfind (goal,tokenl) (!stac_cache) handle NotFound =>
   let
-    val tim = if is_metis_stac (hd tokenl)
+    val tim = if is_metis_stac (hd tokenl) andalso !ttt_metis_flag
               then !ttt_metis_time
               else !ttt_tactic_time
     fun f g =

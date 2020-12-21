@@ -82,6 +82,8 @@ fun select_tacfea tacdata gfea =
 
 fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   let
+    val _ = if not (!ttt_metis_flag) 
+            then prioritize_stacl := [] else ()
     val _ = hidef QUse.use infix_file
     (* preselection *)
     val _ = print_endline "preselection"
@@ -123,7 +125,7 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     fun predarg stac aty g = case aty of
         Athml =>
         let val thml = predthml g in
-          if stac = metis_stac
+          if stac = metis_stac andalso (!ttt_metis_flag)
           then map Sthml [first_n (!ttt_metis_radius) thml]
           else map Sthml (mk_batch_full 1 thml)
         end

@@ -139,10 +139,12 @@ fun nntm_of_statepol (g,stac) =
 
 val gstacarg_cat = mk_var ("gstacarg_cat", rpt_fun_type 3 alpha);
 
+
+(* todo: get rid of the cache and use the preparsed theorems *)
 val thm_cache = ref (dempty String.compare)
 
 fun thm_of_name_cached x = 
-  dfind x (!thm_cache) handle NotFound => 
+  dfind x (!thm_cache) handle NotFound =>
   let val r = thm_of_name x in thm_cache := dadd x r (!thm_cache); r end
 
 (* todo: lookup a dictionary of preparsed theorems necessary to speed up
