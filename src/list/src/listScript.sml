@@ -335,6 +335,34 @@ Proof
   \\ simp[UNCURRY]
 QED
 
+Theorem INDEX_OF_eq_NONE:
+  !x l. INDEX_OF x l = NONE <=> ~MEM x l
+Proof
+  gen_tac \\ Induct
+  \\ rw[INDEX_OF_def, INDEX_FIND_def]
+  \\ rw[Once INDEX_FIND_add]
+  \\ fs[INDEX_OF_def]
+QED
+
+Theorem INDEX_OF_eq_SOME:
+  !x l i. INDEX_OF x l = SOME i <=>
+    (i < LENGTH l) /\ (EL i l = x) /\ (!j. (j < i) ==> EL j l <> x)
+Proof
+  gen_tac \\ Induct
+  \\ simp[INDEX_OF_def, INDEX_FIND_def]
+  \\ rpt gen_tac
+  \\ simp[Once INDEX_FIND_add]
+  \\ fs[INDEX_OF_def]
+  \\ rw[PULL_EXISTS, UNCURRY]
+  >- (
+    Cases_on`i` \\ rw[EL]
+    \\ rpt disj2_tac
+    \\ Q.EXISTS_TAC`0` \\ rw[EL] )
+  \\ Cases_on`i` \\ rw[arithmeticTheory.ADD1, EL]
+  \\ rw[Once arithmeticTheory.FORALL_NUM, SimpRHS]
+  \\ rw[arithmeticTheory.ADD1, EL]
+QED
+
 (* ---------------------------------------------------------------------*)
 (* Proofs of some theorems about lists.                                 *)
 (* ---------------------------------------------------------------------*)
