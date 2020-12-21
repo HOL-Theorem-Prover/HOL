@@ -53,17 +53,20 @@ fun export_argex file tree =
                  if #sstatus x = StacProved then [1.0] else [0.0])
       else NONE
     fun f_argtree g x = 
-      if #sstatus (dfind [] x) <> StacProved then [] else
+      if #sstatus (dfind [] x) <> StacProved then NONE else
       let 
         val stac = dest_stac (#token (dfind [] x))  
         val argl = map snd (before_stacfresh_all 
           (access_child x []))             
+        val exo = 
+          if length argl <= 1 then NONE else 
+          let val ex = List.mapPartial (f_arg g stac) argl in
+            if length ex <= 1 then NONE else SOME ex
+          end
       in
-        if length argl <= 1 
-        then []
-        else List.mapPartial (f_arg g stac) argl
+        exo
       end
-    fun f_goal x = List.concat (map
+    fun f_goal x = List.concat (List.mapPartial
        (f_argtree (#goal x)) (vector_to_list (#stacv x)))
     fun f_node x = map f_goal (vector_to_list (#goalv x))
     val exl = List.concat (map f_node nodel)
@@ -331,8 +334,8 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "201220-6-a1" 
-  (true,30) (NONE,NONE,SOME tnnfile) thyl;
+tttSetup.ttt_metis_flag := false;
+run_evalscript_thyl smlfun "201221" (true,30) (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -417,7 +420,7 @@ rlval_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval; 
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val expdir = ttt_eval_dir ^ "/201220-5"
+val expdir = ttt_eval_dir ^ "/201221"
 val argdir = expdir ^ "/arg";
 val tnnfile = expdir ^ "/tnn/arg";
 
@@ -427,10 +430,8 @@ fun collect_ex dir =
     List.concat (map read_tnnex filel)
   end;
 
+val exl = collect_ex argdir;
 val exl = filter (not o null) (collect_ex argdir);
-
-fun is_pos l = exists (exists (fn x => x > 0.5) o snd) l;
-val posexl = filter is_pos exl;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
