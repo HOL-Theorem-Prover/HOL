@@ -321,6 +321,20 @@ val INDEX_FIND_def = Define‘
 val FIND_def = Define ‘FIND P = OPTION_MAP SND o INDEX_FIND 0 P’
 val INDEX_OF_def = Define ‘INDEX_OF x = OPTION_MAP FST o INDEX_FIND 0 ($= x)’
 
+Theorem INDEX_FIND_add:
+  !ls n. INDEX_FIND n P ls = OPTION_MAP (\(i, x). (i + n, x)) (INDEX_FIND 0 P ls)
+Proof
+  Induct >- ( rw[Once INDEX_FIND_def] \\ rw[Once INDEX_FIND_def] )
+  \\ simp_tac(srw_ss())[Once INDEX_FIND_def, SimpRHS]
+  \\ simp_tac(srw_ss())[Once INDEX_FIND_def]
+  \\ rpt gen_tac
+  \\ IF_CASES_TAC \\ simp_tac(srw_ss())[]
+  \\ first_assum(Q.SPEC_THEN`SUC n`(fn th => simp_tac(srw_ss())[th]))
+  \\ first_x_assum(Q.SPEC_THEN`1`(fn th => simp_tac(srw_ss())[th]))
+  \\ Cases_on`INDEX_FIND 0 P ls` \\ simp[]
+  \\ simp[UNCURRY]
+QED
+
 (* ---------------------------------------------------------------------*)
 (* Proofs of some theorems about lists.                                 *)
 (* ---------------------------------------------------------------------*)
@@ -2087,6 +2101,25 @@ val ALL_DISTINCT_FLAT_REVERSE = store_thm("ALL_DISTINCT_FLAT_REVERSE[simp]",
   “!xs. ALL_DISTINCT (FLAT (REVERSE xs)) = ALL_DISTINCT (FLAT xs)”,
   Induct \\ FULL_SIMP_TAC(srw_ss())[ALL_DISTINCT_APPEND]
   \\ FULL_SIMP_TAC(srw_ss())[MEM_FLAT,PULL_EXISTS] \\ METIS_TAC []);
+
+Theorem ALL_DISTINCT_INDEX_OF_EL:
+  !l n.
+    (ALL_DISTINCT l /\ n < LENGTH l) ==>
+    INDEX_OF (EL n l) l = SOME n
+Proof
+  Induct
+  \\ rw[INDEX_OF_def]
+  \\ rw[INDEX_FIND_def]
+  >- (
+    Cases_on`n` \\ fs[]
+    \\ metis_tac[MEM_EL] )
+  \\ rw[Once INDEX_FIND_add, PULL_EXISTS]
+  \\ fs[INDEX_OF_def]
+  \\ Cases_on`n` \\ fs[]
+  \\ first_x_assum drule
+  \\ rw[]
+  \\ rw[UNCURRY, arithmeticTheory.ADD1]
+QED
 
 (* ----------------------------------------------------------------------
     LRC
