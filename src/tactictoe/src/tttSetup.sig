@@ -28,6 +28,7 @@ sig
   (* search *)
   val ttt_search_time : real ref
   val ttt_tactic_time : real ref
+  val ttt_metis_flag : bool ref
   val ttt_metis_time : real ref
   val ttt_metis_radius : int ref
   val ttt_policy_coeff : real ref

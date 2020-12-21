@@ -188,6 +188,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
+     sreflect_flag "tttSetup.ttt_metis_flag" ttt_metis_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
@@ -330,7 +331,8 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "201220-5" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "201220-6-a1" 
+  (true,30) (NONE,NONE,SOME tnnfile) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -413,11 +415,13 @@ rlval_loop expname thyl (1,maxgen);
    ------------------------------------------------------------------------ *)
 
 (*
-load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;
+load "tttEval"; open tttEval; 
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
 val expdir = ttt_eval_dir ^ "/201220-5"
 val argdir = expdir ^ "/arg";
+val tnnfile = expdir ^ "/tnn/arg";
 
+open mlTreeNeuralNetwork aiLib;
 fun collect_ex dir = 
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
@@ -462,7 +466,6 @@ val schedule =
 
 val tnn = train_fixed schedule exl;
 
-val tnnfile = expdir ^ "/tnn/arg";
 val _ = write_tnn tnnfile tnn;
 
 *)
