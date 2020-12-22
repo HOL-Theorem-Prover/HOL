@@ -48,7 +48,7 @@ fun export_argex file tree =
   let
     val nodel = map snd (dlist tree)
     fun f_arg g stac x = 
-      if #svis x > 1.5 orelse #sstatus x = StacProved
+      if true (* #svis x > 1.5 orelse #sstatus x = StacProved *) 
       then SOME (nntm_of_statearg ((g,stac),#token x),
                  if #sstatus x = StacProved then [1.0] else [0.0])
       else NONE
@@ -335,7 +335,8 @@ tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := false;
-run_evalscript_thyl smlfun "201221" (true,30) (NONE,NONE,NONE) thyl;
+run_evalscript_thyl smlfun "201222" (true,30) 
+  (NONE,NONE,NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -420,7 +421,7 @@ rlval_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval; 
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val expdir = ttt_eval_dir ^ "/201221"
+val expdir = ttt_eval_dir ^ "/201221-1"
 val argdir = expdir ^ "/arg";
 val tnnfile = expdir ^ "/tnn/arg";
 
@@ -463,7 +464,6 @@ val schedule =
      {ncore = 4, verbose = true,
      learning_rate = 0.08, batch_size = 128, nepoch = 50}
    ];
-
 
 val tnn = train_fixed schedule exl;
 
