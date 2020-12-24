@@ -617,7 +617,7 @@ Proof
 QED
 
 Theorem not_WF_string_lt:
-  ¬WF string_lt
+  ~WF string_lt
 Proof
   rw[string_lt_LLEX]
   \\ match_mp_tac LLEX_not_WF
