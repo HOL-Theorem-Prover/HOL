@@ -1226,8 +1226,8 @@ Theorem open_paths_first_tree[simp]:
   open_paths (first_tree n v) = IMAGE (λm. Fpow m ++ [T]) (count n)
 Proof
   Induct_on ‘n’ >>
-  simp[EXTENSION, indexedListsTheory.LT_SUC, PULL_EXISTS, LEFT_AND_OVER_OR,
-       EXISTS_OR_THM] >> metis_tac[]
+  simp[EXTENSION, LT_SUC, PULL_EXISTS, LEFT_AND_OVER_OR, EXISTS_OR_THM] >>
+  metis_tac[]
 QED
 
 Theorem packed_first_tree[simp]:
@@ -1963,7 +1963,7 @@ Proof
   Induct_on ‘ws’ >> simp[AllCaseEqs(), PULL_EXISTS] >> rpt gen_tac >> strip_tac>>
   drule_then (CONJUNCTS_THEN2 (qx_choose_then ‘hp’ strip_assume_tac)
               strip_assume_tac) insert_extends_domain >>
-  dsimp[DISJ_IMP_THM, FORALL_AND_THM, indexedListsTheory.LT_SUC] >> conj_tac
+  dsimp[DISJ_IMP_THM, FORALL_AND_THM, LT_SUC] >> conj_tac
   >- (first_x_assum $ drule_all_then strip_assume_tac >>
       rpt strip_tac >> first_x_assum drule >> simp[ADD1] >>
       metis_tac[ADD_ASSOC, ADD_COMM]) >> conj_tac
