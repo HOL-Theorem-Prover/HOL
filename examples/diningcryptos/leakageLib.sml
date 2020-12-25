@@ -39,7 +39,7 @@ fun UNFOLD_CONV (defs :thm list) (c:term->thm) =
                  THENC c);
 
 fun MAKE_ALL_DISTINCT_CONV (c:term->thm) =
-        UNFOLD_CONV [MAKE_ALL_DISTINCT_def] c;
+        UNFOLD_CONV [nub_def] c;
 
 fun MEM_CONV (c:term->thm) =
         UNFOLD_CONV [MEM] c;

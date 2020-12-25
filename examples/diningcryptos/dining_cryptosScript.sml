@@ -852,7 +852,7 @@ val CARD_dc_valid_outputs = store_thm
                   GSYM LENGTH_dc_valid_outputs_list,
                   ALL_DISTINCT_CARD_LIST_TO_SET,
                   ALL_DISTINCT_dc_valid_outputs_list,
-                  MAKE_ALL_DISTINCT_ALL_DISTINCT]);
+                  all_distinct_nub_id]);
 
 (* ------------------------------------------------------------------------- *)
 
