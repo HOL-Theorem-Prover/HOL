@@ -3652,6 +3652,12 @@ Proof
   Induct >> rw [nub_def] >> metis_tac [nub_set]
 QED
 
+Theorem all_distinct_nub_id:
+  !l. ALL_DISTINCT l ==> nub l = l
+Proof
+  Induct >> simp[nub_def]
+QED
+
 Theorem CARD_LIST_TO_SET_EQN:
   CARD (LIST_TO_SET l) = LENGTH (nub l)
 Proof
