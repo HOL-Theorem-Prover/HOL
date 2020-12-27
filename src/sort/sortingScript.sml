@@ -406,6 +406,109 @@ Proof
   simp[combinTheory.o_DEF]
 QED
 
+Theorem PERM_BIJ_IFF:
+  PERM l1 l2 <=>
+  ?p. p PERMUTES count (LENGTH l1) /\
+      l2 = GENLIST (\i. EL (p i) l1) (LENGTH l1)
+Proof
+  eq_tac
+  >- metis_tac[PERM_BIJ]
+  \\ rw[] \\ fs[]
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac`p`
+  \\ qid_spec_tac`l1`
+  \\ Induct
+  \\ rw[]
+  \\ simp[PERM_CONS_EQ_APPEND]
+  \\ pop_assum mp_tac
+  \\ rw[BIJ_IFF_INV]
+  \\ qexists_tac`GENLIST (\i. EL (p i - 1) l1) (g 0)`
+  \\ qexists_tac`GENLIST (\i. EL (p (g 0 + i + 1) - 1) l1)
+                         (LENGTH l1 - g 0)`
+  \\ simp[LIST_EQ_REWRITE, GSYM CONJ_ASSOC]
+  \\ conj_tac
+  >- ( rpt(first_x_assum(qspec_then`0`mp_tac)) \\ simp[] )
+  \\ conj_tac
+  >- (
+    simp[EL_APPEND_EQN]
+    \\ rpt strip_tac
+    \\ Cases_on`x < g 0` \\ gs[]
+    >- (
+      Cases_on`p x` \\ gs[]
+      \\ Cases_on`g 0` \\ gs[]
+      \\ metis_tac[prim_recTheory.LESS_REFL] )
+    \\ Cases_on`x = g 0` \\ gs[]
+    \\ Cases_on`p x` \\ gs[]
+    \\ metis_tac[prim_recTheory.LESS_0])
+  \\ qspecl_then[`\i. EL (p (if i < g 0 then i else i + 1) - 1) l1`,
+                 `LENGTH l1 - g 0`, `g 0`] (mp_tac o SYM) GENLIST_APPEND
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`l2 ++ l3`
+  \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`l4 ++ l3`
+  \\ `l4 = l2` by ( simp[Abbr`l4`, Abbr`l2`, LIST_EQ_REWRITE] )
+  \\ `g 0 < SUC (LENGTH l1)` by gs[]
+  \\ `g 0 <= LENGTH l1` by simp[]
+  \\ simp[Abbr`l4`, Abbr`l2`]
+  \\ qho_match_abbrev_tac`PERM _ (GENLIST (\i. EL (q i) l1) _)`
+  \\ first_x_assum irule
+  \\ simp[BIJ_DEF, SURJ_DEF, INJ_DEF, GSYM CONJ_ASSOC]
+  \\ conj_asm1_tac
+  >- (
+    simp[Abbr`q`]
+    \\ rpt strip_tac
+    \\ `p x < SUC (LENGTH l1)` by gs[]
+    \\ `p (x + 1) < SUC (LENGTH l1)` by gs[]
+    \\ rw[] )
+  \\ simp[]
+  \\ reverse conj_tac
+  >- (
+    simp[Abbr`q`]
+    \\ rpt strip_tac
+    \\ qexists_tac`if g (x + 1) < g 0 then g (x + 1) else g (x + 1) - 1`
+    \\ IF_CASES_TAC \\ simp[]
+    \\ `g (x + 1) < SUC (LENGTH l1)`by gs[]
+    \\ simp[]
+    \\ Cases_on`g (x + 1) = g 0` \\ gs[]
+    \\ `(0 < SUC (LENGTH l1)) /\ x + 1 < SUC (LENGTH l1)` by gs[]
+    \\ `0 = x + 1` by metis_tac[]
+    \\ fs[] )
+  \\ simp[Abbr`q`]
+  \\ rpt strip_tac
+  \\ `(x + 1 < SUC (LENGTH l1)) /\ y + 1 < SUC (LENGTH l1)` by gs[]
+  \\ wlog_tac `x < y` [`x`, `y`]
+  >- (
+    CCONTR_TAC
+    \\ first_x_assum(qspecl_then[`y`,`x`]mp_tac)
+    \\ simp[] )
+  \\ `x < SUC (LENGTH l1)` by gs[]
+  \\ `y < SUC (LENGTH l1)` by gs[]
+  \\ Cases_on`y < g 0`
+  >- (
+    fs[]
+    \\ Cases_on`p x` \\ fs[]
+    >- ( `y < x` by metis_tac[] \\ fs[] )
+    \\ Cases_on`p y` \\ fs[]
+    >- ( `y < y` by metis_tac[] \\ fs[] )
+    \\ `x = y` by metis_tac[] \\ fs[] )
+  \\ qpat_x_assum`p _ - _ = _`mp_tac
+  \\ Cases_on`x < g 0` \\ simp[]
+  >- (
+    Cases_on`p x` \\ simp[]
+    >- ( `x < x` by metis_tac[] \\ fs[] )
+    \\ Cases_on`p (y + 1)` \\ simp[]
+    >- ( `g 0 = y + 1` by metis_tac[] \\ gs[] )
+    \\ strip_tac
+    \\ `x = y + 1` by metis_tac[] \\ fs[] )
+  \\ Cases_on`p (x + 1)` \\ simp[]
+  >- ( `g 0 = x + 1` by metis_tac[] \\ gs[] )
+  \\ Cases_on`p (y + 1)` \\ simp[]
+  >- ( `g 0 = y + 1` by metis_tac[] \\ gs[] )
+  \\ strip_tac
+  \\ `x + 1 = y + 1` by metis_tac[]
+  \\ fs[]
+QED
+
 Theorem PERM_EVERY:
   !ls ls'. PERM ls ls' ==> (EVERY P ls <=> EVERY P ls')
 Proof Induct_on ‘PERM’ >> srw_tac[][] >> metis_tac[]
