@@ -3686,6 +3686,25 @@ val nub_append = Q.store_thm ("nub_append",
    >> rw []
    >> metis_tac [filter_helper]);
 
+Theorem nub_MAP_INJ:
+  INJ f (set ls) UNIV ==>
+  nub (MAP f ls) = MAP f (nub ls)
+Proof
+  Induct_on`ls`
+  \\ rw[]
+  \\ simp[nub_def]
+  \\ simp[Once COND_RAND, SimpRHS]
+  \\ `INJ f (set ls) UNIV`
+  by (
+    irule INJ_SUBSET
+    \\ goal_assum(first_assum o mp_then Any mp_tac)
+    \\ simp[SUBSET_DEF] )
+  \\ fs[]
+  \\ simp[MEM_MAP]
+  \\ fs[INJ_DEF]
+  \\ metis_tac[]
+QED
+
 val list_to_set_diff = Q.store_thm ("list_to_set_diff",
    ‘!l1 l2. set l2 DIFF set l1 = set (FILTER (\x. x NOTIN set l1) l2)’,
    Induct_on ‘l2’ >> rw []);
