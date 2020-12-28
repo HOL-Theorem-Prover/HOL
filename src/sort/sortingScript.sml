@@ -1578,13 +1578,8 @@ val sorted_count_list = Q.store_thm ("sorted_count_list",
  decide_tac);
 
 val sorted_map = Q.store_thm ("sorted_map",
-`!R f l. transitive R ==> (SORTED R (MAP f l) <=> SORTED (inv_image R f) l)`,
- Induct_on `l` >>
- rw [SORTED_EQ] >>
- eq_tac >>
- rw [] >>
- fs [MEM_MAP] >>
- metis_tac []);
+`!R f l. (SORTED R (MAP f l) <=> SORTED (inv_image R f) l)`,
+ Induct_on `l` >> rw [SORTED_EL_SUC, EL_MAP]);
 
 val sorted_perm_count_list = Q.store_thm ("sorted_perm_count_list",
 `!y f l n.
