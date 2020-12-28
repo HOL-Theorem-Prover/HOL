@@ -1568,14 +1568,29 @@ val QSORT3_SORTED = Q.store_thm ("QSORT3_SORTED",
  imp_res_tac QSORT3_SORTS >>
  fs [SORTS_DEF]);
 
-val sorted_count_list = Q.store_thm ("sorted_count_list",
-`!n. SORTED $<= (COUNT_LIST n)`,
+val sorted_lt_count_list = Q.store_thm ("sorted_lt_count_list",
+`!n. SORTED $< (COUNT_LIST n)`,
  Induct_on `n`
  >- rw [COUNT_LIST_def] >>
  rw [COUNT_LIST_SNOC, SNOC_APPEND] >>
  match_mp_tac SORTED_APPEND_IMP >>
  FULL_SIMP_TAC (srw_ss()++ARITH_ss) [transitive_def, MEM_COUNT_LIST] >>
  decide_tac);
+
+val SORTED_weaken = store_thm("SORTED_weaken",
+  ``!R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
+      ==> SORTED R' ls``,
+  NTAC 2 GEN_TAC THEN
+  Induct THEN SRW_TAC[][] THEN
+  Cases_on`ls` THEN
+  FULL_SIMP_TAC(srw_ss())[SORTED_DEF] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  METIS_TAC[])
+
+val sorted_count_list = Q.store_thm ("sorted_count_list",
+`!n. SORTED $<= (COUNT_LIST n)`,
+ gen_tac \\ irule SORTED_weaken \\ qexists_tac`$<`
+ \\ simp[sorted_lt_count_list]);
 
 val sorted_map = Q.store_thm ("sorted_map",
 `!R f l. (SORTED R (MAP f l) <=> SORTED (inv_image R f) l)`,
@@ -1591,16 +1606,6 @@ val sorted_perm_count_list = Q.store_thm ("sorted_perm_count_list",
  `transitive $<= /\ antisymmetric $<=`
           by srw_tac [ARITH_ss] [transitive_def,antisymmetric_def] >>
  metis_tac [sorted_map, SORTED_PERM_EQ, sorted_count_list]);
-
-val SORTED_weaken = store_thm("SORTED_weaken",
-  ``!R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
-      ==> SORTED R' ls``,
-  NTAC 2 GEN_TAC THEN
-  Induct THEN SRW_TAC[][] THEN
-  Cases_on`ls` THEN
-  FULL_SIMP_TAC(srw_ss())[SORTED_DEF] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
-  METIS_TAC[])
 
 val less_sorted_eq = MATCH_MP SORTED_EQ arithmeticTheory.transitive_LESS
   |> curry save_thm"less_sorted_eq";
