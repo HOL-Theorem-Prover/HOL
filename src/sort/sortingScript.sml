@@ -1647,4 +1647,117 @@ Proof
   \\ metis_tac[antisymmetric_def]
 QED
 
+Theorem EL_FILTER_COUNT_LIST_LEAST:
+!n i.
+  (i < LENGTH (FILTER P (COUNT_LIST n))) ==>
+    EL i (FILTER P (COUNT_LIST n))
+    = LEAST j.
+        ((0 < i) ==> EL (i-1) (FILTER P (COUNT_LIST n)) < j) /\
+        (j < n) /\ P j
+Proof
+  rw[]
+  \\ `SORTED $< (FILTER P (COUNT_LIST n))`
+    by ( irule SORTED_FILTER \\ rw[sorted_lt_count_list] )
+  \\ qmatch_goalsub_abbrev_tac`x = _`
+  \\ `MEM x (FILTER P (COUNT_LIST n))` by metis_tac[MEM_EL]
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac
+  >- (
+    qexists_tac`x`
+    \\ fs[MEM_FILTER, MEM_COUNT_LIST]
+    \\ strip_tac
+    \\ fs[SORTED_EL_LESS, Abbr`x`] )
+  \\ qx_gen_tac`y`
+  \\ strip_tac
+  \\ `MEM y (FILTER P (COUNT_LIST n))` by simp[MEM_FILTER, MEM_COUNT_LIST]
+  \\ pop_assum mp_tac \\ simp[MEM_EL]
+  \\ disch_then(qx_choose_then`j`strip_assume_tac)
+  \\ Cases_on`i = j` >- fs[]
+  \\ Cases_on`i < j` >- (
+    `x < y` by fs[SORTED_EL_LESS, Abbr`x`]
+    \\ first_x_assum drule
+    \\ fs[SORTED_EL_LESS, MEM_FILTER]
+    \\ simp[Abbr`x`]
+    \\ Cases_on`i = 0` \\ simp[] )
+  \\ `j < i` by simp[]
+  \\ `0 < i` by simp[]
+  \\ Cases_on `j = i-1` \\ fs[]
+  \\ `j < i-1` by fs[]
+  \\ fs[SORTED_EL_LESS]
+  \\ last_x_assum drule
+  \\ simp[]
+QED
+
+Theorem SORTED_FILTER_COUNT_LIST:
+  SORTED R (FILTER P (COUNT_LIST m)) <=>
+  !i j. (i < j) /\ (j < m) /\ P i /\ P j /\ (!k. (i < k) /\ (k < j) ==> ~P k)
+        ==> R i j
+Proof
+  `SORTED $< (FILTER P (COUNT_LIST m))`
+  by ( irule SORTED_FILTER \\ simp[sorted_lt_count_list] )
+  \\ rw[SORTED_EL_SUC, EQ_IMP_THM]
+  >- (
+    `MEM i (FILTER P (COUNT_LIST m))` by simp[MEM_FILTER, MEM_COUNT_LIST]
+    \\ `MEM j (FILTER P (COUNT_LIST m))` by simp[MEM_FILTER, MEM_COUNT_LIST]
+    \\ fs[MEM_EL]
+    \\ qmatch_asmsub_rename_tac`i = EL ni _`
+    \\ qmatch_asmsub_rename_tac`j = EL nj _`
+    \\ `ni < nj`
+    by (
+      CCONTR_TAC \\ gs[NOT_LESS, LESS_OR_EQ]
+      \\ fs[SORTED_EL_LESS]
+      \\ res_tac \\ fs[] )
+    \\ last_x_assum(qspec_then`nj-1`mp_tac)
+    \\ simp[ADD1]
+    \\ `ni = nj - 1` suffices_by rw[]
+    \\ CCONTR_TAC
+    \\ first_x_assum(qspec_then`EL (nj-1) (FILTER P (COUNT_LIST m))`mp_tac)
+    \\ fs[SORTED_EL_LESS]
+    \\ qmatch_goalsub_abbrev_tac`P x`
+    \\ `nj - 1 < LENGTH (FILTER P (COUNT_LIST m))` by simp[]
+    \\ `MEM x (FILTER P (COUNT_LIST m))` by metis_tac[MEM_EL]
+    \\ fs[MEM_FILTER] )
+  \\ first_x_assum irule
+  \\ qmatch_goalsub_abbrev_tac`P x ∧ P y ∧ _`
+  \\ `n < LENGTH (FILTER P (COUNT_LIST m))` by simp[]
+  \\ `MEM x (FILTER P (COUNT_LIST m))` by metis_tac[MEM_EL]
+  \\ `MEM y (FILTER P (COUNT_LIST m))` by metis_tac[MEM_EL]
+  \\ fs[MEM_FILTER, MEM_COUNT_LIST]
+  \\ fs[SORTED_EL_LESS]
+  \\ reverse conj_asm2_tac >- metis_tac[prim_recTheory.LESS_SUC_REFL]
+  \\ simp[Abbr`y`, Once EL_FILTER_COUNT_LIST_LEAST]
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac >- metis_tac[]
+  \\ rw[]
+  \\ first_x_assum(qspec_then`k`mp_tac)
+  \\ simp[]
+QED
+
+Theorem SORTED_nub:
+  transitive R /\ SORTED R ls ==> SORTED R (nub ls)
+Proof
+  qspec_then`ls`(SUBST1_TAC o Q.AP_TERM`nub` o SYM)GENLIST_ID
+  \\ simp[nub_GENLIST, sorted_map]
+  \\ qmatch_goalsub_abbrev_tac`FILTER P`
+  \\ qmatch_goalsub_abbrev_tac`COUNT_LIST m`
+  \\ simp[SORTED_FILTER_COUNT_LIST]
+  \\ rw[]
+  \\ gs[SORTED_EL_LESS]
+QED
+
+Theorem QSORT_nub:
+  transitive R /\ antisymmetric R /\ total R ==>
+  QSORT R (nub ls) = nub (QSORT R ls)
+Proof
+  rw[]
+  \\ irule SORTED_ALL_DISTINCT_LIST_TO_SET_EQ
+  \\ simp[]
+  \\ conj_tac >- metis_tac[ALL_DISTINCT_PERM, QSORT_PERM, all_distinct_nub]
+  \\ conj_tac >- simp[EXTENSION, QSORT_MEM]
+  \\ qexists_tac`R`
+  \\ simp[QSORT_SORTED]
+  \\ irule SORTED_nub
+  \\ simp[QSORT_SORTED]
+QED
+
 val _ = export_theory();
