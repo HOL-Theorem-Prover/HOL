@@ -1718,7 +1718,7 @@ Proof
     \\ `MEM x (FILTER P (COUNT_LIST m))` by metis_tac[MEM_EL]
     \\ fs[MEM_FILTER] )
   \\ first_x_assum irule
-  \\ qmatch_goalsub_abbrev_tac`P x ∧ P y ∧ _`
+  \\ qmatch_goalsub_abbrev_tac`P x /\ P y /\ _`
   \\ `n < LENGTH (FILTER P (COUNT_LIST m))` by simp[]
   \\ `MEM x (FILTER P (COUNT_LIST m))` by metis_tac[MEM_EL]
   \\ `MEM y (FILTER P (COUNT_LIST m))` by metis_tac[MEM_EL]
