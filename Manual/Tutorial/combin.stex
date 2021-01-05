@@ -212,7 +212,7 @@ point they produce no more than one \emph{normal form}, where a normal
 form is a value from which no further steps can be taken.
 \begin{session}
 \begin{alltt}
->> Definition normform_def:  normform R x = !y. ~(R x y)
+>> Definition normform_def:  normform R x = !y. ~R x y
    End
 \end{alltt}
 \end{session}
@@ -293,13 +293,13 @@ We'll again hide the existing definition of ``diamond'':
    QED
 \end{alltt}
 \end{session}
-    So far so good.  How then do we show the diamond property for
-    $\con{RTC}\;R$?  The answer that leaps to mind is to hope that if
-    the original relation has the diamond property, then maybe the
-    reflexive and transitive closure will too.  The theorem we want is
-    \[ \con{diamond}\;R \;\Rightarrow\; \con{diamond}\,(\con{RTC}\;R)\] Graphically,
-    this is hoping that from
-    \[\xymatrix @R=5mm @C=2.5mm {
+So far so good.
+How then do we show the diamond property for $\con{RTC}\;R$?  The answer that leaps to mind is to hope that if the original relation has the diamond property, then maybe the reflexive and transitive closure will too.
+The theorem we want is \[
+  \con{diamond}\;R \;\Rightarrow\; \con{diamond}\,(\con{RTC}\;R)
+\]
+Graphically, this is hoping that from \[
+  \xymatrix @R=5mm @C=2.5mm {
 & x \ar[dl] \ar[dr] & \\
 y \ar@{.>}[dr] & & z \ar@{.>}[dl] \\
 & u}\]
@@ -308,10 +308,11 @@ y \ar@{.>}[dr] & & z \ar@{.>}[dl] \\
 & & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \ar@{-->}[ddrr] \\
 & & & u \\
 p \ar@{.>}[dddrrr] & & & & & & q \ar@{.>}[dddlll] \\ \\ \\
-& & & r}\] where the dashed lines indicate that these steps (from $x$ to $p$,
-for example) are using $\con{RTC}\;R$.  The presence of two instances
-of $\con{RTC}\;R$ is an indication that this proof will require two
-inductions.  With the first we will prove
+& & & r}
+\]
+where the dashed lines indicate that these steps (from $x$ to $p$, for example) are using $\con{RTC}\;R$.
+The presence of two instances of $\con{RTC}\;R$ is an indication that this proof will require two inductions.
+With the first we will prove
 \[\xymatrix @R=4mm @C=2mm {
 & & & x \ar[dl] \ar[dr] & \\
 & & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \\
@@ -374,10 +375,9 @@ In fact, we don't even need to provide this witness explicitly: \texttt{metis\_t
 >> e (metis_tac [RTC_rules]);
 \end{alltt}
 \end{session}
-    And what of this remaining goal?  Assumptions one and four
-    between them are the top of an $R$-diamond.  Let's use the fact
-    that we have the diamond property for $R$ and infer that there
-    exists a $v$ to which $x'$ and $z$ can both take single steps:
+And what of this remaining goal?
+Assumptions one and four between them are the top of an $R$-diamond.
+Let's use the fact that we have the diamond property for $R$ and infer that there exists a $v$ to which $x'$ and $z$ can both take single steps:
 \begin{session}
 \begin{alltt}
 >> e (`?v. R x' v /\ R z v` by metis_tac [diamond_def]);
@@ -394,8 +394,7 @@ All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
 ##assert can top_thm()
 \end{alltt}
 \end{session}
-    Again we can (and should) package up the lemma, avoiding the
-    sub-goal package commands:
+Again we can (and should) package up the lemma, avoiding the sub-goal package commands:
 \begin{session}
 \begin{alltt}
 ##eval Theorem R_RTC_diamond:
@@ -503,13 +502,15 @@ development and established that\[
 & & \land\\
 & & \con{diamond}\,(\con{RTC}\;R) & \equiv & \con{confluent}\;R\\
 \end{array}
-\]  (We have also established a couple of other useful results along
-the way.)
+\]
+(We have also established a couple of other useful results along the way.)
 
 \newcommand{\topk}{\KC\;\SC\;(\KC\;\KC\;\KC)} Sadly, it just isn't the
 case that $\rightarrow$, our one-step relation for combinators, has
-the diamond property.  A counter-example is $\topk$.  Its possible evolution
-can be described graphically: \[\xymatrix @R=5mm @C=2.5mm {
+the diamond property.
+A counter-example is $\topk$.
+Its possible evolution can be described graphically:
+\[\xymatrix @R=5mm @C=2.5mm {
 & \topk \ar[dl] \ar[dr] & \\
 \SC & & \KC\;\SC\;\KC \ar[dl] \\
 & \SC}\]
@@ -542,14 +543,11 @@ We use the \texttt{-||->} symbol to indicate parallel reduction because of its o
                       term_name = "predn"};
 \end{alltt}
 \end{session}
-    Then we can define parallel reduction itself.  The rules look very
-    similar to those for $\rightarrow$.  The difference is that we
-    allow the reflexive transition, and say that an application of
-    $x\;u$ can be transformed to $y\;v$ if there are transformations
-    taking $x$ to $y$ and $u$ to $v$.  This is why we must have
-    reflexivity incidentally.  Without it, a term like
-    $(\KC\;x\;y)\,\KC$ couldn't reduce because while the LHS of the
-    application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
+Then we can define parallel reduction itself.
+The rules look very similar to those for $\rightarrow$.
+The difference is that we allow the reflexive transition, and say that an application of $x\;u$ can be transformed to $y\;v$ if there are transformations taking $x$ to $y$ and $u$ to $v$.
+This is why we must have reflexivity incidentally.
+Without it, a term like $(\KC\;x\;y)\,\KC$ couldn't reduce because while the LHS of the application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}
 \begin{alltt}
 >>_ Inductive predn:
@@ -566,20 +564,18 @@ We use the \texttt{-||->} symbol to indicate parallel reduction because of its o
 \subsection{Using \con{RTC}}
 \label{sec:Using-RTC}
 
-Now we can set up nice syntax for the reflexive and transitive
-closures of our two relations.  We will use ASCII symbols for both
-that consist of the original symbol followed by an asterisk.  Note
-also how, in defining the two relations, we have to use the
-\texttt{\$} character to ``escape'' the symbols' usual fixities.  This
-is exactly analogous to the way in which ML's \texttt{op} keyword is
-used.  First, we create the desired symbol for the concrete syntax,
+Now we can set up nice syntax for the reflexive and transitive closures of our two relations.
+We will use ASCII symbols for both that consist of the original symbol followed by an asterisk.
+Note also how, in defining the two relations, we have to use the \texttt{\$} character to ``escape'' the symbols' usual fixities.
+This is exactly analogous to the way in which ML's \texttt{op} keyword is used.
+First, we create the desired symbol for the concrete syntax,
 and then we ``overload'' it so that the parser will expand it to the
 desired form.
 \begin{session}
 \begin{alltt}
 >> set_fixity "-->*" (Infix(NONASSOC, 450));
 
->> overload_on ("-->*", ``RTC redn``);
+>> Overload "-->*" = “RTC redn”;
 \end{alltt}
 \end{session}
 We do exactly the same thing for the reflexive and transitive closure
@@ -588,7 +584,7 @@ of our parallel reduction.
 \begin{alltt}
 >> set_fixity "-||->*" (Infix(NONASSOC, 450));
 
->> overload_on ("-||->*", ``RTC predn``);
+>> Overload "-||->*" = ``RTC predn``;
 \end{alltt}
 \end{session}
 Incidentally, in conjunction with \texttt{PROVE} we can now
