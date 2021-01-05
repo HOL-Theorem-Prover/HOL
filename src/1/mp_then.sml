@@ -28,8 +28,7 @@ fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
                              (REWR_CONV rth_eq ORELSEC
                               TRY_CONV (RAND_CONV (REWR_CONV rth_eq) THENC
                                         REWR_CONV notT))) THENC
-                  TRY_CONV (REWR_CONV Timp) THENC
-                  TRY_CONV (REWR_CONV impF)))
+                  TRY_CONV (REWR_CONV Timp)))
               th0
       in
         ttac th g

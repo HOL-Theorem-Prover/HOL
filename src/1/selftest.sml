@@ -867,6 +867,22 @@ end
 val _ = hide "Q"
 val _ = hide "P"
 
+fun pp_goal (asl,g) =
+    PP.block PP.CONSISTENT 1 [
+      PP.add_string "([",
+      PP.block PP.INCONSISTENT 1 (
+        PP.pr_list pp_term [PP.add_string ",", PP.add_break(1,0)] asl
+      ),
+      PP.add_string "],", PP.add_break (1,0),
+      pp_term g, PP.add_string ")"
+    ]
+
+fun pp_goals gs = PP.block PP.INCONSISTENT 1 (
+      PP.add_string "[" ::
+      PP.pr_list pp_goal [PP.add_string ",", PP.add_break (1,0)] gs @
+      [PP.add_string "]"]
+    )
+
 val _ = let
   open mp_then
   val _ = tprint "mp_then + goal_assum 1"
@@ -958,7 +974,7 @@ val _ = let
   val asl = [``p ==> q``, ``~q``]
   val g = (asl, ``r:bool``)
   val (res, _) = pop_assum (first_assum o mp_then Concl mp_tac) g
-  val expectedg = ``~p ==> r``
+  val expectedg = ``(p ==> F) ==> r``
 in
   case res of
       [(asl', g')] =>
@@ -977,19 +993,20 @@ val _ = let
   val _ = tprint "mp_then (concl) 2"
   val asl = [``p ==> ~q``, ``q:bool``]
   val g = (asl, ``r:bool``)
-  val (res, _) = pop_assum (first_assum o mp_then Concl mp_tac) g
-  val expectedg = ``~p ==> r``
+  val eres = Exn.capture (#1 o pop_assum (first_assum o mp_then Concl mp_tac)) g
+  val expectedg = ``(p ==> F) ==> r``
 in
-  case res of
-      [(asl', g')] =>
+  case eres of
+      Exn.Res [(asl', g')] =>
       (case Lib.list_compare Term.compare ([``q:bool``], asl') of
            EQUAL => if aconv g' expectedg then OK()
                     else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
          | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("Tactic returned wrong number of sub-goals (" ^
-                Int.toString (length res))
+    | Exn.Res res => die ("Tactic returned wrong number of sub-goals (" ^
+                          Int.toString (length res))
+    | Exn.Exn e => die ("Unexpected exception: " ^ General.exnMessage e)
 end;
 
 
@@ -1106,6 +1123,27 @@ in
     | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
+
+val _ = let
+  val _ = tprint "drule_all 2 (ith implies F)"
+  val asl = [“Q (a:ind) (b:'b):bool”,  “P (a:ind):bool”, “R T : bool”,
+             “!x:ind. P x ==> !c:'b. Q x c ==> F”]
+  val g = (asl, “p /\ q”)
+  val eres = Exn.capture (#1 o VALID (first_x_assum drule_all)) g
+  val (asl', _) = front_last asl
+  val expected = (asl', “F ==> p /\ q”)
+in
+  case eres of
+      Exn.Res res =>
+      if ListPair.allEq goal_equal ([expected], res) then OK()
+      else die ("Unexpected result:\n  " ^
+                PP.pp_to_string 70
+                                (fn r => PP.block PP.CONSISTENT 2 [pp_goals r])
+                                res
+               )
+    | Exn.Exn e => die ("Unexpected exception: " ^ General.exnMessage e)
+end
+
 
 val _ = let
   val _ = tprint "dxrule_all 1"
