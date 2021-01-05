@@ -232,7 +232,7 @@ how long this took."
                   end" nil))
 
 (defvar tactic-connective-regexp
-  "[[:space:]]*\\(THEN1\\|THENL\\|THEN\\|>>\\|>|\\|>-\\|\\\\\\\\\\)[[:space:]]*[[(]?"
+  "[[:space:]]*\\(THEN1\\|THENL\\|THEN\\|>>\\|>|\\|>-\\|>~\\|\\\\\\\\\\)[[:space:]]*[[(]?"
   "Regular expression for strings used to put tactics together.")
 
 (defun tactic-cleanup-leading (string)
