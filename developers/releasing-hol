@@ -177,7 +177,7 @@ else
 fi
 
 echo ; echo Building documentation
-for man_name in Reference Description Tutorial Quick Logic Developers
+for man_name in Description Developers Interaction-emacs Logic Quick Reference Tutorial
 do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo -n "  $man_name"

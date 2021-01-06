@@ -2,13 +2,13 @@ INCLUDES = $(HOLDIR)/Manual/Tools
 
 SCRIPTER = $(HOLDIR)/Manual/Tools/polyscripter
 
-all: HOL-interaction.pdf
+all: interaction-emacs.pdf
 .PHONY: all
 
-HOL-interaction.pdf: HOL-interaction.tex
-	latexmk -pdf HOL-interaction
+interaction-emacs.pdf: interaction-emacs.tex
+	latexmk -pdf interaction-emacs
 
-HOL-interaction.tex: HOL-interaction.stex $(dprot $(SCRIPTER))
+interaction-emacs.tex: interaction-emacs.stex $(dprot $(SCRIPTER))
 	$(protect $(SCRIPTER)) $(protect $(HOLDIR)/Manual/Tools/umap) < $< > $@
 
-EXTRA_CLEANS = $(patsubst %,HOL-interaction.%,aux fdb_latexmk fls log pdf tex)
+EXTRA_CLEANS = $(patsubst %,interaction-emacs.%,aux fdb_latexmk fls log pdf tex)
