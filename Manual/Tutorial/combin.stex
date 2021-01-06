@@ -817,11 +817,12 @@ Packaged, the proof is:
 \subsection{Proving a diamond property for parallel reduction}
 \label{sec:predn-diamond}
 
-Now we just have one substantial proof to go.  Before we can even
-begin, there are a number of minor lemmas we will need to prove first.
-These are basically specialisations of the theorem
-\texttt{predn\_cases}.  We want exhaustive characterisations of the
-possibilities when the following terms undergo a parallel reduction:
+Now we just have one substantial proof to go.
+Before we can even begin, there are a number of minor lemmas we will need to prove first.
+These are basically specialisations of the theorem \texttt{predn\_cases}.
+The problem with that theorem is that it is not easy to use as a rewrite or simplification rule: it would cause the simplifier to loop because there are instances of the left-hand-side pattern (\holtxt{x~-||->~y}) on its right-hand-side.
+If we specialise the variable corresponding to the pattern's \holtxt{x}, then the looping can be removed.
+In particular, we want exhaustive characterisations of the possibilities when the following terms undergo a parallel reduction:
 $x\;y$, \KC, \SC, $\KC\;x$, $\SC\;x$, $\KC\;x\;y$, $\SC\;x\;y$ and
 $\SC\;x\;y\;z$.
 
@@ -832,10 +833,8 @@ characterisations automatically:
 >> fun characterise t = SIMP_RULE (srw_ss()) [] (SPEC t predn_cases);
 \end{alltt}
 \end{session}
-The \ml{characterise} function specialises the theorem
-\ml{predn\_cases} with the input term, and then simplifies.  The
-\ml{srw\_ss()} simpset includes information about the injectivity and
-disjointness of constructors and eliminates obvious impossibilities.
+The \ml{characterise} function specialises the theorem \ml{predn\_cases} with the input term, and then simplifies.
+The \ml{srw\_ss()} simpset includes information about the injectivity and disjointness of constructors and eliminates obvious impossibilities.
 For example,
 \begin{session}
 \begin{alltt}
@@ -921,6 +920,7 @@ for all that we might look upon the four disjunctions and despair.
 \noindent Now we are ready to prove the final goal.  It is
 \begin{session}
 \begin{alltt}
+>>__ dropn 1;
 >> g `!x y. x -||-> y ==>
             !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u`;
 \end{alltt}
@@ -939,13 +939,11 @@ the work for us:
 >> e (metis_tac [predn_rules]);
 \end{alltt}
 \end{session}
-    The next goal includes two instances of terms of the form
-    \verb!x # y -||-> z!.  We can use our \verb!x_ap_y_predn!
-    theorem here.  However, if we rewrite indiscriminately with it, we
-    will really confuse the goal.  We want to rewrite just the
-    assumption, not the instance underneath the existential
-    quantifier.  Starting everything by repeatedly stripping can't
-    lead us too far astray.
+The next goal includes two instances of terms of the form \verb!x # y -||-> z!.
+We can use our \verb!x_ap_y_predn! theorem here.
+However, if we rewrite indiscriminately with it, we will really confuse the goal.
+We want to rewrite just the assumption, not the instance underneath the existential quantifier.
+Starting everything by repeatedly stripping can't lead us too far astray.
 \begin{session}
 \begin{alltt}
 >> e (rw[]);
@@ -956,14 +954,12 @@ list using the \ml{qpat\_x\_assum} theorem-tactical.
 We will write
 \begin{alltt}
 ##eval qpat_x_assum `_ # _ -||-> _`
-         (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn])
+         (strip_assume_tac o SIMP_RULE (srw_ss()) [x_ap_y_predn])
 \end{alltt}
 The quotation specifies the pattern that we want to match: we want the term that has an application term reducing, and as there is just one such, we can use ``don't care'' underscore patterns for the various arguments.
 The second argument specifies how we are going to transform the theorem.
-Reading the compositions from right to left, first we will simplify with the \verb!x_ap_y_predn! theorem and then we will assume the result back into the assumptions, stripping disjunctions and existentials as we go.\footnote{An alternative to using \ml{qpat\_x\_assum} is to use
-  \texttt{by} instead: you would have to state the four-way
-  disjunction yourself, but the proof would be more ``declarative'' in
-  style, and though wordier, might be more maintainable.}
+Reading the compositions from right to left, first we will simplify with the \verb!x_ap_y_predn! theorem (the simplifier invocation here is like that we used in the definition of the \ml{characterise} function), and then we will assume the result back into the assumptions, stripping disjunctions and existentials as we go.\footnote{%
+  An alternative to using \ml{qpat\_x\_assum} is to use \texttt{by} instead: you would have to state the four-way disjunction yourself, but the proof would be more ``declarative'' in style, and though wordier, might be more maintainable.}
 
 We already know that doing this is going to produce four new sub-goals (there were four disjuncts in the \verb!x_ap_y_predn! theorem).
 We'll follow up the use of \ml{strip\_assume\_tac} with \ml{rw} to eliminate any equalities that might appear as assumptions.
@@ -1043,26 +1039,28 @@ We can try the same strategy.
 The final goal proof can be packaged into:
 \begin{session}
 \begin{alltt}
-##eval val predn_diamond_lemma = prove(
-         ``!x y. x -||-> y ==>
-                 !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
-         Induct_on `x -||-> y` >> rpt conj_tac >| [
+##eval Theorem predn_diamond_lemma[local]:
+         !x y. x -||-> y ==>
+               !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u
+       Proof
+         Induct_on ‘x -||-> y’ >> rpt conj_tac >| [
            metis_tac [predn_rules],
            rw[] >>
-           qpat_x_assum `_ # _ -||-> _`
+           qpat_x_assum ‘_ # _ -||-> _’
              (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
            rw[] >| [
              metis_tac[predn_rules],
              metis_tac[predn_rules],
-             `?w. (y = K # w) /\ (z -||-> w)` by metis_tac [Kx_predn] >>
+             ‘?w. (y = K # w) /\ (z -||-> w)’ by metis_tac [Kx_predn] >>
              rw[] >> metis_tac [predn_rules],
-             `?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)` by
+             ‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
                 metis_tac [Sxy_predn] >>
              rw [] >> metis_tac [predn_rules]
            ],
            rw[Kxy_predn] >> metis_tac [predn_rules],
            rw[Sxyz_predn] >> metis_tac [predn_rules]
-         ]);
+         ]
+       QED
 \end{alltt}
 \end{session}
 \eos{}
