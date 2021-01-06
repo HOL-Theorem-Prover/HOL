@@ -14,7 +14,7 @@
 
 \begin{document}
 
-\title{\bf\Large Guide to HOL4 interaction and basic proofs\vspace{-0.3em}}
+\title{Guide to HOL4 interaction and basic proofs \\ (Using Emacs) }
 
 %\author{\normalsize Magnus O. Myreen and Minchao Wu}
 %\date{~\vspace{-2em}}
