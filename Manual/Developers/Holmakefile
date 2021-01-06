@@ -1,14 +1,13 @@
-.PHONY: all clean
+.PHONY: all
 
 TARGETS = developers.pdf developers.html
 
 all: $(TARGETS)
 
-developers.pdf: developers.md
+developers.pdf: developers.md hol4.latex
 	pandoc --template=hol4 $< -o $@
 
 developers.html: developers.md
 	pandoc -s $< -o $@
 
-clean:
-	-/bin/rm -f $(TARGETS) developers.tex
+EXTRA_CLEANS = $(TARGETS)

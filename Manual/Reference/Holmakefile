@@ -2,56 +2,30 @@
 # Makefile for the hol REFERENCE manual
 # =====================================================================
 
-PDFLATEX=pdflatex
-DVILATEX=latex
-MAKEINDEX=makeindex
-
 # ---------------------------------------------------------------------
 # Pathnames: Helpd = hol help directory, MAKEINDEX = makeindex program
 # ---------------------------------------------------------------------
 Helpd=../../help
-D2TSED=bin/doc-to-tex.sed
-
-HOLdir=../../
-THMDIR=$(Helpd)/THEOREMS/
-MAKEDOC=$(HOLdir)/Manual/Reference/bin/create-doc-files2
 
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
         ../LaTeX/ref-macros.tex
 
-default: pdf
-all: ps pdf
-ps: reference.ps
-pdf: reference.pdf
+reference.pdf: reference.tex entries.tex entries-intro.tex $(OTHER)
+	latexmk -pdf reference
 
-clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind *.toc \
-         entries.tex theorems.tex reference.ps reference.pdf
-
-reference.pdf: ids reference.tex $(OTHER)
-	${PDFLATEX}  reference
-	${MAKEINDEX} reference
-	${PDFLATEX}  reference
-
-reference.dvi: ids reference.tex $(OTHER)
-	${DVILATEX}  reference
-	${MAKEINDEX} reference
-	${DVILATEX}  reference
-
-reference.ps: reference.dvi
-	dvips -Ppdf -G0 -f reference.dvi > reference.ps.tmp
-	mv reference.ps.tmp $@
-
-# Until we know how to generate the theorems that used to be part of the
-# reference, we leave off the theorems entry that used to follow ids below
-tex: ids
-	@echo "TeX files made"
-
-ids:
-	@echo "\chapter{Pre-defined ML Identifiers}" > entries.tex
-	@echo "\input{entries-intro}" >> entries.tex
+entries.tex: $(Helpd)/src-sml/Doc2Tex.exe docfiles $(wildcard $(Helpd)/Docfiles/*.doc)
 	$(Helpd)/src-sml/Doc2Tex.exe ${Helpd}/Docfiles entries.tex
 
+docfiles:
+	@/bin/ls -1 $(Helpd)/Docfiles/*.doc > docfiles0
+	@if [ -r docfiles ] ; then if cmp -s docfiles0 docfiles ; then rm docfiles0 ; else mv docfiles0 docfiles ; fi ; else mv docfiles0 docfiles ; fi
+
+.PHONY: docfiles
+
+EXTRA_CLEANS = $(patsubst %,reference.%,aux fdb_latexmk fls idx ilg ind log out pdf toc) title.aux entries.aux preface.aux docfiles docfiles0
+
+# Until we know how to generate the theorems that used to be part of the
+# reference, this is all unused
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
 	@echo "\input{theorems-intro}" >> theorems.tex
