@@ -360,7 +360,7 @@ val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
    >> Q.EXISTS_TAC `f (SUC m + n')`
    >> PROVE_TAC [ADD_CLAUSES]);
 
-(* Definition 3.1 of [1, p.16] *)
+(* Definition 3.1 of [7, p.16] *)
 Theorem SIGMA_ALGEBRA_ALT_SPACE :
     !a. sigma_algebra a <=>
         subset_class (space a) (subsets a) /\
@@ -621,10 +621,11 @@ val SIGMA_ALGEBRA_FN_DISJOINT = store_thm
    >> EQ_TAC
    >> RW_TAC std_ss []);
 
-val PREIMAGE_SIGMA_ALGEBRA = store_thm (* [1, p.16] *)
-  ("PREIMAGE_SIGMA_ALGEBRA",
-  ``!sp A f. sigma_algebra A /\ f IN (sp -> space A) ==>
-             sigma_algebra (sp,IMAGE (\s. PREIMAGE f s INTER sp) (subsets A))``,
+(* [7, p.16] or Theorem 3.1.1 [8, p.35], f is not necessary measurable *)
+Theorem PREIMAGE_SIGMA_ALGEBRA :
+    !sp A f. sigma_algebra A /\ f IN (sp -> space A) ==>
+             sigma_algebra (sp,IMAGE (\s. PREIMAGE f s INTER sp) (subsets A))
+Proof
     rpt STRIP_TAC
  >> RW_TAC std_ss [SIGMA_ALGEBRA_ALT, space_def, subsets_def, algebra_def, subset_class_def]
  >| [ (* goal 1 (of 5) *)
@@ -642,22 +643,26 @@ val PREIMAGE_SIGMA_ALGEBRA = store_thm (* [1, p.16] *)
       EQ_TAC >> RW_TAC std_ss [],
       (* goal 4 (of 5) *)
       fs [IN_IMAGE, IN_FUNSET] \\
-      Q.EXISTS_TAC `s' UNION s''` \\
+      rename1 ‘t = PREIMAGE f t' INTER sp’ \\
+      Q.EXISTS_TAC `s' UNION t'` \\
       reverse CONJ_TAC
       >- (MATCH_MP_TAC ALGEBRA_UNION >> fs [sigma_algebra_def]) \\
       RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNION, IN_INTER] \\
       EQ_TAC >> RW_TAC std_ss [] >> art [],
       (* goal 5 (of 5) *)
       fs [IN_IMAGE, IN_FUNSET, IN_UNIV, SKOLEM_THM] \\
-     `f' = \x. PREIMAGE f (f'' x) INTER sp` by PROVE_TAC [] >> POP_ORW \\
-     `!x. f'' x IN subsets A` by PROVE_TAC [] \\
-      Q.EXISTS_TAC `BIGUNION (IMAGE f'' UNIV)` \\
+      rename1 ‘!x. f' x = PREIMAGE f (g x) INTER sp /\ g x IN subsets A’ \\
+     `f' = \x. PREIMAGE f (g x) INTER sp` by PROVE_TAC [] >> POP_ORW \\
+     `!x. g x IN subsets A` by PROVE_TAC [] \\
+      Q.EXISTS_TAC `BIGUNION (IMAGE g UNIV)` \\
       reverse CONJ_TAC
       >- (fs [SIGMA_ALGEBRA_FN] \\
           FIRST_X_ASSUM MATCH_MP_TAC >> art [IN_FUNSET, IN_UNIV]) \\
       RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_PREIMAGE, IN_UNIV, IN_INTER] \\
       EQ_TAC >> RW_TAC std_ss [] >> art [] \\
-      Q.EXISTS_TAC `x'` >> art [] ]);
+      rename1 ‘f x IN g n’ \\
+      Q.EXISTS_TAC `n` >> art [] ]
+QED
 
 val SIGMA_PROPERTY_ALT = store_thm
   ("SIGMA_PROPERTY_ALT",
@@ -731,6 +736,13 @@ val SIGMA_REDUCE = store_thm
   ("SIGMA_REDUCE", ``!sp a. (sp, subsets (sigma sp a)) = sigma sp a``,
     PROVE_TAC [SPACE_SIGMA, SPACE]);
 
+Theorem SIGMA_CONG :
+    !sp a b. (subsets (sigma sp a) = subsets (sigma sp b)) ==>
+             (sigma sp a = sigma sp b)
+Proof
+    METIS_TAC [SPACE_SIGMA, SPACE]
+QED
+
 (* note: SEMIRING_SPACE doesn't hold *)
 val SEMIRING_EMPTY = store_thm
   ("SEMIRING_EMPTY", ``!r. semiring r ==> {} IN (subsets r)``,
@@ -759,8 +771,7 @@ val SEMIRING_DIFF_ALT = store_thm
  >> STRIP_ASSUME_TAC (MATCH_MP finite_disjoint_decomposition
                                (CONJ (ASSUME ``FINITE (c :'a set set)``)
                                      (ASSUME ``disjoint (c :'a set set)``)))
- >> Q.EXISTS_TAC `f`
- >> Q.EXISTS_TAC `n`
+ >> qexistsl_tac [`f`, `n`]
  >> RW_TAC std_ss []
  >> PROVE_TAC [SUBSET_DEF]);
 
@@ -2976,16 +2987,19 @@ val MEASURABLE_UP_SIGMA = store_thm
    >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA])
    >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]);
 
-(* NOTE: see martingaleTheory for more theorems on ‘prod_sets’ *)
+(* Definition 14.2 of [1, p.137] *)
+val prod_sigma_def = Define
+   ‘prod_sigma a b =
+      sigma (space a CROSS space b) (prod_sets (subsets a) (subsets b))’;
+
+val _ = overload_on ("CROSS", “prod_sigma”);
+
 Theorem MEASURABLE_PROD_SIGMA :
-    !a a1 a2 f.
-       sigma_algebra a /\
-       (FST o f) IN measurable a a1 /\
-       (SND o f) IN measurable a a2 ==>
-       f IN measurable a (sigma ((space a1) CROSS (space a2))
-                                (prod_sets (subsets a1) (subsets a2)))
+    !a a1 a2 f. sigma_algebra a /\
+      (FST o f) IN measurable a a1 /\ (SND o f) IN measurable a a2 ==>
+       f IN measurable a (a1 CROSS a2)
 Proof
-    rpt STRIP_TAC
+    RW_TAC std_ss [prod_sigma_def]
  >> MATCH_MP_TAC MEASURABLE_SIGMA
  >> FULL_SIMP_TAC std_ss [IN_MEASURABLE]
  >> CONJ_TAC
@@ -3004,6 +3018,34 @@ Proof
  >> PROVE_TAC [sigma_algebra_def, ALGEBRA_INTER]
 QED
 
+(* prod_sigma is indeed a sigma-algebra *)
+Theorem SIGMA_ALGEBRA_PROD_SIGMA :
+    !a b. subset_class (space a) (subsets a) /\
+          subset_class (space b) (subsets b) ==> sigma_algebra (prod_sigma a b)
+Proof
+    RW_TAC std_ss [prod_sigma_def]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
+ >> RW_TAC std_ss [subset_class_def, IN_PROD_SETS, GSPECIFICATION, IN_CROSS]
+ >> fs [subset_class_def]
+ >> RW_TAC std_ss [SUBSET_DEF, IN_CROSS]
+ >> METIS_TAC [SUBSET_DEF]
+QED
+
+(* |- !X Y A B.
+          subset_class X A /\ subset_class Y B ==>
+          sigma_algebra ((X,A) CROSS (Y,B))
+ *)
+Theorem SIGMA_ALGEBRA_PROD_SIGMA' =
+   Q.GENL [‘X’, ‘Y’, ‘A’, ‘B’]
+          (REWRITE_RULE [space_def, subsets_def]
+                        (Q.SPECL [‘(X,A)’, ‘(Y,B)’] SIGMA_ALGEBRA_PROD_SIGMA));
+
+Theorem SPACE_PROD_SIGMA :
+    !a b. space (prod_sigma a b) = space a CROSS space b
+Proof
+    rw [SPACE_SIGMA, prod_sigma_def]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  sigma-algebra of functions [7, p.55]                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -3014,41 +3056,439 @@ val sigma_function_def = Define
 
 val _ = overload_on ("sigma", ``sigma_function``);
 
-val SIGMA_MEASURABLE = store_thm
-  ("SIGMA_MEASURABLE",
-  ``!sp A f. sigma_algebra A /\ f IN (sp -> space A) ==> f IN measurable (sigma sp A f) A``,
+Theorem SIGMA_MEASURABLE :
+    !sp A f. sigma_algebra A /\ f IN (sp -> space A) ==>
+             f IN measurable (sigma sp A f) A
+Proof
     RW_TAC std_ss [sigma_function_def, space_def, subsets_def,
                    IN_FUNSET, IN_MEASURABLE, IN_IMAGE]
  >- (MATCH_MP_TAC PREIMAGE_SIGMA_ALGEBRA >> art [IN_FUNSET])
- >> Q.EXISTS_TAC `s` >> art []);
+ >> Q.EXISTS_TAC `s` >> art []
+QED
 
-(* Definition 7.5 of [1, p.51], The smallest sigma-algebra on `sp` that makes all `f`
+(* Definition 7.5 of [7, p.51], The smallest sigma-algebra on `sp` that makes all `f`
    simultaneously measurable. *)
 val sigma_functions_def = Define
-   `sigma_functions sp A f J =
-      sigma sp (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp) (subsets (A i))) J))`;
+   `sigma_functions sp A f (J :'index set) =
+      sigma sp (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp)
+                                           (subsets (A i))) J))`;
 
 val _ = overload_on ("sigma", ``sigma_functions``);
 
-(* Lemma 7.5 of [1, p.51] *)
-val SIGMA_SIMULTANEOUSLY_MEASURABLE = store_thm
-  ("SIGMA_SIMULTANEOUSLY_MEASURABLE",
-  ``!sp A f J. (!i. i IN J ==> sigma_algebra (A i)) /\
-               (!i. f i IN (sp -> space (A i))) ==>
-                !i. i IN J ==> f i IN measurable (sigma sp A f J) (A i)``,
+(* Lemma 7.5 of [7, p.51] *)
+Theorem SIGMA_SIMULTANEOUSLY_MEASURABLE :
+    !sp A f (J :'index set).
+            (!i. i IN J ==> sigma_algebra (A i)) /\
+            (!i. f i IN (sp -> space (A i))) ==>
+             !i. i IN J ==> f i IN measurable (sigma sp A f J) (A i)
+Proof
     RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, sigma_functions_def, IN_MEASURABLE]
  >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
-     RW_TAC std_ss [subset_class_def, IN_BIGUNION_IMAGE, IN_IMAGE, IN_PREIMAGE, IN_INTER] \\
+     RW_TAC std_ss [subset_class_def, IN_BIGUNION_IMAGE, IN_IMAGE, IN_PREIMAGE,
+                    IN_INTER] \\
      REWRITE_TAC [INTER_SUBSET])
  >> Know `PREIMAGE (f i) s INTER sp IN
-            (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp) (subsets (A i))) J))`
+            (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp)
+                                        (subsets (A i))) J))`
  >- (RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_IMAGE] \\
      Q.EXISTS_TAC `i` >> art [] \\
-     Q.EXISTS_TAC `s` >> art []) >> DISCH_TAC
+     Q.EXISTS_TAC `s` >> art [])
+ >> DISCH_TAC
  >> ASSUME_TAC
-      (Q.SPECL [`sp`, `BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp)
-                                                  (subsets (A i))) J)`] SIGMA_SUBSET_SUBSETS)
- >> PROVE_TAC [SUBSET_DEF]);
+      (Q.SPECL [`sp`,
+                `BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp)
+                                            (subsets (A i)))
+                                 (J :'index set))`] SIGMA_SUBSET_SUBSETS)
+ >> PROVE_TAC [SUBSET_DEF]
+QED
+
+(* Theorem 14.17 (i): alternative definition of product sigma-algebra [7, p.149] *)
+Theorem prod_sigma_alt :
+    !A B. sigma_algebra A /\ sigma_algebra B ==>
+          prod_sigma A B =
+          sigma_functions (space A CROSS space B)
+                          (binary A B) (binary FST SND) {0; 1 :num}
+Proof
+    rw [sigma_functions_def, binary_def]
+ >> Q.ABBREV_TAC ‘sts = {a CROSS space B | a IN subsets A} UNION
+                        {space A CROSS b | b IN subsets B}’
+ >> Know ‘(IMAGE (\s. PREIMAGE FST s INTER (space A CROSS space B)) (subsets A) UNION
+           IMAGE (\s. PREIMAGE SND s INTER (space A CROSS space B)) (subsets B)) = sts’
+ >- (rw [Abbr ‘sts’, Once EXTENSION, PREIMAGE_def] \\
+     EQ_TAC >> rw [] >| (* 4 subgoals *)
+     [ (* goal 1 (of 4) *)
+       rename1 ‘s IN subsets A’ \\
+       DISJ1_TAC >> Q.EXISTS_TAC ‘s’ >> art [] \\
+       rw [Once EXTENSION, IN_CROSS] \\
+       EQ_TAC >> rw [] \\
+       Suff ‘s SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
+       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       (* goal 2 (of 4) *)
+       rename1 ‘s IN subsets B’ \\
+       DISJ2_TAC >> Q.EXISTS_TAC ‘s’ >> art [] \\
+       rw [Once EXTENSION, IN_CROSS] \\
+       EQ_TAC >> rw [] \\
+       Suff ‘s SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
+       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       (* goal 3 (of 4) *)
+       DISJ1_TAC >> Q.EXISTS_TAC ‘a’ >> art [] \\
+       rw [Once EXTENSION, IN_CROSS] \\
+       EQ_TAC >> rw [] \\
+       Suff ‘a SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
+       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       (* goal 4 (of 4) *)
+       DISJ2_TAC >> Q.EXISTS_TAC ‘b’ >> art [] \\
+       rw [Once EXTENSION, IN_CROSS] \\
+       EQ_TAC >> rw [] \\
+       Suff ‘b SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
+       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def] ])
+ >> Rewr'
+ >> ‘sts SUBSET subsets (sigma (space A CROSS space B) sts)’
+       by PROVE_TAC [SIGMA_SUBSET_SUBSETS]
+ >> Know ‘sigma_algebra (sigma (space A CROSS space B) sts)’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
+     rw [Abbr ‘sts’, subset_class_def, SUBSET_DEF] >> fs [IN_CROSS] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       rename1 ‘FST y IN a’ \\
+       Suff ‘a SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
+       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       (* goal 2 (of 2) *)
+       rename1 ‘SND y IN b’ \\
+       Suff ‘b SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
+       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def] ])
+ >> DISCH_TAC
+ >> Know ‘prod_sets (subsets A) (subsets B) SUBSET
+          subsets (sigma (space A CROSS space B) sts)’
+ >- (rw [SUBSET_DEF, IN_PROD_SETS] \\
+     Know ‘t CROSS u = (t CROSS space B) INTER (space A CROSS u)’
+     >- (rw [Once EXTENSION, IN_CROSS] \\
+         EQ_TAC >> rw [] >| (* 2 subgoals *)
+         [ (* goal 1 (of 2) *)
+           Suff ‘u SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
+           FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+           (* goal 2 (of 2) *)
+           Suff ‘t SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
+           FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def] ]) \\
+     Rewr' \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER \\
+     RW_TAC std_ss [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Suff ‘t CROSS space B IN sts’ >- METIS_TAC [SUBSET_DEF] \\
+       Q.UNABBREV_TAC ‘sts’ >> rw [] \\
+       DISJ1_TAC >> Q.EXISTS_TAC ‘t’ >> art [],
+       (* goal 2 (of 2) *)
+       Suff ‘space A CROSS u IN sts’ >- METIS_TAC [SUBSET_DEF] \\
+       Q.UNABBREV_TAC ‘sts’ >> rw [] \\
+       DISJ2_TAC >> Q.EXISTS_TAC ‘u’ >> art [] ])
+ >> DISCH_TAC
+ >> REWRITE_TAC [prod_sigma_def, Once EQ_SYM_EQ]
+ >> Suff ‘subsets (sigma (space A CROSS space B) sts) =
+          subsets (sigma (space A CROSS space B)
+                         (prod_sets (subsets A) (subsets B)))’
+ >- METIS_TAC [SPACE, SPACE_SIGMA]
+ >> MATCH_MP_TAC SIGMA_SMALLEST >> art []
+ >> reverse CONJ_TAC
+ >- METIS_TAC [SPACE, SPACE_SIGMA]
+ >> MP_TAC (Q.SPECL [‘sts’, ‘(sigma (space A CROSS space B) (prod_sets (subsets A) (subsets B)))’]
+                    (INST_TYPE [“:'a” |-> “:'a # 'a”] SIGMA_SUBSET))
+ >> REWRITE_TAC [SPACE_SIGMA]
+ >> DISCH_THEN MATCH_MP_TAC
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
+     rw [subset_class_def, IN_PROD_SETS] \\
+     MATCH_MP_TAC SUBSET_CROSS \\
+     FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def])
+ >> MATCH_MP_TAC SUBSET_TRANS
+ >> Q.EXISTS_TAC ‘prod_sets (subsets A) (subsets B)’
+ >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]
+ >> rw [Abbr ‘sts’, SUBSET_DEF, IN_PROD_SETS]
+ >| [ (* goal 1 (of 2) *)
+      qexistsl_tac [‘a’, ‘space B’] >> art [] \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art [],
+      (* goal 2 (of 2) *)
+      qexistsl_tac [‘space A’, ‘b’] >> art [] \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art [] ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*   Pre-image of sigma generator (by Chun Tian)                             *)
+(* ------------------------------------------------------------------------- *)
+
+(* The proof is from https://math.stackexchange.com/questions/1496875 *)
+Theorem PREIMAGE_SIGMA_SUBSET[local] :
+    !Z sp sts f. subset_class sp sts /\ f IN (Z -> sp) ==>
+                 IMAGE (\s. PREIMAGE f s INTER Z) (subsets (sigma sp sts)) SUBSET
+                 subsets (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts))
+Proof
+    rpt STRIP_TAC
+ (* applying PREIMAGE_SIGMA_ALGEBRA *)
+ >> Know ‘sigma_algebra (Z,IMAGE (\s. PREIMAGE f s INTER Z) (subsets (sigma sp sts)))’
+ >- (MATCH_MP_TAC PREIMAGE_SIGMA_ALGEBRA >> rw [SPACE_SIGMA] \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> art [])
+ >> DISCH_TAC
+ (* stage work *)
+ >> rw [SUBSET_DEF]
+ >> rename1 ‘u IN subsets (sigma sp sts)’
+ >> Q.ABBREV_TAC ‘D = {G | G SUBSET sp /\
+                           PREIMAGE f G INTER Z IN
+                           subsets (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts))}’
+ >> Suff ‘sts SUBSET D /\ sigma_algebra (sp,D)’
+ >- (STRIP_TAC \\
+     Know ‘subsets (sigma (space (sp,D)) sts) SUBSET subsets (sp,D)’
+     >- (MATCH_MP_TAC SIGMA_SUBSET >> art [subsets_def]) \\
+     REWRITE_TAC [space_def, subsets_def] \\
+     DISCH_TAC \\
+     Know ‘u IN D’ >- METIS_TAC [SUBSET_DEF] \\
+     rw [Abbr ‘D’, GSPECIFICATION])
+ >> CONJ_TAC (* sts SUBSET D *)
+ >- (Know ‘(IMAGE (\s. PREIMAGE f s INTER Z) sts) SUBSET
+             subsets (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts))’
+     >- (rw [SIGMA_SUBSET_SUBSETS]) \\
+     rw [SUBSET_DEF, Abbr ‘D’]
+     >- (rename [‘s IN sts’, ‘x IN s’] \\
+         METIS_TAC [subset_class_def, SUBSET_DEF]) \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ (* final stage *)
+ >> Know ‘sigma_algebra (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts))’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
+     rw [subset_class_def] \\
+     REWRITE_TAC [INTER_SUBSET])
+ >> DISCH_TAC
+ >> rw [sigma_algebra_alt_pow] (* 4 subgoals *)
+ >| [ (* goal 1 (of 4) *)
+      rw [SUBSET_DEF, IN_POW, Abbr ‘D’],
+      (* goal 2 (of 4) *)
+      rw [Abbr ‘D’] \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [],
+      (* goal 3 (of 4) *)
+      fs [Abbr ‘D’] \\
+      Know ‘PREIMAGE f (sp DIFF s) INTER Z =
+              (space (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts)))
+              DIFF (PREIMAGE f s INTER Z)’
+      >- (REWRITE_TAC [SPACE_SIGMA] \\
+          rw [Once EXTENSION, GSPECIFICATION] \\
+          METIS_TAC [IN_FUNSET]) >> Rewr' \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [],
+      (* goal 4 (of 4) *)
+      POP_ASSUM MP_TAC \\
+      rw [Abbr ‘D’, SUBSET_DEF] >- METIS_TAC [] \\
+      Know ‘PREIMAGE f (BIGUNION {A i | i | T}) INTER Z =
+            BIGUNION (IMAGE (\i. PREIMAGE f (A i) INTER Z) UNIV)’
+      >- (rw [Once EXTENSION, IN_PREIMAGE, IN_BIGUNION_IMAGE] \\
+          METIS_TAC []) >> Rewr' \\
+      Q.PAT_X_ASSUM ‘sigma_algebra (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts))’
+        (MP_TAC o REWRITE_RULE [SIGMA_ALGEBRA_ALT]) \\
+      rw [IN_FUNSET] \\
+      POP_ASSUM MATCH_MP_TAC >> rw [] \\
+      METIS_TAC [] ]
+QED
+
+Theorem PREIMAGE_SIGMA :
+    !Z sp sts f. subset_class sp sts /\ f IN (Z -> sp) ==>
+                 IMAGE (\s. PREIMAGE f s INTER Z) (subsets (sigma sp sts)) =
+                 subsets (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC PREIMAGE_SIGMA_SUBSET >> art [])
+ >> fs [IN_FUNSET]
+ >> ‘sigma_algebra (sigma sp sts)’ by PROVE_TAC [SIGMA_ALGEBRA_SIGMA]
+ >> MATCH_MP_TAC SIGMA_PROPERTY_ALT
+ >> rw [IN_FUNSET] (* 5 subgoals *)
+ >| [ (* goal 1 (of 5) *)
+      rw [subset_class_def] >> REWRITE_TAC [INTER_SUBSET],
+      (* goal 2 (of 5) *)
+      Q.EXISTS_TAC ‘{}’ >> rw [PREIMAGE_EMPTY] \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [],
+      (* goal 3 (of 5) *)
+      rw [SUBSET_DEF] >> rename1 ‘s IN sts’ \\
+      Q.EXISTS_TAC ‘s’ >> REWRITE_TAC [] \\
+      METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF],
+      (* goal 4 (of 5) *)
+      rename1 ‘s IN subsets (sigma sp sts)’ \\
+      Q.EXISTS_TAC ‘(space (sigma sp sts)) DIFF s’ \\
+      reverse CONJ_TAC
+      >- (MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art []) \\
+      rw [Once EXTENSION, SPACE_SIGMA] >> METIS_TAC [],
+      (* goal 5 (of 5) *)
+      Know ‘(!x. f' x IN subsets (sigma Z (IMAGE (\s. PREIMAGE f s INTER Z) sts))) /\
+            (!x. (?s. f' x = PREIMAGE f s INTER Z /\ s IN subsets (sigma sp sts)))’
+      >- METIS_TAC [] \\
+      POP_ASSUM K_TAC >> STRIP_TAC \\
+      fs [SKOLEM_THM] \\
+      Know ‘(!x. f' x = PREIMAGE f (f'' x) INTER Z) /\
+            (!x. f'' x IN subsets (sigma sp sts))’ >- METIS_TAC [] \\
+      POP_ASSUM K_TAC >> STRIP_TAC \\
+      rename1 ‘!x. g x = PREIMAGE f (h x) INTER Z’ \\
+      Q.EXISTS_TAC ‘BIGUNION (IMAGE h UNIV)’ \\
+      reverse CONJ_TAC
+      >- (Q.PAT_X_ASSUM ‘sigma_algebra (sigma sp sts)’
+            (MP_TAC o REWRITE_RULE [SIGMA_ALGEBRA_ALT]) \\
+          rw [IN_FUNSET]) \\
+      rw [Once EXTENSION, IN_PREIMAGE, IN_BIGUNION_IMAGE] >> METIS_TAC [] ]
+QED
+
+(* Lemma 14.1 of [7, p.137] (not used anywhere) *)
+Theorem SEMIRING_PROD_SETS :
+    !a b. semiring a /\ semiring b ==>
+          semiring ((space a CROSS space b),prod_sets (subsets a) (subsets b))
+Proof
+    rpt STRIP_TAC
+ >> RW_TAC std_ss [semiring_def, space_def, subsets_def]
+ (* subset_class *)
+ >- (RW_TAC std_ss [subset_class_def, IN_PROD_SETS, GSPECIFICATION] \\
+     RW_TAC std_ss [SUBSET_DEF, IN_CROSS] >| (* 2 subgoals, same ending *)
+     [ Suff ‘t SUBSET space a’ >- rw [SUBSET_DEF],
+       Suff ‘u SUBSET space b’ >- rw [SUBSET_DEF] ] \\
+     PROVE_TAC [subset_class_def, semiring_def])
+ (* EMPTY *)
+ >- (RW_TAC std_ss [IN_CROSS, IN_PROD_SETS, GSPECIFICATION, Once EXTENSION,
+                    NOT_IN_EMPTY] \\
+     qexistsl_tac [‘{}’, ‘{}’] >> fs [semiring_def])
+ (* INTER *)
+ >- (fs [IN_PROD_SETS] \\
+     rename1 ‘s = t1 CROSS u1’ \\
+     rename1 ‘t = t2 CROSS u2’ \\
+     qexistsl_tac [`t1 INTER t2`, `u1 INTER u2`] \\
+     reverse CONJ_TAC >- METIS_TAC [SEMIRING_INTER] \\
+     RW_TAC std_ss [Once EXTENSION, IN_CROSS, IN_INTER] >> PROVE_TAC [])
+ (* DIFF (hard) *)
+ >> fs [prod_sets_def]
+ >> rename1 `s = A CROSS B`
+ >> rename1 `t = A' CROSS B'`
+ >> REWRITE_TAC [DIFF_INTER_COMPL]
+ >> Know `COMPL (A' CROSS B') =
+          (COMPL A' CROSS B') UNION (A' CROSS COMPL B') UNION (COMPL A' CROSS COMPL B')`
+ >- (RW_TAC std_ss [Once EXTENSION, IN_CROSS, IN_COMPL, IN_UNION] \\
+     PROVE_TAC []) >> Rewr'
+ >> REWRITE_TAC [UNION_OVER_INTER]
+ >> REWRITE_TAC [INTER_CROSS, GSYM DIFF_INTER_COMPL]
+ >> `?c1. c1 SUBSET subsets a /\ FINITE c1 /\ disjoint c1 /\
+          (A DIFF A' = BIGUNION c1)` by METIS_TAC [semiring_def] >> art []
+ >> `?c2. c2 SUBSET subsets b /\ FINITE c2 /\ disjoint c2 /\
+          (B DIFF B' = BIGUNION c2)` by METIS_TAC [semiring_def] >> art []
+ (* applying finite_disjoint_decomposition *)
+ >> Know `FINITE c1 /\ disjoint c1` >- art []
+ >> DISCH_THEN (MP_TAC o (MATCH_MP finite_disjoint_decomposition))
+ >> DISCH_THEN (qx_choosel_then [`f1`, `n1`] STRIP_ASSUME_TAC)
+ >> Know `FINITE c2 /\ disjoint c2` >- art []
+ >> DISCH_THEN (MP_TAC o (MATCH_MP finite_disjoint_decomposition))
+ >> DISCH_THEN (qx_choosel_then [`f2`, `n2`] STRIP_ASSUME_TAC)
+ >> ASM_REWRITE_TAC [] (* rewrite c1 and c2 in the goal *)
+ >> Know `BIGUNION (IMAGE f1 (count n1)) CROSS (B INTER B') =
+          BIGUNION (IMAGE (\n. f1 n CROSS (B INTER B')) (count n1))`
+ >- (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_CROSS,
+                    IN_COUNT] >> PROVE_TAC []) >> Rewr'
+ >> Know `(A INTER A') CROSS BIGUNION (IMAGE f2 (count n2)) =
+          BIGUNION (IMAGE (\n. (A INTER A') CROSS f2 n) (count n2))`
+ >- (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_CROSS,
+                    IN_COUNT] >> PROVE_TAC []) >> Rewr'
+ >> Know `BIGUNION (IMAGE f1 (count n1)) CROSS
+          BIGUNION (IMAGE f2 (count n2)) =
+          BIGUNION (IMAGE (\(i,j). f1 i CROSS f2 j) (count n1 CROSS count n2))`
+ >- (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_CROSS, IN_COUNT] \\
+     EQ_TAC >> rpt STRIP_TAC >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       rename1 `y < n1` >> rename1 `z < n2` \\
+       Q.EXISTS_TAC `(y,z)` >> fs [],
+       (* goal 2 (of 3) *)
+       rename1 `FST z < n1` \\
+       Q.EXISTS_TAC `FST z` >> art [] \\
+       Cases_on `z` >> fs [],
+       (* goal 3 (of 3) *)
+       rename1 `SND z < n2` \\
+       Q.EXISTS_TAC `SND z` >> art [] \\
+       Cases_on `z` >> fs [] ]) >> Rewr'
+ >> Q.EXISTS_TAC `(IMAGE (\n. f1 n CROSS (B INTER B')) (count n1)) UNION
+                  (IMAGE (\n. (A INTER A') CROSS f2 n) (count n2)) UNION
+                  (IMAGE (\(i,j). f1 i CROSS f2 j) (count n1 CROSS count n2))`
+ >> rw [BIGUNION_UNION] (* 4 subgoals, first 3 are easy *)
+ >- (RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, GSPECIFICATION] \\
+     Q.EXISTS_TAC `(f1 n,B INTER B')` >> rw []
+     >- fs [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
+     fs [semiring_def])
+ >- (RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, GSPECIFICATION] \\
+     Q.EXISTS_TAC `(A INTER A',f2 n)` >> rw []
+     >- fs [semiring_def] \\
+     fs [SUBSET_DEF, IN_IMAGE, IN_COUNT])
+ >- (RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, GSPECIFICATION] \\
+     rename1 `y IN count n1 CROSS count n2` \\
+     Cases_on `y` >> fs [IN_CROSS, IN_COUNT] \\
+     Q.EXISTS_TAC `(f1 q,f2 r)` >> fs [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
+     CONJ_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       FIRST_X_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `q` >> art [],
+       (* goal 2 (of 2) *)
+       FIRST_X_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `r` >> art [] ])
+ >> RW_TAC std_ss [disjoint_def, IN_IMAGE, IN_COUNT, IN_CROSS, IN_UNION]
+ (* 9 (3 * 3) subgoals *)
+ >| [ (* goal 1 (of 9) *)
+      MATCH_MP_TAC DISJOINT_CROSS_L \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> art [] >> METIS_TAC [],
+      (* goal 2 (of 9) *)
+      RW_TAC std_ss [DISJOINT_ALT, IN_CROSS] >> ASM_SET_TAC [],
+      (* goal 3 (of 9) *)
+      Cases_on `x` >> fs [] \\
+      RW_TAC std_ss [DISJOINT_ALT, IN_CROSS] \\
+      DISJ2_TAC \\
+      Know `SND x NOTIN (B DIFF B')` >- ASM_SET_TAC [] \\
+      Q.PAT_X_ASSUM `B DIFF B' = BIGUNION (IMAGE f2 (count n2))`
+        (ONCE_REWRITE_TAC o wrap) \\
+      rw [IN_BIGUNION_IMAGE, IN_COUNT] >> METIS_TAC [],
+      (* goal 4 (of 9) *)
+      RW_TAC std_ss [DISJOINT_ALT, IN_CROSS] >> ASM_SET_TAC [],
+      (* goal 5 (of 9) *)
+      MATCH_MP_TAC DISJOINT_CROSS_R \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> art [] >> METIS_TAC [],
+      (* goal 6 (of 9) *)
+      Cases_on `x` >> fs [] \\
+      RW_TAC std_ss [DISJOINT_ALT, IN_CROSS] \\
+      DISJ1_TAC \\
+      Know `FST x NOTIN (A DIFF A')` >- ASM_SET_TAC [] \\
+      Q.PAT_X_ASSUM `A DIFF A' = BIGUNION (IMAGE f1 (count n1))`
+        (ONCE_REWRITE_TAC o wrap) \\
+      rw [IN_BIGUNION_IMAGE, IN_COUNT] >> METIS_TAC [],
+      (* goal 7 (of 9) *)
+      Cases_on `x` >> fs [] \\
+      RW_TAC std_ss [DISJOINT_ALT, IN_CROSS] \\
+      DISJ2_TAC \\
+      Suff `SND x IN B DIFF B'` >- ASM_SET_TAC [] \\
+      Q.PAT_X_ASSUM `B DIFF B' = BIGUNION (IMAGE f2 (count n2))`
+        (ONCE_REWRITE_TAC o wrap) \\
+      rw [IN_BIGUNION_IMAGE, IN_COUNT] \\
+      Q.EXISTS_TAC `r` >> art [],
+      (* goal 8 (of 9) *)
+      Cases_on `x` >> fs [] \\
+      RW_TAC std_ss [DISJOINT_ALT, IN_CROSS] \\
+      DISJ1_TAC \\
+      Suff `FST x IN A DIFF A'` >- ASM_SET_TAC [] \\
+      Q.PAT_X_ASSUM `A DIFF A' = BIGUNION (IMAGE f1 (count n1))`
+        (ONCE_REWRITE_TAC o wrap) \\
+      rw [IN_BIGUNION_IMAGE, IN_COUNT] \\
+      Q.EXISTS_TAC `q` >> art [],
+      (* goal 9 (of 9) *)
+      Cases_on `x` >> Cases_on `x'` >> fs [] \\
+      RW_TAC std_ss [DISJOINT_ALT, IN_CROSS] \\
+      reverse (Cases_on `q = q'`)
+      >- (DISJ1_TAC >> ASM_SET_TAC []) \\
+      reverse (Cases_on `r = r'`)
+      >- (DISJ2_TAC >> ASM_SET_TAC []) \\
+      METIS_TAC [] ]
+QED
+
+(* a sigma_algebra is also a semiring *)
+Theorem SEMIRING_PROD_SETS' :
+    !a b. sigma_algebra a /\ sigma_algebra b ==>
+          semiring ((space a CROSS space b),prod_sets (subsets a) (subsets b))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC SEMIRING_PROD_SETS
+ >> CONJ_TAC
+ >> MATCH_MP_TAC ALGEBRA_IMP_SEMIRING
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_ALGEBRA >> art []
+QED
 
 val _ = export_theory ();
 
@@ -3063,4 +3503,5 @@ val _ = export_theory ();
   [6] Wikipedia: https://en.wikipedia.org/wiki/Dynkin_system
   [7] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
       Cambridge University Press (2017).
+  [8] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
  *)
