@@ -721,6 +721,12 @@ Proof
   srw_tac[][IS_SUFFIX_APPEND] >> Q.EXISTS_TAC ‘a::l’ >> srw_tac[][]
 QED
 
+Theorem IS_SUFFIX_APPEND1:
+  !l1 l2 l. IS_SUFFIX l2 l ==> IS_SUFFIX (l1 ++ l2) l
+Proof
+  Induct >> fs[IS_SUFFIX_CONS]
+QED
+
 Theorem IS_SUFFIX_TRANS:
   !l1 l2 l3. IS_SUFFIX l1 l2 /\ IS_SUFFIX l2 l3 ==> IS_SUFFIX l1 l3
 Proof
@@ -3362,6 +3368,53 @@ val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
 
 end
 (* end CakeML lemmas *)
+
+local open listTheory in
+
+Theorem nub_GENLIST:
+  nub (GENLIST f n) =
+    MAP f (FILTER (\i. !j. (i < j) /\ (j < n) ==> f i <> f j) (COUNT_LIST n))
+Proof
+  simp[COUNT_LIST_GENLIST]
+  \\ Q.ID_SPEC_TAC`f`
+  \\ Induct_on`n` \\ simp[]
+  \\ simp[GENLIST_CONS]
+  \\ simp[nub_def]
+  \\ gen_tac
+  \\ simp[MEM_GENLIST]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`COND b1`
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`MAP f (COND b2 _ _)`
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`f 0 :: r1`
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`0 :: r2`
+  \\ `b2 = ~b1`
+  by (
+    rw[Abbr`b1`, Abbr`b2`, EQ_IMP_THM]
+    >- (
+      CCONTR_TAC \\ fs[]
+      \\ first_x_assum(Q.SPEC_THEN`SUC m`mp_tac)
+      \\ simp[] )
+    \\ first_x_assum(Q.SPEC_THEN`PRE j`mp_tac)
+    \\ simp[]
+    \\ metis_tac[SUC_PRE] )
+  \\ `r1 = MAP f r2`
+  by (
+    simp[Abbr`r1`, Abbr`r2`]
+    \\ Q.MATCH_GOALSUB_ABBREV_TAC`FILTER f2`
+    \\ `f2 = (\i. !j. i <= j /\ (j < n) ==> f i <> f (SUC j)) o SUC`
+    by (
+      simp[Abbr`f2`, FUN_EQ_THM]
+      \\ simp[LESS_EQ] )
+    \\ simp[GSYM MAP_MAP_o, GSYM FILTER_MAP]
+    \\ simp[MAP_GENLIST]
+    \\ rpt (AP_TERM_TAC ORELSE AP_THM_TAC)
+    \\ simp[FUN_EQ_THM]
+    \\ gen_tac
+    \\ CONV_TAC(RAND_CONV(Ho_Rewrite.ONCE_REWRITE_CONV[FORALL_NUM]))
+    \\ simp[LESS_EQ] )
+  \\ rw[]
+QED
+
+end
 
 (* alternative definition of listTheory.UNIQUE *)
 val UNIQUE_LIST_ELEM_COUNT = store_thm (

@@ -13,7 +13,6 @@ val _ = new_theory "groupCyclic";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -677,7 +676,7 @@ val cyclic_uroots_cyclic = store_thm(
      and !m. 0 < m /\ m < n,
          (add_mod n).exp 1 m = m <> 0         by NOT_ZERO_LT_ZERO, 0 < n
      Now (add_mod n).id = 0                   by add_mod_property
-      so order (add_mod n) 1 = n              by group_order_alt
+      so order (add_mod n) 1 = n              by group_order_thm
 *)
 val add_mod_order_1 = store_thm(
   "add_mod_order_1",
@@ -688,7 +687,7 @@ val add_mod_order_1 = store_thm(
   `1 IN (add_mod n).carrier` by rw[add_mod_element] >>
   `(add_mod n).exp 1 n = 0` by rw[] >>
   `!m. 0 < m /\ m < n ==> (add_mod n).exp 1 m <> 0` by rw[NOT_ZERO_LT_ZERO] >>
-  metis_tac[group_order_alt, add_mod_property]);
+  metis_tac[group_order_thm, add_mod_property]);
 
 (* Theorem: 0 < n ==> cyclic (add_mod n) *)
 (* Proof:

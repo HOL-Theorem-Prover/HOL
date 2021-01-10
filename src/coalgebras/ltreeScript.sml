@@ -633,6 +633,7 @@ Proof
   \\ rw [] \\ fs [ltree_CASE]
 QED
 
+Overload "case" = “ltree_CASE”
 val _ = TypeBase.export
   [TypeBasePure.mk_datatype_info
     { ax = TypeBasePure.ORIG TRUTH,

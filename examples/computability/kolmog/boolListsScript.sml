@@ -106,8 +106,15 @@ Proof
 QED
 
 
-val Fpow_def = Define`Fpow n = GENLIST (K F) n`
+Definition Fpow_def: Fpow n = GENLIST (K F) n
+End
 
+Theorem Fpow0_thm[simp]:
+  Fpow 0 = [] ∧
+  Fpow (SUC n) = F :: Fpow n
+Proof
+  simp[Fpow_def, GENLIST_CONS]
+QED
 
 
 val prefix_refl = Q.store_thm("prefix_refl[simp]",
@@ -1117,7 +1124,7 @@ Proof
   ‘n <= LENGTH x’ suffices_by simp[rich_listTheory.DROP_APPEND1] >>
   CCONTR_TAC >> ‘LENGTH x < n’ by fs[] >>
   ‘DROP n x = []’ by fs[DROP_LENGTH_TOO_LONG] >>
-  ‘bar x' = []’ by fs[] >> fs[bar_def]
+  pop_assum SUBST_ALL_TAC >> fs[]
 QED
 
 Definition nblTpow_def:

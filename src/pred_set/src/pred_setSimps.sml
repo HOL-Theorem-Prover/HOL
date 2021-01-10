@@ -56,7 +56,7 @@ struct
     }
   end
 
-  val _ = BasicProvers.augment_srw_ss [GSPEC_SIMP_ss]
+  val _ = BasicProvers.logged_addfrags {thyname="pred_set"} [GSPEC_SIMP_ss]
 
 
 end (* pred_setSimps *)

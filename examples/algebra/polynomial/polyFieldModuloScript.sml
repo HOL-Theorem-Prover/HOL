@@ -14,7 +14,6 @@ val _ = new_theory "polyFieldModulo";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -395,20 +394,39 @@ open dividesTheory gcdTheory;
    poly_prod_set_image_X_add_c_deg     |- !r. Ring r /\ #1 <> #0 ==>
                                           !s. FINITE s /\ MAX_SET s < char r ==>
                                               (deg (PPROD (IMAGE (\c. X + |c|) s)) = CARD s)
+   poly_prod_set_image_X_sub_c_deg     |- !r. Ring r /\ #1 <> #0 ==>
+                                          !s. FINITE s /\ MAX_SET s < char r ==>
+                                              (deg (PPIMAGE (\c. X - |c|) s) = CARD s)
    poly_prod_set_image_X_add_c_factor  |- !r. Ring r /\ #1 <> #0 ==>
                                           !s. FINITE s /\ MAX_SET s < char r ==>
                                           !n. n < char r /\ n IN s ==>
                                               (PPROD (IMAGE (\c. X + |c|) s) % (X + |n|) = |0|)
+   poly_prod_set_image_X_sub_c_factor  |- !r. Ring r /\ #1 <> #0 ==>
+                                          !s. FINITE s /\ MAX_SET s < char r ==>
+                                          !n. n < char r /\ n IN s ==>
+                                              (PPIMAGE (\c. X - |c|) s % (X - |n|) = |0|)
    poly_X_add_c_image_poly_subset      |- !r. Ring r ==>
                                           !s. IMAGE (\c. X + |c|) s SUBSET (PolyRing r).carrier
+   poly_X_sub_c_image_poly_subset      |- !r. Ring r ==>
+                                          !s. IMAGE (\c. X - |c|) s SUBSET (PolyRing r).carrier
    poly_prod_set_image_X_add_c_divides |- !r. Field r ==>
                                           !s. FINITE s /\ MAX_SET s < char r ==>
-       !n. n < char r ==> (PPROD (IMAGE (\c. X + |c|) s) % (X + |n|) = |0|) ==> n IN s
+                     !n. n < char r ==> (PPIMAGE (\c. X + |c|) s % (X + |n|) = |0|) ==> n IN s
+   poly_prod_set_image_X_sub_c_divides |- !r. Field r ==>
+                                          !s. FINITE s /\ MAX_SET s < char r ==>
+                     !n. n < char r ==> (PPIMAGE (\c. X - |c|) s % (X - |n|) = |0|) ==> n IN s
    poly_prod_set_image_X_add_c_property|- !r. Field r ==>
                                           !s. FINITE s /\ MAX_SET s < char r ==>
-       !n. n < char r ==> (n IN s <=> (PPROD (IMAGE (\c. X + |c|) s) % (X + |n|) = |0|))
+                     !n. n < char r ==> (n IN s <=> (PPIMAGE (\c. X + |c|) s % (X + |n|) = |0|))
+   poly_prod_set_image_X_sub_c_property|- !r. Field r ==>
+                                          !s. FINITE s /\ MAX_SET s < char r ==>
+                     !n. n < char r ==> (n IN s <=> (PPIMAGE (\c. X - |c|) s % (X - |n|) = |0|))
    poly_prod_set_image_X_add_c_inj     |- !r. Field r ==> !n. n < char r ==>
-       INJ (\s. PPROD (IMAGE (\c. X + |c|) s)) (PPOW (IMAGE SUC (count n))) (PolyRing r).carrier
+                                              INJ (\s. PPIMAGE (\c. X + |c|) s)
+                                                  (PPOW (natural n)) (PolyRing r).carrier
+   poly_prod_set_image_X_sub_c_inj     |- !r. Field r ==> !n. n < char r ==>
+                                              INJ (\s. PPIMAGE (\c. X - |c|) s)
+                                                  (PPOW (natural n)) (PolyRing r).carrier
 
    Factor and Root of Lifting Polynomial:
    poly_mod_lift_root_factor  |- !r. Field r ==> !z. ipoly z ==>
@@ -4478,6 +4496,63 @@ val poly_prod_set_image_X_add_c_deg = store_thm(
   `_ = CARD (e INSERT s)` by rw[CARD_INSERT] >>
   rw[]);
 
+(* Theorem: FINITE s /\ MAX_SET s < char r ==> deg (PPROD (IMAGE (\c. X - |c|) s)) = CARD s *)
+(* Proof:
+   By FINITE_INDUCT on s.
+   Base case: deg (PPROD (IMAGE (\c. X - |c|) {})) = CARD {}
+     LHS = deg (PPROD (IMAGE (\c. X - |c|) {}))
+         = deg |1|                   by poly_prod_set_empty
+         = 0                         by poly_deg_one
+         = CARD {}                   by CARD_EMPTY
+         = RHS
+   Step case: e NOTIN s ==> deg (PPROD (IMAGE (\c. X - |c|) (e INSERT s))) = CARD (e INSERT s)
+     Note that monic (X - |e|)                                    by poly_monic_X_sub_c
+          and  monic (PPROD (IMAGE (\c. X - |c|) s))              by poly_monic_prod_set_monic
+          and  (X - |e|) NOTIN (IMAGE (\c. X - |c|) s)            by poly_X_sub_c_image_property
+     LHS = deg (PPROD (IMAGE (\c. X - |c|) (e INSERT s)))
+         = deg (PPROD ((X - |e|) INSERT IMAGE (\c. X - |c|) s))   by IMAGE_INSERT
+         = deg ((X - |e|) * PPROD (IMAGE (\c. X - |c|) s) DELETE (X + |e|))  by poly_prod_set_thm
+         = deg ((X - |e|) * PPROD (IMAGE (\c. X - |c|) s))        by DELETE_NON_ELEMENT
+         = deg (X - |e|) + deg (PPROD (IMAGE (\c. X - |c|) s))    by poly_monic_deg_mult
+         = deg (X - |e|) + CARD s                                 by induction hypothesis
+         = 1 + CARD s                                             by poly_deg_X_sub_c
+         = SUC(CARD s)                                            by SUC_ONE_ADD
+         = CARD (e INSERT s)                                      by CARD_INSERT
+         = RHS
+*)
+val poly_prod_set_image_X_sub_c_deg = store_thm(
+  "poly_prod_set_image_X_sub_c_deg",
+  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
+   !s. FINITE s /\ MAX_SET s < char r ==>
+    (deg (PPROD (IMAGE (\c:num. X - |c|) s)) = CARD s)``,
+  ntac 2 strip_tac >>
+  `!s. FINITE s ==> MAX_SET s < char r ==> (deg (PPROD (IMAGE (\c:num. X - |c|) s)) = CARD s)` suffices_by metis_tac[] >>
+  Induct_on `FINITE` >>
+  rw_tac std_ss[] >-
+  rw[poly_prod_set_empty] >>
+  `monic (X - |e|)` by rw[poly_monic_X_sub_c] >>
+  `!p. p IN (IMAGE (\c:num. X - |c|) s) <=> ?c. (p = X - |c|) /\ c IN s` by rw[] >>
+  `!p. p IN (IMAGE (\c:num. X - |c|) s) ==> monic p` by metis_tac[poly_monic_X_sub_c] >>
+  `(e INSERT s) <> {}` by rw[] >>
+  `!c. c IN (e INSERT s) ==> c <= MAX_SET (e INSERT s)` by rw[MAX_SET_DEF] >>
+  `e < char r` by metis_tac[COMPONENT, LESS_EQ_LESS_TRANS] >>
+  `MAX_SET s <= MAX_SET (e INSERT s)` by rw[MAX_SET_THM] >>
+  `MAX_SET s < char r` by decide_tac >>
+  `X - |e| NOTIN IMAGE (\c. X - |c|) s` by metis_tac[poly_X_sub_c_image_property] >>
+  `monic (PPROD (IMAGE (\c. X - |c|) s))` by rw[poly_monic_prod_set_monic] >>
+  `(IMAGE (\c. X - |c|) s) SUBSET (PolyRing r).carrier` by metis_tac[poly_monic_poly, poly_ring_element, SUBSET_DEF] >>
+  `!p. p IN (IMAGE (\c. X - |c|) s) ==> poly p` by metis_tac[poly_ring_element, SUBSET_DEF] >>
+  `deg (PPROD (IMAGE (\c. X - |c|) (e INSERT s)))
+    = deg (PPROD ((X - |e|) INSERT IMAGE (\c. X - |c|) s))` by rw[IMAGE_INSERT] >>
+  `_ = deg ((X - |e|) * PPROD ((IMAGE (\c. X - |c|) s) DELETE (X - |e|)))` by rw[GSYM poly_prod_set_thm] >>
+  `_ = deg ((X - |e|) * PPROD (IMAGE (\c. X - |c|) s))` by metis_tac[DELETE_NON_ELEMENT] >>
+  `_ = deg (X - |e|) + deg (PPROD (IMAGE (\c. X - |c|) s))` by rw[poly_monic_deg_mult] >>
+  `_ = deg (X - |e|) + CARD s` by rw[] >>
+  `_ = 1 + CARD s` by rw[poly_deg_X_sub_c] >>
+  `_ = SUC(CARD s)` by rw[SUC_ONE_ADD] >>
+  `_ = CARD (e INSERT s)` by rw[CARD_INSERT] >>
+  rw[]);
+
 (* Theorem: A factor divides the poly_prod_set of monomials.
             !n. n < char r ==>
             (n IN s ==> ((PPROD (IMAGE (\c:num. X + |c|) s)) % (X + |n|) = |0|) *)
@@ -4516,6 +4591,44 @@ val poly_prod_set_image_X_add_c_factor = store_thm(
   `poly (PPROD (IMAGE f s))` by rw[poly_prod_set_poly, Abbr`f`] >>
   metis_tac[poly_mod_eq_zero, poly_mult_comm]);
 
+(* Theorem: A factor divides the poly_prod_set of monomials.
+            !n. n < char r ==>
+            (n IN s ==> ((PPROD (IMAGE (\c:num. X - |c|) s)) % (X - |n|) = |0|) *)
+(* Proof:
+   Let f = (\c:num. X - |c|), this is to show:
+       n < char r ==> n IN s ==> (PPROD (IMAGE f s) % (X - |n|) = |0|)
+   Let p = f n = X - |n|,
+   n IN s ==> p IN (IMAGE f s)                 by poly_X_sub_c_image_property
+     PPROD (IMAGE f s)
+   = PPROD (p INSERT (IMAGE f s))              by ABSORPTION
+   = p * PPROD ((IMAGE f s) DELETE p)          by poly_prod_set_thm
+   Since pmonic p                              by poly_pmonic_X_sub_c, #1 <> #0
+     and poly (PPROD ((IMAGE f s) DELETE p))   by poly_prod_set_poly
+         PPROD (IMAGE f s) % p = |0|           by poly_mod_eq_zero, poly_mult_comm
+*)
+val poly_prod_set_image_X_sub_c_factor = store_thm(
+  "poly_prod_set_image_X_sub_c_factor",
+  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
+   !s. FINITE s /\ MAX_SET s < char r ==> !n. n < char r /\ n IN s ==>
+       ((PPROD (IMAGE (\c:num. X - |c|) s)) % (X - |n|) = |0|)``,
+  rpt strip_tac >>
+  qabbrev_tac `f = \c:num. X - |c|` >>
+  qabbrev_tac `p = X - |n|` >>
+  `p IN (IMAGE f s)` by rw[GSYM poly_X_sub_c_image_property, Abbr`f`, Abbr`p`] >>
+  `FINITE (IMAGE f s)` by rw[] >>
+  `FINITE ((IMAGE f s) DELETE p)` by rw[] >>
+  `(IMAGE f s) SUBSET (PolyRing r).carrier` by (rw[poly_X_sub_c_image_element, poly_ring_element, SUBSET_DEF, Abbr`f`] >- rw[]) >>
+  `!x. x IN (IMAGE f s) ==> poly x` by metis_tac[poly_ring_element, SUBSET_DEF] >>
+  `poly p` by rw[poly_X_sub_c, Abbr`p`] >>
+  `PPROD (IMAGE f s) = PPROD (p INSERT (IMAGE f s))` by metis_tac[ABSORPTION] >>
+  `_ = p * PPROD ((IMAGE f s) DELETE p)` by rw[poly_prod_set_thm] >>
+  `pmonic p` by rw[poly_pmonic_X_sub_c, Abbr`p`] >>
+  `((IMAGE f s) DELETE p) SUBSET (PolyRing r).carrier` by metis_tac[DELETE_SUBSET, SUBSET_TRANS] >>
+  `!x. x IN ((IMAGE f s) DELETE p) ==> poly x` by metis_tac[poly_ring_element, SUBSET_DEF] >>
+  `poly (PPROD ((IMAGE f s) DELETE p))` by rw[poly_prod_set_poly] >>
+  `poly (PPROD (IMAGE f s))` by rw[poly_prod_set_poly, Abbr`f`] >>
+  metis_tac[poly_mod_eq_zero, poly_mult_comm]);
+
 (* Theorem: (IMAGE (\c:num. X + |c|) s) SUBSET (PolyRing r).carrier *)
 (* Proof: by poly_X_add_c_image_element and poly_ring_element. *)
 val poly_X_add_c_image_poly_subset = store_thm(
@@ -4524,7 +4637,17 @@ val poly_X_add_c_image_poly_subset = store_thm(
   rw[poly_X_add_c_image_element, poly_ring_element, SUBSET_DEF] >>
   rw[]);
 
-(* Theorem: What divides the poly_prod_set of monomials must be a factor. *)
+(* Theorem: (IMAGE (\c:num. X - |c|) s) SUBSET (PolyRing r).carrier *)
+(* Proof: by poly_X_sub_c_image_element and poly_ring_element. *)
+val poly_X_sub_c_image_poly_subset = store_thm(
+  "poly_X_sub_c_image_poly_subset",
+  ``!r:'a ring. Ring r ==> !s. (IMAGE (\c:num. X - |c|) s) SUBSET (PolyRing r).carrier``,
+  rw[poly_X_sub_c_image_element, poly_ring_element, SUBSET_DEF] >>
+  rw[]);
+
+(* Theorem: What divides the poly_prod_set of monomials must be a factor.
+            FINITE s /\ MAX_SET s < char r ==> !n. n < char r ==>
+            (((PPROD (IMAGE (\c:num. X + |c|) s)) % (X + |n|) = |0|) ==> n IN s) *)
 (* Proof:
    Let f = (\c:num. X + |c|), this is to show:
        n < char r ==> (PPROD (IMAGE f s) % (X + |n|) = |0|) ==> n IN s
@@ -4602,10 +4725,92 @@ val poly_prod_set_image_X_add_c_divides = store_thm(
     metis_tac[REST_SUBSET, IMAGE_SUBSET, SUBSET_DEF]
   ]);
 
-(* Theorem: A factor divides only its poly_prod_set of monomials. *)
+(* Theorem: What divides the poly_prod_set of monomials must be a factor.
+            FINITE s /\ MAX_SET s < char r ==> !n. n < char r ==>
+            (((PPROD (IMAGE (\c:num. X - |c|) s)) % (X - |n|) = |0|) ==> n IN s) *)
 (* Proof:
-   If part: by poly_prod_set_image_X_add_c_factor
-   Only-if part: poly_prod_set_image_X_add_c_divides
+   Let f = (\c:num. X - |c|), this is to show:
+       n < char r ==> (PPROD (IMAGE f s) % (X - |n|) = |0|) ==> n IN s
+   Let p = f n = X - |n|,
+   Need to use: p IN (IMAGE f s) ==> n IN s      by poly_X_sub_c_image_property
+   Change goal: PPROD (IMAGE f s) % p = |0| ==> p IN IMAGE f s
+   Use complete induction on (CARD s).
+   If s = {},
+      IMAGE f {} = {}      by IMAGE_EMPTY
+      and p IN IMAGE f {}  is impossible.
+      But  PPROD (IMAGE f {}) % p
+         = PPROD {} % p            by IMAGE_EMPTY
+         = |1| % p                 by poly_prod_set_empty
+         = |1|                     by poly_mod_const, poly_one
+      and  |1| <> |0|.
+   If s <> {},
+      Let c = CHOICE s, t = REST s,
+      then s = c INSERT t                        by CHOICE_INSERT_REST
+        PPROD (IMAGE f s)
+      = PPROD (IMAGE f (c INSERT t))             by CHOICE_INSERT_REST above
+      = PPROD ((X + |c|) INSERT (IMAGE f t))     by IMAGE_INSERT
+      = (X + |c|) * PPROD ((IMAGE f t) DELETE (X + |c|))  by poly_prod_set_thm
+      = (X + |c|) * PPROD (IMAGE f t)            by DELETE_NON_ELEMENT
+      Given (PPROD (IMAGE f s)) % p = |0|,
+            (X + |c|) % p = |0|
+         or PPROD (IMAGE f t) % p = |0|          by poly_X_sub_c_divides_product
+      If (X - |c|) % p = |0|,
+         X - |c| = p                             by poly_X_sub_c_factor
+         Since (X - |c|) IN IMAGE f s            by IN_IMAGE, CHOICE_DEF
+         Hence p IN IMAGE f s.
+      If PPROD (IMAGE f t) % p = |0|,
+         Since deg (PPROD (IMAGE f t)) = CARD t  by poly_prod_set_image_X_sub_c_deg
+           and CARD t < CARD s                   by CARD_REST
+          Thus p IN (IMAGE f t)                  by induction hypothesis
+          Hence p IN (IMAGE f s)                 by REST_SUBSET, IMAGE_SUBSET, SUBSET_DEF
+*)
+val poly_prod_set_image_X_sub_c_divides = store_thm(
+  "poly_prod_set_image_X_sub_c_divides",
+  ``!r:'a field. Field r ==>
+   !s. FINITE s /\ MAX_SET s < char r ==> !n. n < char r ==>
+    (((PPROD (IMAGE (\c:num. X - |c|) s)) % (X - |n|) = |0|) ==> n IN s)``,
+  rpt strip_tac >>
+  `Ring r /\ #1 <> #0` by rw[] >>
+  qabbrev_tac `f = \c:num. X - |c|` >>
+  qabbrev_tac `p = X - |n|` >>
+  `p IN (IMAGE f s)` suffices_by rw[GSYM poly_X_sub_c_image_property, Abbr`f`, Abbr`p`] >>
+  `pmonic p` by rw[poly_pmonic_X_sub_c, Abbr`p`] >>
+  completeInduct_on `CARD s` >>
+  rule_assum_tac(SIMP_RULE bool_ss[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) >>
+  rw_tac std_ss[] >>
+  Cases_on `s = {}` >| [
+    rw[] >>
+    `PPROD (IMAGE f {}) = |1|` by rw[poly_prod_set_empty] >>
+    `|1| % p = |1|` by rw[poly_mod_const] >>
+    metis_tac[poly_one_ne_poly_zero],
+    `?c t. (c = CHOICE s) /\ (t = REST s) /\ (s = c INSERT t)` by rw[CHOICE_INSERT_REST] >>
+    `c NOTIN t` by metis_tac[CHOICE_NOT_IN_REST] >>
+    `c < char r` by metis_tac[CHOICE_DEF, MAX_SET_LESS] >>
+    `FINITE t` by metis_tac[REST_SUBSET, SUBSET_FINITE] >>
+    `MAX_SET t < char r` by metis_tac[REST_SUBSET, SUBSET_MAX_SET, LESS_EQ_LESS_TRANS] >>
+    `(X - |c|) NOTIN (IMAGE f t)` by rw[GSYM poly_X_sub_c_image_property, Abbr`f`] >>
+    `(IMAGE f t) SUBSET (PolyRing r).carrier` by (rw[poly_X_sub_c_image_element, poly_ring_element, SUBSET_DEF, Abbr`f`] >- rw[]) >>
+    `!p. p IN (IMAGE f t) ==> poly p` by metis_tac[poly_ring_element, SUBSET_DEF] >>
+    `PPROD (IMAGE f s) = PPROD (IMAGE f (c INSERT t))` by rw[] >>
+    `_ = PPROD ((X - |c|) INSERT (IMAGE f t))` by rw[IMAGE_INSERT] >>
+    `_ = (X - |c|) * PPROD ((IMAGE f t) DELETE (X - |c|))` by rw[poly_prod_set_thm] >>
+    `_ = (X - |c|) * PPROD (IMAGE f t)` by metis_tac[DELETE_NON_ELEMENT] >>
+    `poly (X - |c|)` by rw[poly_X_sub_c] >>
+    `poly (PPROD (IMAGE f t))` by rw[poly_prod_set_poly, Abbr`f`] >>
+    `((X - |c|) % p = |0|) \/ (PPROD (IMAGE f t) % p = |0|)` by metis_tac[poly_X_sub_c_divides_product] >-
+    metis_tac[poly_X_sub_c_factor, IN_IMAGE, CHOICE_DEF] >>
+    `CARD t < CARD s` by rw[CARD_REST] >>
+    `deg (PPROD (IMAGE f t)) = CARD t` by rw[poly_prod_set_image_X_sub_c_deg, Abbr`f`] >>
+    `p IN (IMAGE f t)` by rw[] >>
+    metis_tac[REST_SUBSET, IMAGE_SUBSET, SUBSET_DEF]
+  ]);
+
+(* Theorem: A factor divides only its poly_prod_set of monomials.
+            Field r ==> !s. FINITE s /\ MAX_SET s < char r ==> !n. n < char r ==>
+            (n IN s <=> (PPROD (IMAGE (\c. X + |c|) s) % (X + |n|) = |0|)) *)
+(* Proof:
+   If part: by poly_prod_set_image_X_add_c_factor.
+   Only-if part: by poly_prod_set_image_X_add_c_divides.
 *)
 val poly_prod_set_image_X_add_c_property = store_thm(
   "poly_prod_set_image_X_add_c_property",
@@ -4616,9 +4821,26 @@ val poly_prod_set_image_X_add_c_property = store_thm(
   `Ring r /\ #1 <> #0` by rw[] >>
   metis_tac[poly_prod_set_image_X_add_c_factor, poly_prod_set_image_X_add_c_divides]);
 
+(* Theorem: A factor divides only its poly_prod_set of monomials.
+            Field r ==> !s. FINITE s /\ MAX_SET s < char r ==> !n. n < char r ==>
+            (n IN s <=> (PPROD (IMAGE (\c. X - |c|) s) % (X - |n|) = |0|)) *)
+(* Proof:
+   If part: by poly_prod_set_image_X_sub_c_factor.
+   Only-if part: by poly_prod_set_image_X_sub_c_divides.
+*)
+val poly_prod_set_image_X_sub_c_property = store_thm(
+  "poly_prod_set_image_X_sub_c_property",
+  ``!r:'a field. Field r ==>
+   !s. FINITE s /\ MAX_SET s < char r ==> !n. n < char r ==>
+   (n IN s <=> (PPROD (IMAGE (\c. X - |c|) s) % (X - |n|) = |0|))``,
+  rpt strip_tac >>
+  `Ring r /\ #1 <> #0` by rw[] >>
+  metis_tac[poly_prod_set_image_X_sub_c_factor, poly_prod_set_image_X_sub_c_divides]);
+
 (* Theorem: The poly_prod_set map of monomials from PowerSet of counts to Polynomials is Injective.
-   FiniteField r /\ n < char r ==>
-   INJ (\s. PPROD (IMAGE (\c:num. X + |c|) s)) (PPOW (IMAGE SUC (count n))) (PolyRing r).carrier
+            FiniteField r /\ n < char r ==>
+            INJ (\s. PPROD (IMAGE (\c:num. X + |c|) s))
+                (PPOW (IMAGE SUC (count n))) (PolyRing r).carrier
 *)
 (* Proof:
    Let f = (\c:num. X + |c|).
@@ -4686,6 +4908,71 @@ Proof
     `MAX_SET s1 < char r ∧ MAX_SET s2 < char r`
       by metis_tac[SUBSET_MAX_SET, LESS_EQ_LESS_TRANS] >>
     metis_tac[SUBSET_ANTISYM]
+  ]
+QED
+
+(* Theorem: The poly_prod_set map of monomials from PowerSet of counts to Polynomials is Injective.
+            FiniteField r /\ n < char r ==>
+            INJ (\s. PPROD (IMAGE (\c:num. X - |c|) s))
+                (PPOW (IMAGE SUC (count n))) (PolyRing r).carrier
+*)
+(* Proof:
+   Let f = (\c:num. X - |c|).
+   By INJ_DEF, this is to show:
+   (1) s IN POW (IMAGE SUC (count n)) ==> PPROD (IMAGE f s) IN (PolyRing r).carrier
+           s IN POW (IMAGE SUC (count n))
+       ==> s SUBSET (IMAGE SUC (count n))               by IN_POW
+       Since FINITE (IMAGE f s)                         by IMAGE_FINITE
+         and (IMAGE f s) SUBSET (PolyRing r).carrier    by poly_X_sub_c_image_poly_subset
+       Hence PPROD (IMAGE f s) IN (PolyRing r).carrier  by poly_prod_set_property
+   (2) s IN POW (IMAGE SUC (count n)) /\
+       s' IN POW (IMAGE SUC (count n)) /\
+       PPROD (IMAGE f s') = PPROD (IMAGE f s) ==> s' = s
+       First prove that: equality implies subsets:
+       !s t. FINITE s /\ MAX_SET s < char r /\ FINITE t /\ MAX_SET t < char r /\
+          (PPROD (IMAGE f s) = PPROD (IMAGE f t)) ==> s SUBSET t
+       Expand by r SUBSET_DEF, this is to show: x IN s ==> x IN t
+       Since x IN s ==> x < char r      by MAX_SET_LESS
+        Also x IN s ==> (PPROD (IMAGE f s'')) % (X - ###x) = |0|  by poly_prod_set_image_X_sub_c_property
+        Thus            (PPROD (IMAGE f t)) % (X - ###x) = |0|    by given equality
+       Hence x IN t, or assetion is proved                        by poly_prod_set_image_X_sub_c_property
+       Now, s IN POW (IMAGE SUC (count n)) ==> s SUBSET (IMAGE SUC (count n))     by IN_POW
+            s' IN POW (IMAGE SUC (count n)) ==> s' SUBSET (IMAGE SUC (count n))   by IN_POW
+       Also FINITE s and FINITE s'                        by FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE
+        and MAX_SET s <= n, MAX_SET s' <= n               by MAX_SET_IMAGE_SUC_COUNT, SUBSET_MAX_SET
+         so MAX_SET s < char r and MAX_SET s' < char r    by LESS_EQ_LESS_TRANS
+       Applying the lemma, s SUBSET s' and s' SUBSET s    by equality implies subset
+       Therefore s = s'                                   by SUBSET_ANTISYM
+*)
+Theorem poly_prod_set_image_X_sub_c_inj:
+  !r:'a field. Field r ==> !n. n < char r ==>
+   INJ (\s. PPROD (IMAGE (\c:num. X - |c|) s)) (PPOW (IMAGE SUC (count n))) (PolyRing r).carrier
+Proof
+  rpt strip_tac >>
+  `Ring r /\ #1 <> #0` by rw[] >>
+  qabbrev_tac `f = \c:num. X - |c|` >>
+  rw_tac std_ss[INJ_DEF, IN_PPOW, IN_DIFF, IN_SING] >| [
+    rename1 ‘s <> natural n’ >>
+    `s SUBSET (IMAGE SUC (count n))` by rw[GSYM IN_POW] >>
+    `FINITE (IMAGE f s)` by metis_tac[IMAGE_FINITE, SUBSET_FINITE, FINITE_COUNT] >>
+    `(IMAGE f s) SUBSET (PolyRing r).carrier` by rw[poly_X_sub_c_image_poly_subset, Abbr`f`] >>
+    rw[poly_prod_set_property],
+    rename1 ‘s IN POW (natural n)’ >>
+    `!s t. FINITE s /\ MAX_SET s < char r /\ FINITE t /\ MAX_SET t < char r /\
+             (PPROD (IMAGE f s) = PPROD (IMAGE f t)) ==> s SUBSET t` by
+  (rw_tac std_ss[SUBSET_DEF, Abbr`f`] >>
+    qabbrev_tac `f = \c:num. X - |c|` >>
+    `x < char r` by metis_tac[MAX_SET_LESS] >>
+    `(PPROD (IMAGE f s'')) % (X - ###x) = |0|` by rw[GSYM poly_prod_set_image_X_sub_c_property, Abbr`f`] >>
+    `(PPROD (IMAGE f t)) % (X - ###x) = |0|` by metis_tac[] >>
+    rev_full_simp_tac std_ss [GSYM poly_prod_set_image_X_sub_c_property, Abbr`f`]) >>
+    `s SUBSET (IMAGE SUC (count n)) /\ s' SUBSET (IMAGE SUC (count n))` by rw[GSYM IN_POW] >>
+    `FINITE (IMAGE SUC (count n))` by rw[] >>
+    `MAX_SET (IMAGE SUC (count n)) = n` by rw[MAX_SET_IMAGE_SUC_COUNT] >>
+    `FINITE s /\ FINITE s'` by metis_tac[SUBSET_FINITE] >>
+    `MAX_SET s < char r /\ MAX_SET s' < char r` by metis_tac[SUBSET_MAX_SET, LESS_EQ_LESS_TRANS] >>
+    `s SUBSET s' /\ s' SUBSET s` by metis_tac[] >>
+    rw[SUBSET_ANTISYM]
   ]
 QED
 

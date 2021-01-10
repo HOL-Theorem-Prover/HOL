@@ -23,16 +23,6 @@ include Abbrev
   val mk_embedding_var : (real vector * hol_type) -> term
   val precomp_embed : tnn -> term -> term
 
-  (* input terms for tactictoe *)
-  val nntm_of_gl : goal list -> term
-  val mask_unknown : tnn * int -> term -> term
-  val mask_unknown_value : tnn -> term -> term
-  val mask_unknown_policy : tnn -> term -> term
-  val mask_unknown_thmpol : tnn -> term -> term
-  val nntm_of_applyexp : smlParser.applyexp -> term
-  val nntm_of_gstactm : (term list * term) * term -> term
-  val nntm_of_thm : thm -> term
-
   (* examples *)
   val stats_tnnex : tnnex -> string
   val prepare_tnnex : tnnex -> tnnbatch

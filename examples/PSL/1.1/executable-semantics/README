@@ -1,0 +1,10 @@
+I believe ExecutableSemanticsScript.sml has been broken since 2004,
+where commit 8908ad59392fa5b leaves the file in a broken (not valid
+SML) state.
+
+Some simple changes let a prefix of the file build, and I've commented
+out the rest.
+
+--
+
+Michael Norrish, 6 January 2021

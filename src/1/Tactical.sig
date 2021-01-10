@@ -65,6 +65,8 @@ sig
   val EVERY          : tactic list -> tactic
   val EVERY_LT       : list_tactic list -> list_tactic
   val FIRST          : tactic list -> tactic
+  val FIRST_LT       : tactic -> list_tactic
+  val SELECT_LT      : tactic -> list_tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic
   val map_every      : ('a -> tactic) -> 'a list -> tactic
   val MAP_FIRST      : ('a -> tactic) -> 'a list -> tactic

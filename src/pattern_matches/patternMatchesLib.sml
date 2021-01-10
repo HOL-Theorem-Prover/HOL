@@ -1694,7 +1694,7 @@ fun PMATCH_SIMP_GEN_ss ssl =
   make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
 
 val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GEN_ss [])
-val _ = BasicProvers.augment_srw_ss [PMATCH_SIMP_ss];
+val _ = logged_addfrags {thyname="patternMatches"} [PMATCH_SIMP_ss];
 
 
 fun PMATCH_FAST_SIMP_CONV_GENCALL_AUX rc_arg =

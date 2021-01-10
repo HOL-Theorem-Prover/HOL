@@ -240,7 +240,7 @@ sig
   val strip_binop : term -> term -> term list
   val arity_of : term -> int
 
-  (* S-expressions *)
+  (* term data *)
   val enc_real : real -> HOLsexp_dtype.t
   val dec_real : HOLsexp_dtype.t -> real option
   val write_tmdata :
@@ -251,6 +251,10 @@ sig
     string -> 'a
   val write_data : ('a -> HOLsexp_dtype.t) -> string -> 'a -> unit
   val read_data : (HOLsexp_dtype.t -> 'a option) -> string -> 'a
+  val export_terml : string -> term list -> unit
+  val import_terml : string -> term list
+  val export_goal : string -> goal -> unit
+  val import_goal : string -> goal
 
   (* thread *)
   val interruptkill : Thread.thread -> unit

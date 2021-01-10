@@ -5,7 +5,7 @@
 
 (defun holscript-fixture-in (file sword-arg body)
   (with-temp-buffer
-    (insert-file-contents-literally (concat holdir "tools/mode-tests/" file))
+    (insert-file-contents-literally (concat hol-dir "tools/mode-tests/" file))
     (decode-coding-region (point-min) (point-max) 'utf-8-unix)
     (holscript-mode)
     (set-buffer-modified-p nil)
@@ -17,8 +17,8 @@
   (holscript-fixture-in file 1 body))
 
 
-(defun holscript-unchanged-at1 ()
-  ; (message "Testing unchanged at %d" (line-number-at-pos))
+(defun holscript-unchanged-at1 (p)
+  ;; (message "Testing unchanged at %d" (line-number-at-pos))
   (indent-for-tab-command)
   (not (buffer-modified-p)))
 
@@ -34,12 +34,12 @@
 (defun holscript-eachline-unchanged ()
   (save-excursion
     (goto-char (point-min))
-    (while (and (holscript-unchanged-at1) (= 0 (forward-line))))
-    (should (= (point) (point-max)))))
+    (while (and (should (holscript-unchanged-at1 (point)))
+                (equal 0 (forward-line))))))
 
 (ert-deftest holscript-indent1 ()
   "Tests every line in sampleScript is already indented correctly"
-  (holscript-fixture-both "sampleScript.sml" 'holscript-eachline-unchanged))
+  (holscript-fixture-both "indentScript.sml" 'holscript-eachline-unchanged))
 
 (defun holscript-indent2-test ()
   (goto-char 86)
@@ -50,7 +50,7 @@
 
 (ert-deftest holscript-indent2 ()
   "Tests Theorem: syntax after Theorem="
-  (holscript-fixture-both "sampleScript.sml" 'holscript-indent2-test))
+  (holscript-fixture-both "indentScript.sml" 'holscript-indent2-test))
 
 (defun holscript-indent3-test ()
   (goto-char 111)
@@ -62,7 +62,7 @@
   (should (looking-at "  simp\\[]")))
 (ert-deftest holscript-indent3 ()
   "Tactic indents 2 when moved under proof keyword (_)"
-  (holscript-fixture-both "sampleScript.sml" 'holscript-indent3-test))
+  (holscript-fixture-both "indentScript.sml" 'holscript-indent3-test))
 
 
 (defun holscript-indent4-test ()
@@ -90,13 +90,33 @@
       t)))
 
 
-(defun holscript-sexp-forward-test ()
+(defun holscript-sexp-movement-test ()
+  (save-excursion
+    (and
+     (should (move-check '(1 12 41 42 64 84 121 139
+                             176 218 382 499)
+                         'forward-sexp))
+     (should (move-check '(2205 2486) 'forward-sexp))
+     (should (move-check '(3872 3905) 'forward-sexp))
+     (should (move-check '(3507 3310) 'backward-up-list))
+     (should (move-check '(3907 3872 3310 2801) 'backward-sexp))
+     (should (move-check '(4435 4452 4505 4552) 'forward-sexp))
+     (should (move-check '(4455 4505) 'forward-sexp))
+     (should (move-check '(4508 4455 4435) 'backward-sexp))
+     (should (move-check '(3943 3959 3999 4046) 'forward-sexp)))))
+
+(ert-deftest holscript-sexp-movement ()
+  "sexp-moves are made correctly"
+  (holscript-fixture-both "sampleScript.sml" 'holscript-sexp-movement-test))
+
+(defconst point4359-expected
+  " (*#loc 261 10 *)\ninv (2r pow (e + 1)) < inv (2r pow e)")
+(defun holscript-tap-test ()
   (should (save-excursion
             (and
-             (move-check '(1 12 41 42 64 84 121 139
-                             176 218 382 499)
-                         'forward-sexp)
-             (move-check '(2205 2486) 'forward-sexp)))))
-(ert-deftest holscript-sexp-forward1 ()
-  "sexp-forward moves correctly"
-  (holscript-fixture-both "sampleScript.sml" 'holscript-sexp-forward-test))
+             (progn (goto-char 4359)
+                    (equal (hol-term-at-point) point4359-expected))))))
+
+(ert-deftest holscript-term-at-point ()
+  "hol-term-at-point correct"
+  (holscript-fixture-both "sampleScript.sml" 'holscript-tap-test))

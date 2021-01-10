@@ -11,16 +11,17 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlLexer smlParser smlExecute smlRedirect smlInfix
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
-  psMinimize
-  tttSetup tttToken tttLearn tttSearch
+  psMinimize tttSetup tttToken tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
 
 (* -------------------------------------------------------------------------
-   Time limit
+   Global parameters
    ------------------------------------------------------------------------- *)
 
 fun set_timeout r = (ttt_search_time := r)
+val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
+val prioritize_stacl = ref [metis_stac]
 
 (* -------------------------------------------------------------------------
    Preparsing theorems and tactics
@@ -63,32 +64,24 @@ fun select_thmfea (symweight,thmfea) gfea =
 
 fun select_tacfea tacdata gfea =
   let
-    val calls = #calls tacdata
-    val callfea = map_assoc #fea calls
-    val symweight = learn_tfidf callfea
+    val calld = #calld tacdata
+    val calls = dlist calld
+    val callfea = map_assoc (#fea o snd) calls
+    val symweight = learn_tfidf_symfreq_nofilter (dlength calld)
+      (#symfreq tacdata)
     val sel1 = callknn (symweight,callfea) (!ttt_presel_radius) gfea
-    val sel2 = add_calldep (#calldep tacdata) (!ttt_presel_radius) sel1
-    val tacfea = map (fn x => (#ortho x, #fea x)) sel2
+    val sel2 = add_calldep calld (!ttt_presel_radius) sel1
+    val tacfea = map (fn (_,x) => (#stac x, #fea x)) sel2
   in
     (symweight,tacfea)
   end
 
 (* -------------------------------------------------------------------------
-   Variable enumerator (to be moved elsewhere)
-   ------------------------------------------------------------------------- *)
-
-fun unterm_var v =
-  let val (vs,ty) = dest_var v in vs ^ " " ^ type_to_string ty end
-
-fun pred_qvar goal = map unterm_var (find_terms is_var (snd goal))
-
-(* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
-fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
+fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   let
-    val narg_explo = 1
     val _ = hidef QUse.use infix_file
     (* preselection *)
     val _ = print_endline "preselection"
@@ -97,12 +90,11 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
     val (tacsymweight,tacfea) = select_tacfea tacdata goalf
     (* parsing *)
     val _ = print_endline "parsing"
-    val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
-    val metis_flag = is_tactic "metisTools.METIS_TAC []"
-    val thm_parse_dict = dnew String.compare (preparse_thmidl (map fst thmfea))
-    val tac_parse_dict =
-       dnew String.compare (preparse_stacl (
-         (if metis_flag then [metis_stac] else []) @ map fst tacfea))
+    val pstacl = preparse_stacl (!prioritize_stacl)
+    val thm_parse_dict = dnew String.compare
+      (preparse_thmidl (map fst thmfea))
+    val tac_parse_dict = dnew String.compare
+      (pstacl @ preparse_stacl (map fst tacfea))
     fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl
       handle NotFound =>
         raise ERR "parse_thmidl" (String.concatWith " " thmidl)
@@ -115,7 +107,7 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
        parse_thmidl = parse_thmidl,
        parse_sterm = fn x => [QUOTE x]}
     (* predictors *)
-    val stacl_filtered = metis_stac :: (map fst tacfea_filtered)
+    val stacl_filtered = map fst pstacl @ map fst tacfea_filtered
     val atyd = dnew String.compare (map_assoc extract_atyl stacl_filtered)
     val thm_cache = ref (dempty goal_compare)
     val tac_cache = ref (dempty goal_compare)
@@ -124,107 +116,38 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
       let
         val gfea = fea_of_goal true g
         val thmidl = thmknn (thmsymweight,thmfea_filtered)
-          (narg_explo * (!ttt_thmlarg_radius)) gfea
+          (!ttt_thmlarg_radius) gfea
       in
         thm_cache := dadd g thmidl (!thm_cache); thmidl
       end
     fun predarg stac aty g = case aty of
         Athml =>
+        let val thml = predthml g in
           if stac = metis_stac
-          then map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g))
-          else map Sthml (mk_batch_full 1 (predthml g))
-      | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
+          then map Sthml (mk_batch_full (!ttt_metis_radius) thml)
+          else map Sthml (mk_batch_full 1 thml)
+        end
+      | Aterm => map Sterm (pred_svar 8 g)
     fun predtac g =
       dfind g (!tac_cache) handle NotFound =>
       let
         val gfea = fea_of_goal true g
         val stacl1 = tacknn (tacsymweight,tacfea_filtered)
           (!ttt_presel_radius) gfea
-        val stacl2 =
-          if metis_flag
-          then mk_sameorder_set String.compare (metis_stac :: stacl1)
-          else stacl1
+        val stacl2 = mk_sameorder_set String.compare (map fst pstacl @ stacl1)
         val stacl3 = map_assoc (fn x => dfind x atyd) stacl2
       in
         tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
-    (* search parameters *)
-    val _ = print_endline "search"
-    val searchobj =
-      {predtac = predtac, predarg = predarg,
-       parsetoken = parsetoken,
-       vnno = vnno, pnno = pnno}
   in
-    search searchobj goal
+    {predtac = predtac, predarg = predarg,
+     parsetoken = parsetoken,
+     vnno = vnno, pnno = pnno, anno = anno}
   end
 
-(* -------------------------------------------------------------------------
-   Alternative main function (without recorded data)
-   ------------------------------------------------------------------------- *)
-
-val ministacl =
-  [
-  "metisTools.METIS_TAC " ^ thmlarg_placeholder,
-  "BasicProvers.Induct_on " ^ termarg_placeholder,
-  "simpLib.FULL_SIMP_TAC ( BasicProvers.srw_ss ( ) ) " ^ thmlarg_placeholder,
-  "simpLib.SIMP_TAC ( BasicProvers.srw_ss ( ) ) " ^ thmlarg_placeholder,
-  "Rewrite.ASM_REWRITE_TAC " ^ thmlarg_placeholder,
-  "Rewrite.REWRITE_TAC " ^ thmlarg_placeholder
-  ]
-
-fun main_tactictoe_mini thmdata (vnno,pnno) goal =
-  let
-    val narg_explo = 8
-    val mem = !ttt_policy_coeff
-    val _ = ttt_policy_coeff := 0.9999
-    (* trying to load required modules *)
-    val _ = map (can load) ["metisTools","BasicProvers","simpLib","Rewrite"]
-    (* preselection *)
-    val _ = print_endline "preselection"
-    val goalf = fea_of_goal true goal
-    val (thmsymweight,thmfea) = select_thmfea thmdata goalf
-    (* parsing *)
-    val _ = print_endline "parsing"
-    val thm_parse_dict = dnew String.compare (preparse_thmidl (map fst thmfea))
-    val tac_parse_dict = dnew String.compare (preparse_stacl ministacl)
-    fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl
-      handle NotFound =>
-        raise ERR "parse_thmidl" (String.concatWith " " thmidl)
-    fun parse_stac stac = dfind stac tac_parse_dict
-      handle NotFound => raise ERR "parse_stac" stac
-    val parsetoken =
-      {parse_stac = parse_stac,
-       parse_thmidl = parse_thmidl,
-       parse_sterm = fn x => [QUOTE x]}
-    val thmfea_filtered = filter (fn x => dmem (fst x) thm_parse_dict) thmfea
-    val stacl_filtered = dkeys tac_parse_dict
-    (* predictors *)
-    val atyd = dnew String.compare (map_assoc extract_atyl stacl_filtered)
-    val thm_cache = ref (dempty goal_compare)
-    val tac_cache = ref (dempty goal_compare)
-    fun predthml g =
-      dfind g (!thm_cache) handle NotFound =>
-      let
-        val gfea = fea_of_goal true g
-        val thmidl = thmknn (thmsymweight,thmfea_filtered)
-          (narg_explo * (!ttt_thmlarg_radius)) gfea
-      in
-        thm_cache := dadd g thmidl (!thm_cache); thmidl
-      end
-    fun predarg _ aty g = case aty of
-        Athml => map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g))
-      | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
-    fun predtac g = map_assoc (fn x => dfind x atyd) stacl_filtered
-    (* search parameters *)
-    val _ = print_endline "search"
-    val searchobj =
-      {predtac = predtac, predarg = predarg,
-       parsetoken = parsetoken,
-       vnno = vnno, pnno = pnno}
-    val r = search searchobj goal
-    val _ = ttt_policy_coeff := mem
-  in
-    r
+fun main_tactictoe (thmdata,tacdata) nnol goal =
+  let val searchobj = build_searchobj (thmdata,tacdata) nnol goal in
+    print_endline "search"; search searchobj goal
   end
 
 (* -------------------------------------------------------------------------
@@ -265,7 +188,7 @@ fun tactictoe_aux goal =
         tacdata_aux
       end
     val (proofstatus,_) = hidef
-      (main_tactictoe (thmdata,tacdata) (NONE,NONE)) goal
+      (main_tactictoe (thmdata,tacdata) (NONE,NONE,NONE)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac
@@ -275,28 +198,6 @@ fun ttt goal = (tactictoe_aux goal) goal
 
 fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
-
-(* -------------------------------------------------------------------------
-   Interface (without recorded data)
-   ------------------------------------------------------------------------- *)
-
-fun tactictoe_mini_aux goal =
-  if not (has_boolty_goal goal)
-  then raise ERR "tactictoe" "type bool expected"
-  else
-  let
-    val cthyl = current_theory () :: ancestry (current_theory ())
-    val thmdata = hidef create_thmdata ()
-    val (proofstatus,_) = hidef (main_tactictoe_mini thmdata (NONE,NONE)) goal
-    val (staco,tac) = read_status proofstatus
-  in
-    tac
-  end
-
-fun ttt_mini goal = (tactictoe_mini_aux goal) goal
-
-fun tactictoe_mini term =
-  let val goal = ([],term) in TAC_PROOF (goal, tactictoe_mini_aux goal) end
 
 
 end (* struct *)

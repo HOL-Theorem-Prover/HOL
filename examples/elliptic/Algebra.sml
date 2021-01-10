@@ -246,10 +246,10 @@ local
             end
         end;
 
-  fun pp_basic_exp pp (Var v, _) = Useful.pp_string pp v
-    | pp_basic_exp pp (e,_) =
+  fun pp_basic_exp (Var v, _) = Useful.pp_string v
+    | pp_basic_exp (e,_) =
       case toInt e of
-        SOME n => Useful.pp_int pp n
+        SOME n => Useful.pp_int n
       | NONE => raise Bug "pp_basic_exp";
 in
   val pp =

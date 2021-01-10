@@ -145,6 +145,8 @@ sig
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val sg             : term quotation -> tactic
   val subgoal        : term quotation -> tactic
+  val >~             : ('a,'b)gentactic*term quotation list -> ('a,'b)gentactic
+  val >>~            : ('a,'b)gentactic*term quotation list -> ('a,'b)gentactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 
@@ -154,6 +156,9 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+
+  (* name cases of an induction theorem *)
+  val name_ind_cases : term list -> thm -> thm
 
   (* more simplification variants *)
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic

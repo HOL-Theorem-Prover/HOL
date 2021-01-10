@@ -1611,7 +1611,7 @@ val INDEP_FN_PROB_FST_SUC = store_thm
    >> MP_TAC
       (Q.SPECL [`f`, `n`, `count n`]
        (INST_TYPE [alpha |-> numSyntax.num] INDEP_FN_PROB_FST_INSERT))
-   >> RW_TAC arith_ss [IN_COUNT, LT_SUC, IN_INSERT]
+   >> RW_TAC arith_ss [IN_COUNT, prim_recTheory.LESS_THM, IN_INSERT]
    >> ONCE_REWRITE_TAC [DISJ_COMM]
    >> RW_TAC std_ss []
    >> PROVE_TAC [REAL_ADD_SYM]);
@@ -1753,7 +1753,7 @@ val PROB_BERN_BIND_FINITE = store_thm
                      PROB_BERN_EMPTY]
    >> STRIP_TAC
    >> Q.PAT_X_ASSUM `X ==> Y` MP_TAC
-   >> Cond >- PROVE_TAC [LT_SUC]
+   >> Cond >- PROVE_TAC [prim_recTheory.LESS_THM]
    >> RW_TAC bool_ss [sum]
    >> POP_ASSUM K_TAC
    >> RW_TAC bool_ss [COUNT_SUC, IMAGE_INSERT, BIGUNION_INSERT]

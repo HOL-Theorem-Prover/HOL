@@ -13,7 +13,6 @@ val _ = new_theory "groupProduct";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -43,24 +42,10 @@ open helperSetTheory;
 (* ------------------------------------------------------------------------- *)
 (* Overloading (# is temporary):
    FUN_COMM op f  = !x y z. op (f x) (op (f y) z) = op (f y) (op (f x) z)
-   GPI f s        = GROUP_IMAGE g f s
-   gfun f         = group_fun g f
+#  GPI f s        = GROUP_IMAGE g f s
+#  gfun f         = group_fun g f
 *)
 (* Definitions and Theorems (# are exported):
-
-xx
-   The GROUP ITSET theorems, fold of g.op, especially for Abelian Groups (by lifting):
-   GITSET_THM      |- !s g b. FINITE s ==> (GITSET g s b = if s = {} then b else GITSET g (REST s) (CHOICE s * b))
-   GITSET_EMPTY    |- !g b. GITSET g {} b = b
-   GITSET_INSERT   |- !x. FINITE s ==> !x g b. (GITSET g (x INSERT s) b = GITSET g (REST (x INSERT s)) (CHOICE (x INSERT s) * b))
-   GITSET_PROPERTY |- !g s. FINITE s /\ s <> {} ==> !b. GITSET g s b = GITSET g (REST s) (CHOICE s * b)
-   COMMUTING_GITSET_INSERT |- !g s.  AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
-                              !b x::(G). GITSET g (x INSERT s) b = GITSET g (s DELETE x) (x * b)
-   COMMUTING_GITSET_REDUCTION  |- !g s.  AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
-                                  !b x::(G). GITSET g s (x * b) = x * GITSET g s b
-   COMMUTING_GITSET_RECURSES   |- !g s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
-                                  !b x::(G). GITSET g (x INSERT s) b = x * GITSET g (s DELETE x) b
-xx
 
    Fermat's Little Theorem of Abelian Groups:
    GPROD_SET_IMAGE            |- !g a. Group g /\ a IN G ==> (GPROD_SET g (a * G) = GPROD_SET g G)
@@ -406,7 +391,7 @@ val GROUP_IMAGE_DEF = Define `
 `;
 
 (* overload GROUP_IMAGE *)
-val _ = overload_on("GPI", ``GROUP_IMAGE g``);
+val _ = temp_overload_on("GPI", ``GROUP_IMAGE g``);
 
 (*
 > GROUP_IMAGE_DEF;
@@ -507,7 +492,7 @@ val group_fun_def = Define `
 `;
 
 (* overload on group function *)
-val _ = overload_on("gfun", ``group_fun g``);
+val _ = temp_overload_on("gfun", ``group_fun g``);
 
 (* Theorem: Monoid g ==> !f. gfun f ==> !x. x IN G ==> (GPI f {x} = f x) *)
 (* Proof:

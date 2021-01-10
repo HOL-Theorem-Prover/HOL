@@ -31,9 +31,12 @@ datatype qfs = QFS of {comdepth : int ref,
                        antiquote_stack : quotetype list ref,
                        mltype_stack : mltype list ref,
                        induction_thm : string ref,
+                       labelidxs : (string * int) list ref,
+                       conjcount : int ref,
                        row      : int ref,
                        rowstart : int ref,
                        inscript : bool,
+                       stem : string ref,
                        quotefix : bool}
 
 fun mlswitch tys init tval thval =
@@ -50,13 +53,18 @@ fun newstate {inscriptp,quotefixp}  =
        rowstart = ref 0,
        inscript = inscriptp,
        quotefix = quotefixp,
+       labelidxs = ref [],
+       conjcount = ref 0,
+       stem = ref "",
        induction_thm = ref "",
        mltype_stack = ref []}
 
 fun linenum (QFS{row,...}) = !row + 1
 
-fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,...}) =
-    (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := []);
+fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,
+                    labelidxs, conjcount, stem, ...}) =
+    (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := [];
+     conjcount := 0; labelidxs := []; stem := "");
 
 
 fun ECHO (QFS _) s = s
@@ -68,6 +76,9 @@ fun dest_ml_thm_binding s =
          ident is either a standard ML identifier, or something in double quotes
          NB: If it's in double quotes, the thing in quotes might include square
          brackets!
+
+         returns the ident, the original string corresponding to the string +
+         attributes, and the attributes as a separate list of strings
       *)
       val ss = s |> Substring.full
                  |> Substring.dropl Char.isAlpha
@@ -104,6 +115,27 @@ fun dest_ml_thm_binding_triv s =
           else (with_attrs,attrs)
     in
       (thmname, with_attrs, attrs)
+    end
+
+fun extra_binds stem (s,i) =
+    let
+      val (mlname, withattrs, _) = dest_ml_thm_binding ("x " ^ s)
+      val f = if String.sub(mlname,0) = #"~" then
+                fn s => stem ^ "_" ^ String.extract(s,1,NONE)
+              else fn s => s
+    in
+      "val " ^ f mlname ^ " = boolLib.save_thm(\"" ^ f withattrs ^
+      "\", Drule.cj " ^ Int.toString i ^ " " ^ stem ^ "_rules);"
+    end
+
+fun process_defnlabel labref i s =
+    let
+      val s' = Substring.extract (s, 2, SOME (size s - 3))
+                 |> Substring.dropl Char.isSpace
+                 |> Substring.dropr (fn c => Char.isSpace c orelse c = #":")
+                 |> Substring.string
+    in
+      labref := !labref @ [(s',i)]
     end
 
 
@@ -177,13 +209,14 @@ fun eof (QFS {mltype_stack,...}) =
 %%
 %structure QuoteFilter
 %s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL;
-%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm});
+%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, labelidxs, conjcount, stem});
 %full
 
 letter = [A-Za-z];
 digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
-alphaMLid = {letter} ({letter} | {digit} | _ | "'")*;
+alphaMLid_tailchar = ({letter} | {digit} | _ | "'");
+alphaMLid = {letter} {alphaMLid_tailchar}*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
 quotedsymbolid = "\"" [^\034]+ "\"";
 defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
@@ -198,10 +231,13 @@ fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
 Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
+DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+;
+DefinitionLabel = "["{ws}*{DefinitionLabelID}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]";
 Definitionpfx =
   "Definition"{ws}+{alphaMLid}("["{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
+HOLconjunction = "/\092" | "\226\136\167";
 %%
 
 {locpragma} => ((yypos,
@@ -365,6 +401,10 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
            else ("CoIndDefLib.xHol_coreln", "_coind")
      in
        mltype_stack := [];
+       labelidxs := [];
+       conjcount := 0;
+       pardepth := 0;
+       stem := s;
        YYBEGIN defnquote;
        induction_thm := s ^ "_strongind";
        ECHO yyarg
@@ -574,6 +614,30 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <quote,tmquote,tyquote,defnquote,datatypequote>"^`" => (
   (yypos, if quotefix then yytext else ECHO yyarg "`")
 );
+<defnquote>{HOLconjunction} => (
+  (* TextIO.output(TextIO.stdErr,
+       "Saw conjunction at depth " ^ Int.toString (!pardepth) ^ "!\n") ; *)
+  (if !pardepth = 0 then (inc conjcount) else ());
+  (yypos, if Char.isPrint (String.sub(yytext,0)) then String.toString yytext
+          else mk_strsafe yytext)
+);
+<defnquote>{newline}{DefinitionLabel} => (
+  (yypos,
+   if quotefix then yytext
+   else (
+    (* TextIO.output(TextIO.stdErr,
+      "Saw label with pd = " ^ Int.toString (!pardepth) ^ ", cc = " ^
+      Int.toString (!conjcount) ^ "\n"); *)
+    process_defnlabel labelidxs (!conjcount + 1) yytext;
+    qnewline yyarg (yypos, yytext)
+   )
+  )
+);
+<defnquote>"(*" => (
+  (yypos, (inc comdepth; YYBEGIN defncomment; ECHO yyarg yytext))
+);
+<defnquote>"(" => (inc pardepth; (yypos, ECHO yyarg yytext));
+<defnquote>")" => (dec pardepth; (yypos, ECHO yyarg yytext));
 <quote,tmquote,tyquote,defnquote,datatypequote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
 <quote,tmquote,tyquote,defnquote,datatypequote>{newline} => (
   (yypos, if quotefix then yytext else qnewline yyarg (yypos,yytext))
@@ -599,8 +663,12 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
   (yypos, (
      YYBEGIN INITIAL;
      nextline yyarg (yypos + size yytext);
-     if quotefix then yytext else ECHO yyarg ("\"\n] NONE; " ^ magic_bind yyarg)
-     )
+     if quotefix then yytext
+     else (ECHO yyarg ("\"\n] NONE; " ^ magic_bind yyarg ^
+                       String.concat (List.map (extra_binds (!stem))
+                                               (!labelidxs))) before
+           labelidxs := [])
+    )
   )
 );
 <defnquote>{newline}"Termination" => (
@@ -629,10 +697,6 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <datatypequote>"(*" => (
   (yypos, (inc comdepth; YYBEGIN datatypecomment; ECHO yyarg yytext))
 );
-<defnquote>"(*" => (
-  (yypos, (inc comdepth; YYBEGIN defncomment; ECHO yyarg yytext))
-);
-
 <quote>"^" => (
   (yypos,
    (YYBEGIN ANTIQ; antiquote_stack := inQUOTE :: !antiquote_stack;
@@ -657,9 +721,6 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 );
 <quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => (
   (yypos, if quotefix then yytext else ECHO yyarg (bslash_escape_s yytext))
-);
-<quote,tmquote,tyquote,defnquote,datatypequote>[^`\n\015^ \t(*\128-\255]+ => (
-  (yypos, if quotefix then yytext else ECHO yyarg (String.toString yytext))
 );
 <quote,tmquote,tyquote,defnquote,datatypequote>. => (
   (yypos, if quotefix then yytext else ECHO yyarg (String.toString yytext))

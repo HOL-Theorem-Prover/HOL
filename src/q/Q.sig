@@ -69,6 +69,13 @@ sig
   val MATCH_ASMSUB_ABBREV_TAC : tmquote -> tactic
   val RENAME1_TAC            : tmquote -> tactic
   val RENAME_TAC             : tmquote list -> tactic
+  val SELECT_GOAL_LT         : tmquote list -> list_tactic
+  val >~                     : ('a,'b)gentactic * tmquote list ->
+                               ('a,'b)gentactic
+  val SELECT_GOALS_LT        : tmquote list -> list_tactic
+  val SELECT_GOALS_LT_THEN   : tmquote list -> tactic -> list_tactic
+  val >>~                    : ('a,'b)gentactic * tmquote list ->
+                               ('a,'b)gentactic
   val kRENAME_TAC            : tmquote list -> tactic -> tactic
   val coreRENAME_TAC         : tmquote list -> tactic -> tactic
 

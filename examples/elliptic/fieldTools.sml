@@ -9,6 +9,8 @@ open HolKernel Parse boolLib bossLib res_quanLib groupTools fieldTheory;
 
 val Bug = mlibUseful.Bug;
 
+val ERR = mk_HOL_ERR "fieldTools"
+
 val cond_rewr_conv = subtypeTools.cond_rewr_conv;
 
 val cond_rewrs_conv = subtypeTools.cond_rewrs_conv;
@@ -264,10 +266,13 @@ val field_pretty_print = ref true;
 
 val field_pretty_print_max_size = ref 1000;
 
-fun field_print Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp =
+fun field_print Gs bend sys0 (ppfns:term_pp_types.ppstream_funs) gravs d =
     let
-      open Portable term_pp_types
+      open Portable term_pp_types term_pp_utils smpp
       val (str,brk) = (#add_string ppfns, #add_break ppfns);
+      infix >> >-
+      fun sys gravs d =
+          sys0 { gravs = gravs, depth = d, binderp = false }
 
       fun field_num tm =
           let
@@ -280,11 +285,9 @@ fun field_print Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp =
           let
             val (_,x) = dest tm
           in
-            begin_block pp INCONSISTENT 0;
-            str s;
-            brk (1,0);
-            sys (Prec (prec,s), Top, Top) (d - 1) x;
-            end_block pp
+            block INCONSISTENT 0 (
+              str s >> brk (1,0) >> sys (Prec (prec,s), Top, Top) (d - 1) x
+            )
           end
 
       fun field_binop_prec x s =
@@ -308,18 +311,18 @@ fun field_print Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp =
             val n = term_size tm
           in
             if n > !field_pretty_print_max_size then
-              (begin_block pp INCONSISTENT 0;
-               str ("<<" ^ int_to_string n ^ ">>");
-               end_block pp)
+              block INCONSISTENT 0 (
+                  str ("<<" ^ int_to_string n ^ ">>")
+              )
             else
-              (begin_block pp INCONSISTENT (if b then 1 else 0);
-               if b then str "(" else ();
-               sys (p,l,p) (d - 1) x;
-               str (" " ^ s);
-               brk (1,0);
-               sys (p,p,r) (d - 1) y;
-               if b then str ")" else ();
-               end_block pp)
+              block INCONSISTENT (if b then 1 else 0) (
+                (if b then str "(" else nothing) >>
+                sys (p,l,p) (d - 1) x >>
+                str (" " ^ s) >>
+                brk (1,0) >>
+                sys (p,p,r) (d - 1) y >>
+                (if b then str ")" else nothing)
+              )
           end
 
       fun first_printer [] _ = raise term_pp_types.UserPP_Failed
@@ -580,7 +583,7 @@ local
                           NONE => (v, (s,tm) :: varmap)
                         | SOME (_,tm') =>
                           let
-                            val _ = tm = tm' orelse raise Bug "field_to_exp"
+                            val _ = tm ~~ tm' orelse raise Bug "field_to_exp"
                           in
                             (v,varmap)
                           end
@@ -661,7 +664,7 @@ in
         val _ = print ("ORACLE_field_poly_conv: result =\n"
                        ^ term_to_string tm' ^ "\n")
 
-        val _ = tm <> tm' orelse raise ERR "ORACLE_field_poly_conv" "unchanged"
+        val _ = tm !~ tm' orelse raise ERR "ORACLE_field_poly_conv" "unchanged"
       in
         mk_oracle_thm "field_poly" ([], mk_eq (tm,tm'))
       end;
@@ -985,7 +988,8 @@ fun field_div_elim_ss context =
 
       val data =
           simpLib.SSFRAG
-            {name = NONE, ac = [], congs = [], convs = convs, rewrs = rewrs,
+            {name = NONE, ac = [], congs = [], convs = convs,
+             rewrs = map (fn th => (NONE, th)) rewrs,
              dprocs = [], filter = NONE}
 
       val {simplify = alg_ss, ...} = subtypeTools.simpset2 context

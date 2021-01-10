@@ -13,7 +13,6 @@ val _ = new_theory "helperList";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -37,6 +36,7 @@ open rich_listTheory; (* for EVERY_REVERSE *)
 (* HelperList Documentation                                                  *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
+   m downto n        = REVERSE [m .. n]
    turn_exp l n      = FUNPOW turn n l
    POSITIVE l        = !x. MEM x l ==> 0 < x
    EVERY_POSITIVE l  = EVERY (\k. 0 < k) l
@@ -72,14 +72,21 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    FRONT_EL         |- !l n. l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l)
    FRONT_EQ_NIL     |- !l. LENGTH l = 1 ==> FRONT l = []
    FRONT_NON_NIL    |- !l. 1 < LENGTH l ==> FRONT l <> []
-   REVERSE_SING     |- !x. REVERSE [x] = [x]
-
    HEAD_MEM         |- !ls. ls <> [] ==> MEM (HD ls) ls
    LAST_MEM         |- !ls. ls <> [] ==> MEM (LAST ls) ls
    DROP_1           |- !h t. DROP 1 (h::t) = t
    FRONT_SING       |- !x. FRONT [x] = []
    TAIL_BY_DROP     |- !ls. ls <> [] ==> TL ls = DROP 1 ls
    FRONT_BY_TAKE    |- !ls. ls <> [] ==> FRONT ls = TAKE (LENGTH ls - 1) ls
+   HD_APPEND        |- !h t ls. HD (h::t ++ ls) = h
+   EL_TAIL          |- !h t n. 0 <> n ==> (EL (n - 1) t = EL n (h::t))
+   MONOLIST_SET_SING|- !c ls. ls <> [] /\ EVERY ($= c) ls ==> SING (set ls)
+
+   List Reversal:
+   REVERSE_SING      |- !x. REVERSE [x] = [x]
+   REVERSE_HD        |- !ls. ls <> [] ==> (HD (REVERSE ls) = LAST ls)
+   REVERSE_TL        |- !ls. ls <> [] ==> (TL (REVERSE ls) = REVERSE (FRONT ls))
+
 
    Extra List Theorems:
    EVERY_ELEMENT_PROPERTY  |- !p R. EVERY (\c. c IN R) p ==> !k. k < LENGTH p ==> EL k p IN R
@@ -142,6 +149,8 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    turn_length      |- !l. LENGTH (turn l) = LENGTH l
    turn_eq_nil      |- !p. (turn p = []) <=> (p = [])
    head_turn        |- !ls. ls <> [] ==> HD (turn ls) = LAST ls
+   tail_turn        |- !ls. ls <> [] ==> (TL (turn ls) = FRONT ls)
+   turn_snoc        |- !ls x. turn (SNOC x ls) = x::ls
    turn_exp_0       |- !l. turn_exp l 0 = l
    turn_exp_1       |- !l. turn_exp l 1 = turn l
    turn_exp_2       |- !l. turn_exp l 2 = turn (turn l)
@@ -170,6 +179,9 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    GENLIST_K_RANGE     |- !f e n. (!k. 0 < k /\ k <= n ==> (f k = e)) ==> (GENLIST (f o SUC) n = GENLIST (K e) n)
    GENLIST_K_APPEND    |- !a b c. GENLIST (K c) a ++ GENLIST (K c) b = GENLIST (K c) (a + b)
    GENLIST_K_APPEND_K  |- !c n. GENLIST (K c) n ++ [c] = [c] ++ GENLIST (K c) n
+   GENLIST_K_MEM       |- !x c n. 0 < n ==> (MEM x (GENLIST (K c) n) <=> (x = c))
+   GENLIST_K_SET       |- !c n. 0 < n ==> (set (GENLIST (K c) n) = {c})
+   LIST_TO_SET_SING_IFF|- !ls. ls <> [] ==> (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls))
 
    SUM Theorems:
    SUM_NIL                |- SUM [] = 0
@@ -293,6 +305,8 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    listRangeINC_EVERY_EXISTS |- !P m n. EVERY P [m .. n] <=> ~EXISTS ($~ o P) [m .. n]
    listRangeINC_EXISTS_EVERY |- !P m n. EXISTS P [m .. n] <=> ~EVERY ($~ o P) [m .. n]
    listRangeINC_SNOC         |- !m n. m <= n + 1 ==> ([m .. n + 1] = SNOC (n + 1) [m .. n])
+   listRangeINC_FRONT        |- !m n. m <= n + 1 ==> (FRONT [m .. n + 1] = [m .. n])
+   listRangeINC_LAST         |- !m n. m <= n ==> (LAST [m .. n] = n)
    listRangeINC_REVERSE      |- !m n. REVERSE [m .. n] = MAP (\x. n - x + m) [m .. n]
    listRangeINC_REVERSE_MAP  |- !f m n. REVERSE (MAP f [m .. n]) = MAP (f o (\x. n - x + m)) [m .. n]
    listRangeINC_MAP_SUC      |- !f m n. MAP f [m + 1 .. n + 1] = MAP (f o SUC) [m .. n]
@@ -312,6 +326,8 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    listRangeLHI_EL           |- !m n i. m + i < n ==> EL i [m ..< n] = m + i
    listRangeLHI_EVERY        |- !P m n. EVERY P [m ..< n] <=> !x. m <= x /\ x < n ==> P x
    listRangeLHI_SNOC         |- !m n. m <= n ==> [m ..< n + 1] = SNOC n [m ..< n]
+   listRangeLHI_FRONT        |- !m n. m <= n ==> (FRONT [m ..< n + 1] = [m ..< n])
+   listRangeLHI_LAST         |- !m n. m <= n ==> (LAST [m ..< n + 1] = n)
    listRangeLHI_REVERSE      |- !m n. REVERSE [m ..< n] = MAP (\x. n - 1 - x + m) [m ..< n]
    listRangeLHI_REVERSE_MAP  |- !f m n. REVERSE (MAP f [m ..< n]) = MAP (f o (\x. n - 1 - x + m)) [m ..< n]
    listRangeLHI_MAP_SUC      |- !f m n. MAP f [m + 1 ..< n + 1] = MAP (f o SUC) [m ..< n]
@@ -656,17 +672,6 @@ val FRONT_NON_NIL = store_thm(
   `FRONT l = h::FRONT (k::t)` by fs[FRONT_CONS] >>
   fs[]);
 
-(* Theorem: REVERSE [x] = [x] *)
-(* Proof:
-      REVERSE [x]
-    = [] ++ [x]       by REVERSE_DEF
-    = [x]             by APPEND
-*)
-val REVERSE_SING = store_thm(
-  "REVERSE_SING",
-  ``!x. REVERSE [x] = [x]``,
-  rw[]);
-
 (* Theorem: ls <> [] ==> MEM (HD ls) ls *)
 (* Proof:
    Note ls = h::t      by list_CASES
@@ -760,6 +765,89 @@ val FRONT_BY_TAKE = store_thm(
   rw[] >>
   `LENGTH ls <> 0` by rw[] >>
   rw[FRONT_DEF]);
+
+(* Theorem: HD (h::t ++ ls) = h *)
+(* Proof:
+     HD (h::t ++ ls)
+   = HD (h::(t ++ ls))     by APPEND
+   = h                     by HD
+*)
+Theorem HD_APPEND:
+  !h t ls. HD (h::t ++ ls) = h
+Proof
+  simp[]
+QED
+
+(* Theorem: 0 <> n ==> (EL (n-1) t = EL n (h::t)) *)
+(* Proof:
+   Note n = SUC k for some k         by num_CASES
+     so EL k t = EL (SUC k) (h::t)   by EL_restricted
+*)
+Theorem EL_TAIL:
+  !h t n. 0 <> n ==> (EL (n-1) t = EL n (h::t))
+Proof
+  rpt strip_tac >>
+  `n = SUC (n - 1)` by decide_tac >>
+  metis_tac[EL_restricted]
+QED
+
+(* Idea: If all elements are the same, the set is SING. *)
+
+(* Theorem: ls <> [] /\ EVERY ($= c) ls ==> SING (set ls) *)
+(* Proof:
+   Note set ls = {c}       by LIST_TO_SET_EQ_SING
+   thus SING (set ls)      by SING_DEF
+*)
+Theorem MONOLIST_SET_SING:
+  !c ls. ls <> [] /\ EVERY ($= c) ls ==> SING (set ls)
+Proof
+  metis_tac[LIST_TO_SET_EQ_SING, SING_DEF]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* List Reversal.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+(* Overload for REVERSE [m .. n] *)
+val _ = overload_on ("downto", ``\n m. REVERSE [m .. n]``);
+val _ = set_fixity "downto" (Infix(NONASSOC, 450)); (* same as relation *)
+
+(* Theorem: REVERSE [x] = [x] *)
+(* Proof:
+      REVERSE [x]
+    = [] ++ [x]       by REVERSE_DEF
+    = [x]             by APPEND
+*)
+val REVERSE_SING = store_thm(
+  "REVERSE_SING",
+  ``!x. REVERSE [x] = [x]``,
+  rw[]);
+
+(* Theorem: ls <> [] ==> (HD (REVERSE ls) = LAST ls) *)
+(* Proof:
+      HD (REVERSE ls)
+    = HD (REVERSE (SNOC (LAST ls) (FRONT ls)))   by SNOC_LAST_FRONT
+    = HD (LAST ls :: (REVERSE (FRONT ls))        by REVERSE_SNOC
+    = LAST ls                                    by HD
+*)
+Theorem REVERSE_HD:
+  !ls. ls <> [] ==> (HD (REVERSE ls) = LAST ls)
+Proof
+  metis_tac[SNOC_LAST_FRONT, REVERSE_SNOC, HD]
+QED
+
+(* Theorem: ls <> [] ==> (TL (REVERSE ls) = REVERSE (FRONT ls)) *)
+(* Proof:
+      TL (REVERSE ls)
+    = TL (REVERSE (SNOC (LAST ls) (FRONT ls)))   by SNOC_LAST_FRONT
+    = TL (LAST ls :: (REVERSE (FRONT ls))        by REVERSE_SNOC
+    = REVERSE (FRONT ls)                         by TL
+*)
+Theorem REVERSE_TL:
+  !ls. ls <> [] ==> (TL (REVERSE ls) = REVERSE (FRONT ls))
+Proof
+  metis_tac[SNOC_LAST_FRONT, REVERSE_SNOC, TL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extra List Theorems                                                       *)
@@ -1107,42 +1195,6 @@ val DROP_LENGTH_NIL = store_thm(
   ``!l. DROP (LENGTH l) l = []``,
   Induct >> rw[]);
 
-(* Theorem: n < LENGTH l ==> DROP n l <> [] *)
-(* Proof:
-   By induction on n.
-   Base case: !l. 0 < LENGTH l ==> DROP 0 l <> []
-     DROP 0 l = l        by DROP_0
-              <> []      by LENGTH_NON_NIL
-   Step case: !l. n < LENGTH l ==> DROP n l <> [] ==>
-              !l. SUC n < LENGTH l ==> DROP (SUC n) l <> []
-     Since 0 < SUC n        by prim_recTheory.LESS_0
-           0 < LENGTH l     by LESS_TRANS
-        so l <> []          by LENGTH_NON_NIL
-        or ?h t. l = h::t   by list_CASES
-       and LENGTH l = SUC (LENGTH t)  by LENGTH
-     Hence SUC n < SUC (LENGTH t)
-        or     n < LENGTH t           by LESS_MONO_EQ
-     DROP (SUC n) l
-   = DROP (SUC n) (h::t)
-   = DROP n t                by DROP_def, SUC n - 1 = n.
-   <> []                     by induction hypothesis, n < LENGTH t.
-*)
-(* Proof:
-   By induction on l.
-   Base case: !n. n < LENGTH [] ==> DROP n [] <> []
-     True since DROP n [] <> [] is False by DROP_def.
-   Step case: !n. n < LENGTH l ==> DROP n l <> [] ==>
-              !h n. n < LENGTH (h::l) ==> DROP n (h::l) <> []
-     Since LENGTH (h::l) = SUC (LENGTH l)   by LENGTH
-           n < LENGTH l + 1                 by ADD1
-        or n - 1 < LENGTH l
-     If n = 0,
-        DROP 0 (h::l) = (h::l)       by DROP_0
-                      <> []          by NOT_CONS_NIL
-     If n <> 0,
-        DROP n (h::l) = DROP (n-1) l by DROP_def
-                      <> []          by induction hypothesis, n-1 < LENGTH l
-*)
 (* Theorem: n < LENGTH ls ==> (HD (DROP n ls) = EL n ls) *)
 (* Proof:
      HD (DROP n ls)
@@ -1723,6 +1775,32 @@ val head_turn = store_thm(
   ``!ls. ls <> [] ==> (HD (turn ls) = LAST ls)``,
   rw[turn_def]);
 
+(* Theorem: ls <> [] ==> (TL (turn ls) = FRONT ls) *)
+(* Proof:
+     TL (turn ls)
+   = TL (LAST ls :: FRONT ls)  by turn_def, ls <> []
+   = FRONT ls                  by TL
+*)
+Theorem tail_turn:
+  !ls. ls <> [] ==> (TL (turn ls) = FRONT ls)
+Proof
+  rw[turn_def]
+QED
+
+(* Theorem: turn (SNOC x ls) = x :: ls *)
+(* Proof:
+   Note (SNOC x ls) <> []                    by NOT_SNOC_NIL
+     turn (SNOC x ls)
+   = LAST (SNOC x ls) :: FRONT (SNOC x ls)   by turn_def
+   = x :: FRONT (SNOC x ls)                  by LAST_SNOC
+   = x :: ls                                 by FRONT_SNOC
+*)
+Theorem turn_snoc:
+  !ls x. turn (SNOC x ls) = x :: ls
+Proof
+  metis_tac[NOT_SNOC_NIL, turn_def, LAST_SNOC, FRONT_SNOC]
+QED
+
 (* Overload repeated turns *)
 val _ = overload_on("turn_exp", ``\l n. FUNPOW turn n l``);
 
@@ -2183,6 +2261,104 @@ val GENLIST_K_APPEND_K = store_thm(
   "GENLIST_K_APPEND_K",
   ``!c n. GENLIST (K c) n ++ [c] = [c] ++ GENLIST (K c) n``,
   metis_tac[GENLIST_K_APPEND, GENLIST_1, ADD_COMM, combinTheory.K_THM]);
+
+(* Theorem: 0 < n ==> (MEM x (GENLIST (K c) n) <=> (x = c)) *)
+(* Proof:
+       MEM x (GENLIST (K c) n
+   <=> ?m. m < n /\ (x = (K c) m)    by MEM_GENLIST
+   <=> ?m. m < n /\ (x = c)          by K_THM
+   <=> (x = c)                       by taking m = 0, 0 < n
+*)
+Theorem GENLIST_K_MEM:
+  !x c n. 0 < n ==> (MEM x (GENLIST (K c) n) <=> (x = c))
+Proof
+  metis_tac[MEM_GENLIST, combinTheory.K_THM]
+QED
+
+(* Theorem: 0 < n ==> (set (GENLIST (K c) n) = {c}) *)
+(* Proof:
+   By induction on n.
+   Base: 0 < 0 ==> (set (GENLIST (K c) 0) = {c})
+      Since 0 < 0 = F, hence true.
+   Step: 0 < n ==> (set (GENLIST (K c) n) = {c}) ==>
+         0 < SUC n ==> (set (GENLIST (K c) (SUC n)) = {c})
+      If n = 0,
+        set (GENLIST (K c) (SUC 0)
+      = set (GENLIST (K c) 1          by ONE
+      = set [(K c) 0]                 by GENLIST_1
+      = set [c]                       by K_THM
+      = {c}                           by LIST_TO_SET
+      If n <> 0, 0 < n.
+        set (GENLIST (K c) (SUC n)
+      = set (SNOC ((K c) n) (GENLIST (K c) n))     by GENLIST
+      = set (SNOC c (GENLIST (K c) n)              by K_THM
+      = c INSERT set (GENLIST (K c) n)             by LIST_TO_SET_SNOC
+      = c INSERT {c}                               by induction hypothesis
+      = {c}                                        by IN_INSERT
+ *)
+Theorem GENLIST_K_SET:
+  !c n. 0 < n ==> (set (GENLIST (K c) n) = {c})
+Proof
+  rpt strip_tac >>
+  Induct_on `n` >-
+  simp[] >>
+  (Cases_on `n = 0` >> simp[]) >>
+  `0 < n` by decide_tac >>
+  simp[GENLIST, LIST_TO_SET_SNOC]
+QED
+
+(* Theorem: ls <> [] ==> (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls)) *)
+(* Proof:
+   By induction on ls.
+   Base: [] <> [] ==> (SING (set []) <=> ?c. [] = GENLIST (K c) (LENGTH []))
+     Since [] <> [] = F, hence true.
+   Step: ls <> [] ==> (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls)) ==>
+         !h. h::ls <> [] ==>
+             (SING (set (h::ls)) <=> ?c. h::ls = GENLIST (K c) (LENGTH (h::ls)))
+     Note h::ls <> [] = T.
+     If part: SING (set (h::ls)) ==> ?c. h::ls = GENLIST (K c) (LENGTH (h::ls))
+        Note SING (set (h::ls)) means
+             set ls = {h}                by LIST_TO_SET_DEF, IN_SING
+         Let n = LENGTH ls, 0 < n        by LENGTH_NON_NIL
+        Note ls <> []                    by LIST_TO_SET, IN_SING, MEMBER_NOT_EMPTY
+         and SING (set ls)               by SING_DEF
+         ==> ?c. ls = GENLIST (K c) n    by induction hypothesis
+          so set ls = {c}                by GENLIST_K_SET, 0 < n
+         ==> h = c                       by IN_SING
+           GENLIST (K c) (LENGTH (h::ls)
+         = (K c) h :: ls                 by GENLIST_K_CONS
+         = c :: ls                       by K_THM
+         = h::ls                         by h = c
+     Only-if part: ?c. h::ls = GENLIST (K c) (LENGTH (h::ls)) ==> SING (set (h::ls))
+           set (h::ls)
+         = set (GENLIST (K c) (LENGTH (h::ls)))        by given
+         = set ((K c) h :: GENLIST (K c) (LENGTH ls))  by GENLIST_K_CONS
+         = set (c :: GENLIST (K c) (LENGTH ls))        by K_THM
+         = c INSERT set (GENLIST (K c) (LENGTH ls))    by LIST_TO_SET
+         = c INSERT {c}                                by GENLIST_K_SET
+         = {c}                                         by IN_INSERT
+         Hence SING (set (h::ls))                      by SING_DEF
+*)
+Theorem LIST_TO_SET_SING_IFF:
+  !ls. ls <> [] ==> (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls))
+Proof
+  Induct >-
+  simp[] >>
+  (rw[EQ_IMP_THM] >> simp[]) >| [
+    qexists_tac `h` >>
+    qabbrev_tac `n = LENGTH ls` >>
+    `ls <> []` by metis_tac[LIST_TO_SET, IN_SING, MEMBER_NOT_EMPTY] >>
+    `SING (set ls)` by fs[SING_DEF] >>
+    fs[] >>
+    `0 < n` by metis_tac[LENGTH_NON_NIL] >>
+    `h = c` by metis_tac[GENLIST_K_SET, IN_SING] >>
+    simp[GENLIST_K_CONS],
+    spose_not_then strip_assume_tac >>
+    fs[GENLIST_K_CONS] >>
+    `0 < LENGTH ls` by metis_tac[LENGTH_NON_NIL] >>
+    metis_tac[GENLIST_K_SET]
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* SUM Theorems                                                              *)
@@ -3919,6 +4095,51 @@ val listRangeINC_SNOC = store_thm(
   `(n + 2 - m = 1 + (n + 1 - m)) /\ (n + 1 - m + m = n + 1)` by decide_tac >>
   rw_tac std_ss[GENLIST_APPEND, GENLIST_1]);
 
+(* Theorem: m <= n + 1 ==> (FRONT [m .. (n + 1)] = [m .. n]) *)
+(* Proof:
+     FRONT [m .. (n + 1)]
+   = FRONT (SNOC (n + 1) [m .. n]))    by listRangeINC_SNOC
+   = [m .. n]                          by FRONT_SNOC
+*)
+Theorem listRangeINC_FRONT:
+  !m n. m <= n + 1 ==> (FRONT [m .. (n + 1)] = [m .. n])
+Proof
+  simp[listRangeINC_SNOC, FRONT_SNOC]
+QED
+
+(* Theorem: m <= n ==> (LAST [m .. n] = n) *)
+(* Proof:
+   Let ls = [m .. n]
+   Note ls <> []                   by listRangeINC_NIL
+     so LAST ls
+      = EL (PRE (LENGTH ls)) ls    by LAST_EL
+      = EL (PRE (n + 1 - m)) ls    by listRangeINC_LEN
+      = EL (n - m) ls              by arithmetic
+      = n                          by listRangeINC_EL
+   Or
+      LAST [m .. n]
+    = LAST (GENLIST (\i. m + i) (n + 1 - m))   by listRangeINC_def
+    = LAST (GENLIST (\i. m + i) (SUC (n - m))  by arithmetic, m <= n
+    = (\i. m + i) (n - m)                      by GENLIST_LAST
+    = m + (n - m)                              by function application
+    = n                                        by m <= n
+   Or
+    If n = 0, then m <= 0 means m = 0.
+      LAST [0 .. 0] = LAST [0] = 0 = n   by LAST_DEF
+    Otherwise n = SUC k.
+      LAST [m .. n]
+    = LAST (SNOC n [m .. k])             by listRangeINC_SNOC, ADD1
+    = n                                  by LAST_SNOC
+*)
+Theorem listRangeINC_LAST:
+  !m n. m <= n ==> (LAST [m .. n] = n)
+Proof
+  rpt strip_tac >>
+  Cases_on `n` >-
+  fs[] >>
+  metis_tac[listRangeINC_SNOC, LAST_SNOC, ADD1]
+QED
+
 (* Theorem: REVERSE [m .. n] = MAP (\x. n - x + m) [m .. n] *)
 (* Proof:
      REVERSE [m .. n]
@@ -4221,6 +4442,30 @@ val listRangeLHI_SNOC = store_thm(
     `_ = SNOC n [m ..< n]` by rw[GSYM listRangeLHI_to_listRangeINC] >>
     rw[]
   ]);
+
+(* Theorem: m <= n ==> (FRONT [m .. < n + 1] = [m .. <n]) *)
+(* Proof:
+     FRONT [m ..< n + 1]
+   = FRONT (SNOC n [m ..< n]))     by listRangeLHI_SNOC
+   = [m ..< n]                     by FRONT_SNOC
+*)
+Theorem listRangeLHI_FRONT:
+  !m n. m <= n ==> (FRONT [m ..< n + 1] = [m ..< n])
+Proof
+  simp[listRangeLHI_SNOC, FRONT_SNOC]
+QED
+
+(* Theorem: m <= n ==> (LAST [m ..< n + 1] = n) *)
+(* Proof:
+      LAST [m ..< n + 1]
+    = LAST (SNOC n [m ..< n])      by listRangeLHI_SNOC
+    = n                            by LAST_SNOC
+*)
+Theorem listRangeLHI_LAST:
+  !m n. m <= n ==> (LAST [m ..< n + 1] = n)
+Proof
+  simp[listRangeLHI_SNOC, LAST_SNOC]
+QED
 
 (* Theorem: REVERSE [m ..< n] = MAP (\x. n - 1 - x + m) [m ..< n] *)
 (* Proof:

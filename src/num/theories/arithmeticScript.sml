@@ -319,7 +319,24 @@ val LESS_OR_EQ_ALT = store_thm ("LESS_OR_EQ_ALT",
     THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
     THEN ASM_REWRITE_TAC []) ;
 
+Theorem LT_SUC:
+  n < SUC m <=> n = 0 \/ ?n0. n = SUC n0 /\ n0 < m
+Proof
+  eq_tac >> Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES >>
+  rewrite_tac [LESS_0, prim_recTheory.LESS_MONO_EQ, NOT_SUC, INV_SUC_EQ]
+  >- (disch_then (irule_at (Pos last)) >> rewrite_tac[]) >>
+  strip_tac >> asm_rewrite_tac[]
+QED
 
+Theorem SUC_LT:
+  SUC n < m <=> ?m0. m = SUC m0 /\ n < m0
+Proof
+  eq_tac
+  >- (Q.SPEC_THEN ‘m’ STRUCT_CASES_TAC num_CASES >>
+      rewrite_tac[NOT_LESS_0, prim_recTheory.LESS_MONO_EQ] >>
+      disch_then (irule_at (Pos last)) >> rewrite_tac[]) >>
+  strip_tac >> asm_rewrite_tac [prim_recTheory.LESS_MONO_EQ]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
@@ -894,6 +911,20 @@ val WOP = store_thm ("WOP",
     GEN_TAC THEN
     POP_ASSUM (MATCH_MP_TAC o SPECL [“SUC n”,“n:num”]) THEN
     MATCH_ACCEPT_TAC LESS_SUC_REFL);
+
+(* anything can be well-ordered if mapped into the natural numbers;
+   take the contrapositive to make all constants positive *)
+Theorem WOP_measure:
+  !P m. (?a:'a. P a) ==> ?b. P b /\ !c. P c ==> m b <= m c
+Proof
+  rpt strip_tac >>
+  Q.SPEC_THEN ‘m’ assume_tac prim_recTheory.WF_measure >>
+  dxrule_then (Q.SPEC_THEN ‘P’ mp_tac) (iffLR relationTheory.WF_DEF) >>
+  simp_tac bool_ss [PULL_EXISTS] >>
+  disch_then dxrule >>
+  REWRITE_TAC [prim_recTheory.measure_thm] >>
+  METIS_TAC [NOT_LESS]
+QED
 
 val COMPLETE_INDUCTION = store_thm ("COMPLETE_INDUCTION",
   “!P. (!n. (!m. m < n ==> P m) ==> P n) ==> !n. P n”,

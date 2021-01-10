@@ -241,9 +241,9 @@ val FINITE_UNIONL = store_thm
 val CARD_UNIONL = store_thm
   ("CARD_UNIONL",
    ``!(ss:('a->bool) list). EVERY FINITE ss /\ DISJOINTL ss
-          ==> (CARD (UNIONL ss) = sum (MAP CARD ss))``,
-   Induct >- RW_TAC list_ss [DISJOINTL_def, UNIONL_def, sum_def, CARD_DEF]
-   >> RW_TAC list_ss [DISJOINTL_def, UNIONL_def, sum_def]
+          ==> (CARD (UNIONL ss) = SUM (MAP CARD ss))``,
+   Induct >- RW_TAC list_ss [DISJOINTL_def, UNIONL_def, SUM, CARD_DEF]
+   >> RW_TAC list_ss [DISJOINTL_def, UNIONL_def, SUM]
    >> Know `FINITE (UNIONL ss)` >- RW_TAC std_ss [FINITE_UNIONL]
    >> MP_TAC (Q.SPECL [`h`] CARD_UNION)
    >> ASM_REWRITE_TAC []
@@ -269,17 +269,13 @@ val DISJOINT_UNIONL2 = store_thm
    >> PROVE_TAC []);
 val DISJOINT_UNIONL1 = ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_UNIONL2;
 
-val DISJOINTL_KILL_DUPS = store_thm
-  ("DISJOINTL_KILL_DUPS",
-   ``!(l:('a->bool) list). DISJOINTL (kill_dups l)
-         = (!x y. MEM x l /\ MEM y l ==> (x = y) \/ DISJOINT x y)``,
-   Induct >- RW_TAC list_ss [DISJOINTL_def, MEM, kill_dups_def, FOLDR]
-   >> REWRITE_TAC [kill_dups_def, FOLDR]
-   >> (RW_TAC std_ss [GSYM kill_dups_def, MEM, DISJOINTL_def, MEM_KILL_DUPS,
-                      DISJOINT_UNIONL2]
-       >> EQ_TAC
-       >> RW_TAC std_ss []
-       >> PROVE_TAC [DISJOINT_SYM]));
+Theorem DISJOINTL_KILL_DUPS:
+  !(l:('a->bool) list).
+    DISJOINTL (nub l) = (!x y. MEM x l /\ MEM y l ==> (x = y) \/ DISJOINT x y)
+Proof
+  Induct >> rw[DISJOINTL_def, nub_def, DISJOINT_UNIONL2] >>
+  metis_tac[DISJOINT_SYM]
+QED
 
 val NUM_TO_FINITE = store_thm
   ("NUM_TO_FINITE",
@@ -1156,22 +1152,5 @@ val CROSS_LIST_TO_SET = store_thm
    ``!l l'. (LIST_TO_SET l) CROSS (LIST_TO_SET l') =
         LIST_TO_SET (LIST_COMBS l l')``,
    RW_TAC std_ss [EXTENSION, IN_CROSS, LIST_TO_SET, MEM_LIST_COMBS]);
-
-val LIST_TO_SET_MAKE_ALL_DISTINCT = store_thm
-  ("LIST_TO_SET_MAKE_ALL_DISTINCT",
-   ``!l. LIST_TO_SET (MAKE_ALL_DISTINCT l) = LIST_TO_SET l``,
-   RW_TAC std_ss [EXTENSION, LIST_TO_SET, MEM_MAKE_ALL_DISTINCT]);
-
-val CARD_LIST_TO_SET = store_thm
-  ("CARD_LIST_TO_SET",
-   ``!l. CARD (LIST_TO_SET l) = LENGTH (MAKE_ALL_DISTINCT l)``,
-   Induct >- RW_TAC std_ss [MAKE_ALL_DISTINCT_def, LENGTH, CARD_EMPTY, LIST_TO_SET_THM]
-   >> RW_TAC std_ss [MAKE_ALL_DISTINCT_def, LENGTH, CARD_EMPTY, LIST_TO_SET_THM]
-   >- METIS_TAC [ABSORPTION, LIST_TO_SET]
-   >> ASM_SIMP_TAC bool_ss [CARD_DEF, FINITE_LIST_TO_SET, LIST_TO_SET]);
-
-val UNIV_NEQ_EMPTY = store_thm
-  ("UNIV_NEQ_EMPTY", ``~(UNIV = {})``,
-   RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_UNIV]);
 
 val _ = export_theory ();

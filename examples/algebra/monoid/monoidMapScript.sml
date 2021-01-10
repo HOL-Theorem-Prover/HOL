@@ -13,7 +13,6 @@ val _ = new_theory "monoidMap";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -577,7 +576,7 @@ val monoid_iso_eq_id = store_thm(
    If n <> 0, to show: order h y = n.
       Note ord x = n
        ==> (x ** n = #e) /\
-           !m. 0 < m /\ m < n ==> x ** m <> #e    by order_alt, 0 < n
+           !m. 0 < m /\ m < n ==> x ** m <> #e    by order_thm, 0 < n
       Note h.exp y n = f (x ** n)    by monoid_iso_exp
                      = f #e          by x ** n = #e
                      = h.id          by monoid_iso_id, [1]
@@ -589,7 +588,7 @@ val monoid_iso_eq_id = store_thm(
              But !m. 0 < m /\ m < n ==> x ** m <> #e   by above
              This is a contradiction.
 
-      Thus by [1] and claim, order h y = n  by order_alt
+      Thus by [1] and claim, order h y = n  by order_thm
 *)
 val monoid_iso_order = store_thm(
   "monoid_iso_order",
@@ -607,14 +606,14 @@ val monoid_iso_order = store_thm(
     `x ** m = #e` by metis_tac[monoid_iso_eq_id, monoid_exp_element] >>
     metis_tac[order_eq_0],
     `0 < n` by decide_tac >>
-    `(x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e` by metis_tac[order_alt] >>
+    `(x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e` by metis_tac[order_thm] >>
     `h.exp y n = h.id` by metis_tac[monoid_iso_exp, monoid_iso_id] >>
     `!m. 0 < m /\ m < n ==> h.exp y m <> h.id` by
   (spose_not_then strip_assume_tac >>
     `f (x ** m) = h.id` by metis_tac[monoid_iso_exp] >>
     `x ** m = #e` by metis_tac[monoid_iso_eq_id, monoid_exp_element] >>
     metis_tac[]) >>
-    metis_tac[order_alt]
+    metis_tac[order_thm]
   ]);
 
 (* Theorem: MonoidIso f g h /\ FINITE G ==> (CARD G = CARD h.carrier) *)
@@ -819,7 +818,7 @@ val submonoid_carrier_antisym = store_thm(
       This is a contradiction.
    If ord x <> 0, to show: order h x = ord x.
       Note 0 < ord x              by ord x <> 0
-      By order_alt, this is to show:
+      By order_thm, this is to show:
       (1) h.exp x (ord x) = h.id
             h.exp x (ord x)
           = I (h.exp x (ord x))   by I_THM
@@ -837,7 +836,7 @@ val submonoid_carrier_antisym = store_thm(
             h.id = I (h.id)       by I_THM
                  = #e             by monoid_homo_id
          Thus x ** m = #e         by h.exp x m = h.id
-          But x ** m <> #e        by order_alt
+          But x ** m <> #e        by order_thm
           This is a contradiction.
 *)
 val submonoid_order_eqn = store_thm(
@@ -854,11 +853,11 @@ val submonoid_order_eqn = store_thm(
     `x ** n = #e` by metis_tac[monoid_homo_exp, monoid_homo_id] >>
     metis_tac[order_eq_0],
     `0 < ord x` by decide_tac >>
-    rw[order_alt] >-
+    rw[order_thm] >-
     metis_tac[monoid_homo_exp, order_property, monoid_homo_id] >>
     spose_not_then strip_assume_tac >>
     `x ** m = #e` by metis_tac[monoid_homo_exp, monoid_homo_id] >>
-    metis_tac[order_alt]
+    metis_tac[order_thm]
   ]);
 
 (* ------------------------------------------------------------------------- *)

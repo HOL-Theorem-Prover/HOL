@@ -36,29 +36,30 @@ sig
     | NeedArg of db
 
   and rewrite =
-      RW of { cst: term,          (* constant which the rule applies to *)
-              lhs: pattern list,  (* patterns = constant args in lhs of thm *)
-              npv: int,           (* number of distinct pat vars in lhs *)
+      RW of { cst: term,           (* constant which the rule applies to *)
+              ants: db dterm list, (* Antecedents of the `thm` *)
+              lhs: pattern list,   (* patterns = constant args in lhs of thm *)
+              npv: int,            (* number of distinct pat vars in lhs *)
               rhs: db dterm,
-              thm: Thm.thm }      (* thm we use for rewriting *)
+              thm: Thm.thm };      (* thm we use for rewriting *)
 
-  type comp_rws
-  val empty_rws : unit -> comp_rws
-  val from_list : thm list -> comp_rws
-  val add_extern : term * int * (term -> thm * db fterm) -> comp_rws -> unit
-  val add_thms : thm list -> comp_rws -> unit
-  val add_thmset : string -> comp_rws -> unit
+  type compset
+  val empty_rws : unit -> compset
+  val from_list : thm list -> compset
+  val add_extern : term * int * (term -> thm * db fterm) -> compset -> unit
+  val add_thms : thm list -> compset -> unit
+  val add_thmset : string -> compset -> unit
 
-  val scrub_const : comp_rws -> term -> unit
-  val scrub_thms : thm list -> comp_rws -> unit
-  val from_term : comp_rws * term list * term -> db dterm
-  val set_skip : comp_rws -> string * string -> int option -> unit
+  val scrub_const : compset -> term -> unit
+  val scrub_thms : thm list -> compset -> unit
+  val from_term : compset * term list * term -> db dterm
+  val set_skip : compset -> string * string -> int option -> unit
 
   datatype transform
     = Conversion of (term -> thm * db fterm)
     | RRules of thm list
 
-  val deplist : comp_rws -> ((string * string) * transform list) list
-  val no_transform : comp_rws -> (string * string) list
+  val deplist : compset -> ((string * string) * transform list) list
+  val no_transform : compset -> (string * string) list
 
 end

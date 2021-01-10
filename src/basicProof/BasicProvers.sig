@@ -33,6 +33,19 @@ sig
   val delsimps        : string list -> unit
   val temp_delsimps   : string list -> unit
   val thy_ssfrag      : string -> simpLib.ssfrag
+  val thy_simpset     : string -> simpset option
+  val temp_setsimpset : simpset -> unit
+  val merge_simpsets  : string list -> simpset
+  datatype srw_update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
+  val simpset_state   : unit -> simpset * bool * srw_update list
+  val logged_update   : {thyname : string} -> (simpset -> simpset) -> unit
+  val logged_addfrags : {thyname : string} -> simpLib.ssfrag list -> unit
+  val do_logged_updates : {theories : string list} -> unit
+  val apply_logged_updates : {theories : string list} -> (simpset -> simpset)
+  val augment_with_typebase : TypeBasePure.typeBase -> simpset -> simpset
+  val temp_set_simpset_ancestry : string list -> unit
+  val set_simpset_ancestry : string list -> unit
+  val recreate_sset_at_parentage : string list -> unit
 
   (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic

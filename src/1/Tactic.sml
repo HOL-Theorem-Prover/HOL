@@ -819,6 +819,15 @@ in
     MATCH_MP_TAC th'
   else MATCH_ACCEPT_TAC th'
 end
+fun irule_at pos thm =
+    let
+      open resolve_then
+    in
+      case pos of
+          Concl => irule thm
+        | Any => irule thm ORELSE goal_assum (resolve_then Any mp_tac thm)
+        | _ => goal_assum (resolve_then pos mp_tac thm)
+    end
 val IRULE_TAC = irule
 
 

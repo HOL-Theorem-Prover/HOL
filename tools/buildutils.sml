@@ -25,7 +25,7 @@ fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
 fun die s =
     let open TextIO
     in
-      output(stdErr, s ^ "\n");
+      output(stdErr, "*** FATAL: " ^ s ^ "\n");
       flushOut stdErr;
       Process.exit Process.failure
     end
@@ -273,17 +273,20 @@ fun write_kernelid s =
     TextIO.closeOut strm
   end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
 
+fun cline_die s = die ("Command line option error: " ^ s)
 fun apply_updates l t =
   case l of
       [] => t
-    | {update} :: rest => apply_updates rest (update (warn, t))
+    | {update} :: rest => apply_updates
+                            rest
+                            (update {warn = warn, die = cline_die, arg = t})
 
 fun get_cline () = let
   open GetOpt
   val oldopts = read_earlier_options TextIO.inputLine
   val (opts, rest) = getOpt { argOrder = RequireOrder,
                               options = buildcline.cline_opt_descrs,
-                              errFn = die } (CommandLine.arguments())
+                              errFn = cline_die } (CommandLine.arguments())
   val option_record = apply_updates opts buildcline.initial
   val _ = if #help option_record then exit_with_help() else ()
   val _ =

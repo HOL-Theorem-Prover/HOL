@@ -10,20 +10,6 @@ fun assocToString x =
   | RIGHT => "HOLgrammars.RIGHT"
   | NONASSOC => "HOLgrammars.NONASSOC"
 
-fun assoc_encode LEFT = "L"
-  | assoc_encode RIGHT = "R"
-  | assoc_encode NONASSOC = "N"
-
-val assoc_reader =
-    let
-      open optmonad Coding
-      infix >> ||
-    in
-      (literal "L" >> return LEFT) ||
-      (literal "R" >> return RIGHT) ||
-      (literal "N" >> return NONASSOC)
-    end
-
 type mini_lspec = {nilstr:string,cons:string,sep:string}
 datatype rule_element =
          TOK of string

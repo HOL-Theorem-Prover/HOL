@@ -16,6 +16,8 @@ type fea = int list
 type symfreq = (int, int) Redblackmap.dict
 type symweight = (int, real) Redblackmap.dict
 
+val fea_compare = list_compare Int.compare
+
 (* -------------------------------------------------------------------------
    Constants, variables and types
    ------------------------------------------------------------------------- *)

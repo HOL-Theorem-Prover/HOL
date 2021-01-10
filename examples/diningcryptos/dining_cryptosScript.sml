@@ -59,7 +59,7 @@ val compute_result_def = Define
         if (s = "result") then XOR_announces low n else low s`;
 
 val dcprog_def = Define
-   `dcprog (SUC(SUC(SUC n))) = (\((high:bool state, low:bool state), random:bool state).
+   `dcprog (SUC(SUC(SUC n))) = (λ((high:bool state, low:bool state), random:bool state).
         compute_result (set_announcements high low random (SUC(SUC n)) (SUC(SUC n)))
                        (SUC(SUC n)))`;
 
@@ -652,7 +652,7 @@ val dc_random_witness_result = prove
 
 val dc_valid_outputs_eq_outputs = store_thm
   ("dc_valid_outputs_eq_outputs",
-   ``!n. (IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+   ``!n. (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                (dc_high_states F (SUC (SUC (SUC n))) CROSS
                 dc_random_states (SUC (SUC n)))) =
           dc_valid_outputs (SUC (SUC n))``,
@@ -843,7 +843,7 @@ val ALL_DISTINCT_dc_valid_outputs_list = prove
 
 val CARD_dc_valid_outputs = store_thm
   ("CARD_dc_valid_outputs",
-   ``!n. CARD (IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+   ``!n. CARD (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                (dc_high_states F (SUC (SUC (SUC n))) CROSS
                 dc_random_states (SUC (SUC n)))) =
           2 ** (SUC(SUC n))``,
@@ -852,7 +852,7 @@ val CARD_dc_valid_outputs = store_thm
                   GSYM LENGTH_dc_valid_outputs_list,
                   ALL_DISTINCT_CARD_LIST_TO_SET,
                   ALL_DISTINCT_dc_valid_outputs_list,
-                  MAKE_ALL_DISTINCT_ALL_DISTINCT]);
+                  all_distinct_nub_id]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -874,7 +874,7 @@ val valid_coin_assignment_result1 = prove
 val valid_coin_set_eq_valid_coin_assignment = store_thm
   ("valid_coin_set_eq_valid_coin_assignment",
    ``!n p out. p <= SUC (SUC n) /\
-               out IN (IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+               out IN (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                              (dc_high_states F (SUC (SUC (SUC n))) CROSS dc_random_states (SUC (SUC n)))) ==>
              ({r | r IN (dc_random_states (SUC (SUC n))) /\
                    (dcprog (SUC (SUC (SUC n))) (((\s. s = STRCAT "pays" (toString p)), (\s.F)), r) = out)} =
@@ -972,7 +972,7 @@ val valid_coin_assignment_eq_2_element_set = store_thm
    ``!n p out.
          p <= SUC (SUC n) /\
          out IN
-         IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+         IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
            (dc_high_states F (SUC (SUC (SUC n))) CROSS
             dc_random_states (SUC (SUC n))) ==>
         ({r |
@@ -1108,11 +1108,11 @@ val dc_leakage_result = store_thm
                                  (dc_high_states_set (SUC (SUC n)) CROSS dc_low_states CROSS
                                   dc_random_states (SUC (SUC n)))
                    then
-                        (\(out,h,l). (\x. x * lg (1 / & (2 ** SUC (SUC (SUC n))) * x))
+                        (λ(out,h,l). (\x. x * lg (1 / & (2 ** SUC (SUC (SUC n))) * x))
                         (SIGMA (\r. (if dcprog (SUC (SUC (SUC n))) ((h,l),r) = out then 1  else 0))
                                 (dc_random_states (SUC (SUC n))))) x
                    else 0))=
-        (\(x :bool state # bool state # bool state).
+        (λ(x :bool state # bool state # bool state).
         (if x IN IMAGE (\s. (dcprog (SUC (SUC (SUC n))) s,FST s))
                 (dc_high_states_set (SUC (SUC n)) CROSS dc_low_states CROSS
                  dc_random_states (SUC (SUC n)))
@@ -1124,7 +1124,7 @@ val dc_leakage_result = store_thm
             >> `FST s' = (FST (FST s'), SND (FST s'))` by RW_TAC std_ss [PAIR]
             >> POP_ORW
             >> RW_TAC std_ss []
-            >> Suff `SIGMA (\(r :bool state). (if dcprog
+            >> Suff `SIGMA (λ(r :bool state). (if dcprog
                                 (SUC (SUC (SUC (n :num)))) (FST (s' :(bool, bool, bool) prog_state),r) =
                                 dcprog (SUC (SUC (SUC n))) s'
                         then (1 : real) else (0 : real))) (dc_random_states (SUC (SUC n))) = 2`
@@ -1166,7 +1166,7 @@ val dc_leakage_result = store_thm
                     >> RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION])
                >> ASM_SIMP_TAC std_ss [REAL_SUM_IMAGE_DISJOINT_UNION]
                >> (MP_TAC o Q.ISPEC `0:real` o
-                   Q.ISPEC `(\(r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
+                   Q.ISPEC `(λ(r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
                                                     (FST (s' :(bool, bool, bool) prog_state),r) =
                                                     dcprog (SUC (SUC (SUC n))) s'
                                                 then (1 : real) else (0 : real)))` o
@@ -1182,7 +1182,7 @@ val dc_leakage_result = store_thm
                >> RW_TAC real_ss []
                >> POP_ASSUM (K ALL_TAC)
                >> (MP_TAC o Q.ISPEC `1:real` o
-                   Q.ISPEC `(\(r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
+                   Q.ISPEC `(λ(r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
                                                     (FST (s' :(bool, bool, bool) prog_state),r) =
                                                     dcprog (SUC (SUC (SUC n))) s'
                                                 then (1 : real) else (0 : real)))` o
@@ -1198,7 +1198,7 @@ val dc_leakage_result = store_thm
                >> RW_TAC real_ss []
                >> POP_ASSUM (K ALL_TAC)
                >> `dcprog (SUC (SUC (SUC n))) s' IN
-                        IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+                        IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                                 (dc_high_states F (SUC (SUC (SUC n))) CROSS
                                 dc_random_states (SUC (SUC n)))`
                         by (RW_TAC std_ss [IN_CROSS, IN_IMAGE, dc_high_states_def, IN_dc_high_states_set]
@@ -1216,7 +1216,7 @@ val dc_leakage_result = store_thm
                >> METIS_TAC [])
    >> DISCH_TAC
    >> `!x. (\x.
-           (\(out,h,l).
+           (λ(out,h,l).
               (\x. x * lg (1 / &(2 ** SUC (SUC (SUC n))) * x))
                 (SIGMA
                    (\r.
@@ -1224,7 +1224,7 @@ val dc_leakage_result = store_thm
                         1
                       else
                         0) (dc_random_states (SUC (SUC n))))) x) x =
-        (\(out,h,l).
+        (λ(out,h,l).
               (\x. x * lg (1 / &(2 ** SUC (SUC (SUC n))) * x))
                 (SIGMA
                    (\r.
@@ -1256,8 +1256,8 @@ val dc_leakage_result = store_thm
    >> Know `(\x. (if x IN IMAGE (\s. (dcprog (SUC (SUC (SUC n))) s,SND (FST s)))
                         (dc_high_states_set (SUC (SUC n)) CROSS dc_low_states CROSS
                         dc_random_states (SUC (SUC n)))
-             then (\(out,l). (\x. x * lg (1 / & (SUC (SUC (SUC n)) * 2 ** SUC (SUC (SUC n))) * x))
-                (SIGMA (\(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,l),r) = out then 1 else 0))
+             then (λ(out,l). (\x. x * lg (1 / & (SUC (SUC (SUC n)) * 2 ** SUC (SUC (SUC n))) * x))
+                (SIGMA (λ(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,l),r) = out then 1 else 0))
                  (dc_high_states_set (SUC (SUC n)) CROSS
                   dc_random_states (SUC (SUC n))))) x
              else 0)) =
@@ -1273,7 +1273,7 @@ val dc_leakage_result = store_thm
             >> `FST s' = (FST (FST s'), SND (FST s'))` by RW_TAC std_ss [PAIR]
             >> POP_ORW
             >> RW_TAC std_ss []
-            >> Suff `SIGMA (\(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
+            >> Suff `SIGMA (λ(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
                                         dcprog (SUC (SUC (SUC n))) s'
                                      then 1 else 0))
                         (dc_high_states_set (SUC (SUC n)) CROSS
@@ -1366,14 +1366,14 @@ val dc_leakage_result = store_thm
                                        r IN dc_random_states (SUC (SUC n)) /\
                                        ~(dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
                                          dcprog (SUC (SUC (SUC n))) s')} ==>
-                        ((\(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
+                        ((λ(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
                                       dcprog (SUC (SUC (SUC n))) s'
                                    then 1 else 0)) y = 0))`
                         by (RW_TAC std_ss [GSPECIFICATION]
                             >> (MP_TAC o Q.ISPEC `x: bool state # bool state`) pair_CASES
                             >> RW_TAC bool_ss [] >> FULL_SIMP_TAC std_ss [])
                >> ((fn thm => ONCE_REWRITE_TAC [thm]) o UNDISCH o Q.ISPEC `0:real` o
-                   Q.ISPEC `(\(h:bool state, r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
+                   Q.ISPEC `(λ(h:bool state, r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
                                                     ((h, (\s:string. F)) ,r) =
                                                     dcprog (SUC (SUC (SUC n))) s'
                                                 then (1 : real) else (0 : real)))` o
@@ -1389,14 +1389,14 @@ val dc_leakage_result = store_thm
                                        r IN dc_random_states (SUC (SUC n)) /\
                                        (dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
                                          dcprog (SUC (SUC (SUC n))) s')} ==>
-                        ((\(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
+                        ((λ(h,r). (if dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r) =
                                       dcprog (SUC (SUC (SUC n))) s'
                                    then 1 else 0)) y = 1))`
                         by (RW_TAC std_ss [GSPECIFICATION]
                             >> (MP_TAC o Q.ISPEC `x: bool state # bool state`) pair_CASES
                             >> RW_TAC bool_ss [] >> FULL_SIMP_TAC std_ss [])
                >> ((fn thm => ONCE_REWRITE_TAC [thm]) o UNDISCH o Q.ISPEC `1:real` o
-                   Q.ISPEC `(\(h:bool state, r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
+                   Q.ISPEC `(λ(h:bool state, r :bool state). (if dcprog (SUC (SUC (SUC (n :num))))
                                                     ((h, (\s:string. F)) ,r) =
                                                     dcprog (SUC (SUC (SUC n))) s'
                                                 then (1 : real) else (0 : real)))` o
@@ -1409,7 +1409,7 @@ val dc_leakage_result = store_thm
                    REAL_SUM_IMAGE_FINITE_CONST2
                >> POP_ASSUM (K ALL_TAC) >> RW_TAC real_ss []
                >> `(dcprog (SUC (SUC (SUC n))) s') IN
-                                IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+                                IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                                         (dc_high_states F (SUC (SUC (SUC n))) CROSS
                                          dc_random_states (SUC (SUC n)))`
                                 by (RW_TAC std_ss [IN_IMAGE, IN_CROSS, dc_high_states_def]
@@ -1585,28 +1585,28 @@ val dc_leakage_result = store_thm
                >> POP_ORW >> RW_TAC arith_ss [pred_setTheory.CARD_COUNT])
    >> DISCH_TAC
    >> `!x. (\x.
-           (\(out,l).
+           (λ(out,l).
               (\x.
                  x *
                  lg
                    (1 / &(SUC (SUC (SUC n)) * 2 ** SUC (SUC (SUC n))) *
                     x))
                 (SIGMA
-                   (\(h,r).
+                   (λ(h,r).
                       if dcprog (SUC (SUC (SUC n))) ((h,l),r) = out then
                         1
                       else
                         0)
                    (dc_high_states_set (SUC (SUC n)) CROSS
                     dc_random_states (SUC (SUC n))))) x) x =
-        (\(out,l).
+        (λ(out,l).
               (\x.
                  x *
                  lg
                    (1 / &(SUC (SUC (SUC n)) * 2 ** SUC (SUC (SUC n))) *
                     x))
                 (SIGMA
-                   (\(h,r).
+                   (λ(h,r).
                       if dcprog (SUC (SUC (SUC n))) ((h,l),r) = out then
                         1
                       else
@@ -1645,7 +1645,7 @@ val dc_leakage_result = store_thm
    >> Know `(IMAGE (\s. (dcprog (SUC (SUC (SUC n))) s,SND (FST s)))
         (dc_high_states_set (SUC (SUC n)) CROSS dc_low_states CROSS
          dc_random_states (SUC (SUC n)))) =
-        (IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+        (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
           (dc_high_states F (SUC (SUC (SUC n))) CROSS
            dc_random_states (SUC (SUC n)))) CROSS dc_low_states`
    >- (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_CROSS, IN_IMAGE, dc_low_states_def, IN_SING]
@@ -1667,7 +1667,7 @@ val dc_leakage_result = store_thm
    >> Know `IMAGE (\s. (dcprog (SUC (SUC (SUC n))) s,FST s))
         (dc_high_states_set (SUC (SUC n)) CROSS dc_low_states CROSS
          dc_random_states (SUC (SUC n))) =
-             (IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s:string. F)),r))
+             (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s:string. F)),r))
           (dc_high_states F (SUC (SUC (SUC n))) CROSS
            dc_random_states (SUC (SUC n)))) CROSS ((dc_high_states_set (SUC (SUC n)) CROSS dc_low_states))`
    >- (ONCE_REWRITE_TAC [EXTENSION]
@@ -1692,7 +1692,7 @@ val dc_leakage_result = store_thm
             >> Q.ABBREV_TAC `r = coin_assignment (dcprog (SUC (SUC (SUC n))) ((FST x',(\s:string. F)),SND x'))
                                                 i' n T (SUC(SUC n))`
             >> Q.ABBREV_TAC `out = dcprog (SUC (SUC (SUC n))) (((\s. s = STRCAT "pays" (toString i)),(\s:string. F)),SND x')`
-            >> `out IN (IMAGE (\(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+            >> `out IN (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                              (dc_high_states F (SUC (SUC (SUC n))) CROSS dc_random_states (SUC (SUC n))))`
                 by (Q.UNABBREV_TAC `out`
                     >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, dc_high_states_def, IN_dc_high_states_set, dc_low_states_def, IN_SING]
@@ -1810,7 +1810,7 @@ val insider_set_announcements_alt = store_thm
 
 val insider_dcprog_def = Define
    `insider_dcprog (SUC(SUC(SUC n))) =
-      (\((high:bool state, low:bool state), random:bool state).
+      (λ((high:bool state, low:bool state), random:bool state).
          compute_result (insider_set_announcements high low random (SUC(SUC n)) (SUC(SUC n)))
                         (SUC(SUC n)))`;
 
@@ -2255,7 +2255,7 @@ val biased_dc3_leakage_result = store_thm
                  PREIMAGE L {(\s. s = STRCAT "coin" (toString 0))} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
                  biased_random_states foo)) =
-                 IMAGE (\(h,r). ((h, (\s. s = STRCAT "coin" (toString 0))),r))
+                 IMAGE (λ(h,r). ((h, (\s. s = STRCAT "coin" (toString 0))),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s. s = STRCAT "coin" (toString 0))),r) = x)}`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
@@ -2281,10 +2281,10 @@ val biased_dc3_leakage_result = store_thm
                        >> POP_ASSUM MP_TAC
                        >> `x'' = (FST x'',SND x'')` by RW_TAC std_ss [PAIR]
                        >> POP_ORW >> RW_TAC std_ss [])
-                >> `INJ (\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
+                >> `INJ (λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                  (insider_dcprog (SUC foo) ((h,(\s. s = STRCAT "coin" (toString 0))),r) = x)}
-                        (IMAGE (\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
+                        (IMAGE (λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
                                 {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                         (insider_dcprog (SUC foo) ((h,(\s. s = STRCAT "coin" (toString 0))),r) = x)})`
                         by (RW_TAC std_ss [INJ_DEF, GSPECIFICATION, IN_IMAGE] >- METIS_TAC []
@@ -2297,13 +2297,13 @@ val biased_dc3_leakage_result = store_thm
                             >> METIS_TAC [PAIR, PAIR_EQ])
                 >> RW_TAC std_ss [REAL_SUM_IMAGE_IMAGE, o_DEF, Once REAL_SUM_IMAGE_IN_IF] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         SND (FST ((\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x')) =
+                         SND (FST ((λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x')) =
                          (\s. s = STRCAT "coin" (toString 0))`
                         by (RW_TAC std_ss [] >> `(x' :bool state # bool state) = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                             >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         ((\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x' IN
+                         ((λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x' IN
                         biased_high_states foo CROSS biased_low_states CROSS
                         biased_random_states foo) = (FST x' IN (biased_high_states foo) /\
                                                      SND x' IN (biased_random_states foo))`
@@ -2311,12 +2311,12 @@ val biased_dc3_leakage_result = store_thm
                             >> POP_ORW >> RW_TAC std_ss []
                             >> RW_TAC set_ss [IN_CROSS, biased_low_states_def, FST, SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
-                >> `(\(x' :bool state # bool state). (if x' IN
+                >> `(λ(x' :bool state # bool state). (if x' IN
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s. s = STRCAT "coin" (toString 0))),r) = x)}
                         then 1 / 2 * (if FST x' IN biased_high_states foo /\ SND x' IN biased_random_states foo
                         then 1 / 16 else 0) else 0)) =
-                    (\(x' :bool state # bool state). (if x' IN
+                    (λ(x' :bool state # bool state). (if x' IN
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s. s = STRCAT "coin" (toString 0))),r) = x)}
                         then (\x. 1 / 32) x' else 0))`
@@ -2329,7 +2329,7 @@ val biased_dc3_leakage_result = store_thm
                  PREIMAGE L {(\s:string. F)} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
                  biased_random_states foo)) =
-                 IMAGE (\(h,r). ((h, (\s:string. F)),r))
+                 IMAGE (λ(h,r). ((h, (\s:string. F)),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s:string. F)),r) = x)}`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
@@ -2355,10 +2355,10 @@ val biased_dc3_leakage_result = store_thm
                        >> POP_ASSUM MP_TAC
                        >> `x'' = (FST x'',SND x'')` by RW_TAC std_ss [PAIR]
                        >> POP_ORW >> RW_TAC std_ss [])
-                >> `INJ (\(h,r). ((h,(\s:string. F)),r))
+                >> `INJ (λ(h,r). ((h,(\s:string. F)),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                  (insider_dcprog (SUC foo) ((h,(\s:string. F)),r) = x)}
-                        (IMAGE (\(h,r). ((h,(\s:string. F)),r))
+                        (IMAGE (λ(h,r). ((h,(\s:string. F)),r))
                                 {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                         (insider_dcprog (SUC foo) ((h,(\s:string. F)),r) = x)})`
                         by (RW_TAC std_ss [INJ_DEF, GSPECIFICATION, IN_IMAGE] >- METIS_TAC []
@@ -2371,13 +2371,13 @@ val biased_dc3_leakage_result = store_thm
                             >> METIS_TAC [PAIR, PAIR_EQ])
                 >> RW_TAC std_ss [REAL_SUM_IMAGE_IMAGE, o_DEF, Once REAL_SUM_IMAGE_IN_IF] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         SND (FST ((\(h,r). ((h,(\s:string.F)),r)) x')) =
+                         SND (FST ((λ(h,r). ((h,(\s:string.F)),r)) x')) =
                          (\s:string. F)`
                         by (RW_TAC std_ss [] >> `(x' :bool state # bool state) = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                             >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         ((\(h,r). ((h,(\s:string.F)),r)) x' IN
+                         ((λ(h,r). ((h,(\s:string.F)),r)) x' IN
                         biased_high_states foo CROSS biased_low_states CROSS
                         biased_random_states foo) = (FST x' IN (biased_high_states foo) /\
                                                      SND x' IN (biased_random_states foo))`
@@ -2385,12 +2385,12 @@ val biased_dc3_leakage_result = store_thm
                             >> POP_ORW >> RW_TAC std_ss []
                             >> RW_TAC set_ss [IN_CROSS, biased_low_states_def, FST, SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
-                >> `(\(x' :bool state # bool state). (if x' IN
+                >> `(λ(x' :bool state # bool state). (if x' IN
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s:string.F)),r) = x)}
                         then 3 / 2 * (if FST x' IN biased_high_states foo /\ SND x' IN biased_random_states foo
                         then 1 / 16 else 0) else 0)) =
-                    (\(x' :bool state # bool state). (if x' IN
+                    (λ(x' :bool state # bool state). (if x' IN
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s:string.F)),r) = x)}
                         then (\x. 3 / 32) x' else 0))`
@@ -2454,7 +2454,7 @@ val biased_dc3_leakage_result = store_thm
             >| [`(PREIMAGE L {(\s. s = STRCAT "coin" (toString 0))} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
                  biased_random_states foo)) =
-                 IMAGE (\(h,r). ((h, (\s. s = STRCAT "coin" (toString 0))),r))
+                 IMAGE (λ(h,r). ((h, (\s. s = STRCAT "coin" (toString 0))),r))
                         (biased_high_states foo CROSS biased_random_states foo)`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
                                     IN_CROSS, L_def]
@@ -2468,9 +2468,9 @@ val biased_dc3_leakage_result = store_thm
                      >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND]
                      >> RW_TAC set_ss [biased_low_states_def])
                 >> POP_ORW
-                >> `INJ (\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
+                >> `INJ (λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
                         (biased_high_states foo CROSS biased_random_states foo)
-                        (IMAGE (\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
+                        (IMAGE (λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r))
                                 (biased_high_states foo CROSS biased_random_states foo))`
                         by (RW_TAC std_ss [INJ_DEF, GSPECIFICATION, IN_IMAGE] >- METIS_TAC []
                             >> POP_ASSUM MP_TAC
@@ -2482,13 +2482,13 @@ val biased_dc3_leakage_result = store_thm
                             >> METIS_TAC [PAIR, PAIR_EQ])
                 >> RW_TAC std_ss [REAL_SUM_IMAGE_IMAGE, o_DEF, Once REAL_SUM_IMAGE_IN_IF, FINITE_CROSS] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         SND (FST ((\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x')) =
+                         SND (FST ((λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x')) =
                          (\s. s = STRCAT "coin" (toString 0))`
                         by (RW_TAC std_ss [] >> `(x' :bool state # bool state) = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                             >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         ((\(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x' IN
+                         ((λ(h,r). ((h,(\s. s = STRCAT "coin" (toString 0))),r)) x' IN
                         biased_high_states foo CROSS biased_low_states CROSS
                         biased_random_states foo) = (FST x' IN (biased_high_states foo) /\
                                                      SND x' IN (biased_random_states foo))`
@@ -2496,11 +2496,11 @@ val biased_dc3_leakage_result = store_thm
                             >> POP_ORW >> RW_TAC std_ss []
                             >> RW_TAC set_ss [IN_CROSS, biased_low_states_def, FST, SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
-                >> `(\(x' :bool state # bool state). (if x' IN
+                >> `(λ(x' :bool state # bool state). (if x' IN
                         biased_high_states foo CROSS biased_random_states foo
                         then 1 / 2 * (if FST x' IN biased_high_states foo /\ SND x' IN biased_random_states foo
                         then 1 / 16 else 0) else 0)) =
-                    (\(x' :bool state # bool state). (if x' IN
+                    (λ(x' :bool state # bool state). (if x' IN
                         biased_high_states foo CROSS biased_random_states foo
                         then (\x. 1 / 32) x' else 0))`
                         by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [IN_CROSS])
@@ -2509,7 +2509,7 @@ val biased_dc3_leakage_result = store_thm
                 `(PREIMAGE L {(\s:string. F)} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
                  biased_random_states foo)) =
-                 IMAGE (\(h,r). ((h, (\s:string. F)),r))
+                 IMAGE (λ(h,r). ((h, (\s:string. F)),r))
                         (biased_high_states foo CROSS biased_random_states foo)`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
                                     IN_CROSS, L_def]
@@ -2523,9 +2523,9 @@ val biased_dc3_leakage_result = store_thm
                      >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND]
                      >> RW_TAC set_ss [biased_low_states_def])
                 >> POP_ORW
-                >> `INJ (\(h,r). ((h,(\s:string. F)),r))
+                >> `INJ (λ(h,r). ((h,(\s:string. F)),r))
                         (biased_high_states foo CROSS biased_random_states foo)
-                        (IMAGE (\(h,r). ((h,(\s:string. F)),r))
+                        (IMAGE (λ(h,r). ((h,(\s:string. F)),r))
                                 (biased_high_states foo CROSS biased_random_states foo))`
                         by (RW_TAC std_ss [INJ_DEF, GSPECIFICATION, IN_IMAGE] >- METIS_TAC []
                             >> POP_ASSUM MP_TAC
@@ -2537,13 +2537,13 @@ val biased_dc3_leakage_result = store_thm
                             >> METIS_TAC [PAIR, PAIR_EQ])
                 >> RW_TAC std_ss [REAL_SUM_IMAGE_IMAGE, o_DEF, Once REAL_SUM_IMAGE_IN_IF, FINITE_CROSS] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         SND (FST ((\(h,r). ((h,(\s:string.F)),r)) x')) =
+                         SND (FST ((λ(h,r). ((h,(\s:string.F)),r)) x')) =
                          (\s:string. F)`
                         by (RW_TAC std_ss [] >> `(x' :bool state # bool state) = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                             >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
                 >> `!(x' :bool state # bool state).
-                         ((\(h,r). ((h,(\s:string.F)),r)) x' IN
+                         ((λ(h,r). ((h,(\s:string.F)),r)) x' IN
                         biased_high_states foo CROSS biased_low_states CROSS
                         biased_random_states foo) = (FST x' IN (biased_high_states foo) /\
                                                      SND x' IN (biased_random_states foo))`
@@ -2551,11 +2551,11 @@ val biased_dc3_leakage_result = store_thm
                             >> POP_ORW >> RW_TAC std_ss []
                             >> RW_TAC set_ss [IN_CROSS, biased_low_states_def, FST, SND])
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
-                >> `(\(x' :bool state # bool state). (if x' IN
+                >> `(λ(x' :bool state # bool state). (if x' IN
                         (biased_high_states foo CROSS biased_random_states foo)
                         then 3 / 2 * (if FST x' IN biased_high_states foo /\ SND x' IN biased_random_states foo
                         then 1 / 16 else 0) else 0)) =
-                    (\(x' :bool state # bool state). (if x' IN
+                    (λ(x' :bool state # bool state). (if x' IN
                         (biased_high_states foo CROSS biased_random_states foo)
                         then (\x. 3 / 32) x' else 0))`
                         by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [IN_CROSS])
@@ -2635,12 +2635,12 @@ val biased_dc3_leakage_result = store_thm
                                 biased_random_states foo) = (x' IN (biased_random_states foo))`
                         by RW_TAC set_ss [IN_CROSS, biased_low_states_def, FST, SND]
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
-                >> `(\(x' :bool state). (if x' IN
+                >> `(λ(x' :bool state). (if x' IN
                         {r |r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((y,(\s. s = STRCAT "coin" (toString 0))),r) = x)}
                         then 1 / 2 * (if x' IN biased_random_states foo
                         then 1 / 16 else 0) else 0)) =
-                    (\(x' :bool state). (if x' IN
+                    (λ(x' :bool state). (if x' IN
                         {r |r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((y,(\s. s = STRCAT "coin" (toString 0))),r) = x)}
                         then (\x. 1 / 32) x' else 0))`
@@ -2681,12 +2681,12 @@ val biased_dc3_leakage_result = store_thm
                         biased_random_states foo) = (x' IN (biased_random_states foo))`
                         by RW_TAC set_ss [IN_CROSS, biased_low_states_def, FST, SND]
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
-                >> `(\(x' :bool state). (if x' IN
+                >> `(λ(x' :bool state). (if x' IN
                         {r | r IN biased_random_states foo /\
                                         (insider_dcprog (SUC foo) ((y,(\s:string. F)),r) = x)}
                         then 3 / 2 * (if x' IN biased_random_states foo
                         then 1 / 16 else 0) else 0)) =
-                    (\(x' :bool state). (if x' IN
+                    (λ(x' :bool state). (if x' IN
                         {r | r IN biased_random_states foo /\
                                         (insider_dcprog (SUC foo) ((y,(\s:string. F)),r) = x)}
                         then (\x. 3 / 32) x' else 0))`
@@ -2770,7 +2770,7 @@ val biased_dc3_leakage_result = store_thm
                         by RW_TAC set_ss [IN_CROSS, biased_low_states_def, FST, SND]
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
                 >> `(\x: bool state. (if x IN biased_random_states foo then 1 / 2 * (1 / 16) else 0)) =
-                    (\(x' :bool state). (if x' IN biased_random_states foo then (\x. 1 / 32) x' else 0))`
+                    (λ(x' :bool state). (if x' IN biased_random_states foo then (\x. 1 / 32) x' else 0))`
                         by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [IN_CROSS])
                 >> POP_ORW >> RW_TAC real_ss [GSYM REAL_SUM_IMAGE_IN_IF, REAL_SUM_IMAGE_FINITE_CONST3,
                                               REAL_MUL_COMM],
@@ -2802,7 +2802,7 @@ val biased_dc3_leakage_result = store_thm
                 >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
                 >> Q.UNABBREV_TAC `foo`
                 >> `(\x:bool state. (if x IN biased_random_states 2 then 3 / 2 * (1 / 16) else 0)) =
-                    (\(x' :bool state). (if x' IN biased_random_states 2
+                    (λ(x' :bool state). (if x' IN biased_random_states 2
                         then (\x. 3 / 32) x' else 0))`
                         by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [IN_CROSS])
                 >> POP_ORW >> RW_TAC real_ss [GSYM REAL_SUM_IMAGE_IN_IF, REAL_SUM_IMAGE_FINITE_CONST3, REAL_MUL_COMM],
@@ -2869,10 +2869,10 @@ val biased_dc3_leakage_result = store_thm
        (biased_high_states foo CROSS biased_low_states CROSS
         biased_random_states foo) CROSS
      (biased_high_states foo CROSS biased_low_states)) =
-        (IMAGE (\(out,h). (out, (h,(\s.s = STRCAT "coin" (toString 0))))) ((IMAGE (insider_dcprog (SUC foo))
+        (IMAGE (λ(out,h). (out, (h,(\s.s = STRCAT "coin" (toString 0))))) ((IMAGE (insider_dcprog (SUC foo))
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo)) CROSS (biased_high_states foo))) UNION
-        (IMAGE (\(out,h). (out, (h,(\s:string.F)))) ((IMAGE (insider_dcprog (SUC foo))
+        (IMAGE (λ(out,h). (out, (h,(\s:string.F)))) ((IMAGE (insider_dcprog (SUC foo))
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo)) CROSS (biased_high_states foo)))`
         by ((ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [biased_low_states_def, IN_UNION, IN_IMAGE, IN_CROSS, IN_IMAGE, IN_INSERT, IN_SING]
@@ -2930,10 +2930,10 @@ val biased_dc3_leakage_result = store_thm
                 `x' = (FST x', SND x')` by RW_TAC std_ss [PAIR]
                 >> POP_ORW >> RW_TAC std_ss [FST, SND]])
    >> POP_ORW
-   >> `DISJOINT (IMAGE (\(out,h). (out, (h,(\s.s = STRCAT "coin" (toString 0))))) ((IMAGE (insider_dcprog (SUC foo))
+   >> `DISJOINT (IMAGE (λ(out,h). (out, (h,(\s.s = STRCAT "coin" (toString 0))))) ((IMAGE (insider_dcprog (SUC foo))
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo)) CROSS (biased_high_states foo)))
-        (IMAGE (\(out,h). (out, (h,(\s:string.F)))) ((IMAGE (insider_dcprog (SUC foo))
+        (IMAGE (λ(out,h). (out, (h,(\s:string.F)))) ((IMAGE (insider_dcprog (SUC foo))
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo)) CROSS (biased_high_states foo)))`
         by (RW_TAC std_ss [DISJOINT_DEF] >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [NOT_IN_EMPTY, IN_INTER, IN_IMAGE, IN_CROSS, biased_low_states_def,
@@ -2951,11 +2951,11 @@ val biased_dc3_leakage_result = store_thm
             >> RW_TAC bool_ss [PAIR_EQ])
    >> RW_TAC bool_ss [REAL_SUM_IMAGE_DISJOINT_UNION, IMAGE_FINITE, FINITE_CROSS]
    >> POP_ASSUM (K ALL_TAC)
-   >> `!c:bool state. INJ (\(out,h). (out,h,c))
+   >> `!c:bool state. INJ (λ(out,h). (out,h,c))
             (IMAGE (insider_dcprog (SUC foo))
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo) CROSS biased_high_states foo)
-          (IMAGE (\(out,h). (out,h,c))
+          (IMAGE (λ(out,h). (out,h,c))
             (IMAGE (insider_dcprog (SUC foo))
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo) CROSS biased_high_states foo))`
@@ -3178,7 +3178,7 @@ val biased_dc3_leakage_result = store_thm
                      ((h,b),r) =
                    out)}) =
         REAL_SUM_IMAGE
-        (\(h,r). if (insider_dcprog (SUC foo)
+        (λ(h,r). if (insider_dcprog (SUC foo)
                         ((h,b),r) = out) then 1 else 0)
         (biased_high_states foo CROSS biased_random_states foo)`
         by (STRIP_TAC >> STRIP_TAC
@@ -3228,7 +3228,7 @@ val biased_dc3_leakage_result = store_thm
                     >> `x':bool state # bool state = (FST x', SND x')` by RW_TAC std_ss [PAIR]
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ] >> METIS_TAC [PAIR, PAIR_EQ])
             >> RW_TAC std_ss [REAL_SUM_IMAGE_DISJOINT_UNION] >> POP_ASSUM (K ALL_TAC)
-            >> `SIGMA (\(h,r). (if insider_dcprog (SUC foo)
+            >> `SIGMA (λ(h,r). (if insider_dcprog (SUC foo)
                         ((h,b),r) = out then 1 else 0))
                 {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                         ~(insider_dcprog (SUC foo)
@@ -3239,7 +3239,7 @@ val biased_dc3_leakage_result = store_thm
                         h IN biased_high_states foo /\ r IN biased_random_states foo /\
                         ~(insider_dcprog (SUC foo)
                         ((h,b),r) = out)} then
-                        (\(h,r). (if insider_dcprog (SUC foo)
+                        (λ(h,r). (if insider_dcprog (SUC foo)
                         ((h,b),r) =
                         out then 1 else 0)) x else 0) = 0`
                     >- RW_TAC std_ss [REAL_SUM_IMAGE_0]
@@ -3256,7 +3256,7 @@ val biased_dc3_leakage_result = store_thm
                      (\x. (if x IN {(h,r) |
                         h IN biased_high_states foo /\ r IN biased_random_states foo /\
                         (insider_dcprog (SUC foo) ((h,b),r) = out)}
-                        then (\(h,r). (if insider_dcprog (SUC foo)
+                        then (λ(h,r). (if insider_dcprog (SUC foo)
                                 ((h,b),r) =
                         out then 1 else 0)) x else 0))`
              >- (STRIP_TAC >> POP_ORW >> RW_TAC bool_ss [GSYM REAL_SUM_IMAGE_IN_IF]
@@ -3868,11 +3868,11 @@ val biased_dc3_leakage_result2 = store_thm
                  PREIMAGE L {z} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
                  biased_random_states foo)) =
-                 (IMAGE (\(h,r). ((h, z),r))
+                 (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)}) UNION
-                 (IMAGE (\(h,r). ((h, z),r))
+                 (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)})`
@@ -3908,11 +3908,11 @@ val biased_dc3_leakage_result2 = store_thm
                      >> POP_ORW >> RW_TAC std_ss [FST,SND, PAIR_EQ]
                      >> `x' = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                      >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND])
-            >> `DISJOINT (IMAGE (\(h,r). ((h, z),r))
+            >> `DISJOINT (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)})
-                         (IMAGE (\(h,r). ((h, z),r))
+                         (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)})`
@@ -3929,16 +3929,16 @@ val biased_dc3_leakage_result2 = store_thm
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ]
                     >> METIS_TAC [FST, SND, PAIR_EQ, PAIR])
             >> RW_TAC bool_ss [REAL_SUM_IMAGE_DISJOINT_UNION, IMAGE_FINITE] >> POP_ASSUM (K ALL_TAC)
-            >> `INJ (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+            >> `INJ (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)}
-                    (IMAGE (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+                    (IMAGE (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)}) /\
-                INJ (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+                INJ (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)}
-                    (IMAGE (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+                    (IMAGE (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)})`
                 by (RW_TAC std_ss [INJ_DEF, GSPECIFICATION, IN_IMAGE]
@@ -3963,11 +3963,11 @@ val biased_dc3_leakage_result2 = store_thm
             >> `!x': bool state # bool state.
                 (if x' IN {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                    r (STRCAT "coin" (toString 1)) /\ (insider_dcprog (SUC foo) ((h,z),r) = x)}
-                then (if SND ((\(h,r). ((h,z),r)) x') (STRCAT "coin" (toString 1)) then
-                1 / 2 * (if (\(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS
+                then (if SND ((λ(h,r). ((h,z),r)) x') (STRCAT "coin" (toString 1)) then
+                1 / 2 * (if (λ(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS
                                                         biased_random_states foo
                 then 1 / 16 else 0) else 3 / 2 *
-                (if (\(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
+                (if (λ(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
                 then 1 / 16 else 0)) else 0) =
                 1/32 * (\x'. if
                  x' IN {(h,r) |
@@ -3986,11 +3986,11 @@ val biased_dc3_leakage_result2 = store_thm
             >> `!x': bool state # bool state.
                 (if x' IN {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                    ~r (STRCAT "coin" (toString 1)) /\ (insider_dcprog (SUC foo) ((h,z),r) = x)}
-                then (if SND ((\(h,r). ((h,z),r)) x') (STRCAT "coin" (toString 1)) then
-                1 / 2 * (if (\(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS
+                then (if SND ((λ(h,r). ((h,z),r)) x') (STRCAT "coin" (toString 1)) then
+                1 / 2 * (if (λ(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS
                                                         biased_random_states foo
                 then 1 / 16 else 0) else 3 / 2 *
-                (if (\(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
+                (if (λ(h,r). ((h,z),r)) x' IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
                 then 1 / 16 else 0)) else 0) =
                 3/32 * (\x'. if
                  x' IN {(h,r) |
@@ -4058,10 +4058,10 @@ val biased_dc3_leakage_result2 = store_thm
             >> `(PREIMAGE L {z} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
                  biased_random_states foo)) =
-                 (IMAGE (\(h,r). ((h, z),r))
+                 (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1))}) UNION
-                 (IMAGE (\(h,r). ((h, z),r))
+                 (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1))})`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
@@ -4094,10 +4094,10 @@ val biased_dc3_leakage_result2 = store_thm
                      >> POP_ORW >> RW_TAC std_ss [FST,SND, PAIR_EQ]
                      >> `x = (FST x,SND x)` by RW_TAC std_ss [PAIR]
                      >> POP_ORW >> RW_TAC std_ss [] >> RW_TAC std_ss [FST,SND])
-            >> `DISJOINT (IMAGE (\(h,r). ((h, z),r))
+            >> `DISJOINT (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1))})
-                         (IMAGE (\(h,r). ((h, z),r))
+                         (IMAGE (λ(h,r). ((h, z),r))
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1))})`
                 by (RW_TAC std_ss [DISJOINT_DEF] >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, NOT_IN_EMPTY, IN_IMAGE, GSPECIFICATION]
@@ -4113,13 +4113,13 @@ val biased_dc3_leakage_result2 = store_thm
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ]
                     >> METIS_TAC [FST, SND, PAIR_EQ, PAIR])
             >> RW_TAC bool_ss [REAL_SUM_IMAGE_DISJOINT_UNION, IMAGE_FINITE] >> POP_ASSUM (K ALL_TAC)
-            >> `INJ (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+            >> `INJ (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1))}
-                    (IMAGE (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+                    (IMAGE (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 r (STRCAT "coin" (toString 1))}) /\
-                INJ (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+                INJ (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1))}
-                    (IMAGE (\(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
+                    (IMAGE (λ(h,r). ((h,z),r)) {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1))})`
                 by (RW_TAC std_ss [INJ_DEF, GSPECIFICATION, IN_IMAGE]
                     >| [METIS_TAC [],
@@ -4143,11 +4143,11 @@ val biased_dc3_leakage_result2 = store_thm
             >> `!x: bool state # bool state.
                 (if x IN {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                    r (STRCAT "coin" (toString 1))}
-                then (if SND ((\(h,r). ((h,z),r)) x) (STRCAT "coin" (toString 1)) then
-                1 / 2 * (if (\(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS
+                then (if SND ((λ(h,r). ((h,z),r)) x) (STRCAT "coin" (toString 1)) then
+                1 / 2 * (if (λ(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS
                                                         biased_random_states foo
                 then 1 / 16 else 0) else 3 / 2 *
-                (if (\(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
+                (if (λ(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
                 then 1 / 16 else 0)) else 0) =
                 1/32 * (\x. if
                  x IN {(h,r) |
@@ -4165,11 +4165,11 @@ val biased_dc3_leakage_result2 = store_thm
             >> `!x: bool state # bool state.
                 (if x IN {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                    ~r (STRCAT "coin" (toString 1))}
-                then (if SND ((\(h,r). ((h,z),r)) x) (STRCAT "coin" (toString 1)) then
-                1 / 2 * (if (\(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS
+                then (if SND ((λ(h,r). ((h,z),r)) x) (STRCAT "coin" (toString 1)) then
+                1 / 2 * (if (λ(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS
                                                         biased_random_states foo
                 then 1 / 16 else 0) else 3 / 2 *
-                (if (\(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
+                (if (λ(h,r). ((h,z),r)) x IN biased_high_states foo CROSS biased_low_states CROSS biased_random_states foo
                 then 1 / 16 else 0)) else 0) =
                 3/32 * (\x'. if
                  x IN {(h,r) |
@@ -4482,7 +4482,7 @@ val biased_dc3_leakage_result2 = store_thm
              (biased_high_states foo CROSS biased_low_states CROSS
               biased_random_states foo) CROSS biased_low_states
          then
-           (\(x,z).
+           (λ(x,z).
               (if z IN biased_low_states then
                  1 / 32 *
                  &
@@ -4545,7 +4545,7 @@ val biased_dc3_leakage_result2 = store_thm
              (biased_high_states foo CROSS biased_low_states CROSS
               biased_random_states foo) CROSS biased_low_states
          then
-           (\(x,z).
+           (λ(x,z).
               (1 / 32 *
                  &
                    (CARD
@@ -4598,7 +4598,7 @@ val biased_dc3_leakage_result2 = store_thm
    >> Q.ABBREV_TAC `sumone =
         SIGMA
      (\x.
-        (\(x,z).
+        (λ(x,z).
            (1 / 32 *
             &
               (CARD
@@ -4663,7 +4663,7 @@ val biased_dc3_leakage_result2 = store_thm
              biased_random_states foo) CROSS
           (biased_high_states foo CROSS biased_low_states)
         then
-          (\(x,y,z).
+          (λ(x,y,z).
              (if
                 z IN biased_low_states /\ y IN biased_high_states foo
               then
@@ -4729,7 +4729,7 @@ val biased_dc3_leakage_result2 = store_thm
              biased_random_states foo) CROSS
           (biased_high_states foo CROSS biased_low_states)
         then
-          (\(x,y,z).
+          (λ(x,y,z).
              (1 / 32 *
                 &
                   (CARD
@@ -4944,7 +4944,7 @@ val biased_dc3_leakage_result2 = store_thm
                   r (STRCAT "coin" (toString 1)) /\
                   (insider_dcprog (SUC foo) ((h,z),r) = x)}) =
         REAL_SUM_IMAGE
-        (\(h,r). if r (STRCAT "coin" (toString 1)) /\ (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)
+        (λ(h,r). if r (STRCAT "coin" (toString 1)) /\ (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)
         (biased_high_states foo CROSS biased_random_states foo)`
         by (STRIP_TAC >> STRIP_TAC
             >> `FINITE {(h,r) |
@@ -5000,7 +5000,7 @@ val biased_dc3_leakage_result2 = store_thm
                     >> `x'':bool state # bool state = (FST x'', SND x'')` by RW_TAC std_ss [PAIR]
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ] >> METIS_TAC [PAIR, PAIR_EQ])
             >> RW_TAC std_ss [REAL_SUM_IMAGE_DISJOINT_UNION] >> POP_ASSUM (K ALL_TAC)
-            >> `SIGMA (\(h,r). (if r (STRCAT "coin" (toString 1)) /\
+            >> `SIGMA (λ(h,r). (if r (STRCAT "coin" (toString 1)) /\
                         (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0))
                   {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                            (~r (STRCAT "coin" (toString 1)) \/
@@ -5012,7 +5012,7 @@ val biased_dc3_leakage_result2 = store_thm
                          h IN biased_high_states foo /\ r IN biased_random_states foo /\
                          (~r (STRCAT "coin" (toString 1)) \/
                           ~(insider_dcprog (SUC foo) ((h,z),r) = x))} then
-                        (\(h,r). (if r (STRCAT "coin" (toString 1)) /\
+                        (λ(h,r). (if r (STRCAT "coin" (toString 1)) /\
                         (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)) x' else 0) = 0`
                     >- RW_TAC std_ss [REAL_SUM_IMAGE_0]
                     >> RW_TAC std_ss [GSPECIFICATION]
@@ -5030,7 +5030,7 @@ val biased_dc3_leakage_result2 = store_thm
                         h IN biased_high_states foo /\ r IN biased_random_states foo /\
                         r (STRCAT "coin" (toString 1)) /\
                         (insider_dcprog (SUC foo) ((h,z),r) = x)}
-                        then (\(h,r). (if r (STRCAT "coin" (toString 1)) /\
+                        then (λ(h,r). (if r (STRCAT "coin" (toString 1)) /\
                 (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)) x' else 0))`
              >- (STRIP_TAC >> POP_ORW >> RW_TAC bool_ss [GSYM REAL_SUM_IMAGE_IN_IF]
                  >> METIS_TAC [])
@@ -5047,7 +5047,7 @@ val biased_dc3_leakage_result2 = store_thm
                   ~r (STRCAT "coin" (toString 1)) /\
                   (insider_dcprog (SUC foo) ((h,z),r) = x)}) =
         REAL_SUM_IMAGE
-        (\(h,r). if ~r (STRCAT "coin" (toString 1)) /\ (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)
+        (λ(h,r). if ~r (STRCAT "coin" (toString 1)) /\ (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)
         (biased_high_states foo CROSS biased_random_states foo)`
         by (STRIP_TAC >> STRIP_TAC
             >> `FINITE {(h,r) |
@@ -5102,7 +5102,7 @@ val biased_dc3_leakage_result2 = store_thm
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ] >> METIS_TAC [PAIR, PAIR_EQ])
             >> FULL_SIMP_TAC std_ss [DE_MORGAN_THM]
             >> RW_TAC std_ss [REAL_SUM_IMAGE_DISJOINT_UNION] >> POP_ASSUM (K ALL_TAC)
-            >> `SIGMA (\(h,r). (if ~r (STRCAT "coin" (toString 1)) /\
+            >> `SIGMA (λ(h,r). (if ~r (STRCAT "coin" (toString 1)) /\
                 (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0))
                 {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                 (r (STRCAT "coin" (toString 1)) \/ ~(insider_dcprog (SUC foo) ((h,z),r) = x))} = 0`
@@ -5113,7 +5113,7 @@ val biased_dc3_leakage_result2 = store_thm
                          h IN biased_high_states foo /\ r IN biased_random_states foo /\
                          (r (STRCAT "coin" (toString 1)) \/
                          ~(insider_dcprog (SUC foo) ((h,z),r) = x))} then
-                        (\(h,r). (if ~r (STRCAT "coin" (toString 1)) /\
+                        (λ(h,r). (if ~r (STRCAT "coin" (toString 1)) /\
                         (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)) x' else 0) = 0`
                     >- RW_TAC std_ss [REAL_SUM_IMAGE_0]
                     >> RW_TAC std_ss [GSPECIFICATION]
@@ -5132,7 +5132,7 @@ val biased_dc3_leakage_result2 = store_thm
                         h IN biased_high_states foo /\ r IN biased_random_states foo /\
                         ~r (STRCAT "coin" (toString 1)) /\
                         (insider_dcprog (SUC foo) ((h,z),r) = x)}
-                        then (\(h,r). (if ~r (STRCAT "coin" (toString 1)) /\
+                        then (λ(h,r). (if ~r (STRCAT "coin" (toString 1)) /\
                         (insider_dcprog (SUC foo) ((h,z),r) = x) then 1 else 0)) x' else 0))`
              >- (STRIP_TAC >> POP_ORW >> RW_TAC bool_ss [GSYM REAL_SUM_IMAGE_IN_IF]
                  >> METIS_TAC [])

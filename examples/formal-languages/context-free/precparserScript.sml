@@ -109,11 +109,6 @@ val precparse1_preserves_wfStk = store_thm(
         option_case_eq, tokrel_case_eq] >>
   rw[] >> fs[]);
 
-val LT_SUC = store_thm(
-  "LT_SUC",
-  ``x < SUC y ⇔ (x = 0) ∨ ∃m. x = SUC m ∧ m < y``,
-  Cases_on `x` >> simp[]);
-
 val wfStk_ALT = store_thm(
   "wfStk_ALT",
   ``wfStk l ⇔ (l ≠ [] ⇒ ∀opn. LAST l ≠ INL opn) ∧
@@ -122,7 +117,7 @@ val wfStk_ALT = store_thm(
   Cases_on `stk` >> simp[] >> fs[] >> rename1 `wfStk (_ :: el2 :: stk)` >>
   Cases_on `el2` >> simp[] >- (disj2_tac >> qexists_tac `0` >> simp[]) >>
   simp[DECIDE ``x + 1 < SUC y ⇔ x < y``] >>
-  dsimp[LT_SUC, DECIDE ``x + 1 = SUC x``])
+  dsimp[arithmeticTheory.LT_SUC, DECIDE ``x + 1 = SUC x``])
 
 val precparse1_reduces = store_thm(
   "precparse1_reduces",

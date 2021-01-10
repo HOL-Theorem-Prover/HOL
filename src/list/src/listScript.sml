@@ -321,6 +321,48 @@ val INDEX_FIND_def = Define‘
 val FIND_def = Define ‘FIND P = OPTION_MAP SND o INDEX_FIND 0 P’
 val INDEX_OF_def = Define ‘INDEX_OF x = OPTION_MAP FST o INDEX_FIND 0 ($= x)’
 
+Theorem INDEX_FIND_add:
+  !ls n. INDEX_FIND n P ls = OPTION_MAP (\(i, x). (i + n, x)) (INDEX_FIND 0 P ls)
+Proof
+  Induct >- ( rw[Once INDEX_FIND_def] \\ rw[Once INDEX_FIND_def] )
+  \\ simp_tac(srw_ss())[Once INDEX_FIND_def, SimpRHS]
+  \\ simp_tac(srw_ss())[Once INDEX_FIND_def]
+  \\ rpt gen_tac
+  \\ IF_CASES_TAC \\ simp_tac(srw_ss())[]
+  \\ first_assum(Q.SPEC_THEN`SUC n`(fn th => simp_tac(srw_ss())[th]))
+  \\ first_x_assum(Q.SPEC_THEN`1`(fn th => simp_tac(srw_ss())[th]))
+  \\ Cases_on`INDEX_FIND 0 P ls` \\ simp[]
+  \\ simp[UNCURRY]
+QED
+
+Theorem INDEX_OF_eq_NONE:
+  !x l. INDEX_OF x l = NONE <=> ~MEM x l
+Proof
+  gen_tac \\ Induct
+  \\ rw[INDEX_OF_def, INDEX_FIND_def]
+  \\ rw[Once INDEX_FIND_add]
+  \\ fs[INDEX_OF_def]
+QED
+
+Theorem INDEX_OF_eq_SOME:
+  !x l i. INDEX_OF x l = SOME i <=>
+    (i < LENGTH l) /\ (EL i l = x) /\ (!j. (j < i) ==> EL j l <> x)
+Proof
+  gen_tac \\ Induct
+  \\ simp[INDEX_OF_def, INDEX_FIND_def]
+  \\ rpt gen_tac
+  \\ simp[Once INDEX_FIND_add]
+  \\ fs[INDEX_OF_def]
+  \\ rw[PULL_EXISTS, UNCURRY]
+  >- (
+    Cases_on`i` \\ rw[EL]
+    \\ rpt disj2_tac
+    \\ Q.EXISTS_TAC`0` \\ rw[EL] )
+  \\ Cases_on`i` \\ rw[arithmeticTheory.ADD1, EL]
+  \\ rw[Once arithmeticTheory.FORALL_NUM, SimpRHS]
+  \\ rw[arithmeticTheory.ADD1, EL]
+QED
+
 (* ---------------------------------------------------------------------*)
 (* Proofs of some theorems about lists.                                 *)
 (* ---------------------------------------------------------------------*)
@@ -678,6 +720,12 @@ val MEM_MAP = store_thm(
   “!(l:'a list) (f:'a -> 'b) x.
        MEM x (MAP f l) = ?y. (x = f y) /\ MEM y l”,
   LIST_INDUCT_TAC THEN SRW_TAC [] [MAP] THEN PROVE_TAC[]);
+
+Theorem MEM_MAP_f:
+  !f l a. MEM a l ==> MEM (f a) (MAP f l)
+Proof
+  PROVE_TAC[MEM_MAP]
+QED
 
 val LENGTH_NIL = store_thm("LENGTH_NIL[simp]",
  “!l:'a list. (LENGTH l = 0) = (l = [])”,
@@ -1870,8 +1918,7 @@ Theorem DROP_LENGTH_TOO_LONG:
 Proof Induct THEN SRW_TAC [numSimps.ARITH_ss] []
 QED
 
-val LT_SUC = Q.prove(‘x < SUC y <=> x = 0 \/ ?x0. x = SUC x0 /\ x0 < y’,
-                     Cases_on ‘x’ >> simp[])
+Theorem LT_SUC[local] = arithmeticTheory.LT_SUC
 
 Theorem MEM_DROP:
   !x ls n. MEM x (DROP n ls) <=>
@@ -1884,15 +1931,11 @@ Proof
     [GSYM arithmeticTheory.ADD1, ADD_CLAUSES]
 QED
 
-Theorem DROP_EQ_NIL:
- !ls n. (DROP n ls = []) = (LENGTH ls <= n)
+Theorem DROP_EQ_NIL[simp]:
+ !ls n. DROP n ls = [] <=> LENGTH ls <= n
 Proof
  Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC
 QED
-
-val LT_SUC = Q.prove(
-  ‘x < SUC y <=> (x = 0) \/ ?x0. (x = SUC x0) /\ x0 < y’,
-  Cases_on ‘x’ >> simp[]);
 
 Theorem HD_DROP:
   !n l. n < LENGTH l ==> (HD (DROP n l) = EL n l)
@@ -2084,6 +2127,25 @@ val ALL_DISTINCT_FLAT_REVERSE = store_thm("ALL_DISTINCT_FLAT_REVERSE[simp]",
   “!xs. ALL_DISTINCT (FLAT (REVERSE xs)) = ALL_DISTINCT (FLAT xs)”,
   Induct \\ FULL_SIMP_TAC(srw_ss())[ALL_DISTINCT_APPEND]
   \\ FULL_SIMP_TAC(srw_ss())[MEM_FLAT,PULL_EXISTS] \\ METIS_TAC []);
+
+Theorem ALL_DISTINCT_INDEX_OF_EL:
+  !l n.
+    (ALL_DISTINCT l /\ n < LENGTH l) ==>
+    INDEX_OF (EL n l) l = SOME n
+Proof
+  Induct
+  \\ rw[INDEX_OF_def]
+  \\ rw[INDEX_FIND_def]
+  >- (
+    Cases_on`n` \\ fs[]
+    \\ metis_tac[MEM_EL] )
+  \\ rw[Once INDEX_FIND_add, PULL_EXISTS]
+  \\ fs[INDEX_OF_def]
+  \\ Cases_on`n` \\ fs[]
+  \\ first_x_assum drule
+  \\ rw[]
+  \\ rw[UNCURRY, arithmeticTheory.ADD1]
+QED
 
 (* ----------------------------------------------------------------------
     LRC
@@ -2344,6 +2406,40 @@ val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
 HO_MATCH_MP_TAC pred_setTheory.FINITE_COMPLETE_INDUCTION THEN
 SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]);
 
+
+(* ----------------------------------------------------------------------
+    FINITE set of lists
+   ---------------------------------------------------------------------- *)
+
+Theorem bounded_length_FINITE:
+  FINITE (UNIV:'a set) ==>
+  !m (s:'a list set). (!x. x IN s ==> LENGTH x <= m) ==> FINITE s
+Proof
+  strip_tac
+  \\ ho_match_mp_tac numTheory.INDUCTION
+  \\ rw[]
+  >- (
+    Cases_on`s` \\ fs[]
+    \\ `x = []` by metis_tac[] \\ rw[]
+    \\ Cases_on`t` \\ fs[] \\ metis_tac[] )
+  \\ `s SUBSET [] INSERT BIGUNION (IMAGE (\f. IMAGE (f o TL) s) (IMAGE CONS UNIV))`
+  by (
+    rw[SUBSET_DEF, PULL_EXISTS]
+    \\ res_tac
+    \\ Cases_on`x` \\ fs[]
+    \\ Q.EXISTS_TAC`a::l` \\ simp[] )
+  \\ match_mp_tac (MP_CANON SUBSET_FINITE)
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ rewrite_tac[FINITE_INSERT]
+  \\ match_mp_tac FINITE_BIGUNION
+  \\ simp[PULL_EXISTS]
+  \\ simp[IMAGE_COMPOSE]
+  \\ first_x_assum match_mp_tac
+  \\ Q.X_GEN_TAC`z`
+  \\ rw[PULL_EXISTS]
+  \\ res_tac
+  \\ Cases_on`x` \\ fs[]
+QED
 
 (* ----------------------------------------------------------------------
     isPREFIX
@@ -3553,6 +3649,24 @@ Proof
   Induct >> rw [nub_def] >> metis_tac [nub_set]
 QED
 
+Theorem all_distinct_nub_id:
+  !l. ALL_DISTINCT l ==> nub l = l
+Proof
+  Induct >> simp[nub_def]
+QED
+
+Theorem CARD_LIST_TO_SET_EQN:
+  CARD (LIST_TO_SET l) = LENGTH (nub l)
+Proof
+  metis_tac[nub_set, CARD_LIST_TO_SET_ALL_DISTINCT,
+            ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub]
+QED
+
+(* doesn't need to be simp, as nub_set is *)
+Theorem MEM_nub: MEM x (nub l) = MEM x l
+Proof simp[]
+QED
+
 val filter_helper = Q.prove (
    ‘!x l1 l2.
       ~MEM x l2 ==> (MEM x (FILTER (\x. x NOTIN set l2) l1) = MEM x l1)’,
@@ -3568,6 +3682,25 @@ val nub_append = Q.store_thm ("nub_append",
    >> BasicProvers.FULL_CASE_TAC
    >> rw []
    >> metis_tac [filter_helper]);
+
+Theorem nub_MAP_INJ:
+  INJ f (set ls) UNIV ==>
+  nub (MAP f ls) = MAP f (nub ls)
+Proof
+  Induct_on`ls`
+  \\ rw[]
+  \\ simp[nub_def]
+  \\ simp[Once COND_RAND, SimpRHS]
+  \\ `INJ f (set ls) UNIV`
+  by (
+    irule INJ_SUBSET
+    \\ goal_assum(first_assum o mp_then Any mp_tac)
+    \\ simp[SUBSET_DEF] )
+  \\ fs[]
+  \\ simp[MEM_MAP]
+  \\ fs[INJ_DEF]
+  \\ metis_tac[]
+QED
 
 val list_to_set_diff = Q.store_thm ("list_to_set_diff",
    ‘!l1 l2. set l2 DIFF set l1 = set (FILTER (\x. x NOTIN set l1) l2)’,
@@ -3585,10 +3718,9 @@ val length_nub_append = Q.store_thm ("length_nub_append",
             LENGTH (nub l1) + LENGTH (nub (FILTER (\x. ~MEM x l1) l2))’,
    rw [GSYM ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub]
    >> fs [FINITE_LIST_TO_SET, CARD_UNION_EQN]
-   >> ASSUME_TAC (Q.SPECL [‘l1’, ‘l2’] card_eqn_help)
-   >> ‘CARD (set l1 INTER set l2) <= CARD (set l2)’
-   by metis_tac [CARD_INTER_LESS_EQ, FINITE_LIST_TO_SET, INTER_COMM]
-   >> RW_TAC arith_ss []);
+   >> simp[GSYM card_eqn_help]
+   >> ‘CARD (set l1 INTER set l2) <= CARD (set l2)’ suffices_by simp[]
+   >> metis_tac [CARD_INTER_LESS_EQ, FINITE_LIST_TO_SET, INTER_COMM]);
 
 val ALL_DISTINCT_DROP = Q.store_thm("ALL_DISTINCT_DROP",
    ‘!ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (DROP n ls)’,
@@ -3627,13 +3759,15 @@ val SUM_MAP_PLUS = Q.store_thm("SUM_MAP_PLUS",
    ‘!f g ls. SUM (MAP (\x. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)’,
    NTAC 2 GEN_TAC >> Induct >> simp [SUM])
 
-val TAKE_LENGTH_ID_rwt = Q.store_thm("TAKE_LENGTH_ID_rwt",
-   ‘!l m. (m = LENGTH l) ==> (TAKE m l = l)’,
-   rw [TAKE_LENGTH_ID])
+Theorem TAKE_LENGTH_ID_rwt: !l m. (m = LENGTH l) ==> (TAKE m l = l)
+Proof rw [TAKE_LENGTH_ID]
+QED
 
-val TAKE_LENGTH_ID_rwt = Q.store_thm("TAKE_LENGTH_ID_rwt",
-   ‘!l m. (m = LENGTH l) ==> (TAKE m l = l)’,
-   rw [TAKE_LENGTH_ID])
+Theorem TAKE_LENGTH_ID_rwt2[simp]:
+   !l m. TAKE m l = l <=> LENGTH l <= m
+Proof
+  Induct >> simp[] >> Cases_on ‘m’ >> simp[]
+QED
 
 val ZIP_DROP = Q.store_thm("ZIP_DROP",
    ‘!a b n. n <= LENGTH a /\ (LENGTH a = LENGTH b) ==>

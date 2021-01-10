@@ -50,10 +50,7 @@ val MAPi_compute = store_thm(
 
 val _ = computeLib.add_persistent_funs ["MAPi_compute"]
 
-val LT_SUC = store_thm(
-  "LT_SUC",
-  ``n < SUC m <=> n = 0 \/ ?n0. n = SUC n0 /\ n0 < m``,
-  simp[EQ_IMP_THM] >> Cases_on `n` >> simp[]);
+val LT_SUC = arithmeticTheory.LT_SUC
 
 val MEM_MAPi = store_thm(
   "MEM_MAPi",

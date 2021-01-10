@@ -15,7 +15,7 @@ infix 8 via by suffices_by
 infix 9 using
 
 (* infixes for THEN shorthands *)
-infix >> >- >| \\ >>> >>- ??
+infix >> >- >| \\ >>> >>- ?? >~ >>~
 
 infix ~~ !~ Un Isct -- IN -*
 

@@ -12,6 +12,20 @@ type term     = Term.term
 type hol_type = Type.hol_type
 type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
+type struct_info_record = {
+   theory      : string*Arbnum.num*Arbnum.num,
+   parents     : (string*Arbnum.num*Arbnum.num) list,
+   types       : (string*int) list,
+   constants   : (string*hol_type) list,
+   axioms      : (string * thm) list,
+   definitions : (string * thm) list,
+   theorems    : (string * thm) list,
+   struct_ps   : (unit -> PP.pretty) option list,
+   struct_pcps : (unit -> PP.pretty) list,
+   mldeps      : string list,
+   thydata     : string list * Term.term list *
+                 (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
+ }
 
 open Feedback Lib Portable Dep;
 
@@ -196,10 +210,11 @@ fun mlower s m =
       NONE => raise Fail ("Couldn't print Theory" ^ s)
     | SOME(_, (_, ps)) => PP.block PP.CONSISTENT 0 ps
 
-fun pp_struct info_record = let
+fun pp_struct (info_record : struct_info_record) = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, axioms,
-       definitions,theorems,types,constants,struct_ps} = info_record
+       definitions,theorems,types,constants,struct_ps,
+       struct_pcps} = info_record
   val parents1 =
     List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                     parents0
@@ -247,6 +262,12 @@ fun pp_struct info_record = let
   fun pr_psl l =
        block CONSISTENT 0
          (pr_list pr_ps (add_newline >> add_newline) l)
+  fun pr_pcl l =
+      block CONSISTENT 0 (
+        pr_list (fn pf => block CONSISTENT 0 (lift pf ()))
+                (add_newline >> add_newline)
+                l
+      )
   val datfile =
       mlquote (
         holpathdb.reverse_lookup {
@@ -292,6 +313,7 @@ fun pp_struct info_record = let
                    \\"done\\n\" else ()" >> add_newline >>
         add_string ("val _ = Theory.load_complete "^ stringify name) >>
         jump >>
+        pr_pcl struct_pcps >>
         add_string "end" >> add_newline)
 in
   mlower ": struct" m
@@ -302,11 +324,11 @@ end
  *---------------------------------------------------------------------------*)
 
 
-fun pp_thydata info_record = let
+fun pp_thydata (info_record : struct_info_record) = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0,
        thydata = (thydata_strings,thydata_tms, thydata), mldeps,
-       axioms,definitions,theorems,types,constants,struct_ps} = info_record
+       axioms,definitions,theorems,types,constants,...} = info_record
   val parents1 =
       List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
@@ -343,19 +365,20 @@ fun pp_thydata info_record = let
                       constants
       end
 
-  val enc_db = let open HOLsexp in
-                 pair_encode (Integer o write_string share_data,Symbol)
-               end
   val enc_dblist =
-     let open HOLsexp
-       fun check cl =
+     let
+       open HOLsexp
+       val enc_db = Integer o write_string share_data
+       val enc_dbl = list_encode enc_db
+       val check =
            List.mapPartial (fn (nm, _) => if is_temp_binding nm then NONE
-                                          else SOME (nm, cl))
-       val axl  = check "A" axioms
-       val defl = check "D" definitions
-       val thml = check "T" theorems
+                                          else SOME nm)
+       val axl  = check axioms
+       val defl = check definitions
+       val thml = check theorems
      in
-       tagged_encode "thm-classes" (list_encode enc_db) (axl@defl@thml)
+       tagged_encode "thm-classes"
+                     (pair3_encode (enc_dbl, enc_dbl, enc_dbl)) (axl,defl,thml)
      end
 
   fun chunks w s =
@@ -392,7 +415,9 @@ fun pp_thydata info_record = let
       end
 in
   mlower ": dat" (lift HOLsexp.printer thysexp)
-end;
+end handle e as Interrupt => raise e
+         | e => raise ERR "pp_thydata"
+                      ("Caught exception: " ^ General.exnMessage e)
 
 
 

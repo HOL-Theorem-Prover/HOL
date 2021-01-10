@@ -1651,10 +1651,6 @@ val SURJECTIVE_IMAGE = store_thm ("SURJECTIVE_IMAGE",
   MP_TAC (ISPECL [``f:'a->'b``,``univ(:'a)``,``univ(:'b)``] SURJECTIVE_ON_IMAGE) THEN
   SIMP_TAC std_ss [IN_UNIV, SUBSET_UNIV]);
 
-(* TODO: they're in seqTheory; prove them manually and move to numTheory *)
-val LT_SUC = prove (``!a b. a < SUC b <=> a < b \/ (a = b)``, DECIDE_TAC);
-val LE_SUC = prove (``!a b. a <= SUC b <=> a <= b \/ (a = SUC b)``, DECIDE_TAC);
-
 val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
  ``!s t. FINITE s /\ FINITE t /\ CARD s <= CARD t
    ==> ?f:'a->'b. (IMAGE f s) SUBSET t /\
@@ -1688,7 +1684,7 @@ val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
   MAP_EVERY X_GEN_TAC [``t:'b->bool``, ``y:'b``] THEN
   SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT] THEN
   STRIP_TAC THEN POP_ASSUM K_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[LE_SUC] THEN STRIP_TAC THEN
+  STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC o SPEC ``t:'b->bool``) THEN ASM_REWRITE_TAC[] THEN
   DISCH_THEN(X_CHOOSE_THEN ``f:'a->'b`` STRIP_ASSUME_TAC) THEN
   EXISTS_TAC ``\z:'a. if z = x then (y:'b) else f(z)`` THEN
