@@ -2714,6 +2714,17 @@ Proof
  >> ASM_SET_TAC [space_def]
 QED
 
+Theorem IN_MEASURABLE_BOREL_EQ' :
+    !a f g. (!x. x IN space a ==> (f x = g x)) /\
+            g IN measurable a Borel ==> f IN measurable a Borel
+Proof
+    rw [IN_MEASURABLE_BOREL, IN_FUNSET]
+ >> POP_ASSUM (MP_TAC o Q.SPEC `c`)
+ >> Suff ‘{x | g x < Normal c} INTER space a =
+          {x | f x < Normal c} INTER space a’ >- rw []
+ >> ASM_SET_TAC []
+QED
+
 (*****************************************************)
 
 val BOREL_MEASURABLE_SETS_RO_r = prove (
@@ -3218,30 +3229,48 @@ val BOREL_MEASURABLE_SETS_SING_r = prove (
      by RW_TAC std_ss [IN_FUNSET, BOREL_MEASURABLE_SETS_CO]
  >> METIS_TAC []);
 
-val BOREL_MEASURABLE_SETS_SING = store_thm (* was: BOREL_MEASURABLE_SING *)
-  ("BOREL_MEASURABLE_SETS_SING", ``!c. {c} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_SING : (* was: BOREL_MEASURABLE_SING *)
+    !c. {c} IN subsets Borel
+Proof
     GEN_TAC >> Cases_on `c`
  >- REWRITE_TAC [BOREL_MEASURABLE_SETS_NEGINF']
  >- REWRITE_TAC [BOREL_MEASURABLE_SETS_POSINF']
- >> REWRITE_TAC [BOREL_MEASURABLE_SETS_SING_r]);
+ >> REWRITE_TAC [BOREL_MEASURABLE_SETS_SING_r]
+QED
 
-val BOREL_MEASURABLE_SETS_SING' = store_thm (* new *)
-  ("BOREL_MEASURABLE_SETS_SING'", ``!c. {x | x = c} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_FINITE :
+    !s. FINITE s ==> s IN subsets Borel
+Proof
+    HO_MATCH_MP_TAC FINITE_INDUCT
+ >> rpt STRIP_TAC
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY \\
+     REWRITE_TAC [SIGMA_ALGEBRA_BOREL])
+ >> ‘e INSERT s = {e} UNION s’ by SET_TAC []
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION
+ >> rw [BOREL_MEASURABLE_SETS_SING, SIGMA_ALGEBRA_BOREL]
+QED
+
+Theorem BOREL_MEASURABLE_SETS_SING' :
+    !c. {x | x = c} IN subsets Borel
+Proof
     GEN_TAC
  >> `{x | x = c} = {c}` by RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_SING]
- >> POP_ORW >> Cases_on `c`
- >- REWRITE_TAC [BOREL_MEASURABLE_SETS_NEGINF']
- >- REWRITE_TAC [BOREL_MEASURABLE_SETS_POSINF']
- >> REWRITE_TAC [BOREL_MEASURABLE_SETS_SING_r]);
+ >> POP_ORW
+ >> REWRITE_TAC [BOREL_MEASURABLE_SETS_SING]
+QED
 
-val BOREL_MEASURABLE_SETS_NOT_SING = store_thm
-  ("BOREL_MEASURABLE_SETS_NOT_SING", ``!c. {x | x <> c} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_NOT_SING :
+    !c. {x | x <> c} IN subsets Borel
+Proof
     RW_TAC std_ss []
  >> `{x | x <> c} = (space Borel) DIFF ({c})`
-      by RW_TAC std_ss [SPACE_BOREL, EXTENSION, IN_DIFF, IN_SING, GSPECIFICATION, IN_UNIV]
+      by RW_TAC std_ss [SPACE_BOREL, EXTENSION, IN_DIFF, IN_SING, GSPECIFICATION,
+                        IN_UNIV]
  >> POP_ORW
  >> METIS_TAC [SIGMA_ALGEBRA_BOREL, BOREL_MEASURABLE_SETS_SING,
-               sigma_algebra_def, algebra_def]);
+               sigma_algebra_def, algebra_def]
+QED
 
 (* For backwards compatibilities *)
 val BOREL_MEASURABLE_SETS1 = save_thm
@@ -3295,20 +3324,21 @@ val BOREL_MEASURABLE_SETS = store_thm
 (*        Borel measurable functions           *)
 (* ******************************************* *)
 
-val IN_MEASURABLE_BOREL_CONST = store_thm
-  ("IN_MEASURABLE_BOREL_CONST",
-  ``!a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==> f IN measurable a Borel``,
- (* proof *)
-    RW_TAC std_ss [IN_MEASURABLE_BOREL,IN_FUNSET, IN_UNIV]
+Theorem IN_MEASURABLE_BOREL_CONST :
+    !a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==>
+            f IN measurable a Borel
+Proof
+    RW_TAC std_ss [IN_MEASURABLE_BOREL, IN_FUNSET, IN_UNIV]
  >> Cases_on `Normal c <= k`
  >- (`{x | f x < Normal c} INTER space a = {}`
-         by  (RW_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,IN_INTER]
+         by  (RW_TAC std_ss [EXTENSION, GSPECIFICATION, NOT_IN_EMPTY, IN_INTER]
               >> METIS_TAC [extreal_lt_def])
-      >> METIS_TAC [sigma_algebra_def,algebra_def])
+      >> METIS_TAC [sigma_algebra_def, algebra_def])
  >> `{x | f x < Normal c} INTER space a = space a`
-      by (RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_INTER]
+      by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
           >> METIS_TAC [extreal_lt_def])
- >> METIS_TAC [sigma_algebra_def,algebra_def,INTER_IDEMPOT,DIFF_EMPTY]);
+ >> METIS_TAC [sigma_algebra_def, algebra_def, INTER_IDEMPOT,DIFF_EMPTY]
+QED
 
 Theorem IN_MEASURABLE_BOREL_CONST' :
     !a k. sigma_algebra a ==> (\x. k) IN measurable a Borel
@@ -4484,78 +4514,6 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*  Construction of Borel measure space by CARATHEODORY_SEMIRING             *)
 (* ------------------------------------------------------------------------- *)
-
-(* cf. integrationTheory.INTERVAL_UPPERBOUND for open/closed intervals *)
-Theorem right_open_interval_upperbound :
-    !a b. a < b ==> interval_upperbound (right_open_interval a b) = b
-Proof
-    RW_TAC std_ss [interval_upperbound]
- >- (fs [EXTENSION, GSPECIFICATION, in_right_open_interval] \\
-     METIS_TAC [REAL_LE_REFL])
- >> RW_TAC std_ss [right_open_interval, GSPECIFICATION,
-                   GSYM REAL_LE_ANTISYM]
- >- (MATCH_MP_TAC REAL_IMP_SUP_LE >> rw []
-     >- (Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL]) \\
-     MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
- >> MATCH_MP_TAC REAL_LE_EPSILON
- >> rpt STRIP_TAC
- >> Q.ABBREV_TAC `y = sup {x | a <= x /\ x < b}`
- >> `b <= y + e <=> b - e <= y` by REAL_ARITH_TAC >> POP_ORW
- >> Q.UNABBREV_TAC `y`
- >> MATCH_MP_TAC REAL_IMP_LE_SUP >> rw []
- >- (Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL])
- >- (Q.EXISTS_TAC `b` >> rw [] \\
-     MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
- >> Cases_on `a <= b - e`
- >- (Q.EXISTS_TAC `b - e` >> rw [REAL_LE_TRANS] \\
-     Q.PAT_X_ASSUM `0 < e` MP_TAC >> REAL_ARITH_TAC)
- >> Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL]
- >> MATCH_MP_TAC REAL_LT_IMP_LE >> fs [real_lte]
-QED
-
-Theorem right_open_interval_lowerbound :
-    !a b. a < b ==> interval_lowerbound (right_open_interval a b) = a
-Proof
-    RW_TAC std_ss [interval_lowerbound]
- >- (fs [EXTENSION, GSPECIFICATION, in_right_open_interval] \\
-     METIS_TAC [REAL_LE_REFL])
- >> RW_TAC std_ss [right_open_interval, GSPECIFICATION]
- >> MATCH_MP_TAC REAL_INF_MIN >> rw []
-QED
-
-Theorem right_open_interval_two_bounds :
-    !a b. interval_lowerbound (right_open_interval a b) <=
-          interval_upperbound (right_open_interval a b)
-Proof
-    rpt GEN_TAC
- >> Cases_on `a < b`
- >- (rw [right_open_interval_upperbound, right_open_interval_lowerbound] \\
-     IMP_RES_TAC REAL_LT_IMP_LE)
- >> fs [GSYM right_open_interval_empty]
- >> rw [interval_lowerbound, interval_upperbound, le_refl]
-QED
-
-Theorem right_open_interval_between_bounds :
-    !x a b. x IN right_open_interval a b <=>
-            interval_lowerbound (right_open_interval a b) <= x /\
-            x < interval_upperbound (right_open_interval a b)
-Proof
-    rpt GEN_TAC
- >> reverse (Cases_on `a < b`)
- >- (FULL_SIMP_TAC std_ss [GSYM right_open_interval_empty] \\
-     rw [NOT_IN_EMPTY, INTERVAL_BOUNDS_EMPTY] \\
-     REAL_ARITH_TAC)
- >> rw [in_right_open_interval]
- >> EQ_TAC >> rpt STRIP_TAC (* 4 subgoals *)
- >| [ (* goal 1 (of 4) *)
-      fs [right_open_interval_lowerbound],
-      (* goal 2 (of 4) *)
-      fs [right_open_interval_upperbound],
-      (* goal 3 (of 4) *)
-      rfs [right_open_interval_lowerbound, right_open_interval_upperbound],
-      (* goal 4 (of 4) *)
-      rfs [right_open_interval_lowerbound, right_open_interval_upperbound] ]
-QED
 
 (* The content (length) of [a, b), cf. integrationTheory.content *)
 local
@@ -6658,7 +6616,8 @@ QED
 val lebesgueI_borel = borel_imp_lebesgue_sets;
 
 (* TODO: prove this theorem with PSUBSET, i.e. the existence of non-Borel
-   Lebesgue-measurable sets. Currently it's useless. *)
+   Lebesgue-measurable sets.
+ *)
 Theorem lborel_subset_lebesgue :
     (measurable_sets lborel) SUBSET (measurable_sets lebesgue)
 Proof
@@ -6680,7 +6639,7 @@ QED
 
 val borel_measurable_lebesgueI = borel_imp_lebesgue_measurable;
 
-Theorem negligible_in_sets_lebesgue : (* was: lebesgueI_negligible *)
+Theorem negligible_in_lebesgue : (* was: lebesgueI_negligible *)
     !s. negligible s ==> s IN measurable_sets lebesgue
 Proof
     RW_TAC std_ss [negligible]
@@ -6688,9 +6647,9 @@ Proof
  >> METIS_TAC [integrable_on, line, GSYM interval]
 QED
 
-val lebesgueI_negligible = negligible_in_sets_lebesgue;
+val lebesgueI_negligible = negligible_in_lebesgue;
 
-Theorem lebesgue_negligible : (* was: lmeasure_eq_0 *)
+Theorem lebesgue_of_negligible : (* was: lmeasure_eq_0 *)
     !s. negligible s ==> (measure lebesgue s = 0)
 Proof
     RW_TAC std_ss [measure_lebesgue]
@@ -6705,7 +6664,7 @@ Proof
  >> SIMP_TAC std_ss [sup_sing]
 QED
 
-val lmeasure_eq_0 = lebesgue_negligible;
+val lmeasure_eq_0 = lebesgue_of_negligible;
 
 Theorem lebesgue_measure_iff_LIMSEQ : (* was: lmeasure_iff_LIMSEQ *)
     !A m. A IN measurable_sets lebesgue /\ 0 <= m ==>
@@ -6778,7 +6737,7 @@ Theorem lebesgue_sing =
 Theorem lebesgue_empty :
     measure lebesgue {} = 0
 Proof
-    MATCH_MP_TAC lebesgue_negligible
+    MATCH_MP_TAC lebesgue_of_negligible
  >> REWRITE_TAC [NEGLIGIBLE_EMPTY]
 QED
 
@@ -9417,6 +9376,104 @@ Proof
        IN_MEASURABLE_BOREL_SUB_tactics_5n ])
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Two-dimensional Borel sigma-algebra (extreal version), author: Chun Tian *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem IN_MEASURABLE_BOREL_BOREL_I :
+    (\x. x) IN measurable Borel Borel
+Proof
+    ‘(\x :extreal. x) = I’ by METIS_TAC [I_THM]
+ >> POP_ORW
+ >> MATCH_MP_TAC MEASURABLE_I
+ >> REWRITE_TAC [SIGMA_ALGEBRA_BOREL]
+QED
+
+Theorem IN_MEASURABLE_BOREL_BOREL_ABS :
+    abs IN measurable Borel Borel
+Proof
+    MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS
+ >> Q.EXISTS_TAC ‘\x. x’
+ >> rw [SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_I, SPACE_BOREL]
+QED
+
+Theorem SIGMA_ALGEBRA_BOREL_2D :
+    sigma_algebra (Borel CROSS Borel)
+Proof
+    MATCH_MP_TAC SIGMA_ALGEBRA_PROD_SIGMA
+ >> rw [SPACE_BOREL, subset_class_def]
+QED
+
+Theorem SPACE_BOREL_2D :
+    space (Borel CROSS Borel) = UNIV
+Proof
+    REWRITE_TAC [SPACE_PROD_SIGMA, SPACE_BOREL, CROSS_UNIV]
+QED
+
+Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
+    !a X Y. sigma_algebra a /\
+            X IN measurable a Borel /\ Y IN measurable a Borel ==>
+            (\x. (X x,Y x)) IN measurable a (Borel CROSS Borel)
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = \x. (X x,Y x)’
+ >> simp [IN_MEASURABLE, IN_FUNSET, SPACE_PROD_SIGMA, SPACE_BOREL]
+ >> STRONG_CONJ_TAC >- REWRITE_TAC [SIGMA_ALGEBRA_BOREL_2D]
+ >> DISCH_TAC
+ (* stage work *)
+ >> Suff ‘IMAGE (\s. PREIMAGE g s INTER space a)
+                (subsets (Borel CROSS Borel)) SUBSET subsets a’
+ >- (rw [IN_IMAGE, SUBSET_DEF] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘s’ >> art [])
+ >> Know ‘IMAGE (\s. PREIMAGE g s INTER space a)
+                (prod_sets (subsets Borel) (subsets Borel)) SUBSET subsets a’
+ >- (Q.UNABBREV_TAC ‘g’ \\
+     rw [IN_IMAGE, SUBSET_DEF, IN_PROD_SETS] \\
+     simp [PREIMAGE_CROSS, o_DEF, ETA_AX] \\
+    ‘PREIMAGE X t INTER PREIMAGE Y u INTER space a =
+       (PREIMAGE X t INTER space a) INTER (PREIMAGE Y u INTER space a)’
+      by SET_TAC [] >> POP_ORW \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER \\
+     fs [IN_MEASURABLE])
+ >> DISCH_TAC
+ (* applying SIGMA_SUBSET *)
+ >> Know ‘subsets (sigma (space a)
+                         (IMAGE (\s. PREIMAGE g s INTER space a)
+                                (prod_sets (subsets Borel) (subsets Borel)))) SUBSET
+          subsets a’
+ >- (MATCH_MP_TAC SIGMA_SUBSET >> rw [])
+ >> POP_ASSUM K_TAC
+ >> DISCH_TAC
+ (* stage work *)
+ >> Suff ‘IMAGE (\s. PREIMAGE g s INTER space a) (subsets (Borel CROSS Borel)) =
+          subsets (sigma (space a)
+                         (IMAGE (\s. PREIMAGE g s INTER space a)
+                                (prod_sets (subsets Borel) (subsets Borel))))’
+ >- (Rewr' >> art [])
+ >> REWRITE_TAC [prod_sigma_def]
+ (* applying PREIMAGE_SIGMA *)
+ >> MATCH_MP_TAC PREIMAGE_SIGMA
+ >> rw [IN_FUNSET, IN_CROSS, SPACE_BOREL, subset_class_def]
+ >> MATCH_MP_TAC SUBSET_CROSS
+ >> REWRITE_TAC [SUBSET_UNIV]
+QED
+
+Theorem IN_MEASURABLE_BOREL_2D_FUNCTION :
+    !a X Y f. sigma_algebra a /\
+              X IN measurable a Borel /\ Y IN measurable a Borel /\
+              f IN measurable (Borel CROSS Borel) Borel ==>
+              (\x. f (X x,Y x)) IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = \x. (X x,Y x)’
+ >> ‘(\x. f (X x,Y x)) = f o g’ by rw [Abbr ‘g’, o_DEF] >> POP_ORW
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘Borel CROSS Borel’ >> art []
+ >> Q.UNABBREV_TAC ‘g’
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_2D_VECTOR >> art []
+QED
+
 val _ = export_theory ();
 
 (* References:
@@ -9430,7 +9487,7 @@ val _ = export_theory ();
   [4] Hurd, J.: Formal verification of probabilistic algorithms. (2001).
   [5] Wikipedia: https://en.wikipedia.org/wiki/Henri_Lebesgue
   [6] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
-  [7] https://en.wikipedia.org/wiki/%C3%89mile_Borel
+  [7] Emile Borel: https://en.wikipedia.org/wiki/%C3%89mile_Borel
   [8] Hardy, G.H., Littlewood, J.E.: A Course of Pure Mathematics, Tenth Edition.
       Cambridge University Press, London (1967).
  *)
