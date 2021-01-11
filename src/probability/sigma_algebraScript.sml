@@ -3103,7 +3103,7 @@ Proof
 QED
 
 (* Theorem 14.17 (i): alternative definition of product sigma-algebra [7, p.149] *)
-Theorem prod_sigma_alt :
+Theorem prod_sigma_alt_sigma_functions :
     !A B. sigma_algebra A /\ sigma_algebra B ==>
           prod_sigma A B =
           sigma_functions (space A CROSS space B)
