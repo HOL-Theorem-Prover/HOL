@@ -39,8 +39,8 @@ def header(modules='core', codalabDependencies=nil)
     'java',
     '-ea',
     '-Dmodules='+modules,
-    # Memory size
-    letDefault(:memsize, 'default'),
+    # Memory size; set to low to work with HOL regression server
+    letDefault(:memsize, 'low'),
     sel(:memsize, {
       'tiny' => l('-Xms2G', '-Xmx4G'),
       'low' => l('-Xms5G', '-Xmx7G'),

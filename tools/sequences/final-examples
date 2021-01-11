@@ -40,3 +40,7 @@
 !!examples/algebra
 !!examples/simple_complexity
 !!examples/AKS
+
+# Lassie examples
+!examples/lassie/src
+!examples/lassie/examples
