@@ -3010,10 +3010,10 @@ Proof
      rw [SUBSET_DEF, IN_PROD_SETS] \\
      qexistsl_tac [‘interval (a,b)’, ‘interval (c,d)’] \\
      rw [OPEN_interval, borel_measurable_sets_gr_less])
- (* applying prod_sigma_alt *)
+ (* applying prod_sigma_alt_sigma_functions *)
  >> Know ‘borel CROSS borel =
           sigma (space borel CROSS space borel) (binary borel borel) (binary FST SND) {0; 1}’
- >- (MATCH_MP_TAC prod_sigma_alt \\
+ >- (MATCH_MP_TAC prod_sigma_alt_sigma_functions \\
      REWRITE_TAC [sigma_algebra_borel])
  >> Rewr'
  >> rw [sigma_functions_def, binary_def, space_borel, GSYM CROSS_UNIV]
