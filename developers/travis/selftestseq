@@ -16,4 +16,4 @@ src/finite_maps
 !examples/zipper
 !src/quotient/examples/lambda
 !examples/lassie/src
-!examples/lassie/examples
+!examples/lassie/regression
