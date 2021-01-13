@@ -9,6 +9,7 @@ val hard_fail = true;
 val _ = testutils.diemode := ProcessExit
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
+val _ = Feedback.emit_MESG := false
 
 (* For manual
 
@@ -67,15 +68,30 @@ end;
 fun print_term' t = (print UnicodeChars.ldquo;
                      print (ppstring pp_term t);
                      print UnicodeChars.rdquo);
+fun pterm_to_string pfx t = pfx ^ " " ^ UnicodeChars.ldquo ^ term_to_string t ^
+                            UnicodeChars.rdquo
+
 fun print_thm' t = print (ppstring pp_thm t);
 
 val test_term_thm_gen = test_gen print_term' print_thm' print_term'
-
-val test_conv = test_term_thm_gen (fn (inp, out, res) => let
-  val (l, r) = dest_eq (concl res)
-in
-  (aconv l inp andalso aconv r out)
-end)
+val isHE = (fn HOL_ERR _ => true | _ => false)
+val is_unchHE = (fn HOL_ERR _ => true | UNCHANGED => true | _ => false)
+fun valid_conv_result inp out th = concl th ~~ mk_eq(inp,out)
+fun test_conv nm c (inp,outopt) =
+    case outopt of
+        NONE => shouldfail {
+                 checkexn = is_unchHE,
+                 printarg = pterm_to_string (nm ^ "(valid exn)"),
+                 printresult = term_to_string o concl,
+                 testfn = quietly c
+               } inp
+      | SOME t =>
+        let
+          val _ = tprint (pterm_to_string nm inp)
+        in
+          require_msg (check_result (valid_conv_result inp t))
+                      thm_to_string (quietly c) inp
+        end
 
 
 (* ----------------------------------------------------------------------
@@ -203,16 +219,14 @@ val _ = app test [
 
 ]
 
-fun shouldfail s = let
-  val _ = tprint ("Should NOT parse: " ^ s)
-in
-  case Lib.total (trace ("show_typecheck_errors", 0) Parse.Term) [QUOTE s] of
-      NONE => OK()
-    | SOME t => die ("FAILED!\n  Parsed to: " ^ term_to_string t)
-end
+val parsefails =
+    shouldfail {checkexn = isHE,
+                printarg = fn s => "Should NOT parse: " ^ s,
+                printresult = term_to_string,
+                testfn = fn s => trace ("show_typecheck_errors", 0) Parse.Term
+                                       [QUOTE s]};
 
-
-val _ = app shouldfail [
+val _ = app parsefails [
       "case x of NONE => F | y .| SOME(x,y) => x < y"
 ]
 
@@ -1069,42 +1083,44 @@ val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
 (* Compilation to nchotomies     *)
 (*********************************)
 
-val test_nchot = test_gen (fn l => (
-  print "[";
-  OldPP.pr_list print_term' (fn () => print ", ") (fn () => ()) l;
-  print "]"))
-  print_thm' print_term' (fn (inp, out, res) => aconv  out (concl res))
-  "nchotomy_of_pats" nchotomy_of_pats
-
+fun test_nchot (inp,out) =
+    let
+      val _ = tprint ("nchotomy_of_pats: [" ^
+                      String.concatWith "," (map term_to_string inp) ^ "]")
+    in
+      require_msg (check_result (aconv out o concl)) thm_to_string
+                  (quietly nchotomy_of_pats)
+                  inp
+    end
 
 val _ =  test_nchot ([``\x:unit. (NONE : num option)``,
-   ``\x:num. SOME x``] , SOME ``!x. (x = NONE) \/ ?v1:num. x = SOME v1``)
+   ``\x:num. SOME x``] , ``!x. (x = NONE) \/ ?v1:num. x = SOME v1``)
 
 val _ =  test_nchot ([``\x:num. x``, ``\x:num. x``],
-  SOME ``!x. ?v0:num. x = v0``)
+  ``!x. ?v0:num. x = v0``)
 
 val _ =  test_nchot ([
    ``\v:bool. (v, F, T)``,
    ``\v:bool. (F, T, v)``,
    ``\(v1:bool, v2:bool). (v1, v2, F)``,
    ``\(v1:bool, v2:bool). (v1, v2, F)``],
-   SOME ``!x.
+   ``!x.
      (x = (T,T,T)) \/ (x = (T,T,F)) \/ (x = (F,T,T)) \/ (x = (F,T,F)) \/
      (?v0. x = (v0,F,T)) \/ ?v0. x = (v0,F,F)``)
 
 val _ =  test_nchot ([
    ``\(x:num, y:num). (SOME x, SOME y)``,
    ``\(x : num option, y : num option). (x, y)``],
-   SOME ``!x.
+   ``!x.
      (?v1. x = (NONE,v1)) \/ (?v2. x = (SOME v2,NONE)) \/
      ?(v2:num) (v3:num). x = (SOME v2,SOME v3)``)
 
-val _ =  test_nchot ([``\_:unit. 3``, ``\x:num. x``], SOME (
-  ``!x. (x = 3) \/ ?v1. v1 <> 3 /\ (x = v1)``))
+val _ =  test_nchot ([``\_:unit. 3``, ``\x:num. x``],
+  ``!x. (x = 3) \/ ?v1. v1 <> 3 /\ (x = v1)``)
 
-val _ =  test_nchot ([``\_:unit. 0``, ``\_:unit. SUC 0``, ``\_:unit. SUC (SUC 0)``], SOME (
+val _ =  test_nchot ([``\_:unit. 0``, ``\_:unit. SUC 0``, ``\_:unit. SUC (SUC 0)``],
   ``!x. (x = 0) \/ (x = SUC 0) \/ (x = SUC (SUC 0)) \/
-     ?v3. x = SUC (SUC (SUC v3))``))
+     ?v3. x = SUC (SUC (SUC v3))``)
 
 
 (*********************************)
@@ -1136,17 +1152,39 @@ val _ = test_conv "PMATCH_REMOVE_REDUNDANT_CONV" PMATCH_REMOVE_REDUNDANT_CONV (t
 (* Exhaustiveness                *)
 (*********************************)
 
-val test_precond = test_term_thm_gen (fn (inp, out, res) => let
-  val (r, _) = dest_imp_only (concl res)
-in
-  (aconv r out)
-end)
+fun precond_check (inp, out) res =
+    let
+      val (r, _) = dest_imp_only (concl res)
+    in
+      r ~~ out
+    end
+fun test_precond nm c (inp,outopt) =
+    case outopt of
+        SOME t =>
+        let
+          val _ = tprint (pterm_to_string (nm ^ "[precond]") inp)
+        in
+          require_msg (check_result (precond_check(inp,t))) thm_to_string
+                      (quietly c) inp
+        end
+      | NONE => shouldfail {checkexn = K true,
+                            printarg = pterm_to_string (nm ^ "[precond](exn)"),
+                            printresult = thm_to_string, testfn = quietly c}
+                           inp
 
-val test_rhs = test_term_thm_gen (fn (inp, out, res) => let
-  val (_, r) = dest_eq (concl res)
-in
-  (aconv r out)
-end)
+fun rhs_check exp th = rhs (concl th) ~~ exp
+fun test_rhs nm c (inp,outopt) =
+    case outopt of
+        SOME t =>
+        let
+          val _ = tprint (pterm_to_string (nm ^ "[rhs]") inp)
+        in
+          require_msg (check_result (rhs_check t)) thm_to_string (quietly c) inp
+        end
+      | NONE => shouldfail {checkexn = K true,
+                            printarg = pterm_to_string (nm ^ "[rhs](exn)"),
+                            printresult = thm_to_string, testfn = quietly c}
+                           inp;
 
 val t =
    ``PMATCH ((x :'a option),(z :'b option))
