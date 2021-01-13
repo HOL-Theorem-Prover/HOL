@@ -1483,8 +1483,9 @@ Proof
   >- (qx_gen_tac ‘a’ >> Cases >> simp[]
       >- (disch_then (mp_tac o C Q.AP_THM ‘[]’ o Q.AP_TERM ‘FAPPLY’) >>
           simp[]) >>
-      strip_tac >> simp[fmap_EXT] >> disj1_tac >> simp[EXTENSION] >>
-      qexists_tac ‘[]’ >> simp[]) >>
+      strip_tac >> simp[fmap_EXT] >>
+      strip_tac >> dxrule (SUBSET_ANTISYM_EQ |> iffRL |> cj 2) >>
+      simp[SUBSET_DEF]) >>
   Cases >> simp[]
   >- (simp[fmap_EXT, FUN_FMAP_DEF] >> strip_tac >>
       rename [‘packed (FullNode ctl ctr)’] >>
@@ -1494,8 +1495,8 @@ Proof
       rpt (dxrule_all_then strip_assume_tac packed_domain_empty) >> gvs[] >>
       qpat_x_assum ‘packed (FullNode Empty Empty)’ mp_tac >> simp[packed_def] >>
       qexistsl_tac [‘[T]’, ‘[F]’] >> simp[])
-  >- (strip_tac >> simp[fmap_EXT] >> disj1_tac >> simp[EXTENSION] >>
-      qexists_tac‘[]’ >> simp[]) >>
+  >- (strip_tac >> simp[fmap_EXT] >> strip_tac >>
+      dxrule (SUBSET_ANTISYM_EQ |> iffRL |> cj 2) >> simp[SUBSET_DEF]) >>
   strip_tac >> simp[fmap_EXT] >> rw[] >>
   first_x_assum irule (* 2 *)
   >- (reverse (rpt conj_tac) (* 3 *)

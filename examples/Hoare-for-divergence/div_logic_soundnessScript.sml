@@ -70,7 +70,7 @@ Proof
   \\ rw [] \\ CCONTR_TAC \\ fs []
   \\ Cases_on ‘∃j. i < LENGTH (FLAT (GENLIST f j))’ \\ fs []
   THEN1
-   (fs [GSYM IMP_DISJ_THM] \\ first_x_assum drule \\ fs []
+   (first_x_assum $ drule_at Concl \\ fs []
     \\ first_x_assum (qspec_then ‘j’ mp_tac)
     \\ rw[] \\ fs [FLAT_def]
     \\ fs [LNTH_LAPPEND,LNTH_fromList])
