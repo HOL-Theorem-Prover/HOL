@@ -2994,7 +2994,7 @@ val prod_sigma_def = Define
 
 val _ = overload_on ("CROSS", “prod_sigma”);
 
-Theorem MEASURABLE_PROD_SIGMA :
+Theorem MEASURABLE_PROD_SIGMA' :
     !a a1 a2 f. sigma_algebra a /\
       (FST o f) IN measurable a a1 /\ (SND o f) IN measurable a a2 ==>
        f IN measurable a (a1 CROSS a2)
@@ -3017,6 +3017,19 @@ Proof
        by (RW_TAC std_ss [Once EXTENSION, IN_INTER] >> DECIDE_TAC)
  >> PROVE_TAC [sigma_algebra_def, ALGEBRA_INTER]
 QED
+
+(* |- !a a1 a2 f.
+        sigma_algebra a /\ FST o f IN measurable a a1 /\
+        SND o f IN measurable a a2 ==>
+        f IN
+        measurable a
+          (sigma (space a1 CROSS space a2)
+             (prod_sets (subsets a1) (subsets a2)))
+
+   NOTE: this theorem is used by the "miller" example.
+ *)
+Theorem MEASURABLE_PROD_SIGMA =
+    REWRITE_RULE [prod_sigma_def] MEASURABLE_PROD_SIGMA';
 
 (* prod_sigma is indeed a sigma-algebra *)
 Theorem SIGMA_ALGEBRA_PROD_SIGMA :
