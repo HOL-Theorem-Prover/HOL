@@ -1,11 +1,14 @@
 CLINE_OPTIONS=-j1
 
-all: $(DEFAULT_TARGETS) LassieTestTheory.sml sempre
+all: LassieTestTheory.sml sempre
 .PHONY: all
 
 sempre:
 	export LASSIEDIR=../ &&\
-	./init.sh
+	./init.sh &&\
+	cd ../sempre &&\
+	ant core interactive &&\
+	cd ../src
 .PHONY: sempre
 
 LassieTestTheory.sml: sempre
