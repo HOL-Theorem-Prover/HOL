@@ -2420,6 +2420,8 @@ Definition indep_families_def :
     indep_families p q r = !s t. s IN q /\ t IN r ==> indep p s t
 End
 
+val _ = overload_on("indep_sets", “indep_families”);
+
 (* 5. extension of `indep_families`: pairwise independent sets/collections of events *)
 Definition pairwise_indep_sets :
     pairwise_indep_sets p A (J :'index set) =
@@ -2427,8 +2429,9 @@ Definition pairwise_indep_sets :
 End
 
 Theorem pairwise_indep_sets_def :
-    !p A J. pairwise_indep_sets p A J <=>
-            !i j. i IN J /\ j IN J /\ i <> j ==> indep_families p (A i) (A j)
+    !p A (J :'index set).
+       pairwise_indep_sets p A J <=>
+       !i j. i IN J /\ j IN J /\ i <> j ==> indep_families p (A i) (A j)
 Proof
     RW_TAC std_ss [pairwise_indep_sets, pairwise]
 QED
@@ -2447,6 +2450,8 @@ Definition indep_rv_def :
             indep p ((PREIMAGE X a) INTER p_space p)
                     ((PREIMAGE Y b) INTER p_space p)
 End
+
+val _ = overload_on("indep_vars", “indep_rv”);
 
 (* 8. extension of `indep_rv`: pairwise independent random variables *)
 Definition pairwise_indep_vars :
@@ -2500,12 +2505,6 @@ val INDEP_SYM_EQ = store_thm
 val INDEP_FAMILIES_SYM = store_thm
   ("INDEP_FAMILIES_SYM", ``!p q r. indep_families p q r ==> indep_families p r q``,
     RW_TAC std_ss [indep_families_def]
- >> MATCH_MP_TAC INDEP_SYM
- >> FIRST_X_ASSUM MATCH_MP_TAC >> art []);
-
-val INDEP_RV_SYM = store_thm
-  ("INDEP_RV_SYM", ``!p X Y s t. indep_rv p X Y s t ==> indep_rv p Y X t s``,
-    RW_TAC std_ss [indep_rv_def]
  >> MATCH_MP_TAC INDEP_SYM
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []);
 
@@ -3060,8 +3059,7 @@ val _ = overload_on ("tail_algebra", ``tail_algebra_of_rv``);
   `sigma_functions` (martingaleTheory).
  *)
 Theorem Kolmogorov_0_1_Law :
-    !p E. prob_space p /\
-          (!n. (E n) IN events p) /\ indep_events p E UNIV ==>
+    !p E. prob_space p /\ (!n. (E n) IN events p) /\ indep_events p E UNIV ==>
           !e. e IN subsets (tail_algebra p E) ==> (prob p e = 0) \/ (prob p e = 1)
 Proof
     RW_TAC std_ss [tail_algebra_def, subsets_def, IN_BIGINTER_IMAGE, IN_UNIV]
@@ -3278,9 +3276,11 @@ val covariance_def = Define
    `covariance p X Y =
       expectation p (\x. (X x - expectation p X) * (Y x - expectation p Y))`;
 
-val covariance_self = store_thm
-  ("covariance_self", ``!p X. covariance p X X = variance p X``,
-    RW_TAC std_ss [variance_alt, covariance_def, pow_2]);
+Theorem covariance_self :
+    !p X. covariance p X X = variance p X
+Proof
+    RW_TAC std_ss [variance_alt, covariance_def, pow_2]
+QED
 
 (* i.e. `covariance p X Y` is zero if X and Y are uncorelated *)
 Theorem uncorrelated_thm :
@@ -7705,10 +7705,11 @@ Proof
 QED
 
 (* r.v.'s having indentical distributions have the same integrability *)
-Theorem identical_distribution_integrable :
-    !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
-          identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
-          !(n :num). integrable p (X n)
+Theorem identical_distribution_integrable_general :
+    !p X (J :'index set). prob_space p /\
+         (!n. n IN J ==> random_variable (X n) p Borel) /\
+          identical_distribution p X Borel UNIV /\
+         (?i. i IN J /\ integrable p (X i)) ==> !n. n IN J ==> integrable p (X n)
 Proof
     RW_TAC std_ss [identical_distribution_def, IN_UNIV]
  >> ‘X n IN Borel_measurable (m_space p,measurable_sets p)’
@@ -7718,25 +7719,41 @@ Proof
      MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> rw [SIGMA_ALGEBRA_BOREL] \\
      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> rw [SIGMA_ALGEBRA_BOREL])
  >> DISCH_TAC
- >> MP_TAC (Q.SPECL [‘p’, ‘X (0 :num)’, ‘\x. x’] expectation_distribution)
+ >> MP_TAC (Q.SPECL [‘p’, ‘X (i :'index)’, ‘\x. x’] expectation_distribution)
  >> RW_TAC std_ss [o_DEF]
- >> MP_TAC (Q.SPECL [‘p’, ‘X (n :num)’, ‘\x. x’] expectation_distribution)
+ >> MP_TAC (Q.SPECL [‘p’, ‘X (n :'index)’, ‘\x. x’] expectation_distribution)
  >> RW_TAC std_ss [o_DEF]
- >> Suff ‘integrable (space Borel,subsets Borel,distribution p (X 0)) (\x. x) <=>
+ >> Suff ‘integrable (space Borel,subsets Borel,distribution p (X i)) (\x. x) <=>
           integrable (space Borel,subsets Borel,distribution p (X n)) (\x. x)’
  >- METIS_TAC []
  (* applying integral_cong_measure *)
- >> ‘prob_space (space Borel,subsets Borel,distribution p (X 0)) /\
+ >> ‘prob_space (space Borel,subsets Borel,distribution p (X i)) /\
      prob_space (space Borel,subsets Borel,distribution p (X n))’
        by METIS_TAC [distribution_prob_space]
- >> METIS_TAC [integral_cong_measure, prob_space_def]
+ >> MATCH_MP_TAC integrable_cong_measure
+ >> fs [prob_space_def]
+QED
+
+Theorem identical_distribution_integrable :
+    !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
+          identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
+          !(n :num). integrable p (X n)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘UNIV’]
+                    (INST_TYPE [“:'index” |-> “:num”]
+                               identical_distribution_integrable_general))
+ >> RW_TAC std_ss [IN_UNIV]
+ >> POP_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘0’ >> art []
 QED
 
 (* r.v.'s having indentical distributions have the same expectation *)
-Theorem identical_distribution_expectation :
-    !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
+Theorem identical_distribution_expectation_general :
+    !p X (J :'index set). prob_space p /\ J <> {} /\
+         (!n. n IN J ==> random_variable (X n) p Borel) /\
           identical_distribution p X Borel UNIV ==>
-          !(n :num). expectation p (X n) = expectation p (X 0)
+          ?e. !n. n IN J ==> expectation p (X n) = e
 Proof
     RW_TAC std_ss [identical_distribution_def, IN_UNIV]
  >> Know ‘(\x. x) IN measurable Borel Borel’
@@ -7744,19 +7761,65 @@ Proof
      MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> rw [SIGMA_ALGEBRA_BOREL] \\
      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> rw [SIGMA_ALGEBRA_BOREL])
  >> DISCH_TAC
- >> MP_TAC (Q.SPECL [‘p’, ‘X (0 :num)’, ‘\x. x’] expectation_distribution)
+ >> Q.ABBREV_TAC ‘i = CHOICE J’
+ >> ‘i IN J’ by METIS_TAC [CHOICE_DEF]
+ >> MP_TAC (Q.SPECL [‘p’, ‘X (i :'index)’, ‘\x. x’] expectation_distribution)
  >> RW_TAC std_ss [o_DEF]
- >> MP_TAC (Q.SPECL [‘p’, ‘X (n :num)’, ‘\x. x’] expectation_distribution)
+ >> Q.EXISTS_TAC ‘expectation p (X i)’
+ >> rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘X (n :'index)’, ‘\x. x’] expectation_distribution)
  >> RW_TAC std_ss [o_DEF]
  >> ‘!n. X n = (\x. X n x)’ by METIS_TAC [ETA_THM] >> POP_ORW
- >> Suff ‘integral (space Borel,subsets Borel,distribution p (X 0)) (\x. x) =
+ >> Suff ‘integral (space Borel,subsets Borel,distribution p (X i)) (\x. x) =
           integral (space Borel,subsets Borel,distribution p (X n)) (\x. x)’
  >- rw []
  (* applying integral_cong_measure *)
- >> ‘prob_space (space Borel,subsets Borel,distribution p (X 0)) /\
+ >> ‘prob_space (space Borel,subsets Borel,distribution p (X i)) /\
      prob_space (space Borel,subsets Borel,distribution p (X n))’
        by METIS_TAC [distribution_prob_space]
- >> METIS_TAC [integral_cong_measure, prob_space_def, expectation_def]
+ >> MATCH_MP_TAC integral_cong_measure
+ >> fs [prob_space_def]
+QED
+
+Theorem identical_distribution_expectation :
+    !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
+          identical_distribution p X Borel UNIV ==>
+          !(n :num). expectation p (X n) = expectation p (X 0)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘UNIV’]
+                    (INST_TYPE [“:'index” |-> “:num”]
+                               identical_distribution_expectation_general))
+ >> RW_TAC std_ss [IN_UNIV, UNIV_NOT_EMPTY] >> art []
+QED
+
+(* Theorem 3.1.4 [2, p.37] *)
+Theorem random_variable_compose :
+    !p X f. prob_space p /\ random_variable X p Borel /\
+            f IN measurable Borel Borel ==> random_variable (f o X) p Borel
+Proof
+    RW_TAC std_ss [random_variable_def]
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC `Borel` >> art []
+QED
+
+(* Theorem 3.1.5 [2, p.38] (fundamental theorem of random vectors) *)
+Theorem random_variable_functional :
+    !p X Y f. prob_space p /\ random_variable X p Borel /\ random_variable Y p Borel /\
+              f IN measurable (Borel CROSS Borel) Borel ==>
+              random_variable (\x. f (X x,Y x)) p Borel
+Proof
+    RW_TAC std_ss [random_variable_def, prob_space_def, p_space_def, events_def]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_2D_FUNCTION
+ >> fs [measure_space_def]
+QED
+
+Theorem indep_vars_comm : (* was: INDEP_RV_SYM *)
+    !p X Y s t. indep_rv p X Y s t ==> indep_rv p Y X t s
+Proof
+    RW_TAC std_ss [indep_rv_def]
+ >> MATCH_MP_TAC INDEP_SYM
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
 (* ========================================================================= *)

@@ -1,0 +1,7 @@
+INCLUDES = ../src/
+CLINE_OPTIONS=-j1 -r
+
+default: all
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all

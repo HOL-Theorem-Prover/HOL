@@ -2982,13 +2982,17 @@ val COUNTABLE_CASES = store_thm ("COUNTABLE_CASES",
  >> ONCE_REWRITE_TAC[COUNTABLE_ALT_cardleq, FINITE_CARD_LT]
  >> METIS_TAC [CARD_LE_LT]);
 
-val CARD_LE_COUNTABLE = store_thm ("CARD_LE_COUNTABLE",
- ``!s:'a->bool t:'a->bool. COUNTABLE t /\ s <=_c t ==> COUNTABLE s``,
-  REWRITE_TAC[COUNTABLE, ge_c] THEN REPEAT STRIP_TAC THEN
-  KNOW_TAC ``?(t :'a -> bool).
-      (s :'a -> bool) <=_c t /\ t <=_c univ((:num) :num itself)`` THENL
-  [EXISTS_TAC ``t:'a->bool`` THEN ASM_REWRITE_TAC[],
-   METIS_TAC [CARD_LE_TRANS]]);
+(* changed ‘t:'a->bool’ to ‘t:'b->bool’ *)
+Theorem CARD_LE_COUNTABLE :
+    !s:'a->bool t:'b->bool. COUNTABLE t /\ s <=_c t ==> COUNTABLE s
+Proof
+    REWRITE_TAC [COUNTABLE, ge_c]
+ >> rpt STRIP_TAC
+ >> KNOW_TAC ``?(t :'b -> bool).
+      (s :'a -> bool) <=_c t /\ t <=_c univ((:num) :num itself)``
+ >- (EXISTS_TAC ``t:'b->bool`` >> ASM_REWRITE_TAC[])
+ >> METIS_TAC [CARD_LE_TRANS]
+QED
 
 val CARD_EQ_COUNTABLE = store_thm ("CARD_EQ_COUNTABLE",
  ``!s:'a->bool t:'a->bool. COUNTABLE t /\ s =_c t ==> COUNTABLE s``,

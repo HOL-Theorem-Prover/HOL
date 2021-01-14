@@ -1,0 +1,21 @@
+CLINE_OPTIONS=-j1
+
+default: LassieTestTheory.sml
+
+sempre:
+	cd ../sempre &&\
+        git clean -xfd &&\
+	./pull-dependencies core interactive &&\
+	ant core interactive &&\
+	cd ../src
+.PHONY: sempre
+
+LassieTestTheory.sml: sempre
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+sempre_clean: $(clean)
+	cd ../sempre &&\
+	git clean -xfd
+.PHONY: sempre_clean
