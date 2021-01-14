@@ -146,21 +146,22 @@ val example1_conv = SIMP_CONV arith_ss [high, low, random, lem1,lem2,lem3];
 
 val leakage_example1 = store_thm
   ("leakage_example1",
-   ``leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) (low (SUC (SUC (SUC 0)))) random) M1 = 2``,
-CONV_TAC (RATOR_CONV (RAND_CONV (
-        LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
-                              ``low (SUC (SUC (SUC 0)))``,
-                              ``random``)
-                        [high, low, random, lem1, lem2, lem3]
-                        [M1, H_def, L_def, FST, SND]
-                        example1_conv example1_conv example1_conv
-                        example1_conv example1_conv example1_conv example1_conv)))
+   “leakage (unif_prog_space (high (SUC (SUC (SUC 0))))
+             (low (SUC (SUC (SUC 0)))) random) M1 = 2”,
+   CONV_TAC (LAND_CONV
+        (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
+                              “low (SUC (SUC (SUC 0)))”,
+                              “random”)
+         [high, low, random, lem1, lem2, lem3]
+         [M1, H_def, L_def, FST, SND]
+         example1_conv example1_conv example1_conv
+         example1_conv example1_conv example1_conv example1_conv))
 ++ SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
-++ `lg 4 = 2`
-        by (`4 = 2 pow 2` by RW_TAC real_ss [pow] ++ POP_ORW ++ RW_TAC std_ss [lg_pow])
+++ ‘lg 4 = 2’
+        by (‘4 = 2 pow 2’ by RW_TAC real_ss [pow] ++ POP_ORW ++ RW_TAC std_ss [lg_pow])
 ++ RW_TAC real_ss []
 ++ ONCE_REWRITE_TAC [REAL_MUL_COMM] ++ RW_TAC std_ss [GSYM real_div]
-++ (MP_TAC o Q.SPECL [`32`,`2`,`16`]) REAL_EQ_LDIV_EQ
+++ (MP_TAC o Q.SPECL [‘32’,‘2’,‘16’]) REAL_EQ_LDIV_EQ
 ++ RW_TAC real_ss []);
 
 (* ******************************** *)
