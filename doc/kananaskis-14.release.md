@@ -87,6 +87,21 @@ New features:
 
     Thanks to Hrutvik Kanabar for the implementation of this feature.
 
+*   There is (yet) another high-level simplification entry-point: `gs` (standing for “global simplification”).
+    Like the others in this family this has type
+
+           thm list -> tactic
+
+    and interprets theorems as rewrites as with the others.
+    This tactic simplifies all of a goal by repeatedly simplifying goal assumptions in turn (assuming all other assumptions as it goes) until no change happens, and then finishes by simplifying the goal conclusion, assuming all of the (transformed) assumptions as it does so.
+
+    There are three variants on this base (with the same type): `gns`, `gvs` and `gnvs`.
+    The presence of the `v` indicates a tactic that eliminates variables (as is done by `rw` and some others), and the presence of the `n` causes assumptions to _not_ be stripped as they are added back into the goal.
+    Stripping (turned on by default) is the effect behind `strip_assume_tac` (and `strip_tac`) when these tactics add to the assumptions.
+    It causes, for example, case-splits when disjunctions are added.
+
+    We believe that `gs` will often be a better choice than the existing `fs` and `rfs` tactics.
+
 Bugs fixed:
 -----------
 
