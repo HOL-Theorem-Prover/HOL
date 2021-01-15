@@ -323,6 +323,7 @@ val fun_eq_lem6 = METIS_PROVE []
   ``!x a b P Q. (x = a) \/ ~ (x = b) /\ P <=>
         (a = b) /\ ((x = a) \/ P) \/ ~(x = b) /\ ((x = a) \/ P)``;
 
+val _ = print "Starting very long dc3_leakage_result (expect 10min)\n"
 (* NOTE: this theorem needs a long time (~10min) to finish *)
 val dc3_leakage_result = store_thm
   ("dc3_leakage_result",
@@ -395,6 +396,7 @@ fun dc_input_unroll (remove_dups_conv:Abbrev.term->Abbrev.thm) =
            THENC SIMP_CONV bool_ss [])
     THENC SIMP_CONV arith_ss []));
 
+val _ = print "Starting very long new_dc3_leakage_result (expect 10min)\n"
 (* NOTE: this theorem needs a long time (~10min) to finish *)
 val new_dc3_leakage_result = store_thm
   ("new_dc3_leakage_result",
