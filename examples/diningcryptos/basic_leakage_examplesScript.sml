@@ -31,166 +31,200 @@ fun TRY2_TAC t1 t2 state = let
  in if length a1 = 0 then (a1,f1) else t2 state end;
 
 
-val lem1 = prove
-  (“!(s:string) (n:num) (m:num). ((\s'. (if s' = s then n else 0)) =
-                       (\s'. (if s' = s then m else 0))) =
-                      (n = m)”,METIS_TAC []);
+Triviality lem1:
+  !(s:string) (n:num) (m:num).
+    ((\s'. (if s' = s then n else 0)) = (\s'. (if s' = s then m else 0))) =
+    (n = m)
+Proof METIS_TAC []
+QED
 
-val lem2 = prove
-  (“!(s:string) (n:num). ((\s'. (if s' = s then n else 0)) = (\s'. 0)) = (n = 0)”,
-   METIS_TAC []);
+Triviality lem2:
+  !(s:string) (n:num). ((\s'. (if s' = s then n else 0)) = (\s'. 0)) = (n = 0)
+Proof METIS_TAC []
+QED
 
-val lem3 = prove
-  (“!(s:string) (n:num). ((\s'. 0) = (\s'. (if s' = s then n else 0))) = (n = 0)”,
-   METIS_TAC []);
+Triviality lem3:
+  !(s:string) (n:num). ((\s'. 0) = (\s'. (if s' = s then n else 0))) = (n = 0)
+Proof METIS_TAC []
+QED
 
-val lem4 = prove
-  (“!(n1:num)(n2:num)(m1:num)(m2:num).
-        ((\s'. (if s' = "h2" then m1 else (if s' = "h1" then n1 else 0))) =
-         (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
-        ((n1=n2)/\(m1=m2))”,
-        REPEAT STRIP_TAC >> EQ_TAC
-            >- (ONCE_REWRITE_TAC [FUN_EQ_THM]
-                >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
-                >> Cases_on ‘n1 = n2’
-                >- (Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else (if x = "h1" then n1 else 0)) =
-                                     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))’
-                    (MP_TAC o Q.SPEC ‘"h2"’) >> RW_TAC std_ss [])
-                >> Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else (if x = "h1" then n1 else 0)) =
-                                     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))’
-                    (MP_TAC o Q.SPEC ‘"h1"’) >> SRW_TAC [] [])
-            >> RW_TAC std_ss []);
+Triviality lem4:
+  !(n1:num)(n2:num)(m1:num)(m2:num).
+    ((\s'. (if s' = "h2" then m1 else (if s' = "h1" then n1 else 0))) =
+     (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
+    ((n1=n2) /\ (m1=m2))
+Proof
+  REPEAT STRIP_TAC >> EQ_TAC
+  >- (ONCE_REWRITE_TAC [FUN_EQ_THM]
+      >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
+      >> Cases_on ‘n1 = n2’
+      >- (Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else
+                                (if x = "h1" then n1 else 0)) =
+                             (if x = "h2" then m2 else
+                                (if x = "h1" then n2 else 0))’
+          (MP_TAC o Q.SPEC ‘"h2"’) >> RW_TAC std_ss [])
+      >> Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else
+                               (if x = "h1" then n1 else 0)) =
+                            (if x = "h2" then m2 else
+                               (if x = "h1" then n2 else 0))’
+          (MP_TAC o Q.SPEC ‘"h1"’) >> SRW_TAC [] [])
+  >> RW_TAC std_ss []
+QED
 
-val lem5 = prove
-  (“!(m1:num)(m2:num)(n2:num).
-        ((\s'. (if s' = "h2" then m1 else 0)) =
-         (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
-        ((n2=0)/\(m1=m2))”,
-        REPEAT STRIP_TAC >> EQ_TAC
-            >- (ONCE_REWRITE_TAC [FUN_EQ_THM]
-                >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
-                >> Cases_on ‘n2=0’
-                >- (Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else 0) =
-                                     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))’
-                    (MP_TAC o Q.SPEC ‘"h2"’) >> RW_TAC std_ss [])
-                >> Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else 0) =
-                                     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))’
-                    (MP_TAC o Q.SPEC ‘"h1"’) >> SRW_TAC [] [])
-            >> RW_TAC std_ss []);
+Triviality lem5:
+  !(m1:num)(m2:num)(n2:num).
+    ((\s'. (if s' = "h2" then m1 else 0)) =
+     (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
+    ((n2=0) /\ (m1=m2))
+Proof
+  REPEAT STRIP_TAC >> EQ_TAC
+  >- (ONCE_REWRITE_TAC [FUN_EQ_THM]
+      >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
+      >> Cases_on ‘n2=0’
+      >- (Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else 0) =
+                             (if x = "h2" then m2 else
+                                (if x = "h1" then n2 else 0))’
+          (MP_TAC o Q.SPEC ‘"h2"’) >> RW_TAC std_ss [])
+      >> Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m1 else 0) =
+                            (if x = "h2" then m2 else
+                               (if x = "h1" then n2 else 0))’
+          (MP_TAC o Q.SPEC ‘"h1"’) >> SRW_TAC [] [])
+  >> RW_TAC std_ss []
+QED
 
-val lem6 = prove
-  (“!(n:num)(m:num).
-        ((\s'. (if s' = "h2" then m else (if s' = "h1" then n else 0))) =
-         (\s'. 0)) =
-        ((n=0)/\(m=0))”,
-        REPEAT STRIP_TAC >> EQ_TAC
-            >- (ONCE_REWRITE_TAC [FUN_EQ_THM]
-                >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
-                >> Cases_on ‘n = 0’
-                >- (Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m else (if x = "h1" then n else 0)) = 0’
-                    (MP_TAC o Q.SPEC ‘"h2"’) >> RW_TAC std_ss [])
-                >> Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m else (if x = "h1" then n else 0)) = 0’
-                    (MP_TAC o Q.SPEC ‘"h1"’) >> SRW_TAC [] [])
-            >> RW_TAC std_ss []);
+Triviality lem6:
+  !(n:num)(m:num).
+    ((\s'. (if s' = "h2" then m else (if s' = "h1" then n else 0))) =
+     (\s'. 0)) =
+    ((n=0) /\ (m=0))
+Proof
+  REPEAT STRIP_TAC >> EQ_TAC
+  >- (ONCE_REWRITE_TAC [FUN_EQ_THM]
+      >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
+      >> Cases_on ‘n = 0’
+      >- (Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m else
+                                (if x = "h1" then n else 0)) = 0’
+          (MP_TAC o Q.SPEC ‘"h2"’) >> RW_TAC std_ss [])
+      >> Q.PAT_X_ASSUM ‘!x. (if x = "h2" then m else
+                               (if x = "h1" then n else 0)) = 0’
+          (MP_TAC o Q.SPEC ‘"h1"’) >> SRW_TAC [] [])
+  >> RW_TAC std_ss []
+QED
 
-val lem7 = prove
-  (“!(s:string) (n:num) (m:num). ((\s'. (if s' = s then [n] else [])) =
-                       (\s'. (if s' = s then [m] else []))) =
-                      (n = m)”,
-        REPEAT STRIP_TAC >> EQ_TAC
-            >- (RW_TAC list_ss [FUN_EQ_THM] >> POP_ASSUM (MP_TAC o Q.SPEC ‘s’)
-                >> RW_TAC std_ss [])
-            >> RW_TAC std_ss []);
+Triviality lem7:
+  !(s:string) (n:num) (m:num). ((\s'. (if s' = s then [n] else [])) =
+                                (\s'. (if s' = s then [m] else []))) =
+                               (n = m)
+Proof
+  REPEAT STRIP_TAC >> EQ_TAC
+  >- (RW_TAC list_ss [FUN_EQ_THM] >> POP_ASSUM (MP_TAC o Q.SPEC ‘s’)
+      >> RW_TAC std_ss [])
+  >> RW_TAC std_ss []
+QED
 
-val lem8 = prove
-  (“!(n1:num) (n2:num) (n3:num) (m1:num) (m2:num) (m3:num).
-        ((\s'. (if (s' = "out") then [n1;n2] else
-                (if (s' = "low") then [n3] else []))) =
-         (\s'. (if (s' = "out") then [m1;m2] else
-                (if (s' = "low") then [m3] else [])))) =
-                      ((n1 = m1) /\ (n2 = m2) /\ (n3 = m3))”,
-        REPEAT STRIP_TAC >> EQ_TAC
-            >- (RW_TAC list_ss [FUN_EQ_THM]
-                >| [POP_ASSUM (MP_TAC o Q.SPEC ‘"out"’) >> RW_TAC std_ss [],
-                    POP_ASSUM (MP_TAC o Q.SPEC ‘"out"’) >> RW_TAC std_ss [],
-                    POP_ASSUM (MP_TAC o Q.SPEC ‘"low"’) >> RW_TAC string_ss []])
-            >> RW_TAC std_ss []);
+Triviality lem8:
+  !(n1:num) (n2:num) (n3:num) (m1:num) (m2:num) (m3:num).
+    ((\s'. (if (s' = "out") then [n1;n2] else
+              (if (s' = "low") then [n3] else []))) =
+     (\s'. (if (s' = "out") then [m1;m2] else
+              (if (s' = "low") then [m3] else [])))) =
+    ((n1 = m1) /\ (n2 = m2) /\ (n3 = m3))
+Proof
+  REPEAT STRIP_TAC >> EQ_TAC
+  >- (RW_TAC list_ss [FUN_EQ_THM]
+      >| [POP_ASSUM (MP_TAC o Q.SPEC ‘"out"’) >> RW_TAC std_ss [],
+          POP_ASSUM (MP_TAC o Q.SPEC ‘"out"’) >> RW_TAC std_ss [],
+          POP_ASSUM (MP_TAC o Q.SPEC ‘"low"’) >> RW_TAC string_ss []])
+  >> RW_TAC std_ss []
+QED
 
 (* *************************** *)
 (* Example 1: out = high + low *)
 (* TOTAL LEAKAGE               *)
 (* *************************** *)
 
-val high = Define
-   ‘(high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
-    (high (SUC n) = (\s:string. if s = "high" then SUC n else 0)INSERT(high n))’;
+Definition high:
+  (high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
+  (high (SUC n) = (\s:string. if s = "high" then SUC n else 0)INSERT(high n))
+End
 
-val low = Define
-   ‘(low 0 = {(\s:string. if s = "low" then 0 else 0)}) /\
-    (low (SUC n) = (\s:string. if s = "low" then SUC n else 0)INSERT(low n))’;
+Definition low:
+  (low 0 = {(\s:string. if s = "low" then 0 else 0)}) /\
+  (low (SUC n) = (\s:string. if s = "low" then SUC n else 0)INSERT(low n))
+End
 
-val random = Define
-   ‘random = {(\s:string. (0:num))}’;
+Definition random: random = {(\s:string. (0:num))}
+End
 
-val M1 = Define
-   ‘M1 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-   then (H s "high") + (L s "low") else 0))’;
+Definition M1:
+  M1 = (\s: ((num,num,num) prog_state).
+         (\s':string. if (s' = "out") then (H s "high") + (L s "low") else 0))
+End
 
 val example1_conv = SIMP_CONV arith_ss [high, low, random, lem1,lem2,lem3];
 
-val leakage_example1 = store_thm
-  ("leakage_example1",
-   “leakage (unif_prog_space (high (SUC (SUC (SUC 0))))
-             (low (SUC (SUC (SUC 0)))) random) M1 = 2”,
-   CONV_TAC (LAND_CONV
-        (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
-                              “low (SUC (SUC (SUC 0)))”,
-                              “random”)
-         [high, low, random, lem1, lem2, lem3]
-         [M1, H_def, L_def, FST, SND]
-         example1_conv example1_conv example1_conv
-         example1_conv example1_conv example1_conv example1_conv))
->> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
->> ‘lg 4 = 2’
-        by (‘4 = 2 pow 2’ by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
->> RW_TAC real_ss []
->> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC std_ss [GSYM real_div]
->> (MP_TAC o Q.SPECL [‘32’,‘2’,‘16’]) REAL_EQ_LDIV_EQ
->> RW_TAC real_ss []);
+Theorem leakage_example1:
+  leakage (unif_prog_space (high (SUC (SUC (SUC 0))))
+           (low (SUC (SUC (SUC 0)))) random) M1 = 2
+Proof
+  CONV_TAC (LAND_CONV
+            (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
+                                   “low (SUC (SUC (SUC 0)))”,
+                                   “random”)
+             [high, low, random, lem1, lem2, lem3]
+             [M1, H_def, L_def, FST, SND]
+             example1_conv example1_conv example1_conv
+             example1_conv example1_conv example1_conv example1_conv))
+  >> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
+  >> ‘lg 4 = 2’
+    by (‘4 = 2 pow 2’ by RW_TAC real_ss [pow] >> POP_ORW >>
+        RW_TAC std_ss [lg_pow])
+  >> RW_TAC real_ss []
+  >> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC std_ss [GSYM real_div]
+  >> (MP_TAC o Q.SPECL [‘32’,‘2’,‘16’]) REAL_EQ_LDIV_EQ
+  >> RW_TAC real_ss []
+QED
 
 (* ******************************** *)
 (* Example 2:    out = high XOR low *)
 (* TOTAL LEAKAGE                    *)
 (* ******************************** *)
 
-val M2 = Define
-   ‘M2 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-        then w2n (((n2w (H s "high")):word2) ?? (n2w (L s "low"))) else 0))’;
+Definition M2:
+  M2 = λ(s: ((num,num,num) prog_state)) (s':string).
+         if (s' = "out") then
+           w2n (((n2w (H s "high")):word2) ?? (n2w (L s "low")))
+         else 0
+End
 
-val example2_output_conv = SIMP_CONV arith_ss [lem1,lem2,lem3, w2n_11]
-                                                      THENC (FIND_CONV “w2n(a ?? b)” WORD_EVAL_CONV);
+val example2_output_conv =
+  SIMP_CONV arith_ss [lem1,lem2,lem3, w2n_11] THENC
+  FIND_CONV “w2n(a ?? b)” WORD_EVAL_CONV;
 
 val example2_input_conv = SIMP_CONV arith_ss [high, low, random, lem1,lem2,lem3];
 
-val leakage_example2 = store_thm
-  ("leakage_example2",
-   “leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) (low (SUC (SUC (SUC 0)))) random) M2 = 2”,
-CONV_TAC (RATOR_CONV (RAND_CONV (
-        LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
-                              “low (SUC (SUC (SUC 0)))”,
-                              “random”)
-                        [high, low, random, lem1, lem2, lem3, w2n_11]
-                        [M2, H_def, L_def, FST, SND]
-                        example2_input_conv example2_input_conv example2_input_conv
-                        example2_input_conv example2_input_conv example2_input_conv
-                        example2_output_conv)))
->> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
->> ‘lg 4 = 2’
-        by (‘4 = 2 pow 2’ by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
->> RW_TAC real_ss []
->> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC std_ss [GSYM real_div]
->> (MP_TAC o Q.SPECL [‘32’,‘2’,‘16’]) REAL_EQ_LDIV_EQ
->> RW_TAC real_ss []);
+Theorem leakage_example2:
+  leakage (unif_prog_space (high (SUC (SUC (SUC 0))))
+           (low (SUC (SUC (SUC 0)))) random) M2 = 2
+Proof
+  CONV_TAC (LAND_CONV
+            (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
+                                   “low (SUC (SUC (SUC 0)))”,
+                                   “random”)
+             [high, low, random, lem1, lem2, lem3, w2n_11]
+             [M2, H_def, L_def, FST, SND]
+             example2_input_conv example2_input_conv example2_input_conv
+             example2_input_conv example2_input_conv example2_input_conv
+             example2_output_conv))
+  >> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
+  >> ‘lg 4 = 2’
+    by (‘4 = 2 pow 2’ by RW_TAC real_ss [pow] >> POP_ORW >>
+        RW_TAC std_ss [lg_pow])
+  >> RW_TAC real_ss []
+  >> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC std_ss [GSYM real_div]
+  >> (MP_TAC o Q.SPECL [‘32’,‘2’,‘16’]) REAL_EQ_LDIV_EQ
+  >> RW_TAC real_ss []
+QED
 
 (* ********************************** *)
 (* Example 3:  out = h1 XOR h2        *)
@@ -346,9 +380,11 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
 val state_update = Define
    ‘state_update name value = (\s:(num list) state. (\n:string. if (n=name) then value else s n))’;
 
-val state_append = Define
-   ‘state_append name value = (\s:(num list) state.
-        state_update name ((if (value=[]) then [] else [HD value])>>(s name)) s)’;
+Definition state_append:
+   state_append name value =
+   λs:(num list) state.
+     state_update name ((if (value=[]) then [] else [HD value]) ++ s name) s
+End
 
 val assign1 = Define
    ‘assign1 = (\s: ((num list,num list,num list) prog_state). state_update "out" (H s "high") (L s))’;
