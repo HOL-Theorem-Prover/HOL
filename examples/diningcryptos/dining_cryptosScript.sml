@@ -1,6 +1,6 @@
-(* ========================================================================= *)
-(* Create "leakageTheory" setting up the theory of information leakage       *)
-(* ========================================================================= *)
+(* ----------------------------------------------------------------------
+    Case Study: The Dining Cryptographers
+   ---------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
 
@@ -16,24 +16,19 @@ open extra_boolTheory extra_numTheory extra_listTheory extra_stringLib
 open hurdUtils util_probTheory sigma_algebraTheory
      real_measureTheory real_lebesgueTheory real_probabilityTheory;
 
-(* ------------------------------------------------------------------------- *)
-(* Start a new theory called "information"                                   *)
-(* ------------------------------------------------------------------------- *)
-
 val _ = new_theory "dining_cryptos";
 
-(* ------------------------------------------------------------------------- *)
-(* Helpful proof tools                                                       *)
-(* ------------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    Helpful proof tools
+   ---------------------------------------------------------------------- *)
 
 val Simplify = RW_TAC arith_ss;
 val safe_set_ss = bool_ss ++ PRED_SET_ss;
 val set_ss = arith_ss ++ PRED_SET_ss;
 
-(* ************************************************************************* *)
-(* Case Study: The Dining Cryptographers - Definitions                       *)
-(* ************************************************************************* *)
-
+(* ----------------------------------------------------------------------
+    Definitions
+   ---------------------------------------------------------------------- *)
 val set_announcements_def = Define
    `(set_announcements (high: bool state) (low:bool state)
                        (random:bool state) (n:num) (0:num) (s:string) =
