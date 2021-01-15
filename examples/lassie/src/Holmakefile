@@ -1,21 +1,19 @@
 CLINE_OPTIONS=-j1
 
-default: LassieTestTheory.sml
+all: LassieTestTheory.sml sempre
+.PHONY: all
 
 sempre:
+	export LASSIEDIR=../ &&\
+	./init.sh &&\
 	cd ../sempre &&\
-        git clean -xfd &&\
-	./pull-dependencies core interactive &&\
 	ant core interactive &&\
 	cd ../src
 .PHONY: sempre
 
 LassieTestTheory.sml: sempre
 
-all: $(DEFAULT_TARGETS)
-.PHONY: all
-
 sempre_clean: $(clean)
 	cd ../sempre &&\
-	git clean -xfd
+	rm -rf classes/ fig/ int-output/ interactive/lassie.lexicon interactive/sempre-out-socket.sml lib/ libsempre/ module-classes.txt state/
 .PHONY: sempre_clean

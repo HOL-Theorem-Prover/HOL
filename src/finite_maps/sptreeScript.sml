@@ -1425,16 +1425,15 @@ val spt_center_def = Define `
   (spt_center (BS t1 x t2) = SOME x) /\
   (spt_center _ = NONE)`
 
-val subspt_eq = Define `
+Definition subspt_eq:
   (subspt LN t <=> T) /\
   (subspt (LS x) t <=> (spt_center t = SOME x)) /\
   (subspt (BN t1 t2) t <=>
      subspt t1 (spt_left t) /\ subspt t2 (spt_right t)) /\
   (subspt (BS t1 x t2) t <=>
      (spt_center t = SOME x) /\
-     subspt t1 (spt_left t) /\ subspt t2 (spt_right t))`
-
-val _ = save_thm("subspt_eq",subspt_eq);
+     subspt t1 (spt_left t) /\ subspt t2 (spt_right t))
+End
 
 val subspt_lookup_lemma = Q.prove(
   `(!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)

@@ -1,6 +1,6 @@
-(* ========================================================================= *)
-(* Create "leakageTheory" setting up the theory of information leakage       *)
-(* ========================================================================= *)
+(* ----------------------------------------------------------------------
+    Case Study: The Dining Cryptographers
+   ---------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
 
@@ -16,15 +16,11 @@ open extra_boolTheory extra_numTheory extra_listTheory extra_stringLib
 open hurdUtils util_probTheory sigma_algebraTheory
      real_measureTheory real_lebesgueTheory real_probabilityTheory;
 
-(* ------------------------------------------------------------------------- *)
-(* Start a new theory called "information"                                   *)
-(* ------------------------------------------------------------------------- *)
-
 val _ = new_theory "dining_cryptos";
 
-(* ------------------------------------------------------------------------- *)
-(* Helpful proof tools                                                       *)
-(* ------------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    Helpful proof tools
+   ---------------------------------------------------------------------- *)
 
 fun disjsafe ss = ss -* ["lift_disj_eq", "lift_imp_disj"]
 val arith_ss = disjsafe arith_ss
@@ -37,10 +33,9 @@ val Simplify = RW_TAC arith_ss;
 val safe_set_ss = bool_ss ++ PRED_SET_ss;
 val set_ss = arith_ss ++ PRED_SET_ss;
 
-(* ************************************************************************* *)
-(* Case Study: The Dining Cryptographers - Definitions                       *)
-(* ************************************************************************* *)
-
+(* ----------------------------------------------------------------------
+    Definitions
+   ---------------------------------------------------------------------- *)
 val set_announcements_def = Define
    `(set_announcements (high: bool state) (low:bool state)
                        (random:bool state) (n:num) (0:num) (s:string) =
@@ -330,6 +325,7 @@ val fun_eq_lem6 = METIS_PROVE []
   ``!x a b P Q. (x = a) \/ ~ (x = b) /\ P <=>
         (a = b) /\ ((x = a) \/ P) \/ ~(x = b) /\ ((x = a) \/ P)``;
 
+val _ = print "Starting very long dc3_leakage_result (expect 10min)\n"
 (* NOTE: this theorem needs a long time (~10min) to finish *)
 val dc3_leakage_result = store_thm
   ("dc3_leakage_result",
@@ -402,6 +398,7 @@ fun dc_input_unroll (remove_dups_conv:Abbrev.term->Abbrev.thm) =
            THENC SIMP_CONV bool_ss [])
     THENC SIMP_CONV arith_ss []));
 
+val _ = print "Starting very long new_dc3_leakage_result (expect 10min)\n"
 (* NOTE: this theorem needs a long time (~10min) to finish *)
 val new_dc3_leakage_result = store_thm
   ("new_dc3_leakage_result",
