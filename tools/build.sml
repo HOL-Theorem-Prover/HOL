@@ -36,7 +36,9 @@ val Holmake = let
   val isSuccess = OS.Process.isSuccess
 in
   buildutils.Holmake sysl isSuccess
-                     (fn () => ["-j"^Int.toString jobcount] @
+                     (fn () => (case jobcount of
+                                    NONE => []
+                                  | SOME j => ["-j"^Int.toString j]) @
                                (if debug then ["--dbg"] else []))
                      (fn _ => "")
                      selftest_level
