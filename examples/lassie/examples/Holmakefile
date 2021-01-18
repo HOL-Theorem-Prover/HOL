@@ -1,5 +1,12 @@
 INCLUDES = ../src/
 CLINE_OPTIONS=-j1
+LEXICON = ../sempre/interactive/lassie.lexicon
 
-all: $(DEFAULT_TARGETS) ../sempre/interactive/lassie.lexicon
+all: $(DEFAULT_TARGETS)
 .PHONY: all
+
+caseStudy1EuclidTheory.sml: $(LEXICON)
+caseStudy2RealNumsTheory.sml: $(LEXICON)
+caseStudy3IntervalLibTheory.sml: $(LEXICON)
+caseStudy4NaprochePowersetTheory.sml: $(LEXICON)
+gaussTheory.sml: $(LEXICON)

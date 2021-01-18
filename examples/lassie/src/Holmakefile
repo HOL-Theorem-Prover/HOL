@@ -3,14 +3,14 @@ CLINE_OPTIONS=-j1
 all: LassieTestTheory.sml
 .PHONY: all
 
-interactive/lassie.lexicon:
+../sempre/interactive/lassie.lexicon:
 	export LASSIEDIR=../ &&\
 	./init.sh &&\
 	cd ../sempre &&\
 	ant core interactive &&\
 	cd ../src
 
-LassieTestTheory.sml: interactive/lassie.lexicon
+LassieTestTheory.sml: ../sempre/interactive/lassie.lexicon
 
 sempre_clean: $(clean)
 	cd ../sempre &&\
