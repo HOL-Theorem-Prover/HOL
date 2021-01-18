@@ -5106,6 +5106,16 @@ val MAX_SET_THM = store_thm(
     RES_TAC THEN ASM_SIMP_TAC arith_ss [MAX_DEF]
   ]);
 
+Theorem in_max_set:
+  !s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s
+Proof
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [] [MAX_SET_THM] THEN
+  SRW_TAC [] []
+QED
+
+Theorem X_LE_MAX_SET = in_max_set
+
 val MAX_SET_REWRITES = store_thm(
   "MAX_SET_REWRITES",
   ``(MAX_SET {} = 0) /\ (MAX_SET {e} = e)``,
@@ -5234,6 +5244,21 @@ val MAX_SET_UNION = Q.store_thm
 val set_ss = arith_ss ++ SET_SPEC_ss ++
              rewrites [CARD_INSERT,CARD_EMPTY,FINITE_EMPTY,FINITE_INSERT,
                        NOT_IN_EMPTY];
+
+Theorem SUBSET_count_MAX_SET:
+  FINITE s ==> s SUBSET count (MAX_SET s + 1)
+Proof
+  simp[SUBSET_DEF, DECIDE “x < y + 1 <=> x <= y”, X_LE_MAX_SET]
+QED
+
+Theorem CARD_LE_MAX_SET:
+  FINITE s ==> CARD s <= MAX_SET s + 1
+Proof
+  strip_tac >> CCONTR_TAC >>
+  ‘s SUBSET count (MAX_SET s + 1)’ by simp[SUBSET_count_MAX_SET] >>
+  ‘CARD s <= CARD (count (MAX_SET s + 1))’ by simp[CARD_SUBSET] >>
+  full_simp_tac (srw_ss()) []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* POW s is the powerset of s                                                *)
@@ -6281,12 +6306,6 @@ val compl_insert = Q.store_thm ("compl_insert",
 `!s x. COMPL (x INSERT s) = COMPL s DELETE x`,
  SRW_TAC [] [EXTENSION, IN_COMPL] THEN
  METIS_TAC []);
-
-val in_max_set = Q.store_thm ("in_max_set",
-`!s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s`,
- HO_MATCH_MP_TAC FINITE_INDUCT THEN
- SRW_TAC [] [MAX_SET_THM] THEN
- SRW_TAC [] []);
 
 (* end CakeML lemmas *)
 

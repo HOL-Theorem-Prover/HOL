@@ -860,8 +860,9 @@ region instead. With prefix ARG prompt for a file-name to load."
            ((file-exists-p (concat bindir "hol.state"))
             (list (concat bindir "hol") "(as we are in its HOL directory)"))
            ((file-exists-p (concat bindir "hol.state0"))
-            '((concat bindir "hol.bare")
-              "(as we are in its HOL directory and hol.state doesn't exist)"))))))))
+            (list
+             (concat bindir "hol.bare")
+             "(as we are in its HOL directory and hol.state doesn't exist)"))))))))
 
 (defun hol--get-executable ()
   (let ((first-option (hol-executable-with-bare)))
@@ -879,7 +880,11 @@ region instead. With prefix ARG prompt for a file-name to load."
   (interactive)
   (let* ((original-buffer (current-buffer))
          (my-dir (or (ignore-errors (file-name-directory buffer-file-name))
-                     default-directory)))
+                     default-directory))
+         (hol-executable (hol--get-executable)))
+    (if (not (file-executable-p hol-executable))
+        (error "Wanted to execute %s as HOL, but can not find/execute it"
+               hol-executable))
     (if (get-buffer hol-buffer-name)
         (progn
           (set-buffer hol-buffer-name)
@@ -889,9 +894,8 @@ region instead. With prefix ARG prompt for a file-name to load."
                 (comint-send-eof)
                 (sleep-for 0 500)))
           (setq default-directory my-dir)
-          (make-comint-in-buffer "HOL" hol-buffer-name
-                                 (hol--get-executable)))
-      (let* ((buf (make-comint "HOL" (hol--get-executable))))
+          (make-comint-in-buffer "HOL" hol-buffer-name hol-executable))
+      (let* ((buf (make-comint "HOL" hol-executable)))
         (setq hol-buffer-name (buffer-name buf))
         (set-buffer hol-buffer-name)))
 

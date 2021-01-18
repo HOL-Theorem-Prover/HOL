@@ -337,27 +337,12 @@ fun get_cline () = let
              | SOME _ => raise Fail "Really can't happen")
         | SOME b => b
   val bgoption = if buildgraph then [] else ["--nograph"]
-  val jcount =
-      case #jobcount option_record of
-          NONE =>
-            (case List.find (fn s => String.isPrefix "-j" s) oldopts of
-                NONE => dfltjobnum
-              | SOME jns =>
-                (case Int.fromString (String.extract(jns, 2, NONE)) of
-                     NONE => (warn "Bogus -j spec in old build options file";
-                              dfltjobnum)
-                   | SOME jn => if jn = dfltjobnum then jn
-                                else (warn ("Using -j "^Int.toString jn^
-                                            " from earlier build command; \
-                                            \use -j to override");
-                                      jn)))
-        | SOME jn => jn
-  val joption = "-j" ^ Int.toString jcount
+  val jcount = #jobcount option_record
   val _ =
       if seqspec = dfltbuildseq then
-        write_options ("--"^knlspec::joption::bgoption)
+        write_options ("--"^knlspec::bgoption)
       else
-        write_options ("--"^knlspec::"--seq"::seqspec::joption::bgoption)
+        write_options ("--"^knlspec::"--seq"::seqspec::bgoption)
 in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,

@@ -87,6 +87,34 @@ New features:
 
     Thanks to Hrutvik Kanabar for the implementation of this feature.
 
+*   There is (yet) another high-level simplification entry-point: `gs` (standing for “global simplification”).
+    Like the others in this family this has type
+
+           thm list -> tactic
+
+    and interprets theorems as rewrites as with the others.
+    This tactic simplifies all of a goal by repeatedly simplifying goal assumptions in turn (assuming all other assumptions as it goes) until no change happens, and then finishes by simplifying the goal conclusion, assuming all of the (transformed) assumptions as it does so.
+
+    There are three variants on this base (with the same type): `gns`, `gvs` and `gnvs`.
+    The presence of the `v` indicates a tactic that eliminates variables (as is done by `rw` and some others), and the presence of the `n` causes assumptions to _not_ be stripped as they are added back into the goal.
+    Stripping (turned on by default) is the effect behind `strip_assume_tac` (and `strip_tac`) when these tactics add to the assumptions.
+    It causes, for example, case-splits when disjunctions are added.
+
+    We believe that `gs` will often be a better choice than the existing `fs` and `rfs` tactics.
+
+-   Automatic simplification of multiplicative terms over the real numbers is more aggressive and capable.
+    Multiplicative terms are normalised, with coefficients being gathered, and variables sorted and grouped (*e.g.*, `z * 2 * x * 3` turns into `6 * (x * z)`).
+    In addition, common factors are eliminated on either side of relation symbols (`<`, `≤`, and `=`), and occurrences of `inv` (`⁻¹`) and division are rearranged as much as possible (*e.g.*, `z * x pow 2 * 4 = x⁻¹ * 6` turns into  `x = 0 ∨ 2 * (x pow 3 * z) = 3`).
+    To turn off normalisation over relations within a file, use
+
+           val _ = diminish_srw_ss [“RMULRELNORM_ss”]
+
+    To additionally stop normalisation, use
+
+           val _ = diminish_srw_ss [“RMULCANON_ss”]
+
+    These behaviours can also be turned off in a more fine-grained way by using `Excl` invocations.
+
 Bugs fixed:
 -----------
 
