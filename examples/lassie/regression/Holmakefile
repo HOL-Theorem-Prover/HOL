@@ -1,7 +1,7 @@
 INCLUDES = ../src/
 CLINE_OPTIONS=-j1
 
-default: all
-
 all: $(DEFAULT_TARGETS)
 .PHONY: all
+
+caseStudy1EuclidTheory.sml: ../sempre/interactive/lassie.lexicon
