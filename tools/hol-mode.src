@@ -860,8 +860,9 @@ region instead. With prefix ARG prompt for a file-name to load."
            ((file-exists-p (concat bindir "hol.state"))
             (list (concat bindir "hol") "(as we are in its HOL directory)"))
            ((file-exists-p (concat bindir "hol.state0"))
-            '((concat bindir "hol.bare")
-              "(as we are in its HOL directory and hol.state doesn't exist)"))))))))
+            (list
+             (concat bindir "hol.bare")
+             "(as we are in its HOL directory and hol.state doesn't exist)"))))))))
 
 (defun hol--get-executable ()
   (let ((first-option (hol-executable-with-bare)))
