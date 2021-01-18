@@ -42,5 +42,4 @@
 !!examples/AKS
 
 # Lassie examples
-!examples/lassie/src
-!examples/lassie/examples
+!examples/lassie/
