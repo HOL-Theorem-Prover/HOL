@@ -267,4 +267,19 @@ Inductive foob2:
   (l. foob (HD l) ==> foob (LAST l))
 End
 
+Theorem foo = base |> rule1
+                   |> rule2
+
+Theorem foo2 = base
+                 |> rule1
+                 |> rule2
+
+Theorem bar:
+  <| field := v1 ;
+     field2 := v2
+  |>
+Proof
+  tac
+QED
+
 val _ = export_theory();
