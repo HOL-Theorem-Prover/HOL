@@ -446,27 +446,30 @@ fun hmakefile_data HOLDIR =
 
 fun clean0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans} ;
+  clean_dir default_ofns {extra_cleans = extra_cleans} ;
   includes
 end
 
 fun cleanAll0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans};
-  Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-  Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+  clean_dir default_ofns {extra_cleans = extra_cleans};
+  clean_depdir {depdirname = ".HOLMK"};
+  clean_depdir {depdirname = ".hollogs"};
   includes
 end
 
 fun cleanForReloc0 HOLDIR =
   let
     val {includes,holheap,...} = hmakefile_data HOLDIR
+    open Holmake_tools
   in
-    Holmake_tools.clean_forReloc {holheap = holheap};
-    Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-    Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+    clean_forReloc {holheap = holheap};
+    clean_depdir {depdirname = ".HOLMK"};
+    clean_depdir {depdirname = ".hollogs"};
     includes
   end
 

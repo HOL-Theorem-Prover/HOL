@@ -224,6 +224,9 @@ in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
 
+val default_ofns =
+    output_functions {usepfx = true, chattiness = 1, debug = NONE}
+
 fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
 fun check_distrib toolname = let
@@ -418,9 +421,55 @@ fun read_files ds P action =
       (if P nextfile then action nextfile else ();
        read_files ds P action)
 
-fun quiet_remove s = OS.FileSys.remove s handle e => ()
+fun dir_files dnm A =
+    let
+      val ds = OS.FileSys.openDir dnm
+      fun recurse A =
+          case OS.FileSys.readDir ds of
+              NONE => (OS.FileSys.closeDir ds; A)
+            | SOME nm => recurse (OS.Path.concat (dnm, nm) :: A)
+    in
+      recurse A
+    end
 
-fun clean_dir {extra_cleans} = let
+fun recursive_act file_act dir_act name =
+    let
+      fun worklist nms rmds =
+          case nms of
+              [] => List.app dir_act rmds
+            | n::ns =>
+              if OS.FileSys.isDir n then
+                worklist (dir_files n ns) (n :: rmds)
+              else (file_act n ; worklist ns rmds)
+    in
+      worklist [name] []
+    end
+
+fun quiet_remove s = OS.FileSys.remove s handle e => ()
+fun chatty_remove act (ofns : output_functions) s =
+    act s handle e =>
+                 (#warn ofns ("Attempt to remove: " ^ s ^
+                              " failed with exception " ^ General.exnMessage e);
+                  raise e)
+
+fun clean1 (ofns : output_functions) s =
+    let val _ = #diag ofns "tools" (fn () => "clean1 " ^ s)
+    in
+      if OS.FileSys.access (s, []) then
+        if OS.FileSys.isDir s then
+          if String.isSuffix "/" s then
+            recursive_act (chatty_remove OS.FileSys.remove ofns)
+                          (chatty_remove OS.FileSys.rmDir ofns)
+                          s
+          else
+            (#warn ofns ("Not removing directory " ^ s ^ " from EXTRA_CLEANS.");
+             #warn ofns ("  Use trailing / on name to force this."))
+        else chatty_remove OS.FileSys.remove ofns s
+      else (* doesn't exist, do nothing *) ()
+    end
+
+
+fun clean_dir ofns {extra_cleans} = let
   val cdstream = OS.FileSys.openDir "."
   fun to_delete f =
       case (toFile f) of
@@ -434,8 +483,8 @@ fun clean_dir {extra_cleans} = let
       | ART _ => true
       | _ => false
 in
-  read_files cdstream to_delete quiet_remove;
-  app quiet_remove extra_cleans
+  read_files cdstream to_delete (chatty_remove OS.FileSys.remove ofns);
+  app (clean1 ofns) extra_cleans
 end
 
 fun clean_forReloc {holheap} =
