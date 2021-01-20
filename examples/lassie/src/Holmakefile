@@ -1,16 +1,17 @@
 CLINE_OPTIONS=-j1
+TACTIC_WORLD = ../sempre/classes/interactive/edu/stanford/nlp/sempre/interactive/lassie/TacticWorld.class
 
 all: LassieTestTheory.sml
 .PHONY: all
 
-../sempre/interactive/lassie.lexicon:
+$(TACTIC_WORLD):
 	export LASSIEDIR=../ &&\
 	./init.sh &&\
 	cd ../sempre &&\
 	ant core interactive &&\
 	cd ../src
 
-LassieTestTheory.sml: ../sempre/interactive/lassie.lexicon
+LassieTestTheory.sml: $(TACTIC_WORLD)
 
 sempre_clean: $(clean)
 	cd ../sempre &&\
