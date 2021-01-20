@@ -1506,11 +1506,11 @@ val denorm_relative_tac =
          float_div_finite, float_sqrt_finite, float_mul_add_finite,
          float_mul_sub_finite]
   \\ last_assum (mp_then Any mp_tac error_bound_norm_strong)
-  \\ disch_then (qspec_then ‘0’ mp_tac)
+  \\ disch_then (qspec_then ‵0‵ mp_tac)
   \\ impl_tac >- fs[]
-  \\ qmatch_goalsub_abbrev_tac ‘abs (err_op) ≤ _ ⇒ _’
+  \\ qmatch_goalsub_abbrev_tac ‵abs (err_op) <= _ ==> _‵
   \\ strip_tac
-  \\ qexists_tac ‘err_op’
+  \\ qexists_tac ‵err_op‵
   \\ unabbrev_all_tac \\ fs[error_def]
   \\ full_simp_tac (srw_ss()++realSimps.real_SS++boolSimps.LET_ss)
        [float_value_finite, error_def, float_round_finite, normalizes_def,
