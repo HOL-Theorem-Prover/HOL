@@ -115,6 +115,53 @@ New features:
 
     These behaviours can also be turned off in a more fine-grained way by using `Excl` invocations.
 
+-   The `Induct_on` tactic is now more generous in the goals it will work on when inducting on an inductively defined relation.
+    For example, if one’s goal was
+
+           ∀s t. FINITE (s ∪ t) ∧ s ⊆ t ⇒ some-concl
+
+    and the aim was to do an induction using the principle associated with finite-ness’s inductive characterisation, one had to manually turn the goal into something like
+
+           ∀s0. FINITE s0 ==> ∀s t. s0 = s ∪ t ∧ s ⊆ t ⇒ some-concl
+
+    before applying `Induct_on ‘FINITE’`.
+
+    Now, `Induct_on` does the necessary transformations first itself.
+
+-   The `Inductive` and `CoInductive` syntaxes now support labelling of specific rules.
+    The supported syntax involves names in square brackets in column 0, as per the following:
+
+           Inductive dbeta:
+           [~redex:]
+             (∀s t. dbeta (dAPP (dABS s) t) (nsub t 0 s)) ∧
+           [~appL:]
+             (∀s t u. dbeta s t ⇒ dbeta (dAPP s u) (dAPP t u)) ∧
+           [~appR:]
+             (∀s t u. dbeta s t ⇒ dbeta (dAPP u s) (dAPP u t)) ∧
+           [~abs:]
+             (∀s t. dbeta s t ⇒ dbeta (dABS s) (dABS t))
+           End
+
+    The use of the leading tilde (`~`) character causes the substitution of the “stem” name (here `dbeta`) and an underscore into the name.
+    Thus in this case, there will be four theorems saved, the first of which will be called `dbeta_redex`, corresponding to the first conjunct.
+    If there is no tilde, the name is taken exactly as given.
+    Theorem attributes such as `simp`, `compute` *etc.* can be given in square brackets after the name and before the colon.
+    For example, `[~redex[simp]:]`.
+
+    The given names are both saved into the theory (available for future users of the theory) and into the Poly/ML REPL.
+
+-   There is a new `using` infix available in the tactic language.
+    It is an SML function of type `tactic * thm -> tactic`, and allows user-specification of theorems to use instead of the defaults.
+    Currently, it works with the `Induct_on`, `Induct`, `Cases_on` and `Cases` tactic.
+    All of these tactics consult global information in order to apply specific induction and cases theorems.
+    If the `using` infix is used, they will attempt to use the provided theorem instead.
+
+    Thus one can do a “backwards” list induction by writing
+
+           Induct_on ‘mylist’ using listTheory.SNOC_INDUCT
+
+    The `using` infix has tighter precedence than the various `THEN` operators so no extra parentheses are required.
+
 Bugs fixed:
 -----------
 
@@ -276,7 +323,7 @@ Incompatibilities:
              ⊢ ((P ⇒ Q) ∨ R ⇔ P ⇒ Q ∨ R) ∧
                (R ∨ (P ⇒ Q) ⇔ P ⇒ R ∨ Q)
 
-    These can be removed with `Excl` directives, the `-*` operator or `temp_delsimps`.
+    These can be removed with `Excl` directives, the `-*` operator or `{temp_,}delsimps`.
 
 *   The treatment of abbreviations (introduced with `qabbrev_tac` for
     example), has changed slightly. The system tries harder to prevent
