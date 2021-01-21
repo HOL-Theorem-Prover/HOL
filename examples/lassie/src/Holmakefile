@@ -13,7 +13,8 @@ $(TACTIC_WORLD):
 
 LassieTestTheory.sml: $(TACTIC_WORLD)
 
-sempre_clean: $(clean)
-	cd ../sempre &&\
-	rm -rf classes/ fig/ int-output/ interactive/lassie.lexicon interactive/sempre-out-socket.sml lib/ libsempre/ module-classes.txt state/
-.PHONY: sempre_clean
+EXTRA_CLEANS = ../sempre/classes/ ../sempre/fig/ ../sempre/int-output/ \
+               ../sempre/interactive/lassie.lexicon \
+               ../sempre/interactive/sempre-out-socket.sml ../sempre/lib/ \
+               ../sempre/libsempre/ ../sempre/module-classes.txt \
+               ../sempre/state/
