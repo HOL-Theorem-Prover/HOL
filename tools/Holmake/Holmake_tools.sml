@@ -438,7 +438,9 @@ fun recursive_act file_act dir_act name =
           case nms of
               [] => List.app dir_act rmds
             | n::ns =>
-              if OS.FileSys.isDir n then
+              if OS.FileSys.isLink n then
+                (file_act n ; worklist ns rmds)
+              else if OS.FileSys.isDir n then
                 worklist (dir_files n ns) (n :: rmds)
               else (file_act n ; worklist ns rmds)
     in
