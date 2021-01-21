@@ -193,6 +193,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_real "tttSearch.ttt_vis_fail" ttt_vis_fail,
      sreflect_flag "tttSetup.ttt_metis_flag" ttt_metis_flag,
+     sreflect_flag "tttSearch.ttt_spol_flag" ttt_metis_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
@@ -423,9 +424,10 @@ rlval_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval; 
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val expdir = ttt_eval_dir ^ "/201222"
-val argdir = expdir ^ "/arg";
-val tnnfile = expdir ^ "/tnn/arg";
+val expname = "210121-2"
+val expdir = ttt_eval_dir ^ "/" ^ expname;
+val valuedir = expdir ^ "/val";
+val tnnfile = expdir ^ "/tnn/val";
 
 open mlTreeNeuralNetwork aiLib;
 fun collect_ex dir = 
@@ -433,8 +435,8 @@ fun collect_ex dir =
     List.concat (map read_tnnex filel)
   end;
 
-val exl = collect_ex argdir;
-val exl = filter (not o null) (collect_ex argdir); length exl;
+val exl = collect_ex valuedir;
+val exl = filter (not o null) (collect_ex valuedir); length exl;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
@@ -468,13 +470,19 @@ val schedule =
    ];
 
 val tnn = train_fixed schedule exl;
-
 val _ = write_tnn tnnfile tnn;
 
+tttSetup.ttt_search_time := 30.0;
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val smlfun = "tttEval.ttt_eval";
+tttSetup.ttt_metis_flag := true;
+tttSetup.ttt_policy_coeff := 0.5;
+tttSearch.ttt_vis_fail := 0.1;
+tttSearch.ttt_spol_flag := true;
+run_evalscript_thyl smlfun "210121-2-3" (true,30) 
+  (SOME tnnfile,NONE,NONE) thyl;
+
 *)
-
-
-
 
 (* --------------------------------------------------------------------
    Statistics

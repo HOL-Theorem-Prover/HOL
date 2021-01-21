@@ -9,6 +9,7 @@ sig
   val reorder_time : real ref
 
   val ttt_vis_fail : real ref
+  val ttt_spol_flag : bool ref
 
   datatype sstatus = StacProved | StacSaturated | StacUndecided | StacFresh
   datatype gstatus = GoalProved | GoalSaturated | GoalUndecided
@@ -24,7 +25,7 @@ sig
 
   type stac_record =
    {token : tttToken.token, atyl : tttToken.aty list,
-    svis : real, ssum : real, sstatus : sstatus}
+    svis : real, ssum : real, spol : real, sstatus : sstatus}
   type argtree = (int list, stac_record) Redblackmap.dict
   type goal_record =
    {goal : goal, gvis : real, gsum : real, gstatus : gstatus,
@@ -39,7 +40,6 @@ sig
   val before_stacfresh_all : 
     (int -> stac_record) -> (int * stac_record) list
 
- 
   val backstatus_arg : sstatus list -> sstatus
   val backstatus_stacv : argtree vector -> gstatus
   val backstatus_goalv : goal_record vector -> nstatus
