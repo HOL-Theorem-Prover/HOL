@@ -191,6 +191,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
+     sreflect_real "tttSearch.ttt_vis_fail" ttt_vis_fail,
      sreflect_flag "tttSetup.ttt_metis_flag" ttt_metis_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
@@ -336,7 +337,7 @@ val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
-run_evalscript_thyl smlfun "210121-1" (true,30) 
+run_evalscript_thyl smlfun "210121-2" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
