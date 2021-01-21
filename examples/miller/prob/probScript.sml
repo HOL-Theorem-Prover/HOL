@@ -1125,9 +1125,9 @@ val INDEP_FN_SDEST = store_thm
                       SHD_SCONS, STL_SCONS, IN_HALFSPACE, LENGTH, sdrop_def,
                       I_o_ID, HALFSPACE_T_UNION_F, PROB_BERN_UNIV, FST]);
 
-val INDEP_FN_NONEXAMPLE = store_thm
-  ("INDEP_FN_NONEXAMPLE",
-   ``~((\s. (shd s = shd (stl s), stl s)) IN indep_fn)``,
+Theorem INDEP_FN_NONEXAMPLE:
+  (\s. (shd s = shd (stl s), stl s)) NOTIN indep_fn
+Proof
    RW_TAC std_ss [indep_fn_def, GSPECIFICATION, o_DEF]
    >> STRONG_DISJ_TAC
    >> STRONG_DISJ_TAC
@@ -1163,9 +1163,9 @@ val INDEP_FN_NONEXAMPLE = store_thm
    >> Q.EXISTS_TAC `scons h (scons (~shd (stl (prefix_seq [h]))) s)`
    >> RW_TAC std_ss [IN_INSERT, PREFIX_SET_SCONS, prefix_set_def, IN_UNIV,
                      STL_SCONS, SHD_SCONS, prefix_seq_def]
-   >> DISJ1_TAC
-   >> Cases_on `h`
-   >> RW_TAC std_ss [EQ_IMP_THM]);
+   >> pop_assum mp_tac >> Cases_on `h`
+   >> RW_TAC std_ss [EQ_IMP_THM]
+QED
 
 val INDEP_FN_PSUBSET = store_thm
   ("INDEP_FN_PSUBSET",
@@ -1579,12 +1579,12 @@ val INDEP_FN_SND_EVENTS' = store_thm
        f IN indep_fn /\ q IN events bern ==> ((q o SND) o f) IN events bern``,
    RW_TAC std_ss [INDEP_FN_SND_EVENTS, GSYM o_ASSOC]);
 
-val INDEP_FN_PROB_FST_INSERT = store_thm
-  ("INDEP_FN_PROB_FST_INSERT",
-   ``!f x xs.
+Theorem INDEP_FN_PROB_FST_INSERT:
+  !f x xs.
        f IN indep_fn /\ ~(x IN xs) ==>
        (prob bern {s | FST (f s) IN (x INSERT xs)} =
-        prob bern {s | FST (f s) = x} + prob bern {s | FST (f s) IN xs})``,
+        prob bern {s | FST (f s) = x} + prob bern {s | FST (f s) IN xs})
+Proof
    RW_TAC std_ss [IN_INSERT, GUNION]
    >> MATCH_MP_TAC PROB_ADDITIVE
    >> RW_TAC arith_ss [PROB_SPACE_BERN, IN_DISJOINT, GSPECIFICATION] >|
@@ -1597,8 +1597,9 @@ val INDEP_FN_PROB_FST_INSERT = store_thm
     >- RW_TAC std_ss [INDEP_FN_FST_EVENTS]
     >> ONCE_REWRITE_TAC [EXTENSION]
     >> RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM]
-    >> RW_TAC std_ss [SPECIFICATION],
-    PROVE_TAC []]);
+    >> RW_TAC std_ss [SPECIFICATION]
+   ]
+QED
 
 val INDEP_FN_PROB_FST_SUC = store_thm
   ("INDEP_FN_PROB_FST_SUC",
@@ -2274,18 +2275,16 @@ val INDEP_FN_FUNPOW = store_thm
    >- RW_TAC std_ss [INDEP_FN_BIND]
    >> RW_TAC std_ss [FUNPOW_SUC, BIND_DEF, o_DEF]);
 
-val PREFIX_COVER_LEVELS_DISJOINT = store_thm
-  ("PREFIX_COVER_LEVELS_DISJOINT",
-   ``!c b ca a m n.
-       (!a. prefix_cover (ca a)) /\ ~(m = n) ==>
-       DISJOINT (prefix_cover_level c b ca a m)
-                (prefix_cover_level c b ca a n)``,
+Theorem PREFIX_COVER_LEVELS_DISJOINT:
+  !c b ca a m n.
+    (!a. prefix_cover (ca a)) /\ ~(m = n) ==>
+    DISJOINT (prefix_cover_level c b ca a m)
+             (prefix_cover_level c b ca a n)
+Proof
    RW_TAC std_ss [IN_DISJOINT, prefix_cover_def, FORALL_AND_THM]
-   >> Q.SPEC_TAC (`x`, `x`)
-   >> Q.SPEC_TAC (`a`, `a`)
+   >> qid_spec_tac ‘x’ >> qid_spec_tac ‘a’
    >> POP_ASSUM MP_TAC
-   >> Q.SPEC_TAC (`n`, `n`)
-   >> Q.SPEC_TAC (`m`, `m`)
+   >> map_every qid_spec_tac [‘n’, ‘m’]
    >> (Induct
        >> Cases
        >> BasicProvers.NORM_TAC std_ss
@@ -2294,7 +2293,6 @@ val PREFIX_COVER_LEVELS_DISJOINT = store_thm
    >> Know `!a b. a \/ b = ~a ==> b` >- PROVE_TAC []
    >> Rewr'
    >> RW_TAC std_ss []
-   >> STRONG_DISJ_TAC
    >> STRONG_DISJ_TAC
    >> STRIP_TAC
    >> Know `l' = l''`
@@ -2307,11 +2305,9 @@ val PREFIX_COVER_LEVELS_DISJOINT = store_thm
        >> RW_TAC std_ss [IS_PREFIX_REFL])
    >> STRIP_TAC
    >> RW_TAC std_ss []
-   >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [APPEND_11]
-   >> STRIP_TAC
-   >> RW_TAC std_ss []
-   >> PROVE_TAC []);
+   >> full_simp_tac std_ss [APPEND_11]
+   >> PROVE_TAC []
+QED
 
 val PREFIX_COVER_STAR_PREFIXFREE = store_thm
   ("PREFIX_COVER_STAR_PREFIXFREE",
@@ -3391,11 +3387,11 @@ val NONEVENT_SEQ_SDROP_INJ = store_thm
    >> Know `eventually x y` >- PROVE_TAC [eventually_def]
    >> PROVE_TAC [EVENTUALLY_IN_NONEVENT]);
 
-val PROB_BERN_NONEVENT_SEQ = store_thm
-  ("PROB_BERN_NONEVENT_SEQ",
-   ``!n.
-       nonevent IN events bern ==>
-       (prob bern (nonevent_seq n) = 2 pow n * prob bern nonevent)``,
+Theorem PROB_BERN_NONEVENT_SEQ:
+  !n.
+    nonevent IN events bern ==>
+    (prob bern (nonevent_seq n) = 2 pow n * prob bern nonevent)
+Proof
    RW_TAC std_ss []
    >> Induct_on `n` >- RW_TAC real_ss [pow, nonevent_seq_def]
    >> RW_TAC real_ss [pow, nonevent_seq_def]
@@ -3429,14 +3425,14 @@ val PROB_BERN_NONEVENT_SEQ = store_thm
    >> POP_ASSUM K_TAC
    >> RW_TAC std_ss [NONEVENT_SEQ_ALT, IN_IMAGE]
    >> Cases_on `x' = x''` >- PROVE_TAC [MIRROR_NEQ]
-   >> STRONG_DISJ_TAC
    >> STRIP_TAC
    >> Suff `sdrop (SUC n) x' = sdrop (SUC n) x''`
    >- (MP_TAC (Q.SPEC `SUC n` NONEVENT_SEQ_SDROP_INJ)
        >> RW_TAC std_ss [INJ_DEF]
        >> PROVE_TAC [])
    >> RW_TAC std_ss [GSYM STL_o_SDROP, o_THM]
-   >> PROVE_TAC [STL_MIRROR]);
+   >> PROVE_TAC [STL_MIRROR]
+QED
 
 val NONEVENT = store_thm
   ("NONEVENT",
@@ -3821,9 +3817,12 @@ val PROBABLY_TRUE = store_thm
    MATCH_MP_TAC DEFINITELY_PROBABLY
    >> RW_TAC std_ss []);
 
-val PROB_BERN_BIND_COUNTABLE = store_thm
-  ("PROB_BERN_BIND_COUNTABLE",
-   ``!p f g c.
+local
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
+in
+Theorem PROB_BERN_BIND_COUNTABLE:
+   !p f g c.
        f IN indep_fn /\ (!a. g a IN indep_fn) /\
        (!x. x IN range (FST o f) ==> ?n. (c n = x)) ==>
        (\n.
@@ -3831,7 +3830,8 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
            prob bern ($= (c n) o FST o f) *
            prob bern (p o FST o g (c n))
          else 0) sums
-       prob bern (p o FST o BIND f g)``,
+       prob bern (p o FST o BIND f g)
+Proof
    RW_TAC std_ss []
    >> Know `countable (range (FST o f))`
    >- (RW_TAC std_ss [COUNTABLE_ALT]
@@ -4024,7 +4024,9 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
    >- RW_TAC std_ss []
    >> FUN_EQ_TAC
    >> Q.PAT_X_ASSUM `X sums Y` K_TAC
-   >> RW_TAC std_ss [o_THM]);
+   >> RW_TAC std_ss [o_THM]
+QED
+end (* local *)
 
 val PROB_BERN_BIND_EQ = store_thm
   ("PROB_BERN_BIND_EQ",

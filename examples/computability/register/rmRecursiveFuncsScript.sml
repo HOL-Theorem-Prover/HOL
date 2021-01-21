@@ -362,14 +362,17 @@ QED
 
 
 Theorem Cn_rmcorr:
-∀M N Op f g fin gin RS.
-  wfrm g ∧ wfrm f ∧ g.In = [gin] ∧ f.In = [fin]
-∧
-  rmcorr g g.q0 (λrs. rs gin = M ∧ ∀k. k ≠ gin ⇒ rs k = 0) NONE (λrs. rs g.Out = N)
-∧
-  rmcorr f f.q0 (λrs. rs fin = N ∧ ∀k. k ≠ fin ⇒ rs k = 0) NONE (λrs. rs f.Out = Op)
-
-⇒ rmcorr (Cn f g) (Cn f g).q0 (λrs. rs (2 ⊗ gin) = M ∧ ∀k. k ≠ (2 ⊗ gin) ⇒ rs k = 0) NONE (λrs. rs (Cn f g).Out = Op)
+  ∀M N Op f g fin gin RS.
+    wfrm g ∧ wfrm f ∧ g.In = [gin] ∧ f.In = [fin] ∧
+    rmcorr g g.q0 (λrs. rs gin = M ∧ ∀k. k ≠ gin ⇒ rs k = 0) NONE
+           (λrs. rs g.Out = N) ∧
+    rmcorr f f.q0 (λrs. rs fin = N ∧ ∀k. k ≠ fin ⇒ rs k = 0) NONE
+           (λrs. rs f.Out = Op)
+    ⇒
+    rmcorr (Cn f g) (Cn f g).q0
+           (λrs. rs (2 ⊗ gin) = M ∧
+            ∀k. k ≠ (2 ⊗ gin) ⇒ rs k = 0) NONE
+           (λrs. rs (Cn f g).Out = Op)
 Proof
   rw[Cn_def, link_all_def] >>
   irule link_correct_V >> simp[] >> rw[]
@@ -377,8 +380,11 @@ Proof
   >- (rw[DISJOINT_DEF, EXTENSION] >> metis_tac[npair_11, DECIDE``2 ≠ 1``])
   >> qexists_tac `λrs. rs (HD (msInst 2 (mrInst 1 f)).In) = N ∧
                        rs (msInst 0 (mrInst 2 g)).Out = N ∧
-                       ∀k. k ≠ (HD (msInst 2 (mrInst 1 f)).In) ∧ nfst k ≠ 2 ⇒ rs k = 0`
-  >> qexists_tac `λrs. rs (HD (msInst 2 (mrInst 1 f)).In) = N ∧ ∀k. k ≠ (HD (msInst 2 (mrInst 1 f)).In) ∧ nfst k = 1 ⇒ rs k = 0`
+                       ∀k. k ≠ (HD (msInst 2 (mrInst 1 f)).In) ∧ nfst k ≠ 2 ⇒
+                           rs k = 0`
+  >> qexists_tac
+       `λrs. rs (HD (msInst 2 (mrInst 1 f)).In) = N ∧
+             ∀k. k ≠ (HD (msInst 2 (mrInst 1 f)).In) ∧ nfst k = 1 ⇒ rs k = 0`
   >> reverse (rw[])
   (* f *)
   >- (irule msInst_correct_2 >> rw[] >> qexists_tac`NONE` >> rw[]
@@ -390,18 +396,23 @@ Proof
       >> rw[liftP_def]
       >> rw[FUN_EQ_THM]
       >> `(∀k. k ≠ 1 ⊗ fin ∧ nfst k = 1 ⇒ rs k = 0) = (∀k. k ≠ fin ⇒ rs (1 ⊗ k) = 0)`
-            by (rw[EQ_IMP_THM] >> `∃p q. k = npair p q` by metis_tac[npair_cases] >> fs[])
+            by (rw[EQ_IMP_THM] >>
+                `∃p q. k = npair p q` by metis_tac[npair_cases] >> fs[])
       >> rw[])
   >> irule link_correct_V >> simp[] >> rw[]
   >- (rw[DISJOINT_DEF, EXTENSION] >> metis_tac[npair_11, DECIDE``1 ≠ 0``])
-  >> qexists_tac `λrs.rs (msInst 0 (mrInst 2 g)).Out = N ∧ ∀k. nfst k ≠ 2 ⇒ rs k = 0`
-  >> qexists_tac `λrs.rs (msInst 0 (mrInst 2 g)).Out = N ∧ ∀k. nfst k ≠ 2 ∧ k ≠ (HD (msInst 2 (mrInst 1 f)).In) ⇒ rs k = 0`
+  >> qexists_tac
+       `λrs.rs (msInst 0 (mrInst 2 g)).Out = N ∧ ∀k. nfst k ≠ 2 ⇒ rs k = 0`
+  >> qexists_tac `λrs.rs (msInst 0 (mrInst 2 g)).Out = N ∧
+                         ∀k. nfst k ≠ 2 ∧ k ≠ (HD (msInst 2 (mrInst 1 f)).In) ⇒
+                             rs k = 0`
   >> reverse (rw[])
   (* dup *)
   >- (irule msInst_correct_2 >> rw[] >> qexists_tac`NONE` >> rw[]
       >- rw[npair_opt_def]
       >> irule dup_correct_INV >> simp[]
-      >> qexists_tac `λrs. ∀k. nfst k ≠ 2 ∧ k ≠ (HD (msInst 2 (mrInst 1 f)).In) ⇒ rs k = 0`
+      >> qexists_tac `λrs. ∀k. nfst k ≠ 2 ∧ k ≠ (HD (msInst 2 (mrInst 1 f)).In)⇒
+                               rs k = 0`
       >> qexists_tac `N` >> rw[]
       >> rw[FUN_EQ_THM, EQ_IMP_THM]
       >> first_x_assum drule_all
@@ -412,7 +423,8 @@ Proof
   >- rw[npair_opt_def]
   >- metis_tac[wfrm_def]
   >> `(mrInst 2 g).In = [2 ⊗ gin]` by simp[]
-  >> `(mrInst 2 g with In := [2 ⊗ gin]) = (mrInst 2 g with In := (mrInst 2 g).In)` by metis_tac[]
+  >> `(mrInst 2 g with In := [2 ⊗ gin]) =
+      (mrInst 2 g with In := (mrInst 2 g).In)` by metis_tac[]
   >> simp[]
   >> irule mrInst_correct_kV >> rw[]
   >- fs[wfrm_def]
@@ -424,7 +436,7 @@ Proof
   >- (`∃p q. k = npair p q` by simp[npair_cases] >> fs[])
   >> `∃p q. k = npair p q` by simp[npair_cases] >> fs[]
   >> Cases_on `nfst k = 2` >> fs[]
-  >- (last_x_assum drule >> rw[] >> fs[])
+  >- (rw[] >> fs[])
   >> metis_tac[]
 QED
 

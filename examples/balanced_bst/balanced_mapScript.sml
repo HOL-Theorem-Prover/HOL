@@ -5,6 +5,8 @@ open comparisonTheory;
 
 val _ = new_theory "balanced_map";
 
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 (* ------------------------ Preliminaries ------------------------ *)
 
 val _ = numLib.prefer_num();

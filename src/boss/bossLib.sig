@@ -88,8 +88,8 @@ sig
   val augment_srw_ss  : ssfrag list -> unit
   val diminish_srw_ss : string list -> unit
   val export_rewrites : string list -> unit
-  val delsimps        : string list -> unit
   val temp_delsimps   : string list -> unit
+  val delsimps        : string list -> unit
   val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)

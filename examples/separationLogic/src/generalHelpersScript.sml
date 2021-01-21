@@ -429,52 +429,51 @@ val ALL_DISJOINT_PERM = store_thm ("ALL_DISJOINT_PERM",
 
 
 
-val FIRST_OCCURENCE_def = Define `
-(FIRST_OCCURENCE n P [] = NONE) /\
-(FIRST_OCCURENCE n P (x::L) = if (P x) then SOME (n,x) else
-                              FIRST_OCCURENCE (SUC n) P L)`
+Definition FIRST_OCCURENCE_def:
+  (FIRST_OCCURENCE n P [] = NONE) /\
+  (FIRST_OCCURENCE n P (x::L) = if (P x) then SOME (n,x)
+                                else FIRST_OCCURENCE (SUC n) P L)
+End
 
-
-val FIRST_OCCURENCE_EQ_REWRITES = store_thm ("FIRST_OCCURENCE_EQ_REWRITES",
-``(!n P L. (FIRST_OCCURENCE n P L = NONE) = (EVERY ($~ o P) L)) /\
+Theorem FIRST_OCCURENCE_EQ_REWRITES:
+  (!n P L. (FIRST_OCCURENCE n P L = NONE) = (EVERY ($~ o P) L)) /\
   (!n m x P L. (FIRST_OCCURENCE n P L = (SOME (m,x))) =
-             (EXISTS P L /\ (n <= m) /\ (EL (m-n) L = x) /\ P x /\
-              !m'. m' < (m - n) ==> ~(P (EL m' L))))``,
+               (EXISTS P L /\ (n <= m) /\ (EL (m-n) L = x) /\ P x /\
+                !m'. m' < (m - n) ==> ~(P (EL m' L))))
+Proof
+  CONJ_TAC THENL [
+    Induct_on `L` THEN
+    ASM_SIMP_TAC list_ss [FIRST_OCCURENCE_def, COND_RAND, COND_RATOR],
 
-CONJ_TAC THENL [
-   Induct_on `L` THEN
-   ASM_SIMP_TAC list_ss [FIRST_OCCURENCE_def, COND_RAND, COND_RATOR],
+    Induct_on `L` THEN
+    ASM_SIMP_TAC list_ss [FIRST_OCCURENCE_def, COND_RAND, COND_RATOR] THEN
+    SIMP_TAC std_ss [COND_EXPAND_IMP, FORALL_AND_THM] THEN
+    CONJ_TAC THENL [
+        REPEAT STRIP_TAC THEN
+        Cases_on `n = m` THEN ASM_SIMP_TAC list_ss [] THENL [
+          PROVE_TAC[],
 
-   Induct_on `L` THEN
-   ASM_SIMP_TAC list_ss [FIRST_OCCURENCE_def, COND_RAND, COND_RATOR] THEN
-   SIMP_TAC std_ss [COND_EXPAND_IMP, FORALL_AND_THM] THEN
-   CONJ_TAC THENL [
-      REPEAT STRIP_TAC THEN
-      Cases_on `n = m` THEN ASM_SIMP_TAC list_ss [] THENL [
-         PROVE_TAC[],
+          Cases_on `n <= m` THEN ASM_REWRITE_TAC[] THEN
+          STRIP_TAC THEN DISJ2_TAC THEN
+          Q.EXISTS_TAC `0` THEN
+          ASM_SIMP_TAC list_ss []
+        ],
 
-         Cases_on `n <= m` THEN ASM_REWRITE_TAC[] THEN
-         DISJ2_TAC THEN DISJ2_TAC THEN
-         Q.EXISTS_TAC `0` THEN
-         ASM_SIMP_TAC list_ss []
-      ],
-
-      SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
-      REPEAT STRIP_TAC THEN
-      Cases_on `n <= m` THEN ASM_SIMP_TAC arith_ss [] THEN
-      Cases_on `n = m` THEN1 (
-         ASM_SIMP_TAC list_ss [] THEN PROVE_TAC[]
-      ) THEN
-      ASM_SIMP_TAC arith_ss [] THEN
-      Q.ABBREV_TAC `n' = m - SUC n` THEN
-      `m - n = SUC n'` by (
+        SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+        REPEAT STRIP_TAC THEN
+        Cases_on `n <= m` THEN ASM_SIMP_TAC arith_ss [] THEN
+        Cases_on `n = m` THEN1 (
+          ASM_SIMP_TAC list_ss [] THEN PROVE_TAC[]
+          ) THEN
+        ASM_SIMP_TAC arith_ss [] THEN
+        Q.ABBREV_TAC `n' = m - SUC n` THEN
+        `m - n = SUC n'` by (
           Q.UNABBREV_TAC `n'` THEN DECIDE_TAC
-      ) THEN
-      ASM_SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [FORALL_LESS_SUC]
-   ]
-]);
-
-
+          ) THEN
+        ASM_SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [FORALL_LESS_SUC]
+      ]
+  ]
+QED
 
 val IS_SOME___FIRST_OCCURENCE = store_thm ("IS_SOME___FIRST_OCCURENCE",
 ``!n P L. IS_SOME (FIRST_OCCURENCE n P L) = EXISTS P L``,

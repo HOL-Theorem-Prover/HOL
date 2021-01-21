@@ -9,15 +9,14 @@ open HolKernel Parse boolLib bossLib metisLib arithmeticTheory
      listTheory numTheory simpLib
      stringTheory rich_listTheory stringSimps
      listSimps extra_stringTheory;
+open simpLib
 
+fun disjsafe ss = ss -* ["lift_disj_eq", "lift_imp_disj"]
 
-val safe_list_ss = (simpLib.++ (bool_ss, LIST_ss));
-
-val safe_string_ss = (simpLib.++ (bool_ss, STRING_ss));
-
-val arith_string_ss = (simpLib.++ (arith_ss, STRING_ss));
-
-val string_ss = (simpLib.++ (list_ss, STRING_ss));
+val safe_list_ss = disjsafe (bool_ss ++ LIST_ss)
+val safe_string_ss = disjsafe (bool_ss ++ STRING_ss)
+val arith_string_ss = disjsafe (arith_ss ++ STRING_ss)
+val string_ss = disjsafe (list_ss ++ STRING_ss)
 
 
 fun test_eq tm1 tm2 = let
@@ -26,7 +25,7 @@ fun test_eq tm1 tm2 = let
 
 fun toString_CONV_helper tm =
    DEPTH_CONV (test_eq ``toString n``
-                THENC SIMP_CONV (simpLib.++ (arith_string_ss, LIST_ss))
+                THENC SIMP_CONV (arith_string_ss ++ LIST_ss)
                 [toString_def, rec_toString_def]);
 
 val toString_CONV = toString_CONV_helper ``:num``;

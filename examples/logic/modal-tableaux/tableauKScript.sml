@@ -529,7 +529,7 @@ Theorem scmap_EQ_SOME:
 Proof
   Induct >> simp[AllCaseEqs(), PULL_EXISTS] >>
   rw[] >> Cases_on ‘f h’ >> simp[]
-  >- (disj2_tac >> qexists_tac‘0’ >> simp[]) >>
+  >- (strip_tac >> qexists_tac‘0’ >> simp[]) >>
   Cases_on ‘r’ >> simp[] >> simp[Once FORALL_NUM, SimpRHS] >> simp[] >>
   metis_tac[]
 QED

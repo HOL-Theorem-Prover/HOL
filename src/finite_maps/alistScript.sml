@@ -737,15 +737,13 @@ QED
 Theorem ADELKEY_unchanged:
   !x ls. ((ADELKEY x ls = ls) <=> ~MEM x (MAP FST ls))
 Proof
-  Induct_on`ls`
-  \\ rw[ADELKEY_def,FILTER_EQ_ID,MEM_MAP,EVERY_MEM]
-  >- metis_tac[]
-  \\ rw[EQ_IMP_THM]
-  >- (
-    `LENGTH (h::ls) <= LENGTH ls` by metis_tac[LENGTH_FILTER_LEQ]
-    \\ fs[] )
-  \\ first_x_assum(qspec_then`h`mp_tac)
-  \\ simp[]
+  simp[MEM_MAP, ADELKEY_def, FORALL_PROD] >>
+  Induct_on‘ls’ >> simp[AllCaseEqs(), FORALL_PROD] >>
+  ‘!P h. FILTER P ls <> h::ls’
+    by (rpt strip_tac >>
+        ‘LENGTH (h::ls) <= LENGTH ls’ by metis_tac[LENGTH_FILTER_LEQ] >>
+        fs[]) >>
+  simp[] >> metis_tac[]
 QED
 
 Theorem ADELKEY_AFUPDKEY:

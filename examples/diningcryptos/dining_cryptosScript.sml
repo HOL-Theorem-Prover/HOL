@@ -22,6 +22,13 @@ val _ = new_theory "dining_cryptos";
     Helpful proof tools
    ---------------------------------------------------------------------- *)
 
+fun disjsafe ss = ss -* ["lift_disj_eq", "lift_imp_disj"]
+val arith_ss = disjsafe arith_ss
+val bool_ss = disjsafe bool_ss
+val list_ss = disjsafe list_ss
+val real_ss = disjsafe real_ss
+val std_ss = disjsafe std_ss
+
 val Simplify = RW_TAC arith_ss;
 val safe_set_ss = bool_ss ++ PRED_SET_ss;
 val set_ss = arith_ss ++ PRED_SET_ss;

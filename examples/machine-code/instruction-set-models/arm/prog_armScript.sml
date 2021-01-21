@@ -124,12 +124,13 @@ val IN_arm2set = prove(``
   SRW_TAC [] [arm2set'_def,arm2set''_def,arm2set_def,IN_UNION,
      IN_INSERT,NOT_IN_EMPTY,IN_DIFF,PUSH_IN_INTO_IF] \\ METIS_TAC []);
 
-val arm2set''_11 = prove(
-  ``!y y' s s'. (arm2set'' y' s' = arm2set'' y s) ==> (y = y')``,
+Theorem arm2set''_11[local]:
+  !y y' s s'. (arm2set'' y' s' = arm2set'' y s) ==> (y = y')
+Proof
   REPEAT STRIP_TAC \\ CCONTR_TAC
   \\ `?r m st cp ud. y = (r,m,st,cp,ud)` by METIS_TAC [PAIR]
   \\ `?r' m' st' cp' ud'. y' = (r',m',st',cp',ud')` by METIS_TAC [PAIR]
-  \\ FULL_SIMP_TAC bool_ss [PAIR_EQ] THENL [
+  \\ FULL_SIMP_TAC bool_ss [PAIR_EQ, Excl "lift_disj_eq"] THENL [
     `?a. ~(a IN r ⇔ a IN r')` by METIS_TAC [EXTENSION]
     \\ sg `~((?x. aReg a x IN arm2set'' y s) = (?x. aReg a x IN arm2set'' y' s'))`,
     `?a. ~(a IN m ⇔ a IN m')` by METIS_TAC [EXTENSION]
@@ -140,7 +141,8 @@ val arm2set''_11 = prove(
     sg `~((?x. aUndef x IN arm2set'' y s) = (?x. aUndef x IN arm2set'' y' s'))`]
   \\ REPEAT (FULL_SIMP_TAC bool_ss [IN_arm2set] \\ METIS_TAC [])
   \\ Q.PAT_X_ASSUM `arm2set'' _ _ = arm2set'' _ _` (K ALL_TAC)
-  \\ FULL_SIMP_TAC bool_ss [IN_arm2set] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC bool_ss [IN_arm2set] \\ METIS_TAC []
+QED
 
 val DELETE_arm2set = prove(``
   (!a s. (arm2set' (rs,ms,st,cp,ud) s) DELETE aReg a (ARM_READ_REG a s) =

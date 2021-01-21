@@ -2438,24 +2438,18 @@ Proof
  >- (Q.UNABBREV_TAC ‘d’ \\
      Cases_on ‘x’ >> Cases_on ‘y’ >> simp [] \\
      reverse EQ_TAC >- rw [SQRT_0] \\
-     STRIP_TAC >> rename1 ‘x1 = x2 /\ y1 = y2’ \\
-     CCONTR_TAC >> fs [] >| (* 2 subgoals *)
+     STRIP_TAC >> rename1 ‘x1 = x2 /\ y1 = y2’ >>
+     Cases_on ‘x1 = x2’ >> gvs[] >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
-       Suff ‘0 < (x1 - x2) pow 2 + (y1 - y2) pow 2’
+       CCONTR_TAC >>
+       Suff ‘0 < (y1 - y2) pow 2’
        >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
-       Q.PAT_X_ASSUM ‘sqrt _ = 0’ K_TAC \\
-      ‘x1 - x2 <> 0’ by PROVE_TAC [REAL_SUB_0] \\
-      ‘0 < (x1 - x2) pow 2’ by METIS_TAC [ZERO_LT_POW] \\
-      ‘0 <= (y1 - y2) pow 2’ by PROVE_TAC [REAL_LE_POW2] \\
-       REAL_ASM_ARITH_TAC,
+       simp[],
        (* goal 2 (of 2) *)
        Suff ‘0 < (x1 - x2) pow 2 + (y1 - y2) pow 2’
        >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
-       Q.PAT_X_ASSUM ‘sqrt _ = 0’ K_TAC \\
-      ‘y1 - y2 <> 0’ by PROVE_TAC [REAL_SUB_0] \\
-      ‘0 < (y1 - y2) pow 2’ by METIS_TAC [ZERO_LT_POW] \\
-      ‘0 <= (x1 - x2) pow 2’ by PROVE_TAC [REAL_LE_POW2] \\
-       REAL_ASM_ARITH_TAC ])
+       irule REAL_LTE_TRANS >> qexists_tac ‘(x1 - x2) pow 2’ >> simp[]
+     ])
  >> Cases_on ‘x’ (* (q,r) *)
  >> Cases_on ‘y’ (* (q',r') *)
  >> Cases_on ‘z’ (* (q'',r'') *)

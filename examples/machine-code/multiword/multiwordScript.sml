@@ -318,16 +318,18 @@ val IMP_EQ_n2mw_ALT = prove(
   ``!xs ys. mw_ok xs /\ mw_ok ys /\ (mw2n xs = mw2n ys) ==> (xs = ys)``,
   METIS_TAC [IMP_EQ_n2mw]);
 
-val EXISTS_i2mw = prove(
-  ``!x. mw_ok (SND x) /\ ~(x = (T,[])) ==> ?y. x = i2mw y``,
-  Cases \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
+Theorem EXISTS_i2mw[local]:
+  !x. mw_ok (SND x) /\ ~(x = (T,[])) ==> ?y. x = i2mw y
+Proof
+  Cases \\ SIMP_TAC std_ss [Excl "lift_disj_eq"] \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC mw_ok_IMP_EXISTS_n2mw THEN1
-   (Q.EXISTS_TAC `(& n)` \\ ASM_SIMP_TAC std_ss [i2mw_def,n2mw_11]
+   (Q.EXISTS_TAC ‘(& n)’ \\ ASM_SIMP_TAC std_ss [i2mw_def,n2mw_11]
     \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC)
-  \\ `~(n = 0)` by METIS_TAC [n2mw_def]
-  \\ Q.EXISTS_TAC `if q then -(& n) else (& n)` \\ POP_ASSUM MP_TAC
-  \\ Cases_on `q` \\ FULL_SIMP_TAC std_ss [i2mw_def,n2mw_11]
-  \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC);
+  \\ ‘~(n = 0)’ by METIS_TAC [n2mw_def]
+  \\ Q.EXISTS_TAC ‘if q then -(& n) else (& n)’ \\ POP_ASSUM MP_TAC
+  \\ Cases_on ‘q’ \\ FULL_SIMP_TAC std_ss [i2mw_def,n2mw_11]
+  \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC
+QED
 
 val mw2i_EQ_IMP_EQ_i2mw = prove(
   ``!x. mw_ok (SND x) /\ ~(x = (T,[])) /\ (mw2i x = i) ==> (x = i2mw i)``,
@@ -394,16 +396,20 @@ val mw_zerofix_thm = prove(
   ``!x b xs. ~(mw_zerofix x = (T,[])) /\ mw_ok (SND (mw_zerofix (b, mw_fix xs)))``,
   SRW_TAC [] [mw_zerofix_def,mw_ok_CLAUSES,mw_ok_fix]);
 
-val mw_fix_NIL = store_thm("mw_fix_NIL",
-  ``!xs. (mw_fix xs = []) = (mw2n xs = 0)``,
-  HO_MATCH_MP_TAC SNOC_INDUCT \\ REPEAT STRIP_TAC
+Theorem mw_fix_NIL:
+  !xs. (mw_fix xs = []) = (mw2n xs = 0)
+Proof
+  Induct using SNOC_INDUCT \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [mw_fix_def]
-  \\ SIMP_TAC std_ss [mw2n_def,NOT_SNOC_NIL,LAST_SNOC,FRONT_SNOC]
+  \\ SIMP_TAC std_ss [mw2n_def,NOT_SNOC_NIL,LAST_SNOC,FRONT_SNOC,
+                      Excl "lift_disj_eq"]
   \\ Cases_on `x = 0w` \\ ASM_SIMP_TAC std_ss [SNOC_APPEND,mw2n_APPEND,mw2n_def]
-  \\ ASM_SIMP_TAC std_ss [w2n_n2w,ZERO_LT_dimword,GSYM SNOC_APPEND,NOT_SNOC_NIL]
-  \\ `0 < dimwords (LENGTH xs) (:'a)` by METIS_TAC [ZERO_LT_dimwords] \\ DISJ2_TAC
-  \\ REPEAT STRIP_TAC THEN1 DECIDE_TAC \\ Cases_on `x`
-  \\ FULL_SIMP_TAC std_ss [n2w_11,w2n_n2w,ZERO_LT_dimword]);
+  \\ ASM_SIMP_TAC std_ss [w2n_n2w,ZERO_LT_dimword,GSYM SNOC_APPEND,NOT_SNOC_NIL,
+                          Excl "lift_disj_eq"]
+  \\ `0 < dimwords (LENGTH xs) (:'a)` by METIS_TAC [ZERO_LT_dimwords]
+  \\ DISJ2_TAC \\ REPEAT STRIP_TAC THEN1 DECIDE_TAC \\ Cases_on `x`
+  \\ FULL_SIMP_TAC std_ss [n2w_11,w2n_n2w,ZERO_LT_dimword]
+QED
 
 val mw_fix_LENGTH_ZERO = prove(
   ``!xs. (LENGTH (mw_fix xs) = 0) = (mw2n xs = 0)``,

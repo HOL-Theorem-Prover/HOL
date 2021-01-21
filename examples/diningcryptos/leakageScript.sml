@@ -21,6 +21,10 @@ open hurdUtils util_probTheory sigma_algebraTheory
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "leakage";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"];
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"];
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"];
+
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)

@@ -21,7 +21,9 @@ struct
 end
 open Parse
 
-val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
+val std_ss   = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss  =
+    numLib.arith_ss ++ listSimps.LIST_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (***********************************************)
 (* Auxiliary stuff                             *)
@@ -188,8 +190,10 @@ val static_ss = simpLib.merge_ss
    e.g. case-constants or constructors) and a
    custum component as well. *)
 fun rc_ss gl =
-    simpLib.remove_ssfrags ["patternMatchesSimp"]
-                           (srw_ss() ++ simpLib.merge_ss (static_ss :: gl))
+    simpLib.remove_ssfrags
+      ["patternMatchesSimp"]
+      (srw_ss() ++ simpLib.merge_ss (static_ss :: gl) -*
+       ["lift_disj_eq", "lift_imp_disj"])
 
 (* finally we add a call-back component. This is an
    external conversion that is used at the end if

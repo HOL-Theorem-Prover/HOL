@@ -2519,11 +2519,13 @@ Proof
   SIMP_TAC std_ss [BIGINTER, GSPECIFICATION] THEN GEN_TAC THEN
   STRIP_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM MP_TAC THEN
   POP_ASSUM K_TAC THEN FULL_SIMP_TAC std_ss [IN_DIFF, BIGUNION, GSPECIFICATION] THEN
-  STRIP_TAC THEN CCONTR_TAC THEN UNDISCH_TAC
-   ``!s. (!x. s <> sp DIFF (A:num->'a->bool) x \/ x NOTIN X) \/ x' NOTIN s`` THEN
+  STRIP_TAC THEN CCONTR_TAC THEN
+  UNDISCH_TAC
+   “!s. (!x. s = sp DIFF (A:num->'a->bool) x ==> x NOTIN X) \/ x' NOTIN s” THEN
   SIMP_TAC std_ss [] THEN EXISTS_TAC ``sp DIFF (A:num->'a->bool) x''`` THEN
   CONJ_TAC THENL [METIS_TAC [], ALL_TAC] THEN
-  ASM_SIMP_TAC std_ss [IN_DIFF]);
+  ASM_SIMP_TAC std_ss [IN_DIFF]
+QED
 
 Theorem SIGMA_ALGEBRA_COUNTABLE_INT' : (* was: countable_INT' *)
     !sp sts A X. sigma_algebra (sp,sts) /\ countable X /\ (X <> {}) /\
