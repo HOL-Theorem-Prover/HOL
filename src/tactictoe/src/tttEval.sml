@@ -334,8 +334,9 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-tttSetup.ttt_metis_flag := false;
-run_evalscript_thyl smlfun "201222" (true,30) 
+tttSetup.ttt_metis_flag := true;
+tttSetup.ttt_policy_coeff := 0.7;
+run_evalscript_thyl smlfun "210121" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
@@ -421,7 +422,7 @@ rlval_loop expname thyl (1,maxgen);
 (*
 load "tttEval"; open tttEval; 
 val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val expdir = ttt_eval_dir ^ "/201221-1"
+val expdir = ttt_eval_dir ^ "/201222"
 val argdir = expdir ^ "/arg";
 val tnnfile = expdir ^ "/tnn/arg";
 
@@ -432,7 +433,7 @@ fun collect_ex dir =
   end;
 
 val exl = collect_ex argdir;
-val exl = filter (not o null) (collect_ex argdir);
+val exl = filter (not o null) (collect_ex argdir); length exl;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
