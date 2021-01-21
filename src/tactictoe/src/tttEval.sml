@@ -335,8 +335,8 @@ tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := true;
-tttSetup.ttt_policy_coeff := 0.7;
-run_evalscript_thyl smlfun "210121" (true,30) 
+tttSetup.ttt_policy_coeff := 0.5;
+run_evalscript_thyl smlfun "210121-1" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 

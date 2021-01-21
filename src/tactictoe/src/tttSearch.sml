@@ -100,7 +100,7 @@ fun eval_goal vnn g =
   end
 
 fun reward_of_goal vnno g =
-  if not (isSome vnno) then 1.0 else eval_goal (valOf vnno) g
+  if not (isSome vnno) then 0.0 else eval_goal (valOf vnno) g
 
 (* policy *)
 fun eval_stac pnn g stac =
