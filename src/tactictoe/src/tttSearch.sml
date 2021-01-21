@@ -192,7 +192,14 @@ fun puct gvis ((sum,vis),polv) =
 fun expo_polv_aux ci (c:real) l = case l of
     [] => []
   | a :: m => (a,c) :: expo_polv_aux ci (ci * c) m
-fun expo_polv ci l = expo_polv_aux ci ci l
+fun expo_polv ci l = expo_polv_aux ci 1.0 l
+
+fun norm_polv l = 
+  let val sum = sum_real (map snd l) in
+    if sum > epsilon 
+    then map_snd (fn x => x / sum) l
+    else l
+  end
 
 fun before_stacfresh_aux accessf acc i =
   if not (can accessf i) then rev acc else
@@ -225,7 +232,7 @@ fun select_stacrecl stacrecl pvis =
   let
     fun add_puct ((sn,{ssum,svis,...}),polv) =
       (sn, puct pvis ((ssum,svis),polv))
-    val l0 = expo_polv (!ttt_policy_coeff) stacrecl
+    val l0 = norm_polv (expo_polv (!ttt_policy_coeff) stacrecl)
     val _ = if null l0 then raise ERR "select_stacrecl" "unexpected" else ()
     val l1 = map add_puct l0
     val l2 = dict_sort compare_rmax l1
