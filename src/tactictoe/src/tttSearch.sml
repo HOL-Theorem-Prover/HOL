@@ -20,6 +20,8 @@ val reward_time = ref 0.0
 val reorder_time = ref 0.0
 val dict_time = ref 0.0
 
+val ttt_vis_fail = ref 0.1
+
 (* -------------------------------------------------------------------------
    Status
    ------------------------------------------------------------------------- *)
@@ -86,9 +88,12 @@ fun backstatus_node node = case #nstatus node of
    ------------------------------------------------------------------------- *)
 
 (* value *)
+
+(* called only when tactic applications either closes the goal or fails *)
 fun reward_of_sstatus sstatus = case sstatus of
-    StacSaturated => 0.0
-  | StacProved => 1.0
+    (* do not penalize too much for failing as the policy cannot avoid it *)
+    StacSaturated => (sstatus,(!ttt_vis_fail),0.0)
+  | StacProved => (sstatus,1.0,1.0)
   | _ => raise ERR "reward_of_sstatus" "unexpected"
 
 fun eval_goal vnn g =
@@ -432,17 +437,19 @@ fun node_create (tree,searchobj) gl (pid,(gn,sn,anl)) =
     val pgoal = #goal (Vector.sub (#goalv node,gn))
     val cgoalv = Vector.fromList (map (goal_create searchobj) gl)
     val cid = (gn,sn,anl) :: pid
+    val vis = 1.0
+    val status = backstatus_goalv cgoalv
+    val reward = backreward_allgoalv cgoalv
     val node =
       {
-      nvis = 1.0, nsum = backreward_allgoalv cgoalv,
-      nstatus = backstatus_goalv cgoalv,
+      nvis = vis, nsum = reward, nstatus = status,
       goalv = cgoalv,
       parentd = dadd pgoal () (#parentd node)
       }
     val newtree = dadd cid node tree
   in
     debug_node gl;
-    (newtree, #nsum node)
+    (newtree,reward)
   end
 
 (* -------------------------------------------------------------------------
@@ -455,12 +462,12 @@ fun children_statusl argtree anl acc i =
     (#sstatus (dfind (i :: anl) argtree) :: acc) (i+1)
   else rev acc
 
-fun backup_argtree (argtree,anl) (sstatus,reward) =
+fun backup_argtree (argtree,anl) (sstatus,vis,reward) =
   let
     val {token,atyl,svis,ssum,...} = dfind anl argtree
     val newargnode =
       {token = token, atyl = atyl,
-       svis = svis + 1.0, ssum = ssum + reward, sstatus = sstatus}
+       svis = svis + vis, ssum = ssum + reward, sstatus = sstatus}
     val newargtree = dadd anl newargnode argtree
   in
     if null anl then newargtree else
@@ -468,25 +475,25 @@ fun backup_argtree (argtree,anl) (sstatus,reward) =
       val cstatusl = children_statusl newargtree (tl anl) [] 0
       val pstatus = backstatus_arg cstatusl
     in
-      backup_argtree (newargtree, tl anl) (pstatus,reward)
+      backup_argtree (newargtree, tl anl) (pstatus,vis,reward)
     end
   end
 
-fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
+fun node_update tree (argtreeo,glo) (sstatus,vis,reward) (id,(gn,sn,anl)) =
   let
     val {nvis,nsum,goalv,parentd,...} = dfind id tree
     val {goal,gvis,gsum,stacv,siblingd,...} = Vector.sub (goalv,gn)
     val argtree = Vector.sub (stacv,sn)
     (* update argtree *)
     val argtree1 = if isSome argtreeo then (valOf argtreeo) else argtree
-    val argtree2 = backup_argtree (argtree1,anl) (sstatus,reward)
+    val argtree2 = backup_argtree (argtree1,anl) (sstatus,vis,reward)
     (* update stacv *)
     val newstacv = Vector.update (stacv,sn,argtree2)
     (* update goalv *)
     val newgoalrec =
       {
       goal = goal,
-      gvis = gvis + 1.0, gsum = gsum + reward,
+      gvis = gvis + vis, gsum = gsum + reward,
       gstatus = backstatus_stacv newstacv,
       stacv = newstacv,
       siblingd = if isSome glo then dadd (valOf glo) () siblingd else siblingd
@@ -495,7 +502,7 @@ fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
     (* update node *)
     val newnode =
       {
-      nvis = nvis + 1.0, nsum = nsum + backreward_goalv (gn,reward) newgoalv,
+      nvis = nvis + vis, nsum = nsum + backreward_goalv (gn,reward) newgoalv,
       nstatus = backstatus_goalv newgoalv,
       goalv = newgoalv,
       parentd = parentd
@@ -504,13 +511,13 @@ fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
     (dadd id newnode tree, backstatus_node newnode)
   end
 
-fun node_backup tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
+fun node_backup tree (argtreeo,glo) (sstatus,vis,reward) (id,(gn,sn,anl)) =
   let val (newtree,newsstatus) =
-    node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl))
+    node_update tree (argtreeo,glo) (sstatus,vis,reward) (id,(gn,sn,anl))
   in
     if null id
     then newtree
-    else node_backup newtree (NONE,NONE) (newsstatus,reward) (tl id, hd id)
+    else node_backup newtree (NONE,NONE) (newsstatus,vis,reward) (tl id, hd id)
   end
 
 (* -------------------------------------------------------------------------
@@ -546,13 +553,18 @@ fun search_loop startsearchobj nlimito starttree =
             then apply_stac (tree,searchobj) newargtree pidx
             else (debug "no argument predicted"; (NONE, StacSaturated))
           val _ = debug "node expansion"
-          val (exptree,reward) =
+          val (exptree,(status,vis,reward)) =
             if sstatus = StacUndecided
-            then node_create (tree,searchobj) (valOf glo) pidx
+            then 
+               let val(temptree,tempreward) = 
+                 node_create (tree,searchobj) (valOf glo) pidx
+               in
+                 (temptree,(sstatus,1.0,tempreward))
+               end
             else (tree, reward_of_sstatus sstatus)
           val _ = debug "backup"
           val backuptree =
-            node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
+            node_backup exptree (SOME newargtree, glo) (status,vis,reward) pidx
         in
           loop (n+1) searchobj backuptree
         end
