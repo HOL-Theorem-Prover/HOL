@@ -991,7 +991,7 @@ fun do_clean_target x = let
       Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans()}
 in
   case x of
-      "clean" => (info "Cleaning directory of object files\n"; clean_action())
+      "clean" => clean_action()
     | "cleanDeps" => ignore (clean_deps())
     | "cleanAll" => (clean_action(); ignore (clean_deps()))
     | _ => die ("Bad clean target " ^ x)
