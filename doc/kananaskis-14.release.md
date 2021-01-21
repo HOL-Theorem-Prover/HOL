@@ -265,6 +265,19 @@ New examples:
 Incompatibilities:
 ------------------
 
+*   Two new rewrites to do with disjunctions have been introduced into the automatic simplifier (and also other simpsets that derive from the fundamental `bool_ss` value).
+    The rewrites are
+
+           [lift_disj_eq]
+             ⊢ (x ≠ y ∨ P ⇔ x = y ⇒ P) ∧
+               (P ∨ x ≠ y ⇔ x = y ⇒ P)
+
+           [lift_imp_disj]
+             ⊢ ((P ⇒ Q) ∨ R ⇔ P ⇒ Q ∨ R) ∧
+               (R ∨ (P ⇒ Q) ⇔ P ⇒ R ∨ Q)
+
+    These can be removed with `Excl` directives, the `-*` operator or `temp_delsimps`.
+
 *   The treatment of abbreviations (introduced with `qabbrev_tac` for
     example), has changed slightly. The system tries harder to prevent
     abbreviation assumptions from changing in form; they should stay
