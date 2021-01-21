@@ -152,7 +152,7 @@ New features:
 
 -   There is a new `using` infix available in the tactic language.
     It is an SML function of type `tactic * thm -> tactic`, and allows user-specification of theorems to use instead of the defaults.
-    Currently, it works with the `Induct_on`, `Induct`, `Cases_on` and `Cases` tactic.
+    Currently, it works with the `Induct_on`, `Induct`, `Cases_on` and `Cases` tactics.
     All of these tactics consult global information in order to apply specific induction and cases theorems.
     If the `using` infix is used, they will attempt to use the provided theorem instead.
 
@@ -167,7 +167,7 @@ Bugs fixed:
 
 *   In `extrealTheory`: the old definition of `extreal_add` wrongly
     allowed `PosInf + NegInf = PosInf`, while the definition of
-    `extreal_sub` wrongly allows `PosInf - PosInf = PosInf` and
+    `extreal_sub` wrongly allowed `PosInf - PosInf = PosInf` and
     `NegInf - NegInf = PosInf`. Now these cases are unspecified, as is
     division-by-zero (which is indeed allowed for reals in
     `realTheory`). As a consequence, now all `EXTREAL_SUM_IAMGE`-
@@ -177,7 +177,7 @@ Bugs fixed:
 
     There is a minor backwards-incompatibility: the above changes may
     lead to more complicated proofs when using extreals, while better
-    alignments with textbook proofs are achieved, on the other hand.
+    alignment with textbook proofs is achieved, on the other hand.
 
 *   Fix soundness bug in the HolyHammer translations to first-order.
     Lambda-lifting definitions were stated as local hypothesis but
@@ -242,8 +242,8 @@ New theories:
 New tools:
 ----------
 
-*   `holwrap.py`: a simple python script that 'wraps' hol in a similar
-    fashion to rlwrap. Features include multiline input, history and
+*   `holwrap.py`: a simple python script that ‘wraps’ hol in a similar
+    fashion to `rlwrap`. Features include multiline input, history and
     basic StandardML syntax highlighting. See the comments at the head
     of the script for usage instructions.
 
@@ -278,7 +278,7 @@ New examples:
     `finitefieldTheory` in __algebra__.
 
     An implementation of the AKS algorithm is shown to execute in
-    polynomial-time: the pseudo-codes of subroutines are given in
+    polynomial-time: the pseudo-code of subroutines is given in
     __AKS/compute__, and the corresponding implementations in monadic
     style are given in __AKS/machine__, which includes a simple
     machine model outlined in `countMonadTheory` and
