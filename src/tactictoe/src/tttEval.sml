@@ -433,14 +433,31 @@ fun collect_ex dir =
     List.concat (map read_tnnex filel)
   end;
 
-val exl = collect_ex valdir; length exl;
+val exl = collect_ex valdir;
+val exl = filter (not o null) (collect_ex valdir); length exl;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
+val operl = operl_of_tnnex exl;
+val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
+
+fun duplicate n l = if n <= 1 then l else l @ duplicate (n-1) l;
+
+fun balance exl = 
+  let  
+    val pos = filter (fn x => (hd o snd o hd) x > 0.5) exl
+    val neg = filter (fn x => (hd o snd o hd) x <= 0.5) exl
+    val posn = length pos
+    val negn = length neg
+  in
+    if negn >= posn 
+    then duplicate (negn div posn) pos @ neg
+    else pos @ duplicate (posn div negn) neg
+  end   
 
 fun train_fixed schedule exl =
   let
-    val (train,test) = part_pct 1.0 (shuffle exl)
+    val (train,test) = part_pct 1.0 (shuffle (balance exl))
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
@@ -455,14 +472,13 @@ fun train_fixed schedule exl =
 
 val schedule =
     [{ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 4, nepoch = 10},
+     learning_rate = 0.08, batch_size = 4, nepoch = 15},
      {ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 8, nepoch = 10},
+     learning_rate = 0.08, batch_size = 8, nepoch = 15},
      {ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 16, nepoch = 10},
+     learning_rate = 0.08, batch_size = 16, nepoch = 15},
      {ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 32, nepoch = 10}
-   ];
+     learning_rate = 0.08, batch_size = 32, nepoch = 15}];
 
 val tnn = train_fixed schedule exl;
 val _ = write_tnn tnnfile tnn;
@@ -480,7 +496,7 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 0.1;
 tttSearch.ttt_spol_flag := false;
-run_evalscript_thyl smlfun "210121-2-8" (true,30) 
+run_evalscript_thyl smlfun "210121-2-10" (true,30) 
   (SOME tnnfile,NONE,NONE) thyl;
 
 *)
