@@ -414,6 +414,13 @@ Incompatibilities:
     The former is a new theorem; the latter is an existing theorem that has been promoted to “automatic” status.
     Use `Excl` or `{temp_,}delsimps` to remove these theorems from the simplifier as necessary.
 
+*   The `BIGINTER_SUBSET` theorem in `pred_setTheory` has changed from
+
+           ⊢ ∀sp s. (∀t. t ∈ s ⇒ t ⊆ sp) ∧ s ≠ ∅ ⇒ BIGINTER s ⊆ sp
+
+    to
+
+           ⊢ ∀sp s t. t ∈ s ∧ t ⊆ sp ⇒ BIGINTER s ⊆ sp
 
 * * * * *
 
