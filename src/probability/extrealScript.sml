@@ -2386,7 +2386,7 @@ Proof
  >> ASM_SIMP_TAC real_ss [abs]
  >> fs [GSYM real_lt]
  >> REWRITE_TAC [Once REAL_LE_RSUB_GE0, REAL_SUB_RNEG, REAL_MUL_RNEG]
- >> Suff `x pow 2 + y pow 2 + 2 * (x * y) = (x + y) pow 2`
+ >> Suff `x pow 2 + y pow 2 - -2 * (x * y) = (x + y) pow 2`
  >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2])
  >> SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
                       REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,

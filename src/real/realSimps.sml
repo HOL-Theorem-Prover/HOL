@@ -628,6 +628,8 @@ val (NEG_FRAC, NEG_DENOM) = CONJ_PAIR neg_rat
 val NEG_INV = REAL_NEG_INV'
 val INV_1OVER = REAL_INV_1OVER
 val NEG_MINUS1' = GSYM REAL_NEG_MINUS1
+val neg1_t = mk_negated one_tm
+val NEG1_MUL = SPEC neg1_t REAL_MUL_ASSOC
 val Flor = OR_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 3
 
 val realreduce_cs = real_compset()
@@ -670,6 +672,7 @@ val NZ_t = prim_mk_const{Thy = "real", Name = "nonzerop"}
 fun is_NZ t = is_comb t andalso rator t ~~ NZ_t
 fun mul_termbase t =
     if is_real_fraction t then (t, Arbint.one)
+    else if is_negated t then (dest_negated t, Arbint.one)
     else if is_NZ t then (t, Arbint.one)
     else
       case total dest_pow t of
@@ -781,7 +784,8 @@ local
       case total dest_mult t of
           SOME (l,r) => if is_real_fraction l then
                           (RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC]) THENC
-                           TRY_CONV (REWR_CONV NEG_MINUS1')) t
+                           PURE_REWRITE_CONV [NEG1_MUL] THENC
+                           PURE_REWRITE_CONV [NEG_MINUS1']) t
                         else PURE_REWRITE_CONV [REAL_MUL_ASSOC] t
         | _ => ALL_CONV t
   fun elim1div t =
@@ -799,7 +803,7 @@ local
         | NONE => if is_div t then (BINOP_CONV elimdivs THENC elim1div) t
                   else ALL_CONV t
 in
-  fun REALMULCANON t =
+  fun REALMULCANON0 t =
       let
         fun strip A t =
             case total dest_mult t of
@@ -818,7 +822,9 @@ in
       in
         if List.exists (fn t => is_literalish t orelse is_mult t orelse
                                 is_baddiv t) ts orelse
-           not (oksort mulcompare ts)
+           not (oksort mulcompare ts) orelse
+           is_real_fraction l andalso List.exists is_negated ts orelse
+           length ts > 1 andalso List.exists is_negated (tl ts)
         then
           elimdivs THENC REWRITE_CONV [REAL_INV_MUL'] THENC
           AC_Sort.sort mulsort THENC
@@ -829,6 +835,19 @@ in
           leading_coeff_norm
         else ALL_CONV
       end t
+  fun interesting_negation t =
+      case Lib.total dest_negated t of
+          NONE => raise UNCHANGED
+        | SOME t0 => if is_mult t0 orelse is_div t0 orelse is_inv t0 orelse
+                        (is_literalish t0 andalso not (is_real_literal t0))
+                     then
+                       REWR_CONV REAL_NEG_MINUS1 t
+                     else raise UNCHANGED
+
+  val REALMULCANON =
+      PURE_REWRITE_CONV [REAL_NEGNEG] THENC
+      interesting_negation THENC
+      REALMULCANON0
 end (* local *)
 
 val RMULCANON_ss = SSFRAG {
@@ -955,7 +974,7 @@ val Rthms = [(REAL_EQ_LMUL, (rand o rhs))]
 val R = “$< : real -> real -> bool”
 val Rthms = [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)]
 
-fun solver0 stk t = base_solver [ASSUME ``z <> 0r``] stk t
+fun solver0 stk t = base_solver [ASSUME ``0r < U``] stk t
 val stk = []
 *)
 fun giveexp t =
@@ -1123,8 +1142,15 @@ fun mulrelnorm0 R Rthms solver0 stk t =
       findelim ls rs t
     end
 
+fun elim_bare_negations t =
+    case Lib.total dest_negated t of
+        NONE => raise UNCHANGED
+      | SOME a => if is_literalish a then raise UNCHANGED
+                  else REWR_CONV REAL_NEG_MINUS1 t
+
 fun mulrelnorm R Rthms solver stk =
-    BINOP_CONV REALMULCANON THENC mulrelnorm0 R Rthms solver stk THENC
+    BINOP_CONV REALMULCANON THENC BINOP_CONV elim_bare_negations THENC
+    mulrelnorm0 R Rthms solver stk THENC
     TRY_CONV (BINOP_CONV REALMULCANON)
 (*
 
