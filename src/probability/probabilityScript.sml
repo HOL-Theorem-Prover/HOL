@@ -2691,24 +2691,25 @@ Proof
        DISJ2_TAC >> Q.EXISTS_TAC `N` >> art [] \\
        Suff `BIGINTER (IMAGE B N) SUBSET p_space p` >- PROVE_TAC [INTER_SUBSET_EQN] \\
        MATCH_MP_TAC BIGINTER_SUBSET \\
-       reverse CONJ_TAC
-       >- (RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_IMAGE] \\
-           fs [GSYM MEMBER_NOT_EMPTY] >> Q.EXISTS_TAC `x` >> art []) \\
-       RW_TAC std_ss [IN_IMAGE] \\
+       RW_TAC std_ss [IN_IMAGE, PULL_EXISTS] \\
       `!i. i IN J ==> B i IN events p` by PROVE_TAC [SUBSET_DEF, IN_INSERT, IN_IMAGE] \\
+       drule_then (qx_choose_then ‘x’ strip_assume_tac)
+                  (iffRL MEMBER_NOT_EMPTY) >>
       `B x IN events p` by PROVE_TAC [SUBSET_DEF] \\
-       MATCH_MP_TAC PROB_SPACE_SUBSET_PSPACE >> art [],
+       irule_at Any PROB_SPACE_SUBSET_PSPACE >> art[] >>
+       first_assum (irule_at Any) >> art[],
        (* goal 3 (of 4) *)
        DISJ2_TAC >> Q.EXISTS_TAC `N` >> art [] \\
-       Suff `BIGINTER (IMAGE B N) SUBSET p_space p` >- PROVE_TAC [INTER_SUBSET_EQN] \\
+       Suff `BIGINTER (IMAGE B N) SUBSET p_space p`
+       >- PROVE_TAC [INTER_SUBSET_EQN] \\
        MATCH_MP_TAC BIGINTER_SUBSET \\
-       reverse CONJ_TAC
-       >- (RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_IMAGE] \\
-           fs [GSYM MEMBER_NOT_EMPTY] >> Q.EXISTS_TAC `x` >> art []) \\
-       RW_TAC std_ss [IN_IMAGE] \\
-      `!i. i IN J ==> B i IN events p` by PROVE_TAC [SUBSET_DEF, IN_UNION, IN_IMAGE] \\
+       RW_TAC std_ss [IN_IMAGE, PULL_EXISTS] \\
+      `!i. i IN J ==> B i IN events p` by PROVE_TAC [SUBSET_DEF, IN_INSERT, IN_IMAGE] \\
+       drule_then (qx_choose_then ‘x’ strip_assume_tac)
+                  (iffRL MEMBER_NOT_EMPTY) >>
       `B x IN events p` by PROVE_TAC [SUBSET_DEF] \\
-       MATCH_MP_TAC PROB_SPACE_SUBSET_PSPACE >> art [],
+       irule_at Any PROB_SPACE_SUBSET_PSPACE >> art[] >>
+       first_assum (irule_at Any) >> art[],
        (* goal 4 (of 4) *)
        DISJ2_TAC >> Q.EXISTS_TAC `N UNION N'` \\
        CONJ_TAC >- REWRITE_TAC [BIGINTER_UNION, IMAGE_UNION] \\

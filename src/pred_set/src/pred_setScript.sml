@@ -4154,12 +4154,11 @@ Proof
  PROVE_TAC []
 QED
 
-val BIGINTER_SUBSET = store_thm (* from util_prob *)
-  ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-                       ==> (BIGINTER s) SUBSET sp``,
+Theorem BIGINTER_SUBSET:
+  !sp s t. t IN s /\ t SUBSET sp ==> (BIGINTER s) SUBSET sp
+Proof
   RW_TAC std_ss [SUBSET_DEF,IN_BIGINTER]
-  >> `?u. u IN s` by METIS_TAC [CHOICE_DEF]
-  >> METIS_TAC []);
+QED
 
 val DIFF_BIGINTER1 = store_thm
   ("DIFF_BIGINTER1",
@@ -4171,16 +4170,17 @@ val DIFF_BIGINTER1 = store_thm
   >> RW_TAC std_ss []
   >> METIS_TAC []);
 
-val DIFF_BIGINTER = store_thm( (* from util_prob *)
-  "DIFF_BIGINTER",
-  ``!sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
-           (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))``,
+Theorem DIFF_BIGINTER:
+  !sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
+         (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))
+Proof
   RW_TAC std_ss []
-  >> `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
+  >> ‘BIGINTER s SUBSET sp’ by METIS_TAC[MEMBER_NOT_EMPTY, BIGINTER_SUBSET]
   >> ASSUME_TAC (Q.SPECL [`sp`,`s`] DIFF_BIGINTER1)
   >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)`
        by RW_TAC std_ss [DIFF_DIFF_SUBSET]
-  >> METIS_TAC []);
+  >> METIS_TAC []
+QED
 
 val FINITE_BIGINTER = Q.store_thm(
   "FINITE_BIGINTER",
