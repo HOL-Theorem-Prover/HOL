@@ -1181,17 +1181,14 @@ val Generated_subset_has_set = store_thm(
          so t <> {}                by MEMBER_NOT_EMPTY
          or IMAGE (\h. H) t <> {}  by IMAGE_EQ_EMPTY
 *)
-val Generated_subset_subset = store_thm(
-  "Generated_subset_subset",
-  ``!(g:'a group) s. Group g /\ s SUBSET G ==> (gen_set s).carrier SUBSET G``,
+Theorem Generated_subset_subset:
+  !(g:'a group) s. Group g /\ s SUBSET G ==> (gen_set s).carrier SUBSET G
+Proof
   rw[Generated_subset_def] >>
-  (irule BIGINTER_SUBSET >> rpt conj_tac) >| [
-    rw[] >>
-    rw[subgroup_carrier_subset],
-    `g <= g` by rw[subgroup_refl] >>
-    `g IN {h | h <= g /\ s SUBSET H}` by rw[] >>
-    metis_tac[IMAGE_EQ_EMPTY, MEMBER_NOT_EMPTY]
-  ]);
+  irule BIGINTER_SUBSET >>
+  csimp[subgroup_carrier_subset, PULL_EXISTS] >>
+  metis_tac[subgroup_refl]
+QED
 
 (* Theorem: Group g /\ s SUBSET G ==> Group (gen_set s) *)
 (* Proof:

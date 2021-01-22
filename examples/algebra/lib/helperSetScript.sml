@@ -60,7 +60,6 @@ open gcdTheory; (* for P_EUCLIDES *)
    DISJOINT_DIFF_IFF   |- !s t. DISJOINT s t <=> (s DIFF t = s)
    UNION_DIFF_EQ_UNION |- !s t. s UNION (t DIFF s) = s UNION t
    INTER_DIFF          |- !s t. (s INTER (t DIFF s) = {}) /\ ((t DIFF s) INTER s = {})
-   BIGINTER_SUBSET     |- !P X. P <> {} /\ (!Y. Y IN P ==> Y SUBSET X) ==> BIGINTER P SUBSET X
    SUBSET_SING         |- !s x. {x} SUBSET s /\ SING s <=> (s = {x})
    INTER_SING          |- !s x. x IN s ==> (s INTER {x} = {x})
    ONE_ELEMENT_SING    |- !s a. s <> {} /\ (!k. k IN s ==> (k = a)) ==> (s = {a})
@@ -474,22 +473,6 @@ val INTER_DIFF = store_thm(
   "INTER_DIFF",
   ``!s t. (s INTER (t DIFF s) = {}) /\ ((t DIFF s) INTER s = {})``,
   rw[DISJOINT_DIFF, GSYM DISJOINT_DEF]);
-
-(* Theorem: P <> {} /\ (!Y. Y IN P ==> Y SUBSET X) ==> (BIGINTER P) SUBSET X *)
-(* Proof:
-   Since P <> {}, let s IN P           by MEMBER_NOT_EMPTY
-   Since s IN P, s SUBSET X            by given
-   Now, x IN BIGINTER P
-    <=> !Y. Y IN P ==> x IN Y          by IN_BIGINTER
-   Since s IN P, x IN s
-   Since s SUBSET X, x IN X            by IN_SUBSET
-   Therefore (BIGINTER P) SUBSET X     by IN_SUBSET
-*)
-val BIGINTER_SUBSET = store_thm(
-  "BIGINTER_SUBSET",
-  ``!P X. P <> {} /\ (!Y. Y IN P ==> Y SUBSET X) ==> (BIGINTER P) SUBSET X``,
-  rw[SUBSET_DEF] >>
-  metis_tac[MEMBER_NOT_EMPTY]);
 
 (* Theorem: {x} SUBSET s /\ SING s <=> (s = {x}) *)
 (* Proof:
