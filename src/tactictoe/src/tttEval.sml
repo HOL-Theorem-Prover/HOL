@@ -457,7 +457,7 @@ fun balance exl =
 
 fun train_fixed schedule exl =
   let
-    val (train,test) = part_pct 1.0 (shuffle (balance exl))
+    val (train,test) = part_pct 1.0 (shuffle exl)
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
@@ -472,13 +472,13 @@ fun train_fixed schedule exl =
 
 val schedule =
     [{ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 4, nepoch = 15},
-     {ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 8, nepoch = 15},
-     {ncore = 4, verbose = true,
      learning_rate = 0.08, batch_size = 16, nepoch = 15},
      {ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 32, nepoch = 15}];
+     learning_rate = 0.06, batch_size = 16, nepoch = 15},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.04, batch_size = 16, nepoch = 15},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.02, batch_size = 16, nepoch = 15}];
 
 val tnn = train_fixed schedule exl;
 val _ = write_tnn tnnfile tnn;
@@ -496,7 +496,7 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 0.1;
 tttSearch.ttt_spol_flag := false;
-run_evalscript_thyl smlfun "210121-2-10" (true,30) 
+run_evalscript_thyl smlfun "210121-2-12" (true,30) 
   (SOME tnnfile,NONE,NONE) thyl;
 
 *)
