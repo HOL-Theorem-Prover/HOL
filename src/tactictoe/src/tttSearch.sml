@@ -111,7 +111,12 @@ fun backstatus_goalv goalv =
   end
 
 fun backreward_goalv (gn,reward) goalv =
-  let fun f (i,r) = if gn = i then reward else #gsum r / #gvis r in
+  let fun f (i,r) = 
+    if #gstatus r = GoalProved then 1.0
+    else if #gstatus r = GoalSaturated then 0.0
+    else if gn = i then reward 
+    else #gsum r / #gvis r 
+  in
     Vector.foldl (op *) 1.0 (Vector.mapi f goalv)
   end
 
