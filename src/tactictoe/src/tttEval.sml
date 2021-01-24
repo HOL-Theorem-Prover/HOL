@@ -346,6 +346,20 @@ run_evalscript_thyl smlfun "210121-2" (true,30)
    Reinforcement learning of the value of an intermediate goal.
    ------------------------------------------------------------------------ *)
 
+fun rl_schedule nepoch =
+   [
+     {ncore = 4, verbose = true,
+     learning_rate = 0.08, batch_size = 16, nepoch = nepoch},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.08, batch_size = 24, nepoch = nepoch},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.08, batch_size = 32, nepoch = nepoch},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.08, batch_size = 48, nepoch = nepoch},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.08, batch_size = 64, nepoch = nepoch}
+   ];
+
 fun train_fixed pct exl =
   let
     val (train,test) = part_pct pct (shuffle exl)
@@ -355,15 +369,9 @@ fun train_fixed pct exl =
     val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
     val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operset
     val randtnn = random_tnn operdiml
-    val nepoch = 20000000 div (length exl) 
-    val schedule =
-      [{ncore = 4, verbose = true,
-       learning_rate = 0.08, batch_size = 16, nepoch = nepoch}] @
-      [{ncore = 4, verbose = true,
-       learning_rate = 0.08, batch_size = 32, nepoch = nepoch}] @
-      [{ncore = 4, verbose = true,
-       learning_rate = 0.08, batch_size = 64, nepoch = nepoch}]
-    val tnn = train_tnn schedule randtnn (train,test)
+    val nepoch = (20 * 100 * 1000) div (length exl) 
+    val nepoch' = if nepoch >= 1 then nepoch else 1
+    val tnn = train_tnn (rl_schedule nepoch') randtnn (train,test)
   in
     tnn
   end
@@ -395,8 +403,10 @@ fun rlval_loop expname thyl (gen,maxgen) =
 fun rlval expname thyl maxgen =
   (
   print_endline ("Generation 0"); 
+  tttSearch.ttt_vis_fail := 1.0;
   run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,30) 
     (NONE,NONE,NONE) thyl;
+  tttSearch.ttt_vis_fail := 0.1;
   rlval_loop expname thyl (1,maxgen)
   )
 
@@ -408,11 +418,13 @@ ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-val expname = "december13";
+val expname = "210124-1";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val maxgen = 1;
+val maxgen = 10;
 rlval expname thyl maxgen;
-rlval_loop expname thyl (1,maxgen);
+
+
+(* rlval_loop expname thyl (1,maxgen); *)
 *)
 
 (* ------------------------------------------------------------------------
@@ -441,20 +453,6 @@ fun operl_of_tnnex exl =
 val operl = operl_of_tnnex exl;
 val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
 
-fun duplicate n l = if n <= 1 then l else l @ duplicate (n-1) l;
-
-fun balance exl = 
-  let  
-    val pos = filter (fn x => (hd o snd o hd) x > 0.5) exl
-    val neg = filter (fn x => (hd o snd o hd) x <= 0.5) exl
-    val posn = length pos
-    val negn = length neg
-  in
-    if negn >= posn 
-    then duplicate (negn div posn) pos @ neg
-    else pos @ duplicate (posn div negn) neg
-  end   
-
 fun train_fixed schedule exl =
   let
     val (train,test) = part_pct 1.0 (shuffle exl)
@@ -472,14 +470,15 @@ fun train_fixed schedule exl =
 
 val schedule =
     [{ncore = 4, verbose = true,
-     learning_rate = 0.08, batch_size = 16, nepoch = 15},
+     learning_rate = 0.08, batch_size = 16, nepoch = 20},
      {ncore = 4, verbose = true,
-     learning_rate = 0.06, batch_size = 16, nepoch = 15},
+     learning_rate = 0.08, batch_size = 24, nepoch = 20},
      {ncore = 4, verbose = true,
-     learning_rate = 0.04, batch_size = 16, nepoch = 15},
+     learning_rate = 0.08, batch_size = 32, nepoch = 20},
      {ncore = 4, verbose = true,
-     learning_rate = 0.02, batch_size = 16, nepoch = 15}];
-
+     learning_rate = 0.08, batch_size = 48, nepoch = 20},
+     {ncore = 4, verbose = true,
+     learning_rate = 0.08, batch_size = 64, nepoch = 20}];
 val tnn = train_fixed schedule exl;
 val _ = write_tnn tnnfile tnn;
 
@@ -496,7 +495,7 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 0.1;
 tttSearch.ttt_spol_flag := false;
-run_evalscript_thyl smlfun "210121-2-12" (true,30) 
+run_evalscript_thyl smlfun "210121-2-13" (true,30) 
   (SOME tnnfile,NONE,NONE) thyl;
 
 *)
