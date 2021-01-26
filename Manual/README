@@ -42,3 +42,7 @@ Translations     : for translations into non-English languages. (Not
                    updated sadly.)
 
 Tutorial	 : LaTeX sources for the HOL tutorial and case studies
+
+Lassie-Tutorial  : LaTex sources for a HOL tutorial using the Lassie tool from `examples/lassie`.
+                   The tutorial focuses on complete beginners by simplifying the
+                   HOL learning process.
