@@ -408,7 +408,7 @@ fun apply_tac parsetoken tokenl goal =
       let val tac = build_tac parsetoken tokenl in
         SOME (fst (TC_OFF tac g))
       end
-    val glo = timeout_ext tim f goal
+    val glo = timeout tim f goal
       handle Interrupt => raise Interrupt | _ => NONE
   in
     stac_cache := dadd (goal,tokenl) glo (!stac_cache); glo
@@ -735,7 +735,6 @@ fun search searchobj g =
     val ((searchstatus,tree),t) = add_time
       (search_loop searchobj NONE) starttree
     val _ = clean_stac_cache ()
-    val _ = stop_global_worker ()
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     (reconstruct_proofstatus (searchstatus,tree) g, tree)

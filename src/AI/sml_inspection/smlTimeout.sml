@@ -79,68 +79,6 @@ fun timeLimit t f x =
 
 fun timeout t f x = timeLimit (Time.fromReal t) f x
 
-val resref = ref (NONE : goal list option result option)
-val funref = ref (NONE : ((goal -> goal list option) * goal) option)
-val m = Mutex.mutex ()
-val c = ConditionVar.conditionVar ()
-val worker_glob = ref (NONE : thread option)
-
-fun start_worker () = 
-  let 
-    val c0 = ConditionVar.conditionVar ()
-    val m0 = Mutex.mutex ()
-    val _ = Mutex.lock m0
-    fun worker_ext () =
-      if isSome (!funref) then 
-        let val (f,g) = valOf (!funref) in
-          funref := NONE; 
-          Thread.setAttributes attrib_async;
-          resref := SOME (capture f g);
-          Thread.setAttributes attrib_sync;
-          Mutex.lock m; ConditionVar.signal c; Mutex.unlock m;
-          worker_ext ()
-        end 
-      else  
-        (
-        ConditionVar.waitUntil (c0,m0,Time.now () + 
-        Time.fromReal (0.00001));
-        worker_ext ()
-        )
-  in 
-    worker_glob := SOME (Thread.fork (worker_ext, attrib_sync))
-  end
-
-fun start_global_worker () =
-  if isSome (!worker_glob) andalso 
-     Thread.isActive (valOf (!worker_glob)) 
-  then () else start_worker ()
-
-fun stop_global_worker () =
-  if isSome (!worker_glob) then interruptkill (valOf (!worker_glob)) else ()
-
-fun timeLimit_ext t f g =
-  let
-    val _ = (funref := NONE; resref := NONE)
-    val _ = start_global_worker ()
-    val curattrib = Thread.getAttributes ()
-    val _ = Thread.setAttributes attrib_sync
-    val _ = funref := SOME (f,g)
-    val _ = Mutex.lock m    
-    val b = ConditionVar.waitUntil (c,m,Time.now () + t)
-    val _ = Mutex.unlock m
-    val _ = Thread.setAttributes curattrib
-    val _ = if b then () else (stop_global_worker (); funref := NONE)
-    val result = case !resref of
-        NONE => Exn FunctionTimeout
-      | SOME (Exn Interrupt) => Exn FunctionTimeout
-      | SOME s => s
-  in
-    release result
-  end
-
-
-fun timeout_ext t f g = timeLimit_ext (Time.fromReal t) f g
-
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun timeout_tactic t tac g =

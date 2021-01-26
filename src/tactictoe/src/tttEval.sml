@@ -347,7 +347,7 @@ val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-run_evalscript_thyl smlfun "210126-1" (true,30) 
+run_evalscript_thyl smlfun "210126-2" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
