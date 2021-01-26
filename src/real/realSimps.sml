@@ -634,7 +634,7 @@ val Flor = OR_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 3
 
 val realreduce_cs = real_compset()
 fun REPORT_ALL_CONV t =
-    (print ("\nGiving up on " ^ term_to_string t ^ "\n"); ALL_CONV t)
+    ((*print ("\nGiving up on " ^ term_to_string t ^ "\n"); *) NO_CONV t)
 val REAL_REDUCE =
     PURE_REWRITE_CONV [REAL_INV_1OVER] THENC computeLib.CBV_CONV realreduce_cs
 val NUM_REDUCE = reduceLib.REDUCE_CONV
@@ -845,7 +845,7 @@ in
                      else raise UNCHANGED
 
   val REALMULCANON =
-      PURE_REWRITE_CONV [REAL_NEGNEG] THENC
+      PURE_REWRITE_CONV [REAL_NEGNEG, pow0, POW_1] THENC
       interesting_negation THENC
       REALMULCANON0
 end (* local *)
