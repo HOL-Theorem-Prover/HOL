@@ -302,13 +302,21 @@ ttt_record_thmdata ();
 (*
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
-val expname = "test4";
+val expname = "test7";
 val savestatedir = tactictoe_dir ^ "/savestate";
 val expdir = ttt_eval_dir ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
-val _ = app mkDir_err [ttt_eval_dir, expdir, outdir];
-val file = savestatedir ^ "/" ^ "real_topology_1024";
-tttSetup.ttt_search_time := 5.0;
+val valdir = expdir ^ "/val"
+val argdir = expdir ^ "/arg"
+val tnndir = expdir ^ "/tnn"
+val pbdir = expdir ^ "/pb"
+val _ = app mkDir_err 
+  [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir];
+
+
+val file = savestatedir ^ "/" ^ "pair_0";
+tttSearch.ttt_vis_fail := 1.0;
+tttSetup.ttt_search_time := 30.0;
 run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 *)
 
@@ -338,7 +346,8 @@ val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
-run_evalscript_thyl smlfun "210121-2" (true,30) 
+tttSearch.ttt_vis_fail := 1.0;
+run_evalscript_thyl smlfun "210126-1" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
