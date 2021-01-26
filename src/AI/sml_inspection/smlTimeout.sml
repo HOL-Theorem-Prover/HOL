@@ -93,20 +93,21 @@ fun start_worker () =
     fun worker_ext () =
       if isSome (!funref) then 
         let val (f,g) = valOf (!funref) in
+          funref := NONE; 
+          Thread.setAttributes attrib_async;
           resref := SOME (capture f g);
           Thread.setAttributes attrib_sync;
           Mutex.lock m; ConditionVar.signal c; Mutex.unlock m;
-          Thread.setAttributes attrib_async;
           worker_ext ()
         end 
       else  
         (
         ConditionVar.waitUntil (c0,m0,Time.now () + 
-        Time.fromReal (0.000001));
+        Time.fromReal (0.00001));
         worker_ext ()
         )
   in 
-    worker_glob := SOME (Thread.fork (worker_ext, attrib_async))
+    worker_glob := SOME (Thread.fork (worker_ext, attrib_sync))
   end
 
 fun start_global_worker () =
@@ -119,16 +120,16 @@ fun stop_global_worker () =
 
 fun timeLimit_ext t f g =
   let
+    val _ = (funref := NONE; resref := NONE)
     val _ = start_global_worker ()
     val curattrib = Thread.getAttributes ()
     val _ = Thread.setAttributes attrib_sync
-    val _ = resref := NONE
     val _ = funref := SOME (f,g)
     val _ = Mutex.lock m    
     val b = ConditionVar.waitUntil (c,m,Time.now () + t)
     val _ = Mutex.unlock m
     val _ = Thread.setAttributes curattrib
-    val _ = if b then () else stop_global_worker ()
+    val _ = if b then () else (stop_global_worker (); funref := NONE)
     val result = case !resref of
         NONE => Exn FunctionTimeout
       | SOME (Exn Interrupt) => Exn FunctionTimeout
@@ -136,7 +137,6 @@ fun timeLimit_ext t f g =
   in
     release result
   end
-
 
 
 fun timeout_ext t f g = timeLimit_ext (Time.fromReal t) f g
@@ -166,11 +166,19 @@ fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => ();
 add_time List.tabulate (1000, fn _ => g ());
 add_time g ();
 
+fun loop () = loop ();
+fun zero () = loop () handle Interrupt => zero ();
 val g : goal = ([],``!x. x = x``);
-fun f g  = SOME (fst (STRIP_TAC g));
-val (_,t) = add_time (timeout_ext 1.0 f) g;
-val (_,t) = add_time (timeout_ext 1.0 f) g;
-interruptkill (valOf (!worker_glob));
+fun f1 g  = (zero (); SOME (fst (STRIP_TAC g)));
+fun f2 g  = (SOME (fst (STRIP_TAC g)));
+fun f3 g  = (loop (); SOME (fst (STRIP_TAC g)));
+val (_,t) = add_time (timeout_ext 0.1 f1) g;
+val (_,t) = add_time (timeout_ext 0.1 f2) g;
+val (_,t) = add_time (timeout_ext 0.1 f3) g;
+val (_,t) = add_time (timeout_ext 0.1 f1) g;
+val (_,t) = add_time (timeout_ext 0.1 f2) g;
+val (_,t) = add_time (timeout_ext 0.1 f3) g;
+stop_global_worker ();
 
 
 
