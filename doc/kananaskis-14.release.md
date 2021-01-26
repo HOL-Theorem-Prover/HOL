@@ -309,6 +309,10 @@ New examples:
     includes soundness and completeness proofs for a standard
     total-correctness Hoare logic.
 
+*   __Lassie__: a tool for developing tactic languages by example.
+    A tutorial using Lassie is included in the manual, and more details about
+    the technique can be found in the corresponding [paper](https://arxiv.org/abs/2101.00930).
+
 Incompatibilities:
 ------------------
 
