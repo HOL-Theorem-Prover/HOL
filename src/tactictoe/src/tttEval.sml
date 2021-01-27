@@ -40,7 +40,7 @@ fun parse_info file l =
   let
     fun parse_int s (s1,s2) = 
       if s = s1 then string_to_int s2 else 
-        raise ERR "parse_int" (msg ^ " --" ^ s)
+        raise ERR "parse_int" (msg ^ " -- " ^ s)
     fun parse_real s (s1,s2) =
       if s = s1 then valOf (Real.fromString s2) else 
         raise ERR "parse_real" (msg ^ " -- " ^ s)
@@ -49,8 +49,8 @@ fun parse_info file l =
         raise ERR "parse_status" (msg ^ " -- " ^ s)
   in
     {
-    nodes = parse_int "nodes:" (List.nth (l,0)),
-    loops = parse_int "loops:" (List.nth (l,1)),
+    loops = parse_int "loops:" (List.nth (l,0)),
+    nodes = parse_int "nodes:" (List.nth (l,1)),
     search = parse_real "search:" (List.nth (l,2)),
     select = parse_real "select:" (List.nth (l,3)),
     exparg = parse_real "exparg:" (List.nth (l,4)),
