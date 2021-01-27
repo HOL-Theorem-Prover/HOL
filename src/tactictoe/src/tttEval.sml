@@ -35,17 +35,18 @@ type stats_record =
    create: real, backup: real, recons: real, status: string}
 
 fun parse_info file l =
-  if length l <> length keyl then raise ERR "parse_info" file else
+  let val msg = file ^ " -- " ^ String.concatWith " " (map fst l) in
+  if length l <> length keyl then raise ERR "parse_info" msg else
   let
     fun parse_int s (s1,s2) = 
       if s = s1 then string_to_int s2 else 
-        raise ERR "parse_int" (file ^ " " ^ s)
+        raise ERR "parse_int" (msg ^ " --" ^ s)
     fun parse_real s (s1,s2) =
       if s = s1 then valOf (Real.fromString s2) else 
-        raise ERR "parse_real" (file ^ " " ^ s)
+        raise ERR "parse_real" (msg ^ " -- " ^ s)
     fun parse_status s (s1,s2) = 
       if s = s1 then s2 else 
-        raise ERR "parse_status" (file ^ " " ^ s)
+        raise ERR "parse_status" (msg ^ " -- " ^ s)
   in
     {
     nodes = parse_int "nodes:" (List.nth (l,0)),
@@ -60,6 +61,7 @@ fun parse_info file l =
     status = parse_status "tactictoe:" (List.nth (l,9))
     }
   end
+  end
 
 fun all_info dir file =
   let
@@ -70,6 +72,8 @@ fun all_info dir file =
   in
     parse_info file (List.mapPartial read_line sl)
   end
+
+
 
 fun compile_info exp =
   let
@@ -100,6 +104,8 @@ fun compile_info exp =
     ]
   end
 
+(* load "tttEval"; open tttEval aiLib;
+   print_endline (compile_info "210127-1"); *)
 
 fun extract_info dir file =
   let
