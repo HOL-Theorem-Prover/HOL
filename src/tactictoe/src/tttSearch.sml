@@ -612,7 +612,7 @@ fun search_loop startsearchobj nlimito starttree =
           val (glo,sstatus) =
             if argstatus = StacFresh
             then total_time apply_time 
-              (apply_stac (tree,searchobj)) newargtree pidx
+              (apply_stac (tree,searchobj) newargtree) pidx
             else (debug "no argument predicted"; (NONE, StacSaturated))
           val _ = debug "node expansion"
           val (exptree,(status,vis,reward)) =
@@ -625,8 +625,9 @@ fun search_loop startsearchobj nlimito starttree =
                end
             else (tree, reward_of_sstatus sstatus)
           val _ = debug "backup"
-          val backuptree =
-            node_backup exptree (SOME newargtree, glo) (status,vis,reward) pidx
+          val backuptree = total_time backup
+            (node_backup exptree (SOME newargtree, glo) (status,vis,reward)) 
+            pidx
         in
           loop (n+1) searchobj backuptree
         end
