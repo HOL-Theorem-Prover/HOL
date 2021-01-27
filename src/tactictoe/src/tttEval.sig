@@ -20,6 +20,7 @@ sig
     nnfiles -> string list -> unit
 
   (* statistics *)
+  val compile_info : string -> string
   val cumul_graph : real -> string -> unit
   val compare_stats : string list -> string -> unit
 
