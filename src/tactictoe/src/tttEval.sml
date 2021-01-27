@@ -35,14 +35,17 @@ type stats_record =
    create: real, backup: real, recons: real, status: string}
 
 fun parse_info l =
-  if length l <> length keyl then raise ERR "parse_info" "" else
+  if length l <> length keyl then raise ERR "parse_info" file else
   let
     fun parse_int s (s1,s2) = 
-      if s = s1 then string_to_int s2 else raise ERR "parse_int" ""
+      if s = s1 then string_to_int s2 else 
+        raise ERR "parse_int" (file ^ " " ^ s)
     fun parse_real s (s1,s2) =
-      if s = s1 then valOf (Real.fromString s2) else raise ERR "parse_real" ""
-    fun parse_status (s1,s2) = 
-      if s1 = "tactictoe:" then s2 else raise ERR "parse_status" ""
+      if s = s1 then valOf (Real.fromString s2) else 
+        raise ERR "parse_real" (file ^ " " ^ s)
+    fun parse_status s (s1,s2) = 
+      if s = s1 then s2 else 
+        raise ERR "parse_status" (file ^ " " ^ s)
   in
     {
     nodes = parse_int "nodes:" (List.nth (l,0)),
@@ -54,9 +57,8 @@ fun parse_info l =
     create = parse_real "create:" (List.nth (l,6)),
     backup = parse_real "backup:" (List.nth (l,7)),
     recons = parse_real "recons:" (List.nth (l,8)),
-    status = parse_status (List.nth (l,9))
+    status = parse_status "tactictoe:" (List.nth (l,9))
     }
-    handle Interrupt => raise Interrupt | _ => raise ERR "parse_info" " "
   end
 
 fun all_info dir file =
@@ -66,9 +68,8 @@ fun all_info dir file =
        [a,b] => if mem a keyl then SOME (a,b) else NONE
      | _ => NONE
   in
-    parse_info (List.mapPartial read_line sl)
+    parse_info file (List.mapPartial read_line sl)
   end
-  handle HOL_ERR _ => raise ERR "all_info" (dir ^ "/" ^ file)
 
 fun compile_info exp =
   let
@@ -515,7 +516,7 @@ val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-run_evalscript_thyl smlfun "210126-2" (true,30) 
+run_evalscript_thyl smlfun "210127-1" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
