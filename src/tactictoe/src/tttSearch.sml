@@ -625,7 +625,7 @@ fun search_loop startsearchobj nlimito starttree =
                end
             else (tree, reward_of_sstatus sstatus)
           val _ = debug "backup"
-          val backuptree = total_time backup
+          val backuptree = total_time backup_time
             (node_backup exptree (SOME newargtree, glo) (status,vis,reward)) 
             pidx
         in
