@@ -34,7 +34,7 @@ type stats_record =
    search: real, select: real, exparg: real, apply: real,
    create: real, backup: real, recons: real, status: string}
 
-fun parse_info l =
+fun parse_info file l =
   if length l <> length keyl then raise ERR "parse_info" file else
   let
     fun parse_int s (s1,s2) = 
