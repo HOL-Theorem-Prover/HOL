@@ -15,12 +15,37 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttToken tttLearn tttTrain
 
 val ERR = mk_HOL_ERR "tttSearch"
-val predtac_time = ref 0.0
-val reward_time = ref 0.0
-val reorder_time = ref 0.0
-val dict_time = ref 0.0
+
+(* -------------------------------------------------------------------------
+   Globals
+   ------------------------------------------------------------------------- *)
 
 val ttt_vis_fail = ref 0.1
+
+(* -------------------------------------------------------------------------
+   Timers
+   ------------------------------------------------------------------------- *)
+
+val select_time = ref 0.0
+val exparg_time = ref 0.0
+val apply_time = ref 0.0
+val create_time = ref 0.0
+val backup_time = ref 0.0
+val recons_time = ref 0.0
+
+fun reset_timer x = x := 0.0
+fun clean_timers () = app reset_timer 
+  [select_time, exparg_time, apply_time, create_time, backup_time, recons_time]
+
+fun print_timers () = 
+  app print_endline 
+  ["select: " ^ rts_round 6 (!select_time),
+   "exparg: " ^ rts_round 6 (!exparg_time),
+   "apply: " ^ rts_round 6 (!apply_time),
+   "create: " ^ rts_round 6 (!create_time),
+   "backup: " ^ rts_round 6 (!backup_time),
+   "recons: " ^ rts_round 6 (!recons_time)
+   ]
 
 (* -------------------------------------------------------------------------
    Status
@@ -566,34 +591,35 @@ fun search_loop startsearchobj nlimito starttree =
     val timer = Timer.startRealTimer ()
     fun loop n searchobj tree =
       if isSome nlimito andalso n >= valOf nlimito
-        then (SearchTimeout,tree)
+        then (print_endline ("loops: " ^ its n); (SearchTimeout,tree))
       else if not (isSome nlimito) andalso
         Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
-        then (SearchTimeout,tree)
+        then (print_endline ("loops: " ^ its n); (SearchTimeout,tree))
       else if #nstatus (dfind [] tree) = NodeSaturated
-        then (SearchSaturated,tree)
+        then (print_endline ("loops: " ^ its n); (SearchSaturated,tree))
       else if #nstatus (dfind [] tree) = NodeProved
-        then (SearchProved,tree)
+        then (print_endline ("loops: " ^ its n); (SearchProved,tree))
       else
         let
           val _ = debug "selection"
-          val ((pid,(gn,sn,anl)),(goal,stac,argtree)) =
-            select_node tree []
+          val ((pid,(gn,sn,anl)),(goal,stac,argtree)) = total_time select_time 
+              (select_node tree) []
           val _ = debug "argument expansion"
-          val (newargtree,newanl,argstatus) =
-            expand_argtree searchobj (goal,stac) (argtree,anl)
+          val (newargtree,newanl,argstatus) = total_time exparg_time
+            (expand_argtree searchobj (goal,stac)) (argtree,anl)
           val pidx = (pid,(gn,sn,newanl))
           val _ = debugf "application: " string_of_id ((gn,sn,newanl) :: pid)
           val (glo,sstatus) =
             if argstatus = StacFresh
-            then apply_stac (tree,searchobj) newargtree pidx
+            then total_time apply_time 
+              (apply_stac (tree,searchobj)) newargtree pidx
             else (debug "no argument predicted"; (NONE, StacSaturated))
           val _ = debug "node expansion"
           val (exptree,(status,vis,reward)) =
             if sstatus = StacUndecided
             then 
-               let val(temptree,tempreward) = 
-                 node_create (tree,searchobj) (valOf glo) pidx
+               let val(temptree,tempreward) = total_time create_time
+                 (node_create (tree,searchobj) (valOf glo)) pidx
                in
                  (temptree,(sstatus,1.0,tempreward))
                end
@@ -730,14 +756,18 @@ fun starttree_of_gstacarg searchobj (goal,stac,tokenl) =
 fun search searchobj g =
   let
     val _ = clean_stac_cache ()
-    val _ = (predtac_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
+    val _ = clean_timers ()
     val starttree = starttree_of_goal searchobj g
     val ((searchstatus,tree),t) = add_time
       (search_loop searchobj NONE) starttree
     val _ = clean_stac_cache ()
-    val _ = print_endline ("search time: " ^ rts_round 6 t)
+    val _ = print_endline ("nodes: " ^ its (dlength tree));
+    val _ = print_endline ("search: " ^ rts_round 6 t)
+    val r = total_time recons_time
+      (reconstruct_proofstatus (searchstatus,tree)) g
+    val _ = print_timers ()
   in
-    (reconstruct_proofstatus (searchstatus,tree) g, tree)
+    (r, tree)
   end
 
 

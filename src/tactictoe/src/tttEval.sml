@@ -19,6 +19,178 @@ type nnfiles = string option * string option * string option
 
 val export_pb_flag = ref false
 
+(* --------------------------------------------------------------------
+   Statistics
+   ------------------------------------------------------------------------ *)
+
+fun is_proof x = (case x of Proof _ => true | _ => false)
+
+val keyl = ["nodes:","loops:",
+  "search:","select:","exparg:","apply:","create:","backup:","recons:",
+  "tactictoe:"]
+
+type stats_record = 
+  {nodes: int, loops: int,
+   search: real, select: real, exparg: real, apply: real,
+   create: real, backup: real, recons: real, status: string}
+
+fun parse_info l =
+  if length l <> length keyl then raise ERR "parse_info" "" else
+  let
+    fun parse_int s (s1,s2) = 
+      if s = s1 then string_to_int s2 else raise ERR "parse_int" ""
+    fun parse_real s (s1,s2) =
+      if s = s1 then valOf (Real.fromString s2) else raise ERR "parse_real" ""
+    fun parse_status (s1,s2) = 
+      if s1 = "tactictoe:" then s2 else raise ERR "parse_status" ""
+  in
+    {
+    nodes = parse_int "nodes:" (List.nth (l,0)),
+    loops = parse_int "loops:" (List.nth (l,1)),
+    search = parse_real "search:" (List.nth (l,2)),
+    select = parse_real "select:" (List.nth (l,3)),
+    exparg = parse_real "exparg:" (List.nth (l,4)),
+    apply = parse_real "apply:" (List.nth (l,5)),
+    create = parse_real "create:" (List.nth (l,6)),
+    backup = parse_real "backup:" (List.nth (l,7)),
+    recons = parse_real "recons:" (List.nth (l,8)),
+    status = parse_status (List.nth (l,9))
+    }
+    handle Interrupt => raise Interrupt | _ => raise ERR "parse_info" " "
+  end
+
+fun all_info dir file =
+  let
+    val sl = readl (dir ^ "/" ^ file)
+    fun read_line line = case String.tokens Char.isSpace line of
+       [a,b] => if mem a keyl then SOME (a,b) else NONE
+     | _ => NONE
+  in
+    parse_info (List.mapPartial read_line sl)
+  end
+  handle HOL_ERR _ => raise ERR "all_info" (dir ^ "/" ^ file)
+
+fun compile_info exp =
+  let
+    val dir = ttt_eval_dir ^ "/" ^ exp ^ "/out"
+    val filel = filter (String.isPrefix "buildheap_") (listDir dir)
+    val statsl = map (all_info dir) filel
+    val provenl = filter (fn x => #status x = "proven") statsl
+    val timeoutl = filter (fn x => #status x = "timeout") statsl
+    val saturatedl = filter (fn x => #status x = "saturatedl") statsl
+    val totsearch = sum_real (map #search statsl)
+    val totnodes = Real.fromInt (sum_int (map #nodes statsl))
+    val totloops = Real.fromInt (sum_int (map #loops statsl))
+  in
+    String.concatWith "\n" [
+    "total " ^ its (length statsl),
+    "proven " ^ its (length provenl),
+    "timeout " ^ its (length timeoutl),
+    "saturated " ^ its (length saturatedl),
+    "nodes_per_sec " ^ rts_round 2 (totnodes / totsearch),
+    "loops_per_sec " ^ rts_round 2 (totloops / totsearch), 
+    "select " ^ rts_round 6 (sum_real (map #select statsl) / totsearch),
+    "exparg " ^ rts_round 6 (sum_real (map #exparg statsl) / totsearch),
+    "apply " ^ rts_round 6 (sum_real (map #apply statsl) / totsearch),
+    "create " ^ rts_round 6 (sum_real (map #create statsl) / totsearch),
+    "backup " ^ rts_round 6 (sum_real (map #backup statsl) / totsearch),
+    "recons_average " ^ rts_round 6 (sum_real (map #recons statsl) / 
+       Real.fromInt (length provenl))
+    ]
+  end
+
+
+fun extract_info dir file =
+  let
+    val sl = readl (dir ^ "/" ^ file)
+    val status =
+      if exists (String.isPrefix "tactictoe: saturated") sl
+        then ProofSaturated
+      else if exists (String.isPrefix "tactictoe: timeout") sl
+        then ProofTimeout
+      else if exists (String.isPrefix "tactictoe: proven") sl
+        then Proof "todo"
+      else raise ERR "extract_info" "no status"
+    val stim1 = valOf (List.find (String.isPrefix "search: ") sl)
+    val stim2 = snd (split_string "search: " stim1)
+    val t = valOf (Real.fromString stim2)
+  in
+    (snd (split_string "buildheap_" file), (status,t))
+  end
+
+fun write_graph file (s1,s2) l =
+  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
+
+fun stats_exp exp =
+  let
+    val dir = ttt_eval_dir ^ "/" ^ exp ^ "/out"
+    val filel = filter (String.isPrefix "buildheap_") (listDir dir)
+    val totl = map (extract_info dir) filel
+    val satl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
+    val timeoutl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
+    val proofl = filter (fn (_,(x,_)) => is_proof x) totl
+  in
+    (totl,satl,timeoutl,proofl)
+  end
+
+fun cumul_graph timelimit exp =
+  let
+    val (l,satl,timeoutl,proofl) = stats_exp exp
+    val timl = map (fn (_,(_,t)) => t) proofl
+    fun f bound = length (filter (fn x => x <= bound) timl)
+    val graph = map_assoc f (interval 0.1 (0.02,timelimit))
+    val graph_out = ttt_eval_dir ^ "/graph/" ^ exp ^ "_graph"
+    val _ = mkDir_err (ttt_eval_dir ^ "/graph")
+  in
+    print_endline
+      ("total: " ^ its (length l) ^ ", " ^
+       "proof: " ^ its (length proofl) ^ ", " ^
+       "timeout: " ^ its (length timeoutl) ^ ", " ^
+       "saturated: " ^ its (length satl));
+    write_graph graph_out ("time","proofs") graph
+  end
+
+(*
+load "tttEval"; open tttEval;
+val expl = ["august11-300","august10"];
+app (cumul_graph 300.0) expl;
+(* quit *)
+gnuplot -p -e "plot 'eval/graph/august10_graph' using 1:2 with lines,\
+                    'eval/graph/august11-300_graph' using 1:2 with lines"
+*)
+
+fun compare_stats expl exp =
+  let
+    val dproven = ref (HOLset.empty String.compare)
+    val dtot = ref (HOLset.empty String.compare)
+    fun f (totl,_,_,proofl) =
+      let
+        val sl1 = map fst proofl
+        val sl2 = map fst totl
+      in
+        dproven := HOLset.addList (!dproven,sl1);
+        dtot := HOLset.addList (!dtot,sl2)
+      end
+    val _ = app f (map stats_exp expl)
+    val lproven1 = (!dproven)
+    val ltot1 = (!dtot)
+    val _ = f (stats_exp exp)
+    val lproven2 = (!dproven)
+    val ltot2 = (!dtot)
+    val uniq = HOLset.difference (lproven2,lproven1)
+    fun g (name,set) = print_endline (name ^ ": " ^ its (HOLset.numItems set))
+  in
+    app g [("total (old)",ltot1),("proven (old)",lproven1),
+           ("total (new)",ltot2),("proven (new)",lproven2),
+           ("unique: ", uniq)];
+    print_endline ("\n  " ^ String.concatWith "\n  " (HOLset.listItems uniq))
+  end
+
+(*
+load "tttEval"; open tttEval;
+compare_stats ["august9"] "august10";
+*)
+
 (* -------------------------------------------------------------------------
    TNN value examples
    ------------------------------------------------------------------------- *)
@@ -117,8 +289,6 @@ fun print_status r = case r of
  | ProofTimeout   => print_endline "tactictoe: timeout"
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
-fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
-
 fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let
     val pbid = thy ^ "_" ^ its n
@@ -135,11 +305,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
         | e => (print_endline "Error"; raise e)
   in
     print_status status;
-    print_time ("ttt_eval",t);
-    print_endline ("nodes: " ^ its (dlength tree));
-    print_time ("tnn value",!reward_time);
-    print_time ("tnn policy",!reorder_time);
-    print_time ("tactic pred",!predtac_time);
+    print_endline ("ttt_eval: " ^ rts_round 6 t);
     export_valex valfile tree;
     export_argex argfile tree;
     if !export_pb_flag then export_pbl pbprefix tree else ();
@@ -236,8 +402,10 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
     val (_,t) = add_time
       (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel2
+    val infos = 
+      ("evaluation time: " ^ rts_round 6 t) ^ "\n" ^ compile_info expname 
   in
-    print_endline ("evaluation time: " ^ rts_round 6 t)
+    (print_endline infos; writel (expdir ^ "/stats") [infos])
   end
 
 (* ------------------------------------------------------------------------
@@ -509,102 +677,7 @@ run_evalscript_thyl smlfun "210121-2-13" (true,30)
 
 *)
 
-(* --------------------------------------------------------------------
-   Statistics
-   ------------------------------------------------------------------------ *)
 
-fun is_proof x = (case x of Proof _ => true | _ => false)
-
-fun extract_info dir file =
-  let
-    val sl = readl (dir ^ "/" ^ file)
-    val status =
-      if exists (String.isPrefix "tactictoe: saturated") sl
-        then ProofSaturated
-      else if exists (String.isPrefix "tactictoe: timeout") sl
-        then ProofTimeout
-      else if exists (String.isPrefix "tactictoe: proven") sl
-        then Proof "todo"
-      else raise ERR "extract_info" "no status"
-    val stim1 = valOf (List.find (String.isPrefix "search time:") sl)
-    val stim2 = snd (split_string "search time: " stim1)
-    val t = valOf (Real.fromString stim2)
-  in
-    (snd (split_string "buildheap_" file), (status,t))
-  end
-
-fun write_graph file (s1,s2) l =
-  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
-
-fun stats_exp exp =
-  let
-    val dir = ttt_eval_dir ^ "/" ^ exp
-    val filel = filter (String.isPrefix "buildheap_") (listDir dir)
-    val totl = map (extract_info dir) filel
-    val satl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
-    val timeoutl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
-    val proofl = filter (fn (_,(x,_)) => is_proof x) totl
-  in
-    (totl,satl,timeoutl,proofl)
-  end
-
-fun cumul_graph timelimit exp =
-  let
-    val (l,satl,timeoutl,proofl) = stats_exp exp
-    val timl = map (fn (_,(_,t)) => t) proofl
-    fun f bound = length (filter (fn x => x <= bound) timl)
-    val graph = map_assoc f (interval 0.1 (0.02,timelimit))
-    val graph_out = ttt_eval_dir ^ "/graph/" ^ exp ^ "_graph"
-    val _ = mkDir_err (ttt_eval_dir ^ "/graph")
-  in
-    print_endline
-      ("total: " ^ its (length l) ^ ", " ^
-       "proof: " ^ its (length proofl) ^ ", " ^
-       "timeout: " ^ its (length timeoutl) ^ ", " ^
-       "saturated: " ^ its (length satl));
-    write_graph graph_out ("time","proofs") graph
-  end
-
-(*
-load "tttEval"; open tttEval;
-val expl = ["august11-300","august10"];
-app (cumul_graph 300.0) expl;
-(* quit *)
-gnuplot -p -e "plot 'eval/graph/august10_graph' using 1:2 with lines,\
-                    'eval/graph/august11-300_graph' using 1:2 with lines"
-*)
-
-fun compare_stats expl exp =
-  let
-    val dproven = ref (HOLset.empty String.compare)
-    val dtot = ref (HOLset.empty String.compare)
-    fun f (totl,_,_,proofl) =
-      let
-        val sl1 = map fst proofl
-        val sl2 = map fst totl
-      in
-        dproven := HOLset.addList (!dproven,sl1);
-        dtot := HOLset.addList (!dtot,sl2)
-      end
-    val _ = app f (map stats_exp expl)
-    val lproven1 = (!dproven)
-    val ltot1 = (!dtot)
-    val _ = f (stats_exp exp)
-    val lproven2 = (!dproven)
-    val ltot2 = (!dtot)
-    val uniq = HOLset.difference (lproven2,lproven1)
-    fun g (name,set) = print_endline (name ^ ": " ^ its (HOLset.numItems set))
-  in
-    app g [("total (old)",ltot1),("proven (old)",lproven1),
-           ("total (new)",ltot2),("proven (new)",lproven2),
-           ("unique: ", uniq)];
-    print_endline ("\n  " ^ String.concatWith "\n  " (HOLset.listItems uniq))
-  end
-
-(*
-load "tttEval"; open tttEval;
-compare_stats ["august9"] "august10";
-*)
 
 
 

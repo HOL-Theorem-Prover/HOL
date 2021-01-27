@@ -4,9 +4,6 @@ sig
   include Abbrev
 
   type tnn = mlTreeNeuralNetwork.tnn
-  val predtac_time : real ref
-  val reward_time : real ref
-  val reorder_time : real ref
 
   val ttt_vis_fail : real ref
   val ttt_spol_flag : bool ref
