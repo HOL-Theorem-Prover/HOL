@@ -32,10 +32,13 @@ val apply_time = ref 0.0
 val create_time = ref 0.0
 val backup_time = ref 0.0
 val recons_time = ref 0.0
+val metis_time = ref 0.0
+val other_time = ref 0.0
 
 fun reset_timer x = x := 0.0
 fun clean_timers () = app reset_timer 
-  [select_time, exparg_time, apply_time, create_time, backup_time, recons_time]
+  [select_time, exparg_time, apply_time, create_time, 
+   backup_time, recons_time, metis_time, other_time]
 
 fun print_timers () = 
   app print_endline 
@@ -44,8 +47,9 @@ fun print_timers () =
    "apply: " ^ rts_round 6 (!apply_time),
    "create: " ^ rts_round 6 (!create_time),
    "backup: " ^ rts_round 6 (!backup_time),
-   "recons: " ^ rts_round 6 (!recons_time)
-   ]
+   "recons: " ^ rts_round 6 (!recons_time),
+   "metis: " ^ rts_round 6 (!metis_time),
+   "other: " ^ rts_round 6 (!other_time)]
 
 (* -------------------------------------------------------------------------
    Status
@@ -433,7 +437,11 @@ fun apply_tac parsetoken tokenl goal =
       let val tac = build_tac parsetoken tokenl in
         SOME (fst (TC_OFF tac g))
       end
-    val glo = timeout tim f goal
+    val timer = 
+      if is_metis_stac (hd tokenl) 
+      then total_time metis_time
+      else total_time other_time
+    val glo = timer (timeout tim f) goal
       handle Interrupt => raise Interrupt | _ => NONE
   in
     stac_cache := dadd (goal,tokenl) glo (!stac_cache); glo
