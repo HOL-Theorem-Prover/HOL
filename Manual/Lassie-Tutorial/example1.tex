@@ -264,14 +264,14 @@ Proof
    show 'n * (n + 1) = SUC n * n' using (trivial using [MULT_CLAUSES, MULT_SYM]).
    '2 * SUC n = SUC n + SUC n' follows trivially.
    'n * (SUC n + 1) = SUC n * n + n' follows trivially.
-   rewrite assumptions. simplify.
+   rewrite assumptions. simplify.`
 QED
 \end{lstlisting}
 \caption{Complete proof of the closed form for summing natural numbers until $n$ using Lassie}\label{fig:gaussProof}
 \end{figure}
 
 Marking the complete statement, and running it with \ekey{M-h M-r} will save the
-theorem under the name \lstinline{gaussian_sum}.
+theorem under the name \lstinline{closed_form_sum}.
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "lassie-tutorial"
