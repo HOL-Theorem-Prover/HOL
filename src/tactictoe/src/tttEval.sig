@@ -7,6 +7,7 @@ sig
   type nnfiles = string option * string option * string option
 
   val export_pb_flag : bool ref
+  val cheat_flag : bool ref
 
   val prepare_global_data : (string * int) -> unit
   val ttt_eval : string -> (string * int) -> 

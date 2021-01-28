@@ -335,11 +335,14 @@ fun assign_tnn s fileo =
        mlquote (valOf fileo) ^ " );"
   else "val " ^ s ^ " = NONE : mlTreeNeuralNetwork.tnn option ;"
 
+val cheat_flag = ref false
+
 fun prepare_global_data (thy,n) =
   let 
     val _ = print_endline ("prepare_data: " ^ thy ^ " " ^ its n)
     val calls = mlTacticData.import_calls (ttt_tacdata_dir ^ "/" ^ thy)
-    val calls_before = filter (fn ((_,x,_),_) => x < n) calls
+    val m = if !cheat_flag then n + 1 else n
+    val calls_before = filter (fn ((_,x,_),_) => x < m) calls
   in
     thmdata_glob := create_thmdata ();
     tacdata_glob := foldl ttt_update_tacdata (!tacdata_glob) calls_before
@@ -367,6 +370,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_flag "tttSearch.ttt_spol_flag" ttt_spol_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
+     sreflect_flag "tttEval.cheat_flag" cheat_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      smlfun ^ " " ^ mlquote expdir ^ " " ^
@@ -520,7 +524,8 @@ val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-run_evalscript_thyl smlfun "210127-2" (true,30) 
+cheat_flag := true;
+run_evalscript_thyl smlfun "210128-2" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
