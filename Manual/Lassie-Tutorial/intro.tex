@@ -44,10 +44,8 @@ Here, \verb!~/! stands for your home directory
 To interact with HOL4 within emacs, it suffices to append the following lines to
 the emacs configuration file:
 \begin{lstlisting}
-(load-file "<HOL install dir>/tools/hol-unicode.el")
-(load-file "<HOL install dir>/tools/hol-input.el")
-(load-file "<HOL install dir>/tools/holscript-mode.el")
-(load-file "<HOL install dir>/tools/hol-mode.el")
+(load "<HOL install dir>/tools/hol-unicode")
+(load "<HOL install dir>/tools/hol-mode")
 \end{lstlisting}
 \noindent Here, \lstinline{<HOL install dir>} is the same path as the one
 to which \texttt{HOLDIR} is set.

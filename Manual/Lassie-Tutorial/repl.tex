@@ -5,7 +5,7 @@ behaves like the REPL's of other interpreted languages.
 In general, it is recommend to first open a script file before starting
 the REPL.
 
-\textbf{Important setup note:}We strongly recommend opening a file
+\textbf{Important setup note:} We strongly recommend opening a file
 \texttt{tutorialScript.sml} in the folder \texttt{\$LASSIEDIR/examples}, to make
 sure that the below code can be run easily.
 This is done by either manually creating an empty file named \texttt{tutorialScript.sml} in \texttt{\$LASSIEDIR/examples}
@@ -23,12 +23,13 @@ For example, type
   3 + 5;
 \end{lstlisting}
 
-anywhere in the currently openend script file.
+anywhere in the currently opened script file.
 Sending is then done by first highlighting the code with emacs using \ekey{C-space}.
 Here, \ekey{C} stands for \ekey{Control}, so to start marking text, press
 \ekey{Control} together with the \ekey{space} key.
 The arrow keys are used for marking the code to be send to the REPL, and once it
 has been completely selected, press \ekey{M-h M-r}.
+Alternatively, holding down the shift key while moving the cursor will also select text.
 
 The REPL should print:
 \begin{lstlisting}[frame=single]
