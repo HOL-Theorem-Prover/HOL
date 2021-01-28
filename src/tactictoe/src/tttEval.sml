@@ -27,12 +27,7 @@ fun is_proof x = (case x of Proof _ => true | _ => false)
 
 val keyl = ["nodes:","loops:",
   "search:","select:","exparg:","apply:","create:","backup:","recons:",
-  "tactictoe:"]
-
-type stats_record = 
-  {nodes: int, loops: int,
-   search: real, select: real, exparg: real, apply: real,
-   create: real, backup: real, recons: real, status: string}
+  "metis:","other:","tactictoe:"]
 
 fun parse_info file l =
   let val msg = file ^ " -- " ^ String.concatWith " " (map fst l) in
@@ -58,7 +53,9 @@ fun parse_info file l =
     create = parse_real "create:" (List.nth (l,6)),
     backup = parse_real "backup:" (List.nth (l,7)),
     recons = parse_real "recons:" (List.nth (l,8)),
-    status = parse_status "tactictoe:" (List.nth (l,9))
+    metis = parse_real "metis:" (List.nth (l,9)),
+    other = parse_real "other:" (List.nth (l,10)),
+    status = parse_status "tactictoe:" (List.nth (l,11))
     }
   end
   end
@@ -82,7 +79,7 @@ fun compile_info exp =
     val statsl = map (all_info dir) filel
     val provenl = filter (fn x => #status x = "proven") statsl
     val timeoutl = filter (fn x => #status x = "timeout") statsl
-    val saturatedl = filter (fn x => #status x = "saturatedl") statsl
+    val saturatedl = filter (fn x => #status x = "saturated") statsl
     val totsearch = sum_real (map #search statsl)
     val totnodes = Real.fromInt (sum_int (map #nodes statsl))
     val totloops = Real.fromInt (sum_int (map #loops statsl))
@@ -100,8 +97,9 @@ fun compile_info exp =
     "create " ^ rts_round 6 (sum_real (map #create statsl) / totsearch),
     "backup " ^ rts_round 6 (sum_real (map #backup statsl) / totsearch),
     "recons_average " ^ rts_round 6 (sum_real (map #recons statsl) / 
-       Real.fromInt (length provenl))
-    ]
+       Real.fromInt (length provenl)),
+    "metis " ^ rts_round 6 (sum_real (map #metis statsl) / totsearch),
+    "other " ^ rts_round 6 (sum_real (map #other statsl) / totsearch)]
   end
 
 (* load "tttEval"; open tttEval aiLib;
@@ -522,7 +520,7 @@ val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-run_evalscript_thyl smlfun "210127-1" (true,30) 
+run_evalscript_thyl smlfun "210127-2" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
