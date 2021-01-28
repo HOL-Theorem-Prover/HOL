@@ -103,7 +103,8 @@
      (should (move-check '(4435 4452 4505 4552) 'forward-sexp))
      (should (move-check '(4455 4505) 'forward-sexp))
      (should (move-check '(4508 4455 4435) 'backward-sexp))
-     (should (move-check '(3943 3959 3999 4046) 'forward-sexp)))))
+     (should (move-check '(3943 3959 3999 4046) 'forward-sexp))
+     (should (move-check '(4599 4558) 'backward-sexp)))))
 
 (ert-deftest holscript-sexp-movement ()
   "sexp-moves are made correctly"

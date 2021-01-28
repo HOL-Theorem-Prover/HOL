@@ -42,6 +42,7 @@
     (modify-syntax-entry ?‘ "(’" st)
     (modify-syntax-entry ?’ ")‘" st)
     (modify-syntax-entry ?\\ "\\" st)
+    (modify-syntax-entry ?λ "." st)
     ;; backslash only escapes in strings but we need to have it seen
     ;; as one in general if the hol-mode isn't to get seriously
     ;; confused by script files that contain escaped quotation
@@ -1061,7 +1062,8 @@ ignoring fact that it should really only occur at the beginning of the line.")
        ((looking-back "\\\\\\\\" (- (point) 3))
         (goto-char (match-beginning 0)) "\\\\")
        (; am I just after either a backslash or Greek lambda?
-        (looking-back (concat "[^$[:punct:]]" holscript-lambda-regexp)
+        (looking-back (concat "\\([^$[:punct:]]\\|[~()“‘]\\)"
+                              holscript-lambda-regexp)
                       (- (point) 3) nil)
         (if (equal 1 (syntax-class (syntax-after (point))))
             (buffer-substring-no-properties

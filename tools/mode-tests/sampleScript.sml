@@ -275,6 +275,8 @@ Inductive foob2:
   (l. foob (HD l) ==> foob (LAST l))
 End
 
-
+Definition foo:
+  foo x = λy z. y + z
+End
 
 val _ = export_theory()
