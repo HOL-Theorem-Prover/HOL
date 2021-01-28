@@ -211,19 +211,19 @@ val it =
    : proof
 \end{lstlisting}
 
-The assupmtion now tells us that any natural number $p$ which is greater than
-$n$.
-On a high-level the goal is to derive a contradiction from this assumption by
+The assumption now tells us that any natural number $p$ which is greater than
+$n$ cannot be prime.
+On a high level, the goal is to derive a contradiction from this assumption by
 finding a prime number that is bigger than $n$.
 An integral part of this step is that every natural number greater than $1$ has
 a prime factorization\footnote{We have to exclude $1$ here because our definition of prime numbers explicitly ruled out $1$.}.
 Before continuing the proof, we prove a theorem that for an arbitrary natural
-number $n$ provides us with a prime factor of it.
+number $n$, there is a prime factor of that number.
 To this end we first drop the current goal with \ekey{M-h d} and start proving:
 %
 \begin{lstlisting}
 Theorem PRIME_FACTOR:
-  !n . ~(n = 1) ==> ?p . prime p /\ p divides n
+  !n . n <> 1 ==> ?p . prime p /\ p divides n
 Proof
   LassieLib.nltac `
     Complete Induction on 'n'.
@@ -274,7 +274,7 @@ Alternatively, we can say that we want to prove first the goal where \texttt{pri
 \lstinline{Goal 'prime n'}.
 
 Having shown the theorem \lstinline{PRIME_FACTOR} we can go back to proving
-euclids theorem:
+Euclid's theorem:
 \begin{lstlisting}
 Theorem euclid:
   !n . ?p . n < p /\ prime p
@@ -283,7 +283,7 @@ Proof
 QED
 \end{lstlisting}
 
-As a next step, we will obtain a prime factor of $!n + 1$, called $q$.
+As a next step, we will obtain a prime factor of $n! + 1$, called $q$.
 From this we know that $q$ is prime and \lstinline{q divides FACT n + 1}.
 As $q$ is a prime number, we can derive that $q \leq n$.
 We obtain a contradiction by deriving that $q = 1$ from the fact that any number
