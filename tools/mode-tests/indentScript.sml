@@ -282,4 +282,11 @@ Proof
   tac
 QED
 
+Theorem foo_bar:
+  f x : bool ∧
+  Q
+Proof
+  tactic
+QED
+
 val _ = export_theory();
