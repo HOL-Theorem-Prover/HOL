@@ -2004,6 +2004,48 @@ in
             |> BETA_RULE
 end
 
+(* prove a higher-order variant of the case elim thm
+     !f. f (ty_CASE x f1 .. fn) :bool <=>
+       (?a1 .. ai. x = ctor1 a1 .. ai /\ f (f1 a1 .. ai)) \/
+       (?b1 .. bj. x = ctor2 b1 .. bj /\ f (f2 b1 .. bj)) \/
+       ...
+*)
+fun prove_case_ho_elim_thm ty_def = let
+    val thm1 = prove_case_rand_thm ty_def
+    val elim_thm = prove_case_elim_thm ty_def
+    val f = concl thm1 |> lhs |> rator
+    val (nm, f_ty) = dest_var f
+    val (x_ty, _) = dom_rng f_ty
+    val f2 = mk_var (nm, x_ty --> bool)
+  in GEN f thm1 |> ISPEC f2 |> GEN f2
+    |> REWRITE_RULE [elim_thm]
+    |> CONV_RULE (DEPTH_CONV BETA_CONV)
+  end
+
+(* the forall/implies variant of the case subdivision,
+        more useful for conclusions and forward reasoning
+     !f. f (ty_CASE x f1 .. fn) :bool <=>
+       (!a1 .. ai. x = ctor1 a1 .. ai ==> f (f1 a1 .. ai)) /\
+       (!b1 .. bj. x = ctor2 b1 .. bj ==> f (f2 b1 .. bj)) /\
+       ...
+*)
+fun prove_case_ho_imp_thm ty_def = let
+    val thm1 = prove_case_ho_elim_thm ty_def
+    val (f, _) = concl thm1 |> dest_forall
+    val (nm, f_ty) = dest_var f
+    val (x_ty, _) = dom_rng f_ty
+    val x = mk_var ("x", x_ty)
+    val f2 = mk_abs (x, mk_neg (mk_comb (f, x)))
+    val rews = [SPEC (mk_neg (mk_var ("P", bool))) DISJ_EQ_IMP, DE_MORGAN_THM,
+        NOT_EXISTS_THM, NOT_CLAUSES]
+  in ISPEC f2 thm1 |> AP_TERM negation
+      |> CONV_RULE (DEPTH_CONV BETA_CONV)
+      |> CONV_RULE (BINOP_CONV (REWRITE_CONV [DE_MORGAN_THM]))
+      |> CONV_RULE (REDEPTH_CONV (HO_REWR_CONV NOT_EXISTS_THM))
+      |> REWRITE_RULE [DE_MORGAN_THM, DISJ_EQ_IMP, NOT_CLAUSES]
+  end
+
+
 
 
 
