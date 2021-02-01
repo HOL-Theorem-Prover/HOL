@@ -63,7 +63,7 @@ val list_pc = precontext_add
     NOT_CONS_NIL,
     NOT_NIL_CONS,
     CONS_11,
-    MEM_KILL_DUPS,
+    MEM_nub,
     HD,
     TL])
   num_pc;
@@ -73,6 +73,3 @@ val list_c = precontext_compile list_pc;
 (* non-interactive mode
 *)
 end;
-
-
-

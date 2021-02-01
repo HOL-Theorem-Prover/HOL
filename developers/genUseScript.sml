@@ -91,8 +91,7 @@ fun load1 (S as {worklist, alreadySeen, acc}) (src,s) =
         | SOME "sml" => doSource()
         | SOME "uo" => doUOI()
         | SOME "ui" => doUOI()
-        | SOME _ => die ("Can't handle " ^ s ^ " (from " ^ src ^ ")")
-        | NONE => ToplevelLoad S (src,s)
+        | _ => ToplevelLoad S (src,s)
   end
 
 fun dowork {worklist, alreadySeen, acc} =
@@ -110,7 +109,10 @@ val HOLprelude =
     "local val dir = OS.FileSys.getDir()\n\
     \val _ = OS.FileSys.chDir \"" ^ Systeml.HOLDIR ^^ "tools-poly" ^ "\";\n" ^
     "val _ = use \"poly/poly-init2.ML\";\n\
-    \val _ = OS.FileSys.chDir dir in end;\n"
+    \val _ = OS.FileSys.chDir dir in end;\n\
+    \use \"" ^ Systeml.HOLDIR ^^ "tools" ^^ "Holmake" ^^
+    "FunctionalRecordUpdate.sml" ^ "\";\n\
+    \val use = QUse.use;\n"
 
 fun turnOnHelp _ = {dohelp = true, prefix = "", prelude = "", suffix = ""}
 fun turnOnHOL {dohelp,...} = {dohelp = dohelp, prefix = "use \"",

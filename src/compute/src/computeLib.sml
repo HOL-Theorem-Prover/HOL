@@ -364,8 +364,7 @@ in
     val write_datatype_info = add_datatype_info the_compset
 end
 
-val _ = TypeBase.register_update_fn
-          (fn tyis => (app write_datatype_info tyis; tyis))
+val _ = TypeBase.register_update_fn (fn tyi => (write_datatype_info tyi; tyi))
 
 (*---------------------------------------------------------------------------*)
 (* Usage note: call this before export_theory().                             *)
@@ -375,7 +374,7 @@ open LoadableThyData
 val {export,...} =
     ThmSetData.new_exporter {
       settype = "compute",
-      efns = {add = (fn {named_thms,...} => add_funs (map #2 named_thms)),
+      efns = {add = (fn {named_thm,...} => add_funs [#2 named_thm]),
               remove = fn _ => ()}
     }
 val add_persistent_funs = app export

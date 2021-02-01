@@ -72,21 +72,24 @@ val l2n_lt = Q.store_thm("l2n_lt",
 
 (* ......................................................................... *)
 
-val LENGTH_l2n = Q.store_thm("LENGTH_l2n",
-  `!b l. 1 < b /\ EVERY ($> b) l /\ ~(l2n b l = 0) ==>
-     (SUC (LOG b (l2n b l)) <= LENGTH l)`,
-  Induct_on `l` \\ SRW_TAC [ARITH_ss] [l2n_def, GREATER_DEF]
-    << [ALL_TAC, `~(h = 0)` by (`0 < b` by DECIDE_TAC \\ STRIP_TAC
-          \\ IMP_RES_TAC ZERO_MOD \\ FULL_SIMP_TAC arith_ss [])]
-    \\ `0 < h + b * l2n b l`
-    by (IMP_RES_TAC (simpLib.SIMP_PROVE arith_ss [LESS_MULT2]
-         ``1 < b /\ ~(c = 0) ==> 0 < b * c``) \\ SRW_TAC [ARITH_ss] [])
-    \\ SRW_TAC [ARITH_ss] [LOG_RWT, LESS_DIV_EQ_ZERO,
-         SIMP_RULE arith_ss [] ADD_DIV_ADD_DIV]
-    << [Cases_on `l` \\ FULL_SIMP_TAC (arith_ss++listSimps.LIST_ss) [l2n_def],
-        SRW_TAC [ARITH_ss] [(GSYM o REWRITE_RULE [GSYM SUC_ONE_ADD]) LOG_DIV],
-        `~(l2n b l = 0)` by (STRIP_TAC \\ FULL_SIMP_TAC arith_ss [])
-          \\ SRW_TAC [] []]);
+Theorem LENGTH_l2n:
+  !b l. 1 < b /\ EVERY ($> b) l /\ ~(l2n b l = 0) ==>
+        SUC (LOG b (l2n b l)) <= LENGTH l
+Proof
+  Induct_on `l` \\ SRW_TAC [ARITH_ss] [l2n_def, GREATER_DEF] \\
+  Cases_on ‘h MOD b = 0’ \\ FULL_SIMP_TAC (srw_ss()) []
+  >> (REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [MOD_EQ_0_DIVISOR] \\
+      FULL_SIMP_TAC (srw_ss()) [LT_MULT_CANCEL_RBARE] \\ SRW_TAC[][] \\
+      SRW_TAC[ARITH_ss][LOG_MULT]) \\
+  ‘h <> 0’ by (STRIP_TAC \\ SRW_TAC[][] \\ REV_FULL_SIMP_TAC (srw_ss()) []) \\
+  ‘0 < h + b * l2n b l’ by DECIDE_TAC \\
+  Cases_on ‘l2n b l = 0’
+  >> (SRW_TAC[][] \\ SRW_TAC[ARITH_ss][LOG_RWT]) \\
+  SRW_TAC[][LOG_RWT] \\
+  ‘(h + b * l2n b l) DIV b = l2n b l’
+     by METIS_TAC[DIV_MULT, MULT_COMM, ADD_COMM] \\
+  SRW_TAC[][]
+QED
 
 val l2n_DIGIT = Q.store_thm("l2n_DIGIT",
   `!b l x. 1 < b /\ EVERY ($> b) l /\ x < LENGTH l ==>

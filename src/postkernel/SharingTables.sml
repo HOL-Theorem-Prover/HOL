@@ -413,10 +413,15 @@ fun build_sharing_data (ed : extract_data) =
           |> add_strings (List.concat (map (thm_strings o #2) theorems))
     end
 
-fun write_string (SDI{strtable,...}) s = Map.find(#map strtable,s)
-fun write_type (SDI{tytable,...}) ty = Map.find(#tymap tytable,ty)
+fun write_string (SDI{strtable,...}) s =
+    Map.find(#map strtable,s)
+    handle Map.NotFound =>
+           raise SharingTables ("write_string: can't find \"" ^ s ^ "\"")
+fun write_type (SDI{tytable,...}) ty =
+    Map.find(#tymap tytable,ty)
 fun write_term (SDI{tmtable,...}) =
     Term.write_raw (fn t => Map.find(#termmap tmtable,t))
+    handle Map.NotFound => raise SharingTables "write_term: can't find term"
 
 
 fun enc_sdata (sd as SDI{strtable,idtable,tytable,tmtable,exp}) =

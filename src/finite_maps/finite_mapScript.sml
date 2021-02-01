@@ -1605,36 +1605,36 @@ SRW_TAC [][Once UNION_COMM] THEN
 SRW_TAC [][Once (GSYM INSERT_SING_UNION)] THEN
 SRW_TAC [][EQ_IMP_THM]);
 
-local open listTheory in
-val FUPDATE_LIST_APPLY_MEM = store_thm(
-"FUPDATE_LIST_APPLY_MEM",
-``!kvl f k v n. n < LENGTH kvl /\ (k = EL n (MAP FST kvl)) /\ (v = EL n (MAP SND kvl)) /\
-  (!m. n < m /\ m < LENGTH kvl ==> (EL m (MAP FST kvl) <> k))
-  ==> ((f |++ kvl) ' k = v)``,
-Induct THEN1 SRW_TAC[][] THEN
-Cases THEN NTAC 3 GEN_TAC THEN
-Cases THEN1 (
-  Q.MATCH_RENAME_TAC `0 < LENGTH ((q,r)::kvl) /\ _ ==> _` THEN
-  Q.ISPECL_THEN [`kvl`,`f |+ (k,r)`,`k`] MP_TAC FUPDATE_LIST_APPLY_NOT_MEM THEN
-  SRW_TAC[][FUPDATE_LIST_THM] THEN
+Theorem FUPDATE_LIST_APPLY_MEM:
+  !kvl f k v n.
+     n < LENGTH kvl /\ (k = EL n (MAP FST kvl)) /\ (v = EL n (MAP SND kvl)) /\
+     (!m. n < m /\ m < LENGTH kvl ==> (EL m (MAP FST kvl) <> k))
+    ==>
+     ((f |++ kvl) ' k = v)
+Proof
+  Induct THEN1 SRW_TAC[][] THEN
+  Cases THEN NTAC 3 GEN_TAC THEN
+  Cases THEN1 (
+    Q.MATCH_RENAME_TAC `0 < LENGTH ((q,r)::kvl) /\ _ ==> _` >>
+    Q.ISPECL_THEN [`kvl`,`f |+ (k,r)`,`k`] MP_TAC FUPDATE_LIST_APPLY_NOT_MEM >>
+    SRW_TAC[][FUPDATE_LIST_THM] >> FIRST_X_ASSUM MATCH_MP_TAC >>
+    SRW_TAC[][listTheory.MEM_MAP,listTheory.MEM_EL,pairTheory.EXISTS_PROD] >>
+    STRIP_TAC >> rename [‘(k,v) = EL n kvl’] >>
+    FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC) THEN
+    SRW_TAC[][listTheory.EL_MAP] THEN
+    METIS_TAC[pairTheory.FST]) THEN
+  SRW_TAC[][] THEN
+  Q.MATCH_RENAME_TAC `(f |++ ((q,r)::kvl)) ' _ = _` THEN
+  Q.ISPECL_THEN [`(q,r)`,`kvl`] SUBST1_TAC rich_listTheory.CONS_APPEND THEN
+  REWRITE_TAC [FUPDATE_LIST_APPEND] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  SRW_TAC[][MEM_MAP,MEM_EL,pairTheory.EXISTS_PROD] THEN
-  Q.MATCH_RENAME_TAC `_ \/ _ <> EL n kvl` THEN
-  FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC) THEN
-  SRW_TAC[][EL_MAP] THEN
-  METIS_TAC[pairTheory.FST]) THEN
-SRW_TAC[][] THEN
-Q.MATCH_RENAME_TAC `(f |++ ((q,r)::kvl)) ' _ = _` THEN
-Q.ISPECL_THEN [`(q,r)`,`kvl`] SUBST1_TAC rich_listTheory.CONS_APPEND THEN
-REWRITE_TAC [FUPDATE_LIST_APPEND] THEN
-FIRST_X_ASSUM MATCH_MP_TAC THEN
-Q.MATCH_ASSUM_RENAME_TAC `n < LENGTH kvl` THEN
-Q.EXISTS_TAC `n` THEN
-SRW_TAC[][] THEN
-Q.MATCH_RENAME_TAC `EL m (MAP FST kvl) <> _` THEN
-FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
-SRW_TAC[][])
-end
+  Q.MATCH_ASSUM_RENAME_TAC `n < LENGTH kvl` THEN
+  Q.EXISTS_TAC `n` THEN
+  SRW_TAC[][] THEN
+  Q.MATCH_RENAME_TAC `EL m (MAP FST kvl) <> _` THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
+  SRW_TAC[][]
+QED
 
 val FOLDL_FUPDATE_LIST = store_thm("FOLDL_FUPDATE_LIST",
   ``!f1 f2 ls a. FOLDL (\fm k. fm |+ (f1 k, f2 k)) a ls =
@@ -3265,23 +3265,17 @@ Theorem fmlfpR_total =
 (* deleting it from the map will then make the map smaller.                  *)
 (*---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn _ =>
-     PP.block PP.CONSISTENT 0 (
-       PP.pr_list PP.add_string [PP.NL] [
-         "val _ = ",
-         " TypeBase.write",
-         " [TypeBasePure.mk_nondatatype_info",
-         "  (mk_type(\"fmap\",[alpha,beta]),",
-         "    {nchotomy = SOME fmap_CASES,",
-         "     induction = SOME fmap_INDUCT,",
-         "     size = SOME(Parse.Term`\\(ksize:'a->num) (vsize:'b->num). \
-                           \fmap_size (\\k:'a. 0) (\\v. 1 + vsize v)`,",
-         "                 fmap_size_def),",
-         "     encode=NONE})];"
-       ]
-     ))}
+val _ = TypeBase.export [
+    TypeBasePure.mk_nondatatype_info (
+      “:'a |-> 'b”,
+      {encode = NONE,
+       size = SOME (“λ(ksize:'a -> num) (vsize:'b -> num).
+                      fmap_size (λk:'a. 0) (λv. 1 + vsize v)”,
+                    fmap_size_def),
+       induction = SOME fmap_INDUCT,
+       nchotomy = SOME fmap_CASES}
+      )
+  ]
 
 (* ----------------------------------------------------------------------
     to close...

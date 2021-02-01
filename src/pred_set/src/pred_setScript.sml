@@ -2330,8 +2330,7 @@ Theorem INJ_LINV_OPT:
 Proof
   REWRITE_TAC [LINV_OPT_def, INJ_DEF, IN_IMAGE] THEN
   REPEAT STRIP_TAC THEN
-  REVERSE COND_CASES_TAC THEN FULL_SIMP_TAC std_ss [] THEN1
-  (POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN REV_FULL_SIMP_TAC std_ss []) THEN
+  REVERSE COND_CASES_TAC THEN FULL_SIMP_TAC std_ss [] THEN
   EQ_TAC THENL [
     DISCH_THEN (ASSUME_TAC o MATCH_MP SELECT_EQ_AX) THEN
     VALIDATE (POP_ASSUM (fn th => REWRITE_TAC [BETA_RULE (UNDISCH th)])) THEN
@@ -4155,12 +4154,11 @@ Proof
  PROVE_TAC []
 QED
 
-val BIGINTER_SUBSET = store_thm (* from util_prob *)
-  ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-                       ==> (BIGINTER s) SUBSET sp``,
+Theorem BIGINTER_SUBSET:
+  !sp s t. t IN s /\ t SUBSET sp ==> (BIGINTER s) SUBSET sp
+Proof
   RW_TAC std_ss [SUBSET_DEF,IN_BIGINTER]
-  >> `?u. u IN s` by METIS_TAC [CHOICE_DEF]
-  >> METIS_TAC []);
+QED
 
 val DIFF_BIGINTER1 = store_thm
   ("DIFF_BIGINTER1",
@@ -4172,16 +4170,17 @@ val DIFF_BIGINTER1 = store_thm
   >> RW_TAC std_ss []
   >> METIS_TAC []);
 
-val DIFF_BIGINTER = store_thm( (* from util_prob *)
-  "DIFF_BIGINTER",
-  ``!sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
-           (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))``,
+Theorem DIFF_BIGINTER:
+  !sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
+         (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))
+Proof
   RW_TAC std_ss []
-  >> `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
+  >> ‘BIGINTER s SUBSET sp’ by METIS_TAC[MEMBER_NOT_EMPTY, BIGINTER_SUBSET]
   >> ASSUME_TAC (Q.SPECL [`sp`,`s`] DIFF_BIGINTER1)
   >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)`
        by RW_TAC std_ss [DIFF_DIFF_SUBSET]
-  >> METIS_TAC []);
+  >> METIS_TAC []
+QED
 
 val FINITE_BIGINTER = Q.store_thm(
   "FINITE_BIGINTER",
@@ -5107,6 +5106,16 @@ val MAX_SET_THM = store_thm(
     RES_TAC THEN ASM_SIMP_TAC arith_ss [MAX_DEF]
   ]);
 
+Theorem in_max_set:
+  !s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s
+Proof
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [] [MAX_SET_THM] THEN
+  SRW_TAC [] []
+QED
+
+Theorem X_LE_MAX_SET = in_max_set
+
 val MAX_SET_REWRITES = store_thm(
   "MAX_SET_REWRITES",
   ``(MAX_SET {} = 0) /\ (MAX_SET {e} = e)``,
@@ -5235,6 +5244,21 @@ val MAX_SET_UNION = Q.store_thm
 val set_ss = arith_ss ++ SET_SPEC_ss ++
              rewrites [CARD_INSERT,CARD_EMPTY,FINITE_EMPTY,FINITE_INSERT,
                        NOT_IN_EMPTY];
+
+Theorem SUBSET_count_MAX_SET:
+  FINITE s ==> s SUBSET count (MAX_SET s + 1)
+Proof
+  simp[SUBSET_DEF, DECIDE “x < y + 1 <=> x <= y”, X_LE_MAX_SET]
+QED
+
+Theorem CARD_LE_MAX_SET:
+  FINITE s ==> CARD s <= MAX_SET s + 1
+Proof
+  strip_tac >> CCONTR_TAC >>
+  ‘s SUBSET count (MAX_SET s + 1)’ by simp[SUBSET_count_MAX_SET] >>
+  ‘CARD s <= CARD (count (MAX_SET s + 1))’ by simp[CARD_SUBSET] >>
+  full_simp_tac (srw_ss()) []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* POW s is the powerset of s                                                *)
@@ -6283,12 +6307,6 @@ val compl_insert = Q.store_thm ("compl_insert",
  SRW_TAC [] [EXTENSION, IN_COMPL] THEN
  METIS_TAC []);
 
-val in_max_set = Q.store_thm ("in_max_set",
-`!s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s`,
- HO_MATCH_MP_TAC FINITE_INDUCT THEN
- SRW_TAC [] [MAX_SET_THM] THEN
- SRW_TAC [] []);
-
 (* end CakeML lemmas *)
 
 (*---------------------------------------------------------------------------*)
@@ -6514,7 +6532,7 @@ in
     simpLib.SSFRAG
       {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
        dprocs = [], filter = NONE, rewrs = []}
-  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]
+  val _ = BasicProvers.logged_addfrags {thyname = "pred_set"} [SET_SPEC_ss]
 end
 `
 

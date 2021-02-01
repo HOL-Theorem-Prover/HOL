@@ -1010,11 +1010,8 @@ Proof
  >- METIS_TAC []
  >> GEN_TAC >> Induct_on `E` (* 8 subgoals *)
  >> RW_TAC lset_ss [CCS_Subst_def, FV_def] (* 5 subgoals left *)
- >- (Q.EXISTS_TAC `nil` >> METIS_TAC [CCS_distinct_exists])
- >| [ RES_TAC >> take [`E1`, `E2`] >> DISJ1_TAC >> art [],
-      RES_TAC >> take [`E1`, `E2`] >> DISJ2_TAC >> art [],
-      RES_TAC >> take [`E1`, `E2`] >> DISJ1_TAC >> art [],
-      RES_TAC >> take [`E1`, `E2`] >> DISJ2_TAC >> art [] ]
+ >- (Q.EXISTS_TAC `nil` >> METIS_TAC [CCS_distinct_exists]) >>
+ RES_TAC >> take [`E1`, `E2`] >> art []
 QED
 
 Theorem FV_REC_PREF :

@@ -100,7 +100,7 @@ fun Prove(t,tac) = let val th = prove(t,tac)
                      th
                    end
 
-val (aeq_rules, aeq_ind, aeq_cases) = Hol_reln`
+Inductive aeq:
   (!s. aeq (tyvar s) (tyvar s)) /\
   (!a b t u. aeq a t /\ aeq b u ==> aeq (tyfun a b) (tyfun t u)) /\
   (!us vs t u pi1 pi2. okpm pi1 vs (fv t UNION fv u) t /\
@@ -108,31 +108,33 @@ val (aeq_rules, aeq_ind, aeq_cases) = Hol_reln`
                        aeq (rtypm pi1 t) (rtypm pi2 u)
                      ==>
                        aeq (tyforall vs t) (tyforall us u))
-`;
+End
 
 val aeq_forall = last (CONJUNCTS aeq_rules)
 
-val aeq_example1 = prove(
-  ``aeq (tyforall {x} (tyvar x)) (tyforall {y} (tyvar y))``,
+Theorem aeq_example1[local]:
+  aeq (tyforall {x} (tyvar x)) (tyforall {y} (tyvar y))
+Proof
   MATCH_MP_TAC aeq_forall THEN
   Q_TAC (NEW_TAC "z") `{x;y}` THEN
-  MAP_EVERY Q.EXISTS_TAC [`[(x,z)]`, `[(y,z)]`] THEN
-  SRW_TAC [][aeq_rules, okpm_def]);
+  qexistsl_tac [`[(x,z)]`, `[(y,z)]`] THEN
+  SRW_TAC [][aeq_rules, okpm_def]
+QED
 
-val aeq_example2 = prove(
-  ``aeq (tyforall {x} (tyvar x)) (tyforall {y} (tyvar a)) = (a = y)``,
+Theorem aeq_example2[local]:
+  aeq (tyforall {x} (tyvar x)) (tyforall {y} (tyvar a)) <=> a = y
+Proof
   ONCE_REWRITE_TAC [aeq_cases] THEN SRW_TAC [][okpm_def] THEN
-  SRW_TAC [][Once aeq_cases] THEN Cases_on `a = y` THEN SRW_TAC [][] THENL [
-    Q_TAC (NEW_TAC "z") `{x;a}` THEN
-    MAP_EVERY Q.EXISTS_TAC [`[(x, z)]`, `[(a, z)]`] THEN
-    SRW_TAC [][],
-    Cases_on `lswapstr pi2 a = a` THEN SRW_TAC [][] THEN
-    Cases_on `lswapstr pi1 x = a` THEN SRW_TAC [][stringpm_raw]
-  ]);
+  SRW_TAC [][Once aeq_cases] THEN Cases_on `a = y` THEN SRW_TAC [][] THEN
+  Q_TAC (NEW_TAC "z") `{x;a}` THEN
+  MAP_EVERY Q.EXISTS_TAC [`[(x, z)]`, `[(a, z)]`] THEN
+  SRW_TAC [][]
+QED
 
-val aeq_example3 = prove(
-  ``aeq (tyforall {x} (tyfun (tyvar x) (tyforall {x} (tyvar x))))
-        (tyforall {a} (tyfun (tyvar a) (tyforall {c;d} (tyvar d))))``,
+Theorem aeq_example3[local]:
+  aeq (tyforall {x} (tyfun (tyvar x) (tyforall {x} (tyvar x))))
+      (tyforall {a} (tyfun (tyvar a) (tyforall {c;d} (tyvar d))))
+Proof
   MATCH_MP_TAC aeq_forall THEN SRW_TAC [][] THEN
   Q_TAC (NEW_TAC "z") `{x;a}` THEN
   MAP_EVERY Q.EXISTS_TAC [`[(x, z)]`, `[(a, z)]`] THEN
@@ -141,16 +143,19 @@ val aeq_example3 = prove(
   MATCH_MP_TAC aeq_forall THEN SRW_TAC [][] THEN
   Q_TAC (NEW_TAC "q") `{swapstr a z d; z}` THEN
   MAP_EVERY Q.EXISTS_TAC [`[(z, q)]`, `[(swapstr a z d, q)]`] THEN
-  SRW_TAC [][aeq_rules, okpm_def]);
+  SRW_TAC [][aeq_rules, okpm_def]
+QED
 
-val aeq_example4 = prove(
-  ``~(a = c) ==> ~aeq (tyforall {x} (tyfun (tyvar x) (tyvar x)))
-                      (tyforall {a;c} (tyfun (tyvar a) (tyvar c)))``,
+Theorem aeq_example4[local]:
+  a ≠ c ==> ~aeq (tyforall {x} (tyfun (tyvar x) (tyvar x)))
+                 (tyforall {a;c} (tyfun (tyvar a) (tyvar c)))
+Proof
   SRW_TAC [][Once aeq_cases] THEN SRW_TAC [][Once aeq_cases] THEN
   SRW_TAC [][Once aeq_cases] THEN SRW_TAC [][Once aeq_cases] THEN
   SRW_TAC [][okpm_def] THEN
   SRW_TAC [DNF_ss][] THEN
-  METIS_TAC [pmact_injective]);
+  METIS_TAC [pmact_injective]
+QED
 
 fun find_small_cond t = let
   fun recurse t k =
@@ -544,35 +549,37 @@ val liftrule = quotientLib.define_quotient_types_std_rule {
               forall_respects_aeq, tyfun_respects_aeq,
               aeq_fv, okpm_respects]}
 
-fun Save_thm(s,th) = save_thm(s,th) before export_rewrites [s]
-fun Store_thm(s,t,tac) = store_thm(s,t,tac) before export_rewrites [s]
-val tysFV_thm = Save_thm("tysFV_thm", liftrule fv_def)
-val tysFV_FINITE = Save_thm("tysFV_FINITE", liftrule FINITE_fv)
+Theorem tysFV_thm[simp] = liftrule fv_def
+Theorem tysFV_FINITE[simp] = liftrule FINITE_fv
 val is_pmact_raw_tyspm = is_pmact_pmact |> Q.ISPEC `rty_pmact`
                          |> REWRITE_RULE [rtypm_raw,is_pmact_def] |> liftrule
-val _ = overload_on("tys_pmact",``mk_pmact raw_tyspm``);
-val _ = overload_on("tyspm",``pmact tys_pmact``);
-val tyspm_raw = store_thm("tyspm_raw",``tyspm = raw_tyspm``,
-  SRW_TAC [][GSYM pmact_bijections,is_pmact_def,is_pmact_raw_tyspm])
+Overload tys_pmact = ``mk_pmact raw_tyspm``
+Overload tyspm = ``pmact tys_pmact``
+Theorem tyspm_raw:
+  tyspm = raw_tyspm
+Proof SRW_TAC [][GSYM pmact_bijections,is_pmact_def,is_pmact_raw_tyspm]
+QED
 fun liftrule' th = th |> SUBS [rtypm_raw] |> liftrule |> SUBS [GSYM tyspm_raw]
-val tyspm_thm = Save_thm("tyspm_thm", liftrule' rtypm_thm)
-val tys_ind = save_thm("tys_ind", liftrule (TypeBase.induction_of ``:type``))
-val OKpm_thm = save_thm("OKpm_thm", liftrule okpm_def)
-val OKpm_eqvt = save_thm("OKpm_eqvt", liftrule' rtypm_okpm)
-val tysFV_tyspm = save_thm("tysFV_tyspm", liftrule' fv_rtypm)
-val tyseq_rule = liftrule' aeq_rules
+Theorem tyspm_thm[simp] = liftrule' rtypm_thm
+Theorem tys_ind = liftrule (TypeBase.induction_of ``:type``)
+Theorem OKpm_thm = liftrule okpm_def
+Theorem OKpm_eqvt = liftrule' rtypm_okpm
+Theorem tysFV_tyspm = liftrule' fv_rtypm
+Theorem tyseq_rule = liftrule' aeq_rules
 
-val OKpm_exists = save_thm("OKpm_exists", liftrule okpm_exists)
+Theorem OKpm_exists = liftrule okpm_exists
 
-val OKpm_increase = store_thm(
-  "OKpm_increase",
-  ``s1 SUBSET s2 /\ OKpm pi bvs s2 ty ==> OKpm pi bvs s1 ty``,
-  SRW_TAC [][OKpm_thm] THEN METIS_TAC [SUBSET_DEF]);
+Theorem OKpm_increase:
+  s1 SUBSET s2 /\ OKpm pi bvs s2 ty ==> OKpm pi bvs s1 ty
+Proof
+  SRW_TAC [][OKpm_thm] THEN METIS_TAC [SUBSET_DEF]
+QED
 
-val OKpm_avoids = prove(
-  ``!Set. FINITE Set  ==>
-          DISJOINT Set (tysFV ty) ==>
-          ?pi. DISJOINT (patoms pi) Set /\ OKpm pi bvs (tysFV ty) ty``,
+Theorem OKpm_avoids[local]:
+  !Set. FINITE Set  ==>
+        DISJOINT Set (tysFV ty) ==>
+        ?pi. DISJOINT (patoms pi) Set /\ OKpm pi bvs (tysFV ty) ty
+Proof
   SIMP_TAC (srw_ss()) [OKpm_thm] THEN
   HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][] THENL [
     SRW_TAC [][avoid_finite_set],
@@ -602,7 +609,8 @@ val OKpm_avoids = prove(
       ],
       Q.EXISTS_TAC `pi` THEN SRW_TAC [][]
     ]
-  ]);
+  ]
+QED
 
 val tys_fresh = store_thm(
   "tys_fresh",

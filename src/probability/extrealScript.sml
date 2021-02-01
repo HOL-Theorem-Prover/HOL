@@ -332,6 +332,8 @@ val _ = overload_on ("<",    Term `extreal_lt`);
 val _ = overload_on ("~",    Term `extreal_ainv`);
 val _ = overload_on ("numeric_negate",
                              Term `extreal_ainv`);
+Overload "~" = “bool$~”
+Overload "¬" = “bool$~” (* UOK *)
 val _ = overload_on ("inv",  Term `extreal_inv`);
 val _ = overload_on ("abs",  Term `extreal_abs`);
 val _ = overload_on ("logr", Term `extreal_logr`);
@@ -2384,7 +2386,7 @@ Proof
  >> ASM_SIMP_TAC real_ss [abs]
  >> fs [GSYM real_lt]
  >> REWRITE_TAC [Once REAL_LE_RSUB_GE0, REAL_SUB_RNEG, REAL_MUL_RNEG]
- >> Suff `x pow 2 + y pow 2 + 2 * (x * y) = (x + y) pow 2`
+ >> Suff `x pow 2 + y pow 2 - -2 * (x * y) = (x + y) pow 2`
  >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2])
  >> SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
                       REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
@@ -2534,47 +2536,6 @@ Proof
  >> MATCH_MP_TAC zero_pow
  >> RW_TAC arith_ss []
 QED
-
-(* an extended version of EXP_LE_X, needed by Borel_Cantelli_lemma2 (direct proof):
-val EXP_LE_X_FULL = store_thm
-  ("EXP_LE_X_FULL", ``!x :real. &1 + x <= exp x``,
-    GEN_TAC
- >> Cases_on `0 <= x` (* existing case *)
- >- (MATCH_MP_TAC EXP_LE_X >> art [])
- >> fs [GSYM real_lt]
- >> Cases_on `x <= -1` (* easy case *)
- >- (MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC `0` >> REWRITE_TAC [EXP_POS_LE] \\
-    `0r = 1 + -1` by RW_TAC real_ss [] >> POP_ORW >> art [REAL_LE_LADD])
- >> fs [GSYM real_lt]
- >> ONCE_REWRITE_TAC [GSYM REAL_SUB_LE]
- >> Q.ABBREV_TAC `f = \x :real. exp x - (1 + x)`
- >> `exp x - (1 + x) = f x` by METIS_TAC [] >> POP_ORW
- >> Q.ABBREV_TAC `g = \x :real. exp x - 1`
- >> Know `!x. (f diffl (g x)) x` (* diffl *)
- >- (GEN_TAC >> Q.UNABBREV_TAC `f` \\
-     Q.UNABBREV_TAC `g` >> BETA_TAC \\
-     MATCH_MP_TAC (REWRITE_RULE [REAL_ADD_LID] (DIFF_CONV ``\x :real. exp x - (1 + x)``)) \\
-     REWRITE_TAC [ETA_AX, DIFF_EXP]) >> DISCH_TAC
- >> Know `!x :real. x <= 0 ==> g x <= 0`
- >- (Q.UNABBREV_TAC `g` >> RW_TAC std_ss [] \\
-     REWRITE_TAC [REAL_LE_SUB_RADD, REAL_ADD_LID] \\
-    `1 :real = exp 0` by REWRITE_TAC [EXP_0] >> POP_ORW \\
-     art [EXP_MONO_LE]) >> DISCH_TAC
- >> Know `f 0 = 0`
- >- (Q.UNABBREV_TAC `f` >> BETA_TAC \\
-     RW_TAC real_ss [EXP_0, REAL_ADD_RID]) >> DISCH_TAC
- >>
-    cheat);
-
-val exp_le_x = store_thm
-  ("exp_le_x", ``!x :extreal. &1 + x <= exp x``,
-    cheat);
-
-val exp_le_x_neg = store_thm
-  ("exp_le_x_neg", ``!x :extreal. &1 - x <= exp (-x)``,
-    cheat);
-
- *)
 
 (***************************)
 (*         Various         *)

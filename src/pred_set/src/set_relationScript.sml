@@ -1812,48 +1812,46 @@ Triviality nth_min_surj_lem2:
   !r' s r m m' x x'.
     nth_min r' (s, r) m = SOME x /\
     nth_min r' (s DIFF {x | ?n. n <= m /\ (nth_min r' (s,r) n = SOME x)}, r) m'
-       =
+    =
     SOME x'
-  ==>
+    ==>
     (nth_min r' (s, r) (SUC (m + m')) = SOME x')
 Proof
-Induct_on `m` THEN
-SRW_TAC [] [nth_min_def, LET_THM] THEN
-SRW_TAC [] [DELETE_DEF] THEN
-FULL_SIMP_TAC (srw_ss()) [LET_THM] THEN
-REV_FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.RENAME_TAC [‘get_min R (s,r) <> NONE’,
-              ‘nth_min R (s DELETE _, _) m1 = SOME x1’,
-              ‘nth_min R _ (SUC m1 + m2) = SOME x2’] >>
-Cases_on `get_min R (s, r)` THEN
-FULL_SIMP_TAC (srw_ss()) [DELETE_DEF] THEN
-SRW_TAC [] [arithmeticTheory.ADD] THEN
-first_assum irule THEN
-SRW_TAC [] [] THEN
-Q.RENAME_TAC [‘get_min R _ = SOME x0’, ‘s DIFF {x0} DIFF _’] >>
-‘s DIFF {x0} DIFF
-        {x | ?n. n <= m1 /\ (nth_min R (s DIFF {x0}, r) n = SOME x)} =
- s DIFF {x | ?n.  n <= SUC m1 /\ (nth_min R (s,r) n = SOME x)}’
-  by (SRW_TAC [] [EXTENSION] THEN EQ_TAC THEN SRW_TAC [] [] THENL [
-        Cases_on `n` THEN SRW_TAC [] [nth_min_def, LET_THM] THEN
-        SRW_TAC [] [DELETE_DEF] THEN
-        Q.RENAME_TAC [‘SUC m1 <= N \/ nth_min _ _ N <> _’] >>
-        first_x_assum (Q.SPEC_THEN ‘N’ mp_tac) >>
-        SRW_TAC [] [] THENL [
-          DISJ1_TAC THEN DECIDE_TAC,
-          ASM_REWRITE_TAC[]
-        ],
-        DISCH_THEN SUBST_ALL_TAC >> POP_ASSUM (Q.SPEC_THEN ‘0’ MP_TAC) THEN
-        SRW_TAC [] [nth_min_def],
-        Q.RENAME_TAC [‘~(N <= m1) \/ nth_min _ _ N <> SOME _’] >>
-        POP_ASSUM (Q.SPEC_THEN ‘SUC N’ MP_TAC) >>
-        SRW_TAC [] [] >- (DISJ1_TAC THEN DECIDE_TAC) >>
-        pop_assum mp_tac >>
-        ASM_SIMP_TAC (srw_ss()) [nth_min_def, LET_THM, DELETE_DEF]
-      ]) THEN
-SRW_TAC [] []
+  Induct_on `m` THEN
+  SRW_TAC [] [nth_min_def, LET_THM] THEN
+  SRW_TAC [] [DELETE_DEF] THEN
+  FULL_SIMP_TAC (srw_ss()) [LET_THM] THEN
+  REV_FULL_SIMP_TAC (srw_ss()) [] THEN
+  Q.RENAME_TAC [‘get_min R (s,r) <> NONE’,
+                ‘nth_min R (s DELETE _, _) m1 = SOME x1’,
+                ‘nth_min R _ (SUC m1 + m2) = SOME x2’] >>
+  Cases_on `get_min R (s, r)` THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_DEF] THEN
+  SRW_TAC [] [arithmeticTheory.ADD] THEN
+  first_assum irule THEN
+  SRW_TAC [] [] THEN
+  Q.RENAME_TAC [‘get_min R _ = SOME x0’, ‘s DIFF {x0} DIFF _’] >>
+  ‘s DIFF {x0} DIFF
+   {x | ?n. n <= m1 /\ (nth_min R (s DIFF {x0}, r) n = SOME x)} =
+   s DIFF {x | ?n.  n <= SUC m1 /\ (nth_min R (s,r) n = SOME x)}’
+    by (SRW_TAC [] [EXTENSION] THEN EQ_TAC THEN SRW_TAC [] [] THENL [
+           Cases_on `n` THEN SRW_TAC [] [nth_min_def, LET_THM]
+           >- REV_FULL_SIMP_TAC (srw_ss()) [nth_min_def] >>
+           Q.RENAME_TAC [‘SUC m1 <= N’] >>
+           first_x_assum (Q.SPEC_THEN ‘N’ mp_tac) >>
+           SRW_TAC [] [] >>
+           Q.PAT_X_ASSUM ‘nth_min _ _ (SUC _) = SOME _’ mp_tac >>
+           ASM_SIMP_TAC (srw_ss()) [LET_THM, nth_min_def] >> strip_tac >>
+           FULL_SIMP_TAC (srw_ss()) [DELETE_DEF] >> DECIDE_TAC,
+           DISCH_THEN SUBST_ALL_TAC >> POP_ASSUM (Q.SPEC_THEN ‘0’ MP_TAC) THEN
+           SRW_TAC [] [nth_min_def],
+           Q.RENAME_TAC [‘~(N <= m1)’, ‘nth_min _ _ N = SOME _’] >>
+           first_x_assum (Q.SPEC_THEN ‘SUC N’ MP_TAC) >>
+           ASM_SIMP_TAC (srw_ss()) [nth_min_def, LET_THM, DELETE_DEF] >>
+           DECIDE_TAC
+         ]) THEN
+  SRW_TAC [] []
 QED
-
 
 val nth_min_surj_lem3 = Q.prove (
 `!r' s r s' x.

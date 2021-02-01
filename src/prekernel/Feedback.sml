@@ -179,17 +179,47 @@ fun find_record n =
     | SOME (ALIAS a) => find_record a
 
 val WARN = HOL_WARNING "Feedback"
+local
+   fun err f l = raise ERR f (String.concat l)
+in
+   fun registered_err f nm = err f ["No trace ", quote nm, " is registered"]
 
-fun register_trace (nm, r, max) =
+   fun bound_check f nm maximum value =
+      if value > maximum
+         then err f ["Trace ", quote nm, " can't be set that high."]
+      else if value < 0
+         then err f ["Trace ", quote nm, " can't be set less than 0."]
+      else ()
+end
+
+fun get_tracefn nm =
+   case find_record nm of
+      NONE => registered_err "get_tracefn" nm
+    | SOME {value = TRFP {get, ...}, ...} => get
+
+fun register_trace0 fnm (nm, r, max) =
    if !r < 0 orelse max < 0
-      then raise ERR "register_trace" "Can't have trace values less than zero."
-   else (case Binarymap.peek (!trace_map, nm) of
-            NONE => ()
-          | SOME _ =>
-             WARN "register_trace" ("Replacing a trace with name " ^ quote nm)
-         ; trace_map := Binarymap.insert
-                          (!trace_map, nm, TR {value = ref2trfp r, default = !r,
-                                               aliases = [], maximum = max}))
+      then raise ERR fnm "Can't have trace values less than zero."
+   else
+     let
+       val trfns as TRFP rcd = ref2trfp r
+     in
+       case Binarymap.peek (!trace_map, nm) of
+           NONE => ()
+         | SOME _ =>
+           WARN fnm ("Replacing a trace with name " ^ quote nm);
+       trace_map := Binarymap.insert
+                      (!trace_map, nm, TR {value = trfns, default = !r,
+                                           aliases = [], maximum = max});
+       rcd
+     end
+val register_trace = ignore o register_trace0 "register_trace"
+
+fun create_trace {name, max, initial} =
+    let val r = ref initial
+    in
+      register_trace0 "create_trace" (name, r, max)
+    end
 
 fun register_alias_trace {original, alias} =
   if original = alias then
@@ -240,18 +270,30 @@ fun register_ftrace (nm, (get, set), max) =
                                           maximum = max}))
    end
 
-fun register_btrace (nm, bref) =
-   (case Binarymap.peek (!trace_map, nm) of
-       NONE => ()
-     | SOME _ => WARN "register_btrace"
-                      ("Replacing a trace with name "^ quote nm)
-    ; trace_map :=
-        Binarymap.insert
-            (!trace_map, nm,
-             TR {value = TRFP {get = (fn () => if !bref then 1 else 0),
-                               set = (fn i => bref := (i > 0))},
-                 default = if !bref then 1 else 0, aliases = [],
-                 maximum = 1}))
+fun register_btrace0 fnm (nm, bref) =
+    let
+      fun get() = !bref
+      fun set b = bref := b
+    in
+      case Binarymap.peek (!trace_map, nm) of
+          NONE => ()
+        | SOME _ => WARN fnm ("Replacing a trace with name "^ quote nm);
+      trace_map :=
+      Binarymap.insert
+        (!trace_map, nm,
+         TR {value = TRFP {get = (fn () => if !bref then 1 else 0),
+                           set = (fn i => bref := (i > 0))},
+             default = if !bref then 1 else 0, aliases = [],
+             maximum = 1});
+      {set = set, get = get}
+    end
+val register_btrace = ignore o register_btrace0 "register_btrace0"
+
+fun create_btrace (nm, initb) =
+    let val r = ref initb
+    in
+      register_btrace0 "create_btrace" (nm, r)
+    end
 
 fun traces () =
    let
@@ -266,19 +308,6 @@ fun traces () =
    in
       Binarymap.foldr foldthis [] (!trace_map)
    end
-
-local
-   fun err f l = raise ERR f (String.concat l)
-in
-   fun registered_err f nm = err f ["No trace ", quote nm, " is registered"]
-
-   fun bound_check f nm maximum value =
-      if value > maximum
-         then err f ["Trace ", quote nm, " can't be set that high."]
-      else if value < 0
-         then err f ["Trace ", quote nm, " can't be set less than 0."]
-      else ()
-end
 
 fun set_trace nm newvalue =
    case find_record nm of
@@ -317,11 +346,6 @@ fun trace (nm, i) f x =
            in
               y
            end)
-
-fun get_tracefn nm =
-   case find_record nm of
-      NONE => registered_err "get_tracefn" nm
-    | SOME {value = TRFP {get, ...}, ...} => get
 
 val () = register_btrace ("assumptions", Globals.show_assums)
 val () = register_btrace ("numeral types", Globals.show_numeral_types)

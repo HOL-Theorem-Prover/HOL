@@ -98,7 +98,7 @@ fun bsrw_ss() = betafy(srw_ss())
 val {export = export_betarwt,...} =
     ThmSetData.new_exporter {
       settype = "betasimp",
-      efns = {add = (fn {named_thms,...} => add_rwts named_thms),
+      efns = {add = (fn {named_thm,...} => add_rwts [named_thm]),
               remove = (fn _ => ())}
     }
 fun bstore_thm (trip as (n,t,tac)) = store_thm trip before export_betarwt n

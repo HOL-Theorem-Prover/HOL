@@ -13,7 +13,6 @@ val _ = new_theory "helperFunction";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -75,6 +74,7 @@ open dividesTheory gcdTheory;
    FUNPOW_K            |- !n x c. FUNPOW (K c) n x = if n = 0 then x else c
    FUNPOW_MULTIPLE     |- !f k e. 0 < k /\ (FUNPOW f k e = e) ==> !n. FUNPOW f (n * k) e = e
    FUNPOW_MOD          |- !f k e. 0 < k /\ (FUNPOW f k e = e) ==> !n. FUNPOW f n e = FUNPOW f (n MOD k) e
+   FUNPOW_COMM         |- !f m n x. FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x)
    FUNPOW_LE_RISING    |- !f m n. RISING f /\ m <= n ==> !x. FUNPOW f m x <= FUNPOW f n x
    FUNPOW_LE_FALLING   |- !f m n. FALLING f /\ m <= n ==> !x. FUNPOW f n x <= FUNPOW f m x
    FUNPOW_LE_MONO      |- !f g. (!x. f x <= g x) /\ MONO g ==> !n x. FUNPOW f n x <= FUNPOW g n x
@@ -90,6 +90,7 @@ open dividesTheory gcdTheory;
    FUNPOW_PAIR         |- !f g n x y. FUNPOW (\(x,y). (f x,g y)) n (x,y) = (FUNPOW f n x,FUNPOW g n y)
    FUNPOW_TRIPLE       |- !f g h n x y z. FUNPOW (\(x,y,z). (f x,g y,h z)) n (x,y,z) =
                                           (FUNPOW f n x,FUNPOW g n y,FUNPOW h n z)
+   FUNPOW_closure      |- !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s
 
    Factorial:
    FACT_0              |- FACT 0 = 1
@@ -128,11 +129,12 @@ open dividesTheory gcdTheory;
    PRODUCT_WITH_GCD_ONE     |- !n x y. coprime n x /\ coprime n y ==> coprime n (x * y)
    MOD_WITH_GCD_ONE         |- !n x. 0 < n /\ coprime n x ==> coprime n (x MOD n)
    GCD_ONE_PROPERTY         |- !n x. 1 < n /\ coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k
-   GCD_MOD_MULT_INV         |- !n x. 1 < n /\ coprime n x /\ 0 < x /\ x < n ==>
-                               ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)
-   GEN_MULT_INV_DEF         |- !n x. 1 < n /\ coprime n x /\ 0 < x /\ x < n ==>
-                               0 < GCD_MOD_MUL_INV n x /\ GCD_MOD_MUL_INV n x < n /\
-                               coprime n (GCD_MOD_MUL_INV n x) /\ ((GCD_MOD_MUL_INV n x * x) MOD n = 1)
+   GCD_MOD_MULT_INV         |- !n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+                                 ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)
+   GEN_MULT_INV_DEF         |- !n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+                                     0 < GCD_MOD_MUL_INV n x /\ GCD_MOD_MUL_INV n x < n /\
+                                     coprime n (GCD_MOD_MUL_INV n x) /\
+                                     ((GCD_MOD_MUL_INV n x * x) MOD n = 1)
 
    More GCD and LCM Theorems:
    GCD_PROPERTY        |- !a b c. (c = gcd a b) <=> c divides a /\ c divides b /\
@@ -243,6 +245,9 @@ open dividesTheory gcdTheory;
    coprime_power_and_power_predecessor   |- !b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m - 1)
    coprime_power_and_power_successor     |- !b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m + 1)
 
+   Useful Theorems:
+   PRIME_EXP_FACTOR    |- !p q n. prime p /\ q divides p ** n ==> (q = 1) \/ p divides q
+   FACT_MOD_PRIME      |- !p n. prime p /\ n < p ==> FACT n MOD p <> 0:
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -511,6 +516,14 @@ val FUNPOW_MOD = store_thm(
   rpt strip_tac >>
   `n = (n MOD k) + (n DIV k) * k` by metis_tac[DIVISION, ADD_COMM] >>
   metis_tac[FUNPOW_ADD, FUNPOW_MULTIPLE]);
+
+(* Theorem: FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x) *)
+(* Proof: by FUNPOW_ADD, ADD_COMM *)
+Theorem FUNPOW_COMM:
+  !f m n x. FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x)
+Proof
+  metis_tac[FUNPOW_ADD, ADD_COMM]
+QED
 
 (* Overload a RISING function *)
 val _ = overload_on ("RISING", ``\f. !x:num. x <= f x``);
@@ -914,6 +927,27 @@ val FUNPOW_TRIPLE = store_thm(
   rpt strip_tac >>
   Induct_on `n` >>
   rw[FUNPOW_SUC]);
+
+(* Theorem: f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s *)
+(* Proof:
+   By induction on n.
+   Base: FUNPOW f 0 x IN s
+         Since FUNPOW f 0 x = x      by FUNPOW_0
+         This is trivially true.
+   Step: FUNPOW f n x IN s ==> FUNPOW f (SUC n) x IN s
+           FUNPOW f (SUC n) x
+         = f (FUNPOW f n x)          by FUNPOW_SUC
+         But FUNPOW f n x IN s       by induction hypothesis
+          so f (FUNPOW f n x) IN s   by BIJ_ELEMENT, f PERMUTES s
+*)
+Theorem FUNPOW_closure:
+  !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s
+Proof
+  rpt strip_tac >>
+  Induct_on `n` >-
+  rw[] >>
+  metis_tac[FUNPOW_SUC, BIJ_ELEMENT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Functions.                                                        *)
@@ -1592,7 +1626,7 @@ val GCD_ONE_PROPERTY = store_thm(
   `g divides 1` by metis_tac[DIVIDES_ADD_2] >>
   metis_tac[DIVIDES_ONE]);
 
-(* Theorem: For n > 1, (gcd n x = 1) /\ 0 < x < n ==>
+(* Theorem: For n > 1, 0 < x < n /\ (gcd n x = 1) ==>
             ?y. 0 < y /\ y < n /\ gcd n y = 1 /\ y*x MOD n = 1 *)
 (* Proof:
        gcd n x = 1
@@ -1609,7 +1643,7 @@ val GCD_ONE_PROPERTY = store_thm(
 *)
 val GCD_MOD_MULT_INV = store_thm(
   "GCD_MOD_MULT_INV",
-  ``!n x. 1 < n /\ (gcd n x = 1) /\ 0 < x /\ x < n ==> ?y. 0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
+  ``!n x. 1 < n /\ 0 < x /\ x < n /\ (gcd n x = 1) ==> ?y. 0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
   rpt strip_tac >>
   `?k. ((k*x) MOD n = 1) /\ (gcd n k = 1)` by rw_tac std_ss[GCD_ONE_PROPERTY] >>
   `0 < n` by decide_tac >>
@@ -1623,7 +1657,7 @@ val GCD_MOD_MULT_INV = store_thm(
 
 (* Convert this into an existence definition *)
 val lemma = prove(
-  ``!n x. ?y. 1 < n /\ (gcd n x = 1) /\ 0 < x /\ x < n ==>
+  ``!n x. ?y. 1 < n /\ 0 < x /\ x < n /\ (gcd n x = 1) ==>
               0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
   metis_tac[GCD_MOD_MULT_INV]);
 
@@ -1632,7 +1666,7 @@ val GEN_MULT_INV_DEF = new_specification(
   ["GCD_MOD_MUL_INV"],
   SIMP_RULE (srw_ss()) [SKOLEM_THM] lemma);
 (* > val GEN_MULT_INV_DEF =
-    |- !n x. 1 < n /\ coprime n x /\ 0 < x /\ x < n ==>
+    |- !n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
        0 < GCD_MOD_MUL_INV n x /\ GCD_MOD_MUL_INV n x < n /\ coprime n (GCD_MOD_MUL_INV n x) /\
        ((GCD_MOD_MUL_INV n x * x) MOD n = 1) : thm *)
 
@@ -2449,7 +2483,7 @@ val prime_coprime_all_lt = store_thm(
   `n <> 0 /\ m <> 0` by decide_tac >>
   `d divides n /\ d divides m` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d = n` by metis_tac[prime_def] >>
-  `n <= m` by fs[DIVIDES_LE] >>
+  `n <= m` by rw[DIVIDES_LE] >>
   decide_tac);
 
 (* Theorem: prime n /\ m < n ==> (!j. 0 < j /\ j <= m ==> coprime n j) *)
@@ -3464,6 +3498,67 @@ val coprime_power_and_power_successor = store_thm(
   `coprime z (z + 1)` by rw[coprime_SUC] >>
   `coprime (z ** (n DIV m)) (z + 1)` by rw[coprime_exp] >>
   metis_tac[GCD_SYM, GCD_CANCEL_MULT, MOD_LESS]);
+
+(* ------------------------------------------------------------------------- *)
+(* Useful Theorems                                                           *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: prime p /\ q divides (p ** n) ==> (q = 1) \/ (p divides q) *)
+(* Proof:
+   By contradiction, suppose q <> 1 /\ ~(p divides q).
+   Note ?j. j <= n /\ (q = p ** j)   by prime_power_divisor
+    and 0 < j                        by EXP_0, q <> 1
+   then p divides q                  by prime_divides_self_power, 0 < j
+   This contradicts ~(p divides q).
+*)
+Theorem PRIME_EXP_FACTOR:
+  !p q n. prime p /\ q divides (p ** n) ==> (q = 1) \/ (p divides q)
+Proof
+  spose_not_then strip_assume_tac >>
+  `?j. j <= n /\ (q = p ** j)` by rw[prime_power_divisor] >>
+  `0 < j` by fs[] >>
+  metis_tac[prime_divides_self_power]
+QED
+
+(* Idea: For prime p, FACT (p-1) MOD p <> 0 *)
+
+(* Theorem: prime p /\ n < p ==> FACT n MOD p <> 0 *)
+(* Proof:
+   Note 1 < p                  by ONE_LT_PRIME
+   By induction on n.
+   Base: 0 < p ==> (FACT 0 MOD p = 0) ==> F
+      Note FACT 0 = 1          by FACT_0
+       and 1 MOD p = 1         by LESS_MOD, 1 < p
+       and 1 = 0 is F.
+   Step: n < p ==> (FACT n MOD p = 0) ==> F ==>
+         SUC n < p ==> (FACT (SUC n) MOD p = 0) ==> F
+      If n = 0, SUC 0 = 1      by ONE
+         Note FACT 1 = 1       by FACT_1
+          and 1 MOD p = 1      by LESS_MOD, 1 < p
+          and 1 = 0 is F.
+      If n <> 0, 0 < n.
+             (FACT (SUC n)) MOD p = 0
+         <=> (SUC n * FACT n) MOD p = 0      by FACT
+         Note (SUC n) MOD p <> 0             by MOD_LESS, SUC n < p
+          and (FACT n) MOD p <> 0            by induction hypothesis
+           so (SUC n * FACT n) MOD p <> 0    by EUCLID_LEMMA
+         This is a contradiction.
+*)
+Theorem FACT_MOD_PRIME:
+  !p n. prime p /\ n < p ==> FACT n MOD p <> 0
+Proof
+  rpt strip_tac >>
+  `1 < p` by rw[ONE_LT_PRIME] >>
+  Induct_on `n` >-
+  simp[FACT_0] >>
+  Cases_on `n = 0` >-
+  simp[FACT_1] >>
+  rw[FACT] >>
+  `n < p` by decide_tac >>
+  `(SUC n) MOD p <> 0` by fs[] >>
+  metis_tac[EUCLID_LEMMA]
+QED
+
 
 (* ------------------------------------------------------------------------- *)
 

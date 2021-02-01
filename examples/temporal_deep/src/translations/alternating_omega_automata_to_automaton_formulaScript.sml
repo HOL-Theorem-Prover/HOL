@@ -33,6 +33,7 @@ quietdec := false;
 
 
 val _ = new_theory "alternating_omega_automata_to_automaton_formula";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (*This file contains some definitions and lemmata about a translation of
   alternating omega-automata to automaton formulas, i.e. symbolic

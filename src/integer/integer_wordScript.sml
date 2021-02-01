@@ -406,18 +406,18 @@ val w2w_i2w = Q.store_thm("w2w_i2w",
        ONCE_REWRITE_RULE [MULT_COMM] arithmeticTheory.MOD_MULT_MOD]
   )
 
-val WORD_LTi = store_thm("WORD_LTi",
-  ``!a b. a < b = w2i a < w2i b``,
-  RW_TAC std_ss [WORD_LT, GSYM WORD_LO, INT_LT_CALCULATE, WORD_NEG_EQ_0,
-                 w2i_def, w2n_eq_0]
-    THENL [
-      SRW_TAC [boolSimps.LET_ss] [word_lo_def,nzcv_def,
-               Once (DECIDE ``w2n (-b) + a = a + w2n (-b)``)]
-        THEN Cases_on `~BIT (dimindex (:'a)) (w2n a + w2n (-b))`
-        THEN FULL_SIMP_TAC std_ss [] ,
-      DISJ1_TAC]
-    THEN FULL_SIMP_TAC (std_ss++fcpLib.FCP_ss) [word_0, word_msb_def]
-    THEN METIS_TAC [DECIDE ``0n < n ==> n - 1 < n``, DIMINDEX_GT_0])
+Theorem WORD_LTi: !a b. a < b = w2i a < w2i b
+Proof
+  reverse (RW_TAC std_ss [WORD_LT, GSYM WORD_LO, INT_LT_CALCULATE,
+                          WORD_NEG_EQ_0, w2i_def, w2n_eq_0])
+  >- (strip_tac >> fs[]) >>
+  SRW_TAC [boolSimps.LET_ss] [word_lo_def,nzcv_def,
+                              Once (DECIDE ``w2n (-b) + a = a + w2n (-b)``)] >>
+  Cases_on `~BIT (dimindex (:'a)) (w2n a + w2n (-b))` >>
+  FULL_SIMP_TAC std_ss [] >>
+  FULL_SIMP_TAC (std_ss++fcpLib.FCP_ss) [word_0, word_msb_def] >>
+  METIS_TAC [DECIDE ``0n < n ==> n - 1 < n``, DIMINDEX_GT_0]
+QED
 
 val WORD_GTi = store_thm("WORD_GTi",
   ``!a b. a > b = w2i a > w2i b``,
@@ -1247,14 +1247,15 @@ val add_max_overflow = Q.prove(
 val srw_add_min_overflow = SIMP_RULE (srw_ss()) [] add_min_overflow
 val srw_add_max_overflow = SIMP_RULE (srw_ss()) [] add_max_overflow
 
-val signed_saturate_add = Q.store_thm("signed_saturate_add",
-  `!a b:'a word.
+Theorem signed_saturate_add:
+  !a b:'a word.
      signed_saturate_add a b =
        let sum = a + b and msba = word_msb a in
          if (msba = word_msb b) /\ (msba <> word_msb sum) then
            if msba then INT_MINw else INT_MAXw
          else
-           sum`,
+           sum
+Proof
   ntac 2 strip_tac
   \\ Cases_on_i2w `a : 'a word`
   \\ Cases_on_i2w `b : 'a word`
@@ -1290,8 +1291,11 @@ val signed_saturate_add = Q.store_thm("signed_saturate_add",
     by (fsrw_tac [intLib.INT_ARITH_ss] [integerTheory.INT_NOT_LT]
         \\ Cases_on `i < 0i`
         \\ fsrw_tac [intLib.INT_ARITH_ss] [integerTheory.INT_NOT_LT]
-        \\ metis_tac [srw_add_min_overflow, srw_add_max_overflow,
-             integerTheory.INT_NOT_LT, integerTheory.INT_NOT_LE])
+        \\ spose_not_then (assume_tac o
+                           SIMP_RULE(srw_ss()) [integerTheory.INT_NOT_LE]) >>
+        (drule_all srw_add_min_overflow ORELSE drule_all srw_add_max_overflow)>>
+        simp[integerTheory.INT_NOT_LE, integerTheory.INT_NOT_LT] >>
+        first_x_assum irule >> srw_tac[intLib.INT_ARITH_ss][])
     \\ simp_tac std_ss [saturate_i2sw_def]
     \\ Cases_on `INT_MAX (:'a) = i + i'`
     \\ full_simp_tac std_ss [integerTheory.INT_LE_REFL, GSYM i2w_INT_MAX]
@@ -1302,7 +1306,7 @@ val signed_saturate_add = Q.store_thm("signed_saturate_add",
     \\ `~(i + i' <= INT_MIN (:'a))` by intLib.ARITH_TAC
     \\ asm_rewrite_tac []
   ]
-)
+QED
 
 (* ------------------------------------------------------------------------- *)
 

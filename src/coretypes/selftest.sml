@@ -213,4 +213,18 @@ val _ = case res of
             Exn.Res _ => OK()
           | Exn.Exn e => sdie ("Exception : " ^ General.exnMessage e)
 
+(* removing thy-named fragments *)
+local
+  open simpLib BasicProvers
+in
+val _ = convtest("srw_ss has x = () rewrite", SIMP_CONV (srw_ss()) [],
+                 “x:unit”, “() : unit”)
+val _ = diminish_srw_ss ["one"]
+val _ = shouldfail {checkexn = fn UNCHANGED => true | _ => false,
+                    printarg = K "after diminish\"one\", that no longer works",
+                    printresult = thm_to_string,
+                    testfn = SIMP_CONV (srw_ss()) []}
+                   “x:unit”
+end (* local *)
+
 val _ = Process.exit Process.success

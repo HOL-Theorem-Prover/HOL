@@ -35,7 +35,7 @@ val INT_SIZES_ss = simpLib.name_ss "int sizes"
                ``integer_word$INT_MAX(:'a)``,
                ``integer_word$UINT_MAX(:'a)``]})
 
-val () = augment_srw_ss [INT_SIZES_ss]
+val () = BasicProvers.logged_addfrags {thyname="integer_word"} [INT_SIZES_ss]
 
 val add_integer_word_compset =
    let

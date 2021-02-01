@@ -214,7 +214,7 @@ Proof
   simp[raw_atoms_def, MEM_MAP, PULL_EXISTS, OR_LEFT_FORALL_THM, listpm_MAP]
   >- metis_tac[]
   >- (rw[] >> simp[LIST_EQ_REWRITE, EL_MAP] >> metis_tac[MEM_EL, tfv_apart])
-  >- (rw[] >> simp[])
+  >- (rw[] >> simp[] >> fs[basic_swapTheory.swapstr_thm])
 QED
 
 Theorem raw_atoms_rawfpm:

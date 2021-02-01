@@ -592,16 +592,12 @@ val GBA_TRANS_LEMM = store_thm
        >- (HO_MATCH_MP_TAC IN_BIGINTER_SUBSET >> fs[]
            >> qexists_tac `q` >> fs[] >> qexists_tac `(q,d)` >> fs[]
           )
-       >- (HO_MATCH_MP_TAC BIGINTER_SUBSET >> rpt strip_tac
-           >- (fs[] >> Cases_on `x'` >> rw[]
-               >> qunabbrev_tac `a_sel` >> fs[]
-               >> metis_tac[TRANSFORMLABEL_AP]
-              )
-           >- (`?x. x ∈ {a_sel q | q ∈ IMAGE FST s}`
-                 suffices_by metis_tac[MEMBER_NOT_EMPTY]
-               >> simp[] >> metis_tac[MEMBER_NOT_EMPTY]
-              )
-          )
+       >- (HO_MATCH_MP_TAC BIGINTER_SUBSET >> rpt strip_tac >>
+           simp[PULL_EXISTS, pairTheory.EXISTS_PROD] >>
+           simp[Abbr‘a_sel’] >>
+           drule (iffRL MEMBER_NOT_EMPTY) >>
+           simp[pairTheory.EXISTS_PROD] >>
+           metis_tac[TRANSFORMLABEL_AP])
         )
       )
    >- (

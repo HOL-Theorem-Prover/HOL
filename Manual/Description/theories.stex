@@ -4096,35 +4096,34 @@ The empty bag has no elements. Thus, the function implementing it
 returns $0$ for every input.
 %
 \begin{hol}
-\begin{verbatim}
-   EMPTY_BAG  |- EMPTY_BAG = K 0
-\end{verbatim}
+\begin{alltt}
+>>__ load "bagTheory"; open bagTheory;
+##thm EMPTY_BAG
+\end{alltt}
 \end{hol}
 
-\noindent The special syntax {\verb+{||}+} can be used to represent the empty
-bag.
+\noindent The special syntax {\verb+{||}+} (the analogue of \texttt{[]} for lists, and \texttt{\{\}} for sets) is used for both printing and parsing, but the underlying constant is indeed called \holtxt{EMPTY\_BAG}, and this name can also be passed to the parser.
 
 \paragraph {Membership}
 
 Much of the theory can be based on the notion of membership in a
 bag. There are two notions: does an element occur at least $n$ times
-in a bag ({\small\verb+BAG_INN+}); and does an element occur in a bag
-at all ({\small\verb+BAG_IN+}).
+in a bag ({\holtxt{BAG\_INN}); and does an element occur in a bag
+at all ({\holtxt{BAG\_IN}).
 %
 \begin{hol}
-\begin{verbatim}
-   BAG_INN  |- BAG_INN e n b = (b e >= n)
-   BAG_IN   |- BAG_IN e b = BAG_INN e 1 b
-\end{verbatim}
+\begin{alltt}
+##thm BAG_INN
+##thm BAG_IN
+\end{alltt}
 \end{hol}
 %
 Two bags are equal if all elements have the same tally.
 %
 \begin{hol}
-\begin{verbatim}
-   BAG_EXTENSION
-     |- !b1 b2. (b1 = b2) = (!n e. BAG_INN e n b1 = BAG_INN e n b2)
-\end{verbatim}
+\begin{alltt}
+##thm BAG_EXTENSION
+\end{alltt}
 \end{hol}
 
 \paragraph{Sub-multiset}
@@ -4135,12 +4134,10 @@ $b_2$. The notion of a proper sub-bag (\holtxt{PSUB\_BAG}) is easily
 defined.
 %
 \begin{hol}
-\begin{verbatim}
-   SUB_BAG
-     |- SUB_BAG b1 b2 = !x n. BAG_INN x n b1 ==> BAG_INN x n b2
-   PSUB_BAG
-     |- PSUB_BAG b1 b2 = SUB_BAG b1 b2 /\ ~(b1 = b2)
-\end{verbatim}
+\begin{alltt}
+##thm SUB_BAG
+##thm PSUB_BAG
+\end{alltt}
 \end{hol}
 
 \paragraph{Insertion}
@@ -4149,10 +4146,9 @@ Inserting an element into a bag (\holtxt{BAG\_INSERT}) updates the
 tally for that element and leaves the others unchanged.
 %
 \begin{hol}
-\begin{verbatim}
-   BAG_INSERT
-     |- BAG_INSERT e b = (\x. if (x = e) then b e + 1 else b x)
-\end{verbatim}
+\begin{alltt}
+##thm BAG_INSERT
+\end{alltt}
 \end{hol}
 
 Explicitly-given multisets are supported by the syntax
@@ -4183,14 +4179,11 @@ argument than the last.  This is not the same as using
 the element being removed actually appear in the larger bag.
 %
 \begin{hol}
-\begin{verbatim}
-   BAG_UNION
-     |- BAG_UNION b c = \x. b x + c x
-   BAG_DIFF
-     |- BAG_DIFF b1 b2 = \x. b1 x - b2 x
-   BAG_DELETE
-     |- BAG_DELETE b0 e b = (b0 = BAG_INSERT e b)
-\end{verbatim}
+\begin{alltt}
+##thm BAG_UNION
+##thm BAG_DIFF
+##thm BAG_DELETE
+\end{alltt}
 \end{hol}
 
 \paragraph {Intersection, merge, and filter}
@@ -4202,14 +4195,11 @@ where all the elements not in the set have been dropped
 (\holtxt{BAG\_FILTER}).
 %
 \begin{hol}
-\begin{verbatim}
-   BAG_INTER
-     |- BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)
-   BAG_MERGE
-     |- BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)
-   BAG_FILTER_DEF
-     |- BAG_FILTER P b = (\e. if P e then b e else 0)
-\end{verbatim}
+\begin{alltt}
+##thm BAG_INTER
+##thm BAG_MERGE
+##thm BAG_FILTER_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph {Sets and multisets}
@@ -4218,12 +4208,10 @@ Moving between bags and sets is accomplished by the following two
 definitions.
 %
 \begin{hol}
-\begin{verbatim}
-   SET_OF_BAG
-     |- SET_OF_BAG b = \x. BAG_IN x b
-   BAG_OF_SET
-     |- BAG_OF_SET P = \x. if x IN P then 1 else 0
-\end{verbatim}
+\begin{alltt}
+##thm SET_OF_BAG
+##thm BAG_OF_SET
+\end{alltt}
 \end{hol}
 
 \paragraph {Image}
@@ -4241,13 +4229,9 @@ proof; the compromise is to map the multipicity of problematic
 elements to $0$.
 %
 \begin{hol}
-\begin{verbatim}
-   BAG_IMAGE_DEF
-     |- BAG_IMAGE f b =
-          \e. let sb = BAG_FILTER (\e0. f e0 = e) b
-              in
-                if FINITE_BAG sb then BAG_CARD sb else 0
-\end{verbatim}
+\begin{alltt}
+##thm BAG_IMAGE_DEF
+\end{alltt}
 \end{hol}
 
 
@@ -4257,12 +4241,9 @@ The finite multisets (\holtxt{FINITE\_BAG}) are defined inductively as
 those built from the empty bag by a finite number of insertions.
 %
 \begin{hol}
-\begin{verbatim}
-   FINITE_BAG
-     |- FINITE_BAG b =
-          !P. P EMPTY_BAG /\
-              (!b. P b ==> (!e. P (BAG_INSERT e b))) ==> P b
-\end{verbatim}
+\begin{alltt}
+##thm FINITE_BAG
+\end{alltt}
 \end{hol}
 %
 The finite multisets have an induction theorem, and also a strong
@@ -4271,29 +4252,20 @@ induction theorem.
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite bags}
 %
 \begin{hol}
-\begin{verbatim}
-   FINITE_BAG_INDUCT
-     |- !P. P {||} /\
-            (!b. P b ==> (!e. P (BAG_INSERT e b)))
-            ==> (!b. FINITE_BAG b ==> P b)
+\begin{alltt}
+##thm FINITE_BAG_INDUCT
 
-   STRONG_FINITE_BAG_INDUCT
-     |- !P. P {||} /\
-            (!b. FINITE_BAG b /\ P b ==> !e. P (BAG_INSERT e b))
-            ==> (!b. FINITE_BAG b ==> P b)
-\end{verbatim}
+##thm STRONG_FINITE_BAG_INDUCT
+\end{alltt}
 \end{hol}
 %
 The cardinality (\holtxt{BAG\_CARD}) of a multiset counts the
 total number of occurrences. It is only specified for finite multisets.
 %
 \begin{hol}
-\begin{verbatim}
-   BAG_CARD_THM
-     |- (BAG_CARD {||} = 0) /\
-        (!b. FINITE_BAG b ==>
-               !e. BAG_CARD (BAG_INSERT e b) = BAG_CARD b + 1)
-\end{verbatim}
+\begin{alltt}
+##thm BAG_CARD_THM
+\end{alltt}
 \end{hol}
 
 \paragraph{Recursive functions on multisets}
@@ -4308,22 +4280,17 @@ f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the
 multiset in a tail-recursive fashion.
 %
 \begin{hol}
-\begin{verbatim}
-   ITBAG_EMPTY
-     |- !f acc. ITSET f {||} acc = acc
-   COMMUTING_ITBAG_INSERT
-     |- !f b. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
-              !x a. ITBAG f (BAG_INSERT x b) a = ITBAG f b (f x a)
-\end{verbatim}
+\begin{alltt}
+##thm ITBAG_EMPTY
+##thm COMMUTING_ITBAG_INSERT
+\end{alltt}
 \end{hol}
 %
 A recursive version is also available:
 \begin{hol}
-\begin{verbatim}
-   COMMUTING_ITBAG_RECURSES
-     |- !f e b a. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
-                  (ITBAG f (BAG_INSERT e b) a = f e (ITBAG f b a))
-\end{verbatim}
+\begin{alltt}
+##thm COMMUTING_ITBAG_RECURSES
+\end{alltt}
 \end{hol}
 
 \subsection{Relations (\theoryimp{relation})}\label{relation}
@@ -4868,9 +4835,10 @@ is \holtxt{WHILE}-loops. The following equation is derived in theory
 \theoryimp{while}:
 %
 \begin{hol}
-\begin{verbatim}
-   WHILE  |- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x
-\end{verbatim}
+\begin{alltt}
+>>__ open whileTheory
+##thm WHILE
+\end{alltt}
 \end{hol}
 %
 Clearly, if \holtxt{P} in this theorem was instantiated to $\lambda
@@ -4900,10 +4868,9 @@ ones are mapped to \holtxt{ARB}. This function is used as the witness
 for \verb+f+ in the proof of the following theorem:
 %
 \begin{hol}
-\begin{verbatim}
-   ITERATION
-     |- !P g. ?f. !x. f x = if P x then x else f (g x)
-\end{verbatim}
+\begin{alltt}
+##thm ITERATION
+\end{alltt}
 \end{hol}
 %
 From this, it is a simple application of Skolemization and
@@ -4919,12 +4886,9 @@ a wellfounded relation for \verb+R+ is found and used to eliminate the
 constraints.
 %
 \begin{hol}
-\begin{verbatim}
-   WHILE_INDUCTION
-     |- !B C R.
-          WF R /\ (!s. B s ==> R (C s) s) ==>
-          !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v
-\end{verbatim}
+\begin{alltt}
+##thm WHILE_INDUCTION
+\end{alltt}
 \end{hol}
 %
 A more refined level of support is provided by the standard Hoare
@@ -4932,28 +4896,42 @@ Logic \holtxt{WHILE} rule, phrased in terms of Hoare triples
 (\holtxt{HOARE\_SPEC}).
 %
 \begin{hol}
-\begin{verbatim}
-   HOARE_SPEC_DEF
-     |- !P C Q. HOARE_SPEC P C Q = !s. P s ==> Q (C s)
-   WHILE_RULE
-     |- !R B C.
-           WF R /\ (!s. B s ==> R (C s) s) ==>
-           HOARE_SPEC (\s. P s /\ B s) C P ==>
-           HOARE_SPEC P (WHILE B C) (\s. P s /\ ~B s)
-\end{verbatim}
+\begin{alltt}
+##thm HOARE_SPEC_DEF
+##thm WHILE_RULE
+\end{alltt}
 \end{hol}
 %
 As a follow-on, an operator for finding the least number with property
 \verb+P+ is defined.
 %
 \begin{hol}
-\begin{verbatim}
-   LEAST_DEF  |- !P. $LEAST P = WHILE ($~ o P) SUC 0
-\end{verbatim}
+\begin{alltt}
+##thm LEAST_DEF
+\end{alltt}
 \end{hol}
 %
-A few theorems for reasoning about \holtxt{LEAST} may be found in
-theory \theoryimp{while}.
+The \holtxt{LEAST} constant is treated as a binder by the parser, which explains the special printing of the name above.
+Its use as a binder can be seen in:
+\begin{hol}
+\begin{alltt}
+##thm LEAST_LESS_EQ
+\end{alltt}
+\end{hol}
+A fundamental result, the operation of which is embodied in the tactic \ml{LEAST\_ELIM\_TAC} is:
+\begin{hol}
+\begin{alltt}
+##thm LEAST_ELIM
+\end{alltt}
+\end{hol}
+If one wants a specified result even when the predicate is everywhere false, the \holtxt{OLEAST} function (also treated as a binder by the parser and pretty-printer) may be helpful:
+\begin{hol}
+\begin{alltt}
+##thm OLEAST_def
+\end{alltt}
+\end{hol}
+
+More theorems for reasoning about \holtxt{LEAST}, \holtxt{OLEAST} and \holtxt{WHILE} may be found in theory \theoryimp{while}.
 
 
 %\section{Partial orders}

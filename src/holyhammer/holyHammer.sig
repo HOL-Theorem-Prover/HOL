@@ -5,7 +5,7 @@ sig
   datatype prover = Eprover | Z3 | Vampire
 
   val set_timeout : int -> unit
-
+  val dep_flag : bool ref (* remove limits on the number of premises *)
   val holyhammer  : term -> thm
   val hh          : tactic
   (* For running holyhammer in the backgroup with a high time limit *)

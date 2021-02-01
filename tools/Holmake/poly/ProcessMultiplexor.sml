@@ -278,6 +278,8 @@ struct
       val state = #update job (#current_state wl, false)
     in
       kill (K_PROC pid, Posix.Signal.kill);
+      TextIO.closeIn (#out job);
+      TextIO.closeIn (#err job);
       waitpid(W_CHILD pid, []);
       ignore (mfn (MonitorKilled(jk,Time.-(Time.now(),#starttime job))));
       updateWL wl
@@ -322,6 +324,8 @@ struct
         let
           val msg = Terminated (wjkey wj, status, elapsed wj)
           val newstate = #update wj (#current_state wl, status = W_EXITED)
+          val _ = TextIO.closeIn (#out wj)
+          val _ = TextIO.closeIn (#err wj)
         in
           monitor msg (cs, updateWL wl (U #current_state newstate) $$)
         end

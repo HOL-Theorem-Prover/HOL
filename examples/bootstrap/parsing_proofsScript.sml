@@ -675,7 +675,7 @@ Proof
       \\ rewrite_tac [head_def,getNum_def,isNum_def,LET_THM,tail_def]
       \\ asm_simp_tac std_ss []
       \\ fs [DefnBase.one_line_ify NONE up_const_def,AllCaseEqs()]
-      \\ CCONTR_TAC \\ fs []
+      \\ CCONTR_TAC \\ fs [Excl "lift_disj_eq"]
       \\ TRY (qpat_x_assum ‘is_upper _’ mp_tac \\ rw []
               \\ rename [‘is_upper (name _)’] \\ EVAL_TAC)
       \\ pop_assum mp_tac

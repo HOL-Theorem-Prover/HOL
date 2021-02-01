@@ -296,6 +296,11 @@ in
     (mktag "rmfrags [\"UNWIND\"] bool_ss -* BETA_CONV", ["BETA_CONV"],
      remove_ssfrags ["UNWIND"] bool_ss, unwind_beta_t, unwind_beta_t)
   ];
+  List.app (ignore o test0) [
+    (mktag "rmfrags [\"UNWIND\"] (bool_ss -* BETA_CONV)", [],
+     remove_ssfrags ["UNWIND"] (bool_ss -* ["BETA_CONV"]),
+     unwind_beta_t, unwind_beta_t)
+  ];
   List.app (ignore o excltest) [
     (mkex_tag "bool_ss & \"COND_CLAUSES.1\"", ["COND_CLAUSES.1"],
      T_t, T_t),
@@ -311,7 +316,7 @@ in
 end;
 
 fun printgoal (asms,w) =
-    "([" ^ String.concatWith "," (map term_to_string asms) ^ ", " ^
+    "([" ^ String.concatWith "," (map term_to_string asms) ^ "], " ^
     term_to_string w ^ ")"
 fun printgoals (sgs, _) =
     "[" ^ String.concatWith ",\n" (map printgoal sgs) ^ "]"
@@ -369,13 +374,27 @@ val _ = let
         | _ => false
   fun test (msg, tac, ing, outgs) =
       (tprint msg;
-       require_msg (testresult outgs)  printgoals (VALID tac) ing)
+       require_msg (testresult outgs) printgoals (VALID tac) ing)
+  val T_t = “?x:'a. p”
+  fun gs c = global_simp_tac c
+  val fs = full_simp_tac
+  val gsc = {droptrues=true,elimvars=false,strip=true}
 in
   List.app (ignore o test) [
     ("Abbrev var not rewritten",
      rev_full_simp_tac (bool_ss ++ ABBREV_ss) [],
      ([“Abbrev (v <=> q /\ r)”, “v = F”], “P (v:bool):bool”),
-     [([“Abbrev (v <=> q /\ r)”, “~v”], “P F:bool”)])
+     [([“Abbrev (v <=> q /\ r)”, “~v”], “P F:bool”)]),
+    ("simp_tac + Excl", simp_tac bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
+     [([], T_t)]),
+    ("fs + Excl", fs bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
+     [([], T_t)]),
+    ("gs + Excl", gs gsc bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
+     [([], T_t)]),
+    ("fs + Excl (in assumptions)", fs bool_ss [Excl "EXISTS_SIMP"],
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
+    ("gs + Excl (in assumptions)", gs gsc bool_ss [Excl "EXISTS_SIMP"],
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)])
   ]
 end
 

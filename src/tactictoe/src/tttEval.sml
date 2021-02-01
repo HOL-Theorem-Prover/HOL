@@ -11,106 +11,12 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlRedirect smlParallel smlOpen smlParser
   mlTacticData mlTreeNeuralNetwork
-  tttSetup tttSearch tttRecord tacticToe
+  tttSetup tttSearch tttRecord tacticToe tttBigSteps
 
 val ERR = mk_HOL_ERR "tttEval"
 
-type pvfiles = string option * string option
-val tnnex_dir = tactictoe_dir ^ "/tnnex"
-val tnn_dir = tactictoe_dir ^ "/tnn"
+type nnfiles = string option * string option * string option
 
-(* -------------------------------------------------------------------------
-   Value examples
-   ------------------------------------------------------------------------- *)
-
-fun extract_value tree =
-  let
-    val nodel = map snd (dlist tree)
-    fun get_valuetm node =
-      (nntm_of_gl o vector_to_list o Vector.map #goal o #goalv) node
-    fun is_win node = case #nstatus node of NodeProved => 1.0 | _ => 0.0
-  in
-    basicex_to_tnnex (map (fn x => (get_valuetm x, is_win x)) nodel)
-  end
-
-(* could be dependent on tttTrain tttReinforce *)
-
-(*
-(* -------------------------------------------------------------------------
-   Policy examples
-   ------------------------------------------------------------------------- *)
-
-fun btr b = if b then 1.0 else 0.0
-
-fun extract_policy tree =
-  let
-    val nodel = map snd (dlist tree)
-    val goalrecl1 = List.concat (map (vector_to_list o #goalv) nodel)
-    val goalrecl2 = filter (fn x => #goalstatus x = GoalProved) goalrecl1
-    fun f x = distrib [(#goal x, number_snd 0 (vector_to_list (#stacv x)))]
-    val stacrecl = List.concat (map f goalrecl2)
-    fun is_win x = case #stacstatus x of StacProved => true | _ => false
-    fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
-    fun g (goal,(stacv,stacn)) =
-      if is_win stacv orelse (stacn < 10 andalso not_fresh stacv)
-      then SOME (nntm_of_gstactm (goal, #stactm stacv), btr (is_win stacv))
-      else NONE
-  in
-    List.mapPartial g stacrecl
-  end
-
-(* -------------------------------------------------------------------------
-   Policy examples
-   ------------------------------------------------------------------------- *)
-
-fun extract_thmpol tree =
-  let
-    val nodel = map snd (dlist tree)
-    val goalrecl1 = List.concat (map (vector_to_list o #goalv) nodel)
-    val goalrecl2 = filter (fn x => #goalstatus x = GoalProved) goalrecl1
-    fun f x = distrib [(#goal x, number_snd 0 (vector_to_list (#stacv x)))]
-    val stacrecl = List.concat (map f goalrecl2)
-    fun is_win x = case #stacstatus x of StacProved => true | _ => false
-    fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
-    fun g (goal,(stacv,stacn)) =
-      if is_win stacv andalso is_thmlarg_stac (#astac stacv)
-      then SOME (nntm_of_gstactm (goal, #stactm stacv), btr (is_win stacv))
-      else NONE
-    val thml =
-  in
-    List.mapPartial g stacrecl
-  end
-
-
-fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
-fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
-
-
-
-fun test_astac astac g gl thmidl =
-  let
-    val tim = if is_metis_stac astac then 0.1 else 0.04
-    val istac = snd (inst_thmidl astac thmidl)
-  in
-    case app_stac (2 * tim) istac g of
-      SOME newgl => op_subset goal_eq newgl gl
-    | NONE => false
-  end
-
-fun minimize f (pos,neg) thmidl =
-  case thmidl of
-    [] => (pos,neg)
-  | a :: m => if f (pos :: m)
-              then minimize f (pos, a :: neg) m
-              else minimize f (a :: pos, neg) m
-
-val posthml = map (fn x => (nntm_of_thm x, 1.0))
-  (map snd (thml_of_sml (map dbfetch_of_thmid pos)))
-val negthml = map (fn x => (nntm_of_thm x, 0.0))
-  (map snd (thml_of_sml (map dbfetch_of_thmid pos)))
-
-val ex = basicex_to_tnnex (posthml @ negthml)
-*)
 (* -------------------------------------------------------------------------
    Evaluation function
    ------------------------------------------------------------------------- *)
@@ -122,31 +28,16 @@ fun print_status r = case r of
 
 fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
-fun ttt_clean_eval () = clean_rec_dir (tactictoe_dir ^ "/tnnex")
-
-fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
+fun ttt_eval (thmdata,tacdata) nnol goal =
   let
-    val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
-    val b = !hide_flag
+    val mem = !hide_flag
     val _ = hide_flag := false
-    val _ = mkDir_err tnnex_dir
-    val value_dir = tnnex_dir ^ "/value"
-    val policy_dir = tnnex_dir ^ "/policy"
-    val thmpol_dir = tnnex_dir ^ "/thmpol"
-    val _ = app mkDir_err [value_dir,policy_dir,thmpol_dir];
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
-      (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
-    val _ = if not (isSome vnno) andalso not (isSome pnno) then
-      (case status of Proof _ =>
-        (
-        write_tnnex (value_dir ^ "/" ^ thmid) (extract_value tree)
-       (* write_tnnex (policy_dir ^ "/" ^ thmid) (extract_policy tree);
-        write_tnnex (thmpol_dir ^ "/" ^ thmid) (extract_thmpol tree) *)
-        )
-      | _ => ())
-      else ()
+      (main_tactictoe (thmdata,tacdata) nnol) goal
+      handle Interrupt => raise Interrupt
+        | e => (print_endline "Error"; raise e)
   in
     print_status status;
     print_time ("ttt_eval",t);
@@ -154,7 +45,7 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
-    hide_flag := b
+    hide_flag := mem
   end
 
 (* ------------------------------------------------------------------------
@@ -168,32 +59,30 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
 
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
 fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
+fun assign_tnn s fileo =
+  if isSome fileo
+  then "val " ^ s ^ " = SOME ( mlTreeNeuralNetwork.read_tnn " ^
+       mlquote (valOf fileo) ^ " );"
+  else "val " ^ s ^ " = NONE : mlTreeNeuralNetwork.tnn option ;"
 
-fun write_evalscript (vnno,pnno) file =
+fun write_evalscript smlfun (vnno,pnno,anno) file =
   let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
-    val filevo = Option.map (fn x => tnn_dir ^ "/" ^ x) vnno
-    val filepo = Option.map (fn x => tnn_dir ^ "/" ^ x) pnno
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
-     "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
+     "val tactictoe_goal = aiLib.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tttEval" ^ ";",
-     if isSome filevo
-     then "val tactictoe_vnno = SOME (mlTreeNeuralNetwork.read_tnn " ^
-       mlquote (valOf filevo) ^ ");"
-     else "val tactictoe_vnno = NONE : mlTreeNeuralNetwork.tnn option ;",
-     if isSome filepo
-     then "val tactictoe_pnno = SOME (mlTreeNeuralNetwork.read_tnn " ^
-       mlquote (valOf filepo) ^ ");"
-     else "val tactictoe_pnno = NONE : mlTreeNeuralNetwork.tnn option ;",
+     assign_tnn "tactictoe_vo" vnno,
+     assign_tnn "tactictoe_po" pnno,
+     assign_tnn "tactictoe_ao" anno,
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "aiLib.debug_flag" debug_flag,
-     "tttEval.ttt_eval " ^
+     smlfun  ^ " " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
-     "(tactictoe_vnno, tactictoe_pnno) " ^
+     "(tactictoe_vo, tactictoe_po, tactictoe_ao) " ^
      "tactictoe_goal;"]
   in
     writel (file ^ "_eval.sml") sl
@@ -201,32 +90,34 @@ fun write_evalscript (vnno,pnno) file =
 
 fun bare file = OS.Path.base (OS.Path.file file)
 
-fun run_evalscript dir tnno file =
+fun run_evalscript smlfun dir nnol file =
   (
-  write_evalscript tnno file;
+  write_evalscript smlfun nnol file;
   run_buildheap_nodep dir (file ^ "_eval.sml")
   )
 
-fun run_evalscript_thyl expname (b,ncore) tnno thyl =
+fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
   let
-    val dir = ttt_eval_dir ^ "/" ^ expname ^
-      (if b then "" else "_tenth")
-    val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
+    val savestatedir = tactictoe_dir ^ "/savestate"
+    val expdir = ttt_eval_dir ^ "/" ^ expname
+    val outdir = expdir ^ "/out"
+    val _ = app mkDir_err [ttt_eval_dir, expdir, outdir]
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
-    val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
-    fun f x = (readl x handle Interrupt => raise Interrupt
-      | _ => (print_endline x; []))
+    val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl'
+    fun f x = readl x handle
+        Interrupt => raise Interrupt
+      | _         => (print_endline x; [])
     val filel1 = List.concat (map f pbl)
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
     val (_,t) = add_time
-      (parapp_queue ncore (run_evalscript dir tnno)) filel2
+      (parapp_queue ncore (run_evalscript smlfun outdir nnol)) filel2
   in
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
 
 (* ------------------------------------------------------------------------
-   Evaluation example runs
+   Evaluation runs
    ------------------------------------------------------------------------ *)
 
 (* One example
@@ -238,11 +129,12 @@ run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 (* One theory
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
+tttSetup.record_ortho_flag := true;
 tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := true;
-ttt_clean_record (); ttt_record_thy "arithmetic";
-load "tacticToe"; open tacticToe; tactictoe ``1+1=2``;
+ttt_clean_record (); ttt_record_thy "list";
 
+load "tacticToe"; open tacticToe; tactictoe ``1+1=2``;
 tttSetup.ttt_search_time := 10.0;
 run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 *)
@@ -259,28 +151,72 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val smlfun = "tttEval.ttt_eval"
+val _ = run_evalscript_thyl smlfun "october14-2"
+  (true,30) (NONE,NONE,NONE) thyl;
+*)
 
-ttt_clean_eval ();
-val _ = run_evalscript_thyl "august10" (true,30) (NONE,NONE) thyl;
+(* ------------------------------------------------------------------------
+   Bigsteps / learning / bigsteps
+   ------------------------------------------------------------------------ *)
 
-val tnn_value = train_value 0.95 "value";
-val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;
+(*
+load "tttUnfold"; open tttUnfold;
+tttSetup.record_savestate_flag := true;
+tttSetup.learn_abstract_term := false;
+aiLib.debug_flag := false;
+ttt_clean_record ();
+ttt_record ();
+
+
+load "tttEval"; open tttEval;
+open mlTreeNeuralNetwork aiLib tttTrain tttEval;
+
+tttSetup.ttt_search_time := 30.0;
+aiLib.debug_flag := false;
+val thyl = sort_thyl (ancestry (current_theory ()));
+
+val expname = "october11";
+val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
+val gendir = expdir ^ "/" ^ aiLib.its 0;
+val valdir = gendir ^ "/val";
+val poldir = gendir ^ "/pol";
+val argdir = gendir ^ "/arg";
+fun prefix s = SOME (gendir ^ "/tnn" ^ s);
+val (vnno,pnno,anno) = triple_of_list (map prefix ["val","pol","arg"]);
+
+fun read_ex dir =
+  let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
+    List.concat (map read_tnnex filel)
+  end;
+
+val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^
+  mlquote expdir ^ "," ^ its 0 ^ ")";
+val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^
+  mlquote expdir ^ "," ^ its 1 ^ ")";
+
+fun train_dir limit dir name =
+  let
+    val ex1 = read_ex dir
+    val _ = print_endline (its (length ex1))
+    val ex2 = filter (fn x => term_size (fst (hd x)) < limit) ex1
+    val _ = print_endline (its (length ex2))
+    val tnn = train_fixed 0.95 ex2
+  in
+    write_tnn (gendir ^ "/" ^ name) tnn
+  end;
+
+val _ = run_evalscript_thyl smlfun0 expname (true,30) (NONE,NONE,NONE) thyl;
+val _ = train_dir 40 valdir "tnnval";
+val _ = train_dir 60 poldir "tnnpol";
+val _ = train_dir 100 argdir "tnnarg";
+val _ = run_evalscript_thyl smlfun1 expname (true,30) (vnno,pnno,anno) thyl;
+
 *)
 
 (* ------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------ *)
-
-fun listDir dirName =
-  let
-    val dir = OS.FileSys.openDir dirName
-    fun read files = case OS.FileSys.readDir dir of
-        NONE => rev files
-      | SOME file => read (file :: files)
-    val r = read []
-  in
-    OS.FileSys.closeDir dir; r
-  end
 
 fun is_proof x = (case x of Proof _ => true | _ => false)
 
@@ -336,14 +272,11 @@ fun cumul_graph timelimit exp =
 
 (*
 load "tttEval"; open tttEval;
-val expl = ["june4-e1","june4-e2","june2-e1","june2-e3","june2-e4"];
-app (cumul_graph 30.0) expl;
+val expl = ["august11-300","august10"];
+app (cumul_graph 300.0) expl;
 (* quit *)
-gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
-                    'eval/graph/june4-e2_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e1_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e3_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e4_graph' using 1:2 with lines"
+gnuplot -p -e "plot 'eval/graph/august10_graph' using 1:2 with lines,\
+                    'eval/graph/august11-300_graph' using 1:2 with lines"
 *)
 
 fun compare_stats expl exp =
@@ -378,38 +311,6 @@ load "tttEval"; open tttEval;
 compare_stats ["august9"] "august10";
 *)
 
-(* ------------------------------------------------------------------------
-   Training (maybe copy the training)
-   ------------------------------------------------------------------------ *)
 
-fun operl_of_tnnex exl =
-  List.concat (map operl_of_term (map fst (List.concat exl)))
-
-fun train_dir pct name =
-  let
-    val tnnex_dir = tactictoe_dir ^ "/tnnex/" ^ name
-    val filel = map (fn x => tnnex_dir ^ "/" ^ x) (listDir tnnex_dir)
-    val exl = List.concat (map read_tnnex filel)
-    val (train,test) = part_pct pct (shuffle exl)
-    val operl = operl_of_tnnex exl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
-    val randtnn = random_tnn operdiml
-    val schedule =
-      [{ncore = 4, verbose = true,
-       learning_rate = 0.02, batch_size = 16, nepoch = 100}];
-    val tnn = train_tnn schedule randtnn (train,test)
-    val acctrain = tnn_accuracy tnn train
-    val acctest = tnn_accuracy tnn test
-  in
-    print_endline ("train accuracy: " ^ rts_round 6 acctrain ^
-      ", test accuracy: " ^ rts_round 6 acctest);
-    mkDir_err tnn_dir;
-    write_tnn (tnn_dir ^ "/" ^ name) tnn;
-    tnn
-  end
-
-fun train_value pct file = train_dir pct "value"
-fun train_policy pct file = train_dir pct "policy"
-fun train_thmpol pct file = train_dir pct "thmpol"
 
 end (* struct *)

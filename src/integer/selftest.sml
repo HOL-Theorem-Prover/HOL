@@ -31,6 +31,8 @@ val _ =
       noamb_parse
       "-p"
 
+val _ = tpp "¬p ∧ q"                                                   (* UOK *)
+
 (* check that deprecation really deprecates *)
 val _ = intLib.deprecate_int()
 

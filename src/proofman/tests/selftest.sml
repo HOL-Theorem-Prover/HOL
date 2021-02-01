@@ -167,7 +167,7 @@ val _ = List.app testf [
  \------------------------------------\n\
  \ 0.  P a b ==>\n\
  \     !x y z.\n\
- \         Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
+ \       Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
  \ 1.  P (f a) (hhhh b)\n"),
 ("Stack printing; more than 10 assumptions",
  ``p1 /\ p2 /\ p3 /\ p4 /\ p5 /\ p6 /\ p7 /\ p8 /\ p9 /\ p10 /\ p11 ==> q``,

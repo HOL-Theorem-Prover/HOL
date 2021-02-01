@@ -26,7 +26,6 @@ val _ = new_theory "group";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -145,6 +144,9 @@ open helperNumTheory helperSetTheory;
                             #e IN G /\
                             (!x. x IN G ==> (#e * x = x)) /\ !x. x IN G ==> ?y. y IN G /\ (y * x = #e)
    group_def_by_inverse |- !g. Group g <=> Monoid g /\ !x. x IN G ==> ?y. y IN G /\ (y * x = #e)
+   group_alt            |- !g. Group g <=>
+                            (!x y::G. x * y IN G) /\ (!x y z::G. x * y * z = x * (y * z)) /\
+                            #e IN G /\ (!x::G. #e * x = x) /\ !x::G. |/ x IN G /\ |/ x * x = #e
 
    Transformation of Group structure by modifying carrier (for field).
    including_def   |- !g z. including g z = <|carrier := G UNION {z}; op := $*; id := #e|>
@@ -508,14 +510,14 @@ val group_carrier_nonempty = lift_monoid_thm "carrier_nonempty";
 (* Theorem: [Group right inverse] x * |/ x = #e *)
 (* Proof:
      x * |/ x
-   = #e  * (x * |/ x)                 by left identity: #e * X = X, where X = (x * |/ x)
-   = (#e * x) * |/ x                  by associativity
+   = #e  * (x * |/ x)                   by left identity: #e * X = X, where X = (x * |/ x)
+   = (#e * x) * |/ x                    by associativity
    = ( |/ ( |/ x) * |/ x) * x) * |/ x   by left inverse: #e = |/ Y * Y, where Y = |/ x
-   = ( |/ ( |/ x) * ( |/ x * x)) * |/ x  by associativity
+   = ( |/ ( |/ x) * ( |/ x * x)) * |/ x by associativity
    = ( |/ ( |/ x) * #e) * |/ x          by left inverse: |/ Y * Y = #e, where Y = |/ x
-   = |/ ( |/ x) * (#e * |/ x)          by associativity
+   = |/ ( |/ x) * (#e * |/ x)           by associativity
    = |/ ( |/ x) * ( |/ x)               by left identity: #e * Y = Y, where Y = |/ x
-   = #e                               by left inverse: |/ Y * Y = #e, where Y = |/ x
+   = #e                                 by left inverse: |/ Y * Y = #e, where Y = |/ x
 *)
 
 (* Just an exercise to show that right identity can be deduced from left identity for Group. *)
@@ -523,7 +525,7 @@ val group_carrier_nonempty = lift_monoid_thm "carrier_nonempty";
 (* Theorem: [Group right identity] x * #e = x *)
 (* Proof:
      x * #e
-   = x * ( |/ x * x)     by left inverse: |/ Y * Y = #e, where Y = x
+   = x * ( |/ x * x)    by left inverse: |/ Y * Y = #e, where Y = x
    = (x * |/ x) * x     by associativity
    = #e * x             by right inverse: Y * |/ Y = #e, where Y = x
    = x                  by left identity: #e * Y = Y, where Y = x
@@ -533,17 +535,17 @@ val group_carrier_nonempty = lift_monoid_thm "carrier_nonempty";
 (* Proof:
    (wrong proof: note the <=>)
                x * y = x * z
-   <=> |/x * (x * y) = |/x * (x * z)  this asssume left-cancellation!
+   <=> |/x * (x * y) = |/x * (x * z)    this asssume left-cancellation!
    <=> ( |/x * x) * y = ( |/x * x) * z  by group_assoc
-   <=>        #e * y = #e * z         by group_linv
-   <=>             y = z              by group_lid
+   <=>        #e * y = #e * z           by group_linv
+   <=>             y = z                by group_lid
    (correct proof: note the ==>)
    If part: x * y = x * z ==> y = z
                x * y = x * z
-   ==> |/x * (x * y) = |/x * (x * z)  by group_inv_element
+   ==> |/x * (x * y) = |/x * (x * z)    by group_inv_element
    ==> ( |/x * x) * y = ( |/x * x) * z  by group_assoc
-   ==>        #e * y = #e * z         by group_linv
-   ==>             y = z              by group_lid
+   ==>        #e * y = #e * z           by group_linv
+   ==>             y = z                by group_lid
    Only-if part: true by substitution.
 *)
 val group_lcancel = store_thm(
@@ -608,15 +610,15 @@ val group_lsolve = store_thm(
 (* Another proof:
    If part: x * y = z ==> x = z * |/y
      x * y = z
-           = z * #e          by group_rid
+           = z * #e           by group_rid
            = z * ( |/y * y)   by group_linv
-           = (z * |/y) * y   by group_assc
-     hence x = z * |/y       by group_rcancel
+           = (z * |/y) * y    by group_assc
+     hence x = z * |/y        by group_rcancel
    Only-if part: x = z * |/y ==> x * y = z
-     x * y = (z * |/y) * y   by substituting x
+     x * y = (z * |/y) * y    by substituting x
            = z * ( |/y * y)   by group_assoc
-           = z * #e          by group_linv
-           = z               by group_rid
+           = z * #e           by group_linv
+           = z                by group_rid
 *)
 (* still, the first proof is easier. *)
 
@@ -628,7 +630,7 @@ val group_lsolve = store_thm(
     = y                by group_linv_assoc
    Only-if part: y = |/x * z ==> x * y = z
       x * y
-    = x ( |/x * z)      by substituting y
+    = x ( |/x * z)     by substituting y
     = z                by group_linv_assoc
 *)
 val group_rsolve = store_thm(
@@ -695,7 +697,7 @@ val group_rinv_unique = store_thm(
 (* Theorem: [Inverse of inverse] |/( |/ x) = x *)
 (* Proof:
        x * |/x = #e      by group_rinv
-   <=> x = |/x ( |/x)     by group_linv_unique
+   <=> x = |/x ( |/x)    by group_linv_unique
 *)
 val group_inv_inv = store_thm(
   "group_inv_inv",
@@ -706,10 +708,11 @@ val _ = export_rewrites ["group_inv_inv"];
 
 (* Theorem: [Inverse equal] |/x = |/y <=> x = y *)
 (* Proof:
-   Only-if part is trivial. For the if part:
-       |/x = |/y
+   Only-if part is trivial.
+   For the if part: |/x = |/y ==> x = y
+            |/x = |/y
    ==> |/( |/x) = |/( |/y)
-   ==>       x = y       by group_inv_inv
+   ==>        x = y         by group_inv_inv
 *)
 val group_inv_eq = store_thm(
   "group_inv_eq",
@@ -720,9 +723,9 @@ val _ = export_rewrites ["group_inv_eq"];
 
 (* Theorem: [Inverse equality swap]: |/x = y <=> x = |/y *)
 (* Proof:
-       |/x = y
+            |/x = y
    <=> |/( |/x) = |/y
-   <=>       x = |/y    by group_inv_inv
+   <=>        x = |/y    by group_inv_inv
 *)
 val group_inv_eq_swap = store_thm(
   "group_inv_eq_swap",
@@ -777,10 +780,10 @@ val group_inv_op = store_thm(
 (* Proof:
      (x * z) * |/ (y * z)
    = (x * z) * ( |/ z * |/ y)   by group_inv_op
-   = ((x * z) * |/ z) * |/ y   by group_assoc
-   = (x * (z * |/ z)) * |/ y   by group_assoc
-   = (x * #e) * |/ y           by group_rinv
-   = x * |/ y                  by group_rid
+   = ((x * z) * |/ z) * |/ y    by group_assoc
+   = (x * (z * |/ z)) * |/ y    by group_assoc
+   = (x * #e) * |/ y            by group_rinv
+   = x * |/ y                   by group_rid
 *)
 val group_pair_reduce = store_thm(
   "group_pair_reduce",
@@ -810,10 +813,10 @@ val group_id_fix = store_thm(
 (* Theorem: Group g ==> !x y. x IN G /\ y IN G ==> (( |/ x * y = #e) <=> (x = y)) *)
 (* Proof:
    If part: |/ x * y = #e ==> x = y
-   Note |/ x IN G               by group_inv_element
+   Note |/ x IN G                by group_inv_element
    Given  |/ x * y = #e
                  y = |/ ( |/ x)  by group_rinv_unique
-                   = x          by group_inv_inv
+                   = x           by group_inv_inv
 
    Only-if part: x = y ==> |/ x * y = #e
        True by group_linv.
@@ -827,10 +830,10 @@ val group_op_linv_eq_id = store_thm(
 (* Theorem: Group g ==> !x y. x IN G /\ y IN G ==> ((x * |/ y = #e) <=> (x = y)) *)
 (* Proof:
    If part: x * |/ y = #e ==> x = y
-   Note |/ x IN G               by group_inv_element
+   Note |/ x IN G                by group_inv_element
    Given  x * |/ y = #e
                  x = |/ ( |/ y)  by group_linv_unique
-                   = y          by group_inv_inv
+                   = y           by group_inv_inv
 
    Only-if part: x = y ==> x * |/ y = #e
        True by group_rinv.
@@ -845,7 +848,7 @@ val group_op_rinv_eq_id = store_thm(
 (* Proof:
    Note |/ x IN G                     by group_inv_element
                 |/ x * y = z
-   <=>  x * (( |/ x) * y) = x * z      by group_lcancel
+   <=> x * (( |/ x) * y) = x * z      by group_lcancel
    <=>    (x * |/ x) * y = x * z      by group_assoc
    <=>            #e * y = x * z      by group_rinv
    <=>                 y = x * z      by group_lid
@@ -864,8 +867,8 @@ val group_op_linv_eqn = store_thm(
 (* Proof:
    Note |/ y IN G                     by group_inv_element
                 x * |/ y = z
-   <=>  (x * |/ y) * y = z * y        by group_rcancel
-   <=>    x * ( |/ y * y) = z * y      by group_assoc
+   <=>    (x * |/ y) * y = z * y      by group_rcancel
+   <=>   x * ( |/ y * y) = z * y      by group_assoc
    <=>           x * #e  = z * y      by group_linv
    <=>                 x = z * y      by group_rid
 *)
@@ -885,8 +888,8 @@ val group_op_rinv_eqn = store_thm(
     and (Invertibles g).op = g.op         by Invertibles_property
     and (Invertibles g).id = #e           by Invertibles_property
     and (Invertibles g).carrier = G*      by Invertibles_carrier
-    Now ( |/ x) IN G*                      by monoid_inv_invertible
-    and x * ( |/ x) = #e                   by monoid_inv_def
+    Now ( |/ x) IN G*                     by monoid_inv_invertible
+    and x * ( |/ x) = #e                  by monoid_inv_def
     ==> |/ x = (Invertibles g).inv x      by group_rinv_unique
 *)
 val Invertibles_inv = store_thm(
@@ -998,6 +1001,25 @@ val group_def_by_inverse = store_thm(
   `z * y * x = z * (y * x)` by rw_tac std_ss[monoid_assoc] >>
   `x = z` by metis_tac[monoid_lid, monoid_rid] >>
   metis_tac[monoid_invertibles_element]);
+
+(* Alternative concise definition of a group. *)
+
+(* Theorem: Group g <=>
+            (!x y::G. x * y IN G) /\
+            (!x y z::G. x * y * z = x * (y * z)) /\
+             #e IN G /\ (!x::G. #e * x = x) /\
+             !x::G. |/ x IN G /\ |/ x * x = #e *)
+(* Proof: by group_def_alt, group_inv_element. *)
+Theorem group_alt:
+  !(g:'a group). Group g <=>
+          (!x y::G. x * y IN G) /\ (* closure *)
+          (!x y z::G. x * y * z = x * (y * z)) /\ (* associativity *)
+          #e IN G /\ (!x::G. #e * x = x) /\ (* identity *)
+          !x::G. |/ x IN G /\ |/ x * x = #e
+Proof
+  rw[group_def_alt, group_inv_element, EQ_IMP_THM] >>
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Transformation of Group structure by modifying carrier.                   *)
@@ -1171,14 +1193,14 @@ val abelian_monoid_invertible_excluding = store_thm(
      |/ (x ** 0)
    = |/ #e            by group_exp_zero
    = #e               by group_inv_id
-   = ( |/ #e) ** 0     by group_exp_zero
+   = ( |/ #e) ** 0    by group_exp_zero
    Step case: |/ (x ** n) = |/ x ** n ==> |/ (x ** SUC n) = |/ x ** SUC n
      |/ (x ** SUC n)
-   = |/ (x * (x ** n))      by group_exp_SUC
+   = |/ (x * (x ** n))        by group_exp_SUC
    = ( |/ (x ** n)) * ( |/x)  by group_inv_op
    = ( |/x) ** n * ( |/x)     by inductive hypothesis
    = ( |/x) * ( |/x) ** n     by group_exp_comm
-   = ( |/x) ** SUC n         by group_exp_SUC
+   = ( |/x) ** SUC n          by group_exp_SUC
 *)
 val group_exp_inv = store_thm(
   "group_exp_inv",

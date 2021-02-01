@@ -20,16 +20,16 @@ val ERR = mk_HOL_ERR "tttLearn"
    ------------------------------------------------------------------------- *)
 
 fun abstract_stac stac =
-  let val a1 = abstract_thml stac in
-    if not (!learn_abstract_term) then Option.map fst a1 else
-      let
-        val a2 = abstract_term (if isSome a1 then fst (valOf a1) else stac)
-      in
-        if isSome a1 orelse isSome a2
-        then Option.map fst a2
-        else NONE
-      end
-  end
+  (
+  if is_thmlstac stac orelse is_termstac stac then NONE else
+  case abstract_thml stac of
+    SOME (thmlstac,_) => SOME thmlstac
+  | NONE =>
+    (if not (!learn_abstract_term) then NONE else
+    case abstract_term stac of
+      SOME (termstac,_) => SOME termstac
+    | NONE => NONE)
+  )
   handle Interrupt => raise Interrupt | _ =>
     (debug ("error: abstract_stac: " ^ stac); NONE)
 
@@ -53,6 +53,25 @@ fun pred_stac (tacsymweight,tacfea) ostac fea =
 fun pred_thmid thmdata fea =
   thmknn thmdata (!ttt_thmlarg_radius) fea
 
+fun unterm_var v =
+  let val (vs,ty) = dest_var v in vs end
+
+fun respace s = String.concatWith " " (partial_sml_lexer s)
+
+fun unterm_var_alt v =
+  let val (vs,ty) = dest_var v in [vs, respace vs] end
+
+fun pred_svar n goal =
+  first_n n (map unterm_var (find_terms is_var (snd goal)))
+
+fun pred_svar_alt n goal =
+  let
+    val vl1 = find_terms is_var (snd goal)
+    val vl2 = List.concat (map unterm_var_alt vl1)
+  in
+    first_n (2 * n) vl2
+  end
+
 fun order_stac tacdata ostac stacl =
    let
      fun covscore x = dfind x (#taccov tacdata) handle NotFound => 0
@@ -64,17 +83,30 @@ fun order_stac tacdata ostac stacl =
    end
 
 (* -------------------------------------------------------------------------
+   Instantiations (* todo: speedup by preparsing tokenl *)
+   ------------------------------------------------------------------------- *)
+
+fun inst_arg (thmidl,sterml) stac =
+  if is_thmlstac stac then
+    [(stac, inst_thml thmidl stac)]
+  else if is_termstac stac then
+    map (fn x => (stac, inst_term x stac)) sterml
+  else [(stac,stac)]
+
+(* -------------------------------------------------------------------------
    Testing if a predicted tactic as a "better effect" than the original
    ------------------------------------------------------------------------- *)
 
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
+val goal_subset = op_subset goal_eq
+
 fun test_stac g gl (stac, istac) =
   let
     val _ = debug "test_stac"
     val glo = app_stac (!learn_tactic_time) istac g
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if op_subset goal_eq newgl gl then SOME stac else NONE)
+      (if goal_subset newgl gl then SOME stac else NONE)
   end
 
 (* -------------------------------------------------------------------------
@@ -86,7 +118,7 @@ val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
 fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
-  (call as {stac,ortho,time,ig,ogl,loc,fea}) =
+  ((g,gl), icall as (loc,{stac,ogl,fea})) =
   let
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time
@@ -95,20 +127,21 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     val stacl2 = order_stac tacdata stac stacl1
     val _ = debug "abstract tactics"
     val stacl3 = concat_absstacl fea stac stacl2
-    val _ = debug "predict theorems"
+    val _ = debug "predict arguments"
     val thmidl = total_time ortho_predthm_time (pred_thmid thmdata) fea
+    val sterml = []
     val _ = debug "instantiate arguments"
-    val stacl4 = map_assoc (inst_thml thmidl) stacl3
+    val stacl4 = List.concat (map (inst_arg (thmidl,sterml)) stacl3)
     val _ = debug "test tactics"
-    val (neworthoo,t) = add_time (findSome (test_stac ig ogl)) stacl4
+    val (newstaco,t) = add_time (findSome (test_stac g gl)) stacl4
     val _ = debug ("test time: " ^ rts t)
     val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
-    case neworthoo of NONE => call | SOME newortho =>
-      {stac = stac, ortho = newortho, time = time,
-       ig = ig, ogl = ogl, loc = loc, fea = fea}
+    case newstaco of NONE => icall |
+      SOME newstac => (loc, {stac = newstac, ogl = ogl, fea = fea})
   end
   handle Interrupt => raise Interrupt | _ =>
-    (debug "error: orthogonalize"; call)
+    (debug "error: orthogonalize"; icall)
+
 
 end (* struct *)

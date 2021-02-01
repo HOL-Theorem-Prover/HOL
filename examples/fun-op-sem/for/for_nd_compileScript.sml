@@ -1069,14 +1069,17 @@ val compile_pres = store_thm("compile_pres",
    that the source program cannot Crash. This leads to a cleaner
    top-level correctness theorem for compile. *)
 
-val syntax_ok_def = Define `
-  syntax_ok t = type_t F {} t`;
+Definition syntax_ok_def: syntax_ok t = type_t F {} t
+End
 
-val compile_correct = store_thm("compile_correct",
-  ``!t inp. syntax_ok t ==>
-            asm_semantics (compile t) inp SUBSET semantics t inp``,
+Theorem compile_correct:
+  !t inp. syntax_ok t ==>
+          asm_semantics (compile t) inp SUBSET semantics t inp
+Proof
   rpt strip_tac \\ match_mp_tac compile_pres \\ fs [syntax_ok_def]
   \\ imp_res_tac type_soundness
-  \\ fs [semantics_def,IN_DEF,for_nd_semTheory.semantics_with_nd_def]);
+  \\ fs [semantics_def,IN_DEF,for_nd_semTheory.semantics_with_nd_def]
+  \\ metis_tac[]
+QED
 
 val _ = export_theory ();

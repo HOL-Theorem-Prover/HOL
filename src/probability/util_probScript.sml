@@ -137,8 +137,8 @@ Proof
       rename1 ‘c IN X’ >> qexistsl_tac [‘c’,‘u’] >> art [],
       (* goal 2 (of 3) *)
       rename1 ‘c IN X’ \\
-      rename1 ‘x <> FCP_CONCAT c' u' \/ c' NOTIN s \/ u' NOTIN t’ \\
-      STRONG_DISJ_TAC >> DISJ1_TAC \\
+      rename [‘x = FCP_CONCAT c' u'’, ‘c' NOTIN s \/ u' NOTIN t’] \\
+      DISJ1_TAC \\
       CCONTR_TAC >> fs [] \\
       Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
       Suff ‘c = c'’ >- METIS_TAC [] \\
@@ -159,8 +159,8 @@ Proof
       rename1 ‘c IN s’ >> qexistsl_tac [‘c’,‘u’] >> art [],
       (* goal 2 (of 3) *)
       rename1 ‘c IN s’ \\
-      rename1 ‘x <> FCP_CONCAT c' u' \/ c' NOTIN s \/ u' NOTIN t’ \\
-      STRONG_DISJ_TAC >> DISJ2_TAC \\
+      rename[‘x = FCP_CONCAT c' u'’,‘c' NOTIN s \/ u' NOTIN t’] \\
+      DISJ2_TAC \\
       CCONTR_TAC >> fs [] \\
       Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
       Suff ‘u = u'’ >- METIS_TAC [] \\
@@ -318,7 +318,7 @@ Proof
  >| [ (* goal 1 (of 3) *)
       qexistsl_tac [‘a’,‘b’] >> art [],
       (* goal 2 (of 3) *)
-      STRONG_DISJ_TAC >> DISJ1_TAC \\
+      DISJ1_TAC \\
       CCONTR_TAC >> fs [] \\
       Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
       Suff ‘a = a'’ >- METIS_TAC [] \\
@@ -338,7 +338,7 @@ Proof
  >| [ (* goal 1 (of 3) *)
       qexistsl_tac [‘a’,‘b’] >> art [],
       (* goal 2 (of 3) *)
-      STRONG_DISJ_TAC >> DISJ2_TAC \\
+      DISJ2_TAC \\
       CCONTR_TAC >> fs [] \\
       Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
       Suff ‘b = b'’ >- METIS_TAC [] \\

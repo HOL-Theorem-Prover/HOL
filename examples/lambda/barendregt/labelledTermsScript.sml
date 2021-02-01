@@ -485,8 +485,6 @@ val term_info_string =
     \                           binderLib.NTI term_info)\n\
     \in end;\n"
 
-val _ = adjoin_to_theory
-        { sig_ps = NONE,
-          struct_ps = SOME (fn _ => PP.add_string term_info_string)}
+val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
 
 val _ = export_theory()

@@ -21,6 +21,10 @@ open hurdUtils util_probTheory sigma_algebraTheory
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "leakage";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"];
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"];
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"];
+
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
@@ -1776,67 +1780,77 @@ val unif_prog_space_visible_leakage_computation_reduce = store_thm
                   unif_prog_space_visible_leakage_lemma4, REAL_SUB_LDISTRIB, REAL_SUB_LZERO]);
 
 
-val unif_prog_space_leakage_LIST_TO_SET_computation_reduce = store_thm
-  ("unif_prog_space_leakage_LIST_TO_SET_computation_reduce",
-   ``!high low random f. ALL_DISTINCT high /\ ALL_DISTINCT low /\ ALL_DISTINCT random /\
-           ~(high = []) /\ ~(low = []) /\ ~(random = []) ==>
-           (leakage (unif_prog_space (LIST_TO_SET high) (LIST_TO_SET low) (LIST_TO_SET random)) f =
-            (1/(&(LENGTH high * LENGTH low * LENGTH random)))*
-            ((REAL_SUM (MAP (\x. (\(out,h,l). (\s. s * lg ((1/(&(LENGTH random)))*s))
-                                (REAL_SUM (MAP (\r. if (f((h,l),r)=out) then 1 else 0) random))) x)
-                      (MAKE_ALL_DISTINCT
-                                (MAP (\s. (f s,FST s)) (LIST_COMBS (LIST_COMBS high low) random))))) -
-            (REAL_SUM (MAP (\x. (\(out,l). (\s. s * lg ((1/(&(LENGTH high * LENGTH random)))*s))
-                                (REAL_SUM (MAP (\(h,r). if (f((h,l),r)=out) then 1 else 0)
-                                          (LIST_COMBS high random)))) x)
-                      (MAKE_ALL_DISTINCT
-                                (MAP (\s. (f s,SND (FST s)))
-                                     (LIST_COMBS (LIST_COMBS high low) random)))))))``,
+Theorem unif_prog_space_leakage_LIST_TO_SET_computation_reduce:
+  !high low random f.
+    ALL_DISTINCT high /\ ALL_DISTINCT low /\
+    ALL_DISTINCT random /\ ~(high = []) /\ ~(low = []) /\ ~(random = []) ==>
+    (leakage (unif_prog_space (set high) (set low) (set random)) f =
+     (1/(&(LENGTH high * LENGTH low * LENGTH random)))*
+     ((REAL_SUM (MAP (λx.
+                       (λ(out,h,l). (\s. s * lg ((1/(&(LENGTH random)))*s))
+                                    (REAL_SUM (MAP (\r. if (f((h,l),r)=out) then 1
+                                                        else 0) random))) x)
+                 (nub
+                  (MAP (\s. (f s,FST s))
+                   (LIST_COMBS (LIST_COMBS high low) random))))) -
+      (REAL_SUM (MAP (\x. (λ(out,l).
+                            (\s. s * lg ((1/(&(LENGTH high * LENGTH random)))*s))
+                            (REAL_SUM (MAP (λ(h,r). if (f((h,l),r)=out) then 1
+                                                    else 0)
+                                       (LIST_COMBS high random)))) x)
+                 (nub
+                  (MAP (\s. (f s,SND (FST s)))
+                   (LIST_COMBS (LIST_COMBS high low) random)))))))
+Proof
    REPEAT STRIP_TAC
-   >> (MP_TAC o Q.SPECL [`LIST_TO_SET high`,`LIST_TO_SET low`,`LIST_TO_SET random`,`f`])
-      unif_prog_space_leakage_computation_reduce
+   >> qspecl_then [`set high`,`set low`,`set random`,`f`] mp_tac
+                  unif_prog_space_leakage_computation_reduce
    >> SIMP_TAC std_ss [FINITE_LIST_TO_SET, CROSS_LIST_TO_SET]
    >> `~(set (LIST_COMBS (LIST_COMBS high low) random) = {})`
       by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [NOT_IN_EMPTY]
           >> Cases_on `high` >> Cases_on `low` >> Cases_on `random`
           >> FULL_SIMP_TAC list_ss [LIST_COMBS_def, MAP]
           >> METIS_TAC [])
-   >> RW_TAC std_ss [CARD_LIST_TO_SET, MAKE_ALL_DISTINCT_ALL_DISTINCT, REAL_EQ_LMUL]
+   >> RW_TAC std_ss [CARD_LIST_TO_SET, all_distinct_nub_id, REAL_EQ_LMUL]
    >> POP_ASSUM (K ALL_TAC)
    >> Cases_on `(1 / & (LENGTH high * LENGTH low * LENGTH random) = 0)`
    >> RW_TAC real_ss [IMAGE_LIST_TO_SET]
-   >> `(set
-     (MAP (\s. (f s,SND (FST s)))
-        (LIST_COMBS (LIST_COMBS high low) random))) =
-        (set (MAKE_ALL_DISTINCT
-     (MAP (\s. (f s,SND (FST s)))
-        (LIST_COMBS (LIST_COMBS high low) random))))`
-        by RW_TAC std_ss [LIST_TO_SET_MAKE_ALL_DISTINCT]
+   >> ‘set (MAP (\s. (f s,SND (FST s)))
+            (LIST_COMBS (LIST_COMBS high low) random)) =
+       set (nub
+             (MAP (\s. (f s,SND (FST s)))
+              (LIST_COMBS (LIST_COMBS high low) random)))’
+        by RW_TAC std_ss [nub_set]
    >> POP_ORW
-   >> `(set
-     (MAP (\s. (f s,FST s))
-        (LIST_COMBS (LIST_COMBS high low) random))) =
-        (set (MAKE_ALL_DISTINCT
-     (MAP (\s. (f s,FST s))
-        (LIST_COMBS (LIST_COMBS high low) random))))`
-        by RW_TAC std_ss [LIST_TO_SET_MAKE_ALL_DISTINCT]
+   >> ‘set (MAP (\s. (f s,FST s))
+            (LIST_COMBS (LIST_COMBS high low) random)) =
+       set (nub
+            (MAP (\s. (f s,FST s))
+             (LIST_COMBS (LIST_COMBS high low) random)))’
+        by RW_TAC std_ss [nub_set]
    >> POP_ORW
    >> RW_TAC std_ss [ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM,
-                     ALL_DISTINCT_LIST_COMBS, ALL_DISTINCT_MAKE_ALL_DISTINCT]);
+                     ALL_DISTINCT_LIST_COMBS, all_distinct_nub,
+                     CARD_LIST_TO_SET_EQN, all_distinct_nub_id, REAL_MUL_LZERO]
+QED
 
 
-val unif_prog_space_visible_leakage_LIST_TO_SET_computation_reduce = store_thm
-  ("unif_prog_space_visible_leakage_LIST_TO_SET_computation_reduce",
-   ``!high low random f. ALL_DISTINCT high /\ ALL_DISTINCT low /\ ALL_DISTINCT random /\
-           ~(high = []) /\ ~(low = []) /\ ~(random = []) ==>
-           (visible_leakage (unif_prog_space (LIST_TO_SET high) (LIST_TO_SET low) (LIST_TO_SET random)) f =
-            ~(1/(&(LENGTH high * LENGTH low * LENGTH random)))*
-            ((REAL_SUM (MAP (\x. (\(out,l,r). (\s. s * lg ((1/(&(LENGTH high)))*s))
-                                (REAL_SUM (MAP (\h. if (f((h,l),r)=out) then 1 else 0) high))) x)
-                      (MAKE_ALL_DISTINCT
-                                (MAP (\s. (f s,SND (FST s),SND s)) (LIST_COMBS (LIST_COMBS high low) random)))))))``,
+Theorem unif_prog_space_visible_leakage_LIST_TO_SET_computation_reduce:
+  !high low random f.
+    ALL_DISTINCT high /\ ALL_DISTINCT low /\ ALL_DISTINCT random /\
+    high ≠ [] /\ low ≠ [] /\ random ≠ [] ==>
+    (visible_leakage (unif_prog_space (set high) (set low) (set random)) f =
+     -(1/(&(LENGTH high * LENGTH low * LENGTH random)))*
+     ((REAL_SUM (MAP (\x. (λ(out,l,r).
+                            (\s. s * lg ((1/(&(LENGTH high)))*s))
+                            (REAL_SUM (MAP (\h. if (f((h,l),r)=out) then 1 else 0)
+                                       high))) x)
+                 (nub
+                  (MAP (\s. (f s,SND (FST s),SND s))
+                   (LIST_COMBS (LIST_COMBS high low) random)))))))
+Proof
    REPEAT STRIP_TAC
-   >> (MP_TAC o Q.SPECL [`LIST_TO_SET high`,`LIST_TO_SET low`,`LIST_TO_SET random`,`f`])
+   >> (MP_TAC o Q.SPECL [`set high`,`set low`,`LIST_TO_SET random`,`f`])
       unif_prog_space_visible_leakage_computation_reduce
    >> SIMP_TAC std_ss [FINITE_LIST_TO_SET, CROSS_LIST_TO_SET]
    >> `~(set (LIST_COMBS (LIST_COMBS high low) random) = {})`
@@ -1844,21 +1858,22 @@ val unif_prog_space_visible_leakage_LIST_TO_SET_computation_reduce = store_thm
           >> Cases_on `high` >> Cases_on `low` >> Cases_on `random`
           >> FULL_SIMP_TAC list_ss [LIST_COMBS_def, MAP]
           >> METIS_TAC [])
-   >> RW_TAC std_ss [CARD_LIST_TO_SET, MAKE_ALL_DISTINCT_ALL_DISTINCT, REAL_EQ_LMUL, GSYM REAL_MUL_LNEG,
+   >> RW_TAC std_ss [CARD_LIST_TO_SET, all_distinct_nub_id, REAL_EQ_LMUL,
+                     GSYM REAL_MUL_LNEG,
                      REAL_NEG_EQ0, GSYM REAL_INV_1OVER, REAL_INV_EQ_0]
    >> POP_ASSUM (K ALL_TAC)
-   >> Cases_on `(& (LENGTH high * LENGTH low * LENGTH random) = 0)` >> ASM_REWRITE_TAC []
-   >> RW_TAC real_ss [IMAGE_LIST_TO_SET]
-   >> `(set
-     (MAP (\s. (f s,SND (FST s),SND s))
-        (LIST_COMBS (LIST_COMBS high low) random))) =
-        (set (MAKE_ALL_DISTINCT
-     (MAP (\s. (f s,SND (FST s),SND s))
-        (LIST_COMBS (LIST_COMBS high low) random))))`
-        by RW_TAC std_ss [LIST_TO_SET_MAKE_ALL_DISTINCT]
+   >> Cases_on `(& (LENGTH high * LENGTH low * LENGTH random) = 0)`
+   >> ASM_REWRITE_TAC []
+   >- gs[]
+   >> RW_TAC real_ss [IMAGE_LIST_TO_SET, CARD_LIST_TO_SET_EQN,
+                      all_distinct_nub_id]
+   >> simp[all_distinct_nub_id,
+           ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM]
+   >> qmatch_abbrev_tac ‘_ = REAL_SUM (MAP ff (nub l))’
+   >> ‘set l = set (nub l)’ by RW_TAC std_ss [nub_set]
    >> POP_ORW
-   >> RW_TAC std_ss [ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM,
-                     ALL_DISTINCT_LIST_COMBS, ALL_DISTINCT_MAKE_ALL_DISTINCT]);
+   >> simp[ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM]
+QED
 
 
 val _ = export_theory ();

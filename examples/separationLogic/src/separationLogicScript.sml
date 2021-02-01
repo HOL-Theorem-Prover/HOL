@@ -26,6 +26,9 @@ quietdec := false;
 val _ = new_theory "separationLogic"
 val _ = ParseExtras.temp_loose_equality()
 
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
+
 (******************************************************************************)
 (* Define separation combinators and algebras                                 *)
 (******************************************************************************)

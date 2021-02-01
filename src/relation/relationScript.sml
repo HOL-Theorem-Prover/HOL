@@ -197,6 +197,12 @@ val RC_REFLEXIVE = store_thm(
 val reflexive_RC = save_thm("reflexive_RC", RC_REFLEXIVE);
 val _ = export_rewrites ["reflexive_RC"]
 
+Theorem RC_REFL[simp]:
+  RC R x x
+Proof
+  MESON_TAC [RC_DEF]
+QED
+
 val RC_lifts_monotonicities = store_thm(
   "RC_lifts_monotonicities",
   ``(!x y. R x y ==> R (f x) (f y)) ==> !x y. RC R x y ==> RC R (f x) (f y)``,

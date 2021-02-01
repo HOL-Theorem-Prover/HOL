@@ -60,12 +60,10 @@ val prob_canonical_def = Define `prob_canonical l = (prob_canon l = l)`;
 (* 2. Induction principle on elements in canonical form.                     *)
 (* ------------------------------------------------------------------------- *)
 
-val PROB_TWIN_NIL = store_thm
-  ("PROB_TWIN_NIL",
-   ``!l. ~(prob_twin l []) /\ ~(prob_twin [] l)``,
-   RW_TAC std_ss [prob_twin_def]
-   >> Cases_on `l'`
-   >> RW_TAC std_ss [SNOC]);
+Theorem PROB_TWIN_NIL:
+  !l. ~prob_twin l [] /\ ~prob_twin [] l
+Proof rw[prob_twin_def]
+QED
 
 val PROB_TWIN_SING = store_thm
   ("PROB_TWIN_SING",
@@ -408,25 +406,25 @@ val PROB_TWINFREE_STEP1 = store_thm
     >> RW_TAC list_ss [MEM, MAP, prob_twinfree_def],
     RW_TAC list_ss [prob_twinfree_def, PROB_TWIN_REDUCE, MEM]]);
 
-val PROB_TWINFREE_STEP2 = store_thm
-  ("PROB_TWINFREE_STEP2",
-   ``!l1 l2. (~(MEM [] l1) \/ ~(MEM [] l2))
-             /\ prob_twinfree l1 /\ prob_twinfree l2
-             ==> prob_twinfree (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))``,
+Theorem PROB_TWINFREE_STEP2:
+  !l1 l2. (~MEM [] l1 \/ ~MEM [] l2) /\
+          prob_twinfree l1 /\ prob_twinfree l2
+          ==> prob_twinfree (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
+Proof
    NTAC 2 STRIP_TAC
    >> Induct_on `l1`
    >- RW_TAC list_ss [MAP, PROB_TWINFREE_TLS, prob_twinfree_def]
    >> STRIP_TAC
    >> POP_ASSUM MP_TAC
-   >> Cases_on `l1` >|
-   [Cases_on `l2` >- RW_TAC list_ss [MAP, prob_twinfree_def]
-    >> RW_TAC list_ss [MEM, MAP, prob_twinfree_def] >|
-    [Cases_on `h` >- RW_TAC std_ss []
-     >> RW_TAC std_ss [PROB_TWIN_CONS],
-     Cases_on `h'` >- RW_TAC std_ss []
-     >> RW_TAC std_ss [PROB_TWIN_CONS]],
+   >> Cases_on `l1` >| [
+    Cases_on `l2` >- RW_TAC list_ss [MAP, prob_twinfree_def]
+    >> RW_TAC list_ss [MEM, MAP, prob_twinfree_def]
+    >> Cases_on ‘h’ >> fs[PROB_TWIN_CONS]
+    >> Cases_on `h'` >> fs[PROB_TWIN_CONS],
     RW_TAC list_ss [prob_twinfree_def, PROB_TWIN_REDUCE, MEM]
-    >> RES_TAC]);
+    >> RES_TAC
+  ]
+QED
 
 val PROB_TWINFREE_STEP = store_thm
   ("PROB_TWINFREE_STEP",
@@ -964,7 +962,7 @@ val PROB_CANONICAL_INDUCT = store_thm
 val MEM_NIL_STEP = store_thm
   ("MEM_NIL_STEP",
    ``!l1 l2. ~MEM [] (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))``,
-   RW_TAC list_ss [APPEND_MEM, MEM_NIL_MAP_CONS]);
+   RW_TAC list_ss [MEM_NIL_MAP_CONS]);
 
 val PROB_SORTED_PREFIXFREE_MEM_NIL = store_thm
   ("PROB_SORTED_PREFIXFREE_MEM_NIL",

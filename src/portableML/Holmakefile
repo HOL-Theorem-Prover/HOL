@@ -25,6 +25,9 @@ Inttab.uo: Inttab.sml Table.ui
 Symtab.uo: Symtab.sml Table.ui
 	$(MOSMLC) Table.ui -c $<
 
+SymGraph.uo: SymGraph.sml Graph.ui
+	$(MOSMLC) Graph.ui -c $<
+
 Symreltab.uo: Symreltab.sml Table.ui
 	$(MOSMLC) Table.ui -c $<
 

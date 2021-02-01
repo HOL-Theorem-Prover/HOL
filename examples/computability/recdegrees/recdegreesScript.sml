@@ -130,7 +130,6 @@ Proof
   >- (rename[`n1=n2`] >>
       ‘¬(n1<n2) ∧ ¬(n2<n1)’ suffices_by simp[] >>
       rpt strip_tac >> metis_tac[prim_recTheory.LESS_REFL,optionTheory.SOME_11])
-  >- metis_tac[]
 QED
 
 Definition step_n_def:

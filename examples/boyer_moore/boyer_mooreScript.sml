@@ -202,35 +202,35 @@ val checkDeltaS_def =
 
 (* Relationship between checkDeltaS function
    and valid_suf_shift specification *)
-val CHECK_DELTAS_THM = store_thm(
-    "CHECK_DELTAS_THM",
-    ``! pat j d . d IN valid_suf_shifts pat j
-                 <=> 1 <= d /\ d <= LENGTH pat /\ checkDeltaS pat j d``,
+Theorem CHECK_DELTAS_THM:
+  !pat j d.
+    d IN valid_suf_shifts pat j <=>
+    1 <= d /\ d <= LENGTH pat /\ checkDeltaS pat j d
+Proof
     ONCE_REWRITE_TAC [EQ_SYM_EQ]
     >> simp[valid_suf_shifts_def,checkDeltaS_def,EXTRACT_THM,LIST_EQ_REWRITE]
     >> rw[EQ_IMP_THM]
     >> simp[]
-    >- (`MAX (SUC j) d = d`
-            by simp[MAX_DEF]
-        >> fs[]
-        >> first_x_assum(qspec_then `i-d` mp_tac)
-        >> simp[])
-    >- (qabbrev_tac `M = MAX (SUC j) d`
-        >> `d <= M`
-                by rw[MAX_DEF,Abbr `M`]
-        >> Q.UNDISCH_THEN `d<= LENGTH pat` assume_tac
+    >- (Cases_on ‘SUC j ≤ d’
+        >- (`MAX (SUC j) d = d` by simp[MAX_DEF]
+            >> fs[]
+            >> first_x_assum(qspec_then `i-d` mp_tac)
+            >> simp[]) >>
+        fs[] >>
+        qabbrev_tac `M = MAX (SUC j) d`
+        >> `d <= M` by rw[MAX_DEF,Abbr `M`]
+        >> `d ≤ LENGTH pat` by simp[]
         >> fs[]
         >> first_x_assum(qspec_then `i-M` mp_tac)
         >> simp[]
         >> `M <= i`
                 by simp[MAX_DEF, Abbr `M`]
         >> simp[])
-    >- (simp[MAX_DEF])
+    >- fs[]
+    >- fs[]
     >- (qabbrev_tac `M = MAX (SUC j) d`
-        >> `d <= M`
-                by rw[MAX_DEF,Abbr `M`]
+        >> `d <= M` by rw[MAX_DEF,Abbr `M`]
         >> simp[])
-    >- (simp[MAX_DEF])
     >- (qabbrev_tac `M = MAX (SUC j) d`
         >> `d <= M`
                 by rw[MAX_DEF,Abbr `M`]
@@ -241,7 +241,7 @@ val CHECK_DELTAS_THM = store_thm(
                 by rw[MAX_DEF,Abbr `M`]
         >> first_x_assum(qspec_then `M + x` mp_tac)
         >> simp[])
-    );
+QED
 
 (* Check Delta S in terms of set comprehensions *)
 val CHECK_DELTAS_SET = store_thm(

@@ -33,6 +33,7 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "field";
+val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "field";
 val Bug = mlibUseful.Bug;
@@ -772,7 +773,7 @@ val field_mult_rzero = store_thm
            ++ RW_TAC std_ss [group_id_carrier, IN_DIFF, IN_SING])
        ++ Suff `f.prod.mult x (f.sum.inv f.prod.id) IN f.prod.carrier`
        >> RW_TAC std_ss [IN_DIFF]
-       ++ Q.PAT_ASSUM `f.sum.carrier = f.carrier`
+       ++ Q.PAT_X_ASSUM `f.sum.carrier = f.carrier`
             (MP_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ])
        ++ STRIP_TAC
        ++ match_tac group_mult_carrier
@@ -785,7 +786,7 @@ val field_mult_rzero = store_thm
        >> (match_tac group_inv_carrier
            ++ RW_TAC std_ss [])
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
+       ++ Q.PAT_X_ASSUM `~(X = Y)` MP_TAC
        ++ RW_TAC std_ss []
        ++ match_tac group_lcancel_imp
        ++ Q.EXISTS_TAC `f.sum`
@@ -887,7 +888,7 @@ val field_mult_comm = store_thm
    ++ RW_TAC std_ss
         [Field_def, GSPECIFICATION, field_mult_def, AbelianGroup_def,
          field_nonzero_def]
-   ++ Q.PAT_ASSUM `!x y :: (f.prod.carrier). P x y` match_tac
+   ++ Q.PAT_X_ASSUM `!x y :: (f.prod.carrier). P x y` match_tac
    ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]);
 
 val field_mult_comm' = store_thm
@@ -1505,7 +1506,7 @@ val field_mult_add_neg_mult = store_thm
        ++ Induct_on `m`
        ++ RW_TAC alg_ss []
        ++ Cases_on `n = SUC m` >> RW_TAC alg_ss' []
-       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
        ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
        ++ CONJ_TAC >> DECIDE_TAC
        ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, field_add_assoc]
@@ -1517,7 +1518,7 @@ val field_mult_add_neg_mult = store_thm
        ++ Induct_on `m`
        ++ RW_TAC alg_ss []
        ++ Cases_on `n = SUC m` >> RW_TAC alg_ss' []
-       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
        ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
        ++ CONJ_TAC >> DECIDE_TAC
        ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, field_add_assoc]
@@ -1741,7 +1742,7 @@ val field_exp_mult_inv_exp = store_thm
        ++ Induct_on `m`
        ++ RW_TAC alg_ss []
        ++ Cases_on `n = SUC m` >> RW_TAC alg_ss []
-       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
        ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
        ++ CONJ_TAC >> DECIDE_TAC
        ++ RW_TAC alg_ss [field_exp_def, field_mult_assoc]
@@ -1752,7 +1753,7 @@ val field_exp_mult_inv_exp = store_thm
        ++ Induct_on `m`
        ++ RW_TAC alg_ss []
        ++ Cases_on `n = SUC m` >> RW_TAC alg_ss []
-       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
        ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
        ++ CONJ_TAC >> DECIDE_TAC
        ++ RW_TAC alg_ss [field_exp_def, field_mult_assoc]
@@ -1993,7 +1994,7 @@ val field_neg_nonzero = store_thm
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC alg_ss [field_nonzero_def, GSPECIFICATION, IN_DIFF, IN_SING]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
+   ++ Q.PAT_X_ASSUM `~(X = Y)` MP_TAC
    ++ RW_TAC alg_ss []
    ++ match_tac field_add_lcancel_imp
    ++ Q.EXISTS_TAC `f`
@@ -2502,7 +2503,7 @@ val modexp = store_thm
    ++ ONCE_REWRITE_TAC [modexp_def]
    ++ Cases_on `n = 0` >> RW_TAC arith_ss [EXP]
    ++ ASM_SIMP_TAC bool_ss []
-   ++ REPEAT (Q.PAT_ASSUM `X ==> Y` (K ALL_TAC))
+   ++ REPEAT (Q.PAT_X_ASSUM `X ==> Y` (K ALL_TAC))
    ++ Know `0 < m` >> DECIDE_TAC
    ++ STRIP_TAC
    ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)

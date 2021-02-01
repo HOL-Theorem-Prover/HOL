@@ -32,6 +32,7 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "group";
+val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "group";
 val Bug = mlibUseful.Bug;
@@ -294,8 +295,8 @@ val is_gcd_1_mult_imp = store_thm
    ++ Suff `F` >> METIS_TAC []
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!i. P i` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `!i. P i` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!i. P i` (K ALL_TAC)
+   ++ Q.PAT_X_ASSUM `!i. P i` MATCH_MP_TAC
    ++ METIS_TAC [DIVIDES_TRANS,  divides_gcd]);
 
 val gcd_1_mult_imp = store_thm
@@ -353,7 +354,7 @@ val euler_totient = store_thm
    >> (RW_TAC std_ss [GSYM IMAGE_SURJ, GSYM finite_inj_surj]
        ++ POP_ASSUM MP_TAC
        ++ RW_TAC bool_ss [INJ_DEF, IN_UNIV]
-       ++ Q.PAT_ASSUM `!i i'. P i i'` (K ALL_TAC)
+       ++ Q.PAT_X_ASSUM `!i i'. P i i'` (K ALL_TAC)
        ++ FULL_SIMP_TAC std_ss [GSPECIFICATION, DIVISION]
        ++ MATCH_MP_TAC (PROVE [] ``(~a ==> ~b) /\ b ==> a /\ b``)
        ++ CONJ_TAC
@@ -376,7 +377,7 @@ val euler_totient = store_thm
    ++ RW_TAC std_ss
         [CARD_EMPTY, ITSET_EMPTY, IMAGE_EMPTY, EXP, MULT_CLAUSES,
          CARD_INSERT, IMAGE_INSERT]
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
    ++ POP_ASSUM MP_TAC
    ++ SIMP_TAC bool_ss [INJ_DEF, IN_UNIV]
    ++ STRIP_TAC
@@ -395,12 +396,12 @@ val euler_totient = store_thm
    ++ POP_ASSUM MP_TAC
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
    ++ CONJ_TAC
-   >> (Q.PAT_ASSUM `!i i'. P i i'` (MP_TAC o Q.SPEC `e`)
+   >> (Q.PAT_X_ASSUM `!i i'. P i i'` (MP_TAC o Q.SPEC `e`)
        ++ RW_TAC std_ss [IN_IMAGE, IN_INSERT]
        ++ METIS_TAC [])
    ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
    ++ POP_ASSUM (K ALL_TAC)
-   ++ Q.PAT_ASSUM `!i i'. P i i'` (K ALL_TAC)
+   ++ Q.PAT_X_ASSUM `!i i'. P i i'` (K ALL_TAC)
    ++ MATCH_MP_TAC
       (METIS_PROVE [MULT_ASSOC, MULT_COMM]
        ``(((a * c) * (b * d)) MOD n = X) ==> ((a * b * (c * d)) MOD n = X)``)
@@ -1197,7 +1198,7 @@ val cyclic_group_alt = store_thm
        ++ CONJ_TAC >> METIS_TAC []
        ++ RW_TAC std_ss []
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `(k - q MOD k) + p MOD k`)
+       ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `(k - q MOD k) + p MOD k`)
        ++ ASM_SIMP_TAC std_ss [FUNPOW_ADD]
        ++ SIMP_TAC std_ss [GSYM FUNPOW_ADD]
        ++ MP_TAC (Q.SPEC `k` DIVISION)

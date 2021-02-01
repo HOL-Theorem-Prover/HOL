@@ -8,7 +8,7 @@
 structure mlTacticData :> mlTacticData =
 struct
 
-open HolKernel boolLib Abbrev SharingTables Portable aiLib smlLexer mlFeature
+open HolKernel boolLib Abbrev aiLib smlLexer mlFeature
 
 val ERR = mk_HOL_ERR "mlTacticData"
 
@@ -17,202 +17,96 @@ val ERR = mk_HOL_ERR "mlTacticData"
    ------------------------------------------------------------------------- *)
 
 type stac = string
+type loc = string * int * int
+type call = {stac : stac, ogl : int list, fea : fea}
 
-type call =
-  {
-  stac : stac, ortho : stac, time : real,
-  ig : goal, ogl : goal list,
-  loc : ((string * int) * string),
-  fea : fea
-  }
-
+val loc_compare = triple_compare String.compare Int.compare Int.compare
 fun call_compare (c1,c2) =
-  cpl_compare String.compare goal_compare
-    ((#ortho c1,#ig c1),(#ortho c2,#ig c2))
-
-fun call_to_tuple {stac,ortho,time,ig,ogl,loc,fea} =
-  ((stac,ortho,time),(ig,ogl),loc,fea)
-
-fun tuple_to_call ((stac,ortho,time),(ig,ogl),loc,fea) =
-  {
-  stac = stac, ortho = ortho, time = time,
-  ig = ig, ogl = ogl,
-  loc = loc,
-  fea = fea
-  }
+  cpl_compare String.compare fea_compare
+    ((#stac c1,#fea c1),(#stac c2,#fea c2))
 
 type tacdata =
   {
-  calls : call list,
-  calls_cthy : call list,
-  taccov : (stac, int) Redblackmap.dict,
-  calldep : (goal, call list) Redblackmap.dict,
-  symfreq : (int, int) Redblackmap.dict
+  calld : (string * int * int, call) Redblackmap.dict,
+  taccov : (stac,int) Redblackmap.dict,
+  symfreq : (int,int) Redblackmap.dict
   }
 
 val empty_tacdata : tacdata =
   {
-  calls = [],
-  calls_cthy = [],
+  calld = dempty loc_compare,
   taccov = dempty String.compare,
-  calldep = dempty goal_compare,
   symfreq = dempty Int.compare
   }
-
-(* -------------------------------------------------------------------------
-   Check if data is up-to-date before export
-   ------------------------------------------------------------------------- *)
-
-fun uptodate_goal (asl,w) = all uptodate_term (w :: asl)
-fun uptodate_call call = all uptodate_goal (#ig call :: #ogl call)
-
-(* -------------------------------------------------------------------------
-   Exporting terms
-   ------------------------------------------------------------------------- *)
-
-fun pp_tml tml =
-  let
-    val ed = {unnamed_terms = tml, named_terms = [], unnamed_types = [],
-              named_types = [], theorems = []}
-    val sdo = build_sharing_data ed
-    val sexp = enc_sdata sdo
-  in
-    HOLsexp.printer sexp
-  end
-
-fun export_terml file tml =
-  let
-    val tml' = filter uptodate_term tml
-    val _ = if length tml <> length tml'
-            then print_endline "Warning: out-of-date terms are not exported"
-            else ()
-    val ostrm = Portable.open_out file
-  in
-    (PP.prettyPrint (curry TextIO.output ostrm, 75) (pp_tml tml');
-     TextIO.closeOut ostrm)
-  end
-
-fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)
 
 (* -------------------------------------------------------------------------
    Exporting tactic data
    ------------------------------------------------------------------------- *)
 
-local open HOLsexp in
+fun loc_to_string (s,i1,i2) =
+  String.concatWith " " [s, its i1, its i2]
 
-fun enc_goal enc_tm (asl,w) = list_encode enc_tm (w::asl)
-fun dec_goal dec_tm =
-  Option.map (fn (w,asl) => (asl,w)) o
-  Option.mapPartial List.getItem o
-  list_decode dec_tm
-fun enc_goal_list enc_tm = list_encode (enc_goal enc_tm)
-fun dec_goal_list dec_tm = list_decode (dec_goal dec_tm)
-val enc_fea = Integer
-val dec_fea = int_decode
-fun enc_call enc_tm =
-  tagged_encode "call" (
-    pair4_encode (
-      pair3_encode (String, String, enc_real),
-      pair_encode (enc_goal enc_tm, enc_goal_list enc_tm),
-      pair_encode (pair_encode (String, Integer), String),
-      list_encode enc_fea
-    )
-  )
-fun enc_calls enc_tm = list_encode (enc_call enc_tm)
-fun dec_call dec_tm =
-  tagged_decode "call" (
-    pair4_decode (
-      pair3_decode (string_decode, string_decode, dec_real),
-      pair_decode (dec_goal dec_tm, dec_goal_list dec_tm),
-      pair_decode (pair_decode (string_decode, int_decode), string_decode),
-      list_decode dec_fea
-    )
-  )
-fun dec_calls dec_tm = list_decode (dec_call dec_tm)
+fun ilts il = String.concatWith " " (map its il)
 
-fun tml_of_calls calls =
+fun call_to_string (loc,{stac,ogl,fea}) =
+  [loc_to_string loc, stac, ilts ogl, ilts fea]
+
+fun export_calls file calls1 =
   let
-    fun goal_terms ((asl,w),A) = (w::asl) @ A
-    fun call_terms (call,A) =
-      List.foldl goal_terms A (fst (#2 call) :: snd (#2 call))
-  in
-    List.foldl call_terms [] calls
-  end
-
-fun export_calls file calls =
-  let
-    val _ = debug ("export_calls: " ^ its (length calls) ^ " calls")
-    val calls1 = filter uptodate_call calls
     fun is_local stac = mem "tttRecord.local_tag" (partial_sml_lexer stac)
-    fun test call = not (is_local (#ortho call))
-    val calls2 = filter test calls1
-    val calls3 = mk_sameorder_set call_compare (rev calls2)
-    val calls4 = map call_to_tuple calls3
-    val _ = debug ("export_calls: " ^ its (length calls3) ^ " filtered calls")
+    fun test call = not (is_local (#stac call))
+    val calls2 = filter (test o snd) calls1
+    val _ = debug ("export_calls: " ^ its (length calls2) ^ " filtered calls")
   in
-    write_tmdata (enc_calls, tml_of_calls) file calls4
+    writel file (List.concat (map call_to_string calls2))
   end
 
-end (* local *)
-
-(* -------------------------------------------------------------------------
-   Importing terms
-   ------------------------------------------------------------------------- *)
-
-fun import_terml file =
+fun export_tacdata thy file tacdata =
   let
-    val t = HOLsexp.fromFile file
-    val sdo = valOf (dec_sdata {with_strings = fn _ => (),
-                                with_stridty = fn _ => ()} t)
+    fun test (x,_,_) = (x = thy)
+    val calls = filter (test o fst) (dlist (#calld tacdata))
   in
-    #unnamed_terms (export_from_sharing_data sdo)
+    print_endline ("Exporting tactic data to: " ^ file);
+    export_calls file calls
   end
-
-fun import_goal file = let val l = import_terml file in (tl l, hd l) end
 
 (* -------------------------------------------------------------------------
    Importing tactic data
    ------------------------------------------------------------------------- *)
 
-fun import_calls file =
-  map tuple_to_call (read_tmdata dec_calls file)
-
-fun init_taccov calls =
-  count_dict (dempty String.compare) (map #ortho calls)
-
-fun init_symfreq calls =
-  count_dict (dempty Int.compare) (List.concat (map #fea calls))
-
-fun update_calldep (call,calldep) =
-  let
-    val oldl = dfind (#ig call) calldep handle NotFound => []
-    val newl = call :: oldl
-  in
-    dadd (#ig call) newl calldep
+fun loc_from_string s =
+  let val (a,b,c) = triple_of_list (String.tokens Char.isSpace s) in
+    (a, string_to_int b, string_to_int c)
   end
 
-fun init_calldep calls =
-  foldl update_calldep (dempty goal_compare) calls
+fun string_to_il s = map string_to_int (String.tokens Char.isSpace s)
+
+fun call_from_string (s1,s2,s3,s4) =
+  (loc_from_string s1,
+   {stac = s2, ogl = string_to_il s3, fea = string_to_il s4})
+
+fun import_calls file =
+  let val l = mk_batch_full 4 (readl_empty file) in
+    map (call_from_string o quadruple_of_list) l
+  end
+
+fun init_taccov calls =
+  count_dict (dempty String.compare) (map (#stac o snd) calls)
+
+fun init_symfreq calls =
+  count_dict (dempty Int.compare) (List.concat (map (#fea o snd) calls))
 
 fun init_tacdata calls =
   {
-  calls      = calls,
-  calls_cthy = [],
-  calldep    = init_calldep calls,
-  taccov     = init_taccov calls,
-  symfreq    = init_symfreq calls
+  calld = dnew loc_compare calls,
+  taccov = init_taccov calls,
+  symfreq = init_symfreq calls
   }
 
 fun import_tacdata filel =
   let val calls = List.concat (map import_calls filel) in
     init_tacdata calls
   end
-
-fun export_tacdata file tacdata =
-  (
-  print_endline ("Exporting tactic data to: " ^ file);
-  export_calls file (#calls_cthy tacdata)
-  )
 
 (* -------------------------------------------------------------------------
    Tactictoe database management
@@ -221,13 +115,11 @@ fun export_tacdata file tacdata =
 val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
 
 fun exists_tacdata_thy thy =
-  let val file = ttt_tacdata_dir ^ "/" ^ thy in
-    exists_file file andalso (not o null o readl) file
-  end
+  exists_file (ttt_tacdata_dir ^ "/" ^ thy)
 
 fun create_tacdata () =
   let
-    fun test file = exists_file file andalso (not o null o readl) file
+    fun test file = exists_file file
     val thyl = ancestry (current_theory ())
     fun f x = ttt_tacdata_dir ^ "/" ^ x
     val filel = filter test (map f thyl)
@@ -239,21 +131,18 @@ fun create_tacdata () =
       print_endline ("Missing tactic data: " ^  String.concatWith " " thyl3);
       print_endline "Run tttUnfold.ttt_record ()"
       )
-    val _ = print_endline
     val tacdata = import_tacdata filel
+    val calln = dlength (#calld tacdata)
   in
-    print_endline ("Loading " ^ its (length (#calls tacdata)) ^
-      " tactic calls");
+    print_endline ("Loading " ^ its calln ^ " tactic calls");
     tacdata
   end
 
-fun ttt_update_tacdata (call, {calls,calls_cthy,taccov,calldep,symfreq}) =
+fun ttt_update_tacdata ((loc,call),{calld,taccov,symfreq}) =
   {
-  calls      = call :: calls,
-  calls_cthy = call :: calls_cthy,
-  calldep    = update_calldep (call,calldep),
-  taccov     = count_dict taccov [#ortho call],
-  symfreq    = count_dict symfreq (#fea call)
+  calld = dadd loc call calld,
+  taccov = count_dict taccov [#stac call],
+  symfreq = count_dict symfreq (#fea call)
   }
 
 fun ttt_export_tacdata thy tacdata =
@@ -261,7 +150,7 @@ fun ttt_export_tacdata thy tacdata =
     val _ = mkDir_err ttt_tacdata_dir
     val file = ttt_tacdata_dir ^ "/" ^ thy
   in
-    export_tacdata file tacdata
+    export_tacdata thy file tacdata
   end
 
 

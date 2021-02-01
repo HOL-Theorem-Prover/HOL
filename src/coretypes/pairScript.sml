@@ -98,8 +98,7 @@ val PAIR_EQ = Q.store_thm
    THEN REWRITE_TAC[],
   STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
-val CLOSED_PAIR_EQ =
-  save_thm("CLOSED_PAIR_EQ", itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ);
+Theorem CLOSED_PAIR_EQ[simp] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
 
 
 (*---------------------------------------------------------------------------
@@ -134,12 +133,13 @@ val PAIR =
  Definition.new_specification
   ("PAIR", ["FST","SND"],
    Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM));
+val _ = BasicProvers.export_rewrites ["PAIR"]
 
 local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
       val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)
 in
-val FST = save_thm("FST", itlist Q.GEN [`x`,`y`] th2);
-val SND = save_thm("SND", itlist Q.GEN [`x`,`y`] th3);
+Theorem FST[simp] = itlist Q.GEN [`x`,`y`] th2;
+Theorem SND[simp] = itlist Q.GEN [`x`,`y`] th3;
 end;
 val _ = ot0 "FST" "fst"
 val _ = ot0 "SND" "snd"
@@ -160,9 +160,8 @@ val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-val CURRY_DEF = Q.new_definition
-  ("CURRY_DEF",
-   `CURRY f x y :'c = f (x,y)`);
+val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
+val _ = BasicProvers.export_rewrites ["CURRY_DEF"]
 
 val UNCURRY = Q.new_definition
   ("UNCURRY",
@@ -179,10 +178,10 @@ val ELIM_UNCURRY = Q.store_thm(
   REFL_TAC);
 
 
-val UNCURRY_DEF = Q.store_thm
- ("UNCURRY_DEF",
-  `!f x y. UNCURRY f (x,y) :'c = f x y`,
-  REWRITE_TAC [UNCURRY,FST,SND])
+Theorem UNCURRY_DEF[simp]:    !f x y. UNCURRY f (x,y) :'c = f x y
+Proof
+  REWRITE_TAC [UNCURRY,FST,SND]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -200,9 +199,7 @@ val CURRY_UNCURRY_THM =
     in
         GEN “f:'a->'b->'c” th4
     end;
-
-val _ = save_thm("CURRY_UNCURRY_THM",CURRY_UNCURRY_THM);
-
+Theorem CURRY_UNCURRY_THM[simp] = CURRY_UNCURRY_THM
 
 (* ------------------------------------------------------------------------- *)
 (* UNCURRY_CURRY_THM = |- !f. UNCURRY(CURRY f) = f                           *)
@@ -224,7 +221,7 @@ val UNCURRY_CURRY_THM =
         GEN “f:('a#'b)->'c” th6
   end;
 
-  val _ = save_thm("UNCURRY_CURRY_THM",UNCURRY_CURRY_THM);
+Theorem UNCURRY_CURRY_THM[simp] = UNCURRY_CURRY_THM;
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_ONE_ONE_THM = |- (CURRY f = CURRY g) = (f = g)                      *)
@@ -242,7 +239,7 @@ val CURRY_ONE_ONE_THM =
         IMP_ANTISYM_RULE thD th3
     end;
 
-val _ = save_thm("CURRY_ONE_ONE_THM",CURRY_ONE_ONE_THM);
+Theorem CURRY_ONE_ONE_THM[simp] = CURRY_ONE_ONE_THM;
 
 (* ------------------------------------------------------------------------- *)
 (* UNCURRY_ONE_ONE_THM = |- (UNCURRY f = UNCURRY g) = (f = g)                *)
@@ -260,7 +257,7 @@ val UNCURRY_ONE_ONE_THM =
         IMP_ANTISYM_RULE thD th3
     end;
 
-val _ = save_thm("UNCURRY_ONE_ONE_THM",UNCURRY_ONE_ONE_THM);
+Theorem UNCURRY_ONE_ONE_THM[simp] = UNCURRY_ONE_ONE_THM;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -426,20 +423,20 @@ val PAIR_MAP = Q.new_infixr_definition
  ("PAIR_MAP",
   `$## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 490);
 
-val PAIR_MAP_THM = Q.store_thm
-("PAIR_MAP_THM",
- `!f g x y. (f##g) (x,y) = (f x, g y)`,
- REWRITE_TAC [PAIR_MAP,FST,SND]);
+Theorem PAIR_MAP_THM[simp]:
+  !f g x y. (f##g) (x,y) = (f x, g y)
+Proof REWRITE_TAC [PAIR_MAP,FST,SND]
+QED
 
-val FST_PAIR_MAP = store_thm(
-  "FST_PAIR_MAP",
-  ``!p f g. FST ((f ## g) p) = f (FST p)``,
-  REWRITE_TAC [PAIR_MAP, FST]);
+Theorem FST_PAIR_MAP[simp]:
+  !p f g. FST ((f ## g) p) = f (FST p)
+Proof REWRITE_TAC [PAIR_MAP, FST]
+QED
 
-val SND_PAIR_MAP = store_thm(
-  "SND_PAIR_MAP",
-  ``!p f g. SND ((f ## g) p) = g (SND p)``,
-  REWRITE_TAC [PAIR_MAP, SND]);
+Theorem SND_PAIR_MAP[simp]:
+  !p f g. SND ((f ## g) p) = g (SND p)
+Proof REWRITE_TAC [PAIR_MAP, SND]
+QED
 
 (*---------------------------------------------------------------------------
         Distribution laws for paired lets. Only will work for the
@@ -882,12 +879,6 @@ S "    itlist GEN vars (rev_itlist add_varstruct V th)", NL,
 S "  end;", NL,
 S "  ", NL,
 S "val _ = Definition.new_definition_hook := (dest, post)", NL])};
-
-val _ = BasicProvers.export_rewrites
-        ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
-         "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
-         "UNCURRY_DEF", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
-         "SND_PAIR_MAP"]
 
 val FST_EQ_EQUIV = Q.store_thm("FST_EQ_EQUIV",
   `(FST p = x) <=> ?y. p = (x,y)`,
