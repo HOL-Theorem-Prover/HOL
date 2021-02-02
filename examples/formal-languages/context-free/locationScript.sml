@@ -68,9 +68,15 @@ Proof
   simp[locnle_def]
 QED
 
-Definition locsle_def:
+Definition locsle_def[simp]:
   locsle (Locs l1 _) (Locs l2 _) ⇔ locnle l1 l2
 End
+
+Theorem locsle_REFL[simp]:
+  locsle l l
+Proof
+  Cases_on ‘l’ >> simp[]
+QED
 
 val merge_locs_def = Define`
   merge_locs (Locs l1 l2) (Locs l3 l4) = Locs l1 l4

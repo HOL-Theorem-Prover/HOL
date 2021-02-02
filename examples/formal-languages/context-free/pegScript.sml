@@ -82,6 +82,12 @@ Definition sloc_def:
   sloc (h::t) = SND h
 End
 
+Theorem sloc_thm[simp]:
+  sloc [] = Locs end_locn end_locn ∧
+  sloc ((c,l) :: t) = l
+Proof
+  simp[sloc_def]
+QED
 
 (* Option type should be replaced with sum type (loc. for NONE *)
 Inductive peg_eval:
