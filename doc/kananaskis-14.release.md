@@ -3,7 +3,7 @@
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: )
+(Released: 3 February 2021)
 
 We are pleased to announce the Kananaskis-14 release of HOL4.
 
