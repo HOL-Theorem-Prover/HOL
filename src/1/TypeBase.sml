@@ -225,10 +225,15 @@ fun AllCaseEqs() =
     TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
   end
 
-fun case_prop_disj_thm ty = Prim_rec.prove_case_ho_elim_thm
-    {case_def = case_def_of ty, nchotomy = nchotomy_of ty}
-fun case_prop_imp_thm ty = Prim_rec.prove_case_ho_imp_thm
-    {case_def = case_def_of ty, nchotomy = nchotomy_of ty}
+fun type_info_of ty = {case_def = case_def_of ty, nchotomy = nchotomy_of ty}
+
+fun case_rand_thm ty = let
+    val thm = Prim_rec.prove_case_rand_thm (type_info_of ty)
+    val f = concl thm |> boolSyntax.lhs |> rator
+  in GEN f thm end
+
+val case_prop_disj_thm = Prim_rec.prove_case_ho_elim_thm o type_info_of
+val case_prop_imp_thm = Prim_rec.prove_case_ho_imp_thm o type_info_of
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *
