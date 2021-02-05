@@ -15,8 +15,6 @@ open hurdUtils util_probTheory sigma_algebraTheory real_borelTheory;
 
 val _ = new_theory "real_measure";
 
-val std_ss' = std_ss ++ boolSimps.ETA_ss;
-
 (* ------------------------------------------------------------------------- *)
 (* Basic measure theory definitions.                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -1599,44 +1597,50 @@ val MEASURE_SPACE_REDUCE = store_thm
    >> Cases
    >> RW_TAC std_ss [m_space_def, measurable_sets_def, measure_def]);
 
-val MONOTONE_CONVERGENCE = store_thm
-  ("MONOTONE_CONVERGENCE",
-   ``!m s f.
+Theorem MONOTONE_CONVERGENCE :
+    !m s f.
        measure_space m /\ f IN (UNIV -> measurable_sets m) /\
        (!n. f n SUBSET f (SUC n)) /\
        (s = BIGUNION (IMAGE f UNIV)) ==>
-       measure m o f --> measure m s``,
-   RW_TAC std_ss [measure_space_def, IN_FUNSET, IN_UNIV]
-   >> (MP_TAC o
+       measure m o f --> measure m s
+Proof
+    RW_TAC std_ss [measure_space_def, IN_FUNSET, IN_UNIV]
+ >> (MP_TAC o
        INST_TYPE [beta |-> ``:num``] o
        Q.SPECL [`m`, `BIGUNION (IMAGE f UNIV)`, `\x. num_CASE x {} f`])
       MEASURE_COUNTABLE_INCREASING
-   >> Cond
-   >- (RW_TAC std_ss [IN_FUNSET, IN_UNIV, num_case_def, measure_space_def] >|
-       [Cases_on `x` >|
-        [RW_TAC std_ss [num_case_def]
-         >> PROVE_TAC [SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_EMPTY, subsets_def],
-         RW_TAC std_ss [num_case_def]],
-        Cases_on `n`
-        >> RW_TAC std_ss [num_case_def, EMPTY_SUBSET],
-        RW_TAC std_ss [EXTENSION,GSPECIFICATION]
-        >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV]
-        >> EQ_TAC >|
-        [RW_TAC std_ss []
-         >> Q.EXISTS_TAC `SUC x'`
-         >> RW_TAC std_ss [num_case_def],
-         RW_TAC std_ss []
-         >> POP_ASSUM MP_TAC
-         >> Cases_on `x'` >- RW_TAC std_ss [NOT_IN_EMPTY, num_case_def]
-         >> RW_TAC std_ss [num_case_def]
-         >> PROVE_TAC []]])
-   >> RW_TAC std_ss []
-   >> Know `measure m o f = (\n. (measure m o (\x. num_CASE x {} f)) (SUC n))`
-   >- (RW_TAC std_ss [FUN_EQ_THM]
-       >> RW_TAC std_ss [num_case_def, o_THM])
-   >> Rewr
-   >> Ho_Rewrite.REWRITE_TAC [GSYM SEQ_SUC]
-   >> RW_TAC std_ss' []);
+ >> Cond
+ >- (RW_TAC std_ss [IN_FUNSET, IN_UNIV, num_case_def, measure_space_def] >|
+     [ (* goal 1 *)
+       Cases_on `x` >|
+       [ RW_TAC std_ss [num_case_def] \\
+         PROVE_TAC [SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_EMPTY, subsets_def],
+         RW_TAC std_ss [num_case_def] ],
+       (* goal 2 *)
+       Cases_on `n` \\
+       RW_TAC std_ss [num_case_def, EMPTY_SUBSET],
+       (* goal 3 *)
+       RW_TAC std_ss [EXTENSION, GSPECIFICATION] \\
+       RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV] \\
+       EQ_TAC >| (* 2 subgoals *)
+       [ (* goal 1 (of 2) *)
+         RW_TAC std_ss [] \\
+         Q.EXISTS_TAC `SUC x'` \\
+         RW_TAC std_ss [num_case_def],
+         (* goal 2 (of 2) *)
+         RW_TAC std_ss [] \\
+         POP_ASSUM MP_TAC \\
+         Cases_on `x'` >- RW_TAC std_ss [NOT_IN_EMPTY, num_case_def] \\
+         RW_TAC std_ss [num_case_def] \\
+         PROVE_TAC [] ] ])
+ >> RW_TAC std_ss []
+ >> Know `measure m o f = (\n. (measure m o (\x. num_CASE x {} f)) (SUC n))`
+ >- (RW_TAC std_ss [FUN_EQ_THM] \\
+     RW_TAC std_ss [num_case_def, o_THM])
+ >> Rewr
+ >> Ho_Rewrite.REWRITE_TAC [GSYM SEQ_SUC]
+ >> RW_TAC (std_ss ++ boolSimps.ETA_ss) []
+QED
 
 val MEASURABLE_SETS_SUBSET_SPACE = store_thm
   ("MEASURABLE_SETS_SUBSET_SPACE",

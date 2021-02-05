@@ -16,10 +16,6 @@ open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
 
 val _ = new_theory "martingale";
 
-val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
-val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
-val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
-
 val _ = hide "S";
 
 (* "The theory of martingales as we know it now goes back to
@@ -1528,17 +1524,14 @@ Proof
                qexistsl_tac [‘\y. pos_fn_integral (X,A,u) (\x. indicator_fn (E n) (cons x y))’,
                              ‘\y. pos_fn_integral (X,A,u)
                                     (\x. indicator_fn (d INTER E n) (cons x y))’] \\
-               rw [] >| (* 3 subgoals *)
-               [ (* goal 1 (of 3) *)
+               rw [] >| (* 2 subgoals *)
+               [ (* goal 1 (of 2) *)
                 ‘E n = E n INTER E n’ by PROVE_TAC [INTER_IDEMPOT] >> POP_ORW \\
                  Q.PAT_X_ASSUM ‘!n. E n IN D n’ (MP_TAC o (Q.SPEC ‘n’)) \\
                  RW_TAC std_ss [Abbr ‘D’, GSPECIFICATION],
-                 (* goal 2 (of 3) *)
+                 (* goal 2 (of 2) *)
                  Q.PAT_X_ASSUM ‘d IN D n’ MP_TAC \\
-                 RW_TAC std_ss [Abbr ‘D’, GSPECIFICATION],
-                 (* goal 3 (of 3) *)
-                 DISJ1_TAC >> MATCH_MP_TAC pos_not_neginf \\
-                 MATCH_MP_TAC pos_fn_integral_pos >> rw [INDICATOR_FN_POS] ]) \\
+                 RW_TAC std_ss [Abbr ‘D’, GSPECIFICATION] ]) \\
            Q.X_GEN_TAC ‘y’ >> STRIP_TAC >> BETA_TAC \\
            HO_MATCH_MP_TAC pos_fn_integral_sub \\
            simp [INDICATOR_FN_POS, INDICATOR_FN_NOT_INFTY] \\
@@ -1559,17 +1552,14 @@ Proof
                qexistsl_tac [‘\x. pos_fn_integral (Y,B,v) (\y. indicator_fn (E n) (cons x y))’,
                              ‘\x. pos_fn_integral (Y,B,v)
                                     (\y. indicator_fn (d INTER E n) (cons x y))’] \\
-               rw [] >| (* 3 subgoals *)
-               [ (* goal 1 (of 3) *)
+               rw [] >| (* 2 subgoals *)
+               [ (* goal 1 (of 2) *)
                 ‘E n = E n INTER E n’ by PROVE_TAC [INTER_IDEMPOT] >> POP_ORW \\
                  Q.PAT_X_ASSUM ‘!n. E n IN D n’ (MP_TAC o (Q.SPEC ‘n’)) \\
                  RW_TAC std_ss [Abbr ‘D’, GSPECIFICATION],
-                 (* goal 2 (of 3) *)
+                 (* goal 2 (of 2) *)
                  Q.PAT_X_ASSUM ‘d IN D n’ MP_TAC \\
-                 RW_TAC std_ss [Abbr ‘D’, GSPECIFICATION],
-                 (* goal 3 (of 3) *)
-                 DISJ1_TAC >> MATCH_MP_TAC pos_not_neginf \\
-                 MATCH_MP_TAC pos_fn_integral_pos >> rw [INDICATOR_FN_POS] ]) \\
+                 RW_TAC std_ss [Abbr ‘D’, GSPECIFICATION] ]) \\
            Q.X_GEN_TAC ‘x’ >> STRIP_TAC >> BETA_TAC \\
            HO_MATCH_MP_TAC pos_fn_integral_sub \\
            simp [INDICATOR_FN_POS, INDICATOR_FN_NOT_INFTY] \\
@@ -4185,11 +4175,15 @@ Proof
      Q.EXISTS_TAC ‘{y | y IN Y /\ pos_fn_integral (X,A,u) (\x. (fn_plus f) (x,y)) = PosInf} UNION
                    {y | y IN Y /\ pos_fn_integral (X,A,u) (\x. (fn_minus f) (x,y)) = PosInf}’ \\
      CONJ_TAC >- (PROVE_TAC [NULL_SET_UNION, GSYM IN_NULL_SET]) \\
-     Q.X_GEN_TAC ‘y’ >> rw []
-     >- (‘!x. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
-            by METIS_TAC [FN_DECOMP] >> POP_ORW \\
-         simp [Once IN_MEASURABLE_BOREL_PLUS_MINUS]) \\
-     art []) >> DISCH_TAC
+     Q.X_GEN_TAC ‘y’ >> rw [] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+      ‘!x. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
+          by METIS_TAC [FN_DECOMP] >> POP_ORW \\
+       simp [Once IN_MEASURABLE_BOREL_PLUS_MINUS],
+       (* goal 2 (of 3) *)
+       CCONTR_TAC >> FULL_SIMP_TAC std_ss [],
+       (* goal 3 (of 3) *)
+       CCONTR_TAC >> FULL_SIMP_TAC std_ss [] ]) >> DISCH_TAC
  (* goal: AE x::(X,A,u). integrable (Y,B,v) (\y. f (x,y)) *)
  >> STRONG_CONJ_TAC
  >- (rw [Once FN_DECOMP, integrable_def] \\
@@ -4210,11 +4204,15 @@ Proof
      Q.EXISTS_TAC ‘{x | x IN X /\ pos_fn_integral (Y,B,v) (\y. (fn_plus f) (x,y)) = PosInf} UNION
                    {x | x IN X /\ pos_fn_integral (Y,B,v) (\y. (fn_minus f) (x,y)) = PosInf}’ \\
      CONJ_TAC >- (PROVE_TAC [NULL_SET_UNION, GSYM IN_NULL_SET]) \\
-     Q.X_GEN_TAC ‘x’ >> rw []
-     >- (‘!y. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
-            by METIS_TAC [FN_DECOMP] >> POP_ORW \\
-         simp [Once IN_MEASURABLE_BOREL_PLUS_MINUS]) \\
-     art []) >> DISCH_TAC
+     Q.X_GEN_TAC ‘x’ >> rw [] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+      ‘!y. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
+          by METIS_TAC [FN_DECOMP] >> POP_ORW \\
+       simp [Once IN_MEASURABLE_BOREL_PLUS_MINUS],
+       (* goal 2 (of 3) *)
+       CCONTR_TAC >> FULL_SIMP_TAC std_ss [],
+       (* goal 3 (of 3) *)
+       CCONTR_TAC >> FULL_SIMP_TAC std_ss [] ]) >> DISCH_TAC
  (* goal: integrable (X,A,u) (\x. integral (Y,B,v) (\y. f (x,y))) *)
  >> STRONG_CONJ_TAC
  >- (rw [integrable_def] >| (* 3 subgoals *)
