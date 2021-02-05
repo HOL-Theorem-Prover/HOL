@@ -36,11 +36,7 @@ open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
 
 val _ = new_theory "borel";
 
-val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
-val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
-val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
-
-val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
+val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 
@@ -4730,7 +4726,8 @@ Proof
      qunabbrevl_tac [`empties`, `filtered`] \\
      RW_TAC std_ss [Once EXTENSION, MEM_FILTER, MEM_COUNT_LIST,
                     IN_DIFF, IN_COUNT] \\
-     EQ_TAC >> RW_TAC std_ss []) >> Rewr'
+     EQ_TAC >> RW_TAC std_ss [] \\
+     PROVE_TAC []) >> Rewr'
  (* Part II: sort the list by lowerbounds *)
  >> Q.ABBREV_TAC `R = \s t. interval_lowerbound s <= interval_lowerbound t`
  >> Know `transitive R /\ total R`
@@ -6042,7 +6039,7 @@ Proof
  >- (qx_genl_tac [‘m’, ‘n’] >> DISCH_TAC \\
      fs [DISJOINT_ALT, Abbr ‘rf’] \\
      rw [real_set_def] >> rename1 ‘y IN f m’ \\
-     STRONG_DISJ_TAC >> rename1 ‘real y = real z’ \\
+     rename1 ‘real z = real y’ \\
      Cases_on ‘z = PosInf’ >- rw [] >> DISJ2_TAC \\
      Cases_on ‘z = NegInf’ >- rw [] >> DISJ2_TAC \\
     ‘?a. y = Normal a’ by METIS_TAC [extreal_cases] \\
