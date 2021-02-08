@@ -114,6 +114,25 @@ fun ssf_upd_rewrs f (SSFRAG_CON s) =
                   filter = filter, dprocs = dprocs, congs = congs,
                   relsimps = relsimps}
     end
+
+(* ----------------------------------------------------------------------
+    maintain a global database of (named) ssfrags
+   ---------------------------------------------------------------------- *)
+
+val ssfragDB = Sref.new (Symtab.empty : ssfrag Symtab.table)
+fun register_frag ssf =
+    case frag_name ssf of
+        NONE => raise ERR ("register_frag", "Can only register named ssfrags")
+      | SOME n =>
+        (case Symtab.lookup (Sref.value ssfragDB) n of
+             NONE => (Sref.update ssfragDB (Symtab.update(n,ssf)); ssf)
+           | SOME _ => (HOL_WARNING "simpLib" "register_frag"
+                                    ("Discarding existing entry for "^n);
+                        Sref.update ssfragDB $ Symtab.update(n,ssf);
+                        ssf))
+fun lookup_named_frag n = Symtab.lookup (Sref.value ssfragDB) n
+fun all_named_frags() = Symtab.keys (Sref.value ssfragDB)
+
 (*---------------------------------------------------------------------------*)
 (* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
