@@ -136,11 +136,14 @@ Inductive peg_eval:
      peg_eval G (s, e2) sr ∧ isSuccess sr ⇒
      peg_eval G (s, choice e1 e2 f) (resultmap (f o INR) sr)) ∧
   (∀e s. peg_eval G (s, error e) (Failure (sloc s) e)) ∧
+[~rpt:]
   (∀e f s s1 list.
      peg_eval_list G (s, e) (s1,list) ⇒
      peg_eval G (s, rpt e f) (Success s1 (f list))) ∧
+[~list_nil:]
   (∀e s fr. peg_eval G (s, e) fr ∧ isFailure fr ⇒
             peg_eval_list G (s, e) (s,[])) ∧
+[~list_cons:]
   (∀e s0 s1 s2 c cs.
      peg_eval G (s0, e) (Success s1 c) ∧
      peg_eval_list G (s1, e) (s2,cs) ⇒
