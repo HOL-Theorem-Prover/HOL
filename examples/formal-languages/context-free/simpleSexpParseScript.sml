@@ -3,6 +3,8 @@ open ASCIInumbersTheory simpleSexpTheory
 open pegTheory pegexecTheory;
 open simpleSexpPEGTheory
 
+open listTheory pairTheory stringTheory
+
 val _ = new_theory"simpleSexpParse"
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
@@ -11,7 +13,7 @@ val _ = temp_delsimps ["NORMEQ_CONV"]
 
 val MAP_DROP = Q.store_thm("MAP_DROP",
   `∀l i. MAP f (DROP i l) = DROP i (MAP f l)`,
-  Induct \\ simp[listTheory.DROP_def] \\ rw[]);
+  Induct \\ simp[DROP_def] \\ rw[]);
 
 val MAP_FRONT = Q.store_thm("MAP_FRONT",
   `∀ls. ls ≠ [] ⇒ MAP f (FRONT ls) = FRONT (MAP f ls)`,
@@ -32,14 +34,14 @@ val option_sequence_SOME = Q.store_thm("option_sequence_SOME",
 
 val isDigit_HEX = Q.store_thm("isDigit_HEX",
   `∀n. n < 10 ⇒ isDigit (HEX n)`,
-  simp[GSYM rich_listTheory.MEM_COUNT_LIST]
+  simp[GSYM rich_MEM_COUNT_LIST]
   \\ gen_tac \\ EVAL_TAC
   \\ strip_tac \\ var_eq_tac \\ EVAL_TAC);
 
 val EVERY_isDigit_n2s = Q.store_thm("EVERY_isDigit_n2s",
   `∀n. EVERY isDigit (n2s 10 HEX n)`,
-  rw[n2s_def,rich_listTheory.EVERY_REVERSE,listTheory.EVERY_MAP]
-  \\ match_mp_tac (MP_CANON listTheory.EVERY_MONOTONIC)
+  rw[n2s_def,rich_EVERY_REVERSE,EVERY_MAP]
+  \\ match_mp_tac (MP_CANON EVERY_MONOTONIC)
   \\ qexists_tac`$> 10`
   \\ simp[]
   \\ metis_tac[isDigit_HEX,arithmeticTheory.GREATER_DEF,
@@ -51,7 +53,7 @@ val EVERY_isDigit_num_to_dec_string = Q.store_thm("EVERY_isDigit_num_to_dec_stri
 
 val n2s_not_null = Q.store_thm("n2s_not_null",
   `∀n. ¬NULL(n2s 10 HEX n)`,
-  rw[n2s_def,listTheory.NULL_EQ]
+  rw[n2s_def,NULL_EQ]
   \\ strip_tac
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.LENGTH_n2l
   \\ simp[]);
@@ -72,7 +74,7 @@ val isDigit_ORD_MOD_10 = Q.store_thm("isDigit_ORD_MOD_10",
 val isDigit_UNHEX_alt = Q.store_thm("isDigit_UNHEX_alt",
   `isDigit h ⇒
    (combin$C $- 48 o ORD) h = UNHEX h`,
-  simp[stringTheory.isDigit_def] \\ rw[]
+  simp[isDigit_def] \\ rw[]
   \\ Cases_on`h` \\ fs[]
   \\ Cases_on`n = 57` \\ fs[UNHEX_def]
   \\ Cases_on`n = 56` \\ fs[UNHEX_def]
@@ -101,20 +103,20 @@ val num_to_dec_string_eq_cons = Q.store_thm("num_to_dec_string_eq_cons",
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.n2l_BOUND
   \\ rw[]
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.l2n_n2l \\ rw[]
-  \\ Q.ISPEC_THEN`n2l 10 n`FULL_STRUCT_CASES_TAC listTheory.SNOC_CASES
-  \\ fs[listTheory.EVERY_SNOC] \\ rpt var_eq_tac
+  \\ Q.ISPEC_THEN`n2l 10 n`FULL_STRUCT_CASES_TAC SNOC_CASES
+  \\ fs[EVERY_SNOC] \\ rpt var_eq_tac
   \\ simp[UNHEX_HEX]
-  \\ simp[listTheory.SNOC_APPEND,l2n_APPEND,numposrepTheory.l2n_def]
-  \\ simp[s2n_def,listTheory.MAP_MAP_o]
+  \\ simp[SNOC_APPEND,l2n_APPEND,numposrepTheory.l2n_def]
+  \\ simp[s2n_def,MAP_MAP_o]
   \\ AP_TERM_TAC
-  \\ fs[listTheory.LIST_EQ_REWRITE,listTheory.EL_MAP,listTheory.EVERY_MEM,listTheory.MEM_EL,PULL_EXISTS]
+  \\ fs[LIST_EQ_REWRITE,EL_MAP,EVERY_MEM,MEM_EL,PULL_EXISTS]
   \\ rw[] \\ res_tac \\ simp[UNHEX_HEX]);
 
 Theorem peg_eval_list_tok_nil:
   ∀ls. (ls = [] ∨ ¬ P(FST(HD ls))) ⇒
        peg_eval_list G (ls, tok P a) (ls,[])
 Proof
-  rw[Once peg_eval_list,peg_eval_tok_NONE,listTheory.EVERY_MEM]
+  rw[Once peg_eval_list,peg_eval_tok_NONE,EVERY_MEM]
   >- simp[Once peg_eval_cases]
   \\ Cases_on`ls` \\ fs[]
   >- simp[Once peg_eval_cases]
@@ -126,10 +128,10 @@ Theorem peg_eval_list_tok_imp_every:
     peg_eval_list G (ls, tok P a) (r,z) ⇒
     ∃l. ls = l ++ r ∧ EVERY (P o FST) l ∧ (¬NULL r ⇒ ¬P (FST(HD r)))
 Proof
-  Induct \\ rw[Once peg_eval_list,listTheory.NULL_EQ,peg_eval_tok_SOME]
+  Induct \\ rw[Once peg_eval_list,NULL_EQ,peg_eval_tok_SOME]
   >- (rename [‘isFailure fr’] >> Cases_on ‘fr’ >> gs[peg_eval_tok_NONE])
   \\ first_x_assum $ drule_then strip_assume_tac
-  \\ gvs[listTheory.NULL_EQ]
+  \\ gvs[NULL_EQ]
 QED
 
 Theorem peg_eval_list_tok_every_imp:
@@ -149,7 +151,7 @@ val FOLDR_STRCAT_destSXSYM = Q.prove(
 
 val FOLDR_STRCAT_destSXSYM_FST = Q.prove(
   `∀ls. FOLDR (λs a. STRCAT (destSXSYM s) a) "" (MAP (λ(c,l). SX_SYM (STRING c "")) ls) = MAP FST ls`,
-  Induct >> simp[destSXSYM_def,pairTheory.FORALL_PROD]);
+  Induct >> simp[destSXSYM_def,FORALL_PROD]);
 
 (* -- *)
 
@@ -372,7 +374,7 @@ Proof
        peg_eval_tok_NONE] >>
   simp[pnt_def, peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied, ignoreL_def,
        peg_eval_seq_SOME, peg_eval_rpt, PULL_EXISTS] >>
-  `¬isSpace q` by (strip_tac >> Cases_on `q` >> fs[stringTheory.isGraph_def]) >>
+  `¬isSpace q` by (strip_tac >> Cases_on `q` >> fs[isGraph_def]) >>
   simp[Once peg_eval_list, peg_eval_tok_SOME] >>
   simp[EXISTS_result, peg_eval_tok_NONE] >>
   simp[Once peg_eval_choicel_CONS, sexpnum_nondigit_fails] >>
@@ -396,19 +398,19 @@ QED
 val valid_symbol_no_spaces = Q.store_thm("valid_symbol_no_spaces",
   `∀s. valid_symbol s ⇒ EVERY ($~ o isSpace) s`,
   Cases_on`s` \\ rw[valid_symbol_def]
-  >- ( fs[stringTheory.isGraph_def,stringTheory.isSpace_def] )
+  >- ( fs[isGraph_def,isSpace_def] )
   \\ Induct_on`t`
   \\ rw[]
-  >- ( fs[stringTheory.isGraph_def,stringTheory.isSpace_def] ))
+  >- ( fs[isGraph_def,isSpace_def] ))
 
 val peg_eval_list_num_to_dec_string_no_spaces = Q.prove(
   `peg_eval_list sexpPEG (map_loc (toString n) 0,tok isSpace ARB)
                              (map_loc (toString n) 0 ,[])`,
   match_mp_tac peg_eval_list_tok_nil
   \\ assume_tac EVERY_isDigit_num_to_dec_string
-  \\ fs[listTheory.EVERY_MEM] \\ rw[]
+  \\ fs[EVERY_MEM] \\ rw[]
   \\ Cases_on`toString n` \\ fs[]
-  \\ fs[stringTheory.isDigit_def,stringTheory.isSpace_def]
+  \\ fs[isDigit_def,isSpace_def]
   \\ spose_not_then strip_assume_tac
   \\ fs[locationTheory.map_loc_def]
   \\ first_x_assum(qspec_then`h`mp_tac)
@@ -424,7 +426,7 @@ Proof
       >- simp[Once peg_eval_cases, FDOM_sexpPEG,sexpPEG_applied,
               peg_eval_tok_SOME, peg_eval_tok_NONE] >>
       Cases_on ‘h’ >> simp[sexpdigit_nondigit_fails]) >>
-  simp[pairTheory.FORALL_PROD] >> rw[] >>
+  simp[FORALL_PROD] >> rw[] >>
   simp[peg_eval_NT_SOME] >>
   simp[FDOM_sexpPEG, sexpPEG_applied, peg_eval_tok_SOME]
 QED
@@ -531,7 +533,7 @@ val print_nt_def = tDefine"print_nt"`
  (WF_REL_TAC`inv_image ($< LEX $<) (λ(x,y). (sexp_size y, nt_rank x))`
   \\ rw[]
   \\ TRY (
-    Induct_on`str` \\ rw[listTheory.list_size_def] \\ fs[] \\ NO_TAC)
+    Induct_on`str` \\ rw[list_size_def] \\ fs[] \\ NO_TAC)
   \\ imp_res_tac dest_quote_sizelt \\ fs[sexp_size_def]
   \\ qpat_x_assum`_ = strip_dot _`(assume_tac o SYM)
   \\ imp_res_tac strip_dot_last_sizelt
@@ -544,38 +546,38 @@ val print_nt_sexp0_no_leading_space = Q.store_thm("print_nt_sexp0_no_leading_spa
   `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ ¬ isSpace (HD str)`,
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
   \\ TRY (
-    rw[GSYM listTheory.NULL_EQ,num_to_dec_string_not_null]
+    rw[GSYM NULL_EQ,num_to_dec_string_not_null]
     \\ NO_TAC)
   \\ TRY (
     qspec_then`n`mp_tac num_to_dec_string_not_null
-    \\ rw[listTheory.NULL_EQ]
+    \\ rw[NULL_EQ]
     \\ Cases_on`toString n` \\ fs[]
     \\ assume_tac EVERY_isDigit_num_to_dec_string
     \\ rfs[]
-    \\ fs[stringTheory.isSpace_def,stringTheory.isDigit_def]
+    \\ fs[isSpace_def,isDigit_def]
     \\ NO_TAC)
-  \\ every_case_tac \\ fs[listTheory.NULL_EQ]
+  \\ every_case_tac \\ fs[NULL_EQ]
   \\ TRY (EVAL_TAC \\ NO_TAC)
-  \\ fs[stringTheory.isGraph_def,stringTheory.isSpace_def]);
+  \\ fs[isGraph_def,isSpace_def]);
 
 val print_nt_sexp0_no_leading_rparen = Q.store_thm("print_nt_sexp0_no_leading_rparen",
   `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ HD str ≠ #")"`,
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
   \\ TRY (
-    rw[GSYM listTheory.NULL_EQ,num_to_dec_string_not_null]
+    rw[GSYM NULL_EQ,num_to_dec_string_not_null]
     \\ NO_TAC)
   \\ TRY (
     qspec_then`n`mp_tac num_to_dec_string_not_null
-    \\ rw[listTheory.NULL_EQ]
+    \\ rw[NULL_EQ]
     \\ Cases_on`toString n` \\ fs[]
     \\ assume_tac EVERY_isDigit_num_to_dec_string
     \\ rfs[]
     \\ spose_not_then strip_assume_tac
-    \\ fs[stringTheory.isSpace_def,stringTheory.isDigit_def]
+    \\ fs[isSpace_def,isDigit_def]
     \\ NO_TAC)
-  \\ every_case_tac \\ fs[listTheory.NULL_EQ]
+  \\ every_case_tac \\ fs[NULL_EQ]
   \\ TRY (EVAL_TAC \\ NO_TAC)
-  \\ fs[stringTheory.isGraph_def,stringTheory.isSpace_def]);
+  \\ fs[isGraph_def,isSpace_def]);
 
 Theorem peg_eval_sexp_sexp0:
   peg_eval sexpPEG (str ++ rst, pnt sxnt_sexp0) (Success rst s) ∧
@@ -620,6 +622,13 @@ Proof
   Cases_on ‘res’ >> simp[peg_eval_tok_NONE, sloc_def] >> metis_tac[]
 QED
 
+Theorem gen_peg_eval_tok:
+  peg_eval G ((c,l) :: toks, tok P f) res <=>
+  if P c then res = Success toks (f (c, l)) else res = Failure l G.tokFALSE
+Proof
+  simp[Once peg_eval_cases] >> metis_tac[]
+QED
+
 Theorem sexpnum_requires_digits:
   ¬isDigit c ⇒
   (peg_eval sexpPEG ((c,l)::rest, pnt sxnt_sexpnum) r ⇔
@@ -659,7 +668,7 @@ Proof
   rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS,
      tokeq_def, pegf_def, ignoreL_def, ignoreR_def] >>
   simp[peg_eval_seq_ASSOC, gen_peg_eval_seqtok] >>
-  csimp[sexpnum_requires_digits, stringTheory.isDigit_def]
+  csimp[sexpnum_requires_digits, isDigit_def]
 QED
 
 val stoppers_def = Define`
@@ -686,12 +695,74 @@ Proof
   csimp[Once peg_eval_cases]
 QED
 
+Theorem peg_eval_seq =
+        peg_eval_cases |> SPEC_ALL |> cj 1 |> Q.SPEC ‘(inp, seq s1 s2 f)’
+                       |> SIMP_RULE (srw_ss())[]
+
+Theorem seqgrabWS:
+  inp ≠ [] ∧ ¬isSpace (FST (HD inp)) ⇒
+  (peg_eval G (inp, seq (grabWS sym1) sym2 f) res ⇔
+     peg_eval G (inp, seq sym1 sym2 f) res) ∧
+  (peg_eval G (inp, pegf (grabWS sym) g) res ⇔
+     peg_eval G (inp, pegf sym g) res) ∧
+  (peg_eval G (inp, grabWS sym) res ⇔ peg_eval G (inp, sym) res)
+Proof
+  Cases_on ‘inp’ >>
+  simp[SimpLHS, Once peg_eval_cases, grabWS_def, ignoreL_def, PULL_EXISTS] >>
+  rename [‘¬isSpace (FST h)’] >> Cases_on ‘h’ >> simp[pegf_def] >>
+  strip_tac >>
+  simp[peg_eval_seq, peg_eval_rpt, PULL_EXISTS] >>
+  ONCE_REWRITE_TAC [peg_eval_list] >> csimp[gen_peg_eval_tok] >>
+  dsimp[] >> csimp[] >> Cases_on ‘res’ >> simp[]
+QED
+
+Theorem grabWS_grabs[simp]:
+  (peg_eval G ((#" ", l)::rest, grabWS sym) res ⇔
+     peg_eval G (rest, grabWS sym) res)
+Proof
+  csimp[grabWS_def, peg_eval_rpt, ignoreL_def, peg_eval_seq, PULL_EXISTS,
+        EXISTS_result] >>
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [peg_eval_list])) >>
+  csimp[gen_peg_eval_tok, isSpace_def, PULL_EXISTS]
+QED
+
 Theorem sxnt_normstrcharNIL[simp]:
   peg_eval sexpPEG ([], pnt sxnt_normstrchar) r ⇔
   r = Failure (Locs end_locn end_locn) sexpPEG.tokEOF
 Proof
   simp[pnt_def, Once peg_eval_cases, sexpPEG_applied, FDOM_sexpPEG]
 QED
+
+Theorem strip_dot_EQ_NILNONE[simp]:
+  strip_dot s = ([], NONE) ⇔ s = ⟪ ⟫
+Proof
+  ONCE_REWRITE_TAC [strip_dot_def] >> simp[AllCaseEqs(), UNCURRY]
+QED
+
+Theorem strip_dot_EQ_E:
+  strip_dot s = (sexps, rest) ⇒
+    s = FOLDR SX_CONS (case rest of
+                         NONE => ⟪ ⟫
+                       | SOME s0 => s0) sexps
+Proof
+  map_every qid_spec_tac [‘s’, ‘rest’] >> Induct_on‘sexps’ >> simp[] >>
+  Cases_on‘s’ >> simp[Once strip_dot_def, AllCaseEqs(), DISJ_IMP_THM] >>
+  rename [‘_ (strip_dot s0) = _’] >>
+  Cases_on‘strip_dot s0’ >> simp[]
+QED
+
+Theorem option_sequence_EQ_NIL[simp]:
+  option_sequence l = SOME [] ⇔ l = []
+Proof
+  Cases_on ‘l’ >> simp[]
+QED
+
+Theorem peg_eval_rpt_never_fails[simp]:
+  ¬peg_eval G (inp, rpt sym f) (Failure fl fe)
+Proof
+  simp[peg_eval_rpt]
+QED
+
 
 Theorem peg_eval_print_nt:
   ∀nt s strl rst str.
@@ -718,10 +789,10 @@ Proof
     simp[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
          peg_eval_rpt,peg_eval_choicel_CONS,ignoreL_def,ignoreR_def,
          peg_eval_seq_NONE,peg_eval_seq_SOME,tokeq_def,peg_eval_tok_NONE,
-         peg_eval_tok_SOME, pairTheory.EXISTS_PROD, AllCaseEqs()]
+         peg_eval_tok_SOME, EXISTS_PROD, AllCaseEqs()]
     \\ rw[PULL_EXISTS]
     \\ simp[EXISTS_result, AllCaseEqs()]
-    \\ gvs[listTheory.MAP_EQ_CONS] >~
+    \\ gvs[MAP_EQ_CONS] >~
     [‘c ≠ #"\\"’, ‘c ≠ #"\""’]
     >- (simp[gen_peg_eval_seqtok]
         \\ simp[peg_eval_NT_SOME, sexpPEG_applied, FDOM_sexpPEG,
@@ -748,14 +819,14 @@ Proof
                peg_eval_tok_SOME] >>
           csimp[AllCaseEqs(), rmax_EQ_Success]) >>
       simp[AllCaseEqs(), DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS,
-           pairTheory.FORALL_PROD] >> gs[] >> qx_gen_tac ‘c1’ >> strip_tac >>
+           FORALL_PROD] >> gs[] >> qx_gen_tac ‘c1’ >> strip_tac >>
       gs[] >> simp[Once print_nt_def, AllCaseEqs(), PULL_EXISTS] >>
-      simp[listTheory.MAP_EQ_APPEND, PULL_EXISTS] >> rpt strip_tac >>
+      simp[MAP_EQ_APPEND, PULL_EXISTS] >> rpt strip_tac >>
       gs[stoppers_def] >>
       simp[peg_eval_NT_SOME, pnt_def, FDOM_sexpPEG, sexpPEG_applied,
            peg_eval_rpt] >>
       irule_at Any (peg_eval_rules |> SPEC_ALL |> CONJUNCTS |> last) >>
-      gs[pnt_def] >> REWRITE_TAC [GSYM listTheory.APPEND_ASSOC] >>
+      gs[pnt_def] >> REWRITE_TAC [GSYM APPEND_ASSOC] >>
       last_x_assum $ irule_at Any >> simp[destSXSYM_def] >>
       qpat_x_assum ‘print_nt sxnt_strchar _ = _’ (K ALL_TAC) >>
       first_x_assum $ qspec_then ‘ARB’ (K ALL_TAC) >>
@@ -777,275 +848,87 @@ Proof
       gvs[stoppers_def] >>
       irule_at Any
                (peg_eval_list_tok_every_imp
-                  |> REWRITE_RULE[GSYM listTheory.APPEND_ASSOC,
-                                  listTheory.APPEND]) >>
-      gvs[IN_DEF, listTheory.EVERY_MAP, Excl "valid_symchar_def",
-          combinTheory.o_DEF, FOLDR_STRCAT_destSXSYM_FST])
+                  |> REWRITE_RULE[GSYM APPEND_ASSOC,
+                                  APPEND]) >>
+      gvs[IN_DEF, EVERY_MAP, Excl "valid_symchar_def",
+          combinTheory.o_DEF, FOLDR_STRCAT_destSXSYM_FST]) >~
+  [‘print_nt sxnt_sexpseq’, ‘strip_dot’]
   >- (
-    rw[print_nt_def]
-    \\ pairarg_tac \\ fs[] \\ rpt var_eq_tac
-    \\ fs[option_sequence_SOME] \\ rw[]
-    \\ rw[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS]
-    \\ Cases_on`NULL ls` \\ fs[]
-    >- (
-      fs[listTheory.NULL_EQ,print_space_separated_def]
-      \\ Cases_on`n` \\ fs[] \\ rw[]
-      \\ disj1_tac
-      \\ rw[pegf_def,peg_eval_seq_SOME,tokeq_def,grabWS_def,ignoreL_def,peg_eval_tok_SOME,peg_eval_rpt,PULL_EXISTS]
-      \\ fs[Once strip_dot_def]
-      \\ Cases_on`s` \\ fs[]
-      \\ TRY(pairarg_tac \\ fs[])
-      \\ pop_assum mp_tac \\ rw[]
-      \\ qexists_tac`[]`
-      \\ qexists_tac`x0` \\ rw[]
-      \\ match_mp_tac peg_eval_list_tok_nil
-      \\ Cases_on `x0` \\ fs[]
-      \\ var_eq_tac
-      \\ EVAL_TAC)
-    \\ disj2_tac
-    \\ conj_tac
-    >- (
-      rw[pegf_def,peg_eval_seq_NONE,grabWS_def,ignoreL_def,peg_eval_rpt,PULL_EXISTS,tokeq_def,peg_eval_tok_NONE]
-      \\ Cases_on`ls` \\ fs[optionTheory.IS_SOME_EXISTS]
-      \\ imp_res_tac print_nt_sexp0_no_leading_space
-      \\ qpat_abbrev_tac`ls = _ ++ rst`
-      \\ map_every qexists_tac[`ls`,`[]`]
-      \\ simp[Abbr`ls`]
-      \\ Cases_on`x` \\ fs[]
-      \\ imp_res_tac print_nt_sexp0_no_leading_rparen
-      \\ fs[]
-      \\ reverse conj_tac
-      >- (
-        Cases_on`t` \\ fs[print_space_separated_def]
-        \\ Cases_on`strl` \\ rfs[])
-      \\ match_mp_tac peg_eval_list_tok_nil
-      \\ fs[]
-      \\ Cases_on`t` \\ rfs[print_space_separated_def]
-      \\ Cases_on`strl` \\ fs[])
-    \\ rw[peg_eval_seq_SOME]
-    \\ qpat_x_assum`strip_dot _ = _`mp_tac
-    \\ simp[Once strip_dot_def]
-    \\ CASE_TAC \\ fs[]
-    \\ TRY (
-      rw[] \\ spose_not_then strip_assume_tac \\ fs[] \\ rw[] \\ fs[] \\ NO_TAC)
-    \\ pairarg_tac \\ fs[] \\ rw[] \\ fs[]
-    \\ fs[optionTheory.IS_SOME_EXISTS]
-    \\ rw[grabWS_def,ignoreL_def,peg_eval_seq_SOME,PULL_EXISTS,peg_eval_rpt]
-    \\ fs[pnt_def,stoppers_def]
-    \\ qpat_abbrev_tac`ls = _ ++ rst`
-    \\ CONV_TAC (RESORT_EXISTS_CONV (sort_vars ["i1''","l"]))
-    \\ map_every qexists_tac[`ls`,`[]`]
-    \\ simp[RIGHT_EXISTS_AND_THM]
-    \\ conj_tac
-    >- (
-      match_mp_tac peg_eval_list_tok_nil
-      \\ simp[Abbr`ls`,print_space_separated_cons]
-      \\ imp_res_tac print_nt_sexp0_no_leading_space
-      \\ Cases_on`x` \\ fs[]
-      \\ Cases_on`strl` \\ rfs[print_space_separated_cons])
-    \\ qmatch_asmsub_rename_tac`print_nt sxnt_sexp0 s1 = SOME x1`
-    \\ rfs[]
-    \\ first_assum(qspec_then`s1`mp_tac)
-    \\ impl_tac >- rw[]
-    \\ disch_then(qspec_then`TAKE (LENGTH x1) strl`mp_tac)
-    \\ `MAP FST (TAKE (LENGTH x1) strl) = x1`
-    by ( fs[print_space_separated_cons,listTheory.MAP_TAKE,listTheory.TAKE_APPEND1] )
-    \\ first_assum SUBST1_TAC
-    \\ `MAP FST strl = x1 ++ MAP FST (DROP (STRLEN x1) strl)`
-    by (
-      pop_assum(fn th => CONV_TAC(PATH_CONV"rlr"(REWR_CONV(SYM th))))
-      \\ rewrite_tac[GSYM listTheory.MAP_APPEND]
-      \\ metis_tac[listTheory.TAKE_DROP] )
-    \\ pop_assum mp_tac \\ pop_assum kall_tac \\ strip_tac
-    \\ fsrw_tac[boolSimps.ETA_ss][print_space_separated_cons]
-    \\ disch_then(qspec_then`DROP (LENGTH x1) strl ++ rst`mp_tac)
-    \\ impl_tac
-    >- (
-      strip_tac
-      \\ Cases_on`DROP (LENGTH x1) strl` \\ fs[]
-      \\ qpat_x_assum`_ = _ ++ ")"`mp_tac
-      \\ reverse IF_CASES_TAC \\ fs[]
-      >- ( strip_tac \\ simp[IN_DEF] \\ EVAL_TAC )
-      \\ fs[listTheory.NULL_EQ]
-      \\ Cases_on`l2` \\ fs[]
-      >- ( strip_tac \\ simp[IN_DEF] \\ EVAL_TAC )
-      \\ Cases_on`n` \\ fs[]
-      >- ( strip_tac \\ simp[IN_DEF] \\ EVAL_TAC ) )
-    \\ REWRITE_TAC[listTheory.APPEND_ASSOC, listTheory.TAKE_DROP]
-    \\ simp[] \\ strip_tac
-    \\ HINT_EXISTS_TAC \\ simp[Abbr`ls`]
-    \\ qmatch_assum_rename_tac`EVERY _ (MAP _ ls)`
-    \\ qmatch_assum_rename_tac`MAP FST l1 = _ ++ ")"`
-    \\ qhdtm_x_assum`strip_dot`mp_tac
-    \\ qpat_x_assum`_ = SOME l2`mp_tac
-    \\ qpat_x_assum`∀x. SOME x = n ⇒ _`mp_tac
-    \\ qpat_x_assum`MAP FST l1 = _`mp_tac
-    \\ qpat_x_assum`EVERY _ _`mp_tac
-    \\ fsrw_tac[boolSimps.DNF_ss][]
-    \\ qpat_x_assum`∀x y z. MEM x ls ⇒ _`mp_tac
-    \\ rpt(pop_assum kall_tac)
-    \\ map_every qid_spec_tac[`n`,`s0`,`l2`,`l1`,`rst`]
-    \\ Induct_on`ls`
-    >- (
-      rw[]
-      \\ qpat_x_assum`_ = SOME l2`mp_tac
-      \\ BasicProvers.TOP_CASE_TAC \\ strip_tac \\ rpt var_eq_tac
-      \\ fs[] \\ rw[]
-      >- (
-        qmatch_assum_rename_tac`_ = FST cl`
-        \\ Cases_on`cl` \\ fs[] \\ var_eq_tac
-        \\ rw[Once peg_eval_list,peg_eval_seq_NONE,peg_eval_rpt]
-        \\ rw[Once peg_eval_list,peg_eval_tok_NONE,stringTheory.isSpace_def,peg_eval_tok_SOME]
-        \\ rw[peg_eval_sexp0_NONE]
-        \\ rw[peg_eval_seq_SOME,peg_eval_rpt,PULL_EXISTS]
-        \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-        \\ rw[stringTheory.isSpace_def]
-        \\ rw[peg_eval_sexp0_NONE]
-        \\ rw[peg_eval_choicel_CONS,pegf_def,peg_eval_seq_SOME,
-              peg_eval_seq_NONE,peg_eval_rpt,PULL_EXISTS,tokeq_def,
-              ignoreR_def,ignoreL_def]
-        \\ rw[peg_eval_tok_NONE,peg_eval_tok_SOME]
-        \\ rw[replace_nil_def]
-        \\ rw[Once peg_eval_list]
-        \\ rw[peg_eval_tok_NONE,peg_eval_tok_SOME]
-        \\ rw[stringTheory.isSpace_def]
-        \\ fs[Once strip_dot_def]
-        \\ pop_assum mp_tac \\ CASE_TAC \\ fs[] \\ rw[]
-        \\ pairarg_tac \\ fs[] )
-      \\ Cases_on`l1` \\ fs[] \\ Cases_on`h` \\ fs[] \\ var_eq_tac
-      \\ Cases_on`t` \\ fs[] \\ Cases_on`h` \\ fs[] \\ var_eq_tac
-      \\ Cases_on`t'` \\ fs[] \\ Cases_on`h` \\ fs[] \\ var_eq_tac
-      \\ rw[Once peg_eval_list,peg_eval_seq_NONE,peg_eval_rpt,PULL_EXISTS,peg_eval_seq_SOME]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[peg_eval_sexp0_NONE]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[peg_eval_sexp0_NONE]
-      \\ rw[peg_eval_choicel_CONS,pegf_def,peg_eval_seq_SOME,
-            peg_eval_seq_NONE,peg_eval_rpt,PULL_EXISTS,tokeq_def,
-            ignoreR_def,ignoreL_def]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-      \\ rw[replace_nil_def] \\ fs[]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ imp_res_tac print_nt_sexp0_no_leading_space
-      \\ Cases_on`z` \\ fs[]
-      \\ `s0 = x`
-      by (
-        qhdtm_x_assum`strip_dot`mp_tac
-        \\ simp[Once strip_dot_def]
-        \\ CASE_TAC \\ rw[]
-        \\ pairarg_tac \\ fs[] )
-      \\ rw[]
-      \\ first_x_assum(qspecl_then[`FRONT t`,`[LAST t]++rst`]mp_tac)
-      \\ `FST (LAST t) = #")"`
-      by (
-        `LAST (MAP FST t) = #")"` by simp[listTheory.LAST_DEF]
-        \\ `t ≠ []` by (strip_tac \\ fs[])
-        \\ fs[listTheory.LAST_MAP] )
-      \\ simp[]
-      \\ Cases_on`t` \\ fs[]
-      \\ simp[listTheory.APPEND_FRONT_LAST]
-      \\ impl_tac >- (simp[IN_DEF,MAP_FRONT] \\ EVAL_TAC \\ rw[]
-                      \\ fs[rich_listTheory.FRONT_APPEND] )
-      \\ strip_tac
-      \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
-      \\ simp[]
-      \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ rw[stringTheory.isSpace_def,PULL_EXISTS] )
-    \\ rw[] \\ fs[]
-    \\ fs[optionTheory.IS_SOME_EXISTS]
-    \\ Cases_on`l1` \\ fs[]
-    \\ qmatch_assum_rename_tac`FST cl = #" "`
-    \\ Cases_on`cl` \\ fs[] \\ var_eq_tac
-    \\ rw[Once peg_eval_list]
-    \\ srw_tac[boolSimps.DNF_ss][]
-    \\ disj2_tac
-    \\ simp[peg_eval_seq_SOME,peg_eval_rpt,PULL_EXISTS]
-    \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-    \\ rw[stringTheory.isSpace_def,PULL_EXISTS]
-    \\ imp_res_tac print_nt_sexp0_no_leading_space
-    \\ fs[print_space_separated_cons] \\ rfs[]
-    \\ last_assum(qspec_then`h`mp_tac) \\ simp_tac std_ss []
-    \\ disch_then(qspec_then`TAKE (LENGTH x) t`mp_tac)
-    \\ `MAP FST (TAKE (LENGTH x) t) = x`
-    by ( simp[listTheory.MAP_TAKE,listTheory.TAKE_APPEND1] )
-    \\ first_assum SUBST1_TAC
-    \\ `MAP FST t = x ++ MAP FST (DROP (STRLEN x) t)`
-    by (
-      pop_assum(fn th => CONV_TAC(PATH_CONV"rlr"(REWR_CONV(SYM th))))
-      \\ rewrite_tac[GSYM listTheory.MAP_APPEND]
-      \\ metis_tac[listTheory.TAKE_DROP] )
-    \\ pop_assum mp_tac \\ pop_assum kall_tac \\ strip_tac
-    \\ disch_then(qspec_then`DROP (LENGTH x) t ++ rst`mp_tac)
-    \\ impl_tac
-    >- (
-      simp[]
-      \\ Cases_on`DROP (LENGTH x) t` \\ fs[]
-      \\ qpat_x_assum`_ = _ ++ ")"`mp_tac
-      \\ reverse IF_CASES_TAC \\ fs[]
-      >- ( strip_tac \\ simp[IN_DEF] \\ EVAL_TAC )
-      \\ fs[listTheory.NULL_EQ]
-      \\ Cases_on`l2` \\ fs[]
-      >- ( strip_tac \\ simp[IN_DEF] \\ EVAL_TAC )
-      \\ Cases_on`n` \\ fs[]
-      >- ( strip_tac \\ simp[IN_DEF] \\ EVAL_TAC ) )
-    \\ REWRITE_TAC[listTheory.APPEND_ASSOC, listTheory.TAKE_DROP]
-    \\ simp[] \\ strip_tac
-    \\ first_assum(part_match_exists_tac(el 2 o strip_conj) o concl)
-    \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
-    \\ Cases_on`x` \\ fs[]
-    \\ Cases_on`t` \\ fs[]
-    \\ first_x_assum(fn th => first_x_assum(mp_tac o MATCH_MP th))
-    \\ disch_then(fn th => first_x_assum(mp_tac o MATCH_MP th))
-    \\ simp[]
-    \\ disch_then(qspec_then`rst`mp_tac)
-    \\ rw[replace_nil_def]
-    \\ qhdtm_x_assum`strip_dot`mp_tac
-    \\ simp[Once strip_dot_def]
-    \\ CASE_TAC \\ rw[]
-    \\ pairarg_tac \\ fs[] \\ rw[])
-  >- (
-    rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
-       peg_eval_rpt,peg_eval_choicel_CONS,ignoreL_def,ignoreR_def,
-       peg_eval_seq_NONE,peg_eval_seq_SOME,tokeq_def,peg_eval_tok_NONE,peg_eval_tok_SOME]
-    \\ Cases_on`strl` \\ fs[]\\ fs[]
-    \\ simp[stringTheory.isDigit_def]
-    \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
-    \\ simp[peg_eval_seq_NONE,pnt_def]
-    \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
-    \\ simp[peg_eval_tok_NONE]
-    \\ simp[stringTheory.isDigit_def]
-    \\ disj1_tac
-    \\ `t ≠ []` by (Cases_on`t` \\ fs[])
-    \\ imp_res_tac listTheory.APPEND_FRONT_LAST
-    \\ pop_assum(SUBST_ALL_TAC o SYM) \\ fs[]
-    \\ simp[PULL_EXISTS]
-    \\ first_x_assum (qspecl_then[`FRONT t`,`[LAST t] ++ rst`]mp_tac)
-    \\ impl_tac >- simp[stoppers_def] \\ rw[]
-    \\ metis_tac[])
+    rw[print_nt_def, pnt_def] >>
+    rename [‘_ (strip_dot s) = SOME _’] >> Cases_on ‘strip_dot s’ >>
+    gvs[] >> dxrule_then SUBST_ALL_TAC strip_dot_EQ_E >>
+    simp[peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied] >>
+    rename [‘NULL sexps’] >>
+    Cases_on ‘sexps’ >> gvs[NULL_EQ, print_space_separated_def]
+    >- (gvs[AllCaseEqs(), MAP_EQ_APPEND] >>
+        rename [‘#")" = FST rpcl’] >> Cases_on ‘rpcl’ >> gvs[] >>
+        simp[peg_eval_choicel_CONS, seqgrabWS, isSpace_def,
+             pegf_def, tokeq_def, gen_peg_eval_seqtok]) >>
+    gvs[DISJ_IMP_THM, FORALL_AND_THM] >>
+    rename [‘print_space_separated (s1::ss)’] >>
+    gvs[print_space_separated_cons] >> Cases_on ‘NULL ss’ >>
+    gvs[NULL_EQ]
+    >- ((* one sexp before end *) all_tac >>
+        gvs[MAP_EQ_APPEND] >>
+        rename [‘#")" = FST rpcl’] >> Cases_on ‘rpcl’ >> gvs[] >>
+        rename [‘print_nt sxnt_sexp0 sexp1 = SOME (MAP FST s1)’] >>
+        drule_then strip_assume_tac print_nt_sexp0_no_leading_rparen >>
+        ‘∃c l cs. s1 = (c,l)::cs’
+          by (Cases_on ‘s1’ >> gvs[] >> metis_tac[pair_CASES]) >>
+        gvs[] >>
+        drule_then strip_assume_tac print_nt_sexp0_no_leading_space >> gvs[] >>
+        simp[peg_eval_choicel_CONS, seqgrabWS] >> disj2_tac >>
+        simp[pegf_def, tokeq_def, gen_peg_eval_seqtok] >> dsimp[] >>
+        disj1_tac >> simp[peg_eval_seq_SOME, EXISTS_result, PULL_EXISTS] >>
+        gvs[MAP_EQ_CONS, PULL_EXISTS, FORALL_PROD]>>
+        simp[pnt_def] >> REWRITE_TAC[GSYM APPEND_ASSOC] >>
+        first_x_assum $ irule_at Any >> simp[] >> gvs[AllCaseEqs()]
+        >- (simp[stoppers_def, peg_eval_rpt, Once peg_eval_list, IN_DEF,
+                 valid_symchar_def, isDigit_def, PULL_EXISTS,
+                 seqgrabWS, isSpace_def, peg_eval_sexp0_NONE] >>
+            simp[peg_eval_choicel_CONS, seqgrabWS, isSpace_def,
+                 gen_peg_eval_seqtok] >> dsimp[replace_nil_def]) >>
+        gvs[MAP_EQ_CONS] >>
+        rename [‘#" " = FST spcl’, ‘#"." = FST fscl’, ‘FST sp2cl = FST spcl’] >>
+        map_every Cases_on [‘spcl’, ‘fscl’, ‘sp2cl’] >> gvs[] >>
+        simp[stoppers_def, valid_symchar_def, isDigit_def, IN_DEF,
+             isGraph_def, isSpace_def, seqgrabWS,
+             peg_eval_sexp0_NONE, peg_eval_rpt, Once peg_eval_list] >>
+        simp[peg_eval_choicel_CONS] >>
+        simp[peg_eval_seq_SOME, seqgrabWS, isSpace_def,
+             peg_eval_tok_SOME, EXISTS_result, ignoreL_def, ignoreR_def,
+             peg_eval_seq_NONE, peg_eval_tok_NONE] >>
+        dsimp[AllCaseEqs()] >>
+        rename [‘print_nt _ sexp2 = SOME (MAP FST sfx_sl)’] >>
+        qpat_x_assum ‘print_nt _ sexp2 = _’ $
+           mp_then (Pos hd) strip_assume_tac print_nt_sexp0_no_leading_space >>
+        ‘∃d dl sfx0. sfx_sl = (d,dl)::sfx0’
+          by (Cases_on ‘sfx_sl’ >> gvs[] >> metis_tac[pair_CASES]) >>
+        gvs[seqgrabWS, MAP_EQ_CONS, PULL_EXISTS, FORALL_PROD] >>
+        REWRITE_TAC [GSYM APPEND_ASSOC] >> first_x_assum $ irule_at Any >>
+        simp[stoppers_def, IN_DEF, isDigit_def, seqgrabWS, isSpace_def,
+             peg_eval_tok_SOME, replace_nil_def]) >>
+    cheat) >~
+  [‘print_nt sxnt_sexp0’, ‘print_nt sxnt_strcontents’]
+  >- (gen_tac >> strip_tac >>
+      simp[Once print_nt_def, PULL_EXISTS, MAP_EQ_CONS, FORALL_PROD,
+           MAP_EQ_APPEND] >> rpt strip_tac >>
+      simp[peg_eval_NT_SOME, pnt_def, FDOM_sexpPEG, sexpPEG_applied] >>
+      simp[Once peg_eval_choicel_CONS] >> disj2_tac >>
+      simp[REWRITE_RULE [pnt_def] sexpnum_requires_digits, isDigit_def] >>
+      simp[Once peg_eval_choicel_CONS, tokeq_def, ignoreL_def,
+           gen_peg_eval_seqtok] >> dsimp[] >>
+      simp[Once peg_eval_choicel_CONS, ignoreR_def, gen_peg_eval_seqtok,
+           peg_eval_seq_ASSOC] >> dsimp[peg_eval_seq_SOME] >> disj1_tac >>
+      gvs[pnt_def] >> REWRITE_TAC [GSYM APPEND_ASSOC] >>
+      first_x_assum $ irule_at Any >>
+      simp[stoppers_def, Once peg_eval_cases, gen_peg_eval_tok]) >~
+  [‘print_nt sxnt_sexpnum’]
   >- (
     rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
        peg_eval_seq_SOME,peg_eval_rpt,peg_eval_tok_SOME]
     \\ qspec_then`n`mp_tac num_to_dec_string_not_null
-    \\ rw[listTheory.NULL_EQ]
+    \\ rw[NULL_EQ]
     \\ Cases_on`toString n` \\ fs[]
     \\ assume_tac EVERY_isDigit_num_to_dec_string
     \\ rfs[PULL_EXISTS]
@@ -1057,7 +940,7 @@ Proof
     \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
     \\ rw[]
     \\ pairarg_tac \\ fs[destSXNUM_def]
-    \\ fs[pairTheory.UNCURRY,destSXCONS_def,destSXNUM_def,rich_listTheory.FOLDL_MAP]
+    \\ fs[UNCURRY,destSXCONS_def,destSXNUM_def,rich_FOLDL_MAP]
     \\ qmatch_assum_abbrev_tac`FOLDL f a t = _`
     \\ `∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)`
     by ( Induct \\ simp[Abbr`f`,arithmeticTheory.EXP])
@@ -1067,9 +950,9 @@ Proof
           SND (FOLDL f a ls) = (10 ** LENGTH ls * SND a + (l2n 10 (MAP (combin$C $- 48 o ORD) (REVERSE (MAP FST ls)))))`
     by (
       qunabbrev_tac`f` \\ rpt (pop_assum kall_tac)
-      \\ ho_match_mp_tac listTheory.SNOC_INDUCT
-      \\ rw[numposrepTheory.l2n_def,listTheory.FOLDL_SNOC,listTheory.EVERY_SNOC,
-            listTheory.MAP_SNOC,listTheory.REVERSE_SNOC,arithmeticTheory.EXP]
+      \\ ho_match_mp_tac SNOC_INDUCT
+      \\ rw[numposrepTheory.l2n_def,FOLDL_SNOC,EVERY_SNOC,
+            MAP_SNOC,REVERSE_SNOC,arithmeticTheory.EXP]
       \\ simp[isDigit_ORD_MOD_10] )
     \\ first_x_assum(qspecl_then[`t`,`(1,0)`]mp_tac)
     \\ simp[] \\ disch_then kall_tac
@@ -1092,7 +975,7 @@ Proof
     \\ disj2_tac
     \\ rw[peg_eval_seq_NONE,peg_eval_tok_NONE,peg_eval_tok_SOME]
     \\ Cases_on`strl` \\ fs[]
-    \\ fs[pairTheory.UNCURRY,destSXSYM_def]
+    \\ fs[UNCURRY,destSXSYM_def]
     \\ first_x_assum(qspec_then`h::t`mp_tac) \\ rw[]
     \\ first_x_assum match_mp_tac
     \\ fs[stoppers_def])
@@ -1111,18 +994,18 @@ Proof
       \\ Cases_on`strl` \\ fs[] \\ rw[]
       \\ rw[peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS,
             pnt_def,peg_eval_seq_SOME,peg_eval_seq_NONE,
-            peg_eval_tok_NONE,peg_eval_tok_SOME,stringTheory.isDigit_def,
+            peg_eval_tok_NONE,peg_eval_tok_SOME,isDigit_def,
             tokeq_def,ignoreR_def,ignoreL_def,pegf_def]
       >- (
         rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
         \\ rw[peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS,
               pnt_def,peg_eval_seq_SOME,peg_eval_seq_NONE,
-              peg_eval_tok_NONE,peg_eval_tok_SOME,stringTheory.isDigit_def,
+              peg_eval_tok_NONE,peg_eval_tok_SOME,isDigit_def,
               tokeq_def,ignoreR_def,ignoreL_def]
         \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
         \\ rw[peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS,
               pnt_def,peg_eval_seq_SOME,peg_eval_seq_NONE,
-              peg_eval_tok_NONE,peg_eval_tok_SOME,stringTheory.isDigit_def] )
+              peg_eval_tok_NONE,peg_eval_tok_SOME,isDigit_def] )
       \\ rw[grabWS_def,ignoreR_def,ignoreL_def,peg_eval_seq_SOME,peg_eval_rpt]
       \\ qmatch_asmsub_rename_tac`dest_quote (SX_CONS a d) = SOME x`
       \\ Cases_on`d` \\ fs[] \\ rw[] \\ rfs[]
@@ -1130,15 +1013,15 @@ Proof
       \\ rw[Once peg_eval_list]
       \\ rw[peg_eval_tok_NONE,peg_eval_tok_SOME]
       \\ Cases_on`t` \\ fs[]
-      \\ once_rewrite_tac[rich_listTheory.CONS_APPEND]
-      \\ rewrite_tac[listTheory.APPEND_ASSOC]
+      \\ once_rewrite_tac[rich_CONS_APPEND]
+      \\ rewrite_tac[APPEND_ASSOC]
       \\ rw[])
     \\ fs[option_sequence_SOME] \\ rw[]
     \\ Cases_on`strl` \\ fs[] \\ rw[]
     \\ rw[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS]
     \\ Cases_on`NULL ls` \\ fs[]
     >- (
-      fs[listTheory.NULL_EQ,print_space_separated_def]
+      fs[NULL_EQ,print_space_separated_def]
       \\ Cases_on`n` \\ fs[] \\ rw[]
       \\ disj1_tac
       \\ rw[pegf_def,peg_eval_seq_SOME,tokeq_def,grabWS_def,ignoreL_def,peg_eval_tok_SOME,peg_eval_rpt,PULL_EXISTS]
@@ -1148,7 +1031,7 @@ Proof
     \\ conj_tac
     >- (
       rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_seq_NONE,pnt_def]
-      \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_tok_NONE,stringTheory.isDigit_def] )
+      \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_tok_NONE,isDigit_def] )
     \\ disj1_tac
     \\ rw[tokeq_def,ignoreL_def,peg_eval_seq_SOME,peg_eval_tok_SOME]
     \\ rfs[]
@@ -1234,7 +1117,7 @@ val print_nt_print_sexp = Q.store_thm("print_nt_print_sexp",
   >- (
     fs[option_sequence_SOME]
     \\ imp_res_tac strip_dot_valid_sexp \\ rfs[]
-    \\ fs[listTheory.EVERY_MEM,listTheory.MEM_MAP,optionTheory.IS_SOME_EXISTS,PULL_EXISTS]
+    \\ fs[EVERY_MEM,MEM_MAP,optionTheory.IS_SOME_EXISTS,PULL_EXISTS]
     \\ conj_tac
     >- (
       rw[]
@@ -1242,7 +1125,7 @@ val print_nt_print_sexp = Q.store_thm("print_nt_print_sexp",
       \\ impl_tac >- metis_tac[markerTheory.Abbrev_def]
       \\ rw[print_nt_def] )
     \\ AP_TERM_TAC
-    \\ simp[listTheory.MAP_MAP_o,listTheory.MAP_EQ_f]
+    \\ simp[MAP_MAP_o,MAP_EQ_f]
     \\ rw[]
     \\ last_x_assum(qspec_then`a`mp_tac)
     \\ impl_tac >- metis_tac[markerTheory.Abbrev_def]
@@ -1258,11 +1141,11 @@ val print_nt_print_sexp = Q.store_thm("print_nt_print_sexp",
   \\ rfs[]
   \\ simp[PULL_EXISTS,optionTheory.IS_SOME_EXISTS]
   \\ fs[print_nt_def]
-  \\ fs[listTheory.EVERY_MEM,listTheory.MEM_MAP,PULL_EXISTS]
-  \\ simp[print_space_separated_cons,listTheory.NULL_EQ]
+  \\ fs[EVERY_MEM,MEM_MAP,PULL_EXISTS]
+  \\ simp[print_space_separated_cons,NULL_EQ]
   \\ rw[]
   \\ AP_TERM_TAC
-  \\ simp[listTheory.MAP_MAP_o,listTheory.MAP_EQ_f]);
+  \\ simp[MAP_MAP_o,MAP_EQ_f]);
 
 val peg_eval_print_sexp = Q.store_thm("peg_eval_print_sexp",
   `∀s sl. valid_sexp s ⇒
@@ -1277,7 +1160,7 @@ val peg_eval_print_sexp = Q.store_thm("peg_eval_print_sexp",
 val parse_print = Q.store_thm("parse_print",
   `valid_sexp s ⇒ print_sexp s = MAP FST sl ⇒
    parse_sexp sl = SOME s`,
-  rw[parse_sexp_def,pairTheory.EXISTS_PROD]
+  rw[parse_sexp_def,EXISTS_PROD]
   \\ imp_res_tac peg_eval_print_sexp
   \\ simp[pegparse_eq_SOME,wfG_sexpPEG]);
 
