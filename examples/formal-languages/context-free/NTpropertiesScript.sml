@@ -733,7 +733,7 @@ Proof
            combinTheory.o_ABS_R] >> csimp[] >>
       conj_tac >- (Induct_on ‘sf0’ >> simp[]) >>
       Induct_on ‘sf0’ >>
-      simp[indexedListsTheory.LT_SUC, DISJ_IMP_THM, PULL_EXISTS]) >>
+      simp[arithmeticTheory.LT_SUC, DISJ_IMP_THM, PULL_EXISTS]) >>
   simp[derive_def, PULL_EXISTS]>> rw[] >>
   fs[MAP_EQ_APPEND, PULL_EXISTS] >> rw[] >>
   fs[DISJ_IMP_THM, FORALL_AND_THM] >>
@@ -967,6 +967,13 @@ QED
 (* processing a rule
      N -> sf
    symbol by symbol, augmenting the finite-map of information in A
+
+   This does the "easy" analysis, finding tokens that are directly
+   after non-terminals on rule RHSs.
+
+   The "hard" analysis is recognising that the follow-set of an NT inside
+   a RHS needs to include the follow set of the rule's LHS if what comes after
+   the NT in the rule is nullable.
 *)
 Definition follow_p1_def[simp]:
   follow_p1 g [] A = A ∧
@@ -1075,6 +1082,36 @@ Proof
     by (pop_assum mp_tac >> csimp[SUBMAP_DEF, DOMSUB_FAPPLY_THM]) >>
   simp[MATCH_MP (ITFMAP_thm |> CONJUNCT2) K_fITfollowp1_commutes] >>
   irule ITSET_follow_p1_approxes >> simp[DOMSUB_NOT_IN_DOM] >> metis_tac[]
+QED
+
+Definition follow_rules1_def:
+  follow_rules1 g rfm = ITFMAP (K (fITSET (follow_p1 g))) rfm
+End
+
+Theorem follow_rules1_thm0:
+  follow_rules1 g FEMPTY A = A ∧
+  follow_rules1 g (fm |+ (nt, rs)) A =
+  follow_rules1 g (fm \\ nt) (fITSET (follow_p1 g) rs A)
+Proof
+  simp[follow_rules1_def] >>
+  REWRITE_TAC[MATCH_MP ITFMAP_tail K_fITfollowp1_commutes] >>
+  simp[]
+QED
+
+Theorem follow_rules1_thm:
+  follow_rules1 g FEMPTY A = A ∧
+  follow_rules1 g (fm |+ (nt, ∅ᶠ)) A = follow_rules1 g (fm \\ nt) A ∧
+  follow_rules1 g (fm |+ (nt, fINSERT r rs)) A =
+    follow_rules1 g (fm |+ (nt, fDELETE r rs)) (follow_p1 g r A)
+Proof
+  simp[follow_rules1_thm0, finite_setTheory.fITSET_INSERT_tail,
+       follow_p1_commutes]
+QED
+
+Theorem follow_phase1_thm:
+  follow_phase1 g A = follow_rules1 g g.rules A
+Proof
+  simp[follow_phase1_def, follow_rules1_def]
 QED
 
 Definition follow_p2_sf_def:
