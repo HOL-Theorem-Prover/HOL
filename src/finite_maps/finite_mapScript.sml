@@ -1935,6 +1935,23 @@ Proof
   fs[] >> SELECT_ELIM_TAC >> metis_tac[ITFMAPR_unique]
 QED
 
+Theorem ITFMAP_tail:
+  (!k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A)) ==>
+  !fm k v A. ITFMAP f (fm |+ (k,v)) A = ITFMAP f (fm \\ k) (f k v A)
+Proof
+  strip_tac >> ho_match_mp_tac fmap_INDUCT >> rpt strip_tac
+  >- simp[ITFMAP_thm] >>
+  rename [‘ITFMAP f (fm |+ (k1,v1) |+ (k2,v2)) A’] >>
+  Cases_on ‘k1 = k2’ >> simp[] >>
+  ‘fm |+ (k1,v1) |+ (k2,v2) = fm |+ (k2,v2) |+ (k1,v1)’
+    by simp[FUPDATE_COMMUTES] >>
+  pop_assum SUBST1_TAC >> drule_then assume_tac (cj 2 ITFMAP_thm) >>
+  pop_assum (fn th => simp[SimpLHS, Once th] >>
+             simp[DOMSUB_FUPDATE_NEQ, DOMSUB_NOT_IN_DOM] >>
+             assume_tac th) >>
+  simp[] >> metis_tac[DOMSUB_COMMUTES, DOMSUB_NOT_IN_DOM]
+QED
+
 Theorem ITFMAP_FEMPTY[simp]:
   ITFMAP f FEMPTY A = A
 Proof
