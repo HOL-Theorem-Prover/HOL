@@ -34,22 +34,25 @@ val option_sequence_SOME = Q.store_thm("option_sequence_SOME",
 
 val isDigit_HEX = Q.store_thm("isDigit_HEX",
   `∀n. n < 10 ⇒ isDigit (HEX n)`,
-  simp[GSYM rich_MEM_COUNT_LIST]
+  simp[GSYM rich_listTheory.MEM_COUNT_LIST]
   \\ gen_tac \\ EVAL_TAC
   \\ strip_tac \\ var_eq_tac \\ EVAL_TAC);
 
-val EVERY_isDigit_n2s = Q.store_thm("EVERY_isDigit_n2s",
-  `∀n. EVERY isDigit (n2s 10 HEX n)`,
-  rw[n2s_def,rich_EVERY_REVERSE,EVERY_MAP]
-  \\ match_mp_tac (MP_CANON EVERY_MONOTONIC)
-  \\ qexists_tac`$> 10`
+Theorem EVERY_isDigit_n2s: ∀n. EVERY isDigit (n2s 10 HEX n)
+Proof
+  rw[n2s_def,EVERY_MAP]
+  \\ irule EVERY_MONOTONIC
+  \\ qexists_tac‘$> 10’
   \\ simp[]
-  \\ metis_tac[isDigit_HEX,arithmeticTheory.GREATER_DEF,
-               numposrepTheory.n2l_BOUND,DECIDE``0n < 10``]);
+  \\ metis_tac[isDigit_HEX, arithmeticTheory.GREATER_DEF,
+               numposrepTheory.n2l_BOUND,DECIDE“0n < 10”]
+QED
 
-val EVERY_isDigit_num_to_dec_string = Q.store_thm("EVERY_isDigit_num_to_dec_string",
-  `EVERY isDigit (num_to_dec_string n)`,
-  rw[num_to_dec_string_def,EVERY_isDigit_n2s]);
+Theorem EVERY_isDigit_num_to_dec_string:
+  EVERY isDigit (num_to_dec_string n)
+Proof
+  rw[num_to_dec_string_def,EVERY_isDigit_n2s]
+QED
 
 val n2s_not_null = Q.store_thm("n2s_not_null",
   `∀n. ¬NULL(n2s 10 HEX n)`,
@@ -718,12 +721,14 @@ QED
 
 Theorem grabWS_grabs[simp]:
   (peg_eval G ((#" ", l)::rest, grabWS sym) res ⇔
-     peg_eval G (rest, grabWS sym) res)
+     peg_eval G (rest, grabWS sym) res) ∧
+  (peg_eval G ((#" ", l)::rest, seq (grabWS sym1) sym2 f) res ⇔
+     peg_eval G (rest, seq (grabWS sym1) sym2 f) res)
 Proof
   csimp[grabWS_def, peg_eval_rpt, ignoreL_def, peg_eval_seq, PULL_EXISTS,
-        EXISTS_result] >>
+        EXISTS_result] >> conj_tac >>
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [peg_eval_list])) >>
-  csimp[gen_peg_eval_tok, isSpace_def, PULL_EXISTS]
+  csimp[gen_peg_eval_tok, isSpace_def, PULL_EXISTS] >> metis_tac[]
 QED
 
 Theorem sxnt_normstrcharNIL[simp]:
@@ -908,6 +913,68 @@ Proof
         REWRITE_TAC [GSYM APPEND_ASSOC] >> first_x_assum $ irule_at Any >>
         simp[stoppers_def, IN_DEF, isDigit_def, seqgrabWS, isSpace_def,
              peg_eval_tok_SOME, replace_nil_def]) >>
+    gvs[MAP_EQ_APPEND] >>
+    rename [‘#")" = FST rpcl’, ‘#" " = FST spcl’] >>
+    map_every Cases_on [‘rpcl’, ‘spcl’] >> gvs[] >>
+    rename [‘print_nt sxnt_sexp0 s1 = SOME (MAP FST s1_s)’] >>
+    drule_then strip_assume_tac print_nt_sexp0_no_leading_space >>
+    ‘∃c1 l1 rest1. s1_s = (c1,l1)::rest1’
+      by (Cases_on ‘s1_s’ >> gvs[] >> metis_tac[pair_CASES]) >> gvs[] >>
+    drule_then strip_assume_tac print_nt_sexp0_no_leading_rparen >> gvs[] >>
+    simp[Once peg_eval_choicel_CONS, seqgrabWS, tokeq_def] >>
+    simp[pegf_def, gen_peg_eval_seqtok] >>
+    simp[Once peg_eval_choicel_CONS, EXISTS_result, AllCaseEqs()] >>
+    simp[peg_eval_seq_SOME, PULL_EXISTS] >>
+    gvs[MAP_EQ_CONS, PULL_EXISTS, FORALL_PROD, pnt_def, seqgrabWS] >>
+    REWRITE_TAC [GSYM APPEND_ASSOC] >> first_x_assum $ irule_at Any >>
+    simp[stoppers_def, valid_symchar_def, IN_DEF, isDigit_def, isGraph_def,
+         isSpace_def, isPrint_def] >>
+    rename [‘print_space_separated sl = MAP FST pfx_s’,
+            ‘option_sequence (MAP _ sexpl) = SOME sl’,
+            ‘(#" ", sploc)’, ‘(#")", rploc)’, ‘pfx_s ++ sfx_s’] >>
+    map_every (C qpat_x_assum (K ALL_TAC))
+              [‘¬isSpace c1’, ‘c1 ≠ #")"’, ‘print_nt _ _ = _’] >>
+    map_every (C qpat_x_assum mp_tac) [
+        ‘sl ≠ []’, ‘option_sequence _ = _’, ‘print_space_separated _ = _’,
+        ‘∀x. MEM x sexpl ⇒ P ’
+      ] >>
+    map_every qid_spec_tac [‘sl’, ‘pfx_s’, ‘sploc’, ‘sexpl’] >>
+    simp[peg_eval_rpt, PULL_EXISTS] >>
+    Induct_on ‘sexpl’ >> simp[] >> rpt strip_tac>>
+    rename [‘sl = s1 :: ss’, ‘print_space_separated sl’] >>
+    Cases_on ‘ss’ >> gvs[]
+    >- (gvs[print_space_separated_cons] >> simp[Once peg_eval_list] >>
+        drule_then strip_assume_tac print_nt_sexp0_no_leading_space >>
+        dsimp[] >> disj2_tac >>
+        ‘∃c1 l1 pfx0_s. pfx_s = (c1,l1) :: pfx0_s’
+          by (Cases_on ‘pfx_s’ >> gvs[] >> metis_tac[pair_CASES]) >>
+        gvs[seqgrabWS, MAP_EQ_CONS, PULL_EXISTS, FORALL_PROD] >>
+        REWRITE_TAC [GSYM APPEND_ASSOC] >> first_x_assum $ irule_at Any >>
+        irule_at Any peg_eval_list_nil >> simp[EXISTS_result] >>
+        gvs[AllCaseEqs()] >> simp[seqgrabWS, isSpace_def, peg_eval_sexp0_NONE]
+        >- (simp[stoppers_def, valid_symchar_def, IN_DEF, isDigit_def] >>
+            csimp[Once peg_eval_choicel_CONS, seqgrabWS, isSpace_def,
+                  gen_peg_eval_seqtok, replace_nil_def]) >>
+        gvs[MAP_EQ_CONS] >>
+        rename [‘#" " = FST spcl’, ‘#"." = FST fscl’, ‘FST sp2cl = FST spcl’] >>
+        map_every Cases_on [‘spcl’, ‘fscl’, ‘sp2cl’] >> gvs[] >>
+        simp[isSpace_def, seqgrabWS, peg_eval_sexp0_NONE, stoppers_def,
+             valid_symchar_def, IN_DEF, isGraph_def, isDigit_def] >>
+        simp[Once peg_eval_choicel_CONS, peg_eval_seq_SOME, isSpace_def,
+             seqgrabWS, peg_eval_tok_SOME, gen_peg_eval_seqtok] >>
+        simp[peg_eval_choicel_CONS, ignoreR_def, ignoreL_def,
+             peg_eval_seq_ASSOC, seqgrabWS, isSpace_def, gen_peg_eval_seqtok]>>
+        simp[EXISTS_result, AllCaseEqs()] >>
+        rev_drule_then strip_assume_tac print_nt_sexp0_no_leading_space >>
+        rename [‘peg_eval _ (sfx_ls ++ [_] ++ _, _)’] >>
+        simp[peg_eval_seq_SOME, PULL_EXISTS] >>
+        ‘∃sc sl sfx_ls0. sfx_ls = (sc,sl) ::sfx_ls0’
+          by (Cases_on ‘sfx_ls’ >> gvs[] >> metis_tac[pair_CASES]) >>
+        gvs[seqgrabWS, MAP_EQ_CONS, PULL_EXISTS, FORALL_PROD] >>
+        REWRITE_TAC [GSYM APPEND_ASSOC] >> first_x_assum $ irule_at Any >>
+        simp[seqgrabWS, isSpace_def, peg_eval_tok_SOME, replace_nil_def,
+             stoppers_def, IN_DEF, isDigit_def]) >>
+    (* inductive case (at last!) *)
     cheat) >~
   [‘print_nt sxnt_sexp0’, ‘print_nt sxnt_strcontents’]
   >- (gen_tac >> strip_tac >>
@@ -940,7 +1007,7 @@ Proof
     \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
     \\ rw[]
     \\ pairarg_tac \\ fs[destSXNUM_def]
-    \\ fs[UNCURRY,destSXCONS_def,destSXNUM_def,rich_FOLDL_MAP]
+    \\ fs[UNCURRY,destSXCONS_def,destSXNUM_def,rich_listTheory.FOLDL_MAP]
     \\ qmatch_assum_abbrev_tac`FOLDL f a t = _`
     \\ `∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)`
     by ( Induct \\ simp[Abbr`f`,arithmeticTheory.EXP])
@@ -1013,7 +1080,7 @@ Proof
       \\ rw[Once peg_eval_list]
       \\ rw[peg_eval_tok_NONE,peg_eval_tok_SOME]
       \\ Cases_on`t` \\ fs[]
-      \\ once_rewrite_tac[rich_CONS_APPEND]
+      \\ once_rewrite_tac[rich_listTheory.CONS_APPEND]
       \\ rewrite_tac[APPEND_ASSOC]
       \\ rw[])
     \\ fs[option_sequence_SOME] \\ rw[]
