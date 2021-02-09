@@ -66,7 +66,7 @@ fun hh_reconstruct lemmas g =
       val t1 = !minimization_timeout
       val t2 = !reconstruction_timeout
       val newstac = psMinimize.minimize_stac t1 stac g []
-      val tac = tactic_of_sml newstac
+      val tac = tactic_of_sml 1.0 newstac
     in
       case timeout_tactic t2 tac g of
         SOME _ => (newstac,tac)

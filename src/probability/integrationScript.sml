@@ -26,6 +26,10 @@ open hurdUtils iterateTheory productTheory real_topologyTheory derivativeTheory;
 
 val _ = new_theory "integration";
 
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
@@ -255,6 +259,19 @@ Proof
  >> ASM_MESON_TAC[REAL_LE_REFL]
 QED
 
+Theorem OPEN_INTERVAL_UPPERBOUND :
+    !a b:real. a < b ==> interval_upperbound(interval(a,b)) = b
+Proof
+    RW_TAC std_ss [interval_upperbound]
+ >- METIS_TAC [INTERVAL_EQ_EMPTY, GSYM real_lte]
+ >> MATCH_MP_TAC REAL_SUP_UNIQUE
+ >> rw [GSPECIFICATION, IN_INTERVAL]
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> MP_TAC (Q.SPECL [‘max a b'’, ‘b’] REAL_MEAN)
+ >> rw [REAL_MAX_LT]
+ >> Q.EXISTS_TAC ‘z’ >> art []
+QED
+
 Theorem INTERVAL_LOWERBOUND :
     !a b:real. a <= b ==> (interval_lowerbound(interval[a,b]) = a)
 Proof
@@ -264,6 +281,19 @@ Proof
  >> MATCH_MP_TAC REAL_INF_UNIQUE
  >> SIMP_TAC std_ss [GSPECIFICATION, IN_INTERVAL]
  >> ASM_MESON_TAC [REAL_LE_REFL]
+QED
+
+Theorem OPEN_INTERVAL_LOWERBOUND :
+    !a b:real. a < b ==> interval_lowerbound(interval(a,b)) = a
+Proof
+    RW_TAC std_ss [interval_lowerbound]
+ >- METIS_TAC [INTERVAL_EQ_EMPTY, GSYM real_lte]
+ >> MATCH_MP_TAC REAL_INF_UNIQUE
+ >> rw [GSPECIFICATION, IN_INTERVAL]
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> MP_TAC (Q.SPECL [‘a’, ‘min b b'’] REAL_MEAN)
+ >> rw [REAL_LT_MIN]
+ >> Q.EXISTS_TAC ‘z’ >> art []
 QED
 
 Theorem INTERVAL_LOWERBOUND_NONEMPTY :

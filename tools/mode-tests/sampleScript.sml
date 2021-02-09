@@ -151,7 +151,7 @@ Theorem eval_op_later:
   eval_op f vs s = (res,t) ⇒ s ≤ t
 Proof
   fs [eval_op_def, AllCaseEqs(),fail_def,return_def] \\ rw[]
-  \\ fs[later_refl] \\ fs{later_def]
+  \\ fs[later_refl] \\ fs[later_def]
   \\ Cases_on ‘s.input’ \\ fs[forward_def,greater_def]
 QED
 
@@ -197,6 +197,86 @@ Definition foo:
   case x of
     NONE => 3
   | SOME z => 4
+End
+
+Theorem term_quantifiers:
+  Q1 (\x. big long
+              expression x) /\
+  Q2 (\ x. big long
+               expression x) /\
+  P1 (λy. big longer
+              expression y) /\
+  P2 (λ y. big longer
+               expression y) /\
+  p (@n. something long
+                   on n) /\
+  p (@ n. something long
+                    on n) /\
+  R (LEAST n. yea another long
+                  expression on n) /\
+  R' (some(m,n). yea another long
+                     expression on mn)
+Proof
+  tact1 >> tac2
+QED
+
+Theorem EXISTS_i2mw[local]:
+  !x. mw_ok (SND x) /\ ~(x = (T,[])) ==> ?y. x = i2mw y
+Proof
+  Cases \\ SIMP_TAC std_ss [Excl "lift_disj_eq"] \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC mw_ok_IMP_EXISTS_n2mw THEN1
+   (Q.EXISTS_TAC ‘(& n)’ \\ ASM_SIMP_TAC std_ss [i2mw_def,n2mw_11]
+    \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC)
+  \\ ‘~(n = 0)’ by METIS_TAC [n2mw_def]
+  \\ Q.EXISTS_TAC ‘if q then -(& n) else (& n)’ \\ POP_ASSUM MP_TAC
+  \\ Cases_on ‘q’ \\ FULL_SIMP_TAC std_ss [i2mw_def,n2mw_11]
+  \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC
+QED
+
+Datatype:
+  foo = C1 num | C2
+End
+
+Theorem foo = blah
+
+Inductive foob:
+[~rule1:] foob 0 ∧
+[~suc:]
+  (∀n. foob n ⇒ foob (SUC n)) ∧
+[last:]
+  (l. foob (HD l) ==> foob (LAST l))
+End
+
+(* issue tested here is that |>, should be seen as two tokens, not one *)
+Theorem foo:
+  P (s with <| fld1 := foo.other_fld |>,
+     second_component)  ∧
+  Q (s with fld1 := foo_bar,
+     second_component) ∧
+  R (s with <| fld := foo_bar |>,
+     fld)
+Proof
+  tactic
+QED
+
+val q = ‘inv (2r pow (e + 1)) < inv (2r pow e)’
+
+(* Theorem broken:
+  foo
+Proof
+  tac
+QED *)
+
+Inductive foob2:
+[~rule1:] foob2 0 ∧
+[suc[simp,compute]:]
+  (∀n. foob n ⇒ foob (SUC n)) ∧
+[last:]
+  (l. foob (HD l) ==> foob (LAST l))
+End
+
+Definition foo:
+  foo x = λy z. y + z
 End
 
 val _ = export_theory()

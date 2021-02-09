@@ -87,7 +87,7 @@ end (* local *) ;
 (* Add reducer to srw_ss                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val _ = BasicProvers.augment_srw_ss [INT_REDUCE_ss];
+val _ = BasicProvers.logged_addfrags {thyname="integer"} [INT_REDUCE_ss];
 
 (* Accumulate literal additions in integer expressions
     (doesn't do coefficient gathering - just adds up literals, and

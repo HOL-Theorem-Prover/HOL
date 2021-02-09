@@ -176,9 +176,9 @@ Definition iso_def:
 End
 
 Theorem iso_SYM:
-  iso (A,af) (B,bf) <=> iso (B,bf) (A,af)
+  iso As Bs <=> iso Bs As
 Proof
-  simp[iso_def] >> metis_tac[]
+  map_every Cases_on [‘As’, ‘Bs’] >> simp[iso_def] >> metis_tac[]
 QED
 
 Theorem INJ_homs_mono:
@@ -503,6 +503,12 @@ Proof
   Cases_on ‘bquot (A,af) R’ >>
   simp[coequalizer_def, sbisimulation_projns_homo] >> rw[] >>
   first_assum IRULE >> rw[]
+  >- metis_tac[bquot_correct,sbisimulation_projns_homo]
+  >- (simp[Once FUN_EQ_THM, restr_def, FORALL_PROD] >>
+      rw[EXTENSION] >> simp[eps_def] >> rw[]
+      >- (fs[equiv_on_def] >> metis_tac[])
+      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])
+      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[]))
   >- (fs[bquot_def] >> rw[] >>
       fs[FUN_EQ_THM, restr_def, FORALL_PROD, EXISTS_UNIQUE_THM] >>
       conj_tac
@@ -554,18 +560,7 @@ Proof
             fs[partition_def] >> rw[] >> fs[] >> fs[equiv_on_def] >>
             metis_tac[]) >>
       metis_tac[])
-  >- (simp[Once FUN_EQ_THM, restr_def, FORALL_PROD] >>
-      rw[EXTENSION] >> simp[eps_def] >> rw[]
-      >- (fs[equiv_on_def] >> metis_tac[])
-      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])
-      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])) >>
-  metis_tac[bquot_correct,sbisimulation_projns_homo]
 QED
-
-
-
-
-
 
 Theorem prop5_9_1:
   hom (restr f A) (A,af) (B,bf) /\ bisim R (A,af) (A,af) ==>
@@ -573,7 +568,7 @@ Theorem prop5_9_1:
 Proof
   simp[RIMAGE_Gr] >> strip_tac >> IRULE bisimulations_compose >>
   IRULE bisimulations_compose >>
-  simp[] >> goal_assum drule >> fs[thm2_5]
+  simp[] >> goal_assum (drule_at (Pos (el 2))) >> fs[thm2_5]
 QED
 
 Theorem prop5_9_2:
@@ -731,7 +726,7 @@ Theorem subsystem_INTER:
   subsystem (BIGINTER VS) (A, af)
 Proof
   strip_tac >> simp[subsystem_ALT] >> rw[]
-  >- fs[BIGINTER_SUBSET, subsystem_def] >>
+  >- (irule BIGINTER_SUBSET >> metis_tac[MEMBER_NOT_EMPTY,subsystem_def]) >>
   rw[hom_def, restr_applies]
   >- (simp[system_def, PULL_EXISTS, restr_def, Fset_def, SUBSET_DEF,
            AllCaseEqs()] >> rw[]
@@ -750,6 +745,10 @@ Proof
       metis_tac[system_members, restr_def, subsystem_system]) >>
   simp[restr_def] >> metis_tac[]
 QED
+
+Theorem subsystem_INTER2 =
+  subsystem_INTER |> Q.INST [‘VS’ |-> ‘{V1;V2}’]
+                  |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]
 
 Definition genS_def:
   genS As X = BIGINTER { V | subsystem V As /\ X SUBSET V }
@@ -770,7 +769,20 @@ Definition bounded_def:
 End
 
 (* Section 7 *)
-(*
+Theorem iso_inj_hom:
+  iso (A,af) (B,bf) /\ hom h (A,af) (C,cf) /\ INJ h A C ==>
+  ?j. hom j (B,bf) (C,cf) /\ INJ j B C
+Proof
+  rw[iso_def] >>
+  rename [‘hom f (A,af) (B,bf)’, ‘hom invf (B,bf) (A,af)’, ‘INJ h A C’] >>
+  qexists_tac ‘restr (h o invf) B’ >> fs[hom_def, mapO', restr_applies] >>
+  rpt conj_tac
+  >- (rpt strip_tac >> irule map_CONG >>
+      metis_tac[system_members, restr_applies])
+  >- simp[restr_def] >>
+  fs[INJ_IFF, restr_def] >> metis_tac[]
+QED
+
 Theorem thm7_1:
   hom f (A,af) (B,bf) ==>
   hom f (A,af) (IMAGE f A,restr bf (IMAGE f A)) /\
@@ -843,11 +855,148 @@ Proof
       simp[] >>
       irule (iffLR iso_SYM) >> irule BIJ_homs_iso >>
       fs[] >> qexists_tac ‘u’ >> simp[BIJ_DEF]) >>
+  Cases_on ‘bquot (A,af) (kernel A f)’ >> simp[] >>
+  drule_then (drule_then irule) iso_inj_hom >>
+  simp[INJ_IFF, restr_applies, PULL_EXISTS] >> fs[hom_def]
+QED
 
-*)
+Theorem thm7_2:
+  hom f (A,af) (B,bf) /\ bisim R (A,af) (A,af) /\ R RSUBSET kernel A f /\
+  R equiv_on A ==>
+  ?!fbar.
+    hom fbar (bquot (A,af) R) (B,bf) /\ f = restr (fbar o eps R A) A
+Proof
+  strip_tac >>
+  ‘system (A,af)’ by fs[hom_def] >>
+  drule_all_then (qx_choose_then ‘Rf’ strip_assume_tac)
+                 (INST_TYPE [delta |-> beta] bquot_coequalizer) >>
+  fs[coequalizer_thm] >> first_x_assum irule >> simp[] >>
+  fs[restr_def, FUN_EQ_THM, RSUBSET, FORALL_PROD] >> metis_tac[]
+QED
 
-
-
+Theorem thm7_3:
+  system (A,af) /\ subsystem B (A,af) /\ bisim R (A,af) (A,af) /\
+  R equiv_on A /\
+  Abbrev(TR = { a | a IN A /\ ?b. b IN B /\ R a b })
+  ==>
+  subsystem TR (A,af) /\
+  let Q = CURRY (UNCURRY R INTER (B CROSS B))
+  in
+    bisim Q (B,restr af B) (B,restr af B) /\ Q equiv_on B /\
+    iso (bquot (B,restr af B) Q) (bquot (TR,restr af TR) R)
+Proof
+  strip_tac >> conj_asm1_tac
+  >- (‘TR = IMAGE (restr FST (UNCURRY R))
+                  (PREIMAGE (restr SND (UNCURRY R)) B INTER UNCURRY R)’
+        by (simp[EXTENSION, Abbr‘TR’, EXISTS_PROD, restr_def] >> csimp[] >>
+            metis_tac[bisim_def]) >>
+      simp[] >> irule thm6_3_1 >> fs[sbisimulation_projns_homo] >>
+      first_assum (goal_assum o resolve_then Any mp_tac) >>
+      irule thm6_3_2 >> metis_tac[]) >>
+  REWRITE_TAC[LET_FORALL_ELIM] >> simp_tac std_ss [S_ABS_R] >>
+  ntac 2 strip_tac >> conj_asm1_tac
+  >- (fs[sbisimulation_projns_homo] >>
+      simp[GSYM sbisimulation_projns_homo] >>
+      ‘Q = RINV_IMAGE (λx.x) B R’
+        by (simp[FUN_EQ_THM, RINV_IMAGE_def, Abbr‘Q’] >> metis_tac[]) >>
+      simp[] >> irule prop5_9_2 >> simp[sbisimulation_projns_homo] >>
+      fs[subsystem_ALT] >> metis_tac[]) >>
+  conj_asm1_tac
+  >- (fs[equiv_on_def, Abbr‘Q’, subsystem_def] >> metis_tac[SUBSET_DEF]) >>
+  qabbrev_tac ‘epsR = eps R A ’ >>
+  ‘!a. a IN B ==> a IN A’ by fs[subsystem_def, SUBSET_DEF] >>
+  ‘IMAGE (restr epsR B) B = IMAGE epsR TR’
+    by (simp[Abbr‘TR’, Once EXTENSION] >> csimp[restr_applies] >>
+        qx_gen_tac ‘qt’ >> csimp[eps_def, Abbr‘epsR’] >>
+        csimp[] >> eq_tac >> rw[] >>
+        simp[Once EXTENSION, PULL_EXISTS] >>
+        fs[equiv_on_def] >> metis_tac[]) >>
+  ‘_ = partition R TR’
+    by (simp[Once EXTENSION, Abbr‘epsR’, Abbr‘TR’, eps_def] >>
+        csimp[PULL_EXISTS, partition_def] >> qx_gen_tac ‘qt’ >>
+        eq_tac >> rw[] >>
+        ntac 3 (first_assum (goal_assum o resolve_then Any mp_tac)) >>
+        simp[Once EXTENSION] >> fs[equiv_on_def] >> metis_tac[]) >>
+  pop_assum (assume_tac o SYM) >>
+  ‘kernel B (restr epsR B) = Q’
+    by (simp[Abbr‘epsR’, Abbr‘Q’, Once FUN_EQ_THM] >>
+        csimp[Once FUN_EQ_THM, kernel_def, restr_applies] >>
+        csimp[eps_def] >> fs[equiv_on_def] >> simp[Once EXTENSION] >>
+        metis_tac[]) >>
+  pop_assum (SUBST1_TAC o SYM) >>
+  irule (iffLR iso_SYM) >>
+  Cases_on ‘bquot (TR, restr af TR) R ’ >>
+  rename [‘bquot (TR, restr af TR) R = (qt,qtf)’] >>
+  ‘qt = IMAGE (restr epsR B) B’ by fs[bquot_def] >> pop_assum SUBST_ALL_TAC >>
+  ‘restr qtf (IMAGE (restr epsR B) B) = qtf’
+    by (fs[bquot_def] >> rw[] >> simp[Once FUN_EQ_THM] >>
+        qx_gen_tac ‘aF’ >> reverse (Cases_on ‘aF IN IMAGE (restr epsR B) B’)
+        >- (ONCE_REWRITE_TAC[restr_def] >> simp_tac bool_ss [] >>
+            ASM_REWRITE_TAC[]) >>
+        simp[restr_applies]) >>
+  first_assum (ONCE_REWRITE_TAC o single o SYM) >> irule (cj 5 thm7_1) >>
+  qexists_tac ‘IMAGE (restr epsR B) B’ >>
+  qpat_assum ‘bquot _ _ = (_, _)’ (REWRITE_TAC o single o SYM) >>
+  simp_tac (srw_ss())[hom_def,bquot_def, restr_applies] >>
+  simp[] >> rw[]
+  >- metis_tac[subsystem_system]
+  >- (csimp[system_def, restr_applies, PULL_EXISTS] >> rw[]
+      >- (irule map_preserves_funs >>
+          csimp[eps_def, Abbr‘epsR’, restr_applies] >>
+          qexists_tac ‘TR’ >> simp[] >> rw[]
+          >- (fs[Abbr‘TR’, equiv_on_def] >> simp[Once EXTENSION] >>
+              metis_tac[]) >>
+          ‘system (TR,restr af TR)’ by metis_tac[subsystem_system] >>
+          fs[system_def] >> first_x_assum irule >>
+          simp[Abbr‘TR’] >> DEEP_INTRO_TAC CHOICE_INTRO >> simp[] >>
+          fs[equiv_on_def] >> metis_tac[]) >>
+      csimp[restr_def] >> metis_tac[])
+  >- (csimp[Abbr‘epsR’, restr_applies] >> metis_tac[])
+  >- (rename [‘partition R _ = IMAGE _ B’, ‘b IN B’] >>
+      ‘epsR b IN IMAGE (restr epsR B) B’
+        by (csimp[restr_applies] >> metis_tac[]) >>
+      simp[restr_applies] >>
+      ‘CHOICE (epsR b) IN TR’
+        by (DEEP_INTRO_TAC CHOICE_INTRO >>
+            simp[Abbr‘epsR’, Abbr‘TR’, eps_def] >>
+            fs[equiv_on_def] >> metis_tac[]) >> simp[restr_applies] >>
+      ‘mapF (restr epsR B) (af b) = mapF (eps R A) (af b)’
+        by (irule map_CONG >> qx_gen_tac ‘b0’ >> strip_tac >>
+            ‘b0 IN B’ suffices_by simp[restr_applies] >>
+            rev_drule subsystem_system >>
+            ‘af b = restr af B b’ by simp[restr_applies] >>
+            metis_tac[system_members]) >> simp[]>>
+      ‘mapF (eps R TR) (af (CHOICE (epsR b))) =
+       mapF epsR (af (CHOICE (epsR b)))’
+        by (irule map_CONG >> qx_gen_tac ‘t’ >> DEEP_INTRO_TAC CHOICE_INTRO >>
+            simp[Abbr‘epsR’, eps_def] >> conj_tac
+            >- (fs[equiv_on_def] >> metis_tac[]) >>
+            qx_gen_tac ‘a’ >> rpt strip_tac >>
+            ‘a IN TR’ by (simp[Abbr‘TR’] >> fs[equiv_on_def] >> metis_tac[]) >>
+            ‘af a = restr af TR a’ by simp[restr_applies] >>
+            ‘t IN TR’ by metis_tac[system_members, subsystem_system] >>
+            ‘t IN A’ by fs[Abbr‘TR’] >> simp[] >>
+            fs[Abbr‘TR’] >> simp[Once EXTENSION] >>
+            fs[equiv_on_def] >> metis_tac[]) >>
+      simp[] >> ntac 2 (pop_assum (K ALL_TAC)) >>
+      pop_assum mp_tac >> DEEP_INTRO_TAC CHOICE_INTRO >>
+      simp[Abbr‘epsR’, Abbr‘TR’, eps_def] >> conj_tac
+      >- (fs[equiv_on_def] >> metis_tac[]) >>
+      qx_gen_tac ‘a’ >> strip_tac >>
+      disch_then $ qx_choose_then ‘b'’ strip_assume_tac >>
+      qpat_x_assum ‘bisim R _ _ ’ mp_tac >>
+      csimp[sbisimulation_projns_homo, hom_def, FORALL_PROD, restr_applies] >>
+      disch_then $ qx_choose_then ‘Rf’ strip_assume_tac >>
+      ‘af a = mapF (restr SND (UNCURRY R)) (Rf (b, a)) /\
+       af b = mapF (restr FST (UNCURRY R)) (Rf (b, a))’ by simp[] >>
+      simp[mapO'] >> irule map_CONG >> simp[FORALL_PROD] >>
+      qx_genl_tac [‘a1’, ‘a2’] >> strip_tac >> ‘(b,a) IN UNCURRY R’ by simp[]>>
+      ‘(a1,a2) IN UNCURRY R’ by metis_tac[system_members] >>
+      pop_assum mp_tac >> simp[restr_applies, eps_def] >>
+      strip_tac >> ‘a1 IN A /\ a2 IN A’ by metis_tac[] >>
+      simp[EXTENSION, restr_applies] >> fs[equiv_on_def] >> metis_tac[])
+  >- (simp[restr_def])
+QED
 
 Theorem bisimilar_equivalence:
   bisimilar equiv_on system

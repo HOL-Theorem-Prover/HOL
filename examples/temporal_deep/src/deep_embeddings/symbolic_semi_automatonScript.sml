@@ -18,6 +18,7 @@ val _ = hide "K";
 val _ = hide "I";
 
 val _ = new_theory "symbolic_semi_automaton";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
 (* Different with symbolic_kripke_structure, which does not have concepts of

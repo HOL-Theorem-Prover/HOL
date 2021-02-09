@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : psBigSteps.sml                                            *)
-(* DESCRIPTION   : Succession of non-backtrackable moves chosen after one    *)
+(* DESCRIPTION   : Successions of non-backtrackable moves chosen after one   *)
 (*                 MCTS call for each step                                   *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2019                                                      *)

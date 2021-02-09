@@ -9,105 +9,159 @@ structure tacticToe :> tacticToe =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlLexer smlExecute smlRedirect smlInfix
-  mlFeature mlThmData mlTacticData mlNearestNeighbor
-  psMinimize
-  tttSetup tttLearn tttSearch
+  smlLexer smlParser smlExecute smlRedirect smlInfix
+  mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
+  psMinimize tttSetup tttToken tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
 
 (* -------------------------------------------------------------------------
-   Time limit
+   Global parameters
    ------------------------------------------------------------------------- *)
 
 fun set_timeout r = (ttt_search_time := r)
+val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
+val prioritize_stacl = ref [metis_stac]
 
 (* -------------------------------------------------------------------------
-   Preselection of theorems
+   Preparsing theorems and tactics
    ------------------------------------------------------------------------- *)
 
-fun select_thmfea (symweight,thmfeadict) gfea =
+fun thml_of_thmidl thmidl = thml_of_sml (map dbfetch_of_thmid thmidl)
+
+fun preparse_thmidl thmidl = case thml_of_thmidl thmidl of
+    NONE =>
+    if is_singleton thmidl
+    then (print_endline ("Could not parse: " ^ singleton_of_list thmidl); [])
+    else
+      let val (l1,l2) = part_n (length thmidl div 2) thmidl in
+        (preparse_thmidl l1 @ preparse_thmidl l2)
+      end
+  | SOME rl => combine (thmidl,rl)
+
+fun preparse_stacl stacl = case pretacl_of_sml 1.0 stacl of
+    NONE =>
+    if is_singleton stacl
+    then (print_endline ("Could not parse: " ^ singleton_of_list stacl); [])
+    else
+      let val (l1,l2) = part_n (length stacl div 2) stacl in
+        (preparse_stacl l1 @ preparse_stacl l2)
+      end
+  | SOME rl => combine (stacl,rl)
+
+(* -------------------------------------------------------------------------
+   Preselection of theorems and tactics
+   ------------------------------------------------------------------------- *)
+
+fun select_thmfea (symweight,thmfea) gfea =
   let
-    val l0 = thmknn_wdep (symweight,thmfeadict) (!ttt_presel_radius) gfea
+    val l0 = thmknn_wdep (symweight,thmfea) (!ttt_presel_radius) gfea
     val d = dset String.compare l0
-    val l1 = filter (fn (k,v) => dmem k d) (dlist thmfeadict)
+    val l1 = filter (fn (k,v) => dmem k d) thmfea
   in
-    (symweight, dnew String.compare l1)
+    (symweight, l1)
   end
 
-(* -------------------------------------------------------------------------
-   Preselection of tactics
-   ------------------------------------------------------------------------- *)
-
-fun select_tacfea tacdata goalf =
+fun select_tacfea tacdata gfea =
   let
-    val tacfea = dlist (#tacfea tacdata)
-    val tacsymweight = learn_tfidf tacfea
-    val l0 =
-      stacknn_preselect (tacsymweight,tacfea) (!ttt_presel_radius) goalf
-    val l1 = add_stacdep (#tacdep tacdata) (!ttt_presel_radius) (map fst l0)
-    fun f x = (x, dfind x (#tacfea tacdata))
-    val l2 = map f l1
+    val calld = #calld tacdata
+    val calls = dlist calld
+    val callfea = map_assoc (#fea o snd) calls
+    val symweight = learn_tfidf_symfreq_nofilter (dlength calld)
+      (#symfreq tacdata)
+    val sel1 = callknn (symweight,callfea) (!ttt_presel_radius) gfea
+    val sel2 = add_calldep calld (!ttt_presel_radius) sel1
+    val tacfea = map (fn (_,x) => (#stac x, #fea x)) sel2
   in
-    (tacsymweight, l2)
+    (symweight,tacfea)
   end
 
 (* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
-fun constant_space s = String.concatWith " " (partial_sml_lexer s)
-
-fun main_tactictoe (thmdata,tacdata) goal =
+fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   let
+    val _ = hidef QUse.use infix_file
     (* preselection *)
-    val goalf = feahash_of_goal goal
-    val _ = debug "preselection of theorems"
-    val ((thmsymweight,thmfeadict),t1) =
-      add_time (select_thmfea thmdata) goalf
-    val _ = debug ("preselection of theorems time: " ^ rts_round 6 t1)
-    val _ = debug "preselection of tactics"
-    val ((tacsymweight,tacfea),t2) = add_time (select_tacfea tacdata) goalf
-    val _ = debug ("preselection of tactics time: " ^ rts_round 6 t2)
-    (* caches *)
-    val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
-    val tac_cache = ref (dempty goal_compare)
+    val _ = print_endline "preselection"
+    val goalf = fea_of_goal true goal
+    val (thmsymweight,thmfea) = select_thmfea thmdata goalf
+    val (tacsymweight,tacfea) = select_tacfea tacdata goalf
+    (* parsing *)
+    val _ = print_endline "parsing"
+    val pstacl = preparse_stacl (!prioritize_stacl)
+    val thm_parse_dict = dnew String.compare
+      (preparse_thmidl (map fst thmfea))
+    val tac_parse_dict = dnew String.compare
+      (pstacl @ preparse_stacl (map fst tacfea))
+    fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl
+      handle NotFound =>
+        raise ERR "parse_thmidl" (String.concatWith " " thmidl)
+    fun parse_stac stac = dfind stac tac_parse_dict
+      handle NotFound => raise ERR "parse_stac" stac
+    val thmfea_filtered = filter (fn x => dmem (fst x) thm_parse_dict) thmfea
+    val tacfea_filtered = filter (fn x => dmem (fst x) tac_parse_dict) tacfea
+    val parsetoken =
+      {parse_stac = parse_stac,
+       parse_thmidl = parse_thmidl,
+       parse_sterm = fn x => [QUOTE x]}
     (* predictors *)
-    fun sthmpred n g =
-      dfind (g,n) (!thm_cache) handle NotFound =>
-      let val r = thmknn (thmsymweight,thmfeadict) n (feahash_of_goal g) in
-        thm_cache := dadd (g,n) r (!thm_cache); r
+    val stacl_filtered = map fst pstacl @ map fst tacfea_filtered
+    val atyd = dnew String.compare (map_assoc extract_atyl stacl_filtered)
+    val thm_cache = ref (dempty goal_compare)
+    val tac_cache = ref (dempty goal_compare)
+    fun predthml g =
+      dfind g (!thm_cache) handle NotFound =>
+      let
+        val gfea = fea_of_goal true g
+        val thmidl = thmknn (thmsymweight,thmfea_filtered)
+          (!ttt_thmlarg_radius) gfea
+      in
+        thm_cache := dadd g thmidl (!thm_cache); thmidl
       end
-    fun stacpred g =
+    fun predarg stac aty g = case aty of
+        Athml =>
+        let val thml = predthml g in
+          if stac = metis_stac
+          then map Sthml (mk_batch_full (!ttt_metis_radius) thml)
+          else map Sthml (mk_batch_full 1 thml)
+        end
+      | Aterm => map Sterm (pred_svar 8 g)
+    fun predtac g =
       dfind g (!tac_cache) handle NotFound =>
       let
-        val thmidl = sthmpred 16 g
-        val l = feahash_of_goal g
-        val metis_stac = constant_space
-          ("metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ "]")
-        val stacl =
-          mk_sameorder_set String.compare (metis_stac ::
-            stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l)
-        val istacl = map (inst_stac thmidl) stacl
+        val gfea = fea_of_goal true g
+        val stacl1 = tacknn (tacsymweight,tacfea_filtered)
+          (!ttt_presel_radius) gfea
+        val stacl2 = mk_sameorder_set String.compare (map fst pstacl @ stacl1)
+        val stacl3 = map_assoc (fn x => dfind x atyd) stacl2
       in
-        tac_cache := dadd g istacl (!tac_cache); istacl
+        tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
-    val _ = debug "search"
   in
-    search stacpred goal
+    {predtac = predtac, predarg = predarg,
+     parsetoken = parsetoken,
+     vnno = vnno, pnno = pnno, anno = anno}
+  end
+
+fun main_tactictoe (thmdata,tacdata) nnol goal =
+  let val searchobj = build_searchobj (thmdata,tacdata) nnol goal in
+    print_endline "search"; search searchobj goal
   end
 
 (* -------------------------------------------------------------------------
    Return values
    ------------------------------------------------------------------------- *)
 
-fun read_status r = case r of
+fun read_status status = case status of
    ProofSaturated =>
    (print_endline "saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
  | ProofTimeout   =>
    (print_endline "timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
  | Proof s        =>
-   (print_endline ("  " ^ s); (SOME s, hidef tactic_of_sml s))
+   (print_endline ("  " ^ s);
+    (SOME s, hidef (tactic_of_sml (!ttt_search_time)) s))
 
 (* -------------------------------------------------------------------------
    Interface
@@ -125,16 +179,16 @@ fun tactictoe_aux goal =
   then raise ERR "tactictoe" "type bool expected"
   else
   let
-    val _ = hidef QUse.use infix_file
     val cthyl = current_theory () :: ancestry (current_theory ())
     val thmdata = hidef create_thmdata ()
     val tacdata =
       dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
-      let val tacdata_aux = ttt_create_tacdata () in
+      let val tacdata_aux = create_tacdata () in
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val proofstatus = hidef (main_tactictoe (thmdata,tacdata)) goal
+    val (proofstatus,_) = hidef
+      (main_tactictoe (thmdata,tacdata) (NONE,NONE,NONE)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac
@@ -145,25 +199,5 @@ fun ttt goal = (tactictoe_aux goal) goal
 fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
-(* -------------------------------------------------------------------------
-   Evaluation function called by tttUnfold.run_evalscript_thy
-   ------------------------------------------------------------------------- *)
-
-fun log_status r = case r of
-   ProofSaturated => print_endline "tactictoe: saturated"
- | ProofTimeout   => print_endline "tactictoe: timeout"
- | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
-
-fun ttt_eval (thmdata,tacdata) goal =
-  let
-    val b = !hide_flag
-    val _ = hide_flag := false
-    val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
-    val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
-  in
-    log_status status;
-    print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
-    hide_flag := b
-  end
 
 end (* struct *)

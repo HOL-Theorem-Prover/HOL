@@ -183,7 +183,81 @@ Unless otherwise noted, they are built by the configuration process.
 
 <!-- # Appropriate Idioms  -->
 
+# Glossary of common abbreviations in the source code
 
+`abs`
+:   Abstraction.
+
+`ant`
+:   Antecedent of an implication.
+
+`asm`
+:   Assumptions of a theorem or goal.
+
+`conseq`
+:   Consequent of an implication.
+
+`_conv`
+:   Optional suffix to indicate a conversion. Useful to distinguish between a conversion, tactic and derived inference rule that perform the same basic function.
+
+`dest_`
+:   “destroy”, i.e.: decompose an object into simpler constituents.
+
+`g`
+:   Goal of a tactic.
+
+`gen_`
+:   As a prefix of functions indicates that this function is the more general version of the function without the prefix.
+
+`ho`
+:   “higher-order”, as opposed to first-order. Typically in the context of term matching.
+
+`l`
+:   - A list.
+:   - Suffix for a variant of a functions whose difference is that it operates on a list instead of a single element. E.g: the tactical `THENL` compared to `THEN`.
+
+`lhs`
+:   Left-hand side of an equation.
+
+`mk_`
+:   “make”, i.e.: create an object from simpler constituents.
+
+`prim_`
+:   “primitive”. Optional prefix for the name of internal functions that contain most of the implementation. The function without the prefix is a thin wrapper that implements the public interface.
+
+`q_`
+:   Optional prefix in the name of a tactical to indicates that it takes a term quotation which is parsed in the context of the goal. Example: `q_abbrev_tac`.
+
+`rand`
+:   Ope*rand* of a combination.
+
+`rator`
+:   Ope*rator* of a combination.
+
+`rhs`
+:   Right-hand side of an equation.
+
+`_rule`
+:   Optional suffix to indicate a derived inference rule. Often used for a variant of a conversion that applies the conversion to the conclusion of a theorem. See `CONV_RULE`.
+
+`t`
+:   A term.
+
+`_tac`
+:   Optional suffix for tactics or tacticals.
+
+`th`
+:   A theorem.
+
+`_then`
+:   Optional suffix for theorem-tacticals. See the section on tactics in the HOL description manual.
+
+`thm`
+:   A theorem.
+
+`x_`
+:   * Optional prefix to indicate a variant that takes a term or quotation. E.g.: The tactical `X_GEN_TAC` compared to `GEN_TAC`.
+:   * In a tactical that takes a theorem-tactic and applies it to assumptions, indicates a variant that removes the assumption which was acted on.
 
 <!--  LocalWords:  executables mosmlc sml categorise
  -->

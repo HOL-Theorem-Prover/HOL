@@ -27,6 +27,8 @@ val () = quietdec := false;
 
 val _ = new_theory "primality";
 
+val _ = ParseExtras.temp_loose_equality()
+
 (* ------------------------------------------------------------------------- *)
 (* Helper proof tools.                                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -97,7 +99,7 @@ val nat_sqrt = store_thm
    ++ ONCE_REWRITE_TAC [nat_sqrt_def]
    ++ Cases_on `n < k * k`
    >> (RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X ==> Y` (K ALL_TAC)
+       ++ Q.PAT_X_ASSUM `X ==> Y` (K ALL_TAC)
        ++ Cases_on `k = 0`
        >> (RW_TAC std_ss []
            ++ FULL_SIMP_TAC arith_ss [])
@@ -111,7 +113,7 @@ val nat_sqrt = store_thm
        ++ MATCH_MP_TAC LESS_EQ_TRANS
        ++ Q.EXISTS_TAC `k * k'`
        ++ RW_TAC arith_ss [LE_MULT_LCANCEL, LE_MULT_RCANCEL])
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
    ++ RW_TAC std_ss []
    ++ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
    ++ MATCH_MP_TAC
@@ -148,14 +150,14 @@ val prime_condition = store_thm
    ++ Cases_on `b = 1` >> RW_TAC std_ss []
    ++ Cases_on `b = p` >> RW_TAC std_ss []
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `divides b p` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides b p` MP_TAC
    ++ RW_TAC std_ss [divides_def]
    ++ STRIP_TAC
    ++ RW_TAC std_ss []
    ++ Cases_on `q = 1` >> FULL_SIMP_TAC arith_ss []
    ++ Cases_on `q = 0` >> FULL_SIMP_TAC arith_ss []
    ++ Cases_on `b = 0` >> FULL_SIMP_TAC arith_ss []
-   ++ Q.PAT_ASSUM `!n. P n`
+   ++ Q.PAT_X_ASSUM `!n. P n`
         (fn th => MP_TAC (Q.SPEC `q` th) ++ MP_TAC (Q.SPEC `b` th))
    ++ REVERSE (RW_TAC arith_ss [divides_def, LE_MULT_LCANCEL])
    >> METIS_TAC [MULT_COMM]

@@ -8,8 +8,11 @@ open type_grammar_dtype
 fun typstruct_uptodate ts =
     case ts of
       PARAM _ => true
-    | TYOP {Thy, Tyop, Args} => isSome (Type.op_arity {Thy = Thy, Tyop = Tyop})
-                                andalso List.all typstruct_uptodate Args
+    | TYOP {Thy, Tyop, Args} => (
+      case Type.op_arity {Thy = Thy, Tyop = Tyop} of
+          SOME a => length Args = a andalso List.all typstruct_uptodate Args
+        | _ => false
+    )
 
 type kernelname = KernelSig.kernelname
 

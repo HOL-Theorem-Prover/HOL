@@ -588,16 +588,6 @@ val EXP1_MONO_LE = store_thm
    >> Know `1 < n /\ a < b` >- DECIDE_TAC
    >> RW_TAC std_ss [EXP_MONO]);
 
-val LT_SUC = store_thm
-  ("LT_SUC",
-   ``!a b. a < SUC b <=> a < b \/ (a = b)``,
-   DECIDE_TAC);
-
-val LE_SUC = store_thm
-  ("LE_SUC",
-   ``!a b. a <= SUC b <=> a <= b \/ (a = SUC b)``,
-   DECIDE_TAC);
-
 val TRANSFORM_2D_NUM = store_thm
   ("TRANSFORM_2D_NUM",
    ``!P.

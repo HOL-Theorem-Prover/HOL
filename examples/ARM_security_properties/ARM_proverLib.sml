@@ -18,6 +18,7 @@ val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
 val words_ss = simpLib.mk_simpset [wordsLib.WORD_ss];
 val global_mode = ref ``16w:bool[5]``;
 val simp_thms_list = ref ([]:(Theory.thm list));
+val bool_ss = boolSimps.bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 val mode_changing_comp_list =
     ref [``take_undef_instr_exception``, ``take_svc_exception``];

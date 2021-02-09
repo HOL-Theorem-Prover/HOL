@@ -65,11 +65,11 @@ val ident_def = Define‘
                   else NONE)
 ’;
 
-val ident_EQ_SOME = Q.store_thm(
-  "ident_EQ_SOME[simp]",
-  ‘ident s = SOME v ⇔
+Theorem ident_EQ_SOME[simp]:
+  ident s = SOME v ⇔
      ∃px sx. s = px ++ sx ∧ px ≠ [] ∧ EVERY (λc. isAlpha c ∧ isLower c) px ∧
-             (∀c t. sx = c::t ⇒ ¬isAlpha c ∨ ¬isLower c) ∧ v = (px, sx)’,
+             (∀c t. sx = c::t ⇒ ¬isAlpha c ∨ ¬isLower c) ∧ v = (px, sx)
+Proof
   qid_spec_tac ‘v’ >> Induct_on ‘s’ >> simp[ident_def] >>
   rpt gen_tac >> rename [‘isAlpha c1’] >> Cases_on ‘isAlpha c1 ∧ isLower c1’
   >- (simp[optionTheory.option_case_eq, pairTheory.pair_case_eq, PULL_EXISTS] >>
@@ -77,9 +77,9 @@ val ident_EQ_SOME = Q.store_thm(
       >- (rw[] >>
           fs[ident_def, optionTheory.option_case_eq, pairTheory.pair_case_eq])>>
       Cases_on ‘px’ >> fs[] >> rw[] >>
-      rename [‘ident (cs ++ sx) = NONE’] >> Cases_on ‘cs’ >> simp[] >>
       Cases_on ‘sx’ >> fs[ident_def]) >>
-  simp[] >> rw[] >> Cases_on ‘px’ >> simp[] >> metis_tac[]);
+  simp[] >> rw[] >> fs[] >> Cases_on ‘px’ >> fs[]
+QED
 
 val token_EQ_NONE = Q.store_thm(
   "token_EQ_NONE",

@@ -45,6 +45,7 @@ val _ = List.app
           (fn (s1,s2) => tpp_expected
                            {testf=standard_tpp_message, input=s1, output=s2})
           [("realinv 2", "2⁻¹"), ("inv (TC R)", "R⁺ ᵀ")]
+val _ = tpp "¬p ∧ q"                                                   (* UOK *)
 
 fun UNCH_test (n,c,t) =
   shouldfail {checkexn = fn Conv.UNCHANGED => true | _ => false,
@@ -77,6 +78,7 @@ fun nftest (r as (n,c,t1,t2)) =
       require_msg (check t2) (pr t2) test (t1,t2)
     end
 fun simpl ths = SIMP_CONV (BasicProvers.srw_ss()) ths
+fun asimpl ths = SIMP_CONV (BasicProvers.srw_ss() ++ numSimps.ARITH_ss) ths
 val simp = simpl []
 val _ = List.app nftest [
       ("MULCANON01", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
@@ -109,7 +111,7 @@ val _ = List.app nftest [
       ("MULCANON18", REALMULCANON,
        “2 * (inv 3 * z * 2 * inv 10)”, “(2r/15) * z”),
       ("MULCANON19", REALMULCANON, “2 * (inv 3 * z * 6 * inv 4)”, “z:real”),
-      ("MULCANON21", REALMULCANON, “-z * x: real”, “-(x * z:real)”),
+      ("MULCANON21", REALMULCANON, “-z * x: real”, “-x * z:real”),
       ("MULCANON22", REALMULCANON, “2 * (-inv 3 * z * 6 * inv 4)”, “-z:real”),
       ("MULCANON23", REALMULCANON,
        “(2/3) * (z * y:real)”, “(2/3) * (y * z:real)”),
@@ -118,6 +120,16 @@ val _ = List.app nftest [
       ("MULCANON25", REALMULCANON,
        “x * y * (2 pow b) pow 2 * inv 2 pow b”, “x * y * 2 pow b”),
       ("MULCANON26", REALMULCANON, “2 * x * inv 2 pow 2”, “1/2 * x:real”),
+      ("MULCANON27", REALMULCANON, “2r * y * 3 / (x * y)”,
+       “6r * (inv x * NZ y)”),
+      ("MULCANON28", REALMULCANON, “x * (9r * y)”, “9r * (x * y)”),
+      ("MULCANON29", REALMULCANON, “x * y / 2 * x”, “1/2 * (x pow 2 * y)”),
+      ("MULCANON30", REALMULCANON, “-(-a * x:real)”, “a * x : real”),
+      ("MULCANON31", REALMULCANON, “-(2/3r)”, “-2 / 3r”),
+      ("MULCANON32", REALMULCANON, “-a * -x:real”, “a * x : real”),
+      ("MULCANON33", REALMULCANON, “-x * z * 2 pow 0 * y : real”,
+       “-x * y * z : real”),
+
       ("MULRELNORM01", simp,
        “z <> 0 ⇒ 2r * z pow 2 * inv yy = 5 * z pow 2 * inv y * a”,
        “z <> 0 ⇒ 2 * inv yy = 5 * (a * inv y)”),
@@ -149,6 +161,11 @@ val _ = List.app nftest [
       ("MULRELNORM14", simp, “x <> 0 /\ 0 < x ==> inv x < 1r”,
        “x <> 0 /\ 0 < x ==> 1 < x”),
       ("MULRELNORM15", simp, “2r * x = 1/2 * z”, “4 * x = z”),
+      ("MULRELNORM16", asimpl [ASSUME “m < lg : num”],
+       “inv (2 pow m) < 2 * inv (2 pow lg)”,
+       “2 pow lg < 2 * 2 pow m”),
+      ("MULRELNORM17", simpl [ASSUME “0r < U”],
+       “U * a * b <= -U”, “a * b <= -1”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

@@ -24,6 +24,11 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
      seqTheory limTheory transcTheory realLib topologyTheory metricTheory;
 
+val _ = new_theory "real_topology";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 open wellorderTheory cardinalTheory iterateTheory productTheory hurdUtils;
 
 val _ = new_theory "real_topology";

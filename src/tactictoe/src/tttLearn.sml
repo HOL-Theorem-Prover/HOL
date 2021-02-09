@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : tttLearn.sml                                              *)
-(* DESCRIPTION   : Learning from tactic calls during search and recording    *)
+(* DESCRIPTION   : Re-addressing tactic ownership of goals during recording  *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
 (* DATE          : 2017                                                      *)
 (* ========================================================================= *)
@@ -9,107 +9,67 @@ structure tttLearn :> tttLearn =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlTimeout smlLexer smlExecute
-  mlFeature mlThmData mlTacticData mlNearestNeighbor
-  psMinimize tttSetup
+  smlTimeout smlLexer smlParser smlExecute
+  mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
+  psMinimize tttSetup tttToken
 
 val ERR = mk_HOL_ERR "tttLearn"
 
 (* -------------------------------------------------------------------------
-   Abstracting theorem list in tactics
+   Combining multiple abstractions
    ------------------------------------------------------------------------- *)
 
-val thmlarg_placeholder = "tactictoe_thmlarg"
+fun abstract_stac stac =
+  (
+  if is_thmlstac stac orelse is_termstac stac then NONE else
+  case abstract_thml stac of
+    SOME (thmlstac,_) => SOME thmlstac
+  | NONE =>
+    (if not (!learn_abstract_term) then NONE else
+    case abstract_term stac of
+      SOME (termstac,_) => SOME termstac
+    | NONE => NONE)
+  )
+  handle Interrupt => raise Interrupt | _ =>
+    (debug ("error: abstract_stac: " ^ stac); NONE)
 
-fun is_thmlarg_stac stac =
-  mem thmlarg_placeholder (partial_sml_lexer stac)
-
-fun change_thml thml = case thml of
-    [] => NONE
-  | a :: m => (if is_thm (String.concatWith " " a) then SOME thml else NONE)
-
-fun abstract_thmlarg_loop thmlacc l = case l of
-    []       => []
-  | "[" :: m =>
-    let
-      val (el,cont) = split_level "]" m
-      val thml = rpt_split_level "," el
-    in
-      case change_thml thml of
-        NONE => "[" :: abstract_thmlarg_loop thmlacc m
-      | SOME x =>
-        (
-        thmlacc := map (String.concatWith " ") thml :: !thmlacc;
-        ["[",thmlarg_placeholder,"]"] @
-          abstract_thmlarg_loop thmlacc cont
-        )
-    end
-  | a :: m => a :: abstract_thmlarg_loop thmlacc m
-
-fun abstract_thmlarg stac =
-  if is_thmlarg_stac stac then NONE else
+fun concat_absstacl gfea stac stacl =
   let
-    val sl1 = partial_sml_lexer stac
-    val thmllref = ref []
-    val sl2 = abstract_thmlarg_loop thmllref sl1
+    fun f x = [abstract_stac x, SOME x]
+    val l = List.concat (map f stacl) @ [abstract_stac stac]
   in
-    if null (!thmllref)
-    then NONE
-    else SOME (String.concatWith " " sl2, !thmllref)
+    mk_sameorder_set String.compare (List.mapPartial I l)
   end
 
 (* -------------------------------------------------------------------------
-   Instantiating abstracted tactic with a list of theorems
+   Predictions + re-ordering according to coverage
    ------------------------------------------------------------------------- *)
 
-fun inst_thmlarg_loop thmls l =
-  let fun f x = if x = thmlarg_placeholder then thmls else x in
-    map f l
-  end
-
-fun inst_thmlarg thmls stac =
-  let val sl = partial_sml_lexer stac in
-    if mem thmlarg_placeholder sl
-    then String.concatWith " " (inst_thmlarg_loop thmls sl)
-    else stac
-  end
-
-(* -------------------------------------------------------------------------
-   Combining abstractions and instantiations
-   ------------------------------------------------------------------------- *)
-
-fun abstract_stac stac = Option.map fst (abstract_thmlarg stac)
-fun prefix_absstac stac = [abstract_stac stac, SOME stac]
-
-fun concat_absstacl gfea ostac stacl =
-  let
-    val l1 = case abstract_thmlarg ostac of NONE => []
-      | SOME (aostac, thmsll) => [SOME aostac]
-    val l2 = List.concat (map prefix_absstac stacl) @ l1
-  in
-    mk_sameorder_set String.compare (List.mapPartial I l2)
-  end
-
-fun inst_stac thmidl stac =
-  let val thmls = String.concatWith " , " (map dbfetch_of_thmid thmidl) in
-    inst_thmlarg thmls stac
-  end
-
-fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
-
-(* -------------------------------------------------------------------------
-   Orthogonalization
-   ------------------------------------------------------------------------- *)
-
-fun pred_stac tacdata ostac gfea =
-  let
-    val tacfea = dlist (#tacfea tacdata)
-    val symweight = learn_tfidf tacfea
-    val stacl = stacknn_uniq (symweight,tacfea) (!ttt_ortho_radius) gfea
-    val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl)
-    val ns = case no of NONE => "none" | SOME (_,i) => its i
-  in
+fun pred_stac (tacsymweight,tacfea) ostac fea =
+  let val stacl = tacknn (tacsymweight,tacfea) (!ttt_ortho_radius) fea in
     filter (fn x => not (x = ostac)) stacl
+  end
+
+fun pred_thmid thmdata fea =
+  thmknn thmdata (!ttt_thmlarg_radius) fea
+
+fun unterm_var v =
+  let val (vs,ty) = dest_var v in vs end
+
+fun respace s = String.concatWith " " (partial_sml_lexer s)
+
+fun unterm_var_alt v =
+  let val (vs,ty) = dest_var v in [vs, respace vs] end
+
+fun pred_svar n goal =
+  first_n n (map unterm_var (find_terms is_var (snd goal)))
+
+fun pred_svar_alt n goal =
+  let
+    val vl1 = find_terms is_var (snd goal)
+    val vl2 = List.concat (map unterm_var_alt vl1)
+  in
+    first_n (2 * n) vl2
   end
 
 fun order_stac tacdata ostac stacl =
@@ -122,56 +82,66 @@ fun order_stac tacdata ostac stacl =
      dict_sort covcmp stacl'
    end
 
+(* -------------------------------------------------------------------------
+   Instantiations (* todo: speedup by preparsing tokenl *)
+   ------------------------------------------------------------------------- *)
+
+fun inst_arg (thmidl,sterml) stac =
+  if is_thmlstac stac then
+    [(stac, inst_thml thmidl stac)]
+  else if is_termstac stac then
+    map (fn x => (stac, inst_term x stac)) sterml
+  else [(stac,stac)]
+
+(* -------------------------------------------------------------------------
+   Testing if a predicted tactic as a "better effect" than the original
+   ------------------------------------------------------------------------- *)
+
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
+val goal_subset = op_subset goal_eq
+
 fun test_stac g gl (stac, istac) =
   let
-    val _ = debug ("test_stac " ^ istac)
-    val (glo,t) = add_time (app_stac 0.02 istac) g
+    val _ = debug "test_stac"
+    val glo = app_stac (!learn_tactic_time) istac g
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if op_subset goal_eq newgl gl
-       then SOME (stac,t,g,newgl)
-       else NONE)
+      (if goal_subset newgl gl then SOME stac else NONE)
   end
+
+(* -------------------------------------------------------------------------
+   Updates the original label if a better tactic is found
+   ------------------------------------------------------------------------- *)
 
 val ortho_predstac_time = ref 0.0
 val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
-fun save_thmlintac (lbl as (ostac,t,g,gl)) =
-  let val gfea = feahash_of_goal g in
-    case abstract_thmlarg ostac of NONE => ()
-    | SOME (_, thmsll) =>
-      let
-        val thmsl = List.concat thmsll
-        val l = map (fn x => (thmlintac_tag ^ "Theory." ^ x, gfea)) thmsl
-      in
-        thmlintac_cthy := l @ !thmlintac_cthy
-      end
-  end
-
-fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
+fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
+  ((g,gl), icall as (loc,{stac,ogl,fea})) =
   let
-    val gfea = feahash_of_goal g
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time
-      (pred_stac tacdata ostac) gfea
+      (pred_stac (tacsymweight,tacfea) stac) fea
     val _ = debug "order tactics"
-    val stacl2 = order_stac tacdata ostac stacl1
-    val _ = debug "concat abstract tactics"
-    val stacl3 = concat_absstacl gfea ostac stacl2
-    val _ = debug "predict theorems"
-    val thml = total_time ortho_predthm_time
-      (thmknn thmdata (!ttt_thmlarg_radius)) gfea
+    val stacl2 = order_stac tacdata stac stacl1
+    val _ = debug "abstract tactics"
+    val stacl3 = concat_absstacl fea stac stacl2
+    val _ = debug "predict arguments"
+    val thmidl = total_time ortho_predthm_time (pred_thmid thmdata) fea
+    val sterml = []
     val _ = debug "instantiate arguments"
-    val stacl4 = inst_stacl thml stacl3
+    val stacl4 = List.concat (map (inst_arg (thmidl,sterml)) stacl3)
     val _ = debug "test tactics"
-    val (testo,r) = add_time (findSome (test_stac g gl)) stacl4
-    val _ = debug ("test time: " ^ rts r)
-    val _ = ortho_teststac_time := !ortho_teststac_time + r
+    val (newstaco,t) = add_time (findSome (test_stac g gl)) stacl4
+    val _ = debug ("test time: " ^ rts t)
+    val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
-    case testo of NONE => lbl | SOME newlbl => newlbl
+    case newstaco of NONE => icall |
+      SOME newstac => (loc, {stac = newstac, ogl = ogl, fea = fea})
   end
+  handle Interrupt => raise Interrupt | _ =>
+    (debug "error: orthogonalize"; icall)
 
 
 end (* struct *)

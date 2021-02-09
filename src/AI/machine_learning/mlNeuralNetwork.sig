@@ -35,26 +35,24 @@ sig
   val random_nn : (real -> real) * (real -> real) -> int list -> nn
 
   (* forward and backward pass *)
-  val fp_nn        : nn -> vect -> fpdata list
-  val bp_nn        : fpdata list -> vect -> bpdata list
+  val fp_nn : nn -> vect -> fpdata list
+  val bp_nn : fpdata list -> vect -> bpdata list
   val bp_nn_doutnv : fpdata list -> vect -> bpdata list
 
   (* weight updates *)
-  val update_nn         : trainparam -> nn -> mat list -> nn
-  val smult_dwl         : real -> mat list -> mat list
-  val sum_dwll          : mat list list -> mat list
+  val update_nn : trainparam -> nn -> mat list -> nn
+  val smult_dwl : real -> mat list -> mat list
+  val sum_dwll : mat list list -> mat list
   val mean_square_error : vect -> real
-  val average_loss      : bpdata list list -> real
+  val average_loss : bpdata list list -> real
 
   (* input/output *)
-  val reall_to_string : real list -> string
-  val string_to_reall : string -> real list
-  val string_of_wl : mat list -> string
-  val string_of_nn : nn -> string
-  val read_wl_sl : string list -> mat list
-  val read_nn_sl : string list -> nn
+  val enc_nn : nn -> HOLsexp_dtype.t
+  val dec_nn : HOLsexp_dtype.t -> nn option
   val write_nn : string -> nn -> unit
   val read_nn : string -> nn
+  val reall_to_string : real list -> string
+  val string_to_reall : string -> real list
   val write_exl : string -> (real list * real list) list -> unit
   val read_exl : string -> (real list * real list) list
 

@@ -1,6 +1,7 @@
 signature Tactic =
 sig
   include Abbrev
+  datatype match_position = datatype thmpos_dtype.match_position
 
   val ACCEPT_TAC            : thm_tactic
   val DISCARD_TAC           : thm_tactic
@@ -78,6 +79,7 @@ sig
   val match_mp_tac          : thm -> tactic
   val prim_irule            : thm -> tactic
   val irule                 : thm -> tactic
+  val irule_at              : match_position -> thm -> tactic
   val IRULE_TAC             : thm -> tactic
   val impl_tac              : tactic
   val impl_keep_tac         : tactic
@@ -97,6 +99,10 @@ sig
   val SUFF_TAC              : term -> tactic
   val suff_tac              : term -> tactic
 
+
+  val eliminable            : term -> bool
+  val VSUBST_TAC            : thm -> tactic
+
   val DEEP_INTROk_TAC       : thm -> tactic -> tactic
   val DEEP_INTRO_TAC        : thm -> tactic
 
@@ -104,7 +110,6 @@ sig
   val HINT_EXISTS_TAC       : tactic
   val part_match_exists_tac : (term -> term) -> term -> tactic
 
-  datatype match_position = datatype thmpos_dtype.match_position
   val drule                : thm_tactic
   val dxrule               : thm_tactic
   val rev_drule            : thm_tactic

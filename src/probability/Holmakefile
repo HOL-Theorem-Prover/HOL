@@ -1,8 +1,5 @@
 EXTRA_CLEANS = heap
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
 ifdef POLY
 HOLHEAP = heap
 OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
@@ -17,7 +14,10 @@ $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
 endif
 
-all: $(TARGETS)
+all: $(DEFAULT_TARGETS) selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
 

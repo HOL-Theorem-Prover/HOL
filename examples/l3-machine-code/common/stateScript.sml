@@ -468,8 +468,8 @@ val SEP_EQ_STAR = Q.store_thm("SEP_EQ_STAR",
   \\ METIS_TAC []
   )
 
-val MAPPED_COMPONENT_INSERT = Q.store_thm("MAPPED_COMPONENT_INSERT",
-   `!P n x y single_c map_c.
+Theorem MAPPED_COMPONENT_INSERT:
+   !P n x y single_c map_c.
      (!c d. single_c c d = {set (GENLIST (\i. (x c i, y d i)) n)}) ==>
      (!a b i j. P a /\ P b /\ i < n /\ j < n ==>
                 ((x a i = x b j) = (a = b) /\ (i = j))) /\
@@ -477,7 +477,8 @@ val MAPPED_COMPONENT_INSERT = Q.store_thm("MAPPED_COMPONENT_INSERT",
              {BIGUNION {BIGUNION (single_c c (f c)) | c | c IN df /\ P c}}) ==>
      !f df c d.
        c IN df /\ P c ==>
-       (single_c c d * map_c (df DELETE c) f = map_c df ((c =+ d) f))`,
+       (single_c c d * map_c (df DELETE c) f = map_c df ((c =+ d) f))
+Proof
    REPEAT strip_tac
    \\ asm_rewrite_tac [GSYM SEP_EQ_SINGLETON]
    \\ match_mp_tac SEP_EQ_STAR
@@ -485,12 +486,8 @@ val MAPPED_COMPONENT_INSERT = Q.store_thm("MAPPED_COMPONENT_INSERT",
                    pred_setTheory.DISJOINT_DEF, pred_setTheory.EXTENSION]
    \\ rw [boolTheory.PULL_EXISTS, combinTheory.APPLY_UPDATE_THM,
           listTheory.MEM_GENLIST]
-   >- metis_tac []
-   \\ Cases_on `x'`     \\ simp [] (* shouldn't rely on name here *)
-   \\ Cases_on `i < n`  \\ simp []
-   \\ Cases_on `i' < n` \\ simp []
    \\ metis_tac []
-   )
+QED
 
 val cnv = SIMP_CONV (srw_ss()) [DECIDE ``i < 1n = (i = 0)``]
 

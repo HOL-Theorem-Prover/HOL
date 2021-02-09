@@ -458,7 +458,7 @@ val NET_SUB = store_thm("NET_SUB",
                       ((\n. x(n) - y(n)) tends (x0 - y0))(mtop(mr1),g)”,
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[real_sub] THEN
-  CONV_TAC(EXACT_CONV[X_BETA_CONV “n:'a” “~(y (n:'a))”]) THEN
+  CONV_TAC(EXACT_CONV[X_BETA_CONV “n:'a” “-(y (n:'a))”]) THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_ADD) THEN
   ASM_REWRITE_TAC[] THEN
   FIRST_ASSUM(fn th => ONCE_REWRITE_TAC[GSYM(MATCH_MP NET_NEG th)]) THEN

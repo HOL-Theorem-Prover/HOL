@@ -157,7 +157,7 @@ val {export = export_cong,...} =
     ThmSetData.new_exporter {
       settype = "defncong",
       efns = {
-        add = fn {thy,named_thms} => app (add_cong o #2) named_thms,
+        add = fn {thy,named_thm} => add_cong (#2 named_thm),
         remove = fn _ => ()
       }
     }

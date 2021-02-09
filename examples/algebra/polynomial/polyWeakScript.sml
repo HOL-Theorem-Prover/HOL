@@ -4048,13 +4048,12 @@ val poly_chop_nonzero_eq = store_thm(
       If p = |0|, true as chop |0| = |0|   by poly_chop_zero
       If lead p <> #0, true                by poly_chop_nonzero_eq
 *)
-val poly_chop_eq = store_thm(
-  "poly_chop_eq",
-  ``!r:'a ring. !p. (chop p = p) <=> ((p = |0|) \/ lead p <> #0)``,
-  rw_tac std_ss[EQ_IMP_THM] >-
-  metis_tac[poly_chop_lead_zero] >-
-  rw[] >>
-  metis_tac[poly_chop_nonzero_eq]);
+Theorem poly_chop_eq:
+  !r:'a ring. !p. (chop p = p) <=> ((p = |0|) \/ lead p <> #0)
+Proof
+  simp[GSYM poly_chop_nonzero_eq, Excl "lift_disj_eq"] >>
+  rw_tac std_ss[EQ_IMP_THM] >> simp[poly_chop_of_zero]
+QED
 
 (* Theorem: p <> |0| ==> ((lead p = #0) <=> (chop (FRONT p) = chop p)) *)
 (* Proof:

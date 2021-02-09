@@ -62,6 +62,24 @@ val literal_case_ss =
       beta-conversion.
    ---------------------------------------------------------------------- *)
 
+local
+  val x = mk_var("x", Type.alpha)
+  val y = mk_var("y", Type.alpha)
+  val P = mk_var("P", bool)
+  val Q = mk_var("Q", bool)
+  val R = mk_var("R", bool)
+  val xney = mk_neg(mk_eq(x,y))
+  val idt' = GSYM IMP_DISJ_THM
+  val th1 = REWR_CONV idt' (mk_disj(xney,P))
+  val th2 = (REWR_CONV DISJ_COMM THENC REWR_CONV idt') (mk_disj(P, xney))
+  val th3_c =
+      LAND_CONV (REWR_CONV IMP_DISJ_THM) THENC REWR_CONV (GSYM DISJ_ASSOC) THENC
+      REWR_CONV idt'
+  val th3 = th3_c (mk_disj(mk_imp(P,Q),R))
+in
+val lift_disj_eq = CONJ th1 th2
+val lift_imp_disj = CONJ th3 (ONCE_REWRITE_RULE [DISJ_COMM] th3)
+end;
 
 val BOOL_ss = SSFRAG
   {name = SOME"BOOL",
@@ -81,7 +99,9 @@ val BOOL_ss = SSFRAG
      ("EXISTS_UNIQUE_REFL'", GSYM EXISTS_UNIQUE_REFL),
      ("EXCLUDED_MIDDLE'", ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE),
      ("literal_I_thm", literal_I_thm),
-     ("COND_BOOL_CLAUSES", COND_BOOL_CLAUSES)
+     ("COND_BOOL_CLAUSES", COND_BOOL_CLAUSES),
+     ("lift_disj_eq", lift_disj_eq),
+     ("lift_imp_disj", lift_imp_disj)
    ],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 

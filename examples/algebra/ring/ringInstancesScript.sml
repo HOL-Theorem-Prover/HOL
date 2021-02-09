@@ -22,7 +22,6 @@ val _ = new_theory "ringInstances";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -883,7 +882,7 @@ val ZN_invertibles_order = store_thm(
   rw[Invertibles_order, ZN_order_mod]);
 
 (*
-> order_alt |> ISPEC ``(ZN n).prod`` |> SPEC ``0`` |> SPEC ``1``;
+> order_thm |> ISPEC ``(ZN n).prod`` |> SPEC ``0`` |> SPEC ``1``;
 val it = |- 0 < 1 ==> ((ordz n 0 = 1) <=>
     ((ZN n).prod.exp 0 1 = (ZN n).prod.id) /\
     !m. 0 < m /\ m < 1 ==> (ZN n).prod.exp 0 m <> (ZN n).prod.id): thm
@@ -1664,7 +1663,7 @@ val ZN_order_test_propery = store_thm(
   metis_tac[ZN_order_property_alt]);
 
 (*
-> order_alt |> GEN_ALL |> ISPEC ``(ZN m).prod`` |> ISPEC ``n:num`` |> ISPEC ``k:num``;
+> order_thm |> GEN_ALL |> ISPEC ``(ZN m).prod`` |> ISPEC ``n:num`` |> ISPEC ``k:num``;
 val it = |- 0 < k ==> ((ordz m n = k) <=>
     ((ZN m).prod.exp n k = (ZN m).prod.id) /\
     !m'. 0 < m' /\ m' < k ==> (ZN m).prod.exp n m' <> (ZN m).prod.id): thm
@@ -1673,7 +1672,7 @@ val it = |- 0 < k ==> ((ordz m n = k) <=>
 (* Theorem: 1 < m /\ 0 < k ==>
             ((ordz m n = k) <=> ((n ** k) MOD m = 1) /\ !j. 0 < j /\ j < k ==> (n ** j) MOD m <> 1) *)
 (* Proof:
-   By order_alt, 0 < k ==>
+   By order_thm, 0 < k ==>
    ((ordz m n = k) <=> ((ZN m).prod.exp n k = (ZN m).prod.id) /\
                        !j. 0 < j /\ j < k ==> (ZN m).prod.exp n j <> (ZN m).prod.id)
    Now (ZN m).prod.exp n k = (n ** k) MOD m    by ZN_exp, 0 < m
@@ -1684,7 +1683,7 @@ val ZN_order_test_1 = store_thm(
   "ZN_order_test_1",
   ``!m n k. 1 < m /\ 0 < k ==>
    ((ordz m n = k) <=> ((n ** k) MOD m = 1) /\ !j. 0 < j /\ j < k ==> (n ** j) MOD m <> 1)``,
-  metis_tac[order_alt, ZN_exp, ZN_ids_alt, DECIDE``1 < m ==> 0 < m``]);
+  metis_tac[order_thm, ZN_exp, ZN_ids_alt, DECIDE``1 < m ==> 0 < m``]);
 
 (* Theorem: 1 < m /\ 0 < k ==> ((ordz m n = k) <=>
             (n ** k MOD m = 1) /\ !j. 0 < j /\ j < k /\ j divides (phi m) ==> n ** j MOD m <> 1) *)

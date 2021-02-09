@@ -71,6 +71,10 @@ sig
     dprocs: Traverse.reducer list,
      congs: thm list} -> ssfrag
 
+  val empty_ssfrag : ssfrag
+  val ssf_upd_rewrs : ((thname option * thm) list -> (thname option * thm) list)
+                      ->
+                      ssfrag -> ssfrag
   val frag_rewrites : ssfrag -> thm list
   val frag_name : ssfrag -> string option
 
@@ -127,6 +131,7 @@ sig
   val &&              : simpset * thm list -> simpset  (* infix *)
   val limit           : int -> simpset -> simpset
   val unlimit         : simpset -> simpset
+  val add_named_rwt   : (thname * thm) -> ssfrag -> ssfrag
 
   val add_weakener : weakener_data -> simpset -> simpset
 
@@ -186,6 +191,14 @@ sig
    val rev_full_simp_tac          : simpset -> thm list -> tactic
    val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
    val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+
+   type simptac_config = {strip : bool, elimvars : bool, droptrues : bool}
+   val psr : simptac_config -> simpset -> tactic
+     (* Pop, Simp, Rotate to back *)
+   val allasms : simptac_config -> simpset -> tactic
+     (* do the above to all the assumptions in turn *)
+   val global_simp_tac : simptac_config -> simpset -> thm list -> tactic
+     (* do allasms until quiescence, then simp in the goal as well *)
 
    (* ---------------------------------------------------------------------
     * SIMP_RULE : simpset -> tactic

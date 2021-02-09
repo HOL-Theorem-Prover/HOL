@@ -45,7 +45,7 @@ open LoadableThyData ThmSetData
 fun simple_export nm add =
     #export (
       new_exporter {settype = nm,
-                    efns = {add = fn {named_thms,...} => add (map #2 named_thms),
+                    efns = {add = fn {named_thm,...} => add [#2 named_thm],
                             remove = fn {thy,...} => ()
                            }
                    }

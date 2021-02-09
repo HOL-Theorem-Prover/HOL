@@ -2316,15 +2316,18 @@ val linear_order_to_list_lem2a = Q.prove (
     ASM_REWRITE_TAC [] THEN
     IMP_RES_TAC (REWRITE_RULE [SUBSET_DEF] rrestrict_SUBSET) ]) ;
 
-val linear_order_to_list_lem1d = Q.prove (
-  `linear_order lo X ==> finite_prefixes lo X ==> x IN X ==>
-  (LNTH (PRE (CARD {y | (y,x) IN lo})) (LUNFOLD linear_order_to_list_f lo) =
-    SOME x)`,
+Theorem linear_order_to_list_lem1d[local]:
+  linear_order lo X ==> finite_prefixes lo X ==> x IN X ==>
+  LNTH (PRE (CARD {y | (y,x) IN lo})) (LUNFOLD linear_order_to_list_f lo) =
+  SOME x
+Proof
   REPEAT DISCH_TAC THEN
-  irule (MODIFY_CONS CONJUNCT1 linear_order_to_list_lem1a) >> rpt conj_tac
-  THENL [RULE_ASSUM_TAC (REWRITE_RULE [finite_prefixes_def]) THEN RES_TAC,
+  irule (cj 1 linear_order_to_list_lem1a) >> rpt conj_tac THENL [
+    RULE_ASSUM_TAC (REWRITE_RULE [finite_prefixes_def]) THEN RES_TAC,
     REFL_TAC,
-    Q.EXISTS_TAC `X` THEN ASM_REWRITE_TAC []]) ;
+    Q.EXISTS_TAC `X` THEN ASM_REWRITE_TAC []
+  ]
+QED
 
 val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist_eq",
   `!lo X.
@@ -2897,6 +2900,7 @@ End
    Update TypeBase
    -------------------------------------------------------------------------- *)
 
+Overload "case" = “llist_CASE”;
 val _ = TypeBase.export
   [TypeBasePure.mk_datatype_info
     {
@@ -3308,6 +3312,37 @@ Proof
   rpt strip_tac >>
   imp_res_tac NOT_LFINITE_IMP_fromSeq >> VAR_EQ_TAC >>
   simp[LPREFIX_fromList,LFINITE_toList_SOME,LPREFIX_fromList,toList]
+QED
+
+Theorem LPREFIX_NTH:
+  LPREFIX l1 l2 <=>
+    !i v. LNTH i l1 = SOME v ==> LNTH i l2 = SOME v
+Proof
+  qspec_then `l1` strip_assume_tac fromList_fromSeq
+  \\ qspec_then `l2` strip_assume_tac fromList_fromSeq
+  \\ rw [LPREFIX_def,from_toList]
+  \\ fs [toList,FUN_EQ_THM]
+  \\ fs [LNTH_fromList]
+  THEN1
+   (qid_spec_tac `l'` \\ qid_spec_tac `l` \\ Induct \\ fs []
+    \\ Cases_on `l'` \\ fs [] THEN1 (qexists_tac `0` \\ fs [])
+    \\ rw [] \\ eq_tac \\ rw []
+    \\ TRY (Cases_on `i` \\ fs [] \\ NO_TAC)
+    THEN1 (first_x_assum (qspec_then `0` mp_tac) \\ fs [])
+    \\ first_x_assum (qspec_then `SUC i` mp_tac) \\ fs [])
+  THEN1
+   (qid_spec_tac `l`
+    \\ ho_match_mp_tac rich_listTheory.SNOC_INDUCT
+    \\ fs [GSYM ADD1,rich_listTheory.GENLIST] \\ rw []
+    \\ eq_tac \\ rw []
+    THEN1
+     (Cases_on `i = LENGTH l` \\ fs []
+      \\ fs [rich_listTheory.SNOC_APPEND,
+             rich_listTheory.EL_LENGTH_APPEND,rich_listTheory.EL_APPEND1])
+    \\ fs [rich_listTheory.SNOC_APPEND,
+           rich_listTheory.EL_LENGTH_APPEND,rich_listTheory.EL_APPEND1])
+  THEN1 (qexists_tac `LENGTH l` \\ fs [])
+  \\ eq_tac \\ rw []
 QED
 
 (* ----------------------------------------------------------------------

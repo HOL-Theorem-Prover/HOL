@@ -148,6 +148,7 @@
 (define-key hol-unicode-superscript-map "+" "⁺")
 (define-key hol-unicode-superscript-map "-" "⁻")
 (define-key hol-unicode-superscript-map "=" "⁼")
+(define-key hol-unicode-superscript-map "*" "꙳")
 
 (define-key hol-unicode-superscript-map "A" "ᴬ")
 (define-key hol-unicode-superscript-map "B" "ᴮ")

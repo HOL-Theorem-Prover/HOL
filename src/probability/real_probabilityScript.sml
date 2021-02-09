@@ -574,7 +574,7 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
                           COUNTABLE_COUNT]
         >> PROVE_TAC [],
         RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
-        >> PROVE_TAC [LT_SUC],
+        >> PROVE_TAC [DECIDE “x < SUC y <=> x < y \/ x = y”],
         RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_UNIV, IN_COUNT]
         >> reverse EQ_TAC >- PROVE_TAC []
         >> RW_TAC std_ss []

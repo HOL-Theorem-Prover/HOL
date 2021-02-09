@@ -76,6 +76,7 @@ sig
       {chattiness:int,
        debug: {ins:string list,outs:string list} option,
        usepfx:bool} -> output_functions
+  val default_ofns : output_functions
   val die_with : string -> 'a
 
 
@@ -99,7 +100,7 @@ sig
   val exists_readable : string -> bool
   val extract_theory : string list -> string option
 
-  val clean_dir : {extra_cleans: string list} -> unit
+  val clean_dir : output_functions -> {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
   val clean_forReloc : {holheap : string option} -> unit
   val pushdir : string -> ('a -> 'b) -> ('a -> 'b)

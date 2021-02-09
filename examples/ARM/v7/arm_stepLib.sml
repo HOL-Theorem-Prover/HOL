@@ -25,7 +25,10 @@ open Parse
 
 val _ = numLib.prefer_num();
 val _ = wordsLib.prefer_word();
-val srw_ss = srw_ss() -* ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
+val srw_ss = srw_ss() -* ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT", "lift_disj_eq",
+                          "lift_imp_disj"]
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+
 fun SRW_TAC ssdl thl g = let
   val base = srw_ss
   open BasicProvers

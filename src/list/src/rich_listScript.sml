@@ -54,6 +54,8 @@ in
    val ZIP = ZIP
 end;
 
+open markerLib
+
 val () = new_theory "rich_list"
 
 (* ------------------------------------------------------------------------ *)
@@ -457,9 +459,6 @@ val EL_FILTER = Q.prove(
 val FILTER_EQ_lem = Q.prove(
    `!l l2 P h. ~P h ==> (FILTER P l <> h :: l2)`,
    SRW_TAC [] [listTheory.LIST_EQ_REWRITE]
-   THEN Cases_on `LENGTH (FILTER P l) = 0`
-   THEN SRW_TAC [] []
-   THEN DISJ2_TAC
    THEN Q.EXISTS_TAC `0`
    THEN SRW_TAC [numSimps.ARITH_ss] []
    THEN `0 < LENGTH (FILTER P l)` by numLib.DECIDE_TAC
@@ -722,6 +721,12 @@ Theorem IS_SUFFIX_CONS:
   !l1 l2 a. IS_SUFFIX l1 l2 ==> IS_SUFFIX (a::l1) l2
 Proof
   srw_tac[][IS_SUFFIX_APPEND] >> Q.EXISTS_TAC ‘a::l’ >> srw_tac[][]
+QED
+
+Theorem IS_SUFFIX_APPEND1:
+  !l1 l2 l. IS_SUFFIX l2 l ==> IS_SUFFIX (l1 ++ l2) l
+Proof
+  Induct >> fs[IS_SUFFIX_CONS]
 QED
 
 Theorem IS_SUFFIX_TRANS:
@@ -2390,60 +2395,46 @@ val LESS_EQ_SPLIT = numLib.DECIDE ``!p n m. m + n <= p ==> n <= p /\ m <= p``
 val SUB_LESS_EQ_ADD =
    numLib.DECIDE ``!p n m. n <= p ==> (m <= p - n <=> m + n <= p)``
 
-val TAKE_BUTLASTN = Q.store_thm ("TAKE_BUTLASTN",
-   `!n l. n <= LENGTH l ==> (TAKE n l = BUTLASTN ((LENGTH l) - n) l)`,
-   INDUCT_TAC
-   THEN REWRITE_TAC [TAKE, BUTLASTN_LENGTH_NIL, SUB_0]
-   THEN LIST_INDUCT_TAC
-   THEN REWRITE_TAC [NOT_SUC_LESS_EQ_0, TAKE, LENGTH, SUB_0, BUTLASTN,
-                     LESS_EQ_MONO, SUB_MONO_EQ]
-   THEN GEN_TAC
-   THEN DISCH_TAC
-   THEN RES_THEN SUBST1_TAC
-   THEN CONV_TAC SYM_CONV
-   THEN MATCH_MP_TAC BUTLASTN_CONS
-   THEN MATCH_ACCEPT_TAC SUB_LESS_EQ);
 
-val BUTLASTN_TAKE = Q.store_thm ("BUTLASTN_TAKE",
-   `!n l. n <= LENGTH l ==> (BUTLASTN n l = TAKE (LENGTH l - n) l)`,
-   INDUCT_TAC
-   THEN REWRITE_TAC [TAKE, BUTLASTN_LENGTH_NIL, SUB_0]
-   THEN SNOC_INDUCT_TAC
-   THEN REWRITE_TAC [NOT_SUC_LESS_EQ_0, LENGTH, LENGTH_SNOC, SUB_0, BUTLASTN,
-                     TAKE, listTheory.TAKE_LENGTH_ID, LESS_EQ_MONO, SUB_MONO_EQ]
-   THEN GEN_TAC
-   THEN DISCH_TAC
-   THEN RES_THEN SUBST1_TAC
-   THEN CONV_TAC SYM_CONV
-   THEN MATCH_MP_TAC TAKE_SNOC
-   THEN MATCH_ACCEPT_TAC SUB_LESS_EQ);
+Theorem BUTLASTN_TAKE_UNCOND:
+  !n l. BUTLASTN n l = TAKE (LENGTH l - n) l
+Proof
+  simp[BUTLASTN_def] >> Induct >> simp[] >>
+  Cases using listTheory.SNOC_CASES >> simp[TAKE_APPEND] >>
+  simp[ARITH_PROVE “1 - SUC x = 0”, ARITH_PROVE “x + 1 - SUC y = x - y”]
+QED
 
-val LASTN_DROP = Q.store_thm ("LASTN_DROP",
-   `!n l. n <= LENGTH l ==> (LASTN n l = DROP (LENGTH l - n) l)`,
-   INDUCT_TAC
-   THEN REWRITE_TAC [LASTN, DROP_LENGTH_NIL, SUB_0]
-   THEN SNOC_INDUCT_TAC
-   THEN REWRITE_TAC [NOT_SUC_LESS_EQ_0, LASTN, LENGTH, LENGTH_SNOC, SUB_0,
-                     LESS_EQ_MONO, SUB_MONO_EQ]
-   THEN GEN_TAC
-   THEN DISCH_TAC
-   THEN RES_THEN SUBST1_TAC
-   THEN CONV_TAC SYM_CONV THEN MATCH_MP_TAC DROP_SNOC
-   THEN MATCH_ACCEPT_TAC SUB_LESS_EQ);
+Theorem BUTLASTN_TAKE:
+  !n l. n <= LENGTH l ==> (BUTLASTN n l = TAKE (LENGTH l - n) l)
+Proof
+  simp[BUTLASTN_TAKE_UNCOND]
+QED
 
-val DROP_LASTN = Q.store_thm ("DROP_LASTN",
-   `!n l. n <= LENGTH l ==> (DROP n l = LASTN ((LENGTH l) - n) l)`,
-   INDUCT_TAC
-   THEN REWRITE_TAC [LASTN_LENGTH_ID, DROP, SUB_0]
-   THEN LIST_INDUCT_TAC
-   THEN REWRITE_TAC [NOT_SUC_LESS_EQ_0, LASTN, LENGTH, DROP, SUB_0,
-                     LESS_EQ_MONO, SUB_MONO_EQ]
-   THEN GEN_TAC
-   THEN DISCH_TAC
-   THEN RES_THEN SUBST1_TAC
-   THEN CONV_TAC SYM_CONV
-   THEN MATCH_MP_TAC LASTN_CONS
-   THEN MATCH_ACCEPT_TAC SUB_LESS_EQ);
+Theorem TAKE_BUTLASTN:
+  !n l. n <= LENGTH l ==> TAKE n l = BUTLASTN (LENGTH l - n) l
+Proof
+  simp[BUTLASTN_TAKE]
+QED
+
+Theorem LASTN_DROP_UNCOND:
+  !n l. LASTN n l = DROP (LENGTH l - n) l
+Proof
+  simp[LASTN_def] >> Induct >> simp[] >>
+  Cases using listTheory.SNOC_CASES >> simp[DROP_APPEND] >>
+  simp[ARITH_PROVE “1 - SUC n = 0”, ARITH_PROVE “x + 1 - SUC y = x - y”]
+QED
+
+Theorem LASTN_DROP:
+   !n l. n <= LENGTH l ==> LASTN n l = DROP (LENGTH l - n) l
+Proof
+  simp[LASTN_DROP_UNCOND]
+QED
+
+Theorem DROP_LASTN:
+  !n l. n <= LENGTH l ==> DROP n l = LASTN (LENGTH l - n) l
+Proof
+  simp[LASTN_DROP_UNCOND]
+QED
 
 val SUB_ADD_lem =
    numLib.DECIDE ``!l n m. n + m <= l ==> ((l - (n + m)) + n = l - m)``
@@ -3034,7 +3025,9 @@ local
   val metis_tac = METIS_TAC
   val fs = FULL_SIMP_TAC (srw_ss())
   val rfs = REV_FULL_SIMP_TAC (srw_ss())
-  val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
+  fun simpss() = srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss
+  fun simp ths = asm_simp_tac (simpss()) ths
+  fun dsimp ths = asm_simp_tac (simpss() ++ boolSimps.DNF_ss) ths
   val decide_tac = numLib.DECIDE_TAC
   open pred_setTheory open listTheory pairTheory;
 in
@@ -3159,37 +3152,28 @@ val EVERY2_APPEND = save_thm(
 val EVERY2_APPEND_suff = save_thm(
   "EVERY2_APPEND_suff", listTheory.LIST_REL_APPEND_suff);
 
-val EVERY2_DROP = Q.store_thm("EVERY2_DROP",
-   `!R l1 l2 n.
-      EVERY2 R l1 l2 ==> EVERY2 R (DROP n l1) (DROP n l2)`,
-  REPEAT STRIP_TAC THEN IMP_RES_TAC LIST_REL_LENGTH
-  THEN Q.PAT_ASSUM `LIST_REL P xs ys` MP_TAC
-  THEN ONCE_REWRITE_TAC [GSYM TAKE_DROP] THEN REPEAT STRIP_TAC
-  THEN ONCE_REWRITE_TAC [TAKE_DROP]
-  THEN Cases_on `n <= LENGTH l1`
-  THEN1 (METIS_TAC [EVERY2_APPEND,LENGTH_DROP,LENGTH_TAKE])
-  THEN fs [GSYM NOT_LESS] THEN `LENGTH l1 <= n` by numLib.DECIDE_TAC
-  THEN fs [DROP_LENGTH_TOO_LONG]
-  THEN rfs [DROP_LENGTH_TOO_LONG]);
+Theorem EVERY2_DROP:
+  !R l1 l2 n.
+    EVERY2 R l1 l2 ==> EVERY2 R (DROP n l1) (DROP n l2)
+Proof
+  Induct_on ‘n’ >> simp[] >> Induct_on ‘l1’ >> dsimp[]
+QED
 
-val EVERY2_TAKE = store_thm("EVERY2_TAKE",
-  ``!P xs ys n. EVERY2 P xs ys ==> EVERY2 P (TAKE n xs) (TAKE n ys)``,
-  REPEAT STRIP_TAC THEN IMP_RES_TAC EVERY2_LENGTH
-  THEN Q.PAT_ASSUM `LIST_REL P xs ys` MP_TAC
-  THEN ONCE_REWRITE_TAC [GSYM TAKE_DROP] THEN REPEAT STRIP_TAC
-  THEN ONCE_REWRITE_TAC [TAKE_DROP]
-  THEN Cases_on `n <= LENGTH xs`
-  THEN1 (METIS_TAC [EVERY2_APPEND,LENGTH_DROP,LENGTH_TAKE])
-  THEN fs [GSYM NOT_LESS] THEN `LENGTH xs <= n` by DECIDE_TAC
-  THEN fs [TAKE_LENGTH_TOO_LONG]
-  THEN rfs [TAKE_LENGTH_TOO_LONG]);
+Theorem EVERY2_TAKE:
+  !P xs ys n. EVERY2 P xs ys ==> EVERY2 P (TAKE n xs) (TAKE n ys)
+Proof
+  Induct_on ‘n’ >> simp[] >> Induct_on ‘xs’ >>
+  asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss) []
+QED
 
-val LIST_REL_APPEND_SING = Q.store_thm("LIST_REL_APPEND_SING[simp]",
-   `LIST_REL R (l1 ++ [x1]) (l2 ++ [x2]) <=> LIST_REL R l1 l2 /\ R x1 x2`,
-   rw[EQ_IMP_THM]
-   >> TRY (MATCH_MP_TAC EVERY2_APPEND_suff >> simp[])
-   >> IMP_RES_TAC EVERY2_APPEND
-   >> fs[])
+Theorem LIST_REL_APPEND_SING[simp]:
+  LIST_REL R (l1 ++ [x1]) (l2 ++ [x2]) <=> LIST_REL R l1 l2 /\ R x1 x2
+Proof
+  simp_tac (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.CONJ_ss)
+           [listTheory.LIST_REL_EL_EQN, EL_APPEND1, EL_APPEND2,
+            ARITH_PROVE “x < y + 1 <=> x = y \/ x < y”,
+            AC CONJ_COMM CONJ_ASSOC]
+QED
 
 val LIST_REL_GENLIST = store_thm("LIST_REL_GENLIST",
   ``EVERY2 P (GENLIST f l) (GENLIST g l) <=>
@@ -3285,12 +3269,11 @@ Theorem DROP_REPLICATE[simp]:
 Proof simp[LIST_EQ_REWRITE,LENGTH_REPLICATE,EL_REPLICATE,EL_DROP]
 QED
 
-val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
-  ``LIST_REL P (REPLICATE n x) (REPLICATE n y) <=> (n > 0 ==> P x y)``,
-  simp[LIST_REL_EL_EQN,REPLICATE_GENLIST] >>
-  Cases_on`n`>>simp[EQ_IMP_THM] >> rw[] >>
-  FIRST_X_ASSUM MATCH_MP_TAC >>
-  Q.EXISTS_TAC`0`>>simp[]);
+Theorem LIST_REL_REPLICATE_same:
+  LIST_REL P (REPLICATE n x) (REPLICATE n y) <=> (0 < n ==> P x y)
+Proof
+  Induct_on ‘n’>> asm_simp_tac (srw_ss() ++ boolSimps.CONJ_ss)[]
+QED
 
 Theorem SNOC_REPLICATE[simp]:
   !n x. SNOC x (REPLICATE n x) = REPLICATE (SUC n) x
@@ -3333,38 +3316,73 @@ val all_distinct_count_list = Q.store_thm ("all_distinct_count_list",
    >> MATCH_MP_TAC ALL_DISTINCT_MAP_INJ
    >> rw []);
 
-val list_rel_lastn = Q.store_thm("list_rel_lastn",
-  `!f l1 l2 n.
-    n <= LENGTH l1 /\
-    LIST_REL f l1 l2 ==>
-    LIST_REL f (LASTN n l1) (LASTN n l2)`,
-  Induct_on `l1` >>
-  rw [LASTN] >>
-  imp_res_tac EVERY2_LENGTH >>
-  Cases_on `n = LENGTH l1 + 1`
-  >- metis_tac [LASTN_LENGTH_ID, ADD1, LENGTH, LIST_REL_def] >>
-  `n <= LENGTH l1` by decide_tac >>
-  `n <= LENGTH ys` by decide_tac >>
-  res_tac >>
-  fs [LASTN_CONS]);
+Theorem list_rel_lastn:
+  !f l1 l2 n.
+    n <= LENGTH l1 /\ LIST_REL f l1 l2 ==>
+    LIST_REL f (LASTN n l1) (LASTN n l2)
+Proof
+  simp[LASTN_DROP_UNCOND] >> rpt strip_tac >>
+  drule LIST_REL_LENGTH >> simp[EVERY2_DROP]
+QED
 
-val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
-  `!f l1 l2 n.
-    n <= LENGTH l1 /\
-    LIST_REL f l1 l2 ==>
-    LIST_REL f (BUTLASTN n l1) (BUTLASTN n l2)`,
-  Induct_on `l1` >>
-  rw [BUTLASTN] >>
-  imp_res_tac EVERY2_LENGTH >>
-  Cases_on `n = LENGTH l1 + 1`
-  >- metis_tac [BUTLASTN_LENGTH_NIL, ADD1, LENGTH, LIST_REL_def] >>
-  `n <= LENGTH l1` by decide_tac >>
-  `n <= LENGTH ys` by decide_tac >>
-  res_tac >>
-  fs [BUTLASTN_CONS]);
+Theorem list_rel_butlastn:
+  !f l1 l2 n.
+    n <= LENGTH l1 /\ LIST_REL f l1 l2 ==>
+    LIST_REL f (BUTLASTN n l1) (BUTLASTN n l2)
+Proof
+  rpt strip_tac >> drule_then assume_tac LIST_REL_LENGTH >>
+  simp[BUTLASTN_TAKE, EVERY2_TAKE]
+QED
 
 end
 (* end CakeML lemmas *)
+
+local open listTheory in
+
+Theorem nub_GENLIST:
+  nub (GENLIST f n) =
+    MAP f (FILTER (\i. !j. (i < j) /\ (j < n) ==> f i <> f j) (COUNT_LIST n))
+Proof
+  simp[COUNT_LIST_GENLIST]
+  \\ Q.ID_SPEC_TAC`f`
+  \\ Induct_on`n` \\ simp[]
+  \\ simp[GENLIST_CONS]
+  \\ simp[nub_def]
+  \\ gen_tac
+  \\ simp[MEM_GENLIST]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`COND b1`
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`MAP f (COND b2 _ _)`
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`f 0 :: r1`
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`0 :: r2`
+  \\ `b2 = ~b1`
+  by (
+    rw[Abbr`b1`, Abbr`b2`, EQ_IMP_THM]
+    >- (
+      CCONTR_TAC \\ fs[]
+      \\ first_x_assum(Q.SPEC_THEN`SUC m`mp_tac)
+      \\ simp[] )
+    \\ first_x_assum(Q.SPEC_THEN`PRE j`mp_tac)
+    \\ simp[]
+    \\ metis_tac[SUC_PRE] )
+  \\ `r1 = MAP f r2`
+  by (
+    simp[Abbr`r1`, Abbr`r2`]
+    \\ Q.MATCH_GOALSUB_ABBREV_TAC`FILTER f2`
+    \\ `f2 = (\i. !j. i <= j /\ (j < n) ==> f i <> f (SUC j)) o SUC`
+    by (
+      simp[Abbr`f2`, FUN_EQ_THM]
+      \\ simp[LESS_EQ] )
+    \\ simp[GSYM MAP_MAP_o, GSYM FILTER_MAP]
+    \\ simp[MAP_GENLIST]
+    \\ rpt (AP_TERM_TAC ORELSE AP_THM_TAC)
+    \\ simp[FUN_EQ_THM]
+    \\ gen_tac
+    \\ CONV_TAC(RAND_CONV(Ho_Rewrite.ONCE_REWRITE_CONV[FORALL_NUM]))
+    \\ simp[LESS_EQ] )
+  \\ rw[]
+QED
+
+end
 
 (* alternative definition of listTheory.UNIQUE *)
 val UNIQUE_LIST_ELEM_COUNT = store_thm (

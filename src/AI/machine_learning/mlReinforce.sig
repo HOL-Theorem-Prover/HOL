@@ -5,7 +5,7 @@ sig
 
   type tnn = mlTreeNeuralNetwork.tnn
   type tnnex = mlTreeNeuralNetwork.tnnex
-  type tnnparam = mlTreeNeuralNetwork.tnnparam
+  type tnndim = mlTreeNeuralNetwork.tnndim
   type schedule = mlNeuralNetwork.schedule
   type 'a rlex = 'a psBigSteps.rlex
   type 'a targetd = ('a, bool list) Redblackmap.dict
@@ -22,7 +22,7 @@ sig
   type 'a dplayer =
     {pretob : ('a * tnn) option -> 'a -> term list,
      schedule : schedule,
-     tnnparam : tnnparam}
+     tnndim : tnndim}
   val player_from_tnn :
     tnn -> ('a -> term list) -> ('a,'b) psMCTS.game -> 'a ->
     (real * ('b * real) list)

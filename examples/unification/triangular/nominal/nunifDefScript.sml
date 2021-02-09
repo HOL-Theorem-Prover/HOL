@@ -212,9 +212,9 @@ REPEAT (Q.PAT_X_ASSUM `Abbrev B` (K ALL_TAC)) THEN
 `?m. !n. m < n ==> (f1 m = f1 n)`
 by (Q.ISPECL_THEN
     [`f1`, `\n. sysvars (f1 n) (f2 n) (f3 n) DIFF (FDOM(f1 n))`, `m`]
-    (MATCH_MP_TAC o GSYM o SIMP_RULE (srw_ss()) [])
+    (MATCH_MP_TAC o GSYM o SIMP_RULE (srw_ss()) [Excl"UNION_DIFF_EQ"])
     commonUnifTheory.extension_chain THEN
-    SRW_TAC [][DISJOINT_DEF] THENL [
+    SRW_TAC [][DISJOINT_DEF,Excl"UNION_DIFF_EQ"] THENL [
       SRW_TAC [][EXTENSION] THEN METIS_TAC [],
       METIS_TAC [UNION_DIFF,sysvars_def,SUBSET_UNION,SUBSET_TRANS]
     ]) THEN

@@ -104,6 +104,16 @@ fun SSFRAG {name,convs,rewrs,ac,filter,dprocs,congs} =
               filter = filter, dprocs = dprocs, congs = congs,
               relsimps = []}
 
+val empty_ssfrag = SSFRAG{name = NONE, rewrs = [], convs = [], ac = [],
+                          filter = NONE, dprocs = [], congs = []}
+fun ssf_upd_rewrs f (SSFRAG_CON s) =
+    let
+      val {name,rewrs,convs,ac,filter,dprocs,congs, relsimps} = s
+    in
+      SSFRAG_CON {name = name, rewrs = f rewrs, convs = convs, ac = ac,
+                  filter = filter, dprocs = dprocs, congs = congs,
+                  relsimps = relsimps}
+    end
 (*---------------------------------------------------------------------------*)
 (* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
@@ -141,6 +151,7 @@ fun relsimp_ss rsdata =
 fun D (SSFRAG_CON s) = s;
 fun frag_rewrites ssf = map #2 (#rewrs (D ssf))
 
+fun add_named_rwt nth ssfrag = ssf_upd_rewrs (cons (apfst SOME nth)) ssfrag
 
 fun merge_names list =
   itlist (fn (SOME x) =>
@@ -681,31 +692,32 @@ val Req0 = markerLib.mk_Req0
 val ReqD = markerLib.mk_ReqD
 
 local open markerSyntax markerLib
-  fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
-  fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
+in
+fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
+fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
-  fun extract_excls (excls, rest) l =
-      case l of
-          [] => (List.rev excls, List.rev rest)
-        | th::ths => case markerLib.destExcl th of
-                         NONE => extract_excls (excls, th::rest) ths
-                       | SOME nm => extract_excls (nm::excls, rest) ths
+fun extract_excls (excls, rest) l =
+    case l of
+        [] => (List.rev excls, List.rev rest)
+      | th::ths => case markerLib.destExcl th of
+                       NONE => extract_excls (excls, th::rest) ths
+                     | SOME nm => extract_excls (nm::excls, rest) ths
 
-  fun process_tags ss thl =
+fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst) = Lib.partition is_AC rst
         val (excludes, rst) = extract_excls ([],[]) rst
     in
-     if null Congs andalso null ACs andalso null excludes then (ss,thl)
-     else (
-       ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                             ac=map unAC ACs, congs=map unCong Congs,
-                             convs=[],rewrs=[],filter=NONE,dprocs=[]}
-          -* excludes,
-       rst
-     )
+      if null Congs andalso null ACs andalso null excludes then (ss,thl)
+      else (
+        ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+                         ac=map unAC ACs, congs=map unCong Congs,
+                         convs=[],rewrs=[],filter=NONE,dprocs=[]}
+           -* excludes,
+        rst
+      )
     end
-in
+
 fun SIMP_CONV ss l tm =
   let val (ss', l') = process_tags ss l
   in TRY_CONV (SIMP_QCONV ss' l') tm
@@ -751,9 +763,35 @@ fun ASM_SIMP_TAC0 ss =
 fun ASM_SIMP_TAC ss = markerLib.mk_require_tac (ASM_SIMP_TAC0 ss)
 val asm_simp_tac = ASM_SIMP_TAC
 
+(* differs from default strip_assume_tac base in that it doesn't call
+   OPPOSITE_TAC or DISCARD_TAC.
+
+   Both are reasonable omissions: OPPOSITE_TAC detects mutually
+   contradictory assumptions; we'd hope that simplification will turn
+   one or the other into F, which is then caught by CONTR_TAC.
+   DISCARD_TAC drops duplicates. This should turn into T, which we can
+   discard if droptrues is true.
+*)
+
+type simptac_config = {strip : bool, elimvars : bool, droptrues : bool}
+
+fun BF_ASSUME_TAC backp th (g as (asl,w)) =
+    if backp then ([(asl @ [concl th], w)],
+                   fn resths => PROVE_HYP th (hd resths))
+    else ASSUME_TAC th g
+
+fun caa_tac0 backp (c : simptac_config) th =
+    let
+      val base = FIRST [CONTR_TAC th, ACCEPT_TAC th,
+                        BF_ASSUME_TAC backp th]
+    in
+      if #droptrues c andalso concl th ~~ boolSyntax.T then ALL_TAC
+      else base
+    end
+
 local
-   (* differs only in that it doesn't call OPPOSITE_TAC or DISCARD_TAC *)
-   fun caa_tac th = FIRST [CONTR_TAC th, ACCEPT_TAC th, ASSUME_TAC th]
+   val caa_tac = caa_tac0 false
+                          {elimvars = false, droptrues = false, strip = false}
    val STRIP_ASSUME_TAC' = REPEAT_TCL STRIP_THM_THEN caa_tac
    fun drop r =
       fn n =>
@@ -784,6 +822,37 @@ in
    val NO_STRIP_REV_FULL_SIMP_TAC =
        markerLib.mk_require_tac o rev_full_tac caa_tac
 end
+
+fun stdcon (c : simptac_config) th =
+    if #elimvars c andalso eliminable (concl th) then VSUBST_TAC th
+    else
+      (if #strip c then REPEAT_TCL STRIP_THM_THEN else I) (caa_tac0 true c) th
+
+fun psr (cfg : simptac_config) ss =
+    pop_assum (fn th =>
+                  ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+
+fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
+
+fun global_simp_tac cfg ss0 =
+    markerLib.mk_require_tac (
+      markerLib.ABBRS_THEN (
+        markerLib.LLABEL_RES_THEN (
+          fn thl =>
+             let
+               val (ss1,thl') = process_tags ss0 thl
+               val ss = ss1 ++ rewrites thl'
+             in
+               rpt (CHANGED_TAC (allasms cfg ss)) THEN
+               ASM_SIMP_TAC ss []
+             end
+        )
+      )
+    )
+
+
+
+
 
 fun track f x =
  let val _ = (used_rewrites := [])

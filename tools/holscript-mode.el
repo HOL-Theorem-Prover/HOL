@@ -10,10 +10,13 @@
         '("^\\(Definition\\|\\(?:Co\\)?Inductive\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
           (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax))
         '("^Termination\\>\\|^End\\>" . 'holscript-definition-syntax)
-        '("^Datatype\\>" . 'holscript-definition-syntax)
-        '("^THEN[1L]?\\>" . 'holscript-then-syntax)
-        '("[^A-Za-z0-9_']\\(THEN[1L]?\\)\\>" 1 'holscript-then-syntax)
-        '("\\S.\\(>[->|]\\|\\\\\\\\\\)\\S." 1 'holscript-then-syntax)
+        '("^\\(Datatype\\)[[:space:]]*:" (1 'holscript-definition-syntax))
+        '("\\_<THEN\\_>" . 'holscript-then-syntax)
+        '("\\_<THEN1\\_>" . 'holscript-then-syntax)
+        '("\\_<THENL\\_>" . 'holscript-then-syntax)
+        '("\\_<THEN_LT\\_>" . 'holscript-then-syntax)
+        '("\\S.\\(>\\(>>?\\|[-~|]\\)\\|\\\\\\\\\\)\\S." 1
+          'holscript-then-syntax)
         "^Type\\>"
         "^Overload\\>"
         (list (regexp-opt
@@ -23,7 +26,9 @@
               'holscript-smlsyntax)
         '("\\<cheat\\>" . 'holscript-cheat-face)
         '(holscript-find-syntax-error 0 'holscript-syntax-error-face prepend)
-        '(hol-find-quoted-material 0 'holscript-quoted-material prepend)))
+        '(hol-find-quoted-material 0 'holscript-quoted-material prepend)
+        '("^\\[[[:space:]]*~?\\([A-Za-z0-9'_]+\\)\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:\\]" 0
+          'holscript-definition-label-face prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
 
@@ -37,6 +42,7 @@
     (modify-syntax-entry ?‘ "(’" st)
     (modify-syntax-entry ?’ ")‘" st)
     (modify-syntax-entry ?\\ "\\" st)
+    (modify-syntax-entry ?λ "." st)
     ;; backslash only escapes in strings but we need to have it seen
     ;; as one in general if the hol-mode isn't to get seriously
     ;; confused by script files that contain escaped quotation
@@ -143,11 +149,13 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
 
 (defun is-a-then (s)
   (and s (or (string-equal s "THEN")
+             (string-equal s "THEN_LT")
              (string-equal s "THENL")
              (string-equal s "QED")
              (string-equal s "val")
              (string-equal s ">-")
              (string-equal s ">>")
+             (string-equal s ">>>")
              (string-equal s ">|")
              (string-equal s "\\\\"))))
 
@@ -360,7 +368,8 @@ a store_thm equivalent.")
                          holscript-quotedmaterial-delimiter-fullregexp nil t))
           (setq ppss (syntax-ppss)))
         (and beginmatch
-             (or (looking-at holscript-quoteddeclaration-begin)
+             (or (and (looking-at holscript-quoteddeclaration-begin)
+                      (>= p (match-end 0)))
                  (looking-at "[“‘]")))))))
 
 (defun holscript-find-syntax-error (limit)
@@ -550,11 +559,6 @@ a store_thm equivalent.")
   (nil "≠" "<>")
   (nil "∃" "?")
   (nil "∀" "!")
-  (nil "λ" "\\\\")
-  (nil "“" "``")
-  (nil "”" "``")
-  (nil "‘" "`")
-  (nil "’" "`")
   (t "∈" "IN")
   (t "∉" "NOTIN")
   (nil "α" "'a")
@@ -730,17 +734,18 @@ a store_thm equivalent.")
   (smie-prec2->grammar
    (smie-bnf->prec2
     '((id)
+      (sml-expr (id "SML|>" id))
       (decls (decls ";" decls) (decl))
       (decl ("^Theorem" theorem-contents "^QED")
             ("^Triviality" theorem-contents "^QED")
-            ("^Theorem=" id)
+            ("^Theorem=" sml-expr)
             ("^Triviality=" id)
             ("^Definition" definition-contents "^End")
             ("^Inductive" id-quoted "^End")
             ("^CoInductive" id-quoted "^End")
             ("^Overload" id)
             ("^Type" id)
-            ("^Datatype" quotedmaterial "^End")
+            ("^Datatype:" quotedmaterial "^End")
             ("val" id)
             ("fun" id)
             ("open" id)
@@ -748,7 +753,7 @@ a store_thm equivalent.")
             ("structure" id))
       (theorem-contents (id-quoted "^Proof" tactic))
       (definition-contents (id-quoted "^Termination" tactic) (id-quoted))
-      (id-quoted (id ":" quotedmaterial))
+      (id-quoted (id "SML:" quotedmaterial))
       (quotedmaterial
         ("QFIER." quotedmaterial "ENDQ." quotedmaterial)
         (quotedmaterial "/\\" quotedmaterial)
@@ -764,11 +769,14 @@ a store_thm equivalent.")
         (quotedmaterial "≤" quotedmaterial)
         (quotedmaterial "<=" quotedmaterial)
         (quotedmaterial "+" quotedmaterial)
+        (quotedmaterial "++" quotedmaterial)
         (quotedmaterial "*" quotedmaterial)
         (quotedmaterial ":=" quotedmaterial)
         (quotedmaterial "<-" quotedmaterial)
         (quotedmaterial "|" quotedmaterial)
         (quotedmaterial "=>" quotedmaterial)
+        (quotedmaterial ":" quotedmaterial)
+        ("[defnlabel]" quotedmaterial)
         ("case" quotedmaterial "of" quotedmaterial)
         ("do" quotedmaterial "od")
         ("if" quotedmaterial "then" quotedmaterial "else" quotedmaterial)
@@ -781,6 +789,8 @@ a store_thm equivalent.")
               (tactic "\\\\" tactic)
               (tactic ">-" tactic)
               (tactic ">|" tactic)
+              (tactic ">~" tactic)
+              (tactic "THEN_LT" tactic)
               (tactic "THEN" tactic)
               (tactic "THEN1" tactic)
               (tactic "THENL" tactic)
@@ -788,27 +798,40 @@ a store_thm equivalent.")
               (quotation "suffices_by" tactic)
               ("[" tactics "]"))
       (tactics (tactic) (tactics "," tactics)))
-    '((assoc ",")) '((assoc ";"))
+    '((assoc ",")) '((assoc ";")) '((assoc "SML|>"))
     '((assoc "^Proof")
-      (left ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")
+      (left ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL" "THEN_LT" ">~")
       (assoc "by" "suffices_by"))
-    '((assoc "ENDQ." "QFIER." "in" "of")
+    '((assoc "ENDQ." "QFIER." "in" "of") ; HOL syntax
       (assoc "|")
       (assoc "=>")
       (assoc "else")
       (assoc "<=>" "⇔" "<-")
       (assoc "==>" "⇒") (assoc "\\/" "∨") (assoc "/\\" "∧")
-      (assoc "=" "<" "≤" "<=") (assoc ":=") (assoc "+") (assoc "*")))))
+      (assoc "[defnlabel]")
+      (assoc "=" "<" "≤" "<=") (assoc ":=") (assoc "++" "+") (assoc "*")
+      (assoc ":")))))
 
 (defvar holscript-quotedmaterial-delimiter-regexp
   (regexp-opt (list "“" "”" "‘" "’" holscript-quoteddeclaration-begin)))
 
-(defvar holscript-boolean-quantifiers '("?" "!" "?!" "∀" "∃" "∃!"))
+(defvar holscript-boolean-quantifiers '("∀" "∃" "∃!"))
 
 (defvar holscript-quantifier-regexp
   (concat (regexp-opt holscript-boolean-quantifiers) "\\|"
-          (regexp-opt '("some" "LEAST") 'symbols) "\\|\\_<[@λ]\\_>")
+          (regexp-opt '("some" "LEAST") 'symbols))
   "List of strings that can begin \"quantifier blocks\".")
+
+(defvar holscript-lambda-regexp "[λ\\!?@]\\|?!"
+  "Regular expression for quantifiers that are (treated as) single punctuation
+class characters.")
+
+(defvar holscript-definitionlabel-re
+  "\\[~?[A-Za-z0-9_']+\\(\\[[A-Za-z0-9_',]+\\]\\)?[[:space:]]*:[[:space:]]*\\]"
+  "Regular expression for case-labels occurring within HOL definitions,
+ignoring fact that it should really only occur at the beginning of the line.")
+
+
 
 
 (defun holscript-can-find-earlier-quantifier (pp)
@@ -821,16 +844,22 @@ a store_thm equivalent.")
                 (concat "\\(" holscript-quoteddeclaration-begin "\\)" "\\|"
                         "\\(" holscript-quoteddeclaration-end "\\)" "\\|"
                         holscript-quotedmaterial-delimiter-regexp "\\|"
-                        holscript-quantifier-regexp "\\|\\.")
+                        holscript-quantifier-regexp "\\|"
+                        holscript-lambda-regexp "\\|\\.")
                 limit
                 t)
-          (let ((pp1 (syntax-ppss)))
+          (let ((pp1 (syntax-ppss))
+                (sa (holscript-syntax-convert (syntax-after (point))))
+                (sb (holscript-syntax-convert (syntax-after (1- (point))))))
             (if (or (nth 3 pp1) (nth 4 pp1))
                 (goto-char (nth 8 pp1))
-              (if (equal (car (last (nth 9 pp1))) limit)
-                  (if (looking-at holscript-quantifier-regexp)
-                      (throw 'found-one (point))
-                    (throw 'found-one nil))))))))))
+              (if (and sb (equal sa sb)) (forward-char -1)
+                (if (equal (car (last (nth 9 pp1))) limit)
+                    (if (or (looking-at holscript-quantifier-regexp)
+                            (looking-at holscript-lambda-regexp)
+                            (looking-at "\\\\"))
+                        (throw 'found-one (point))
+                      (throw 'found-one nil)))))))))))
 
 (defconst holscript-column0-keywords-regexp
   (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type"
@@ -867,20 +896,20 @@ a store_thm equivalent.")
       (skip-syntax-backward "w")
       (buffer-substring-no-properties (point) p)))))
 
-
 (defun holscript-smie-forward-token ()
   (let ((p0 (point))
         (case-fold-search nil))
     (forward-comment (point-max))
     (if (and (not (= p0 (point)))
              (or (looking-at
-                  (concat holscript-column0-declbegin-keyword "[[:space:]]"))
+                  (concat holscript-column0-declbegin-keyword
+                          "\\([[:space:]]\\|[[:space:]]*:\\)"))
                  (looking-at (concat "^" holscript-sml-declaration-keyword))))
         ";"
       (let ((pp (syntax-ppss)))
         (cond
          ((and (looking-at (concat "\\(" holscript-column0-keywords-regexp
-                                   "\\)" "[[:space:]]"))
+                                   "\\)" "\\([[:space:]]\\|[[:space:]]*:\\)"))
                (save-excursion (skip-chars-backward " \t") (bolp)))
           (goto-char (match-end 1))
           (let ((ms (match-string-no-properties 1)))
@@ -889,10 +918,20 @@ a store_thm equivalent.")
                   (save-excursion
                     (if (re-search-forward ":" eolpoint t) (concat "^" ms)
                       (concat "^" ms "="))))
-              (concat "^" ms))))
+              (if (and (string= ms "Datatype") (looking-at "[[:space:]]*:"))
+                  (progn (goto-char (match-end 0)) (concat "^" ms ":"))
+                (concat "^" ms)))))
          ((looking-at holscript-quotedmaterial-delimiter-regexp)
           (goto-char (match-end 0))
           (match-string-no-properties 0))
+         ((and (looking-at holscript-definitionlabel-re)
+               (save-excursion (skip-chars-backward " \t") (bolp)))
+          (goto-char (match-end 0))
+          "[defnlabel]")
+         ((looking-at ":\\([^[:punct:]]\\|[(]\\)")
+          (let ((p (point)))
+            (goto-char (1- (match-end 0)))
+            (if (holscript-in-quotedmaterialp p) ":" "SML:")))
          ((looking-at "\\\\/") (goto-char (match-end 0)) "\\/")
          ((looking-at "/\\\\") (goto-char (match-end 0)) "/\\")
          ((looking-at "\\\\\\\\") (goto-char (match-end 0)) "\\\\")
@@ -905,10 +944,32 @@ a store_thm equivalent.")
               (forward-char 1) tok)))
          ((looking-at holscript-quantifier-regexp)
           (goto-char (match-end 0)) "QFIER.")
+         ((looking-at (concat "\\(?:" holscript-lambda-regexp "\\)\\S."))
+          (if (equal 1 (syntax-class (syntax-after (1- (point)))))
+              (buffer-substring-no-properties
+               (point)
+               (progn (skip-syntax-forward ".") (point)))
+            (forward-char 1) "QFIER."))
+         ((looking-at (regexp-quote "|>"))
+          (goto-char (match-end 0))
+          (if (holscript-in-quotedmaterialp (point)) "|>" "SML|>"))
          ((equal 1 (syntax-class (syntax-after (point))))
-          (buffer-substring-no-properties
-           (point)
-           (progn (skip-syntax-forward ".") (point))))
+          ;; looking at "punctuation", meaning that it's what HOL could consider
+          ;; "symbolic"
+          (let* ((symstr (buffer-substring-no-properties
+                         (point)
+                         (progn (skip-syntax-forward ".") (point))))
+                 (ldel1 (cl-search "<|" symstr))
+                 (rdel1 (cl-search "|>" symstr))
+                 (del1 (or (and ldel1 rdel1 (min ldel1 rdel1)) ldel1 rdel1)))
+            (if del1
+                (if (= del1 0)
+                    (progn
+                      (forward-char (- 2 (length symstr)))
+                      (substring symstr 0 2))
+                  (forward-char (- del1 (length symstr)))
+                  (substring symstr 0 del1))
+              symstr)))
          ((looking-at "\\$")
           (let ((p (point)))
             (if (> (skip-chars-forward "$") 1)
@@ -931,10 +992,19 @@ a store_thm equivalent.")
                          (holscript-simple-token-forward)))
               (buffer-substring-no-properties p (point)))))))))
 
+(defun holscript-maybe-skip-attr-list-backward ()
+  (if (char-equal (char-before) ?\])
+      (progn (forward-char -1)
+             (skip-chars-backward "A-Za-z0-9_',")
+             (if (char-equal (char-before) ?\[) (progn (forward-char -1) t)
+               nil))
+    t))
+
 (defun holscript-smie-backward-token ()
   (let ((case-fold-search nil))
     (if (or (and (looking-at
-                  (concat holscript-column0-declbegin-keyword "[[:space:]]"))
+                  (concat holscript-column0-declbegin-keyword
+                          "\\([[:space:]]\\|[[:space:]]*:\\)"))
                  (save-excursion (skip-chars-backward " \t") (bolp)))
             (looking-at (concat "^" holscript-sml-declaration-keyword)))
         (if (= (point) (point-min)) ""
@@ -949,9 +1019,12 @@ a store_thm equivalent.")
           (skip-syntax-backward " ")))
       (cond
        (; am I just after a keyword?
-        (and (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+        (and (or
+              (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+              (looking-back "^\\(Datatype\\)[[:space:]]*:" (- (point) 20) t))
              (let ((syn (syntax-after (point))))
-               (or (null syn) (= 0 (car syn)))) ; next char is whitespace
+               ; next char is whitespace or colon
+               (or (null syn) (= 0 (car syn)) (char-equal (char-after) ?:)))
              (save-excursion
                (goto-char (match-beginning 0))
                (skip-chars-backward " \t")
@@ -963,11 +1036,29 @@ a store_thm equivalent.")
                 (save-excursion
                   (if (re-search-forward ":" eolpoint t) (concat "^" ms)
                     (concat "^" ms "="))))
-            (concat "^" ms))))
+            (if (looking-at "Datatype[[:space:]]*:") "^Datatype:"
+              (concat "^" ms)))))
        (; am I just after a quotation mark
         (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
         (goto-char (match-beginning 0))
         (match-string-no-properties 0))
+       (; am I after a definition-label
+        (and (equal (char-before) ?\])
+             (let ((p (point)))
+               (forward-char -1)
+               (skip-chars-backward " \t")
+               (if (equal (char-before) ?:)
+                   (progn (forward-char -1)
+                          (skip-chars-backward " \t")
+                          (if (holscript-maybe-skip-attr-list-backward)
+                              (progn
+                                (skip-chars-backward "A-Za-z0-9_'")
+                                (if (equal (char-before) ?~) (forward-char -1))
+                                (skip-chars-backward " \t")
+                                (equal (char-before) ?\[))
+                            (goto-char p) nil))
+                 (goto-char p) nil)))
+        (forward-char -1) "[defnlabel]")
        (; am I just after a quantifier
         (looking-back holscript-quantifier-regexp (- (point) 10) t)
         (goto-char (match-beginning 0))
@@ -975,6 +1066,17 @@ a store_thm equivalent.")
           (if (and c (char-equal c ?$))
               (progn (backward-char) (concat "$" (match-string-no-properties 0)))
             "QFIER.")))
+       ((looking-back "\\\\\\\\" (- (point) 3))
+        (goto-char (match-beginning 0)) "\\\\")
+       (; am I just after either a backslash or Greek lambda?
+        (looking-back (concat "\\([^$[:punct:]]\\|[~()“‘]\\)"
+                              holscript-lambda-regexp)
+                      (- (point) 3) nil)
+        (if (equal 1 (syntax-class (syntax-after (point))))
+            (buffer-substring-no-properties
+             (point)
+             (progn (skip-syntax-backward ".") (point)))
+          (backward-char) "QFIER."))
        (; am I sitting on a full-stop that might end a quantifier block
         (let ((c (char-before))) (and c (char-equal c ?.)))
         (forward-char -1)
@@ -985,13 +1087,29 @@ a store_thm equivalent.")
         (goto-char (match-beginning 0)) "\\/")
        ((looking-back "/\\\\" (- (point) 3))
         (goto-char (match-beginning 0)) "/\\")
-       ((looking-back "\\\\\\\\" (- (point) 3))
-        (goto-char (match-beginning 0)) "\\\\")
+       ((looking-back "\\([^[:punct:]]\\|[])]\\):" (- (point) 3))
+        (goto-char (1+ (match-beginning 0)))
+        (if (holscript-in-quotedmaterialp (point)) ":" "SML:"))
+       ((looking-back (regexp-quote "|>") (- (point) 3))
+        (goto-char (match-beginning 0))
+        (if (holscript-in-quotedmaterialp (point)) "|>" "SML|>"))
        (; am I sitting after "punctuation"
         (equal 1 (syntax-class (syntax-after (1- (point)))))
-        (buffer-substring-no-properties
-         (point)
-         (progn (skip-syntax-backward ".") (point))))
+        (let* ((symstr (buffer-substring-no-properties
+                        (point)
+                        (progn (skip-syntax-backward ".") (point))))
+               (ldel (and (string-match ".*\\(<|\\)" symstr)
+                          (match-end 1)))
+               (rdel (and (string-match ".*\\(|>\\)" symstr)
+                          (match-end 1)))
+               (del (or (and ldel rdel (max ldel rdel)) ldel rdel))
+               (sz (length symstr)))
+          (if del
+              (if (= del sz) (progn (forward-char (- sz 2))
+                                    (substring symstr -2 nil))
+                (forward-char del)
+                (substring symstr del nil))
+            symstr)))
        (t (buffer-substring-no-properties
            (point)
            (progn (skip-syntax-backward "w_")
@@ -1008,14 +1126,24 @@ a store_thm equivalent.")
                      (point) kind token)
   (pcase (cons kind token)
     (`(:elem  . basic) (holscript-message "In elem rule") 0)
-    (`(:list-intro . ":")
+    (`(:list-intro . "SML:")
      (holscript-message "In list-intro :")
      holscript-indent-level)
     (`(:list-intro . "‘") 1)
     (`(:list-intro . "“") 1)
     (`(:list-intro . "")
      (holscript-message "In (:list-intro \"\"))") holscript-indent-level)
-    (`(:after . ":") 2)
+    (`(:after . "SML:") 2)
+    (`(:before . "SML|>")
+     (holscript-message "|> Current column = %d" (current-column))
+     (save-mark-and-excursion
+       (backward-sexp 1)
+       (if (looking-back (concat (regexp-quote "|>") "[[:space:]]*")
+                         (- (point) 10))
+           (progn
+             (goto-char (match-beginning 0))
+             (cons 'column (current-column)))
+         (cons 'column (+ (current-column) 2)))))
     (`(:before . "^CoInductive") '(column . 0))
     (`(:before . "^Definition") '(column . 0))
     (`(:before . "^Inductive") '(column . 0))
@@ -1024,8 +1152,11 @@ a store_thm equivalent.")
     (`(:before . "^Termination") '(column . 0))
     (`(:before . "^Theorem") '(column . 0))
     (`(:before . "^Theorem=") '(column . 0))
+    (`(:before . "[defnlabel]") '(column . 0))
+    (`(:after . "[defnlabel]") 2)
     (`(:after . "^Proof") 2)
     (`(:after . "^Termination") 2)
+    (`(:after . "^Datatype:") 2)
     (`(:before . "val") 0)
     (`(:before . "fun") 0)
     (`(:before . "open") 0)
@@ -1054,7 +1185,7 @@ a store_thm equivalent.")
      (and (not (smie-rule-bolp))
           (smie-rule-prev-p "else")
           (smie-rule-parent)))
-    (`(:before . ":") holscript-indent-level)
+    (`(:before . "SML:") holscript-indent-level)
     (`(:after . "=>") 2)
     (`(:after . "do") 2)
     ; (`(:before . "==>") 2)
@@ -1074,6 +1205,7 @@ a store_thm equivalent.")
     (`(:after . "‘") 1)
     (`(:after . "“") 1)
     (`(:after . "THEN1") 1)
+    (`(:after . "⇔") 2)
 ))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil
@@ -1171,6 +1303,14 @@ a store_thm equivalent.")
   '((((class color)) :foreground "red" :background "yellow"
      :weight bold :box t))
   "The face for highlighting guaranteed syntax errors."
+  :group 'holscript-faces)
+
+(defface holscript-definition-label-face
+  '((((class color))
+     :foreground "PaleVioletRed4"
+     :box (:line-width 1 :color "PaleVioletRed4" :style released-button)
+     :slant normal :weight light))
+  "The face for highlighting definition labels in HOL material."
   :group 'holscript-faces)
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)

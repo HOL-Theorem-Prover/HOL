@@ -11,8 +11,8 @@ include Abbrev
 
   (* new definitions using free variables *)
   val ATOM_CONV     : conv -> conv
-  val LIFT_CONV     : (int * int) ref -> conv
-  val RPT_LIFT_CONV : (int * int) ref -> term -> thm list
+  val LIFT_CONV     : int ref -> conv
+  val RPT_LIFT_CONV : int ref -> term -> thm list
 
   (* inserting apply operators *)
   val APP_CONV_ONCE      : conv
@@ -23,10 +23,9 @@ include Abbrev
   val APP_CONV_MAX_REC   : conv
 
   (* translation *)
-  val translate_nocache : (int * term) -> (term * term list)
-  val translate : term -> (term * term list)
-  val translate_thm : thm -> (term * term list)
-
+  val translate_nocache : term -> term
+  val translate : term -> term
+  val translate_thm : thm -> term
 
   (* arity equations *)
   val strip_type : hol_type -> (hol_type list * hol_type)

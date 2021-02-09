@@ -68,7 +68,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 13
+val version_number = 14
 val release_string = "Kananaskis"
 
 (*
@@ -512,8 +512,12 @@ val _ =
     closeOut tar3;
     output(tar4,"augroup filetypedetect\n");
     output(tar4,"  au BufRead,BufNewFile *?Script.sml let maplocalleader = \"h\" | source "^tar1^"\n");
+    output(tar4,"  \" recognise pre-munger files as latex source\n");
+    output(tar4,"  au BufRead,BufNewFile *.htex setlocal filetype=htex syntax=tex\n");
     output(tar4,"  \"Uncomment the line below to automatically load Unicode\n");
     output(tar4,"  \"au BufRead,BufNewFile *?Script.sml source "^fullPath [pref, "holabs.vim"]^"\n");
+    output(tar4,"  \"Uncomment the line below to fold proofs\n");
+    output(tar4,"  \"au BufRead,BufNewFile *?Script.sml setlocal foldmethod=marker foldmarker=Proof,QED foldnestmax=1\n");
     output(tar4,"augroup END\n");
     closeOut tar4
   end;

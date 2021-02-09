@@ -64,8 +64,10 @@ fun mktheta (com,argl,argr) =
         ("\226\135\148", math "Leftrightarrow"),
         ("\226\136\128", math "forall"),
         ("\226\136\131", math "exists"),
+        ("\226\136\146", "-"),
         ("\226\136\167", math "land" ),
         ("\226\136\168", math "lor"),
+        ("\226\137\164", math "le"),
         ("\226\138\162", math "vdash"),
         ("\226\167\186", "++")
       ]
@@ -90,7 +92,7 @@ fun print_verbblock (ss, ostr) =
       map (fn (a,b) => {redex = a, residue = b}) (mktheta(com,argl,argr))
   in
     out(ostr,"\\begin{Verbatim}[commandchars=" ^ String.concat[com,argl,argr] ^
-             "]\n");
+             "]");
     out(ostr, stringfindreplace.subst verbtheta (Substring.string ss));
     out(ostr, "\\end{Verbatim}\n")
   end
@@ -183,12 +185,11 @@ val sections = [#"a", #"b", #"c", #"d", #"e", #"f", #"g", #"h",
 
 val current_section = ref 0; (* starting from A *)
 
-fun do_the_work dir dset outstr = let
-  fun appthis dnm = let
-    val _ = if !verbose then warn ("Processing "^dnm) else ()
-    val cname = core_dname dnm
-    val file = parse_file (OS.Path.concat(dir,dnm ^ ".doc"))
-               handle ParseError msg => die ("Parse error in "^dnm^": "^msg)
+fun do_the_work dir dmap outstr = let
+  fun appthis ((str,cname),dfile) = let
+    val _ = if !verbose then warn ("Processing "^dfile) else ()
+    val file = parse_file (OS.Path.concat(dir,dfile))
+               handle ParseError msg => die ("Parse error in "^dfile^": "^msg)
 
     val current_char = String.sub (cname,0)
     val section_char = List.nth (sections,!current_section)
@@ -204,10 +205,10 @@ fun do_the_work dir dset outstr = let
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
-  end handle e => die ("Exception raised (" ^ dnm ^ ".doc): " ^
+  end handle e => die ("Exception raised (" ^ dfile ^"): " ^
                        General.exnMessage e)
 in
-  Binaryset.app appthis dset
+  Binarymap.app appthis dmap
 end
 
 fun main () = let

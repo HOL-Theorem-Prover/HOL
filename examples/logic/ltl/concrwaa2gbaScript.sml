@@ -3,7 +3,9 @@ open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setT
 open sptreeTheory ltlTheory generalHelpersTheory concrGBArepTheory concrRepTheory waa2baTheory buechiATheory gbaSimplTheory alterATheory ltl2waaTheory waaSimplTheory concrltl2waaTheory
 
 val _ = new_theory "concrwaa2gba"
+
 val _ = set_trace "BasicProvers.var_eq_old" 1
+val _ = temp_delsimps ["all_distinct_nub", "nub_NIL"]
 
 val _ = Cond_rewr.stack_limit := 2
 

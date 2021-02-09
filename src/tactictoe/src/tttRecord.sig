@@ -3,7 +3,7 @@ sig
 
 include Abbrev
 
-  (* These function are printed out by tttUnfold and used in a modified
+  (* These functions are printed out by tttUnfold.sml and used in a modified
      fooScript.sml *)
 
   (* Databases of tactics and theorems *)
@@ -26,6 +26,10 @@ include Abbrev
   val end_record_thy : string -> unit
 
   (* Save state *)
+  val savestate_level : int ref
+  val ttt_save_state_time : real ref
+  val ttt_before_save_state : unit -> unit
   val ttt_save_state : unit -> unit
+  val ttt_after_save_state : unit -> unit
 
 end

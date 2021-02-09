@@ -44,6 +44,7 @@ type t = {
     ’   U+2019   0xE28099
     “   U+201C   0xE2809C
     ”   U+201D   0xE2809D
+    λ   U+03BB     0xCEBB
 *)
 
 fun includes_unicode s =
@@ -55,6 +56,7 @@ fun includes_unicode s =
         let val c = ord (String.sub(s,i))
         in
           if c = 0xE2 then quote_char2 (i + 1)
+          else if c = 0xCE then maybelambda (i + 1)
           else if c > 127 then true
           else recurse (i + 1)
         end
@@ -69,6 +71,14 @@ fun includes_unicode s =
           in
             if c = 0x98 orelse c = 0x99 orelse c = 0x9C orelse c = 0x9D then
               recurse (i + 1)
+            else true
+          end
+    and maybelambda i =
+        if i = sz then false
+        else
+          let val c = ord (String.sub(s,i))
+          in
+            if c = 0xBB then recurse (i + 1)
             else true
           end
   in

@@ -9,6 +9,8 @@ val () = new_theory "binary_ieee"
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss","NORMEQ_ss"]
 
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 local
    open String
    val mesg_to_string = !Feedback.MESG_to_string

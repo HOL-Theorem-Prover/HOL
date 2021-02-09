@@ -25,7 +25,7 @@ fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
 fun die s =
     let open TextIO
     in
-      output(stdErr, s ^ "\n");
+      output(stdErr, "*** FATAL: " ^ s ^ "\n");
       flushOut stdErr;
       Process.exit Process.failure
     end
@@ -273,17 +273,20 @@ fun write_kernelid s =
     TextIO.closeOut strm
   end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
 
+fun cline_die s = die ("Command line option error: " ^ s)
 fun apply_updates l t =
   case l of
       [] => t
-    | {update} :: rest => apply_updates rest (update (warn, t))
+    | {update} :: rest => apply_updates
+                            rest
+                            (update {warn = warn, die = cline_die, arg = t})
 
 fun get_cline () = let
   open GetOpt
   val oldopts = read_earlier_options TextIO.inputLine
   val (opts, rest) = getOpt { argOrder = RequireOrder,
                               options = buildcline.cline_opt_descrs,
-                              errFn = die } (CommandLine.arguments())
+                              errFn = cline_die } (CommandLine.arguments())
   val option_record = apply_updates opts buildcline.initial
   val _ = if #help option_record then exit_with_help() else ()
   val _ =
@@ -334,27 +337,12 @@ fun get_cline () = let
              | SOME _ => raise Fail "Really can't happen")
         | SOME b => b
   val bgoption = if buildgraph then [] else ["--nograph"]
-  val jcount =
-      case #jobcount option_record of
-          NONE =>
-            (case List.find (fn s => String.isPrefix "-j" s) oldopts of
-                NONE => dfltjobnum
-              | SOME jns =>
-                (case Int.fromString (String.extract(jns, 2, NONE)) of
-                     NONE => (warn "Bogus -j spec in old build options file";
-                              dfltjobnum)
-                   | SOME jn => if jn = dfltjobnum then jn
-                                else (warn ("Using -j "^Int.toString jn^
-                                            " from earlier build command; \
-                                            \use -j to override");
-                                      jn)))
-        | SOME jn => jn
-  val joption = "-j" ^ Int.toString jcount
+  val jcount = #jobcount option_record
   val _ =
       if seqspec = dfltbuildseq then
-        write_options ("--"^knlspec::joption::bgoption)
+        write_options ("--"^knlspec::bgoption)
       else
-        write_options ("--"^knlspec::"--seq"::seqspec::joption::bgoption)
+        write_options ("--"^knlspec::"--seq"::seqspec::bgoption)
 in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
@@ -458,27 +446,30 @@ fun hmakefile_data HOLDIR =
 
 fun clean0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans} ;
+  clean_dir default_ofns {extra_cleans = extra_cleans} ;
   includes
 end
 
 fun cleanAll0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans};
-  Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-  Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+  clean_dir default_ofns {extra_cleans = extra_cleans};
+  clean_depdir {depdirname = ".HOLMK"};
+  clean_depdir {depdirname = ".hollogs"};
   includes
 end
 
 fun cleanForReloc0 HOLDIR =
   let
     val {includes,holheap,...} = hmakefile_data HOLDIR
+    open Holmake_tools
   in
-    Holmake_tools.clean_forReloc {holheap = holheap};
-    Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-    Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+    clean_forReloc {holheap = holheap};
+    clean_depdir {depdirname = ".HOLMK"};
+    clean_depdir {depdirname = ".hollogs"};
     includes
   end
 

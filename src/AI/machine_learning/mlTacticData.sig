@@ -3,42 +3,31 @@ sig
 
   include Abbrev
 
-  (* term data (can be useful for other purposes) *)
-  val export_terml : string -> term list -> unit
-  val import_terml : string -> term list
-  val export_goal : string -> goal -> unit
-  val import_goal : string -> goal
-
-  (* tactic data *)
-  type lbl = (string * real * goal * goal list)
-  type fea = int list
+  (* datatype *)
+  type stac = string
+  type loc = string * int * int
+  type call = {stac : stac, ogl : int list, fea : mlFeature.fea}
+  val loc_compare : loc * loc -> order
+  val call_compare : call * call -> order
   type tacdata =
     {
-    tacfea : (lbl,fea) Redblackmap.dict,
-    tacfea_cthy : (lbl,fea) Redblackmap.dict,
-    taccov : (string, int) Redblackmap.dict,
-    tacdep : (goal, lbl list) Redblackmap.dict
+    calld : (loc,call) Redblackmap.dict,
+    taccov : (stac,int) Redblackmap.dict,
+    symfreq : (int,int) Redblackmap.dict
     }
   val empty_tacdata : tacdata
 
-  val export_tacfea : string -> (lbl,fea) Redblackmap.dict -> unit
-  val import_tacfea : string -> (lbl,fea) Redblackmap.dict
+  (* I/O *)
+  val export_calls : string -> (loc * call) list -> unit
+  val import_calls : string -> (loc * call) list
   val import_tacdata : string list -> tacdata
+  val export_tacdata : string -> string -> tacdata -> unit
 
   (* tactictoe database *)
   val ttt_tacdata_dir : string
   val exists_tacdata_thy : string -> bool
-  val ttt_create_tacdata : unit -> tacdata
-  val ttt_update_tacdata : (lbl * tacdata) -> tacdata
+  val create_tacdata : unit -> tacdata
+  val ttt_update_tacdata : ((loc * call) * tacdata) -> tacdata
   val ttt_export_tacdata : string -> tacdata -> unit
-
-  type ex = (goal * string * (goal * goal list) * goal list) * bool
-  val exl_glob : ex list ref
-  val ttt_export_exl_human : string -> ex list -> unit
-  val ttt_export_exl : string -> ex list -> unit
-  val ttt_import_exl : string -> ex list
-  val ttt_export_tptpexl : string -> ex list -> unit
-
-  val prepare_exl : ex list -> (term * real list) list list
 
 end

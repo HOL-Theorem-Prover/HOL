@@ -88,8 +88,8 @@ sig
   val augment_srw_ss  : ssfrag list -> unit
   val diminish_srw_ss : string list -> unit
   val export_rewrites : string list -> unit
-  val delsimps        : string list -> unit
   val temp_delsimps   : string list -> unit
+  val delsimps        : string list -> unit
   val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)
@@ -145,6 +145,8 @@ sig
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val sg             : term quotation -> tactic
   val subgoal        : term quotation -> tactic
+  val >~             : ('a,'b)gentactic*term quotation list -> ('a,'b)gentactic
+  val >>~            : ('a,'b)gentactic*term quotation list -> ('a,'b)gentactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 
@@ -154,6 +156,9 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+
+  (* name cases of an induction theorem *)
+  val name_ind_cases : term list -> thm -> thm
 
   (* more simplification variants *)
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
@@ -166,6 +171,10 @@ sig
   val rw : thm list -> tactic
   val fs : thm list -> tactic
   val rfs : thm list -> tactic
+  val gs : thm list -> tactic
+  val gvs : thm list -> tactic
+  val gns : thm list -> tactic
+  val gnvs : thm list -> tactic
 
   (* without loss of generality (from wlogLib) *)
   val wlog_then : term quotation ->

@@ -84,12 +84,16 @@ val clear = checkterm "\027[0m"
 
 val FAILEDstr = "\027[2CFAILED!"
 val diemode = ref ProcessExit
-fun die s =
-  (tadd (boldred FAILEDstr ^ "\n" ^ s ^ "\n");
+val S = HOLPP.add_string
+fun pretty_die p =
+  (tadd (boldred FAILEDstr ^ "\n");
+   HOLPP.prettyPrint (print, output_linewidth) p;
+   print "\n";
    case (!diemode) of
        ProcessExit => OS.Process.exit OS.Process.failure
-     | FailException => raise (Fail ("DIE:" ^ s))
+     | FailException => raise (Fail ("DIE:" ^ HOLPP.pp_to_string 75 (K p) ()))
      | Remember iref => (iref := !iref + 1))
+fun die s = pretty_die (S s)
 fun OK () = print (boldgreen "OK" ^ "\n")
 fun exit_count0 iref =
     OS.Process.exit
@@ -125,19 +129,19 @@ in
 end
 end (* local *)
 
-exception InternalDie of string
+exception InternalDie of HOLPP.pretty
 fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
-          handle HOL_ERR _ => raise InternalDie "Parse failed!"
+          handle HOL_ERR _ => raise InternalDie (S "Parse failed!")
   val res = HOLPP.pp_to_string width Parse.pp_term t
   fun f s = String.translate
               (fn #" " => UTF8.chr 0x2423 | #"\n" => "\n      " | c => str c) s
 in
   if res = output then OK() else
   die ("  Saw:\n    >|" ^ clear (f res) ^
-       boldred "|<\n  rather than \n    >|" ^ clear (f output) ^ boldred "|<\n")
-end handle InternalDie s => die s
+       "|<\n  rather than \n    >|" ^ clear (f output) ^ "|<\n")
+end handle InternalDie p => pretty_die p
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
 fun tpp_expected r = tppw (!linewidth) r
@@ -176,17 +180,24 @@ fun convtest (nm,conv,tm,expected) =
               (l,r)
             end handle e =>
               raise InternalDie
-                    ("Didn't get equality; rather exn "^ General.exnMessage e)
+                    (S ("Didn't get equality; rather exn "^
+                        General.exnMessage e))
+        open HOLPP
       in
         if aconv l tm then
           if aconv r expected then OK()
-          else raise InternalDie ("\n  Got: " ^ Parse.term_to_string r)
+          else raise InternalDie (block CONSISTENT 2 [
+                                     S "Got:", add_break(1,0),
+                                     Parse.pp_term r
+                                   ])
         else
-          raise InternalDie ("\n  Conv result LHS = " ^ Parse.term_to_string l)
+          raise InternalDie (block CONSISTENT 2 [
+                                S "Conv result LHS =", add_break(1,0),
+                                Parse.pp_term l])
       end
   in
     timed conv (exncheck c) tm
-  end handle InternalDie s => die s
+  end handle InternalDie p => pretty_die p
 
 fun check_HOL_ERRexn P e =
     case e of
@@ -205,19 +216,36 @@ fun check_result P (Res r) = P r
 
 fun require_msgk P pr f k x =
     let
+      open HOLPP
       fun idie s = raise InternalDie s
       fun check res =
           if P res then (OK(); res)
           else
             case res of
-                Exn e => idie ("  Unexpected exception:\n    " ^
-                               General.exnMessage e)
-              | Res y => idie ("  Unexpected result:\n    " ^ pr y)
+                Exn e => idie (
+                          block CONSISTENT 0 [
+                            S " ", add_break(1,0),
+                            block CONSISTENT 2[
+                              S "Unexpected exception:", add_break(1,0),
+                              S (General.exnMessage e)
+                            ]
+                          ]
+                        )
+              | Res y => idie (
+                          block CONSISTENT 0 [
+                            S " ", add_break(1,0),
+                            block CONSISTENT 2[
+                              S "Unexpected result:", add_break(1,0),
+                              pr y
+                            ]
+                          ]
+                        )
       val result = timed f check x
     in
       k result
-    end handle InternalDie s => die s
-fun require_msg P pr f x = require_msgk P pr f (fn _ => ()) x
+    end handle InternalDie p => pretty_die p
+fun require_pretty_msg P pr f x = require_msgk P pr f (fn _ => ()) x
+fun require_msg P pr = require_pretty_msg P (S o pr)
 fun require P f x = require_msg P (fn _ => "") f x
 
 fun shouldfail {printarg,testfn,printresult,checkexn} arg =

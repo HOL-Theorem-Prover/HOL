@@ -10,7 +10,7 @@ struct
 
 open HolKernel boolLib aiLib
   smlLexer smlTimeout smlExecute smlParser smlRedirect
-  mlFeature mlThmData mlTacticData
+  mlFeature mlThmData mlTacticData mlNearestNeighbor
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttRecord"
@@ -19,12 +19,16 @@ val ERR = mk_HOL_ERR "tttRecord"
    Globals
    ------------------------------------------------------------------------- *)
 
-val goalstep_glob = ref []
+val savestate_level = ref 0
+val calls_glob = ref []
 fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 val tacdata_glob = ref empty_tacdata
 val thmdata_glob = ref empty_thmdata
 val pbl_glob = ref []
+val record_tactic_time = ref 2.0
+val record_proof_time = ref 20.0
+val name_glob = ref ""
 
 (* -------------------------------------------------------------------------
    Messages and profiling
@@ -42,6 +46,9 @@ val record_time = ref 0.0
 val parse_time = ref 0.0
 val replay_time = ref 0.0
 val learn_time = ref 0.0
+val tacfea_time = ref 0.0
+val learn_tfidf_time = ref 0.0
+val ttt_save_state_time = ref 0.0
 
 fun info_thy thy =
   [
@@ -57,7 +64,18 @@ fun info_thy thy =
    "  Learn time: " ^ rts_round 6 (!learn_time) ^
    " (tactic pred: " ^ rts_round 6 (!ortho_predstac_time) ^ "," ^
    " thm pred: " ^ rts_round 6 (!ortho_predthm_time) ^ "," ^
-   " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")"
+   " inter: " ^ rts_round 6 (!inter_time) ^ "," ^
+   " dfind: " ^ rts_round 6 (!dfind_time) ^ "," ^
+   " sum: " ^ rts_round 6 (!sum_time) ^ "," ^
+   " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")",
+   "  Others: " ^
+   "(tactic data: " ^ rts_round 6 (!tacfea_time) ^ " " ^
+   rts_round 6 (!learn_tfidf_time) ^ "," ^
+   " thm data : " ^ rts_round 6 (!create_thmdata_time) ^ " " ^
+   rts_round 6 (!add_cthy_time) ^ " " ^
+   rts_round 6 (!add_namespace_time) ^ " " ^
+   rts_round 6 (!thmdata_tfidf_time) ^ "," ^
+   " savestate : " ^ rts_round 6 (!ttt_save_state_time) ^ ")"
   ]
 
 fun write_info thy =
@@ -75,11 +93,15 @@ fun write_info thy =
    ------------------------------------------------------------------------- *)
 
 fun record_tactic (tac,stac) g =
-  let val ((gl,v),t) = add_time tac g in
+  let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
-    goalstep_glob := ((stac,t,g,gl),v) :: !goalstep_glob;
+    if op_mem goal_eq g gl then () else
+    calls_glob := (stac,g,gl) :: !calls_glob;
     (gl,v)
   end
+  handle Interrupt => raise Interrupt
+    |  _ => (debug ("error: recording tactic: " ^ stac);
+             raise ERR "record_tactic" stac)
 
 (* -------------------------------------------------------------------------
    Replaying a proof
@@ -88,25 +110,25 @@ fun record_tactic (tac,stac) g =
 fun wrap_stac stac = String.concatWith " "
   ["( tttRecord.record_tactic","(",stac,",",mlquote stac,")",")"]
 
-fun wrap_tacexp e = case e of
-    SmlTactic stac => if is_tactic stac
-                      then SmlTactic (wrap_stac stac)
-                      else SmlTactic stac
-  | SmlTactical _ => e
-  | SmlInfix (s,(e1,e2)) => SmlInfix (s,(wrap_tacexp e1, wrap_tacexp e2))
+fun wrap_proofexp e = case e of
+    ProofTactic stac => ProofTactic (wrap_stac stac)
+  | ProofOther _ => e
+  | ProofTactical _ => e
+  | ProofInfix (s,(e1,e2)) =>
+    ProofInfix (s,(wrap_proofexp e1, wrap_proofexp e2))
 
 fun wrap_proof ostac =
   let
-    (* val _ =  debug ("original proof: " ^ ostac) *)
-    val tacexp = extract_tacexp ostac
-    val ntac = size_of_tacexp tacexp
+    val _ = if not (is_tactic ostac) then raise ERR "wrap_proof" "" else ()
+    val smlexp = extract_smlexp ostac
+    val proofexp = extract_proofexp smlexp
+    val ntac = size_of_proofexp proofexp
     val _  = debug ("#tactics (proof): " ^ its ntac)
     val _  = n_tactic_parsed := (!n_tactic_parsed) + ntac
     val _  = debug ("#tactics (total): " ^ its (!n_tactic_parsed))
-    val wstac = string_of_tacexp (wrap_tacexp tacexp)
-    (* val _ = debug ("wrapped proof: " ^ wstac) *)
+    val wstac = string_of_proofexp (wrap_proofexp proofexp)
   in
-    (wstac, tactic_of_sml wstac)
+    (wstac, tactic_of_sml (!record_proof_time) wstac)
   end
 
 fun app_wrap_proof name ostac goal =
@@ -115,7 +137,7 @@ fun app_wrap_proof name ostac goal =
     val _  = incr n_proof_parsed
   in
     let val (gl,v) = total_time replay_time
-      (timeout (!ttt_recproof_time) wtac) goal
+      (timeout (!record_proof_time) wtac) goal
     in
       if null gl
       then (incr n_proof_replayed; (gl,v))
@@ -146,38 +168,56 @@ fun fetch s reps =
    Proof recording
    ---------------------------------------------------------------------- *)
 
-val savestate_level = ref 0
-
 fun start_record_proof name =
-  let val outname = "Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name in
-    debug outname; incr n_proof; goalstep_glob := []
-  end
+  (
+  incr n_proof; calls_glob := [];
+  debug ("Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name)
+  )
 
-fun end_record_proof name g =
+fun end_record_proof name =
   let
-    val l1 = map fst (rev (!goalstep_glob))
-    val _ = if !thmlintac_flag then app save_thmlintac l1 else ()
+    (* transforming into a call *)
+    val precalls = number_snd 0 (rev (!calls_glob))
+    val parentd = dregroup goal_compare (map_fst (fn (_,g,_) => g) precalls)
+    fun find_parents gl =
+      let fun f x = dfind x parentd handle NotFound => [] in
+        mk_fast_set Int.compare (List.concat (map f gl))
+      end
+    fun init_call ((stac,g,gl),n) = ((g,gl),
+      (
+      (current_theory (), (!savestate_level) - 1, n),
+      {stac= stac, ogl = find_parents gl, fea = fea_of_goal true g}
+      ))
+    val icalls1 = map init_call precalls
+    (* precompute symweight *)
+    val feal1 = List.concat (map (#fea o snd o snd) icalls1)
+    val feal2 = mk_fast_set Int.compare feal1
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val l2 = if !ttt_ortho_flag
-      then map (orthogonalize (thmdata,tacdata)) l1
-      else l1
-    val newtacdata = foldl ttt_update_tacdata tacdata l2
+    val calld = #calld tacdata
+    val tacfea = total_time tacfea_time
+      (map (fn (_,x) => (#stac x, #fea x))) (dlist calld)
+    val tacsymweight = total_time learn_tfidf_time
+      (learn_tfidf_symfreq (dlength calld) feal2) (#symfreq tacdata)
+    val icalls2 = if not (!record_ortho_flag) then map snd icalls1 else
+      map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) icalls1
+    val newtacdata = foldl ttt_update_tacdata tacdata icalls2
   in
-    debug ("saving " ^ int_to_string (length l2) ^ " labels");
+    debug ("saving " ^ int_to_string (length icalls2) ^ " calls");
     tacdata_glob := newtacdata
   end
 
-(* The value of 50 is a compromise between fast saveState/saveChild
-   and fast loadState. Probably loading
-   becomes too slow above 50 * 50 = 2500 savestates
-   per theory. *)
+val savestate_dir = tactictoe_dir ^ "/savestate"
+
+fun ttt_before_save_state () =
+  let val _ = mkDir_err savestate_dir in
+    thmdata_glob := total_time create_thmdata_time create_thmdata ()
+  end
+
 fun ttt_save_state () =
   (
-  if !ttt_savestate_flag then
+  if !record_savestate_flag then
   let
-    val savestate_dir = tactictoe_dir ^ "/savestate"
-    val _ = mkDir_err savestate_dir
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^ "_" ^
       its (!savestate_level)
     val savestate_file = prefix ^ "_savestate"
     val _ = debug ("saving state to " ^ savestate_file)
@@ -185,17 +225,18 @@ fun ttt_save_state () =
     if !savestate_level = 0
     then PolyML.SaveState.saveState savestate_file
     else PolyML.SaveState.saveChild (savestate_file,
-                 ((!savestate_level) div 50) + 1)
+      (!savestate_level div 50) + 1)
   end
-  else ();
-  incr savestate_level
+  else ()
   )
+
+fun ttt_after_save_state () = incr savestate_level
 
 fun save_goal g =
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^ "_" ^
       its ((!savestate_level) - 1)
     val _ = pbl_glob := prefix :: (!pbl_glob)
     val goal_file = prefix ^ "_goal"
@@ -207,12 +248,10 @@ fun save_goal g =
 fun record_proof name lflag tac1 tac2 (g:goal) =
   let
     val _ = save_goal g
-    val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
-    val _ = debug ("\nrecord_proof: " ^ tptpname)
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
-    val b2 = (not (!ttt_recprove_flag) andalso pflag)
-    val b3 = (not (!ttt_reclet_flag) andalso lflag)
+    val b2 = (not (!record_prove_flag) andalso pflag)
+    val b3 = (not (!record_let_flag) andalso lflag)
     val result =
       if b2 orelse b3 then
         (debug "record proof: ignored"; incr n_proof_ignored; tac2 g)
@@ -221,13 +260,13 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
           val (r,t) = add_time tac1 g
           val _ = record_time := !record_time + t;
           val _ = debug ("record time: " ^ Real.toString t)
-          val _ = total_time learn_time (end_record_proof name) g
+          val _ = total_time learn_time end_record_proof name
         in
           if null (fst r) then r
-          else (debug "record_proof: error not null"; tac2 g)
+          else (debug "error: record_proof: not null"; tac2 g)
         end
         handle Interrupt => raise Interrupt
-          | _ => (debug "record_proof: error exception"; tac2 g)
+          | _ => (debug "error: record_proof: exception"; tac2 g)
   in
     result
   end
@@ -239,7 +278,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
 fun start_record_thy thy =
   (
   print_endline "importing tactic data";
-  tacdata_glob := ttt_create_tacdata ()
+  tacdata_glob := create_tacdata ()
   )
 
 fun end_record_thy thy =
@@ -248,21 +287,12 @@ fun end_record_thy thy =
   write_info thy;
   print_endline "exporting tactic data";
   ttt_export_tacdata thy (!tacdata_glob);
-  if !ttt_savestate_flag
+  if !record_savestate_flag
   then
     (mkDir_err (tactictoe_dir ^ "/savestate");
      writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
   else ();
-  print_endline "export successful";
-  if !ttt_ex_flag then
-  (
-  debug "exporting positive and negative examples";
-  ttt_export_exl_human thy (!exl_glob);
-  ttt_export_exl thy (!exl_glob);
-  ttt_export_tptpexl thy (!exl_glob);
-  debug "export successful"
-  )
-  else ()
+  print_endline "export successful"
   )
 
 end (* struct *)

@@ -2,6 +2,7 @@ open HolKernel Parse bossLib boolLib
 
 val _ = new_theory "recsets"
 
+open listTheory
 open recfunsTheory reductionEval
 open binderLib
 open stepsTheory
@@ -133,20 +134,6 @@ val re_def = Define`
    this list, see if one of them is equal to e.  If so, terminate.
 *)
 open rich_listTheory
-val MEM_GENLIST = prove(
-  ``MEM e (GENLIST f n) = ∃i. i < n ∧ (e = f i)``,
-  Q.ID_SPEC_TAC `f` THEN
-  Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
-  SRW_TAC [][GENLIST_CONS, EQ_IMP_THM] THENL [
-    Cases_on `e = f 0` THENL [
-      Q.EXISTS_TAC `0` THEN SRW_TAC [][],
-      FULL_SIMP_TAC (srw_ss()) [] THEN Q.EXISTS_TAC `SUC i` THEN
-      SRW_TAC [][]
-    ],
-    `∃m. i = SUC m` by METIS_TAC [TypeBase.nchotomy_of ``:num``] THEN
-    Q.EXISTS_TAC `m` THEN SRW_TAC [ARITH_ss][]
-  ]);
-
 val EXISTS_FILTER = store_thm(
   "EXISTS_FILTER",
   ``EXISTS P (FILTER Q l) = EXISTS (λe. Q e ∧ P e) l``,
@@ -302,19 +289,16 @@ Proof
     SIMP_TAC (bsrw_ss()) [bnf_bnf_of, ceqnat_behaviour,
                           cB_behaviour],
 
-    IMP_RES_TAC bnf_of_SOME THEN
-    IMP_RES_THEN MP_TAC
-                 (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
+    drule_then strip_assume_tac bnf_of_SOME THEN
+    drule_all cbnf_ofk_works2 THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN ‘e’ (Q.X_CHOOSE_THEN ‘zz’ MP_TAC)) THEN
     Cases_on ‘e ∈ s’ THEN SRW_TAC [][] THEN
-    SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, ceqnat_behaviour,
-                          cB_behaviour] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, DISJ_IMP_EQ] THEN
     STRIP_TAC THEN
-    REV_FULL_SIMP_TAC (bsrw_ss()) [] THEN
     ‘Ω -β->* z’ by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
     ‘z = Ω’ by METIS_TAC [chap3Theory.Omega_starloops] THEN
-    METIS_TAC [chap2Theory.bnf_Omega]
+    fs[]
   ]
 QED
 

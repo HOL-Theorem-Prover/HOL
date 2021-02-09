@@ -142,6 +142,8 @@ val _ = overload_on ("~",  Term`$complex_neg`);
 val _ = overload_on ("*",  Term`$complex_mul`);
 val _ = overload_on ("inv",  Term`$complex_inv`);
 val _ = overload_on ("numeric_negate", ``$~ : complex->complex``);
+Overload "~" = “$~ : bool -> bool”
+Overload "¬" = “$~ : bool -> bool”  (* UOK *)
 
 val complex_sub = new_definition
 ("complex_sub",

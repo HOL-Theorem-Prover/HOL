@@ -143,7 +143,7 @@ val allatoms_apart = store_thm(
     (∀l:(α,β)pregterm list a b.
        a ∉ allatomsl l ∧ b ∈ allatomsl l ⇒ listpm pt_pmact [(a,b)] l ≠ l)``,
   ho_match_mp_tac oldind >> srw_tac [][allatoms_def] >>
-  srw_tac [][swapstr_def]);
+  metis_tac[swapstr_def]);
 
 val allatoms_supp = store_thm(
   "allatoms_supp",
@@ -599,14 +599,7 @@ val GFV_apart = prove(
   ho_match_mp_tac simple_induction >>
   srw_tac [][GFV_thm0, gtpm_thm, gterm_11, listTheory.MEM_MAP,
              MAP_EQ1, GLAM_eq_thm0, IN_gfvl] >>
-  srw_tac [][]
-  >- metis_tac []
-  >- (Cases_on `y = v` >> srw_tac [][] >> metis_tac [])
-  >- metis_tac []
-  >- metis_tac []
-  >- (Cases_on `y = v` >> srw_tac [][] >> metis_tac [])
-  >- metis_tac []
-  >- metis_tac [])
+  srw_tac [][] >> metis_tac[swapstr_def]);
 
 (* tempting to delete GFV and just use supp gtpm.... *)
 val GFV_supp = prove(
@@ -1011,6 +1004,8 @@ val listpm_tMAP = prove(
   ``(listpm apm pi (MAP f l) =
      MAP ((gt_pmact → apm) pi f) (gtpml pi l))``,
   srw_tac [][] >> Induct_on `l` >> srw_tac [][fnpm_def]);
+
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val tmrec_equivariant = store_thm( (* correct name? *)
 "tmrec_equivariant",

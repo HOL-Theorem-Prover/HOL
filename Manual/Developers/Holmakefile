@@ -1,0 +1,13 @@
+.PHONY: all
+
+TARGETS = developers.pdf developers.html
+
+all: $(TARGETS)
+
+developers.pdf: developers.md hol4.latex
+	pandoc --template=hol4 $< -o $@
+
+developers.html: developers.md
+	pandoc -s $< -o $@
+
+EXTRA_CLEANS = $(TARGETS)

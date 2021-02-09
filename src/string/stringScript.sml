@@ -187,6 +187,45 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------
+    Some facts about the set of all characters and relations between them.
+ ---------------------------------------------------------------------------*)
+open pred_setTheory relationTheory
+
+Theorem UNIV_IMAGE_CHR_count_256:
+  UNIV = IMAGE CHR (count 256)
+Proof
+  rw[EXTENSION]
+  \\ qspec_then`x`FULL_STRUCT_CASES_TAC ranged_char_nchotomy
+  \\ metis_tac[]
+QED
+
+Theorem FINITE_UNIV_char[simp]:
+  FINITE (UNIV:char set)
+Proof
+  simp[UNIV_IMAGE_CHR_count_256]
+QED
+
+Theorem RC_char_lt:
+  RC (char_lt) = char_le
+Proof
+  rw[FUN_EQ_THM, RC_DEF, char_le_def, char_lt_def, arithmeticTheory.LESS_OR_EQ]
+  \\ metis_tac[ORD_11]
+QED
+
+Theorem WF_char_lt[simp]:
+  WF char_lt
+Proof
+  rw[WF_DEF]
+  \\ qexists_tac`CHR (LEAST n. (n < 256) /\ B (CHR n))`
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac
+  >- (qspec_then`w`FULL_STRUCT_CASES_TAC ranged_char_nchotomy
+      \\ fs[] \\ metis_tac[])
+  \\ rw[] \\ qspec_then`b`FULL_STRUCT_CASES_TAC ranged_char_nchotomy
+  \\ fs[char_lt_def] \\ rfs[]
+QED
+
+(*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
       EXPLODE and IMPLODE as the functions mapping into, and from, the
       representation.
@@ -584,6 +623,26 @@ val string_lt_trans = store_thm("string_lt_trans",
   THEN STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
   THEN REPEAT STRIP_TAC THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS
   THEN METIS_TAC []);
+
+val string_lt_ind = theorem"string_lt_ind";
+
+Theorem string_lt_LLEX:
+  string_lt = LLEX char_lt
+Proof
+  simp[FUN_EQ_THM]
+  \\ recInduct string_lt_ind
+  \\ rw[string_lt_def]
+QED
+
+Theorem not_WF_string_lt:
+  ~WF string_lt
+Proof
+  rw[string_lt_LLEX]
+  \\ match_mp_tac LLEX_not_WF
+  \\ qexists_tac`CHR 0`
+  \\ qexists_tac`CHR 1`
+  \\ simp[char_lt_def]
+QED
 
 (*---------------------------------------------------------------------------
     Exportation

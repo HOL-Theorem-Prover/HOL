@@ -15,3 +15,4 @@ src/finite_maps
 !examples/unification/triangular/first-order
 !examples/zipper
 !src/quotient/examples/lambda
+!examples/lassie/regression

@@ -22,10 +22,12 @@
 open HolKernel Parse boolLib bossLib;
 
 open metisLib arithmeticTheory pred_setTheory pred_setLib numTheory numLib
-     listTheory combinTheory pairTheory realTheory realLib jrhUtils realSimps
-     simpLib seqTheory real_sigmaTheory transcTheory limTheory RealArith;
+     listTheory combinTheory pairTheory realTheory realLib jrhUtils RealArith
+     seqTheory real_sigmaTheory transcTheory cardinalTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory real_topologyTheory;
+open metricTheory topologyTheory real_topologyTheory integrationTheory;
+
+open hurdUtils util_probTheory sigma_algebraTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "borel" (renamed to "real_borel")               *)
@@ -330,7 +332,7 @@ Definition real_rat_set_def :
 End
 
 val _ = overload_on ("q_set", ``real_rat_set``);
-val q_set_def = save_thm ("Q_set_def", real_rat_set_def);
+Theorem q_set_def = real_rat_set_def;
 
 val QSET_COUNTABLE = store_thm ("QSET_COUNTABLE",
   ``countable q_set``,
@@ -998,6 +1000,61 @@ val borel_eq_atLeastAtMost = borel_eq_ge_le;
 (* this is the original definition *)
 val borel_def = save_thm ("borel_def", borel_eq_le);
 
+Theorem borel_eq_gr_le :
+    borel = sigma UNIV (IMAGE (\(a,b). {x | a < x /\ x <= b}) UNIV)
+Proof
+    ONCE_REWRITE_TAC [METIS [] ``{x | a < x /\ x <= b} =
+                                 (\a b. {x:real | a < x /\ x <= b}) a b``]
+ >> Suff `(borel = sigma univ(:real) (IMAGE (\a. {x | x <= a}) univ(:real))) /\
+          (!i. (\a. {x | x <= a}) i IN
+               subsets (sigma univ(:real)
+                             (IMAGE (\(i,j). (\a b. {x | a < x /\ x <= b}) i j)
+                                    univ(:real # real)))) /\
+           !i j. (\a b. {x | a < x /\ x <= b}) i j IN subsets borel`
+ >- (DISCH_THEN (MP_TAC o MATCH_MP borel_eq_sigmaI5) >> SIMP_TAC std_ss [])
+ >> SIMP_TAC std_ss [borel_eq_le]
+ >> Know `!a. {x | x <= a} =
+              BIGUNION {{x:real | -&n < x /\ x <= a} | n IN UNIV}`
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] \\
+     reverse EQ_TAC
+     >- (STRIP_TAC >> POP_ASSUM (MP_TAC o SPEC ``x:real``) \\
+         ASM_REWRITE_TAC [] >> REAL_ARITH_TAC) \\
+     DISCH_TAC \\
+     MP_TAC (ISPEC ``x:real`` SIMP_REAL_ARCH_NEG) >> STRIP_TAC \\
+     Q.EXISTS_TAC `{x | -&SUC n < x /\ x <= a}` \\
+     ASM_SIMP_TAC std_ss [GSPECIFICATION] \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+                  Q.EXISTS_TAC ‘-&n’ >> rw []) \\
+     Q.EXISTS_TAC ‘SUC n’ >> rw [])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [subsets_def, sigma_def, IN_BIGINTER,
+                    GSPECIFICATION, SUBSET_DEF] \\
+     ONCE_REWRITE_TAC [METIS [] ``{x | -&n < x /\ x <= i} =
+                                  (\n. {x:real | -&n < x /\ x <= i}) n``] \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UN >> EXISTS_TAC ``univ(:real)`` \\
+     ASM_SIMP_TAC std_ss [COUNTABLE_NUM] \\
+     RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_UNIV] >> FIRST_X_ASSUM MATCH_MP_TAC \\
+     SET_TAC [])
+ (* below are new steps by Chun Tian *)
+ >> rpt GEN_TAC
+ >> Know ‘{x | i < x /\ x <= j} = {x | x <= j} DIFF {x | x <= i}’
+ >- (rw [Once EXTENSION] >> METIS_TAC [real_lt]) >> Rewr'
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_DIFF
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >| [ (* goal 1 (of 2) *)
+      Suff ‘{x | x <= j} IN (IMAGE (\a. {x | x <= a}) univ(:real))’
+      >- METIS_TAC [SUBSET_DEF, SIGMA_SUBSET_SUBSETS] \\
+      rw [] >> Q.EXISTS_TAC ‘j’ >> REWRITE_TAC [],
+      (* goal 2 (of 2) *)
+      Suff ‘{x | x <= i} IN (IMAGE (\a. {x | x <= a}) univ(:real))’
+      >- METIS_TAC [SUBSET_DEF, SIGMA_SUBSET_SUBSETS] \\
+      rw [] >> Q.EXISTS_TAC ‘i’ >> REWRITE_TAC [] ]
+QED
+
 val in_borel_measurable = store_thm
   ("in_borel_measurable",
    ``!f s. f IN borel_measurable s <=>
@@ -1427,6 +1484,203 @@ Proof
                   borel_measurable_sets_ge_le,
                   borel_measurable_sets_sing,
                   borel_measurable_sets_not_sing]
+QED
+
+(* borel_measurable_plus_borel_measurable *)
+Theorem in_borel_measurable_add :
+    !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
+             (!x. x IN space a ==> (h x = f x + g x)) ==> h IN measurable a borel
+Proof
+    rpt STRIP_TAC
+ >> RW_TAC std_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
+ >> Know `!c. {w | w IN space a /\ h w < c} =
+              BIGUNION (IMAGE (\r. {x | x IN space a /\ f x < r /\ r < c - g x}) q_set)`
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV, IN_INTER] \\
+     EQ_TAC >- (RW_TAC std_ss [] \\
+                MATCH_MP_TAC Q_DENSE_IN_REAL \\
+                METIS_TAC [REAL_LT_SUB_LADD]) \\
+     RW_TAC std_ss [] >- art [] \\
+    ‘h x = f x + g x’ by PROVE_TAC [] >> POP_ORW \\
+    ‘f x < c - g x’ by PROVE_TAC [REAL_LT_TRANS] \\
+     METIS_TAC [REAL_LT_SUB_LADD])
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss []
+ >> MATCH_MP_TAC BIGUNION_IMAGE_QSET
+ >> RW_TAC std_ss [IN_FUNSET]
+ >> rename1 ‘{x | x IN space a /\ f x < r /\ r < c - g x} IN subsets a’
+ >> `{x | x IN space a /\ f x < r /\ r < c - g x} =
+     {x | x IN space a /\ f x < r} INTER {x | x IN space a /\ r < c - g x}`
+      by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []
+ >> CONJ_TAC
+ >- (MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                          (Q.SPECL [‘f’, ‘a’] in_borel_measurable_less)) \\
+     RW_TAC std_ss [])
+ >> Know `!x. x IN space a ==> (r < c - g x <=> g x < c - r)`
+ >- (rpt STRIP_TAC \\
+     METIS_TAC [REAL_LT_SUB_LADD, REAL_ADD_COMM])
+ >> DISCH_TAC
+ >> `{x | x IN space a /\ r < c - g x} = {x | x IN space a /\ g x < c - r}` by ASM_SET_TAC []
+ >> POP_ORW
+ >> MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                         (Q.SPECL [‘g’, ‘a’] in_borel_measurable_less))
+ >> RW_TAC std_ss []
+QED
+
+Theorem in_borel_measurable_const :
+    !a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==> f IN measurable a borel
+Proof
+    RW_TAC std_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
+ >> rename1 ‘{w | w IN space a /\ f w < c} IN subsets a’
+ >> Cases_on `c <= k`
+ >- (`{x | x IN space a /\ f x < c} = {}` by ASM_SET_TAC [real_lt] >> POP_ORW \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [])
+ >> `{x | x IN space a /\ f x < c} = space a` by ASM_SET_TAC [real_lt]
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art []
+QED
+
+Theorem in_borel_measurable_cmul :
+    !a f g z. sigma_algebra a /\ f IN measurable a borel /\
+             (!x. x IN space a ==> (g x = z * f x)) ==> g IN measurable a borel
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `z = 0`
+ >- METIS_TAC [in_borel_measurable_const, REAL_MUL_LZERO]
+ >> Cases_on `0 < z`
+ >- (RW_TAC real_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV] \\
+     Know `!c. {x | x IN space a /\ g x < c} = {x | x IN space a /\ f x < c / z}`
+     >- (rw [Once EXTENSION] \\
+         METIS_TAC [REAL_LT_RDIV_EQ, REAL_MUL_COMM]) >> Rewr' \\
+     MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                          (Q.SPECL [‘f’, ‘a’] in_borel_measurable_less)) \\
+     RW_TAC std_ss [])
+ >> `z < 0` by METIS_TAC [REAL_LT_LE, GSYM real_lte]
+ >> RW_TAC real_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
+ >> Know `!c. {x | x IN space a /\ g x < c} = {x | x IN space a /\ c / z < f x}`
+ >- (rw [Once EXTENSION] \\
+     METIS_TAC [REAL_LT_RDIV_EQ_NEG, REAL_MUL_COMM]) >> Rewr'
+ >> MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                         (Q.SPECL [‘f’, ‘a’] in_borel_measurable_gr))
+ >> RW_TAC std_ss []
+QED
+
+(* cf. borel_measurable_sub_borel_measurable (real_measureTheory) *)
+Theorem in_borel_measurable_sub :
+    !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
+             (!x. x IN space a ==> (h x = f x - g x)) ==> h IN measurable a borel
+Proof
+    RW_TAC std_ss []
+ >> MATCH_MP_TAC in_borel_measurable_add
+ >> qexistsl_tac [`f`, `\x. - g x`]
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_cmul \\
+      qexistsl_tac [‘g’, ‘-1’] \\
+      RW_TAC real_ss [],
+      (* goal 2 (of 2) *)
+      REWRITE_TAC [real_sub] ]
+QED
+
+Theorem in_borel_measurable_sqr :
+    !a f g. sigma_algebra a /\ f IN measurable a borel /\
+            (!x. x IN space a ==> (g x = (f x) pow 2)) ==> g IN measurable a borel
+Proof
+    rpt STRIP_TAC
+ >> Know `!c. {x | f x <= c} INTER space a IN subsets a`
+ >- (GEN_TAC >> fs [in_borel_measurable_le, IN_FUNSET, IN_UNIV] \\
+    ‘{x | f x <= c} INTER space a = {x | x IN space a /\ f x <= c}’ by SET_TAC [] \\
+     POP_ORW >> art [])
+ >> DISCH_TAC
+ >> Know `!c. {x | c <= f x} INTER space a IN subsets a`
+ >- (GEN_TAC >> fs [in_borel_measurable_ge, IN_FUNSET, IN_UNIV] \\
+    ‘{x | c <= f x} INTER space a = {x | x IN space a /\ c <= f x}’ by SET_TAC [] \\
+     POP_ORW >> art [])
+ >> DISCH_TAC
+ >> simp [IN_FUNSET, in_borel_measurable_le]
+ >> Q.X_GEN_TAC ‘c’
+ >> ‘{w | w IN space a /\ g w <= c} = {x | g x <= c} INTER space a’ by SET_TAC []
+ >> POP_ORW
+ >> Cases_on `c < 0`
+ >- (Know `{x | g x <= c} INTER space a = {}`
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY, GSYM real_lt] \\
+         ONCE_REWRITE_TAC [DISJ_COMM] >> STRONG_DISJ_TAC \\
+         MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC ‘0’ >> art [] \\
+         METIS_TAC [REAL_LE_POW2]) >> Rewr' \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [])
+ >> FULL_SIMP_TAC real_ss [real_lt]
+ >> Suff `{x | g x <= c} INTER space a =
+            ({x | f x <= sqrt c} INTER space a) INTER
+            ({x | - (sqrt c) <= f x} INTER space a)`
+ >- (Rewr' >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [])
+ >> rw [Once EXTENSION]
+ >> EQ_TAC
+ >- (RW_TAC real_ss []
+     >- (Cases_on `f x < 0` >- METIS_TAC [REAL_LTE_TRANS, REAL_LT_IMP_LE, SQRT_POS_LE] \\
+         FULL_SIMP_TAC real_ss [real_lt] \\
+         Know ‘sqrt (g x) <= sqrt c’
+         >- (MATCH_MP_TAC SQRT_MONO_LE >> art [] \\
+             METIS_TAC [REAL_LE_POW2]) >> DISCH_TAC \\
+         Suff ‘sqrt (g x) = f x’ >- PROVE_TAC [] \\
+         MATCH_MP_TAC SQRT_POS_UNIQ >> METIS_TAC [REAL_LE_POW2]) \\
+     SPOSE_NOT_THEN ASSUME_TAC \\
+     FULL_SIMP_TAC real_ss [GSYM real_lt] \\
+    `sqrt c < -(f x)` by METIS_TAC [REAL_LT_NEG, REAL_NEG_NEG] \\
+     Know `(sqrt c) pow 2 < (- (f x)) pow 2`
+     >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [SQRT_POS_LE]) >> DISCH_TAC \\
+    `(sqrt c) pow 2 = c` by METIS_TAC [SQRT_POW2] \\
+    `(-1) pow 2 = (1 :real)` by METIS_TAC [POW_MINUS1, MULT_RIGHT_1] \\
+    `(- (f x)) pow 2 = (f x) pow 2`
+       by RW_TAC std_ss [Once REAL_NEG_MINUS1, POW_MUL, REAL_MUL_LID] \\
+     METIS_TAC [real_lt])
+ >> RW_TAC std_ss []
+ >> Cases_on `0 <= f x` >- METIS_TAC [POW_LE, SQRT_POW2]
+ >> FULL_SIMP_TAC real_ss [GSYM real_lt]
+ >> `- (f x) <= sqrt c` by METIS_TAC [REAL_LE_NEG, REAL_NEG_NEG]
+ >> `(- (f x)) pow 2 <= (sqrt c) pow 2`
+      by METIS_TAC [POW_LE, SQRT_POS_LE, REAL_LT_NEG, REAL_NEG_NEG, REAL_NEG_0, REAL_LT_IMP_LE]
+ >> `(sqrt c) pow 2 = c` by METIS_TAC [SQRT_POW2]
+ >> `(-1) pow 2 = (1 :real)` by METIS_TAC [POW_MINUS1, MULT_RIGHT_1]
+ >> `(- (f x)) pow 2 = (f x) pow 2`
+       by RW_TAC std_ss [Once REAL_NEG_MINUS1, POW_MUL, REAL_MUL_LID]
+ >> METIS_TAC []
+QED
+
+Theorem in_borel_measurable_mul :
+    !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
+             (!x. x IN space a ==> (h x = f x * g x)) ==> h IN measurable a borel
+Proof
+    RW_TAC std_ss []
+ >> Know `!x. x IN space a ==>
+             (f x * g x = 1 / 2 * ((f x + g x) pow 2 - f x pow 2 - g x pow 2))`
+ >- (rpt STRIP_TAC \\
+     (MP_TAC o Q.SPECL [`f x`, `g x`]) ADD_POW_2 >> Rewr' \\
+     simp [] >> REAL_ARITH_TAC)
+ >> DISCH_TAC
+ >> MATCH_MP_TAC in_borel_measurable_cmul
+ >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2 - g x pow 2)`
+ >> Q.EXISTS_TAC `1 / 2`
+ >> RW_TAC real_ss []
+ >> MATCH_MP_TAC in_borel_measurable_sub
+ >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2)`
+ >> Q.EXISTS_TAC `(\x. g x pow 2)`
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_sub \\
+      Q.EXISTS_TAC `(\x. (f x + g x) pow 2)` \\
+      Q.EXISTS_TAC `(\x. f x pow 2)` \\
+      RW_TAC std_ss [] >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2) *)
+        MATCH_MP_TAC in_borel_measurable_sqr \\
+        Q.EXISTS_TAC `(\x. f x + g x)` \\
+        RW_TAC std_ss [] \\
+        MATCH_MP_TAC in_borel_measurable_add \\
+        qexistsl_tac [`f`, `g`] \\
+        RW_TAC std_ss [],
+        (* goal 1.2 (of 2) *)
+        MATCH_MP_TAC in_borel_measurable_sqr >> METIS_TAC [] ],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_sqr >> METIS_TAC [] ]
 QED
 
 (************************************************************)
@@ -1951,6 +2205,78 @@ Proof
  >> Q.EXISTS_TAC `(q,r)` >> rw []
 QED
 
+(* cf. integrationTheory.INTERVAL_UPPERBOUND for open/closed intervals *)
+Theorem right_open_interval_upperbound :
+    !a b. a < b ==> interval_upperbound (right_open_interval a b) = b
+Proof
+    RW_TAC std_ss [interval_upperbound]
+ >- (fs [EXTENSION, GSPECIFICATION, in_right_open_interval] \\
+     METIS_TAC [REAL_LE_REFL])
+ >> RW_TAC std_ss [right_open_interval, GSPECIFICATION,
+                   GSYM REAL_LE_ANTISYM]
+ >- (MATCH_MP_TAC REAL_IMP_SUP_LE >> rw []
+     >- (Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL]) \\
+     MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> MATCH_MP_TAC REAL_LE_EPSILON
+ >> rpt STRIP_TAC
+ >> Q.ABBREV_TAC `y = sup {x | a <= x /\ x < b}`
+ >> `b <= y + e <=> b - e <= y` by REAL_ARITH_TAC >> POP_ORW
+ >> Q.UNABBREV_TAC `y`
+ >> MATCH_MP_TAC REAL_IMP_LE_SUP >> rw []
+ >- (Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL])
+ >- (Q.EXISTS_TAC `b` >> rw [] \\
+     MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> Cases_on `a <= b - e`
+ >- (Q.EXISTS_TAC `b - e` >> rw [REAL_LE_TRANS] \\
+     Q.PAT_X_ASSUM `0 < e` MP_TAC >> REAL_ARITH_TAC)
+ >> Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE >> fs [real_lte]
+QED
+
+Theorem right_open_interval_lowerbound :
+    !a b. a < b ==> interval_lowerbound (right_open_interval a b) = a
+Proof
+    RW_TAC std_ss [interval_lowerbound]
+ >- (fs [EXTENSION, GSPECIFICATION, in_right_open_interval] \\
+     METIS_TAC [REAL_LE_REFL])
+ >> RW_TAC std_ss [right_open_interval, GSPECIFICATION]
+ >> MATCH_MP_TAC REAL_INF_MIN >> rw []
+QED
+
+Theorem right_open_interval_two_bounds :
+    !a b. interval_lowerbound (right_open_interval a b) <=
+          interval_upperbound (right_open_interval a b)
+Proof
+    rpt GEN_TAC
+ >> Cases_on `a < b`
+ >- (rw [right_open_interval_upperbound, right_open_interval_lowerbound] \\
+     IMP_RES_TAC REAL_LT_IMP_LE)
+ >> fs [GSYM right_open_interval_empty]
+ >> rw [interval_lowerbound, interval_upperbound]
+QED
+
+Theorem right_open_interval_between_bounds :
+    !x a b. x IN right_open_interval a b <=>
+            interval_lowerbound (right_open_interval a b) <= x /\
+            x < interval_upperbound (right_open_interval a b)
+Proof
+    rpt GEN_TAC
+ >> reverse (Cases_on `a < b`)
+ >- (FULL_SIMP_TAC std_ss [GSYM right_open_interval_empty] \\
+     rw [NOT_IN_EMPTY, INTERVAL_BOUNDS_EMPTY] \\
+     REAL_ARITH_TAC)
+ >> rw [in_right_open_interval]
+ >> EQ_TAC >> rpt STRIP_TAC (* 4 subgoals *)
+ >| [ (* goal 1 (of 4) *)
+      fs [right_open_interval_lowerbound],
+      (* goal 2 (of 4) *)
+      fs [right_open_interval_upperbound],
+      (* goal 3 (of 4) *)
+      rfs [right_open_interval_lowerbound, right_open_interval_upperbound],
+      (* goal 4 (of 4) *)
+      rfs [right_open_interval_lowerbound, right_open_interval_upperbound] ]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Standard Cubes                                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -2019,4 +2345,819 @@ Proof
     GEN_TAC THEN MATCH_MP_TAC LINE_MONO THEN ARITH_TAC
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Two-dimensional Borel sigma-algebra (real version), author: Chun Tian    *)
+(* ------------------------------------------------------------------------- *)
+
+val mr2_tm = “(\((x1,x2),(y1,y2)). sqrt ((x1 - y1) pow 2 + (x2 - y2) pow 2) :real)”;
+
+Theorem MR2_lemma1[local] :
+    !x1 x2 z1 z2. ^mr2_tm ((x1,x2),(z1,z2)) = ^mr2_tm ((x1-z1,x2-z2),(0,0))
+Proof
+    rw []
+QED
+
+Theorem MR2_lemma2[local] :
+    !x1 x2 y1 y2. ^mr2_tm ((x1+y1,x2+y2),(0,0)) <=
+                  ^mr2_tm ((x1,x2),(0,0)) + ^mr2_tm ((y1,y2),(0,0))
+Proof
+    rw []
+ >> CCONTR_TAC >> fs [real_lte]
+ >> Know ‘(sqrt (x1 pow 2 + x2 pow 2) + sqrt (y1 pow 2 + y2 pow 2)) pow 2 <
+          (sqrt ((x1 + y1) pow 2 + (x2 + y2) pow 2)) pow 2’
+ >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [] \\
+     MATCH_MP_TAC REAL_LE_ADD \\
+     CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC SQRT_POS_LE >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> KILL_TAC
+ >> REWRITE_TAC [GSYM real_lte]
+ >> Know ‘sqrt ((x1 + y1) pow 2 + (x2 + y2) pow 2) pow 2 =
+          (x1 + y1) pow 2 + (x2 + y2) pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [ADD_POW_2]
+ >> Know ‘sqrt (x1 pow 2 + x2 pow 2) pow 2 = x1 pow 2 + x2 pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> Know ‘sqrt (y1 pow 2 + y2 pow 2) pow 2 = y1 pow 2 + y2 pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> rw [ADD_POW_2]
+ >> Suff ‘x1 * y1 + x2 * y2 <= sqrt (x1 pow 2 + x2 pow 2) * sqrt (y1 pow 2 + y2 pow 2)’
+ >- REAL_ARITH_TAC
+ >> Know ‘sqrt (x1 pow 2 + x2 pow 2) * sqrt (y1 pow 2 + y2 pow 2) =
+          sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2))’
+ >- (MATCH_MP_TAC EQ_SYM \\
+     MATCH_MP_TAC SQRT_MUL \\
+     CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> CCONTR_TAC >> fs [real_lte]
+ >> Know ‘(sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2))) pow 2 <
+          (x1 * y1 + x2 * y2) pow 2’
+ >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [] \\
+     MATCH_MP_TAC SQRT_POS_LE \\
+     MATCH_MP_TAC REAL_LE_MUL \\
+     CONJ_TAC >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> KILL_TAC
+ >> REWRITE_TAC [GSYM real_lte]
+ >> Know ‘sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2)) pow 2 =
+          (x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2)’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_MUL \\
+     CONJ_TAC >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> rw [ADD_POW_2, POW_MUL, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB]
+ >> Suff ‘2 * (x1 * x2 * y1 * y2) <= x1 pow 2 * y2 pow 2 + x2 pow 2 * y1 pow 2’
+ >- REAL_ARITH_TAC
+ >> Know ‘0 <= (x1 * y2 - x2 * y1) pow 2’ >- rw [REAL_LE_POW2]
+ >> ONCE_REWRITE_TAC [POW_2]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem MR2_lemma3[local] :
+    !x1 x2 y1 y2. ^mr2_tm ((x1,x2),(y1,y2)) = ^mr2_tm ((y1,y2),(x1,x2))
+Proof
+    rw []
+ >> Know ‘(x1 - y1) pow 2 = (y1 - x1) pow 2’
+ >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> Know ‘(x2 - y2) pow 2 = (y2 - x2) pow 2’
+ >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
+ >> Rewr
+QED
+
+Theorem ISMET_R2 :
+    ismet ^mr2_tm
+Proof
+    Q.ABBREV_TAC ‘d = ^mr2_tm’
+ >> rw [ismet] (* 2 subgoals *)
+ >- (Q.UNABBREV_TAC ‘d’ \\
+     Cases_on ‘x’ >> Cases_on ‘y’ >> simp [] \\
+     reverse EQ_TAC >- rw [SQRT_0] \\
+     STRIP_TAC >> rename1 ‘x1 = x2 /\ y1 = y2’ >>
+     Cases_on ‘x1 = x2’ >> gvs[] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       CCONTR_TAC >>
+       Suff ‘0 < (y1 - y2) pow 2’
+       >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
+       simp[],
+       (* goal 2 (of 2) *)
+       Suff ‘0 < (x1 - x2) pow 2 + (y1 - y2) pow 2’
+       >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
+       irule REAL_LTE_TRANS >> qexists_tac ‘(x1 - x2) pow 2’ >> simp[]
+     ])
+ >> Cases_on ‘x’ (* (q,r) *)
+ >> Cases_on ‘y’ (* (q',r') *)
+ >> Cases_on ‘z’ (* (q'',r'') *)
+ >> rename1 ‘d ((x1,x2),(z1,z2)) <= d ((y1,y2),(x1,x2)) + d ((y1,y2),(z1,z2))’
+ >> Know ‘d ((x1,x2),z1,z2) = d ((x1-z1,x2-z2),(0,0))’
+ >- METIS_TAC [MR2_lemma1]
+ >> Rewr'
+ >> ‘x1 - z1 = x1 - y1 + (y1 - z1)’ by REAL_ARITH_TAC >> POP_ORW
+ >> ‘x2 - z2 = x2 - y2 + (y2 - z2)’ by REAL_ARITH_TAC >> POP_ORW
+ >> Know ‘d ((y1,y2),(x1,x2)) = d ((x1,x2),(y1,y2))’
+ >- METIS_TAC [MR2_lemma3]
+ >> Rewr'
+ >> Know ‘d ((x1 - y1 + (y1 - z1),x2 - y2 + (y2 - z2)),(0,0)) <=
+          d ((x1 - y1,x2 - y2),(0,0)) + d ((y1 - z1,y2 - z2),(0,0))’
+ >- METIS_TAC [MR2_lemma2]
+ >> Suff ‘d ((x1 - y1,x2 - y2),0,0) + d ((y1 - z1,y2 - z2),0,0) =
+          d ((x1,x2),y1,y2) + d ((y1,y2),z1,z2)’ >- rw []
+ >> METIS_TAC [MR2_lemma1]
+QED
+
+Definition mr2 :
+    mr2 = metric ^mr2_tm
+End
+
+Theorem MR2_DEF :
+    !x1 x2 y1 y2. (dist mr2) ((x1,x2),(y1,y2)) =
+                  sqrt ((x1 - y1) pow 2 + (x2 - y2) pow 2)
+Proof
+    rw [mr2, REWRITE_RULE [metric_tybij] ISMET_R2]
+QED
+
+(* Theorem 3.8 [1,p.19]: borel_2d can be also generated by open rectangles
+   having rational endpoints.
+
+   see open_UNION_rational_box for one-dimension case.
+ *)
+Theorem borel_2d_lemma1[local] :
+    !U. open_in (mtop mr2) U ==>
+        U = BIGUNION {J | ?a b c d. a IN q_set /\ b IN q_set /\ c IN q_set /\ d IN q_set /\
+                                    J = OPEN_interval (a,b) CROSS OPEN_interval (c,d) /\
+                                    J SUBSET U}
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> reverse CONJ_TAC
+ >- (rw [SUBSET_DEF, IN_BIGUNION] \\
+     POP_ASSUM MATCH_MP_TAC >> art [])
+ (* now the hard part, fix ‘x IN U’ *)
+ >> rw [Once SUBSET_DEF]
+ >> fs [MTOP_OPEN]
+ >> Q.PAT_X_ASSUM ‘!x. U x ==> _’ (MP_TAC o (Q.SPEC ‘x’))
+ >> POP_ASSUM (MP_TAC o (REWRITE_RULE [IN_APP]))
+ >> RW_TAC std_ss []
+ >> Cases_on ‘x’ >> rename1 ‘U (x1,x2)’
+ >> MP_TAC (Q.SPECL [‘x2’, ‘e / 2’] rational_boxes)
+ >> MP_TAC (Q.SPECL [‘x1’, ‘e / 2’] rational_boxes)
+ >> Know ‘0 < e / 2’
+ >- (MATCH_MP_TAC REAL_LT_DIV >> rw [])
+ >> RW_TAC std_ss []
+ >> rename1 ‘x2 IN box c d’
+ >> fs [box_alt, ball, dist]
+ >> Q.EXISTS_TAC ‘OPEN_interval (a,b) CROSS OPEN_interval (c,d)’
+ >> rw [IN_CROSS]
+ >> qexistsl_tac [‘a’, ‘b’, ‘c’, ‘d’]
+ >> rw [SUBSET_DEF, IN_CROSS]
+ >> REWRITE_TAC [IN_APP]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Cases_on ‘x’ >> fs []
+ (* stage work *)
+ >> MATCH_MP_TAC REAL_LET_TRANS
+ >> Q.EXISTS_TAC ‘dist mr2 ((x1,x2),(q,x2)) + dist mr2 ((q,x2),(q,r))’
+ >> REWRITE_TAC [METRIC_TRIANGLE]
+ >> rw [MR2_DEF]
+ >> Know ‘(x1 - q) pow 2 = (abs (x1 - q)) pow 2’
+ >- (rw [POW_ABS, ABS_POW2]) >> Rewr'
+ >> Know ‘(x2 - r) pow 2 = (abs (x2 - r)) pow 2’
+ >- (rw [POW_ABS, ABS_POW2]) >> Rewr'
+ >> Know ‘sqrt (abs (x1 - q) pow 2) = abs (x1 - q)’
+ >- (MATCH_MP_TAC POW_2_SQRT \\
+     REWRITE_TAC [ABS_POS]) >> Rewr'
+ >> Know ‘sqrt (abs (x2 - r) pow 2) = abs (x2 - r)’
+ >- (MATCH_MP_TAC POW_2_SQRT \\
+     REWRITE_TAC [ABS_POS]) >> Rewr'
+ >> ‘e = e / 2 + e / 2’ by REWRITE_TAC [REAL_HALF_DOUBLE] >> POP_ORW
+ >> MATCH_MP_TAC REAL_LT_ADD2
+ >> CONJ_TAC (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      Q.PAT_X_ASSUM ‘interval (a,b) SUBSET _’ MP_TAC \\
+      Q.PAT_X_ASSUM ‘q IN interval (a,b)’ MP_TAC,
+      (* goal 2 (of 2) *)
+      Q.PAT_X_ASSUM ‘interval (c,d) SUBSET _’ MP_TAC \\
+      Q.PAT_X_ASSUM ‘r IN interval (c,d)’ MP_TAC ]
+ >> rw [SUBSET_DEF, IN_INTERVAL]
+QED
+
+Theorem IMAGE_FST_CROSS_INTERVAL :
+    !a b c d. c < d ==> IMAGE FST (interval (a,b) CROSS interval (c,d)) = interval (a,b)
+Proof
+    rw [Once EXTENSION, IN_INTERVAL]
+ >> EQ_TAC >> rw [] >> art []
+ >> MP_TAC (Q.SPECL [‘c’, ‘d’] REAL_MEAN)
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘(x,z)’
+ >> RW_TAC std_ss []
+QED
+
+Theorem IMAGE_SND_CROSS_INTERVAL :
+    !a b c d. a < b ==> IMAGE SND (interval (a,b) CROSS interval (c,d)) = interval (c,d)
+Proof
+    rw [Once EXTENSION, IN_INTERVAL]
+ >> EQ_TAC >> rw [] >> art []
+ >> MP_TAC (Q.SPECL [‘a’, ‘b’] REAL_MEAN)
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘(z,x)’
+ >> RW_TAC std_ss []
+QED
+
+(* This proof needs advanced results from cardinalTheory *)
+Theorem borel_2d_lemma2[local] :
+    !U. COUNTABLE {J | ?a b c d. a IN q_set /\ b IN q_set /\ c IN q_set /\ d IN q_set /\
+                                 J = OPEN_interval (a,b) CROSS OPEN_interval (c,d) /\
+                                 J SUBSET U}
+Proof
+    GEN_TAC
+ >> MATCH_MP_TAC (INST_TYPE [“:'b” |-> “:real # real # real # real”]
+                            CARD_LE_COUNTABLE)
+ >> Q.EXISTS_TAC ‘q_set CROSS (q_set CROSS (q_set CROSS q_set))’
+ >> CONJ_TAC >- PROVE_TAC [COUNTABLE_CROSS, QSET_COUNTABLE]
+ >> rw [cardleq_def]
+ >> Q.EXISTS_TAC ‘\s. if s = {} then (0,0,0,0)
+                      else (interval_lowerbound (IMAGE FST s),
+                            interval_upperbound (IMAGE FST s),
+                            interval_lowerbound (IMAGE SND s),
+                            interval_upperbound (IMAGE SND s))’
+ >> rw [INJ_DEF] (* 5 subgoals *)
+ >| [ (* goal 1 (of 5) *)
+      reverse (Cases_on ‘a < b’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+      reverse (Cases_on ‘c < d’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+     ‘interval (a,b) <> {} /\ interval (c,d) <> {}’
+        by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+      Know ‘interval (a,b) CROSS interval (c,d) <> {}’
+      >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+      RW_TAC std_ss [] \\
+      Know ‘IMAGE FST (interval (a,b) CROSS interval (c,d)) = interval (a,b)’
+      >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) >> Rewr' \\
+      Suff ‘interval_lowerbound (interval (a,b)) = a’ >- rw [] \\
+      MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art [],
+      (* goal 2 (of 5) *)
+      reverse (Cases_on ‘a < b’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+      reverse (Cases_on ‘c < d’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+     ‘interval (a,b) <> {} /\ interval (c,d) <> {}’
+        by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+      Know ‘interval (a,b) CROSS interval (c,d) <> {}’
+      >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+      RW_TAC std_ss [] \\
+      Know ‘IMAGE FST (interval (a,b) CROSS interval (c,d)) = interval (a,b)’
+      >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) >> Rewr' \\
+      Suff ‘interval_upperbound (interval (a,b)) = b’ >- rw [] \\
+      MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art [],
+      (* goal 3 (of 5) *)
+      reverse (Cases_on ‘a < b’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+      reverse (Cases_on ‘c < d’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+     ‘interval (a,b) <> {} /\ interval (c,d) <> {}’
+        by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+      Know ‘interval (a,b) CROSS interval (c,d) <> {}’
+      >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+      RW_TAC std_ss [] \\
+      Know ‘IMAGE SND (interval (a,b) CROSS interval (c,d)) = interval (c,d)’
+      >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) >> Rewr' \\
+      Suff ‘interval_lowerbound (interval (c,d)) = c’ >- rw [] \\
+      MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art [],
+      (* goal 4 (of 5) *)
+      reverse (Cases_on ‘a < b’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+      reverse (Cases_on ‘c < d’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          rw [real_of_num, NUM_IN_QSET]) \\
+     ‘interval (a,b) <> {} /\ interval (c,d) <> {}’
+        by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+      Know ‘interval (a,b) CROSS interval (c,d) <> {}’
+      >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+      RW_TAC std_ss [] \\
+      Know ‘IMAGE SND (interval (a,b) CROSS interval (c,d)) = interval (c,d)’
+      >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) >> Rewr' \\
+      Suff ‘interval_upperbound (interval (c,d)) = d’ >- rw [] \\
+      MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art [],
+      (* goal 5 (of 5) *)
+      reverse (Cases_on ‘a < b’)
+      >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          reverse (Cases_on ‘a' < b'’)
+          >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY]) \\
+          reverse (Cases_on ‘c' < d'’)
+          >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY]) \\
+         ‘interval (a',b') <> {} /\ interval (c',d') <> {}’
+            by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          Know ‘interval (a',b') CROSS interval (c',d') <> {}’
+          >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘IMAGE FST (interval (a',b') CROSS interval (c',d')) = interval (a',b')’
+          >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘IMAGE SND (interval (a',b') CROSS interval (c',d')) = interval (c',d')’
+          >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_lowerbound (interval (a',b')) = a'’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_upperbound (interval (a',b')) = b'’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          rfs [REAL_LT_REFL]) \\
+      reverse (Cases_on ‘c < d’)
+      >- (fs [GSYM real_lte] \\
+         ‘interval (c,d) = {}’ by PROVE_TAC [INTERVAL_EQ_EMPTY] >> fs [] \\
+          reverse (Cases_on ‘a' < b'’)
+          >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY]) \\
+          reverse (Cases_on ‘c' < d'’)
+          >- (fs [GSYM real_lte, INTERVAL_EQ_EMPTY]) \\
+         ‘interval (a',b') <> {} /\ interval (c',d') <> {}’
+            by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+          Know ‘interval (a',b') CROSS interval (c',d') <> {}’
+          >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘IMAGE FST (interval (a',b') CROSS interval (c',d')) = interval (a',b')’
+          >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘IMAGE SND (interval (a',b') CROSS interval (c',d')) = interval (c',d')’
+          >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_lowerbound (interval (a',b')) = a'’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_upperbound (interval (a',b')) = b'’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          rfs [REAL_LT_REFL]) \\
+     ‘interval (a,b) <> {} /\ interval (c,d) <> {}’
+        by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+      Know ‘interval (a,b) CROSS interval (c,d) <> {}’
+      >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+      DISCH_THEN (fs o wrap) \\
+      reverse (Cases_on ‘a' < b'’)
+      >- (fs [GSYM real_lte] \\
+         ‘interval (a',b') = {}’ by PROVE_TAC [INTERVAL_EQ_EMPTY] >> fs [] \\
+          Know ‘IMAGE FST (interval (a,b) CROSS interval (c,d)) = interval (a,b)’
+          >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘IMAGE SND (interval (a,b) CROSS interval (c,d)) = interval (c,d)’
+          >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_lowerbound (interval (a,b)) = a’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_upperbound (interval (a,b)) = b’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          rfs [REAL_LT_REFL]) \\
+      reverse (Cases_on ‘c' < d'’)
+      >- (fs [GSYM real_lte] \\
+         ‘interval (c',d') = {}’ by PROVE_TAC [INTERVAL_EQ_EMPTY] >> fs [] \\
+          Know ‘IMAGE FST (interval (a,b) CROSS interval (c,d)) = interval (a,b)’
+          >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘IMAGE SND (interval (a,b) CROSS interval (c,d)) = interval (c,d)’
+          >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_lowerbound (interval (a,b)) = a’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          Know ‘interval_upperbound (interval (a,b)) = b’
+          >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+          DISCH_THEN (fs o wrap) \\
+          rfs [REAL_LT_REFL]) \\
+     ‘interval (a',b') <> {} /\ interval (c',d') <> {}’
+        by PROVE_TAC [GSYM real_lte, INTERVAL_EQ_EMPTY] \\
+      Know ‘interval (a',b') CROSS interval (c',d') <> {}’
+      >- (CCONTR_TAC >> rfs [CROSS_EMPTY_EQN]) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘IMAGE FST (interval (a,b) CROSS interval (c,d)) = interval (a,b)’
+      >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘IMAGE SND (interval (a,b) CROSS interval (c,d)) = interval (c,d)’
+      >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘IMAGE FST (interval (a',b') CROSS interval (c',d')) = interval (a',b')’
+      >- (MATCH_MP_TAC IMAGE_FST_CROSS_INTERVAL >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘IMAGE SND (interval (a',b') CROSS interval (c',d')) = interval (c',d')’
+      >- (MATCH_MP_TAC IMAGE_SND_CROSS_INTERVAL >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_lowerbound (interval (a,b)) = a’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_upperbound (interval (a,b)) = b’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_lowerbound (interval (a',b')) = a'’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_upperbound (interval (a',b')) = b'’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_lowerbound (interval (c,d)) = c’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_upperbound (interval (c,d)) = d’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_lowerbound (interval (c',d')) = c'’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_LOWERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Know ‘interval_upperbound (interval (c',d')) = d'’
+      >- (MATCH_MP_TAC OPEN_INTERVAL_UPPERBOUND >> art []) \\
+      DISCH_THEN (fs o wrap) ]
+QED
+
+Theorem POW_2_SUB[local] :
+    !x y. (x - y) pow 2 = (y - x) pow 2
+Proof
+    rpt GEN_TAC
+ >> ‘(x - y) pow 2 = (abs (x - y)) pow 2’ by PROVE_TAC [REAL_POW2_ABS] >> POP_ORW
+ >> ‘(y - x) pow 2 = (abs (y - x)) pow 2’ by PROVE_TAC [REAL_POW2_ABS] >> POP_ORW
+ >> REWRITE_TAC [Once ABS_SUB]
+QED
+
+Theorem box_open_in_mr2 :
+    !a b c d. open_in (mtop mr2) (interval (a,b) CROSS interval (c,d))
+Proof
+    rw [MTOP_OPEN]
+ >> Cases_on ‘x’ >> fs []
+ (* open_in (mtop mr2) (interval (a,b) CROSS interval (c,d)) *)
+ >> reverse (Cases_on ‘a < b’)
+ >- (‘interval (a,b) = {}’ by METIS_TAC [real_lte, INTERVAL_EQ_EMPTY] \\
+     FULL_SIMP_TAC std_ss [NOT_IN_EMPTY])
+ >> reverse (Cases_on ‘c < d’)
+ >- (‘interval (c,d) = {}’ by METIS_TAC [real_lte, INTERVAL_EQ_EMPTY] \\
+     FULL_SIMP_TAC std_ss [NOT_IN_EMPTY])
+ (* stage work *)
+ >> Q.ABBREV_TAC ‘dx = min (q - a) (b - q)’
+ >> Q.ABBREV_TAC ‘dy = min (r - c) (d - r)’
+ >> Q.EXISTS_TAC ‘min dx dy’
+ >> STRONG_CONJ_TAC
+ >- (rw [Abbr ‘dx’, Abbr ‘dy’, REAL_LT_MIN, REAL_SUB_LT] \\
+     fs [IN_INTERVAL])
+ >> DISCH_TAC
+ >> GEN_TAC
+ >> Cases_on ‘y’
+ >> rw [REAL_LT_MIN, IN_INTERVAL] (* 4 subgoals *)
+ >> rename1 ‘dist mr2 ((x0,y0),(x1,y1)) < dx’
+ >| [ (* goal 1 (of 4) *)
+      CCONTR_TAC >> fs [GSYM real_lte] \\
+      Know ‘dist mr2 ((x0,y0),(x1,y0)) <= dist mr2 ((x0,y0),(x1,y1))’
+      >- (rw [MR2_DEF] \\
+          MATCH_MP_TAC SQRT_MONO_LE >> rw [REAL_LE_POW2]) >> DISCH_TAC \\
+      Know ‘dist mr2 ((x0,y0),(x1,y0)) < dx’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘dist mr2 ((x0,y0),(x1,y1))’ >> art []) \\
+      rw [Abbr ‘dx’, REAL_LT_MIN, MR2_DEF] \\
+      DISJ1_TAC >> rw [GSYM real_lte] \\
+      Cases_on ‘0 <= x0 - x1’
+      >- (Know ‘sqrt ((x0 - x1) pow 2) = x0 - x1’
+          >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> Rewr' \\
+          Q.PAT_X_ASSUM ‘x1 <= a’ MP_TAC \\
+          REAL_ARITH_TAC) \\
+      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+      Know ‘x0 < 0 + x1’
+      >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+      Know ‘x0 < a’
+      >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+          Q.EXISTS_TAC ‘x1’ >> art []) >> DISCH_TAC \\
+      Q.PAT_X_ASSUM ‘x0 IN interval (a,b)’
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_INTERVAL])) \\
+      PROVE_TAC [REAL_LT_ANTISYM],
+      (* goal 2 (of 4) *)
+      CCONTR_TAC >> fs [GSYM real_lte] \\
+      Know ‘dist mr2 ((x0,y0),(x1,y0)) <= dist mr2 ((x0,y0),(x1,y1))’
+      >- (rw [MR2_DEF] \\
+          MATCH_MP_TAC SQRT_MONO_LE >> rw [REAL_LE_POW2]) >> DISCH_TAC \\
+      Know ‘dist mr2 ((x0,y0),(x1,y0)) < dx’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘dist mr2 ((x0,y0),(x1,y1))’ >> art []) \\
+      rw [Abbr ‘dx’, REAL_LT_MIN, MR2_DEF] \\
+      DISJ2_TAC >> rw [GSYM real_lte] \\
+      ONCE_REWRITE_TAC [POW_2_SUB] \\
+      Cases_on ‘0 <= x1 - x0’
+      >- (Know ‘sqrt ((x1 - x0) pow 2) = x1 - x0’
+          >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> Rewr' \\
+          ASM_REWRITE_TAC [REAL_LE_SUB_CANCEL2]) \\
+      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+      Know ‘x1 < 0 + x0’
+      >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+      Know ‘b < x0’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘x1’ >> art []) >> DISCH_TAC \\
+      Q.PAT_X_ASSUM ‘x0 IN interval (a,b)’
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_INTERVAL])) \\
+      PROVE_TAC [REAL_LT_ANTISYM],
+      (* goal 3 (of 4) *)
+      CCONTR_TAC >> fs [GSYM real_lte] \\
+      Know ‘dist mr2 ((x0,y0),(x0,y1)) <= dist mr2 ((x0,y0),(x1,y1))’
+      >- (rw [MR2_DEF] \\
+          MATCH_MP_TAC SQRT_MONO_LE >> rw [REAL_LE_POW2]) >> DISCH_TAC \\
+      Know ‘dist mr2 ((x0,y0),(x0,y1)) < dy’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘dist mr2 ((x0,y0),(x1,y1))’ >> art []) \\
+      rw [Abbr ‘dy’, REAL_LT_MIN, MR2_DEF] \\
+      DISJ1_TAC >> rw [GSYM real_lte] \\
+      Cases_on ‘0 <= y0 - y1’
+      >- (Know ‘sqrt ((y0 - y1) pow 2) = y0 - y1’
+          >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> Rewr' \\
+          Q.PAT_X_ASSUM ‘y1 <= c’ MP_TAC \\
+          REAL_ARITH_TAC) \\
+      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+      Know ‘y0 < 0 + y1’
+      >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+      Know ‘y0 < c’
+      >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+          Q.EXISTS_TAC ‘y1’ >> art []) >> DISCH_TAC \\
+      Q.PAT_X_ASSUM ‘y0 IN interval (c,d)’
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_INTERVAL])) \\
+      PROVE_TAC [REAL_LT_ANTISYM],
+      (* goal 4 (of 4) *)
+      CCONTR_TAC >> fs [GSYM real_lte] \\
+      Know ‘dist mr2 ((x0,y0),(x0,y1)) <= dist mr2 ((x0,y0),(x1,y1))’
+      >- (rw [MR2_DEF] \\
+          MATCH_MP_TAC SQRT_MONO_LE >> rw [REAL_LE_POW2]) >> DISCH_TAC \\
+      Know ‘dist mr2 ((x0,y0),(x0,y1)) < dy’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘dist mr2 ((x0,y0),(x1,y1))’ >> art []) \\
+      rw [Abbr ‘dy’, REAL_LT_MIN, MR2_DEF] \\
+      DISJ2_TAC >> rw [GSYM real_lte] \\
+      ONCE_REWRITE_TAC [POW_2_SUB] \\
+      Cases_on ‘0 <= y1 - y0’
+      >- (Know ‘sqrt ((y1 - y0) pow 2) = y1 - y0’
+          >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> Rewr' \\
+          ASM_REWRITE_TAC [REAL_LE_SUB_CANCEL2]) \\
+      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+      Know ‘y1 < 0 + y0’
+      >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+      Know ‘d < y0’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘y1’ >> art []) >> DISCH_TAC \\
+      Q.PAT_X_ASSUM ‘y0 IN interval (c,d)’
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_INTERVAL])) \\
+      PROVE_TAC [REAL_LT_ANTISYM] ]
+QED
+
+Theorem borel_2d_lemma3[local] :
+    sigma UNIV {s | open_in (mtop mr2) s} =
+    sigma UNIV {J | ?a b c d. a IN q_set /\ b IN q_set /\ c IN q_set /\ d IN q_set /\
+                              J = OPEN_interval (a,b) CROSS OPEN_interval (c,d)}
+Proof
+    Q.ABBREV_TAC ‘S1 = sigma UNIV {s | open_in (mtop mr2) s}’
+ >> Q.ABBREV_TAC
+     ‘S3 = sigma UNIV {J | ?a b c d. a IN q_set /\ b IN q_set /\ c IN q_set /\ d IN q_set /\
+                                     J = OPEN_interval (a,b) CROSS OPEN_interval (c,d)}’
+ >> Suff ‘subsets S1 = subsets S3’ >- METIS_TAC [SIGMA_CONG]
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> reverse CONJ_TAC
+ >- (qunabbrevl_tac [‘S1’, ‘S3’] \\
+     MATCH_MP_TAC SIGMA_MONOTONE \\
+     rw [Once SUBSET_DEF] \\
+     REWRITE_TAC [box_open_in_mr2])
+ (* subsets S1 SUBSET subsets S3 *)
+ >> Q.UNABBREV_TAC ‘S1’
+ >> ‘univ(:real # real) = space S3’ by METIS_TAC [SPACE_SIGMA] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_SUBSET
+ >> Know ‘sigma_algebra S3’
+ >- (Q.UNABBREV_TAC ‘S3’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
+ >> rw [SUBSET_DEF]
+ >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o (MATCH_MP borel_2d_lemma1))
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION >> art [borel_2d_lemma2]
+ >> MATCH_MP_TAC SUBSET_TRANS
+ >> Q.EXISTS_TAC ‘{J | ?a b c d. a IN q_set /\ b IN q_set /\ c IN q_set /\ d IN q_set /\
+                                 J = OPEN_interval (a,b) CROSS OPEN_interval (c,d)}’
+ >> reverse CONJ_TAC >- rw [Abbr ‘S3’, SIGMA_SUBSET_SUBSETS]
+ >> rw [SUBSET_DEF]
+ >> qexistsl_tac [‘a’, ‘b’, ‘c’, ‘d’] >> rw []
+QED
+
+(* now rationals are all removed *)
+Theorem borel_2d_lemma4[local] :
+    sigma UNIV {s | open_in (mtop mr2) s} =
+    sigma UNIV {J | ?a b c d. J = OPEN_interval (a,b) CROSS OPEN_interval (c,d)}
+Proof
+    Q.ABBREV_TAC ‘S1 = sigma UNIV {s | open_in (mtop mr2) s}’
+ >> Q.ABBREV_TAC
+     ‘S2 = sigma UNIV {J | ?a b c d. J = OPEN_interval (a,b) CROSS OPEN_interval (c,d)}’
+ >> Q.ABBREV_TAC
+     ‘S3 = sigma UNIV {J | ?a b c d. a IN q_set /\ b IN q_set /\ c IN q_set /\ d IN q_set /\
+                                     J = OPEN_interval (a,b) CROSS OPEN_interval (c,d)}’
+ >> Suff ‘subsets S1 = subsets S2’ >- METIS_TAC [SIGMA_CONG]
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> reverse CONJ_TAC
+ >- (qunabbrevl_tac [‘S1’, ‘S2’] \\
+     MATCH_MP_TAC SIGMA_MONOTONE \\
+     rw [Once SUBSET_DEF] \\
+     REWRITE_TAC [box_open_in_mr2])
+ >> MATCH_MP_TAC SUBSET_TRANS
+ >> Q.EXISTS_TAC ‘subsets S3’
+ >> reverse CONJ_TAC
+ >- (qunabbrevl_tac [‘S2’, ‘S3’] \\
+     MATCH_MP_TAC SIGMA_MONOTONE \\
+     rw [Once SUBSET_DEF] \\
+     qexistsl_tac [‘a’, ‘b’, ‘c’, ‘d’] >> REWRITE_TAC [])
+ >> ‘S1 = S3’ by METIS_TAC [borel_2d_lemma3] >> POP_ORW
+ >> qunabbrevl_tac [‘S2’, ‘S3’]
+ >> MATCH_MP_TAC SIGMA_MONOTONE
+ >> rw [Once SUBSET_DEF]
+ >> qexistsl_tac [‘a’, ‘b’, ‘c’, ‘d’] >> REWRITE_TAC []
+QED
+
+Theorem sigma_algebra_borel_2d :
+    sigma_algebra (borel CROSS borel)
+Proof
+    MATCH_MP_TAC SIGMA_ALGEBRA_PROD_SIGMA
+ >> rw [subset_class_def, space_borel]
+QED
+
+(* 2D borel sets can be also generated by open sets in MR2 *)
+Theorem borel_2d :
+    borel CROSS borel = sigma UNIV {s | open_in (mtop mr2) s}
+Proof
+    Suff ‘subsets (borel CROSS borel) =
+          subsets (sigma UNIV {s | open_in (mtop mr2) s})’
+ >- (rw [prod_sigma_def, SPACE_SIGMA, GSYM CROSS_UNIV, space_borel] \\
+     MATCH_MP_TAC SIGMA_CONG >> art [])
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> reverse CONJ_TAC
+ >- (rw [borel_2d_lemma4] \\
+     Know ‘univ(:real # real) = space (borel CROSS borel)’
+     >- (rw [SPACE_PROD_SIGMA, CROSS_UNIV, space_borel]) >> Rewr' \\
+     MATCH_MP_TAC SIGMA_SUBSET \\
+     REWRITE_TAC [sigma_algebra_borel_2d, prod_sigma_def] \\
+     MATCH_MP_TAC SUBSET_TRANS \\
+     Q.EXISTS_TAC ‘prod_sets (subsets borel) (subsets borel)’ \\
+     REWRITE_TAC [SIGMA_SUBSET_SUBSETS] \\
+     rw [SUBSET_DEF, IN_PROD_SETS] \\
+     qexistsl_tac [‘interval (a,b)’, ‘interval (c,d)’] \\
+     rw [OPEN_interval, borel_measurable_sets_gr_less])
+ (* applying prod_sigma_alt_sigma_functions *)
+ >> Know ‘borel CROSS borel =
+          sigma (space borel CROSS space borel) (binary borel borel) (binary FST SND) {0; 1}’
+ >- (MATCH_MP_TAC prod_sigma_alt_sigma_functions \\
+     REWRITE_TAC [sigma_algebra_borel])
+ >> Rewr'
+ >> rw [sigma_functions_def, binary_def, space_borel, GSYM CROSS_UNIV]
+ >> Q.ABBREV_TAC ‘B = sigma univ(:real # real) {s | open_in (mtop mr2) s}’
+ >> ‘univ(:real # real) = space B’ by PROVE_TAC [SPACE_SIGMA] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_SUBSET
+ >> Q.UNABBREV_TAC ‘B’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
+     rw [subset_class_def])
+ >> rw [SUBSET_DEF] >> rename1 ‘s IN subsets borel’
+ >| [ (* goal 1 (of 2) *)
+      Suff ‘IMAGE (\s. PREIMAGE FST s) (subsets borel) SUBSET
+            subsets (sigma univ(:real # real) {s | open_in (mtop mr2) s})’
+      >- (rw [SUBSET_DEF] >> POP_ASSUM MATCH_MP_TAC \\
+          Q.EXISTS_TAC ‘s’ >> art []) \\
+      KILL_TAC \\
+      REWRITE_TAC [borel_eq_gr_less] \\
+      Q.ABBREV_TAC ‘sts = IMAGE (\(a,b). {x | a < x /\ x < b}) univ(:real # real)’ \\
+      Q.ABBREV_TAC ‘Z = univ(:real # real)’ \\
+      Know ‘IMAGE (\s. PREIMAGE FST s INTER Z) (subsets (sigma UNIV sts)) =
+            subsets (sigma Z (IMAGE (\s. PREIMAGE FST s INTER Z) sts))’
+      >- (MATCH_MP_TAC PREIMAGE_SIGMA >> rw [subset_class_def, IN_FUNSET]) \\
+      simp [Abbr ‘Z’] >> Rewr' \\
+      Q.ABBREV_TAC ‘B = sigma univ(:real # real) {s | open_in (mtop mr2) s}’ \\
+     ‘univ(:real # real) = space B’ by PROVE_TAC [SPACE_SIGMA] >> POP_ORW \\
+      MATCH_MP_TAC SIGMA_SUBSET \\
+      Q.UNABBREV_TAC ‘B’ \\
+      CONJ_TAC >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def]) \\
+      MATCH_MP_TAC SUBSET_TRANS \\
+      Q.EXISTS_TAC ‘{s | open_in (mtop mr2) s}’ >> rw [SIGMA_SUBSET_SUBSETS] \\
+      simp [Abbr ‘sts’, SUBSET_DEF] \\
+      Q.X_GEN_TAC ‘y’ >> rw [] \\
+      Cases_on ‘x’ >> simp [] \\
+      Know ‘PREIMAGE FST {x | q < x /\ x < r} = {x | q < x /\ x < r} CROSS univ(:real)’
+      >- (rw [Once EXTENSION, IN_PREIMAGE, IN_CROSS]) >> Rewr' \\
+      rw [MTOP_OPEN] \\
+      Cases_on ‘x’ >> rename1 ‘q < FST (x,y)’ >> fs [] \\
+      Q.ABBREV_TAC ‘dx = min (x - q) (r - x)’ \\
+      Q.EXISTS_TAC ‘dx’ \\
+      CONJ_TAC >- (rw [Abbr ‘dx’, REAL_LT_MIN, REAL_SUB_LT]) \\
+      Q.X_GEN_TAC ‘z’ >> Cases_on ‘z’ >> simp [] \\
+      DISCH_TAC >> rename1 ‘dist mr2 ((x0,y0),(x1,y1)) < dx’ \\
+      Know ‘dist mr2 ((x0,y0),(x1,y0)) <= dist mr2 ((x0,y0),(x1,y1))’
+      >- (rw [MR2_DEF] \\
+          MATCH_MP_TAC SQRT_MONO_LE >> rw [REAL_LE_POW2]) >> DISCH_TAC \\
+      Know ‘dist mr2 ((x0,y0),(x1,y0)) < dx’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘dist mr2 ((x0,y0),(x1,y1))’ >> art []) \\
+      rw [Abbr ‘dx’, REAL_LT_MIN, MR2_DEF] >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2) *)
+        Cases_on ‘0 <= x0 - x1’
+        >- (Know ‘sqrt ((x0 - x1) pow 2) = x0 - x1’
+            >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> DISCH_THEN (fs o wrap) \\
+            Q.PAT_X_ASSUM ‘x0 - x1 < x0 - q’ MP_TAC \\
+            REAL_ARITH_TAC) \\
+        POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+        Know ‘x0 < 0 + x1’
+        >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+        MATCH_MP_TAC REAL_LT_TRANS \\
+        Q.EXISTS_TAC ‘x0’ >> art [],
+        (* goal 1.2 (of 2) *)
+       ‘sqrt ((x1 - x0) pow 2) < r - x0’ by PROVE_TAC [POW_2_SUB] \\
+        Cases_on ‘0 <= x1 - x0’
+        >- (Know ‘sqrt ((x1 - x0) pow 2) = x1 - x0’
+            >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> DISCH_THEN (fs o wrap) \\
+            Q.PAT_X_ASSUM ‘x1 - x0 < r - x0’ MP_TAC \\
+            REAL_ARITH_TAC) \\
+        POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+        Know ‘x1 < 0 + x0’
+        >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+        MATCH_MP_TAC REAL_LT_TRANS \\
+        Q.EXISTS_TAC ‘x0’ >> art [] ],
+      (* goal 2 (of 2) *)
+      Suff ‘IMAGE (\s. PREIMAGE SND s) (subsets borel) SUBSET
+            subsets (sigma univ(:real # real) {s | open_in (mtop mr2) s})’
+      >- (rw [SUBSET_DEF] >> POP_ASSUM MATCH_MP_TAC \\
+          Q.EXISTS_TAC ‘s’ >> art []) \\
+      KILL_TAC \\
+      REWRITE_TAC [borel_eq_gr_less] \\
+      Q.ABBREV_TAC ‘sts = IMAGE (\(a,b). {x | a < x /\ x < b}) univ(:real # real)’ \\
+      Q.ABBREV_TAC ‘Z = univ(:real # real)’ \\
+      Know ‘IMAGE (\s. PREIMAGE SND s INTER Z) (subsets (sigma UNIV sts)) =
+            subsets (sigma Z (IMAGE (\s. PREIMAGE SND s INTER Z) sts))’
+      >- (MATCH_MP_TAC PREIMAGE_SIGMA >> rw [subset_class_def, IN_FUNSET]) \\
+      simp [Abbr ‘Z’] >> Rewr' \\
+      Q.ABBREV_TAC ‘B = sigma univ(:real # real) {s | open_in (mtop mr2) s}’ \\
+     ‘univ(:real # real) = space B’ by PROVE_TAC [SPACE_SIGMA] >> POP_ORW \\
+      MATCH_MP_TAC SIGMA_SUBSET \\
+      Q.UNABBREV_TAC ‘B’ \\
+      CONJ_TAC >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def]) \\
+      MATCH_MP_TAC SUBSET_TRANS \\
+      Q.EXISTS_TAC ‘{s | open_in (mtop mr2) s}’ >> rw [SIGMA_SUBSET_SUBSETS] \\
+      simp [Abbr ‘sts’, SUBSET_DEF] \\
+      Q.X_GEN_TAC ‘y’ >> rw [] \\
+      Cases_on ‘x’ >> simp [] \\
+      Know ‘PREIMAGE SND {x | q < x /\ x < r} = univ(:real) CROSS {x | q < x /\ x < r}’
+      >- (rw [Once EXTENSION, IN_PREIMAGE, IN_CROSS]) >> Rewr' \\
+      rw [MTOP_OPEN] \\
+      Cases_on ‘x’ >> rename1 ‘q < SND (x,y)’ >> fs [] \\
+      Q.ABBREV_TAC ‘dy = min (y - q) (r - y)’ \\
+      Q.EXISTS_TAC ‘dy’ \\
+      CONJ_TAC >- (rw [Abbr ‘dy’, REAL_LT_MIN, REAL_SUB_LT]) \\
+      Q.X_GEN_TAC ‘z’ >> Cases_on ‘z’ >> simp [] \\
+      DISCH_TAC >> rename1 ‘dist mr2 ((x0,y0),(x1,y1)) < dy’ \\
+      Know ‘dist mr2 ((x0,y0),(x0,y1)) <= dist mr2 ((x0,y0),(x1,y1))’
+      >- (rw [MR2_DEF] \\
+          MATCH_MP_TAC SQRT_MONO_LE >> rw [REAL_LE_POW2]) >> DISCH_TAC \\
+      Know ‘dist mr2 ((x0,y0),(x0,y1)) < dy’
+      >- (MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘dist mr2 ((x0,y0),(x1,y1))’ >> art []) \\
+      rw [Abbr ‘dy’, REAL_LT_MIN, MR2_DEF] >| (* 2 subgoals *)
+      [ (* goal 2.1 (of 2) *)
+        Cases_on ‘0 <= y0 - y1’
+        >- (Know ‘sqrt ((y0 - y1) pow 2) = y0 - y1’
+            >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> DISCH_THEN (fs o wrap) \\
+            Q.PAT_X_ASSUM ‘y0 - y1 < y0 - q’ MP_TAC \\
+            REAL_ARITH_TAC) \\
+        POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+        Know ‘y0 < 0 + y1’
+        >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+        MATCH_MP_TAC REAL_LT_TRANS \\
+        Q.EXISTS_TAC ‘y0’ >> art [],
+        (* goal 2.2 (of 2) *)
+       ‘sqrt ((y1 - y0) pow 2) < r - y0’ by PROVE_TAC [POW_2_SUB] \\
+        Cases_on ‘0 <= y1 - y0’
+        >- (Know ‘sqrt ((y1 - y0) pow 2) = y1 - y0’
+            >- (MATCH_MP_TAC POW_2_SQRT >> art []) >> DISCH_THEN (fs o wrap) \\
+            Q.PAT_X_ASSUM ‘y1 - y0 < r - y0’ MP_TAC \\
+            REAL_ARITH_TAC) \\
+        POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
+        Know ‘y1 < 0 + y0’
+        >- (rw [GSYM REAL_LT_SUB_RADD]) >> rw [] \\
+        MATCH_MP_TAC REAL_LT_TRANS \\
+        Q.EXISTS_TAC ‘y0’ >> art [] ] ]
+QED
+
+Theorem borel_2d_alt_box :
+    borel CROSS borel = sigma UNIV {(box a b) CROSS (box c d) | T}
+Proof
+    REWRITE_TAC [borel_2d, borel_2d_lemma4]
+ >> Suff ‘{J | (?a b c d. J = interval (a,b) CROSS interval (c,d))} =
+          {box a b CROSS box c d | T}’ >- Rewr
+ >> rw [Once EXTENSION, box_alt]
+QED
+
 val _ = export_theory ();
+
+(* References:
+
+  [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
+      Cambridge University Press (2017).
+ *)

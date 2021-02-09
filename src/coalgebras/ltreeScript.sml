@@ -123,9 +123,8 @@ Proof
    (first_x_assum (qspecl_then [`i::path`,`x`,`n`] mp_tac)
     \\ fs [] \\ disch_then drule \\ fs [])
   THEN1
-   (Cases_on `path` \\ fs []
-    \\ first_x_assum drule
-    \\ disch_then drule \\ fs [])
+   (fs[AllCaseEqs()] >> rfs[] >> first_x_assum (drule_then irule) >>
+    RULE_ASSUM_TAC (REWRITE_RULE [GSYM APPEND_ASSOC, APPEND]) >> metis_tac[])
   \\ fs [every_fromList_EVERY,LNTH_fromList]
   THEN1
    (rw [EVERY_EL,ltree_rep_ok_def]
@@ -134,7 +133,7 @@ Proof
   \\ fs [EVERY_EL,ltree_rep_ok_def]
   \\ Cases_on `path` \\ fs []
   \\ rw [] \\ fs [AllCaseEqs()]
-  \\ res_tac \\ fs []
+  \\ res_tac \\ fs [] >> metis_tac[]
 QED
 
 Theorem ltree_rep_ok_Branch_rep[local]:
@@ -634,6 +633,7 @@ Proof
   \\ rw [] \\ fs [ltree_CASE]
 QED
 
+Overload "case" = “ltree_CASE”
 val _ = TypeBase.export
   [TypeBasePure.mk_datatype_info
     { ax = TypeBasePure.ORIG TRUTH,

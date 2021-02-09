@@ -578,17 +578,19 @@ val _ = TeX_notation {hol = (UnicodeChars.sup_minus ^ UnicodeChars.sup_1),
 
 val natplus  = Term`$+`;
 val natless  = Term`$<`;
-val bool_not = Term`$~`
+val bool_not = “$~ : bool -> bool”
 val natmult  = Term`$*`;
 
-val _ = overload_on ("~", bool_not);
 
 val _ = overload_on ("+", natplus);
 val _ = overload_on ("*", natmult);
 val _ = overload_on ("<", natless);
 
-val _ = overload_on ("~", Term`$real_neg`);
-val _ = overload_on ("numeric_negate", Term`$real_neg`);
+Overload "~" = “$real_neg”
+Overload "~" = bool_not
+Overload "¬" = bool_not                                               (* UOK *)
+Overload "numeric_negate" = “$real_neg”
+
 val _ = overload_on ("+", Term`$real_add`);
 val _ = overload_on ("*", Term`$real_mul`);
 val _ = overload_on ("<", Term`real_lt`);

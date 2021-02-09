@@ -1,34 +1,31 @@
 HOLyHammer is a machine learning for theorem proving framework.
+It automatically selects suitable premises (theorems) for the current goal and
+translates them together with the goal to automated theorem provers (ATPs).
+The final proof is reconstructed by calling Metis on the premises appearing in
+the ATP proof.
 
-Install Holyhammer:
-  
-  Run Holmake in src/holyhammer (done during the build)
-
-Install external provers: Eprover(1.8 1.9 2.0, latest version should work too), 
-  Z3 (4.0), Vampire (4.2.2)
-
-  1) Download provers 
-  - Eprover 2.0: 
-      Source: http://wwwlehre.dhbw-stuttgart.de/~sschulz/E/E.html
-        (eprover binary found in PROVER directory)
-  - Z3 4.0 (not 4.4.0): 
-      Binaries: http://isabelle.in.tum.de/components/
-  - Vampire 4.2.2: 
-      Linux binary: https://vprover.github.io/download.html
-      Source: https://github.com/vprover/vampire 
-        (produces vampire_rel_master_3993 in the top directory)
-  2) Prover binaries with the appropriate version should be copied or linked
-     in the directory src/holyhammer/provers.
-     They should be respectively renamed to eprover, z3 and vampire.
-  3) Make sure you have the permission to execute them (chmod +x)
-
-Example:
-
+Usage (requires at least one installed external prover):
   load "holyHammer"; open holyHammer;
-  holyhammer ``1+1=2``;
+  hh ([],``1+1=2``);
+  holyhammer ``1+1=2``; (* alternatively *)
+
+Install external provers:
+  1) Download provers
+  - Eprover 2.0 (latest version should work too):
+      Source: http://wwwlehre.dhbw-stuttgart.de/~sschulz/E/E.html
+      Installing Eprover produces the binary file PROVER/eprover.
+  - Z3 4.0 (only):
+      Linux binary: http://isabelle.in.tum.de/components/
+  - Vampire 4.2.2 (latest version should work too):
+      Linux binary: https://vprover.github.io/download.html
+      Source: https://github.com/vprover/vampire
+      Installing Vampire produces the binary file "vampire_rel_master_3993"
+      in the top directory.
+  2) Prover binaries should be copied or linked in
+     the directory src/holyhammer/provers.
+     They should be respectively renamed to eprover, z3 and vampire.
+  3) Make sure you have the permission to execute them (chmod +x).
 
 Questions:
-
-  If you have any question, you can send an email to 
-  email@thibaultgauthier.fr
-
+  If you have any question, you can send an email to
+  email@thibaultgauthier.fr.

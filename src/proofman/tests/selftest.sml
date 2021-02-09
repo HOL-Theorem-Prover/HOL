@@ -167,7 +167,7 @@ val _ = List.app testf [
  \------------------------------------\n\
  \ 0.  P a b ==>\n\
  \     !x y z.\n\
- \         Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
+ \       Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
  \ 1.  P (f a) (hhhh b)\n"),
 ("Stack printing; more than 10 assumptions",
  ``p1 /\ p2 /\ p3 /\ p4 /\ p5 /\ p6 /\ p7 /\ p8 /\ p9 /\ p10 /\ p11 ==> q``,
@@ -211,8 +211,8 @@ val _ = app (fn (w,s) => Portable.with_flag(testutils.linewidth,w) tpp s)
                   \  v /\\ y"),
              (80, "f\n\
                   \  (let\n\
-                  \     x = long expression ;\n\
-                  \     y = long expression ;\n\
+                  \     x = long expression;\n\
+                  \     y = long expression;\n\
                   \     z = long expression\n\
                   \   in\n\
                   \     x /\\ y /\\ z)"),
@@ -258,6 +258,45 @@ val _ = let
 in
   require_msg (check_result (list_eq goal_eq expected)) goalprint
               (fst o REPEAT (fv_term Cases)) goal
+end
+
+val _ = let
+  open boolLib
+  val longty = “:('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool”
+  val f = mk_var("f", longty)
+  val P = mk_var("P", longty --> bool)
+  val _ = new_constant("I", “:'a -> 'a”)
+  val Itm = mk_const("I", longty --> longty)
+  val _ = new_constant ("EMPTY", “:'a -> bool”)
+  val _ = new_constant ("INSERT", “:'a -> ('a -> bool) -> 'a -> bool”)
+  val _ = add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
+                        separator = [TOK ";", BreakSpace(1,0)],
+                        cons = "INSERT", nilstr = "EMPTY",
+                        block_info = (PP.INCONSISTENT, 1)};
+  fun test (wdth, s, t) =
+      with_flag(linewidth,wdth)
+               (trace ("types", 1) tpp_expected)
+               {input = trace ("types", 1) term_to_string t,
+                output = s,
+                testf = fn s =>
+                           "Width=" ^ Int.toString wdth ^
+                           " type-annotation of “" ^ s ^ "”"}
+in
+  List.app test [
+    (75,
+     "(P :(('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool) -> bool)\n\
+     \  (f :('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(P,f)),
+    (75, "I (f :('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(Itm,f)),
+    (55, "I\n\
+         \  (f :('a -> 'b) ->\n\
+         \      ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(Itm,f)),
+    (55, "({} :(('a -> 'b) ->\n\
+         \      ('c itself -> 'a -> bool) -> 'a -> bool) -> bool)",
+     mk_const("EMPTY", longty --> bool))
+  ]
 end
 
 val _ = let

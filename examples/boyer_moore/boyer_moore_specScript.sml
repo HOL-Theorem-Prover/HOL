@@ -7,8 +7,6 @@ open arithmeticTheory;
 open pred_setTheory;
 open pairTheory;
 open boolTheory;
-
-load "set_lemmasTheory";
 open set_lemmasTheory;
 
 val _ = new_theory"boyer_moore_spec";
@@ -19,28 +17,26 @@ val _ = new_theory"boyer_moore_spec";
                                         *)
 (* -- SOLUTION SET -- *)
 (* Formal Definition of potential solutions. *)
-val solutions_def =
-    Define
-    `
-    solutions pat search =
-        if
-            ~(LENGTH pat <= LENGTH search)
-        then
-            {}
-        else
-            {k| k <= LENGTH search - LENGTH pat
-                /\ (!i. i < LENGTH pat
-                        ==> (EL (i+k) search = EL i pat)
-                    )
-            }
-    `;
+Definition solutions_def:
+  solutions pat search =
+  if ~(LENGTH pat <= LENGTH search)
+  then
+    {}
+  else
+    {k| k <= LENGTH search - LENGTH pat
+        /\ (!i. i < LENGTH pat
+                ==> (EL (i+k) search = EL i pat)
+           )
+    }
+End
 
 (* The capacity to skip and produce the same solution set *)
-val SOLS_SHF_THM = Q.prove(
-    `(m <= LENGTH search) /\
-       (!d. d < m ==> ~(d IN solutions pat search))
-        ==> (!x. x IN solutions pat (DROP m search)
-             <=> (m+x) IN solutions pat search)`,
+Theorem SOLS_SHF_THM[local]:
+  (m <= LENGTH search) /\
+  (!d. d < m ==> ~(d IN solutions pat search))
+  ==> (!x. x IN solutions pat (DROP m search)
+           <=> (m+x) IN solutions pat search)
+Proof
     Cases_on `LENGTH search = 0`
     >- (strip_tac
         >> `m=0`
@@ -63,16 +59,17 @@ val SOLS_SHF_THM = Q.prove(
                     suffices_by rw[LESS_EQ_LESS_TRANS]
             >> simp[])
         )
-    );
+QED
 
 (* Shifting capacity of the minimum of the solution set *)
-val SOLS_MIN_SHF = Q.prove(
-    `(m <= LENGTH search) /\
-     (!d. d < m ==> ~(d IN solutions pat search)) /\
-     (solutions pat (DROP m search) <> {}) /\
-     (solutions pat search <> {})
-     ==> (m + MIN_SET (solutions pat (DROP m search))
-          = MIN_SET (solutions pat search))`,
+Theorem SOLS_MIN_SHF[local]:
+  (m <= LENGTH search) /\
+  (!d. d < m ==> ~(d IN solutions pat search)) /\
+  (solutions pat (DROP m search) <> {}) /\
+  (solutions pat search <> {})
+  ==> (m + MIN_SET (solutions pat (DROP m search))
+       = MIN_SET (solutions pat search))
+Proof
     REPEAT STRIP_TAC
     >> qabbrev_tac `sols_d = solutions pat (DROP m search)`
     >> qabbrev_tac `sols = solutions pat search`
@@ -100,15 +97,15 @@ val SOLS_MIN_SHF = Q.prove(
         >> `m + (MIN_SET sols_d) IN sols`
                 by metis_tac[]
         >> fs[MIN_SET_LEM])
-    );
+QED
 
 (* Shifting a solution set appropriately does not change
    its nullness *)
-val SOLS_NULL_EQ = Q.prove(
-    `(m <= LENGTH search) /\
-     (!d. d < m ==> ~(d IN solutions pat search))
-     ==> ((solutions pat (DROP m search) = {})
-           <=> (solutions pat search = {}))`,
+Theorem SOLS_NULL_EQ[local]:
+  m <= LENGTH search /\ (!d. d < m ==> d ∉ solutions pat search)
+    ==>
+  (solutions pat (DROP m search) = {} <=> solutions pat search = {})
+Proof
     REPEAT STRIP_TAC
     >> rw[EQ_IMP_THM]
     >> qabbrev_tac `sols_d = solutions pat (DROP m search)`
@@ -138,7 +135,7 @@ val SOLS_NULL_EQ = Q.prove(
                 suffices_by metis_tac[MEMBER_NOT_EMPTY]
         >> qexists_tac `m + y`
         >> fs[])
-    );
+QED
 
 
 
@@ -150,12 +147,9 @@ val SOLS_NULL_EQ = Q.prove(
 (* The actual solution we want is the minimum of all
    solutions. We include past the end of
    the search string a 'solution'. It is the failure indicator. *)
-val solution_def =
-    Define
-    `
-    solution pat search = MIN_SET ((LENGTH search) INSERT
-                                   solutions pat search)
-    `;
+Definition solution_def:
+  solution pat search = MIN_SET ((LENGTH search) INSERT solutions pat search)
+End
 
 (* Shifting capacity of the solution*)
 val SOL_SHF_THM = store_thm(
@@ -208,40 +202,30 @@ val CHA_SHIFT_EXISTS_THM = store_thm(
 
 (* Confirmation that skipped shifts not in valid_cha_shifts give
    invalid alignments *)
-val CHA_SKIP_NOT_SOL = store_thm(
-    "CHA_SKIP_NOT_SOL",
-    ``((k <= LENGTH search - LENGTH pat)
-     /\ (j < LENGTH pat)
-     /\ (EL j pat <> EL (k+j) search)
-     /\ (EL (k+j) search = EL a all_chars)
-     )
-     ==> (!d. d < MIN_SET (valid_cha_shifts pat all_chars j a)
-              ==> ~((k+d) IN solutions pat search))``,
-    DISCH_TAC
-    >> fs[]
-    >> rw[]
-    >> `d NOTIN valid_cha_shifts pat all_chars j a`
-            by metis_tac[CHA_SHIFT_EXISTS_THM, MIN_SET_LEM,
-                            DECIDE ``a < b /\ b <= a ==> F``]
-    >> `d < j + 1`
-            by (irule MIN_SET_IS_LOWER_BOUND
-                >> rpt conj_tac
-                >> qexists_tac `valid_cha_shifts pat all_chars j a`
-                >> rw[valid_cha_shifts_def])
-    >> fs[valid_cha_shifts_def]
-    >- (`d + k = k` by fs[]
-        >> `k NOTIN solutions pat search`
-                suffices_by rw[]
-        >> rw[solutions_def]
-        >> `EL (j + k) search <> EL j pat`
-                by metis_tac[EQ_SYM_EQ]
-        >> metis_tac[])
-    >- (rw[solutions_def]
-        >> DISJ2_TAC
-        >> qexists_tac `j - d`
-        >> simp[ADD_CLAUSES])
-    );
+Theorem CHA_SKIP_NOT_SOL:
+  k <= LENGTH search - LENGTH pat
+  /\ j < LENGTH pat
+  /\ EL j pat <> EL (k+j) search
+  /\ EL (k+j) search = EL a all_chars
 
+  ==> !d. d < MIN_SET (valid_cha_shifts pat all_chars j a) ==>
+          (k+d) ∉ solutions pat search
+Proof
+  DISCH_TAC >> fs[] >> rw[]
+  >> `d NOTIN valid_cha_shifts pat all_chars j a`
+    by metis_tac[CHA_SHIFT_EXISTS_THM, MIN_SET_LEM,
+                 DECIDE ``a < b /\ b <= a ==> F``]
+  >> `d < j + 1`
+    by (irule MIN_SET_IS_LOWER_BOUND
+        >> rpt conj_tac
+        >> qexists_tac `valid_cha_shifts pat all_chars j a`
+        >> rw[valid_cha_shifts_def])
+  >> fs[valid_cha_shifts_def]
+  >> Cases_on ‘d = 0’
+  >- (rw[solutions_def] >> metis_tac[])
+  >- (fs[] >> rw[solutions_def] >> DISJ2_TAC >> qexists_tac `j - d` >>
+      simp[ADD_CLAUSES])
+QED
 
 (* -- SUFFIX MATCH SHIFTS -- *)
 (* Formal Definition of Valid Suffix Shifts *)

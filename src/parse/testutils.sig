@@ -34,7 +34,9 @@ val check_result : ('a -> bool) -> ('a testresult -> bool)
 val require : ('b testresult -> bool) -> ('a -> 'b) -> 'a -> unit
 val require_msg : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
                   'a -> unit
-val require_msgk : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
+val require_pretty_msg : ('b testresult -> bool) -> 'b HOLPP.pprinter ->
+                         ('a -> 'b) -> 'a -> unit
+val require_msgk : ('b testresult -> bool) -> 'b HOLPP.pprinter -> ('a -> 'b) ->
                    ('b testresult -> unit) -> 'a -> unit
 
 val bold : string -> string
