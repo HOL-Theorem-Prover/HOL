@@ -143,7 +143,7 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
                 ttac kth g handle HOL_ERR _ => k()
               end
       val max = length cs2
-      val fail = mk_HOL_ERR "resolve_then" "resolve_then" "No unifier"
+      val fail = mk_HOL_ERR "Tactic" "resolve_then" "No unifier"
     in
       case mpos of
           Any =>
@@ -154,7 +154,10 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
           in
             doit 1
           end
-        | Pos f => try (f cs2) (fn _ => raise fail)
+        | Pos f =>
+          (case Exn.capture f cs2 of
+               Exn.Exn _ => raise fail
+             | Exn.Res t => try t (fn _ => raise fail))
         | Pat q =>
           let
             open TermParse
