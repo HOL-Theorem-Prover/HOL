@@ -41,9 +41,12 @@ system.tex: system.stex $(PS_STUFF)
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
 
-EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex PatternMatchesLib.tex HolSat.tex \
+EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
+               PatternMatchesLib.tex HolSat.tex definitions.tex \
                system.tex conv.tex math.tex \
                description.pdf \
-               $(patsubst %,%.aux,$(TEX_CORES)) description.log description.out \
+               $(patsubst %,%.aux,$(TEX_CORES)) \
+	       description.log description.out \
                description.toc description.fls description.idx description.ilg \
-               description.ind description.blg description.bbl description.fdb_latexmk
+               description.ind description.blg description.bbl \
+	       description.fdb_latexmk
