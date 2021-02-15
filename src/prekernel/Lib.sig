@@ -14,6 +14,7 @@ sig
    val |-> : ('a * 'b) -> {redex: 'a, residue: 'b}
    val |> : 'a * ('a -> 'b) -> 'b
    val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+   val flip : ('a * 'b -> 'c) -> ('b * 'a -> 'c)
    val I : 'a -> 'a
    val K : 'a -> 'b -> 'a
    val S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
