@@ -89,7 +89,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    BIJ_ELEMENT         |- !f s t x. BIJ f s t /\ x IN s ==> f x IN t
    INJ_UNIV            |- !f s t. INJ f s t ==> INJ f s univ(:'b)
    INJ_SUBSET_UNIV     |- !f s. INJ f univ(:'a) univ(:'b) ==> INJ f s univ(:'b)
-   INJ_IMAGE_BIJ       |- !f s. INJ f s univ(:'b) ==> BIJ f s (IMAGE f s)
+   INJ_IMAGE_BIJ_ALT   |- !f s. INJ f s univ(:'b) ==> BIJ f s (IMAGE f s)
    INJ_IMAGE_EQ        |- !P f. INJ f P univ(:'b) ==> !s t. s SUBSET P /\ t SUBSET P ==>
                                 ((IMAGE f s = IMAGE f t) <=> (s = t))
    INJ_IMAGE_INTER     |- !P f. INJ f P univ(:'b) ==> !s t. s SUBSET P /\ t SUBSET P ==>
@@ -98,7 +98,7 @@ open gcdTheory; (* for P_EUCLIDES *)
                                 (DISJOINT s t <=> DISJOINT (IMAGE f s) (IMAGE f t))
    INJ_I               |- !s. INJ I s univ(:'a)
    INJ_I_IMAGE         |- !s f. INJ I (IMAGE f s) univ(:'b)
-   BIJ_ALT             |- !f s t. BIJ f s t <=>
+   BIJ_THM             |- !f s t. BIJ f s t <=>
                           (!x. x IN s ==> f x IN t) /\ !y. y IN t ==> ?!x. x IN s /\ (f x = y)
    BIJ_IS_INJ          |- !f s t. BIJ f s t ==>
                           !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)
@@ -792,8 +792,8 @@ val INJ_SUBSET_UNIV = store_thm(
 
 (* Theorem: INJ f s UNIV ==> BIJ f s (IMAGE f s) *)
 (* Proof: by definitions. *)
-val INJ_IMAGE_BIJ = store_thm(
-  "INJ_IMAGE_BIJ",
+val INJ_IMAGE_BIJ_ALT = store_thm(
+  "INJ_IMAGE_BIJ_ALT",
   ``!f s. INJ f s UNIV ==> BIJ f s (IMAGE f s)``,
   rw[BIJ_DEF, INJ_DEF, SURJ_DEF]);
 
@@ -897,8 +897,8 @@ val INJ_I_IMAGE = store_thm(
    (3) x IN t ==> ?y. y IN s /\ (f y = x)
        true by SURJ_DEF.
 *)
-val BIJ_ALT = store_thm(
-  "BIJ_ALT",
+val BIJ_THM = store_thm(
+  "BIJ_THM",
   ``!f s t. BIJ f s t <=> (!x. x IN s ==> f x IN t) /\ (!y. y IN t ==> ?!x. x IN s /\ (f x = y))``,
   rw_tac std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, EQ_IMP_THM] >> metis_tac[]);
 

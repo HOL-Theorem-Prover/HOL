@@ -1169,17 +1169,16 @@ val Generated_subset_has_set = store_thm(
 
 (* Theorem: Group g /\ s SUBSET G ==> (gen_set s).carrier SUBSET G *)
 (* Proof:
-   Let t = {h | h <= g /\ s SUBSET H}.
-   By Generated_subset_def, this is to show: BIGINTER (IMAGE (\h. H) t) SUBSET G
+   By Generated_subset_def, this is to show:
+      BIGINTER (IMAGE (\h. H) {h | h <= g /\ s SUBSET H}) SUBSET G
    By BIGINTER_SUBSET, this is to show:
-   (1) !Y. Y IN IMAGE (\h. H) t ==> Y SUBSET G
-       After simplication, this is to show: h <= g ==> H SUBSET G
-       This is true                by subgroup_carrier_subset
-   (2) IMAGE (\h. H) t <> {}
-       Note g <= g                 by subgroup_refl, Group g
-       Thus g IN t                 by notation
-         so t <> {}                by MEMBER_NOT_EMPTY
-         or IMAGE (\h. H) t <> {}  by IMAGE_EQ_EMPTY
+      ?t. t IN IMAGE (\h. H) {h | h <= g /\ s SUBSET H} /\ t SUBSET G
+   By IN_IMAGE, this is,
+      ?t. (?h. t = H /\ h <= g /\ s SUBSET H) /\ t SUBSET G
+   or ?h. h <= g /\ s SUBSET H     by subgroup_carrier_subset
+   Take h = g,
+   Then g <= g                     by subgroup_refl
+    and s SUBSET G                 by given
 *)
 Theorem Generated_subset_subset:
   !(g:'a group) s. Group g /\ s SUBSET G ==> (gen_set s).carrier SUBSET G

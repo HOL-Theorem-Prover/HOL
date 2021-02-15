@@ -160,6 +160,8 @@ open dividesTheory gcdTheory;
    GCD_MOD_COMM        |- !m n. 0 < m ==> (gcd n m = gcd (n MOD m) m)
    GCD_EUCLID          |- !a b c. gcd a (b * a + c) = gcd a c
    GCD_REDUCE          |- !a b c. gcd (b * a + c) a = gcd a c
+   GCD_REDUCE_BY_COPRIME
+                       |- !m n k. coprime m k ==> gcd m (k * n) = gcd m n
 
    Coprime Theorems:
    coprime_SUC         |- !n. coprime n (n + 1)
@@ -2076,6 +2078,11 @@ val GCD_REDUCE = store_thm(
   "GCD_REDUCE",
   ``!a b c. gcd (b * a + c) a = gcd a c``,
   rw[GCD_EUCLID, GCD_SYM]);
+
+(* Theorem alias *)
+Theorem GCD_REDUCE_BY_COPRIME = GCD_CANCEL_MULT;
+(* val GCD_REDUCE_BY_COPRIME =
+   |- !m n k. coprime m k ==> gcd m (k * n) = gcd m n: thm *)
 
 (* ------------------------------------------------------------------------- *)
 (* Coprime Theorems                                                          *)
