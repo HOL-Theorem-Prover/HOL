@@ -70,15 +70,12 @@ open helperListTheory; (* for LENGTH_NON_NIL, LIST_TO_SET_SING_IFF *)
    necklace_not_nil  |- !n a ls. 0 < n /\ ls IN necklace n a ==> ls <> []
    necklace_suc      |- !n a. necklace (SUC n) a =
                               IMAGE (\(c,ls). c::ls) (count a CROSS necklace n a)
+!  necklace_eqn      |- !n a. necklace n a =
+                              if n = 0 then {[]}
+                              else IMAGE (\(c,ls). c::ls) (count a CROSS necklace (n - 1) a)
    necklace_1        |- !a. necklace 1 a = {[e] | e IN count a}
    necklace_finite   |- !n a. FINITE (necklace n a)
    necklace_card     |- !n a. CARD (necklace n a) = a ** n
-
-   Necklace for display:
-   show_necklace_def |- (!a. show_necklace 0 a = {[]}) /\
-                        !n a. show_necklace (SUC n) a =
-                              IMAGE (\(c,ls). c::ls) (count a CROSS show_necklace n a)
-!  show_necklace_eqn |- !n a. necklace n a = show_necklace n a
 
    Mono-colored necklace:
    monocoloured_def  |- !n a. monocoloured n a =
@@ -276,6 +273,28 @@ Proof
   ]
 QED
 
+(* Idea: display the necklaces. *)
+
+(* Theorem: necklace n a =
+            if n = 0 then {[]}
+            else IMAGE (\(c,ls). c::ls) (count a CROSS necklace (n - 1) a) *)
+(* Proof: by necklace_0, necklace_suc. *)
+Theorem necklace_eqn[compute]:
+  !n a. necklace n a =
+        if n = 0 then {[]}
+        else IMAGE (\(c,ls). c::ls) (count a CROSS necklace (n - 1) a)
+Proof
+  rw[necklace_0] >>
+  metis_tac[necklace_suc, num_CASES, SUC_SUB1]
+QED
+
+(*
+> EVAL ``necklace 3 2``;
+= {[1; 1; 1]; [1; 1; 0]; [1; 0; 1]; [1; 0; 0]; [0; 1; 1]; [0; 1; 0]; [0; 0; 1]; [0; 0; 0]}
+> EVAL ``necklace 2 3``;
+= {[2; 2]; [2; 1]; [2; 0]; [1; 2]; [1; 1]; [1; 0]; [0; 2]; [0; 1]; [0; 0]}
+*)
+
 (* Idea: Unit-length necklaces are singletons from (count a). *)
 
 (* Theorem: necklace 1 a = {[e] | e IN count a} *)
@@ -368,56 +387,6 @@ Proof
   `_ = a * a ** n` by fs[Abbr`b`, Abbr`c`] >>
   simp[EXP]
 QED
-
-(* ------------------------------------------------------------------------- *)
-(* Necklace for display.                                                     *)
-(* ------------------------------------------------------------------------- *)
-
-(* Construction of necklaces. *)
-Definition show_necklace_def:
-   show_necklace 0 a = {[]} /\ (* by necklace_0 *)
-   show_necklace (SUC n) a = (* by necklace_suc *)
-      IMAGE (\(c,ls). c::ls) (count a CROSS show_necklace n a)
-End
-(*
-> show_necklace_def;
-val it = |- (!a. show_necklace 0 a = {[]}) /\
-             !n a. show_necklace (SUC n) a =
-                   IMAGE (\(c,ls). c::ls) (count a CROSS show_necklace n a): thm
-*)
-(*
-> EVAL ``show_necklace 1 2``; = {[1]; [0]}
-> EVAL ``show_necklace 2 2``; = {[1; 1]; [1; 0]; [0; 1]; [0; 0]}
-*)
-
-(* Theorem: necklace n a = show_necklace n a *)
-(* Proof:
-   By induction on n.
-   Base: necklace 0 a = show_necklace 0 a
-      This is true      by show_necklace_def, necklace_0
-   Step: necklace n a = show_necklace n a ==>
-         necklace (SUC n) a = show_necklace (SUC n) a
-      Let f = (\(c,ls). c::ls).
-         necklace (SUC n) a
-       = IMAGE f (count a CROSS necklace n a)       by necklace_suc
-       = IMAGE f (count a CROSS show_necklace n a)  by induction hypothesis
-       = show_necklace (SUC n) a                    by show_necklace_def
-*)
-Theorem show_necklace_eqn[compute]:
-  !n a. necklace n a = show_necklace n a
-Proof
-  rpt strip_tac >>
-  Induct_on `n` >-
-  simp[show_necklace_def, necklace_0] >>
-  simp[show_necklace_def, necklace_suc]
-QED
-
-(*
-> EVAL ``necklace 3 2``;
-= {[1; 1; 1]; [1; 1; 0]; [1; 0; 1]; [1; 0; 0]; [0; 1; 1]; [0; 1; 0]; [0; 0; 1]; [0; 0; 0]}
-> EVAL ``necklace 2 3``;
-= {[2; 2]; [2; 1]; [2; 0]; [1; 2]; [1; 1]; [1; 0]; [0; 2]; [0; 1]; [0; 0]}
-*)
 
 (* ------------------------------------------------------------------------- *)
 (* Mono-colored necklace - necklace with a single color.                     *)
