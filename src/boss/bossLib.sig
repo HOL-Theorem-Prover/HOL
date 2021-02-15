@@ -79,10 +79,16 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
-  val QI_ss           : ssfrag
-  val SQI_ss          : ssfrag
+
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
+  val CONJ_ss         : ssfrag
+  val DISJ_ss         : ssfrag
+  val DNF_ss          : ssfrag
+  val ETA_ss          : ssfrag
+  val QI_ss           : ssfrag
+  val SFY_ss          : ssfrag
+  val SQI_ss          : ssfrag
   val type_rws        : hol_type -> thm list
   val rewrites        : thm list -> ssfrag
   val augment_srw_ss  : ssfrag list -> unit
@@ -101,6 +107,7 @@ sig
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
   val Excl           : string -> thm
+  val SF             : ssfrag -> thm
   val Req0           : thm -> thm
   val ReqD           : thm -> thm
 

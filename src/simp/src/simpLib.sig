@@ -91,6 +91,7 @@ sig
   val Excl        : string -> thm
   val Req0        : thm -> thm
   val ReqD        : thm -> thm
+  val SF          : ssfrag -> thm
 
   val rewrites       : thm list -> ssfrag
   val rewrites_with_names : (thname * thm) list -> ssfrag

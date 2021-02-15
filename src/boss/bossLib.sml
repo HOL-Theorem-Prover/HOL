@@ -102,22 +102,28 @@ val op && = simpLib.&&;
      simplification is quick.
  ---------------------------------------------------------------------------*)
 
-local open sumTheory pred_setTheory
-      infix ++
-in
-
-val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
-val SQI_ss = quantHeuristicsLib.SIMPLE_QUANT_INST_ss
-val pure_ss = pureSimps.pure_ss
-val bool_ss = boolSimps.bool_ss
-val std_ss = numLib.std_ss ++ PMATCH_SIMP_ss
+(* simpsets *)
 val arith_ss = numLib.arith_ss ++ PMATCH_SIMP_ss
-val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss ++ PMATCH_SIMP_ss
+val bool_ss = boolSimps.bool_ss
+val list_ss = let open pred_setTheory
+              in
+                arith_ss ++ listSimps.LIST_ss
+                         ++ rewrites [IN_INSERT, NOT_IN_EMPTY, IN_UNION]
+              end
+val pure_ss = pureSimps.pure_ss
+val old_arith_ss = numLib.std_ss ++ numSimps.old_ARITH_ss ++ PMATCH_SIMP_ss
+val std_ss = numLib.std_ss ++ PMATCH_SIMP_ss
+
+(* fragments *)
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
-val list_ss  = arith_ss ++ listSimps.LIST_ss
-                        ++ rewrites [IN_INSERT, NOT_IN_EMPTY, IN_UNION]
-end
+val CONJ_ss = boolSimps.CONJ_ss
+val DISJ_ss = boolSimps.DISJ_ss
+val DNF_ss = boolSimps.DNF_ss
+val ETA_ss = boolSimps.ETA_ss
+val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
+val SFY_ss = SatisfySimps.SATISFY_ss
+val SQI_ss = quantHeuristicsLib.SIMPLE_QUANT_INST_ss
 
 val DECIDE = numLib.DECIDE;
 val DECIDE_TAC = numLib.DECIDE_TAC;
@@ -227,7 +233,6 @@ fun stateful f ssfl thm : tactic =
     f ss thm
   end
 
-val ARITH_ss = numSimps.ARITH_ss
 val fsrw_tac = stateful full_simp_tac
 val rfsrw_tac = stateful rev_full_simp_tac
 

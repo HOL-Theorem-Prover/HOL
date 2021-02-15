@@ -330,18 +330,28 @@ val CONJ_ss = SSFRAG {
   name = SOME"CONJ",
   ac = [],
   congs = [REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL boolTheory.AND_CONG)],
-  convs = [], dprocs = [], filter = NONE, rewrs = []}
+  convs = [], dprocs = [], filter = NONE, rewrs = []};
+
+val DISJ_ss = SSFRAG {
+      name = SOME "DISJ",
+      congs = [tautLib.TAUT ‘(~Q ==> (P = P')) ==> (~P' ==> (Q = Q')) ==>
+                             ((P \/ Q) = (P' \/ Q'))’],
+      ac = [], convs = [], dprocs = [], filter = NONE, rewrs = []
+    };
+
 
 (* ----------------------------------------------------------------------
     A boolean formula normaliser that attempts to create formulas with
     maximum opportunity for UNWIND_ss to eliminate equalities
    ---------------------------------------------------------------------- *)
 
-val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
-                       DISJ_IMP_THM, IMP_CONJ_THM,
-                       RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
-                       GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
-                       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM]
+val DNF_ss =
+    rewrites [FORALL_AND_THM, EXISTS_OR_THM,
+              DISJ_IMP_THM, IMP_CONJ_THM,
+              RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
+              GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
+              GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM]
+             |> name_ss "DNF" |> register_frag
 
 
 val EQUIV_EXTRACT_ss = simpLib.conv_ss BoolExtractShared.BOOL_EQ_IMP_convdata;
@@ -379,12 +389,6 @@ val LABEL_CONG_ss = SSFRAG {
       filter = NONE,
       name = SOME "LABEL_CONG_ss", rewrs = []}
 
-val DISJ_ss = SSFRAG {
-      name = SOME "DISJ",
-      congs = [tautLib.TAUT ‘(~Q ==> (P = P')) ==> (~P' ==> (Q = Q')) ==>
-                             ((P \/ Q) = (P' \/ Q'))’],
-      ac = [], convs = [], dprocs = [], filter = NONE, rewrs = []
-    }
 
 
 

@@ -78,21 +78,27 @@ fun Cong th = EQ_MP (SYM(SPEC (concl th) markerTheory.Cong_def)) th;
 
 fun unCong th = PURE_REWRITE_RULE [Cong_def] th;
 
-fun Excl nm =
+fun genmktagged th nm =
     let val v = mk_var(nm, alpha)
     in
-      EQT_ELIM (SPEC v markerTheory.Exclude_def)
+      EQT_ELIM (SPEC v th)
     end
+val Excl = genmktagged markerTheory.Exclude_def
+val FRAG = genmktagged markerTheory.FRAG_def
+
 
 fun mk_marker_const nm = prim_mk_const{Thy = "marker", Name = nm}
 val Excl_t = mk_marker_const "Exclude"
-fun destExcl th =
+val FRAG_t = mk_marker_const "FRAG"
+fun gendest_tagged t th =
     let val c = concl th
         val f = rator c
     in
-      if same_const Excl_t f then SOME (#1 (dest_var (rand c)))
+      if same_const t f then SOME (#1 (dest_var (rand c)))
       else NONE
     end handle HOL_ERR _ => NONE
+val destExcl = gendest_tagged Excl_t
+val destFRAG = gendest_tagged FRAG_t
 
 val Req0_t = mk_marker_const "Req0"
 val Req0_th = EQT_ELIM markerTheory.Req0_def

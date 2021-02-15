@@ -361,8 +361,16 @@ List.app (ignore o req_test) [
   ("reqD/Once succeeds", [ReqD (Once AND_CLAUSES)], [] ,
    “p /\ T /\ q /\ T”, SOME “x:α”),
   ("req0/Twice succeeds", [Req0 (Ntimes AND_CLAUSES 2)], [],
-   “p /\ T /\ q /\ T”, SOME “p /\ q”)
-
+   “p /\ T /\ q /\ T”, SOME “p /\ q”),
+  ("SF ETA_ss succeeds", [SF boolSimps.ETA_ss], [], “P (\x:'a. f x:'b) /\ T”,
+   SOME “P (f:'a -> 'b) /\ T”),
+  ("SF ETA_ss & DNF_ss succeeds",
+   [SF boolSimps.ETA_ss, AND_CLAUSES, SF boolSimps.DNF_ss], [],
+   “p /\ (p \/ R (\x:'a . f x:'b))”,
+   SOME “p \/ p /\ R (f : 'a -> 'b)”),
+  ("SF DISJ_ss & DNF_ss succeeds",
+   [SF boolSimps.DISJ_ss, AND_CLAUSES, SF boolSimps.DNF_ss], [],
+   “p /\ (p \/ r)”, SOME “p \/ F”)
 ]
 end;
 
