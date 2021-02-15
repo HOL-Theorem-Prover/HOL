@@ -15,7 +15,7 @@ val _ = new_theory "iterate";
 
 (* open dependent theories *)
 val _ = load("helperFunctionTheory");
-(* open helperTheory; -- skip helper, so no FUNPOW_closure *)
+(* open helperTwosqTheory; -- skip helperTwosq, so no FUNPOW_closure *)
 open helperFunctionTheory;
 open helperSetTheory;
 open helperNumTheory;

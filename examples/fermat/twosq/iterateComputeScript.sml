@@ -28,8 +28,8 @@ open listTheory;
 open listRangeTheory;
 open helperListTheory; (* for listRangeINC_SNOC *)
 
-(* val _ = load "helperTheory"; *)
-open helperTheory; (* for WHILE_RULE_PRE_POST *)
+(* val _ = load "helperTwosqTheory"; *)
+open helperTwosqTheory; (* for WHILE_RULE_PRE_POST *)
 open whileTheory; (* for WHILE definition *)
 
 
@@ -850,8 +850,7 @@ Proof
   irule WHILE_RULE_PRE_POST >>
   qexists_tac `\x. x = a` >>
   qexists_tac `\x. 1` >>
-  rw[] >-
-  metis_tac[] >>
+  rw[] >>
   rw[whileTheory.HOARE_SPEC_DEF]
 QED
 

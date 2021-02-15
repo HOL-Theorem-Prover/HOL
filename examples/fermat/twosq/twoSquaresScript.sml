@@ -17,7 +17,7 @@ val _ = new_theory "twoSquares";
 (* arithmeticTheory -- load by default *)
 
 (* val _ = load "windmillTheory"; *)
-open helperTheory;
+open helperTwosqTheory;
 open helperNumTheory;
 open helperSetTheory;
 open helperFunctionTheory;
