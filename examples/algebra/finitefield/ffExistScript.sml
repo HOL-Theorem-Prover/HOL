@@ -13,7 +13,6 @@ val _ = new_theory "ffExist";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -577,7 +576,7 @@ val ring_inj_image_carrier = store_thm(
 (* Theorem: Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).sum *)
 (* Proof:
    Let s = IMAGE f R.
-   Then BIJ f R s                            by INJ_IMAGE_BIJ
+   Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
      so INJ f R s                            by BIJ_DEF
    Note !x. x IN R ==> f x IN s              by INJ_DEF
     and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
@@ -604,7 +603,7 @@ val ring_inj_image_sum_monoid = store_thm(
   ``!(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).sum``,
   rpt strip_tac >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -631,7 +630,7 @@ val ring_inj_image_sum_monoid = store_thm(
        By ring_inj_image_def, monoid_invertibles_def, this is to show:
        x IN IMAGE f R ==> ?y. y IN IMAGE f R /\ (f (xx + LINV f R y) = f #0) /\ (f (LINV f R y + xx) = f #0)
        Let s = IMAGE f R.
-       Then BIJ f R s                            by INJ_IMAGE_BIJ
+       Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
          so INJ f R s                            by BIJ_DEF
        Note !x. x IN R ==> f x IN s              by INJ_DEF
         and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
@@ -651,7 +650,7 @@ val ring_inj_image_sum_group = store_thm(
   rw[ring_inj_image_sum_monoid] >>
   rw_tac std_ss[ring_inj_image_def, monoid_invertibles_def, GSPECIFICATION, EXTENSION, EQ_IMP_THM] >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -668,7 +667,7 @@ val ring_inj_image_sum_group = store_thm(
    (2) x' IN R /\ x'' IN R ==>
        f (LINV f R (f x') + LINV f R (f x'')) = f (LINV f R (f x'') + LINV f R (f x'))
        Let s = IMAGE f R.
-       Then BIJ f R s                            by INJ_IMAGE_BIJ
+       Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
          so INJ f R s                            by BIJ_DEF
        Note !x. x IN R ==> f x IN s              by INJ_DEF
         and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
@@ -685,7 +684,7 @@ val ring_inj_image_sum_abelian_group = store_thm(
   pop_assum mp_tac >>
   rw[ring_inj_image_def] >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -696,7 +695,7 @@ val ring_inj_image_sum_abelian_group = store_thm(
 (* Theorem: Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).prod *)
 (* Proof:
    Let s = IMAGE f R.
-   Then BIJ f R s                            by INJ_IMAGE_BIJ
+   Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
      so INJ f R s                            by BIJ_DEF
    Note !x. x IN R ==> f x IN s              by INJ_DEF
     and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
@@ -723,7 +722,7 @@ val ring_inj_image_prod_monoid = store_thm(
   ``!(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).prod``,
   rpt strip_tac >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -748,7 +747,7 @@ val ring_inj_image_prod_monoid = store_thm(
    (2) x' IN R /\ x'' IN R ==>
        f (LINV f R (f x') * LINV f R (f x'')) = f (LINV f R (f x'') * LINV f R (f x'))
        Let s = IMAGE f R.
-       Then BIJ f R s                            by INJ_IMAGE_BIJ
+       Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
          so INJ f R s                            by BIJ_DEF
        Note !x. x IN R ==> f x IN s              by INJ_DEF
         and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
@@ -765,7 +764,7 @@ val ring_inj_image_prod_abelian_monoid = store_thm(
   pop_assum mp_tac >>
   rw[ring_inj_image_def] >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -776,7 +775,7 @@ val ring_inj_image_prod_abelian_monoid = store_thm(
 (* Theorem: Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f) *)
 (* Proof:
    Let s = IMAGE f R.
-   Then BIJ f R s                            by INJ_IMAGE_BIJ
+   Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
      so INJ f R s                            by BIJ_DEF
    Note !x. x IN R ==> f x IN s              by INJ_DEF
     and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
@@ -813,7 +812,7 @@ val ring_inj_image_ring = store_thm(
   qabbrev_tac `xx = LINV f R x` >>
   qabbrev_tac `yy = LINV f R y` >>
   qabbrev_tac `zz = LINV f R z` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -827,7 +826,7 @@ val ring_inj_image_ring = store_thm(
 (* Theorem: Field r /\ INJ f R univ(:'b) ==> Monoid ((ring_inj_image r f).prod excluding (f #0)) *)
 (* Proof:
    Let s = IMAGE f R.
-   Then BIJ f R s                                    by INJ_IMAGE_BIJ
+   Then BIJ f R s                                    by INJ_IMAGE_BIJ_ALT
      so INJ f R s                                    by BIJ_DEF
    Note !x. x IN R ==> f x IN s                      by INJ_DEF
     and !x. x IN s ==> LINV f R x IN R               by BIJ_LINV_ELEMENT
@@ -854,7 +853,7 @@ val ring_inj_image_prod_nonzero_monoid = store_thm(
   ``!(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> Monoid ((ring_inj_image r f).prod excluding (f #0))``,
   rpt strip_tac >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -879,7 +878,7 @@ val ring_inj_image_prod_nonzero_monoid = store_thm(
 (* Theorem: Field r /\ INJ f R univ(:'b) ==> Group ((ring_inj_image r f).prod excluding (f #0)) *)
 (* Proof:
    Let s = IMAGE f R.
-   Then BIJ f R s                                    by INJ_IMAGE_BIJ
+   Then BIJ f R s                                    by INJ_IMAGE_BIJ_ALT
      so INJ f R s                                    by BIJ_DEF
    Note !x. x IN R ==> f x IN s                      by INJ_DEF
     and !x. x IN s ==> LINV f R x IN R               by BIJ_LINV_ELEMENT
@@ -909,7 +908,7 @@ val ring_inj_image_prod_nonzero_group = store_thm(
   rw[Group_def] >-
   rw[ring_inj_image_prod_nonzero_monoid] >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
   `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
@@ -943,7 +942,7 @@ val ring_inj_image_field = store_thm(
 (* Theorem: Ring r /\ INJ f R univ(:'b) ==> GroupHomo f r.sum (ring_inj_image r f).sum *)
 (* Proof:
    Let s = IMAGE f R.
-   Then BIJ f R s                                    by INJ_IMAGE_BIJ
+   Then BIJ f R s                                    by INJ_IMAGE_BIJ_ALT
      so INJ f R s                                    by BIJ_DEF
 
    By GroupHomo_def, ring_inj_image_def, this is to show:
@@ -958,14 +957,14 @@ val ring_inj_image_sum_group_homo = store_thm(
   ``!(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> GroupHomo f r.sum (ring_inj_image r f).sum``,
   rw[GroupHomo_def, ring_inj_image_def] >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   metis_tac[BIJ_LINV_THM]);
 
 (* Theorem: Ring r /\ INJ f R univ(:'b) ==> MonoidHomo f r.prod (ring_inj_image r f).prod *)
 (* Proof:
    Let s = IMAGE f R.
-   Then BIJ f R s                                    by INJ_IMAGE_BIJ
+   Then BIJ f R s                                    by INJ_IMAGE_BIJ_ALT
      so INJ f R s                                    by BIJ_DEF
 
    By MonoidHomo_def, ring_inj_image_def, this is to show:
@@ -980,7 +979,7 @@ val ring_inj_image_prod_monoid_homo = store_thm(
   ``!(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> MonoidHomo f r.prod (ring_inj_image r f).prod``,
   rw[MonoidHomo_def, ring_inj_image_def] >>
   qabbrev_tac `s = IMAGE f R` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ, Abbr`s`] >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
   `INJ f R s` by metis_tac[BIJ_DEF] >>
   metis_tac[BIJ_LINV_THM]);
 
@@ -1030,7 +1029,7 @@ val ring_inj_image_finite_field = store_thm(
    (1) FieldHomo f r (ring_inj_image r f), true         by ring_inj_image_ring_homo, FieldHomo_def
    (2) BIJ f R (ring_inj_image r f).carrier
        Since (ring_inj_image r f).carrier = IMAGE f R   by ring_inj_image_def
-          so BIJ f R (IMAGE f R)                        by INJ_IMAGE_BIJ
+          so BIJ f R (IMAGE f R)                        by INJ_IMAGE_BIJ_ALT
 *)
 val finite_field_by_inj_map = store_thm(
   "finite_field_by_inj_map",
@@ -1040,7 +1039,7 @@ val finite_field_by_inj_map = store_thm(
   rw[ring_inj_image_field] >>
   rw[FieldIso_def] >-
   rw[FieldHomo_def, ring_inj_image_ring_homo] >>
-  rw[ring_inj_image_def, INJ_IMAGE_BIJ]);
+  rw[ring_inj_image_def, INJ_IMAGE_BIJ_ALT]);
 
 (* Theorem: prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p ** n) *)
 (* Proof:

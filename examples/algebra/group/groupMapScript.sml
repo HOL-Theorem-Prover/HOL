@@ -13,7 +13,6 @@ val _ = new_theory "groupMap";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -311,8 +310,8 @@ val group_iso_property = store_thm(
   "group_iso_property",
   ``!f g h. GroupIso f g h <=> GroupHomo f g h /\ (!y. y IN h.carrier ==> ?!x. x IN G /\ (f x = y))``,
   rw[GroupIso_def, EQ_IMP_THM] >-
-  metis_tac[BIJ_ALT] >>
-  rw[BIJ_ALT] >>
+  metis_tac[BIJ_THM] >>
+  rw[BIJ_THM] >>
   metis_tac[GroupHomo_def]);
 
 (* Theorem: Group g /\ Group h /\ GroupIso f g h ==> f #e = h.id *)

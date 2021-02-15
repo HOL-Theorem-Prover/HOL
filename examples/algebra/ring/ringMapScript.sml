@@ -13,7 +13,6 @@ val _ = new_theory "ringMap";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -1890,7 +1889,7 @@ val ring_homo_image_bij = store_thm(
   ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> BIJ f R (ring_homo_image f r r_).carrier``,
   rpt strip_tac >>
   `(ring_homo_image f r r_).carrier = IMAGE f R` by rw[ring_homo_image_def] >>
-  metis_tac[INJ_IMAGE_BIJ, INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV]);
+  metis_tac[INJ_IMAGE_BIJ]);
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> RingIso f r (ring_homo_image f r r_) *)
 (* Proof:

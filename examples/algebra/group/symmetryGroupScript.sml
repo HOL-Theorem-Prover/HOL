@@ -13,7 +13,6 @@ val _ = new_theory "symmetryGroup";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -290,7 +289,7 @@ val monoid_homo_on_homo = store_thm(
        MonoidIso f g h
      = MonoidHomo f g h /\ BIJ f G h.carrier                by MonoidIso_def
    ==> MonoidHomo f g h /\ BIJ (f on G) G h.carrier         by bij_on_bij
-   ==> MonoidHomo (f on G) g h /\ BIJ (f o G) G h.carrier   by monoid_homo_on_homo
+   ==> MonoidHomo (f on G) g h /\ BIJ (f on G) G h.carrier  by monoid_homo_on_homo
      = MonoidIso (f on G) g h                               by MonoidIso_def
 *)
 val monoid_iso_on_iso = store_thm(
@@ -324,7 +323,7 @@ val group_homo_on_homo = store_thm(
        GroupIso f g h
      = GroupHomo f g h /\ BIJ f G h.carrier                by GroupIso_def
    ==> GroupHomo f g h /\ BIJ (f on G) G h.carrier         by bij_on_bij
-   ==> GroupHomo (f on G) g h /\ BIJ (f o G) G h.carrier   by group_homo_on_homo
+   ==> GroupHomo (f on G) g h /\ BIJ (f on G) G h.carrier  by group_homo_on_homo
      = GroupIso (f on G) g h                               by GroupIso_def
 *)
 val group_iso_on_iso = store_thm(
