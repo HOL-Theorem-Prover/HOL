@@ -110,6 +110,21 @@ open arithmeticTheory dividesTheory gcdTheory;
    sigma_geometric_natural       |- !p. 1 < p ==>
                                     !n. SIGMA (\j. p ** j) (natural n) = p * (p ** n - 1) DIV (p - 1)
 
+   Chinese Remainder Theorem:
+   mod_mod_prod_eq     |- !m n a b. 0 < m /\ 0 < n /\ a MOD (m * n) = b MOD (m * n) ==>
+                                    a MOD m = b MOD m /\ a MOD n = b MOD n
+   coprime_mod_mod_prod_eq
+                       |- !m n a b. 0 < m /\ 0 < n /\ coprime m n /\
+                                    a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+                                    a MOD (m * n) = b MOD (m * n)
+   coprime_mod_mod_prod_eq_iff
+                       |- !m n. 0 < m /\ 0 < n /\ coprime m n ==>
+                          !a b. a MOD (m * n) = b MOD (m * n) <=>
+                                a MOD m = b MOD m /\ a MOD n = b MOD n
+   coprime_mod_mod_solve
+                       |- !m n a b. 0 < m /\ 0 < n /\ coprime m n ==>
+                               ?!x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n
+
    Useful Theorems:
    PROD_SET_IMAGE_EXP_NONZERO    |- !n m. PROD_SET (IMAGE (\j. n ** j) (count m)) =
                                           PROD_SET (IMAGE (\j. n ** j) (residue m))
@@ -923,6 +938,179 @@ val sigma_geometric_natural = store_thm(
   rpt strip_tac >>
   `0 < p - 1 /\ 0 < p` by decide_tac >>
   rw[sigma_geometric_natural_eqn, DIV_SOLVE]);
+
+(* ------------------------------------------------------------------------- *)
+(* Chinese Remainder Theorem.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: when a MOD (m * n) = b MOD (m * n), break up modulus m * n. *)
+
+(* Theorem: 0 < m /\ 0 < n /\ a MOD (m * n) = b MOD (m * n) ==>
+            a MOD m = b MOD m /\ a MOD n = b MOD n *)
+(* Proof:
+   Either b <= a, or a < b, which implies a <= b.
+   The statement is symmetrical in a and b,
+   so proceed by lemma with b <= a, without loss of generality.
+   Note 0 < m * n                  by MULT_POS
+     so ?c. a = b + c * (m * n)    by MOD_MOD_EQN, 0 < m * n
+   Thus a = b + (c * m) * n        by arithmetic
+    and a = b + (c * n) * m        by arithmetic
+    ==> a MOD m = b MOD m          by MOD_MOD_EQN, 0 < m
+    and a MOD n = b MOD n          by MOD_MOD_EQN, 0 < n
+*)
+Theorem mod_mod_prod_eq:
+  !m n a b. 0 < m /\ 0 < n /\ a MOD (m * n) = b MOD (m * n) ==>
+            a MOD m = b MOD m /\ a MOD n = b MOD n
+Proof
+  ntac 5 strip_tac >>
+  `!a b. b <= a /\ a MOD (m * n) = b MOD (m * n) ==>
+            a MOD m = b MOD m /\ a MOD n = b MOD n` by
+  (ntac 3 strip_tac >>
+  `0 < m * n` by fs[] >>
+  `?c. a' = b' + c * (m * n)` by metis_tac[MOD_MOD_EQN] >>
+  `a' = b' + (c * m) * n` by decide_tac >>
+  `a' = b' + (c * n) * m` by decide_tac >>
+  metis_tac[MOD_MOD_EQN]) >>
+  (Cases_on `b <= a` >> simp[])
+QED
+
+(* Idea: converse of mod_mod_prod_eq when coprime. *)
+
+(* Theorem: 0 < m /\ 0 < n /\ coprime m n /\
+            a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+            a MOD (m * n) = b MOD (m * n) *)
+(* Proof:
+   Either b <= a, or a < b, which implies a <= b.
+   The statement is symmetrical in a and b,
+   so proceed by lemma with b <= a, without loss of generality.
+   Note 0 < m * n                  by MULT_POS
+    and ?h. a = b + h * m          by MOD_MOD_EQN, 0 < m
+    and ?k. a = b + k * n          by MOD_MOD_EQN, 0 < n
+    ==> h * m = k * n              by EQ_ADD_LCANCEL
+   Thus n divides (h * m)          by divides_def
+     or n divides h                by euclid_coprime, coprime m n
+    ==> ?c. h = c * n              by divides_def
+     so a = b + c * (m * n)        by above
+   Thus a MOD (m * n) = b MOD (m * n)
+                                   by MOD_MOD_EQN, 0 < m * n
+*)
+Theorem coprime_mod_mod_prod_eq:
+  !m n a b. 0 < m /\ 0 < n /\ coprime m n /\
+            a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+            a MOD (m * n) = b MOD (m * n)
+Proof
+  rpt strip_tac >>
+  `!a b. b <= a /\ a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+             a MOD (m * n) = b MOD (m * n)` by
+  (rpt strip_tac >>
+  `0 < m * n` by fs[] >>
+  `?h. a' = b' + h * m` by metis_tac[MOD_MOD_EQN] >>
+  `?k. a' = b' + k * n` by metis_tac[MOD_MOD_EQN] >>
+  `h * m = k * n` by decide_tac >>
+  `n divides (h * m)` by metis_tac[divides_def] >>
+  `n divides h` by metis_tac[euclid_coprime, MULT_COMM] >>
+  `?c. h = c * n` by rw[GSYM divides_def] >>
+  `a' = b' + c * (m * n)` by fs[] >>
+  metis_tac[MOD_MOD_EQN]) >>
+  (Cases_on `b <= a` >> simp[])
+QED
+
+(* Idea: combine both parts for a MOD (m * n) = b MOD (m * n). *)
+
+(* Theorem: 0 < m /\ 0 < n /\ coprime m n ==>
+            !a b. a MOD (m * n) = b MOD (m * n) <=> a MOD m = b MOD m /\ a MOD n = b MOD n *)
+(* Proof:
+   If part is true             by mod_mod_prod_eq
+   Only-if part is true        by coprime_mod_mod_prod_eq
+*)
+Theorem coprime_mod_mod_prod_eq_iff:
+  !m n. 0 < m /\ 0 < n /\ coprime m n ==>
+        !a b. a MOD (m * n) = b MOD (m * n) <=> a MOD m = b MOD m /\ a MOD n = b MOD n
+Proof
+  metis_tac[mod_mod_prod_eq, coprime_mod_mod_prod_eq]
+QED
+
+(* Idea: application, the Chinese Remainder Theorem for two coprime moduli. *)
+
+(* Theorem: 0 < m /\ 0 < n /\ coprime m n ==>
+            ?!x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n *)
+(* Proof:
+   By EXISTS_UNIQUE_THM, this is to show:
+   (1) Existence: ?x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n
+   Note ?p q. (p * m + q * n) MOD (m * n) = 1 MOD (m * n)
+                                               by coprime_linear_mod_prod
+     so (p * m + q * n) MOD m = 1 MOD m
+    and (p * m + q * n) MOD n = 1 MOD n        by mod_mod_prod_eq
+     or (q * n) MOD m = 1 MOD m                by MOD_TIMES
+    and (p * m) MOD n = 1 MOD n                by MOD_TIMES
+   Let z = b * p * m + a * q * n.
+           z MOD m
+         = (b * p * m + a * q * n) MOD m
+         = (a * q * n) MOD m                   by MOD_TIMES
+         = ((a MOD m) * (q * n) MOD m) MOD m   by MOD_TIMES2
+         = a MOD m                             by MOD_TIMES, above
+   and     z MOD n
+         = (b * p * m + a * q * n) MDO n
+         = (b * p * m) MOD n                   by MOD_TIMES
+         = ((b MOD n) * (p * m) MOD n) MOD n   by MOD_TIMES2
+         = b MOD n                             by MOD_TIMES, above
+   Take x = z MOD (m * n).
+   Then x < m * n                              by MOD_LESS
+    and x MOD m = z MOD m = a MOD m            by MOD_MULT_MOD
+    and x MOD n = z MOD n = b MOD n            by MOD_MULT_MOD
+   (2) Uniqueness:
+       x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n /\
+       y < m * n /\ y MOD m = a MOD m /\ y MOD n = b MOD n ==> x = y
+   Note x MOD m = y MOD m                      by both equal to a MOD m
+    and x MOD n = y MOD n                      by both equal to b MOD n
+   Thus x MOD (m * n) = y MOD (m * n)          by coprime_mod_mod_prod_eq
+     so             x = y                      by LESS_MOD, both < m * n
+*)
+Theorem coprime_mod_mod_solve:
+  !m n a b. 0 < m /\ 0 < n /\ coprime m n ==>
+            ?!x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n
+Proof
+  rw[EXISTS_UNIQUE_THM] >| [
+    `?p q. (p * m + q * n) MOD (m * n) = 1 MOD (m * n)` by rw[coprime_linear_mod_prod] >>
+    qabbrev_tac `u = p * m + q * n` >>
+    `u MOD m = 1 MOD m /\ u MOD n = 1 MOD n` by metis_tac[mod_mod_prod_eq] >>
+    `(q * n) MOD m = 1 MOD m /\ (p * m) MOD n = 1 MOD n` by rfs[MOD_TIMES, Abbr`u`] >>
+    qabbrev_tac `z = b * p * m + a * q * n` >>
+    qexists_tac `z MOD (m * n)` >>
+    rw[] >| [
+      `z MOD (m * n) MOD m = z MOD m` by rw[MOD_MULT_MOD] >>
+      `_ = (a * q * n) MOD m` by rw[Abbr`z`] >>
+      `_ = ((a MOD m) * (q * n) MOD m) MOD m` by rw[MOD_TIMES2] >>
+      `_ = a MOD m` by fs[] >>
+      decide_tac,
+      `z MOD (m * n) MOD n = z MOD n` by metis_tac[MOD_MULT_MOD, MULT_COMM] >>
+      `_ = (b * p * m) MOD n` by rw[Abbr`z`] >>
+      `_ = ((b MOD n) * (p * m) MOD n) MOD n` by rw[MOD_TIMES2] >>
+      `_ = b MOD n` by fs[] >>
+      decide_tac
+    ],
+    metis_tac[coprime_mod_mod_prod_eq, LESS_MOD]
+  ]
+QED
+
+(* Yes! The Chinese Remainder Theorem with two modular equations. *)
+
+(*
+For an algorithm:
+* define bezout, input pair (m, n), output pair (p, q)
+* define a dot-product:
+        (p, q) dot (m, n) = p * m + q * n
+  with  (p, q) dot (m, n) MOD (m * n) = (gcd m n) MOD (m * n)
+* define a scale-product:
+        (a, b) scale (p, q) = (a * p, b * q)
+  with  z = ((a, b) scale (p, q)) dot (m, n)
+   and  x = z MOD (m * n)
+          = (((a, b) scale (p, q)) dot (m, n)) MOD (m * n)
+          = (((a, b) scale (bezout (m, n))) dot (m, n)) MOD (m * n)
+
+Note that bezout (m, n) is the extended Euclidean algorithm.
+
+*)
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Theorems                                                           *)

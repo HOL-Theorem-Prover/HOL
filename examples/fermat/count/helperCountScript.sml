@@ -19,19 +19,6 @@ open helperNumTheory;
 open helperSetTheory;
 open helperFunctionTheory;
 open arithmeticTheory pred_setTheory;
-open dividesTheory gcdTheory;
-
-open helperListTheory;
-open listTheory;
-open rich_listTheory;
-open listRangeTheory;
-
-(* val _ = load "necklaceTheory"; *)
-open necklaceTheory; (* for necklace_0, necklace_suc *)
-open EulerTheory; (* for natural, upto *)
-
-(* val _ = load "binomialTheory"; *)
-open binomialTheory; (* for binomial_alt *)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -54,6 +41,7 @@ open binomialTheory; (* for binomial_alt *)
    INJ_IMAGE_BIJ_IFF   |- !f s t. INJ f s t <=> BIJ f s (IMAGE f s) /\ over f s t
    INJ_IFF_BIJ_IMAGE   |- !f s t. over f s t ==> (INJ f s t <=> BIJ f s (IMAGE f s))
    INJ_IMAGE_IFF       |- !f s t. INJ f s t <=> INJ f s (IMAGE f s) /\ over f s t
+   FUNSET_ALT          |- !P Q. FUNSET P Q = {f | over f P Q}
 
    Bijective Equivalence:
    bij_eq_empty        |- !s t. s =b= t ==> (s = {} <=> t = {})
@@ -232,6 +220,18 @@ Proof
   `s SUBSET s` by rw[] >>
   `(IMAGE f s) SUBSET t` by fs[IMAGE_SUBSET_TARGET] >>
   metis_tac[INJ_SUBSET]
+QED
+
+(* pred_setTheory:
+FUNSET |- !P Q. FUNSET P Q = (\f. over f P Q)
+*)
+
+(* Theorem: FUNSET P Q = {f | over f P Q} *)
+(* Proof: by FUNSET, EXTENSION *)
+Theorem FUNSET_ALT:
+  !P Q. FUNSET P Q = {f | over f P Q}
+Proof
+  rw[FUNSET, EXTENSION]
 QED
 
 (* ------------------------------------------------------------------------- *)
