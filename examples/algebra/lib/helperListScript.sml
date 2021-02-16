@@ -84,6 +84,11 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    EL_TAIL          |- !h t n. 0 <> n ==> (EL (n - 1) t = EL n (h::t))
    MONOLIST_SET_SING|- !c ls. ls <> [] /\ EVERY ($= c) ls ==> SING (set ls)
 !  LIST_TO_SET_EVAL |- !t h. set [] = {} /\ set (h::t) = h INSERT set t
+   set_list_eq_count|- !ls n. set ls = count n ==> !j. j < LENGTH ls ==> EL j ls < n
+   list_to_set_eq_el_image
+                    |- !ls. set ls = IMAGE (\j. EL j ls) (count (LENGTH ls))
+   all_distinct_list_el_inj
+                    |- !ls. ALL_DISTINCT ls ==> INJ (\j. EL j ls) (count (LENGTH ls)) univ(:'a)
 
    List Reversal:
    REVERSE_SING      |- !x. REVERSE [x] = [x]
@@ -886,6 +891,48 @@ Theorem LIST_TO_SET_EVAL[compute] = LIST_TO_SET |> GEN_ALL;
 > EVAL ``set [3;3;3]``;
 val it = |- set [3; 3; 3] = {3}: thm
 *)
+
+(* Theorem: set ls = count n ==> !j. j < LENGTH ls ==> EL j ls < n *)
+(* Proof:
+   Note MEM (EL j ls) ls       by EL_MEM
+     so EL j ls IN (count n)   by set ls = count n
+     or EL j ls < n            by IN_COUNT
+*)
+Theorem set_list_eq_count:
+  !ls n. set ls = count n ==> !j. j < LENGTH ls ==> EL j ls < n
+Proof
+  metis_tac[EL_MEM, IN_COUNT]
+QED
+
+(* Theorem: set ls = IMAGE (\j. EL j ls) (count (LENGTH ls)) *)
+(* Proof:
+   Let f = \j. EL j ls, n = LENGTH ls.
+       x IN IMAGE f (count n)
+   <=> ?j. x = f j /\ j IN (count n)     by IN_IMAGE
+   <=> ?j. x = EL j ls /\ j < n          by notation, IN_COUNT
+   <=> MEM x ls                          by MEM_EL
+   <=> x IN set ls                       by notation
+   Thus set ls = IMAGE f (count n)       by EXTENSION
+*)
+Theorem list_to_set_eq_el_image:
+  !ls. set ls = IMAGE (\j. EL j ls) (count (LENGTH ls))
+Proof
+  rw[EXTENSION] >>
+  metis_tac[MEM_EL]
+QED
+
+(* Theorem: ALL_DISTINCT ls ==> INJ (\j. EL j ls) (count (LENGTH ls)) univ(:num) *)
+(* Proof:
+   By INJ_DEF this is to show:
+   (1) EL j ls IN univ(:'a), true  by IN_UNIV, function type
+   (2) !x y. x < LENGTH ls /\ y < LENGTH ls /\ EL x ls = EL y ls ==> x = y
+       This is true                by ALL_DISTINCT_EL_IMP, ALL_DISTINCT ls
+*)
+Theorem all_distinct_list_el_inj:
+  !ls. ALL_DISTINCT ls ==> INJ (\j. EL j ls) (count (LENGTH ls)) univ(:'a)
+Proof
+  rw[INJ_DEF, ALL_DISTINCT_EL_IMP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Reversal.                                                            *)

@@ -1,7 +1,7 @@
 
 # Fermat's Two Squares Theorem, with an algorithm.
 
-These scripts contain theories to support the formalisation of an algorithm for Fermat's Two Squares Theorem.
+These theories support the formalisation of an algorithm for Fermat's Two Squares Theorem.
 
 ## Theory
 * __helperTwosq__, helper theorems for arithmetic, sets, maps and lists.
