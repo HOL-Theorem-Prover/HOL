@@ -80,6 +80,7 @@ open arithmeticTheory dividesTheory gcdTheory;
    upto_finite      |- !n. FINITE (upto n)
    upto_card        |- !n. CARD (upto n) = SUC n
    upto_has_last    |- !n. n IN upto n
+   upto_delete      |- !n. upto n DELETE n = count n
    upto_split_first |- !n. upto n = {0} UNION natural n
    upto_split_last  |- !n. upto n = count n UNION {n}
    upto_by_count    |- !n. upto n = n INSERT count n
@@ -110,9 +111,8 @@ open arithmeticTheory dividesTheory gcdTheory;
                                     !n. SIGMA (\j. p ** j) (natural n) = p * (p ** n - 1) DIV (p - 1)
 
    Useful Theorems:
-   PROD_SET_IMAGE_EXP_NONZERO    |- !n m. 1 < n /\ 0 < m ==>
-                                         (PROD_SET (IMAGE (\j. n ** j) (count m)) =
-                                          PROD_SET (IMAGE (\j. n ** j) (residue m)))
+   PROD_SET_IMAGE_EXP_NONZERO    |- !n m. PROD_SET (IMAGE (\j. n ** j) (count m)) =
+                                          PROD_SET (IMAGE (\j. n ** j) (residue m))
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -136,17 +136,19 @@ val residue_element = store_thm(
 
 (* Theorem: residue 0 = EMPTY *)
 (* Proof: by residue_def *)
-val residue_0 = store_thm(
-  "residue_0",
-  ``residue 0 = {}``,
-  simp[residue_def]);
+Theorem residue_0:
+  residue 0 = {}
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: residue 1 = EMPTY *)
-(* Proof: by definition. *)
-val residue_1 = store_thm(
-  "residue_1",
-  ``residue 1 = {}``,
-  simp[residue_def]);
+(* Proof: by residue_def. *)
+Theorem residue_1:
+  residue 1 = {}
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: 1 < n ==> residue n <> {} *)
 (* Proof:
@@ -161,17 +163,19 @@ val residue_nonempty = store_thm(
 
 (* Theorem: 0 NOTIN residue n *)
 (* Proof: by residue_def *)
-val residue_no_zero = store_thm(
-  "residue_no_zero",
-  ``!n. 0 NOTIN residue n``,
-  simp[residue_def]);
+Theorem residue_no_zero:
+  !n. 0 NOTIN residue n
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: n NOTIN residue n *)
 (* Proof: by residue_def *)
-val residue_no_self = store_thm(
-  "residue_no_self",
-  ``!n. n NOTIN residue n``,
-  simp[residue_def]);
+Theorem residue_no_self:
+  !n. n NOTIN residue n
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: residue n = (count n) DIFF {0} *)
 (* Proof:
@@ -279,32 +283,32 @@ val residue_prime_neq = store_thm(
    By induction on n.
    Base: PROD_SET (residue 0) = FACT (0 - 1)
         PROD_SET (residue 0)
-      = PROD_SET {}           by residue_0
-      = 1                     by PROD_SET_EMPTY
-      = FACT 0                by FACT_0
-      = FACT (0 - 1)          by arithmetic
+      = PROD_SET {}            by residue_0
+      = 1                      by PROD_SET_EMPTY
+      = FACT 0                 by FACT_0
+      = FACT (0 - 1)           by arithmetic
    Step: PROD_SET (residue n) = FACT (n - 1) ==>
          PROD_SET (residue (SUC n)) = FACT (SUC n - 1)
       If n = 0,
         PROD_SET (residue (SUC 0))
-      = PROD_SET (residue 1)  by ONE
-      = PROD_SET {}           by residue_1
-      = 1                     by PROD_SET_EMPTY
-      = FACT 0                by FACT_0
+      = PROD_SET (residue 1)   by ONE
+      = PROD_SET {}            by residue_1
+      = 1                      by PROD_SET_EMPTY
+      = FACT 0                 by FACT_0
 
       If n <> 0, then 0 < n.
-      Note FINITE (residue n)                by residue_finite
+      Note FINITE (residue n)                  by residue_finite
         PROD_SET (residue (SUC n))
-      = PROD_SET (n INSERT residue n)        by residue_insert
-      = n * PROD_SET ((residue n) DELETE n)  by PROD_SET_THM
-      = n * PROD_SET (residue n)             by residue_delete
-      = n * FACT (n - 1)                     by induction hypothesis
-      = FACT (SUC (n - 1))                   by FACT
-      = FACT (SUC n - 1)                     by arithmetic
+      = PROD_SET (n INSERT residue n)          by residue_insert
+      = n * PROD_SET ((residue n) DELETE n)    by PROD_SET_THM
+      = n * PROD_SET (residue n)               by residue_delete
+      = n * FACT (n - 1)                       by induction hypothesis
+      = FACT (SUC (n - 1))                     by FACT
+      = FACT (SUC n - 1)                       by arithmetic
 *)
-val prod_set_residue = store_thm(
-  "prod_set_residue",
-  ``!n. PROD_SET (residue n) = FACT (n - 1)``,
+Theorem prod_set_residue:
+  !n. PROD_SET (residue n) = FACT (n - 1)
+Proof
   Induct >-
   simp[residue_0, PROD_SET_EMPTY, FACT_0] >>
   Cases_on `n = 0` >-
@@ -316,7 +320,8 @@ val prod_set_residue = store_thm(
   `_ = n * PROD_SET ((residue n) DELETE n)` by rw[PROD_SET_THM] >>
   `_ = n * PROD_SET (residue n)` by rw[residue_delete] >>
   `_ = n * FACT (n - 1)` by rw[] >>
-  metis_tac[FACT]);
+  metis_tac[FACT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Naturals -- counting from 1 rather than 0, and inclusive.                 *)
@@ -546,6 +551,20 @@ val upto_has_last = store_thm(
   "upto_has_last",
   ``!n. n IN (upto n)``,
   rw[]);
+
+(* Theorem: (upto n) DELETE n = count n *)
+(* Proof:
+     (upto n) DELETE n
+   = (count (SUC n)) DELETE n      by notation
+   = (n INSERT count n) DELETE n   by COUNT_SUC
+   = count n DELETE n              by DELETE_INSERT
+   = count n                       by DELETE_NON_ELEMENT, COUNT_NOT_SELF
+*)
+Theorem upto_delete:
+  !n. (upto n) DELETE n = count n
+Proof
+  metis_tac[COUNT_SUC, COUNT_NOT_SELF, DELETE_INSERT, DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: upto n = {0} UNION (natural n) *)
 (* Proof:
@@ -915,39 +934,101 @@ val sigma_geometric_natural = store_thm(
    The difference i = 0 gives n ** 0 = 1, which does not make a difference for PROD_SET.
 *)
 
-(* Theorem: 1 < n /\ 0 < m ==>
-    (PROD_SET (IMAGE (\j. n ** j) (count m)) = PROD_SET (IMAGE (\j. n ** j) (residue m))) *)
+(* Theorem: PROD_SET (IMAGE (\j. n ** j) (count m)) =
+            PROD_SET (IMAGE (\j. n ** j) (residue m)) *)
 (* Proof:
-   Since 0 IN count m  by IN_COUNT, 0 < m
-     and (IMAGE (\j. n ** j) (count m)) DELETE 1 = IMAGE (\j. n ** j) (residue m)
-                                                            by IMAGE_DEF, EXP_EQ_1, EXP
-     PROD_SET (IMAGE (\j. n ** j) (count m))
-   = PROD_SET (IMAGE (\j. n ** j) (0 INSERT count m))       by ABSORPTION
-   = PROD_SET ((\j. n ** j) 0 INSERT IMAGE (\j. n ** j) (count m))     by IMAGE_INSERT
-   = n ** 0 * PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE n ** 0)  by PROD_SET_THM
-   = PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE 1)     by EXP
-   = PROD_SET ((IMAGE (\j. n ** j) (residue m)))            by above
+   Let f = \j. n ** j.
+   When m = 0,
+      Note count 0 = {}            by COUNT_0
+       and residue 0 = {}          by residue_0
+      Thus LHS = RHS.
+   When m = 1,
+      Note count 1 = {0}           by COUNT_1
+       and residue 1 = {}          by residue_1
+      Thus LHS = PROD_SET (IMAGE f {0})
+               = PROD_SET {f 0}    by IMAGE_SING
+               = f 0               by PROD_SET_SING
+               = n ** 0 = 1        by EXP_0
+           RHS = PROD_SET (IMAGE f {})
+               = PROD_SET {}       by IMAGE_EMPTY
+               = 1                 by PROD_SET_EMPTY
+               = LHS
+   For m <> 0, m <> 1,
+   When n = 0,
+      Note !j. f j = f j = 0 then 1 else 0     by ZERO_EXP
+      Thus IMAGE f (count m) = {0; 1}          by count_def, EXTENSION, 1 < m
+       and IMAGE f (residue m) = {0}           by residue_def, EXTENSION, 1 < m
+      Thus LHS = PROD_SET {0; 1}
+               = 0 * 1 = 0                     by PROD_SET_THM
+           RHS = PROD_SET {0}
+               = 0 = LHS                       by PROD_SET_SING
+   When n = 1,
+      Note f = K 1                             by EXP_1, FUN_EQ_THM
+       and count m <> {}                       by COUNT_NOT_EMPTY, 0 < m
+       and residue m <> {}                     by residue_nonempty, 1 < m
+      Thus LHS = PROD_SET (IMAGE (K 1) (count m))
+               = PROD_SET {1}                          by IMAGE_K
+               = PROD_SET (IMAGE (K 1) (residue m))    by IMAGE_K
+               = RHS
+   For 1 < m, and 1 < n,
+   Note 0 IN count m                                   by IN_COUNT, 0 < m
+   also (IMAGE f (count m)) DELETE 1
+       = IMAGE f (residue m)                           by IMAGE_DEF, EXP_EQ_1, EXP, 1 < n
+     PROD_SET (IMAGE f (count m))
+   = PROD_SET (IMAGE f (0 INSERT count m))             by ABSORPTION
+   = PROD_SET (f 0 INSERT IMAGE f (count m))           by IMAGE_INSERT
+   = n ** 0 * PROD_SET ((IMAGE f (count m)) DELETE n ** 0)  by PROD_SET_THM
+   = PROD_SET ((IMAGE f (count m)) DELETE 1)           by EXP_0
+   = PROD_SET ((IMAGE f (residue m)))                  by above
 *)
-val PROD_SET_IMAGE_EXP_NONZERO = store_thm(
-  "PROD_SET_IMAGE_EXP_NONZERO",
-  ``!n m. 1 < n /\ 0 < m ==>
-    (PROD_SET (IMAGE (\j. n ** j) (count m)) = PROD_SET (IMAGE (\j. n ** j) (residue m)))``,
+Theorem PROD_SET_IMAGE_EXP_NONZERO:
+  !n m. PROD_SET (IMAGE (\j. n ** j) (count m)) =
+        PROD_SET (IMAGE (\j. n ** j) (residue m))
+Proof
   rpt strip_tac >>
-  `0 IN count m` by rw[] >>
-  `FINITE (IMAGE (\j. n ** j) (count m))` by rw[] >>
-  `(IMAGE (\j. n ** j) (count m)) DELETE 1 = IMAGE (\j. n ** j) (residue m)` by
-  (rw[residue_def, IMAGE_DEF, EXTENSION, EQ_IMP_THM] >-
-  metis_tac[EXP, NOT_ZERO_LT_ZERO] >-
-  metis_tac[] >>
-  `j <> 0 /\ n <> 1` by decide_tac >>
-  metis_tac[EXP_EQ_1]
-  ) >>
-  `PROD_SET (IMAGE (\j. n ** j) (count m)) = PROD_SET (IMAGE (\j. n ** j) (0 INSERT count m))` by metis_tac[ABSORPTION] >>
-  `_ = PROD_SET ((\j. n ** j) 0 INSERT IMAGE (\j. n ** j) (count m))` by rw[] >>
-  `_ = n ** 0 * PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE n ** 0)` by rw[PROD_SET_THM] >>
-  `_ = PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE 1)` by rw[EXP] >>
-  `_ = PROD_SET ((IMAGE (\j. n ** j) (residue m)))` by rw[] >>
-  decide_tac);
+  qabbrev_tac `f = \j. n ** j` >>
+  Cases_on `m = 0` >-
+  simp[residue_0] >>
+  Cases_on `m = 1` >-
+  simp[residue_1, COUNT_1, Abbr`f`, PROD_SET_THM] >>
+  `0 < m /\ 1 < m` by decide_tac >>
+  Cases_on `n = 0` >| [
+    `!j. f j = if j = 0 then 1 else 0` by rw[Abbr`f`] >>
+    `IMAGE f (count m) = {0; 1}` by
+  (rw[EXTENSION, EQ_IMP_THM] >-
+    metis_tac[ONE_NOT_ZERO] >>
+    metis_tac[]
+    ) >>
+    `IMAGE f (residue m) = {0}` by
+    (rw[residue_def, EXTENSION, EQ_IMP_THM] >>
+    `0 < 1` by decide_tac >>
+    metis_tac[]) >>
+    simp[PROD_SET_THM],
+    Cases_on `n = 1` >| [
+      `f = K 1` by rw[FUN_EQ_THM, Abbr`f`] >>
+      `count m <> {}` by fs[COUNT_NOT_EMPTY] >>
+      `residue m <> {}` by fs[residue_nonempty] >>
+      simp[IMAGE_K],
+      `0 < n /\ 1 < n` by decide_tac >>
+      `0 IN count m` by rw[] >>
+      `FINITE (IMAGE f (count m))` by rw[] >>
+      `(IMAGE f (count m)) DELETE 1 = IMAGE f (residue m)` by
+  (rw[residue_def, IMAGE_DEF, Abbr`f`, EXTENSION, EQ_IMP_THM] >-
+      metis_tac[EXP, NOT_ZERO] >-
+      metis_tac[] >>
+      `j <> 0` by decide_tac >>
+      metis_tac[EXP_EQ_1]
+      ) >>
+      `PROD_SET (IMAGE f (count m)) = PROD_SET (IMAGE f (0 INSERT count m))` by metis_tac[ABSORPTION] >>
+      `_ = PROD_SET (f 0 INSERT IMAGE f (count m))` by rw[] >>
+      `_ = n ** 0 * PROD_SET ((IMAGE f (count m)) DELETE n ** 0)` by rw[PROD_SET_THM, Abbr`f`] >>
+      `_ = 1 * PROD_SET ((IMAGE f (count m)) DELETE 1)` by metis_tac[EXP_0] >>
+      `_ = PROD_SET ((IMAGE f (residue m)))` by rw[] >>
+      decide_tac
+    ]
+  ]
+QED
+
 
 (* ------------------------------------------------------------------------- *)
 

@@ -3198,7 +3198,7 @@ val leibniz_lcm_invariance = store_thm(
 (* Proof:
      leibniz_col_arm n 0 (n + 1)
    = MAP (\x. leibniz (n - x) 0) [0 ..< (n + 1)]      by notation
-   = MAP (\x. leibniz (n - x) 0) [0 .. n]             by listRangeLHI_to_listRangeINC
+   = MAP (\x. leibniz (n - x) 0) [0 .. n]             by listRangeLHI_to_INC
    = MAP ((\x. leibniz x 0) o (\x. n - x)) [0 .. n]   by function composition
    = REVERSE (MAP (\x. leibniz x 0) [0 .. n])         by listRangeINC_REVERSE_MAP
    = REVERSE (MAP (\x. x + 1) [0 .. n])               by leibniz_n_0
@@ -3214,7 +3214,7 @@ val leibniz_col_arm_n_0 = store_thm(
   rpt strip_tac >>
   `(\x. x + 1) = SUC` by rw[FUN_EQ_THM] >>
   `(\x. leibniz x 0) o (\x. n - x + 0) = (\x. leibniz (n - x) 0)` by rw[FUN_EQ_THM] >>
-  `leibniz_col_arm n 0 (n + 1) = MAP (\x. leibniz (n - x) 0) [0 .. n]` by rw[listRangeLHI_to_listRangeINC] >>
+  `leibniz_col_arm n 0 (n + 1) = MAP (\x. leibniz (n - x) 0) [0 .. n]` by rw[listRangeLHI_to_INC] >>
   `_ = MAP ((\x. leibniz x 0) o (\x. n - x + 0)) [0 .. n]` by rw[] >>
   `_ = REVERSE (MAP (\x. leibniz x 0) [0 .. n])` by rw[listRangeINC_REVERSE_MAP] >>
   `_ = REVERSE (MAP (\x. x + 1) [0 .. n])` by rw[leibniz_n_0] >>
@@ -3227,7 +3227,7 @@ val leibniz_col_arm_n_0 = store_thm(
 (* Proof:
      leibniz_seg_arm n 0 (n + 1)
    = MAP (\x. leibniz n x) [0 ..< (n + 1)]       by notation
-   = MAP (\x. leibniz n x) [0 .. n]              by listRangeLHI_to_listRangeINC
+   = MAP (\x. leibniz n x) [0 .. n]              by listRangeLHI_to_INC
    = MAP (leibniz n) [0 .. n]                    by FUN_EQ_THM
    = MAP (leibniz n) (GENLIST (\i. i) (n + 1))   by listRangeINC_def
    = GENLIST ((leibniz n) o I) (n + 1)           by MAP_GENLIST
@@ -3240,7 +3240,7 @@ val leibniz_seg_arm_n_0 = store_thm(
   rpt strip_tac >>
   `(\x. x) = I` by rw[FUN_EQ_THM] >>
   `(\x. leibniz n x) = leibniz n` by rw[FUN_EQ_THM] >>
-  `leibniz_seg_arm n 0 (n + 1) = MAP (leibniz n) [0 .. n]` by rw_tac std_ss[listRangeLHI_to_listRangeINC] >>
+  `leibniz_seg_arm n 0 (n + 1) = MAP (leibniz n) [0 .. n]` by rw_tac std_ss[listRangeLHI_to_INC] >>
   `_ = MAP (leibniz n) (GENLIST (\i. i) (n + 1))` by rw[listRangeINC_def] >>
   `_ = MAP (leibniz n) (GENLIST I (n + 1))` by metis_tac[] >>
   `_ = GENLIST ((leibniz n) o I) (n + 1)` by rw[MAP_GENLIST] >>
@@ -6516,7 +6516,7 @@ val lcm_lower_bound_by_big_lcm_stirling = store_thm(
 
 (*
 This is GCD_CANCEL_MULT by coprime p n, and coprime p n ==> coprime (p ** k) n by coprime_exp.
-Note prime_not_divides_is_coprime.
+Note prime_not_divides_coprime.
 *)
 
 (* Theorem: prime p /\ m divides n /\ ~((p * m) divides n) ==> (gcd (p * m) n = m) *)
