@@ -36,7 +36,6 @@ open dividesTheory gcdTheory;
    FALLING f           = !x:num. f x <= x
    SQRT n              = ROOT 2 n
    LOG2 n              = LOG 2 n
-   coprime x y         = gcd x y = 1
    PAIRWISE_COPRIME s  = !x y. x IN s /\ y IN s /\ x <> y ==> coprime x y
    tops b n            = b ** n - 1
    nines n             = tops 10 n
@@ -62,12 +61,33 @@ open dividesTheory gcdTheory;
    feq_partition              |- !s f. partition (feq f) s = IMAGE (feq_class f s o f) s
    feq_partition_element      |- !s f t. t IN partition (feq f) s <=>
                                  ?z. z IN s /\ !x. x IN t <=> x IN s /\ (f x = f z)
+   feq_partition_element_exists
+                              |- !f s x. x IN s <=> ?e. e IN partition (feq f) s /\ x IN e
+   feq_partition_element_not_empty
+                              |- !f s e. e IN partition (feq f) s ==> e <> {}
    feq_class_eq_preimage      |- !f s. feq_class f s = preimage f s
    feq_partition_by_preimage  |- !f s. partition (feq f) s = IMAGE (preimage f s o f) s
    feq_sum_over_partition     |- !s. FINITE s ==> !f g. SIGMA g s = SIGMA (SIGMA g) (partition (feq f) s)
 
    finite_card_by_feq_partition   |- !s. FINITE s ==> !f. CARD s = SIGMA CARD (partition (feq f) s)
    finite_card_by_image_preimage  |- !s. FINITE s ==> !f. CARD s = SIGMA CARD (IMAGE (preimage f s o f) s)
+   finite_card_surj_by_image_preimage
+                       |- !f s t. FINITE s /\ SURJ f s t ==>
+                                  CARD s = SIGMA CARD (IMAGE (preimage f s) t)
+   preimage_image_bij  |- !f s. BIJ (preimage f s) (IMAGE f s) (partition (feq f) s):
+
+   Condition for surjection to be a bijection:
+   inj_iff_partition_element_sing
+                       |- !f s. INJ f s (IMAGE f s) <=>
+                                !e. e IN partition (feq f) s ==> SING e
+   inj_iff_partition_element_card_1
+                       |- !f s. FINITE s ==>
+                                (INJ f s (IMAGE f s) <=>
+                                 !e. e IN partition (feq f) s ==> CARD e = 1)
+   FINITE_SURJ_IS_INJ  |- !f s t. FINITE s /\
+                                  CARD s = CARD t /\ SURJ f s t ==> INJ f s t
+   FINITE_SURJ_IS_BIJ  |- !f s t. FINITE s /\
+                                  CARD s = CARD t /\ SURJ f s t ==> BIJ f s t
 
    Function Iteration:
    FUNPOW_2            |- !f x. FUNPOW f 2 x = f (f x)
@@ -104,6 +124,7 @@ open dividesTheory gcdTheory;
    FACT_EQ_PROD        |- !n. FACT n = PROD_SET (IMAGE SUC (count n))
    FACT_REDUCTION      |- !n m. m < n ==> (FACT n = PROD_SET (IMAGE SUC ((count n) DIFF (count m))) * (FACT m))
    PRIME_BIG_NOT_DIVIDES_FACT  |- !p k. prime p /\ k < p ==> ~(p divides (FACT k))
+   FACT_iff            |- !f. f = FACT <=> f 0 = 1 /\ !n. f (SUC n) = SUC n * f n
 
    Basic GCD, LCM Theorems:
    GCD_COMM            |- !a b. gcd a b = gcd b a
@@ -162,12 +183,33 @@ open dividesTheory gcdTheory;
    GCD_REDUCE          |- !a b c. gcd (b * a + c) a = gcd a c
    GCD_REDUCE_BY_COPRIME
                        |- !m n k. coprime m k ==> gcd m (k * n) = gcd m n
+   gcd_le              |- !m n. 0 < m /\ 0 < n ==> gcd m n <= m /\ gcd m n <= n
+   gcd_divides_iff     |- !a b c. 0 < a ==> (gcd a b divides c <=> ?p q. p * a = q * b + c)
+   gcd_linear_thm      |- !a b c. 0 < a ==> (gcd a b divides c <=> ?p q. p * a = q * b + c)
+   gcd_linear_mod_thm  |- !n a b. 0 < n /\ 0 < a ==> ?p q. (p * a + q * b) MOD n = gcd a b MOD n
+   gcd_linear_mod_1    |- !a b. 0 < a ==> ?q. (q * b) MOD a = gcd a b MOD a
+   gcd_linear_mod_2    |- !a b. 0 < b ==> ?p. (p * a) MOD b = gcd a b MOD b
+   gcd_linear_mod_prod |- !a b. 0 < a /\ 0 < b ==>
+                          ?p q. (p * a + q * b) MOD (a * b) = gcd a b MOD (a * b)
+   coprime_linear_mod_prod
+                       |- !a b. 0 < a /\ 0 < b /\ coprime a b ==>
+                          ?p q. (p * a + q * b) MOD (a * b) = 1 MOD (a * b)
+   gcd_multiple_linear_mod_thm
+                       |- !n a b c. 0 < n /\ 0 < a /\ gcd a b divides c ==>
+                              ?p q. (p * a + q * b) MOD n = c MOD n
+   gcd_multiple_linear_mod_prod
+                       |- !a b c. 0 < a /\ 0 < b /\ gcd a b divides c ==>
+                            ?p q. (p * a + q * b) MOD (a * b) = c MOD (a * b)
+   coprime_multiple_linear_mod_prod
+                       |- !a b c. 0 < a /\ 0 < b /\ coprime a b ==>
+                            ?p q. (p * a + q * b) MOD (a * b) = c MOD (a * b)
 
    Coprime Theorems:
    coprime_SUC         |- !n. coprime n (n + 1)
    coprime_PRE         |- !n. 0 < n ==> coprime (n - 1) n
    coprime_0L          |- !n. coprime 0 n <=> (n = 1)
    coprime_0R          |- !n. coprime n 0 <=> (n = 1)
+   coprime_0           |- !n. (coprime 0 n <=> n = 1) /\ (coprime n 0 <=> n = 1)
    coprime_sym         |- !x y. coprime x y <=> coprime y x
    coprime_neq_1       |- !n k. coprime k n /\ n <> 1 ==> k <> 0
    coprime_gt_1        |- !n k. coprime k n /\ 1 < n ==> 0 < k
@@ -184,7 +226,8 @@ open dividesTheory gcdTheory;
    coprime_factor_not_divides   |- !n k. 1 < n /\ coprime n k ==>
                                    !p. 1 < p /\ p divides n ==> ~(p divides k)
    coprime_factor_coprime       |- !m n. m divides n ==> !k. coprime n k ==> coprime m k
-   prime_not_divides_is_coprime |- !n p. prime p /\ ~(p divides n) ==> coprime p n
+   coprime_common_factor        |- !a b c. coprime a b /\ c divides a /\ c divides b ==> c = 1
+   prime_not_divides_coprime    |- !n p. prime p /\ ~(p divides n) ==> coprime p n
    prime_not_coprime_divides    |- !n p. prime p /\ ~(coprime p n) ==> p divides n
    coprime_prime_factor_coprime |- !n p. 1 < n /\ prime p /\ p divides n ==>
                                    !k. coprime n k ==> coprime p k
@@ -192,6 +235,15 @@ open dividesTheory gcdTheory;
    coprime_condition         |- !m n. (!j. 1 < j /\ j <= m ==> ~(j divides n)) <=>
                                       !j. 1 < j /\ j <= m ==> coprime j n
    coprime_by_le_not_divides |- !m n. 1 < m /\ (!j. 1 < j /\ j <= m ==> ~(j divides n)) ==> coprime m n
+   coprime_by_prime_factor   |- !m n. coprime m n <=> !p. prime p ==> ~(p divides m /\ p divides n)
+   coprime_by_prime_factor_le|- !m n. 0 < m /\ 0 < n ==>
+                                     (coprime m n <=>
+                                  !p. prime p /\ p <= m /\ p <= n ==> ~(p divides m /\ p divides n))
+   coprime_linear_mult       |- !a b p q. coprime a b /\ coprime p b /\ coprime q a ==>
+                                          coprime (p * a + q * b) (a * b)
+   coprime_linear_mult_iff   |- !a b p q. coprime a b ==>
+                                         (coprime p b /\ coprime q a <=> coprime (p * a + q * b) (a * b))
+   coprime_prime_power       |- !p n. prime p /\ 0 < n ==> !q. coprime q (p ** n) <=> ~(p divides q)
    prime_coprime_all_lt      |- !n. prime n ==> !m. 0 < m /\ m < n ==> coprime n m
    prime_coprime_all_less    |- !m n. prime n /\ m < n ==> !j. 0 < j /\ j <= m ==> coprime n j
    prime_iff_coprime_all_lt  |- !n. prime n <=> 1 < n /\ !j. 0 < j /\ j < n ==> coprime n j
@@ -384,6 +436,28 @@ val feq_partition_element = store_thm(
   ``!s f t. t IN partition (feq f) s <=> ?z. z IN s /\ (!x. x IN t <=> x IN s /\ (f x = f z))``,
   (rw[feq_partition, feq_class_def, EXTENSION] >> metis_tac[]));
 
+(* Theorem: x IN s <=> ?e. e IN partition (feq f) s /\ x IN e *)
+(* Proof:
+   Note (feq f) equiv_on s         by feq_equiv
+   This result follows             by partition_element_exists
+*)
+Theorem feq_partition_element_exists:
+  !f s x. x IN s <=> ?e. e IN partition (feq f) s /\ x IN e
+Proof
+  simp[feq_equiv, partition_element_exists]
+QED
+
+(* Theorem: e IN partition (feq f) s ==> e <> {} *)
+(* Proof:
+   Note (feq f) equiv_on s     by feq_equiv
+     so e <> {}                by partition_element_not_empty
+*)
+Theorem feq_partition_element_not_empty:
+  !f s e. e IN partition (feq f) s ==> e <> {}
+Proof
+  metis_tac[feq_equiv, partition_element_not_empty]
+QED
+
 (* Theorem: feq_class f s = preimage f s *)
 (* Proof:
      feq_class f s n
@@ -447,6 +521,143 @@ val finite_card_by_image_preimage = store_thm(
   "finite_card_by_image_preimage",
   ``!s. FINITE s ==> !f. CARD s = SIGMA CARD (IMAGE ((preimage f s) o f) s)``,
   rw[feq_equiv, partition_CARD, GSYM feq_partition_by_preimage]);
+
+(* Theorem: FINITE s /\ SURJ f s t ==>
+            CARD s = SIGMA CARD (IMAGE (preimage f s) t) *)
+(* Proof:
+     CARD s
+   = SIGMA CARD (IMAGE (preimage f s o f) s)           by finite_card_by_image_preimage
+   = SIGMA CARD (IMAGE (preimage f s) (IMAGE f s))     by IMAGE_COMPOSE
+   = SIGMA CARD (IMAGE (preimage f s) t)               by IMAGE_SURJ
+*)
+Theorem finite_card_surj_by_image_preimage:
+  !f s t. FINITE s /\ SURJ f s t ==>
+          CARD s = SIGMA CARD (IMAGE (preimage f s) t)
+Proof
+  rpt strip_tac >>
+  `CARD s = SIGMA CARD (IMAGE (preimage f s o f) s)` by rw[finite_card_by_image_preimage] >>
+  `_ = SIGMA CARD (IMAGE (preimage f s) (IMAGE f s))` by rw[IMAGE_COMPOSE] >>
+  `_ = SIGMA CARD (IMAGE (preimage f s) t)` by fs[IMAGE_SURJ] >>
+  simp[]
+QED
+
+(* Theorem: BIJ (preimage f s) (IMAGE f s) (partition (feq f) s) *)
+(* Proof:
+   Let g = preimage f s, t = IMAGE f s.
+   Note INJ g t (POW s)                        by preimage_image_inj
+     so BIJ g t (IMAGE g t)                    by INJ_IMAGE_BIJ
+    But IMAGE g t
+      = IMAGE (preimage f s) (IMAGE f s)       by notation
+      = IMAGE (preimage f s o f) s             by IMAGE_COMPOSE
+      = partition (feq f) s                    by feq_partition_by_preimage
+   Thus BIJ g t (partition (feq f) s)          by above
+*)
+Theorem preimage_image_bij:
+  !f s. BIJ (preimage f s) (IMAGE f s) (partition (feq f) s)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `g = preimage f s` >>
+  qabbrev_tac `t = IMAGE f s` >>
+  `BIJ g t (IMAGE g t)` by metis_tac[preimage_image_inj, INJ_IMAGE_BIJ] >>
+  simp[IMAGE_COMPOSE, feq_partition_by_preimage, Abbr`g`, Abbr`t`]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Condition for surjection to be a bijection.                               *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: INJ f s (IMAGE f s) <=> !e. e IN (partition (feq f) s) ==> SING e *)
+(* Proof:
+   If part: e IN partition (feq f) s ==> SING e
+          e IN partition (feq f) s
+      <=> ?z. z IN s /\ !x. x IN e <=> x IN s /\ f x = f z
+                                               by feq_partition_element
+      Thus z IN e, so e <> {}                  by MEMBER_NOT_EMPTY
+       and !x. x IN e ==> x = z                by INJ_DEF
+        so SING e                              by SING_ONE_ELEMENT
+   Only-if part: !e. e IN partition (feq f) s ==> SING e ==> INJ f s (IMAGE f s)
+      By INJ_DEF, IN_IMAGE, this is to show:
+         !x y. x IN s /\ y IN s /\ f x = f y ==> x = y
+      Note ?e. e IN (partition (feq f) s) /\ x IN e
+                                               by feq_partition_element_exists
+       and y IN e                              by feq_partition_element
+      then SING e                              by implication
+        so x = y                               by IN_SING
+*)
+Theorem inj_iff_partition_element_sing:
+  !f s. INJ f s (IMAGE f s) <=> !e. e IN (partition (feq f) s) ==> SING e
+Proof
+  rw[EQ_IMP_THM] >| [
+    fs[feq_partition_element, INJ_DEF] >>
+    `e <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
+    simp[SING_ONE_ELEMENT],
+    rw[INJ_DEF] >>
+    `?e. e IN (partition (feq f) s) /\ x IN e` by fs[GSYM feq_partition_element_exists] >>
+    `y IN e` by metis_tac[feq_partition_element] >>
+    metis_tac[SING_DEF, IN_SING]
+  ]
+QED
+
+(* Theorem: FINITE s ==>
+            (INJ f s (IMAGE f s) <=> !e. e IN (partition (feq f) s) ==> CARD e = 1) *)
+(* Proof:
+       INJ f s (IMAGE f s)
+   <=> !e. e IN (partition (feq f) s) ==> SING e       by inj_iff_partition_element_sing
+   <=> !e. e IN (partition (feq f) s) ==> CARD e = 1   by FINITE_partition, CARD_EQ_1
+*)
+Theorem inj_iff_partition_element_card_1:
+  !f s. FINITE s ==>
+        (INJ f s (IMAGE f s) <=> !e. e IN (partition (feq f) s) ==> CARD e = 1)
+Proof
+  metis_tac[inj_iff_partition_element_sing, FINITE_partition, CARD_EQ_1]
+QED
+
+(* Idea: for a finite domain, with target same size, surjection means injection. *)
+
+(* Theorem: FINITE s /\ CARD s = CARD t /\ SURJ f s t ==> INJ f s t *)
+(* Proof:
+   Let p = partition (feq f) s.
+   Note IMAGE f s = t              by IMAGE_SURJ
+     so FINITE t                   by IMAGE_FINITE
+    and CARD s = SIGMA CARD p      by finite_card_by_feq_partition
+    and CARD t = CARD p            by preimage_image_bij, bij_eq_card
+   Thus CARD p = SIGMA CARD p      by given CARD s = CARD t
+    Now FINITE p                   by FINITE_partition
+    and !e. e IN p ==> FINITE e    by FINITE_partition
+    and !e. e IN p ==> e <> {}     by feq_partition_element_not_empty
+     so !e. e IN p ==> CARD e <> 0 by CARD_EQ_0
+   Thus !e. e IN p ==> CARD e = 1  by card_eq_sigma_card
+     or INJ f s (IMAGE f s)        by inj_iff_partition_element_card_1
+     so INJ f s t                  by IMAGE f s = t
+*)
+Theorem FINITE_SURJ_IS_INJ:
+  !f s t. FINITE s /\ CARD s = CARD t /\ SURJ f s t ==> INJ f s t
+Proof
+  rpt strip_tac >>
+  imp_res_tac finite_card_by_feq_partition >>
+  first_x_assum (qspec_then `f` strip_assume_tac) >>
+  qabbrev_tac `p = partition (feq f) s` >>
+  `IMAGE f s = t` by fs[IMAGE_SURJ] >>
+  `FINITE t` by rw[] >>
+  `CARD t = CARD p` by metis_tac[preimage_image_bij, FINITE_BIJ_CARD] >>
+  `FINITE p /\ !e. e IN p ==> FINITE e` by metis_tac[FINITE_partition] >>
+  `!e. e IN p ==> CARD e <> 0` by metis_tac[feq_partition_element_not_empty, CARD_EQ_0] >>
+  `!e. e IN p ==> CARD e = 1` by metis_tac[card_eq_sigma_card] >>
+  metis_tac[inj_iff_partition_element_card_1]
+QED
+
+(* Finally! show that SURJ can imply BIJ. *)
+
+(* Theorem: FINITE s /\ CARD s = CARD t /\ SURJ f s t ==> BIJ f s t *)
+(* Proof:
+   Note INJ f s t              by FINITE_SURJ_IS_INJ
+     so BIJ f s t              by BIJ_DEF, SURJ f s t
+*)
+Theorem FINITE_SURJ_IS_BIJ:
+  !f s t. FINITE s /\ CARD s = CARD t /\ SURJ f s t ==> BIJ f s t
+Proof
+  simp[FINITE_SURJ_IS_INJ, BIJ_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Function Iteration                                                        *)
@@ -1208,6 +1419,33 @@ val PRIME_BIG_NOT_DIVIDES_FACT = store_thm(
     metis_tac[P_EUCLIDES, NOT_LT_DIVIDES]
   ]);
 
+(* Idea: test if a function f is factorial. *)
+
+(* Theorem: f = FACT <=> f 0 = 1 /\ !n. f (SUC n) = SUC n * f n *)
+(* Proof:
+   If part is true         by FACT
+   Only-if part, apply FUN_EQ_THM, this is to show:
+   !n. f n = FACT n.
+   By induction on n.
+   Base: f 0 = FACT 0
+           f 0
+         = 1               by given
+         = FACT 0          by FACT_0
+   Step: f n = FACT n ==> f (SUC n) = FACT (SUC n)
+           f (SUC n)
+         = SUC n * f n     by given
+         = SUC n * FACT n  by induction hypothesis
+         = FACT (SUC n)    by FACT
+*)
+Theorem FACT_iff:
+  !f. f = FACT <=> f 0 = 1 /\ !n. f (SUC n) = SUC n * f n
+Proof
+  rw[FACT, EQ_IMP_THM] >>
+  rw[FUN_EQ_THM] >>
+  Induct_on `x` >>
+  simp[FACT]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Basic GCD, LCM Theorems                                                   *)
 (* ------------------------------------------------------------------------- *)
@@ -1537,18 +1775,15 @@ val FACTOR_OUT_PRIME = store_thm(
 (* Consequences of Coprime.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-(* Overload on coprime for GCD equals 1 *)
-val _ = overload_on ("coprime", ``\x y. gcd x y = 1``);
-
-(* Theorem: If 1 < n, !x. gcd n x = 1  ==> 0 < x /\ 0 < x MOD n *)
+(* Theorem: If 1 < n, !x. coprime n x ==> 0 < x /\ 0 < x MOD n *)
 (* Proof:
    If x = 0, gcd n x = n. But n <> 1, hence x <> 0, or 0 < x.
    x MOD n = 0 ==> x a multiple of n ==> gcd n x = n <> 1  if n <> 1.
-   Hence if 1 < n, gcd x n = 1 ==> x MOD n <> 0, or 0 < x MOD n.
+   Hence if 1 < n, coprime n x ==> x MOD n <> 0, or 0 < x MOD n.
 *)
 val MOD_NONZERO_WHEN_GCD_ONE = store_thm(
   "MOD_NONZERO_WHEN_GCD_ONE",
-  ``!n. 1 < n ==> !x. (gcd n x = 1) ==> 0 < x /\ 0 < x MOD n``,
+  ``!n. 1 < n ==> !x. coprime n x ==> 0 < x /\ 0 < x MOD n``,
   ntac 4 strip_tac >>
   conj_asm1_tac >| [
     `1 <> n` by decide_tac >>
@@ -1562,22 +1797,21 @@ val MOD_NONZERO_WHEN_GCD_ONE = store_thm(
     metis_tac[MOD_MULITPLE_ZERO, MULT_COMM]
   ]);
 
-(* Theorem: (gcd n x = 1) /\ (gcd n y = 1) ==> (gcd n (x*y) = 1) *)
+(* Theorem: coprime n x /\ coprime n y ==> coprime n (x * y) *)
 (* Proof:
    gcd n x = 1 ==> no common factor between x and n
    gcd n y = 1 ==> no common factor between y and n
-   Hence there is no common factor between (x*y) and n
-   or gcd n (x*y) = 1
+   Hence there is no common factor between (x * y) and n, or gcd n (x * y) = 1
 
-   gcd n (x * y) = gcd n y    by GCD_CANCEL_MULT, since gcd n x = 1.
-                 = 1          by given
+   gcd n (x * y) = gcd n y     by GCD_CANCEL_MULT, since coprime n x.
+                 = 1           by given
 *)
 val PRODUCT_WITH_GCD_ONE = store_thm(
   "PRODUCT_WITH_GCD_ONE",
-  ``!n x y. (gcd n x = 1) /\ (gcd n y = 1) ==> (gcd n (x*y) = 1)``,
+  ``!n x y. coprime n x /\ coprime n y ==> coprime n (x * y)``,
   metis_tac[GCD_CANCEL_MULT]);
 
-(* Theorem: For 0 < n, (gcd n x = 1) ==> (gcd n (x MOD n) = 1) *)
+(* Theorem: For 0 < n, coprime n x ==> coprime n (x MOD n) *)
 (* Proof:
    Since n <> 0,
    1 = gcd n x            by given
@@ -1586,12 +1820,12 @@ val PRODUCT_WITH_GCD_ONE = store_thm(
 *)
 val MOD_WITH_GCD_ONE = store_thm(
   "MOD_WITH_GCD_ONE",
-  ``!n x. 0 < n /\ (gcd n x = 1) ==> (gcd n (x MOD n) = 1)``,
+  ``!n x. 0 < n /\ coprime n x ==> coprime n (x MOD n)``,
   rpt strip_tac >>
   `0 <> n` by decide_tac >>
   metis_tac[GCD_EFFICIENTLY, GCD_SYM]);
 
-(* Theorem: If 1 < n, gcd n x = 1 ==> ?k q. (k * x) MOD n = 1 /\ gcd n k = 1 *)
+(* Theorem: If 1 < n, coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k *)
 (* Proof:
        gcd n x = 1 ==> x <> 0               by GCD_0R
    Also,
@@ -1612,7 +1846,7 @@ val MOD_WITH_GCD_ONE = store_thm(
 *)
 val GCD_ONE_PROPERTY = store_thm(
   "GCD_ONE_PROPERTY",
-  ``!n x. 1 < n /\ (gcd n x = 1) ==> ?k. ((k * x) MOD n = 1) /\ (gcd n k = 1)``,
+  ``!n x. 1 < n /\ coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k``,
   rpt strip_tac >>
   `n <> 1` by decide_tac >>
   `x <> 0` by metis_tac[GCD_0R] >>
@@ -1628,12 +1862,12 @@ val GCD_ONE_PROPERTY = store_thm(
   `g divides 1` by metis_tac[DIVIDES_ADD_2] >>
   metis_tac[DIVIDES_ONE]);
 
-(* Theorem: For n > 1, 0 < x < n /\ (gcd n x = 1) ==>
-            ?y. 0 < y /\ y < n /\ gcd n y = 1 /\ y*x MOD n = 1 *)
+(* Theorem: For 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+            ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1) *)
 (* Proof:
        gcd n x = 1
-   ==> ?k. (k*x) MOD n = 1 /\ gcd n k = 1     by GCD_ONE_PROPERTY
-       (k*x) MOD n = 1
+   ==> ?k. (k * x) MOD n = 1 /\ coprime n k   by GCD_ONE_PROPERTY
+       (k * x) MOD n = 1
    ==> (k MOD n * x MOD n) MOD n = 1          by MOD_TIMES2
    ==> ((k MOD n) * x) MOD n = 1              by LESS_MOD, x < n.
 
@@ -1645,9 +1879,10 @@ val GCD_ONE_PROPERTY = store_thm(
 *)
 val GCD_MOD_MULT_INV = store_thm(
   "GCD_MOD_MULT_INV",
-  ``!n x. 1 < n /\ 0 < x /\ x < n /\ (gcd n x = 1) ==> ?y. 0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
+  ``!n x. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+      ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)``,
   rpt strip_tac >>
-  `?k. ((k*x) MOD n = 1) /\ (gcd n k = 1)` by rw_tac std_ss[GCD_ONE_PROPERTY] >>
+  `?k. ((k * x) MOD n = 1) /\ coprime n k` by rw_tac std_ss[GCD_ONE_PROPERTY] >>
   `0 < n` by decide_tac >>
   `(k MOD n * x MOD n) MOD n = 1` by rw_tac std_ss[MOD_TIMES2] >>
   `((k MOD n) * x) MOD n = 1` by metis_tac[LESS_MOD] >>
@@ -1659,8 +1894,8 @@ val GCD_MOD_MULT_INV = store_thm(
 
 (* Convert this into an existence definition *)
 val lemma = prove(
-  ``!n x. ?y. 1 < n /\ 0 < x /\ x < n /\ (gcd n x = 1) ==>
-              0 < y /\ y < n /\ (gcd n y = 1) /\ ((y*x) MOD n = 1)``,
+  ``!n x. ?y. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+              0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)``,
   metis_tac[GCD_MOD_MULT_INV]);
 
 val GEN_MULT_INV_DEF = new_specification(
@@ -2084,6 +2319,197 @@ Theorem GCD_REDUCE_BY_COPRIME = GCD_CANCEL_MULT;
 (* val GCD_REDUCE_BY_COPRIME =
    |- !m n k. coprime m k ==> gcd m (k * n) = gcd m n: thm *)
 
+(* Idea: a crude upper bound for greatest common divisor.
+         A better upper bound is: gcd m n <= MIN m n, by MIN_LE *)
+
+(* Theorem: 0 < m /\ 0 < n ==> gcd m n <= m /\ gcd m n <= n *)
+(* Proof:
+   Let g = gcd m n.
+   Then g divides m /\ g divides n   by GCD_PROPERTY
+     so g <= m /\ g <= n             by DIVIDES_LE,  0 < m, 0 < n
+*)
+Theorem gcd_le:
+  !m n. 0 < m /\ 0 < n ==> gcd m n <= m /\ gcd m n <= n
+Proof
+  ntac 3 strip_tac >>
+  qabbrev_tac `g = gcd m n` >>
+  `g divides m /\ g divides n` by metis_tac[GCD_PROPERTY] >>
+  simp[DIVIDES_LE]
+QED
+
+(* Idea: a generalisation of GCD_LINEAR:
+|- !j k. 0 < j ==> ?p q. p * j = q * k + gcd j k
+   This imposes a condition for (gcd a b) divides c.
+*)
+
+(* Theorem: 0 < a ==> ((gcd a b) divides c <=> ?p q. p * a = q * b + c) *)
+(* Proof:
+   Let d = gcd a b.
+   If part: d divides c ==> ?p q. p * a = q * b + c
+      Note ?k. c = k * d                 by divides_def
+       and ?u v. u * a = v * b + d       by GCD_LINEAR, 0 < a
+        so (k * u) * a = (k * v) * b + (k * d)
+      Take p = k * u, q = k * v,
+      Then p * q = q * b + c
+   Only-if part: p * a = q * b + c ==> d divides c
+      Note d divides a /\ d divides b    by GCD_PROPERTY
+        so d divides c                   by divides_linear_sub
+*)
+Theorem gcd_divides_iff:
+  !a b c. 0 < a ==> ((gcd a b) divides c <=> ?p q. p * a = q * b + c)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `d = gcd a b` >>
+  rw_tac bool_ss[EQ_IMP_THM] >| [
+    `?k. c = k * d` by rw[GSYM divides_def] >>
+    `?p q. p * a = q * b + d` by rw[GCD_LINEAR, Abbr`d`] >>
+    `k * (p * a) = k * (q * b + d)` by fs[] >>
+    `_ = k * (q * b) + k * d` by decide_tac >>
+    metis_tac[MULT_ASSOC],
+    `d divides a /\ d divides b` by metis_tac[GCD_PROPERTY] >>
+    metis_tac[divides_linear_sub]
+  ]
+QED
+
+(* Theorem alias *)
+Theorem gcd_linear_thm = gcd_divides_iff;
+(* val gcd_linear_thm =
+|- !a b c. 0 < a ==> (gcd a b divides c <=> ?p q. p * a = q * b + c): thm *)
+
+(* Idea: a version of GCD_LINEAR for MOD, without negatives.
+   That is: in MOD n. gcd (a b) can be expressed as a linear combination of a b. *)
+
+(* Theorem: 0 < n /\ 0 < a ==> ?p q. (p * a + q * b) MOD n = gcd a b MOD n *)
+(* Proof:
+   Let d = gcd a b.
+   Then ?h k. h * a = k * b + d                by GCD_LINEAR, 0 < a
+   Let p = h, q = k * n - k.
+   Then q + k = k * n.
+          (p * a) MOD n = (k * b + d) MOD n
+   <=>    (p * a + q * b) MOD n = (q * b + k * b + d) MOD n    by ADD_MOD
+   <=>    (p * a + q * b) MOD n = (k * b * n + d) MOD n        by above
+   <=>    (p * a + q * b) MOD n = d MOD n                      by MOD_TIMES
+*)
+Theorem gcd_linear_mod_thm:
+  !n a b. 0 < n /\ 0 < a ==> ?p q. (p * a + q * b) MOD n = gcd a b MOD n
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `d = gcd a b` >>
+  `?p k. p * a = k * b + d` by rw[GCD_LINEAR, Abbr`d`] >>
+  `k <= k * n` by fs[] >>
+  `k * n - k + k = k * n` by decide_tac >>
+  qabbrev_tac `q = k * n - k` >>
+  qexists_tac `p` >>
+  qexists_tac `q` >>
+  `(p * a + q * b) MOD n = (q * b + k * b + d) MOD n` by rw[ADD_MOD] >>
+  `_ = ((q + k) * b + d) MOD n` by decide_tac >>
+  `_ = (k * b * n + d) MOD n` by rfs[] >>
+  simp[MOD_TIMES]
+QED
+
+(* Idea: a simplification of gcd_linear_mod_thm when n = a. *)
+
+(* Theorem: 0 < a ==> ?q. (q * b) MOD a = (gcd a b) MOD a *)
+(* Proof:
+   Let g = gcd a b.
+   Then ?p q. (p * a + q * b) MOD a = g MOD a  by gcd_linear_mod_thm, n = a
+     so               (q * b) MOD a = g MOD a  by MOD_TIMES
+*)
+Theorem gcd_linear_mod_1:
+  !a b. 0 < a ==> ?q. (q * b) MOD a = (gcd a b) MOD a
+Proof
+  metis_tac[gcd_linear_mod_thm, MOD_TIMES]
+QED
+
+(* Idea: symmetric version of of gcd_linear_mod_1. *)
+
+(* Theorem: 0 < b ==> ?p. (p * a) MOD b = (gcd a b) MOD b *)
+(* Proof:
+   Note ?p. (p * a) MOD b = (gcd b a) MOD b    by gcd_linear_mod_1
+     or                   = (gcd a b) MOD b    by GCD_SYM
+*)
+Theorem gcd_linear_mod_2:
+  !a b. 0 < b ==> ?p. (p * a) MOD b = (gcd a b) MOD b
+Proof
+  metis_tac[gcd_linear_mod_1, GCD_SYM]
+QED
+
+(* Idea: replacing n = a * b in gcd_linear_mod_thm. *)
+
+(* Theorem: 0 < a /\ 0 < b ==> ?p q. (p * a + q * b) MOD (a * b) = (gcd a b) MOD (a * b) *)
+(* Proof: by gcd_linear_mod_thm, n = a * b. *)
+Theorem gcd_linear_mod_prod:
+  !a b. 0 < a /\ 0 < b ==> ?p q. (p * a + q * b) MOD (a * b) = (gcd a b) MOD (a * b)
+Proof
+  simp[gcd_linear_mod_thm]
+QED
+
+(* Idea: specialise gcd_linear_mod_prod for coprime a b. *)
+
+(* Theorem: 0 < a /\ 0 < b /\ coprime a b ==>
+            ?p q. (p * a + q * b) MOD (a * b) = 1 MOD (a * b) *)
+(* Proof: by gcd_linear_mod_prod. *)
+Theorem coprime_linear_mod_prod:
+  !a b. 0 < a /\ 0 < b /\ coprime a b ==>
+  ?p q. (p * a + q * b) MOD (a * b) = 1 MOD (a * b)
+Proof
+  metis_tac[gcd_linear_mod_prod]
+QED
+
+(* Idea: generalise gcd_linear_mod_thm for multiple of gcd a b. *)
+
+(* Theorem: 0 < n /\ 0 < a /\ gcd a b divides c ==>
+            ?p q. (p * a + q * b) MOD n = c MOD n *)
+(* Proof:
+   Let d = gcd a b.
+   Note k. c = k * d                           by divides_def
+    and ?p q. (p * a + q * b) MOD n = d MOD n  by gcd_linear_mod_thm
+   Thus (k * d) MOD n
+      = (k * (p * a + q * b)) MOD n            by MOD_TIMES2, 0 < n
+      = (k * p * a + k * q * b) MOD n          by LEFT_ADD_DISTRIB
+   Take (k * p) and (k * q) for the eventual p and q.
+*)
+Theorem gcd_multiple_linear_mod_thm:
+  !n a b c. 0 < n /\ 0 < a /\ gcd a b divides c ==>
+            ?p q. (p * a + q * b) MOD n = c MOD n
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `d = gcd a b` >>
+  `?k. c = k * d` by rw[GSYM divides_def] >>
+  `?p q. (p * a + q * b) MOD n = d MOD n` by metis_tac[gcd_linear_mod_thm] >>
+  `(k * (p * a + q * b)) MOD n = (k * d) MOD n` by metis_tac[MOD_TIMES2] >>
+  `k * (p * a + q * b) = k * p * a + k * q * b` by decide_tac >>
+  metis_tac[]
+QED
+
+(* Idea: specialise gcd_multiple_linear_mod_thm for n = a * b. *)
+
+(* Theorem: 0 < a /\ 0 < b /\ gcd a b divides c ==>
+            ?p q. (p * a + q * b) MOD (a * b) = c MOD (a * b)) *)
+(* Proof: by gcd_multiple_linear_mod_thm. *)
+Theorem gcd_multiple_linear_mod_prod:
+  !a b c. 0 < a /\ 0 < b /\ gcd a b divides c ==>
+          ?p q. (p * a + q * b) MOD (a * b) = c MOD (a * b)
+Proof
+  simp[gcd_multiple_linear_mod_thm]
+QED
+
+(* Idea: specialise gcd_multiple_linear_mod_prod for coprime a b. *)
+
+(* Theorem: 0 < a /\ 0 < b /\ coprime a b ==>
+            ?p q. (p * a + q * b) MOD (a * b) = c MOD (a * b) *)
+(* Proof:
+   Note coprime a b means gcd a b = 1    by notation
+    and 1 divides c                      by ONE_DIVIDES_ALL
+     so the result follows               by gcd_multiple_linear_mod_prod
+*)
+Theorem coprime_multiple_linear_mod_prod:
+  !a b c. 0 < a /\ 0 < b /\ coprime a b ==>
+          ?p q. (p * a + q * b) MOD (a * b) = c MOD (a * b)
+Proof
+  metis_tac[gcd_multiple_linear_mod_prod, ONE_DIVIDES_ALL]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Coprime Theorems                                                          *)
 (* ------------------------------------------------------------------------- *)
@@ -2132,6 +2558,14 @@ val coprime_0R = store_thm(
   "coprime_0R",
   ``!n. coprime n 0 <=> (n = 1)``,
   rw[GCD_0R]);
+
+(* Theorem: (coprime 0 n <=> n = 1) /\ (coprime n 0 <=> n = 1) *)
+(* Proof: by coprime_0L, coprime_0R *)
+Theorem coprime_0:
+  !n. (coprime 0 n <=> n = 1) /\ (coprime n 0 <=> n = 1)
+Proof
+  simp[coprime_0L, coprime_0R]
+QED
 
 (* Theorem: coprime x y = coprime y x *)
 (* Proof:
@@ -2346,6 +2780,21 @@ val coprime_factor_coprime = store_thm(
   `d divides 1` by metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR] >>
   rw[GSYM DIVIDES_ONE]);
 
+(* Idea: common factor of two coprime numbers. *)
+
+(* Theorem: coprime a b /\ c divides a /\ c divides b ==> c = 1 *)
+(* Proof:
+   Note c divides gcd a b      by GCD_PROPERTY
+     or c divides 1            by coprime a b
+     so c = 1                  by DIVIDES_ONE
+*)
+Theorem coprime_common_factor:
+  !a b c. coprime a b /\ c divides a /\ c divides b ==> c = 1
+Proof
+  metis_tac[GCD_PROPERTY, DIVIDES_ONE]
+QED
+
+
 (* Theorem: prime p /\ ~(p divides n) ==> coprime p n *)
 (* Proof:
    Since divides p 0, so n <> 0.    by ALL_DIVIDES_0
@@ -2358,8 +2807,8 @@ val coprime_factor_coprime = store_thm(
      but d <> p                     by divides_iff_gcd_fix
    Hence d = 1, or coprime p n.
 *)
-val prime_not_divides_is_coprime = store_thm(
-  "prime_not_divides_is_coprime",
+val prime_not_divides_coprime = store_thm(
+  "prime_not_divides_coprime",
   ``!n p. prime p /\ ~(p divides n) ==> coprime p n``,
   rpt strip_tac >>
   `n <> 0` by metis_tac[ALL_DIVIDES_0] >>
@@ -2375,33 +2824,25 @@ val prime_not_divides_is_coprime = store_thm(
    Then d divides p        by GCD_IS_GREATEST_COMMON_DIVISOR
     ==> d = p              by prime_def
    Thus p divides n        by divides_iff_gcd_fix
+
+   Or: this is just the inverse of prime_not_divides_coprime.
 *)
 val prime_not_coprime_divides = store_thm(
   "prime_not_coprime_divides",
   ``!n p. prime p /\ ~(coprime p n) ==> p divides n``,
-  rpt strip_tac >>
-  qabbrev_tac `d = gcd p n` >>
-  `d divides p` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
-  `d = p` by metis_tac[prime_def] >>
-  rw[divides_iff_gcd_fix]);
-
-(* This is just the inverse of prime_not_divides_is_coprime *)
-val prime_not_coprime_divides = store_thm(
-  "prime_not_coprime_divides",
-  ``!n p. prime p /\ ~(coprime p n) ==> p divides n``,
-  metis_tac[prime_not_divides_is_coprime]);
+  metis_tac[prime_not_divides_coprime]);
 
 (* Theorem: 1 < n /\ prime p /\ p divides n ==> !k. coprime n k ==> coprime p k *)
 (* Proof:
    Since coprime n k /\ p divides n
      ==> ~(p divides k)               by coprime_factor_not_divides
     Then prime p /\ ~(p divides k)
-     ==> coprime p k                  by prime_not_divides_is_coprime
+     ==> coprime p k                  by prime_not_divides_coprime
 *)
 val coprime_prime_factor_coprime = store_thm(
   "coprime_prime_factor_coprime",
   ``!n p. 1 < n /\ prime p /\ p divides n ==> !k. coprime n k ==> coprime p k``,
-  metis_tac[coprime_factor_not_divides, prime_not_divides_is_coprime, ONE_LT_PRIME]);
+  metis_tac[coprime_factor_not_divides, prime_not_divides_coprime, ONE_LT_PRIME]);
 
 (* This is better:
 coprime_factor_coprime
@@ -2469,6 +2910,181 @@ val coprime_by_le_not_divides = store_thm(
   "coprime_by_le_not_divides",
   ``!m n. 1 < m /\ (!j. 1 < j /\ j <= m ==> ~(j divides n)) ==> coprime m n``,
   rw[coprime_condition]);
+
+(* Idea: a characterisation of the coprime property of two numbers. *)
+
+(* Theorem: coprime m n <=> !p. prime p ==> ~(p divides m /\ p divides n) *)
+(* Proof:
+   If part: coprime m n /\ prime p ==> ~(p divides m) \/ ~(p divides n)
+      By contradiction, suppose p divides m /\ p divides n.
+      Then p = 1                   by coprime_common_factor
+      This contradicts prime p     by NOT_PRIME_1
+   Only-if part: !p. prime p ==> ~(p divides m) \/ ~(p divides m) ==> coprime m n
+      Let d = gcd m n.
+      By contradiction, suppose d <> 1.
+      Then ?p. prime p /\ p divides d    by PRIME_FACTOR, d <> 1.
+       Now d divides m /\ d divides n    by GCD_PROPERTY
+        so p divides m /\ p divides n    by DIVIDES_TRANS
+      This contradicts the assumption.
+*)
+Theorem coprime_by_prime_factor:
+  !m n. coprime m n <=> !p. prime p ==> ~(p divides m /\ p divides n)
+Proof
+  rw[EQ_IMP_THM] >-
+  metis_tac[coprime_common_factor, NOT_PRIME_1] >>
+  qabbrev_tac `d = gcd m n` >>
+  spose_not_then strip_assume_tac >>
+  `?p. prime p /\ p divides d` by rw[PRIME_FACTOR] >>
+  `d divides m /\ d divides n` by metis_tac[GCD_PROPERTY] >>
+  metis_tac[DIVIDES_TRANS]
+QED
+
+(* Idea: coprime_by_prime_factor with reduced testing of primes, useful in practice. *)
+
+(* Theorem: 0 < m /\ 0 < n ==>
+           (coprime m n <=>
+           !p. prime p /\ p <= m /\ p <= n ==> ~(p divides m /\ p divides n)) *)
+(* Proof:
+   If part: coprime m n /\ prime p /\ ... ==> ~(p divides m) \/ ~(p divides n)
+      By contradiction, suppose p divides m /\ p divides n.
+      Then p = 1                   by coprime_common_factor
+      This contradicts prime p     by NOT_PRIME_1
+   Only-if part: !p. prime p /\ p <= m /\ p <= n ==> ~(p divides m) \/ ~(p divides m) ==> coprime m n
+      Let d = gcd m n.
+      By contradiction, suppose d <> 1.
+      Then ?p. prime p /\ p divides d    by PRIME_FACTOR, d <> 1.
+       Now d divides m /\ d divides n    by GCD_PROPERTY
+        so p divides m /\ p divides n    by DIVIDES_TRANS
+      Thus p <= m /\ p <= n              by DIVIDES_LE, 0 < m, 0 < n
+      This contradicts the assumption.
+*)
+Theorem coprime_by_prime_factor_le:
+  !m n. 0 < m /\ 0 < n ==>
+        (coprime m n <=>
+        !p. prime p /\ p <= m /\ p <= n ==> ~(p divides m /\ p divides n))
+Proof
+  rw[EQ_IMP_THM] >-
+  metis_tac[coprime_common_factor, NOT_PRIME_1] >>
+  qabbrev_tac `d = gcd m n` >>
+  spose_not_then strip_assume_tac >>
+  `?p. prime p /\ p divides d` by rw[PRIME_FACTOR] >>
+  `d divides m /\ d divides n` by metis_tac[GCD_PROPERTY] >>
+  `0 < p` by rw[PRIME_POS] >>
+  metis_tac[DIVIDES_TRANS, DIVIDES_LE]
+QED
+
+(* Idea: establish coprime (p * a + q * b) (a * b). *)
+(* Note: the key is to apply coprime_by_prime_factor. *)
+
+(* Theorem: coprime a b /\ coprime p b /\ coprime q a ==> coprime (p * a + q * b) (a * b) *)
+(* Proof:
+   Let z = p * a + q * b, c = a * b, d = gcd z c.
+   Then d divides z /\ d divides c       by GCD_PROPERTY
+   By coprime_by_prime_factor, we need to show:
+      !t. prime t ==> ~(t divides z /\ t divides c)
+   By contradiction, suppose t divides z /\ t divides c.
+   Then t divides d                      by GCD_PROPERTY
+     or t divides c where c = a * b      by DIVIDES_TRANS
+     so t divides a or p divides b       by P_EUCLIDES
+
+   If t divides a,
+      Then t divides (q * b)             by divides_linear_sub
+       and ~(t divides b)                by coprime_common_factor, NOT_PRIME_1
+        so t divides q                   by P_EUCLIDES
+       ==> t = 1                         by coprime_common_factor
+       This contradicts prime t          by NOT_PRIME_1
+   If t divides b,
+      Then t divides (p * a)             by divides_linear_sub
+       and ~(t divides a)                by coprime_common_factor, NOT_PRIME_1
+        so t divides p                   by P_EUCLIDES
+       ==> t = 1                         by coprime_common_factor
+       This contradicts prime t          by NOT_PRIME_1
+   Since all lead to contradiction, we have shown:
+     !t. prime t ==> ~(t divides z /\ t divides c)
+   Thus coprime z c                      by coprime_by_prime_factor
+*)
+Theorem coprime_linear_mult:
+  !a b p q. coprime a b /\ coprime p b /\ coprime q a ==> coprime (p * a + q * b) (a * b)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `z = p * a + q * b` >>
+  qabbrev_tac `c = a * b` >>
+  irule (coprime_by_prime_factor |> SPEC_ALL |> #2 o EQ_IMP_RULE) >>
+  rpt strip_tac >>
+  `p' divides a \/ p' divides b` by metis_tac[P_EUCLIDES] >| [
+    `p' divides (q * b)` by metis_tac[divides_linear_sub, MULT_LEFT_1] >>
+    `~(p' divides b)` by metis_tac[coprime_common_factor, NOT_PRIME_1] >>
+    `p' divides q` by metis_tac[P_EUCLIDES] >>
+    metis_tac[coprime_common_factor, NOT_PRIME_1],
+    `p' divides (p * a)` by metis_tac[divides_linear_sub, MULT_LEFT_1, ADD_COMM] >>
+    `~(p' divides a)` by metis_tac[coprime_common_factor, NOT_PRIME_1, MULT_COMM] >>
+    `p' divides p` by metis_tac[P_EUCLIDES] >>
+    metis_tac[coprime_common_factor, NOT_PRIME_1]
+  ]
+QED
+
+(* Idea: include converse of coprime_linear_mult. *)
+
+(* Theorem: coprime a b ==>
+            ((coprime p b /\ coprime q a) <=> coprime (p * a + q * b) (a * b)) *)
+(* Proof:
+   If part: coprime p b /\ coprime q a ==> coprime (p * a + q * b) (a * b)
+      This is true by coprime_linear_mult.
+   Only-if: coprime (p * a + q * b) (a * b) ==> coprime p b /\ coprime q a
+      Let z = p * a + q * b. Consider a prime t.
+      For coprime p b.
+          If t divides p /\ t divides b,
+          Then t divides z         by divides_linear
+           and t divides (a * b)   by DIVIDES_MULTIPLE
+            so t = 1               by coprime_common_factor
+          This contradicts prime t by NOT_PRIME_1
+          Thus coprime p b         by coprime_by_prime_factor
+      For coprime q a.
+          If t divides q /\ t divides a,
+          Then t divides z         by divides_linear
+           and t divides (a * b)   by DIVIDES_MULTIPLE
+            so t = 1               by coprime_common_factor
+          This contradicts prime t by NOT_PRIME_1
+          Thus coprime q a         by coprime_by_prime_factor
+*)
+Theorem coprime_linear_mult_iff:
+  !a b p q. coprime a b ==>
+            ((coprime p b /\ coprime q a) <=> coprime (p * a + q * b) (a * b))
+Proof
+  rw_tac std_ss[EQ_IMP_THM] >-
+  simp[coprime_linear_mult] >-
+ (irule (coprime_by_prime_factor |> SPEC_ALL |> #2 o EQ_IMP_RULE) >>
+  rpt strip_tac >>
+  `p' divides (p * a + q * b)` by metis_tac[divides_linear, MULT_COMM] >>
+  `p' divides (a * b)` by rw[DIVIDES_MULTIPLE] >>
+  metis_tac[coprime_common_factor, NOT_PRIME_1]) >>
+  irule (coprime_by_prime_factor |> SPEC_ALL |> #2 o EQ_IMP_RULE) >>
+  rpt strip_tac >>
+  `p' divides (p * a + q * b)` by metis_tac[divides_linear, MULT_COMM] >>
+  `p' divides (a * b)` by metis_tac[DIVIDES_MULTIPLE, MULT_COMM] >>
+  metis_tac[coprime_common_factor, NOT_PRIME_1]
+QED
+
+(* Idea: condition for a number to be coprime with prime power. *)
+
+(* Theorem: prime p /\ 0 < n ==> !q. coprime q (p ** n) <=> ~(p divides q) *)
+(* Proof:
+   If part: prime p /\ 0 < n /\ coprime q (p ** n) ==> ~(p divides q)
+      By contradiction, suppose p divides q.
+      Note p divides (p ** n)  by prime_divides_self_power, 0 < n
+      Thus p = 1               by coprime_common_factor
+      This contradicts p <> 1  by NOT_PRIME_1
+   Only-if part: prime p /\ 0 < n /\ ~(p divides q) ==> coprime q (p ** n)
+      Note coprime q p         by prime_not_divides_coprime, GCD_SYM
+      Thus coprime q (p ** n)  by coprime_iff_coprime_exp, 0 < n
+*)
+Theorem coprime_prime_power:
+  !p n. prime p /\ 0 < n ==> !q. coprime q (p ** n) <=> ~(p divides q)
+Proof
+  rw[EQ_IMP_THM] >-
+  metis_tac[prime_divides_self_power, coprime_common_factor, NOT_PRIME_1] >>
+  metis_tac[prime_not_divides_coprime, coprime_iff_coprime_exp, GCD_SYM]
+QED
 
 (* Theorem: prime n ==> !m. 0 < m /\ m < n ==> coprime n m *)
 (* Proof:
@@ -3186,7 +3802,7 @@ val prime_divides_prime_power = store_thm(
        and coprime p q                           by taking k = 1, EXP_1
 
    If ~(p divides n),
-      Then coprime p n                           by prime_not_divides_is_coprime
+      Then coprime p n                           by prime_not_divides_coprime
       Let q = n, m = 0.
       Then n = 1 * q                             by EXP, MULT_LEFT_1
        and coprime p q.
@@ -3201,7 +3817,7 @@ val prime_power_factor = store_thm(
     `0 < p` by rw[PRIME_POS] >>
     `0 < p ** m` by rw[EXP_POS] >>
     metis_tac[DIVIDES_EQN_COMM, EXP_1],
-    `coprime p n` by rw[prime_not_divides_is_coprime] >>
+    `coprime p n` by rw[prime_not_divides_coprime] >>
     metis_tac[EXP, MULT_LEFT_1]
   ]);
 

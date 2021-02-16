@@ -68,12 +68,16 @@ C:\jc\www\ml\hol\info\Hol\examples\miller\RSA\binomialScript.sml
    binomial_is_integer |- !n k. k <= n ==> (FACT k * FACT (n - k)) divides (FACT n)
    binomial_pos        |- !n k. k <= n ==> 0 < binomial n k
    binomial_eq_0       |- !n k. (binomial n k = 0) <=> n < k
+   binomial_1_n        |- !n. binomial 1 n = if 1 < n then 0 else 1
    binomial_up_eqn     |- !n. 0 < n ==> !k. n * binomial (n - 1) k = (n - k) * binomial n k
    binomial_up         |- !n. 0 < n ==> !k. binomial (n - 1) k = (n - k) * binomial n k DIV n
    binomial_right_eqn  |- !n. 0 < n ==> !k. (k + 1) * binomial n (k + 1) = (n - k) * binomial n k
    binomial_right      |- !n. 0 < n ==> !k. binomial n (k + 1) = (n - k) * binomial n k DIV (k + 1)
    binomial_monotone   |- !n k. k < HALF n ==> binomial n k < binomial n (k + 1)
    binomial_max        |- !n k. binomial n k <= binomial n (HALF n)
+   binomial_iff        |- !f. f = binomial <=>
+                              !n k. f n 0 = 1 /\ f 0 (k + 1) = 0 /\
+                                    f (n + 1) (k + 1) = f n k + f n (k + 1)
 
    Primes and Binomial Coefficients:
    prime_divides_binomials     |- !n.  prime n ==> 1 < n /\ !k. 0 < k /\ k < n ==> n divides (binomial n k)
@@ -412,6 +416,21 @@ val binomial_eq_0 = store_thm(
     rw[binomial_less_0]
   ]);
 
+(* Theorem: binomial 1 n = if 1 < n then 0 else 1 *)
+(* Proof:
+   If n = 0, binomial 1 0 = 1     by binomial_n_0
+   If n = 1, binomial 1 1 = 1     by binomial_n_1
+   Otherwise, binomial 1 n = 0    by binomial_eq_0, 1 < n
+*)
+Theorem binomial_1_n:
+  !n. binomial 1 n = if 1 < n then 0 else 1
+Proof
+  rw[binomial_eq_0] >>
+  `n = 0 \/ n = 1` by decide_tac >-
+  simp[binomial_n_0] >>
+  simp[binomial_n_1]
+QED
+
 (* Relating Binomial to its up-entry:
 
    binomial n k = (n, k, n-k) = n! / k! (n-k)!
@@ -634,6 +653,46 @@ val binomial_max = store_thm(
     `binomial n (n - k) < binomial n (HALF n)` by rw[binomial_monotone, MONOTONE_MAX] >>
     decide_tac
   ]);
+
+(* Idea: the recurrence relation for binomial defines itself. *)
+
+(* Theorem: f = binomial <=>
+            !n k. f n 0 = 1 /\ f 0 (k + 1) = 0 /\
+                  f (n + 1) (k + 1) = f n k + f n (k + 1) *)
+(* Proof:
+   If part: f = binomial ==> recurrence, true  by binomial_alt
+   Only-if part: recurrence ==> f = binomial
+   By FUN_EQ_THM, this is to show:
+      !n k. f n k = binomial n k
+   By double induction, first induct on k.
+   Base: !n. f n 0 = binomial n 0, true        by binomial_n_0
+   Step: !n. f n k = binomial n k ==>
+         !n. f n (SUC k) = binomial n (SUC k)
+       By induction on n.
+       Base: f 0 (SUC k) = binomial 0 (SUC k)
+             This is true                      by binomial_0_n, ADD1
+       Step: f n (SUC k) = binomial n (SUC k) ==>
+             f (SUC n) (SUC k) = binomial (SUC n) (SUC k)
+
+             f (SUC n) (SUC k)
+           = f (n + 1) (k + 1)                 by ADD1
+           = f n k + f n (k + 1)               by given
+           = binomial n k + binomial n (k + 1) by induction hypothesis
+           = binomial (n + 1) (k + 1)          by binomial_alt
+           = binomial (SUC n) (SUC k)          by ADD1
+*)
+Theorem binomial_iff:
+  !f. f = binomial <=>
+      !n k. f n 0 = 1 /\ f 0 (k + 1) = 0 /\ f (n + 1) (k + 1) = f n k + f n (k + 1)
+Proof
+  rw[binomial_alt, EQ_IMP_THM] >>
+  simp[FUN_EQ_THM] >>
+  Induct_on `x'` >-
+  simp[binomial_n_0] >>
+  Induct_on `x` >-
+  fs[binomial_0_n, ADD1] >>
+  fs[binomial_alt, ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Primes and Binomial Coefficients                                          *)
