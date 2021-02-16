@@ -19,7 +19,7 @@ These folders for number theories contain interesting proofs of theorems stated 
 
 ## Fermat's Two Squares Theorem
 * __twosq__ includes the source code for the paper `Windmills of the minds: an algorithm for Fermat's Two Squares Theorem`.
-    * `twosq/helper`, useful library theorems.
+    * `twosq/helperTwosq`, useful library theorems.
     * `twosq/involute`, basic involution.
     * `twosq/involuteFix`, fixed points of involution.
     * `twosq/involuteAction`, group action with involution.
@@ -29,3 +29,10 @@ These folders for number theories contain interesting proofs of theorems stated 
     * `twosq/windmill`, windmills and their involutions.
     * `twosq/twoSquares`, rework of a proof by Don Zagier, formalised in HOL4.
 
+## Counting and Combinatorics
+* __count__ includes formal proofs of theorems in combinatorics by counting sets.
+    * `count/helperCount`, useful library theorems.
+    * `count/combinatorics`, basic combinatorics.
+    * `count/mapCount`, counting set mappings.
+    * `count/symmetry`, automorphisms of symmetry groups and fields.
+    * `count/permutation`, permutation group of lists.

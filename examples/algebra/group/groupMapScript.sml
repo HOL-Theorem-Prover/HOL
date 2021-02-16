@@ -60,6 +60,8 @@ open helperNumTheory helperSetTheory;
    group_homo_compose  |- !g h k f1 f2. GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo (f2 o f1) g k
    group_homo_is_monoid_homo
                        |- !g h f. Group g /\ Group h /\ GroupHomo f g h ==> MonoidHomo f g h
+   group_homo_monoid_homo
+                       |- !f g h. GroupHomo f g h /\ f #e = h.id <=> MonoidHomo f g h
    group_homo_exp      |- !g h f. Group g /\ Group h /\ GroupHomo f g h ==>
                           !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n
 
@@ -74,6 +76,7 @@ open helperNumTheory helperSetTheory;
    group_iso_compose   |- !g h k f1 f2. GroupIso f1 g h /\ GroupIso f2 h k ==> GroupIso (f2 o f1) g k
    group_iso_is_monoid_iso
                        |- !g h f. Group g /\ Group h /\ GroupIso f g h ==> MonoidIso f g h
+   group_iso_monoid_iso|- !f g h. GroupIso f g h /\ f #e = h.id <=> MonoidIso f g h
    group_iso_exp       |- !g h f. Group g /\ Group h /\ GroupIso f g h ==>
                           !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n
    group_iso_order     |- !g h f. Group g /\ Group h /\ GroupIso f g h ==>
@@ -281,6 +284,15 @@ val group_homo_is_monoid_homo = store_thm(
   fs[GroupHomo_def] >>
   fs[group_homo_id]);
 
+(* Theorem: (GroupHomo f g h /\ f #e = h.id) <=> MonoidHomo f g h *)
+(* Proof: by MonoidHomo_def, GroupHomo_def. *)
+Theorem group_homo_monoid_homo:
+  !f g h. (GroupHomo f g h /\ f #e = h.id) <=> MonoidHomo f g h
+Proof
+  simp[MonoidHomo_def, GroupHomo_def] >>
+  rw[EQ_IMP_THM]
+QED
+
 (* Theorem: Group g /\ Group h /\ GroupHomo f g h ==> !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n *)
 (* Proof:
    Note Monoid g           by group_is_monoid
@@ -401,6 +413,20 @@ val group_iso_is_monoid_iso = store_thm(
   ``!(g:'a group) (h:'b group) f. Group g /\ Group h /\ GroupIso f g h ==> MonoidIso f g h``,
   rw[GroupIso_def, MonoidIso_def] >>
   rw[group_homo_is_monoid_homo]);
+
+(* Theorem: (GroupIso f g h /\ f #e = h.id) <=> MonoidIso f g h *)
+(* Proof:
+       MonioidIso f g h
+   <=> MonoidHomo f g h /\ BIJ f G h.carrier                 by MonoidIso_def
+   <=> GroupHomo f g h /\ f #e = h.id /\ BIJ f G h.carrier   by group_homo_monoid_homo
+   <=> GroupIso f g h /\ f #e = h.id                         by GroupIso_def
+*)
+Theorem group_iso_monoid_iso:
+  !f g h. (GroupIso f g h /\ f #e = h.id) <=> MonoidIso f g h
+Proof
+  simp[MonoidIso_def, GroupIso_def] >>
+  metis_tac[group_homo_monoid_homo]
+QED
 
 (* Theorem: Group g /\ Group h /\ GroupIso f g h ==> !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n *)
 (* Proof:
