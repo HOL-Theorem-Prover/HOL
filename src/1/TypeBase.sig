@@ -65,6 +65,13 @@ sig
    val CaseEqs            : string list -> thm
    val AllCaseEqs         : unit -> thm
 
+   (* f (case x of ...) <=> (case x of ..) *)
+   val case_rand_of       : hol_type -> thm
+   (* f (case x of ...) <=> disjunction of possibilities *)
+   val case_pred_disj_of  : hol_type -> thm
+   (* f (case x of ...) <=> conjunction of implications *)
+   val case_pred_imp_of   : hol_type -> thm
+
    val update_induction   : thm -> unit
    val update_axiom       : thm -> unit
 end

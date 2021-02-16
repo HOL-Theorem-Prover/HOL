@@ -198,13 +198,15 @@ done
 
 echo ; echo Cleaning up
 cd $archive
-(while read line ; do
-  case $line in
+while read line 
+do
+  case "$line" in
       \#* ) : ;;
       * ) (/bin/rm -r $line 2> /dev/null && echo "  Removed $line") ||
         warn "  *** Couldn't delete $line ***"
   esac
- done) < $localholdir/developers/deleted-in-release.txt
+done < $localholdir/developers/deleted-in-release.txt
+echo "Removed files listed for deletion; now removing .gitignore files"
 find . -name '.gitignore' -delete
 
 echo
@@ -220,10 +222,10 @@ then
     (cd sigobj ; /bin/rm Systeml.{uo,ui})
     (cd tools/mllex ; ../../bin/Holmake cleanAll)
     (cd help/src-sml ; ../../bin/Holmake cleanAll)
+    cd bin
+    echo "Cleaning bin/"
+    /bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs /bin/rm
 fi
-
-cd bin
-/bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs /bin/rm
 
 cd /tmp
 

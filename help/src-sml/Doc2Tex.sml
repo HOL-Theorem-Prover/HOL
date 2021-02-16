@@ -213,7 +213,7 @@ end
 
 fun main () = let
   fun handle_args (docdir, texfile) = let
-    val texfstr = TextIO.openAppend texfile
+    val texfstr = TextIO.openOut texfile
     val docfiles = find_docfiles docdir
   in
     do_the_work docdir docfiles texfstr;

@@ -324,6 +324,17 @@ end
 
 val _ = let
   open boolLib
+  val a = “P (c:'a) (d:'b) : bool”
+  val tac = resolve_then (Pos hd) mp_tac boolTheory.EQ_REFL (ASSUME a)
+in
+  shouldfail {checkexn = is_struct_HOL_ERR "Tactic",
+              printarg = K "resolve_then fails with HOL_ERR",
+              printresult = goalprint,
+              testfn = #1 o VALID tac} ([a], “p \/ q”)
+end
+
+val _ = let
+  open boolLib
   val _ = tprint "PAT_ASSUM with type variables"
   val asl = [“x:'a = y”, “u:'b = v”]
   val p = mk_var("p", bool)

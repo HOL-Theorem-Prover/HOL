@@ -17,6 +17,7 @@
 !!examples/logic/ltl
 !!examples/logic/ltl-transformations
 !!examples/fun-op-sem
+!examples/algorithms
 
 # Crypto examples
 !!examples/Crypto/AES

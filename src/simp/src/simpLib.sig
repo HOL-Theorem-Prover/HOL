@@ -78,6 +78,10 @@ sig
   val frag_rewrites : ssfrag -> thm list
   val frag_name : ssfrag -> string option
 
+  val register_frag : ssfrag -> ssfrag
+  val lookup_named_frag : string -> ssfrag option
+  val all_named_frags : unit -> string list
+
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssfrag objects                        *)
   (*------------------------------------------------------------------------*)
@@ -87,6 +91,7 @@ sig
   val Excl        : string -> thm
   val Req0        : thm -> thm
   val ReqD        : thm -> thm
+  val SF          : ssfrag -> thm
 
   val rewrites       : thm list -> ssfrag
   val rewrites_with_names : (thname * thm) list -> ssfrag

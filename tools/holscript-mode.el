@@ -734,7 +734,7 @@ a store_thm equivalent.")
   (smie-prec2->grammar
    (smie-bnf->prec2
     '((id)
-      (sml-expr (id "SML|>" id))
+      (sml-expr (sml-expr "SML|>" sml-expr))
       (decls (decls ";" decls) (decl))
       (decl ("^Theorem" theorem-contents "^QED")
             ("^Triviality" theorem-contents "^QED")
@@ -1137,6 +1137,7 @@ ignoring fact that it should really only occur at the beginning of the line.")
     (`(:before . "SML|>")
      (holscript-message "|> Current column = %d" (current-column))
      (save-mark-and-excursion
+       (forward-char 2)
        (backward-sexp 1)
        (if (looking-back (concat (regexp-quote "|>") "[[:space:]]*")
                          (- (point) 10))

@@ -289,4 +289,7 @@ Proof
   tactic
 QED
 
+Theorem foo3 = base |> f (x + y)
+                    |> g
+
 val _ = export_theory();

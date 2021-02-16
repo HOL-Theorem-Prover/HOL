@@ -13,6 +13,7 @@ sig
      val CONJ_ss : simpLib.ssfrag       (* congruence rules for /\; not
                                            included in bool_ss, but
                                            occasionally useful *)
+     val DISJ_ss : simpLib.ssfrag       (* analogous congruence rules for \/ *)
      val NOT_ss : simpLib.ssfrag        (* rewrites that move negations
                                            inwards, included in bool_ss *)
      val COND_elim_ss : simpLib.ssfrag  (* eliminates if-then-else's;

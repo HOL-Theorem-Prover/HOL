@@ -19,10 +19,16 @@ sig
 
   val AC     : thm -> thm -> thm
   val unAC   : thm -> thm * thm
+
   val Cong   : thm -> thm
   val unCong : thm -> thm
+
   val Excl   : string -> thm
   val destExcl : thm -> string option
+
+  val FRAG   : string -> thm
+  val destFRAG : thm -> string option
+
   val mk_Req0 : thm -> thm
   val mk_ReqD : thm -> thm
   val dest_Req0 : thm -> thm option

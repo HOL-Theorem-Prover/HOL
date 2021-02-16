@@ -13,6 +13,6 @@ val SATISFY_REDUCER =
      addcontext=(fn (ctxt,thms) => FACTDB (add_facts (get_db ctxt) thms))}
   end;
 
-val SATISFY_ss = name_ss "SATISFY" (dproc_ss SATISFY_REDUCER);
+val SATISFY_ss = register_frag $ name_ss "SATISFY" (dproc_ss SATISFY_REDUCER);
 
 end (* struct *)

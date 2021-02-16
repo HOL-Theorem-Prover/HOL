@@ -114,6 +114,25 @@ fun ssf_upd_rewrs f (SSFRAG_CON s) =
                   filter = filter, dprocs = dprocs, congs = congs,
                   relsimps = relsimps}
     end
+
+(* ----------------------------------------------------------------------
+    maintain a global database of (named) ssfrags
+   ---------------------------------------------------------------------- *)
+
+val ssfragDB = Sref.new (Symtab.empty : ssfrag Symtab.table)
+fun register_frag ssf =
+    case frag_name ssf of
+        NONE => raise ERR ("register_frag", "Can only register named ssfrags")
+      | SOME n =>
+        (case Symtab.lookup (Sref.value ssfragDB) n of
+             NONE => (Sref.update ssfragDB (Symtab.update(n,ssf)); ssf)
+           | SOME _ => (HOL_WARNING "simpLib" "register_frag"
+                                    ("Discarding existing entry for "^n);
+                        Sref.update ssfragDB $ Symtab.update(n,ssf);
+                        ssf))
+fun lookup_named_frag n = Symtab.lookup (Sref.value ssfragDB) n
+fun all_named_frags() = Symtab.keys (Sref.value ssfragDB)
+
 (*---------------------------------------------------------------------------*)
 (* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
@@ -703,17 +722,46 @@ fun extract_excls (excls, rest) l =
                        NONE => extract_excls (excls, th::rest) ths
                      | SOME nm => extract_excls (nm::excls, rest) ths
 
+fun extract_frags (frags, rest) l =
+    case l of
+        [] => (List.rev frags, List.rev rest)
+      | th :: ths => case markerLib.destFRAG th of
+                         NONE => extract_frags (frags, th :: rest) ths
+                       | SOME fragnm => (
+                         case lookup_named_frag fragnm of
+                             NONE => raise ERR ("extract_frags",
+                                                "No frag called " ^ fragnm)
+                           | SOME sf => extract_frags (sf::frags, rest) ths
+                       )
+
+fun SF ssfrag =
+    case frag_name ssfrag of
+        NONE => raise ERR ("SF",
+                           "Can't use anonymous ssfrags in thm list arguments")
+      | SOME nm => ((case lookup_named_frag nm of
+                         NONE => (ignore (register_frag ssfrag);
+                                  HOL_WARNING "simpLib" "SF"
+                                              ("Registering ssfrag " ^ nm ^
+                                               "; this doesn't persist after "^
+                                               "theory export!"))
+                       | _ => ());
+                    markerLib.FRAG nm)
+
 fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst) = Lib.partition is_AC rst
         val (excludes, rst) = extract_excls ([],[]) rst
+        val (frags, rst) = extract_frags ([],[]) rst
     in
-      if null Congs andalso null ACs andalso null excludes then (ss,thl)
+      if null Congs andalso null ACs andalso null excludes andalso null frags
+      then (ss,thl)
       else (
-        ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                         ac=map unAC ACs, congs=map unCong Congs,
-                         convs=[],rewrs=[],filter=NONE,dprocs=[]}
-           -* excludes,
+        List.foldl (flip op++) ss (
+          SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+                     ac=map unAC ACs, congs=map unCong Congs,
+                     convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
+          frags
+        ) -* excludes,
         rst
       )
     end

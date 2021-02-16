@@ -112,6 +112,7 @@ val Req0_def = new_definition("Req0_def", “Req0 = T”);
 val ReqD_def = new_definition("ReqD_def", “ReqD = T”);
 val Cong_def = new_definition("Cong_def", ``Cong (x:bool) = x``);
 val Exclude_def = new_definition("Exclude_def", “Exclude (x:'a) = T”);
+val FRAG_def = new_definition("FRAG_def", “FRAG (x:'a) = T”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="AC"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="bool",Name="/\\"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Cong"},name=(["Unwanted"],"id")}
