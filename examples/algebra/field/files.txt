@@ -54,9 +54,3 @@
 * ringBinomial
 * 0 field
 * 2 fieldMap
-
-3 symmetryField -- symmetry group of a field: the group of field automorphisms fixing a subfield.
-* groupOrder
-* symmetryGroup
-* 0 field
-* 2 fieldMap

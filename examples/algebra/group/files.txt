@@ -43,13 +43,6 @@
 * 3 groupProduct
 * Euler
 
-3 symmetryGroup -- symmetry group of all permutations of a set of symbols.
-* submonoid
-* monoidOrder
-* 0 group
-* 1 groupMap
-* 2 subgroup
-
 4 finiteGroup -- finite group properties
 * submonoid
 * 0 group

@@ -36,7 +36,7 @@ to support in particular the mechanisation of AKS algorithm.
     * `group/quotientGroup`, theorems of a group partitioned by a normal subgroup.
     * `group/groupMap`, homomorphism and isomorphism between groups.
     * `group/congruences`, application to number theory, mainly Fermat's Little Theorem.
-    * `group/symmetryGroup`, the group of all permutations of a set of symbols.
+    * `group/corres`, the Correspondence Theorem for group theory.
     * `group/finiteGroup`, properties of a finite group.
     * `group/groupAction`, action of a group on a target.
 
@@ -61,7 +61,6 @@ to support in particular the mechanisation of AKS algorithm.
     * `field/fieldOrder`, multiplicative order of elements in a field.
     * `field/fieldMap`, homomorphism and isomorphism between fields.
     * `field/fieldProduct`, product of a set of field elements.
-    * `field/symmetryField`, the group of field automorphisms fixing a subfield.
 
 * __polynomial__ is made up of coefficients taken from a ring or a field.
     * `polynomial/polyWeak`, properties of un-normalized polynomials.
