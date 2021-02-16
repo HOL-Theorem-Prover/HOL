@@ -49,7 +49,7 @@ else
 fi
 
 # find rlwrap if installed
-RLWRAP="$(command -v rlwap 2> /dev/null)" || RLWRAP=""
+RLWRAP="$(command -v rlwrap 2> /dev/null)" || RLWRAP=""
 
 # first argument's directory or current working directory
 WD="$(echo "$@" | xargs dirname 2>/dev/null \
