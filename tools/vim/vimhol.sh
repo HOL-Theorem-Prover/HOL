@@ -51,6 +51,15 @@ fi
 # find rlwrap if installed
 RLWRAP="$(command -v rlwrap 2> /dev/null)" || RLWRAP=""
 
+# get absolute pathnames of the argument files, because the working directory
+# is later changed
+cwd="$(pwd)"
+files=()
+for f in "$@"; do
+  test "${f:0:1}" = "/" || f="${cwd}/$f"
+  files+=("$f")
+done
+
 # first argument's directory or current working directory
 WD="$(echo "$@" | xargs dirname 2>/dev/null \
       | cat - <(pwd) | head -n 1)"
