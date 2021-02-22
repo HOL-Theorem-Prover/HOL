@@ -1,7 +1,8 @@
-open HolKernel boolLib simpLib Parse realSimps
+open HolKernel Parse bossLib boolLib;
 
-open bossLib
-open testutils
+open simpLib realSimps Diff transcTheory;
+
+open testutils;
 
 val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) []
 
@@ -197,6 +198,30 @@ val _ = require_msg (check_result (aconv “bool$T”))
                     (rhs o concl o simpc [Excl "REAL_ARITH_DP"])
                     “4n < x ==> 2 < x”
 
+fun diff_test (r as (n,f,df)) =
+    let
+      fun check res = aconv df (concl res);
+    in
+      tprint (n ^ ": " ^ term_to_string df);
+      require_msg (check_result check) (term_to_string o concl) DIFF_CONV f
+    end;
 
+val _ = List.app diff_test [
+      ("DIFFCONV01", “\x. sin x”,   “!x. ((\x. sin x) diffl (cos x * 1)) x”),
+      ("DIFFCONV02", “\x. cos x”,   “!x. ((\x. cos x) diffl (-sin x * 1)) x”),
+      ("DIFFCONV03", “\x. exp x”,   “!x. ((\x. exp x) diffl (exp x * 1)) x”),
+      ("DIFFCONV04", “\x. x pow 3”, “!x. ((\x. x pow 3) diffl (3 * x pow (3 - 1) * 1)) x”),
+      ("DIFFCONV05", “\x. (sin x) pow 2”,
+                     “!x. ((\x. sin x pow 2) diffl (2 * sin x pow (2 - 1) * (cos x * 1))) x”),
+      ("DIFFCONV06", “\x. sin (x pow 2)”,
+                     “!x. ((\x. sin (x pow 2)) diffl
+                           (cos (x pow 2) * (2 * x pow (2 - 1) * 1))) x”),
+      ("DIFFCONV07", “\x. ln x”,
+                     “!x. 0 < x ==> ((\x. ln x) diffl (realinv x * 1)) x”),
+      ("DIFFCONV08", “\x. ln (x pow 2)”,
+                     “!x. 0 < x pow 2 ==>
+                          ((\x. ln (x pow 2)) diffl
+                           (realinv (x pow 2) * (2 * x pow (2 - 1) * 1))) x”)
+    ];
 
 val _ = Process.exit Process.success

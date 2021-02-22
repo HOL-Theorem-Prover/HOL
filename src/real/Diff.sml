@@ -37,12 +37,12 @@ val iths = map TAUT_CONV
               (``c /\ d ==> c /\ d``)];
 
 val [DIFF_INV', DIFF_DIV'] =
-   map (ONCE_REWRITE_RULE[TAUT_CONV (``a /\ b ==> c = a ==> b ==> c``)])
+   map (ONCE_REWRITE_RULE[TAUT_CONV (``a /\ b ==> c <=> a ==> b ==> c``)])
           [DIFF_INV, REWRITE_RULE[CONJ_ASSOC] DIFF_DIV];
 
 val comths = [DIFF_ADD, DIFF_MUL, DIFF_SUB, DIFF_DIV', DIFF_NEG, DIFF_INV'];
 
-val CC = TAUT_CONV (``a ==> b ==> c = a /\ b ==> c``);
+val CC = TAUT_CONV (``a ==> b ==> c <=> a /\ b ==> c``);
 
 fun DIFF_CONV tm =
   let val xv = variant (frees tm) xreal
