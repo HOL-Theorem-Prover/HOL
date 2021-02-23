@@ -17,6 +17,7 @@ Datatype:
   | addErr locs 'err kont
   | cmpErrs kont
   | returnTo (('atok # locs) list) ('cvalue option list) kont
+  | restoreEO ((locs # 'err) option) kont
   | poplist ('cvalue list -> 'cvalue) kont
   | listsym (('atok,'bnt,'cvalue,'err) pegsym)
             ('cvalue list -> 'cvalue)
@@ -41,97 +42,113 @@ Datatype:
   evalcase = EV (('atok,'bnt,'cvalue,'err) pegsym)
                 (('atok # locs) list)
                 ('cvalue option list)
+                ((locs # 'err) option)
                 ((locs # 'err) list)
                 (('atok,'bnt,'cvalue,'err) kont)
                 (('atok,'bnt,'cvalue,'err) kont)
            | AP (('atok,'bnt,'cvalue,'err) kont)
                 (('atok # locs) list)
                 ('cvalue option list)
+                ((locs # 'err) option)
                 ((locs # 'err) list)
            | Result ((('atok # locs) list, 'cvalue, 'err) pegresult)
            | Looped
 End
+
+Overload OME[local] = “optmax MAXerr”
 
 Definition coreloop_def[nocompute]:
   coreloop G =
    OWHILE (λs. case s of Result _ => F
                        | _ => T)
           (λs. case s of
-                   EV (empty v) i r errs k fk => AP k i (SOME v::r) errs
-                 | EV (any tf) i r errs k fk =>
+                   EV (empty v) i r eo errs k fk => AP k i (SOME v::r) eo errs
+                 | EV (any tf) i r eo errs k fk =>
                    (case i of
-                        [] => AP fk i r ((sloc i, G.anyEOF)::errs)
-                      | h::t => AP k t (SOME (tf h) :: r) errs)
-                 | EV (tok P tf2) i r errs k fk =>
+                        [] => let err = (sloc i, G.anyEOF)
+                              in
+                                AP fk i r (OME (SOME err) eo) (err::errs)
+                      | h::t => AP k t (SOME (tf h) :: r) eo errs)
+                 | EV (tok P tf2) i r eo errs k fk =>
                    (case i of
-                        [] => AP fk i r ((sloc i, G.tokEOF)::errs)
+                        [] => let err = (sloc i, G.tokEOF)
+                              in
+                                AP fk i r (OME (SOME err) eo) (err::errs)
                       | h::t => if P (FST h) then
-                                  AP k t (SOME (tf2 h)::r) errs
-                                else AP fk i r ((sloc i, G.tokFALSE)::errs))
-                 | EV (nt n tf3) i r errs k fk =>
+                                  AP k t (SOME (tf2 h)::r) eo errs
+                                else let err = (sloc i, G.tokFALSE)
+                                     in AP fk i r (OME (SOME err) eo)
+                                           (err::errs))
+                 | EV (nt n tf3) i r eo errs k fk =>
                    if n ∈ FDOM G.rules then
-                     EV (G.rules ' n) i r errs (appf1 tf3 k) fk
+                     EV (G.rules ' n) i r eo errs (appf1 tf3 k) fk
                    else
                      Looped
-                 | EV (seq e1 e2 f) i r errs k fk =>
-                     EV e1 i r errs
+                 | EV (seq e1 e2 f) i r eo errs k fk =>
+                     EV e1 i r eo errs
                         (ksym e2 (appf2 f k) (returnTo i r fk))
                         fk
-                 | EV (choice e1 e2 cf) i r errs k fk =>
-                     EV e1 i r errs
+                 | EV (choice e1 e2 cf) i r eo errs k fk =>
+                     EV e1 i r eo errs
                         (appf1 (cf o INL) k)
                         (returnTo i r
                          (ksym e2
                           (dropErr (appf1 (cf o INR) k))
                           (cmpErrs fk)))
-                 | EV (rpt e lf) i r errs k fk =>
-                     EV e i (NONE::r) errs (listsym e lf k) (poplist lf k)
-                 | EV (not e v) i r errs k fk =>
-                     EV e i r errs
-                        (returnTo i r (addErr (sloc i) G.notFAIL fk))
-                        (returnTo i (SOME v::r) (dropErr k))
-                 | EV (error err) i r errs k fk =>
-                     AP fk i r ((sloc i, err) :: errs)
-                 | AP done i [] _ => Looped
-                 | AP done i (NONE :: t) _ => Looped
-                 | AP done i (SOME rv :: _) _ => Result (Success i rv)
-                 | AP failed i r [] => Looped
-                 | AP failed i r ((l,e)::_) => Result (Failure l e)
-                 | AP (dropErr _) i r [] => Looped
-                 | AP (dropErr k) i r (_ :: t) => AP k i r t
-                 | AP (addErr l e k) i r errs => AP k i r ((l,e)::errs)
-                 | AP (cmpErrs k) i r [] => Looped
-                 | AP (cmpErrs k) i r [_] => Looped
-                 | AP (cmpErrs k) i r ((l2,er2)::(l1,er1)::rest) =>
-                     AP k i r ((if locsle l1 l2 then (l2,er2) else (l1,er1)) ::
-                               rest)
-                 | AP (ksym e k fk) i r errs => EV e i r errs k fk
-                 | AP (appf1 f1 k) i (SOME v :: r) errs =>
-                     AP k i (SOME (f1 v) :: r) errs
-                 | AP (appf1 _ _) _ _ _ => Looped
-                 | AP (appf2 f2 k) i (SOME v1 :: SOME v2 :: r) errs =>
-                     AP k i (SOME (f2 v2 v1) :: r) errs
-                 | AP (appf2 _ _) _ _ _ => Looped
-                 | AP (returnTo i r k) i' r' errs => AP k i r errs
-                 | AP (listsym e f k) i r errs =>
-                     EV e i r errs (listsym e f k) (poplist f k)
-                 | AP (poplist f k) i r [] => Looped
-                 | AP (poplist f k) i r (_ :: errs) =>
-                     AP k i (poplistval f r) errs
+                 | EV (rpt e lf) i r eo errs k fk =>
+                     EV e i (NONE::r) eo errs (listsym e lf k) (poplist lf k)
+                 | EV (not e v) i r eo errs k fk =>
+                     EV e i r eo errs
+                        (restoreEO eo $
+                           returnTo i r (addErr (sloc i) G.notFAIL fk))
+                        (restoreEO eo $ returnTo i (SOME v::r) (dropErr k))
+                 | EV (error err) i r eo errs k fk =>
+                     let err = (sloc i, err)
+                     in
+                       AP fk i r (OME (SOME err) eo) (err :: errs)
+                 | AP done i [] _ _ => Looped
+                 | AP done i (NONE :: t) _ _ => Looped
+                 | AP done i (SOME rv :: _) eo _ => Result (Success i rv eo)
+                 | AP failed i r _ [] => Looped
+                 | AP failed i r _ ((l,e)::_) => Result (Failure l e)
+                 | AP (dropErr _) i r _ [] => Looped
+                 | AP (dropErr k) i r eo (_ :: t) => AP k i r eo t
+                 | AP (addErr l e k) i r eo errs =>
+                     AP k i r (OME (SOME (l,e)) eo) ((l,e)::errs)
+                 | AP (cmpErrs k) i r _ [] => Looped
+                 | AP (cmpErrs k) i r _ [_] => Looped
+                 | AP (cmpErrs k) i r eo ((l2,er2)::(l1,er1)::rest) =>
+                     AP k i r eo
+                        ((if locsle l1 l2 then (l2,er2) else (l1,er1)) ::
+                         rest)
+                 | AP (ksym e k fk) i r eo errs => EV e i r eo errs k fk
+                 | AP (appf1 f1 k) i (SOME v :: r) eo errs =>
+                     AP k i (SOME (f1 v) :: r) eo errs
+                 | AP (appf1 _ _) _ _ _ _ => Looped
+                 | AP (appf2 f2 k) i (SOME v1 :: SOME v2 :: r) eo errs =>
+                     AP k i (SOME (f2 v2 v1) :: r) eo errs
+                 | AP (appf2 _ _) _ _ _ _ => Looped
+                 | AP (returnTo i r k) i' r' eo errs => AP k i r eo errs
+                 | AP (restoreEO eo k) i r eo' errs => AP k i r eo errs
+                 | AP (listsym e f k) i r eo errs =>
+                     EV e i r eo errs (listsym e f k) (poplist f k)
+                 | AP (poplist f k) i r eo [] => Looped
+                 | AP (poplist f k) i r eo (e :: errs) =>
+                     AP k i (poplistval f r) (OME (SOME e) eo) errs
                  | Result r => Result r
                  | Looped => Looped)
 End
 
 Definition peg_exec_def[nocompute]:
-  peg_exec (G:('atok,'bnt,'cvalue,'err)peg) e i r errs k fk =
-    case coreloop G (EV e i r errs k fk) of
+  peg_exec (G:('atok,'bnt,'cvalue,'err)peg) e i r eo errs k fk =
+    case coreloop G (EV e i r eo errs k fk) of
         SOME r => r
       | NONE => Looped
 End
 
 Definition applykont_def[nocompute]:
-  applykont G k i r errs =
-  case coreloop G (AP k i r errs) of
+  applykont G k i r eo errs =
+  case coreloop G (AP k i r eo errs) of
     SOME r => r
   | NONE => Looped
 End
@@ -149,6 +166,26 @@ Proof
   simp[arithmeticTheory.FUNPOW]
 QED
 
+Theorem coreloop_LET[local]:
+  coreloop G (LET f x) = LET (coreloop G o f) x
+Proof
+  simp[]
+QED
+
+Theorem option_case_LET[local]:
+  option_CASE (LET f x) Looped sf =
+  LET (option_CASE o f) x Looped sf
+Proof
+  REWRITE_TAC[combinTheory.GEN_LET_RAND]
+QED
+
+Theorem LET_RATOR[local]:
+  LET f x Looped = LET (flip f Looped) x ∧
+  LET g y (λr: (α,β,γ,δ)evalcase. r) = LET (flip g (λr. r)) y
+Proof
+  simp[]
+QED
+
 fun inst_thm def (qs,ths) =
     def |> SIMP_RULE (srw_ss()) [Once whileTheory.OWHILE_THM, coreloop_def]
         |> SPEC_ALL
@@ -156,6 +193,9 @@ fun inst_thm def (qs,ths) =
         |> SIMP_RULE (srw_ss()) []
         |> SIMP_RULE bool_ss (GSYM peg_exec_def :: GSYM coreloop_def ::
                               GSYM applykont_def :: coreloop_result ::
+                              coreloop_LET :: combinTheory.o_ABS_R ::
+                              option_case_LET :: LET_RATOR ::
+                              combinTheory.C_ABS_L ::
                               optionTheory.option_case_def :: ths)
 
 val peg_exec_thm = inst_thm peg_exec_def
@@ -164,6 +204,7 @@ val option_case_COND = prove(
   ``option_CASE (if P then Q else R) n s =
     if P then option_CASE Q n s else option_CASE R n s``,
   SRW_TAC [][]);
+
 
 val better_peg_execs =
     map peg_exec_thm [([`e` |-> `empty v`], []),
@@ -195,41 +236,54 @@ val better_apply =
          ([`k` |-> `failed`, ‘errs’ |-> ‘(l,e)::errs’], []),
          ([`k` |-> `poplist f k`, ‘errs’ |-> ‘[]’], []),
          ([`k` |-> `poplist f k`, ‘errs’ |-> ‘le::errs’], []),
-         ([`k` |-> `listsym e f k`], [])]
+         ([`k` |-> `listsym e f k`], []),
+         ([‘k’ |-> ‘restoreEO eo0 k’], [])
+         ]
 
 Theorem peg_nt_thm =
   peg_exec_thm ([`e` |-> `nt n nfn`], [Once COND_RAND, option_case_COND])
   |> SIMP_RULE (srw_ss()) []
 
-Theorem peg_exec_thm = LIST_CONJ better_peg_execs
+Theorem peg_exec_thm[compute] = LIST_CONJ better_peg_execs
 
-Theorem applykont_thm = LIST_CONJ better_apply
-
-val _ = computeLib.add_persistent_funs ["peg_exec_thm", "applykont_thm"]
+Theorem applykont_thm[compute] = LIST_CONJ better_apply
 
 val _ = app (fn s => ignore (remove_ovl_mapping s {Thy = "pegexec", Name = s}))
             ["AP", "EV"]
 
+Theorem OME_NONE[local,simp]:
+  OME NONE eo = eo ∧ OME eo NONE = eo
+Proof
+  Cases_on ‘eo’ >> simp[optmax_def]
+QED
+
 Theorem exec_correct0[local]:
   (∀i e r.
      peg_eval G (i,e) r ⇒
-     (∀j v k fk stk errs.
-        r = Success j v ⇒
-        peg_exec G e i stk errs k fk = applykont G k j (SOME v :: stk) errs) ∧
-     (∀k fk stk errs l err.
+     (∀j v eo eo0 k fk stk errs.
+        r = Success j v eo ⇒
+        peg_exec G e i stk eo0 errs k fk =
+        applykont G k j (SOME v :: stk) (OME eo0 eo) errs) ∧
+     (∀k fk stk eo errs l err.
         r = Failure l err ⇒
-        peg_exec G e i stk errs k fk = applykont G fk i stk ((l,err)::errs))) ∧
-  (∀i e j vlist.
-     peg_eval_list G (i,e) (j,vlist) ⇒
-     ∀f k stk errs vs.
+        peg_exec G e i stk eo errs k fk =
+        applykont G fk i stk (OME eo (SOME (l,err))) ((l,err)::errs))) ∧
+  (∀i e j vlist err.
+     peg_eval_list G (i,e) (j,vlist,err) ⇒
+     ∀f k stk eo errs vs.
        peg_exec G e i (MAP SOME vs ++ (NONE::stk))
+                eo
                 errs
                 (listsym e f k)
                 (poplist f k) =
-       applykont G k j (SOME (f (REVERSE vs ++ vlist)) :: stk) errs)
+       applykont G k j (SOME (f (REVERSE vs ++ vlist)) :: stk)
+                 (OME eo (SOME err))
+                 errs)
 Proof
   ho_match_mp_tac peg_eval_strongind' >>
   simp[peg_exec_thm, peg_nt_thm, applykont_thm, FORALL_result, AllCaseEqs()] >>
+
+  simp[peg_exec_thm, FORALL_result, applykont_thm]
   rpt conj_tac
   >- ((* locsle comparison *) rw[])
   >- ((* rpt - no elements succeed *)
