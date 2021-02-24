@@ -2,6 +2,7 @@ open HolKernel Parse boolLib bossLib
 open boolSimps
 open grammarTheory finite_mapTheory
 open locationTheory
+open listTheory rich_listTheory
 
 val _ = new_theory "peg"
 
@@ -14,8 +15,8 @@ val _ = new_theory "peg"
 Datatype:
   pegsym =
     empty 'c
-  | any  (('a # locs) -> 'c)
-  | tok ('a -> bool) (('a # locs) -> 'c)
+  | any  ('a -> 'c)
+  | tok ('a -> bool) ('a -> 'c)
   | nt ('b inf) ('c -> 'c)
   | seq pegsym pegsym ('c  -> 'c -> 'c)
   | choice pegsym pegsym ('c + 'c -> 'c)
@@ -74,49 +75,43 @@ Definition optmax_def:
   optmax f (SOME x) (SOME y) = SOME (f x y)
 End
 
-
-
 Theorem result_cases[local] = TypeBase.nchotomy_of “:(α,β,γ) pegresult”
 
+Overload EOF[local] = “Locs EOFpt EOFpt”
 Definition sloc_def:
-  sloc [] = Locs end_locn end_locn ∧
+  sloc [] = EOF ∧
   sloc (h::t) = SND h
 End
 
 Theorem sloc_thm[simp]:
-  sloc [] = Locs end_locn end_locn ∧
+  sloc [] = EOF ∧
   sloc ((c,l) :: t) = l
 Proof
   simp[sloc_def]
 QED
 
+
 (* Option type should be replaced with sum type (loc. for NONE *)
 Inductive peg_eval:
 [~empty:]
   (∀s c. peg_eval G (s, empty c) (Success s c NONE)) ∧
-[~nt_success:]
-  (∀n r s f c.
-       n ∈ FDOM G.rules ∧ peg_eval G (s, G.rules ' n) (Success r c eo) ⇒
-       peg_eval G (s, nt n f) (Success r (f c) eo)) ∧
-[~nt_failure:]
-  (∀n s f fe fl.
-       n ∈ FDOM G.rules ∧ peg_eval G (s, G.rules ' n) (Failure fl fe) ⇒
-       peg_eval G (s, nt n f) (Failure fl fe)) ∧
+[~nt:]
+  (∀n s f res.
+       n ∈ FDOM G.rules ∧ peg_eval G (s, G.rules ' n) res ⇒
+       peg_eval G (s, nt n f) (resultmap f res)) ∧
 [~any_success:]
-  (∀h t f. peg_eval G (h::t, any f) (Success t (f h) NONE)) ∧
+  (∀h t f. peg_eval G (h::t, any f) (Success t (f (FST h)) NONE)) ∧
 [~any_failure:]
-  (∀f. peg_eval G
-                ([] : ('a # locs) list, any f)
-                (Failure (sloc ([] : ('a # locs) list)) G.anyEOF)) ∧
+  (∀f. peg_eval G ([], any f) (Failure EOF G.anyEOF)) ∧
 [~tok_success:]
-  (∀e t P f. P (FST e) ⇒ peg_eval G (e::t, tok P f) (Success t (f e) NONE)) ∧
-[~tok_failureF:]
   (∀e t P f.
-     ¬P (FST e) ⇒
-     peg_eval G (e::t, tok P f) (Failure (sloc (e::t)) G.tokFALSE)) ∧
+     P (FST e) ⇒ peg_eval G (e::t, tok P f) (Success t (f (FST e)) NONE)) ∧
+[~tok_failureF:]
+  (∀h t P f.
+     ¬P (FST h) ⇒
+     peg_eval G (h::t, tok P f) (Failure (SND h) G.tokFALSE)) ∧
 [~tok_failureEOF:]
-  (∀P f. peg_eval G ([], tok P f)
-                  (Failure (sloc ([] : ('a # locs) list)) G.tokEOF)) ∧
+  (∀P f. peg_eval G ([], tok P f) (Failure EOF G.tokEOF)) ∧
 [~not_success:]
   (∀e s c fr.
      peg_eval G (s, e) fr ∧ isFailure fr ⇒
@@ -126,19 +121,19 @@ Inductive peg_eval:
      peg_eval G (s, e) r ∧ isSuccess r ⇒
      peg_eval G (s, not e c) (Failure (sloc s) G.notFAIL))  ∧
 [~seq_fail1:]
-  (∀e1 e2 s f fr.
-     peg_eval G (s, e1) fr ∧ isFailure fr ⇒ peg_eval G (s, seq e1 e2 f) fr)  ∧
+  (∀e1 e2 s f fl fe.
+     peg_eval G (s, e1) (Failure fl fe) ⇒
+     peg_eval G (s, seq e1 e2 f) (Failure fl fe))  ∧
 [~seq_fail2:]
-  (∀e1 e2 s0 eo s1 c1 fl fe.
+  (∀e1 e2 f s0 eo s1 c1 fl fe.
      peg_eval G (s0, e1) (Success s1 c1 eo) ∧
      peg_eval G (s1, e2) (Failure fl fe) ⇒
      peg_eval G (s0, seq e1 e2 f) (Failure fl fe)) ∧
 [~seq_success:]
-  (∀e1 e2 s0 s1 s2 c1 c2 f.
+  (∀e1 e2 s0 s1 s2 c1 c2 f eo1 eo2.
      peg_eval G (s0, e1) (Success s1 c1 eo1) ∧
      peg_eval G (s1, e2) (Success s2 c2 eo2) ⇒
-     peg_eval G (s0, seq e1 e2 f)
-              (Success s2 (f c1 c2) (optmax MAXerr eo1 eo2))) ∧
+     peg_eval G (s0, seq e1 e2 f) (Success s2 (f c1 c2) eo2)) ∧
 [~choice_fail:]
   (∀e1 e2 s f fl1 fe1 fl2 fe2.
      peg_eval G (s, e1) (Failure fl1 fe1) ∧
@@ -158,7 +153,7 @@ Inductive peg_eval:
 [~error:]
   (∀e s. peg_eval G (s, error e) (Failure (sloc s) e)) ∧
 [~rpt:]
-  (∀e f s s1 list.
+  (∀e f s s1 list err.
      peg_eval_list G (s, e) (s1,list,err) ⇒
      peg_eval G (s, rpt e f) (Success s1 (f list) (SOME err))) ∧
 [~list_nil:]
@@ -175,8 +170,9 @@ val fprod = HO_REWR_CONV pairTheory.FORALL_PROD
 Theorem peg_eval_strongind' =
   peg_eval_strongind
     |> Q.SPECL [`G`, `\es0 r. P1 (FST es0) (SND es0) r`,
-                `\es0 sr. P2 (FST es0) (SND es0) (FST sr) (FST $ SND sr)
-                (SND $ SND sr)`]
+                ‘\es0 sr. P2 (FST es0) (SND es0) (FST sr)
+                             (FST $ SND sr)
+                             (SND $ SND sr)’]
     |> SIMP_RULE (srw_ss()) []
     |> UNDISCH |> CONJ_PAIR
     |> (SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD] ##
@@ -192,26 +188,47 @@ Proof
   Cases_on ‘fle’ >> simp[]
 QED
 
-open rich_listTheory
+Theorem IS_PREFIX_MEM:
+  l1 ≼ l2 ∧ MEM e l1 ⇒ MEM e l2
+Proof
+  simp[IS_PREFIX_APPEND, PULL_EXISTS]
+QED
+
 Theorem peg_eval_suffix0[local]:
-  (∀s0 e sr. peg_eval G (s0,e) sr ⇒
-             ∀s r eo. sr = Success s r eo ⇒ IS_SUFFIX s0 s) ∧
-  ∀s0 e s rl err. peg_eval_list G (s0,e) (s,rl,err) ⇒ IS_SUFFIX s0 s
+  (∀s0 e sr.
+     peg_eval G (s0,e) sr ⇒
+     (∀s r eo.
+       sr = Success s r eo ⇒ IS_SUFFIX s0 s) ∧
+     (∀fl fe. sr = Failure fl fe ∧ fl ≠ EOF ⇒ MEM fl (MAP SND s0))) ∧
+  ∀s0 e s rl err.
+    peg_eval_list G (s0,e) (s,rl,err) ⇒ IS_SUFFIX s0 s
 Proof
   HO_MATCH_MP_TAC peg_eval_strongind' THEN
   SRW_TAC [][IS_SUFFIX_compute, IS_PREFIX_APPEND3, IS_PREFIX_REFL] THEN
-  METIS_TAC [IS_PREFIX_TRANS]
+  gvs[resultmap_EQ_Success] >~
+  [‘UNCURRY Failure (MAXerr (fl1,_) (fl2,_))’]
+  >- (Cases_on ‘locsle fl1 fl2’ >> gvs[MAXerr_def]) >~
+  [‘isSuccess sr’, ‘MEM (sloc s0) (MAP SND s0)’]
+  >- (Cases_on ‘s0’ >> gvs[sloc_def]) >~
+  [‘sloc s0 ≠ EOF’, ‘MEM (sloc s0) (MAP SND s0)’]
+  >- (Cases_on ‘s0’ >> gvs[sloc_def]) >~
+  [‘MEM fl (MAP SND s0)’, ‘REVERSE s1 ≼ REVERSE s0’]
+  >- (gvs[MEM_MAP] >>
+      metis_tac[IS_PREFIX_MEM, MEM_REVERSE]) >>
+  metis_tac [IS_PREFIX_TRANS]
 QED
 
 (* Theorem 3.1 *)
 Theorem peg_eval_suffix =
-  peg_eval_suffix0 |> SIMP_RULE (srw_ss() ++ DNF_ss) []
+  peg_eval_suffix0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [GSYM CONJ_ASSOC]
 
 (* Theorem 3.2 *)
 Theorem peg_deterministic:
-  (∀s0 e sr. peg_eval G (s0,e) sr ⇒ ∀sr'. peg_eval G (s0,e) sr' ⇔ sr' = sr) ∧
-  ∀s0 e s rl err. peg_eval_list G (s0,e) (s,rl,err) ⇒
-                  ∀srl'. peg_eval_list G (s0,e) srl' ⇔ srl' = (s,rl,err)
+  (∀s0 e sr. peg_eval G (s0,e) sr ⇒
+               ∀sr'. peg_eval G (s0,e) sr' ⇔ sr' = sr) ∧
+  ∀s0 e s rl err.
+    peg_eval_list G (s0,e) (s,rl,err) ⇒
+    ∀srl'. peg_eval_list G (s0,e) srl' ⇔ srl' = (s,rl,err)
 Proof
   HO_MATCH_MP_TAC peg_eval_strongind' THEN SRW_TAC [][] THEN
   ONCE_REWRITE_TAC [peg_eval_cases] THEN SRW_TAC [][] THEN
@@ -285,11 +302,13 @@ Proof
 QED
 
 Theorem peg_eval_suffix':
-peg_eval G (s0,e) (Success s c eo) ⇒
-        s0 = s ∨ IS_SUFFIX s0 s ∧ LENGTH s < LENGTH s0
+  peg_eval G (s0,e) (Success s c eo) ⇒
+  s0 = s ∨ IS_SUFFIX s0 s ∧ LENGTH s < LENGTH s0
 Proof
-  strip_tac >> imp_res_tac peg_eval_suffix >> Cases_on `s0 = s` >- simp[] >>
-  fs[IS_SUFFIX_compute] >>
+  strip_tac >>
+  drule_then strip_assume_tac (cj 1 peg_eval_suffix) >>
+  Cases_on `s0 = s` >> gvs[] >>
+  gvs[IS_SUFFIX_compute] >>
   imp_res_tac IS_PREFIX_LENGTH >> fs[] >>
   qsuff_tac `LENGTH s ≠ LENGTH s0` >- (strip_tac >> decide_tac) >>
   strip_tac >>
@@ -297,10 +316,12 @@ Proof
 QED
 
 Theorem peg_eval_list_suffix':
-peg_eval_list G (s0, e) (s,rl,err) ⇒
-        s0 = s ∨ IS_SUFFIX s0 s ∧ LENGTH s < LENGTH s0
+  peg_eval_list G (s0, e) (s,rl,err) ⇒
+  s0 = s ∨ IS_SUFFIX s0 s ∧ LENGTH s < LENGTH s0
 Proof
-  strip_tac >> imp_res_tac peg_eval_suffix >> Cases_on `s0 = s` >- simp[] >>
+  strip_tac >>
+  drule_then strip_assume_tac (cj 3 peg_eval_suffix) >>
+  Cases_on `s0 = s` >> gvs[] >>
   fs[IS_SUFFIX_compute] >> imp_res_tac IS_PREFIX_LENGTH >> fs[] >>
   qsuff_tac `LENGTH s ≠ LENGTH s0` >- (strip_tac >> decide_tac) >> strip_tac >>
   metis_tac [IS_PREFIX_LENGTH_ANTI, LENGTH_REVERSE, REVERSE_REVERSE]
@@ -322,32 +343,31 @@ Proof
 QED
 
 Theorem lemma4_1a0[local]:
-  (∀s0 e r. peg_eval G (s0, e) r ⇒
-            (∀c eo. r = Success s0 c eo ⇒ peg0 G e) ∧
-            (isFailure r ⇒ pegfail G e) ∧
-            (∀s c eo. r = Success s c eo ∧ LENGTH s < LENGTH s0 ⇒ peggt0 G e)) ∧
-  (∀s0 e s rl err. peg_eval_list G (s0,e) (s,rl,err) ⇒
-                   (s0 = s ⇒ pegfail G e) ∧
-                   (LENGTH s < LENGTH s0 ⇒ peggt0 G e))
+  (∀s0 e r.
+     peg_eval G (s0, e) r ⇒
+     (∀c eo. r = Success s0 c eo ⇒ peg0 G e) ∧
+     (isFailure r ⇒ pegfail G e) ∧
+     (∀s c eo. r = Success s c eo ∧ LENGTH s < LENGTH s0 ⇒ peggt0 G e)) ∧
+  (∀s0 e s rl err.
+     peg_eval_list G (s0,e) (s,rl,err) ⇒
+     (s0 = s ⇒ pegfail G e) ∧
+     (LENGTH s < LENGTH s0 ⇒ peggt0 G e))
 Proof
-  ho_match_mp_tac peg_eval_strongind' >> simp[peg0_rules, FORALL_result] >>
+  ho_match_mp_tac peg_eval_strongind' >>
+  simp[peg0_rules, FORALL_result, pairTheory.FORALL_PROD] >>
   rpt conj_tac
-  >- (rpt strip_tac >> imp_res_tac peg_eval_suffix' >> fs[peg0_rules])
+  >- (rpt strip_tac >> imp_res_tac peg_eval_suffix' >> gvs[peg0_rules])
   >- (rpt strip_tac >> rule_match peg0_rules >>
-      imp_res_tac peg_eval_suffix' >> fs[] >> rw[] >>
-      full_simp_tac (srw_ss() ++ ARITH_ss) [])
-  >- (rpt strip_tac >> rule_match peg0_rules >>
-      imp_res_tac peg_eval_suffix' >> fs[] >> rw[] >>
-      full_simp_tac (srw_ss() ++ ARITH_ss) []) >>
+      imp_res_tac peg_eval_suffix' >> gvs[])
+  >- (rpt strip_tac >> rule_match peg0_rules >> gvs[] >>
+      imp_res_tac peg_eval_suffix' >> gvs[]) >>
   rpt strip_tac
   >- (first_x_assum match_mp_tac >> rw[] >>
       imp_res_tac peg_eval_suffix >> fs[IS_SUFFIX_compute] >>
       imp_res_tac IS_PREFIX_LENGTH >> fs[] >>
-      `LENGTH s = LENGTH s0'` by decide_tac >>
-      metis_tac [IS_PREFIX_LENGTH_ANTI, LENGTH_REVERSE, REVERSE_REVERSE]) >>
-  imp_res_tac peg_eval_suffix' >- rw[] >>
-  imp_res_tac peg_eval_list_suffix' >- rw[] >>
-  asm_simp_tac (srw_ss() ++ ARITH_ss) []
+      imp_res_tac IS_PREFIX_ANTISYM >> fs[]) >>
+  imp_res_tac peg_eval_suffix' >- gvs[] >>
+  imp_res_tac peg_eval_list_suffix' >> gvs[]
 QED
 
 Theorem lemma4_1a = lemma4_1a0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO]
@@ -423,7 +443,6 @@ QED
 
 val pair_CASES = pairTheory.pair_CASES
 val option_CASES = optionTheory.option_nchotomy
-val list_CASES = listTheory.list_CASES
 
 Theorem reducing_peg_eval_makes_list[local]:
   (∀s. LENGTH s < n ⇒ ∃r. peg_eval G (s, e) r) ∧ ¬peg0 G e ∧ LENGTH s0 < n ⇒
@@ -437,7 +456,8 @@ Proof
   >- metis_tac [peg_eval_list_nil] >>
   `s0 ≠ s1` by metis_tac [lemma4_1a] >>
   `LENGTH s1 < LENGTH s0` by metis_tac [peg_eval_suffix'] >>
-  metis_tac [peg_eval_rules]
+  irule_at Any peg_eval_list_cons >> first_x_assum $ irule_at Any >>
+  metis_tac []
 QED
 
 Theorem peg_eval_total:
@@ -455,14 +475,14 @@ Proof
       >- (strip_tac >>
           first_x_assum $ drule_then
                         $ qx_choose_then ‘result’ strip_assume_tac >>
-          Cases_on ‘result’ >>
-          metis_tac [peg_eval_rules]) >>
+          metis_tac [peg_eval_nt]) >>
       asm_simp_tac (srw_ss() ++ DNF_ss) [Gexprs_def, FRANGE_DEF] >>
       metis_tac [subexprs_included])
-  >- (* empty *) metis_tac [peg_eval_rules]
-  >- (* any *) metis_tac [peg_eval_rules, list_CASES]
-  >- (* tok *) metis_tac [peg_eval_rules, list_CASES]
-  >- (* error *) metis_tac[peg_eval_rules]
+  >- (* empty *) metis_tac [peg_eval_empty]
+  >- (* any *) metis_tac [peg_eval_any_success, peg_eval_any_failure,list_CASES]
+  >- (* tok *) metis_tac [peg_eval_tok_success, peg_eval_tok_failureF,
+                          peg_eval_tok_failureEOF, list_CASES]
+  >- (* error *) metis_tac[peg_eval_error]
   >- (* not *) metis_tac [peg_eval_not_success, result_cases, IN_Gexprs_E,
                           isFailure_def, isSuccess_def, peg_eval_not_failure]
   >- ((* seq *) rename [‘seq e1 e2 f ∈ Gexprs G’] >>
@@ -520,10 +540,9 @@ val checkAhead_def = Define`
 
 Theorem peg_eval_seq_SOME:
   peg_eval G (i0, seq s1 s2 f) (Success i r eo) ⇔
-    ∃i1 r1 r2 eo1 eo2.
+    ∃i1 r1 r2 eo1.
       peg_eval G (i0, s1) (Success i1 r1 eo1) ∧
-      peg_eval G (i1, s2) (Success i r2 eo2) ∧ (r = f r1 r2) /\
-      eo = optmax MAXerr eo1 eo2
+      peg_eval G (i1, s2) (Success i r2 eo) ∧ r = f r1 r2
 Proof simp[Once peg_eval_cases] >> metis_tac[]
 QED
 
@@ -542,8 +561,8 @@ Theorem peg_eval_tok_NONE =
 
 Theorem peg_eval_tok_SOME:
   peg_eval G (i0, tok P f) (Success i r eo) ⇔
-  ∃h. P (FST h) ∧ i0 = h::i ∧ r = f h ∧ eo = NONE
-Proof simp[Once peg_eval_cases] >> metis_tac[]
+  ∃h l. P h ∧ i0 = (h,l)::i ∧ r = f h ∧ eo = NONE
+Proof simp[Once peg_eval_cases, pairTheory.EXISTS_PROD] >> metis_tac[]
 QED
 
 Theorem peg_eval_empty[simp]: peg_eval G (i, empty r) x ⇔ x = Success i r NONE
@@ -554,7 +573,7 @@ Theorem peg_eval_NT_SOME:
   peg_eval G (i0,nt N f) (Success i r eo) ⇔
   ∃r0. r = f r0 ∧ N ∈ FDOM G.rules ∧
        peg_eval G (i0,G.rules ' N) (Success i r0 eo)
-Proof simp[Once peg_eval_cases]
+Proof simp[Once peg_eval_cases, resultmap_EQ_Success, PULL_EXISTS]
 QED
 
 Theorem peg_eval_choice:

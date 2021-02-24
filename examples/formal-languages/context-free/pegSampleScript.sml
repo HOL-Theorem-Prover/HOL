@@ -19,7 +19,7 @@ End
 
 Type ty = “:(tok, string, expr, string) pegsym”
 Definition lift_number_def:
-  lift_number (Number n,l) = XN n
+  lift_number (Number n) = XN n
 End
 
 val nrule = “tok (λt. case t of Number n => T | _ => F) lift_number : ty”
@@ -100,7 +100,7 @@ Theorem sample_nts[compute] = LIST_CONJ (map mk_nt nts)
 Theorem result1 =
   time EVAL “peg_exec samplePEG (nt (INL "expr") I)
                       (map_loc [Number 1; Plus; Number 2; Times; Number 4] 0)
-                      [] []
+                      [] NONE []
                       done failed”
 
 (* As of 879f4f4, takes 0.026s *)
@@ -108,6 +108,6 @@ Theorem result2 =
   time EVAL “peg_exec samplePEG (nt (INL "expr") I)
                       (map_loc [Number 1; Plus; Number 2; Times; Number 4;
                        Times; LParen; Number 3; Plus; Number 1; RParen] 0)
-                      [] [] done failed”
+                      [] NONE [] done failed”
 
 val _ = export_theory()
