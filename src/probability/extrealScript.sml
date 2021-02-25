@@ -2554,7 +2554,7 @@ QED
 val lemma =
     SIMP_RULE real_ss [REAL_NEG_0, real_div, REAL_INV_0, POW_1, REAL_EQ_NEG]
                       (REWRITE_RULE [sum, ONE]
-				    (Q.SPECL [‘-x’, ‘1’] MCLAURIN_LN_NEG));
+                                    (Q.SPECL [‘-x’, ‘1’] MCLAURIN_LN_NEG));
 
 (* extended version of EXP_LE_X, based on MCLAURIN_LN_NEG *)
 Theorem EXP_LE_X_FULL :
