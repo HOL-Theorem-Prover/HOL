@@ -292,4 +292,10 @@ QED
 Theorem foo3 = base |> f (x + y)
                     |> g
 
+Theorem foo':
+  foo ⇒ bar
+Proof
+  tactic
+QED
+
 val _ = export_theory();
