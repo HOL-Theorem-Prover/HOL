@@ -466,7 +466,7 @@ val pos_concave_lg = store_thm
   ("pos_concave_lg",
    ``lg IN pos_concave_fn``,
    RW_TAC std_ss [lg_def, logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
-		  NOT_IN_EMPTY, GSPECIFICATION]
+                  NOT_IN_EMPTY, GSPECIFICATION]
    >> `~(ln (t * x + (1 - t) * y) / ln 2) =
        (inv (ln 2))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
    >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
@@ -477,14 +477,14 @@ val pos_concave_lg = store_thm
    >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
    >> MP_TAC pos_concave_ln
    >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
-		     NOT_IN_EMPTY, GSPECIFICATION]);
+                     NOT_IN_EMPTY, GSPECIFICATION]);
 
 (* from extra_realScript.sml of "miller" example *)
 val pos_concave_logr = store_thm
   ("pos_concave_logr",
    ``!b. 1 <= b ==> (logr b) IN pos_concave_fn``,
    RW_TAC std_ss [logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
-		  NOT_IN_EMPTY, GSPECIFICATION]
+                  NOT_IN_EMPTY, GSPECIFICATION]
    >> `~(ln (t * x + (1 - t) * y) / ln b) =
        (inv (ln b))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
    >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
@@ -495,7 +495,7 @@ val pos_concave_logr = store_thm
    >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
    >> MP_TAC pos_concave_ln
    >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
-		     NOT_IN_EMPTY, GSPECIFICATION]);
+                     NOT_IN_EMPTY, GSPECIFICATION]);
 
 (********************************************************************************************)
 
