@@ -461,6 +461,42 @@ val lg_pow = store_thm
             >> RW_TAC real_ss [LN_POS, LN_MONO_LT])
    >> RW_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_RINV]);
 
+(* from extra_realScript.sml of "miller" example *)
+val pos_concave_lg = store_thm
+  ("pos_concave_lg",
+   ``lg IN pos_concave_fn``,
+   RW_TAC std_ss [lg_def, logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
+                  NOT_IN_EMPTY, GSPECIFICATION]
+   >> `~(ln (t * x + (1 - t) * y) / ln 2) =
+       (inv (ln 2))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+   >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+   >> `t * ~(ln x / ln 2) + (1 - t) * ~(ln y / ln 2) =
+       (inv (ln 2)) * (t * ~ ln x + (1-t) * ~ln y)`  by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+   >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+   >> MATCH_MP_TAC REAL_LE_LMUL_IMP
+   >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
+   >> MP_TAC pos_concave_ln
+   >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
+                     NOT_IN_EMPTY, GSPECIFICATION]);
+
+(* from extra_realScript.sml of "miller" example *)
+val pos_concave_logr = store_thm
+  ("pos_concave_logr",
+   ``!b. 1 <= b ==> (logr b) IN pos_concave_fn``,
+   RW_TAC std_ss [logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
+                  NOT_IN_EMPTY, GSPECIFICATION]
+   >> `~(ln (t * x + (1 - t) * y) / ln b) =
+       (inv (ln b))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+   >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+   >> `t * ~(ln x / ln b) + (1 - t) * ~(ln y / ln b) =
+       (inv (ln b)) * (t * ~ ln x + (1-t) * ~ln y)`  by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+   >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+   >> MATCH_MP_TAC REAL_LE_LMUL_IMP
+   >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
+   >> MP_TAC pos_concave_ln
+   >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
+                     NOT_IN_EMPTY, GSPECIFICATION]);
+
 (********************************************************************************************)
 
 val NUM_2D_BIJ = store_thm
