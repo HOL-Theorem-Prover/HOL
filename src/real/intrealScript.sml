@@ -13,27 +13,33 @@ val _ = new_theory "intreal"
    Define the inclusion homomorphism real_of_int :int->real.
    ------------------------------------------------------------------------- *)
 
-val real_of_int = Lib.with_flag (boolLib.def_suffix, "") Define
-  `real_of_int i =
-   if i < 0 then ~(real_of_num (Num (~i))) else real_of_num (Num i)`
+Definition real_of_int:
+  real_of_int i =
+  if i < 0 then ~(real_of_num (Num (~i))) else real_of_num (Num i)
+End
 
-val real_of_int_def = save_thm("real_of_int_def", real_of_int);
+Theorem real_of_int_def = real_of_int;
 
 (* -------------------------------------------------------------------------
    Floor and ceiling (ints)
    ------------------------------------------------------------------------- *)
 
-val INT_FLOOR_def = zDefine `INT_FLOOR x = LEAST_INT i. x < real_of_int (i + 1)`
-val INT_CEILING_def = zDefine `INT_CEILING x = LEAST_INT i. x <= real_of_int i`
+Definition INT_FLOOR_def[nocompute]:
+  INT_FLOOR x = LEAST_INT i. x < real_of_int (i + 1)
+End
+Definition INT_CEILING_def[nocompute]:
+  INT_CEILING x = LEAST_INT i. x <= real_of_int i
+End
 
-val _ = Parse.overload_on ("flr", ``INT_FLOOR``)
-val _ = Parse.overload_on ("clg", ``INT_CEILING``)
+Overload flr = “INT_FLOOR”
+Overload clg = “INT_CEILING”
 
 (* -------------------------------------------------------------------------
    is_int
    ------------------------------------------------------------------------- *)
 
-val is_int_def = Define `is_int (x:real) = (x = real_of_int (INT_FLOOR x))`
+Definition is_int_def: is_int (x:real) <=> x = real_of_int (INT_FLOOR x)
+End
 
 (* -------------------------------------------------------------------------
    Theorems
@@ -408,5 +414,98 @@ val real_of_int_11 = store_thm("real_of_int_11[simp]",
 val real_of_int_le = store_thm("real_of_int_le[simp]",
   “real_of_int m <= real_of_int n <=> m <= n”,
   simp[realTheory.REAL_LE_LT, integerTheory.INT_LE_LT]);
+
+Theorem INT_FLOOR_MONO:
+  x < y ⇒ INT_FLOOR x <= INT_FLOOR y
+Proof
+  CCONTR_TAC >> gs[integerTheory.INT_NOT_LE] >>
+  ‘flr y + 1i <= flr x’ by simp[GSYM integerTheory.INT_LT_LE1] >>
+  ‘y < real_of_int (flr y + 1)’ by simp[INT_FLOOR_BOUNDS] >>
+  ‘real_of_int (flr x) <= x’ by simp[INT_FLOOR_BOUNDS] >>
+  metis_tac[realTheory.REAL_LET_TRANS, realTheory.REAL_LTE_TRANS,
+            realTheory.REAL_LT_TRANS,
+            real_of_int_le, realTheory.REAL_LT_REFL]
+QED
+
+Theorem INT_FLOOR_SUCa[local]:
+  INT_FLOOR r + 1 <= INT_FLOOR (r + 1)
+Proof
+  CCONTR_TAC >> gs[integerTheory.INT_NOT_LE] >>
+  ‘INT_FLOOR (r + 1) + 1 <= INT_FLOOR r + 1’ by gs[integerTheory.INT_LT_LE1] >>
+  ‘real_of_int (flr r) + 1 <= r + 1’ by simp[INT_FLOOR_BOUNDS] >>
+  ‘r + 1 < real_of_int (flr (r + 1) + 1)’ by simp[INT_FLOOR_BOUNDS] >>
+  ‘real_of_int(flr (r + 1) + 1) <= real_of_int (flr r + 1)’ by simp[] >>
+  ‘r + 1 < real_of_int (flr r + 1)’ by metis_tac[realTheory.REAL_LTE_TRANS] >>
+  metis_tac[real_of_int_num, realTheory.REAL_LTE_TRANS, realTheory.REAL_LT_REFL,
+            real_of_int_add]
+QED
+
+Theorem INT_FLOOR_SUCb[local]:
+  INT_FLOOR (r + 1) <= INT_FLOOR r + 1
+Proof
+  CCONTR_TAC >> gs[integerTheory.INT_NOT_LE] >>
+  qabbrev_tac ‘i = (flr r:int) + 1’ >> qabbrev_tac ‘j:int = flr (r + 1)’ >>
+  ‘i + 1 <= j’ by gs[integerTheory.INT_LT_LE1] >>
+  ‘r < real_of_int i’ by simp[INT_FLOOR_BOUNDS, Abbr‘i’] >>
+  ‘real_of_int j <= r + 1’ by simp[INT_FLOOR_BOUNDS, Abbr‘j’] >>
+  ‘r + 1 < real_of_int j’
+    by (irule realTheory.REAL_LTE_TRANS >>
+        irule_at Any (iffRL real_of_int_le) >> first_assum $ irule_at Any >>
+        simp[]) >>
+  metis_tac[realTheory.REAL_LTE_TRANS, realTheory.REAL_LT_REFL]
+QED
+
+Theorem INT_FLOOR_SUC:
+  INT_FLOOR (x + 1) = INT_FLOOR x + 1
+Proof
+  simp[GSYM integerTheory.INT_LE_ANTISYM, INT_FLOOR_SUCb, INT_FLOOR_SUCa]
+QED
+
+Theorem INT_FLOOR_SUB1:
+  INT_FLOOR (x - 1) = INT_FLOOR x - 1
+Proof
+  simp[integerTheory.INT_EQ_SUB_LADD, GSYM INT_FLOOR_SUC,
+       RealArith.REAL_ARITH “x - 1r + 1 = x”]
+QED
+
+Theorem INT_FLOOR_SUM_NUM[simp]:
+  INT_FLOOR (x + &n) = INT_FLOOR x + &n /\
+  INT_FLOOR (&n + x) = INT_FLOOR x + &n
+Proof
+  csimp[realTheory.REAL_ADD_COMM] >>
+  Induct_on‘n’>>
+  simp[realTheory.REAL, GSYM realTheory.REAL_ADD, Excl "REAL_ADD",
+       integerTheory.INT, realTheory.REAL_ADD_ASSOC, INT_FLOOR_SUC,
+       integerTheory.INT_ADD_ASSOC
+      ]
+QED
+
+Theorem INT_FLOOR_SUB_NUM[simp]:
+  INT_FLOOR (x - &n) = INT_FLOOR x - &n /\
+  INT_FLOOR (&n - x) = INT_FLOOR (-x) + &n
+Proof
+  reverse conj_tac >- simp[realTheory.real_sub] >>
+  Induct_on ‘n’ >>
+  simp[realTheory.REAL, Excl "REAL_ADD", GSYM realTheory.REAL_ADD,
+       RealArith.REAL_ARITH “x - (y + z) = x - y - z:real”, INT_FLOOR_SUB1,
+       integerTheory.INT] >>
+  intLib.ARITH_TAC
+QED
+
+Theorem INT_FLOOR_SUM[simp]:
+  INT_FLOOR (x + real_of_int y) = INT_FLOOR x + y /\
+  INT_FLOOR (real_of_int y + x) = INT_FLOOR x + y
+Proof
+  csimp[realTheory.REAL_ADD_COMM] >>
+  Cases_on ‘y’ >> simp[GSYM realTheory.real_sub, GSYM integerTheory.int_sub]
+QED
+
+Theorem ints_exist_in_gaps:
+  !a b. a + 1 < b ==> ?i. a < real_of_int i /\ real_of_int i < b
+Proof
+  rpt strip_tac >> irule_at Any (cj 2 INT_FLOOR_BOUNDS) >> simp[] >>
+  irule realTheory.REAL_LET_TRANS >> first_assum $ irule_at Any >>
+  simp[INT_FLOOR_BOUNDS]
+QED
 
 val _ = export_theory ()
