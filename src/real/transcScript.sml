@@ -229,8 +229,9 @@ val SIN_NEGLEMMA = store_thm("SIN_NEGLEMMA",
   MP_TAC(MATCH_MP SER_NEG (SPEC “x:real” SIN_CONVERGES)) THEN
   BETA_TAC THEN DISCH_THEN ACCEPT_TAC);
 
-val DIFF_EXP = store_thm("DIFF_EXP",
-  “!x. (exp diffl exp(x))(x)”,
+Theorem DIFF_EXP[difftool]:
+  !x. (exp diffl exp(x))(x)
+Proof
   GEN_TAC THEN REWRITE_TAC[HALF_MK_ABS exp] THEN
   GEN_REWR_TAC (LAND_CONV o ONCE_DEPTH_CONV)  [GSYM EXP_FDIFF] THEN
   CONV_TAC(LAND_CONV BETA_CONV) THEN
@@ -238,10 +239,12 @@ val DIFF_EXP = store_thm("DIFF_EXP",
   REWRITE_TAC[EXP_FDIFF, MATCH_MP SUM_SUMMABLE (SPEC_ALL EXP_CONVERGES)] THEN
   MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC “abs(x) + &1” THEN
   REWRITE_TAC[ABS_LE, REAL_LT_ADDR] THEN
-  REWRITE_TAC[REAL_LT, ONE, LESS_0]);
+  REWRITE_TAC[REAL_LT, ONE, LESS_0]
+QED
 
-val DIFF_SIN = store_thm("DIFF_SIN",
-  “!x. (sin diffl cos(x))(x)”,
+Theorem DIFF_SIN[difftool]:
+  !x. (sin diffl cos(x))(x)
+Proof
   GEN_TAC THEN REWRITE_TAC[HALF_MK_ABS sin, cos] THEN
   ONCE_REWRITE_TAC[GSYM SIN_FDIFF] THEN
   MATCH_MP_TAC TERMDIFF THEN EXISTS_TAC “abs(x) + &1” THEN
@@ -255,10 +258,12 @@ val DIFF_SIN = store_thm("DIFF_SIN",
     REWRITE_TAC[GSYM REAL_NEG_LMUL],
     MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC “abs(x) + &1” THEN
     REWRITE_TAC[ABS_LE, REAL_LT_ADDR] THEN
-    REWRITE_TAC[REAL_LT, ONE, LESS_0]]);
+    REWRITE_TAC[REAL_LT, ONE, LESS_0]]
+QED
 
-val DIFF_COS = store_thm("DIFF_COS",
-  “!x. (cos diffl ~(sin(x)))(x)”,
+Theorem DIFF_COS[difftool]:
+  !x. (cos diffl ~(sin(x)))(x)
+Proof
   GEN_TAC THEN REWRITE_TAC[HALF_MK_ABS cos, SIN_NEGLEMMA] THEN
   ONCE_REWRITE_TAC[REAL_NEG_LMUL] THEN
   REWRITE_TAC[GSYM(CONV_RULE(RAND_CONV BETA_CONV)
@@ -280,18 +285,16 @@ val DIFF_COS = store_thm("DIFF_COS",
     REWRITE_TAC[GSYM REAL_NEG_LMUL],
     MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC “abs(x) + &1” THEN
     REWRITE_TAC[ABS_LE, REAL_LT_ADDR] THEN
-    REWRITE_TAC[REAL_LT, ONE, LESS_0]]);
-
-val _ = basic_diffs := !basic_diffs@[DIFF_EXP, DIFF_SIN, DIFF_COS];
+    REWRITE_TAC[REAL_LT, ONE, LESS_0]]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
 (* Processed versions of composition theorems.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val DIFF_COMPOSITE = store_thm("DIFF_COMPOSITE",
- Term
-  `((f diffl l)(x) /\ ~(f(x) = &0) ==>
+Theorem DIFF_COMPOSITE[difftool]:
+   ((f diffl l)(x) /\ ~(f(x) = &0) ==>
         ((\x. inv(f x)) diffl ~(l / (f(x) pow 2)))(x)) /\
    ((f diffl l)(x) /\ (g diffl m)(x) /\ ~(g(x) = &0) ==>
     ((\x. f(x) / g(x)) diffl (((l * g(x)) - (m * f(x)))
@@ -307,16 +310,15 @@ val DIFF_COMPOSITE = store_thm("DIFF_COMPOSITE",
          ((\x. (g x) pow n) diffl ((&n * (g x) pow (n - 1)) * m))(x)) /\
    ((g diffl m)(x) ==> ((\x. exp(g x)) diffl (exp(g x) * m))(x)) /\
    ((g diffl m)(x) ==> ((\x. sin(g x)) diffl (cos(g x) * m))(x)) /\
-   ((g diffl m)(x) ==> ((\x. cos(g x)) diffl (~(sin(g x)) * m))(x))`,
+   ((g diffl m)(x) ==> ((\x. cos(g x)) diffl (~(sin(g x)) * m))(x))
+Proof
   REWRITE_TAC[DIFF_INV, DIFF_DIV, DIFF_ADD, DIFF_SUB, DIFF_MUL, DIFF_NEG] THEN
   REPEAT CONJ_TAC THEN DISCH_TAC THEN
   TRY(MATCH_MP_TAC DIFF_CHAIN THEN
   ASM_REWRITE_TAC[DIFF_SIN, DIFF_COS, DIFF_EXP]) THEN
   MATCH_MP_TAC(BETA_RULE (SPEC (Term`\x. x pow n`) DIFF_CHAIN)) THEN
-  ASM_REWRITE_TAC[DIFF_POW]);
-
-val _ = basic_diffs := !basic_diffs @ CONJUNCTS DIFF_COMPOSITE;
-
+  ASM_REWRITE_TAC[DIFF_POW]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Properties of the exponential function                                    *)
@@ -666,7 +668,7 @@ val LN_POS = store_thm("LN_POS",
     DISCH_THEN(fn th => GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [] [SYM th])
     THEN REWRITE_TAC[EXP_MONO_LE]]);;
 
-Theorem DIFF_LN :
+Theorem DIFF_LN[difftool]:
    !x. &0 < x ==> (ln diffl (inv x))(x)
 Proof
   GEN_TAC THEN DISCH_TAC THEN
@@ -679,8 +681,6 @@ Proof
   DISCH_TAC THEN ASM_REWRITE_TAC[LN_EXP] THEN
   EXISTS_TAC (Term`&1`) THEN MATCH_ACCEPT_TAC REAL_LT_01
 QED
-
-val _ = basic_diffs := !basic_diffs@[DIFF_LN];
 
 (*---------------------------------------------------------------------------*)
 (* Some properties of roots (easier via logarithms)                          *)
@@ -1810,13 +1810,15 @@ val TAN_POS_PI2 = store_thm("TAN_POS_PI2",
     MATCH_MP_TAC REAL_INV_POS THEN MATCH_MP_TAC COS_POS_PI2] THEN
   ASM_REWRITE_TAC[]);
 
-val DIFF_TAN = store_thm("DIFF_TAN",
-  “!x. ~(cos(x) = &0) ==> (tan diffl inv(cos(x) pow 2))(x)”,
+Theorem DIFF_TAN[difftool]:
+  !x. ~(cos(x) = &0) ==> (tan diffl inv(cos(x) pow 2))(x)
+Proof
   GEN_TAC THEN DISCH_TAC THEN MP_TAC(DIFF_CONV “\x. sin(x) / cos(x)”) THEN
   DISCH_THEN(MP_TAC o SPEC “x:real”) THEN ASM_REWRITE_TAC[REAL_MUL_RID] THEN
   REWRITE_TAC[GSYM tan, GSYM REAL_NEG_LMUL, REAL_NEGNEG, real_sub] THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-  REWRITE_TAC[GSYM POW_2, SIN_CIRCLE, GSYM REAL_INV_1OVER]);
+  REWRITE_TAC[GSYM POW_2, SIN_CIRCLE, GSYM REAL_INV_1OVER]
+QED
 
 
 val TAN_TOTAL_LEMMA = store_thm("TAN_TOTAL_LEMMA",
@@ -2160,8 +2162,9 @@ val DIFF_ASN_LEMMA = store_thm("DIFF_ASN_LEMMA",
     MATCH_MP_TAC SIN_ASN THEN ASM_REWRITE_TAC[],
     MATCH_MP_TAC COS_ASN_NZ THEN ASM_REWRITE_TAC[]]);
 
-val DIFF_ASN = store_thm("DIFF_ASN",
-  “!x. ~(&1) < x /\ x < &1 ==> (asn diffl (inv(sqrt(&1 - (x pow 2)))))(x)”,
+Theorem DIFF_ASN[difftool]:
+  !x. ~(&1) < x /\ x < &1 ==> (asn diffl (inv(sqrt(&1 - (x pow 2)))))(x)
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP DIFF_ASN_LEMMA) THEN
   MATCH_MP_TAC(TAUT_CONV “(a <=> b) ==> a ==> b”) THEN
@@ -2170,7 +2173,8 @@ val DIFF_ASN = store_thm("DIFF_ASN",
    [MATCH_MP_TAC COS_SIN_SQ THEN MATCH_MP_TAC ASN_BOUNDS,
     SUBGOAL_THEN “sin(asn x) = x” SUBST1_TAC THEN REWRITE_TAC[] THEN
     MATCH_MP_TAC ASN_SIN] THEN
-  CONJ_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]);
+  CONJ_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]
+QED
 
 (* Known as DIFF_ACS_SIN in GTT *)
 val DIFF_ACS_LEMMA = store_thm("DIFF_ACS_LEMMA",
@@ -2188,8 +2192,9 @@ val DIFF_ACS_LEMMA = store_thm("DIFF_ACS_LEMMA",
     REWRITE_TAC[REAL_NEG_EQ, REAL_NEG_0] THEN
     MATCH_MP_TAC SIN_ACS_NZ THEN ASM_REWRITE_TAC[]]);
 
-val DIFF_ACS = store_thm("DIFF_ACS",
-  “!x. ~(&1) < x /\ x <  &1 ==> (acs diffl ~(inv(sqrt(&1 - (x pow 2)))))(x)”,
+Theorem DIFF_ACS[difftool]:
+  !x. ~(&1) < x /\ x <  &1 ==> (acs diffl ~(inv(sqrt(&1 - (x pow 2)))))(x)
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP DIFF_ACS_LEMMA) THEN
   MATCH_MP_TAC(TAUT_CONV “(a <=> b) ==> a ==> b”) THEN
@@ -2209,10 +2214,12 @@ val DIFF_ACS = store_thm("DIFF_ACS",
       MATCH_MP_TAC REAL_LT_MUL2 THEN ASM_REWRITE_TAC[] THEN
       ONCE_REWRITE_TAC [GSYM REAL_LT_NEG] THEN
       ASM_REWRITE_TAC[REAL_NEGNEG]]] THEN
-  CONJ_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]);
+  CONJ_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]
+QED
 
-val DIFF_ATN = store_thm("DIFF_ATN",
-  “!x. (atn diffl (inv(&1 + (x pow 2))))(x)”,
+Theorem DIFF_ATN[difftool]:
+  !x. (atn diffl (inv(&1 + (x pow 2))))(x)
+Proof
   GEN_TAC THEN
   SUBGOAL_THEN “(atn diffl (inv(&1 + (x pow 2))))(tan(atn x))” MP_TAC THENL
    [MATCH_MP_TAC DIFF_INVERSE_OPEN, REWRITE_TAC[ATN_TAN]] THEN
@@ -2231,7 +2238,8 @@ val DIFF_ATN = store_thm("DIFF_ATN",
     REWRITE_TAC[ATN_TAN],
     MATCH_MP_TAC REAL_POS_NZ THEN
     MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC “&1” THEN
-    REWRITE_TAC[REAL_LT_01, REAL_LE_ADDR, POW_2, REAL_LE_SQUARE]]);
+    REWRITE_TAC[REAL_LT_01, REAL_LE_ADDR, POW_2, REAL_LE_SQUARE]]
+QED
 
 
 
@@ -3642,7 +3650,7 @@ QED
 (* Version for ln(1 - x).                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem DIFF_LN_COMPOSITE :
+Theorem DIFF_LN_COMPOSITE:
    !g m x. (g diffl m)(x) /\ &0 < g x
            ==> ((\x. ln(g x)) diffl (inv(g x) * m))(x)
 Proof
@@ -3651,7 +3659,7 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-val _ = basic_diffs := !basic_diffs@[SPEC_ALL DIFF_LN_COMPOSITE];
+Theorem DIFF_LN_COMPOSITE'[difftool] = SPEC_ALL DIFF_LN_COMPOSITE
 
 (* ------------------------------------------------------------------------- *)
 (* Exponentiation with real exponents (rpow)                                 *)
@@ -4331,18 +4339,5 @@ val pos_concave_ln = store_thm
    >> MP_TAC exp_convex >> RW_TAC std_ss [convex_fn, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]);
 
 (* NOTE: Jensen's inequalities are in real_sigmaScript.sml *)
-
-val _ = Theory.quote_adjoin_to_theory
-`(* val basic_diffs : Thm.thm list ref; *)`
-`local in
-  open Diff Drule;
-
-  val _ = basic_diffs := !basic_diffs@[DIFF_EXP, DIFF_LN];
-  val _ = basic_diffs := !basic_diffs@[DIFF_SIN, DIFF_COS, DIFF_TAN];
-  val _ = basic_diffs := !basic_diffs@[DIFF_ASN, DIFF_ACS, DIFF_ATN];
-  val _ = basic_diffs := !basic_diffs@(CONJUNCTS DIFF_COMPOSITE);
-  val _ = basic_diffs := !basic_diffs@[SPEC_ALL DIFF_LN_COMPOSITE];
-end
-`;
 
 val _ = export_theory();
