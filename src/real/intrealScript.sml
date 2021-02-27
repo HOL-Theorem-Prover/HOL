@@ -433,7 +433,7 @@ val real_of_int_le = store_thm("real_of_int_le[simp]",
   simp[realTheory.REAL_LE_LT, integerTheory.INT_LE_LT]);
 
 Theorem INT_FLOOR_MONO:
-  x < y ⇒ INT_FLOOR x <= INT_FLOOR y
+  x < y ==> INT_FLOOR x <= INT_FLOOR y
 Proof
   CCONTR_TAC >> gs[integerTheory.INT_NOT_LE] >>
   ‘flr y + 1i <= flr x’ by simp[GSYM integerTheory.INT_LT_LE1] >>
