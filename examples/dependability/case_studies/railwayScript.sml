@@ -34,42 +34,27 @@ fun K_TAC _ = ALL_TAC;
 open HolKernel boolLib bossLib Parse;
 val _ = new_theory "railway";
 
-(*------new tactics for set simplification----*)
 (*--------------------*)
-infixr 0 ++ << || ORELSEC ## --> THENC;
-infix 1 >> |->;
-fun parse_with_goal t (asms, g) =
-  let
-    val ctxt = free_varsl (g::asms)
-  in
-    Parse.parse_in_context ctxt t
-  end;
-
-val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
-val Suff = PARSE_TAC SUFF_TAC;
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-val !! = REPEAT;
-val op++ = op THEN;
-val op<< = op THENL;
-val op|| = op ORELSE;
-val op>> = op THEN1;
-val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val op by = BasicProvers.byA;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 (*---------------------------*)
 
 (*--------------------------------------*)
-val in_events_def = Define
-`in_events p L = (!z. MEM z L ==> z IN events p)`;
+Definition in_events_def :
+in_events p L = (!z. MEM z L ==> z IN events p)
+End
 (*--------------------------------------*)
-val two_dim_fail_event_list_def = Define
-`two_dim_fail_event_list p L t = MAP (\a. fail_event_list p a t) L `;
+Definition two_dim_fail_event_list_def :
+two_dim_fail_event_list p L t = MAP (\a. fail_event_list p a t) L
+End
 (*--------------------------------------*)
-val three_dim_fail_event_list_def = Define
-`three_dim_fail_event_list p L t = MAP (\a. two_dim_fail_event_list p a t) L `;
+Definition three_dim_fail_event_list_def :
+three_dim_fail_event_list p L t = MAP (\a. two_dim_fail_event_list p a t) L
+End
 (*--------------------------------------*)
 
-val railway_FT_equi_RBD = store_thm("railway_FT_equi_RBD",
-  `` prob_space p /\ in_events p (fail_event_list p [x1;x2;x3;x4;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15;x16] t) ==>
+Theorem railway_FT_equi_RBD :
+ prob_space p /\ in_events p (fail_event_list p [x1;x2;x3;x4;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15;x16] t) ==>
 ((FTree p (OR[OR(gate_list (fail_event_list p [x3;x4] t));
                     OR(gate_list (fail_event_list p [x5;x6] t));
                     AND[OR (gate_list (fail_event_list p [x9;x10] t));
@@ -82,29 +67,32 @@ val railway_FT_equi_RBD = store_thm("railway_FT_equi_RBD",
   ((parallel
      of series of (λa. parallel (rbd_list a)))
         (three_dim_fail_event_list p [[[x3; x4; x5; x6; x7; x8; x1; x2]];
-         [[x9; x10]; [x13; x14]; [x15; x16]; [x11; x12]]] t))))``,
+         [[x9; x10]; [x13; x14]; [x15; x16]; [x11; x12]]] t))))
+Proof
 RW_TAC list_ss[three_dim_fail_event_list_def,in_events_def,two_dim_fail_event_list_def,fail_event_list_def,rbd_struct_def,FTree_def,of_DEF,o_THM,fail_event_list_def,rbd_list_def,gate_list_def]
-++ RW_TAC std_ss[UNION_EMPTY,UNION_ASSOC]
-++ RW_TAC std_ss[INTER_ASSOC]
-++ ONCE_REWRITE_TAC[INTER_COMM]
-++ DEP_REWRITE_TAC[INTER_PSPACE]
-++ RW_TAC std_ss[]
-++ DEP_REWRITE_TAC[EVENTS_INTER,EVENTS_UNION]
-++ FULL_SIMP_TAC list_ss[in_events_def]
-++ DEP_REWRITE_TAC[EVENTS_INTER,EVENTS_UNION]
-++ FULL_SIMP_TAC list_ss[in_events_def]
-++ SRW_TAC[][EXTENSION,GSPECIFICATION]
-++ SET_TAC[]);
+>> RW_TAC std_ss[UNION_EMPTY,UNION_ASSOC]
+>> RW_TAC std_ss[INTER_ASSOC]
+>> ONCE_REWRITE_TAC[INTER_COMM]
+>> DEP_REWRITE_TAC[INTER_PSPACE]
+>> RW_TAC std_ss[]
+>> DEP_REWRITE_TAC[EVENTS_INTER,EVENTS_UNION]
+>> FULL_SIMP_TAC list_ss[in_events_def]
+>> DEP_REWRITE_TAC[EVENTS_INTER,EVENTS_UNION]
+>> FULL_SIMP_TAC list_ss[in_events_def]
+>> SRW_TAC[][EXTENSION,GSPECIFICATION]
+>> SET_TAC[]
+QED
 
 (*--------------------------------------*)
 
-val one_minus_exp_func_list_def = Define
-`one_minus_exp_func_list C t = MAP (λa. 1 - exp (-(a * (t:real)))) C `;
+Definition one_minus_exp_func_list_def :
+one_minus_exp_func_list C t = MAP (λa. 1 - exp (-(a * (t:real)))) C
+End
 
 
 (*--------------------------------------*)
-val fail_prob_railway_FT = store_thm("fail_prob_railway_FT",
-``(0 <= t) /\ prob_space p /\
+Theorem fail_prob_railway_FT :
+(0 <= t) /\ prob_space p /\
 mutual_indep p
   (FLAT
      (FLAT
@@ -138,20 +126,22 @@ exp (-(c7 * t)) * exp (-(c8 * t)) * exp (-(c1 * t)) * exp (-(c2 * t)) *
  (1 − exp (-(c9 * t)) * exp (-(c10 * t))) *
  (1 − exp (-(c13 * t)) * exp (-(c14 * t))) *
  (1 − exp (-(c15 * t)) * exp (-(c16 * t))) *
- (1 − exp (-(c11 * t)) * exp (-(c12 * t)))))) ``,
+ (1 − exp (-(c11 * t)) * exp (-(c12 * t))))))
+Proof
 RW_TAC std_ss[]
-++ DEP_REWRITE_TAC[railway_FT_equi_RBD]
-++ RW_TAC std_ss[in_events_def]
->> (FULL_SIMP_TAC list_ss[three_dim_fail_event_list_def,in_events_def,two_dim_fail_event_list_def,fail_event_list_def])
-++ RW_TAC std_ss[of_DEF]
-++ DEP_REWRITE_TAC[REWRITE_RULE[of_DEF]rel_parallel_of_series_parallel_rbd]
-++ RW_TAC std_ss[]
->> (Q.EXISTS_TAC `[]`
-   ++ RW_TAC list_ss[]
-   ++ FULL_SIMP_TAC list_ss[three_dim_fail_event_list_def,in_events_def,two_dim_fail_event_list_def,fail_event_list_def])
-++ RW_TAC list_ss[list_prod_def,one_minus_list_def,list_prob_def,o_THM,three_dim_fail_event_list_def,in_events_def,two_dim_fail_event_list_def,fail_event_list_def]
-++ RW_TAC real_ss[REAL_MUL_ASSOC]
-++ FULL_SIMP_TAC list_ss[exp_dist_list_def,VDCTheory.exp_dist_def,CDF_def,distribution_def,fail_event_def]
-++ RW_TAC real_ss[REAL_MUL_ASSOC]);
+>> DEP_REWRITE_TAC[railway_FT_equi_RBD]
+>> RW_TAC std_ss[in_events_def]
+>- (FULL_SIMP_TAC list_ss[three_dim_fail_event_list_def,in_events_def,two_dim_fail_event_list_def,fail_event_list_def])
+>> RW_TAC std_ss[of_DEF]
+>> DEP_REWRITE_TAC[REWRITE_RULE[of_DEF]rel_parallel_of_series_parallel_rbd]
+>> RW_TAC std_ss[]
+>- (Q.EXISTS_TAC `[]`
+   >> RW_TAC list_ss[]
+   >> FULL_SIMP_TAC list_ss[three_dim_fail_event_list_def,in_events_def,two_dim_fail_event_list_def,fail_event_list_def])
+>> RW_TAC list_ss[list_prod_def,one_minus_list_def,list_prob_def,o_THM,three_dim_fail_event_list_def,in_events_def,two_dim_fail_event_list_def,fail_event_list_def]
+>> RW_TAC real_ss[REAL_MUL_ASSOC]
+>> FULL_SIMP_TAC list_ss[exp_dist_list_def,VDCTheory.exp_dist_def,CDF_def,distribution_def,fail_event_def]
+>> RW_TAC real_ss[REAL_MUL_ASSOC]
+QED
 
 val _ = export_theory();
