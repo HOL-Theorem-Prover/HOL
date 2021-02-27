@@ -44,3 +44,6 @@
 
 # Lassie examples
 !examples/lassie/
+
+# Dependability examples
+!examples/dependability/
