@@ -30,7 +30,7 @@ fun repc i c = CharVector.tabulate(i, fn _ => c)
 val non_aggregating_chars =
     foldl (fn (c, cs) => HOLset.add(cs,c))
           (HOLset.empty Int.compare)
-          (UTF8.explodei "()[]{}~.,;-¬⟨⟩⦇⦈⟦⟧⦃⦄") (* UOK *)
+          (UTF8.explodei "()[]{}~.,;-¬⟨⟩⦇⦈⟦⟧⦃⦄⌈⌉⌊⌋") (* UOK *)
 fun cpt_is_nonagg_char i = HOLset.member(non_aggregating_chars, i)
 val cpts_have_nonagg_char = List.exists cpt_is_nonagg_char
 
