@@ -2,7 +2,7 @@
    A bridging theory between integers and reals
    ------------------------------------------------------------------------- *)
 
-open HolKernel boolLib bossLib
+open HolKernel Parse boolLib bossLib
 open intLib
 
 local open realSimps in end
@@ -33,6 +33,23 @@ End
 
 Overload flr = “INT_FLOOR”
 Overload clg = “INT_CEILING”
+
+val _ = add_rule {
+  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+  fixity = Closefix,
+  paren_style = OnlyIfNecessary,
+  pp_elements = [TOK UnicodeChars.clgl, TM, TOK UnicodeChars.clgr],
+  term_name = "clgtoks"}
+Overload clgtoks = “INT_CEILING”
+
+val _ = add_rule {
+  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+  fixity = Closefix,
+  paren_style = OnlyIfNecessary,
+  pp_elements = [TOK UnicodeChars.flrl, TM, TOK UnicodeChars.flrr],
+  term_name = "flrtoks"}
+Overload flrtoks = “INT_FLOOR”
+
 
 (* -------------------------------------------------------------------------
    is_int
