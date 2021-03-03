@@ -1030,6 +1030,52 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
+Theorem SUB_POW_2 :
+   !x y :real. (x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y
+Proof
+    RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                    GSYM REAL_DOUBLE]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem REAL_LE_MUL' :
+    !x y. x <= 0 /\ y <= 0 ==> 0 <= x * y
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘-x’, ‘-y’] REAL_LE_MUL)
+ >> REWRITE_TAC [GSYM REAL_NEG_LE0, REAL_NEGNEG, REAL_NEG_MUL2]
+ >> DISCH_THEN MATCH_MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem REAL_LT_MUL' :
+    !x y. x < 0 /\ y < 0 ==> 0 < x * y
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘-x’, ‘-y’] REAL_LT_MUL)
+ >> REWRITE_TAC [GSYM REAL_NEG_LT0, REAL_NEGNEG, REAL_NEG_MUL2]
+ >> DISCH_THEN MATCH_MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem REAL_LT_LMUL' :
+    !x y z. x < 0 ==> ((x * y) < (x * z) <=> z < y)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘-x’, ‘z’, ‘y’] REAL_LT_LMUL)
+ >> ‘0 < -x’ by PROVE_TAC [GSYM REAL_NEG_LT0, REAL_NEGNEG]
+ >> rw [GSYM REAL_NEG_RMUL, REAL_LT_NEG]
+QED
+
+Theorem REAL_LT_RMUL' :
+    !x y z. z < 0 ==> ((x * z) < (y * z) <=> y < x)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘y’, ‘x’, ‘-z’] REAL_LT_RMUL)
+ >> ‘0 < -z’ by PROVE_TAC [GSYM REAL_NEG_LT0, REAL_NEGNEG]
+ >> rw [GSYM REAL_NEG_RMUL, REAL_LT_NEG]
+QED
+
 Theorem HARMONIC_SERIES_POW_2 :
     summable (\n. inv (&(SUC n) pow 2))
 Proof

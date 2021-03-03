@@ -3345,6 +3345,32 @@ Proof
       rw [Once EXTENSION, IN_PREIMAGE, IN_BIGUNION_IMAGE] >> METIS_TAC [] ]
 QED
 
+(* Example 3.3 (vi) [7,p.17] *)
+Theorem TRACE_SIGMA_ALGEBRA :
+    !a E. sigma_algebra a /\ E SUBSET (space a) ==>
+          sigma_algebra (E,{A INTER E | A IN subsets a})
+Proof
+    rpt STRIP_TAC
+ >> rw [SIGMA_ALGEBRA_ALT_SPACE]
+ >| [ (* goal 1 (of 4) *)
+      rw [subset_class_def] >> REWRITE_TAC [INTER_SUBSET],
+      (* goal 2 (of 4) *)
+      Q.EXISTS_TAC ‘space a’ \\
+      CONJ_TAC >- ASM_SET_TAC [] \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art [],
+      (* goal 3 (of 4) *)
+      Q.EXISTS_TAC ‘space a DIFF A’ \\
+      CONJ_TAC >- ASM_SET_TAC [] \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [],
+      (* goal 4 (of 4) *)
+      fs [IN_FUNSET, SKOLEM_THM] \\
+      Q.EXISTS_TAC ‘BIGUNION (IMAGE f' UNIV)’ \\
+      CONJ_TAC >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] >> METIS_TAC []) \\
+      fs [SIGMA_ALGEBRA_ALT_SPACE] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      rw [IN_FUNSET] ]
+QED
+
 (* Lemma 14.1 of [7, p.137] (not used anywhere) *)
 Theorem SEMIRING_PROD_SETS :
     !a b. semiring a /\ semiring b ==>
