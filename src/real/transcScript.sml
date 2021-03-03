@@ -43,6 +43,13 @@ open hol88Lib
 val _ = new_theory "transc";
 val _ = Parse.reveal "B";
 
+val Suff = Q_TAC SUFF_TAC;
+val Know = Q_TAC KNOW_TAC;
+fun wrap a = [a];
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val art = ASM_REWRITE_TAC;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+
 (*---------------------------------------------------------------------------*)
 (* Some miscellaneous lemmas                                                 *)
 (*---------------------------------------------------------------------------*)
@@ -899,6 +906,17 @@ val SQRT_DIV = store_thm("SQRT_DIV",
 val SQRT_MONO_LE = store_thm("SQRT_MONO_LE",
   “!x y. &0 <= x /\ x <= y ==> sqrt(x) <= sqrt(y)”,
   REWRITE_TAC[sqrt, TWO, ROOT_MONO_LE]);
+
+Theorem SQRT_MONO_LT :
+    !x y. &0 <= x /\ x < y ==> sqrt(x) < sqrt(y)
+Proof
+    rpt STRIP_TAC
+ >> fs [REAL_LT_LE]
+ >> CONJ_TAC >- (MATCH_MP_TAC SQRT_MONO_LE >> art [])
+ >> ‘0 <= y’ by PROVE_TAC [REAL_LE_TRANS]
+ >> CCONTR_TAC >> fs []
+ >> METIS_TAC [SQRT_POW2]
+QED
 
 val lem = prove(Term`0<2:num`, REWRITE_TAC[TWO,LESS_0]);
 
@@ -4163,9 +4181,6 @@ QED
 (* ----------- exp is a convex function (from "miller" example) ------------ *)
 (* ------------------------------------------------------------------------- *)
 
-val Suff = Q_TAC SUFF_TAC;
-val Know = Q_TAC KNOW_TAC;
-
 Definition convex_fn :
     convex_fn =
       {f | !x y t. (0 <= t /\ t <= 1) ==>
@@ -4337,6 +4352,71 @@ val pos_concave_ln = store_thm
    >> ONCE_REWRITE_TAC [GSYM EXP_MONO_LE]
    >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
    >> MP_TAC exp_convex >> RW_TAC std_ss [convex_fn, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]);
+
+Theorem convex_lemma[local] :
+    !x y t. 0 < x /\ 0 < y /\ 0 <= t /\ t <= 1 ==> 0 < x * t + y * (1 - t)
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘t = 0’ >- rw []
+ >> Cases_on ‘t = 1’ >- rw []
+ >> MATCH_MP_TAC REAL_LT_ADD
+ >> CONJ_TAC
+ >| [ MATCH_MP_TAC REAL_LT_MUL >> rw [REAL_LT_LE],
+      MATCH_MP_TAC REAL_LT_MUL >> rw [REAL_LT_SUB_LADD, REAL_LT_LE] ]
+QED
+
+(* inv is pos_convex *)
+Theorem pos_convex_inv :
+    inv IN pos_convex_fn
+Proof
+    simp [pos_convex_fn]
+ >> qx_genl_tac [‘x’, ‘y’, ‘t’]
+ >> STRIP_TAC
+ >> ‘x <> 0 /\ y <> 0’ by PROVE_TAC [REAL_POS_NZ]
+ >> Know ‘t * inv x + inv y * (1 - t) = (y * t + x * (1 - t)) / (x * y)’
+ >- (rw [real_div, REAL_ADD_RDISTRIB])
+ >> Rewr'
+ >> Know ‘(y * t + x * (1 - t)) / (x * y) = inv (x * y / (y * t + x * (1 - t)))’
+ >- (rw [real_div, REAL_INV_MUL'])
+ >> Rewr'
+ >> Know ‘inv (t * x + y * (1 - t)) <= inv (x * y / (y * t + x * (1 - t))) <=>
+          x * y / (y * t + x * (1 - t)) <= t * x + y * (1 - t)’
+ >- (MATCH_MP_TAC REAL_INV_LE_ANTIMONO \\
+     simp [real_div] \\
+     CONJ_TAC >- PROVE_TAC [REAL_MUL_COMM, convex_lemma] \\
+     MATCH_MP_TAC REAL_LT_MUL \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LT_MUL >> art []) \\
+     REWRITE_TAC [REAL_LT_INV_EQ] \\
+     PROVE_TAC [REAL_MUL_COMM, convex_lemma])
+ >> Rewr'
+ >> Know ‘x * y / (y * t + x * (1 - t)) <= t * x + y * (1 - t) <=>
+          x * y <= (t * x + y * (1 - t)) * (y * t + x * (1 - t))’
+ >- (MATCH_MP_TAC REAL_LE_LDIV_EQ \\
+     PROVE_TAC [convex_lemma])
+ >> Rewr'
+ >> rw [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC]
+ >> Know ‘x * y = t pow 2 * x * y + t * (2 * x * y) * (1 - t) +
+                  x * y * (1 - t) pow 2’
+ >- (GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [] [GSYM REAL_MUL_RID] \\
+     Know ‘1 = (t + (1 - t)) pow 2’
+     >- (‘t + (1 - t) = 1’ by REAL_ARITH_TAC >> POP_ORW \\
+         rw [pow]) \\
+     DISCH_THEN ((GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) []) o wrap) \\
+     REWRITE_TAC [POW_2, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB] \\
+     REAL_ARITH_TAC)
+ >> DISCH_THEN ((GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) []) o wrap)
+ >> REWRITE_TAC [REAL_LE_RADD]
+ >> REWRITE_TAC [GSYM REAL_ADD_ASSOC, REAL_LE_LADD]
+ >> REWRITE_TAC [GSYM REAL_ADD_LDISTRIB, GSYM REAL_ADD_RDISTRIB]
+ >> MATCH_MP_TAC REAL_LE_RMUL_IMP
+ >> CONJ_TAC >- (rw [REAL_LE_SUB_LADD])
+ >> MATCH_MP_TAC REAL_LE_LMUL_IMP >> art []
+ >> Know ‘0 <= (x - y) pow 2’ >- PROVE_TAC [REAL_LE_POW2]
+ >> Know ‘(x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y’
+ >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> rw [REAL_LE_SUB_LADD]
+QED
 
 (* NOTE: Jensen's inequalities are in real_sigmaScript.sml *)
 

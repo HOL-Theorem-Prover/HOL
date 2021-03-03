@@ -2,31 +2,22 @@
 (* Metric spaces, including metric on real line                              *)
 (*===========================================================================*)
 
-open HolKernel Parse bossLib boolLib BasicProvers boolSimps simpLib mesonLib
-     metisLib jrhUtils pairTheory pairLib pred_setTheory quotientTheory
-     realTheory topologyTheory;
+open HolKernel Parse bossLib boolLib;
+
+open BasicProvers boolSimps simpLib mesonLib metisLib jrhUtils pairTheory
+     pairLib pred_setTheory quotientTheory realTheory topologyTheory;
 
 val _ = new_theory "metric";
-val _ = ParseExtras.temp_loose_equality()
-
-
-(*---------------------------------------------------------------------------*)
-(* Minimal amount of set notation is convenient                              *)
-(*---------------------------------------------------------------------------*)
-
-val re_intersect = prove(
-   “!P Q. P INTER Q = \x:'a. P x /\ Q x”,
-    PROVE_TAC [INTER_applied, IN_DEF]);
 
 (*---------------------------------------------------------------------------*)
 (* Characterize an (alpha)metric                                             *)
 (*---------------------------------------------------------------------------*)
 
-val ismet = new_definition("ismet",
-  “ismet (m:'a#'a->real)
-        =
-      (!x y. (m(x,y) = &0) = (x = y)) /\
-      (!x y z. m(y,z) <= m(x,y) + m(x,z))”);
+Definition ismet :
+   ismet (m :'a # 'a -> real) =
+     ((!x y. (m(x,y) = &0) <=> (x = y)) /\
+      (!x y z. m(y,z) <= m(x,y) + m(x,z)))
+End
 
 val metric_tydef = new_type_definition
  ("metric",
@@ -97,7 +88,7 @@ val METRIC_NZ = store_thm("METRIC_NZ",
   “!m:('a)metric. !x y. ~(x = y) ==> &0 < (dist m)(x,y)”,
   REPEAT GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [“m:('a)metric”, “x:'a”, “y:'a”] METRIC_ZERO)) THEN
-  ONCE_REWRITE_TAC[TAUT_CONV “~a ==> b = b \/ a”] THEN
+  ONCE_REWRITE_TAC[TAUT_CONV “~a ==> b <=> b \/ a”] THEN
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   REWRITE_TAC[GSYM REAL_LE_LT, METRIC_POS]);
 
@@ -105,18 +96,20 @@ val METRIC_NZ = store_thm("METRIC_NZ",
 (* Now define metric topology and prove equivalent definition of "open"      *)
 (*---------------------------------------------------------------------------*)
 
-val mtop = new_definition("mtop",
-  “!m:('a)metric. mtop m =
-    topology(\S'. !x. S' x ==> ?e. &0 < e /\ (!y. (dist m)(x,y) < e ==> S' y))”);
+Definition mtop :
+    mtop (m :'a metric) =
+    topology (\S'. !x. S' x ==> ?e. &0 < e /\ !y. (dist m)(x,y) < e ==> S' y)
+End
 
-val mtop_istopology = store_thm("mtop_istopology",
-  ``!m:('a)metric.
+Theorem mtop_istopology :
+    !m:('a)metric.
       istopology (\S'. !x. S' x ==>
                            ?e. &0 < e /\
-                               (!y. (dist m)(x,y) < e ==> S' y))``,
+                               (!y. (dist m)(x,y) < e ==> S' y))
+Proof
   GEN_TAC THEN
   SIMP_TAC bool_ss [istopology, EMPTY_DEF, UNIV_DEF, BIGUNION_applied,
-                    re_intersect, SUBSET_applied, IN_DEF] THEN
+                    INTER_applied, SUBSET_applied, IN_DEF] THEN
   REVERSE (REPEAT STRIP_TAC) THENL (* 2 subgoals *)
   [ (* goal 1 (of 2) *)
     RES_TAC >> Q.EXISTS_TAC `e` >> ASM_REWRITE_TAC [] \\
@@ -141,7 +134,8 @@ val mtop_istopology = store_thm("mtop_istopology",
       ASM_REWRITE_TAC [] THEN
       DISCH_THEN (fn th2 => GEN_TAC THEN DISCH_THEN(fn th1 =>
                   ASSUME_TAC th1 THEN ASSUME_TAC (MATCH_MP REAL_LT_TRANS (CONJ th1 th2))))
-      >> PROVE_TAC [] ] ]);
+      >> PROVE_TAC [] ] ]
+QED
 
 val MTOP_OPEN = store_thm("MTOP_OPEN",
   “!S' (m:('a)metric). open_in(mtop m) S' =
@@ -154,8 +148,9 @@ val MTOP_OPEN = store_thm("MTOP_OPEN",
 (* Define open ball in metric space + prove basic properties                 *)
 (*---------------------------------------------------------------------------*)
 
-val ball = new_definition("ball",
-  “!m:('a)metric. !x e. B(m)(x,e) = \y. (dist m)(x,y) < e”);
+Definition ball :
+    B(m)(x,e) = \y. (dist m)(x,y) < e
+End
 
 val BALL_OPEN = store_thm("BALL_OPEN",
   “!m:('a)metric. !x e. &0 < e ==> open_in(mtop(m))(B(m)(x,e))”,
@@ -223,8 +218,9 @@ val ISMET_R1 = store_thm("ISMET_R1",
       “(a + b) + (c + d) = (d + a) + (c + b):real”] THEN
     REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]);
 
-val mr1 = new_definition("mr1",
-  “mr1 = metric(\(x,y). abs(y - x))”);
+Definition mr1 :
+    mr1 = metric(\(x,y). abs(y - x))
+End
 
 val MR1_DEF = store_thm("MR1_DEF",
   “!x y. (dist mr1)(x,y) = abs(y - x)”,

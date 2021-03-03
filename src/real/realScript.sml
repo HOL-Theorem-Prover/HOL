@@ -3501,6 +3501,12 @@ val REAL_LE_SUB_CANCEL2 = store_thm
    ``!x y z : real. x - z <= y - z = x <= y``,
    RW_TAC boolSimps.bool_ss [REAL_LE_SUB_RADD, REAL_SUB_ADD]);
 
+(* |- !x y z :real. z - x <= z - y <=> y <= x *)
+Theorem REAL_LE_SUB_CANCEL1 =
+        REAL_LE_SUB_CANCEL2 |> (Q.SPECL [‘-x’, ‘-y’, ‘-z’])
+                            |> (REWRITE_RULE [REAL_SUB_NEG2, REAL_LE_NEG])
+                            |> (Q.GENL [‘x’, ‘y’, ‘z’]);
+
 val REAL_ADD_SUB_ALT = store_thm
   ("REAL_ADD_SUB_ALT",
    ``!x y : real. (x + y) - y = x``,

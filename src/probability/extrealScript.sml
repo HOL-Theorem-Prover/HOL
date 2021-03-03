@@ -2192,8 +2192,8 @@ Theorem add_pow2 :
 Proof
     NTAC 2 Cases
  >> RW_TAC real_ss [extreal_pow_def, extreal_mul_def, extreal_add_def,
-                    extreal_of_num_def, pow_2]
- >> REWRITE_TAC [GSYM POW_2, ADD_POW_2]
+                    extreal_of_num_def]
+ >> REWRITE_TAC [ADD_POW_2]
 QED
 
 val REAL_MUL_POS_LT = prove ((* from intergrationTheory *)
@@ -2226,16 +2226,15 @@ Proof
   ASM_SIMP_TAC real_ss [GSYM extreal_lt_eq, normal_real, GSYM extreal_of_num_def]
 QED
 
-val sub_pow2 = store_thm
-  ("sub_pow2",
-  ``!x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
-        ((x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y)``,
+Theorem sub_pow2 :
+    !x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
+        ((x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y)
+Proof
     NTAC 2 Cases
  >> RW_TAC real_ss [extreal_pow_def, extreal_mul_def, extreal_add_def,
-                    extreal_of_num_def, pow_2, extreal_ainv_def, extreal_sub_def]
- >> RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_ASSOC, POW_2,
-                    GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC);
+                    extreal_of_num_def, extreal_ainv_def, extreal_sub_def]
+ >> REWRITE_TAC [SUB_POW_2]
+QED
 
 val pow_add = store_thm
   ("pow_add", ``!x n m. x pow (n + m) = x pow n * x pow m``,
