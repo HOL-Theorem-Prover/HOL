@@ -34,6 +34,13 @@
   :group 'hol
   :type '(file :must-match t))
 
+(defcustom hol-show-tooltips-in-minibuffer t
+  "Whether to additionally show tooltips in minibuffer."
+  :group 'hol
+  :type '(choice
+          (const :tag "Yes; messages appear in minibuffer" t)
+          (const :tag "No; messages only in tooltips" nil)))
+
 (defconst hol-dir
   (file-name-directory
    (directory-file-name (file-name-directory hol-executable))))
@@ -913,6 +920,9 @@ region instead. With prefix ARG prompt for a file-name to load."
     (hol-mode-init-sml)
     (send-raw-string-to-hol
      "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil)
+    (if hol-show-tooltips-in-minibuffer
+       (progn (setq help-at-pt-display-when-idle t)
+              (help-at-pt-set-timer)))
 
     (if (eq (get-buffer hol-buffer-name) original-buffer)
         nil
