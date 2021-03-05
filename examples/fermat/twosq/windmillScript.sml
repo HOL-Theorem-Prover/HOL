@@ -122,16 +122,16 @@ open pairTheory; (* for FORALL_PROD, PAIR_EQ *)
    zagier_x_x_z    |- !x z. x <> 0 ==> zagier (x,x,z) = (x,x,z)
    zagier_closure  |- !n x y z. (x,y,z) IN mills n ==> zagier (x,y,z) IN mills n
    zagier_closure_alt        |- !n t. t IN mills n ==> zagier t IN mills n
-   zagier_involute |- !x y z. x <> 0 /\ y <> 0 /\ z <> 0 ==>
-                              zagier (zagier (x,y,z)) = (x,y,z)
-   zagier_involute_xyz |- !x y z. x * y * z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
-   zagier_involute_thm |- !t. FST t <> 0 /\ FST (SND t) <> 0 /\ SND (SND t) <> 0 ==>
-                              zagier (zagier t) = t
-   cuboid_def          |- !x y z. cuboid (x,y,z) = x * y * z
-   cuboid_eq_0         |- !x y z. (cuboid (x,y,z) = 0) <=> (x = 0) \/ (y = 0) \/ (z = 0)
-   zagier_involute_alt |- !t. cuboid t <> 0 ==> zagier (zagier t) = t
+   zagier_involute |- !x y z. x <> 0 /\ z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
+   zagier_involute_alt |- !x y z. x * z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
+   zagier_involute_thm |- !t. FST t <> 0 /\ SND (SND t) <> 0 ==> zagier (zagier t) = t
+   doublet_def         |- !x y z. doublet (x,y,z) = x * z
+   doublet_eq_0        |- !x y z. (doublet (x,y,z) = 0) <=> (x = 0) \/ (z = 0)
+   zagier_involute_alt |- !t. doublet t <> 0 ==> zagier (zagier t) = t
    zagier_involute_mills
                        |- !n. ~square n /\ n MOD 4 <> 0 ==> zagier involute (mills n)
+   zagier_involute_mills_prime
+                       |- !p. prime p ==> zagier involute (mills p)
 
    Mind of a windmill:
    mind_def            |- !x y z. mind (x,y,z) =
@@ -479,10 +479,10 @@ QED
 
 
 (* The set of windmills of a number *)
-val mills_def = zDefine`
+Definition mills_def[nocompute]:
     mills n = {(x,y,z) | n = windmill x y z}
-`;
-(* use zDefine as this is not effective. *)
+End
+(* use [nocompute] as this is not effective. *)
 
 (* Theorem: (x, y, z) IN mills n <=> n = windmill x y z *)
 (* Proof: by mills_def. *)
@@ -1323,7 +1323,7 @@ Proof
 QED
 
 
-(* Theorem: x <> 0 /\ y <> 0 /\ z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z) *)
+(* Theorem: x <> 0 /\ z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z) *)
 (* Proof:
    Put the 3 branches of zagier_def into 5 cases for a triple (x,y,z):
    Case 1: x < y and x < y - z      for branch 1
@@ -1401,58 +1401,60 @@ QED
       Thus x' = x - 2 * y < (x + z - y) - y = y' - z' for z <> 0,
       which is case 1, so
         zagier (x',y',z')
-      = (x' + 2 * z',z',y' - z' - x')     by first branch
+      = (x' + 2 * z',z',y' - z' - x')    by first branch
       = (x - 2 * y + 2 * y, y, (x + z - y) - y - (x - 2 * y))
       = (x, y, z)
+  If y = 0, then
+        zagier (zagier (x, 0, z))
+      = zagier (x, x + z, 0)             by zagier_x_0_z
+      = (x, 0, x + z - x)                by zagier_x_y_0, z <> 0
+      = (x, 0, z)                        by arithmetic
 *)
 Theorem zagier_involute:
-  !x y z. x <> 0 /\ y <> 0 /\ z <> 0 ==>
-          zagier (zagier (x, y, z)) = (x, y, z)
+  !x y z. x <> 0 /\ z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z)
 Proof
   rw[zagier_def]
 QED
 
-(* Theorem: x * y * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z) *)
-(* Proof: by MULT3_EQ_0, zagier_involute. *)
-Theorem zagier_involute_xyz:
-  !x y z. x * y * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z)
+(* Theorem: x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z) *)
+(* Proof: by MULT_EQ_0, zagier_involute. *)
+Theorem zagier_involute_alt:
+  !x y z. x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z)
 Proof
   rw[zagier_involute]
 QED
 
-(* Theorem: FST t <> 0 /\ FST (SND t) <> 0 /\ SND (SND t) <> 0 ==>
-            zagier (zagier t) = t *)
+(* Theorem: FST t <> 0 /\ SND (SND t) <> 0 ==> zagier (zagier t) = t *)
 (* Proof: by zagier_involute *)
 Theorem zagier_involute_thm:
-  !t. FST t <> 0 /\ FST (SND t) <> 0 /\ SND (SND t) <> 0 ==>
-      zagier (zagier t) = t
+  !t. FST t <> 0 /\ SND (SND t) <> 0 ==> zagier (zagier t) = t
 Proof
   simp[zagier_involute, FORALL_PROD]
 QED
 
-(* Define cuboid of a triple *)
-Definition cuboid_def:
-   cuboid (x, y, z) = x * y * z
+(* Define doublet of a triple *)
+Definition doublet_def:
+   doublet (x, y, z) = x * z
 End
 
-(* Theorem: cuboid (x, y, z) = 0 <=> x = 0 \/ y = 0 \/ z = 0 *)
-(* Proof: by cuboid_def, MULT_EQ_0 *)
-Theorem cuboid_eq_0:
-  !x y z. cuboid (x, y, z) = 0 <=> x = 0 \/ y = 0 \/ z = 0
+(* Theorem: doublet (x, y, z) = 0 <=> x = 0 \/ z = 0 *)
+(* Proof: by doublet_def, MULT_EQ_0 *)
+Theorem doublet_eq_0:
+  !x y z. doublet (x, y, z) = 0 <=> x = 0 \/ z = 0
 Proof
-  simp[cuboid_def]
+  simp[doublet_def]
 QED
 
-(* Theorem: cuboid t <> 0 ==> zagier (zagier t) = t *)
+(* Theorem: doublet t <> 0 ==> zagier (zagier t) = t *)
 (* Proof:
    Let t = (x, y, z).
-   Then x <> 0 /\ y <> 0 /\ z <> 0  by cuboid_eq_0
-   Thus zagier (zagier t) = t       by zagier_involute
+   Then x <> 0 /\ z <> 0           by doublet_eq_0
+   Thus zagier (zagier t) = t      by zagier_involute
 *)
 Theorem zagier_involute_alt:
-  !t. cuboid t <> 0 ==> zagier (zagier t) = t
+  !t. doublet t <> 0 ==> zagier (zagier t) = t
 Proof
-  metis_tac[triple_parts, cuboid_eq_0, zagier_involute]
+  metis_tac[triple_parts, doublet_eq_0, zagier_involute]
 QED
 
 (* Theorem: ~square n /\ n MOD 4 <> 0 ==> zagier involute (mills n) *)
@@ -1468,6 +1470,22 @@ Theorem zagier_involute_mills:
   !n. ~square n /\ n MOD 4 <> 0 ==> zagier involute (mills n)
 Proof
   metis_tac[mills_triple_nonzero, zagier_closure, zagier_involute, triple_parts]
+QED
+
+(* Theorem: prime p ==> zagier involute (mills p) *)
+(* Proof:
+   Note ~square p                  by prime_non_square
+    and p MOD 4 <> 0               by prime_mod_eq_0, NOT_PRIME_4
+   Thus zagier involute (mills p)  by zagier_involute_mills
+*)
+Theorem zagier_involute_mills_prime:
+  !p. prime p ==> zagier involute (mills p)
+Proof
+  ntac 2 strip_tac >>
+  `~square p` by simp[prime_non_square] >>
+  `1 < 4` by decide_tac >>
+  `p MOD 4 <> 0` by metis_tac[prime_mod_eq_0, NOT_PRIME_4] >>
+  metis_tac[zagier_involute_mills]
 QED
 
 (* ------------------------------------------------------------------------- *)
