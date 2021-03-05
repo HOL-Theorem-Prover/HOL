@@ -126,10 +126,11 @@ val _ = clear_overloads_on "SQ";
 (* Make square in computeLib, cannot be an overload. *)
 
 (* Define square predicate. *)
-val square_def = zDefine`
+
+Definition square_def[nocompute]:
     square (n:num) = ?k. n = k * k
-`;
-(* use zDefine as this is not effective. *)
+End
+(* use [nocompute] as this is not effective. *)
 
 (* Theorem: square n = ?k. n = k ** 2 *)
 (* Proof: by square_def. *)

@@ -346,13 +346,14 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define period = optional LEAST index for FUNPOW f k x to return to x. *)
-val iterate_period_def = zDefine`
+
+Definition iterate_period_def[nocompute]:
     iterate_period (f:'a -> 'a) (x:'a) =
       case OLEAST k. 0 < k /\ FUNPOW f k x = x of
            NONE => 0
          | SOME k => k
-`;
-(* use zDefine here since this is not computationally effective. *)
+End
+(* use [nocompute] here since this is not computationally effective. *)
 
 (* Theorem: FUNPOW f (iterate_period f x) x = x *)
 (* Proof:

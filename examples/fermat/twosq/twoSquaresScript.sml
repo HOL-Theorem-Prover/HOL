@@ -390,9 +390,8 @@ QED
    Let m = mills p, the solutions (x,y,z) of p = x ** 2 + 4 * y * z.
    Note ~square p                 by prime_non_square
      so FINITE m                  by mills_non_square_finite
-    and zagier involute m         by zagier_closure, zagier_involute, triple_parts,
-                                     mills_prime_triple_nonzero
-    and flip involute m           by flip_closure, flip_involute, triple_parts
+    and zagier involute m         by zagier_involute_mills_prime
+    and flip involute m           by flip_involute_mills
 
    Now work out fixed points:
    Let a = fixes zagier m, b = fixes flip m.
@@ -419,8 +418,8 @@ Proof
   qabbrev_tac `m = mills p` >>
   `~square p` by metis_tac[prime_non_square] >>
   `FINITE m` by fs[mills_non_square_finite, Abbr`m`] >>
-  `zagier involute m` by metis_tac[zagier_closure, zagier_involute, triple_parts, mills_prime_triple_nonzero] >>
-  `flip involute m` by metis_tac[flip_closure, flip_involute, triple_parts] >>
+  `zagier involute m` by metis_tac[zagier_involute_mills_prime] >>
+  `flip involute m` by metis_tac[flip_involute_mills] >>
   qabbrev_tac `a = fixes zagier m` >>
   qabbrev_tac `b = fixes flip m` >>
   qabbrev_tac `k = p DIV 4` >>
@@ -546,7 +545,7 @@ QED
      so u IN a               by IN_SING
    Also ~square p            by prime_non_square
      so FINITE s             by mills_non_square_finite
-    ==> zagier involute s    by zagier_involute_mills, p MOD 4 = 1
+    ==> zagier involute s    by zagier_involute_mills_prime
     and flip involute s      by flip_involute_mills
     ==> ODD n                by involute_involute_fix_sing_period_odd
      so v IN b               by involute_involute_fix_orbit_fix_odd
@@ -567,7 +566,7 @@ Proof
   `u IN a` by fs[] >>
   `~square p` by metis_tac[prime_non_square] >>
   `FINITE s` by fs[mills_non_square_finite, Abbr`s`] >>
-  `zagier involute s` by metis_tac[zagier_involute_mills, ONE_NOT_ZERO] >>
+  `zagier involute s` by metis_tac[zagier_involute_mills_prime] >>
   `flip involute s` by metis_tac[flip_involute_mills] >>
   drule_then strip_assume_tac involute_involute_fix_sing_period_odd >>
   last_x_assum (qspecl_then [`zagier`, `flip`, `n`, `u`] strip_assume_tac) >>
@@ -671,7 +670,7 @@ QED
 
    Note ~square p                 by prime_non_square
      so FINITE s                  by mills_non_square_finite
-    and zagier involute s         by zagier_involute_mills
+    and zagier involute s         by zagier_involute_mills_prime
     and flip involute s           by flip_involute_mills
      so f PERMUTES s              by involute_involute_permutes
    Also u IN s                    by mills_element_trivial
@@ -732,7 +731,7 @@ Proof
   qabbrev_tac `v = FUNPOW f h u` >>
   `~square p` by rw[prime_non_square] >>
   `FINITE s` by metis_tac[mills_non_square_finite] >>
-  `zagier involute s` by metis_tac[zagier_involute_mills, ONE_NOT_ZERO] >>
+  `zagier involute s` by metis_tac[zagier_involute_mills_prime] >>
   `flip involute s` by metis_tac[flip_involute_mills] >>
   `f PERMUTES s` by fs[involute_involute_permutes, Abbr`f`] >>
   `u IN s` by rw[mills_element_trivial, Abbr`s` ] >>
@@ -840,7 +839,7 @@ QED
 
    Note ~square p               by prime_non_square
      so FINITE s                by mills_non_square_finite
-    and zagier involute s       by zagier_involute_mills, ~square p, p MOD 4 <> 0
+    and zagier involute s       by zagier_involute_mills_prime
     and flip involute s         by flip_involute_mills
    also fixes zagier s = {u}    by zagier_fixes_prime
      so u IN fixes zagier s     by IN_SING
@@ -865,7 +864,7 @@ Proof
   last_x_assum (qspecl_then [`flip`, `s`, `n`, `u`] strip_assume_tac) >>
   `~square p` by rw[prime_non_square] >>
   `FINITE s` by rw[mills_non_square_finite, Abbr`s`] >>
-  `zagier involute s` by metis_tac[zagier_involute_mills, ONE_NOT_ZERO] >>
+  `zagier involute s` by metis_tac[zagier_involute_mills_prime] >>
   `flip involute s` by metis_tac[flip_involute_mills] >>
   `fixes zagier s = {u}` by rw[zagier_fixes_prime, Abbr`s`, Abbr`u`] >>
   drule_then strip_assume_tac involute_involute_fix_sing_period_odd >>
@@ -908,7 +907,7 @@ QED
    If n <> 1,
    Note ~square p           by prime_non_square
      so FINITE s            by mills_non_square_finite
-    and zagier involute s   by zagier_involute_mills, ~square p
+    and zagier involute s   by zagier_involute_mills_prime
     and flip involute s     by flip_involute_mills
      so f PERMUTES s        by involute_involute_permutes
    Also 0 < n               by iterate_period_pos, u IN s
@@ -949,7 +948,7 @@ Proof
     rw[iterate_while_hoare_0],
     `~square p` by rw[prime_non_square] >>
     `FINITE s` by metis_tac[mills_non_square_finite] >>
-    `zagier involute s` by metis_tac[zagier_involute_mills, ONE_NOT_ZERO] >>
+    `zagier involute s` by metis_tac[zagier_involute_mills_prime] >>
     `flip involute s` by metis_tac[flip_involute_mills] >>
     `f PERMUTES s` by fs[involute_involute_permutes, Abbr`f`] >>
     `0 < n` by metis_tac[iterate_period_pos] >>
@@ -1179,15 +1178,15 @@ QED
    Let X = mills p, a = fixed_points (FUNPOW zagier) Z2 X.
    The goal is: a = {(1,1,p DIV 4)}.
 
-   Note ~square p                   by prime_non_square
-     so zagier involute X           by zagier_involute_mills
+   Note zagier involute X           by zagier_involute_mills_prime
 
    By EXTENSION, this is to show:
    (1) t IN X ==> t = (1,1,p DIV 4)
        Note t IN X                  by involute_fixed_points_element_element
         and zagier t = t            by involute_fixed_points
-        Now ?x y z. t = (x, y, z)   by triple_parts
-        and x <> 0                  by mills_triple_nonzero, ~square p
+        Now ~square p               by prime_non_square
+         so ?x y z. t = (x, y, z)   by triple_parts
+        and x <> 0                  by mills_triple_nonzero, ~square p, p MOD 4 = 1
         ==> x = y                   by zagier_fix
        Note p = windmill x y z      by mills_element
         ==> (x,y,z) = (1,1,p DIV 4) by windmill_trivial_prime
@@ -1205,14 +1204,12 @@ Proof
   rpt strip_tac >>
   qabbrev_tac `X = mills p` >>
   qabbrev_tac `a = fixed_points (FUNPOW zagier) Z2 X` >>
-  `~square p` by metis_tac[prime_non_square] >>
-  `p MOD 4 <> 0` by decide_tac >>
-  `zagier involute X` by  metis_tac[zagier_involute_mills] >>
+  `zagier involute X` by  metis_tac[zagier_involute_mills_prime] >>
   rw[EXTENSION, EQ_IMP_THM] >| [
     `x IN X` by metis_tac[involute_fixed_points_element_element] >>
     `zagier x = x` by metis_tac[involute_fixed_points] >>
     `?x1 y z. x = (x1, y, z)` by rw[triple_parts] >>
-    `x1 <> 0` by metis_tac[mills_triple_nonzero] >>
+    `x1 <> 0` by metis_tac[mills_triple_nonzero, prime_non_square, ONE_NOT_ZERO] >>
     `x1 = y` by fs[zagier_fix] >>
     metis_tac[windmill_trivial_prime, mills_element],
     `(1,1,p DIV 4) IN X` by rw[mills_element_trivial, Abbr`X`] >>
@@ -1227,7 +1224,7 @@ QED
      so FINITE X                       by mills_non_square_finite
     Now !x y z. (x,y,z) IN X ==>
         x <> 0 /\ y <> 0 /\ z <> 0     by mills_triple_nonzero
-    and zagier involute X              by zagier_involute_mills
+    and zagier involute X              by zagier_involute_mills_prime
     and flip involute X                by flip_involute_mills
 
    Let a = fixed_points (FUNPOW zagier) Z2 X,
@@ -1255,7 +1252,7 @@ Proof
   qabbrev_tac `X = mills p` >>
   `~square p` by metis_tac[prime_non_square] >>
   `FINITE X` by fs[mills_non_square_finite, Abbr`X`] >>
-  `zagier involute X` by metis_tac[zagier_involute_mills, DECIDE``1 <> 0``] >>
+  `zagier involute X` by metis_tac[zagier_involute_mills_prime] >>
   `flip involute X` by metis_tac[flip_involute_mills] >>
   qabbrev_tac `a = fixed_points (FUNPOW zagier) Z2 X` >>
   qabbrev_tac `b = fixed_points (FUNPOW flip) Z2 X` >>
