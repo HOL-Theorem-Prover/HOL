@@ -295,16 +295,16 @@ the counterpart of binomial_sum |- !n. SUM (GENLIST (binomial n) (SUC n)) = 2 **
 *)
 
 (* Define the set of choices of k-subsets of (count n). *)
-val sub_count_def = zDefine`
+Definition sub_count_def[nocompute]:
     sub_count n k = { (s:num -> bool) | s SUBSET (count n) /\ CARD s = k}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Define the number of choices of k-subsets of (count n). *)
-val choose_def = zDefine`
+Definition choose_def[nocompute]:
     choose n k = CARD (sub_count n k)
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 (* make this an infix operator *)
 val _ = set_fixity "choose" (Infix(NONASSOC, 550)); (* higher than arithmetic op 500. *)
 (* val choose_def = |- !n k. n choose k = CARD (sub_count n k): thm *)
@@ -844,10 +844,10 @@ val it = |- MAP ($choose 5) [0 .. 5] = [1; 5; 10; 10; 5; 1]: thm
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of k-subsets of a set. *)
-val sub_sets_def = zDefine`
+Definition sub_sets_def[nocompute]:
     sub_sets P k = { s | s SUBSET P /\ CARD s = k}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: s IN sub_sets P k <=> s SUBSET P /\ CARD s = k *)
 (* Proof: by sub_sets_def. *)
@@ -1027,16 +1027,16 @@ val it = |- !n. SUM (GENLIST (binomial n) (SUC n)) = 2 ** n: thm
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of permutation tuples of (count n). *)
-val perm_count_def = zDefine`
+Definition perm_count_def[nocompute]:
     perm_count n = { ls | ALL_DISTINCT ls /\ set ls = count n}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Define the number of choices of k-tuples of (count n). *)
-val perm_def = zDefine`
+Definition perm_def[nocompute]:
     perm n = CARD (perm_count n)
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: ls IN perm_count n <=> ALL_DISTINCT ls /\ set ls = count n *)
 (* Proof: by perm_count_def. *)
@@ -1824,10 +1824,10 @@ SET_TO_LIST_THM
 *)
 
 (* Define the set of permutation lists of a set. *)
-val perm_set_def = zDefine`
+Definition perm_set_def[nocompute]:
     perm_set s = {ls | ALL_DISTINCT ls /\ set ls = s}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 (* Note: this cannot be made effective, unless sort s to list by some ordering. *)
 
 (* Theorem: ls IN perm_set s <=> ALL_DISTINCT ls /\ set ls = s *)
@@ -2108,21 +2108,21 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of choices of k-tuples of (count n). *)
-val list_count_def = zDefine`
+Definition list_count_def[nocompute]:
     list_count n k =
         { ls | ALL_DISTINCT ls /\ (set ls) SUBSET (count n) /\ LENGTH ls = k}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 (* Note: if defined as:
    list_count n k = { ls | (set ls) SUBSET (count n) /\ CARD (set ls) = k}
 then non-distinct lists will be in the set, which is not desirable.
 *)
 
 (* Define the number of choices of k-tuples of (count n). *)
-val arrange_def = zDefine`
+Definition arrange_def[nocompute]:
     arrange n k = CARD (list_count n k)
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 (* make this an infix operator *)
 val _ = set_fixity "arrange" (Infix(NONASSOC, 550)); (* higher than arithmetic op 500. *)
 (* arrange_def;

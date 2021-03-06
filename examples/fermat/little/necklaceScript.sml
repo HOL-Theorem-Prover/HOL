@@ -138,10 +138,10 @@ open helperListTheory; (* for LENGTH_NON_NIL, LIST_TO_SET_SING_IFF *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define necklaces as lists of length n, i.e. with n beads, in a colors. *)
-val necklace_def = zDefine `
+Definition necklace_def[nocompute]:
     necklace n a = {ls | LENGTH ls = n /\ (set ls) SUBSET (count a) }
-`;
-(* Note: use zDefine as this is not effective. *)
+End
+(* Note: use [nocompute] as this is not effective. *)
 
 (* Theorem: ls IN necklace n a <=> (LENGTH ls = n /\ (set ls) SUBSET (count a)) *)
 (* Proof: by necklace_def *)
@@ -393,11 +393,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define mono-colored necklace *)
-val monocoloured_def = zDefine`
+Definition monocoloured_def[nocompute]:
     monocoloured n a =
        {ls | ls IN necklace n a /\ (ls <> [] ==> SING (set ls)) }
-`;
-(* Note: use zDefine as this is not effective. *)
+End
+(* Note: use [nocompute] as this is not effective. *)
 
 (* Theorem: ls IN monocoloured n a <=>
             ls IN necklace n a /\ (ls <> [] ==> SING (set ls)) *)

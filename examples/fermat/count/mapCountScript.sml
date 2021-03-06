@@ -43,9 +43,6 @@ open combinatoricsTheory;
 *)
 (* Definitions and Theorems (# are exported, ! are in compute):
 
-   Helper Theorems:
-   FUNSET_ALT          |- !P Q. FUNSET P Q = {f | over f P Q}
-
    Function on a Set:
    on_def              |- !f s. f on s = (\x. if x IN s then f x else ARB)
    on_over             |- !f s t. over f s t <=> over (f on s) s t
@@ -72,6 +69,9 @@ open combinatoricsTheory;
    bij_on_linv         |- !f s. f PERMUTES s ==> LINV f s o f on s = I on s
    INJ_I_SUBSET        |- !s t. INJ I s t <=> s SUBSET t
    INJ_I_on_SUBSET     |- !s t. INJ (I on s) s t <=> s SUBSET t
+   map_on_count        |- !f n. MAP f [0 ..< n] = MAP (f on count n) [0 ..< n]
+   map_on_count_length |- !f ls. set ls = count (LENGTH ls) ==>
+                                 MAP f ls = MAP (f on count (LENGTH ls)) ls
 
    Counting number of functions:
    fun_set_def         |- !s t. fun_set s t = {f on s | f | over f s t}
@@ -193,23 +193,9 @@ This is different from FUNSET P Q in pred_setTheory,
 which are still lambda expressions, not math functions.
 *)
 
-(* pred_setTheory:
-FUNSET |- !P Q. FUNSET P Q = (\f. over f P Q)
-*)
-
-(* Theorem: FUNSET P Q = {f | over f P Q} *)
-(* Proof: by FUNSET, EXTENSION *)
-Theorem FUNSET_ALT:
-  !P Q. FUNSET P Q = {f | over f P Q}
-Proof
-  rw[FUNSET, EXTENSION]
-QED
-
 (* ------------------------------------------------------------------------- *)
 (* Function on a Set                                                         *)
 (* ------------------------------------------------------------------------- *)
-
-(* This part is originally in algebra/group/symmetryGroup. *)
 
 (* Function with domain on a set *)
 (* val _ = overload_on("on", ``\(f:'a -> 'b) (s:'a -> bool) x. if x IN s then f x else ARB``); *)
@@ -420,6 +406,52 @@ Proof
   simp[on_def, INJ_DEF, SUBSET_DEF]
 QED
 
+(* Theorem: MAP f [0 ..< n] = MAP (f on count n) [0 ..< n] *)
+(* Proof:
+   Note LENGTH [0 ..< n] = n                           by listRangeLHI_LEN
+     so LENGTH (MAP f [0 ..< n]) = n                   by LENGTH_MAP
+    and LENGTH (MAP (f on count n) [0 ..< n]) = n      by LENGTH_MAP
+   By LIST_EQ, it remains to show:
+      !x. x < n ==> EL x (MAP f [0 ..< n]) = EL x (MAP (f on count n) [0 ..< n])
+   Note x IN (count n)                   by IN_COUNT, x < n
+     EL x (MAP f [0 ..< n])
+   = f (EL x [0 ..< n])                  by EL_MAP
+   = f x                                 by listRangeLHI_EL
+   = (f on count n) x                    by on_def, x IN (count n)
+   = (f on count n) (EL x [0 ..< n])     by listRangeLHI_EL
+   = EL x (MAP (f on count n) [0 ..< n]) by EL_MAP
+*)
+Theorem map_on_count:
+  !f n. MAP f [0 ..< n] = MAP (f on count n) [0 ..< n]
+Proof
+  rpt strip_tac >>
+  irule LIST_EQ >>
+  rw[on_def, EL_MAP, listRangeLHI_EL]
+QED
+
+(* Theorem: set ls = count (LENGTH ls) ==> MAP f ls = MAP (f on count (LENGTH ls)) ls *)
+(* Proof:
+   Let n = LENGTH ls, g = f on count n.
+   Note LENGTH (MAP f ls) = n            by LENGTH_MAP
+    and LENGTH (MAP g ls) = n            by LENGTH_MAP
+   By LIST_EQ, it remains to show:
+      !x. x < n ==> EL x (MAP f ls) = EL x (MAP g ls)
+   Note EL x ls IN (count n)             by set_list_eq_count, x < n
+     EL x (MAP f ls)
+   = f (EL x ls)                         by EL_MAP
+   = (f on count n) (EL x ls)            by on_def, EL x ls IN (count n)
+   = g (EL x ls)                         by notation
+   = EL x (MAP g ls)                     by EL_MAP
+*)
+Theorem map_on_count_length:
+  !f ls. set ls = count (LENGTH ls) ==> MAP f ls = MAP (f on count (LENGTH ls)) ls
+Proof
+  rpt strip_tac >>
+  irule LIST_EQ >>
+  rw[on_def, EL_MAP] >>
+  metis_tac[set_list_eq_count]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Counting number of functions.                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -447,10 +479,10 @@ Therefore, such a fundamental result of combinatorics takes a lot of effort, and
 *)
 
 (* The set of functions restricted to the domain. *)
-val fun_set_def = zDefine`
+Definition fun_set_def[nocompute]:
     fun_set s t = {f on s | f | over f s t}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: x IN fun_set s t <=> ?f. x = f on s /\ over f s t *)
 (* Proof: by fun_set_def. *)
@@ -844,10 +876,10 @@ and then in one of k! ways, assign one of these subsets for each element in [k].
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of injections from s to t. *)
-val inj_set_def = zDefine`
+Definition inj_set_def[nocompute]:
     inj_set s t = {f on s | f | INJ f s t}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: x IN inj_set s t <=> ?f. x = f on s /\ INJ f s t *)
 (* Proof: by inj_set_def. *)
@@ -1306,10 +1338,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of bijections from s to t. *)
-val bij_set_def = zDefine`
+Definition bij_set_def[nocompute]:
     bij_set s t = {f on s | f | BIJ f s t}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: x IN bij_set s t <=> ?f. x = f on s /\ BIJ f s t *)
 (* Proof: by bij_set_def. *)
