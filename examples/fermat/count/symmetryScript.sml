@@ -22,7 +22,7 @@ open pred_setTheory arithmeticTheory;
 open helperCountTheory;
 open helperSetTheory;
 
-open mapCountTheory;
+open mapCountTheory; (* for on_def *)
 open combinatoricsTheory;
 
 (* Get dependent theories local *)
@@ -40,8 +40,6 @@ open ringMapTheory fieldMapTheory;
 (* Overloading (# is temporary):
 *)
 (* Definitions and Theorems (# are exported):
-
-   Helper Theorems:
 
    Symmetric Group:
    symmetric_group_def     |- !s. symmetric_group s =
@@ -229,8 +227,6 @@ open ringMapTheory fieldMapTheory;
 (* ------------------------------------------------------------------------- *)
 (* Symmetric Group                                                           *)
 (* ------------------------------------------------------------------------- *)
-
-(* This is a rework of algebra/group/symmetryGroup. *)
 
 (*
 Given a finite set s of cardinality n,
@@ -487,10 +483,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of group automorphisms. *)
-val group_auto_maps_def = zDefine`
+Definition group_auto_maps_def[nocompute]:
     group_auto_maps (g:'a group) = {f on G | f | GroupAuto f g}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: x IN group_auto_maps g <=> ?f. x = f on G /\ GroupAuto f g *)
 (* Proof: by group_auto_maps_def. *)
@@ -694,8 +690,6 @@ QED
 (* Field Symmetry Group                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-(* This is a rework of algebra/field/symmetryField. *)
-
 (* ------------------------------------------------------------------------- *)
 (* Maps restricted on a Set                                                  *)
 (* ------------------------------------------------------------------------- *)
@@ -860,10 +854,10 @@ QED
 (* This is true, but this is not the aim. *)
 
 (* Define the set of all field automorphism maps. *)
-val field_auto_maps_def = zDefine`
+Definition field_auto_maps_def[nocompute]:
     field_auto_maps (r:'a field) = {f on R | f | FieldAuto f r}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: x IN field_auto_maps r <=> ?f. x = f on R /\ FieldAuto f r *)
 (* Proof: by field_auto_maps_def. *)
@@ -1061,10 +1055,10 @@ QED
 (* Overload a map fixing a set -- but hard to control:
 val _ = overload_on("fixes", ``\f s. !x. x IN s ==> (f x = x)``);
 *)
-val fixes_def = zDefine`
+Definition fixes_def[nocompute]:
     fixes f s <=> (!x. x IN s ==> (f x = x))
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 val _ = set_fixity "fixes" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Note:
@@ -1149,10 +1143,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the subfield-fixing automorphism *)
-val subfield_auto_def = zDefine`
+Definition subfield_auto_def[nocompute]:
     subfield_auto f (r:'a field) (s:'a field) <=> FieldAuto f r /\ (f fixes B)
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 (* Note: no subfield or SUBSET relating r and s here. *)
 (* Note: including B SUBSET R only simplifies some theorems with subfield_auto f r s in premise,
          but then subfield_auto_I needs explicity B SUBSET R,
@@ -1308,11 +1302,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of all field automorphism maps. *)
-val subfield_auto_maps_def = zDefine`
+Definition subfield_auto_maps_def[nocompute]:
     subfield_auto_maps (r:'a field) (s:'a field) =
        {f on R | f | subfield_auto f r s}
-`;
-(* use zDefine as this is not effective for evalutaion. *)
+End
+(* use [nocompute] as this is not effective for evalutaion. *)
 
 (* Theorem: x IN subfield_auto_maps r <=> ?f. x = f on R /\ subfield_auto f r s *)
 (* Proof: by subfield_auto_maps_def. *)
