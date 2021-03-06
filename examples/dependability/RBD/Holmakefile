@@ -1,3 +1,1 @@
-HOLDIR = ../../
-
-INCLUDES = $(HOLDIR)/miller/formalize
+INCLUDES = $(HOLDIR)/examples/miller/formalize
