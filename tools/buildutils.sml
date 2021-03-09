@@ -31,10 +31,11 @@ fun die s =
     end
 fun warn s =
   let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
+fun WARN s = (warn s; OS.Process.sleep (Time.fromSeconds 2))
 fun I x = x
 
 
-fun startup_check () =
+fun right_distrib_check () =
   let
     val me = Systeml.find_my_path()
   in
@@ -44,6 +45,34 @@ fun startup_check () =
         if whereami = me then ()
         else die "*** Don't run this instance of build in a foreign HOL directory"
   end
+
+fun cpp_present() =
+    let val which = internal_functions.which
+        open OS.FileSys
+    in
+      case OS.Process.getEnv "MINISAT_CPP" of
+         SOME p => if OS.Path.isAbsolute p then
+                     if access (p, [A_READ, A_EXEC]) then ()
+                     else
+                       WARN ("MINISAT_CPP environment variable doesn't point "^
+                             "at executable; minisat will fail to build")
+                   else if OS.Path.isAbsolute (which p) then ()
+                   else (
+                     WARN ("MINISAT_CPP environment variable " ^
+                           "points to " ^ p ^
+                           ", which is not in PATH;");
+                     WARN ("minisat will fail to build")
+                   )
+       | NONE => if OS.Path.isAbsolute (which "c++") then ()
+                 else
+                     WARN ("No c++ in PATH; set MINISAT_CPP env. " ^
+                           "variable or minisat will fail to build")
+    end
+
+fun startup_check() = (
+  right_distrib_check();
+  cpp_present()
+)
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
