@@ -36,7 +36,8 @@ else
 fi
 
 cd polyml
-echo "*** Configuring PolyML for prefix: ${PREFIX}"
+echo "*** Configuring PolyML for prefix: ${PREFIX};"
+echo "*** Poly/ML intinf-option = ${POLY_INTINF}"
 ./configure --prefix=$PREFIX ${POLY_INTINF}
 make
 
