@@ -19,7 +19,7 @@ env:
     - SML=poly BUILDOPTS="--seq=developers/travis/more_examples_seq -t1"
     - SML=poly BUILDOPTS="--expk --seq=developers/travis/more_examples_seq -t1"
     - SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
-
+    - SML=poly POLY_INTINF="--enable-intinf-as-int"
 matrix:
   include:
     - os: osx
