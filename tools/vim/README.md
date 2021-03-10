@@ -23,8 +23,8 @@ All files are located under tools/vim
   when hol starts.
 - `filetype.vim`: Template filetype.vim for automatically running hol.vim when
   vim starts.
-- `vimhol.sh`: Wraps hol and vim in tmux, side-by-side. Below you find
-  a description the usage.
+- `vimhol.sh`: Wraps hol and vim side-by-side in tmux. Below you find the
+  description of its usage.
 - `README.md`: Documentation. (This file.)
 
 ## Quickstart
@@ -205,8 +205,9 @@ The script requires:
 - tmux, a terminal multiplexer.
 - vim terminal editor. If desired set the `$EDITOR` environment variable to any
   other editor of the vim flavour.
-- optionally rlwrap, a readline wrapper, for easier interaction with hol.
-  An advantage is a history of commands typed on the hol command prompt.
+- optionally `rlwrap`, a readline wrapper, for easier interaction with hol.
+  By default `rlwrap` remembers the history of commands previously typed on the
+  hol command prompt.
 
 Hereafter, `$HOLDIR` abbreviates the location to the root directory of the HOL
 sources.
@@ -230,18 +231,18 @@ existing swap files, when opening the same files again. Make sure to save your
 work. When quitting, the fifo pipe is deleted by tmux hooks (when not using the
 configured `Ctrl-q` shortcut).
 
-For permanent usage you may link the script to a path that is mentioned in the
-PATH environment variable, for example
-```
-ln -s $HOLDIR/tools/vim/vimhol.sh /usr/local/bin/vimhol
-```
-makes a vimhol command available, provided that
-```
-export PATH="/usr/local/bin:$PATH"
-```
-is set in the shell's configuration (e.g. in `~/.bash_profile`).
-
 If the script is called in an environment where `HOLDIR` is set, then the hol
 at the path `$HOLDIR/bin/hol` is run, otherwise it executes hol from the same
 hol directory tree as vimhol.
+
+For permanent usage you may add an alias to the script in the shell
+configuration (e.g. in `~/.bash_profile`).
+```
+alias vimhol="$HOLDIR/tools/vim/vimhol.sh"
+```
+Provided that that the variable `$HOLDIR` is set, this makes a `vimhol` command
+available, which can be called as in
+```
+vimhol $HOLDIR/src/coalgebras/*Script.sml
+```
 
