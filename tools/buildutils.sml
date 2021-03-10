@@ -50,22 +50,22 @@ fun cpp_present() =
     let val which = internal_functions.which
         open OS.FileSys
     in
-      case OS.Process.getEnv "MINISAT_CPP" of
+      case OS.Process.getEnv "MINISAT_CXX" of
          SOME p => if OS.Path.isAbsolute p then
                      if access (p, [A_READ, A_EXEC]) then ()
                      else
-                       WARN ("MINISAT_CPP environment variable doesn't point "^
+                       WARN ("MINISAT_CXX environment variable doesn't point "^
                              "at executable; minisat will fail to build")
                    else if OS.Path.isAbsolute (which p) then ()
                    else (
-                     WARN ("MINISAT_CPP environment variable " ^
+                     WARN ("MINISAT_CXX environment variable " ^
                            "points to " ^ p ^
                            ", which is not in PATH;");
                      WARN ("minisat will fail to build")
                    )
        | NONE => if OS.Path.isAbsolute (which "c++") then ()
                  else
-                     WARN ("No c++ in PATH; set MINISAT_CPP env. " ^
+                     WARN ("No c++ in PATH; set MINISAT_CXX env. " ^
                            "variable or minisat will fail to build")
     end
 
