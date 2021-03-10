@@ -832,7 +832,7 @@ bool Solver::solve(const vec<Lit>& assumps)
         if (var(conflict[i]) >= 100){
             Lit p = conflict[i];
             Var x = var(p);
-            printf("confl[%d] = "L_LIT"\n", i, L_lit(p));
+            printf("confl[%d] = " L_LIT "\n", i, L_lit(p));
             printf("level     = %d\n", level[x]);
             printf("reason    = %p\n", reason[x]);
             printf("unit_id   = %d\n", unit_id[x]);
