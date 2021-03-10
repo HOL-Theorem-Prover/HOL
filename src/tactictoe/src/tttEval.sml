@@ -525,7 +525,7 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := true;
-run_evalscript_thyl smlfun "210128-2" (true,30) 
+run_evalscript_thyl smlfun "210310-2" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
