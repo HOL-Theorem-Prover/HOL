@@ -241,7 +241,6 @@ fun hh_pb_eval_thy atpl thy =
 fun hh_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let val b = !hide_flag in
     hide_flag := false; 
-    ttt_eval_flag := true;
     mkDir_err hh_eval_dir;
     log_eval ("Goal: " ^ string_of_goal goal);
     ignore (main_hh thmdata goal);

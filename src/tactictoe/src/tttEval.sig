@@ -8,6 +8,10 @@ sig
 
   val export_pb_flag : bool ref
   val cheat_flag : bool ref
+  val hh_flag : bool ref
+  val hh_glob : (string -> mlThmData.thmdata -> goal -> tactic) option ref
+  val import_hh : 
+    unit -> (string -> mlThmData.thmdata -> goal -> tactic) option   
 
   val prepare_global_data : (string * int) -> unit
   val ttt_eval : string -> (string * int) -> 

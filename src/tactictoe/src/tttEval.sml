@@ -9,14 +9,34 @@ structure tttEval :> tttEval =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlRedirect smlParallel smlOpen smlParser
+  smlRedirect smlParallel smlOpen smlParser smlExecute
   mlThmData mlTacticData mlTreeNeuralNetwork
   tttSetup tttSearch tttRecord tacticToe tttToken tttTrain tttBigSteps
 
 val ERR = mk_HOL_ERR "tttEval"
 
-type nnfiles = string option * string option * string option
+(* -------------------------------------------------------------------------
+   Import holyhammer if possible
+   ------------------------------------------------------------------------- *)
 
+val hh_glob = ref NONE
+
+fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
+
+fun import_hh () =
+  let val _ =  
+     metis_avail () andalso
+     quse_string ("load \"holyHammer\"; " ^ 
+                  "tttEval.hh_glob := Option.SOME (holyHammer.main_hh);")
+  in
+    !hh_glob
+  end 
+
+(* -------------------------------------------------------------------------
+   I/O
+   ------------------------------------------------------------------------- *)
+
+type nnfiles = string option * string option * string option
 val export_pb_flag = ref false
 
 (* --------------------------------------------------------------------
@@ -69,8 +89,6 @@ fun all_info dir file =
   in
     parse_info file (List.mapPartial read_line sl)
   end
-
-
 
 fun compile_info exp =
   let
@@ -294,26 +312,43 @@ fun print_status r = case r of
  | ProofTimeout   => print_endline "tactictoe: timeout"
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
+val hh_flag = ref false
+
 fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let
     val pbid = thy ^ "_" ^ its n
     val valfile = expdir ^ "/val/" ^ pbid
     val argfile = expdir ^ "/arg/" ^ pbid
     val pbprefix = expdir ^ "/pb/" ^ pbid
+    val fofdir = expdir ^ "/fof/" ^ pbid
+    val _ = app mkDir_err [expdir ^ "/fof", fofdir]
     val mem = !hide_flag
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
-    val ((status,tree),t) = add_time
-      (main_tactictoe (thmdata,tacdata) nnol) goal
-      handle Interrupt => raise Interrupt
-        | e => (print_endline "Error"; raise e)
   in
-    print_status status;
-    print_endline ("ttt_eval: " ^ rts_round 6 t);
-    export_valex valfile tree;
-    export_argex argfile tree;
-    if !export_pb_flag then export_pbl pbprefix tree else ();
+    if !hh_flag then
+      let val hho = import_hh () in
+      if not (isSome hho) then print_endline "hh: not available" else
+      let 
+        val hh = valOf hho 
+        val (_,t) = add_time (hh fofdir thmdata) goal
+      in
+        print_endline ("hh_eval: " ^ rts_round 6 t)
+      end end
+    else 
+      let val ((status,tree),t) = add_time
+        (main_tactictoe (thmdata,tacdata) nnol) goal
+        handle Interrupt => raise Interrupt
+          | e => (print_endline "Error"; raise e)
+      in
+        print_status status;
+        print_endline ("ttt_eval: " ^ rts_round 6 t);
+        export_valex valfile tree;
+        export_argex argfile tree;
+        if !export_pb_flag then export_pbl pbprefix tree else ()
+      end
+    ;
     hide_flag := mem
   end
 
@@ -371,6 +406,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_flag "aiLib.debug_flag" debug_flag,
      sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
      sreflect_flag "tttEval.cheat_flag" cheat_flag,
+     sreflect_flag "tttEval.hh_flag" hh_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      smlfun ^ " " ^ mlquote expdir ^ " " ^
