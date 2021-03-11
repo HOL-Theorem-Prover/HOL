@@ -121,7 +121,6 @@ fun which arg =
   end
 
 val exe_ext = if OS = "winNT" then ".exe" else "";
-determining "mosmldir";
 
 fun check_mosml candidate = let
   open FileSys
@@ -161,7 +160,52 @@ fun dirify {arcs,isAbs,vol} =
     OS.Path.toString {arcs = #1 (frontlast arcs), isAbs = isAbs, vol = vol}
 
 
+
+val holdir = let
+  val _ = determining "holdir"
+  val cdir_files = readdir currentdir
+in
+  if mem "sigobj" cdir_files andalso mem "std.prelude" cdir_files then
+    currentdir
+  else if mem "smart-configure.sml" cdir_files andalso
+          mem "configure.sml" cdir_files
+  then let
+      val {arcs, isAbs, vol} = Path.fromString currentdir
+      val (arcs', _) = frontlast arcs
+    in
+      Path.toString {arcs = arcs', isAbs = isAbs, vol = vol}
+    end
+  else (print "\n\n*** Couldn't determine holdir; ";
+        print "please run me from the root HOL directory\n";
+        Process.exit Process.failure)
+end;
+
+determining "dynlib_available";
+val dynlib_available = (load "Dynlib"; true) handle _ => false;
+
+
+val DOT_PATH = SOME "";
+val GNUMAKE = "";
+
+val _ = let
+  val override = Path.concat(holdir, "config-override")
+in
+  if FileSys.access (override, [FileSys.A_READ]) then
+    (print "\n[Using override file!]\n\n";
+     use override)
+  else ()
+end;
+
+val DOT_PATH = if DOT_PATH = SOME "" then which "dot" else DOT_PATH;
+val GNUMAKE = if GNUMAKE = "" then
+                (determining "GNUMAKE";
+                 case OS.Process.getEnv "MAKE" of
+                     NONE => "make"
+                   | SOME s => s)
+              else GNUMAKE;
+
 val mosmldir = let
+  val _ = determining "mosmldir"
   val nm = CommandLine.name()
   val p as {arcs, isAbs, vol} = OS.Path.fromString nm
   val cand =
@@ -184,44 +228,7 @@ in
   | SOME c => if check_mosml c then c else mosml_from_loadpath ()
 end;
 
-determining "holdir";
-
-val holdir = let
-  val cdir_files = readdir currentdir
-in
-  if mem "sigobj" cdir_files andalso mem "std.prelude" cdir_files then
-    currentdir
-  else if mem "smart-configure.sml" cdir_files andalso
-          mem "configure.sml" cdir_files
-  then let
-      val {arcs, isAbs, vol} = Path.fromString currentdir
-      val (arcs', _) = frontlast arcs
-    in
-      Path.toString {arcs = arcs', isAbs = isAbs, vol = vol}
-    end
-  else (print "\n\n*** Couldn't determine holdir; ";
-        print "please run me from the root HOL directory\n";
-        Process.exit Process.failure)
-end;
-
-determining "dynlib_available";
-
-val dynlib_available = (load "Dynlib"; true) handle _ => false;
-
 print "\n";
-
-val DOT_PATH = SOME "";
-
-val _ = let
-  val override = Path.concat(holdir, "config-override")
-in
-  if FileSys.access (override, [FileSys.A_READ]) then
-    (print "\n[Using override file!]\n\n";
-     use override)
-  else ()
-end;
-
-val DOT_PATH = if DOT_PATH = SOME "" then which "dot" else DOT_PATH;
 
 fun verdict (prompt, value) =
     (print (StringCvt.padRight #" " 20 (prompt^":"));
@@ -237,6 +244,7 @@ verdict ("OS", OS);
 verdict ("mosmldir", mosmldir);
 verdict ("holdir", holdir);
 verdict ("dynlib_available", Bool.toString dynlib_available);
+verdict ("GNUMAKE", GNUMAKE);
 optverdict ("DOT_PATH", DOT_PATH);
 
 val _ = let
