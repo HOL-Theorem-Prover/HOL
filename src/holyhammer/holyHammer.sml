@@ -56,8 +56,6 @@ fun pathl sl = case sl of
 val hhdir = pathl [HOLDIR,"src","holyhammer"]
 val bindir = pathl [hhdir,"provers"]
 fun fof_dir dir atp = pathl [dir, name_of atp ^ "_files"]
-fun out_file dir atp = pathl [fof_dir dir atp,"out"]
-fun status_file dir atp = pathl [fof_dir dir atp,"status"]
 
 (* ---------------------------------------------------------------------------
    Evaluation log
@@ -109,12 +107,12 @@ fun parallel_call t fl =
 
 val atp_ref = ref ""
 
-fun launch_atp dir atp t =
+fun launch_atp fofdir atp t =
   let
     val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^
-      dir ^ " > /dev/null 2> /dev/null"
+      fofdir ^ " > /dev/null 2> /dev/null"
     val _ = cmd_in_dir bindir cmd
-    val r = get_lemmas (status_file dir atp, out_file dir atp)
+    val r = get_lemmas (fofdir ^ "/status", fofdir ^ "/out")
   in
     if isSome r
     then
@@ -158,7 +156,7 @@ fun hh_pb dir wanted_atpl premises goal =
     val _  = app (export_to_atp dir premises cj) atpl
     val t1 = !timeout_glob
     val t2 = Real.fromInt t1 + 2.0
-    fun f x = fn () => ignore (launch_atp dir x t1)
+    fun f x = fn () => ignore (launch_atp (fof_dir dir x) x t1)
     val olemmas = parallel_call t2 (map f atpl)
   in
     case olemmas of
