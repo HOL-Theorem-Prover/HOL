@@ -502,11 +502,26 @@ fun cleanForReloc0 HOLDIR =
     includes
   end
 
+fun maybe_gmakeclean dirname owise () =
+    if OS <> "winNT" then
+      let
+        val gnumake = 
+            case List.rev (#arcs (OS.Path.fromString dirname)) of
+              "minisat" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | "zc2hs" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | _ => false
+      in
+        if gnumake then (Systeml.systeml [Systeml.GNUMAKE, "clean"]; [])
+        else owise()
+      end
+    else owise()
 
-fun clean HOLDIR dirname = moveTo dirname (fn () => clean0 HOLDIR)
-fun cleanAll HOLDIR dirname = moveTo dirname (fn () => cleanAll0 HOLDIR)
+fun clean HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => clean0 HOLDIR))
+fun cleanAll HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanAll0 HOLDIR))
 fun cleanForReloc HOLDIR dirname =
-  moveTo dirname (fn () => cleanForReloc0 HOLDIR)
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanForReloc0 HOLDIR))
 
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
@@ -655,7 +670,7 @@ end;
 
 fun Gnumake dir =
   if SYSTEML [GNUMAKE] then true
-  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
+  else (WARN ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
 exception BuildExit
@@ -693,9 +708,9 @@ in
                               (fullPath [HOLDIR, "src","HolSat","sat_solvers",
                                          "minisat", "DELTHISminisat.exe"])
 	 | other => if not (Gnumake dir) then
-			print(String.concat
-				  ["\nMiniSat has NOT been built!! ",
-				   "(continuing anyway).\n\n"])
+			WARN (String.concat
+				["\nMiniSat has NOT been built!! ",
+				 "(continuing anyway).\n\n"])
                     else ()
     end
   | "zc2hs" => let

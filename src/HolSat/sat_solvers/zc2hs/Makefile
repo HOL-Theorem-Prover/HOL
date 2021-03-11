@@ -13,4 +13,4 @@ zc2hs:
 	g++ -O3 Proof.o File.o zc2hs.cpp -o zc2hs
 
 clean:
-	rm -f zc2hs *.h *.o
+	@rm -f zc2hs *.h *.o
