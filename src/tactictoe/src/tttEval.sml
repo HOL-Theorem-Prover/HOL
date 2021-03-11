@@ -534,16 +534,6 @@ run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 *)
 
 (* ------------------------------------------------------------------------
-   Evaluation on one theory
-   ------------------------------------------------------------------------ *)
-
-(* 
-load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 10.0;
-run_evalscript_thyl "arithmetic_1in10" false 1 ["arithmetic"];
-*)
-
-(* ------------------------------------------------------------------------
    Evaluation on a list of theories
    ------------------------------------------------------------------------ *)
 
@@ -561,7 +551,8 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
-run_evalscript_thyl smlfun "210310-2" (true,30) 
+hh_flag := true;
+run_evalscript_thyl smlfun "210311-hh-1" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
