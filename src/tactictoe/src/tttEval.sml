@@ -360,6 +360,8 @@ fun mk_goaltree maxw tree id =
 fun gen_term t = list_mk_forall (free_vars_lr t, t)
 fun termify g = gen_term (list_mk_imp g)
 
+
+
 fun termify_gconj gconj = case gconj of
   GConj gdisjl => 
     if null gdisjl then raise ERR "termify_goaltree" "unexpected" else 
@@ -419,7 +421,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
       (* export_argex argfile tree; *)
       if !export_pb_flag then export_pbl pbprefix tree else ();
       (* call to holyhammer on partial proof tree *)
-      if !hh_ontop_flag 
+      if !hh_ontop_flag andalso not (is_proved tree) 
       then hh_call fofdir thmdata 
         ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
       else ()
