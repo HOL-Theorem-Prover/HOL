@@ -10,8 +10,15 @@ sig
   val cheat_flag : bool ref
   val hh_flag : bool ref
   val hh_glob : (string -> mlThmData.thmdata -> goal -> tactic) option ref
+  val hh_timeout : int ref
   val import_hh : 
     unit -> (string -> mlThmData.thmdata -> goal -> tactic) option   
+  val hh_ontop_flag : bool ref
+  val hh_ontop_wd : int ref
+
+  datatype GoalDisj = GDisj of goal * GoalConj list
+  and GoalConj = GConj of GoalDisj list
+  val mk_goaltree : int -> tttSearch.tree -> tttSearch.id -> GoalConj
 
   val prepare_global_data : (string * int) -> unit
   val ttt_eval : string -> (string * int) -> 

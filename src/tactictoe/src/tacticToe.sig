@@ -5,6 +5,9 @@ sig
 
   type tnn = mlTreeNeuralNetwork.tnn
 
+  (* for debugging and experiments *)
+  val tree_glob : tttSearch.tree option ref 
+
   val build_searchobj : mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option * tnn option ->
     goal -> tttSearch.searchobj

@@ -178,6 +178,8 @@ fun clean_ttt_tacdata_cache () =
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
+val tree_glob = ref NONE
+
 fun tactictoe_aux goal =
   if not (has_boolty_goal goal)
   then raise ERR "tactictoe" "type bool expected"
@@ -191,8 +193,9 @@ fun tactictoe_aux goal =
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val (proofstatus,_) = hidef
+    val (proofstatus,tree) = hidef
       (main_tactictoe (thmdata,tacdata) (NONE,NONE,NONE)) goal
+    val _ = tree_glob := SOME tree
     val (staco,tac) = read_status proofstatus
   in
     tac
