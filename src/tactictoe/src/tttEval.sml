@@ -20,6 +20,7 @@ val ERR = mk_HOL_ERR "tttEval"
    ------------------------------------------------------------------------- *)
 
 val hh_glob = ref NONE
+val hh_timeout = ref 30
 
 fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
 
@@ -27,6 +28,7 @@ fun import_hh () =
   let val _ =  
      metis_avail () andalso
      quse_string ("load \"holyHammer\"; " ^ 
+                  "holyHammer.set_timeout " ^ its (!hh_timeout) ^ ";" ^
                   "tttEval.hh_glob := Option.SOME (holyHammer.main_hh);")
   in
     !hh_glob
@@ -238,6 +240,7 @@ fun export_valex file tree =
 
 fun access_child argtree anl i = dfind (i :: anl) argtree
 
+(*
 fun export_argex file tree =
   if not (is_proved tree) then () else 
   let
@@ -268,7 +271,7 @@ fun export_argex file tree =
   in
     write_tnnex file exl
   end
-
+*)
 (* -------------------------------------------------------------------------
    Exporting problems on intermediate goals
    ------------------------------------------------------------------------- *)
@@ -304,6 +307,68 @@ fun export_pbl pbprefix tree =
   end
 
 (* -------------------------------------------------------------------------
+   Goal tree up to a maximum width + depth
+   ------------------------------------------------------------------------- *)
+
+datatype GoalDisj = GDisj of goal * GoalConj list
+and GoalConj = GConj of GoalDisj list
+
+fun children_of_argtree maxw tree id (gn,sn) argtree =
+  let 
+    val anll = dkeys argtree
+    fun prefix anl = (gn,sn,anl) :: id
+    fun test anl = dmem (prefix anl) tree
+    val anll1 = filter test anll
+    val anll2 = dict_sort (list_compare Int.compare) anll1
+  in
+    map prefix (first_n maxw anll2)
+  end
+
+fun children_of_stacv maxw tree id gn sn argtreel = 
+   if maxw <= 0 then [] else
+   case argtreel of
+     [] => []
+   | argtree :: m => 
+     let val cidl = children_of_argtree maxw tree id (gn,sn) argtree in
+       if null cidl 
+       then children_of_stacv maxw tree id gn (sn+1) m
+       else cidl :: children_of_stacv (maxw - 1) tree id gn (sn+1) m
+     end
+
+fun mk_goaltree maxw tree id =
+  let
+    val node = dfind id tree
+    val goalv = number_snd 0 (vector_to_list (#goalv node))
+    fun f (x,i) = if #gstatus x <> GoalProved then SOME (x,i) else NONE
+    val goall = List.mapPartial f goalv
+    fun g (grec,gn) = 
+      let val cidl = List.concat 
+        (children_of_stacv maxw tree id gn 0 (vector_to_list (#stacv grec)))
+      in
+        if maxw - 1 <= 0 
+        then GDisj (#goal grec, [])
+        else GDisj (#goal grec, map (mk_goaltree (maxw - 1) tree) cidl)
+      end
+  in
+    GConj (map g goall)
+  end
+
+(* -------------------------------------------------------------------------
+   Convert goal tree to a term
+   ------------------------------------------------------------------------- *)
+
+fun gen_term t = list_mk_forall (free_vars_lr t, t)
+fun termify g = gen_term (list_mk_imp g)
+
+fun termify_gconj gconj = case gconj of
+  GConj gdisjl => 
+    if null gdisjl then raise ERR "termify_goaltree" "unexpected" else 
+    list_mk_conj (map termify_gdisj gdisjl)
+and termify_gdisj gdisj = case gdisj of
+  GDisj (goal,gconjl) => 
+    list_mk_disj (termify goal :: map termify_gconj gconjl)
+
+(* -------------------------------------------------------------------------
    Evaluation function
    ------------------------------------------------------------------------- *)
 
@@ -313,6 +378,21 @@ fun print_status r = case r of
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
 val hh_flag = ref false
+val hh_ontop_flag = ref false
+val hh_ontop_wd = ref 1
+
+fun hh_call fofdir thmdata goal =
+  let val hho = import_hh () in
+  if not (isSome hho) then print_endline "hh: not available" else
+  let 
+    val hh = valOf hho 
+    fun hh_err x y z = ignore (hh x y z) 
+      handle HOL_ERR {origin_structure,message, ...} => 
+      print_endline ("Error: " ^ origin_structure ^ " " ^ message) 
+    val (_,t) = add_time (hh_err fofdir thmdata) goal
+  in
+    print_endline ("hh_eval: " ^ rts_round 6 t)
+  end end
 
 fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let
@@ -327,27 +407,23 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
   in
-    if !hh_flag then
-      let val hho = import_hh () in
-      if not (isSome hho) then print_endline "hh: not available" else
-      let 
-        val hh = valOf hho 
-        val (_,t) = add_time (hh fofdir thmdata) goal
-      in
-        print_endline ("hh_eval: " ^ rts_round 6 t)
-      end end
-    else 
-      let val ((status,tree),t) = add_time
-        (main_tactictoe (thmdata,tacdata) nnol) goal
-        handle Interrupt => raise Interrupt
-          | e => (print_endline "Error"; raise e)
-      in
-        print_status status;
-        print_endline ("ttt_eval: " ^ rts_round 6 t);
-        export_valex valfile tree;
-        export_argex argfile tree;
-        if !export_pb_flag then export_pbl pbprefix tree else ()
-      end
+    if !hh_flag then hh_call fofdir thmdata goal else
+    let val ((status,tree),t) = add_time
+      (main_tactictoe (thmdata,tacdata) nnol) goal
+      handle Interrupt => raise Interrupt
+        | e => (print_endline "Error"; raise e)
+    in
+      print_status status;
+      print_endline ("ttt_eval: " ^ rts_round 6 t);
+      export_valex valfile tree;
+      (* export_argex argfile tree; *)
+      if !export_pb_flag then export_pbl pbprefix tree else ();
+      (* call to holyhammer on partial proof tree *)
+      if !hh_ontop_flag 
+      then hh_call fofdir thmdata 
+        ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
+      else ()
+    end
     ;
     hide_flag := mem
   end
@@ -362,6 +438,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
    ------------------------------------------------------------------------ *)
 
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
+fun sreflect_int s r = ("val _ = " ^ s ^ " := " ^ its (!r) ^ ";")
 fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
 
 fun assign_tnn s fileo =
@@ -407,6 +484,9 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
      sreflect_flag "tttEval.cheat_flag" cheat_flag,
      sreflect_flag "tttEval.hh_flag" hh_flag,
+     sreflect_int "tttEval.hh_timeout" hh_timeout,
+     sreflect_flag "tttEval.hh_ontop_flag" hh_ontop_flag,
+     sreflect_int "tttEval.hh_ontop_wd" hh_ontop_wd,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      smlfun ^ " " ^ mlquote expdir ^ " " ^
@@ -525,8 +605,6 @@ val tnndir = expdir ^ "/tnn"
 val pbdir = expdir ^ "/pb"
 val _ = app mkDir_err 
   [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir];
-
-
 val file = savestatedir ^ "/" ^ "pair_0";
 tttSearch.ttt_vis_fail := 1.0;
 tttSetup.ttt_search_time := 30.0;
@@ -551,8 +629,11 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
-hh_flag := true;
-run_evalscript_thyl smlfun "210311-hh-1" (true,30) 
+hh_flag := false;
+hh_ontop_flag := true;
+hh_ontop_wd := 2;
+hh_timeout := 30;
+run_evalscript_thyl smlfun "210312-hh-1" (true,20) 
   (NONE,NONE,NONE) thyl;
 *)
 
