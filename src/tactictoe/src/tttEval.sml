@@ -14,6 +14,11 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttSearch tttRecord tacticToe tttToken tttTrain tttBigSteps
 
 val ERR = mk_HOL_ERR "tttEval"
+fun catch_err msg f x = 
+  f x handle HOL_ERR {origin_structure,origin_function,message} => 
+  (print_endline 
+    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ message);
+  raise ERR "tttEval" "error caught (see log)")
 
 (* -------------------------------------------------------------------------
    Import holyhammer if possible
@@ -387,8 +392,7 @@ fun hh_call fofdir thmdata goal =
   let 
     val hh = valOf hho 
     fun hh_err x y z = ignore (hh x y z) 
-      handle HOL_ERR {origin_structure,message, ...} => 
-      print_endline ("hh_call error: " ^ origin_structure ^ " " ^ message) 
+
     val (_,t) = add_time (hh_err fofdir thmdata) goal
   in
     print_endline ("hh_eval: " ^ rts_round 6 t)
@@ -421,13 +425,13 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
       (* call to holyhammer on partial proof tree *)
       if !hh_ontop_flag andalso not (is_proved tree) 
       then 
-        let val newgoal =
-          ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
+        let 
+          fun build_term () =
+            ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
+          val newgoal = catch_err "build_term" build_term ()
         in 
-          hh_call fofdir thmdata newgoal 
+          catch_err "hh_call" (hh_call fofdir thmdata) newgoal 
         end
-        handle HOL_ERR {origin_structure,message, ...} => 
-        print_endline ("hh_ext error: " ^ origin_structure ^ " " ^ message)   
       else ()
     end
     ;
@@ -601,7 +605,7 @@ ttt_record_thmdata ();
 (*
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
-val expname = "test7";
+val expname = "test8";
 val savestatedir = tactictoe_dir ^ "/savestate";
 val expdir = ttt_eval_dir ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
@@ -611,10 +615,17 @@ val tnndir = expdir ^ "/tnn"
 val pbdir = expdir ^ "/pb"
 val _ = app mkDir_err 
   [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir];
-val file = savestatedir ^ "/" ^ "pair_0";
-tttSearch.ttt_vis_fail := 1.0;
+val file = savestatedir ^ "/" ^ "relation_43";
 tttSetup.ttt_search_time := 30.0;
-run_evalscript smlfun expdir (NONE,NONE,NONE) file;
+tttSetup.ttt_metis_flag := true;
+tttSetup.ttt_policy_coeff := 0.5;
+tttSearch.ttt_vis_fail := 1.0;
+cheat_flag := false;
+hh_flag := false;
+hh_ontop_flag := true;
+hh_ontop_wd := 8;
+hh_timeout := 30;
+run_evalscript smlfun expname (NONE,NONE,NONE) file;
 *)
 
 (* ------------------------------------------------------------------------
@@ -628,9 +639,9 @@ tttSetup.record_savestate_flag := true;
 ttt_record_savestate (); (* also cleans the savestate directory *)
 
 load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
+tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
@@ -639,7 +650,7 @@ hh_flag := false;
 hh_ontop_flag := true;
 hh_ontop_wd := 8;
 hh_timeout := 30;
-run_evalscript_thyl smlfun "210313-wd8" (true,20) 
+run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
   (NONE,NONE,NONE) thyl;
 *)
 
