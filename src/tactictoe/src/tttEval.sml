@@ -423,11 +423,11 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
       then 
         let val newgoal =
           ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
-          handle HOL_ERR {origin_structure,message, ...} => 
-          print_endline ("termify error: " ^ origin_structure ^ " " ^ message) 
         in 
           hh_call fofdir thmdata newgoal 
         end
+        handle HOL_ERR {origin_structure,message, ...} => 
+        print_endline ("hh_ext error: " ^ origin_structure ^ " " ^ message)   
       else ()
     end
     ;
