@@ -19,6 +19,11 @@ fun catch_err msg f x =
   (print_endline 
     (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ message);
   raise ERR "tttEval" "error caught (see log)")
+fun catch_err_ignore msg f x = 
+  f x handle HOL_ERR {origin_structure,origin_function,message} => 
+  (print_endline 
+    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ message))
+
 
 (* -------------------------------------------------------------------------
    Import holyhammer if possible
@@ -362,18 +367,22 @@ fun mk_goaltree maxw tree id =
    Convert goal tree to a term
    ------------------------------------------------------------------------- *)
 
-fun gen_term t = catch_err "list_mk_forall" list_mk_forall (free_vars_lr t, t)
-  handle e => (show_types := true; print_endline (term_to_string t);
-  raise e)
-fun termify g = gen_term (catch_err "list_mk_imp"  list_mk_imp g)
+fun foralls (vl,t) = case vl of 
+    [] => t 
+  | a :: m => mk_forall (a, foralls (m,t))
+val list_mk_forall = foralls
+
+fun gen_term t = list_mk_forall (free_vars_lr t, t)
+fun termify g = gen_term (list_mk_imp g)
+  handle HOL_ERR _ => raise ERR "termify" 
+    (show_types := true; string_of_goal g)
 
 fun termify_gconj gconj = case gconj of
   GConj gdisjl => 
     if null gdisjl then raise ERR "termify_goaltree" "unexpected" else 
-    catch_err "list_mk_conj" list_mk_conj (map termify_gdisj gdisjl)
+    list_mk_conj (map termify_gdisj gdisjl)
 and termify_gdisj gdisj = case gdisj of
   GDisj (goal,gconjl) => 
-    catch_err "list_mk_disj" 
     list_mk_disj (termify goal :: map termify_gconj gconjl)
 
 (* -------------------------------------------------------------------------
@@ -431,10 +440,10 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
         let 
           fun build_term () =
             ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
-          val newgoal = catch_err "build_term" build_term ()
+          val newgoal = build_term ()
           val _ = print_endline ("hh goal: " ^ string_of_goal newgoal)
         in 
-          catch_err "hh_call" (hh_call fofdir thmdata) newgoal 
+          catch_err_ignore "hh_error" (hh_call fofdir thmdata) newgoal 
         end
       else ()
     end

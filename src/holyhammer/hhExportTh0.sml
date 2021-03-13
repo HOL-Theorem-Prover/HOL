@@ -11,6 +11,11 @@ struct
 open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportTh0"
+fun foralls (vl,t) = case vl of 
+    [] => t 
+  | a :: m => mk_forall (a, foralls (m,t))
+val list_mk_forall = foralls
+
 
 val thfpar = "thf("
 type thmid = string * string
