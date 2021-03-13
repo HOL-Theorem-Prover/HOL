@@ -362,15 +362,16 @@ fun mk_goaltree maxw tree id =
    Convert goal tree to a term
    ------------------------------------------------------------------------- *)
 
-fun gen_term t = list_mk_forall (free_vars_lr t, t)
-fun termify g = gen_term (list_mk_imp g)
+fun gen_term t = catch_err "list_mk_forall" list_mk_forall (free_vars_lr t, t)
+fun termify g = gen_term (catch_err "list_mk_imp"  list_mk_imp g)
 
 fun termify_gconj gconj = case gconj of
   GConj gdisjl => 
     if null gdisjl then raise ERR "termify_goaltree" "unexpected" else 
-    list_mk_conj (map termify_gdisj gdisjl)
+    catch_err "list_mk_conj" list_mk_conj (map termify_gdisj gdisjl)
 and termify_gdisj gdisj = case gdisj of
   GDisj (goal,gconjl) => 
+    catch_err "list_mk_disj" 
     list_mk_disj (termify goal :: map termify_gconj gconjl)
 
 (* -------------------------------------------------------------------------
@@ -605,7 +606,7 @@ ttt_record_thmdata ();
 (*
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
-val expname = "test8";
+val expname = "test11";
 val savestatedir = tactictoe_dir ^ "/savestate";
 val expdir = ttt_eval_dir ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
@@ -615,7 +616,7 @@ val tnndir = expdir ^ "/tnn"
 val pbdir = expdir ^ "/pb"
 val _ = app mkDir_err 
   [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir];
-val file = savestatedir ^ "/" ^ "relation_43";
+val file = savestatedir ^ "/" ^ "relation_40";
 tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
@@ -625,7 +626,7 @@ hh_flag := false;
 hh_ontop_flag := true;
 hh_ontop_wd := 8;
 hh_timeout := 30;
-run_evalscript smlfun expname (NONE,NONE,NONE) file;
+run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 *)
 
 (* ------------------------------------------------------------------------
