@@ -360,8 +360,6 @@ fun mk_goaltree maxw tree id =
 fun gen_term t = list_mk_forall (free_vars_lr t, t)
 fun termify g = gen_term (list_mk_imp g)
 
-
-
 fun termify_gconj gconj = case gconj of
   GConj gdisjl => 
     if null gdisjl then raise ERR "termify_goaltree" "unexpected" else 
@@ -390,7 +388,7 @@ fun hh_call fofdir thmdata goal =
     val hh = valOf hho 
     fun hh_err x y z = ignore (hh x y z) 
       handle HOL_ERR {origin_structure,message, ...} => 
-      print_endline ("Error: " ^ origin_structure ^ " " ^ message) 
+      print_endline ("hh_call error: " ^ origin_structure ^ " " ^ message) 
     val (_,t) = add_time (hh_err fofdir thmdata) goal
   in
     print_endline ("hh_eval: " ^ rts_round 6 t)
@@ -422,8 +420,14 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
       if !export_pb_flag then export_pbl pbprefix tree else ();
       (* call to holyhammer on partial proof tree *)
       if !hh_ontop_flag andalso not (is_proved tree) 
-      then hh_call fofdir thmdata 
-        ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
+      then 
+        let val newgoal =
+          ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
+          handle HOL_ERR {origin_structure,message, ...} => 
+          print_endline ("termify error: " ^ origin_structure ^ " " ^ message) 
+        in 
+          hh_call fofdir thmdata newgoal 
+        end
       else ()
     end
     ;
@@ -633,9 +637,9 @@ tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
 hh_flag := false;
 hh_ontop_flag := true;
-hh_ontop_wd := 2;
+hh_ontop_wd := 8;
 hh_timeout := 30;
-run_evalscript_thyl smlfun "210312-hh-1" (true,20) 
+run_evalscript_thyl smlfun "210313-wd8" (true,20) 
   (NONE,NONE,NONE) thyl;
 *)
 
