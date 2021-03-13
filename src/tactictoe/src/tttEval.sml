@@ -363,6 +363,8 @@ fun mk_goaltree maxw tree id =
    ------------------------------------------------------------------------- *)
 
 fun gen_term t = catch_err "list_mk_forall" list_mk_forall (free_vars_lr t, t)
+  handle e => (show_types := true; print_endline (term_to_string t);
+  raise e)
 fun termify g = gen_term (catch_err "list_mk_imp"  list_mk_imp g)
 
 fun termify_gconj gconj = case gconj of
@@ -430,6 +432,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
           fun build_term () =
             ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
           val newgoal = catch_err "build_term" build_term ()
+          val _ = print_endline ("hh goal: " ^ string_of_goal newgoal)
         in 
           catch_err "hh_call" (hh_call fofdir thmdata) newgoal 
         end
@@ -606,7 +609,7 @@ ttt_record_thmdata ();
 (*
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
-val expname = "test11";
+val expname = "test13";
 val savestatedir = tactictoe_dir ^ "/savestate";
 val expdir = ttt_eval_dir ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
@@ -625,7 +628,7 @@ cheat_flag := false;
 hh_flag := false;
 hh_ontop_flag := true;
 hh_ontop_wd := 8;
-hh_timeout := 30;
+hh_timeout := 10;
 run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 *)
 
