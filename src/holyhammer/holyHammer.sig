@@ -15,6 +15,7 @@ sig
   val hh_pb  : string -> prover list -> string list -> goal -> tactic
   (* same as hh_pb but with all atps and premise selection *)
   val main_hh : string -> mlThmData.thmdata -> goal -> tactic
+  val main_hh_lemmas : string -> mlThmData.thmdata -> goal -> string list option
 
   (* Evaluation of holyhammer (without premise selection) *)
   val hh_pb_eval_thm : prover list -> string * thm -> unit

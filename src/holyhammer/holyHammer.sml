@@ -149,6 +149,8 @@ fun exists_atp_err atp =
     b
   end
 
+val lemmas_glob = ref NONE
+
 fun hh_pb dir wanted_atpl premises goal =
   let
     val atpl = filter exists_atp_err wanted_atpl
@@ -165,6 +167,7 @@ fun hh_pb dir wanted_atpl premises goal =
         raise ERR "hh_pb" "ATPs could not find a proof")
     | SOME lemmas =>
       let
+        val _ = lemmas_glob := SOME lemmas
         val (stac,tac) = hidef (hh_reconstruct lemmas) goal
       in
         log_eval ("  minimized proof:  \n    " ^ stac);
@@ -184,6 +187,10 @@ fun main_hh dir thmdata goal =
   in
     hh_pb dir atpl premises goal
   end
+
+fun main_hh_lemmas dir thmdata goal =
+  (lemmas_glob := NONE; ignore (main_hh dir thmdata goal); !lemmas_glob)
+  handle HOL_ERR _ => NONE
 
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
