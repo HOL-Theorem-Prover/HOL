@@ -374,8 +374,7 @@ val list_mk_forall = foralls
 
 fun gen_term t = list_mk_forall (free_vars_lr t, t)
 fun termify g = gen_term (list_mk_imp g)
-  handle HOL_ERR _ => raise ERR "termify" 
-    (show_types := true; string_of_goal g)
+  handle HOL_ERR _ => (print_endline ("termify_error:" ^ string_of_goal g); F)
 
 fun termify_gconj gconj = case gconj of
   GConj gdisjl => 
@@ -403,8 +402,7 @@ fun hh_call fofdir thmdata goal =
   if not (isSome hho) then print_endline "hh: not available" else
   let 
     val hh = valOf hho 
-    fun hh_err x y z = ignore (hh x y z) 
-
+    fun hh_err x y z = ignore (hh x y z)
     val (_,t) = add_time (hh_err fofdir thmdata) goal
   in
     print_endline ("hh_eval: " ^ rts_round 6 t)
@@ -417,6 +415,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     val argfile = expdir ^ "/arg/" ^ pbid
     val pbprefix = expdir ^ "/pb/" ^ pbid
     val fofdir = expdir ^ "/fof/" ^ pbid
+    val _ = atp_dir := fofdir
     val _ = app mkDir_err [expdir ^ "/fof", fofdir]
     val mem = !hide_flag
     val _ = hide_flag := false
@@ -510,6 +509,8 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_int "tttEval.hh_timeout" hh_timeout,
      sreflect_flag "tttEval.hh_ontop_flag" hh_ontop_flag,
      sreflect_int "tttEval.hh_ontop_wd" hh_ontop_wd,
+     sreflect_flag "tacticToe.hh_use" hh_use,
+     sreflect_int "tacticToe.hh_time" hh_time,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      smlfun ^ " " ^ mlquote expdir ^ " " ^
@@ -555,6 +556,27 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
   in
     (print_endline infos; writel (expdir ^ "/stats") [infos])
   end
+
+fun run_evalscript_filel smlfun expname (b,ncore) nnol filel =
+  let
+    val savestatedir = tactictoe_dir ^ "/savestate"
+    val expdir = ttt_eval_dir ^ "/" ^ expname
+    val outdir = expdir ^ "/out"
+    val valdir = expdir ^ "/val"
+    val argdir = expdir ^ "/arg"
+    val tnndir = expdir ^ "/tnn"
+    val pbdir = expdir ^ "/pb"
+    val _ = app mkDir_err 
+      [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir]
+    val _ = print_endline ("evaluation: " ^ its (length filel) ^ " problems")
+    val (_,t) = add_time
+      (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel
+    val infos = 
+      ("evaluation time: " ^ rts_round 6 t) ^ "\n" ^ compile_info expname 
+  in
+    (print_endline infos; writel (expdir ^ "/stats") [infos])
+  end
+
 
 (* ------------------------------------------------------------------------
    Record theory data
@@ -618,7 +640,7 @@ ttt_record_thmdata ();
 (*
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
-val expname = "test13";
+val expname = "test14";
 val savestatedir = tactictoe_dir ^ "/savestate";
 val expdir = ttt_eval_dir ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
@@ -652,19 +674,47 @@ tttSetup.record_savestate_flag := true;
 ttt_record_savestate (); (* also cleans the savestate directory *)
 
 load "tttEval"; open tttEval;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
-hh_flag := false;
-hh_ontop_flag := true;
-hh_ontop_wd := 8;
-hh_timeout := 30;
+hh_flag := false; hh_ontop_flag := true; hh_ontop_wd := 8; hh_timeout := 30;
 run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
   (NONE,NONE,NONE) thyl;
+*)
+
+(* ------------------------------------------------------------------------
+   Evaluation on a list of files
+   ------------------------------------------------------------------------ *)
+
+(*
+load "tttEval"; open tttEval;
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val smlfun = "tttEval.ttt_eval";
+tttSetup.ttt_search_time := 600.0;
+tacitcToe.hh_use := true;
+tacticToe.hh_time := 5.0;
+tttSetup.ttt_metis_flag := true;
+tttSetup.ttt_policy_coeff := 0.5;
+tttSearch.ttt_vis_fail := 1.0;
+cheat_flag := false;
+hh_flag := false;
+hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
+
+val savestatedir = tactictoe_dir ^ "/savestate";
+val evaldir = tactictoe_dir ^ "/eval";
+val filel = readl (evaldir ^ "/hard);
+fun trim s = savestateidr ^ "/" ^ 
+  String.substring (s,12,String.size s - 5 - 12);
+val filel2 = map trim filel;
+
+run_evalscript_thyl smlfun "210314-integrated" (true,20) 
+  (NONE,NONE,NONE) filel2;
+
+val s = "./buildheap_arithmetic_238_eval";
+
 *)
 
 (* ------------------------------------------------------------------------

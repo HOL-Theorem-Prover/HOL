@@ -30,6 +30,8 @@ sig
   val run_evalscript : string -> string -> nnfiles -> string -> unit
   val run_evalscript_thyl : string -> string -> bool * int ->
     nnfiles -> string list -> unit
+  val run_evalscript_filel : string -> string -> bool * int ->
+    nnfiles -> string list -> unit
 
   (* statistics *)
   val compile_info : string -> string

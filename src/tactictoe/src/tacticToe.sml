@@ -76,6 +76,29 @@ fun select_tacfea tacdata gfea =
     (symweight,tacfea)
   end
 
+
+(* -------------------------------------------------------------------------
+   Import holyhammer if metis is available. We do not want the dependencies
+   to be loaded that is why the code is executed at run time.
+   ------------------------------------------------------------------------- *)
+
+val hh_use = ref false
+val hh_time = ref 30
+val hh_lemmas = ref NONE
+val atp_dir = ref (tactictoe_dir ^ "/provers")
+
+fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
+
+fun import_hh () =
+  let val _ =  
+     metis_avail () andalso
+     quse_string ("load \"holyHammer\"; " ^ 
+       "holyHammer.set_timeout " ^ its (!hh_time) ^ ";" ^
+       "tacticToe.hh_lemmas := Option.SOME (holyHammer.main_hh_lemmas);")
+  in
+    !hh_lemmas
+  end 
+
 (* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
@@ -113,6 +136,14 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     val atyd = dnew String.compare (map_assoc extract_atyl stacl_filtered)
     val thm_cache = ref (dempty goal_compare)
     val tac_cache = ref (dempty goal_compare)
+    (* holyhammer if available *)
+    val hh_cache = ref (dempty goal_compare)
+    val hho = if !hh_use then import_hh () else NONE
+    fun predhh g =
+      dfind g (!hh_cache) handle NotFound => 
+      let val r = (valOf hho) (!atp_dir) thmdata g in
+         hh_cache := dadd g r (!hh_cache); r
+      end
     fun predthml g =
       dfind g (!thm_cache) handle NotFound =>
       let
@@ -126,7 +157,13 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
         Athml =>
         let val thml = predthml g in
           if stac = metis_stac andalso (!ttt_metis_flag)
-          then map Sthml [first_n (!ttt_metis_radius) thml]
+          then 
+            if isSome hho then 
+              case predhh g of
+                NONE => map Sthml [first_n (!ttt_metis_radius) thml]
+              | SOME lemmas => map Sthml [lemmas]
+            else
+              map Sthml [first_n (!ttt_metis_radius) thml]
           else map Sthml (mk_batch_full 1 thml)
         end
       | Aterm => map Sterm (pred_svar 8 g)
