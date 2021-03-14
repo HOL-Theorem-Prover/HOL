@@ -8,7 +8,7 @@
 structure hhExportLib :> hhExportLib =
 struct
 
-open HolKernel boolLib aiLib mlThmData hhTranslate combinTheory
+open HolKernel boolLib aiLib mlThmData hhTranslate (* combinTheory *)
 
 val ERR = mk_HOL_ERR "hhExportLib"
 type thmid = string * string
@@ -221,6 +221,7 @@ end (* local *)
    Higher-order theorems in a first-order embedding
    ------------------------------------------------------------------------- *)
 
+(*
 fun mk_combin_thm thmname fvname =
   let
     val thm = DB.fetch "combin" thmname
@@ -236,9 +237,11 @@ fun mk_combin_thm thmname fvname =
 val i_thm = mk_combin_thm "I_THM" "combin_i"
 val k_thm = mk_combin_thm "K_THM" "combin_k"
 val s_thm = mk_combin_thm "S_THM" "combin_s"
+*)
 
 (* combin_axioml are already translated *)
-val combin_axioml = [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)]
+(* val combin_axioml = [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)] *)
+val combin_axioml = []
 
 val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
 val p_axioml =

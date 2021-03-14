@@ -691,11 +691,11 @@ run_evalscript_thyl smlfun "210313-wd8-1" (true,20)
 
 (*
 load "tttEval"; open tttEval;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 600.0;
 tacitcToe.hh_use := true;
-tacticToe.hh_time := 5.0;
+tacticToe.hh_time := 5;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
@@ -703,14 +703,14 @@ cheat_flag := false;
 hh_flag := false;
 hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
 
-val savestatedir = tactictoe_dir ^ "/savestate";
-val evaldir = tactictoe_dir ^ "/eval";
-val filel = readl (evaldir ^ "/hard);
-fun trim s = savestateidr ^ "/" ^ 
+val savestatedir = tttSetup.tactictoe_dir ^ "/savestate";
+val evaldir = tttSetup.tactictoe_dir ^ "/eval";
+val filel = aiLib.readl (evaldir ^ "/hard");
+fun trim s = savestatedir ^ "/" ^ 
   String.substring (s,12,String.size s - 5 - 12);
 val filel2 = map trim filel;
 
-run_evalscript_thyl smlfun "210314-integrated" (true,20) 
+run_evalscript_filel smlfun "210314-integrated" (true,20) 
   (NONE,NONE,NONE) filel2;
 
 val s = "./buildheap_arithmetic_238_eval";
