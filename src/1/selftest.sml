@@ -22,6 +22,24 @@ val xfun = mk_var("x", Type.alpha --> Type.alpha)
 val y = mk_var("y", Type.alpha)
 val Id = mk_abs(x,x)
 val Idy = mk_abs(y,y)
+val P = mk_var("P", Type.alpha --> Type.bool)
+
+val _ = tprint "TG list_mk_forall bug (0)"
+val _ = require_msg
+          (check_result (aconv (List.foldr mk_abs (mk_comb(P,x)) [x,P])))
+          term_to_string
+          list_mk_abs ([x,P],mk_comb(P,x))
+val _ = tprint "TG list_mk_forall bug (1)"
+val _ = require_msg
+          (check_result (aconv (List.foldr mk_forall (mk_comb(P,x)) [x,P])))
+          term_to_string
+          list_mk_forall ([x,P],mk_comb(P,x))
+val _ = tprint "TG list_mk_forall bug (2)"
+val _ = require_msg
+          (check_result (aconv (List.foldr mk_forall (mk_comb(P,x)) [P,x])))
+          term_to_string
+          list_mk_forall ([P,x],mk_comb(P,x))
+
 
 (* tests that substitutions work, deferred until this point so that we get
    access to the parser (which is implicitly a test of the parser too) *)
