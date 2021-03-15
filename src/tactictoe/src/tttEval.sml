@@ -533,8 +533,7 @@ fun run_evalscript smlfun expdir nnol file =
 val savestatedir = tactictoe_dir ^ "/savestate"
 
 val oldeval_flag = ref false
-fun is_oldeval file = 
-  readl (savestatedir ^ "/" ^ file ^ "_flags") = ["false","false"]
+fun is_oldeval file = readl (file ^ "_flags") = ["false","false"]
 
 fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
   let    
@@ -697,12 +696,10 @@ run_evalscript_thyl smlfun "210313-wd8-1" (true,20)
    ------------------------------------------------------------------------ *)
 
 (*
-load "tttEval"; open tttEval;
-is_oldeval "arithmetic_25";
 val thyl = ["arithmetic", "real", "complex", "measure", "probability", "list", "sorting","finite_map"];
 
 load "tttUnfold"; open tttUnfold;
-app load thyl;
+app load (map (fn x => x ^ "Theory") thyl);
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 ttt_record_savestate (); (* also cleans the savestate directory *)
@@ -713,8 +710,11 @@ tttSetup.ttt_search_time := 60.0;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 oldeval_flag := true;
-run_evalscript_thyl smlfun "comparison" (true,20) 
-  (NONE,NONE,NONE) thyl;
+
+fun f x = 
+  run_evalscript_thyl smlfun ("compare-" ^ x) (true,20) 
+  (NONE,NONE,NONE) [x];
+app f thyl;
 *)
 
 
