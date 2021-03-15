@@ -6,6 +6,9 @@ sig
   type tnn = mlTreeNeuralNetwork.tnn
   type nnfiles = string option * string option * string option
 
+  val oldeval_flag : bool ref
+  val is_oldeval : string -> bool
+
   val export_pb_flag : bool ref
   val cheat_flag : bool ref
   val hh_flag : bool ref
@@ -15,6 +18,7 @@ sig
     unit -> (string -> mlThmData.thmdata -> goal -> tactic) option   
   val hh_ontop_flag : bool ref
   val hh_ontop_wd : int ref
+  
 
   datatype GoalDisj = GDisj of goal * GoalConj list
   and GoalConj = GConj of GoalDisj list
