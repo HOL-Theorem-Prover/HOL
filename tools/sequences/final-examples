@@ -42,8 +42,9 @@
 !!examples/simple_complexity
 !!examples/AKS
 
+# Dependability examples
+!examples/dependability/
+
 # Lassie examples
 !examples/lassie/
 
-# Dependability examples
-!examples/dependability/
