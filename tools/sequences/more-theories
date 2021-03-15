@@ -3,7 +3,7 @@
 src/TeX
 !src/TeX/theory_tests
 !src/TeX/theory_tests/proj1paper
-!examples/RSA
+!examples/Crypto/RSA
 !examples/zipper
 src/monad/more_monads
 src/string
@@ -21,7 +21,7 @@ src/bag
 src/n-bit
 [poly]!src/n-bit/interactive_tests
 src/finite_maps
-!!examples/unification/triangular/first-order
+!!examples/algorithms/unification/triangular/first-order
 !!examples/decidable_separationLogic/src/
 !examples/ind_def
 !examples/ARM/arm6-verification
