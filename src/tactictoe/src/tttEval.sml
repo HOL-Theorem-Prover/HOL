@@ -530,9 +530,14 @@ fun run_evalscript smlfun expdir nnol file =
   run_buildheap_nodep (expdir ^ "/out") (file ^ "_eval.sml")
   )
 
+val savestatedir = tactictoe_dir ^ "/savestate"
+
+val oldeval_flag = ref false
+fun is_oldeval file = 
+  readl (savestatedir ^ "/" ^ file ^ "_flags") = ["false","false"]
+
 fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
-  let
-    val savestatedir = tactictoe_dir ^ "/savestate"
+  let    
     val expdir = ttt_eval_dir ^ "/" ^ expname
     val outdir = expdir ^ "/out"
     val valdir = expdir ^ "/val"
@@ -548,9 +553,10 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
       | _         => (print_endline x; [])
     val filel1 = List.concat (map f pbl)
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
-    val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
+    val filel3 = if !oldeval_flag then filter is_oldeval filel2 else filel2
+    val _ = print_endline ("evaluation: " ^ its (length filel3) ^ " problems")
     val (_,t) = add_time
-      (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel2
+      (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel3
     val infos = 
       ("evaluation time: " ^ rts_round 6 t) ^ "\n" ^ compile_info expname 
   in
@@ -680,21 +686,50 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
-hh_flag := false; hh_ontop_flag := true; hh_ontop_wd := 8; hh_timeout := 30;
+hh_flag := false; hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
 run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
   (NONE,NONE,NONE) thyl;
 *)
+
+
+(* ------------------------------------------------------------------------
+   Comparison with older evaluation
+   ------------------------------------------------------------------------ *)
+
+(*
+load "tttEval"; open tttEval;
+is_oldeval "arithmetic_25";
+val thyl = ["arithmetic", "real", "complex", "measure", "probability", "list", "sorting","finite_map"];
+
+load "tttUnfold"; open tttUnfold;
+app load thyl;
+tttSetup.record_flag := false;
+tttSetup.record_savestate_flag := true;
+ttt_record_savestate (); (* also cleans the savestate directory *)
+
+load "tttEval"; open tttEval;
+val smlfun = "tttEval.ttt_eval";
+tttSetup.ttt_search_time := 60.0;
+tttSetup.ttt_policy_coeff := 0.5;
+tttSearch.ttt_vis_fail := 1.0;
+oldeval_flag := true;
+run_evalscript_thyl smlfun "comparison" (true,20) 
+  (NONE,NONE,NONE) thyl;
+*)
+
 
 (* ------------------------------------------------------------------------
    Evaluation on a list of files
    ------------------------------------------------------------------------ *)
 
 (*
+grep -rL "hh: not available" . | xargs grep -L "tactictoe: proven" > ../../hard_avail
+
 load "tttEval"; open tttEval;
 
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 600.0;
-tacitcToe.hh_use := true;
+tacticToe.hh_use := true;
 tacticToe.hh_time := 5;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
@@ -703,17 +738,17 @@ cheat_flag := false;
 hh_flag := false;
 hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
 
+
+
 val savestatedir = tttSetup.tactictoe_dir ^ "/savestate";
 val evaldir = tttSetup.tactictoe_dir ^ "/eval";
-val filel = aiLib.readl (evaldir ^ "/hard");
+val filel = aiLib.readl (evaldir ^ "/hard_avail");
 fun trim s = savestatedir ^ "/" ^ 
   String.substring (s,12,String.size s - 5 - 12);
 val filel2 = map trim filel;
 
-run_evalscript_filel smlfun "210314-integrated" (true,20) 
+run_evalscript_filel smlfun "i5" (true,20) 
   (NONE,NONE,NONE) filel2;
-
-val s = "./buildheap_arithmetic_238_eval";
 
 *)
 
