@@ -3190,4 +3190,106 @@ val COUNTABLE_PRODUCT_DEPENDENT = store_thm ("COUNTABLE_PRODUCT_DEPENDENT",
               EXISTS_PROD, IN_CROSS, IN_UNIV] THEN
   ASM_SET_TAC[]);
 
+Definition BIGPROD_def:
+  BIGPROD (A : ('a -> bool) -> bool) =
+  { tup : ('a -> bool) -> 'a option |
+    (!s. s IN A ==> ?a. tup s = SOME a /\ a IN s) /\
+    (!s. s NOTIN A ==> tup s = NONE) }
+End
+
+Theorem BIGPROD_pair:
+  A1 <> A2 ==>
+  BIGPROD { A1; A2 } =~ A1 CROSS A2
+Proof
+  strip_tac >> simp[cardeq_def, BIGPROD_def] >>
+  qexists_tac ‘λt. (THE (t A1), THE (t A2))’ >>
+  simp[BIJ_IFF_INV] >> rw[]
+  >- metis_tac[optionTheory.THE_DEF]
+  >- metis_tac[optionTheory.THE_DEF] >>
+  simp[FORALL_PROD] >>
+  qexists_tac ‘\p s. if s = A1 then SOME (FST p)
+                     else if s = A2 then SOME (SND p) else NONE’ >>
+  simp[] >> rw[] >> simp[Once FUN_EQ_THM] >> qx_gen_tac ‘A’ >>
+  rw[] >> metis_tac[optionTheory.THE_DEF]
+QED
+
+Theorem BIGPROD_SING:
+  BIGPROD {A} =~ A
+Proof
+  simp[cardeq_def, BIGPROD_def, BIJ_IFF_INV] >>
+  qexists_tac ‘λt. THE (t A)’ >> simp[PULL_EXISTS] >>
+  qexists_tac ‘\a s. if s = A then SOME a else NONE’ >> rw[] >>
+  simp[Once FUN_EQ_THM] >> rw[]
+QED
+
+Theorem BIGPROD_ONE:
+  BIGPROD {} =~ {()}
+Proof
+  simp[BIGPROD_def, cardeq_def]>> qexists_tac ‘K ()’ >>
+  simp[BIJ_IFF_INV] >> qexists_tac ‘K (K NONE)’ >> simp[] >>
+  rpt strip_tac >> simp[FUN_EQ_THM]
+QED
+
+Theorem BIGPROD_EQ_EMPTY[simp]:
+  BIGPROD As = {} <=> {} IN As
+Proof
+  Cases_on ‘As = {}’ >> simp[] >> rpt strip_tac
+  >- (assume_tac BIGPROD_ONE >> gs[CARDEQ_0]) >>
+  simp[BIGPROD_def] >> simp[Once EXTENSION] >> eq_tac >>
+  rpt strip_tac >> gvs[]
+  >- (CCONTR_TAC >>
+      qpat_x_assum ‘!x. _’ mp_tac >> simp[] >>
+      qexists_tac ‘λs. if s IN As then SOME (CHOICE s) else NONE’ >>
+      simp[SF DISJ_ss] >> metis_tac[CHOICE_DEF]) >>
+  disj1_tac >> qexists_tac ‘{}’ >> rw[]
+QED
+
+Theorem image_thms[simp,local]:
+  IMAGE OUTL (IMAGE INL A) = A /\
+  IMAGE OUTR (IMAGE INR B) = B /\
+  ((!x. x IN AB ==> ISL x) ==> (IMAGE INL (IMAGE OUTL AB) = AB)) /\
+  ((!x. x IN AB ==> ISR x) ==> (IMAGE INR (IMAGE OUTR AB) = AB))
+Proof
+  rw[EXTENSION, PULL_EXISTS] >> csimp[INR, INL]
+QED
+
+Theorem BIGPROD_CONS:
+  A CROSS BIGPROD As =~ BIGPROD (IMAGE INL A INSERT IMAGE (IMAGE INR) As)
+Proof
+  Cases_on ‘A = {}’ >> simp[iffRL BIGPROD_EQ_EMPTY, CARDEQ_0] >>
+  Cases_on ‘{} IN As’ >> simp[iffRL BIGPROD_EQ_EMPTY, CARDEQ_0] >>
+  simp[BIGPROD_def, BIJ_IFF_INV, cardeq_def, FORALL_PROD] >>
+  qexists_tac ‘λ(p : 'a # (('b -> bool) -> 'b option)) (s: 'a + 'b -> bool).
+                 if s = EMPTY then NONE : ('a + 'b) option
+                 else if (!x. x IN s ==> ISL x) then
+                   if IMAGE OUTL s = A then SOME (INL (FST p)) else NONE
+                 else if (!x. x IN s ==> ISR x) /\ IMAGE OUTR s IN As then
+                   SOME (INR (THE (SND p (IMAGE OUTR s))))
+                 else NONE’ >>
+  rw[] >> simp[AllCaseEqs(), PULL_EXISTS]
+  >- (metis_tac[optionTheory.THE_DEF, MEMBER_NOT_EMPTY])
+  >- (rename [‘s = {}’, ‘s <> IMAGE INL A’] >>
+      pop_assum mp_tac >> rw[]
+      >- (qpat_x_assum ‘s <> IMAGE INL _’ mp_tac >>
+          csimp[EXTENSION, PULL_EXISTS, sumTheory.INL]) >>
+      first_x_assum $ qspec_then ‘IMAGE OUTR s’ mp_tac >> simp[]) >>
+  qexists_tac ‘λtup. (OUTL (THE (tup (IMAGE INL A))),
+                      (λB. if B IN As then
+                             SOME (OUTR (THE (tup (IMAGE INR B))))
+                           else NONE))’ >> rw[] >>
+  gvs[DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS]
+  >- (first_x_assum drule >> simp[PULL_EXISTS])
+  >- (simp[Once FUN_EQ_THM] >> rw[]
+      >- gs[]
+      >- metis_tac[MEMBER_NOT_EMPTY]
+      >- metis_tac[MEMBER_NOT_EMPTY]
+      >- (last_x_assum drule >> simp[PULL_EXISTS]))
+  >- (simp[Once FUN_EQ_THM] >> qx_gen_tac ‘AB’ >> rw[]
+      >- gs[]
+      >- (first_x_assum irule >> rpt strip_tac >> gvs[PULL_EXISTS] >>
+          metis_tac[MEMBER_NOT_EMPTY])
+      >- (first_x_assum drule >> simp[PULL_EXISTS])
+      >- (gs[] >> first_x_assum irule >> rpt strip_tac >> gvs[]))
+QED
+
 val _ = export_theory()
