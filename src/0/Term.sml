@@ -635,26 +635,25 @@ fun dest_comb (Comb r) = r
        efficient version for making terms with many consecutive
        abstractions.
   ---------------------------------------------------------------------------*)
-
 local
-(*
-  fun destCheck binder =
-     let val (fnty,target) = Type.dom_rng(type_of binder)
-         val (dty,target1) = Type.dom_rng fnty
+  fun binder_check binder = (* expect type to be (ty1 -> ty2) -> ty3 *)
+     let val (fnty,rty) = Type.dom_rng(type_of binder)
+         val _ = Type.dom_rng fnty
+         val fntyV = Type.type_vars fnty
+         val rtyV = Type.type_vars rty
      in
-       if not (is_const binder) orelse not (target1 = target2) then
-          raise ERR "destCheck" ""
-       else dty
+       if Lib.all (C mem fntyV) rtyV then (fnty,rty) else raise ERR "" ""
      end
      handle _ => raise ERR "list_mk_binder"
-     "expected first arg to be a constant of type :(ty1 -> ty2) -> ty2"
-*)
-  fun binderFn NONE tmty = (fn v => fn M => Abs(v,M))
-    | binderFn (SOME binder) tmty =
-       let val bty = type_of binder
-       in fn v => fn M =>
-             let val theta = Type.match_type bty ((type_of v --> tmty) --> tmty)
-             in Comb (inst theta binder, Abs(v,M))
+       "expected binder to have type ((ty1 -> ty2) -> ty3) where\
+       \ tyvars of ty3 are all in (ty1->ty2)"
+  fun binderFn NONE = (fn v => fn (M,_) => (Abs(v,M),Type.ind))
+    | binderFn (SOME binder) =
+       let val (dty,rty) = binder_check binder
+       in fn v => fn (M,Mty) =>
+             let val theta = Type.match_type dty (type_of v --> Mty)
+             in (Comb (inst theta binder, Abs(v,M)),
+                 Type.type_subst theta rty)
              end
        end
   open Redblackmap
@@ -677,12 +676,13 @@ fun list_mk_binder opt =
        tm
     else
     if not (all is_var vlist) then
-       raise ERR "list_mk_binder" ""
+       raise ERR "list_mk_binder" "expected list of variables"
     else
-     (let val tmty = type_of tm
-          val (varmap, rvlist) = enum vlist (length vlist - 1)
-                                            (mkDict compare, [])
-      in rev_itlist (mk_binder tmty) rvlist (bind tm varmap I)
+     (let val (vMap, rvlist) = enum vlist (length vlist-1) (mkDict compare, [])
+          val raw_tm = bind tm vMap I
+          val (final,_) = rev_itlist mk_binder rvlist (raw_tm,type_of tm)
+      in
+         final
       end
       handle e => raise wrap_exn "Term" "list_mk_binder" e)
  end
