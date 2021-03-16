@@ -7,18 +7,16 @@ open sumTheory ind_typeTheory wellorderTheory;
 
 val _ = new_theory "cardinal";
 
-(* ------------------------------------------------------------------------- *)
-(* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
-(* ------------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    K_TAC, METIS, DISC_RW_KILL, ASM_ARITH_TAC
+   ---------------------------------------------------------------------- *)
 
 fun K_TAC _ = ALL_TAC;
-fun MESON ths tm = prove(tm,MESON_TAC ths);
+
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
-
-fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 
@@ -1503,15 +1501,6 @@ val RIGHT_IMP_FORALL_THM = store_thm ("RIGHT_IMP_FORALL_THM",
  ``!P Q. P ==> (!x. Q x) <=> (!x. P ==> Q x)``,
  REWRITE_TAC [GSYM RIGHT_FORALL_IMP_THM]);
 
-val FINITE_FINITE_BIGUNIONS = store_thm ("FINITE_FINITE_BIGUNIONS",
- ``!s. FINITE(s) ==> (FINITE(BIGUNION s) <=> (!t. t IN s ==> FINITE(t)))``,
-  ONCE_REWRITE_TAC [METIS []
-   ``!s. (FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) =
-     (\s. FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) s``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY, BIGUNION_EMPTY, BIGUNION_INSERT] THEN
-  SIMP_TAC std_ss [FINITE_UNION, FINITE_EMPTY, FINITE_INSERT] THEN MESON_TAC[]);
-
 (* old name IMP_CONJ seems to be a conv function *)
 Theorem CONJ_EQ_IMP :
     !p q r. p /\ q ==> r <=> p ==> q ==> r
@@ -1797,15 +1786,11 @@ val INJECTIVE_IMAGE = store_thm ("INJECTIVE_IMAGE",
   GEN_TAC THEN MP_TAC(ISPECL [``f:'a->'b``, ``univ(:'a)``] INJECTIVE_ON_IMAGE) THEN
   REWRITE_TAC[IN_UNIV, SUBSET_UNIV]);
 
-val FINITE_FINITE_BIGUNION = store_thm
-  ("FINITE_FINITE_BIGUNION",
- ``!s. FINITE(s) ==> (FINITE(BIGUNION s) <=> (!t. t IN s ==> FINITE(t)))``,
-  ONCE_REWRITE_TAC [METIS []
-   ``!s. (FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) =
-     (\s. FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) s``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY, BIGUNION_EMPTY, BIGUNION_INSERT] THEN
-  SIMP_TAC std_ss [FINITE_UNION, FINITE_EMPTY, FINITE_INSERT] THEN MESON_TAC[]);
+Theorem FINITE_FINITE_BIGUNION[local]:
+ !s. FINITE(s) ==> (FINITE(BIGUNION s) <=> (!t. t IN s ==> FINITE(t)))
+Proof
+  metis_tac[FINITE_BIGUNION_EQ]
+QED
 
 val num_FINITE = store_thm ("num_FINITE",
  ``!s:num->bool. FINITE s <=> ?a. !x. x IN s ==> x <= a``,
@@ -2184,7 +2169,7 @@ val GE_C = store_thm ("GE_C",
  ``!s t. s >=_c t <=> ?f. !y. y IN t ==> ?x. x IN s /\ (y = f x)``,
   REWRITE_TAC[ge_c, LE_C] THEN MESON_TAC[]);
 
-val _ = overload_on ("COUNTABLE", ``countable``);
+Overload COUNTABLE[inferior] = “countable”
 
 val COUNTABLE = store_thm
   ("COUNTABLE", ``!t. COUNTABLE t <=> univ(:num) >=_c t``,
@@ -2375,34 +2360,7 @@ val CARD_EQ_CONG = store_thm ("CARD_EQ_CONG",
 (* Finiteness and infiniteness in terms of cardinality of N.                 *)
 (* ------------------------------------------------------------------------- *)
 
-val INFINITE_CARD_LE = store_thm ("INFINITE_CARD_LE",
- ``!s:'a->bool. INFINITE s <=> (UNIV:num->bool) <=_c s``,
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [ALL_TAC,
-    ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
-    REWRITE_TAC[le_c, IN_UNIV] THEN REPEAT STRIP_TAC THEN
-    FIRST_ASSUM(MP_TAC o MATCH_MP INFINITE_IMAGE_INJ) THEN
-    DISCH_THEN(MP_TAC o C MATCH_MP num_INFINITE) THEN SIMP_TAC std_ss [] THEN
-    MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``s:'a->bool`` THEN
-    ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_UNIV, LEFT_IMP_EXISTS_THM]] THEN
-  DISCH_TAC THEN
-  SUBGOAL_THEN ``?f:num->'a. !n. f(n) = @x. x IN (s DIFF IMAGE f {m | m < n})``
-  MP_TAC THENL
-   [ONCE_REWRITE_TAC [MESON [] ``(@x. x IN s DIFF IMAGE f {m | m < n}) =
-                       (\f n:num. @x. x IN s DIFF IMAGE f {m | m < n}) f n``] THEN
-    MATCH_MP_TAC(MATCH_MP WF_REC WF_num) THEN
-    SIMP_TAC std_ss [IN_IMAGE, GSPECIFICATION, IN_DIFF] THEN REPEAT STRIP_TAC THEN
-    AP_TERM_TAC THEN ABS_TAC THEN ASM_MESON_TAC[],
-    ALL_TAC] THEN
-  REWRITE_TAC[le_c] THEN DISCH_THEN (X_CHOOSE_TAC ``f:num->'a``) THEN
-  EXISTS_TAC ``f:num->'a`` THEN
-  SUBGOAL_THEN ``!n. (f:num->'a)(n) IN (s DIFF IMAGE f {m | m < n})`` MP_TAC THENL
-   [GEN_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN CONV_TAC SELECT_CONV THEN
-    REWRITE_TAC[MEMBER_NOT_EMPTY] THEN
-    MATCH_MP_TAC INFINITE_NONEMPTY THEN MATCH_MP_TAC INFINITE_DIFF_FINITE THEN
-    ASM_SIMP_TAC std_ss [IMAGE_FINITE, FINITE_NUMSEG_LT],
-    ALL_TAC] THEN
-  SIMP_TAC std_ss [IN_IMAGE, GSPECIFICATION, IN_DIFF] THEN MESON_TAC[LT_CASES]);
+Theorem INFINITE_CARD_LE[local] = INFINITE_Unum
 
 val FINITE_CARD_LT = store_thm ("FINITE_CARD_LT",
  ``!s:'a->bool. FINITE s <=> s <_c (UNIV:num->bool)``,
