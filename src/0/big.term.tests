@@ -63,7 +63,7 @@ val dabs10K  = let val abs10K = list_mk_abs(vars10K,body10K)
 val dabs100K = let val abs100K = list_mk_abs(vars100K,body100K)
                in time Term.strip_abs abs100K ; () end;
 val dabs100K' = let val abs100K' = list_mk_abs(vars10K,body100K)
-                in list_mk_abs(Term.strip_abs abs100K') = abs100K' end;
+                in list_mk_abs(Term.strip_abs abs100K') ~~ abs100K' end;
 val dabs500K = let val abs500K = list_mk_abs(vars500K,body500K)
                in time Term.strip_abs abs500K ; () end;
 val dabs1M   = let val abs1M = time list_mk_abs(vars1M,body1M)
@@ -75,8 +75,8 @@ fun old_list_mk_forall(V,t) = itlist(curry mk_forall) V t;
 val old_abs10 = (time old_list_mk_abs(vars10,body10); ());
 val old_abs100 = (time old_list_mk_abs(vars100,body100); ());
 val old_abs1K = (time old_list_mk_abs(vars1K,body1K); ());
-(* After this, it's too slow *)
 val abs10K = (time old_list_mk_abs(vars10K,body10K);());
+(* After this, it's too slow *)
 val abs100K = (time old_list_mk_abs(vars100K,body100K); ());
 val abs500K = (time old_list_mk_abs(vars500K,body500K); ());
 val abs1M = time old_list_mk_abs(vars1M,body1M);

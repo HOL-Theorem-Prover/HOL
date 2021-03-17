@@ -633,7 +633,9 @@ fun dest_comb (Comb r) = r
 (*---------------------------------------------------------------------------
        Making abstractions. list_mk_binder is a relatively
        efficient version for making terms with many consecutive
-       abstractions.
+       abstractions. Works by replacing all free vars to be bound by
+       raw Bvs, then adding the binding prefix without going back into
+       the body.
   ---------------------------------------------------------------------------*)
 local
   fun binder_check binder = (* expect type to be (ty1 -> ty2) -> ty3 *)
