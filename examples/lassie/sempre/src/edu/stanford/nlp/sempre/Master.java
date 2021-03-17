@@ -44,7 +44,7 @@ public class Master {
     public String newGrammarPath;
   }
   public static Options opts = new Options();
-  
+
   public class Response {
     // Example that was parsed, if any.
     public Example ex;
@@ -137,7 +137,7 @@ public class Master {
     Server server = new Server(this);
     server.run();;
   }
-  
+
   public void runInteractivePrompt() {
     Session session = getSession("stdin");
 
@@ -145,7 +145,7 @@ public class Master {
       printHelp();
     try {
       ConsoleReader reader = new ConsoleReader();
-      reader.setPrompt("> ");
+      reader.setPrompt("#SEMPRE# ");
       String line;
       while ((line = reader.readLine()) != null) {
         int indent = LogInfo.getIndLevel();
@@ -255,7 +255,7 @@ public class Master {
     Map<String, Integer> choices = new LinkedHashMap<>();
     deriv.incrementAllChoices(1, choices);
     FeatureVector.logChoices("Pred", choices);
-    
+
     // Print denotation
     LogInfo.begin_track("Top formula");
     LogInfo.logs("%s", deriv.formula);
@@ -264,10 +264,10 @@ public class Master {
 	LogInfo.begin_track("Top value");
 	deriv.value.log();
 	LogInfo.end_track();
-    } 
+    }
   }
-  
-    
+
+
   private void handleCommand(Session session, String line, Response response) {
     LispTree tree = LispTree.proto.parseFromString(line);
     tree = builder.grammar.applyMacros(tree);
