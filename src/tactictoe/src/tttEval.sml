@@ -187,7 +187,7 @@ fun cumul_graph timelimit exp =
 
 (*
 load "tttEval"; open tttEval;
-val expl = ["i5"];
+val expl = ["hard-default"];
 app (cumul_graph 605.0) expl;
 (* quit *)
 gnuplot -p -e "plot 'eval/graph/august10_graph' using 1:2 with lines,\
@@ -422,7 +422,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
   in
-    if !hh_flag then hh_call fofdir thmdata goal else
+    if !hh_flag then catch_err "hh_call" (hh_call fofdir thmdata) goal else
     let val ((status,tree),t) = add_time
       (main_tactictoe (thmdata,tacdata) nnol) goal
       handle Interrupt => raise Interrupt
@@ -686,7 +686,7 @@ tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
 hh_flag := false; hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
-run_evalscript_thyl smlfun "hdefault" (true,20) 
+run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
   (NONE,NONE,NONE) thyl;
 *)
 
@@ -731,16 +731,14 @@ load "tttEval"; open tttEval;
 
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 600.0;
-tacticToe.hh_use := true;
+tacticToe.hh_use := false;
 tacticToe.hh_time := 5;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
-hh_flag := false;
+hh_flag := true;
 hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
-
-
 
 val savestatedir = tttSetup.tactictoe_dir ^ "/savestate";
 val evaldir = tttSetup.tactictoe_dir ^ "/eval";
@@ -749,7 +747,7 @@ fun trim s = savestatedir ^ "/" ^
   String.substring (s,12,String.size s - 5 - 12);
 val filel2 = map trim filel;
 
-run_evalscript_filel smlfun "i5" (true,20) 
+run_evalscript_filel smlfun "hard-eprover" (true,20) 
   (NONE,NONE,NONE) filel2;
 
 *)
