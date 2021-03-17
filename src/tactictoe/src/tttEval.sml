@@ -162,7 +162,7 @@ fun stats_exp exp =
     val filel = filter (String.isPrefix "buildheap_") (listDir dir)
     val totl = map (extract_info dir) filel
     val satl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
-    val timeoutl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
+    val timeoutl = filter (fn (_,(x,_)) => x = ProofTimeout) totl
     val proofl = filter (fn (_,(x,_)) => is_proof x) totl
   in
     (totl,satl,timeoutl,proofl)
@@ -187,8 +187,8 @@ fun cumul_graph timelimit exp =
 
 (*
 load "tttEval"; open tttEval;
-val expl = ["august11-300","august10"];
-app (cumul_graph 300.0) expl;
+val expl = ["i5"];
+app (cumul_graph 605.0) expl;
 (* quit *)
 gnuplot -p -e "plot 'eval/graph/august10_graph' using 1:2 with lines,\
                     'eval/graph/august11-300_graph' using 1:2 with lines"
@@ -686,7 +686,7 @@ tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
 hh_flag := false; hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
-run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
+run_evalscript_thyl smlfun "hdefault" (true,20) 
   (NONE,NONE,NONE) thyl;
 *)
 
@@ -704,6 +704,8 @@ tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 ttt_record_savestate (); (* also cleans the savestate directory *)
 
+
+val thyl = ["arithmetic", "real", "complex", "measure", "probability", "list", "sorting","finite_map"];
 load "tttEval"; open tttEval;
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 60.0;
