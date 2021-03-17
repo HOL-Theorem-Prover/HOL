@@ -191,7 +191,6 @@ struct
                 else
                 let
                   val theString = strAcc ^ " " ^ (removeTrailing (! LASSIESEP) str);
-                  val _ = (print ("Turned :"^ strAcc ^ " " ^ str); print "\n Into: "; print theString; print "\n");
                   val t = sempre theString;
                 in
                   case #result t of
