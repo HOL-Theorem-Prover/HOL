@@ -523,60 +523,64 @@ QED
 
 (*-----------prob_indep_compl_event_big_inter_list-----------------*)
 Theorem prob_indep_compl_event_big_inter_list :
-!L1 n h p.  mutual_indep p (h::L1) /\ (!x.  MEM x (h::L1)  ==>  x  IN  events p) /\
-            ( prob_space p) /\ (LENGTH L1 = 1) ==>
-            ( prob p ((p_space p DIFF h) INTER  big_inter p (TAKE n (compl_list p L1))) =
-prob p (p_space p DIFF (h:'a ->bool)) *
-list_prod (list_prob p (TAKE n (compl_list p L1))))
+  !L1 n h p.
+    mutual_indep p (h::L1) /\ (!x.  MEM x (h::L1)  ==>  x  IN  events p) /\
+    prob_space p /\ LENGTH L1 = 1 ==>
+    prob p ((p_space p DIFF h) INTER big_inter p (TAKE n (compl_list p L1))) =
+    prob p (p_space p DIFF (h:'a ->bool)) *
+    list_prod (list_prob p (TAKE n (compl_list p L1)))
 Proof
-Induct
-THEN1(RW_TAC list_ss[])
-     THEN Induct_on `n`
-        THEN1(RW_TAC list_ss[TAKE_def,LENGTH]
+  Induct
+  THEN1(RW_TAC list_ss[])
+  THEN Induct_on `n`
+  THEN1(RW_TAC list_ss[TAKE_def,LENGTH]
         THEN RW_TAC list_ss[big_inter_def,list_prob_def,list_prod_def]
         THEN RW_TAC std_ss[DIFF_INTER,INTER_IDEMPOT]
         THEN REAL_ARITH_TAC )
-      THEN RW_TAC std_ss[LENGTH,LENGTH_NIL]
-      THEN RW_TAC real_ss[compl_list_def,MAP,TAKE_def,big_inter_def,list_prob_def,list_prod_def]
-      THEN  RW_TAC std_ss[DIFF_INTER,INTER_IDEMPOT]
-      THEN (`(p_space p INTER  (p_space p DIFF ((h':('a ->bool))))) =
-            ((p_space p DIFF (h':('a ->bool)))) ` by (MATCH_MP_TAC INTER_PSPACE))
-      THEN1(RW_TAC std_ss[]
-       THEN MATCH_MP_TAC EVENTS_DIFF
-       THEN RW_TAC std_ss[EVENTS_SPACE]
-       THEN FULL_SIMP_TAC list_ss[])
-      THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
-      THEN RW_TAC std_ss[GSYM DIFF_UNION]
-      THEN (`prob p (p_space p DIFF (h'  UNION  h)) =
-            1 - prob p ((((h':('a ->bool)))  UNION  h)) `by (MATCH_MP_TAC PROB_COMPL))
-       THEN1 (FULL_SIMP_TAC list_ss[EVENTS_UNION])
-      THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
-      THEN (`prob p ((h':('a ->bool))  UNION  h) =
-             prob p h' + prob p ((h:('a ->bool))) -
-              prob p (h' INTER  h) ` by (MATCH_MP_TAC Prob_Incl_excl))
-       THEN1 (FULL_SIMP_TAC list_ss[])
-      THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
-      THEN FULL_SIMP_TAC std_ss[mutual_indep_def]
-      THEN NTAC 2 (POP_ASSUM MP_TAC)
-      THEN POP_ASSUM (MP_TAC o Q.SPEC `[h; (h':('a ->bool))] `)
-      THEN RW_TAC std_ss[]
-      THEN NTAC 2 (POP_ASSUM MP_TAC)
-      THEN POP_ASSUM (MP_TAC o Q.SPEC `LENGTH [h; (h':('a ->bool))] `)
-      THEN RW_TAC std_ss[]
-      THEN FULL_SIMP_TAC std_ss[LENGTH,PERM_REFL]
-      THEN FULL_SIMP_TAC list_ss[TAKE]
-      THEN FULL_SIMP_TAC real_ss[big_inter_def,list_prob_def, list_prod_def]
-      THEN (`h' INTER  p_space p =  h'` by (ONCE_REWRITE_TAC[INTER_COMM]))
-       THEN1 (MATCH_MP_TAC INTER_PSPACE
-       THEN FULL_SIMP_TAC list_ss[])
-      THEN FULL_SIMP_TAC std_ss[INTER_COMM]
-      THEN (POP_ASSUM (K ALL_TAC))
-      THEN (`(prob p (p_space p DIFF (h:('a ->bool)))  =
- 1 - prob p (h)) /\  (prob p (p_space p DIFF (h':('a ->bool))) =  1 - prob p (h')) ` by (RW_TAC std_ss[]))
-       THEN1( FULL_SIMP_TAC list_ss[PROB_COMPL] )
-       THEN1 (FULL_SIMP_TAC list_ss[PROB_COMPL])
-      THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
-    THEN REAL_ARITH_TAC
+  THEN RW_TAC std_ss[LENGTH,LENGTH_NIL]
+  THEN RW_TAC real_ss[compl_list_def,MAP,TAKE_def,big_inter_def,list_prob_def,list_prod_def]
+  THEN rename [‘MEM _ [h; h'] ⇒ _ ∈ events p’]
+  THEN RW_TAC std_ss[DIFF_INTER,INTER_IDEMPOT]
+  THEN (`(p_space p INTER  (p_space p DIFF ((h':('a ->bool))))) =
+        ((p_space p DIFF (h':('a ->bool)))) ` by (MATCH_MP_TAC INTER_PSPACE))
+  THEN1(RW_TAC std_ss[]
+        THEN MATCH_MP_TAC EVENTS_DIFF
+        THEN RW_TAC std_ss[EVENTS_SPACE]
+        THEN FULL_SIMP_TAC list_ss[])
+  THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
+  THEN RW_TAC std_ss[GSYM DIFF_UNION]
+  THEN (`prob p (p_space p DIFF (h'  UNION  h)) =
+        1 - prob p ((((h':('a ->bool)))  UNION  h)) `
+          by (MATCH_MP_TAC PROB_COMPL))
+  THEN1 (FULL_SIMP_TAC list_ss[EVENTS_UNION])
+  THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
+  THEN (`prob p ((h':('a ->bool))  UNION  h) =
+        prob p h' + prob p ((h:('a ->bool))) -
+                         prob p (h' INTER  h) ` by (MATCH_MP_TAC Prob_Incl_excl))
+  THEN1 (FULL_SIMP_TAC list_ss[])
+  THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
+  THEN FULL_SIMP_TAC std_ss[mutual_indep_def]
+  THEN NTAC 2 (POP_ASSUM MP_TAC)
+  THEN POP_ASSUM (MP_TAC o Q.SPEC `[h; (h':('a ->bool))] `)
+  THEN RW_TAC std_ss[]
+  THEN NTAC 2 (POP_ASSUM MP_TAC)
+  THEN POP_ASSUM (MP_TAC o Q.SPEC `LENGTH [h; (h':('a ->bool))] `)
+  THEN RW_TAC std_ss[]
+  THEN FULL_SIMP_TAC std_ss[LENGTH,PERM_REFL]
+  THEN FULL_SIMP_TAC list_ss[TAKE]
+  THEN FULL_SIMP_TAC real_ss[big_inter_def,list_prob_def, list_prod_def]
+  THEN (`h' INTER  p_space p =  h'` by (ONCE_REWRITE_TAC[INTER_COMM]))
+  THEN1 (MATCH_MP_TAC INTER_PSPACE THEN FULL_SIMP_TAC list_ss[])
+  THEN FULL_SIMP_TAC std_ss[INTER_COMM]
+  THEN (POP_ASSUM (K ALL_TAC))
+  THEN (‘(prob p (p_space p DIFF (h:('a ->bool)))  =
+          1 - prob p (h)) /\
+         (prob p (p_space p DIFF (h':('a ->bool))) =  1 - prob p (h')) ’
+          by (RW_TAC std_ss[]))
+  THEN1( FULL_SIMP_TAC list_ss[PROB_COMPL] )
+  THEN1 (FULL_SIMP_TAC list_ss[PROB_COMPL])
+  THEN ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC)
+  THEN REAL_ARITH_TAC
 QED
 
 (*-----------prob_indep_big_inter1------------------*)
