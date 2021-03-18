@@ -513,6 +513,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_int "tttSearch.snap_n" snap_n,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
+     sreflect_flag "tttSearch.nocut_flag" nocut_flag,
      smlfun ^ " " ^ mlquote expdir ^ " " ^
      "(" ^ mlquote thy ^ "," ^ its n ^ ") " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
@@ -660,7 +661,6 @@ tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-cheat_flag := false;
 hh_flag := false;
 hh_ontop_flag := true;
 hh_timeout := 10;
@@ -683,7 +683,6 @@ tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-cheat_flag := false;
 hh_flag := false; 
 hh_ontop_flag := false; hh_timeout := 30;
 run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
@@ -730,15 +729,13 @@ grep -rL "hh: not available" . | xargs grep -L "tactictoe: proven" > ../../hard_
 load "tttEval"; open tttEval;
 
 val smlfun = "tttEval.ttt_eval";
-tttSetup.ttt_search_time := 600.0;
-tacticToe.hh_use := false;
-tacticToe.hh_time := 5;
+tttSetup.ttt_search_time := 30.0;
+tacticToe.hh_use := false; tacticToe.hh_time := 5;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-cheat_flag := false;
-hh_flag := true; hh_timeout := 600;
-hh_ontop_flag := false; hh_ontop_wd := 8;
+hh_flag := false; hh_timeout := 530;
+hh_ontop_flag := true; tttSearch.snap_flag := true; tttSearch.snap_n := 100;
 
 val savestatedir = tttSetup.tactictoe_dir ^ "/savestate";
 val evaldir = tttSetup.tactictoe_dir ^ "/eval";
@@ -747,9 +744,25 @@ fun trim s = savestatedir ^ "/" ^
   String.substring (s,12,String.size s - 5 - 12);
 val filel2 = map trim filel;
 
-run_evalscript_filel smlfun "hard-eprover-1" (true,20) 
+run_evalscript_filel smlfun "hard-seq" (true,20) 
   (NONE,NONE,NONE) filel2;
 
+*)
+
+(*
+load "aiLib"; open aiLib;
+val sl = readl "time";
+val sl1 = map (fn x => snd (split_string " " x)) sl;
+val rl = map (valOf o Real.fromString) sl1;
+val rl1 = dict_sort Real.compare rl;
+fun rltograph n rl = case rl of
+    [] => []
+  | a :: m => (a - 0.0001, n) :: (a,n+1) :: rltograph (n+1) m
+
+fun write_graph file (s1,s2) l =
+  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
+write_graph  (HOLDIR ^ "/src/tactictoe/eval/graph/hard-eprover-1_graph")
+  ("time","proofs") (rltograph 0 rl1);
 *)
 
 (* ------------------------------------------------------------------------
