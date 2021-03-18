@@ -96,6 +96,14 @@ in
       ``f (a:'a) : 'b``
 end
 
+(* test that loop detection doesn't trigger on bound variables *)
+val _ =
+    convtest ("Loop detection doesn't trigger on bound variable",
+              SIMP_CONV boolSimps.bool_ss
+                        [ASSUME “a:'a = (\a:'a b:'b. a) x y”],
+              “f(a:'a) = z:'c”,
+              “f(x:'a) = z:'c”);
+
 (* test that a bounded rewrite on a variable gets a chance to fire at all *)
 val _ = let
   open pureSimps
@@ -125,6 +133,19 @@ in
       doit
       t
 end
+
+(*
+(* test improved loop detection *)
+val _ = let
+  val rwt_th = ASSUME “!x:'a. FN x = if P x then T else FN (g x)”
+in
+  shouldfail {checkexn = (fn UNCHANGED => true | _ => false),
+              printarg = K "Test internal instance loop detection",
+              printresult = thm_to_string,
+              testfn = SIMP_CONV bool_ss [rwt_th]}
+             “FN (n:'a) : bool”
+end;
+*)
 
 (* test that congruence rule for conditional expressions is working OK *)
 val _ = let
