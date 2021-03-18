@@ -34,6 +34,10 @@ sig
     parentd : (goal, unit) Redblackmap.dict}
   type tree = (id, node) Redblackmap.dict
 
+  val snap_flag : bool ref
+  val snap_tree : tree option ref
+  val snap_n : int ref
+
   val before_stacfresh_all : 
     (int -> stac_record) -> (int * stac_record) list
 

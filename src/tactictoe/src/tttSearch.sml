@@ -595,6 +595,10 @@ fun node_backup tree (argtreeo,glo) (sstatus,vis,reward) (id,(gn,sn,anl)) =
    Search loop: selection, expansion and backup
    ------------------------------------------------------------------------- *)
 
+val snap_flag = ref false
+val snap_tree = ref NONE
+val snap_n = ref 10
+
 fun search_loop startsearchobj nlimito starttree =
   let
     val nlimitb = isSome nlimito
@@ -611,6 +615,9 @@ fun search_loop startsearchobj nlimito starttree =
         then (print_endline ("loops: " ^ its n); (SearchProved,tree))
       else
         let
+          val _ = if !snap_flag andalso dlength tree = !snap_n
+                  then snap_tree := SOME tree
+                  else ()
           val _ = debug "selection"
           val ((pid,(gn,sn,anl)),(goal,stac,argtree)) = total_time select_time 
               (select_node tree) []

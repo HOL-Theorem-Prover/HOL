@@ -323,7 +323,7 @@ fun export_pbl pbprefix tree =
 datatype GoalDisj = GDisj of goal * GoalConj list
 and GoalConj = GConj of GoalDisj list
 
-fun children_of_argtree maxw tree id (gn,sn) argtree =
+fun children_of_argtree tree id (gn,sn) argtree =
   let 
     val anll = dkeys argtree
     fun prefix anl = (gn,sn,anl) :: id
@@ -331,33 +331,30 @@ fun children_of_argtree maxw tree id (gn,sn) argtree =
     val anll1 = filter test anll
     val anll2 = dict_sort (list_compare Int.compare) anll1
   in
-    map prefix (first_n maxw anll2)
+    map prefix anll2
   end
 
-fun children_of_stacv maxw tree id gn sn argtreel = 
-   if maxw <= 0 then [] else
+fun children_of_stacv tree id gn sn argtreel =
    case argtreel of
      [] => []
    | argtree :: m => 
-     let val cidl = children_of_argtree maxw tree id (gn,sn) argtree in
+     let val cidl = children_of_argtree tree id (gn,sn) argtree in
        if null cidl 
-       then children_of_stacv maxw tree id gn (sn+1) m
-       else cidl :: children_of_stacv (maxw - 1) tree id gn (sn+1) m
+       then children_of_stacv tree id gn (sn+1) m
+       else cidl :: children_of_stacv tree id gn (sn+1) m
      end
 
-fun mk_goaltree maxw tree id =
+fun mk_goaltree bigtree tree id =
   let
-    val node = dfind id tree
-    val goalv = number_snd 0 (vector_to_list (#goalv node))
+    val bignode = dfind id bigtree
+    val goalv = number_snd 0 (vector_to_list (#goalv bignode))
     fun f (x,i) = if #gstatus x <> GoalProved then SOME (x,i) else NONE
     val goall = List.mapPartial f goalv
-    fun g (grec,gn) = 
+    fun g (grec,gn) =
       let val cidl = List.concat 
-        (children_of_stacv maxw tree id gn 0 (vector_to_list (#stacv grec)))
+        (children_of_stacv tree id gn 0 (vector_to_list (#stacv grec)))
       in
-        if maxw - 1 <= 0 
-        then GDisj (#goal grec, [])
-        else GDisj (#goal grec, map (mk_goaltree (maxw - 1) tree) cidl)
+        GDisj (#goal grec, map (mk_goaltree bigtree tree) cidl)
       end
   in
     GConj (map g goall)
@@ -395,7 +392,6 @@ fun print_status r = case r of
 
 val hh_flag = ref false
 val hh_ontop_flag = ref false
-val hh_ontop_wd = ref 1
 
 fun hh_call fofdir thmdata goal =
   let val hho = import_hh () in
@@ -422,7 +418,8 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
   in
-    if !hh_flag then catch_err "hh_call" (hh_call fofdir thmdata) goal else
+    if !hh_flag 
+      then catch_err_ignore "hh_call" (hh_call fofdir thmdata) goal else
     let val ((status,tree),t) = add_time
       (main_tactictoe (thmdata,tacdata) nnol) goal
       handle Interrupt => raise Interrupt
@@ -438,7 +435,9 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
       then 
         let 
           fun build_term () =
-            ([], termify_gconj (mk_goaltree (!hh_ontop_wd) tree []))
+            if isSome (!snap_tree) 
+            then ([], termify_gconj (mk_goaltree tree (valOf (!snap_tree)) []))
+            else ([], termify_gconj (mk_goaltree tree tree []))
           val newgoal = build_term ()
           val _ = print_endline ("hh goal: " ^ string_of_goal newgoal)
         in 
@@ -508,9 +507,10 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_flag "tttEval.hh_flag" hh_flag,
      sreflect_int "tttEval.hh_timeout" hh_timeout,
      sreflect_flag "tttEval.hh_ontop_flag" hh_ontop_flag,
-     sreflect_int "tttEval.hh_ontop_wd" hh_ontop_wd,
      sreflect_flag "tacticToe.hh_use" hh_use,
      sreflect_int "tacticToe.hh_time" hh_time,
+     sreflect_flag "tttSearch.snap_flag" snap_flag,
+     sreflect_int "tttSearch.snap_n" snap_n,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      smlfun ^ " " ^ mlquote expdir ^ " " ^
@@ -663,7 +663,6 @@ tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
 hh_flag := false;
 hh_ontop_flag := true;
-hh_ontop_wd := 8;
 hh_timeout := 10;
 run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 *)
@@ -685,7 +684,8 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
-hh_flag := false; hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
+hh_flag := false; 
+hh_ontop_flag := false; hh_timeout := 30;
 run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
   (NONE,NONE,NONE) thyl;
 *)
@@ -737,8 +737,8 @@ tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
 cheat_flag := false;
-hh_flag := true;
-hh_ontop_flag := false; hh_ontop_wd := 8; hh_timeout := 30;
+hh_flag := true; hh_timeout := 600;
+hh_ontop_flag := false; hh_ontop_wd := 8;
 
 val savestatedir = tttSetup.tactictoe_dir ^ "/savestate";
 val evaldir = tttSetup.tactictoe_dir ^ "/eval";
@@ -747,7 +747,7 @@ fun trim s = savestatedir ^ "/" ^
   String.substring (s,12,String.size s - 5 - 12);
 val filel2 = map trim filel;
 
-run_evalscript_filel smlfun "hard-eprover" (true,20) 
+run_evalscript_filel smlfun "hard-eprover-1" (true,20) 
   (NONE,NONE,NONE) filel2;
 
 *)
