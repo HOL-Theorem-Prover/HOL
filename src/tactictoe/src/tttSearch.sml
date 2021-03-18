@@ -407,6 +407,8 @@ fun expand_argtree searchobj (goal,stac) (argtree,anl) =
    Application of a tactic
    ------------------------------------------------------------------------- *)
 
+val nocut_flag = ref false
+
 fun status_of_stac parentd goalrec glo = case glo of
     NONE => StacSaturated
   | SOME [] => StacProved
@@ -414,7 +416,9 @@ fun status_of_stac parentd goalrec glo = case glo of
    (if op_mem goal_eq (#goal goalrec) gl orelse
        exists (fn x => dmem x parentd) gl orelse
        dmem gl (#siblingd goalrec) orelse
-       exists (fn x => term_eq (snd x) F) gl
+       exists (fn x => term_eq (snd x) F) gl orelse
+       (!nocut_flag andalso 
+        exists (fn x => term_eq (snd x) (snd (#goal goalrec))) gl)
     then StacSaturated
     else StacUndecided)
 
