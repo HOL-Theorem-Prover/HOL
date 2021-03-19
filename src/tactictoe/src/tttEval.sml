@@ -232,16 +232,23 @@ compare_stats ["august9"] "august10";
 
 fun is_proved tree = #nstatus (dfind [] tree) = NodeProved
 
+val neg_limit_flag = ref true
+val neg_limit_n = ref 64
+
 fun export_valex file tree =
   if not (is_proved tree) then () else 
   let
     val nodel = map snd (dlist tree)
-    fun f x = (nntm_of_stateval (#goal x), 
-               if #gstatus x = GoalProved then 1.0 else 0.0)
+    fun f x = ((nntm_of_stateval (#goal x), 
+               if #gstatus x = GoalProved then 1.0 else 0.0), #gvis x)
     fun g x = vector_to_list (Vector.map f (#goalv x))
     val exl = List.concat (map g nodel)
+    val (posl,negl) = partition (fn x => snd (fst x) > 0.5) exl
+    val negl2 = if !neg_limit_flag 
+      then first_n (!neg_limit_n) (dict_sort compare_rmax negl)
+      else negl
   in
-    write_tnnex file (basicex_to_tnnex exl)
+    write_tnnex file (basicex_to_tnnex (map fst (posl @ negl2)))
   end
 
 (* -------------------------------------------------------------------------
@@ -678,14 +685,14 @@ tttSetup.record_savestate_flag := true;
 ttt_record_savestate (); (* also cleans the savestate directory *)
 
 load "tttEval"; open tttEval;
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
 tttSearch.ttt_vis_fail := 1.0;
-hh_flag := false; 
-hh_ontop_flag := false; hh_timeout := 30;
-run_evalscript_thyl smlfun "210313-wd8-1" (true,20) 
+tttSearch.nocut_flag := true;
+run_evalscript_thyl smlfun "nocut" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
@@ -799,10 +806,16 @@ fun train_fixed pct exl =
     tnn
   end
 
+(*
+1) make a set of the examples
+2) limit the number of examples per proof.
+*)
+
 fun collect_ex dir = 
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
   end
+
 
 val ttt_eval_string = "tttEval.ttt_eval"
 
