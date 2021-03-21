@@ -5,9 +5,6 @@ sig
 
   type tnn = mlTreeNeuralNetwork.tnn
 
-  val ttt_vis_fail : real ref
-  val ttt_spol_flag : bool ref
-
   datatype sstatus = StacProved | StacSaturated | StacUndecided | StacFresh
   datatype gstatus = GoalProved | GoalSaturated | GoalUndecided
   datatype nstatus = NodeProved | NodeSaturated | NodeUndecided
