@@ -163,7 +163,6 @@ fun backstatus_node node = case #nstatus node of
 
 (* called only when tactic applications either closes the goal or fails *)
 fun reward_of_sstatus sstatus = case sstatus of
-    (* do not penalize too much for failing as the policy cannot avoid it *)
     StacSaturated => (sstatus,0.0)
   | StacProved => (sstatus,1.0)
   | _ => raise ERR "reward_of_sstatus" "unexpected"
@@ -176,7 +175,7 @@ fun eval_goal vnn g =
     infer_tnn_basic vnn tm2
   end
 
-val default_reward = 0.0
+val default_reward = 1.0
 
 fun reward_of_goal vnno g =
   if not (isSome vnno) then default_reward else eval_goal (valOf vnno) g
