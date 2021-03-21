@@ -232,8 +232,8 @@ compare_stats ["august9"] "august10";
 
 fun is_proved tree = #nstatus (dfind [] tree) = NodeProved
 
-val neg_limit_flag = ref false
-val neg_limit_n = ref 64
+val neg_limit_flag = ref true
+val neg_limit_n = ref 100
 
 fun export_valex file tree =
   if not (is_proved tree) then () else 
@@ -789,12 +789,14 @@ fun train_fixed pct exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
     val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operset
+    val operdiml = map (fn x => (fst x, dim_std_arity (2,16) x)) operset
     val randtnn = random_tnn operdiml
-    val nepoch = (20 * 100 * 1000) div (length exl) 
-    val nepoch' = if nepoch >= 1 then nepoch else 1
-    val tnn = train_tnn (rl_schedule nepoch') randtnn (train,test)
+    val nepoch = 20
+    val tnn = train_tnn (rl_schedule nepoch) randtnn (train,test)
+    val accur = tnn_accuracy tnn train 
   in
+    print_endline ("tnn accuracy:" ^ rts accur);
+    writel (tactictoe_dir ^ "/accuracy") [rts accur];
     tnn
   end
 
@@ -803,11 +805,29 @@ fun train_fixed pct exl =
 2) limit the number of examples per proof.
 *)
 
-fun collect_ex dir = 
+fun collect_ex dir =
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
   end
 
+fun tnnex_to_basicex ex = 
+  let fun f ex = case ex of
+    [(t,[r])] => (t,r)
+  | _ => raise ERR "not a basic example" ""
+  in 
+    map f ex
+  end
+
+fun unify_ex ex =
+  let 
+    val ex1 = tnnex_to_basicex ex
+    val ex2 = dlist (dregroup Term.compare ex1)
+    fun f (t,l) = if exists (fn x => x > 0.5) l then (t,1.0) else (t,0.0)
+    val ex3 = map f ex2
+    val ex4 = filter (fn (t,_) => term_size t < 40) ex3
+  in
+    basicex_to_tnnex ex4
+  end
 
 val ttt_eval_string = "tttEval.ttt_eval"
 
@@ -817,7 +837,7 @@ fun rlval_loop expname thyl (gen,maxgen) =
     fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
     fun valdir x = gendir x ^ "/val"    
     val dirl = List.tabulate (gen,valdir)
-    val exl = List.concat (map collect_ex dirl)
+    val exl = unify_ex (List.concat (map collect_ex dirl))
     val tnnfile = gendir (gen - 1) ^ "/tnn/val"
     val _ = if exists_file tnnfile then () (* for restarts *) else 
       write_tnn tnnfile (train_fixed 1.0 exl)
@@ -844,10 +864,8 @@ ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-val expname = "rl-clean";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val maxgen = 1;
-rlval expname thyl maxgen;
+rlval "rl-uniq" thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)
 *)
