@@ -232,7 +232,7 @@ compare_stats ["august9"] "august10";
 
 fun is_proved tree = #nstatus (dfind [] tree) = NodeProved
 
-val neg_limit_flag = ref true
+val neg_limit_flag = ref false
 val neg_limit_n = ref 64
 
 fun export_valex file tree =
@@ -505,9 +505,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
-     sreflect_real "tttSearch.ttt_vis_fail" ttt_vis_fail,
      sreflect_flag "tttSetup.ttt_metis_flag" ttt_metis_flag,
-     sreflect_flag "tttSearch.ttt_spol_flag" ttt_spol_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
      sreflect_flag "tttEval.cheat_flag" cheat_flag,
@@ -667,7 +665,6 @@ val file = savestatedir ^ "/" ^ "relation_40";
 tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
-tttSearch.ttt_vis_fail := 1.0;
 hh_flag := false;
 hh_ontop_flag := true;
 hh_timeout := 10;
@@ -687,10 +684,7 @@ ttt_record_savestate (); (* also cleans the savestate directory *)
 load "tttEval"; open tttEval;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-tttSetup.ttt_search_time := 30.0;
-tttSetup.ttt_metis_flag := true;
-tttSetup.ttt_policy_coeff := 0.5;
-tttSearch.ttt_vis_fail := 1.0;
+tttSetup.ttt_search_time := 30.0;ttt
 tttSearch.nocut_flag := true;
 run_evalscript_thyl smlfun "nocut" (true,30) 
   (NONE,NONE,NONE) thyl;
@@ -716,7 +710,6 @@ load "tttEval"; open tttEval;
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 60.0;
 tttSetup.ttt_policy_coeff := 0.5;
-tttSearch.ttt_vis_fail := 1.0;
 oldeval_flag := true;
 
 fun f x = 
@@ -740,7 +733,6 @@ tttSetup.ttt_search_time := 30.0;
 tacticToe.hh_use := false; tacticToe.hh_time := 5;
 tttSetup.ttt_metis_flag := true;
 tttSetup.ttt_policy_coeff := 0.5;
-tttSearch.ttt_vis_fail := 1.0;
 hh_flag := false; hh_timeout := 530;
 hh_ontop_flag := true; tttSearch.snap_flag := true; tttSearch.snap_n := 100;
 
@@ -839,10 +831,8 @@ fun rlval_loop expname thyl (gen,maxgen) =
 fun rlval expname thyl maxgen =
   (
   print_endline ("Generation 0"); 
-  tttSearch.ttt_vis_fail := 1.0;
   run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,30) 
     (NONE,NONE,NONE) thyl;
-  tttSearch.ttt_vis_fail := 0.1;
   rlval_loop expname thyl (1,maxgen)
   )
 
@@ -854,11 +844,10 @@ ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-val expname = "210124-1";
+val expname = "rl-clean";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val maxgen = 10;
+val maxgen = 1;
 rlval expname thyl maxgen;
-
 
 (* rlval_loop expname thyl (1,maxgen); *)
 *)
@@ -927,9 +916,6 @@ val tnnfile = expdir ^ "/tnn/val";
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-tttSetup.ttt_metis_flag := true;
-tttSetup.ttt_policy_coeff := 0.5;
-tttSearch.ttt_vis_fail := 0.1;
 tttSearch.ttt_spol_flag := false;
 run_evalscript_thyl smlfun "210121-2-13" (true,30) 
   (SOME tnnfile,NONE,NONE) thyl;
