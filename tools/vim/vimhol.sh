@@ -49,7 +49,16 @@ else
 fi
 
 # find rlwrap if installed
-RLWRAP="$(command -v rlwap 2> /dev/null)" || RLWRAP=""
+RLWRAP="$(command -v rlwrap 2> /dev/null)" || RLWRAP=""
+
+# get absolute pathnames of the argument files, because the working directory
+# is later changed
+cwd="$(pwd)"
+files=()
+for f in "$@"; do
+  test "${f:0:1}" = "/" || f="${cwd}/$f"
+  files+=("$f")
+done
 
 # first argument's directory or current working directory
 WD="$(echo "$@" | xargs dirname 2>/dev/null \
@@ -66,7 +75,8 @@ test -p "$VIMHOL_FIFO" || mkfifo "$VIMHOL_FIFO"
 tmux \
   new-session \
     -s "$(basename "$VIMHOL_FIFO")" \
-    "env VIMHOL_FIFO='$VIMHOL_FIFO' ${EDITOR:-vim} -c 'source $VIMOPT' $*" \; \
+    "env VIMHOL_FIFO='$VIMHOL_FIFO' ${EDITOR:-vim} -c 'source $VIMOPT' \
+        -c 'bufdo doautocmd BufRead' $*" \; \
   split-window -h "cd '$WD'; env HOME='$HOLDIR/tools/vim/' VIMHOL_FIFO='$VIMHOL_FIFO' $RLWRAP $HOLDIR/bin/hol" \; \
   select-pane -t :.- \; \
   bind-key C-q confirm-before -p "kill-session #S? (y/n)" \

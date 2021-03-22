@@ -246,7 +246,7 @@ val GF_2_deg_h = store_thm(
 
 (* Theorem: poly_roots (GF 2) h = {} *)
 (* Proof:
-   Simply by definitions, this is to show:
+   Simplify by definitions, this is to show:
    x <> 0 /\ x <> 1 \/ (1 + ((1 + x MOD 2) MOD 2 * x) MOD 2) MOD 2 <> 0
    If x = 0,
       (1 + ((1 + x MOD 2) MOD 2 * x) MOD 2) MOD 2

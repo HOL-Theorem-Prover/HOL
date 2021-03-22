@@ -16536,7 +16536,7 @@ Proof
     [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
     CONJ_TAC THENL
      [ALL_TAC,
-      MATCH_MP_TAC CARD_MUL2_ABSORB_LE THEN REWRITE_TAC[INFINITE_CARD_LE] THEN
+      MATCH_MP_TAC CARD_MUL2_ABSORB_LE THEN REWRITE_TAC[INFINITE_Unum] THEN
       SIMP_TAC std_ss [CANTOR_THM_UNIV, CARD_LT_IMP_LE, CARD_LE_REFL]] THEN
     `univ(:real) <=_c (univ(:num) *_c {x:real | &0 <= x}) /\
      univ(:num) *_c {x:real | &0 <= x} <=_c univ(:num) *_c univ(:num -> bool)`

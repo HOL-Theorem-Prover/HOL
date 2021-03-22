@@ -25,7 +25,6 @@ val _ = new_theory "quotientGroup";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -972,7 +971,7 @@ val kernel_group_group = store_thm(
    (1) Group (kernel_group f g h)
    True by kernel_group_group.
    (2) (kernel_group f g h).carrier SUBSET G
-   True by kernel_group_def, kernel_def, preimage_subset_of_domain.
+   True by kernel_group_def, kernel_def, preimage_subset.
    (3) x IN (kernel_group f g h).carrier /\ y IN (kernel_group f g h).carrier ==> (kernel_group f g h).op x y = x * y
    True by kernel_group_def.
 *)
@@ -981,7 +980,7 @@ val kernel_group_subgroup = store_thm(
   ``!(g:'a group) (h:'b group). !f. Group g /\ Group h /\ GroupHomo f g h ==> (kernel_group f g h) <= g``,
   rw_tac std_ss[Subgroup_def] >| [
     rw_tac std_ss[kernel_group_group],
-    rw[kernel_group_def, kernel_def, preimage_subset_of_domain],
+    rw[kernel_group_def, kernel_def, preimage_subset],
     full_simp_tac (srw_ss()) [kernel_group_def]
   ]);
 

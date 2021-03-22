@@ -322,8 +322,8 @@ val monoid_iso_property = store_thm(
   "monoid_iso_property",
   ``!f g h. MonoidIso f g h <=> MonoidHomo f g h /\ (!y. y IN h.carrier ==> ?!x. x IN G /\ (f x = y))``,
   rw_tac std_ss[MonoidIso_def, EQ_IMP_THM] >-
-  metis_tac[BIJ_ALT] >>
-  rw[BIJ_ALT] >>
+  metis_tac[BIJ_THM] >>
+  rw[BIJ_THM] >>
   metis_tac[MonoidHomo_def]);
 
 (* Note: all these proofs so far do not require the condition: f #e = h.id in MonoidHomo_def,
@@ -1149,7 +1149,7 @@ val WeakIso_def = Define`
    Hence this is to show: !x. x IN h.carrier ==> (h.op x (f #e) = x) /\ (h.op (f #e) x = x)
    Note that WeakIso f g h = WeakHomo f g h /\ BIJ f G h.carrier.
    (1) x IN h.carrier /\ f #e IN h.carrier ==> h.op x (f #e) = x
-       Since  x = f y     for some y IN G, by BIJ_ALT
+       Since  x = f y     for some y IN G, by BIJ_THM
        h.op x (f #e) = h.op (f y) (f #e)
                      = f (y * #e)     by WeakHomo_def
                      = f y = x        by monoid_rid
@@ -1164,9 +1164,9 @@ val monoid_weak_iso_id = store_thm(
   `#e IN G /\ f #e IN h.carrier` by metis_tac[WeakHomo_def, monoid_id_element] >>
   `!x. x IN h.carrier ==> (h.op x (f #e) = x) /\ (h.op (f #e) x = x)` suffices_by rw_tac std_ss[monoid_id_unique] >>
   rpt strip_tac>| [
-    `?y. y IN G /\ (f y = x)` by metis_tac[BIJ_ALT] >>
+    `?y. y IN G /\ (f y = x)` by metis_tac[BIJ_THM] >>
     metis_tac[WeakHomo_def, monoid_rid],
-    `?y. y IN G /\ (f y = x)` by metis_tac[BIJ_ALT] >>
+    `?y. y IN G /\ (f y = x)` by metis_tac[BIJ_THM] >>
     metis_tac[WeakHomo_def, monoid_lid]
   ]);
 

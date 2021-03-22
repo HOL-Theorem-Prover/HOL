@@ -21,8 +21,22 @@ val pow_tm   = Term`$pow`;
 (*---------------------------------------------------------------------------*)
 (* A conversion to differentiate expressions                                 *)
 (*---------------------------------------------------------------------------*)
+open ThmSetData
+fun add_delta (ADD (_, th)) ths = ths @ CONJUNCTS th
+  | add_delta (REMOVE _) ths =
+    (HOL_WARNING "Diff" "add_delta" "Cannot remove diff thms"; ths)
+val {get_global_value, update_global_value, ...} =
+    ThmSetData.export_with_ancestry {
+      settype = "difftool",
+      delta_ops = { apply_to_global = add_delta,
+                    initial_value = [],
+                    thy_finaliser = NONE,
+                    uptodate_delta = K true,
+                    apply_delta = add_delta}
+    }
 
-val basic_diffs = ref ([]:thm list);
+fun basic_diffs() = get_global_value ()
+fun temp_add_diffs ths = update_global_value (C append ths)
 
 
 (*---------------------------------------------------------------------------*)
@@ -37,12 +51,12 @@ val iths = map TAUT_CONV
               (``c /\ d ==> c /\ d``)];
 
 val [DIFF_INV', DIFF_DIV'] =
-   map (ONCE_REWRITE_RULE[TAUT_CONV (``a /\ b ==> c = a ==> b ==> c``)])
+   map (ONCE_REWRITE_RULE[TAUT_CONV (``a /\ b ==> c <=> a ==> b ==> c``)])
           [DIFF_INV, REWRITE_RULE[CONJ_ASSOC] DIFF_DIV];
 
 val comths = [DIFF_ADD, DIFF_MUL, DIFF_SUB, DIFF_DIV', DIFF_NEG, DIFF_INV'];
 
-val CC = TAUT_CONV (``a ==> b ==> c = a /\ b ==> c``);
+val CC = TAUT_CONV (``a ==> b ==> c <=> a /\ b ==> c``);
 
 fun DIFF_CONV tm =
   let val xv = variant (frees tm) xreal
@@ -61,7 +75,7 @@ fun DIFF_CONV tm =
                 (fst(strip_comb tm2),th3)
               end
         end
-      val (cths, bths) = case map (map make_assoc) [comths, !basic_diffs]
+      val (cths, bths) = case map (map make_assoc) [comths, basic_diffs()]
                          of [cths, bths] => (cths, bths)
                           | _ => raise ERR "DIFF_CONV" ""
       fun ICONJ th1 th2 =

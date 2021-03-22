@@ -2,27 +2,13 @@
 (* Theory of Moore-Smith covergence nets, and special cases like sequences   *)
 (*===========================================================================*)
 
-(*
-app load ["hol88Lib",
-          "numLib",
-          "reduceLib",
-          "pairTheory",
-          "PairedLambda",
-          "jrhUtils",
-          "metricTheory"];
-*)
+open HolKernel Parse boolLib hol88Lib;
 
-(*
-*)
-open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+open numLib reduceLib pairLib pred_setTheory
      pairTheory arithmeticTheory numTheory prim_recTheory
      jrhUtils realTheory topologyTheory metricTheory;
 
-val re_subset = REWRITE_RULE [pred_setTheory.SPECIFICATION]
-                             pred_setTheory.SUBSET_DEF
-
 val _ = new_theory "nets";
-val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
 
@@ -45,9 +31,10 @@ val bounded = new_definition("bounded",
   “bounded(m:('a)metric,(g:'b->'b->bool)) f =
       ?k x N. g N N /\ (!n. g n N ==> (dist m)(f(n),x) < k)”);
 
-val tendsto = new_definition("tendsto",
-  “tendsto(m:('a)metric,x) y z =
-      &0 < (dist m)(x,y) /\ (dist m)(x,y) <= (dist m)(x,z)”);
+Definition tendsto :
+   tendsto(m:('a)metric,x) y z =
+      (&0 < (dist m)(x,y) /\ (dist m)(x,y) <= (dist m)(x,z))
+End
 
 val DORDER_LEMMA = store_thm("DORDER_LEMMA",
   “!g:'a->'a->bool.
@@ -118,9 +105,10 @@ val DORDER_TENDSTO = store_thm("DORDER_TENDSTO",
 (* Simpler characterization of limit in a metric topology                    *)
 (*---------------------------------------------------------------------------*)
 
-val MTOP_TENDS = store_thm("MTOP_TENDS",
-  “!d g. !x:'b->'a. !x0. (x tends x0)(mtop(d),g) =
-     !e. &0 < e ==> ?n. g n n /\ !m. g m n ==> dist(d)(x(m),x0) < e”,
+Theorem MTOP_TENDS :
+  !d g. !x:'b->'a. !x0. (x tends x0)(mtop(d),g) <=>
+     !e. &0 < e ==> ?n. g n n /\ !m. g m n ==> dist(d)(x(m),x0) < e
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[tends] THEN EQ_TAC THEN DISCH_TAC THENL
    [GEN_TAC THEN DISCH_TAC THEN
     FIRST_ASSUM(MP_TAC o SPEC “B(d)(x0:'a,e)”) THEN
@@ -141,10 +129,11 @@ val MTOP_TENDS = store_thm("MTOP_TENDS",
     EXISTS_TAC “n:'b” THEN ASM_REWRITE_TAC[] THEN
     GEN_TAC THEN DISCH_TAC THEN
     UNDISCH_TAC “(P:'a->bool) SUBSET N” THEN
-    REWRITE_TAC[re_subset] THEN DISCH_TAC THEN
+    REWRITE_TAC[SUBSET_applied] THEN DISCH_TAC THEN
     REPEAT(FIRST_ASSUM MATCH_MP_TAC) THEN
     ONCE_REWRITE_TAC[METRIC_SYM] THEN
-    FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
+    FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove that a net in a metric topology cannot converge to different limits *)
@@ -156,7 +145,7 @@ val MTOP_TENDS_UNIQ = store_thm("MTOP_TENDS_UNIQ",
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[MTOP_TENDS] THEN
   CONV_TAC(ONCE_DEPTH_CONV AND_FORALL_CONV) THEN
-  REWRITE_TAC[TAUT_CONV “(a ==> b) /\ (a ==> c) = a ==> b /\ c”] THEN
+  REWRITE_TAC[TAUT_CONV “(a ==> b) /\ (a ==> c) <=> a ==> b /\ c”] THEN
   CONV_TAC CONTRAPOS_CONV THEN DISCH_TAC THEN
   CONV_TAC NOT_FORALL_CONV THEN
   EXISTS_TAC “dist(d:('a)metric)(x0,x1) / &2” THEN
@@ -208,7 +197,7 @@ val LIM_TENDS = store_thm("LIM_TENDS",
     UNDISCH_TAC “limpt(mtop m1) (x0:'a) UNIV” THEN
     REWRITE_TAC[MTOP_LIMPT] THEN
     DISCH_THEN(MP_TAC o SPEC “d:real”) THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[pred_setTheory.UNIV_DEF] THEN
+    REWRITE_TAC[UNIV_DEF] THEN
     DISCH_THEN(X_CHOOSE_THEN “y:'a” STRIP_ASSUME_TAC) THEN
     EXISTS_TAC “y:'a” THEN CONJ_TAC THENL
      [MATCH_MP_TAC METRIC_NZ THEN ASM_REWRITE_TAC[], ALL_TAC] THEN

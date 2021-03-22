@@ -1,6 +1,6 @@
 HOL COPYRIGHT NOTICE, LICENSE AND DISCLAIMER.
 
-Copyright 1985--2020 by the HOL4 CONTRIBUTORS
+Copyright 1985--2021 by the HOL4 CONTRIBUTORS
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -44,6 +44,7 @@ See
   examples/muddy/LICENSE
   examples/muddy/muddyC/buddy/README
   examples/machine-code/graph/seL4-kernel/README
+  src/HolSat/sat_solvers/minisat
 
 - Files derived from SML/NJ are governed by the notice in
      doc/copyrights/smlnj.txt

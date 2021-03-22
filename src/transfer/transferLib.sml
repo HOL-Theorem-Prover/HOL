@@ -276,7 +276,10 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
             let
               val hth = SIMP_CONV transfer_ss (#DOMRNG_ss ruledb) h
             in
-              PROVE_HYP (EQ_IMP_RULE hth |> #2 |> UNDISCH) th
+              if rhs (concl hth) ~~ T then
+                PROVE_HYP (EQT_ELIM hth) th
+              else
+                PROVE_HYP (EQ_IMP_RULE hth |> #2 |> UNDISCH) th
             end handle UNCHANGED => th | HOL_ERR _ => th
       fun simphyps th = sqreturn (List.foldl simphyp th (hyp th))
       fun assertprogress (p, th) = if not p andalso forceprogress then fail

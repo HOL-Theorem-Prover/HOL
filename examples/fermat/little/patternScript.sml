@@ -217,10 +217,10 @@ open dividesTheory; (* for prime_def, NOT_PRIME_0 *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define similar to relate two lists *)
-val similar_def = zDefine`
+Definition similar_def[nocompute]:
     similar l1 l2 = ?n. l2 = cycle n l1
-`;
-(* Note: use zDefine as this is not effective. *)
+End
+(* Note: use [nocompute] as this is not effective. *)
 
 (* set infix and overload for similar *)
 val _ = set_fixity "==" (Infixl 480);
@@ -332,10 +332,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the associate of list: all those that are similar to the list. *)
-val associate_def = zDefine `
+Definition associate_def[nocompute]:
     associate x = {y | x == y }
-`;
-(* Note: use zDefine as this is not effective. *)
+End
+(* Note: use [nocompute] as this is not effective. *)
 
 (* Theorem: y IN associate x <=> x == y *)
 (* Proof: by associate_def. *)

@@ -31,10 +31,11 @@ fun die s =
     end
 fun warn s =
   let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
+fun WARN s = (warn s; OS.Process.sleep (Time.fromSeconds 2))
 fun I x = x
 
 
-fun startup_check () =
+fun right_distrib_check () =
   let
     val me = Systeml.find_my_path()
   in
@@ -44,6 +45,34 @@ fun startup_check () =
         if whereami = me then ()
         else die "*** Don't run this instance of build in a foreign HOL directory"
   end
+
+fun cpp_present() =
+    let val which = internal_functions.which
+        open OS.FileSys
+    in
+      case OS.Process.getEnv "MINISAT_CXX" of
+         SOME p => if OS.Path.isAbsolute p then
+                     if access (p, [A_READ, A_EXEC]) then ()
+                     else
+                       WARN ("MINISAT_CXX environment variable doesn't point "^
+                             "at executable; minisat will fail to build")
+                   else if OS.Path.isAbsolute (which p) then ()
+                   else (
+                     WARN ("MINISAT_CXX environment variable " ^
+                           "points to " ^ p ^
+                           ", which is not in PATH;");
+                     WARN ("minisat will fail to build")
+                   )
+       | NONE => if OS.Path.isAbsolute (which "c++") then ()
+                 else
+                     WARN ("No c++ in PATH; set MINISAT_CXX env. " ^
+                           "variable or minisat will fail to build")
+    end
+
+fun startup_check() = (
+  right_distrib_check();
+  cpp_present()
+)
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -473,11 +502,26 @@ fun cleanForReloc0 HOLDIR =
     includes
   end
 
+fun maybe_gmakeclean dirname owise () =
+    if OS <> "winNT" then
+      let
+        val gnumake = 
+            case List.rev (#arcs (OS.Path.fromString dirname)) of
+              "minisat" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | "zc2hs" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | _ => false
+      in
+        if gnumake then (Systeml.systeml [Systeml.GNUMAKE, "clean"]; [])
+        else owise()
+      end
+    else owise()
 
-fun clean HOLDIR dirname = moveTo dirname (fn () => clean0 HOLDIR)
-fun cleanAll HOLDIR dirname = moveTo dirname (fn () => cleanAll0 HOLDIR)
+fun clean HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => clean0 HOLDIR))
+fun cleanAll HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanAll0 HOLDIR))
 fun cleanForReloc HOLDIR dirname =
-  moveTo dirname (fn () => cleanForReloc0 HOLDIR)
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanForReloc0 HOLDIR))
 
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
@@ -626,7 +670,7 @@ end;
 
 fun Gnumake dir =
   if SYSTEML [GNUMAKE] then true
-  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
+  else (WARN ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
 exception BuildExit
@@ -664,9 +708,9 @@ in
                               (fullPath [HOLDIR, "src","HolSat","sat_solvers",
                                          "minisat", "DELTHISminisat.exe"])
 	 | other => if not (Gnumake dir) then
-			print(String.concat
-				  ["\nMiniSat has NOT been built!! ",
-				   "(continuing anyway).\n\n"])
+			WARN (String.concat
+				["\nMiniSat has NOT been built!! ",
+				 "(continuing anyway).\n\n"])
                     else ()
     end
   | "zc2hs" => let

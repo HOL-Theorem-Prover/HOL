@@ -33,16 +33,19 @@ val body100K = time list_mk_conj vars100K;
 val body500K = time list_mk_conj vars500K;
 val body1M = time list_mk_conj vars1M;   (* 9 secs *)
 
-val abs10   = (time HolKernel.list_mk_abs(vars10,body10); ());
-val abs100  = (time HolKernel.list_mk_abs(vars100,body100); ())
-val abs1K   = (time HolKernel.list_mk_abs(vars1K,body1K); ());
-val abs10K  = (time HolKernel.list_mk_abs(vars10K,body10K); ());
-val abs100K = (time HolKernel.list_mk_abs(vars100K,body100K); ());
-val abs500K = (time HolKernel.list_mk_abs(vars500K,body500K); ());
-val abs1M   = (time HolKernel.list_mk_abs(vars1M,body1M); ());
+val list_mk_abs    = Term.list_mk_abs;
+val list_mk_forall = boolSyntax.list_mk_forall;
+
+val abs10   = (time list_mk_abs(vars10,body10); ());
+val abs100  = (time list_mk_abs(vars100,body100); ());
+val abs1K   = (time list_mk_abs(vars1K,body1K); ());
+val abs10K  = (time list_mk_abs(vars10K,body10K); ());
+val abs100K = (time list_mk_abs(vars100K,body100K); ());
+val abs500K = (time list_mk_abs(vars500K,body500K); ());
+val abs1M   = (time list_mk_abs(vars1M,body1M); ());
 
 val ALL10 =   (time list_mk_forall(vars10,body10); ());
-val ALL100 =  (time list_mk_forall(vars100,body100); ())
+val ALL100 =  (time list_mk_forall(vars100,body100); ());
 val ALL1K =   (time list_mk_forall(vars1K,body1K); ());
 val ALL10K =  (time list_mk_forall(vars10K,body10K); ());
 val ALL100K = (time list_mk_forall(vars100K,body100K); ());
@@ -60,7 +63,7 @@ val dabs10K  = let val abs10K = list_mk_abs(vars10K,body10K)
 val dabs100K = let val abs100K = list_mk_abs(vars100K,body100K)
                in time Term.strip_abs abs100K ; () end;
 val dabs100K' = let val abs100K' = list_mk_abs(vars10K,body100K)
-                in list_mk_abs(Term.strip_abs abs100K') = abs100K' end;
+                in list_mk_abs(Term.strip_abs abs100K') ~~ abs100K' end;
 val dabs500K = let val abs500K = list_mk_abs(vars500K,body500K)
                in time Term.strip_abs abs500K ; () end;
 val dabs1M   = let val abs1M = time list_mk_abs(vars1M,body1M)
@@ -72,10 +75,10 @@ fun old_list_mk_forall(V,t) = itlist(curry mk_forall) V t;
 val old_abs10 = (time old_list_mk_abs(vars10,body10); ());
 val old_abs100 = (time old_list_mk_abs(vars100,body100); ());
 val old_abs1K = (time old_list_mk_abs(vars1K,body1K); ());
-(* After this, it's too slow *)
 val abs10K = (time old_list_mk_abs(vars10K,body10K);());
-val abs100K = (time old_list_mk_abs(vars100K,body100K); ())
-val abs500K = (time old_list_mk_abs(vars500K,body500K); ())
+(* After this, it's too slow *)
+val abs100K = (time old_list_mk_abs(vars100K,body100K); ());
+val abs500K = (time old_list_mk_abs(vars500K,body500K); ());
 val abs1M = time old_list_mk_abs(vars1M,body1M);
 
 (* ---------------------------------------------------------------------------

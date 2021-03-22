@@ -42,7 +42,6 @@ val OS :string      =
 
 
 val CC:string       = "cc";       (* C compiler                       *)
-val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 (*---------------------------------------------------------------------------

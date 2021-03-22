@@ -33,7 +33,7 @@ val _ = useS "Holmake";
 
 val die_with = Holmake.die_with
 
-fun printPosn (l,pos) = Int.toString l ^ ":" ^ Int.toString pos
+fun printPosn (l,pos) = FixedInt.toString l ^ ":" ^ FixedInt.toString pos
 
 fun main() =
   Holmake.main()

@@ -3342,6 +3342,26 @@ val EXISTS_UNIQUE_REFL = save_thm("EXISTS_UNIQUE_REFL",
      GEN a (EQ_MP th15 th14)
  end);
 
+(* ----------------------------------------------------------------------
+    EXISTS_UNIQUE_FALSE |- (?!x. F) <=> F
+   ---------------------------------------------------------------------- *)
+
+val EXISTS_UNIQUE_FALSE = save_thm("EXISTS_UNIQUE_FALSE",
+  let
+    val BINDER_CONV = RAND_CONV o ABS_CONV
+    val LAND_CONV = RATOR_CONV o RAND_CONV
+    val P = mk_var("P", alpha --> bool)
+    val x = mk_var("x", alpha)
+    val th1 = INST [P |-> mk_abs(x, F)] EXISTS_UNIQUE_THM
+    val th2 = CONV_RULE(RAND_CONV (LAND_CONV (BINDER_CONV BETA_CONV))) th1
+    val th3 = CONV_RULE(LAND_CONV (BINDER_CONV BETA_CONV)) th2
+    val uniqueness_t = th3 |> concl |> rhs |> rand
+    val simp1 = AP_THM (AP_TERM conjunction (SPEC F EXISTS_SIMP)) uniqueness_t
+    val th4 = TRANS th3 simp1
+    val simp2 = AND_CLAUSES |> SPEC uniqueness_t |> CONJUNCTS |> el 3
+  in
+    TRANS th4 simp2
+  end);
 
 (* ------------------------------------------------------------------------- *)
 (* Unwinding.                                                                *)

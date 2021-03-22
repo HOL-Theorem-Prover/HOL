@@ -14,7 +14,7 @@ sig
    (* Incorporates simpsets for bool, pair, and arithmetic *)
 
    (* Differentiation *)
-   val basic_diffs :thm list ref
+   val basic_diffs : unit -> thm list
    val DIFF_CONV : conv
 
 end

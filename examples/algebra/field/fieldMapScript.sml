@@ -1662,7 +1662,7 @@ val field_homo_map_image_bij = store_thm(
   rpt strip_tac >>
   `INJ f R R_` by rw[field_homo_map_inj] >>
   `(ring_homo_image f r r_).carrier = IMAGE f R` by rw[ring_homo_image_def] >>
-  metis_tac[INJ_IMAGE_BIJ, INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV]);
+  metis_tac[INJ_IMAGE_BIJ]);
 
 (* Theorem: (r ~~~ r_) f ==> FieldHomo f r (ring_homo_image f r r_ *)
 (* Proof:

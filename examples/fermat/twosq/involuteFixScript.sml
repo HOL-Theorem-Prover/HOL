@@ -18,7 +18,7 @@ val _ = load("involuteTheory");
 open helperFunctionTheory; (* for FUNPOW_2 *)
 open helperSetTheory; (* for BIJ_ELEMENT *)
 open helperNumTheory; (* for MOD_EQ *)
-open helperTheory; (* for doublet_finite, doublet_card *)
+open helperTwosqTheory; (* for doublet_finite, doublet_card *)
 open involuteTheory;
 
 (* arithmeticTheory -- load by default *)

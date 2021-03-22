@@ -12,16 +12,7 @@ datatype setdelta =
          ADD of thname * thm
        | REMOVE of string (* could be anything *)
 datatype raw_delta = rADD of thname | rREMOVE of string
-
 val added_thms = List.mapPartial (fn ADD (_, th) => SOME th | _ => NONE)
-
-fun splitnm nm = let
-  val comps = String.fields (equal #".") nm
-in
-  case comps of
-    [thy,nm] => (thy, nm)
-  | _ => raise Fail ("ThmSetData.splitnm applied to " ^ nm)
-end
 
 fun mk_store_name_safe s =
    case String.fields (equal #".") s of
@@ -31,20 +22,8 @@ fun mk_store_name_safe s =
                   ("Malformed name: " ^ s)
 
 fun lookup_exn {Thy,Name} = DB.fetch Thy Name
-fun mk_radd s = rADD (mk_store_name_safe s)
 fun mk_add s =
     let val nm = mk_store_name_safe s in ADD(nm, lookup_exn nm) end
-
-
-fun lookup ty nm =
-    SOME (lookup_exn nm)
-    handle HOL_ERR _ => (
-      Feedback.HOL_WARNING
-        "ThmSetData" "lookup"
-        ("Bad theorem name: \"" ^ name_toString nm ^ "\" for set-type \"" ^
-         ty ^ "\"");
-      NONE
-    )
 
 local
   open ThyDataSexp

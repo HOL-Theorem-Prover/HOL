@@ -152,6 +152,45 @@ open dividesTheory gcdTheory;
                                                ((CARD o coprimes_by n) x = (\d. phi (n DIV d)) x)
    Gauss_little_thm           |- !n. n = SIGMA phi (divisors n)
 
+   Euler phi function is multiplicative for coprimes:
+   coprimes_mult_by_image
+                       |- !m n. coprime m n ==>
+                                coprimes (m * n) =
+                                IMAGE (\(x,y). if m * n = 1 then 1 else (x * n + y * m) MOD (m * n))
+                                      (coprimes m CROSS coprimes n)
+   coprimes_map_cross_inj
+                       |- !m n. coprime m n ==>
+                                INJ (\(x,y). if m * n = 1 then 1 else (x * n + y * m) MOD (m * n))
+                                    (coprimes m CROSS coprimes n) univ(:num)
+   phi_mult            |- !m n. coprime m n ==> phi (m * n) = phi m * phi n
+   phi_primes_distinct |- !p q. prime p /\ prime q /\ p <> q ==> phi (p * q) = (p - 1) * (q - 1)
+
+   Euler phi function for prime powers:
+   multiples_upto_def  |- !m n. m multiples_upto n = {x | m divides x /\ 0 < x /\ x <= n}
+   multiples_upto_element
+                       |- !m n x. x IN m multiples_upto n <=> m divides x /\ 0 < x /\ x <= n
+   multiples_upto_alt  |- !m n. m multiples_upto n = {x | ?k. x = k * m /\ 0 < x /\ x <= n}
+   multiples_upto_element_alt
+                       |- !m n x. x IN m multiples_upto n <=> ?k. x = k * m /\ 0 < x /\ x <= n
+   multiples_upto_eqn  |- !m n. m multiples_upto n = {x | m divides x /\ x IN natural n}
+   multiples_upto_0_n  |- !n. 0 multiples_upto n = {}
+   multiples_upto_1_n  |- !n. 1 multiples_upto n = natural n
+   multiples_upto_m_0  |- !m. m multiples_upto 0 = {}
+   multiples_upto_m_1  |- !m. m multiples_upto 1 = if m = 1 then {1} else {}
+   multiples_upto_thm  |- !m n. m multiples_upto n =
+                                if m = 0 then {} else IMAGE ($* m) (natural (n DIV m))
+   multiples_upto_subset
+                       |- !m n. m multiples_upto n SUBSET natural n
+   multiples_upto_finite
+                       |- !m n. FINITE (m multiples_upto n)
+   multiples_upto_card |- !m n. CARD (m multiples_upto n) = if m = 0 then 0 else n DIV m
+   coprimes_prime_power|- !p n. prime p ==>
+                                coprimes (p ** n) = natural (p ** n) DIFF p multiples_upto p ** n
+   phi_prime_power     |- !p n. prime p ==> phi (p ** SUC n) = (p - 1) * p ** n
+   phi_prime_sq        |- !p. prime p ==> phi (p * p) = p * (p - 1)
+   phi_primes          |- !p q. prime p /\ prime q ==>
+                                phi (p * q) = if p = q then p * (p - 1) else (p - 1) * (q - 1)
+
    Recursive definition of phi:
    rec_phi_def      |- !n. rec_phi n = if n = 0 then 0
                                   else if n = 1 then 1
@@ -160,7 +199,7 @@ open dividesTheory gcdTheory;
    rec_phi_1        |- rec_phi 1 = 1
    rec_phi_eq_phi   |- !n. rec_phi n = phi n
 
-   Not Used:
+   Useful Theorems:
    coprimes_from_notone_inj       |- INJ coprimes (univ(:num) DIFF {1}) univ(:num -> bool)
    divisors_eq_image_gcd_upto     |- !n. divisors n = IMAGE (gcd n) (upto n)
    gcd_eq_equiv_on_upto           |- !n. feq (gcd n) equiv_on upto n
@@ -1625,6 +1664,658 @@ val Gauss_little_thm = store_thm(
 (* This is a milestone theorem. *)
 
 (* ------------------------------------------------------------------------- *)
+(* Euler phi function is multiplicative for coprimes.                        *)
+(* ------------------------------------------------------------------------- *)
+
+(*
+EVAL ``coprimes 2``; = {1}
+EVAL ``coprimes 3``; = {2; 1}
+EVAL ``coprimes 6``; = {5; 1}
+
+Let ϕ(n) = the set of remainders coprime to n and not exceeding n.
+Then ϕ(2) = {1}, ϕ(3) = {1,2}
+We shall show ϕ(6) = {z = (3 * x + 2 * y) mod 6 | x ∈ ϕ(2), y ∈ ϕ(3)}.
+(1,1) corresponds to z = (3 * 1 + 2 * 1) mod 6 = 5, right!
+(1,2) corresponds to z = (3 * 1 + 2 * 2) mod 6 = 1, right!
+*)
+
+(* Idea: give an expression for coprimes (m * n). *)
+
+(* Theorem: coprime m n ==>
+            coprimes (m * n) =
+            IMAGE (\(x,y). if (m * n = 1) then 1 else (x * n + y * m) MOD (m * n))
+                  ((coprimes m) CROSS (coprimes n)) *)
+(* Proof:
+   Let f = \(x,y). if (m * n = 1) then 1 else (x * n + y * m) MOD (m * n).
+   If m = 0 or n = 0,
+      When m = 0, to show:
+           coprimes 0 = IMAGE f ((coprimes 0) CROSS (coprimes n))
+           RHS
+         = IMAGE f ({} CROSS (coprimes n))     by coprimes_0
+         = IMAGE f {}                          by CROSS_EMPTY
+         = {}                                  by IMAGE_EMPTY
+         = LHS                                 by coprimes_0
+      When n = 0, to show:
+           coprimes 0 = IMAGE f ((coprimes m) CROSS (coprimes 0))
+           RHS
+         = IMAGE f ((coprimes n) CROSS {})     by coprimes_0
+         = IMAGE f {}                          by CROSS_EMPTY
+         = {}                                  by IMAGE_EMPTY
+         = LHS                                 by coprimes_0
+
+   If m = 1, or n = 1,
+      When m = 1, to show:
+           coprimes n = IMAGE f ((coprimes 1) CROSS (coprimes n))
+           RHS
+         = IMAGE f ({1} CROSS (coprimes n))    by coprimes_1
+         = IMAGE f {(1,y) | y IN coprimes n}   by IN_CROSS
+         = {if n = 1 then 1 else (n + y) MOD n | y IN coprimes n}
+                                               by IN_IMAGE
+         = {1} if n = 1, or {y MOD n | y IN coprimes n} if 1 < n
+         = {1} if n = 1, or {y | y IN coprimes n} if 1 < n
+                                               by coprimes_element_alt, LESS_MOD, y < n
+         = LHS                                 by coprimes_1
+      When n = 1, to show:
+           coprimes m = IMAGE f ((coprimes m) CROSS (coprimes 1))
+           RHS
+         = IMAGE f ((coprimes m) CROSS {1})    by coprimes_1
+         = IMAGE f {(x,1) | x IN coprimes m}   by IN_CROSS
+         = {if m = 1 then 1 else (x + m) MOD m | x IN coprimes m}
+                                               by IN_IMAGE
+         = {1} if m = 1, or {x MOD m | x IN coprimes m} if 1 < m
+         = {1} if m = 1, or {x | x IN coprimes m} if 1 < m
+                                               by coprimes_element_alt, LESS_MOD, x < m
+         = LHS                                 by coprimes_1
+
+   Now, 1 < m, 1 < n, and 0 < m, 0 < n.
+   Therefore 1 < m * n, and 0 < m * n.         by MULT_EQ_1, MULT_EQ_0
+   and function f = \(x,y). (x * n + y * m) MOD (m * n).
+   If part: z IN coprimes (m * n) ==>
+            ?x y. z = (x * n + y * m) MOD (m * n) /\ x IN coprimes m /\ y IN coprimes n
+      Note z < m * n /\ coprime z (m * n)      by coprimes_element_alt, 1 < m * n
+       for x < m /\ coprime x m, and y < n /\ coprime y n
+                                               by coprimes_element_alt, 1 < m, 1 < n
+       Now ?p q. (p * m + q * n) MOD (m * n)
+               = z MOD (m * n)                 by coprime_multiple_linear_mod_prod
+               = z                             by LESS_MOD, z < m * n
+      Note ?h x. p = h * n + x /\ x < n        by DA, 0 < n
+       and ?k y. q = k * m + y /\ y < m        by DA, 0 < m
+           z
+         = (p * m + q * n) MOD (m * n)         by above
+         = (h * n * m + x * m + k * m * n + y * n) MOD (m * n)
+         = ((x * m + y * n) + (h + k) * (m * n)) MOD (m * n)
+         = (x * m + y * n) MOD (m * n)         by MOD_PLUS2, MOD_EQ_0
+      Take these x and y, but need to show:
+      (1) coprime x n
+          Let g = gcd x n,
+          Then g divides x /\ g divides n      by GCD_PROPERTY
+            so g divides (m * n)               by DIVIDES_MULTIPLE
+            so g divides z                     by divides_linear, mod_divides_divides
+           ==> g = 1, or coprime x n           by coprime_common_factor
+      (2) coprime y m
+          Let g = gcd y m,
+          Then g divides y /\ g divides m      by GCD_PROPERTY
+            so g divides (m * n)               by DIVIDES_MULTIPLE
+            so g divides z                     by divides_linear, mod_divides_divides
+           ==> g = 1, or coprime y m           by coprime_common_factor
+
+   Only-if part: coprime m n /\ x IN coprimes m /\ y IN coprimes n ==>
+                 (x * n + y * m) MOD (m * n) IN coprimes (m * n)
+       Note x < m /\ coprime x m               by coprimes_element_alt, 1 < m
+        and y < n /\ coprime y n               by coprimes_element_alt, 1 < n
+       Let z = x * m + y * n.
+       Then coprime z (m * n)                  by coprime_linear_mult
+         so coprime (z MOD (m * n)) (m * n)    by GCD_MOD_COMM
+        and z MOD (m * n) < m * n              by MOD_LESS, 0 < m * n
+*)
+Theorem coprimes_mult_by_image:
+  !m n. coprime m n ==>
+        coprimes (m * n) =
+        IMAGE (\(x,y). if (m * n = 1) then 1 else (x * n + y * m) MOD (m * n))
+              ((coprimes m) CROSS (coprimes n))
+Proof
+  rpt strip_tac >>
+  Cases_on `m = 0 \/ n = 0` >-
+  fs[coprimes_0] >>
+  Cases_on `m = 1 \/ n = 1` >| [
+    fs[coprimes_1] >| [
+      rw[EXTENSION, pairTheory.EXISTS_PROD] >>
+      Cases_on `n = 1` >-
+      simp[coprimes_1] >>
+      fs[coprimes_element_alt] >>
+      metis_tac[LESS_MOD],
+      rw[EXTENSION, pairTheory.EXISTS_PROD] >>
+      Cases_on `m = 1` >-
+      simp[coprimes_1] >>
+      fs[coprimes_element_alt] >>
+      metis_tac[LESS_MOD]
+    ],
+    `m * n <> 0 /\ m * n <> 1` by rw[] >>
+    `1 < m /\ 1 < n /\ 1 < m * n` by decide_tac >>
+    rw[EXTENSION, pairTheory.EXISTS_PROD] >>
+    rw[EQ_IMP_THM] >| [
+      rfs[coprimes_element_alt] >>
+      `1 < m /\ 1 < n /\ 0 < m /\ 0 < n /\ 0 < m * n` by decide_tac >>
+      `?p q. (p * m + q * n) MOD (m * n) = x MOD (m * n)` by rw[coprime_multiple_linear_mod_prod] >>
+      `?h u. p = h * n + u /\ u < n` by metis_tac[DA] >>
+      `?k v. q = k * m + v /\ v < m` by metis_tac[DA] >>
+      `p * m + q * n = h * n * m + u * m + k * m * n + v * n` by simp[] >>
+      `_ = (u * m + v * n) + (h + k) * (m * n)` by simp[] >>
+      `(u * m + v * n) MOD (m * n) = x MOD (m * n)` by metis_tac[MOD_PLUS2, MOD_EQ_0, ADD_0] >>
+      `_ = x` by rw[] >>
+      `coprime u n` by
+  (qabbrev_tac `g = gcd u n` >>
+      `0 < g` by rw[GCD_POS, Abbr`g`] >>
+      `g divides u /\ g divides n` by metis_tac[GCD_PROPERTY] >>
+      `g divides (m * n)` by rw[DIVIDES_MULTIPLE] >>
+      `g divides x` by metis_tac[divides_linear, MULT_COMM, mod_divides_divides] >>
+      metis_tac[coprime_common_factor]) >>
+      `coprime v m` by
+    (qabbrev_tac `g = gcd v m` >>
+      `0 < g` by rw[GCD_POS, Abbr`g`] >>
+      `g divides v /\ g divides m` by metis_tac[GCD_PROPERTY] >>
+      `g divides (m * n)` by metis_tac[DIVIDES_MULTIPLE, MULT_COMM] >>
+      `g divides x` by metis_tac[divides_linear, MULT_COMM, mod_divides_divides] >>
+      metis_tac[coprime_common_factor]) >>
+      metis_tac[MULT_COMM],
+      rfs[coprimes_element_alt] >>
+      `0 < m * n` by decide_tac >>
+      `coprime (m * p_2 + n * p_1) (m * n)` by metis_tac[coprime_linear_mult, MULT_COMM] >>
+      metis_tac[GCD_MOD_COMM]
+    ]
+  ]
+QED
+
+(* Yes! a milestone theorem. *)
+
+(* Idea: in coprimes (m * n), the image map is injective. *)
+
+(* Theorem: coprime m n ==>
+            INJ (\(x,y). if (m * n = 1) then 1 else (x * n + y * m) MOD (m * n))
+                ((coprimes m) CROSS (coprimes n)) univ(:num) *)
+(* Proof:
+   Let f = \(x,y). if m * n = 1 then 1 else (x * n + y * m) MOD (m * n).
+   To show: coprime m n ==> INJ f ((coprimes m) CROSS (coprimes n)) univ(:num)
+   If m = 0, or n = 0,
+      When m = 0,
+           INJ f ((coprimes 0) CROSS (coprimes n)) univ(:num)
+       <=> INJ f ({} CROSS (coprimes n)) univ(:num)      by coprimes_0
+       <=> INJ f {} univ(:num)                           by CROSS_EMPTY
+       <=> T                                             by INJ_EMPTY
+      When n = 0,
+           INJ f ((coprimes m) CROSS (coprimes 0)) univ(:num)
+       <=> INJ f ((coprimes m) CROSS {}) univ(:num)      by coprimes_0
+       <=> INJ f {} univ(:num)                           by CROSS_EMPTY
+       <=> T                                             by INJ_EMPTY
+
+   If m = 1, or n = 1,
+      When m = 1,
+           INJ f ((coprimes 1) CROSS (coprimes n)) univ(:num)
+       <=> INJ f ({1} CROSS (coprimes n)) univ(:num)     by coprimes_1
+       If n = 1, this is
+           INJ f ({1} CROSS {1}) univ(:num)              by coprimes_1
+       <=> INJ f {(1,1)} univ(:num)                      by CROSS_SINGS
+       <=> T                                             by INJ_DEF
+       If n <> 1, this is by INJ_DEF:
+       to show: !p q. p IN coprimes n /\ q IN coprimes n ==> p MOD n = q MOD n ==> p = q
+       Now p < n /\ q < n                                by coprimes_element_alt, 1 < n
+       With p MOD n = q MOD n, so p = q                  by LESS_MOD
+      When n = 1,
+           INJ f ((coprimes m) CROSS (coprimes 1)) univ(:num)
+       <=> INJ f ((coprimes m) CROSS {1}) univ(:num)     by coprimes_1
+       If m = 1, this is
+           INJ f ({1} CROSS {1}) univ(:num)              by coprimes_1
+       <=> INJ f {(1,1)} univ(:num)                      by CROSS_SINGS
+       <=> T                                             by INJ_DEF
+       If m <> 1, this is by INJ_DEF:
+       to show: !p q. p IN coprimes m /\ q IN coprimes m ==> p MOD m = q MOD m ==> p = q
+       Now p < m /\ q < m                                by coprimes_element_alt, 1 < m
+       With p MOD m = q MOD m, so p = q                  by LESS_MOD
+
+   Now 1 < m and 1 < n, so 1 < m * n           by MULT_EQ_1, MULT_EQ_0
+   By INJ_DEF, coprimes_element_alt, this is to show:
+      !x y u v. x < m /\ coprime x m /\ y < n /\ coprime y n /\
+                u < m /\ coprime u m /\ v < n /\ coprime v n /\
+                (x * n + y * m) MOD (m * n) = (u * n + v * m) MOD (m * n)
+            ==> x = u /\ y = v
+   Note x * n < n * m                          by LT_MULT_RCANCEL, 0 < n, x < m
+    and v * m < n * m                          by LT_MULT_RCANCEL, 0 < m, v < n
+   Thus (y * m + (n * m - v * m)) MOD (n * m)
+      = (u * n + (n * m - x * n)) MOD (n * m)      by mod_add_eq_sub
+    Now y * m + (n * m - v * m) = m * (n + y - v)  by arithmetic
+    and u * n + (n * m - x * n) = n * (m + u - x)  by arithmetic
+    and 0 < n + y - v /\ n + y - v < 2 * n         by y < n, v < n
+    and 0 < m + u - x /\ m + u - x < 2 * m         by x < m, u < m
+    ==> n + y - v = n /\ m + u - x = m             by mod_mult_eq_mult
+    ==> n + y = n + v /\ m + u = m + x             by arithmetic
+    ==> y = v /\ x = u                             by EQ_ADD_LCANCEL
+*)
+Theorem coprimes_map_cross_inj:
+  !m n. coprime m n ==>
+        INJ (\(x,y). if (m * n = 1) then 1 else (x * n + y * m) MOD (m * n))
+            ((coprimes m) CROSS (coprimes n)) univ(:num)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `f = \(x,y). if m * n = 1 then 1 else (x * n + y * m) MOD (m * n)` >>
+  Cases_on `m = 0 \/ n = 0` >-
+  fs[coprimes_0] >>
+  Cases_on `m = 1 \/ n = 1` >| [
+    fs[coprimes_1, INJ_DEF, pairTheory.FORALL_PROD, Abbr`f`] >| [
+      (Cases_on `n = 1` >> simp[coprimes_1]) >>
+      fs[coprimes_element_alt],
+      (Cases_on `m = 1` >> simp[coprimes_1]) >>
+      fs[coprimes_element_alt]
+    ],
+    `m * n <> 0 /\ m * n <> 1` by rw[] >>
+    `1 < m /\ 1 < n /\ 1 < m * n` by decide_tac >>
+    simp[INJ_DEF, pairTheory.FORALL_PROD] >>
+    ntac 6 strip_tac >>
+    rfs[coprimes_element_alt, Abbr`f`] >>
+    `0 < m /\ 0 < n /\ 0 < m * n` by decide_tac >>
+    `n * p_1 < n * m /\ m * p_2' < n * m` by simp[] >>
+    `(m * p_2 + (n * m - m * p_2')) MOD (n * m) =
+    (n * p_1' + (n * m - n * p_1)) MOD (n * m)` by simp[GSYM mod_add_eq_sub] >>
+    `m * p_2 + (n * m - m * p_2') = m * (n + p_2 - p_2')` by decide_tac >>
+    `n * p_1' + (n * m - n * p_1) = n * (m + p_1' - p_1)` by decide_tac >>
+    `0 < n + p_2 - p_2' /\ n + p_2 - p_2' < 2 * n` by decide_tac >>
+    `0 < m + p_1' - p_1 /\ m + p_1' - p_1 < 2 * m` by decide_tac >>
+    `n + p_2 - p_2' = n /\ m + p_1' - p_1 = m` by metis_tac[mod_mult_eq_mult, MULT_COMM] >>
+    simp[]
+  ]
+QED
+
+(* Another milestone theorem! *)
+
+(* Idea: Euler phi function is multiplicative for coprimes. *)
+
+(* Theorem: coprime m n ==> phi (m * n) = phi m * phi n *)
+(* Proof:
+   Let f = \(x,y). if m * n = 1 then 1 else (x * n + y * m) MOD (m * n),
+       u = coprimes m,
+       v = coprimes n.
+   Then coprimes (m * n) = IMAGE f (u CROSS v) by coprimes_mult_by_image
+    and INJ f (u CROSS v) univ(:num)           by coprimes_map_cross_inj
+   Note FINITE u /\ FINITE v                   by coprimes_finite
+     so FINITE (u CROSS v)                     by FINITE_CROSS
+        phi (m * n)
+      = CARD (coprimes (m * n))                by phi_def
+      = CARD (IMAGE f (u CROSS v))             by above
+      = CARD (u CROSS v)                       by INJ_CARD_IMAGE
+      = (CARD u) * (CARD v)                    by CARD_CROSS
+      = phi m * phi n                          by phi_def
+*)
+Theorem phi_mult:
+  !m n. coprime m n ==> phi (m * n) = phi m * phi n
+Proof
+  rw[phi_def] >>
+  imp_res_tac coprimes_mult_by_image >>
+  imp_res_tac coprimes_map_cross_inj >>
+  qabbrev_tac `f = \(x,y). if m * n = 1 then 1 else (x * n + y * m) MOD (m * n)` >>
+  qabbrev_tac `u = coprimes m` >>
+  qabbrev_tac `v = coprimes n` >>
+  `FINITE u /\ FINITE v` by rw[coprimes_finite, Abbr`u`, Abbr`v`] >>
+  `FINITE (u CROSS v)` by rw[] >>
+  metis_tac[INJ_CARD_IMAGE, CARD_CROSS]
+QED
+
+(* This is the ultimate goal! *)
+
+(* Idea: an expression for phi (p * q) with distinct primes p and q. *)
+
+(* Theorem: prime p /\ prime q /\ p <> q ==> phi (p * q) = (p - 1) * (q - 1) *)
+(* Proof:
+   Note coprime p q        by primes_coprime
+        phi (p * q)
+      = phi p * phi q      by phi_mult
+      = (p - 1) * (q - 1)  by phi_prime
+*)
+Theorem phi_primes_distinct:
+  !p q. prime p /\ prime q /\ p <> q ==> phi (p * q) = (p - 1) * (q - 1)
+Proof
+  simp[primes_coprime, phi_mult, phi_prime]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Euler phi function for prime powers.                                      *)
+(* ------------------------------------------------------------------------- *)
+
+(*
+EVAL ``coprimes 9``; = {8; 7; 5; 4; 2; 1}
+EVAL ``divisors 9``; = {9; 3; 1}
+EVAL ``IMAGE (\x. 3 * x) (natural 3)``; = {9; 6; 3}
+EVAL ``IMAGE (\x. 3 * x) (natural 9)``; = {27; 24; 21; 18; 15; 12; 9; 6; 3}
+
+> EVAL ``IMAGE ($* 3) (natural (8 DIV 3))``; = {6; 3}
+> EVAL ``IMAGE ($* 3) (natural (9 DIV 3))``; = {9; 6; 3}
+> EVAL ``IMAGE ($* 3) (natural (10 DIV 3))``; = {9; 6; 3}
+> EVAL ``IMAGE ($* 3) (natural (12 DIV 3))``; = {12; 9; 6; 3}
+*)
+
+(* Idea: develop a special set in anticipation for counting. *)
+
+(* Define the set of positive multiples of m, up to n *)
+val multiples_upto_def = zDefine`
+    multiples_upto m n = {x | m divides x /\ 0 < x /\ x <= n}
+`;
+(* use zDefine as this is not effective for evalutaion. *)
+(* make this an infix operator *)
+val _ = set_fixity "multiples_upto" (Infix(NONASSOC, 550)); (* higher than arithmetic op 500. *)
+
+(*
+> multiples_upto_def;
+val it = |- !m n. m multiples_upto n = {x | m divides x /\ 0 < x /\ x <= n}: thm
+*)
+
+(* Theorem: x IN m multiples_upto n <=> m divides x /\ 0 < x /\ x <= n *)
+(* Proof: by multiples_upto_def. *)
+Theorem multiples_upto_element:
+  !m n x. x IN m multiples_upto n <=> m divides x /\ 0 < x /\ x <= n
+Proof
+  simp[multiples_upto_def]
+QED
+
+(* Theorem: m multiples_upto n = {x | ?k. x = k * m /\ 0 < x /\ x <= n} *)
+(* Proof:
+     m multiples_upto n
+   = {x | m divides x /\ 0 < x /\ x <= n}      by multiples_upto_def
+   = {x | ?k. x = k * m /\ 0 < x /\ x <= n}    by divides_def
+*)
+Theorem multiples_upto_alt:
+  !m n. m multiples_upto n = {x | ?k. x = k * m /\ 0 < x /\ x <= n}
+Proof
+  rw[multiples_upto_def, EXTENSION] >>
+  metis_tac[divides_def]
+QED
+
+(* Theorem: x IN m multiples_upto n <=> ?k. x = k * m /\ 0 < x /\ x <= n *)
+(* Proof: by multiples_upto_alt. *)
+Theorem multiples_upto_element_alt:
+  !m n x. x IN m multiples_upto n <=> ?k. x = k * m /\ 0 < x /\ x <= n
+Proof
+  simp[multiples_upto_alt]
+QED
+
+(* Theorem: m multiples_upto n = {x | m divides x /\ x IN natural n} *)
+(* Proof:
+     m multiples_upto n
+   = {x | m divides x /\ 0 < x /\ x <= n}      by multiples_upto_def
+   = {x | m divides x /\ x IN natural n}       by natural_element
+*)
+Theorem multiples_upto_eqn:
+  !m n. m multiples_upto n = {x | m divides x /\ x IN natural n}
+Proof
+  simp[multiples_upto_def, natural_element, EXTENSION]
+QED
+
+(* Theorem: 0 multiples_upto n = {} *)
+(* Proof:
+     0 multiples_upto n
+   = {x | 0 divides x /\ 0 < x /\ x <= n}      by multiples_upto_def
+   = {x | x = 0 /\ 0 < x /\ x <= n}            by ZERO_DIVIDES
+   = {}                                        by contradiction
+*)
+Theorem multiples_upto_0_n:
+  !n. 0 multiples_upto n = {}
+Proof
+  simp[multiples_upto_def, EXTENSION]
+QED
+
+(* Theorem: 1 multiples_upto n = natural n *)
+(* Proof:
+     1 multiples_upto n
+   = {x | 1 divides x /\ x IN natural n}       by multiples_upto_eqn
+   = {x | T /\ x IN natural n}                 by ONE_DIVIDES_ALL
+   = natural n                                 by EXTENSION
+*)
+Theorem multiples_upto_1_n:
+  !n. 1 multiples_upto n = natural n
+Proof
+  simp[multiples_upto_eqn, EXTENSION]
+QED
+
+(* Theorem: m multiples_upto 0 = {} *)
+(* Proof:
+     m multiples_upto 0
+   = {x | m divides x /\ 0 < x /\ x <= 0}      by multiples_upto_def
+   = {x | m divides x /\ F}                    by arithmetic
+   = {}                                        by contradiction
+*)
+Theorem multiples_upto_m_0:
+  !m. m multiples_upto 0 = {}
+Proof
+  simp[multiples_upto_def, EXTENSION]
+QED
+
+(* Theorem: m multiples_upto 1 = if m = 1 then {1} else {} *)
+(* Proof:
+     m multiples_upto 1
+   = {x | m divides x /\ 0 < x /\ x <= 1}      by multiples_upto_def
+   = {x | m divides x /\ x = 1}                by arithmetic
+   = {1} if m = 1, {} otherwise                by DIVIDES_ONE
+*)
+Theorem multiples_upto_m_1:
+  !m. m multiples_upto 1 = if m = 1 then {1} else {}
+Proof
+  rw[multiples_upto_def, EXTENSION] >>
+  spose_not_then strip_assume_tac >>
+  `x = 1` by decide_tac >>
+  fs[]
+QED
+
+(* Idea: an expression for (m multiples_upto n), for direct evaluation. *)
+
+(* Theorem: m multiples_upto n =
+            if m = 0 then {}
+            else IMAGE ($* m) (natural (n DIV m)) *)
+(* Proof:
+   If m = 0,
+      Then 0 multiples_upto n = {} by multiples_upto_0_n
+   If m <> 0.
+      By multiples_upto_alt, EXTENSION, this is to show:
+      (1) 0 < k * m /\ k * m <= n ==>
+          ?y. k * m = m * y /\ ?x. y = SUC x /\ x < n DIV m
+          Note k <> 0              by MULT_EQ_0
+           and k <= n DIV m        by X_LE_DIV, 0 < m
+            so k - 1 < n DIV m     by arithmetic
+          Let y = k, x = k - 1.
+          Note SUC x = SUC (k - 1) = k = y.
+      (2) x < n DIV m ==> ?k. m * SUC x = k * m /\ 0 < m * SUC x /\ m * SUC x <= n
+          Note SUC x <= n DIV m    by arithmetic
+            so m * SUC x <= n      by X_LE_DIV, 0 < m
+           and 0 < m * SUC x       by MULT_EQ_0
+          Take k = SUC x, true     by MULT_COMM
+*)
+Theorem multiples_upto_thm[compute]:
+  !m n. m multiples_upto n =
+        if m = 0 then {}
+        else IMAGE ($* m) (natural (n DIV m))
+Proof
+  rpt strip_tac >>
+  Cases_on `m = 0` >-
+  fs[multiples_upto_0_n] >>
+  fs[multiples_upto_alt, EXTENSION] >>
+  rw[EQ_IMP_THM] >| [
+    qexists_tac `k` >>
+    simp[] >>
+    `0 < k /\ 0 < m` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
+    `k <= n DIV m` by rw[X_LE_DIV] >>
+    `k - 1 < n DIV m` by decide_tac >>
+    qexists_tac `k - 1` >>
+    simp[],
+    `SUC x'' <= n DIV m` by decide_tac >>
+    `m * SUC x'' <= n` by rfs[X_LE_DIV] >>
+    simp[] >>
+    metis_tac[MULT_COMM]
+  ]
+QED
+
+(*
+EVAL ``3 multiples_upto 9``; = {9; 6; 3}
+EVAL ``3 multiples_upto 11``; = {9; 6; 3}
+EVAL ``3 multiples_upto 12``; = {12; 9; 6; 3}
+EVAL ``3 multiples_upto 13``; = {12; 9; 6; 3}
+*)
+
+(* Theorem: m multiples_upto n SUBSET natural n *)
+(* Proof: by multiples_upto_eqn, SUBSET_DEF. *)
+Theorem multiples_upto_subset:
+  !m n. m multiples_upto n SUBSET natural n
+Proof
+  simp[multiples_upto_eqn, SUBSET_DEF]
+QED
+
+(* Theorem: FINITE (m multiples_upto n) *)
+(* Proof:
+   Let s = m multiples_upto n
+   Note s SUBSET natural n     by multiples_upto_subset
+    and FINITE natural n       by natural_finite
+     so FINITE s               by SUBSET_FINITE
+*)
+Theorem multiples_upto_finite:
+  !m n. FINITE (m multiples_upto n)
+Proof
+  metis_tac[multiples_upto_subset, natural_finite, SUBSET_FINITE]
+QED
+
+(* Theorem: CARD (m multiples_upto n) = if m = 0 then 0 else n DIV m *)
+(* Proof:
+   If m = 0,
+        CARD (0 multiples_upto n)
+      = CARD {}                    by multiples_upto_0_n
+      = 0                          by CARD_EMPTY
+   If m <> 0,
+      Claim: INJ ($* m) (natural (n DIV m)) univ(:num)
+      Proof: By INJ_DEF, this is to show:
+             !x. x IN (natural (n DIV m)) /\
+                 m * x = m * y ==> x = y, true     by EQ_MULT_LCANCEL, m <> 0
+      Note FINITE (natural (n DIV m))              by natural_finite
+        CARD (m multiples_upto n)
+      = CARD (IMAGE ($* m) (natural (n DIV m)))    by multiples_upto_thm, m <> 0
+      = CARD (natural (n DIV m))                   by INJ_CARD_IMAGE
+      = n DIV m                                    by natural_card
+*)
+Theorem multiples_upto_card:
+  !m n. CARD (m multiples_upto n) = if m = 0 then 0 else n DIV m
+Proof
+  rpt strip_tac >>
+  Cases_on `m = 0` >-
+  simp[multiples_upto_0_n] >>
+  simp[multiples_upto_thm] >>
+  `INJ ($* m) (natural (n DIV m)) univ(:num)` by rw[INJ_DEF] >>
+  metis_tac[INJ_CARD_IMAGE, natural_finite, natural_card]
+QED
+
+(* Idea: an expression for the set of coprimes of a prime power. *)
+
+(* Theorem: prime p ==>
+            coprimes (p ** n) = natural (p ** n) DIFF p multiples_upto (p ** n) *)
+(* Proof:
+   If n = 0,
+      LHS = coprimes (p ** 0)
+          = coprimes 1             by EXP_0
+          = {1}                    by coprimes_1
+      RHS = natural (p ** 0) DIFF p multiples_upto (p ** 0)
+          = natural 1 DIFF p multiples_upto 1
+          = natural 1 DIFF {}      by multiples_upto_m_1, NOT_PRIME_1
+          = {1} DIFF {}            by natural_1
+          = {1} = LHS              by DIFF_EMPTY
+   If n <> 0,
+      By coprimes_def, multiples_upto_def, EXTENSION, this is to show:
+         coprime (SUC x) (p ** n) <=> ~(p divides SUC x)
+      This is true                 by coprime_prime_power
+*)
+Theorem coprimes_prime_power:
+  !p n. prime p ==>
+        coprimes (p ** n) = natural (p ** n) DIFF p multiples_upto (p ** n)
+Proof
+  rpt strip_tac >>
+  Cases_on `n = 0` >| [
+    `p <> 1` by metis_tac[NOT_PRIME_1] >>
+    simp[coprimes_1, multiples_upto_m_1, natural_1, EXP_0],
+    rw[coprimes_def, multiples_upto_def, EXTENSION] >>
+    (rw[EQ_IMP_THM] >> rfs[coprime_prime_power])
+  ]
+QED
+
+(* Idea: an expression for phi of a prime power. *)
+
+(* Theorem: prime p ==> phi (p ** SUC n) = (p - 1) * p ** n *)
+(* Proof:
+   Let m = SUC n,
+       u = natural (p ** m),
+       v = p multiples_upto (p ** m).
+   Note 0 < p                      by PRIME_POS
+    and FINITE u                   by natural_finite
+    and v SUBSET u                 by multiples_upto_subset
+
+     phi (p ** m)
+   = CARD (coprimes (p ** m))      by phi_def
+   = CARD (u DIFF v)               by coprimes_prime_power
+   = CARD u - CARD v               by SUBSET_DIFF_CARD
+   = p ** m - CARD v               by natural_card
+   = p ** m - (p ** m DIV p)       by multiples_upto_card, p <> 0
+   = p ** m - p ** n               by EXP_SUC_DIV, 0 < p
+   = p * p ** n - p ** n           by EXP
+   = (p - 1) * p ** n              by RIGHT_SUB_DISTRIB
+*)
+Theorem phi_prime_power:
+  !p n. prime p ==> phi (p ** SUC n) = (p - 1) * p ** n
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `m = SUC n` >>
+  qabbrev_tac `u = natural (p ** m)` >>
+  qabbrev_tac `v = p multiples_upto (p ** m)` >>
+  `0 < p` by rw[PRIME_POS] >>
+  `FINITE u` by rw[natural_finite, Abbr`u`] >>
+  `v SUBSET u` by rw[multiples_upto_subset, Abbr`v`, Abbr`u`] >>
+  `phi (p ** m) = CARD (coprimes (p ** m))` by rw[phi_def] >>
+  `_ = CARD (u DIFF v)` by rw[coprimes_prime_power, Abbr`u`, Abbr`v`] >>
+  `_ = CARD u - CARD v` by rw[SUBSET_DIFF_CARD] >>
+  `_ = p ** m - (p ** m DIV p)` by rw[natural_card, multiples_upto_card, Abbr`u`, Abbr`v`] >>
+  `_ = p ** m - p ** n` by rw[EXP_SUC_DIV, Abbr`m`] >>
+  `_ = p * p ** n - p ** n` by rw[GSYM EXP] >>
+  `_ = (p - 1) * p ** n` by decide_tac >>
+  simp[]
+QED
+
+(* Yes, a spectacular theorem! *)
+
+(* Idea: specialise phi_prime_power for prime squared. *)
+
+(* Theorem: prime p ==> phi (p * p) = p * (p - 1) *)
+(* Proof:
+     phi (p * p)
+   = phi (p ** 2)          by EXP_2
+   = phi (p ** SUC 1)      by TWO
+   = (p - 1) * p ** 1      by phi_prime_power
+   = p * (p - 1)           by EXP_1
+*)
+Theorem phi_prime_sq:
+  !p. prime p ==> phi (p * p) = p * (p - 1)
+Proof
+  rpt strip_tac >>
+  `phi (p * p) = phi (p ** SUC 1)` by rw[] >>
+  simp[phi_prime_power]
+QED
+
+(* Idea: Euler phi function for a product of primes. *)
+
+(* Theorem: prime p /\ prime q ==>
+            phi (p * q) = if p = q then p * (p - 1) else (p - 1) * (q - 1) *)
+(* Proof:
+   If p = q, phi (p * p) = p * (p - 1)         by phi_prime_sq
+   If p <> q, phi (p * q) = (p - 1) * (q - 1)  by phi_primes_distinct
+*)
+Theorem phi_primes:
+  !p q. prime p /\ prime q ==>
+        phi (p * q) = if p = q then p * (p - 1) else (p - 1) * (q - 1)
+Proof
+  metis_tac[phi_prime_sq, phi_primes_distinct]
+QED
+
+(* Finally, another nice result. *)
+
+(* ------------------------------------------------------------------------- *)
 (* Recursive definition of phi                                               *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1725,7 +2416,7 @@ val rec_phi_eq_phi = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-(* Not Used                                                                  *)
+(* Useful Theorems (not used).                                               *)
 (* ------------------------------------------------------------------------- *)
 
 (* Theorem: INJ (coprimes) (univ(:num) DIFF {1}) univ(:num -> bool) *)

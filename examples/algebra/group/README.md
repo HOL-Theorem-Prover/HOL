@@ -12,7 +12,6 @@ A group is an algebraic structure: a monoid with all its elements invertible.
 * __groupProduct__, iteration of group operation.
 
 ## Application
-* __symmetryGroup__, symmetry group of all permutations of a set of symbols.
 * __groupInstances__, Zn as additive group, Zp when p is prime as multiplicative group.
 * __finiteGroup__, finite group properties.
 * __groupAction__, action on a group to a target.

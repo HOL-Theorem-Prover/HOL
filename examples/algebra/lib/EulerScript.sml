@@ -80,6 +80,7 @@ open arithmeticTheory dividesTheory gcdTheory;
    upto_finite      |- !n. FINITE (upto n)
    upto_card        |- !n. CARD (upto n) = SUC n
    upto_has_last    |- !n. n IN upto n
+   upto_delete      |- !n. upto n DELETE n = count n
    upto_split_first |- !n. upto n = {0} UNION natural n
    upto_split_last  |- !n. upto n = count n UNION {n}
    upto_by_count    |- !n. upto n = n INSERT count n
@@ -109,10 +110,24 @@ open arithmeticTheory dividesTheory gcdTheory;
    sigma_geometric_natural       |- !p. 1 < p ==>
                                     !n. SIGMA (\j. p ** j) (natural n) = p * (p ** n - 1) DIV (p - 1)
 
+   Chinese Remainder Theorem:
+   mod_mod_prod_eq     |- !m n a b. 0 < m /\ 0 < n /\ a MOD (m * n) = b MOD (m * n) ==>
+                                    a MOD m = b MOD m /\ a MOD n = b MOD n
+   coprime_mod_mod_prod_eq
+                       |- !m n a b. 0 < m /\ 0 < n /\ coprime m n /\
+                                    a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+                                    a MOD (m * n) = b MOD (m * n)
+   coprime_mod_mod_prod_eq_iff
+                       |- !m n. 0 < m /\ 0 < n /\ coprime m n ==>
+                          !a b. a MOD (m * n) = b MOD (m * n) <=>
+                                a MOD m = b MOD m /\ a MOD n = b MOD n
+   coprime_mod_mod_solve
+                       |- !m n a b. 0 < m /\ 0 < n /\ coprime m n ==>
+                               ?!x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n
+
    Useful Theorems:
-   PROD_SET_IMAGE_EXP_NONZERO    |- !n m. 1 < n /\ 0 < m ==>
-                                         (PROD_SET (IMAGE (\j. n ** j) (count m)) =
-                                          PROD_SET (IMAGE (\j. n ** j) (residue m)))
+   PROD_SET_IMAGE_EXP_NONZERO    |- !n m. PROD_SET (IMAGE (\j. n ** j) (count m)) =
+                                          PROD_SET (IMAGE (\j. n ** j) (residue m))
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -136,17 +151,19 @@ val residue_element = store_thm(
 
 (* Theorem: residue 0 = EMPTY *)
 (* Proof: by residue_def *)
-val residue_0 = store_thm(
-  "residue_0",
-  ``residue 0 = {}``,
-  simp[residue_def]);
+Theorem residue_0:
+  residue 0 = {}
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: residue 1 = EMPTY *)
-(* Proof: by definition. *)
-val residue_1 = store_thm(
-  "residue_1",
-  ``residue 1 = {}``,
-  simp[residue_def]);
+(* Proof: by residue_def. *)
+Theorem residue_1:
+  residue 1 = {}
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: 1 < n ==> residue n <> {} *)
 (* Proof:
@@ -161,17 +178,19 @@ val residue_nonempty = store_thm(
 
 (* Theorem: 0 NOTIN residue n *)
 (* Proof: by residue_def *)
-val residue_no_zero = store_thm(
-  "residue_no_zero",
-  ``!n. 0 NOTIN residue n``,
-  simp[residue_def]);
+Theorem residue_no_zero:
+  !n. 0 NOTIN residue n
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: n NOTIN residue n *)
 (* Proof: by residue_def *)
-val residue_no_self = store_thm(
-  "residue_no_self",
-  ``!n. n NOTIN residue n``,
-  simp[residue_def]);
+Theorem residue_no_self:
+  !n. n NOTIN residue n
+Proof
+  simp[residue_def]
+QED
 
 (* Theorem: residue n = (count n) DIFF {0} *)
 (* Proof:
@@ -279,32 +298,32 @@ val residue_prime_neq = store_thm(
    By induction on n.
    Base: PROD_SET (residue 0) = FACT (0 - 1)
         PROD_SET (residue 0)
-      = PROD_SET {}           by residue_0
-      = 1                     by PROD_SET_EMPTY
-      = FACT 0                by FACT_0
-      = FACT (0 - 1)          by arithmetic
+      = PROD_SET {}            by residue_0
+      = 1                      by PROD_SET_EMPTY
+      = FACT 0                 by FACT_0
+      = FACT (0 - 1)           by arithmetic
    Step: PROD_SET (residue n) = FACT (n - 1) ==>
          PROD_SET (residue (SUC n)) = FACT (SUC n - 1)
       If n = 0,
         PROD_SET (residue (SUC 0))
-      = PROD_SET (residue 1)  by ONE
-      = PROD_SET {}           by residue_1
-      = 1                     by PROD_SET_EMPTY
-      = FACT 0                by FACT_0
+      = PROD_SET (residue 1)   by ONE
+      = PROD_SET {}            by residue_1
+      = 1                      by PROD_SET_EMPTY
+      = FACT 0                 by FACT_0
 
       If n <> 0, then 0 < n.
-      Note FINITE (residue n)                by residue_finite
+      Note FINITE (residue n)                  by residue_finite
         PROD_SET (residue (SUC n))
-      = PROD_SET (n INSERT residue n)        by residue_insert
-      = n * PROD_SET ((residue n) DELETE n)  by PROD_SET_THM
-      = n * PROD_SET (residue n)             by residue_delete
-      = n * FACT (n - 1)                     by induction hypothesis
-      = FACT (SUC (n - 1))                   by FACT
-      = FACT (SUC n - 1)                     by arithmetic
+      = PROD_SET (n INSERT residue n)          by residue_insert
+      = n * PROD_SET ((residue n) DELETE n)    by PROD_SET_THM
+      = n * PROD_SET (residue n)               by residue_delete
+      = n * FACT (n - 1)                       by induction hypothesis
+      = FACT (SUC (n - 1))                     by FACT
+      = FACT (SUC n - 1)                       by arithmetic
 *)
-val prod_set_residue = store_thm(
-  "prod_set_residue",
-  ``!n. PROD_SET (residue n) = FACT (n - 1)``,
+Theorem prod_set_residue:
+  !n. PROD_SET (residue n) = FACT (n - 1)
+Proof
   Induct >-
   simp[residue_0, PROD_SET_EMPTY, FACT_0] >>
   Cases_on `n = 0` >-
@@ -316,7 +335,8 @@ val prod_set_residue = store_thm(
   `_ = n * PROD_SET ((residue n) DELETE n)` by rw[PROD_SET_THM] >>
   `_ = n * PROD_SET (residue n)` by rw[residue_delete] >>
   `_ = n * FACT (n - 1)` by rw[] >>
-  metis_tac[FACT]);
+  metis_tac[FACT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Naturals -- counting from 1 rather than 0, and inclusive.                 *)
@@ -546,6 +566,20 @@ val upto_has_last = store_thm(
   "upto_has_last",
   ``!n. n IN (upto n)``,
   rw[]);
+
+(* Theorem: (upto n) DELETE n = count n *)
+(* Proof:
+     (upto n) DELETE n
+   = (count (SUC n)) DELETE n      by notation
+   = (n INSERT count n) DELETE n   by COUNT_SUC
+   = count n DELETE n              by DELETE_INSERT
+   = count n                       by DELETE_NON_ELEMENT, COUNT_NOT_SELF
+*)
+Theorem upto_delete:
+  !n. (upto n) DELETE n = count n
+Proof
+  metis_tac[COUNT_SUC, COUNT_NOT_SELF, DELETE_INSERT, DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: upto n = {0} UNION (natural n) *)
 (* Proof:
@@ -906,6 +940,179 @@ val sigma_geometric_natural = store_thm(
   rw[sigma_geometric_natural_eqn, DIV_SOLVE]);
 
 (* ------------------------------------------------------------------------- *)
+(* Chinese Remainder Theorem.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: when a MOD (m * n) = b MOD (m * n), break up modulus m * n. *)
+
+(* Theorem: 0 < m /\ 0 < n /\ a MOD (m * n) = b MOD (m * n) ==>
+            a MOD m = b MOD m /\ a MOD n = b MOD n *)
+(* Proof:
+   Either b <= a, or a < b, which implies a <= b.
+   The statement is symmetrical in a and b,
+   so proceed by lemma with b <= a, without loss of generality.
+   Note 0 < m * n                  by MULT_POS
+     so ?c. a = b + c * (m * n)    by MOD_MOD_EQN, 0 < m * n
+   Thus a = b + (c * m) * n        by arithmetic
+    and a = b + (c * n) * m        by arithmetic
+    ==> a MOD m = b MOD m          by MOD_MOD_EQN, 0 < m
+    and a MOD n = b MOD n          by MOD_MOD_EQN, 0 < n
+*)
+Theorem mod_mod_prod_eq:
+  !m n a b. 0 < m /\ 0 < n /\ a MOD (m * n) = b MOD (m * n) ==>
+            a MOD m = b MOD m /\ a MOD n = b MOD n
+Proof
+  ntac 5 strip_tac >>
+  `!a b. b <= a /\ a MOD (m * n) = b MOD (m * n) ==>
+            a MOD m = b MOD m /\ a MOD n = b MOD n` by
+  (ntac 3 strip_tac >>
+  `0 < m * n` by fs[] >>
+  `?c. a' = b' + c * (m * n)` by metis_tac[MOD_MOD_EQN] >>
+  `a' = b' + (c * m) * n` by decide_tac >>
+  `a' = b' + (c * n) * m` by decide_tac >>
+  metis_tac[MOD_MOD_EQN]) >>
+  (Cases_on `b <= a` >> simp[])
+QED
+
+(* Idea: converse of mod_mod_prod_eq when coprime. *)
+
+(* Theorem: 0 < m /\ 0 < n /\ coprime m n /\
+            a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+            a MOD (m * n) = b MOD (m * n) *)
+(* Proof:
+   Either b <= a, or a < b, which implies a <= b.
+   The statement is symmetrical in a and b,
+   so proceed by lemma with b <= a, without loss of generality.
+   Note 0 < m * n                  by MULT_POS
+    and ?h. a = b + h * m          by MOD_MOD_EQN, 0 < m
+    and ?k. a = b + k * n          by MOD_MOD_EQN, 0 < n
+    ==> h * m = k * n              by EQ_ADD_LCANCEL
+   Thus n divides (h * m)          by divides_def
+     or n divides h                by euclid_coprime, coprime m n
+    ==> ?c. h = c * n              by divides_def
+     so a = b + c * (m * n)        by above
+   Thus a MOD (m * n) = b MOD (m * n)
+                                   by MOD_MOD_EQN, 0 < m * n
+*)
+Theorem coprime_mod_mod_prod_eq:
+  !m n a b. 0 < m /\ 0 < n /\ coprime m n /\
+            a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+            a MOD (m * n) = b MOD (m * n)
+Proof
+  rpt strip_tac >>
+  `!a b. b <= a /\ a MOD m = b MOD m /\ a MOD n = b MOD n ==>
+             a MOD (m * n) = b MOD (m * n)` by
+  (rpt strip_tac >>
+  `0 < m * n` by fs[] >>
+  `?h. a' = b' + h * m` by metis_tac[MOD_MOD_EQN] >>
+  `?k. a' = b' + k * n` by metis_tac[MOD_MOD_EQN] >>
+  `h * m = k * n` by decide_tac >>
+  `n divides (h * m)` by metis_tac[divides_def] >>
+  `n divides h` by metis_tac[euclid_coprime, MULT_COMM] >>
+  `?c. h = c * n` by rw[GSYM divides_def] >>
+  `a' = b' + c * (m * n)` by fs[] >>
+  metis_tac[MOD_MOD_EQN]) >>
+  (Cases_on `b <= a` >> simp[])
+QED
+
+(* Idea: combine both parts for a MOD (m * n) = b MOD (m * n). *)
+
+(* Theorem: 0 < m /\ 0 < n /\ coprime m n ==>
+            !a b. a MOD (m * n) = b MOD (m * n) <=> a MOD m = b MOD m /\ a MOD n = b MOD n *)
+(* Proof:
+   If part is true             by mod_mod_prod_eq
+   Only-if part is true        by coprime_mod_mod_prod_eq
+*)
+Theorem coprime_mod_mod_prod_eq_iff:
+  !m n. 0 < m /\ 0 < n /\ coprime m n ==>
+        !a b. a MOD (m * n) = b MOD (m * n) <=> a MOD m = b MOD m /\ a MOD n = b MOD n
+Proof
+  metis_tac[mod_mod_prod_eq, coprime_mod_mod_prod_eq]
+QED
+
+(* Idea: application, the Chinese Remainder Theorem for two coprime moduli. *)
+
+(* Theorem: 0 < m /\ 0 < n /\ coprime m n ==>
+            ?!x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n *)
+(* Proof:
+   By EXISTS_UNIQUE_THM, this is to show:
+   (1) Existence: ?x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n
+   Note ?p q. (p * m + q * n) MOD (m * n) = 1 MOD (m * n)
+                                               by coprime_linear_mod_prod
+     so (p * m + q * n) MOD m = 1 MOD m
+    and (p * m + q * n) MOD n = 1 MOD n        by mod_mod_prod_eq
+     or (q * n) MOD m = 1 MOD m                by MOD_TIMES
+    and (p * m) MOD n = 1 MOD n                by MOD_TIMES
+   Let z = b * p * m + a * q * n.
+           z MOD m
+         = (b * p * m + a * q * n) MOD m
+         = (a * q * n) MOD m                   by MOD_TIMES
+         = ((a MOD m) * (q * n) MOD m) MOD m   by MOD_TIMES2
+         = a MOD m                             by MOD_TIMES, above
+   and     z MOD n
+         = (b * p * m + a * q * n) MDO n
+         = (b * p * m) MOD n                   by MOD_TIMES
+         = ((b MOD n) * (p * m) MOD n) MOD n   by MOD_TIMES2
+         = b MOD n                             by MOD_TIMES, above
+   Take x = z MOD (m * n).
+   Then x < m * n                              by MOD_LESS
+    and x MOD m = z MOD m = a MOD m            by MOD_MULT_MOD
+    and x MOD n = z MOD n = b MOD n            by MOD_MULT_MOD
+   (2) Uniqueness:
+       x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n /\
+       y < m * n /\ y MOD m = a MOD m /\ y MOD n = b MOD n ==> x = y
+   Note x MOD m = y MOD m                      by both equal to a MOD m
+    and x MOD n = y MOD n                      by both equal to b MOD n
+   Thus x MOD (m * n) = y MOD (m * n)          by coprime_mod_mod_prod_eq
+     so             x = y                      by LESS_MOD, both < m * n
+*)
+Theorem coprime_mod_mod_solve:
+  !m n a b. 0 < m /\ 0 < n /\ coprime m n ==>
+            ?!x. x < m * n /\ x MOD m = a MOD m /\ x MOD n = b MOD n
+Proof
+  rw[EXISTS_UNIQUE_THM] >| [
+    `?p q. (p * m + q * n) MOD (m * n) = 1 MOD (m * n)` by rw[coprime_linear_mod_prod] >>
+    qabbrev_tac `u = p * m + q * n` >>
+    `u MOD m = 1 MOD m /\ u MOD n = 1 MOD n` by metis_tac[mod_mod_prod_eq] >>
+    `(q * n) MOD m = 1 MOD m /\ (p * m) MOD n = 1 MOD n` by rfs[MOD_TIMES, Abbr`u`] >>
+    qabbrev_tac `z = b * p * m + a * q * n` >>
+    qexists_tac `z MOD (m * n)` >>
+    rw[] >| [
+      `z MOD (m * n) MOD m = z MOD m` by rw[MOD_MULT_MOD] >>
+      `_ = (a * q * n) MOD m` by rw[Abbr`z`] >>
+      `_ = ((a MOD m) * (q * n) MOD m) MOD m` by rw[MOD_TIMES2] >>
+      `_ = a MOD m` by fs[] >>
+      decide_tac,
+      `z MOD (m * n) MOD n = z MOD n` by metis_tac[MOD_MULT_MOD, MULT_COMM] >>
+      `_ = (b * p * m) MOD n` by rw[Abbr`z`] >>
+      `_ = ((b MOD n) * (p * m) MOD n) MOD n` by rw[MOD_TIMES2] >>
+      `_ = b MOD n` by fs[] >>
+      decide_tac
+    ],
+    metis_tac[coprime_mod_mod_prod_eq, LESS_MOD]
+  ]
+QED
+
+(* Yes! The Chinese Remainder Theorem with two modular equations. *)
+
+(*
+For an algorithm:
+* define bezout, input pair (m, n), output pair (p, q)
+* define a dot-product:
+        (p, q) dot (m, n) = p * m + q * n
+  with  (p, q) dot (m, n) MOD (m * n) = (gcd m n) MOD (m * n)
+* define a scale-product:
+        (a, b) scale (p, q) = (a * p, b * q)
+  with  z = ((a, b) scale (p, q)) dot (m, n)
+   and  x = z MOD (m * n)
+          = (((a, b) scale (p, q)) dot (m, n)) MOD (m * n)
+          = (((a, b) scale (bezout (m, n))) dot (m, n)) MOD (m * n)
+
+Note that bezout (m, n) is the extended Euclidean algorithm.
+
+*)
+
+(* ------------------------------------------------------------------------- *)
 (* Useful Theorems                                                           *)
 (* ------------------------------------------------------------------------- *)
 
@@ -915,39 +1122,101 @@ val sigma_geometric_natural = store_thm(
    The difference i = 0 gives n ** 0 = 1, which does not make a difference for PROD_SET.
 *)
 
-(* Theorem: 1 < n /\ 0 < m ==>
-    (PROD_SET (IMAGE (\j. n ** j) (count m)) = PROD_SET (IMAGE (\j. n ** j) (residue m))) *)
+(* Theorem: PROD_SET (IMAGE (\j. n ** j) (count m)) =
+            PROD_SET (IMAGE (\j. n ** j) (residue m)) *)
 (* Proof:
-   Since 0 IN count m  by IN_COUNT, 0 < m
-     and (IMAGE (\j. n ** j) (count m)) DELETE 1 = IMAGE (\j. n ** j) (residue m)
-                                                            by IMAGE_DEF, EXP_EQ_1, EXP
-     PROD_SET (IMAGE (\j. n ** j) (count m))
-   = PROD_SET (IMAGE (\j. n ** j) (0 INSERT count m))       by ABSORPTION
-   = PROD_SET ((\j. n ** j) 0 INSERT IMAGE (\j. n ** j) (count m))     by IMAGE_INSERT
-   = n ** 0 * PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE n ** 0)  by PROD_SET_THM
-   = PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE 1)     by EXP
-   = PROD_SET ((IMAGE (\j. n ** j) (residue m)))            by above
+   Let f = \j. n ** j.
+   When m = 0,
+      Note count 0 = {}            by COUNT_0
+       and residue 0 = {}          by residue_0
+      Thus LHS = RHS.
+   When m = 1,
+      Note count 1 = {0}           by COUNT_1
+       and residue 1 = {}          by residue_1
+      Thus LHS = PROD_SET (IMAGE f {0})
+               = PROD_SET {f 0}    by IMAGE_SING
+               = f 0               by PROD_SET_SING
+               = n ** 0 = 1        by EXP_0
+           RHS = PROD_SET (IMAGE f {})
+               = PROD_SET {}       by IMAGE_EMPTY
+               = 1                 by PROD_SET_EMPTY
+               = LHS
+   For m <> 0, m <> 1,
+   When n = 0,
+      Note !j. f j = f j = 0 then 1 else 0     by ZERO_EXP
+      Thus IMAGE f (count m) = {0; 1}          by count_def, EXTENSION, 1 < m
+       and IMAGE f (residue m) = {0}           by residue_def, EXTENSION, 1 < m
+      Thus LHS = PROD_SET {0; 1}
+               = 0 * 1 = 0                     by PROD_SET_THM
+           RHS = PROD_SET {0}
+               = 0 = LHS                       by PROD_SET_SING
+   When n = 1,
+      Note f = K 1                             by EXP_1, FUN_EQ_THM
+       and count m <> {}                       by COUNT_NOT_EMPTY, 0 < m
+       and residue m <> {}                     by residue_nonempty, 1 < m
+      Thus LHS = PROD_SET (IMAGE (K 1) (count m))
+               = PROD_SET {1}                          by IMAGE_K
+               = PROD_SET (IMAGE (K 1) (residue m))    by IMAGE_K
+               = RHS
+   For 1 < m, and 1 < n,
+   Note 0 IN count m                                   by IN_COUNT, 0 < m
+   also (IMAGE f (count m)) DELETE 1
+       = IMAGE f (residue m)                           by IMAGE_DEF, EXP_EQ_1, EXP, 1 < n
+     PROD_SET (IMAGE f (count m))
+   = PROD_SET (IMAGE f (0 INSERT count m))             by ABSORPTION
+   = PROD_SET (f 0 INSERT IMAGE f (count m))           by IMAGE_INSERT
+   = n ** 0 * PROD_SET ((IMAGE f (count m)) DELETE n ** 0)  by PROD_SET_THM
+   = PROD_SET ((IMAGE f (count m)) DELETE 1)           by EXP_0
+   = PROD_SET ((IMAGE f (residue m)))                  by above
 *)
-val PROD_SET_IMAGE_EXP_NONZERO = store_thm(
-  "PROD_SET_IMAGE_EXP_NONZERO",
-  ``!n m. 1 < n /\ 0 < m ==>
-    (PROD_SET (IMAGE (\j. n ** j) (count m)) = PROD_SET (IMAGE (\j. n ** j) (residue m)))``,
+Theorem PROD_SET_IMAGE_EXP_NONZERO:
+  !n m. PROD_SET (IMAGE (\j. n ** j) (count m)) =
+        PROD_SET (IMAGE (\j. n ** j) (residue m))
+Proof
   rpt strip_tac >>
-  `0 IN count m` by rw[] >>
-  `FINITE (IMAGE (\j. n ** j) (count m))` by rw[] >>
-  `(IMAGE (\j. n ** j) (count m)) DELETE 1 = IMAGE (\j. n ** j) (residue m)` by
-  (rw[residue_def, IMAGE_DEF, EXTENSION, EQ_IMP_THM] >-
-  metis_tac[EXP, NOT_ZERO_LT_ZERO] >-
-  metis_tac[] >>
-  `j <> 0 /\ n <> 1` by decide_tac >>
-  metis_tac[EXP_EQ_1]
-  ) >>
-  `PROD_SET (IMAGE (\j. n ** j) (count m)) = PROD_SET (IMAGE (\j. n ** j) (0 INSERT count m))` by metis_tac[ABSORPTION] >>
-  `_ = PROD_SET ((\j. n ** j) 0 INSERT IMAGE (\j. n ** j) (count m))` by rw[] >>
-  `_ = n ** 0 * PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE n ** 0)` by rw[PROD_SET_THM] >>
-  `_ = PROD_SET ((IMAGE (\j. n ** j) (count m)) DELETE 1)` by rw[EXP] >>
-  `_ = PROD_SET ((IMAGE (\j. n ** j) (residue m)))` by rw[] >>
-  decide_tac);
+  qabbrev_tac `f = \j. n ** j` >>
+  Cases_on `m = 0` >-
+  simp[residue_0] >>
+  Cases_on `m = 1` >-
+  simp[residue_1, COUNT_1, Abbr`f`, PROD_SET_THM] >>
+  `0 < m /\ 1 < m` by decide_tac >>
+  Cases_on `n = 0` >| [
+    `!j. f j = if j = 0 then 1 else 0` by rw[Abbr`f`] >>
+    `IMAGE f (count m) = {0; 1}` by
+  (rw[EXTENSION, EQ_IMP_THM] >-
+    metis_tac[ONE_NOT_ZERO] >>
+    metis_tac[]
+    ) >>
+    `IMAGE f (residue m) = {0}` by
+    (rw[residue_def, EXTENSION, EQ_IMP_THM] >>
+    `0 < 1` by decide_tac >>
+    metis_tac[]) >>
+    simp[PROD_SET_THM],
+    Cases_on `n = 1` >| [
+      `f = K 1` by rw[FUN_EQ_THM, Abbr`f`] >>
+      `count m <> {}` by fs[COUNT_NOT_EMPTY] >>
+      `residue m <> {}` by fs[residue_nonempty] >>
+      simp[IMAGE_K],
+      `0 < n /\ 1 < n` by decide_tac >>
+      `0 IN count m` by rw[] >>
+      `FINITE (IMAGE f (count m))` by rw[] >>
+      `(IMAGE f (count m)) DELETE 1 = IMAGE f (residue m)` by
+  (rw[residue_def, IMAGE_DEF, Abbr`f`, EXTENSION, EQ_IMP_THM] >-
+      metis_tac[EXP, NOT_ZERO] >-
+      metis_tac[] >>
+      `j <> 0` by decide_tac >>
+      metis_tac[EXP_EQ_1]
+      ) >>
+      `PROD_SET (IMAGE f (count m)) = PROD_SET (IMAGE f (0 INSERT count m))` by metis_tac[ABSORPTION] >>
+      `_ = PROD_SET (f 0 INSERT IMAGE f (count m))` by rw[] >>
+      `_ = n ** 0 * PROD_SET ((IMAGE f (count m)) DELETE n ** 0)` by rw[PROD_SET_THM, Abbr`f`] >>
+      `_ = 1 * PROD_SET ((IMAGE f (count m)) DELETE 1)` by metis_tac[EXP_0] >>
+      `_ = PROD_SET ((IMAGE f (residue m)))` by rw[] >>
+      decide_tac
+    ]
+  ]
+QED
+
 
 (* ------------------------------------------------------------------------- *)
 

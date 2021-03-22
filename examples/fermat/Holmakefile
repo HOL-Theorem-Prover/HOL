@@ -1,2 +1,2 @@
 CLINE_OPTIONS = -r
-INCLUDES = little twosq
+INCLUDES = little twosq count

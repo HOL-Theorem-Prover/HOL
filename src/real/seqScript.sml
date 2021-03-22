@@ -2,23 +2,12 @@
 (* Theory of sequences and series of real numbers                            *)
 (*===========================================================================*)
 
-(*
-app load ["hol88Lib",
-          "numLib",
-          "reduceLib",
-          "PairedLambda",
-          "jrhUtils",
-          "netsTheory"];
-*)
+open HolKernel Parse boolLib bossLib;
 
-
-open HolKernel Parse boolLib bossLib numLib reduceLib pairLib
-     pairTheory arithmeticTheory numTheory prim_recTheory
+open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory prim_recTheory
      jrhUtils realTheory realSimps metricTheory netsTheory BasicProvers;
 
 open combinTheory pred_setTheory res_quanTools realSimps RealArith;
-
-infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "seq";
 val _ = ParseExtras.temp_loose_equality()
@@ -33,10 +22,6 @@ val KILL_TAC = POP_ASSUM_LIST K_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-val Cond =
-  MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-  >> CONJ_TAC;
 
 local
   val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])

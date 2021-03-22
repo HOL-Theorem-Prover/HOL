@@ -371,7 +371,7 @@ n^8 - 1 = (3^2)(5)(11)(17)(97)(113)(401)(230017)
 The smallest prime not appearing is k = 2, but n = 98 has no order in (ZN 2).
 Need to pick k = 13, smallest coprime not appearing. order_13(98) = order_13(7) = 12 > 8.
 Need to pick k = 13, smallest prime not dividing 98 and not appearing. order_13(98) = order_13(7) = 12 > 8.
-Both are the same due to prime_not_divides_is_coprime: |- !n p. prime p /\ ~(p divides n) ==> coprime p
+Both are the same due to prime_not_divides_coprime: |- !n p. prime p /\ ~(p divides n) ==> coprime p
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -397,11 +397,11 @@ val prime_candidates_element = store_thm(
 (* Proof:
    Expand by prime_candidates_def, this is to show:
    (1) prime k /\ ~(k divides n) ==> coprime k n
-       True by prime_not_divides_is_coprime.
+       True by prime_not_divides_coprime.
    (2) prime k /\ ~(k divides n) /\
        !j. 0 < j /\ j <= m ==> ~(k divides (n ** j - 1)) ==> m <= ordz k n
    Let h = ordz k n. To show: m <= h.
-   Note prime k /\ ~(k divides n) ==> coprime k n   by prime_not_divides_is_coprime
+   Note prime k /\ ~(k divides n) ==> coprime k n   by prime_not_divides_coprime
    By contradiction. Suppose h < m.
    Then prime k ==> 1 < k                           by ONE_LT_PRIME
     and 1 < k /\ coprime k n
@@ -414,10 +414,10 @@ val prime_candidates_property = store_thm(
   "prime_candidates_property",
   ``!n m k. k IN prime_candidates n m ==> prime k /\ coprime k n /\ m <= ordz k n``,
   rw[prime_candidates_def] >-
-  rw[prime_not_divides_is_coprime] >>
+  rw[prime_not_divides_coprime] >>
   qabbrev_tac `h = ordz k n` >>
   spose_not_then strip_assume_tac >>
-  `coprime k n` by rw[prime_not_divides_is_coprime] >>
+  `coprime k n` by rw[prime_not_divides_coprime] >>
   `1 < k` by rw[ONE_LT_PRIME] >>
   `0 < h /\ (n ** h MOD k = 1)` by rw[ZN_coprime_order_alt, Abbr`h`] >>
   `0 < k /\ h < m` by decide_tac >>
@@ -943,7 +943,7 @@ val product_factors_pos = store_thm(
    Hence PROD_SET s < PROD_SET (IMAGE SUC s)    by PROD_SET_LESS_SUC
      PROD_SET (IMAGE SUC s)
    = PROD_SET (IMAGE (\j. n ** j) (residue m))  by power_factors_image_suc, 0 < n
-   = PROD_SET (IMAGE (\j. n ** j) (count m))    by PROD_SET_IMAGE_EXP_NONZERO, 1 < n /\ 0 < m
+   = PROD_SET (IMAGE (\j. n ** j) (count m))    by PROD_SET_IMAGE_EXP_NONZERO
    = n ** SUM_SET (count m)                     by PROD_SET_IMAGE_EXP, 1 < n
    = n ** (m * (m - 1) DIV 2)                   by SUM_SET_COUNT
 

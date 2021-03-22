@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib;
 
 open metisLib combinTheory pred_setTheory res_quanTools pairTheory RealArith
      prim_recTheory arithmeticTheory realTheory realLib real_sigmaTheory
-     seqTheory limTheory Diff transcTheory jrhUtils pred_setLib tautLib;
+     seqTheory limTheory transcTheory jrhUtils pred_setLib tautLib;
 
 open hurdUtils util_probTheory cardinalTheory;
 
@@ -1477,27 +1477,41 @@ val mul_assoc = store_thm
                REAL_LT_LMUL_NEG_0_NEG, REAL_LT_RMUL_0, REAL_LT_LMUL_0,
                REAL_LT_RMUL_NEG_0_NEG]);
 
-val mul_infty = store_thm (* new *)
-  ("mul_infty",
-  ``!x. 0 < x ==> (PosInf * x = PosInf) /\ (x * PosInf = PosInf) /\
-                  (NegInf * x = NegInf) /\ (x * NegInf = NegInf)``,
+Theorem mul_infty :
+    !x. 0 < x ==> (PosInf * x = PosInf) /\ (x * PosInf = PosInf) /\
+                  (NegInf * x = NegInf) /\ (x * NegInf = NegInf)
+Proof
     GEN_TAC >> DISCH_TAC
  >> STRONG_CONJ_TAC
- >- (Cases_on `x = PosInf` >- art [extreal_mul_def] \\
-     `x <> NegInf` by PROVE_TAC [lt_imp_le, pos_not_neginf] \\
-     `?r. x = Normal r` by PROVE_TAC [extreal_cases] \\
-     `0 < r` by PROVE_TAC [extreal_of_num_def, extreal_lt_eq] \\
-     `r <> 0` by PROVE_TAC [REAL_LT_IMP_NE] \\
-     ASM_SIMP_TAC std_ss [extreal_mul_def]) >> DISCH_TAC
- >> CONJ_TAC >- ASM_REWRITE_TAC [Once mul_comm]
+ >- (Cases_on ‘x’ >> rw [extreal_mul_def] \\
+     fs [lt_infty, extreal_of_num_def, extreal_lt_eq] \\
+     PROVE_TAC [REAL_LT_ANTISYM])
+ >> DISCH_TAC
+ >> CONJ_TAC >- art [Once mul_comm]
  >> STRONG_CONJ_TAC
- >- (Cases_on `x = PosInf` >- art [extreal_mul_def] \\
-     `x <> NegInf` by PROVE_TAC [lt_imp_le, pos_not_neginf] \\
-     `?r. x = Normal r` by PROVE_TAC [extreal_cases] \\
-     `0 < r` by PROVE_TAC [extreal_of_num_def, extreal_lt_eq] \\
-     `r <> 0` by PROVE_TAC [REAL_LT_IMP_NE] \\
-     ASM_SIMP_TAC std_ss [extreal_mul_def]) >> DISCH_TAC
- >> ASM_REWRITE_TAC [Once mul_comm]);
+ >- (Cases_on ‘x’ >> rw [extreal_mul_def] \\
+     fs [lt_infty, extreal_of_num_def, extreal_lt_eq] \\
+     PROVE_TAC [REAL_LT_ANTISYM])
+ >> REWRITE_TAC [Once mul_comm]
+QED
+
+Theorem mul_infty' :
+    !x. x < 0 ==> (PosInf * x = NegInf) /\ (x * PosInf = NegInf) /\
+                  (NegInf * x = PosInf) /\ (x * NegInf = PosInf)
+Proof
+    GEN_TAC >> DISCH_TAC
+ >> STRONG_CONJ_TAC
+ >- (Cases_on ‘x’ >> rw [extreal_mul_def] \\
+     fs [lt_infty, extreal_of_num_def, extreal_lt_eq] \\
+     PROVE_TAC [REAL_LT_ANTISYM])
+ >> DISCH_TAC
+ >> CONJ_TAC >- art [Once mul_comm]
+ >> STRONG_CONJ_TAC
+ >- (Cases_on ‘x’ >> rw [extreal_mul_def] \\
+     fs [lt_infty, extreal_of_num_def, extreal_lt_eq] \\
+     PROVE_TAC [REAL_LT_ANTISYM])
+ >> REWRITE_TAC [Once mul_comm]
+QED
 
 val mul_not_infty = store_thm
   ("mul_not_infty",
@@ -2178,8 +2192,8 @@ Theorem add_pow2 :
 Proof
     NTAC 2 Cases
  >> RW_TAC real_ss [extreal_pow_def, extreal_mul_def, extreal_add_def,
-                    extreal_of_num_def, pow_2]
- >> REWRITE_TAC [GSYM POW_2, ADD_POW_2]
+                    extreal_of_num_def]
+ >> REWRITE_TAC [ADD_POW_2]
 QED
 
 val REAL_MUL_POS_LT = prove ((* from intergrationTheory *)
@@ -2212,16 +2226,15 @@ Proof
   ASM_SIMP_TAC real_ss [GSYM extreal_lt_eq, normal_real, GSYM extreal_of_num_def]
 QED
 
-val sub_pow2 = store_thm
-  ("sub_pow2",
-  ``!x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
-        ((x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y)``,
+Theorem sub_pow2 :
+    !x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
+        ((x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y)
+Proof
     NTAC 2 Cases
  >> RW_TAC real_ss [extreal_pow_def, extreal_mul_def, extreal_add_def,
-                    extreal_of_num_def, pow_2, extreal_ainv_def, extreal_sub_def]
- >> RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_ASSOC, POW_2,
-                    GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC);
+                    extreal_of_num_def, extreal_ainv_def, extreal_sub_def]
+ >> REWRITE_TAC [SUB_POW_2]
+QED
 
 val pow_add = store_thm
   ("pow_add", ``!x n m. x pow (n + m) = x pow n * x pow m``,
@@ -2535,6 +2548,62 @@ Proof
  >> ASM_SIMP_TAC std_ss [zero_rpow]
  >> MATCH_MP_TAC zero_pow
  >> RW_TAC arith_ss []
+QED
+
+val lemma =
+    SIMP_RULE real_ss [REAL_NEG_0, real_div, REAL_INV_0, POW_1, REAL_EQ_NEG]
+                      (REWRITE_RULE [sum, ONE]
+                                    (Q.SPECL [‘-x’, ‘1’] MCLAURIN_LN_NEG));
+
+(* extended version of EXP_LE_X, based on MCLAURIN_LN_NEG *)
+Theorem EXP_LE_X_FULL :
+    !x :real. &1 + x <= exp x
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on `0 <= x`
+ >- (MATCH_MP_TAC EXP_LE_X >> art [])
+ >> fs [GSYM real_lt]
+ >> Cases_on `x <= -1`
+ >- (MATCH_MP_TAC REAL_LE_TRANS \\
+     Q.EXISTS_TAC `0` >> REWRITE_TAC [EXP_POS_LE] \\
+    `0r = 1 + -1` by RW_TAC real_ss [] \\
+     POP_ORW >> art [REAL_LE_LADD])
+ >> fs [GSYM real_lt]
+ >> MP_TAC lemma
+ >> ‘0 < -x /\ -x < 1’ by REAL_ASM_ARITH_TAC
+ >> RW_TAC std_ss []
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> Know ‘1 + x < exp x <=> ln (1 + x) < ln (exp x)’
+ >- (MATCH_MP_TAC (GSYM LN_MONO_LT) \\
+     REWRITE_TAC [EXP_POS_LT] >> REAL_ASM_ARITH_TAC)
+ >> Rewr'
+ >> POP_ORW
+ >> REWRITE_TAC [LN_EXP]
+ >> GEN_REWRITE_TAC RAND_CONV empty_rewrites [GSYM REAL_MUL_RID]
+ >> Know ‘x * inv (1 - t) < x * 1 <=> 1 < inv (1 - t)’
+ >- (MATCH_MP_TAC REAL_LT_LMUL_NEG >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC REAL_INV_LT1
+ >> REAL_ASM_ARITH_TAC
+QED
+
+Theorem exp_le_x :
+    !x :extreal. &1 + x <= exp x
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on ‘x’
+ >> rw [extreal_of_num_def, extreal_add_def, extreal_exp_def, le_infty,
+        extreal_le_eq, EXP_LE_X_FULL]
+QED
+
+Theorem exp_le_x' :
+    !x :extreal. &1 - x <= exp (-x)
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> MP_TAC (Q.SPEC ‘-x’ exp_le_x)
+ >> Suff ‘1 - x = 1 + -x’ >- rw []
+ >> MATCH_MP_TAC extreal_sub_add
+ >> rw [extreal_of_num_def]
 QED
 
 (***************************)

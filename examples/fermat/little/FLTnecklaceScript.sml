@@ -378,10 +378,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define partitions of necklaces by similarity *)
-val necklace_partition_def = zDefine `
+Definition necklace_partition_def[nocompute]:
     necklace_partition n a = partition similar (necklace n a)
-`;
-(* Note: use zDefine as this is not effective. *)
+End
+(* Note: use [nocompute] as this is not effective. *)
 
 (* Idea: elements in (necklace_partition n a) are non-empty. *)
 
@@ -665,10 +665,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define partitions of multicoloured necklaces by similarity. *)
-val multicoloured_partition_def = zDefine `
+Definition multicoloured_partition_def[nocompute]:
     multicoloured_partition n a = partition similar (multicoloured n a)
-`;
-(* Note: use zDefine as this is not effective. *)
+End
+(* Note: use [nocompute] as this is not effective. *)
 
 (* Idea: a multicoloured partition is finite. *)
 
@@ -844,10 +844,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define partitions of monocoloured necklaces by similarity. *)
-val monocoloured_partition_def = zDefine `
+Definition monocoloured_partition_def[nocompute]:
     monocoloured_partition n a = partition similar (monocoloured n a)
-`;
-(* Note: use zDefine as this is not effective. *)
+End
+(* Note: use [nocompute] as this is not effective. *)
 
 (* Idea: a monocoloured partition is finite. *)
 

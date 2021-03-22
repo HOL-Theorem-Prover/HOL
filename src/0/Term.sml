@@ -633,46 +633,60 @@ fun dest_comb (Comb r) = r
 (*---------------------------------------------------------------------------
        Making abstractions. list_mk_binder is a relatively
        efficient version for making terms with many consecutive
-       abstractions.
+       abstractions. Works by replacing all free vars to be bound by
+       raw Bvs, then adding the binding prefix without going back into
+       the body.
   ---------------------------------------------------------------------------*)
-
-local val FORMAT = ERR "list_mk_binder"
-   "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
-   fun check_opt NONE = Lib.I
-     | check_opt (SOME c) =
-        if not(is_const c) then raise FORMAT
-        else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c
-              of NONE => raise FORMAT
-               | SOME ty => (fn abs =>
-                   let val dom = fst(Type.dom_rng(type_of abs))
-                   in mk_comb (inst[ty |-> dom] c, abs)
-                   end)
+local
+  fun binder_check binder = (* expect type to be (ty1 -> ty2) -> ty3 *)
+     let val (fnty,rty) = Type.dom_rng(type_of binder)
+         val _ = Type.dom_rng fnty
+         val fntyV = Type.type_vars fnty
+         val rtyV = Type.type_vars rty
+     in
+       if Lib.all (C mem fntyV) rtyV then (fnty,rty) else raise ERR "" ""
+     end
+     handle _ => raise ERR "list_mk_binder"
+       "expected binder to have type ((ty1 -> ty2) -> ty3) where\
+       \ tyvars of ty3 are all in (ty1->ty2)"
+  fun binderFn NONE = (fn v => fn (M,_) => (Abs(v,M),Type.ind))
+    | binderFn (SOME binder) =
+       let val (dty,rty) = binder_check binder
+       in fn v => fn (M,Mty) =>
+             let val theta = Type.match_type dty (type_of v --> Mty)
+             in (Comb (inst theta binder, Abs(v,M)),
+                 Type.type_subst theta rty)
+             end
+       end
+  open Redblackmap
+  fun enum [] _ A = A
+    | enum (h::t) i (vmap,rvs) = enum t (i-1) (insert (vmap,h,i),h::rvs)
+  fun lookup v vmap = case peek (vmap,v) of NONE => v | SOME i => Bv i
+  fun increment vmap = transform (fn x => x+1) vmap
+  fun bind (v as Fv _) vmap k = k (lookup v vmap)
+    | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
+                                bind N vmap (fn n => k (Comb(m,n))))
+    | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
+                                       (fn q => k (Abs(v,q)))
+    | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
+    | bind tm vmap k = k tm
 in
 fun list_mk_binder opt =
- let val f = check_opt opt
- in fn (vlist,tm)
- => if not (all is_var vlist) then raise ERR "list_mk_binder" ""
+ let val mk_binder = binderFn opt
+ in fn (vlist,tm) =>
+    if null vlist then
+       tm
     else
-  let open Redblackmap
-     val varmap0 = mkDict compare
-     fun enum [] _ A = A
-       | enum (h::t) i (vmap,rvs) = let val vmap' = insert (vmap,h,i)
-                                    in enum t (i-1) (vmap',h::rvs)
-                                    end
-     val (varmap, rvlist) = enum vlist (length vlist - 1) (varmap0, [])
-     fun lookup v vmap = case peek (vmap,v) of NONE => v | SOME i => Bv i
-     fun increment vmap = transform (fn x => x+1) vmap
-     fun bind (v as Fv _) vmap k = k (lookup v vmap)
-       | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
-                                   bind N vmap (fn n => k (Comb(m,n))))
-       | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
-                                          (fn q => k (Abs(v,q)))
-       | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
-       | bind tm vmap k = k tm
-  in
-     rev_itlist (fn v => fn M => f(Abs(v,M))) rvlist (bind tm varmap I)
-  end
-  handle e => raise wrap_exn "Term" "list_mk_binder" e
+    if not (all is_var vlist) then
+       raise ERR "list_mk_binder" "expected list of variables"
+    else
+     (let val (vMap, rvlist) = enum vlist (length vlist-1) (mkDict compare, [])
+          val raw_tm = bind tm vMap I
+          val (final,_) = rev_itlist mk_binder rvlist (raw_tm,type_of tm)
+      in
+         final
+      end
+      handle e => raise wrap_exn "Term" "list_mk_binder" e)
  end
 end;
 

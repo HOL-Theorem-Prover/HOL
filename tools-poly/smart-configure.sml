@@ -71,6 +71,7 @@ val polyc = NONE : string option
 val polymllibdir = "";
 val DOT_PATH = SOME "";
 val MLTON = SOME "";
+val GNUMAKE = "";
 val POLY_LDFLAGS = [] : string list;
 val POLY_LDFLAGS_STATIC = [] : string list;
 
@@ -224,6 +225,17 @@ in
   OS.Path.toString { arcs = parent @ ["lib"], vol = vol, isAbs = isAbs }
 end
 
+val GNUMAKE:string  =
+    if GNUMAKE = "" then
+      let
+        val _ = determining "GNUMAKE"
+      in
+        case OS.Process.getEnv "MAKE" of
+            NONE => "make"
+          | SOME s => s
+      end
+    else GNUMAKE
+
 val polylibinstruction =
     "Please write file tools-poly/poly-includes.ML to specify it.\n\
     \This file should include a line of the form\n\n\
@@ -279,6 +291,7 @@ verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
 optverdict ("DOT_PATH", DOT_PATH);
 optverdict ("MLTON", MLTON);
+verdict ("GNUMAKE", GNUMAKE);
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";

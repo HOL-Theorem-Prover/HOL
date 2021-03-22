@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
-(* Further enriched by Chun Tian (2019-2020)                                 *)
+(* Further enriched by Chun Tian (2019-2021)                                 *)
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Joe Hurd [7] and Aaron Coble [8]                     *)
 (* Cambridge University.                                                     *)
@@ -7812,6 +7812,299 @@ Proof
     RW_TAC std_ss [indep_rv_def]
  >> MATCH_MP_TAC INDEP_SYM
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+val FINITE_TWO = Q.prove (`!s t. FINITE {s; t}`,
+    PROVE_TAC [FINITE_INSERT, FINITE_SING]);
+
+(* Theorem 3.3.3 [2, p.54], depending on Fubini and UNIQUENESS_OF_PROD_MEASURE
+
+   This is the last theorem in Isabelle's Independent_Family.thy but in extreals.
+ *)
+Theorem indep_vars_expectation :
+    !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
+            indep_rv p X Y Borel Borel /\ integrable p X /\ integrable p Y ==>
+            expectation p (\x. X x * Y x) = expectation p X * expectation p Y
+Proof
+    rw [indep_rv_def, real_random_variable_def, prob_space_def, p_space_def, events_def,
+        real_random_variable_def, random_variable_def, expectation_def]
+ >> Q.ABBREV_TAC ‘f = \x. (X x,Y x)’
+ >> Q.ABBREV_TAC ‘u = \(x,y). x * (y :extreal)’
+ >> ‘(\x. X x * Y x) = u o f’ by rw [Abbr ‘u’, Abbr ‘f’, o_DEF] >> POP_ORW
+ (* applying MEASURABLE_PROD_SIGMA' *)
+ >> Know ‘f IN measurable (m_space p,measurable_sets p) (Borel CROSS Borel)’
+ >- (MATCH_MP_TAC MEASURABLE_PROD_SIGMA' \\
+     STRONG_CONJ_TAC >- fs [measure_space_def] >> DISCH_TAC \\
+     rw [Abbr ‘f’, o_DEF, ETA_AX])
+ >> DISCH_TAC
+ >> Know ‘u IN measurable (Borel CROSS Borel) Borel’
+ >- (Q.UNABBREV_TAC ‘u’ \\
+     REWRITE_TAC [IN_MEASURABLE_BOREL_2D_MUL])
+ >> DISCH_TAC
+ (* applying integral_distr and SIGMA_ALGEBRA_BOREL_2D *)
+ >> Know ‘integral p (u o f) =
+          integral (space (Borel CROSS Borel),subsets (Borel CROSS Borel),distr p f) u’
+ >- (MP_TAC (ISPECL [“p :'a m_space”,
+                     “Borel CROSS Borel”,
+                     “f :'a -> extreal # extreal”,
+                     “u :extreal # extreal -> extreal”] integral_distr) \\
+     RW_TAC std_ss [SIGMA_ALGEBRA_BOREL_2D]) >> Rewr'
+ >> Q.ABBREV_TAC ‘m1 = (space Borel,subsets Borel,distr p X)’
+ >> Q.ABBREV_TAC ‘m2 = (space Borel,subsets Borel,distr p Y)’
+ >> ‘measure_space m1 /\ measure_space m2’
+      by METIS_TAC [measure_space_distr, SIGMA_ALGEBRA_BOREL]
+ (* sigma_finiteness of m1 and m2 *)
+ >> Know ‘sigma_finite_measure_space m1 /\ sigma_finite_measure_space m2’
+ >- (rw [sigma_finite_measure_space_def] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE >> art [lt_infty] \\
+      ‘m_space m1 = UNIV’ by METIS_TAC [m_space_def, SPACE_BOREL] >> POP_ORW \\
+      ‘measure m1 = distr p X’ by METIS_TAC [measure_def] >> POP_ORW \\
+       rw [distr_def],
+       (* goal 2 (of 2) *)
+       MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE >> art [lt_infty] \\
+      ‘m_space m2 = UNIV’ by METIS_TAC [m_space_def, SPACE_BOREL] >> POP_ORW \\
+      ‘measure m2 = distr p Y’ by METIS_TAC [measure_def] >> POP_ORW \\
+       rw [distr_def] ])
+ >> STRIP_TAC
+ >> ‘measure_space (m1 CROSS m2)’ by PROVE_TAC [measure_space_prod_measure]
+ (* applying UNIQUENESS_OF_PROD_MEASURE *)
+ >> Know ‘integral (space (Borel CROSS Borel),subsets (Borel CROSS Borel),distr p f) u =
+          integral (m1 CROSS m2) u’
+ >- (MATCH_MP_TAC integral_cong_measure' >> simp [] \\
+     CONJ_TAC >- (MATCH_MP_TAC measure_space_distr >> rw [SIGMA_ALGEBRA_BOREL_2D]) \\
+     CONJ_TAC >- rw [SPACE_PROD_SIGMA, prod_measure_def, Abbr ‘m1’, Abbr ‘m2’] \\
+     CONJ_TAC >- rw [prod_measure_def, Abbr ‘m1’, Abbr ‘m2’] \\
+     MATCH_MP_TAC UNIQUENESS_OF_PROD_MEASURE \\
+     qexistsl_tac [‘space Borel’, ‘space Borel’] \\
+     qexistsl_tac [‘subsets Borel’, ‘subsets Borel’] \\
+     qexistsl_tac [‘distr p X’, ‘distr p Y’] \\
+     Know ‘subset_class (space Borel) (subsets Borel)’
+     >- (rw [subset_class_def, SPACE_BOREL]) >> Rewr \\
+     Know ‘sigma (space Borel) (subsets Borel) = Borel’
+     >- (MATCH_MP_TAC SIGMA_STABLE \\
+         REWRITE_TAC [SIGMA_ALGEBRA_BOREL]) >> Rewr \\
+     CONJ_TAC >- fs [Abbr ‘m1’, sigma_finite_measure_space_def] \\
+     CONJ_TAC >- fs [Abbr ‘m2’, sigma_finite_measure_space_def] \\
+     Know ‘!s t. s IN subsets Borel /\ t IN subsets Borel ==>
+                 s INTER t IN subsets Borel’
+     >- (rpt STRIP_TAC \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [SIGMA_ALGEBRA_BOREL]) >> Rewr \\
+     CONJ_TAC >- fs [Abbr ‘m1’, sigma_finite_measure_space_def] \\
+     CONJ_TAC >- fs [Abbr ‘m2’, sigma_finite_measure_space_def] \\
+     Know ‘space Borel CROSS space Borel = space (Borel CROSS Borel)’
+     >- (rw [prod_sigma_def, SPACE_SIGMA]) >> Rewr' \\
+     CONJ_TAC >- (MATCH_MP_TAC measure_space_distr >> art [SIGMA_ALGEBRA_BOREL_2D]) \\
+     CONJ_TAC
+     >- (Know ‘space (Borel CROSS Borel) = m_space (m1 CROSS m2)’
+         >- (rw [Abbr ‘m1’, Abbr ‘m2’, SPACE_PROD_SIGMA, prod_measure_def]) >> Rewr' \\
+         Know ‘subsets (Borel CROSS Borel) = measurable_sets (m1 CROSS m2)’
+         >- (rw [Abbr ‘m1’, Abbr ‘m2’, prod_sigma_def, prod_measure_def]) >> Rewr' \\
+         art [MEASURE_SPACE_REDUCE]) \\
+     CONJ_TAC
+     >- (rw [distr_def, PREIMAGE_CROSS, Abbr ‘f’, o_DEF, ETA_AX] \\
+        ‘PREIMAGE X s INTER PREIMAGE Y t INTER m_space p =
+          (PREIMAGE X s INTER m_space p) INTER (PREIMAGE Y t INTER m_space p)’
+           by SET_TAC [] >> POP_ORW \\
+         METIS_TAC [indep_def, prob_def]) \\ (* independence is used here!!! *)
+     rw [prod_measure_def, INDICATOR_FN_CROSS] \\
+     ONCE_REWRITE_TAC [mul_comm] \\
+     Know ‘!y. pos_fn_integral m1 (\x. indicator_fn t y * indicator_fn s x) =
+               indicator_fn t y * pos_fn_integral m1 (indicator_fn s)’
+     >- (GEN_TAC \\
+        ‘?r. 0 <= r /\ (indicator_fn t y = Normal r)’ by METIS_TAC [indicator_fn_normal] \\
+         POP_ORW \\
+         MATCH_MP_TAC pos_fn_integral_cmul >> rw [INDICATOR_FN_POS]) >> Rewr' \\
+     Know ‘pos_fn_integral m1 (indicator_fn s) = measure m1 s’
+     >- (MATCH_MP_TAC pos_fn_integral_indicator >> rw [Abbr ‘m1’]) >> Rewr' \\
+     ONCE_REWRITE_TAC [mul_comm] \\
+     Know ‘?r. 0 <= r /\ (measure m1 s = Normal r)’
+     >- (rw [Abbr ‘m1’, distr_def] \\
+         Know ‘measure p (PREIMAGE X s INTER m_space p) <= measure p (m_space p)’
+         >- (MATCH_MP_TAC INCREASING \\
+             CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []) \\
+             CONJ_TAC >- REWRITE_TAC [INTER_SUBSET] \\
+             reverse CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_MSPACE_MEASURABLE >> art []) \\
+             fs [IN_MEASURABLE]) >> art [] \\
+         DISCH_TAC \\
+         Know ‘0 <= measure p (PREIMAGE X s INTER m_space p)’
+         >- (‘positive p’ by PROVE_TAC [MEASURE_SPACE_POSITIVE] \\
+             fs [positive_def] >> POP_ASSUM MATCH_MP_TAC \\
+             fs [IN_MEASURABLE]) >> DISCH_TAC \\
+        ‘measure p (PREIMAGE X s INTER m_space p) <> NegInf’ by PROVE_TAC [pos_not_neginf] \\
+         Know ‘measure p (PREIMAGE X s INTER m_space p) <> PosInf’
+         >- (REWRITE_TAC [lt_infty] \\
+             MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘1’ \\
+             rw [GSYM lt_infty, extreal_of_num_def, extreal_not_infty]) \\
+         DISCH_TAC \\
+        ‘?r. measure p (PREIMAGE X s INTER m_space p) = Normal r’ by METIS_TAC [extreal_cases] \\
+         fs [extreal_of_num_def, extreal_le_eq]) \\
+     STRIP_TAC \\
+     Know ‘pos_fn_integral m2 (\y. measure m1 s * indicator_fn t y) =
+           measure m1 s * pos_fn_integral m2 (indicator_fn t)’
+     >- (POP_ORW >> MATCH_MP_TAC pos_fn_integral_cmul >> art [INDICATOR_FN_POS]) >> Rewr' \\
+     Know ‘pos_fn_integral m2 (indicator_fn t) = measure m2 t’
+     >- (MATCH_MP_TAC pos_fn_integral_indicator >> rw [Abbr ‘m2’]) >> Rewr' \\
+     POP_ASSUM K_TAC \\
+     rw [Abbr ‘m1’, Abbr ‘m2’])
+ >> Rewr'
+ (* clean up ‘f’ *)
+ >> Q.PAT_X_ASSUM ‘f IN measurable (m_space p,measurable_sets p) (Borel CROSS Borel)’ K_TAC
+ >> Q.UNABBREV_TAC ‘f’
+ (* applying Fubini; finiteness / integrability is needed here. *)
+ >> Know ‘integral (m1 CROSS m2) u =
+          integral m2 (\y. integral m1 (\x. u (x,y)))’
+ >- (MP_TAC (ISPECL [“m1 :extreal m_space”, “m2 :extreal m_space”,
+                     “u :extreal # extreal -> extreal”] Fubini) \\
+     Know ‘((m_space m1,measurable_sets m1) CROSS
+            (m_space m2,measurable_sets m2)) = Borel CROSS Borel’
+     >- rw [Abbr ‘m1’, Abbr ‘m2’, SPACE] >> Rewr' \\
+     ASM_SIMP_TAC std_ss [o_DEF] \\
+     Suff ‘pos_fn_integral m2 (\y. pos_fn_integral m1 (\x. abs (u (x,y)))) <> PosInf’
+     >- METIS_TAC [] \\
+     rw [Abbr ‘u’, abs_mul] \\
+     Know ‘pos_fn_integral m2 (\y. pos_fn_integral m1 (\x. abs x * abs y)) =
+           pos_fn_integral m2 (\y. abs y * pos_fn_integral m1 (\x. abs x))’
+     >- (MATCH_MP_TAC pos_fn_integral_cong_AE >> rw [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           MATCH_MP_TAC pos_fn_integral_pos >> art [] \\
+           Q.X_GEN_TAC ‘y’ >> rw [] \\
+           MATCH_MP_TAC le_mul >> REWRITE_TAC [abs_pos],
+           (* goal 2 (of 3) *)
+           MATCH_MP_TAC le_mul >> REWRITE_TAC [abs_pos] \\
+           MATCH_MP_TAC pos_fn_integral_pos >> rw [abs_pos],
+           (* goal 3 (of 3) *)
+           rw [AE_THM, almost_everywhere_def] \\
+           Q.EXISTS_TAC ‘{PosInf; NegInf}’ \\
+           reverse CONJ_TAC
+           >- (rw [] >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+               REWRITE_TAC [extreal_abs_def, ETA_AX] \\
+               GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [mul_comm] \\
+               MATCH_MP_TAC pos_fn_integral_cmul >> rw [abs_pos]) \\
+           rw [null_set_def, Abbr ‘m2’, distr_def]
+           >- (MATCH_MP_TAC BOREL_MEASURABLE_SETS_FINITE \\
+               REWRITE_TAC [FINITE_TWO]) \\
+           Know ‘PREIMAGE Y {PosInf; NegInf} INTER m_space p = {}’
+           >- (rw [PREIMAGE_def]) >> Rewr' \\
+          ‘positive p’ by PROVE_TAC [MEASURE_SPACE_POSITIVE] \\
+           fs [positive_def] ]) >> Rewr' \\
+     ONCE_REWRITE_TAC [mul_comm] \\
+     Know ‘pos_fn_integral m1 (\x. abs x) <> PosInf’
+     >- (rw [Abbr ‘m1’, ETA_AX] \\
+         Know ‘pos_fn_integral (space Borel,subsets Borel,distr p X) abs =
+               pos_fn_integral p (abs o X)’
+         >- (MATCH_MP_TAC pos_fn_integral_distr \\
+             rw [SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_ABS, abs_pos]) >> Rewr' \\
+         Know ‘integrable p (abs o X)’ >- PROVE_TAC [integrable_abs] \\
+         rw [integrable_def, FN_PLUS_ABS_SELF]) >> DISCH_TAC \\
+     Know ‘0 <= pos_fn_integral m1 (\x. abs x)’
+     >- (MATCH_MP_TAC pos_fn_integral_pos >> rw [abs_pos]) >> DISCH_TAC \\
+    ‘pos_fn_integral m1 (\x. abs x) <> NegInf’ by PROVE_TAC [pos_not_neginf] \\
+    ‘?r. 0 <= r /\ pos_fn_integral m1 (\x. abs x) = Normal r’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq] >> POP_ORW \\
+     Know ‘pos_fn_integral m2 (\y. Normal r * abs y) =
+           Normal r * pos_fn_integral m2 abs’
+     >- (MATCH_MP_TAC pos_fn_integral_cmul >> rw [abs_pos]) >> Rewr' \\
+     Know ‘pos_fn_integral m2 abs <> PosInf’
+     >- (rw [Abbr ‘m2’] \\
+         Know ‘pos_fn_integral (space Borel,subsets Borel,distr p Y) abs =
+               pos_fn_integral p (abs o Y)’
+         >- (MATCH_MP_TAC pos_fn_integral_distr \\
+             rw [SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_ABS, abs_pos]) >> Rewr' \\
+         Know ‘integrable p (abs o Y)’ >- PROVE_TAC [integrable_abs] \\
+         rw [integrable_def, FN_PLUS_ABS_SELF]) >> DISCH_TAC \\
+     Know ‘pos_fn_integral m2 abs <> NegInf’
+     >- (MATCH_MP_TAC pos_not_neginf \\
+         MATCH_MP_TAC pos_fn_integral_pos >> rw [abs_pos]) >> DISCH_TAC \\
+    ‘?z. pos_fn_integral m2 abs = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     REWRITE_TAC [extreal_mul_def, extreal_not_infty])
+ >> Rewr'
+ (* clean up ‘u’, now all pairs disappeared *)
+ >> Q.UNABBREV_TAC ‘u’ >> simp []
+ (* applying integral_cong_AE and integral_cmul, twice *)
+ >> Know ‘integral m2 (\y. integral m1 (\x. x * y)) =
+          integral m2 (\y. y * integral m1 (\x. x))’
+ >- (GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [mul_comm] \\
+     MATCH_MP_TAC integral_cong_AE \\
+     rw [AE_THM, almost_everywhere_def] \\
+     Q.EXISTS_TAC ‘{PosInf; NegInf}’ \\
+     CONJ_TAC
+     >- (rw [null_set_def, Abbr ‘m2’, distr_def]
+         >- (MATCH_MP_TAC BOREL_MEASURABLE_SETS_FINITE \\
+             REWRITE_TAC [FINITE_TWO]) \\
+         Know ‘PREIMAGE Y {PosInf; NegInf} INTER m_space p = {}’
+         >- (rw [PREIMAGE_def]) >> Rewr' \\
+        ‘positive p’ by PROVE_TAC [MEASURE_SPACE_POSITIVE] \\
+         fs [positive_def]) \\
+     rw [] >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     HO_MATCH_MP_TAC integral_cmul >> art [] \\
+     rw [integrable_def, Abbr ‘m1’, IN_MEASURABLE_BOREL_BOREL_I] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Know ‘pos_fn_integral (space Borel,subsets Borel,distr p X) (fn_plus (\x. x)) =
+             pos_fn_integral p (fn_plus (\x. x) o X)’
+       >- (MATCH_MP_TAC pos_fn_integral_distr \\
+           rw [FN_PLUS_POS, SIGMA_ALGEBRA_BOREL] \\
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS \\
+           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I]) >> Rewr' \\
+      ‘(fn_plus (\x. x) o X) = fn_plus X’ by rw [fn_plus_def, o_DEF] >> POP_ORW \\
+       fs [integrable_def],
+       (* goal 2 (of 2) *)
+       Know ‘pos_fn_integral (space Borel,subsets Borel,distr p X) (fn_minus (\x. x)) =
+             pos_fn_integral p (fn_minus (\x. x) o X)’
+       >- (MATCH_MP_TAC pos_fn_integral_distr \\
+           rw [FN_MINUS_POS, SIGMA_ALGEBRA_BOREL] \\
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS \\
+           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I]) >> Rewr' \\
+      ‘(fn_minus (\x. x) o X) = fn_minus X’ by rw [fn_minus_def, o_DEF] >> POP_ORW \\
+       fs [integrable_def] ])
+ >> Rewr'
+ >> Know ‘integrable m1 (\x. x)’
+ >- (rw [Abbr ‘m1’] \\
+     MP_TAC (Q.SPECL [‘p’, ‘Borel’, ‘X’, ‘\x. x’]
+                     (INST_TYPE [“:'b” |-> “:extreal”] integral_distr)) \\
+     rw [IN_MEASURABLE_BOREL_BOREL_I, SIGMA_ALGEBRA_BOREL, o_DEF, ETA_AX])
+ >> DISCH_TAC
+ >> Know ‘integrable m2 (\x. x)’
+ >- (rw [Abbr ‘m2’] \\
+     MP_TAC (Q.SPECL [‘p’, ‘Borel’, ‘Y’, ‘\x. x’]
+                     (INST_TYPE [“:'b” |-> “:extreal”] integral_distr)) \\
+     rw [IN_MEASURABLE_BOREL_BOREL_I, SIGMA_ALGEBRA_BOREL, o_DEF, ETA_AX])
+ >> DISCH_TAC
+ >> Know ‘integral m2 (\y. y * integral m1 (\x. x)) =
+          integral m1 (\x. x) * integral m2 (\y. y)’
+ >- (GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [mul_comm] \\
+    ‘?r. integral m1 (\x. x) = Normal r’ by PROVE_TAC [integrable_normal_integral] \\
+     POP_ORW \\
+     HO_MATCH_MP_TAC integral_cmul >> art [])
+ >> Rewr'
+ >> Know ‘(\x. x) IN measurable Borel Borel’
+ >- (rw [IN_MEASURABLE, SIGMA_ALGEBRA_BOREL, IN_FUNSET, PREIMAGE_def] \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> rw [SIGMA_ALGEBRA_BOREL] \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+(* applying integral_distr, twice *)
+ >> Know ‘integral p X = integral m1 (\x. x)’
+ >- (MP_TAC (ISPECL [“p :'a m_space”, “Borel”, “X :'a -> extreal”,
+                     “(\x. x) :extreal -> extreal”] integral_distr) \\
+     RW_TAC std_ss [Abbr ‘m1’, SIGMA_ALGEBRA_BOREL, o_DEF, ETA_AX])
+ >> Rewr'
+ >> Know ‘integral p Y = integral m2 (\y. y)’
+ >- (MP_TAC (ISPECL [“p :'a m_space”, “Borel”, “Y :'a -> extreal”,
+                     “(\x. x) :extreal -> extreal”] integral_distr) \\
+     RW_TAC std_ss [Abbr ‘m2’, SIGMA_ALGEBRA_BOREL, o_DEF, ETA_AX])
+ >> Rewr
+QED
+
+(* An easy corollary of Theorem 3.3.3 *)
+Theorem indep_vars_imp_uncorrelated :
+    !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
+            finite_second_moments p X /\ finite_second_moments p Y /\
+            indep_rv p X Y Borel Borel ==> uncorrelated p X Y
+Proof
+    RW_TAC std_ss [uncorrelated_def]
+ >> MATCH_MP_TAC indep_vars_expectation >> art []
+ >> CONJ_TAC (* 2 subgoals, same tactics *)
+ >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
 QED
 
 (* ========================================================================= *)
