@@ -17,6 +17,9 @@ sig
   val import_hh : 
     unit -> (string -> mlThmData.thmdata -> goal -> tactic) option   
   val hh_ontop_flag : bool ref
+  
+  val collect_ex : string -> ((term * real list) list) list
+  val uniq_ex : ((term * real list) list) list -> ((term * real list) list) list
 
   datatype GoalDisj = GDisj of goal * GoalConj list
   and GoalConj = GConj of GoalDisj list
