@@ -818,13 +818,16 @@ fun tnnex_to_basicex ex =
     map f ex
   end
 
-fun unify_ex ex =
+fun uniq_ex ex =
   let 
     val ex1 = tnnex_to_basicex ex
+    val _ = print_endline ("Ex1: " ^ its (length ex1))
     val ex2 = dlist (dregroup Term.compare ex1)
     fun f (t,l) = if exists (fn x => x > 0.5) l then (t,1.0) else (t,0.0)
     val ex3 = map f ex2
+    val _ = print_endline ("Ex3: " ^ its (length ex3))
     val ex4 = filter (fn (t,_) => term_size t < 40) ex3
+    val _ = print_endline ("Ex4: " ^ its (length ex3))
   in
     basicex_to_tnnex ex4
   end
@@ -837,7 +840,7 @@ fun rlval_loop expname thyl (gen,maxgen) =
     fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
     fun valdir x = gendir x ^ "/val"    
     val dirl = List.tabulate (gen,valdir)
-    val exl = unify_ex (List.concat (map collect_ex dirl))
+    val exl = uniq_ex (List.concat (map collect_ex dirl))
     val tnnfile = gendir (gen - 1) ^ "/tnn/val"
     val _ = if exists_file tnnfile then () (* for restarts *) else 
       write_tnn tnnfile (train_fixed 1.0 exl)
@@ -865,7 +868,7 @@ ttt_record_savestate (); (* includes clean savestate *)
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-rlval "rl-uniq" thyl 1;
+rlval "rl-2layer" thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)
 *)
@@ -883,13 +886,9 @@ val valdir = expdir ^ "/val";
 val tnnfile = expdir ^ "/tnn/val";
 
 open mlTreeNeuralNetwork aiLib;
-fun collect_ex dir = 
-  let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
-    List.concat (map read_tnnex filel)
-  end;
+
 
 val exl = collect_ex valdir;
-val exl = filter (not o null) (collect_ex valdir); length exl;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
