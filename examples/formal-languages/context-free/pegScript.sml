@@ -63,6 +63,12 @@ Proof
   Cases_on ‘r’ >> simp[] >> metis_tac[]
 QED
 
+Theorem resultmap_I[simp]:
+  resultmap I r = r
+Proof
+  Cases_on ‘r’ >> simp[]
+QED
+
 Definition MAXerr_def:
   MAXerr (fl1, fe1) (fl2, fe2) =
   if locsle fl1 fl2 then (fl2, fe2) else (fl1,fe1)
