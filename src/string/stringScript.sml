@@ -135,15 +135,10 @@ val char_le_def = Define `char_le a b <=> ORD a <= ORD b`;
 val char_gt_def = Define `char_gt a b <=> ORD a > ORD b`;
 val char_ge_def = Define `char_ge a b <=> ORD a >= ORD b`;
 
-val _ = overload_on ("<", Term`char_lt`);
-val _ = overload_on (">", Term`char_gt`);
-val _ = overload_on ("<=", Term`char_le`);
-val _ = overload_on (">=", Term`char_ge`);
-
-val _ = send_to_back_overload "<" {Name = "char_lt", Thy = "string"};
-val _ = send_to_back_overload ">" {Name = "char_gt", Thy = "string"};
-val _ = send_to_back_overload "<=" {Name = "char_le", Thy = "string"};
-val _ = send_to_back_overload ">=" {Name = "char_ge", Thy = "string"};
+Overload "<"[inferior] = “char_lt”
+Overload ">"[inferior] = “char_gt”
+Overload "<="[inferior] = “char_le”
+Overload ">="[inferior] = “char_ge”
 
 (*---------------------------------------------------------------------------
     In our development, CHR is not a constructor. Is that really
@@ -215,9 +210,9 @@ QED
 
 val _ = type_abbrev_pp ("string", ``:char list``)
 
-val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
-val _ = overload_on ("EMPTYSTRING", ``[] : string``)
-val _ = overload_on ("CONCAT", ``FLAT : string list -> string``);
+Overload STRING[inferior] = “CONS : char -> string -> string”
+Overload EMPTYSTRING[inferior] = “[] : string”
+Overload CONCAT[inferior] = “FLAT : string list -> string”
 
 val _ = new_definition(GrammarSpecials.string_elim_term,
                        “^(mk_var(GrammarSpecials.string_elim_term,
@@ -390,7 +385,7 @@ val STRING_ACYCLIC = Q.store_thm
       Size of a string.
  ---------------------------------------------------------------------------*)
 
-val _ = overload_on("STRLEN", ``LENGTH : string -> num``)
+Overload STRLEN[inferior] = “LENGTH : string -> num”
 val STRLEN_DEF = listTheory.LENGTH
 
 val EXTRACT_def = Define`
@@ -487,7 +482,7 @@ val STRLEN_DEF = save_thm("STRLEN_DEF",  STRLEN_THM)
                       String concatenation
  ---------------------------------------------------------------------------*)
 
-val _ = overload_on ("STRCAT", ``list$APPEND : string -> string -> string``)
+Overload STRCAT[inferior] = “list$APPEND : string -> string -> string”
 
 
 val STRCAT_def = save_thm("STRCAT_def", stringinst APPEND)
@@ -570,15 +565,10 @@ val string_le_def = Define `string_le s1 s2 <=> (s1 = s2) \/ string_lt s1 s2`;
 val string_gt_def = Define `string_gt s1 s2 <=> string_lt s2 s1`;
 val string_ge_def = Define `string_ge s1 s2 <=> string_le s2 s1`;
 
-val _ = overload_on ("<", Term`string_lt`);
-val _ = overload_on (">", Term`string_gt`);
-val _ = overload_on ("<=", Term`string_le`);
-val _ = overload_on (">=", Term`string_ge`);
-
-val _ = send_to_back_overload "<" {Name = "string_lt", Thy = "string"};
-val _ = send_to_back_overload ">" {Name = "string_gt", Thy = "string"};
-val _ = send_to_back_overload "<=" {Name = "string_le", Thy = "string"};
-val _ = send_to_back_overload ">=" {Name = "string_ge", Thy = "string"};
+Overload "<"[inferior]  = “string_lt”
+Overload ">"[inferior]  = “string_gt”
+Overload "<="[inferior] = “string_le”
+Overload ">="[inferior] = “string_ge”
 
 val string_lt_nonrefl = store_thm("string_lt_nonrefl",
   ``!s:string. ~(s < s)``,
