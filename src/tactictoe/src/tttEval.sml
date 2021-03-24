@@ -782,8 +782,33 @@ fun rl_schedule nepoch =
      learning_rate = 0.08, batch_size = 64, nepoch = nepoch}
    ];
 
-fun train_fixed pct exl =
+
+fun tnnex_to_basicex ex = 
+  let fun f ex = case ex of
+    [(t,[r])] => (t,r)
+  | _ => raise ERR "not a basic example" ""
+  in 
+    map f ex
+  end
+
+fun uniq_ex ex =
+  let 
+    val ex1 = tnnex_to_basicex ex
+    val _ = print_endline ("Examples: " ^ its (length ex1))
+    val ex2 = dlist (dregroup Term.compare ex1)
+    fun f (t,l) = if exists (fn x => x > 0.5) l then (t,1.0) else (t,0.0)
+    val ex3 = map f ex2
+    val _ = print_endline ("Unique: " ^ its (length ex3))
+    val ex4 = filter (fn (t,_) => term_size t < 80) ex3
+    val _ = print_endline ("Lessthan80: " ^ its (length ex4))
+  in
+    basicex_to_tnnex ex4
+  end
+
+
+fun train_fixed pct exl' =
   let
+    val exl = uniq_ex exl'
     val (train,test) = part_pct pct (shuffle exl)
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
@@ -796,7 +821,6 @@ fun train_fixed pct exl =
     val accur = tnn_accuracy tnn train 
   in
     print_endline ("tnn accuracy:" ^ rts accur);
-    writel (tactictoe_dir ^ "/accuracy") [rts accur];
     tnn
   end
 
@@ -810,27 +834,7 @@ fun collect_ex dir =
     List.concat (map read_tnnex filel)
   end
 
-fun tnnex_to_basicex ex = 
-  let fun f ex = case ex of
-    [(t,[r])] => (t,r)
-  | _ => raise ERR "not a basic example" ""
-  in 
-    map f ex
-  end
 
-fun uniq_ex ex =
-  let 
-    val ex1 = tnnex_to_basicex ex
-    val _ = print_endline ("Ex1: " ^ its (length ex1))
-    val ex2 = dlist (dregroup Term.compare ex1)
-    fun f (t,l) = if exists (fn x => x > 0.5) l then (t,1.0) else (t,0.0)
-    val ex3 = map f ex2
-    val _ = print_endline ("Ex3: " ^ its (length ex3))
-    val ex4 = filter (fn (t,_) => term_size t < 40) ex3
-    val _ = print_endline ("Ex4: " ^ its (length ex3))
-  in
-    basicex_to_tnnex ex4
-  end
 
 val ttt_eval_string = "tttEval.ttt_eval"
 
@@ -840,10 +844,11 @@ fun rlval_loop expname thyl (gen,maxgen) =
     fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
     fun valdir x = gendir x ^ "/val"    
     val dirl = List.tabulate (gen,valdir)
-    val exl = uniq_ex (List.concat (map collect_ex dirl))
+    val exl = List.concat (map collect_ex dirl)
     val tnnfile = gendir (gen - 1) ^ "/tnn/val"
-    val _ = if exists_file tnnfile then () (* for restarts *) else 
-      write_tnn tnnfile (train_fixed 1.0 exl)
+    val hidfile = gendir (gen - 1) ^ "/train_log"
+    val tnn = hide_in_file hidfile (train_fixed 1.0) exl
+    val _ = write_tnn tnnfile tnn
   in
     print_endline ("Generation " ^ its gen);
     run_evalscript_thyl ttt_eval_string (expname ^ "-gen" ^ its gen) (true,30) 
@@ -868,7 +873,7 @@ ttt_record_savestate (); (* includes clean savestate *)
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-rlval "rl-2layer" thyl 1;
+rlval "rl-core-final" thyl 8;
 
 (* rlval_loop expname thyl (1,maxgen); *)
 *)
@@ -879,25 +884,26 @@ rlval "rl-2layer" thyl 1;
 
 (*
 load "tttEval"; open tttEval; 
-val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val expname = "210121-2"
-val expdir = ttt_eval_dir ^ "/" ^ expname;
+val expname = "rl-2layer-gen0";
+val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val valdir = expdir ^ "/val";
 val tnnfile = expdir ^ "/tnn/val";
 
 open mlTreeNeuralNetwork aiLib;
 
-
-val exl = collect_ex valdir;
+val exl1 = collect_ex valdir;
+val exl2 = uniq_ex exl1;
 
 fun operl_of_tnnex exl =
    List.concat (map operl_of_term (map fst (List.concat exl)));
 val operl = operl_of_tnnex exl;
 val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
 
+val (train,test) = part_pct 1.0 (shuffle exl)
+
 fun train_fixed schedule exl =
   let
-    val (train,test) = part_pct 1.0 (shuffle exl)
+    
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
@@ -921,20 +927,19 @@ val schedule =
      learning_rate = 0.08, batch_size = 48, nepoch = 20},
      {ncore = 4, verbose = true,
      learning_rate = 0.08, batch_size = 64, nepoch = 20}];
-val tnn = train_fixed schedule exl;
+val tnn = train_fixed schedule exl2;
 val _ = write_tnn tnnfile tnn;
+tnn_accuracy tnn train;
+tnn_accuracy tnn test;
 
 load "tttEval"; open tttEval;
-val ttt_eval_dir = HOLDIR ^ "/src/tactictoe/eval";
-val expname = "210121-2"
-val expdir = ttt_eval_dir ^ "/" ^ expname;
-val valdir = expdir ^ "/val";
+val expname = "rl-2layer-gen0"
+val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val tnnfile = expdir ^ "/tnn/val";
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-tttSearch.ttt_spol_flag := false;
-run_evalscript_thyl smlfun "210121-2-13" (true,30) 
+run_evalscript_thyl smlfun "rl-2layer-gen1-alt" (true,30) 
   (SOME tnnfile,NONE,NONE) thyl;
 
 *)
