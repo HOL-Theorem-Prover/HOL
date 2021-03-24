@@ -69,13 +69,9 @@ fun hide_in_file file f x =
     )
   )
 
-val sml_hide_dir = HOLDIR ^ "/src/AI/sml_inspection/hide"
+val hide_file = HOLDIR ^ "/src/AI/sml_inspection/hide"
 
-fun hide_out f x =
-  (
-  mkDir_err sml_hide_dir;
-  hide_in_file (sml_hide_dir ^ "/" ^ current_theory ()) f x
-  )
+fun hide_out f x = hide_in_file hide_file f x
 
 val hide_flag = ref true
 
