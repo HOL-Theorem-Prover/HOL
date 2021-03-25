@@ -240,7 +240,7 @@ fun export_valex file tree =
                if #gstatus x = GoalProved then 1.0 else 0.0), #gvis x)
     fun g x = vector_to_list (Vector.map f (#goalv x))
     val exl1 = List.concat (map g nodel)
-    val exl2 = filter (fn (t,_) => term_size t < 100) exl1
+    val exl2 = filter (fn ((t,_),_) => term_size t < 100) exl1
     val (posl,negl) = partition (fn x => snd (fst x) > 0.5) exl2
     val negl2 = first_n 600 (dict_sort compare_rmax negl)
   in
