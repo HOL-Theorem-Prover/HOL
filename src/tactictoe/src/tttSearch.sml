@@ -223,8 +223,8 @@ fun reorder_arg anno g stac argl =
 
 fun puct gvis ((sum,vis),polv) =
   let
-    val exploitation = sum / (vis + 1.0)
-    val exploration  = (polv * Math.sqrt gvis) / (vis + 1.0)
+    val exploitation = sum / vis
+    val exploration  = (polv * Math.sqrt gvis) / vis
   in
     exploitation + (!ttt_explo_coeff) * exploration
   end
@@ -353,7 +353,7 @@ fun select_node tree pid =
    ------------------------------------------------------------------------- *)
 
 fun arg_create atyl arg =
-  {token = arg, atyl = atyl, svis = 0.0, ssum = 0.0, spol = 0.0, 
+  {token = arg, atyl = atyl, svis = 1.0, ssum = 0.0, spol = 0.0, 
    sstatus = StacFresh}
 
 fun expand_argtree searchobj (goal,stac) (argtree,anl) =
@@ -451,7 +451,7 @@ fun apply_stac (tree,searchobj) argtree (pid,(gn,sn,anl)) =
 
 fun argtree_create (stac,atyl) =
   let val stacrec = {token = Stac stac, atyl = atyl,
-    svis = 0.0, ssum = 0.0, spol = 0.0, sstatus = StacFresh}
+    svis = 1.0, ssum = 0.0, spol = 0.0, sstatus = StacFresh}
   in
     dnew (list_compare Int.compare) [([],stacrec)]
   end
@@ -717,7 +717,7 @@ fun argtree_add_tokenl (tree,id) (tokenl,atyl) =
   if null tokenl then tree else
   let val node =
     {token = hd tokenl, atyl = atyl, 
-     svis = 0.0, ssum = 0.0, spol = 0.0, sstatus = StacFresh}
+     svis = 1.0, ssum = 0.0, spol = 0.0, sstatus = StacFresh}
   in
     argtree_add_tokenl (dadd (0 :: id) node tree, 0 :: id)
     (tl tokenl, tl atyl)

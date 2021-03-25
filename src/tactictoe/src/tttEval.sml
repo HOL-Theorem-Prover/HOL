@@ -232,9 +232,6 @@ compare_stats ["august9"] "august10";
 
 fun is_proved tree = #nstatus (dfind [] tree) = NodeProved
 
-val neg_limit_flag = ref true
-val neg_limit_n = ref 100
-
 fun export_valex file tree =
   if not (is_proved tree) then () else 
   let
@@ -242,11 +239,10 @@ fun export_valex file tree =
     fun f x = ((nntm_of_stateval (#goal x), 
                if #gstatus x = GoalProved then 1.0 else 0.0), #gvis x)
     fun g x = vector_to_list (Vector.map f (#goalv x))
-    val exl = List.concat (map g nodel)
-    val (posl,negl) = partition (fn x => snd (fst x) > 0.5) exl
-    val negl2 = if !neg_limit_flag 
-      then first_n (!neg_limit_n) (dict_sort compare_rmax negl)
-      else negl
+    val exl1 = List.concat (map g nodel)
+    val exl2 = filter (fn (t,_) => term_size t < 100) exl1
+    val (posl,negl) = partition (fn x => snd (fst x) > 0.5) exl2
+    val negl2 = first_n 600 (dict_sort compare_rmax negl)
   in
     write_tnnex file (basicex_to_tnnex (map fst (posl @ negl2)))
   end
@@ -799,12 +795,9 @@ fun uniq_ex ex =
     fun f (t,l) = if exists (fn x => x > 0.5) l then (t,1.0) else (t,0.0)
     val ex3 = map f ex2
     val _ = print_endline ("Unique: " ^ its (length ex3))
-    val ex4 = filter (fn (t,_) => term_size t < 80) ex3
-    val _ = print_endline ("Lessthan80: " ^ its (length ex4))
   in
-    basicex_to_tnnex ex4
+    basicex_to_tnnex ex3
   end
-
 
 fun train_fixed pct exl' =
   let
@@ -814,7 +807,7 @@ fun train_fixed pct exl' =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
     val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
-    val operdiml = map (fn x => (fst x, dim_std_arity (2,16) x)) operset
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operset
     val randtnn = random_tnn operdiml
     val nepoch = 20
     val tnn = train_tnn (rl_schedule nepoch) randtnn (train,test)
@@ -847,6 +840,7 @@ fun rlval_loop expname thyl (gen,maxgen) =
     val exl = List.concat (map collect_ex dirl)
     val tnnfile = gendir (gen - 1) ^ "/tnn/val"
     val hidfile = gendir (gen - 1) ^ "/train_log"
+    val _ = erase_file hidfile
     val tnn = hide_in_file hidfile (train_fixed 1.0) exl
     val _ = write_tnn tnnfile tnn
   in
@@ -873,7 +867,7 @@ ttt_record_savestate (); (* includes clean savestate *)
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-rlval "rl-core-final" thyl 8;
+rlval "rl-core" thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)
 *)
@@ -893,20 +887,13 @@ open mlTreeNeuralNetwork aiLib;
 
 val exl1 = collect_ex valdir;
 val exl2 = uniq_ex exl1;
+val (train,test) = part_pct 0.9 (shuffle exl2);
 
-fun operl_of_tnnex exl =
-   List.concat (map operl_of_term (map fst (List.concat exl)));
-val operl = operl_of_tnnex exl;
-val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
-
-val (train,test) = part_pct 1.0 (shuffle exl)
-
-fun train_fixed schedule exl =
+fun train_fixed schedule =
   let
-    
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
-    val operl = operl_of_tnnex exl
+    val operl = operl_of_tnnex exl2
     val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
     val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operset
     val randtnn = random_tnn operdiml
@@ -927,10 +914,11 @@ val schedule =
      learning_rate = 0.08, batch_size = 48, nepoch = 20},
      {ncore = 4, verbose = true,
      learning_rate = 0.08, batch_size = 64, nepoch = 20}];
-val tnn = train_fixed schedule exl2;
-val _ = write_tnn tnnfile tnn;
+val tnn = train_fixed schedule;
 tnn_accuracy tnn train;
 tnn_accuracy tnn test;
+
+val _ = write_tnn tnnfile tnn;
 
 load "tttEval"; open tttEval;
 val expname = "rl-2layer-gen0"

@@ -69,7 +69,7 @@ fun hide_in_file file f x =
     )
   )
 
-val hide_file = HOLDIR ^ "/src/AI/sml_inspection/hide"
+val hide_file = HOLDIR ^ "/src/AI/sml_inspection/hide_file"
 
 fun hide_out f x = hide_in_file hide_file f x
 
