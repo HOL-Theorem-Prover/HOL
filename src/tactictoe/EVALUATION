@@ -1,0 +1,42 @@
+This file describes how to use the evaluation framework and how 
+to replicate the experiments accompanying the paper
+"Learned Provability Likelihood for Tactical Search"
+
+1) Build HOL (bin/build) from the commit "todo".
+
+2) Record (or download) the supervised learning data as described in the
+   README file in the same directory.
+
+3) Create the savestates by running the following commands in an interactive   
+   session (takes an hour and requires 33 GB):
+
+  load "tttUnfold"; open tttUnfold;
+  aiLib.load_sigobj ();
+  tttSetup.record_flag := false;
+  tttSetup.record_savestate_flag := true;
+  ttt_record_savestate (); (* clean the savestate directory *)
+
+4) Restart hol (recommended)
+
+5) Setup the parameters
+
+load "tttEval"; open tttEval;
+(* timeout *)
+tttSetup.ttt_search_time := 30.0;
+(* theories to be evaluated *)
+aiLib.load_sigob (); (* for the full standard library *
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+(* number of cores used *)
+val ncore = 30;
+(* directory src/tactictoe/eval/foo will contain the results *)
+val expname = "foo";
+
+
+5) Then the following command will evaluate TacticToe, train the TNN, and
+   evaluate TacticToe + TNN:
+
+rlval ncore expname thyl 1;
+
+6) To only evaluate TacticToe, run:
+
+run_evalscript_thyl "tttEval.ttt_eval" expname (true,ncore) (NONE,NONE,NONE) thyl;

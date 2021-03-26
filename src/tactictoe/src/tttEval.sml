@@ -866,7 +866,9 @@ tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_policy_coeff := 0.9999;
 tttSetup.ttt_explo_coeff := 1.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-rlval "rl-unipol" thyl 1;
+val ncore = 30;
+val expname = "foo"
+rlval ncore expname thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)
 *)
