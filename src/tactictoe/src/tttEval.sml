@@ -680,9 +680,8 @@ ttt_record_savestate (); (* also cleans the savestate directory *)
 load "tttEval"; open tttEval;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-tttSetup.ttt_search_time := 30.0;ttt
-tttSearch.nocut_flag := true;
-run_evalscript_thyl smlfun "nocut" (true,30) 
+tttSetup.ttt_search_time := 30.0;
+run_evalscript_thyl smlfun "uniformpol" (true,30) 
   (NONE,NONE,NONE) thyl;
 *)
 
@@ -705,7 +704,6 @@ val thyl = ["arithmetic", "real", "complex", "measure", "probability", "list", "
 load "tttEval"; open tttEval;
 val smlfun = "tttEval.ttt_eval";
 tttSetup.ttt_search_time := 60.0;
-tttSetup.ttt_policy_coeff := 0.5;
 oldeval_flag := true;
 
 fun f x = 
@@ -720,8 +718,6 @@ app f thyl;
    ------------------------------------------------------------------------ *)
 
 (*
-grep -rL "hh: not available" . | xargs grep -L "tactictoe: proven" > ../../hard_avail
-
 load "tttEval"; open tttEval;
 
 val smlfun = "tttEval.ttt_eval";
@@ -831,7 +827,7 @@ fun collect_ex dir =
 
 val ttt_eval_string = "tttEval.ttt_eval"
 
-fun rlval_loop expname thyl (gen,maxgen) =
+fun rlval_loop ncore expname thyl (gen,maxgen) =
   if gen > maxgen then () else
   let 
     fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
@@ -845,29 +841,32 @@ fun rlval_loop expname thyl (gen,maxgen) =
     val _ = write_tnn tnnfile tnn
   in
     print_endline ("Generation " ^ its gen);
-    run_evalscript_thyl ttt_eval_string (expname ^ "-gen" ^ its gen) (true,30) 
+    run_evalscript_thyl ttt_eval_string (expname ^ "-gen" ^ its gen) (true,ncore) 
     (SOME tnnfile,NONE,NONE) thyl;
-    rlval_loop expname thyl (gen+1,maxgen)
+    rlval_loop ncore expname thyl (gen+1,maxgen)
   end
 
-fun rlval expname thyl maxgen =
+fun rlval ncore expname thyl maxgen =
   (
   print_endline ("Generation 0"); 
-  run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,30) 
+  run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,ncore) 
     (NONE,NONE,NONE) thyl;
-  rlval_loop expname thyl (1,maxgen)
+  rlval_loop ncore expname thyl (1,maxgen)
   )
 
 (*
 load "tttUnfold"; open tttUnfold;
+(* aiLib.load_sigobj (); *)
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
+tttSetup.ttt_policy_coeff := 0.9999;
+tttSetup.ttt_explo_coeff := 1.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-rlval "rl-core1" thyl 9;
+rlval "rl-unipol" thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)
 *)
@@ -877,17 +876,14 @@ rlval "rl-core1" thyl 9;
    ------------------------------------------------------------------------ *)
 
 (*
-load "tttEval"; open tttEval; 
-val expname = "rl-core1-gen0";
+load "tttEval"; open tttEval mlTreeNeuralNetwork aiLib;; 
+val expname = "rl-full-gen0";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val valdir = expdir ^ "/val";
-val tnnfile = expdir ^ "/tnn/val";
-
-open mlTreeNeuralNetwork aiLib;
+val tnnfile = expdir ^ "/tnn/val_alt";
 
 val exl1 = collect_ex valdir;
 val exl2 = uniq_ex exl1;
-
 val oper_compare = (cpl_compare Term.compare Int.compare);
 val operl = List.concat (map operl_of_term (map fst (List.concat exl2)));
 val operset = mk_fast_set oper_compare operl;
@@ -918,14 +914,20 @@ tnn_accuracy tnn train;
 tnn_accuracy tnn test;
 
 val _ = write_tnn tnnfile tnn;
+
 load "tttEval"; open tttEval;
-val expname = "rl-2layer-gen0"
-val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
-val tnnfile = expdir ^ "/tnn/val";
+val tnnfile = tttSetup.ttt_eval_dir ^ "/rl-core1-gen0/tnn/val";
 tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val smlfun = "tttEval.ttt_eval";
-run_evalscript_thyl smlfun "rl-2layer-gen1-alt" (true,30) 
+tttSetup.ttt_policy_coeff := 0.7;
+tttSetup.ttt_explo_coeff := 2.0;
+run_evalscript_thyl smlfun "rl-core1-pol7" (true,30) 
+  (SOME tnnfile,NONE,NONE) thyl;
+
+tttSetup.ttt_policy_coeff := 0.5;
+tttSetup.ttt_explo_coeff := 1.0;
+run_evalscript_thyl smlfun "rl-core1-explo1" (true,30) 
   (SOME tnnfile,NONE,NONE) thyl;
 
 *)
