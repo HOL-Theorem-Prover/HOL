@@ -45,7 +45,7 @@ sig
   val compare_stats : string list -> string -> unit
 
   (* reinforcement learning for the value *)
-  val rlval : string -> string list -> int -> unit
-  val rlval_loop: string -> string list -> int * int -> unit
+  val rlval : int -> string -> string list -> int -> unit
+  val rlval_loop: int -> string -> string list -> int * int -> unit
 
 end
