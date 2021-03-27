@@ -2,7 +2,7 @@ This file describes how to use the evaluation framework and how
 to replicate the experiments accompanying the paper
 "Learned Provability Likelihood for Tactical Search"
 
-1) Build HOL (bin/build) from the commit "todo".
+1) Build HOL (bin/build) from the commit d7d3aaa0cd236b33ce31f1d5b904eb97fc5ebb77.
 
 2) Record (or download) the supervised learning data as described in the
    README file in the same directory.
