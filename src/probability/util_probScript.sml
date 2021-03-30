@@ -1378,6 +1378,19 @@ Proof
   SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
 QED
 
+Theorem FINITE_TWO :
+    !s t. FINITE {s; t}
+Proof
+    PROVE_TAC [FINITE_INSERT, FINITE_SING]
+QED
+
+Theorem SUBSET_TWO :
+    !N s t. N SUBSET {s; t} /\ N <> {} ==> N = {s} \/ N = {t} \/ N = {s; t}
+Proof
+    rpt GEN_TAC
+ >> SET_TAC []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Some lemmas needed by CARATHEODORY in measureTheory (author: Chun Tian)  *)
 (* ------------------------------------------------------------------------- *)
