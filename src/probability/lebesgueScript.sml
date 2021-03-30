@@ -2176,6 +2176,20 @@ Proof
  >> METIS_TAC [pos_fn_integral_pos_simple_fn, pos_simple_fn_integral_indicator]
 QED
 
+Theorem pos_fn_integral_const :
+    !m c. measure_space m /\ measure m (m_space m) < PosInf /\ 0 <= c ==>
+         (pos_fn_integral m (\x. Normal c) = Normal c * measure m (m_space m))
+Proof
+    rpt STRIP_TAC
+ >> Know ‘pos_fn_integral m (\x. Normal c)  =
+          pos_fn_integral m (\x. (\x. Normal c) x * indicator_fn (m_space m) x)’
+ >- (MATCH_MP_TAC pos_fn_integral_mspace \\
+     rw [extreal_of_num_def, extreal_le_eq])
+ >> BETA_TAC >> Rewr'
+ >> MATCH_MP_TAC pos_fn_integral_cmul_indicator
+ >> simp [MEASURE_SPACE_MSPACE_MEASURABLE]
+QED
+
 Theorem pos_fn_integral_sum_cmul_indicator :
     !m s a x. measure_space m /\ FINITE s /\ (!i:num. i IN s ==> 0 <= x i) /\
              (!i:num. i IN s ==> a i IN measurable_sets m) ==>
@@ -5068,6 +5082,18 @@ val integrable_eq = store_thm (* new *)
           MATCH_MP_TAC pos_fn_integral_mspace >> art [] \\
           REWRITE_TAC [FN_MINUS_POS]) >> Rewr \\
       ASM_REWRITE_TAC [] ]);
+
+Theorem integrable_cong :
+    !m f g. measure_space m /\ (!x. x IN m_space m ==> (f x = g x)) ==>
+           (integrable m f <=> integrable m g)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC integrable_eq >> Q.EXISTS_TAC ‘f’ >> art [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC integrable_eq >> Q.EXISTS_TAC ‘g’ >> rw [] ]
+QED
 
 (* added ‘x IN m_space m’ *)
 Theorem integrable_pos :

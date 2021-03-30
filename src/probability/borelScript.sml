@@ -2738,6 +2738,21 @@ Proof
  >> ASM_SET_TAC []
 QED
 
+Theorem IN_MEASURABLE_BOREL_CONG :
+    !m f g. (!x. x IN m_space m ==> (f x = g x)) ==>
+            (f IN measurable (m_space m,measurable_sets m) Borel <=>
+             g IN measurable (m_space m,measurable_sets m) Borel)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
+      Q.EXISTS_TAC ‘f’ >> rw [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
+      Q.EXISTS_TAC ‘g’ >> rw [] ]
+QED
+
 (*****************************************************)
 
 val BOREL_MEASURABLE_SETS_RO_r = prove (
