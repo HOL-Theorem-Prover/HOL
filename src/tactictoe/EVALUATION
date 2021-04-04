@@ -4,7 +4,7 @@ to replicate the experiments accompanying the paper
 
 0) Install PolyML. (see HOL/INSTALL)
 
-1) Switch to this commit (you are in the right commit)
+1) Switch to the commit 31a54d9b8380cac406727a54053f97daf89bdfa6
    Build HOL (bin/build).
 
 2) Record (or download) the supervised learning data as described in the
