@@ -105,9 +105,10 @@ val distribution_def = Define (* was: pmf in [10] *)
 val distribution_function_def = Define
    `distribution_function p X = (\x. prob p ({w | X w <= x} INTER p_space p))`;
 
+(* NOTE (fixes after k14): changed ‘i IN J’ to ‘j IN J’ *)
 Definition identical_distribution_def :
     identical_distribution p X E (J :'index set) =
-      !i j s. s IN subsets E /\ i IN J /\ i IN J ==>
+      !i j s. s IN subsets E /\ i IN J /\ j IN J ==>
              (distribution p (X i) s = distribution p (X j) s)
 End
 
@@ -8169,14 +8170,86 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL]
 QED
 
-(* r.v.'s having indentical distributions have the same integrability *)
+(* alternative definition of identical distribution, see [3, p.62, Definition 5.4.1] *)
+Theorem identical_distribution_alt :
+    !p X (J :'index set). prob_space p /\
+         (!n. n IN J ==> random_variable (X n) p Borel) ==>
+         (identical_distribution p X Borel J <=>
+          (!f. f IN measurable Borel Borel ==>
+               ?c. !n. n IN J ==> expectation p (f o (X n)) = c))
+Proof
+    RW_TAC std_ss [identical_distribution_def]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (Cases_on ‘J = {}’ >- (Q.EXISTS_TAC ‘ARB’ >> rw []) \\
+     Q.ABBREV_TAC ‘j = CHOICE J’ \\
+    ‘j IN J’ by METIS_TAC [CHOICE_DEF] \\
+     Q.EXISTS_TAC ‘expectation p (f o X j)’ \\
+     Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+     Know ‘!n. n IN J ==>
+               expectation p (f o X n) =
+               integral (space Borel,subsets Borel,distribution p (X n)) f’
+     >- (METIS_TAC [expectation_distribution]) >> rw [] \\
+     MATCH_MP_TAC integral_cong_measure' >> simp [] \\
+     Suff ‘!n. n IN J ==> measure_space (space Borel,subsets Borel,distribution p (X n))’
+     >- rw [] \\
+     Q.X_GEN_TAC ‘n’ >> STRIP_TAC \\
+     FULL_SIMP_TAC std_ss [distribution_distr, prob_space_def, random_variable_def,
+                           p_space_def, events_def] \\
+     MATCH_MP_TAC measure_space_distr \\
+     rw [SIGMA_ALGEBRA_BOREL])
+ >> Know ‘!n f. n IN J /\ f IN Borel_measurable Borel ==>
+                expectation p (f o X n) =
+                integral (space Borel,subsets Borel,distribution p (X n)) f’
+ >- (rpt STRIP_TAC \\
+     METIS_TAC [expectation_distribution])
+ >> DISCH_TAC
+ >> Know ‘indicator_fn s IN measurable Borel Borel’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR \\
+     Q.EXISTS_TAC ‘s’ >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> Know ‘!n. n IN J ==>
+              expectation p ((indicator_fn s) o (X n)) =
+              expectation p ((indicator_fn s) o (X j))’
+ >- (rpt STRIP_TAC >> METIS_TAC [])
+ >> simp []
+ >> Know ‘!n. n IN J ==>
+              integral (space Borel,subsets Borel,distribution p (X n)) (indicator_fn s) =
+              distribution p (X n) s’
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC (REWRITE_RULE [measure_def, measurable_sets_def]
+                    (Q.SPECL [‘(space Borel,subsets Borel,
+                                distribution (p :'a m_space) (X (n :'index)))’, ‘s’]
+                      (INST_TYPE [“:'a” |-> “:extreal”] integral_indicator))) \\
+     simp [distribution_distr] \\
+     MATCH_MP_TAC measure_space_distr \\
+     fs [prob_space_def, random_variable_def, p_space_def, events_def, SIGMA_ALGEBRA_BOREL])
+ >> rw []
+QED
+
+Theorem identical_distribution_alt' :
+    !p (X :num -> 'a -> extreal).
+          prob_space p /\ (!n. random_variable (X n) p Borel) ==>
+         (identical_distribution p X Borel univ(:num) <=>
+          (!f n. f IN measurable Borel Borel ==>
+                 expectation p (f o (X n)) = expectation p (f o (X 0))))
+Proof
+    RW_TAC std_ss [identical_distribution_alt, IN_UNIV]
+ >> EQ_TAC >> rw []
+ >> METIS_TAC []
+QED
+
+(* r.v.'s having identical distributions have the same integrability
+
+   NOTE: fixes after k14: changed ‘identical_distribution p X Borel UNIV’
+                               to ‘identical_distribution p X Borel J’
+ *)
 Theorem identical_distribution_integrable_general :
     !p X (J :'index set). prob_space p /\
          (!n. n IN J ==> random_variable (X n) p Borel) /\
-          identical_distribution p X Borel UNIV /\
+          identical_distribution p X Borel J /\
          (?i. i IN J /\ integrable p (X i)) ==> !n. n IN J ==> integrable p (X n)
 Proof
-    RW_TAC std_ss [identical_distribution_def, IN_UNIV]
+    RW_TAC std_ss [identical_distribution_def]
  >> ‘X n IN Borel_measurable (m_space p,measurable_sets p)’
        by fs [random_variable_def, p_space_def, events_def]
  >> Know ‘(\x. x) IN measurable Borel Borel’
@@ -8213,19 +8286,26 @@ Proof
  >> Q.EXISTS_TAC ‘0’ >> art []
 QED
 
-(* r.v.'s having indentical distributions have the same expectation *)
+(* r.v.'s having identical distributions have the same expectation
+
+   NOTE: fixes after k14: changed ‘identical_distribution p X Borel UNIV’
+                               to ‘identical_distribution p X Borel J’
+
+         also removed unnecessary ‘J <> {}’ from antecedents.
+ *)
 Theorem identical_distribution_expectation_general :
-    !p X (J :'index set). prob_space p /\ J <> {} /\
+    !p X (J :'index set). prob_space p /\
          (!n. n IN J ==> random_variable (X n) p Borel) /\
-          identical_distribution p X Borel UNIV ==>
+          identical_distribution p X Borel J ==>
           ?e. !n. n IN J ==> expectation p (X n) = e
 Proof
-    RW_TAC std_ss [identical_distribution_def, IN_UNIV]
+    RW_TAC std_ss [identical_distribution_def]
  >> Know ‘(\x. x) IN measurable Borel Borel’
  >- (rw [IN_MEASURABLE, SIGMA_ALGEBRA_BOREL, IN_FUNSET, PREIMAGE_def] \\
      MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> rw [SIGMA_ALGEBRA_BOREL] \\
      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> rw [SIGMA_ALGEBRA_BOREL])
  >> DISCH_TAC
+ >> Cases_on ‘J = {}’ >- (Q.EXISTS_TAC ‘ARB’ >> rw [])
  >> Q.ABBREV_TAC ‘i = CHOICE J’
  >> ‘i IN J’ by METIS_TAC [CHOICE_DEF]
  >> MP_TAC (Q.SPECL [‘p’, ‘X (i :'index)’, ‘\x. x’] expectation_distribution)
@@ -8255,7 +8335,7 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘UNIV’]
                     (INST_TYPE [“:'index” |-> “:num”]
                                identical_distribution_expectation_general))
- >> RW_TAC std_ss [IN_UNIV, UNIV_NOT_EMPTY] >> art []
+ >> RW_TAC std_ss [IN_UNIV] >> art []
 QED
 
 (* Theorem 3.1.4 [2, p.37], slightly generalized *)
