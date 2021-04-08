@@ -2685,9 +2685,13 @@ val half_cancel = store_thm
                     EVAL ``2 <> 0:real``, REAL_MUL_RINV, real_div]);
 
 Theorem x_half_half : (* see seqTheory.X_HALF_HALF *)
-    !x :extreal. x <> PosInf /\ x <> NegInf ==> x / 2 + x / 2 = x
+    !x :extreal. x / 2 + x / 2 = x
 Proof
-    rpt Cases >> rw [extreal_of_num_def, extreal_div_eq, extreal_add_def]
+   ‘0 < (2 :real)’ by rw []
+ >> Q.X_GEN_TAC ‘x’ >> Cases_on ‘x’
+ >> rw [extreal_of_num_def, extreal_div_eq, extreal_add_def]
+ >- rw [infty_div, extreal_add_def]
+ >- rw [infty_div, extreal_add_def]
  >> ‘r / 2 = (1 / 2) * r’ by METIS_TAC [real_div, REAL_INV_1OVER, REAL_MUL_COMM]
  >> POP_ORW
  >> REWRITE_TAC [X_HALF_HALF]
