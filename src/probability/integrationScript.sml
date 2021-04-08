@@ -22,7 +22,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
      topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
-open hurdUtils iterateTheory productTheory real_topologyTheory derivativeTheory;
+open hurdUtils iterateTheory real_topologyTheory derivativeTheory;
 
 val _ = new_theory "integration";
 
