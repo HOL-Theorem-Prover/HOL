@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)            *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
-(* Updated and further enriched by Chun Tian (2018-2020)                     *)
+(* Updated and further enriched by Chun Tian (2018 - 2021)                   *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -13,7 +13,7 @@ open metisLib combinTheory pred_setTheory res_quanTools pairTheory RealArith
      prim_recTheory arithmeticTheory realTheory realLib real_sigmaTheory
      seqTheory limTheory transcTheory jrhUtils pred_setLib tautLib;
 
-open hurdUtils util_probTheory cardinalTheory;
+open hurdUtils util_probTheory cardinalTheory iterateTheory;
 
 val _ = new_theory "extreal";
 
@@ -204,6 +204,12 @@ Proof
  >> rename1 ‘Normal (real y) IN s’
  >> Suff ‘Normal (real y) = y’ >- rw []
  >> MATCH_MP_TAC normal_real >> art []
+QED
+
+Theorem real_0[simp] :
+    real 0 = 0
+Proof
+    rw [extreal_of_num_def]
 QED
 
 (* ********************************************* *)
@@ -1456,6 +1462,19 @@ Proof
  >> rw [extreal_abs_def, extreal_add_def, extreal_sub_def, extreal_le_eq, ABS_TRIANGLE_SUB]
 QED
 
+Theorem abs_neg_eq[simp] :
+    !x :extreal. abs (-x) = abs x
+Proof
+    GEN_TAC
+ >> ‘0 <= x \/ x < 0’ by METIS_TAC [let_total]
+ >- (‘abs x = x’ by PROVE_TAC [abs_refl] >> POP_ORW \\
+     fs [le_lt] >> MP_TAC (Q.SPEC ‘-x’ abs_neg) \\
+    ‘-x < 0’ by METIS_TAC [lt_neg, neg_0] >> rw [neg_neg])
+ >> rw [abs_neg, abs_refl]
+ >> rw [Once (GSYM le_neg), neg_0]
+ >> MATCH_MP_TAC lt_imp_le >> art []
+QED
+
 (*********************)
 (*   Multiplication  *)
 (*********************)
@@ -1842,25 +1861,37 @@ val lt_rdiv_neg = store_thm
  >> METIS_TAC [REAL_LT_ANTISYM, real_lte, REAL_NEG_NZ, REAL_LT_INV_EQ, lt_refl, lt_infty]);
 
 (* `x, y` must be reals, `z <> 0` *)
-val div_add = store_thm
-  ("div_add",
-  ``!x y z. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf /\ z <> 0 ==>
-           (x / z + y / z = (x + y) / z)``,
+Theorem div_add :
+    !x y z. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf /\ z <> 0 ==>
+           (x / z + y / z = (x + y) / z)
+Proof
     rpt Cases
  >> RW_TAC real_ss [extreal_add_def, extreal_div_def, extreal_mul_def, extreal_inv_def,
                     extreal_of_num_def]
- >> RW_TAC real_ss [extreal_add_def, REAL_RDISTRIB]);
+ >> REAL_ARITH_TAC
+QED
 
 (* `z` must be non-zero normal reals, `x + y` must be defined *)
-val div_add2 = store_thm
-  ("div_add2",
-  ``!x y z. ((x <> PosInf /\ y <> PosInf) \/ (x <> NegInf /\ y <> NegInf)) /\
+Theorem div_add2 :
+    !x y z. ((x <> PosInf /\ y <> PosInf) \/ (x <> NegInf /\ y <> NegInf)) /\
              z <> 0 /\ z <> PosInf /\ z <> NegInf ==>
-            (x / z + y / z = (x + y) / z)``,
+            (x / z + y / z = (x + y) / z)
+Proof
     rpt Cases
  >> RW_TAC real_ss [extreal_add_def, extreal_div_def, extreal_mul_def, extreal_inv_def,
                     extreal_of_num_def]
- >> RW_TAC real_ss [extreal_add_def, REAL_RDISTRIB]);
+ >> REAL_ARITH_TAC
+QED
+
+Theorem div_sub :
+    !x y z. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf /\ z <> 0 ==>
+           (x / z - y / z = (x - y) / z)
+Proof
+    rpt Cases
+ >> RW_TAC real_ss [extreal_sub_def, extreal_div_def, extreal_mul_def, extreal_inv_def,
+                    extreal_of_num_def]
+ >> REAL_ARITH_TAC
+QED
 
 (* NOTE: `0 <= x` is changed to `0 < x` otherwise `inv x` is not defined *)
 val le_inv = store_thm
@@ -2652,6 +2683,15 @@ val half_cancel = store_thm
   ("half_cancel", ``2 * (1 / 2) = 1``,
     RW_TAC real_ss [extreal_of_num_def, extreal_mul_def, extreal_div_eq,
                     EVAL ``2 <> 0:real``, REAL_MUL_RINV, real_div]);
+
+Theorem x_half_half : (* see seqTheory.X_HALF_HALF *)
+    !x :extreal. x <> PosInf /\ x <> NegInf ==> x / 2 + x / 2 = x
+Proof
+    rpt Cases >> rw [extreal_of_num_def, extreal_div_eq, extreal_add_def]
+ >> ‘r / 2 = (1 / 2) * r’ by METIS_TAC [real_div, REAL_INV_1OVER, REAL_MUL_COMM]
+ >> POP_ORW
+ >> REWRITE_TAC [X_HALF_HALF]
+QED
 
 val third_cancel = store_thm
   ("third_cancel", ``3 * (1 / 3) = 1``,
@@ -4232,7 +4272,6 @@ Theorem sup_le' : (* was: Sup_le_iff *)
 Proof
     METIS_TAC [sup_le, SPECIFICATION]
 QED
-val Sup_le_iff = sup_le';
 
 val le_sup = store_thm
   ("le_sup", ``!p x. x <= sup p <=> (!y. (!z. p z ==> z <= y) ==> x <= y)``,
@@ -7240,30 +7279,54 @@ val pos_summable_tail = store_thm
 (*  Finite Product Images (PI) of extreals                                   *)
 (* ------------------------------------------------------------------------- *)
 
+(* old definition:
+
 val EXTREAL_PROD_IMAGE_DEF = new_definition
   ("EXTREAL_PROD_IMAGE_DEF",
   ``EXTREAL_PROD_IMAGE f s = ITSET (\e acc. f e * acc) s (1 :extreal)``);
+
+   new definition (based on iterateTheory):
+ *)
+Definition ext_product_def :
+    ext_product = iterate (( * ):extreal->extreal->extreal)
+End
+Overload EXTREAL_PROD_IMAGE = “\f s. ext_product s f”
 
 val _ = overload_on ("PI", ``EXTREAL_PROD_IMAGE``);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
 val _ = TeX_notation {hol = UTF8.chr 0x220F, TeX = ("\\HOLTokenPI{}", 1)};
 val _ = TeX_notation {hol = "PI"           , TeX = ("\\HOLTokenPI{}", 1)};
 
-val EXTREAL_PROD_IMAGE_THM = store_thm
-  ("EXTREAL_PROD_IMAGE_THM",
-  ``!f. (EXTREAL_PROD_IMAGE f {} = 1) /\
+Theorem neutral_mul :
+    neutral(( * ):extreal->extreal->extreal) = &1
+Proof
+    REWRITE_TAC [neutral]
+ >> MATCH_MP_TAC SELECT_UNIQUE
+ >> METIS_TAC [mul_lone, mul_rone]
+QED
+
+Theorem monoidal_mul :
+    monoidal(( * ):extreal->extreal->extreal)
+Proof
+    rw [monoidal, neutral_mul, mul_assoc]
+ >> REWRITE_TAC [Once mul_comm]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_THM :
+    !f. (EXTREAL_PROD_IMAGE f {} = 1) /\
         !e s. FINITE s ==>
-             (EXTREAL_PROD_IMAGE f (e INSERT s) = f e * EXTREAL_PROD_IMAGE f (s DELETE e))``,
-    rpt STRIP_TAC
- >- SIMP_TAC (srw_ss()) [ITSET_THM, EXTREAL_PROD_IMAGE_DEF]
- >> SIMP_TAC (srw_ss()) [EXTREAL_PROD_IMAGE_DEF]
- >> Q.ABBREV_TAC `g = \e acc. f e * acc`
- >> Suff `ITSET g (e INSERT s) 1 = g e (ITSET g (s DELETE e) 1)`
- >- (Q.UNABBREV_TAC `g` >> SRW_TAC [] [])
- >> MATCH_MP_TAC COMMUTING_ITSET_RECURSES
- >> Q.UNABBREV_TAC `g`
- >> RW_TAC std_ss []
- >> METIS_TAC [mul_assoc, mul_comm]);
+             (EXTREAL_PROD_IMAGE f (e INSERT s) = f e * EXTREAL_PROD_IMAGE f (s DELETE e))
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> ASSUME_TAC monoidal_mul
+ >> rw [ext_product_def, GSYM neutral_mul]
+ >- rw [ITERATE_CLAUSES]
+ >> reverse (Cases_on ‘e IN s’)
+ >- (‘s DELETE e = s’ by METIS_TAC [DELETE_NON_ELEMENT] >> POP_ORW \\
+     rw [ITERATE_CLAUSES])
+ >> ‘e INSERT s = e INSERT (s DELETE e)’ by SET_TAC [] >> POP_ORW
+ >> rw [ITERATE_CLAUSES]
+QED
 
 val EXTREAL_PROD_IMAGE_EMPTY = store_thm
   ("EXTREAL_PROD_IMAGE_EMPTY", ``!f. EXTREAL_PROD_IMAGE f {} = 1``,

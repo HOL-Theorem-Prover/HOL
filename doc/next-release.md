@@ -59,6 +59,9 @@ number of components.
 Incompatibilities:
 ------------------
 
+*   The small `productTheory` (Products of natural numbers and real numbers, ported from HOL-Light)
+    has been merged into `iterateTheory` (which is now dependent by `extrealTheory`).
+
 * * * * *
 
 <div class="footer">

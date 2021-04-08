@@ -30,4 +30,3 @@ This directory contains HOL4's Measure, Lebesgue integral and Probability theori
      hurdUtils.{sml|sig}          * Some useful tools originally defined by Joe Hurd
      util_probScript.sml          * Utility lemmas needed by other scripts
      iterateScript.sml            * Generic iterated operations and special cases of sums over N and R
-     productScript.sml            * Products of natural numbers and real numbers

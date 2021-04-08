@@ -24,7 +24,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
      seqTheory limTheory transcTheory realLib topologyTheory metricTheory;
 
-open wellorderTheory cardinalTheory iterateTheory productTheory hurdUtils;
+open wellorderTheory cardinalTheory iterateTheory hurdUtils;
 
 val _ = new_theory "real_topology";
 
@@ -20045,7 +20045,7 @@ val HAUSDIST_POS_LE = store_thm ("HAUSDIST_POS_LE",
   REPEAT GEN_TAC THEN REWRITE_TAC[hausdist] THEN
   SIMP_TAC std_ss [FORALL_IN_GSPEC, FORALL_IN_UNION] THEN
   COND_CASES_TAC THEN REWRITE_TAC[REAL_LE_REFL] THEN
-  MATCH_MP_TAC REAL_LE_SUP THEN
+  MATCH_MP_TAC REAL_LE_SUP' THEN
   ASM_SIMP_TAC std_ss [FORALL_IN_GSPEC, FORALL_IN_UNION, SETDIST_POS_LE] THEN
   KNOW_TAC ``?(y :real) (b :real).
   y IN {setdist ({x},(t :real -> bool)) | x IN (s :real -> bool)} UNION
@@ -20198,7 +20198,7 @@ val REAL_LE_HAUSDIST = store_thm ("REAL_LE_HAUSDIST",
   REWRITE_TAC[hausdist, SETDIST_SINGS] THEN
   ASM_SIMP_TAC real_ss [EMPTY_UNION, SET_RULE ``({f x | x IN s} = {}) <=> (s = {})``] THEN
   SIMP_TAC real_ss [FORALL_IN_UNION, FORALL_IN_GSPEC] THEN COND_CASES_TAC THENL
-   [MATCH_MP_TAC REAL_LE_SUP THEN
+   [MATCH_MP_TAC REAL_LE_SUP' THEN
     ASM_SIMP_TAC real_ss [EMPTY_UNION, SET_RULE ``({f x | x IN s} = {}) <=> (s = {})``] THEN
     SIMP_TAC real_ss [FORALL_IN_UNION, FORALL_IN_GSPEC],
     FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [NOT_EXISTS_THM]) THEN

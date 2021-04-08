@@ -22,7 +22,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
      topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
-open hurdUtils iterateTheory productTheory real_topologyTheory;
+open hurdUtils iterateTheory real_topologyTheory;
 
 val _ = new_theory "derivative";
 
@@ -1189,7 +1189,7 @@ val DIFFERENTIABLE_BOUND = store_thm ("DIFFERENTIABLE_BOUND",
     MATCH_MP_TAC REAL_LE_TRANS THEN Q.EXISTS_TAC `oabs (f' x') * abs y'` THEN
     ASM_SIMP_TAC std_ss [] THEN MATCH_MP_TAC REAL_LE_MUL2 THEN
     ASM_SIMP_TAC std_ss [REAL_LE_REFL, ABS_POS] THEN
-    SIMP_TAC std_ss [oabs] THEN MATCH_MP_TAC REAL_LE_SUP THEN
+    SIMP_TAC std_ss [oabs] THEN MATCH_MP_TAC REAL_LE_SUP' THEN
     SIMP_TAC std_ss [GSPECIFICATION] THEN Q.EXISTS_TAC `oabs (f' x') * abs 1` THEN
     Q.EXISTS_TAC `abs (f' x' 1)` THEN METIS_TAC [ABS_POS, ABS_1],
     ALL_TAC] THEN
