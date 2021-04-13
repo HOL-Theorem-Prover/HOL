@@ -297,7 +297,7 @@ fun expand obj (tree,cache) (id,cid) =
     val move = find_move (#pol node) cid
     val (board2,newtree) = (#apply_move (#game obj)) (tree,id) move board1
   in
-    node_create_backup obj (tree,cache) (cid,board2)
+    node_create_backup obj (newtree,cache) (cid,board2)
   end
 
 (* -------------------------------------------------------------------------
@@ -320,16 +320,23 @@ fun is_timeout timer tree param =
 fun check_success tree =
   if is_win (#status (dfind [] tree)) then Success else Timeout
 
+(*
+fun select_child_p x y z = Profile.profile "select" (select_child x y) z
+fun backup_p x y z = Profile.profile "backup" (backup x y) z
+fun expand_p x y z = Profile.profile "expand" (expand x y) z
+*) 
+
 fun mcts obj (starttree,startcache) =
   let
     val timer = Timer.startRealTimer ()
     val param = #mctsparam obj
+    val decay = #decay param
     fun loop (tree,cache) =
       if is_timeout timer tree param
       then (check_success tree, (tree,cache))
       else
         case select_child obj tree [] of
-            Backup (id,sc) => loop (backup (#decay param) tree (id,sc), cache)
+            Backup (id,sc) => loop (backup decay tree (id,sc), cache)
           | NodeExtension (id,cid) => loop (expand obj (tree,cache) (id,cid))
           | NoSelection => (Saturated, (tree, cache))
   in
@@ -451,8 +458,8 @@ load "psMCTS"; open psMCTS;
 
 val mctsparam =
   {
-  timer = SOME 5.0,
-  nsim = (NONE : int option),
+  timer = (NONE : real option),
+  nsim = (SOME 100000 : int option),
   stopatwin_flag = true,
   decay = 1.0,
   explo_coeff = 2.0,
@@ -461,7 +468,7 @@ val mctsparam =
   noise_coeff = 0.25,
   noise_gen = gamma_noise_gen 0.2,
   noconfl = false,
-  avoidlose = false,
+  avoidlose = true,
   evalwin = false
   };
 
@@ -472,9 +479,10 @@ val mctsobj : (toy_board,toy_move) mctsobj =
   player = uniform_player toy_game
   };
 
-val starttree = starttree_of mctsobj (0,10,100);
+val starttree = starttree_of mctsobj (0,1000,1000);
 val ((sstatus,(tree,_)),t) = add_time (mcts mctsobj) starttree;
 dlength tree;
+Profile.results ();
 val root = dfind [] tree;
 val nodel = trace_win tree [];
 *)
