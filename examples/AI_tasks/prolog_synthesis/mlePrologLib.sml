@@ -131,8 +131,18 @@ val prog0 = [
  (delete [x1,mk_cons(x1,l1),l1],[]),
  (delete [x1,mk_cons(x2,l1),mk_cons(x2,l2)],[delete [x1,l1,l2]])];
 
+val prog1 = [(delete [x1,mk_cons(x1,l1),l1],[])]
+
 val operl =  
   [delg,x1,x2,l1,l2,numpairg,numcastg,boolnil,boolcons,anil,acons,rulec];
+
+val operl_novar =
+  [delg,numpairg,numcastg,boolnil,boolcons,acons,rulec];
+
+fun operl_nn (n1,n2) = 
+  operl_novar @ 
+  List.tabulate (n1,fn i => mk_var ("x" ^ its i,``:num``)) @
+  List.tabulate (n2,fn i => mk_var ("l" ^ its i,``:num list``))
 
 (* -------------------------------------------------------------------------
    Generate prolog programs
@@ -202,34 +212,19 @@ fun all_ex prog (siz,len) =
    ------------------------------------------------------------------------- *)
 
 fun test_unit prog (input,output) = 
-  term_eq (subst (execute 50 prog input) lr) output
-  handle Interrupt => raise Interrupt | _ => false
-
-fun test_list prog exl = all (test_unit prog) exl
-
-fun test_board (exl,qt) = test_list (qt_to_prog qt) exl
-
-(* -------------------------------------------------------------------------
-   Random search
-   ------------------------------------------------------------------------- *)
-
-fun random_search exl acc n = 
-  if n = 0 then raise ERR "find_prog" "timeout" else
-  if null acc  then random_search exl (random_qtl 29 1000) n else
-  let 
-    val _ = if n mod 1000 = 0 then print_endline (its n) else ()
-    val (b,t) = add_time test_board (exl,(hd acc))
-  in
-    if t > 0.1 then print_endline (term_to_string (hd acc)) else ();
-    if b then hd acc else random_search exl (tl acc) (n-1)
+  let val b = term_eq (subst (execute 20 prog input) lr) output in 
+    (b, b)
   end
+  handle Interrupt => raise Interrupt 
+  | Break => (false, false)
+  | _ => (false, true)
 
 (*
 load "mlePrologLib"; open mlePrologLib;
 load "aiLib"; open aiLib;
-load "psTermGen"; open psTermGen;
-val exl = all_ex prog0 (3,4);
-val winrule = random_search exl [] 100000;
+val exl = all_ex prog0 (2,3);
+val ex = List.nth (exl,13);
+val r = map (test_unit prog1) exl;
 *)
 
 
