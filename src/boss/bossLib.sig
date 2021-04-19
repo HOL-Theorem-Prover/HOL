@@ -219,9 +219,5 @@ sig
   val qabbrev_tac : term quotation -> tactic
   val qunabbrev_tac : term quotation -> tactic
   val qunabbrevl_tac : term quotation list -> tactic
-  val unabbrev_all_tac : tactic
-
-  (* Derived search functions *)
-  val find_consts_thy : string list -> hol_type -> term list
-  val find_consts : hol_type -> term list
+  val unabbrev_all_tac : tacti
 end

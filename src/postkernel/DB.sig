@@ -8,6 +8,7 @@ sig
  datatype selector = datatype DB_dtype.selector
  type data = DB_dtype.data
  datatype location = datatype DB_dtype.location
+ type hol_type = Type.hol_type
 
   val thy         : string -> data list
   val fetch       : string -> string -> thm
@@ -37,5 +38,9 @@ sig
 
   val dest_theory  : string -> theory
   val bindl : string -> (string * thm * class) list -> unit
+
+  (* Derived search functions *)
+  val find_consts_thy : string list -> hol_type -> term list
+  val find_consts : hol_type -> term list
 
 end
