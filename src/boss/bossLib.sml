@@ -299,16 +299,6 @@ val wlog_then = wlog_then
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
-(* Derived search functions *)
-fun find_consts_thy thl t =
-  let
-    val theConsts = List.concat (List.map constants thl)
-  in
-    List.filter (can (match_type t) o type_of) theConsts
-end
-
-val find_consts = find_consts_thy ("-" :: ancestry "-")
-
 (*---------------------------------------------------------------------------*)
 (* Tactic to automate some routine set theory by reduction to FOL            *)
 (* (Ported from HOL Light)                                                   *)
