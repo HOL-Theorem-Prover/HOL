@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib bossLib DB
 open testutils
 
 val _ = print "\n"

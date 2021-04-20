@@ -378,7 +378,8 @@ fun find_consts_thy thl t =
     List.filter (can (match_type t) o type_of) theConsts
 end
 
-val find_consts = find_consts_thy ("-" :: ancestry "-")
-
+(* The call to find_consts_thy is hidden under a fun binding to make sure that
+  the theory list is constructed properly and not captured in a closure *)
+fun find_consts t = find_consts_thy ("-" :: ancestry "-") t;
 
 end
