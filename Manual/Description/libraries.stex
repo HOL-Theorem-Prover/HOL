@@ -446,12 +446,13 @@ string
    ++a
 \end{verbatim}
 the lexer will see two tokens, \holtxt{++} and \holtxt{a}, because
-\holtxt{+} is a symbol and \holtxt{a} is an alphanumeric.  The
-classification of the additional Unicode characters is very
-simplistic: all Greek letters except \holtxt{$\lambda$} are alphanumeric;
-the logical negation symbol \holtxt{$\neg$} is non-aggregating; and
-everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
-allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
+\holtxt{+} is a symbol and \holtxt{a} is an alphanumeric.
+The classification of the additional Unicode characters is very simplistic:
+all Greek letters except \holtxt{$\lambda$} are alphanumeric;
+the logical negation symbol \holtxt{$\neg$} is non-aggregating;
+a variety of parenthetical characters (\eg, $\llparenthesis\,\rrparenthesis$) are non-aggregating, and
+everything else is symbolic.
+(The exception for \holtxt{$\lambda$} is to allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
 \index{Unicode|)}
