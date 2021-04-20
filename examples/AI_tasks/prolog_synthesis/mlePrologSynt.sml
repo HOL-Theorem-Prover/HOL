@@ -1,8 +1,8 @@
 (* ========================================================================= *)
 (* FILE          : mlePrologSynt.sml                                         *)
-(* DESCRIPTION   : Specification of term synthesis on combinator datatype    *)
+(* DESCRIPTION   : Prolog program synthesis                                  *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
-(* DATE          : 2020                                                      *)
+(* DATE          : 2021                                                      *)
 (* ========================================================================= *)
 
 structure mlePrologSynt :> mlePrologSynt =
@@ -21,30 +21,21 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 fun is_mvar x = is_var x andalso "M" = fst (dest_var x)
 fun contain_mvar tm = can (find_term is_mvar) tm
-fun first_mvar tm = find_term is_mvar tm
+
+fun find_mvar po tm = 
+  if is_comb tm then 
+    let val (oper,argl) = strip_comb tm in
+      tryfind (find_mvar (SOME tm)) argl 
+    end
+  else if is_mvar tm then (po,tm) else raise ERR "find_mvar" ""
+
 fun mk_mvar ty = mk_var ("M",ty)
 fun is_svar x = is_var x andalso "M" <> fst (dest_var x)
 fun is_xvar x = is_var x andalso String.isPrefix "x" (fst (dest_var x))
 fun is_lvar x = is_var x andalso String.isPrefix "l" (fst (dest_var x))
-
 fun nov x = string_to_int (tl_string (fst (dest_var x)))
 
-fun wsize tm = 
-  let 
-    val (oper,argl) = strip_comb tm
-    val n = 
-      if is_mvar oper then 
-       let val ty = type_of oper in 
-         assoc ty [(``:num``,1),(``:num list``,1),(beta,1),(bool,6),
-                   (``:bool list``,1),(alpha,8),(``:'a list``,1)]
-         handle HOL_ERR _ => raise ERR "wsize" (term_to_string tm)
-       end
-      else 1
-  in
-    n + sum_int (map wsize argl)
-  end
-
-fun mk_subst oper =
+fun mk_msubst oper =
   let 
     val (domtyl,imty) = strip_type (type_of oper) 
     val res = list_mk_comb (oper, map mk_mvar domtyl)
@@ -52,15 +43,21 @@ fun mk_subst oper =
     [{redex = mk_mvar imty, residue = res}]
   end
 
-val anilsubst = mk_subst anil
+val close_qt_sub = 
+  [{redex = mk_mvar (type_of listSyntax.nil_tm), residue = listSyntax.nil_tm}]
+fun close_qt qt = subst close_qt_sub qt
+  
+val open_qt_sub =
+  [{redex = listSyntax.nil_tm, residue = mk_mvar (type_of listSyntax.nil_tm)}] 
+fun open_qt qt = subst open_qt_sub qt
 
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-type board = (term * term) list * (int * int) * term
-fun string_of_board board = tts (#3 board)
-fun board_compare ((_,_,a),(_,_,b)) = Term.compare (a,b)
+type board = (term * bool) list * term
+fun string_of_board board = tts (#2 board)
+fun board_compare ((_,a),(_,b)) = Term.compare (a,b)
 
 fun no_singletonvar clause = 
   let  
@@ -76,26 +73,47 @@ fun strip_cons rl qt =
   end
   handle HOL_ERR _ => rl
 
+(*
 fun pretest_qt qt =
   let val clausel = strip_cons [] qt in  
     all no_singletonvar (filter (not o contain_mvar) clausel)
   end
+*)
 
-fun test_ex status prog ex = case ex of [] => status | e :: m => 
-  let val (b1,b2) = test_unit prog e in
-    if b1 then test_ex status prog m 
-    else if b2 then test_ex Undecided prog m
+fun test_ex prog ex = case ex of [] => Win | e :: m => 
+  let val (b1,b2) = test_io prog e in
+    if (not b1) then Undecided
+    else if (not b2) then Lose
+    else test_ex prog m
+  end
+(*
+  case ex of [] => if b then status else Lose
+  | e :: m => 
+  let val (b1,b2) = test_io prog e in
+    if b1 then test_ex (true,status) prog m 
+    else if b2 then test_ex (b,Undecided) prog m
     else Lose
   end
+*)
 
-fun status_of (board as (ex,_,qt)) =
+fun status_of (board as (ex,qt)) =
   if is_mvar qt then Undecided else 
-  let val qt' = subst anilsubst qt in
-    if wsize qt > 29 orelse not (pretest_qt qt') then Lose else
+  let val qt' = close_qt qt in
+    (* if term_size qt > 29 then Lose else *)
     if not (contain_mvar qt') 
-      then test_ex Win (qt_to_prog qt') ex
-      else Undecided
+    then Profile.profile "test_ex" (test_ex (qt_to_prog qt')) (shuffle ex)
+    else Undecided
   end
+
+(*
+load "mlePrologSynt"; open mlePrologSynt;
+load "mlePrologLib"; open mlePrologLib;
+load "psMTCS"; open psMCTS;
+load "aiLib"; open aiLib;
+val ex = all_ex progdel ;
+val b = test_ex (false,Win) prog0 ex;
+*)
+
 
 (* -------------------------------------------------------------------------
    Move
@@ -103,36 +121,58 @@ fun status_of (board as (ex,_,qt)) =
 
 type move = (term,term) subst
 
-val movel = map mk_subst (operl_nn (2,2))
+val movel = map mk_msubst (operlsorted @ all_var (2,2))
 
 fun string_of_move m = tts (#residue (hd m))
 fun move_compare (m1,m2) = Term.compare (#residue (hd m1),#residue (hd m2))
+
+fun available_movel (_,qt) =
+  if is_mvar qt then map mk_msubst [listSyntax.cons_tm] else 
   
+  (* 
+  let
+    val (po,mvar) = find_mvar NONE qt 
+    val clause = (hd o strip_cons []) qt
+    val (xn,ln) =
+      let    
+        val xl = map nov (find_terms is_xvar clause)
+        val xn' = if null xl then 0 else list_imax xl + 1
+        val ll = map nov (find_terms is_lvar clause)
+        val ln' = if null ll then 0 else list_imax ll + 1       
+      in
+        (Int.min (xn' + 1,2), Int.min (ln' + 1,2))
+      end
+    val varl = 
+      let val (head,body) = (rand (rator clause), rand clause) in
+        if is_mvar body 
+        then all_var (2,2)
+        else mk_term_set (find_terms is_svar head)
+      end
+      handle HOL_ERR _ => all_var (2,2)
+    val varl_filtered = filter (fn x => tmem x varl) (all_var (xn,ln))
 
-
-fun available_movel (_,(nx,lx),qt) =
-  let 
-    val mvar = first_mvar qt 
-    val operl = operl_nn (nx,lx)
+    val operl_filtered =
+      let 
+        val p = (fst o strip_comb o valOf) po 
+        fun test x = tmem x [numSyntax.suc_tm,cons_bool,cons_num] 
+                     andalso term_eq x p
+      in
+        filter (not o test) operlsorted
+      end
+    *)
+    val subl = map mk_msubst (operlsorted @ varl_filtered)
   in
-    filter (fn x => term_eq (#redex (hd x)) mvar) (map mk_subst operl)
+    filter (fn x => term_eq (#redex (hd x)) mvar) subl
   end
 
-fun apply_move (tree,id) move (ex,(nx,lx),qt) =
+fun apply_move (tree,id) move (ex,qt) =
   let 
-    val (newnx,newlx) = 
-    if type_of (#redex (hd move)) = alpha then (1,1) else 
-      if is_xvar (#residue (hd move))
-      then (Int.min (2, Int.max (nov (#residue (hd move)) + 2, nx)), lx)
-      else 
-        if is_lvar (#residue (hd move))
-        then (nx, Int.min (2, Int.max (nov (#residue (hd move)) + 2, lx)))
-        else (nx,lx)
-    val newboard = (ex, (newnx,newlx), subst_occs [[1]] move qt)
+    val newboard as (_,newqt) = (ex, subst_occs [[1]] move qt)
     val movel = available_movel newboard
   in
-   if length movel <> 1 orelse 
-      status_of newboard <> Undecided 
+   if length movel <> 1 orelse
+      not (contain_mvar (close_qt newqt)) orelse
+      status_of newboard <> Undecided
    then (newboard, tree)
    else apply_move (tree,id) (hd movel) newboard
   end
@@ -167,7 +207,7 @@ load "Profile";
 val mctsparam =
   {
   timer = NONE: real option,
-  nsim = SOME 100000 : int option,
+  nsim = SOME 1000000 : int option,
   stopatwin_flag = true,
   decay = 1.0,
   explo_coeff = 2.0,
@@ -176,34 +216,49 @@ val mctsparam =
   noise_coeff = 0.25,
   noise_gen = random_real,
   noconfl = false,
-  avoidlose = false,
+  avoidlose = true,
   evalwin = false
   };
 
 val mctsobj = {game = game, mctsparam = mctsparam,
   player =  psMCTS.random_player game};
 
-val ex = all_ex prog0 (2,3);
-val startqt = mk_var ("M",``:'a list``);
-val tree = starttree_of mctsobj (ex,(1,1),startqt);
+val table = create_table (progleq @ progsorted) cstrsorted;
+val startqt = open_qt (prog_to_qt progleq);
+  (* mk_var ("M",``:'a list``); *)
+val tree = starttree_of mctsobj (table,startqt);
+
+Profile.reset_all ();
 val ((a,(newtree,b)),t) = add_time (mcts mctsobj) tree;
 Profile.results ();
 
+val terml = 
+  filter (not o contain_mvar) 
+    (map (close_qt o snd o #board o snd) (dlist newtree));
+
 fun is_mvar x = is_var x andalso "M" = fst (dest_var x) andalso type_of x <> ``:'a list``;
 fun contain_mvar tm = can (find_term is_mvar) tm;
-
-
-val nodel = filter (fn (id,x) => not (contain_mvar (#3 (#board x)))) 
+val nodel = filter (fn (id,x) => not (contain_mvar (#2 (#board x)))) 
   (dlist newtree);
-length nodel;
-val nodel2 = filter (fn (id,x) => #stati x = Undecided) nodel;
-length nodel2;
-val nodel3 = map (#3 o #board o snd) nodel2;
 
+
+length nodel;
+val nodel2 = filter (fn (id,x) => #stati x = Lose) nodel;
+length nodel2;
+val tml = map (fn (id,x) => (snd o #board) x) nodel2;
+val tml2 = filter (fn x => term_size x >= 5 andalso term_size x <= 18 andalso
+   term_size ((rand o rand o rator) x) <= 1) tml;
+
+
+val qt = ``rule (del x0 (x0::l0) l0) [] :: M``;
+val nodel3 = filter (fn x => term_eq ((snd o #board o snd) x) qt) (dlist newtree);
+
+
+val terml = mk_term_set (map (fn (id,x) => (snd o #board) x) nodel);
 
 val nodel = filter (fn (id,x) => #stati x = Lose) (dlist newtree);
-
-val nodel = trace_win newtree [];
+val nodewinl = trace_win newtree [];
+val terml = map (snd o #board) nodewinl;
 
 val nodel = filter (fn (id,x) => 
   contain_mvar (#3 (#board x)) andalso 
