@@ -1,4 +1,4 @@
-SIGOBJ=../../sigobj
+SIGOBJ=../../../sigobj
 FILE=$(pwd)/$1
 BASE=${FILE%.*}
 LINK=$SIGOBJ/$(basename $BASE)

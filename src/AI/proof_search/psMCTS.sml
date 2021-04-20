@@ -39,11 +39,10 @@ type id = int list (* node identifier *)
 val id_compare = list_compare Int.compare
 type 'b pol = (('b * real) * id) list
 type ('a,'b) node =
-  {
-  board : 'a, pol : 'b pol, value : real, stati : status,
-  sum : real, vis : real, status : status
-  }
-type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
+  {board : 'a, pol : 'b pol, value : real, stati : status,
+   sum : real, vis : real, status : status}
+datatype ('a,'b) tree = 
+  Node of ('a,'b) node * ('a,'b) tree option list 
 
 (* -------------------------------------------------------------------------
    Game specification
@@ -257,7 +256,7 @@ fun select_child obj tree id =
   in
     if not (is_undecided stati)
       then Backup (id, if #evalwin param andalso is_win stati
-                       then fst ((#player obj) (#board node)) (* inefficient *)
+                       then fst ((#player obj) (#board node))
                        else score_status stati)
     else if #avoidlose param andalso is_lose status
       then Backup (id, score_status status)
@@ -468,7 +467,7 @@ val mctsparam =
   noise_coeff = 0.25,
   noise_gen = gamma_noise_gen 0.2,
   noconfl = false,
-  avoidlose = true,
+  avoidlose = false,
   evalwin = false
   };
 

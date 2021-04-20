@@ -14,7 +14,7 @@ val ERR = mk_HOL_ERR "mlePrologLib"
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 type prog = (term * term list) list
-type ex = (term * term) list
+type table = (term * bool) list
 
 (* -------------------------------------------------------------------------
    Prolog terms
@@ -82,97 +82,107 @@ fun solve env =
     if equal_subst (env',env) then env else solve env'
   end
 
-fun prettify env = 
-  filter (fn x => not (String.isPrefix "V" ((fst o dest_var o #redex) x))) env
-
 fun execute n prog input = 
-  let val _ = nref := n in prettify (solve (backchain prog [] [input])) end
+  let val _ = nref := n in solve (backchain prog [] [input]) end
 
 (* -------------------------------------------------------------------------
    Operators
    ------------------------------------------------------------------------- *)
 
-val x1 = ``x1:num``;
-val x2 = ``x2:num``;
-val l1 = ``l1:num list``;
-val l2 = ``l2:num list``;
-val lr = ``lr:num list``;
-val mk_cons = listSyntax.mk_cons
-val tysub = [{redex = beta, residue = ``:num list``}];
-val numnil = ``[]:num list``;
+(*
+let sortrules =
+ ["sort(X,Y) :- perm(X,Y),sorted(Y)";
+  "sorted(nil)";
+  "sorted(X::nil)";
+  "sorted(X::Y::Z) :- X <= Y, sorted(Y::Z)";
+  "perm(nil,nil)";
+  "perm(X::Y,U::V) :- delete(U,X::Y,Z), perm(Z,V)";
+  "delete(X,X::Y,Y)";
+  "delete(X,Y::Z,Y::W) :- delete(X,Z,W)";
+  "0 <= X";
+  "S(X) <= S(Y) :- X <= Y"];;
+*)
 
-val prenumcast = ("numcast",``:num list -> 'b``);
-val numcastg = (new_constant prenumcast; mk_const prenumcast);
-val prenumsing = ("numsing",``:num -> 'b``);
-val prenumpair = ("numpair",``:num -> num list -> 'b``);
-val numsingg = (new_constant prenumsing; mk_const prenumsing);
-val numpairg = (new_constant prenumpair; mk_const prenumpair);
 
-val numsing = inst tysub numsingg
-val numpair = inst tysub numpairg
-val numcast = inst tysub numcastg;
+fun force_const (name,ty) =
+  (new_constant (name,ty); mk_const (name,ty))
 
-val numcons = mk_const ("CONS",``:num -> num list -> num list``);
-val boolnil = ``[]:bool list``;
-val boolcons = mk_const ("CONS",``:bool -> bool list -> bool list``);
-val anil = ``[] :'a list``;
-val acons = mk_const ("CONS",``:'a -> 'a list -> 'a list``);
-val ruler = ("rule",``:bool -> bool list -> 'a``);
-val rulec = (new_constant ruler; mk_const ruler);
+val nil_tm = listSyntax.nil_tm
+val cons_tm = listSyntax.cons_tm
+val numsub = [{redex = alpha, residue = ``:num``}]
+val nil_num = inst numsub nil_tm
+val cons_num = inst numsub cons_tm
+val boolsub = [{redex = alpha, residue = ``:bool``}]
+val nil_bool = inst boolsub nil_tm
+val cons_bool = inst boolsub cons_tm
+val rul = force_const ("rul",``:bool -> bool list -> 'a``);
+val del = force_const ("del",``:num -> num list -> num list -> bool``);
+val leq = force_const ("leq",``:num -> num -> bool``);
+val perm = force_const ("perm",``:num list -> num list -> bool``);
+val sorted = force_const ("sorted",``:num list -> bool``);
+val sort = force_const ("sort",``:num list -> num list -> bool``);
 
-val delr = ("del",``:num -> 'b -> 'b -> bool``);
-val delg = (new_constant delr; mk_const delr);
-val del = inst tysub delg;
-fun delete x = list_mk_comb (del,x);
+val operlprog = [rul,nil_num,cons_tm,cons_bool,nil_bool]
+val operlnum = [numSyntax.zero_tm,numSyntax.suc_tm]
+val operllist =  [cons_num, nil_num]
+val operlpred = [del,leq,perm,sorted,sort]
+val operlall = operlprog @ operlnum @ operllist @ operlpred
 
-val g0 = delete [``3``,``[3;4;5;6]``,lr];
+val operlsorted = operlprog @ [sorted,leq,nil_num,cons_num]
 
-val prog0 = [
- (delete [x1,mk_cons(x1,l1),l1],[]),
- (delete [x1,mk_cons(x2,l1),mk_cons(x2,l2)],[delete [x1,l1,l2]])];
-
-val prog1 = [(delete [x1,mk_cons(x1,l1),l1],[])]
-
-val operl =  
-  [delg,x1,x2,l1,l2,numpairg,numcastg,boolnil,boolcons,anil,acons,rulec];
-
-val operl_novar =
-  [delg,numpairg,numcastg,boolnil,boolcons,acons,rulec];
-
-fun operl_nn (n1,n2) = 
-  operl_novar @ 
+fun all_var (n1,n2) = 
   List.tabulate (n1,fn i => mk_var ("x" ^ its i,``:num``)) @
   List.tabulate (n2,fn i => mk_var ("l" ^ its i,``:num list``))
 
 (* -------------------------------------------------------------------------
-   Generate prolog programs
+   Samples of programs and examples
    ------------------------------------------------------------------------- *)
 
-fun random_qt size = random_term operl (size,``:'a list``);
-fun random_qtl size n = random_terml operl(size,``:'a list``) n;
+fun mk_cons x y = listSyntax.mk_cons (x,y)
+fun mk_sing x = listSyntax.mk_list ([x],type_of x);
+fun mk_del x y z = list_mk_comb (del,[x,y,z])
+fun mk_leq x y = list_mk_comb (leq,[x,y])
+fun mk_sorted x = mk_comb (sorted,x)
 
-fun subst_singpair tm = 
-  let 
-    val (oper,argl) = strip_comb tm 
-    val newargl = map subst_singpair argl
-  in
-    if tmem oper [numsing] then listSyntax.mk_list (newargl, ``:num``)
-    else if tmem oper [numpair] then listSyntax.mk_cons (pair_of_list newargl)
-    else if tmem oper [numcast] then (singleton_of_list newargl)
-    else list_mk_comb (oper,newargl)  
-  end;
+val (x0,x1,x2) = (``x0:num``,``x1:num``,``x2:num``)
+val (l0,l1,l2) = ( ``l0:num list``,``l1:num list``,``l2:num list``)
+val inputdel = mk_del ``SUC 0`` ``[0; SUC 0]`` ``[0]``
+
+val progdel = 
+ [(mk_del x0 (mk_cons x0 l0) l0,[]),
+  (mk_del x0 (mk_cons x1 l0) (mk_cons x1 l1),[mk_del x0 l0 l1])]
+val progleq = 
+ [(mk_leq ``0`` x0, []),
+  (mk_leq ``SUC x0`` ``SUC x1``, [mk_leq x0 x1])] 
+val progsorted = 
+ [(mk_sorted nil_num, []),
+  (mk_sorted (mk_cons x0 nil_num), []),
+  (mk_sorted (mk_cons x0 (mk_cons x1 l0)), 
+    [mk_leq x0 x1, mk_sorted (mk_cons x1 l0)])
+ ]
+
+val cstrdel = ([del,nil_num,cons_num,``SUC``,``0``],bool)
+val cstrleq = ([leq,``SUC``,``0``],bool)
+val cstrsorted = ([sorted,nil_num,cons_num,``SUC``,``0``],bool)
+
+(* -------------------------------------------------------------------------
+   Transform a program term to a list of clauses
+   ------------------------------------------------------------------------- *)
 
 fun qt_to_prog qt =
   let 
-    val qt' = subst_singpair (inst tysub qt)
-    val l = fst (listSyntax.dest_list qt')
+    val l = fst (listSyntax.dest_list qt)
     val hbl = map (pair_of_list o snd o strip_comb) l
   in
     map_snd (fst o listSyntax.dest_list) hbl
   end
 
+fun mk_rul x y = list_mk_comb (rul,[x,y])
+fun rule_to_qt (head,body) = mk_rul head (listSyntax.mk_list (body,bool))
+fun prog_to_qt prog = listSyntax.mk_list (map rule_to_qt prog,alpha)
+
 (* -------------------------------------------------------------------------
-   Generate examples exhaustively
+   Generate inputs
    ------------------------------------------------------------------------- *)
 
 val tmoi = numSyntax.term_of_int
@@ -180,54 +190,61 @@ fun loi il = listSyntax.mk_list (map tmoi il ,``:num``)
 
 val input_compare = cpl_compare Int.compare (list_compare Int.compare) 
 
-fun all_input (siz,len) = 
-  let 
-    val numberl = List.tabulate (siz,I)
-    val inputl1 = 
-      let fun f n = cartesian_productl (List.tabulate (n, fn _ => numberl)) in
-        List.concat (List.tabulate (len,f))
-      end
-    val inputl2 = 
-      let fun f l = map (fn x => (x,l)) l in
-        List.concat (map f inputl1)
-      end
-  in
-    mk_fast_set input_compare inputl2
+fun gen_term_n_aux n (operl,ty) size = 
+  let val l = gen_term operl (size,ty) in
+    if length l >= n 
+    then first_n n (dict_sort tmsize_compare l)
+    else gen_term_n_aux n (operl,ty) (size + 1)
   end
 
-fun create_ex prog (a,b) =
-  let 
-    val input = delete [tmoi a,loi b,lr]
-    val env = execute 50 prog input 
-    val output = subst env lr
-  in
-    (input,output)
-  end;
+fun gen_term_n (operl,ty) n = gen_term_n_aux n (operl,ty) 1
 
-fun all_ex prog (siz,len) =
-  map (create_ex prog) (all_input (siz,len))
+fun add_output prog input = 
+  let val b = (ignore (execute 50 prog input); true) 
+    handle HOL_ERR _ => false 
+  in 
+    (input,b)
+  end
+  handle Break => raise ERR "add_output" "break"
+
+fun create_table_aux prog cstr n =
+  let 
+    val inputl = gen_term_n cstr n
+    val iol = map (add_output prog) inputl
+    val (pos,neg) = partition snd iol
+    val pos' = first_n 40 pos
+    val neg' = first_n 20 neg @ random_subset 20 neg
+  in
+    if length pos' < 10 
+    then create_table_aux prog cstr (n+100)
+    else pos' @ neg'
+  end
+
+fun create_table prog cstr = create_table_aux prog cstr 100
 
 (* -------------------------------------------------------------------------
-   Test program on examples
+   Test program against known table entries
    ------------------------------------------------------------------------- *)
 
-fun test_unit prog (input,output) = 
-  let val b = term_eq (subst (execute 20 prog input) lr) output in 
-    (b, b)
+fun test_io prog (input,output) =
+  let val b = (ignore (execute 50 prog input); true)
+    handle HOL_ERR _ => false 
+  in 
+    (b = output, true)
   end
-  handle Interrupt => raise Interrupt 
-  | Break => (false, false)
-  | _ => (false, true)
+  handle Break => (false, false)
+
 
 (*
 load "mlePrologLib"; open mlePrologLib;
 load "aiLib"; open aiLib;
-val exl = all_ex prog0 (2,3);
-val ex = List.nth (exl,13);
-val r = map (test_unit prog1) exl;
+val table = create_table progdel cstrdel;
+val input = fst (List.nth (table,17));
+execute 50 progdel input;
+val r = map (test_io progdel) table;
 *)
 
 
 
 end (* struct *)
-
+  
