@@ -30,6 +30,7 @@ sig
   val compare_imax : (('a * int) * ('a * int)) -> order
   val list_rmax : real list -> real
   val list_imax : int list -> int
+  val vector_maxi : ('a -> real) -> 'a vector -> int
   val list_imin : int list -> int
   val tmsize_compare : term * term -> order
   val all_subterms : term -> term list
@@ -226,6 +227,7 @@ sig
   val pretty_real : real -> string
   val epsilon : real
   val interval : real -> real * real -> real list
+  val gamma_noise_gen : real -> unit -> real
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term

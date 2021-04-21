@@ -567,6 +567,17 @@ fun list_imax l = case l of
   | [a] => a
   | a :: m => Int.max (a,list_imax m)
 
+fun vector_maxi score v =
+  let 
+    val (maxi,maxsc) = (ref 0,ref Real.negInf)
+    fun f (i,x) = 
+      let val newsc = score x in 
+        if newsc > (!maxsc) then (maxi := i; maxsc := newsc) else ()
+      end
+  in
+    Vector.appi f v; !maxi
+  end
+
 fun list_imin l = case l of
     [] => raise ERR "list_imin" ""
   | [a] => a
@@ -1253,6 +1264,37 @@ fun normalize_distrib dis =
     then uniform_distrib (map fst dis)
     else map_snd (fn x => x / sum) dis
   end
+
+(* --------------------------------------------------------------------------
+   Dirichlet noise
+   ------------------------------------------------------------------------- *)
+
+val gammadict = dnew Real.compare
+  [(0.01, 99.43258512),(0.02, 49.44221016),(0.03, 32.78499835),
+   (0.04, 24.46095502),(0.05, 19.47008531),(0.06, 16.14572749),
+   (0.07, 13.77360061),(0.08, 11.99656638),(0.09, 10.61621654),
+   (0.1, 9.513507699),(0.2, 4.590843712),(0.3, 2.991568988),
+   (0.4, 2.218159544),(0.5, 1.772453851),(0.6, 1.489192249),
+   (0.7, 1.298055333),(0.8, 1.164229714),(0.9, 1.068628702)]
+
+fun gamma_of alpha = dfind alpha gammadict
+  handle NotFound => raise ERR "gamma_of" (rts alpha)
+
+fun gamma_density alpha x =
+  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of alpha
+
+fun gamma_distrib alpha =
+  map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
+
+fun gamma_noise_gen alpha =
+  let
+    val distrib = gamma_distrib alpha
+    val cumul = mk_cumul distrib
+  in
+    fn () => select_in_cumul cumul
+  end
+
+
 
 (* ------------------------------------------------------------------------
    Theories of the standard library (sigobj)
