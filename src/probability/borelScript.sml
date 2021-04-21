@@ -504,6 +504,13 @@ Proof
  >> METIS_TAC [le_lt]
 QED
 
+Theorem FN_PLUS_REDUCE' :
+    !f x. f x <= 0 ==> (fn_plus f x = 0)
+Proof
+    RW_TAC std_ss [fn_plus_def]
+ >> METIS_TAC [let_antisym]
+QED
+
 Theorem FN_MINUS_REDUCE[simp] :
     !f x. 0 <= f x ==> (fn_minus f x = 0)
 Proof
@@ -3806,34 +3813,138 @@ val IN_MEASURABLE_BOREL_MIN = store_thm
        by ASM_SET_TAC []
  >> METIS_TAC [sigma_algebra_def, ALGEBRA_UNION]);
 
-val IN_MEASURABLE_BOREL_MONO_SUP = store_thm
-  ("IN_MEASURABLE_BOREL_MONO_SUP",
-  ``!fn f a. sigma_algebra a /\ (!n:num. fn n IN measurable a Borel) /\
-            (!n x. x IN space a ==> fn n x <= fn (SUC n) x) /\
-            (!x. x IN space a ==> (f x = sup (IMAGE (\n. fn n x) UNIV)))
-         ==> f IN measurable a Borel``,
+(* TODO: ‘!n x. x IN space a ==> fn n x <= fn (SUC n) x’ (MONO) is unnecessary *)
+Theorem IN_MEASURABLE_BOREL_MONO_SUP :
+    !fi f a. sigma_algebra a /\ (!n:num. fi n IN measurable a Borel) /\
+            (!n x. x IN space a ==> fi n x <= fi (SUC n) x) /\
+            (!x. x IN space a ==> (f x = sup (IMAGE (\n. fi n x) UNIV)))
+         ==> f IN measurable a Borel
+Proof
     RW_TAC std_ss [IN_MEASURABLE_BOREL_ALT2, IN_FUNSET, IN_UNIV]
- >> `{x | sup (IMAGE (\n. fn n x) UNIV) <= Normal c} INTER space a =
-      BIGINTER (IMAGE (\n. {x | fn n x <= Normal c} INTER space a) UNIV)`
- by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGINTER_IMAGE, IN_UNIV, IN_INTER, sup_le] \\
+ >> Know ‘{x | sup (IMAGE (\n. fi n x) UNIV) <= Normal c} INTER space a =
+           BIGINTER (IMAGE (\n. {x | fi n x <= Normal c} INTER space a) UNIV)’
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGINTER_IMAGE, IN_UNIV, IN_INTER, sup_le'] \\
      EQ_TAC
      >- (RW_TAC std_ss [] \\
          Q.PAT_X_ASSUM `!y. P y ==> y <= Normal c` MATCH_MP_TAC \\
-         ONCE_REWRITE_TAC [GSYM SPECIFICATION] \\
          RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
          METIS_TAC []) \\
      RW_TAC std_ss [] \\
-     POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) \\
+     POP_ASSUM MP_TAC \\
      RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
      METIS_TAC [])
- >> `{x | f x <= Normal c} INTER space a =
-     {x | sup (IMAGE (\n. fn n x) UNIV) <= Normal c} INTER space a`
+ >> DISCH_TAC
+ >> ‘{x | f x <= Normal c} INTER space a =
+     {x | sup (IMAGE (\n. fi n x) UNIV) <= Normal c} INTER space a’
       by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] >> METIS_TAC [])
- >> `!c. BIGINTER (IMAGE (\n. {x | fn n x <= Normal c} INTER (space a)) UNIV) IN subsets a`
+ >> ‘!c. BIGINTER (IMAGE (\n. {x | fi n x <= Normal c} INTER (space a)) UNIV) IN subsets a’
       by (RW_TAC std_ss [] \\
           (MP_TAC o Q.SPEC `(space a,subsets a)`) SIGMA_ALGEBRA_FN_BIGINTER \\
           RW_TAC std_ss [IN_FUNSET, IN_UNIV, space_def, subsets_def, SPACE])
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
+
+(* Here univ(:num) is replaced by a subset X *)
+Theorem IN_MEASURABLE_BOREL_SUP :
+    !a fi f X. sigma_algebra a /\ X <> {} /\
+              (!n:num. n IN X ==> fi n IN measurable a Borel) /\
+              (!x. x IN space a ==> (f x = sup (IMAGE (\n. fi n x) X)))
+           ==> f IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> RW_TAC std_ss [IN_MEASURABLE_BOREL_ALT2, IN_FUNSET, IN_UNIV]
+ >> Know ‘{x | sup (IMAGE (\n. fi n x) X) <= Normal c} INTER space a =
+           BIGINTER (IMAGE (\n. {x | fi n x <= Normal c} INTER space a) X)’
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGINTER_IMAGE, IN_UNIV, IN_INTER, sup_le'] \\
+     EQ_TAC
+     >- (RW_TAC std_ss [] \\
+         Q.PAT_X_ASSUM `!y. P y ==> y <= Normal c` MATCH_MP_TAC \\
+         RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
+         Q.EXISTS_TAC ‘n’ >> art []) \\
+     RW_TAC std_ss [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       POP_ASSUM MP_TAC \\
+       RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
+       METIS_TAC [],
+       (* goal 2 (of 2) *)
+      ‘?i. i IN X’ by METIS_TAC [MEMBER_NOT_EMPTY] \\
+       METIS_TAC [] ])
+ >> DISCH_TAC
+ >> ‘{x | f x <= Normal c} INTER space a =
+     {x | sup (IMAGE (\n. fi n x) X) <= Normal c} INTER space a’
+      by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] >> METIS_TAC [])
+ >> NTAC 2 POP_ORW
+ >> Q.ABBREV_TAC ‘A = \n. {x | fi n x <= Normal c} INTER space a’
+ >> ‘IMAGE A X = {A i | i IN X}’ by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC (Q.SPECL [‘space a’, ‘subsets a’] SIGMA_ALGEBRA_COUNTABLE_INT)
+ >> rw [IN_FUNSET, space_def, subsets_def, SPACE, SUBSET_DEF, Abbr ‘A’]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_RC >> rw []
+QED
+
+Theorem IN_MEASURABLE_BOREL_MONO_INF :
+    !fi f a. sigma_algebra a /\ (!n:num. fi n IN measurable a Borel) /\
+            (!x. x IN space a ==> (f x = inf (IMAGE (\n. fi n x) UNIV)))
+         ==> f IN measurable a Borel
+Proof
+    RW_TAC std_ss [IN_MEASURABLE_BOREL_ALT1, IN_FUNSET, IN_UNIV]
+ >> Know ‘{x | Normal c <= inf (IMAGE (\n. fi n x) UNIV)} INTER space a =
+           BIGINTER (IMAGE (\n. {x | Normal c <= fi n x} INTER space a) UNIV)’
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGINTER_IMAGE, IN_UNIV, IN_INTER, le_inf'] \\
+     EQ_TAC
+     >- (RW_TAC std_ss [] \\
+         Q.PAT_X_ASSUM ‘!y. P y ==> Normal c <= y’ MATCH_MP_TAC \\
+         RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
+         METIS_TAC []) \\
+     RW_TAC std_ss [] \\
+     POP_ASSUM MP_TAC \\
+     RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
+     METIS_TAC [])
+ >> DISCH_TAC
+ >> ‘{x | Normal c <= f x} INTER space a =
+     {x | Normal c <= inf (IMAGE (\n. fi n x) UNIV)} INTER space a’
+       by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] >> METIS_TAC [])
+ >> ‘!c. BIGINTER (IMAGE (\n. {x | Normal c <= fi n x} INTER (space a)) UNIV) IN subsets a’
+       by (RW_TAC std_ss [] \\
+           (MP_TAC o Q.SPEC `(space a,subsets a)`) SIGMA_ALGEBRA_FN_BIGINTER \\
+           RW_TAC std_ss [IN_FUNSET, IN_UNIV, space_def, subsets_def, SPACE])
+ >> METIS_TAC []
+QED
+
+Theorem IN_MEASURABLE_BOREL_INF :
+    !a fi f X. sigma_algebra a /\ X <> {} /\
+              (!n:num. n IN X ==> fi n IN measurable a Borel) /\
+              (!x. x IN space a ==> (f x = inf (IMAGE (\n. fi n x) X)))
+           ==> f IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> RW_TAC std_ss [IN_MEASURABLE_BOREL_ALT1, IN_FUNSET, IN_UNIV]
+ >> Know ‘{x | Normal c <= inf (IMAGE (\n. fi n x) X)} INTER space a =
+           BIGINTER (IMAGE (\n. {x | Normal c <= fi n x} INTER space a) X)’
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGINTER_IMAGE, IN_UNIV, IN_INTER, le_inf'] \\
+     EQ_TAC
+     >- (RW_TAC std_ss [] \\
+         Q.PAT_X_ASSUM ‘!y. P y ==> Normal c <= y’ MATCH_MP_TAC \\
+         RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
+         Q.EXISTS_TAC ‘n’ >> art []) \\
+     RW_TAC std_ss [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       POP_ASSUM MP_TAC \\
+       RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
+       METIS_TAC [],
+       (* goal 2 (of 2) *)
+      ‘?i. i IN X’ by METIS_TAC [MEMBER_NOT_EMPTY] \\
+       METIS_TAC [] ])
+ >> DISCH_TAC
+ >> ‘{x | Normal c <= f x} INTER space a =
+     {x | Normal c <= inf (IMAGE (\n. fi n x) X)} INTER space a’
+       by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] >> METIS_TAC [])
+ >> NTAC 2 POP_ORW
+ >> Q.ABBREV_TAC ‘A = \n. {x | Normal c <= fi n x} INTER space a’
+ >> ‘IMAGE A X = {A i | i IN X}’ by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC (Q.SPECL [‘space a’, ‘subsets a’] SIGMA_ALGEBRA_COUNTABLE_INT)
+ >> rw [IN_FUNSET, space_def, subsets_def, SPACE, SUBSET_DEF, Abbr ‘A’]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CR >> rw []
+QED
 
 (* a generalized version of IN_MEASURABLE_BOREL_MAX, cf. sup_maximal *)
 Theorem IN_MEASURABLE_BOREL_MAXIMAL :
@@ -6572,6 +6683,13 @@ val AE_THM = store_thm
   ("AE_THM", ``!m P. (AE x::m. P x) <=> almost_everywhere m P``,
     SIMP_TAC std_ss [almost_everywhere_def]);
 
+Theorem AE_DEF :
+    !m P. (AE x::m. P x) <=>
+          ?N. null_set m N /\ !x. x IN (m_space m DIFF N) ==> P x
+Proof
+    rw [AE_THM, almost_everywhere_def]
+QED
+
 (* `lebesgue` is the default measure used in `AE x. ...` (without restriction) *)
 val AE_default = store_thm
   ("AE_default", ``!P. (AE x. P x) <=> (AE x::lebesgue. P x)``,
@@ -6582,7 +6700,7 @@ Theorem AE_ALT :
     !m P. (AE x::m. P x) <=>
           ?N. null_set m N /\ {x | x IN m_space m /\ ~P x} SUBSET N
 Proof
-    RW_TAC std_ss [AE_THM, almost_everywhere_def, SUBSET_DEF, GSPECIFICATION, IN_DIFF]
+    RW_TAC std_ss [AE_DEF, SUBSET_DEF, GSPECIFICATION, IN_DIFF]
  >> METIS_TAC []
 QED
 
@@ -6598,7 +6716,7 @@ QED
 val FORALL_IMP_AE = store_thm
   ("FORALL_IMP_AE",
   ``!m P. measure_space m /\ (!x. x IN m_space m ==> P x) ==> AE x::m. P x``,
-    RW_TAC std_ss [AE_THM, almost_everywhere_def]
+    RW_TAC std_ss [AE_DEF]
  >> Q.EXISTS_TAC `{}`
  >> RW_TAC std_ss [NULL_SET_EMPTY, IN_DIFF, NOT_IN_EMPTY]);
 
@@ -10232,8 +10350,7 @@ val _ = export_theory ();
   [3] Coble, A.R.: Anonymity, information, and machine-assisted proof, (2010).
   [4] Hurd, J.: Formal verification of probabilistic algorithms. (2001).
   [5] Wikipedia: https://en.wikipedia.org/wiki/Henri_Lebesgue
-  [6] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
-  [7] Emile Borel: https://en.wikipedia.org/wiki/%C3%89mile_Borel
+  [7] Wikipedia: https://en.wikipedia.org/wiki/Emile_Borel
   [8] Hardy, G.H., Littlewood, J.E.: A Course of Pure Mathematics, Tenth Edition.
       Cambridge University Press, London (1967).
  *)

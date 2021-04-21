@@ -869,6 +869,16 @@ val SQRT_POS_LT = store_thm("SQRT_POS_LT",
  REWRITE_TAC [sqrt,TWO] THEN REPEAT STRIP_TAC
   THEN IMP_RES_TAC ROOT_LN THEN ASM_REWRITE_TAC[EXP_POS_LT]);
 
+Theorem SQRT_POS_NE :
+    !(x :real). &0 < x ==> sqrt(x) <> &0
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> DISCH_THEN (ASSUME_TAC o (MATCH_MP SQRT_POS_LT))
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC REAL_LT_IMP_NE
+ >> ASM_REWRITE_TAC []
+QED
+
 val SQRT_POS_LE = store_thm("SQRT_POS_LE",
   “!x. &0 <= x ==> &0 <= sqrt(x)”,
   REWRITE_TAC[REAL_LE_LT] THEN MESON_TAC[SQRT_POS_LT, SQRT_0]);

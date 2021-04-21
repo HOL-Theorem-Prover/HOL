@@ -649,9 +649,7 @@ space $m$, denoted by ``\holtxt{AE x::m. P x}'' in
 for every $x$ excluding a null set:
 \begin{hol}
 \begin{alltt}
-##thm AE_THM
-
-##thm almost_everywhere_def
+##thm AE_DEF
 \end{alltt}
 \end{hol}
 
@@ -1305,16 +1303,15 @@ $X - Y$ to 0'' are equivalent, for instance:
 \end{alltt}
 \end{hol}
 
-On the other hand, $L^p$ convergence implies ``in pr.'', but so far
-only a special version (converge to zero, with integer-valued power)
-is provided:
+On the other hand, $L^p$ convergence implies convergence in probability, but so far
+only a special version (converge to zero, with integer-valued power) is provided:
 \begin{hol}
 \begin{alltt}
 ##thm converge_LP_imp_PR'
 \end{alltt}
 \end{hol}
 
-\paragraph{Limit theorems and the laws of large numbers}
+\subsection{Limit Theorems and the Laws of Large Numbers}
 
 \begin{quote}
 \textit{
@@ -1332,11 +1329,26 @@ were actually observed. For large $n$ the average $(X_1 + \cdots +
 X_n)/n$ should be close to $\mathscr{E}(X)$. The laws of large numbers
 give substance and precision to this vague intuitive description~\cite[p.~221]{Feller:2004vv}.
 %
-More generally, the so-called ``Law of Large Numbers'' deals with the
+More generally, the so-called ``Law of Large Numbers'' (LLN) deals with the
 partial sums of an infinite sequence of random variables
 $S_n = \sum_{j=1}^n X_j$. Under certain conditions
 $(S_n - \mathscr{E}(S_n))/n$ converges to 0, in probability
 (weak law) or almost everywhere (strong law).
+
+All versions of LLN can be found in \HOL{}'s \theoryimp{large_number} theory.
+The conclusion of all LLN theorems are given in the form of \holtxt{LLN}, which
+has alternative definitions for different conditions, e.g.
+\begin{hol}
+\begin{alltt}
+>>__ load "large_numberTheory";
+>>__ open large_numberTheory;
+##thm LLN_def
+
+##thm LLN_alt_converge_AE_IID
+
+##thm LLN_alt_converge_PR_IID
+\end{alltt}
+\end{hol}
 
 For uncorrelated r.v.'s with a common bound of variance, the proof is
 simple and based on Markov's and Chebyshev's inequalities. The centered
@@ -1345,9 +1357,19 @@ probability~\cite[108]{Chung:2001}.
 Under the same hypotheses it also converges to 0 almost everywhere:
 \begin{hol}
 \begin{alltt}
-##thm WLLN_uncorrelated'
+##thm WLLN_uncorrelated_L2
 
-##thm SLLN_uncorrelated'
+##thm WLLN_uncorrelated
+
+##thm SLLN_uncorrelated
+\end{alltt}
+\end{hol}
+
+For (pairwise) independent r.v.'s with identical distributions,
+the weak law has been proven:
+\begin{hol}
+\begin{alltt}
+##thm WLLN_IID    
 >>__ val _ = Globals.linewidth := oldwidth;
 \end{alltt}
 \end{hol}
