@@ -1,6 +1,6 @@
 # HOL's Probability Theory
 
-This directory contains HOL4's Measure, Lebesgue integral and Probability theories.
+This directory contains HOL4's Measure, Lebesgue Integration and Probability theories.
 
 ## Preliminaries
 
@@ -11,16 +11,17 @@ This directory contains HOL4's Measure, Lebesgue integral and Probability theori
 
 ## Measure, Integral and Probability Theory defined on extended reals
 
-     sigma_algebraScript.sml      * Sigma-algebra and other system of sets
-     measureScript.sml            * Measure Theory defined on extended reals 
-     real_borelScript.sml         * Borel-measurable sets generated from reals 
+     sigma_algebraScript.sml      * Sigma-algebra and other systems of sets
+     measureScript.sml            * Measure Theory defined on extended reals
      borelScript.sml              * Borel sets and Borel measurable functions
      lebesgueScript.sml           * Lebesgue integration theory
      martingaleScript.sml         * Martingales based on σ-finite filtered measure space
      probabilityScript.sml        * Probability Theory based on extended reals
+     large_numberScript.sml       * The Law(s) of Large Numbers
 
 ## Measure, Integral and Probability Theory defined on reals
 
+     real_borelScript.sml         * Borel-measurable sets generated from reals
      real_measureScript.sml       * Measure Theory defined on reals
      real_lebesgueScript.sml      * Lebesgue integrals based on reals
      real_probabilityScript.sml   * Probability Theory based on reals
@@ -29,4 +30,4 @@ This directory contains HOL4's Measure, Lebesgue integral and Probability theori
 
      hurdUtils.{sml|sig}          * Some useful tools originally defined by Joe Hurd
      util_probScript.sml          * Utility lemmas needed by other scripts
-     iterateScript.sml            * Generic iterated operations and special cases of sums over N and R
+     iterateScript.sml            * Generic iterated operations and special cases over N and R (from HOL Light)

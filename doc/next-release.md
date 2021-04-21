@@ -26,6 +26,10 @@ Bugs fixed:
 New theories:
 -------------
 
+*   `large_numberTheory`: various versions of the Laws of Large Numbers (LLN) of Probability Theory.
+    Some theorems (`WLLN_uncorrelated`, `SLLN_uncorrelated`, etc.) previously in `probabilityTheory`
+	are moved to `large_numberTheory` with updated statements.
+
 New tools:
 ----------
 

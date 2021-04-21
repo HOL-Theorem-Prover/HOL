@@ -690,6 +690,21 @@ val REAL_SUM_IMAGE_CROSS_SYM = store_thm
            >> RW_TAC std_ss [])
   >> RW_TAC std_ss []);
 
+Theorem REAL_SUM_IMAGE_ABS_TRIANGLE :
+   !f s. FINITE s ==> abs (REAL_SUM_IMAGE f s) <= REAL_SUM_IMAGE (abs o f) s
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> CONJ_TAC >- REWRITE_TAC [REAL_SUM_IMAGE_THM, ABS_0, REAL_LE_REFL]
+ >> rpt STRIP_TAC
+ >> ASM_SIMP_TAC std_ss [REAL_SUM_IMAGE_THM]
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘abs (f e) + abs (REAL_SUM_IMAGE f (s DELETE e))’
+ >> REWRITE_TAC [ABS_TRIANGLE]
+ >> MATCH_MP_TAC REAL_LE_LADD_IMP
+ >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
+QED
+
 val _ = overload_on ("SIGMA", ``REAL_SUM_IMAGE ``);
 
 (* ------------------------------------------------------------------------- *)
