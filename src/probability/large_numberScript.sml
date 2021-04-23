@@ -63,7 +63,7 @@ Definition equivalent_def :
 End
 
 Definition truncated_def :
-    truncated p (X :num -> 'a -> extreal) =
+    truncated (X :num -> 'a -> extreal) =
       \n x. if &SUC n <= abs (X n x) then 0 else X n x
 End
 
@@ -2470,7 +2470,7 @@ QED
 (* alternative definition of ‘truncated’ from [3, p.62] *)
 Theorem truncated_alt :
     !p X n x. prob_space p /\ random_variable (X n) p Borel /\ x IN p_space p ==>
-             (truncated p X n x =
+             (truncated X n x =
               X n x * indicator_fn {x | x IN p_space p /\ abs (X n x) < &SUC n} x)
 Proof
     RW_TAC set_ss [truncated_def, indicator_fn_def, extreal_lt_def,
@@ -2478,34 +2478,36 @@ Proof
 QED
 
 Theorem truncated_le_abs :
-    !p X n x. abs (truncated p X n x) <= abs (X n x)
+    !X n x. abs (truncated X n x) <= abs (X n x)
 Proof
     rw [truncated_def, abs_0, abs_pos]
 QED
 
 Theorem random_variable_truncated :
     !p X n. prob_space p /\ random_variable (X n) p Borel ==>
-            random_variable (truncated p X n) p Borel
+            random_variable (truncated X n) p Borel
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘f = \x. if &SUC n <= abs x then 0 else x’
  >> ‘f IN measurable Borel Borel’
        by (rw [Abbr ‘f’, IN_MEASURABLE_BOREL_BOREL_truncated])
- >> ‘truncated p X n = f o X n’ by (rw [truncated_def, Abbr ‘f’, o_DEF])
+ >> ‘truncated X n = f o X n’ by (rw [truncated_def, Abbr ‘f’, o_DEF])
  >> POP_ORW
  >> MATCH_MP_TAC random_variable_comp >> art []
 QED
 
 Theorem real_random_variable_truncated :
     !p X n. prob_space p /\ real_random_variable (X n) p ==>
-            real_random_variable (truncated p X n) p
+            real_random_variable (truncated X n) p
 Proof
     rpt GEN_TAC
  >> SIMP_TAC std_ss [real_random_variable_def]
  >> STRIP_TAC
  >> reverse CONJ_TAC
  >- (Q.X_GEN_TAC ‘x’ >> DISCH_TAC \\
-     ASM_SIMP_TAC std_ss [truncated_alt] \\
+     Know ‘truncated X n x =
+           X n x * indicator_fn {x | x IN p_space p /\ abs (X n x) < &SUC n} x’
+     >- (MATCH_MP_TAC truncated_alt >> art []) >> Rewr' \\
     ‘?r. X n x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
     ‘?z. indicator_fn {x | x IN p_space p /\ abs (X n x) < &SUC n} x = Normal z’
        by METIS_TAC [indicator_fn_normal] >> POP_ORW \\
@@ -2515,10 +2517,10 @@ QED
 
 Theorem integrable_truncated :
     !p X n. prob_space p /\ random_variable (X n) p Borel /\ integrable p (X n) ==>
-            integrable p (truncated p X n)
+            integrable p (truncated X n)
 Proof
     rpt STRIP_TAC
- >> ‘random_variable (truncated p X n) p Borel’ by PROVE_TAC [random_variable_truncated]
+ >> ‘random_variable (truncated X n) p Borel’ by PROVE_TAC [random_variable_truncated]
  >> FULL_SIMP_TAC std_ss [prob_space_def, random_variable_def, p_space_def, events_def]
  >> MATCH_MP_TAC integrable_bounded
  >> Q.EXISTS_TAC ‘abs o (X n)’ >> art []
@@ -2530,7 +2532,7 @@ QED
 Theorem truncated_vars_expectation :
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
-         ((\n. real (expectation p (truncated p X n))) -->
+         ((\n. real (expectation p (truncated X n))) -->
                real (expectation p (X 0))) sequentially
 Proof
     rpt STRIP_TAC
@@ -2545,7 +2547,7 @@ Proof
  >> Q.ABBREV_TAC ‘f = \n x. if &SUC n <= abs x then 0 else x’
  >> ‘!n. (f n) IN measurable Borel Borel’
        by (rw [Abbr ‘f’, IN_MEASURABLE_BOREL_BOREL_truncated])
- >> ‘!n. truncated p X n = f n o X n’
+ >> ‘!n. truncated X n = f n o X n’
        by (rw [truncated_def, Abbr ‘f’, o_DEF]) >> POP_ORW
  >> ‘!n. expectation p (f n o X n) = expectation p (f n o X 0)’
        by METIS_TAC [identical_distribution_alt'] >> POP_ORW
@@ -2715,39 +2717,39 @@ Theorem truncated_vars_expectation' :
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
          ((\n. real (expectation p
-                      (\x. SIGMA (\i. truncated p X i x) (count (SUC n))) / &SUC n)) -->
+                      (\x. SIGMA (\i. truncated X i x) (count (SUC n))) / &SUC n)) -->
                real (expectation p (X 0))) sequentially
 Proof
     rpt STRIP_TAC
- >> ‘!n. real_random_variable (truncated p X n) p’
+ >> ‘!n. real_random_variable (truncated X n) p’
        by PROVE_TAC [real_random_variable_truncated]
- >> Know ‘((\n. real (expectation p (truncated p X n))) -->
+ >> Know ‘((\n. real (expectation p (truncated X n))) -->
                 real (expectation p (X 0))) sequentially’
  >- (MATCH_MP_TAC truncated_vars_expectation >> art [])
  >> DISCH_TAC
  >> Q.PAT_X_ASSUM ‘!n. real_random_variable (X n) p’
       (STRIP_ASSUME_TAC o (CONV_RULE FORALL_AND_CONV) o
        (REWRITE_RULE [real_random_variable_def]))
- >> Q.PAT_X_ASSUM ‘!n. real_random_variable (truncated p X n) p’
+ >> Q.PAT_X_ASSUM ‘!n. real_random_variable (truncated X n) p’
       (STRIP_ASSUME_TAC o (CONV_RULE FORALL_AND_CONV) o
        (REWRITE_RULE [real_random_variable_def]))
  >> Know ‘!n. integrable p (X n)’
  >- (MATCH_MP_TAC identical_distribution_integrable >> art [])
  >> DISCH_TAC
- >> ‘!n. integrable p (truncated p X n)’ by PROVE_TAC [integrable_truncated]
+ >> ‘!n. integrable p (truncated X n)’ by PROVE_TAC [integrable_truncated]
  (* applying integral_sum *)
  >> Know ‘!n. expectation p
-                (\x. SIGMA (\i. truncated p X i x) (count (SUC n))) =
-              SIGMA (\i. expectation p (truncated p X i)) (count (SUC n))’
+                (\x. SIGMA (\i. truncated X i x) (count (SUC n))) =
+              SIGMA (\i. expectation p (truncated X i)) (count (SUC n))’
  >- (RW_TAC std_ss [expectation_def] \\
      HO_MATCH_MP_TAC integral_sum \\
      FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, FINITE_COUNT])
  >> Rewr'
- >> Q.ABBREV_TAC ‘f = \n. expectation p (truncated p X n)’
+ >> Q.ABBREV_TAC ‘f = \n. expectation p (truncated X n)’
  >> Q.ABBREV_TAC ‘m = expectation p (X 0)’
- >> Q.PAT_X_ASSUM ‘((\n. real (expectation p (truncated p X n))) --> real m)
+ >> Q.PAT_X_ASSUM ‘((\n. real (expectation p (truncated X n))) --> real m)
                      sequentially’ MP_TAC
- >> ‘!n. expectation p (truncated p X n) = f n’ by METIS_TAC []
+ >> ‘!n. expectation p (truncated X n) = f n’ by METIS_TAC []
  >> POP_ORW
  >> ‘!n. f n <> PosInf /\ f n <> NegInf’ by METIS_TAC [expectation_finite]
  >> ‘m <> PosInf /\ m <> NegInf’ by METIS_TAC [expectation_finite]
@@ -2798,7 +2800,7 @@ Proof
  >> ‘!n. f n IN measurable Borel Borel’
        by (rw [Abbr ‘f’, IN_MEASURABLE_BOREL_BOREL_truncated])
  (* define Y and prove it's equivalent to X *)
- >> Q.ABBREV_TAC ‘Y = truncated p X’
+ >> Q.ABBREV_TAC ‘Y = truncated X’
  >> ‘!n. real_random_variable (Y n) p’
        by (rw [Abbr ‘Y’, real_random_variable_truncated])
  (* alternative definition of Y *)
