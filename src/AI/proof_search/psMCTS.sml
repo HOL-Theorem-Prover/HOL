@@ -236,7 +236,7 @@ load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
 
 val mctsparam =
-  {time = (NONE : real option), nsim = (SOME 100000 : int option),
+  {time = (NONE : real option), nsim = (SOME 10000000 : int option),
    explo_coeff = 2.0,
    noise = false, noise_coeff = 0.25, noise_gen = gamma_noise_gen 0.2};
 
