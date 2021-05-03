@@ -338,16 +338,6 @@ Proof
   simp[ded_hyp]
 QED
 
-
-Theorem contrI:
-  ded (NEG q INSERT Γ) p ∧ ded (NEG q INSERT Γ) (NEG p) ⇒ ded Γ q
-Proof
-  strip_tac >>
-  ‘ded Γ (IMP (NEG q) p) ∧ ded Γ (IMP (NEG q) (NEG p))’
-    by (conj_tac >> irule deduction_thm >> simp[]) >>
-  metis_tac[ded_rules]
-QED
-
 Theorem cposI:
   ded Γ (IMP (IMP p q) (IMP (NEG q) (NEG p)))
 Proof
