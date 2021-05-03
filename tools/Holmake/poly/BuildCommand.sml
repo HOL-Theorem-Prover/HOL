@@ -312,6 +312,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                   | SOME d => "--holstate="^tgt_toString d) ::
             extra_poly_cline() @
             ((if isSome debug then ["--dbg"] else []) @ objectfiles) @
+            ["-e",
+             "  check that export_theory call exists, and that new_theory\n\
+             \  call is of the right name"] @
             List.concat (map (fn f => ["-c", f]) expecteds)
         fun cont wn res =
           let
