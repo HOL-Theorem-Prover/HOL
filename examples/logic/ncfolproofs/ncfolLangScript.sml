@@ -5,6 +5,8 @@ open pred_setTheory listTheory
 
 val _ = new_theory "ncfolLang";
 
+val _ = Unicode.unicode_version {tmnm = "INSERT", u = "⨾"}
+
 Datatype:
   term = Var string | Fn string (term list)
 End
@@ -159,40 +161,80 @@ QED
 
 
 Inductive ded:
-[PL1:] (∀A B. ded Hs (A ⥰ B ⥰ A)) ∧
-[PL2:] (∀A B C. ded Hs ((A ⥰ B ⥰ C) ⥰ (A ⥰ B) ⥰ (A ⥰ C))) ∧
-[PL3:] (∀A B. ded Hs ((⌁A ⥰ ⌁B) ⥰ (⌁A ⥰ B) ⥰ A)) ∧
-[PL4:] (∀v t f. acceptable v t f ⇒ ded Hs ((ALL v f) ⥰ fsubst v t f)) ∧
-[PL5:] (∀v A B. v ∉ fFV A ⇒ ded Hs (ALL v (A ⥰ B) ⥰ A ⥰ (ALL v B))) ∧
-[~MP:] (∀A B. ded Hs (A ⥰ B) ∧ ded Hs A ⇒ ded Hs B) ∧
-[UG:] (∀v A. (∀h. h ∈ Hs ⇒ v ∉ fFV h) ∧ ded Hs A ⇒ ded Hs (ALL v A)) ∧
-[~hyp:] (∀h. h ∈ Hs ⇒ ded Hs h)
+[PL1:] (∀A B. ded R Hs (A ⥰ B ⥰ A)) ∧
+[PL2:] (∀A B C. ded R Hs ((A ⥰ B ⥰ C) ⥰ (A ⥰ B) ⥰ (A ⥰ C))) ∧
+[PL3:] (∀A B. ded R Hs ((⌁A ⥰ ⌁B) ⥰ (⌁A ⥰ B) ⥰ A)) ∧
+[PL4:] (∀v t f. acceptable v t f ⇒ ded R Hs ((ALL v f) ⥰ fsubst v t f)) ∧
+[PL5:] (∀v A B. v ∉ fFV A ⇒ ded R Hs (ALL v (A ⥰ B) ⥰ A ⥰ (ALL v B))) ∧
+[~MP:] (∀A B. ded R Hs (A ⥰ B) ∧ ded R Hs A ⇒ ded R Hs B) ∧
+[UG:] (∀v A. (∀h. h ∈ Hs ⇒ v ∉ fFV h) ∧ ded R Hs A ⇒ ded R Hs (ALL v A)) ∧
+[~hyp:] (∀h. h ∈ Hs ⇒ ded R Hs h) ∧
+[~R:] (∀B s. (∀A hs. (hs,A) ∈ s ⇒ ded R hs A) ∧ R s Hs B ⇒ ded R Hs B)
 End
 
-val _ = set_mapped_fixity {term_name = "ded", fixity = Infix(NONASSOC, 450),
+Overload Ded = “ded R”
+
+Overload ded0 = “ded (λs Hs B. F)”
+Overload dedg = “ded (λs Hs B. ∃hs0. s = {(hs0,B)} ∧ hs0 ⊆ Hs)”
+
+val _ = set_mapped_fixity {term_name = "Ded", fixity = Infix(NONASSOC, 450),
                            tok = "⊩"}
+val _ = set_mapped_fixity {term_name = "dedg", fixity = Infix(NONASSOC, 450),
+                           tok = "⊩ᵍ"}
+val _ = set_mapped_fixity {term_name = "ded0", fixity = Infix(NONASSOC, 450),
+                           tok = "⊩⁰"}
 
 Theorem ded_I:
-  ded Hs (ϕ ⥰ ϕ)
+  Hs ⊩ (ϕ ⥰ ϕ)
 Proof
   metis_tac[ded_rules]
 QED
 
-Theorem deduction_thm:
-  ded (h INSERT Hs) ϕ ⇒ ded Hs (h ⥰ ϕ)
+Theorem Gdeduction_thm:
+  ∀h Hs ϕ. (h INSERT Hs) ⊩ᵍ ϕ ⇒ Hs ⊩ᵍ (h ⥰ ϕ)
+Proof
+  Induct_on ‘ded’ >> rpt strip_tac >> gvs[ded_I] >~
+  [‘ϕ ∈ Hs’, ‘h ⥰ ϕ’]
+  >- (Cases_on ‘h = ϕ’ >- simp[ded_I] >>
+      irule ded_MP >> metis_tac[PL1, ded_hyp, IN_DELETE]) >~
+  [‘h INSERT Hs ⊩ᵍ (ϕ ⥰ ψ)’, ‘h INSERT Hs ⊩ᵍ ϕ’]
+  >- (resolve_then (Pos hd) assume_tac PL2 ded_MP >>
+      pop_assum (first_assum o C (resolve_then (Pos hd) assume_tac)) >>
+      irule ded_MP >> pop_assum $ irule_at (Pos last) >> simp[]) >~
+  [‘Hs ⊩ᵍ IMP h (ALL v ϕ)’]
+  >- (pop_assum $ C (resolve_then (Pos (el 2)) assume_tac) UG >>
+      gs[DISJ_IMP_THM, FORALL_AND_THM] >>
+      irule ded_MP >> metis_tac[PL5]) >~
+  [‘Hs0 ⊩ᵍ ϕ’, ‘Hs0 ⊆ h INSERT Hs’]
+  >- (irule ded_R >> simp[PULL_EXISTS] >>
+      Cases_on ‘h ∈ Hs0’
+      >- (‘∃Hs00. Hs0 = h INSERT Hs00 ∧ h ∉ Hs00’ by metis_tac[DECOMPOSITION] >>
+          ‘Hs00 ⊩ᵍ IMP h ϕ’ by metis_tac[] >>
+          ‘Hs00 ⊆ Hs’ suffices_by metis_tac[] >>
+          gvs[]) >>
+      ‘Hs0 ⊩ᵍ IMP h ϕ’ by metis_tac[ded_MP, PL1] >>
+      ‘Hs0 ⊆ Hs’ by metis_tac[SUBSET_DEF, IN_INSERT] >> metis_tac[])
+  >- (irule ded_MP >> irule_at Any PL1 >> irule_at Any PL1)
+  >- (irule ded_MP >> irule_at (Pos last) PL1 >> simp[PL2])
+  >- (irule ded_MP >> irule_at (Pos last) PL1 >> simp[PL3])
+  >- (irule ded_MP >> irule_at (Pos last) PL1 >> simp[PL4])
+  >- (irule ded_MP >> irule_at (Pos last) PL1 >> simp[PL5])
+QED
+
+Theorem deduction0_thm:
+  ∀h Hs ϕ. (h INSERT Hs) ⊩⁰ ϕ ⇒ Hs ⊩⁰ (h ⥰ ϕ)
 Proof
   Induct_on ‘ded’ >> rpt strip_tac >> gvs[ded_I] >~
   [‘ϕ ∈ Hs’, ‘h ⥰ ϕ’]
   >- (Cases_on ‘h = ϕ’ >- simp[ded_I] >>
       irule ded_MP >> metis_tac[PL1, ded_hyp]) >~
-  [‘ded (h INSERT Hs) (ϕ ⥰ ψ)’, ‘ded (h INSERT Hs) ϕ’]
+  [‘h INSERT Hs ⊩⁰ (ϕ ⥰ ψ)’, ‘h INSERT Hs ⊩⁰ ϕ’]
   >- (resolve_then (Pos hd) assume_tac PL2 ded_MP >>
       pop_assum (first_assum o C (resolve_then (Pos hd) assume_tac)) >>
-      irule ded_MP >> pop_assum $ irule_at (Pos last) >>
-      pop_assum $ irule_at Any >> metis_tac[]) >~
-  [‘ded (h INSERT Hs) ϕ’, ‘ded Hs (h ⥰ ALL v ϕ)’]
-  >- (gs[DISJ_IMP_THM, FORALL_AND_THM] >>
-      dxrule_all_then assume_tac UG >>
+      irule ded_MP >> pop_assum $ irule_at (Pos last) >> simp[]) >~
+  [‘Hs ⊩⁰ IMP h (ALL v ϕ)’]
+  >- (pop_assum $ C (resolve_then (Pos (el 2)) assume_tac) UG >>
+      gs[DISJ_IMP_THM, FORALL_AND_THM] >>
       irule ded_MP >> metis_tac[PL5])
   >- (irule ded_MP >> irule_at Any PL1 >> irule_at Any PL1)
   >- (irule ded_MP >> irule_at (Pos last) PL1 >> simp[PL2])
@@ -201,45 +243,74 @@ Proof
   >- (irule ded_MP >> irule_at (Pos last) PL1 >> simp[PL5])
 QED
 
-Theorem alpha_deduce:
-  ∀x y P Hs.
-    y ∉ fFV P ∧ (∀h. h ∈ Hs ⇒ y ∉ fFV h) ∧
-    acceptable x (Var y) P ⇒
-    ded Hs ((ALL x P) ⥰ ALL y (fsubst x (Var y) P))
+Theorem stripimp_rwt[simp]:
+  G ⊩ᵍ p ⥰ q ⇔ p INSERT G ⊩ᵍ q
 Proof
-  rpt strip_tac >> irule deduction_thm >> irule UG >>
-  simp[DISJ_IMP_THM, FORALL_AND_THM] >> irule ded_MP >>
-  irule_at (Pos last) PL4 >> simp[] >> irule ded_hyp >> simp[]
+  eq_tac >> simp[Gdeduction_thm] >> strip_tac >>
+  ‘p INSERT G ⊩ᵍ p ⥰ q’
+    by (irule ded_R>> simp[PULL_EXISTS] >> goal_assum drule >>
+        simp[SUBSET_DEF]) >>
+  ‘p INSERT G ⊩ᵍ p’ by simp[ded_hyp] >> metis_tac[ded_MP]
 QED
 
-Theorem finite_deductions0:
-  ded Hs ϕ ⇒ ∃Hs0. FINITE Hs0 ∧ Hs0 ⊆ Hs ∧
-                   ∀Hs'. Hs0 ⊆ Hs' ∧ Hs' ⊆ Hs ⇒ ded Hs' ϕ
+Theorem alpha_deduce:
+  ∀x y P Hs.
+    y ∉ fFV P ∧ acceptable x (Var y) P ∧ ALL x P ∈ Γ ⇒
+    Γ ⊩ᵍ ALL y (fsubst x (Var y) P)
 Proof
-  Induct_on ‘ded’ >> simp[ded_rules] >> rpt strip_tac >~
-  [‘ded _ (ALL v ϕ)’] >- metis_tac[SUBSET_DEF, UG] >~
-  [‘Hs1 ⊆ _ ∧ _ ⇒ ded _ ϕ₁’, ‘Hs2 ⊆ _ ∧ _ ⇒ ded _ (ϕ₁ ⥰ ϕ₂)’,
-   ‘Hs1 ⊆ Hs’, ‘Hs2 ⊆ Hs’]
-  >- (qexists_tac ‘Hs1 ∪ Hs2’ >> simp[] >> qx_gen_tac ‘HI’ >>
-      metis_tac[ded_MP]) >~
-  [‘ϕ ∈ Hs’, ‘ded _ ϕ’]
-  >- (qexists_tac ‘{ϕ}’ >> simp[SUBSET_DEF, ded_rules]) >>
-  qexists_tac ‘∅’ >> simp[]
+  rpt strip_tac >> irule ded_R >> simp[PULL_EXISTS] >>
+  qexists_tac ‘{ALL x P}’ >> simp[] >> irule UG >> simp[] >>
+  irule ded_MP >> irule_at (Pos last) PL4 >> simp[ded_hyp]
 QED
 
 Theorem finite_deductions:
-  ded Hs ϕ ⇒ ∃Hs0. FINITE Hs0 ∧ Hs0 ⊆ Hs ∧ ded Hs0 ϕ
+  Hs ⊩ᵍ ϕ ⇒ ∃Hs0. FINITE Hs0 ∧ Hs0 ⊆ Hs ∧ Hs0 ⊩ᵍ ϕ
 Proof
-  metis_tac[finite_deductions0, SUBSET_REFL]
+  Induct_on ‘ded’ >> rpt strip_tac >>
+  gvs[PL1,PL2,PL3,PL4,PL5,Excl "stripimp_rwt"] >~
+  [‘_ ⊩ᵍ (ALL v ϕ)’] >- metis_tac[SUBSET_DEF, UG] >~
+  [‘Hs2 ⊩ᵍ ϕ₁ ⥰ ϕ₂’, ‘FINITE Hs2’, ‘Hs1 ⊩ᵍ ϕ₁’, ‘FINITE Hs1’]
+  >- (qexists_tac ‘Hs1 ∪ Hs2’ >> simp[] >> irule ded_MP >> qexists_tac ‘ϕ₁’ >>
+      conj_tac >> irule ded_R >> gs[PULL_EXISTS] >> metis_tac[SUBSET_UNION]) >~
+  [‘ϕ ∈ Hs’, ‘_ ⊩ᵍ ϕ’]
+  >- (qexists_tac ‘{ϕ}’ >> simp[SUBSET_DEF, ded_hyp]) >~
+  [‘As ⊆ Bs’, ‘Bs ⊆ Cs’] >- metis_tac[SUBSET_TRANS] >>
+  qexists_tac ‘∅’ >> simp[]
 QED
 
 Theorem closed_weakening:
-  (∀f. f ∈ Hs' ⇒ fFV f = ∅) ∧ ded Hs ϕ ⇒ ded (Hs ∪ Hs') ϕ
+  (∀f. f ∈ Hs' ⇒ fFV f = ∅) ∧ Hs ⊩⁰ ϕ ⇒ Hs ∪ Hs' ⊩⁰ ϕ
 Proof
   Cases_on ‘∀f. f ∈ Hs' ⇒ fFV f = ∅’ >> simp[] >>
   Induct_on ‘ded’ >> simp[ded_rules] >> rpt strip_tac
   >- metis_tac[ded_rules] >>
   irule UG >> simp[DISJ_IMP_THM]
+QED
+
+Theorem gweakening:
+  Hs ⊩ᵍ ϕ ⇒ Hs ∪ Hs' ⊩ᵍ ϕ
+Proof
+  strip_tac >> irule ded_R >> simp[PULL_EXISTS] >> metis_tac[SUBSET_UNION]
+QED
+
+Theorem ded0_dedg:
+  Hs ⊩⁰ ϕ ⇒ Hs ⊩ᵍ ϕ
+Proof
+  Induct_on ‘ded’ >> REWRITE_TAC[] >> rpt strip_tac >>
+  metis_tac[ded_rules]
+QED
+
+Theorem closed_dedg_ded0:
+  (∀h. h ∈ Hs ⇒ fFV h = ∅) ∧ Hs ⊩ᵍ ϕ ⇒ Hs ⊩⁰ ϕ
+Proof
+  Induct_on ‘ded’ >> rpt strip_tac >~
+  [‘s = {(_,_)}’]
+  >- (gvs[] >>
+      ‘∃hs1. Hs = hs0 ∪ hs1’ suffices_by
+        (strip_tac >> gvs[DISJ_IMP_THM, FORALL_AND_THM] >>
+         metis_tac[closed_weakening]) >>
+      qexists_tac ‘Hs DIFF hs0’ >> simp[EXTENSION]>> metis_tac[SUBSET_DEF]) >>
+  metis_tac[ded_rules]
 QED
 
 Definition conmap_def:
@@ -256,29 +327,29 @@ Proof
 QED
 
 Theorem FOL_consistent_lemma:
-  ded ∅ ϕ ⇒ conmap ϕ
+  ∅ ⊩⁰ ϕ ⇒ conmap ϕ
 Proof
   Induct_on ‘ded’ >> simp[conmap_def, conmap_subst]
 QED
 
 Theorem FOL_consistent:
-  ded ∅ ϕ ⇒ ¬ded ∅ (NEG ϕ)
+  ∅ ⊩⁰ ϕ ⇒ ¬(∅ ⊩⁰ NEG ϕ)
 Proof
   rpt strip_tac >> rpt (dxrule FOL_consistent_lemma) >>
   simp[conmap_def]
 QED
 
 Theorem MODAL_ALL:
-  ded ∅ (IMP (ALL x (IMP P Q)) (IMP (ALL x P) (ALL x Q)))
+  ∅ ⊩⁰ (IMP (ALL x (IMP P Q)) (IMP (ALL x P) (ALL x Q)))
 Proof
-  irule deduction_thm >> irule deduction_thm >> irule UG >>
+  irule deduction0_thm >> irule deduction0_thm >> irule UG >>
   simp[DISJ_IMP_THM, FORALL_AND_THM] >> irule ded_MP >> qexists_tac ‘P’ >>
-  conj_tac >> qmatch_abbrev_tac ‘ded Hs _’ >~
-  [‘ded _ (IMP P Q)’]
-  >- (‘ded Hs (fsubst x (Var x) (IMP P Q))’ suffices_by simp[] >>
+  conj_tac >> qmatch_abbrev_tac ‘Hs ⊩⁰ _’ >~
+  [‘_ ⊩⁰ (IMP P Q)’]
+  >- (‘Hs ⊩⁰ (fsubst x (Var x) (IMP P Q))’ suffices_by simp[] >>
       irule ded_MP >> irule_at (Pos last) PL4 >> simp[] >>
-      simp[Abbr‘Hs’] >> irule ded_hyp >> simp[]) >>
-  ‘ded Hs (fsubst x (Var x) P)’ suffices_by simp[] >>
+      simp[Abbr‘Hs’, ded_hyp]) >>
+  ‘Hs ⊩⁰ (fsubst x (Var x) P)’ suffices_by simp[] >>
   irule ded_MP >> qexists_tac ‘ALL x P’ >> simp[PL4] >>
   simp[Abbr‘Hs’, ded_hyp]
 QED
@@ -302,96 +373,107 @@ Proof
 QED
 
 Theorem exFALSO:
-  ϕ ∈ Γ ∧ NEG ϕ ∈ Γ ⇒ ded Γ ψ
+  ϕ ∈ Γ ∧ NEG ϕ ∈ Γ ⇒ Γ ⊩ ψ
 Proof
-  strip_tac >>
-  ‘ded Γ (IMP (NEG ψ) (NEG ϕ)) ∧ ded Γ (IMP (NEG ψ) ϕ)’
-    by metis_tac[ded_rules] >>
   metis_tac[ded_rules]
 QED
 
 Theorem negnegE:
-  ded Γ (IMP (NEG (NEG p)) p)
+  Γ ⊩⁰ IMP (NEG (NEG p)) p
 Proof
-  irule deduction_thm >>
-  ‘ded (NEG (NEG p) INSERT Γ) (IMP (NEG p) (NEG(NEG p)))’
-    by (irule deduction_thm >> simp[ded_hyp]) >>
-  ‘ded (NEG(NEG p) INSERT Γ) (IMP (NEG p) (NEG p))’
-    by (irule deduction_thm >> simp[ded_hyp]) >>
+  irule deduction0_thm >>
+  ‘(NEG (NEG p) INSERT Γ) ⊩⁰ (IMP (NEG p) (NEG(NEG p)))’
+    by (irule deduction0_thm >> simp[ded_hyp]) >>
+  ‘NEG(NEG p) INSERT Γ ⊩⁰ IMP (NEG p) (NEG p)’
+    by (irule deduction0_thm >> simp[ded_hyp]) >>
   metis_tac[PL3, ded_MP]
 QED
 
 Theorem contrI:
-  ded (NEG q INSERT Γ) p ∧ ded (NEG q INSERT Γ) (NEG p) ⇒ ded Γ q
+  NEG q INSERT Γ ⊩ᵍ p ∧ NEG q INSERT Γ ⊩ᵍ NEG p ⇒ Γ ⊩ᵍ q
 Proof
   strip_tac >>
-  ‘ded Γ (IMP (NEG q) p) ∧ ded Γ (IMP (NEG q) (NEG p))’
-    by (conj_tac >> irule deduction_thm >> simp[]) >>
+  ‘Γ ⊩ᵍ IMP (NEG q) p ∧ Γ ⊩ᵍ IMP (NEG q) (NEG p)’ by simp[] >>
   metis_tac[ded_rules]
 QED
 
 Theorem negnegI:
-  ded Γ (IMP p (NEG (NEG p)))
+  Γ ⊩ᵍ IMP p (NEG (NEG p))
 Proof
-  irule deduction_thm >> irule contrI >> qexists_tac ‘p’ >>
-  simp[ded_hyp] >> irule ded_MP >> irule_at (Pos last) negnegE >>
-  simp[ded_hyp]
+  simp[] >> irule contrI >> qexists_tac ‘p’ >>
+  simp[ded_hyp] >> irule ded_MP >> irule_at (Pos last) ded0_dedg >>
+  irule_at (Pos hd) negnegE >> simp[ded_hyp]
 QED
 
 Theorem cposI:
-  ded Γ (IMP (IMP p q) (IMP (NEG q) (NEG p)))
+  Γ ⊩⁰ IMP (IMP p q) (IMP (NEG q) (NEG p))
 Proof
-  ntac 2 (irule deduction_thm) >>
-  ‘ded (NEG q INSERT IMP p q INSERT Γ) (IMP (NEG (NEG p)) q)’
-    by (irule deduction_thm >> irule ded_MP >>
+  ntac 2 (irule deduction0_thm) >>
+  ‘NEG q INSERT IMP p q INSERT Γ ⊩⁰ IMP (NEG (NEG p)) q’
+    by (irule deduction0_thm >> irule ded_MP >>
         qexists_tac ‘p’ >> simp[ded_hyp] >>
         irule ded_MP >> irule_at (Pos last) negnegE >>
         simp[ded_hyp]) >>
-  ‘ded (NEG q INSERT IMP p q INSERT Γ) (IMP (NEG (NEG p)) (NEG q))’
-    by (irule deduction_thm >> simp[ded_hyp]) >>
+  ‘NEG q INSERT IMP p q INSERT Γ ⊩⁰ IMP (NEG (NEG p)) (NEG q)’
+    by (irule deduction0_thm >> simp[ded_hyp]) >>
   metis_tac[ded_rules]
 QED
 
-Theorem disjI1:
-  ded Γ (IMP ϕ (disj ϕ ψ))
+Theorem impE:
+  Γ ⊩ᵍ IMP p q ∧ Γ ⊩ᵍ p ∧ q INSERT Γ ⊩ᵍ r ⇒ Γ ⊩ᵍ r
 Proof
-  simp[disj_def] >> ntac 2 (irule deduction_thm) >>
+  strip_tac >> irule ded_MP >> qexists_tac ‘q’ >> simp[Gdeduction_thm] >>
+  metis_tac[ded_MP]
+QED
+
+Theorem cposE:
+  Γ ⊩ᵍ IMP (IMP (NEG q) (NEG p)) (IMP p q)
+Proof
+  simp[] >> irule contrI >> qexists_tac ‘p’ >>
+  simp[ded_hyp] >> irule impE >> qexistsl_tac [‘NEG q’, ‘NEG p’] >>
+  simp[ded_hyp, Excl "stripimp_rwt"]
+QED
+
+Theorem disjI1:
+  Γ ⊩⁰ IMP ϕ (disj ϕ ψ)
+Proof
+  simp[disj_def] >> ntac 2 (irule deduction0_thm) >>
   irule exFALSO >> simp[] >> metis_tac[]
 QED
 
 Theorem disjI2:
-  ded Γ (IMP ϕ (disj ψ ϕ))
+  Γ ⊩ IMP ϕ (disj ψ ϕ)
 Proof
   simp[disj_def, PL1]
 QED
 
 Theorem disjEth:
-  ded Γ (IMP (disj p q) (IMP (IMP p r) (IMP (IMP q r) r)))
+  Γ ⊩ᵍ IMP (disj p q) (IMP (IMP p r) (IMP (IMP q r) r))
 Proof
-  simp[disj_def] >> ntac 3 $ irule deduction_thm >>
-  qmatch_abbrev_tac ‘ded Δ r’ >>
-  ‘ded Δ (IMP (NEG r) (NEG q))’
-    by (irule ded_MP >> irule_at (Pos last) cposI >>
-        simp[Abbr‘Δ’, ded_hyp]) >>
-  ‘ded Δ (IMP (IMP (NEG r) q) r)’ by metis_tac[ded_rules] >>
-  irule ded_MP >> pop_assum (irule_at (Pos last)) >>
-  irule deduction_thm >>
+  simp[disj_def] >>
+  qmatch_abbrev_tac ‘Δ ⊩ᵍ r’ >>
+  ‘Δ ⊩ᵍ IMP (NEG r) (NEG q)’
+    by (irule ded_MP >> irule_at (Pos last) ded0_dedg >>
+        irule_at (Pos hd) cposI >>
+        simp[Abbr‘Δ’, ded_hyp, Excl "stripimp_rwt"]) >>
+  ‘Δ ⊩ᵍ IMP (IMP (NEG r) q) r’ by metis_tac[ded_rules] >>
+  irule ded_MP >> pop_assum (irule_at (Pos last)) >> simp[] >>
   irule ded_MP >> qexists_tac ‘NEG p’ >>
-  reverse conj_tac >- simp[ded_hyp, Abbr‘Δ’] >>
+  reverse conj_tac >- simp[ded_hyp, Abbr‘Δ’, Excl "stripimp_rwt"] >>
   irule ded_MP >> qexists_tac ‘NEG r’ >> conj_tac
   >- simp[ded_hyp, Abbr‘Δ’] >>
-  irule ded_MP >> irule_at (Pos last) cposI >> simp[ded_hyp, Abbr‘Δ’]
+  irule ded_MP >> irule_at (Pos last) ded0_dedg >> irule_at (Pos hd) cposI >>
+  simp[ded_hyp, Abbr‘Δ’, Excl "stripimp_rwt"]
 QED
 
 Theorem disjE:
-  ded Γ (disj p q) ∧ ded (p INSERT Γ) r ∧ ded (q INSERT Γ) r ⇒
-  ded Γ r
+  Γ ⊩ᵍ disj p q ∧ p INSERT Γ ⊩ᵍ r ∧ q INSERT Γ ⊩ᵍ r ⇒ Γ ⊩ᵍ r
 Proof
   strip_tac >>
-  ‘ded Γ (IMP (IMP p r) (IMP (IMP q r) r))’ by metis_tac[ded_MP, disjEth] >>
-  ‘ded Γ (IMP p r)’ by metis_tac[deduction_thm] >>
-  ‘ded Γ (IMP (IMP q r) r)’ by metis_tac[ded_MP] >>
-  metis_tac[deduction_thm, ded_MP]
+  ‘Γ ⊩ᵍ IMP (IMP p r) (IMP (IMP q r) r)’ by metis_tac[ded_MP, disjEth] >>
+  ‘Γ ⊩ᵍ IMP p r’ by metis_tac[Gdeduction_thm] >>
+  ‘Γ ⊩ᵍ IMP (IMP q r) r’ by metis_tac[ded_MP] >>
+  metis_tac[Gdeduction_thm, ded_MP]
 QED
 
 Definition conj_def:
@@ -413,48 +495,46 @@ Proof
   simp[conj_def]
 QED
 
+Theorem negnegEG = MATCH_MP ded0_dedg negnegE
+
 Theorem conjIth:
-  ded Γ (IMP ϕ (IMP ψ (conj ϕ ψ)))
+  Γ ⊩ᵍ IMP ϕ (IMP ψ (conj ϕ ψ))
 Proof
-  simp[conj_def, disj_def] >> ntac 2 (irule deduction_thm) >>
-  irule contrI>> qexists_tac ‘ψ’ >> simp[ded_hyp] >>
+  simp[conj_def, disj_def] >>
+  irule contrI >> qexists_tac ‘ψ’ >> simp[ded_hyp] >>
   irule ded_MP >> qexists_tac ‘NEG (NEG ϕ)’ >> reverse conj_tac
-  >- (irule ded_MP >> irule_at (Pos last) negnegE >> simp[ded_hyp]) >>
+  >- (irule ded_MP >> irule_at (Pos last) negnegEG >> simp[ded_hyp]) >>
   irule ded_MP >> irule_at (Pos last) negnegI >> simp[ded_hyp]
 QED
 
 Theorem conjI:
-  ded Γ p ∧ ded Γ q ⇒ ded Γ (conj p q)
+  Γ ⊩ᵍ p ∧ Γ ⊩ᵍ q ⇒ Γ ⊩ᵍ (conj p q)
 Proof
-  metis_tac[ded_rules, conjIth]
+  strip_tac >> irule impE >> irule_at (Pos (el 2)) conjIth >>
+  qexistsl_tac [‘p’, ‘q’] >> simp[] >> irule impE >>
+  qexistsl_tac [‘q’, ‘conj p q’] >> simp[ded_hyp, Excl "stripimp_rwt"] >>
+  irule ded_R >> simp[PULL_EXISTS] >> qexists_tac ‘Γ’ >> simp[] >>
+  simp[SUBSET_DEF]
 QED
 
 Theorem conjE1th:
-  ded Γ (IMP (conj ϕ ψ) ϕ)
+  Γ ⊩ᵍ IMP (conj ϕ ψ) ϕ
 Proof
-  simp[conj_def, disj_def] >> irule deduction_thm >> irule contrI >>
+  simp[conj_def, disj_def] >> irule contrI >>
   qexists_tac ‘IMP (NEG (NEG ϕ)) (NEG ψ)’ >> reverse conj_tac
   >- simp[ded_hyp] >>
-  irule deduction_thm >> irule exFALSO >> qexists_tac ‘NEG ϕ’ >> simp[]
+  simp[] >> irule exFALSO >> qexists_tac ‘NEG ϕ’ >> simp[]
 QED
 
 Theorem conjE2th:
-  ded Γ (IMP (conj ϕ ψ) ψ)
+  Γ ⊩ᵍ IMP (conj ϕ ψ) ψ
 Proof
-  simp[conj_def, disj_def] >> irule deduction_thm >> irule contrI >>
-  qexists_tac ‘IMP (NEG (NEG ϕ)) (NEG ψ)’ >> simp [ded_hyp] >>
-  irule deduction_thm >> simp[ded_hyp]
-QED
-
-Theorem impE:
-  ded Γ (IMP p q) ∧ ded Γ p ∧ ded (q INSERT Γ) r ⇒ ded Γ r
-Proof
-  strip_tac >> irule ded_MP >> qexists_tac ‘q’ >> simp[deduction_thm] >>
-  metis_tac[ded_MP]
+  simp[conj_def, disj_def] >> irule contrI >>
+  qexists_tac ‘IMP (NEG (NEG ϕ)) (NEG ψ)’ >> simp [ded_hyp]
 QED
 
 Theorem conjE[simp]:
-  ded Γ (conj p q) ⇔ ded Γ p ∧ ded Γ q
+  Γ ⊩ᵍ conj p q ⇔ Γ ⊩ᵍ p ∧ Γ ⊩ᵍ q
 Proof
   rw[EQ_IMP_THM, conjI]
   >- (irule impE >> first_assum $ irule_at (Pos hd) >>
@@ -469,13 +549,6 @@ End
 val _ = set_mapped_fixity {tok = "↔", term_name = "IFF",
                            fixity = Infix(NONASSOC, 450)}
 
-Theorem DRULE:
-  ded Γ (IMP p q) ∧ p ∈ Γ ∧ ded (q INSERT Γ) r ⇒ ded Γ r
-Proof
-  rpt strip_tac >> irule ded_MP >> qexists_tac ‘q’ >>
-  metis_tac[deduction_thm, ded_rules]
-QED
-
 Theorem IN_INSERT1 =
         IN_INSERT |> iffRL |> SIMP_RULE bool_ss [DISJ_IMP_THM, FORALL_AND_THM]
                            |> cj 1
@@ -489,59 +562,147 @@ Proof
 QED
 
 Theorem conjE_H[simp]:
-  ded (conj p q INSERT Γ) c ⇔ ded (p INSERT q INSERT Γ) c
+  conj p q INSERT Γ ⊩ᵍ c ⇔ p INSERT q INSERT Γ ⊩ᵍ c
 Proof
-  eq_tac
-  >- (Induct_on ‘ded’ >> rw[PL1, PL2, PL3, PL4, PL5]
+  eq_tac >>
+  map_every qid_spec_tac [‘p’, ‘q’, ‘Γ’, ‘c’] >>
+  Induct_on ‘ded’ >> simp[PL1, PL2, PL3, PL4, PL5, Excl "stripimp_rwt"]
+  >- (rpt strip_tac >> gvs[ded_hyp, Excl "stripimp_rwt"]
       >- metis_tac[ded_MP]
-      >- (irule UG >> gs[DISJ_IMP_THM, FORALL_AND_THM])
-      >- simp[ded_hyp]
-      >- simp[ded_hyp]) >>
-  Induct_on ‘ded’ >>
-  simp[PL1,PL2,PL3,PL4,PL5,DISJ_IMP_THM,FORALL_AND_THM,ded_hyp] >> rw[]
+      >- (irule UG >> gvs[DISJ_IMP_THM, FORALL_AND_THM])
+      >- (rename [‘hs0 ⊆ _’] >> irule ded_R >> simp[PULL_EXISTS] >>
+          Cases_on ‘conj p q ∈ hs0’
+          >- (fs[Once DECOMPOSITION]>> last_x_assum $ irule_at (Pos hd) >>
+              gvs[] >> irule_at (Pos hd) EQ_REFL >> simp[] >>
+              gs[SUBSET_DEF]) >>
+          first_x_assum $ irule_at (Pos hd) >> gs[SUBSET_DEF])) >>
+  rpt strip_tac >> gvs[ded_hyp, Excl "stripimp_rwt"]
   >- metis_tac[ded_MP]
-  >- (irule UG >> simp[DISJ_IMP_THM, FORALL_AND_THM])
+  >- (irule UG >> gvs[DISJ_IMP_THM, FORALL_AND_THM])
   >- (irule impE >> irule_at (Pos (el 2)) conjE1th >>
       irule_at Any ded_hyp >> irule_at Any IN_INSERT1 >>
+      simp[ded_hyp])
+  >- (irule impE >> irule_at (Pos (el 2)) conjE2th >>
+      irule_at Any ded_hyp >> irule_at Any IN_INSERT1 >>
       simp[ded_hyp]) >>
-  irule impE >> irule_at (Pos (el 2)) conjE2th >>
-  irule_at Any ded_hyp >> irule_at Any IN_INSERT1 >>
-  simp[ded_hyp]
+  Cases_on ‘p ∈ hs0’
+  >- (‘∃hs1. hs0 = p INSERT hs1 ∧ p ∉ hs1’ by metis_tac[DECOMPOSITION] >>
+      gvs[]>> Cases_on ‘q ∈ hs1’
+      >- (‘∃hs2. hs1 = q INSERT hs2 ∧ q ∉ hs2’ by metis_tac[DECOMPOSITION] >>
+          gvs[] >> first_x_assum (resolve_then Any assume_tac EQ_REFL)>>
+          irule ded_R >> simp[PULL_EXISTS] >> goal_assum drule >>
+          gs[SUBSET_DEF]) >>
+      irule ded_R >> simp[PULL_EXISTS] >> qexists_tac ‘conj p q INSERT hs1’ >>
+      reverse conj_tac >- gs[SUBSET_DEF] >> irule impE >>
+      qexistsl_tac [‘conj p q’, ‘p’] >>
+      simp[ded_hyp, Excl "stripimp_rwt", Excl "conjE", conjE1th] >>
+      irule ded_R >> simp[PULL_EXISTS] >> qexists_tac ‘p INSERT hs1’ >>
+      simp[SUBSET_DEF]) >>
+  Cases_on ‘q ∈ hs0’
+  >- (‘∃hs1. hs0 = q INSERT hs1 ∧ q ∉ hs1’ by metis_tac[DECOMPOSITION]>>
+      gvs[] >> irule ded_R >> simp[PULL_EXISTS] >>
+      qexists_tac ‘conj p q INSERT hs1’ >>
+      reverse conj_tac >- gs[SUBSET_DEF] >> irule impE >>
+      qexistsl_tac [‘conj p q’, ‘q’] >>
+      simp[ded_hyp, Excl "stripimp_rwt", Excl "conjE", conjE2th] >>
+      irule ded_R >> simp[PULL_EXISTS] >> qexists_tac ‘q INSERT hs1’ >>
+      simp[SUBSET_DEF]) >>
+  irule ded_R >> simp[PULL_EXISTS] >> qexists_tac ‘hs0’ >> gs[SUBSET_DEF]
 QED
 
 Theorem conj_comm:
-  ded Γ (conj p q ↔ conj q p)
+  Γ ⊩ᵍ (conj p q ↔ conj q p)
 Proof
-  rw[IFF_def] >> irule deduction_thm >> rw[ded_hyp]
+  rw[IFF_def, ded_hyp]
 QED
 
 Theorem disj_comm:
-  ded Γ (disj p q ↔ disj q p)
+  Γ ⊩ᵍ (disj p q ↔ disj q p)
 Proof
-  rw[IFF_def] >> irule deduction_thm >>
-  irule disjE >> irule_at (Pos hd) ded_hyp >> irule_at (Pos hd) IN_INSERT1>>
-  metis_tac[IN_INSERT, ded_rules, disjI1, disjI2]
+  rw[IFF_def] >> irule disjE >>
+  irule_at (Pos hd) ded_hyp >> irule_at (Pos hd) IN_INSERT1>>
+  metis_tac[IN_INSERT, ded_rules, disjI1, disjI2, ded0_dedg]
 QED
 
-Overload dedeq = “λΓ p q. ded Γ (p ↔ q)”
+Definition fequiv_def:
+  fequiv p q ⇔ ∅ ⊩⁰ (p ↔ q)
+End
+val _ = set_mapped_fixity{fixity = Infix(NONASSOC, 450), term_name = "fequiv",
+                          tok = "≡"};
 
-Theorem prove_hyp:
-  ded Γ ϕ ∧ ded (ϕ INSERT Γ) ψ ⇒ ded Γ ψ
+Theorem ded0g_coincide[simp]:
+  ∅ ⊩⁰ p ⇔ ∅ ⊩ᵍ p
 Proof
-  metis_tac[ded_MP, deduction_thm]
+  rw[EQ_IMP_THM, ded0_dedg] >> irule closed_dedg_ded0 >> simp[]
 QED
 
-
-val _ = Unicode.unicode_version {tmnm = "INSERT", u = "⨾"}
-
-(*
-Theorem conj_CONGL:
-  ∀p1 p2 q. dedeq Γ p1 p2 ⇒
-            dedeq Γ (conj p1 q) (conj p2 q)
+Theorem fequiv_REFL[simp]:
+  p ≡ p
 Proof
-  Induct_on ‘ded’ >> rw[IFF_def]
-  strip_tac >> simp[IFF_def] >> conj_tac >>
-  irule deduction_thm >> simp[]
-*)
+  simp[fequiv_def, IFF_def, ded_hyp]
+QED
+
+Theorem fequiv_SYM:
+  p ≡ q ⇔ q ≡ p
+Proof
+  rw[fequiv_def, IFF_def, EQ_IMP_THM]
+QED
+
+Theorem fequiv_TRANS:
+  p ≡ q ∧ q ≡ r ⇒ p ≡ r
+Proof
+  simp[fequiv_def, IFF_def] >> rpt strip_tac >>
+  irule ded_MP >> goal_assum drule >> simp[] >> irule ded_R >>
+  simp[PULL_EXISTS] >> goal_assum drule >> simp[]
+QED
+
+Theorem conj_CONG:
+  p1 ≡ p2 ∧ q1 ≡ q2 ⇒
+  conj p1 q1 ≡ conj p2 q2
+Proof
+  rw[fequiv_def, IFF_def] >>
+  irule ded_R >> simp[PULL_EXISTS] >> goal_assum drule >> simp[SUBSET_DEF]
+QED
+
+Definition EXISTS_def:
+  EXISTS x P = NEG (ALL x (NEG P))
+End
+
+Theorem EXISTS_I:
+  acceptable x t ϕ ⇒ Γ ⊩ᵍ IMP (fsubst x t ϕ) (EXISTS x ϕ)
+Proof
+  rw[EXISTS_def] >> irule contrI >>
+  qexists_tac ‘fsubst x t ϕ’ >> simp[ded_hyp] >>
+  irule impE >> irule_at (Pos (el 2)) PL4 >>
+  irule_at (Pos (el 2)) ded_MP >> irule_at (Pos hd) negnegEG >>
+  irule_at (Pos hd) ded_hyp >> irule_at (Pos hd) IN_INSERT1 >>
+  simp[] >> metis_tac[IN_INSERT1, ded_hyp]
+QED
+
+Theorem negnegE_thm[simp]:
+  Γ ⊩ᵍ NEG (NEG p) ⇔ Γ ⊩ᵍ p
+Proof
+  metis_tac[ded_MP, negnegI, negnegEG]
+QED
+
+Theorem EXISTS_E:
+  x ∉ fFV ψ ∧ (∀f. f ∈ Γ ⇒ x ∉ fFV f) ⇒
+  ((EXISTS x ϕ) INSERT (ALL x (IMP ϕ ψ)) INSERT Γ) ⊩ᵍ ψ
+Proof
+  strip_tac >> irule contrI >> qexists_tac ‘EXISTS x ϕ’ >> conj_tac >>
+  simp[ded_hyp] >> simp[EXISTS_def] >> irule UG >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM] >> irule contrI >> qexists_tac ‘ψ’ >>
+  simp[ded_hyp] >> irule impE >> qexistsl_tac [‘ϕ’, ‘ψ’] >>
+  simp[ded_hyp, Excl "stripimp_rwt"] >>
+  conj_tac
+  >- (irule impE >> qexistsl_tac [‘NEG(NEG ϕ)’, ‘ϕ’] >>
+      simp[ded_hyp, negnegEG, Excl "negnegE_thm", Excl "stripimp_rwt"]) >>
+  irule impE >>
+  qexistsl_tac [‘ALL x (IMP ϕ ψ)’, ‘fsubst x (Var x) (IMP ϕ ψ)’] >>
+  simp[ded_hyp, Excl "fsubst_id", PL4, Excl "fsubst_def",
+       Excl "stripimp_rwt"] >>
+  simp[ded_hyp, Excl "stripimp_rwt"]
+QED
+
 
 val _ = export_theory();
