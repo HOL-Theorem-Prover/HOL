@@ -193,14 +193,16 @@ val (LT_tm, EQ_tm, GT_tm, UN_tm) =
 
 val (float_tm, mk_float, dest_float, is_float) = monop "Float"
 
+fun mkrt(ty,f) =
+    TypeBasePure.mk_recordtype_fieldsel {tyname = ty, fieldname = f}
 val (float_sign_tm, mk_float_sign, dest_float_sign, is_float_sign) =
-   monop "float_Sign"
+   monop (mkrt("float", "Sign"))
 
 val (float_exponent_tm, mk_float_exponent, dest_float_exponent,
-     is_float_exponent) = monop "float_Exponent"
+     is_float_exponent) = monop (mkrt("float","Exponent"))
 
 val (float_significand_tm, mk_float_significand, dest_float_significand,
-     is_float_significand) = monop "float_Significand"
+     is_float_significand) = monop (mkrt("float", "Significand"))
 
 val (float_to_real_tm, mk_float_to_real, dest_float_to_real, is_float_to_real) =
    monop "float_to_real"
