@@ -19,7 +19,7 @@ End
 
 Type ty = “:(tok, string, expr, string) pegsym”
 Definition lift_number_def:
-  lift_number (Number n) = XN n
+  lift_number (Number n, _) = XN n
 End
 
 val nrule = “tok (λt. case t of Number n => T | _ => F) lift_number : ty”

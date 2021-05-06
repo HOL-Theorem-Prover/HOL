@@ -70,14 +70,14 @@ Definition coreloop_def[nocompute]:
                         [] => let err = (EOF, G.anyEOF)
                               in
                                 AP fk i r (OME eo (SOME err)) (err::errs)
-                      | h::t => AP k t (SOME (tf (FST h)) :: r) eo errs)
+                      | h::t => AP k t (SOME (tf h) :: r) eo errs)
                  | EV (tok P tf2) i r eo errs k fk =>
                    (case i of
                         [] => let err = (EOF, G.tokEOF)
                               in
                                 AP fk i r (OME eo (SOME err)) (err::errs)
                       | h::t => if P (FST h) then
-                                  AP k t (SOME (tf2 (FST h))::r) eo errs
+                                  AP k t (SOME (tf2 h)::r) eo errs
                                 else let err = (sloc i, G.tokFALSE)
                                      in AP fk i r (OME eo (SOME err))
                                            (err::errs))

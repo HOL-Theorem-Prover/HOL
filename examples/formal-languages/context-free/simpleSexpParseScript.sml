@@ -130,7 +130,7 @@ Theorem peg_eval_list_tok_every_imp:
   ∀ls x rst. EVERY (P o FST) ls ∧ ¬ (P o FST) x ⇒
              peg_eval_list G
                            (ls ++ [x] ++ rst, tok P a)
-                           ([x] ++ rst, MAP (a o FST) ls, SND x, G.tokFALSE)
+                           ([x] ++ rst, MAP a ls, SND x, G.tokFALSE)
 Proof
   Induct \\ simp[] \\ simp[Once peg_eval_list]
   >- simp[EXISTS_result, peg_eval_tok_NONE]
@@ -271,7 +271,7 @@ End
 
 Theorem peg_eval_list_valid_symchars[local]:
   ∀cs. EVERY valid_symchar (MAP FST cs) ⇒
-       peg_eval_list sexpPEG (cs,tok valid_symchar (λc. SX_SYM [c]))
+       peg_eval_list sexpPEG (cs,tok valid_symchar (λ(c,l). SX_SYM [c]))
                      ([],MAP (λc. SX_SYM [c]) (MAP FST cs),
                       Locs EOFpt EOFpt, sexpPEG.tokEOF)
 Proof
@@ -282,7 +282,7 @@ QED
 Theorem peg_eval_valid_symchars[local]:
   ∀cs. EVERY valid_symchar (MAP FST cs) ⇒
        peg_eval sexpPEG
-                (cs,rpt (tok valid_symchar (λc. SX_SYM (STRING c "")))
+                (cs,rpt (tok valid_symchar (λ(c,l). SX_SYM (STRING c "")))
                         (SX_SYM o FOLDR (λs a. STRCAT (destSXSYM s) a) []))
                 (Success [] (SX_SYM (MAP FST cs))
                  (SOME (Locs EOFpt EOFpt, sexpPEG.tokEOF)))
@@ -359,7 +359,7 @@ Theorem gen_peg_eval_seqtok:
   peg_eval G ((c,l) :: toks, seq (tok P f) sym g) res =
   if P c then
     (∃fl fe. res = Failure fl fe ∧ peg_eval G (toks,sym) res) ∨
-    ∃s2 c2 eo. res = Success s2 (g (f c) c2) eo ∧
+    ∃s2 c2 eo. res = Success s2 (g (f (c,l)) c2) eo ∧
                peg_eval G (toks,sym) (Success s2 c2 eo)
   else
     res = Failure l G.tokFALSE
@@ -370,7 +370,7 @@ QED
 
 Theorem gen_peg_eval_tok:
   peg_eval G ((c,l) :: toks, tok P f) res <=>
-  if P c then res = Success toks (f c) NONE
+  if P c then res = Success toks (f (c,l)) NONE
   else res = Failure l G.tokFALSE
 Proof
   simp[Once peg_eval_cases] >> metis_tac[]
@@ -872,8 +872,7 @@ Proof
                (peg_eval_list_tok_every_imp
                   |> REWRITE_RULE[GSYM APPEND_ASSOC, APPEND]) >>
       gvs[IN_DEF, EVERY_MAP, Excl "valid_symchar_def",
-          combinTheory.o_DEF,
-          SIMP_RULE bool_ss [ELIM_UNCURRY] FOLDR_STRCAT_destSXSYM_FST]) >~
+          combinTheory.o_DEF, FOLDR_STRCAT_destSXSYM_FST]) >~
   [‘print_nt sxnt_sexpseq’, ‘strip_dot’]
   >- (
     rw[print_nt_def, pnt_def] >>

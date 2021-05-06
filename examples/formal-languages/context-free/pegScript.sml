@@ -15,8 +15,8 @@ val _ = new_theory "peg"
 Datatype:
   pegsym =
     empty 'c
-  | any  ('a -> 'c)
-  | tok ('a -> bool) ('a -> 'c)
+  | any  ('a # locs -> 'c)
+  | tok ('a -> bool) ('a # locs -> 'c)
   | nt ('b inf) ('c -> 'c)
   | seq pegsym pegsym ('c  -> 'c -> 'c)
   | choice pegsym pegsym ('c + 'c -> 'c)
@@ -106,12 +106,12 @@ Inductive peg_eval:
        n ∈ FDOM G.rules ∧ peg_eval G (s, G.rules ' n) res ⇒
        peg_eval G (s, nt n f) (resultmap f res)) ∧
 [~any_success:]
-  (∀h t f. peg_eval G (h::t, any f) (Success t (f (FST h)) NONE)) ∧
+  (∀h t f. peg_eval G (h::t, any f) (Success t (f h) NONE)) ∧
 [~any_failure:]
   (∀f. peg_eval G ([], any f) (Failure EOF G.anyEOF)) ∧
 [~tok_success:]
   (∀e t P f.
-     P (FST e) ⇒ peg_eval G (e::t, tok P f) (Success t (f (FST e)) NONE)) ∧
+     P (FST e) ⇒ peg_eval G (e::t, tok P f) (Success t (f e) NONE)) ∧
 [~tok_failureF:]
   (∀h t P f.
      ¬P (FST h) ⇒
@@ -567,7 +567,7 @@ Theorem peg_eval_tok_NONE =
 
 Theorem peg_eval_tok_SOME:
   peg_eval G (i0, tok P f) (Success i r eo) ⇔
-  ∃h l. P h ∧ i0 = (h,l)::i ∧ r = f h ∧ eo = NONE
+  ∃h l. P h ∧ i0 = (h,l)::i ∧ r = f (h,l) ∧ eo = NONE
 Proof simp[Once peg_eval_cases, pairTheory.EXISTS_PROD] >> metis_tac[]
 QED
 

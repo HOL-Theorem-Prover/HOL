@@ -121,10 +121,10 @@ Definition sexpPEG_def[nocompute]:
                    FOLDL (λ(l,n) d. (10*l, 10*n + destSXNUM d)) (1,0)))
                  (λs1. (λ(l,n). SX_NUM (destSXNUM s1 * l + n))
                        o (destSXNUM ## destSXNUM) o destSXCONS)) ;
-            (mkNT sxnt_digit, tok isDigit (λc. SX_NUM (ORD c - ORD #"0"))) ;
+            (mkNT sxnt_digit, tok isDigit (λ(c,l). SX_NUM (ORD c - ORD #"0"))) ;
             (mkNT sxnt_sexpsym,
-             seq (tok valid_first_symchar (λc. SX_SYM [c]))
-                 (rpt (tok valid_symchar (λc. SX_SYM [c]))
+             seq (tok valid_first_symchar (λ(c,l). SX_SYM [c]))
+                 (rpt (tok valid_symchar (λ(c,l). SX_SYM [c]))
                   (SX_SYM o FOLDR (λs a. destSXSYM s ++ a) []))
                  (λs1 s2. SX_SYM (destSXSYM s1 ++ destSXSYM s2)));
             (mkNT sxnt_strcontents,
@@ -138,7 +138,7 @@ Definition sexpPEG_def[nocompute]:
             (mkNT sxnt_escapedstrchar,
              choicel [tokeq #"\\"; tokeq #"\""; error "Illegal string-escape"]);
             (mkNT sxnt_normstrchar,
-             tok (λc. isPrint c ∧ c ≠ #"\"" ∧ c ≠ #"\\") (λc. SX_SYM [c]))
+             tok (λc. isPrint c ∧ c ≠ #"\"" ∧ c ≠ #"\\") (λ(c,l). SX_SYM [c]))
            ]
   |>
 End
