@@ -58,9 +58,10 @@ val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 
 
-
-
-
+val std_ss = std_ss ++
+             rewrites (TypeBase.accessors_of “:α alternating_run” @
+                       TypeBase.accessors_of “:(α,β)alternating_automaton” @
+                       TypeBase.accessors_of “:(α,β)alternating_semi_automaton”)
 
 val IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON_def = Define
   `IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON (A:('a, 'a) alternating_semi_automaton) (fi:'a->'a set) =
@@ -309,9 +310,9 @@ val COLLAPSED_DECOLLAPSED_ELIM =
     ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN
     Induct_on `x` THENL [
-        REWRITE_TAC [IS_REACHABLE_BY_RUN_def, alternating_run_S0],
+        simp[IS_REACHABLE_BY_RUN_def],
 
-        ASM_REWRITE_TAC [IS_REACHABLE_BY_RUN_def, alternating_run_R] THEN
+        simp [IS_REACHABLE_BY_RUN_def] THEN
         Cases_on `EMPTY_ABORT_RUN r x = EMPTY` THENL [
             PROVE_TAC[MEMBER_NOT_EMPTY, EMPTY_ABORT_RUN_EMPTY_SUC],
             PROVE_TAC[MEMBER_NOT_EMPTY]
@@ -326,9 +327,9 @@ val IS_REACHABLE_BY_DECOLLAPSED_EMPTY_ABORT_RUN_ELIM =
     ``!s n r. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN (EMPTY_ABORT_RUN r))) = (s IN (EMPTY_ABORT_RUN r) n)``,
 
     Induct_on `n` THENL [
-        SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def, alternating_run_S0],
+        SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def],
 
-        ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R, DECOLLAPSED_RUN_def] THEN
+        ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def] THEN
         REPEAT GEN_TAC THEN
         Cases_on `EMPTY_ABORT_RUN r n = EMPTY` THENL [
             PROVE_TAC[MEMBER_NOT_EMPTY, EMPTY_ABORT_RUN_EMPTY_SUC],
@@ -343,9 +344,9 @@ val IS_REACHABLE_BY_DECOLLAPSED_RUN =
     ``!s n r. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN r)) ==> (s IN r n)``,
 
     Induct_on `n` THENL [
-        SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def, alternating_run_S0],
+        SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def],
 
-        ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R, DECOLLAPSED_RUN_def] THEN
+        ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def] THEN
         PROVE_TAC[]
     ]);
 
@@ -470,8 +471,8 @@ val  DECOLLAPSED_RUN___IMPL_COLLAPSED___THM =
           !n s. s IN r n ==> P_SEM (r (SUC n)) (A.R s (i n))` by PROVE_TAC[IMPL_COLLAPSED_RUN_SEM] THEN
 
     FULL_SIMP_TAC std_ss [ALTERNATING_RUN_def, DECOLLAPSED_RUN_def,
-        alternating_run_S0, alternating_run_R, IS_VALID_ENCODED_INPUT_def,
-        PATH_SUBSET_def] THEN
+                          IS_VALID_ENCODED_INPUT_def,
+                          PATH_SUBSET_def] THEN
     METIS_TAC[IS_REACHABLE_BY_DECOLLAPSED_RUN, DECOLLAPSED_RUN_def]);
 
 
