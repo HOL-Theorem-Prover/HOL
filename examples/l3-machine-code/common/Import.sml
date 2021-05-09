@@ -377,7 +377,10 @@ end
 
 (* Record destructor *)
 
-fun flag s tm = Term.mk_comb (mk_ieee_const ("flags_" ^ s), tm)
+fun flag s tm =
+    Term.mk_comb (mk_ieee_const (TypeBasePure.mk_recordtype_fieldsel
+                                   {tyname = "flags", fieldname =  s}),
+                  tm)
 val ieee_underflow_before = ref false
 fun underflow () =
   "Underflow_" ^ (if !ieee_underflow_before then "Before" else "After") ^
@@ -414,7 +417,9 @@ fun Rupd (f, tm) =
                   | "Overflow" => mk_ieee_const name
                   | "Precision" => mk_ieee_const name
                   | "Underflow" =>
-                      mk_ieee_const ("flags_" ^ underflow() ^ "_fupd")
+                      mk_ieee_const $
+                        TypeBasePure.mk_recordtype_fieldfupd
+                          {tyname = "flags", fieldname = underflow()}
                   | _ => mk_local_const (name, typ)
       val (x, d) = smart_dest_pair tm
    in
