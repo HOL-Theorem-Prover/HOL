@@ -527,11 +527,12 @@ fun accessor_update_fns ty =
            val v = Term.mk_var ("v", fld_ty)
            val kv = Term.inst [Type.beta |-> fld_ty]
                       (boolSyntax.mk_icomb (combinSyntax.K_tm, v))
+           val fieldrec = {tyname = Tyop, fieldname = s}
+           val accnm = TypeBasePure.mk_recordtype_fieldsel fieldrec
+           val fupdnm = TypeBasePure.mk_recordtype_fieldfupd fieldrec
          in
-           (Term.prim_mk_const {Name = Tyop ^ "_" ^ s, Thy = Thy},
-            Term.mk_comb
-              (Term.prim_mk_const
-                 {Name = Tyop ^ "_" ^ s ^ "_fupd", Thy = Thy}, kv))
+           (Term.prim_mk_const {Name = accnm, Thy = Thy},
+            Term.mk_comb (Term.prim_mk_const {Name = fupdnm, Thy = Thy}, kv))
          end)
       (TypeBase.fields_of ty)
   end
@@ -730,7 +731,8 @@ fun avoid_name_clashes tm2 tm1 =
    end
 
 local
-   fun mk_fupd s f = s ^ "_" ^ f ^ "_fupd"
+   fun mk_fupd s f = TypeBasePure.mk_recordtype_fieldfupd {tyname = s,
+                                                           fieldname = f}
    val name = fst o Term.dest_const o fst o Term.dest_comb
 in
    fun mk_state_id_thm eqthm =
@@ -745,7 +747,9 @@ in
                val l1 = List.mapPartial get l
                val s = Term.mk_var ("s", ty)
                val h = hd l1
-               val id = Term.prim_mk_const {Thy = Thy, Name = Tyop ^ "_" ^ hd l}
+               val accnm = TypeBasePure.mk_recordtype_fieldsel
+                             {tyname = Tyop, fieldname = hd l}
+               val id = Term.prim_mk_const {Thy = Thy, Name = accnm}
                val id =
                   Term.subst [hd (Term.free_vars h) |-> Term.mk_comb (id, s)] h
                val after = List.foldr

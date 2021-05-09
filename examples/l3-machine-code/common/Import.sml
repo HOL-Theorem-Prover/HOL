@@ -390,7 +390,10 @@ fun Dest (f, ty, tm) =
    | "Overflow" => flag "Overflow" tm
    | "Precision" => flag "Precision" tm
    | "Underflow" => flag (underflow()) tm
-   | _ => Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
+   | _ => Call (TypeBasePure.mk_recordtype_fieldsel
+                  {tyname = typeName (Term.type_of tm),
+                   fieldname = f},
+                ty, tm)
 
 (* Record update *)
 
@@ -403,7 +406,8 @@ fun Rupd (f, tm) =
    let
       val (rty, fty) = pairSyntax.dest_prod (Term.type_of tm)
       val typ = Type.--> (Type.--> (fty, fty), Type.--> (rty, rty))
-      val name = typeName rty ^ "_" ^ f ^ "_fupd"
+      val name = TypeBasePure.mk_recordtype_fieldfupd
+                   {tyname = typeName rty, fieldname = f}
       val fupd = case f of
                     "DivideByZero" => mk_ieee_const name
                   | "InvalidOp" => mk_ieee_const name
