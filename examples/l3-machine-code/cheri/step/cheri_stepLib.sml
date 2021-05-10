@@ -349,15 +349,19 @@ end
 local
   val monop = #2 o HolKernel.syntax_fns1 "cheri"
   val binop = #2 o HolKernel.syntax_fns2 "cheri"
-  val mk_exception = monop "cheri_state_exception"
+  fun monopr ty fld =
+      monop $ TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=fld}
+  fun binopr ty fld =
+      binop $ TypeBasePure.mk_recordtype_fieldfupd{tyname=ty,fieldname=fld}
+  val mk_exception = monopr "cheri_state" "exception"
   val mk_exceptionSignalled = monop "exceptionSignalled"
   val mk_BranchDelay = monop "BranchDelay"
-  val mk_BranchDelayPCC = monop "cheri_state_BranchDelayPCC"
+  val mk_BranchDelayPCC = monopr "cheri_state" "BranchDelayPCC"
   val mk_BranchTo = monop "BranchTo"
-  val mk_BranchToPCC = monop "cheri_state_BranchToPCC"
-  val mk_CCallBranch = monop "cheri_state_CCallBranch"
-  val mk_CCallBranchDelay = monop "cheri_state_CCallBranchDelay"
-  val mk_currentInst_fupd = binop "cheri_state_currentInst_fupd"
+  val mk_BranchToPCC = monopr "cheri_state" "BranchToPCC"
+  val mk_CCallBranch = monopr "cheri_state" "CCallBranch"
+  val mk_CCallBranchDelay = monopr "cheri_state" "CCallBranchDelay"
+  val mk_currentInst_fupd = binopr "cheri_state" "currentInst"
   fun currentInst w st' =
     mk_currentInst_fupd (combinSyntax.mk_K_1 (w, Term.type_of w), st')
   val st = ``s:cheri_state``
@@ -385,7 +389,7 @@ local
                 [boolTheory.COND_ID, procID_th, exceptionSignalled_th,
                  BranchDelayPCC_th, BranchTo_th, BranchToPCC_th,
                  CCallBranch_th, CCallBranchDelay_th,
-                 GSYM cheriTheory.cheri_state_exception])
+                 GSYM cheriTheory.recordtype_cheri_state_seldef_exception_def])
   val hyp_rule = utilsLib.ALL_HYP_CONV_RULE datatype_conv
   val full_rule = hyp_rule o Conv.RIGHT_CONV_RULE datatype_conv
   val state_rule = Conv.RIGHT_CONV_RULE (Conv.RAND_CONV (utilsLib.SRW_CONV []))
