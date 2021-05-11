@@ -95,11 +95,13 @@ val arm_frame_hidden =
 (* -- *)
 
 local
+   fun mkselnm ty f = TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
    val arm_instr_tm = Term.prim_mk_const {Thy = "arm_prog", Name = "arm_instr"}
    fun is_mem_access v tm =
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
-            stateLib.is_code_access ("arm$arm_state_MEM", v) l andalso
+            stateLib.is_code_access ("arm$" ^ mkselnm "arm_state" "MEM", v) l
+            andalso
             (wordsSyntax.is_word_literal r orelse bitstringSyntax.is_v2w r)
        | NONE => false
    val dest_opc = fst o listSyntax.dest_list o fst o bitstringSyntax.dest_v2w
@@ -296,32 +298,36 @@ end
 
 local
    val st = Term.mk_var ("s", ``:arm_state``)
-   fun mk_rec (t, c) = List.map (fn s => ("arm$" ^ t ^ "_" ^ s ^ "_fupd",
-                                          "arm_" ^ c ^ "_" ^ s))
+   fun fupnm ty fld =
+       "arm$" ^ TypeBasePure.mk_recordtype_fieldfupd {tyname=ty,fieldname=fld}
+   fun selnm ty fld =
+       "arm$" ^ TypeBasePure.mk_recordtype_fieldsel {tyname=ty,fieldname=fld}
+   fun mk_rec (t, c) =
+       List.map (fn s => (fupnm t s, "arm_" ^ c ^ "_" ^ s))
    val cpsr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
         (mk_rec ("PSR", "CPSR") PSR_components) [] []
-        (fn (s, l) => s = "arm$arm_state_CPSR" andalso tml_eq l [st])
+        (fn (s, l) => s = selnm "arm_state" "CPSR" andalso tml_eq l [st])
    val fpscr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
         (mk_rec ("FPSCR", "FP_FPSCR") FPSCR_components) [] []
-        (fn (s, l) => s = "arm$FP_FPSCR")
+        (fn (s, l) => s = selnm "FP" "FPSCR")
    val fp_footprint =
       stateLib.write_footprint arm_1 arm_2
-        [("arm$FP_REG_fupd", "arm_FP_REG", ``^st.FP.REG``)] [] []
-        [("arm$FP_FPSCR_fupd", fpscr_footprint)]
-        (fn (s, l) => s = "arm$arm_state_FP" andalso tml_eq l [st])
+        [(fupnm "FP" "REG", "arm_FP_REG", ``^st.FP.REG``)] [] []
+        [(fupnm "FP" "FPSCR", fpscr_footprint)]
+        (fn (s, l) => s = selnm "arm_state" "FP" andalso tml_eq l [st])
 in
    val arm_write_footprint =
       stateLib.write_footprint arm_1 arm_2
-        [("arm$arm_state_MEM_fupd", "arm_MEM", ``^st.MEM``),
-         ("arm$arm_state_REG_fupd", "arm_REG", ``^st.REG``)]
+        [(fupnm "arm_state" "MEM", "arm_MEM", ``^st.MEM``),
+         (fupnm "arm_state" "REG", "arm_REG", ``^st.REG``)]
         [] []
-        [("arm$arm_state_FP_fupd", fp_footprint),
-         ("arm$arm_state_CPSR_fupd", cpsr_footprint),
-         ("arm$arm_state_Encoding_fupd", fn (p, q, _) => (p, q)),
-         ("arm$arm_state_undefined_fupd", fn (p, q, _) => (p, q)),
-         ("arm$arm_state_CurrentCondition_fupd", fn (p, q, _) => (p, q))]
+        [(fupnm "arm_state" "FP", fp_footprint),
+         (fupnm "arm_state" "CPSR", cpsr_footprint),
+         (fupnm "arm_state" "Encoding", fn (p, q, _) => (p, q)),
+         (fupnm "arm_state" "undefined", fn (p, q, _) => (p, q)),
+         (fupnm "arm_state" "CurrentCondition", fn (p, q, _) => (p, q))]
         (K false)
 end
 

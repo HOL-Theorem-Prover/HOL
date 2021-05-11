@@ -49,10 +49,13 @@ val mips_select_state_pool_thm =
 local
    val mips_instr_tm =
       Term.prim_mk_const {Thy = "mips_prog", Name = "mips_instr"}
+   val memnm =
+       "mips$" ^ TypeBasePure.mk_recordtype_fieldsel
+                   {tyname="mips_state", fieldname="MEM"}
    fun is_mem_access v tm =
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
-            stateLib.is_code_access ("mips$mips_state_MEM", v) l andalso
+            stateLib.is_code_access (memnm, v) l andalso
             (wordsSyntax.is_word_literal r orelse bitstringSyntax.is_v2w r)
        | NONE => false
    val dest_opc = fst o listSyntax.dest_list o fst o bitstringSyntax.dest_v2w
@@ -172,42 +175,46 @@ in
 end
 
 local
+   fun fupnm ty f =
+       "mips$" ^ TypeBasePure.mk_recordtype_fieldfupd{tyname=ty,fieldname=f}
+   fun selnm ty f =
+       "mips$" ^ TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
    val cp0_status_write_footprint =
       stateLib.write_footprint mips_1 mips_2 [] []
-         [("mips$StatusRegister_ERL_fupd", "mips_CP0_Status_ERL"),
-          ("mips$StatusRegister_EXL_fupd", "mips_CP0_Status_EXL")]
+         [(fupnm "StatusRegister" "ERL", "mips_CP0_Status_ERL"),
+          (fupnm "StatusRegister" "EXL", "mips_CP0_Status_EXL")]
          []
-         (fn (s, l) => s = "mips$CP0_Status" andalso tml_eq l [``^st.CP0``])
+         (fn (s, l) => s = selnm "CP0" "Status" andalso tml_eq l [``^st.CP0``])
    val cp0_write_footprint =
       stateLib.write_footprint mips_1 mips_2 []
-         [("mips$CP0_Cause_fupd", "mips_CP0_Cause"),
-          ("mips$CP0_EPC_fupd", "mips_CP0_EPC"),
-          ("mips$CP0_Debug_fupd", "mips_CP0_Debug"),
-          ("mips$CP0_LLAddr_fupd", "mips_CP0_LLAddr"),
-          ("mips$CP0_ErrCtl_fupd", "mips_CP0_ErrCtl")]
-         [("mips$CP0_Count_fupd", "mips_CP0_Count")]
-         [("mips$CP0_Status_fupd", cp0_status_write_footprint)]
-         (fn (s, l) => s = "mips$mips_state_CP0" andalso tml_eq l [st])
+         [(fupnm "CP0" "Cause", "mips_CP0_Cause"),
+          (fupnm "CP0" "EPC", "mips_CP0_EPC"),
+          (fupnm "CP0" "Debug", "mips_CP0_Debug"),
+          (fupnm "CP0" "LLAddr", "mips_CP0_LLAddr"),
+          (fupnm "CP0" "ErrCtl", "mips_CP0_ErrCtl")]
+         [(fupnm "CP0" "Count", "mips_CP0_Count")]
+         [(fupnm "CP0" "Status", cp0_status_write_footprint)]
+         (fn (s, l) => s = selnm "mips_state" "CP0" andalso tml_eq l [st])
    val fcsr_write_footprint =
       stateLib.write_footprint mips_1 mips_2 [] []
-         [("mips$FCSR_FCC_fupd", "mips_fcsr_FCC")]
+         [(fupnm "FCSR" "FCC", "mips_fcsr_FCC")]
          []
-         (fn (s, l) => s = "mips$mips_state_fcsr" andalso tml_eq l [st])
+         (fn (s, l) => s = selnm "mips_state" "fcsr" andalso tml_eq l [st])
 in
    val mips_write_footprint =
       stateLib.write_footprint mips_1 mips_2
-        [("mips$mips_state_MEM_fupd", "mips_MEM", ``^st.MEM``),
-         ("mips$mips_state_gpr_fupd", "mips_gpr", ``^st.gpr``),
-         ("mips$mips_state_FGR_fupd", "mips_FGR", ``^st.FGR``)]
-        [("mips$mips_state_hi_fupd", "mips_hi"),
-         ("mips$mips_state_lo_fupd", "mips_lo"),
-         ("mips$mips_state_exceptionSignalled_fupd", "mips_exceptionSignalled"),
-         ("mips$mips_state_LLbit_fupd", "mips_LLbit"),
-         ("mips$mips_state_BranchTo_fupd", "mips_BranchTo")]
-        [("mips$mips_state_PC_fupd", "mips_PC"),
-         ("mips$mips_state_BranchDelay_fupd", "mips_BranchDelay")]
-        [("mips$mips_state_CP0_fupd", cp0_write_footprint),
-         ("mips$mips_state_fcsr_fupd", fcsr_write_footprint)]
+        [(fupnm "mips_state" "MEM", "mips_MEM", ``^st.MEM``),
+         (fupnm "mips_state" "gpr", "mips_gpr", ``^st.gpr``),
+         (fupnm "mips_state" "FGR", "mips_FGR", ``^st.FGR``)]
+        [(fupnm "mips_state" "hi", "mips_hi"),
+         (fupnm "mips_state" "lo", "mips_lo"),
+         (fupnm "mips_state" "exceptionSignalled", "mips_exceptionSignalled"),
+         (fupnm "mips_state" "LLbit", "mips_LLbit"),
+         (fupnm "mips_state" "BranchTo", "mips_BranchTo")]
+        [(fupnm "mips_state" "PC", "mips_PC"),
+         (fupnm "mips_state" "BranchDelay", "mips_BranchDelay")]
+        [(fupnm "mips_state" "CP0", cp0_write_footprint),
+         (fupnm "mips_state" "fcsr", fcsr_write_footprint)]
         (K false)
 end
 

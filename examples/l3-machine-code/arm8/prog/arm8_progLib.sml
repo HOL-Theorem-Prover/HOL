@@ -69,12 +69,15 @@ val arm_frame_hidden =
 (* -- *)
 
 local
+  val memnm =
+      "arm8$" ^ TypeBasePure.mk_recordtype_fieldsel
+                  {tyname="arm8_state",fieldname="MEM"}
    val arm_instr_tm =
       Term.prim_mk_const {Thy = "arm8_prog", Name = "arm8_instr"}
    fun is_mem_access v tm =
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
-            stateLib.is_code_access ("arm8$arm8_state_MEM", v) l andalso
+            stateLib.is_code_access (memnm, v) l andalso
             (wordsSyntax.is_word_literal r orelse bitstringSyntax.is_v2w r)
        | NONE => false
    val dest_opc = fst o listSyntax.dest_list o fst o bitstringSyntax.dest_v2w
@@ -210,25 +213,29 @@ in
 end
 
 local
+  fun fupnm ty f =
+      "arm8$" ^ TypeBasePure.mk_recordtype_fieldfupd{tyname=ty,fieldname=f}
+  fun selnm ty f =
+      "arm8$" ^ TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
    val st = Term.mk_var ("s", ``:arm8_state``)
    val pstate_footprint =
       stateLib.write_footprint arm_1 arm_2 []
-        [("arm8$ProcState_N_fupd", "arm8_PSTATE_N"),
-         ("arm8$ProcState_Z_fupd", "arm8_PSTATE_Z"),
-         ("arm8$ProcState_C_fupd", "arm8_PSTATE_C"),
-         ("arm8$ProcState_V_fupd", "arm8_PSTATE_V")
+        [(fupnm "ProcState" "N", "arm8_PSTATE_N"),
+         (fupnm "ProcState" "Z", "arm8_PSTATE_Z"),
+         (fupnm "ProcState" "C", "arm8_PSTATE_C"),
+         (fupnm "ProcState" "V", "arm8_PSTATE_V")
          ] [] []
-        (fn (s, l) => s = "arm8$arm8_state_PSTATE" andalso tml_eq l [st])
+        (fn (s, l) => s = selnm "arm8_state" "PSTATE" andalso tml_eq l [st])
 in
    val arm_write_footprint =
       stateLib.write_footprint arm_1 arm_2
-        [("arm8$arm8_state_MEM_fupd", "arm8_MEM", ``^st.MEM``),
-         ("arm8$arm8_state_REG_fupd", "arm8_REG", ``^st.REG``)]
-        [("arm8$arm8_state_SP_EL0_fupd",  "arm8_SP_EL0")]
-        [("arm8$arm8_state_PC_fupd",  "arm8_PC")]
+        [(fupnm "arm8_state" "MEM", "arm8_MEM", ``^st.MEM``),
+         (fupnm "arm8_state" "REG", "arm8_REG", ``^st.REG``)]
+        [(fupnm "arm8_state" "SP_EL0",  "arm8_SP_EL0")]
+        [(fupnm "arm8_state" "PC",  "arm8_PC")]
         [
-         ("arm8$arm8_state_PSTATE_fupd", pstate_footprint),
-         ("arm8$arm8_state_branch_hint_fupd", fn (p, q, _) => (p, q))
+         (fupnm "arm8_state" "PSTATE", pstate_footprint),
+         (fupnm "arm8_state" "branch_hint", fn (p, q, _) => (p, q))
         ]
         (K false)
 end

@@ -1104,12 +1104,13 @@ in
 end
 
 local
+   fun selnm f =
+       TypeBasePure.mk_recordtype_fieldsel{tyname="mips_state",fieldname=f}
    fun mk_mips_const n = Term.prim_mk_const {Thy = "mips", Name = n}
-   val state_exception_tm = mk_mips_const "mips_state_exception"
-   val state_exceptionSignalled_tm =
-      mk_mips_const "mips_state_exceptionSignalled"
-   val state_BranchDelay_tm = mk_mips_const "mips_state_BranchDelay"
-   val state_BranchTo_tm = mk_mips_const "mips_state_BranchTo"
+   val state_exception_tm = mk_mips_const $ selnm "exception"
+   val state_exceptionSignalled_tm = mk_mips_const $ selnm "exceptionSignalled"
+   val state_BranchDelay_tm = mk_mips_const $ selnm "BranchDelay"
+   val state_BranchTo_tm = mk_mips_const $ selnm "BranchTo"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
    fun mk_proj_exceptionSignalled r =
       Term.mk_comb (state_exceptionSignalled_tm, r)
