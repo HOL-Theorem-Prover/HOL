@@ -39,6 +39,8 @@ type ('a,'b) node =
 datatype ('a,'b) tree = 
    Leaf | Node of ('a,'b) node * ('b * real * ('a,'b) tree ref) vector
 fun dest_node x = case x of Node y => y | _ => raise ERR "dest_node" ""
+fun is_node x = case x of Node y => true | _ => false
+fun is_leaf x = case x of Leaf => true | _ => false
 
 (* -------------------------------------------------------------------------
    MCTS specification
@@ -152,7 +154,7 @@ fun select_child obj refl (node,cv) =
     let    
       val _ = if Vector.length cv = 0 
         then raise ERR "no move available" "" else () 
-      val ci = vector_maxi (fn x => score_puct param (Math.sqrt vtot) x) cv 
+      val ci = vector_maxi (score_puct param (Math.sqrt vtot)) cv 
       val (cmove,_,ctree) = Vector.sub (cv,ci)
     in
       case !ctree of 
@@ -197,6 +199,25 @@ fun mcts obj tree =
   end
 
 (* -------------------------------------------------------------------------
+   Statistics
+   ------------------------------------------------------------------------- *)
+
+fun score_visit (move,polv,ctree) = case !ctree of
+      Leaf => 0.0
+    | Node (cnode,_) => !(#vis cnode)
+
+fun most_visited_path tree = case tree of
+    Leaf => []
+  | Node (node,cv) => 
+    if Vector.length cv = 0 then [(node,NONE)] else
+    let 
+      val ci = vector_maxi score_visit cv 
+      val (cmove,_,ctree) = Vector.sub (cv,ci)
+    in
+      (node, SOME cmove) :: most_visited_path (!ctree)
+    end
+
+(* -------------------------------------------------------------------------
    Toy example: the goal of this task is to reach a positive number starting
    from zero by incrementing or decrementing.
    ------------------------------------------------------------------------- *)
@@ -236,19 +257,18 @@ load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
 
 val mctsparam =
-  {time = (NONE : real option), nsim = (SOME 10000000 : int option),
+  {time = (NONE : real option), nsim = (SOME 100000 : int option),
    explo_coeff = 2.0,
    noise = false, noise_coeff = 0.25, noise_gen = gamma_noise_gen 0.2};
 
 val mctsobj : (toy_board,toy_move) mctsobj =
-  {mctsparam = mctsparam, game = toy_game, player = uniform_player toy_game};
+  {mctsparam = mctsparam, game = toy_game, player = random_player toy_game};
 
-val starttree = starting_tree mctsobj (0,1000,1000);
-val ((),t) = add_time (mcts mctsobj) starttree;
+val tree = starting_tree mctsobj (500,1000,1000);
+val ((),t) = add_time (mcts mctsobj) tree;
 dlength tree;
 Profile.results ();
-val root = dfind [] tree;
-val nodel = trace_win tree [];
+val l = most_visited_path tree;
 *)
 
 

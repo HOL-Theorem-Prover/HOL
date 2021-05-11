@@ -16,6 +16,11 @@ sig
     {board : 'a, value : real, stati : status, sum : real ref, vis : real ref}
   datatype ('a,'b) tree = 
     Leaf | Node of ('a,'b) node * ('b * real * ('a,'b) tree ref) vector
+  val dest_node : ('a,'b) tree -> 
+    ('a,'b) node * ('b * real * ('a,'b) tree ref) vector
+  val is_node : ('a,'b) tree -> bool
+  val is_leaf : ('a,'b) tree -> bool
+
 
   (* MCTS specification *)
   type ('a,'b) game =
@@ -46,6 +51,10 @@ sig
   val starting_tree : ('a,'b) mctsobj -> 'a -> ('a,'b) tree
   val mcts : ('a,'b) mctsobj -> ('a,'b) tree -> unit (* modifies input tree *)
  
+  (* Statistics *)
+  val most_visited_path : ('a,'b) tree -> (('a, 'b) node * 'b option) list
+
+
   (* toy example *)
   type toy_board = (int * int * int)
   datatype toy_move = Incr | Decr

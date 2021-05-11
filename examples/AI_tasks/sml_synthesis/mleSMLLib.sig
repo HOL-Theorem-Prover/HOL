@@ -2,15 +2,27 @@ signature mleSMLLib =
 sig
 
   include Abbrev
- 
 
-  type state = int list list
+  exception Unbuildable
+
   type instr = string * int * (int list -> int)
-  val namefunl : instr list
-  val mk_varinstr : int -> instr
-  val all_input : int -> int -> int list list
-  val all_instr : int -> instr list
-  val exec_instr : int list list -> instr -> state -> state
-  val random_state : int -> int -> state
+  datatype prog =
+      Ins of instr * prog list
+    | Test of prog * prog * prog
+    | Rec of prog list
+    | Proj of int
+    | Sub of prog * prog list
+  datatype bprog =
+    BIns of (string * int * (int list -> int))
+  | BTest
+  | BRec
+  | BProj of int
+  | BStartSub of int
+  | BEndSub;
+
+  val instrl : instr list
+  val instrd : (string,instr) Redblackmap.dict
+  val exec : int -> prog -> int list -> int option
+  val build : bprog -> (int * prog list) list -> (int * prog list) list
 
 end
