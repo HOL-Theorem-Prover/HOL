@@ -2489,16 +2489,16 @@ val CARD_EQ_IMAGE = store_thm ("CARD_EQ_IMAGE",
 (* Cardinal arithmetic operations.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "+_c" (Infixl 500);
+
+val add_c = disjUNION_def
+
+val _ = set_mapped_fixity {tok = "+_c", fixity = Infixl 500,
+                           term_name = "disjUNION"}
+val _ = temp_overload_on ("+", ``disjUNION``);
+
 val _ = set_fixity "*_c" (Infixl 600);
-
-val add_c = new_definition ("add_c",
-  ``s +_c t = {INL x | x IN s} UNION {INR y | y IN t}``);
-
-val _ = overload_on ("+", ``$+_c``);
 val _ = overload_on ("*_c", ``$CROSS``); (* defined in pred_setTheory *)
 val _ = overload_on ("CROSS", ``$CROSS``);
-val _ = TeX_notation {hol = "*_c", TeX = ("\\ensuremath{\\times}", 1)};
 
 val mul_c = store_thm ("mul_c",
   ``!s t. s *_c t = {(x,y) | x IN s /\ y IN t}``,
