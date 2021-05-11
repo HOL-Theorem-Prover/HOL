@@ -3369,4 +3369,42 @@ Proof
   metis_tac[optionTheory.SOME_11]
 QED
 
+Theorem cardeq_addUnum:
+  INFINITE (univ(:'a)) ⇒ univ(:num + 'a) =~ univ(:'a)
+Proof
+  strip_tac >> irule cardleq_ANTISYM >>
+  ‘univ(:'a) <<= univ(:num + 'a)’
+    by (simp[cardleq_def]>> qexists_tac ‘INR’ >>
+        simp[INJ_DEF]) >> simp[] >>
+  ‘univ(:num) <<= univ(:'a)’ by gs[INFINITE_Unum] >>
+  simp[disjUNION_UNIV, CARD_ADD_ABSORB_LE]
+QED
+
+Theorem wellorder_destWO =
+        wellorder_ABSREP |> cj 2
+                         |> Q.SPEC ‘destWO r’
+                         |> REWRITE_RULE [mkWO_destWO]
+
+Theorem cardleq_copy_wellorders:
+  univ(:'a) <<= univ(:'b) ==>
+  !w1 : 'a wellorder. ?w2: 'b wellorder. orderiso w1 w2
+Proof
+  simp[orderiso_def, cardleq_def, INJ_IFF] >>
+  disch_then $ qx_choose_then ‘f’ strip_assume_tac >>
+  qx_gen_tac ‘w1’ >> qabbrev_tac ‘W2 = {(f x, f y) | (x,y) ∈ destWO w1 }’ >>
+  ‘wellorder (destWO w1)’ by simp[wellorder_destWO] >>
+  ‘wellorder W2’
+    by (‘W2 = IMAGE (f ## f) (destWO w1)’
+          by simp[Abbr‘W2’, EXTENSION, EXISTS_PROD] >>
+        simp[] >> irule INJ_preserves_wellorder >>
+        simp[wellorder_destWO] >> qexists_tac ‘UNIV’ >>
+        simp[INJ_IFF]) >>
+  qexistsl_tac [‘mkWO W2’, ‘f’] >>
+  ‘elsOf (mkWO W2) = { f x | x IN elsOf w1}’
+    by (simp[elsOf_def, Abbr‘W2’, destWO_mkWO, domain_def, range_def] >>
+        dsimp[EXTENSION] >> metis_tac[]) >>
+  simp[PULL_EXISTS] >>
+  simp[destWO_mkWO] >> simp[strict_def, Abbr‘W2’]
+QED
+
 val _ = export_theory()
