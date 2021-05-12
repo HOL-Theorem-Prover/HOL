@@ -85,12 +85,14 @@ fun loop_bigsteps mctsobj rlex tree = case tree of
   let
     val {mctsparam,game,player} = mctsobj
     val {board,stati,...} = root
-    val _ = debug ("\nBoard\n" ^ (#string_of_board game) board)
+    val _ = debug ("Board " ^ its (length rlex))
+    val _ = debug (#string_of_board game board)
   in
     if not (is_undecided stati) then (is_win stati, rlex) else
     let
       val _ = mcts mctsobj tree
       val (move,i) = select_bigstep mctsobj tree
+      val _ = debug ("Move " ^ #string_of_move game move)
       val newrlex = add_rootex game tree rlex
       val newtree = cut_tree i tree 
     in
@@ -126,7 +128,6 @@ val mctsobj : (toy_board,toy_move) mctsobj =
 val target = (0,10,100);
 val _ = debug_flag := true;
 val ((winb,rlex),t) = add_time (run_bigsteps (false,mctsobj)) target;
-
 *)
 
 end (* struct *)
