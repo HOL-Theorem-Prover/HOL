@@ -36,7 +36,7 @@ datatype search_status = Success | Saturated | Timeout
 
 type ('a,'b) node =
   {board : 'a, value : real, stati : status, sum : real ref, vis : real ref}
-datatype ('a,'b) tree = 
+datatype ('a,'b) tree =
    Leaf | Node of ('a,'b) node * ('b * real * ('a,'b) tree ref) vector
 fun dest_node x = case x of Node y => y | _ => raise ERR "dest_node" ""
 fun is_node x = case x of Node y => true | _ => false
@@ -177,7 +177,7 @@ fun select_child obj refl (node,cv) =
 fun mk_timer param =
   if isSome (#nsim param) then 
     let val threshold = valOf (#nsim param) in
-      fn n => n >= threshold
+      fn n => (Real.round (!n)) >= threshold
     end
   else if isSome (#time param) then 
     let 
@@ -192,7 +192,7 @@ fun mcts obj tree =
   let
     val timerf = mk_timer (#mctsparam obj)
     fun loop n =
-      if timerf n then () else 
+      if timerf (#vis (fst (dest_node tree))) then () else 
       (select_child obj [] (dest_node tree); loop (n+1))
   in
     loop 0
