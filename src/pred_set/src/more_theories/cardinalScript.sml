@@ -3370,7 +3370,7 @@ Proof
 QED
 
 Theorem cardeq_addUnum:
-  INFINITE (univ(:'a)) ⇒ univ(:num + 'a) =~ univ(:'a)
+  INFINITE (univ(:'a)) ==> univ(:num + 'a) =~ univ(:'a)
 Proof
   strip_tac >> irule cardleq_ANTISYM >>
   ‘univ(:'a) <<= univ(:num + 'a)’
@@ -3391,7 +3391,7 @@ Theorem cardleq_copy_wellorders:
 Proof
   simp[orderiso_def, cardleq_def, INJ_IFF] >>
   disch_then $ qx_choose_then ‘f’ strip_assume_tac >>
-  qx_gen_tac ‘w1’ >> qabbrev_tac ‘W2 = {(f x, f y) | (x,y) ∈ destWO w1 }’ >>
+  qx_gen_tac ‘w1’ >> qabbrev_tac ‘W2 = {(f x, f y) | (x,y) IN destWO w1 }’ >>
   ‘wellorder (destWO w1)’ by simp[wellorder_destWO] >>
   ‘wellorder W2’
     by (‘W2 = IMAGE (f ## f) (destWO w1)’
