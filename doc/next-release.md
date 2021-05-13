@@ -26,10 +26,6 @@ Bugs fixed:
 New theories:
 -------------
 
-*   `large_numberTheory`: various versions of the Laws of Large Numbers (LLN) of Probability Theory.
-    Some theorems (`WLLN_uncorrelated`, `SLLN_uncorrelated`, etc.) previously in `probabilityTheory`
-	are moved to `large_numberTheory` with updated statements.
-
 New tools:
 ----------
 
@@ -47,8 +43,8 @@ for developing safe hardware and software systems.
 number of components.
 
            Datatype: rbd = series (rbd list)
-						 | parallel (rbd list)
-						 | atomic (α event)
+                         | parallel (rbd list)
+                         | atomic (α event)
            End
 
            Datatype: gate = AND (gate list)
@@ -59,6 +55,10 @@ number of components.
 
    Some case studies are also formalized and placed with dependability theories, for illustration purposes, including smart grids, WSN data transport protocols, satellite solar arrays, virtual data centers, oil and gas pipeline systems and an air traffic management system.
 
+-   __large_numberTheory__ (in `examples/probability`): various versions of The Law of Large Numbers (LLN) of Probability Theory.
+
+    Some LLN theorems (`WLLN_uncorrelated` and `SLLN_uncorrelated`) previously in `probabilityTheory`
+    are now moved to `large_numberTheory` with unified statements.
 
 Incompatibilities:
 ------------------
