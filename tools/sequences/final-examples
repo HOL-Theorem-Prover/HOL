@@ -10,6 +10,7 @@
 !!examples/category
 !!examples/miller
 !!examples/miller/miller
+!!examples/probability
 !!!examples/ARM_security_properties
 !examples/fun-op-sem/lprefix_lub
 !examples/fun-op-sem/for
