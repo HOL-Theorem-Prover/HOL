@@ -34,7 +34,6 @@ open gcdTheory; (* for P_EUCLIDES *)
 (* Overloading:
    countFrom m n        = IMAGE ($+ m) (count n)
    s =|= u # v          = split s u v
-   equiv_class R s x    = {y | y IN s /\ R x y}
    EVERY_FINITE  P      = !s. s IN P ==> FINITE s
    PAIR_DISJOINT P      = !s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t
    SET_ADDITIVE f       = (f {} = 0) /\
@@ -302,8 +301,6 @@ open gcdTheory; (* for P_EUCLIDES *)
 
    Partition and Equivalent Class:
    equiv_class_element    |- !R s x y. y IN equiv_class R s x <=> y IN s /\ R x y
-   equiv_class_eq         |- !R s x y. R equiv_on s /\ x IN s /\ y IN s ==>
-                                       ((equiv_class R s x = equiv_class R s y) <=> R x y)
    equiv_on_subset        |- !R s t. R equiv_on s /\ t SUBSET s ==> R equiv_on t
    partition_on_empty     |- !R. partition R {} = {}
    partition_element      |- !R s t. t IN partition R s <=> ?x. x IN s /\ (t = equiv_class R s x)
@@ -3580,26 +3577,12 @@ val PROD_SET_PRODUCT_BY_PARTITION = store_thm(
 (* Partition and Equivalent Class                                            *)
 (* ------------------------------------------------------------------------- *)
 
-(* Overload equivalence class of a relation *)
-val _ = overload_on("equiv_class", ``\R s x. {y | y IN s /\ R x y}``);
-
 (* Theorem: y IN equiv_class R s x <=> y IN s /\ R x y *)
 (* Proof: by GSPECIFICATION *)
 val equiv_class_element = store_thm(
   "equiv_class_element",
   ``!R s x y. y IN equiv_class R s x <=> y IN s /\ R x y``,
   rw[]);
-
-(* Theorem: R equiv_on s /\ x IN s /\ y IN s ==>
-            ((equiv_class R s x = equiv_class R s y) <=> R x y) *)
-(* Proof: by equiv_on_def, EXTENSION. *)
-Theorem equiv_class_eq:
-  !R s x y. R equiv_on s /\ x IN s /\ y IN s ==>
-             ((equiv_class R s x = equiv_class R s y) <=> R x y)
-Proof
-  rw[equiv_on_def, EXTENSION] >>
-  metis_tac[]
-QED
 
 (* Theorem: R equiv_on s /\ t SUBSET s ==> R equiv_on t *)
 (* Proof: by equiv_on_def, SUBSET_DEF *)
