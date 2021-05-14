@@ -5474,8 +5474,25 @@ val equiv_on_def = new_definition(
        (!x y z. x IN s /\ y IN s /\ z IN s /\ R x y /\ R y z ==> R x z)``);
 val _ = set_fixity "equiv_on" (Infix(NONASSOC, 425))
 
+Theorem inv_image_equiv_on:
+  R equiv_on Y ==>
+  inv_image R f equiv_on { x | f x IN Y }
+Proof
+  rw[equiv_on_def]
+  \\ METIS_TAC[]
+QED
+
+(* Theorem: R equiv_on s /\ t SUBSET s ==> R equiv_on t *)
+(* Proof: by equiv_on_def, SUBSET_DEF *)
+Theorem equiv_on_subset:
+  !R s t. R equiv_on s /\ t SUBSET s ==> R equiv_on t
+Proof
+  rw_tac std_ss[equiv_on_def, SUBSET_DEF] >>
+  METIS_TAC[]
+QED
+
 (* Overload equivalence class of a relation *)
-val _ = overload_on("equiv_class", ``\R s x. {y | y IN s /\ R x y}``);
+Overload "equiv_class" = ``\R s x. {y | y IN s /\ R x y}``
 
 (* Theorem: R equiv_on s /\ x IN s /\ y IN s ==>
             ((equiv_class R s x = equiv_class R s y) <=> R x y) *)
@@ -5679,6 +5696,62 @@ Proof
   \\ `{a} = x` suffices_by rw[]
   \\ rw[Once EXTENSION, EQ_IMP_THM]
   \\ res_tac \\ fs[]
+QED
+
+Theorem SING_partitions:
+  {x} partitions w <=> x = w /\ w <> {}
+Proof
+  rw[partitions_thm]
+  \\ rw[EQ_IMP_THM]
+  >- ( rw[SET_EQ_SUBSET] \\ rw[SUBSET_DEF] \\ fs[EXISTS_UNIQUE_THM] )
+  >- ( strip_tac \\ fs[] )
+  \\ simp[EXISTS_UNIQUE_THM]
+QED
+
+Theorem INJ_IMAGE_equiv_class:
+  INJ f s t /\ x IN s ==>
+  IMAGE f (equiv_class R s x) =
+  equiv_class (inv_image R (LINV f s)) (IMAGE f s) (f x)
+Proof
+  rw[Once EXTENSION]
+  \\ imp_res_tac LINV_DEF
+  \\ rw[EQ_IMP_THM]
+  \\ METIS_TAC[LINV_DEF]
+QED
+
+Theorem IMAGE_IMAGE_partition:
+  INJ f s t ==>
+  IMAGE (IMAGE f) (partition R s) =
+  partition (inv_image R (LINV f s)) (IMAGE f s)
+Proof
+  rw[partition_def, Once EXTENSION]
+  \\ rw[Once EQ_IMP_THM]
+  >- (
+    imp_res_tac INJ_IMAGE_equiv_class
+    \\ fs[] \\ METIS_TAC[] )
+  \\ simp[PULL_EXISTS]
+  \\ imp_res_tac INJ_IMAGE_equiv_class
+  \\ simp[]
+  \\ simp[Once EXTENSION]
+  \\ METIS_TAC[LINV_DEF]
+QED
+
+Theorem BIJ_IMAGE_partitions:
+  BIJ f x y /\ v partitions x ==>
+  IMAGE (IMAGE f) v partitions y
+Proof
+  rw[partitions_def]
+  \\ Q.EXISTS_TAC`inv_image R (LINV f x)`
+  \\ fs[BIJ_DEF]
+  \\ fs[IMAGE_SURJ]
+  \\ imp_res_tac IMAGE_IMAGE_partition
+  \\ fs[] \\ REV_FULL_SIMP_TAC(srw_ss())[]
+  \\ drule inv_image_equiv_on
+  \\ disch_then(Q.SPEC_THEN`LINV f x`strip_assume_tac)
+  \\ irule equiv_on_subset
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ rw[SUBSET_DEF]
+  \\ METIS_TAC[LINV_DEF]
 QED
 
 val part_def = TotalDefn.Define`
