@@ -23,7 +23,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
-     pred_setTheory pred_setLib realTheory realLib
+     pred_setTheory pred_setLib realTheory realLib iterateTheory
      seqTheory transcTheory real_sigmaTheory real_topologyTheory;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory

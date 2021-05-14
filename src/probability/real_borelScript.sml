@@ -23,9 +23,9 @@ open HolKernel Parse boolLib bossLib;
 
 open metisLib arithmeticTheory pred_setTheory pred_setLib numTheory numLib
      listTheory combinTheory pairTheory realTheory realLib jrhUtils RealArith
-     seqTheory real_sigmaTheory transcTheory cardinalTheory;
+     seqTheory real_sigmaTheory transcTheory metricTheory topologyTheory;
 
-open metricTheory topologyTheory real_topologyTheory integrationTheory;
+open cardinalTheory real_topologyTheory iterateTheory integrationTheory;
 
 open hurdUtils util_probTheory sigma_algebraTheory;
 
@@ -46,21 +46,17 @@ val set_ss = std_ss ++ PRED_SET_ss;
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-(* New definition based on open sets. See "borel_def" for the old definition *)
+(* The new definition is based on open sets. See "borel_def" for the old definition *)
 Definition borel :
     borel = sigma univ(:real) {s | open s}
 End
 
 (* was: borel_measurable [definition] *)
-val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
+Overload borel_measurable = “\a. measurable a borel”
 
-val indicator_fn_def = Define
-   `indicator_fn s = \x. if x IN s then (1:real) else (0:real)`;
-
-(* MATHEMATICAL DOUBLE-STRUCK DIGIT ONE *)
-val _ = Unicode.unicode_version {u = UTF8.chr 0x1D7D9, tmnm = "indicator_fn"};
-val _ = TeX_notation {hol = UTF8.chr 0x1D7D9, TeX = ("\\HOLTokenOne{}", 1)};
-val _ = TeX_notation {hol = "indicator_fn",   TeX = ("\\HOLTokenOne{}", 1)};
+(* The definition of ‘indicator_fn’ is now merged with iterateTheory.indicator *)
+Overload indicator_fn[local] = “indicator”
+Theorem indicator_fn_def[local] = indicator
 
 (* ************************************************************************* *)
 (* Proofs                                                                    *)

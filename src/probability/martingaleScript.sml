@@ -10,7 +10,7 @@ open HolKernel Parse boolLib bossLib;
 
 open pairTheory relationTheory prim_recTheory arithmeticTheory fcpTheory
      pred_setTheory combinTheory realTheory realLib seqTheory posetTheory
-     real_topologyTheory;
+     iterateTheory real_topologyTheory;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
      measureTheory real_borelTheory borelTheory lebesgueTheory;

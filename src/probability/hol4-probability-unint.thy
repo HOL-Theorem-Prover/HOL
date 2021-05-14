@@ -12,7 +12,6 @@ main {
   import: lebesgue
   import: martingale
   import: probability
-  import: large-number
 }
 extreal {
   article: "extreal.ot.art"
@@ -58,13 +57,4 @@ probability {
   import: lebesgue
   import: martingale
   article: "probability.ot.art"
-}
-large-number {
-  import: sigma-algebra
-  import: measure
-  import: borel
-  import: lebesgue
-  import: martingale
-  import: probability
-  article: "large_number.ot.art"
 }

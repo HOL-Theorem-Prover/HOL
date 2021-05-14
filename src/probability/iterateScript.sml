@@ -1298,6 +1298,75 @@ val NUMSEG_LT = store_thm ("NUMSEG_LT",
   THEN POP_ASSUM MP_TAC THEN ARITH_TAC);
 
 (* ------------------------------------------------------------------------- *)
+(* Segment of natural numbers starting at a specific number.                 *)
+(* ------------------------------------------------------------------------- *)
+
+val from_def = Define
+   `from n = {m:num | n <= m}`;
+
+val FROM_0 = store_thm ("FROM_0",
+  ``from 0 = univ(:num)``,
+    REWRITE_TAC [from_def, ZERO_LESS_EQ, GSPEC_T]);
+
+val IN_FROM = store_thm ("IN_FROM",
+  ``!m n. m IN from n <=> n <= m``,
+    SIMP_TAC std_ss [from_def, GSPECIFICATION]);
+
+val DISJOINT_COUNT_FROM = store_thm
+  ("DISJOINT_COUNT_FROM", ``!n. DISJOINT (count n) (from n)``,
+    RW_TAC arith_ss [from_def, count_def, DISJOINT_DEF, Once EXTENSION, NOT_IN_EMPTY,
+                     GSPECIFICATION, IN_INTER]);
+
+val DISJOINT_FROM_COUNT = store_thm
+  ("DISJOINT_FROM_COUNT", ``!n. DISJOINT (from n) (count n)``,
+    RW_TAC std_ss [Once DISJOINT_SYM, DISJOINT_COUNT_FROM]);
+
+val UNION_COUNT_FROM = store_thm
+  ("UNION_COUNT_FROM", ``!n. (count n) UNION (from n) = UNIV``,
+    RW_TAC arith_ss [from_def, count_def, Once EXTENSION, NOT_IN_EMPTY,
+                     GSPECIFICATION, IN_UNION, IN_UNIV]);
+
+val UNION_FROM_COUNT = store_thm
+  ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
+    RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
+
+Theorem FROM_NOT_EMPTY :
+    !n. from n <> {}
+Proof
+    RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY, from_def, GSPECIFICATION]
+ >> Q.EXISTS_TAC `n` >> REWRITE_TAC [LESS_EQ_REFL]
+QED
+
+Theorem COUNTABLE_FROM :
+    !n. COUNTABLE (from n)
+Proof
+    PROVE_TAC [COUNTABLE_NUM]
+QED
+
+val FROM_INTER_NUMSEG_GEN = store_thm ("FROM_INTER_NUMSEG_GEN",
+ ``!k m n. (from k) INTER (m..n) = (if m < k then k..n else m..n)``,
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
+  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
+  ARITH_TAC);
+
+val FROM_INTER_NUMSEG_MAX = store_thm ("FROM_INTER_NUMSEG_MAX",
+ ``!m n p. from p INTER (m..n) = (MAX p m..n)``,
+  SIMP_TAC arith_ss [EXTENSION, IN_INTER, IN_NUMSEG, IN_FROM] THEN ARITH_TAC);
+
+val FROM_INTER_NUMSEG = store_thm ("FROM_INTER_NUMSEG",
+ ``!k n. (from k) INTER (0:num..n) = k..n``,
+  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
+  ARITH_TAC);
+
+val INFINITE_FROM = store_thm ("INFINITE_FROM",
+  ``!n. INFINITE(from n)``,
+   GEN_TAC THEN KNOW_TAC ``from n = univ(:num) DIFF {i | i < n}`` THENL
+  [SIMP_TAC std_ss [EXTENSION, from_def, IN_DIFF, IN_UNIV, GSPECIFICATION] THEN
+   ARITH_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
+   MATCH_MP_TAC INFINITE_DIFF_FINITE THEN
+   REWRITE_TAC [FINITE_NUMSEG_LT, num_INFINITE]]);
+
+(* ------------------------------------------------------------------------- *)
 (* Topological sorting of a finite set.                                      *)
 (* ------------------------------------------------------------------------- *)
 
@@ -2707,6 +2776,7 @@ val SUM_SUB = store_thm ("SUM_SUB",
  ``!f g s. FINITE s ==> (sum s (\x. f(x) - g(x)) = sum s f - sum s g)``,
   ONCE_REWRITE_TAC[real_sub] THEN SIMP_TAC std_ss [SUM_NEG, SUM_ADD]);
 
+(* TODO: name conflicts with realTheory.SUM_LE *)
 val SUM_LE = store_thm ("SUM_LE",
  ``!f g s. FINITE(s) /\ (!x. x IN s ==> f(x) <= g(x)) ==> sum s f <= sum s g``,
   ONCE_REWRITE_TAC[GSYM AND_IMP_INTRO] THEN REPEAT GEN_TAC THEN
@@ -4348,6 +4418,52 @@ Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC PRODUCT_EQ
  >> ASM_SIMP_TAC std_ss [GSPECIFICATION, IN_NUMSEG]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Real-valued indicator function (cf. extrealTheory.indicator_fn)           *)
+(* ------------------------------------------------------------------------- *)
+
+(* This is originally from HOL Light (Multivariate/vectors.ml). Generalized. *)
+Definition indicator :
+    indicator (s :'a -> bool) :'a -> real = \x. if x IN s then 1 else 0
+End
+
+Theorem DROP_INDICATOR :
+    !s x. (indicator s x) = if x IN s then &1 else &0
+Proof
+    SIMP_TAC std_ss [indicator]
+QED
+
+Theorem DROP_INDICATOR_POS_LE :
+    !s x. &0 <= (indicator s x)
+Proof
+    RW_TAC real_ss [DROP_INDICATOR]
+QED
+
+Theorem DROP_INDICATOR_LE_1 :
+    !s x. (indicator s x) <= &1
+Proof
+    RW_TAC real_ss [DROP_INDICATOR]
+QED
+
+Theorem DROP_INDICATOR_ABS_LE_1 :
+    !s x. abs(indicator s x) <= &1
+Proof
+    RW_TAC real_ss [DROP_INDICATOR]
+QED
+
+Theorem INDICATOR_EMPTY :
+    indicator {} = (\x. 0)
+Proof
+    SET_TAC [indicator]
+QED
+
+Theorem INDICATOR_COMPLEMENT :
+    !s. indicator (UNIV DIFF s) = \x. 1 - indicator s x
+Proof
+    rw [FUN_EQ_THM, indicator]
+ >> Cases_on ‘x IN s’ >> rw []
 QED
 
 val _ = export_theory();
