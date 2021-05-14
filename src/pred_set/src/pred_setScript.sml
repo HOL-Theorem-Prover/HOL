@@ -5841,6 +5841,42 @@ Proof
   \\ METIS_TAC[in_part]
 QED
 
+Theorem refines_refl[simp]:
+  v refines v
+Proof
+  rw[refines_def]
+  \\ METIS_TAC[SUBSET_REFL]
+QED
+
+Theorem refines_transitive:
+  v1 refines v2 /\ v2 refines v3 ==> v1 refines v3
+Proof
+  rw[refines_def]
+  \\ METIS_TAC[SUBSET_TRANS]
+QED
+
+Theorem refines_antisym:
+  v1 partitions w /\ v2 partitions w /\
+  v1 refines v2 /\ v2 refines v1 ==> v1 = v2
+Proof
+  Q.HO_MATCH_ABBREV_TAC`P v1 v2 ==> v1 = v2`
+  \\ `!v1 v2. P v1 v2 ==> v1 SUBSET v2` suffices_by (
+    simp[Abbr`P`] \\ METIS_TAC[SET_EQ_SUBSET])
+  \\ rw[Abbr`P`, SUBSET_DEF]
+  \\ fs[refines_def]
+  \\ `?a. a IN w /\ a IN x`
+  by METIS_TAC[partitions_thm, MEMBER_NOT_EMPTY, SUBSET_DEF]
+  \\ `x = part v1 a` by METIS_TAC[part_unique]
+  \\ res_tac
+  \\ `a IN s2` by METIS_TAC[SUBSET_DEF]
+  \\ `s2 = part v2 a` by METIS_TAC[part_unique]
+  \\ `?y. y IN v1 /\ s2 SUBSET y` by METIS_TAC[]
+  \\ `a IN y` by METIS_TAC[SUBSET_DEF]
+  \\ `y = part v1 a` by METIS_TAC[part_unique]
+  \\ `s2 = part v1 a` by METIS_TAC[SUBSET_ANTISYM]
+  \\ METIS_TAC[part_in_partition]
+QED
+
 (* ----------------------------------------------------------------------
     Assert a predicate on all pairs of elements in a set.
     Take the RC of the P argument to consider only pairs of distinct elements.
