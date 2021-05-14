@@ -301,7 +301,6 @@ open gcdTheory; (* for P_EUCLIDES *)
 
    Partition and Equivalent Class:
    equiv_class_element    |- !R s x y. y IN equiv_class R s x <=> y IN s /\ R x y
-   equiv_on_subset        |- !R s t. R equiv_on s /\ t SUBSET s ==> R equiv_on t
    partition_on_empty     |- !R. partition R {} = {}
    partition_element      |- !R s t. t IN partition R s <=> ?x. x IN s /\ (t = equiv_class R s x)
    partition_elements     |- !R s. partition R s = IMAGE (\x. equiv_class R s x) s
@@ -3583,14 +3582,6 @@ val equiv_class_element = store_thm(
   "equiv_class_element",
   ``!R s x y. y IN equiv_class R s x <=> y IN s /\ R x y``,
   rw[]);
-
-(* Theorem: R equiv_on s /\ t SUBSET s ==> R equiv_on t *)
-(* Proof: by equiv_on_def, SUBSET_DEF *)
-val equiv_on_subset = store_thm(
-  "equiv_on_subset",
-  ``!R s t. R equiv_on s /\ t SUBSET s ==> R equiv_on t``,
-  rw_tac std_ss[equiv_on_def, SUBSET_DEF] >>
-  metis_tac[]);
 
 (* Theorem: partition R {} = {} *)
 (* Proof: by partition_def *)
