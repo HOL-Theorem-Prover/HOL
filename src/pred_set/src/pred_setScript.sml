@@ -5767,6 +5767,23 @@ Proof
   \\ METIS_TAC[]
 QED
 
+Theorem part_partition:
+  y IN w /\ R equiv_on w ==>
+  part (partition R w) y = { x | x IN w /\ R x y }
+Proof
+  strip_tac
+  \\ rw[part_def]
+  \\ SELECT_ELIM_TAC
+  \\ simp[partition_def, PULL_EXISTS]
+  \\ Q.EXISTS_TAC`y`
+  \\ conj_tac >- fs[equiv_on_def]
+  \\ simp[]
+  \\ simp[Once EXTENSION]
+  \\ Q.X_GEN_TAC`x` \\ strip_tac
+  \\ fs[equiv_on_def]
+  \\ METIS_TAC[]
+QED
+
 Theorem part_unique:
   v partitions w /\ x IN w /\ x IN s /\ s IN v ==>
   s = part v x
