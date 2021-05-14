@@ -17,7 +17,6 @@ This directory contains HOL4's Measure, Lebesgue Integration and Probability the
      lebesgueScript.sml           * Lebesgue integration theory
      martingaleScript.sml         * Martingales based on σ-finite filtered measure space
      probabilityScript.sml        * Probability Theory based on extended reals
-     large_numberScript.sml       * The Law(s) of Large Numbers
 
 ## Measure, Integral and Probability Theory defined on reals
 

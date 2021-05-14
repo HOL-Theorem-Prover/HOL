@@ -13,6 +13,8 @@ open metisLib pairTheory combinTheory pred_setTheory pred_setLib jrhUtils
      arithmeticTheory realTheory realLib transcTheory seqTheory numLib
      real_sigmaTheory numpairTheory hurdUtils RealArith fcpTheory fcpLib;
 
+open iterateTheory;
+
 val _ = new_theory "util_prob";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
@@ -1084,18 +1086,19 @@ Proof
  >> Q.EXISTS_TAC `2`
  >> GEN_TAC
  >> Cases_on `n` >- rw [sum]
+ >> rename1 ‘sum (0,SUC m) (\n. inv (&SUC n pow 2)) <= 2’
  >> MATCH_MP_TAC REAL_LE_TRANS
- >> Q.EXISTS_TAC `1 + sum (1,n') (\n. inv (&n) - inv (&SUC n))`
+ >> Q.EXISTS_TAC `1 + sum (1,m) (\n. inv (&n) - inv (&SUC n))`
  >> CONJ_TAC
- >- (Know `sum (0,SUC n') (\n. inv (&SUC n pow 2)) =
-           sum (0,1) (\n. inv (&SUC n pow 2)) + sum (1,n') (\n. inv (&SUC n pow 2))`
+ >- (Know `sum (0,SUC m) (\n. inv (&SUC n pow 2)) =
+           sum (0,1) (\n. inv (&SUC n pow 2)) + sum (1,m) (\n. inv (&SUC n pow 2))`
      >- (MATCH_MP_TAC EQ_SYM \\
-         MP_TAC (Q.SPECL [`\n. inv (&SUC n pow 2)`, `1`, `n'`] SUM_TWO) \\
+         MP_TAC (Q.SPECL [`\n. inv (&SUC n pow 2)`, `1`, `m`] SUM_TWO) \\
          RW_TAC arith_ss [ADD1]) >> Rewr' \\
      Know `sum (0,1) (\n. inv (&SUC n pow 2)) = 1`
      >- (REWRITE_TAC [sum, ONE] >> rw []) >> Rewr' \\
      REWRITE_TAC [REAL_LE_LADD] \\
-     MATCH_MP_TAC SUM_LE \\
+     MATCH_MP_TAC realTheory.SUM_LE \\
      RW_TAC real_ss [REAL_INV_1OVER] \\
     `&r <> 0` by RW_TAC real_ss [] \\
     `&SUC r <> 0` by RW_TAC real_ss [] \\
@@ -2316,6 +2319,115 @@ val tail_countable = store_thm
  >> Suff `{A n | m <= n} = IMAGE A {n | m <= n}`
  >- PROVE_TAC [COUNTABLE_IMAGE_NUM]
  >> RW_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION]);
+
+(* ------------------------------------------------------------------------- *)
+(*  limsup and liminf for sets [1, p.78] (moved from borelTheory)            *)
+(* ------------------------------------------------------------------------- *)
+
+val set_limsup_def = Define (* "infinitely often" *)
+   `set_limsup (E :num -> 'a set) =
+      BIGINTER (IMAGE (\m. BIGUNION {E n | m <= n}) UNIV)`;
+
+val set_liminf_def = Define (* "almost always" *)
+   `set_liminf (E :num -> 'a set) =
+      BIGUNION (IMAGE (\m. BIGINTER {E n | m <= n}) UNIV)`;
+
+val _ = overload_on ("limsup", ``set_limsup``);
+val _ = overload_on ("liminf", ``set_liminf``);
+
+(* alternative definition of `limsup` using `from` *)
+val set_limsup_alt = store_thm
+  ("set_limsup_alt",
+  ``!E. set_limsup E = BIGINTER (IMAGE (\n. BIGUNION (IMAGE E (from n))) UNIV)``,
+    GEN_TAC >> REWRITE_TAC [set_limsup_def]
+ >> Suff `!m. BIGUNION (IMAGE E (from m)) = BIGUNION {E n | m <= n}`
+ >- (Rewr' >> REWRITE_TAC [])
+ >> RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_BIGUNION, GSPECIFICATION, from_def]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC `E x'` >> art [] \\
+     Q.EXISTS_TAC `x'` >> art [])
+ >> Q.EXISTS_TAC `n` >> PROVE_TAC []);
+
+(* this lemma implicitly assume `events p = UNIV` *)
+val liminf_limsup = store_thm
+  ("liminf_limsup", ``!(E :num -> 'a set). COMPL (liminf E) = limsup (COMPL o E)``,
+    RW_TAC std_ss [set_limsup_def, set_liminf_def]
+ >> SIMP_TAC std_ss [COMPL_BIGUNION_IMAGE, o_DEF]
+ >> Suff `!m. COMPL (BIGINTER {E n | m <= n}) = BIGUNION {COMPL (E n) | m <= n}` >- Rewr
+ >> GEN_TAC >> REWRITE_TAC [COMPL_BIGINTER]
+ >> Suff `IMAGE COMPL {E n | m <= n} = {COMPL (E n) | m <= n}` >- Rewr
+ >> SIMP_TAC std_ss [IMAGE_DEF, IN_COMPL, Once GSPECIFICATION]
+ >> RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, IN_COMPL]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (fs [COMPL_COMPL] >> Q.EXISTS_TAC `n` >> art [])
+ >> fs []
+ >> Q.EXISTS_TAC `E n` >> art []
+ >> Q.EXISTS_TAC `n` >> art []);
+
+val liminf_limsup_sp = store_thm (* more general form *)
+  ("liminf_limsup_sp",
+  ``!sp E. (!n. E n SUBSET sp) ==> (sp DIFF (liminf E) = limsup (\n. sp DIFF (E n)))``,
+    RW_TAC std_ss [set_limsup_def, set_liminf_def]
+ >> Q.ABBREV_TAC `f = (\m. BIGINTER {E n | m <= n})`
+ >> Know `!m. f m SUBSET sp`
+ >- (GEN_TAC >> Q.UNABBREV_TAC `f` >> BETA_TAC \\
+     RW_TAC std_ss [SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] \\
+     fs [SUBSET_DEF] >> LAST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC `SUC m` \\
+     POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `E (SUC m)`)) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC `SUC m` >> RW_TAC arith_ss [])
+ >> DISCH_THEN (REWRITE_TAC o wrap o (MATCH_MP GEN_COMPL_BIGUNION_IMAGE))
+ >> Suff `!m. sp DIFF f m = BIGUNION {sp DIFF E n | m <= n}` >- Rewr
+ >> GEN_TAC >> Q.UNABBREV_TAC `f` >> BETA_TAC
+ >> Know `!x. x IN {E n | m <= n} ==> x SUBSET sp`
+ >- (RW_TAC std_ss [GSPECIFICATION] >> art [])
+ >> DISCH_THEN (REWRITE_TAC o wrap o (MATCH_MP GEN_COMPL_BIGINTER))
+ >> Suff `(IMAGE (\x. sp DIFF x) {E n | m <= n}) = {sp DIFF E n | m <= n}` >- Rewr
+ >> RW_TAC std_ss [Once EXTENSION, IMAGE_DEF, IN_DIFF, GSPECIFICATION]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC `n` >> METIS_TAC [])
+ >> Q.EXISTS_TAC `E n` >> art []
+ >> Q.EXISTS_TAC `n` >> art []);
+
+(* A point belongs to `limsup E` if and only if it belongs to infinitely
+   many terms of the sequence E. [2, p.76]
+ *)
+Theorem IN_LIMSUP :
+    !A x. x IN limsup A <=> ?N. INFINITE N /\ !n. n IN N ==> x IN (A n)
+Proof
+    rpt GEN_TAC >> EQ_TAC
+ >> RW_TAC std_ss [set_limsup_def, IN_BIGINTER_IMAGE, IN_UNIV]
+ >| [ (* goal 1 (of 2) *)
+      Q.ABBREV_TAC `P = \n. x IN (A n)` \\
+     `!n. x IN (A n) <=> P n` by PROVE_TAC [] >> POP_ORW \\
+      CCONTR_TAC \\
+     `?m. !n. m <= n ==> ~(P n)` by PROVE_TAC [infinitely_often_lemma] \\
+      Q.UNABBREV_TAC `P` >> FULL_SIMP_TAC bool_ss [] \\
+      Know `x NOTIN BIGUNION {A n | m <= n}`
+      >- (SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION] \\
+          CCONTR_TAC >> FULL_SIMP_TAC bool_ss [] >> METIS_TAC []) \\
+      DISCH_TAC >> METIS_TAC [],
+      (* goal 2 (of 2) *)
+      SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION] \\
+      IMP_RES_TAC infinity_bound_lemma \\
+      POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `m`)) \\
+      Q.EXISTS_TAC `A n` >> CONJ_TAC >- PROVE_TAC [] \\
+      Q.EXISTS_TAC `n` >> art [] ]
+QED
+
+(* A point belongs to `liminf E` if and only if it belongs to all terms
+   of the sequence from a certain term on. [2, p.76]
+ *)
+Theorem IN_LIMINF :
+    !A x. x IN liminf A <=> ?m. !n. m <= n ==> x IN (A n)
+Proof
+    rpt GEN_TAC
+ >> ASSUME_TAC (SIMP_RULE std_ss [GSYM liminf_limsup, IN_COMPL, o_DEF]
+                                 (Q.SPECL [`COMPL o A`, `x`] IN_LIMSUP))
+ >> `x IN liminf A <=> ~(?N. INFINITE N /\ !n. n IN N ==> x NOTIN A n)` by PROVE_TAC []
+ >> fs [infinitely_often_lemma]
+QED
 
 val _ = export_theory ();
 

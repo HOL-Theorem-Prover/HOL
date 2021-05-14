@@ -48,6 +48,9 @@ val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
 val FINITE_SUBSET = SUBSET_FINITE_I; (* pred_setTheory *)
 val LE_0          = ZERO_LESS_EQ;    (* arithmeticTheory *)
 
+(* This overrides realTheory.SUM_LE *)
+val SUM_LE = iterateTheory.SUM_LE;
+
 (* ------------------------------------------------------------------------- *)
 (* Pairwise property over sets and lists.                                    *)
 (* ------------------------------------------------------------------------- *)
@@ -5459,75 +5462,6 @@ val LIM_WITHIN_OPEN = store_thm ("LIM_WITHIN_OPEN",
   DISCH_THEN(X_CHOOSE_THEN ``d2:real`` STRIP_ASSUME_TAC) THEN
   MP_TAC(SPECL [``d1:real``, ``d2:real``] REAL_DOWN2) THEN ASM_REWRITE_TAC[] THEN
   ASM_MESON_TAC[REAL_LT_TRANS]);
-
-(* ------------------------------------------------------------------------- *)
-(* Segment of natural numbers starting at a specific number.                 *)
-(* ------------------------------------------------------------------------- *)
-
-val from_def = Define
-   `from n = {m:num | n <= m}`;
-
-val FROM_0 = store_thm ("FROM_0",
-  ``from 0 = univ(:num)``,
-    REWRITE_TAC [from_def, ZERO_LESS_EQ, GSPEC_T]);
-
-val IN_FROM = store_thm ("IN_FROM",
-  ``!m n. m IN from n <=> n <= m``,
-    SIMP_TAC std_ss [from_def, GSPECIFICATION]);
-
-val DISJOINT_COUNT_FROM = store_thm
-  ("DISJOINT_COUNT_FROM", ``!n. DISJOINT (count n) (from n)``,
-    RW_TAC arith_ss [from_def, count_def, DISJOINT_DEF, Once EXTENSION, NOT_IN_EMPTY,
-                     GSPECIFICATION, IN_INTER]);
-
-val DISJOINT_FROM_COUNT = store_thm
-  ("DISJOINT_FROM_COUNT", ``!n. DISJOINT (from n) (count n)``,
-    RW_TAC std_ss [Once DISJOINT_SYM, DISJOINT_COUNT_FROM]);
-
-val UNION_COUNT_FROM = store_thm
-  ("UNION_COUNT_FROM", ``!n. (count n) UNION (from n) = UNIV``,
-    RW_TAC arith_ss [from_def, count_def, Once EXTENSION, NOT_IN_EMPTY,
-                     GSPECIFICATION, IN_UNION, IN_UNIV]);
-
-val UNION_FROM_COUNT = store_thm
-  ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
-    RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
-
-Theorem FROM_NOT_EMPTY :
-    !n. from n <> {}
-Proof
-    RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY, from_def, GSPECIFICATION]
- >> Q.EXISTS_TAC `n` >> REWRITE_TAC [LESS_EQ_REFL]
-QED
-
-Theorem COUNTABLE_FROM :
-    !n. COUNTABLE (from n)
-Proof
-    PROVE_TAC [COUNTABLE_NUM]
-QED
-
-val FROM_INTER_NUMSEG_GEN = store_thm ("FROM_INTER_NUMSEG_GEN",
- ``!k m n. (from k) INTER (m..n) = (if m < k then k..n else m..n)``,
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
-  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
-  ARITH_TAC);
-
-val FROM_INTER_NUMSEG_MAX = store_thm ("FROM_INTER_NUMSEG_MAX",
- ``!m n p. from p INTER (m..n) = (MAX p m..n)``,
-  SIMP_TAC arith_ss [EXTENSION, IN_INTER, IN_NUMSEG, IN_FROM] THEN ARITH_TAC);
-
-val FROM_INTER_NUMSEG = store_thm ("FROM_INTER_NUMSEG",
- ``!k n. (from k) INTER (0:num..n) = k..n``,
-  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
-  ARITH_TAC);
-
-val INFINITE_FROM = store_thm ("INFINITE_FROM",
-  ``!n. INFINITE(from n)``,
-   GEN_TAC THEN KNOW_TAC ``from n = univ(:num) DIFF {i | i < n}`` THENL
-  [SIMP_TAC std_ss [EXTENSION, from_def, IN_DIFF, IN_UNIV, GSPECIFICATION] THEN
-   ARITH_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
-   MATCH_MP_TAC INFINITE_DIFF_FINITE THEN
-   REWRITE_TAC [FINITE_NUMSEG_LT, num_INFINITE]]);
 
 (* ------------------------------------------------------------------------- *)
 (* More limit point characterizations.                                       *)

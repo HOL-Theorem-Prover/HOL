@@ -27,6 +27,8 @@ val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = new_theory "real_probability";
 
+Overload indicator_fn[local] = “indicator”
+
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theory definitions.                                     *)
 (* ------------------------------------------------------------------------- *)

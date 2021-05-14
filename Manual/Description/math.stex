@@ -1335,7 +1335,8 @@ $S_n = \sum_{j=1}^n X_j$. Under certain conditions
 $(S_n - \mathscr{E}(S_n))/n$ converges to 0, in probability
 (weak law) or almost everywhere (strong law).
 
-All versions of LLN can be found in \HOL{}'s \theoryimp{large_number} theory.
+All versions of LLN can be found in \HOL{}'s \theoryimp{large_number} theory
+(now in \ml{\$(HOLDIR)/examples/probability}).
 The conclusion of all LLN theorems are given in the form of \holtxt{LLN}, which
 has alternative definitions for different conditions, e.g.
 \begin{hol}

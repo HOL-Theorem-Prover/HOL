@@ -30,7 +30,7 @@ open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
      jrhUtils cardinalTheory;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory
-     real_borelTheory borelTheory real_topologyTheory;
+     borelTheory real_topologyTheory;
 
 val _ = new_theory "lebesgue";
 
