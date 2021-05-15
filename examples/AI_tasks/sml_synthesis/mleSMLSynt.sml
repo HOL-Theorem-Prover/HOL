@@ -269,14 +269,16 @@ load "psMTCS"; open psMCTS;
 load "aiLib"; open aiLib;
 fun ilts il = String.concatWith " " (map its il);
 val selfdir = HOLDIR ^ "/examples/AI_tasks/sml_synthesis";
-writel (selfdir ^ "/data/train") (map ilts train');
-writel (selfdir ^ "/data/test") (map ilts test');
+
 val seql = gen_seql maxstep 2200;
 val seqlb = filter (fn x => hd x = 0 andalso hd (tl x) = 0) seql; length seqlb;
 val seql2 = shuffle seql; length seql2;
 val (train,test) = part_n 2000 seql2;
 val train' = dict_sort (list_compare Int.compare) train
 val test' = dict_sort (list_compare Int.compare) test;
+
+writel (selfdir ^ "/target/train") (map ilts train');
+writel (selfdir ^ "/target/test") (map ilts test');
 *)
 
 (* -------------------------------------------------------------------------
@@ -407,7 +409,7 @@ fun stil x = map string_to_int (String.tokens Char.isSpace x)
 fun import_targetl name = 
   map (mk_startboard o stil) (readl (targetdir ^ "/" ^ name))
 
-fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l) 
+fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
 
 
 (* -------------------------------------------------------------------------
@@ -423,15 +425,48 @@ fun dim_head_poli n = [dim,n]
 val tnndim = map_assoc (dim_std (1,dim)) operl @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
-fun player_from_tnn tnn board =
-  let
-    val amovel = available_movel board
-    (* *)
-    val (e,p) = pair_of_list (map snd (infer_tnn tnn (term_of_board board)))
-    val d = dnew move_compare (combine (movel,p))
-    fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
+
+fun fp_embed tnn oper embl =
+  let 
+    val inv = Vector.concat embl
+    val nn = dfind oper tnn
   in
-    (singleton_of_list e, map_assoc f amovel)
+    #outnv (last (fp_nn nn inv))
+  end
+
+fun infer_embed tnn embd tm =
+  dfind tm (!embd) handle NotFound =>
+  let 
+    val (oper,argl) = strip_comb tm
+    val embl = map (infer_embed tnn embd) argl 
+    val tmemb = fp_embed tnn oper embl
+  in
+    embd := dadd tm tmemb (!embd); tmemb
+  end
+
+fun player_from_tnn tnn =
+  let 
+    val olemb_mem = ref NONE (* optimization to avoid calling dict *)
+    val embd = ref (dempty Term.compare) (* use hash table? *)
+  in
+    (
+    fn board =>
+    let
+      val amovel = available_movel board
+      val olemb = if isSome (!olemb_mem) then valOf (!olemb_mem) else 
+        let val r = infer_embed tnn embd (term_of_natl (#2 board)) in
+          olemb_mem := SOME r; r
+        end
+      val progllemb = infer_embed tnn embd (term_of_progll (#3 board))
+      val boardemb = fp_embed tnn ol_cat [olemb,progllemb]
+      val e = descale_out (fp_embed tnn head_eval [boardemb])
+      val p = descale_out (fp_embed tnn head_poli [boardemb])
+      val d = dnew move_compare (combine (movel,p))
+      fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
+    in
+      (singleton_of_list e, map_assoc f amovel)
+    end
+    )
   end
 
 val dplayer = 
