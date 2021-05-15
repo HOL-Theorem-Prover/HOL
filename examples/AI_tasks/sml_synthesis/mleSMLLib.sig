@@ -20,6 +20,7 @@ sig
   | BStartSub of int
   | BEndSub;
 
+  val compare_prog : prog * prog -> order
   val instrl : instr list
   val instrd : (string,instr) Redblackmap.dict
   val exec : int -> prog -> int list -> int option

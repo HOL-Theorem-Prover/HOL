@@ -57,6 +57,24 @@ datatype prog =
   | Proj of int
   | Sub of prog * prog list
 
+fun compare_prog (a,b) = case (a,b) of
+    (Ins ((s1,_,_),pl1), Ins ((s2,_,_),pl2)) => 
+    cpl_compare String.compare (list_compare compare_prog) ((s1,pl1),(s2,pl2))
+  | (Ins _,_) => LESS
+  | (_,Ins _) => GREATER
+  | (Test x, Test y) => 
+    triple_compare compare_prog compare_prog compare_prog (x,y)
+  | (Test _,_) => LESS
+  | (_,Test _) => GREATER
+  | (Rec x, Rec y) => list_compare compare_prog (x,y)
+  | (Rec _,_) => LESS
+  | (_,Rec _) => GREATER
+  | (Proj x, Proj y) => Int.compare (x,y)
+  | (Proj _,_) => LESS
+  | (_,Proj _) => GREATER
+  | (Sub (p1,pl1), Sub (p2,pl2)) => 
+    list_compare compare_prog (p1 :: pl1, p2 :: pl2)
+
 exception LocTimeout
 
 fun exec_aux t (mem as (top,input)) argp = 
