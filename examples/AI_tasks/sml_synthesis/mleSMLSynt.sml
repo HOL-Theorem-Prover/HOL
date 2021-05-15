@@ -478,8 +478,9 @@ fun player_from_tnn tnn =
   end
 
 fun player_from_tnn tnn board = 
-  (random_real (), map (fn x => (x,1.0)) (available_movel board))
-
+  let val _ = term_of_board board in
+    (random_real (), map (fn x => (x,1.0)) (available_movel board))
+  end
   
 
 val dplayer = 
@@ -491,7 +492,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/random", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/random2", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
