@@ -413,6 +413,22 @@ fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
 
 
 (* -------------------------------------------------------------------------
+   Hash
+   ------------------------------------------------------------------------- *)
+
+fun hempty hf size cmp = 
+  (fn x => hf x mod size, 
+   Vector.fromList (List.tabulate (size, fn _ => ref (dempty cmp))))
+
+fun hfind x (hf,hv) = 
+  let val d = Vector.sub (hv,hf x)  in dfind x (!d) end
+
+fun hadd a b (hf,hv) =
+  let val d = Vector.sub (hv,hf a) in d := dadd a b (!d) end
+
+fun hash_term tm = hash_string (tts tm)
+
+(* -------------------------------------------------------------------------
    Player
    ------------------------------------------------------------------------- *)
 
@@ -435,19 +451,19 @@ fun fp_embed tnn oper embl =
   end
 
 fun infer_embed_cached tnn embd tm =
-  dfind tm (!embd) handle NotFound =>
+  hfind tm embd handle NotFound =>
   let 
     val (oper,argl) = strip_comb tm
     val embl = map (infer_embed_cached tnn embd) argl 
     val tmemb = fp_embed tnn oper embl
   in
-    embd := dadd tm tmemb (!embd); tmemb
+    hadd tm tmemb embd; tmemb
   end
 
-fun infer_embed tnn embd tm =
+fun infer_embed tnn tm =
   let 
     val (oper,argl) = strip_comb tm
-    val embl = map (infer_embed tnn embd) argl 
+    val embl = map (infer_embed tnn) argl 
   in
     fp_embed tnn oper embl
   end
@@ -455,14 +471,14 @@ fun infer_embed tnn embd tm =
 fun player_from_tnn tnn =
   let 
     val olemb_mem = ref NONE (* optimization to avoid calling dict *)
-    val embd = ref (dempty Term.compare) (* use hash table? *)
+    val embd = hempty hash_term 100000 Term.compare
   in
     (
     fn board =>
     let
       val amovel = available_movel board
       val olemb = if isSome (!olemb_mem) then valOf (!olemb_mem) else 
-        let val r = infer_embed tnn embd (term_of_natl (#2 board)) in
+        let val r = infer_embed tnn (term_of_natl (#2 board)) in
           olemb_mem := SOME r; r
         end
       val progllemb = infer_embed_cached tnn embd (term_of_progll (#3 board))
@@ -477,11 +493,12 @@ fun player_from_tnn tnn =
     )
   end
 
+(*
 fun player_from_tnn tnn board = 
   let val _ = term_of_board board in
     (random_real (), map (fn x => (x,1.0)) (available_movel board))
   end
-  
+*) 
 
 val dplayer = 
   {player_from_tnn = player_from_tnn,
@@ -492,7 +509,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/random2", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/optimized2", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
@@ -508,6 +525,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleSMLSynt"; open mleSMLSynt;
 load "mleSMLLib"; open mleSMLLib;
 
+print_endline (#expdir (#rlparam rlobj));
 val targetl = import_targetl "train";
 val targetd = mk_targetd targetl;
 val r = rl_start (rlobj,extsearch) targetd;
