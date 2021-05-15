@@ -434,14 +434,22 @@ fun fp_embed tnn oper embl =
     #outnv (last (fp_nn nn inv))
   end
 
-fun infer_embed tnn embd tm =
+fun infer_embed_cached tnn embd tm =
   dfind tm (!embd) handle NotFound =>
   let 
     val (oper,argl) = strip_comb tm
-    val embl = map (infer_embed tnn embd) argl 
+    val embl = map (infer_embed_cached tnn embd) argl 
     val tmemb = fp_embed tnn oper embl
   in
     embd := dadd tm tmemb (!embd); tmemb
+  end
+
+fun infer_embed tnn embd tm =
+  let 
+    val (oper,argl) = strip_comb tm
+    val embl = map (infer_embed tnn embd) argl 
+  in
+    fp_embed tnn oper embl
   end
 
 fun player_from_tnn tnn =
@@ -457,7 +465,7 @@ fun player_from_tnn tnn =
         let val r = infer_embed tnn embd (term_of_natl (#2 board)) in
           olemb_mem := SOME r; r
         end
-      val progllemb = infer_embed tnn embd (term_of_progll (#3 board))
+      val progllemb = infer_embed_cached tnn embd (term_of_progll (#3 board))
       val boardemb = fp_embed tnn ol_cat [olemb,progllemb]
       val e = descale_out (fp_embed tnn head_eval [boardemb])
       val p = descale_out (fp_embed tnn head_poli [boardemb])
@@ -469,6 +477,11 @@ fun player_from_tnn tnn =
     )
   end
 
+fun player_from_tnn tnn board = 
+  (random_real (), map (fn x => (x,1.0)) (available_movel board))
+
+  
+
 val dplayer = 
   {player_from_tnn = player_from_tnn,
    tob = term_of_board, tnndim = tnndim, schedule = schedule}
@@ -478,7 +491,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/optimized", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/random", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
