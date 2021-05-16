@@ -5030,6 +5030,56 @@ val PROD_IMAGE_THM = store_thm(
 val _ = overload_on ("PI", ``PROD_IMAGE``)
 val _ = Unicode.unicode_version {tmnm = "PROD_IMAGE", u = UnicodeChars.Pi}
 
+Theorem PROD_IMAGE_EQ_0:
+  !s. FINITE s ==>
+  (PROD_IMAGE f s = 0 <=> ?x. x IN s /\ f x = 0)
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[PROD_IMAGE_THM, DELETE_NON_ELEMENT]
+  \\ METIS_TAC[]
+QED
+
+Theorem PROD_IMAGE_EQ_1:
+  !s. FINITE s ==>
+  (PROD_IMAGE f s = 1 <=> IMAGE f s SUBSET {1})
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[PROD_IMAGE_THM, DELETE_NON_ELEMENT,
+        SUBSET_INSERT, NOT_IN_EMPTY, INSERT_SUBSET]
+QED
+
+local open dividesTheory in
+Theorem prime_PROD_IMAGE:
+  !f s. FINITE s ==>
+  (prime (PROD_IMAGE f s) <=>
+     ?p. IMAGE f s SUBSET {1; p} /\ prime p /\
+         ?!x. x IN s /\ f x = p)
+Proof
+  gen_tac \\ ho_match_mp_tac FINITE_INDUCT
+  \\ simp[PROD_IMAGE_THM]
+  \\ rw[DELETE_NON_ELEMENT]
+  \\ simp[prime_MULT]
+  \\ Cases_on`PROD_IMAGE f s = 0` \\ simp[]
+  >- (
+    REV_FULL_SIMP_TAC(srw_ss())[PROD_IMAGE_EQ_0]
+    \\ rw[SUBSET_DEF, PULL_EXISTS]
+    \\ METIS_TAC[NOT_PRIME_0, DECIDE``1 <> 0``])
+  \\ Cases_on`f e = 0` \\ simp[INSERT_SUBSET]
+  \\ Cases_on`PROD_IMAGE f s = 1` \\ simp[]
+  >- (
+    REV_FULL_SIMP_TAC(srw_ss())[PROD_IMAGE_EQ_1]
+    \\ fs[SUBSET_DEF, PULL_EXISTS]
+    \\ Cases_on`f e = 1` \\ simp[]
+    \\ METIS_TAC[NOT_PRIME_1])
+  \\ Cases_on`f e = 1` \\ simp[]
+  >- METIS_TAC[NOT_PRIME_1]
+  \\ CCONTR_TAC \\ fs[]
+  \\ REV_FULL_SIMP_TAC(srw_ss())[PROD_IMAGE_EQ_1]
+  \\ REV_FULL_SIMP_TAC(srw_ss())[SUBSET_DEF, PULL_EXISTS]
+  \\ METIS_TAC[DELETE_NON_ELEMENT]
+QED
+end
+
 (*---------------------------------------------------------------------------*)
 (* PROD_SET multiplies the elements of a set of natural numbers              *)
 (*---------------------------------------------------------------------------*)
