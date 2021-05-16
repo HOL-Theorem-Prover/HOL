@@ -5475,7 +5475,7 @@ val equiv_on_def = new_definition(
 val _ = set_fixity "equiv_on" (Infix(NONASSOC, 425))
 
 Theorem inv_image_equiv_on:
-  R equiv_on Y ==>
+  !R Y f. R equiv_on Y ==>
   inv_image R f equiv_on { x | f x IN Y }
 Proof
   rw[equiv_on_def]
@@ -5584,11 +5584,13 @@ METIS_TAC [FINITE_partition, BIGUNION_partition, DISJ_BIGUNION_CARD,
            partition_elements_disjoint, FINITE_BIGUNION, partition_def]);
 
 Theorem partition_rel_eq:
-  R1 equiv_on Y /\ R2 equiv_on Y /\
-  partition R1 Y = partition R2 Y ==>
-  (!x y. x IN Y /\ y IN Y ==> R1 x y = R2 x y)
+  !R1 R2 Y.
+    R1 equiv_on Y /\ R2 equiv_on Y /\
+    partition R1 Y = partition R2 Y ==>
+    (!x y. x IN Y /\ y IN Y ==> R1 x y = R2 x y)
 Proof
-  Q.HO_MATCH_ABBREV_TAC`P R1 R2 ==> _`
+  rpt gen_tac
+  \\ Q.HO_MATCH_ABBREV_TAC`P R1 R2 ==> _`
   \\ `!R1 R2 x y. P R1 R2 /\ x IN Y /\ y IN Y /\ R1 x y ==> R2 x y`
   suffices_by (simp[Abbr`P`] \\ PROVE_TAC[])
   \\ ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)
@@ -5610,11 +5612,11 @@ val partitions_def = TotalDefn.Define`
 val _ = set_fixity "partitions" (Infix(NONASSOC, 425));
 
 Theorem partitions_thm:
-  X partitions Y <=>
+  !X Y. X partitions Y <=>
   ((!x. x IN X ==> x <> {} /\ x SUBSET Y) /\
    (!y. y IN Y ==> ?!x. x IN X /\ y IN x))
 Proof
-  simp[partitions_def]
+  rpt gen_tac \\ simp[partitions_def]
   \\ eq_tac \\ strip_tac
   >- (
     simp[partition_def]
@@ -5654,7 +5656,7 @@ Proof
 QED
 
 Theorem partitions_FINITE:
-  X partitions Y /\ FINITE Y ==>
+  !X Y. X partitions Y /\ FINITE Y ==>
   FINITE X /\ (!s. s IN X ==> FINITE s)
 Proof
   rw[partitions_def]
@@ -5662,16 +5664,17 @@ Proof
 QED
 
 Theorem partitions_DISJOINT:
-  v partitions w /\ s1 IN v /\ s2 IN v /\ s1 <> s2 ==>
-  DISJOINT s1 s2
+  !v w s1 s2.
+    v partitions w /\ s1 IN v /\ s2 IN v /\ s1 <> s2 ==>
+    DISJOINT s1 s2
 Proof
   rw[partitions_thm, IN_DISJOINT]
   \\ fs[EXISTS_UNIQUE_ALT, SUBSET_DEF]
   \\ METIS_TAC[]
 QED
 
-Theorem partitions_empty:
-  v partitions {} <=> v = {}
+Theorem partitions_empty[simp]:
+  !v. v partitions {} <=> v = {}
 Proof
   rw[partitions_thm, EQ_IMP_THM]
   \\ CCONTR_TAC
@@ -5679,9 +5682,15 @@ Proof
   \\ res_tac \\ fs[]
 QED
 
+Theorem empty_partitions[simp]:
+  !s. {} partitions s <=> s = {}
+Proof
+  rw[partitions_thm, EXTENSION]
+QED
+
 Theorem partitions_SING:
-  SING x ==>
-  (v partitions x <=> v = {{CHOICE x}})
+  !v x. SING x ==>
+        (v partitions x <=> v = {{CHOICE x}})
 Proof
   rw[SING_DEF, partitions_thm, SUBSET_DEF] \\ rw[]
   \\ rw[EQ_IMP_THM, EXISTS_UNIQUE_THM]
@@ -5699,7 +5708,7 @@ Proof
 QED
 
 Theorem SING_partitions:
-  {x} partitions w <=> x = w /\ w <> {}
+  !x w. {x} partitions w <=> x = w /\ w <> {}
 Proof
   rw[partitions_thm]
   \\ rw[EQ_IMP_THM]
@@ -5709,7 +5718,7 @@ Proof
 QED
 
 Theorem INJ_IMAGE_equiv_class:
-  INJ f s t /\ x IN s ==>
+  !f s t x. INJ f s t /\ x IN s ==>
   IMAGE f (equiv_class R s x) =
   equiv_class (inv_image R (LINV f s)) (IMAGE f s) (f x)
 Proof
@@ -5720,7 +5729,7 @@ Proof
 QED
 
 Theorem IMAGE_IMAGE_partition:
-  INJ f s t ==>
+  !R f s t. INJ f s t ==>
   IMAGE (IMAGE f) (partition R s) =
   partition (inv_image R (LINV f s)) (IMAGE f s)
 Proof
@@ -5737,7 +5746,7 @@ Proof
 QED
 
 Theorem BIJ_IMAGE_partitions:
-  BIJ f x y /\ v partitions x ==>
+  !f x y v. BIJ f x y /\ v partitions x ==>
   IMAGE (IMAGE f) v partitions y
 Proof
   rw[partitions_def]
@@ -5758,7 +5767,7 @@ val part_def = TotalDefn.Define`
   part v x = @s. x IN s /\ s IN v`;
 
 Theorem part_in_partition:
-  v partitions w /\ x IN w ==>
+  !w v x. v partitions w /\ x IN w ==>
   part v x IN v
 Proof
   rw[part_def]
@@ -5768,7 +5777,7 @@ Proof
 QED
 
 Theorem part_partition:
-  y IN w /\ R equiv_on w ==>
+  !R w y. y IN w /\ R equiv_on w ==>
   part (partition R w) y = { x | x IN w /\ R x y }
 Proof
   strip_tac
@@ -5785,7 +5794,7 @@ Proof
 QED
 
 Theorem part_unique:
-  v partitions w /\ x IN w /\ x IN s /\ s IN v ==>
+  !w v x s. v partitions w /\ x IN w /\ x IN s /\ s IN v ==>
   s = part v x
 Proof
   rw[part_def]
@@ -5795,7 +5804,7 @@ Proof
 QED
 
 Theorem in_part:
-  v partitions w /\ x IN w ==>
+  !w v x. v partitions w /\ x IN w ==>
   x IN part v x
 Proof
   rw[part_def, partitions_thm]
@@ -5810,12 +5819,12 @@ val refines_def = TotalDefn.Define`
 val _ = set_fixity "refines" (Infix(NONASSOC, 425));
 
 Theorem refines_grows_parts:
-  v1 partitions w /\ v2 partitions w ==>
+  !w v1 v2. v1 partitions w /\ v2 partitions w ==>
   (v1 refines v2 <=>
     (!x y. x IN w /\ y IN w /\ part v1 x = part v1 y ==>
                                part v2 x = part v2 y))
 Proof
-  strip_tac
+  rpt gen_tac \\ strip_tac
   \\ rw[refines_def]
   \\ rw[EQ_IMP_THM]
   >- (
@@ -5842,24 +5851,24 @@ Proof
 QED
 
 Theorem refines_refl[simp]:
-  v refines v
+  !v. v refines v
 Proof
   rw[refines_def]
   \\ METIS_TAC[SUBSET_REFL]
 QED
 
 Theorem refines_transitive:
-  v1 refines v2 /\ v2 refines v3 ==> v1 refines v3
+  !v1 v2 v3. v1 refines v2 /\ v2 refines v3 ==> v1 refines v3
 Proof
   rw[refines_def]
   \\ METIS_TAC[SUBSET_TRANS]
 QED
 
 Theorem refines_antisym:
-  v1 partitions w /\ v2 partitions w /\
+  !w v1 v2. v1 partitions w /\ v2 partitions w /\
   v1 refines v2 /\ v2 refines v1 ==> v1 = v2
 Proof
-  Q.HO_MATCH_ABBREV_TAC`P v1 v2 ==> v1 = v2`
+  rpt gen_tac \\ Q.HO_MATCH_ABBREV_TAC`P v1 v2 ==> v1 = v2`
   \\ `!v1 v2. P v1 v2 ==> v1 SUBSET v2` suffices_by (
     simp[Abbr`P`] \\ METIS_TAC[SET_EQ_SUBSET])
   \\ rw[Abbr`P`, SUBSET_DEF]
