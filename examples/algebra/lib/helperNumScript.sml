@@ -248,7 +248,6 @@ open gcdTheory; (* for P_EUCLIDES *)
                                      (m DIV n) divides x ==> (x DIV (m DIV n) = n * (x DIV m))
 
    Basic Divisibility:
-   factor_divides      |- !m n. n divides m * n /\ n divides n * m
    divides_iff_equal   |- !m n. 0 < n /\ n < 2 * m ==> (m divides n <=> n = m)
    dividend_divides_divisor_multiple
                        |- !m n. 0 < m /\ n divides m ==> !t. m divides t * n <=> m DIV n divides t
@@ -2693,16 +2692,6 @@ val DIV_DIV_MULT = store_thm(
 
 (* Overload on coprime for GCD equals 1 *)
 val _ = overload_on ("coprime", ``\x y. gcd x y = 1``);
-
-(* Idea: a convenient form of divides_def. *)
-
-(* Theorem: n divides (m * n) /\ n divides (n * m) *)
-(* Proof: by divides_def. *)
-Theorem factor_divides:
-  !m n. n divides (m * n) /\ n divides (n * m)
-Proof
-  metis_tac[divides_def, MULT_COMM]
-QED
 
 (* Idea: a little trick to make divisibility to mean equality. *)
 
