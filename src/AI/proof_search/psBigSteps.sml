@@ -32,9 +32,8 @@ fun cut_tree i tree = case tree of
 fun erase_tree tree = case tree of
     Leaf  => raise ERR "erase_tree" "leaf"
   | Node (_,ctreev) => 
-    let fun f x v = let val r = #3 v in r := Leaf end
-    in
-      Vector.appi f ctreev
+    let fun f v = let val r = #3 v in r := Leaf end in
+      Vector.app f ctreev
     end
 
 (* -------------------------------------------------------------------------
