@@ -14,127 +14,16 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS
 val ERR = mk_HOL_ERR "mleSMLSynt"
 val selfdir = HOLDIR ^ "/examples/AI_tasks/sml_synthesis"
 
-type board = int * int list * (int * prog list) list
-val maxvar = 1
-
-(* -------------------------------------------------------------------------
-   Program size
-   ------------------------------------------------------------------------- *)
-
-fun size_of_prog prog =  case prog of
-    Ins ((name,_,_),pl) => 1 + sum_int (map size_of_prog pl)
-  | Test (p1,p2,p3) => 1 + sum_int (map size_of_prog [p1,p2,p3])
-  | Rec pl => 1 + sum_int (map size_of_prog pl)
-  | Proj i => 1
-  | Sub (p,pl) => 1 + sum_int (map size_of_prog (p :: pl))
-
-fun size_of_progl progl = sum_int (map size_of_prog progl)
-fun size_of_progll progll =  sum_int (map (fn (_,a) => size_of_progl a) progll)
-
-(* -------------------------------------------------------------------------
-   Neural network representation of the board
-   ------------------------------------------------------------------------- *)
-
-val embed_flag = ref false
-
-(* target *)
-val natbase = 16
-
-val nat_cat = mk_var ("nat_cat", rpt_fun_type 3 alpha)
-val seq_cat = mk_var ("seq_cat", rpt_fun_type 3 alpha)
-fun mk_nat i = mk_var ("nat" ^ its i,alpha)
-val natl = List.tabulate (16,mk_nat)
-
-fun term_of_nat n = 
-  if n < 0 then raise ERR "term_of_nat" ""
-  else if n < natbase then mk_nat n 
-  else list_mk_comb (nat_cat, 
-    [mk_nat (n mod natbase), term_of_nat (n div natbase)]);
-
-fun term_of_natl nl = 
-  if !embed_flag then mk_var ("seqembed",alpha) else
-  case nl of
-    [] => raise ERR "term_of_natl" ""
-  | [a] => term_of_nat a
-  | a :: m => list_mk_comb (seq_cat, [term_of_nat a, term_of_natl m]);
-
-(* state *)
-fun mk_proj i = mk_var ("proj" ^ its i,alpha)
-
-fun term_of_prog prog = 
-  if !embed_flag then mk_var ("progembed",alpha) else
-  case prog of
-    Ins ((name,_,_),pl) => term_of_namepl (name,pl)
-  | Test (p1,p2,p3) => term_of_namepl ("test",[p1,p2,p3])
-  | Rec pl => term_of_namepl ("rec" ^ its (length pl),pl)
-  | Proj i => mk_proj i
-  | Sub (p,pl) => term_of_namepl ("sub" ^ its (length pl), p :: pl)
-and term_of_namepl (name,pl) =
-  let val v = mk_var (name,rpt_fun_type (length pl + 1) alpha) in
-    list_mk_comb (v, map term_of_prog pl)
-  end 
-
-val prog_cat = mk_var ("prog_cat", rpt_fun_type 3 alpha)
-val progl_cat = mk_var ("progl_cat", rpt_fun_type 3 alpha)
-val arity_cat = mk_var ("arity_cat", rpt_fun_type 3 alpha)
-
-fun term_of_progl progl = case progl of
-    [] => mk_var ("empty_prog",alpha)
-  | [a] => term_of_prog a
-  | a :: m => list_mk_comb (prog_cat,[term_of_prog a,term_of_progl m])
-
-fun mk_arity i = mk_var ("arity" ^ its i,alpha)
-fun term_of_progll progll = case progll of
-    [] => raise ERR "term_of_progll" ""
-  | [(a,progl)] => list_mk_comb (arity_cat, [mk_arity a, term_of_progl progl])
-  | (a,progl) :: m => list_mk_comb (progl_cat,
-    [list_mk_comb (arity_cat, [mk_arity a, term_of_progl progl]),
-     term_of_progll m])
-
-(* board *)
-
-val head_eval = mk_var ("head_eval", rpt_fun_type 2 alpha)
-val head_poli = mk_var ("head_poli", rpt_fun_type 2 alpha)
-fun tag_heval x = mk_comb (head_eval,x)
-fun tag_hpoli x = mk_comb (head_poli,x)
-
-val ol_cat = mk_var ("ol_cat", rpt_fun_type 3 alpha)
-
-fun term_of_board (_,ol,progll) = 
-  let val tm = 
-    list_mk_comb (ol_cat, [term_of_natl ol, term_of_progll progll]) 
-  in
-    [tag_heval tm, tag_hpoli tm]
-  end
-
-(* operators *)
-val operl = 
-  List.tabulate (natbase,mk_nat) @ [nat_cat,seq_cat] @
-  List.tabulate (maxvar,mk_proj) @
-  [mk_var ("test",rpt_fun_type 4 alpha)] @
-  List.tabulate (maxvar + 1, 
-     fn i => mk_var ("rec" ^ its i, rpt_fun_type (i+1) alpha)) @
-  List.tabulate (maxvar + 1, 
-     fn i => mk_var ("sub" ^ its i, rpt_fun_type (i+2) alpha)) @
-  map (fn (name,i,_) => mk_var (name, rpt_fun_type (i+1) alpha)) instrl @
-  [mk_var ("empty_prog",alpha), prog_cat, progl_cat, arity_cat] @
-  List.tabulate (maxvar + 1, mk_arity) @
-  [ol_cat]
-
-
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-fun string_of_board board = tts (hd (term_of_board board))
-fun board_compare (a,b) = 
-  Term.compare (hd (term_of_board a), hd (term_of_board b))
+fun string_of_board board = tts (term_of_board board)
+fun board_compare (a,b) = Term.compare (term_of_board a, term_of_board b)
 
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
-
-type move = bprog
 
 val movel =
   (map BIns instrl) @ [BTest,BRec] @ 
@@ -152,19 +41,15 @@ fun string_of_move m = case m of
 fun move_compare (m1,m2) = 
   String.compare (string_of_move m1, string_of_move m2)
   
-fun apply_move m (n, a : int list,b) = (n+1, a, build m b)
+fun tnn_apply_move tnn m (n, a ,b) = 
+  (n+1, a, build_progll tnn m b)
 
 fun available_movel board =
-  let fun test x =
-    (ignore (apply_move x board); true) handle Unbuildable => false
-  in
-   filter test movel
-  end
+  filter (fn x => avail_board x board) movel
 
 val maxstep = 30
 
 fun timelimit i = (i+1) * (i+1) * (i+1) * maxstep
-
 
 fun compare_ol_aux i n ol prog = case ol of
     [] => Win
@@ -178,18 +63,24 @@ fun compare_ol_aux i n ol prog = case ol of
 fun compare_ol n ol prog = compare_ol_aux 0 n ol prog
 
 fun status_of (n,ol,progll) = case progll of 
-   [(arity : int,[prog])] => compare_ol n ol prog
+   ConsPLL (_, (_,(_,ConsPL (_,prog,NilPL _))), NilPLL _) => 
+   compare_ol n (snd ol) (snd prog)
   | _ => if n > maxstep then Lose else Undecided
 
 (* -------------------------------------------------------------------------
    Game
    ------------------------------------------------------------------------- *)
 
-val game : (board,move) game =
+val startprogll = [(1,[])]
+fun mk_startboard target = emptyemb_board (0,target,startprogll) 
+
+fun fake_apply_move move board = board
+
+val game =
   {
   status_of = status_of,
   available_movel = available_movel,
-  apply_move = apply_move,
+  apply_move = fake_apply_move,
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   board_compare = board_compare,
@@ -197,10 +88,36 @@ val game : (board,move) game =
   movel = movel
   }
 
+fun update_apply_move tnn
+   {status_of,available_movel,apply_move,string_of_board,string_of_move,
+    board_compare,move_compare,movel} =
+    {
+    status_of = status_of,
+    available_movel = available_movel,
+    apply_move = tnn_apply_move tnn,
+    string_of_board = string_of_board,
+    string_of_move = string_of_move,
+    board_compare = board_compare,
+    move_compare = move_compare,
+    movel = movel
+    }
+
+(*
+load "mleSMLLib"; open mleSMLLib;
+load "mleSMLSynt"; open mleSMLSynt;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "aiLib"; open aiLib;
+val tnn = random_tnn (map_assoc (dim_std (1,16)) operl);
+val x = mk_startboard [1,2,3];
+val y = updemb_board tnn x;
+*)
+
+(*
 (* -------------------------------------------------------------------------
    Generating random programs and keeping their sequence.
    ------------------------------------------------------------------------- *)
 
+(*
 fun compute_ol_aux (i,ibound) seq prog = 
   if i >= ibound then SOME (rev seq) else
   let val r = exec (timelimit i) prog [i] in
@@ -257,6 +174,7 @@ fun random_progll_aux n board =
   end
 
 fun random_progll nstep = random_progll_aux nstep fakeboard
+*)
 
 (* -------------------------------------------------------------------------
    Export test and train set
@@ -330,6 +248,7 @@ val board7 = #apply_move game (List.nth (movel,4)) board6;
 val movel = #available_movel game board7;
 val board8 = #apply_move game (List.nth (movel,3)) board7;
 *)
+*)
 
 (* -------------------------------------------------------------------------
    Parallelization
@@ -346,8 +265,9 @@ fun enc_prog prog = case prog of
 and enc_ins x = pair_encode (String, list_encode enc_prog) x
 
 val enc_ol = list_encode Integer
-val enc_state = list_encode (pair_encode (Integer, list_encode enc_prog))
-val enc_board = pair3_encode (Integer, enc_ol, enc_state)
+val enc_progll = list_encode (pair_encode (Integer, list_encode enc_prog))
+fun enc_board board = 
+  pair3_encode (Integer, enc_ol, enc_progll) (dropemb_board board)
 val enc_boardl = list_encode enc_board
 
 datatype rawprog = Raw of string * rawprog list
@@ -364,18 +284,17 @@ fun dec_prog_aux (Raw (s,pl)) =
     else Proj (string_to_int s)
   end
 
-fun dec_prog t =
-  let val x = dec_prog_raw t in 
-    if not (isSome x) then NONE else SOME (dec_prog_aux (valOf x))
-  end
+fun dec_prog t = Option.map dec_prog_aux (dec_prog_raw t)
     
 val dec_ol = list_decode int_decode
-val dec_state = list_decode (pair_decode (int_decode, list_decode dec_prog))
-val dec_board = pair3_decode (int_decode, dec_ol, dec_state)
+val dec_progll = list_decode (pair_decode (int_decode, list_decode dec_prog))
+fun dec_board t = 
+  let val x = pair3_decode (int_decode, dec_ol, dec_progll) t in
+    Option.map emptyemb_board x
+  end
 val dec_boardl = list_decode dec_board
 
 end (* local *)
-
 
 fun write_boardl file boardl = write_data enc_boardl file boardl
 fun read_boardl file = read_data dec_boardl file
@@ -396,37 +315,18 @@ val newboard = #read_boardl gameio "test";
 val terml = term_of_board (hd newboard);
 *)
 
+
 (* -------------------------------------------------------------------------
    Targets
    ------------------------------------------------------------------------- *)
 
 val targetdir = selfdir ^ "/target"
 
-val startstate = [(1,[])]
-fun mk_startboard target = (0,target,startstate) 
-
 fun stil x = map string_to_int (String.tokens Char.isSpace x)
 fun import_targetl name = 
   map (mk_startboard o stil) (readl (targetdir ^ "/" ^ name))
 
 fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
-
-
-(* -------------------------------------------------------------------------
-   Hash
-   ------------------------------------------------------------------------- *)
-
-fun hempty hf size cmp = 
-  (fn x => hf x mod size, 
-   Vector.fromList (List.tabulate (size, fn _ => ref (dempty cmp))))
-
-fun hfind x (hf,hv) = 
-  let val d = Vector.sub (hv,hf x)  in dfind x (!d) end
-
-fun hadd a b (hf,hv) =
-  let val d = Vector.sub (hv,hf a) in d := dadd a b (!d) end
-
-fun hash_term tm = hash_string (tts tm)
 
 (* -------------------------------------------------------------------------
    Player
@@ -436,61 +336,23 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 10}]
 
+val head_eval = mk_var ("head_eval", rpt_fun_type 2 alpha)
+val head_poli = mk_var ("head_poli", rpt_fun_type 2 alpha)
+
 val dim = 16
 fun dim_head_poli n = [dim,n]
 val tnndim = map_assoc (dim_std (1,dim)) operl @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
-
-fun fp_embed tnn oper embl =
-  let 
-    val inv = Vector.concat embl
-    val nn = dfind oper tnn
+fun player_from_tnn tnn (board as (_,(olemb,ol),progll)) =
+  let
+    val boardemb = fp_emb tnn ol_cat [olemb,getemb_progll progll]
+    val e = descale_out (fp_emb tnn head_eval [boardemb])
+    val p = descale_out (fp_emb tnn head_poli [boardemb])
+    val d = dnew move_compare (combine (movel,p))
+    fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
   in
-    #outnv (last (fp_nn nn inv))
-  end
-
-fun infer_embed_cached tnn embd tm =
-  hfind tm embd handle NotFound =>
-  let 
-    val (oper,argl) = strip_comb tm
-    val embl = map (infer_embed_cached tnn embd) argl 
-    val tmemb = fp_embed tnn oper embl
-  in
-    hadd tm tmemb embd; tmemb
-  end
-
-fun infer_embed tnn tm =
-  let 
-    val (oper,argl) = strip_comb tm
-    val embl = map (infer_embed tnn) argl 
-  in
-    fp_embed tnn oper embl
-  end
-
-fun player_from_tnn tnn =
-  let 
-    val olemb_mem = ref NONE (* optimization to avoid calling dict *)
-    val embd = hempty hash_term 100000 Term.compare
-  in
-    (
-    fn board =>
-    let
-      val amovel = available_movel board
-      val olemb = if isSome (!olemb_mem) then valOf (!olemb_mem) else 
-        let val r = infer_embed tnn (term_of_natl (#2 board)) in
-          olemb_mem := SOME r; r
-        end
-      val progllemb = infer_embed_cached tnn embd (term_of_progll (#3 board))
-      val boardemb = fp_embed tnn ol_cat [olemb,progllemb]
-      val e = descale_out (fp_embed tnn head_eval [boardemb])
-      val p = descale_out (fp_embed tnn head_poli [boardemb])
-      val d = dnew move_compare (combine (movel,p))
-      fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
-    in
-      (singleton_of_list e, map_assoc f amovel)
-    end
-    )
+    (singleton_of_list e, map_assoc f (available_movel board))
   end
 
 (*
@@ -498,23 +360,29 @@ fun player_from_tnn tnn board =
   let val _ = term_of_board board in
     (random_real (), map (fn x => (x,1.0)) (available_movel board))
   end
-*) 
+*)
 
-val dplayer = 
-  {player_from_tnn = player_from_tnn,
-   tob = term_of_board, tnndim = tnndim, schedule = schedule}
+fun tob board = 
+  let val tm = term_of_board board in
+    [mk_comb (head_eval,tm), mk_comb (head_poli,tm)]
+  end
 
+val dplayer = {tob = tob, tnndim = tnndim, schedule = schedule}
+    
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/optimized2", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/optimized3", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
-   infobs = fn _ => ()}
+   infobs = fn _ => (),
+   player_from_tnn = player_from_tnn,
+   update_apply_move = update_apply_move,
+   prepare_target = updemb_board}
 
 val extsearch =
   (debug_flag := false; mk_extsearch "mleSMLSynt.extsearch" rlobj)

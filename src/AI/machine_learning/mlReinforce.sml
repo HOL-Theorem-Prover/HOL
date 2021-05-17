@@ -29,19 +29,21 @@ type 'a gameio =
   {write_boardl : string -> 'a list -> unit, read_boardl : string -> 'a list}
 type splayer =
   {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
-type ('a,'b) dplayer =
-  {player_from_tnn : tnn -> ('a,'b) player,
-   tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
+type 'a dplayer =
+  {tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
 type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
   {expdir : string, exwindow : int, ncore : int, ntarget : int, nsim : int}
 type ('a,'b) rlobj =
   {
   rlparam : rlparam,
-  game : ('a,'b) psMCTS.game,
+  player_from_tnn : tnn -> ('a,'b) player,
+  update_apply_move : tnn -> ('a,'b) game -> ('a,'b) game,
+  game : ('a,'b) game,
   gameio : 'a gameio,
-  dplayer : ('a,'b) dplayer,
-  infobs : 'a list -> unit
+  dplayer : 'a dplayer,
+  infobs : 'a list -> unit,
+  prepare_target : tnn -> 'a -> 'a
   }
 
 (* -------------------------------------------------------------------------
@@ -56,8 +58,8 @@ fun mk_mctsparam splayer rlobj =
   }
 
 fun mk_mctsobj rlobj (splayer as {unib,tnn,noiseb,nsim}) =
-  {player = #player_from_tnn (#dplayer rlobj) tnn, 
-   game = #game rlobj, 
+  {player = #player_from_tnn rlobj tnn, 
+   game = #update_apply_move rlobj tnn (#game rlobj), 
    mctsparam = mk_mctsparam splayer rlobj}
 
 (* -------------------------------------------------------------------------
@@ -167,7 +169,10 @@ fun retrieve_targetd rlobj n =
    ------------------------------------------------------------------------- *)
 
 fun extsearch_fun rlobj splayer target =
-  let val (b1,rlex) = run_bigsteps (false, mk_mctsobj rlobj splayer) target in
+  let 
+    val newtarget = (#prepare_target rlobj) (#tnn splayer) target
+    val (b1,rlex) = run_bigsteps (false, mk_mctsobj rlobj splayer) newtarget 
+  in
     (#infobs rlobj (map fst rlex); (b1,rlex))
   end
 
@@ -175,8 +180,7 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
   {
   self = self,
   parallel_dir = default_parallel_dir ^ "_search",
-  reflect_globals = fn () => 
-    "aiLib.debug_flag := " ^ bts (!debug_flag),
+  reflect_globals = fn () => "aiLib.debug_flag := " ^ bts (!debug_flag),
   function = extsearch_fun rlobj,
   write_param = write_splayer,
   read_param = read_splayer,
@@ -192,7 +196,7 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
 
 fun rl_train ngen rlobj rlex =
   let
-    val {player_from_tnn,tob,schedule,tnndim} = #dplayer rlobj
+    val {tob,schedule,tnndim} = #dplayer rlobj
     fun f (a,b) = combine (tob a,[[hd b],tl b])
     val tnnex = map f rlex
     val uex = mk_fast_set (list_compare Term.compare) (map (tob o fst) rlex)
