@@ -374,7 +374,7 @@ val dplayer = {tob = tob, tnndim = tnndim, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/optimized3", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/optimized4", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =

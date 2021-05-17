@@ -29,6 +29,14 @@ fun cut_tree i tree = case tree of
     Leaf  => raise ERR "cut_tree" "leaf"
   | Node (_,ctreev) => !(#3 (Vector.sub (ctreev,i)))
 
+fun erase_tree tree = case tree of
+    Leaf  => raise ERR "erase_tree" "leaf"
+  | Node (_,ctreev) => 
+    let fun f x v = let val r = #3 v in r := Leaf end
+    in
+      Vector.appi f ctreev
+    end
+
 (* -------------------------------------------------------------------------
    Big steps and example extraction
    ------------------------------------------------------------------------- *)
@@ -65,7 +73,7 @@ fun add_rootex game tree rlex = case tree of
   let
     val board  = #board root
     val (dis,tot) = mk_dis tree
-    val eval = !(#sum root) / !(#vis root) 
+    val eval = !(#sum root) / !(#vis root)
     (* todo: use the final eval instead *)
     fun f1 ((m,_),r) = (m,r/tot)
     val poli1 = map f1 dis
@@ -94,7 +102,9 @@ fun loop_bigsteps mctsobj rlex tree = case tree of
       val (move,i) = select_bigstep mctsobj tree
       val _ = debug ("Move " ^ #string_of_move game move)
       val newrlex = add_rootex game tree rlex
-      val newtree = cut_tree i tree 
+      val newtree = cut_tree i tree
+      val _ = erase_tree tree 
+      (* try to free up the memory *)
     in
       loop_bigsteps mctsobj newrlex newtree
     end
