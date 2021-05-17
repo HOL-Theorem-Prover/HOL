@@ -29,13 +29,6 @@ fun cut_tree i tree = case tree of
     Leaf  => raise ERR "cut_tree" "leaf"
   | Node (_,ctreev) => !(#3 (Vector.sub (ctreev,i)))
 
-fun erase_tree tree = case tree of
-    Leaf  => raise ERR "erase_tree" "leaf"
-  | Node (_,ctreev) => 
-    let fun f v = let val r = #3 v in r := Leaf end in
-      Vector.app f ctreev
-    end
-
 (* -------------------------------------------------------------------------
    Big steps and example extraction
    ------------------------------------------------------------------------- *)
@@ -89,6 +82,8 @@ fun add_rootex game tree rlex = case tree of
 fun loop_bigsteps mctsobj rlex tree = case tree of
     Leaf => (false, rlex)
   | Node (root,ctreev) =>  
+  (
+  PolyML.fullGC ();
   let
     val {mctsparam,game,player} = mctsobj
     val {board,stati,...} = root
@@ -102,12 +97,11 @@ fun loop_bigsteps mctsobj rlex tree = case tree of
       val _ = debug ("Move " ^ #string_of_move game move)
       val newrlex = add_rootex game tree rlex
       val newtree = cut_tree i tree
-      val _ = erase_tree tree 
-      (* try to free up the memory *)
     in
       loop_bigsteps mctsobj newrlex newtree
     end
   end
+  )
 
 fun run_bigsteps (tempb,mctsobj) target =
   let
