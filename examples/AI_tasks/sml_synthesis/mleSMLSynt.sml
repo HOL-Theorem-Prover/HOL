@@ -292,7 +292,6 @@ fun import_targetl name =
 
 fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
 
-
 (* -------------------------------------------------------------------------
    Player
    ------------------------------------------------------------------------- *)
@@ -353,7 +352,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/semi1", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/semi2", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
