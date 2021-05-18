@@ -65,7 +65,7 @@ fun add_rootex game tree rlex = case tree of
   let
     val board  = #board root
     val (dis,tot) = mk_dis tree
-    val eval = !(#sum root) / !(#vis root)
+    val eval = !(#sum root) / !(#vis root) 
     (* todo: use the final eval instead *)
     fun f1 ((m,_),r) = (m,r/tot)
     val poli1 = map f1 dis
@@ -82,8 +82,6 @@ fun add_rootex game tree rlex = case tree of
 fun loop_bigsteps mctsobj rlex tree = case tree of
     Leaf => (false, rlex)
   | Node (root,ctreev) =>  
-  (
-  PolyML.fullGC ();
   let
     val {mctsparam,game,player} = mctsobj
     val {board,stati,...} = root
@@ -96,12 +94,11 @@ fun loop_bigsteps mctsobj rlex tree = case tree of
       val (move,i) = select_bigstep mctsobj tree
       val _ = debug ("Move " ^ #string_of_move game move)
       val newrlex = add_rootex game tree rlex
-      val newtree = cut_tree i tree
+      val newtree = cut_tree i tree 
     in
       loop_bigsteps mctsobj newrlex newtree
     end
   end
-  )
 
 fun run_bigsteps (tempb,mctsobj) target =
   let
