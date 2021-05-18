@@ -142,7 +142,7 @@ val LEQ_DIVIDES_FACT = store_thm
 
 (* Theorem: n divides (m * n) /\ n divides (n * m) *)
 (* Proof: by divides_def. *)
-Theorem factor_divides:
+Theorem factor_divides[simp]:
   !m n. divides n (m * n) /\ divides n (n * m)
 Proof
   METIS_TAC[divides_def, MULT_COMM]
