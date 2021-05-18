@@ -79,7 +79,9 @@ fun add_rootex game tree rlex = case tree of
    MCTS big steps. Ending the search when there is no move available.
    ------------------------------------------------------------------------- *)
 
-fun loop_bigsteps mctsobj rlex tree = case tree of
+fun loop_bigsteps mctsobj rlex tree = 
+  (PolyML.fullGC ();
+  case tree of
     Leaf => (false, rlex)
   | Node (root,ctreev) =>  
   let
@@ -99,6 +101,7 @@ fun loop_bigsteps mctsobj rlex tree = case tree of
       loop_bigsteps mctsobj newrlex newtree
     end
   end
+  )
 
 fun run_bigsteps (tempb,mctsobj) target =
   let
