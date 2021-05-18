@@ -80,7 +80,6 @@ fun add_rootex game tree rlex = case tree of
    ------------------------------------------------------------------------- *)
 
 fun loop_bigsteps mctsobj rlex tree = 
-  (PolyML.fullGC ();
   case tree of
     Leaf => (false, rlex)
   | Node (root,ctreev) =>  
@@ -101,7 +100,6 @@ fun loop_bigsteps mctsobj rlex tree =
       loop_bigsteps mctsobj newrlex newtree
     end
   end
-  )
 
 fun run_bigsteps (tempb,mctsobj) target =
   let

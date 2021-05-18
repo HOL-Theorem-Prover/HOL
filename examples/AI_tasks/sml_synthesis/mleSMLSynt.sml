@@ -352,8 +352,8 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/semi2", exwindow = 200000,
-   ncore = 30, ntarget = 200, nsim = 100000}
+  {expdir = selfdir ^ "/eval/semi3", exwindow = 200000,
+   ncore = 25, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
