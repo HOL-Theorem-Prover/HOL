@@ -118,8 +118,11 @@ void putUInt(File& out, uint64 val)
 }
 
 
-uint64 getUInt(File& in)
-    noexcept(false)
+#if __cplusplus >= 201703L
+uint64 getUInt (File& in) noexcept(false)
+#else
+uint64 getUInt (File& in) throw(Exception_EOF)
+#endif
 {
     uint byte0, byte1, byte2, byte3, byte4, byte5, byte6, byte7;
     byte0 = in.getChar();
