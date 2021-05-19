@@ -176,13 +176,13 @@ load "Profile";
 val mctsparam =
   {explo_coeff = 2.0,
    noise = false, noise_coeff = 0.25, noise_gen = random_real,
-   nsim = SOME 1000000 : int option, time = NONE: real option};
+   nsim = SOME 3000000 : int option, time = NONE: real option};
 val mctsobj = {game = game, mctsparam = mctsparam,
   player =  psMCTS.uniform_player game};
 
 val seq = [0,1,3,6,10,15,21,28];
 val startprog = [(1,[])];
-val startboard = (seq, startprog);
+val startboard = (0,seq,startprog);
 val tree = starting_tree mctsobj startboard;
 Profile.reset_all ();
 val (_,t) = add_time (mcts mctsobj) tree;
@@ -343,6 +343,10 @@ fun player_from_tnn tnn =
     )
   end
 
+fun player_from_tnn tnn board =
+   (0.0, map (fn x => (x,1.0)) (available_movel board))
+
+
 val dplayer = 
   {player_from_tnn = player_from_tnn,
    tob = tob, tnndim = tnndim, schedule = schedule}
@@ -352,8 +356,8 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/semi3", exwindow = 200000,
-   ncore = 25, ntarget = 200, nsim = 100000}
+  {expdir = selfdir ^ "/eval/uni1", exwindow = 200000,
+   ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
