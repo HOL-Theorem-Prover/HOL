@@ -392,7 +392,7 @@ fun player_from_tnn tnn =
           olemb_mem := SOME r; r
         end
       val _ =
-        if !ycache > 3000000 then (xcache := EmbLeaf; ycache := 0) else ()
+        if !ycache > 100000 then (xcache := EmbLeaf; ycache := 0) else ()
       val progllemb = 
         infer_emb_cache (xcache,ycache) tnn (term_of_progll (#3 board))
       val boardemb = fp_emb tnn ol_cat [olemb,progllemb]
@@ -416,7 +416,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/cache2", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/cache3", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
@@ -433,7 +433,7 @@ load "mleSMLSynt"; open mleSMLSynt;
 load "mleSMLLib"; open mleSMLLib;
 
 print_endline (#expdir (#rlparam rlobj));
-smlOpen.buildheap_options := "--maxheap 2000";
+smlOpen.buildheap_options := "--maxheap 4000";
 val targetl = import_targetl "train";
 val targetd = mk_targetd targetl;
 val r = rl_start (rlobj,extsearch) targetd;
