@@ -356,7 +356,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/uni1", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/uni2", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
