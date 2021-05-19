@@ -321,6 +321,7 @@ fun infer_emb tnn tm =
     fp_emb tnn oper embl
   end
 
+
 fun player_from_tnn tnn =
   let val olemb_mem = ref NONE in
     (
@@ -343,9 +344,10 @@ fun player_from_tnn tnn =
     )
   end
 
+(*
 fun player_from_tnn tnn board =
    (0.0, map (fn x => (x,1.0)) (available_movel board))
-
+*)
 
 val dplayer = 
   {player_from_tnn = player_from_tnn,
@@ -356,7 +358,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/uni2", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/semi4", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
@@ -372,6 +374,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleSMLSynt"; open mleSMLSynt;
 load "mleSMLLib"; open mleSMLLib;
 
+smlOpen.buildheap_options := "--maxheap 2000";
 val targetl = import_targetl "train";
 val targetd = mk_targetd targetl;
 val r = rl_start (rlobj,extsearch) targetd;
