@@ -327,9 +327,7 @@ fun n_oper oper = dfind oper opernd
 fun embtree_find embtree tml = case embtree of 
     EmbLeaf => NONE
   | EmbNode (embo,treev) =>
-    (case tml of 
-       [] => embo
-     | a :: m =>
+    (case tml of [] => embo | a :: m =>
      let val (oper,argl) = strip_comb a in
        embtree_find (Vector.sub (treev,n_oper oper)) (argl @ m)
      end)
