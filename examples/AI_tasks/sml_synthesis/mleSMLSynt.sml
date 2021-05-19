@@ -293,17 +293,8 @@ fun import_targetl name =
 fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
 
 (* -------------------------------------------------------------------------
-   Player
+   Neural network inference
    ------------------------------------------------------------------------- *)
-
-val schedule =
-  [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 10}]
-
-val dim = 16
-fun dim_head_poli n = [dim,n]
-val tnndim = map_assoc (dim_std (1,dim)) operl @
-  [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
 fun fp_emb tnn oper embl =
   let 
@@ -321,33 +312,102 @@ fun infer_emb tnn tm =
     fp_emb tnn oper embl
   end
 
+(* -------------------------------------------------------------------------
+   Neural network embbeddings cache
+   ------------------------------------------------------------------------- *)
+
+datatype embtree = EmbNode of real vector option * embtree vector | EmbLeaf
+
+val opernd = dnew Term.compare (number_snd 0 operl)
+val operl_length = length operl
+val embleafv = Vector.tabulate (operl_length, fn _ => EmbLeaf)
+
+fun n_oper oper = dfind oper opernd
+
+fun embtree_find embtree tml = case embtree of 
+    EmbLeaf => NONE
+  | EmbNode (embo,treev) =>
+    (case tml of 
+       [] => embo
+     | a :: m =>
+     let val (oper,argl) = strip_comb a in
+       embtree_find (Vector.sub (treev,n_oper oper)) (argl @ tml)
+     end)
+    
+fun embline tml emb = case tml of
+    [] => EmbNode (SOME emb, embleafv)
+  | a :: m => 
+    let val (oper,argl) = strip_comb a in
+       EmbNode (NONE, Vector.update 
+         (embleafv, n_oper oper, embline (argl @ m) emb))
+    end
+
+fun embtree_add embtree tml emb = case embtree of 
+    EmbLeaf => embline tml emb
+  | EmbNode (embo,treev) =>
+    (case tml of [] => EmbNode (SOME emb,treev) | a :: m =>
+     let 
+       val (oper,argl) = strip_comb a 
+       val n = n_oper oper
+       val tree1 = Vector.sub (treev,n)
+       val tree2 = embtree_add tree1 (argl @ m) emb
+     in
+       EmbNode (embo, Vector.update (treev,n,tree2))
+     end)
+
+fun infer_emb_cache (cache,n) tnn tm =
+  case embtree_find (!cache) [tm] of SOME emb => emb | NONE =>
+  let 
+    val (oper,argl) = strip_comb tm
+    val embl = map (infer_emb_cache (cache,n) tnn) argl
+    val emb = fp_emb tnn oper embl
+  in
+    cache := embtree_add (!cache) [tm] emb; incr n; emb
+  end
+
+
+(* -------------------------------------------------------------------------
+   Player
+   ------------------------------------------------------------------------- *)
+
+val schedule =
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 10}]
+
+val dim = 16
+fun dim_head_poli n = [dim,n]
+val tnndim = map_assoc (dim_std (1,dim)) operl @
+  [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
+
 
 fun player_from_tnn tnn =
-  let val olemb_mem = ref NONE in
+  let 
+    val olemb_mem = ref NONE 
+    val xcache = ref EmbLeaf
+    val ycache = ref 0
+  in
     (
     fn board =>
     let
-      val amovel = available_movel board
       val olemb = if isSome (!olemb_mem) then valOf (!olemb_mem) else 
         let val r = infer_emb tnn (term_of_natl (#2 board)) in
           olemb_mem := SOME r; r
         end
-      val progllemb = infer_emb tnn (term_of_progll (#3 board))
+      val _ =
+        if !ycache > 3000000 then (xcache := EmbLeaf; ycache := 0) else ()
+      val progllemb = 
+        infer_emb_cache (xcache,ycache) tnn (term_of_progll (#3 board))
       val boardemb = fp_emb tnn ol_cat [olemb,progllemb]
       val e = descale_out (fp_emb tnn head_eval [boardemb])
       val p = descale_out (fp_emb tnn head_poli [boardemb])
       val d = dnew move_compare (combine (movel,p))
       fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
     in
-      (singleton_of_list e, map_assoc f amovel)
+      (singleton_of_list e, map_assoc f (available_movel board))
     end
     )
   end
 
-(*
-fun player_from_tnn tnn board =
-   (0.0, map (fn x => (x,1.0)) (available_movel board))
-*)
 
 val dplayer = 
   {player_from_tnn = player_from_tnn,
@@ -358,7 +418,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/semi4", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/cache1", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
