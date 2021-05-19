@@ -18,6 +18,8 @@ sig
   val import_targetl : string -> board list
   val mk_targetd : board list -> (board, bool list) Redblackmap.dict
   
+  datatype embtree = EmbNode of real vector option * embtree vector | EmbLeaf
+
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
 
