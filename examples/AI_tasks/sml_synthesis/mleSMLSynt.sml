@@ -331,7 +331,7 @@ fun embtree_find embtree tml = case embtree of
        [] => embo
      | a :: m =>
      let val (oper,argl) = strip_comb a in
-       embtree_find (Vector.sub (treev,n_oper oper)) (argl @ tml)
+       embtree_find (Vector.sub (treev,n_oper oper)) (argl @ m)
      end)
     
 fun embline tml emb = case tml of
@@ -434,6 +434,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleSMLSynt"; open mleSMLSynt;
 load "mleSMLLib"; open mleSMLLib;
 
+print_endline (#expdir (#rlparam rlobj));
 smlOpen.buildheap_options := "--maxheap 2000";
 val targetl = import_targetl "train";
 val targetd = mk_targetd targetl;
