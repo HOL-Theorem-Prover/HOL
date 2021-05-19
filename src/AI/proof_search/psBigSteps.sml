@@ -27,7 +27,7 @@ type 'a rlex = ('a * real list) list
 
 fun cut_tree i tree = case tree of
     Leaf  => raise ERR "cut_tree" "leaf"
-  | Node (_,ctreev) => !(#3 (Vector.sub (ctreev,i)))
+  | Node (_,ctreev) => (#3 (Vector.sub (ctreev,i)))
 
 (* -------------------------------------------------------------------------
    Big steps and example extraction
@@ -35,13 +35,13 @@ fun cut_tree i tree = case tree of
 
 fun nvisit tree = case tree of
     Leaf => 0.0
-  | Node (node,ctreev) => !(#vis node)
+  | Node (node,ctreev) => #vis node
 
 fun mk_dis tree = case tree of
     Leaf => raise ERR "mk_dis" "leaf"
   | Node (node,ctreev) => 
   let
-    fun f i (a,b,c) = ((a,i),nvisit (!c))
+    fun f i (a,b,c) = ((a,i),nvisit c)
     val pol = mapi f (vector_to_list ctreev) 
     val _ = if null pol then raise ERR "mk_dis" "pol" else ()
     val tot = sum_real (map snd pol)
@@ -65,8 +65,7 @@ fun add_rootex game tree rlex = case tree of
   let
     val board  = #board root
     val (dis,tot) = mk_dis tree
-    val eval = !(#sum root) / !(#vis root) 
-    (* todo: use the final eval instead *)
+    val eval = #sum root / #vis root (* todo: use the final eval instead *)
     fun f1 ((m,_),r) = (m,r/tot)
     val poli1 = map f1 dis
     val poli2 = dnew (#move_compare game) poli1
@@ -91,13 +90,13 @@ fun loop_bigsteps mctsobj rlex tree =
   in
     if not (is_undecided stati) then (is_win stati, rlex) else
     let
-      val _ = mcts mctsobj tree
-      val (move,i) = select_bigstep mctsobj tree
+      val mctstree = mcts mctsobj tree
+      val (move,i) = select_bigstep mctsobj mctstree
       val _ = debug ("Move " ^ #string_of_move game move)
-      val newrlex = add_rootex game tree rlex
-      val newtree = cut_tree i tree 
+      val newrlex = add_rootex game mctstree rlex
+      val cuttree = cut_tree i mctstree 
     in
-      loop_bigsteps mctsobj newrlex newtree
+      loop_bigsteps mctsobj newrlex cuttree
     end
   end
 

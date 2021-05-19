@@ -34,10 +34,10 @@ datatype search_status = Success | Saturated | Timeout
    Search tree
    ------------------------------------------------------------------------- *)
 
-type ('a,'b) node =
-  {board : 'a, value : real, stati : status, sum : real ref, vis : real ref}
+type 'a node =
+  {board : 'a, stati : status, sum : real, vis : real}
 datatype ('a,'b) tree =
-   Leaf | Node of ('a,'b) node * ('b * real * ('a,'b) tree ref) vector
+   Leaf | Node of 'a node * ('b * real * ('a,'b) tree) vector
 fun dest_node x = case x of Node y => y | _ => raise ERR "dest_node" ""
 fun is_node x = case x of Node y => true | _ => false
 fun is_leaf x = case x of Leaf => true | _ => false
@@ -114,8 +114,8 @@ fun create_node obj board =
     val pol2 = normalize_prepol pol1
     val pol3 = if #noise param then add_noise param pol2 else pol2
   in
-    (Node ({value=value,stati=stati,board=board,sum=ref value,vis=ref 1.0},
-            Vector.fromList (map (fn (a,b) => (a,b,ref Leaf)) pol3)), 
+    (Node ({stati=stati,board=board,sum=value,vis=1.0},
+            Vector.fromList (map (fn (a,b) => (a,b,Leaf)) pol3)), 
      value)
   end
 
@@ -127,9 +127,9 @@ fun starting_tree obj board = fst (create_node obj board)
 
 fun score_puct param sqvtot (move,polv,ctree) =
   let
-    val (sum,vis) = case !ctree of
+    val (sum,vis) = case ctree of
       Leaf => (0.0,0.0)
-    | Node (cnode,_) => (!(#sum cnode), !(#vis cnode))
+    | Node (cnode,_) => (#sum cnode, #vis cnode)
   in
     (sum + (#explo_coeff param) * polv * sqvtot) / (vis + 1.0)
   end
@@ -138,35 +138,39 @@ fun score_puct param sqvtot (move,polv,ctree) =
    Selection of a node to extend by traversing the tree.
    ------------------------------------------------------------------------- *)
 
-fun update_sumrefl reward l = app (fn x => x := !x + reward) l (* backup *)
+fun rebuild_tree reward buildl tree = case buildl of
+    [] => tree
+  | build :: m => rebuild_tree reward m (build reward tree)
 
-fun select_child obj refl (node,cv) =
+fun select_child obj buildl (node,cv) =
   let
     val (stati,param) = (#stati node, #mctsparam obj)
-    val (visref,sumref) = (#vis node, #sum node)
-    val vtot = !visref
-    val newrefl = sumref :: refl
-    val _ = visref := !visref + 1.0 (* backup *)
   in
     if not (is_undecided stati)
-    then update_sumrefl (score_status stati) newrefl
+    then rebuild_tree (score_status stati) buildl (Node (node,cv))
     else
     let    
       val _ = if Vector.length cv = 0 
         then raise ERR "no move available" "" else () 
-      val ci = vector_maxi (score_puct param (Math.sqrt vtot)) cv 
-      val (cmove,_,ctree) = Vector.sub (cv,ci)
+      val sqrttot = Math.sqrt (#vis node)
+      val ci = vector_maxi (score_puct param sqrttot) cv 
+      val (cmove,cpol,ctree) = Vector.sub (cv,ci)
+      fun update_node reward {stati,board,sum,vis} =
+        {stati=stati, board=board, sum=sum+reward, vis=vis+1.0}
+      fun build reward cfuture =
+        Node (update_node reward node, 
+              Vector.update (cv,ci,(cmove,cpol,cfuture)))
+      val newbuildl = build :: buildl
     in
-      case !ctree of 
+      case ctree of 
         Leaf => 
         let 
           val newboard = (#apply_move (#game obj)) cmove (#board node)
           val (newctree,reward) = create_node obj newboard
         in
-          update_sumrefl reward newrefl;
-          ctree := newctree     
+          rebuild_tree reward newbuildl newctree  
         end 
-      | Node x => select_child obj newrefl x
+      | Node x => select_child obj newbuildl x
     end
   end
 
@@ -177,7 +181,7 @@ fun select_child obj refl (node,cv) =
 fun mk_timer param =
   if isSome (#nsim param) then 
     let val threshold = valOf (#nsim param) in
-      fn n => (Real.round (!n)) >= threshold
+      fn n => (Real.round n) >= threshold
     end
   else if isSome (#time param) then 
     let 
@@ -188,23 +192,23 @@ fun mk_timer param =
     end
   else (fn _ => false)
 
-fun mcts obj tree =
+fun mcts obj starttree =
   let
     val timerf = mk_timer (#mctsparam obj)
-    fun loop n =
-      if timerf (#vis (fst (dest_node tree))) then () else 
-      (select_child obj [] (dest_node tree); loop (n+1))
+    fun loop n tree =
+      if timerf (#vis (fst (dest_node tree))) then tree else 
+      loop (n+1) (select_child obj [] (dest_node tree))
   in
-    loop 0
+    loop 0 starttree
   end
 
 (* -------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------- *)
 
-fun score_visit (move,polv,ctree) = case !ctree of
+fun score_visit (move,polv,ctree) = case ctree of
       Leaf => 0.0
-    | Node (cnode,_) => !(#vis cnode)
+    | Node (cnode,_) => (#vis cnode)
 
 fun most_visited_path tree = case tree of
     Leaf => []
@@ -214,7 +218,7 @@ fun most_visited_path tree = case tree of
       val ci = vector_maxi score_visit cv 
       val (cmove,_,ctree) = Vector.sub (cv,ci)
     in
-      (node, SOME cmove) :: most_visited_path (!ctree)
+      (node, SOME cmove) :: most_visited_path ctree
     end
 
 (* -------------------------------------------------------------------------
@@ -257,7 +261,7 @@ load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
 
 val mctsparam =
-  {time = (NONE : real option), nsim = (SOME 100000 : int option),
+  {time = (NONE : real option), nsim = (SOME 1000000 : int option),
    explo_coeff = 2.0,
    noise = false, noise_coeff = 0.25, noise_gen = gamma_noise_gen 0.2};
 
@@ -265,7 +269,7 @@ val mctsobj : (toy_board,toy_move) mctsobj =
   {mctsparam = mctsparam, game = toy_game, player = random_player toy_game};
 
 val tree = starting_tree mctsobj (500,1000,1000);
-val ((),t) = add_time (mcts mctsobj) tree;
+val (_,t) = add_time (mcts mctsobj) tree;
 dlength tree;
 Profile.results ();
 val l = most_visited_path tree;

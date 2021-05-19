@@ -12,15 +12,13 @@ sig
   datatype search_status = Success | Saturated | Timeout
 
   (* search tree: 'a is a board position, 'b is a move *)
-  type ('a,'b) node =
-    {board : 'a, value : real, stati : status, sum : real ref, vis : real ref}
+  type 'a node =
+    {board : 'a, stati : status, sum : real, vis : real}
   datatype ('a,'b) tree = 
-    Leaf | Node of ('a,'b) node * ('b * real * ('a,'b) tree ref) vector
-  val dest_node : ('a,'b) tree -> 
-    ('a,'b) node * ('b * real * ('a,'b) tree ref) vector
+    Leaf | Node of 'a node * ('b * real * ('a,'b) tree) vector
+  val dest_node : ('a,'b) tree -> 'a node * ('b * real * ('a,'b) tree) vector
   val is_node : ('a,'b) tree -> bool
   val is_leaf : ('a,'b) tree -> bool
-
 
   (* MCTS specification *)
   type ('a,'b) game =
@@ -49,10 +47,10 @@ sig
 
   (* MCTS search function *)
   val starting_tree : ('a,'b) mctsobj -> 'a -> ('a,'b) tree
-  val mcts : ('a,'b) mctsobj -> ('a,'b) tree -> unit (* modifies input tree *)
+  val mcts : ('a,'b) mctsobj -> ('a,'b) tree -> ('a,'b) tree
  
   (* Statistics *)
-  val most_visited_path : ('a,'b) tree -> (('a, 'b) node * 'b option) list
+  val most_visited_path : ('a,'b) tree -> ('a node * 'b option) list
 
 
   (* toy example *)

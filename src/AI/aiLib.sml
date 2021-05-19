@@ -571,13 +571,12 @@ fun list_imax l = case l of
 
 fun vector_maxi score v =
   let 
-    val (maxi,maxsc) = (ref 0,ref Real.negInf)
-    fun f (i,x) = 
-      let val newsc = score x in 
-        if newsc > (!maxsc) then (maxi := i; maxsc := newsc) else ()
+    fun f (i,x,(maxi,maxsc)) = 
+      let val sc = score x in 
+        if sc > maxsc then (i,sc) else (maxi,maxsc)
       end
   in
-    Vector.appi f v; !maxi
+    fst (Vector.foldli f (0,Real.negInf) v)
   end
 
 fun list_imin l = case l of
