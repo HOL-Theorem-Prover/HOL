@@ -29,21 +29,19 @@ type 'a gameio =
   {write_boardl : string -> 'a list -> unit, read_boardl : string -> 'a list}
 type splayer =
   {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
-type 'a dplayer =
-  {tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
+type ('a,'b) dplayer =
+  {player_from_tnn : tnn -> ('a,'b) player,
+   tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
 type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
   {expdir : string, exwindow : int, ncore : int, ntarget : int, nsim : int}
 type ('a,'b) rlobj =
   {
   rlparam : rlparam,
-  player_from_tnn : tnn -> ('a,'b) player,
-  update_apply_move : tnn -> ('a,'b) game -> ('a,'b) game,
-  game : ('a,'b) game,
+  game : ('a,'b) psMCTS.game,
   gameio : 'a gameio,
-  dplayer : 'a dplayer,
-  infobs : 'a list -> unit,
-  prepare_target : tnn -> 'a -> 'a
+  dplayer : ('a,'b) dplayer,
+  infobs : 'a list -> unit
   }
 
 (* -------------------------------------------------------------------------
@@ -58,15 +56,13 @@ fun mk_mctsparam splayer rlobj =
   }
 
 fun mk_mctsobj rlobj (splayer as {unib,tnn,noiseb,nsim}) =
-   let 
-     val game = #update_apply_move rlobj tnn (#game rlobj)
-     val player = if unib then uniform_player game else 
-       #player_from_tnn rlobj tnn
-   in
-     {player = player, 
-      game = game, 
-      mctsparam = mk_mctsparam splayer rlobj}
-   end
+  let 
+    val game = #game rlobj 
+    val player =  if unib then uniform_player game else
+      #player_from_tnn (#dplayer rlobj) tnn
+  in
+    {player=player, game=game, mctsparam = mk_mctsparam splayer rlobj}
+  end
 
 (* -------------------------------------------------------------------------
    I/O for external parallelization
@@ -175,10 +171,7 @@ fun retrieve_targetd rlobj n =
    ------------------------------------------------------------------------- *)
 
 fun extsearch_fun rlobj splayer target =
-  let 
-    val newtarget = (#prepare_target rlobj) (#tnn splayer) target
-    val (b1,rlex) = run_bigsteps (false, mk_mctsobj rlobj splayer) newtarget 
-  in
+  let val (b1,rlex) = run_bigsteps (false, mk_mctsobj rlobj splayer) target in
     (#infobs rlobj (map fst rlex); (b1,rlex))
   end
 
@@ -186,7 +179,8 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
   {
   self = self,
   parallel_dir = default_parallel_dir ^ "_search",
-  reflect_globals = fn () => "aiLib.debug_flag := " ^ bts (!debug_flag),
+  reflect_globals = fn () => 
+    "aiLib.debug_flag := " ^ bts (!debug_flag),
   function = extsearch_fun rlobj,
   write_param = write_splayer,
   read_param = read_splayer,
@@ -202,7 +196,7 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
 
 fun rl_train ngen rlobj rlex =
   let
-    val {tob,schedule,tnndim} = #dplayer rlobj
+    val {player_from_tnn,tob,schedule,tnndim} = #dplayer rlobj
     fun f (a,b) = combine (tob a,[[hd b],tl b])
     val tnnex = map f rlex
     val uex = mk_fast_set (list_compare Term.compare) (map (tob o fst) rlex)
@@ -291,6 +285,11 @@ fun select_from_targetd rlobj ntot targetd =
     lfin
   end
 
+(*
+fun select_from_targetd rlobj ntot targetd = dkeys targetd
+  (* map (#modify_board rlobj targetd) *)
+*)
+
 fun update_targetd ((board,b),targetd) =
   let val bl = dfind board targetd handle NotFound => [] in
     dadd board (b :: bl) targetd
@@ -300,7 +299,7 @@ fun rl_explore_targetd unib (rlobj,es) (tnn,targetd) =
   let
     val rlparam = #rlparam rlobj
     val targetl = select_from_targetd rlobj (#ntarget rlparam) targetd
-    val (rlex,resultl) = 
+    val (rlex,resultl) =
       rl_explore_targetl (unib,true) (rlobj,es) tnn targetl
     val newtargetd = foldl update_targetd targetd resultl
   in
