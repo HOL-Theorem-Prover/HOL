@@ -140,9 +140,28 @@ fun term_of_prog prog =
   | Sub (p,pl) => 
     list_mk_comb (embv_sub (length pl), map term_of_prog (p :: pl))
 
+(* program stack *)
+val progl_nil = mk_var ("progl_nil", alpha)
+val progl_cons = mk_var ("progl_cons", rpt_fun_type 3 alpha)
 
+fun term_of_progl progl = case progl of
+    NilPL _ => progl_nil
+  | ConsPL (_,a,m) => 
+    list_mk_comb (progl_cons,[term_of_prog (snd a),term_of_progl m])
 
+(* program stack stack *)
+fun embv_arity ari = mk_var ("arity" ^ its ari,alpha)
+val arity_cat = mk_var ("arity_cat", rpt_fun_type 3 alpha)
+val progll_nil = mk_var ("progll_nil", alpha)
+val progll_cons = mk_var ("progll_cons", rpt_fun_type 3 alpha)
 
+fun term_of_ariprogl (ari,progl) = 
+  list_mk_comb (arity_cat, [embv_arity ari, term_of_progl progl])
+
+fun term_of_progll progll = case progll of
+    NilPLL _ => progll_nil
+  | ConsPLL (_,(_,a),m) =>
+    list_mk_comb (progll_cons,[term_of_ariprogl a,term_of_progll m])
 
 (* board *)
 val ol_cat = mk_var ("ol_cat", rpt_fun_type 3 alpha)
@@ -158,7 +177,9 @@ val operl_prog =
   List.tabulate (maxvar + 1, embv_sub) @
   map embv_instr instrl
   
-
+val operl_ariprogl = 
+  [progl_nil,progl_cons,arity_cat] @
+  List.tabulate (maxvar + 1, embv_arity)
 
 val operl_progll = [progll_nil,progll_cons]
 
