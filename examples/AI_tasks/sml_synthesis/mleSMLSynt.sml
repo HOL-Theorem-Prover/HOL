@@ -416,7 +416,7 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/cache4", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/cache5", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
