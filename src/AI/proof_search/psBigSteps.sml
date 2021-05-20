@@ -41,7 +41,7 @@ fun mk_dis tree = case tree of
     Leaf => raise ERR "mk_dis" "leaf"
   | Node (node,ctreev) => 
   let
-    fun f i (a,b,c) = ((a,i),nvisit c)
+    fun f i (a,b,c) = ((a,i), nvisit c)
     val pol = mapi f (vector_to_list ctreev) 
     val _ = if null pol then raise ERR "mk_dis" "pol" else ()
     val tot = sum_real (map snd pol)

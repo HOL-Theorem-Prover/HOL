@@ -145,9 +145,14 @@ fun rebuild_tree reward buildl tree = case buildl of
 fun select_child obj buildl (node,cv) =
   let
     val (stati,param) = (#stati node, #mctsparam obj)
+    fun update_node reward {stati,board,sum,vis} =
+        {stati=stati, board=board, sum=sum+reward, vis=vis+1.0}
   in
     if not (is_undecided stati)
-    then rebuild_tree (score_status stati) buildl (Node (node,cv))
+    then 
+      let val reward = score_status stati in
+        rebuild_tree reward buildl (Node (update_node reward node,cv))
+      end
     else
     let    
       val _ = if Vector.length cv = 0 
@@ -155,8 +160,6 @@ fun select_child obj buildl (node,cv) =
       val sqrttot = Math.sqrt (#vis node)
       val ci = vector_maxi (score_puct param sqrttot) cv 
       val (cmove,cpol,ctree) = Vector.sub (cv,ci)
-      fun update_node reward {stati,board,sum,vis} =
-        {stati=stati, board=board, sum=sum+reward, vis=vis+1.0}
       fun build reward cfuture =
         Node (update_node reward node, 
               Vector.update (cv,ci,(cmove,cpol,cfuture)))
