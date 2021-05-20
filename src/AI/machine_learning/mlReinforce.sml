@@ -299,9 +299,7 @@ fun update_targetd ((board,b),targetd) =
 fun rl_explore_targetd unib (rlobj,es) (tnn,targetd) =
   let
     val rlparam = #rlparam rlobj
-    val targetl = 
-      if unib then (dkeys targetd) else
-      select_from_targetd rlobj (#ntarget rlparam) targetd
+    val targetl = select_from_targetd rlobj (#ntarget rlparam) targetd
     val (rlex,resultl) = 
       rl_explore_targetl (unib,true) (rlobj,es) tnn targetl
     val newtargetd = foldl update_targetd targetd resultl
@@ -314,8 +312,7 @@ fun rl_explore_init ngen (rlobj,es) targetd =
     val _ = log rlobj "Exploration: initialization"
     val dummy = random_tnn (#tnndim (#dplayer rlobj))
     val rlparam = #rlparam rlobj
-    val targetl = if unib then (dkeys targetd) else
-      select_from_targetd rlobj (#ntarget rlparam) targetd
+    val targetl = dkeys targetd
     val (rlex,resultl) =
       rl_explore_targetl (true,false) (rlobj,es) dummy targetl
     val newtargetd = foldl update_targetd targetd resultl
