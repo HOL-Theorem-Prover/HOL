@@ -19,9 +19,8 @@ sig
   (* players *)
   type splayer =
     {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
-  type ('a,'b)  dplayer =
-    {player_from_tnn : tnn -> ('a,'b) psMCTS.player,
-     tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
+  type 'a dplayer =
+    {tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
 
   (* parallelization of the search *)
   type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
@@ -32,10 +31,13 @@ sig
   type ('a,'b) rlobj =
     {
     rlparam : rlparam,
+    player_from_tnn : tnn -> ('a,'b) psMCTS.player,
+    update_apply_move : tnn -> ('a,'b) psMCTS.game -> ('a,'b) psMCTS.game,
     game : ('a,'b) psMCTS.game,
     gameio : 'a gameio,
-    dplayer : ('a,'b) dplayer,
-    infobs : 'a list -> unit
+    dplayer : 'a dplayer,
+    infobs : 'a list -> unit,
+    prepare_target : tnn -> 'a -> 'a
     }
   val mk_mctsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psMCTS.mctsobj
   val mk_extsearch : string -> ('a,'b) rlobj -> 'a es
