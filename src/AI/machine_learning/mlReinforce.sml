@@ -291,11 +291,6 @@ fun select_from_targetd rlobj ntot targetd =
     lfin
   end
 
-(*
-fun select_from_targetd rlobj ntot targetd = dkeys targetd
-  (* map (#modify_board rlobj targetd) *)
-*)
-
 fun update_targetd ((board,b),targetd) =
   let val bl = dfind board targetd handle NotFound => [] in
     dadd board (b :: bl) targetd
@@ -319,7 +314,8 @@ fun rl_explore_init ngen (rlobj,es) targetd =
     val _ = log rlobj "Exploration: initialization"
     val dummy = random_tnn (#tnndim (#dplayer rlobj))
     val rlparam = #rlparam rlobj
-    val targetl = select_from_targetd rlobj (#ntarget rlparam) targetd
+    val targetl = if unib then (dkeys targetd) else
+      select_from_targetd rlobj (#ntarget rlparam) targetd
     val (rlex,resultl) =
       rl_explore_targetl (true,false) (rlobj,es) dummy targetl
     val newtargetd = foldl update_targetd targetd resultl

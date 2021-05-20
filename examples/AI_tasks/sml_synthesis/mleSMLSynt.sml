@@ -374,7 +374,7 @@ val dplayer = {tob = tob, tnndim = tnndim, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/optim7", exwindow = 200000,
+  {expdir = selfdir ^ "/eval/optim8", exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
@@ -393,7 +393,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleSMLSynt"; open mleSMLSynt;
 load "mleSMLLib"; open mleSMLLib;
 
-smlOpen.buildheap_options := "--maxheap 4000";
+smlOpen.buildheap_options := "--maxheap 3500";
 print_endline (#expdir (#rlparam rlobj));
 val targetl = import_targetl "train";
 val targetd = mk_targetd targetl;
