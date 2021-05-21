@@ -209,6 +209,20 @@ val preds_wobound = store_thm(
   ``preds ord = elsOf (wobound ord allOrds)``,
   simp[EXTENSION, elsOf_wobound, preds_def, WIN_allOrds]);
 
+Theorem cardeq_ordinals_exist:
+  (s:'b set) <<= univ(:num + 'a) ==>
+  ?a:'a ordinal. preds a =~ s
+Proof
+  strip_tac >>
+  qspec_then ‘s’ (qx_choose_then ‘w1’ assume_tac) allsets_wellorderable >>
+  gvs[cardleq_def] >>
+  drule_then (qx_choose_then ‘w2’ assume_tac) elsOf_cardeq_iso>>
+  qspec_then ‘w2’ assume_tac wellorder_ordinal_isomorphism >>
+  qexists_tac ‘mkOrdinal w2’ >>
+  simp[preds_wobound] >> gs[orderiso_thm, cardeq_def] >>
+  metis_tac[BIJ_SYM, BIJ_COMPOSE]
+QED
+
 val preds_inj_univ = store_thm(
   "preds_inj_univ",
   ``preds (ord:'a ordinal) <<= univ(:'a inf)``,
@@ -644,6 +658,51 @@ val sup_preds_omax_NONE = store_thm(
   strip_tac >> qsuff_tac `c <= a /\ a <= c` >- metis_tac [ordlt_trichotomy] >>
   metis_tac [ordlt_TRANS, ordlt_REFL]);
 
+Theorem preds_nat:
+  preds (&n) = IMAGE fromNat (count n)
+Proof
+  Induct_on ‘n’ >> simp[preds_ordSUC, COUNT_SUC]
+QED
+
+Theorem omax_INSERT:
+  omax (x INSERT y) = if (!e. e IN y ==> e <= x) then SOME x
+                      else omax y
+Proof
+  Cases_on‘omax y’ >>
+  gs[omax_SOME, omax_NONE, AllCaseEqs(), DISJ_IMP_THM, FORALL_AND_THM,
+     RIGHT_AND_OVER_OR, EXISTS_OR_THM]
+  >- metis_tac[] >>
+  rename [‘_ \/ _ /\ a <= b’] >> Cases_on ‘b <= a’
+  >- metis_tac[ordle_TRANS] >> gs[] >> metis_tac[ordle_lteq]
+QED
+
+Theorem FINITE_omax_IS_SOME:
+  s <> {} /\ FINITE s ⇒ ?a. omax s = SOME a
+Proof
+  Induct_on ‘FINITE’ >> simp[omax_INSERT, AllCaseEqs(), EXISTS_OR_THM] >>
+  rw[] >> simp[PULL_EXISTS] >> Cases_on ‘s = {}’ >> simp[] >>
+  gs[omax_SOME] >>
+  Cases_on ‘e < a’ >- metis_tac[] >>
+  metis_tac[ordle_TRANS]
+QED
+
+Theorem fromNat_11[simp]:
+  !x y. (&x:'a ordinal = &y) = (x = y)
+Proof
+  Induct >- (Cases >> simp[]) >> Cases >> simp[]
+QED
+
+Theorem FINITE_preds:
+  FINITE (preds a) <=> ?n. a = &n
+Proof
+  simp[EQ_IMP_THM, PULL_EXISTS, preds_nat] >>
+  qid_spec_tac ‘a’ >> ho_match_mp_tac simple_ord_induction >>
+  simp[preds_ordSUC] >> rw[] >> gs[]
+  >- simp[GSYM fromNat_SUC, Excl "fromNat_SUC"] >>
+  ‘preds a <> {}’ by (strip_tac >> gs[]) >>
+  drule_all FINITE_omax_IS_SOME >> simp[]
+QED
+
 val dclose_def = Define`dclose s = { x:'a ordinal | ?y. y IN s /\ x < y }`;
 
 val preds_sup = store_thm(
@@ -690,12 +749,6 @@ val preds_sup_thm = store_thm(
 
 val preds_lesup = save_thm("preds_lesup", mklesup preds_sup_thm)
 val preds_suple = save_thm("preds_suple", mksuple preds_sup_thm)
-
-val fromNat_11 = store_thm(
-  "fromNat_11",
-  ``!x y. (&x:'a ordinal = &y) = (x = y)``,
-  Induct >- (Cases >> simp[]) >> Cases >> simp[])
-val _ = export_rewrites ["fromNat_11"]
 
 val ordlt_fromNat = store_thm(
   "ordlt_fromNat",
@@ -2139,6 +2192,92 @@ val olog_correct = save_thm(
   "olog_correct",
   ordLOG_correct |> Q.INST [`b` |-> `omega`] |> SIMP_RULE (srw_ss()) []);
 
+(* uncountable ordinals *)
+Type ucinf = “:('a + (num -> bool)) inf”
+Type ucord = “:('a + (num -> bool)) ordinal”
 
+Theorem ucinf_uncountable: ~countable univ(:'a ucinf)
+Proof
+  simp[SUM_UNIV, UNIV_FUN_TO_BOOL, infinite_pow_uncountable]
+QED
+
+Theorem Unum_cardlt_ucinf: univ(:num) <</= univ(:'a ucinf)
+Proof
+  simp[cardlt_lenoteq] >> conj_tac
+  >- (simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]) >>
+  strip_tac >> imp_res_tac countable_cardeq >>
+  fs[ucinf_uncountable, num_countable]
+QED
+
+Theorem Unum_cardle_ucinf: univ(:num) <<= univ(:'a ucinf)
+Proof
+  simp[cardleq_lteq, Unum_cardlt_ucinf]
+QED
+
+Theorem ucord_sup_exists_lemma:
+  { a:'a ucord | countableOrd a } <<= univ(:'a ucinf)
+Proof
+  spose_not_then assume_tac >> fs[cardlt_lenoteq] >>
+  `?f. INJ f univ(:'a ucinf) {a:'a ucord | countableOrd a}`
+     by metis_tac[cardleq_def] >>
+  `(!u. countableOrd (f u)) /\ (!u v. f u = f v ==> u = v)`
+      by fs[INJ_DEF] >>
+  qabbrev_tac `fU = IMAGE f univ(:'a ucinf)` >>
+  `fU <<= univ(:'a ucinf)` by simp[Abbr`fU`, IMAGE_cardleq] >>
+  first_assum (ASSUME_TAC o MATCH_MP (GEN_ALL sup_thm)) >>
+  Cases_on `countableOrd (sup fU)`
+  >- (`!u. f u <= sup fU`
+        by (gen_tac >> match_mp_tac suple_thm >> simp[Abbr`fU`]) >>
+      qsuff_tac `univ(:'a ucinf) <<= preds (sup fU)`
+      >- (strip_tac >>
+          `preds (sup fU) <<= univ(:num)` by fs[countable_thm] >>
+          metis_tac[countable_thm, ucinf_uncountable, cardleq_TRANS]) >>
+      Cases_on `?u. f u = sup fU`
+      >- (pop_assum strip_assume_tac >>
+          `!v. v <> u ==> f v < sup fU` by metis_tac[ordle_lteq] >>
+          qabbrev_tac `U0 = univ(:'a ucinf) DELETE u` >>
+          `univ(:'a ucinf) = u INSERT U0`
+             by metis_tac[INSERT_DELETE, IN_UNIV] >>
+          `U0 =~ univ(:'a ucinf)`
+             by metis_tac[finite_countable, FINITE_DELETE, ucinf_uncountable,
+                          cardeq_SYM, CARDEQ_INSERT_RWT] >>
+          qsuff_tac `U0 <<= preds (sup fU)`
+          >- metis_tac[CARDEQ_CARDLEQ, cardeq_REFL] >>
+          simp[cardleq_def] >> qexists_tac `f` >>
+          simp[INJ_DEF, Abbr`U0`]) >>
+      pop_assum (fn th => `!u. f u < sup fU` by metis_tac[ordle_lteq, th]) >>
+      simp[cardleq_def] >> qexists_tac `f` >> simp[INJ_DEF]) >>
+  `{ a:'a ucord | countableOrd a } <<= preds (sup fU)`
+    by (match_mp_tac SUBSET_CARDLEQ >> simp[SUBSET_DEF] >>
+        qx_gen_tac `c` >> strip_tac >>
+        spose_not_then assume_tac >>
+        `sup fU <= c` by metis_tac[] >>
+        `preds (sup fU) SUBSET preds c`
+          by (simp[SUBSET_DEF] >> metis_tac [ordlte_TRANS]) >>
+        metis_tac [subset_countable]) >>
+  qsuff_tac `preds (sup fU) <<= univ(:'a ucinf)`
+  >- metis_tac [cardleq_ANTISYM, cardleq_TRANS] >>
+  simp[preds_sup, dclose_BIGUNION] >>
+  match_mp_tac CARD_BIGUNION >>
+  dsimp[IMAGE_cardleq_rwt] >>
+  dsimp[Abbr`fU`] >>
+  metis_tac[countable_thm, cardleq_TRANS, Unum_cardle_ucinf]
+QED
+
+Definition omega1_def:
+  omega1 : 'a ucord = sup { a | countableOrd a }
+End
+Overload "ω₁" = “omega1”  (* UOK *)
+
+Theorem x_lt_omega1_countable: x < omega1 <=> countableOrd x
+Proof
+  simp[omega1_def, sup_thm, ucord_sup_exists_lemma, EQ_IMP_THM] >>
+  rpt strip_tac >- metis_tac[countableOrds_dclosed] >>
+  qexists_tac `x^+` >> simp[preds_ordSUC]
+QED
+
+(* |- ~countableOrd omega1 *)
+Theorem omega1_not_countable =
+  x_lt_omega1_countable |> Q.INST[`x` |-> `omega1`] |> SIMP_RULE (srw_ss()) []
 
 val _ = export_theory()

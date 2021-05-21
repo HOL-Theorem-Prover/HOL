@@ -689,8 +689,16 @@ val set_exp_def = Define`
 `;
 val _ = overload_on ("**", ``set_exp``)
 
-val csimp = asm_simp_tac (srw_ss() ++ boolSimps.CONJ_ss)
-val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
+Theorem UNIV_fun_exp:
+  univ(:'a -> 'b) =~ univ(:'b) ** univ(:'a)
+Proof
+  simp[set_exp_def] >>
+  irule cardleq_ANTISYM >> simp[cardleq_def, INJ_IFF] >> rw[]
+  >- (qexists_tac ‘λf a. SOME (f a)’ >> simp[] >>
+      simp[FUN_EQ_THM]) >>
+  qexists_tac ‘λf a. THE (f a)’ >> simp[FUN_EQ_THM] >> rw[] >>
+  gs[SKOLEM_THM]
+QED
 
 val BIJ_functions_agree = store_thm(
   "BIJ_functions_agree",
