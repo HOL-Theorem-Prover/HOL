@@ -18,15 +18,28 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numLib unwindLib tautLib Arith
-     prim_recTheory combinTheory quotientTheory arithmeticTheory
-     realTheory realLib jrhUtils pairTheory seqTheory limTheory
-     transcTheory listTheory mesonLib boolTheory pred_setTheory
-     optionTheory numTheory sumTheory;
+open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
+     arithmeticTheory realTheory realLib jrhUtils pairTheory mesonLib
+     pred_setTheory;
 
-open wellorderTheory cardinalTheory hurdUtils;
+open wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
+
+(* Minimal version of hurdUtils *)
+fun K_TAC _ = ALL_TAC;
+fun wrap a = [a];
+val art = ASM_REWRITE_TAC;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -35,13 +48,13 @@ val _ = new_theory "iterate";
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
-val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
+val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
                    POP_ASSUM K_TAC;
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 
-val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
-val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
+val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC;
+val ASM_REAL_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> REAL_ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
 val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
@@ -2776,16 +2789,20 @@ val SUM_SUB = store_thm ("SUM_SUB",
  ``!f g s. FINITE s ==> (sum s (\x. f(x) - g(x)) = sum s f - sum s g)``,
   ONCE_REWRITE_TAC[real_sub] THEN SIMP_TAC std_ss [SUM_NEG, SUM_ADD]);
 
-(* TODO: name conflicts with realTheory.SUM_LE *)
-val SUM_LE = store_thm ("SUM_LE",
- ``!f g s. FINITE(s) /\ (!x. x IN s ==> f(x) <= g(x)) ==> sum s f <= sum s g``,
+(* renamed: name conflicts with realTheory.SUM_LE *)
+Theorem SUM_MONO_LE : (* was: SUM_LE *)
+    !f g s. FINITE(s) /\ (!x. x IN s ==> f(x) <= g(x)) ==> sum s f <= sum s g
+Proof
   ONCE_REWRITE_TAC[GSYM AND_IMP_INTRO] THEN REPEAT GEN_TAC THEN
   KNOW_TAC ``((!(x :'a). x IN s ==> (f :'a -> real) x <= (g :'a -> real) x) ==>
     sum s f <= sum s g) = (\(s:'a->bool). (!(x :'a). x IN s ==>
     (f :'a -> real) x <= (g :'a -> real) x) ==> sum s f <= sum s g) s`` THENL
   [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [SUM_CLAUSES, REAL_LE_REFL, REAL_LE_ADD2, IN_INSERT]);
+  SIMP_TAC std_ss [SUM_CLAUSES, REAL_LE_REFL, REAL_LE_ADD2, IN_INSERT]
+QED
+
+val SUM_LE = SUM_MONO_LE;
 
 val SUM_LT = store_thm ("SUM_LT",
  ``!f g s:'a->bool.
