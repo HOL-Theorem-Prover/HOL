@@ -46,9 +46,6 @@ val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
 val SUM_LE             = SUM_MONO_LE;        (* iterateTheory *)
 
-(* This overrides realTheory.SUM_LE *)
-val SUM_LE = iterateTheory.SUM_LE;
-
 (* --------------------------------------------------------------------- *)
 (* STRONG_DISJ2_TAC : tactic                                             *)
 (*                                                                       *)
