@@ -677,7 +677,7 @@ Proof
 QED
 
 Theorem FINITE_omax_IS_SOME:
-  s <> {} /\ FINITE s ⇒ ?a. omax s = SOME a
+  s <> {} /\ FINITE s ==> ?a. omax s = SOME a
 Proof
   Induct_on ‘FINITE’ >> simp[omax_INSERT, AllCaseEqs(), EXISTS_OR_THM] >>
   rw[] >> simp[PULL_EXISTS] >> Cases_on ‘s = {}’ >> simp[] >>
