@@ -501,20 +501,23 @@ val FINREC_FUN_LEMMA = store_thm ("FINREC_FUN_LEMMA",
   MATCH_MP_TAC SELECT_UNIQUE THEN ASM_MESON_TAC[],
   DISCH_THEN(SUBST1_TAC o SYM) THEN CONV_TAC SELECT_CONV THEN ASM_MESON_TAC[]]);
 
-val FINREC_FUN = store_thm ("FINREC_FUN",
- ``!(f:'a->'b->'b) b.
+Theorem FINREC_FUN :
+    !(f:'a->'b->'b) b.
         (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
         ==> ?g. (g {} = b) /\
                 !s x. FINITE s /\ x IN s
-                      ==> (g s = f x (g (s DELETE x)))``,
+                      ==> (g s = f x (g (s DELETE x)))
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_THEN MP_TAC FINREC_UNIQUE_LEMMA THEN
-  REPEAT STRIP_TAC THEN KNOW_TAC ``!n1 n2 s a1 a2. FINREC f b s a1 n1 /\
-  FINREC f b s a2 n2 ==> (a1 = a2) /\ (n1 = n2)`` THENL [METIS_TAC [],
+  REPEAT STRIP_TAC THEN
+  KNOW_TAC ``!n1 n2 s a1 a2. FINREC f b s a1 n1 /\
+                             FINREC f b s a2 n2 ==> (a1 = a2) /\ (n1 = n2)``
+  THEN1 METIS_TAC [] THEN
   DISCH_THEN (MP_TAC o CONJ (SPECL [``f:'a->'b->'b``, ``b:'b``] FINREC_EXISTS_LEMMA)) THEN
   DISCH_THEN(MP_TAC o MATCH_MP FINREC_FUN_LEMMA) THEN
   DISCH_THEN(X_CHOOSE_TAC ``g:('a->bool)->'b``) THEN
   EXISTS_TAC ``g:('a->bool)->'b`` THEN CONJ_TAC THENL
-   [SUBGOAL_THEN ``FINITE(EMPTY:'a->bool)``
+  [ SUBGOAL_THEN ``FINITE(EMPTY:'a->bool)``
     (ANTE_RES_THEN (fn th => GEN_REWR_TAC I [GSYM th])) THENL
      [REWRITE_TAC[FINITE_EMPTY],
       EXISTS_TAC ``0:num`` THEN REWRITE_TAC[FINREC]],
@@ -524,18 +527,20 @@ val FINREC_FUN = store_thm ("FINREC_FUN",
     FIRST_ASSUM(MP_TAC o SPEC ``(g:('a->bool)->'b) s``) THEN
     REWRITE_TAC[] THEN REWRITE_TAC[GSYM LEFT_FORALL_IMP_THM] THEN
     INDUCT_TAC THENL
-     [ASM_REWRITE_TAC[FINREC] THEN DISCH_TAC THEN UNDISCH_TAC ``x:'a IN s`` THEN
+    [ ASM_REWRITE_TAC[FINREC] THEN DISCH_TAC THEN UNDISCH_TAC ``x:'a IN s`` THEN
       ASM_REWRITE_TAC[NOT_IN_EMPTY],
       IMP_RES_THEN ASSUME_TAC FINREC_SUC_LEMMA THEN
       DISCH_THEN(ANTE_RES_THEN (MP_TAC o SPEC ``x:'a``)) THEN
       ASM_REWRITE_TAC[] THEN
       DISCH_THEN(X_CHOOSE_THEN ``w:'b`` (CONJUNCTS_THEN ASSUME_TAC)) THEN
       SUBGOAL_THEN ``(g (s DELETE x:'a) = w:'b)`` SUBST1_TAC THENL
-       [SUBGOAL_THEN ``FINITE(s DELETE x:'a)`` MP_TAC THENL
-         [FULL_SIMP_TAC std_ss [FINITE_DELETE],
+      [ SUBGOAL_THEN ``FINITE(s DELETE x:'a)`` MP_TAC THENL
+        [ FULL_SIMP_TAC std_ss [FINITE_DELETE],
           DISCH_THEN(ANTE_RES_THEN (MP_TAC o GSYM)) THEN
           DISCH_THEN(fn th => REWRITE_TAC[th]) THEN
-          METIS_TAC []], ASM_REWRITE_TAC[]]]]]);
+          METIS_TAC [] ],
+        ASM_REWRITE_TAC [] ] ] ]
+QED
 
 val SET_RECURSION_LEMMA = store_thm ("SET_RECURSION_LEMMA",
  ``!(f:'a->'b->'b) b.
@@ -2804,18 +2809,23 @@ QED
 
 val SUM_LE = SUM_MONO_LE;
 
-val SUM_LT = store_thm ("SUM_LT",
- ``!f g s:'a->bool.
+(* renamed: name conflicts with seqTheory.SUM_LT *)
+Theorem SUM_MONO_LT : (* was: SUM_LT *)
+    !f g s:'a->bool.
         FINITE(s) /\ (!x. x IN s ==> f(x) <= g(x)) /\
         (?x. x IN s /\ f(x) < g(x))
-         ==> sum s f < sum s g``,
+         ==> sum s f < sum s g
+Proof
   REPEAT GEN_TAC THEN
   REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
   DISCH_THEN(X_CHOOSE_THEN ``a:'a`` STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN ``s = (a:'a) INSERT (s DELETE a)`` SUBST1_TAC THENL
    [UNDISCH_TAC ``a:'a IN s`` THEN SIMP_TAC std_ss [INSERT_DELETE], ALL_TAC]
   THEN ASM_SIMP_TAC std_ss [SUM_CLAUSES, FINITE_DELETE, IN_DELETE] THEN
-  ASM_SIMP_TAC std_ss [REAL_LTE_ADD2, SUM_LE, IN_DELETE, FINITE_DELETE]);
+  ASM_SIMP_TAC std_ss [REAL_LTE_ADD2, SUM_LE, IN_DELETE, FINITE_DELETE]
+QED
+
+val SUM_LT = SUM_MONO_LT;
 
 val SUM_LT_ALL = store_thm ("SUM_LT_ALL",
  ``!f g s. FINITE s /\ ~(s = {}) /\ (!x. x IN s ==> f(x) < g(x))

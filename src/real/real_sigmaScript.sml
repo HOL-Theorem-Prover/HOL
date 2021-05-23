@@ -28,16 +28,8 @@ val art = ASM_REWRITE_TAC;
     Where f's range is the real numbers and P is finite.
    ---------------------------------------------------------------------- *)
 
-(* The old definition (only used by REAL_SUM_IMAGE_THM):
-
 Definition REAL_SUM_IMAGE_DEF :
     REAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0:real)
-End
-
-   The new definition (based iterateTheory):
- *)
-Definition REAL_SUM_IMAGE_DEF :
-    REAL_SUM_IMAGE f s = iterate$Sum s f
 End
 
 Overload SIGMA = “REAL_SUM_IMAGE”
@@ -48,35 +40,45 @@ Theorem REAL_SUM_IMAGE_THM :
                (REAL_SUM_IMAGE f (e INSERT s) =
                 f e + REAL_SUM_IMAGE f (s DELETE e)))
 Proof
+  REPEAT STRIP_TAC
+  >- SIMP_TAC (srw_ss()) [ITSET_THM, REAL_SUM_IMAGE_DEF]
+  >> SIMP_TAC (srw_ss()) [REAL_SUM_IMAGE_DEF]
+  >> Q.ABBREV_TAC `g = \e acc. f e + acc`
+  >> Suff `ITSET g (e INSERT s) 0 =
+                    g e (ITSET g (s DELETE e) 0)`
+  >- (Q.UNABBREV_TAC `g` >> SRW_TAC [] [])
+  >> MATCH_MP_TAC COMMUTING_ITSET_RECURSES
+  >> Q.UNABBREV_TAC `g`
+  >> RW_TAC real_ss []
+  >> REAL_ARITH_TAC
+QED
+
+(* An equivalent theorem linking REAL_SUM_IMAGE and iterate$Sum *)
+Theorem REAL_SUM_IMAGE_sum :
+    !f s. FINITE s ==> REAL_SUM_IMAGE f s = iterate$Sum s f
+Proof
     Q.X_GEN_TAC ‘f’
- >> ASSUME_TAC MONOIDAL_REAL_ADD
- >> rw [REAL_SUM_IMAGE_DEF, iterateTheory.sum_def, GSYM NEUTRAL_REAL_ADD]
- >- rw [ITERATE_CLAUSES]
- >> reverse (Cases_on ‘e IN s’)
- >- (‘s DELETE e = s’ by METIS_TAC [DELETE_NON_ELEMENT] >> POP_ORW \\
-     rw [ITERATE_CLAUSES])
- >> ‘e INSERT s = e INSERT (s DELETE e)’ by SET_TAC [] >> POP_ORW
- >> rw [ITERATE_CLAUSES]
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> CONJ_TAC >- rw [REAL_SUM_IMAGE_THM, SUM_CLAUSES]
+ >> rpt STRIP_TAC
+ >> ‘s DELETE e = s’ by METIS_TAC [DELETE_NON_ELEMENT]
+ >> rw [REAL_SUM_IMAGE_THM, SUM_CLAUSES]
 QED
 
 (* it translates a sum theorem into a SIGMA theorem *)
-fun translate th = REWRITE_RULE [GSYM REAL_SUM_IMAGE_DEF] th;
+fun translate th = SIMP_RULE std_ss [GSYM REAL_SUM_IMAGE_sum] th;
 
-(* |- !f x. REAL_SUM_IMAGE f {x} = f x *)
-Theorem REAL_SUM_IMAGE_SING = translate SUM_SING
+Theorem REAL_SUM_IMAGE_SING :
+    !f e. REAL_SUM_IMAGE f {e} = f e
+Proof
+    SRW_TAC [][REAL_SUM_IMAGE_THM]
+QED
 
 Theorem REAL_SUM_IMAGE_POS :
     !f s. FINITE s /\ (!x. x IN s ==> 0 <= f x) ==>
           0 <= REAL_SUM_IMAGE f s
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_POS_LE]
-QED
-
-(* NEW, without ‘FINITE s’ *)
-Theorem REAL_SUM_IMAGE_POS' :
-    !f s. (!x. x IN s ==> 0 <= f x) ==> 0 <= REAL_SUM_IMAGE f s
-Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_POS_LE]
+    rw [REAL_SUM_IMAGE_sum, SUM_POS_LE]
 QED
 
 Theorem REAL_SUM_IMAGE_SPOS :
@@ -84,7 +86,7 @@ Theorem REAL_SUM_IMAGE_SPOS :
         !f. (!x. x IN s ==> 0 < f x) ==>
             0 < REAL_SUM_IMAGE f s
 Proof
-    rw [REAL_SUM_IMAGE_DEF]
+    rw [REAL_SUM_IMAGE_sum]
  >> MATCH_MP_TAC SUM_POS_LT >> art []
  >> CONJ_TAC >- METIS_TAC [REAL_LT_IMP_LE]
  >> fs [GSYM MEMBER_NOT_EMPTY]
@@ -92,13 +94,14 @@ Proof
 QED
 
 (* ‘?x. x IN P’ already indicates ‘P <> {}’, thus the actual conclusion is just
-   ‘SIGMA f P <> 0’ *)
+   ‘SIGMA f P <> 0’
+ *)
 Theorem REAL_SUM_IMAGE_NONZERO :
     !P. FINITE P ==>
         !f. (!x. x IN P ==> 0 <= f x) /\ (?x. x IN P /\ ~(f x = 0)) ==>
             ((~(REAL_SUM_IMAGE f P = 0)) <=> (~(P = {})))
 Proof
-    rw [REAL_SUM_IMAGE_DEF]
+    rw [REAL_SUM_IMAGE_sum]
  >> ‘P <> {}’ by METIS_TAC [MEMBER_NOT_EMPTY]
  >> rw []
  >> Suff ‘0 < sum P f’ >- METIS_TAC [REAL_LT_IMP_NE]
@@ -188,7 +191,7 @@ Theorem REAL_SUM_IMAGE_FINITE_CONST3 :
     !P. FINITE P ==>
         !c. (REAL_SUM_IMAGE (\x. c) P = (&(CARD P)) * c)
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_CONST]
+    rw [REAL_SUM_IMAGE_sum, SUM_CONST]
 QED
 
 val REAL_SUM_IMAGE_IN_IF_lem = prove
@@ -217,16 +220,14 @@ Theorem REAL_SUM_IMAGE_CMUL :
     !P. FINITE P ==>
         !f c. (REAL_SUM_IMAGE (\x. c * f x) P = c * (REAL_SUM_IMAGE f P))
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_LMUL]
+    rw [REAL_SUM_IMAGE_sum, SUM_LMUL]
 QED
-
-Theorem REAL_SUM_IMAGE_RMUL = translate SUM_RMUL
 
 Theorem REAL_SUM_IMAGE_NEG :
     !P. FINITE P ==>
         !f. (REAL_SUM_IMAGE (\x. ~ f x) P = ~ (REAL_SUM_IMAGE f P))
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_NEG]
+    rw [REAL_SUM_IMAGE_sum, SUM_NEG]
 QED
 
 Theorem REAL_SUM_IMAGE_IMAGE :
@@ -234,16 +235,7 @@ Theorem REAL_SUM_IMAGE_IMAGE :
         !f'. INJ f' P (IMAGE f' P) ==>
              !f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P
 Proof
-    rw [REAL_SUM_IMAGE_DEF, INJ_DEF]
- >> MATCH_MP_TAC SUM_IMAGE >> rw []
-QED
-
-(* NEW, without ‘FINITE P’ *)
-Theorem REAL_SUM_IMAGE_IMAGE' :
-    !P f'. INJ f' P (IMAGE f' P) ==>
-           !f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P
-Proof
-    rw [REAL_SUM_IMAGE_DEF, INJ_DEF]
+    rw [REAL_SUM_IMAGE_sum, INJ_DEF]
  >> MATCH_MP_TAC SUM_IMAGE >> rw []
 QED
 
@@ -253,7 +245,7 @@ Theorem REAL_SUM_IMAGE_DISJOINT_UNION :
                      REAL_SUM_IMAGE f P +
                      REAL_SUM_IMAGE f P')
 Proof
-    rw [REAL_SUM_IMAGE_DEF]
+    rw [REAL_SUM_IMAGE_sum]
  >> MATCH_MP_TAC SUM_UNION
  >> rw [GSYM DISJOINT_DEF, FINITE_UNION]
 QED
@@ -363,11 +355,15 @@ Theorem REAL_SUM_IMAGE_MONO :
         !f f'. (!x. x IN P ==> f x <= f' x) ==>
                REAL_SUM_IMAGE f P <= REAL_SUM_IMAGE f' P
 Proof
-    rw [REAL_SUM_IMAGE_DEF]
+    rw [REAL_SUM_IMAGE_sum]
  >> MATCH_MP_TAC SUM_MONO_LE >> rw []
 QED
 
-Theorem REAL_SUM_IMAGE_MONO_LT = translate SUM_LT
+(* |- !f g s.
+        FINITE s /\ (!x. x IN s ==> f x <= g x) /\ (?x. x IN s /\ f x < g x) ==>
+        SIGMA f s < SIGMA g s
+ *)
+Theorem REAL_SUM_IMAGE_MONO_LT = translate SUM_MONO_LT
 
 val REAL_SUM_IMAGE_POS_MEM_LE = store_thm
   ("REAL_SUM_IMAGE_POS_MEM_LE",
@@ -442,11 +438,11 @@ val REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD = store_thm
    >> METIS_TAC [REAL_NZ_IMP_LT, GSYM REAL_EQ_RDIV_EQ, REAL_INV_1OVER, SUC_NOT]);
 
 Theorem REAL_SUM_IMAGE_ADD :
-    !s. FINITE s ==> !f f'.
-                (REAL_SUM_IMAGE (\x. f x + f' x) s =
-                 REAL_SUM_IMAGE f s + REAL_SUM_IMAGE f' s)
+    !s. FINITE s ==>
+        !f f'. REAL_SUM_IMAGE (\x. f x + f' x) s =
+               REAL_SUM_IMAGE f s + REAL_SUM_IMAGE f' s
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_ADD]
+    rw [REAL_SUM_IMAGE_sum, SUM_ADD]
 QED
 
 val REAL_SUM_IMAGE_REAL_SUM_IMAGE = store_thm
@@ -486,17 +482,8 @@ val REAL_SUM_IMAGE_REAL_SUM_IMAGE = store_thm
 Theorem REAL_SUM_IMAGE_0 :
     !s. FINITE s ==> (REAL_SUM_IMAGE (\x. 0) s = 0)
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_0]
+    rw [REAL_SUM_IMAGE_sum, SUM_0]
 QED
-
-(* NEW, without ‘FINITE s’ *)
-Theorem REAL_SUM_IMAGE_0' :
-    !s. REAL_SUM_IMAGE (\x. 0) s = 0
-Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_0]
-QED
-
-Theorem REAL_SUM_IMAGE_EQ_0 = translate SUM_EQ_0
 
 val SEQ_REAL_SUM_IMAGE = store_thm
   ("SEQ_REAL_SUM_IMAGE",
@@ -567,15 +554,7 @@ Theorem REAL_SUM_IMAGE_EQ :
     !s (f:'a->real) f'. FINITE s /\ (!x. x IN s ==> (f x = f' x))
                     ==> (REAL_SUM_IMAGE f s = REAL_SUM_IMAGE f' s)
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_EQ]
-QED
-
-(* NEW, without ‘FINITE s’ *)
-Theorem REAL_SUM_IMAGE_EQ' :
-    !s (f:'a->real) f'. (!x. x IN s ==> (f x = f' x))
-                    ==> (REAL_SUM_IMAGE f s = REAL_SUM_IMAGE f' s)
-Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_EQ]
+    rw [REAL_SUM_IMAGE_sum, SUM_EQ]
 QED
 
 val REAL_SUM_IMAGE_IN_IF_ALT = store_thm
@@ -590,7 +569,7 @@ Theorem REAL_SUM_IMAGE_SUB :
                  (REAL_SUM_IMAGE (\x. f x - f' x) s =
                   REAL_SUM_IMAGE f s - REAL_SUM_IMAGE f' s)
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_SUB]
+    rw [REAL_SUM_IMAGE_sum, SUM_SUB]
 QED
 
 val REAL_SUM_IMAGE_MONO_SET = store_thm
@@ -631,18 +610,30 @@ val REAL_SUM_IMAGE_CROSS_SYM = store_thm
 Theorem REAL_SUM_IMAGE_ABS_TRIANGLE :
     !f s. FINITE s ==> abs (REAL_SUM_IMAGE f s) <= REAL_SUM_IMAGE (abs o f) s
 Proof
-    rw [REAL_SUM_IMAGE_DEF, SUM_ABS, o_DEF]
+    rw [REAL_SUM_IMAGE_sum, SUM_ABS, o_DEF]
 QED
 
 Theorem REAL_SUM_IMAGE_DELETE = translate SUM_DELETE
 Theorem REAL_SUM_IMAGE_SWAP = translate SUM_SWAP
 Theorem REAL_SUM_IMAGE_BOUND = translate SUM_BOUND
-Theorem REAL_SUM_IMAGE_IMAGE_LE = translate SUM_IMAGE_LE
+
+Theorem REAL_SUM_IMAGE_IMAGE_LE :
+    !f:'a->'b g s.
+        FINITE s /\
+        (!x. x IN s ==> (0:real) <= g (f x))
+        ==> REAL_SUM_IMAGE g (IMAGE f s) <= REAL_SUM_IMAGE (g o f) s
+Proof
+    rpt STRIP_TAC
+ >> ‘FINITE (IMAGE f s)’ by METIS_TAC [IMAGE_FINITE]
+ >> rw [REAL_SUM_IMAGE_sum]
+ >> MATCH_MP_TAC SUM_IMAGE_LE >> art []
+QED
 
 Theorem REAL_SUM_IMAGE_PERMUTES :
-    !f p s:'a->bool. p PERMUTES s ==> REAL_SUM_IMAGE f s = REAL_SUM_IMAGE (f o p) s
+    !f p s:'a->bool. FINITE s /\ p PERMUTES s ==>
+                     REAL_SUM_IMAGE f s = REAL_SUM_IMAGE (f o p) s
 Proof
-    rw [BIJ_ALT, REAL_SUM_IMAGE_DEF, IN_FUNSET]
+    rw [BIJ_ALT, REAL_SUM_IMAGE_sum, IN_FUNSET]
  >> MATCH_MP_TAC SUM_BIJECTION >> rw []
  >> Q.PAT_X_ASSUM ‘!y. y IN s ==> ?!x. P’ (MP_TAC o Q.SPEC ‘y’)
  >> RW_TAC bool_ss [EXISTS_UNIQUE_DEF] (* why it takes so long time? *)
