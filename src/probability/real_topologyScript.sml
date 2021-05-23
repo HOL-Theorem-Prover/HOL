@@ -39,17 +39,14 @@ val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
-val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
-val FINITE_SUBSET = SUBSET_FINITE_I; (* pred_setTheory *)
-val LE_0          = ZERO_LESS_EQ;    (* arithmeticTheory *)
-
-(* This overrides realTheory.SUM_LE *)
-val SUM_LE = iterateTheory.SUM_LE;
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
+val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
+val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
+val SUM_LE             = SUM_MONO_LE;        (* iterateTheory *)
 
 (* ------------------------------------------------------------------------- *)
 (* Pairwise property over sets and lists.                                    *)

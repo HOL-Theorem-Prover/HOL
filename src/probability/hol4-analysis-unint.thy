@@ -4,13 +4,9 @@ description: HOL real analysis (before re-interpretation)
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
-  import: iterate
   import: real-topology
   import: derivative
   import: integration
-}
-iterate {
-  article: "iterate.ot.art"
 }
 real-topology {
   import: iterate

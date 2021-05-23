@@ -7486,9 +7486,10 @@ val EXTREAL_PROD_IMAGE_DEF = new_definition
 Definition ext_product_def :
     ext_product = iterate (( * ):extreal->extreal->extreal)
 End
-Overload EXTREAL_PROD_IMAGE = “\f s. ext_product s f”
 
-val _ = overload_on ("PI", ``EXTREAL_PROD_IMAGE``);
+Overload EXTREAL_PROD_IMAGE = “\f s. ext_product s f”
+Overload PI = “EXTREAL_PROD_IMAGE”
+
 val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
 val _ = TeX_notation {hol = UTF8.chr 0x220F, TeX = ("\\HOLTokenPI{}", 1)};
 val _ = TeX_notation {hol = "PI"           , TeX = ("\\HOLTokenPI{}", 1)};
@@ -7550,88 +7551,35 @@ val EXTREAL_PROD_IMAGE_PAIR = store_thm
      EQ_TAC >> rpt STRIP_TAC >> fs []) >> Rewr'
  >> REWRITE_TAC [EXTREAL_PROD_IMAGE_SING]);
 
-val EXTREAL_PROD_IMAGE_EQ = store_thm
-  ("EXTREAL_PROD_IMAGE_EQ",
-  ``!s. FINITE s ==>
-        !f f'. (!x. x IN s ==> (f x = f' x)) ==>
-               (EXTREAL_PROD_IMAGE f s = EXTREAL_PROD_IMAGE f' s)``,
-    Suff `!s. FINITE s ==>
-              (\s. !f f'. (!x. x IN s ==> (f x = f' x)) ==>
-                  (EXTREAL_PROD_IMAGE f s = EXTREAL_PROD_IMAGE f' s)) s`
- >- PROVE_TAC []
- >> MATCH_MP_TAC FINITE_INDUCT
- >> RW_TAC std_ss [EXTREAL_PROD_IMAGE_EMPTY]
- >> FULL_SIMP_TAC std_ss [EXTREAL_PROD_IMAGE_PROPERTY, DELETE_NON_ELEMENT,
-                          IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
- >> METIS_TAC []);
+(* NOTE: removed ‘FINITE s’ due to iterateTheory *)
+Theorem EXTREAL_PROD_IMAGE_EQ :
+    !s f f'. (!x. x IN s ==> (f x = f' x)) ==>
+             (EXTREAL_PROD_IMAGE f s = EXTREAL_PROD_IMAGE f' s)
+Proof
+    rw [ext_product_def]
+ >> irule ITERATE_EQ
+ >> rw [monoidal_mul]
+QED
 
-val EXTREAL_PROD_IMAGE_DISJOINT_UNION = store_thm
-  ("EXTREAL_PROD_IMAGE_DISJOINT_UNION",
-  ``!s s'. FINITE s /\ FINITE s' /\ DISJOINT s s' ==>
+Theorem EXTREAL_PROD_IMAGE_DISJOINT_UNION :
+    !s s'. FINITE s /\ FINITE s' /\ DISJOINT s s' ==>
            !f. (EXTREAL_PROD_IMAGE f (s UNION s') =
-                EXTREAL_PROD_IMAGE f s * EXTREAL_PROD_IMAGE f s')``,
-    Suff `!s. FINITE s ==>
-             (\s. !s'. FINITE s' ==>
-                      (\s'. DISJOINT s s' ==>
-                            !f. (EXTREAL_PROD_IMAGE f (s UNION s') =
-                                 EXTREAL_PROD_IMAGE f s *
-                                 EXTREAL_PROD_IMAGE f s')) s') s`
- >- METIS_TAC []
- >> MATCH_MP_TAC FINITE_INDUCT
- >> CONJ_TAC
- >- RW_TAC std_ss [DISJOINT_EMPTY, UNION_EMPTY, EXTREAL_PROD_IMAGE_EMPTY, mul_lone]
- >> rpt STRIP_TAC
- >> CONV_TAC (BETA_CONV) >> MATCH_MP_TAC FINITE_INDUCT
- >> CONJ_TAC
- >- RW_TAC std_ss [DISJOINT_EMPTY, UNION_EMPTY, EXTREAL_PROD_IMAGE_EMPTY, mul_rone]
- >> FULL_SIMP_TAC std_ss [DISJOINT_INSERT]
- >> ONCE_REWRITE_TAC [DISJOINT_SYM]
- >> RW_TAC std_ss [INSERT_UNION, DISJOINT_INSERT, IN_INSERT]
- >> FULL_SIMP_TAC std_ss [DISJOINT_SYM]
- >> ONCE_REWRITE_TAC [UNION_COMM] >> RW_TAC std_ss [INSERT_UNION]
- >> ONCE_REWRITE_TAC [UNION_COMM] >> ONCE_REWRITE_TAC [INSERT_COMM]
- >> `FINITE (e INSERT s UNION s')` by RW_TAC std_ss [FINITE_INSERT, FINITE_UNION]
- >> Q.ABBREV_TAC `Q = e INSERT s UNION s'`
- >> FULL_SIMP_TAC std_ss [EXTREAL_PROD_IMAGE_PROPERTY, DELETE_NON_ELEMENT]
- >> Q.UNABBREV_TAC `Q`
- >> `~(e' IN (e INSERT s UNION s'))`
-      by (RW_TAC std_ss [IN_INSERT, IN_UNION] \\
-          FULL_SIMP_TAC std_ss [EXTREAL_PROD_IMAGE_PROPERTY, DELETE_NON_ELEMENT])
- >> `~(e IN (s UNION s'))` by METIS_TAC [IN_UNION, DELETE_NON_ELEMENT]
- >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT, EXTREAL_PROD_IMAGE_PROPERTY, FINITE_UNION]
- >> FULL_SIMP_TAC std_ss [IN_INSERT]
- >> RW_TAC std_ss [mul_assoc]
- >> `f e' * (f e * EXTREAL_SUM_IMAGE f s * EXTREAL_SUM_IMAGE f s') =
-       (f e * (EXTREAL_SUM_IMAGE f s * EXTREAL_SUM_IMAGE f s')) * f e'`
-              by METIS_TAC [mul_comm, mul_assoc, IN_INSERT]
- >> POP_ORW
- >> RW_TAC std_ss [mul_assoc]
- >> METIS_TAC [mul_comm, mul_assoc]);
+                EXTREAL_PROD_IMAGE f s * EXTREAL_PROD_IMAGE f s')
+Proof
+    rw [ext_product_def]
+ >> irule ITERATE_UNION
+ >> rw [monoidal_mul]
+QED
 
-val EXTREAL_PROD_IMAGE_IMAGE = store_thm
-  ("EXTREAL_PROD_IMAGE_IMAGE",
-  ``!s. FINITE s ==>
-        !f'. INJ f' s (IMAGE f' s) ==>
-             !f. EXTREAL_PROD_IMAGE f (IMAGE f' s) = EXTREAL_PROD_IMAGE (f o f') s``,
- (* proof *)
-    Suff `!s. FINITE s ==>
-             (\s. !f'. INJ f' s (IMAGE f' s) ==>
-                       !f. EXTREAL_PROD_IMAGE f (IMAGE f' s) =
-                           EXTREAL_PROD_IMAGE (f o f') s) s`
- >- METIS_TAC []
- >> MATCH_MP_TAC FINITE_INDUCT
- >> RW_TAC std_ss [EXTREAL_PROD_IMAGE_EMPTY, IMAGE_EMPTY, IMAGE_INSERT, INJ_DEF]
- >> `FINITE (IMAGE f' s)` by METIS_TAC [IMAGE_FINITE]
- >> RW_TAC std_ss [EXTREAL_PROD_IMAGE_PROPERTY]
- >> `~(f' e IN IMAGE f' s)`
-        by (RW_TAC std_ss [IN_IMAGE] >> reverse (Cases_on `x IN s`)
-            >- ASM_REWRITE_TAC [] >> METIS_TAC [IN_INSERT])
- >> `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
- >> `(IMAGE f' s) DELETE f' e = IMAGE f' s` by METIS_TAC [DELETE_NON_ELEMENT]
- >> ASM_REWRITE_TAC []
- >> `(!x. x IN s ==> f' x IN IMAGE f' s)` by METIS_TAC [IN_IMAGE]
- >> `(!x y. x IN s /\ y IN s ==> (f' x = f' y) ==> (x = y))` by METIS_TAC [IN_INSERT]
- >> FULL_SIMP_TAC std_ss []);
+(* NOTE: removed ‘FINITE s’ due to iterateTheory *)
+Theorem EXTREAL_PROD_IMAGE_IMAGE :
+    !s f'. INJ f' s (IMAGE f' s) ==>
+           !f. EXTREAL_PROD_IMAGE f (IMAGE f' s) = EXTREAL_PROD_IMAGE (f o f') s
+Proof
+    rw [ext_product_def, INJ_DEF]
+ >> irule ITERATE_IMAGE
+ >> rw [monoidal_mul]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Preliminary for Radon-Nikodym Theorem                                    *)

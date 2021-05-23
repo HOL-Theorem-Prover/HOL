@@ -4,7 +4,7 @@
 
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
      listTheory state_transformerTheory combinTheory
-     pairTheory realTheory realLib jrhUtils
+     pairTheory realTheory realLib jrhUtils iterateTheory
      realSimps numTheory simpLib seqTheory subtypeTheory
      transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps;
 
@@ -20,6 +20,9 @@ open hurdUtils util_probTheory sigma_algebraTheory real_measureTheory
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "information";
+
+Overload indicator_fn[local] = “indicator”
+Theorem indicator_fn_def[local] = indicator
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)

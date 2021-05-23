@@ -127,29 +127,40 @@ fun LEAKAGE_COMPUTE_REDUCE_CARDS ((h:term),(l:term),(r:term)) (tl:Abbrev.thm lis
                 LEAKAGE_COMPUTE_INITIAL_REDUCE (h,l,r) tl
                 THENC SIMP_CONV bool_ss (COMPUTE_HLR_CARDS (h,l,r) h_expand_conv l_expand_conv r_expand_conv h_dups_conv l_dups_conv r_dups_conv);
 
-fun LEAKAGE_COMPUTE_HLR_CROSS ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list)
-        (h_expand_conv:Abbrev.term->Abbrev.thm)
-        (l_expand_conv:Abbrev.term->Abbrev.thm)
-        (r_expand_conv:Abbrev.term->Abbrev.thm)
-        (h_dups_conv:Abbrev.term->Abbrev.thm)
-        (l_dups_conv:Abbrev.term->Abbrev.thm)
-        (r_dups_conv:Abbrev.term->Abbrev.thm) =
-        FIND_CONV
-        (mk_comb((mk_comb((inst [alpha |-> (pairSyntax.mk_prod((fst(dom_rng(type_of h))),
-                                                              (fst(dom_rng(type_of l))))), beta |-> (fst(dom_rng(type_of r)))] ``$CROSS``),
-         mk_comb(mk_comb((inst [alpha |-> (fst(dom_rng(type_of h))), beta |-> (fst(dom_rng(type_of l)))] ``$CROSS``),h),l))), r))
-        (RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV h_expand_conv)
-                                THENC RAND_CONV l_expand_conv
-                                THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-                                THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV h_dups_conv)
-                                                     THENC (TRY_CONV l_dups_conv))))))
-         THENC (RAND_CONV r_expand_conv)
-         THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-         THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                     THENC (TRY_CONV h_dups_conv)
-                                                     THENC (TRY_CONV l_dups_conv)
-                                                     THENC (TRY_CONV r_dups_conv)))));
+fun LEAKAGE_COMPUTE_HLR_CROSS
+    ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list)
+    (h_expand_conv:Abbrev.term->Abbrev.thm)
+    (l_expand_conv:Abbrev.term->Abbrev.thm)
+    (r_expand_conv:Abbrev.term->Abbrev.thm)
+    (h_dups_conv:Abbrev.term->Abbrev.thm)
+    (l_dups_conv:Abbrev.term->Abbrev.thm)
+    (r_dups_conv:Abbrev.term->Abbrev.thm) =
+  FIND_CONV
+    (mk_comb ((mk_comb ((inst [alpha |-> (pairSyntax.mk_prod ((fst(dom_rng(type_of h))),
+                                                              (fst(dom_rng(type_of l))))),
+                               beta |-> (fst(dom_rng(type_of r)))] “pred_set$CROSS”),
+                        mk_comb (mk_comb ((inst [alpha |-> (fst(dom_rng(type_of h))),
+                                                 beta |-> (fst(dom_rng(type_of l)))] “pred_set$CROSS”),
+                                          h),
+                                 l))),
+              r))
+    (RATOR_CONV
+      (RAND_CONV
+        (RATOR_CONV (RAND_CONV h_expand_conv)
+         THENC RAND_CONV l_expand_conv
+         THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION,
+                                  IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
+         THENC (FIND_CONV “x UNION y”
+                          (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
+                                       THENC (TRY_CONV h_dups_conv)
+                                       THENC (TRY_CONV l_dups_conv))))))
+    THENC (RAND_CONV r_expand_conv)
+    THENC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION,
+                              IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY])
+    THENC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
+                                              THENC (TRY_CONV h_dups_conv)
+                                              THENC (TRY_CONV l_dups_conv)
+                                              THENC (TRY_CONV r_dups_conv)))));
 
 val lg_times_compute_simp_lem = prove
    (``!x y. x * lg (y * x) = (\x. x * lg (y * x)) x``,
@@ -174,20 +185,27 @@ fun LEAKAGE_COMPUTE_IMAGE_HLR_CROSS ((h:term),(l:term),(r:term)) (tl:Abbrev.thm 
                                     THENC (FIND_CONV ``x UNION y``
                                                 (UNION_CONV (SIMP_CONV bool_ss [] THENC r_dups_conv)))))))))));
 
-fun RECURSIVE_UNWIND_SUM (dups_conv:Abbrev.term->Abbrev.thm) (item_conv:Abbrev.term->Abbrev.thm) (tm:term) =
-        if (rand tm) ~~ (inst [alpha |-> fst(dom_rng(type_of (rand tm)))] ``{}``) then REWRITE_CONV [REAL_SUM_IMAGE_THM] tm else
-        ((fn (tm:term) => (let val s = snd(dest_comb(snd (dest_comb tm))) in
-                                          let val f = snd(dest_comb (fst(dest_comb tm))) in
-                                          let val fin_thm = prove (mk_comb((inst [alpha |-> fst(dom_rng(type_of s))] ``FINITE``),s),
-                                                                   CONV_TAC (SIMP_CONV set_ss [])) in
-                                                REWRITE_CONV [REWRITE_RULE [fin_thm]
-                                                (ISPEC s ((CONV_RULE SWAP_VARS_CONV) (CONJUNCT2 (ISPEC f REAL_SUM_IMAGE_THM))))] tm
-                                          end
-                                          end
-                                          end))
-        THENC (TRY_CONV (RATOR_CONV (RAND_CONV item_conv)))
-        THENC (RAND_CONV (RAND_CONV (DELETE_CONV dups_conv)))
-        THENC (RAND_CONV (RECURSIVE_UNWIND_SUM dups_conv item_conv))) tm;
+fun RECURSIVE_UNWIND_SUM (dups_conv:Abbrev.term->Abbrev.thm)
+                         (item_conv:Abbrev.term->Abbrev.thm) (tm:term) =
+  if (rand tm) ~~ (inst [alpha |-> fst(dom_rng(type_of (rand tm)))] “{}”) then
+      REWRITE_CONV [REAL_SUM_IMAGE_THM] tm
+  else
+      ((fn (tm:term) =>
+           (let val s = snd(dest_comb(snd (dest_comb tm))) in
+                let val f = snd(dest_comb (fst(dest_comb tm))) in
+                    let val fin_thm = prove (mk_comb ((inst [alpha |-> fst(dom_rng(type_of s))]
+                                                            “FINITE”), s),
+                                             CONV_TAC (SIMP_CONV set_ss []))
+                    in
+                        REWRITE_CONV [REWRITE_RULE [fin_thm]
+                                       (ISPEC s ((CONV_RULE SWAP_VARS_CONV)
+                                                   (CONJUNCT2 (ISPEC f REAL_SUM_IMAGE_THM))))] tm
+                    end
+                end
+            end))
+       THENC (TRY_CONV (RATOR_CONV (RAND_CONV item_conv)))
+       THENC (RAND_CONV (RAND_CONV (DELETE_CONV dups_conv)))
+       THENC (RAND_CONV (RECURSIVE_UNWIND_SUM dups_conv item_conv))) tm;
 
 fun LEAKAGE_COMPUTE_UNWIND_OUTER_SUM
         (h_dups_conv:Abbrev.term->Abbrev.thm)
@@ -207,22 +225,25 @@ fun LEAKAGE_COMPUTE_UNWIND_OUTER_SUM
                                                           PairRules.PBETA_CONV)))
         THENC REWRITE_CONV [REAL_ADD_RID];
 
-fun LEAKAGE_COMPUTE_UNWIND_INNER_SUM ((h:term),(r:term)) (tl:Abbrev.thm list) (prog_tl:Abbrev.thm list)
-        (h_expand_conv:Abbrev.term->Abbrev.thm)
-        (r_expand_conv:Abbrev.term->Abbrev.thm)
-        (h_dups_conv:Abbrev.term->Abbrev.thm)
-        (r_dups_conv:Abbrev.term->Abbrev.thm)
-        (o_dups_conv:Abbrev.term->Abbrev.thm) =
-        let val h_cross_r =  (RATOR_CONV(RAND_CONV (h_expand_conv)) THENC (RAND_CONV r_expand_conv)
-                              THENC SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-                              THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
-                                                                          THENC (TRY_CONV h_dups_conv)
-                                                                          THENC (TRY_CONV r_dups_conv)))))
-                             (mk_comb(mk_comb((inst [alpha |-> (fst(dom_rng(type_of h))),
-                                                beta |-> (fst(dom_rng(type_of r)))] ``$CROSS``),h),r))
-        in
-                RAND_CONV (RATOR_CONV(RAND_CONV (FIND_CONV ``REAL_SUM_IMAGE f s`` (
-                                RECURSIVE_UNWIND_SUM r_dups_conv
+fun LEAKAGE_COMPUTE_UNWIND_INNER_SUM
+    ((h:term),(r:term)) (tl:Abbrev.thm list) (prog_tl:Abbrev.thm list)
+    (h_expand_conv:Abbrev.term->Abbrev.thm)
+    (r_expand_conv:Abbrev.term->Abbrev.thm)
+    (h_dups_conv:Abbrev.term->Abbrev.thm)
+    (r_dups_conv:Abbrev.term->Abbrev.thm)
+    (o_dups_conv:Abbrev.term->Abbrev.thm) =
+  let val h_cross_r = (RATOR_CONV (RAND_CONV (h_expand_conv)) THENC
+                       (RAND_CONV r_expand_conv) THENC
+                       (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT,
+                                           IMAGE_EMPTY, UNION_EMPTY]) THENC
+                       (FIND_CONV “x UNION y” (UNION_CONV ((SIMP_CONV bool_ss [PAIR_EQ])
+                                                               THENC (TRY_CONV h_dups_conv)
+                                                               THENC (TRY_CONV r_dups_conv)))))
+                      (mk_comb (mk_comb ((inst [alpha |-> (fst(dom_rng(type_of h))),
+                                                beta |-> (fst(dom_rng(type_of r)))] “pred_set$CROSS”),h),r))
+  in
+      RAND_CONV (RATOR_CONV (RAND_CONV (FIND_CONV ``REAL_SUM_IMAGE f s``
+                                         (RECURSIVE_UNWIND_SUM r_dups_conv
                                                      ((TRY_CONV BETA_CONV) THENC
         RATOR_CONV (RATOR_CONV (RAND_CONV (LHS_CONV (SIMP_CONV bool_ss prog_tl THENC (TRY_CONV PairRules.PBETA_CONV)) THENC o_dups_conv)))
            THENC SIMP_CONV bool_ss []))))
@@ -234,7 +255,7 @@ fun LEAKAGE_COMPUTE_UNWIND_INNER_SUM ((h:term),(r:term)) (tl:Abbrev.thm list) (p
                                                      ((TRY_CONV PairRules.PBETA_CONV) THENC
         RATOR_CONV (RATOR_CONV (RAND_CONV (LHS_CONV (SIMP_CONV bool_ss prog_tl THENC (TRY_CONV PairRules.PBETA_CONV)) THENC o_dups_conv)))
            THENC SIMP_CONV bool_ss []))))) THENC REWRITE_CONV [REAL_ADD_RID]
-        end;
+  end;
 
 fun LEAKAGE_COMPUTE_CONV ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list) (prog_tl:Abbrev.thm list)
         (h_expand_conv:Abbrev.term->Abbrev.thm)

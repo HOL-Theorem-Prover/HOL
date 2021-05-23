@@ -18,15 +18,28 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numLib unwindLib tautLib Arith
-     prim_recTheory combinTheory quotientTheory arithmeticTheory
-     realTheory realLib jrhUtils pairTheory seqTheory limTheory
-     transcTheory listTheory mesonLib boolTheory pred_setTheory
-     optionTheory numTheory sumTheory;
+open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
+     arithmeticTheory realTheory realLib jrhUtils pairTheory mesonLib
+     pred_setTheory;
 
-open wellorderTheory cardinalTheory hurdUtils;
+open wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
+
+(* Minimal version of hurdUtils *)
+fun K_TAC _ = ALL_TAC;
+fun wrap a = [a];
+val art = ASM_REWRITE_TAC;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -35,13 +48,13 @@ val _ = new_theory "iterate";
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
-val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
+val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
                    POP_ASSUM K_TAC;
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 
-val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
-val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
+val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC;
+val ASM_REAL_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> REAL_ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
 val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
@@ -488,20 +501,23 @@ val FINREC_FUN_LEMMA = store_thm ("FINREC_FUN_LEMMA",
   MATCH_MP_TAC SELECT_UNIQUE THEN ASM_MESON_TAC[],
   DISCH_THEN(SUBST1_TAC o SYM) THEN CONV_TAC SELECT_CONV THEN ASM_MESON_TAC[]]);
 
-val FINREC_FUN = store_thm ("FINREC_FUN",
- ``!(f:'a->'b->'b) b.
+Theorem FINREC_FUN :
+    !(f:'a->'b->'b) b.
         (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
         ==> ?g. (g {} = b) /\
                 !s x. FINITE s /\ x IN s
-                      ==> (g s = f x (g (s DELETE x)))``,
+                      ==> (g s = f x (g (s DELETE x)))
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_THEN MP_TAC FINREC_UNIQUE_LEMMA THEN
-  REPEAT STRIP_TAC THEN KNOW_TAC ``!n1 n2 s a1 a2. FINREC f b s a1 n1 /\
-  FINREC f b s a2 n2 ==> (a1 = a2) /\ (n1 = n2)`` THENL [METIS_TAC [],
+  REPEAT STRIP_TAC THEN
+  KNOW_TAC ``!n1 n2 s a1 a2. FINREC f b s a1 n1 /\
+                             FINREC f b s a2 n2 ==> (a1 = a2) /\ (n1 = n2)``
+  THEN1 METIS_TAC [] THEN
   DISCH_THEN (MP_TAC o CONJ (SPECL [``f:'a->'b->'b``, ``b:'b``] FINREC_EXISTS_LEMMA)) THEN
   DISCH_THEN(MP_TAC o MATCH_MP FINREC_FUN_LEMMA) THEN
   DISCH_THEN(X_CHOOSE_TAC ``g:('a->bool)->'b``) THEN
   EXISTS_TAC ``g:('a->bool)->'b`` THEN CONJ_TAC THENL
-   [SUBGOAL_THEN ``FINITE(EMPTY:'a->bool)``
+  [ SUBGOAL_THEN ``FINITE(EMPTY:'a->bool)``
     (ANTE_RES_THEN (fn th => GEN_REWR_TAC I [GSYM th])) THENL
      [REWRITE_TAC[FINITE_EMPTY],
       EXISTS_TAC ``0:num`` THEN REWRITE_TAC[FINREC]],
@@ -511,18 +527,20 @@ val FINREC_FUN = store_thm ("FINREC_FUN",
     FIRST_ASSUM(MP_TAC o SPEC ``(g:('a->bool)->'b) s``) THEN
     REWRITE_TAC[] THEN REWRITE_TAC[GSYM LEFT_FORALL_IMP_THM] THEN
     INDUCT_TAC THENL
-     [ASM_REWRITE_TAC[FINREC] THEN DISCH_TAC THEN UNDISCH_TAC ``x:'a IN s`` THEN
+    [ ASM_REWRITE_TAC[FINREC] THEN DISCH_TAC THEN UNDISCH_TAC ``x:'a IN s`` THEN
       ASM_REWRITE_TAC[NOT_IN_EMPTY],
       IMP_RES_THEN ASSUME_TAC FINREC_SUC_LEMMA THEN
       DISCH_THEN(ANTE_RES_THEN (MP_TAC o SPEC ``x:'a``)) THEN
       ASM_REWRITE_TAC[] THEN
       DISCH_THEN(X_CHOOSE_THEN ``w:'b`` (CONJUNCTS_THEN ASSUME_TAC)) THEN
       SUBGOAL_THEN ``(g (s DELETE x:'a) = w:'b)`` SUBST1_TAC THENL
-       [SUBGOAL_THEN ``FINITE(s DELETE x:'a)`` MP_TAC THENL
-         [FULL_SIMP_TAC std_ss [FINITE_DELETE],
+      [ SUBGOAL_THEN ``FINITE(s DELETE x:'a)`` MP_TAC THENL
+        [ FULL_SIMP_TAC std_ss [FINITE_DELETE],
           DISCH_THEN(ANTE_RES_THEN (MP_TAC o GSYM)) THEN
           DISCH_THEN(fn th => REWRITE_TAC[th]) THEN
-          METIS_TAC []], ASM_REWRITE_TAC[]]]]]);
+          METIS_TAC [] ],
+        ASM_REWRITE_TAC [] ] ] ]
+QED
 
 val SET_RECURSION_LEMMA = store_thm ("SET_RECURSION_LEMMA",
  ``!(f:'a->'b->'b) b.
@@ -2776,29 +2794,38 @@ val SUM_SUB = store_thm ("SUM_SUB",
  ``!f g s. FINITE s ==> (sum s (\x. f(x) - g(x)) = sum s f - sum s g)``,
   ONCE_REWRITE_TAC[real_sub] THEN SIMP_TAC std_ss [SUM_NEG, SUM_ADD]);
 
-(* TODO: name conflicts with realTheory.SUM_LE *)
-val SUM_LE = store_thm ("SUM_LE",
- ``!f g s. FINITE(s) /\ (!x. x IN s ==> f(x) <= g(x)) ==> sum s f <= sum s g``,
+(* renamed: name conflicts with realTheory.SUM_LE *)
+Theorem SUM_MONO_LE : (* was: SUM_LE *)
+    !f g s. FINITE(s) /\ (!x. x IN s ==> f(x) <= g(x)) ==> sum s f <= sum s g
+Proof
   ONCE_REWRITE_TAC[GSYM AND_IMP_INTRO] THEN REPEAT GEN_TAC THEN
   KNOW_TAC ``((!(x :'a). x IN s ==> (f :'a -> real) x <= (g :'a -> real) x) ==>
     sum s f <= sum s g) = (\(s:'a->bool). (!(x :'a). x IN s ==>
     (f :'a -> real) x <= (g :'a -> real) x) ==> sum s f <= sum s g) s`` THENL
   [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [SUM_CLAUSES, REAL_LE_REFL, REAL_LE_ADD2, IN_INSERT]);
+  SIMP_TAC std_ss [SUM_CLAUSES, REAL_LE_REFL, REAL_LE_ADD2, IN_INSERT]
+QED
 
-val SUM_LT = store_thm ("SUM_LT",
- ``!f g s:'a->bool.
+val SUM_LE = SUM_MONO_LE;
+
+(* renamed: name conflicts with seqTheory.SUM_LT *)
+Theorem SUM_MONO_LT : (* was: SUM_LT *)
+    !f g s:'a->bool.
         FINITE(s) /\ (!x. x IN s ==> f(x) <= g(x)) /\
         (?x. x IN s /\ f(x) < g(x))
-         ==> sum s f < sum s g``,
+         ==> sum s f < sum s g
+Proof
   REPEAT GEN_TAC THEN
   REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
   DISCH_THEN(X_CHOOSE_THEN ``a:'a`` STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN ``s = (a:'a) INSERT (s DELETE a)`` SUBST1_TAC THENL
    [UNDISCH_TAC ``a:'a IN s`` THEN SIMP_TAC std_ss [INSERT_DELETE], ALL_TAC]
   THEN ASM_SIMP_TAC std_ss [SUM_CLAUSES, FINITE_DELETE, IN_DELETE] THEN
-  ASM_SIMP_TAC std_ss [REAL_LTE_ADD2, SUM_LE, IN_DELETE, FINITE_DELETE]);
+  ASM_SIMP_TAC std_ss [REAL_LTE_ADD2, SUM_LE, IN_DELETE, FINITE_DELETE]
+QED
+
+val SUM_LT = SUM_MONO_LT;
 
 val SUM_LT_ALL = store_thm ("SUM_LT_ALL",
  ``!f g s. FINITE s /\ ~(s = {}) /\ (!x. x IN s ==> f(x) < g(x))
