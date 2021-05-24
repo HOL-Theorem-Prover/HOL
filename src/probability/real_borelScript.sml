@@ -3280,9 +3280,8 @@ Proof
      Suff ‘cy = R * (1 / 2 * inv X + 1 / 2 * inv (R / Y))’
      >- (Rewr' >> art []) \\
      Q.UNABBREV_TAC ‘cy’ \\
-     REWRITE_TAC [real_div, REAL_INV_MUL', REAL_INV_INV, REAL_ADD_LDISTRIB,
-                  REAL_MUL_LID] \\
-     rw [Once REAL_ADD_COMM])
+     REWRITE_TAC [real_div, REAL_ADD_LDISTRIB, REAL_MUL_LID] \\
+     rw [REAL_INV_MUL, REAL_INV_INV, Once REAL_ADD_COMM])
  >> DISCH_TAC
  (* now estimate e *)
  >> Q.EXISTS_TAC ‘min (A / 2) (B / 2)’
