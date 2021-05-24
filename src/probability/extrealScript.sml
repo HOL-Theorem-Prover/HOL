@@ -1797,13 +1797,13 @@ Proof
     RW_TAC std_ss [extreal_inv_def, extreal_of_num_def, REAL_10, REAL_INV1]
 QED
 
-val inv_1over = store_thm
+val inv_1over = store_thm (* was: div_lone *)
   ("inv_1over", ``!x. x <> 0 ==> (inv x = 1 / x)``,
     rpt Cases
  >> RW_TAC real_ss [extreal_inv_def, extreal_div_def, extreal_mul_def,
                     extreal_of_num_def, REAL_10, REAL_INV1]);
 
-Theorem div_one[simp] :
+Theorem div_one[simp] : (* was: div_rone *)
     !x :extreal. x / 1 = x
 Proof
     RW_TAC real_ss [extreal_div_def, extreal_of_num_def, extreal_inv_def]
@@ -8690,6 +8690,50 @@ Proof
  >> MATCH_MP_TAC (Q.SPECL [‘f’, ‘indicator_fn s’] FN_MINUS_FMUL)
  >> GEN_TAC
  >> REWRITE_TAC [INDICATOR_FN_POS]
+QED
+
+(* moved here from lebesgueTheory *)
+Theorem ext_suminf_cmult_indicator :
+    !A f x i. disjoint_family A /\ x IN A i /\ (!i. 0 <= f i) ==>
+              (suminf (\n. f n * indicator_fn (A n) x) = f i)
+Proof
+  RW_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
+  Suff `!n. f n * indicator_fn (A n) x = if n = i then f n else 0` THENL
+  [DISCH_TAC,
+   RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero] THEN
+   ASM_SET_TAC []] THEN
+  Suff `f i = SIGMA (\i. f i * indicator_fn (A i) x) (count (SUC i))` THENL
+  [DISCH_THEN (fn th => ONCE_REWRITE_TAC [th]) THEN MATCH_MP_TAC ext_suminf_sum THEN
+   RW_TAC std_ss [le_refl] THEN POP_ASSUM MP_TAC THEN ASM_SIMP_TAC arith_ss [ADD1],
+   ASM_SIMP_TAC std_ss []] THEN
+  `count (SUC i) <> {}` by (SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] THEN
+     Q.EXISTS_TAC `i` THEN SIMP_TAC arith_ss [GSPECIFICATION, count_def]) THEN
+  Suff `count (SUC i) = count i UNION {i}` THENL
+  [RW_TAC std_ss [],
+   SIMP_TAC arith_ss [count_def, EXTENSION, IN_UNION, GSPECIFICATION, IN_SING]] THEN
+  Suff `SIGMA (\i'. if i' = i then f i else 0) (count i UNION {i}) =
+                  SIGMA (\i'. if i' = i then f i else 0) (count i) +
+                  SIGMA (\i'. if i' = i then f i else 0) ({i})` THENL
+  [RW_TAC std_ss [],
+   ABBREV_TAC ``g = (\i'. if i' = i then (f:num->extreal) i else 0)`` THEN
+   Suff `(!x. x IN (count i UNION {i}) ==> g x <> NegInf) \/
+                   (!x. x IN (count i UNION {i}) ==> g x <> PosInf)` THENL
+   [Q.SPEC_TAC (`g`,`g`) THEN MATCH_MP_TAC EXTREAL_SUM_IMAGE_DISJOINT_UNION THEN
+    SIMP_TAC std_ss [FINITE_COUNT, FINITE_SING, DISJOINT_DEF] THEN
+    SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_SING, NOT_IN_EMPTY, count_def] THEN
+    SIMP_TAC arith_ss [GSPECIFICATION],
+    DISJ1_TAC] THEN
+   EXPAND_TAC "g" THEN POP_ASSUM K_TAC THEN RW_TAC std_ss [lt_infty] THENL
+   [ALL_TAC, METIS_TAC [lt_infty, num_not_infty]] THEN
+   MATCH_MP_TAC lte_trans THEN Q.EXISTS_TAC `0` THEN ASM_REWRITE_TAC [] THEN
+   METIS_TAC [lt_infty, num_not_infty]] THEN
+  SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING] THEN
+  Suff `SIGMA (\i'. if i' = i then f i else 0) (count i) = 0` THENL
+  [SIMP_TAC std_ss [add_lzero],
+   MATCH_MP_TAC EXTREAL_SUM_IMAGE_0] THEN
+  RW_TAC std_ss [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
+  ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
+  SIMP_TAC arith_ss [count_def, GSPECIFICATION]
 QED
 
 val _ = export_theory();
