@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+git clone https://gitlab.com/arm-research/security/mra-hol-snapshots.git
