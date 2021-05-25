@@ -1,0 +1,7 @@
+INCLUDES = mra-hol-snapshots/A64_ISA_v86A ../model ../step
+
+ifdef POLY
+
+HOLHEAP=mra-hol-snapshots/A64_ISA_v86A/armv86a-heap
+
+endif
