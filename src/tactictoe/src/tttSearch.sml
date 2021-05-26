@@ -15,6 +15,7 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttToken tttLearn tttTrain
 
 val ERR = mk_HOL_ERR "tttSearch"
+val continue_searching = ref false
 
 (* -------------------------------------------------------------------------
    Timers
@@ -175,7 +176,7 @@ fun eval_goal vnn g =
     infer_tnn_basic vnn tm2
   end
 
-val default_reward = 1.0
+val default_reward = 0.0
 
 fun reward_of_goal vnno g =
   if not (isSome vnno) then default_reward else eval_goal (valOf vnno) g
@@ -250,7 +251,9 @@ fun before_stacfresh_aux accessf acc i =
     case sstatus of
       StacFresh => rev ((i,stacrec) :: acc)
     | StacUndecided => before_stacfresh_aux accessf ((i,stacrec) :: acc) (i+1)
-    | _ => before_stacfresh_aux accessf acc (i+1)
+    | _ => (if !continue_searching
+        then before_stacfresh_aux accessf ((i,stacrec) :: acc) (i+1)
+        else before_stacfresh_aux accessf acc (i+1))
   end
 
 fun before_stacfresh accessf = before_stacfresh_aux accessf [] 0
@@ -294,10 +297,11 @@ fun select_arg argtree anl =
     val pnode = dfind anl argtree
     val pvis = #svis pnode
   in
-    if #sstatus pnode = StacFresh then NONE else
-    SOME (select_accessf (access_child argtree anl) pvis)
+    if #sstatus pnode = StacFresh 
+    then NONE 
+    else SOME (select_accessf (access_child argtree anl) pvis)
   end
-  handle HOL_ERR _ =>
+  handle Interrupt => raise Interrupt | _ =>
     raise ERR "select_arg" (String.concatWith "|" (map its (rev anl)))
 
 fun select_argl argtree anl =
@@ -318,7 +322,9 @@ fun string_of_goalv gv =
 fun select_goalundec goalv =
   let
     val goall = number_fst 0 (vector_to_list goalv)
-    fun test (_,x) = (#gstatus x = GoalUndecided)
+    fun test (_,x) = if !continue_searching 
+      then true 
+      else (#gstatus x = GoalUndecided)
     val gl = filter test goall
     fun f (_,x) = #gvis x (* uniform *)
   in
@@ -339,7 +345,8 @@ fun select_node tree pid =
     val stac = dest_stac (#token (dfind [] argtree))
     val anl = select_argl argtree []
   in
-    if #sstatus (dfind anl argtree) = StacFresh
+    if #sstatus (dfind anl argtree) = StacFresh orelse
+       (!continue_searching andalso not (dmem ((gn,sn,anl) :: pid) tree))
     then ((pid,(gn,sn,anl)),(goal,stac,argtree))
     else select_node tree ((gn,sn,anl) :: pid)
   end
@@ -490,8 +497,7 @@ fun node_create (tree,searchobj) gl (pid,(gn,sn,anl)) =
       }
     val newtree = dadd cid node tree
   in
-    debug_node gl;
-    (newtree,reward)
+    debug_node gl; (newtree,reward)
   end
 
 (* -------------------------------------------------------------------------
@@ -572,20 +578,28 @@ val snap_flag = ref false
 val snap_tree = ref NONE
 val snap_n = ref 10
 
-fun search_loop startsearchobj nlimito starttree =
+fun get_searchstatus tree =
+  let val nstatus = #nstatus (dfind [] tree) in
+    if nstatus = NodeSaturated then SearchSaturated
+    else if nstatus = NodeProved then SearchProved
+    else SearchTimeout
+  end
+
+fun stop_search (timer,nlimito) n tree =
+  let val nstatus = #nstatus (dfind [] tree) in 
+    (isSome nlimito andalso n >= valOf nlimito) orelse
+    (not (isSome nlimito) andalso 
+       Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)) orelse
+    (not (!continue_searching) andalso nstatus = NodeSaturated) orelse
+    (not (!continue_searching) andalso nstatus = NodeProved)
+  end
+
+fun search_loop startsearchobj nlimito starttree = 
   let
-    val nlimitb = isSome nlimito
     val timer = Timer.startRealTimer ()
     fun loop n searchobj tree =
-      if isSome nlimito andalso n >= valOf nlimito
-        then (print_endline ("loops: " ^ its n); (SearchTimeout,tree))
-      else if not (isSome nlimito) andalso
-        Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
-        then (print_endline ("loops: " ^ its n); (SearchTimeout,tree))
-      else if #nstatus (dfind [] tree) = NodeSaturated
-        then (print_endline ("loops: " ^ its n); (SearchSaturated,tree))
-      else if #nstatus (dfind [] tree) = NodeProved
-        then (print_endline ("loops: " ^ its n); (SearchProved,tree))
+      if stop_search (timer,nlimito) n tree
+      then (print_endline ("loops: " ^ its n); (get_searchstatus tree,tree))
       else
         let
           val _ = if !snap_flag andalso dlength tree = !snap_n
