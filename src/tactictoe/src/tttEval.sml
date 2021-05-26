@@ -242,9 +242,10 @@ fun export_valex file tree =
     val exl1 = List.concat (map g nodel)
     val exl2 = filter (fn ((t,_),_) => term_size t < 100) exl1
     val (posl,negl) = partition (fn x => snd (fst x) > 0.5) exl2
-    val negl2 = first_n 600 (dict_sort compare_rmax negl)
+    val posl2 = first_n 100 (dict_sort compare_rmax posl)
+    val negl2 = first_n 100 (dict_sort compare_rmax negl)
   in
-    write_tnnex file (basicex_to_tnnex (map fst (posl @ negl2)))
+    write_tnnex file (basicex_to_tnnex (map fst (posl2 @ negl2)))
   end
 
 (* -------------------------------------------------------------------------
@@ -512,6 +513,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_int "tacticToe.hh_time" hh_time,
      sreflect_flag "tttSearch.snap_flag" snap_flag,
      sreflect_int "tttSearch.snap_n" snap_n,
+     sreflect_flag "tttSearch.continue_searching" continue_searching,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      sreflect_flag "tttSearch.nocut_flag" nocut_flag,
@@ -841,7 +843,8 @@ fun rlval_loop ncore expname thyl (gen,maxgen) =
     val _ = write_tnn tnnfile tnn
   in
     print_endline ("Generation " ^ its gen);
-    run_evalscript_thyl ttt_eval_string (expname ^ "-gen" ^ its gen) (true,ncore) 
+    run_evalscript_thyl ttt_eval_string 
+      (expname ^ "-gen" ^ its gen) (true,ncore) 
     (SOME tnnfile,NONE,NONE) thyl;
     rlval_loop ncore expname thyl (gen+1,maxgen)
   end
@@ -863,11 +866,9 @@ ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-tttSetup.ttt_policy_coeff := 0.9999;
-tttSetup.ttt_explo_coeff := 1.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
-val expname = "foo"
+val expname = "cont_search";
 rlval ncore expname thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)

@@ -35,7 +35,8 @@ sig
   val snap_tree : tree option ref
   val snap_n : int ref
   val nocut_flag : bool ref
-  
+  val continue_searching : bool ref  
+
   val eval_goal : tnn -> goal -> real
   val before_stacfresh_all : 
     (int -> stac_record) -> (int * stac_record) list
