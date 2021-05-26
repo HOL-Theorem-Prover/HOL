@@ -217,7 +217,7 @@ fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
 val tree_glob = ref NONE
 
-fun tactictoe_aux goal =
+fun tactictoe_aux vnno goal =
   if not (has_boolty_goal goal)
   then raise ERR "tactictoe" "type bool expected"
   else
@@ -231,17 +231,25 @@ fun tactictoe_aux goal =
         tacdata_aux
       end
     val (proofstatus,tree) = hidef
-      (main_tactictoe (thmdata,tacdata) (NONE,NONE,NONE)) goal
+      (main_tactictoe (thmdata,tacdata) (vnno,NONE,NONE)) goal
     val _ = tree_glob := SOME tree
     val (staco,tac) = read_status proofstatus
   in
     tac
   end
 
-fun ttt goal = (tactictoe_aux goal) goal
+fun ttt goal = (tactictoe_aux NONE goal) goal
 
 fun tactictoe term =
-  let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
+  let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux NONE goal) end
 
+fun ttt_tnn tnn goal = (tactictoe_aux (SOME tnn) goal) goal
+
+fun tactictoe_tnn tnn term = 
+  let val goal = ([],term) in 
+    TAC_PROOF (goal, tactictoe_aux (SOME tnn) goal) 
+  end  
+
+val confidence_tnn = eval_goal
 
 end (* struct *)

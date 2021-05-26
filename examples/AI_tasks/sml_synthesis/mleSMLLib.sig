@@ -39,6 +39,8 @@ sig
   val tob : board -> term list
   
   (* program manipluation *)
+  val string_of_prog : prog -> string
+  val string_of_progll : (int * prog list) list -> string
   val exec : int -> prog -> int list -> int option
   val build : move -> (int * prog list) list -> (int * prog list) list
   val available : board -> move -> bool

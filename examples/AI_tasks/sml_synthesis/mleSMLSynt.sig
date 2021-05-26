@@ -3,6 +3,7 @@ sig
 
   include Abbrev
   
+  val selfdir : string
   type board = mleSMLLib.board
   type move = mleSMLLib.move
   val game : (board,move) psMCTS.game

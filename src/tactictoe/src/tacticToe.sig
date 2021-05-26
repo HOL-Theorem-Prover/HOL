@@ -12,7 +12,8 @@ sig
   val hh_use : bool ref
   val hh_time : int ref
   val atp_dir : string ref
-  val import_hh : unit -> (string -> mlThmData.thmdata -> goal -> string list option) option
+  val import_hh : unit -> 
+    (string -> mlThmData.thmdata -> goal -> string list option) option
 
   val build_searchobj : mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option * tnn option ->
@@ -28,7 +29,12 @@ sig
   (* tactics on prioritize_stacl are added to tactictoe and
      first tactics on the list are applied first *)
   
+  (* tnn-based functions *)
+  val ttt_tnn : tnn -> tactic
+  val tactictoe_tnn : tnn -> term -> thm
+  val confidence_tnn : tnn -> goal -> real
 
+  (* main functions *)
   val ttt : tactic
   val tactictoe : term -> thm
 
