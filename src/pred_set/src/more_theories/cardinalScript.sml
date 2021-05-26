@@ -923,6 +923,81 @@ val exp_count_cardeq = store_thm(
   `A CROSS A =~ A` by simp[SET_SQUARED_CARDEQ_SET] >>
   metis_tac [cardeq_TRANS]);
 
+Theorem K_lemma[local]:
+  (!x. f x = y) <=> f = K y
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem FINITE_setexp[simp]:
+  FINITE ((A:'a set) ** (B:'b set)) <=>
+  B = {} \/ A <<= {()} \/ FINITE A /\ FINITE B
+Proof
+  simp[set_exp_def, EQ_IMP_THM] >> rpt strip_tac >> gvs[K_lemma]
+  >- (Cases_on ‘B = {}’ >> simp[] >>
+      Cases_on ‘A = {}’ >> gvs[] >>
+      Cases_on ‘?a. A = {a}’ >> gvs[]
+      >- (simp[cardleq_def] >> disj1_tac >> qexists_tac ‘K ()’ >>
+          simp[INJ_IFF]) >> disj2_tac >>
+      ‘?a1 a2. a1 <> a2 /\ a1 IN A /\ a2 IN A’
+        by (pop_assum mp_tac >> simp[EXTENSION] >> gs[GSYM MEMBER_NOT_EMPTY] >>
+            metis_tac[]) >> conj_tac
+      >- (CCONTR_TAC >>
+          qpat_x_assum ‘FINITE _’ mp_tac >> simp[] >>
+          ‘?b. b IN B’ by simp[MEMBER_NOT_EMPTY] >>
+          qabbrev_tac ‘ff = λa b. if b IN B then SOME a else NONE’ >>
+          ‘(!a1 a2. ff a1 = ff a2 ==> a1 = a2)’
+            by (simp[Abbr‘ff’, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]) >>
+          drule_then (drule_then assume_tac) IMAGE_11_INFINITE >>
+          qmatch_abbrev_tac ‘INFINITE s’ >>
+          ‘IMAGE ff A SUBSET s’ suffices_by metis_tac[SUBSET_FINITE] >>
+          simp[Abbr‘ff’, Abbr‘s’, SUBSET_DEF, PULL_EXISTS]) >>
+      CCONTR_TAC >> qpat_x_assum ‘FINITE _’ mp_tac >> simp[] >>
+      qabbrev_tac ‘ff = λb1 b2. if b1 = b2 then SOME a1
+                                else if b2 IN B then SOME a2 else NONE’ >>
+      ‘(!b1 b2. ff b1 = ff b2 ==> b1 = b2)’
+        by (simp[Abbr‘ff’, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]) >>
+      drule_then (drule_then assume_tac) IMAGE_11_INFINITE >>
+      qmatch_abbrev_tac ‘INFINITE s’ >>
+      ‘IMAGE ff B SUBSET s’ suffices_by metis_tac[SUBSET_FINITE] >>
+      first_x_assum $ qspecl_then [‘ARB : 'b’, ‘ARB : 'b’] kall_tac >>
+      simp[Abbr‘ff’, Abbr‘s’, SUBSET_DEF, PULL_EXISTS, AllCaseEqs()] >>
+      metis_tac[])
+  >- (Cases_on ‘A = {}’ >> gvs[]
+      >- (csimp[K_lemma] >> Cases_on ‘!b. b NOTIN B’ >> simp[]) >>
+      ‘?a. A = {a}’
+        by (gs[cardleq_def, INJ_IFF, GSYM MEMBER_NOT_EMPTY] >>
+            rename [‘a IN A’] >> qexists_tac ‘a’ >> simp[EXTENSION] >>
+            metis_tac[]) >>
+      gvs[] >> qmatch_abbrev_tac ‘FINITE s’ >>
+      ‘s = {λb. if b IN B then SOME a else NONE}’ suffices_by simp[] >>
+      simp[Abbr‘s’, Once FUN_EQ_THM, AllCaseEqs(), EQ_IMP_THM] >>
+      rpt strip_tac >> csimp[FUN_EQ_THM, AllCaseEqs()])
+  >- (‘FINITE (A CROSS B)’ by simp[] >>
+      ‘FINITE (POW (A CROSS B))’ by simp[] >>
+      first_assum $ C (resolve_then (Pos hd) irule) CARDLEQ_FINITE >>
+      simp[INJ_IFF, cardleq_def, IN_POW, SUBSET_DEF, FORALL_PROD] >>
+      qexists_tac ‘λf. { (a,b) | f b = SOME a}’ >> simp[] >> rw[] >~
+      [‘GSPEC _ = GSPEC _ <=> _ = _’]
+      >- (simp[EXTENSION] >> simp[FUN_EQ_THM, FORALL_PROD] >>
+          simp[Once EQ_IMP_THM] >> rw[] >> rename [‘f1 a = f2 a’] >>
+          Cases_on ‘f1 a’ >>
+          metis_tac[optionTheory.SOME_11, optionTheory.NOT_SOME_NONE]) >>
+      metis_tac[optionTheory.SOME_11, optionTheory.NOT_SOME_NONE])
+QED
+
+Theorem CARD_LE_EXP:
+  {T; F} <<= B ==> (A:'a set) <<= (B:'b set) ** A
+Proof
+  simp[cardleq_def, set_exp_def, INJ_IFF] >>
+  disch_then $ qx_choose_then ‘bf’ strip_assume_tac >>
+  qexists_tac ‘λa1 a2. if a1 = a2 then SOME (bf T)
+                       else if a2 IN A then SOME (bf F)
+                       else NONE’ >>
+  simp[AllCaseEqs()] >> simp[FUN_EQ_THM, AllCaseEqs()] >> rw[] >>
+  metis_tac[]
+QED
+
 val INFINITE_Unum = store_thm(
   "INFINITE_Unum",
   ``INFINITE A <=> univ(:num) <<= A``,
