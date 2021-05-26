@@ -19,7 +19,7 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks/sml_synthesis"
 
 val natbase = 16
 val maxvar = 1
-val maxstep = 30
+val maxstep = 10
 
 (* -------------------------------------------------------------------------
    Types
@@ -34,12 +34,10 @@ datatype prog =
   | Proj of int
   | Sub of prog * prog list
 
-
 datatype move =
     BIns of instr | BTest | BRec | BProj of int | BSub of int | BEndSub;
 
 type board = int * int list * (int * prog list) list
-
 
 (* -------------------------------------------------------------------------
    Instructions
@@ -65,6 +63,38 @@ val instrl_aux =
 
 val instrl = map (fn (a,b,c) => (a,b,regularize c)) instrl_aux
 val instrd = dnew String.compare (map (fn a => (#1 a, a)) instrl)
+
+(* -------------------------------------------------------------------------
+   Print a program
+   ------------------------------------------------------------------------- *)
+
+fun string_of_prog prog =  
+  let 
+    fun s_x n = "x" ^ its n
+    fun s_xl n = "(" ^ String.concatWith "," (List.tabulate (n,s_x)) ^ ")"
+    fun s_f d = "f" ^ its d
+    fun s_p d ptop = case ptop of
+      Ins ((name,_,_),pl) => 
+      if name = "zero" then "0" else name ^ s_al d pl
+    | Test (p1,p2,p3) => String.concatWith " "
+      ["if", s_p d p1, "= 0 then", s_p d p2, "else", s_p d p3]
+    | Rec pl => s_f d ^ s_al d pl 
+    | Proj n => s_x n
+    | Sub (p,pl) => String.concatWith " "
+      ["let fun", s_f (d+1) ^ s_xl (length pl), "=", 
+       s_p (d+1) p, "in", s_f d ^ s_al d pl, "end"]
+    and s_al d pl = 
+     "(" ^ String.concatWith "," (map (s_p d) pl) ^ ")"
+  in
+    s_p 0 prog
+  end
+
+fun string_of_ariprogl (ari,progl) = 
+  "#" ^ its ari ^ " " ^ 
+  String.concatWith "\n#~ " (map string_of_prog progl)
+  
+fun string_of_progll progll = 
+  String.concatWith "\n" (map string_of_ariprogl progll)
 
 (* -------------------------------------------------------------------------
    Execute a program

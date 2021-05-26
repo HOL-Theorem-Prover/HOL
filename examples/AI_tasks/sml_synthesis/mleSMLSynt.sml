@@ -18,7 +18,9 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks/sml_synthesis"
    Board
    ------------------------------------------------------------------------- *)
 
-fun string_of_board board = tts (term_of_board board)
+fun string_of_board (_,ol,progll) =
+  String.concatWith " " (map its ol) ^ "\n" ^ string_of_progll progll
+
 fun board_compare (a,b) = Term.compare (term_of_board a, term_of_board b)
 
 (* -------------------------------------------------------------------------
@@ -41,7 +43,7 @@ fun string_of_move m = case m of
 fun move_compare (m1,m2) = 
   String.compare (string_of_move m1, string_of_move m2)
   
-fun apply_move m (n, a : int list,b) = (n+1, a, build m b)
+fun apply_move move (n,ol,progll) = (n+1,ol, build move progll)
 
 fun available_movel board = filter (available board) movel
 
@@ -115,14 +117,18 @@ val fakeboard = (0,[],[(1,[])])
 
 fun random_seql nstep = random_seql_aux nstep [] fakeboard
 
-fun gen_seql_aux nstep n d = 
+fun gen_seql_aux nstep n d' d = 
+  (
+  if d' <> dlength d andalso dlength d mod 100 = 0 
+    then print_endline (its (dlength d)) else ();
   if dlength d >= n then first_n n (dkeys d) else
   let val l = map (fn x => (x,())) (random_seql nstep) in
-    gen_seql_aux nstep n (daddl l d)
+    gen_seql_aux nstep n (dlength d) (daddl l d)
   end
+  )
 
 fun gen_seql nstep n = 
-  gen_seql_aux nstep n (dempty (list_compare Int.compare))
+  gen_seql_aux nstep n 0 (dempty (list_compare Int.compare))
 
 (* -------------------------------------------------------------------------
    Generating a random board of a certain size
@@ -151,19 +157,18 @@ load "aiLib"; open aiLib;
 fun ilts il = String.concatWith " " (map its il);
 val selfdir = HOLDIR ^ "/examples/AI_tasks/sml_synthesis";
 
-val seql = gen_seql maxstep 2200;
-val seqlb = filter (fn x => hd x = 0 andalso hd (tl x) = 0) seql; length seqlb;
+val seql = gen_seql maxstep 5500;
 val seql2 = shuffle seql; length seql2;
-val (train,test) = part_n 2000 seql2;
+val (train,test) = part_n 5000 seql2;
 val train' = dict_sort (list_compare Int.compare) train
 val test' = dict_sort (list_compare Int.compare) test;
 
-writel (selfdir ^ "/target/train") (map ilts train');
-writel (selfdir ^ "/target/test") (map ilts test');
+writel (selfdir ^ "/target/train10") (map ilts train');
+writel (selfdir ^ "/target/test10") (map ilts test');
 *)
 
 (* -------------------------------------------------------------------------
-   Test MCTS
+   Test MCTS and big steps
    ------------------------------------------------------------------------- *)
 
 (* 
@@ -171,24 +176,33 @@ load "mleSMLSynt"; open mleSMLSynt;
 load "mleSMLLib"; open mleSMLLib;
 load "psMTCS"; open psMCTS;
 load "aiLib"; open aiLib;
-load "Profile";
 
 val mctsparam =
   {explo_coeff = 2.0,
    noise = false, noise_coeff = 0.25, noise_gen = random_real,
-   nsim = SOME 3000000 : int option, time = NONE: real option};
-val mctsobj = {game = game, mctsparam = mctsparam,
-  player =  psMCTS.uniform_player game};
+   nsim = SOME 100000 : int option, time = NONE: real option};
 
-val seq = [0,1,3,6,10,15,21,28];
-val startprog = [(1,[])];
-val startboard = (0,seq,startprog);
+val tnn = mlTreeNeuralNetwork.read_tnn (selfdir ^ "/tnn/tnn105");
+
+val mctsobj = {game = game, mctsparam = mctsparam,
+  player =  #player_from_tnn (#dplayer rlobj) tnn};
+
+
 val tree = starting_tree mctsobj startboard;
 Profile.reset_all ();
 val (_,t) = add_time (mcts mctsobj) tree;
 Profile.results ();
 PolyML.print_depth 10;
-tree;
+tree
+
+load "psBigSteps"; open psBigSteps;
+aiLib.debug_flag := true;
+
+fun seqf n = if n <= 0 then 1 else (seqf (n-1)) * 2;
+val seq = List.tabulate (16,seqf);
+val startprog = [(1,[])];
+val startboard = (0,seq,startprog);
+val (b,_) = run_bigsteps (false, mctsobj) startboard;
 
 if n = 0 then 0 else n + (f (n-1))
 (* 6 characters *)
@@ -210,6 +224,14 @@ val movel = #available_movel game board6;
 val board7 = #apply_move game (List.nth (movel,4)) board6;
 val movel = #available_movel game board7;
 val board8 = #apply_move game (List.nth (movel,3)) board7;
+
+
+load "mleSMLSynt"; open mleSMLSynt;
+load "mleSMLLib"; open mleSMLLib;
+load "psMTCS"; open psMCTS;
+load "aiLib"; open aiLib;
+val progll = random_progll 30;
+print_endline (string_of_progll progll);
 *)
 
 (* -------------------------------------------------------------------------
@@ -410,6 +432,22 @@ fun player_from_tnn tnn =
 val dplayer = 
   {player_from_tnn = player_from_tnn,
    tob = tob, tnndim = tnndim, schedule = schedule}
+
+
+(* -------------------------------------------------------------------------
+   OEIS
+   ------------------------------------------------------------------------- *)
+
+
+(* 
+load "mleSMLSynt"; open mleSMLSynt;
+load "aiLib"; open aiLib;
+val sl = readl (selfdir ^ "/oeis/pos");
+fun f s = 
+  map string_to_int (tl (first_n 17 (String.tokens (fn x => x = #",") s)));
+
+val oeis_seql = mapfilter f sl; (* filter because of overflow *)
+*)
 
 (* -------------------------------------------------------------------------
    Interface
