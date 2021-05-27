@@ -3177,6 +3177,17 @@ existing behaviours, as well as the ability to rewrite with the given
 relation.
 
 
+\subsubsection{Tracing the Simplifier}
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!simplification}
+There is a trace variable associated with the simplifier that can be used to obtain a log of its activities printed to the screen as simplification proceeds.
+(The tracing system is described generally in Section~\ref{sec:traces} below.)
+With the name \texttt{"simplifier"}, this trace can be set to have integer values between 0 and 7, inclusive.
+The default value of 0 means that no logging will be printed.
+Larger values result in more output.
+
+Tracing can be useful in trying to determine why a simplification theorem is not being applied, perhaps because of a failure to simplify side-conditions.
+At high values of the trace, output can be particularly voluminous.
+
 \index{simplification|)}
 
 \section{Efficient Applicative Order Reduction---\texttt{computeLib}}
