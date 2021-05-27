@@ -2192,6 +2192,460 @@ val olog_correct = save_thm(
   "olog_correct",
   ordLOG_correct |> Q.INST [`b` |-> `omega`] |> SIMP_RULE (srw_ss()) []);
 
+(* ----------------------------------------------------------------------
+    Results about cardinalities of ordinal predecessor sets
+   ---------------------------------------------------------------------- *)
+
+Definition csuc_def:
+  csuc (a : 'a ordinal) =
+  oleast (b: ('a + num -> bool) ordinal). preds a <</= preds b
+End
+
+Definition cardSUC_def:
+  cardSUC (s : 'a set) = csuc (oleast a:'a ordinal. preds a =~ s)
+End
+
+Theorem bumpUNIV_cardlt:
+  univ(:num + 'a) <</= univ(:num + ('a + num -> bool))
+Proof
+  simp[disjUNION_UNIV] >> Cases_on ‘INFINITE univ(:'a)’
+  >- (‘univ(:num) +_c univ(:'a) =~ univ(:'a)’
+        by (irule cardleq_ANTISYM >>
+            gs[INFINITE_Unum,CARD_ADD_ABSORB_LE, CARD_LE_ADDL]) >>
+      ‘univ(:'a) <</= univ(:num) +_c univ(:'a + num -> bool)’
+        suffices_by metis_tac[CARD_LT_CONG, cardeq_REFL]>>
+      resolve_then (Pos hd) irule
+                   CANTOR_THM_UNIV cardlt_leq_trans >>
+      qspec_then ‘univ(:num)’
+                 (fn th =>
+                    resolve_then (Pos hd) irule th
+                                 cardleq_TRANS)
+                 CARD_LE_ADDL >>
+      irule CARD_LE_ADD >> simp[] >>
+      simp[cardleq_def, INJ_IFF] >>
+      qexists_tac ‘IMAGE INL’ >> simp[IMAGE_11]) >>
+  irule CARD_ADD2_ABSORB_LT >> simp[CARD_ADD_FINITE_EQ] >>
+  conj_tac
+  >- (resolve_then (Pos hd) irule
+      CANTOR_THM_UNIV cardlt_leq_trans >>
+      simp[cardleq_def, INJ_IFF] >>
+      qexists_tac ‘λs. INR (IMAGE INR s)’ >>
+      simp[IMAGE_11]) >>
+  gs[FINITE_CARD_LT] >>
+  pop_assum (C (resolve_then (Pos hd) irule)
+             cardlt_leq_trans) >>
+  simp[CARD_LE_ADDR]
+QED
+
+Theorem cardinality_bump_exists:
+  !x : 'a ordinal. ?y: ('a + num -> bool) ordinal. cardlt (preds x) (preds y)
+Proof
+  gen_tac >>
+  irule_at (Pos hd)
+           (CARD_LET_TRANS |> Q.ISPEC ‘preds x’
+                           |> Q.ISPEC ‘univ(:num + 'a)’) >>
+  simp[preds_inj_univ] >>
+  qexists_tac ‘sup { a | preds a =~ univ(:num + 'a)}’>>
+  qmatch_abbrev_tac ‘UNIV <</= preds (sup ords)’ >>
+  strip_tac >>
+  qabbrev_tac ‘bigU = univ(:num + ('a + num -> bool))’ >>
+  ‘INFINITE bigU /\ !x. x IN bigU’ by simp[Abbr‘bigU’] >>
+  ‘univ(:num + 'a) <</= bigU’ by simp[Abbr‘bigU’, bumpUNIV_cardlt] >>
+  ‘omax ords = NONE’
+    by (simp[omax_NONE] >> CCONTR_TAC >> gs[] >>
+        rename [‘mx IN ords’] >> ‘mx < ordSUC mx’ by simp[] >>
+        ‘ordSUC mx NOTIN ords’ by metis_tac[] >> pop_assum mp_tac >>
+        gs[Abbr‘ords’, preds_ordSUC] >>
+        ‘INFINITE univ(:num+'a)’ by simp[] >>
+        ‘INFINITE (preds mx)’ by metis_tac[CARD_INFINITE_CONG] >>
+        metis_tac[cardeq_INSERT, cardeq_SYM, cardeq_TRANS]) >>
+  ‘ords <<= bigU’ (* can't prove much about sup ords without this *)
+    by (CCONTR_TAC >> gs[cardlt_lenoteq] >>
+        ‘?f. INJ f bigU ords’ by metis_tac[cardleq_def] >>
+        ‘(!u. preds (f u) =~ univ(:num + 'a)) /\
+         (!u v. f u = f v <=> u = v)’
+          by fs[INJ_IFF, Abbr‘ords’] >>
+        qabbrev_tac ‘fU = IMAGE f bigU’ >>
+        ‘fU =~ bigU’
+          by (simp[Abbr‘fU’] >> gs[INJ_DEF, CARD_EQ_IMAGE]) >>
+        ‘fU <<= univ(:num+('a+num->bool))’
+          by metis_tac[cardleq_REFL, CARD_LE_CONG, cardeq_REFL] >>
+        drule_then assume_tac sup_thm >>
+        reverse (Cases_on ‘omax fU’)
+        >- (gs[omax_SOME] >> rename [‘mx IN fU’] >>
+            ‘?u. f u = mx’ by gs[Abbr‘fU’] >>
+            ‘ordSUC mx IN ords’
+              by (gs[Abbr‘ords’, preds_ordSUC] >>
+                  ‘preds mx =~ univ(:num + 'a)’ by metis_tac[] >>
+                  ‘INFINITE univ(:num + 'a)’ by simp[] >>
+                  ‘INFINITE (preds mx)’ by metis_tac[CARD_INFINITE_CONG] >>
+                  metis_tac[cardeq_INSERT, cardeq_SYM, cardeq_TRANS]) >>
+            pop_assum mp_tac >> simp[Abbr‘ords’] >> strip_tac >>
+            ‘fU <<= preds $ ordSUC mx’
+              by (simp[preds_sup, cardleq_def, INJ_IFF] >>
+                  qexists_tac ‘I’>> simp[] >> rpt strip_tac >>
+                  irule ordlet_TRANS >> qexists_tac ‘mx’ >> simp[]) >>
+            ‘bigU <<= univ(:num + 'a)’ by metis_tac[CARD_LE_CONG] >>
+            metis_tac[cardleq_ANTISYM]) >>
+        Cases_on ‘sup fU IN ords’
+        >- (‘fU <<= preds (sup fU)’
+              by (simp[preds_sup,cardleq_def,INJ_IFF] >>
+                  qexists_tac ‘I’ >> simp[dclose_def] >> gs[omax_NONE]) >>
+            ‘preds (sup fU) =~ univ(:num + 'a)’ by gs[Abbr‘ords’] >>
+            ‘bigU <<= univ(:num + 'a)’ by metis_tac[CARD_LE_CONG] >>
+            metis_tac[cardleq_ANTISYM]) >>
+        ‘!a. a IN ords ==> a < sup fU’
+          by (simp[] >> CCONTR_TAC >> gs[] >>
+              ‘sup fU < a’ by metis_tac[sup_thm, ordle_lteq] >>
+              ‘preds (sup fU) SUBSET preds a’
+                by metis_tac[PSUBSET_DEF, preds_lt_PSUBSET] >>
+              ‘fU <<= preds (sup fU)’
+                by (simp[preds_sup,cardleq_def,INJ_IFF] >>
+                    qexists_tac ‘I’ >> simp[dclose_def] >> gs[omax_NONE])>>
+              ‘preds a =~ univ(:num + 'a)’ by gs[Abbr‘ords’] >>
+              ‘fU <<= univ(:num + 'a)’
+                by metis_tac[cardleq_TRANS, CARD_LE_CONG, cardeq_REFL,
+                             SUBSET_CARDLEQ] >>
+              ‘bigU <<= univ(:num + 'a)’
+                by metis_tac[CARD_LE_CONG, cardeq_REFL]>>
+              metis_tac[cardleq_ANTISYM]) >>
+        ‘sup fU = sup ords’
+          by (irule ordle_ANTISYM >> drule_then assume_tac ubsup_thm >>
+              simp[]>> rw[] >- metis_tac[ordle_lteq] >>
+              simp[ordle_lteq] >> rename [‘a NOTIN fU \/ _’] >>
+              Cases_on ‘a IN fU’ >> simp[] >> gs[omax_NONE] >>
+              ‘a IN ords’ suffices_by metis_tac[] >> gs[INJ_IFF, Abbr‘fU’])>>
+        ‘fU <<= preds (sup ords)’
+          by (simp[preds_sup,cardleq_def,INJ_IFF] >>
+              qexists_tac ‘I’ >> simp[dclose_def] >> gs[omax_NONE])>>
+        ‘bigU <<= univ(:num + 'a)’
+          by metis_tac[CARD_LE_CONG, cardeq_REFL, cardleq_TRANS,
+                       cardeq_SYM] >>
+        metis_tac[cardleq_ANTISYM]) >>
+  qpat_x_assum ‘preds (sup _) <<= _’ mp_tac >> simp[] >>
+  ‘sup ords NOTIN ords’
+    by (gs[omax_NONE] >> strip_tac >> first_x_assum drule >>
+        metis_tac[suple_thm]) >>
+  ‘~(univ(:num + 'a) =~ preds (sup ords))’
+    by (gs[Abbr‘ords’] >> metis_tac[cardeq_SYM]) >>
+  simp[CARD_LT_LE] >>
+  ‘?a. a IN ords’ suffices_by
+    (strip_tac >>
+     ‘a < sup ords’ by (simp[sup_thm] >> gs[omax_NONE]) >>
+     ‘preds a SUBSET preds (sup ords)’
+       by metis_tac[preds_lt_PSUBSET, PSUBSET_DEF] >>
+     ‘preds a =~ univ(:num + 'a)’ by gs[Abbr‘ords’] >>
+     metis_tac[CARD_LE_SUBSET, CARD_LE_CONG, cardeq_SYM, cardeq_REFL]) >>
+  simp[Abbr‘ords’] >> irule cardeq_ordinals_exist >>
+  simp[cardleq_lteq, Abbr‘bigU’]
+QED
+
+Theorem ZERO_LT_csuc[simp]:
+  0 < csuc a /\ csuc a <> 0
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> rpt strip_tac >>
+  CCONTR_TAC >> gvs[]
+QED
+
+Theorem cardSUC_EQ0[simp]:
+  cardSUC A <> 0 /\ cardSUC A <> 0
+Proof
+  simp[cardSUC_def]
+QED
+
+Theorem csuc_is_nonzero_limit:
+  omega <= a ==> islimit (csuc a) /\ 0 < csuc a
+Proof
+  strip_tac >> simp[] >>
+  qspec_then ‘a’ (qx_choose_then ‘b’ assume_tac) cardinality_bump_exists >>
+  CCONTR_TAC >>
+  ‘csuc a <> 0’ by (strip_tac >> gs[]) >>
+  ‘?a0. csuc a = ordSUC a0’ by metis_tac[ord_CASES] >>
+  gs[csuc_def] >> pop_assum mp_tac >>
+  DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- goal_assum drule >>
+  simp[preds_ordSUC] >>
+  ‘INFINITE (preds a)’
+    by (simp[FINITE_preds] >> rpt strip_tac >> gs[]) >>
+  simp[INFINITE_cardleq_INSERT] >> Cases_on ‘preds a0 <<= preds a’ >>
+  simp[] >> qexists_tac ‘a0’ >> simp[]
+QED
+
+Theorem CARD_FINITE_preds:
+  CARD (preds (&n : 'a ordinal)) = CARD (preds (&n : unit ordinal))
+Proof
+  simp[preds_nat, CARD_INJ_IMAGE]
+QED
+
+Theorem csuc_nat:
+  csuc (fromNat n) = ordSUC (fromNat n)
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
+  rpt strip_tac >- metis_tac[cardinality_bump_exists] >>
+  gs[] >> irule ordle_ANTISYM >> rpt strip_tac
+  >- (gs[preds_lt_PSUBSET] >> qpat_x_assum ‘preds _ <</= preds _’ mp_tac >>
+      simp[] >>
+      drule_at (Pos last) CARD_PSUBSET >>
+      simp[FINITE_preds, GSYM fromNat_SUC, Excl "fromNat_SUC"] >>
+      simp[] >>
+      ‘FINITE (preds a)’
+        by metis_tac[SUBSET_FINITE, FINITE_preds, fromNat_SUC, PSUBSET_DEF] >>
+      simp[CARD_LE_CARD, FINITE_preds, preds_ordSUC, CARD_FINITE_preds]) >>
+  first_x_assum drule >>
+  simp[preds_nat, preds_ordSUC, CARD_LT_CARD, CARD_INJ_IMAGE]
+QED
+
+Theorem lt_csuc:
+  x < csuc y <=> preds x <<= preds y
+Proof
+  simp[csuc_def] >>
+  DEEP_INTRO_TAC oleast_intro >> rpt strip_tac
+  >- metis_tac[cardinality_bump_exists] >> gs[] >> simp[EQ_IMP_THM] >>
+  strip_tac >> CCONTR_TAC >> qpat_x_assum ‘a <= x’ mp_tac >>
+  PURE_REWRITE_TAC[ordle_lteq] >> rpt strip_tac >> gvs[] >>
+  gs[preds_lt_PSUBSET] >>
+  ‘preds a <<= preds x’ by metis_tac[CARD_LE_SUBSET, PSUBSET_DEF] >>
+  metis_tac[cardlt_REFL, CARD_LTE_TRANS, CARD_LE_TRANS]
+QED
+
+Theorem orderiso_cardeq_elsOf:
+  orderiso w1 w2 ==> elsOf w1 =~ elsOf w2
+Proof
+  simp[orderiso_thm, cardeq_def] >> metis_tac[]
+QED
+
+Theorem transfer_ordinals:
+  !a:'a ordinal.
+    preds a <<= univ(:num + 'b) ==>
+    ?b:'b ordinal. orderiso (wobound a allOrds) (wobound b allOrds) /\
+                   preds a =~ preds b
+Proof
+  rw[cardleq_def,preds_wobound] >>
+  drule_then (qx_choose_then ‘w1’ assume_tac) elsOf_cardeq_iso>>
+  qexists_tac ‘mkOrdinal w1’ >>
+  qspec_then ‘w1’ assume_tac wellorder_ordinal_isomorphism >>
+  conj_asm1_tac >- metis_tac[orderiso_TRANS] >>
+  metis_tac[orderiso_cardeq_elsOf]
+QED
+
+Theorem cardlt_preds:
+  cardlt (preds x) (preds y) ==> x < y
+Proof
+  CONV_TAC CONTRAPOS_CONV >> simp[ordle_lteq, DISJ_IMP_THM] >>
+  metis_tac[PSUBSET_DEF, CARD_LE_SUBSET, preds_lt_PSUBSET]
+QED
+
+Theorem INFINITE_eqpreds:
+  omega <= (x:'a ordinal) ==> INFINITE { y : 'a ordinal | preds y =~ preds x }
+Proof
+  rpt strip_tac >>
+  ‘{ y : 'a ordinal | preds y =~ preds x} <> {}’
+    by (simp[EXTENSION] >> metis_tac[cardeq_REFL]) >>
+  drule_all_then strip_assume_tac FINITE_omax_IS_SOME >>
+  gs[omax_SOME] >> rename [‘preds a =~ preds x’] >>
+  ‘INFINITE (preds a)’
+    by (strip_tac >> gvs[FINITE_preds] >> rename [‘preds (&n) =~ preds x’] >>
+        ‘x <= &n’ by metis_tac[cardeq_REFL] >>
+        ‘omega <= &n’ by metis_tac[ordle_TRANS] >> gs[]) >>
+  ‘preds (ordSUC a) =~ preds x’
+    by (simp[preds_ordSUC] >> metis_tac[CARDEQ_INSERT_RWT, cardeq_TRANS]) >>
+  first_x_assum drule >> simp[]
+QED
+
+Theorem cardlt_lepreds:
+  cardlt (preds (x : 'a ordinal)) { (y : 'a ordinal) | preds y <<= preds x }
+Proof
+  rpt strip_tac >>
+  qabbrev_tac ‘s = { y : 'a ordinal | preds y <<= preds x }’ >>
+  ‘s <<= univ(:num + 'a)’ by metis_tac[cardleq_TRANS, preds_inj_univ] >>
+  Cases_on ‘x < omega’
+  >- (gvs[lt_omega, preds_nat] >>
+      rev_drule_at (Pos last) CARD_LE_CARD_IMP >> simp[Abbr‘s’] >>
+      simp[CARD_INJ_IMAGE] >> qmatch_abbrev_tac ‘~(CARD s <= m)’ >>
+      ‘s = IMAGE $& (count (m + 1))’ suffices_by simp[CARD_INJ_IMAGE] >>
+      simp[Abbr‘s’, EXTENSION] >> qx_gen_tac ‘n’ >> eq_tac
+      >- (strip_tac >> drule_at (Pos last) CARD_LE_CARD_IMP >>
+          simp[CARD_INJ_IMAGE] >>
+          ‘n < omega’
+            by (CCONTR_TAC >> qpat_x_assum ‘_ <<= _’ mp_tac >> simp[] >>
+                irule CARD_LT_FINITE_INFINITE >> simp[FINITE_preds] >>
+                rpt strip_tac >> gs[]) >> gvs[lt_omega] >>
+          rename [‘preds (&n)’] >> simp[preds_nat, CARD_INJ_IMAGE]) >>
+      rw[] >> simp[preds_nat] >> irule CARD_LE_SUBSET >> simp[SUBSET_DEF]) >>
+  ‘INFINITE s’
+    by (‘s = { y | preds y =~ preds x} UNION { y | cardlt (preds y) (preds x)}’
+          by (simp[Abbr‘s’, EXTENSION] >> metis_tac[cardleq_lteq]) >>
+        simp[INFINITE_eqpreds]) >>
+  ‘dclose s = s’
+    by (simp[dclose_def, EXTENSION] >> qx_gen_tac ‘a’ >> eq_tac >>
+        rpt strip_tac
+        >- (gs[Abbr‘s’, preds_lt_PSUBSET] >>
+            metis_tac[cardleq_TRANS, CARD_LE_SUBSET, PSUBSET_DEF]) >>
+        qexists_tac ‘ordSUC a’ >> simp[] >> gs[Abbr‘s’, preds_ordSUC] >>
+        irule (iffRL INFINITE_cardleq_INSERT) >> simp[FINITE_preds] >>
+        rpt strip_tac >> gs[]) >>
+  ‘preds (sup s) = s’ by simp[preds_sup] >>
+  Cases_on ‘preds (sup s) =~ preds x’
+  >- (‘preds (ordSUC (sup s)) =~ preds x’
+        by (gs[preds_ordSUC] >> metis_tac[cardeq_TRANS, CARDEQ_INSERT_RWT]) >>
+      ‘!x. x IN s ==> x <= sup s’ by simp[suple_thm] >>
+      ‘ordSUC (sup s) IN s’ suffices_by (strip_tac >> first_x_assum drule >>
+                                         simp[]) >>
+      qabbrev_tac ‘mx = sup s’ >> simp[Abbr‘s’] >>
+      metis_tac[cardleq_REFL, CARD_LE_CONG, cardeq_REFL]) >>
+  Cases_on ‘preds (sup s) <</= preds x’
+  >- (drule cardlt_preds >> simp[] >> irule suple_thm >> simp[] >>
+      simp[Abbr‘s’]) >>
+  ‘preds x <</= preds(sup s)’ by metis_tac[CARD_LT_TOTAL] >> gs[preds_sup]
+QED
+
+Theorem cardle_preds_EQ_cardeq_preds:
+  omega <= (x:'a ordinal) ==>
+  { (y:'a ordinal) | preds y <<= preds x } =~
+  { (y:'a ordinal) | preds y =~ preds x }
+Proof
+  strip_tac >> irule cardleq_ANTISYM >> reverse conj_tac
+  >- (irule CARD_LE_SUBSET >> simp[SUBSET_DEF] >>
+      metis_tac[CARD_LE_CONG, cardeq_REFL, cardeq_SYM, cardleq_REFL]) >>
+  ‘{ (y:'a ordinal) | preds y <<= preds x} =
+   { y | preds y =~ preds x } UNION { y | cardlt (preds y) (preds x) }’
+    by (simp[EXTENSION, Once cardleq_lteq] >> metis_tac[]) >>
+  pop_assum SUBST1_TAC >>
+  resolve_then (Pos hd) irule UNION_LE_ADD_C cardleq_TRANS >>
+  irule CARD_ADD2_ABSORB_LE >> simp[INFINITE_eqpreds] >>
+  simp[Once cardleq_def, INJ_IFF, PULL_EXISTS] >>
+  qexists_tac ‘λy. x + y’ >> simp[] >> qx_gen_tac ‘y’ >>
+  strip_tac >> drule_then assume_tac cardlt_preds >>
+  ‘preds (x + y) = preds x UNION IMAGE (λy. x + y) (preds y)’
+    by (simp[EXTENSION, EQ_IMP_THM] >> rw[] >> simp[]
+        >- (rename [‘x0 < x + y’] >> Cases_on ‘x0 < x’ >> simp[] >>
+            gs[ordle_EXISTS_ADD]) >>
+        irule ordlte_TRANS >> first_assum $ irule_at Any >> simp[]) >>
+  simp[] >>
+  ‘preds x INTER IMAGE (λy. x + y) (preds y) = {}’
+    by (simp[EXTENSION] >> qx_gen_tac ‘a’ >> Cases_on ‘x <= a’ >> simp[] >>
+        qx_gen_tac ‘b’ >> rpt strip_tac >> gvs[]) >>
+  dxrule_then assume_tac CARD_DISJOINT_UNION >>
+  drule_then irule cardeq_TRANS >>
+  resolve_then (Pos hd) irule CARD_ADD_SYM cardeq_TRANS >>
+  irule CARD_ADD_ABSORB >> conj_tac
+  >- (strip_tac >> gvs[FINITE_preds]) >>
+  irule IMAGE_cardleq_rwt >> metis_tac[cardleq_lteq]
+QED
+
+Theorem cardlt_eqpreds:
+  omega <= (x:'a ordinal) ==>
+  cardlt (preds x) { y:'a ordinal | preds y =~ preds x }
+Proof
+  strip_tac >>
+  resolve_then (Pos hd)
+               (resolve_then Any irule
+                (ONCE_REWRITE_RULE [cardeq_SYM] cardle_preds_EQ_cardeq_preds))
+               cardeq_REFL
+               (iffRL CARD_LT_CONG) >>
+  simp[cardlt_lepreds]
+QED
+
+Theorem lt_cardSUC:
+  A <</= preds (cardSUC A)
+Proof
+  simp[cardSUC_def] >> qabbrev_tac ‘Aord = oleast a:'a ordinal. preds a =~ A’ >>
+  ‘preds Aord =~ A’
+    by (simp[Abbr‘Aord’] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
+        irule cardeq_ordinals_exist >>
+        simp[disjUNION_UNIV] >>
+        resolve_then (Pos hd) irule CARD_LE_UNIV CARD_LE_TRANS >>
+        simp[CARD_LE_ADDL]) >>
+  ‘preds Aord <</= preds (csuc Aord)’
+    suffices_by metis_tac[CARD_LT_CONG, cardeq_REFL] >>
+  ‘preds Aord <<= univ(:num + ('a + num -> bool))’
+    by (resolve_then (Pos hd) irule preds_inj_univ CARD_LE_TRANS >>
+        simp[Once cardleq_lteq, bumpUNIV_cardlt]) >>
+  drule_then (qx_choose_then ‘Aord'’ strip_assume_tac) transfer_ordinals >>
+  ‘Aord' < csuc Aord’
+    by (simp[lt_csuc] >> metis_tac[CARD_LE_CONG, CARD_LE_REFL, cardeq_REFL]) >>
+  ‘preds Aord' <</= preds (csuc Aord)’ suffices_by
+    metis_tac[CARD_LE_CONG, cardeq_REFL, cardeq_SYM] >>
+  simp[csuc_def] >>
+  DEEP_INTRO_TAC oleast_intro >> rw[]
+  >- metis_tac[cardinality_bump_exists] >>
+  ‘preds a = { y | preds y <<= preds Aord' }’
+    by (simp[EXTENSION] >> rw[EQ_IMP_THM]
+        >- metis_tac[CARD_LE_CONG, cardeq_REFL, cardeq_SYM] >>
+        irule cardlt_preds >>
+        first_assum $ C (resolve_then (Pos hd) irule) CARD_LET_TRANS >>
+        metis_tac[CARD_LT_CONG, cardeq_REFL]) >>
+  simp[cardlt_lepreds]
+QED
+
+Theorem le_cardSUC:
+  A <<= preds (cardSUC A)
+Proof
+  metis_tac[lt_cardSUC, cardleq_lteq]
+QED
+
+Theorem omega_LEQ_INFINITE_preds:
+  INFINITE (preds a) ==> omega <= a
+Proof
+  CONV_TAC CONTRAPOS_CONV >> simp[FINITE_preds, lt_omega]
+QED
+
+Theorem csuc_EQ_N[simp]:
+  csuc a = &n <=> ?m. n = SUC m /\ a = &m
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> qx_gen_tac ‘b’ >> rpt strip_tac >>
+  simp[EQ_IMP_THM, PULL_EXISTS] >> rw[]
+  >- (Cases_on ‘n’ >> gvs[] >>
+      rename [‘a = &m’, ‘preds a <</= preds (ordSUC (&m))’] >>
+      ‘FINITE (preds (ordSUC (&m) : ('a + num -> bool) ordinal))’
+        by simp[FINITE_preds, GSYM fromNat_SUC, Excl "fromNat_SUC"] >>
+      ‘FINITE (preds a)’ by metis_tac[CARD_LE_FINITE, cardleq_lteq] >>
+      gvs[FINITE_preds, preds_nat,GSYM fromNat_SUC, Excl "fromNat_SUC"] >>
+      rename [‘cardlt (IMAGE $& (count n)) (IMAGE $& (count (SUC m)))’] >>
+      gvs[CARD_LE_CARD, CARD_INJ_IMAGE] >> ‘m <= n’ suffices_by simp[] >>
+      first_x_assum $ qspec_then ‘&m’ mp_tac >>
+      simp[preds_nat, CARD_LE_CARD, CARD_INJ_IMAGE]) >>
+  rename [‘preds (&m) <</= preds b’] >>
+  ‘FINITE (preds b)’
+    by (CCONTR_TAC >> drule_then assume_tac omega_LEQ_INFINITE_preds >>
+        ‘&(SUC m) < b’ by (irule ordlte_TRANS >> goal_assum drule >> simp[]) >>
+        first_x_assum drule >> simp[preds_nat, CARD_LE_CARD, CARD_INJ_IMAGE]) >>
+  gvs[FINITE_preds] >>
+  gvs[CARD_LE_CARD, CARD_INJ_IMAGE, preds_nat, GSYM fromNat_SUC,
+      Excl "fromNat_SUC", arithmeticTheory.NOT_LESS_EQUAL] >>
+  ‘n - 1 <= m’ suffices_by simp[] >>
+  first_x_assum $ qspec_then ‘&(n - 1)’ mp_tac >>
+  simp[preds_nat, CARD_LE_CARD, CARD_INJ_IMAGE]
+QED
+
+Theorem cardSUC_EQN:
+  cardSUC A = &n <=> ?m. n = SUC m /\ FINITE A /\ CARD A = m
+Proof
+  simp[cardSUC_def, GSYM fromNat_SUC, Excl "fromNat_SUC", EQ_IMP_THM,
+       PULL_EXISTS] >> conj_tac
+  >- (qx_gen_tac ‘m’ >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+      >- (irule cardeq_ordinals_exist >>
+          resolve_then (Pos hd) irule CARD_LE_UNIV cardleq_TRANS >>
+          simp[disjUNION_UNIV, CARD_LE_ADDL]) >> qx_gen_tac ‘a’ >> strip_tac >>
+      strip_tac >> gvs[preds_nat] >>
+      ‘FINITE A’
+        by (first_assum $ C (resolve_then Any irule)
+            (ONCE_REWRITE_RULE [cardeq_SYM] CARD_EQ_FINITE) >>
+            simp[]) >>
+      gs[CARD_EQ_CARD, CARD_INJ_IMAGE]) >>
+  strip_tac >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- (irule cardeq_ordinals_exist >>
+      resolve_then (Pos hd) irule CARD_LE_UNIV cardleq_TRANS >>
+      simp[disjUNION_UNIV, CARD_LE_ADDL]) >> rpt strip_tac >>
+  ‘FINITE (preds a)’ by metis_tac[CARD_EQ_FINITE] >>
+  gvs[FINITE_preds, preds_nat, CARD_EQ_CARD, CARD_INJ_IMAGE]
+QED
+
+
+
+
 (* uncountable ordinals *)
 Type ucinf = “:('a + (num -> bool)) inf”
 Type ucord = “:('a + (num -> bool)) ordinal”
