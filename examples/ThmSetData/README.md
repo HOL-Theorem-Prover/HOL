@@ -1,6 +1,6 @@
 # A simple `ThmSetData` example
 
-This small example showcases some of the functionality of DIR.
+This small example showcases some of the functionality of `src/1/ThmSetData.sml`.
 To create, update, and eventually query a theorem set follow this steps:
 
 * Using `export_with_ancestry` define the underlying data
