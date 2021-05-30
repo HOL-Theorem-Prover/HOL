@@ -7,6 +7,11 @@ open ordinalTheory
 
 val _ = new_theory "bnfAlgebra";
 
+Overload "𝟙"[local] = “{()}”
+Overload "𝟚"[local] = “{T;F}”
+Overload "≉"[local] = “λa b. ¬(a ≈ b)”
+
+val _ = set_fixity "≉" (Infix(NONASSOC, 450))
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
 val _ = new_type ("F", 2)
@@ -520,5 +525,202 @@ Proof
   simp[Once (GSYM mapID), SimpRHS] >> irule map_CONG >> simp[] >>
   gs[INJ_IFF]
 QED
+
+Theorem cardleq_preds_csuc:
+  preds a ≼ preds b ⇒ preds (csuc a) ≼ preds (csuc b)
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> rw[] >>
+  DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> rw[] >>
+  rename [‘preds a ≼ preds b’, ‘preds b ≺ preds c’, ‘preds a ≺ preds d’] >>
+  CCONTR_TAC >>
+  ‘∃c' : (α + num -> bool) ordinal.
+     orderiso (wobound c allOrds) (wobound c' allOrds) ∧
+     preds c ≈ preds c'’
+    by (irule transfer_ordinals >>
+        resolve_then (Pos last) irule preds_inj_univ cardleq_TRANS >>
+        metis_tac[cardleq_lteq]) >>
+  ‘preds c' ≺ preds d’ by metis_tac[CARD_LT_CONG, cardeq_REFL] >>
+  drule_then assume_tac cardlt_preds >> first_x_assum drule >>
+  metis_tac[CARD_LE_TRANS, CARD_LET_TRANS, CARD_LT_REFL, CARD_LT_CONG,
+            cardeq_REFL]
+QED
+
+Theorem preds_bd_lemma[local]:
+  setBF (gv  : (α,γ ordinal)F) ≠ ∅ ⇒
+  preds (bd:γ ordinal) ≼
+        preds (oleast a:(α,γ ordinal)F ordinal. preds a ≈ Fin 𝕌(:α) (preds bd))
+Proof
+  strip_tac >>
+  ‘preds bd ≼ Fin 𝕌(:α) (preds bd)’
+    by metis_tac[nontrivialBs] >>
+  pop_assum mp_tac >>
+  simp[Once cardleq_lteq, SimpL “$==>”] >> strip_tac
+  >- (DEEP_INTRO_TAC oleast_intro >> conj_tac
+      >- (irule cardeq_ordinals_exist >>
+          simp[disjUNION_UNIV] >>
+          resolve_then (Pos hd) irule CARD_LE_UNIV
+                       CARD_LE_TRANS >>
+          simp[CARD_LE_ADDL]) >>
+      metis_tac[cardleq_lteq, CARD_LT_CONG, CARD_EQ_REFL]) >>
+  DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- (irule cardeq_ordinals_exist >>
+      simp[disjUNION_UNIV] >>
+      resolve_then (Pos hd) irule CARD_LE_UNIV CARD_LE_TRANS >>
+      simp[CARD_LE_ADDL]) >>
+  metis_tac[CARD_LE_REFL, CARD_LE_CONG]
+QED
+
+Theorem preds_csuc_lemma:
+  preds a ≼ preds (csuc a)
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> metis_tac[cardleq_lteq]
+QED
+
+
+Theorem Fin_MONO:
+  s ⊆ t ⇒ Fin A s ⊆ Fin A t
+Proof
+  simp[Fin_def, SUBSET_DEF]
+QED
+
+Theorem Fin_cardleq:
+  s ≼ t ⇒ Fin A s ≼ Fin A t
+Proof
+  simp[Fin_def, cardleq_def] >>
+  disch_then $ qx_choose_then ‘f’ strip_assume_tac >>
+  qexists_tac ‘mapF I f’ >> simp[INJ_IFF, setB_map, setA_map] >>
+  rpt strip_tac >- gs[SUBSET_DEF, PULL_EXISTS, INJ_IFF] >>
+  simp[EQ_IMP_THM] >> strip_tac >>
+  ‘mapF I (LINV f s o f) x = mapF I I x ∧ mapF I (LINV f s o f) y = mapF I I y’
+    by (conj_tac >> irule map_CONG >> drule_then assume_tac LINV_DEF >>
+        gs[LINV_DEF, SUBSET_DEF]) >>
+  qpat_x_assum ‘mapF I f x = _’ (mp_tac o Q.AP_TERM ‘mapF I (LINV f s)’) >>
+  simp[mapO] >> simp[mapID, I_EQ_IDABS]
+QED
+
+Theorem cardADD2[local]:
+  s ≼ s +_c 𝟚
+Proof
+  simp[CARD_LE_ADDR]
+QED
+
+Theorem CARD_ADD_EQ0[simp]:
+  x +_c y = ∅ ⇔ x = ∅ ∧ y = ∅
+Proof
+  simp[disjUNION_def, EXTENSION, EQ_IMP_THM]
+QED
+
+Theorem CARD1_SING:
+  (A:'a set) ≈ {()} ⇔ ∃a. A = {a}
+Proof
+  simp[cardeq_def, EQ_IMP_THM, PULL_EXISTS, BIJ_IFF_INV] >>
+  rpt strip_tac
+  >- (rename [‘g () ∈ A’] >> qexists_tac ‘g()’ >> simp[EXTENSION] >>
+      metis_tac[]) >>
+  qexists_tac ‘K a’ >> simp[]
+QED
+
+Theorem cardleq_setexp:
+  x ≼ x ** e ⇔ x = ∅ ∨ x ≈ {()} ∨ e ≠ ∅
+Proof
+  Cases_on ‘x = ∅’ >> simp[] >>
+  Cases_on ‘e = ∅’ >> simp[EMPTY_set_exp, CARD1_SING]
+  >- (simp[INJ_IFF, EQ_IMP_THM, PULL_EXISTS] >> reverse (rpt strip_tac)
+      >- (simp[INJ_IFF, cardleq_def] >> qexists_tac ‘λa. K NONE’ >> simp[]) >>
+      gs[cardleq_def, INJ_IFF, GSYM MEMBER_NOT_EMPTY] >> simp[EXTENSION] >>
+      metis_tac[]) >>
+  simp[cardleq_def, INJ_IFF] >> gs[GSYM MEMBER_NOT_EMPTY] >>
+  rename [‘X ** E’, ‘x ∈ X’, ‘e ∈ E’] >>
+  qexists_tac ‘λx0 e0. if e0 ∈ E then SOME x0 else NONE’ >>
+  simp[set_exp_def, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]
+QED
+
+Theorem CARD_12[simp]:
+  {()} ≺ 𝟚 ∧ ¬({()} ≈ 𝟚) ∧ ¬(𝟚 ≈ {()}) ∧ {()} ≼ 𝟚
+Proof
+  conj_asm1_tac
+  >- (simp[cardleq_def, INJ_IFF] >> qexistsl_tac [‘T’, ‘F’] >> simp[]) >>
+  metis_tac[CARD_LT_CONG, CARD_LT_REFL, cardeq_REFL, cardleq_lteq]
+QED
+
+Theorem alg_cardinality_bound:
+  ω ≤ (bd : γ ordinal) ∧ (∀x:(α,β+bool)F. setBF x ≼ preds bd) ∧
+  (∃x:(α,γ ordinal)F. setBF x ≠ ∅) ⇒
+  KK (s:(α,β)F -> β) (csuc bd) ≼ {T;F} ** preds (cardSUC $ Fin 𝕌(:α) (preds bd))
+Proof
+  strip_tac >> rename [‘setBF gv ≠ ∅’] >>
+  qmatch_abbrev_tac ‘_ ≼ 𝟚 ** BD’ >>
+  ‘INFINITE BD’
+    by (strip_tac >> gs[Abbr‘BD’, FINITE_preds, cardSUC_EQN] >>
+        ‘preds bd ≼ Fin 𝕌(:α) (preds bd)’ by metis_tac[nontrivialBs] >>
+        ‘FINITE (preds bd)’ by metis_tac[CARD_LE_FINITE] >>
+        gs[FINITE_preds]) >>
+  ‘BD ≠ ∅’ by simp[Abbr‘BD’] >>
+  ‘∀i. i < csuc bd ⇒ KK s i ≼ 𝟚 ** BD’
+    suffices_by (strip_tac >> simp[csuc_is_nonzero_limit, KK_def] >>
+                 irule CARD_BIGUNION >> simp[PULL_EXISTS] >>
+                 rpt strip_tac >>
+                 irule IMAGE_cardleq_rwt >> simp[cardSUC_def] >>
+                 resolve_then Any
+                              (fn th =>
+                                 resolve_then (Pos hd) irule th cardleq_TRANS)
+                              cardleq_REFL
+                              CARD_LE_EXP >>
+                 irule set_exp_cardle_cong >> simp[Abbr‘BD’, cardSUC_def] >>
+                 irule cardleq_preds_csuc >> metis_tac[preds_bd_lemma]) >>
+  ho_match_mp_tac ord_induction >> rw[] >>
+  simp[Once KK_thm] >> rw[] >> irule CARD_BIGUNION >>
+  simp[PULL_EXISTS] >> reverse (rpt conj_tac)
+  >- (irule IMAGE_cardleq_rwt >> gs[lt_csuc] >> simp[cardSUC_def] >>
+      resolve_then Any
+                   (fn th =>
+                      resolve_then (Pos hd) irule th cardleq_TRANS)
+                   cardleq_REFL
+                   CARD_LE_EXP >> irule set_exp_cardle_cong >> simp[] >>
+      drule_then (qspec_then ‘bd’ assume_tac) preds_bd_lemma >>
+      dxrule_then assume_tac cardleq_preds_csuc >>
+      simp[Abbr‘BD’, cardSUC_def] >>
+      pop_assum (C (resolve_then (Pos last) irule) cardleq_TRANS) >>
+      first_assum (C (resolve_then (Pos hd) irule) cardleq_TRANS) >>
+      simp[preds_csuc_lemma]) >>
+  qx_gen_tac ‘j’ >> strip_tac >>
+  ‘{ s fv | fv | setBF fv ⊆ KK s j} = IMAGE s (Fin 𝕌(:α) (KK s j))’
+    by simp[EXTENSION, Fin_def] >> simp[] >>
+  irule IMAGE_cardleq_rwt >>
+  resolve_then (Pos hd) irule (MATCH_MP (GEN_ALL Fin_cardleq) cardADD2)
+               cardleq_TRANS >>
+  drule_then (drule_then $ qspec_then ‘KK s j +_c 𝟚’ mp_tac) CBDb >> impl_tac
+  >- (conj_tac >- metis_tac[] >> simp[CARD_LE_ADDL]) >>
+  disch_then $ C (resolve_then (Pos hd) irule) cardleq_TRANS >>
+  first_x_assum $ qspec_then ‘j’ mp_tac >> simp[] >>
+  impl_tac >- metis_tac[ordlt_TRANS] >>
+  disch_then
+    (C (resolve_then (Pos hd) (qspecl_then [‘𝟚’, ‘𝟚’] mp_tac)) CARD_LE_ADD) >>
+  simp[] >> strip_tac >>
+  pop_assum (
+    C (resolve_then (Pos (el 2)) (resolve_then (Pos last)
+                                  (qspec_then ‘BD’ mp_tac) cardleq_REFL))
+    set_exp_cardle_cong) >>
+  impl_tac >- simp[Abbr‘BD’] >>
+  disch_then (C (resolve_then (Pos hd) irule) cardleq_TRANS) >>
+  ‘𝟚 ≼ 𝟚 ** BD’ by (simp[cardleq_setexp] >> simp[Abbr‘BD’]) >>
+  ‘INFINITE (𝟚 ** BD)’ by simp[] >>
+  ‘𝟚 ** BD +_c 𝟚 ≈ 𝟚 ** BD’
+    by metis_tac[CARD_ADD_SYM, CARD_ADD_ABSORB, cardeq_TRANS] >>
+  qspecl_then [‘(𝟚 ** BD +_c 𝟚) ** BD’, ‘(𝟚 ** BD) ** BD’,
+               ‘𝟚 ** BD’, ‘𝟚 ** BD’] mp_tac
+              (INST_TYPE [“:γ” |-> “:'z”] CARD_LE_CONG) >>
+  simp[cardeq_REFL] >> impl_tac
+  >- (irule set_exp_card_cong >> simp[cardeq_REFL]) >>
+  simp[] >> strip_tac >>
+  resolve_then (Pos hd) (resolve_then (Pos hd) irule cardeq_REFL)
+               set_exp_product (iffRL CARD_LE_CONG) >>
+  irule set_exp_cardle_cong >> simp[] >> ONCE_REWRITE_TAC [cardleq_lteq] >>
+  simp[CARD_SQUARE_INFINITE]
+QED
+
 
 val _ = export_theory();
