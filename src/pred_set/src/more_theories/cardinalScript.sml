@@ -1445,6 +1445,32 @@ val set_exp_product = Q.store_thm(
   simp[FUN_EQ_THM, FORALL_PROD] >> qx_genl_tac [‘b1’, ‘b2’] >>
   Cases_on ‘b2 IN B2’ >> simp[] >> rw[]);
 
+Theorem CARD1_SING:
+  (A:'a set) =~ {()} <=> ?a. A = {a}
+Proof
+  simp[cardeq_def, EQ_IMP_THM, PULL_EXISTS, BIJ_IFF_INV] >>
+  rpt strip_tac
+  >- (rename [‘g () IN A’] >> qexists_tac ‘g()’ >> simp[EXTENSION] >>
+      metis_tac[]) >>
+  qexists_tac ‘K a’ >> simp[]
+QED
+
+Theorem cardleq_setexp:
+  x <<= x ** e <=> x = {} \/ x =~ {()} \/ e <> {}
+Proof
+  Cases_on ‘x = {}’ >> simp[] >>
+  Cases_on ‘e = {}’ >> simp[EMPTY_set_exp, CARD1_SING]
+  >- (simp[INJ_IFF, EQ_IMP_THM, PULL_EXISTS] >> reverse (rpt strip_tac)
+      >- (simp[INJ_IFF, cardleq_def] >> qexists_tac ‘λa. K NONE’ >> simp[]) >>
+      gs[cardleq_def, INJ_IFF, GSYM MEMBER_NOT_EMPTY] >> simp[EXTENSION] >>
+      metis_tac[]) >>
+  simp[cardleq_def, INJ_IFF] >> gs[GSYM MEMBER_NOT_EMPTY] >>
+  rename [‘X ** E’, ‘x IN X’, ‘e IN E’] >>
+  qexists_tac ‘λx0 e0. if e0 IN E then SOME x0 else NONE’ >>
+  simp[set_exp_def, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]
+QED
+
+
 val COUNT_EQ_EMPTY = Q.store_thm(
   "COUNT_EQ_EMPTY[simp]",
   ‘(count n = {}) <=> (n = 0)’,
@@ -2577,6 +2603,10 @@ val add_c = disjUNION_def
 
 val _ = set_mapped_fixity {tok = "+_c", fixity = Infixl 500,
                            term_name = "disjUNION"}
+val _ = set_mapped_fixity {fixity = Infixl 500,
+                           term_name = "disjUNION",
+                           tok = UTF8.chr 0x2294}
+
 val _ = temp_overload_on ("+", ``disjUNION``);
 
 val _ = set_fixity "*_c" (Infixl 600);

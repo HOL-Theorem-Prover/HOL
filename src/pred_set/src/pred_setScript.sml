@@ -4450,6 +4450,14 @@ Proof
   simp[EXTENSION, sumTheory.FORALL_SUM]
 QED
 
+Theorem disjUNION_EQ_EMPTY[simp]:
+  x <+> y = {} <=> x = {} /\ y = {}
+Proof
+  simp[disjUNION_def, EXTENSION, EQ_IMP_THM]
+QED
+
+
+
 
 (* ====================================================================== *)
 (* Set complements.                                                       *)

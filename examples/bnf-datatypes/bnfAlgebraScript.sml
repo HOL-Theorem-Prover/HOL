@@ -113,17 +113,6 @@ Proof
   metis_tac[IN_minset]
 QED
 
-        (*
-Theorem minsub_INJ:
-  INJ s (Fin UNIV (minset s)) (minset s)
-Proof
-  simp[INJ_IFF] >> ‘alg(minset s, s)’ by simp[] >> conj_tac
-  >- gs[Fin_def, IN_minset, alg_def, SUBSET_BIGINTER, Excl "minset_is_alg"] >>
-  simp[Fin_def, EQ_IMP_THM] >> CCONTR_TAC >> gvs[SUBSET_DEF, IN_minset] >>
-  ‘alg (minset s DIFF setBF x,s)’ suffices_by
-    (strip_tac >>
-        *)
-
 Definition hom_def:
   hom h (A,s) (B,t) ⇔
     alg(A,s) ∧ alg(B,t) ∧ (∀a. a IN A ⇒ h a IN B) ∧
@@ -607,36 +596,7 @@ Proof
   simp[CARD_LE_ADDR]
 QED
 
-Theorem CARD_ADD_EQ0[simp]:
-  x +_c y = ∅ ⇔ x = ∅ ∧ y = ∅
-Proof
-  simp[disjUNION_def, EXTENSION, EQ_IMP_THM]
-QED
 
-Theorem CARD1_SING:
-  (A:'a set) ≈ {()} ⇔ ∃a. A = {a}
-Proof
-  simp[cardeq_def, EQ_IMP_THM, PULL_EXISTS, BIJ_IFF_INV] >>
-  rpt strip_tac
-  >- (rename [‘g () ∈ A’] >> qexists_tac ‘g()’ >> simp[EXTENSION] >>
-      metis_tac[]) >>
-  qexists_tac ‘K a’ >> simp[]
-QED
-
-Theorem cardleq_setexp:
-  x ≼ x ** e ⇔ x = ∅ ∨ x ≈ {()} ∨ e ≠ ∅
-Proof
-  Cases_on ‘x = ∅’ >> simp[] >>
-  Cases_on ‘e = ∅’ >> simp[EMPTY_set_exp, CARD1_SING]
-  >- (simp[INJ_IFF, EQ_IMP_THM, PULL_EXISTS] >> reverse (rpt strip_tac)
-      >- (simp[INJ_IFF, cardleq_def] >> qexists_tac ‘λa. K NONE’ >> simp[]) >>
-      gs[cardleq_def, INJ_IFF, GSYM MEMBER_NOT_EMPTY] >> simp[EXTENSION] >>
-      metis_tac[]) >>
-  simp[cardleq_def, INJ_IFF] >> gs[GSYM MEMBER_NOT_EMPTY] >>
-  rename [‘X ** E’, ‘x ∈ X’, ‘e ∈ E’] >>
-  qexists_tac ‘λx0 e0. if e0 ∈ E then SOME x0 else NONE’ >>
-  simp[set_exp_def, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]
-QED
 
 Theorem CARD_12[simp]:
   {()} ≺ 𝟚 ∧ ¬({()} ≈ 𝟚) ∧ ¬(𝟚 ≈ {()}) ∧ {()} ≼ 𝟚
