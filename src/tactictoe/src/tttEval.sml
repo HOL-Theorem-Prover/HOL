@@ -866,6 +866,7 @@ ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
+smlOpen.buildheap_options := "--maxheap 4000";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
 val expname = "cont_search";

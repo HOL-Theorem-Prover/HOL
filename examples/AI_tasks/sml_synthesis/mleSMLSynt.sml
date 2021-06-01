@@ -167,43 +167,58 @@ writel (selfdir ^ "/target/train10") (map ilts train');
 writel (selfdir ^ "/target/test10") (map ilts test');
 *)
 
+
 (* -------------------------------------------------------------------------
-   Test MCTS and big steps
+   Test MCTS
    ------------------------------------------------------------------------- *)
 
 (* 
 load "mleSMLSynt"; open mleSMLSynt;
-load "mleSMLLib"; open mleSMLLib;
-load "psMTCS"; open psMCTS;
 load "aiLib"; open aiLib;
+load "psMTCS"; open psMCTS;
+load "psBigSteps"; open psBigSteps;
+load "mleSMLLib"; open mleSMLLib;
+
 
 val mctsparam =
   {explo_coeff = 2.0,
    noise = false, noise_coeff = 0.25, noise_gen = random_real,
    nsim = SOME 100000 : int option, time = NONE: real option};
 
-val tnn = mlTreeNeuralNetwork.read_tnn (selfdir ^ "/tnn/tnn105");
+val tnn = mlTreeNeuralNetwork.read_tnn (selfdir ^ "/eval/cache5/tnn105");
 
 val mctsobj = {game = game, mctsparam = mctsparam,
   player =  #player_from_tnn (#dplayer rlobj) tnn};
 
 
+fun seqf n = if n = 0 then 0 else n + seqf (n-1);
+val seq = List.tabulate (16,seqf);
+val startprog = [(1,[])];
+val startboard = (0,seq,startprog);
+
+aiLib.debug_flag := true;
+val (b,_) = run_bigsteps (false, mctsobj) startboard;
+
+
+
+
+*)
+
+
+
+
+
+
+
+
+
+(*
 val tree = starting_tree mctsobj startboard;
 Profile.reset_all ();
 val (_,t) = add_time (mcts mctsobj) tree;
 Profile.results ();
 PolyML.print_depth 10;
 tree
-
-load "psBigSteps"; open psBigSteps;
-aiLib.debug_flag := true;
-
-fun seqf n = if n <= 0 then 1 else (seqf (n-1)) * 2;
-val seq = List.tabulate (16,seqf);
-val startprog = [(1,[])];
-val startboard = (0,seq,startprog);
-val (b,_) = run_bigsteps (false, mctsobj) startboard;
-
 if n = 0 then 0 else n + (f (n-1))
 (* 6 characters *)
 #status_of game board2;
@@ -443,10 +458,14 @@ val dplayer =
 load "mleSMLSynt"; open mleSMLSynt;
 load "aiLib"; open aiLib;
 val sl = readl (selfdir ^ "/oeis/pos");
+fun ilts il = String.concatWith " " (map its il);
 fun f s = 
   map string_to_int (tl (first_n 17 (String.tokens (fn x => x = #",") s)));
 
 val oeis_seql = mapfilter f sl; (* filter because of overflow *)
+val oeis_seql2 = filter (fn x => length x = 16) oeis_seql;
+val oeis_seql3 = mk_fast_set (list_compare Int.compare) oeis_seql2;
+writel "target/oeis" (map ilts oeis_seql3);
 *)
 
 (* -------------------------------------------------------------------------

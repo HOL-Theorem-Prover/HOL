@@ -569,15 +569,31 @@ fun list_imax l = case l of
   | [a] => a
   | a :: m => Int.max (a,list_imax m)
 
-fun vector_maxi score v =
+
+fun vector_max score v =
   let 
     fun f (i,x,(maxi,maxsc)) = 
       let val sc = score x in 
         if sc > maxsc then (i,sc) else (maxi,maxsc)
       end
   in
-    fst (Vector.foldli f (0,Real.negInf) v)
+    Vector.foldli f (0,Real.negInf) v
   end
+
+fun vector_maxi score v = fst (vector_max score v)
+
+
+
+fun vector_mini score v =
+  let 
+    fun f (i,x,(mini,minsc)) = 
+      let val sc = score x in 
+        if sc < minsc then (i,sc) else (mini,minsc)
+      end
+  in
+    fst (Vector.foldli f (0,Real.posInf) v)
+  end
+
 
 fun list_imin l = case l of
     [] => raise ERR "list_imin" ""

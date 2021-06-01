@@ -51,10 +51,10 @@ fun safe_prettify_stac stac = (smart_space o partial_sml_lexer) stac
    Pretty proof steps
    ------------------------------------------------------------------------- *)
 
-datatype Proof =
+datatype proof =
     Tactic of (string * goal)
-  | Then   of (Proof * Proof)
-  | Thenl  of (Proof * Proof list)
+  | Then   of (proof * proof)
+  | Thenl  of (proof * proof list)
 
 fun pretty_allstac tim proof = case proof of
     Tactic (s,g) =>
@@ -224,7 +224,6 @@ fun reconstruct_aux g proof sproof =
       handle Interrupt => raise Interrupt | _ => NO_TAC
     val new_tim =
       snd (add_time (timeout (!mini_proof_time) Tactical.TAC_PROOF) (g,tac))
-      handle Interrupt => raise Interrupt | _ => (!mini_proof_time)
   in
     debugf "proof length: " int_to_string (proof_length proof);
     debugf "proof time: " Real.toString new_tim;
@@ -246,5 +245,11 @@ fun reconstruct g proof =
   )
   handle Interrupt => raise Interrupt | _ => safe_prettify_proof proof
 
+(*---------------------------------------------------------------------------
+  Printing partial proofs
+  ---------------------------------------------------------------------------*)
+
+fun unsafe_sproof proof = 
+  unsafe_prettify_stac (requote_sproof (unsafe_prettify_proof proof))
 
 end (* struct *)
