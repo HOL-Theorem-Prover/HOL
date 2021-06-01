@@ -26,6 +26,9 @@ sig
      StacLeaf of stacrecord * searchtree option
    | StacNode of stacrecord * (stactree vector * token list) option
 
+  val get_stacrecord : stactree -> stacrecord
+  val dest_goal : gtoken -> goal
+
   val nocut_flag : bool ref
   val conttop_flag : bool ref  
   val contmid_flag : bool ref

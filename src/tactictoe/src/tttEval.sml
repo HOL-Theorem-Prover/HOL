@@ -230,20 +230,28 @@ compare_stats ["august9"] "august10";
    TNN value examples
    ------------------------------------------------------------------------- *)
 
-fun is_proved tree = #nstatus (dfind [] tree) = NodeProved
+fun allgoalrec_searchtree tree = case tree of
+  SearchNode (_,gtreev) => 
+    vector_to_list (Vector.map get_stacrecord gtreev) @
+    List.concat (vector_to_list (Vector.map allgoalrec_stactree gtreev))
+and allgoalrec_stactree stactree = case stactree of
+    StacNode (_,svo) => (case svo of NONE => [] | SOME (sv,sl) =>
+      List.concat (vector_to_list (Vector.map allgoalrec_stactree sv)))
+  | StacLeaf (_,NONE) => [] 
+  | StacLeaf (_,SOME ctree) => allgoalrec_searchtree ctree
 
-fun export_valex file tree =
-  if not (is_proved tree) then () else 
+
+fun export_valex file (tree as SearchNode (r,gtreev)) =
+  if #sstatus r = Proved then () else 
   let
-    val nodel = map snd (dlist tree)
-    fun f x = ((nntm_of_stateval (#goal x), 
-               if #gstatus x = GoalProved then 1.0 else 0.0), #gvis x)
-    fun g x = vector_to_list (Vector.map f (#goalv x))
-    val exl1 = List.concat (map g nodel)
+    val goalrecl = allgoalrec_searchtree tree
+    fun f x = ((nntm_of_stateval (dest_goal (#gtoken x)), 
+               if #sstatus x = Proved then 1.0 else 0.0), #svis x)
+    val exl1 = map f goalrecl
     val exl2 = filter (fn ((t,_),_) => term_size t < 100) exl1
     val (posl,negl) = partition (fn x => snd (fst x) > 0.5) exl2
-    val posl2 = first_n 100 (dict_sort compare_rmax posl)
-    val negl2 = first_n 100 (dict_sort compare_rmax negl)
+    val posl2 = first_n 600 (dict_sort compare_rmax posl)
+    val negl2 = first_n 600 (dict_sort compare_rmax negl)
   in
     write_tnnex file (basicex_to_tnnex (map fst (posl2 @ negl2)))
   end
@@ -252,9 +260,8 @@ fun export_valex file tree =
    Argument policy examples
    ------------------------------------------------------------------------- *)
 
-fun access_child argtree anl i = dfind (i :: anl) argtree
-
 (*
+fun access_child argtree anl i = dfind (i :: anl) argtree
 fun export_argex file tree =
   if not (is_proved tree) then () else 
   let
@@ -321,71 +328,6 @@ fun export_pbl pbprefix tree =
   end
 
 (* -------------------------------------------------------------------------
-   Goal tree up to a maximum width + depth
-   ------------------------------------------------------------------------- *)
-
-datatype GoalDisj = GDisj of goal * GoalConj list
-and GoalConj = GConj of GoalDisj list
-
-fun children_of_argtree tree id (gn,sn) argtree =
-  let 
-    val anll = dkeys argtree
-    fun prefix anl = (gn,sn,anl) :: id
-    fun test anl = dmem (prefix anl) tree
-    val anll1 = filter test anll
-    val anll2 = dict_sort (list_compare Int.compare) anll1
-  in
-    map prefix anll2
-  end
-
-fun children_of_stacv tree id gn sn argtreel =
-   case argtreel of
-     [] => []
-   | argtree :: m => 
-     let val cidl = children_of_argtree tree id (gn,sn) argtree in
-       if null cidl 
-       then children_of_stacv tree id gn (sn+1) m
-       else cidl :: children_of_stacv tree id gn (sn+1) m
-     end
-
-fun mk_goaltree bigtree tree id =
-  let
-    val bignode = dfind id bigtree
-    val goalv = number_snd 0 (vector_to_list (#goalv bignode))
-    fun f (x,i) = if #gstatus x <> GoalProved then SOME (x,i) else NONE
-    val goall = List.mapPartial f goalv
-    fun g (grec,gn) =
-      let val cidl = List.concat 
-        (children_of_stacv tree id gn 0 (vector_to_list (#stacv grec)))
-      in
-        GDisj (#goal grec, map (mk_goaltree bigtree tree) cidl)
-      end
-  in
-    GConj (map g goall)
-  end
-
-(* -------------------------------------------------------------------------
-   Convert goal tree to a term
-   ------------------------------------------------------------------------- *)
-
-fun foralls (vl,t) = case vl of 
-    [] => t 
-  | a :: m => mk_forall (a, foralls (m,t))
-val list_mk_forall = foralls
-
-fun gen_term t = list_mk_forall (free_vars_lr t, t)
-fun termify g = gen_term (list_mk_imp g)
-  handle HOL_ERR _ => (print_endline ("termify_error:" ^ string_of_goal g); F)
-
-fun termify_gconj gconj = case gconj of
-  GConj gdisjl => 
-    if null gdisjl then raise ERR "termify_goaltree" "unexpected" else 
-    list_mk_conj (map termify_gdisj gdisjl)
-and termify_gdisj gdisj = case gdisj of
-  GDisj (goal,gconjl) => 
-    list_mk_disj (termify goal :: map termify_gconj gconjl)
-
-(* -------------------------------------------------------------------------
    Evaluation function
    ------------------------------------------------------------------------- *)
 
@@ -431,23 +373,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     in
       print_status status;
       print_endline ("ttt_eval: " ^ rts_round 6 t);
-      export_valex valfile tree;
-      (* export_argex argfile tree; *)
-      if !export_pb_flag then export_pbl pbprefix tree else ();
-      (* call to holyhammer on partial proof tree *)
-      if !hh_ontop_flag andalso not (is_proved tree) 
-      then 
-        let 
-          fun build_term () =
-            if isSome (!snap_tree) 
-            then ([], termify_gconj (mk_goaltree tree (valOf (!snap_tree)) []))
-            else ([], termify_gconj (mk_goaltree tree tree []))
-          val newgoal = build_term ()
-          val _ = print_endline ("hh goal: " ^ string_of_goal newgoal)
-        in 
-          catch_err_ignore "hh_error" (hh_call fofdir thmdata) newgoal 
-        end
-      else ()
+      export_valex valfile tree
     end
     ;
     hide_flag := mem
@@ -824,8 +750,6 @@ fun collect_ex dir =
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
   end
-
-
 
 val ttt_eval_string = "tttEval.ttt_eval"
 
