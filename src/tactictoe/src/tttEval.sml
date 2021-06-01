@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlRedirect smlParallel smlOpen smlParser smlExecute
   mlThmData mlTacticData mlTreeNeuralNetwork
-  tttSetup tttSearch tttRecord tacticToe tttToken tttTrain tttBigSteps
+  tttSetup tttSearch tttRecord tacticToe tttToken tttTrain
 
 val ERR = mk_HOL_ERR "tttEval"
 fun catch_err msg f x = 
@@ -49,7 +49,6 @@ fun import_hh () =
    ------------------------------------------------------------------------- *)
 
 type nnfiles = string option * string option * string option
-val export_pb_flag = ref false
 
 (* --------------------------------------------------------------------
    Statistics
@@ -242,7 +241,7 @@ and allgoalrec_stactree stactree = case stactree of
 
 
 fun export_valex file (tree as SearchNode (r,gtreev)) =
-  if #sstatus r = Proved then () else 
+  if #nstatus r = Proved then () else 
   let
     val goalrecl = allgoalrec_searchtree tree
     fun f x = ((nntm_of_stateval (dest_goal (#gtoken x)), 
@@ -257,77 +256,6 @@ fun export_valex file (tree as SearchNode (r,gtreev)) =
   end
 
 (* -------------------------------------------------------------------------
-   Argument policy examples
-   ------------------------------------------------------------------------- *)
-
-(*
-fun access_child argtree anl i = dfind (i :: anl) argtree
-fun export_argex file tree =
-  if not (is_proved tree) then () else 
-  let
-    val nodel = map snd (dlist tree)
-    fun f_arg g stac x = 
-      if true (* #svis x > 1.5 orelse #sstatus x = StacProved *) 
-      then SOME (nntm_of_statearg ((g,stac),#token x),
-                 if #sstatus x = StacProved then [1.0] else [0.0])
-      else NONE
-    fun f_argtree g x = 
-      if #sstatus (dfind [] x) <> StacProved then NONE else
-      let 
-        val stac = dest_stac (#token (dfind [] x))  
-        val argl = map snd (before_stacfresh_all 
-          (access_child x []))             
-        val exo = 
-          if length argl <= 1 then NONE else 
-          let val ex = List.mapPartial (f_arg g stac) argl in
-            if length ex <= 1 then NONE else SOME ex
-          end
-      in
-        exo
-      end
-    fun f_goal x = List.concat (List.mapPartial
-       (f_argtree (#goal x)) (vector_to_list (#stacv x)))
-    fun f_node x = map f_goal (vector_to_list (#goalv x))
-    val exl = List.concat (map f_node nodel)
-  in
-    write_tnnex file exl
-  end
-*)
-(* -------------------------------------------------------------------------
-   Exporting problems on intermediate goals
-   ------------------------------------------------------------------------- *)
-
-fun mk_info (id,gi,gstatus,gvis) =
-  ["Path: " ^ (if null id then "top" else string_of_id id),
-   "Goal: " ^ its gi,
-   "Status: " ^ (if gstatus = GoalProved then "proven" else "unknown"),
-   "Visits: " ^ rts gvis]
-
-fun export_pb pbprefix pbn (g,(id,gi,gstatus,gvis)) =
-  let 
-    val pbfile = pbprefix ^ "-" ^ its pbn
-    val premises = mlNearestNeighbor.thmknn_wdep 
-      (!thmdata_glob) 128 (mlFeature.fea_of_goal true g) 
-  in
-    export_goal (pbfile ^ ".goal") g;
-    writel (pbfile ^ ".premises") premises;
-    writel (pbfile ^ ".info") (mk_info (id,gi,gstatus,gvis))
-  end
-
-fun export_pbl pbprefix tree =
-  if not (can (smlExecute.tactic_of_sml 1.0) "metisTools.METIS_TAC []") 
-  then () else
-  let
-    fun f id (gi,x) = (#goal x, (id, gi, #gstatus x, #gvis x))    
-    fun g (id,x) = vector_to_list (Vector.mapi (f id) (#goalv x))
-    val pbl = List.concat (map g (dlist tree))
-    fun cmp (a,b) = Real.compare (#4 (snd b),#4 (snd a))
-    val pbl_sorted = first_n 32 (dict_sort cmp pbl)
-  in
-    appi (export_pb pbprefix) pbl_sorted
-  end
-
-(* -------------------------------------------------------------------------
    Evaluation function
    ------------------------------------------------------------------------- *)
 
@@ -337,7 +265,6 @@ fun print_status r = case r of
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
 val hh_flag = ref false
-val hh_ontop_flag = ref false
 
 fun hh_call fofdir thmdata goal =
   let val hho = import_hh () in
@@ -430,16 +357,13 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "tttSetup.ttt_metis_flag" ttt_metis_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
-     sreflect_flag "tttEval.export_pb_flag" export_pb_flag,
      sreflect_flag "tttEval.cheat_flag" cheat_flag,
      sreflect_flag "tttEval.hh_flag" hh_flag,
      sreflect_int "tttEval.hh_timeout" hh_timeout,
-     sreflect_flag "tttEval.hh_ontop_flag" hh_ontop_flag,
      sreflect_flag "tacticToe.hh_use" hh_use,
      sreflect_int "tacticToe.hh_time" hh_time,
-     sreflect_flag "tttSearch.snap_flag" snap_flag,
-     sreflect_int "tttSearch.snap_n" snap_n,
-     sreflect_flag "tttSearch.continue_searching" continue_searching,
+     sreflect_flag "tttSearch.conttop_flag" conttop_flag,
+     sreflect_flag "tttSearch.contmid_flag" contmid_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      sreflect_flag "tttSearch.nocut_flag" nocut_flag,
@@ -790,10 +714,12 @@ ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
+tttSearch.contmid_flag := true;
+tttSearch.conttop_flag := true;
 smlOpen.buildheap_options := "--maxheap 4000";
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
-val expname = "cont_search";
+val expname = "reimp1";
 rlval ncore expname thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)
