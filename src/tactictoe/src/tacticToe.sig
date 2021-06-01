@@ -6,7 +6,7 @@ sig
   type tnn = mlTreeNeuralNetwork.tnn
 
   (* for debugging and experiments *)
-  val tree_glob : tttSearch.tree option ref 
+  val tree_glob : tttSearch.searchtree option ref 
   val hh_lemmas : 
     (string -> mlThmData.thmdata -> goal -> string list option) option ref
   val hh_use : bool ref
@@ -21,7 +21,7 @@ sig
   val main_tactictoe :
     mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option * tnn option ->
-    goal -> tttSearch.proofstatus * tttSearch.tree
+    goal -> tttSearch.proofstatus * tttSearch.searchtree
 
   val clean_ttt_tacdata_cache : unit -> unit
   val set_timeout : real -> unit

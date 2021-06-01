@@ -11,10 +11,11 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
-  psMinimize
-  tttSetup tttToken tttLearn tttTrain
+  psMinimize tttSetup tttToken tttLearn tttTrain
 
 val ERR = mk_HOL_ERR "tttSearch"
+fun hderr x = hd x handle Empty => raise ERR "hderr" ""
+fun tlerr x = tl x handle Empty => raise ERR "tlerr" ""
 
 (* -------------------------------------------------------------------------
    Global parameters
@@ -24,6 +25,7 @@ val default_reward = 0.0
 val conttop_flag = ref false
 val contmid_flag = ref false
 val nocut_flag = ref false
+val looplimit = ref NONE
 
 (* -------------------------------------------------------------------------
    Timers
@@ -58,6 +60,9 @@ fun print_timers () =
    ------------------------------------------------------------------------- *)
 
 datatype status = Proved | Saturated | Undecided
+fun is_proved x = (x = Proved)
+fun is_saturated x = (x = Saturated)
+
 datatype searchstatus = 
   SearchProved | SearchSaturated | SearchTimeout
 datatype proofstatus = 
@@ -69,6 +74,13 @@ datatype proofstatus =
 
 datatype gtoken = 
   Token of token | Goal of (goal * (goal list, unit) Redblackmap.dict)
+fun is_token gtoken = case gtoken of Token _ => true | _ => false
+fun is_goal gtoken = case gtoken of Goal _ => true | _ => false
+fun dest_token gtoken = 
+  case gtoken of Token x => x | _ => raise ERR "dest_token" ""
+fun dest_goal gtoken = 
+  case gtoken of Goal (x,_) => x | _ => raise ERR "dest_goal" ""
+
 
 type searchrecord =
   {nvis : real, nsum : real, nstatus : status,
@@ -82,7 +94,7 @@ datatype searchtree = SearchNode of searchrecord * stactree vector
 
 and stactree = 
    StacLeaf of stacrecord * searchtree option
- | StacNode of stacrecord * (stactree vector * stactree list) option
+ | StacNode of stacrecord * (stactree vector * token list) option
 
 fun dest_searchtree tree = case tree of SearchNode x => x
 
@@ -95,19 +107,11 @@ fun get_stacrecord stactree = case stactree of
    ------------------------------------------------------------------------- *)
 
 type searchobj =
-  {predtac : goal -> (string * aty list) list,
+  {predtac : goal -> token list,
    predarg : string -> aty -> goal -> token list,
+   atyd : (string, aty list) Redblackmap.dict,
    parsetoken : parsetoken,
    vnno: tnn option, pnno: tnn option, anno: tnn option}
-
-(* -------------------------------------------------------------------------
-   Backing up utilities
-   ------------------------------------------------------------------------- *)
-
-fun is_proved x = (x = Proved)
-fun is_saturated x = (x = Saturated)
-
-
 
 (* -------------------------------------------------------------------------
    Re-evaluation of nearest neighbor choices
@@ -115,10 +119,6 @@ fun is_saturated x = (x = Saturated)
    ------------------------------------------------------------------------- *)
 
 (* value *)
-
-(* called only when tactic applications either closes the goal or fails *)
-
-
 fun eval_goal vnn g =
   let
     val tm1 = nntm_of_stateval g
@@ -130,6 +130,7 @@ fun eval_goal vnn g =
 fun reward_of_goal vnno g =
   if not (isSome vnno) then default_reward else eval_goal (valOf vnno) g
 
+(*
 (* policy *)
 fun eval_stac pnn g stac =
   let
@@ -152,8 +153,6 @@ fun reorder_stacl g pnn stacl =
 fun reorder_pol g pnno stacl =
   if not (isSome pnno) then stacl else reorder_stacl g (valOf pnno) stacl
 
-(* reorder_pol goal (#pnno searchobj) stacl1 *)
-
 (* argument *)
 fun eval_argl ann g stac argl =
   let fun f x = mask_unknown_arg ann (nntm_of_statearg ((g,stac),x)) in
@@ -168,16 +167,15 @@ fun reorder_arg anno g stac argl =
   in
     map fst (dict_sort compare_rmax argle)
   end
-
-(*  reorder_arg (#anno searchobj) goal stac argl1 *)
+*)
 
 (* -------------------------------------------------------------------------
    Node expansion
    ------------------------------------------------------------------------- *)
 
 fun status_of_stac parentd (goal,siblingd) glo = case glo of
-    NONE => StacSaturated
-  | SOME [] => StacProved
+    NONE => Saturated
+  | SOME [] => Proved
   | SOME gl =>
    (if op_mem goal_eq goal gl orelse
        exists (fn x => dmem x parentd) gl orelse
@@ -185,8 +183,8 @@ fun status_of_stac parentd (goal,siblingd) glo = case glo of
        exists (fn x => term_eq (snd x) F) gl orelse
        (!nocut_flag andalso 
         exists (fn x => term_eq (snd x) (snd goal)) gl)
-    then StacSaturated
-    else StacUndecided)
+    then Saturated
+    else Undecided)
 
 fun is_metis_stac token = case token of
     Stac s => s = "metisTools.METIS_TAC " ^ thmlarg_placeholder
@@ -219,10 +217,10 @@ fun apply_tac parsetoken tokenl goal =
     stac_cache := dadd (goal,tokenl) glo (!stac_cache); glo
   end
 
-fun apply_stac searchobj noderec gtokenl = case gtokenl of
+fun apply_stac obj noderec gtokenl = case gtokenl of
     Goal (goal,siblingd) :: tokenl =>
   let
-    val glo = apply_tac (#parsetoken searchobj) (map dest_token tokenl) goal
+    val glo = apply_tac (#parsetoken obj) (map dest_token tokenl) goal
     val sstatus = status_of_stac (#parentd noderec) (goal,siblingd) glo
     val glo' = if sstatus = Undecided then glo else NONE
   in
@@ -234,112 +232,60 @@ fun apply_stac searchobj noderec gtokenl = case gtokenl of
    Node creation
    ------------------------------------------------------------------------- *)
 
-fun create_predtac searchobj svo = case svo of 
-    NONE => SOME (Vector.fromList [], #predtac searchobj goal)
+(* predictions *)
+fun create_predtac obj svo goal = case svo of 
+    NONE => SOME (Vector.fromList [], #predtac obj goal)
   | SOME _ => svo 
 
-fun create_predarg searchobj tokenl aty svo = case svo of 
-    NONE => case rev tokenl of  
-      Goal goal :: Token (Stac stac) :: m =>
-        SOME (Vector.fromList [], #predarg searchobj stac aty goal)
-      | _ => raise ERR "create_predarg" "match"
+fun create_predarg obj tokenl aty svo = case svo of 
+    NONE => (case tokenl of  
+      Goal (goal,_) :: Token (Stac stac) :: m =>
+        SOME (Vector.fromList [], #predarg obj stac aty goal)
+      | _ => raise ERR "create_predarg" "")
   | SOME _ => svo
 
-fun create_stacnode x = 
+(* stactree *)
+fun wrap_stacrecord x = 
    if is_token (#gtoken x) andalso null (#atyl x)
    then StacLeaf (x,NONE)
    else StacNode (x,NONE)
 
+fun atyl_of obj pr token = case token of 
+    Stac stac => dfind stac (#atyd obj)
+  | _ => tlerr (#atyl pr)
 
+fun create_stactree obj pr token spol = wrap_stacrecord
+  {gtoken = Token token, atyl = atyl_of obj pr token, 
+   svis = 1.0, ssum = 0.0, spol = spol, sstatus = Undecided}
 
-
-
-fun create_searchleaf searchobj gl =
-  let
-    val pgoal = #goal (Vector.sub (#goalv node,gn))
-    val cgoalv = Vector.fromList (map (goal_create searchobj) gl)
-    val cid = (gn,sn,anl) :: pid
-    val status = backstatus_goalv cgoalv
-    val reward = backreward_allgoalv cgoalv
-    val node =
-
-    val newtree = dadd cid node tree
+(* searchtree *)
+fun createreward_searchtree gtreev =
+  let fun f gtree = case gtree of
+      StacNode (r,_) => #ssum r / #svis r 
+    | _ => raise ERR "createreward_searchtree" ""
   in
-    debug_node gl; (newtree,reward)
+    Vector.foldl (op *) 1.0 (Vector.map f gtreev)
+  end
+
+val empty_siblingd = dempty (list_compare goal_compare)
+
+fun create_searchtree obj parentd gl = 
+  let 
+    val vnno = #vnno obj 
+    fun create_gtree g = StacNode (
+      {gtoken = Goal (g, empty_siblingd), atyl = [], 
+       svis = 1.0, ssum = reward_of_goal vnno g, 
+       spol = 0.0, sstatus = Undecided}
+      , NONE)
+    val gtreev = Vector.fromList (map create_gtree gl) 
+    val reward = createreward_searchtree gtreev
+  in
+    (SearchNode ({nvis = 1.0, nsum = reward, nstatus = Undecided, 
+                  parentd = parentd} , gtreev), reward)
   end
 
 (* -------------------------------------------------------------------------
-   Node backup and update
-   ------------------------------------------------------------------------- *)
-
-fun children_statusl argtree anl acc i =
-  if dmem (i :: anl) argtree
-  then children_statusl argtree anl
-    (#sstatus (dfind (i :: anl) argtree) :: acc) (i+1)
-  else rev acc
-
-fun backup_argtree (argtree,anl) (sstatus,reward) =
-  let
-    val {token,atyl,svis,ssum,spol,...} = dfind anl argtree
-    val newargnode =
-      {token = token, atyl = atyl,
-       svis = svis + 1.0, ssum = ssum + reward, 
-       spol = if reward > spol then reward else spol,
-       sstatus = sstatus}
-    val newargtree = dadd anl newargnode argtree
-  in
-    if null anl then newargtree else
-    let
-      val cstatusl = children_statusl newargtree (tl anl) [] 0
-      val pstatus = backstatus_arg cstatusl
-    in
-      backup_argtree (newargtree, tl anl) (pstatus,reward)
-    end
-  end
-
-fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
-  let
-    val {nvis,nsum,goalv,parentd,...} = dfind id tree
-    val {goal,gvis,gsum,stacv,siblingd,...} = Vector.sub (goalv,gn)
-    val argtree = Vector.sub (stacv,sn)
-    (* update argtree *)
-    val argtree1 = if isSome argtreeo then (valOf argtreeo) else argtree
-    val argtree2 = backup_argtree (argtree1,anl) (sstatus,reward)
-    (* update stacv *)
-    val newstacv = Vector.update (stacv,sn,argtree2)
-    (* update goalv *)
-    val newgoalrec =
-      {
-      goal = goal,
-      gvis = gvis + 1.0, gsum = gsum + reward,
-      gstatus = backstatus_stacv newstacv,
-      stacv = newstacv,
-      siblingd = if isSome glo then dadd (valOf glo) () siblingd else siblingd
-      }
-    val newgoalv = Vector.update (goalv,gn,newgoalrec)
-    (* update node *)
-    val newreward = backreward_goalv (gn,reward) newgoalv
-    val newnode =
-      {
-      nvis = nvis + 1.0, nsum = nsum + newreward,
-      nstatus = backstatus_goalv newgoalv,
-      goalv = newgoalv,
-      parentd = parentd
-      }
-  in
-    (dadd id newnode tree, backstatus_node newnode, newreward)
-  end
-
-fun node_backup tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
-  let val (newtree,newsstatus,newreward) =
-    node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl))
-  in
-    if null id then newtree else 
-    node_backup newtree (NONE,NONE) (newsstatus,newreward) (tl id, hd id)
-  end
-
-(* -------------------------------------------------------------------------
-   Node selection
+   Node backup
    ------------------------------------------------------------------------- *)
 
 fun reward_of_status status = case status of
@@ -347,24 +293,96 @@ fun reward_of_status status = case status of
   | Proved => 1.0
   | _ => raise ERR "reward_of_sstatus" "unexpected"
 
+(* stactree *)
+fun backstatus_stactree (sv,sl) =
+  let val v = Vector.map (fn x => #sstatus (get_stacrecord x)) sv in
+    if Vector.exists is_proved v then Proved
+    else if null sl andalso Vector.all is_saturated v then Saturated
+    else Undecided
+  end
+
+fun back_stactree stree si (su,reward) = case stree of
+     StacNode ({gtoken,atyl,svis,ssum,spol,sstatus}, SOME (sv,sl)) => 
+     let 
+       val newsv = Vector.update (sv,si,su)
+       val newstatus = backstatus_stactree (newsv,sl)
+     in 
+       (StacNode
+         ({gtoken = gtoken, atyl = atyl,
+          svis = svis + 1.0, ssum = ssum + reward, spol = spol,
+          sstatus = newstatus}, SOME (newsv,sl)),
+        reward)
+     end
+   | _ => raise ERR "back_stactree" ""
+
+(* searchtree root *)
+fun backstatus_root gtreev =
+  let val v = Vector.map (#sstatus o get_stacrecord) gtreev in
+    if Vector.all is_proved v then Proved
+    else if Vector.exists is_saturated v then Saturated
+    else Undecided
+  end
+
+fun backreward_root (gi,reward) gtreev =
+  let fun f (i,gtree) = 
+    let val r = get_stacrecord gtree in
+      if #sstatus r = Proved then 1.0
+      else if #sstatus r = Saturated then 0.0
+      else if gi = i then reward 
+      else #ssum r / #svis r
+    end
+  in
+    Vector.foldl (op *) 1.0 (Vector.mapi f gtreev)
+  end
+
+fun back_root tree gi (gu,reward) =
+  let 
+    val ({nvis,nsum,nstatus,parentd},gtreev) = dest_searchtree tree
+    val newgtreev = Vector.update (gtreev,gi,gu)
+    val newstatus = backstatus_root newgtreev
+    val newreward = backreward_root (gi,reward) newgtreev
+  in
+    (SOME (SearchNode 
+      ({nvis = nvis + 1.0, nsum = nsum + newreward, nstatus = newstatus,
+        parentd = parentd}, newgtreev)), newreward)
+  end
+
+fun update_stacrec (status,reward) {gtoken,atyl,svis,ssum,spol,sstatus} =
+  {gtoken = gtoken, atyl = atyl,
+   svis = svis + 1.0, ssum = ssum + reward, spol = spol,
+   sstatus = status}
+
+(* stactree leaf *)
+fun backleaf_wstatus stacleaf status (cuo,reward) = 
+  let     
+    val newstacleaf = case stacleaf of
+        StacNode (r,svo) => StacNode (update_stacrec (status,reward) r,svo)
+      | StacLeaf (r,_) => StacLeaf (update_stacrec (status,reward) r,cuo)
+  in
+    (newstacleaf,reward)
+  end
+
+fun backleaf stacleaf (cuo,reward) =
+  let     
+    val cu = valOf cuo handle Option => raise ERR "backleaf" ""
+    val status = (#nstatus o fst o dest_searchtree) cu
+  in
+    backleaf_wstatus stacleaf status (cuo,reward)
+  end
+
+(* -------------------------------------------------------------------------
+   Node selection
+   ------------------------------------------------------------------------- *)
+
 fun puct gvis {ssum,svis,spol,...} =
   ssum / svis + (!ttt_explo_coeff) * (spol * Math.sqrt gvis) / svis
 
-fun select_goaltree gtreev =
-  let
-    val _ = if Vector.length gtreev = 0
-      then raise ERR "select_goaltree" "" else ()
-    fun score x = #svis (get_stacrecord x)
-    val i = vector_mini score gtreev
-  in
-    (i, Vector.sub (gtreev, i))
-  end
-
 fun policy_coeff n =
-  (1 - !ttt_policy_coeff) * Math.pow (!ttt_policy_coeff, Real.fromInt n)
+  (1.0 - !ttt_policy_coeff) * Math.pow (!ttt_policy_coeff, Real.fromInt n)
 
+(* stactree *)
 datatype selectres = 
-  Sel of int | SelNone | SelFresh of sc 
+  Sel of int | SelNone | SelFresh of (token * real)
 
 fun select_stactree pvis (sv,sl) =
   if Vector.length sv = 0 then 
@@ -380,240 +398,138 @@ fun select_stactree pvis (sv,sl) =
       val freshpol = policy_coeff (Vector.length sv)
       val freshsc = !ttt_explo_coeff * (freshpol * Math.sqrt pvis)
     in
-      if freshsc > sc then Sel (hd sl, freshpol) else Sel i
+      if freshsc > sc then SelFresh (hd sl, freshpol) else Sel i
     end
   end
 
-fun hderr x = hd x handle Empty => raise ERR "hderr" ""
-fun tlerr x = tl x handle Empty => raise ERR "tlerr" ""
-
-fun atyl_of searchobj pr token = case token of 
-    Stac stac => dfind stac (#atyd searchobj)
-  | _ => tlerr (#atyl pr)
-
-fun create_stactree searchobj pr token spol = create_stacnode
-  {gtoken = Token token, atyl = atyl_of searchobj pr token, 
-   svis = 1.0, ssum = 0.0, spol = spol, sstatus = Undecided}
-
-fun backreward_stactree reward = reward
-
-fun backstatus_stactree sv =
-  let val v = Vector.map (fn (r,_) => #sstatus r) sv in
-    if Vector.exists is_proved v then Proved
-    else if Vector.all is_saturated v then Saturated
-    else Undecided
-  end
-
-fun backup_stactree stree si (su,reward) = case stree of
-     StacNode ({gtoken,atyl,svis,ssum,spol,sstatus}, SOME (sv,sl)) => 
-     let 
-       val newsv = Vector.update (sv,si,su) 
-       val newreward = backreward_stactree reward
-       val newstatus = backstatus_stactree newsv
-     in 
-       (StacNode
-         {gtoken = gtoken, atyl = atyl,
-          svis = svis + 1.0, ssum = ssum + newreward, spol = spol,
-          sstatus = newstatus},
-        newreward)
-     end
-   | _ => raise ERR "backup_stactree" ""
-   
-
-fun select_stacleaf searchobj backupl gtokenl stree = case stree of
+fun select_stacleaf obj backl gtokenl stree = case stree of
     StacNode (r,svo) => 
     let 
       val newsvo = case #gtoken r of 
-          Goal _ => create_predtac searchobj svo
-        | Token _ => create_predarg searchobj (hderr (#atyl r)) svo
+          Goal (goal,_) => create_predtac obj svo goal 
+        | Token _ => create_predarg obj (rev (#gtoken r :: gtokenl)) 
+            (hderr (#atyl r)) svo
       val newstree = StacNode (r,newsvo)
+      val newgtokenl = #gtoken r :: gtokenl
     in
       case select_stactree (#svis r) (valOf newsvo) of
-        SelNone => (stree, rev (#gtoken r :: gtokenl), backupl)
-      | Sel si => 
+        SelNone => (stree, rev newgtokenl, backl)
+      | Sel si =>
         let 
-          val cstree = Vector.sub (fst (valOf newsvo), si) 
-          val newgtokenl = #gtoken r :: tokenl
-          val backupf = backup_stactree newstree si
-          val newbackupl = backupf :: backupl
+          val cstree = Vector.sub (fst (valOf newsvo), si)
+          val backf = back_stactree newstree si
+          val newbackl = backf :: backl
         in
-          select_stacfleaf searchobj newbackupl newgtokenl cstree
+          select_stacleaf obj newbackl newgtokenl cstree
         end
       | SelFresh (token,spol) => 
         let 
-          val cstree = create_stactree searchobj r token spol 
+          val cstree = create_stactree obj r token spol 
           val (sv,sl) = valOf newsvo
-          val newnewsvo = SOME (Vector.concat [sv,cstree], tl sl)
+            handle Option => raise ERR "select_stacleaf" ""
+          val newnewsvo = 
+            SOME (Vector.concat [sv,Vector.fromList [cstree]], tl sl)
           val newnewstree = StacNode (r,newnewsvo)
-          val newgtokenl = #gtoken r :: tokenl
-          val backupf = backup_stactree newnewstree (Vector.length sv)
-          val newbackupl = backupf :: backupl
+          val backf = back_stactree newnewstree (Vector.length sv)
+          val newbackl = backf :: backl
         in
-          select_stacfleaf searchobj newbackupl newgtokenl cstree
+          select_stacleaf obj newbackl newgtokenl cstree
         end
-  | StacLeaf (r,_) => (stree, rev (#gtoken r :: gtokenl), backupl)
+    end
+  | StacLeaf (r,_) => (stree, rev (#gtoken r :: gtokenl), backl)
 
-fun backstatus_searchtree gtreev =
-  let val v = Vector.map (#sstatus o fst) gtreev in
-    if Vector.all is_proved v then Proved
-    else if Vector.exists is_saturated v then Saturated
-    else Undecided
-  end
-
-fun backreward_searchtree (gi,reward) gtreev =
-  let fun f (i,(r,_)) = 
-    if #sstatus r = Proved then 1.0
-    else if #sstatus r = Saturated then 0.0
-    else if gi = i then reward 
-    else #ssum r / #svis r 
-  in
-    Vector.foldl (op *) 1.0 (Vector.mapi f goalv)
-  end
-
-fun backup_searchtree tree gi reward gu =
-  let 
-    val ({nvis,nsum,nstatus,parentd},gtreev) = dest_searchtree tree
-    val newgtreev = Vector.update (gtreev,gi,gu)
-    val newstatus = backstatus_searchtree newgtreev
-    val newreward = backreward_searchtree (gi,reward) newgtreev
-  in
-    SearchNode 
-      ({nvis = nvis + 1.0, nsum = nsum + newreward, nstatus = newstatus,
-        parentd = parentd}, newgtreev)
-  end
-
-fun createreward_searchtree gtreev =
-  let fun f gtree = case gtree of
-      StacNode (r,_) => #gsum r / #gvis r 
-    | _ => raise ERR "createreward_searchtree" ""
-  in
-    Vector.foldl (op *) 1.0 (Vector.map f gtreev)
-  end
-
-val empty_siblind = dempty (list_compare goal_compare)
-
-fun create_searchtree searchobj parentd gl = 
-  let 
-    val vnno = #vnno searchobj 
-    fun create_gtree g = 
-      StacNode (
-      {token = Goal (g, empty_siblingd), atyl = [], 
-       svis = 1.0, ssum = reward_of_goal vnno g, 
-       spol = 0.0, sstatus = Undecided}
-      , NONE)
-    val gtreev = Vector.fromList (map create_gtree gl) 
-    val reward = createreward_searchtree gtreev
-  in
-    (SOME (SearchNode ({nvis = 1.0, nsum = reward, nstatus = Undecided, 
-                parentd = parentd} , gtreev)), reward)
-  end
-  
-fun goal_of_gtokenl gtokenl = case gtokenl of
-    Goal (g,_) :: m => g
-  | _ => raise ERR "goal_of_tokenl" ""
-
-
-fun update_stacrec (status,reward) {gtoken,atyl,svis,ssum,spol,sstatus} =
-  {gtoken = gtoken, atyl = atyl,
-   svis = svis + 1.0, ssum = ssum + reward, spol = spol,
-   sstatus = status}
-
-fun backupleaf_wstatus stacleaf status (cuo,reward) = 
-  let     
-    val newstacleaf = case stacleaf of
-        StacNode (r,svo) => StacNode (update_stacrec (status,reward) r,svo)
-      | StacLeaf (r,_) => StacLeaf (update_stacrec (status,reward) r,cuo)
-  in
-    (newstacleaf,reward)
-  end
-
-fun backupleaf stacleaf (cuo,reward) =
-  let     
-    val cu = valOf cuo handle Option => raise ERR "backupleaf" ""
-    val status = (#nstatus o fst o dest_searchtree) cu
-  in
-    backupleaf_wstatus stacleaf status (cuo,reward)
-  end
-
-fun endselect status bfl bfroot sleaf = 
+(* search tree *)
+fun select_goaltree gtreev =
   let
-    val ctreeo = case sleaf of StacNode _ => NONE
-      | Stactree (_,co) => co
-    val reward = reward_of_status status
-    val be = (backupleaf_wstatus sleaf status, bfl, bfroot) 
+    val _ = if Vector.length gtreev = 0
+      then raise ERR "select_goaltree" "" else ()
+    fun score x = #svis (get_stacrecord x)
+    val i = vector_mini score gtreev
   in
-    ((ctreeo,reward), be :: backupl)
+    (i, Vector.sub (gtreev, i))
   end
 
-fun select_searchleaf searchobj backupl tree =
+fun endselect status (backl,bfroot,bfl) sleaf = 
+  let
+    val ctreeo = case sleaf of StacNode _ => NONE | StacLeaf (_,co) => co
+    val reward = reward_of_status status
+    val be = (backleaf_wstatus sleaf status, bfl, bfroot) 
+  in
+    ((ctreeo,reward), be :: backl)
+  end
+
+fun select_searchleaf obj backl tree =
   let 
     val (nr,gtreev) = dest_searchtree tree
     val (gi,gtree) = select_goaltree gtreev    
-    val bfroot = backup_searchtree tree gi
-    val (sleaf,gtokenl,bfl) = select_stacleaf searchobj [] gtree
+    val bfroot = back_root tree gi
+    val (sleaf,gtokenl,bfl) = select_stacleaf obj [] [] gtree
+    val bbb = (backl,bfroot,bfl)
   in
     case sleaf of
-      StacNode _ => endselect Saturated bfl bfroot sleaf
+      StacNode _ => endselect Saturated bbb sleaf
     | StacLeaf (sr,SOME ctree) => 
       if #sstatus sr <> Undecided andalso not (!contmid_flag) then 
-        endselect (#status sr) bfl bfroot sleaf
+        endselect (#sstatus sr) bbb sleaf
       else 
-      let val be = (backupleaf sleaf,bfl,bfroot) in
-        select_searchleaf searchobj (be :: backupl) ctree
+      let val be = (backleaf sleaf, bfl, bfroot) in
+        select_searchleaf obj (be :: backl) ctree
       end         
     | StacLeaf (sr,NONE) => 
       if #sstatus sr <> Undecided then 
-        endselect (#status sr) bfl bfroot sleaf
+        endselect (#sstatus sr) bbb sleaf 
       else 
       let val (glo,status) = total_time apply_time 
-        (apply_stac searchobj nr) gtokenl 
+        (apply_stac obj nr) gtokenl 
       in
         case glo of 
-           NONE => endselect status bfl bfroot sleaf
+           NONE => endselect status bbb sleaf
          | SOME gl =>
         let 
-          val newparentd = dadd (goal_of_gtokenl gtokenl) (#parentd nr)
+          fun goal_of_gtokenl gtokenl = case gtokenl of
+            Goal (g,_) :: m => g
+          | _ => raise ERR "goal_of_tokenl" ""
+          val newparentd = dadd (goal_of_gtokenl gtokenl) () (#parentd nr)
           val _ = debug "creation"
           val (newctree,reward) = total_time create_time 
-            (create_searchtree newparentd) gl
-          val be = (backupleaf sleaf, bfl, bfroot)
+            (create_searchtree obj newparentd) gl
+          val be = (backleaf sleaf, bfl, bfroot)
         in
-          ((SOME newctree, reward), be :: backupl)
+          ((SOME newctree, reward), be :: backl)
         end
      end
   end
 
 (* -------------------------------------------------------------------------
-   Rebuild the tree using the stored backup functions
+   Rebuild the tree using the stored back functions
    ------------------------------------------------------------------------- *)
 
-fun backuploop_stactree (bleaf,bnodel,broot) x =
+fun backloop_stactree (bleaf,bnodel,broot) x =
   let fun f l x = case l of
       [] =>  x
-    | backupf :: m => f m (backupf x)
+    | backf :: m => f m (backf x)
   in
     broot (f bnodel (bleaf x))
   end
 
-fun backuploop_searchtree backupl x =
-  case backupl of
+fun backloop_searchtree backl x =
+  case backl of
     [] => x
-  | a :: m => backuploop_searchtree m (backuploop_stactree a x)
+  | a :: m => backloop_searchtree m (backloop_stactree a x)
   
-fun backupfull backupl x =
-  let val (ctreeo,reward) = backuploop_searchtree backupl x in
+fun backfull backl x =
+  let val (ctreeo,reward) = backloop_searchtree backl x in
     valOf ctreeo
   end
 
-
 (* -------------------------------------------------------------------------
-   Search loop: selection, expansion and backup
+   Search loop: selection, expansion and back
    ------------------------------------------------------------------------- *)
 
 fun get_searchstatus tree =
-  let val nstatus = #nstatus (dfind [] tree) in
-    if nstatus = NodeSaturated then SearchSaturated
-    else if nstatus = NodeProved then SearchProved
+  let val nstatus = (#nstatus o fst o dest_searchtree) tree in
+    if nstatus = Saturated then SearchSaturated
+    else if nstatus = Proved then SearchProved
     else SearchTimeout
   end
 
@@ -625,52 +541,81 @@ fun stop_search (timer,nlimito) n tree =
     (not (!conttop_flag) andalso nstatus <> Undecided)
   end
 
-fun search_loop startsearchobj nlimito starttree = 
+fun search_loop (obj : searchobj) nlimito starttree = 
   let
     val timer = Timer.startRealTimer ()
-    fun loop n searchobj tree =
+    fun loop n tree =
       if stop_search (timer,nlimito) n tree
       then (print_endline ("loops: " ^ its n); (get_searchstatus tree,tree))
       else
         let
           val _ = debug "selection"
-          val ((ctreeo, reward), backupl) = total_time select_time 
-            select_searchleaf searchobj [] tree
+          val ((ctreeo,reward),backl) = total_time select_time 
+            (select_searchleaf obj []) tree
           val _ = debug "backup"
-          val backuptree = total_time backup_time 
-            (backupfull backupl) (ctreeo, reward)
+          val backtree = total_time backup_time 
+            (backfull backl) (ctreeo,reward)
         in
-          loop (n+1) searchobj backuptree
+          loop (n+1) backtree
         end
   in
-    loop 0 startsearchobj starttree
+    loop 0 starttree
   end
 
 (* -------------------------------------------------------------------------
    Proof reconstruction
    ------------------------------------------------------------------------- *)
 
-fun extract_proofl tree  = case tree of
-  
+fun proof_stactree gtokenl stactree = case stactree of
+    StacLeaf (r,ctreeo) => (rev (#gtoken r :: gtokenl), ctreeo)  
+  | StacNode (r,svo) =>
+    let 
+      val (sv,_) = valOf svo 
+        handle Option => raise ERR "proof_stactree" ""
+      fun f x = is_proved (#sstatus (get_stacrecord x))
+      val cstree = valOf (Vector.find f sv) 
+        handle Option => raise ERR "proof_stactree" ""
+    in
+      proof_stactree (#gtoken r :: gtokenl) cstree
+    end
 
+fun proofl_searchtree tree =
+  let
+    val (_,gtreev) = dest_searchtree tree
+    fun f gtree =
+      let
+        val (gtokenl,ctreeo) = proof_stactree [] gtree 
+        val tokenl = map dest_token (tl gtokenl)
+          handle Empty => raise ERR "proof_searchtree" ""
+        val istac = build_stac tokenl
+        val goal = dest_goal (hd gtokenl)
+        val ptac = Tactic (istac, goal)
+        val _ = debugf "goal: " string_of_goal goal
+        val _ = debug ("stac: " ^ istac);
+      in
+        case ctreeo of 
+          NONE => ptac 
+        | SOME ctree => Thenl (ptac, proofl_searchtree ctree)
+      end
+  in
+    vector_to_list (Vector.map f gtreev)
+  end
 
-
-
-fun reconstruct_proofstatus (searchstatus,tree) g =
+fun reconstruct_proofstatus (searchstatus,tree) goal =
    case searchstatus of
     SearchSaturated => ProofSaturated
   | SearchTimeout => ProofTimeout
   | SearchProved =>
     let
       val _ = debug "extraction"
-      fun f tree = singleton_of_list (extract_proofl tree [])
+      fun f tree = singleton_of_list (proofl_searchtree tree)
       val (proof1,t1) = add_time f tree
       val _ = debug ("extraction time: " ^ rts_round 6 t1)
       val _ = debug "minimization"
       val (proof2,t2) = add_time minimize_proof proof1
       val _ = print_endline ("minimization time: " ^ rts_round 6 t2)
       val _ = debug "reconstruction"
-      val (sproof,t3) = add_time (reconstruct g) proof2
+      val (sproof,t3) = add_time (reconstruct goal) proof2
       val _ = print_endline ("reconstruction time: " ^ rts_round 6 t3)
     in
       Proof sproof
@@ -680,20 +625,20 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
    Proof search top-level function
    ------------------------------------------------------------------------- *)
 
-fun search searchobj g =
+fun search (obj : searchobj) goal =
   let
     val _ = (clean_stac_cache (); clean_timers ())
-    val starttree = create_searchtree searchobj (dempty goal_compare) [goal]
-    val ((searchstatus,tree),t) = add_time
-      (search_loop searchobj NONE) starttree
+    val (starttree,_) = create_searchtree obj (dempty goal_compare) [goal]
+    val ((searchstatus,endtree),t) = add_time 
+      (search_loop obj (!looplimit)) starttree
     val _ = clean_stac_cache ()
     val _ = print_endline ("nodes: " ^ "1");
     val _ = print_endline ("search: " ^ rts_round 6 t)
     val r = total_time recons_time
-      (reconstruct_proofstatus (searchstatus,tree)) g
+      (reconstruct_proofstatus (searchstatus,endtree)) goal
     val _ = print_timers ()
   in
-    (r, tree)
+    (r,endtree)
   end
 
 

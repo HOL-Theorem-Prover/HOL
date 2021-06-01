@@ -76,7 +76,6 @@ fun select_tacfea tacdata gfea =
     (symweight,tacfea)
   end
 
-
 (* -------------------------------------------------------------------------
    Import holyhammer if metis is available. We do not want the dependencies
    to be loaded that is why the code is executed at run time.
@@ -198,12 +197,8 @@ fun main_tactictoe (thmdata,tacdata) nnol goal =
 fun read_status status = case status of
    ProofSaturated =>
    (print_endline "saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
- | ProofTimeout s =>
-   (
-   print_endline "Most promising partial proof:"; 
-   print_endline ("  " ^ s);
-   (NONE, FAIL_TAC "tactictoe: timeout")
-   )
+ | ProofTimeout =>
+   (print_endline "timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
  | Proof s =>
    (print_endline ("  " ^ s);
     (SOME s, hidef (tactic_of_sml (!ttt_search_time)) s))
@@ -259,10 +254,6 @@ fun tactictoe_tnn tnn term =
   end  
 
 val confidence_tnn = eval_goal
-
-
-
-
 
 
 end (* struct *)
