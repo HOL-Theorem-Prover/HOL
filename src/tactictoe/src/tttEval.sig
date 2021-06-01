@@ -21,11 +21,7 @@ sig
   val collect_ex : string -> ((term * real list) list) list
   val uniq_ex : ((term * real list) list) list -> ((term * real list) list) list
   val tnnex_to_basicex : ((term * real list) list) list -> (term * real) list
-    
-  datatype GoalDisj = GDisj of goal * GoalConj list
-  and GoalConj = GConj of GoalDisj list
-  val mk_goaltree : tttSearch.tree -> tttSearch.tree -> tttSearch.id -> GoalConj
-
+  
   val prepare_global_data : (string * int) -> unit
   val ttt_eval : string -> (string * int) -> 
     mlThmData.thmdata * mlTacticData.tacdata ->

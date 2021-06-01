@@ -76,11 +76,10 @@ datatype gtoken =
   Token of token | Goal of (goal * (goal list, unit) Redblackmap.dict)
 fun is_token gtoken = case gtoken of Token _ => true | _ => false
 fun is_goal gtoken = case gtoken of Goal _ => true | _ => false
-fun dest_token gtoken = 
+fun dest_token gtoken =
   case gtoken of Token x => x | _ => raise ERR "dest_token" ""
-fun dest_goal gtoken = 
+fun dest_goal gtoken =
   case gtoken of Goal (x,_) => x | _ => raise ERR "dest_goal" ""
-
 
 type searchrecord =
   {nvis : real, nsum : real, nstatus : status,
