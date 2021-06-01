@@ -30,7 +30,9 @@ sig
   val compare_imax : (('a * int) * ('a * int)) -> order
   val list_rmax : real list -> real
   val list_imax : int list -> int
+  val vector_max : ('a -> real) -> 'a vector -> (int * real)
   val vector_maxi : ('a -> real) -> 'a vector -> int
+  val vector_mini : ('a -> real) -> 'a vector -> int
   val list_imin : int list -> int
   val tmsize_compare : term * term -> order
   val all_subterms : term -> term list

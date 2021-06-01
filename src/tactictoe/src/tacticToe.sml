@@ -174,13 +174,13 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
         val stacl1 = tacknn (tacsymweight,tacfea_filtered)
           (!ttt_presel_radius) gfea
         val stacl2 = mk_sameorder_set String.compare (map fst pstacl @ stacl1)
-        val stacl3 = map_assoc (fn x => dfind x atyd) stacl2
+        val stacl3 = map Stac stacl2
       in
         tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
   in
     {predtac = predtac, predarg = predarg,
-     parsetoken = parsetoken,
+     atyd = atyd, parsetoken = parsetoken,
      vnno = Option.map add_mask_val vnno, 
      pnno = Option.map add_mask_pol pnno, 
      anno = Option.map add_mask_arg anno}
@@ -198,9 +198,13 @@ fun main_tactictoe (thmdata,tacdata) nnol goal =
 fun read_status status = case status of
    ProofSaturated =>
    (print_endline "saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
- | ProofTimeout   =>
-   (print_endline "timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
- | Proof s        =>
+ | ProofTimeout s =>
+   (
+   print_endline "Most promising partial proof:"; 
+   print_endline ("  " ^ s);
+   (NONE, FAIL_TAC "tactictoe: timeout")
+   )
+ | Proof s =>
    (print_endline ("  " ^ s);
     (SOME s, hidef (tactic_of_sml (!ttt_search_time)) s))
 
@@ -243,6 +247,10 @@ fun ttt goal = (tactictoe_aux NONE goal) goal
 fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux NONE goal) end
 
+(* -------------------------------------------------------------------------
+   TNN-based functions
+   ------------------------------------------------------------------------- *)
+
 fun ttt_tnn tnn goal = (tactictoe_aux (SOME tnn) goal) goal
 
 fun tactictoe_tnn tnn term = 
@@ -251,5 +259,10 @@ fun tactictoe_tnn tnn term =
   end  
 
 val confidence_tnn = eval_goal
+
+
+
+
+
 
 end (* struct *)

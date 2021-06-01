@@ -19,7 +19,7 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks/sml_synthesis"
 
 val natbase = 16
 val maxvar = 1
-val maxstep = 10
+val maxstep = 30
 
 (* -------------------------------------------------------------------------
    Types
@@ -35,7 +35,7 @@ datatype prog =
   | Sub of prog * prog list
 
 datatype move =
-    BIns of instr | BTest | BRec | BProj of int | BSub of int | BEndSub;
+  BIns of instr | BTest | BRec | BProj of int | BSub of int | BEndSub;
 
 type board = int * int list * (int * prog list) list
 
