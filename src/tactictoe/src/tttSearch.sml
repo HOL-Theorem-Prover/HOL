@@ -25,6 +25,8 @@ val default_reward = 0.0
 val conttop_flag = ref false
 val contmid_flag = ref false
 val nocut_flag = ref false
+val avoid_decided_flag = ref true
+val shift_policy_flag = ref true
 val looplimit = ref NONE
 
 (* -------------------------------------------------------------------------
@@ -373,11 +375,19 @@ fun backleaf stacleaf (cuo,reward) =
    Node selection
    ------------------------------------------------------------------------- *)
 
-fun puct gvis {ssum,svis,spol,...} =
-  ssum / svis + (!ttt_explo_coeff) * (spol * Math.sqrt gvis) / svis
-
 fun policy_coeff n =
   (1.0 - !ttt_policy_coeff) * Math.pow (!ttt_policy_coeff, Real.fromInt n)
+
+fun puct gvis rankn {ssum,svis,spol,sstatus,...} =
+  if !avoid_decided_flag andalso sstatus <> Undecided then ~1.0 else
+  let 
+    val newspol = 
+      if !shift_policy_flag then policy_coeff (!rankn) else spol
+    val _ = incr rankn
+  in
+    ssum / svis + (!ttt_explo_coeff) * (newspol * Math.sqrt gvis) / svis
+  end
+
 
 (* stactree *)
 datatype selectres = 
@@ -389,12 +399,14 @@ fun select_stactree pvis (sv,sl) =
      else SelFresh (hd sl, policy_coeff (Vector.length sv))) 
   else
   let
-    fun score x = puct pvis (get_stacrecord x)
+    val rankn = ref 0
+    fun score x = puct pvis rankn (get_stacrecord x)
     val (i,sc) = vector_max score sv
   in
     if null sl then Sel i else
     let  
-      val freshpol = policy_coeff (Vector.length sv)
+      val freshpol = policy_coeff
+        (if !shift_policy_flag then !rankn else Vector.length sv)
       val freshsc = !ttt_explo_coeff * (freshpol * Math.sqrt pvis)
     in
       if freshsc > sc then SelFresh (hd sl, freshpol) else Sel i
@@ -454,7 +466,7 @@ fun endselect status (backl,bfroot,bfl) sleaf =
     val reward = reward_of_status status
     val be = (backleaf_wstatus sleaf status, bfl, bfroot) 
   in
-    ((ctreeo,reward), be :: backl)
+    ((ctreeo,reward), be :: backl, NONE)
   end
 
 fun select_searchleaf obj backl tree =
@@ -494,7 +506,7 @@ fun select_searchleaf obj backl tree =
             (create_searchtree obj newparentd) gl
           val be = (backleaf sleaf, bfl, bfroot)
         in
-          ((SOME newctree, reward), be :: backl)
+          ((SOME newctree, reward), be :: backl, glo)
         end
      end
   end
@@ -503,21 +515,36 @@ fun select_searchleaf obj backl tree =
    Rebuild the tree using the stored back functions
    ------------------------------------------------------------------------- *)
 
-fun backloop_stactree (bleaf,bnodel,broot) x =
-  let fun f l x = case l of
+fun update_siblingd_gtoken gl gtoken = case gtoken  of
+   Goal (g,siblingd) => Goal (g, dadd gl () siblingd)
+ | _ => raise ERR "update_siblingd_gtoken" ""
+
+fun update_siblingd_rec gl {gtoken,atyl,svis,ssum,spol,sstatus} =
+  {gtoken = update_siblingd_gtoken gl gtoken, 
+   atyl=atyl,svis=svis,ssum=ssum,spol=spol,sstatus=sstatus}
+
+fun update_siblingd gl gtree = case gtree of
+    StacNode (r,svo) => StacNode (update_siblingd_rec gl r, svo)
+  | _ => raise ERR "update_siblingd" ""
+
+fun backloop_stactree glo (bleaf,bnodel,broot) x =
+  let 
+    fun f glo (x,reward) = case glo of NONE => (x,reward) | 
+      SOME gl => (update_siblingd gl x, reward)
+    fun loop l x = case l of
       [] =>  x
-    | backf :: m => f m (backf x)
+    | backf :: m => loop m (backf x)
   in
-    broot (f bnodel (bleaf x))
+    broot (f glo (loop bnodel (bleaf x)))
   end
 
-fun backloop_searchtree backl x =
+fun backloop_searchtree glo backl x =
   case backl of
     [] => x
-  | a :: m => backloop_searchtree m (backloop_stactree a x)
+  | a :: m => backloop_searchtree NONE m (backloop_stactree glo a x)
   
-fun backfull backl x =
-  let val (ctreeo,reward) = backloop_searchtree backl x in
+fun backfull glo backl x =
+  let val (ctreeo,reward) = backloop_searchtree glo backl x in
     valOf ctreeo
   end
 
@@ -549,11 +576,11 @@ fun search_loop (obj : searchobj) nlimito starttree =
       else
         let
           val _ = debug "selection"
-          val ((ctreeo,reward),backl) = total_time select_time 
+          val ((ctreeo,reward),backl,glo) = total_time select_time 
             (select_searchleaf obj []) tree
           val _ = debug "backup"
           val backtree = total_time backup_time 
-            (backfull backl) (ctreeo,reward)
+            (backfull glo backl) (ctreeo,reward)
         in
           loop (n+1) backtree
         end
