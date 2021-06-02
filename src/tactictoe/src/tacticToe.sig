@@ -5,10 +5,9 @@ sig
 
   type tnn = mlTreeNeuralNetwork.tnn
 
-  (* allow tactictoe to call holyhammer: currently disabled by default as 
-     it is in general not very effective *)
+  (* allows tactictoe to call holyhammer: disabled by default *)
   val hh_use : bool ref
-  val hh_lemmas : 
+  val hh_lemmas :
     (string -> mlThmData.thmdata -> goal -> string list option) option ref
   val hh_time : int ref
   val atp_dir : string ref
@@ -40,6 +39,6 @@ sig
   val tactictoe : term -> thm
 
   (* search tree returned by tactictoe *)
-  val tree_glob : tttSearch.searchtree option ref 
+  val searchtree_glob : tttSearch.searchtree option ref 
 
 end

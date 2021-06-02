@@ -214,7 +214,7 @@ fun clean_ttt_tacdata_cache () =
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
-val tree_glob = ref NONE
+val searchtree_glob = ref NONE
 
 fun tactictoe_aux vnno goal =
   if not (has_boolty_goal goal)
@@ -231,7 +231,7 @@ fun tactictoe_aux vnno goal =
       end
     val (proofstatus,tree) = hidef
       (main_tactictoe (thmdata,tacdata) (vnno,NONE,NONE)) goal
-    val _ = tree_glob := SOME tree
+    val _ = searchtree_glob := SOME tree
     val (staco,tac) = read_status proofstatus
   in
     tac
