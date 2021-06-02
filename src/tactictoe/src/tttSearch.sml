@@ -378,14 +378,14 @@ fun backleaf stacleaf (cuo,reward) =
 fun policy_coeff n =
   (1.0 - !ttt_policy_coeff) * Math.pow (!ttt_policy_coeff, Real.fromInt n)
 
-fun puct gvis rankn {ssum,svis,spol,sstatus,...} =
+fun puct pvis rankn {ssum,svis,spol,sstatus,...} =
   if !avoid_decided_flag andalso sstatus <> Undecided then ~1.0 else
   let 
     val newspol = 
       if !shift_policy_flag then policy_coeff (!rankn) else spol
     val _ = incr rankn
   in
-    ssum / svis + (!ttt_explo_coeff) * (newspol * Math.sqrt gvis) / svis
+    ssum / svis + (!ttt_explo_coeff) * (newspol * Math.sqrt pvis) / svis
   end
 
 
@@ -395,7 +395,7 @@ datatype selectres =
 
 fun select_stactree pvis (sv,sl) =
   if Vector.length sv = 0 then 
-    (if null sl then SelNone 
+    (if null sl then SelNone
      else SelFresh (hd sl, policy_coeff (Vector.length sv))) 
   else
   let
@@ -403,7 +403,9 @@ fun select_stactree pvis (sv,sl) =
     fun score x = puct pvis rankn (get_stacrecord x)
     val (i,sc) = vector_max score sv
   in
-    if null sl then Sel i else
+    if null sl then 
+      (if !rankn = 0 andalso !avoid_decided_flag then SelNone else Sel i) 
+    else
     let  
       val freshpol = policy_coeff
         (if !shift_policy_flag then !rankn else Vector.length sv)
