@@ -57,7 +57,7 @@ type nnfiles = string option * string option * string option
 fun is_proof x = (case x of Proof _ => true | _ => false)
 
 val keyl = ["nodes:","loops:",
-  "search:","select:","exparg:","apply:","create:","backup:","recons:",
+  "search:","select:","exparg:","apply:","backup:","recons:",
   "metis:","other:","tactictoe:"]
 
 fun parse_info file l =
@@ -130,7 +130,7 @@ fun compile_info exp =
   end
 
 (* load "tttEval"; open tttEval aiLib;
-   print_endline (compile_info "210127-1"); *)
+   print_endline (compile_info "reimp1-gen0"); *)
 
 fun extract_info dir file =
   let
