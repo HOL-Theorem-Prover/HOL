@@ -122,7 +122,6 @@ fun compile_info exp =
     "select " ^ rts_round 6 (sum_real (map #select statsl) / totsearch),
     "exparg " ^ rts_round 6 (sum_real (map #exparg statsl) / totsearch),
     "apply " ^ rts_round 6 (sum_real (map #apply statsl) / totsearch),
-    "create " ^ rts_round 6 (sum_real (map #create statsl) / totsearch),
     "backup " ^ rts_round 6 (sum_real (map #backup statsl) / totsearch),
     "recons_average " ^ rts_round 6 (sum_real (map #recons statsl) / 
        Real.fromInt (length provenl)),
