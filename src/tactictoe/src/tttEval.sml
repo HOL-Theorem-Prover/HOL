@@ -517,24 +517,6 @@ hh_timeout := 10;
 run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 *)
 
-(* ------------------------------------------------------------------------
-   Evaluation on a list of theories
-   ------------------------------------------------------------------------ *)
-
-(*
-load "tttUnfold"; open tttUnfold;
-tttSetup.record_flag := false;
-tttSetup.record_savestate_flag := true;
-ttt_record_savestate (); (* also cleans the savestate directory *)
-
-load "tttEval"; open tttEval;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val smlfun = "tttEval.ttt_eval";
-tttSetup.ttt_search_time := 30.0;
-run_evalscript_thyl smlfun "uniformpol" (true,30) 
-  (NONE,NONE,NONE) thyl;
-*)
-
 
 (* ------------------------------------------------------------------------
    Comparison with older evaluation
@@ -663,11 +645,6 @@ fun train_fixed pct exl' =
     tnn
   end
 
-(*
-1) make a set of the examples
-2) limit the number of examples per proof.
-*)
-
 fun collect_ex dir =
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
@@ -712,12 +689,14 @@ ttt_record_savestate (); (* includes clean savestate *)
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
-tttSearch.contmid_flag := true;
-tttSearch.conttop_flag := true;
-smlOpen.buildheap_options := "--maxheap 4000";
+(* smlOpen.buildheap_options := "--maxheap 4000"; *)
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
-val expname = "reimp1";
+val expname = "reimp3";
+
+run_evalscript_thyl "tttEval.ttt_eval" expname (true,30) 
+  (NONE,NONE,NONE) thyl;
+
 rlval ncore expname thyl 1;
 
 (* rlval_loop expname thyl (1,maxgen); *)
