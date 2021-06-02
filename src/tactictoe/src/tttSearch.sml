@@ -395,8 +395,7 @@ datatype selectres =
 
 fun select_stactree pvis (sv,sl) =
   if Vector.length sv = 0 then 
-    (if null sl then SelNone
-     else SelFresh (hd sl, policy_coeff (Vector.length sv))) 
+    (if null sl then SelNone else SelFresh (hd sl, policy_coeff 0))
   else
   let
     val rankn = ref 0
@@ -456,7 +455,12 @@ fun select_goaltree gtreev =
   let
     val _ = if Vector.length gtreev = 0
       then raise ERR "select_goaltree" "" else ()
-    fun score x = #svis (get_stacrecord x)
+    fun score x = 
+      let val r = get_stacrecord x in
+        if !avoid_decided_flag andalso #sstatus r <> Undecided
+        then Real.posInf
+        else #svis r
+      end
     val i = vector_mini score gtreev
   in
     (i, Vector.sub (gtreev, i))
@@ -650,7 +654,7 @@ fun reconstruct_proofstatus (searchstatus,tree) goal =
     end
 
 (* -------------------------------------------------------------------------
-   Proof search top-level function
+   Statistics
    ------------------------------------------------------------------------- *)
 
 fun allnode_searchtree tree = case tree of SearchNode (r,gtreev) => 
@@ -661,6 +665,10 @@ and allnode_stactree stactree = case stactree of
     List.concat (vector_to_list (Vector.map allnode_stactree sv))
   | StacLeaf (_,NONE) => [] 
   | StacLeaf (_,SOME ctree) => allnode_searchtree ctree
+
+(* -------------------------------------------------------------------------
+   Proof search top-level function
+   ------------------------------------------------------------------------- *)
 
 fun search (obj : searchobj) goal =
   let
