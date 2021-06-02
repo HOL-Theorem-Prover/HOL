@@ -326,9 +326,12 @@ fun backstatus_root gtreev =
 
 fun backreward_root (gi,reward) gtreev =
   let fun f (i,gtree) = 
-    let val r = get_stacrecord gtree in
-      if #sstatus r = Proved then 1.0
-      else if #sstatus r = Saturated then 0.0
+    let 
+      val r = get_stacrecord gtree 
+      val status = #sstatus r
+    in
+      if status = Proved then 1.0
+      else if status = Saturated then 0.0
       else if gi = i then reward 
       else #ssum r / #svis r
     end
