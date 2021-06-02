@@ -651,6 +651,15 @@ fun reconstruct_proofstatus (searchstatus,tree) goal =
    Proof search top-level function
    ------------------------------------------------------------------------- *)
 
+fun allnode_searchtree tree = case tree of SearchNode (r,gtreev) => 
+  r :: List.concat (vector_to_list (Vector.map allnode_stactree gtreev))
+and allnode_stactree stactree = case stactree of
+    StacNode (_,NONE) => [] 
+  | StacNode (_,SOME (sv,sl)) =>  
+    List.concat (vector_to_list (Vector.map allnode_stactree sv))
+  | StacLeaf (_,NONE) => [] 
+  | StacLeaf (_,SOME ctree) => allnode_searchtree ctree
+
 fun search (obj : searchobj) goal =
   let
     val _ = (clean_stac_cache (); clean_timers ())
@@ -658,7 +667,8 @@ fun search (obj : searchobj) goal =
     val ((searchstatus,endtree),t) = add_time 
       (search_loop obj (!looplimit)) starttree
     val _ = clean_stac_cache ()
-    val _ = print_endline ("nodes: " ^ "1");
+    val _ = print_endline 
+      ("nodes: " ^ its (length (allnode_searchtree endtree)));
     val _ = print_endline ("search: " ^ rts_round 6 t)
     val r = total_time recons_time
       (reconstruct_proofstatus (searchstatus,endtree)) goal

@@ -62,33 +62,32 @@ val keyl = ["nodes:","loops:",
 
 fun parse_info file l =
   let val msg = file ^ " -- " ^ String.concatWith " " (map fst l) in
-  if length l <> length keyl then raise ERR "parse_info" msg else
-  let
-    fun parse_int s (s1,s2) = 
-      if s = s1 then string_to_int s2 else 
-        raise ERR "parse_int" (msg ^ " -- " ^ s)
-    fun parse_real s (s1,s2) =
-      if s = s1 then valOf (Real.fromString s2) else 
-        raise ERR "parse_real" (msg ^ " -- " ^ s)
-    fun parse_status s (s1,s2) = 
-      if s = s1 then s2 else 
-        raise ERR "parse_status" (msg ^ " -- " ^ s)
-  in
-    {
-    loops = parse_int "loops:" (List.nth (l,0)),
-    nodes = parse_int "nodes:" (List.nth (l,1)),
-    search = parse_real "search:" (List.nth (l,2)),
-    select = parse_real "select:" (List.nth (l,3)),
-    exparg = parse_real "exparg:" (List.nth (l,4)),
-    apply = parse_real "apply:" (List.nth (l,5)),
-    create = parse_real "create:" (List.nth (l,6)),
-    backup = parse_real "backup:" (List.nth (l,7)),
-    recons = parse_real "recons:" (List.nth (l,8)),
-    metis = parse_real "metis:" (List.nth (l,9)),
-    other = parse_real "other:" (List.nth (l,10)),
-    status = parse_status "tactictoe:" (List.nth (l,11))
-    }
-  end
+    if length l <> length keyl then raise ERR "parse_info" msg else
+    let
+      fun parse_int s (s1,s2) = 
+        if s = s1 then string_to_int s2 else 
+          raise ERR "parse_int" (msg ^ " -- " ^ s)
+      fun parse_real s (s1,s2) =
+        if s = s1 then valOf (Real.fromString s2) else 
+          raise ERR "parse_real" (msg ^ " -- " ^ s)
+      fun parse_status s (s1,s2) = 
+        if s = s1 then s2 else 
+          raise ERR "parse_status" (msg ^ " -- " ^ s)
+    in
+      {
+      loops = parse_int "loops:" (List.nth (l,0)),
+      nodes = parse_int "nodes:" (List.nth (l,1)),
+      search = parse_real "search:" (List.nth (l,2)),
+      select = parse_real "select:" (List.nth (l,3)),
+      exparg = parse_real "exparg:" (List.nth (l,4)),
+      apply = parse_real "apply:" (List.nth (l,5)),
+      backup = parse_real "backup:" (List.nth (l,6)),
+      recons = parse_real "recons:" (List.nth (l,7)),
+      metis = parse_real "metis:" (List.nth (l,8)),
+      other = parse_real "other:" (List.nth (l,9)),
+      status = parse_status "tactictoe:" (List.nth (l,10))
+      }
+    end
   end
 
 fun all_info dir file =
