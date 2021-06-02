@@ -245,7 +245,7 @@ fun export_valex file (tree as SearchNode (r,gtreev)) =
     fun f x = ((nntm_of_stateval (dest_goal (#gtoken x)), 
                if #sstatus x = Proved then 1.0 else 0.0), #svis x)
     val exl1 = map f goalrecl
-    val exl2 = filter (fn ((t,_),_) => term_size t < 100) exl1
+    val exl2 = filter (fn ((t,_),_) => term_size t < 80) exl1
     val (posl,negl) = partition (fn x => snd (fst x) > 0.5) exl2
     val posl2 = first_n 600 (dict_sort compare_rmax posl)
     val negl2 = first_n 600 (dict_sort compare_rmax negl)
@@ -692,7 +692,7 @@ tttSetup.ttt_search_time := 30.0;
 (* smlOpen.buildheap_options := "--maxheap 4000"; *)
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
-val expname = "reimp3";
+val expname = "reimp4";
 
 run_evalscript_thyl "tttEval.ttt_eval" expname (true,30) 
   (NONE,NONE,NONE) thyl;
