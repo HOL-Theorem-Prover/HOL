@@ -30,10 +30,24 @@ val setA_map = new_axiom("setA_map",
 val setB_map = new_axiom("setB_map",
                          “∀a f g. setBF (mapF f g a) = IMAGE g (setBF a)”)
 
+Definition Fin_def:
+  Fin As Bs = { a : (α,β) F | setAF a ⊆ As ∧ setBF a ⊆ Bs }
+End
+
+val starter = new_axiom ("starter", “Fin 𝕌(:β) ∅ ≠ ∅”);
+
 val map_CONG = new_axiom("map_CONG",
                          “(∀a. a ∈ setAF A ⇒ f1 a = f2 a) ∧
                           (∀b. b ∈ setBF A ⇒ g1 b = g2 b) ⇒
                           mapF f1 g1 A = mapF f2 g2 A”);
+
+Theorem map_eq_id:
+  (∀b. b ∈ setBF x ⇒ f b = b) ⇒ mapF I f x = x
+Proof
+  strip_tac >> ‘x = mapF I I x’ by simp[mapID, I_EQ_IDABS] >>
+  pop_assum SUBST1_TAC >> simp[mapO] >> irule map_CONG >>
+  simp[]
+QED
 
 Definition relF_def:
   relF R1 R2 x y ⇔ ∃z. setAF z ⊆ UNCURRY R1 ∧ setBF z ⊆ UNCURRY R2 ∧
@@ -47,6 +61,7 @@ val _ = new_type ("bndop", 1)
 val _ = new_constant ("bnd", “:β bndop ordinal”)
 val bnd = new_axiom ("bnd",
   “∀v : (β,α)F. setBF v ≼ preds (bnd : β bndop ordinal) ∧ ω ≤ bnd”);
+val setF_exists = new_axiom("setF_exists", “∃x. setBF x ≠ ∅”);
 
 
 Theorem IN_UNCURRY[simp]:
@@ -68,13 +83,17 @@ Proof
   irule map_CONG >> simp[FORALL_PROD]
 QED
 
-Definition Fin_def:
-  Fin As Bs = { a : (α,β) F | setAF a ⊆ As ∧ setBF a ⊆ Bs }
-End
-
 Definition alg_def:
   alg (A : α set, s : (β,α) F -> α) ⇔ ∀x. x ∈ Fin UNIV A ⇒ s x ∈ A
 End
+
+Theorem alg_nonempty:
+  alg(A, s : (β,α)F -> α) ⇒ A ≠ ∅
+Proof
+  rpt strip_tac >> gvs[alg_def] >>
+  ‘Fin 𝕌(:β) ∅ = ∅’ by simp[EXTENSION] >>
+  gs[starter]
+QED
 
 Definition minset_def:
   minset (s : (β,α)F -> α) = BIGINTER { B | alg(B,s) }
@@ -127,6 +146,16 @@ Proof
   ‘s af ∈ A’ by gs[alg_def, Fin_def] >> simp[] >>
   ‘mapF I h' af = mapF I h af’ suffices_by simp[] >>
   irule map_CONG >> simp[] >> metis_tac[SUBSET_DEF]
+QED
+
+Theorem homs_compose:
+  hom f (A : α set,s : (δ,α)F -> α) (B : β set,t) ∧ hom g (B,t) (C : γ set,u) ⇒
+  hom (g o f) (A,s) (C,u)
+Proof
+  csimp[hom_def] >> rw[] >> RULE_ASSUM_TAC GSYM >> simp[] >>
+  ‘mapF I f af ∈ Fin 𝕌(:δ) B ’
+    by gs[Fin_def, setB_map, SUBSET_DEF, PULL_EXISTS] >>
+  first_x_assum $ drule_then assume_tac >> simp[mapO]
 QED
 
 Definition weakly_initial_def:
@@ -223,50 +252,58 @@ QED
 
 Type alg[local,pp] = “:α set # ((β,α)F -> α)”
 
+val idx_tydef as
+              {absrep_id, newty, repabs_pseudo_id, termP, termP_exists,
+               termP_term_REP, ...} =
+  newtypeTools.rich_new_type(
+  "idx",
+  prove(“∃i : (α,β) alg. alg i”,
+        simp[EXISTS_PROD] >> qexists_tac ‘UNIV’ >>
+        simp[alg_def]));
+Overload dIx = (#term_REP_t idx_tydef)
+Overload mkIx = (#term_ABS_t idx_tydef)
+
+
 Definition bigprod_def:
-  bigprod (As : (α,β)alg set) : (((α,β)alg,α)vec,β)alg =
-  (BIGPRODi (λa. if a IN As then SOME (FST a) else NONE),
-   λfv a. if a IN As then SOME (SND a (THE (liftvec As fv a)))
-          else NONE)
+  bigprod : ((α,β)idx -> α, β) alg =
+  ({ f | ∀i. f i ∈ FST (dIx i) },
+   λfv i. SND (dIx i) $ mapF I (λf. f i) fv)
 End
 
-Theorem bigprod_preserves_alg:
-  (∀a. a ∈ As ⇒ alg a) ⇒ alg (bigprod As)
+Theorem bigprod_isalg:
+  alg bigprod
 Proof
-  simp[bigprod_def, alg_def, FORALL_PROD, Fin_def] >>
-  disch_then (assume_tac o CONV_RULE (RENAME_VARS_CONV ["A", "f"])) >>
-  simp[BIGPRODi_def, FORALL_PROD, liftvec_def, SUBSET_DEF] >>
-  rpt gen_tac >> strip_tac >>
-  qx_genl_tac [‘B’, ‘g’] >> strip_tac >>
-  first_x_assum irule >> simp[] >> simp[setB_map] >>
-  simp[SUBSET_DEF, PULL_EXISTS] >> rpt strip_tac >>
-  first_x_assum $ drule_then strip_assume_tac >> first_x_assum drule >>
-  simp[PULL_EXISTS]
+  simp[bigprod_def, alg_def, FORALL_PROD, Fin_def] >> rpt strip_tac >>
+  Cases_on ‘dIx i’ >> rename [‘dIx i = (A,s)’] >>
+  ‘alg(A,s)’ by metis_tac[termP_term_REP] >> simp[] >> gs[alg_def] >>
+  first_assum irule >>
+  gs[Fin_def, setB_map, SUBSET_DEF, PULL_EXISTS] >> metis_tac[FST]
 QED
 
 Theorem bigprod_proj:
-  (∀A f. (A,f) ∈ As ⇒ alg (A,f)) ⇒
-  ∀A f. (A,f) ∈ As ⇒ hom (λv. THE (v (A,f))) (bigprod As) (A,f)
+  alg (A,s) ⇒ hom (λf. f (mkIx (A,s))) bigprod (A,s)
 Proof
-  rpt strip_tac >> simp[hom_def, bigprod_def] >> conj_tac
-  >- (simp[GSYM bigprod_def] >> simp[bigprod_preserves_alg, FORALL_PROD]) >>
-  simp[Fin_def, liftvec_def] >> simp[BIGPRODi_def] >> rpt strip_tac >>
-  first_assum drule >> simp[PULL_EXISTS]
+  simp[hom_def, bigprod_def] >> rpt strip_tac
+  >- metis_tac[bigprod_isalg, bigprod_def]
+  >- (‘dIx (mkIx (A,s)) = (A,s)’ by metis_tac[repabs_pseudo_id] >>
+      first_x_assum $ qspec_then ‘mkIx (A,s)’ mp_tac >> simp[]) >>
+  ‘dIx (mkIx (A,s)) = (A,s)’ by metis_tac[repabs_pseudo_id] >>
+  simp[]
 QED
 
 Theorem minbigprod_has_unique_homs:
-  let s = SND (bigprod { a : (α,β) alg | alg a})
+  let s = SND (bigprod : ((α,β)idx -> α, β) alg)
   in
     ∀A f. alg ((A, f) : (α,β) alg) ⇒
           ∃!h. (∀d. d ∉ minset s ⇒ h d = ARB) ∧ hom h (minset s, s) (A, f)
 Proof
-  Cases_on ‘bigprod {a : (α,β) alg| alg a}’ >> simp[] >> rpt strip_tac >>
-  ‘alg (bigprod {a | alg a})’ by simp[bigprod_preserves_alg] >>
-  rename [‘bigprod _ = (AA,FF)’] >> gs[] >>
+  Cases_on ‘bigprod’ >> simp[] >> rpt strip_tac >>
+  ‘alg bigprod’ by simp[bigprod_isalg] >>
+  rename [‘bigprod = (AA,FF)’] >> gs[] >>
   ‘alg (minset FF, FF)’ by simp[] >>
-  ‘∃h0. hom h0 (bigprod {a : (α,β) alg | alg a}) (A,f)’
+  ‘∃h0 : ((α,β)idx -> α) -> α. hom h0 bigprod (A,f)’
     by (irule_at (Pos hd) bigprod_proj >> simp[]) >>
-  ‘subalg (minset FF, FF) (bigprod { a | alg a})’
+  ‘subalg (minset FF, FF) (AA,FF)’
     by metis_tac[minsub_subalg] >>
   ‘hom h0 (minset FF, FF) (A,f)’ by metis_tac[subalgs_preserve_homs] >>
   simp[EXISTS_UNIQUE_ALT] >>
@@ -276,6 +313,15 @@ Proof
       simp[]) >>
   qx_gen_tac ‘h1’ >> strip_tac >> csimp[FUN_EQ_THM, AllCaseEqs()] >>
   metis_tac[minsub_gives_unique_homs]
+QED
+
+Theorem minset_unique_homs:
+  hom h1 (minset s, s) (B,t) ∧ hom h2 (minset s, s) (B,t) ⇒
+  ∀a. a ∈ minset s ⇒ h1 a = h2 a
+Proof
+  strip_tac >> ho_match_mp_tac minset_ind >> gs[hom_def, Fin_def] >>
+  rpt strip_tac >> RULE_ASSUM_TAC GSYM >> simp[] >>
+  AP_TERM_TAC >> irule map_CONG >> simp[]
 QED
 
 (* there are unique homs out of the minimised product of all α-algebras into
@@ -387,12 +433,6 @@ Proof
   qexists_tac ‘a⁺’ >> simp[KK_def] >> metis_tac[islimit_SUC_lt]
 QED
 
-Theorem SUBSET_BIGUNION_I2:
-  B ⊆ A ∧ A ∈ As ⇒ B ⊆ BIGUNION As
-Proof
-  simp[SUBSET_DEF] >> metis_tac[]
-QED
-
 Theorem sucbnd_suffices:
   ω ≤ (bd : γ ordinal) ∧ (∀x : (α,β)F. setBF x ≼ preds bd) ⇒
   alg (KK (s:(α,β)F -> β) (csuc bd), s)
@@ -429,7 +469,7 @@ Proof
   gvs[KK_def] >>
   rename [‘v ∈ KK s a’, ‘a < csuc bd’] >>
   qpat_x_assum ‘v ∈ KK s a’ mp_tac >> simp[Once KK_thm] >> rw[] >>
-  gs[] >> qexists_tac ‘fv’ >> simp[] >> irule SUBSET_BIGUNION_I2 >>
+  gs[] >> qexists_tac ‘fv’ >> simp[] >> irule SUBSET_BIGUNION_SUBSET_I >>
   simp[PULL_EXISTS] >> metis_tac[ordlt_TRANS]
 QED
 
@@ -599,7 +639,7 @@ QED
 
 
 Theorem CARD_12[simp]:
-  {()} ≺ 𝟚 ∧ ¬({()} ≈ 𝟚) ∧ ¬(𝟚 ≈ {()}) ∧ {()} ≼ 𝟚
+  𝟙 ≺ 𝟚 ∧ 𝟙 ≉ 𝟚 ∧ 𝟚 ≉ 𝟙 ∧ 𝟙 ≼ 𝟚
 Proof
   conj_asm1_tac
   >- (simp[cardleq_def, INJ_IFF] >> qexistsl_tac [‘T’, ‘F’] >> simp[]) >>
@@ -682,5 +722,250 @@ Proof
   simp[CARD_SQUARE_INFINITE]
 QED
 
+Theorem KK_EQ_MINSET =
+        KKbnd_EQ_minset |> INST_TYPE [“:γ” |-> “:α bndop”]
+                        |> Q.INST [‘bd’ |-> ‘bnd’]
+                        |> SRULE [bnd]
+
+Theorem inst_bound =
+        alg_cardinality_bound
+          |> INST_TYPE [“:γ” |-> “:α bndop”]
+          |> Q.INST [‘bd’ |-> ‘bnd’]
+          |> SRULE [bnd, setF_exists, KK_EQ_MINSET]
+
+Type algty0[pp] = (#1 $ dom_rng $ type_of $ rand $ concl inst_bound)
+
+Theorem copy_alg_back:
+  (A:α set) ≼ (B:β set) ∧ alg (A, s : (γ,α)F -> α) ⇒
+  ∃(B0:β set) s' h j.
+    hom h (B0,s') (A,s) ∧ hom j (A,s) (B0,s') ∧
+    (∀a. a ∈ A ⇒ h (j a) = a) ∧ (∀b. b ∈ B0 ⇒ j (h b) = b)
+Proof
+  simp[cardleq_def] >> strip_tac >> rename [‘INJ h0 A B’] >>
+  qexistsl_tac [‘IMAGE h0 A’, ‘λbv. h0 $ s $ mapF I (LINV h0 A) bv’,
+                ‘LINV h0 A’, ‘h0’] >>
+  csimp[hom_def, PULL_EXISTS] >>
+  drule_then assume_tac LINV_DEF >> rw[]
+  >- (gs[alg_def, Fin_def, SUBSET_DEF] >> rw[] >>
+      irule_at Any EQ_REFL >> first_assum irule >>
+      simp[setB_map, PULL_EXISTS] >> rw[] >> first_assum drule >>
+      simp[PULL_EXISTS])
+  >- (‘s (mapF I (LINV h0 A) bv) ∈ A’
+        by (gs[alg_def, Fin_def] >> first_assum irule >>
+            gs[setB_map, SUBSET_DEF, PULL_EXISTS] >> rw[] >>
+            first_assum drule >> simp[PULL_EXISTS]) >>
+      simp[] >> AP_TERM_TAC >> irule map_CONG >> simp[] >>
+      gs[Fin_def, SUBSET_DEF])
+  >- (simp[mapO] >> rename [‘av ∈ Fin UNIV A’] >>
+      ‘mapF I (LINV h0 A o h0) av = mapF I I av’
+        suffices_by simp[I_EQ_IDABS, mapID] >>
+      irule map_CONG >> gs[Fin_def, SUBSET_DEF])
+QED
+
+Type algty[pp] = “:(α algty0,α)idx -> α algty0”
+Definition IAlg_def:
+  IAlg = minset (SND $ bigprod : ('a algty, 'a) alg)
+End
+
+Definition Cons_def:
+  Cons = SND $ bigprod : ('a algty,'a)alg
+End
+
+Theorem IAlg_isalg:
+  alg (IAlg, Cons)
+Proof
+  simp[IAlg_def, Cons_def]
+QED
+
+Theorem hom_arbification:
+  hom h (A,s) (B,t) ⇒
+  ∃j. hom j (A,s) (B,t) ∧ ∀x. x ∉ A ⇒ j x = ARB
+Proof
+  strip_tac >>
+  qexists_tac ‘λx. if x ∈ A then h x else ARB’ >> simp[] >>
+  gs[hom_def, Fin_def, alg_def] >> RULE_ASSUM_TAC GSYM >>
+  simp[] >> rw[] >> AP_TERM_TAC >> irule map_CONG >> simp[] >>
+  gs[SUBSET_DEF]
+QED
+
+Theorem initiality0:
+  ∀(t:(α,γ)F -> γ) (G:γ set).
+    alg(G,t) ⇒
+    ∃!h. hom h (IAlg,Cons) (G,t) ∧ ∀x. x ∉ IAlg ⇒ h x = ARB
+Proof
+  rw[] >> simp[EXISTS_UNIQUE_THM] >> reverse conj_tac
+  >- (rpt strip_tac >> simp[FUN_EQ_THM] >> qx_gen_tac ‘a’ >>
+      Cases_on ‘a ∈ IAlg’ >> simp[] >> gs[IAlg_def, Cons_def] >>
+      dxrule_then drule minset_unique_homs >> simp[]) >>
+  irule hom_arbification >>
+  simp[IAlg_def, Cons_def] >>
+  qmatch_abbrev_tac ‘∃h. hom h (minset Is, Is) _’ >>
+  ‘hom I (minset Is, Is) (FST bigprod,Is)’
+    by (irule minsub_I_subalg >> simp[bigprod_isalg, Abbr‘Is’]) >>
+  dxrule_then (irule_at (Pos hd)) homs_compose >>
+  ‘hom I (minset t, t) (G,t)’ by (irule minsub_I_subalg >> metis_tac[]) >>
+  pop_assum $ C (resolve_then (Pos last) (irule_at (Pos hd))) homs_compose >>
+  ‘alg (minset t, t)’ by simp[] >>
+  resolve_then (Pos hd) (drule_then strip_assume_tac)
+               inst_bound copy_alg_back >>
+  rename [‘hom h (A0,s) (minset t, t)’] >>
+  first_assum $ C (resolve_then (Pos last) (irule_at (Pos hd))) homs_compose >>
+  simp[Abbr‘Is’] >>
+  irule_at (Pos hd) bigprod_proj >> gs[hom_def]
+QED
+
+Theorem inhabited:
+  ∃w. IAlg w
+Proof
+  ‘alg (IAlg, Cons)’ by simp[IAlg_isalg] >>
+  drule alg_nonempty >> simp[EXTENSION, IN_DEF]
+QED
+
+Theorem alg_Fin:
+  alg (A,s) ⇒ alg (Fin 𝕌(:β) A, mapF I s)
+Proof
+  strip_tac >>
+  simp[alg_def, Fin_def, SUBSET_DEF, setB_map, PULL_EXISTS] >> rw[] >>
+  rename [‘s vf ∈ A’, ‘vf ∈ setBF vff’] >>
+  first_assum $ drule_then assume_tac >>
+  irule (iffLR $ SRULE [Fin_def, PULL_EXISTS] alg_def) >> simp[SUBSET_DEF]
+QED
+
+Definition arbify_def:
+  arbify A f x = if x ∈ A then f x else ARB
+End
+
+Theorem arbify_ARB:
+  x ∉ A ⇒ arbify A f x = ARB
+Proof
+  simp[arbify_def]
+QED
+
+Theorem hom_arbify:
+  hom (arbify A f) (A,s : (γ,α)F -> α) (B,t : (γ,β)F -> β) ⇔ hom f (A,s) (B,t)
+Proof
+  simp[hom_def, arbify_def] >> Cases_on ‘alg (A,s)’ >> simp[] >>
+  ‘∀af. af ∈ Fin 𝕌(:γ) A ⇒ s af ∈ A’ by gs[alg_def] >> simp[] >>
+  rw[EQ_IMP_THM] >> RULE_ASSUM_TAC GSYM >> simp[] >> AP_TERM_TAC >>
+  irule map_CONG >> gs[arbify_def, SUBSET_DEF, Fin_def]
+QED
+
+Theorem iso:
+  BIJ Cons (Fin 𝕌(:α) IAlg) IAlg
+Proof
+  ‘alg (IAlg, Cons : (α,α algty)F -> α algty)’ by simp[IAlg_isalg] >>
+  drule_then assume_tac alg_Fin >>
+  drule_then assume_tac initiality0 >>
+  gs[EXISTS_UNIQUE_ALT] >>
+  rename[‘hom _ (IAlg,Cons) _ ∧ _ ⇔ H = _’] >>
+  ‘hom H (IAlg,Cons) (Fin 𝕌(:α) IAlg, mapF I Cons)’ by metis_tac[] >>
+  ‘hom Cons (Fin 𝕌(:α) IAlg, mapF I Cons) (IAlg,Cons)’
+    by (simp[hom_def] >> metis_tac[alg_def]) >>
+  rev_drule_then (drule_then assume_tac) homs_compose >>
+  rev_drule_then (strip_assume_tac o SRULE [EXISTS_UNIQUE_ALT]) initiality0 >>
+  ‘hom (arbify IAlg (Cons o H)) (IAlg,Cons) (IAlg,Cons)’ by simp[hom_arbify] >>
+  ‘∀x. x ∉ IAlg ⇒ arbify IAlg (Cons o H) x = ARB’ by simp[arbify_def] >>
+  ‘hom (arbify IAlg I) (IAlg,Cons) (IAlg,Cons)’
+    by (simp[hom_arbify] >> simp[hom_def, mapID, I_EQ_IDABS]) >>
+  ‘∀x. x ∉ IAlg ⇒ arbify IAlg I x = ARB’ by simp[arbify_def] >>
+  ‘arbify IAlg (Cons o H) = arbify IAlg I’ by metis_tac[] >>
+  simp[BIJ_IFF_INV] >> conj_tac >- gs[alg_def] >>
+  qexists_tac ‘H’ >> conj_tac
+  >- (qpat_x_assum ‘hom H _ _’ mp_tac >> simp[hom_def, mapO]) >>
+  conj_asm2_tac
+  >- (qpat_x_assum ‘hom H _ _’ mp_tac >> simp[hom_def, mapO] >> strip_tac >>
+      qx_gen_tac ‘a’ >> strip_tac >>
+      ‘H (Cons a) = mapF I (Cons o H) a’ by simp[] >> pop_assum SUBST1_TAC >>
+      ‘mapF I (Cons o H) a = mapF I I a’ suffices_by simp[I_EQ_IDABS, mapID] >>
+      irule map_CONG >> gs[Fin_def, SUBSET_DEF]) >>
+  pop_assum mp_tac >> simp[Once FUN_EQ_THM, arbify_def] >> metis_tac[]
+QED
+
+val itype = newtypeTools.rich_new_type("nty", inhabited)
+
+Definition NCONS_def:
+  NCONS (x : (α, α nty)F) = nty_ABS $ Cons $ mapF I nty_REP x
+End
+
+Theorem NCONS_isalg:
+  alg (UNIV, NCONS)
+Proof
+  simp[alg_def]
+QED
+
+Theorem hom_nty_ABS:
+  hom nty_ABS (IAlg,Cons) (UNIV,NCONS)
+Proof
+  simp[hom_def, NCONS_isalg, IAlg_isalg] >> simp[NCONS_def, mapO] >>
+  rpt strip_tac >> rpt AP_TERM_TAC >> irule map_eq_id >>
+  gs[Fin_def, SUBSET_DEF, #repabs_pseudo_id itype, IN_DEF]
+QED
+
+Theorem hom_nty_REP:
+  hom nty_REP (UNIV, NCONS) (IAlg, Cons)
+Proof
+  simp[hom_def, NCONS_isalg, IAlg_isalg] >> conj_tac
+  >- simp[IN_DEF, # termP_term_REP itype] >>
+  simp[NCONS_def] >> rpt strip_tac >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+  irule (#repabs_pseudo_id itype) >>
+  ‘alg (IAlg : 'a algty set,Cons)’ by simp[IAlg_isalg] >>
+  gs[alg_def, Fin_def, SUBSET_DEF] >>
+  ONCE_REWRITE_TAC [GSYM SPECIFICATION] >> pop_assum irule >>
+  simp[setB_map, PULL_EXISTS] >> simp[IN_DEF, #termP_term_REP itype]
+QED
+
+Theorem initiality_hom:
+  alg(B,t) ⇒ ∃!h. hom h (UNIV,NCONS) (B,t)
+Proof
+  strip_tac >>
+  simp[EXISTS_UNIQUE_THM] >>
+  drule_then (strip_assume_tac o SRULE[EXISTS_UNIQUE_ALT]) initiality0 >>
+  rename [‘hom _ _ _ ∧ _ ⇔ H = _’] >>
+  ‘hom H (IAlg,Cons) (B,t)’ by metis_tac[] >> conj_tac
+  >- metis_tac[homs_compose, hom_nty_REP] >>
+  qx_genl_tac [‘h1’, ‘h2’] >> strip_tac >>
+  ‘hom (arbify IAlg (h1 o nty_ABS)) (IAlg,Cons) (B,t) ∧
+   hom (arbify IAlg (h2 o nty_ABS)) (IAlg,Cons) (B,t)’
+    by (simp[hom_arbify] >> metis_tac[homs_compose, hom_nty_ABS]) >>
+  ‘arbify IAlg (h1 o nty_ABS) = arbify IAlg (h2 o nty_ABS)’
+    by metis_tac[arbify_def] >>
+  pop_assum mp_tac >> ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[arbify_def] >>
+  strip_tac >> qx_gen_tac ‘a’ >>
+  qspec_then ‘a’ (SUBST1_TAC o SYM) (#absrep_id itype) >>
+  pop_assum $ qspec_then ‘nty_REP a’ mp_tac >>
+  simp[#termP_term_REP itype, IN_DEF]
+QED
+
+Theorem initiality =
+        initiality_hom |> Q.INST [‘B’ |-> ‘UNIV’]
+                       |> SRULE [hom_def, alg_def, Fin_def]
+                       |> GSYM |> Q.GEN ‘t’
+
+Theorem UNIQUE_SKOLEM:
+  (∀x. ∃!y. P x y) ⇔ ∃!f. ∀x. P x (f x)
+Proof
+  eq_tac >> simp[EXISTS_UNIQUE_THM] >> rw[]
+  >- (qexists_tac ‘λx. @y. P x y’ >> simp[] >> gen_tac >> SELECT_ELIM_TAC >>
+      metis_tac[])
+  >- (simp[FUN_EQ_THM] >> metis_tac[])
+  >- metis_tac[]
+  >- (rename [‘P x a’, ‘P x b’, ‘a = b’] >>
+      Cases_on ‘f x = a’ >> gvs[]
+      >- (first_x_assum $ qspecl_then [‘f’, ‘f (| x |-> b |)’] mp_tac >>
+          simp[APPLY_UPDATE_THM] >> disch_then irule >> rw[] >> rw[]) >>
+      first_x_assum $ qspecl_then [‘f(|x|->a|)’, ‘f’] mp_tac >>
+      simp[APPLY_UPDATE_THM, FUN_EQ_THM] >> metis_tac[])
+QED
+
+Theorem MAP_exists =
+        initiality |> INST_TYPE [alpha |-> “:α nty” ]
+                   |> Q.SPEC ‘NCONS o mapF f I’
+                   |> SRULE [mapO]
+                   |> Q.GEN ‘f’
+                   |> SRULE[UNIQUE_SKOLEM]
+                   |> CONV_RULE (RENAME_VARS_CONV ["MAP"])
+                   |> SRULE[EXISTS_UNIQUE_THM] |> cj 1
+
+val MAP_def = new_specification("MAP_def", ["MAP"], MAP_exists);
 
 val _ = export_theory();
