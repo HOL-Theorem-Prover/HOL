@@ -42,7 +42,7 @@ val map_CONG = new_axiom("map_CONG",
                           mapF f1 g1 A = mapF f2 g2 A”);
 
 Theorem map_eq_id:
-  (∀b. b ∈ setBF x ⇒ f b = b) ⇒ mapF I f x = x
+  (∀a. a ∈ setAF x ⇒ f a = a) ∧ (∀b. b ∈ setBF x ⇒ g b = b) ⇒ mapF f g x = x
 Proof
   strip_tac >> ‘x = mapF I I x’ by simp[mapID, I_EQ_IDABS] >>
   pop_assum SUBST1_TAC >> simp[mapO] >> irule map_CONG >>
@@ -112,26 +112,6 @@ Proof
   simp[minset_def]
 QED
 
-Theorem minsub_surj:
-  SURJ s (Fin UNIV (minset s)) (minset s)
-Proof
-  ‘alg (minset s, s)’ by simp[] >>
-  simp[SURJ_DEF] >> conj_tac
-  >- gs[alg_def, Fin_def, SUBSET_BIGINTER, Excl "minset_is_alg"] >>
-  simp[Fin_def] >> qx_gen_tac ‘tgt’ >> strip_tac >> CCONTR_TAC >>
-  gvs[SUBSET_DEF, IN_minset] >>
-  ‘alg (minset s DELETE tgt, s)’ suffices_by
-    (strip_tac >> first_x_assum drule >> simp[]) >>
-  simp[alg_def, Fin_def, SUBSET_DEF] >> qx_gen_tac ‘src’ >>
-  rpt strip_tac
-  >- (irule (iffLR alg_def) >> simp[Fin_def, SUBSET_DEF]) >>
-  first_x_assum drule >> simp[] >> qx_gen_tac ‘srcA’ >>
-  Cases_on ‘srcA ∈ setBF src’ >> simp[] >>
-  qx_gen_tac ‘A’ >> Cases_on ‘alg(A,s)’ >> simp[] >>
-  ‘srcA ∈ minset s’ by simp[] >> pop_assum mp_tac >>
-  metis_tac[IN_minset]
-QED
-
 Definition hom_def:
   hom h (A,s) (B,t) ⇔
     alg(A,s) ∧ alg(B,t) ∧ (∀a. a IN A ⇒ h a IN B) ∧
@@ -157,12 +137,6 @@ Proof
     by gs[Fin_def, setB_map, SUBSET_DEF, PULL_EXISTS] >>
   first_x_assum $ drule_then assume_tac >> simp[mapO]
 QED
-
-Definition weakly_initial_def:
-  weakly_initial (A,s : (β,α) F -> α) (:γ) ⇔
-    alg(A,s) ∧
-    ∀(C:γ set) t. alg(C,t : (β,γ) F -> γ) ⇒ ∃h. hom h (A,s) (C,t)
-End
 
 Theorem minset_ind:
   ∀P. (∀x. setBF x ⊆ minset s ∧ (∀y. y ∈ setBF x ⇒ P y) ⇒ P (s x)) ⇒
@@ -213,41 +187,6 @@ Theorem minsub_I_subalg:
 Proof
   strip_tac >> drule minsub_subalg >>
   simp[hom_def, Fin_def, mapID, I_EQ_IDABS, subalg_def, SUBSET_DEF]
-QED
-
-Type vec[local,pp] = “:'a -> 'b option”
-
-Definition vecdom_def:
-  vecdom v = { i | v i ≠ NONE}
-End
-
-Definition validvecF_def:
-  validvecF (fv : (β,('i,'a) vec) F) ⇔
-    ∃I. ∀v. v ∈ setBF fv ⇒ vecdom v = I
-End
-
-Definition vecFdom_def:
-  vecFdom (fv : (β,(ι,α)vec)F) = some I. ∀v. v ∈ setBF fv ⇒ vecdom v = I
-End
-
-Theorem validvecF_vecFdom:
-  validvecF fv ⇔ ∃I. vecFdom fv = SOME I
-Proof
-  simp[validvecF_def, vecFdom_def] >> DEEP_INTRO_TAC optionTheory.some_intro >>
-  simp[vecdom_def, EQ_IMP_THM, PULL_EXISTS, FORALL_AND_THM] >> rw[] >>
-  metis_tac[]
-QED
-
-Definition liftvec_def:
-  liftvec D (fv : (β,('i,α)vec) F) : ('i,(β,α)F) vec =
-  λi. if i ∈ D then SOME (mapF I (λv. THE (v i)) fv)
-      else NONE
-End
-
-Theorem liftvec_preserves_dom:
-  vecdom (liftvec Is fv) = Is
-Proof
-  simp[liftvec_def, vecdom_def] >> rw[]
 QED
 
 Type alg[local,pp] = “:α set # ((β,α)F -> α)”
@@ -835,12 +774,6 @@ Definition arbify_def:
   arbify A f x = if x ∈ A then f x else ARB
 End
 
-Theorem arbify_ARB:
-  x ∉ A ⇒ arbify A f x = ARB
-Proof
-  simp[arbify_def]
-QED
-
 Theorem hom_arbify:
   hom (arbify A f) (A,s : (γ,α)F -> α) (B,t : (γ,β)F -> β) ⇔ hom f (A,s) (B,t)
 Proof
@@ -850,7 +783,7 @@ Proof
   irule map_CONG >> gs[arbify_def, SUBSET_DEF, Fin_def]
 QED
 
-Theorem iso:
+Theorem iso0:
   BIJ Cons (Fin 𝕌(:α) IAlg) IAlg
 Proof
   ‘alg (IAlg, Cons : (α,α algty)F -> α algty)’ by simp[IAlg_isalg] >>
@@ -967,5 +900,155 @@ Theorem MAP_exists =
                    |> SRULE[EXISTS_UNIQUE_THM] |> cj 1
 
 val MAP_def = new_specification("MAP_def", ["MAP"], MAP_exists);
+
+Theorem minset_Cons:
+  minset Cons = IAlg
+Proof
+  simp[Cons_def, IAlg_def]
+QED
+
+Theorem ALL_Ialg:
+  (∀ia. ia ∈ IAlg ⇒ P ia) ⇔ (∀n. P (nty_REP n))
+Proof
+  eq_tac >> rw[] >> gs[IN_DEF]
+  >- (pop_assum $ qspec_then ‘nty_REP n’ mp_tac >>
+      simp[#termP_term_REP itype]) >>
+  first_x_assum $ qspec_then ‘nty_ABS ia’ mp_tac >>
+  simp[#repabs_pseudo_id itype]
+QED
+
+Theorem ALL_Ialgv:
+  (∀av. setBF av ⊆ IAlg ⇒ P av) ⇔
+  (∀n. P (mapF I nty_REP n))
+Proof
+  rw[EQ_IMP_THM]
+  >- (pop_assum irule >> simp[setB_map, SUBSET_DEF, PULL_EXISTS] >>
+      simp[IN_DEF, #termP_term_REP itype]) >>
+  first_x_assum $ qspec_then ‘mapF I nty_ABS av’ mp_tac >>
+  simp[mapO] >>
+  ‘mapF I (nty_REP o nty_ABS) av = av’ suffices_by simp[] >>
+  irule map_eq_id >> gs[SUBSET_DEF, #repabs_pseudo_id itype, IN_DEF]
+QED
+
+Theorem IN_setBF:
+  (∀y. y ∈ setBF x ⇒ Q (nty_ABS y)) ⇔ x ∈ Fin 𝕌(:α) (Q o nty_ABS)
+Proof
+  simp[Fin_def, SUBSET_DEF] >> simp[IN_DEF]
+QED
+
+Theorem Cons_NCONS:
+  setBF x ⊆ IAlg ⇒
+  Cons x = nty_REP (NCONS (mapF I nty_ABS x))
+Proof
+  simp[NCONS_def, mapO] >> strip_tac >>
+  ‘mapF I (nty_REP o nty_ABS) x = x’
+    by (irule map_eq_id >> gs[SUBSET_DEF, IN_DEF, #repabs_pseudo_id itype]) >>
+  simp[] >>
+  ‘Cons x ∈ IAlg’ suffices_by simp[IN_DEF, #repabs_pseudo_id itype] >>
+  irule (iffLR alg_def) >> simp[IAlg_isalg, Fin_def]
+QED
+
+Theorem abs_o_rep:
+  nty_ABS o nty_REP = I
+Proof
+  simp[FUN_EQ_THM, #absrep_id itype]
+QED
+
+Theorem setBF_applied:
+  setBF x v ⇔ v ∈ setBF x
+Proof
+  simp[IN_DEF]
+QED
+
+Theorem IND =
+        minset_ind |> Q.GEN ‘s’
+                   |> Q.ISPEC ‘Cons’
+                   |> SRULE [minset_Cons]
+                   |> Q.SPEC ‘λia. Q (nty_ABS ia)’
+                   |> SRULE[ALL_Ialg, #absrep_id itype, IN_setBF, Cons_NCONS]
+                   |> SRULE[GSYM AND_IMP_INTRO, ALL_Ialgv, mapO, Fin_def,
+                            setB_map, abs_o_rep, I_EQ_IDABS, mapID]
+                   |> SRULE[SUBSET_DEF, PULL_EXISTS, IN_DEF, #absrep_id itype]
+                   |> SRULE [setBF_applied]
+
+Theorem NCONS_comp:
+  NCONS = nty_ABS o Cons o mapF I nty_REP
+Proof
+  simp[FUN_EQ_THM, NCONS_def]
+QED
+
+Theorem iso:
+  BIJ NCONS (Fin 𝕌(:α) 𝕌(:α nty)) 𝕌(:α nty)
+Proof
+  simp[NCONS_comp] >> irule BIJ_COMPOSE >> qexists_tac ‘IAlg’ >>
+  reverse conj_tac
+  >- (simp[BIJ_IFF_INV] >> qexists_tac ‘nty_REP’ >>
+      simp[#repabs_pseudo_id itype, #absrep_id itype, IN_DEF,
+           #termP_term_REP itype]) >>
+  irule BIJ_COMPOSE >> irule_at Any iso0 >>
+  simp[BIJ_IFF_INV] >> conj_tac
+  >- simp[Fin_def, setB_map, SUBSET_DEF, PULL_EXISTS, IN_DEF,
+          #termP_term_REP itype] >>
+  qexists_tac ‘mapF I nty_ABS’ >> simp[mapO, abs_o_rep, I_EQ_IDABS, mapID] >>
+  conj_tac >- simp[Fin_def] >>
+  rpt strip_tac >> irule map_eq_id >> simp[] >>
+  gs[Fin_def, SUBSET_DEF, #repabs_pseudo_id itype, IN_DEF]
+QED
+
+Theorem Fin_UNIV:
+  Fin UNIV UNIV = UNIV
+Proof
+  simp[EXTENSION, Fin_def]
+QED
+
+Theorem NCONS_11:
+  NCONS x = NCONS y ⇔ x = y
+Proof
+  assume_tac iso >> gs[BIJ_DEF, Fin_UNIV, INJ_IFF]
+QED
+
+val DEST_def = new_specification("DEST_def", ["DEST"],
+                                 iso |> SRULE [BIJ_IFF_INV, Fin_UNIV])
+
+Theorem MAP_ID:
+  ∀n. MAP I n = n
+Proof
+  ho_match_mp_tac IND >> simp[MAP_def, NCONS_11] >> rw[] >>
+  irule map_eq_id >> simp[]
+QED
+
+Theorem MAP_COMPOSE:
+  ∀n. MAP f (MAP g n) = MAP (f o g) n
+Proof
+  ho_match_mp_tac IND >> simp[MAP_def, NCONS_11, mapO] >> rw[] >>
+  irule map_CONG >> simp[]
+QED
+
+val SET_def = new_specification (
+  "SET_def", ["SET"],
+  initiality |> Q.ISPEC ‘λfv. setAF fv ∪ BIGUNION (setBF fv)’
+             |> SRULE[setA_map, setB_map]
+             |> SRULE[EXISTS_UNIQUE_THM] |> cj 1);
+
+Theorem SET_MAP:
+  ∀n. SET (MAP f n) = IMAGE f (SET n)
+Proof
+  ho_match_mp_tac IND >>
+  simp[SET_def, MAP_def, setA_map, setB_map, IMAGE_IMAGE] >> rw[] >>
+  simp[Once EXTENSION] >> qx_gen_tac ‘a’ >> eq_tac >> rw[]
+  >- metis_tac[]
+  >- (first_x_assum $ drule_then assume_tac >> gs[PULL_EXISTS] >> metis_tac[])
+  >- metis_tac[]
+  >- (simp[PULL_EXISTS] >> first_x_assum $ drule_then assume_tac >>
+      metis_tac[IN_IMAGE])
+QED
+
+Theorem MAP_CONG:
+  ∀n. (∀a. a ∈ SET n ⇒ f a = g a) ⇒ MAP f n = MAP g n
+Proof
+  ho_match_mp_tac IND >>
+  simp[MAP_def, SET_def, PULL_EXISTS, NCONS_11] >> rw[] >>
+  irule map_CONG >> simp[] >> metis_tac[]
+QED
 
 val _ = export_theory();
