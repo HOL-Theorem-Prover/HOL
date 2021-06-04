@@ -38,7 +38,7 @@ sig
   val ttt : tactic
   val tactictoe : term -> thm
 
-  (* search tree returned by tactictoe *)
+  (* visualization of the final search tree and most promising path *)
   val searchtree_glob : tttSearch.searchtree option ref 
 
 end
