@@ -362,6 +362,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_int "tacticToe.hh_time" hh_time,
      sreflect_flag "tttSearch.conttop_flag" conttop_flag,
      sreflect_flag "tttSearch.contmid_flag" contmid_flag,
+     sreflect_flag "tttSearch.softmax_flag" softmax_flag,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      sreflect_flag "tttSearch.nocut_flag" nocut_flag,
@@ -692,10 +693,19 @@ tttSetup.ttt_search_time := 30.0;
 (* smlOpen.buildheap_options := "--maxheap 4000"; *)
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
-val expname = "reimp4";
+val expname = "softmax1";
+fun tnnfile expname = tttSetup.ttt_eval_dir ^ "/" ^ expnamne ^ "/tnn/val";
 
+softmax_flag := true;
+*)
+
+
+(*
 run_evalscript_thyl "tttEval.ttt_eval" expname (true,30) 
   (NONE,NONE,NONE) thyl;
+
+run_evalscript_thyl "tttEval.ttt_eval" expname (true,30) 
+  (SOME (tnnfile expname),NONE,NONE) thyl;
 
 rlval ncore expname thyl 1;
 

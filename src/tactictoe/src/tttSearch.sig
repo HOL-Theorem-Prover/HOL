@@ -15,11 +15,11 @@ sig
     Token of token | 
     Goal of (goal * (goal list, unit) Redblackmap.dict)
   type searchrecord =
-    {nvis : real, nsum : real, nstatus : status,
+    {nvis : real, nsum : real, ncoeff : real, nstatus : status, 
      parentd : (goal, unit) Redblackmap.dict}
   type stacrecord =
     {gtoken : gtoken, atyl : aty list,
-     svis : real, ssum : real, spol : real, sstatus : status}
+     svis : real, ssum : real, scoeff : real, spol : real, sstatus : status}
 
   datatype searchtree = SearchNode of searchrecord * stactree vector
   and stactree = 
@@ -32,8 +32,9 @@ sig
   val nocut_flag : bool ref
   val conttop_flag : bool ref  
   val contmid_flag : bool ref
+  val softmax_flag : bool ref
   val looplimit : int option ref
-
+  
   val eval_goal : tnn -> goal -> real
 
   type searchobj =

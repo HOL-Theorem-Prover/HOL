@@ -27,7 +27,11 @@ val contmid_flag = ref false
 val nocut_flag = ref false
 val avoid_decided_flag = ref true
 val shift_policy_flag = ref true
+
 val looplimit = ref NONE
+
+val softmax_flag = ref false
+fun coeff_of_reward x = if !softmax_flag then Math.pow (10.0,x) else 1.0
 
 (* -------------------------------------------------------------------------
    Timers
@@ -84,12 +88,12 @@ fun dest_goal gtoken =
   case gtoken of Goal (x,_) => x | _ => raise ERR "dest_goal" ""
 
 type searchrecord =
-  {nvis : real, nsum : real, nstatus : status,
+  {nvis : real, nsum : real, ncoeff : real, nstatus : status, 
    parentd : (goal, unit) Redblackmap.dict}
 
 type stacrecord =
   {gtoken : gtoken, atyl : aty list,
-   svis : real, ssum : real, spol : real, sstatus : status}
+   svis : real, ssum : real, scoeff : real, spol : real, sstatus : status}
 
 datatype searchtree = SearchNode of searchrecord * stactree vector
 
@@ -257,12 +261,13 @@ fun atyl_of obj pr token = case token of
 
 fun create_stactree obj pr token spol = wrap_stacrecord
   {gtoken = Token token, atyl = atyl_of obj pr token, 
-   svis = 1.0, ssum = 0.0, spol = spol, sstatus = Undecided}
+   svis = 1.0, ssum = 0.0, scoeff = 1.0, 
+   spol = spol, sstatus = Undecided}
 
 (* searchtree *)
 fun createreward_searchtree gtreev =
   let fun f gtree = case gtree of
-      StacNode (r,_) => #ssum r / #svis r 
+      StacNode (r,_) => #ssum r / #scoeff r 
     | _ => raise ERR "createreward_searchtree" ""
   in
     Vector.foldl (op *) 1.0 (Vector.map f gtreev)
@@ -275,14 +280,14 @@ fun create_searchtree obj parentd gl =
     val vnno = #vnno obj 
     fun create_gtree g = StacNode (
       {gtoken = Goal (g, empty_siblingd), atyl = [], 
-       svis = 1.0, ssum = reward_of_goal vnno g, 
+       svis = 1.0, ssum = reward_of_goal vnno g, scoeff = 1.0,
        spol = 0.0, sstatus = Undecided}
       , NONE)
     val gtreev = Vector.fromList (map create_gtree gl) 
     val reward = createreward_searchtree gtreev
   in
-    (SearchNode ({nvis = 1.0, nsum = reward, nstatus = Undecided, 
-                  parentd = parentd} , gtreev), reward)
+    (SearchNode ({nvis = 1.0, nsum = reward, ncoeff = 1.0, 
+      nstatus = Undecided, parentd = parentd} , gtreev), reward)
   end
 
 (* -------------------------------------------------------------------------
@@ -303,15 +308,17 @@ fun backstatus_stactree (sv,sl) =
   end
 
 fun back_stactree stree si (su,reward) = case stree of
-     StacNode ({gtoken,atyl,svis,ssum,spol,sstatus}, SOME (sv,sl)) => 
+     StacNode ({gtoken,atyl,svis,ssum,scoeff,spol,sstatus}, SOME (sv,sl)) => 
      let 
        val newsv = Vector.update (sv,si,su)
        val newstatus = backstatus_stactree (newsv,sl)
+       val coeff = coeff_of_reward reward
      in 
        (StacNode
          ({gtoken = gtoken, atyl = atyl,
-          svis = svis + 1.0, ssum = ssum + reward, spol = spol,
-          sstatus = newstatus}, SOME (newsv,sl)),
+          svis = svis + 1.0, ssum = ssum + coeff * reward,
+          scoeff = scoeff + coeff,
+          spol = spol, sstatus = newstatus}, SOME (newsv,sl)),
         reward)
      end
    | _ => raise ERR "back_stactree" ""
@@ -333,7 +340,7 @@ fun backreward_root (gi,reward) gtreev =
       if status = Proved then 1.0
       else if status = Saturated then 0.0
       else if gi = i then reward 
-      else #ssum r / #svis r
+      else #ssum r / #scoeff r
     end
   in
     Vector.foldl (op *) 1.0 (Vector.mapi f gtreev)
@@ -341,21 +348,26 @@ fun backreward_root (gi,reward) gtreev =
 
 fun back_root tree gi (gu,reward) =
   let 
-    val ({nvis,nsum,nstatus,parentd},gtreev) = dest_searchtree tree
+    val ({nvis,nsum,ncoeff,nstatus,parentd},gtreev) = dest_searchtree tree
     val newgtreev = Vector.update (gtreev,gi,gu)
     val newstatus = backstatus_root newgtreev
     val newreward = backreward_root (gi,reward) newgtreev
+    val coeff = coeff_of_reward newreward
   in
     (SOME (SearchNode 
-      ({nvis = nvis + 1.0, nsum = nsum + newreward, nstatus = newstatus,
+      ({nvis = nvis + 1.0, nsum = nsum + coeff * newreward, 
+        ncoeff = ncoeff + coeff, nstatus = newstatus,
         parentd = parentd}, newgtreev)), newreward)
   end
 
-fun update_stacrec (status,reward) {gtoken,atyl,svis,ssum,spol,sstatus} =
-  {gtoken = gtoken, atyl = atyl,
-   svis = svis + 1.0, ssum = ssum + reward, spol = spol,
-   sstatus = status}
-
+fun update_stacrec (status,reward) 
+  {gtoken,atyl,svis,ssum,scoeff,spol,sstatus} =
+  let val coeff = coeff_of_reward reward in
+    {gtoken = gtoken, atyl = atyl,
+     svis = svis + 1.0, ssum = ssum + coeff * reward, 
+     scoeff = scoeff + coeff,
+     spol = spol, sstatus = status}
+  end
 (* stactree leaf *)
 fun backleaf_wstatus stacleaf status (cuo,reward) = 
   let     
@@ -381,14 +393,14 @@ fun backleaf stacleaf (cuo,reward) =
 fun policy_coeff n =
   (1.0 - !ttt_policy_coeff) * Math.pow (!ttt_policy_coeff, Real.fromInt n)
 
-fun puct pvis rankn {ssum,svis,spol,sstatus,...} =
+fun puct pvis rankn {ssum,scoeff,svis,spol,sstatus,...} =
   if !avoid_decided_flag andalso sstatus <> Undecided then ~1.0 else
   let 
     val newspol = 
       if !shift_policy_flag then policy_coeff (!rankn) else spol
     val _ = incr rankn
   in
-    ssum / svis + (!ttt_explo_coeff) * (newspol * Math.sqrt pvis) / svis
+    ssum / scoeff + (!ttt_explo_coeff) * (newspol * Math.sqrt pvis) / svis
   end
 
 
@@ -528,9 +540,9 @@ fun update_siblingd_gtoken gl gtoken = case gtoken  of
    Goal (g,siblingd) => Goal (g, dadd gl () siblingd)
  | _ => raise ERR "update_siblingd_gtoken" ""
 
-fun update_siblingd_rec gl {gtoken,atyl,svis,ssum,spol,sstatus} =
+fun update_siblingd_rec gl {gtoken,atyl,svis,ssum,scoeff,spol,sstatus} =
   {gtoken = update_siblingd_gtoken gl gtoken, 
-   atyl=atyl,svis=svis,ssum=ssum,spol=spol,sstatus=sstatus}
+   atyl=atyl,svis=svis,ssum=ssum,scoeff=scoeff,spol=spol,sstatus=sstatus}
 
 fun update_siblingd gl gtree = case gtree of
     StacNode (r,svo) => StacNode (update_siblingd_rec gl r, svo)
