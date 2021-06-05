@@ -362,7 +362,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_int "tacticToe.hh_time" hh_time,
      sreflect_flag "tttSearch.conttop_flag" conttop_flag,
      sreflect_flag "tttSearch.contmid_flag" contmid_flag,
-     sreflect_real "tttSeach.default_reward" default_reward,
+     sreflect_real "tttSearch.default_reward" default_reward,
      "val _ = tttEval.prepare_global_data (" ^ 
         mlquote thy ^ "," ^ its n ^ ");",
      sreflect_flag "tttSearch.nocut_flag" nocut_flag,
@@ -696,7 +696,7 @@ tttSetup.ttt_search_time := 30.0;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
 val _ = tttSearch.default_reward := 0.01;
-val expname = "altreward1";
+val expname = "altreward2";
 *)
 
 
