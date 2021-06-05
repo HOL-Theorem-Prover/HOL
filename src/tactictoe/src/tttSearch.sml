@@ -21,7 +21,7 @@ fun tlerr x = tl x handle Empty => raise ERR "tlerr" ""
    Global parameters
    ------------------------------------------------------------------------- *)
 
-val default_reward = 0.0
+val default_reward = ref 0.0
 val conttop_flag = ref false
 val contmid_flag = ref false
 val nocut_flag = ref false
@@ -129,7 +129,7 @@ fun eval_goal vnn g =
   end
 
 fun reward_of_goal vnno g =
-  if not (isSome vnno) then default_reward else eval_goal (valOf vnno) g
+  if not (isSome vnno) then !default_reward else eval_goal (valOf vnno) g
 
 (*
 (* policy *)
@@ -679,11 +679,11 @@ fun vistoken_of_gtoken gtoken = case gtoken of
   | Token x => VisArg x
 
 datatype vistree = 
-  VisNode of vistoken * int * real * real * status * vistree list
+  VisNode of vistoken * int * real * status * vistree list
 
 fun vistree_of_stacrecord pvis {gtoken,svis,ssum,sstatus,...} vistreel =
   VisNode (vistoken_of_gtoken gtoken, 
-    Real.round svis, approx 3 (svis / pvis), approx 3 (ssum / svis), 
+    Real.round svis, ssum / svis, 
     sstatus, vistreel)
 
 fun vistreel_of_searchtree tree = case tree of SearchNode (r,gtreev) => 

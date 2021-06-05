@@ -30,6 +30,7 @@ sig
   val dest_goal : gtoken -> goal
 
   (* global parameters *)
+  val default_reward : real ref
   val nocut_flag : bool ref
   val conttop_flag : bool ref  
   val contmid_flag : bool ref
@@ -52,7 +53,7 @@ sig
   datatype vistoken = 
     VisGoal of goal | VisTac of string | VisArg of token
   datatype vistree = 
-    VisNode of vistoken * int * real * real * status * vistree list
+    VisNode of vistoken * int * real * status * vistree list
 
   val vistreel_of_searchtree : searchtree -> vistree list
 
