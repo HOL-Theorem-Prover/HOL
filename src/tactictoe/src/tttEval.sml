@@ -147,81 +147,28 @@ fun extract_info dir file =
     val stim2 = snd (split_string "search: " stim1)
     val t = valOf (Real.fromString stim2)
   in
-    (snd (split_string "buildheap_" file), (status,t))
+    (snd (split_string "buildheap_" file), status, t)
   end
 
 fun write_graph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
 
-fun stats_exp exp =
+fun proofl_exp exp =
   let
     val dir = ttt_eval_dir ^ "/" ^ exp ^ "/out"
     val filel = filter (String.isPrefix "buildheap_") (listDir dir)
     val totl = map (extract_info dir) filel
-    val satl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
-    val timeoutl = filter (fn (_,(x,_)) => x = ProofTimeout) totl
-    val proofl = filter (fn (_,(x,_)) => is_proof x) totl
+    val proofl = filter (fn (_,x,_) => is_proof x) totl
   in
-    (totl,satl,timeoutl,proofl)
-  end
-
-fun cumul_graph timelimit exp =
-  let
-    val (l,satl,timeoutl,proofl) = stats_exp exp
-    val timl = map (fn (_,(_,t)) => t) proofl
-    fun f bound = length (filter (fn x => x <= bound) timl)
-    val graph = map_assoc f (interval 0.1 (0.02,timelimit))
-    val graph_out = ttt_eval_dir ^ "/graph/" ^ exp ^ "_graph"
-    val _ = mkDir_err (ttt_eval_dir ^ "/graph")
-  in
-    print_endline
-      ("total: " ^ its (length l) ^ ", " ^
-       "proof: " ^ its (length proofl) ^ ", " ^
-       "timeout: " ^ its (length timeoutl) ^ ", " ^
-       "saturated: " ^ its (length satl));
-    write_graph graph_out ("time","proofs") graph
+    map (fn (a,_,b) => (a,b)) proofl
   end
 
 (*
 load "tttEval"; open tttEval;
-val expl = ["hard-default"];
-app (cumul_graph 605.0) expl;
-(* quit *)
-gnuplot -p -e "plot 'eval/graph/august10_graph' using 1:2 with lines,\
-                    'eval/graph/august11-300_graph' using 1:2 with lines"
+val l1 = proofl_exp "rl-full-gen0"; 
+val l2 = proofl_exp "rl-full-gen1";
 *)
 
-fun compare_stats expl exp =
-  let
-    val dproven = ref (HOLset.empty String.compare)
-    val dtot = ref (HOLset.empty String.compare)
-    fun f (totl,_,_,proofl) =
-      let
-        val sl1 = map fst proofl
-        val sl2 = map fst totl
-      in
-        dproven := HOLset.addList (!dproven,sl1);
-        dtot := HOLset.addList (!dtot,sl2)
-      end
-    val _ = app f (map stats_exp expl)
-    val lproven1 = (!dproven)
-    val ltot1 = (!dtot)
-    val _ = f (stats_exp exp)
-    val lproven2 = (!dproven)
-    val ltot2 = (!dtot)
-    val uniq = HOLset.difference (lproven2,lproven1)
-    fun g (name,set) = print_endline (name ^ ": " ^ its (HOLset.numItems set))
-  in
-    app g [("total (old)",ltot1),("proven (old)",lproven1),
-           ("total (new)",ltot2),("proven (new)",lproven2),
-           ("unique: ", uniq)];
-    print_endline ("\n  " ^ String.concatWith "\n  " (HOLset.listItems uniq))
-  end
-
-(*
-load "tttEval"; open tttEval;
-compare_stats ["august9"] "august10";
-*)
 
 (* -------------------------------------------------------------------------
    TNN value examples
@@ -520,33 +467,6 @@ run_evalscript smlfun expdir (NONE,NONE,NONE) file;
 
 
 (* ------------------------------------------------------------------------
-   Comparison with older evaluation
-   ------------------------------------------------------------------------ *)
-
-(*
-val thyl = ["arithmetic", "real", "complex", "measure", "probability", "list", "sorting","finite_map"];
-
-load "tttUnfold"; open tttUnfold;
-app load (map (fn x => x ^ "Theory") thyl);
-tttSetup.record_flag := false;
-tttSetup.record_savestate_flag := true;
-ttt_record_savestate (); (* also cleans the savestate directory *)
-
-
-val thyl = ["arithmetic", "real", "complex", "measure", "probability", "list", "sorting","finite_map"];
-load "tttEval"; open tttEval;
-val smlfun = "tttEval.ttt_eval";
-tttSetup.ttt_search_time := 60.0;
-oldeval_flag := true;
-
-fun f x = 
-  run_evalscript_thyl smlfun ("compare-" ^ x) (true,20) 
-  (NONE,NONE,NONE) [x];
-app f thyl;
-*)
-
-
-(* ------------------------------------------------------------------------
    Evaluation on a list of files
    ------------------------------------------------------------------------ *)
 
@@ -695,8 +615,8 @@ tttSetup.ttt_search_time := 30.0;
 (* smlOpen.buildheap_options := "--maxheap 4000"; *)
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
-val _ = tttSearch.default_reward := 0.01;
-val expname = "altreward2";
+val _ = tttSearch.default_reward := 1.0;
+val expname = "altreward3";
 *)
 
 

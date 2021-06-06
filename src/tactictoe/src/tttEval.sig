@@ -39,8 +39,7 @@ sig
 
   (* statistics after evaluation *)
   val compile_info : string -> string
-  val cumul_graph : real -> string -> unit
-  val compare_stats : string list -> string -> unit
+  val proofl_exp : string -> (string * real) list
 
   (* reinforcement learning for the value *)
   val rlval : int -> string -> string list -> int -> unit
