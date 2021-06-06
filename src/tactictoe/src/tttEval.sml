@@ -134,6 +134,7 @@ fun compile_info exp =
 
 fun extract_info dir file =
   let
+    val _ = print_endline file
     val sl = readl (dir ^ "/" ^ file)
     val status =
       if exists (String.isPrefix "tactictoe: saturated") sl
@@ -165,8 +166,13 @@ fun proofl_exp exp =
 
 (*
 load "tttEval"; open tttEval;
-val l1 = proofl_exp "rl-full-gen0"; 
+load "aiLib"; open aiLib;
+val l1 = proofl_exp "rl-full-gen0";
+val d1 = dnew String.compare l1;
 val l2 = proofl_exp "rl-full-gen1";
+val d2 = dnew String.compare l2;
+
+val l2nl1 = filter (fn (x,_) => dmem x 
 *)
 
 
