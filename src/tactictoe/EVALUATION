@@ -2,10 +2,7 @@ This file describes how to use the evaluation framework and how
 to replicate the experiments accompanying the paper
 "Learned Provability Likelihood for Tactical Search"
 
-0) Install PolyML. (see HOL/INSTALL)
-
-1) Switch to the commit 31a54d9b8380cac406727a54053f97daf89bdfa6
-   Build HOL (bin/build).
+1) Install PolyML. (see HOL/INSTALL)
 
 2) Record (or download) the supervised learning data as described in the
    README file in the same directory.
@@ -23,7 +20,7 @@ to replicate the experiments accompanying the paper
   aiLib.load_sigobj ();
   tttSetup.record_flag := false;
   tttSetup.record_savestate_flag := true;
-  ttt_record_savestate (); (* clean the savestate directory *)
+  ttt_record_savestate (); (* starts by cleaning the savestate directory *)
 
 5) Restart hol (recommended)
 
