@@ -172,8 +172,19 @@ val d1 = dnew String.compare l1;
 val l2 = proofl_exp "rl-full-gen1";
 val d2 = dnew String.compare l2;
 
-val l2nl1 = filter (fn (x,_) => dmem x 
+val l2nl1 = filter (fn (x,_) => not (dmem x d1)) l2;
+length l2nl1;
+
+val l1nl2 = filter (fn (x,_) => not (dmem x d2)) l1;
+length l1nl2;
+
+val l2nl1s = dict_sort compare_rmin l2nl1;
+
+val topol = filter (fn (x,_) => String.isPrefix "real_topology" x) l2nl1s;
+
 *)
+
+
 
 
 (* -------------------------------------------------------------------------

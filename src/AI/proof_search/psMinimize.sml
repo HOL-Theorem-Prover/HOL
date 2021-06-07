@@ -33,7 +33,7 @@ fun same_effect tim stac1 stac2 g =
     glopt_eq gl1o gl2o
   end
 
-fun is_proof tim stac g = glopt_eq (app_stac stac tim g) (SOME [])
+fun is_proof stac tim g = glopt_eq (app_stac tim stac g) (SOME [])
 fun has_effect tim stac g gl = glopt_eq (app_stac tim stac g) (SOME gl)
 
 (* -------------------------------------------------------------------------
@@ -161,12 +161,12 @@ fun mini_stac_aux tim g gl pl l = case l of
 
 fun mini_stac stac g =
   let
-    val gl = fst (tactic_of_sml (!mini_tactic_time) stac g)
-      handle Interrupt => raise Interrupt
-      | _ => (debug "Error: minimize"; raise ERR "minimize" stac)
+    val glo = app_stac (!mini_tactic_time) stac g
     val l = decompose (partial_sml_lexer stac)
   in
-    mini_stac_aux (!mini_tactic_time) g gl [] l
+    if isSome glo 
+    then mini_stac_aux (!mini_tactic_time) g (valOf glo) [] l
+    else stac
   end
 
 (*---------------------------------------------------------------------------
@@ -206,6 +206,11 @@ fun minimize_stac tim stac g gl =
 (* proof *)
 fun minimize_proof p =
   (pretty_allstac (!mini_tactic_time) o mini_proof o mini_allstac) p
+  handle Interrupt => raise Interrupt
+   | _ => (debug "Error: prettification or minimization failed"; p)
+
+fun minimize_proof_alt p =
+  (pretty_allstac (!mini_tactic_time) o mini_allstac) p
   handle Interrupt => raise Interrupt
    | _ => (debug "Error: prettification or minimization failed"; p)
 

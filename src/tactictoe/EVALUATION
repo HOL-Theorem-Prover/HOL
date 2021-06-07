@@ -39,7 +39,8 @@ to replicate the experiments accompanying the paper
   val ncore = 30;
   (* directory src/tactictoe/eval/foo will contain the results *)
   val expname = "foo";
-
+  (* default_reward *)
+  tttSearch.default_reward = 1.0;
 
 7) Then calling the following command will
    evaluate TacticToe, train the TNN, and evaluate TacticToe + TNN:
@@ -48,4 +49,5 @@ to replicate the experiments accompanying the paper
 
 8) To only evaluate TacticToe, run:
 
-run_evalscript_thyl "tttEval.ttt_eval" expname (true,ncore) (NONE,NONE,NONE) thyl;
+    run_evalscript_thyl "tttEval.ttt_eval" expname 
+      (true,ncore) (NONE,NONE,NONE) thyl;

@@ -255,5 +255,15 @@ fun tactictoe_tnn tnn term =
 
 val confidence_tnn = eval_goal
 
+(* -------------------------------------------------------------------------
+   Proof suggestion
+   ------------------------------------------------------------------------- *)
+
+fun suggest () =
+  let val s = suggest_proof (valOf (!searchtree_glob)) in
+    print_endline s;
+    hidef (tactic_of_sml (!ttt_search_time)) s
+  end
+
 
 end (* struct *)
