@@ -49,12 +49,17 @@ sig
 
   val search : searchobj -> goal -> proofstatus * searchtree
 
-  (* staistics *)
+  (* suggested proof in case of failure *)
+  val suggest_depth : int option ref
+  val suggest_proof : searchtree -> string
+
+  (* statistics *)
   datatype vistoken = 
     VisGoal of goal | VisTac of string | VisArg of token
   datatype vistree = 
     VisNode of vistoken * int * real * status * vistree list
-
   val vistreel_of_searchtree : searchtree -> vistree list
+  val length_vistree : vistree -> int
+  val print_vistree : vistree -> unit
 
 end

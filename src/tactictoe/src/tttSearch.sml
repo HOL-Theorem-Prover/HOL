@@ -637,6 +637,7 @@ fun proofl_searchtree tree =
     vector_to_list (Vector.map f gtreev)
   end
 
+
 fun reconstruct_proofstatus (searchstatus,tree) goal =
    case searchstatus of
     SearchSaturated => ProofSaturated
@@ -657,9 +658,79 @@ fun reconstruct_proofstatus (searchstatus,tree) goal =
       Proof sproof
     end
 
+
+(* -------------------------------------------------------------------------
+   Proof suggestion
+   ------------------------------------------------------------------------- *)
+
+val suggest_depth = ref NONE
+
+fun suggest_stactree gtokenl stactree = case stactree of
+    StacLeaf (r,ctreeo) => SOME (rev (#gtoken r :: gtokenl), ctreeo)  
+  | StacNode (r,svo) => 
+    (case svo of SOME (sv,_) =>
+     if Vector.all (is_saturated o #sstatus o get_stacrecord) sv then NONE else
+     let val cstree = 
+       case Vector.find (is_proved o #sstatus o get_stacrecord) sv of
+         SOME cst => cst 
+       | NONE => 
+           let 
+             fun score x = let val rloc = get_stacrecord x in 
+               if #sstatus rloc = Saturated then ~1.0 else #svis rloc end 
+           in
+             Vector.sub (sv, vector_maxi score sv)
+           end
+      in
+        suggest_stactree (#gtoken r :: gtokenl) cstree
+      end
+    | NONE => NONE)
+
+fun suggestl_searchtree d tree = 
+  let
+    val (_,gtreev) = dest_searchtree tree
+    fun f gtree =
+      if isSome (!suggest_depth) andalso d >= valOf (!suggest_depth) then
+      let val goal = (dest_goal o #gtoken o get_stacrecord) gtree in
+        Tactic ("Tactical.ALL_TAC", goal) 
+      end
+      else
+      case suggest_stactree [] gtree of
+      NONE => 
+      let val goal = (dest_goal o #gtoken o get_stacrecord) gtree in
+        Tactic ("Tactical.ALL_TAC", goal) 
+      end
+    | SOME (gtokenl,ctreeo) =>
+      let
+        val tokenl = map dest_token (tl gtokenl)
+          handle Empty => raise ERR "suggestl_searchtree" ""
+        val istac = build_stac tokenl
+        val goal = dest_goal (hd gtokenl)
+        val ptac = Tactic (istac, goal)
+      in
+        case ctreeo of 
+          NONE => ptac 
+        | SOME ctree => Thenl (ptac, suggestl_searchtree (d+1) ctree)
+      end
+  in
+    vector_to_list (Vector.map f gtreev)
+  end
+
+fun suggest_proof tree =
+  let
+    val gtree = Vector.sub (snd (dest_searchtree tree),0)
+    val goal = (dest_goal o #gtoken o get_stacrecord) gtree
+    fun f tree = singleton_of_list (suggestl_searchtree 0 tree)
+  in
+    unsafe_prettify_proof (minimize_proof_alt (f tree))
+  end
+
 (* -------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------- *)
+
+datatype vistoken = VisGoal of goal | VisTac of string | VisArg of token
+datatype vistree = 
+  VisNode of vistoken * int * real * status * vistree list
 
 fun allnode_searchtree tree = case tree of SearchNode (r,gtreev) => 
   r :: List.concat (vector_to_list (Vector.map allnode_stactree gtreev))
@@ -670,16 +741,10 @@ and allnode_stactree stactree = case stactree of
   | StacLeaf (_,NONE) => [] 
   | StacLeaf (_,SOME ctree) => allnode_searchtree ctree
 
-
-datatype vistoken = VisGoal of goal | VisTac of string | VisArg of token
-
 fun vistoken_of_gtoken gtoken = case gtoken of 
     Goal (g,_) => VisGoal g
   | Token (Stac s) => VisTac s
   | Token x => VisArg x
-
-datatype vistree = 
-  VisNode of vistoken * int * real * status * vistree list
 
 fun vistree_of_stacrecord pvis {gtoken,svis,ssum,sstatus,...} vistreel =
   VisNode (vistoken_of_gtoken gtoken, 
@@ -701,7 +766,34 @@ and vistree_of_stactree pvis stactree = case stactree of
   | StacLeaf (r,NONE) => vistree_of_stacrecord pvis r []
   | StacLeaf (r,SOME ctree) => vistree_of_stacrecord pvis r 
       (vistreel_of_searchtree ctree)
-        
+       
+fun length_vistree vistree = case vistree of
+    VisNode (vtoken,svis,sval,sstatus,treel) => 
+      (case vtoken of VisGoal _ => 1 | _ => 0) + 
+      sum_int (map length_vistree treel);
+
+fun indent n = String.concat (List.tabulate (n, fn _ => " "))
+
+fun string_of_vtoken vtoken = case vtoken of
+    VisGoal g => string_of_goal g
+  | VisTac s => s
+  | VisArg (Sthml x) => String.concatWith " " x
+  | VisArg (Sterm x) => x
+  | VisArg (Stac x) =>  x
+
+
+fun print_vistree_aux offset vistree = case vistree of
+    VisNode (vtoken,svis,sval,sstatus,treel) => 
+      (
+      print_endline
+        (indent offset ^ 
+         String.concatWith " " [string_of_vtoken vtoken, its svis, 
+           rts sval, 
+           if sstatus = Proved then "Proved" else ""]);
+      app (print_vistree_aux (offset + 2)) treel
+      )
+
+fun print_vistree vistree = print_vistree_aux 0 vistree
 
 (* -------------------------------------------------------------------------
    Proof search top-level function

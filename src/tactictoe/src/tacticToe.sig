@@ -29,16 +29,21 @@ sig
   val set_timeout : real -> unit
   val prioritize_stacl : string list ref
   
-  (* tnn-based functions *)
-  val ttt_tnn : tnn -> tactic
-  val tactictoe_tnn : tnn -> term -> thm
+  (* tnn-based function *)
   val confidence_tnn : tnn -> goal -> real
 
   (* main functions *)
+  val ttt_tnn : tnn -> tactic
+  val tactictoe_tnn : tnn -> term -> thm
+  
   val ttt : tactic
   val tactictoe : term -> thm
 
-  (* visualization of the final search tree and most promising path *)
+  (* search tree produced by the main fucntions *)
   val searchtree_glob : tttSearch.searchtree option ref 
+
+  (* suggest a possible proof after a failed attempt from the search tree *)
+  val suggest_depth : int option ref
+  val suggest : unit -> tactic
 
 end
