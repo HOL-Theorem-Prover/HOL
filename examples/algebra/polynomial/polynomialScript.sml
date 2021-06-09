@@ -143,32 +143,30 @@ This package collects the basic definitions in one location, so that we can imme
 (* ------------------------------------------------------------------------- *)
 
 (* A polynomial is represented by a list of coefficients taken from the ring *)
-val _ = type_abbrev ("poly", Type `:'a list`);
+Type poly = “:'a list”
 
 (* ------------------------------------------------------------------------- *)
 (* Weal Polynomials.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 (* Weak Polynomials are not normalized. *)
-val Weak_def = Define`
+Definition Weak_def[simp]:
   (Weak (r:'a ring) [] <=> T) /\
   (Weak (r:'a ring) ((h:'a)::(t:'a poly)) <=> (h IN R) /\ Weak r t)
-`;
-val _ = overload_on ("weak", ``Weak r``);
-
-(* export simple case definition *)
-val _ = export_rewrites ["Weak_def"];
+End
+Overload weak = “Weak r”
 
 (* ------------------------------------------------------------------------- *)
 (* Weal Polynomial Pair Addition.                                            *)
 (* ------------------------------------------------------------------------- *)
 
 (* Pair addition of weak polynomial *)
-val weak_add_def = Define`
+Definition weak_add_def:
   (weak_add (r:'a ring) [] q = q) /\
   (weak_add (r:'a ring) p [] = p) /\
-  (weak_add (r:'a ring) (ph:'a :: pt:'a poly) (qh:'a :: qt:'a poly) = ph + qh :: weak_add r pt qt)
-`;
+  (weak_add (r:'a ring) (ph:'a :: pt:'a poly) (qh:'a :: qt:'a poly) =
+    ph + qh :: weak_add r pt qt)
+End
 (*
 > val weak_add_def =
     |- (!r. weak_add r [] [] = []) /\
@@ -176,7 +174,7 @@ val weak_add_def = Define`
        (!v5 v4 f. weak_add r (v4::v5) [] = v4::v5) /\
        !qt qh pt ph f. weak_add r (ph::pt) (qh::qt) = ph + qh::weak_add r pt qt : thm
 *)
-val _ = overload_on ("||", ``weak_add r``);
+Overload "||" = “weak_add r”
 val _ = set_fixity "||" (Infixl 500); (* same as + in arithmeticScript.sml *)
 
 (* the internal definition is modified, so don't export *)
@@ -187,14 +185,12 @@ val _ = set_fixity "||" (Infixl 500); (* same as + in arithmeticScript.sml *)
 (* ------------------------------------------------------------------------- *)
 
 (* Scalar multiplication of a polynomial, i.e. c * (polynomial in x) *)
-val weak_cmult_def = Define`
+Definition weak_cmult_def[simp]:
   (weak_cmult (r:'a ring) (c:'a) [] = []) /\
-  (weak_cmult (r:'a ring) (c:'a) (h:'a :: t:'a poly) = c * h :: weak_cmult r c t)
-`;
-val _ = overload_on ("o", ``weak_cmult r``);
-
-(* export simple case definition *)
-val _ = export_rewrites ["weak_cmult_def"];
+  (weak_cmult (r:'a ring) (c:'a) (h:'a :: t:'a poly) =
+   c * h :: weak_cmult r c t)
+End
+Overload "o" = “weak_cmult r”
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Negation.                                                      *)
@@ -203,49 +199,46 @@ val _ = export_rewrites ["weak_cmult_def"];
 (* can we define neg directly as (poly_ring).sum.inv ?  Probably not. *)
 
 (* Negation of a polynomial *)
-val weak_neg_def = Define`
+Definition weak_neg_def[simp]:
   (weak_neg (r:'a ring) [] = []) /\
   (weak_neg (r:'a ring) (h:'a :: t) = (- h) :: (weak_neg r t))
-`;
+End
 (* overloading  *)
-val _ = overload_on ("neg", ``weak_neg r``);
-
-(* export simple case definition *)
-val _ = export_rewrites ["weak_neg_def"];
+Overload neg = “weak_neg r”
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Shifts                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 (* Note: [] >> n = [] is essential for later weak_mult_rzero: p o [] = [] *)
-(* Power multiplication of a polynomial, i.e. x^n * (polynomial in x), same as shifting. *)
-val poly_shift_def = Define`
+(* Power multiplication of a polynomial, i.e. x^n * (polynomial in x), same
+   as shifting. *)
+Definition poly_shift_def:
   (poly_shift (r:'a ring) [] n = []) /\
   (poly_shift (r:'a ring) (p:'a poly) 0 = p) /\
   (poly_shift (r:'a ring) (p:'a poly) (SUC n) = #0 :: poly_shift r p n)
-`;
+End
 (*
-> val poly_shift_def = |- (!r n. poly_shift r [] n = []) /\
-                          (!v5 v4 r. poly_shift r (v4::v5) 0 = v4::v5) /\
-                           !v7 v6 r n. poly_shift r (v6::v7) (SUC n) = #0::poly_shift r (v6::v7) n : thm
+> val poly_shift_def =
+   |- (!r n. poly_shift r [] n = []) /\
+      (!v5 v4 r. poly_shift r (v4::v5) 0 = v4::v5) /\
+      !v7 v6 r n. poly_shift r (v6::v7) (SUC n) =
+                  #0::poly_shift r (v6::v7) n : thm
 *)
-val _ = overload_on (">>", ``poly_shift r``);
+Overload ">>" = “poly_shift r”
 val _ = set_fixity ">>" (Infixr 700);
-val _ = add_infix(">>", 700, HOLgrammars.RIGHT);
 (* consistent with EXP in arithmeticTheory *)
 
 (* the internal definition is modified, so don't export *)
 (* val _ = export_rewrites ["poly_shift_def"]; *)
 
 (* Multiplication of polynomials. This is symbolic polynomial evaluation. *)
-val weak_mult_def = Define`
+Definition weak_mult_def[simp]:
   (weak_mult (r:'a ring) [] (q:'a poly) = []) /\
-  (weak_mult (r:'a ring) (h:'a :: t:'a poly) (q:'a poly) = (h o q) || (weak_mult r t q) >> 1)
-`;
-val _ = overload_on ("o", ``weak_mult r``);
-
-(* export simple case definition *)
-val _ = export_rewrites ["weak_mult_def"];
+  (weak_mult (r:'a ring) (h:'a :: t:'a poly) (q:'a poly) =
+   (h o q) || (weak_mult r t q) >> 1)
+End
+Overload "o" = “weak_mult r”
 
 (* ------------------------------------------------------------------------- *)
 (* Zero Polynomials - for normalization.                                     *)
@@ -253,54 +246,52 @@ val _ = export_rewrites ["weak_mult_def"];
 
 (* Zero polynomial definition *)
 (*
-val zero_poly_def = Define `zero_poly (r:'a ring) (p:'a poly) = EVERY (\c. c = #0) p`;
+val zero_poly_def = Define `
+  zero_poly (r:'a ring) (p:'a poly) = EVERY (\c. c = #0) p`;
 *)
+
 (* Zero polynomial definition - recursive *)
-val zero_poly_def = Define`
+Definition zero_poly_def[simp]:
   (zero_poly (r:'a ring) [] <=> T) /\
   (zero_poly (r:'a ring) ((h:'a)::(t:'a poly)) <=> (h = #0) /\ (zero_poly r t))
-`;
+End
 (* zero_poly is required for checking no division by zerop polynomial. *)
-val _ = overload_on ("zerop", ``zero_poly r``);
-
-(* export simple case definition *)
-val _ = export_rewrites ["zero_poly_def"];
+Overload zerop = “zero_poly r”
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Normalization.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 (* Chopping of a polynomial for normalization (recursive) *)
-val poly_chop_def = Define`
-   (poly_chop (r:'a ring) [] = []) /\
-   (poly_chop (r:'a ring) (h:'a :: t:'a poly) = if zerop (h::t) then [] else (h:: poly_chop r t))
-`;
-(* overloading  *)
-val _ = overload_on ("chop", ``poly_chop r``);
+Definition poly_chop_def[simp]:
+  (* simp though this leads to resolving zerop (h::t).
+     But this is useful, use it. *)
+  (poly_chop (r:'a ring) [] = []) /\
+  (poly_chop (r:'a ring) (h:'a :: t:'a poly) =
+   if zerop (h::t) then [] else (h:: poly_chop r t))
+End
+(* overloading *)
+Overload chop = “poly_chop r”
 
-(* Still simple case definition, although this leads to resolving zerop (h::t). But this is useful, use it. *)
-val _ = export_rewrites ["poly_chop_def"];
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomials over a Ring.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
 (* Polynomial p in ring r is either [], or not zerop (h::t). *)
-val Poly_def = Define`
+Definition Poly_def[simp]:
   (Poly (r:'a ring) [] <=> T) /\
-  (Poly (r:'a ring) ((h:'a)::(t:'a poly)) <=> (h IN R) /\ Poly r t /\ ~ zerop (h::t))
-`;
-val _ = overload_on ("poly", ``Poly r``);
-
-(* export simple case definition *)
-val _ = export_rewrites ["Poly_def"];
+  (Poly (r:'a ring) ((h:'a)::(t:'a poly)) <=>
+   h IN R /\ Poly r t /\ ~ zerop (h::t))
+End
+Overload poly = “Poly r”
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Ring.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define ring of polynomials. *)
-val poly_ring_def = Define`
+Definition poly_ring_def:
   poly_ring (r:'a ring):'a poly ring =
    <| carrier := { p:'a poly | poly p };
           sum := <| carrier := { p:'a poly | poly p };
@@ -312,32 +303,32 @@ val poly_ring_def = Define`
                          id := chop [#1]
                   |>
     |>
-`;
+End
 (*
 - type_of ``poly_ring r``;
 > val it = ``:'a poly ring`` : hol_type
 *)
 
 (* overload on R[x] *)
-val _ = overload_on ("PolyRing", ``\r. poly_ring r``);
+Overload "PolyRing" = “\r. poly_ring r”
 
-val _ = overload_on ("+", ``(PolyRing r).sum.op``);
-val _ = overload_on ("*", ``(PolyRing r).prod.op``);
-val _ = overload_on ("|0|", ``(PolyRing r).sum.id``);
-val _ = overload_on ("|1|", ``(PolyRing r).prod.id``);
+Overload "+" = “(PolyRing r).sum.op”
+Overload "*" = “(PolyRing r).prod.op”
+Overload "|0|" = “(PolyRing r).sum.id”
+Overload "|1|" = “(PolyRing r).prod.id”
 
 val _ = clear_overloads_on "##";
-val _ = overload_on ("##", ``(PolyRing r).sum.exp |1|``);
-val _ = overload_on ("**", ``(PolyRing r).prod.exp``);
+Overload "##" = “(PolyRing r).sum.exp |1|”
+Overload "**" = “(PolyRing r).prod.exp”
 
 (* Overloads for polynomial ring operations with parameter r *)
-val _ = overload_on("poly_zero", ``\r. (PolyRing r).sum.id``);
-val _ = overload_on("poly_one", ``\r. (PolyRing r).prod.id``);
-val _ = overload_on("poly_add", ``\r. (PolyRing r).sum.op``);
-val _ = overload_on("poly_mult", ``\r. (PolyRing r).prod.op``);
-val _ = overload_on("poly_neg", ``\r. (PolyRing r).sum.inv``);
-val _ = overload_on("poly_num", ``\r. (PolyRing r).sum.exp (poly_one r)``);
-val _ = overload_on("poly_exp", ``\r. (PolyRing r).prod.exp``);
+Overload poly_zero = “\r. (PolyRing r).sum.id”
+Overload poly_one = “\r. (PolyRing r).prod.id”
+Overload poly_add = “\r. (PolyRing r).sum.op”
+Overload poly_mult = “\r. (PolyRing r).prod.op”
+Overload poly_neg = “\r. (PolyRing r).sum.inv”
+Overload poly_num = “\r. (PolyRing r).sum.exp (poly_one r)”
+Overload poly_exp = “\r. (PolyRing r).prod.exp”
 
 (* Theorem: poly_ring sum.id = |0| and prod.id = |1|. *)
 (* Proof: by definition. *)
@@ -355,10 +346,10 @@ val poly_add_def = store_thm(
 
 (* Theorem: Definition of p * q. *)
 (* Proof: by poly_ring_def. *)
-val poly_mult_def = store_thm(
-  "poly_mult_def",
-  ``!(p q):'a poly. p * q = chop (p o q)``,
-  rw_tac std_ss[poly_ring_def]);
+Theorem poly_mult_def:
+  !(p q):'a poly. p * q = chop (p o q)
+Proof rw_tac std_ss[poly_ring_def]
+QED
 
 (* no export of rewrites to chop. *)
 (* val _ = export_rewrites ["poly_add_def", "poly_mult_def"]; *)
@@ -368,8 +359,10 @@ val poly_mult_def = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Scalar multiplication of a polynomial, i.e. c * (polynomial in x) *)
-val poly_cmult_def = Define `poly_cmult (r:'a ring) (c:'a) (p:'a poly) = chop (c o p)`;
-val _ = overload_on ("*", ``poly_cmult r``);
+Definition poly_cmult_def:
+  poly_cmult (r:'a ring) (c:'a) (p:'a poly) = chop (c o p)
+End
+Overload "*" = “poly_cmult r”
 
 (* do not want to convert c * p to chop (c o p) always. *)
 (* val _ = export_rewrites ["poly_cmult_def"]; *)
@@ -379,10 +372,10 @@ val _ = overload_on ("*", ``poly_cmult r``);
 (* ------------------------------------------------------------------------- *)
 
 (* Degree of polynomial p, assumed nomralized. *)
-val poly_deg_def = Define`
+Definition poly_deg_def:
   poly_deg (r:'a ring) (p:'a poly) = if p = [] then 0 else PRE (LENGTH p)
-`;
-val _ = overload_on ("deg", ``poly_deg r``);
+End
+Overload "deg" = “poly_deg r”
 
 (* no export, no expand to PRE (LENGTH p) *)
 (* val _ = export_rewrites ["poly_deg_def"]; *)
@@ -392,32 +385,22 @@ val _ = overload_on ("deg", ``poly_deg r``);
 (* ------------------------------------------------------------------------- *)
 
 (* Evaluate a polynomial p for a value x: Horner's method *)
-(* This form causes a problem:
-<<HOL message: more than one resolution of overloading was possible>>
-<<HOL message: mk_functional: The following input rows (counting from zero) are inaccessible: 1. They have been ignored.>>
-
-val poly_eval_def = Define`
-  (poly_eval (r:'a ring) |0| x = #0) /\
-  (poly_eval (r:'a ring) (h:'a :: t:'a poly) x = h + (poly_eval r t x) * x)
-`;
-*)
-val poly_eval_def = Define`
+Definition poly_eval_def[simp]:
   (poly_eval (r:'a ring) [] x = #0) /\
   (poly_eval (r:'a ring) (h:'a :: t:'a poly) x = h + (poly_eval r t x) * x)
-`;
-val _ = overload_on ("eval", ``poly_eval r``);
-
-(* export simple case definition *)
-val _ = export_rewrites ["poly_eval_def"];
+End
+Overload "eval" = “poly_eval r”
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Root.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
 (* Root x of a polynomial p: p(x) = 0. *)
-val poly_root_def = Define `poly_root (r:'a ring) (p:'a poly) (x:'a) = (eval p x = #0)`;
+Definition poly_root_def:
+  poly_root (r:'a ring) (p:'a poly) (x:'a) <=> (eval p x = #0)
+End
 
-val _ = overload_on ("root", ``poly_root r``);
+Overload "root" = “poly_root r”
 
 (* no export of conversion. *)
 (* val _ = export_rewrites ["poly_root_def"]; *)
@@ -427,9 +410,11 @@ val _ = overload_on ("root", ``poly_root r``);
 (* ------------------------------------------------------------------------- *)
 
 (* Roots of a polynomial p. *)
-val poly_roots_def = Define `poly_roots (r:'a ring) (p:'a poly) = {x | x IN R /\ root p x}`;
+Definition poly_roots_def:
+  poly_roots (r:'a ring) (p:'a poly) = {x | x IN R /\ root p x}
+End
 
-val _ = overload_on ("roots", ``poly_roots r``);
+Overload roots = “poly_roots r”
 
 (* no export of conversion. *)
 (* val _ = export_rewrites ["poly_roots_def"]; *)
@@ -439,11 +424,11 @@ val _ = overload_on ("roots", ``poly_roots r``);
 (* ------------------------------------------------------------------------- *)
 
 (* Leading coefficient of a polynomial (nonzero if normalized) *)
-val poly_lead_def = Define`
+Definition poly_lead_def:
   (poly_lead (r:'a ring) [] = #0) /\
   (poly_lead (r:'a ring) (h::t) = LAST (h::t))
-`;
-val _ = overload_on ("lead", ``poly_lead r``);
+End
+Overload "lead" = “poly_lead r”
 
 (* no export -- don't want expand to LAST every time *)
 (* val _ = export_rewrites ["poly_lead_def"]; *)
@@ -453,21 +438,13 @@ val _ = overload_on ("lead", ``poly_lead r``);
 (* ------------------------------------------------------------------------- *)
 
 (* Coefficient of a polynomial term. *)
-(* This form has problem:
-val poly_coeff_def = Define`
-  (poly_coeff (r:'a ring) |0| n = #0) /\
-  (poly_coeff (r:'a ring) (h::t:'a poly) n = if deg (h::t) < n then #0 else EL n (h::t))
-`;
-*)
-val poly_coeff_def = Define`
+Definition poly_coeff_def[simp]:
   (poly_coeff (r:'a ring) [] n = #0) /\
-  (poly_coeff (r:'a ring) (h::t:'a poly) n = if deg (h::t) < n then #0 else EL n (h::t))
-`;
-val _ = overload_on ("'", ``poly_coeff r``);
+  (poly_coeff (r:'a ring) (h::t:'a poly) n =
+   if deg (h::t) < n then #0 else EL n (h::t))
+End
+Overload "'" = “poly_coeff r”
 val _ = set_fixity "'" (Infixl 2000);
-
-(* simple case defintion can export. *)
-val _ = export_rewrites ["poly_coeff_def"];
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Theorems.                                                           *)
@@ -475,33 +452,29 @@ val _ = export_rewrites ["poly_coeff_def"];
 
 (* Theorem: |0| = []. *)
 (* Proof: by poly_ring_def. *)
-val poly_zero = store_thm(
-  "poly_zero",
-  ``|0| = []``,
-  rw_tac std_ss[poly_ring_def]);
-
-(* export as right side is simpler. *)
-val _ = export_rewrites ["poly_zero"];
+Theorem poly_zero[simp]: |0| = []
+Proof
+  rw_tac std_ss[poly_ring_def]
+QED
 
 (* Theorem: |1| = if #1 = #0 then [] else [#1] *)
 (* Prof: by poly_ring_def and poly_chop_def and zero_poly_def.
    If #1 = #0, chop [#0] = []     true by poly_chop_def, zero_poly_def.
    If #1 <> #0, chop [#1] = [#1]  true by poly_chop_def, zero_poly_def.
 *)
-val poly_one = store_thm(
-  "poly_one",
-  ``|1| = if #1 = #0 then [] else [#1]``,
-  rw_tac std_ss[poly_ring_def, poly_chop_def, zero_poly_def]);
+Theorem poly_one:
+  |1| = if #1 = #0 then [] else [#1]
+Proof rw_tac std_ss[poly_ring_def, poly_chop_def, zero_poly_def]
+QED
 
 (* no export as right side is more complicated. *)
 (* val _ = export_rewrites ["poly_one"]; *)
 
 (* Theorem: poly |0| *)
 (* Proof: by Poly_def and poly_zero. *)
-val poly_zero_poly = store_thm(
-  "poly_zero_poly",
-  ``poly |0|``,
-  rw[]);
+Theorem poly_zero_poly:  poly |0|
+Proof rw[]
+QED
 
 (* Theorem: poly p /\ 0 < n /\ deg p < n <=> lead p <> #0 /\ LENGTH p <= n *)
 (* Proof:
@@ -515,10 +488,10 @@ val poly_zero_poly = store_thm(
    ==>              LENGTH p < SUC n   by SUC_PRE: 0 < m <=> (SUC (PRE m) = m)
    ==>              LENGTH p <= n      by LESS_LESS_SUC
 *)
-val poly_deg_less = store_thm(
-  "poly_deg_less",
-  ``!p n. deg p < n ==> LENGTH p <= n``,
-  rw[poly_deg_def]);
+Theorem poly_deg_less:
+  !p n. deg p < n ==> LENGTH p <= n
+Proof rw[poly_deg_def]
+QED
 
 (* Theorem: deg p <= n ==> LENGTH p <= SUC n *)
 (* Proof:
@@ -529,17 +502,18 @@ val poly_deg_less = store_thm(
     SUC(PRE(LENGTH p)) <= SUC n     by arithmetic
               LENGTH p <= SUC n     by SUC_PRE
 *)
-val poly_deg_le_length = store_thm(
-  "poly_deg_le_length",
-  ``!p n. deg p <= n ==> LENGTH p <= SUC n``,
-  rw[poly_deg_def]);
+Theorem poly_deg_le_length:
+  !p n. deg p <= n ==> LENGTH p <= SUC n
+Proof
+  rw[poly_deg_def]
+QED
 
 (* Theorem: x IN roots p <=> x IN R /\ root p x *)
 (* Proof: by poly_roots_def. *)
-val poly_roots_member = store_thm(
-  "poly_roots_member",
-  ``!r:'a ring. !p x. x IN roots p <=> x IN R /\ root p x``,
-  rw[poly_roots_def]);
+Theorem poly_roots_member:
+  !r:'a ring. !p x. x IN roots p <=> x IN R /\ root p x
+Proof rw[poly_roots_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems for Polynomials with #1 <> #0.                                   *)
@@ -555,10 +529,10 @@ val poly_roots_member = store_thm(
    If poly [#1], LAST [#1] <> #0 by poly_one_ne_zero, poly_def_alt
    Hence true by LAST_CONS
 *)
-val poly_of_one_poly = store_thm(
-  "poly_of_one_poly",
-  ``!r:'a ring. Ring r ==> (#1 <> #0 <=> poly [#1])``,
-  rw[]);
+Theorem poly_of_one_poly:
+  !r:'a ring. Ring r ==> (#1 <> #0 <=> poly [#1])
+Proof rw[]
+QED
 
 (* Theorem: #1 <> #0 iff |1| <> |0| *)
 (* Proof:
@@ -570,17 +544,18 @@ val poly_of_one_poly = store_thm(
       but |0| = [] by poly_zero
       hence contradiction.
 *)
-val poly_one_ne_poly_zero = store_thm(
-  "poly_one_ne_poly_zero",
-  ``!r:'a ring. Ring r ==> (#1 <> #0 <=> |1| <> |0|)``,
-  rw[poly_one]);
+Theorem poly_one_ne_poly_zero:
+  !r:'a ring. Ring r ==> (#1 <> #0 <=> |1| <> |0|)
+Proof rw[poly_one]
+QED
 
 (* Theorem: |1| = |0| iff #1 = #0 *)
 (* Proof: by poly_one_ne_poly_zero. *)
-val poly_one_eq_poly_zero = store_thm(
-  "poly_one_eq_poly_zero",
-  ``!r:'a ring. Ring r ==> (( |1| = |0|) <=> (#1 = #0))``,
-  metis_tac[poly_one_ne_poly_zero]);
+Theorem poly_one_eq_poly_zero:
+  !r:'a ring. Ring r ==> (( |1| = |0|) <=> (#1 = #0))
+Proof
+  metis_tac[poly_one_ne_poly_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
