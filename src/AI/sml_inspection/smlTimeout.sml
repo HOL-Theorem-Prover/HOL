@@ -16,7 +16,7 @@ val ERR = mk_HOL_ERR "smlTimeout"
    Interrupt a thread and wait for it to terminate to continue.
    ------------------------------------------------------------------------- *)
 
-(* todo: include small waiting time in the loop to reduce busing waiting 
+(* todo: include small waiting time in the loop to reduce busing waiting
    using condition wait *)
 fun interruptkill worker =
   let
@@ -38,7 +38,7 @@ exception FunctionTimeout
 
 datatype 'a result = Res of 'a | Exn of exn
 
-fun capture f x = Res (f x) 
+fun capture f x = Res (f x)
   handle Interrupt => raise Interrupt | e => Exn e
 
 fun release (Res y) = y
@@ -58,7 +58,7 @@ fun timeLimit t f x =
     val _ = Mutex.lock m
     val c = ConditionVar.conditionVar ()
     val resultref = ref NONE
-    fun worker_fun () = 
+    fun worker_fun () =
       (
       resultref := SOME (capture f x);
       Thread.setAttributes attrib_sync;
@@ -91,7 +91,7 @@ end (* struct *)
    Tests
    ------------------------------------------------------------------------- *)
 
-(* 
+(*
 load "aiLib"; open aiLib;
 load "smlTimeout"; open smlTimeout;
 
@@ -100,7 +100,7 @@ add_time (timeout 1.0 f) ();
 
 
 
-fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => (); 
+fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => ();
 add_time List.tabulate (1000, fn _ => g ());
 add_time g ();
 

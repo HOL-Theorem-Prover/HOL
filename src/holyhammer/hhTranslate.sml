@@ -13,8 +13,8 @@ open HolKernel boolLib aiLib
 val ERR = mk_HOL_ERR "hhTranslate"
 val translate_cache_glob = ref (dempty Term.compare)
 
-fun foralls (vl,t) = case vl of 
-    [] => t 
+fun foralls (vl,t) = case vl of
+    [] => t
   | a :: m => mk_forall (a, foralls (m,t))
 
 val list_mk_forall = foralls

@@ -33,7 +33,7 @@ include Abbrev
   val ttt_after_save_state : unit -> unit
 
   (* Thmdata I/O *)
-  val write_thmdata : string -> (string * thm) list -> unit 
+  val write_thmdata : string -> (string * thm) list -> unit
   val read_thmdata : string -> (string * goal) list
 
 end

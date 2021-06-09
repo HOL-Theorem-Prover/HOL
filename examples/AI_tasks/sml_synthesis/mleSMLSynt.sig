@@ -2,7 +2,7 @@ signature mleSMLSynt =
 sig
 
   include Abbrev
-  
+
   val selfdir : string
   type board = mleSMLLib.board
   type move = mleSMLLib.move
@@ -18,7 +18,7 @@ sig
   val gameio : board mlReinforce.gameio
   val import_targetl : string -> board list
   val mk_targetd : board list -> (board, bool list) Redblackmap.dict
-  
+
   datatype embtree = EmbNode of real vector option * embtree vector | EmbLeaf
 
   val extsearch : board mlReinforce.es

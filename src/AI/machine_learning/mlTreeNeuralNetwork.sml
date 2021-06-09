@@ -65,14 +65,14 @@ fun random_tnn_std (nlayer,dim) operl =
   random_tnn (map_assoc (dim_std (nlayer,dim)) operl)
 
 fun prepare_tnn tnn =
-  let 
-    val termnnl = dlist tnn 
+  let
+    val termnnl = dlist tnn
     val operd = dnew Term.compare (number_snd 0 (map fst termnnl))
     val nnv = Vector.fromList (map snd termnnl)
   in
     (nnv,operd)
   end
-  
+
 fun unprepare_tnn (nnv,operd) =
   dnew Term.compare (combine (dkeys operd, vector_to_list nnv))
 
@@ -148,7 +148,7 @@ fun index_graph operd subtml =
   let
     val subtmil = number_snd 0 subtml
     val subtmd = dnew Term.compare subtmil
-    fun f (subtm,i) = 
+    fun f (subtm,i) =
       let val (oper,argl) = strip_comb subtm in
         (i, (dfind oper operd, map (fn x => dfind x subtmd) argl))
       end
@@ -157,10 +157,10 @@ fun index_graph operd subtml =
   end
 
 fun prepare_tnnex operd tnnex =
-  let fun f x = 
-    let 
+  let fun f x =
+    let
       val tml = map fst x
-      val (graph, subtmd) = index_graph operd (order_subtm tml) 
+      val (graph, subtmd) = index_graph operd (order_subtm tml)
       val ievl =
         let fun g (tm,rl) = (dfind tm subtmd, scale_out rl) in
           map g x
@@ -192,14 +192,14 @@ fun fp_oper tnn fpv (oper,argl) =
 fun fp_tnn_loop tnn fpv graph = case graph of
     []      => fpv
   | (subtm,(oper,argl)) :: m =>
-    let 
-      val fpdatal = fp_oper tnn fpv (oper,argl) 
+    let
+      val fpdatal = fp_oper tnn fpv (oper,argl)
       val newfpv = Vector.update (fpv,subtm,fpdatal)
     in
       fp_tnn_loop tnn newfpv m
     end
 
-fun fp_tnn tnn graph = 
+fun fp_tnn tnn graph =
   fp_tnn_loop tnn (empty_fpv (length graph)) graph
 
 (* -------------------------------------------------------------------------
@@ -210,9 +210,9 @@ fun mat_add_cpl (m1,m2) = mat_add m1 m2
 
 fun update_wud ((oper,operdwl), wud) =
   dadd oper (map mat_add_cpl (combine (operdwl, dfind oper wud))) wud
-  handle NotFound => 
+  handle NotFound =>
   dadd oper operdwl wud
- 
+
 fun update_gradv ((subtm,doutnv),gradv) =
   Vector.update (gradv, subtm, vect_add (Vector.sub (gradv,subtm)) doutnv)
 
@@ -229,19 +229,19 @@ fun bp_tnn_loop fpv gradv wud revgraph = case revgraph of
       val bpdatal = bp_nn_doutnv fpdatal grad
       val dinv = vector_to_list (#dinv (hd bpdatal))
       val dinvl = map Vector.fromList (part_group diml dinv)
-      val operdwl = map #dw bpdatal  
+      val operdwl = map #dw bpdatal
       val newgradv = foldl update_gradv gradv (combine (argl,dinvl))
       val newwud = update_wud ((oper,operdwl), wud)
     in
       bp_tnn_loop fpv newgradv newwud m
     end
 
-fun zero_vect n = Vector.tabulate (n, fn _ => 0.0)   
+fun zero_vect n = Vector.tabulate (n, fn _ => 0.0)
 
 fun bp_tnn fpv (graph,ievl) =
   let
-    val gradv0 = 
-      Vector.tabulate (Vector.length fpv, 
+    val gradv0 =
+      Vector.tabulate (Vector.length fpv,
         fn subtm => zero_vect (dimout_subtm fpv subtm))
     fun f (subtm,ev) =
       let
@@ -262,7 +262,7 @@ fun bp_tnn fpv (graph,ievl) =
 fun infer_tnn tnn tml =
   let
     val (ptnn,operd) = prepare_tnn tnn
-    val (graph,subtmd) = index_graph operd (order_subtm tml) 
+    val (graph,subtmd) = index_graph operd (order_subtm tml)
     val fpv = fp_tnn ptnn graph
     fun f x = descale_out (#outnv (last (Vector.sub (fpv,x))))
   in
@@ -290,7 +290,7 @@ fun update_oper param ((oper,dwl),tnn) =
     Vector.update (tnn,oper,newnn)
   end
 
-fun update_tnn param wud tnn = 
+fun update_tnn param wud tnn =
   foldl (update_oper param) tnn (dlist wud)
 
 (* -------------------------------------------------------------------------
@@ -327,7 +327,7 @@ fun train_tnn_subbatch tnn subbatch =
   let val (wudl,lossl) = split (map (train_tnn_one tnn) subbatch) in
     (regroup_wud wudl, lossl)
   end
- 
+
 fun train_tnn_batch param pf tnn batch =
   let
     val subbatchl = cut_modulo (#ncore param) batch
@@ -373,7 +373,7 @@ fun train_tnn_schedule schedule tnn (train,test) =
       val _ = msg param ("ncore: " ^ its (#ncore param))
       val (pf,close_threadl) = parmap_gen (#ncore param)
       val newtnn = train_tnn_nepoch param pf 0 tnn (train,test)
-      val _ = close_threadl () 
+      val _ = close_threadl ()
     in
       train_tnn_schedule m newtnn (train,test)
     end
@@ -407,12 +407,12 @@ fun train_tnn schedule randtnn (trainex,testex) =
     val _ = print_endline ("testing set: " ^ stats_tnnex testex)
     val _ = print_endline ""
     val (ptnn,operd) = prepare_tnn randtnn
-    val (ptrainex,ptestex) = 
+    val (ptrainex,ptestex) =
       (prepare_tnnex operd trainex, prepare_tnnex operd testex)
    val (tnn,t) = add_time (train_tnn_schedule schedule ptnn)
      (ptrainex, ptestex)
   in
-    print_endline ("Tree neural network training time: " ^ rts t); 
+    print_endline ("Tree neural network training time: " ^ rts t);
     unprepare_tnn (tnn,operd)
   end
 

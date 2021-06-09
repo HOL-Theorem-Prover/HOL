@@ -14,14 +14,14 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttSearch tttRecord tacticToe tttToken tttTrain
 
 val ERR = mk_HOL_ERR "tttEval"
-fun catch_err msg f x = 
-  f x handle HOL_ERR {origin_structure,origin_function,message} => 
-  (print_endline 
+fun catch_err msg f x =
+  f x handle HOL_ERR {origin_structure,origin_function,message} =>
+  (print_endline
     (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ message);
   raise ERR "tttEval" "error caught (see log)")
-fun catch_err_ignore msg f x = 
-  f x handle HOL_ERR {origin_structure,origin_function,message} => 
-  (print_endline 
+fun catch_err_ignore msg f x =
+  f x handle HOL_ERR {origin_structure,origin_function,message} =>
+  (print_endline
     (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ message))
 
 
@@ -35,14 +35,14 @@ val hh_timeout = ref 30
 fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
 
 fun import_hh () =
-  let val _ =  
+  let val _ =
      metis_avail () andalso
-     quse_string ("load \"holyHammer\"; " ^ 
+     quse_string ("load \"holyHammer\"; " ^
                   "holyHammer.set_timeout " ^ its (!hh_timeout) ^ ";" ^
                   "tttEval.hh_glob := Option.SOME (holyHammer.main_hh);")
   in
     !hh_glob
-  end 
+  end
 
 (* -------------------------------------------------------------------------
    I/O
@@ -64,14 +64,14 @@ fun parse_info file l =
   let val msg = file ^ " -- " ^ String.concatWith " " (map fst l) in
     if length l <> length keyl then raise ERR "parse_info" msg else
     let
-      fun parse_int s (s1,s2) = 
-        if s = s1 then string_to_int s2 else 
+      fun parse_int s (s1,s2) =
+        if s = s1 then string_to_int s2 else
           raise ERR "parse_int" (msg ^ " -- " ^ s)
       fun parse_real s (s1,s2) =
-        if s = s1 then valOf (Real.fromString s2) else 
+        if s = s1 then valOf (Real.fromString s2) else
           raise ERR "parse_real" (msg ^ " -- " ^ s)
-      fun parse_status s (s1,s2) = 
-        if s = s1 then s2 else 
+      fun parse_status s (s1,s2) =
+        if s = s1 then s2 else
           raise ERR "parse_status" (msg ^ " -- " ^ s)
     in
       {
@@ -118,12 +118,12 @@ fun compile_info exp =
     "timeout " ^ its (length timeoutl),
     "saturated " ^ its (length saturatedl),
     "nodes_per_sec " ^ rts_round 2 (totnodes / totsearch),
-    "loops_per_sec " ^ rts_round 2 (totloops / totsearch), 
+    "loops_per_sec " ^ rts_round 2 (totloops / totsearch),
     "select " ^ rts_round 6 (sum_real (map #select statsl) / totsearch),
     "exparg " ^ rts_round 6 (sum_real (map #exparg statsl) / totsearch),
     "apply " ^ rts_round 6 (sum_real (map #apply statsl) / totsearch),
     "backup " ^ rts_round 6 (sum_real (map #backup statsl) / totsearch),
-    "recons_average " ^ rts_round 6 (sum_real (map #recons statsl) / 
+    "recons_average " ^ rts_round 6 (sum_real (map #recons statsl) /
        Real.fromInt (length provenl)),
     "metis " ^ rts_round 6 (sum_real (map #metis statsl) / totsearch),
     "other " ^ rts_round 6 (sum_real (map #other statsl) / totsearch)]
@@ -192,21 +192,21 @@ val topol = filter (fn (x,_) => String.isPrefix "real_topology" x) l2nl1s;
    ------------------------------------------------------------------------- *)
 
 fun allgoalrec_searchtree tree = case tree of
-  SearchNode (_,gtreev) => 
+  SearchNode (_,gtreev) =>
     vector_to_list (Vector.map get_stacrecord gtreev) @
     List.concat (vector_to_list (Vector.map allgoalrec_stactree gtreev))
 and allgoalrec_stactree stactree = case stactree of
     StacNode (_,svo) => (case svo of NONE => [] | SOME (sv,sl) =>
       List.concat (vector_to_list (Vector.map allgoalrec_stactree sv)))
-  | StacLeaf (_,NONE) => [] 
+  | StacLeaf (_,NONE) => []
   | StacLeaf (_,SOME ctree) => allgoalrec_searchtree ctree
 
 
 fun export_valex file (tree as SearchNode (r,gtreev)) =
-  if #nstatus r = Proved then () else 
+  if #nstatus r = Proved then () else
   let
     val goalrecl = allgoalrec_searchtree tree
-    fun f x = ((nntm_of_stateval (dest_goal (#gtoken x)), 
+    fun f x = ((nntm_of_stateval (dest_goal (#gtoken x)),
                if #sstatus x = Proved then 1.0 else 0.0), #svis x)
     val exl1 = map f goalrecl
     val exl2 = filter (fn ((t,_),_) => term_size t < 80) exl1
@@ -231,8 +231,8 @@ val hh_flag = ref false
 fun hh_call fofdir thmdata goal =
   let val hho = import_hh () in
   if not (isSome hho) then print_endline "hh: not available" else
-  let 
-    val hh = valOf hho 
+  let
+    val hh = valOf hho
     fun hh_err x y z = ignore (hh x y z)
     val (_,t) = add_time (hh_err fofdir thmdata) goal
   in
@@ -253,7 +253,7 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
   in
-    if !hh_flag 
+    if !hh_flag
       then catch_err_ignore "hh_call" (hh_call fofdir thmdata) goal else
     let val ((status,tree),t) = add_time
       (main_tactictoe (thmdata,tacdata) nnol) goal
@@ -290,7 +290,7 @@ fun assign_tnn s fileo =
 val cheat_flag = ref false
 
 fun prepare_global_data (thy,n) =
-  let 
+  let
     val _ = print_endline ("prepare_data: " ^ thy ^ " " ^ its n)
     val calls = mlTacticData.import_calls (ttt_tacdata_dir ^ "/" ^ thy)
     val m = if !cheat_flag then n + 1 else n
@@ -327,7 +327,7 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
      sreflect_flag "tttSearch.conttop_flag" conttop_flag,
      sreflect_flag "tttSearch.contmid_flag" contmid_flag,
      sreflect_real "tttSearch.default_reward" default_reward,
-     "val _ = tttEval.prepare_global_data (" ^ 
+     "val _ = tttEval.prepare_global_data (" ^
         mlquote thy ^ "," ^ its n ^ ");",
      sreflect_flag "tttSearch.nocut_flag" nocut_flag,
      smlfun ^ " " ^ mlquote expdir ^ " " ^
@@ -353,14 +353,14 @@ val oldeval_flag = ref false
 fun is_oldeval file = readl (file ^ "_flags") = ["false","false"]
 
 fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
-  let    
+  let
     val expdir = ttt_eval_dir ^ "/" ^ expname
     val outdir = expdir ^ "/out"
     val valdir = expdir ^ "/val"
     val argdir = expdir ^ "/arg"
     val tnndir = expdir ^ "/tnn"
     val pbdir = expdir ^ "/pb"
-    val _ = app mkDir_err 
+    val _ = app mkDir_err
       [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir]
     val (thyl',thyl'') = partition (fn x => mem x ["min","bool"]) thyl
     val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl''
@@ -373,8 +373,8 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
     val _ = print_endline ("evaluation: " ^ its (length filel3) ^ " problems")
     val (_,t) = add_time
       (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel3
-    val infos = 
-      ("evaluation time: " ^ rts_round 6 t) ^ "\n" ^ compile_info expname 
+    val infos =
+      ("evaluation time: " ^ rts_round 6 t) ^ "\n" ^ compile_info expname
   in
     (print_endline infos; writel (expdir ^ "/stats") [infos])
   end
@@ -388,13 +388,13 @@ fun run_evalscript_filel smlfun expname (b,ncore) nnol filel =
     val argdir = expdir ^ "/arg"
     val tnndir = expdir ^ "/tnn"
     val pbdir = expdir ^ "/pb"
-    val _ = app mkDir_err 
+    val _ = app mkDir_err
       [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir]
     val _ = print_endline ("evaluation: " ^ its (length filel) ^ " problems")
     val (_,t) = add_time
       (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel
-    val infos = 
-      ("evaluation time: " ^ rts_round 6 t) ^ "\n" ^ compile_info expname 
+    val infos =
+      ("evaluation time: " ^ rts_round 6 t) ^ "\n" ^ compile_info expname
   in
     (print_endline infos; writel (expdir ^ "/stats") [infos])
   end
@@ -440,7 +440,7 @@ aiLib.load_sigobj ();
 fun ttt_ancestry thy =
   filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
 
-fun ttt_record_thmdata () = 
+fun ttt_record_thmdata () =
   let
     val thyl1 = ttt_ancestry (current_theory ())
     val ((),t) = add_time (app ttt_record_thy) thyl1
@@ -470,7 +470,7 @@ val valdir = expdir ^ "/val"
 val argdir = expdir ^ "/arg"
 val tnndir = expdir ^ "/tnn"
 val pbdir = expdir ^ "/pb"
-val _ = app mkDir_err 
+val _ = app mkDir_err
   [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir];
 val file = savestatedir ^ "/" ^ "relation_40";
 tttSetup.ttt_search_time := 30.0;
@@ -501,11 +501,11 @@ hh_ontop_flag := true; tttSearch.snap_flag := true; tttSearch.snap_n := 100;
 val savestatedir = tttSetup.tactictoe_dir ^ "/savestate";
 val evaldir = tttSetup.tactictoe_dir ^ "/eval";
 val filel = aiLib.readl (evaldir ^ "/hard_avail");
-fun trim s = savestatedir ^ "/" ^ 
+fun trim s = savestatedir ^ "/" ^
   String.substring (s,12,String.size s - 5 - 12);
 val filel2 = map trim filel;
 
-run_evalscript_filel smlfun "hard-seq" (true,20) 
+run_evalscript_filel smlfun "hard-seq" (true,20)
   (NONE,NONE,NONE) filel2;
 
 *)
@@ -545,16 +545,16 @@ fun rl_schedule nepoch =
    ];
 
 
-fun tnnex_to_basicex ex = 
+fun tnnex_to_basicex ex =
   let fun f ex = case ex of
     [(t,[r])] => (t,r)
   | _ => raise ERR "not a basic example" ""
-  in 
+  in
     map f ex
   end
 
 fun uniq_ex ex =
-  let 
+  let
     val ex1 = tnnex_to_basicex ex
     val _ = print_endline ("Examples: " ^ its (length ex1))
     val ex2 = dlist (dregroup Term.compare ex1)
@@ -577,7 +577,7 @@ fun train_fixed pct exl' =
     val randtnn = random_tnn operdiml
     val nepoch = 20
     val tnn = train_tnn (rl_schedule nepoch) randtnn (train,test)
-    val accur = tnn_accuracy tnn train 
+    val accur = tnn_accuracy tnn train
   in
     print_endline ("tnn accuracy:" ^ rts accur);
     tnn
@@ -592,9 +592,9 @@ val ttt_eval_string = "tttEval.ttt_eval"
 
 fun rlval_loop ncore expname thyl (gen,maxgen) =
   if gen > maxgen then () else
-  let 
+  let
     fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
-    fun valdir x = gendir x ^ "/val"    
+    fun valdir x = gendir x ^ "/val"
     val dirl = List.tabulate (gen,valdir)
     val exl = List.concat (map collect_ex dirl)
     val tnnfile = gendir (gen - 1) ^ "/tnn/val"
@@ -604,16 +604,16 @@ fun rlval_loop ncore expname thyl (gen,maxgen) =
     val _ = write_tnn tnnfile tnn
   in
     print_endline ("Generation " ^ its gen);
-    run_evalscript_thyl ttt_eval_string 
-      (expname ^ "-gen" ^ its gen) (true,ncore) 
+    run_evalscript_thyl ttt_eval_string
+      (expname ^ "-gen" ^ its gen) (true,ncore)
     (SOME tnnfile,NONE,NONE) thyl;
     rlval_loop ncore expname thyl (gen+1,maxgen)
   end
 
 fun rlval ncore expname thyl maxgen =
   (
-  print_endline ("Generation 0"); 
-  run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,ncore) 
+  print_endline ("Generation 0");
+  run_evalscript_thyl ttt_eval_string (expname ^ "-gen0") (true,ncore)
     (NONE,NONE,NONE) thyl;
   rlval_loop ncore expname thyl (1,maxgen)
   )
@@ -638,21 +638,21 @@ val expname = "altreward3";
 
 
 (*
-run_evalscript_thyl "tttEval.ttt_eval" expname (true,30) 
+run_evalscript_thyl "tttEval.ttt_eval" expname (true,30)
   (NONE,NONE,NONE) thyl;
 
 (* see Training test *)
 
-run_evalscript_thyl "tttEval.ttt_eval" expname (true,30) 
+run_evalscript_thyl "tttEval.ttt_eval" expname (true,30)
   (SOME (tnnfile expname),NONE,NONE) thyl;
 *)
 
-(* 
-rlval ncore expname thyl 1; 
+(*
+rlval ncore expname thyl 1;
 *)
 
-(* 
-rlval_loop expname thyl (1,maxgen); 
+(*
+rlval_loop expname thyl (1,maxgen);
 *)
 
 
@@ -661,7 +661,7 @@ rlval_loop expname thyl (1,maxgen);
    ------------------------------------------------------------------------ *)
 
 (*
-open mlTreeNeuralNetwork aiLib;; 
+open mlTreeNeuralNetwork aiLib;;
 
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 fun tnnfile expname = tttSetup.ttt_eval_dir ^ "/" ^ expname ^ "/tnn/val";

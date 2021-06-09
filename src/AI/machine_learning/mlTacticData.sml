@@ -134,7 +134,7 @@ fun create_tacdata () =
     val (tacdata,t) = add_time import_tacdata filel
     val calln = dlength (#calld tacdata)
   in
-    print_endline ("Loading " ^ its calln ^ " tactic calls in " ^ 
+    print_endline ("Loading " ^ its calln ^ " tactic calls in " ^
       rts_round 2 t ^ " seconds");
     tacdata
   end

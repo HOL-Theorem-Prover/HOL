@@ -28,7 +28,7 @@ fun board_compare (a,b) = Term.compare (term_of_board a, term_of_board b)
    ------------------------------------------------------------------------- *)
 
 val movel =
-  (map BIns instrl) @ [BTest,BRec] @ 
+  (map BIns instrl) @ [BTest,BRec] @
   map BProj (List.tabulate (maxvar,I)) @
   map BSub (List.tabulate (maxvar,fn x => x + 1)) @ [BEndSub]
 
@@ -36,13 +36,13 @@ fun string_of_move m = case m of
     BIns (name,_,_) => name
   | BTest => "test"
   | BRec => "rec"
-  | BProj i => "proj" ^ its i 
+  | BProj i => "proj" ^ its i
   | BSub i => "sub" ^ its i
   | BEndSub => "endsub"
-  
-fun move_compare (m1,m2) = 
+
+fun move_compare (m1,m2) =
   String.compare (string_of_move m1, string_of_move m2)
-  
+
 fun apply_move move (n,ol,progll) = (n+1,ol, build move progll)
 
 fun available_movel board = filter (available board) movel
@@ -51,16 +51,16 @@ fun timelimit i = (i+1) * (i+1) * (i+1) * maxstep
 
 fun compare_ol_aux i n ol prog = case ol of
     [] => Win
-  | a :: m => 
+  | a :: m =>
     let val r = exec (timelimit i) prog [i] in
-      if isSome r andalso valOf r = a 
+      if isSome r andalso valOf r = a
       then compare_ol_aux (i+1) n m prog
       else if n > maxstep then Lose else Undecided
     end
 
 fun compare_ol n ol prog = compare_ol_aux 0 n ol prog
 
-fun status_of (n,ol,progll) = case progll of 
+fun status_of (n,ol,progll) = case progll of
    [(arity : int,[prog])] => compare_ol n ol prog
   | _ => if n > maxstep then Lose else Undecided
 
@@ -84,10 +84,10 @@ val game : (board,move) game =
    Generating random programs and keeping their sequence.
    ------------------------------------------------------------------------- *)
 
-fun compute_ol_aux (i,ibound) seq prog = 
+fun compute_ol_aux (i,ibound) seq prog =
   if i >= ibound then SOME (rev seq) else
   let val r = exec (timelimit i) prog [i] in
-     if isSome r 
+     if isSome r
      then compute_ol_aux (i+1, ibound) (valOf r :: seq) prog
      else NONE
    end
@@ -96,16 +96,16 @@ fun compute_ol ibound prog = compute_ol_aux (0,ibound) [] prog
 
 val seqlength = 16
 
-fun random_seql_aux n seql board = 
+fun random_seql_aux n seql board =
   if n <= 0 then seql else
-  let 
-    val movel = available_movel board 
+  let
+    val movel = available_movel board
     val newboard = apply_move (random_elem movel) board
   in
     case newboard of
-      (_ , _, [(_,[prog])]) => 
-      let 
-        val r = compute_ol seqlength prog 
+      (_ , _, [(_,[prog])]) =>
+      let
+        val r = compute_ol seqlength prog
         val newseql = (if isSome r then valOf r :: seql else seql)
       in
         random_seql_aux (n-1) newseql newboard
@@ -117,9 +117,9 @@ val fakeboard = (0,[],[(1,[])])
 
 fun random_seql nstep = random_seql_aux nstep [] fakeboard
 
-fun gen_seql_aux nstep n d' d = 
+fun gen_seql_aux nstep n d' d =
   (
-  if d' <> dlength d andalso dlength d mod 100 = 0 
+  if d' <> dlength d andalso dlength d mod 100 = 0
     then print_endline (its (dlength d)) else ();
   if dlength d >= n then first_n n (dkeys d) else
   let val l = map (fn x => (x,())) (random_seql nstep) in
@@ -127,17 +127,17 @@ fun gen_seql_aux nstep n d' d =
   end
   )
 
-fun gen_seql nstep n = 
+fun gen_seql nstep n =
   gen_seql_aux nstep n 0 (dempty (list_compare Int.compare))
 
 (* -------------------------------------------------------------------------
    Generating a random board of a certain size
    ------------------------------------------------------------------------- *)
 
-fun random_progll_aux n board = 
+fun random_progll_aux n board =
   if n <= 0 then #3 board else
-  let 
-    val movel = available_movel board 
+  let
+    val movel = available_movel board
     val newboard = apply_move (random_elem movel) board
   in
     random_progll_aux (n-1) newboard
@@ -172,7 +172,7 @@ writel (selfdir ^ "/target/test10") (map ilts test');
    Test MCTS
    ------------------------------------------------------------------------- *)
 
-(* 
+(*
 load "mleSMLSynt"; open mleSMLSynt;
 load "aiLib"; open aiLib;
 load "psMTCS"; open psMCTS;
@@ -270,10 +270,10 @@ val enc_boardl = list_encode enc_board
 
 datatype rawprog = Raw of string * rawprog list
 
-fun dec_prog_raw t = 
+fun dec_prog_raw t =
   Option.map Raw (pair_decode (string_decode, list_decode dec_prog_raw) t)
 
-fun dec_prog_aux (Raw (s,pl)) = 
+fun dec_prog_aux (Raw (s,pl)) =
   let val pl' = map dec_prog_aux pl in
     if s = "test" then Test (triple_of_list pl')
     else if s = "rec" then Rec pl'
@@ -283,10 +283,10 @@ fun dec_prog_aux (Raw (s,pl)) =
   end
 
 fun dec_prog t =
-  let val x = dec_prog_raw t in 
+  let val x = dec_prog_raw t in
     if not (isSome x) then NONE else SOME (dec_prog_aux (valOf x))
   end
-    
+
 val dec_ol = list_decode int_decode
 val dec_state = list_decode (pair_decode (int_decode, list_decode dec_prog))
 val dec_board = pair3_decode (int_decode, dec_ol, dec_state)
@@ -299,7 +299,7 @@ fun write_boardl file boardl = write_data enc_boardl file boardl
 fun read_boardl file = read_data dec_boardl file
 val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 
-(* 
+(*
 load "mleSMLSynt"; open mleSMLSynt;
 load "mleSMLLib"; open mleSMLLib;
 load "psMTCS"; open psMCTS;
@@ -321,10 +321,10 @@ val terml = term_of_board (hd newboard);
 val targetdir = selfdir ^ "/target"
 
 val startstate = [(1,[])]
-fun mk_startboard target = (0,target,startstate) 
+fun mk_startboard target = (0,target,startstate)
 
 fun stil x = map string_to_int (String.tokens Char.isSpace x)
-fun import_targetl name = 
+fun import_targetl name =
   map (mk_startboard o stil) (readl (targetdir ^ "/" ^ name))
 
 fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
@@ -334,7 +334,7 @@ fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
    ------------------------------------------------------------------------- *)
 
 fun fp_emb tnn oper embl =
-  let 
+  let
     val inv = Vector.concat embl
     val nn = dfind oper tnn
   in
@@ -342,9 +342,9 @@ fun fp_emb tnn oper embl =
   end
 
 fun infer_emb tnn tm =
-  let 
+  let
     val (oper,argl) = strip_comb tm
-    val embl = map (infer_emb tnn) argl 
+    val embl = map (infer_emb tnn) argl
   in
     fp_emb tnn oper embl
   end
@@ -361,28 +361,28 @@ val embleafv = Vector.tabulate (operl_length, fn _ => EmbLeaf)
 
 fun n_oper oper = dfind oper opernd
 
-fun embtree_find embtree tml = case embtree of 
+fun embtree_find embtree tml = case embtree of
     EmbLeaf => NONE
   | EmbNode (embo,treev) =>
     (case tml of [] => embo | a :: m =>
      let val (oper,argl) = strip_comb a in
        embtree_find (Vector.sub (treev,n_oper oper)) (argl @ m)
      end)
-    
+
 fun embline tml emb = case tml of
     [] => EmbNode (SOME emb, embleafv)
-  | a :: m => 
+  | a :: m =>
     let val (oper,argl) = strip_comb a in
-       EmbNode (NONE, Vector.update 
+       EmbNode (NONE, Vector.update
          (embleafv, n_oper oper, embline (argl @ m) emb))
     end
 
-fun embtree_add embtree tml emb = case embtree of 
+fun embtree_add embtree tml emb = case embtree of
     EmbLeaf => embline tml emb
   | EmbNode (embo,treev) =>
     (case tml of [] => EmbNode (SOME emb,treev) | a :: m =>
-     let 
-       val (oper,argl) = strip_comb a 
+     let
+       val (oper,argl) = strip_comb a
        val n = n_oper oper
        val tree1 = Vector.sub (treev,n)
        val tree2 = embtree_add tree1 (argl @ m) emb
@@ -392,7 +392,7 @@ fun embtree_add embtree tml emb = case embtree of
 
 fun infer_emb_cache (cache,n) tnn tm =
   case embtree_find (!cache) [tm] of SOME emb => emb | NONE =>
-  let 
+  let
     val (oper,argl) = strip_comb tm
     val embl = map (infer_emb_cache (cache,n) tnn) argl
     val emb = fp_emb tnn oper embl
@@ -416,21 +416,21 @@ val tnndim = map_assoc (dim_std (1,dim)) operl @
 
 
 fun player_from_tnn tnn =
-  let 
-    val olemb_mem = ref NONE 
+  let
+    val olemb_mem = ref NONE
     val xcache = ref EmbLeaf
     val ycache = ref 0
   in
     (
     fn board =>
     let
-      val olemb = if isSome (!olemb_mem) then valOf (!olemb_mem) else 
+      val olemb = if isSome (!olemb_mem) then valOf (!olemb_mem) else
         let val r = infer_emb tnn (term_of_natl (#2 board)) in
           olemb_mem := SOME r; r
         end
       val _ =
         if !ycache > 200000 then (xcache := EmbLeaf; ycache := 0) else ()
-      val progllemb = 
+      val progllemb =
         infer_emb_cache (xcache,ycache) tnn (term_of_progll (#3 board))
       val boardemb = fp_emb tnn ol_cat [olemb,progllemb]
       val e = descale_out (fp_emb tnn head_eval [boardemb])
@@ -444,7 +444,7 @@ fun player_from_tnn tnn =
   end
 
 
-val dplayer = 
+val dplayer =
   {player_from_tnn = player_from_tnn,
    tob = tob, tnndim = tnndim, schedule = schedule}
 
@@ -454,12 +454,12 @@ val dplayer =
    ------------------------------------------------------------------------- *)
 
 
-(* 
+(*
 load "mleSMLSynt"; open mleSMLSynt;
 load "aiLib"; open aiLib;
 val sl = readl (selfdir ^ "/oeis/pos");
 fun ilts il = String.concatWith " " (map its il);
-fun f s = 
+fun f s =
   map string_to_int (tl (first_n 17 (String.tokens (fn x => x = #",") s)));
 
 val oeis_seql = mapfilter f sl; (* filter because of overflow *)
@@ -483,7 +483,7 @@ val rlobj : (board,move) rlobj =
 val extsearch =
   (debug_flag := false; mk_extsearch "mleSMLSynt.extsearch" rlobj)
 
-(* 
+(*
 load "aiLib"; open aiLib;
 load "mlReinforce"; open mlReinforce;
 load "mleSMLLib"; open mleSMLLib;

@@ -341,7 +341,7 @@ fun fof_axdef oc (name,thm) =
     fof_formula oc statement; osn oc ")."
   end
 
-fun fof_export_pbfile file (cj,namethml) = 
+fun fof_export_pbfile file (cj,namethml) =
   let
     val oc = TextIO.openOut file
     val cval = collect_arity_pb (cj,namethml)
@@ -428,7 +428,7 @@ fun ttt_fof_arity oc tml =
   in
     app (fof_arityeq oc) cval
   end
-  
+
 fun ttt_fof_goal file role (name,g) =
   let val oc  = TextIO.openOut file in
     (
@@ -460,7 +460,7 @@ fun ttt_fof_thy dir thy =
       let val fileout = dir ^ "/" ^ escape name in
         ttt_fof_goal fileout "axiom" (name, dest_thm thm)
       end
-    val thmdata = map_fst (fn x => thy ^ "Theory." ^ x) (DB.thms thy) 
+    val thmdata = map_fst (fn x => thy ^ "Theory." ^ x) (DB.thms thy)
   in
     app f thmdata
   end
@@ -478,7 +478,7 @@ val fofc_dir = tactictoe_dir ^ "/fof_cthy";
 val _ = clean_dir fofc_dir;
 
 fun ttt_fof_cthy dirin dirout =
-  let 
+  let
     fun f_goal file (name,g) =
       let val fileout = dirout ^ "/" ^ file ^ "-" ^ (escape name) in
         ttt_fof_goal fileout "axiom" (name,g)
@@ -500,7 +500,7 @@ val pb_dir = tactictoe_dir ^ "/eval/201217-full/pb";
 val filel = filter (String.isSuffix ".goal") (aiLib.listDir pb_dir);
 
 fun read_goal file =
-  let 
+  let
     val (name,_) = split_string "." file
     val g = import_goal (pb_dir ^ "/" ^ file)
   in
@@ -519,32 +519,32 @@ fun cj_to_fof (name,g) =
 app cj_to_fof gl2;
 
 (* -------------------------------------------------------------------------
-   Map dependencies to axiom files 
+   Map dependencies to axiom files
    ------------------------------------------------------------------------- *)
 
 val fofcd = dset String.compare (aiLib.listDir fofc_dir);
 val foftd = dset String.compare (aiLib.listDir foft_dir);
 
-fun find_axfile_curthy (thy,n) thmname = 
+fun find_axfile_curthy (thy,n) thmname =
   if n < 0 then (print_endline (thy ^ " " ^ thmname); NONE) else
     let val file = (thy ^ "_" ^ its n) ^ "-" ^ thmname in
-      if dmem file fofcd then SOME file else 
+      if dmem file fofcd then SOME file else
         find_axfile_curthy (thy,(n-1)) thmname
     end;
 
-fun find_axfile (thy,n) thmname = 
-  let 
+fun find_axfile (thy,n) thmname =
+  let
     val thmthy = fst (split_string "Theory." (unescape thmname))
   in
     if mem thmthy [thy, mlThmData.namespace_tag]
     then find_axfile_curthy (thy,n) thmname
-    else 
-      if dmem thmname foftd then SOME thmname else 
+    else
+      if dmem thmname foftd then SOME thmname else
         raise ERR "find_axfile" thmname
   end;
 
-fun convert_premises i file = 
-  let 
+fun convert_premises i file =
+  let
     val bare1 = fst (split_string "." file)
     val bare2 = fst (split_string "-" bare1)
     val sl = String.fields (fn x => x = #"_") bare2
@@ -552,12 +552,12 @@ fun convert_premises i file =
     val n = string_to_int (last sl)
     val premises = map escape (readl (pb_dir ^ "/" ^ file))
     val newpremises = List.mapPartial (find_axfile (thy,n)) premises
-    val ext = if length premises = length newpremises 
+    val ext = if length premises = length newpremises
       then ".dep" else ".xdep"
-     val dirbare1 = pb_dir ^ "/" ^ bare1 
+     val dirbare1 = pb_dir ^ "/" ^ bare1
   in
-    if length premises <> length newpremises 
-    then (print_endline bare1; 
+    if length premises <> length newpremises
+    then (print_endline bare1;
       OS.FileSys.rename {old = dirbare1 ^ ".cj", new = dirbare1 ^ ".xcj"}
       handle SysErr _ => ())
     else ();

@@ -89,14 +89,14 @@ val atp_dir = ref (tactictoe_dir ^ "/provers")
 fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
 
 fun import_hh () =
-  let val _ =  
+  let val _ =
      metis_avail () andalso
-     quse_string ("load \"holyHammer\"; " ^ 
+     quse_string ("load \"holyHammer\"; " ^
        "holyHammer.set_timeout " ^ its (!hh_time) ^ ";" ^
        "tacticToe.hh_lemmas := Option.SOME (holyHammer.main_hh_lemmas);")
   in
     !hh_lemmas
-  end 
+  end
 
 (* -------------------------------------------------------------------------
    Main function
@@ -104,7 +104,7 @@ fun import_hh () =
 
 fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   let
-    val _ = if not (!ttt_metis_flag) 
+    val _ = if not (!ttt_metis_flag)
             then prioritize_stacl := [] else ()
     val _ = hidef QUse.use infix_file
     (* preselection *)
@@ -139,7 +139,7 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     val hh_cache = ref (dempty goal_compare)
     val hho = if !hh_use then import_hh () else NONE
     fun predhh g =
-      dfind g (!hh_cache) handle NotFound => 
+      dfind g (!hh_cache) handle NotFound =>
       let val r = (valOf hho) (!atp_dir) thmdata g in
          hh_cache := dadd g r (!hh_cache); r
       end
@@ -156,8 +156,8 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
         Athml =>
         let val thml = predthml g in
           if stac = metis_stac andalso (!ttt_metis_flag)
-          then 
-            if isSome hho then 
+          then
+            if isSome hho then
               case predhh g of
                 NONE => map Sthml [first_n (!ttt_metis_radius) thml]
               | SOME lemmas => map Sthml [lemmas]
@@ -180,8 +180,8 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   in
     {predtac = predtac, predarg = predarg,
      atyd = atyd, parsetoken = parsetoken,
-     vnno = Option.map add_mask_val vnno, 
-     pnno = Option.map add_mask_pol pnno, 
+     vnno = Option.map add_mask_val vnno,
+     pnno = Option.map add_mask_pol pnno,
      anno = Option.map add_mask_arg anno}
   end
 
@@ -248,10 +248,10 @@ fun tactictoe term =
 
 fun ttt_tnn tnn goal = (tactictoe_aux (SOME tnn) goal) goal
 
-fun tactictoe_tnn tnn term = 
-  let val goal = ([],term) in 
-    TAC_PROOF (goal, tactictoe_aux (SOME tnn) goal) 
-  end  
+fun tactictoe_tnn tnn term =
+  let val goal = ([],term) in
+    TAC_PROOF (goal, tactictoe_aux (SOME tnn) goal)
+  end
 
 val confidence_tnn = eval_goal
 

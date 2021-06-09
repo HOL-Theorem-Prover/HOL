@@ -1102,7 +1102,7 @@ fun ttt_record_thy thy =
     restore_scripts scriptorg
   end
 
-fun ttt_clean_temp () = 
+fun ttt_clean_temp () =
   (
   clean_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
   clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
@@ -1125,7 +1125,7 @@ fun ttt_record () =
   end
 
 (* used to record savestates with record_flag := false *)
-fun ttt_record_savestate () = 
+fun ttt_record_savestate () =
   let
     val _ = ttt_clean_savestate ()
     val thyl1 = ttt_ancestry (current_theory ())

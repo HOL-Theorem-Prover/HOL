@@ -11,8 +11,8 @@ struct
 open HolKernel boolLib aiLib mlThmData hhTranslate holyHammer hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportSexpr"
-fun foralls (vl,t) = case vl of 
-    [] => t 
+fun foralls (vl,t) = case vl of
+    [] => t
   | a :: m => mk_forall (a, foralls (m,t))
 val list_mk_forall = foralls
 

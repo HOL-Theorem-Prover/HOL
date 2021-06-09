@@ -8,9 +8,9 @@ sig
   val holyhammer  : term -> thm
   val hh          : tactic
   val hh_fork     : goal -> Thread.thread
-  
+
   (* remove limits on the number of premises *)
-  val dep_flag : bool ref  
+  val dep_flag : bool ref
   (* string list is a list of premises of the form "fooTheory.bar" *)
   val hh_pb  : string -> prover list -> string list -> goal -> tactic
   (* same as hh_pb but with all atps and premise selection *)

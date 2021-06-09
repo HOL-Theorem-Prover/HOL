@@ -27,7 +27,7 @@ sig
   val maxstep : int
   val instrl : instr list
   val instrd : (string,instr) Redblackmap.dict
-  
+
   (* tree neural network *)
   val operl : term list
   val ol_cat : term
@@ -37,7 +37,7 @@ sig
   val term_of_progll : (int * prog list) list -> term
   val term_of_board : board -> term
   val tob : board -> term list
-  
+
   (* program manipluation *)
   val string_of_prog : prog -> string
   val string_of_progll : (int * prog list) list -> string
@@ -45,6 +45,6 @@ sig
   val build : move -> (int * prog list) list -> (int * prog list) list
   val available : board -> move -> bool
 
-  
+
 
 end

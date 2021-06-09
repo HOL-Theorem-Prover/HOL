@@ -115,7 +115,7 @@ fun create_node obj board =
     val pol3 = if #noise param then add_noise param pol2 else pol2
   in
     (Node ({stati=stati,board=board,sum=value,vis=1.0},
-            Vector.fromList (map (fn (a,b) => (a,b,Leaf)) pol3)), 
+            Vector.fromList (map (fn (a,b) => (a,b,Leaf)) pol3)),
      value)
   end
 
@@ -133,7 +133,7 @@ fun score_puct param sqvtot (move,polv,ctree) =
   in
     (sum + (#explo_coeff param) * polv * sqvtot) / (vis + 1.0)
   end
- 
+
 (* -------------------------------------------------------------------------
    Selection of a node to extend by traversing the tree.
    ------------------------------------------------------------------------- *)
@@ -149,30 +149,30 @@ fun select_child obj buildl (node,cv) =
         {stati=stati, board=board, sum=sum+reward, vis=vis+1.0}
   in
     if not (is_undecided stati)
-    then 
+    then
       let val reward = score_status stati in
         rebuild_tree reward buildl (Node (update_node reward node,cv))
       end
     else
-    let    
-      val _ = if Vector.length cv = 0 
-        then raise ERR "no move available" "" else () 
+    let
+      val _ = if Vector.length cv = 0
+        then raise ERR "no move available" "" else ()
       val sqrttot = Math.sqrt (#vis node)
-      val ci = vector_maxi (score_puct param sqrttot) cv 
+      val ci = vector_maxi (score_puct param sqrttot) cv
       val (cmove,cpol,ctree) = Vector.sub (cv,ci)
       fun build reward cfuture =
-        Node (update_node reward node, 
+        Node (update_node reward node,
               Vector.update (cv,ci,(cmove,cpol,cfuture)))
       val newbuildl = build :: buildl
     in
-      case ctree of 
-        Leaf => 
-        let 
+      case ctree of
+        Leaf =>
+        let
           val newboard = (#apply_move (#game obj)) cmove (#board node)
           val (newctree,reward) = create_node obj newboard
         in
-          rebuild_tree reward newbuildl newctree  
-        end 
+          rebuild_tree reward newbuildl newctree
+        end
       | Node x => select_child obj newbuildl x
     end
   end
@@ -182,13 +182,13 @@ fun select_child obj buildl (node,cv) =
    ------------------------------------------------------------------------- *)
 
 fun mk_timer param =
-  if isSome (#nsim param) then 
+  if isSome (#nsim param) then
     let val threshold = valOf (#nsim param) in
       fn n => (Real.round n) >= threshold
     end
-  else if isSome (#time param) then 
-    let 
-      val timer = Timer.startRealTimer () 
+  else if isSome (#time param) then
+    let
+      val timer = Timer.startRealTimer ()
       val limit = Time.fromReal (valOf (#time param))
     in
       fn _ => Timer.checkRealTimer timer > limit
@@ -199,7 +199,7 @@ fun mcts obj starttree =
   let
     val timerf = mk_timer (#mctsparam obj)
     fun loop n tree =
-      if timerf (#vis (fst (dest_node tree))) then tree else 
+      if timerf (#vis (fst (dest_node tree))) then tree else
       loop (n+1) (select_child obj [] (dest_node tree))
   in
     loop 0 starttree
@@ -215,10 +215,10 @@ fun score_visit (move,polv,ctree) = case ctree of
 
 fun most_visited_path tree = case tree of
     Leaf => []
-  | Node (node,cv) => 
+  | Node (node,cv) =>
     if Vector.length cv = 0 then [(node,NONE)] else
-    let 
-      val ci = vector_maxi score_visit cv 
+    let
+      val ci = vector_maxi score_visit cv
       val (cmove,_,ctree) = Vector.sub (cv,ci)
     in
       (node, SOME cmove) :: most_visited_path ctree

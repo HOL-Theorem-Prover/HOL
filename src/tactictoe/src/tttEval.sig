@@ -14,17 +14,17 @@ sig
   val hh_flag : bool ref
   val hh_glob : (string -> mlThmData.thmdata -> goal -> tactic) option ref
   val hh_timeout : int ref
-  val import_hh : 
+  val import_hh :
     unit -> (string -> mlThmData.thmdata -> goal -> tactic) option
-  
+
   (* tnn examples *)
   val collect_ex : string -> ((term * real list) list) list
   val uniq_ex : ((term * real list) list) list -> ((term * real list) list) list
   val tnnex_to_basicex : ((term * real list) list) list -> (term * real) list
-  
+
   (* tactictoe function for the evaluation framework *)
   val prepare_global_data : (string * int) -> unit
-  val ttt_eval : string -> (string * int) -> 
+  val ttt_eval : string -> (string * int) ->
     mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option * tnn option ->
     goal -> unit
