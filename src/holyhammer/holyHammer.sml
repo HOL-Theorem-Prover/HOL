@@ -8,7 +8,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread aiLib 
+open HolKernel boolLib Thread aiLib
   smlExecute smlRedirect smlParallel smlTimeout
   mlFeature mlThmData mlTacticData mlNearestNeighbor
   hhExportFof hhReconstruct hhTranslate hhTptp
@@ -79,7 +79,7 @@ fun log_eval s =
 
 val (parallel_result : string list option ref) = ref NONE
 
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, 
+val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
 fun parallel_call t fl =
@@ -245,7 +245,7 @@ fun hh_pb_eval_thy atpl thy =
 (*
 fun hh_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let val b = !hide_flag in
-    hide_flag := false; 
+    hide_flag := false;
     mkDir_err hh_eval_dir;
     log_eval ("Goal: " ^ string_of_goal goal);
     ignore (main_hh thmdata goal);

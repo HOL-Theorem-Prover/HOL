@@ -22,10 +22,10 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks"
 fun is_mvar x = is_var x andalso "M" = fst (dest_var x)
 fun contain_mvar tm = can (find_term is_mvar) tm
 
-fun find_mvar po tm = 
-  if is_comb tm then 
+fun find_mvar po tm =
+  if is_comb tm then
     let val (oper,argl) = strip_comb tm in
-      tryfind (find_mvar (SOME tm)) argl 
+      tryfind (find_mvar (SOME tm)) argl
     end
   else if is_mvar tm then (po,tm) else raise ERR "find_mvar" ""
 
@@ -36,19 +36,19 @@ fun is_lvar x = is_var x andalso String.isPrefix "l" (fst (dest_var x))
 fun nov x = string_to_int (tl_string (fst (dest_var x)))
 
 fun mk_msubst oper =
-  let 
-    val (domtyl,imty) = strip_type (type_of oper) 
+  let
+    val (domtyl,imty) = strip_type (type_of oper)
     val res = list_mk_comb (oper, map mk_mvar domtyl)
   in
     [{redex = mk_mvar imty, residue = res}]
   end
 
-val close_qt_sub = 
+val close_qt_sub =
   [{redex = mk_mvar (type_of listSyntax.nil_tm), residue = listSyntax.nil_tm}]
 fun close_qt qt = subst close_qt_sub qt
-  
+
 val open_qt_sub =
-  [{redex = listSyntax.nil_tm, residue = mk_mvar (type_of listSyntax.nil_tm)}] 
+  [{redex = listSyntax.nil_tm, residue = mk_mvar (type_of listSyntax.nil_tm)}]
 fun open_qt qt = subst open_qt_sub qt
 
 (* -------------------------------------------------------------------------
@@ -59,15 +59,15 @@ type board = (term * bool) list * term
 fun string_of_board board = tts (#2 board)
 fun board_compare ((_,a),(_,b)) = Term.compare (a,b)
 
-fun no_singletonvar clause = 
-  let  
+fun no_singletonvar clause =
+  let
     val vl = find_terms is_var clause
     val vd = count_dict (dempty Term.compare) vl
   in
     all (fn x => x >= 2) (map snd (dlist vd))
   end
 
-fun strip_cons rl qt = 
+fun strip_cons rl qt =
   let val (a,m) = listSyntax.dest_cons qt in
     strip_cons (a :: rl) m
   end
@@ -75,12 +75,12 @@ fun strip_cons rl qt =
 
 (*
 fun pretest_qt qt =
-  let val clausel = strip_cons [] qt in  
+  let val clausel = strip_cons [] qt in
     all no_singletonvar (filter (not o contain_mvar) clausel)
   end
 *)
 
-fun test_ex prog ex = case ex of [] => Win | e :: m => 
+fun test_ex prog ex = case ex of [] => Win | e :: m =>
   let val (b1,b2) = test_io prog e in
     if (not b1) then Undecided
     else if (not b2) then Lose
@@ -88,19 +88,19 @@ fun test_ex prog ex = case ex of [] => Win | e :: m =>
   end
 (*
   case ex of [] => if b then status else Lose
-  | e :: m => 
+  | e :: m =>
   let val (b1,b2) = test_io prog e in
-    if b1 then test_ex (true,status) prog m 
+    if b1 then test_ex (true,status) prog m
     else if b2 then test_ex (b,Undecided) prog m
     else Lose
   end
 *)
 
 fun status_of (board as (ex,qt)) =
-  if is_mvar qt then Undecided else 
+  if is_mvar qt then Undecided else
   let val qt' = close_qt qt in
     (* if term_size qt > 29 then Lose else *)
-    if not (contain_mvar qt') 
+    if not (contain_mvar qt')
     then Profile.profile "test_ex" (test_ex (qt_to_prog qt')) (shuffle ex)
     else Undecided
   end
@@ -127,24 +127,24 @@ fun string_of_move m = tts (#residue (hd m))
 fun move_compare (m1,m2) = Term.compare (#residue (hd m1),#residue (hd m2))
 
 fun available_movel (_,qt) =
-  if is_mvar qt then map mk_msubst [listSyntax.cons_tm] else 
-  
-  (* 
+  if is_mvar qt then map mk_msubst [listSyntax.cons_tm] else
+
+  (*
   let
-    val (po,mvar) = find_mvar NONE qt 
+    val (po,mvar) = find_mvar NONE qt
     val clause = (hd o strip_cons []) qt
     val (xn,ln) =
-      let    
+      let
         val xl = map nov (find_terms is_xvar clause)
         val xn' = if null xl then 0 else list_imax xl + 1
         val ll = map nov (find_terms is_lvar clause)
-        val ln' = if null ll then 0 else list_imax ll + 1       
+        val ln' = if null ll then 0 else list_imax ll + 1
       in
         (Int.min (xn' + 1,2), Int.min (ln' + 1,2))
       end
-    val varl = 
+    val varl =
       let val (head,body) = (rand (rator clause), rand clause) in
-        if is_mvar body 
+        if is_mvar body
         then all_var (2,2)
         else mk_term_set (find_terms is_svar head)
       end
@@ -152,9 +152,9 @@ fun available_movel (_,qt) =
     val varl_filtered = filter (fn x => tmem x varl) (all_var (xn,ln))
 
     val operl_filtered =
-      let 
-        val p = (fst o strip_comb o valOf) po 
-        fun test x = tmem x [numSyntax.suc_tm,cons_bool,cons_num] 
+      let
+        val p = (fst o strip_comb o valOf) po
+        fun test x = tmem x [numSyntax.suc_tm,cons_bool,cons_num]
                      andalso term_eq x p
       in
         filter (not o test) operlsorted
@@ -166,7 +166,7 @@ fun available_movel (_,qt) =
   end
 
 fun apply_move (tree,id) move (ex,qt) =
-  let 
+  let
     val newboard as (_,newqt) = (ex, subst_occs [[1]] move qt)
     val movel = available_movel newboard
   in
@@ -186,7 +186,7 @@ val game : (board,move) game =
   {
   status_of = Profile.profile "status_of" status_of,
   available_movel = Profile.profile "available_movel" available_movel,
-  apply_move = 
+  apply_move =
     let fun f x y z = Profile.profile "apply_move" (apply_move x y) z
     in f end
   ,
@@ -197,7 +197,7 @@ val game : (board,move) game =
   movel = movel
   }
 
-(* 
+(*
 load "mlePrologSynt"; open mlePrologSynt;
 load "mlePrologLib"; open mlePrologLib;
 load "psMTCS"; open psMCTS;
@@ -232,13 +232,13 @@ Profile.reset_all ();
 val ((a,(newtree,b)),t) = add_time (mcts mctsobj) tree;
 Profile.results ();
 
-val terml = 
-  filter (not o contain_mvar) 
+val terml =
+  filter (not o contain_mvar)
     (map (close_qt o snd o #board o snd) (dlist newtree));
 
 fun is_mvar x = is_var x andalso "M" = fst (dest_var x) andalso type_of x <> ``:'a list``;
 fun contain_mvar tm = can (find_term is_mvar) tm;
-val nodel = filter (fn (id,x) => not (contain_mvar (#2 (#board x)))) 
+val nodel = filter (fn (id,x) => not (contain_mvar (#2 (#board x))))
   (dlist newtree);
 
 
@@ -260,16 +260,16 @@ val nodel = filter (fn (id,x) => #stati x = Lose) (dlist newtree);
 val nodewinl = trace_win newtree [];
 val terml = map (snd o #board) nodewinl;
 
-val nodel = filter (fn (id,x) => 
-  contain_mvar (#3 (#board x)) andalso 
-  #stati x = Lose) 
+val nodel = filter (fn (id,x) =>
+  contain_mvar (#3 (#board x)) andalso
+  #stati x = Lose)
   (dlist newtree);
 
 val nodel = filter (fn (id,x) => not (pretest_qt (#3 (#board x))))
   (dlist newtree);
 
 
-fun is_looping 
+fun is_looping
   delete (a,b,c) <= delete (a,b,c)
 case delete (a,[b,c],y) of
   delete (x1,l1,l2) <= delete (x1,l2,l1)

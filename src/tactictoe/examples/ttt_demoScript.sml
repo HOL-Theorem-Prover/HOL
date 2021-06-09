@@ -44,8 +44,8 @@ open pred_setTheory
 (* ttt ([],``count (n+m) DIFF count n = IMAGE ($+n) (count m)``); *)
 val ex4 = store_thm("ex4",
   ``count (n+m) DIFF count n = IMAGE ($+n) (count m)``,
-  srw_tac [ARITH_ss] [EXTENSION, EQ_IMP_THM] >> 
-  Q.EXISTS_TAC `x - n` >> 
+  srw_tac [ARITH_ss] [EXTENSION, EQ_IMP_THM] >>
+  Q.EXISTS_TAC `x - n` >>
   srw_tac [ARITH_ss] []
   );
 
@@ -59,11 +59,11 @@ open sum_numTheory
 (* ttt  ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``); *)
 val ex5 = store_thm("ex5",
   ``!n. 2 * SUM (n+1) I = n * (n+1)``,
-  Induct >| 
-    [rewrite_tac [numeralTheory.numeral_distrib] >> 
-       srw_tac [] [SUM_1], 
-     asm_simp_tac (srw_ss () ++ ARITH_ss) [arithmeticTheory.ADD_CLAUSES] >>    
-       srw_tac [ARITH_ss] [SUM_def] >> 
+  Induct >|
+    [rewrite_tac [numeralTheory.numeral_distrib] >>
+       srw_tac [] [SUM_1],
+     asm_simp_tac (srw_ss () ++ ARITH_ss) [arithmeticTheory.ADD_CLAUSES] >>
+       srw_tac [ARITH_ss] [SUM_def] >>
        srw_tac [ARITH_ss] [arithmeticTheory.MULT_CLAUSES]]
   );
 

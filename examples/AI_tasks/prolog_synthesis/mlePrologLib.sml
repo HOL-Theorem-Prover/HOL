@@ -29,7 +29,7 @@ fun rename_varl tm =
       VAR(Name,Ty) => (dfind tm (!cache) handle NotFound =>
       let val newtm = mk_var ("V" ^ int_to_string (!vi), Ty) in
         incr vi; cache := dadd tm newtm (!cache); newtm
-      end)              
+      end)
     | CONST{Name,Thy,Ty} => tm
     | COMB(Rator,Rand)   => mk_comb (rename Rator,rename Rand)
     | LAMB(Var,Bod) => raise ERR "rename_varl" "abs"
@@ -37,7 +37,7 @@ fun rename_varl tm =
     rename tm
   end
 
-fun renamerule rule = 
+fun renamerule rule =
  swap (strip_imp (rename_varl (list_mk_imp (swap rule))));
 
 exception Break;
@@ -45,22 +45,22 @@ exception Break;
 fun tryfind f =
    let
       fun F [] = raise ERR "tryfind" "all applications failed"
-        | F (h :: t) = f h 
+        | F (h :: t) = f h
         handle Interrupt => raise Interrupt | Break => raise Break | _ => F t
    in
       F
    end
 
-val nref = ref 0 
+val nref = ref 0
 
 fun backchain rules env goals = case goals of
     [] => env
-  | g :: gl => 
+  | g :: gl =>
     if term_size g > 30 orelse length goals > 30 orelse
        !nref <= 0 then raise Break else
-    let 
+    let
       val _ = nref := !nref - 1
-      fun f rule = 
+      fun f rule =
       let
         val (w,asm) = renamerule rule
         val newenv = Unify.simp_unify_terms_in_env [] w g env
@@ -68,12 +68,12 @@ fun backchain rules env goals = case goals of
         backchain rules newenv (asm @ gl)
       end
     in
-      tryfind f rules 
+      tryfind f rules
     end
-    
-fun redres_compare (a1,a2) = cpl_compare 
+
+fun redres_compare (a1,a2) = cpl_compare
   Term.compare Term.compare ((#redex a1, #residue a1),(#redex a2, #residue a2))
-fun equal_subst (s1: (term,term) subst,s2 : (term,term) subst) = list_compare redres_compare (s1,s2) = EQUAL; 
+fun equal_subst (s1: (term,term) subst,s2 : (term,term) subst) = list_compare redres_compare (s1,s2) = EQUAL;
 
 fun substr sub {redex,residue} = {redex = redex, residue = subst sub residue};
 
@@ -82,7 +82,7 @@ fun solve env =
     if equal_subst (env',env) then env else solve env'
   end
 
-fun execute n prog input = 
+fun execute n prog input =
   let val _ = nref := n in solve (backchain prog [] [input]) end
 
 (* -------------------------------------------------------------------------
@@ -130,7 +130,7 @@ val operlall = operlprog @ operlnum @ operllist @ operlpred
 
 val operlsorted = operlprog @ [sorted,leq,nil_num,cons_num]
 
-fun all_var (n1,n2) = 
+fun all_var (n1,n2) =
   List.tabulate (n1,fn i => mk_var ("x" ^ its i,``:num``)) @
   List.tabulate (n2,fn i => mk_var ("l" ^ its i,``:num list``))
 
@@ -148,16 +148,16 @@ val (x0,x1,x2) = (``x0:num``,``x1:num``,``x2:num``)
 val (l0,l1,l2) = ( ``l0:num list``,``l1:num list``,``l2:num list``)
 val inputdel = mk_del ``SUC 0`` ``[0; SUC 0]`` ``[0]``
 
-val progdel = 
+val progdel =
  [(mk_del x0 (mk_cons x0 l0) l0,[]),
   (mk_del x0 (mk_cons x1 l0) (mk_cons x1 l1),[mk_del x0 l0 l1])]
-val progleq = 
+val progleq =
  [(mk_leq ``0`` x0, []),
-  (mk_leq ``SUC x0`` ``SUC x1``, [mk_leq x0 x1])] 
-val progsorted = 
+  (mk_leq ``SUC x0`` ``SUC x1``, [mk_leq x0 x1])]
+val progsorted =
  [(mk_sorted nil_num, []),
   (mk_sorted (mk_cons x0 nil_num), []),
-  (mk_sorted (mk_cons x0 (mk_cons x1 l0)), 
+  (mk_sorted (mk_cons x0 (mk_cons x1 l0)),
     [mk_leq x0 x1, mk_sorted (mk_cons x1 l0)])
  ]
 
@@ -170,7 +170,7 @@ val cstrsorted = ([sorted,nil_num,cons_num,``SUC``,``0``],bool)
    ------------------------------------------------------------------------- *)
 
 fun qt_to_prog qt =
-  let 
+  let
     val l = fst (listSyntax.dest_list qt)
     val hbl = map (pair_of_list o snd o strip_comb) l
   in
@@ -188,34 +188,34 @@ fun prog_to_qt prog = listSyntax.mk_list (map rule_to_qt prog,alpha)
 val tmoi = numSyntax.term_of_int
 fun loi il = listSyntax.mk_list (map tmoi il ,``:num``)
 
-val input_compare = cpl_compare Int.compare (list_compare Int.compare) 
+val input_compare = cpl_compare Int.compare (list_compare Int.compare)
 
-fun gen_term_n_aux n (operl,ty) size = 
+fun gen_term_n_aux n (operl,ty) size =
   let val l = gen_term operl (size,ty) in
-    if length l >= n 
+    if length l >= n
     then first_n n (dict_sort tmsize_compare l)
     else gen_term_n_aux n (operl,ty) (size + 1)
   end
 
 fun gen_term_n (operl,ty) n = gen_term_n_aux n (operl,ty) 1
 
-fun add_output prog input = 
-  let val b = (ignore (execute 50 prog input); true) 
-    handle HOL_ERR _ => false 
-  in 
+fun add_output prog input =
+  let val b = (ignore (execute 50 prog input); true)
+    handle HOL_ERR _ => false
+  in
     (input,b)
   end
   handle Break => raise ERR "add_output" "break"
 
 fun create_table_aux prog cstr n =
-  let 
+  let
     val inputl = gen_term_n cstr n
     val iol = map (add_output prog) inputl
     val (pos,neg) = partition snd iol
     val pos' = first_n 40 pos
     val neg' = first_n 20 neg @ random_subset 20 neg
   in
-    if length pos' < 10 
+    if length pos' < 10
     then create_table_aux prog cstr (n+100)
     else pos' @ neg'
   end
@@ -228,8 +228,8 @@ fun create_table prog cstr = create_table_aux prog cstr 100
 
 fun test_io prog (input,output) =
   let val b = (ignore (execute 50 prog input); true)
-    handle HOL_ERR _ => false 
-  in 
+    handle HOL_ERR _ => false
+  in
     (b = output, true)
   end
   handle Break => (false, false)
@@ -247,4 +247,4 @@ val r = map (test_io progdel) table;
 
 
 end (* struct *)
-  
+

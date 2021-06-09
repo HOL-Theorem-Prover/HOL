@@ -13,7 +13,7 @@ sig
   val ttt_clean_record : unit -> unit
   val ttt_record : unit -> unit
 
-  (* creating savestates before each proof 
+  (* creating savestates before each proof
      (requires some flags see usage in tttEval) *)
   val ttt_clean_savestate : unit -> unit
   val ttt_record_savestate : unit -> unit

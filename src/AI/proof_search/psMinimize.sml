@@ -164,7 +164,7 @@ fun mini_stac stac g =
     val glo = app_stac (!mini_tactic_time) stac g
     val l = decompose (partial_sml_lexer stac)
   in
-    if isSome glo 
+    if isSome glo
     then mini_stac_aux (!mini_tactic_time) g (valOf glo) [] l
     else stac
   end
@@ -254,7 +254,7 @@ fun reconstruct g proof =
   Printing partial proofs
   ---------------------------------------------------------------------------*)
 
-fun unsafe_sproof proof = 
+fun unsafe_sproof proof =
   unsafe_prettify_stac (requote_sproof (unsafe_prettify_proof proof))
 
 end (* struct *)

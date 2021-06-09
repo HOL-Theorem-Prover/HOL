@@ -115,8 +115,8 @@ fun read_exl file = map ex_of_string (readl file)
 
 val biais = Vector.fromList [1.0]
 fun add_biais v = Vector.concat [biais,v]
-fun rm_biais v = 
-  Vector.tabulate (Vector.length v - 1, fn i => Vector.sub (v,i+1)) 
+fun rm_biais v =
+  Vector.tabulate (Vector.length v - 1, fn i => Vector.sub (v,i+1))
 
 (* -------------------------------------------------------------------------
   Forward propagation (fp) with memory of the steps
@@ -212,12 +212,12 @@ fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 
-fun clip_float (a,b) x = 
+fun clip_float (a,b) x =
   if x < a then a else (if x > b then b else x)
 
 fun mat_add_weight lr m w =
-  let 
-    fun f i j = clip_float (~4.0,4.0) (mat_sub m i j + lr * mat_sub w i j) 
+  let
+    fun f i j = clip_float (~4.0,4.0) (mat_sub m i j + lr * mat_sub w i j)
   in
     mat_tabulate f (mat_dim m)
   end
@@ -226,7 +226,7 @@ fun update_layer param (layer, layerwu) =
   let
     val lr = #learning_rate param / Real.fromInt (#batch_size param)
   in
-    {a = #a layer, da = #da layer, 
+    {a = #a layer, da = #da layer,
      w = mat_add_weight lr (#w layer) layerwu}
   end
 

@@ -37,7 +37,7 @@ val ahead = mk_var ("head_arg", rpt_fun_type 2 alpha)
 
 fun add_mask dim tnn =
   dadd mask_var (random_nn (idactiv,didactiv) [0,dim]) tnn
-  
+
 fun add_mask_val tnn = add_mask (dimin_nn (dfind vhead tnn)) tnn
 fun add_mask_pol tnn = add_mask (dimin_nn (dfind phead tnn)) tnn
 fun add_mask_arg tnn = add_mask (dimin_nn (dfind ahead tnn)) tnn
@@ -143,14 +143,14 @@ val gstacarg_cat = mk_var ("gstacarg_cat", rpt_fun_type 3 alpha);
 (* todo: get rid of the cache and use the preparsed theorems *)
 val thm_cache = ref (dempty String.compare)
 
-fun thm_of_name_cached x = 
+fun thm_of_name_cached x =
   dfind x (!thm_cache) handle NotFound =>
   let val r = thm_of_name x in thm_cache := dadd x r (!thm_cache); r end
 
 (* todo: lookup a dictionary of preparsed theorems necessary to speed up
    looking up the namespace *)
 fun nntm_of_arg arg = case arg of
-    Sthml [s] => ((nntm_of_goal o dest_thm o snd o valOf o 
+    Sthml [s] => ((nntm_of_goal o dest_thm o snd o valOf o
       thm_of_name_cached) s
       handle Option => raise ERR "nntm_of_arg" "option")
   | _ => raise ERR "nntm_of_arg" "not supported"

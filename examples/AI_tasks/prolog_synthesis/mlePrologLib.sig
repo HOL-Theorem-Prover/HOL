@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  
+
   type prog = (term * term list) list
   type table = (term * bool) list
 
@@ -30,16 +30,16 @@ sig
 
   (* execution *)
   val execute : int -> prog -> term -> (term,term) subst
-  
+
   val add_output : prog -> term -> (term * bool)
-  val test_io : prog -> (term * bool) -> (bool * bool)  
+  val test_io : prog -> (term * bool) -> (bool * bool)
 
   (* testing *)
   val inputdel : term
   val progdel : prog
   val progleq : prog
   val progsorted : prog
-  
-  
+
+
 
 end

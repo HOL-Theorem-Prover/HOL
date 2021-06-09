@@ -39,10 +39,10 @@ fun nvisit tree = case tree of
 
 fun mk_dis tree = case tree of
     Leaf => raise ERR "mk_dis" "leaf"
-  | Node (node,ctreev) => 
+  | Node (node,ctreev) =>
   let
     fun f i (a,b,c) = ((a,i), nvisit c)
-    val pol = mapi f (vector_to_list ctreev) 
+    val pol = mapi f (vector_to_list ctreev)
     val _ = if null pol then raise ERR "mk_dis" "pol" else ()
     val tot = sum_real (map snd pol)
     val _ = if tot < 0.5 then raise ERR "mk_dis" "tot" else ()
@@ -53,15 +53,15 @@ fun mk_dis tree = case tree of
 fun select_bigstep mctsobj tree =
   let val (dis,_) = mk_dis tree in
     if !temp_flag then select_in_distrib dis else best_in_distrib dis
-  end 
+  end
 
 (* -------------------------------------------------------------------------
    Extracting root examples from bigsteps
    ------------------------------------------------------------------------- *)
 
-fun add_rootex game tree rlex = case tree of 
+fun add_rootex game tree rlex = case tree of
     Leaf => raise ERR "add_rootex" ""
-  | Node (root,ctreev) =>  
+  | Node (root,ctreev) =>
   let
     val board  = #board root
     val (dis,tot) = mk_dis tree
@@ -78,10 +78,10 @@ fun add_rootex game tree rlex = case tree of
    MCTS big steps. Ending the search when there is no move available.
    ------------------------------------------------------------------------- *)
 
-fun loop_bigsteps mctsobj rlex tree = 
+fun loop_bigsteps mctsobj rlex tree =
   case tree of
     Leaf => (false, rlex)
-  | Node (root,ctreev) =>  
+  | Node (root,ctreev) =>
   let
     val {mctsparam,game,player} = mctsobj
     val {board,stati,...} = root
@@ -94,7 +94,7 @@ fun loop_bigsteps mctsobj rlex tree =
       val (move,i) = select_bigstep mctsobj mctstree
       val _ = debug ("Move " ^ #string_of_move game move)
       val newrlex = add_rootex game mctstree rlex
-      val cuttree = cut_tree i mctstree 
+      val cuttree = cut_tree i mctstree
     in
       loop_bigsteps mctsobj newrlex cuttree
     end

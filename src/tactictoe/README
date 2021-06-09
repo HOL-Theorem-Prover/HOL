@@ -39,5 +39,3 @@ NOTES FOR DEVELOPERS:
      for more output.
   2) A copy of the modified theory is saved under src/tactictoe/scripts
      for further inspection.
-
-WARNING: Recording has been tested only on core theories.

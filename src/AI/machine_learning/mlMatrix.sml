@@ -41,11 +41,11 @@ fun mult_rvect v1 v2 =
   end
 
 fun sp_vecl l1 l2 = case (l1,l2) of
-    (a1 :: m1, a2 :: m2) => a1 * a2 + sp_vecl m1 m2 
+    (a1 :: m1, a2 :: m2) => a1 * a2 + sp_vecl m1 m2
   | _ => 0.0
 
-fun scalar_product v1 v2 = 
-  let 
+fun scalar_product v1 v2 =
+  let
     val sum = ref 0.0
     fun f (i,x) = (sum := !sum + x * Vector.sub (v2,i))
   in
@@ -69,8 +69,8 @@ fun mat_mult m inv =
 
 fun mat_map f m = Vector.map (Vector.map f) m
 
-fun mat_app f m = 
-  let 
+fun mat_app f m =
+  let
     fun felem i (j,elem) = f i j
     fun fline (i,line) = Vector.appi (felem i) line
   in
@@ -105,8 +105,8 @@ fun matl_add ml = case ml of
 
 
 fun mat_add_mem mem m =
-  let fun f i j = 
-    let val r = mat_sub mem i j in r := !r + mat_sub m i j end 
+  let fun f i j =
+    let val r = mat_sub mem i j in r := !r + mat_sub m i j end
   in
     mat_app f mem
   end
@@ -117,13 +117,13 @@ fun matl_add_mem mem ml = case ml of
 
 fun add_colrow mv i j =
   let
-    val sum = ref 0.0 
-    fun g m = sum := !sum + (mat_sub m i j)  
+    val sum = ref 0.0
+    fun g m = sum := !sum + (mat_sub m i j)
   in
     Vector.app g mv; !sum
   end
 
-fun matv_add mv = 
+fun matv_add mv =
   mat_tabulate (add_colrow mv) (mat_dim (Vector.sub (mv,0)))
 
 fun inv_dim (a,b) = (b,a)

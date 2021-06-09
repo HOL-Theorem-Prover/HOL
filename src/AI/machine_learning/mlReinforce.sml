@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "mlReinforce"
    Logs
    ------------------------------------------------------------------------- *)
 
-fun log rlobj s = 
+fun log rlobj s =
   (append_endline (#expdir (#rlparam rlobj) ^ "/log") s; print_endline s)
 
 (* -------------------------------------------------------------------------
@@ -56,8 +56,8 @@ fun mk_mctsparam splayer rlobj =
   }
 
 fun mk_mctsobj rlobj (splayer as {unib,tnn,noiseb,nsim}) =
-  let 
-    val game = #game rlobj 
+  let
+    val game = #game rlobj
     val player =  if unib then uniform_player game else
       #player_from_tnn (#dplayer rlobj) tnn
   in
@@ -179,7 +179,7 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
   {
   self = self,
   parallel_dir = default_parallel_dir ^ "_search",
-  reflect_globals = fn () => 
+  reflect_globals = fn () =>
     "aiLib.debug_flag := " ^ bts (!debug_flag),
   function = extsearch_fun rlobj,
   write_param = write_splayer,

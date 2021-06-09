@@ -571,9 +571,9 @@ fun list_imax l = case l of
 
 
 fun vector_max score v =
-  let 
-    fun f (i,x,(maxi,maxsc)) = 
-      let val sc = score x in 
+  let
+    fun f (i,x,(maxi,maxsc)) =
+      let val sc = score x in
         if sc > maxsc then (i,sc) else (maxi,maxsc)
       end
   in
@@ -585,9 +585,9 @@ fun vector_maxi score v = fst (vector_max score v)
 
 
 fun vector_mini score v =
-  let 
-    fun f (i,x,(mini,minsc)) = 
-      let val sc = score x in 
+  let
+    fun f (i,x,(mini,minsc)) =
+      let val sc = score x in
         if sc < minsc then (i,sc) else (mini,minsc)
       end
   in
@@ -809,9 +809,9 @@ fun export_terml file tml =
      TextIO.closeOut ostrm)
   end
 
-fun export_goal file (goal as (asl,w)) = 
+fun export_goal file (goal as (asl,w)) =
   export_terml file (w :: asl)
-  handle HOL_ERR _ => 
+  handle HOL_ERR _ =>
   print_endline "Warning: goal contained out-of-date terms (not exported it)"
 
 (* -------------------------------------------------------------------------

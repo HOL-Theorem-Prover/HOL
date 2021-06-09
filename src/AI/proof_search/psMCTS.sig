@@ -14,7 +14,7 @@ sig
   (* search tree: 'a is a board position, 'b is a move *)
   type 'a node =
     {board : 'a, stati : status, sum : real, vis : real}
-  datatype ('a,'b) tree = 
+  datatype ('a,'b) tree =
     Leaf | Node of 'a node * ('b * real * ('a,'b) tree) vector
   val dest_node : ('a,'b) tree -> 'a node * ('b * real * ('a,'b) tree) vector
   val is_node : ('a,'b) tree -> bool
@@ -41,14 +41,14 @@ sig
     {time : real option, nsim : int option,
      explo_coeff : real,
      noise : bool, noise_coeff : real, noise_gen : unit -> real}
-  
+
   type ('a,'b) mctsobj =
     {mctsparam : mctsparam, game : ('a,'b) game, player : ('a,'b) player}
 
   (* MCTS search function *)
   val starting_tree : ('a,'b) mctsobj -> 'a -> ('a,'b) tree
   val mcts : ('a,'b) mctsobj -> ('a,'b) tree -> ('a,'b) tree
- 
+
   (* Statistics *)
   val most_visited_path : ('a,'b) tree -> ('a node * 'b option) list
 
