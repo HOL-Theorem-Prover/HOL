@@ -7,6 +7,8 @@ SKIPPING RECORDING of the HOL4 standard library:
      http://grid01.ciirc.cvut.cz/~thibault/
   2) Extract it in your HOL/src/tactictoe directory.
      This creates the directory HOL/src/tactictoe/ttt_tacdata.
+  3) Optionally download from the same location
+     "tnn_for_tactictoe" to a file "path_to_tnn"
 
 RECORDING all ancestor theories not recorded yet:
   load "tttUnfold"; open tttUnfold;
@@ -14,10 +16,27 @@ RECORDING all ancestor theories not recorded yet:
   ttt_record (); (* takes about 8 hours for the full standard library *)
   (* tip: use ttt_record_thy "foo" to only record the "foo" Theory *)
 
-USAGE (after RECORDING or SKIPPING RECORDING):
+DEFAULT USAGE (after RECORDING or SKIPPING RECORDING):
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
   tactictoe ``1+1=2``; (* alternatively *)
+
+USAGE with tree neural network:
+  load "tacticToe"; open tacticToe;
+  val tnn = mlTreeNeuralNetwork.read_tnn "path_to_tnn";
+  load "sum_numTheory"; open sum_numTheory;
+  set_timeout 60.0;
+  ttt_tnn tnn ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``);
+
+USAGE after failure:
+  load "tacticToe"; open tacticToe;
+  val tnn = mlTreeNeuralNetwork.read_tnn "path_to_tnn";
+  load "sum_numTheory"; open sum_numTheory;
+  set_timeout 2.0;
+  (* also works with ttt *)
+  ttt_tnn tnn ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``); 
+  suggest_depth := NONE;
+  suggest ();
 
 CLEANING:
   TacticToe depends on data stored in src/tactictoe/ttt_tacdata and
