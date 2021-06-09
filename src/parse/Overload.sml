@@ -273,7 +273,7 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
            end of the list for inferior resolutions.  *)
 fun add_overloading_with_inserter inserter tstamp (opname, term) oinfo = let
   val _ = Theory.uptodate_term term orelse
-          raise OVERLOAD_ERR "Term is out-of-date"
+          raise OVERLOAD_ERR ("Term is out-of-date; opname = "^opname)
   val (opc0, cop0) = oinfo
   val opc =
       case info_for_name oinfo opname of

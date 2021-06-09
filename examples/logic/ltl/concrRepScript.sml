@@ -6,6 +6,7 @@ val _ = new_theory "concrRep";
 
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val _ = Datatype`
   edgeLabelAA = <| edge_grp : num ;

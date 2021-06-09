@@ -399,20 +399,16 @@ val subring_poly_zero_poly = store_thm(
       By Poly_def, zero_poly_def, this is to show:
       (1) h IN B ==> h IN R, true                      by subring_element
       (2) h <> s.sum.id ==> h <> #0 \/ ~zerop p, true  by subring_ids
-      (3) h IN B ==> h IN R, true                      by subring_element
-      (4) ~zero_poly s p ==> h <> #0 \/ ~zerop p, true by subring_poly_zero_poly
+      (3) ~zero_poly s p ==> h <> #0 \/ ~zerop p, true by subring_poly_zero_poly
 *)
-val subring_poly_poly = store_thm(
-  "subring_poly_poly",
-  ``!(r s):'a ring. s <= r ==> !p. Poly s p ==> poly p``,
+Theorem subring_poly_poly:
+  !(r s):'a ring. s <= r ==> !p. Poly s p ==> poly p
+Proof
   rpt strip_tac >>
-  Induct_on `p` >-
-  rw[] >>
-  rw[] >-
-  metis_tac[subring_element] >-
-  metis_tac[subring_ids] >-
-  metis_tac[subring_element] >>
-  metis_tac[subring_poly_zero_poly]);
+  Induct_on `p` >- rw[] >>
+  rw[] >- metis_tac[subring_element] >>
+  metis_tac[subring_ids, subring_element, subring_poly_zero_poly]
+QED
 
 (* Theorem: s <= r ==> (PolyRing s).carrier SUBSET (PolyRing r).carrier *)
 (* Proof:
@@ -724,7 +720,7 @@ val subring_poly_subring = store_thm(
               !h. Poly s (h::p) ==> (poly_neg s (h::p) = -(h::p))
      Note Poly s (h::p)
       ==> h IN B /\ Poly s p        by poly_cons_poly
-      and Poly s p ==> poly p       by poly_prime_field_element_poly
+      and Poly s p ==> poly p       by subring_poly_poly
        poly_neg s (h::p)
      = s.sum.inv h::poly_neg s p    by poly_neg_cons, Ring s, Poly s p
      = -h :: poly_neg s p           by subring_neg, h IN B
@@ -1679,22 +1675,17 @@ val poly_prime_field_zero_poly = store_thm(
    Step case: pfpoly p ==> poly p ==> !h. pfpoly (h::p) ==> poly (h::p)
       By PF_property, this is to show:
       (1) ##x IN R, true by ring_num_element
-      (2) ##x <> #0 ==> ##x <> #0 \/ ~zerop p, trivially true.
-      (3) ##x IN R, true by ring_num_element
-      (4) ~zero_poly (PF r) p ==> ##x <> #0 \/ ~zerop p
+      (2) ~zero_poly (PF r) p ==> ##x <> #0 \/ ~zerop p
           True by poly_prime_field_zero_poly
 *)
-val poly_prime_field_element_poly = store_thm(
-  "poly_prime_field_element_poly",
-  ``!r:'a ring. Ring r ==> !p. pfpoly p ==> poly p``,
+Theorem poly_prime_field_element_poly:
+  !r:'a ring. Ring r ==> !p. pfpoly p ==> poly p
+Proof
   rpt strip_tac >>
-  Induct_on `p` >-
-  rw[] >>
-  rw[PF_property] >-
-  rw[ring_num_element] >-
-  rw[] >-
-  rw[ring_num_element] >>
-  metis_tac[poly_prime_field_zero_poly]);
+  Induct_on `p` >- rw[] >>
+  rw[PF_property] >- rw[ring_num_element] >>
+  metis_tac[poly_prime_field_zero_poly]
+QED
 
 (* Theorem: Ring r ==> (PolyRing (PF r)).carrier SUBSET (PolyRing r).carrier *)
 (* Proof:

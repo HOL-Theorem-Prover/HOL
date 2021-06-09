@@ -159,6 +159,12 @@ val I_THM = store_thm("I_THM",
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
+Theorem I_EQ_IDABS:
+  I = \x. x
+Proof
+  REWRITE_TAC[FUN_EQ_THM] >> BETA_TAC >> REWRITE_TAC[I_THM]
+QED
+
 val I_o_ID = store_thm("I_o_ID",
    “!f. (I o f = f) /\ (f o I = f)”,
    REWRITE_TAC [I_THM, o_THM, FUN_EQ_THM]);

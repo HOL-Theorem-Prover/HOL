@@ -42,14 +42,13 @@ val OS :string      =
 
 
 val CC:string       = "cc";       (* C compiler                       *)
-val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 13
+val version_number = 14
 val release_string = "Kananaskis"
 
 

@@ -15,12 +15,12 @@ RCOBJS    = $(addsuffix r,  $(COBJS))
 
 EXEC      = minisat
 
-CXX       = g++
+CXX       = $(or $(MINISAT_CXX),c++)
 CFLAGS    = -Wall -ffloat-store -fno-strict-aliasing
 COPTIMIZE = -O3
 
 
-.PHONY : s p d r build clean depend
+.PHONY : s p d r build clean
 
 r:	WAY=release
 s:	WAY=standard
@@ -45,7 +45,7 @@ build:
 
 clean:
 	@rm -f $(EXEC)_standard $(EXEC)_profile $(EXEC)_debug $(EXEC) $(EXEC)_static \
-	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) depend.mak
+	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS)
 
 ## Build rule
 %.o %.op %.od %.or:	%.C
@@ -74,15 +74,43 @@ $(EXEC)_static: $(RCOBJS)
 	@$(CXX) --static $(RCOBJS)  -Wall -o $@
 
 
-## Make dependencies
-depend:	depend.mak
-depend.mak: $(CSRCS) $(CHDRS)
-	@echo Making dependencies ...
-	@$(CXX) -MM $(CSRCS) > depend.mak
-	@cp depend.mak /tmp/depend.mak.tmp
-	@sed "s/o:/op:/" /tmp/depend.mak.tmp >> depend.mak
-	@sed "s/o:/od:/" /tmp/depend.mak.tmp >> depend.mak
-	@sed "s/o:/or:/" /tmp/depend.mak.tmp >> depend.mak
-	@rm /tmp/depend.mak.tmp
 
-include depend.mak
+File.o: File.C File.h Global.h
+
+Main.o: Main.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h Proof.h \
+  File.h Sort.h
+
+Proof.o: Proof.C Proof.h SolverTypes.h Global.h File.h Sort.h
+
+Solver.o: Solver.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h \
+  Proof.h File.h Sort.h
+
+File.op: File.C File.h Global.h
+
+Main.op: Main.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h Proof.h \
+  File.h Sort.h
+
+Proof.op: Proof.C Proof.h SolverTypes.h Global.h File.h Sort.h
+
+Solver.op: Solver.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h \
+  Proof.h File.h Sort.h
+
+File.od: File.C File.h Global.h
+
+Main.od: Main.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h Proof.h \
+  File.h Sort.h
+
+Proof.od: Proof.C Proof.h SolverTypes.h Global.h File.h Sort.h
+
+Solver.od: Solver.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h \
+  Proof.h File.h Sort.h
+
+File.or: File.C File.h Global.h
+
+Main.or: Main.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h Proof.h \
+  File.h Sort.h
+
+Proof.or: Proof.C Proof.h SolverTypes.h Global.h File.h Sort.h
+
+Solver.or: Solver.C Solver.h SolverTypes.h Global.h VarOrder.h Heap.h \
+  Proof.h File.h Sort.h

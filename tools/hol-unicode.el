@@ -36,6 +36,7 @@
 (define-prefix-command 'hol-unicode-dquote-map)
 (define-prefix-command 'hol-unicode-squote-map)
 (define-prefix-command 'hol-unicode-frak-map)
+(define-prefix-command 'hol-unicode-calligraphic-map)
 (define-prefix-command 'hol-unicode-bboard-map)
 (define-prefix-command 'hol-unicode-specialalphabet-map)
 (define-key global-map (kbd "C-S-f") 'hol-unicode-shift-map)
@@ -269,6 +270,76 @@
   (lambda () (interactive) (insert "‹")))
 (define-key hol-unicode-squote-map (kbd "C->")
   (lambda () (interactive) (insert "›")))
+
+(define-key hol-unicode-specialalphabet-map (kbd "c")
+  hol-unicode-calligraphic-map)
+; calligraphic upper-case map (note numerous special case exceptions)
+; app (fn (s1,s2,s3) =>
+;        print ("(define-key hol-unicode-calligraphic-map (kbd \"" ^ s1 ^ "\") \"" ^
+;               s2 ^ "\")  ; U+" ^ s3 ^ "\n"))
+;     (List.tabulate (26, (fn i => (UTF8.chr (i + 65),
+;                                   UTF8.chr (i + 0x1D49C),
+;                                   Int.fmt StringCvt.HEX (i + 0x1D49C)))));
+(define-key hol-unicode-calligraphic-map (kbd "A") "𝒜")  ; U+1D49C
+(define-key hol-unicode-calligraphic-map (kbd "B") "ℬ")  ; U+212C
+(define-key hol-unicode-calligraphic-map (kbd "C") "𝒞")  ; U+1D49E
+(define-key hol-unicode-calligraphic-map (kbd "D") "𝒟")  ; U+1D49F
+(define-key hol-unicode-calligraphic-map (kbd "E") "ℰ")  ; U+2130
+(define-key hol-unicode-calligraphic-map (kbd "F") "ℱ")  ; U+2131
+(define-key hol-unicode-calligraphic-map (kbd "G") "𝒢")  ; U+1D4A2
+(define-key hol-unicode-calligraphic-map (kbd "H") "ℋ")  ; U+210B
+(define-key hol-unicode-calligraphic-map (kbd "I") "ℐ")  ; U+2110
+(define-key hol-unicode-calligraphic-map (kbd "J") "𝒥")  ; U+1D4A5
+(define-key hol-unicode-calligraphic-map (kbd "K") "𝒦")  ; U+1D4A6
+(define-key hol-unicode-calligraphic-map (kbd "L") "ℒ")  ; U+2112
+(define-key hol-unicode-calligraphic-map (kbd "M") "ℳ")  ; U+2113
+(define-key hol-unicode-calligraphic-map (kbd "N") "𝒩")  ; U+1D4A9
+(define-key hol-unicode-calligraphic-map (kbd "O") "𝒪")  ; U+1D4AA
+(define-key hol-unicode-calligraphic-map (kbd "P") "𝒫")  ; U+1D4AB
+(define-key hol-unicode-calligraphic-map (kbd "Q") "𝒬")  ; U+1D4AC
+(define-key hol-unicode-calligraphic-map (kbd "R") "ℛ")  ; U+211B
+(define-key hol-unicode-calligraphic-map (kbd "S") "𝒮")  ; U+1D4AE
+(define-key hol-unicode-calligraphic-map (kbd "T") "𝒯")  ; U+1D4AF
+(define-key hol-unicode-calligraphic-map (kbd "U") "𝒰")  ; U+1D4B0
+(define-key hol-unicode-calligraphic-map (kbd "V") "𝒱")  ; U+1D4B1
+(define-key hol-unicode-calligraphic-map (kbd "W") "𝒲")  ; U+1D4B2
+(define-key hol-unicode-calligraphic-map (kbd "X") "𝒳")  ; U+1D4B3
+(define-key hol-unicode-calligraphic-map (kbd "Y") "𝒴")  ; U+1D4B4
+(define-key hol-unicode-calligraphic-map (kbd "Z") "𝒵")  ; U+1D4B5
+; app (fn (s1,s2,s3) =>
+;        print ("(define-key hol-unicode-calligraphic-map (kbd \"" ^ s1 ^ "\") \"" ^
+;               s2 ^ "\")  ; U+" ^ s3 ^ "\n"))
+;     (List.tabulate (26, (fn i => (UTF8.chr (i + 97),
+;                                   UTF8.chr (i + 0x1D4B6),
+;                                   Int.fmt StringCvt.HEX (i + 0x1D4B6)))));
+(define-key hol-unicode-calligraphic-map (kbd "a") "𝒶")  ; U+1D4B6
+(define-key hol-unicode-calligraphic-map (kbd "b") "𝒷")  ; U+1D4B7
+(define-key hol-unicode-calligraphic-map (kbd "c") "𝒸")  ; U+1D4B8
+(define-key hol-unicode-calligraphic-map (kbd "d") "𝒹")  ; U+1D4B9
+(define-key hol-unicode-calligraphic-map (kbd "e") "ℯ")  ; U+212F
+(define-key hol-unicode-calligraphic-map (kbd "f") "𝒻")  ; U+1D4BB
+(define-key hol-unicode-calligraphic-map (kbd "g") "ℊ")  ; U+210A
+(define-key hol-unicode-calligraphic-map (kbd "h") "𝒽")  ; U+1D4BD
+(define-key hol-unicode-calligraphic-map (kbd "i") "𝒾")  ; U+1D4BE
+(define-key hol-unicode-calligraphic-map (kbd "j") "𝒿")  ; U+1D4BF
+(define-key hol-unicode-calligraphic-map (kbd "k") "𝓀")  ; U+1D4C0
+(define-key hol-unicode-calligraphic-map (kbd "l") "𝓁")  ; U+1D4C1
+(define-key hol-unicode-calligraphic-map (kbd "m") "𝓂")  ; U+1D4C2
+(define-key hol-unicode-calligraphic-map (kbd "n") "𝓃")  ; U+1D4C3
+(define-key hol-unicode-calligraphic-map (kbd "o") "ℴ")  ; U+2134
+(define-key hol-unicode-calligraphic-map (kbd "p") "𝓅")  ; U+1D4C5
+(define-key hol-unicode-calligraphic-map (kbd "q") "𝓆")  ; U+1D4C6
+(define-key hol-unicode-calligraphic-map (kbd "r") "𝓇")  ; U+1D4C7
+(define-key hol-unicode-calligraphic-map (kbd "s") "𝓈")  ; U+1D4C8
+(define-key hol-unicode-calligraphic-map (kbd "t") "𝓉")  ; U+1D4C9
+(define-key hol-unicode-calligraphic-map (kbd "u") "𝓊")  ; U+1D4CA
+(define-key hol-unicode-calligraphic-map (kbd "v") "𝓋")  ; U+1D4CB
+(define-key hol-unicode-calligraphic-map (kbd "w") "𝓌")  ; U+1D4CC
+(define-key hol-unicode-calligraphic-map (kbd "x") "𝓍")  ; U+1D4CD
+(define-key hol-unicode-calligraphic-map (kbd "y") "𝓎")  ; U+1D4CE
+(define-key hol-unicode-calligraphic-map (kbd "z") "𝓏")  ; U+1D4CF
+
+
 
 (define-key hol-unicode-specialalphabet-map (kbd "f") hol-unicode-frak-map)
 ; fraktur map

@@ -2330,8 +2330,7 @@ Theorem INJ_LINV_OPT:
 Proof
   REWRITE_TAC [LINV_OPT_def, INJ_DEF, IN_IMAGE] THEN
   REPEAT STRIP_TAC THEN
-  REVERSE COND_CASES_TAC THEN FULL_SIMP_TAC std_ss [] THEN1
-  (POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN REV_FULL_SIMP_TAC std_ss []) THEN
+  REVERSE COND_CASES_TAC THEN FULL_SIMP_TAC std_ss [] THEN
   EQ_TAC THENL [
     DISCH_THEN (ASSUME_TAC o MATCH_MP SELECT_EQ_AX) THEN
     VALIDATE (POP_ASSUM (fn th => REWRITE_TAC [BETA_RULE (UNDISCH th)])) THEN
@@ -4023,6 +4022,12 @@ val SUBSET_BIGUNION_I = store_thm(
   ``!x P. x IN P ==> x SUBSET BIGUNION P``,
   SRW_TAC [][BIGUNION, SUBSET_DEF] THEN METIS_TAC []);
 
+Theorem SUBSET_BIGUNION_SUBSET_I:
+  B SUBSET A /\ A IN As ==> B SUBSET BIGUNION As
+Proof
+  simp[SUBSET_DEF] >> METIS_TAC[]
+QED
+
 val CARD_BIGUNION_SAME_SIZED_SETS = store_thm(
   "CARD_BIGUNION_SAME_SIZED_SETS",
   ``!n s.
@@ -4155,12 +4160,11 @@ Proof
  PROVE_TAC []
 QED
 
-val BIGINTER_SUBSET = store_thm (* from util_prob *)
-  ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-                       ==> (BIGINTER s) SUBSET sp``,
+Theorem BIGINTER_SUBSET:
+  !sp s t. t IN s /\ t SUBSET sp ==> (BIGINTER s) SUBSET sp
+Proof
   RW_TAC std_ss [SUBSET_DEF,IN_BIGINTER]
-  >> `?u. u IN s` by METIS_TAC [CHOICE_DEF]
-  >> METIS_TAC []);
+QED
 
 val DIFF_BIGINTER1 = store_thm
   ("DIFF_BIGINTER1",
@@ -4172,16 +4176,17 @@ val DIFF_BIGINTER1 = store_thm
   >> RW_TAC std_ss []
   >> METIS_TAC []);
 
-val DIFF_BIGINTER = store_thm( (* from util_prob *)
-  "DIFF_BIGINTER",
-  ``!sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
-           (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))``,
+Theorem DIFF_BIGINTER:
+  !sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
+         (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))
+Proof
   RW_TAC std_ss []
-  >> `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
+  >> ‘BIGINTER s SUBSET sp’ by METIS_TAC[MEMBER_NOT_EMPTY, BIGINTER_SUBSET]
   >> ASSUME_TAC (Q.SPECL [`sp`,`s`] DIFF_BIGINTER1)
   >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)`
        by RW_TAC std_ss [DIFF_DIFF_SUBSET]
-  >> METIS_TAC []);
+  >> METIS_TAC []
+QED
 
 val FINITE_BIGINTER = Q.store_thm(
   "FINITE_BIGINTER",
@@ -4450,6 +4455,14 @@ Proof
   ‘X INTER Y = {}’ suffices_by simp[Abbr‘X’, Abbr‘Y’] >>
   simp[EXTENSION, sumTheory.FORALL_SUM]
 QED
+
+Theorem disjUNION_EQ_EMPTY[simp]:
+  x <+> y = {} <=> x = {} /\ y = {}
+Proof
+  simp[disjUNION_def, EXTENSION, EQ_IMP_THM]
+QED
+
+
 
 
 (* ====================================================================== *)
@@ -5031,6 +5044,56 @@ val PROD_IMAGE_THM = store_thm(
 val _ = overload_on ("PI", ``PROD_IMAGE``)
 val _ = Unicode.unicode_version {tmnm = "PROD_IMAGE", u = UnicodeChars.Pi}
 
+Theorem PROD_IMAGE_EQ_0:
+  !s. FINITE s ==>
+  (PROD_IMAGE f s = 0 <=> ?x. x IN s /\ f x = 0)
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[PROD_IMAGE_THM, DELETE_NON_ELEMENT]
+  \\ METIS_TAC[]
+QED
+
+Theorem PROD_IMAGE_EQ_1:
+  !s. FINITE s ==>
+  (PROD_IMAGE f s = 1 <=> IMAGE f s SUBSET {1})
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[PROD_IMAGE_THM, DELETE_NON_ELEMENT,
+        SUBSET_INSERT, NOT_IN_EMPTY, INSERT_SUBSET]
+QED
+
+local open dividesTheory in
+Theorem prime_PROD_IMAGE:
+  !f s. FINITE s ==>
+  (prime (PROD_IMAGE f s) <=>
+     ?p. IMAGE f s SUBSET {1; p} /\ prime p /\
+         ?!x. x IN s /\ f x = p)
+Proof
+  gen_tac \\ ho_match_mp_tac FINITE_INDUCT
+  \\ simp[PROD_IMAGE_THM]
+  \\ rw[DELETE_NON_ELEMENT]
+  \\ simp[prime_MULT]
+  \\ Cases_on`PROD_IMAGE f s = 0` \\ simp[]
+  >- (
+    REV_FULL_SIMP_TAC(srw_ss())[PROD_IMAGE_EQ_0]
+    \\ rw[SUBSET_DEF, PULL_EXISTS]
+    \\ METIS_TAC[NOT_PRIME_0, DECIDE``1 <> 0``])
+  \\ Cases_on`f e = 0` \\ simp[INSERT_SUBSET]
+  \\ Cases_on`PROD_IMAGE f s = 1` \\ simp[]
+  >- (
+    REV_FULL_SIMP_TAC(srw_ss())[PROD_IMAGE_EQ_1]
+    \\ fs[SUBSET_DEF, PULL_EXISTS]
+    \\ Cases_on`f e = 1` \\ simp[]
+    \\ METIS_TAC[NOT_PRIME_1])
+  \\ Cases_on`f e = 1` \\ simp[]
+  >- METIS_TAC[NOT_PRIME_1]
+  \\ CCONTR_TAC \\ fs[]
+  \\ REV_FULL_SIMP_TAC(srw_ss())[PROD_IMAGE_EQ_1]
+  \\ REV_FULL_SIMP_TAC(srw_ss())[SUBSET_DEF, PULL_EXISTS]
+  \\ METIS_TAC[DELETE_NON_ELEMENT]
+QED
+end
+
 (*---------------------------------------------------------------------------*)
 (* PROD_SET multiplies the elements of a set of natural numbers              *)
 (*---------------------------------------------------------------------------*)
@@ -5106,6 +5169,16 @@ val MAX_SET_THM = store_thm(
     Q.ASM_CASES_TAC `s = {}` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     RES_TAC THEN ASM_SIMP_TAC arith_ss [MAX_DEF]
   ]);
+
+Theorem in_max_set:
+  !s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s
+Proof
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [] [MAX_SET_THM] THEN
+  SRW_TAC [] []
+QED
+
+Theorem X_LE_MAX_SET = in_max_set
 
 val MAX_SET_REWRITES = store_thm(
   "MAX_SET_REWRITES",
@@ -5235,6 +5308,21 @@ val MAX_SET_UNION = Q.store_thm
 val set_ss = arith_ss ++ SET_SPEC_ss ++
              rewrites [CARD_INSERT,CARD_EMPTY,FINITE_EMPTY,FINITE_INSERT,
                        NOT_IN_EMPTY];
+
+Theorem SUBSET_count_MAX_SET:
+  FINITE s ==> s SUBSET count (MAX_SET s + 1)
+Proof
+  simp[SUBSET_DEF, DECIDE “x < y + 1 <=> x <= y”, X_LE_MAX_SET]
+QED
+
+Theorem CARD_LE_MAX_SET:
+  FINITE s ==> CARD s <= MAX_SET s + 1
+Proof
+  strip_tac >> CCONTR_TAC >>
+  ‘s SUBSET count (MAX_SET s + 1)’ by simp[SUBSET_count_MAX_SET] >>
+  ‘CARD s <= CARD (count (MAX_SET s + 1))’ by simp[CARD_SUBSET] >>
+  full_simp_tac (srw_ss()) []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* POW s is the powerset of s                                                *)
@@ -5450,6 +5538,37 @@ val equiv_on_def = new_definition(
        (!x y z. x IN s /\ y IN s /\ z IN s /\ R x y /\ R y z ==> R x z)``);
 val _ = set_fixity "equiv_on" (Infix(NONASSOC, 425))
 
+Theorem inv_image_equiv_on:
+  !R Y f. R equiv_on Y ==>
+  inv_image R f equiv_on { x | f x IN Y }
+Proof
+  rw[equiv_on_def]
+  \\ METIS_TAC[]
+QED
+
+(* Theorem: R equiv_on s /\ t SUBSET s ==> R equiv_on t *)
+(* Proof: by equiv_on_def, SUBSET_DEF *)
+Theorem equiv_on_subset:
+  !R s t. R equiv_on s /\ t SUBSET s ==> R equiv_on t
+Proof
+  rw_tac std_ss[equiv_on_def, SUBSET_DEF] >>
+  METIS_TAC[]
+QED
+
+(* Overload equivalence class of a relation *)
+Overload "equiv_class" = ``\R s x. {y | y IN s /\ R x y}``
+
+(* Theorem: R equiv_on s /\ x IN s /\ y IN s ==>
+            ((equiv_class R s x = equiv_class R s y) <=> R x y) *)
+(* Proof: by equiv_on_def, EXTENSION. *)
+Theorem equiv_class_eq:
+  !R s x y. R equiv_on s /\ x IN s /\ y IN s ==>
+             ((equiv_class R s x = equiv_class R s y) <=> R x y)
+Proof
+  rw[equiv_on_def, EXTENSION] >>
+  METIS_TAC[]
+QED
+
 val partition_def = new_definition(
   "partition_def",
   ``partition R s =
@@ -5527,6 +5646,309 @@ val partition_CARD = Q.store_thm
         (CARD s = SUM_IMAGE CARD (partition R s))`,
 METIS_TAC [FINITE_partition, BIGUNION_partition, DISJ_BIGUNION_CARD,
            partition_elements_disjoint, FINITE_BIGUNION, partition_def]);
+
+Theorem partition_rel_eq:
+  !R1 R2 Y.
+    R1 equiv_on Y /\ R2 equiv_on Y /\
+    partition R1 Y = partition R2 Y ==>
+    (!x y. x IN Y /\ y IN Y ==> R1 x y = R2 x y)
+Proof
+  rpt gen_tac
+  \\ Q.HO_MATCH_ABBREV_TAC`P R1 R2 ==> _`
+  \\ `!R1 R2 x y. P R1 R2 /\ x IN Y /\ y IN Y /\ R1 x y ==> R2 x y`
+  suffices_by (simp[Abbr`P`] \\ PROVE_TAC[])
+  \\ ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)
+       [Abbr`P`, partition_def, Once SET_EQ_SUBSET, SUBSET_DEF]
+  \\ rw[]
+  \\ last_assum drule
+  \\ disch_then(Q.X_CHOOSE_THEN`z`strip_assume_tac)
+  \\ `x IN equiv_class R1 Y y` by ( simp[] \\ METIS_TAC[equiv_on_def] )
+  \\ `y IN equiv_class R1 Y y` by ( simp[] \\ METIS_TAC[equiv_on_def] )
+  \\ `z IN equiv_class R2 Y z`  by ( simp[] \\ METIS_TAC[equiv_on_def] )
+  \\ `x IN equiv_class R2 Y z` by METIS_TAC[]
+  \\ `y IN equiv_class R2 Y z` by METIS_TAC[]
+  \\ fs[] \\ PROVE_TAC[equiv_on_def]
+QED
+
+val partitions_def = TotalDefn.Define`
+  partitions X Y = ?R. R equiv_on Y /\ X = partition R Y`;
+
+val _ = set_fixity "partitions" (Infix(NONASSOC, 425));
+
+Theorem partitions_thm:
+  !X Y. X partitions Y <=>
+  ((!x. x IN X ==> x <> {} /\ x SUBSET Y) /\
+   (!y. y IN Y ==> ?!x. x IN X /\ y IN x))
+Proof
+  rpt gen_tac \\ simp[partitions_def]
+  \\ eq_tac \\ strip_tac
+  >- (
+    simp[partition_def]
+    \\ conj_tac
+    >- (
+      CCONTR_TAC \\ fs[]
+      \\ pop_assum mp_tac
+      \\ simp[GSYM MEMBER_NOT_EMPTY, SUBSET_DEF]
+      \\ METIS_TAC[equiv_on_def] )
+    \\ rpt strip_tac
+    \\ simp[EXISTS_UNIQUE_THM, PULL_EXISTS]
+    \\ Q.EXISTS_TAC`y`
+    \\ rw[]
+    >- METIS_TAC[equiv_on_def]
+    \\ METIS_TAC[equiv_class_eq])
+  \\ fs[EXISTS_UNIQUE_ALT]
+  \\ fs[Once (GSYM RIGHT_EXISTS_IMP_THM)]
+  \\ fs[SKOLEM_THM]
+  \\ Q.EXISTS_TAC`\y z. f y = f z`
+  \\ simp[equiv_on_def]
+  \\ conj_tac >- METIS_TAC[]
+  \\ simp[partition_def, Once EXTENSION]
+  \\ rw[EQ_IMP_THM]
+  >- (
+    `?a. a IN x /\ a IN Y` by METIS_TAC[MEMBER_NOT_EMPTY, SUBSET_DEF]
+    \\ Q.EXISTS_TAC`a` \\ simp[]
+    \\ `f a = x` by METIS_TAC[]
+    \\ simp[EXTENSION]
+    \\ METIS_TAC[SUBSET_DEF] )
+  \\ `f y IN X /\ y IN f y` by METIS_TAC[]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`z IN X`
+  \\ `z = f y` suffices_by rw[]
+  \\ rw[Abbr`z`, EXTENSION]
+  \\ reverse(Cases_on`x IN Y`) \\ simp[]
+  >- METIS_TAC[SUBSET_DEF]
+  \\ METIS_TAC[]
+QED
+
+Theorem partitions_FINITE:
+  !X Y. X partitions Y /\ FINITE Y ==>
+  FINITE X /\ (!s. s IN X ==> FINITE s)
+Proof
+  rw[partitions_def]
+  \\ METIS_TAC[FINITE_partition]
+QED
+
+Theorem partitions_DISJOINT:
+  !v w s1 s2.
+    v partitions w /\ s1 IN v /\ s2 IN v /\ s1 <> s2 ==>
+    DISJOINT s1 s2
+Proof
+  rw[partitions_thm, IN_DISJOINT]
+  \\ fs[EXISTS_UNIQUE_ALT, SUBSET_DEF]
+  \\ METIS_TAC[]
+QED
+
+Theorem partitions_empty[simp]:
+  !v. v partitions {} <=> v = {}
+Proof
+  rw[partitions_thm, EQ_IMP_THM]
+  \\ CCONTR_TAC
+  \\ fs[GSYM MEMBER_NOT_EMPTY]
+  \\ res_tac \\ fs[]
+QED
+
+Theorem empty_partitions[simp]:
+  !s. {} partitions s <=> s = {}
+Proof
+  rw[partitions_thm, EXTENSION]
+QED
+
+Theorem partitions_SING:
+  !v x. SING x ==>
+        (v partitions x <=> v = {{CHOICE x}})
+Proof
+  rw[SING_DEF, partitions_thm, SUBSET_DEF] \\ rw[]
+  \\ rw[EQ_IMP_THM, EXISTS_UNIQUE_THM]
+  \\ rw[Once EXTENSION]
+  \\ rw[EQ_IMP_THM]
+  \\ res_tac \\ fs[]
+  \\ simp[Once EXTENSION]
+  \\ rw[EQ_IMP_THM]
+  \\ fs[GSYM MEMBER_NOT_EMPTY]
+  \\ res_tac \\ fs[] \\ rw[]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`{a} IN v`
+  \\ `{a} = x` suffices_by rw[]
+  \\ rw[Once EXTENSION, EQ_IMP_THM]
+  \\ res_tac \\ fs[]
+QED
+
+Theorem SING_partitions:
+  !x w. {x} partitions w <=> x = w /\ w <> {}
+Proof
+  rw[partitions_thm]
+  \\ rw[EQ_IMP_THM]
+  >- ( rw[SET_EQ_SUBSET] \\ rw[SUBSET_DEF] \\ fs[EXISTS_UNIQUE_THM] )
+  >- ( strip_tac \\ fs[] )
+  \\ simp[EXISTS_UNIQUE_THM]
+QED
+
+Theorem INJ_IMAGE_equiv_class:
+  !f s t x. INJ f s t /\ x IN s ==>
+  IMAGE f (equiv_class R s x) =
+  equiv_class (inv_image R (LINV f s)) (IMAGE f s) (f x)
+Proof
+  rw[Once EXTENSION]
+  \\ imp_res_tac LINV_DEF
+  \\ rw[EQ_IMP_THM]
+  \\ METIS_TAC[LINV_DEF]
+QED
+
+Theorem IMAGE_IMAGE_partition:
+  !R f s t. INJ f s t ==>
+  IMAGE (IMAGE f) (partition R s) =
+  partition (inv_image R (LINV f s)) (IMAGE f s)
+Proof
+  rw[partition_def, Once EXTENSION]
+  \\ rw[Once EQ_IMP_THM]
+  >- (
+    imp_res_tac INJ_IMAGE_equiv_class
+    \\ fs[] \\ METIS_TAC[] )
+  \\ simp[PULL_EXISTS]
+  \\ imp_res_tac INJ_IMAGE_equiv_class
+  \\ simp[]
+  \\ simp[Once EXTENSION]
+  \\ METIS_TAC[LINV_DEF]
+QED
+
+Theorem BIJ_IMAGE_partitions:
+  !f x y v. BIJ f x y /\ v partitions x ==>
+  IMAGE (IMAGE f) v partitions y
+Proof
+  rw[partitions_def]
+  \\ Q.EXISTS_TAC`inv_image R (LINV f x)`
+  \\ fs[BIJ_DEF]
+  \\ fs[IMAGE_SURJ]
+  \\ imp_res_tac IMAGE_IMAGE_partition
+  \\ fs[] \\ REV_FULL_SIMP_TAC(srw_ss())[]
+  \\ drule inv_image_equiv_on
+  \\ disch_then(Q.SPEC_THEN`LINV f x`strip_assume_tac)
+  \\ irule equiv_on_subset
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ rw[SUBSET_DEF]
+  \\ METIS_TAC[LINV_DEF]
+QED
+
+val part_def = TotalDefn.Define`
+  part v x = @s. x IN s /\ s IN v`;
+
+Theorem part_in_partition:
+  !w v x. v partitions w /\ x IN w ==>
+  part v x IN v
+Proof
+  rw[part_def]
+  \\ SELECT_ELIM_TAC
+  \\ fs[partitions_thm, EXISTS_UNIQUE_THM]
+  \\ METIS_TAC[]
+QED
+
+Theorem part_partition:
+  !R w y. y IN w /\ R equiv_on w ==>
+  part (partition R w) y = { x | x IN w /\ R x y }
+Proof
+  strip_tac
+  \\ rw[part_def]
+  \\ SELECT_ELIM_TAC
+  \\ simp[partition_def, PULL_EXISTS]
+  \\ Q.EXISTS_TAC`y`
+  \\ conj_tac >- fs[equiv_on_def]
+  \\ simp[]
+  \\ simp[Once EXTENSION]
+  \\ Q.X_GEN_TAC`x` \\ strip_tac
+  \\ fs[equiv_on_def]
+  \\ METIS_TAC[]
+QED
+
+Theorem part_unique:
+  !w v x s. v partitions w /\ x IN w /\ x IN s /\ s IN v ==>
+  s = part v x
+Proof
+  rw[part_def]
+  \\ SELECT_ELIM_TAC
+  \\ fs[partitions_thm, EXISTS_UNIQUE_THM]
+  \\ METIS_TAC[]
+QED
+
+Theorem in_part:
+  !w v x. v partitions w /\ x IN w ==>
+  x IN part v x
+Proof
+  rw[part_def, partitions_thm]
+  \\ SELECT_ELIM_TAC
+  \\ METIS_TAC[EXISTS_UNIQUE_THM]
+QED
+
+val refines_def = TotalDefn.Define`
+  refines v1 v2 <=>
+  !s1. s1 IN v1 ==> ?s2. s2 IN v2 /\ s1 SUBSET s2`;
+
+val _ = set_fixity "refines" (Infix(NONASSOC, 425));
+
+Theorem refines_grows_parts:
+  !w v1 v2. v1 partitions w /\ v2 partitions w ==>
+  (v1 refines v2 <=>
+    (!x y. x IN w /\ y IN w /\ part v1 x = part v1 y ==>
+                               part v2 x = part v2 y))
+Proof
+  rpt gen_tac \\ strip_tac
+  \\ rw[refines_def]
+  \\ rw[EQ_IMP_THM]
+  >- (
+    `part v1 x IN v1` by METIS_TAC[part_in_partition]
+    \\ `?s2. s2 IN v2 /\ part v1 x SUBSET s2` by METIS_TAC[]
+    \\ `x IN part v1 x` by METIS_TAC[in_part]
+    \\ `x IN s2` by METIS_TAC[SUBSET_DEF]
+    \\ `s2 = part v2 x` by METIS_TAC[part_unique]
+    \\ `y IN part v1 y` by METIS_TAC[in_part]
+    \\ `y IN s2` by METIS_TAC[SUBSET_DEF]
+    \\ METIS_TAC[part_unique])
+  \\ `s1 <> {}` by METIS_TAC[partitions_thm]
+  \\ `?x. x IN s1` by METIS_TAC[MEMBER_NOT_EMPTY]
+  \\ Q.EXISTS_TAC`part v2 x`
+  \\ `x IN w` by METIS_TAC[partitions_thm, SUBSET_DEF]
+  \\ conj_asm1_tac >- METIS_TAC[part_in_partition]
+  \\ simp[SUBSET_DEF]
+  \\ Q.X_GEN_TAC`y`
+  \\ strip_tac
+  \\ `s1 = part v1 x` by METIS_TAC[part_unique]
+  \\ `y IN w` by METIS_TAC[partitions_thm, SUBSET_DEF]
+  \\ `s1 = part v1 y` by METIS_TAC[part_unique]
+  \\ METIS_TAC[in_part]
+QED
+
+Theorem refines_refl[simp]:
+  !v. v refines v
+Proof
+  rw[refines_def]
+  \\ METIS_TAC[SUBSET_REFL]
+QED
+
+Theorem refines_transitive:
+  !v1 v2 v3. v1 refines v2 /\ v2 refines v3 ==> v1 refines v3
+Proof
+  rw[refines_def]
+  \\ METIS_TAC[SUBSET_TRANS]
+QED
+
+Theorem refines_antisym:
+  !w v1 v2. v1 partitions w /\ v2 partitions w /\
+  v1 refines v2 /\ v2 refines v1 ==> v1 = v2
+Proof
+  rpt gen_tac \\ Q.HO_MATCH_ABBREV_TAC`P v1 v2 ==> v1 = v2`
+  \\ `!v1 v2. P v1 v2 ==> v1 SUBSET v2` suffices_by (
+    simp[Abbr`P`] \\ METIS_TAC[SET_EQ_SUBSET])
+  \\ rw[Abbr`P`, SUBSET_DEF]
+  \\ fs[refines_def]
+  \\ `?a. a IN w /\ a IN x`
+  by METIS_TAC[partitions_thm, MEMBER_NOT_EMPTY, SUBSET_DEF]
+  \\ `x = part v1 a` by METIS_TAC[part_unique]
+  \\ res_tac
+  \\ `a IN s2` by METIS_TAC[SUBSET_DEF]
+  \\ `s2 = part v2 a` by METIS_TAC[part_unique]
+  \\ `?y. y IN v1 /\ s2 SUBSET y` by METIS_TAC[]
+  \\ `a IN y` by METIS_TAC[SUBSET_DEF]
+  \\ `y = part v1 a` by METIS_TAC[part_unique]
+  \\ `s2 = part v1 a` by METIS_TAC[SUBSET_ANTISYM]
+  \\ METIS_TAC[part_in_partition]
+QED
 
 (* ----------------------------------------------------------------------
     Assert a predicate on all pairs of elements in a set.
@@ -6283,12 +6705,6 @@ val compl_insert = Q.store_thm ("compl_insert",
  SRW_TAC [] [EXTENSION, IN_COMPL] THEN
  METIS_TAC []);
 
-val in_max_set = Q.store_thm ("in_max_set",
-`!s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s`,
- HO_MATCH_MP_TAC FINITE_INDUCT THEN
- SRW_TAC [] [MAX_SET_THM] THEN
- SRW_TAC [] []);
-
 (* end CakeML lemmas *)
 
 (*---------------------------------------------------------------------------*)
@@ -6514,7 +6930,7 @@ in
     simpLib.SSFRAG
       {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
        dprocs = [], filter = NONE, rewrs = []}
-  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]
+  val _ = BasicProvers.logged_addfrags {thyname = "pred_set"} [SET_SPEC_ss]
 end
 `
 

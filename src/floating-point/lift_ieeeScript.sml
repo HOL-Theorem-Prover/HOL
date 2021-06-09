@@ -1498,6 +1498,29 @@ val relative_tac =
          binary_ieeeTheory.float_is_zero_to_real,
          binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
 
+val denorm_relative_tac =
+  rpt gen_tac
+  \\ strip_tac
+  \\ conj_tac
+  >- fs [float_add_finite, float_sub_finite, float_mul_finite,
+         float_div_finite, float_sqrt_finite, float_mul_add_finite,
+         float_mul_sub_finite]
+  \\ last_assum (mp_then Any mp_tac error_bound_norm_strong)
+  \\ disch_then (qspec_then `0` mp_tac)
+  \\ impl_tac >- fs[]
+  \\ qmatch_goalsub_abbrev_tac `abs (err_op) <= _ ==> _`
+  \\ strip_tac
+  \\ qexists_tac `err_op`
+  \\ unabbrev_all_tac \\ fs[error_def]
+  \\ full_simp_tac (srw_ss()++realSimps.real_SS++boolSimps.LET_ss)
+       [float_value_finite, error_def, float_round_finite, normalizes_def,
+        float_add_def, float_sub_def, float_mul_def, float_div_def,
+        float_sqrt_def, float_mul_add_def, float_mul_sub_def,
+        binary_ieeeTheory.float_is_zero_to_real,
+        float_round_with_flags_def]
+  \\ rw [float_round_def, binary_ieeeTheory.float_is_zero_to_real, finite_not,
+         binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties];
+
 val float_add_relative = Q.store_thm ("float_add_relative",
   `!a b : ('t, 'w) float.
       float_is_finite a /\ float_is_finite b /\
@@ -1507,6 +1530,19 @@ val float_add_relative = Q.store_thm ("float_add_relative",
           (float_to_real (SND (float_add roundTiesToEven a b)) =
            (float_to_real a + float_to_real b) * (1 + e))`,
   relative_tac
+  );
+
+val float_add_relative_denorm = Q.store_thm ("float_add_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\
+      abs (float_to_real a + float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a + float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_add roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_add roundTiesToEven a b)) =
+           (float_to_real a + float_to_real b) + e)`,
+  denorm_relative_tac
   );
 
 val float_sub_relative = Q.store_thm ("float_sub_relative",
@@ -1520,6 +1556,19 @@ val float_sub_relative = Q.store_thm ("float_sub_relative",
   relative_tac
   );
 
+val float_sub_relative_denorm = Q.store_thm ("float_sub_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\
+      abs (float_to_real a - float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a - float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_sub roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_sub roundTiesToEven a b)) =
+           (float_to_real a - float_to_real b) + e)`,
+  denorm_relative_tac
+  );
+
 val float_mul_relative = Q.store_thm ("float_mul_relative",
   `!a b : ('t, 'w) float.
       float_is_finite a /\ float_is_finite b /\
@@ -1529,6 +1578,19 @@ val float_mul_relative = Q.store_thm ("float_mul_relative",
           (float_to_real (SND (float_mul roundTiesToEven a b)) =
            (float_to_real a * float_to_real b) * (1 + e))`,
   relative_tac
+  );
+
+val float_mul_relative_denorm = Q.store_thm ("float_mul_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\
+      abs (float_to_real a * float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a * float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_mul roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_mul roundTiesToEven a b)) =
+           (float_to_real a * float_to_real b) + e)`,
+  denorm_relative_tac
   );
 
 val float_div_relative = Q.store_thm ("float_div_relative",
@@ -1542,6 +1604,19 @@ val float_div_relative = Q.store_thm ("float_div_relative",
   relative_tac
   );
 
+val float_div_relative_denorm = Q.store_thm ("float_div_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ ~float_is_zero b /\
+      abs (float_to_real a / float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a / float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_div roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_div roundTiesToEven a b)) =
+           (float_to_real a / float_to_real b) + e)`,
+  denorm_relative_tac
+  );
+
 val float_sqrt_relative = Q.store_thm ("float_sqrt_relative",
   `!a : ('t, 'w) float.
       float_is_finite a /\ (a.Sign = 0w) /\
@@ -1551,6 +1626,19 @@ val float_sqrt_relative = Q.store_thm ("float_sqrt_relative",
           (float_to_real (SND (float_sqrt roundTiesToEven a)) =
            (sqrt (float_to_real a) * (1 + e)))`,
   relative_tac
+  );
+
+val float_sqrt_relative_denorm = Q.store_thm ("float_sqrt_relative_denorm",
+  `!a : ('t, 'w) float.
+      float_is_finite a /\ (a.Sign = 0w) /\
+      abs (sqrt (float_to_real a)) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (sqrt (float_to_real a)) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_sqrt roundTiesToEven a)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_sqrt roundTiesToEven a)) =
+           (sqrt (float_to_real a) + e))`,
+  denorm_relative_tac
   );
 
 val float_mul_add_relative = Q.store_thm ("float_mul_add_relative",
@@ -1565,6 +1653,21 @@ val float_mul_add_relative = Q.store_thm ("float_mul_add_relative",
   relative_tac
   );
 
+val float_mul_add_relative_denorm = Q.store_thm ("float_mul_add_relative_denorm",
+  `!a b c: ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+      abs (float_to_real a * float_to_real b + float_to_real c) <
+        2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a * float_to_real b + float_to_real c) <
+        threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_mul_add roundTiesToEven a b c)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_mul_add roundTiesToEven a b c)) =
+           (float_to_real a * float_to_real b + float_to_real c) + e)`,
+  denorm_relative_tac
+  );
+
 val float_mul_sub_relative = Q.store_thm ("float_mul_sub_relative",
   `!a b c : ('t, 'w) float.
       float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
@@ -1575,6 +1678,21 @@ val float_mul_sub_relative = Q.store_thm ("float_mul_sub_relative",
           (float_to_real (SND (float_mul_sub roundTiesToEven a b c)) =
            (float_to_real a * float_to_real b - float_to_real c) * (1 + e))`,
   relative_tac
+  );
+
+val float_mul_sub_relative_denorm = Q.store_thm ("float_mul_sub_relative_denorm",
+  `!a b c: ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+      abs (float_to_real a * float_to_real b - float_to_real c) <
+        2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a * float_to_real b - float_to_real c) <
+        threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_mul_sub roundTiesToEven a b c)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_mul_sub roundTiesToEven a b c)) =
+           (float_to_real a * float_to_real b - float_to_real c) + e)`,
+  denorm_relative_tac
   );
 
 (* ------------------------------------------------------------------------- *)

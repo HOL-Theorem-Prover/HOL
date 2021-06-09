@@ -44,8 +44,9 @@ val gord_def = Define `gord G g
 val elt_subgroup_def = Define
   `elt_subgroup G g = ((\x. ?i. x = gpow G g i), gop G)`;
 
-val lcoset_list_def = Define `lcoset_list G H
-  = kill_dups (MAP (\g. lcoset G g H) (list_elts (gset G)))`;
+Definition lcoset_list_def:
+  lcoset_list G H = nub (MAP (\g. lcoset G g H) (list_elts (gset G)))
+End
 
 val cyclic_def = Define
   `cyclic G = ?g :: gset G. elt_subgroup G g = G`;
@@ -339,6 +340,7 @@ val CARD_LCOSET = store_thm
    >> CONJ_TAC >- PROVE_TAC [IN_FINITE_GROUP, SUBGROUP_FINITE_GROUP]
    >> G_TAC' [INJ_DEF, IN_FINITE_GROUP]);
 
+Theorem MAP_MEM[local] = ONCE_REWRITE_RULE [CONJ_COMM] MEM_MAP
 val UNIONL_LCOSET_LIST = store_thm
   ("UNIONL_LCOSET_LIST",
    ``!G :: finite_group. !H :: subgroup G. UNIONL (lcoset_list G H) = gset G``,
@@ -348,7 +350,7 @@ val UNIONL_LCOSET_LIST = store_thm
    [R_TAC [IN_UNIONL]
     >> S_TAC
     >> Q.PAT_X_ASSUM `MEM s t` MP_TAC
-    >> R_TAC [lcoset_list_def, MEM_KILL_DUPS, MAP_MEM]
+    >> R_TAC [lcoset_list_def, MEM_nub, MAP_MEM]
     >> S_TAC
     >> AR_TAC []
     >> POP_ASSUM K_TAC
@@ -357,7 +359,7 @@ val UNIONL_LCOSET_LIST = store_thm
     >> R_TAC [lcoset_def, IN_IMAGE]
     >> S_TAC
     >> G_TAC [],
-    RW_TAC std_ss [lcoset_list_def, IN_UNIONL, MEM_KILL_DUPS, MAP_MEM]
+    RW_TAC std_ss [lcoset_list_def, IN_UNIONL, MEM_nub, MEM_MAP]
     >> Q.EXISTS_TAC `lcoset G x H`
     >> G_TAC [LIST_ELTS, LCOSET_REFL]
     >> ho_PROVE_TAC []]);
@@ -366,7 +368,7 @@ val DISJOINTL_LCOSET_LIST = store_thm
   ("DISJOINTL_LCOSET_LIST",
    ``!G :: finite_group. !H :: subgroup G. DISJOINTL (lcoset_list G H)``,
    S_TAC
-   >> G_TAC [lcoset_list_def, DISJOINTL_KILL_DUPS, MAP_MEM, LIST_ELTS]
+   >> G_TAC [lcoset_list_def, DISJOINTL_KILL_DUPS, MEM_MAP, LIST_ELTS]
    >> S_TAC
    >> G_TAC [LCOSETS_EQUAL_OR_DISJOINT]);
 
@@ -374,7 +376,7 @@ val CARD_LCOSET_LIST = store_thm
   ("CARD_LCOSET_LIST",
    ``!G :: finite_group. !H :: subgroup G. !c.
        MEM c (lcoset_list G H) ==> (CARD c = CARD (gset H))``,
-   G_TAC [lcoset_list_def, MEM_KILL_DUPS, MAP_MEM]
+   G_TAC [lcoset_list_def, MEM_nub, MAP_MEM]
    >> S_TAC
    >> Q.PAT_X_ASSUM `MEM y x` MP_TAC
    >> G_TAC [LIST_ELTS, CARD_LCOSET]);

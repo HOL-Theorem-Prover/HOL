@@ -23,11 +23,11 @@ QED
 
 Definition bar:
   bar x y ⇔
-  ∀z.
-    x + z < y + z ∧ let a = 2 * x ;
-                        b = 3 * z
-                    in
-                      a * b ≤ x
+    ∀z.
+      x + z < y + z ∧ let a = 2 * x ;
+                          b = 3 * z
+                      in
+                        a * b ≤ x
 End
 
 Theorem baz:
@@ -267,6 +267,43 @@ Inductive foob2:
   (l. foob (HD l) ==> foob (LAST l))
 End
 
+Theorem foo = base |> rule1
+                   |> rule2
 
+Theorem foo2 = base
+                 |> rule1
+                 |> rule2
+
+Theorem bar:
+  <| field := v1 ;
+     field2 := v2
+  |>
+Proof
+  tac
+QED
+
+Theorem foo_bar:
+  f x : bool ∧
+  Q
+Proof
+  tactic
+QED
+
+Theorem foo3 = base |> f (x + y)
+                    |> g
+
+Theorem foo':
+  foo ⇒ bar
+Proof
+  tactic
+QED
+
+Datatype:
+  peg = <| start : ('a,'b,'c,'e) pegsym ;
+           anyEOF : 'e ;
+           tokFALSE : 'e ; tokEOF : 'e;
+           notFAIL : 'e;
+           rules : 'b inf |-> ('a,'b,'c,'e) pegsym |>
+End
 
 val _ = export_theory();

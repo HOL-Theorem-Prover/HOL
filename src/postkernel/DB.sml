@@ -370,4 +370,16 @@ fun dest_theory s =
  end
  handle e => raise ERR "dest_theory" (Lib.quote s^" is not a known theory");
 
+(* Derived search functions *)
+fun find_consts_thy thl t =
+  let
+    val theConsts = List.concat (List.map constants thl)
+  in
+    List.filter (can (match_type t) o type_of) theConsts
+end
+
+(* The call to find_consts_thy is hidden under a fun binding to make sure that
+  the theory list is constructed properly and not captured in a closure *)
+fun find_consts t = find_consts_thy ("-" :: ancestry "-") t;
+
 end

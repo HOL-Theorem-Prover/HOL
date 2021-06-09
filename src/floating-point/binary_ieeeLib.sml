@@ -941,7 +941,8 @@ val float_Sign_fupd_tm =
    Term.mk_thy_const
       {Ty = ``:(word1 -> word1) -> ('t, 'w) float -> ('t, 'w) float``,
        Thy = "binary_ieee",
-       Name = "float_Sign_fupd"}
+       Name = TypeBasePure.mk_recordtype_fieldfupd {tyname = "float",
+                                                    fieldname = "Sign"}}
 
 fun add_ieee_to_compset cmp =
    let

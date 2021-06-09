@@ -1,5 +1,5 @@
 name: hol-probability-unint
-version: 1.0
+version: 1.1
 description: HOL probability theory (before re-interpretation)
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

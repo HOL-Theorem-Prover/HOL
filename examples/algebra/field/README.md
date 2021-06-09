@@ -13,4 +13,3 @@ A field is a non-trivial ring with all nonzero elements invertible.
 ## Application
 * __fieldInstances__, Zp, integers within a prime modulus p.
 * __fieldBinomial__, binomial coefficients and binomial expansion in a field, the "Freshmen" theorem.
-* __symmetryField__, symmetry group of a field: the group of field automorphisms fixing a subfield.

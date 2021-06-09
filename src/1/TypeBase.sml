@@ -9,13 +9,14 @@ open HolKernel TypeBasePure;
 
 val ERR = mk_HOL_ERR "TypeBase";
 
-
-(*--------------------------------------------------------------------------*
- * Create the database.                                                     *
- *--------------------------------------------------------------------------*)
-
+(* ----------------------------------------------------------------------
+    Functions used to tweak "bare" tyinfo values
+   ---------------------------------------------------------------------- *)
 fun list_compose [] x = x | list_compose (f :: fs) x = list_compose fs (f x);
 
+(* tyinfo values can include references to conversions through the
+   ssfrag database
+*)
 fun resolve_ssfragconvs tyi =
   let
     open ThyDataSexp
@@ -40,29 +41,7 @@ fun resolve_ssfragconvs tyi =
     apply_all [] (TypeBasePure.extra_of tyi) tyi
   end
 
-local val dBase = ref empty
-      val update_fns = ref ([]:(tyinfo list -> tyinfo list) list)
-in
-  fun theTypeBase() = !dBase
-
-  fun register_update_fn f = (update_fns := !update_fns @ [f])
-  fun write tyinfos =
-    let
-      fun write1 tyinfo =
-        dBase := insert (theTypeBase()) tyinfo
-        handle HOL_ERR _ => ()
-      val tyinfos = map resolve_ssfragconvs tyinfos
-      val tyinfos = list_compose (!update_fns) tyinfos
-      val () = app write1 tyinfos
-    in
-      tyinfos
-    end;
-end;
-
-fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
-
-fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
-
+(* tyinfos lacking the "standard simplifications" have those added here. *)
 fun maybe_add_simpls tyi =
     let
       open boolSyntax
@@ -75,77 +54,78 @@ fun maybe_add_simpls tyi =
       if List.exists iscasedef rwts then tyi else add_std_simpls tyi
     end handle HOL_ERR _ => tyi
 
-fun load_from_disk {thyname, data} =
-  case data of
-      SOME (ThyDataSexp.List tyi_sexps) =>
-      let
-        val tyis = List.mapPartial fromSEXP tyi_sexps
-      in
-        if length tyis = length tyi_sexps then
-          ignore (write (map maybe_add_simpls tyis))
-        else (HOL_WARNING "TypeBase" "load_from_disk"
-                ("{thyname=" ^ thyname ^ "}: " ^
-                 Int.toString (length tyi_sexps - length tyis) ^
-                 "/" ^ Int.toString (length tyi_sexps) ^
-                 " corrupted data entries");
-              ignore (write tyis))
-      end
-    | NONE => ()
-    | _ => HOL_WARNING "TypeBase" "load_from_disk"
-                       ("{thyname=" ^ thyname ^ "}: " ^
-                        "data completely corrupted")
+fun tweak_tyi tyi = tyi |> maybe_add_simpls |> resolve_ssfragconvs
 
-fun getTyname d =
-  case TypeBasePure.fromSEXP d of
-      NONE => NONE
-    | SOME tyi =>
-      let
-        val {Thy,Tyop,...} = dest_thy_type (ty_of tyi)
-      in
-        SOME (Thy^"$"^Tyop)
-      end
+(* ----------------------------------------------------------------------
+    Initial value of the database
+   ---------------------------------------------------------------------- *)
 
-fun uptodate_check t =
-  case t of
-      ThyDataSexp.List tyis =>
-      let
-        val (good, bad) = partition ThyDataSexp.uptodate tyis
-      in
-        case bad of
-            [] => NONE
-          | _ =>
-            let
-              val tyinames = List.mapPartial getTyname bad
-            in
-              HOL_WARNING "TypeBase" "uptodate_check"
-                          ("Type information for: " ^
-                           String.concatWith ", " tyinames ^ " discarded");
-              SOME (ThyDataSexp.List good)
-            end
-      end
-    | _ => raise Fail "TypeBase.uptodate_check : shouldn't happen"
+val bool_info =
+    TypeBasePure.mk_datatype_info
+      {ax=ORIG boolTheory.boolAxiom,
+       induction = ORIG boolTheory.bool_INDUCT,
+       case_def = boolTheory.bool_case_thm,
+       case_eq =
+         Prim_rec.prove_case_eq_thm{
+           case_def = boolTheory.bool_case_thm,
+           nchotomy = boolTheory.BOOL_CASES_AX
+         },
+       case_cong = boolTheory.COND_CONG,
+       distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
+       nchotomy = boolTheory.BOOL_CASES_AX,
+       fields = [], accessors = [], updates = [], one_one = NONE,
+       recognizers=[], destructors = [],
+       size = NONE, encode = NONE, lift = NONE} |> tweak_tyi
 
-fun check_thydelta (t, tdelta) =
-  let
-    open TheoryDelta
-  in
-    case tdelta of
-        NewConstant _ => uptodate_check t
-      | NewTypeOp _ => uptodate_check t
-      | DelConstant _ => uptodate_check t
-      | DelTypeOp _ => uptodate_check t
-      | _ => NONE
-  end
+(* and similarly for the itself type constructor *)
+val [itself_info0] = let
+  open boolTheory
+in
+  TypeBasePure.gen_datatype_info {ax = itself_Axiom, ind = itself_induction,
+                                  case_defs = [itself_case_thm]}
+end
+val itself_info = tweak_tyi itself_info0
 
-val {export = export_tyisexp, segment_data} = ThyDataSexp.new{
-      thydataty = "TypeBase", load = load_from_disk, other_tds = check_thydelta,
-      merge = ThyDataSexp.alist_merge
-    }
+(*--------------------------------------------------------------------------*
+ * Create the database.                                                     *
+ *--------------------------------------------------------------------------*)
 
-fun export tyis =
-  export_tyisexp (ThyDataSexp.List (map TypeBasePure.toSEXP tyis))
+local
+  val update_fns = ref ([]:(tyinfo -> tyinfo) list)
+in
+  fun register_update_fn f = (update_fns := !update_fns @ [f])
+  fun apply_update_fns tyi = list_compose (!update_fns) tyi
+end;
 
+fun apply_delta tyi tyb = TypeBasePure.insert tyb (tweak_tyi tyi)
+fun apply_to_global tyi tyb =
+    TypeBasePure.insert tyb (apply_update_fns $ tweak_tyi tyi)
+val initial_tydb = TypeBasePure.empty
+                     |> rev_itlist apply_delta [bool_info, itself_info]
 
+val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
+                   record_delta, get_deltas = thy_updates,
+                   merge = merge_typebases, update_global_value, ...} =
+    let open TypeBasePure
+    in
+      AncestryData.fullmake{
+        adinfo = {tag = "TypeBase", initial_values = [("min", initial_tydb)],
+                  apply_delta = apply_delta
+                 },
+        uptodate_delta = K true,
+        sexps = { dec = fromSEXP, enc = toSEXP },
+        globinfo = {apply_to_global = apply_to_global,
+                    thy_finaliser = NONE,
+                    initial_value = initial_tydb}
+      }
+    end
+
+fun write tyis = update_global_value (rev_itlist apply_to_global tyis)
+fun export tyis = (write tyis; List.app record_delta tyis)
+
+(* various ways to access the global value *)
+fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
+fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
 val elts = listItems o theTypeBase;
 
 fun print_sp_type ty =
@@ -195,37 +175,6 @@ fun encode_of ty       = valOf2 ty "encode_of"
 
 
 
-(*---------------------------------------------------------------------------*
- * Install datatype facts for booleans into theTypeBase.                     *
- *---------------------------------------------------------------------------*)
-
-val bool_info =
-    TypeBasePure.mk_datatype_info
-      {ax=ORIG boolTheory.boolAxiom,
-       induction = ORIG boolTheory.bool_INDUCT,
-       case_def = boolTheory.bool_case_thm,
-       case_eq =
-         Prim_rec.prove_case_eq_thm{
-           case_def = boolTheory.bool_case_thm,
-           nchotomy = boolTheory.BOOL_CASES_AX
-         },
-       case_cong = boolTheory.COND_CONG,
-       distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
-       nchotomy = boolTheory.BOOL_CASES_AX,
-       fields = [], accessors = [], updates = [], one_one = NONE,
-       recognizers=[], destructors = [],
-       size = NONE, encode = NONE, lift = NONE}
-
-val _ = write [bool_info];
-
-(* and similarly for the itself type constructor *)
-val [itself_info] = let
-  open boolTheory
-in
-  TypeBasePure.gen_datatype_info {ax = itself_Axiom, ind = itself_induction,
-                                  case_defs = [itself_case_thm]}
-end
-val _ = write [itself_info]
 
 fun tyi_from_name s =
   let
@@ -250,7 +199,14 @@ fun tyi_from_name s =
           case Binarymap.peek(privileged_abbrevs tyg, nm) of
               NONE => raise ERR "tyi_from_name"
                             ("Ty-grammar doesn't know name: "^nm)
-            | SOME thy => tyi_from_kid thy nm
+            | SOME thy =>
+              (case Binarymap.peek(parse_map tyg, {Thy = thy, Name = nm}) of
+                   NONE => raise ERR "tyi_from_name"
+                                 ("Ty-grammar has bad abbrev-map for name: "^nm)
+                 | SOME (TYOP {Thy,Tyop,...}) => tyi_from_kid Thy Tyop
+                 | SOME _ => raise ERR "tyi_from_name"
+                                   "Impossible return from type-grammar \
+                                   \abbreviation information")
         end
       | [thy,nm] => tyi_from_kid thy nm
       | _ => raise ERR "tyi_from_name" ("Malformed tyname: "^s)
@@ -268,6 +224,16 @@ fun AllCaseEqs() =
   in
     TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
   end
+
+fun type_info_of ty = {case_def = case_def_of ty, nchotomy = nchotomy_of ty}
+
+fun case_rand_of ty = let
+    val thm = Prim_rec.prove_case_rand_thm (type_info_of ty)
+    val f = concl thm |> boolSyntax.lhs |> rator
+  in GEN f thm end
+
+val case_pred_disj_of = Prim_rec.prove_case_ho_elim_thm o type_info_of
+val case_pred_imp_of = Prim_rec.prove_case_ho_imp_thm o type_info_of
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *

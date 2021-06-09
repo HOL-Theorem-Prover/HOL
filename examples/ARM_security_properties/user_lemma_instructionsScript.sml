@@ -15,6 +15,7 @@ val _ = temp_overload_on ("return", ``constT``);
 val _ = diminish_srw_ss ["one"]
 val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 val _ = BasicProvers.temp_delsimps ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val _ = goalStack.chatting := !Globals.interactive
 
@@ -815,24 +816,21 @@ val miscellaneous_instruction_comb_thm = save_comb_thm("miscellaneous_instructio
 (************************************************************)
 
 
-val IT_advance_constlem = store_thm(
-    "IT_advance_constlem",
-    ``((s.psrs(0,CPSR)).IT = 0w) ==> (((IT_advance <|proc :=0|>) s) = (ValueState () s))``,
-    EVAL_TAC
-      THEN RW_TAC (srw_ss()) []
-      THENL [`!(x:unit). x = ()` by (Cases_on `x` THEN EVAL_TAC)
-                THEN SPEC_ASSUM_TAC (``!x. X``, [``ARB:unit``])
-                THEN FULL_SIMP_TAC (srw_ss()) [],
-             ALL_TAC,
-             ALL_TAC]
-      THEN UNDISCH_ALL_TAC
-      THEN EVAL_TAC
-      THEN RW_TAC (srw_ss()) []
-      THEN Cases_on `s`
-      THEN FULL_SIMP_TAC (srw_ss()) [arm_state_psrs_fupd]
-      THEN ASSUME_TAC (SPEC ``f0:num#PSRName->ARMpsr`` (GEN_ALL psrs_update_in_update_thm))
-      THEN Q.ABBREV_TAC `x = (f0 (0,CPSR)).IT`
-      THEN  RW_TAC (srw_ss()) [arm_state_psrs_fupd]);
+Theorem IT_advance_constlem:
+  ((s.psrs(0,CPSR)).IT = 0w) ==>
+  (((IT_advance <|proc :=0|>) s) = (ValueState () s))
+Proof
+  EVAL_TAC
+  THEN RW_TAC (srw_ss()) []
+  THENL [`!(x:unit). x = ()` by (Cases_on `x` THEN EVAL_TAC)
+         THEN SPEC_ASSUM_TAC (``!x. X``, [``ARB:unit``])
+         THEN FULL_SIMP_TAC (srw_ss()) [],
+         ALL_TAC,
+         ALL_TAC]
+  THEN simp[arm_state_component_equality, FUN_EQ_THM,
+            combinTheory.APPLY_UPDATE_THM, AllCaseEqs()] >>
+  simp[ARMpsr_component_equality] >> simp[ITAdvance_def]
+QED
 
 val condition_passed_constlem = store_thm(
     "condition_passed_constlem",

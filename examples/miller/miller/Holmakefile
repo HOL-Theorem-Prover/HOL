@@ -1,4 +1,4 @@
-INCLUDES = ../prob ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/RSA ../groups
+INCLUDES = ../prob ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/Crypto/RSA ../groups
 OPTIONS = QUIT_ON_FAILURE
 
 all: $(DEFAULT_TARGETS) selftest.exe

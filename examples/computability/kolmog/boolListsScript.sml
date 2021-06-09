@@ -1124,7 +1124,7 @@ Proof
   ‘n <= LENGTH x’ suffices_by simp[rich_listTheory.DROP_APPEND1] >>
   CCONTR_TAC >> ‘LENGTH x < n’ by fs[] >>
   ‘DROP n x = []’ by fs[DROP_LENGTH_TOO_LONG] >>
-  ‘bar x' = []’ by fs[] >> fs[bar_def]
+  pop_assum SUBST_ALL_TAC >> fs[]
 QED
 
 Definition nblTpow_def:

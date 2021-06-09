@@ -2,23 +2,12 @@
 (* Theory of sequences and series of real numbers                            *)
 (*===========================================================================*)
 
-(*
-app load ["hol88Lib",
-          "numLib",
-          "reduceLib",
-          "PairedLambda",
-          "jrhUtils",
-          "netsTheory"];
-*)
+open HolKernel Parse boolLib bossLib;
 
-
-open HolKernel Parse boolLib bossLib numLib reduceLib pairLib
-     pairTheory arithmeticTheory numTheory prim_recTheory
+open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory prim_recTheory
      jrhUtils realTheory realSimps metricTheory netsTheory BasicProvers;
 
 open combinTheory pred_setTheory res_quanTools realSimps RealArith;
-
-infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "seq";
 val _ = ParseExtras.temp_loose_equality()
@@ -33,10 +22,6 @@ val KILL_TAC = POP_ASSUM_LIST K_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-val Cond =
-  MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-  >> CONJ_TAC;
 
 local
   val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
@@ -318,7 +303,7 @@ val SEQ_NEG_CONV = store_thm("SEQ_NEG_CONV",
   “!f. convergent f = convergent (\n. ~(f n))”,
   GEN_TAC THEN REWRITE_TAC[convergent] THEN EQ_TAC THEN
   DISCH_THEN(X_CHOOSE_TAC “l:real”) THEN
-  EXISTS_TAC “~l” THEN POP_ASSUM MP_TAC THEN
+  Q.EXISTS_TAC ‘~l’ THEN POP_ASSUM MP_TAC THEN
   SUBST1_TAC(SYM(SPEC “l:real” REAL_NEGNEG)) THEN
   REWRITE_TAC[GSYM SEQ_NEG] THEN REWRITE_TAC[REAL_NEGNEG]);
 
@@ -1329,7 +1314,7 @@ val GP = store_thm("GP",
 val ABS_NEG_LEMMA = store_thm("ABS_NEG_LEMMA",
   “!c. c <= &0 ==> !x y. abs(x) <= c * abs(y) ==> (x = &0)”,
   GEN_TAC THEN REWRITE_TAC[GSYM REAL_NEG_GE0] THEN DISCH_TAC THEN
-  REPEAT GEN_TAC THEN MP_TAC(SPECL [“~c”, “abs(y)”] REAL_LE_MUL) THEN
+  REPEAT GEN_TAC THEN MP_TAC(Q.SPECL [‘~c’, ‘abs(y)’] REAL_LE_MUL) THEN
   ASM_REWRITE_TAC[ABS_POS, GSYM REAL_NEG_LMUL, REAL_NEG_GE0] THEN
   DISCH_THEN(fn th => DISCH_THEN(MP_TAC o C CONJ th)) THEN
   DISCH_THEN(MP_TAC o MATCH_MP REAL_LE_TRANS) THEN CONV_TAC CONTRAPOS_CONV THEN
@@ -1569,16 +1554,8 @@ val INCREASING_SEQ = store_thm
    >> POP_ASSUM MP_TAC
    >> REAL_ARITH_TAC);
 
-(* TODO: move the following 4 lemmas to arithmeticTheory *)
-val MAX_LE_X = store_thm
-  ("MAX_LE_X",
-   ``!m n k. MAX m n <= k = m <= k /\ n <= k``,
-   RW_TAC arith_ss [MAX_DEF]);
-
-val X_LE_MAX = store_thm
-  ("X_LE_MAX",
-   ``!m n k. k <= MAX m n = k <= m \/ k <= n``,
-   RW_TAC arith_ss [MAX_DEF]);
+Theorem X_LE_MAX[local] = cj 1 MAX_LE
+Theorem MAX_LE_X[local] = cj 2 MAX_LE
 
 val TRANSFORM_2D_NUM = store_thm
   ("TRANSFORM_2D_NUM",
@@ -1722,11 +1699,7 @@ val SUMS_ZERO = store_thm
    ``(K 0) sums 0``,
    RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]);
 
-val LT_SUC = store_thm
-  ("LT_SUC", ``!a b. a < SUC b = a < b \/ (a = b)``, DECIDE_TAC);
-
-val LE_SUC = store_thm
-  ("LE_SUC", ``!a b. a <= SUC b = a <= b \/ (a = SUC b)``, DECIDE_TAC);
+Theorem LT_SUC'[local] = DECIDE “!a b. a < SUC b = a < b \/ (a = b)”
 
 val K_PARTIAL = store_thm
   ("K_PARTIAL", ``!x. K x = \z. x``, RW_TAC std_ss [K_DEF]);
@@ -1996,7 +1969,7 @@ val SUMINF_2D = store_thm
        >> Induct_on `M` >- RW_TAC arith_ss []
        >> Strip
        >> Q.EXISTS_TAC `MAX (SUC c) (N M)`
-       >> RW_TAC arith_ss [X_LE_MAX, LT_SUC]
+       >> RW_TAC arith_ss [X_LE_MAX, LT_SUC']
        >> PROVE_TAC [LESS_EQ_REFL, LE])
    >> Strip
    >> MP_TAC (Q.SPECL [`h`, `c`] NUM_2D_BIJ_SMALL_SQUARE)
@@ -2033,7 +2006,7 @@ val SUMINF_2D = store_thm
    >> KILL_TAC
    >> RW_TAC std_ss []
    >> Induct_on `M` >- RW_TAC arith_ss [sum, SUM_ZERO]
-   >> RW_TAC arith_ss [sum, LT_SUC]
+   >> RW_TAC arith_ss [sum, LT_SUC']
    >> Q.PAT_X_ASSUM `a ==> b` K_TAC
    >> Know
       `!k'.
@@ -2065,7 +2038,7 @@ val SUMINF_2D = store_thm
    >> POP_ASSUM K_TAC
    >> Q.SPEC_TAC (`N M`, `l`)
    >> Induct >- RW_TAC real_ss [sum, SUM_0]
-   >> RW_TAC arith_ss [sum, LT_SUC]
+   >> RW_TAC arith_ss [sum, LT_SUC']
    >> Q.PAT_X_ASSUM `a ==> b` K_TAC
    >> Know
       `!k'.

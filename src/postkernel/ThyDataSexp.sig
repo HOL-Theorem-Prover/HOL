@@ -13,6 +13,7 @@ datatype t =
        | Bool of bool
        | Char of char
        | Option of t option
+       | KName of KernelSig.kernelname
 
 val uptodate : t -> bool
 val compare : t * t -> order
@@ -33,13 +34,43 @@ val new : {thydataty : string,
            merge : {old : t, new : t} -> t,
            load : {thyname : string, data : t option} -> unit,
            other_tds : t * TheoryDelta.t -> t option} ->
-          {export : t -> unit, segment_data : {thyname : string} -> t option}
+          {export : t -> unit, segment_data : {thyname : string} -> t option,
+           set : t -> unit}
 
 val pp_sexp : Type.hol_type PP.pprinter -> Term.term PP.pprinter ->
               Thm.thm PP.pprinter -> t PP.pprinter
 
-val dest_string : t -> string option
-val dest_list : (t -> 'a option) -> t -> 'a list option
-val mk_list : ('a -> t) -> 'a list -> t
+type 'a dec = t -> 'a option
+type 'a enc = 'a -> t
+
+val string_decode : string dec
+val int_decode    : int dec
+val type_decode   : Type.hol_type dec
+val term_decode   : Term.term dec
+val char_decode   : char dec
+val list_decode   : 'a dec -> 'a list dec
+val kname_decode  : KernelSig.kernelname dec
+val bool_decode   : bool dec
+
+val mk_list : 'a enc -> 'a list enc
+
+val option_encode : 'a enc -> 'a option enc
+val option_decode : 'a dec -> 'a option dec
+
+val pair_encode : 'a enc * 'b enc -> ('a * 'b) enc
+val pair_decode : 'a dec * 'b dec -> ('a * 'b) dec
+
+val pair3_encode : 'a enc * 'b enc * 'c enc -> ('a * 'b * 'c) enc
+val pair3_decode : 'a dec * 'b dec * 'c dec -> ('a * 'b * 'c) dec
+
+val pair4_encode : 'a enc * 'b enc * 'c enc * 'd enc -> ('a * 'b * 'c * 'd) enc
+val pair4_decode : 'a dec * 'b dec * 'c dec * 'd dec -> ('a * 'b * 'c * 'd) dec
+
+val require_tag : string -> unit dec
+val tag_encode : string -> ('a -> t) -> ('a -> t)
+val tag_decode : string -> 'a dec -> 'a dec
+
+val || : 'a dec * 'a dec -> 'a dec
+val first : 'a dec list -> 'a dec
 
 end

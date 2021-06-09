@@ -13,6 +13,7 @@ sig
   val ||-> : ('a * 'b) * ('a -> 'b -> 'c) -> 'c
   val B2 : ('c -> 'd) -> ('a -> 'b -> 'c) -> 'a -> 'b -> 'd
   val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+  val flip : ('a * 'b -> 'c) -> ('b * 'a -> 'c)
   val I : 'a -> 'a
   val K : 'a -> 'b -> 'a
   val S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c

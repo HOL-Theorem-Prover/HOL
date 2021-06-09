@@ -13,7 +13,6 @@ val _ = new_theory "fieldMap";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -957,7 +956,7 @@ val field_iso_inverse_nonzero = store_thm(
    If n <> 0,
       Then 0 < n                                 by n <> 0
         so (x ** n = #1) /\
-           !m. 0 < m /\ m < n ==> x ** m <> #1   by field_order_alt, 0 < n [1]
+           !m. 0 < m /\ m < n ==> x ** m <> #1   by field_order_thm, 0 < n [1]
       Thus y **_ n = #1_               by field_iso_exp, field_iso_ids
 
       Claim: !m. 0 < m /\ m < n ==> y **_ m <> #1_
@@ -966,7 +965,7 @@ val field_iso_inverse_nonzero = store_thm(
                or     x ** m = #1      by field_iso_eq_one, field_exp_element
              This contradicts the implication [1].
 
-      Then forder_ y = n               by field_order_alt
+      Then forder_ y = n               by field_order_thm
 *)
 val field_iso_order = store_thm(
   "field_iso_order",
@@ -983,14 +982,14 @@ val field_iso_order = store_thm(
     `x ** m = #1` by metis_tac[field_iso_eq_one, field_exp_element] >>
     metis_tac[field_order_0],
     `0 < n` by decide_tac >>
-    `(x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1` by metis_tac[field_order_alt] >>
+    `(x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1` by metis_tac[field_order_thm] >>
     `y **_ n = #1_` by metis_tac[field_iso_exp, field_iso_ids] >>
     `!m. 0 < m /\ m < n ==> y **_ m <> #1_` by
   (spose_not_then strip_assume_tac >>
     `f (x ** m) = #1_` by metis_tac[field_iso_exp] >>
     `x ** m = #1` by metis_tac[field_iso_eq_one, field_exp_element] >>
     metis_tac[]) >>
-    metis_tac[field_order_alt]
+    metis_tac[field_order_thm]
   ]);
 
 (* Theorem: (r === r_) f ==> !n. IMAGE f (orders f* n) = orders f_* n *)
@@ -1663,7 +1662,7 @@ val field_homo_map_image_bij = store_thm(
   rpt strip_tac >>
   `INJ f R R_` by rw[field_homo_map_inj] >>
   `(ring_homo_image f r r_).carrier = IMAGE f R` by rw[ring_homo_image_def] >>
-  metis_tac[INJ_IMAGE_BIJ, INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV]);
+  metis_tac[INJ_IMAGE_BIJ]);
 
 (* Theorem: (r ~~~ r_) f ==> FieldHomo f r (ring_homo_image f r r_ *)
 (* Proof:

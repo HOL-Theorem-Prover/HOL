@@ -13,7 +13,6 @@ val _ = new_theory "polyGCD";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -85,11 +84,6 @@ open dividesTheory gcdTheory;
    miset s                     = monic_irreducibles_set r
 *)
 (* Definitions and Theorems (# are exported):
-
-   Helper Theorems (Reworks):
--  LCM_DIVISORS      |- !m n. m divides lcm m n /\ n divides lcm m n
--  LCM_IS_LCM        |- !m n p. m divides p /\ n divides p ==> lcm m n divides p
--  GCD_CANCEL_MULT   |- !m n k. coprime m k ==> (gcd m (k * n) = gcd m n)
 
    Polynomial GCD:
    poly_gcd_def      |- !r p q. pgcd p q = ring_gcd (PolyRing r) (\p. norm p) p q
@@ -386,8 +380,7 @@ val LCM_DIVISORS = prove(
        Hence p = t * e                 by step 3 and step 4
           or e divides p               by divides_def
 *)
-val LCM_IS_LCM = store_thm(
-  "LCM_IS_LCM",
+val LCM_IS_LCM = prove(
   ``!m n p. m divides p /\ n divides p ==> (lcm m n) divides p``,
   rpt strip_tac >>
   qabbrev_tac `d = gcd m n` >>
@@ -440,8 +433,7 @@ GCD_CANCEL_MULT
         With x divides m /\ x divides n
          ==> x divides gcd m n            by GCD_IS_GREATEST_COMMON_DIVISOR
 *)
-val GCD_CANCEL_MULT = store_thm(
-  "GCD_CANCEL_MULT",
+val GCD_CANCEL_MULT = prove(
   ``!m n k. coprime m k ==> (gcd m (k * n) = gcd m n)``,
   rpt strip_tac >>
   rw[GCD_PROPERTY] >-
@@ -451,7 +443,6 @@ val GCD_CANCEL_MULT = store_thm(
   (rw[GCD_PROPERTY] >>
   prove_tac[DIVIDES_TRANS, GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_ONE]) >>
   metis_tac[L_EUCLIDES, GCD_IS_GREATEST_COMMON_DIVISOR]);
-(* can rename to: gcd_multiple_reduction_by_coprime *)
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial GCD                                                            *)

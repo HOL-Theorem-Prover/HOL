@@ -71,6 +71,6 @@ val parse_infixes :
 
 val pp_infixes :
     infixities -> ('a -> (string * 'a * 'a) option) ->
-    (ppstream -> 'a * bool -> unit) -> ppstream -> 'a * bool -> unit
+    ('a * bool -> PP.pretty) -> 'a * bool -> PP.pretty
 
 end

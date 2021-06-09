@@ -728,8 +728,10 @@ end
 val remove_vacuous = List.filter (not o utilsLib.vacuous)
 
 local
+  fun selnm ty fld =
+      TypeBasePure.mk_recordtype_fieldsel {tyname=ty,fieldname=fld}
    val arm8_run = utilsLib.Run_CONV ("arm8", st) o rhsc
-   val (_, mk_exception, _, _) = arm8_monop "arm8_state_exception"
+   val (_, mk_exception, _, _) = arm8_monop $ selnm "arm8_state" "exception"
    val arm8_exception = DATATYPE_CONV o mk_exception o utilsLib.rhsc
    val get_next = Term.rator o utilsLib.rhsc o Drule.SPEC_ALL
    val rule = REG_31_RULE o Conv.RIGHT_CONV_RULE DATATYPE_CONV o

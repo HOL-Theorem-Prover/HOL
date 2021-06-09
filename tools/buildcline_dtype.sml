@@ -23,7 +23,7 @@ type 'a final_options =
       debug : bool,
       selftest_level : int,
       extra : 'a,
-      jobcount : int,
+      jobcount : int option,
       multithread : int option,
       relocbuild : bool}
 

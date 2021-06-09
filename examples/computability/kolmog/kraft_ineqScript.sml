@@ -1226,8 +1226,8 @@ Theorem open_paths_first_tree[simp]:
   open_paths (first_tree n v) = IMAGE (λm. Fpow m ++ [T]) (count n)
 Proof
   Induct_on ‘n’ >>
-  simp[EXTENSION, indexedListsTheory.LT_SUC, PULL_EXISTS, LEFT_AND_OVER_OR,
-       EXISTS_OR_THM] >> metis_tac[]
+  simp[EXTENSION, LT_SUC, PULL_EXISTS, LEFT_AND_OVER_OR, EXISTS_OR_THM] >>
+  metis_tac[]
 QED
 
 Theorem packed_first_tree[simp]:
@@ -1483,8 +1483,9 @@ Proof
   >- (qx_gen_tac ‘a’ >> Cases >> simp[]
       >- (disch_then (mp_tac o C Q.AP_THM ‘[]’ o Q.AP_TERM ‘FAPPLY’) >>
           simp[]) >>
-      strip_tac >> simp[fmap_EXT] >> disj1_tac >> simp[EXTENSION] >>
-      qexists_tac ‘[]’ >> simp[]) >>
+      strip_tac >> simp[fmap_EXT] >>
+      strip_tac >> dxrule (SUBSET_ANTISYM_EQ |> iffRL |> cj 2) >>
+      simp[SUBSET_DEF]) >>
   Cases >> simp[]
   >- (simp[fmap_EXT, FUN_FMAP_DEF] >> strip_tac >>
       rename [‘packed (FullNode ctl ctr)’] >>
@@ -1494,8 +1495,8 @@ Proof
       rpt (dxrule_all_then strip_assume_tac packed_domain_empty) >> gvs[] >>
       qpat_x_assum ‘packed (FullNode Empty Empty)’ mp_tac >> simp[packed_def] >>
       qexistsl_tac [‘[T]’, ‘[F]’] >> simp[])
-  >- (strip_tac >> simp[fmap_EXT] >> disj1_tac >> simp[EXTENSION] >>
-      qexists_tac‘[]’ >> simp[]) >>
+  >- (strip_tac >> simp[fmap_EXT] >> strip_tac >>
+      dxrule (SUBSET_ANTISYM_EQ |> iffRL |> cj 2) >> simp[SUBSET_DEF]) >>
   strip_tac >> simp[fmap_EXT] >> rw[] >>
   first_x_assum irule (* 2 *)
   >- (reverse (rpt conj_tac) (* 3 *)
@@ -1963,7 +1964,7 @@ Proof
   Induct_on ‘ws’ >> simp[AllCaseEqs(), PULL_EXISTS] >> rpt gen_tac >> strip_tac>>
   drule_then (CONJUNCTS_THEN2 (qx_choose_then ‘hp’ strip_assume_tac)
               strip_assume_tac) insert_extends_domain >>
-  dsimp[DISJ_IMP_THM, FORALL_AND_THM, indexedListsTheory.LT_SUC] >> conj_tac
+  dsimp[DISJ_IMP_THM, FORALL_AND_THM, LT_SUC] >> conj_tac
   >- (first_x_assum $ drule_all_then strip_assume_tac >>
       rpt strip_tac >> first_x_assum drule >> simp[ADD1] >>
       metis_tac[ADD_ASSOC, ADD_COMM]) >> conj_tac

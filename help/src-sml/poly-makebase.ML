@@ -1,9 +1,4 @@
-val _ = use "../../tools-poly/poly/Binarymap.sig";
-val _ = use "../../tools-poly/poly/Binarymap.sml";
-val _ = use "../../tools-poly/poly/Binaryset.sig";
-val _ = use "../../tools-poly/poly/Binaryset.sml";
-val _ = use "../../tools-poly/poly/Listsort.sig";
-val _ = use "../../tools-poly/poly/Listsort.sml";
+val _ = use "poly-stdprefix.ML";
 
 fun useB f =
   (use (f ^ ".sig");
@@ -12,6 +7,7 @@ fun useB f =
 val _ = useB "Database";
 val _ = use "HOLPage.sml";
 val _ = useB "Htmlsigs";
+val _ = useB "ParseDoc";
 val _ = use "Keepers.sml";
 val _ = use "Asynt.sml";
 
@@ -38,8 +34,6 @@ end;
 val _ = use "Lexer.lex.sml";
 val _ = use "Parsspec.sml";
 val _ = use "Printbase.sml";
-val _ = useB "Symbolic";
-
 val _ = useB "../../sigobj/Systeml";
 
 val _ = use "makebase.sml";

@@ -74,10 +74,14 @@ val m0_frame_hidden =
 
 local
    val m0_instr_tm = Term.prim_mk_const {Thy = "m0_prog", Name = "m0_instr"}
+   val MEMsel =
+       "m0$" ^
+       TypeBasePure.mk_recordtype_fieldsel
+         {tyname = "m0_state", fieldname = "MEM"}
    fun is_mem_access v tm =
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
-            stateLib.is_code_access ("m0$m0_state_MEM", v) l andalso
+            stateLib.is_code_access (MEMsel, v) l andalso
             (wordsSyntax.is_word_literal r orelse bitstringSyntax.is_v2w r)
        | NONE => false
    val dest_opc = fst o listSyntax.dest_list o fst o bitstringSyntax.dest_v2w
@@ -234,21 +238,26 @@ end
 
 local
    val st = Term.mk_var ("s", ``:m0_state``)
+   fun mkfup0 thy ty fld =
+       thy ^ "$" ^ TypeBasePure.mk_recordtype_fieldfupd{tyname=ty,fieldname=fld}
+   fun mksel0 thy ty fld =
+       thy ^ "$" ^ TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=fld}
+   val m0fup = mkfup0 "m0" val m0sel = mksel0 "m0"
    val psr_footprint =
       stateLib.write_footprint m0_1 m0_2 []
-        [("m0$PSR_N_fupd", "m0_PSR_N"),
-         ("m0$PSR_Z_fupd", "m0_PSR_Z"),
-         ("m0$PSR_C_fupd", "m0_PSR_C"),
-         ("m0$PSR_V_fupd", "m0_PSR_V")] [] []
-        (fn (s, l) => s = "m0$m0_state_PSR" andalso tml_eq l [st])
+        [(m0fup "PSR" "N", "m0_PSR_N"),
+         (m0fup "PSR" "Z", "m0_PSR_Z"),
+         (m0fup "PSR" "C", "m0_PSR_C"),
+         (m0fup "PSR" "V", "m0_PSR_V")] [] []
+        (fn (s, l) => s = m0sel "m0_state" "PSR" andalso tml_eq l [st])
 in
    val m0_write_footprint =
       stateLib.write_footprint m0_1 m0_2
-        [("m0$m0_state_MEM_fupd", "m0_MEM", ``^st.MEM``),
-         ("m0$m0_state_REG_fupd", "m0_REG", ``^st.REG``)]
-        [("m0$m0_state_count_fupd", "m0_count")] []
-        [("m0$m0_state_PSR_fupd", psr_footprint),
-         ("m0$m0_state_pcinc_fupd", fn (p, q, _) => (p, q))]
+        [(m0fup "m0_state" "MEM", "m0_MEM", ``^st.MEM``),
+         (m0fup "m0_state" "REG", "m0_REG", ``^st.REG``)]
+        [(m0fup "m0_state" "count", "m0_count")] []
+        [(m0fup "m0_state" "PSR", psr_footprint),
+         (m0fup "m0_state" "pcinc", fn (p, q, _) => (p, q))]
         (K false)
 end
 

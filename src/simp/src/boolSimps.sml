@@ -23,6 +23,9 @@ fun comb_ETA_CONV t =
        then RAND_CONV ETA_CONV
        else NO_CONV) t
 
+val SSFRAG = register_frag o SSFRAG
+
+
 val ETA_ss = SSFRAG {name = SOME "ETA",
   convs = [{name = "ETA_CONV (eta reduction)",
             trace = 2,
@@ -47,7 +50,7 @@ val literal_I_thm = prove(
   REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
 
 val literal_case_ss =
-    simpLib.SSFRAG {
+    SSFRAG {
       name = SOME"literal_case",
       ac = [], congs = [literal_cong], convs = [], filter = NONE,
       dprocs = [], rewrs = [
@@ -62,6 +65,24 @@ val literal_case_ss =
       beta-conversion.
    ---------------------------------------------------------------------- *)
 
+local
+  val x = mk_var("x", Type.alpha)
+  val y = mk_var("y", Type.alpha)
+  val P = mk_var("P", bool)
+  val Q = mk_var("Q", bool)
+  val R = mk_var("R", bool)
+  val xney = mk_neg(mk_eq(x,y))
+  val idt' = GSYM IMP_DISJ_THM
+  val th1 = REWR_CONV idt' (mk_disj(xney,P))
+  val th2 = (REWR_CONV DISJ_COMM THENC REWR_CONV idt') (mk_disj(P, xney))
+  val th3_c =
+      LAND_CONV (REWR_CONV IMP_DISJ_THM) THENC REWR_CONV (GSYM DISJ_ASSOC) THENC
+      REWR_CONV idt'
+  val th3 = th3_c (mk_disj(mk_imp(P,Q),R))
+in
+val lift_disj_eq = CONJ th1 th2
+val lift_imp_disj = CONJ th3 (ONCE_REWRITE_RULE [DISJ_COMM] th3)
+end;
 
 val BOOL_ss = SSFRAG
   {name = SOME"BOOL",
@@ -75,13 +96,15 @@ val BOOL_ss = SSFRAG
      "EXISTS_SIMP",  "COND_ID", "EXISTS_REFL", "EXISTS_UNIQUE_REFL",
      "EXCLUDED_MIDDLE", "bool_case_thm", "NOT_AND",
      "SELECT_REFL", "SELECT_REFL_2", "RES_FORALL_TRUE",
-     "RES_EXISTS_FALSE"
+     "RES_EXISTS_FALSE", "EXISTS_UNIQUE_FALSE"
    ] @ map (fn (s,th) => (SOME {Thy = "", Name = s}, th)) [
      ("EXISTS_REFL'", GSYM EXISTS_REFL),
      ("EXISTS_UNIQUE_REFL'", GSYM EXISTS_UNIQUE_REFL),
      ("EXCLUDED_MIDDLE'", ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE),
      ("literal_I_thm", literal_I_thm),
-     ("COND_BOOL_CLAUSES", COND_BOOL_CLAUSES)
+     ("COND_BOOL_CLAUSES", COND_BOOL_CLAUSES),
+     ("lift_disj_eq", lift_disj_eq),
+     ("lift_imp_disj", lift_imp_disj)
    ],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 
@@ -126,6 +149,7 @@ val ABBREV_ss = SSFRAG {
  * --------------------------------------------------------------------*)
 
 val NOT_ss =
+  register_frag $
   named_rewrites "NOT"
     [NOT_IMP,
      DE_MORGAN_THM,
@@ -163,10 +187,10 @@ val let_I_thm = prove(
   REWRITE_TAC [combinTheory.I_THM, LET_THM]);
 
 val LET_ss =
-    simpLib.SSFRAG {name = SOME"LET",
-                    ac = [], congs = [let_cong], convs = [], filter = NONE,
-                    dprocs = [],
-                    rewrs = [(SOME {Thy = "", Name = "let_I_thm"}, let_I_thm)]}
+    SSFRAG {name = SOME"LET",
+            ac = [], congs = [let_cong], convs = [], filter = NONE,
+            dprocs = [],
+            rewrs = [(SOME {Thy = "", Name = "let_I_thm"}, let_I_thm)]}
 
 (* ----------------------------------------------------------------------
     bool_ss
@@ -257,7 +281,7 @@ end handle HOL_ERR _ => failwith "COND_ABS_CONV";
 
 
 val COND_elim_ss =
-  simpLib.SSFRAG {
+  SSFRAG {
     name = SOME"COND_elim",
     ac = [], congs = [],
     convs = [
@@ -275,7 +299,7 @@ val COND_elim_ss =
              (SOME {Thy = "bool",Name = "COND_EXPAND"},boolTheory.COND_EXPAND),
              (SOME {Thy = "", Name = "NESTED_COND"}, NESTED_COND)]}
 
-val LIFT_COND_ss = simpLib.SSFRAG
+val LIFT_COND_ss = SSFRAG
   {name=SOME"LIFT_COND",
    ac = [], congs = [],
    convs = [{conv = K (K celim_rand_CONV),
@@ -306,18 +330,28 @@ val CONJ_ss = SSFRAG {
   name = SOME"CONJ",
   ac = [],
   congs = [REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL boolTheory.AND_CONG)],
-  convs = [], dprocs = [], filter = NONE, rewrs = []}
+  convs = [], dprocs = [], filter = NONE, rewrs = []};
+
+val DISJ_ss = SSFRAG {
+      name = SOME "DISJ",
+      congs = [tautLib.TAUT ‘(~Q ==> (P = P')) ==> (~P' ==> (Q = Q')) ==>
+                             ((P \/ Q) = (P' \/ Q'))’],
+      ac = [], convs = [], dprocs = [], filter = NONE, rewrs = []
+    };
+
 
 (* ----------------------------------------------------------------------
     A boolean formula normaliser that attempts to create formulas with
     maximum opportunity for UNWIND_ss to eliminate equalities
    ---------------------------------------------------------------------- *)
 
-val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
-                       DISJ_IMP_THM, IMP_CONJ_THM,
-                       RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
-                       GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
-                       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM]
+val DNF_ss =
+    rewrites [FORALL_AND_THM, EXISTS_OR_THM,
+              DISJ_IMP_THM, IMP_CONJ_THM,
+              RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
+              GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
+              GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM]
+             |> name_ss "DNF" |> register_frag
 
 
 val EQUIV_EXTRACT_ss = simpLib.conv_ss BoolExtractShared.BOOL_EQ_IMP_convdata;
@@ -338,7 +372,7 @@ in
     conv = c }
 end
 
-val NORMEQ_ss = simpLib.SSFRAG {
+val NORMEQ_ss = SSFRAG {
   ac = [],
   congs = [],
   convs = [NORMEQ_CONV],
@@ -347,13 +381,15 @@ val NORMEQ_ss = simpLib.SSFRAG {
   name = SOME "NORMEQ_ss", rewrs = []}
 
 val LABEL_CONG = REFL “l1 :- t”
-val LABEL_CONG_ss = simpLib.SSFRAG {
+val LABEL_CONG_ss = SSFRAG {
       ac = [],
       congs = [LABEL_CONG],
       convs = [],
       dprocs = [],
       filter = NONE,
-      name = SOME "NORMEQ_ss", rewrs = []}
+      name = SOME "LABEL_CONG_ss", rewrs = []}
+
+
 
 
 (* ----------------------------------------------------------------------

@@ -24,7 +24,6 @@ val _ = new_theory "field";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -2878,7 +2877,7 @@ val field_add_exp_eqn = store_thm(
    Let c = char r, then 0 < c.
    Note x IN R /\ x <> #0  by field_nonzero_eq
 
-   By group_order_alt, this is to show:
+   By group_order_thm, this is to show:
    (1) r.sum.exp x c = #0
          r.sum.exp x c
        = x * ##c           by field_add_exp_eqn
@@ -2899,7 +2898,7 @@ val field_add_order = store_thm(
   qabbrev_tac `c = char r` >>
   `x IN R /\ x <> #0` by metis_tac[field_nonzero_eq] >>
   `Group r.sum` by rw[field_add_group] >>
-  `(r.sum.exp x c = #0) /\ !m. 0 < m /\ m < c ==> r.sum.exp x m <> #0` suffices_by rw[group_order_alt] >>
+  `(r.sum.exp x c = #0) /\ !m. 0 < m /\ m < c ==> r.sum.exp x m <> #0` suffices_by rw[group_order_thm] >>
   rpt strip_tac >-
   metis_tac[field_add_exp_eqn, char_property, field_mult_rzero] >>
   metis_tac[field_add_exp_eqn, field_mult_eq_zero, field_num_element, field_char_alt]);

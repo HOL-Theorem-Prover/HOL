@@ -22,7 +22,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
      topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
-open hurdUtils iterateTheory productTheory real_topologyTheory;
+open hurdUtils iterateTheory real_topologyTheory;
 
 val _ = new_theory "derivative";
 
@@ -249,15 +249,14 @@ val IS_INTERVAL_CONNECTED_1 = store_thm ("IS_INTERVAL_CONNECTED_1",
   ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
   SIMP_TAC std_ss [IS_INTERVAL, connected, NOT_FORALL_THM,
    LEFT_IMP_EXISTS_THM, NOT_IMP] THEN
-  MAP_EVERY X_GEN_TAC [``a:real``, ``b:real``, ``x:real``] THEN STRIP_TAC THEN
+  qx_genl_tac [‘a’, ‘b’, ‘x’] THEN STRIP_TAC THEN
   MAP_EVERY EXISTS_TAC [``{z:real | 1 * z < x}``, ``{z:real | 1 * z > x}``] THEN
   REWRITE_TAC[OPEN_HALFSPACE_LT, OPEN_HALFSPACE_GT] THEN
   SIMP_TAC arith_ss [SUBSET_DEF, EXTENSION, IN_UNION, IN_INTER, NOT_FORALL_THM,
    real_gt, NOT_IN_EMPTY, GSPECIFICATION] THEN
   SIMP_TAC real_ss [] THEN
-  REPEAT CONJ_TAC THENL [METIS_TAC[REAL_LT_TOTAL],
-   REAL_ARITH_TAC, EXISTS_TAC ``a:real``, EXISTS_TAC ``b:real``] THEN
-  ASM_REWRITE_TAC[REAL_LT_LE] THEN ASM_MESON_TAC[]);
+  REPEAT CONJ_TAC THENL [simp[REAL_NOT_LT, REAL_LE_TOTAL],
+   metis_tac[REAL_LT_TOTAL], metis_tac[REAL_LE_LT], metis_tac[REAL_LE_LT]]);
 
 val CONVEX_INTERVAL = store_thm ("CONVEX_INTERVAL",
  ``!a b:real. convex(interval [a,b]) /\ convex(interval (a,b))``,
@@ -1190,7 +1189,7 @@ val DIFFERENTIABLE_BOUND = store_thm ("DIFFERENTIABLE_BOUND",
     MATCH_MP_TAC REAL_LE_TRANS THEN Q.EXISTS_TAC `oabs (f' x') * abs y'` THEN
     ASM_SIMP_TAC std_ss [] THEN MATCH_MP_TAC REAL_LE_MUL2 THEN
     ASM_SIMP_TAC std_ss [REAL_LE_REFL, ABS_POS] THEN
-    SIMP_TAC std_ss [oabs] THEN MATCH_MP_TAC REAL_LE_SUP THEN
+    SIMP_TAC std_ss [oabs] THEN MATCH_MP_TAC REAL_LE_SUP' THEN
     SIMP_TAC std_ss [GSPECIFICATION] THEN Q.EXISTS_TAC `oabs (f' x') * abs 1` THEN
     Q.EXISTS_TAC `abs (f' x' 1)` THEN METIS_TAC [ABS_POS, ABS_1],
     ALL_TAC] THEN

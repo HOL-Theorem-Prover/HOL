@@ -246,7 +246,7 @@ val GF_2_deg_h = store_thm(
 
 (* Theorem: poly_roots (GF 2) h = {} *)
 (* Proof:
-   Simply by definitions, this is to show:
+   Simplify by definitions, this is to show:
    x <> 0 /\ x <> 1 \/ (1 + ((1 + x MOD 2) MOD 2 * x) MOD 2) MOD 2 <> 0
    If x = 0,
       (1 + ((1 + x MOD 2) MOD 2 * x) MOD 2) MOD 2
@@ -266,17 +266,13 @@ val GF_2_deg_h = store_thm(
     = 1 MOD 2                                       by ADD_0
     = 1 <> 0                                        by ONE_MOD
 *)
-val GF_2_roots_h = store_thm(
-  "GF_2_roots_h",
-  ``poly_roots (GF 2) h = {}``,
-  rw_tac std_ss[poly_roots_def, poly_root_def, EXTENSION, GSPECIFICATION] >>
-  rw[GF_def, add_mod_def, mult_mod_def, including_def] >>
-  spose_not_then strip_assume_tac >>
-  Cases_on `x = 0` >| [
-    full_simp_tac std_ss[],
-    `x = 1` by rw[] >>
-    full_simp_tac std_ss[]
-  ]);
+Theorem GF_2_roots_h:
+  poly_roots (GF 2) h = {}
+Proof
+  rw[GF_def, add_mod_def, mult_mod_def, including_def,
+     poly_roots_def, poly_root_def, EXTENSION, GSPECIFICATION] >>
+  strip_tac >> fs[]
+QED
 
 (*
 - poly_deg_2_irreducible |> ISPEC ``(GF 2)``;

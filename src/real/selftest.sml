@@ -1,7 +1,8 @@
-open HolKernel boolLib simpLib Parse realSimps
+open HolKernel Parse bossLib boolLib;
 
-open bossLib
-open testutils
+open simpLib realSimps Diff transcTheory;
+
+open testutils;
 
 val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) []
 
@@ -45,6 +46,7 @@ val _ = List.app
           (fn (s1,s2) => tpp_expected
                            {testf=standard_tpp_message, input=s1, output=s2})
           [("realinv 2", "2⁻¹"), ("inv (TC R)", "R⁺ ᵀ")]
+val _ = tpp "¬p ∧ q"                                                   (* UOK *)
 
 fun UNCH_test (n,c,t) =
   shouldfail {checkexn = fn Conv.UNCHANGED => true | _ => false,
@@ -110,7 +112,7 @@ val _ = List.app nftest [
       ("MULCANON18", REALMULCANON,
        “2 * (inv 3 * z * 2 * inv 10)”, “(2r/15) * z”),
       ("MULCANON19", REALMULCANON, “2 * (inv 3 * z * 6 * inv 4)”, “z:real”),
-      ("MULCANON21", REALMULCANON, “-z * x: real”, “-(x * z:real)”),
+      ("MULCANON21", REALMULCANON, “-z * x: real”, “-x * z:real”),
       ("MULCANON22", REALMULCANON, “2 * (-inv 3 * z * 6 * inv 4)”, “-z:real”),
       ("MULCANON23", REALMULCANON,
        “(2/3) * (z * y:real)”, “(2/3) * (y * z:real)”),
@@ -119,6 +121,17 @@ val _ = List.app nftest [
       ("MULCANON25", REALMULCANON,
        “x * y * (2 pow b) pow 2 * inv 2 pow b”, “x * y * 2 pow b”),
       ("MULCANON26", REALMULCANON, “2 * x * inv 2 pow 2”, “1/2 * x:real”),
+      ("MULCANON27", REALMULCANON, “2r * y * 3 / (x * y)”,
+       “6r * (inv x * NZ y)”),
+      ("MULCANON28", REALMULCANON, “x * (9r * y)”, “9r * (x * y)”),
+      ("MULCANON29", REALMULCANON, “x * y / 2 * x”, “1/2 * (x pow 2 * y)”),
+      ("MULCANON30", REALMULCANON, “-(-a * x:real)”, “a * x : real”),
+      ("MULCANON31", REALMULCANON, “-(2/3r)”, “-2 / 3r”),
+      ("MULCANON32", REALMULCANON, “-a * -x:real”, “a * x : real”),
+      ("MULCANON33", REALMULCANON, “-x * z * 2 pow 0 * y : real”,
+       “-x * y * z : real”),
+      ("MULCANON34", REALMULCANON, “2 * s pow 2 / 64”, “1 / 32 * s pow 2”),
+
       ("MULRELNORM01", simp,
        “z <> 0 ⇒ 2r * z pow 2 * inv yy = 5 * z pow 2 * inv y * a”,
        “z <> 0 ⇒ 2 * inv yy = 5 * (a * inv y)”),
@@ -153,6 +166,8 @@ val _ = List.app nftest [
       ("MULRELNORM16", asimpl [ASSUME “m < lg : num”],
        “inv (2 pow m) < 2 * inv (2 pow lg)”,
        “2 pow lg < 2 * 2 pow m”),
+      ("MULRELNORM17", simpl [ASSUME “0r < U”],
+       “U * a * b <= -U”, “a * b <= -1”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
@@ -184,6 +199,37 @@ val _ = require_msg (check_result (aconv “bool$T”))
                     (rhs o concl o simpc [Excl "REAL_ARITH_DP"])
                     “4n < x ==> 2 < x”
 
+fun diff_test (r as (n,f,df)) =
+    let
+      fun check res = aconv df (concl res);
+    in
+      tprint (n ^ ": " ^ term_to_string df);
+      require_msg (check_result check) (term_to_string o concl) DIFF_CONV f
+    end;
 
+val _ = List.app diff_test [
+      ("DIFFCONV00", “\x. exp x”,   “!x. ((\x. exp x) diffl (exp x * 1)) x”),
+      ("DIFFCONV01", “\x. sin x”,   “!x. ((\x. sin x) diffl (cos x * 1)) x”),
+      ("DIFFCONV02", “\x. cos x”,   “!x. ((\x. cos x) diffl (-sin x * 1)) x”),
+      ("DIFFCONV03", “\x. tan x”,
+                     “!x. cos x <> 0 ==> ((\x. tan x) diffl (inv (cos x pow 2) * 1)) x”),
+      ("DIFFCONV04", “\x. ln x”,
+                     “!x. 0 < x ==> ((\x. ln x) diffl (inv x * 1)) x”),
+      ("DIFFCONV05", “\x. asn x”,   “!x. -1 < x /\ x < 1 ==>
+                                         ((\x. asn x) diffl (inv (sqrt (1 - x pow 2)) * 1)) x”),
+      ("DIFFCONV06", “\x. acs x”,   “!x. -1 < x /\ x < 1 ==>
+                                         ((\x. acs x) diffl (-inv (sqrt (1 - x pow 2)) * 1)) x”),
+      ("DIFFCONV07", “\x. atn x”,   “!x. ((\x. atn x) diffl (inv (1 + x pow 2) * 1)) x”),
+      ("DIFFCONV08", “\x. x pow 3”, “!x. ((\x. x pow 3) diffl (3 * x pow (3 - 1) * 1)) x”),
+      ("DIFFCONV09", “\x. (sin x) pow 2”,
+                     “!x. ((\x. sin x pow 2) diffl (2 * sin x pow (2 - 1) * (cos x * 1))) x”),
+      ("DIFFCONV10", “\x. sin (x pow 2)”,
+                     “!x. ((\x. sin (x pow 2)) diffl
+                           (cos (x pow 2) * (2 * x pow (2 - 1) * 1))) x”),
+      ("DIFFCONV11", “\x. ln (x pow 2)”,
+                     “!x. 0 < x pow 2 ==>
+                          ((\x. ln (x pow 2)) diffl
+                           (inv (x pow 2) * (2 * x pow (2 - 1) * 1))) x”)
+    ];
 
 val _ = Process.exit Process.success

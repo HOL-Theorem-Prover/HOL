@@ -167,7 +167,7 @@ val _ = List.app testf [
  \------------------------------------\n\
  \ 0.  P a b ==>\n\
  \     !x y z.\n\
- \         Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
+ \       Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
  \ 1.  P (f a) (hhhh b)\n"),
 ("Stack printing; more than 10 assumptions",
  ``p1 /\ p2 /\ p3 /\ p4 /\ p5 /\ p6 /\ p7 /\ p8 /\ p9 /\ p10 /\ p11 ==> q``,
@@ -320,6 +320,17 @@ val _ = let
   val tac = VALID (goal_assum (resolve_then Any mp_tac ith))
 in
   require_msg (check_result null) goalprint (fst o tac) G
+end
+
+val _ = let
+  open boolLib
+  val a = “P (c:'a) (d:'b) : bool”
+  val tac = resolve_then (Pos hd) mp_tac boolTheory.EQ_REFL (ASSUME a)
+in
+  shouldfail {checkexn = is_struct_HOL_ERR "Tactic",
+              printarg = K "resolve_then fails with HOL_ERR",
+              printresult = goalprint,
+              testfn = #1 o VALID tac} ([a], “p \/ q”)
 end
 
 val _ = let

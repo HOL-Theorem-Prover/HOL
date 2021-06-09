@@ -49,7 +49,6 @@ val pkgconfig_info =
 
 
 val CC:string       = "cc";       (* C compiler                       *)
-val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 
@@ -68,7 +67,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 13
+val version_number = 14
 val release_string = "Kananaskis"
 
 (*
@@ -176,8 +175,9 @@ fun systeml x = (print "Systeml not correctly loaded.\n";
 val mk_xable = systeml;
 val xable_string = systeml;
 
-fun optquote NONE = "NONE"
-  | optquote (SOME p) = "SOME " ^ quote p
+fun opt_to_string p NONE = "NONE"
+  | opt_to_string p (SOME x) = "SOME " ^ p x
+val optquote = opt_to_string quote
 
 val OSkind = if OS="linux" orelse OS="solaris" orelse OS="macosx" then "unix"
              else OS
@@ -270,6 +270,9 @@ open Systeml;
 
 fun canread s = OS.FileSys.access(s, [FileSys.A_READ])
 val modTime = OS.FileSys.modTime;
+
+val _ = print ("Note: Int.maxInt = " ^ opt_to_string Int.toString Int.maxInt ^
+               "\n");
 
 let
   val _ = print "Compiling system specific functions ("

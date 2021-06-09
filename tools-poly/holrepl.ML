@@ -152,7 +152,9 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
                                   PrettyBlock(0, false, exLoc,
                                               [PrettyString "Exception-"]),
                                   PrettyBreak(1, 3),
-                                  prettyRepresentation(exn, ! printDepth),
+                                  prettyRepresentation(exn,
+                                                       FixedInt.fromInt
+                                                         (! printDepth)),
                                   PrettyBreak(1, 3),
                                   PrettyString "raised"
                    ]));

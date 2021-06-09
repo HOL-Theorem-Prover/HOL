@@ -1,0 +1,118 @@
+/* Resets */
+body, h1, h2, h3, h4, h5, h6, p, blockquote, pre, hr, dl, dd, ol, ul, figure {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font: 300 14px/1.5 "Noto Sans", Arial, sans-serif;
+  background-color: white;
+  color: #626262;
+  font-kerning: normal;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  overflow-wrap: break-word;
+  max-width: 800px;
+  margin: auto;
+}
+
+p, ul, ol {
+  margin: 0 0 20px;
+}
+
+h2, h3, h4, h5, h6 {
+  margin: 30px 0 20px 0;
+}
+
+h1, h2, h3 {
+  line-height: 1.1;
+}
+
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 30px;
+}
+
+h1, h2, h3, h4, h5, h6{
+  color: #393939;
+}
+
+strong {
+  color: #393939;
+  font-weight:700;
+}
+
+ol, ul {
+  padding-inline-start: 30px;
+}
+
+li::marker {
+  color: #393939;
+}
+
+a {
+  color: #267CB9;
+  text-decoration: none;
+}
+
+a:hover, a:focus {
+  color: #069;
+  font-weight: bold;
+}
+
+/* Table of contents */
+#TOC ul {
+  margin-bottom: 0
+}
+
+#TOC {
+  margin-bottom: 2em;
+}
+
+/* Code formatting */
+pre, code {
+  font-family: Fira Code, monospace;
+  font-weight: 500;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  background-color: white;
+  white-space: pre;
+  font-size: 95%;
+}
+
+code {
+  padding: 1px 5px;
+}
+
+pre {
+  padding: 8px 12px;
+}
+
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+/* Definition lists */
+dl {
+  display: grid;
+  grid-template-columns: max-content auto;
+  grid-gap: 2px;
+  background-color: #e8e8e8;
+}
+
+dt {
+  grid-column: 1;
+  text-align: center;
+  padding: 1ex;
+  background-color: white;
+}
+
+dd {
+  grid-column: 2;
+  text-align: left;
+  padding: 1ex;
+  background-color: white;
+}

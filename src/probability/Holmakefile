@@ -1,13 +1,10 @@
 EXTRA_CLEANS = heap
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
 ifdef POLY
 HOLHEAP = heap
 OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
 	RealArith sortingTheory pred_setLib numpairTheory res_quanTools \
-	logrootTheory
+	logrootTheory iterateTheory listTheory rich_listTheory
 
 OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
 
@@ -17,14 +14,20 @@ $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
 endif
 
-all: $(TARGETS)
+all: $(DEFAULT_TARGETS) selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
 
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
-# this takes a lot of time, disabled by default
-# all: $(ARTFILES) hol4-analysis-unint.art hol4-probability-unint.art
+# This takes a lot of time, disabled by default
+extra: $(ARTFILES) hol4-analysis-unint.art hol4-probability-unint.art
+
+# This requires more than 32GB memory! ("-j 1" is recommended)
+heavy: hol4-analysis.art hol4-probability.art
 
 hol4-analysis-unint.art: hol4-analysis-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<

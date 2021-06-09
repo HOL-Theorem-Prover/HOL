@@ -22,9 +22,13 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
      topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
-open hurdUtils iterateTheory productTheory real_topologyTheory derivativeTheory;
+open hurdUtils iterateTheory real_topologyTheory derivativeTheory;
 
 val _ = new_theory "integration";
+
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
@@ -40,6 +44,7 @@ val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
+val SUM_LE             = SUM_MONO_LE;        (* iterateTheory *)
 
 (* --------------------------------------------------------------------- *)
 (* STRONG_DISJ2_TAC : tactic                                             *)
@@ -255,6 +260,19 @@ Proof
  >> ASM_MESON_TAC[REAL_LE_REFL]
 QED
 
+Theorem OPEN_INTERVAL_UPPERBOUND :
+    !a b:real. a < b ==> interval_upperbound(interval(a,b)) = b
+Proof
+    RW_TAC std_ss [interval_upperbound]
+ >- METIS_TAC [INTERVAL_EQ_EMPTY, GSYM real_lte]
+ >> MATCH_MP_TAC REAL_SUP_UNIQUE
+ >> rw [GSPECIFICATION, IN_INTERVAL]
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> MP_TAC (Q.SPECL [‘max a b'’, ‘b’] REAL_MEAN)
+ >> rw [REAL_MAX_LT]
+ >> Q.EXISTS_TAC ‘z’ >> art []
+QED
+
 Theorem INTERVAL_LOWERBOUND :
     !a b:real. a <= b ==> (interval_lowerbound(interval[a,b]) = a)
 Proof
@@ -264,6 +282,19 @@ Proof
  >> MATCH_MP_TAC REAL_INF_UNIQUE
  >> SIMP_TAC std_ss [GSPECIFICATION, IN_INTERVAL]
  >> ASM_MESON_TAC [REAL_LE_REFL]
+QED
+
+Theorem OPEN_INTERVAL_LOWERBOUND :
+    !a b:real. a < b ==> interval_lowerbound(interval(a,b)) = a
+Proof
+    RW_TAC std_ss [interval_lowerbound]
+ >- METIS_TAC [INTERVAL_EQ_EMPTY, GSYM real_lte]
+ >> MATCH_MP_TAC REAL_INF_UNIQUE
+ >> rw [GSPECIFICATION, IN_INTERVAL]
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> MP_TAC (Q.SPECL [‘a’, ‘min b b'’] REAL_MEAN)
+ >> rw [REAL_LT_MIN]
+ >> Q.EXISTS_TAC ‘z’ >> art []
 QED
 
 Theorem INTERVAL_LOWERBOUND_NONEMPTY :
@@ -4492,37 +4523,6 @@ val INTEGRABLE_UNIFORM_LIMIT = store_thm ("INTEGRABLE_UNIFORM_LIMIT",
 (* ------------------------------------------------------------------------- *)
 (* Negligible sets.                                                          *)
 (* ------------------------------------------------------------------------- *)
-
-val indicator = new_definition ("indicator",
-  ``indicator s :real->real = \x. if x IN s then 1 else 0``);
-
-val DROP_INDICATOR = store_thm ("DROP_INDICATOR",
- ``!s x. (indicator s x) = if x IN s then &1 else &0``,
-  SIMP_TAC std_ss [indicator]);
-
-Theorem DROP_INDICATOR_POS_LE :
-    !s x. &0 <= (indicator s x)
-Proof
-    RW_TAC real_ss [DROP_INDICATOR]
-QED
-
-Theorem DROP_INDICATOR_LE_1 :
-   !s x. (indicator s x) <= &1
-Proof
-   RW_TAC real_ss [DROP_INDICATOR]
-QED
-
-Theorem DROP_INDICATOR_ABS_LE_1 :
-    !s x. abs(indicator s x) <= &1
-Proof
-    RW_TAC real_ss [DROP_INDICATOR]
-QED
-
-Theorem INDICATOR_EMPTY :
-    indicator {} = (\x. 0)
-Proof
-    SET_TAC [indicator]
-QED
 
 val negligible = new_definition ("negligible",
  ``negligible s <=> !a b. (indicator s has_integral (0)) (interval[a,b])``);

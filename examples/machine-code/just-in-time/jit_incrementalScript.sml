@@ -18,6 +18,9 @@ val op \\ = op THEN;
 
 val _ = new_theory "jit_incremental";
 val _ = ParseExtras.temp_loose_equality()
+val bool_ss = bool_ss -* ["lift_disj_eq", "list_imp_disj"]
+val std_ss = std_ss -* ["lift_disj_eq", "list_imp_disj"]
+
 (* compiler setup begins *)
 
 (* make function "f" have exec permissions *)

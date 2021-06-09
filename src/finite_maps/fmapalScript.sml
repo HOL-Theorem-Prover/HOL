@@ -850,42 +850,45 @@ val FAPPLY_nt = store_thm ("FAPPLY_nt",
 ``!cmp x. FMAPAL cmp (nt:('a#'b)bt) ' x = FEMPTY ' x``,
 REWRITE_TAC [bt_to_fmap]);
 
-val FAPPLY_node = store_thm ("FAPPLY_node",
-``!cmp x l a:'a b:'b r. FMAPAL cmp (node l (a,b) r) ' x =
-       case apto cmp x a of LESS => FMAPAL cmp l ' x
-                       |   EQUAL => b
-                       | GREATER => FMAPAL cmp r ' x``,
-SRW_TAC [] [bt_to_fmap, FUNION_DEF] THENL
-[Q.SUBGOAL_THEN `x IN {y | apto cmp y a = LESS}`
- (fn xin => SRW_TAC [] [MATCH_MP DRESTRICT_IN xin,
-                                CONV_RULE SET_SPEC_CONV xin]) THEN
- METIS_TAC [IN_INTER, FDOM_DRESTRICT]
-,`apto cmp a a = LESS` by IMP_RES_THEN
- (MATCH_ACCEPT_TAC o CONV_RULE SET_SPEC_CONV) IN_FDOM_DRESTRICT_IMP THEN
- METIS_TAC [toto_refl, all_cpn_distinct]
-,SRW_TAC [] [toto_refl, FAPPLY_FUPDATE_THM]
-,POP_ASSUM (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV SET_SPEC_CONV) o
-            REWRITE_RULE [FDOM_DRESTRICT, IN_INTER]) THEN
- SRW_TAC [] [] THENL
- [Cases_on `apto cmp x a` THEN SRW_TAC [] [] THENL
-  [IMP_RES_THEN SUBST1_TAC NOT_FDOM_FAPPLY_FEMPTY THEN
-   Q.SUBGOAL_THEN `x NOTIN {z | apto cmp a z = LESS}`
-    (REWRITE_TAC o ulist o MATCH_MP DRESTRICT_NOT_IN) THEN
-   CONV_TAC (RAND_CONV SET_SPEC_CONV) THEN
-   SRW_TAC [] [GSYM toto_antisym]
-  ,METIS_TAC [toto_equal_eq]
-  ,Q.SUBGOAL_THEN `x IN {z | apto cmp a z = LESS}`
-                  (REWRITE_TAC o ulist o MATCH_MP DRESTRICT_IN) THEN
-   CONV_TAC SET_SPEC_CONV THEN ASM_REWRITE_TAC [GSYM toto_antisym]
+Theorem FAPPLY_node:
+  !cmp x l a:'a b:'b r.
+     FMAPAL cmp (node l (a,b) r) ' x =
+     case apto cmp x a of
+         LESS => FMAPAL cmp l ' x
+       | EQUAL => b
+       | GREATER => FMAPAL cmp r ' x
+Proof
+  SRW_TAC [] [bt_to_fmap, FUNION_DEF] THENL [
+    Q.SUBGOAL_THEN `x IN {y | apto cmp y a = LESS}`
+      (fn xin => SRW_TAC [] [MATCH_MP DRESTRICT_IN xin,
+                             CONV_RULE SET_SPEC_CONV xin]) THEN
+    METIS_TAC [IN_INTER, FDOM_DRESTRICT],
+
+    `apto cmp a a = LESS`
+      by IMP_RES_THEN (MATCH_ACCEPT_TAC o CONV_RULE SET_SPEC_CONV)
+                      IN_FDOM_DRESTRICT_IMP THEN
+    METIS_TAC [toto_refl, all_cpn_distinct],
+
+    SRW_TAC [] [toto_refl, FAPPLY_FUPDATE_THM],
+
+    POP_ASSUM (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV SET_SPEC_CONV) o
+               REWRITE_RULE [FDOM_DRESTRICT, IN_INTER]) THEN
+    SRW_TAC [] [] THEN
+    Cases_on `apto cmp x a` THEN SRW_TAC [] [] THENL [
+      IMP_RES_THEN SUBST1_TAC NOT_FDOM_FAPPLY_FEMPTY THEN
+      Q.SUBGOAL_THEN `x NOTIN {z | apto cmp a z = LESS}`
+       (REWRITE_TAC o ulist o MATCH_MP DRESTRICT_NOT_IN) THEN
+      CONV_TAC (RAND_CONV SET_SPEC_CONV) THEN
+      SRW_TAC [] [GSYM toto_antisym],
+
+      METIS_TAC [toto_equal_eq],
+
+      Q.SUBGOAL_THEN `x IN {z | apto cmp a z = LESS}`
+                     (REWRITE_TAC o ulist o MATCH_MP DRESTRICT_IN) THEN
+      CONV_TAC SET_SPEC_CONV THEN ASM_REWRITE_TAC [GSYM toto_antisym]
+     ]
   ]
- ,Q.SUBGOAL_THEN `x IN {z | apto cmp a z = LESS}`
-  (fn xin => SRW_TAC [] [MATCH_MP DRESTRICT_IN xin,
-         REWRITE_RULE [GSYM toto_antisym] (CONV_RULE SET_SPEC_CONV xin)]) THEN
-  CONV_TAC SET_SPEC_CONV THEN
-  REWRITE_TAC [GSYM toto_antisym] THEN
-  `apto cmp x a <> EQUAL` by ASM_REWRITE_TAC [toto_equal_eq] THEN
-  METIS_TAC [cpn_nchotomy]
-]]);
+QED
 
 (* Following theorems prepare for converting bt's to association lists. *)
 

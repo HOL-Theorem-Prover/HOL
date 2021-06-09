@@ -13,7 +13,6 @@ val _ = new_theory "binomial";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -52,6 +51,8 @@ C:\jc\www\ml\hol\info\Hol\examples\miller\RSA\binomialScript.sml
    binomial_def        |- (binomial 0 0 = 1) /\ (!n. binomial (SUC n) 0 = 1) /\
                           (!k. binomial 0 (SUC k) = 0) /\
                           !n k. binomial (SUC n) (SUC k) = binomial n k + binomial n (SUC k)
+   binomial_alt        |- !n k. binomial n 0 = 1 /\ binomial 0 (k + 1) = 0 /\
+                                binomial (n + 1) (k + 1) = binomial n k + binomial n (k + 1)
    binomial_less_0     |- !n k. n < k ==> (binomial n k = 0)
    binomial_n_0        |- !n. binomial n 0 = 1
    binomial_n_n        |- !n. binomial n n = 1
@@ -60,18 +61,23 @@ C:\jc\www\ml\hol\info\Hol\examples\miller\RSA\binomialScript.sml
    binomial_formula    |- !n k. binomial (n + k) k * (FACT n * FACT k) = FACT (n + k)
    binomial_formula2   |- !n k. k <= n ==> (FACT n = binomial n k * (FACT (n - k) * FACT k))
    binomial_formula3   |- !n k. k <= n ==> (binomial n k = FACT n DIV (FACT k * FACT (n - k)))
+   binomial_fact       |- !n k. k <= n ==> (binomial n k = FACT n DIV (FACT k * FACT (n - k)))
    binomial_n_k        |- !n k. k <= n ==> (binomial n k = FACT n DIV FACT k DIV FACT (n - k)
    binomial_n_1        |- !n. binomial n 1 = n
    binomial_sym        |- !n k. k <= n ==> (binomial n k = binomial n (n - k))
    binomial_is_integer |- !n k. k <= n ==> (FACT k * FACT (n - k)) divides (FACT n)
    binomial_pos        |- !n k. k <= n ==> 0 < binomial n k
    binomial_eq_0       |- !n k. (binomial n k = 0) <=> n < k
+   binomial_1_n        |- !n. binomial 1 n = if 1 < n then 0 else 1
    binomial_up_eqn     |- !n. 0 < n ==> !k. n * binomial (n - 1) k = (n - k) * binomial n k
    binomial_up         |- !n. 0 < n ==> !k. binomial (n - 1) k = (n - k) * binomial n k DIV n
    binomial_right_eqn  |- !n. 0 < n ==> !k. (k + 1) * binomial n (k + 1) = (n - k) * binomial n k
    binomial_right      |- !n. 0 < n ==> !k. binomial n (k + 1) = (n - k) * binomial n k DIV (k + 1)
    binomial_monotone   |- !n k. k < HALF n ==> binomial n k < binomial n (k + 1)
    binomial_max        |- !n k. binomial n k <= binomial n (HALF n)
+   binomial_iff        |- !f. f = binomial <=>
+                              !n k. f n 0 = 1 /\ f 0 (k + 1) = 0 /\
+                                    f (n + 1) (k + 1) = f n k + f n (k + 1)
 
    Primes and Binomial Coefficients:
    prime_divides_binomials     |- !n.  prime n ==> 1 < n /\ !k. 0 < k /\ k < n ==> n divides (binomial n k)
@@ -92,8 +98,9 @@ C:\jc\www\ml\hol\info\Hol\examples\miller\RSA\binomialScript.sml
    binomial_term_merge_y  |- !n x y. (\k. y * k) o (\k. binomial n k * x ** (n - k) * y ** k) =
                                      (\k. binomial n k * x ** (n - k) * y ** SUC k)
    binomial_thm     |- !n x y. (x + y) ** n = SUM (GENLIST (\k. binomial n k * x ** (n - k) * y ** k) (SUC n))
-   binomial_sum_alt |- !n. SUM (GENLIST (\k. binomial n k) (SUC n)) = 2 ** n
+   binomial_thm_alt |- !n x y. (x + y) ** n = SUM (GENLIST (\k. binomial n k * x ** (n - k) * y ** k) (n + 1))
    binomial_sum     |- !n. SUM (GENLIST (binomial n) (SUC n)) = 2 ** n
+   binomial_sum_alt |- !n. SUM (GENLIST (binomial n) (n + 1)) = 2 ** n
 
    Binomial Horizontal List:
    binomial_horizontal_0        |- binomial_horizontal 0 = [1]
@@ -148,11 +155,22 @@ C:\jc\www\ml\hol\info\Hol\examples\miller\RSA\binomialScript.sml
    C(n+1,k+1) = C(n,k) + C(n,k+1)
 *)
 val binomial_def = Define`
-    (binomial 0 0  = 1) /\
-    (binomial (SUC n) 0  = 1) /\
+    (binomial 0 0 = 1) /\
+    (binomial (SUC n) 0 = 1) /\
     (binomial 0 (SUC k) = 0)  /\
     (binomial (SUC n) (SUC k) = binomial n k + binomial n (SUC k))
 `;
+
+(* Theorem: alternative definition of C(n,k). *)
+(* Proof: by binomial_def. *)
+Theorem binomial_alt:
+  !n k. (binomial n 0 = 1) /\
+         (binomial 0 (k + 1) = 0) /\
+         (binomial (n + 1) (k + 1) = binomial n k + binomial n (k + 1))
+Proof
+  rewrite_tac[binomial_def, GSYM ADD1] >>
+  (Cases_on `n` >> simp[binomial_def])
+QED
 
 (* Basic properties *)
 
@@ -296,6 +314,10 @@ val binomial_formula3 = store_thm(
   ``!n k. k <= n ==> (binomial n k = (FACT n) DIV ((FACT k) * (FACT (n - k))))``,
   metis_tac[binomial_formula2, MULT_COMM, MULT_DIV, MULT_EQ_0, FACT_LESS, NOT_ZERO_LT_ZERO]);
 
+(* Theorem alias. *)
+val binomial_fact = save_thm("binomial_fact", binomial_formula3);
+(* val binomial_fact = |- !n k. k <= n ==> (binomial n k = FACT n DIV (FACT k * FACT (n - k))): thm *)
+
 (* Theorem: k <= n ==> binomial n k = (FACT n) DIV (FACT k) DIV (FACT (n - k)) *)
 (* Proof:
     binomial n k
@@ -393,6 +415,21 @@ val binomial_eq_0 = store_thm(
     metis_tac[binomial_pos, NOT_ZERO_LT_ZERO],
     rw[binomial_less_0]
   ]);
+
+(* Theorem: binomial 1 n = if 1 < n then 0 else 1 *)
+(* Proof:
+   If n = 0, binomial 1 0 = 1     by binomial_n_0
+   If n = 1, binomial 1 1 = 1     by binomial_n_1
+   Otherwise, binomial 1 n = 0    by binomial_eq_0, 1 < n
+*)
+Theorem binomial_1_n:
+  !n. binomial 1 n = if 1 < n then 0 else 1
+Proof
+  rw[binomial_eq_0] >>
+  `n = 0 \/ n = 1` by decide_tac >-
+  simp[binomial_n_0] >>
+  simp[binomial_n_1]
+QED
 
 (* Relating Binomial to its up-entry:
 
@@ -616,6 +653,46 @@ val binomial_max = store_thm(
     `binomial n (n - k) < binomial n (HALF n)` by rw[binomial_monotone, MONOTONE_MAX] >>
     decide_tac
   ]);
+
+(* Idea: the recurrence relation for binomial defines itself. *)
+
+(* Theorem: f = binomial <=>
+            !n k. f n 0 = 1 /\ f 0 (k + 1) = 0 /\
+                  f (n + 1) (k + 1) = f n k + f n (k + 1) *)
+(* Proof:
+   If part: f = binomial ==> recurrence, true  by binomial_alt
+   Only-if part: recurrence ==> f = binomial
+   By FUN_EQ_THM, this is to show:
+      !n k. f n k = binomial n k
+   By double induction, first induct on k.
+   Base: !n. f n 0 = binomial n 0, true        by binomial_n_0
+   Step: !n. f n k = binomial n k ==>
+         !n. f n (SUC k) = binomial n (SUC k)
+       By induction on n.
+       Base: f 0 (SUC k) = binomial 0 (SUC k)
+             This is true                      by binomial_0_n, ADD1
+       Step: f n (SUC k) = binomial n (SUC k) ==>
+             f (SUC n) (SUC k) = binomial (SUC n) (SUC k)
+
+             f (SUC n) (SUC k)
+           = f (n + 1) (k + 1)                 by ADD1
+           = f n k + f n (k + 1)               by given
+           = binomial n k + binomial n (k + 1) by induction hypothesis
+           = binomial (n + 1) (k + 1)          by binomial_alt
+           = binomial (SUC n) (SUC k)          by ADD1
+*)
+Theorem binomial_iff:
+  !f. f = binomial <=>
+      !n k. f n 0 = 1 /\ f 0 (k + 1) = 0 /\ f (n + 1) (k + 1) = f n k + f n (k + 1)
+Proof
+  rw[binomial_alt, EQ_IMP_THM] >>
+  simp[FUN_EQ_THM] >>
+  Induct_on `x'` >-
+  simp[binomial_n_0] >>
+  Induct_on `x` >-
+  fs[binomial_0_n, ADD1] >>
+  fs[binomial_alt, ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Primes and Binomial Coefficients                                          *)
@@ -901,31 +978,36 @@ val binomial_thm = store_thm(
 
 (* This is a milestone theorem. *)
 
-(* Theorem: SUM (GENLIST (\k. binomial n k) (SUC n)) = 2 ** n *)
+(* Derive an alternative form. *)
+val binomial_thm_alt = save_thm("binomial_thm_alt",
+    binomial_thm |> SIMP_RULE bool_ss [ADD1]);
+(* val binomial_thm_alt =
+   |- !n x y. (x + y) ** n =
+              SUM (GENLIST (\k. binomial n k * x ** (n - k) * y ** k) (n + 1)): thm *)
+
+(* Theorem: SUM (GENLIST (binomial n) (SUC n)) = 2 ** n *)
+(* Proof: by binomial_sum_alt and function equality. *)
 (* Proof:
    Put x = 1, y = 1 in binomial_thm,
    (1 + 1) ** n = SUM (GENLIST (\k. binomial n k * 1 ** (n - k) * 1 ** k) (SUC n))
    (1 + 1) ** n = SUM (GENLIST (\k. binomial n k) (SUC n))    by EXP_1
-   or    2 ** n = SUM (GENLIST (\k. binomial n k) (SUC n))    by EXP_BASE_INJECTIVE, 1 < 2.
+   or    2 ** n = SUM (GENLIST (binomial n) (SUC n))          by FUN_EQ_THM
 *)
-val binomial_sum_alt = store_thm(
-  "binomial_sum_alt",
-  ``!n. SUM (GENLIST (\k. binomial n k) (SUC n)) = 2 ** n``,
+Theorem binomial_sum:
+  !n. SUM (GENLIST (binomial n) (SUC n)) = 2 ** n
+Proof
   rpt strip_tac >>
-  `SUM (GENLIST (\k. binomial n k) (SUC n)) =
-    SUM (GENLIST (\k. binomial n k * 1 ** (n - k) * 1 ** k) (SUC n))` by rw[FUN_EQ_THM] >>
+  `!n. (\k. binomial n k * 1 ** (n - k) * 1 ** k) = binomial n` by rw[FUN_EQ_THM] >>
+  `SUM (GENLIST (binomial n) (SUC n)) =
+    SUM (GENLIST (\k. binomial n k * 1 ** (n - k) * 1 ** k) (SUC n))` by fs[] >>
   `_ = (1 + 1) ** n` by rw[GSYM binomial_thm] >>
-  `_ = 2 ** n` by rw[EXP_BASE_INJECTIVE, DECIDE ``1 < 2``] >>
-  decide_tac);
+  simp[]
+QED
 
-(* Theorem: SUM (GENLIST (binomial n) (SUC n)) = 2 ** n *)
-(* Proof: by binomial_sum_alt and function equality. *)
-val binomial_sum = store_thm(
-  "binomial_sum",
-  ``!n. SUM (GENLIST (binomial n) (SUC n)) = 2 ** n``,
-  rpt strip_tac >>
-  `!n. (\k. binomial n k) = binomial n` by rw[FUN_EQ_THM] >>
-  metis_tac[binomial_sum_alt]);
+(* Derive an alternative form. *)
+val binomial_sum_alt = save_thm("binomial_sum_alt",
+    binomial_sum |> SIMP_RULE bool_ss [ADD1]);
+(* val binomial_sum_alt = |- !n. SUM (GENLIST (binomial n) (n + 1)) = 2 ** n: thm *)
 
 (* ------------------------------------------------------------------------- *)
 (* Binomial Horizontal List                                                  *)

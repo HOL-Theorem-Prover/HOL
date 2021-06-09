@@ -18,6 +18,7 @@ val _ = hide "S";
 val _ = hide "I";
 
 val _ = new_theory "ltl_to_automaton_formula";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
 (****************************************************************
@@ -51,22 +52,10 @@ Datatype : ltl_to_gen_buechi_ds =
      |>
 End
 
-val ltl_to_gen_buechi_ds_SN = DB.fetch "-" "ltl_to_gen_buechi_ds_SN";
-val ltl_to_gen_buechi_ds_S0 = DB.fetch "-" "ltl_to_gen_buechi_ds_S0";
-val ltl_to_gen_buechi_ds_IV = DB.fetch "-" "ltl_to_gen_buechi_ds_IV";
-val ltl_to_gen_buechi_ds_R  = DB.fetch "-" "ltl_to_gen_buechi_ds_R";
-val ltl_to_gen_buechi_ds_FC = DB.fetch "-" "ltl_to_gen_buechi_ds_FC";
-val ltl_to_gen_buechi_ds_B  = DB.fetch "-" "ltl_to_gen_buechi_ds_B";
-val ltl_to_gen_buechi_ds_11 = DB.fetch "-" "ltl_to_gen_buechi_ds_11";
-
-Theorem ltl_to_gen_buechi_ds_REWRITES = LIST_CONJ
-   [ltl_to_gen_buechi_ds_SN,
-    ltl_to_gen_buechi_ds_S0,
-    ltl_to_gen_buechi_ds_IV,
-    ltl_to_gen_buechi_ds_R,
-    ltl_to_gen_buechi_ds_FC,
-    ltl_to_gen_buechi_ds_B,
-    ltl_to_gen_buechi_ds_11];
+Theorem ltl_to_gen_buechi_ds_REWRITES =
+        LIST_CONJ
+        (TypeBase.one_one_of “:'a ltl_to_gen_buechi_ds” ::
+         TypeBase.accessors_of “:'a ltl_to_gen_buechi_ds”)
 
 (* some definitions to get meaning to this datastructure *)
 val LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def = Define
@@ -651,8 +640,8 @@ val LTL_TO_GEN_BUECHI_DS___SEM___S0 = store_thm
           METIS_TAC[]
         ] THEN
         Cases_on `h` THEN
-        SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def, symbolic_semi_automaton_S,
-          LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def] THEN
+        SIMP_TAC (srw_ss()) [LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
+                             LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def] THEN
         Cases_on `r` THEN
         SIMP_ALL_TAC arith_ss [SUBSET_DEF, P_USED_VARS_def, IN_SING] THEN
         SIMP_TAC std_ss [IN_DEF] THEN

@@ -13,10 +13,11 @@ fun ok e = return () e (* eta-expanded b/c of value restriction *)
 
 infix >- ++ >> >-> +++ ++?
 
-fun (m1 >- f) env0 =
+fun bind (m1,f) env0 =
   case m1 env0 of
       Some (env1, res1) => f res1 env1
     | Error e => Error e (* pat and rhs have different types *)
+val op >- = bind
 fun (m1 >> m2) = (m1 >- (fn _ => m2))
 
 fun (m1 ++ m2) env =

@@ -2316,15 +2316,18 @@ val linear_order_to_list_lem2a = Q.prove (
     ASM_REWRITE_TAC [] THEN
     IMP_RES_TAC (REWRITE_RULE [SUBSET_DEF] rrestrict_SUBSET) ]) ;
 
-val linear_order_to_list_lem1d = Q.prove (
-  `linear_order lo X ==> finite_prefixes lo X ==> x IN X ==>
-  (LNTH (PRE (CARD {y | (y,x) IN lo})) (LUNFOLD linear_order_to_list_f lo) =
-    SOME x)`,
+Theorem linear_order_to_list_lem1d[local]:
+  linear_order lo X ==> finite_prefixes lo X ==> x IN X ==>
+  LNTH (PRE (CARD {y | (y,x) IN lo})) (LUNFOLD linear_order_to_list_f lo) =
+  SOME x
+Proof
   REPEAT DISCH_TAC THEN
-  irule (MODIFY_CONS CONJUNCT1 linear_order_to_list_lem1a) >> rpt conj_tac
-  THENL [RULE_ASSUM_TAC (REWRITE_RULE [finite_prefixes_def]) THEN RES_TAC,
+  irule (cj 1 linear_order_to_list_lem1a) >> rpt conj_tac THENL [
+    RULE_ASSUM_TAC (REWRITE_RULE [finite_prefixes_def]) THEN RES_TAC,
     REFL_TAC,
-    Q.EXISTS_TAC `X` THEN ASM_REWRITE_TAC []]) ;
+    Q.EXISTS_TAC `X` THEN ASM_REWRITE_TAC []
+  ]
+QED
 
 val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist_eq",
   `!lo X.
@@ -2897,6 +2900,7 @@ End
    Update TypeBase
    -------------------------------------------------------------------------- *)
 
+Overload "case" = “llist_CASE”;
 val _ = TypeBase.export
   [TypeBasePure.mk_datatype_info
     {

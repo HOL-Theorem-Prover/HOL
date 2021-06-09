@@ -96,6 +96,14 @@ in
       ``f (a:'a) : 'b``
 end
 
+(* test that loop detection doesn't trigger on bound variables *)
+val _ =
+    convtest ("Loop detection doesn't trigger on bound variable",
+              SIMP_CONV boolSimps.bool_ss
+                        [ASSUME “a:'a = (\a:'a b:'b. a) x y”],
+              “f(a:'a) = z:'c”,
+              “f(x:'a) = z:'c”);
+
 (* test that a bounded rewrite on a variable gets a chance to fire at all *)
 val _ = let
   open pureSimps
@@ -125,6 +133,19 @@ in
       doit
       t
 end
+
+(*
+(* test improved loop detection *)
+val _ = let
+  val rwt_th = ASSUME “!x:'a. FN x = if P x then T else FN (g x)”
+in
+  shouldfail {checkexn = (fn UNCHANGED => true | _ => false),
+              printarg = K "Test internal instance loop detection",
+              printresult = thm_to_string,
+              testfn = SIMP_CONV bool_ss [rwt_th]}
+             “FN (n:'a) : bool”
+end;
+*)
 
 (* test that congruence rule for conditional expressions is working OK *)
 val _ = let
@@ -296,6 +317,11 @@ in
     (mktag "rmfrags [\"UNWIND\"] bool_ss -* BETA_CONV", ["BETA_CONV"],
      remove_ssfrags ["UNWIND"] bool_ss, unwind_beta_t, unwind_beta_t)
   ];
+  List.app (ignore o test0) [
+    (mktag "rmfrags [\"UNWIND\"] (bool_ss -* BETA_CONV)", [],
+     remove_ssfrags ["UNWIND"] (bool_ss -* ["BETA_CONV"]),
+     unwind_beta_t, unwind_beta_t)
+  ];
   List.app (ignore o excltest) [
     (mkex_tag "bool_ss & \"COND_CLAUSES.1\"", ["COND_CLAUSES.1"],
      T_t, T_t),
@@ -311,7 +337,7 @@ in
 end;
 
 fun printgoal (asms,w) =
-    "([" ^ String.concatWith "," (map term_to_string asms) ^ ", " ^
+    "([" ^ String.concatWith "," (map term_to_string asms) ^ "], " ^
     term_to_string w ^ ")"
 fun printgoals (sgs, _) =
     "[" ^ String.concatWith ",\n" (map printgoal sgs) ^ "]"
@@ -356,8 +382,16 @@ List.app (ignore o req_test) [
   ("reqD/Once succeeds", [ReqD (Once AND_CLAUSES)], [] ,
    “p /\ T /\ q /\ T”, SOME “x:α”),
   ("req0/Twice succeeds", [Req0 (Ntimes AND_CLAUSES 2)], [],
-   “p /\ T /\ q /\ T”, SOME “p /\ q”)
-
+   “p /\ T /\ q /\ T”, SOME “p /\ q”),
+  ("SF ETA_ss succeeds", [SF boolSimps.ETA_ss], [], “P (\x:'a. f x:'b) /\ T”,
+   SOME “P (f:'a -> 'b) /\ T”),
+  ("SF ETA_ss & DNF_ss succeeds",
+   [SF boolSimps.ETA_ss, AND_CLAUSES, SF boolSimps.DNF_ss], [],
+   “p /\ (p \/ R (\x:'a . f x:'b))”,
+   SOME “p \/ p /\ R (f : 'a -> 'b)”),
+  ("SF DISJ_ss & DNF_ss succeeds",
+   [SF boolSimps.DISJ_ss, AND_CLAUSES, SF boolSimps.DNF_ss], [],
+   “p /\ (p \/ r)”, SOME “p \/ F”)
 ]
 end;
 
@@ -369,13 +403,27 @@ val _ = let
         | _ => false
   fun test (msg, tac, ing, outgs) =
       (tprint msg;
-       require_msg (testresult outgs)  printgoals (VALID tac) ing)
+       require_msg (testresult outgs) printgoals (VALID tac) ing)
+  val T_t = “?x:'a. p”
+  fun gs c = global_simp_tac c
+  val fs = full_simp_tac
+  val gsc = {droptrues=true,elimvars=false,strip=true}
 in
   List.app (ignore o test) [
     ("Abbrev var not rewritten",
      rev_full_simp_tac (bool_ss ++ ABBREV_ss) [],
      ([“Abbrev (v <=> q /\ r)”, “v = F”], “P (v:bool):bool”),
-     [([“Abbrev (v <=> q /\ r)”, “~v”], “P F:bool”)])
+     [([“Abbrev (v <=> q /\ r)”, “~v”], “P F:bool”)]),
+    ("simp_tac + Excl", simp_tac bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
+     [([], T_t)]),
+    ("fs + Excl", fs bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
+     [([], T_t)]),
+    ("gs + Excl", gs gsc bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
+     [([], T_t)]),
+    ("fs + Excl (in assumptions)", fs bool_ss [Excl "EXISTS_SIMP"],
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
+    ("gs + Excl (in assumptions)", gs gsc bool_ss [Excl "EXISTS_SIMP"],
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)])
   ]
 end
 

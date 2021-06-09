@@ -79,17 +79,23 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
-  val QI_ss           : ssfrag
-  val SQI_ss          : ssfrag
+
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
+  val CONJ_ss         : ssfrag
+  val DISJ_ss         : ssfrag
+  val DNF_ss          : ssfrag
+  val ETA_ss          : ssfrag
+  val QI_ss           : ssfrag
+  val SFY_ss          : ssfrag
+  val SQI_ss          : ssfrag
   val type_rws        : hol_type -> thm list
   val rewrites        : thm list -> ssfrag
   val augment_srw_ss  : ssfrag list -> unit
   val diminish_srw_ss : string list -> unit
   val export_rewrites : string list -> unit
-  val delsimps        : string list -> unit
   val temp_delsimps   : string list -> unit
+  val delsimps        : string list -> unit
   val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)
@@ -101,6 +107,7 @@ sig
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
   val Excl           : string -> thm
+  val SF             : ssfrag -> thm
   val Req0           : thm -> thm
   val ReqD           : thm -> thm
 
@@ -145,6 +152,8 @@ sig
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val sg             : term quotation -> tactic
   val subgoal        : term quotation -> tactic
+  val >~             : ('a,'b)gentactic*term quotation list -> ('a,'b)gentactic
+  val >>~            : ('a,'b)gentactic*term quotation list -> ('a,'b)gentactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 
@@ -211,8 +220,4 @@ sig
   val qunabbrev_tac : term quotation -> tactic
   val qunabbrevl_tac : term quotation list -> tactic
   val unabbrev_all_tac : tactic
-
-  (* Derived search functions *)
-  val find_consts_thy : string list -> hol_type -> term list
-  val find_consts : hol_type -> term list
 end

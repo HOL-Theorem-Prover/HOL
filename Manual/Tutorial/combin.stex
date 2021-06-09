@@ -212,7 +212,7 @@ point they produce no more than one \emph{normal form}, where a normal
 form is a value from which no further steps can be taken.
 \begin{session}
 \begin{alltt}
->> Definition normform_def:  normform R x = !y. ~(R x y)
+>> Definition normform_def:  normform R x = !y. ~R x y
    End
 \end{alltt}
 \end{session}
@@ -293,13 +293,13 @@ We'll again hide the existing definition of ``diamond'':
    QED
 \end{alltt}
 \end{session}
-    So far so good.  How then do we show the diamond property for
-    $\con{RTC}\;R$?  The answer that leaps to mind is to hope that if
-    the original relation has the diamond property, then maybe the
-    reflexive and transitive closure will too.  The theorem we want is
-    \[ \con{diamond}\;R \;\Rightarrow\; \con{diamond}\,(\con{RTC}\;R)\] Graphically,
-    this is hoping that from
-    \[\xymatrix @R=5mm @C=2.5mm {
+So far so good.
+How then do we show the diamond property for $\con{RTC}\;R$?  The answer that leaps to mind is to hope that if the original relation has the diamond property, then maybe the reflexive and transitive closure will too.
+The theorem we want is \[
+  \con{diamond}\;R \;\Rightarrow\; \con{diamond}\,(\con{RTC}\;R)
+\]
+Graphically, this is hoping that from \[
+  \xymatrix @R=5mm @C=2.5mm {
 & x \ar[dl] \ar[dr] & \\
 y \ar@{.>}[dr] & & z \ar@{.>}[dl] \\
 & u}\]
@@ -308,10 +308,11 @@ y \ar@{.>}[dr] & & z \ar@{.>}[dl] \\
 & & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \ar@{-->}[ddrr] \\
 & & & u \\
 p \ar@{.>}[dddrrr] & & & & & & q \ar@{.>}[dddlll] \\ \\ \\
-& & & r}\] where the dashed lines indicate that these steps (from $x$ to $p$,
-for example) are using $\con{RTC}\;R$.  The presence of two instances
-of $\con{RTC}\;R$ is an indication that this proof will require two
-inductions.  With the first we will prove
+& & & r}
+\]
+where the dashed lines indicate that these steps (from $x$ to $p$, for example) are using $\con{RTC}\;R$.
+The presence of two instances of $\con{RTC}\;R$ is an indication that this proof will require two inductions.
+With the first we will prove
 \[\xymatrix @R=4mm @C=2mm {
 & & & x \ar[dl] \ar[dr] & \\
 & & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \\
@@ -374,10 +375,9 @@ In fact, we don't even need to provide this witness explicitly: \texttt{metis\_t
 >> e (metis_tac [RTC_rules]);
 \end{alltt}
 \end{session}
-    And what of this remaining goal?  Assumptions one and four
-    between them are the top of an $R$-diamond.  Let's use the fact
-    that we have the diamond property for $R$ and infer that there
-    exists a $v$ to which $x'$ and $z$ can both take single steps:
+And what of this remaining goal?
+Assumptions one and four between them are the top of an $R$-diamond.
+Let's use the fact that we have the diamond property for $R$ and infer that there exists a $v$ to which $x'$ and $z$ can both take single steps:
 \begin{session}
 \begin{alltt}
 >> e (`?v. R x' v /\ R z v` by metis_tac [diamond_def]);
@@ -394,8 +394,7 @@ All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
 ##assert can top_thm()
 \end{alltt}
 \end{session}
-    Again we can (and should) package up the lemma, avoiding the
-    sub-goal package commands:
+Again we can (and should) package up the lemma, avoiding the sub-goal package commands:
 \begin{session}
 \begin{alltt}
 ##eval Theorem R_RTC_diamond:
@@ -503,13 +502,15 @@ development and established that\[
 & & \land\\
 & & \con{diamond}\,(\con{RTC}\;R) & \equiv & \con{confluent}\;R\\
 \end{array}
-\]  (We have also established a couple of other useful results along
-the way.)
+\]
+(We have also established a couple of other useful results along the way.)
 
 \newcommand{\topk}{\KC\;\SC\;(\KC\;\KC\;\KC)} Sadly, it just isn't the
 case that $\rightarrow$, our one-step relation for combinators, has
-the diamond property.  A counter-example is $\topk$.  Its possible evolution
-can be described graphically: \[\xymatrix @R=5mm @C=2.5mm {
+the diamond property.
+A counter-example is $\topk$.
+Its possible evolution can be described graphically:
+\[\xymatrix @R=5mm @C=2.5mm {
 & \topk \ar[dl] \ar[dr] & \\
 \SC & & \KC\;\SC\;\KC \ar[dl] \\
 & \SC}\]
@@ -542,14 +543,11 @@ We use the \texttt{-||->} symbol to indicate parallel reduction because of its o
                       term_name = "predn"};
 \end{alltt}
 \end{session}
-    Then we can define parallel reduction itself.  The rules look very
-    similar to those for $\rightarrow$.  The difference is that we
-    allow the reflexive transition, and say that an application of
-    $x\;u$ can be transformed to $y\;v$ if there are transformations
-    taking $x$ to $y$ and $u$ to $v$.  This is why we must have
-    reflexivity incidentally.  Without it, a term like
-    $(\KC\;x\;y)\,\KC$ couldn't reduce because while the LHS of the
-    application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
+Then we can define parallel reduction itself.
+The rules look very similar to those for $\rightarrow$.
+The difference is that we allow the reflexive transition, and say that an application of $x\;u$ can be transformed to $y\;v$ if there are transformations taking $x$ to $y$ and $u$ to $v$.
+This is why we must have reflexivity incidentally.
+Without it, a term like $(\KC\;x\;y)\,\KC$ couldn't reduce because while the LHS of the application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}
 \begin{alltt}
 >>_ Inductive predn:
@@ -566,20 +564,18 @@ We use the \texttt{-||->} symbol to indicate parallel reduction because of its o
 \subsection{Using \con{RTC}}
 \label{sec:Using-RTC}
 
-Now we can set up nice syntax for the reflexive and transitive
-closures of our two relations.  We will use ASCII symbols for both
-that consist of the original symbol followed by an asterisk.  Note
-also how, in defining the two relations, we have to use the
-\texttt{\$} character to ``escape'' the symbols' usual fixities.  This
-is exactly analogous to the way in which ML's \texttt{op} keyword is
-used.  First, we create the desired symbol for the concrete syntax,
+Now we can set up nice syntax for the reflexive and transitive closures of our two relations.
+We will use ASCII symbols for both that consist of the original symbol followed by an asterisk.
+Note also how, in defining the two relations, we have to use the \texttt{\$} character to ``escape'' the symbols' usual fixities.
+This is exactly analogous to the way in which ML's \texttt{op} keyword is used.
+First, we create the desired symbol for the concrete syntax,
 and then we ``overload'' it so that the parser will expand it to the
 desired form.
 \begin{session}
 \begin{alltt}
 >> set_fixity "-->*" (Infix(NONASSOC, 450));
 
->> overload_on ("-->*", ``RTC redn``);
+>> Overload "-->*" = “RTC redn”;
 \end{alltt}
 \end{session}
 We do exactly the same thing for the reflexive and transitive closure
@@ -588,7 +584,7 @@ of our parallel reduction.
 \begin{alltt}
 >> set_fixity "-||->*" (Infix(NONASSOC, 450));
 
->> overload_on ("-||->*", ``RTC predn``);
+>> Overload "-||->*" = ``RTC predn``;
 \end{alltt}
 \end{session}
 Incidentally, in conjunction with \texttt{PROVE} we can now
@@ -821,11 +817,12 @@ Packaged, the proof is:
 \subsection{Proving a diamond property for parallel reduction}
 \label{sec:predn-diamond}
 
-Now we just have one substantial proof to go.  Before we can even
-begin, there are a number of minor lemmas we will need to prove first.
-These are basically specialisations of the theorem
-\texttt{predn\_cases}.  We want exhaustive characterisations of the
-possibilities when the following terms undergo a parallel reduction:
+Now we just have one substantial proof to go.
+Before we can even begin, there are a number of minor lemmas we will need to prove first.
+These are basically specialisations of the theorem \texttt{predn\_cases}.
+The problem with that theorem is that it is not easy to use as a rewrite or simplification rule: it would cause the simplifier to loop because there are instances of the left-hand-side pattern (\holtxt{x~-||->~y}) on its right-hand-side.
+If we specialise the variable corresponding to the pattern's \holtxt{x}, then the looping can be removed.
+In particular, we want exhaustive characterisations of the possibilities when the following terms undergo a parallel reduction:
 $x\;y$, \KC, \SC, $\KC\;x$, $\SC\;x$, $\KC\;x\;y$, $\SC\;x\;y$ and
 $\SC\;x\;y\;z$.
 
@@ -836,10 +833,8 @@ characterisations automatically:
 >> fun characterise t = SIMP_RULE (srw_ss()) [] (SPEC t predn_cases);
 \end{alltt}
 \end{session}
-The \ml{characterise} function specialises the theorem
-\ml{predn\_cases} with the input term, and then simplifies.  The
-\ml{srw\_ss()} simpset includes information about the injectivity and
-disjointness of constructors and eliminates obvious impossibilities.
+The \ml{characterise} function specialises the theorem \ml{predn\_cases} with the input term, and then simplifies.
+The \ml{srw\_ss()} simpset includes information about the injectivity and disjointness of constructors and eliminates obvious impossibilities.
 For example,
 \begin{session}
 \begin{alltt}
@@ -925,6 +920,7 @@ for all that we might look upon the four disjunctions and despair.
 \noindent Now we are ready to prove the final goal.  It is
 \begin{session}
 \begin{alltt}
+>>__ dropn 1;
 >> g `!x y. x -||-> y ==>
             !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u`;
 \end{alltt}
@@ -943,13 +939,11 @@ the work for us:
 >> e (metis_tac [predn_rules]);
 \end{alltt}
 \end{session}
-    The next goal includes two instances of terms of the form
-    \verb!x # y -||-> z!.  We can use our \verb!x_ap_y_predn!
-    theorem here.  However, if we rewrite indiscriminately with it, we
-    will really confuse the goal.  We want to rewrite just the
-    assumption, not the instance underneath the existential
-    quantifier.  Starting everything by repeatedly stripping can't
-    lead us too far astray.
+The next goal includes two instances of terms of the form \verb!x # y -||-> z!.
+We can use our \verb!x_ap_y_predn! theorem here.
+However, if we rewrite indiscriminately with it, we will really confuse the goal.
+We want to rewrite just the assumption, not the instance underneath the existential quantifier.
+Starting everything by repeatedly stripping can't lead us too far astray.
 \begin{session}
 \begin{alltt}
 >> e (rw[]);
@@ -960,14 +954,12 @@ list using the \ml{qpat\_x\_assum} theorem-tactical.
 We will write
 \begin{alltt}
 ##eval qpat_x_assum `_ # _ -||-> _`
-         (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn])
+         (strip_assume_tac o SIMP_RULE (srw_ss()) [x_ap_y_predn])
 \end{alltt}
 The quotation specifies the pattern that we want to match: we want the term that has an application term reducing, and as there is just one such, we can use ``don't care'' underscore patterns for the various arguments.
 The second argument specifies how we are going to transform the theorem.
-Reading the compositions from right to left, first we will simplify with the \verb!x_ap_y_predn! theorem and then we will assume the result back into the assumptions, stripping disjunctions and existentials as we go.\footnote{An alternative to using \ml{qpat\_x\_assum} is to use
-  \texttt{by} instead: you would have to state the four-way
-  disjunction yourself, but the proof would be more ``declarative'' in
-  style, and though wordier, might be more maintainable.}
+Reading the compositions from right to left, first we will simplify with the \verb!x_ap_y_predn! theorem (the simplifier invocation here is like that we used in the definition of the \ml{characterise} function), and then we will assume the result back into the assumptions, stripping disjunctions and existentials as we go.\footnote{%
+  An alternative to using \ml{qpat\_x\_assum} is to use \texttt{by} instead: you would have to state the four-way disjunction yourself, but the proof would be more ``declarative'' in style, and though wordier, might be more maintainable.}
 
 We already know that doing this is going to produce four new sub-goals (there were four disjuncts in the \verb!x_ap_y_predn! theorem).
 We'll follow up the use of \ml{strip\_assume\_tac} with \ml{rw} to eliminate any equalities that might appear as assumptions.
@@ -1047,26 +1039,28 @@ We can try the same strategy.
 The final goal proof can be packaged into:
 \begin{session}
 \begin{alltt}
-##eval val predn_diamond_lemma = prove(
-         ``!x y. x -||-> y ==>
-                 !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
-         Induct_on `x -||-> y` >> rpt conj_tac >| [
+##eval Theorem predn_diamond_lemma[local]:
+         !x y. x -||-> y ==>
+               !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u
+       Proof
+         Induct_on ‘x -||-> y’ >> rpt conj_tac >| [
            metis_tac [predn_rules],
            rw[] >>
-           qpat_x_assum `_ # _ -||-> _`
+           qpat_x_assum ‘_ # _ -||-> _’
              (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
            rw[] >| [
              metis_tac[predn_rules],
              metis_tac[predn_rules],
-             `?w. (y = K # w) /\ (z -||-> w)` by metis_tac [Kx_predn] >>
+             ‘?w. (y = K # w) /\ (z -||-> w)’ by metis_tac [Kx_predn] >>
              rw[] >> metis_tac [predn_rules],
-             `?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)` by
+             ‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
                 metis_tac [Sxy_predn] >>
              rw [] >> metis_tac [predn_rules]
            ],
            rw[Kxy_predn] >> metis_tac [predn_rules],
            rw[Sxyz_predn] >> metis_tac [predn_rules]
-         ]);
+         ]
+       QED
 \end{alltt}
 \end{session}
 \eos{}

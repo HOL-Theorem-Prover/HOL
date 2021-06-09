@@ -3,12 +3,13 @@
 src/TeX
 !src/TeX/theory_tests
 !src/TeX/theory_tests/proj1paper
-!examples/RSA
+!examples/Crypto/RSA
 !examples/zipper
 src/monad/more_monads
 src/string
 src/sort
 !examples/logic/folcompactness
+!examples/logic/ncfolproofs
 !examples/logic/modal-tableaux
 !src/string/theorytesting
 !src/tfl/examples
@@ -21,7 +22,7 @@ src/bag
 src/n-bit
 [poly]!src/n-bit/interactive_tests
 src/finite_maps
-!!examples/unification/triangular/first-order
+!!examples/algorithms/unification/triangular/first-order
 !!examples/decidable_separationLogic/src/
 !examples/ind_def
 !examples/ARM/arm6-verification
@@ -53,4 +54,4 @@ src/search
 !examples/formal-languages/lambek
 !examples/PSL/1.01/executable-semantics
 !examples/PSL/1.1/official-semantics
-!!examples/boyer_moore
+!!examples/algorithms/boyer_moore

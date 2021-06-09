@@ -13,7 +13,6 @@ val _ = new_theory "helperNum";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -34,6 +33,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    HALF n         = n DIV 2
    TWICE n        = 2 * n
    n divides m    = divides n m
+   coprime x y    = gcd x y = 1
 *)
 (* Definitions and Theorems (# are exported):
 
@@ -68,6 +68,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    SQ_EQ_1           |- !n. (SQ n = 1) <=> (n = 1)
    MULT3_EQ_0        |- !x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))
    MULT3_EQ_1        |- !x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))
+   SQ_0              |- 0 ** 2 = 0
+   EXP_2_EQ_0        |- !n. (n ** 2 = 0) <=> (n = 0)
 
    Maximum and minimum:
    MAX_ALT           |- !m n. MAX m n = if m <= n then n else m
@@ -128,6 +130,9 @@ open gcdTheory; (* for P_EUCLIDES *)
    EVEN_0            |- EVEN 0
    ODD_1             |- ODD 1
    EVEN_2            |- EVEN 2
+   EVEN_SQ           |- !n. EVEN (n ** 2) <=> EVEN n
+   ODD_SQ            |- !n. ODD (n ** 2) <=> ODD n
+   EQ_PARITY         |- !a b. EVEN (2 * a + b) <=> EVEN b
    ODD_MOD2          |- !x. ODD x <=> (x MOD 2 = 1)
    EVEN_ODD_SUC      |- !n. (EVEN n <=> ODD (SUC n)) /\ (ODD n <=> EVEN (SUC n))
    EVEN_ODD_PRE      |- !n. 0 < n ==> (EVEN n <=> ODD (PRE n)) /\ (ODD n <=> EVEN (PRE n))
@@ -243,8 +248,9 @@ open gcdTheory; (* for P_EUCLIDES *)
                                      (m DIV n) divides x ==> (x DIV (m DIV n) = n * (x DIV m))
 
    Basic Divisibility:
-   dividend_divides_divisor_multiple  |- !m n. 0 < m /\ n divides m ==>
-                                         !t. m divides t * n <=> m DIV n divides t
+   divides_iff_equal   |- !m n. 0 < n /\ n < 2 * m ==> (m divides n <=> n = m)
+   dividend_divides_divisor_multiple
+                       |- !m n. 0 < m /\ n divides m ==> !t. m divides t * n <=> m DIV n divides t
    divisor_pos         |- !m n. 0 < n /\ m divides n ==> 0 < m
    divides_pos         |- !m n. 0 < n /\ m divides n ==> 0 < m /\ m <= n
    divide_by_cofactor  |- !m n. 0 < n /\ m divides n ==> (n DIV (n DIV m) = m)
@@ -255,9 +261,15 @@ open gcdTheory; (* for P_EUCLIDES *)
    power_divides_iff        |- !p. 1 < p ==> !m n. p ** m divides p ** n <=> m <= n
    prime_power_divides_iff  |- !p. prime p ==> !m n. p ** m divides p ** n <=> m <= n
    divides_self_power       |- !n p. 0 < n /\ 1 < p ==> p divides p ** n
+   divides_eq_thm      |- !a b. a divides b /\ 0 < b /\ b < 2 * a ==> (b = a)
+   factor_eq_cofactor  |- !m n. 0 < m /\ m divides n ==> (m = n DIV m <=> n = m ** 2)
+   euclid_prime        |- !p a b. prime p /\ p divides a * b ==> p divides a \/ p divides b
+   euclid_coprime      |- !a b c. coprime a b /\ b divides a * c ==> b divides c
 
    Modulo Theorems:
    MOD_EQN             |- !n. 0 < n ==> !a b. (a MOD n = b) <=> ?c. (a = c * n + b) /\ b < n
+   MOD_MOD_EQN         |- !n a b. 0 < n /\ b <= a ==> (a MOD n = b MOD n <=> ?c. a = b + c * n)
+   MOD_PLUS2           |- !n x y. 0 < n ==> (x + y) MOD n = (x + y MOD n) MOD n
    MOD_PLUS3           |- !n. 0 < n ==> !x y z. (x + y + z) MOD n = (x MOD n + y MOD n + z MOD n) MOD n
    MOD_ADD_ASSOC       |- !n x y z. 0 < n /\ x < n /\ y < n /\ z < n ==>
                           (((x + y) MOD n + z) MOD n = (x + (y + z) MOD n) MOD n)
@@ -269,6 +281,27 @@ open gcdTheory; (* for P_EUCLIDES *)
    MOD_EQ              |- !n a b. 0 < n /\ b <= a ==> (((a - b) MOD n = 0) <=> (a MOD n = b MOD n))
    MOD_EQ_0_IFF        |- !m n. n < m ==> ((n MOD m = 0) <=> (n = 0))
    MOD_EXP             |- !n. 0 < n ==> !a m. (a MOD n) ** m MOD n = a ** m MOD n
+   mod_add_eq_sub      |- !n a b c d. b < n /\ c < n ==>
+                                      ((a + b) MOD n = (c + d) MOD n <=>
+                                       (a + (n - c)) MOD n = (d + (n - b)) MOD n)
+   mod_add_eq_sub_eq   |- !n a b c d. 0 < n ==>
+                                      ((a + b) MOD n = (c + d) MOD n <=>
+                                       (a + (n - c MOD n)) MOD n = (d + (n - b MOD n)) MOD n)
+   mod_divides         |- !n a b. 0 < n /\ b divides n /\ b divides a MOD n ==> b divides a
+   mod_divides_iff     |- !n a b. 0 < n /\ b divides n ==> (b divides a MOD n <=> b divides a)
+   mod_divides_divides |- !n a b c. 0 < n /\ a MOD n = b /\ c divides n /\ c divides a ==> c divides b
+   mod_divides_divides_iff
+                       |- !n a b c. 0 < n /\ a MOD n = b /\ c divides n ==>
+                                    (c divides a <=> c divides b)
+   mod_eq_divides      |- !n a b c. 0 < n /\ a MOD n = b MOD n /\ c divides n /\ c divides a ==>
+                                    c divides b
+   mod_eq_divides_iff  |- !n a b c. 0 < n /\ a MOD n = b MOD n /\ c divides n ==>
+                                    (c divides a <=> c divides b)
+   mod_mult_eq_mult    |- !m n a b. coprime m n /\ 0 < a /\ a < 2 * n /\ 0 < b /\ b < 2 * m /\
+                                    (m * a) MOD (m * n) = (n * b) MOD (m * n) ==> a = n /\ b = m
+
+   Even and Odd Parity:
+   EVEN_EXP            |- !m n. 0 < n /\ EVEN m ==> EVEN (m ** n)
    ODD_EXP             |- !m n. 0 < n /\ ODD m ==> ODD (m ** n)
    power_parity        |- !n. 0 < n ==> !m. (EVEN m <=> EVEN (m ** n)) /\ (ODD m <=> ODD (m ** n))
    EXP_2_EVEN          |- !n. 0 < n ==> EVEN (2 ** n)
@@ -277,8 +310,10 @@ open gcdTheory; (* for P_EUCLIDES *)
    Modulo Inverse:
    GCD_LINEAR          |- !j k. 0 < j ==> ?p q. p * j = q * k + gcd j k
    EUCLID_LEMMA        |- !p x y. prime p ==> (((x * y) MOD p = 0) <=> (x MOD p = 0) \/ (y MOD p = 0))
-   MOD_MULT_LCANCEL    |- !p x y z. prime p ==>
-                               ((x * y) MOD p = (x * z) MOD p) /\ x MOD p <> 0 ==> (y MOD p = z MOD p)
+   MOD_MULT_LCANCEL    |- !p x y z. prime p /\ (x * y) MOD p = (x * z) MOD p /\ x MOD p <> 0 ==>
+                                    y MOD p = z MOD p
+   MOD_MULT_RCANCEL    |- !p x y z. prime p /\ (y * x) MOD p = (z * x) MOD p /\ x MOD p <> 0 ==>
+                                    y MOD p = z MOD p
    MOD_MULT_INV_EXISTS |- !p x. prime p /\ 0 < x /\ x < p ==> ?y. 0 < y /\ y < p /\ ((y * x) MOD p = 1)
    MOD_MULT_INV_DEF    |- !p x. prime p /\ 0 < x /\ x < p ==>
                            0 < MOD_MULT_INV p x /\ MOD_MULT_INV p x < p /\ ((MOD_MULT_INV p x * x) MOD p = 1)
@@ -289,12 +324,20 @@ open gcdTheory; (* for P_EUCLIDES *)
                              ?m. (p ** m) divides n /\ ~(p divides (n DIV p ** m))
 
    Useful Theorems:
+   binomial_add         |- !a b. (a + b) ** 2 = a ** 2 + b ** 2 + 2 * a * b
+   binomial_sub         |- !a b. b <= a ==> ((a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b)
+   binomial_means       |- !a b. 2 * a * b <= a ** 2 + b ** 2
+   binomial_sub_add     |- !a b. b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2)
+   difference_of_squares|- !a b. a ** 2 - b ** 2 = (a - b) * (a + b)
+   difference_of_squares_alt
+                        |- !a b. a * a - b * b = (a - b) * (a + b)
    binomial_2           |- !m n. (m + n) ** 2 = m ** 2 + n ** 2 + TWICE m * n
    SUC_SQ               |- !n. SUC n ** 2 = SUC (n ** 2) + TWICE n
    SQ_LE                |- !m n. m <= n ==> SQ m <= SQ n
    EVEN_PRIME           |- !n. EVEN n /\ prime n ==> (n = 2)
    ODD_PRIME            |- !n. prime n /\ n <> 2 ==> ODD n
    TWO_LE_PRIME         |- !p. prime p ==> 2 <= p
+   NOT_PRIME_4          |- ~prime 4
    prime_divides_prime  |- !n m. prime n /\ prime m ==> (n divides m <=> (n = m))
    ALL_PRIME_FACTORS_MOD_EQ_1  |- !m n. 0 < m /\ 1 < n /\
                                    (!p. prime p /\ p divides m ==> (p MOD n = 1)) ==> (m MOD n = 1)
@@ -548,6 +591,22 @@ val MULT3_EQ_1 = store_thm(
   "MULT3_EQ_1",
   ``!x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))``,
   metis_tac[MULT_EQ_1]);
+
+(* Theorem: 0 ** 2 = 0 *)
+(* Proof: by ZERO_EXP *)
+Theorem SQ_0:
+  0 ** 2 = 0
+Proof
+  simp[]
+QED
+
+(* Theorem: (n ** 2 = 0) <=> (n = 0) *)
+(* Proof: by EXP_2, MULT_EQ_0 *)
+Theorem EXP_2_EQ_0:
+  !n. (n ** 2 = 0) <=> (n = 0)
+Proof
+  simp[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Maximum and minimum                                                       *)
@@ -1119,6 +1178,34 @@ val EVEN_2 = store_thm(
   "EVEN_2",
   ``EVEN 2``,
   EVAL_TAC);
+
+(*
+EVEN_ADD  |- !m n. EVEN (m + n) <=> (EVEN m <=> EVEN n)
+ODD_ADD   |- !m n. ODD (m + n) <=> (ODD m <=/=> ODD n)
+EVEN_MULT |- !m n. EVEN (m * n) <=> EVEN m \/ EVEN n
+ODD_MULT  |- !m n. ODD (m * n) <=> ODD m /\ ODD n
+*)
+
+(* Derive theorems. *)
+val EVEN_SQ = save_thm("EVEN_SQ",
+    EVEN_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL);
+(* val EVEN_SQ = |- !n. EVEN (n ** 2) <=> EVEN n: thm *)
+val ODD_SQ = save_thm("ODD_SQ",
+    ODD_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL);
+(* val ODD_SQ = |- !n. ODD (n ** 2) <=> ODD n: thm *)
+
+(* Theorem: EVEN (2 * a + b) <=> EVEN b *)
+(* Proof:
+       EVEN (2 * a + b)
+   <=> EVEN (2 * a) /\ EVEN b      by EVEN_ADD
+   <=>            T /\ EVEN b      by EVEN_DOUBLE
+   <=> EVEN b
+*)
+Theorem EQ_PARITY:
+  !a b. EVEN (2 * a + b) <=> EVEN b
+Proof
+  rw[EVEN_ADD, EVEN_DOUBLE]
+QED
 
 (* Theorem: ODD x <=> (x MOD 2 = 1) *)
 (* Proof:
@@ -2603,6 +2690,33 @@ val DIV_DIV_MULT = store_thm(
 (* Basic Divisibility                                                        *)
 (* ------------------------------------------------------------------------- *)
 
+(* Overload on coprime for GCD equals 1 *)
+val _ = overload_on ("coprime", ``\x y. gcd x y = 1``);
+
+(* Idea: a little trick to make divisibility to mean equality. *)
+
+(* Theorem: 0 < n /\ n < 2 * m ==> (m divides n <=> n = m) *)
+(* Proof:
+   If part: 0 < n /\ n < 2 * m /\ m divides n ==> n = m
+      Note ?k. n = k * m           by divides_def
+       Now k * m < 2 * m           by n < 2 * m
+        so 0 < m /\ k < 2          by LT_MULT_LCANCEL
+       and 0 < k                   by MULT
+        so 1 <= k                  by LE_MULT_LCANCEL, 0 < m
+      Thus k = 1, or n = m.
+   Only-if part: true              by DIVIDES_REFL
+*)
+Theorem divides_iff_equal:
+  !m n. 0 < n /\ n < 2 * m ==> (m divides n <=> n = m)
+Proof
+  rw[EQ_IMP_THM] >>
+  `?k. n = k * m` by rw[GSYM divides_def] >>
+  `0 < m /\ k < 2` by fs[LT_MULT_LCANCEL] >>
+  `0 < k` by fs[] >>
+  `k = 1` by decide_tac >>
+  simp[]
+QED
+
 (* Theorem: 0 < m /\ n divides m ==> !t. m divides (t * n) <=> (m DIV n) divides t *)
 (* Proof:
    Let k = m DIV n.
@@ -2797,6 +2911,56 @@ val divides_self_power = store_thm(
   ``!n p. 0 < n /\ 1 < p ==> p divides p ** n``,
   metis_tac[power_divides_iff, EXP_1, DECIDE``0 < n <=> 1 <= n``]);
 
+(* Theorem: a divides b /\ 0 < b /\ b < 2 * a ==> (b = a) *)
+(* Proof:
+   Note ?k. b = k * a      by divides_def
+    and 0 < k              by MULT_EQ_0, 0 < b
+    and k < 2              by LT_MULT_RCANCEL, k * a < 2 * a
+   Thus k = 1              by 0 < k < 2
+     or b = k * a = a      by arithmetic
+*)
+Theorem divides_eq_thm:
+  !a b. a divides b /\ 0 < b /\ b < 2 * a ==> (b = a)
+Proof
+  rpt strip_tac >>
+  `?k. b = k * a` by rw[GSYM divides_def] >>
+  `0 < k` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
+  `k < 2` by metis_tac[LT_MULT_RCANCEL] >>
+  `k = 1` by decide_tac >>
+  simp[]
+QED
+
+(* Idea: factor equals cofactor iff the number is a square of the factor. *)
+
+(* Theorem: 0 < m /\ m divides n ==> (m = n DIV m <=> n = m ** 2) *)
+(* Proof:
+        n
+      = n DIV m * m + n MOD m    by DIVISION, 0 < m
+      = n DIV m * m + 0          by DIVIDES_MOD_0, m divides n
+      = n DIV m * m              by ADD_0
+   If m = n DIV m,
+     then n = m * m = m ** 2     by EXP_2
+   If n = m ** 2,
+     then n = m * m              by EXP_2
+       so m = n DIV m            by EQ_MULT_RCANCEL
+*)
+Theorem factor_eq_cofactor:
+  !m n. 0 < m /\ m divides n ==> (m = n DIV m <=> n = m ** 2)
+Proof
+  rw[EQ_IMP_THM] >>
+  `n = n DIV m * m + n MOD m` by rw[DIVISION] >>
+  `_ = m * m + 0` by metis_tac[DIVIDES_MOD_0] >>
+  simp[]
+QED
+
+(* Theorem alias *)
+val euclid_prime = save_thm("euclid_prime", P_EUCLIDES);
+(* |- !p a b. prime p /\ p divides a * b ==> p divides a \/ p divides b *)
+
+(* Theorem alias *)
+val euclid_coprime = save_thm("euclid_coprime", L_EUCLIDES);
+(* |- !a b c. coprime a b /\ b divides a * c ==> b divides c *)
+
 (* ------------------------------------------------------------------------- *)
 (* Modulo Theorems                                                           *)
 (* ------------------------------------------------------------------------- *)
@@ -2820,6 +2984,57 @@ val MOD_EQN = store_thm(
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[DIVISION] >>
   metis_tac[MOD_PLUS, MOD_EQ_0, ADD, MOD_MOD, LESS_MOD]);
+
+(* Idea: eliminate modulus n when a MOD n = b MOD n. *)
+
+(* Theorem: 0 < n /\ b <= a ==> (a MOD n = b MOD n <=> ?c. a = b + c * n) *)
+(* Proof:
+   If part: a MOD n = b MOD n ==> ?c. a = b + c * n
+      Note ?c. a = c * n + b MOD n       by MOD_EQN
+       and b = (b DIV n) * n + b MOD n   by DIVISION
+      Let q = b DIV n,
+      Then q * n <= c * n                by LE_ADD_RCANCEL, b <= a
+           a
+         = c * n + (b - q * n)           by above
+         = b + (c * n - q * n)           by arithmetic, q * n <= c * n
+         = b + (c - q) * n               by RIGHT_SUB_DISTRIB
+      Take (c - q) as c.
+   Only-if part: (b + c * n) MOD n = b MOD n
+      This is true                       by MOD_TIMES
+*)
+Theorem MOD_MOD_EQN:
+  !n a b. 0 < n /\ b <= a ==> (a MOD n = b MOD n <=> ?c. a = b + c * n)
+Proof
+  rw[EQ_IMP_THM] >| [
+    `?c. a = c * n + b MOD n` by metis_tac[MOD_EQN] >>
+    `b = (b DIV n) * n + b MOD n` by rw[DIVISION] >>
+    qabbrev_tac `q = b DIV n` >>
+    `q * n <= c * n` by metis_tac[LE_ADD_RCANCEL] >>
+    `a = b + (c * n - q * n)` by decide_tac >>
+    `_ = b + (c - q) * n` by decide_tac >>
+    metis_tac[],
+    simp[]
+  ]
+QED
+
+(* Idea: a convenient form of MOD_PLUS. *)
+
+(* Theorem: 0 < n ==> (x + y) MOD n = (x + y MOD n) MOD n *)
+(* Proof:
+   Let q = y DIV n, r = y MOD n.
+   Then y = q * n + r              by DIVISION, 0 < n
+        (x + y) MOD n
+      = (x + (q * n + r)) MOD n    by above
+      = (q * n + (x + r)) MOD n    by arithmetic
+      = (x + r) MOD n              by MOD_PLUS, MOD_EQ_0
+*)
+Theorem MOD_PLUS2:
+  !n x y. 0 < n ==> (x + y) MOD n = (x + y MOD n) MOD n
+Proof
+  rpt strip_tac >>
+  `y = (y DIV n) * n + y MOD n` by metis_tac[DIVISION] >>
+  simp[]
+QED
 
 (* Theorem: (x + y + z) MOD n = (x MOD n + y MOD n + z MOD n) MOD n *)
 (* Proof:
@@ -2984,6 +3199,226 @@ val MOD_EXP = store_thm(
   rw[EXP]);
 
 
+(* Idea: equality exchange for MOD without negative. *)
+
+(* Theorem: b < n /\ c < n ==>
+              ((a + b) MOD n = (c + d) MOD n <=>
+               (a + (n - c)) MOD n = (d + (n - b)) MOD n) *)
+(* Proof:
+   Note 0 < n                  by b < n or c < n
+   Let x = n - b, y = n - c.
+   The goal is: (a + b) MOD n = (c + d) MOD n <=>
+                (a + y) MOD n = (d + x) MOD n
+   Note n = b + x, n = c + y   by arithmetic
+       (a + b) MOD n = (c + d) MOD n
+   <=> (a + b + x + y) MOD n = (c + d + x + y) MOD n   by ADD_MOD
+   <=> (a + y + n) MOD n = (d + x + n) MOD n           by above
+   <=> (a + y) MOD n = (d + x) MOD n                   by ADD_MOD
+
+   For integers, this is simply: a + b = c + d <=> a - c = b - d.
+*)
+Theorem mod_add_eq_sub:
+  !n a b c d. b < n /\ c < n ==>
+              ((a + b) MOD n = (c + d) MOD n <=>
+               (a + (n - c)) MOD n = (d + (n - b)) MOD n)
+Proof
+  rpt strip_tac >>
+  `0 < n` by decide_tac >>
+  `n = b + (n - b)` by decide_tac >>
+  `n = c + (n - c)` by decide_tac >>
+  qabbrev_tac `x = n - b` >>
+  qabbrev_tac `y = n - c` >>
+  `a + b + x + y = a + y + n` by decide_tac >>
+  `c + d + x + y = d + x + n` by decide_tac >>
+  `(a + b) MOD n = (c + d) MOD n <=>
+    (a + b + x + y) MOD n = (c + d + x + y) MOD n` by simp[ADD_MOD] >>
+  fs[ADD_MOD]
+QED
+
+(* Idea: generalise above equality exchange for MOD. *)
+
+(* Theorem: 0 < n ==>
+            ((a + b) MOD n = (c + d) MOD n <=>
+             (a + (n - c MOD n)) MOD n = (d + (n - b MOD n)) MOD n) *)
+(* Proof:
+   Let b' = b MOD n, c' = c MOD n.
+   Note b' < n            by MOD_LESS, 0 < n
+    and c' < n            by MOD_LESS, 0 < n
+        (a + b) MOD n = (c + d) MOD n
+    <=> (a + b') MOD n = (d + c') MOD n              by MOD_PLUS2
+    <=> (a + (n - c')) MOD n = (d + (n - b')) MOD n  by mod_add_eq_sub
+*)
+Theorem mod_add_eq_sub_eq:
+  !n a b c d. 0 < n ==>
+              ((a + b) MOD n = (c + d) MOD n <=>
+               (a + (n - c MOD n)) MOD n = (d + (n - b MOD n)) MOD n)
+Proof
+  rpt strip_tac >>
+  `b MOD n < n /\ c MOD n < n` by rw[] >>
+  `(a + b) MOD n = (a + b MOD n) MOD n` by simp[Once MOD_PLUS2] >>
+  `(c + d) MOD n = (d + c MOD n) MOD n` by simp[Once MOD_PLUS2] >>
+  prove_tac[mod_add_eq_sub]
+QED
+
+(*
+MOD_EQN is a trick to eliminate MOD:
+|- !n. 0 < n ==> !a b. a MOD n = b <=> ?c. a = c * n + b /\ b < n
+*)
+
+(* Idea: remove MOD for divides: need b divides (a MOD n) ==> b divides a. *)
+
+(* Theorem: 0 < n /\ b divides n /\ b divides (a MOD n) ==> b divides a *)
+(* Proof:
+   Note ?k. n = k * b                    by divides_def, b divides n
+    and ?h. a MOD n = h * b              by divides_def, b divides (a MOD n)
+    and ?c. a = c * n + h * b            by MOD_EQN, 0 < n
+              = c * (k * b) + h * b      by above
+              = (c * k + h) * b          by RIGHT_ADD_DISTRIB
+   Thus b divides a                      by divides_def
+*)
+Theorem mod_divides:
+  !n a b. 0 < n /\ b divides n /\ b divides (a MOD n) ==> b divides a
+Proof
+  rpt strip_tac >>
+  `?k. n = k * b` by rw[GSYM divides_def] >>
+  `?h. a MOD n = h * b` by rw[GSYM divides_def] >>
+  `?c. a = c * n + h * b` by metis_tac[MOD_EQN] >>
+  `_ = (c * k + h) * b` by simp[] >>
+  metis_tac[divides_def]
+QED
+
+(* Idea: include converse of mod_divides. *)
+
+(* Theorem: 0 < n /\ b divides n ==> (b divides (a MOD n) <=> b divides a) *)
+(* Proof:
+   If part: b divides n /\ b divides a MOD n ==> b divides a
+      This is true                       by mod_divides
+   Only-if part: b divides n /\ b divides a ==> b divides a MOD n
+   Note ?c. a = c * n + a MOD n          by MOD_EQN, 0 < n
+              = c * n + 1 * a MOD n      by MULT_LEFT_1
+   Thus b divides (a MOD n)              by divides_linear_sub
+*)
+Theorem mod_divides_iff:
+  !n a b. 0 < n /\ b divides n ==> (b divides (a MOD n) <=> b divides a)
+Proof
+  rw[EQ_IMP_THM] >-
+  metis_tac[mod_divides] >>
+  `?c. a = c * n + a MOD n` by metis_tac[MOD_EQN] >>
+  metis_tac[divides_linear_sub, MULT_LEFT_1]
+QED
+
+(* An application of
+DIVIDES_MOD_MOD:
+|- !m n. 0 < n /\ m divides n ==> !x. x MOD n MOD m = x MOD m
+Let x = a linear combination.
+(linear) MOD n MOD m = linear MOD m
+change n to a product m * n, for z = linear MOD (m * n).
+(linear) MOD (m * n) MOD g = linear MOD g
+z MOD g = linear MOD g
+requires: g divides (m * n)
+*)
+
+(* Idea: generalise for MOD equation: a MOD n = b. Need c divides a ==> c divides b. *)
+
+(* Theorem: 0 < n /\ a MOD n = b /\ c divides n /\ c divides a ==> c divides b *)
+(* Proof:
+   Note 0 < c                      by ZERO_DIVIDES, c divides n, 0 < n.
+       a MOD n = b
+   ==> (a MOD n) MOD c = b MOD c
+   ==>         a MOD c = b MOD c   by DIVIDES_MOD_MOD, 0 < n, c divides n
+   But a MOD c = 0                 by DIVIDES_MOD_0, c divides a
+    so b MOD c = 0, or c divides b by DIVIDES_MOD_0, 0 < c
+*)
+Theorem mod_divides_divides:
+  !n a b c. 0 < n /\ a MOD n = b /\ c divides n /\ c divides a ==> c divides b
+Proof
+  simp[mod_divides_iff]
+QED
+
+(* Idea: include converse of mod_divides_divides. *)
+
+(* Theorem: 0 < n /\ a MOD n = b /\ c divides n ==> (c divides a <=> c divides b) *)
+(* Proof:
+   If part: c divides a ==> c divides b, true  by mod_divides_divides
+   Only-if part: c divides b ==> c divides a
+      Note b = a MOD n, so this is true        by mod_divides
+*)
+Theorem mod_divides_divides_iff:
+  !n a b c. 0 < n /\ a MOD n = b /\ c divides n ==> (c divides a <=> c divides b)
+Proof
+  simp[mod_divides_iff]
+QED
+
+(* Idea: divides across MOD: from a MOD n = b MOD n to c divides a ==> c divides b. *)
+
+(* Theorem: 0 < n /\ a MOD n = b MOD n /\ c divides n /\ c divides a ==> c divides b *)
+(* Proof:
+   Note c divides (b MOD n)        by mod_divides_divides
+     so c divides b                by mod_divides
+   Or, simply have both            by mod_divides_iff
+*)
+Theorem mod_eq_divides:
+  !n a b c. 0 < n /\ a MOD n = b MOD n /\ c divides n /\ c divides a ==> c divides b
+Proof
+  metis_tac[mod_divides_iff]
+QED
+
+(* Idea: include converse of mod_eq_divides. *)
+
+(* Theorem: 0 < n /\ a MOD n = b MOD n /\ c divides n ==> (c divides a <=> c divides b) *)
+(* Proof:
+   If part: c divides a ==> c divides b, true  by mod_eq_divides, a MOD n = b MOD n
+   Only-if: c divides b ==> c divides a, true  by mod_eq_divides, b MOD n = a MOD n
+*)
+Theorem mod_eq_divides_iff:
+  !n a b c. 0 < n /\ a MOD n = b MOD n /\ c divides n ==> (c divides a <=> c divides b)
+Proof
+  metis_tac[mod_eq_divides]
+QED
+
+(* Idea: special cross-multiply equality of MOD (m * n) implies pair equality:
+         from (m * a) MOD (m * n) = (n * b) MOD (m * n) to a = n /\ b = m. *)
+
+(* Theorem: coprime m n /\ 0 < a /\ a < 2 * n /\ 0 < b /\ b < 2 * m /\
+            (m * a) MOD (m * n) = (n * b) MOD (m * n) ==> (a = n /\ b = m) *)
+(* Proof:
+   Given (m * a) MOD (m * n) = (n * b) MOD (m * n)
+   Note n divides (n * b)      by factor_divides
+    and n divides (m * n)      by factor_divides
+     so n divides (m * a)      by mod_eq_divides
+    ==> n divides a            by euclid_coprime, MULT_COMM
+   Thus a = n                  by divides_iff_equal
+   Also m divides (m * a)      by factor_divides
+    and m divides (m * n)      by factor_divides
+     so m divides (n * b)      by mod_eq_divides
+    ==> m divides b            by euclid_coprime, GCD_SYM
+   Thus b = m                  by divides_iff_equal
+*)
+Theorem mod_mult_eq_mult:
+  !m n a b. coprime m n /\ 0 < a /\ a < 2 * n /\ 0 < b /\ b < 2 * m /\
+            (m * a) MOD (m * n) = (n * b) MOD (m * n) ==> (a = n /\ b = m)
+Proof
+  ntac 5 strip_tac >>
+  `0 < m /\ 0 < n` by decide_tac >>
+  `0 < m * n` by rw[] >>
+  strip_tac >| [
+    `n divides (n * b)` by rw[DIVIDES_MULTIPLE] >>
+    `n divides (m * n)` by rw[DIVIDES_MULTIPLE] >>
+    `n divides (m * a)` by metis_tac[mod_eq_divides] >>
+    `n divides a` by metis_tac[euclid_coprime, MULT_COMM] >>
+    metis_tac[divides_iff_equal],
+    `m divides (m * a)` by rw[DIVIDES_MULTIPLE] >>
+    `m divides (m * n)` by metis_tac[DIVIDES_REFL, DIVIDES_MULTIPLE, MULT_COMM] >>
+    `m divides (n * b)` by metis_tac[mod_eq_divides] >>
+    `m divides b` by metis_tac[euclid_coprime, GCD_SYM] >>
+    metis_tac[divides_iff_equal]
+  ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Even and Odd Parity.                                                      *)
+(* ------------------------------------------------------------------------- *)
+
 (* Theorem: 0 < n /\ EVEN m ==> EVEN (m ** n) *)
 (* Proof:
    Since EVEN m, m MOD 2 = 0       by EVEN_MOD2
@@ -3121,24 +3556,33 @@ val EUCLID_LEMMA = store_thm(
    First prove the theorem assuming z <= y,
    then use the same proof for y <= z.
 *)
-val MOD_MULT_LCANCEL1 = prove(
-  ``!p x y z. (prime p) /\ (z <= y) ==> (((x * y) MOD p = (x * z) MOD p) /\ x MOD p <> 0 ==> (y MOD p = z MOD p))``,
+Theorem MOD_MULT_LCANCEL:
+  !p x y z. prime p /\ (x * y) MOD p = (x * z) MOD p /\ x MOD p <> 0 ==> y MOD p = z MOD p
+Proof
   rpt strip_tac >>
+  `!a b c. c <= b /\ (a * b) MOD p = (a * c) MOD p /\ a MOD p <> 0 ==> b MOD p = c MOD p` by
+  (rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
-  `((x*y) - (x*z)) MOD p = 0` by rw[MOD_EQ_DIFF] >>
-  `(x*(y - z)) MOD p = 0` by rw[LEFT_SUB_DISTRIB] >>
-  metis_tac[EUCLID_LEMMA, MOD_EQ]);
-val MOD_MULT_LCANCEL = store_thm(
-  "MOD_MULT_LCANCEL",
-  ``!p x y z. prime p ==> (((x * y) MOD p = (x * z) MOD p) /\ x MOD p <> 0 ==> (y MOD p = z MOD p))``,
-  rpt strip_tac >>
-  Cases_on `z <= y` >| [
-    all_tac,
-    `y <= z` by decide_tac
-  ] >>
-  metis_tac[MOD_MULT_LCANCEL1]);
+  `(a * b - a * c) MOD p = 0` by rw[MOD_EQ_DIFF] >>
+  `(a * (b - c)) MOD p = 0` by rw[LEFT_SUB_DISTRIB] >>
+  metis_tac[EUCLID_LEMMA, MOD_EQ]) >>
+  Cases_on `z <= y` >-
+  metis_tac[] >>
+  `y <= z` by decide_tac >>
+  metis_tac[]
+QED
 
-(* Theorem: For prime p, 0 < x < p ==> ?y. 0 < y /\ y < p /\ y*x MOD p = 1 *)
+(* Theorem: prime p /\ (y * x) MOD p = (z * x) MOD p /\ x MOD p <> 0 ==>
+            y MOD p = z MOD p *)
+(* Proof: by MOD_MULT_LCANCEL, MULT_COMM *)
+Theorem MOD_MULT_RCANCEL:
+  !p x y z. prime p /\ (y * x) MOD p = (z * x) MOD p /\ x MOD p <> 0 ==>
+            y MOD p = z MOD p
+Proof
+  metis_tac[MOD_MULT_LCANCEL, MULT_COMM]
+QED
+
+(* Theorem: For prime p, 0 < x < p ==> ?y. 0 < y /\ y < p /\ (y*x) MOD p = 1 *)
 (* Proof:
        0 < x < p
    ==> ~ divides p x                    by NOT_LT_DIVIDES
@@ -3269,6 +3713,153 @@ val FACTOR_OUT_POWER = store_thm(
 (* Useful Theorems.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
+(* binomial_add: same as SUM_SQUARED *)
+
+(* Theorem: (a + b) ** 2 = a ** 2 + b ** 2 + 2 * a * b *)
+(* Proof:
+     (a + b) ** 2
+   = (a + b) * (a + b)                   by EXP_2
+   = a * (a + b) + b * (a + b)           by RIGHT_ADD_DISTRIB
+   = (a * a + a * b) + (b * a + b * b)   by LEFT_ADD_DISTRIB
+   = a * a + b * b + 2 * a * b           by arithmetic
+   = a ** 2 + b ** 2 + 2 * a * b         by EXP_2
+*)
+Theorem binomial_add:
+  !a b. (a + b) ** 2 = a ** 2 + b ** 2 + 2 * a * b
+Proof
+  rpt strip_tac >>
+  `(a + b) ** 2 = (a + b) * (a + b)` by simp[] >>
+  `_ = a * a + b * b + 2 * a * b` by decide_tac >>
+  simp[]
+QED
+
+(* Theorem: b <= a ==> ((a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b) *)
+(* Proof:
+   If b = 0,
+      RHS = a ** 2 + 0 ** 2 - 2 * a * 0
+          = a ** 2 + 0 - 0
+          = a ** 2
+          = (a - 0) ** 2
+          = LHS
+   If b <> 0,
+      Then b * b <= a * b                      by LE_MULT_RCANCEL, b <> 0
+       and b * b <= 2 * a * b
+
+      LHS = (a - b) ** 2
+          = (a - b) * (a - b)                  by EXP_2
+          = a * (a - b) - b * (a - b)          by RIGHT_SUB_DISTRIB
+          = (a * a - a * b) - (b * a - b * b)  by LEFT_SUB_DISTRIB
+          = a * a - (a * b + (a * b - b * b))  by SUB_PLUS
+          = a * a - (a * b + a * b - b * b)    by LESS_EQ_ADD_SUB, b * b <= a * b
+          = a * a - (2 * a * b - b * b)
+          = a * a + b * b - 2 * a * b          by SUB_SUB, b * b <= 2 * a * b
+          = a ** 2 + b ** 2 - 2 * a * b        by EXP_2
+          = RHS
+*)
+Theorem binomial_sub:
+  !a b. b <= a ==> ((a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b)
+Proof
+  rpt strip_tac >>
+  Cases_on `b = 0` >-
+  simp[] >>
+  `b * b <= a * b` by rw[] >>
+  `b * b <= 2 * a * b` by decide_tac >>
+  `(a - b) ** 2 = (a - b) * (a - b)` by simp[] >>
+  `_ = a * a + b * b - 2 * a * b` by decide_tac >>
+  rw[]
+QED
+
+(* Theorem: 2 * a * b <= a ** 2 + b ** 2 *)
+(* Proof:
+   If a = b,
+      LHS = 2 * a * a
+          = a * a + a * a
+          = a ** 2 + a ** 2        by EXP_2
+          = RHS
+   If a < b, then 0 < b - a.
+      Thus 0 < (b - a) * (b - a)   by MULT_EQ_0
+        or 0 < (b - a) ** 2        by EXP_2
+        so 0 < b ** 2 + a ** 2 - 2 * b * a   by binomial_sub, a <= b
+       ==> 2 * a * b < a ** 2 + b ** 2       due to 0 < RHS.
+   If b < a, then 0 < a - b.
+      Thus 0 < (a - b) * (a - b)   by MULT_EQ_0
+        or 0 < (a - b) ** 2        by EXP_2
+        so 0 < a ** 2 + b ** 2 - 2 * a * b   by binomial_sub, b <= a
+       ==> 2 * a * b < a ** 2 + b ** 2       due to 0 < RHS.
+*)
+Theorem binomial_means:
+  !a b. 2 * a * b <= a ** 2 + b ** 2
+Proof
+  rpt strip_tac >>
+  Cases_on `a = b` >-
+  simp[] >>
+  Cases_on `a < b` >| [
+    `b - a <> 0` by decide_tac >>
+    `(b - a) * (b - a) <> 0` by metis_tac[MULT_EQ_0] >>
+    `(b - a) * (b - a) = (b - a) ** 2` by simp[] >>
+    `_ = b ** 2 + a ** 2 - 2 * b * a` by rw[binomial_sub] >>
+    decide_tac,
+    `a - b <> 0` by decide_tac >>
+    `(a - b) * (a - b) <> 0` by metis_tac[MULT_EQ_0] >>
+    `(a - b) * (a - b) = (a - b) ** 2` by simp[] >>
+    `_ = a ** 2 + b ** 2 - 2 * a * b` by rw[binomial_sub] >>
+    decide_tac
+  ]
+QED
+
+(* Theorem: b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2) *)
+(* Proof:
+   Note: 2 * a * b <= a ** 2 + b ** 2          by binomial_means, as [1]
+     (a - b) ** 2 + 4 * a * b
+   = a ** 2 + b ** 2 - 2 * a * b + 4 * a * b   by binomial_sub, b <= a
+   = a ** 2 + b ** 2 + 4 * a * b - 2 * a * b   by SUB_ADD, [1]
+   = a ** 2 + b ** 2 + 2 * a * b
+   = (a + b) ** 2                              by binomial_add
+*)
+Theorem binomial_sub_add:
+  !a b. b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2)
+Proof
+  rpt strip_tac >>
+  `2 * a * b <= a ** 2 + b ** 2` by rw[binomial_means] >>
+  `(a - b) ** 2 + 4 * a * b = a ** 2 + b ** 2 - 2 * a * b + 4 * a * b` by rw[binomial_sub] >>
+  `_ = a ** 2 + b ** 2 + 4 * a * b - 2 * a * b` by decide_tac >>
+  `_ = a ** 2 + b ** 2 + 2 * a * b` by decide_tac >>
+  `_ = (a + b) ** 2` by rw[binomial_add] >>
+  decide_tac
+QED
+
+(* Theorem: a ** 2 - b ** 2 = (a - b) * (a + b) *)
+(* Proof:
+     a ** 2 - b ** 2
+   = a * a - b * b                       by EXP_2
+   = a * a + a * b - a * b - b * b       by ADD_SUB
+   = a * a + a * b - (b * a + b * b)     by SUB_PLUS
+   = a * (a + b) - b * (a + b)           by LEFT_ADD_DISTRIB
+   = (a - b) * (a + b)                   by RIGHT_SUB_DISTRIB
+*)
+Theorem difference_of_squares:
+  !a b. a ** 2 - b ** 2 = (a - b) * (a + b)
+Proof
+  rpt strip_tac >>
+  `a ** 2 - b ** 2 = a * a - b * b` by simp[] >>
+  `_ = a * a + a * b - a * b - b * b` by decide_tac >>
+  decide_tac
+QED
+
+(* Theorem: a * a - b * b = (a - b) * (a + b) *)
+(* Proof:
+     a * a - b * b
+   = a ** 2 - b ** 2       by EXP_2
+   = (a + b) * (a - b)     by difference_of_squares
+*)
+Theorem difference_of_squares_alt:
+  !a b. a * a - b * b = (a - b) * (a + b)
+Proof
+  rw[difference_of_squares]
+QED
+
+(* binomial_2: same as binomial_add, or SUM_SQUARED *)
+
 (* Theorem: (m + n) ** 2 = m ** 2 + n ** 2 + 2 * m * n *)
 (* Proof:
      (m + n) ** 2
@@ -3332,6 +3923,21 @@ val TWO_LE_PRIME = store_thm(
   "TWO_LE_PRIME",
   ``!p. prime p ==> 2 <= p``,
   metis_tac[ONE_LT_PRIME, DECIDE``1 < n <=> 2 <= n``]);
+
+(* Theorem: ~prime 4 *)
+(* Proof:
+   Note 4 = 2 * 2      by arithmetic
+     so 2 divides 4    by divides_def
+   thus ~prime 4       by primes_def
+*)
+Theorem NOT_PRIME_4:
+  ~prime 4
+Proof
+  rpt strip_tac >>
+  `4 = 2 * 2` by decide_tac >>
+  `4 <> 2 /\ 4 <> 1 /\ 2 <> 1` by decide_tac >>
+  metis_tac[prime_def, divides_def]
+QED
 
 (* Theorem: prime n /\ prime m ==> (n divides m <=> (n = m)) *)
 (* Proof:

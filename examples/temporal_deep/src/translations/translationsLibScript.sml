@@ -25,6 +25,8 @@ val _ = hide "I";
   the proofs would be redone every time, the library is used. *)
 
 val _ = new_theory "translationsLib";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (* Helper theorems for the rewrite translation of LTL to gen. Buechi *)
 Theorem LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX :

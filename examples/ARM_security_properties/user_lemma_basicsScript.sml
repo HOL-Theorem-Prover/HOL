@@ -682,26 +682,39 @@ val read_mem_pmc_thm = store_thm(
 
 val read_mem_thm = save_thm("read_mem_thm", MATCH_MP extras_lem4 (SPEC_ALL read_mem_strict_thm));
 
-
-
-val write_mem_pmc_thm = store_thm(
-    "write_mem_pmc_thm",
-    ``!desc size value. preserve_relation_mmu(write_mem <|proc:=0|> (desc,size) value) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar``,
-    RW_TAC (srw_ss()) [write_mem_def, errorT_def, LET_DEF]
-       THENL [RW_TAC (srw_ss()) [preserve_relation_mmu_def],
-              RW_TAC (srw_ss()) [preserve_relation_mmu_def],
-              ASSUME_TAC reflex_priv_mode_similar_thm
-                 THEN ASSUME_TAC reflex_priv_mode_constraints_thm
-                 THEN ASSUME_TAC trans_priv_mode_constraints_thm
-                 THEN IMP_RES_TAC (SPECL [``(assert_mode 16w):arm_state->bool``, ``priv_mode_constraints``, ``priv_mode_similar``] constT_unit_preserving_lem)
-                 THEN PAT_X_ASSUM ``preserve_relation_mmu X1 X2 X3 X4 X5`` (fn th => ASSUME_TAC (GEN ``u:(unit list)`` th))
-                 THEN `(preserve_relation_mmu_abs ((\u:(unit list). return())) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar)` by FULL_SIMP_TAC (srw_ss()) [second_abs_lemma]
-                 THEN  `!x. preserve_relation_mmu ((λi. write_mem1 <|proc:=0|> ((desc.paddress) + (n2w i)) (EL i value)) x) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar` by METIS_TAC [write_mem1_thm]
-                 THEN IMP_RES_TAC forT_preserves_user_relation_thm
-                 THEN (REPEAT (PAT_X_ASSUM ``!l h. X`` (fn th => ASSUME_TAC (SPECL [``0:num``, ``(LENGTH (value:word8 list) - 1):num``] th))))
-                 THEN (REPEAT (PAT_X_ASSUM ``!x. X`` (fn th => IMP_RES_TAC th)))
-                 THEN (REPEAT (PAT_X_ASSUM ``~X`` (fn th => IMP_RES_TAC th)))
-                 THEN IMP_RES_TAC seqT_preserves_relation_uu_thm]);
+Theorem write_mem_pmc_thm:
+  !desc size value.
+    preserve_relation_mmu (write_mem <|proc:=0|> (desc,size) value)
+                          (assert_mode 16w) (assert_mode 16w)
+                          priv_mode_constraints priv_mode_similar
+Proof
+  RW_TAC (srw_ss()) [write_mem_def, errorT_def, LET_DEF] THENL [
+    RW_TAC (srw_ss()) [preserve_relation_mmu_def],
+    RW_TAC (srw_ss()) [preserve_relation_mmu_def],
+    ASSUME_TAC reflex_priv_mode_similar_thm
+    THEN ASSUME_TAC reflex_priv_mode_constraints_thm
+    THEN ASSUME_TAC trans_priv_mode_constraints_thm
+    THEN IMP_RES_TAC
+         (SPECL [“(assert_mode 16w):arm_state->bool”, “priv_mode_constraints”,
+                 ``priv_mode_similar``] constT_unit_preserving_lem)
+    THEN PAT_X_ASSUM ``preserve_relation_mmu X1 X2 X3 X4 X5``
+                     (fn th => ASSUME_TAC (GEN ``u:(unit list)`` th))
+    THEN ‘preserve_relation_mmu_abs ((\u:(unit list). return()))
+          (assert_mode 16w) (assert_mode 16w) priv_mode_constraints
+          priv_mode_similar’
+      by FULL_SIMP_TAC (srw_ss()) [second_abs_lemma]
+    THEN  `!x. preserve_relation_mmu ((λi. write_mem1 <|proc:=0|> ((desc.paddress) + (n2w i)) (EL i value)) x) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar` by METIS_TAC [write_mem1_thm]
+    THEN IMP_RES_TAC forT_preserves_user_relation_thm
+    THEN REPEAT (PAT_X_ASSUM ``!l h. X``
+                 (fn th => ASSUME_TAC
+                           (SPECL [“0:num”,
+                                   “(LENGTH (value:word8 list) - 1):num”] th)))
+    THEN REPEAT (PAT_X_ASSUM ``!x. X`` (fn th => IMP_RES_TAC th))
+    THEN REPEAT (PAT_X_ASSUM ``~X`` (fn th => IMP_RES_TAC th))
+    THEN IMP_RES_TAC seqT_preserves_relation_uu_thm
+    THEN gs[]
+  ]
+QED
 
 
 val write_mem_thm = save_thm("write_mem_thm", (MATCH_MP extras_lem2 (EQ_MP (SPEC ``(write_mem <|proc := 0|> (desc,size) value):(unit M)`` (INST_TYPE [alpha |-> Type `:unit`] empty_extras_lem)) (SPEC_ALL write_mem_pmc_thm))));

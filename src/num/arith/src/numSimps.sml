@@ -55,9 +55,10 @@ local
  fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
  fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
 in
+val SSFRAG = simpLib.register_frag o simpLib.SSFRAG
 val REDUCE_ss =
  let open numSyntax
- in simpLib.SSFRAG
+ in SSFRAG
      {name = SOME"REDUCE",
       convs = mk_unary_rconv even_tm ::
               mk_unary_rconv odd_tm  ::
@@ -155,7 +156,7 @@ val arithmetic_rewrites =
 end;
 
 val ARITH_RWTS_ss =
-    simpLib.SSFRAG
+    SSFRAG
     {name=SOME"ARITH_RWTS",
      convs = [], rewrs = arithmetic_rewrites, congs = [],
      filter = NONE, ac = [], dprocs = []};
@@ -166,7 +167,8 @@ val ARITH_RWTS_ss =
 (* first argument list of SRW_TAC                                            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
+val add_frags = BasicProvers.logged_addfrags {thyname = "numeral"}
+val _ = add_frags [REDUCE_ss, ARITH_RWTS_ss]
 
 
 (* ---------------------------------------------------------------------*
@@ -603,7 +605,7 @@ val SUC_FILTER_ss = let
     else [(th,bnd), (newth,bnd)]
   end
 in
-  simpLib.SSFRAG
+  SSFRAG
       {name=SOME"SUC_FILTER",
        convs = [], rewrs = [], congs = [],
        filter = SOME numfilter, ac = [], dprocs = []}
@@ -624,7 +626,7 @@ in
   merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
 end
 
-val _ = BasicProvers.augment_srw_ss [MOD_ss]
+val _ = add_frags [MOD_ss]
 
 (* ----------------------------------------------------------------------
     ARITH_NORM_ss

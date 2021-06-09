@@ -495,16 +495,16 @@ val integral_domain_nonzero_order = store_thm(
    Thus #0 ** n = #0              by ring_zero_exp
    This gives #0 = #1, contradicting #1 <> #0.
 *)
-val integral_domain_order_zero = store_thm(
-  "integral_domain_order_zero",
-  ``!r:'a ring. IntegralDomain r ==> (order f* #0 = 0)``,
+Theorem integral_domain_order_zero:
+  !r:'a ring. IntegralDomain r ==> (order f* #0 = 0)
+Proof
   rw_tac std_ss[order_def, period_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
   rw[] >>
-  rw_tac std_ss[integral_domain_nonzero_mult_property] >>
+  rfs[integral_domain_nonzero_mult_property] >>
   spose_not_then strip_assume_tac >>
-  fs[IntegralDomain_def] >>
-  metis_tac[ring_zero_exp]);
+  fs[IntegralDomain_def] >> rfs[ring_zero_exp, AllCaseEqs()]
+QED
 
 (* Theorem: FiniteIntegralDomain r ==> !x. x IN R+ ==> (order f* x <> 0) *)
 (* Proof:

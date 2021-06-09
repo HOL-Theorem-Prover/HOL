@@ -25,16 +25,17 @@ fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
 fun die s =
     let open TextIO
     in
-      output(stdErr, s ^ "\n");
+      output(stdErr, "*** FATAL: " ^ s ^ "\n");
       flushOut stdErr;
       Process.exit Process.failure
     end
 fun warn s =
   let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
+fun WARN s = (warn s; OS.Process.sleep (Time.fromSeconds 2))
 fun I x = x
 
 
-fun startup_check () =
+fun right_distrib_check () =
   let
     val me = Systeml.find_my_path()
   in
@@ -44,6 +45,34 @@ fun startup_check () =
         if whereami = me then ()
         else die "*** Don't run this instance of build in a foreign HOL directory"
   end
+
+fun cpp_present() =
+    let val which = internal_functions.which
+        open OS.FileSys
+    in
+      case OS.Process.getEnv "MINISAT_CXX" of
+         SOME p => if OS.Path.isAbsolute p then
+                     if access (p, [A_READ, A_EXEC]) then ()
+                     else
+                       WARN ("MINISAT_CXX environment variable doesn't point "^
+                             "at executable; minisat will fail to build")
+                   else if OS.Path.isAbsolute (which p) then ()
+                   else (
+                     WARN ("MINISAT_CXX environment variable " ^
+                           "points to " ^ p ^
+                           ", which is not in PATH;");
+                     WARN ("minisat will fail to build")
+                   )
+       | NONE => if OS.Path.isAbsolute (which "c++") then ()
+                 else
+                     WARN ("No c++ in PATH; set MINISAT_CXX env. " ^
+                           "variable or minisat will fail to build")
+    end
+
+fun startup_check() = (
+  right_distrib_check();
+  cpp_present()
+)
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -273,17 +302,20 @@ fun write_kernelid s =
     TextIO.closeOut strm
   end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
 
+fun cline_die s = die ("Command line option error: " ^ s)
 fun apply_updates l t =
   case l of
       [] => t
-    | {update} :: rest => apply_updates rest (update (warn, t))
+    | {update} :: rest => apply_updates
+                            rest
+                            (update {warn = warn, die = cline_die, arg = t})
 
 fun get_cline () = let
   open GetOpt
   val oldopts = read_earlier_options TextIO.inputLine
   val (opts, rest) = getOpt { argOrder = RequireOrder,
                               options = buildcline.cline_opt_descrs,
-                              errFn = die } (CommandLine.arguments())
+                              errFn = cline_die } (CommandLine.arguments())
   val option_record = apply_updates opts buildcline.initial
   val _ = if #help option_record then exit_with_help() else ()
   val _ =
@@ -334,27 +366,12 @@ fun get_cline () = let
              | SOME _ => raise Fail "Really can't happen")
         | SOME b => b
   val bgoption = if buildgraph then [] else ["--nograph"]
-  val jcount =
-      case #jobcount option_record of
-          NONE =>
-            (case List.find (fn s => String.isPrefix "-j" s) oldopts of
-                NONE => dfltjobnum
-              | SOME jns =>
-                (case Int.fromString (String.extract(jns, 2, NONE)) of
-                     NONE => (warn "Bogus -j spec in old build options file";
-                              dfltjobnum)
-                   | SOME jn => if jn = dfltjobnum then jn
-                                else (warn ("Using -j "^Int.toString jn^
-                                            " from earlier build command; \
-                                            \use -j to override");
-                                      jn)))
-        | SOME jn => jn
-  val joption = "-j" ^ Int.toString jcount
+  val jcount = #jobcount option_record
   val _ =
       if seqspec = dfltbuildseq then
-        write_options ("--"^knlspec::joption::bgoption)
+        write_options ("--"^knlspec::bgoption)
       else
-        write_options ("--"^knlspec::"--seq"::seqspec::joption::bgoption)
+        write_options ("--"^knlspec::"--seq"::seqspec::bgoption)
 in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
@@ -458,35 +475,53 @@ fun hmakefile_data HOLDIR =
 
 fun clean0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans} ;
+  clean_dir default_ofns {extra_cleans = extra_cleans} ;
   includes
 end
 
 fun cleanAll0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans};
-  Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-  Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+  clean_dir default_ofns {extra_cleans = extra_cleans};
+  clean_depdir {depdirname = ".HOLMK"};
+  clean_depdir {depdirname = ".hollogs"};
   includes
 end
 
 fun cleanForReloc0 HOLDIR =
   let
     val {includes,holheap,...} = hmakefile_data HOLDIR
+    open Holmake_tools
   in
-    Holmake_tools.clean_forReloc {holheap = holheap};
-    Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-    Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+    clean_forReloc {holheap = holheap};
+    clean_depdir {depdirname = ".HOLMK"};
+    clean_depdir {depdirname = ".hollogs"};
     includes
   end
 
+fun maybe_gmakeclean dirname owise () =
+    if OS <> "winNT" then
+      let
+        val gnumake = 
+            case List.rev (#arcs (OS.Path.fromString dirname)) of
+              "minisat" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | "zc2hs" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | _ => false
+      in
+        if gnumake then (Systeml.systeml [Systeml.GNUMAKE, "clean"]; [])
+        else owise()
+      end
+    else owise()
 
-fun clean HOLDIR dirname = moveTo dirname (fn () => clean0 HOLDIR)
-fun cleanAll HOLDIR dirname = moveTo dirname (fn () => cleanAll0 HOLDIR)
+fun clean HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => clean0 HOLDIR))
+fun cleanAll HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanAll0 HOLDIR))
 fun cleanForReloc HOLDIR dirname =
-  moveTo dirname (fn () => cleanForReloc0 HOLDIR)
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanForReloc0 HOLDIR))
 
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
@@ -635,7 +670,7 @@ end;
 
 fun Gnumake dir =
   if SYSTEML [GNUMAKE] then true
-  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
+  else (WARN ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
 exception BuildExit
@@ -673,9 +708,9 @@ in
                               (fullPath [HOLDIR, "src","HolSat","sat_solvers",
                                          "minisat", "DELTHISminisat.exe"])
 	 | other => if not (Gnumake dir) then
-			print(String.concat
-				  ["\nMiniSat has NOT been built!! ",
-				   "(continuing anyway).\n\n"])
+			WARN (String.concat
+				["\nMiniSat has NOT been built!! ",
+				 "(continuing anyway).\n\n"])
                     else ()
     end
   | "zc2hs" => let

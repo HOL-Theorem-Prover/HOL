@@ -24,9 +24,13 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
      seqTheory limTheory transcTheory realLib topologyTheory metricTheory;
 
-open wellorderTheory cardinalTheory iterateTheory productTheory hurdUtils;
+open wellorderTheory cardinalTheory iterateTheory hurdUtils;
 
 val _ = new_theory "real_topology";
+
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
@@ -35,14 +39,14 @@ val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
-val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
-val FINITE_SUBSET = SUBSET_FINITE_I; (* pred_setTheory *)
-val LE_0          = ZERO_LESS_EQ;    (* arithmeticTheory *)
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
+val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
+val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
+val SUM_LE             = SUM_MONO_LE;        (* iterateTheory *)
 
 (* ------------------------------------------------------------------------- *)
 (* Pairwise property over sets and lists.                                    *)
@@ -5455,75 +5459,6 @@ val LIM_WITHIN_OPEN = store_thm ("LIM_WITHIN_OPEN",
   DISCH_THEN(X_CHOOSE_THEN ``d2:real`` STRIP_ASSUME_TAC) THEN
   MP_TAC(SPECL [``d1:real``, ``d2:real``] REAL_DOWN2) THEN ASM_REWRITE_TAC[] THEN
   ASM_MESON_TAC[REAL_LT_TRANS]);
-
-(* ------------------------------------------------------------------------- *)
-(* Segment of natural numbers starting at a specific number.                 *)
-(* ------------------------------------------------------------------------- *)
-
-val from_def = Define
-   `from n = {m:num | n <= m}`;
-
-val FROM_0 = store_thm ("FROM_0",
-  ``from 0 = univ(:num)``,
-    REWRITE_TAC [from_def, ZERO_LESS_EQ, GSPEC_T]);
-
-val IN_FROM = store_thm ("IN_FROM",
-  ``!m n. m IN from n <=> n <= m``,
-    SIMP_TAC std_ss [from_def, GSPECIFICATION]);
-
-val DISJOINT_COUNT_FROM = store_thm
-  ("DISJOINT_COUNT_FROM", ``!n. DISJOINT (count n) (from n)``,
-    RW_TAC arith_ss [from_def, count_def, DISJOINT_DEF, Once EXTENSION, NOT_IN_EMPTY,
-                     GSPECIFICATION, IN_INTER]);
-
-val DISJOINT_FROM_COUNT = store_thm
-  ("DISJOINT_FROM_COUNT", ``!n. DISJOINT (from n) (count n)``,
-    RW_TAC std_ss [Once DISJOINT_SYM, DISJOINT_COUNT_FROM]);
-
-val UNION_COUNT_FROM = store_thm
-  ("UNION_COUNT_FROM", ``!n. (count n) UNION (from n) = UNIV``,
-    RW_TAC arith_ss [from_def, count_def, Once EXTENSION, NOT_IN_EMPTY,
-                     GSPECIFICATION, IN_UNION, IN_UNIV]);
-
-val UNION_FROM_COUNT = store_thm
-  ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
-    RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
-
-Theorem FROM_NOT_EMPTY :
-    !n. from n <> {}
-Proof
-    RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY, from_def, GSPECIFICATION]
- >> Q.EXISTS_TAC `n` >> REWRITE_TAC [LESS_EQ_REFL]
-QED
-
-Theorem COUNTABLE_FROM :
-    !n. COUNTABLE (from n)
-Proof
-    PROVE_TAC [COUNTABLE_NUM]
-QED
-
-val FROM_INTER_NUMSEG_GEN = store_thm ("FROM_INTER_NUMSEG_GEN",
- ``!k m n. (from k) INTER (m..n) = (if m < k then k..n else m..n)``,
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
-  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
-  ARITH_TAC);
-
-val FROM_INTER_NUMSEG_MAX = store_thm ("FROM_INTER_NUMSEG_MAX",
- ``!m n p. from p INTER (m..n) = (MAX p m..n)``,
-  SIMP_TAC arith_ss [EXTENSION, IN_INTER, IN_NUMSEG, IN_FROM] THEN ARITH_TAC);
-
-val FROM_INTER_NUMSEG = store_thm ("FROM_INTER_NUMSEG",
- ``!k n. (from k) INTER (0:num..n) = k..n``,
-  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
-  ARITH_TAC);
-
-val INFINITE_FROM = store_thm ("INFINITE_FROM",
-  ``!n. INFINITE(from n)``,
-   GEN_TAC THEN KNOW_TAC ``from n = univ(:num) DIFF {i | i < n}`` THENL
-  [SIMP_TAC std_ss [EXTENSION, from_def, IN_DIFF, IN_UNIV, GSPECIFICATION] THEN
-   ARITH_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
-   MATCH_MP_TAC INFINITE_DIFF_FINITE THEN
-   REWRITE_TAC [FINITE_NUMSEG_LT, num_INFINITE]]);
 
 (* ------------------------------------------------------------------------- *)
 (* More limit point characterizations.                                       *)
@@ -16532,7 +16467,7 @@ Proof
     [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
     CONJ_TAC THENL
      [ALL_TAC,
-      MATCH_MP_TAC CARD_MUL2_ABSORB_LE THEN REWRITE_TAC[INFINITE_CARD_LE] THEN
+      MATCH_MP_TAC CARD_MUL2_ABSORB_LE THEN REWRITE_TAC[INFINITE_Unum] THEN
       SIMP_TAC std_ss [CANTOR_THM_UNIV, CARD_LT_IMP_LE, CARD_LE_REFL]] THEN
     `univ(:real) <=_c (univ(:num) *_c {x:real | &0 <= x}) /\
      univ(:num) *_c {x:real | &0 <= x} <=_c univ(:num) *_c univ(:num -> bool)`
@@ -20041,7 +19976,7 @@ val HAUSDIST_POS_LE = store_thm ("HAUSDIST_POS_LE",
   REPEAT GEN_TAC THEN REWRITE_TAC[hausdist] THEN
   SIMP_TAC std_ss [FORALL_IN_GSPEC, FORALL_IN_UNION] THEN
   COND_CASES_TAC THEN REWRITE_TAC[REAL_LE_REFL] THEN
-  MATCH_MP_TAC REAL_LE_SUP THEN
+  MATCH_MP_TAC REAL_LE_SUP' THEN
   ASM_SIMP_TAC std_ss [FORALL_IN_GSPEC, FORALL_IN_UNION, SETDIST_POS_LE] THEN
   KNOW_TAC ``?(y :real) (b :real).
   y IN {setdist ({x},(t :real -> bool)) | x IN (s :real -> bool)} UNION
@@ -20194,7 +20129,7 @@ val REAL_LE_HAUSDIST = store_thm ("REAL_LE_HAUSDIST",
   REWRITE_TAC[hausdist, SETDIST_SINGS] THEN
   ASM_SIMP_TAC real_ss [EMPTY_UNION, SET_RULE ``({f x | x IN s} = {}) <=> (s = {})``] THEN
   SIMP_TAC real_ss [FORALL_IN_UNION, FORALL_IN_GSPEC] THEN COND_CASES_TAC THENL
-   [MATCH_MP_TAC REAL_LE_SUP THEN
+   [MATCH_MP_TAC REAL_LE_SUP' THEN
     ASM_SIMP_TAC real_ss [EMPTY_UNION, SET_RULE ``({f x | x IN s} = {}) <=> (s = {})``] THEN
     SIMP_TAC real_ss [FORALL_IN_UNION, FORALL_IN_GSPEC],
     FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [NOT_EXISTS_THM]) THEN

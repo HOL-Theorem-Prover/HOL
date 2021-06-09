@@ -1,0 +1,7 @@
+all: $(DEFAULT_TARGETS) euclid-OK
+.PHONY: all
+
+euclid-OK: use-euclid.ML
+	$(protect $(HOLDIR)/bin/hol) < use-euclid.ML
+
+EXTRA_CLEANS = euclid-OK

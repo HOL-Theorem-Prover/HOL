@@ -90,6 +90,10 @@ sig
   val double_rangle : string
   val lensel : string
   val lenser : string
+  val flrl : string
+  val flrr : string
+  val clgl : string
+  val clgr : string
 
   (* stars *)
   val blackstar      : string

@@ -28,14 +28,10 @@ Datatype : symbolic_kripke_structure =
      |>
 End
 
-val symbolic_kripke_structure_S0 = DB.fetch "-" "symbolic_kripke_structure_S0";
-val symbolic_kripke_structure_R  = DB.fetch "-" "symbolic_kripke_structure_R";
-val symbolic_kripke_structure_11 = DB.fetch "-" "symbolic_kripke_structure_11";
+Theorem symbolic_kripke_structure_REWRITES =
+        LIST_CONJ (TypeBase.one_one_of “:α symbolic_kripke_structure” ::
+                   TypeBase.accessors_of “:α symbolic_kripke_structure”)
 
-Theorem symbolic_kripke_structure_REWRITES = LIST_CONJ
-   [symbolic_kripke_structure_S0,
-    symbolic_kripke_structure_R,
-    symbolic_kripke_structure_11];
 
 val IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
    `IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p = !n. XP_SEM K.R (p n, p (SUC n))`;

@@ -30,7 +30,7 @@ open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
      jrhUtils cardinalTheory;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory
-     real_borelTheory borelTheory real_topologyTheory;
+     borelTheory real_topologyTheory;
 
 val _ = new_theory "lebesgue";
 
@@ -778,8 +778,7 @@ Proof
  >> Cases_on `r'` >> Cases_on `r` >> Cases_on `r''` >> Cases_on `r'''`
  >> RW_TAC std_ss []
  >> FULL_SIMP_TAC std_ss [PAIR_EQ]
- >> MATCH_MP_TAC pos_simple_fn_integral_present
- >> METIS_TAC []
+ >> MATCH_MP_TAC pos_simple_fn_integral_present >> art []
 QED
 
 (* ------------------------------------------------------ *)
@@ -2175,6 +2174,20 @@ Proof
        by RW_TAC std_ss [indicator_fn_def, le_refl, le_01]
  >> RW_TAC std_ss [pos_fn_integral_cmul]
  >> METIS_TAC [pos_fn_integral_pos_simple_fn, pos_simple_fn_integral_indicator]
+QED
+
+Theorem pos_fn_integral_const :
+    !m c. measure_space m /\ measure m (m_space m) < PosInf /\ 0 <= c ==>
+         (pos_fn_integral m (\x. Normal c) = Normal c * measure m (m_space m))
+Proof
+    rpt STRIP_TAC
+ >> Know ‘pos_fn_integral m (\x. Normal c)  =
+          pos_fn_integral m (\x. (\x. Normal c) x * indicator_fn (m_space m) x)’
+ >- (MATCH_MP_TAC pos_fn_integral_mspace \\
+     rw [extreal_of_num_def, extreal_le_eq])
+ >> BETA_TAC >> Rewr'
+ >> MATCH_MP_TAC pos_fn_integral_cmul_indicator
+ >> simp [MEASURE_SPACE_MSPACE_MEASURABLE]
 QED
 
 Theorem pos_fn_integral_sum_cmul_indicator :
@@ -4178,7 +4191,8 @@ Proof
                   FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
      qexistsl_tac [`f`, `g`] >> fs [measure_space_def] \\
-     GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
+     GEN_TAC >> DISCH_TAC \\
+     Suff ‘f x <> NegInf’ >- PROVE_TAC [] \\
      MATCH_MP_TAC pos_not_neginf >> simp [] \\
      MATCH_MP_TAC le_trans >> Q.EXISTS_TAC ‘g x’ \\
      CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
@@ -4920,6 +4934,21 @@ Proof
  >> MATCH_MP_TAC pos_fn_integral_pos >> art []
 QED
 
+Theorem integral_neg :
+    !m f. measure_space m /\ (!x. x IN m_space m ==> f x <= 0) ==> integral m f <= 0
+Proof
+    rw [integral_def]
+ >> Know ‘pos_fn_integral m (fn_plus f) = pos_fn_integral m (\x. 0)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [FN_PLUS_POS] \\
+     MATCH_MP_TAC FN_PLUS_REDUCE' \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> Rewr'
+ >> rw [pos_fn_integral_zero]
+ >> REWRITE_TAC [Once (GSYM le_neg), neg_0, neg_neg]
+ >> MATCH_MP_TAC pos_fn_integral_pos >> rw [FN_MINUS_POS]
+QED
+
 Theorem integral_abs_pos_fn :
     !m f. measure_space m ==> (integral m (abs o f) = pos_fn_integral m (abs o f))
 Proof
@@ -5069,6 +5098,18 @@ val integrable_eq = store_thm (* new *)
           REWRITE_TAC [FN_MINUS_POS]) >> Rewr \\
       ASM_REWRITE_TAC [] ]);
 
+Theorem integrable_cong :
+    !m f g. measure_space m /\ (!x. x IN m_space m ==> (f x = g x)) ==>
+           (integrable m f <=> integrable m g)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC integrable_eq >> Q.EXISTS_TAC ‘f’ >> art [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC integrable_eq >> Q.EXISTS_TAC ‘g’ >> rw [] ]
+QED
+
 (* added ‘x IN m_space m’ *)
 Theorem integrable_pos :
     !m f. measure_space m /\ (!x. x IN m_space m ==> 0 <= f x) ==>
@@ -5163,7 +5204,7 @@ Proof
       >- (DISCH_THEN (fs o wrap)) \\
       MATCH_MP_TAC pos_fn_integral_cong_AE \\
       fs [complete_measure_space_def, FN_PLUS_POS] \\
-      fs [AE_THM, almost_everywhere_def] \\
+      fs [AE_DEF] \\
       Q.EXISTS_TAC ‘N’ >> rw [] \\
      ‘f x = g x’ by PROVE_TAC [] \\
       RW_TAC std_ss [fn_plus_def],
@@ -5172,7 +5213,7 @@ Proof
       >- (DISCH_THEN (fs o wrap)) \\
       MATCH_MP_TAC pos_fn_integral_cong_AE \\
       fs [complete_measure_space_def, FN_MINUS_POS] \\
-      fs [AE_THM, almost_everywhere_def] \\
+      fs [AE_DEF] \\
       Q.EXISTS_TAC ‘N’ >> rw [] \\
      ‘f x = g x’ by PROVE_TAC [] \\
       RW_TAC std_ss [fn_minus_def] ]
@@ -5702,18 +5743,18 @@ QED
 Theorem integral_cong_AE :
     !m f g. measure_space m /\ (AE x::m. f x = g x) ==> (integral m f = integral m g)
 Proof
-    rw [AE_THM, almost_everywhere_def, integral_def]
+    rw [AE_DEF, integral_def]
  >> Suff ‘(pos_fn_integral m (fn_plus f) = pos_fn_integral m (fn_plus g)) /\
           (pos_fn_integral m (fn_minus f) = pos_fn_integral m (fn_minus g))’
  >- Rewr
  >> CONJ_TAC
  >| [ (* goal 1 (of 2) *)
       MATCH_MP_TAC pos_fn_integral_cong_AE \\
-      rw [FN_PLUS_POS, AE_THM, almost_everywhere_def] \\
+      rw [FN_PLUS_POS, AE_DEF] \\
       Q.EXISTS_TAC ‘N’ >> rw [FN_PLUS_ALT],
       (* goal 2 (of 2) *)
       MATCH_MP_TAC pos_fn_integral_cong_AE \\
-      rw [FN_MINUS_POS, AE_THM, almost_everywhere_def] \\
+      rw [FN_MINUS_POS, AE_DEF] \\
       Q.EXISTS_TAC ‘N’ >> rw [FN_MINUS_ALT] ]
 QED
 
@@ -5932,21 +5973,7 @@ Proof
  >> Know `!x. x IN m_space m ==> (h1 x = h2 x)`
  >- (RW_TAC std_ss [Abbr ‘h1’, Abbr ‘h2’] \\
      Q.PAT_X_ASSUM ‘!x. x IN m_space m ==> P \/ Q’ (MP_TAC o (Q.SPEC ‘x’)) \\
-     reverse (RW_TAC std_ss [])
-     >- (‘f1 x <> NegInf /\ f2 x <> NegInf’ by PROVE_TAC [] \\
-         SIMP_TAC std_ss [fn_plus_def, fn_minus_def, add_lzero] \\
-         Cases_on `f1 x` >> Cases_on `f2 x` \\
-         FULL_SIMP_TAC std_ss [extreal_sub_def, extreal_add_def, extreal_ainv_def,
-                               extreal_11, add_lzero, extreal_of_num_def, GSYM lt_infty,
-                               extreal_lt_eq, extreal_not_infty] \\
-         Cases_on ‘0 < r - r'’
-         >- (‘~(r - r' < 0)’ by METIS_TAC [REAL_LT_ANTISYM] \\
-             fs [extreal_add_def, extreal_sub_def, add_lzero] >> REAL_ARITH_TAC) \\
-         Cases_on ‘r - r' < 0’
-         >- (fs [extreal_add_def, extreal_sub_def, add_lzero] >> REAL_ARITH_TAC) \\
-         fs [extreal_add_def, extreal_11] \\
-        ‘r - r' = 0’ by METIS_TAC [REAL_LE_ANTISYM, real_lt] >> POP_ASSUM MP_TAC \\
-         REAL_ARITH_TAC) \\
+     RW_TAC std_ss [] \\
      Cases_on ‘f2 x = PosInf’
      >- (‘?r. f1 x = Normal r’ by METIS_TAC [extreal_cases] \\
          ‘f x = NegInf’ by METIS_TAC [extreal_sub_def] \\
@@ -6026,7 +6053,7 @@ Proof
  >> Q.ABBREV_TAC ‘g = \x. g1 x - g2 x’
  >> Know ‘integral m f = integral m g’
  >- (MATCH_MP_TAC integral_cong_AE >> art [] \\
-     rw [AE_THM, almost_everywhere_def] \\
+     rw [AE_DEF] \\
      Q.EXISTS_TAC ‘N1 UNION N2’ \\
      CONJ_TAC >- METIS_TAC [NULL_SET_UNION, IN_APP] \\
      rw [Abbr ‘N1’, Abbr ‘N2’, Abbr ‘g’, Abbr ‘g1’, Abbr ‘g2’])
@@ -6145,14 +6172,14 @@ Proof
              ‘fn_plus g x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY'] \\
              ‘fn_plus g x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
              ‘?r. fn_plus g x = Normal r’ by METIS_TAC [extreal_cases] \\
-             DISJ1_TAC >> rw [extreal_not_infty, extreal_add_def]) \\
+             fs [add_lzero]) \\
          Cases_on ‘fn_minus g x = PosInf’
          >- (‘fn_plus g x = 0’ by METIS_TAC [FN_MINUS_INFTY_IMP] \\
              ‘fn_plus f x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY'] \\
              ‘fn_plus f x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
              ‘?r. fn_plus f x = Normal r’ by METIS_TAC [extreal_cases] \\
-             DISJ1_TAC >> rw [extreal_not_infty, extreal_add_def]) \\
-         DISJ2_TAC >> PROVE_TAC [add_not_infty] ] ])
+             fs [add_rzero]) \\
+         PROVE_TAC [add_not_infty] ] ])
  >> Rewr
  >> `pos_fn_integral m (\x. fn_plus f x + fn_plus g x) =
      pos_fn_integral m (fn_plus f) + pos_fn_integral m (fn_plus g)`
@@ -6211,6 +6238,65 @@ Proof
       by METIS_TAC [pos_fn_integral_pos, FN_MINUS_POS, lt_infty, lte_trans, extreal_of_num_def]
  >> FULL_SIMP_TAC std_ss [GSYM sub_ldistrib, extreal_not_infty, GSYM mul_rneg]
  >> METIS_TAC [neg_sub]
+QED
+
+Theorem integrable_finite_integral :
+    !m f. measure_space m /\ integrable m f ==>
+          integral m f <> PosInf /\ integral m f <> NegInf
+Proof
+    rpt GEN_TAC
+ >> SIMP_TAC std_ss [integral_def, integrable_def]
+ >> STRIP_TAC
+ >> Know `pos_fn_integral m (fn_plus f) <> NegInf`
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC pos_fn_integral_pos >> art [FN_PLUS_POS]) >> DISCH_TAC
+ >> Know `pos_fn_integral m (fn_minus f) <> NegInf`
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC pos_fn_integral_pos >> art [FN_MINUS_POS]) >> DISCH_TAC
+ >> `?r1. pos_fn_integral m (fn_plus f) = Normal r1` by PROVE_TAC [extreal_cases]
+ >> `?r2. pos_fn_integral m (fn_minus f) = Normal r2` by PROVE_TAC [extreal_cases]
+ >> ASM_REWRITE_TAC [extreal_sub_def, extreal_not_infty]
+QED
+
+Theorem integral_sub :
+    !m f g. measure_space m /\ integrable m f /\ integrable m g /\
+           (!x. x IN m_space m ==> (f x <> NegInf /\ g x <> PosInf) \/
+                                   (f x <> PosInf /\ g x <> NegInf)) ==>
+           (integral m (\x. f x - g x) = integral m f - integral m g)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘m’, ‘f’, ‘\x. -g x’] integral_add) >> simp []
+ >> Know ‘integrable m (\x. -g x)’
+ >- (REWRITE_TAC [Once neg_minus1, extreal_of_num_def, extreal_ainv_def] \\
+     MATCH_MP_TAC integrable_cmul >> art [])
+ >> DISCH_TAC
+ >> Know ‘!x. x IN m_space m ==> (f x <> NegInf /\ -g x <> NegInf) \/
+                                 (f x <> PosInf /\ -g x <> PosInf)’
+ >- (RW_TAC std_ss [] \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space m ==> P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       DISJ1_TAC >> rw [] \\
+       Cases_on ‘g x’ >> fs [extreal_ainv_def],
+       (* goal 2 (of 2) *)
+       DISJ2_TAC >> rw [] \\
+       Cases_on ‘g x’ >> fs [extreal_ainv_def] ])
+ >> DISCH_TAC
+ >> Know ‘integral m (\x. f x + -g x) = integral m f + integral m (\x. -g x)’
+ >- (HO_MATCH_MP_TAC integral_add >> rw [])
+ >> RW_TAC std_ss []
+ >> Know ‘integral m (\x. f x - g x) = integral m (\x. f x + -g x)’
+ >- (MATCH_MP_TAC integral_cong >> rw [] \\
+     MATCH_MP_TAC extreal_sub_add >> rw [])
+ >> Rewr'
+ >> Know ‘integral m (\x. -g x) = -integral m g’
+ >- (REWRITE_TAC [Once neg_minus1, extreal_of_num_def, extreal_ainv_def] \\
+     REWRITE_TAC [Once neg_minus1, extreal_of_num_def, extreal_ainv_def] \\
+     MATCH_MP_TAC integral_cmul >> art [])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC extreal_sub_add
+ >> METIS_TAC [integrable_finite_integral]
 QED
 
 (* added `measure m s < PosInf` into antecedents, otherwise not true *)
@@ -6345,23 +6431,6 @@ Proof
  >> simp [FN_MINUS_POS]
 QED
 
-val integrable_finite_integral = store_thm (* new *)
-  ("integrable_finite_integral",
-  ``!m f. measure_space m /\ integrable m f ==>
-          integral m f <> PosInf /\ integral m f <> NegInf``,
-    rpt GEN_TAC
- >> SIMP_TAC std_ss [integral_def, integrable_def]
- >> STRIP_TAC
- >> Know `pos_fn_integral m (fn_plus f) <> NegInf`
- >- (MATCH_MP_TAC pos_not_neginf \\
-     MATCH_MP_TAC pos_fn_integral_pos >> art [FN_PLUS_POS]) >> DISCH_TAC
- >> Know `pos_fn_integral m (fn_minus f) <> NegInf`
- >- (MATCH_MP_TAC pos_not_neginf \\
-     MATCH_MP_TAC pos_fn_integral_pos >> art [FN_MINUS_POS]) >> DISCH_TAC
- >> `?r1. pos_fn_integral m (fn_plus f) = Normal r1` by PROVE_TAC [extreal_cases]
- >> `?r2. pos_fn_integral m (fn_minus f) = Normal r2` by PROVE_TAC [extreal_cases]
- >> ASM_REWRITE_TAC [extreal_sub_def, extreal_not_infty]);
-
 (* added ‘x IN m_space m’ *)
 Theorem integrable_sum :
     !m f s. FINITE s /\ measure_space m /\ (!i. i IN s ==> integrable m (f i)) /\
@@ -6429,9 +6498,6 @@ Proof
  >> Know `integral m (\x. f e x + (\x. SIGMA (\i. f i x) s) x) =
           integral m (f e) + integral m (\x. SIGMA (\i. f i x) s)`
  >- (MATCH_MP_TAC integral_add >> fs [IN_INSERT] \\
-     reverse CONJ_TAC
-     >- (GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
-         MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> RW_TAC std_ss []) \\
      MATCH_MP_TAC integrable_sum >> METIS_TAC []) >> Rewr'
  >> Know `integral m (\x. SIGMA (\i. f i x) s) = SIGMA (\i. integral m (f i)) s`
  >- (FIRST_X_ASSUM MATCH_MP_TAC >> fs [IN_INSERT]) >> Rewr'
@@ -9251,8 +9317,8 @@ val measure_subadditive_finite = store_thm
   `measure N (B i) <> PosInf` although `measure N (m_space M) = PosInf`,
    i.e. `m_space M` is splited with all infinite measures only in A0.
  *)
-val split_space_into_finite_sets_and_rest = prove (
-  ``!M N. measure_space M /\ measure_space N /\
+Theorem split_space_into_finite_sets_and_rest[local] :
+    !M N. measure_space M /\ measure_space N /\
          (m_space M = m_space N) /\ (measurable_sets M = measurable_sets N) /\
           measure M (m_space M) <> PosInf /\
           measure_absolutely_continuous (measure N) M ==>
@@ -9262,7 +9328,8 @@ val split_space_into_finite_sets_and_rest = prove (
              (!A. A IN measurable_sets M /\ A SUBSET A0 ==>
                   (((measure M A = 0) /\ (measure N A = 0)) \/
                    (0 < measure M A /\ (measure N A = PosInf)))) /\
-             (!i. measure N (B i) <> PosInf)``,
+             (!i. measure N (B i) <> PosInf)
+Proof
   RW_TAC std_ss [] THEN
   Q.ABBREV_TAC `Q = {x | x IN measurable_sets M /\ (measure N x <> PosInf)}` THEN
   Q.ABBREV_TAC `a = sup {measure M x | x IN Q}` THEN
@@ -9453,21 +9520,19 @@ val split_space_into_finite_sets_and_rest = prove (
     (* goal 2 (of 4) *)
     ASM_CASES_TAC ``(x:'a) NOTIN Q' (0:num)`` THEN FULL_SIMP_TAC std_ss [] THEN
     `1 <= n` by ASM_SIMP_TAC arith_ss [] THEN
-    Q.UNABBREV_TAC `D` THEN BETA_TAC THEN
-    SIMP_TAC std_ss [IN_DIFF, IN_BIGUNION, GSPECIFICATION] THEN
-    ASM_CASES_TAC ``(!s. x NOTIN s \/ !i. s <> (Q':num->'a->bool) i \/ ~(i <= n))`` THEN
-    ASM_REWRITE_TAC [] THEN FULL_SIMP_TAC std_ss [] THEN
-    Q.EXISTS_TAC `Q' 0` THEN ASM_SIMP_TAC std_ss [] THEN
-    Q.EXISTS_TAC `0` THEN SIMP_TAC arith_ss [],
+    SIMP_TAC std_ss [Abbr ‘D’, IN_DIFF, IN_BIGUNION, GSPECIFICATION] \\
+    Cases_on `!s. x NOTIN s \/ !i. s = Q' i ==> ~(i <= n)` >- art [] \\
+    DISJ2_TAC \\
+    Q.EXISTS_TAC `Q' 0` >> ASM_SIMP_TAC std_ss [] \\
+    Q.EXISTS_TAC `0` >> SIMP_TAC arith_ss [],
     (* goal 3 (of 4) *)
     ASM_CASES_TAC ``(x:'a) NOTIN Q' (0:num)`` THEN FULL_SIMP_TAC std_ss [] THEN
     `1 <= m` by ASM_SIMP_TAC arith_ss [] THEN
-    Q.UNABBREV_TAC `D` THEN BETA_TAC THEN
-    SIMP_TAC std_ss [IN_DIFF, IN_BIGUNION, GSPECIFICATION] THEN
-    ASM_CASES_TAC ``(!s. x NOTIN s \/ !i. s <> (Q':num->'a->bool) i \/ ~(i <= m))`` THEN
-    ASM_REWRITE_TAC [] THEN FULL_SIMP_TAC std_ss [] THEN
-    Q.EXISTS_TAC `Q' 0` THEN ASM_SIMP_TAC std_ss [] THEN
-    Q.EXISTS_TAC `0` THEN SIMP_TAC arith_ss [],
+    SIMP_TAC std_ss [Abbr ‘D’, IN_DIFF, IN_BIGUNION, GSPECIFICATION] \\
+    Cases_on `!s. x NOTIN s \/ !i. s = Q' i ==> ~(i <= m)` >- art [] \\
+    DISJ2_TAC \\
+    Q.EXISTS_TAC `Q' 0` >> ASM_SIMP_TAC std_ss [] \\
+    Q.EXISTS_TAC `0` >> SIMP_TAC arith_ss [],
     (* goal 4 (of 4) *)
     ALL_TAC] THEN
    ASM_CASES_TAC ``x NOTIN (D:num->'a->bool) m DIFF D (m - 1)`` THEN
@@ -9483,17 +9548,16 @@ val split_space_into_finite_sets_and_rest = prove (
    ASM_CASES_TAC ``x IN (D:num->'a->bool) (n - 1)`` THEN ASM_SIMP_TAC std_ss [] THEN
    POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
    POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
-   Q.UNABBREV_TAC `D` THEN BETA_TAC THEN
-   SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION] THEN REPEAT STRIP_TAC THEN
-   `n < m` by FULL_SIMP_TAC arith_ss [] THEN
-   POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
+   SIMP_TAC std_ss [Abbr ‘D’, IN_BIGUNION, GSPECIFICATION] \\
+   rpt STRIP_TAC \\
+   `n < m` by FULL_SIMP_TAC arith_ss [] \\
+   NTAC 2 (POP_ASSUM MP_TAC) \\
    FIRST_X_ASSUM (MP_TAC o Q.SPEC `s'`) THEN REPEAT STRIP_TAC THEN
    ASM_REWRITE_TAC [] THEN DISJ2_TAC THEN GEN_TAC THEN
    FIRST_X_ASSUM (MP_TAC o Q.SPEC `i':num`) THEN STRIP_TAC THEN
-   ASM_REWRITE_TAC [] THEN DISJ2_TAC THEN
+   ASM_REWRITE_TAC [] THEN STRIP_TAC \\
    FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL], ALL_TAC] THEN
-  CONJ_TAC THENL
-  [ASM_SET_TAC [], ALL_TAC] THEN
+  CONJ_TAC >- ASM_SET_TAC [] THEN
   reverse CONJ_TAC >-
   (GEN_TAC THEN Q.UNABBREV_TAC `QQ` THEN BETA_TAC THEN
    ASM_CASES_TAC ``i = 0:num`` THEN ASM_SIMP_TAC std_ss [] THENL
@@ -9662,7 +9726,8 @@ val split_space_into_finite_sets_and_rest = prove (
  `measure M A <= 0`
     by PROVE_TAC [REWRITE_RULE [add_rzero]
                    (Q.SPECL [`measure M O_o`, `measure M A`, `0`] le_ladd)] THEN
-  PROVE_TAC [let_antisym]);
+  PROVE_TAC [let_antisym]
+QED
 
 (* M is finite, while N can be infinite *)
 Theorem Radon_Nikodym_finite_arbitrary : (* was: Radon_Nikodym_finite_measure_infinite *)
@@ -10209,49 +10274,6 @@ Proof
   CONJ_TAC THENL [METIS_TAC [], ALL_TAC] THEN ASM_SET_TAC [DISJOINT_DEF]
 QED
 
-Theorem ext_suminf_cmult_indicator :
-    !A f x i. disjoint_family A /\ x IN A i /\ (!i. 0 <= f i) ==>
-              (suminf (\n. f n * indicator_fn (A n) x) = f i)
-Proof
-  RW_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
-  Suff `!n. f n * indicator_fn (A n) x = if n = i then f n else 0` THENL
-  [DISCH_TAC,
-   RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero] THEN
-   ASM_SET_TAC []] THEN
-  Suff `f i = SIGMA (\i. f i * indicator_fn (A i) x) (count (SUC i))` THENL
-  [DISCH_THEN (fn th => ONCE_REWRITE_TAC [th]) THEN MATCH_MP_TAC ext_suminf_sum THEN
-   RW_TAC std_ss [le_refl] THEN POP_ASSUM MP_TAC THEN ASM_SIMP_TAC arith_ss [ADD1],
-   ASM_SIMP_TAC std_ss []] THEN
-  `count (SUC i) <> {}` by (SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] THEN
-     Q.EXISTS_TAC `i` THEN SIMP_TAC arith_ss [GSPECIFICATION, count_def]) THEN
-  Suff `count (SUC i) = count i UNION {i}` THENL
-  [RW_TAC std_ss [],
-   SIMP_TAC arith_ss [count_def, EXTENSION, IN_UNION, GSPECIFICATION, IN_SING]] THEN
-  Suff `SIGMA (\i'. if i' = i then f i else 0) (count i UNION {i}) =
-                  SIGMA (\i'. if i' = i then f i else 0) (count i) +
-                  SIGMA (\i'. if i' = i then f i else 0) ({i})` THENL
-  [RW_TAC std_ss [],
-   ABBREV_TAC ``g = (\i'. if i' = i then (f:num->extreal) i else 0)`` THEN
-   Suff `(!x. x IN (count i UNION {i}) ==> g x <> NegInf) \/
-                   (!x. x IN (count i UNION {i}) ==> g x <> PosInf)` THENL
-   [Q.SPEC_TAC (`g`,`g`) THEN MATCH_MP_TAC EXTREAL_SUM_IMAGE_DISJOINT_UNION THEN
-    SIMP_TAC std_ss [FINITE_COUNT, FINITE_SING, DISJOINT_DEF] THEN
-    SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_SING, NOT_IN_EMPTY, count_def] THEN
-    SIMP_TAC arith_ss [GSPECIFICATION],
-    DISJ1_TAC] THEN
-   EXPAND_TAC "g" THEN POP_ASSUM K_TAC THEN RW_TAC std_ss [lt_infty] THENL
-   [ALL_TAC, METIS_TAC [lt_infty, num_not_infty]] THEN
-   MATCH_MP_TAC lte_trans THEN Q.EXISTS_TAC `0` THEN ASM_REWRITE_TAC [] THEN
-   METIS_TAC [lt_infty, num_not_infty]] THEN
-  SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING] THEN
-  Suff `SIGMA (\i'. if i' = i then f i else 0) (count i) = 0` THENL
-  [SIMP_TAC std_ss [add_lzero],
-   MATCH_MP_TAC EXTREAL_SUM_IMAGE_0] THEN
-  RW_TAC std_ss [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
-  ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
-  SIMP_TAC arith_ss [count_def, GSPECIFICATION]
-QED
-
 Theorem finite_integrable_function_exists : (* was: Ex_finite_integrable_function *)
     !m. measure_space m /\ sigma_finite m ==>
         ?h. h IN measurable (m_space m, measurable_sets m) Borel /\
@@ -10662,7 +10684,6 @@ val _ = export_theory ();
   [2] Mhamdi, T., Hasan, O., Tahar, S.: Formalization of Measure Theory and Lebesgue
       Integration for Probabilistic Analysis in HOL. ACM Trans. Embedded Comput. Syst.
       12, 1-23 (2013). DOI:10.1145/2406336.2406349
-  [3] Wikipedia: https://en.wikipedia.org/wiki/Pierre_Fatou
   [4] Wikipedia: https://en.wikipedia.org/wiki/Beppo_Levi
   [5] Wikipedia: https://en.wikipedia.org/wiki/Giuseppe_Vitali
   [6] Shiryaev, A.N.: Probability-1. Springer-Verlag New York (2016).

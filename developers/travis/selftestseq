@@ -12,6 +12,7 @@ src/finite_maps
 !examples/lambda/basics
 !examples/formal-languages
 !examples/formal-languages/context-free
-!examples/unification/triangular/first-order
+!examples/algorithms/unification/triangular/first-order
 !examples/zipper
 !src/quotient/examples/lambda
+!examples/lassie/regression

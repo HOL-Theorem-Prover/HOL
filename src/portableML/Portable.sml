@@ -53,6 +53,7 @@ fun f $ x = f x
 fun (b ? f) x = if b then f x else x
 fun B2 f g x y = f (g x y)
 fun C f x y = f y x
+fun flip f (x,y) = f (y,x)
 fun I x = x
 fun K x y = x
 fun S f g x = f x (g x)

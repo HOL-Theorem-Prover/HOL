@@ -46,15 +46,9 @@ val semi_automaton_def =
        S0: ('state # 'input set) set;          (*initial states*)
        R:  ('state # 'input set # 'state # 'input set) set  (*transition relation*) |>`;
 
-
-
-val semi_automaton_S = DB.fetch "-" "semi_automaton_S";
-val semi_automaton_I = DB.fetch "-" "semi_automaton_I";
-val semi_automaton_S0 = DB.fetch "-" "semi_automaton_S0";
-val semi_automaton_R = DB.fetch "-" "semi_automaton_R";
-val semi_automaton_11 = DB.fetch "-" "semi_automaton_11";
-
-val semi_automaton_REWRITES = save_thm("semi_automaton_REWRITES", LIST_CONJ [semi_automaton_S, semi_automaton_I, semi_automaton_S0, semi_automaton_R, semi_automaton_11]);
+Theorem semi_automaton_REWRITES =
+        LIST_CONJ (TypeBase.one_one_of “:(α,β) semi_automaton” ::
+                   TypeBase.accessors_of “:(α,β)semi_automaton”)
 
 
 val IS_WELL_FORMED_SEMI_AUTOMATON_def =

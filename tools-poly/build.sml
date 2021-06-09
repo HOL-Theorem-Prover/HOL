@@ -67,14 +67,14 @@ val Holmake = let
   end
 in
   buildutils.Holmake aug_systeml isSuccess
-                     (fn () => ("-j"^Int.toString jobcount) ::
-                               ((if relocbuild then ["--relocbuild"] else []) @
-                                (if debug then ["--dbg"] else []) @
-                                (case multithread of
-                                     NONE => []
-                                   | SOME i => ["--mt="^Int.toString i]) @
-                                phase_extras()))
-                     analysis selftest_level
+    (fn () => (case jobcount of NONE => [] | SOME j => ["-j"^Int.toString j]) @
+              (if relocbuild then ["--relocbuild"] else []) @
+              (if debug then ["--dbg"] else []) @
+              (case multithread of
+                   NONE => []
+                 | SOME i => ["--mt="^Int.toString i]) @
+              phase_extras())
+    analysis selftest_level
 end
 
 (* create a symbolic link - Unix only *)

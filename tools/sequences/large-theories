@@ -13,7 +13,7 @@ src/HolSmt
 [mosml]!!examples/HolCheck
 !examples/lambda/basics
 !examples/logic
-!!examples/unification/triangular/nominal
+!!examples/algorithms/unification/triangular/nominal
 !examples/lambda/barendregt
 !examples/computability
 !!examples/lambda/other-models

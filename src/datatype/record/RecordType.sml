@@ -23,9 +23,9 @@ open Parse
 
 val K_tm = combinSyntax.K_tm
 
-
+val debugp = ref false
+fun DIAG s = if !debugp then print ("RecordType: " ^ s ^ "\n") else ()
 val ERR = mk_HOL_ERR "RecordType";
-fun mk_recordtype_constructor s = "recordtype." ^ s
 
 (* ----------------------------------------------------------------------
     General utilities
@@ -157,7 +157,7 @@ fun freshsubst avoids tyvs =
    ---------------------------------------------------------------------- *)
 
 fun prove_recordtype_thms (tyinfo, fields) = let
-
+  open TypeBasePure
   val save_thm = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm
   fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
 
@@ -234,28 +234,32 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       list_mk_comb(constructor, constructor_args ftl)
   end
   val cons_comb = list_mk_comb(constructor,  typeletters)
-  val access_fn_names = map (fn n => typename^"_"^n) fields
+  val access_fn_names =
+      map (fn f => mk_recordtype_fieldsel{tyname=typename,fieldname=f}) fields
   val access_defn_terms =
     map3 (fn (afn_name, typeletter, accfn_type) =>
           mk_eq(mk_comb(mk_var(afn_name, accfn_type),
                         cons_comb),
                 typeletter))
     (access_fn_names, typeletters, accfn_types)
+  fun mk_defname s = String.translate (fn #"." => "_" | c => str c) s ^ "_def"
   val access_defns =
     ListPair.map
     (fn (name, tm) => Prim_rec.new_recursive_definition
-     {def = tm, name = name, rec_axiom = typthm})
+     {def = tm, name = mk_defname name, rec_axiom = typthm})
     (access_fn_names, access_defn_terms)
   val accessor_thm =
     save_thm(typename^"_accessors", LIST_CONJ access_defns)
   fun mk_const(n,ty) = mk_thy_const{Thy=current_theory(), Name = n, Ty = ty}
   val accfn_terms = ListPair.map mk_const (access_fn_names, accfn_types)
+  val _ = DIAG "generated accessors"
 
   (* generate functional update functions *)
   (* these are of the form :
        field_fupd f o = field_update (f (field o)) o
    *)
-  val fupd_names = map (fn s => s ^ "_fupd") access_fn_names
+  val fupd_names =
+      map (fn f => mk_recordtype_fieldfupd{tyname=typename,fieldname=f}) fields
   fun getredex t = let
     val tyvs = type_vars t
   in
@@ -281,12 +285,14 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                                             (fupd_terms, typeletters)
   val fupd_def_terms = List.rev fupd_def_terms0
   fun mk_defn_th (n, t) =
-      new_recursive_definition {def = t, name = n, rec_axiom = typthm}
+      new_recursive_definition
+        {def = t, name = mk_defname n, rec_axiom = typthm}
   val fupdfn_thms = ListPair.map mk_defn_th (fupd_names, fupd_def_terms)
   val fupdfn_thm =
     save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)
   val fupdfn_terms =
       map (fn (s, v) => (s, mk_const (dest_var v))) fupd_terms
+  val _ = DIAG "generated functional updates"
 
 
   (* do cases and induction theorem *)
@@ -325,6 +331,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val thms = map (C (curry prove) tactic) (goals @ diag_goals)
   val accfupd_thm =
     save_thm(typename^"_accfupds", LIST_CONJ (map GEN_ALL thms))
+  val _ = DIAG "Generated accupds theorem"
 
   fun to_composition t = let
     val (f, gx) = dest_comb t
@@ -385,6 +392,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val fupdfupds_comp_thm =
       save_thm(typename^"_fupdfupds_comp",
                LIST_CONJ (map munge_to_composition thms))
+  val _ = DIAG "Generated fupdfupd thms"
 
   (* do fupdates of (different) fupdates *)
   val combinations = crossprod fupdfn_terms fupdfn_terms
@@ -583,12 +591,17 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   (* set up parsing for the record type *)
   val _ =
       let
-        fun do_fupdfn (name0, (_, tm)) =
-            let val name = name0 ^ "_fupd"
+        fun do_fupdfn (name, (_, tm)) =
+            let
+              val shortname = name ^ "_fupd"
+              val longname = typename ^ "_" ^ shortname
             in
-              Parse.overload_on(name, tm)
+              Parse.overload_on(longname, tm);
+              Parse.overload_on(shortname, tm)
             end
       in
+        ListPair.app (fn (s,tm) => Parse.overload_on(typename ^ "_" ^ s, tm))
+                     (fields, accfn_terms);
         ListPair.app add_record_field (fields, accfn_terms);
           (* overload strings of the form fld_fupd to refer to the
              real fupdate functions, which have names of the form
@@ -603,6 +616,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                      (fields, fupdfn_terms);
         Parse.overload_on(typename, constructor)
       end
+  val _ = DIAG ("set up parsing for type " ^ typename)
 in
   new_tyinfo
 end

@@ -1055,55 +1055,164 @@ val bool_ss = boolSimps.bool_ss;
        just when a datatype is declared.
  ---------------------------------------------------------------------------*)
 
+datatype srw_update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
+type srw_state = simpset * bool * srw_update list
+  (* simpset, initialised-flag, update list (most recent first), ssfrag *)
+
 val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
                               ++ boolSimps.NORMEQ_ss
                               ++ boolSimps.ABBREV_ss
                               ++ boolSimps.LABEL_CONG_ss
 
-val (srw_ss : simpset ref) = ref initial_simpset
+fun ssf1 nth = simpLib.empty_ssfrag |> simpLib.add_named_rwt nth
 
-val srw_ss_initialised = ref false;
+val state0 : srw_state = (initial_simpset, false, [])
+fun apply_delta d ((sset,initp,upds):srw_state) : srw_state =
+    case d of
+        ThmSetData.ADD nth =>
+        (sset ++ ssf1 nth, true, [])
+      | ThmSetData.REMOVE s => (sset -* [s], true, [])
 
-datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
-val pending_updates = ref ([] : update list)
-
-fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
-  | apply_update (REMOVE_RWT n, ss) = ss -* [n]
-
-fun initialise_srw_ss() =
-  if !srw_ss_initialised then !srw_ss
-  else let in
-     HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done")
-     (fn () =>
-         (srw_ss := rev_itlist add_simpls (tyinfol()) (!srw_ss) ;
-          srw_ss := foldl apply_update (!srw_ss) (!pending_updates) ;
-          srw_ss_initialised := true)) () ;
-     !srw_ss
-  end;
-
-fun augment_srw_ss ssdl =
-    if !srw_ss_initialised then
-      srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl
+fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
+    if not initp then
+      case d of
+          ThmSetData.ADD nth =>
+          let
+            open simpLib
+            val upds' =
+                case upds of
+                    ADD_SSFRAG ssf :: rest =>
+                    ADD_SSFRAG (add_named_rwt nth ssf) :: rest
+                  | _ => ADD_SSFRAG (ssf1 nth) :: upds
+          in
+            (sset, initp, upds')
+          end
+        | ThmSetData.REMOVE s => (sset, initp, REMOVE_RWT s :: upds)
     else
-      pending_updates := !pending_updates @ map ADD_SSFRAG ssdl;
+      apply_delta d st
 
-fun diminish_srw_ss names =
-    (initialise_srw_ss();
-     srw_ss := simpLib.remove_ssfrags names (!srw_ss))
+fun apply_srw_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
+  | apply_srw_update (REMOVE_RWT n, ss) = ss -* [n]
 
-fun temp_delsimps names =
-    if !srw_ss_initialised then
-      srw_ss := ((!srw_ss) -* names)
+fun init_state (st as (sset,initp,upds)) =
+    if initp then st
     else
-      pending_updates := !pending_updates @ map REMOVE_RWT names
+      let fun init() =
+              (List.foldl apply_srw_update sset (List.rev upds)
+                          |> rev_itlist add_simpls (tyinfol()),
+               true, [])
+      in
+        HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done") init ()
+      end
+fun opt_partition f g ls =
+    let
+      fun recurse As Bs ls =
+          case ls of
+              [] => (List.rev As, List.rev Bs)
+            | h::t => (case f h of
+                           SOME a => recurse (a::As) Bs t
+                         | NONE => (case g h of
+                                        SOME b => recurse As (b::Bs) t
+                                     | NONE => recurse As Bs t))
+    in
+      recurse [] [] ls
+    end
 
+fun finaliser {thyname} deltas (sset,initp,upds) =
+    let
+      fun toNamedAdd (ThmSetData.ADD p) = SOME p | toNamedAdd _ = NONE
+      fun toRM (ThmSetData.REMOVE s) = SOME s | toRM _ = NONE
+      val (adds,rms) = opt_partition toNamedAdd toRM deltas
+      val ssfrag = simpLib.named_rewrites_with_names thyname (List.rev adds)
+        (* List.rev here preserves old behaviour wrt to the way theorems were
+           added to the global simpset; it will only make a difference when
+           overall rewrite system is not confluent *)
+      val new_upds = ADD_SSFRAG ssfrag :: map REMOVE_RWT rms
+    in
+      if initp then (List.foldl apply_srw_update sset new_upds, true, [])
+      else (sset, false, List.revAppend(new_upds, upds))
+    end
+
+val adresult as {DB,get_global_value,record_delta,update_global_value,...} =
+    ThmSetData.export_with_ancestry {
+      delta_ops = {
+        apply_delta = apply_delta,
+        apply_to_global = apply_to_global,
+        thy_finaliser = SOME finaliser,
+        initial_value = state0, uptodate_delta = K true
+      },
+      settype = "simp"
+    };
+val get_deltas = #get_deltas adresult
+fun merge_simpsets ps =
+    case Option.map (#1 o quiet_messages init_state) (#merge adresult ps) of
+        NONE => simpLib.empty_ss
+      | SOME sset => sset
+
+fun augment_srw_ss0 ssdl ((sset, initp, upds):srw_state):srw_state =
+    if initp then (foldl (fn (ssd,ss) => ss ++ ssd) sset ssdl, true, [])
+    else
+      (sset, false, List.revAppend(map ADD_SSFRAG ssdl, upds))
+val augment_srw_ss = update_global_value o augment_srw_ss0
+
+fun diminish_srw_ss0 names st0 =
+    let val st' as (sset, _, _) = init_state st0
+    in
+      (simpLib.remove_ssfrags names sset, true, [])
+    end
+val diminish_srw_ss = update_global_value o diminish_srw_ss0
+
+fun temp_delsimps0 names (sset, initp, upds) =
+    if initp then (sset -* names, true, [])
+    else
+      (sset, false, List.revAppend (map REMOVE_RWT names, upds))
+val temp_delsimps = update_global_value o temp_delsimps0;
+
+fun tyi_update tyi sset = sset ++ simpLib.tyi_to_ssdata tyi
 fun update_fn tyi =
   augment_srw_ss ([simpLib.tyi_to_ssdata tyi] handle HOL_ERR _ => [])
+fun augment_with_typebase tyb =
+    rev_itlist tyi_update $ TypeBasePure.listItems tyb
 
-val () =
-  TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))
+val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 
-fun srw_ss () = initialise_srw_ss();
+fun srw_ss () =
+    (update_global_value init_state;
+     #1 (get_global_value()))
+
+val update_log =
+    Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
+fun ap13 f (x,y,z) = (f x, y, z)
+fun logged_update {thyname} f =
+    (update_global_value (ap13 f);
+     Sref.update update_log (Symtab.cons_list (thyname,f)))
+
+fun logged_addfrags thy fgs =
+    List.app (fn f => logged_update thy (fn s => s ++ f)) fgs
+
+fun apply_logged_updates {theories} simpset =
+    let
+      open Binaryset
+      val allancs = List.foldl
+                      (fn (thy,s) => addList (add(s,thy), ancestry thy))
+                      (empty String.compare)
+                      theories
+      val G = SymGraph.make (map (fn s => ((s,()), Theory.parents s))
+                                 (Binaryset.listItems allancs))
+      val sorted_thys = List.rev (SymGraph.topological_order G)
+      fun app1 thy simpset =
+          case Symtab.lookup (Sref.value update_log) thy of
+              NONE => simpset
+            | SOME fs => List.foldr (fn (f,ss) => f ss) simpset fs
+    in
+      rev_itlist app1 sorted_thys simpset
+    end
+
+fun do_logged_updates thys =
+    update_global_value (ap13 (apply_logged_updates thys) o init_state)
+
+fun option_fold f NONE x = x
+  | option_fold f (SOME a) x = f a x
 
 fun SRW_TAC ssdl thl g = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
@@ -1113,43 +1222,46 @@ in
 end g;
 val srw_tac = SRW_TAC
 
-val Abbr = markerSyntax.Abbr
-
-(* ----------------------------------------------------------------------
-    Make some additions to the srw_ss persistent
-   ---------------------------------------------------------------------- *)
-
-open LoadableThyData
-
-(* store a database of per-theory simpset fragments *)
-val thy_ssfrags = ref (Binarymap.mkDict String.compare)
-fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
-
-fun add_rewrites thyname (thms : (KernelSig.kernelname * thm) list) = let
-  val ssfrag = simpLib.named_rewrites_with_names thyname thms
-  open Binarymap
-in
-  augment_srw_ss [ssfrag];
-  case peek(!thy_ssfrags, thyname) of
-    NONE => thy_ssfrags := insert(!thy_ssfrags, thyname, ssfrag)
-  | SOME sf' => let
-      val sf = simpLib.named_merge_ss thyname [sf', ssfrag]
+fun export_rewrites slist =
+    let val ds = map ThmSetData.mk_add slist
     in
-      thy_ssfrags := insert(!thy_ssfrags, thyname, sf)
+      List.app record_delta ds;
+      update_global_value (rev_itlist apply_to_global ds)
     end
-end
 
-val {export,delete} =
-    ThmSetData.new_exporter {
-      settype = "simp",
-      efns = {
-        add = fn {thy,named_thms} => add_rewrites thy named_thms,
-        remove = fn {removes, ...} => temp_delsimps removes
-      }
-    }
+fun delsimps names =
+    (List.app (record_delta o ThmSetData.REMOVE) names;
+     temp_delsimps names)
 
-fun export_rewrites slist = List.app export slist
+fun thy_ssfrag s =
+    get_deltas {thyname=s}
+               |> ThmSetData.added_thms
+               |> simpLib.rewrites
+               |> simpLib.name_ss s
 
-fun delsimps names = List.app delete names
+fun thy_simpset s = Option.map (#1 o init_state) (DB {thyname=s})
+
+fun temp_set_simpset_ancestry sl =
+    case #merge adresult sl of
+        NONE => HOL_WARNING "BasicProvers" "temp_set_simpset_ancestry"
+                            "Merge of parental values produces no value; \
+                            \nothing done"
+      | SOME v => update_global_value (K v)
+
+fun set_simpset_ancestry sl =
+    case #set_parents adresult sl of
+        NONE => HOL_WARNING "BasicProvers" "set_simpset_ancestry"
+                            "Merge of parental values produces no value; \
+                            \nothing done"
+      | SOME _ => ()
+
+fun temp_setsimpset ss = update_global_value (K (ss, true, []))
+val simpset_state = get_global_value
+fun recreate_sset_at_parentage ps =
+    ps |> merge_simpsets
+       |> option_fold augment_with_typebase (TypeBase.merge_typebases ps)
+       |> apply_logged_updates {theories = ps}
+       |> temp_setsimpset
+
 
 end

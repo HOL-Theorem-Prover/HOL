@@ -50,6 +50,8 @@ fun record_bvars newbvs p =
     (fn old => setbvs (HOLset.addList(old,newbvs)) >>
                p >- (fn pres => setbvs old >> return pres))
 
+fun restore_bvars p = record_bvars [] p
+
 fun get_gspec x =
     (fupdate (fn x => x) >-
      (fn (i : printing_info) => return (#in_gspec i))) x

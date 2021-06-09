@@ -2,31 +2,21 @@
 (* Sum of a real-valued function on a set: SIGMA f s                         *)
 (* ************************************************************************* *)
 
-(* interactive mode
-app load ["bossLib", "arithmeticTheory", "combinTheory",
-          "pred_setTheory", "realTheory", "realLib",
-          "res_quanTools", "pairTheory", "seqTheory"];
-quietdec := true;
-*)
+open HolKernel Parse boolLib bossLib;
 
-open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory realTheory realLib res_quanTools pairTheory seqTheory;
+open arithmeticTheory combinTheory res_quanTools pairTheory pred_setTheory
+     realTheory realLib seqTheory transcTheory;
 
-(* interactive mode
-quietdec := false;
-*)
+open iterateTheory;
 
 val _ = new_theory "real_sigma";
-
-val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
-val Strip = S_TAC;
 
 fun K_TAC _ = ALL_TAC;
 val KILL_TAC = POP_ASSUM_LIST K_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
+val art = ASM_REWRITE_TAC;
 
 (* ----------------------------------------------------------------------
     REAL_SUM_IMAGE
@@ -38,16 +28,18 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
     Where f's range is the real numbers and P is finite.
    ---------------------------------------------------------------------- *)
 
-val REAL_SUM_IMAGE_DEF = new_definition(
-  "REAL_SUM_IMAGE_DEF",
-  ``REAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0:real)``);
+Definition REAL_SUM_IMAGE_DEF :
+    REAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0:real)
+End
 
-val REAL_SUM_IMAGE_THM = store_thm(
-  "REAL_SUM_IMAGE_THM",
-  ``!f. (REAL_SUM_IMAGE f {} = 0) /\
+Overload SIGMA = “REAL_SUM_IMAGE”
+
+Theorem REAL_SUM_IMAGE_THM :
+    !f. (REAL_SUM_IMAGE f {} = 0) /\
         (!e s. FINITE s ==>
                (REAL_SUM_IMAGE f (e INSERT s) =
-                f e + REAL_SUM_IMAGE f (s DELETE e)))``,
+                f e + REAL_SUM_IMAGE f (s DELETE e)))
+Proof
   REPEAT STRIP_TAC
   >- SIMP_TAC (srw_ss()) [ITSET_THM, REAL_SUM_IMAGE_DEF]
   >> SIMP_TAC (srw_ss()) [REAL_SUM_IMAGE_DEF]
@@ -58,106 +50,71 @@ val REAL_SUM_IMAGE_THM = store_thm(
   >> MATCH_MP_TAC COMMUTING_ITSET_RECURSES
   >> Q.UNABBREV_TAC `g`
   >> RW_TAC real_ss []
-  >> REAL_ARITH_TAC);
+  >> REAL_ARITH_TAC
+QED
 
-val REAL_SUM_IMAGE_SING = store_thm(
-  "REAL_SUM_IMAGE_SING",
-  ``!f e. REAL_SUM_IMAGE f {e} = f e``,
-  SRW_TAC [][REAL_SUM_IMAGE_THM]);
+(* An equivalent theorem linking REAL_SUM_IMAGE and iterate$Sum *)
+Theorem REAL_SUM_IMAGE_sum :
+    !f s. FINITE s ==> REAL_SUM_IMAGE f s = iterate$Sum s f
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> CONJ_TAC >- rw [REAL_SUM_IMAGE_THM, SUM_CLAUSES]
+ >> rpt STRIP_TAC
+ >> ‘s DELETE e = s’ by METIS_TAC [DELETE_NON_ELEMENT]
+ >> rw [REAL_SUM_IMAGE_THM, SUM_CLAUSES]
+QED
 
-val REAL_SUM_IMAGE_POS = store_thm
-  ("REAL_SUM_IMAGE_POS",
-   ``!f s. FINITE s /\
-           (!x. x IN s ==> 0 <= f x) ==>
-                0 <= REAL_SUM_IMAGE f s``,
-   REPEAT STRIP_TAC
-   >> POP_ASSUM MP_TAC >> Q.SPEC_TAC (`f`, `f`)
-   >> POP_ASSUM MP_TAC >> Q.SPEC_TAC (`s`, `s`)
-   >> Q.ABBREV_TAC `Q = (\s. !f. (!x. x IN s ==> 0 <= f x) ==> 0 <= REAL_SUM_IMAGE f s)`
-   >> Suff `!s. FINITE s ==> Q s` >- (Q.UNABBREV_TAC `Q` >> RW_TAC std_ss [])
-   >> MATCH_MP_TAC FINITE_INDUCT
-   >> Q.UNABBREV_TAC `Q`
-   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM]
-   >> MATCH_MP_TAC REAL_LE_ADD
-   >> CONJ_TAC >- FULL_SIMP_TAC real_ss [IN_INSERT]
-   >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
-   >> Q.PAT_ASSUM `!f. (!x. x IN s ==> 0 <= f x) ==> 0 <= REAL_SUM_IMAGE f s` MATCH_MP_TAC
-   >> REPEAT STRIP_TAC >> Q.PAT_ASSUM `!x. b` MATCH_MP_TAC
-   >> RW_TAC std_ss [IN_INSERT]);
+(* it translates a sum theorem into a SIGMA theorem *)
+fun translate th = SIMP_RULE std_ss [GSYM REAL_SUM_IMAGE_sum] th;
 
-val REAL_SUM_IMAGE_SPOS = store_thm
-  ("REAL_SUM_IMAGE_SPOS",
-   ``!s. FINITE s /\ (~(s = {})) ==>
-           !f. (!x. x IN s ==> 0 < f x) ==>
-                0 < REAL_SUM_IMAGE f s``,
-   Suff `!s. FINITE s ==>
-                (\s. (~(s = {})) ==>
-           !f. (!x. x IN s ==> 0 < f x) ==>
-                0 < REAL_SUM_IMAGE f s) s`
-   >- RW_TAC std_ss []
-   >> MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT, DISJ_IMP_THM,
-                      FORALL_AND_THM]
-   >> Cases_on `s = {}`
-   >- RW_TAC real_ss [REAL_SUM_IMAGE_THM]
-   >> MATCH_MP_TAC REAL_LT_ADD
-   >> ASM_SIMP_TAC real_ss []);
+Theorem REAL_SUM_IMAGE_SING :
+    !f e. REAL_SUM_IMAGE f {e} = f e
+Proof
+    SRW_TAC [][REAL_SUM_IMAGE_THM]
+QED
 
-val REAL_SUM_IMAGE_NONZERO_lem = prove
-  (``!P. FINITE P ==>
-        (\P. !f. (!x.x IN P ==> 0 <= f x) /\ (?x. x IN P /\ ~(f x = 0)) ==>
-                ((~(REAL_SUM_IMAGE f P = 0)) = (~(P = {})))) P``,
-   (MATCH_MP_TAC FINITE_INDUCT
-    >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, NOT_INSERT_EMPTY, IN_INSERT]
-    >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT])
-   >- (ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-       >> `0 <= f e + REAL_SUM_IMAGE f s`
-                by (MATCH_MP_TAC REAL_LE_ADD
-                    >> RW_TAC std_ss []
-                    >> MATCH_MP_TAC REAL_SUM_IMAGE_POS
-                    >> METIS_TAC [])
-       >> ASM_REWRITE_TAC []
-       >> RW_TAC std_ss [GSYM real_lt]
-       >> MATCH_MP_TAC REAL_LTE_TRANS
-       >> Q.EXISTS_TAC `f e + 0`
-       >> CONJ_TAC
-       >- (RW_TAC real_ss [] >> POP_ASSUM (K ALL_TAC)
-           >> POP_ASSUM MP_TAC >> POP_ASSUM (MP_TAC o Q.SPECL [`e`])
-           >> SIMP_TAC std_ss []
-           >> REAL_ARITH_TAC)
-       >> MATCH_MP_TAC REAL_LE_ADD2
-       >> RW_TAC real_ss []
-       >> MATCH_MP_TAC REAL_SUM_IMAGE_POS
-       >> METIS_TAC [])
-   >> Cases_on `f e = 0`
-   >- (RW_TAC real_ss [] >> METIS_TAC [NOT_IN_EMPTY])
-   >> ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   >> `0 <= f e + REAL_SUM_IMAGE f s`
-                by (MATCH_MP_TAC REAL_LE_ADD
-                    >> RW_TAC std_ss []
-                    >> MATCH_MP_TAC REAL_SUM_IMAGE_POS
-                    >> METIS_TAC [])
-   >> ASM_REWRITE_TAC []
-   >> RW_TAC std_ss [GSYM real_lt]
-   >> MATCH_MP_TAC REAL_LTE_TRANS
-   >> Q.EXISTS_TAC `f e + 0`
-   >> CONJ_TAC
-   >- (RW_TAC real_ss [] >> POP_ASSUM (K ALL_TAC)
-       >> POP_ASSUM MP_TAC >> POP_ASSUM (K ALL_TAC)
-       >> POP_ASSUM (K ALL_TAC) >> POP_ASSUM (MP_TAC o Q.SPECL [`e`])
-           >> SIMP_TAC std_ss []
-           >> REAL_ARITH_TAC)
-   >> MATCH_MP_TAC REAL_LE_ADD2
-   >> RW_TAC real_ss []
-   >> MATCH_MP_TAC REAL_SUM_IMAGE_POS
-   >> METIS_TAC []);
+Theorem REAL_SUM_IMAGE_POS :
+    !f s. FINITE s /\ (!x. x IN s ==> 0 <= f x) ==>
+          0 <= REAL_SUM_IMAGE f s
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_POS_LE]
+QED
 
-val REAL_SUM_IMAGE_NONZERO = store_thm
-  ("REAL_SUM_IMAGE_NONZERO",
-   ``!P. FINITE P ==>
-        !f. (!x.x IN P ==> 0 <= f x) /\ (?x. x IN P /\ ~(f x = 0)) ==>
-                ((~(REAL_SUM_IMAGE f P = 0)) = (~(P = {})))``,
-   METIS_TAC [REAL_SUM_IMAGE_NONZERO_lem]);
+Theorem REAL_SUM_IMAGE_SPOS :
+    !s. FINITE s /\ (~(s = {})) ==>
+        !f. (!x. x IN s ==> 0 < f x) ==>
+            0 < REAL_SUM_IMAGE f s
+Proof
+    rw [REAL_SUM_IMAGE_sum]
+ >> MATCH_MP_TAC SUM_POS_LT >> art []
+ >> CONJ_TAC >- METIS_TAC [REAL_LT_IMP_LE]
+ >> fs [GSYM MEMBER_NOT_EMPTY]
+ >> Q.EXISTS_TAC ‘x’ >> rw []
+QED
+
+(* ‘?x. x IN P’ already indicates ‘P <> {}’, thus the actual conclusion is just
+   ‘SIGMA f P <> 0’
+ *)
+Theorem REAL_SUM_IMAGE_NONZERO :
+    !P. FINITE P ==>
+        !f. (!x. x IN P ==> 0 <= f x) /\ (?x. x IN P /\ ~(f x = 0)) ==>
+            ((~(REAL_SUM_IMAGE f P = 0)) <=> (~(P = {})))
+Proof
+    rw [REAL_SUM_IMAGE_sum]
+ >> ‘P <> {}’ by METIS_TAC [MEMBER_NOT_EMPTY]
+ >> rw []
+ >> Suff ‘0 < sum P f’ >- METIS_TAC [REAL_LT_IMP_NE]
+ >> ‘0 < f x’ by METIS_TAC [REAL_LE_LT]
+ >> MATCH_MP_TAC SUM_POS_LT >> rw []
+ >> Q.EXISTS_TAC ‘x’ >> art []
+QED
+
+(* |- !f s.
+        FINITE s /\ (!x. x IN s ==> 0 <= f x) /\ (?x. x IN s /\ 0 < f x) ==>
+        0 < SIGMA f s
+ *)
+Theorem REAL_SUM_IMAGE_POS_LT = translate SUM_POS_LT
 
 val REAL_SUM_IMAGE_IF_ELIM_lem = prove
   (``!s. FINITE s ==>
@@ -230,13 +187,12 @@ val REAL_SUM_IMAGE_FINITE_CONST2 = store_thm (* from "examples/diningcryptos" *)
    >> POP_ASSUM MATCH_MP_TAC
    >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [IN_INSERT]);
 
-val REAL_SUM_IMAGE_FINITE_CONST3 = store_thm
-  ("REAL_SUM_IMAGE_FINITE_CONST3",
-   ``!P. FINITE P ==>
-        !c. (REAL_SUM_IMAGE (\x. c) P = (&(CARD P)) * c)``,
-   REPEAT STRIP_TAC
-   >> (MATCH_MP_TAC o UNDISCH o Q.SPEC `P`) REAL_SUM_IMAGE_FINITE_CONST2
-   >> RW_TAC std_ss []);
+Theorem REAL_SUM_IMAGE_FINITE_CONST3 :
+    !P. FINITE P ==>
+        !c. (REAL_SUM_IMAGE (\x. c) P = (&(CARD P)) * c)
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_CONST]
+QED
 
 val REAL_SUM_IMAGE_IN_IF_lem = prove
   (``!P. FINITE P ==>
@@ -260,84 +216,39 @@ val REAL_SUM_IMAGE_IN_IF = store_thm
         !f. REAL_SUM_IMAGE f P = REAL_SUM_IMAGE (\x. if x IN P then f x else 0) P``,
    METIS_TAC [REAL_SUM_IMAGE_IN_IF_lem]);
 
-val REAL_SUM_IMAGE_CMUL_lem = prove
-  (``!f c P. FINITE P ==>
-        (\P. REAL_SUM_IMAGE (\x. c * f x) P = c * (REAL_SUM_IMAGE f P)) P``,
-   STRIP_TAC >> STRIP_TAC >> MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, REAL_ADD_LDISTRIB, DELETE_NON_ELEMENT]);
+Theorem REAL_SUM_IMAGE_CMUL :
+    !P. FINITE P ==>
+        !f c. (REAL_SUM_IMAGE (\x. c * f x) P = c * (REAL_SUM_IMAGE f P))
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_LMUL]
+QED
 
-val REAL_SUM_IMAGE_CMUL = store_thm
-  ("REAL_SUM_IMAGE_CMUL",
-   ``!P. FINITE P ==>
-        !f c. (REAL_SUM_IMAGE (\x. c * f x) P = c * (REAL_SUM_IMAGE f P))``,
-   METIS_TAC [REAL_SUM_IMAGE_CMUL_lem]);
+Theorem REAL_SUM_IMAGE_NEG :
+    !P. FINITE P ==>
+        !f. (REAL_SUM_IMAGE (\x. ~ f x) P = ~ (REAL_SUM_IMAGE f P))
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_NEG]
+QED
 
-val REAL_SUM_IMAGE_NEG = store_thm
-  ("REAL_SUM_IMAGE_NEG",
-   ``!P. FINITE P ==>
-        !f. (REAL_SUM_IMAGE (\x. ~ f x) P = ~ (REAL_SUM_IMAGE f P))``,
-   REPEAT STRIP_TAC
-   >> (ASSUME_TAC o Q.SPECL [`f`, `~1`] o UNDISCH o Q.SPEC `P`) REAL_SUM_IMAGE_CMUL
-   >> FULL_SIMP_TAC real_ss []);
+Theorem REAL_SUM_IMAGE_IMAGE :
+    !P. FINITE P ==>
+        !f'. INJ f' P (IMAGE f' P) ==>
+             !f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P
+Proof
+    rw [REAL_SUM_IMAGE_sum, INJ_DEF]
+ >> MATCH_MP_TAC SUM_IMAGE >> rw []
+QED
 
-val REAL_SUM_IMAGE_IMAGE = store_thm
-  ("REAL_SUM_IMAGE_IMAGE",
-   ``!P. FINITE P ==>
-         !f'. INJ f' P (IMAGE f' P) ==>
-              !f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P``,
-   Induct_on `FINITE`
-   >> SRW_TAC [][REAL_SUM_IMAGE_THM]
-   >> `IMAGE f' P DELETE f' e = IMAGE f' P`
-   by (SRW_TAC [][EXTENSION]
-       >> EQ_TAC >- (METIS_TAC[])
-       >> POP_ASSUM MP_TAC
-       >> ASM_SIMP_TAC (srw_ss()) [INJ_DEF]
-       >> METIS_TAC[])
-   >> `P DELETE e = P` by METIS_TAC [DELETE_NON_ELEMENT]
-   >> SRW_TAC [][]
-   >> FIRST_X_ASSUM MATCH_MP_TAC
-   >> Q.PAT_ASSUM `INJ f' SS1 SS2` MP_TAC
-   >> CONV_TAC (BINOP_CONV (SIMP_CONV (srw_ss()) [INJ_DEF]))
-   >> METIS_TAC[]);
-
-val REAL_SUM_IMAGE_DISJOINT_UNION_lem = prove
-  (``!P.
-        FINITE P ==>
-        (\P. !P'. FINITE P' ==>
-                (\P'. DISJOINT P P' ==>
-                        (!f. REAL_SUM_IMAGE f (P UNION P') =
-                             REAL_SUM_IMAGE f P +
-                             REAL_SUM_IMAGE f P')) P') P``,
-   MATCH_MP_TAC FINITE_INDUCT
-   >> CONJ_TAC
-   >- (RW_TAC real_ss [DISJOINT_EMPTY, UNION_EMPTY, REAL_SUM_IMAGE_THM])
-   >> REPEAT STRIP_TAC
-   >> CONV_TAC (BETA_CONV) >> MATCH_MP_TAC FINITE_INDUCT
-   >> CONJ_TAC
-   >- (RW_TAC real_ss [DISJOINT_EMPTY, UNION_EMPTY, REAL_SUM_IMAGE_THM])
-   >> FULL_SIMP_TAC std_ss [DISJOINT_INSERT]
-   >> ONCE_REWRITE_TAC [DISJOINT_SYM]
-   >> RW_TAC std_ss [INSERT_UNION, DISJOINT_INSERT, IN_INSERT]
-   >> FULL_SIMP_TAC std_ss [DISJOINT_SYM]
-   >> ONCE_REWRITE_TAC [UNION_COMM] >> RW_TAC std_ss [INSERT_UNION]
-   >> ONCE_REWRITE_TAC [UNION_COMM] >> ONCE_REWRITE_TAC [INSERT_COMM]
-   >> `FINITE (e INSERT s UNION s')` by RW_TAC std_ss [FINITE_INSERT, FINITE_UNION]
-   >> Q.ABBREV_TAC `Q = e INSERT s UNION s'`
-   >> RW_TAC std_ss [REAL_SUM_IMAGE_THM]
-   >> Q.UNABBREV_TAC `Q`
-   >> `~ (e' IN (e INSERT s UNION s'))`
-        by RW_TAC std_ss [IN_INSERT, IN_UNION]
-   >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
-   >> RW_TAC std_ss [REAL_SUM_IMAGE_THM]
-   >> REAL_ARITH_TAC);
-
-val REAL_SUM_IMAGE_DISJOINT_UNION = store_thm
-  ("REAL_SUM_IMAGE_DISJOINT_UNION",
-   ``!P P'. FINITE P /\ FINITE P' /\ DISJOINT P P' ==>
+Theorem REAL_SUM_IMAGE_DISJOINT_UNION :
+    !P P'. FINITE P /\ FINITE P' /\ DISJOINT P P' ==>
                 (!f. REAL_SUM_IMAGE f (P UNION P') =
                      REAL_SUM_IMAGE f P +
-                     REAL_SUM_IMAGE f P')``,
-   METIS_TAC [REAL_SUM_IMAGE_DISJOINT_UNION_lem]);
+                     REAL_SUM_IMAGE f P')
+Proof
+    rw [REAL_SUM_IMAGE_sum]
+ >> MATCH_MP_TAC SUM_UNION
+ >> rw [GSYM DISJOINT_DEF, FINITE_UNION]
+QED
 
 val REAL_SUM_IMAGE_EQ_CARD_lem = prove
    (``!P. FINITE P ==>
@@ -439,18 +350,20 @@ val REAL_SUM_IMAGE_COUNT = store_thm
                             DECIDE ``!(x:num) (y:num). x < y ==> ~(x = y)``]
    >> RW_TAC std_ss [REAL_ADD_SYM]);
 
-val REAL_SUM_IMAGE_MONO = store_thm
-  ("REAL_SUM_IMAGE_MONO",
-   ``!P. FINITE P ==>
-           !f f'. (!x. x IN P ==> f x <= f' x) ==>
-                REAL_SUM_IMAGE f P <= REAL_SUM_IMAGE f' P``,
-   Suff `!P. FINITE P ==>
-                (\P. !f f'. (!x. x IN P ==> f x <= f' x) ==>
-                REAL_SUM_IMAGE f P <= REAL_SUM_IMAGE f' P) P`
-   >- PROVE_TAC []
-   >> MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM,DELETE_NON_ELEMENT, IN_INSERT,
-                      DISJ_IMP_THM, FORALL_AND_THM, REAL_LE_ADD2]);
+Theorem REAL_SUM_IMAGE_MONO :
+    !P. FINITE P ==>
+        !f f'. (!x. x IN P ==> f x <= f' x) ==>
+               REAL_SUM_IMAGE f P <= REAL_SUM_IMAGE f' P
+Proof
+    rw [REAL_SUM_IMAGE_sum]
+ >> MATCH_MP_TAC SUM_MONO_LE >> rw []
+QED
+
+(* |- !f g s.
+        FINITE s /\ (!x. x IN s ==> f x <= g x) /\ (?x. x IN s /\ f x < g x) ==>
+        SIGMA f s < SIGMA g s
+ *)
+Theorem REAL_SUM_IMAGE_MONO_LT = translate SUM_MONO_LT
 
 val REAL_SUM_IMAGE_POS_MEM_LE = store_thm
   ("REAL_SUM_IMAGE_POS_MEM_LE",
@@ -524,19 +437,13 @@ val REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD = store_thm
    >> REPEAT (POP_ASSUM (K ALL_TAC))
    >> METIS_TAC [REAL_NZ_IMP_LT, GSYM REAL_EQ_RDIV_EQ, REAL_INV_1OVER, SUC_NOT]);
 
-val REAL_SUM_IMAGE_ADD = store_thm
-  ("REAL_SUM_IMAGE_ADD",
-   ``!s. FINITE s ==> !f f'.
-                (REAL_SUM_IMAGE (\x. f x + f' x) s =
-                 REAL_SUM_IMAGE f s + REAL_SUM_IMAGE f' s)``,
-   Suff `!s. FINITE s ==>
-        (\s. !f f'.
-                (REAL_SUM_IMAGE (\x. f x + f' x) s =
-                 REAL_SUM_IMAGE f s + REAL_SUM_IMAGE f' s)) s`
-   >- RW_TAC std_ss []
-   >> MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT]
-   >> REAL_ARITH_TAC);
+Theorem REAL_SUM_IMAGE_ADD :
+    !s. FINITE s ==>
+        !f f'. REAL_SUM_IMAGE (\x. f x + f' x) s =
+               REAL_SUM_IMAGE f s + REAL_SUM_IMAGE f' s
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_ADD]
+QED
 
 val REAL_SUM_IMAGE_REAL_SUM_IMAGE = store_thm
   ("REAL_SUM_IMAGE_REAL_SUM_IMAGE",
@@ -572,12 +479,11 @@ val REAL_SUM_IMAGE_REAL_SUM_IMAGE = store_thm
         INST_TYPE [``:'b``|->``:'c``]) REAL_SUM_IMAGE_IMAGE
    >> RW_TAC std_ss [INJ_DEF, IN_IMAGE, o_DEF] >> METIS_TAC []);
 
-val REAL_SUM_IMAGE_0 = store_thm
-  ("REAL_SUM_IMAGE_0",
-   ``!s. FINITE s ==> (REAL_SUM_IMAGE (\x. 0) s = 0)``,
-   REPEAT STRIP_TAC
-   >> (MP_TAC o Q.SPECL [`(\x. 0)`,`0`] o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_FINITE_CONST
-   >> RW_TAC real_ss []);
+Theorem REAL_SUM_IMAGE_0 :
+    !s. FINITE s ==> (REAL_SUM_IMAGE (\x. 0) s = 0)
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_0]
+QED
 
 val SEQ_REAL_SUM_IMAGE = store_thm
   ("SEQ_REAL_SUM_IMAGE",
@@ -644,12 +550,12 @@ val REAL_SUM_IMAGE_POW = store_thm
   >> RW_TAC std_ss [REAL_SUM_IMAGE_CMUL]
   >> RW_TAC std_ss [Once REAL_MUL_COMM,REAL_SUM_IMAGE_CMUL,POW_2]);
 
-val REAL_SUM_IMAGE_EQ = store_thm
- ("REAL_SUM_IMAGE_EQ", ``!s (f:'a->real) f'. FINITE s /\ (!x. x IN s ==> (f x = f' x))
-                         ==> (REAL_SUM_IMAGE f s = REAL_SUM_IMAGE f' s)``,
-  RW_TAC std_ss []
-  >> ONCE_REWRITE_TAC [(UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF]
-  >> RW_TAC std_ss []);
+Theorem REAL_SUM_IMAGE_EQ :
+    !s (f:'a->real) f'. FINITE s /\ (!x. x IN s ==> (f x = f' x))
+                    ==> (REAL_SUM_IMAGE f s = REAL_SUM_IMAGE f' s)
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_EQ]
+QED
 
 val REAL_SUM_IMAGE_IN_IF_ALT = store_thm
   ("REAL_SUM_IMAGE_IN_IF_ALT",``!s f z:real.
@@ -658,14 +564,13 @@ val REAL_SUM_IMAGE_IN_IF_ALT = store_thm
   >> MATCH_MP_TAC REAL_SUM_IMAGE_EQ
   >> RW_TAC std_ss []);
 
-val REAL_SUM_IMAGE_SUB = store_thm
- ("REAL_SUM_IMAGE_SUB", ``!s (f:'a -> real) f'. FINITE s ==>
+Theorem REAL_SUM_IMAGE_SUB :
+    !s (f:'a -> real) f'. FINITE s ==>
                  (REAL_SUM_IMAGE (\x. f x - f' x) s =
-                  REAL_SUM_IMAGE f s - REAL_SUM_IMAGE f' s)``,
-  RW_TAC std_ss [Once real_sub,REAL_SUM_IMAGE_ADD,Once REAL_NEG_MINUS1]
-  >> RW_TAC std_ss [Once real_sub,REAL_SUM_IMAGE_ADD,Once
-                    REAL_NEG_MINUS1,REAL_SUM_IMAGE_CMUL]
-  >> RW_TAC std_ss [GSYM REAL_NEG_MINUS1,real_sub]);
+                  REAL_SUM_IMAGE f s - REAL_SUM_IMAGE f' s)
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_SUB]
+QED
 
 val REAL_SUM_IMAGE_MONO_SET = store_thm
  ("REAL_SUM_IMAGE_MONO_SET", ``!(f:'a -> real) s t.
@@ -702,6 +607,351 @@ val REAL_SUM_IMAGE_CROSS_SYM = store_thm
            >> RW_TAC std_ss [])
   >> RW_TAC std_ss []);
 
-val _ = overload_on ("SIGMA", ``REAL_SUM_IMAGE ``);
+Theorem REAL_SUM_IMAGE_ABS_TRIANGLE :
+    !f s. FINITE s ==> abs (REAL_SUM_IMAGE f s) <= REAL_SUM_IMAGE (abs o f) s
+Proof
+    rw [REAL_SUM_IMAGE_sum, SUM_ABS, o_DEF]
+QED
+
+Theorem REAL_SUM_IMAGE_DELETE = translate SUM_DELETE
+Theorem REAL_SUM_IMAGE_SWAP = translate SUM_SWAP
+Theorem REAL_SUM_IMAGE_BOUND = translate SUM_BOUND
+
+Theorem REAL_SUM_IMAGE_IMAGE_LE :
+    !f:'a->'b g s.
+        FINITE s /\
+        (!x. x IN s ==> (0:real) <= g (f x))
+        ==> REAL_SUM_IMAGE g (IMAGE f s) <= REAL_SUM_IMAGE (g o f) s
+Proof
+    rpt STRIP_TAC
+ >> ‘FINITE (IMAGE f s)’ by METIS_TAC [IMAGE_FINITE]
+ >> rw [REAL_SUM_IMAGE_sum]
+ >> MATCH_MP_TAC SUM_IMAGE_LE >> art []
+QED
+
+Theorem REAL_SUM_IMAGE_PERMUTES :
+    !f p s:'a->bool. FINITE s /\ p PERMUTES s ==>
+                     REAL_SUM_IMAGE f s = REAL_SUM_IMAGE (f o p) s
+Proof
+    rw [BIJ_ALT, REAL_SUM_IMAGE_sum, IN_FUNSET]
+ >> MATCH_MP_TAC SUM_BIJECTION >> rw []
+ >> Q.PAT_X_ASSUM ‘!y. y IN s ==> ?!x. P’ (MP_TAC o Q.SPEC ‘y’)
+ >> RW_TAC bool_ss [EXISTS_UNIQUE_DEF] (* why it takes so long time? *)
+ >> Q.EXISTS_TAC ‘x’ >> art []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* ---- jensen's inequality (from "miller" example)             ------------ *)
+(* ------------------------------------------------------------------------- *)
+
+val jensen_convex_SIGMA = store_thm
+  ("jensen_convex_SIGMA",
+   ``!s. FINITE s ==>
+         !f g g'. (SIGMA g s = 1) /\
+                  (!x. x IN s ==> 0 <= g x /\ g x <= 1) /\
+                  f IN convex_fn ==>
+                        f (SIGMA (\x. g x * g' x) s) <= SIGMA (\x. g x * f (g' x)) s``,
+   Suff `!s. FINITE s ==>
+             (\s. !f g g'. (SIGMA g s = 1) /\
+                  (!x. x IN s ==> 0 <= g x /\ g x <= 1) /\
+                  f IN convex_fn ==>
+                        f (SIGMA (\x. g x * g' x) s) <= SIGMA (\x. g x * f (g' x)) s) s`
+   >- RW_TAC std_ss []
+   >> MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
+   >> Cases_on `g e = 0` >- FULL_SIMP_TAC real_ss []
+   >> Cases_on `g e = 1`
+   >- ( FULL_SIMP_TAC real_ss []
+        >> Know `!s. FINITE s ==>
+                (\s. !g. (SIGMA g s = 0) /\ (!x. x IN s ==> 0 <= g x /\ g x <= 1) ==>
+                            (!x. x IN s ==> (g x = 0))) s`
+        >- (MATCH_MP_TAC FINITE_INDUCT \\
+            RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT, DISJ_IMP_THM,
+                            FORALL_AND_THM, NOT_IN_EMPTY] >| (* 2 sub-goals *)
+            [ (* goal 1 (of 2) *)
+              Know `!(x:real) y. 0 <= x /\ 0 <= y /\ (x + y = 0) ==> ((x = 0) /\ (y = 0))`
+              >- REAL_ARITH_TAC
+              >> PROVE_TAC [REAL_SUM_IMAGE_POS],
+              (* goal 2 (of 2) *)
+              Know `!(x:real) y. 0 <= x /\ 0 <= y /\ (x + y = 0) ==> ((x = 0) /\ (y = 0))`
+              >- REAL_ARITH_TAC
+              >> Q.PAT_X_ASSUM `!g. (SIGMA g s' = 0) /\ (!x. x IN s' ==> 0 <= g x /\ g x <= 1) ==>
+                                !x. x IN s' ==> (g x = 0)`
+                (MP_TAC o Q.SPEC `g'`)
+              >> PROVE_TAC [REAL_SUM_IMAGE_POS] ])
+        >> Know `!x:real. (1 + x = 1) = (x = 0)` >- REAL_ARITH_TAC
+        >> STRIP_TAC >> FULL_SIMP_TAC real_ss []
+        >> POP_ASSUM (K ALL_TAC)
+        >> (ASSUME_TAC o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF
+        >> POP_ORW
+        >> DISCH_TAC
+        >> POP_ASSUM (ASSUME_TAC o UNDISCH_ALL o (REWRITE_RULE [GSYM AND_IMP_INTRO]) o
+                      (Q.SPEC `g`) o UNDISCH o (Q.SPEC `s`))
+        >> `(\x. (if x IN s then (\x. g x * g' x) x else 0)) = (\x. 0)`
+                by RW_TAC real_ss [FUN_EQ_THM]
+        >> POP_ORW
+        >> `(\x. (if x IN s then (\x. g x * f (g' x)) x else 0)) = (\x. 0)`
+                by RW_TAC real_ss [FUN_EQ_THM]
+        >> POP_ORW
+        >> Suff `SIGMA (\x. 0) s = 0` >- RW_TAC real_ss []
+        >> (MP_TAC o Q.SPECL [`(\x. 0)`, `0`] o
+                UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_FINITE_CONST
+        >> RW_TAC real_ss [])
+
+   >> Suff `(SIGMA (\x. g x * g' x) s = (1 - g e) * SIGMA (\x. (g x / (1 - g e)) * g' x) s) /\
+            (SIGMA (\x. g x * f(g' x)) s = (1 - g e) * SIGMA (\x. (g x / (1 - g e)) * f(g' x)) s)`
+   >- (RW_TAC std_ss [] >> FULL_SIMP_TAC std_ss [convex_fn, GSPECIFICATION]
+       >> Q.PAT_X_ASSUM `!f' g'' g'''.
+        (SIGMA g'' s = 1) /\
+        (!x. x IN s ==> 0 <= g'' x /\ g'' x <= 1) /\
+        (!x y t.
+           0 <= t /\ t <= 1 ==>
+           f' (t * x + (1 - t) * y) <= t * f' x + (1 - t) * f' y) ==>
+        f' (SIGMA (\x. g'' x * g''' x) s) <=
+        SIGMA (\x. g'' x * f' (g''' x)) s` (MP_TAC o Q.SPECL [`f`, `(\x. g x / (1 - g e))`, `g'`])
+       >> RW_TAC std_ss []
+       >> Q.PAT_X_ASSUM `!x y t. P`
+                (MP_TAC o Q.SPECL [`g' e`, `SIGMA (\x. g x / (1 - g e) * g' x) s`, `g e`])
+       >> RW_TAC std_ss []
+       >> MATCH_MP_TAC REAL_LE_TRANS
+       >> Q.EXISTS_TAC `g e * f (g' e) + (1 - g e) * f (SIGMA (\x. g x / (1 - g e) * g' x) s)`
+       >> RW_TAC real_ss [REAL_LE_LADD]
+       >> Cases_on `g e = 1` >- RW_TAC real_ss []
+       >> Know `0 < 1 - g e`
+       >- (Q.PAT_X_ASSUM `g e <= 1` MP_TAC >> Q.PAT_X_ASSUM `~ (g e = 1)` MP_TAC >> REAL_ARITH_TAC)
+       >> STRIP_TAC
+       >> Suff `f (SIGMA (\x. g x / (1 - g e) * g' x) s) <=
+                SIGMA (\x. g x / (1 - g e) * f (g' x)) s`
+       >- PROVE_TAC [REAL_LE_LMUL]
+       >> Q.PAT_X_ASSUM `(SIGMA (\x. g x / (1 - g e)) s = 1) /\
+                        (!x. x IN s ==> 0 <= g x / (1 - g e) /\ g x / (1 - g e) <= 1) ==>
+                        f (SIGMA (\x. g x / (1 - g e) * g' x) s) <=
+                        SIGMA (\x. g x / (1 - g e) * f (g' x)) s` MATCH_MP_TAC
+       >> CONJ_TAC
+       >- ((MP_TAC o Q.SPECL [`g`, `inv (1- g e)`] o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_CMUL
+           >> RW_TAC real_ss [real_div] >> ASM_REWRITE_TAC [Once REAL_MUL_COMM]
+           >> RW_TAC std_ss [Once REAL_MUL_COMM, GSYM real_div]
+           >> Suff `SIGMA g s = 1 * (1 - g e)`
+           >- PROVE_TAC [REAL_EQ_LDIV_EQ]
+           >> Q.PAT_X_ASSUM `g e + SIGMA g s = 1` MP_TAC
+           >> REAL_ARITH_TAC)
+       >> RW_TAC std_ss [] >- PROVE_TAC [REAL_LE_DIV, REAL_LT_IMP_LE]
+       >> Suff `g x <= 1 * (1 - g e)` >- PROVE_TAC [REAL_LE_LDIV_EQ]
+       >> Suff `g e + g x <= 1` >- REAL_ARITH_TAC
+       >> Q.PAT_X_ASSUM `g e + SIGMA g s = 1` (fn thm => ONCE_REWRITE_TAC [GSYM thm])
+       >> MATCH_MP_TAC REAL_LE_ADD2
+       >> PROVE_TAC [REAL_LE_REFL, REAL_SUM_IMAGE_POS_MEM_LE])
+   >> Know `~(1-g e = 0)` >- (POP_ASSUM MP_TAC >> REAL_ARITH_TAC)
+   >> RW_TAC real_ss [(REWRITE_RULE [Once EQ_SYM_EQ] o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_CMUL,
+                     REAL_MUL_ASSOC, REAL_DIV_LMUL]);
+
+val jensen_concave_SIGMA = store_thm
+  ("jensen_concave_SIGMA",
+   ``!s. FINITE s ==>
+         !f g g'. (SIGMA g s = 1) /\
+                  (!x. x IN s ==> 0 <= g x /\ g x <= 1) /\
+                  f IN concave_fn ==>
+                         SIGMA (\x. g x * f (g' x)) s <= f (SIGMA (\x. g x * g' x) s)``,
+   REPEAT STRIP_TAC
+   >> ONCE_REWRITE_TAC [GSYM REAL_LE_NEG2]
+   >> RW_TAC std_ss [(REWRITE_RULE [Once EQ_SYM_EQ]) REAL_SUM_IMAGE_NEG]
+   >> Suff `(\x. ~ f x) (SIGMA (\x. g x * g' x) s) <=
+            SIGMA (\x. g x * (\x. ~ f x) (g' x)) s`
+   >- RW_TAC real_ss []
+   >> Q.ABBREV_TAC `f' = (\x. ~f x)`
+   >> (MATCH_MP_TAC o UNDISCH o Q.SPEC `s`) jensen_convex_SIGMA
+   >> Q.UNABBREV_TAC `f'`
+   >> FULL_SIMP_TAC std_ss [concave_fn, GSPECIFICATION]);
+
+val jensen_pos_convex_SIGMA = store_thm
+  ("jensen_pos_convex_SIGMA",
+   ``!s. FINITE s ==>
+         !f g g'. (SIGMA g s = 1) /\
+                  (!x. x IN s ==> 0 <= g x /\ g x <= 1) /\
+                  (!x. x IN s ==> (0 < g x ==> 0 < g' x)) /\
+                  f IN pos_convex_fn ==>
+                        f (SIGMA (\x. g x * g' x) s) <= SIGMA (\x. g x * f (g' x)) s``,
+   Suff `!s. FINITE s ==>
+             (\s. !f g g'. (SIGMA g s = 1) /\
+                  (!x. x IN s ==> 0 <= g x /\ g x <= 1) /\
+                  (!x. x IN s ==> (0 < g x ==> 0 < g' x)) /\
+                  f IN pos_convex_fn ==>
+                        f (SIGMA (\x. g x * g' x) s) <= SIGMA (\x. g x * f (g' x)) s) s`
+   >- RW_TAC std_ss []
+   >> MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
+   >> Cases_on `g e = 0` >- FULL_SIMP_TAC real_ss []
+   >> Cases_on `g e = 1`
+   >- ( FULL_SIMP_TAC real_ss []
+        >> Know `!s. FINITE s ==>
+                (\s. !g. (SIGMA g s = 0) /\ (!x. x IN s ==> 0 <= g x /\ g x <= 1) ==>
+                            (!x. x IN s ==> (g x = 0))) s`
+        >- (MATCH_MP_TAC FINITE_INDUCT
+            >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT, DISJ_IMP_THM,
+                               FORALL_AND_THM, NOT_IN_EMPTY] (* 2 sub-goals *)
+            >- (Know `!(x:real) y. 0 <= x /\ 0 <= y /\ (x + y = 0) ==> ((x = 0) /\ (y = 0))`
+                >- REAL_ARITH_TAC
+                >> PROVE_TAC [REAL_SUM_IMAGE_POS])
+            >>
+            ( Know `!(x:real) y. 0 <= x /\ 0 <= y /\ (x + y = 0) ==> ((x = 0) /\ (y = 0))`
+              >- REAL_ARITH_TAC
+              >> Q.PAT_X_ASSUM `!g. (SIGMA g s' = 0) /\ (!x. x IN s' ==> 0 <= g x /\ g x <= 1) ==>
+                                !x. x IN s' ==> (g x = 0)`
+                (MP_TAC o Q.SPEC `g''`)
+              >> PROVE_TAC [REAL_SUM_IMAGE_POS] ))
+        >> Know `!x:real. (1 + x = 1) = (x = 0)` >- REAL_ARITH_TAC
+        >> STRIP_TAC >> FULL_SIMP_TAC real_ss []
+        >> POP_ASSUM (K ALL_TAC)
+        >> (ASSUME_TAC o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF
+        >> POP_ORW
+        >> DISCH_TAC
+        >> POP_ASSUM (ASSUME_TAC o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+                      (Q.SPEC `g`) o UNDISCH o (Q.SPEC `s`))
+        >> `(\x. (if x IN s then (\x. g x * g' x) x else 0)) = (\x. 0)`
+                by RW_TAC real_ss [FUN_EQ_THM]
+        >> POP_ORW
+        >> `(\x. (if x IN s then (\x. g x * f (g' x)) x else 0)) = (\x. 0)`
+                by RW_TAC real_ss [FUN_EQ_THM]
+        >> POP_ORW
+        >> Suff `SIGMA (\x. 0) s = 0` >- RW_TAC real_ss []
+        >> (MP_TAC o Q.SPECL [`(\x. 0)`, `0`] o
+                UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_FINITE_CONST
+        >> RW_TAC real_ss [])
+   >> Suff `(SIGMA (\x. g x * g' x) s = (1 - g e) * SIGMA (\x. (g x / (1 - g e)) * g' x) s) /\
+            (SIGMA (\x. g x * f(g' x)) s = (1 - g e) * SIGMA (\x. (g x / (1 - g e)) * f(g' x)) s)`
+   >- (RW_TAC std_ss [] >> FULL_SIMP_TAC std_ss [pos_convex_fn, GSPECIFICATION]
+       >> Q.PAT_X_ASSUM `!f' g'' g'''.
+        (SIGMA g'' s = 1) /\
+        (!x. x IN s ==> 0 <= g'' x /\ g'' x <= 1) /\
+        (!x. x IN s ==> 0 < g'' x ==> 0 < g''' x) /\
+        (!x y t.
+           0 < x /\ 0 < y /\ 0 <= t /\ t <= 1 ==>
+           f' (t * x + (1 - t) * y) <= t * f' x + (1 - t) * f' y) ==>
+        f' (SIGMA (\x. g'' x * g''' x) s) <=
+        SIGMA (\x. g'' x * f' (g''' x)) s` (MP_TAC o Q.SPECL [`f`, `(\x. g x / (1 - g e))`, `g'`])
+       >> RW_TAC std_ss []
+       >> Know `0 < 1 - g e`
+       >- (Q.PAT_X_ASSUM `g e <= 1` MP_TAC >> Q.PAT_X_ASSUM `~ (g e = 1)` MP_TAC >> REAL_ARITH_TAC)
+       >> STRIP_TAC
+       >> Know `SIGMA (\x. g x / (1 - g e)) s = 1`
+       >- ((MP_TAC o Q.SPECL [`g`, `inv (1- g e)`] o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_CMUL
+           >> RW_TAC real_ss [real_div] >> ASM_REWRITE_TAC [Once REAL_MUL_COMM]
+           >> RW_TAC std_ss [Once REAL_MUL_COMM, GSYM real_div]
+           >> Suff `SIGMA g s = 1 * (1 - g e)`
+           >- PROVE_TAC [REAL_EQ_LDIV_EQ]
+           >> Q.PAT_X_ASSUM `g e + SIGMA g s = 1` MP_TAC
+           >> REAL_ARITH_TAC)
+       >> STRIP_TAC
+       >> FULL_SIMP_TAC std_ss []
+       >> Cases_on `s = {}` >- FULL_SIMP_TAC real_ss [REAL_SUM_IMAGE_THM]
+       >> Know `0 < SIGMA (\x. g x / (1 - g e) * g' x) s`
+       >- ( RW_TAC std_ss [REAL_LT_LE]
+            >- ((MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+                        Q.SPECL [`(\x. g x / (1 - g e) * g' x)`,`s`]) REAL_SUM_IMAGE_POS
+                >> RW_TAC real_ss [] >> Cases_on `g x = 0` >- RW_TAC real_ss []
+                >> MATCH_MP_TAC REAL_LE_MUL
+                >> reverse CONJ_TAC >- PROVE_TAC [REAL_LT_IMP_LE, REAL_LT_LE]
+                >> RW_TAC real_ss [] >> MATCH_MP_TAC REAL_LE_DIV
+                >> RW_TAC real_ss [] >> PROVE_TAC [REAL_LT_IMP_LE])
+            >> Q.PAT_X_ASSUM `SIGMA (\x. g x * g' x) s =
+                                (1 - g e) * SIGMA (\x. g x / (1 - g e) * g' x) s`
+                (MP_TAC o REWRITE_RULE [Once REAL_MUL_COMM] o GSYM)
+            >> RW_TAC std_ss [GSYM REAL_EQ_RDIV_EQ]
+            >> RW_TAC std_ss [real_div, REAL_ENTIRE, REAL_INV_EQ_0, REAL_LT_IMP_NE]
+            >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
+            >> Know `!s. FINITE s ==>
+                    (\s. !g g'. (!x. x IN s ==> 0 <= g x) /\ (!x. x IN s ==> 0 < g x ==> 0 < g' x) /\
+                                (SIGMA (\x. g x * g' x) s = 0) ==>
+                                (!x. x IN s ==> (g x = 0))) s`
+            >- ( REPEAT (POP_ASSUM (K ALL_TAC))
+                 >> MATCH_MP_TAC FINITE_INDUCT
+                 >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, NOT_IN_EMPTY, DELETE_NON_ELEMENT,
+                                   IN_INSERT, Once DISJ_IMP_THM, Once FORALL_AND_THM]
+                 >- ( SPOSE_NOT_THEN STRIP_ASSUME_TAC
+                      >> Cases_on `SIGMA (\x. g x * g' x) s = 0`
+                      >- ( FULL_SIMP_TAC real_ss [REAL_ENTIRE] \\
+                           PROVE_TAC [REAL_LT_IMP_NE, REAL_LT_LE] )
+                      >> `0 < g e * g' e + SIGMA (\x. g x * g' x) s`
+                                by (MATCH_MP_TAC REAL_LT_ADD
+                                    >> CONJ_TAC
+                                    >- (MATCH_MP_TAC REAL_LT_MUL >> PROVE_TAC [REAL_LT_LE])
+                                    >> RW_TAC std_ss [REAL_LT_LE]
+                                    >> (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+                                        Q.SPECL [`(\x. g x * g' x)`,`s`]) REAL_SUM_IMAGE_POS
+                                    >> RW_TAC std_ss []
+                                    >> Cases_on `g x = 0` >- RW_TAC real_ss []
+                                    >> PROVE_TAC [REAL_LE_MUL, REAL_LT_IMP_LE, REAL_LT_LE])
+                      >> PROVE_TAC [REAL_LT_IMP_NE] )
+                 >> Cases_on `SIGMA (\x. g x * g' x) s = 0`
+                 >- METIS_TAC []
+                 >> Cases_on `g e = 0`
+                 >- FULL_SIMP_TAC real_ss []
+                 >> `0 < g e * g' e + SIGMA (\x. g x * g' x) s`
+                        by (MATCH_MP_TAC REAL_LT_ADD
+                            >> CONJ_TAC
+                            >- (MATCH_MP_TAC REAL_LT_MUL >> METIS_TAC [REAL_LT_LE])
+                            >> RW_TAC std_ss [REAL_LT_LE]
+                            >> (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+                                Q.SPECL [`(\x. g x * g' x)`,`s`]) REAL_SUM_IMAGE_POS
+                            >> RW_TAC std_ss []
+                            >> Cases_on `g x' = 0` >- RW_TAC real_ss []
+                            >> PROVE_TAC [REAL_LE_MUL, REAL_LT_IMP_LE, REAL_LT_LE])
+                 >> METIS_TAC [REAL_LT_IMP_NE] )
+            >> DISCH_TAC
+            >> POP_ASSUM (ASSUME_TAC o UNDISCH o Q.SPEC `s`)
+            >> FULL_SIMP_TAC std_ss [IMP_CONJ_THM, Once FORALL_AND_THM]
+            >> POP_ASSUM (ASSUME_TAC o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+                          (Q.SPECL [`g`,`g'`]))
+            >> (ASSUME_TAC o Q.SPECL [`(\x. if x IN s then g x else 0)`, `0`] o
+                UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_FINITE_CONST
+            >> `SIGMA (\x. (if x IN s then g x else 0)) s = SIGMA g s`
+                  by METIS_TAC [GSYM REAL_SUM_IMAGE_IN_IF]
+            >> FULL_SIMP_TAC real_ss [] )
+       >> DISCH_TAC
+       >> Q.PAT_X_ASSUM `!x y t. P`
+              (MP_TAC o Q.SPECL [`g' e`, `SIGMA (\x. g x / (1 - g e) * g' x) s`, `g e`])
+       >> Know `0 < g' e` >- METIS_TAC [REAL_LT_LE]
+       >> RW_TAC std_ss []
+       >> MATCH_MP_TAC REAL_LE_TRANS
+       >> Q.EXISTS_TAC `g e * f (g' e) + (1 - g e) * f (SIGMA (\x. g x / (1 - g e) * g' x) s)`
+       >> RW_TAC real_ss [REAL_LE_LADD]
+       >> Suff `f (SIGMA (\x. g x / (1 - g e) * g' x) s) <=
+                SIGMA (\x. g x / (1 - g e) * f (g' x)) s`
+       >- PROVE_TAC [REAL_LE_LMUL]
+       >> Q.PAT_X_ASSUM `(!x. x IN s ==> 0 <= g x / (1 - g e) /\ g x / (1 - g e) <= 1) /\
+       (!x. x IN s ==> 0 < g x / (1 - g e) ==> 0 < g' x) ==>
+       f (SIGMA (\x. g x / (1 - g e) * g' x) s) <=
+       SIGMA (\x. g x / (1 - g e) * f (g' x)) s` MATCH_MP_TAC
+       >> RW_TAC std_ss [] (* 3 sub-goals *)
+       >| [PROVE_TAC [REAL_LE_DIV, REAL_LT_IMP_LE],
+           Suff `g x <= 1 * (1 - g e)` >- PROVE_TAC [REAL_LE_LDIV_EQ]
+           >> Suff `g e + g x <= 1` >- REAL_ARITH_TAC
+           >> Q.PAT_X_ASSUM `g e + SIGMA g s = 1` (fn thm => ONCE_REWRITE_TAC [GSYM thm])
+           >> MATCH_MP_TAC REAL_LE_ADD2
+           >> PROVE_TAC [REAL_LE_REFL, REAL_SUM_IMAGE_POS_MEM_LE],
+           Cases_on `g x = 0` >- FULL_SIMP_TAC real_ss []
+           >> PROVE_TAC [REAL_LT_LE] ])
+   >> Know `~(1-g e = 0)` >- (POP_ASSUM MP_TAC >> REAL_ARITH_TAC)
+   >> RW_TAC real_ss [(REWRITE_RULE [Once EQ_SYM_EQ] o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_CMUL,
+                     REAL_MUL_ASSOC, REAL_DIV_LMUL]);
+
+val jensen_pos_concave_SIGMA = store_thm
+  ("jensen_pos_concave_SIGMA",
+   ``!s. FINITE s ==>
+         !f g g'. (SIGMA g s = 1) /\
+                  (!x. x IN s ==> 0 <= g x /\ g x <= 1) /\
+                  (!x. x IN s ==> (0 < g x ==> 0 < g' x)) /\
+                  f IN pos_concave_fn ==>
+                        SIGMA (\x. g x * f (g' x)) s <= f (SIGMA (\x. g x * g' x) s)``,
+   REPEAT STRIP_TAC
+   >> ONCE_REWRITE_TAC [GSYM REAL_LE_NEG2]
+   >> RW_TAC std_ss [(REWRITE_RULE [Once EQ_SYM_EQ]) REAL_SUM_IMAGE_NEG]
+   >> Suff `(\x. ~ f x) (SIGMA (\x. g x * g' x) s) <=
+            SIGMA (\x. g x * (\x. ~ f x) (g' x)) s`
+   >- RW_TAC real_ss []
+   >> Q.ABBREV_TAC `f' = (\x. ~f x)`
+   >> (MATCH_MP_TAC o UNDISCH o Q.SPEC `s`) jensen_pos_convex_SIGMA
+   >> Q.UNABBREV_TAC `f'`
+   >> FULL_SIMP_TAC std_ss [pos_concave_fn, GSPECIFICATION]);
 
 val _ = export_theory ();

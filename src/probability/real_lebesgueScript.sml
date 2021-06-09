@@ -8,14 +8,17 @@ open metisLib arithmeticTheory pred_setTheory listTheory combinTheory
      pairTheory realTheory realLib jrhUtils realSimps numTheory
      simpLib seqTheory whileTheory real_sigmaTheory transcTheory limTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory real_measureTheory
-     real_borelTheory;
+open hurdUtils iterateTheory util_probTheory sigma_algebraTheory
+     real_measureTheory real_borelTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "lebesgue"                                      *)
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "real_lebesgue";
+
+Overload indicator_fn[local] = “indicator”
+Theorem indicator_fn_def[local] = indicator
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)

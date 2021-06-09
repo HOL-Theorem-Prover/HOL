@@ -10,6 +10,7 @@
 !!examples/category
 !!examples/miller
 !!examples/miller/miller
+!!examples/probability
 !!!examples/ARM_security_properties
 !examples/fun-op-sem/lprefix_lub
 !examples/fun-op-sem/for
@@ -17,6 +18,7 @@
 !!examples/logic/ltl
 !!examples/logic/ltl-transformations
 !!examples/fun-op-sem
+!examples/algorithms
 
 # Crypto examples
 !!examples/Crypto/AES
@@ -40,3 +42,10 @@
 !!examples/algebra
 !!examples/simple_complexity
 !!examples/AKS
+
+# Dependability examples
+!examples/dependability/
+
+# Lassie examples
+!examples/lassie/
+

@@ -726,7 +726,7 @@ Theorem subsystem_INTER:
   subsystem (BIGINTER VS) (A, af)
 Proof
   strip_tac >> simp[subsystem_ALT] >> rw[]
-  >- fs[BIGINTER_SUBSET, subsystem_def] >>
+  >- (irule BIGINTER_SUBSET >> metis_tac[MEMBER_NOT_EMPTY,subsystem_def]) >>
   rw[hom_def, restr_applies]
   >- (simp[system_def, PULL_EXISTS, restr_def, Fset_def, SUBSET_DEF,
            AllCaseEqs()] >> rw[]
