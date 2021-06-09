@@ -24,25 +24,7 @@ open pred_setTheory listTheory arithmeticTheory;
 (* (* val _ = load "monoidTheory"; *) *)
 (* (* val _ = load "groupTheory"; *) *)
 (* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; *)
-open monoidTheory groupTheory ringTheory integralDomainTheory fieldTheory;
-
-(* Instances for examples. *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
-(* open ringInstancesTheory fieldInstancesTheory; *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; *) *)
-(* (* val _ = load "helperSetTheory"; *) *)
-(* open helperNumTheory helperSetTheory; *)
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; *) *)
-(* (* val _ = load "gcdTheory"; *) *)
-(* open arithmeticTheory dividesTheory gcdTheory; *)
-
+open monoidTheory groupTheory ringTheory
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Polynomials Documentation                                           *)
