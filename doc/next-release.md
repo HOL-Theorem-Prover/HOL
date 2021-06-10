@@ -20,6 +20,10 @@ Contents
 New features:
 -------------
 
+- A `HOL_CONFIG` environment variable is considered to allow for a custom `hol-config` configuration at a non-standard location or potentially ignoring any present hol-config.
+  If the variable is set, any other hol-config file will be ignored. If the value of `HOL_CONFIG` is a readable file, it will be used.
+
+
 Bugs fixed:
 -----------
 
