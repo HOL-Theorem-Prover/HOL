@@ -459,13 +459,24 @@ load "mleSMLSynt"; open mleSMLSynt;
 load "aiLib"; open aiLib;
 val sl = readl (selfdir ^ "/oeis/pos");
 fun ilts il = String.concatWith " " (map its il);
-fun f s =
-  map string_to_int (tl (first_n 17 (String.tokens (fn x => x = #",") s)));
 
-val oeis_seql = mapfilter f sl; (* filter because of overflow *)
-val oeis_seql2 = filter (fn x => length x = 16) oeis_seql;
-val oeis_seql3 = mk_fast_set (list_compare Int.compare) oeis_seql2;
-writel "target/oeis" (map ilts oeis_seql3);
+
+fun f s = map string_to_int
+  (tl (first_n 17 (String.tokens (fn x => x = #",") s)));
+
+
+val l1 = mapfilter f sl; (* filter because of overflow *)
+val l2 = filter (fn x => length x = 16) l1;
+val l3 = mk_fast_set (list_compare Int.compare) l2;
+writel (selfdir ^ "/oeis/oeis_target") (map ilts oeis_seql3);
+val l3 = readl (selfdir ^ "/oeis/oeis_target");
+fun stil s = map string_to_int  (String.tokens Char.isSpace s);
+val l4 = map stil l3;
+val l5 = mk_fast_set (list_compare Int.compare) (map (first_n 8) l4);
+fun test x = length (mk_fast_set Int.compare x) >= 16 andalso
+  all (fn y => y < 1024) x;
+val l6 = filter test l4;
+
 *)
 
 (* -------------------------------------------------------------------------
