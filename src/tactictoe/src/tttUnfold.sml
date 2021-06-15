@@ -1117,6 +1117,7 @@ fun ttt_clean_savestate () =
 
 fun ttt_record () =
   let
+    val _ = mkDir_err (tactictoe_dir ^ "/code")
     val thyl1 = ttt_ancestry (current_theory ())
     val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
     val ((),t) = add_time (app ttt_record_thy) thyl2
