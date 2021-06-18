@@ -74,7 +74,11 @@ fun getcline args =
                                errFn = die}
                               args
     fun is_varassign str =
-      List.length (String.tokens (fn x => x = #"=") str) = 2
+      let
+        val fs = String.fields (fn x => x = #"=") str
+      in
+        List.length fs = 2 andalso List.all (fn s => String.size s > 0) fs
+      end
     val (vars, targets) = List.partition is_varassign rest
   in
     (opts, vars, targets)
@@ -108,7 +112,7 @@ val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 (* Extend the base environment with vars passed at commandline. *)
 fun extend_with_cline_vars env =
   List.foldl (fn (vstr, env) =>
-                case String.tokens (fn x => x = #"=") vstr of
+                case String.fields (fn x => x = #"=") vstr of
                   [vname, contents] => env_extend (vname, [LIT contents]) env
                 | _ => die ("Malformed variable assignment " ^
                             "passed at commandline: " ^ vstr))
