@@ -27,6 +27,7 @@ src/1
 src/proofman
 [poly]bin/hol.bare
 !src/proofman/tests
+!tools/Holmake/tests/clinevars
 !tools/Holmake/tests/holpathdb/proj2
 !tools/Holmake/tests/holpathdb/proj2/proj2A
 !tools/Holmake/tests/depchain1/dir3
