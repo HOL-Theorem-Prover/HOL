@@ -1077,7 +1077,7 @@ fun work() =
               OS.FileSys.chDir (hmdir.toAbsPath original_dir)
             end
         fun transform_thy_target s =
-            if String.isSuffix "Theory" s then s ^ ".dat"
+            if String.isSuffix "Theory" s then s ^ ".uo"
             else s
         val xs = map transform_thy_target xs
       in
