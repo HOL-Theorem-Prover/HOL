@@ -18,7 +18,7 @@ fun test tm = can (find_term (fn x => term_eq x vx)) tm;
 val (pos,neg) = partition test terml;
 val (pos',neg') = (map_assoc (fn x => 1.0) pos, map_assoc (fn x => 0.0) neg);
 val ex = map (fn (a,b) => [(mk_comb (vhead,a),[b])]) (pos' @ neg');
-val (trainex,testex) = part_pct 0.9 ex;
+val (trainex,testex) = part_pct 0.9 (shuffle ex);
 
 (* TNN *)
 val nlayer = 1;
