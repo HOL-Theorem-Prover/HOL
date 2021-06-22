@@ -14,7 +14,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleDiophSynt"
 val version = 2
-val selfdir = HOLDIR ^ "/examples/AI_tasks"
+val selfdir = HOLDIR ^ "/examples/AI/RL/diophantine"
 
 (* -------------------------------------------------------------------------
    Board
@@ -67,8 +67,8 @@ fun apply_move_poly move poly =
              then raise ERR "apply_move_poly" "non-increasing"
              else butlast poly @ [last poly @ [c]]
 
-fun apply_move (tree,id) move (poly,graph,n) =
-  ((apply_move_poly move poly, graph, n-1), tree)
+fun apply_move move (poly,graph,n) =
+  (apply_move_poly move poly, graph, n-1)
 
 fun available_movel_poly poly =
   filter (fn x => can (apply_move_poly x) poly) movel
@@ -151,8 +151,8 @@ fun mk_targetd l1 =
    ------------------------------------------------------------------------- *)
 
 fun term_of_graph graph =
-  mk_embedding_var
-  (Vector.fromList (map (fn x => if x then 1.0 else ~1.0) graph), bool)
+  if null graph then raise ERR "term_of_graph" "empty" else
+  list_mk_conj (map (fn x => if x then T else F) graph)
 
 val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
@@ -161,26 +161,24 @@ fun tag_hpoli x = mk_comb (head_poli,x)
 val graph_tag = mk_var ("graph_tag", ``:bool -> num``)
 fun tag_graph x = mk_comb (graph_tag,x)
 
-fun tob1 (poly,graph,_) =
-  let
-    val (tm1,tm2) = (term_of_poly poly, tag_graph (term_of_graph graph))
-    val tm = mk_eq (tm1,tm2)
-  in
+fun term_of_board (poly,graph,_) =
+  mk_eq (term_of_poly poly, tag_graph (term_of_graph graph))
+
+fun tob board =
+  let val tm = term_of_board board in
     [tag_heval tm, tag_hpoli tm]
   end
 
-fun tob2 embedv (poly,_,_) =
+fun player_from_tnn tnn board =
   let
-    val (tm1,tm2) = (term_of_poly poly, embedv)
-    val tm = mk_eq (tm1,tm2)
+    val boardemb = infer_emb tnn (term_of_board board)
+    val e = descale_out (fp_emb tnn head_eval [boardemb])
+    val p = descale_out (fp_emb tnn head_poli [boardemb])
+    val d = dnew move_compare (combine (movel,p))
+    fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
   in
-    [tag_heval tm, tag_hpoli tm]
+    (singleton_of_list e, map_assoc f (available_movel board))
   end
-
-fun pretob boardtnno = case boardtnno of
-    NONE => tob1
-  | SOME ((_,graph,_),tnn) =>
-    tob2 (precomp_embed tnn (tag_graph (term_of_graph graph)))
 
 (* -------------------------------------------------------------------------
    Player
@@ -191,7 +189,7 @@ val schedule =
     batch_size = 16, nepoch = 10}]
 
 val dioph_operl =
-  [``$= : num -> num -> bool``,
+  [``$= : num -> num -> bool``,``$/\ : bool -> bool -> bool``,
    graph_tag,``$+``,``$*``,mk_var ("start",``:num``)] @
   map (fn i => mk_var ("n" ^ its i,``:num``)) numberl @
   List.concat
@@ -204,57 +202,28 @@ fun dim_head_poli n = [dim,n]
 
 val tnndim = map_assoc (dim_std (1,dim)) dioph_operl @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
-val dplayer = {pretob = pretob, tnndim = tnndim, schedule = schedule}
+
+val dplayer = {player_from_tnn = player_from_tnn,
+  tob = tob, tnndim = tnndim, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-val rlparam =
-  {expname = "mleDiophSynt-" ^ its version, exwindow = 200000,
-   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
+val rlparam =  
+  {expdir = (mkDir_err (selfdir ^ "/eval");
+             selfdir ^ "/eval/dioph-" ^ its version), 
+   exwindow = 200000, ncore = 30, ntarget = 200, nsim = 32000}
 
-val rlobj : (board,move) rlobj =
+val rlobj: (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
    infobs = fn _ => ()}
 
-val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
+val extsearch = mk_extsearch selfdir "mleDiophSynt.extsearch" rlobj
 
 (* -------------------------------------------------------------------------
-   Final test
+   Training run
    ------------------------------------------------------------------------- *)
-
-(*
-val ft_extsearch_uniform =
-  ft_mk_extsearch "mleDiophSynt.ft_extsearch_uniform" rlobj
-    (uniform_player game)
-
-fun graph_distance bl1 bl2 =
-  let
-    val bbl1 = combine (bl1,bl2)
-    val bbl2 = filter (fn (a,b) => a = b) bbl1
-  in
-    int_div (length bbl2) (length bl1)
-  end
-
-fun distance_player (board as (poly,set,_)) =
-  let
-    val e = if null poly
-            then 0.0
-            else graph_distance (graph_to_bl (dioph_set poly)) set
-  in
-    (e, map (fn x => (x,1.0)) (available_movel board))
-  end
-
-val ft_extsearch_distance =
-  ft_mk_extsearch "mleDiophSynt.ft_extsearch_distance" rlobj distance_player
-
-val fttnn_extsearch =
-  fttnn_mk_extsearch "mleDiophSynt.fttnn_extsearch" rlobj
-
-val fttnnbs_extsearch =
-  fttnnbs_mk_extsearch "mleDiophSynt.fttnnbs_extsearch" rlobj
-*)
 
 (*
 load "aiLib"; open aiLib;
@@ -270,222 +239,6 @@ val _ = rl_start (rlobj,extsearch) (mk_targetd targetl);
 
 val targetd = retrieve_targetd rlobj 75;
 val _ = rl_restart 75 (rlobj,extsearch) targetd;
-*)
-
-(* -------------------------------------------------------------------------
-   MCTS test for inspection of the results
-   ------------------------------------------------------------------------- *)
-
-fun solve_target (unib,tim,tnn) target =
-  let
-    val mctsparam =
-    {
-    timer = SOME tim,
-    nsim = (NONE : int option),
-    stopatwin_flag = true,
-    decay = 1.0,
-    explo_coeff = 2.0,
-    noise_all = false,
-    noise_root = false,
-    noise_coeff = 0.25,
-    noise_gen = random_real,
-    noconfl = false,
-    avoidlose = false,
-    evalwin = false
-    }
-  val pretob = (#pretob (#dplayer rlobj));
-  fun preplayer target =
-    let val tob = pretob (SOME (target,tnn)) in
-      fn board => mlReinforce.player_from_tnn tnn tob (#game rlobj) board
-    end;
-  val mctsobj =
-    {mctsparam = mctsparam, game = #game rlobj,
-     player = if unib then uniform_player (#game rlobj) else preplayer target}
-  in
-    (fst o snd) (mcts mctsobj (starttree_of mctsobj target))
-  end
-
-fun solve_diophset (unib,tim,tnn) diophset =
-  let
-    val target = ([]:poly,graph_to_bl diophset,40);
-    val tree = solve_target (unib,tim,tnn) target;
-    val b = #status (dfind [] tree) = Win;
-  in
-    if b then
-      let val nodel = trace_win tree [] in
-        print_endline (its (dlength tree));
-        print_endline (human_of_poly (#1 (#board (last nodel))))
-      end
-    else
-      (print_endline (its (dlength tree)); print_endline "Time out")
-  end
-
-(*
-load "aiLib"; open aiLib;
-load "mleDiophSynt"; open mleDiophSynt;
-val tnn = mlReinforce.retrieve_tnn rlobj 197;
-val diophset = [0,1,2,4,8];
-solve_diophset (false,60.0,tnn) diophset;
-*)
-
-(* -------------------------------------------------------------------------
-   Final testing
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "smlParallel"; open smlParallel;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleDiophSynt"; open mleDiophSynt;
-
-val dir1 = HOLDIR ^ "/examples/AI_tasks/dioph_results_nolimit";
-val _ = mkDir_err dir1;
-fun store_result dir (a,i) =
-  #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;
-
-(*** Testing set ***)
-val dataset = "test";
-val pretargetl = import_targetl dataset;
-val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl;
-length targetl;
-(* uniform *)
-val (l1',t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
-val winb = filter I (map #1 l1'); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l1');
-(* distance *)
-val (l2',t) =
-  add_time (parmap_queue_extern 20 ft_extsearch_distance ()) targetl;
-val winb = filter I (map #1 l2'); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_distance";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2');
-(* tnn *)
-val tnn = mlReinforce.retrieve_tnn rlobj 197;
-val (l3',t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
-val winb = filter I (map #1 l3'); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l3');
-
-(*** Training set ***)
-val dataset = "train";
-val pretargetl = import_targetl dataset;
-val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl;
-length targetl;
-(* uniform *)
-val (l1,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
-val winb = filter I (map #1 l1); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l1);
-(* distance *)
-val (l2,t) =
-  add_time (parmap_queue_extern 20 ft_extsearch_distance ()) targetl;
-val winb = filter I (map #1 l2); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_distance";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2);
-(* tnn *)
-val tnn = mlReinforce.retrieve_tnn rlobj 197;
-val (l3,t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
-val winb = filter I (map #1 l3); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l3);
-*)
-
-(* -------------------------------------------------------------------------
-   Final testing statistics
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "mleDiophLib"; open mleDiophLib;
-load "mleDiophSynt"; open mleDiophSynt;
-
-val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/test_tnn_nolimit";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l1 = List.tabulate (200,g);
-val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/train_tnn";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l2 = List.tabulate (2000,g);
-
-val (l3,l3') = partition #1 (l1 @ l2);
-val nsim_tnn = average_int (map #2 l3');
-val l4 = map (valOf o #3) l3;
-val l5 = map (fn (a,b,c) => veri_of_poly a) l4;
-val l6 = map (fn (a,b,c) => ((graph_to_il b, veri_of_poly a), poly_size a))
-l4;
-val l7 = dict_sort compare_imax l6;
-hd l7;
-val d = dnew (list_compare Int.compare) l6;
-
-val l6 = map (fn (a,b,c) => (graph_to_il b, veri_of_poly a, c)) l4;
-
-val longest =
-  let fun cmp (a,b) = Int.compare (#2 b, #2 a) in
-    dict_sort cmp l3
-  end;
-
-val (a,b,c) = valOf (#3 (hd longest));
-veri_of_poly a;
-graph_to_il b;
-
-
-val monol = List.concat (map numSyntax.strip_plus l5);
-val monofreq = dlist (count_dict (dempty Term.compare) monol);
-val monostats = dict_sort compare_imax monofreq;
-
-mleDiophLib.dioph_set (fst (hd l4));
-
-
-val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/test_uniform";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l1 = List.tabulate (200,g);
-val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/train_uniform";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l2 = List.tabulate (2000,g);
-
-val (l3,l3') = partition #1 (l1 @ l2);
-val nsim_uniform = average_int (map #2 l3');
-
-val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/test_distance";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l1 = List.tabulate (200,g);
-val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/train_distance";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l2 = List.tabulate (2000,g);
-
-val (l3,l3') = partition #1 (l1 @ l2);
-val nsim_distance = average_int (map #2 l3');
-
-*)
-
-(* -------------------------------------------------------------------------
-   Training graph
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "mleDiophLib"; open mleDiophLib;
-load "mleDiophSynt"; open mleDiophSynt;
-
-val targetdl = List.tabulate (230,
-  fn x => mlReinforce.retrieve_targetd rlobj (x+1));
-val l1 = map dlist targetdl;
-val l2 = map (map (snd o snd)) l1;
-
-fun btr b = if b then 1.0 else 0.0
-
-fun expectancy_one bl =
-  if null bl then 0.0 else average_real (map btr (first_n 5 bl))
-fun expectancy bll = sum_real (map expectancy_one bll);
-val expectl = map expectancy l2;
-
-fun exists_one bl = btr (exists I bl);
-fun existssol bll = sum_real (map exists_one bll);
-val esoll = map existssol l2;
-
-val graph = number_fst 0 (combine (expectl,esoll));
-fun graph_to_string (i,(r1,r2)) = its i ^ " " ^ rts r1 ^ " " ^ rts r2;
-writel "dioph_graph" ("gen exp sol" :: map graph_to_string graph);
-
 *)
 
 end (* struct *)

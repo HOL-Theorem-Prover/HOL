@@ -272,6 +272,21 @@ fun infer_tnn tnn tml =
 fun infer_tnn_basic tnn tm =
   singleton_of_list (snd (singleton_of_list (infer_tnn tnn [tm])))
 
+fun fp_emb tnn oper embl =
+  let
+    val inv = Vector.concat embl
+    val nn = dfind oper tnn
+  in
+    #outnv (last (fp_nn nn inv))
+  end
+
+fun infer_emb tnn tm =
+  let
+    val (oper,argl) = strip_comb tm
+    val embl = map (infer_emb tnn) argl
+  in
+    fp_emb tnn oper embl
+  end
 
 (* -------------------------------------------------------------------------
    Updating weights

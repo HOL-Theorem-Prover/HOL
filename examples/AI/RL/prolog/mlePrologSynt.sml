@@ -128,8 +128,6 @@ fun move_compare (m1,m2) = Term.compare (#residue (hd m1),#residue (hd m2))
 
 fun available_movel (_,qt) =
   if is_mvar qt then map mk_msubst [listSyntax.cons_tm] else
-
-  (*
   let
     val (po,mvar) = find_mvar NONE qt
     val clause = (hd o strip_cons []) qt
@@ -159,13 +157,12 @@ fun available_movel (_,qt) =
       in
         filter (not o test) operlsorted
       end
-    *)
     val subl = map mk_msubst (operlsorted @ varl_filtered)
   in
     filter (fn x => term_eq (#redex (hd x)) mvar) subl
   end
 
-fun apply_move (tree,id) move (ex,qt) =
+fun apply_move move (ex,qt) =
   let
     val newboard as (_,newqt) = (ex, subst_occs [[1]] move qt)
     val movel = available_movel newboard
@@ -173,10 +170,9 @@ fun apply_move (tree,id) move (ex,qt) =
    if length movel <> 1 orelse
       not (contain_mvar (close_qt newqt)) orelse
       status_of newboard <> Undecided
-   then (newboard, tree)
-   else apply_move (tree,id) (hd movel) newboard
+   then newboard
+   else apply_move (hd movel) newboard
   end
-
 
 (* -------------------------------------------------------------------------
    Game
@@ -184,12 +180,9 @@ fun apply_move (tree,id) move (ex,qt) =
 
 val game : (board,move) game =
   {
-  status_of = Profile.profile "status_of" status_of,
-  available_movel = Profile.profile "available_movel" available_movel,
-  apply_move =
-    let fun f x y z = Profile.profile "apply_move" (apply_move x y) z
-    in f end
-  ,
+  status_of = status_of,
+  available_movel = available_movel,
+  apply_move = apply_move,
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   board_compare = board_compare,
