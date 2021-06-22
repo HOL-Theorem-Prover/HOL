@@ -342,10 +342,14 @@ fun write_evalscript expdir smlfun (vnno,pnno,anno) file =
 fun bare file = OS.Path.base (OS.Path.file file)
 
 fun run_evalscript smlfun expdir nnol file =
-  (
-  write_evalscript expdir smlfun nnol file;
-  run_buildheap_nodep (expdir ^ "/out") (file ^ "_eval.sml")
-  )
+  let
+    val _ = write_evalscript expdir smlfun nnol file;
+    val mem = !smlExecScripts.buildheap_dir
+    val _ = smlExecScripts.buildheap_dir := expdir ^ "/out"
+    val _ = smlExecScripts.exec_script (file ^ "_eval.sml")
+  in
+    smlExecScripts.buildheap_dir := mem
+  end
 
 val savestatedir = tactictoe_dir ^ "/savestate"
 
