@@ -442,7 +442,7 @@ fun tnn_accuracy tnn set =
   end
 
 (* -------------------------------------------------------------------------
-   Object for training different TNN in parallel
+   Train different TNN in parallel
    ------------------------------------------------------------------------- *)
 
 fun train_tnn_fun () (ex,schedule,tnndim) =
@@ -473,6 +473,7 @@ fun read_tnnarg file =
 
 val traintnn_extspec =
   {
+  self_dir = HOLDIR ^ "/src/AI/machine_learning",
   self = "mlTreeNeuralNetwork.traintnn_extspec",
   parallel_dir = default_parallel_dir ^ "_train",
   reflect_globals = fn () => "()",
@@ -528,7 +529,7 @@ val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
 (* training *)
 val trainparam =
   {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 100};
+   learning_rate = 0.02, batch_size = 16, nepoch = 10};
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
