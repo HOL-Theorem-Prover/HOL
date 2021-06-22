@@ -283,7 +283,7 @@ val tnndim = map_assoc (dim_std (1,dim))
   ([``$= : 'a -> 'a -> bool``] @ skvarl) @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
-val dplayer = 
+val dplayer =
   {player_from_tnn = player_from_tnn,
    tob = tob, tnndim = tnndim, schedule = schedule}
 
@@ -293,7 +293,7 @@ val dplayer =
 
 val rlparam =
   {expdir = (mkDir_err (selfdir ^ "/eval");
-             selfdir ^ "/eval/combin-" ^ its version), 
+             selfdir ^ "/eval/combin-" ^ its version),
    exwindow = 200000, ncore = 30, ntarget = 200, nsim = 32000}
 
 val rlobj : (board,move) rlobj =

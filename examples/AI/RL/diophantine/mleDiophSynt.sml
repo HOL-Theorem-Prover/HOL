@@ -210,9 +210,9 @@ val dplayer = {player_from_tnn = player_from_tnn,
    Interface
    ------------------------------------------------------------------------- *)
 
-val rlparam =  
+val rlparam =
   {expdir = (mkDir_err (selfdir ^ "/eval");
-             selfdir ^ "/eval/dioph-" ^ its version), 
+             selfdir ^ "/eval/dioph-" ^ its version),
    exwindow = 200000, ncore = 30, ntarget = 200, nsim = 32000}
 
 val rlobj: (board,move) rlobj =

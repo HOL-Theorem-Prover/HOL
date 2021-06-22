@@ -458,7 +458,7 @@ val l6 = filter test l4;
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = (mkDir_err (selfdir ^ "/eval"); selfdir ^ "/eval/default"), 
+  {expdir = (mkDir_err (selfdir ^ "/eval"); selfdir ^ "/eval/default"),
    exwindow = 200000, ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
