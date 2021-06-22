@@ -10,7 +10,7 @@ structure tttUnfold :> tttUnfold =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlLexer smlInfix smlExecScripts smlOpen smlExecute smlParallel
+  smlLexer smlInfix smlOpen smlExecute smlParallel
   mlTacticData tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
@@ -1063,7 +1063,7 @@ fun ttt_record_thy thy =
     val scriptorg = find_script thy
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
     val (_,t) = add_time
-      (exec_script (mem thy core_theories)) (tttsml_of scriptorg)
+      smlExecScripts.exec_tttrecord (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
     if not (exists_tacdata_thy thy)

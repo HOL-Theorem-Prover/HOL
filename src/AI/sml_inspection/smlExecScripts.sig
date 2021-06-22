@@ -1,6 +1,7 @@
 signature smlExecScripts =
 sig
 
+  val use_state0 : bool ref
   val find_heapname : string -> string
   val find_genscriptdep : string -> string list
 
@@ -8,6 +9,9 @@ sig
   val buildheap_dir : string ref (* output directory for
     the standard out of exec_script and exec_tttscript *)
   val exec_script : string -> unit
-  val exec_tttscript : string -> unit (* for tactictoe *)
+
+  (* for tactictoe *)
+  val exec_tttrecord : string -> unit
+  val exec_ttteval : string -> string -> unit
 
 end
