@@ -73,7 +73,6 @@ fun parmap_batch ncores f l =
   then map f l
   else List.concat (parmap_exact ncores (map f) (cut_n ncores l))
 
-
 (* -------------------------------------------------------------------------
    The function parmap_gen start n threads, and generate a parmap function
    relying on this threads and a function to close this threads.
@@ -210,6 +209,7 @@ fun parapp_queue ncores f l = ignore (parmap_queue ncores f l)
 
 type ('a,'b,'c) extspec =
   {
+  self_dir : string,
   self: string,
   parallel_dir : string,
   reflect_globals : unit -> string,
@@ -229,11 +229,14 @@ type ('a,'b,'c) extspec =
 fun mini_sleep () = OS.Process.sleep (Time.fromReal 0.01)
 
 val default_parallel_dir = HOLDIR ^ "/src/AI/sml_inspection/parallel"
+
 fun wid_dir pd wid = pd ^ "/" ^ its wid
 fun widin_file pd wid = wid_dir pd wid ^ "/in"
 fun widarg_file pd wid = wid_dir pd wid ^ "/arg"
 fun widout_file pd wid = wid_dir pd wid ^ "/out"
 fun widscript_file pd wid = wid_dir pd wid ^ "/script" ^ its wid ^ ".sml"
+fun widholmake_file pd wid = wid_dir pd wid ^ "/Holmakefile"
+
 fun param_file pd = pd ^ "/param"
 fun result_file pd wid = wid_dir pd wid ^ "/result"
 
@@ -336,10 +339,11 @@ and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
    Starting threads and external calls
    ------------------------------------------------------------------------- *)
 
-fun boss_start_worker pd code_of wid =
+fun boss_start_worker pd selfd code_of wid =
   (
+  writel (widholmake_file pd wid) ["INCLUDES = " ^ selfd];
   writel (widscript_file pd wid) (code_of wid);
-  smlOpen.run_buildheap (wid_dir pd wid) false (widscript_file pd wid)
+  smlExecScripts.exec_script (widscript_file pd wid)
   )
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,
@@ -395,6 +399,7 @@ fun parmap_queue_extern ncore es param argl =
   let
     val widl = List.tabulate (ncore,I)
     val pd = #parallel_dir es
+    val selfd = #self_dir es
     val _ = clean_parallel_dirs pd widl
     val _ = print_endline "writing parameters"
     val _ = #write_param es (param_file pd) param
@@ -404,7 +409,7 @@ fun parmap_queue_extern ncore es param argl =
     val pendingl = List.tabulate (Vector.length arglv,I)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     fun fork wid = Thread.fork (fn () =>
-      boss_start_worker pd (code_of_extspec es) wid, attrib)
+      boss_start_worker pd selfd (code_of_extspec es) wid, attrib)
     val threadl = map fork widl
   in
     boss_wait_upl pd widl;
@@ -418,6 +423,7 @@ fun parmap_queue_extern ncore es param argl =
 
 val idspec : (unit,int,int) extspec =
   {
+  self_dir = HOLDIR ^ "/src/AI/sml_inspection",
   self = "smlParallel.idspec",
   parallel_dir = default_parallel_dir,
   reflect_globals = fn () => "()",
@@ -430,11 +436,5 @@ val idspec : (unit,int,int) extspec =
   write_result = let fun f file r = writel file [its r] in f end,
   read_result = let fun f file = string_to_int (hd (readl_rm file)) in f end
   }
-
-(*
-load "smlParallel"; open smlParallel;
-val l1 = List.tabulate (100,I);
-val l2 = parmap_queue_extern 2 idspec () l1;
-*)
 
 end
