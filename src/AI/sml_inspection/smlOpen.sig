@@ -5,7 +5,7 @@ sig
    val sml_cleanstruct : string -> unit
    val sml_exportstruct : string -> unit
 
-  (* Shows identifiers in a structure: 
+  (* Shows identifiers in a structure:
      values, expressions, constructors, and substructures *)
   val view_struct :
     string -> (string list * string list * string list * string list)

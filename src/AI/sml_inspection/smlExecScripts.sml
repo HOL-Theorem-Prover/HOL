@@ -95,7 +95,7 @@ fun exec_scriptb b script =
 val exec_script = exec_scriptb false
 
 (* -------------------------------------------------------------------------
-   Restore theory files in case they were modified  during 
+   Restore theory files in case they were modified  during
    the execution of a tactictoe script (unlikely as
    export_theory is edited out from the modified script)
    ------------------------------------------------------------------------- *)
@@ -133,7 +133,7 @@ fun save_thyfiles script = app save_file (theory_files script)
 fun restore_thyfiles script = app restore_file (theory_files script)
 
 (* -------------------------------------------------------------------------
-   Execute tactictoe scripts. 
+   Execute tactictoe scripts.
    The modified tactictoe script is erased at the end of the execution.
    ------------------------------------------------------------------------- *)
 
