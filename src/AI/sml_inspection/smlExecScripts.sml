@@ -24,8 +24,10 @@ fun remove_err s = FileSys.remove s handle SysErr _ => ()
    ------------------------------------------------------------------------- *)
 
 val heapname_dir = HOLDIR ^ "/src/AI/sml_inspection/heapname"
+val use_state0 = ref false
 
 fun find_heapname file =
+  if !use_state0 then HOLDIR ^ "/bin/hol.state0" else
   let
     val _ = mkDir_err heapname_dir
     val heapname_bin = HOLDIR ^ "/bin/heapname"
@@ -134,13 +136,25 @@ fun restore_thyfiles script = app restore_file (theory_files script)
 
 (* -------------------------------------------------------------------------
    Execute tactictoe scripts.
-   The modified tactictoe script is erased at the end of the execution.
+   The recording script is erased at the end of the execution.
    ------------------------------------------------------------------------- *)
 
-fun exec_tttscript script =
+fun exec_tttrecord script =
   let fun cleanup () = (restore_thyfiles script; remove_err script) in
     ((save_thyfiles script; exec_scriptb true script; cleanup ())
     handle Interrupt => (cleanup (); raise Interrupt) | e => raise e)
   end
+
+fun exec_ttteval dirout script =
+  let
+    val fileout = dirout ^ "/buildheap_" ^ bare script
+    val heap = HOLDIR ^ "/bin/hol.state0"
+    val cmd = String.concatWith " "
+      ([buildheap_bin,"--holstate=" ^ heap,"--gcthreads=1"] @
+       [!buildheap_options,OS.Path.file script,">",fileout])
+  in
+    cmd_in_dir (OS.Path.dir script) cmd
+  end
+
 
 end (* struct *)
