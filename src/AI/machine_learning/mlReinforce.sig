@@ -38,7 +38,7 @@ sig
     infobs : 'a list -> unit
     }
   val mk_mctsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psMCTS.mctsobj
-  val mk_extsearch : string -> ('a,'b) rlobj -> 'a es
+  val mk_extsearch : string -> string -> ('a,'b) rlobj -> 'a es
 
   (* storage *)
   val log : ('a,'b) rlobj -> string -> unit

@@ -7,7 +7,8 @@ include Abbrev
   type tnnex = ((term * real list) list) list
   type tnndim = (term * int list) list
   type schedule = mlNeuralNetwork.schedule
-  type tnnbatch = (term list * (term * mlMatrix.vect) list) list
+  type vect = mlMatrix.vect
+  type tnnbatch = (term list * (term * vect) list) list
 
   (* dimension of neural networks *)
   val operl_of_term : term -> (term * int) list
@@ -32,8 +33,11 @@ include Abbrev
   val basicex_to_tnnex : (term * real) list -> tnnex
 
   (* inference *)
+  val fp_emb : tnn -> term -> vect list -> vect
+  val infer_emb : tnn -> term -> vect
   val infer_tnn : tnn -> term list -> (term * real list) list
   val infer_tnn_basic : tnn -> term -> real
+
 
   (* training *)
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn

@@ -14,7 +14,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleCombinSynt"
 val version = 5
-val selfdir = HOLDIR ^ "/examples/AI_tasks"
+val selfdir = HOLDIR ^ "/examples/AI/RL/combinator"
 
 (* -------------------------------------------------------------------------
    Board: synthesized combinator * head normal form * timer
@@ -94,16 +94,13 @@ fun replace_metavar move c = case c of
 
 exception Break;
 
-fun apply_move_aux move (c1,c2,n) =
+fun apply_move move (c1,c2,n) =
   (let val c1new = valOf (replace_metavar move c1) in
     if no_metavar c1new then raise Break else c1new
   end, c2, n-1)
 
-fun apply_move (tree,id) move (c1,c2,n) =
-  (apply_move_aux move (c1,c2,n), tree)
-
 fun available_movel board =
-  ((ignore ((apply_move_aux S0) board); movel) handle Break => [S1,S2,K1])
+  ((ignore ((apply_move S0) board); movel) handle Break => [S1,S2,K1])
 
 (* -------------------------------------------------------------------------
    Game
@@ -253,26 +250,24 @@ fun convert_pos pos =
     map f pos
   end
 
-fun tob1 (c1,c2,_) =
-  let
-    val (tm1,tm2) = (witness_to_nntm c1, headnf_to_nntm c2)
-    val tm = mk_eq (tm1,tm2)
-  in
+fun term_of_board (c1,c2,_) =
+  mk_eq (witness_to_nntm c1, headnf_to_nntm c2)
+
+fun tob board =
+  let val tm = term_of_board board in
     [tag_heval tm, tag_hpoli tm]
   end
 
-fun tob2 embedv (c1,_,_) =
+fun player_from_tnn tnn board =
   let
-    val (tm1,tm2) = (witness_to_nntm c1, embedv)
-    val tm = mk_eq (tm1,tm2)
+    val boardemb = infer_emb tnn (term_of_board board)
+    val e = descale_out (fp_emb tnn head_eval [boardemb])
+    val p = descale_out (fp_emb tnn head_poli [boardemb])
+    val d = dnew move_compare (combine (movel,p))
+    fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
   in
-    [tag_heval tm, tag_hpoli tm]
+    (singleton_of_list e, map_assoc f (available_movel board))
   end
-
-fun pretob boardtnno = case boardtnno of
-    NONE => tob1
-  | SOME ((_,headnf,_),tnn) =>
-    tob2 (precomp_embed tnn (headnf_to_nntm headnf))
 
 (* -------------------------------------------------------------------------
    Player
@@ -288,37 +283,28 @@ val tnndim = map_assoc (dim_std (1,dim))
   ([``$= : 'a -> 'a -> bool``] @ skvarl) @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
-val dplayer = {pretob = pretob, tnndim = tnndim, schedule = schedule}
+val dplayer = 
+  {player_from_tnn = player_from_tnn,
+   tob = tob, tnndim = tnndim, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleCombinSyntHp-" ^ its version, exwindow = 200000,
-   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
+  {expdir = (mkDir_err (selfdir ^ "/eval");
+             selfdir ^ "/eval/combin-" ^ its version), 
+   exwindow = 200000, ncore = 30, ntarget = 200, nsim = 32000}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
    infobs = fn _ => ()}
 
-val extsearch = mk_extsearch "mleCombinSynt.extsearch" rlobj
+val extsearch = mk_extsearch selfdir "mleCombinSynt.extsearch" rlobj
 
 (* -------------------------------------------------------------------------
-   Final test
+   Training run
    ------------------------------------------------------------------------- *)
-
-(*
-val ft_extsearch_uniform =
-  ft_mk_extsearch "mleCombinSynt.ft_extsearch_uniform" rlobj
-    (uniform_player game)
-
-val fttnn_extsearch =
-  fttnn_mk_extsearch "mleCombinSynt.fttnn_extsearch" rlobj
-
-val fttnnbs_extsearch =
-  fttnnbs_mk_extsearch "mleCombinSynt.fttnnbs_extsearch" rlobj
-*)
 
 (*
 load "aiLib"; open aiLib;
@@ -332,200 +318,6 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 
 val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
-
-val targetd = retrieve_targetd rlobj 83;
-val _ = rl_restart 83 (rlobj,extsearch) targetd;
 *)
-
-(* -------------------------------------------------------------------------
-   MCTS test for manual inspection
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleCombinLib"; open mleCombinLib;
-load "mleCombinSynt"; open mleCombinSynt;
-load "mlReinforce"; open mlReinforce;
-
-val mctsparam =
-  {
-  timer = SOME 60.0,
-  nsim = NONE,
-  stopatwin_flag = true,
-  decay = 1.0,
-  explo_coeff = 2.0,
-  noise_all = false,
-  noise_root = false,
-  noise_coeff = 0.25,
-  noise_gen = random_real,
-  noconfl = false,
-  avoidlose = false,
-  evalwin = false
-  };
-
-val game = #game rlobj;
-val mctsobj = {game = game, mctsparam = mctsparam,
-  player =  psMCTS.random_player (#game rlobj)};
-
-val headnf = A(V2,(list_mk_A[V1,V2,V3]));
-val target = (V1,headnf,100);
-val tree = psMCTS.starttree_of mctsobj target;
-val (_,(newtree,_)) = mcts mctsobj tree;
-val nodel = trace_win (#status_of game) newtree [];
-*)
-
-(* -------------------------------------------------------------------------
-   Final testing
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "smlParallel"; open smlParallel;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleCombinSynt"; open mleCombinSynt;
-
-val dir1 = HOLDIR ^ "/examples/AI_tasks/combin_results";
-val _ = mkDir_err dir1;
-fun store_result dir (a,i) =
-  #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;
-
-(*** Test ***)
-val dataset = "test";
-val pretargetl = import_targetl dataset;
-val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl;
-length targetl;
-(* uniform *)
-val (l1',t) =
-  add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
-val winb = filter I (map #1 l1'); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l1');
-(* tnn *)
-val tnn = mlReinforce.retrieve_tnn rlobj 318;
-val (l2',t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
-val winb = filter I (map #1 l2'); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2');
-
-(*** Train ***)
-val dataset = "train";
-val pretargetl = import_targetl dataset;
-val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl;
-length targetl;
-(* uniform *)
-val (l1,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
-val winb = filter I (map #1 l1); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l1);
-(* tnn *)
-val tnn = mlReinforce.retrieve_tnn rlobj 318;
-val (l2,t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
-val winb = filter I (map #1 l2); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2);
-*)
-
-(* -------------------------------------------------------------------------
-   Final testing statistics
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "mleCombinLib"; open mleCombinLib;
-load "mleCombinSynt"; open mleCombinSynt;
-
-val dir2 = HOLDIR ^ "/examples/AI_tasks/combin_results/test_tnn_nolimit";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l1 = List.tabulate (200,g);
-val dir2 = HOLDIR ^ "/examples/AI_tasks/combin_results/train_tnn";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l2 = List.tabulate (2000,g);
-
-val (l3,l3') = partition #1 (l1 @ l2);
-val nsim_tnn = average_int (map #2 l3');
-last (dict_sort Int.compare (map #2 l3'));
-
-val l4 = map (valOf o #3) l3;
-val l5 = map (fn (a,b,c) => (ignore_metavar a,b)) l4;
-val l6 = map_assoc (combin_size o fst) l5;
-val l7 = dict_sort compare_imax l6;
-val ((a,b),c) = hd l7;
-combin_to_string a;
-combin_to_string b;
-
-val l5 = map (fn (a,b,c) => ignore_metavar a) l4;
-val l6 = map combin_to_cterm l5;
-fun all_subtm t = find_terms (fn x => type_of x = alpha) t;
-val l7 = List.concat (map all_subtm l6);
-val l8 = dlist (count_dict (dempty Term.compare) l7);
-val l9 = dict_sort compare_imax l8;
-val l10 = map_fst (combin_to_string o cterm_to_combin)
-    (first_n 100 l9);
-
-val d = dnew combin_compare (map (fn (a,b,c) => (b, ignore_metavar a)) l4);
-val combin = dfind (list_mk_A [V1,V3,V2]) d;
-
-val longest =
-  let fun cmp (a,b) = Int.compare (#2 b, #2 a) in
-    dict_sort cmp l3
-  end;
-
-val (a,b,c) = valOf (#3 (hd longest));
-combin_to_string (ignore_metavar a);
-combin_to_string  b;
-
-
-val monol = List.concat (map numSyntax.strip_plus l5);
-val monofreq = dlist (count_dict (dempty Term.compare) monol);
-val monostats = dict_sort compare_imax monofreq;
-
-val dir2 = HOLDIR ^ "/examples/AI_tasks/combin_results/test_uniform";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l1 = List.tabulate (200,g);
-val dir2 = HOLDIR ^ "/examples/AI_tasks/combin_results/train_uniform";
-fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l2 = List.tabulate (2000,g);
-
-val (l3,l3') = partition #1 (l1 @ l2);
-val nsim_uniform = average_int (map #2 l3');
-*)
-
-(* -------------------------------------------------------------------------
-   Training graph
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleCombinLib"; open mleCombinLib;
-load "mleCombinSynt"; open mleCombinSynt;
-load "mlReinforce"; open mlReinforce;
-
-val targetd = retrieve_targetd rlobj 100;
-
-val targetdl = List.tabulate (319,
-  fn x => mlReinforce.retrieve_targetd rlobj (x+1));
-val l1 = map dlist targetdl;
-val l2 = map (map (snd o snd)) l1;
-
-fun btr b = if b then 1.0 else 0.0
-
-fun expectancy_one bl =
-  if null bl then 0.0 else average_real (map btr (first_n 5 bl))
-fun expectancy bll = sum_real (map expectancy_one bll);
-val expectl = map expectancy l2;
-
-fun exists_one bl = btr (exists I bl);
-fun existssol bll = sum_real (map exists_one bll);
-val esoll = map existssol l2;
-
-val graph = number_fst 0 (combine (expectl,esoll));
-fun graph_to_string (i,(r1,r2)) = its i ^ " " ^ rts r1 ^ " " ^ rts r2;
-writel "combin_graph" ("gen exp sol" :: map graph_to_string graph);
-
-*)
-
-
 
 end (* struct *)

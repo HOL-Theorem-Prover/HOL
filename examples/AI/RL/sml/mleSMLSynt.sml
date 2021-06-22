@@ -12,7 +12,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS
   mlNeuralNetwork mlTreeNeuralNetwork mlReinforce mlTacticData mleSMLLib
 
 val ERR = mk_HOL_ERR "mleSMLSynt"
-val selfdir = HOLDIR ^ "/examples/AI_tasks/sml_synthesis"
+val selfdir = HOLDIR ^ "/examples/AI/RL/sml"
 
 (* -------------------------------------------------------------------------
    Board
@@ -330,26 +330,6 @@ fun import_targetl name =
 fun mk_targetd l = dnew board_compare (map (fn x => (x,[])) l)
 
 (* -------------------------------------------------------------------------
-   Neural network inference
-   ------------------------------------------------------------------------- *)
-
-fun fp_emb tnn oper embl =
-  let
-    val inv = Vector.concat embl
-    val nn = dfind oper tnn
-  in
-    #outnv (last (fp_nn nn inv))
-  end
-
-fun infer_emb tnn tm =
-  let
-    val (oper,argl) = strip_comb tm
-    val embl = map (infer_emb tnn) argl
-  in
-    fp_emb tnn oper embl
-  end
-
-(* -------------------------------------------------------------------------
    Neural network embbeddings cache
    ------------------------------------------------------------------------- *)
 
@@ -453,18 +433,13 @@ val dplayer =
    OEIS
    ------------------------------------------------------------------------- *)
 
-
 (*
 load "mleSMLSynt"; open mleSMLSynt;
 load "aiLib"; open aiLib;
 val sl = readl (selfdir ^ "/oeis/pos");
 fun ilts il = String.concatWith " " (map its il);
-
-
 fun f s = map string_to_int
   (tl (first_n 17 (String.tokens (fn x => x = #",") s)));
-
-
 val l1 = mapfilter f sl; (* filter because of overflow *)
 val l2 = filter (fn x => length x = 16) l1;
 val l3 = mk_fast_set (list_compare Int.compare) l2;
@@ -476,7 +451,6 @@ val l5 = mk_fast_set (list_compare Int.compare) (map (first_n 8) l4);
 fun test x = length (mk_fast_set Int.compare x) >= 16 andalso
   all (fn y => y < 1024) x;
 val l6 = filter test l4;
-
 *)
 
 (* -------------------------------------------------------------------------
@@ -484,15 +458,15 @@ val l6 = filter test l4;
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expdir = selfdir ^ "/eval/cache5", exwindow = 200000,
-   ncore = 30, ntarget = 200, nsim = 100000}
+  {expdir = (mkDir_err (selfdir ^ "/eval"); selfdir ^ "/eval/default"), 
+   exwindow = 200000, ncore = 30, ntarget = 200, nsim = 100000}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
    infobs = fn _ => ()}
 
 val extsearch =
-  (debug_flag := false; mk_extsearch "mleSMLSynt.extsearch" rlobj)
+  (debug_flag := false; mk_extsearch selfdir "mleSMLSynt.extsearch" rlobj)
 
 (*
 load "aiLib"; open aiLib;

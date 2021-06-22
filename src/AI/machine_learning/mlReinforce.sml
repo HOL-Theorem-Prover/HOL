@@ -175,8 +175,9 @@ fun extsearch_fun rlobj splayer target =
     (#infobs rlobj (map fst rlex); (b1,rlex))
   end
 
-fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
+fun mk_extsearch selfd self (rlobj as {rlparam,gameio,...}) =
   {
+  self_dir = selfd,
   self = self,
   parallel_dir = default_parallel_dir ^ "_search",
   reflect_globals = fn () =>
