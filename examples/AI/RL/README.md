@@ -9,9 +9,9 @@ The framework can be found under the `src/AI` directory
    `rlwrap ../../../bin/hol` (or just `../../../bin/hol`).
 
 ## Training
-To run the training, first modify the file mleCombinSynt (or mleDiophSynt) to choose the number of cores by modifying the field ncore (default = 30).
-You can choose your experiment name by modifying the field expname.
-The results of the experiments will be stored under `eval/experiment_name/log`:
+To run the training, first modify the file `fooSynt.sml` to choose the number of cores by modifying the field ncore (default = 30).
+You can choose your experiment name `your_expname` by modifying the field expname.
+The results of the experiment will be stored under `eval/your_expname/log`:
 
     val rlparam =
     {expname = "experiment_name", exwindow = 200000,

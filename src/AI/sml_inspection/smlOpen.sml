@@ -9,117 +9,14 @@
 structure smlOpen :> smlOpen =
 struct
 
-open HolKernel boolLib aiLib
+open HolKernel boolLib aiLib smlExecScripts
 
 val ERR = mk_HOL_ERR "smlOpen"
-
-val sml_dir = HOLDIR ^ "/src/AI/sml_inspection"
-val sml_code_dir = sml_dir ^ "/code"
-val sml_open_dir = sml_dir ^ "/open"
-val sml_buildheap_dir = sml_dir ^ "/buildheap"
-fun bare file = OS.Path.base (OS.Path.file file)
+val open_dir = HOLDIR ^ "/src/AI/sml_inspection/open"
+val openscript_dir = HOLDIR ^ "/src/AI/sml_inspection/openscript"
 
 (* -------------------------------------------------------------------------
-   Running buildheap
-   ------------------------------------------------------------------------- *)
-
-(* ancestry "scratch"; *)
-val core_theories =
-  ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
-   "one", "sum", "option", "pair", "combin", "sat", "normalForms",
-   "relation", "min", "bool", "marker", "num", "prim_rec", "arithmetic",
-   "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
-   "indexedLists"];
-
-fun theory_files script =
-  let
-    val base      = fst (split_string "Script." script)
-    val theory    = base ^ "Theory"
-    val theoryuo  = theory ^ ".uo"
-    val theoryui  = theory ^ ".ui"
-    val theorydat = theory ^ ".dat"
-    val theorysml = theory ^ ".sml"
-  in
-    [theorysml,theorydat,theoryuo,theoryui]
-  end
-
-fun find_heapname dir file =
-  let
-    val _ = mkDir_err dir
-    val heapname_bin = HOLDIR ^ "/bin/heapname"
-    val fileout = dir ^ "/heapname_" ^ bare file
-    val cmd = String.concatWith " " [heapname_bin,">",fileout]
-  in
-    cmd_in_dir (OS.Path.dir file) cmd;
-    hd (readl fileout)
-  end
-  handle Interrupt => raise Interrupt
-    | _ => raise ERR "find_heapname" file
-
-fun find_genscriptdep dir file =
-  let
-    val _ = mkDir_err dir
-    val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
-    val fileout = dir ^ "/genscriptdep_" ^ bare file
-    val cmd = String.concatWith " "
-      [genscriptdep_bin, OS.Path.file file, ">", fileout]
-  in
-    cmd_in_dir (OS.Path.dir file) cmd;
-    map holpathdb.subst_pathvars (readl fileout)
-  end
-  handle Interrupt => raise Interrupt
-    | _ => raise ERR "find_genscriptdep" file
-
-val buildheap_options = ref ""
-
-fun run_buildheap dir core_flag file =
-  let
-    val _ = mkDir_err dir
-    val buildheap_bin = HOLDIR ^ "/bin/buildheap"
-    val filel = find_genscriptdep dir file
-    val fileout = dir ^ "/buildheap_" ^ bare file
-    val state =
-      if core_flag
-      then HOLDIR ^ "/bin/hol.state0"
-      else find_heapname dir file
-    val cmd =
-      String.concatWith " "
-        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @
-         [!buildheap_options] @
-         filel @
-         [OS.Path.file file]  @
-         [">",fileout])
-  in
-    cmd_in_dir (OS.Path.dir file) cmd
-  end
-  handle Interrupt => raise Interrupt
-    | _ => raise ERR "run_buildheap" file
-
-fun run_buildheap_nodep dir file =
-  let
-    val _ = mkDir_err dir
-    val buildheap_bin = HOLDIR ^ "/bin/buildheap"
-    val fileout = dir ^ "/buildheap_" ^ bare file
-    val state = HOLDIR ^ "/bin/hol.state0"
-    val cmd = String.concatWith " "
-      ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @
-       [!buildheap_options] @
-       [OS.Path.file file] @
-       [">",fileout])
-  in
-    cmd_in_dir (OS.Path.dir file) cmd
-  end
-  (* handle Interrupt => raise Interrupt
-    | _ => raise ERR "run_buildheap_nodep" file *)
-
-fun remove_err s = FileSys.remove s handle SysErr _ => ()
-
-fun run_rm_script core_flag file =
-  (run_buildheap sml_buildheap_dir core_flag file; remove_err file)
-  handle Interrupt => (remove_err file; raise Interrupt)
-
-(* -------------------------------------------------------------------------
-   Code for exporting values of a structure
+   Generate SML code for exporting values of a structure
    ------------------------------------------------------------------------- *)
 
 fun top_struct s = hd (String.tokens (fn x => x = #".") s)
@@ -148,11 +45,10 @@ fun sml_cleanval () =
     app PolyML.Compiler.forgetValue (map fst l)
   end
 
-fun sml_export s =
+fun sml_exportstruct s =
   let
-    val dir = sml_open_dir ^ "/" ^ s
-    val _ = mkDir_err sml_open_dir
-    val _ = mkDir_err (sml_open_dir ^ "/" ^ s)
+    val dir = open_dir ^ "/" ^ s
+    val _ = app mkDir_err [open_dir,dir]
     val l = filter test_val (#allVal PolyML.globalNameSpace ())
     val structures =
       filter (test_struct s) (#allStruct PolyML.globalNameSpace ())
@@ -170,32 +66,35 @@ fun export_struct_code s =
    "sml_cleanval ();",
    "sml_cleanstruct " ^ mlquote s ^ ";",
    "open " ^ s ^ ";",
-   "sml_export " ^ mlquote s ^ ";"
+   "sml_exportstruct " ^ mlquote s ^ ";"
   ]
 
 (* -------------------------------------------------------------------------
-   Running previous code.
+   Run previous code
    ------------------------------------------------------------------------- *)
 
 fun export_struct s =
   let
-    val _ = mkDir_err sml_code_dir
-    val tempfile = sml_code_dir ^ "/" ^ s ^ "__open__sml.sml"
+    val _ = mkDir_err openscript_dir
+    val script = openscript_dir ^ "/" ^ s ^ "__open__sml.sml"
   in
-    writel tempfile (export_struct_code s);
-    run_rm_script false tempfile
+    writel script (export_struct_code s);
+    exec_script script
   end
 
 fun import_struct s =
-  let val dir = sml_open_dir ^ "/" ^ s in
+  let val dir = open_dir ^ "/" ^ s in
     (readl (dir ^ "/values"), readl (dir ^ "/constructors"),
      readl (dir ^ "/exceptions"), readl (dir ^ "/structures"))
   end
 
-fun export_import_struct s =
+fun view_struct s =
   (
   export_struct s;
   import_struct s handle Interrupt => raise Interrupt | _ => ([],[],[],[])
   )
+
+fun view_struct_cached s = import_struct s handle Io _ => view_struct s
+
 
 end (* struct *)
