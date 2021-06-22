@@ -14,6 +14,7 @@ sig
   (* 'a: type of parameter, 'b: type of arguments, 'c: returned type *)
   type ('a,'b,'c) extspec =
     {
+    self_dir : string,
     self: string,
     parallel_dir: string,
     reflect_globals : unit -> string,
