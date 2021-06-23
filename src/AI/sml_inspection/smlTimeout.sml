@@ -79,12 +79,6 @@ fun timeLimit t f x =
 
 fun timeout t f x = timeLimit (Time.fromReal t) f x
 
-val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
-
-fun timeout_tactic t tac g =
-  SOME (fst (timeout t (TC_OFF tac) g))
-  handle Interrupt => raise Interrupt | _ => NONE
-
 end (* struct *)
 
 (* -------------------------------------------------------------------------
@@ -96,34 +90,9 @@ load "aiLib"; open aiLib;
 load "smlTimeout"; open smlTimeout;
 
 fun f () = 5;
-add_time (timeout 1.0 f) ();
-
-
-
-fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => ();
-add_time List.tabulate (1000, fn _ => g ());
-add_time g ();
-
+val (_,t1) = add_time (timeout 1.0 f) ();
 fun loop () = loop ();
-fun zero () = loop () handle Interrupt => zero ();
-val g : goal = ([],``!x. x = x``);
-fun f1 g  = (zero (); SOME (fst (STRIP_TAC g)));
-fun f2 g  = (SOME (fst (STRIP_TAC g)));
-fun f3 g  = (loop (); SOME (fst (STRIP_TAC g)));
-val (_,t) = add_time (timeout_ext 0.1 f1) g;
-val (_,t) = add_time (timeout_ext 0.1 f2) g;
-val (_,t) = add_time (timeout_ext 0.1 f3) g;
-val (_,t) = add_time (timeout_ext 0.1 f1) g;
-val (_,t) = add_time (timeout_ext 0.1 f2) g;
-val (_,t) = add_time (timeout_ext 0.1 f3) g;
-stop_global_worker ();
-
-
-
-val (_,t) = add_time f g;
-
-fun f x = List.tabulate (10, fn _ => timeout 5.0 STRIP_TAC x);
-val (_,t) = add_time f ([],``!x.x=x``);
-
+fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => ();
+val (_,t2) = add_time g ();
 *)
 

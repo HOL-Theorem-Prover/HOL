@@ -56,6 +56,11 @@ fun get_lemmas (atp_status,atp_out) =
    Minimization and pretty-printing
  -----------------------------------------------------------------------------*)
 
+val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+fun timeout_tactic t tac g =
+  SOME (fst (timeout t (TC_OFF tac) g))
+  handle Interrupt => raise Interrupt | _ => NONE
+
 fun hh_reconstruct lemmas g =
   if not (!reconstruct_flag)
   then (print_endline (mk_metis_call lemmas);
