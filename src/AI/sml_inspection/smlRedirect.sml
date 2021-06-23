@@ -60,9 +60,14 @@ fun pop_output_file () =
   | []      => (dup2{old = duplicate_stdout, new = stdout}; false))
   )
 
+(* --------------------------------------------------------------------------
+   Redirect functions
+   -------------------------------------------------------------------------- *)
+
+val hide_flag = ref true
 fun hide_in_file file f x =
-  (
-  push_output_file {name=file, append=false};
+  if not (!hide_flag) then f x else
+  (push_output_file {name=file, append=false};
     (
     let val r = f x in (pop_output_file (); r) end
     handle e => (pop_output_file (); raise e)
@@ -71,11 +76,7 @@ fun hide_in_file file f x =
 
 val hide_file = HOLDIR ^ "/src/AI/sml_inspection/hide_file"
 
-fun hide_out f x = hide_in_file hide_file f x
-
-val hide_flag = ref true
-
-fun hidef f x = if !hide_flag then hide_out f x else f x
+fun hidef f x = hide_in_file hide_file f x
 
 
 

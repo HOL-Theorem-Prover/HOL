@@ -21,8 +21,7 @@ val ERR = mk_HOL_ERR "holyHammer"
 
 val timeout_glob = ref 10
 fun set_timeout n = timeout_glob := n
-
-val dep_flag = ref false
+val premise_selection_flag = ref true
 
 (* -------------------------------------------------------------------------
    ATPs
@@ -35,7 +34,7 @@ fun name_of atp = case atp of
   | Vampire => "vampire"
 
 fun npremises_of atp =
-  if !dep_flag then 100000 else
+  if not (!premise_selection_flag) then 100000 else
   case atp of
     Eprover => 128
   | Z3 => 32
@@ -74,27 +73,27 @@ fun log_eval s =
 
 (* ---------------------------------------------------------------------------
    Run functions in parallel and terminate as soon as one returned a
-   positive result in parallel_result.
+   positive result in lemmas_glob.
    ------------------------------------------------------------------------- *)
 
-val (parallel_result : string list option ref) = ref NONE
+val (lemmas_glob : string list option ref) = ref NONE
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
 fun parallel_call t fl =
   let
-    val _ = parallel_result := NONE
+    val _ = lemmas_glob := NONE
     fun rec_fork f = Thread.fork (fn () => f (), attrib)
     val threadl = map rec_fork fl
     val rt = Timer.startRealTimer ()
     fun loop () =
       (
       OS.Process.sleep (Time.fromReal 0.01);
-      if isSome (!parallel_result) orelse
+      if isSome (!lemmas_glob) orelse
          not (exists Thread.isActive threadl) orelse
          Timer.checkRealTimer rt  > Time.fromReal t
-      then (app interruptkill threadl; !parallel_result)
+      then (app interruptkill threadl; !lemmas_glob)
       else loop ()
       )
   in
@@ -120,7 +119,7 @@ fun launch_atp fofdir atp t =
       atp_ref := name_of atp;
       log_eval ("  proof found by " ^ name_of atp ^ ":");
       log_eval ("    " ^ mk_metis_call (valOf r));
-      parallel_result := r
+      lemmas_glob := r
       )
     else ();
     r
@@ -230,13 +229,13 @@ fun hh_pb_eval_thm atpl (s,thm) =
   end
 
 fun hh_pb_eval_thy atpl thy =
-  (
-  dep_flag := true; eval_flag := true; eval_thy := thy;
-  mkDir_err hh_eval_dir;
-  remove_file (hh_eval_dir ^ "/" ^ thy);
-  app (hh_pb_eval_thm atpl) (DB.theorems thy);
-  dep_flag := false; eval_flag := false; eval_thy := "scratch"
-  )
+  let val b = !premise_selection_flag in
+    premise_selection_flag := false; eval_flag := true; eval_thy := thy;
+    mkDir_err hh_eval_dir;
+    remove_file (hh_eval_dir ^ "/" ^ thy);
+    app (hh_pb_eval_thm atpl) (DB.theorems thy);
+    premise_selection_flag := b; eval_flag := false; eval_thy := "scratch"
+  end
 
 (* -------------------------------------------------------------------------
    Function called by the tactictoe evaluation framework
