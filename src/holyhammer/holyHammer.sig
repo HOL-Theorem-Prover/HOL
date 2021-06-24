@@ -14,7 +14,7 @@ sig
   val premise_selection_flag : bool ref
   (* string list is a list of premises of the form "fooTheory.bar" *)
   val hh_pb  : string -> prover list -> string list -> goal -> tactic
-  
+
   (* For developers *)
   (* same as hh_pb but with all atps and premise selection *)
   val main_hh : string -> mlThmData.thmdata -> goal -> tactic
