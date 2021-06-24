@@ -9,7 +9,7 @@ sig
   val view_struct :
     string -> (string list * string list * string list * string list)
   (* used by tactictoe: cached files in sml_inspection/open *)
-  val view_struct_cached : 
+  val view_struct_cached :
     string -> (string list * string list * string list * string list)
 
 end
