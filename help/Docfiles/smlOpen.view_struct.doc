@@ -6,8 +6,8 @@
 Shows SML identifiers included in a structure (or substructure) {s}.
 
 \DESCRIBE
-The first field contains values, the second exceptions (i.e Match), 
-the third constructions (i.e SOME) and the fourth substructures. 
+The first field contains values, the second exceptions (i.e Match),
+the third constructions (i.e SOME) and the fourth substructures.
 This output is computed by inspecting PolyML.globalNameSpace () in
 an external HOL4 environment.
 
@@ -17,7 +17,7 @@ the directory {src/AI/sml_inspection/open}.
 
 \EXAMPLE
 {
-- load "smlOpen"; open smlOpen; 
+- load "smlOpen"; open smlOpen;
 (* output omitted *)
 > val it = () : unit
 
@@ -36,7 +36,7 @@ val it =
 }
 
 \COMMENTS
-Including a Holmakefile in the directory {src/AI/sml_inspection/open} with the line {INCLUDES = path-to-your-structure} should remove the requirement for the 
+Including a Holmakefile in the directory {src/AI/sml_inspection/open} with the line {INCLUDES = path-to-your-structure} should remove the requirement for the
 structure to be in sigobj.
 
 \SEEALSO
