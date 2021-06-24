@@ -698,6 +698,7 @@ fun open_struct_aux stack s'=
       let
         val l0 = String.tokens (fn x => x = #".") s
         val (l1,l2,l3,l4) = view_struct_cached s
+          handle Interrupt => raise Interrupt | _ => ([],[],[],[])
         fun f constr a =
           let fun g l =
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a))

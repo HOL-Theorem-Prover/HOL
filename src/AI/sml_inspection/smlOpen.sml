@@ -88,13 +88,11 @@ fun import_struct s =
      readl (dir ^ "/exceptions"), readl (dir ^ "/structures"))
   end
 
-fun view_struct s =
-  (
-  export_struct s;
-  import_struct s handle Interrupt => raise Interrupt | _ => ([],[],[],[])
-  )
+fun view_struct s = (export_struct s; import_struct s)
 
 fun view_struct_cached s = import_struct s handle Io _ => view_struct s
+
+
 
 
 end (* struct *)

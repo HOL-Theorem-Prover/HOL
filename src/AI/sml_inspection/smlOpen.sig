@@ -1,15 +1,15 @@
 signature smlOpen =
 sig
-  (* Functions called in the generated script which opens the structures *)
+  (* functions called in the generated script which opens a structure *)
    val sml_cleanval : unit -> unit
    val sml_cleanstruct : string -> unit
    val sml_exportstruct : string -> unit
 
-  (* Shows identifiers in a structure:
-     values, expressions, constructors, and substructures *)
+  (* shows values, exceptions, constructors, and substructures *)
   val view_struct :
     string -> (string list * string list * string list * string list)
-  val view_struct_cached :
+  (* used by tactictoe: cached files in sml_inspection/open *)
+  val view_struct_cached : 
     string -> (string list * string list * string list * string list)
 
 end
