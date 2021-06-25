@@ -16,6 +16,13 @@ RECORDING all ancestor theories not recorded yet:
   ttt_record (); (* takes about 8 hours for the full standard library *)
   (* tip: use ttt_record_thy "foo" to only record the "foo" Theory *)
 
+WARNING: if fooTheory depends on structures not available in sigobj (or in the
+holstate), place a Holmakefile in the directory src/AI/sml_inspection/open
+(create it if it does not exist) with the line:
+  INCLUDES = directory-of-the-custom-structures
+Otherwise, the tactics and arguments declared in those structures will not be
+recorded.
+
 DEFAULT USAGE (after RECORDING or SKIPPING RECORDING):
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
@@ -34,7 +41,7 @@ USAGE after failure:
   load "sum_numTheory"; open sum_numTheory;
   set_timeout 2.0;
   (* also works with ttt *)
-  ttt_tnn tnn ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``); 
+  ttt_tnn tnn ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``);
   suggest_depth := NONE;
   suggest ();
 
