@@ -180,8 +180,7 @@ fun mk_extsearch selfd self (rlobj as {rlparam,gameio,...}) =
   self_dir = selfd,
   self = self,
   parallel_dir = default_parallel_dir ^ "_search",
-  reflect_globals = fn () =>
-    "aiLib.debug_flag := " ^ bts (!debug_flag),
+  reflect_globals = "aiLib.debug_flag := " ^ bts (!debug_flag),
   function = extsearch_fun rlobj,
   write_param = write_splayer,
   read_param = read_splayer,

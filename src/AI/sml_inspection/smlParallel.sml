@@ -40,6 +40,7 @@ val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadca
 
 (* -------------------------------------------------------------------------
    Simplest parmap (probably the same behavior as Parmap.parmap)
+   Todo: use conditional variables instead of busy waiting.
    ------------------------------------------------------------------------- *)
 
 fun parmap_exact ncores forg lorg =
@@ -212,7 +213,7 @@ type ('a,'b,'c) extspec =
   self_dir : string,
   self: string,
   parallel_dir : string,
-  reflect_globals : unit -> string,
+  reflect_globals : string,
   function : 'a -> 'b -> 'c,
   write_param : string -> 'a -> unit,
   read_param : string -> 'a,
@@ -223,7 +224,7 @@ type ('a,'b,'c) extspec =
   }
 
 (* -------------------------------------------------------------------------
-   Directories as channels
+   Communication channels between boss and workers
    ------------------------------------------------------------------------- *)
 
 fun mini_sleep () = OS.Process.sleep (Time.fromReal 0.01)
@@ -387,7 +388,7 @@ fun code_of_extspec es wid =
   let val s = #self es in
     [
     "open smlParallel;",
-    "val _ = " ^ #reflect_globals es () ^ ";",
+    "val _ = " ^ #reflect_globals es ^ ";",
     "worker_start " ^ its wid ^ " " ^ s ^ ";"
     ]
   end
@@ -401,7 +402,6 @@ fun parmap_queue_extern ncore es param argl =
     val pd = #parallel_dir es
     val selfd = #self_dir es
     val _ = clean_parallel_dirs pd widl
-    val _ = print_endline "writing parameters"
     val _ = #write_param es (param_file pd) param
     val warg = #write_arg es
     fun rr wid = #read_result es (result_file pd wid)
@@ -421,13 +421,13 @@ fun parmap_queue_extern ncore es param argl =
    Example
    ------------------------------------------------------------------------- *)
 
-val idspec : (unit,int,int) extspec =
+val examplespec : (unit,int,int) extspec =
   {
   self_dir = HOLDIR ^ "/src/AI/sml_inspection",
-  self = "smlParallel.idspec",
+  self = "smlParallel.examplespec",
   parallel_dir = default_parallel_dir,
-  reflect_globals = fn () => "()",
-  function = let fun f _ (x:int) = x in f end,
+  reflect_globals = "()",
+  function = let fun f _ (x:int) = 2 * x in f end,
   write_param = let fun f _ () = () in f end,
   read_param = let fun f _ = () in f end,
   write_arg = let fun f file arg = writel file [its arg] in f end,
