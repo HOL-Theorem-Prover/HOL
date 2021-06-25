@@ -80,8 +80,8 @@ fun info_thy thy =
 
 fun write_info thy =
   let
-    val infodir = HOLDIR ^ "/src/tactictoe/info"
-    val _ = mkDir_err infodir
+    val infodir = HOLDIR ^ "/src/tactictoe/log/info"
+    val _ = app mkDir_err [OS.Path.dir infodir, infodir]
     val infol = info_thy thy
   in
     writel (infodir ^ "/" ^ thy) infol;

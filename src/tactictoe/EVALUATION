@@ -1,4 +1,4 @@
-This file describes how to use the evaluation framework and how 
+This file describes how to use the evaluation framework and how
 to replicate the experiments accompanying the paper
 "Learned Provability Likelihood for Tactical Search"
 
@@ -8,12 +8,12 @@ to replicate the experiments accompanying the paper
    README file in the same directory.
 
 3) Change the number of open files allowed per process to 20000.
-   The following bash command changes the soft limit. 
+   The following bash command changes the soft limit.
    You might need to change the hard limit as well.
 
-   ulimit -Sn 20000  
+   ulimit -Sn 20000
 
-4) Create the savestates by running the following commands in an interactive   
+4) Create the savestates by running the following commands in an interactive
    session (takes an hour and requires 33 GB):
 
   load "tttUnfold"; open tttUnfold;
@@ -46,5 +46,5 @@ to replicate the experiments accompanying the paper
 
 8) To only evaluate TacticToe, run:
 
-    run_evalscript_thyl "tttEval.ttt_eval" expname 
+    run_evalscript_thyl "tttEval.ttt_eval" expname
       (true,ncore) (NONE,NONE,NONE) thyl;
