@@ -47,6 +47,6 @@ script. For example, a Holmakefile might include the line {INCLUDES = path-to-
 your-dependency}.
 
 \SEEALSO
-smlOpen.view_struct, smlExecute.quse_string.
+smlOpen.view_struct, smlExecute.quse_string, smlParallel.parmap_queue_extern.
 
 \ENDDOC
