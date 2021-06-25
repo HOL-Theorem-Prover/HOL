@@ -976,7 +976,8 @@ fun sketch_wrap thy file =
     val s1 = QFRead.inputFile file
     val s2 = rm_spaces (rm_comment s1)
     val sl = partial_sml_lexer s2
-    val lexdir =  tactictoe_dir ^ "/log_lexer"
+    val lexdir =  tactictoe_dir ^ "/log/lexer"
+    val _ = app mkDir_err [OS.Path.dir lexdir, lexdir]
     val _ = write_sl (lexdir ^ "/" ^ thy) sl
   in
     sketch sl
@@ -994,13 +995,13 @@ fun print_program cthy fileorg sl =
   let
     val _ = debug ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
-    val scriptdir = tactictoe_dir ^ "/log_scripts"
-    val _ = mkDir_err scriptdir
+    val scriptdir = tactictoe_dir ^ "/log/scripts"
+    val _ = app mkDir_err [OS.Path.dir scriptdir, scriptdir]
     val oc = TextIO.openOut fileout
     fun script_save () =
       let
-        val cmd = "cp " ^ fileout ^ " " ^
-          (scriptdir ^ "/" ^ cthy ^ "_debugScript")
+        val cmd = String.concatWith " "
+          ["cp", fileout, scriptdir ^ "/" ^ cthy]
       in
         cmd_in_dir tactictoe_dir cmd
       end
