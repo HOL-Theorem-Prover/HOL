@@ -359,13 +359,6 @@ fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
       train_tnn_epoch param pf (loss :: lossl) newtnn m
     end
 
-fun train_tnn_epoch_nopar param lossl tnn batchl = case batchl of
-    [] => (tnn, average_real lossl)
-  | batch :: m =>
-    let val (newtnn,loss) = train_tnn_batch param map tnn batch in
-      train_tnn_epoch_nopar param (loss :: lossl) newtnn m
-    end
-
 fun train_tnn_nepoch param pf i tnn (train,test) =
   if i >= #nepoch param then tnn else
   let

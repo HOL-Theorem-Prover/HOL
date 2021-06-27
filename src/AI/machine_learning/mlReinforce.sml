@@ -52,7 +52,7 @@ fun mk_mctsparam splayer rlobj =
   {
   time = NONE, nsim = SOME (#nsim splayer),
   explo_coeff = 2.0,
-  noise = #noiseb splayer, noise_coeff = 0.25, noise_gen = random_real
+  noise = #noiseb splayer, noise_coeff = 0.25, noise_gen = gamma_noise_gen 0.01
   }
 
 fun mk_mctsobj rlobj (splayer as {unib,tnn,noiseb,nsim}) =
