@@ -559,16 +559,23 @@ fun toy_example () =
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetworkAlt"; open mlTreeNeuralNetworkAlt;
 
-writel "test.sml" 
+val dir = HOLDIR ^ "/src/AI/machine_learning/test";
+val _ = mkDir_err dir;
+val script = dir ^ "/test.sml"; 
+val makefile = dir ^ "/Holmakefile"; 
+
+writel script
   ["load \"mlTreeNeuralNetworkAlt\";", 
    "open mlTreeNeuralNetworkAlt;",
-   "ncore_example := 16;",
+   "ncore_example := 4;",
    "toy_example ();"
    ];
+writel makefile ["INCLUDES = " ^ HOLDIR ^ "/src/AI/machine_learning"]; 
 
 load "smlExecScripts"; open smlExecScripts;
+buildheap_dir := dir;
 buildheap_options := "--minheap 8000 --maxheap 16000";
-exec_script (HOLDIR ^ "/src/AI/machine_learning/test.sml");
+exec_script script;
 
 
 *)
