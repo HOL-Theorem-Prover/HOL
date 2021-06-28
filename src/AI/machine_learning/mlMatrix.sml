@@ -68,14 +68,7 @@ fun mat_mult m inv =
   let fun f line = scalar_product line inv in Vector.map f m end
 
 fun mat_map f m = Vector.map (Vector.map f) m
-
-fun mat_app f m =
-  let
-    fun felem i (j,elem) = f i j
-    fun fline (i,line) = Vector.appi (felem i) line
-  in
-    Vector.appi fline m
-  end
+fun mat_app f m = Vector.app (Vector.app f) m
 
 fun mat_tabulate f (linen,coln) =
   let fun mk_line i = Vector.tabulate (coln, f i) in
@@ -104,11 +97,28 @@ fun matl_add ml = case ml of
   | m :: contl => mat_add m (matl_add contl)
 
 
+fun mat_appije f m =
+  let
+    fun felem i (j,elem) = f i j elem
+    fun fline (i,line) = Vector.appi (felem i) line
+  in
+    Vector.appi fline m
+  end
+
+
+fun mat_appij f m =
+  let
+    fun felem i (j,elem) = f i j
+    fun fline (i,line) = Vector.appi (felem i) line
+  in
+    Vector.appi fline m
+  end
+
 fun mat_add_mem mem m =
   let fun f i j =
     let val r = mat_sub mem i j in r := !r + mat_sub m i j end
   in
-    mat_app f mem
+    mat_appij f mem
   end
 
 fun matl_add_mem mem ml = case ml of

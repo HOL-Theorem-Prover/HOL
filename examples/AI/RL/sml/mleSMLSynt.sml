@@ -483,7 +483,6 @@ val r = rl_start (rlobj,extsearch) targetd;
 
 (* todo: 
 1) training with multiple objectives.
-2) better parallelization of tree neural network training.
 3) redirect objectives
 4) consider evaluating partial programs for extra-knowledge.
 *)

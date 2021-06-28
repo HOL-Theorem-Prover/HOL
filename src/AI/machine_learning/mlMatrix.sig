@@ -19,6 +19,9 @@ sig
   val mat_mult     : mat -> vect -> vect
   val mat_smult    : real -> mat -> mat
   val mat_map      : ('a -> 'b) -> 'a vector vector -> 'b vector vector
+  val mat_app      : ('a -> unit) -> 'a vector vector -> unit
+  val mat_appije   : (int -> int -> 'a -> unit) -> 'a vector vector -> unit
+
   val mat_tabulate : (int -> int -> 'a) -> int * int -> 'a vector vector
   val mat_dim      : 'a vector vector -> int * int
   val mat_sub      : 'a vector vector -> int -> int -> 'a
