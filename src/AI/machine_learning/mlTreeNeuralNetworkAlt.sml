@@ -306,7 +306,7 @@ fun upd_oper lr tnn (oper,dwl) = upd_nn lr (Vector.sub (tnn,oper)) dwl
 fun upd_tnn lr wud tnn = app (upd_oper lr tnn) (dlist wud)
 
 (* -------------------------------------------------------------------------
-   Derefence tnn
+   Derefence tnn (* todo only deref the weights that are needed *)
    ------------------------------------------------------------------------- *)
 
 fun deref_weight m = mat_map ! m

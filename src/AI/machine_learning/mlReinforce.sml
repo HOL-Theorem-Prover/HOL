@@ -203,7 +203,8 @@ fun rl_train ngen rlobj rlex =
     val _ = log rlobj ("Training examples: " ^ its (length rlex))
     val _ = log rlobj ("Training unique  : " ^ its (length uex))
     val randtnn = random_tnn tnndim
-    val (tnn,t) = add_time (train_tnn schedule randtnn) (tnnex,[])
+    val (tnn,t) = add_time (
+      mlTreeNeuralNetworkAlt.train_tnn schedule randtnn) (tnnex,[])
   in
     log rlobj ("Training time: " ^ rts t);
     store_tnn rlobj ngen tnn;
