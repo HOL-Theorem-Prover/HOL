@@ -50,6 +50,9 @@ include Abbrev
   val traintnn_extspec :
     (unit, (tnnex * schedule * tnndim), tnn) smlParallel.extspec
 
+  (* toy example *)
+  val ncore_example : int ref
+  val toy_example : unit -> unit
 
 
 

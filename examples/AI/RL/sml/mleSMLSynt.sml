@@ -484,6 +484,8 @@ val r = rl_start (rlobj,extsearch) targetd;
 (* todo: 
 1) training with multiple objectives.
 2) possibility of having fixed embeddings.
+3) Run training in buildheap + 
+   increase minheap to avoid stopping the world.
 3) redirect training log
 3) redirect objectives
 4) consider evaluating partial programs for extra-knowledge.

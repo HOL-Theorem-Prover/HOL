@@ -509,12 +509,8 @@ val traintnn_extspec =
    Toy example: learning to guess if a term contains the variable "x"
    ------------------------------------------------------------------------- *)
 
-(*
-load "aiLib"; open aiLib;
-load "psTermGen"; open psTermGen;
-load "mlTreeNeuralNetworkAlt"; open mlTreeNeuralNetworkAlt;
+open psTermGen;
 
-(* terms *)
 val vx = mk_var ("x",alpha);
 val vy = mk_var ("y",alpha);
 val vz = mk_var ("z",alpha);
@@ -522,41 +518,59 @@ val vf = ``f:'a->'a->'a``;
 val vg = ``g:'a -> 'a``;
 val vhead = mk_var ("head_", ``:'a -> 'a``);
 val varl = [vx,vy,vz,vf,vg];
-
-(* examples *)
 fun contain_x tm = can (find_term (fn x => term_eq x vx)) tm;
-fun mk_dataset n =
+
+fun gen_dataset () = 
   let
-    val pxl = mk_term_set (random_terml varl (n,alpha) 1000);
-    val (px,pnotx) = partition contain_x pxl
+    fun mk_dataset n =
+      let
+        val pxl = mk_term_set (random_terml varl (n,alpha) 1000);
+        val (px,pnotx) = partition contain_x pxl
+      in
+        (first_n 100 (shuffle px), first_n 100 (shuffle pnotx))
+      end
+    val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
+    val (l1',l2') = (List.concat l1, List.concat l2);
+    val (pos,neg) = 
+      (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
+    val ex0 = shuffle (pos @ neg)
   in
-    (first_n 100 (shuffle px), first_n 100 (shuffle pnotx))
+    map (fn (a,b) => [(mk_comb (vhead,a),b)]) ex0
   end
-val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
-val (l1',l2') = (List.concat l1, List.concat l2);
-val (pos,neg) = (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
-val ex0 = shuffle (pos @ neg);
-val ex1 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) ex0;
-val (trainex,testex) = part_pct 0.9 ex1;
 
-(* TNN *)
-val nlayer = 1;
-val dim = 16;
-val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
+val ncore_example = ref 16
 
-(* training *)
-val trainparam =
-  {ncore = 4, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 100};
-val schedule = [trainparam];
-val tnn = train_tnn schedule randtnn (trainex,testex);
+fun toy_example () =
+  let 
+    val ex = gen_dataset ()
+    val (trainex,testex) = part_pct 0.9 ex
+    val trainparam =
+      {ncore = !ncore_example, verbose = true,
+       learning_rate = 0.02, batch_size = 16, nepoch = 100};
+    val schedule = [trainparam];
+    val nlayer = 1
+    val dim = 16
+    val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl)
+  in
+    ignore (train_tnn schedule randtnn (trainex,testex))
+  end
 
-load "mlTreeNeuralNetwork"; 
-val tnn = mlTreeNeuralNetwork.train_tnn schedule randtnn (trainex,testex);
+(*
+load "aiLib"; open aiLib;
+load "mlTreeNeuralNetworkAlt"; open mlTreeNeuralNetworkAlt;
+
+writel "test.sml" 
+  ["load \"mlTreeNeuralNetworkAlt\";", 
+   "open mlTreeNeuralNetworkAlt;",
+   "ncore_example := 16;",
+   "toy_example ();"
+   ];
+
+load "smlExecScripts"; open smlExecScripts;
+buildheap_options := "--minheap 8000 --maxheap 16000";
+exec_script (HOLDIR ^ "/src/AI/machine_learning/test.sml");
 
 
-(* testing *)
-val acc = tnn_accuracy tnn testex;
 *)
 
 end (* struct *)
