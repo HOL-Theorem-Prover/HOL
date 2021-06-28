@@ -17,7 +17,7 @@ As soon as a worker is available, a new job is started on the next argument of
 the list. Since the workers are executing from a script, it is possible to
 execute arbitrary side-effect code before running {#function} by specifing
 {#reflect_globals}.
-The directory where the signature containing {extspec} is located has to be given in {#self_dir} and its full sml identifier in {#self} (see Example}.
+The directory where the signature containing {extspec} is located has to be given in {#self_dir} and its full sml identifier in {#self} (see Example).
 
 
 \FAILURE
