@@ -14,6 +14,8 @@ val _ = wordsLib.guess_lengths();
 
 val _ = numLib.prefer_num();
 
+val _ = Globals.show_assums := false;
+
 (******************************************************************************)
 
 Definition flag_rel_def:
@@ -146,45 +148,53 @@ val _ = computeLib.add_convs [
 
 
 (***** rewrites *****)
-val unfold_rws = [l3_models_asl_instr_def, l3_models_asl_def];
+val unfold_ss =
+  simpLib.named_rewrites "unfold_ss"
+    [l3_models_asl_instr_def, l3_models_asl_def];
 
-val encode_rws = [
-  Encode_def,
-  e_data_def, e_branch_def, e_load_store_def, e_sf_def, e_LoadStoreImmediate_def,
-  EncodeLogicalOp_def, NoOperation_def,
-  ShiftType2num_thm, SystemHintOp2num_thm, ShiftType2num_thm
+val encode_ss =
+  simpLib.named_rewrites "encode_ss" [
+    Encode_def,
+    e_data_def, e_branch_def, e_load_store_def, e_sf_def, e_LoadStoreImmediate_def,
+    EncodeLogicalOp_def, NoOperation_def,
+    ShiftType2num_thm, SystemHintOp2num_thm, ShiftType2num_thm
   ];
 
-val monad_rws = [
-  sail2_state_monadTheory.seqS_def,
-  sail2_state_monadTheory.returnS_def,
-  sail2_state_monadTheory.bindS_def,
-  sail2_state_monadTheory.read_regS_def,
-  sail2_state_monadTheory.readS_def,
-  sail2_state_monadTheory.write_regS_def,
-  sail2_state_monadTheory.updateS_def,
-  sail2_state_monadTheory.chooseS_def,
-  sail2_state_monadTheory.assert_expS_def,
-  sail2_stateTheory.and_boolS_def,
-  sail2_stateTheory.or_boolS_def,
-  sail2_stateTheory.internal_pickS_def
+val monad_ss =
+  simpLib.named_rewrites "monad_ss" [
+    sail2_state_monadTheory.seqS_def,
+    sail2_state_monadTheory.returnS_def,
+    sail2_state_monadTheory.bindS_def,
+    sail2_state_monadTheory.read_regS_def,
+    sail2_state_monadTheory.readS_def,
+    sail2_state_monadTheory.write_regS_def,
+    sail2_state_monadTheory.updateS_def,
+    sail2_state_monadTheory.chooseS_def,
+    sail2_state_monadTheory.assert_expS_def,
+    sail2_stateTheory.and_boolS_def,
+    sail2_stateTheory.or_boolS_def,
+    sail2_stateTheory.internal_pickS_def
   ];
 
-val asl_word_rws = [
-  sail2_operators_mwordsTheory.subrange_vec_dec_def,
-  sail2_operators_mwordsTheory.update_subrange_vec_dec_def,
-  sail2_valuesTheory.update_list_inc_def,
-  sail2_valuesTheory.access_list_inc_def,
-  wordsTheory.bit_field_insert_def,
-  preludeTheory.undefined_bitvector_def |>
-    REWRITE_RULE [Once FUN_EQ_THM, sail2_state_monadTheory.returnS_def],
-  armv86aTheory.integer_subrange_def,
-  sail2_operators_mwordsTheory.get_slice_int_def,
-  sail2_operatorsTheory.get_slice_int_bv_def,
-  sail2_valuesTheory.bools_of_int_def,
-  sail2_valuesTheory.add_one_bool_ignore_overflow_def,
-  sail2_valuesTheory.instance_Sail2_values_Bitvector_Machine_word_mword_dict_def
+val asl_word_ss =
+  simpLib.named_rewrites "asl_word_ss" [
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.update_subrange_vec_dec_def,
+    sail2_valuesTheory.update_list_inc_def,
+    sail2_valuesTheory.access_list_inc_def,
+    wordsTheory.bit_field_insert_def,
+    preludeTheory.undefined_bitvector_def |>
+      REWRITE_RULE [Once FUN_EQ_THM, sail2_state_monadTheory.returnS_def],
+    armv86aTheory.integer_subrange_def,
+    sail2_operators_mwordsTheory.get_slice_int_def,
+    sail2_operatorsTheory.get_slice_int_bv_def,
+    sail2_valuesTheory.bools_of_int_def,
+    sail2_valuesTheory.add_one_bool_ignore_overflow_def,
+    sail2_valuesTheory.instance_Sail2_values_Bitvector_Machine_word_mword_dict_def
   ];
+
+val [unfold_rws, encode_rws, monad_rws, asl_word_rws] =
+  map SF [unfold_ss, encode_ss, monad_ss, asl_word_ss];
 
 (***** L3 tactics *****)
 fun l3_eval thms = SIMP_RULE (srw_ss()) [] o
@@ -236,7 +246,7 @@ val l3_decode_tac =
   let val decode_tm = prim_mk_const {Name = "Decode", Thy = "arm8"}
       fun find_decode tm = is_comb tm andalso
                            same_const (strip_comb tm |> fst) decode_tm
-      fun apply_l3_decode tm = assume_tac (l3_decode (rand tm)) >> fs[]
+      fun apply_l3_decode tm = assume_tac (l3_decode (rand tm)) >> gvs[]
   in goal_term (fn tm => apply_l3_decode (find_term find_decode tm)) end
 
 (* Takes `Decode opc = _` and gives possible next steps.
@@ -256,7 +266,7 @@ fun l3_run tm =
    Does not do anything to handle multiple possible next steps. *)
 val l3_run_tac =
   qpat_assum `Decode _ = _` (fn thm =>
-    map_every (assume_tac o DISCH_ALL) (l3_run (concl thm)) >> fs[]);
+    map_every (assume_tac o DISCH_ALL) (l3_run (concl thm)) >> gvs[]);
 
 
 (***** custom compset *****)
@@ -373,7 +383,7 @@ val asl_cexecute_tac = asl_execute_tac_helper CEVAL;
 
 (* Rewrites using various state theorems and state relation *)
 fun state_rel_tac thms =
-  fs ([
+  gvs ([
     flag_rel_def,
     pstate_rel_def,
     tcr_el1_rel_def, reg'TCR_EL1_def,
@@ -391,20 +401,18 @@ fun state_rel_tac thms =
     sail2_valuesTheory.of_bits_failwith_def,
     sail2_valuesTheory.maybe_failwith_def
     ] @ thms) >>
-  rfs[] >>
-  rw[flookup_thm, FLOOKUP_UPDATE, APPLY_UPDATE_THM] >> rfs[];
-
+  rw[flookup_thm, FLOOKUP_UPDATE, APPLY_UPDATE_THM] >> gvs[];
 
 (******************************************************************************)
 
 Theorem l3_models_asl_NoOperation:
   l3_models_asl_instr NoOperation
 Proof
-  rw unfold_rws >>
-  fs encode_rws >>
+  rw[unfold_rws] >>
+  gvs[encode_rws] >>
   l3_decode_tac >>
   l3_run_tac >>
-  asl_execute_tac >> fs[] >>
+  asl_execute_tac >> gvs[] >>
   state_rel_tac []
 QED
 
@@ -412,43 +420,39 @@ Theorem l3_models_asl_MoveWideOp_Z:
   ∀hw imm16 r.
     l3_models_asl_instr (Data (MoveWide@64 (1w, MoveWideOp_Z, hw, imm16, r)))
 Proof
-  rw unfold_rws >>
-  fs encode_rws >>
+  rw[unfold_rws] >>
+  gvs[encode_rws] >>
   l3_decode_tac >> rw[] >>
   l3_run_tac >>
-  asl_cexecute_tac >> fs[] >> pop_assum kall_tac >>
-  fs [decode_movz_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
-  fs (undefined_MoveWideOp_def::monad_rws) >>
-  fs [execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
-  fs (asl_word_rws @ monad_rws) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `hw` >> fs[]) >>
-  fs (X_set_def::monad_rws) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `r` >> fs[]) >>
-  fs monad_rws >>
-  Cases_on `r = 31w` >> fs monad_rws
-  >- (state_rel_tac []) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `r` >> fs[]) >>
-  fs monad_rws >>
-  state_rel_tac asl_word_rws
+  asl_cexecute_tac >> gvs[] >> pop_assum kall_tac >>
+  gvs[decode_movz_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
+  gvs[undefined_MoveWideOp_def, monad_rws] >>
+  gvs[execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
+  gvs[asl_word_rws, monad_rws] >>
+  reverse IF_CASES_TAC >- (Cases_on_word_value `hw` >> gvs[]) >>
+  gvs[X_set_def, monad_rws] >>
+  reverse IF_CASES_TAC >- (Cases_on_word_value `r` >> gvs[]) >>
+  gvs[monad_rws] >>
+  Cases_on `r = 31w` >> gvs[monad_rws] >- (state_rel_tac []) >>
+  reverse IF_CASES_TAC >- (Cases_on_word_value `r` >> gvs[]) >>
+  gvs[monad_rws] >>
+  state_rel_tac[asl_word_rws]
   >- (
     CCONTR_TAC >>
-    qpat_x_assum `_ < 0` mp_tac >> fs[] >>
-    Cases_on_word_value `hw` >> fs[]
+    qpat_x_assum `_ < 0` mp_tac >> gvs[] >>
+    Cases_on_word_value `hw` >> gvs[]
     )
   >- (
-    fs[EL_LUPDATE] >>
+    gvs[EL_LUPDATE] >>
     `Num (ABS (((&w2n ((hw @@ (0b0w :word4)) :word6)) :int) + (15 :int))) =
       w2n (((hw :word2) @@ (0b0w :word4)) :word6) + 15` by (
-        Cases_on_word_value `hw` >> fs[]) >> fs[]
+        Cases_on_word_value `hw` >> gvs[]) >> gvs[]
     )
   >> (
-    fs[EL_LUPDATE] >>
-    IF_CASES_TAC >> rfs[] >>
+    gvs[EL_LUPDATE] >>
+    IF_CASES_TAC >> gvs[] >>
     rpt (BasicProvers.VAR_EQ_TAC) >>
-    fs[n2w_w2n]
+    gvs[n2w_w2n]
     )
 QED
 
@@ -456,43 +460,38 @@ Theorem l3_models_asl_MoveWideOp_N:
   ∀hw imm16 r.
     l3_models_asl_instr (Data (MoveWide@64 (1w, MoveWideOp_N, hw, imm16, r)))
 Proof
-  rw unfold_rws >>
-  fs encode_rws >>
+  rw[unfold_rws] >>
+  gvs[encode_rws] >>
   l3_decode_tac >> rw[] >>
   l3_run_tac >>
-  asl_cexecute_tac >> fs[] >> pop_assum kall_tac >>
-  fs [decode_movn_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
-  fs (undefined_MoveWideOp_def::monad_rws) >>
-  fs [execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
-  fs (asl_word_rws @ monad_rws) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `hw` >> fs[]) >>
-  fs (X_set_def::monad_rws) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `r` >> fs[]) >>
-  fs monad_rws >>
-  Cases_on `r = 31w` >> fs monad_rws
-  >- (state_rel_tac []) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `r` >> fs[]) >>
-  fs monad_rws >>
-  state_rel_tac asl_word_rws
+  asl_cexecute_tac >> gvs[] >> pop_assum kall_tac >>
+  gvs[decode_movn_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
+  gvs[undefined_MoveWideOp_def, monad_rws] >>
+  gvs[execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
+  gvs[asl_word_rws, monad_rws] >>
+  reverse IF_CASES_TAC >- (Cases_on_word_value `hw` >> gvs[]) >>
+  gvs[X_set_def, monad_rws] >>
+  reverse IF_CASES_TAC >- (Cases_on_word_value `r` >> gvs[]) >>
+  gvs[monad_rws] >>
+  Cases_on `r = 31w` >> gvs[monad_rws] >- (state_rel_tac []) >>
+  reverse IF_CASES_TAC >- (Cases_on_word_value `r` >> gvs[]) >>
+  gvs[monad_rws] >> state_rel_tac[asl_word_rws]
   >- (
     CCONTR_TAC >>
-    qpat_x_assum `_ < 0` mp_tac >> fs[] >>
-    Cases_on_word_value `hw` >> fs[]
+    qpat_x_assum `_ < 0` mp_tac >> gvs[] >>
+    Cases_on_word_value `hw` >> gvs[]
     )
   >- (
-    fs[EL_LUPDATE] >>
+    gvs[EL_LUPDATE] >>
     `Num (ABS (((&w2n ((hw @@ (0b0w :word4)) :word6)) :int) + (15 :int))) =
       w2n (((hw :word2) @@ (0b0w :word4)) :word6) + 15` by (
-        Cases_on_word_value `hw` >> fs[]) >> fs[]
+        Cases_on_word_value `hw` >> gvs[]) >> gvs[]
     )
   >> (
-    fs[EL_LUPDATE] >>
-    IF_CASES_TAC >> rfs[] >>
+    gvs[EL_LUPDATE] >>
+    IF_CASES_TAC >> gvs[] >>
     rpt (BasicProvers.VAR_EQ_TAC) >>
-    fs[n2w_w2n]
+    gvs[n2w_w2n]
     )
 QED
 
@@ -500,50 +499,46 @@ Theorem l3_models_asl_MoveWideOp_K:
   ∀hw imm16 r.
     l3_models_asl_instr (Data (MoveWide@64 (1w, MoveWideOp_K, hw, i, r)))
 Proof
-  rw unfold_rws >>
-  fs encode_rws >>
+  rw[unfold_rws] >>
+  gvs[encode_rws] >>
   l3_decode_tac >> rw[] >>
   l3_run_tac >>
-  asl_cexecute_tac >> fs[] >> pop_assum kall_tac >>
-  fs [decode_movk_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
-  fs (undefined_MoveWideOp_def::monad_rws) >>
-  fs [execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
-  fs (X_read_def::asl_word_rws @ monad_rws) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `r` >> fs[]) >>
-  fs (X_set_def::monad_rws) >>
-  Cases_on `r = 31w` >> fs monad_rws
+  asl_cexecute_tac >> gvs[] >> pop_assum kall_tac >>
+  gvs[decode_movk_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
+  gvs[undefined_MoveWideOp_def, monad_rws] >>
+  gvs[execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
+  gvs[X_read_def, asl_word_rws, monad_rws] >>
+  reverse IF_CASES_TAC >- (Cases_on_word_value `r` >> gvs[]) >>
+  gvs[X_set_def, monad_rws] >>
+  Cases_on `r = 31w` >> gvs[monad_rws]
   >- (
-    reverse (IF_CASES_TAC)
-    >- (Cases_on_word_value `hw` >> fs[]) >>
-    fs (X_set_def::monad_rws) >>
+    reverse IF_CASES_TAC >- (Cases_on_word_value `hw` >> gvs[]) >>
+    gvs[X_set_def, monad_rws] >>
     state_rel_tac []
     ) >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `r` >> fs[]) >>
-  fs monad_rws >>
-  reverse (IF_CASES_TAC)
-  >- (Cases_on_word_value `hw` >> fs[]) >>
-  fs (X_set_def::monad_rws) >>
-  state_rel_tac asl_word_rws
+  reverse IF_CASES_TAC >- (Cases_on_word_value `r` >> gvs[]) >>
+  gvs[monad_rws] >>
+  reverse IF_CASES_TAC
+  >- (Cases_on_word_value `hw` >> gvs[]) >>
+  gvs[X_set_def, monad_rws] >> state_rel_tac[asl_word_rws]
   >- (
     CCONTR_TAC >>
-    qpat_x_assum `_ < 0` mp_tac >> fs[] >>
-    Cases_on_word_value `hw` >> fs[]
+    qpat_x_assum `_ < 0` mp_tac >> gvs[] >>
+    Cases_on_word_value `hw` >> gvs[]
     )
   >- (
-    fs[EL_LUPDATE] >>
+    gvs[EL_LUPDATE] >>
     `Num (ABS (((&w2n ((hw @@ (0b0w :word4)) :word6)) :int) + (15 :int))) =
       w2n (((hw :word2) @@ (0b0w :word4)) :word6) + 15` by (
-        Cases_on_word_value `hw` >> fs[]) >> fs[] >>
+        Cases_on_word_value `hw` >> gvs[]) >> gvs[] >>
     `∀ w : 64 word. (63 >< 0) w = (w2w w : 64 word)` by (
-      strip_tac >> irule EXTRACT_ALL_BITS >> fs[]) >> fs[]
+      strip_tac >> irule EXTRACT_ALL_BITS >> gvs[]) >> gvs[]
     )
   >> (
-    fs[EL_LUPDATE] >>
-    IF_CASES_TAC >> rfs[] >>
+    gvs[EL_LUPDATE] >>
+    IF_CASES_TAC >> gvs[] >>
     rpt (VAR_EQ_TAC) >>
-    fs[n2w_w2n]
+    gvs[n2w_w2n]
     )
 QED
 (*
@@ -552,31 +547,31 @@ Theorem l3_models_asl_AddSubImmediate:
     l3_models_asl_instr
       (Data (AddSubImmediate@64 (1w, b1, b2, i, r2, r1)))
 Proof
-  rw unfold_rws >>
-  fs encode_rws >>
-  rpt (IF_CASES_TAC)
+  rw[unfold_rws] >>
+  gvs[encode_rws] >>
+  rpt IF_CASES_TAC
   >- (
     `i = (0w : 52 word) @@ ((11 >< 0) i : 12 word)` by
-      blastLib.FULL_BBLAST_TAC >> fs[] >>
+      blastLib.FULL_BBLAST_TAC >> gvs[] >>
     last_x_assum kall_tac >> rename1 `_ @@ _ @@ _ @@ _ @@ j @@ _ @@ _` >>
-    Cases_on `b1` >> Cases_on `b2` >> fs[]
+    Cases_on `b1` >> Cases_on `b2` >> gvs[]
     >- (
       l3_decode_tac >> rw[] >>
-      l3_run_tac >> fs[] >> pop_assum kall_tac >>
-      asl_cexecute_tac >> fs[] >> pop_assum kall_tac >>
-      fs[decode_subs_addsub_imm_aarch64_instrs_integer_arithmetic_add_sub_immediate_def] >>
-      fs (asl_word_rws @ monad_rws) >>
-      fs[execute_aarch64_instrs_integer_arithmetic_add_sub_immediate_def] >>
-      fs (asl_word_rws @ monad_rws) >>
-      fs[dfn'AddSubImmediate_def] >>
-      Cases_on `r2 = 31w` >> fs[]
+      l3_run_tac >> gvs[] >> pop_assum kall_tac >>
+      asl_cexecute_tac >> gvs[] >> pop_assum kall_tac >>
+      gvs[decode_subs_addsub_imm_aarch64_instrs_integer_arithmetic_add_sub_immediate_def] >>
+      gvs[asl_word_rws, monad_rws] >>
+      gvs[execute_aarch64_instrs_integer_arithmetic_add_sub_immediate_def] >>
+      gvs[asl_word_rws, monad_rws] >>
+      gvs[dfn'AddSubImmediate_def] >>
+      Cases_on `r2 = 31w` >> gvs[]
       >- (
-        fs[SP_read_def, SP_def] >>
-        fs (PSTATE_ref_def::monad_rws) >>
+        gvs[SP_read_def, SP_def] >>
+        gvs[PSTATE_ref_def, monad_rws] >>
         `flag_rel (l3.PSTATE.SPS)
           ((asl.regstate.ProcState_reg "PSTATE").ProcState_SP)` by
           state_rel_tac [] >>
-        reverse (Cases_on `l3.PSTATE.SPS`) >> fs (flag_rel_def::monad_rws)
+        reverse (Cases_on `l3.PSTATE.SPS`) >> gvs[flag_rel_def, monad_rws]
         >- (
 
           )
