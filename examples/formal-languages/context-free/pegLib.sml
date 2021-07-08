@@ -26,10 +26,10 @@ fun add_peg_compset cs =
     [``:('a,'b)grammar$symbol``
     ,``:('a,'b)grammar``
     ,``:('a,'b,'locs)parsetree``
-    ,``:('a,'b,'c)pegsym``
-    ,``:('a,'b,'c)peg``
-    ,``:('a,'b,'c)kont``
-    ,``:('a,'b,'c)evalcase``
+    ,``:('a,'b,'c,'d)pegsym``
+    ,``:('a,'b,'c,'d)peg``
+    ,``:('a,'b,'c,'d)kont``
+    ,``:('a,'b,'c,'d)evalcase``
     ])
 
 fun derive_compset_distincts ty =
