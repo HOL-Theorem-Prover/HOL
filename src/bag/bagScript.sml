@@ -2331,6 +2331,16 @@ val BAG_GEN_PROD_UNION = Q.store_thm
              BAG_GEN_PROD b1 1 * BAG_GEN_PROD b2 1)`,
  METIS_TAC [BAG_GEN_PROD_UNION_LEM, ARITH `1 * 1 = 1`]);
 
+Theorem BAG_GEN_PROD_EQ_0:
+  !b. FINITE_BAG b ==>
+    !e. BAG_GEN_PROD b e = 0 <=> BAG_IN 0 b \/ e = 0
+Proof
+  ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ rw[BAG_GEN_PROD_REC]
+  >- fs[BAG_GEN_PROD_def]
+  \\ metis_tac[]
+QED
+
 (* BIG_BAG_UNION: the union of all bags in a finite set *)
 
 val BIG_BAG_UNION_def = Define`
