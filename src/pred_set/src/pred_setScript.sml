@@ -5760,6 +5760,14 @@ Proof
   rw[partitions_thm, EXTENSION]
 QED
 
+Theorem partitions_inj:
+  !x w1 w2. x partitions w1 /\ x partitions w2 ==> w1 = w2
+Proof
+  rw[partitions_thm]
+  \\ rw[SET_EQ_SUBSET]
+  \\ fs[SUBSET_DEF, EXISTS_UNIQUE_THM] \\ REV_FULL_SIMP_TAC(srw_ss())[]
+QED
+
 Theorem partitions_SING:
   !v x. SING x ==>
         (v partitions x <=> v = {{CHOICE x}})
@@ -5884,11 +5892,31 @@ Proof
   \\ METIS_TAC[EXISTS_UNIQUE_THM]
 QED
 
+Theorem part_SING:
+  !x w. x IN w ==> part {w} x = w
+Proof
+  rw[part_def] \\ METIS_TAC[]
+QED
+
+Theorem equivalence_same_part:
+  equivalence (\x y. part v x = part v y)
+Proof
+  rw[relationTheory.ALT_equivalence]
+  \\ rw[Once FUN_EQ_THM, SimpRHS]
+  \\ rw[EQ_IMP_THM]
+QED
+
 val refines_def = TotalDefn.Define`
   refines v1 v2 <=>
   !s1. s1 IN v1 ==> ?s2. s2 IN v2 /\ s1 SUBSET s2`;
 
 val _ = set_fixity "refines" (Infix(NONASSOC, 425));
+
+Theorem empty_refines[simp]:
+  !v. {} refines v
+Proof
+  rw[refines_def]
+QED
 
 Theorem refines_grows_parts:
   !w v1 v2. v1 partitions w /\ v2 partitions w ==>
