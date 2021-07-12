@@ -1351,6 +1351,39 @@ val PERM_TO_APPEND_SIMPS = store_thm (
 SIMP_TAC list_ss [PERM_REFL, PERM_CONS_IFF, PERM_CENTRE1, PERM_CENTRE2]
   \\ SIMP_TAC bool_ss [GSYM APPEND_ASSOC, PERM_APPEND_IFF]);
 
+Theorem PERM_FLAT:
+  !l1 l2. PERM l1 l2 ==> PERM (FLAT l1) (FLAT l2)
+Proof
+  ho_match_mp_tac PERM_IND
+  \\ rw[PERM_APPEND_IFF, PERM_SWAP_L_AT_FRONT]
+  \\ metis_tac[PERM_TRANS]
+QED
+
+Theorem PERM_MAP_SET_TO_LIST_IMAGE:
+  !s. FINITE s ==> !f. (!x y. x IN s /\ y IN s /\ f x = f y ==> x = y) ==>
+  PERM (MAP f (SET_TO_LIST s)) (SET_TO_LIST (IMAGE f s))
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[]
+  \\ rw[Once PERM_SYM]
+  \\ irule PERM_TRANS
+  \\ qexists_tac`f e :: SET_TO_LIST (IMAGE f s)`
+  \\ conj_tac
+  >- (
+    `FINITE (IMAGE f s)` by simp[]
+    \\ drule PERM_SET_TO_LIST_INSERT
+    \\ disch_then(qspec_then`f e`mp_tac)
+    \\ simp[]
+    \\ metis_tac[])
+  \\ irule PERM_TRANS
+  \\ qexists_tac`f e :: MAP f (SET_TO_LIST s)`
+  \\ conj_tac >- metis_tac[PERM_SYM, PERM_CONS_IFF]
+  \\ rewrite_tac[GSYM MAP]
+  \\ irule PERM_MAP
+  \\ rw[Once PERM_SYM]
+  \\ drule PERM_SET_TO_LIST_INSERT
+  \\ metis_tac[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* QSORT3 - A stable version of QSORT (James Reynolds - 10/2010)             *)
