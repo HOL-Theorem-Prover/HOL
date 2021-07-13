@@ -957,6 +957,14 @@ Proof
   rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]
 QED
 
+Theorem BAG_OF_SET_DISJOINT_UNION:
+  !s1 s2. DISJOINT s1 s2 ==>
+  BAG_OF_SET (s1 UNION s2) = BAG_UNION (BAG_OF_SET s1) (BAG_OF_SET s2)
+Proof
+  rw[BAG_OF_SET, BAG_UNION, FUN_EQ_THM, IN_DISJOINT]
+  \\ rw[] \\ metis_tac[]
+QED
+
 Theorem BAG_OF_SET_INSERT:
   !e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)
 Proof
@@ -970,6 +978,17 @@ Proof
    >- (`(x = e) = F` by metis_tac[] >>
        `(s x) = T` by metis_tac[] >>
        fs[COND_CLAUSES])
+QED
+
+Theorem BAG_OF_SET_INSERT_NON_ELEMENT:
+  !e s. e NOTIN s ==>
+        BAG_OF_SET (e INSERT s) = BAG_INSERT e (BAG_OF_SET s)
+Proof
+  rw[BAG_OF_SET_INSERT]
+  \\ rw[Once BAG_INSERT, SimpRHS]
+  \\ rw[BAG_MERGE, FUN_EQ_THM]
+  \\ rw[]
+  \\ gs[BAG_INSERT, EMPTY_BAG, BAG_OF_SET]
 QED
 
 Theorem BAG_OF_SET_BAG_DIFF_DIFF:
