@@ -2008,6 +2008,12 @@ val COMMUTING_ITBAG_RECURSES = store_thm(
     SRW_TAC [][COMMUTING_ITBAG_INSERT]
   ]);
 
+Theorem ITBAG_SING[simp]:
+  ITBAG f {|x|} a = f x a
+Proof
+  dep_rewrite.DEP_ONCE_REWRITE_TAC[ITBAG_THM] \\ rw[]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Sums and products on finite bags                                          *)
 (*---------------------------------------------------------------------------*)
