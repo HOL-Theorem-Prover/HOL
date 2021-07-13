@@ -1768,6 +1768,23 @@ val BAG_IMAGE_FINITE_I = store_thm(
  before
  export_rewrites ["BAG_IMAGE_FINITE_I"];
 
+Theorem BAG_IMAGE_CONG:
+  !f1 b1 f2 b2.
+  b1 = b2 /\ (!x. BAG_IN x b1 ==> f1 x = f2 x)
+  ==>
+  BAG_IMAGE f1 b1 = BAG_IMAGE f2 b2
+Proof
+  rw[]
+  \\ rw[BAG_IMAGE_DEF, FUN_EQ_THM]
+  \\ qmatch_goalsub_abbrev_tac`FINITE_BAG c1`
+  \\ irule EQ_SYM
+  \\ qmatch_goalsub_abbrev_tac`FINITE_BAG c2`
+  \\ `c1 = c2` suffices_by rw[]
+  \\ rw[Abbr`c1`,Abbr`c2`, BAG_FILTER_DEF, FUN_EQ_THM]
+  \\ fs[BAG_IN, BAG_INN] \\ rw[]
+  \\ metis_tac[DECIDE``~(x >= 1) ==> x = 0``]
+QED
+
 Theorem BAG_IN_FINITE_BAG_IMAGE[simp]:
   FINITE_BAG b ==>
     (BAG_IN x (BAG_IMAGE f b) = ?y. (f y = x) /\ BAG_IN y b)
