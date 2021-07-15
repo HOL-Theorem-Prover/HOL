@@ -1359,6 +1359,43 @@ Proof
   \\ metis_tac[PERM_TRANS]
 QED
 
+Theorem PERM_FLAT_MAP_CONS:
+  !h t ls. PERM (FLAT (MAP (\x. h x :: t x) ls)) (MAP h ls ++ FLAT (MAP t ls))
+Proof
+  ntac 2 gen_tac
+  \\ Induct
+  \\ rw[]
+  \\ irule PERM_TRANS
+  \\ qmatch_goalsub_abbrev_tac`PERM _ (a ++ b ++ c)`
+  \\ qexists_tac`b ++ (a ++ c)`
+  \\ simp[PERM_APPEND_IFF, PERM_APPEND]
+QED
+
+Theorem PERM_COMM_DISTRIB:
+  !f l1 l2.
+  (!x y. MEM x l1 /\ MEM y l2 ==> f x y = f y x) ==>
+  PERM (FLAT (MAP (\x. MAP (f x) l2) l1)) (FLAT (MAP (\x. MAP (f x) l1) l2))
+Proof
+  gen_tac
+  \\ Induct
+  \\ rw[]
+  >- (
+    qmatch_goalsub_abbrev_tac`MAP g l2`
+    \\ `g = K []` by simp[Abbr`g`, FUN_EQ_THM]
+    \\ rw[FLAT_MAP_K_NIL] )
+  \\ irule PERM_TRANS
+  \\ qexists_tac`MAP (f h) l2 ++ FLAT (MAP (\x. MAP (f x) l1) l2)`
+  \\ simp[PERM_APPEND_IFF]
+  \\ conj_tac
+  >- ( first_x_assum irule \\ metis_tac[] )
+  \\ simp[Once PERM_SYM]
+  \\ qho_match_abbrev_tac`PERM (FLAT (MAP (\x. hf x :: ht x) l2)) _`
+  \\ `MAP (f h) l2 = MAP hf l2`
+  by ( simp[Abbr`hf`, MAP_EQ_f] \\ metis_tac[] )
+  \\ pop_assum SUBST1_TAC
+  \\ simp[PERM_FLAT_MAP_CONS]
+QED
+
 Theorem PERM_MAP_SET_TO_LIST_IMAGE:
   !s. FINITE s ==> !f. (!x y. x IN s /\ y IN s /\ f x = f y ==> x = y) ==>
   PERM (MAP f (SET_TO_LIST s)) (SET_TO_LIST (IMAGE f s))
@@ -1383,6 +1420,32 @@ Proof
   \\ rw[Once PERM_SYM]
   \\ drule PERM_SET_TO_LIST_INSERT
   \\ metis_tac[]
+QED
+
+Theorem PERM_BIJ_SET_TO_LIST:
+  !f s1 s2. FINITE s1 /\ FINITE s2 /\ BIJ f s1 s2 ==>
+  PERM (MAP f (SET_TO_LIST s1)) (SET_TO_LIST s2)
+Proof
+  rw[]
+  \\ irule PERM_TRANS
+  \\ qexists_tac`SET_TO_LIST (IMAGE f s1)`
+  \\ conj_tac
+  >- (
+    irule PERM_MAP_SET_TO_LIST_IMAGE
+    \\ fs[BIJ_DEF, INJ_DEF] )
+  \\ imp_res_tac BIJ_IMAGE
+  \\ rw[]
+QED
+
+Theorem PERM_SET_TO_LIST_DISJOINT_UNION_APPEND:
+  !s1 s2. FINITE s1 /\ FINITE s2 /\ DISJOINT s1 s2 ==>
+  PERM (SET_TO_LIST (s1 UNION s2)) (SET_TO_LIST s1 ++ SET_TO_LIST s2)
+Proof
+  rpt strip_tac
+  \\ irule PERM_ALL_DISTINCT
+  \\ simp[ALL_DISTINCT_APPEND]
+  \\ fs[IN_DISJOINT]
+  \\ PROVE_TAC[]
 QED
 
 (*---------------------------------------------------------------------------*)
