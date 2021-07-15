@@ -1579,6 +1579,12 @@ Proof
   rw[DIFF_DEF,BAG_OF_SET,BAG_FILTER_DEF] >> metis_tac[]
 QED
 
+Theorem BAG_FILTER_BAG_OF_SET:
+  !P s. BAG_FILTER P (BAG_OF_SET s) = BAG_OF_SET (s INTER { x | P x })
+Proof
+  rw[BAG_FILTER_DEF, FUN_EQ_THM, BAG_OF_SET] \\ rw[] \\ fs[]
+QED
+
 val SET_OF_BAG_EQ_INSERT = store_thm(
   "SET_OF_BAG_EQ_INSERT",
   ``!b e s.
@@ -1685,6 +1691,15 @@ Proof
         rw[] >>
         simp[BAG_OF_SET_INSERT] >>
         simp[FINITE_BAG_MERGE])
+QED
+
+Theorem BAG_CARD_BAG_OF_SET:
+  !s. FINITE s ==> BAG_CARD (BAG_OF_SET s) = CARD s
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[]
+  \\ rw[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ rw[BAG_CARD_THM]
 QED
 
 
@@ -1815,6 +1830,30 @@ val BAG_IMAGE_EQ_EMPTY = store_thm(
   qid_spec_tac `b` >> ho_match_mp_tac STRONG_FINITE_BAG_INDUCT >>
   simp[]);
 val _ = export_rewrites ["BAG_IMAGE_EQ_EMPTY"]
+
+Theorem ITSET_BAG_INSERT_BAG_UNION_BAG_IMAGE_BAG_OF_SET:
+  !f s. FINITE s ==> !a.
+    ITSET (\x b. BAG_INSERT (f x) b) s a =
+    BAG_UNION a (BAG_IMAGE f (BAG_OF_SET s))
+Proof
+  gen_tac
+  \\ ho_match_mp_tac FINITE_INDUCT
+  \\ rw[ITSET_EMPTY]
+  \\ dep_rewrite.DEP_REWRITE_TAC[COMMUTING_ITSET_INSERT]
+  \\ rw[] >- metis_tac[BAG_INSERT_commutes]
+  \\ fs[DELETE_NON_ELEMENT]
+  \\ fs[GSYM DELETE_NON_ELEMENT]
+  \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ simp[BAG_INSERT_UNION]
+  \\ simp[AC ASSOC_BAG_UNION COMM_BAG_UNION]
+QED
+
+Theorem BAG_IMAGE_BAG_OF_SET_ITSET_BAG_INSERT:
+  !f s. FINITE s ==>
+    BAG_IMAGE f (BAG_OF_SET s) = ITSET (\x b. BAG_INSERT (f x) b) s {||}
+Proof
+  rw[ITSET_BAG_INSERT_BAG_UNION_BAG_IMAGE_BAG_OF_SET]
+QED
 
 (*---------------------------------------------------------------------------
         CHOICE and REST for bags.
