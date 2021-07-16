@@ -127,6 +127,10 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
 <code>Ntimes <i>theorem int</i></code>
 : Uses the supplied theorem at most the given number of times when rewriting.
 
+<code>Excl <i>theorem</i></code>
+: Do not use the supplied theorem when rewriting.
+  This allows temporary exclusion of a theorem from the stateful simpset.
+
 <code>Simp{L,R}HS <i>theorem</i></code>
 : Uses the supplied theorem to simplify on the left-/right-hand side of equalities.
 
