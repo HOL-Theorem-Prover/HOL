@@ -1,0 +1,13 @@
+INCLUDES=rec1
+.PHONY: all test test1 A_RULE
+
+all: test test1
+
+test: # called with TEST1=SET
+	[ "$(TEST1)" = "SET" ]
+
+test1:
+	[ "$(INBETWEEN)" = "YES" ]
+
+A_RULE: # A rule
+	echo Hello!

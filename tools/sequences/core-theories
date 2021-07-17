@@ -53,3 +53,4 @@ src/boss
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 !tools/Holmake/tests/Iflag
+!examples/developers/ThmSetData

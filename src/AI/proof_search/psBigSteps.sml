@@ -13,6 +13,8 @@ open HolKernel Abbrev boolLib aiLib psMCTS smlParallel
 
 val ERR = mk_HOL_ERR "psBigSteps"
 
+val temp_flag = ref true
+
 (* -------------------------------------------------------------------------
    Type for examples and distribution derived from a policy
    ------------------------------------------------------------------------- *)
@@ -23,152 +25,87 @@ type 'a rlex = ('a * real list) list
    Tree re-use
    ------------------------------------------------------------------------- *)
 
-fun is_prefix l1 l2 = case (l1,l2) of
-    ([],_) => true
-  | (_,[]) => false
-  | (a1 :: m1, a2 :: m2) => a1 = a2 andalso is_prefix m1 m2
-
-fun is_suffix l1 l2 = is_prefix (rev l1) (rev l2)
-
-fun rm_prefix l1 l2 = case (l1,l2) of
-    ([],_) => l2
-  | (_,[]) => raise ERR "rm_prefix" ""
-  | (a1 :: m1, a2 :: m2) =>
-    (if a1 = a2 then rm_prefix m1 m2 else raise ERR "rm_prefix" "")
-
-fun rm_suffix l1 l2 = rev (rm_prefix (rev l1) (rev l2))
-
-fun cut_tree id tree =
-  let
-    val l = filter (fn x => is_suffix id (fst x)) (dlist tree)
-    fun change_node (x,{board,pol,value,stati,sum,vis,status}) =
-      (rm_suffix id x,
-        {board=board, pol=map_snd (rm_suffix id) pol,
-         value=value, stati=stati, sum=sum, vis=vis, status=status})
-  in
-    dnew id_compare (map change_node l)
-  end
-
-fun build_cache game tree =
-  dnew (#board_compare game) (map swap (map_snd #board (dlist tree)))
+fun cut_tree i tree = case tree of
+    Leaf  => raise ERR "cut_tree" "leaf"
+  | Node (_,ctreev) => (#3 (Vector.sub (ctreev,i)))
 
 (* -------------------------------------------------------------------------
    Big steps and example extraction
    ------------------------------------------------------------------------- *)
 
-fun mk_dis tree =
+fun nvisit tree = case tree of
+    Leaf => 0.0
+  | Node (node,ctreev) => #vis node
+
+fun mk_dis tree = case tree of
+    Leaf => raise ERR "mk_dis" "leaf"
+  | Node (node,ctreev) =>
   let
-    val pol = #pol (dfind [] tree)
+    fun f i (a,b,c) = ((a,i), nvisit c)
+    val pol = mapi f (vector_to_list ctreev)
     val _ = if null pol then raise ERR "mk_dis" "pol" else ()
-    fun f (_,cid) = #vis (dfind cid tree) handle NotFound => 0.0
-    val dis = map_assoc f pol
-    val tot = sum_real (map snd dis)
+    val tot = sum_real (map snd pol)
     val _ = if tot < 0.5 then raise ERR "mk_dis" "tot" else ()
   in
-    (dis,tot)
+    (pol,tot)
   end
 
-fun debug_ep obj mctsobj dis root =
-  if #verbose obj then
-  let
-    val {game,player,mctsparam} = mctsobj
-    val old_eval = #value root
-    val new_eval = #sum root / #vis root
-    fun f1 (((move,r),_),_) =
-      pretty_real r  ^ ": " ^ #string_of_move game move
-    fun f2 (((move,_),_),r) =
-      pretty_real r  ^ ": " ^ #string_of_move game move
-  in
-    print_endline ("Old Eval: " ^ pretty_real old_eval);
-    print_endline ("New Eval: " ^ pretty_real new_eval);
-    print_endline ("Old Policy\n" ^ String.concatWith "\n" (map f1 dis));
-    print_endline ("New Policy\n" ^ String.concatWith "\n" (map f2 dis))
-  end
-  else ()
-
-fun select_bigstep obj mctsobj tree =
-  let
-    val (dis,_) = mk_dis tree
-    val (_,cid) = if #temp_flag obj
-      then select_in_distrib dis
-      else best_in_distrib dis
-    val _ = debug_ep obj mctsobj dis (dfind [] tree)
-  in
-    cid
+fun select_bigstep mctsobj tree =
+  let val (dis,_) = mk_dis tree in
+    if !temp_flag then select_in_distrib dis else best_in_distrib dis
   end
 
 (* -------------------------------------------------------------------------
    Extracting root examples from bigsteps
    ------------------------------------------------------------------------- *)
 
-fun add_rootex game tree rlex =
+fun add_rootex game tree rlex = case tree of
+    Leaf => raise ERR "add_rootex" ""
+  | Node (root,ctreev) =>
   let
-    val root = dfind [] tree
     val board  = #board root
     val (dis,tot) = mk_dis tree
-    val eval = #sum root / #vis root
-    val poli1 = map (fn (((m,_),_),r) => (m,r / tot)) dis
+    val eval = #sum root / #vis root (* todo: use the final eval instead *)
+    fun f1 ((m,_),r) = (m,r/tot)
+    val poli1 = map f1 dis
     val poli2 = dnew (#move_compare game) poli1
-    fun f m = dfind m poli2 handle NotFound => 0.0
+    fun f2 m = dfind m poli2 handle NotFound => 0.0
   in
-    (board, eval :: (map f (#movel game))) :: rlex
+    (board, eval :: (map f2 (#movel game))) :: rlex
   end
 
 (* -------------------------------------------------------------------------
    MCTS big steps. Ending the search when there is no move available.
    ------------------------------------------------------------------------- *)
 
-type ('a,'b) bsobj =
-  {
-  verbose : bool,
-  temp_flag : bool,
-  preplayer : 'a -> ('a,'b) player,
-  game : ('a,'b) game,
-  mctsparam : mctsparam
-  }
-
-fun debug_board b game board =
-  if b
-  then print_endline ("\nBoard\n" ^ (#string_of_board game) board)
-  else ()
-
-(* rootl and rlex are reversed *)
-fun loop_bigsteps bsobj mctsobj (rlex,rootl) (tree,cache) =
+fun loop_bigsteps mctsobj rlex tree =
+  case tree of
+    Leaf => (false, rlex)
+  | Node (root,ctreev) =>
   let
     val {mctsparam,game,player} = mctsobj
-    val {board,stati,...} = dfind [] tree
-    val _ = debug_board (#verbose bsobj) game board
+    val {board,stati,...} = root
+    val _ = debug ("Board " ^ its (length rlex))
+    val _ = debug (#string_of_board game board)
   in
-    if not (is_undecided stati) then (is_win stati, rlex, rootl) else
+    if not (is_undecided stati) then (is_win stati, rlex) else
     let
-      val (_,(endtree,_)) = mcts mctsobj (tree,cache)
-      val cid = select_bigstep bsobj mctsobj endtree
-      val newtree =
-        (if #noise_root mctsparam then add_rootnoise mctsparam else I)
-        (cut_tree cid endtree)
-      val newcache = build_cache game newtree
-      val newrlex = add_rootex game endtree rlex
-      val root = dfind [] newtree
-      val newrootl = root :: rootl
+      val mctstree = mcts mctsobj tree
+      val (move,i) = select_bigstep mctsobj mctstree
+      val _ = debug ("Move " ^ #string_of_move game move)
+      val newrlex = add_rootex game mctstree rlex
+      val cuttree = cut_tree i mctstree
     in
-      loop_bigsteps bsobj mctsobj (newrlex,newrootl) (newtree,newcache)
+      loop_bigsteps mctsobj newrlex cuttree
     end
   end
 
-fun run_bigsteps bsobj target =
+fun run_bigsteps (tempb,mctsobj) target =
   let
-    val mctsobj =
-      {
-      mctsparam = #mctsparam bsobj,
-      game = #game bsobj,
-      player = #preplayer bsobj target
-      }
-    val (tree,cache) = starttree_of mctsobj target
-    val mctsparam = #mctsparam bsobj
-    val tree' =
-      (if #noise_root mctsparam then add_rootnoise mctsparam else I) tree
+    val _ = temp_flag := tempb
+    val tree = starting_tree mctsobj target
   in
-    loop_bigsteps bsobj mctsobj ([],[dfind [] tree']) (tree',cache)
+    loop_bigsteps mctsobj [] tree
   end
 
 (* -------------------------------------------------------------------------
@@ -181,33 +118,16 @@ load "psMCTS"; open psMCTS;
 load "psBigSteps"; open psBigSteps;
 
 val mctsparam =
-  {
-  timer = (NONE : real option),
-  nsim = SOME 3200,
-  stopatwin_flag = false,
-  decay = 1.0,
-  explo_coeff = 2.0,
-  noise_all = true,
-  noise_root = false,
-  noise_coeff = 0.25,
-  noise_gen = random_real,
-  noconfl = false,
-  avoidlose = false,
-  eval_endstate = false
-  };
+  {time = (NONE : real option), nsim = (SOME 10 : int option),
+   explo_coeff = 2.0,
+   noise = false, noise_coeff = 0.25, noise_gen = gamma_noise_gen 0.2};
 
-val bsobj : (toy_board,toy_move) bsobj =
-  {
-  verbose = true,
-  temp_flag = false,
-  preplayer = fn target => uniform_player toy_game,
-  game = toy_game,
-  mctsparam = mctsparam
-  };
+val mctsobj : (toy_board,toy_move) mctsobj =
+  {mctsparam = mctsparam, game = toy_game, player = random_player toy_game};
 
 val target = (0,10,100);
-val (_,t) = add_time (run_bigsteps bsobj) target;
-val (winb,rlex,rootl) = run_bigsteps bsobj target;
+val _ = debug_flag := true;
+val ((winb,rlex),t) = add_time (run_bigsteps (false,mctsobj)) target;
 *)
 
 end (* struct *)

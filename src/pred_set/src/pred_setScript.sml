@@ -4022,6 +4022,12 @@ val SUBSET_BIGUNION_I = store_thm(
   ``!x P. x IN P ==> x SUBSET BIGUNION P``,
   SRW_TAC [][BIGUNION, SUBSET_DEF] THEN METIS_TAC []);
 
+Theorem SUBSET_BIGUNION_SUBSET_I:
+  B SUBSET A /\ A IN As ==> B SUBSET BIGUNION As
+Proof
+  simp[SUBSET_DEF] >> METIS_TAC[]
+QED
+
 val CARD_BIGUNION_SAME_SIZED_SETS = store_thm(
   "CARD_BIGUNION_SAME_SIZED_SETS",
   ``!n s.
@@ -4449,6 +4455,14 @@ Proof
   ‘X INTER Y = {}’ suffices_by simp[Abbr‘X’, Abbr‘Y’] >>
   simp[EXTENSION, sumTheory.FORALL_SUM]
 QED
+
+Theorem disjUNION_EQ_EMPTY[simp]:
+  x <+> y = {} <=> x = {} /\ y = {}
+Proof
+  simp[disjUNION_def, EXTENSION, EQ_IMP_THM]
+QED
+
+
 
 
 (* ====================================================================== *)

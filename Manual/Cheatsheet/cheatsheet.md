@@ -127,6 +127,10 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
 <code>Ntimes <i>theorem int</i></code>
 : Uses the supplied theorem at most the given number of times when rewriting.
 
+<code>Excl <i>theorem</i></code>
+: Do not use the supplied theorem when rewriting.
+  This allows temporary exclusion of a theorem from the stateful simpset.
+
 <code>Simp{L,R}HS <i>theorem</i></code>
 : Uses the supplied theorem to simplify on the left-/right-hand side of equalities.
 
@@ -209,6 +213,11 @@ Many proofs rely on induction, and there are several ways to induct in HOL4.
 <code>completeInduct_on &grave;<i>term</i>&grave;</code>
 : Begins strong/complete induction on the supplied natural number.
   In other words, the inductive hypothesis is over all numbers strictly less than the goal instance.
+
+<code>measureInduct_on &grave;<i>term</i>&grave;</code>
+: Begins strong/complete induction using the supplied measure.
+  This should be in the form of a measure function (one which returns a natural number) applied to an input variable which is currently free in the goal.
+  For example, <code>measureInduct_on &grave;LENGTH l&grave;</code> begins induction over the length of the list `l` from the current goal.
 
 <code>recInduct <i>theorem</i></code><br><code>ho_match_mp_tac <i>theorem</i></code>
 : Induction using the supplied theorem, which usually arises from definition of a recursive function or an inductive relation.
@@ -481,10 +490,10 @@ Instead, we can rename variables appropriately, and abbreviate large terms.
 : Takes the theorem supplied, which should be `∃`-quantified, and "chooses" the witness for the `∃` quantification to be the supplied variable.
   Processes the result using the supplied theorem tactic (often `mp_tac` or `assume_tac`).
 
-<code>tmCases_on &grave;<i>tm</i>&grave; ["<i>string</i>"s]</code>
+<code>namedCases_on &grave;<i>tm</i>&grave; ["<i>string</i>"s]</code>
 : Like `Cases_on`, but allows naming of introduced variables.
   Each string in the list corresponds to a case, and multiple names are separated by a space.
-  For example, ``tmCases_on `l` ["", "head tail"]`` performs a case split on list `l`, naming the `head` and `tail` appropriately in the non-empty list case.
+  For example, ``namedCases_on `l` ["", "head tail"]`` performs a case split on list `l`, naming the `head` and `tail` appropriately in the non-empty list case.
 
 
 ## Examples and common patterns

@@ -80,8 +80,8 @@ fun info_thy thy =
 
 fun write_info thy =
   let
-    val infodir = HOLDIR ^ "/src/tactictoe/info"
-    val _ = mkDir_err infodir
+    val infodir = HOLDIR ^ "/src/tactictoe/log/info"
+    val _ = app mkDir_err [OS.Path.dir infodir, infodir]
     val infol = info_thy thy
   in
     writel (infodir ^ "/" ^ thy) infol;
@@ -165,7 +165,7 @@ fun fetch s reps =
   end
 
 (* ----------------------------------------------------------------------
-   Proof recording
+   Recording
    ---------------------------------------------------------------------- *)
 
 fun start_record_proof name =
@@ -206,12 +206,70 @@ fun end_record_proof name =
     tacdata_glob := newtacdata
   end
 
+(* ----------------------------------------------------------------------
+   Thm data I/O
+   ---------------------------------------------------------------------- *)
+
+val thmdata_dir = tactictoe_dir ^ "/thmdata"
+
+val namethm_glob = ref (dempty String.compare)
+
+local open SharingTables HOLsexp in
+fun enc_thmdata_one enc_tm =
+  pair_encode (String, list_encode enc_tm)
+fun dec_thmdata_one dec_tm =
+  pair_decode (string_decode, list_decode dec_tm)
+fun enc_thmdata enc_tm = list_encode (enc_thmdata_one enc_tm)
+fun dec_thmdata dec_tm = list_decode (dec_thmdata_one dec_tm)
+fun tml_of_thmdata l = List.concat (map snd l)
+end
+
+fun tml_of_thm thm = let val (asl,w) = dest_thm thm in w :: asl end
+fun goal_of_tml tml = (tl tml, hd tml)
+
+fun write_thmdata file thmdata =
+  write_tmdata (enc_thmdata, tml_of_thmdata) file (map_snd tml_of_thm thmdata)
+fun read_thmdata file =
+  map_snd goal_of_tml (read_tmdata dec_thmdata file)
+
+fun thm_compare (thm1,thm2) = goal_compare (dest_thm thm1, dest_thm thm2)
+
+fun export_thmdata () =
+  let
+    val _ = mkDir_err thmdata_dir
+    val thmidl = map fst (snd (create_thmdata ()))
+    val file = thmdata_dir ^ "/" ^ current_theory () ^ "_" ^
+      its (!savestate_level)
+    val set = dset (cpl_compare String.compare thm_compare)
+      (dlist (!namethm_glob))
+    fun test x = String.isPrefix (namespace_tag ^ "Theory") x
+    val thmidl_namespace = filter test thmidl
+    val namethm_curthy =
+      map_fst (fn x => current_theory () ^ "Theory." ^ x)
+        (DB.thms (current_theory ()))
+    val l1 = namethm_curthy @ thml_of_namel thmidl_namespace
+    val l2 = filter (fn x => not (dmem x set)) l1
+  in
+    write_thmdata file l2;
+    namethm_glob := daddl l2 (!namethm_glob)
+  end
+
+(* ----------------------------------------------------------------------
+   Savestates
+   ---------------------------------------------------------------------- *)
+
 val savestate_dir = tactictoe_dir ^ "/savestate"
 
 fun ttt_before_save_state () =
-  let val _ = mkDir_err savestate_dir in
-    thmdata_glob := total_time create_thmdata_time create_thmdata ()
-  end
+  (
+  if !record_flag
+    then thmdata_glob := total_time create_thmdata_time create_thmdata ()
+    else ();
+  if !export_thmdata_flag then export_thmdata () else ();
+  if !record_savestate_flag
+    then (mkDir_err savestate_dir; PolyML.fullGC ())
+    else ()
+  )
 
 fun ttt_save_state () =
   (
@@ -224,15 +282,14 @@ fun ttt_save_state () =
   in
     if !savestate_level = 0
     then PolyML.SaveState.saveState savestate_file
-    else PolyML.SaveState.saveChild (savestate_file,
-      (!savestate_level div 50) + 1)
+    else PolyML.SaveState.saveChild (savestate_file, !savestate_level)
   end
   else ()
   )
 
 fun ttt_after_save_state () = incr savestate_level
 
-fun save_goal g =
+fun save_goal lflag pflag g =
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
@@ -240,20 +297,27 @@ fun save_goal g =
       its ((!savestate_level) - 1)
     val _ = pbl_glob := prefix :: (!pbl_glob)
     val goal_file = prefix ^ "_goal"
+    val flags_file = prefix ^ "_flags"
     val _ = debug ("export goal to " ^ goal_file)
   in
-    export_goal goal_file g
+    export_goal goal_file g;
+    writel flags_file (map bts [lflag,pflag])
   end
+
+(* ----------------------------------------------------------------------
+   Recording (continued)
+   ---------------------------------------------------------------------- *)
 
 fun record_proof name lflag tac1 tac2 (g:goal) =
   let
-    val _ = save_goal g
-    val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
+    val _ = if !record_savestate_flag then save_goal lflag pflag g else ()
+    val _ = start_record_proof name
+    val b1 = (not (!record_flag))
     val b2 = (not (!record_prove_flag) andalso pflag)
     val b3 = (not (!record_let_flag) andalso lflag)
     val result =
-      if b2 orelse b3 then
+      if b1 orelse b2 orelse b3 then
         (debug "record proof: ignored"; incr n_proof_ignored; tac2 g)
       else
         let
@@ -277,6 +341,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
 
 fun start_record_thy thy =
   (
+  namethm_glob := dempty String.compare;
   print_endline "importing tactic data";
   tacdata_glob := create_tacdata ()
   )
@@ -285,8 +350,13 @@ fun end_record_thy thy =
   (
   print_endline "recording successful";
   write_info thy;
-  print_endline "exporting tactic data";
-  ttt_export_tacdata thy (!tacdata_glob);
+  if !record_flag
+  then
+    (
+    ttt_export_tacdata thy (!tacdata_glob);
+    print_endline "exporting tactic data"
+    )
+  else ();
   if !record_savestate_flag
   then
     (mkDir_err (tactictoe_dir ^ "/savestate");

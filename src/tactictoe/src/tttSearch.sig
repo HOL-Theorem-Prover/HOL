@@ -4,49 +4,62 @@ sig
   include Abbrev
 
   type tnn = mlTreeNeuralNetwork.tnn
-  val predtac_time : real ref
-  val reward_time : real ref
-  val reorder_time : real ref
+  type aty = tttToken.aty
+  type token = tttToken.token
 
-  datatype sstatus = StacProved | StacSaturated | StacUndecided | StacFresh
-  datatype gstatus = GoalProved | GoalSaturated | GoalUndecided
-  datatype nstatus = NodeProved | NodeSaturated | NodeUndecided
+  datatype status = Proved | Saturated | Undecided
   datatype searchstatus = SearchProved | SearchSaturated | SearchTimeout
-  datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
+  datatype proofstatus = Proof of string | ProofSaturated | ProofTimeout
 
-  val string_of_sstatus : sstatus -> string
+  datatype gtoken =
+    Token of token |
+    Goal of (goal * (goal list, unit) Redblackmap.dict)
+  type searchrecord =
+    {nvis : real, nsum : real, nstatus : status,
+     parentd : (goal, unit) Redblackmap.dict}
+  type stacrecord =
+    {gtoken : gtoken, atyl : aty list,
+     svis : real, ssum : real, spol : real, sstatus : status}
 
-  type id = (int * int * int list) list
-  val id_compare : id * id -> order
-  type stac_record =
-   {token : tttToken.token, atyl : tttToken.aty list,
-    svis : real, ssum : real, sstatus : sstatus}
-  type argtree = (int list, stac_record) Redblackmap.dict
-  type goal_record =
-   {goal : goal, gvis : real, gsum : real, gstatus : gstatus,
-    stacv : argtree vector,
-    siblingd : (goal list, unit) Redblackmap.dict}
-  type node =
-   {nvis : real, nsum : real, nstatus : nstatus,
-    goalv : goal_record vector,
-    parentd : (goal, unit) Redblackmap.dict}
-  type tree = (id, node) Redblackmap.dict
+  datatype searchtree = SearchNode of searchrecord * stactree vector
+  and stactree =
+     StacLeaf of stacrecord * searchtree option
+   | StacNode of stacrecord * (stactree vector * token list) option
 
-  val backstatus_arg : sstatus list -> sstatus
-  val backstatus_stacv : argtree vector -> gstatus
-  val backstatus_goalv : goal_record vector -> nstatus
+  val get_stacrecord : stactree -> stacrecord
+  val dest_goal : gtoken -> goal
 
+  (* global parameters *)
+  val default_reward : real ref
+  val nocut_flag : bool ref
+  val conttop_flag : bool ref
+  val contmid_flag : bool ref
+  val looplimit : int option ref
+
+  (* provability estimation *)
+  val eval_goal : tnn -> goal -> real
+
+  (* main function *)
   type searchobj =
-    {predtac : goal -> (string * tttToken.aty list) list,
-     predarg : string -> tttToken.aty -> goal -> tttToken.token list,
+    {predtac : goal -> token list,
+     predarg : string -> aty -> goal -> token list,
+     atyd : (string, aty list) Redblackmap.dict,
      parsetoken : tttToken.parsetoken,
      vnno: tnn option, pnno: tnn option, anno: tnn option}
 
-  val starttree_of_goal : searchobj -> goal -> tree
-  val starttree_of_gstacarg : searchobj ->
-    goal * string * tttToken.token list -> tree
+  val search : searchobj -> goal -> proofstatus * searchtree
 
-  val search_loop : searchobj -> int option -> tree -> searchstatus * tree
-  val search : searchobj -> goal -> proofstatus * tree
+  (* suggested proof in case of failure *)
+  val suggest_depth : int option ref
+  val suggest_proof : searchtree -> string
+
+  (* statistics *)
+  datatype vistoken =
+    VisGoal of goal | VisTac of string | VisArg of token
+  datatype vistree =
+    VisNode of vistoken * int * real * status * vistree list
+  val vistreel_of_searchtree : searchtree -> vistree list
+  val length_vistree : vistree -> int
+  val print_vistree : vistree -> unit
 
 end
