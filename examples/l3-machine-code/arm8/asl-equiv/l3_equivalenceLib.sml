@@ -28,6 +28,13 @@ val _ = augment_srw_ss [
     wordsLib.WORD_ss
   ];
 
+(*
+  TODO
+  - undefined stuff tactic
+  - decode/execute unfolding tactic
+  - renaming tactic for successive asl states
+*)
+
 (******************** L3 tactics ********************)
 fun l3_eval thms = SIMP_RULE (srw_ss()) [] o
                    computeLib.CBV_CONV (arm8_compset thms);
@@ -217,6 +224,8 @@ val asl_cexecute_tac = asl_execute_tac_helper CEVAL;
 
 (******************** Other stuff ********************)
 
+fun b64 ty = INST_TYPE [ty |-> ``:64``];
+
 (***** current compset *****)
 (*
   val _ = computeLib.add_convs [
@@ -230,34 +239,54 @@ val _ = computeLib.add_convs [
 
 
 (***** rewrites *****)
-val armv86a_ss = rewrites [
-  combinTheory.I_THM,
-  lemTheory.w2ui_def,
-  sail2_valuesTheory.make_the_value_def,
-  sail2_valuesTheory.nat_of_int_def,
-  sail2_operators_mwordsTheory.zeros_def,
-  sail2_operators_mwordsTheory.concat_vec_def,
-  armv86aTheory.Zeros_def,
-  armv86aTheory.IsZero_def,
-  armv86aTheory.id_def,
-  lem_machine_wordTheory.size_itself_def,
-  sail2_valuesTheory.size_itself_int_def,
-  armv86aTheory.ZeroExtend1_def,
-  sail2_operators_mwordsTheory.zero_extend_def,
-  sail2_operators_mwordsTheory.not_vec_def,
-  EL0_def, EL1_def, EL2_def, EL3_def,
-  place_slice_def, shiftl, shiftr,
-  sail2_operators_mwordsTheory.extz_vec_def,
-  sail2_operators_mwordsTheory.and_vec_def,
-  sail2_operators_mwordsTheory.not_vec_def,
-  sail2_operators_mwordsTheory.vector_truncate_def
+val armv86a_ss =
+  simpLib.named_rewrites "armv86a_ss" [
+    combinTheory.I_THM,
+    lemTheory.w2ui_def,
+    sail2_valuesTheory.make_the_value_def,
+    nat_of_int,
+    sail2_operators_mwordsTheory.zeros_def,
+    sail2_operators_mwordsTheory.concat_vec_def,
+    armv86aTheory.sail_ones_def,
+    armv86aTheory.Zeros_def,
+    armv86aTheory.IsZero_def,
+    armv86aTheory.id_def,
+    lem_machine_wordTheory.size_itself_def,
+    sail2_valuesTheory.size_itself_int_def,
+    armv86aTheory.ZeroExtend1_def,
+    sail2_operators_mwordsTheory.zero_extend_def,
+    sail2_operators_mwordsTheory.not_vec_def,
+    EL0_def, EL1_def, EL2_def, EL3_def,
+    place_slice_def, shiftl, shiftr,
+    sail2_operators_mwordsTheory.extz_vec_def,
+    sail2_operators_mwordsTheory.and_vec_def,
+    sail2_operators_mwordsTheory.not_vec_def,
+    sail2_operators_mwordsTheory.vector_truncate_def,
+    sail2_stateTheory.internal_pickS_def,
+    sail2_state_monadTheory.chooseS_def,
+    sail2_state_monadTheory.choose_boolS_def,
+    sail2_state_monadTheory.assert_expS_def,
+    sail2_stateTheory.and_boolS_def,
+    sail2_stateTheory.or_boolS_def,
+    preludeTheory.undefined_bitvector_def,
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.subrange_vec_inc_def,
+    sail2_operators_mwordsTheory.update_subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.update_subrange_vec_inc_def,
+    sail2_valuesTheory.update_list_def,
+    sail2_valuesTheory.update_list_inc_def,
+    sail2_valuesTheory.update_list_dec_def,
+    sail2_valuesTheory.access_list_def,
+    sail2_valuesTheory.access_list_inc_def ,
+    sail2_valuesTheory.access_list_dec_def,
+    sail2_valuesTheory.subrange_list_def ,
+    sail2_valuesTheory.subrange_list_dec_def,
+    sail2_valuesTheory.subrange_list_inc_def,
+    sail2_operators_mwordsTheory.access_vec_inc_def,
+    sail2_operators_mwordsTheory.access_vec_dec_def
   ];
 
 val _ = augment_srw_ss [armv86a_ss];
-
-val unfold_ss =
-  simpLib.named_rewrites "unfold_ss"
-    [l3_models_asl_instr_def, l3_models_asl_def];
 
 val encode_ss =
   simpLib.named_rewrites "encode_ss" [
@@ -285,22 +314,8 @@ val monad_ss =
 
 val asl_word_ss =
   simpLib.named_rewrites "asl_word_ss" [
-    sail2_operators_mwordsTheory.subrange_vec_dec_def,
-    sail2_operators_mwordsTheory.subrange_vec_inc_def,
-    sail2_operators_mwordsTheory.update_subrange_vec_dec_def,
-    sail2_operators_mwordsTheory.update_subrange_vec_inc_def,
-    sail2_valuesTheory.update_list_def,
-    sail2_valuesTheory.update_list_inc_def,
-    sail2_valuesTheory.update_list_dec_def,
-    sail2_valuesTheory.access_list_def,
-    sail2_valuesTheory.access_list_inc_def,
-    sail2_valuesTheory.access_list_dec_def,
-    sail2_valuesTheory.subrange_list_def,
-    sail2_valuesTheory.subrange_list_dec_def,
-    sail2_valuesTheory.subrange_list_inc_def,
-    sail2_operators_mwordsTheory.access_vec_dec_def,
     sail2_valuesTheory.access_bv_dec_def,
-    sail2_operators_mwordsTheory.vec_of_bits_def,
+    sail2_operators_mwordsTheory.vec_of_bits_def ,
     sail2_valuesTheory.of_bits_failwith_def,
     sail2_valuesTheory.maybe_failwith_def,
     wordsTheory.bit_field_insert_def,
@@ -314,31 +329,39 @@ val asl_word_ss =
     sail2_valuesTheory.instance_Sail2_values_Bitvector_Machine_word_mword_dict_def
   ];
 
-val sss = [unfold_ss, encode_ss, monad_ss, asl_word_ss];
+val asl_reg_ss =
+  simpLib.named_rewrites "asl_reg_ss" [
+    sail2_state_monadTheory.read_regS_def,
+    sail2_state_monadTheory.write_regS_def,
+    sail2_state_monadTheory.readS_def,
+    sail2_state_monadTheory.updateS_def,
+    R_ref_def, PSTATE_ref_def, SEE_ref_def,
+    SCTLR_EL1_ref_def, SCTLR_EL1_ref_def, SCTLR_EL2_ref_def, SCTLR_EL3_ref_def,
+    PC_ref_def,
+    SP_EL0_ref_def, SP_EL1_ref_def, SP_EL2_ref_def, SP_EL3_ref_def,
+    TCR_EL1_ref_def, TCR_EL2_ref_def, TCR_EL3_ref_def
+  ];
+
+val l3_reg_ss =
+  simpLib.named_rewrites "l3_reg_ss" [
+    reg'TCR_EL1_def, reg'TCR_EL2_EL3_def, reg'SCTLRType_def
+  ]
+
+val sss = [encode_ss, monad_ss, asl_word_ss, asl_reg_ss, l3_reg_ss];
 val _ = map simpLib.register_frag sss;
-val [unfold_rws, encode_rws, monad_rws, asl_word_rws] = map SF sss;
+val [encode_rws, monad_rws, asl_word_rws, asl_reg_rws, l3_reg_rws] = map SF sss;
 
 (* Rewrites using various state theorems and state relation *)
 fun state_rel_tac thms =
   gvs ([
-    flag_rel_def,
-    pstate_rel_def,
-    tcr_el1_rel_def, reg'TCR_EL1_def,
-    tcr_el2_3_rel_def, reg'TCR_EL2_EL3_def,
-    sctlr_rel_def, reg'SCTLRType_def,
-    read_rel_def,
-    reg_rel_def, R_ref_def, PSTATE_ref_def, SCTLR_EL1_ref_def,
-      SCTLR_EL1_ref_def, SCTLR_EL2_ref_def, SCTLR_EL3_ref_def,
-      PC_ref_def,
-      SP_EL0_ref_def, SP_EL1_ref_def, SP_EL2_ref_def, SP_EL3_ref_def,
-      TCR_EL1_ref_def, TCR_EL2_ref_def, TCR_EL3_ref_def,
-    mem_rel_def,
-    state_rel_def,
+    flag_rel_def, pstate_rel_def, tcr_el1_rel_def, tcr_el2_3_rel_def,
+    sctlr_rel_def, read_rel_def, reg_rel_def, mem_rel_def, state_rel_def,
+    asl_reg_rws, l3_reg_rws,
     sail2_operators_mwordsTheory.vec_of_bits_def,
     sail2_valuesTheory.of_bits_failwith_def,
     sail2_valuesTheory.maybe_failwith_def
     ] @ thms) >>
-  rw[flookup_thm, FLOOKUP_UPDATE, APPLY_UPDATE_THM] >> gvs[];
+  rw[FLOOKUP_UPDATE, EL_LUPDATE, APPLY_UPDATE_THM] >> gvs[];
 
 (****************************************)
 

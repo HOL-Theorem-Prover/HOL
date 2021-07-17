@@ -3,9 +3,10 @@ sig
   include Abbrev
 
   val mk_blast_thm : term -> thm
+  val b64 : hol_type -> thm -> thm
 
-  val l3_eval : thm list -> term -> thm;
-  val l3_eval_tac : thm list -> tactic;
+  val l3_eval : thm list -> term -> thm
+  val l3_eval_tac : thm list -> tactic
   val l3_decode : term -> thm
   val l3_decode_tac : tactic
   val l3_run : term -> thm list
@@ -17,10 +18,10 @@ sig
   val asl_execute_tac : tactic
   val asl_cexecute_tac : tactic
 
-  val unfold_rws : thm
   val encode_rws : thm
-  val monad_rws : thm
   val asl_word_rws : thm
+  val asl_reg_rws : thm
+  val l3_reg_rws : thm
 
   val state_rel_tac : thm list -> tactic
 

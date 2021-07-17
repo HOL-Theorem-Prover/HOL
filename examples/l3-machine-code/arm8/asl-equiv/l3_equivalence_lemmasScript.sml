@@ -23,7 +23,7 @@ val _ = augment_srw_ss [
     wordsLib.WORD_ss
   ];
 
-(****************************************)
+(********************* Word operations *******************)
 
 Theorem shiftr:
   shiftr w i = w >>> (nat_of_int i)
@@ -257,6 +257,52 @@ Theorem bool_of_bitU_bitU_of_bool[simp]:
 Proof
   Cases_on `b` >>
   rw[sail2_valuesTheory.bitU_of_bool_def, sail2_valuesTheory.bool_of_bitU_def]
+QED
+
+(********************* Monad lemmas *******************)
+
+Theorem bindS = sail2_state_monadTheory.bindS_def;
+
+Theorem seqS =
+  sail2_state_monadTheory.seqS_def |> SIMP_RULE std_ss [bindS, FUN_EQ_THM];
+
+Theorem returnS = sail2_state_monadTheory.returnS_def;
+
+Theorem bindS_returnS[simp]:
+  bindS (returnS a) f = f a
+Proof
+  rw[FUN_EQ_THM, bindS, returnS]
+QED
+
+Theorem seqS_returnS[simp]:
+  seqS (returnS a) f = f
+Proof
+  rw[FUN_EQ_THM, bindS, seqS, returnS]
+QED
+
+Theorem returnS_bindS:
+  ∀f a x s.
+  x s = returnS a s ⇒
+  bindS x f s = f a s
+Proof
+  rw[bindS, returnS]
+QED
+
+(********************* Other lemmas *******************)
+
+Theorem SetTheFlags_F[simp]:
+  ∀rest s. SetTheFlags (F, rest) s = s
+Proof
+  PairCases >> rw[SetTheFlags_def]
+QED
+
+Theorem asl_extract_flags[simp]:
+  (3 >< 3) (v2w [n;z;c;v] : word4) = v2w [n] : word1 ∧
+  (2 >< 2) (v2w [n;z;c;v] : word4) = v2w [z] : word1 ∧
+  (1 >< 1) (v2w [n;z;c;v] : word4) = v2w [c] : word1 ∧
+  (0 >< 0) (v2w [n;z;c;v] : word4) = v2w [v] : word1
+Proof
+  EVAL_TAC
 QED
 
 (****************************************)
