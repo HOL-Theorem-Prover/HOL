@@ -4,7 +4,9 @@ open testutils
 val _ = tprint "Testing Holmake VAR=value command-line variable assignments:";
 fun do_holmake args =
   OS.Process.system
-    ("cd test && " ^ Systeml.HOLDIR ^ "/bin/Holmake " ^ args);
+    ("cd test && " ^
+     Systeml.protect (Systeml.HOLDIR ^ "/bin/Holmake") ^ " --holstate " ^
+     Systeml.protect (Systeml.HOLDIR ^ "/bin/hol.state0") ^ " " ^ args);
 
 val _ = tprint "1. Good: successful assignment";
 val res = do_holmake
