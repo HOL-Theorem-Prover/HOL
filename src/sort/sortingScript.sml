@@ -1371,10 +1371,9 @@ Proof
   \\ simp[PERM_APPEND_IFF, PERM_APPEND]
 QED
 
-Theorem PERM_COMM_DISTRIB:
+Theorem PERM_FLAT_MAP_SWAP:
   !f l1 l2.
-  (!x y. MEM x l1 /\ MEM y l2 ==> f x y = f y x) ==>
-  PERM (FLAT (MAP (\x. MAP (f x) l2) l1)) (FLAT (MAP (\x. MAP (f x) l1) l2))
+  PERM (FLAT (MAP (\x. MAP (f x) l2) l1)) (FLAT (MAP (\x. MAP (flip f x) l1) l2))
 Proof
   gen_tac
   \\ Induct
@@ -1384,10 +1383,8 @@ Proof
     \\ `g = K []` by simp[Abbr`g`, FUN_EQ_THM]
     \\ rw[FLAT_MAP_K_NIL] )
   \\ irule PERM_TRANS
-  \\ qexists_tac`MAP (f h) l2 ++ FLAT (MAP (\x. MAP (f x) l1) l2)`
+  \\ qexists_tac`MAP (f h) l2 ++ FLAT (MAP (\x. MAP (flip f x) l1) l2)`
   \\ simp[PERM_APPEND_IFF]
-  \\ conj_tac
-  >- ( first_x_assum irule \\ metis_tac[] )
   \\ simp[Once PERM_SYM]
   \\ qho_match_abbrev_tac`PERM (FLAT (MAP (\x. hf x :: ht x) l2)) _`
   \\ `MAP (f h) l2 = MAP hf l2`
