@@ -271,6 +271,8 @@ local
       | SOME r => r
   fun translate_prime s =
       if s = "'" then "\\prime{}" else
+      if s = UnicodeChars.sup_0 then "0" else
+      if s = UnicodeChars.sup_1 then "1" else
       if s = UnicodeChars.sup_2 then "2" else
       if s = UnicodeChars.sup_3 then "3" else
       if s = UnicodeChars.sup_4 then "4" else
