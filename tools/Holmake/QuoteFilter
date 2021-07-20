@@ -198,7 +198,7 @@ fun magic_bind (arg as QFS{induction_thm,...}) =
     Systeml.bindstr ("val " ^ !induction_thm ^
                      " = DB.fetch \"-\" \"" ^
                      !induction_thm ^
-                     "\" handle HOL_ERR _ => TRUTH;") ^ ";"
+                     "\" handle HOL_ERR _ => boolTheory.TRUTH;") ^ ";"
 
 type lexresult = int*string
 

@@ -129,3 +129,4 @@ local-hol-heap
 examples/l3-machine-code/**/*-heap
 
 *Script_ttt.sml
+*.tttsave

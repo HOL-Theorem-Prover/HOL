@@ -1,6 +1,8 @@
-debug/*
 buildheap/*
-code/*
-hide/*
+genscriptdep/*
+heapname/*
+open/*
+openscript
+hide_file
 open/*
 parallel*

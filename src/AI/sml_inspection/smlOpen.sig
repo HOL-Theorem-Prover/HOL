@@ -1,23 +1,15 @@
 signature smlOpen =
 sig
+  (* functions called in the generated script which opens a structure *)
+   val sml_cleanval : unit -> unit
+   val sml_cleanstruct : string -> unit
+   val sml_exportstruct : string -> unit
 
-  val core_theories : string list
-  val theory_files : string -> string list
-  val find_heapname : string -> string -> string
-  val find_genscriptdep : string -> string -> string list
-  val run_buildheap : string -> bool -> string -> unit
-  val run_buildheap_nodep : string -> string -> unit
-
-  val run_rm_script : bool -> string -> unit
-
-  val sml_cleanval : unit -> unit
-  val sml_cleanstruct : string -> unit
-  val sml_export : string -> unit
-
-  val export_struct : string -> unit
-  val import_struct :
+  (* shows values, exceptions, constructors, and substructures *)
+  val view_struct :
     string -> (string list * string list * string list * string list)
-  val export_import_struct :
+  (* used by tactictoe: cached files in sml_inspection/open *)
+  val view_struct_cached :
     string -> (string list * string list * string list * string list)
 
 end

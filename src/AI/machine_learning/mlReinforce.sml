@@ -17,10 +17,8 @@ val ERR = mk_HOL_ERR "mlReinforce"
    Logs
    ------------------------------------------------------------------------- *)
 
-val eval_dir = HOLDIR ^ "/examples/AI_tasks/eval"
-fun log_in_eval rlobj s =
-  append_endline (eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/log") s
-fun log rlobj s = (log_in_eval rlobj s; print_endline s)
+fun log rlobj s =
+  (append_endline (#expdir (#rlparam rlobj) ^ "/log") s; print_endline s)
 
 (* -------------------------------------------------------------------------
    Types
@@ -31,19 +29,18 @@ type 'a gameio =
   {write_boardl : string -> 'a list -> unit, read_boardl : string -> 'a list}
 type splayer =
   {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
-type 'a dplayer =
-  {pretob : ('a * tnn) option -> 'a -> term list,
-   schedule : schedule, tnndim : tnndim}
+type ('a,'b) dplayer =
+  {player_from_tnn : tnn -> ('a,'b) player,
+   tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
 type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
-  {expname : string, exwindow : int, ncore : int,
-   ntarget : int, nsim : int, decay : real}
+  {expdir : string, exwindow : int, ncore : int, ntarget : int, nsim : int}
 type ('a,'b) rlobj =
   {
   rlparam : rlparam,
   game : ('a,'b) psMCTS.game,
   gameio : 'a gameio,
-  dplayer : 'a dplayer,
+  dplayer : ('a,'b) dplayer,
   infobs : 'a list -> unit
   }
 
@@ -53,40 +50,18 @@ type ('a,'b) rlobj =
 
 fun mk_mctsparam splayer rlobj =
   {
-  timer = NONE, nsim = SOME (#nsim splayer), stopatwin_flag = false,
-  decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
-  noise_all = false, noise_root = (#noiseb splayer),
-  noise_coeff = 0.25, noise_gen = random_real,
-  noconfl = false, avoidlose = false,
-  evalwin = true (* todo : reflect this parameter in rlparam *)
+  time = NONE, nsim = SOME (#nsim splayer),
+  explo_coeff = 2.0,
+  noise = #noiseb splayer, noise_coeff = 0.25, noise_gen = random_real
   }
 
-fun player_from_tnn tnn tob game board =
-  let
-    val amovel = (#available_movel game) board
-    val (e,p) = pair_of_list (map snd (infer_tnn tnn (tob board)))
-    val d = dnew (#move_compare game) (combine (#movel game,p))
-    fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
-  in
-    (singleton_of_list e, map_assoc f amovel)
-  end
-
-fun mk_bsobj rlobj (splayer as {unib,tnn,noiseb,nsim}) =
+fun mk_mctsobj rlobj (splayer as {unib,tnn,noiseb,nsim}) =
   let
     val game = #game rlobj
-    val pretob = #pretob (#dplayer rlobj)
-    fun preplayer target =
-      let val tob = pretob (SOME (target,tnn)) in
-        fn board => player_from_tnn tnn tob game board
-      end
-    fun random_preplayer target board = random_player game board
+    val player =  if unib then uniform_player game else
+      #player_from_tnn (#dplayer rlobj) tnn
   in
-    {
-    verbose = false, temp_flag = false,
-    preplayer = if unib then random_preplayer else preplayer,
-    game = game,
-    mctsparam = mk_mctsparam splayer rlobj
-    }
+    {player=player, game=game, mctsparam = mk_mctsparam splayer rlobj}
   end
 
 (* -------------------------------------------------------------------------
@@ -146,8 +121,7 @@ fun read_target gameio file =
    ------------------------------------------------------------------------- *)
 
 (* Example *)
-fun rlex_file rlobj n =
-  eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/rlex" ^ its n
+fun rlex_file rlobj n = #expdir (#rlparam rlobj) ^ "/rlex" ^ its n
 
 fun store_rlex rlobj n rlex =
   write_rlex (#gameio rlobj) (rlex_file rlobj n) rlex
@@ -164,14 +138,12 @@ fun gather_ex rlobj acc n =
 fun retrieve_rlex rlobj n = gather_ex rlobj [] n
 
 (* TNN *)
-fun tnn_file rlobj n =
-  eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/tnn" ^ its n
+fun tnn_file rlobj n = #expdir (#rlparam rlobj) ^ "/tnn" ^ its n
 fun store_tnn rlobj n tnn = write_tnn (tnn_file rlobj n) tnn
 fun retrieve_tnn rlobj n = read_tnn (tnn_file rlobj n)
 
 (* Target *)
-fun targetd_file rlobj n =
-  eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/targetd" ^ its n
+fun targetd_file rlobj n = #expdir (#rlparam rlobj) ^ "/targetd" ^ its n
 
 fun blts bl = String.concatWith " " (map bts bl)
 fun stbl s = map string_to_bool (String.tokens Char.isSpace s)
@@ -189,7 +161,7 @@ fun retrieve_targetd rlobj n =
   let
     val file = targetd_file rlobj n
     val l1 = #read_boardl (#gameio rlobj) (file ^ "_boardl")
-    val l2 = map stbl (readl (file ^ "_bl"))
+    val l2 = map stbl (readl_empty (file ^ "_bl"))
   in
     dnew (#board_compare (#game rlobj)) (combine (l1,l2))
   end
@@ -199,19 +171,16 @@ fun retrieve_targetd rlobj n =
    ------------------------------------------------------------------------- *)
 
 fun extsearch_fun rlobj splayer target =
-  let
-    val bsobj = mk_bsobj rlobj splayer
-    val (b1,rlex,nodel) = run_bigsteps bsobj target
-  in
-    (#infobs rlobj (map #board nodel); (b1,rlex))
+  let val (b1,rlex) = run_bigsteps (false, mk_mctsobj rlobj splayer) target in
+    (#infobs rlobj (map fst rlex); (b1,rlex))
   end
-  handle Subscript => raise ERR "extsearch_fun" "subscript"
 
-fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
+fun mk_extsearch selfd self (rlobj as {rlparam,gameio,...}) =
   {
+  self_dir = selfd,
   self = self,
   parallel_dir = default_parallel_dir ^ "_search",
-  reflect_globals = fn () => "()",
+  reflect_globals = "aiLib.debug_flag := " ^ bts (!debug_flag),
   function = extsearch_fun rlobj,
   write_param = write_splayer,
   read_param = read_splayer,
@@ -227,8 +196,7 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
 
 fun rl_train ngen rlobj rlex =
   let
-    val {pretob,schedule,tnndim} = #dplayer rlobj
-    fun tob board = pretob NONE board
+    val {player_from_tnn,tob,schedule,tnndim} = #dplayer rlobj
     fun f (a,b) = combine (tob a,[[hd b],tl b])
     val tnnex = map f rlex
     val uex = mk_fast_set (list_compare Term.compare) (map (tob o fst) rlex)
@@ -264,7 +232,7 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
 fun rl_compete_targetl unib (rlobj,es) tnn targetl =
   rl_explore_targetl (unib,false) (rlobj,es) tnn targetl
 
-(*
+
 fun row_win l =
   case l of [] => 0 | a :: m => if a then 1 + row_win m else 0
 fun row_lose l =
@@ -274,7 +242,7 @@ fun exists_win l = exists I l
 
 fun stats_select_one rlobj (s,targetl) =
   let
-    val il = map (row_either o snd o snd) targetl
+    val il = map (row_either o snd) targetl
     fun f (a,b) = its a ^ "-" ^ its b
     val l = dlist (count_dict (dempty Int.compare) il)
   in
@@ -290,12 +258,11 @@ fun stats_select rlobj nfin nwin (neg,pos,negsel,possel) =
     log rlobj ("Exploration: " ^ its nwin ^ " targets proven at least once");
     app (stats_select_one rlobj) l
   end
-*)
 
-(*
+
 fun select_from_targetd rlobj ntot targetd =
   let
-    val targetwinl = map (fn (a,(b,c,_)) => (a,(b,c))) (dlist targetd)
+    val targetwinl = dlist targetd
     fun f x = 1.0 / (1.0 + Real.fromInt x)
     fun g x =
       let
@@ -304,23 +271,24 @@ fun select_from_targetd rlobj ntot targetd =
       in
         x / y'
       end
-    fun h (a,(b,winl)) = ((a,(b,winl)), (g o f o row_either) winl)
-    fun test (_,(_,winl)) = null winl orelse not (hd winl)
+    fun h (a,winl) = ((a,winl), (g o f o row_either) winl)
+    fun test (_,winl) = null winl orelse not (hd winl)
     val (neg,pos) = partition test targetwinl
     val negsel = first_n (ntot div 2) (dict_sort compare_rmax (map h neg))
     val possel = first_n (ntot div 2) (dict_sort compare_rmax (map h pos))
     val lfin = map (fst o fst) (rev negsel @ possel)
-    val lwin = filter exists_win (map (snd o snd) targetwinl)
+    val lwin = filter exists_win (map snd targetwinl)
 
   in
     stats_select rlobj (length lfin)
        (length lwin) (neg,pos, map fst negsel, map fst possel);
     lfin
   end
-*)
 
+(*
 fun select_from_targetd rlobj ntot targetd = dkeys targetd
   (* map (#modify_board rlobj targetd) *)
+*)
 
 fun update_targetd ((board,b),targetd) =
   let val bl = dfind board targetd handle NotFound => [] in
@@ -343,7 +311,7 @@ fun rl_explore_init ngen (rlobj,es) targetd =
     val _ = log rlobj "Exploration: initialization"
     val dummy = random_tnn (#tnndim (#dplayer rlobj))
     val rlparam = #rlparam rlobj
-    val targetl = select_from_targetd rlobj (#ntarget rlparam) targetd
+    val targetl = dkeys targetd
     val (rlex,resultl) =
       rl_explore_targetl (true,false) (rlobj,es) dummy targetl
     val newtargetd = foldl update_targetd targetd resultl
@@ -378,8 +346,8 @@ fun rl_loop ngen (rlobj,es) (rlex,targetd) =
 
 fun rl_start (rlobj,es) targetd =
   let
-    val expdir = eval_dir ^ "/" ^ #expname (#rlparam rlobj)
-    val _ = app mkDir_err [eval_dir,expdir]
+    val expdir = #expdir (#rlparam rlobj)
+    val _ = app mkDir_err [expdir]
     val (rlex,newtargetd) = rl_explore_init 0 (rlobj,es) targetd
   in
     rl_loop 1 (rlobj,es) (rlex,newtargetd)
@@ -387,199 +355,11 @@ fun rl_start (rlobj,es) targetd =
 
 fun rl_restart ngen (rlobj,es) targetd =
   let
-    val expdir = eval_dir ^ "/" ^ #expname (#rlparam rlobj)
-    val _ = app mkDir_err [eval_dir,expdir]
+    val expdir = #expdir (#rlparam rlobj)
+    val _ = app mkDir_err [expdir]
     val rlex = retrieve_rlex rlobj ngen
   in
     rl_loop (ngen + 1) (rlobj,es) (rlex,targetd)
   end
-
-(* -------------------------------------------------------------------------
-   Final MCTS Testing
-   ------------------------------------------------------------------------- *)
-
-(*
-type 'a ftes = (unit, 'a, bool * int * 'a option) smlParallel.extspec
-type 'a fttnnes = (tnn, 'a, bool * int * 'a option) smlParallel.extspec
-
-fun option_to_list vo = if isSome vo then [valOf vo] else []
-fun list_to_option l =
-  case l of [] => NONE | [a] => SOME a | _ => raise ERR "list_to_option" ""
-
-fun ft_write_result gameio file (b,nstep,boardo) =
-  (
-  writel (file ^ "_bstatus") [bts b];
-  writel (file ^ "_nstep") [its nstep];
-  (#write_boardl gameio) (file ^ "_boardo") (option_to_list boardo)
-  )
-
-fun ft_read_result gameio file =
-  let
-    val s1 = singleton_of_list (readl (file ^ "_bstatus"))
-    val s2 = singleton_of_list (readl (file ^ "_nstep"))
-  in
-    (
-    string_to_bool s1,
-    string_to_int s2,
-    list_to_option ((#read_boardl gameio) (file ^ "_boardo"))
-    )
-  end
-
-val ft_mctsparam =
-  {
-  timer = SOME 60.0,
-  nsim = NONE, stopatwin_flag = true,
-  decay = 1.0, explo_coeff = 2.0,
-  noise_all = false, noise_root = false,
-  noise_coeff = 0.25, noise_gen = random_real,
-  noconfl = false, avoidlose = false
-  }
-
-fun mk_ft_mctsparam tim =
-  {
-  timer = SOME tim,
-  nsim = NONE, stopatwin_flag = true,
-  decay = 1.0, explo_coeff = 2.0,
-  noise_all = false, noise_root = false,
-  noise_coeff = 0.25, noise_gen = random_real,
-  noconfl = false, avoidlose = false
-  }
-
-fun ft_extsearch_fun rlobj player (_:unit) target =
-  let
-    val mctsobj =
-      {mctsparam = ft_mctsparam, game = #game rlobj, player = player}
-    val (_,(tree,_)) = mcts mctsobj (starttree_of mctsobj target)
-    val b = is_win (#status (dfind [] tree))
-    val boardo = if not b then NONE else
-      let val nodel = trace_win tree [] in
-        SOME (#board (last nodel))
-      end
-  in
-    (b,dlength tree-1,boardo)
-  end
-
-fun ft_mk_extsearch self (rlobj as {rlparam,gameio,...}) player =
-  {
-  self = self,
-  parallel_dir = default_parallel_dir ^ "_finaltest",
-  reflect_globals = fn () => "()",
-  function = ft_extsearch_fun rlobj player,
-  write_param = fn _ => (fn _ => ()),
-  read_param = fn _ => (),
-  write_arg = write_target gameio,
-  read_arg = read_target gameio,
-  write_result = ft_write_result gameio,
-  read_result = ft_read_result gameio
-  }
-
-
-fun fttnn_extsearch_fun rlobj tnn target =
-  let
-    val pretob = #pretob (#dplayer rlobj)
-    val game = #game rlobj
-    fun preplayer target' =
-      let val tob = pretob (SOME (target',tnn)) in
-        fn board => player_from_tnn tnn tob game board
-      end
-    val mctsobj =
-      {mctsparam = ft_mctsparam, game = #game rlobj,
-       player = preplayer target}
-    val (_,(tree,_)) = mcts mctsobj (starttree_of mctsobj target)
-    val b = #status (dfind [] tree) = Win
-    val boardo = if not b then NONE else
-      let val nodel = trace_win tree [] in
-        SOME (#board (last nodel))
-      end
-  in
-    (b,dlength tree-1,boardo)
-  end
-
-fun fttnn_mk_extsearch self (rlobj as {rlparam,gameio,...}) =
-  {
-  self = self,
-  parallel_dir = default_parallel_dir ^ "_finaltest",
-  reflect_globals = fn () => "()",
-  function = fttnn_extsearch_fun rlobj,
-  write_param = (fn file => (fn tnn => write_tnn (file ^ "_tnn") tnn)),
-  read_param = (fn file => read_tnn (file ^ "_tnn")),
-  write_arg = write_target gameio,
-  read_arg = read_target gameio,
-  write_result = ft_write_result gameio,
-  read_result = ft_read_result gameio
-  }
-
-
-fun mk_dis tree =
-  let
-    val pol = #pol (dfind [] tree)
-    val _ = if null pol then raise ERR "mk_dis" "pol" else ()
-    fun f (_,cid) = #vis (dfind cid tree) handle NotFound => 0.0
-    val dis = map_assoc f pol
-    val tot = sum_real (map snd dis)
-    val _ = if tot < 0.5 then raise ERR "mk_dis" "tot" else ()
-  in
-    (dis,tot)
-  end
-
-fun select_bigstep tree = snd (best_in_distrib (fst (mk_dis tree)))
-
-fun fttnnbs_extsearch_fun rlobj tnn target =
-  let
-    val pretob = #pretob (#dplayer rlobj)
-    val game = #game rlobj
-    fun preplayer target' =
-      let val tob = pretob (SOME (target',tnn)) in
-        fn board => player_from_tnn tnn tob game board
-      end
-    val timerl = List.tabulate (30, fn _ => int_div 60 30)
-    val startmctsobj =
-      {mctsparam = mk_ft_mctsparam (hd timerl), game = #game rlobj,
-       player = preplayer target}
-    val (starttree,startcache) = starttree_of startmctsobj target
-    fun loop timl (tree,cache) =
-      if null timl then (false, 8, NONE) else
-      let
-        val mctsobj =
-          {mctsparam = mk_ft_mctsparam (hd timl), game = #game rlobj,
-           player = preplayer target}
-        val (_,(endtree,_)) = mcts mctsobj (tree,cache)
-        val cid = select_bigstep endtree
-        val status = #status (dfind [] endtree)
-      in
-        if status = Undecided
-          then
-            let
-              val newtree = cut_tree cid endtree
-              val newcache = build_cache game newtree
-            in
-              loop (tl timl) (newtree,newcache)
-            end
-        else if status = Win
-          then
-            let val nodel = trace_win endtree [] in
-              (status = Win, 8 - length timl, SOME (#board (last nodel)))
-            end
-        else (status = Win, 8 - length timl, NONE)
-      end
-  in
-    loop timerl (starttree,startcache)
-  end
-
-fun fttnnbs_mk_extsearch self (rlobj as {rlparam,gameio,...}) =
-  {
-  self = self,
-  parallel_dir = default_parallel_dir ^ "_finaltest",
-  reflect_globals = fn () => "()",
-  function = fttnnbs_extsearch_fun rlobj,
-  write_param = (fn file => (fn tnn => write_tnn (file ^ "_tnn") tnn)),
-  read_param = (fn file => read_tnn (file ^ "_tnn")),
-  write_arg = write_target gameio,
-  read_arg = read_target gameio,
-  write_result = ft_write_result gameio,
-  read_result = ft_read_result gameio
-  }
-*)
-
 
 end (* struct *)

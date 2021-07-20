@@ -30,6 +30,9 @@ sig
   val compare_imax : (('a * int) * ('a * int)) -> order
   val list_rmax : real list -> real
   val list_imax : int list -> int
+  val vector_max : ('a -> real) -> 'a vector -> (int * real)
+  val vector_maxi : ('a -> real) -> 'a vector -> int
+  val vector_mini : ('a -> real) -> 'a vector -> int
   val list_imin : int list -> int
   val tmsize_compare : term * term -> order
   val all_subterms : term -> term list
@@ -47,7 +50,6 @@ sig
   val exists_file : string -> bool
   val remove_file : string -> unit
   val clean_dir : string -> unit
-  val clean_rec_dir : string -> unit
 
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
@@ -176,6 +178,7 @@ sig
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
   val listDir : string -> string list
+  val listDir_all : string -> string list
 
   (* parse *)
   val hd_string : string -> char
@@ -226,6 +229,7 @@ sig
   val pretty_real : real -> string
   val epsilon : real
   val interval : real -> real * real -> real list
+  val gamma_noise_gen : real -> unit -> real
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
@@ -255,9 +259,6 @@ sig
   val import_terml : string -> term list
   val export_goal : string -> goal -> unit
   val import_goal : string -> goal
-
-  (* thread *)
-  val interruptkill : Thread.thread -> unit
 
   (* sigobj *)
   val sigobj_theories : unit -> string list

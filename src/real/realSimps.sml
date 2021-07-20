@@ -672,7 +672,10 @@ val NZ_t = prim_mk_const{Thy = "real", Name = "nonzerop"}
 fun is_NZ t = is_comb t andalso rator t ~~ NZ_t
 fun mul_termbase t =
     if is_real_fraction t then (t, Arbint.one)
-    else if is_negated t then (dest_negated t, Arbint.one)
+    else if is_negated t then
+      let val (t0,c) = mul_termbase (dest_negated t)
+      in (t0, c)
+      end
     else if is_NZ t then (t, Arbint.one)
     else
       case total dest_pow t of

@@ -12,25 +12,19 @@ sig
   datatype search_status = Success | Saturated | Timeout
 
   (* search tree: 'a is a board position, 'b is a move *)
-  type id = int list
-  val id_compare : id * id -> order
-  type 'b pol = (('b * real) * id) list
-  type ('a,'b) node =
-    {
-    board : 'a, pol : 'b pol, value : real, stati : status,
-    sum : real, vis : real, status : status
-    }
-  type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
+  type 'a node =
+    {board : 'a, stati : status, sum : real, vis : real}
+  datatype ('a,'b) tree =
+    Leaf | Node of 'a node * ('b * real * ('a,'b) tree) vector
+  val dest_node : ('a,'b) tree -> 'a node * ('b * real * ('a,'b) tree) vector
+  val is_node : ('a,'b) tree -> bool
+  val is_leaf : ('a,'b) tree -> bool
 
-  (* dirichlet noise *)
-  val gamma_distrib : real -> (real * real) list
-  val gamma_noise_gen : real -> (unit -> real)
-
-  (* search function *)
+  (* MCTS specification *)
   type ('a,'b) game =
     {
     status_of : 'a -> status,
-    apply_move : ('a,'b) tree * id -> 'b -> 'a -> ('a * ('a,'b) tree),
+    apply_move : 'b -> 'a -> 'a,
     available_movel : 'a -> 'b list,
     string_of_board : 'a -> string,
     string_of_move : 'b -> string,
@@ -44,35 +38,20 @@ sig
   val random_player : ('a,'b) game -> ('a,'b) player
 
   type mctsparam =
-    {
-    timer : real option,
-    nsim : int option,
-    stopatwin_flag : bool,
-    decay : real,
-    explo_coeff : real,
-    noise_root : bool,
-    noise_all : bool,
-    noise_coeff : real,
-    noise_gen : unit -> real,
-    noconfl : bool,
-    avoidlose : bool,
-    evalwin : bool
-    }
+    {time : real option, nsim : int option,
+     explo_coeff : real,
+     noise : bool, noise_coeff : real, noise_gen : unit -> real}
 
   type ('a,'b) mctsobj =
     {mctsparam : mctsparam, game : ('a,'b) game, player : ('a,'b) player}
 
-  val add_rootnoise : mctsparam -> ('a,'b) tree -> ('a,'b) tree
-  val starttree_of : ('a,'b) mctsobj -> 'a ->
-    (('a,'b) tree * ('a,id) Redblackmap.dict)
-  val mcts : ('a,'b) mctsobj -> (('a,'b) tree * ('a,id) Redblackmap.dict) ->
-    (search_status * (('a,'b) tree * ('a,id) Redblackmap.dict))
+  (* MCTS search function *)
+  val starting_tree : ('a,'b) mctsobj -> 'a -> ('a,'b) tree
+  val mcts : ('a,'b) mctsobj -> ('a,'b) tree -> ('a,'b) tree
 
-  (* statistics *)
-  val mostexplored_path : ('a,'b) tree -> id -> id list
-  val max_depth : ('a,'b) tree -> id -> int
-  val trace_win : ('a,'b) tree -> id -> ('a,'b) node list
-  val trace_win_movel : ('a,'b) tree -> id -> ('a * 'b) list
+  (* Statistics *)
+  val most_visited_path : ('a,'b) tree -> ('a node * 'b option) list
+
 
   (* toy example *)
   type toy_board = (int * int * int)

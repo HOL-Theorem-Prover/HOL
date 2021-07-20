@@ -15,8 +15,13 @@ include Abbrev
 
   (* holyhammer interface *)
   val fof_export_pb : string -> term * (string * thm) list -> unit
+  val fof_export_pbfile : string -> term * (string * thm) list -> unit
 
   (* export a goal without any translation *)
   val fof_export_goal : string -> goal -> unit
+
+  (* tactictoe interface *)
+  val ttt_fof_extra : string -> unit
+  val ttt_fof_goal : string -> string -> (string * goal) -> unit
 
 end

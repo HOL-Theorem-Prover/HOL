@@ -11,8 +11,7 @@ struct
 
 open HolKernel Abbrev boolLib aiLib
   smlLexer smlInfix smlOpen smlExecute smlParallel
-  mlTacticData
-  tttSetup
+  mlTacticData tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
 
@@ -592,8 +591,7 @@ fun modified_program (h,d) p =
       val semicolon =
         if d = 0 andalso !is_thm_flag then
        ["; val _ = tttRecord.ttt_before_save_state ()",
-        "; val _ = aiLib.total_time tttRecord.ttt_save_state_time" ^
-        " tttRecord.ttt_save_state ()",
+        "; val _ = tttRecord.ttt_save_state ()",
         "; val _ = tttRecord.ttt_after_save_state ();"]
         else []
     in
@@ -699,8 +697,8 @@ fun open_struct_aux stack s'=
     else
       let
         val l0 = String.tokens (fn x => x = #".") s
-        val (l1,l2,l3,l4) = import_struct s handle Io _ =>
-          export_import_struct s
+        val (l1,l2,l3,l4) = view_struct_cached s
+          handle Interrupt => raise Interrupt | _ => ([],[],[],[])
         fun f constr a =
           let fun g l =
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a))
@@ -923,10 +921,12 @@ fun output_header oc cthy =
   (* debugging *)
   reflect_flag oc "aiLib.debug_flag" debug_flag;
   (* recording *)
+  reflect_flag oc "tttSetup.record_flag" record_flag;
   reflect_flag oc "tttSetup.record_prove_flag" record_prove_flag;
   reflect_flag oc "tttSetup.record_let_flag" record_let_flag;
   reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
   reflect_flag oc "tttSetup.record_savestate_flag" record_savestate_flag;
+  reflect_flag oc "tttSetup.export_thmdata_flag" export_thmdata_flag;
   reflect_flag oc "tttSetup.learn_abstract_term" learn_abstract_term;
   reflect_time oc "tttSetup.record_tactic_time" record_tactic_time;
   reflect_time oc "tttSetup.record_proof_time" record_proof_time;
@@ -976,7 +976,9 @@ fun sketch_wrap thy file =
     val s1 = QFRead.inputFile file
     val s2 = rm_spaces (rm_comment s1)
     val sl = partial_sml_lexer s2
-    val _ = write_sl (tactictoe_dir ^ "/code/before_sketch_" ^ thy) sl
+    val lexdir =  tactictoe_dir ^ "/log/lexer"
+    val _ = app mkDir_err [OS.Path.dir lexdir, lexdir]
+    val _ = write_sl (lexdir ^ "/" ^ thy) sl
   in
     sketch sl
   end
@@ -993,13 +995,13 @@ fun print_program cthy fileorg sl =
   let
     val _ = debug ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
-    val scriptdir = tactictoe_dir ^ "/scripts"
-    val _ = mkDir_err scriptdir
+    val scriptdir = tactictoe_dir ^ "/log/scripts"
+    val _ = app mkDir_err [OS.Path.dir scriptdir, scriptdir]
     val oc = TextIO.openOut fileout
     fun script_save () =
       let
-        val cmd = "cp " ^ fileout ^ " " ^
-          (scriptdir ^ "/" ^ cthy ^ "_debugScript")
+        val cmd = String.concatWith " "
+          ["cp", fileout, scriptdir ^ "/" ^ cthy]
       in
         cmd_in_dir tactictoe_dir cmd
       end
@@ -1045,30 +1047,6 @@ fun ttt_rewrite_thy thy =
     print_endline ("ttt_rewrite_thy time: " ^ rts_round 4 t)
   end
 
-(* ------------------------------------------------------------------------
-   Extra safety during recording (if export_theory is not catched)
-   ------------------------------------------------------------------------ *)
-
-fun save_file file =
-  let
-    val dir = #dir (OS.Path.splitDirFile file)
-    val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
-  in
-    cmd_in_dir dir cmd
-  end
-
-fun restore_file file =
-  let
-   val dir = #dir (OS.Path.splitDirFile file)
-    val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
-    val cmd2 = "rm " ^ (file ^ ".tttsave")
-  in
-    cmd_in_dir dir (cmd1 ^ "; " ^ cmd2)
-  end
-
-fun save_scripts script = app save_file (script :: theory_files script)
-fun restore_scripts script = app restore_file (script :: theory_files script)
-
 (* -------------------------------------------------------------------------
    Recording (includes rewriting)
    ------------------------------------------------------------------------ *)
@@ -1085,30 +1063,29 @@ fun ttt_record_thy thy =
   let
     val _ = ttt_rewrite_thy thy
     val scriptorg = find_script thy
-    val _ = save_scripts scriptorg
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
     val (_,t) = add_time
-      (run_rm_script (mem thy core_theories)) (tttsml_of scriptorg)
+      smlExecScripts.exec_tttrecord (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
     if not (exists_tacdata_thy thy)
-    then (
-         print_endline "ttt_record_thy: failed";
-         raise ERR "ttt_record_thy" thy
-         )
+    then (print_endline "ttt_record_thy: failed";
+          raise ERR "ttt_record_thy" thy)
     else ()
-    ;
-    restore_scripts scriptorg
   end
 
-fun ttt_clean_record () =
+fun ttt_clean_temp () =
   (
-  clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
+  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
   clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
-  clean_dir (tactictoe_dir ^ "/ttt_tacdata");
-  clean_dir (tactictoe_dir ^ "/savestate");
   clean_dir (tactictoe_dir ^ "/info")
   )
+
+fun ttt_clean_record () =
+  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/ttt_tacdata"))
+
+fun ttt_clean_savestate () =
+  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/savestate"))
 
 fun ttt_record () =
   let
@@ -1118,5 +1095,17 @@ fun ttt_record () =
   in
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
+
+(* used to record savestates with record_flag := false *)
+fun ttt_record_savestate () =
+  let
+    val _ = ttt_clean_savestate ()
+    val thyl1 = ttt_ancestry (current_theory ())
+    val ((),t) = add_time (app ttt_record_thy) thyl1
+  in
+    print_endline ("ttt_record time: " ^ rts_round 4 t)
+  end
+
+
 
 end (* struct *)

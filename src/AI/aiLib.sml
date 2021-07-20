@@ -76,8 +76,7 @@ fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
-fun clean_dir dir = run_cmd ("rm " ^ dir ^ "/*")
-fun clean_rec_dir dir = run_cmd ("rm -r " ^ dir ^ "/*")
+fun clean_dir dir = (run_cmd ("rm -r " ^ dir); mkDir_err dir)
 
 (* ------------------------------------------------------------------------
    Comparisons
@@ -570,6 +569,32 @@ fun list_imax l = case l of
   | [a] => a
   | a :: m => Int.max (a,list_imax m)
 
+
+fun vector_max score v =
+  let
+    fun f (i,x,(maxi,maxsc)) =
+      let val sc = score x in
+        if sc > maxsc then (i,sc) else (maxi,maxsc)
+      end
+  in
+    Vector.foldli f (0,Real.negInf) v
+  end
+
+fun vector_maxi score v = fst (vector_max score v)
+
+
+
+fun vector_mini score v =
+  let
+    fun f (i,x,(mini,minsc)) =
+      let val sc = score x in
+        if sc < minsc then (i,sc) else (mini,minsc)
+      end
+  in
+    fst (Vector.foldli f (0,Real.posInf) v)
+  end
+
+
 fun list_imin l = case l of
     [] => raise ERR "list_imin" ""
   | [a] => a
@@ -776,7 +801,7 @@ fun export_terml file tml =
   let
     val tml' = filter uptodate_term tml
     val _ = if length tml <> length tml'
-            then print_endline "Warning: out-of-date terms are not exported"
+            then raise ERR "" "out-of-date terms"
             else ()
     val ostrm = Portable.open_out file
   in
@@ -784,8 +809,10 @@ fun export_terml file tml =
      TextIO.closeOut ostrm)
   end
 
-fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)
-
+fun export_goal file (goal as (asl,w)) =
+  export_terml file (w :: asl)
+  handle HOL_ERR _ =>
+  print_endline "Warning: goal contained out-of-date terms (not exported it)"
 
 (* -------------------------------------------------------------------------
    Importing terms
@@ -998,7 +1025,7 @@ fun writel_atomic file sl =
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
-fun listDir dirName =
+fun listDir_all dirName =
   let
     val dir = OS.FileSys.openDir dirName
     fun read files = case OS.FileSys.readDir dir of
@@ -1008,6 +1035,9 @@ fun listDir dirName =
   in
     OS.FileSys.closeDir dir; r
   end
+
+fun listDir dirName =
+  filter (not o String.isPrefix ".") (listDir_all dirName)
 
 (* ------------------------------------------------------------------------
    Profiling
@@ -1252,23 +1282,36 @@ fun normalize_distrib dis =
     else map_snd (fn x => x / sum) dis
   end
 
-(* ------------------------------------------------------------------------
-   Parallelism (currently slowing functions inside threads)
-   ------------------------------------------------------------------------ *)
+(* --------------------------------------------------------------------------
+   Dirichlet noise
+   ------------------------------------------------------------------------- *)
 
-(* small overhead due to waiting safely for the thread to close *)
-fun interruptkill worker =
-   if not (Thread.isActive worker) then () else
-     let
-       val _ = Thread.interrupt worker handle Thread _ => ()
-       fun loop n =
-         if not (Thread.isActive worker) then () else
-           if n > 0
-           then (OS.Process.sleep (Time.fromReal 0.0001); loop (n-1))
-           else (print_endline "Warning: thread killed"; Thread.kill worker)
-     in
-       loop 1000000
-     end
+val gammadict = dnew Real.compare
+  [(0.01, 99.43258512),(0.02, 49.44221016),(0.03, 32.78499835),
+   (0.04, 24.46095502),(0.05, 19.47008531),(0.06, 16.14572749),
+   (0.07, 13.77360061),(0.08, 11.99656638),(0.09, 10.61621654),
+   (0.1, 9.513507699),(0.2, 4.590843712),(0.3, 2.991568988),
+   (0.4, 2.218159544),(0.5, 1.772453851),(0.6, 1.489192249),
+   (0.7, 1.298055333),(0.8, 1.164229714),(0.9, 1.068628702)]
+
+fun gamma_of alpha = dfind alpha gammadict
+  handle NotFound => raise ERR "gamma_of" (rts alpha)
+
+fun gamma_density alpha x =
+  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of alpha
+
+fun gamma_distrib alpha =
+  map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
+
+fun gamma_noise_gen alpha =
+  let
+    val distrib = gamma_distrib alpha
+    val cumul = mk_cumul distrib
+  in
+    fn () => select_in_cumul cumul
+  end
+
+
 
 (* ------------------------------------------------------------------------
    Theories of the standard library (sigobj)

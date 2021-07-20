@@ -240,7 +240,6 @@ fun fof_write_pb dir (thmid,(depthyl,depl)) =
     val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc  = TextIO.openOut file
     val tml = collect_tml (thmid :: depl)
-
   in
     (
     app (fn x => osn oc ("include('" ^ x ^ ".ax').")) depthyl;
@@ -251,6 +250,7 @@ fun fof_write_pb dir (thmid,(depthyl,depl)) =
     )
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
+
 
 (*
 load "hhExportFof"; open hhExportFof;
@@ -341,9 +341,8 @@ fun fof_axdef oc (name,thm) =
     fof_formula oc statement; osn oc ")."
   end
 
-fun fof_export_pb dir (cj,namethml) =
+fun fof_export_pbfile file (cj,namethml) =
   let
-    val file = dir ^ "/atp_in"
     val oc = TextIO.openOut file
     val cval = collect_arity_pb (cj,namethml)
   in
@@ -354,6 +353,26 @@ fun fof_export_pb dir (cj,namethml) =
      TextIO.closeOut oc)
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
+
+fun fof_export_pb dir (cj,namethml) =
+  fof_export_pbfile (dir ^ "/atp_in") (cj,namethml)
+
+
+(*
+load "holyHammer"; open holyhammer;
+load "hhExportFof"; open hhExportFof;
+load "mlThmData"; open mlThmData;
+load "mlFeature"; open mlFeature;
+val cj = ``1+1=2``;
+val goal : goal = ([],cj);
+val n = 32;
+load "mlNearestNeighbor"; open mlNearestNeighbor;
+val thmdata = create_thmdata ();
+val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
+val namethml = thml_of_namel premises;
+val hh_dir = HOLDIR ^ "/src/holyhammer";
+fof_export_pb hh_dir (cj,namethml);
+*)
 
 (* -------------------------------------------------------------------------
    This function is a work-in-progress.
@@ -383,20 +402,177 @@ fun fof_export_goal file (axl,cj) =
     TextIO.closeOut oc
   end
 
+(* -------------------------------------------------------------------------
+   Export TacticToe problems to ATPs
+   ------------------------------------------------------------------------- *)
+
+fun ttt_fof_extra file =
+  let val oc  = TextIO.openOut file in
+    (fof_thmdef_extra oc; TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun ttt_translate_goal g =
+  let val tm = (gen_all o list_mk_imp) g in translate tm end
+
+fun ttt_fof_goaldef role oc (name,g) =
+  (os oc (fofpar ^ escape name ^ "," ^ role ^ ",");
+   fof_formula oc (ttt_translate_goal g); osn oc ").")
+
+fun ttt_collect_tml g = mk_term_set (atoms (ttt_translate_goal g))
+
+fun ttt_fof_arity oc tml =
+  let
+    val cval = mk_sameorder_set tma_compare
+      (List.concat (cval_extra :: map collect_arity_noapp tml))
+  in
+    app (fof_arityeq oc) cval
+  end
+
+fun ttt_fof_goal file role (name,g) =
+  let val oc  = TextIO.openOut file in
+    (
+    ttt_fof_arity oc (ttt_collect_tml g);
+    ttt_fof_goaldef role oc (name,g);
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+
 (*
-load "holyHammer"; open holyhammer;
+load "tttRecord"; open tttRecord;
+load "aiLib"; open aiLib;
 load "hhExportFof"; open hhExportFof;
-load "mlThmData"; open mlThmData;
-load "mlFeature"; open mlFeature;
-val cj = ``1+1=2``;
-val goal : goal = ([],cj);
-val n = 32;
-load "mlNearestNeighbor"; open mlNearestNeighbor;
-val thmdata = create_thmdata ();
-val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
-val namethml = thml_of_namel premises;
-val hh_dir = HOLDIR ^ "/src/holyhammer";
-fof_export_pb hh_dir (cj,namethml);
+val ERR = mk_HOL_ERR "test";
+load_sigobj ();
+
+(* -------------------------------------------------------------------------
+   Theories
+   ------------------------------------------------------------------------- *)
+
+val tactictoe_dir = HOLDIR ^ "/src/tactictoe";
+val foft_dir = tactictoe_dir ^ "/fof_theories";
+
+fun ttt_fof_thy dir thy =
+  let
+    fun f (name,thm) =
+      let val fileout = dir ^ "/" ^ escape name in
+        ttt_fof_goal fileout "axiom" (name, dest_thm thm)
+      end
+    val thmdata = map_fst (fn x => thy ^ "Theory." ^ x) (DB.thms thy)
+  in
+    app f thmdata
+  end
+
+val _ = clean_dir foft_dir;
+app (ttt_fof_thy foft_dir) (ancestry (current_theory ()));
+ttt_fof_extra (tactictoe_dir ^ "/" ^ "fof_extra");
+
+(* -------------------------------------------------------------------------
+   Current theories
+   ------------------------------------------------------------------------- *)
+
+val thmdata_dir = tactictoe_dir ^ "/thmdata";
+val fofc_dir = tactictoe_dir ^ "/fof_cthy";
+val _ = clean_dir fofc_dir;
+
+fun ttt_fof_cthy dirin dirout =
+  let
+    fun f_goal file (name,g) =
+      let val fileout = dirout ^ "/" ^ file ^ "-" ^ (escape name) in
+        ttt_fof_goal fileout "axiom" (name,g)
+      end
+    fun f file =
+      app (f_goal file) (read_thmdata (dirin ^ "/" ^ file))
+      handle _ => print_endline file
+  in
+    app f (aiLib.listDir dirin)
+  end;
+
+ttt_fof_cthy thmdata_dir fofc_dir;
+
+(* -------------------------------------------------------------------------
+   Conjectures
+   ------------------------------------------------------------------------- *)
+
+val pb_dir = tactictoe_dir ^ "/eval/201217-full/pb";
+val filel = filter (String.isSuffix ".goal") (aiLib.listDir pb_dir);
+
+fun read_goal file =
+  let
+    val (name,_) = split_string "." file
+    val g = import_goal (pb_dir ^ "/" ^ file)
+  in
+    SOME (name,g)
+  end
+  handle HOL_ERR _ => (print_endline file; NONE)
+
+val gl = map read_goal filel; (* takes a minute *)
+val gl2 = List.mapPartial I gl;
+(* todo remove fof logroot and wot *)
+
+fun cj_to_fof (name,g) =
+  let val fileout = pb_dir ^ "/" ^ name ^ ".cj" in
+    ttt_fof_goal fileout "conjecture" (name,g)
+  end;
+app cj_to_fof gl2;
+
+(* -------------------------------------------------------------------------
+   Map dependencies to axiom files
+   ------------------------------------------------------------------------- *)
+
+val fofcd = dset String.compare (aiLib.listDir fofc_dir);
+val foftd = dset String.compare (aiLib.listDir foft_dir);
+
+fun find_axfile_curthy (thy,n) thmname =
+  if n < 0 then (print_endline (thy ^ " " ^ thmname); NONE) else
+    let val file = (thy ^ "_" ^ its n) ^ "-" ^ thmname in
+      if dmem file fofcd then SOME file else
+        find_axfile_curthy (thy,(n-1)) thmname
+    end;
+
+fun find_axfile (thy,n) thmname =
+  let
+    val thmthy = fst (split_string "Theory." (unescape thmname))
+  in
+    if mem thmthy [thy, mlThmData.namespace_tag]
+    then find_axfile_curthy (thy,n) thmname
+    else
+      if dmem thmname foftd then SOME thmname else
+        raise ERR "find_axfile" thmname
+  end;
+
+fun convert_premises i file =
+  let
+    val bare1 = fst (split_string "." file)
+    val bare2 = fst (split_string "-" bare1)
+    val sl = String.fields (fn x => x = #"_") bare2
+    val thy = String.concatWith "_" (butlast sl)
+    val n = string_to_int (last sl)
+    val premises = map escape (readl (pb_dir ^ "/" ^ file))
+    val newpremises = List.mapPartial (find_axfile (thy,n)) premises
+    val ext = if length premises = length newpremises
+      then ".dep" else ".xdep"
+     val dirbare1 = pb_dir ^ "/" ^ bare1
+  in
+    if length premises <> length newpremises
+    then (print_endline bare1;
+      OS.FileSys.rename {old = dirbare1 ^ ".cj", new = dirbare1 ^ ".xcj"}
+      handle SysErr _ => ())
+    else ();
+    if i mod 1000 = 0 then print_endline (its i) else ();
+    writel (pb_dir ^ "/" ^ bare1 ^ ext) newpremises
+  end;
+
+val premisesl = filter (String.isSuffix ".premises") (aiLib.listDir pb_dir);
+val file = "list_331-450.premises";
+convert_premises file;
+appi convert_premises premisesl;
+
+(* remove wot, logroot, fcp, lbtree as post-processing *)
 *)
+
+
 
 end (* struct *)
