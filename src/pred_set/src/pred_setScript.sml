@@ -1234,6 +1234,14 @@ val INSERT_DIFF =
       FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC]);
 
 (* with INSERT to hand, it's easy to talk about concrete sets *)
+Theorem SUBSET_SING:
+  x SUBSET {a} <=> x = {} \/ x = {a}
+Proof
+  simp[EQ_IMP_THM, DISJ_IMP_THM, SUBSET_DEF] >> strip_tac >>
+  Cases_on ‘x = {}’ >> simp[] >>
+  rw[EQ_IMP_THM, EXTENSION] >> METIS_TAC[MEMBER_NOT_EMPTY]
+QED
+
 val UNIV_BOOL = store_thm(
   "UNIV_BOOL",
   ``univ(:bool) = {T; F}``,
