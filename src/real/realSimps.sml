@@ -159,6 +159,9 @@ val z = mk_var("z", real_ty)
 val u = mk_var("u", real_ty)
 val v = mk_var("v", real_ty)
 
+val REAL_MUL_ASSOC' = GSYM REAL_MUL_ASSOC
+val REAL_NEG_MINUS1' = GSYM REAL_NEG_MINUS1
+
 val add_rats =
     transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] add_rat
 val add_ratls = transform [(x, posneg), (y,nb12), (z, posneg0)] add_ratl
@@ -614,7 +617,6 @@ val a_num = mk_var("a", numSyntax.num)
 val b_num = mk_var("b", numSyntax.num)
 val NUMERALa = mk_comb(numSyntax.numeral_tm, a_num)
 val NUMERALb = mk_comb(numSyntax.numeral_tm, b_num)
-val MUL_ASSOC' = GSYM REAL_MUL_ASSOC
 val REAL_MUL_RID' = GSYM REAL_MUL_RID
 val REAL_POW_ADD' = GSYM REAL_POW_ADD
 val REAL_POW_INV' = GSYM REAL_POW_INV
@@ -783,12 +785,13 @@ local
     combine = (* diag (fn t => "mulcombine on "^term_to_string t) *) mulcombine,
     preprocess = (* diag (fn t => "mulpre on "^term_to_string t)  *) mulpre
   }
-  fun leading_coeff_norm t =
+  fun leading_coeff_norm leaveneg1 t =
       case total dest_mult t of
           SOME (l,r) => if is_real_fraction l then
                           (RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC]) THENC
-                           PURE_REWRITE_CONV [NEG1_MUL] THENC
-                           PURE_REWRITE_CONV [NEG_MINUS1']) t
+                           (if leaveneg1 then ALL_CONV
+                            else PURE_REWRITE_CONV [NEG1_MUL] THENC
+                                 PURE_REWRITE_CONV [NEG_MINUS1'])) t
                         else PURE_REWRITE_CONV [REAL_MUL_ASSOC] t
         | _ => ALL_CONV t
   fun elim1div t =
@@ -806,7 +809,7 @@ local
         | NONE => if is_div t then (BINOP_CONV elimdivs THENC elim1div) t
                   else ALL_CONV t
 in
-  fun REALMULCANON0 t =
+  fun REALMULCANON00 leaveneg1 t =
       let
         fun strip A t =
             case total dest_mult t of
@@ -827,6 +830,7 @@ in
                                 is_baddiv t) ts orelse
            not (oksort mulcompare ts) orelse
            is_real_fraction l andalso List.exists is_negated ts orelse
+           is_negated (hd ts) andalso not (is_real_fraction l) andalso leaveneg1 orelse
            length ts > 1 andalso List.exists is_negated (tl ts)
         then
           elimdivs THENC REWRITE_CONV [REAL_INV_MUL'] THENC
@@ -835,7 +839,13 @@ in
           AC_Sort.sort mulsort THENC
           REWRITE_CONV[POW_1, nonzerop_NUMERAL, POW_ONE, REAL_MUL_LID,
                        REAL_MUL_RID, nonzerop_pow] THENC
-          leading_coeff_norm
+          leading_coeff_norm leaveneg1
+        else if not leaveneg1 then
+          TRY_CONV (REWR_CONV REAL_NEG_MINUS1' THENC
+                    TRY_CONV (RAND_CONV
+                                (PURE_REWRITE_CONV [REAL_MUL_ASSOC']) THENC
+                                REWR_CONV REAL_NEG_LMUL THENC
+                                PURE_REWRITE_CONV [REAL_MUL_ASSOC]))
         else ALL_CONV
       end t
   fun interesting_negation t =
@@ -847,10 +857,11 @@ in
                        REWR_CONV REAL_NEG_MINUS1 t
                      else raise UNCHANGED
 
-  val REALMULCANON =
+  fun REALMULCANON0 leaveneg1 =
       PURE_REWRITE_CONV [REAL_NEGNEG, pow0, POW_1] THENC
       interesting_negation THENC
-      REALMULCANON0
+      REALMULCANON00 leaveneg1
+  val REALMULCANON = REALMULCANON0 false
 end (* local *)
 
 val RMULCANON_ss = SSFRAG {
@@ -942,10 +953,10 @@ fun mul_extract P t =
         in
           if P l then ALL_CONV
           else
-            (LAND_CONV (mul_extract P) THENC TRY_CONV (REWR_CONV MUL_ASSOC'))
+            (LAND_CONV (mul_extract P) THENC TRY_CONV (REWR_CONV REAL_MUL_ASSOC'))
               ORELSEC
             (RAND_CONV (mul_extract P) THENC REWR_CONV REAL_MUL_COMM THENC
-             TRY_CONV (REWR_CONV MUL_ASSOC'))
+             TRY_CONV (REWR_CONV REAL_MUL_ASSOC'))
         end t
 
 fun mkexp (b0,e) =
@@ -969,6 +980,8 @@ fun base_solver asms stk t =
           Exn.Res th => (print " - OK\n"; th)
         | Exn.Exn e => (print " - FAILED\n"; raise e)
     end
+fun solver0 stk t = base_solver [ASSUME ``0r < U``] stk t
+val stk = []
 
 val R = “$<= : real -> real -> bool”
 val Rthms = [(REAL_LE_LMUL, rhs), (REAL_LE_LMUL_NEG, rhs)]
@@ -977,8 +990,6 @@ val Rthms = [(REAL_EQ_LMUL, (rand o rhs))]
 val R = “$< : real -> real -> bool”
 val Rthms = [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)]
 
-fun solver0 stk t = base_solver [ASSUME ``0r < U``] stk t
-val stk = []
 *)
 fun giveexp t =
     if is_pow t then ALL_CONV t
@@ -1026,8 +1037,11 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                 val ln = toN li and rn = toN ri
                 val dn = Arbnum.gcd (ln,rn)
                 val _ = dn <> Arbnum.one orelse
+                        (Arbint.<(li,Arbint.zero) andalso
+                         (Arbint.<(ri,Arbint.zero) orelse same_const equality R)) orelse
                         raise mkERR "Literals are coprime"
-                val di = Arbint.fromNat dn
+                val di = if dn = Arbnum.one then Arbint.~ Arbint.one
+                         else Arbint.fromNat dn
                 val dt = term_of_int di
                 val lc = Arbint.div(li,di) and rc = Arbint.div(ri,di)
                 val lct = term_of_int lc and rct = term_of_int rc
@@ -1035,7 +1049,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                 val leqn = mkeq lct and reqn = mkeq rct
                 fun extract_n_factor lit eqn =
                     mul_extract (aconv lit) THENC
-                    ifMULT (LAND_CONV (K eqn) THENC REWR_CONV MUL_ASSOC')
+                    ifMULT (LAND_CONV (K eqn) THENC REWR_CONV REAL_MUL_ASSOC')
                            (K eqn)
             in
               FORK_CONV(extract_n_factor l_t leqn, extract_n_factor r_t reqn)
@@ -1101,11 +1115,11 @@ fun mulrelnorm0 R Rthms solver0 stk t =
               FORK_CONV (mul_extract (chk (l_t,el)) THENC
                          ifMULT (LAND_CONV (giveexp THENC common false ld))
                                 (giveexp THENC common true ld) THENC
-                         TRY_CONV (REWR_CONV MUL_ASSOC'),
+                         TRY_CONV (REWR_CONV REAL_MUL_ASSOC'),
                          mul_extract (chk (r_t,er)) THENC
                          ifMULT (LAND_CONV (giveexp THENC common false rd))
                                 (giveexp THENC common true rd) THENC
-                         TRY_CONV (REWR_CONV MUL_ASSOC')) THENC
+                         TRY_CONV (REWR_CONV REAL_MUL_ASSOC')) THENC
               apply_thms
             end t
       fun eqcleanup t =
@@ -1151,10 +1165,25 @@ fun elim_bare_negations t =
       | SOME a => if is_literalish a then raise UNCHANGED
                   else REWR_CONV REAL_NEG_MINUS1 t
 
-fun mulrelnorm R Rthms solver stk =
-    BINOP_CONV REALMULCANON THENC BINOP_CONV elim_bare_negations THENC
-    mulrelnorm0 R Rthms solver stk THENC
-    TRY_CONV (BINOP_CONV REALMULCANON)
+fun negatedL_eq t =
+    let
+      val (l,r) = dest_eq t handle HOL_ERR _ => raise UNCHANGED
+      val (c, _) = dest_mult l handle HOL_ERR _ => raise UNCHANGED
+      val fix = RAND_CONV (REWR_CONV (GSYM REAL_MUL_LID))
+    in
+      if is_literalish c andalso is_negated c then
+        case Lib.total dest_mult r of
+            NONE => if is_literalish r then raise UNCHANGED else fix t
+          | SOME (d,_) => if is_literalish d then raise UNCHANGED
+                          else fix t
+      else raise UNCHANGED
+    end
+
+fun mulrelnorm R Rthms solver0 stk =
+    BINOP_CONV (REALMULCANON0 true THENC elim_bare_negations) THENC
+    negatedL_eq THENC
+    mulrelnorm0 R Rthms solver0 stk THENC
+    BINOP_CONV (TRY_CONV REALMULCANON)
 (*
 
 val lenorm = mulrelnorm “$<= : real -> real -> bool”
