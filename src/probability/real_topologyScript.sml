@@ -19,7 +19,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
-     combinTheory quotientTheory arithmeticTheory realTheory
+     combinTheory quotientTheory arithmeticTheory realTheory real_sigmaTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
      seqTheory limTheory transcTheory realLib topologyTheory metricTheory;
@@ -4192,55 +4192,6 @@ val INTERIOR_UNIONS_OPEN_SUBSETS = store_thm ("INTERIOR_UNIONS_OPEN_SUBSETS",
  ``!s:real->bool. BIGUNION {t | open t /\ t SUBSET s} = interior s``,
   GEN_TAC THEN CONV_TAC SYM_CONV THEN MATCH_MP_TAC INTERIOR_UNIQUE THEN
   SIMP_TAC std_ss [OPEN_BIGUNION, GSPECIFICATION] THEN SET_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
-(* More variants of the Archimedian property and useful consequences.        *)
-(* ------------------------------------------------------------------------- *)
-
-val REAL_ARCH_INV = store_thm ("REAL_ARCH_INV",
- ``!e. &0 < e <=> ?n. ~(n = 0) /\ &0:real < inv(&n) /\ inv(&n) < e:real``,
-  GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[REAL_LT_TRANS]] THEN
-  DISCH_TAC THEN MP_TAC(SPEC ``inv(e:real)`` REAL_BIGNUM) THEN
-  STRIP_TAC THEN EXISTS_TAC ``n:num`` THEN
-  ASM_MESON_TAC[REAL_LT_INV, REAL_INV_INV, REAL_LT_INV_EQ, REAL_LT_TRANS,
-                REAL_LT_ANTISYM]);
-
-val REAL_POW_LBOUND = store_thm ("REAL_POW_LBOUND",
- ``!x:real n. &0 <= x ==> &1 + &n * x <= (&1 + x) pow n``,
-  GEN_TAC THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN DISCH_TAC THEN
-  INDUCT_TAC THEN
-  REWRITE_TAC[pow, REAL_MUL_LZERO, REAL_ADD_RID, REAL_LE_REFL] THEN
-  REWRITE_TAC[GSYM REAL_OF_NUM_SUC] THEN
-  MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``(&1 + x) * (&1 + &n * x:real)`` THEN
-  ASM_SIMP_TAC std_ss [REAL_LE_LMUL, REAL_ARITH ``&0 <= x:real ==> &0 <= &1 + x``,
-                       REAL_LE_MUL, REAL_LE_LMUL_IMP, REAL_POS, pow, REAL_ARITH
-   ``&1 + (n + &1) * x:real <= (&1 + x) * (&1 + n * x) <=> &0 <= n * x * x``]);
-
-val REAL_ARCH_POW = store_thm ("REAL_ARCH_POW",
- ``!x:real y. &1 < x ==> ?n. y < x pow n``,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPEC ``x:real - &1`` REAL_ARCH) THEN ASM_REWRITE_TAC[REAL_SUB_LT] THEN
-  DISCH_THEN(MP_TAC o SPEC ``y:real``) THEN STRIP_TAC THEN
-  EXISTS_TAC ``n:num`` THEN MATCH_MP_TAC REAL_LTE_TRANS THEN
-  EXISTS_TAC ``&1 + &n * (x:real - &1)`` THEN
-  ASM_SIMP_TAC std_ss [REAL_ARITH ``x:real < y ==> x < &1 + y``] THEN
-  ASM_MESON_TAC[REAL_POW_LBOUND, REAL_SUB_ADD2, REAL_ARITH
-    ``&1 < x:real ==> &0 <= x - &1``]);
-
-val REAL_ARCH_POW2 = store_thm ("REAL_ARCH_POW2",
- ``!x:real. ?n. x < &2:real pow n``,
-  SIMP_TAC std_ss [REAL_ARCH_POW, REAL_ARITH ``1 < 2:real``]);
-
-val REAL_ARCH_POW_INV = store_thm ("REAL_ARCH_POW_INV",
- ``!x:real y. &0 < y /\ x < &1 ==> ?n. x pow n < y``,
-  REPEAT STRIP_TAC THEN ASM_CASES_TAC ``&0 < x:real`` THENL
-   [ALL_TAC, ASM_MESON_TAC[POW_1, REAL_LET_TRANS, REAL_NOT_LT]] THEN
-  SUBGOAL_THEN ``inv(&1) < inv(x:real)`` MP_TAC THENL
-   [ASM_SIMP_TAC std_ss [REAL_LT_INV], REWRITE_TAC[REAL_INV1]] THEN
-  DISCH_THEN(MP_TAC o SPEC ``inv(y:real)`` o MATCH_MP REAL_ARCH_POW) THEN
-  STRIP_TAC THEN EXISTS_TAC ``n:num`` THEN
-  GEN_REWR_TAC BINOP_CONV [GSYM REAL_INV_INV] THEN
-  ASM_SIMP_TAC std_ss [GSYM REAL_POW_INV, REAL_LT_INV_EQ, REAL_LT_INV]);
 
 val FORALL_POS_MONO = store_thm ("FORALL_POS_MONO",
  ``!P. (!d e:real. d < e /\ P d ==> P e) /\ (!n. ~(n = 0) ==> P(inv(&n)))
@@ -14153,18 +14104,6 @@ val OPEN_CLOSED_INTERVAL_CONVEX = store_thm ("OPEN_CLOSED_INTERVAL_CONVEX",
   POP_ASSUM MP_TAC THEN GEN_REWR_TAC LAND_CONV [EQ_SYM_EQ] THEN
   DISCH_TAC THEN CONJ_TAC THEN MATCH_MP_TAC REAL_LTE_ADD2 THEN
   ASM_SIMP_TAC std_ss [REAL_LT_LMUL, REAL_LE_LMUL, REAL_SUB_LE, REAL_MUL_LZERO, REAL_LE_REFL]]);
-
-val REAL_LE_INV2 = store_thm ("REAL_LE_INV2",
- ``!x:real y. &0 < x /\ x <= y ==> inv(y) <= inv(x)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
-  ASM_CASES_TAC ``x:real = y`` THEN ASM_REWRITE_TAC[] THEN
-  STRIP_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_INV THEN
-  ASM_REWRITE_TAC[]);
-
-val REAL_INV_LE_1 = store_thm ("REAL_INV_LE_1",
- ``!x:real. &1 <= x ==> inv(x) <= &1``,
-  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
-  MATCH_MP_TAC REAL_LE_INV2 THEN ASM_REWRITE_TAC[REAL_LT_01]);
 
 val CLOSURE_OPEN_INTERVAL = store_thm ("CLOSURE_OPEN_INTERVAL",
  ``!a b:real.

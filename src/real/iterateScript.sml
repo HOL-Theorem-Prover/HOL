@@ -188,10 +188,6 @@ val BIGINTER_IMAGE = store_thm ("BIGINTER_IMAGE",
   REPEAT GEN_TAC THEN  GEN_REWR_TAC I [EXTENSION] THEN
   SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, GSPECIFICATION] THEN MESON_TAC[]);
 
-val REAL_LE_LMUL1 = store_thm ("REAL_LE_LMUL1",
- ``!x y z:real. &0 <= x /\ y <= z ==> x * y <= x * z``,
-  METIS_TAC [REAL_LE_LMUL, REAL_MUL_LZERO, REAL_LE_LT]);
-
 val LE_EXISTS = store_thm ("LE_EXISTS",
  ``!m n:num. (m <= n) <=> (?d. n = m + d)``,
   GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[LE] THENL
@@ -367,43 +363,8 @@ val BIGUNION_BIGINTER = store_thm ("BIGUNION_BIGINTER",
    GSPECIFICATION] THEN
   MESON_TAC[]);
 
-val REAL_POW_1_LE = store_thm ("REAL_POW_1_LE",
- ``!n x:real. &0 <= x /\ x <= &1 ==> x pow n <= &1``,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [``n:num``, ``x:real``, ``&1:real``] POW_LE) THEN
-  ASM_REWRITE_TAC[POW_ONE]);
-
-val REAL_POW_LE_1 = store_thm ("REAL_POW_LE_1",
- ``!n x:real. &1 <= x ==> &1 <= x pow n``,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [``n:num``, ``&1:real``, ``x:real``] POW_LE) THEN
-  ASM_SIMP_TAC real_ss [POW_ONE, REAL_POS]);
-
-val REAL_LT_INV2 = store_thm ("REAL_LT_INV2",
- ``!x y. &0:real < x /\ x < y ==> inv(y) < inv(x)``,
-  REPEAT STRIP_TAC THEN KNOW_TAC ``&0:real < x * y`` THENL
-  [MATCH_MP_TAC REAL_LT_MUL THEN
-   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN REAL_ARITH_TAC, ALL_TAC] THEN
-  DISCH_TAC THEN KNOW_TAC ``inv y * (x * y) < inv x * (x * y:real)`` THENL
-  [ALL_TAC, FULL_SIMP_TAC std_ss [REAL_LT_RMUL]] THEN
-  SUBGOAL_THEN ``(inv x * x = &1:real) /\ (inv y * y = &1:real)`` ASSUME_TAC THENL
-  [CONJ_TAC THEN MATCH_MP_TAC REAL_MUL_LINV THEN
-   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN REAL_ARITH_TAC,
-   ASM_REWRITE_TAC[REAL_MUL_ASSOC, REAL_MUL_LID] THEN
-   GEN_REWR_TAC (LAND_CONV o LAND_CONV) [REAL_MUL_SYM] THEN
-   ASM_REWRITE_TAC[GSYM REAL_MUL_ASSOC, REAL_MUL_RID]]);
-
-val REAL_LE_INV2 = store_thm ("REAL_LE_INV2",
- ``!x y. &0:real < x /\ x <= y ==> inv(y) <= inv(x)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
-  ASM_CASES_TAC ``x:real = y`` THEN ASM_REWRITE_TAC[] THEN
-  STRIP_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_INV2 THEN
-  ASM_REWRITE_TAC[]);
-
-val REAL_INV_1_LE = store_thm ("REAL_INV_1_LE",
- ``!x:real. &0 < x /\ x <= &1 ==> &1 <= inv(x)``,
-  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
-  MATCH_MP_TAC REAL_LE_INV2 THEN ASM_REWRITE_TAC[REAL_LT_01]);
+(* for HOL-Light compatibility *)
+Theorem REAL_LT_INV2 = REAL_LT_INV
 
 val REAL_WLOG_LE = store_thm ("REAL_WLOG_LE",
  ``(!x y:real. P x y <=> P y x) /\ (!x y. x <= y ==> P x y) ==> !x y. P x y``,

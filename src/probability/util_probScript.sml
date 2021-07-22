@@ -2649,25 +2649,7 @@ Proof
   METIS_TAC [MUL_IN_QSET, real_div]
 QED
 
-Theorem CLG_UBOUND :
-    !x. (0 <= x) ==> &(clg(x)) < (x) + 1
-Proof
-  RW_TAC std_ss [NUM_CEILING_def] THEN LEAST_ELIM_TAC THEN
-  REWRITE_TAC [SIMP_REAL_ARCH] THEN RW_TAC real_ss [] THEN
-  FULL_SIMP_TAC real_ss [GSYM real_lt] THEN
-  PAT_X_ASSUM ``!m. P`` (MP_TAC o Q.SPEC `n-1`) THEN
-  RW_TAC real_ss [] THEN Cases_on `n = 0` THENL
-  [METIS_TAC [REAL_LET_ADD2,REAL_LT_01,REAL_ADD_RID], ALL_TAC] THEN
-  `0 < n` by RW_TAC real_ss [] THEN
-  `&(n - 1) < x:real` by RW_TAC real_ss [] THEN
-  `0 <= n-1` by RW_TAC real_ss [] THEN
-  `0:real <= (&(n-1))` by RW_TAC real_ss [] THEN
-  `0 < x` by METIS_TAC [REAL_LET_TRANS] THEN Cases_on `n = 1` THENL
-  [METIS_TAC [REAL_LE_REFL,REAL_ADD_RID,REAL_LTE_ADD2,REAL_ADD_COMM], ALL_TAC] THEN
-  `0 <> n-1` by RW_TAC real_ss [] THEN
-  `&n - 1 < x` by RW_TAC real_ss [REAL_SUB] THEN
-  FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD]
-QED
+Theorem CLG_UBOUND = NUM_CEILING_UPPER_BOUND
 
 Theorem Q_DENSE_IN_REAL_LEMMA :
     !x y. (0 <= x) /\ (x < y) ==> ?r. (r IN q_set) /\ (x < r) /\ (r < y)

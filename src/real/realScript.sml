@@ -1140,14 +1140,21 @@ Proof
   MATCH_MP_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []
 QED
 
+Theorem REAL_INV_DIV :
+    !x y. x <> 0 /\ y <> 0 ==> (inv (x / y) = y * inv x)
+Proof
+    rpt STRIP_TAC
+ >> ‘inv y <> 0’ by PROVE_TAC [REAL_INV_NZ]
+ >> ASM_SIMP_TAC std_ss [real_div, REAL_INV_MUL, REAL_INVINV]
+ >> PROVE_TAC [REAL_MUL_COMM]
+QED
+
 Theorem REAL_LE_LMUL:
   !x y z. 0 < x ==> ((x * y) <= (x * z) = y <= z)
 Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_NOT_LT] THEN
   AP_TERM_TAC THEN MATCH_MP_TAC REAL_LT_LMUL THEN ASM_REWRITE_TAC[]
 QED
-
-
 
 val REAL_LE_RMUL = store_thm("REAL_LE_RMUL",
   “!x y z. 0 < z ==> ((x * z) <= (y * z) = x <= y)”,
@@ -1262,17 +1269,24 @@ val REAL_LT_1 = store_thm("REAL_LT_1",
       EXISTS_TAC “x:real” THEN ASM_REWRITE_TAC[],
       ASM_REWRITE_TAC[REAL_MUL_LID]]]);
 
-val REAL_LE_LMUL_IMP = store_thm("REAL_LE_LMUL_IMP",
-  “!x y z. 0 <= x /\ y <= z ==> (x * y) <= (x * z)”,
-  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-  DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
-   [FIRST_ASSUM(fn th => ASM_REWRITE_TAC[MATCH_MP REAL_LE_LMUL th]),
-    FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[REAL_MUL_LZERO] THEN
-    MATCH_ACCEPT_TAC REAL_LE_REFL]);
+Theorem REAL_LE_LMUL_IMP :
+    !x y z. 0 <= x /\ y <= z ==> x * y <= x * z
+Proof
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
+  REWRITE_TAC[GSYM REAL_SUB_LDISTRIB, REAL_SUB_RZERO, REAL_LE_MUL]
+QED
 
-val REAL_LE_RMUL_IMP = store_thm("REAL_LE_RMUL_IMP",
-  “!x y z. 0 <= x /\ y <= z ==> (y * x) <= (z * x)”,
-  ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN MATCH_ACCEPT_TAC REAL_LE_LMUL_IMP);
+(* HOL-light compatibility, moved from iterateTheory *)
+Theorem REAL_LE_LMUL1 = REAL_LE_LMUL_IMP
+
+Theorem REAL_LE_RMUL_IMP :
+    !x y z. 0 <= x /\ y <= z ==> y * x <= z * x
+Proof
+  ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN MATCH_ACCEPT_TAC REAL_LE_LMUL_IMP
+QED
+
+(* HOL-light compatibility, moved from iterateTheory *)
+Theorem REAL_LE_RMUL1 = REAL_LE_RMUL_IMP
 
 val REAL_EQ_IMP_LE = store_thm("REAL_EQ_IMP_LE",
   “!x y. (x = y) ==> x <= y”,
@@ -1725,6 +1739,25 @@ val ABS_BOUNDS = store_thm("ABS_BOUNDS",
     REWRITE_TAC[REAL_LE_NEGR] THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
     ASM_REWRITE_TAC[GSYM REAL_NOT_LE]]);
 
+Theorem ABS_BOUNDS_LT :
+    !(x :real) k. abs(x) < k <=> -k < x /\ x < k
+Proof
+    RW_TAC std_ss [abs]
+ >| [ (* goal 1 (of 2) *)
+      EQ_TAC >> RW_TAC std_ss [] \\
+      MATCH_MP_TAC REAL_LTE_TRANS \\
+      Q.EXISTS_TAC ‘-x’ \\
+      RW_TAC std_ss [REAL_LT_NEG, REAL_LE_NEGL],
+      (* goal 2 (of 2) *)
+      FULL_SIMP_TAC std_ss [REAL_NOT_LE] \\
+     ‘-x < k <=> -k < x’ by METIS_TAC [REAL_LT_NEG, REAL_NEGNEG] \\
+      EQ_TAC >> RW_TAC std_ss [] \\
+     ‘-k < 0’ by PROVE_TAC [REAL_LT_TRANS] \\
+     ‘0 < k’ by METIS_TAC [REAL_LT_NEG, REAL_NEGNEG, REAL_NEG_0] \\
+      MATCH_MP_TAC REAL_LT_TRANS \\
+      Q.EXISTS_TAC ‘0’ >> ASM_REWRITE_TAC [] ]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Define integer powers                                                     *)
 (*---------------------------------------------------------------------------*)
@@ -1930,6 +1963,25 @@ val REAL_POW_LT = store_thm("REAL_POW_LT",
   INDUCT_TAC THEN REWRITE_TAC[pow, REAL_LT_01] THEN
   MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC[]);;
 
+Theorem REAL_POW_LE_1 :
+    !(n:num) (x:real). (&1:real) <= x ==> (&1:real) <= x pow n
+Proof
+  INDUCT_TAC THENL
+   [REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[pow, REAL_LE_REFL],
+    GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [pow] THEN
+    GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_LID] THEN
+    MATCH_MP_TAC REAL_LE_MUL2 THEN ASM_REWRITE_TAC[REAL_LE_01] THEN
+    FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]
+QED
+
+Theorem REAL_POW_1_LE :
+    !n x:real. &0 <= x /\ x <= &1 ==> x pow n <= &1
+Proof
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [``n:num``, ``x:real``, ``&1:real``] POW_LE) THEN
+  ASM_REWRITE_TAC[POW_ONE]
+QED
+
 val POW_EQ = store_thm("POW_EQ",
   “!n x y. 0 <= x /\ 0 <= y /\ (x pow (SUC n) = y pow (SUC n))
         ==> (x = y)”,
@@ -1969,8 +2021,49 @@ val LT_EXISTS = prove
      THEN EXISTS_TAC (Term`p:num`) THEN REWRITE_TAC [ADD1],
    ASM_REWRITE_TAC[LESS_ADD_SUC]]);
 
-val REAL_POW_MONO_LT = store_thm("REAL_POW_MONO_LT",
- Term`!m n x. &1 < x /\ m < n ==> x pow m < x pow n`,
+Theorem REAL_POW_INV :
+    !x n. (inv x) pow n = inv(x pow n)
+Proof
+  Induct_on `n` THEN REWRITE_TAC [pow] THENL
+  [REWRITE_TAC [REAL_INV1],
+   GEN_TAC THEN Cases_on `x = 0r` THENL
+   [POP_ASSUM SUBST_ALL_TAC
+     THEN REWRITE_TAC [REAL_INV_0,REAL_MUL_LZERO],
+    `~(x pow n = 0)` by PROVE_TAC [POW_NZ] THEN
+    IMP_RES_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []]]
+QED
+
+Theorem REAL_POW_DIV :
+    !x y n. (x / y) pow n = (x pow n) / (y pow n)
+Proof
+  REWRITE_TAC[real_div, POW_MUL, REAL_POW_INV]
+QED
+
+Theorem REAL_POW_ADD :
+    !x m n. x pow (m + n) = x pow m * x pow n
+Proof
+  Induct_on `m` THEN
+  ASM_REWRITE_TAC[ADD_CLAUSES, pow, REAL_MUL_LID, REAL_MUL_ASSOC]
+QED
+
+Theorem REAL_POW_MONO :
+    !m n x. &1 <= x /\ m <= n ==> x pow m <= x pow n
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[LESS_EQ_EXISTS] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+  DISCH_THEN(X_CHOOSE_THEN “d:num” SUBST1_TAC) THEN
+  REWRITE_TAC[REAL_POW_ADD] THEN
+  GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID] THEN
+  MATCH_MP_TAC REAL_LE_LMUL_IMP THEN CONJ_TAC THENL
+   [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “&1” THEN
+    RW_TAC arith_ss [REAL_LE] THEN
+    MATCH_MP_TAC REAL_POW_LE_1 THEN ASM_REWRITE_TAC[],
+    MATCH_MP_TAC REAL_POW_LE_1 THEN ASM_REWRITE_TAC[]]
+QED
+
+Theorem REAL_POW_MONO_LT :
+    !m n x. &1 < x /\ m < n ==> x pow m < x pow n
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[LT_EXISTS] THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   DISCH_THEN(CHOOSE_THEN SUBST_ALL_TAC) THEN
@@ -1985,13 +2078,15 @@ val REAL_POW_MONO_LT = store_thm("REAL_POW_MONO_LT",
     ASM_REWRITE_TAC[REAL_LE, ZERO_LESS_EQ],
     MATCH_MP_TAC REAL_POW_LT THEN
     MATCH_MP_TAC REAL_LT_TRANS THEN EXISTS_TAC (Term`&1`) THEN
-    ASM_REWRITE_TAC[REAL_LT,prim_recTheory.LESS_0, ONE]]);
+    ASM_REWRITE_TAC[REAL_LT,prim_recTheory.LESS_0, ONE]]
+QED
 
-val REAL_POW_POW = store_thm("REAL_POW_POW",
- Term `!x m n. (x pow m) pow n = x pow (m * n)`,
+Theorem REAL_POW_POW :
+    !x m n. (x pow m) pow n = x pow (m * n)
+Proof
   GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN
-  ASM_REWRITE_TAC[pow, MULT_CLAUSES, POW_ADD]);;
-
+  ASM_REWRITE_TAC[pow, MULT_CLAUSES, POW_ADD]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Derive the supremum property for an arbitrary bounded nonempty set        *)
@@ -2173,20 +2268,36 @@ val REAL_ARCH_LEAST = store_thm("REAL_ARCH_LEAST",
     ASM_REWRITE_TAC[] THEN FIRST_ASSUM MATCH_MP_TAC THEN
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[PRE, LESS_SUC_REFL]]);
 
-val SIMP_REAL_ARCH = store_thm (* from extrealTheory *)
-  ("SIMP_REAL_ARCH",
-  ``!x:real. ?n. x <= &n``,
+Theorem SIMP_REAL_ARCH :
+    !x:real. ?n. x <= &n
+Proof
     REWRITE_TAC [REAL_LE_LT]
  >> FULL_SIMP_TAC std_ss [EXISTS_OR_THM]
  >> RW_TAC std_ss []
  >> DISJ1_TAC
  >> MP_TAC (Q.SPEC `1` REAL_ARCH)
  >> REWRITE_TAC [REAL_LT_01, REAL_MUL_RID]
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
-val REAL_ARCH_POW = store_thm (* from extrealTheory *)
-  ("REAL_ARCH_POW", ``!x:real. ?n. x < 2 pow n``,
-    METIS_TAC [POW_2_LT, SIMP_REAL_ARCH, REAL_LET_TRANS]);
+Theorem REAL_BIGNUM :
+    !r : real. ?n : num. r < &n
+Proof
+   GEN_TAC
+   THEN MP_TAC (Q.SPEC `1` REAL_ARCH)
+   THEN REWRITE_TAC [REAL_LT_01, REAL_MUL_RID]
+   THEN PROVE_TAC []
+QED
+
+Theorem REAL_ARCH_INV :
+    !e. &0 < e <=> ?n. ~(n = 0) /\ &0:real < inv(&n) /\ inv(&n) < e:real
+Proof
+  GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[REAL_LT_TRANS]] THEN
+  DISCH_TAC THEN MP_TAC(SPEC ``inv(e:real)`` REAL_BIGNUM) THEN
+  STRIP_TAC THEN EXISTS_TAC ``n:num`` THEN
+  ASM_MESON_TAC[REAL_LT_INV, REAL_INV_INV, REAL_LT_INV_EQ, REAL_LT_TRANS,
+                REAL_LT_ANTISYM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now define finite sums; NB: sum(m,n) f = f(m) + f(m+1) + ... + f(m+n-1)   *)
@@ -2599,28 +2710,6 @@ val REAL_LT_RNEG = store_thm (* from real_topologyTheory *)
   ``!x y. x < -y <=> x + y < &0:real``,
     SIMP_TAC std_ss [real_lt, REAL_LE_LNEG, REAL_ADD_ASSOC, REAL_ADD_SYM]);
 
-val REAL_POW_INV = Q.store_thm
- ("REAL_POW_INV",
-  `!x n. (inv x) pow n = inv(x pow n)`,
-  Induct_on `n` THEN REWRITE_TAC [pow] THENL
-  [REWRITE_TAC [REAL_INV1],
-   GEN_TAC THEN Cases_on `x = 0r` THENL
-   [POP_ASSUM SUBST_ALL_TAC
-     THEN REWRITE_TAC [REAL_INV_0,REAL_MUL_LZERO],
-    `~(x pow n = 0)` by PROVE_TAC [POW_NZ] THEN
-    IMP_RES_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []]]);
-
-val REAL_POW_DIV = Q.store_thm
-("REAL_POW_DIV",
- `!x y n. (x / y) pow n = (x pow n) / (y pow n)`,
- REWRITE_TAC[real_div, POW_MUL, REAL_POW_INV]);
-
-val REAL_POW_ADD = Q.store_thm
-("REAL_POW_ADD",
- `!x m n. x pow (m + n) = x pow m * x pow n`,
-  Induct_on `m` THEN
-  ASM_REWRITE_TAC[ADD_CLAUSES, pow, REAL_MUL_LID, REAL_MUL_ASSOC]);
-
 val REAL_LE_RDIV_EQ = Q.store_thm
 ("REAL_LE_RDIV_EQ",
  `!x y z. &0 < z ==> (x <= y / z = x * z <= y)`,
@@ -2715,14 +2804,6 @@ val REAL_LE_EPSILON = store_thm
    THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
    THEN PROVE_TAC [REAL_DOWN]);
 
-val REAL_BIGNUM = store_thm
-  ("REAL_BIGNUM",
-   ``!r : real. ?n : num. r < &n``,
-   GEN_TAC
-   THEN MP_TAC (Q.SPEC `1` REAL_ARCH)
-   THEN REWRITE_TAC [REAL_LT_01, REAL_MUL_RID]
-   THEN PROVE_TAC []);
-
 val REAL_INV_LT_ANTIMONO = store_thm
   ("REAL_INV_LT_ANTIMONO",
    ``!x y : real. 0 < x /\ 0 < y ==> (inv x < inv y = y < x)``,
@@ -2760,6 +2841,12 @@ val REAL_DIV_ADD = store_thm
   ("REAL_DIV_ADD",
    ``!x y z : real. y / x + z / x = (y + z) / x``,
    RW_TAC boolSimps.bool_ss [real_div, REAL_ADD_RDISTRIB]);
+
+Theorem REAL_DIV_SUB :
+    !x y z :real. y / x - z / x = (y - z) / x
+Proof
+    RW_TAC bool_ss [real_div, REAL_SUB_RDISTRIB]
+QED
 
 val REAL_ADD_RAT = store_thm
   ("REAL_ADD_RAT",
@@ -3855,6 +3942,16 @@ val NUM_FLOOR_LE2 = store_thm
     FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss) []
   ]);
 
+Theorem NUM_FLOOR_MONO :
+    !x y. 0 <= x /\ 0 <= y /\ x <= y ==> NUM_FLOOR x <= NUM_FLOOR y
+Proof
+    rpt STRIP_TAC
+ >> ASM_SIMP_TAC std_ss [NUM_FLOOR_LE2]
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘x’
+ >> ASM_SIMP_TAC std_ss [NUM_FLOOR_LE]
+QED
+
 val NUM_FLOOR_LET = store_thm
 ("NUM_FLOOR_LET",
  ``(NUM_FLOOR x <= y) = (x < &y + 1)``,
@@ -3871,6 +3968,12 @@ val NUM_FLOOR_LET = store_thm
     `&(n' + 1) < &(y + 1):real` by METIS_TAC [REAL_LET_TRANS] THEN
     FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss) []
   ]);
+
+Theorem NUM_FLOOR_LT :
+    !x :real. x - 1 < &(NUM_FLOOR x)
+Proof
+    RW_TAC std_ss [REAL_LT_SUB_RADD, GSYM NUM_FLOOR_LET]
+QED
 
 val NUM_FLOOR_DIV = store_thm
 ("NUM_FLOOR_DIV",
@@ -3973,6 +4076,43 @@ val NUM_FLOOR_upper_bound = store_thm(
   MP_TAC (AP_TERM negation NUM_FLOOR_LOWER_BOUND) THEN
   PURE_REWRITE_TAC [REAL_NOT_LT, NOT_LESS_EQUAL,IMP_CLAUSES]);
 
+Theorem NUM_FLOOR_lower_bound :
+    !x. 1 <= x ==> x / 2 < &NUM_FLOOR(x)
+Proof
+    rpt STRIP_TAC
+ >> SRW_TAC [] [NUM_FLOOR_def]
+ >> numLib.LEAST_ELIM_TAC
+ >> RW_TAC arith_ss [add1_gt_exists, real_gt]
+ >> Cases_on ‘n = 0’ >- (FULL_SIMP_TAC arith_ss [] \\
+                         PROVE_TAC [REAL_LET_ANTISYM])
+ >> ‘0 < n’ by DECIDE_TAC
+ >> ‘0 < (2 :real)’ by SRW_TAC [][]
+ >> Cases_on ‘n = 1’
+ >- (FULL_SIMP_TAC arith_ss [REAL_LT_LDIV_EQ, REAL_MUL_LID])
+ >> ‘1 < n’ by DECIDE_TAC
+ >> RW_TAC arith_ss [REAL_LT_LDIV_EQ]
+ >> MATCH_MP_TAC REAL_LT_TRANS
+ >> Q.EXISTS_TAC ‘&(n + 1)’
+ >> RW_TAC arith_ss [REAL_MUL, REAL_LT, real_of_num]
+QED
+
+Theorem NUM_FLOOR_MUL_LOWERBOUND : (* cf. NUM_FLOOR_DIV_LOWERBOUND *)
+    !(n :num) (x :real). 1 < n /\ 1 <= x ==> x < &(n * flr x)
+Proof
+    RW_TAC std_ss [GSYM REAL_MUL]
+ >> ‘0 <= x’ by PROVE_TAC [REAL_LE_01, REAL_LE_TRANS]
+ >> MATCH_MP_TAC REAL_LTE_TRANS
+ >> Q.EXISTS_TAC ‘2 * &flr x’
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC REAL_LE_RMUL_IMP \\
+     RW_TAC arith_ss [REAL_LE])
+ >> ONCE_REWRITE_TAC [REAL_MUL_COMM]
+ >> ‘0 < (2 :real)’ by SRW_TAC [][]
+ >> ASM_SIMP_TAC std_ss [GSYM REAL_LT_LDIV_EQ]
+ >> MATCH_MP_TAC NUM_FLOOR_lower_bound
+ >> ASM_REWRITE_TAC []
+QED
+
 val NUM_CEILING_NUM_FLOOR = Q.store_thm("NUM_CEILING_NUM_FLOOR",
   `!r. NUM_CEILING r =
        let n = NUM_FLOOR r in
@@ -4049,6 +4189,29 @@ val NUM_CEILING_LE = store_thm
  RW_TAC std_ss [NUM_CEILING_def]
    THEN numLib.LEAST_ELIM_TAC
    THEN METIS_TAC [NOT_LESS_EQUAL]);
+
+Theorem NUM_CEILING_UPPER_BOUND : (* was: util_probTheory.CLG_UBOUND *)
+    !x. 0 <= x ==> &(clg x) < x + 1
+Proof
+    RW_TAC std_ss [NUM_CEILING_def]
+ >> numLib.LEAST_ELIM_TAC
+ >> REWRITE_TAC [SIMP_REAL_ARCH]
+ >> RW_TAC arith_ss []
+ >> FULL_SIMP_TAC arith_ss [GSYM real_lt]
+ >> Q.PAT_X_ASSUM `!m. P` (MP_TAC o Q.SPEC `n-1`)
+ >> RW_TAC arith_ss []
+ >> Cases_on `n = 0` >- METIS_TAC [REAL_LET_ADD2, REAL_LT_01, REAL_ADD_RID]
+ >> `0 < n` by RW_TAC arith_ss []
+ >> `&(n - 1) < x:real` by RW_TAC arith_ss []
+ >> `0 <= n-1` by RW_TAC arith_ss []
+ >> `0:real <= (&(n-1))` by SRW_TAC[][]
+ >> `0 < x` by METIS_TAC [REAL_LET_TRANS]
+ >> Cases_on `n = 1`
+ >- METIS_TAC [REAL_LE_REFL, REAL_ADD_RID, REAL_LTE_ADD2, REAL_ADD_COMM]
+ >> `0 <> n-1` by RW_TAC arith_ss []
+ >> `&n - 1 < x` by RW_TAC arith_ss [REAL_SUB]
+ >> FULL_SIMP_TAC std_ss [REAL_LT_SUB_RADD]
+QED
 
 (* ----------------------------------------------------------------------
     nonzerop : real -> real
@@ -4281,6 +4444,7 @@ Proof
   >> fs [REAL_INV_INJ]
 QED
 
+(* NOTE: ‘0 < x’ is not necessary *)
 Theorem REAL_INV_LE_ANTIMONO_IMPR:
   ! x y.
     0 < x /\ 0 < y /\ y <= x ==> inv x <= inv y
@@ -4288,6 +4452,33 @@ Proof
   rpt strip_tac >> fs[REAL_INV_LE_ANTIMONO]
 QED
 
+(* for HOL-Light compatibility *)
+Theorem REAL_LE_INV2 :
+    !x y. (&0:real) < x /\ x <= y ==> inv(y) <= inv(x)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC REAL_INV_LE_ANTIMONO_IMPR
+ >> ASM_REWRITE_TAC []
+ >> MATCH_MP_TAC REAL_LTE_TRANS
+ >> Q.EXISTS_TAC ‘x’
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem REAL_INV_LE_1 :
+    !x:real. &1 <= x ==> inv(x) <= &1
+Proof
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
+  MATCH_MP_TAC REAL_LE_INV2 THEN ASM_REWRITE_TAC[REAL_LT_01]
+QED
+
+Theorem REAL_INV_1_LE :
+    !x:real. &0 < x /\ x <= &1 ==> &1 <= inv(x)
+Proof
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
+  MATCH_MP_TAC REAL_LE_INV2 THEN ASM_REWRITE_TAC[REAL_LT_01]
+QED
+
+(* NOTE: ‘y < 0’ is not necessary *)
 Theorem REAL_INV_LE_ANTIMONO_IMPL:
   ! x y.
     x < 0 /\ y < 0 /\ y <= x ==> inv x <= inv y
@@ -4319,6 +4510,125 @@ Theorem REAL_DIV_ZERO:
     (a / b = 0) <=> ((a = 0) \/ (b = 0))
 Proof
   rpt strip_tac \\ EQ_TAC \\ fs[REAL_DIV_LZERO, real_div]
+QED
+
+(* cf. REAL_POW_MONO *)
+Theorem REAL_POW_ANTIMONO :
+    !(m :num) n (x :real). 0 < x /\ x <= 1 /\ m <= n ==> x pow n <= x pow m
+Proof
+    rpt STRIP_TAC
+ >> KNOW_TAC “(x :real) pow n <= x pow m <=> inv (x pow m) <= inv (x pow n)”
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC REAL_INV_LE_ANTIMONO \\
+     rw [REAL_POW_POS])
+ >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+ >> ‘x <> 0’ by PROVE_TAC [REAL_LT_IMP_NE]
+ >> ASM_SIMP_TAC std_ss [POW_INV]
+ >> MATCH_MP_TAC REAL_POW_MONO
+ >> ASM_REWRITE_TAC []
+ >> MATCH_MP_TAC REAL_INV_1_LE
+ >> ASM_REWRITE_TAC []
+QED
+
+(* cf. REAL_POW_MONO_LT *)
+Theorem REAL_POW_ANTIMONO_LT :
+    !(m :num) n (x :real). 0 < x /\ x < 1 /\ m < n ==> x pow n < x pow m
+Proof
+    rpt STRIP_TAC
+ >> KNOW_TAC “(x :real) pow n < x pow m <=> inv (x pow m) < inv (x pow n)”
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC REAL_INV_LT_ANTIMONO \\
+     rw [REAL_POW_POS])
+ >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+ >> ‘x <> 0’ by PROVE_TAC [REAL_LT_IMP_NE]
+ >> ASM_SIMP_TAC std_ss [POW_INV]
+ >> MATCH_MP_TAC REAL_POW_MONO_LT
+ >> ASM_REWRITE_TAC []
+ >> MATCH_MP_TAC REAL_INV_LT1
+ >> ASM_REWRITE_TAC []
+QED
+
+(* cf. REAL_LT_RDIV *)
+Theorem REAL_LE_RDIV_CANCEL :
+    !x y (z :real). 0 < z ==> (x / z <= y / z <=> x <= y)
+Proof
+    rpt STRIP_TAC
+ >> ‘0 < inv z’ by PROVE_TAC [REAL_INV_POS]
+ >> ASM_SIMP_TAC bool_ss [real_div, REAL_LE_RMUL]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* More variants of the Archimedian property and useful consequences.        *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem REAL_POW_LBOUND :
+    !x n. &0 <= x ==> &1 + &n * x <= (&1 + x) pow n
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> SIMP_TAC arith_ss [RIGHT_FORALL_IMP_THM]
+ >> DISCH_TAC
+ >> INDUCT_TAC
+ >> REWRITE_TAC [pow, REAL_MUL_LZERO, REAL_ADD_RID, REAL_LE_REFL]
+ >> REWRITE_TAC [GSYM REAL_OF_NUM_SUC]
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘(&1 + x) * (&1 + &n * x)’
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC REAL_LE_LMUL_IMP >> ASM_REWRITE_TAC [] \\
+     MATCH_MP_TAC REAL_LE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> ASM_REWRITE_TAC [REAL_LE_01, REAL_LE_ADDR])
+ >> SIMP_TAC arith_ss [REAL_ADD_RDISTRIB, REAL_ADD_LDISTRIB, REAL_ADD_ASSOC,
+		       REAL_MUL_LID, REAL_MUL_RID]
+ >> REWRITE_TAC [GSYM REAL_ADD_ASSOC]
+ >> MATCH_MP_TAC REAL_LE_LADD_IMP
+ >> REWRITE_TAC [REAL_ADD_ASSOC, REAL_LE_ADDR]
+ >> MATCH_MP_TAC REAL_LE_MUL >> ASM_REWRITE_TAC []
+ >> MATCH_MP_TAC REAL_LE_MUL
+ >> ASM_SIMP_TAC arith_ss [real_of_num, REAL_OF_NUM_LE]
+QED
+
+Theorem REAL_ARCH_POW :
+    !x y. &1 < x ==> ?n. y < x pow n
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPEC ‘x - &1’ REAL_ARCH)
+ >> ASM_REWRITE_TAC [REAL_SUB_LT]
+ >> DISCH_THEN (MP_TAC o SPEC ``y:real``)
+ >> HO_MATCH_MP_TAC MONO_EXISTS
+ >> Q.X_GEN_TAC ‘n’
+ >> DISCH_TAC
+ >> MATCH_MP_TAC REAL_LTE_TRANS
+ >> Q.EXISTS_TAC ‘&1 + &n * (x - &1)’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC REAL_LT_TRANS \\
+     Q.EXISTS_TAC ‘1 + y’ \\
+     reverse CONJ_TAC >- (ASM_REWRITE_TAC [REAL_LT_LADD]) \\
+     REWRITE_TAC [REAL_LT_ADDL, REAL_LT_01])
+ >> MATCH_MP_TAC (REWRITE_RULE [REAL_SUB_ADD2]
+			       (Q.SPECL [‘x - 1’, ‘n’] REAL_POW_LBOUND))
+ >> REWRITE_TAC [REAL_SUB_LE]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE >> ASM_REWRITE_TAC []
+QED
+
+Theorem REAL_ARCH_POW_INV :
+    !x:real y. &0 < y /\ x < &1 ==> ?n. x pow n < y
+Proof
+    rpt STRIP_TAC
+ >> reverse (Cases_on ‘0 < x’)
+ >- ASM_MESON_TAC[POW_1, REAL_LET_TRANS, REAL_NOT_LT]
+ >> KNOW_TAC “inv(&1) < inv(x:real)”
+ >- (MATCH_MP_TAC REAL_LT_INV >> ASM_REWRITE_TAC [])
+ >> REWRITE_TAC [REAL_INV1]
+ >> DISCH_THEN (MP_TAC o (Q.SPEC ‘inv y’) o (MATCH_MP REAL_ARCH_POW))
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘n’
+ >> GEN_REWR_TAC BINOP_CONV [GSYM REAL_INV_INV]
+ >> ASM_SIMP_TAC std_ss [GSYM REAL_POW_INV, REAL_LT_INV_EQ, REAL_LT_INV]
+QED
+
+Theorem REAL_ARCH_POW2 : (* was: REAL_ARCH_POW *)
+    !x. ?n. x < &2 pow n
+Proof
+    SIMP_TAC arith_ss[REAL_ARCH_POW, REAL_LT]
 QED
 
 val _ = export_theory();
