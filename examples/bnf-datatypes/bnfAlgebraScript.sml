@@ -152,13 +152,20 @@ Proof
   gs[alg_def, Fin_def, SUBSET_DEF, IN_minset]
 QED
 
+Theorem minset_ind':
+  ∀P. (∀x. (∀y. y ∈ setBF x ⇒ y ∈ minset s ∧ P y) ⇒ P (s x)) ⇒
+      ∀x. x ∈ minset s ⇒ P x
+Proof
+  metis_tac[minset_ind, SUBSET_DEF]
+QED
+
 Theorem minsub_gives_unique_homs:
   hom h1 (minset s, s) (C,t) ∧ hom h2 (minset s,s) (C,t) ⇒
   ∀a. a ∈ minset s ⇒ h1 a = h2 a
 Proof
-  strip_tac >> ho_match_mp_tac minset_ind >> qx_gen_tac ‘af’ >> strip_tac >>
+  strip_tac >> ho_match_mp_tac minset_ind' >> qx_gen_tac ‘af’ >> strip_tac >>
   gs[hom_def, Fin_def] >>
-  ‘t (mapF I h1 af) = t (mapF I h2 af)’ suffices_by metis_tac[] >>
+  ‘t (mapF I h1 af) = t (mapF I h2 af)’ suffices_by metis_tac[SUBSET_DEF] >>
   ‘mapF I h1 af = mapF I h2 af’ suffices_by metis_tac[] >>
   irule map_CONG >> simp[]
 QED
@@ -258,8 +265,8 @@ Theorem minset_unique_homs:
   hom h1 (minset s, s) (B,t) ∧ hom h2 (minset s, s) (B,t) ⇒
   ∀a. a ∈ minset s ⇒ h1 a = h2 a
 Proof
-  strip_tac >> ho_match_mp_tac minset_ind >> gs[hom_def, Fin_def] >>
-  rpt strip_tac >> RULE_ASSUM_TAC GSYM >> simp[] >>
+  strip_tac >> ho_match_mp_tac minset_ind' >> gs[hom_def, Fin_def] >>
+  rpt strip_tac >> RULE_ASSUM_TAC GSYM >> simp[] >> gs[SUBSET_DEF] >>
   AP_TERM_TAC >> irule map_CONG >> simp[]
 QED
 
