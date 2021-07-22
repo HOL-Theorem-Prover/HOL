@@ -2907,7 +2907,7 @@ val SIMP_EXTREAL_ARCH_NEG = store_thm
 val EXTREAL_ARCH_POW = store_thm
   ("EXTREAL_ARCH_POW", ``!x. x <> PosInf ==> ?n. x < (2 pow n)``,
     Cases
- >> RW_TAC std_ss [lt_infty, extreal_lt_eq, REAL_ARCH_POW, extreal_pow_def,
+ >> RW_TAC std_ss [lt_infty, extreal_lt_eq, REAL_ARCH_POW2, extreal_pow_def,
                    extreal_of_num_def]);
 
 val EXTREAL_ARCH_POW_INV = store_thm

@@ -665,15 +665,23 @@ val LN_LT_X = store_thm("LN_LT_X",
   REWRITE_TAC[REAL_LT_RADD, REAL_LT_01] THEN
   REWRITE_TAC[REAL_ADD_LID, REAL_LE_REFL]);
 
-val LN_POS = store_thm("LN_POS",
-  Term `!x. &1 <= x ==> &0 <= ln(x)`,
-  GEN_TAC THEN DISCH_TAC THEN SUBGOAL_THEN (Term `&0 < x`) ASSUME_TAC THENL
-   [MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC (Term`&1`) THEN
-    ASM_REWRITE_TAC[REAL_LT_01],
-    UNDISCH_TAC (Term`&1 <= x`) THEN SUBST1_TAC(SYM EXP_0) THEN
-    POP_ASSUM(MP_TAC o REWRITE_RULE[GSYM EXP_LN]) THEN
-    DISCH_THEN(fn th => GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [] [SYM th])
-    THEN REWRITE_TAC[EXP_MONO_LE]]);;
+Theorem LN_POS :
+    !(x :real). 1 <= x ==> 0 <= ln x
+Proof
+    RW_TAC std_ss [GSYM LN_1]
+ >> ASSUME_TAC REAL_LT_01
+ >> ‘0 < x’ by PROVE_TAC [REAL_LTE_TRANS]
+ >> RW_TAC std_ss [LN_MONO_LE]
+QED
+
+Theorem LN_POS_LT :
+    !(x :real). 1 < x ==> 0 < ln x
+Proof
+    RW_TAC std_ss [GSYM LN_1]
+ >> ASSUME_TAC REAL_LT_01
+ >> ‘0 < x’ by PROVE_TAC [REAL_LT_TRANS]
+ >> RW_TAC std_ss [LN_MONO_LT]
+QED
 
 Theorem DIFF_LN[difftool]:
    !x. &0 < x ==> (ln diffl (inv x))(x)
