@@ -423,7 +423,7 @@ fun parmap_queue_extern ncore es param argl =
 
 val examplespec : (unit,int,int) extspec =
   {
-  self_dir = HOLDIR ^ "/src/AI/sml_inspection",
+  self_dir = "$(HOLDIR)/src/AI/sml_inspection",
   self = "smlParallel.examplespec",
   parallel_dir = default_parallel_dir,
   reflect_globals = "()",
