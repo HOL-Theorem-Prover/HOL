@@ -2,11 +2,10 @@ open HolKernel boolLib
 local open smlExecute smlInfix smlLexer smlOpen smlParser smlPrettify
   smlRedirect smlTimeout smlParallel in end
 
-(* local open smlParallel in
-  val l1 = List.tabulate (100,I);
-  val _ = parmap_queue_extern 2 idspec () l1;
+local open smlParallel in
+  val l1 = List.tabulate (10,I);
+  val _ = parmap_queue_extern 2 examplespec () l1;
 end
-*)
 
 local open aiLib smlTimeout in
   fun f () = 5;
