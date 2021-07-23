@@ -189,6 +189,7 @@ val _ = List.app nftest [
       ("MULRELNORM27", simp, “x * -2 * y = 6r”, “x * y = -3r”),
       ("MULRELNORM28", simp, “x * -2 * y = z”, “2 * (x * y) = -z”),
       ("MULRELNORM29", simp, “x * -2 * y = -a * z * -b”, “2 * (x * y) = -a * b * z”),
+      ("MULRELNORM30", simp, “4 * B <= 4 * (A * B)”, “B <= A * B”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
