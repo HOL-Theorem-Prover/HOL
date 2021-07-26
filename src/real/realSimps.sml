@@ -1014,7 +1014,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
           in
             case total dest_imp (concl th) of
                 NONE => th
-              | SOME (h,c) => MATCH_MP th (solver (t::stk) h)
+              | SOME (h,c) => MP th (solver (t::stk) h)
           end
       val apply_thms = FIRST_CONV (map apply_thm Rthms)
       fun mkmove_th x (th0, f) t =
