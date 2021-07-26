@@ -1090,6 +1090,18 @@ val SET_OF_BAG_EQ_EMPTY = store_thm(
  before
  export_rewrites ["SET_OF_BAG_EQ_EMPTY"];
 
+Theorem SET_OF_BAG_SING:
+  !b e. SET_OF_BAG b = {e} <=> ?n. 0 < n /\ b = \x. if x = e then n else 0
+Proof
+  rw[SET_OF_BAG, Once EXTENSION]
+  \\ rw[EQ_IMP_THM, BAG_IN, BAG_INN] \\ fs[]
+  \\ pop_assum mp_tac \\ rw[]
+  \\ qexists_tac`b e`
+  \\ simp[FUN_EQ_THM] \\ rw[]
+  >- (first_x_assum(qspec_then`e`mp_tac) \\ rw[])
+  \\ first_x_assum(qspec_then`x`mp_tac) \\ rw[]
+QED
+
 Theorem BAG_OF_SET_EQ_INSERT:
   !e b s. (BAG_INSERT e b = BAG_OF_SET s) ==> (?s'. s = (e INSERT s'))
 Proof
@@ -1585,6 +1597,12 @@ Proof
   rw[BAG_FILTER_DEF, FUN_EQ_THM, BAG_OF_SET] \\ rw[] \\ fs[]
 QED
 
+Theorem BAG_FILTER_SPLIT:
+  !s b. b = BAG_UNION (BAG_FILTER s b) (BAG_FILTER (COMPL s) b)
+Proof
+  rw[FUN_EQ_THM, BAG_UNION, BAG_FILTER_DEF, IN_DEF] \\ rw[]
+QED
+
 val SET_OF_BAG_EQ_INSERT = store_thm(
   "SET_OF_BAG_EQ_INSERT",
   ``!b e s.
@@ -1700,6 +1718,36 @@ Proof
   \\ rw[]
   \\ rw[BAG_OF_SET_INSERT_NON_ELEMENT]
   \\ rw[BAG_CARD_THM]
+QED
+
+Theorem SET_OF_BAG_SING_CARD:
+  !b e. SET_OF_BAG b = {e} ==> BAG_CARD b = b e
+Proof
+  rpt gen_tac THEN
+  Induct_on`b e` \\ rw[]
+  >- gs[SET_OF_BAG_SING]
+  \\ `BAG_IN e b` by simp[BAG_IN, BAG_INN]
+  \\ drule BAG_DECOMPOSE \\ disch_then(qx_choose_then`b'`strip_assume_tac)
+  \\ first_x_assum(qspecl_then[`b'`,`e`]mp_tac)
+  \\ `FINITE {e}` by simp[]
+  \\ `FINITE_BAG b` by metis_tac[FINITE_SET_OF_BAG]
+  \\ `FINITE_BAG b'` by metis_tac[FINITE_BAG_THM]
+  \\ Cases_on`b' = {||}` \\ gs[]
+  \\ fs[BAG_CARD_THM]
+  >- simp[BAG_INSERT, EMPTY_BAG]
+  \\ impl_tac >- fs[BAG_INSERT]
+  \\ fs[SET_OF_BAG_INSERT]
+  \\ impl_tac
+  >- (
+    fs[EXTENSION]
+    \\ rw[EQ_IMP_THM]
+    >- metis_tac[]
+    \\ qspec_then`b'`strip_assume_tac BAG_cases \\ gs[]
+    \\ metis_tac[] )
+  \\ rw[]
+  \\ last_x_assum(assume_tac o SYM) \\ simp[]
+  \\ simp[BAG_CARD_THM, arithmeticTheory.ADD1]
+  \\ fs[BAG_INSERT]
 QED
 
 
@@ -1822,6 +1870,26 @@ Proof
     SIMP_TAC (srw_ss()) [BAG_IN, BAG_INN] THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [BAG_CARD_THM]
   ]
+QED
+
+Theorem BAG_IN_BAG_IMAGE_IMP:
+  !x f b. BAG_IN x (BAG_IMAGE f b) ==> ?y. BAG_IN y b /\ f y = x
+Proof
+  rpt gen_tac THEN
+  Cases_on`FINITE_BAG b` \\ rw[]
+  >- metis_tac[]
+  \\ fs[BAG_IMAGE_DEF]
+  \\ pop_assum mp_tac
+  \\ simp[Once BAG_IN, BAG_INN]
+  \\ qmatch_goalsub_abbrev_tac`BAG_CARD bb`
+  \\ qspec_then`bb`strip_assume_tac BAG_cases >- simp[]
+  \\ fs[markerTheory.Abbrev_def]
+  \\ strip_tac
+  \\ qexists_tac`e`
+  \\ simp[Once CONJ_COMM]
+  \\ qho_match_abbrev_tac`P e /\ _`
+  \\ `BAG_IN e (BAG_FILTER P b)` suffices_by metis_tac[BAG_IN_BAG_FILTER]
+  \\ metis_tac[BAG_IN_BAG_INSERT]
 QED
 
 val BAG_IMAGE_EQ_EMPTY = store_thm(
