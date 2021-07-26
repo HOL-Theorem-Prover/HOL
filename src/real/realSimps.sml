@@ -830,7 +830,8 @@ in
                                 is_baddiv t) ts orelse
            not (oksort mulcompare ts) orelse
            is_real_fraction l andalso List.exists is_negated ts orelse
-           is_negated (hd ts) andalso not (is_real_fraction l) andalso leaveneg1 orelse
+           is_negated (hd ts) andalso not (is_real_fraction l) andalso
+           leaveneg1 orelse
            length ts > 1 andalso List.exists is_negated (tl ts)
         then
           elimdivs THENC REWRITE_CONV [REAL_INV_MUL'] THENC
