@@ -860,7 +860,8 @@ in
   fun REALMULCANON0 leaveneg1 =
       PURE_REWRITE_CONV [REAL_NEGNEG, pow0, POW_1] THENC
       interesting_negation THENC
-      REALMULCANON00 leaveneg1
+      REALMULCANON00 leaveneg1 THENC
+      PURE_REWRITE_CONV [REAL_MUL_LID]
   val REALMULCANON = REALMULCANON0 false
 end (* local *)
 
