@@ -1598,7 +1598,7 @@ Proof
 QED
 
 Theorem BAG_FILTER_SPLIT:
-  !s b. b = BAG_UNION (BAG_FILTER s b) (BAG_FILTER (COMPL s) b)
+  !s b. BAG_UNION (BAG_FILTER s b) (BAG_FILTER (COMPL s) b) = b
 Proof
   rw[FUN_EQ_THM, BAG_UNION, BAG_FILTER_DEF, IN_DEF] \\ rw[]
 QED
