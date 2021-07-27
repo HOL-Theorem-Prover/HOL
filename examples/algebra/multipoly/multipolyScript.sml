@@ -417,8 +417,8 @@ QED
 Theorem ring_mult_lsum:
   Ring r /\ c IN r.carrier ==>
   !b. FINITE_BAG b ==> SET_OF_BAG b SUBSET r.carrier ==>
-  r.prod.op (GBAG r.sum b) c
-  = GBAG r.sum (BAG_IMAGE (\x. r.prod.op x c) b)
+      r.prod.op (GBAG r.sum b) c =
+      GBAG r.sum (BAG_IMAGE (\x. r.prod.op x c) b)
 Proof
   strip_tac
   \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
@@ -449,8 +449,8 @@ QED
 Theorem ring_mult_rsum:
   Ring r /\ c IN r.carrier ==>
   !b. FINITE_BAG b ==> SET_OF_BAG b SUBSET r.carrier ==>
-  r.prod.op c (GBAG r.sum b)
-  = GBAG r.sum (BAG_IMAGE (\x. r.prod.op c x) b)
+      r.prod.op c (GBAG r.sum b) =
+      GBAG r.sum (BAG_IMAGE (\x. r.prod.op c x) b)
 Proof
   rpt strip_tac
   \\ irule EQ_TRANS
