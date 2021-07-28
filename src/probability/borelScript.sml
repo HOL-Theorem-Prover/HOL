@@ -2937,21 +2937,6 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR_EQ = store_thm
            >> METIS_TAC [mul_rzero, mul_rone])
  >> POP_ORW >> art []);
 
-val IN_MEASURABLE_BOREL_POW = store_thm
-  ("IN_MEASURABLE_BOREL_POW",
-  ``!n a f. sigma_algebra a /\ f IN measurable a Borel /\
-            (!x. x IN space a ==> f x <> NegInf /\ f x <> PosInf)
-        ==> (\x. (f x) pow n) IN measurable a Borel``,
-    Induct >- (RW_TAC std_ss [pow_0] \\
-               MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST \\
-               METIS_TAC [])
- >> RW_TAC std_ss []
- >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL
- >> Q.EXISTS_TAC `f`
- >> Q.EXISTS_TAC `(\x. f x pow n)`
- >> RW_TAC std_ss [pow_not_infty]
- >> METIS_TAC [pow_add, ADD1, pow_1, mul_comm]);
-
 val IN_MEASURABLE_BOREL_MAX = store_thm
   ("IN_MEASURABLE_BOREL_MAX",
   ``!a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
@@ -5954,7 +5939,7 @@ Proof
 QED
 
 Theorem AE_iff_measurable :
-    !N M P. measure_space M /\ N IN measurable_sets M ==>
+    !N M P. measure_space M /\ N IN measurable_sets M /\
             ({x | x IN m_space M /\ ~P x} = N) ==>
             ((AE x::M. P x) = (measure M N = 0))
 Proof
@@ -9153,6 +9138,71 @@ Proof
  >> MP_TAC (Q.SPECL [‘(m_space m,measurable_sets m)’, ‘f’, ‘g’, ‘h’]
                     IN_MEASURABLE_BOREL_TIMES')
  >> fs [measure_space_def]
+QED
+
+Theorem IN_MEASURABLE_BOREL_BOREL_CONST :
+    !c. (\x. c) IN measurable Borel Borel
+Proof
+    Q.X_GEN_TAC ‘c’
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST
+ >> Q.EXISTS_TAC ‘c’
+ >> rw [SIGMA_ALGEBRA_BOREL]
+QED
+
+Theorem IN_MEASURABLE_BOREL_BOREL_AINV :
+    extreal_ainv IN measurable Borel Borel
+Proof
+    Know ‘$extreal_ainv = \x. -1 * x’
+ >- (rw [FUN_EQ_THM, Once neg_minus1])
+ >> Rewr'
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
+ >> qexistsl_tac [‘\x. x’, ‘-1’]
+ >> rw [SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_I, SPACE_BOREL,
+        extreal_of_num_def, extreal_ainv_def, extreal_mul_def]
+QED
+
+Theorem IN_MEASURABLE_BOREL_BOREL_MAX :
+    !c. (\x. max x c) IN measurable Borel Borel
+Proof
+    Q.X_GEN_TAC ‘c’
+ >> MATCH_MP_TAC
+      (BETA_RULE (Q.SPECL [‘Borel’, ‘\x :extreal. x’, ‘\x :extreal. c’]
+                          (INST_TYPE [“:'a” |-> “:extreal”] IN_MEASURABLE_BOREL_MAX)))
+ >> rw [IN_MEASURABLE_BOREL_BOREL_I, IN_MEASURABLE_BOREL_BOREL_CONST,
+        SIGMA_ALGEBRA_BOREL]
+QED
+
+Theorem IN_MEASURABLE_BOREL_BOREL_MIN :
+    !c. (\x. min x c) IN measurable Borel Borel
+Proof
+    Q.X_GEN_TAC ‘c’
+ >> MATCH_MP_TAC
+      (BETA_RULE (Q.SPECL [‘Borel’, ‘\x :extreal. x’, ‘\x :extreal. c’]
+                          (INST_TYPE [“:'a” |-> “:extreal”] IN_MEASURABLE_BOREL_MIN)))
+ >> rw [IN_MEASURABLE_BOREL_BOREL_I, IN_MEASURABLE_BOREL_BOREL_CONST,
+        SIGMA_ALGEBRA_BOREL]
+QED
+
+Theorem IN_MEASURABLE_BOREL_BOREL_POW :
+    !n. (\x. x pow n) IN measurable Borel Borel
+Proof
+    Induct_on ‘n’
+ >- REWRITE_TAC [pow_0, IN_MEASURABLE_BOREL_BOREL_CONST]
+ >> REWRITE_TAC [extreal_pow]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES'
+ >> qexistsl_tac [‘\x. x’, ‘\x. x pow n’]
+ >> rw [SPACE_BOREL, SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_I]
+QED
+
+(* Improved without ‘f x <> NegInf /\ f x <> PosInf’ (and also ‘sigma_algebra a’) *)
+Theorem IN_MEASURABLE_BOREL_POW :
+    !n a f. f IN measurable a Borel ==> (\x. (f x) pow n) IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> ‘(\x. f x pow n) = (\x. x pow n) o f’ by rw [o_DEF] >> POP_ORW
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘Borel’
+ >> rw [IN_MEASURABLE_BOREL_BOREL_POW]
 QED
 
 val _ = export_theory ();

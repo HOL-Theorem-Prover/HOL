@@ -1208,6 +1208,114 @@ val distribution_lebesgue_thm2 = store_thm
 Theorem real_random_variable =
        (REWRITE_RULE [random_variable_def] real_random_variable_def)
 
+Theorem real_random_variable_zero :
+    !p. prob_space p ==> real_random_variable (\x. 0) p
+Proof
+    RW_TAC std_ss [prob_space_def, real_random_variable_def,
+                   random_variable_def, p_space_def, events_def, num_not_infty]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST'
+ >> FULL_SIMP_TAC std_ss [measure_space_def]
+QED
+
+Theorem real_random_variable_const :
+    !p m. prob_space p /\ m <> PosInf /\ m <> NegInf ==>
+          real_random_variable (\x. m) p
+Proof
+    RW_TAC std_ss [real_random_variable, p_space_def, events_def]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST'
+ >> FULL_SIMP_TAC std_ss [prob_space_def, measure_space_def]
+QED
+
+Theorem real_random_variable_add :
+    !p X Y. prob_space p /\ real_random_variable X p /\
+            real_random_variable Y p ==> real_random_variable (\x. X x + Y x) p
+Proof
+    RW_TAC std_ss [prob_space_def, real_random_variable_def,
+                   random_variable_def, p_space_def, events_def]
+ >| [ (* goal 1 (of 3) *)
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD \\
+      qexistsl_tac [`X`, `Y`] >> fs [measure_space_def, space_def],
+      (* goal 2 (of 3) *)
+     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
+     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
+      rw [extreal_not_infty, extreal_add_def],
+      (* goal 3 (of 3) *)
+     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
+     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
+      rw [extreal_not_infty, extreal_add_def] ]
+QED
+
+Theorem real_random_variable_sub :
+    !p X Y. prob_space p /\ real_random_variable X p /\
+            real_random_variable Y p ==> real_random_variable (\x. X x - Y x) p
+Proof
+    RW_TAC std_ss [prob_space_def, real_random_variable_def,
+                   random_variable_def, p_space_def, events_def]
+ >| [ (* goal 1 (of 3) *)
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
+      qexistsl_tac [`X`, `Y`] >> fs [measure_space_def, space_def],
+      (* goal 2 (of 3) *)
+     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
+     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
+      rw [extreal_not_infty, extreal_sub_def],
+      (* goal 3 (of 3) *)
+     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
+     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
+      rw [extreal_not_infty, extreal_sub_def] ]
+QED
+
+Theorem real_random_variable_ainv :
+    !p X. prob_space p /\ real_random_variable X p ==> real_random_variable (\x. -X x) p
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘\x. 0’, ‘X’] real_random_variable_sub)
+ >> ‘real_random_variable (\x. 0) p’ by PROVE_TAC [real_random_variable_zero]
+ >> RW_TAC std_ss [sub_lzero]
+QED
+
+Theorem real_random_variable_cmul :
+    !p X r. prob_space p /\ real_random_variable X p ==>
+            real_random_variable (\x. Normal r * X x) p
+Proof
+    rpt GEN_TAC
+ >> simp [real_random_variable, prob_space_def, p_space_def, events_def]
+ >> STRIP_TAC
+ >> CONJ_TAC (* Borel_measurable *)
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL \\
+     qexistsl_tac [‘X’, ‘r’] >> rw [] \\
+     FULL_SIMP_TAC std_ss [measure_space_def])
+ >> Q.X_GEN_TAC ‘x’
+ >> DISCH_TAC
+ >> ‘?z. X x = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> rw [extreal_mul_def]
+QED
+
+Theorem real_random_variable_cdiv :
+    !p X c. prob_space p /\ real_random_variable X p /\ c <> 0 ==>
+            real_random_variable (\x. X x / Normal c) p
+Proof
+    rw [extreal_div_def, extreal_inv_def, Once mul_comm]
+ >> MATCH_MP_TAC real_random_variable_cmul >> art []
+QED
+
+Theorem real_random_variable_fn_plus :
+    !p X. real_random_variable X p ==> real_random_variable (fn_plus X) p
+Proof
+    rw [real_random_variable, p_space_def, events_def]
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS >> art [])
+ >- (MATCH_MP_TAC pos_not_neginf >> rw [FN_PLUS_POS])
+ >> MATCH_MP_TAC FN_PLUS_NOT_INFTY >> rw []
+QED
+
+Theorem real_random_variable_fn_minus :
+    !p X. real_random_variable X p ==> real_random_variable (fn_minus X) p
+Proof
+    rw [real_random_variable, p_space_def, events_def]
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS >> art [])
+ >- (MATCH_MP_TAC pos_not_neginf >> rw [FN_MINUS_POS])
+ >> MATCH_MP_TAC FN_MINUS_NOT_INFTY >> rw []
+QED
+
 (* added `integrable p X`, otherwise `expectation p X` is not defined *)
 val finite_expectation1 = store_thm
   ("finite_expectation1",
@@ -1764,11 +1872,11 @@ val integrable_from_square = store_thm
 
 (* In general, if X has a finite absolute moment of order k, then it has finite absolute
    moments of orders 1,2,...k-1 as well. [6, p.274] *)
-val integrable_absolute_moments = store_thm
-  ("integrable_absolute_moments",
-  ``!p X n. prob_space p /\ real_random_variable X p /\
+Theorem integrable_absolute_moments :
+    !p X n. prob_space p /\ real_random_variable X p /\
             integrable p (\x. (abs (X x)) pow n) ==>
-            !m. m <= n ==> integrable p (\x. (abs (X x)) pow m)``,
+            !m. m <= n ==> integrable p (\x. (abs (X x)) pow m)
+Proof
     RW_TAC std_ss [prob_space_def, p_space_def]
  >> Know `integrable p (\x. 1)`
  >- (REWRITE_TAC [extreal_of_num_def] \\
@@ -1784,14 +1892,13 @@ val integrable_absolute_moments = store_thm
  >> RW_TAC std_ss []
  >- (`!x. abs (X x) pow m = ((abs o X) x) pow m` by METIS_TAC [o_DEF] >> POP_ORW \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_POW >> fs [measure_space_def, space_def, o_DEF] \\
-     CONJ_TAC
-     >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS >> Q.EXISTS_TAC `X` \\
-         ASM_SIMP_TAC std_ss []) \\
-     PROVE_TAC [abs_not_infty])
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS >> Q.EXISTS_TAC `X` \\
+     ASM_SIMP_TAC std_ss [])
  >> Know `abs (abs (X x) pow m) = abs (X x) pow m`
  >- (REWRITE_TAC [abs_refl] \\
      MATCH_MP_TAC pow_pos_le >> REWRITE_TAC [abs_pos]) >> Rewr'
- >> MATCH_MP_TAC abs_pow_le_mono >> art []);
+ >> MATCH_MP_TAC abs_pow_le_mono >> art []
+QED
 
 val variance_alt = store_thm
   ("variance_alt",
@@ -1964,6 +2071,15 @@ Proof
  >> MATCH_MP_TAC integral_cmul >> art []
 QED
 
+Theorem expectation_cdiv :
+    !p X c. prob_space p /\ integrable p X /\ c <> 0 ==>
+            expectation p (\x. X x / Normal c) = expectation p X / Normal c
+Proof
+    rw [extreal_div_def, extreal_inv_def]
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> MATCH_MP_TAC expectation_cmul >> art []
+QED
+
 Theorem expectation_pos :
     !p X. prob_space p /\ (!x. x IN p_space p ==> 0 <= X x) ==>
           0 <= expectation p X
@@ -1988,6 +2104,24 @@ Proof
  >> `1 < PosInf` by PROVE_TAC [lt_infty, extreal_of_num_def]
  >> RW_TAC std_ss [prob_space_def, p_space_def, expectation_def, mul_rone]
 QED
+
+Theorem expectation_zero = 
+        expectation_const |> Q.SPECL [‘p’, ‘0’]
+                          |> REWRITE_RULE [GSYM extreal_of_num_def]
+                          |> Q.GEN ‘p’
+
+Theorem variance_const :
+    !p c. prob_space p ==> variance p (\x. Normal c) = 0
+Proof
+    rpt STRIP_TAC
+ >> rw [variance_alt, expectation_const, extreal_sub_def]
+ >> rw [extreal_pow_def, expectation_zero]
+QED
+
+Theorem variance_zero = 
+        variance_const |> Q.SPECL [‘p’, ‘0’]
+                       |> REWRITE_RULE [GSYM extreal_of_num_def]
+                       |> Q.GEN ‘p’
 
 Theorem expectation_cong :
     !p f g. prob_space p /\ (!x. x IN p_space p ==> f x = g x) ==>
@@ -2040,10 +2174,6 @@ Proof
  >- (RW_TAC pure_ss [integrable_def] >| (* 3 subgoals *)
      [ (* goal 1 (of 3) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_POW >> fs [measure_space_def, space_def] \\
-       reverse CONJ_TAC
-       >- (GEN_TAC >> DISCH_TAC \\
-           `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-           REWRITE_TAC [extreal_sub_def, extreal_not_infty]) \\
        MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB' \\
        qexistsl_tac [`X`, `\x. Normal c`] \\
        ASM_SIMP_TAC std_ss [] \\
@@ -2260,10 +2390,6 @@ Proof
          POP_ORW >> MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
          fs [prob_space_def, measure_space_def, real_random_variable_def,
              random_variable_def, space_def, p_space_def, events_def] \\
-         reverse CONJ_TAC
-         >- (GEN_TAC >> DISCH_TAC \\
-            `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-             REWRITE_TAC [extreal_sub_def, extreal_not_infty]) \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
          qexistsl_tac [`X`, `\x. Normal c`] >> RW_TAC std_ss [] \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `Normal c` \\
@@ -2297,8 +2423,8 @@ Proof
 QED
 
 Theorem bounded_imp_finite_second_moments :
-    !p X r. prob_space p /\ random_variable X p Borel /\
-           (!x. x IN p_space p ==> abs (X x) <= Normal r) ==> finite_second_moments p X
+    !p X. prob_space p /\ random_variable X p Borel /\
+         (?r. !x. x IN p_space p ==> abs (X x) <= Normal r) ==> finite_second_moments p X
 Proof
     rpt STRIP_TAC
  >> Know ‘real_random_variable X p’
@@ -2343,21 +2469,76 @@ Proof
  >> MATCH_MP_TAC pow_le >> rw [abs_pos]
 QED
 
-val finite_second_moments_imp_integrable = store_thm
-  ("finite_second_moments_imp_integrable",
-  ``!p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
-          integrable p X``,
+Theorem finite_second_moments_imp_integrable :
+    !p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
+          integrable p X
+Proof
     rpt GEN_TAC >> STRIP_TAC
  >> MATCH_MP_TAC integrable_from_square >> art []
- >> IMP_RES_TAC finite_second_moments_eq_integrable_square);
+ >> IMP_RES_TAC finite_second_moments_eq_integrable_square
+QED
 
-val finite_second_moments_imp_finite_expectation = store_thm
-  ("finite_second_moments_imp_finite_expectation",
-  ``!p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
-          expectation p X <> PosInf /\ expectation p X <> NegInf``,
+(* This theorem doesn't hold for general measure spaces (cf. integrable_bounded) *)
+Theorem bounded_imp_integrable :
+    !p X. prob_space p /\ random_variable X p Borel /\
+         (?r. !x. x IN p_space p ==> abs (X x) <= Normal r) ==> integrable p X
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC bounded_imp_finite_second_moments >> art [] \\
+     Q.EXISTS_TAC ‘r’ >> art [])
+ >> FULL_SIMP_TAC std_ss [abs_bounds]
+ >> RW_TAC std_ss [real_random_variable_def, lt_infty]
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC lte_trans \\
+      Q.EXISTS_TAC ‘-Normal r’ >> rw [lt_infty, extreal_ainv_def],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC let_trans \\
+      Q.EXISTS_TAC  ‘Normal r’ >> rw [lt_infty, extreal_ainv_def] ]
+QED
+
+Theorem finite_second_moments_imp_finite_expectation :
+    !p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
+          expectation p X <> PosInf /\ expectation p X <> NegInf
+Proof
     rpt GEN_TAC >> STRIP_TAC
  >> MATCH_MP_TAC integrable_imp_finite_expectation >> art []
- >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []);
+ >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
+QED
+
+Theorem finite_second_moments_cmul :
+    !p X c. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
+            finite_second_moments p (\x. Normal c * X x)
+Proof
+    rpt STRIP_TAC
+ >> ‘real_random_variable (\x. Normal c * X x) p’
+      by METIS_TAC [real_random_variable_cmul]
+ >> ‘integrable p X’ by METIS_TAC [finite_second_moments_imp_integrable]
+ >> ‘integrable p (\x. X x pow 2)’
+      by METIS_TAC [finite_second_moments_eq_integrable_square]
+ >> Q.PAT_X_ASSUM ‘finite_second_moments p X’ MP_TAC
+ >> RW_TAC std_ss [finite_second_moments_literally, GSYM lt_infty, pow_mul, extreal_pow_def]
+ >> Know ‘expectation p (\x. Normal (c pow 2) * X x pow 2) =
+          Normal (c pow 2) * expectation p (\x. X x pow 2)’
+ >- (HO_MATCH_MP_TAC expectation_cmul >> art [])
+ >> Rewr'
+ >> Know ‘expectation p (\x. X x pow 2) <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC expectation_pos >> rw [le_pow2])
+ >> DISCH_TAC
+ >> ‘?r. expectation p (\x. X x pow 2) = Normal r’ by METIS_TAC [extreal_cases]
+ >> rw [extreal_mul_def]
+QED
+
+Theorem finite_second_moments_cdiv :
+    !p X c. prob_space p /\ real_random_variable X p /\
+            finite_second_moments p X /\ c <> 0 ==>
+            finite_second_moments p (\x. X x / Normal c)
+Proof
+    rw [extreal_div_def, extreal_inv_def, Once mul_comm]
+ >> MATCH_MP_TAC finite_second_moments_cmul >> art []
+QED
 
 Theorem expectation_real_affine :
     !p X c. prob_space p /\ real_random_variable X p /\ integrable p X /\
@@ -2413,7 +2594,47 @@ Proof
  >> rw [extreal_ainv_def, extreal_not_infty]
 QED
 
-(* Markov's inequality for Probability (general version) *)
+Theorem variance_cmul :
+    !p X c. prob_space p /\ real_random_variable X p /\
+            finite_second_moments p X ==>
+           (variance p (\x. Normal c * X x) = Normal (c pow 2) * variance p X)
+Proof
+    rw [variance_alt]
+ >> ‘integrable p X’ by PROVE_TAC [finite_second_moments_imp_integrable]
+ >> ASM_SIMP_TAC std_ss [expectation_cmul]
+ >> Know ‘expectation p (\x. (Normal c * X x - Normal c * expectation p X) pow 2) =
+          expectation p (\x. (Normal c * (X x - expectation p X)) pow 2)’
+ >- (MATCH_MP_TAC expectation_cong >> rw [] \\
+     Suff ‘Normal c * (X x - expectation p X) =
+           Normal c * X x - Normal c * expectation p X’ >- Rewr \\
+     MATCH_MP_TAC sub_ldistrib \\
+     fs [real_random_variable_def, extreal_not_infty] \\
+     PROVE_TAC [integrable_imp_finite_expectation])
+ >> Rewr'
+ >> REWRITE_TAC [pow_mul, extreal_pow_def]
+ >> HO_MATCH_MP_TAC expectation_cmul >> art []
+ >> ‘expectation p X <> PosInf /\ expectation p X <> NegInf’
+      by PROVE_TAC [integrable_imp_finite_expectation]
+ >> ‘?r. expectation p X = Normal r’ by METIS_TAC [extreal_cases]
+ >> POP_ORW
+ >> METIS_TAC [finite_second_moments_eq_integrable_squares]
+QED
+
+Theorem variance_cdiv :
+    !p X c. prob_space p /\ real_random_variable X p /\
+            finite_second_moments p X /\ c <> 0 ==>
+           (variance p (\x. X x / Normal c) = variance p X / Normal (c pow 2))
+Proof
+    rw [extreal_div_def, extreal_inv_def, POW_INV]
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> MATCH_MP_TAC variance_cmul >> art []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*    Markov and Chebyshev's Inequalities                                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* Markov's inequality (probability version) *)
 Theorem prob_markov_inequality :
     !p X a c. prob_space p /\ integrable p X /\ 0 < c /\ a IN events p ==>
               prob p ({x | c <= abs (X x)} INTER a) <=
@@ -2432,7 +2653,7 @@ Proof
  >> MATCH_MP_TAC markov_ineq >> art []
 QED
 
-(* Chebyshev's inequality (general version) *)
+(* Chebyshev's inequality (probability version) *)
 Theorem chebyshev_inequality :
     !p X a t c. prob_space p /\ real_random_variable X p /\
                 finite_second_moments p X /\ 0 < t /\ a IN events p ==>
@@ -2483,6 +2704,47 @@ Proof
  >> IMP_RES_TAC finite_second_moments_imp_finite_expectation
  >> `?c. expectation p X = Normal c` by PROVE_TAC [extreal_cases] >> POP_ORW
  >> MATCH_MP_TAC chebyshev_ineq >> art []
+QED
+
+(* The special version with ‘<’ in place of ‘<=’ *)
+Theorem chebyshev_ineq_variance' :
+    !p X t. prob_space p /\ real_random_variable X p /\
+            finite_second_moments p X /\ 0 < t ==>
+         prob p ({x | t < abs (X x - expectation p X)} INTER p_space p) <=
+           inv (t pow 2) * variance p X
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC le_trans
+ >> Q.EXISTS_TAC ‘prob p ({x | t <= abs (X x - expectation p X)} INTER p_space p)’
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC chebyshev_ineq_variance >> art [])
+ >> MATCH_MP_TAC PROB_INCREASING >> art []
+ >> REWRITE_TAC [CONJ_ASSOC]
+ >> reverse CONJ_TAC
+ >- (rw [SUBSET_DEF, GSPECIFICATION] \\
+     MATCH_MP_TAC lt_imp_le >> art [])
+ >> fs [real_random_variable, prob_space_def, p_space_def, events_def]
+ >> Q.ABBREV_TAC ‘Y = \x. X x - expectation p X’ >> simp []
+ >> Know ‘Y IN measurable (m_space p,measurable_sets p) Borel’
+ >- (rw [Abbr ‘Y’] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB' \\
+     qexistsl_tac [‘X’, ‘\x. expectation p X’] >> simp [] \\
+     fs [measure_space_def] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST' >> art [])
+ >> DISCH_TAC
+ >> rw [lt_abs_bounds, le_abs_bounds]
+ >| [ (* goal 1 (of 2) *)
+     ‘{x | Y x < -t \/ t < Y x} INTER m_space p =
+        ({x | Y x < -t} INTER m_space p) UNION
+        ({x | t < Y x} INTER m_space p)’ by SET_TAC [] >> POP_ORW \\
+      MATCH_MP_TAC MEASURE_SPACE_UNION >> art [] \\
+      METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE],
+      (* goal 2 (of 2) *)
+     ‘{x | Y x <= -t \/ t <= Y x} INTER m_space p =
+        ({x | Y x <= -t} INTER m_space p) UNION
+        ({x | t <= Y x} INTER m_space p)’ by SET_TAC [] >> POP_ORW \\
+      MATCH_MP_TAC MEASURE_SPACE_UNION >> art [] \\
+      METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE] ]
 QED
 
 (******************************************************************************)
@@ -2578,6 +2840,16 @@ Theorem pairwise_indep_vars_def :
        !i j. i IN J /\ j IN J /\ i <> j ==> indep_rv p (X i) (X j) (A i) (A j)
 Proof
     RW_TAC std_ss [pairwise_indep_vars, pairwise]
+QED
+
+Theorem pairwise_indep_vars_subset :
+    !p X A (s :'index set) (t :'index set).
+       pairwise_indep_vars p X A t /\ s SUBSET t ==>
+       pairwise_indep_vars p X A s
+Proof
+    rw [pairwise_indep_vars_def]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+ >> METIS_TAC [SUBSET_DEF]
 QED
 
 (* 9. extension of `indep-rv`: total independent random variables. *)
@@ -5172,7 +5444,7 @@ QED
 
 (* converge_AE_alt_inf restated by limsup, cf. PROB_LIMSUP
 
-   Theorem 4.2.2 [1, p.77], also see Borel_Cantelli_Lemma1.
+   Theorem 4.2.2 [1, p.77] (extended version), also see Borel_Cantelli_Lemma1.
  *)
 Theorem converge_AE_alt_limsup :
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
@@ -5227,88 +5499,17 @@ Proof
  >> Q.EXISTS_TAC `n` >> art []
 QED
 
-Theorem real_random_variable_zero :
-    !p. prob_space p ==> real_random_variable (\x. 0) p
-Proof
-    RW_TAC std_ss [prob_space_def, real_random_variable_def,
-                   random_variable_def, p_space_def, events_def,
-                   num_not_infty]
- >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST'
- >> fs [measure_space_def]
-QED
-
-Theorem real_random_variable_const :
-    !p m. prob_space p /\ m <> PosInf /\ m <> NegInf ==>
-          real_random_variable (\x. m) p
-Proof
-    RW_TAC std_ss [real_random_variable]
- >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST'
- >> FULL_SIMP_TAC std_ss [prob_space_def, measure_space_def,
-                          p_space_def, events_def]
-QED
-
-Theorem real_random_variable_add :
-    !p X Y. prob_space p /\ real_random_variable X p /\
-            real_random_variable Y p ==> real_random_variable (\x. X x + Y x) p
-Proof
-    RW_TAC std_ss [prob_space_def, real_random_variable_def,
-                   random_variable_def, p_space_def, events_def]
- >| [ (* goal 1 (of 3) *)
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD \\
-      qexistsl_tac [`X`, `Y`] >> fs [measure_space_def, space_def],
-      (* goal 2 (of 3) *)
-     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
-     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
-      rw [extreal_not_infty, extreal_add_def],
-      (* goal 3 (of 3) *)
-     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
-     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
-      rw [extreal_not_infty, extreal_add_def] ]
-QED
-
-Theorem real_random_variable_sub :
-    !p X Y. prob_space p /\ real_random_variable X p /\
-            real_random_variable Y p ==> real_random_variable (\x. X x - Y x) p
-Proof
-    RW_TAC std_ss [prob_space_def, real_random_variable_def,
-                   random_variable_def, p_space_def, events_def]
- >| [ (* goal 1 (of 3) *)
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
-      qexistsl_tac [`X`, `Y`] >> fs [measure_space_def, space_def],
-      (* goal 2 (of 3) *)
-     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
-     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
-      rw [extreal_not_infty, extreal_sub_def],
-      (* goal 3 (of 3) *)
-     `?a. X x = Normal a` by METIS_TAC [extreal_cases] \\
-     `?b. Y x = Normal b` by METIS_TAC [extreal_cases] \\
-      rw [extreal_not_infty, extreal_sub_def] ]
-QED
-
-Theorem real_random_variable_ainv :
-    !p X. prob_space p /\ real_random_variable X p ==> real_random_variable (\x. -X x) p
+(* Theorem 4.2.2 [1, p.77] (original version) *)
+Theorem converge_AE_alt_limsup' :
+    !p X. prob_space p /\ (!n. real_random_variable (X n) p) ==>
+         ((X --> (\x. 0)) (almost_everywhere p) <=>
+          !e. 0 < e /\ e <> PosInf ==>
+              prob p (limsup (\n. {x | x IN p_space p /\ e < abs (X n x)})) = 0)
 Proof
     rpt STRIP_TAC
- >> MP_TAC (Q.SPECL [‘p’, ‘\x. 0’, ‘X’] real_random_variable_sub)
- >> ‘real_random_variable (\x. 0) p’ by PROVE_TAC [real_random_variable_zero]
- >> RW_TAC std_ss [sub_lzero]
-QED
-
-Theorem real_random_variable_cmul :
-    !p X r. prob_space p /\ real_random_variable X p ==>
-            real_random_variable (\x. Normal r * X x) p
-Proof
-    rpt GEN_TAC
- >> simp [real_random_variable, prob_space_def, p_space_def, events_def]
- >> STRIP_TAC
- >> CONJ_TAC (* Borel_measurable *)
- >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL \\
-     qexistsl_tac [‘X’, ‘r’] >> rw [] \\
-     FULL_SIMP_TAC std_ss [measure_space_def])
- >> Q.X_GEN_TAC ‘x’
- >> DISCH_TAC
- >> ‘?z. X x = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW
- >> rw [extreal_mul_def]
+ >> ‘real_random_variable (\x. 0) p’ by METIS_TAC [real_random_variable_zero]
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘\x. 0’] converge_AE_alt_limsup)
+ >> RW_TAC std_ss [sub_rzero]
 QED
 
 Theorem converge_AE_to_zero :
@@ -5403,7 +5604,7 @@ Proof
                           GSYM extreal_of_num_def])
  >> DISCH_THEN (fs o wrap)
  >> Know `!n. integrable p (\x. abs (X n x) pow k)`
- >- (GEN_TAC \\
+ >- (Q.X_GEN_TAC ‘n’ \\
      fs [prob_space_def, random_variable_def, p_space_def, events_def] \\
      Know `measure_space p /\
            (!x. x IN m_space p ==> 0 <= (\x. abs (X n x) pow k) x)`
@@ -5420,11 +5621,8 @@ Proof
      ONCE_REWRITE_TAC [METIS_PROVE []
        ``(\x. abs (X n x) pow k) = (\x. (\x. abs (X n x)) x pow k)``] \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
-     CONJ_TAC >- fs [measure_space_def] \\
-     CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
-                  Q.EXISTS_TAC `X n` \\
-                  fs [measure_space_def]) \\
-     RW_TAC std_ss [space_def] >> METIS_TAC [abs_not_infty])
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
+     Q.EXISTS_TAC `X n` >> fs [measure_space_def])
  >> DISCH_TAC
  (* eliminate all `real (prob p ...)` *)
  >> `!n. real (prob p {x | x IN p_space p /\ e < abs (X n x)}) < d <=>
@@ -5481,11 +5679,8 @@ Proof
                      (MATCH_MP IN_MEASURABLE_BOREL_ALL_MEASURE))) \\
     `!x. abs (X n x) = (\x. abs (X n x)) x` by METIS_TAC [] >> POP_ORW \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
-     CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
-     RW_TAC std_ss [abs_not_infty, space_def] \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS >> Q.EXISTS_TAC `X n` \\
-     CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
-     RW_TAC std_ss [])
+     FULL_SIMP_TAC std_ss [measure_space_def])
  (* applying prob_markov_ineq *)
  >> Q.ABBREV_TAC `Y = \x. abs (X n x) pow k`
  >> Know `!x. abs (X n x) pow k = abs (Y x)`
@@ -5512,9 +5707,10 @@ Proof
  >> ASM_REWRITE_TAC [Once mul_comm]
 QED
 
-Theorem converge_AE_cong :
-    !p X Y Z m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) ==>
-                ((X --> Z) (almost_everywhere p) <=> (Y --> Z) (almost_everywhere p))
+Theorem converge_AE_cong_full :
+    !p X Y A B m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) /\
+                  (!x. x IN p_space p ==> A x = B x) ==>
+                  ((X --> A) (almost_everywhere p) <=> (Y --> B) (almost_everywhere p))
 Proof
     rw [p_space_def, converge_AE_def, AE_DEF, LIM_SEQUENTIALLY, dist]
  >> EQ_TAC >> rw []
@@ -5532,34 +5728,13 @@ Proof
       Q.EXISTS_TAC ‘MAX N' m’ >> rw [MAX_LE] ]
 QED
 
-Theorem converge_PR_cong :
+Theorem converge_AE_cong :
     !p X Y Z m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) ==>
-                ((X --> Z) (in_probability p) <=> (Y --> Z) (in_probability p))
+                ((X --> Z) (almost_everywhere p) <=> (Y --> Z) (almost_everywhere p))
 Proof
-    rw [converge_PR_def, LIM_SEQUENTIALLY, dist]
- >> EQ_TAC >> rw []
- >| [ (* goal 1 (of 2) *)
-      Q.PAT_X_ASSUM ‘!e. 0 < e /\ e <> PosInf ==> P’ (MP_TAC o (Q.SPEC ‘e’)) >> rw [] \\
-      POP_ASSUM (MP_TAC o (Q.SPEC ‘e'’)) >> rw [] \\
-      Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE] \\
-      Know ‘{x | x IN p_space p /\ e < abs (Y n x - Z x)} =
-            {x | x IN p_space p /\ e < abs (X n x - Z x)}’
-      >- (rw [Once EXTENSION] \\
-          EQ_TAC >> rw [] \\
-         ‘Y n x = X n x’ by METIS_TAC [] \\
-          POP_ASSUM (ASM_REWRITE_TAC o wrap)) >> Rewr' \\
-      FIRST_X_ASSUM MATCH_MP_TAC >> art [],
-      (* goal 2 (of 2) *)
-      Q.PAT_X_ASSUM ‘!e. 0 < e /\ e <> PosInf ==> P’ (MP_TAC o (Q.SPEC ‘e’)) >> rw [] \\
-      POP_ASSUM (MP_TAC o (Q.SPEC ‘e'’)) >> rw [] \\
-      Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE] \\
-      Know ‘{x | x IN p_space p /\ e < abs (X n x - Z x)} =
-            {x | x IN p_space p /\ e < abs (Y n x - Z x)}’
-      >- (rw [Once EXTENSION] \\
-          EQ_TAC >> rw [] \\
-         ‘Y n x = X n x’ by METIS_TAC [] \\
-          POP_ASSUM (ASM_REWRITE_TAC o wrap)) >> Rewr' \\
-      FIRST_X_ASSUM MATCH_MP_TAC >> art [] ]
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC converge_AE_cong_full
+ >> Q.EXISTS_TAC ‘m’ >> rw []
 QED
 
 Theorem converge_PR_cong_full :
@@ -5589,6 +5764,15 @@ Proof
       >- (rw [Once EXTENSION] \\
           EQ_TAC >> rw [] >> METIS_TAC []) >> Rewr' \\
       FIRST_X_ASSUM MATCH_MP_TAC >> art [] ]
+QED
+
+Theorem converge_PR_cong :
+    !p X Y Z m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) ==>
+                ((X --> Z) (in_probability p) <=> (Y --> Z) (in_probability p))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC converge_PR_cong_full
+ >> Q.EXISTS_TAC ‘m’ >> rw []
 QED
 
 Theorem converge_LP_cong :
@@ -5627,7 +5811,7 @@ QED
 (*
 Theorem WLLN_uncorrelated_L2 :
 
-    has been moved to large_numberTheory with improved statements.
+    has been moved to examples/probability/large_numberTheory with improved statements.
  *)
 
 Theorem converge_AE_to_zero' :
@@ -5692,7 +5876,7 @@ QED
 (*
 Theorem WLLN_uncorrelated :
 
-    has been moved to large_numberTheory with improved statements.
+    has been moved to examples/probability/large_numberTheory with improved statements.
  *)
 
 Theorem converge_AE_alt_shift :
@@ -5898,11 +6082,9 @@ QED
 Theorem converge_PR_add :
     !p X Y A B. prob_space p /\
                (!n. real_random_variable (X n) p) /\
-                real_random_variable A p /\
-               (X --> A) (in_probability p) /\
+                real_random_variable A p /\ (X --> A) (in_probability p) /\
                (!n. real_random_variable (Y n) p) /\
-                real_random_variable B p /\
-               (Y --> B) (in_probability p) ==>
+                real_random_variable B p /\ (Y --> B) (in_probability p) ==>
        ((\n x. X n x + Y n x) --> (\x. A x + B x)) (in_probability p)
 Proof
     rpt STRIP_TAC
@@ -5944,9 +6126,8 @@ Proof
 QED
 
 Theorem converge_PR_ainv_to_zero :
-    !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
-         (X --> (\x. 0)) (in_probability p) ==>
-         ((\n x. -X n x) --> (\x. 0)) (in_probability p)
+    !p X. (X --> (\x. 0)) (in_probability p) ==>
+          ((\n x. -X n x) --> (\x. 0)) (in_probability p)
 Proof
     rw [converge_PR_def, LIM_SEQUENTIALLY, dist]
  >> Q.PAT_X_ASSUM ‘!e. 0 < e /\ e <> PosInf => P’ (MP_TAC o (Q.SPEC ‘e’))
@@ -5993,11 +6174,9 @@ QED
 Theorem converge_PR_sub :
     !p X Y A B. prob_space p /\
                (!n. real_random_variable (X n) p) /\
-                real_random_variable A p /\
-               (X --> A) (in_probability p) /\
+                real_random_variable A p /\ (X --> A) (in_probability p) /\
                (!n. real_random_variable (Y n) p) /\
-                real_random_variable B p /\
-               (Y --> B) (in_probability p) ==>
+                real_random_variable B p /\ (Y --> B) (in_probability p) ==>
        ((\n x. X n x - Y n x) --> (\x. A x - B x)) (in_probability p)
 Proof
     rpt STRIP_TAC
@@ -6085,12 +6264,261 @@ Proof
  >> Q.EXISTS_TAC ‘0’ >> rw [normal_real]
 QED
 
+Theorem converge_AE_add_to_zero :
+    !p X Y. prob_space p /\
+           (!n. real_random_variable (X n) p) /\
+           (!n. real_random_variable (Y n) p) /\
+           (X --> (\x. 0)) (almost_everywhere p) /\
+           (Y --> (\x. 0)) (almost_everywhere p) ==>
+       ((\n x. X n x + Y n x) --> (\x. 0)) (almost_everywhere p)
+Proof
+    rw [converge_AE_def, AE_DEF, LIM_SEQUENTIALLY, dist, real_random_variable_def,
+        p_space_def]
+ >> Q.EXISTS_TAC ‘N UNION N'’
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC (REWRITE_RULE [IN_APP] NULL_SET_UNION) \\
+     FULL_SIMP_TAC std_ss [prob_space_def])
+ >> rw []
+ >> Q.PAT_X_ASSUM ‘!x. x IN m_space p /\ x NOTIN N ==> P’ (MP_TAC o (Q.SPEC ‘x’))
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘!x. x IN m_space p /\ x NOTIN N' ==> P’ (MP_TAC o (Q.SPEC ‘x’))
+ >> RW_TAC std_ss []
+ >> ‘0 < e / 2’ by rw [REAL_LT_DIV]
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e / 2’))
+ >> RW_TAC std_ss []
+ >> rename1 ‘!n. N1 <= n ==> abs (real (Y n x)) < e / 2’
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e / 2’))
+ >> RW_TAC std_ss []
+ >> rename1 ‘!n. N2 <= n ==> abs (real (X n x)) < e / 2’
+ >> Q.EXISTS_TAC ‘MAX N1 N2’
+ >> rw [MAX_LE]
+ >> Q.PAT_X_ASSUM ‘!n. N1 <= n ==> P’ (MP_TAC o (Q.SPEC ‘n’))
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘!n. N2 <= n ==> P’ (MP_TAC o (Q.SPEC ‘n’))
+ >> RW_TAC std_ss []
+ >> ‘?a. X n x = Normal a’ by METIS_TAC [extreal_cases]
+ >> POP_ASSUM (FULL_SIMP_TAC std_ss o wrap)
+ >> ‘?b. Y n x = Normal b’ by METIS_TAC [extreal_cases]
+ >> POP_ASSUM (FULL_SIMP_TAC std_ss o wrap)
+ >> FULL_SIMP_TAC std_ss [extreal_add_def, real_normal]
+ >> MATCH_MP_TAC REAL_LET_TRANS
+ >> Q.EXISTS_TAC ‘abs a + abs b’
+ >> REWRITE_TAC [ABS_TRIANGLE]
+ >> GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM REAL_HALF_DOUBLE]
+ >> MATCH_MP_TAC REAL_LT_ADD2 >> art []
+QED
+
+Theorem converge_AE_add :
+    !p X Y A B. prob_space p /\
+               (!n. real_random_variable (X n) p) /\
+                real_random_variable A p /\ (X --> A) (almost_everywhere p) /\
+               (!n. real_random_variable (Y n) p) /\
+                real_random_variable B p /\ (Y --> B) (almost_everywhere p) ==>
+       ((\n x. X n x + Y n x) --> (\x. A x + B x)) (almost_everywhere p)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘(X --> A) (almost_everywhere p) <=>
+          ((\n x. X n x - A x) --> (\x. 0)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_to_zero >> art [])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> Know ‘(Y --> B) (almost_everywhere p) <=>
+          ((\n x. Y n x - B x) --> (\x. 0)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_to_zero >> art [])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> Know ‘((\n x. X n x + Y n x) --> (\x. A x + B x)) (almost_everywhere p) <=>
+          ((\n x. X n x + Y n x - (A x + B x)) --> (\x. 0)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_to_zero' >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC real_random_variable_add >> art [],
+       (* goal 2 (of 2) *)
+       MATCH_MP_TAC real_random_variable_add >> art [] ])
+ >> Rewr'
+ >> Know ‘((\n x. (X n x - A x) + (Y n x - B x)) --> (\x. 0)) (almost_everywhere p)’
+ >- (HO_MATCH_MP_TAC converge_AE_add_to_zero >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC real_random_variable_sub >> art [],
+       (* goal 2 (of 2) *)
+       MATCH_MP_TAC real_random_variable_sub >> art [] ])
+ >> DISCH_TAC
+ >> Suff ‘((\n x. X n x + Y n x - (A x + B x)) --> (\x. 0)) (almost_everywhere p) <=>
+          ((\n x. X n x - A x + (Y n x - B x)) --> (\x. 0)) (almost_everywhere p)’
+ >- DISCH_THEN (art o wrap)
+ >> MATCH_MP_TAC converge_AE_cong
+ >> Q.EXISTS_TAC ‘0’ >> RW_TAC arith_ss []
+ >> FULL_SIMP_TAC std_ss [real_random_variable_def]
+ >> ‘?a. X n x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?b. Y n x = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?c. A x = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?d. B x = Normal d’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> rw [extreal_add_def, extreal_sub_def, extreal_11]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem converge_AE_ainv_to_zero :
+    !p X. (!n. real_random_variable (X n) p) /\
+          (X --> (\x. 0)) (almost_everywhere p) ==>
+          ((\n x. -X n x) --> (\x. 0)) (almost_everywhere p)
+Proof
+    rw [converge_AE_def, AE_DEF, LIM_SEQUENTIALLY, dist,
+        real_random_variable_def, p_space_def]
+ >> Q.EXISTS_TAC ‘N’ >> rw []
+ >> Q.PAT_X_ASSUM ‘!x. x IN m_space p /\ x NOTIN N ==> P’ (MP_TAC o (Q.SPEC ‘x’))
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’))
+ >> RW_TAC std_ss []
+ >> rename1 ‘!n. M <= n ==> abs (real (X n x)) < e’
+ >> Q.EXISTS_TAC ‘M’ >> rw []
+ >> Q.PAT_X_ASSUM ‘!n. M <= n ==> P’ (MP_TAC o (Q.SPEC ‘n’))
+ >> RW_TAC std_ss []
+ >> ‘?r. X n x = Normal r’ by METIS_TAC [extreal_cases]
+ >> POP_ASSUM (FULL_SIMP_TAC std_ss o wrap)
+ >> FULL_SIMP_TAC std_ss [extreal_ainv_def, real_normal, ABS_NEG]
+QED
+
+Theorem converge_AE_ainv :
+    !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
+            real_random_variable Y p /\
+            (X --> Y) (almost_everywhere p) ==>
+         ((\n x. -X n x) --> (\x. -Y x)) (almost_everywhere p)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘(X --> Y) (almost_everywhere p) <=>
+          ((\n x. X n x - Y x) --> (\x. 0)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_to_zero >> art [])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> Know ‘((\n x. -X n x) --> (\x. -Y x)) (almost_everywhere p) <=>
+          ((\n x. (\n x. -X n x) n x - (\x. -Y x) x) --> (\x. 0)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_to_zero >> rw [] >| (* 2 subgoals *)
+     [ MATCH_MP_TAC real_random_variable_ainv >> art [],
+       MATCH_MP_TAC real_random_variable_ainv >> art [] ])
+ >> Rewr'
+ >> BETA_TAC
+ >> Know ‘((\n x. -X n x - -Y x) --> (\x. 0)) (almost_everywhere p) <=>
+          ((\n x. -(X n x - Y x)) --> (\x. 0)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_cong \\
+     Q.EXISTS_TAC ‘0’ >> RW_TAC arith_ss [] \\
+     FULL_SIMP_TAC std_ss [real_random_variable_def] \\
+    ‘?a. X n x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?b. Y x = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_ainv_def, extreal_sub_def] \\
+     REAL_ARITH_TAC)
+ >> Rewr'
+ >> HO_MATCH_MP_TAC converge_AE_ainv_to_zero >> rw []
+ >> MATCH_MP_TAC real_random_variable_sub >> art []
+QED
+
+Theorem converge_AE_sub :
+    !p X Y A B. prob_space p /\
+               (!n. real_random_variable (X n) p) /\
+                real_random_variable A p /\ (X --> A) (almost_everywhere p) /\
+               (!n. real_random_variable (Y n) p) /\
+                real_random_variable B p /\ (Y --> B) (almost_everywhere p) ==>
+       ((\n x. X n x - Y n x) --> (\x. A x - B x)) (almost_everywhere p)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘\n x. -Y n x’, ‘A’, ‘\x. -B x’] converge_AE_add)
+ >> BETA_TAC >> art []
+ >> Know ‘((\n x. X n x + -Y n x) --> (\x. A x + -B x)) (almost_everywhere p) <=>
+          ((\n x. X n x - Y n x) --> (\x. A x - B x)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_cong_full \\
+     FULL_SIMP_TAC std_ss [real_random_variable_def] \\
+     Q.EXISTS_TAC ‘0’ >> RW_TAC arith_ss [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+      ‘?a. X n x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+      ‘?b. Y n x = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+       rw [extreal_ainv_def, extreal_add_def, extreal_sub_def] \\
+       REAL_ARITH_TAC,
+       (* goal 2 (of 2) *)
+      ‘?c. A x = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+      ‘?d. B x = Normal d’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+       rw [extreal_ainv_def, extreal_add_def, extreal_sub_def] \\
+       REAL_ARITH_TAC ])
+ >> Rewr'
+ >> Know ‘!n. real_random_variable (\x. -Y n x) p’
+ >- (GEN_TAC >> MATCH_MP_TAC real_random_variable_ainv >> art [])
+ >> Know ‘real_random_variable (\x. -B x) p’
+ >- (MATCH_MP_TAC real_random_variable_ainv >> art [])
+ >> Know ‘((\n x. -Y n x) --> (\x. -B x)) (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_ainv >> art [])
+ >> RW_TAC std_ss []
+QED
+
+Theorem converge_AE_to_limit :
+    !p X M m. prob_space p /\ (!n. real_random_variable (X n) p) /\
+              (M --> m) sequentially /\
+              ((\n x. X n x - Normal (M n)) --> (\x. 0)) (almost_everywhere p) ==>
+              (X --> (\x. Normal m)) (almost_everywhere p)
+Proof
+    rpt STRIP_TAC
+ (* applying converge_PR_cong_full *)
+ >> Know ‘(X --> (\x. Normal m)) (almost_everywhere p) <=>
+          ((\n x. X n x - Normal (M n) + Normal (M n)) --> (\x. 0 + Normal m))
+           (almost_everywhere p)’
+ >- (MATCH_MP_TAC converge_AE_cong_full \\
+     Q.EXISTS_TAC ‘0’ >> rw [sub_add_normal]) >> Rewr'
+ >> HO_MATCH_MP_TAC converge_AE_add
+ >> rw [real_random_variable_zero, real_random_variable_const]
+ >- (HO_MATCH_MP_TAC real_random_variable_sub \\
+     rw [real_random_variable_const] \\
+    ‘(\x. X n x) = X n’ by METIS_TAC [] >> POP_ASSUM (art o wrap))
+ >> Q.PAT_X_ASSUM ‘!n. real_random_variable (X n) p’ K_TAC
+ >> POP_ASSUM K_TAC (* (X n x - M n) --> 0 *)
+ (* stage work, now ‘X n’ disappeared, left only M and m *)
+ >> POP_ASSUM MP_TAC
+ >> rw [converge_AE_def, AE_DEF, null_set_def, LIM_SEQUENTIALLY, dist]
+ >> Q.EXISTS_TAC ‘{}’
+ >> FULL_SIMP_TAC std_ss [prob_space_def]
+ >> ASM_SIMP_TAC std_ss [MEASURE_SPACE_EMPTY_MEASURABLE, MEASURE_EMPTY]
+QED
+
+(* M and m are extreal-valued. This form is used by WLLN_IID directly. *)
+Theorem converge_AE_to_limit' :
+    !p X M m. prob_space p /\ (!n. real_random_variable (X n) p) /\
+              (!n. M n <> PosInf /\ M n <> NegInf) /\ m <> PosInf /\ m <> NegInf /\
+              ((real o M) --> real m) sequentially /\
+              ((\n x. X n x - M n) --> (\x. 0)) (almost_everywhere p) ==>
+              (X --> (\x. m)) (almost_everywhere p)
+Proof
+    rpt STRIP_TAC
+ >> ‘?r. m = Normal r’ by METIS_TAC [extreal_cases] >> fs []
+ >> MATCH_MP_TAC converge_AE_to_limit
+ >> Q.EXISTS_TAC ‘real o M’ >> art []
+ >> Suff ‘((\n x. X n x - Normal ((real o M) n)) --> (\x. 0)) (almost_everywhere p) <=>
+          ((\n x. X n x - M n) --> (\x. 0)) (almost_everywhere p)’ >- rw []
+ >> MATCH_MP_TAC converge_AE_cong
+ >> Q.EXISTS_TAC ‘0’ >> rw [normal_real]
+QED
+
+(* ========================================================================= *)
+(*                  Advanced estimations of expectations                     *)
+(* ========================================================================= *)
+
 Theorem PROB_ZERO_AE :
     !p E. prob_space p /\ E IN events p /\ (prob p E = 0) ==> AE x::p. x NOTIN E
 Proof
     RW_TAC std_ss [AE_DEF, null_set_def]
  >> Q.EXISTS_TAC `E`
  >> fs [prob_space_def, events_def, prob_def]
+QED
+
+Theorem PROB_ZERO_AE_EQ :
+    !p E. prob_space p /\ E IN events p ==> (prob p E = 0 <=> AE x::p. x NOTIN E)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >- (DISCH_TAC >> MATCH_MP_TAC PROB_ZERO_AE >> art [])
+ >> RW_TAC std_ss [AE_DEF, null_set_def]
+ >> fs [prob_space_def, events_def, prob_def]
+ >> Know ‘E SUBSET N’
+ >- (rw [SUBSET_DEF] \\
+    ‘x IN m_space p’ by PROVE_TAC [MEASURE_SPACE_IN_MSPACE] \\
+     METIS_TAC [])
+ >> DISCH_TAC
+ >> reverse (rw [GSYM le_antisym])
+ >- (‘positive p’ by PROVE_TAC [MEASURE_SPACE_POSITIVE] \\
+     fs [positive_def])
+ >> Q.PAT_X_ASSUM ‘measure p N = 0’ (ONCE_REWRITE_TAC o wrap o (MATCH_MP EQ_SYM))
+ >> MATCH_MP_TAC INCREASING >> art []
+ >> MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []
 QED
 
 Theorem PROB_ONE_AE :
@@ -6106,6 +6534,41 @@ Proof
  >> FULL_SIMP_TAC std_ss [prob_space_def, events_def, prob_def, p_space_def,
                           sub_refl, extreal_not_infty, extreal_of_num_def]
  >> MATCH_MP_TAC MEASURE_SPACE_COMPL >> art []
+QED
+
+Theorem PROB_ONE_AE_EQ :
+    !p E. prob_space p /\ E IN events p ==> (prob p E = 1 <=> AE x::p. x IN E)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >- (DISCH_TAC >> MATCH_MP_TAC PROB_ONE_AE >> art [])
+ >> RW_TAC std_ss [AE_DEF, null_set_def]
+ >> fs [prob_space_def, events_def, prob_def]
+ >> Q.ABBREV_TAC ‘E' = m_space p DIFF E’
+ >> ‘E' IN measurable_sets p’ by METIS_TAC [MEASURE_SPACE_COMPL]
+ >> Know ‘E = m_space p DIFF E'’
+ >- (rw [Once EXTENSION, Abbr ‘E'’] \\
+     EQ_TAC >> rw [] \\
+     PROVE_TAC [MEASURE_SPACE_IN_MSPACE])
+ >> Rewr'
+ >> Know ‘measure p (m_space p DIFF E') = measure p (m_space p) - measure p E'’
+ >- (MATCH_MP_TAC MEASURE_COMPL >> rw [Abbr ‘E'’] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘measure p (m_space p)’ \\
+     reverse CONJ_TAC >- rw [lt_infty, extreal_of_num_def] \\
+     MATCH_MP_TAC INCREASING >> rw []
+     >- (MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []) \\
+     MATCH_MP_TAC MEASURE_SPACE_SPACE >> art [])
+ >> Rewr'
+ >> Suff ‘measure p E' = 0’ >- rw []
+ >> reverse (rw [GSYM le_antisym])
+ >- (‘positive p’ by PROVE_TAC [MEASURE_SPACE_POSITIVE] \\
+     fs [positive_def])
+ >> Q.PAT_X_ASSUM ‘measure p N = 0’ (ONCE_REWRITE_TAC o wrap o (MATCH_MP EQ_SYM))
+ >> Know ‘E' SUBSET N’
+ >- (rw [SUBSET_DEF, Abbr ‘E'’] >> METIS_TAC [])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC INCREASING >> art []
+ >> MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []
 QED
 
 (* Theorem 3.2.1, Part I [2, p.45] *)
@@ -6787,6 +7250,42 @@ Proof
  >> METIS_TAC []
 QED
 
+(* Theorem 3.1.4 [2, p.37], slightly generalized *)
+Theorem random_variable_comp :
+    !p X A f. random_variable X p A /\ f IN measurable A A ==>
+              random_variable (f o X) p A
+Proof
+    rw [random_variable_def]
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC `A` >> art []
+QED
+
+Theorem identical_distribution_cong :
+    !p X f. prob_space p /\ (!n. random_variable (X n) p Borel) /\
+            identical_distribution p X Borel univ(:num) /\
+            f IN measurable Borel Borel ==>
+            identical_distribution p (\n. f o X n) Borel univ(:num)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘identical_distribution p X Borel univ(:num) <=>
+          (!f n. f IN measurable Borel Borel ==>
+                 expectation p (f o (X n)) = expectation p (f o (X 0)))’
+ >- (MATCH_MP_TAC identical_distribution_alt' >> art [])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> Know ‘identical_distribution p (\n. f o X n) Borel univ(:num) <=>
+          (!g n. g IN measurable Borel Borel ==>
+                 expectation p (g o ((\n. f o X n) n)) =
+                 expectation p (g o ((\n. f o X n) 0)))’
+ >- (MATCH_MP_TAC identical_distribution_alt' >> rw [] \\
+     MATCH_MP_TAC random_variable_comp >> art [])
+ >> Rewr'
+ >> RW_TAC std_ss []
+ >> REWRITE_TAC [o_ASSOC]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘Borel’ >> art []
+QED
+
 (* r.v.'s having identical distributions have the same integrability
 
    NOTE: fixes after k14: changed ‘identical_distribution p X Borel UNIV’
@@ -6885,16 +7384,6 @@ Proof
                     (INST_TYPE [“:'index” |-> “:num”]
                                identical_distribution_expectation_general))
  >> RW_TAC std_ss [IN_UNIV] >> art []
-QED
-
-(* Theorem 3.1.4 [2, p.37], slightly generalized *)
-Theorem random_variable_comp :
-    !p X A f. random_variable X p A /\ f IN measurable A A ==>
-              random_variable (f o X) p A
-Proof
-    rw [random_variable_def]
- >> MATCH_MP_TAC MEASURABLE_COMP
- >> Q.EXISTS_TAC `A` >> art []
 QED
 
 (* Theorem 3.1.5 [2, p.38] *)
@@ -7284,6 +7773,23 @@ Proof
  >> MATCH_MP_TAC indep_vars_expectation >> art []
  >> CONJ_TAC (* 2 subgoals, same tactics *)
  >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
+QED
+
+(* another version of variance_sum for pairwise independent r.v.'s *)
+Theorem variance_sum' :
+    !p X (J :'index set).
+          prob_space p /\ FINITE J /\ pairwise_indep_vars p X (\n. Borel) J /\
+         (!i. i IN J ==> real_random_variable (X i) p) /\
+         (!i. i IN J ==> finite_second_moments p (X i)) ==>
+         (variance p (\x. SIGMA (\n. X n x) J) = SIGMA (\n. variance p (X n)) J)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘uncorrelated_vars p X J’
+ >- (rw [uncorrelated_vars_def] \\
+     MATCH_MP_TAC indep_vars_imp_uncorrelated >> rw [] \\
+     fs [pairwise_indep_vars_def])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC variance_sum >> art []
 QED
 
 (* ========================================================================= *)
