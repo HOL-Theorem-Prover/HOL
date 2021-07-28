@@ -463,6 +463,31 @@ val lg_pow = store_thm
             >> RW_TAC real_ss [LN_POS, LN_MONO_LT])
    >> RW_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_RINV]);
 
+(* cf. LN_MONO_LT *)
+Theorem LOGR_MONO_LT :
+    !x :real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x < logr b y <=> x < y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+ >> METIS_TAC [REAL_LT_INV_EQ, REAL_LT_RMUL, LN_MONO_LT]
+QED
+
+Theorem LOGR_MONO_LE :
+    !x:real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x <= logr b y <=> x <= y)
+Proof
+  RW_TAC std_ss [logr_def,real_div]
+  >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+  >> METIS_TAC [REAL_LT_INV_EQ, REAL_LE_RMUL, LN_MONO_LE]
+QED
+
+Theorem LOGR_MONO_LE_IMP :
+    !x:real y b. 0 < x /\ x <= y /\ 1 <= b ==> (logr b x <= logr b y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 <= ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LTE_TRANS, LN_MONO_LE]
+ >> METIS_TAC [REAL_LE_INV_EQ, REAL_LE_RMUL_IMP, LN_MONO_LE, REAL_LTE_TRANS]
+QED
+
 (* from extra_realScript.sml of "miller" example *)
 val pos_concave_lg = store_thm
   ("pos_concave_lg",
@@ -967,18 +992,6 @@ val POW_NEG_ODD = store_thm
   >> `0 < x pow n` by METIS_TAC [REAL_LT_LE]
   >> METIS_TAC [REAL_NEG_GT0, REAL_MUL_LNEG, REAL_LT_MUL]);
 
-val LOGR_MONO_LE = store_thm
-  ("LOGR_MONO_LE",``!x:real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x <= logr b y <=> x <= y)``,
-  RW_TAC std_ss [logr_def,real_div]
-  >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
-  >> METIS_TAC [REAL_LT_INV_EQ, REAL_LE_RMUL, LN_MONO_LE]);
-
-val LOGR_MONO_LE_IMP = store_thm
-  ("LOGR_MONO_LE_IMP",``!x:real y b. 0 < x /\ x <= y /\ 1 <= b ==> (logr b x <= logr b y)``,
-  RW_TAC std_ss [logr_def,real_div]
-  >> `0 <= ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LTE_TRANS, LN_MONO_LE]
-  >> METIS_TAC [REAL_LE_INV_EQ, REAL_LE_RMUL_IMP, LN_MONO_LE, REAL_LTE_TRANS]);
-
 Theorem REAL_MAX_REDUCE :
     !x y :real. x <= y \/ x < y ==> (max x y = y) /\ (max y x = y)
 Proof
@@ -1076,6 +1089,22 @@ Proof
  >> MP_TAC (Q.SPECL [‘y’, ‘x’, ‘-z’] REAL_LT_RMUL)
  >> ‘0 < -z’ by PROVE_TAC [GSYM REAL_NEG_LT0, REAL_NEGNEG]
  >> rw [GSYM REAL_NEG_RMUL, REAL_LT_NEG]
+QED
+
+Theorem REAL_LT_LDIV_CANCEL :
+    !x y (z :real). 0 < x /\ 0 < y /\ 0 < z ==> (z / x < z / y <=> y < x)
+Proof
+    RW_TAC bool_ss [real_div, REAL_LT_LMUL]
+ >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem REAL_LE_LDIV_CANCEL :
+    !x y (z :real). 0 < x /\ 0 < y /\ 0 < z ==> (z / x <= z / y <=> y <= x)
+Proof
+    RW_TAC bool_ss [real_div, REAL_LE_LMUL]
+ >> MATCH_MP_TAC REAL_INV_LE_ANTIMONO
+ >> ASM_REWRITE_TAC []
 QED
 
 Theorem HARMONIC_SERIES_POW_2 :
@@ -2348,9 +2377,9 @@ val set_limsup_alt = store_thm
      Q.EXISTS_TAC `x'` >> art [])
  >> Q.EXISTS_TAC `n` >> PROVE_TAC []);
 
-(* this lemma implicitly assume `events p = UNIV` *)
-val liminf_limsup = store_thm
-  ("liminf_limsup", ``!(E :num -> 'a set). COMPL (liminf E) = limsup (COMPL o E)``,
+Theorem LIMSUP_COMPL : (* was: liminf_limsup *)
+    !(E :num -> 'a set). COMPL (liminf E) = limsup (COMPL o E)
+Proof
     RW_TAC std_ss [set_limsup_def, set_liminf_def]
  >> SIMP_TAC std_ss [COMPL_BIGUNION_IMAGE, o_DEF]
  >> Suff `!m. COMPL (BIGINTER {E n | m <= n}) = BIGUNION {COMPL (E n) | m <= n}` >- Rewr
@@ -2362,11 +2391,12 @@ val liminf_limsup = store_thm
  >- (fs [COMPL_COMPL] >> Q.EXISTS_TAC `n` >> art [])
  >> fs []
  >> Q.EXISTS_TAC `E n` >> art []
- >> Q.EXISTS_TAC `n` >> art []);
+ >> Q.EXISTS_TAC `n` >> art []
+QED
 
-val liminf_limsup_sp = store_thm (* more general form *)
-  ("liminf_limsup_sp",
-  ``!sp E. (!n. E n SUBSET sp) ==> (sp DIFF (liminf E) = limsup (\n. sp DIFF (E n)))``,
+Theorem LIMSUP_DIFF : (* was: liminf_limsup_sp *)
+    !sp E. (!n. E n SUBSET sp) ==> (sp DIFF (liminf E) = limsup (\n. sp DIFF (E n)))
+Proof
     RW_TAC std_ss [set_limsup_def, set_liminf_def]
  >> Q.ABBREV_TAC `f = (\m. BIGINTER {E n | m <= n})`
  >> Know `!m. f m SUBSET sp`
@@ -2388,7 +2418,8 @@ val liminf_limsup_sp = store_thm (* more general form *)
  >> EQ_TAC >> rpt STRIP_TAC
  >- (Q.EXISTS_TAC `n` >> METIS_TAC [])
  >> Q.EXISTS_TAC `E n` >> art []
- >> Q.EXISTS_TAC `n` >> art []);
+ >> Q.EXISTS_TAC `n` >> art []
+QED
 
 (* A point belongs to `limsup E` if and only if it belongs to infinitely
    many terms of the sequence E. [2, p.76]
@@ -2423,7 +2454,7 @@ Theorem IN_LIMINF :
     !A x. x IN liminf A <=> ?m. !n. m <= n ==> x IN (A n)
 Proof
     rpt GEN_TAC
- >> ASSUME_TAC (SIMP_RULE std_ss [GSYM liminf_limsup, IN_COMPL, o_DEF]
+ >> ASSUME_TAC (SIMP_RULE std_ss [GSYM LIMSUP_COMPL, IN_COMPL, o_DEF]
                                  (Q.SPECL [`COMPL o A`, `x`] IN_LIMSUP))
  >> `x IN liminf A <=> ~(?N. INFINITE N /\ !n. n IN N ==> x NOTIN A n)` by PROVE_TAC []
  >> fs [infinitely_often_lemma]
@@ -2779,6 +2810,28 @@ Proof
    >> Cases_on `n' = 0`
    >- (FULL_SIMP_TAC real_ss [] >> METIS_TAC [REAL_LT_ANTISYM, REAL_LET_TRANS])
    >> METIS_TAC [num_CASES,REAL_LT_IMP_LE]
+QED
+
+Theorem EXT_SKOLEM_THM :
+    !P Q. (!x. x IN P ==> ?y. Q x y) <=> ?f. !x. x IN P ==> Q x (f x)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC `f x` \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> fs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+ >> Q.EXISTS_TAC `f` >> art []
+QED
+
+Theorem EXT_SKOLEM_THM' :
+    !P Q. (!x. P x ==> ?y. Q x y) <=> ?f. !x. P x ==> Q x (f x)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC `f x` \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> fs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+ >> Q.EXISTS_TAC `f` >> art []
 QED
 
 val _ = export_theory ();

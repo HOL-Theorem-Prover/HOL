@@ -7324,6 +7324,28 @@ val LIM_SUBSEQUENCE = store_thm ("LIM_SUBSEQUENCE",
   SIMP_TAC std_ss [LIM_SEQUENTIALLY, o_THM] THEN
   MESON_TAC[MONOTONE_BIGGER, LESS_EQ_TRANS]);
 
+(* In this "weak" version, r(n) may increase weakly and slowly,
+   but eventually r(n) should go to infinity. (added by Chun Tian for SLLN_IID)
+
+   This lemma is useful when ‘r = \n. flr (a pow n)’, where ‘1 < a’ (but close to 1)
+ *)
+Theorem LIM_SUBSEQUENCE_WEAK :
+    !s r l. (!m n. m <= n ==> r(m) <= r(n)) /\ (!n. ?m. n <= r(m)) /\
+            (s --> l) sequentially ==> (s o r --> l) sequentially
+Proof
+    RW_TAC std_ss [LIM_SEQUENTIALLY, dist, o_THM]
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’))
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘!n. ?m. n <= r m’ (MP_TAC o (Q.SPEC ‘N’))
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘MAX N m’
+ >> RW_TAC std_ss [MAX_LE]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC LESS_EQ_TRANS
+ >> Q.EXISTS_TAC ‘r m’ >> art []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
 val MONOTONE_SUBSEQUENCE = store_thm ("MONOTONE_SUBSEQUENCE",
  ``!s:num->real. ?r:num->num.
    (!m n. m < n ==> r(m) < r(n)) /\

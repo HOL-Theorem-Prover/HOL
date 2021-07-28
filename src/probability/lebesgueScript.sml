@@ -2907,7 +2907,7 @@ Proof
                 >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
                 >> METIS_TAC [])
       >> SPOSE_NOT_THEN ASSUME_TAC
-      >> METIS_TAC [EXTREAL_ARCH_POW,extreal_lt_def])
+      >> METIS_TAC [EXTREAL_ARCH_POW2, extreal_lt_def])
   >> `!n.  fn_seq m f n x <= f x` by METIS_TAC [lemma_fn_seq_upper_bounded]
   >> `?r. f x = Normal r` by METIS_TAC [extreal_cases,lt_infty,lte_trans,extreal_of_num_def]
   >> `!n. fn_seq m f n x <> PosInf` by METIS_TAC [lt_infty,let_trans]
@@ -2918,7 +2918,7 @@ Proof
              >> SELECT_ELIM_TAC
                 >> RW_TAC std_ss []
              >> METIS_TAC [extreal_cases])
-  >> `?N. f x < 2 pow N` by RW_TAC std_ss [EXTREAL_ARCH_POW]
+  >> `?N. f x < 2 pow N` by RW_TAC std_ss [EXTREAL_ARCH_POW2]
   >> `!p n. p <= n ==> 2 pow p <= 2 pow n` by METIS_TAC [pow_le_mono,EVAL ``1<=2``]
   >> `!n. N <= n ==> f x < 2 pow n` by METIS_TAC [lte_trans]
   >> `!n. N <= n ==> ?k. k IN count (4 ** n) /\ &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n`
@@ -5245,22 +5245,23 @@ val integrable_normal_integral = store_thm (* new *)
  >> STRIP_TAC
  >> METIS_TAC [extreal_cases]);
 
-(* Updated with ``!x. x IN m_space m ==> (abs (g x) <= f x)`` *)
-val integrable_bounded = store_thm
-  ("integrable_bounded",
-  ``!m f g. measure_space m /\ integrable m f /\
+(* Updated with ‘!x. x IN m_space m ==> (abs (g x) <= f x)’ *)
+Theorem integrable_bounded :
+    !m f g. measure_space m /\ integrable m f /\
             g IN measurable (m_space m,measurable_sets m) Borel /\
             (!x. x IN m_space m ==> (abs (g x) <= f x))
-        ==> integrable m g``,
+        ==> integrable m g
+Proof
     RW_TAC std_ss [integrable_def, abs_bounds, GSYM fn_plus_def, GSYM fn_minus_def]
  >- (`!x. x IN m_space m ==> fn_plus g x <= fn_plus f x`
        by (RW_TAC real_ss [fn_plus_def, lt_imp_le, le_refl] \\
            METIS_TAC [extreal_lt_def, lte_trans]) \\
-     METIS_TAC [pos_fn_integral_mono_mspace, FN_PLUS_POS, lt_infty, let_trans])
+     METIS_TAC [pos_fn_integral_mono, FN_PLUS_POS, lt_infty, let_trans])
  >> `!x. x IN m_space m ==> fn_minus g x <= fn_plus f x`
         by (RW_TAC real_ss [fn_minus_def, fn_plus_def, lt_imp_le, le_refl] \\
             METIS_TAC [let_trans, lt_neg, le_neg, neg_neg, neg_0])
- >> METIS_TAC [pos_fn_integral_mono_mspace, FN_PLUS_POS, FN_MINUS_POS, lt_infty, let_trans]);
+ >> METIS_TAC [pos_fn_integral_mono, FN_PLUS_POS, FN_MINUS_POS, lt_infty, let_trans]
+QED
 
 val integrable_fn_plus = store_thm
   ("integrable_fn_plus",
@@ -6129,7 +6130,7 @@ Proof
            METIS_TAC [add_assoc, add_comm, add_not_infty, extreal_ainv_def, neg_neg]) \\
        Cases_on ‘fn_minus f x = PosInf’
        >- (‘fn_plus f x = 0’ by METIS_TAC [FN_MINUS_INFTY_IMP] >> rw [extreal_ainv_def] \\
-           ‘fn_plus g x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY'] \\
+           ‘fn_plus g x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY] \\
            ‘fn_plus g x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
            ‘?r. fn_plus g x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
            Cases_on ‘fn_minus g x = PosInf’ >- (rw [extreal_sub_def, extreal_add_def]) \\
@@ -6142,7 +6143,7 @@ Proof
            ‘fn_minus f x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_MINUS_POS] \\
            ‘?r. fn_minus f x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
            rw [extreal_add_def, extreal_ainv_def] \\
-           ‘fn_plus f x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY'] \\
+           ‘fn_plus f x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY] \\
            ‘fn_plus f x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
            ‘?s. fn_plus f x = Normal s’ by METIS_TAC [extreal_cases] >> POP_ORW \\
            rw [extreal_add_def, extreal_sub_def]) \\
@@ -6169,13 +6170,13 @@ Proof
          (* goal 4.2 (of 2) *)
          Cases_on ‘fn_minus f x = PosInf’
          >- (‘fn_plus f x = 0’ by METIS_TAC [FN_MINUS_INFTY_IMP] \\
-             ‘fn_plus g x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY'] \\
+             ‘fn_plus g x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY] \\
              ‘fn_plus g x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
              ‘?r. fn_plus g x = Normal r’ by METIS_TAC [extreal_cases] \\
              fs [add_lzero]) \\
          Cases_on ‘fn_minus g x = PosInf’
          >- (‘fn_plus g x = 0’ by METIS_TAC [FN_MINUS_INFTY_IMP] \\
-             ‘fn_plus f x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY'] \\
+             ‘fn_plus f x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY] \\
              ‘fn_plus f x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
              ‘?r. fn_plus f x = Normal r’ by METIS_TAC [extreal_cases] \\
              fs [add_rzero]) \\
@@ -8660,7 +8661,7 @@ val RN_lemma2 = Q.prove (
      FULL_SIMP_TAC std_ss [GSYM extreal_lt_def] \\
     `0 < - (measure m B - measure v B)` by METIS_TAC [lt_neg, neg_0] \\
     `?n. measure m B - measure v B < -Normal ((1 / 2) pow n)`
-         by METIS_TAC [EXTREAL_ARCH_POW_INV, lt_neg, neg_neg] \\
+         by METIS_TAC [EXTREAL_ARCH_POW2_INV, lt_neg, neg_neg] \\
     `d B < -Normal ((1 / 2) pow n)` by METIS_TAC [] \\
     `!n. B SUBSET A n` by METIS_TAC [SUBSET_BIGINTER, IN_IMAGE, IN_UNIV] \\
      METIS_TAC [lt_antisym])

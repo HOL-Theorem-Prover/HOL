@@ -4794,6 +4794,28 @@ Proof
  >> IMP_RES_TAC MEASURE_SPACE_INCREASING
 QED
 
+Theorem NULL_SET_BIGUNION :
+    !m f. measure_space m /\ (!n. f n IN null_set m) ==>
+          BIGUNION (IMAGE f univ(:num)) IN null_set m
+Proof
+    rpt GEN_TAC
+ >> simp [IN_NULL_SET, null_set_def]
+ >> STRIP_TAC
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC MEASURE_SPACE_BIGUNION >> art [])
+ >> DISCH_TAC
+ >> REWRITE_TAC [GSYM le_antisym]
+ >> reverse CONJ_TAC
+ >- (IMP_RES_TAC MEASURE_SPACE_POSITIVE \\
+     fs [positive_def])
+ >> Know ‘suminf (measure m o f) = 0’
+ >- (MATCH_MP_TAC ext_suminf_zero >> rw [o_DEF])
+ >> DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM)
+ >> IMP_RES_TAC MEASURE_SPACE_COUNTABLY_SUBADDITIVE
+ >> MATCH_MP_TAC COUNTABLY_SUBADDITIVE
+ >> rw [IN_FUNSET]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Alternative definitions of `sigma_finite`                                *)
 (* ------------------------------------------------------------------------- *)
