@@ -2258,6 +2258,52 @@ $\mathbb{N}$ and $\mathbb{N}\times\mathbb{N}$:
 \end{alltt}
 \end{hol}
 
+\paragraph{Upper and lower limits of extreal sequences}
+
+For a sequence of extreal numbers, the \emph{limes inferior} or \emph{lower limit} is
+defined as (see, e.g., Appendix A of \cite{Schilling:2017} for more details.)
+\begin{hol}
+\begin{alltt}
+##thm ext_liminf_def
+\end{alltt}
+\end{hol}
+
+and the \emph{limes superior} or \emph{upper limit} is defined as
+\begin{hol}
+\begin{alltt}
+##thm ext_limsup_def
+\end{alltt}
+\end{hol}
+
+Some basic properties of \holtxt{ext_limsup} and \holtxt{ext_liminf} are provided in
+\theoryimp{extreal} theory:
+\begin{hol}
+\begin{alltt}
+##thm ext_liminf_alt_limsup
+##thm ext_liminf_pos
+##thm ext_liminf_le_limsup
+##thm ext_limsup_alt_liminf
+##thm ext_limsup_pos
+\end{alltt}
+\end{hol}
+
+The most important property, however, that the normal limit of a sequence of extreal numbers
+(when forcely converted to real numbers) coincides with its upper and lower limits
+(in this case they are also the same), together with useful lemmas, are provided
+in \theoryimp{martingale} theory:
+\begin{hol}
+\begin{alltt}
+>>__ load "martingaleTheory";
+>>__ open martingaleTheory;
+##thm ext_limsup_thm
+
+##thm ext_limsup_le_subseq
+##thm ext_liminf_le_subseq
+##thm ext_limsup_imp_subseq
+##thm ext_liminf_imp_subseq
+\end{alltt}
+\end{hol}
+
 \subsection{Bit vectors}
 \label{sec:bit-vectors}
 \index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|(}

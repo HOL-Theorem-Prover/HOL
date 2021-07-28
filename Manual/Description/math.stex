@@ -1311,7 +1311,7 @@ only a special version (converge to zero, with integer-valued power) is provided
 \end{alltt}
 \end{hol}
 
-\subsection{Limit Theorems and the Laws of Large Numbers}
+\subsection{Limit theorems and the Laws of Large Numbers}
 
 \begin{quote}
 \textit{
@@ -1335,7 +1335,8 @@ $S_n = \sum_{j=1}^n X_j$. Under certain conditions
 $(S_n - \mathscr{E}(S_n))/n$ converges to 0, in probability
 (weak law) or almost everywhere (strong law).
 
-All versions of LLN can be found in \HOL{}'s \theoryimp{large_number} theory, from the \texttt{probability} example (\ie, under the \texttt{examples} directory).
+Several versions of the Laws of Large Numbers can be found in \theoryimp{large_number} theory,
+in \ml{\$(HOLDIR)/examples/probability} directory.
 The conclusion of all LLN theorems are given in the form of \holtxt{LLN}, which
 has alternative definitions for different conditions, e.g.
 \begin{hol}
@@ -1365,11 +1366,13 @@ Under the same hypotheses it also converges to 0 almost everywhere:
 \end{alltt}
 \end{hol}
 
-For (pairwise) independent r.v.'s with identical distributions,
-the weak law has been proven:
+For (pairwise) independent r.v.'s with identical distributions (also called \emph{I.I.D.}),
+the Strong and Weak Law of Large Numbers are also proven:
 \begin{hol}
 \begin{alltt}
-##thm WLLN_IID    
+##thm WLLN_IID
+
+##thm SLLN_IID
 >>__ val _ = Globals.linewidth := oldwidth;
 \end{alltt}
 \end{hol}
