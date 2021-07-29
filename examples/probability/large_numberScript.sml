@@ -2897,28 +2897,16 @@ Proof
  >> REWRITE_TAC [LIM_SEQUENTIALLY_CESARO]
 QED
 
-(* The Weak Law of Large Numbers for I.I.D. Random Variables
+(* ------------------------------------------------------------------------- *)
+(*  The Weak Law of Large Numbers for IID random variables                   *)
+(* ------------------------------------------------------------------------- *)
 
-   Theorem 5.2.2 [2, p.114]. This law of large numbers is due to Khintchine.
-
-   Key (non-trivial) lemmas used in the main proof (~1200 lines):
-
- - expectation_converge (expectation_bounds)                 [probabilityTheory]
- - equivalent_thm3' (equivalent_thm3, equivalent_thm2)
- - indep_vars_imp_uncorrelated (indep_vars_expectation)      [probabilityTheory]
- - lebesgue_monotone_convergence_decreasing                  [lebesgueTheory]
- - converge_LP_imp_PR'                                       [probabilityTheory]
- - converge_PR_to_limit' (converge_PR_to_limit)              [probabilityTheory]
- - truncated_vars_expectation' (truncated_vars_expectation,
-       which depends on lebesgue_dominated_convergence)      [martingaleTheory]
- *)
-
-(* This shared tactic is used by both WLLN_IID and SLLN_IID. It setup a truncated
+(* This shared tactic is used by both WLLN_IID and SLLN_IID. It sets up a truncated
    sequence of r.v.'s, Y, according to the most comfortable way (but slightly
    different with textbook proofs) of proving X and Y are equivalent, while Y
    now has finite second moments and is uncorrelated.
 
-   Furthermore (part 2), it setup Z as the partial sum of Y, and prove that Z
+   Furthermore (part 2), it sets up Z as the partial sum of Y, and prove that Z
    is a real_random_variable with finite second moments, etc.
  *)
 val LLN_IID_shared_tactics =
@@ -3061,6 +3049,19 @@ val LLN_IID_shared_tactics =
  >> DISCH_TAC;
  (* end of LLN_IID_shared_tactics *)
 
+(* Theorem 5.2.2 [2, p.114]. This law of large numbers is due to Khintchine.
+
+   Key (non-trivial) lemmas used in the main proof (~1200 lines):
+
+ - expectation_converge (expectation_bounds)                 [probabilityTheory]
+ - equivalent_thm3' (equivalent_thm3, equivalent_thm2)
+ - indep_vars_imp_uncorrelated (indep_vars_expectation)      [probabilityTheory]
+ - lebesgue_monotone_convergence_decreasing                  [lebesgueTheory]
+ - converge_LP_imp_PR'                                       [probabilityTheory]
+ - converge_PR_to_limit' (converge_PR_to_limit)              [probabilityTheory]
+ - truncated_vars_expectation' (truncated_vars_expectation,
+       which depends on lebesgue_dominated_convergence)      [martingaleTheory]
+ *)
 Theorem WLLN_IID :
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           pairwise_indep_vars p X (\n. Borel) UNIV /\
@@ -4166,19 +4167,9 @@ Proof
  >> MATCH_MP_TAC truncated_vars_expectation' >> art []
 QED
 
-(* SLLN_IID for nonnegative r.v.'s, adding ‘!n x. x IN p_space p ==> 0 <= X n x’.
-
-   The proof follows Theorem 5.4.4 [3, p.62] and Theorem 22.1 [6, p.282].
- *)
-(*
-Theorem SLLN_IID_wlog[local] :
-    !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
-          (!n x. x IN p_space p ==> 0 <= X n x) /\
-          pairwise_indep_vars p X (\n. Borel) UNIV /\
-          identical_distribution p X Borel UNIV /\ integrable p (X 0)
-      ==> LLN p X almost_everywhere
-Proof
- *)
+(* ------------------------------------------------------------------------- *)
+(*  The Strong Law of Large Numbers for IID random variables                 *)
+(* ------------------------------------------------------------------------- *)
 
 Definition pow_seq_def :
     pow_seq a n = flr (a pow n)
@@ -4403,6 +4394,10 @@ Proof
  >> MATCH_MP_TAC LIM_INV >> art []
 QED
 
+(* This lemma corresponds to the part of textbook proofs that can be formalized directly,
+   while after this part a non-trivial fix is done by Chun Tian at mathematical levels.
+   (see SLLN_IID_wlog for more details.)
+ *)
 Theorem SLLN_IID_lemma :
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           pairwise_indep_vars p X (\n. Borel) UNIV /\
@@ -4678,7 +4673,7 @@ Proof
              Know ‘random_variable
                      (\x. X 0 x pow 2 *
                           indicator_fn
-                          {x | x IN p_space p /\ abs (X 0 x) < &u a (SUC n)} x) p Borel <=>
+                            {x | x IN p_space p /\ abs (X 0 x) < &u a (SUC n)} x) p Borel <=>
                    random_variable ((\x. x pow 2) o (f N) o (X 0)) p Borel’
              >- (MATCH_MP_TAC random_variable_cong \\
                  rpt STRIP_TAC \\
@@ -4949,7 +4944,7 @@ Proof
      Q.PAT_X_ASSUM ‘!n. &flr (a pow n) <> 0’ K_TAC \\
   (* collect all constants so far *)
     ‘!x. X 0 x pow 2 * 2 * inv (Normal a) pow SUC (N (abs (X 0 x))) * c =
-               2 * c * X 0 x pow 2 * inv (Normal a) pow SUC (N (abs (X 0 x)))’
+         2 * c * X 0 x pow 2 * inv (Normal a) pow SUC (N (abs (X 0 x)))’
        by METIS_TAC [mul_comm, mul_assoc] >> POP_ORW \\
   (* key property of ‘N’ due to LEAST *)
      Know ‘!x. x <> PosInf /\ x <> NegInf ==> x <= Normal (a pow (SUC (N x)))’
@@ -5211,7 +5206,6 @@ Proof
      MATCH_MP_TAC NULL_SET_BIGUNION >> rw [])
  >> DISCH_TAC
  >> Q.EXISTS_TAC ‘N’ >> rw [GSYM IN_NULL_SET]
- (* stage work *)
  >> Know ‘!n. X n x = 0’
  >- (Suff ‘!n. x IN m_space p DIFF f n’ >- METIS_TAC [] \\
      rw [] (* x NOTIN f n *) \\
@@ -5227,7 +5221,7 @@ QED
 
 (* SLLN_IID for nonnegative r.v.'s, i.e. ‘!n x. x IN p_space p ==> 0 <= X n x’
 
-   The proof follows Theorem 5.4.4 [3, p.62] and Theorem 22.1 [6, p.282].
+   The proof follows Theorem 5.4.4 [3, p.62], Theorem 22.1 [6, p.282] and Theorem 1 of [12].
  *)
 Theorem SLLN_IID_wlog[local] :
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
