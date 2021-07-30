@@ -1111,6 +1111,22 @@ val IMP_CLAUSES = save_thm("IMP_CLAUSES",
                   SPEC t IMP_CLAUSE5])
    end);
 
+(* ----------------------------------------------------------------------
+    |- !t1 t2. (t1 <=> t2) ==> (t1 ==> t2)
+   ---------------------------------------------------------------------- *)
+
+val EQ_IMPLIES =
+  let
+    val impt1 = REFL $ mk_comb(implication, t1b)
+    val eqt = mk_eq(t1b,t2b)
+    val t1_eq_t2 = ASSUME eqt
+    val th0 = MK_COMB(impt1,t1_eq_t2)
+    val imp_refl = IMP_CLAUSES |> SPEC t1b |> CONJUNCTS |> el 4 |> EQT_ELIM
+  in
+    save_thm("EQ_IMPLIES", EQ_MP th0 imp_refl |> DISCH eqt |> GENL [t1b,t2b])
+  end
+
+
 (*----------------------------------------------------------------------------
  *    |- (~~t = t) /\ (~T = F) /\ (~F = T)
  *---------------------------------------------------------------------------*)
