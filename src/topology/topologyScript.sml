@@ -292,8 +292,6 @@ Proof
   simp[PULL_EXISTS] THEN METIS_TAC[]
 QED
 
-Theorem BIGINTER_2[local] = BIGINTER_INTER
-
 val CLOSED_IN_INTER = store_thm ("CLOSED_IN_INTER",
  ``!top s t. closed_in top s /\ closed_in top t ==> closed_in top (s INTER t)``,
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM BIGINTER_2] THEN
