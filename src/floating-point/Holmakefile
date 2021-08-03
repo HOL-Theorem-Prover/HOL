@@ -1,4 +1,4 @@
-OPTIONS=QUIT_ON_FAILURE
+INCLUDES = ../real ../integer
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))

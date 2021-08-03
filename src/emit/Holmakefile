@@ -1,2 +1,4 @@
+INCLUDES = ../string ../finite_maps ../sort ../integer
+
 selftest.exe: selftest.uo basis_emitTheory.uo ConstMapML.uo
 	$(HOLMOSMLC) -o $@ $<

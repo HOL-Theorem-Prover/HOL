@@ -1,0 +1,10 @@
+CLINE_OPTIONS = -r
+
+SRCRELNAMES = \
+  monad/more_monads string sort res_quan/src quotient/src hol88 bag n-bit \
+  finite_maps ring/src integer topology transfer update emit \
+  pred_set/src/more_theories coalgebras rational datatype/inftree search \
+  real floating-point probability temporal/src float Boolify/src HolQbf HolSmt
+
+
+INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))

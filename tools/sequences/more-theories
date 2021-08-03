@@ -5,6 +5,7 @@ src/TeX
 !src/TeX/theory_tests/proj1paper
 !examples/Crypto/RSA
 !examples/zipper
+src/parallel_builds/core
 src/monad/more_monads
 src/string
 src/sort

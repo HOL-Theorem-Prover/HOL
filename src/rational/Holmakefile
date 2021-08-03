@@ -1,9 +1,11 @@
+INCLUDES = ../ring/src ../integer
+
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 selftest.exe : selftest.uo ratLib.uo ratTheory.uo ratReduce.uo
 	$(HOLMOSMLC) -o $@ $<
 
-intExtensionTheory.sml: $(dprot $(SIGOBJ)/int_arithTheory.uo)
+intExtensionTheory.sml: ../integer/int_arithTheory.uo
 
 EXTRA_CLEANS = selftest.exe

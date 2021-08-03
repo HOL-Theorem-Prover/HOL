@@ -1,3 +1,5 @@
+INCLUDES = ../quotient/src ../ring/src ../n-bit ../finite_maps
+
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
