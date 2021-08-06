@@ -1,4 +1,11 @@
-INCLUDES = ../string ../finite_maps ../sort ../integer
+INCLUDES = ../string ../finite_maps ../sort ../integer ../coalgebras \
+           ../monad/more_monads
+
+all: $(DEFAULT_TARGETS) selftest.exe
+
+.PHONY: all
 
 selftest.exe: selftest.uo basis_emitTheory.uo ConstMapML.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe
