@@ -12,21 +12,21 @@ env:
   matrix:
     - SML=mosml BUILDOPTS="--seq=developers/travis/smallseq"
     - SML=mosml BUILDOPTS="--seq=tools/sequences/kernel -t1"
-    - SML=poly BUILDOPTS=
-    - SML=poly BUILDOPTS=--expk
-    - SML=poly BUILDOPTS="--seq=developers/travis/selftestseq -t1"
-    - SML=poly BUILDOPTS="--expk --seq=developers/travis/selftestseq -t1"
-    - SML=poly BUILDOPTS="--seq=developers/travis/more_examples_seq -t1"
-    - SML=poly BUILDOPTS="--expk --seq=developers/travis/more_examples_seq -t1"
-    - SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
-    - SML=poly POLY_INTINF="--enable-intinf-as-int"
+    - SML=poly BUILDOPTS="--seq=developers/travis/smallseq"
+    - SML=poly BUILDOPTS="--seq=developers/travis/smallseq --expk"
+    - SML=poly BUILDOPTS="--seq=developers/travis/smallseq -t1"
+    - SML=poly BUILDOPTS="--expk --seq=developers/travis/smallseq -t1"
+    - SML=poly BUILDOPTS="--seq=developers/travis/smallseq -t1"
+    - SML=poly BUILDOPTS="--expk --seq=developers/travis/smallseq -t1"
+    - SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/smallseq"
+    - SML=poly POLY_INTINF="--enable-intinf-as-int --seq=developers/travis/smallseq"
 matrix:
   include:
     - os: osx
       env: SML=poly BUILDOPTS=
-    - env: SML=poly POLY_ROOT=T BUILDOPTS="--seq developers/travis/selftestseq"
+    - env: SML=poly POLY_ROOT=T BUILDOPTS="--seq developers/travis/smallseq"
       sudo: true
     - env: SML=poly OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/vsmallseq"
   allow_failures:
     - os: osx
-    - env: SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
+    - env: SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/smallseq"
