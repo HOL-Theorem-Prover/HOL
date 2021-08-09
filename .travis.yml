@@ -19,11 +19,11 @@ env:
     - SML=poly BUILDOPTS="--seq=developers/travis/smallseq -t1"
     - SML=poly BUILDOPTS="--expk --seq=developers/travis/smallseq -t1"
     - SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/smallseq"
-    - SML=poly POLY_INTINF="--enable-intinf-as-int --seq=developers/travis/smallseq"
+    - SML=poly POLY_INTINF="--enable-intinf-as-int" BUILDOPTS="--seq=developers/travis/smallseq"
 matrix:
   include:
     - os: osx
-      env: SML=poly BUILDOPTS=
+      env: SML=poly BUILDOPTS="--seq developers/travis/kernel -t1"
     - env: SML=poly POLY_ROOT=T BUILDOPTS="--seq developers/travis/smallseq"
       sudo: true
     - env: SML=poly OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/vsmallseq"
