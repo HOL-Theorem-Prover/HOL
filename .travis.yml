@@ -23,7 +23,7 @@ env:
 matrix:
   include:
     - os: osx
-      env: SML=poly BUILDOPTS="--seq developers/travis/kernel -t1"
+      env: SML=poly BUILDOPTS="--seq tools/sequences/kernel -t1"
     - env: SML=poly POLY_ROOT=T BUILDOPTS="--seq developers/travis/smallseq"
       sudo: true
     - env: SML=poly OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/vsmallseq"
