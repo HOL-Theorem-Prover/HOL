@@ -1,4 +1,4 @@
-INCLUDES = ../real ../integer
+INCLUDES = ../real ../integer ../n-bit
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
