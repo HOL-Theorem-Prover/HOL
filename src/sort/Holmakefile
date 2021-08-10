@@ -1,5 +1,3 @@
-INCLUDES = ../string
-
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
