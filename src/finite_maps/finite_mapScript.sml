@@ -1179,7 +1179,7 @@ Proof
   every_case_tac >> gvs[]
 QED
 
-Theorem FMERGE_WITH_KEY_EQ_EMPTY:
+Theorem FMERGE_WITH_KEY_EQ_EMPTY[simp]:
   (FMERGE_WITH_KEY f m1 m2 = FEMPTY) <=> (m1 = FEMPTY) /\ (m2 = FEMPTY)
 Proof
   rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY] >>
@@ -2518,7 +2518,7 @@ val fmap_rel_FEMPTY2 = store_thm(
   METIS_TAC [FDOM_EQ_EMPTY]);
 val _ = export_rewrites ["fmap_rel_FEMPTY2"]
 
-Theorem fmap_rel_FEMPTY3:
+Theorem fmap_rel_FEMPTY3[simp]:
   (fmap_rel (R : 'a -> 'b -> bool) FEMPTY (f1 : 'c |-> 'b) <=> f1 = FEMPTY) ∧
   (fmap_rel R (f2 : 'c |-> 'a) FEMPTY <=> f2 = FEMPTY)
 Proof
@@ -3184,13 +3184,13 @@ Proof
   EVERY_CASE_TAC >> gvs[]
 QED
 
-Theorem FDIFF_FEMPTY:
+Theorem FDIFF_FEMPTY[simp]:
   FDIFF FEMPTY s = FEMPTY
 Proof
   rw[fmap_eq_flookup, FLOOKUP_FDIFF]
 QED
 
-Theorem FDIFF_EMPTY:
+Theorem FDIFF_EMPTY[simp]:
   !f. FDIFF f {} = f
 Proof
   rw[fmap_eq_flookup, FLOOKUP_FDIFF]
