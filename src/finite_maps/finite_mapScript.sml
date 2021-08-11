@@ -669,6 +669,11 @@ val DRESTRICT_FUPDATE = Q.store_thm
             EXTENSION] THEN PROVE_TAC []);
 val _ = export_rewrites ["DRESTRICT_FUPDATE"]
 
+Theorem DRESTRICT_EQ_FEMPTY:
+  !m s. DISJOINT s (FDOM m) <=> DRESTRICT m s = FEMPTY
+Proof
+  ho_match_mp_tac fmap_SIMPLE_INDUCT >> rw[] >> eq_tac >> rw[]
+QED
 
 val STRONG_DRESTRICT_FUPDATE = Q.store_thm
 ("STRONG_DRESTRICT_FUPDATE",
@@ -1802,6 +1807,12 @@ val FUPDATE_LIST_SNOC = store_thm("FUPDATE_LIST_SNOC",
   ``!xs x fm. fm |++ SNOC x xs = (fm |++ xs) |+ x``,
   Induct THEN SRW_TAC[][FUPDATE_LIST_THM])
 
+Theorem DOMSUB_FUPDATE_LIST:
+  !l m x. (m |++ l) \\ x = (m \\ x) |++ (FILTER ($<> x o FST) l)
+Proof
+  Induct >> rw[FUPDATE_LIST_THM, fmap_eq_flookup] >>
+  PairCases_on `h` >> gvs[] >> simp[DOMSUB_FUPDATE_THM]
+QED
 
 
 
@@ -2565,6 +2576,34 @@ val fmap_rel_FLOOKUP_imp = Q.store_thm("fmap_rel_FLOOKUP_imp",
    (!k v1. FLOOKUP f1 k = SOME v1 ==> ?v2. FLOOKUP f2 k = SOME v2 /\ R v1 v2)`,
   rw[fmap_rel_OPTREL_FLOOKUP,optionTheory.OPTREL_def] >>
   first_x_assum(qspec_then`k`mp_tac) >> rw[]);
+
+Theorem fmap_rel_FUPDATE_EQN:
+  fmap_rel R (f1 \\ k) (f2 \\ k) /\ R v1 v2 <=>
+  fmap_rel R (f1 |+ (k,v1)) (f2 |+ (k,v2))
+Proof
+  gvs[fmap_rel_OPTREL_FLOOKUP, FLOOKUP_UPDATE, DOMSUB_FLOOKUP_THM] >>
+  reverse (eq_tac >> rw[])
+  >- (pop_assum (qspec_then `k` mp_tac) >> simp[]) >>
+  first_x_assum (qspec_then `k'` mp_tac) >> simp[] >>
+  every_case_tac >> gvs[]
+QED
+
+Theorem fmap_rel_ind:
+  !R FR.
+    FR FEMPTY FEMPTY /\
+    (!k v1 v2 f1 f2.
+      R v1 v2 /\ FR (f1 \\ k) (f2 \\ k) ==> FR (f1 |+ (k,v1)) (f2 |+ (k,v2)))
+  ==> !f1 f2. fmap_rel R f1 f2 ==> FR f1 f2
+Proof
+  rpt gen_tac >> strip_tac >>
+  ho_match_mp_tac fmap_INDUCT >> rw[] >>
+  `x IN FDOM f2` by gvs[fmap_rel_def] >>
+  imp_res_tac FM_PULL_APART >> gvs[] >>
+  last_x_assum irule >> gvs[DOMSUB_NOT_IN_DOM] >>
+  gvs[GSYM fmap_rel_FUPDATE_EQN] >>
+  first_x_assum irule >> gvs[DOMSUB_NOT_IN_DOM]
+QED
+
 
 (*---------------------------------------------------------------------------
      Some helpers for fupdate_NORMALISE_CONV
