@@ -1,4 +1,5 @@
-INCLUDES = ../real ../sort ../res_quan/src
+INCLUDES = ../real ../sort ../res_quan/src ../n-bit ../pred_set/src/more_theories \
+	../topology ../quotient/src
 EXTRA_CLEANS = heap
 
 ifdef POLY
