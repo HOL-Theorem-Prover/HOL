@@ -3180,12 +3180,6 @@ Proof
   rw[FDIFF_def, DRESTRICT_DRESTRICT, fmap_eq_flookup, FLOOKUP_DRESTRICT]
 QED
 
-Theorem FLOOKUP_FDIFF:
-  FLOOKUP (FDIFF fm s) k = if k IN s then NONE else FLOOKUP fm k
-Proof
-  rw[FDIFF_def, FLOOKUP_DRESTRICT] >> gvs[]
-QED
-
 Theorem FDIFF_FUNION:
   !fm1 fm2 s. FDIFF (FUNION fm1 fm2) s = FUNION (FDIFF fm1 s) (FDIFF fm2 s)
 Proof

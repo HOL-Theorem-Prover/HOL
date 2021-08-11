@@ -2717,7 +2717,7 @@ Proof
 QED
 
 Theorem unionWith_thm:
-  ∀cmp f blo bhi t1 t2.
+  ∀cmp f t1 t2.
     good_cmp cmp ∧
     invariant cmp t1 ∧
     invariant cmp t2
