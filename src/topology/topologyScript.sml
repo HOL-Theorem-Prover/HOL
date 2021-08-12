@@ -345,9 +345,11 @@ val CLOSED_IN_BIGUNION = store_thm ("CLOSED_IN_BIGUNION",
 (* Define limit point in topological space                                   *)
 (*---------------------------------------------------------------------------*)
 
-val limpt = new_definition("limpt",
-  “limpt(top) x S' =
-      !N:'a->bool. neigh(top)(N,x) ==> ?y. ~(x = y) /\ S' y /\ N y”);
+Definition limpt:
+  limpt(top) x S' <=>
+  x IN topspace top /\
+  !N:'a->bool. neigh(top)(N,x) ==> ?y. ~(x = y) /\ S' y /\ N y
+End
 
 (*---------------------------------------------------------------------------*)
 (* Prove that a set is closed iff it contains all its limit points           *)
@@ -361,7 +363,7 @@ Proof
  >> IMP_RES_TAC closed_topspace
  >> GEN_TAC >> CONV_TAC (ONCE_DEPTH_CONV CONTRAPOS_CONV)
  >> REWRITE_TAC[closed_in, limpt]
- >> ASM_REWRITE_TAC [SUBSET_UNIV, GSYM COMPL_DEF]
+ >> ASM_REWRITE_TAC [SUBSET_UNIV, GSYM COMPL_DEF, IN_UNIV]
  >> CONV_TAC(ONCE_DEPTH_CONV NOT_FORALL_CONV)
  >> FREEZE_THEN (fn th => ONCE_REWRITE_TAC[th]) (SPEC “S':'a->bool” COMPL_MEM)
  >> REWRITE_TAC []
