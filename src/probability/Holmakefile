@@ -1,12 +1,18 @@
+INCLUDES = ../real ../sort ../res_quan/src ../n-bit ../pred_set/src/more_theories \
+	../topology ../quotient/src
 EXTRA_CLEANS = heap
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
-	RealArith sortingTheory pred_setLib numpairTheory res_quanTools \
-	logrootTheory iterateTheory listTheory rich_listTheory
+REAL_OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
+	RealArith iterateTheory
+OTHER_OBJNAMES = ../sort/sortingTheory ../res_quan/src/res_quanTools
 
-OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+SIGOBJ_OBJNAMES = pred_setLib numpairTheory logrootTheory
+
+OBJS = $(patsubst %,../real/%.uo,$(REAL_OBJNAMES)) \
+       $(patsubst %,%.uo,$(OTHER_OBJNAMES)) \
+       $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(SIGOBJ_OBJNAMES))
 
 all: $(HOLHEAP)
 

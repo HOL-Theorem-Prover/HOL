@@ -15,8 +15,7 @@ Proof
 QED
 
 val _ =
- emitML ""    (* Write to current directory, not !Globals.emitMLDir *)
-    ("ordinal",
+ eSML "ordinal"
      [MLSIG "type num = numML.num",
       OPEN ["num"],
       DATATYPE `osyntax = End num | Plus osyntax num osyntax`,
@@ -30,7 +29,7 @@ val _ =
       DEFN ord_less_def,
       DEFN ord_add_def,
       DEFN ord_sub_def,
-      DEFN ord_mult_def]);
+      DEFN ord_mult_def]
 
 
 

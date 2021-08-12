@@ -152,8 +152,9 @@ Definition ball :
     B(m)(x,e) = \y. (dist m)(x,y) < e
 End
 
-val BALL_OPEN = store_thm("BALL_OPEN",
-  “!m:('a)metric. !x e. &0 < e ==> open_in(mtop(m))(B(m)(x,e))”,
+Theorem BALL_OPEN:
+  !m:('a)metric. !x e. &0 < e ==> open_in(mtop(m))(B(m)(x,e))
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[MTOP_OPEN] THEN
   X_GEN_TAC “z:'a” THEN REWRITE_TAC[ball] THEN BETA_TAC THEN
   DISCH_THEN(ASSUME_TAC o ONCE_REWRITE_RULE[GSYM REAL_SUB_LT]) THEN
@@ -162,7 +163,16 @@ val BALL_OPEN = store_thm("BALL_OPEN",
   ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN DISCH_TAC THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN
   EXISTS_TAC “dist(m)(x:'a,z) + dist(m)(z,y)” THEN
-  ASM_REWRITE_TAC[METRIC_TRIANGLE]);
+  ASM_REWRITE_TAC[METRIC_TRIANGLE]
+QED
+
+Theorem TOPSPACE_MTOP:
+  topspace (mtop m) = UNIV
+Proof
+  simp[topspace, EXTENSION] >> csimp[IN_DEF] >> qx_gen_tac ‘x’ >>
+  qexists_tac ‘B(m)(x,1)’ >> simp[BALL_OPEN] >>
+  simp[ball, METRIC_SAME]
+QED
 
 val BALL_NEIGH = store_thm("BALL_NEIGH",
   “!m:('a)metric. !x e. &0 < e ==> neigh(mtop(m))(B(m)(x,e),x)”,
@@ -177,14 +187,19 @@ val BALL_NEIGH = store_thm("BALL_NEIGH",
 (* Characterize limit point in a metric topology                             *)
 (*---------------------------------------------------------------------------*)
 
-val MTOP_LIMPT = store_thm("MTOP_LIMPT",
-  “!m:('a)metric. !x S'. limpt(mtop m) x S' =
-      !e. &0 < e ==> ?y. ~(x = y) /\ S' y /\ (dist m)(x,y) < e”,
+Theorem MTOP_LIMPT:
+  !m:('a)metric x S'.
+    limpt(mtop m) x S' <=>
+    !e. &0 < e ==> ?y. ~(x = y) /\ S' y /\ (dist m)(x,y) < e
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[limpt] THEN EQ_TAC THENL
-   [DISCH_THEN(curry op THEN (GEN_TAC THEN DISCH_TAC) o MP_TAC o SPEC “B(m)(x:'a,e)”)
-    THEN FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP BALL_NEIGH th]) THEN
+   [STRIP_TAC THEN
+    Q.X_GEN_TAC ‘e’ THEN STRIP_TAC THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘B(m)(x,e)’ MP_TAC) THEN
+    FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP BALL_NEIGH th]) THEN
     REWRITE_TAC[ball] THEN BETA_TAC THEN DISCH_THEN ACCEPT_TAC,
-    DISCH_TAC THEN GEN_TAC THEN REWRITE_TAC[neigh] THEN
+    STRIP_TAC THEN CONJ_TAC THEN1 ASM_REWRITE_TAC[TOPSPACE_MTOP,IN_UNIV] THEN
+    GEN_TAC THEN REWRITE_TAC[neigh] THEN
     DISCH_THEN(X_CHOOSE_THEN “P:'a->bool”
       (CONJUNCTS_THEN2 MP_TAC STRIP_ASSUME_TAC)) THEN
     REWRITE_TAC[MTOP_OPEN] THEN
@@ -197,7 +212,9 @@ val MTOP_LIMPT = store_thm("MTOP_LIMPT",
     DISCH_TAC THEN EXISTS_TAC “y:'a” THEN ASM_REWRITE_TAC[] THEN
     UNDISCH_TAC “(P:'a->bool) SUBSET N” THEN
     REWRITE_TAC[SUBSET_applied] THEN DISCH_THEN MATCH_MP_TAC THEN
-    FIRST_ASSUM ACCEPT_TAC]);
+    FIRST_ASSUM ACCEPT_TAC
+   ]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define the usual metric on the real line                                  *)
@@ -261,8 +278,9 @@ val MR1_BETWEEN1 = store_thm("MR1_BETWEEN1",
 (* Every real is a limit point of the real line                              *)
 (*---------------------------------------------------------------------------*)
 
-val MR1_LIMPT = store_thm("MR1_LIMPT",
-  ``!x. limpt(mtop mr1) x univ(:real)``,
+Theorem MR1_LIMPT:
+  !x. limpt(mtop mr1) x univ(:real)
+Proof
   GEN_TAC THEN REWRITE_TAC[MTOP_LIMPT, UNIV_DEF] THEN
   X_GEN_TAC “e:real” THEN DISCH_TAC THEN
   EXISTS_TAC “x + (e / &2)” THEN

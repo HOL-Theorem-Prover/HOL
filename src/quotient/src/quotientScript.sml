@@ -1405,14 +1405,7 @@ val W_RSP = store_thm
 (* ----------------------------------------- *)
 
 
-val EQ_IMPLIES = store_thm
-   ("EQ_IMPLIES",
-    (“!P Q.
-          (P = Q) ==>
-          (P ==> Q)”),
-    REPEAT GEN_TAC
-    THEN DISCH_THEN REWRITE_THM
-   );
+Theorem EQ_IMPLIES = boolTheory.EQ_IMPLIES
 
 val EQUALS_IMPLIES = store_thm
    ("EQUALS_IMPLIES",
