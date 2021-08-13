@@ -46,6 +46,10 @@ local
     Option.getOpt
       (Lib.total lhs tm,
        if boolSyntax.is_neg tm then boolSyntax.F else boolSyntax.T)
+
+  val iff_not = Q.prove (
+    `(a ⇎ ¬b) ⇔ (a ⇔ b)`, rw[EQ_IMP_THM, DISJ_EQ_IMP] >> gvs[])
+
 in
   fun mk_blast_thm l =
     let
@@ -53,6 +57,7 @@ in
       val ty = wordsSyntax.dest_word_type lty
       val r =
         blastLib.BBLAST_CONV (boolSyntax.mk_eq (l, Term.mk_var ("_", lty)))
+        |> REWRITE_RULE [iff_not]
         |> concl |> rhs |> strip_conj |> List.map get |> List.rev
         |> (fn l => listSyntax.mk_list (l, Type.bool))
         |> (fn tm => bitstringSyntax.mk_v2w (tm, ty))
