@@ -2515,23 +2515,9 @@ Q.MATCH_ASSUM_RENAME_TAC `R a (SND b)` THEN
 Cases_on `b` THEN FULL_SIMP_TAC(srw_ss())[] THEN
 SRW_TAC[][fmap_rel_FUPDATE_same])
 
-val fmap_rel_FEMPTY = store_thm(
-"fmap_rel_FEMPTY",
-``fmap_rel R FEMPTY FEMPTY``,
-SRW_TAC[][fmap_rel_def])
-val _ = export_rewrites["fmap_rel_FEMPTY"]
-
-val fmap_rel_FEMPTY2 = store_thm(
-  "fmap_rel_FEMPTY2",
-  ``(fmap_rel R FEMPTY f <=> (f = FEMPTY)) /\
-    (fmap_rel R f FEMPTY <=> (f = FEMPTY))``,
-  SRW_TAC [][fmap_rel_def, FDOM_EQ_EMPTY, EQ_IMP_THM] THEN
-  METIS_TAC [FDOM_EQ_EMPTY]);
-val _ = export_rewrites ["fmap_rel_FEMPTY2"]
-
-Theorem fmap_rel_FEMPTY3[simp]:
-  (fmap_rel (R : 'a -> 'b -> bool) FEMPTY (f1 : 'c |-> 'b) <=> f1 = FEMPTY) ∧
-  (fmap_rel R (f2 : 'c |-> 'a) FEMPTY <=> f2 = FEMPTY)
+Theorem fmap_rel_FEMPTY[simp]:
+  (fmap_rel (R : 'a -> 'b -> bool) FEMPTY (f2 : 'c |-> 'b) <=> f2 = FEMPTY) ∧
+  (fmap_rel R (f1 : 'c |-> 'a) FEMPTY <=> f1 = FEMPTY)
 Proof
   rw[fmap_rel_def] >> simp[FDOM_EQ_EMPTY] >> eq_tac >> rw[]
 QED
@@ -2588,7 +2574,7 @@ Proof
   every_case_tac >> gvs[]
 QED
 
-Theorem fmap_rel_ind:
+Theorem fmap_rel_ind[rule_induction]:
   !R FR.
     FR FEMPTY FEMPTY /\
     (!k v1 v2 f1 f2.
