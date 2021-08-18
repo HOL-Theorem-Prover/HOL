@@ -1,3 +1,5 @@
+(* To replay this script, first use "hol.bare" then load "bossLib" before open it. *)
+
 open HolKernel boolLib bossLib BasicProvers;
 
 open OpenTheoryReader;
