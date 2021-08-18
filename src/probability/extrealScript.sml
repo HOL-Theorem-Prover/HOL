@@ -2916,8 +2916,9 @@ val quotient_normal = store_thm
   ("quotient_normal", ``!n m. m <> 0 ==> (&n / &m = Normal (&n / &m))``,
     RW_TAC std_ss [extreal_div_eq, extreal_of_num_def, REAL_OF_NUM_EQ]);
 
-val ext_mono_increasing_def = Define
-   `ext_mono_increasing f = (!m n:num. m <= n ==> f m <= f n)`;
+Definition ext_mono_increasing_def :
+    ext_mono_increasing f = (!m n:num. m <= n ==> f m <= f n)
+End
 
 val ext_mono_increasing_suc = store_thm
   ("ext_mono_increasing_suc", ``!f. ext_mono_increasing f <=> !n. f n <= f (SUC n)``,
@@ -2930,8 +2931,9 @@ val ext_mono_increasing_suc = store_thm
  >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
  >> METIS_TAC [le_trans, ADD_CLAUSES, LESS_EQ_ADD]);
 
-val ext_mono_decreasing_def = Define
-   `ext_mono_decreasing f = (!m n:num. m <= n ==> f n <= f m)`;
+Definition ext_mono_decreasing_def :
+    ext_mono_decreasing f = (!m n:num. m <= n ==> f n <= f m)
+End
 
 val ext_mono_decreasing_suc = store_thm
   ("ext_mono_decreasing_suc", ``!f. ext_mono_decreasing f <=> !n. f (SUC n) <= f n``,
@@ -2944,8 +2946,8 @@ val ext_mono_decreasing_suc = store_thm
  >> Q.PAT_X_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
  >> METIS_TAC [le_trans, ADD_CLAUSES, LESS_EQ_ADD]);
 
-val _ = overload_on ("mono_increasing", Term `ext_mono_increasing`);
-val _ = overload_on ("mono_decreasing", Term `ext_mono_decreasing`);
+Overload mono_increasing = “ext_mono_increasing”
+Overload mono_decreasing = “ext_mono_decreasing”
 
 val EXTREAL_ARCH = store_thm
   ("EXTREAL_ARCH", ``!x. 0 < x ==> !y. y <> PosInf ==> ?n. y < &n * x``,
@@ -4743,11 +4745,11 @@ val sup_shift = store_thm
  >> MATCH_MP_TAC sup_suc
  >> RW_TAC std_ss []);
 
-val sup_seq = store_thm
-  ("sup_seq",
-  ``!f l. mono_increasing f ==>
-         ((f --> l) <=> (sup (IMAGE (\n. Normal (f n)) UNIV) = Normal l))``,
-  RW_TAC std_ss []
+Theorem sup_seq :
+    !f l. mono_increasing f ==>
+         ((f --> l) <=> (sup (IMAGE (\n. Normal (f n)) UNIV) = Normal l))
+Proof
+     RW_TAC std_ss []
   >> EQ_TAC
   >- (RW_TAC std_ss [sup_eq]
       >- (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
@@ -4818,7 +4820,8 @@ val sup_seq = store_thm
    >> POP_ORW
    >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
    >> Q.EXISTS_TAC `z'`
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
 val sup_lt_infty = store_thm
   ("sup_lt_infty", ``!p. (sup p < PosInf) ==> (!x. p x ==> x < PosInf)``,
@@ -5270,11 +5273,11 @@ val inf_suc = store_thm
   >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
   >> METIS_TAC []);
 
-val inf_seq = store_thm
-  ("inf_seq",
-  ``!f l. mono_decreasing f ==>
-         ((f --> l) <=> (inf (IMAGE (\n. Normal (f n)) UNIV) = Normal l))``,
-  RW_TAC std_ss []
+Theorem inf_seq :
+    !f l. mono_decreasing f ==>
+         ((f --> l) <=> (inf (IMAGE (\n. Normal (f n)) UNIV) = Normal l))
+Proof
+     RW_TAC std_ss []
   >> EQ_TAC
   >- (RW_TAC std_ss [inf_eq]
       >- (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
@@ -5327,7 +5330,8 @@ val inf_seq = store_thm
   >> MATCH_MP_TAC SEQ_BOUNDED_2
   >> Q.EXISTS_TAC `-f 0`
   >> Q.EXISTS_TAC `z`
-  >> RW_TAC std_ss []);
+  >> RW_TAC std_ss []
+QED
 
 val inf_lt_infty = store_thm
   ("inf_lt_infty", ``!p. (NegInf < inf p) ==> (!x. p x ==> NegInf < x)``,

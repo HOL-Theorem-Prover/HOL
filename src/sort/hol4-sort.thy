@@ -1,5 +1,5 @@
 name: hol-sort
-version: 1.0
+version: 1.1
 description: HOL sorting theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

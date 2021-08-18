@@ -29,8 +29,7 @@ ifeq ($(KERNELID),otknl)
 
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
-# This takes a lot of time, disabled by default
-extra: $(ARTFILES) hol4-analysis-unint.art hol4-probability-unint.art
+all: hol4-analysis-unint.art hol4-probability-unint.art
 
 # This requires more than 32GB memory! ("-j 1" is recommended)
 heavy: hol4-analysis.art hol4-probability.art

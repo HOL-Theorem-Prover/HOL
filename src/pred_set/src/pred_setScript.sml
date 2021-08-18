@@ -17,7 +17,7 @@ struct
 
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
-     BasicProvers metisLib mesonLib simpLib boolSimps;
+     BasicProvers metisLib mesonLib simpLib boolSimps dividesTheory;
 
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
@@ -5072,7 +5072,6 @@ Proof
         SUBSET_INSERT, NOT_IN_EMPTY, INSERT_SUBSET]
 QED
 
-local open dividesTheory in
 Theorem prime_PROD_IMAGE:
   !f s. FINITE s ==>
   (prime (PROD_IMAGE f s) <=>
@@ -5102,7 +5101,6 @@ Proof
   \\ REV_FULL_SIMP_TAC(srw_ss())[SUBSET_DEF, PULL_EXISTS]
   \\ METIS_TAC[DELETE_NON_ELEMENT]
 QED
-end
 
 (*---------------------------------------------------------------------------*)
 (* PROD_SET multiplies the elements of a set of natural numbers              *)
