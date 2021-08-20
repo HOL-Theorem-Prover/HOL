@@ -14,8 +14,6 @@ src/HolSmt
 !examples/lambda/basics
 !examples/logic
 !!examples/algorithms/unification/triangular/nominal
-!examples/lambda/barendregt
-!examples/computability
 !!examples/lambda/other-models
 !!examples/lambda/typing
 !!examples/computability/lambda

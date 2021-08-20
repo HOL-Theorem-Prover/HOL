@@ -1,1 +1,1 @@
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = $(dprot $(HOLDIR)/src/probability)

@@ -1,4 +1,4 @@
-INCLUDES = ../src
+INCLUDES = ../src $(dprot $(HOLDIR)/src/emit)
 
 GENERATED_STEMS = combin list num pair regexEMC rich_list
 GENERATED_FILES = $(patsubst %,%ML.sig %ML.sml,$(GENERATED_STEMS))

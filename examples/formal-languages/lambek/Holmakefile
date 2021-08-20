@@ -1,12 +1,6 @@
-# INCLUDES = ../context-free
-OPTIONS = QUIT_ON_FAILURE
-# CLINE_OPTIONS = -j1
+INCLUDES = $(dprot $(HOLDIR)/src/integer)
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-EXTRA_CLEANS = heap munge.exe selftest.exe \
-	$(patsubst %Theory.uo,%Theory.html,$(TARGETS)) \
-	$(patsubst %Theory.uo,%Theory.lst,$(TARGETS))
+EXTRA_CLEANS = heap munge.exe selftest.exe
 
 ifdef POLY
 HOLHEAP = heap
@@ -19,7 +13,7 @@ $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
 endif
 
-all: $(TARGETS) munge.exe
+all: $(DEFAULT_TARGETS) munge.exe
 
 MUNGE_DEPS = LambekTheory CutFreeTheory ExampleTheory
 
