@@ -2105,7 +2105,7 @@ Proof
  >> RW_TAC std_ss [prob_space_def, p_space_def, expectation_def, mul_rone]
 QED
 
-Theorem expectation_zero = 
+Theorem expectation_zero =
         expectation_const |> Q.SPECL [‘p’, ‘0’]
                           |> REWRITE_RULE [GSYM extreal_of_num_def]
                           |> Q.GEN ‘p’
@@ -2118,7 +2118,7 @@ Proof
  >> rw [extreal_pow_def, expectation_zero]
 QED
 
-Theorem variance_zero = 
+Theorem variance_zero =
         variance_const |> Q.SPECL [‘p’, ‘0’]
                        |> REWRITE_RULE [GSYM extreal_of_num_def]
                        |> Q.GEN ‘p’
