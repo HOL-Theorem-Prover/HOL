@@ -13,15 +13,6 @@
 (*                                                                           *)
 (*                                                                           *)
 (* ========================================================================= *)
-app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
-          "real_probabilityTheory",
-          "numTheory", "dep_rewrite", "transcTheory", "rich_listTheory", "pairTheory",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory","satTheory",
-          "util_probTheory", "extrealTheory", "real_measureTheory","real_sigmaTheory",
-          "indexedListsTheory", "listLib", "bossLib", "metisLib", "realLib", "numLib",
-          "combinTheory", "arithmeticTheory","boolTheory", "listSyntax", "lebesgueTheory",
-          "real_sigmaTheory", "cardinalTheory", "extra_pred_setTools"];
 
 open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory prim_recTheory
      real_probabilityTheory seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools
