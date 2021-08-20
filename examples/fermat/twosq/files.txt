@@ -24,18 +24,18 @@
 1 involute
 0 helperTwosq
 
-0 iterate        -- iteration period of FUNPOW.
+0 iteration      -- iteration period of FUNPOW.
 
 1 iterateCompute -- iteration period computation, recursion and while-loop.
 0 listRange
-0 iterate
+0 iteration
 0 helperTwosq
 
 3 iterateCompose -- iteration of involution composition.
 1 iterateCompute
 2 involuteFix
 1 involute
-0 iterate
+0 iteration
 0 helperTwosq
 
 4 twoSquares     -- existence, uniqueness and algorithm (clean version for paper).
@@ -44,6 +44,6 @@
 1 windmill
 3 iterateCompose
 1 iterateCompute
-0 iterate
+0 iteration
 0 groupAction
 0 helperTwosq
