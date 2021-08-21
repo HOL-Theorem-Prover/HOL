@@ -66,6 +66,10 @@ Definition truncated_def :
       \n x. if &SUC n <= abs (X n x) then 0 else X n x
 End
 
+Definition pow_seq_def :
+    pow_seq a n = flr (a pow n)
+End
+
 (* ------------------------------------------------------------------------- *)
 (*  Theorems                                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -1655,7 +1659,7 @@ Proof
  >> Q.PAT_X_ASSUM `!n. finite_second_moments p (W n)` K_TAC
  >> qunabbrevl_tac [`Z`, `W`]
  >> FULL_SIMP_TAC std_ss []
- (* translate real inequations to extreal ineq. *)
+ (* translating real inequalities to extreal ones *)
  >> Know `!n. abs (real (S (SUC n) x / &SUC n)) < e <=>
               abs (S (SUC n) x) / &SUC n < Normal e`
  >- (Q.X_GEN_TAC ‘n’ \\
@@ -1756,6 +1760,10 @@ Proof
       DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM) \\
       irule ROOT_LE_MONO >> RW_TAC arith_ss [] ]
 QED
+
+(* ------------------------------------------------------------------------- *)
+(*  The Weak Law of Large Numbers for IID random variables                   *)
+(* ------------------------------------------------------------------------- *)
 
 Theorem equivalent_comm :
     !X Y. equivalent p (X :num -> 'a -> extreal) Y <=> equivalent p Y X
@@ -4171,10 +4179,6 @@ QED
 (*  The Strong Law of Large Numbers for IID random variables                 *)
 (* ------------------------------------------------------------------------- *)
 
-Definition pow_seq_def :
-    pow_seq a n = flr (a pow n)
-End
-
 Theorem pow_seq_pos_lt :
     !a n. 1 < a ==> 0 < pow_seq a n
 Proof
@@ -5986,6 +5990,39 @@ Proof
      ‘(\x. -min x 0) = extreal_ainv o (\x. min x 0)’ by rw [o_DEF] >> POP_ORW \\
       MATCH_MP_TAC MEASURABLE_COMP >> Q.EXISTS_TAC ‘Borel’ \\
       REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_MIN, IN_MEASURABLE_BOREL_BOREL_AINV] ]
+QED
+
+(* A more useful form of SLLN_IID without ‘LLN’ *)
+Theorem SLLN_IID' = SIMP_RULE std_ss [LLN_alt_converge_AE_IID] SLLN_IID
+
+(* This form of SLLN is based on Theorem 5.4.2 (2nd part) of [2, p.133] *)
+Theorem SLLN_IID_diverge :
+    !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
+          pairwise_indep_vars p X (\n. Borel) UNIV /\
+          identical_distribution p X Borel UNIV /\
+         (pos_fn_integral p (fn_plus  (X 0)) <> PosInf \/
+          pos_fn_integral p (fn_minus (X 0)) <> PosInf) /\
+          expectation p (abs o X 0) = PosInf
+      ==> AE x::p. limsup (\n. SIGMA (\i. X i x) (count (SUC n)) / &SUC n) = PosInf
+Proof
+    cheat
+QED
+
+(* This form of SLLN is based on Example 24.8 of [9, p.294], or Corollary (of SLLN_IID)
+   of [6, p.284], which specifically requires ‘pos_fn_integral p (fn_minus (X 0)) < PosInf’
+   so that the existing SLLN_IID can be applied on this part (it will suffice to just
+   consider the divergence on ‘fn_plus (X n)’ (I follow it).  -- Chun Tian, August 4, 2021
+ *)
+Theorem SLLN_IID_full :
+    !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
+          pairwise_indep_vars p X (\n. Borel) UNIV /\
+          identical_distribution p X Borel UNIV /\
+         (pos_fn_integral p (fn_plus  (X 0)) <> PosInf \/
+          pos_fn_integral p (fn_minus (X 0)) <> PosInf) ==>
+         (integrable p (X 0) <=>
+          ?m. AE x::p. (real o (\n. SIGMA (\i. X i x) (count (SUC n)) / &SUC n)) = m)
+Proof
+    cheat
 QED
 
 val _ = export_theory ();

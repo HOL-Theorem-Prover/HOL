@@ -186,29 +186,6 @@ val _ = overload_on ("*", ``\f m. density_measure m f``);
 val distr_def = Define
    `distr m f = \s. measure m (PREIMAGE f s INTER m_space m)`;
 
-(* Radon-Nikodym derivative (RN_deriv)
-
-  `RN_deriv v m` (HOL) = `RN_deriv m (m_space m, measurable_sets m, v)` (Isabelle/HOL)
-
-   The existence of `RN_deriv v m` is then asserted by Radon-Nikodym theorem, and
-   its uniqueness is asserted by the following (unproved) theorem:
-
-   ``!m f f'. measure_space m /\ sigma_finite m /\
-              f IN borel_measurable (m_space m,measurable_sets m) /\
-              f' IN borel_measurable (m_space m,measurable_sets m) /\
-              nonneg f /\ nonneg f' /\
-              (!s. s IN measurable_sets m ==> ((f * m) s = (f' * m) s))
-          ==> AE x::m. (f x = f' x)``
- *)
-val RN_deriv_def = Define (* or `v / m` (dv/dm) *)
-   `RN_deriv v m =
-      @f. f IN measurable (m_space m,measurable_sets m) Borel /\
-          (!x. x IN m_space m ==> 0 <= f x) /\
-          !s. s IN measurable_sets m ==> ((f * m) s = v s)`;
-
-(* `f = RN_deriv v m` is denoted by `f = v / m`, cf. "density_def" above *)
-val _ = overload_on ("/", ``RN_deriv``);
-
 (* unused for now:
 val diff_measure_space_def = Define
    `diff_measure_space m v =
@@ -4527,6 +4504,55 @@ Proof
  >> MATCH_MP_TAC pos_fn_integral_mono >> art []
 QED
 
+(* cf. lebesgue_monotone_convergence_subset *)
+Theorem lebesgue_monotone_convergence_decreasing' :
+    !m f fi A. measure_space m /\
+        (!i. fi i IN measurable (m_space m, measurable_sets m) Borel) /\
+        (!i x. x IN m_space m ==> 0 <= fi i x /\ fi i x < PosInf) /\
+        (!i. pos_fn_integral m (fi i) <> PosInf) /\
+        (!x. x IN m_space m ==> mono_decreasing (\i. fi i x)) /\
+        (!x. x IN m_space m ==> inf (IMAGE (\i. fi i x) UNIV) = f x) /\
+         A IN measurable_sets m ==>
+        (pos_fn_integral m (\x. f x * indicator_fn A x) =
+         inf (IMAGE (\i. pos_fn_integral m (\x. fi i x * indicator_fn A x)) UNIV))
+Proof
+    RW_TAC std_ss []
+ >> (MP_TAC o Q.SPECL [`m`, `(\x. f x * indicator_fn A x)`,
+                       `(\i. (\x. fi i x * indicator_fn A x))`])
+       lebesgue_monotone_convergence_decreasing
+ >> RW_TAC std_ss []
+ >> POP_ASSUM MATCH_MP_TAC
+ >> CONJ_TAC
+ >- METIS_TAC [IN_MEASURABLE_BOREL_MUL_INDICATOR, measure_space_def, subsets_def,
+               measurable_sets_def]
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [GSYM lt_infty] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS],
+       (* goal 2 (of 2) *)
+       STRIP_ASSUME_TAC (Q.SPECL [‘A’, ‘x’] indicator_fn_normal) \\
+      ‘fi i x <> PosInf’ by METIS_TAC [lt_infty] \\
+      ‘fi i x <> NegInf’ by METIS_TAC [pos_not_neginf] \\
+      ‘?z. fi i x = Normal z’ by METIS_TAC [extreal_cases] \\
+       rw [extreal_mul_eq] ])
+ >> CONJ_TAC
+ >- (rw [lt_infty] >> MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘pos_fn_integral m (fi i)’ \\
+     reverse CONJ_TAC >- rw [GSYM lt_infty] \\
+     MATCH_MP_TAC pos_fn_integral_mono >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS],
+       (* goal 1 (of 2) *)
+       GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM mul_rone] \\
+       MATCH_MP_TAC le_lmul_imp >> rw [INDICATOR_FN_LE_1] ])
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero, le_refl, ext_mono_decreasing_def] \\
+     FULL_SIMP_TAC std_ss [ext_mono_decreasing_def])
+ >> RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero]
+ >> Suff `IMAGE (\i:num. 0:extreal) UNIV = (\y. y = 0)` >- RW_TAC std_ss [inf_const]
+ >> RW_TAC std_ss [EXTENSION, IN_ABS, IN_IMAGE, IN_UNIV]
+QED
+
 (* added ‘x IN m_space m’ *)
 Theorem pos_fn_integral_sum :
     !m f s. FINITE s /\ measure_space m /\
@@ -6336,6 +6362,43 @@ val integral_cmul_infty = store_thm
      REWRITE_TAC [extreal_of_num_def, le_infty]) >> Rewr'
  >> MATCH_MP_TAC pos_fn_integral_cmul_infty >> art []);
 
+Theorem integral_cmul_infty' :
+    !m s. measure_space m /\ s IN measurable_sets m ==>
+         (integral m (\x. NegInf * indicator_fn s x) = NegInf * (measure m s))
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m (\x. PosInf) = integral m (\x. (\x. PosInf) x * indicator_fn (m_space m) x)`
+ >- (MATCH_MP_TAC integral_mspace >> art [])
+ >> Rewr'
+ >> REWRITE_TAC [integral_def]
+ >> Know ‘pos_fn_integral m (\x. NegInf * indicator_fn s x)^+ = pos_fn_integral m (\x. 0)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [FN_PLUS_ALT, le_max] \\
+     rw [indicator_fn_def])
+ >> Rewr'
+ >> Know ‘pos_fn_integral m (\x. NegInf * indicator_fn s x)^- =
+          pos_fn_integral m (\x. PosInf * indicator_fn s x)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [fn_minus_def, GSYM mul_lneg, extreal_ainv_def] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       MATCH_MP_TAC le_mul >> rw [le_infty, INDICATOR_FN_POS],
+       (* goal 2 (of 3) *)
+       MATCH_MP_TAC le_mul >> rw [le_infty, INDICATOR_FN_POS],
+       (* goal 3 (of 3) *)
+       fs [extreal_lt_def] \\
+       STRIP_ASSUME_TAC (Q.SPECL [‘s’, ‘x’] indicator_fn_normal) \\
+       FULL_SIMP_TAC std_ss [extreal_mul_def, le_infty, extreal_of_num_def, extreal_11] \\
+       Cases_on ‘r = 0’ >- rw [] \\
+      ‘0 < r’ by PROVE_TAC [REAL_LE_LT] \\
+       FULL_SIMP_TAC std_ss [le_infty, extreal_not_infty] ])
+ >> Rewr'
+ >> ASM_SIMP_TAC std_ss [pos_fn_integral_zero, sub_lzero]
+ >> Know ‘pos_fn_integral m (\x. PosInf * indicator_fn s x) = PosInf * measure m s’
+ >- (MATCH_MP_TAC pos_fn_integral_cmul_infty >> art [])
+ >> Rewr'
+ >> rw [GSYM mul_lneg, extreal_ainv_def]
+QED
+
 val integral_posinf = store_thm
   ("integral_posinf",
   ``!m. measure_space m /\ 0 < measure m (m_space m) ==> (integral m (\x. PosInf) = PosInf)``,
@@ -6350,6 +6413,23 @@ val integral_posinf = store_thm
  >> Cases_on `measure m (m_space m) = PosInf`
  >- (POP_ORW >> REWRITE_TAC [extreal_mul_def])
  >> METIS_TAC [mul_infty]);
+
+Theorem integral_neginf :
+    !m. measure_space m /\ 0 < measure m (m_space m) ==> (integral m (\x. NegInf) = NegInf)
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m (\x. NegInf) =
+          integral m (\x. (\x. NegInf) x * indicator_fn (m_space m) x)`
+ >- (MATCH_MP_TAC integral_mspace >> art [])
+ >> Rewr' >> BETA_TAC
+ >> Know `integral m (\x. NegInf * indicator_fn (m_space m) x) = NegInf * (measure m (m_space m))`
+ >- (MATCH_MP_TAC integral_cmul_infty' >> art [] \\
+     MATCH_MP_TAC MEASURE_SPACE_MSPACE_MEASURABLE >> art [])
+ >> Rewr'
+ >> Cases_on `measure m (m_space m) = PosInf`
+ >- (POP_ORW >> REWRITE_TAC [extreal_mul_def])
+ >> METIS_TAC [mul_infty]
+QED
 
 val integral_indicator_pow_eq = store_thm (* new *)
   ("integral_indicator_pow_eq",
@@ -10675,6 +10755,151 @@ Proof
       by METIS_TAC [Radon_Nikodym]
  >> Q.EXISTS_TAC ‘f’ >> rw []
 QED
+
+(* ------------------------------------------------------------------------- *)
+(*   Applications of Radon_Nikodym (ported from HVG's normal_rvScript.sml)   *)
+(* ------------------------------------------------------------------------- *)
+
+(* Radon-Nikodym derivative (RN_deriv)
+
+  `RN_deriv v m` (HOL) = `RN_deriv m (m_space m,measurable_sets m,v)` (Isabelle/HOL)
+
+   The existence of `RN_deriv v m` is then asserted by Radon-Nikodym theorem, and
+   its uniqueness is asserted by the following (unproved) theorem:
+
+     !m f f'. measure_space m /\ sigma_finite m /\
+              f IN borel_measurable (m_space m,measurable_sets m) /\
+              f' IN borel_measurable (m_space m,measurable_sets m) /\
+              nonneg f /\ nonneg f' /\
+              (!s. s IN measurable_sets m ==> ((f * m) s = (f' * m) s))
+          ==> AE x::m. (f x = f' x)
+
+   see also density_measure_def for the overload of ‘*’ in `f * m`.
+ *)
+Definition RN_deriv_def : (* or `v / m` (dv/dm) *)
+    RN_deriv v m =
+      @f. f IN measurable (m_space m,measurable_sets m) Borel /\
+          (!x. x IN m_space m ==> 0 <= f x) /\
+          !s. s IN measurable_sets m ==> ((f * m) s = v s)
+End
+
+(* `f = RN_deriv v m` is denoted by `f = v / m`
+   NOTE: cannot use the Overload syntax sugar here (on "/").
+ *)
+val _ = overload_on ("/", “RN_deriv”);
+
+Theorem RN_deriv_thm :
+    !m v. measure_space m /\
+          (?f. f IN measurable (m_space m,measurable_sets m) Borel /\
+              (!x. x IN m_space m ==> 0 <= f x) /\
+              (!s. s IN measurable_sets m ==> (f * m) s = v s)) ==>
+          !s. s IN measurable_sets m ==> (v / m * m) s = v s
+Proof
+    RW_TAC std_ss [RN_deriv_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC >- (Q.EXISTS_TAC ‘f’ >> rw [])
+ >> Q.X_GEN_TAC ‘g’
+ >> rpt STRIP_TAC
+ >> POP_ASSUM MATCH_MP_TAC >> art []
+QED
+
+(* This is ported from the following theorem (RN_derivI)
+
+    !f M N. f IN measurable (m_space M, measurable_sets M) Borel /\
+            (!x. 0 <= f x) /\ (density M f = measure_of N) /\
+             measure_space M /\ measure_space N /\
+            (measurable_sets M = measurable_sets N) ==>
+            (density M (RN_deriv M N) = measure_of N)
+ *)
+Theorem RN_deriv_thm' : (* was: RN_derivI *)
+    !f m v. measure_space m /\
+            f IN measurable (m_space m,measurable_sets m) Borel /\
+           (!x. x IN m_space m ==> 0 <= f x) /\
+           (!s. s IN measurable_sets m ==> (f * m) s = v s) ==>
+            measure_space_eq (density m (v / m))
+                             (m_space m,measurable_sets m,v)
+Proof
+    rw [measure_space_eq_def, density_def]
+ >> irule RN_deriv_thm >> art []
+ >> Q.EXISTS_TAC ‘f’ >> rw []
+QED
+
+(*
+Theorem RN_deriv_density : (* was: density_RN_deriv *)
+    !M N. sigma_finite_measure_space M /\ measure_space N /\
+          measure_absolutely_continuous (measure N) M /\
+          measurable_sets M = measurable_sets N ==>
+          measure_space_eq (density M (RN_deriv M N)) N
+Proof
+  RW_TAC std_ss [] THEN MATCH_MP_TAC RN_derivI THEN
+  Q_TAC SUFF_TAC `sigma_finite_measure M /\ measure_space M /\
+    measure_space N /\ measure_absolutely_continuous N M /\
+   (measurable_sets M = measurable_sets N)` THENL
+  [DISCH_THEN (MP_TAC o MATCH_MP RADON_NIKODYM),
+   ASM_SIMP_TAC std_ss []] THEN
+  RW_TAC std_ss [] THEN Q.EXISTS_TAC `f` THEN
+  ASM_SIMP_TAC std_ss [density] THEN
+  `m_space M = m_space N` by METIS_TAC [sets_eq_imp_space_eq] THEN
+  Q_TAC SUFF_TAC `measurable_sets N SUBSET POW (m_space N)` THENL
+  [DISCH_TAC,
+   FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_iff2]] THEN
+  `sigma_sets (m_space N) (measurable_sets N) = measurable_sets N`
+   by METIS_TAC [sigma_sets_eq, measure_space_def] THEN
+  GEN_REWR_TAC (RAND_CONV o RAND_CONV) [GSYM MEASURE_SPACE_REDUCE] THEN
+  ASM_SIMP_TAC std_ss [FUN_EQ_THM, measure_of, MEASURE_SPACE_REDUCE] THEN
+  ASM_SIMP_TAC std_ss [extreal_max_def, le_mul, indicator_fn_pos_le]);
+
+val RN_deriv_positive_integral = store_thm ("RN_deriv_positive_integral",
+  ``!M N f. sigma_finite_measure M /\ measure_space M /\ measure_space N /\
+          measure_absolutely_continuous N M /\
+          (measurable_sets M = measurable_sets N) /\
+          f IN measurable (m_space M, measurable_sets M) Borel ==>
+          (pos_fn_integral N f =
+           pos_fn_integral (density M (RN_deriv M N)) f)``,
+  RW_TAC std_ss [] THEN
+  Q_TAC SUFF_TAC `pos_fn_integral N f = pos_fn_integral (measure_of N) f` THENL
+  [METIS_TAC [density_RN_deriv], ALL_TAC] THEN
+  ONCE_REWRITE_TAC [METIS [MEASURE_SPACE_REDUCE]
+   ``measure_of N = measure_of (m_space N, measurable_sets N, measure N)``] THEN
+  Q_TAC SUFF_TAC `measurable_sets N SUBSET POW (m_space N)` THENL
+  [DISCH_TAC,
+   FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_iff2]] THEN
+  `sigma_sets (m_space N) (measurable_sets N) = measurable_sets N`
+   by METIS_TAC [sigma_sets_eq, measure_space_def] THEN
+  ASM_SIMP_TAC std_ss [measure_of] THEN
+  SIMP_TAC std_ss [pos_fn_integral_def] THEN AP_TERM_TAC THEN
+  AP_TERM_TAC THEN ABS_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  ABS_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  ASM_SIMP_TAC std_ss [IN_psfis_eq, MEASURE_SPACE_REDUCE] THEN
+  AP_TERM_TAC THEN ABS_TAC THEN AP_TERM_TAC THEN ABS_TAC THEN
+  AP_TERM_TAC THEN ABS_TAC THEN
+  Q_TAC SUFF_TAC `pos_simple_fn N g s a x =
+   pos_simple_fn (m_space N,measurable_sets N,
+    (\a. if a IN measurable_sets N then measure N a else 0)) g s a x` THENL
+  [DISCH_TAC THEN ASM_SIMP_TAC std_ss [],
+   SIMP_TAC std_ss [pos_simple_fn_def] THEN EQ_TAC THEN
+   RW_TAC std_ss [measure_of, m_space_def, measurable_sets_def, measure_def]] THEN
+  MATCH_MP_TAC (METIS [] ``(a ==> (b = c)) ==> (a /\ b = a /\ c)``) THEN
+  POP_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ]) THEN
+  POP_ASSUM (fn th => REWRITE_TAC [th]) THEN DISCH_TAC THEN
+  AP_TERM_TAC THEN SIMP_TAC std_ss [pos_simple_fn_integral_def] THEN
+  FULL_SIMP_TAC std_ss [pos_simple_fn_def] THEN
+  FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP EXTREAL_SUM_IMAGE_EQ) THEN
+  CONJ_TAC THENL [ALL_TAC, RW_TAC std_ss [measure_def]] THEN
+  DISJ1_TAC THEN RW_TAC std_ss [] THENL
+  [SIMP_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
+   Q.EXISTS_TAC `0` THEN CONJ_TAC THENL
+   [METIS_TAC [lt_infty, num_not_infty, extreal_of_num_def], ALL_TAC] THEN
+   MATCH_MP_TAC le_mul THEN ASM_SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+   ASM_SIMP_TAC std_ss [GSYM extreal_of_num_def] THEN
+   METIS_TAC [measure_space_def, positive_def], ALL_TAC] THEN
+  SIMP_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
+  Q.EXISTS_TAC `0` THEN CONJ_TAC THENL
+  [METIS_TAC [lt_infty, num_not_infty, extreal_of_num_def], ALL_TAC] THEN
+  MATCH_MP_TAC le_mul THEN ASM_SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+  ASM_SIMP_TAC std_ss [GSYM extreal_of_num_def, measure_def] THEN
+  METIS_TAC [measure_space_def, positive_def]);
+*)
 
 val _ = export_theory ();
 

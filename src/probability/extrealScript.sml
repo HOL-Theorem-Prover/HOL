@@ -5429,6 +5429,23 @@ Proof
     REWRITE_TAC [IN_APP, lt_inf_epsilon]
 QED
 
+Theorem inf_num :
+    inf (\x. ?n :num. x = -&n) = NegInf
+Proof
+    rw [GSYM le_infty, inf_le]
+ >> CCONTR_TAC
+ >> fs [GSYM extreal_lt_def, GSYM lt_infty]
+ >> STRIP_ASSUME_TAC (MATCH_MP (Q.SPEC ‘y’ SIMP_EXTREAL_ARCH_NEG)
+			       (ASSUME “y <> NegInf”))
+ >> Know ‘-&SUC n < y’
+ >- (MATCH_MP_TAC lte_trans \\
+     Q.EXISTS_TAC ‘-&n’ >> rw [extreal_of_num_def, extreal_ainv_def, extreal_lt_eq])
+ >> DISCH_TAC
+ >> Suff ‘y <= -&SUC n’ >- METIS_TAC [let_antisym]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘SUC n’ >> rw []
+QED
+
 Theorem sup_comm : (* was: SUP_commute *)
     !f. sup {sup {f i j | j IN univ(:num)} | i IN univ(:num)} =
         sup {sup {f i j | i IN univ(:num)} | j IN univ(:num)}
@@ -7048,20 +7065,23 @@ val max_le2_imp = store_thm
     RW_TAC std_ss [max_le]
  >> RW_TAC std_ss [le_max]);
 
-val max_refl = store_thm
-  ("max_refl", ``!x. max x x = x``,
-    RW_TAC std_ss [extreal_max_def, le_refl]);
+Theorem max_refl[simp] :
+    !x. max x x = x
+Proof
+    RW_TAC std_ss [extreal_max_def, le_refl]
+QED
 
 val max_comm = store_thm
   ("max_comm", ``!x y. max x y = max y x``,
     RW_TAC std_ss [extreal_max_def]
  >> PROVE_TAC [le_antisym, le_total]);
 
-val max_infty = store_thm
-  ("max_infty",
-  ``!x. (max x PosInf = PosInf) /\ (max PosInf x = PosInf) /\
-        (max NegInf x = x) /\ (max x NegInf = x)``,
-    RW_TAC std_ss [extreal_max_def, le_infty]);
+Theorem max_infty[simp] :
+    !x. (max x PosInf = PosInf) /\ (max PosInf x = PosInf) /\
+        (max NegInf x = x) /\ (max x NegInf = x)
+Proof
+    RW_TAC std_ss [extreal_max_def, le_infty]
+QED
 
 val max_reduce = store_thm
   ("max_reduce", ``!x y :extreal. x <= y \/ x < y ==> (max x y = y) /\ (max y x = y)``,

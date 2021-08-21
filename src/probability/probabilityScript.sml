@@ -9,16 +9,6 @@
 (* Based on the work of Joe Hurd [7] and Aaron Coble [8]                     *)
 (* Cambridge University.                                                     *)
 (* ========================================================================= *)
-(*                 Probability Density Function (PDF) [11]                   *)
-(*                                                                           *)
-(*        (c) Copyright 2015,                                                *)
-(*                       Muhammad Qasim,                                     *)
-(*                       Osman Hasan,                                        *)
-(*                       Hardware Verification Group,                        *)
-(*                       Concordia University                                *)
-(*                                                                           *)
-(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
-(* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
 
@@ -1172,6 +1162,17 @@ val distribution_partition = store_thm
      by RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_IMAGE, IN_SING]
  >> METIS_TAC []);
 
+Theorem distribution_space_eq_1 : (* was: lemma1 (normal_rvScript.sml) *)
+    !p X. prob_space p ==> (distribution p X (IMAGE X (p_space p)) = 1)
+Proof
+    RW_TAC std_ss [prob_space_def, p_space_def]
+ >> SIMP_TAC std_ss [distribution_def]
+ >> SIMP_TAC std_ss [IMAGE_DEF, PREIMAGE_def, INTER_DEF, GSPECIFICATION]
+ >> REWRITE_TAC [prob_def, p_space_def]
+ >> REWRITE_TAC [SET_RULE ``{x | (?x''. (X x = X x'') /\ x'' IN s) /\ x IN s} = s``]
+ >> ASM_REWRITE_TAC []
+QED
+
 val distribution_lebesgue_thm1 = store_thm
   ("distribution_lebesgue_thm1",
  ``!X p s A. prob_space p /\ random_variable X p s /\ A IN subsets s ==>
@@ -2088,27 +2089,39 @@ Proof
  >> MATCH_MP_TAC integral_pos >> rw []
 QED
 
-Theorem expectation_posinf :
+Theorem expectation_posinf[local] :
     !p. prob_space p ==> expectation p (\x. PosInf) = PosInf
 Proof
     RW_TAC std_ss [prob_space_def, p_space_def, expectation_def]
  >> MATCH_MP_TAC integral_posinf >> art [lt_01]
 QED
 
-(* TODO: extend `Normal c` to all extreals *)
-Theorem expectation_const :
-    !p c. prob_space p ==> expectation p (\x. Normal c) = Normal c
+Theorem expectation_neginf[local] :
+    !p. prob_space p ==> expectation p (\x. NegInf) = NegInf
 Proof
-    rpt GEN_TAC
- >> MP_TAC (Q.SPECL [`p`, `c`] integral_const)
- >> `1 < PosInf` by PROVE_TAC [lt_infty, extreal_of_num_def]
- >> RW_TAC std_ss [prob_space_def, p_space_def, expectation_def, mul_rone]
+    RW_TAC std_ss [prob_space_def, p_space_def, expectation_def]
+ >> MATCH_MP_TAC integral_neginf >> art [lt_01]
 QED
 
+(* NOTE: the type of ‘c’ has changed from “:real” to “:extreal” *)
+Theorem expectation_const :
+    !p c. prob_space p ==> expectation p (\x. c) = c
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘c’
+ >| [ (* goal 1 (of 3) *)
+      MATCH_MP_TAC expectation_neginf >> art [],
+      (* goal 2 (of 3) *)
+      MATCH_MP_TAC expectation_posinf >> art [],
+      (* goal 3 (of 3) *)
+      MP_TAC (Q.SPECL [`p`, `r`] integral_const) \\
+     `1 < PosInf` by PROVE_TAC [lt_infty, extreal_of_num_def] \\
+      fs [prob_space_def, p_space_def, expectation_def, mul_rone] ]
+QED
+
+(* |- !p. prob_space p ==> expectation p (\x. 0) = 0 *)
 Theorem expectation_zero =
-        expectation_const |> Q.SPECL [‘p’, ‘0’]
-                          |> REWRITE_RULE [GSYM extreal_of_num_def]
-                          |> Q.GEN ‘p’
+    Q.GEN ‘p’ (Q.SPECL [‘p’, ‘0’] expectation_const)
 
 Theorem variance_const :
     !p c. prob_space p ==> variance p (\x. Normal c) = 0
@@ -2118,6 +2131,7 @@ Proof
  >> rw [extreal_pow_def, expectation_zero]
 QED
 
+(* |- !p. prob_space p ==> variance p (\x. 0) = 0 *)
 Theorem variance_zero =
         variance_const |> Q.SPECL [‘p’, ‘0’]
                        |> REWRITE_RULE [GSYM extreal_of_num_def]
@@ -2160,7 +2174,7 @@ Proof
          Know ‘expectation p (\x. (X x - a) pow 2) =
                expectation p (\x. PosInf)’
          >- (MATCH_MP_TAC expectation_cong >> simp []) \\
-         simp [expectation_posinf] \\
+         simp [expectation_const] \\
          METIS_TAC [lt_infty]) \\
      rpt STRIP_TAC \\
     `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
@@ -7793,128 +7807,6 @@ Proof
 QED
 
 (* ========================================================================= *)
-(*                 Probability Density Function Theory [11]                  *)
-(* ========================================================================= *)
-
-(* Probability Density Function [11] *)
-val PDF_def = Define `PDF p X = RN_deriv (distribution p X) lborel`;
-
-(* extreal version *)
-val pdf_def = Define `pdf p X = RN_deriv (distribution p X) ext_lborel`;
-
-Theorem PDF_LE_POS :
-    !p X. prob_space p /\ random_variable X p borel /\ distribution p X << lborel
-          ==> !x. 0 <= PDF p X x
-Proof
-    rpt STRIP_TAC
- >> `measure_space (space borel, subsets borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space, prob_space_def]
- >> ASSUME_TAC sigma_finite_lborel
- >> ASSUME_TAC measure_space_lborel
- >> MP_TAC (ISPECL [(* m *) ``lborel``,
-                    (* v *) ``distribution (p :'a m_space) (X :'a -> real)``]
-                   Radon_Nikodym')
- >> RW_TAC std_ss [m_space_lborel, sets_lborel, space_borel, IN_UNIV]
- >> fs [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
-        m_space_lborel, sets_lborel, space_borel]
- >> SELECT_ELIM_TAC >> METIS_TAC []
-QED
-
-Theorem pdf_le_pos :
-    !p X x. prob_space p /\ random_variable X p Borel /\
-            distribution p X << ext_lborel ==> 0 <= pdf p X x
-Proof
-    rpt STRIP_TAC
- >> `measure_space (space Borel, subsets Borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space, prob_space_def]
- >> ASSUME_TAC SIGMA_FINITE_LBOREL
- >> ASSUME_TAC MEASURE_SPACE_LBOREL
- >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
-                    (* v *) ``distribution (p :'a m_space) (X :'a -> extreal)``]
-                   Radon_Nikodym')
- >> rw [ext_lborel_def]
- >> fs [pdf_def, RN_deriv_def, ext_lborel_def, SPACE]
- >> SELECT_ELIM_TAC
- >> METIS_TAC [SPACE_BOREL, IN_UNIV]
-QED
-
-Theorem EXPECTATION_PDF_1 : (* was: INTEGRAL_PDF_1 *)
-    !p X. prob_space p /\ random_variable X p borel /\ distribution p X << lborel
-          ==> (expectation lborel (PDF p X) = 1)
-Proof
-    rpt STRIP_TAC
- >> `prob_space (space borel, subsets borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space]
- >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
- >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
-                   expectation_def]
- >> ASSUME_TAC sigma_finite_lborel
- >> ASSUME_TAC measure_space_lborel
- >> MP_TAC (ISPECL [(* m *) ``lborel``,
-                    (* v *) ``distribution (p :'a m_space) (X :'a -> real)``]
-                   Radon_Nikodym')
- >> RW_TAC std_ss [m_space_lborel, sets_lborel, m_space_def, measure_def,
-                   space_borel, IN_UNIV]
- >> fs [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
-        m_space_lborel, sets_lborel, space_borel]
- >> SELECT_ELIM_TAC
- >> CONJ_TAC >- METIS_TAC []
- >> Q.X_GEN_TAC `g`
- >> RW_TAC std_ss [density_measure_def]
- >> POP_ASSUM (MP_TAC o Q.SPEC `space borel`)
- >> Know `space borel IN subsets borel`
- >- (`sigma_algebra borel` by PROVE_TAC [sigma_algebra_borel] \\
-     PROVE_TAC [sigma_algebra_def, ALGEBRA_SPACE])
- >> RW_TAC std_ss []
- >> Know `integral lborel g = pos_fn_integral lborel g`
- >- (MATCH_MP_TAC integral_pos_fn >> art []) >> Rewr'
- >> Know `pos_fn_integral lborel g =
-          pos_fn_integral lborel (\x. g x * indicator_fn (space borel) x)`
- >- (MATCH_MP_TAC pos_fn_integral_cong \\
-     RW_TAC std_ss [m_space_lborel, indicator_fn_def, mul_rone, mul_rzero, le_refl])
- >> Rewr'
- >> POP_ORW
- >> rw [space_borel]
-QED
-
-Theorem expectation_pdf_1 :
-    !p X. prob_space p /\ random_variable X p Borel /\
-          distribution p X << ext_lborel ==> (expectation ext_lborel (pdf p X) = 1)
-Proof
-    rpt STRIP_TAC
- >> `prob_space (space Borel, subsets Borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space]
- >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
- >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
-                   expectation_def]
- >> ASSUME_TAC SIGMA_FINITE_LBOREL
- >> ASSUME_TAC MEASURE_SPACE_LBOREL
- >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
-                    (* v *) ``distribution (p :'a m_space) (X :'a -> extreal)``]
-                   Radon_Nikodym')
- >> rw [ext_lborel_def]
- >> fs [pdf_def, RN_deriv_def, SPACE, ext_lborel_def]
- >> SELECT_ELIM_TAC
- >> CONJ_TAC >- METIS_TAC []
- >> Q.X_GEN_TAC `g`
- >> RW_TAC std_ss [density_measure_def]
- >> POP_ASSUM (MP_TAC o Q.SPEC `space Borel`)
- >> Know `space Borel IN subsets Borel`
- >- (MATCH_MP_TAC SIGMA_ALGEBRA_SPACE \\
-     REWRITE_TAC [SIGMA_ALGEBRA_BOREL])
- >> RW_TAC std_ss []
- >> fs [GSYM ext_lborel_def]
- >> Know `integral ext_lborel g = pos_fn_integral ext_lborel g`
- >- (MATCH_MP_TAC integral_pos_fn >> art [] \\
-     rw [ext_lborel_def]) >> Rewr'
- >> Know `pos_fn_integral ext_lborel g =
-          pos_fn_integral ext_lborel (\x. g x * indicator_fn (space Borel) x)`
- >- (MATCH_MP_TAC pos_fn_integral_cong \\
-     rw [indicator_fn_def, mul_rone, mul_rzero, le_refl, SPACE_BOREL])
- >> DISCH_THEN (art o wrap)
-QED
-
-(* ========================================================================= *)
 (*                      Condition Probability Library                        *)
 (* ========================================================================= *)
 
@@ -8424,6 +8316,77 @@ Proof
  >> `!(x:real) y z w. x * y * (z * w) = x * (y * z) * w`
         by METIS_TAC [REAL_MUL_ASSOC, REAL_MUL_COMM]
  >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_RID]
+QED
+
+(* ========================================================================= *)
+(*                 Probability Density Function Theory [11]                  *)
+(*                                                                           *)
+(*  (see examples/probability/normal_rvScript.sml for the original version)  *)
+(* ========================================================================= *)
+
+(* extreal version, was: pdf *)
+Definition prob_density_function_def :
+    prob_density_function p X = RN_deriv (distribution p X) ext_lborel
+End
+Overload pdf[local] = “prob_density_function”
+
+(* local backward compatibility *)
+Theorem pdf_def[local] = prob_density_function_def
+
+Theorem pdf_le_pos :
+    !p X x. prob_space p /\ random_variable X p Borel /\
+            distribution p X << ext_lborel ==> 0 <= pdf p X x
+Proof
+    rpt STRIP_TAC
+ >> `measure_space (space Borel, subsets Borel, distribution p X)`
+       by PROVE_TAC [distribution_prob_space, prob_space_def]
+ >> ASSUME_TAC SIGMA_FINITE_LBOREL
+ >> ASSUME_TAC MEASURE_SPACE_LBOREL
+ >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
+                    (* v *) ``distribution (p :'a m_space) (X :'a -> extreal)``]
+                   Radon_Nikodym')
+ >> rw [ext_lborel_def]
+ >> fs [pdf_def, RN_deriv_def, ext_lborel_def, SPACE]
+ >> SELECT_ELIM_TAC
+ >> METIS_TAC [SPACE_BOREL, IN_UNIV]
+QED
+
+Theorem expectation_pdf_1 :
+    !p X. prob_space p /\ random_variable X p Borel /\
+          distribution p X << ext_lborel ==>
+          expectation ext_lborel (pdf p X) = 1
+Proof
+    rpt STRIP_TAC
+ >> `prob_space (space Borel, subsets Borel, distribution p X)`
+       by PROVE_TAC [distribution_prob_space]
+ >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
+ >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
+                   expectation_def]
+ >> ASSUME_TAC SIGMA_FINITE_LBOREL
+ >> ASSUME_TAC MEASURE_SPACE_LBOREL
+ >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
+                    (* v *) ``distribution (p :'a m_space) (X :'a -> extreal)``]
+                   Radon_Nikodym')
+ >> rw [ext_lborel_def]
+ >> fs [pdf_def, RN_deriv_def, SPACE, ext_lborel_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC >- METIS_TAC []
+ >> Q.X_GEN_TAC `g`
+ >> RW_TAC std_ss [density_measure_def]
+ >> POP_ASSUM (MP_TAC o Q.SPEC `space Borel`)
+ >> Know `space Borel IN subsets Borel`
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SPACE \\
+     REWRITE_TAC [SIGMA_ALGEBRA_BOREL])
+ >> RW_TAC std_ss []
+ >> fs [GSYM ext_lborel_def]
+ >> Know `integral ext_lborel g = pos_fn_integral ext_lborel g`
+ >- (MATCH_MP_TAC integral_pos_fn >> art [] \\
+     rw [ext_lborel_def]) >> Rewr'
+ >> Know `pos_fn_integral ext_lborel g =
+          pos_fn_integral ext_lborel (\x. g x * indicator_fn (space Borel) x)`
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [indicator_fn_def, mul_rone, mul_rzero, le_refl, SPACE_BOREL])
+ >> DISCH_THEN (art o wrap)
 QED
 
 val _ = export_theory ();
