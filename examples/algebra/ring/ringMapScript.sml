@@ -537,6 +537,27 @@ val ring_homo_sym = store_thm(
   `r_.prod.carrier = R_` by rw[ring_mult_monoid] >>
   metis_tac[monoid_homo_sym]);
 
+Theorem ring_homo_sym_any:
+  Ring r /\ Ring s /\ RingHomo f r s /\
+  (!x. x IN s.carrier ==> i x IN r.carrier /\ f (i x) = x) /\
+  (!x. x IN r.carrier ==> i (f x) = x)
+  ==>
+  RingHomo i s r
+Proof
+  rpt strip_tac
+  \\ fs[RingHomo_def]
+  \\ conj_tac
+  >- (
+    irule group_homo_sym_any
+    \\ conj_tac >- metis_tac[Ring_def, AbelianGroup_def]
+    \\ qexists_tac`f`
+    \\ metis_tac[ring_carriers] )
+  \\ irule monoid_homo_sym_any
+  \\ conj_tac >- metis_tac[Ring_def, AbelianMonoid_def]
+  \\ qexists_tac`f`
+  \\ metis_tac[ring_carriers]
+QED
+
 (* Theorem: RingHomo f1 r s /\ RingHomo f2 s t ==> RingHomo (f2 o f1) r t *)
 (* Proof:
    By RingHomo_def, this is to show:
@@ -937,6 +958,20 @@ val ring_iso_sym = store_thm(
   "ring_iso_sym",
   ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (LINV f R) r_ r``,
   rw[RingIso_def, ring_homo_sym, BIJ_LINV_BIJ]);
+
+Theorem ring_iso_sym_any:
+  Ring r /\ Ring s /\ RingIso f r s /\
+  (!x. x IN s.carrier ==> i x IN r.carrier /\ f (i x) = x) /\
+  (!x. x IN r.carrier ==> i (f x) = x)
+  ==>
+  RingIso i s r
+Proof
+  rpt strip_tac \\ fs[RingIso_def]
+  \\ conj_tac >- metis_tac[ring_homo_sym_any]
+  \\ simp[BIJ_IFF_INV]
+  \\ qexists_tac`f`
+  \\ metis_tac[BIJ_DEF, INJ_DEF]
+QED
 
 (* Theorem: RingIso f1 r s /\ RingIso f2 s t ==> RingIso (f2 o f1) r t *)
 (* Proof:
