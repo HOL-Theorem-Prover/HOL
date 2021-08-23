@@ -978,28 +978,23 @@ in
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
-fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir = let
-  val hmstatus = sysl HOLMAKE ("--qof" :: extra_args())
-in
-  if isSuccess hmstatus then
-    if selftest_level > 0 andalso
-       OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
-    then
-      (print "Performing self-test...\n";
-       if SYSTEML [dir ^ "/selftest.exe", Int.toString selftest_level]
-       then
-         print "Self-test was successful\n"
-       else
-         die ("Selftest failed in directory "^dir))
-    else
-      ()
-  else let
-      val info = analyse_failstatus hmstatus
+fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir =
+    let
+      fun cons h t = h::t
+      val args = (if selftest_level > 0 then
+                    cons ("HOLSELFTESTLEVEL=" ^ Int.toString selftest_level)
+                  else (fn x => x))
+                 ("--qof" :: extra_args())
+      val hmstatus = sysl HOLMAKE args
     in
-      die ("Build failed in directory "^dir^
-           (if info <> "" then " ("^info^")" else ""))
+      if isSuccess hmstatus then ()
+      else let
+        val info = analyse_failstatus hmstatus
+      in
+        die ("Build failed in directory "^dir^
+             (if info <> "" then " ("^info^")" else ""))
+      end
     end
-end
 
 val () = OS.Process.atExit (fn () => finish_logging false)
         (* this will do nothing if finish_logging happened normally first;

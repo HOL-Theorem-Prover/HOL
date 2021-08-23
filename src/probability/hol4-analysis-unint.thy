@@ -9,16 +9,13 @@ main {
   import: integration
 }
 real-topology {
-  import: iterate
   article: "real_topology.ot.art"
 }
 derivative {
-  import: iterate
   import: real-topology
   article: "derivative.ot.art"
 }
 integration {
-  import: iterate
   import: real-topology
   import: derivative
   article: "integration.ot.art"

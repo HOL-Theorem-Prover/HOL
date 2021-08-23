@@ -669,6 +669,11 @@ val DRESTRICT_FUPDATE = Q.store_thm
             EXTENSION] THEN PROVE_TAC []);
 val _ = export_rewrites ["DRESTRICT_FUPDATE"]
 
+Theorem DRESTRICT_EQ_FEMPTY:
+  !m s. DISJOINT s (FDOM m) <=> DRESTRICT m s = FEMPTY
+Proof
+  ho_match_mp_tac fmap_SIMPLE_INDUCT >> rw[] >> eq_tac >> rw[]
+QED
 
 val STRONG_DRESTRICT_FUPDATE = Q.store_thm
 ("STRONG_DRESTRICT_FUPDATE",
@@ -1030,6 +1035,163 @@ val fmap_eq_flookup = save_thm(
 val FLOOKUP_DRESTRICT = store_thm("FLOOKUP_DRESTRICT",
   ``!fm s k. FLOOKUP (DRESTRICT fm s) k = if k IN s then FLOOKUP fm k else NONE``,
   SRW_TAC[][FLOOKUP_DEF,DRESTRICT_DEF] THEN FULL_SIMP_TAC std_ss []);
+
+Theorem FLOOKUP_FMERGE:
+  FLOOKUP (FMERGE f m1 m2) k =
+    case (FLOOKUP m1 k, FLOOKUP m2 k) of
+    | (SOME v1, SOME v2) => SOME $ f v1 v2
+    | (f1, f2) => OPTION_CHOICE f1 f2
+Proof
+  rw[FLOOKUP_DEF, FMERGE_DEF] >> gvs[]
+QED
+
+Theorem FLOOKUP_FMERGE = FLOOKUP_FMERGE |> SIMP_RULE (srw_ss()) [];
+
+
+(*---------------------------------------------------------------------------
+     Merge with key
+ ---------------------------------------------------------------------------*)
+
+Theorem FMERGE_WITH_KEY_EXISTS[local]:
+  !f m1 m2. ?u.
+    FDOM u = FDOM m1 UNION FDOM m2 /\
+    !x. u ' x =
+      if x IN FDOM m1 /\ x IN FDOM m2 then f x (m1 ' x) (m2 ' x)
+      else if x IN FDOM m1 then m1 ' x else m2 ' x
+Proof
+  gen_tac >> ho_match_mp_tac fmap_SIMPLE_INDUCT >> rw[]
+  >- (qexists_tac `m2` >> simp[]) >>
+  first_x_assum $ qspec_then `m2` assume_tac >> gvs[] >>
+  Cases_on `x IN FDOM m2` >> gvs[]
+  >- (
+    qexists_tac `u |+ (x, f x y (m2 ' x))` >>
+    gvs[INSERT_UNION_EQ, FAPPLY_FUPDATE_THM] >> rw[] >> gvs[]
+    )
+  >- (
+    qexists_tac `u |+ (x, y)` >>
+    gvs[INSERT_UNION_EQ, FAPPLY_FUPDATE_THM] >> rw[] >> gvs[]
+    )
+QED
+
+val FMERGE_WITH_KEY_DEF = new_specification
+  ("FMERGE_WITH_KEY_DEF", ["FMERGE_WITH_KEY"],
+   CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) FMERGE_WITH_KEY_EXISTS);
+
+Theorem FLOOKUP_FMERGE_WITH_KEY[local]:
+  FLOOKUP (FMERGE_WITH_KEY f m1 m2) k =
+    case (FLOOKUP m1 k, FLOOKUP m2 k) of
+    | (SOME v1, SOME v2) => SOME $ f k v1 v2
+    | (f1, f2) => OPTION_CHOICE f1 f2
+Proof
+  rw[FLOOKUP_DEF, FMERGE_WITH_KEY_DEF] >> gvs[]
+QED
+
+Theorem FLOOKUP_FMERGE_WITH_KEY =
+  FLOOKUP_FMERGE_WITH_KEY |> SIMP_RULE (srw_ss()) [];
+
+Theorem FMERGE_WITH_KEY_FEMPTY[simp]:
+  FMERGE_WITH_KEY f FEMPTY m2 = m2 /\
+  FMERGE_WITH_KEY f m1 FEMPTY = m1
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY] >> CASE_TAC >> simp[]
+QED
+
+Theorem FLOOKUP_FMERGE_WITH_KEY_COMM:
+  COMM (FMERGE_WITH_KEY f) = !k. COMM (f k)
+Proof
+  rw[combinTheory.COMM_DEF, fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY] >>
+  eq_tac >> rw[]
+  >- (
+    pop_assum $ qspecl_then [`FEMPTY |+ (k,x)`,`FEMPTY |+ (k,y)`,`k`] mp_tac >>
+    simp[FLOOKUP_UPDATE]
+    ) >>
+  rename1 `FLOOKUP _ k` >> Cases_on `FLOOKUP x k` >> Cases_on `FLOOKUP y k`
+  >- simp[] >- simp[] >- simp[] >>
+  qmatch_asmsub_abbrev_tac `FLOOKUP x _ = SOME a` >>
+  qmatch_asmsub_abbrev_tac `FLOOKUP y _ = SOME b` >>
+  last_x_assum $ qspecl_then [`k`,`a`,`b`] assume_tac >> simp[] >> gvs[]
+QED
+
+Theorem FLOOKUP_FMERGE_WITH_KEY_ASSOC:
+  ASSOC (FMERGE_WITH_KEY f) = !k. ASSOC (f k)
+Proof
+  rw[combinTheory.ASSOC_DEF, fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY] >>
+  eq_tac >> rw[]
+  >- (
+    pop_assum $ qspecl_then
+      [`FEMPTY |+ (k,x)`,`FEMPTY |+ (k,y)`,`FEMPTY |+ (k,z)`,`k`] mp_tac >>
+    simp[FLOOKUP_UPDATE]
+    ) >>
+  rename1 `FLOOKUP _ k` >>
+  Cases_on `FLOOKUP x k` >> Cases_on `FLOOKUP y k` >> Cases_on `FLOOKUP z k`
+  >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >>
+  qmatch_asmsub_abbrev_tac `FLOOKUP x _ = SOME a` >>
+  qmatch_asmsub_abbrev_tac `FLOOKUP y _ = SOME b` >>
+  qmatch_asmsub_abbrev_tac `FLOOKUP z _ = SOME c` >>
+  last_x_assum $ qspecl_then [`k`,`a`,`b`,`c`] assume_tac >> simp[] >> gvs[]
+QED
+
+Theorem FMERGE_WITH_KEY_FUPDATE:
+  FMERGE_WITH_KEY f (m1 |+ (k,v1)) m2 =
+    (FMERGE_WITH_KEY f m1 m2) |+
+      (k, case FLOOKUP m2 k of NONE => v1 | SOME v2 => f k v1 v2)
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_UPDATE] >>
+  IF_CASES_TAC >> gvs[] >> CASE_TAC >> gvs[]
+QED
+
+Theorem FMERGE_WITH_KEY_FUNION:
+  FMERGE_WITH_KEY f (FUNION m1 m2) m3 =
+  FUNION
+    (FMERGE_WITH_KEY f m1 (DRESTRICT m3 (FDOM m1)))
+    (FMERGE_WITH_KEY f m2 m3)
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_FUNION, FLOOKUP_DRESTRICT] >>
+  every_case_tac >> gvs[FLOOKUP_DEF]
+QED
+
+Theorem FMERGE_WITH_KEY_FMERGE:
+  FMERGE f = FMERGE_WITH_KEY (\k v1 v2. f v1 v2)
+Proof
+  rw[FUN_EQ_THM, fmap_eq_flookup, FLOOKUP_FMERGE, FLOOKUP_FMERGE_WITH_KEY]
+QED
+
+Theorem FUNION_FMERGE_WITH_KEY:
+  !m1 m2 f. DISJOINT (FDOM m1) (FDOM m2) ==>
+    FMERGE_WITH_KEY f m1 m2 = FUNION m1 m2
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_FUNION] >>
+  CASE_TAC >> simp[] >> CASE_TAC >> simp[] >> gvs[FLOOKUP_DEF, DISJOINT_ALT]
+QED
+
+Theorem FMERGE_WITH_KEY_NO_CHANGE:
+  (FMERGE_WITH_KEY f m1 m2 = m1 <=>
+    !x. x IN FDOM m2 ==> x IN FDOM m1 /\ (f x (m1 ' x) (m2 ' x) = m1 ' x)) /\
+  (FMERGE_WITH_KEY f m1 m2 = m2 <=>
+    !x. x IN FDOM m1 ==> x IN FDOM m2 /\ (f x (m1 ' x) (m2 ' x) = m2 ' x))
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY] >> eq_tac >> rw[] >>
+  gvs[FLOOKUP_DEF] >>
+  last_x_assum $ qspec_then `x` assume_tac >> gvs[] >>
+  every_case_tac >> gvs[]
+QED
+
+Theorem FMERGE_WITH_KEY_DRESTRICT:
+  DRESTRICT (FMERGE_WITH_KEY f m1 m2) vs =
+  FMERGE_WITH_KEY f (DRESTRICT m1 vs) (DRESTRICT m2 vs)
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_DRESTRICT, FLOOKUP_FMERGE_WITH_KEY] >>
+  every_case_tac >> gvs[]
+QED
+
+Theorem FMERGE_WITH_KEY_EQ_EMPTY[simp]:
+  (FMERGE_WITH_KEY f m1 m2 = FEMPTY) <=> (m1 = FEMPTY) /\ (m2 = FEMPTY)
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY] >>
+  eq_tac >> rw[] >>
+  pop_assum $ qspec_then `x` assume_tac >> every_case_tac >> gvs[]
+QED
+
 
 (*---------------------------------------------------------------------------
        Universal quantifier on finite maps
@@ -1645,6 +1807,12 @@ val FUPDATE_LIST_SNOC = store_thm("FUPDATE_LIST_SNOC",
   ``!xs x fm. fm |++ SNOC x xs = (fm |++ xs) |+ x``,
   Induct THEN SRW_TAC[][FUPDATE_LIST_THM])
 
+Theorem DOMSUB_FUPDATE_LIST:
+  !l m x. (m |++ l) \\ x = (m \\ x) |++ (FILTER ($<> x o FST) l)
+Proof
+  Induct >> rw[FUPDATE_LIST_THM, fmap_eq_flookup] >>
+  PairCases_on `h` >> gvs[] >> simp[DOMSUB_FUPDATE_THM]
+QED
 
 
 
@@ -1992,6 +2160,28 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
                  COND_RAND, COND_RATOR,
                  DISJ_IMP_THM]);
 
+Theorem FLOOKUP_FMAP_MAP2:
+  !f m k. FLOOKUP (FMAP_MAP2 f m) k = OPTION_MAP (\v. f (k,v)) (FLOOKUP m k)
+Proof
+  rw[FLOOKUP_DEF, FMAP_MAP2_def, FUN_FMAP_DEF]
+QED
+
+Theorem DOMSUB_FMAP_MAP2:
+  !f m s. (FMAP_MAP2 f m) \\ s = FMAP_MAP2 f (m \\ s)
+Proof
+  rw[fmap_eq_flookup, DOMSUB_FLOOKUP_THM, FLOOKUP_FMAP_MAP2] >>
+  IF_CASES_TAC >> simp[]
+QED
+
+Theorem FMAP_MAP2_FUPDATE_LIST:
+  !l m f.
+    FMAP_MAP2 f (m |++ l) = FMAP_MAP2 f m |++ MAP (\(k,v). (k, f (k,v))) l
+Proof
+  Induct >> rw[FUPDATE_LIST_THM] >>
+  PairCases_on `h` >> simp[FMAP_MAP2_FUPDATE]
+QED
+
+
 (*---------------------------------------------------------------------------*)
 (* Some general stuff                                                        *)
 (* added 17 March 2009 by Thomas Tuerk                                       *)
@@ -2325,19 +2515,12 @@ Q.MATCH_ASSUM_RENAME_TAC `R a (SND b)` THEN
 Cases_on `b` THEN FULL_SIMP_TAC(srw_ss())[] THEN
 SRW_TAC[][fmap_rel_FUPDATE_same])
 
-val fmap_rel_FEMPTY = store_thm(
-"fmap_rel_FEMPTY",
-``fmap_rel R FEMPTY FEMPTY``,
-SRW_TAC[][fmap_rel_def])
-val _ = export_rewrites["fmap_rel_FEMPTY"]
-
-val fmap_rel_FEMPTY2 = store_thm(
-  "fmap_rel_FEMPTY2",
-  ``(fmap_rel R FEMPTY f <=> (f = FEMPTY)) /\
-    (fmap_rel R f FEMPTY <=> (f = FEMPTY))``,
-  SRW_TAC [][fmap_rel_def, FDOM_EQ_EMPTY, EQ_IMP_THM] THEN
-  METIS_TAC [FDOM_EQ_EMPTY]);
-val _ = export_rewrites ["fmap_rel_FEMPTY2"]
+Theorem fmap_rel_FEMPTY[simp]:
+  (fmap_rel (R : 'a -> 'b -> bool) FEMPTY (f2 : 'c |-> 'b) <=> f2 = FEMPTY) /\
+  (fmap_rel R (f1 : 'c |-> 'a) FEMPTY <=> f1 = FEMPTY)
+Proof
+  rw[fmap_rel_def] >> simp[FDOM_EQ_EMPTY] >> eq_tac >> rw[]
+QED
 
 val fmap_rel_refl = store_thm(
 "fmap_rel_refl",
@@ -2379,6 +2562,34 @@ val fmap_rel_FLOOKUP_imp = Q.store_thm("fmap_rel_FLOOKUP_imp",
    (!k v1. FLOOKUP f1 k = SOME v1 ==> ?v2. FLOOKUP f2 k = SOME v2 /\ R v1 v2)`,
   rw[fmap_rel_OPTREL_FLOOKUP,optionTheory.OPTREL_def] >>
   first_x_assum(qspec_then`k`mp_tac) >> rw[]);
+
+Theorem fmap_rel_FUPDATE_EQN:
+  fmap_rel R (f1 \\ k) (f2 \\ k) /\ R v1 v2 <=>
+  fmap_rel R (f1 |+ (k,v1)) (f2 |+ (k,v2))
+Proof
+  gvs[fmap_rel_OPTREL_FLOOKUP, FLOOKUP_UPDATE, DOMSUB_FLOOKUP_THM] >>
+  reverse (eq_tac >> rw[])
+  >- (pop_assum (qspec_then `k` mp_tac) >> simp[]) >>
+  first_x_assum (qspec_then `k'` mp_tac) >> simp[] >>
+  every_case_tac >> gvs[]
+QED
+
+Theorem fmap_rel_ind[rule_induction]:
+  !R FR.
+    FR FEMPTY FEMPTY /\
+    (!k v1 v2 f1 f2.
+      R v1 v2 /\ FR (f1 \\ k) (f2 \\ k) ==> FR (f1 |+ (k,v1)) (f2 |+ (k,v2)))
+  ==> !f1 f2. fmap_rel R f1 f2 ==> FR f1 f2
+Proof
+  rpt gen_tac >> strip_tac >>
+  ho_match_mp_tac fmap_INDUCT >> rw[] >>
+  `x IN FDOM f2` by gvs[fmap_rel_def] >>
+  imp_res_tac FM_PULL_APART >> gvs[] >>
+  last_x_assum irule >> gvs[DOMSUB_NOT_IN_DOM] >>
+  gvs[GSYM fmap_rel_FUPDATE_EQN] >>
+  first_x_assum irule >> gvs[DOMSUB_NOT_IN_DOM]
+QED
+
 
 (*---------------------------------------------------------------------------
      Some helpers for fupdate_NORMALISE_CONV
@@ -2942,6 +3153,85 @@ Proof
     (EXISTS_NOT_IN_FDOM_LEMMA |> SIMP_RULE std_ss [whileTheory.LEAST_EXISTS])>>
    fs[]
 QED
+
+Theorem FLOOKUP_FDIFF:
+  FLOOKUP (FDIFF fm s) k = if k IN s then NONE else FLOOKUP fm k
+Proof
+  rw[FDIFF_def, FLOOKUP_DRESTRICT] >> gvs[]
+QED
+
+Theorem FDIFF_FDIFF:
+  !fm s1 s2. FDIFF (FDIFF fm s1) s2 = FDIFF fm (s1 UNION s2)
+Proof
+  rw[FDIFF_def, DRESTRICT_DRESTRICT, fmap_eq_flookup, FLOOKUP_DRESTRICT]
+QED
+
+Theorem FDIFF_FUNION:
+  !fm1 fm2 s. FDIFF (FUNION fm1 fm2) s = FUNION (FDIFF fm1 s) (FDIFF fm2 s)
+Proof
+  rw[FDIFF_def, DRESTRICTED_FUNION] >>
+  rw[fmap_eq_flookup] >>
+  rw[FLOOKUP_DRESTRICT, FLOOKUP_FUNION] >> fs[] >>
+  rw[FLOOKUP_DEF]
+QED
+
+Theorem FDIFF_FDOMSUB:
+  FDIFF (f \\ x) p = FDIFF f p \\ x
+Proof
+  rw[fmap_eq_flookup,FDIFF_def,FLOOKUP_DRESTRICT,DOMSUB_FLOOKUP_THM] >> rw[]
+QED
+
+Theorem FDIFF_FDOMSUB_INSERT:
+  FDIFF (f \\ x) p = FDIFF f (x INSERT p)
+Proof
+  rw[fmap_eq_flookup,FDIFF_def,FLOOKUP_DRESTRICT,DOMSUB_FLOOKUP_THM] >>
+  rw[] >> gvs[]
+QED
+
+Theorem FDIFF_BOUND:
+  FDIFF f p = FDIFF f (p INTER FDOM f)
+Proof
+  rw[FDIFF_def,fmap_eq_flookup,FLOOKUP_DRESTRICT] >>
+  rw[] >> gvs[flookup_thm]
+QED
+
+Theorem FDIFF_FUPDATE:
+  FDIFF (fm |+ (k,v)) s =
+  if k IN s then FDIFF fm s else (FDIFF fm s) |+ (k,v)
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FDIFF, FLOOKUP_UPDATE] >>
+  EVERY_CASE_TAC >> gvs[]
+QED
+
+Theorem FDIFF_FEMPTY[simp]:
+  FDIFF FEMPTY s = FEMPTY
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FDIFF]
+QED
+
+Theorem FDIFF_EMPTY[simp]:
+  !f. FDIFF f {} = f
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FDIFF]
+QED
+
+Theorem FDIFF_FMAP_MAP2:
+  !f m s. FDIFF (FMAP_MAP2 f m) s = FMAP_MAP2 f (FDIFF m s)
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FDIFF, FLOOKUP_FMAP_MAP2] >> rw[]
+QED
+
+Theorem FMERGE_WITH_KEY_FUNION_ALT:
+  FMERGE_WITH_KEY f (FUNION m1 m2) m3 =
+    FUNION
+      (FMERGE_WITH_KEY f m1 (DRESTRICT m3 (FDOM m1)))
+      (FMERGE_WITH_KEY f m2 (FDIFF m3 (FDOM m1)))
+Proof
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY,
+     FLOOKUP_FUNION, FLOOKUP_DRESTRICT, FLOOKUP_FDIFF] >>
+  every_case_tac >> gvs[FLOOKUP_DEF]
+QED
+
 
 (* ----------------------------------------------------------------------
     fixpoint calculations over finite maps

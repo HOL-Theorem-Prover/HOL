@@ -1,3 +1,5 @@
+OPTIONS = QUIT_ON_FAILURE
+
 ifdef POLY
 EXTRA_CLEANS = $(TARGET)
 
@@ -67,9 +69,13 @@ hol4-assums.art: hol4-base-unsat.thy hol4-base-unint.art ../opentheory/hol4.int
 	opentheory info --skip-definitions --assumptions -o $@ $<
 	touch hol4-assums.ui hol4-assums.uo
 
-prove_base_assums.art: bossLib.uo prove_base_assums.otd \
-	base-theorems.art hol4-assums.art
+prove_base_assums.art: prove_base_assums.otd base-theorems.art hol4-assums.art
 
-all: prove_base_assums.ot.art
+hol4-base.art: hol4-base.thy hol4-base-unint.art ../opentheory/hol4.int \
+               bool_defs.ot.art prove_base_assums.ot.art
+	opentheory info --article -o $@ $<
+	opentheory install --reinstall hol4-base.thy
+
+all: hol4-base.art
 
 endif

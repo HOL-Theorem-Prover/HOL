@@ -6,3 +6,12 @@ all: $(DEFAULT_TARGETS) selftest.exe
 
 selftest.exe: selftest.uo pegexecTheory.uo simpleSexpPEGTheory.uo pegLib.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: context-free-test.log
+
+context-free-test.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+endif
+
+EXTRA_CLEANS = selftest.exe context-free-test.log

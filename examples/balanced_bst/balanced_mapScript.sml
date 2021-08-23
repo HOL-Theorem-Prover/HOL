@@ -599,6 +599,23 @@ val union_def = Define `
 (union cmp t1 Tip = t1) ∧
 (union cmp t1 t2 = hedgeUnion cmp NONE NONE t1 t2)`;
 
+Definition hedgeUnionWithKey_def:
+  (hedgeUnionWithKey _ _ _ _ t1 Tip = t1) ∧
+  (hedgeUnionWithKey cmp _ blo bhi Tip (Bin _ kx x l r) =
+    link kx x (filterGt cmp blo l) (filterLt cmp bhi r)) ∧
+  (hedgeUnionWithKey cmp f blo bhi (Bin _ kx x l r) t2 =
+    let newx = (case lookup cmp kx t2 of NONE => x | SOME y => f kx x y) in
+    link kx newx
+      (hedgeUnionWithKey cmp f blo (SOME kx) l (trim cmp blo (SOME kx) t2))
+      (hedgeUnionWithKey cmp f (SOME kx) bhi r (trim cmp (SOME kx) bhi t2)))
+End
+
+Definition unionWith_def:
+  (unionWith _ _ Tip t2 = t2) ∧
+  (unionWith _ _ t1 Tip = t1) ∧
+  (unionWith cmp f t1 t2 = hedgeUnionWithKey cmp (λk x y. f x y) NONE NONE t1 t2)
+End
+
 val foldrWithKey_def = Define `
 (foldrWithKey f z' Tip = z') ∧
 (foldrWithKey f z' (Bin _ kx x l r) =
@@ -1961,6 +1978,15 @@ Proof
  metis_tac [cmp_thms]
 QED
 
+Triviality restrict_domain_FMERGE_WITH_KEY:
+  restrict_domain cmp lo hi (FMERGE_WITH_KEY f m1 m2) =
+    FMERGE_WITH_KEY f (restrict_domain cmp lo hi m1) (restrict_domain cmp lo hi m2)
+Proof
+  rw[restrict_domain_def, fmap_eq_flookup,
+     FLOOKUP_DRESTRICT, FLOOKUP_FMERGE_WITH_KEY] >>
+  IF_CASES_TAC >> gvs[]
+QED
+
 Definition bounded_root_def:
   bounded_root cmp lk hk t ⇔
     !s k v l r. t = Bin s k v l r ⇒ k ∈ restrict_set cmp lk hk
@@ -2564,6 +2590,163 @@ val lookup_union = Q.store_thm("lookup_union",
                                       NONE => lookup cmp k t2
                                     | SOME v => SOME v`,
   rw[lookup_thm,union_thm,FLOOKUP_FUNION]);
+
+Triviality hedgeUnionWithKey_thm:
+  ∀cmp f blo bhi t1 t2.
+    good_cmp cmp ∧
+    invariant cmp t1 ∧
+    invariant cmp t2 ∧
+    bounded_all cmp blo bhi t1 ∧
+    bounded_root cmp blo bhi t2 ∧
+    (∀k1 k2 x y. cmp k1 k2 = Equal ⇒ f k1 x y = f k2 x y)
+  ⇒ invariant cmp (hedgeUnionWithKey cmp f blo bhi t1 t2) ∧
+    to_fmap cmp (hedgeUnionWithKey cmp f blo bhi t1 t2) =
+      restrict_domain cmp blo bhi
+        (FMERGE_WITH_KEY (λks x y. f (CHOICE ks) x y) (to_fmap cmp t1) (to_fmap cmp t2))
+Proof
+  recInduct hedgeUnionWithKey_ind >> simp[hedgeUnionWithKey_def] >>
+  rpt conj_tac >> rpt gen_tac >> strip_tac
+  >- rw[to_fmap_def, FUNION_FEMPTY_2, bounded_restrict_id]
+  >- (
+    inv_mp_tac link_thm >> simp[GSYM CONJ_ASSOC] >>
+    inv_mp_tac filterGt_thm >> simp[] >> gvs[invariant_eq] >> strip_tac >>
+    inv_mp_tac filterLt_thm >> simp[] >> strip_tac >> rpt conj_tac
+    >- gvs[key_ordered_to_fmap, restrict_domain_def]
+    >- gvs[key_ordered_to_fmap, restrict_domain_def] >>
+    `restrict_domain cmp blo bhi FEMPTY = FEMPTY` by rw [restrict_domain_def] >>
+    simp[to_fmap_def, restrict_domain_union, restrict_domain_update] >> strip_tac >>
+    fmrw[restrict_domain_def, fmap_eq_flookup] >>
+    Cases_on `blo` >> Cases_on `bhi` >>
+    gvs[restrict_set_def, option_cmp_def, option_cmp2_def, bounded_root_def] >>
+    rw[FLOOKUP_DEF] >>
+    gvs[key_ordered_to_fmap] >> res_tac >> imp_res_tac to_fmap_key_set >>
+    metis_tac[cmp_thms, key_set_cmp_thm]
+    ) >>
+  simp[bounded_all_def] >> strip_tac >>
+  inv_mp_tac link_thm >> gvs[] >>
+  `invariant cmp l` by metis_tac[invariant_def] >>
+  `invariant cmp r` by metis_tac[invariant_def] >> gvs[] >>
+  qpat_abbrev_tac `tree = Bin _ _ _ _ _` >>
+  last_x_assum mp_tac >> impl_tac >> simp[]
+  >- (
+    inv_mp_tac trim_thm >> simp[] >> strip_tac >>
+    irule bounded_all_shrink1 >> simp[PULL_EXISTS] >> goal_assum drule >>
+    gvs[invariant_def]
+    ) >>
+  last_x_assum mp_tac >> impl_tac >> simp[]
+  >- (
+    inv_mp_tac trim_thm >> simp[] >> strip_tac >>
+    irule bounded_all_shrink2 >> simp[PULL_EXISTS] >> goal_assum drule >>
+    gvs[invariant_def]
+    ) >>
+  ntac 2 strip_tac >> simp[] >> conj_tac
+  >- (
+    gvs[key_ordered_to_fmap, restrict_domain_def, FMERGE_WITH_KEY_DEF] >>
+    simp[PULL_EXISTS, restrict_set_def, option_cmp2_def, DISJ_EQ_IMP] >>
+    rw[key_set_cmp_def, key_set_def] >> metis_tac[good_cmp_def]
+    ) >>
+  strip_tac >>
+  drule lookup_thm >> disch_then $ qspecl_then [`kx`,`tree`] assume_tac >> gvs[] >>
+  simp[to_fmap_def, restrict_domain_FMERGE_WITH_KEY,
+       restrict_domain_union, restrict_domain_update] >>
+  drule trim_thm >>
+  disch_then $ qspecl_then [`tree`,`blo`,`SOME kx`] assume_tac >> gvs[] >>
+  drule trim_thm >>
+  disch_then $ qspecl_then [`tree`,`SOME kx`,`bhi`] assume_tac >> gvs[] >>
+  ntac 15 $ pop_assum kall_tac >> gvs[invariant_eq] >>
+  `restrict_domain cmp blo bhi (to_fmap cmp l) =
+   restrict_domain cmp blo (SOME kx) (to_fmap cmp l)` by (
+    fmrw[restrict_domain_def, fmap_eq_flookup] >>
+    gvs[key_ordered_to_fmap, restrict_set_def, option_cmp2_def] >>
+    every_case_tac >> gvs[] >>
+    rw[FLOOKUP_DEF] >> CCONTR_TAC >> gvs[] >> res_tac
+    >- (
+      imp_res_tac key_set_cmp_thm >>
+      first_x_assum $ qspec_then `x'` assume_tac >> gvs[] >>
+      metis_tac[good_cmp_def]
+      )
+    >- (
+      first_x_assum $ qspec_then `x'` assume_tac >>
+      Cases_on `bhi` >> gvs[option_cmp2_def] >>
+      metis_tac[good_cmp_def]
+      )
+    ) >>
+  `restrict_domain cmp blo bhi (to_fmap cmp r) =
+   restrict_domain cmp (SOME kx) bhi (to_fmap cmp r)` by (
+    fmrw[restrict_domain_def, fmap_eq_flookup] >>
+    gvs[key_ordered_to_fmap, restrict_set_def] >>
+    every_case_tac >> gvs[] >>
+    rw[FLOOKUP_DEF] >> CCONTR_TAC >> gvs[] >> res_tac
+    >- (
+      imp_res_tac key_set_cmp_thm >>
+      first_x_assum $ qspec_then `x'` assume_tac >> gvs[]
+      )
+    >- (
+      first_x_assum $ qspec_then `x'` assume_tac >>
+      Cases_on `blo` >> gvs[option_cmp_def] >>
+      metis_tac[good_cmp_def]
+      )
+    ) >>
+  simp[] >>
+  ntac 2 $ pop_assum kall_tac >>
+  simp[FMERGE_WITH_KEY_FUPDATE] >>
+  qmatch_goalsub_abbrev_tac `_ |+ (_, a) = _ |+ (_, b)` >>
+  `a = b` by (
+    fmrw[Abbr `a`, Abbr `b`, restrict_domain_def] >>
+    CASE_TAC >> rw[] >> first_x_assum irule >>
+    DEEP_INTRO_TAC CHOICE_INTRO >> simp[key_set_def] >>
+    metis_tac[good_cmp_def]) >>
+  pop_assum SUBST_ALL_TAC >> ntac 2 $ pop_assum kall_tac >>
+  simp[FUPD11_SAME_UPDATE, GSYM fmap_domsub] >>
+  rw[fmap_eq_flookup, DOMSUB_FLOOKUP_THM] >> IF_CASES_TAC >> gvs[] >>
+  drule $ GSYM restrict_domain_combine >>
+  disch_then $ drule_at Any >>
+  disch_then $ qspecl_then [`tree`,`x`] assume_tac >> gvs[] >>
+  qmatch_asmsub_abbrev_tac `FLOOKUP (a ⊌ b)` >>
+  `∀k. FLOOKUP a k = NONE ∨ FLOOKUP b k = NONE` by (
+    rw[] >> Cases_on `FLOOKUP a k` >> Cases_on `FLOOKUP b k` >> gvs[] >>
+    gvs[Abbr `a`, Abbr `b`, FLOOKUP_DEF] >>
+    gvs[restrict_domain_def, restrict_set_def, option_cmp2_def] >>
+    gvs[key_set_eq] >> imp_res_tac good_cmp_thm >> res_tac >> gvs[]) >>
+  fmrw[FLOOKUP_FMERGE_WITH_KEY, Abbr `a`, Abbr `b`] >>
+  qpat_x_assum `FLOOKUP _ _ = _` kall_tac >>
+  first_x_assum $ qspec_then `x` assume_tac >> every_case_tac >> gvs[] >>
+  gvs[restrict_domain_def, FLOOKUP_DRESTRICT, restrict_set_def,
+      option_cmp2_def, key_set_eq] >>
+  imp_res_tac good_cmp_thm >> res_tac >> gvs[]
+QED
+
+Theorem unionWith_thm:
+  ∀cmp f t1 t2.
+    good_cmp cmp ∧
+    invariant cmp t1 ∧
+    invariant cmp t2
+  ⇒ invariant cmp (unionWith cmp f t1 t2) ∧
+    to_fmap cmp (unionWith cmp f t1 t2) =
+      FMERGE_WITH_KEY (λks x y. f x y) (to_fmap cmp t1) (to_fmap cmp t2)
+Proof
+  Cases_on `t1` >> Cases_on `t2` >> simp[unionWith_def, to_fmap_def] >>
+  ntac 2 gen_tac >> strip_tac >>
+  inv_mp_tac hedgeUnionWithKey_thm >> simp[] >>
+  rw[bounded_all_NONE, bounded_root_def, restrict_set_def, option_cmp_def,
+     restrict_domain_def, option_cmp2_def, to_fmap_def] >>
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_DRESTRICT] >> gvs[] >>
+  IF_CASES_TAC >> gvs[] >> simp[FLOOKUP_UPDATE, FLOOKUP_DEF] >>
+  every_case_tac >> gvs[] >> imp_res_tac to_fmap_key_set >> gvs[]
+QED
+
+Theorem lookup_unionWith:
+  good_cmp cmp ∧ invariant cmp t1 ∧ invariant cmp t2 ⇒
+  lookup cmp k (unionWith cmp f t1 t2) =
+    case lookup cmp k t1 of
+    | NONE => lookup cmp k t2
+    | SOME v1 =>
+      case lookup cmp k t2 of
+      | NONE => SOME v1
+      | SOME v2 => SOME $ f v1 v2
+Proof
+  rw[lookup_thm, unionWith_thm, FLOOKUP_FMERGE_WITH_KEY]
+QED
 
 val EXT2 = Q.prove (
 `!s1 s2. s1 = s2 ⇔ (!k v. (k,v) ∈ s1 ⇔ (k,v) ∈ s2)`,

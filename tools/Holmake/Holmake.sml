@@ -131,7 +131,7 @@ local
               ReadHMF.read "Holmakefile"
                            (extend_with_cline_vars (read_holpathdb()))
               handle Fail s =>
-                     (warn ("Bad Holmakefile in " ^ d ^ ": " ^ s);
+                     (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
                       (base,Binarymap.mkDict String.compare,NONE))
           fun hmfstr_to_tgt s = s |> filestr_to_tgt |> setHMF_text s
           fun foldthis (k,{commands,dependencies=deps0},A) =

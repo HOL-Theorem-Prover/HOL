@@ -338,7 +338,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         in
           diag (fn _ => "Looking for other nodes with buildscript "^script);
           find_nodes_by_command g
-              (BuiltInCmd (BIC_BuildScript script_part, empty_incinfo))
+              (hmdir.curdir(),
+               BuiltInCmd (BIC_BuildScript script_part, empty_incinfo))
               (* incinfos not consulted for comparison so empty value ok here *)
         end
       in

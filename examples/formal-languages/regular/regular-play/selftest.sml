@@ -30,7 +30,7 @@ val quiet = false;
 
 fun test_a_case eqf casename (oresultval, expectedval) =
   let
-    val _ = print ("Result of case \"" ^ casename ^ "\":\t");
+    val _ = print ("Result of case \"" ^ casename ^ "\": ");
     val _ = print (if not (isSome oresultval) then "UNKNOWN ERROR"
                    else if eqf (valOf oresultval) expectedval then "success"
                    else "ERROR");
