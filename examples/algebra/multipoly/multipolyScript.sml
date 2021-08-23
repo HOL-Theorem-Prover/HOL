@@ -2360,6 +2360,23 @@ Proof
   \\ rw[]
 QED
 
+Theorem degree_of_mpoly_of_poly:
+  Ring r /\ poly p ==>
+  degree_of r (mpoly_of_poly r v p) v = deg p
+Proof
+  rw[degree_of_def, monomials_mpoly_of_poly]
+  \\ rw[GSYM IMAGE_COMPOSE, combinTheory.o_DEF]
+  \\ rw[polynomialTheory.poly_deg_def]
+  \\ DEP_REWRITE_TAC[helperSetTheory.MAX_SET_TEST_IFF]
+  \\ simp[]
+  \\ fs[polyRingTheory.poly_def_alt]
+  \\ simp[Once EXTENSION]
+  \\ conj_asm2_tac >- metis_tac[]
+  \\ simp[rich_listTheory.EL_PRE_LENGTH]
+  \\ simp[arithmeticTheory.PRE_SUB1]
+  \\ CCONTR_TAC \\ fs[]
+QED
+
 (* mpoly_of_poly is a ring isomorphism *)
 
 Theorem RingIso_mpoly_of_poly:
@@ -2416,5 +2433,89 @@ Proof
                poly_poly_of_mpoly, mpoly_def]
 QED
 
+Theorem poly_of_mpoly_add:
+  Ring r /\ mpoly r p /\ mpoly r q /\ support r p SUBSET {v} /\ support r q SUBSET {v} ==>
+  poly_of_mpoly r (mpoly_add r p q) =
+  poly_of_mpoly r p + poly_of_mpoly r q
+Proof
+  strip_tac
+  \\ drule RingIso_poly_of_mpoly
+  \\ disch_then(qspec_then`v`strip_assume_tac)
+  \\ imp_res_tac RingIso_def
+  \\ imp_res_tac RingHomo_def
+  \\ imp_res_tac GroupHomo_def
+  \\ fs[mpoly_ring_def]
+QED
+
+Theorem mpoly_ring_empty_support_iso:
+  Ring r ==>
+  RingIso (\p. p {||}) (mpoly_ring r {}) r
+Proof
+  simp[RingIso_def]
+  \\ strip_tac
+  \\ reverse conj_asm2_tac
+  >- (
+    simp[mpoly_ring_def, empty_support]
+    \\ simp[BIJ_IFF_INV]
+    \\ simp[mpoly_def, SUBSET_DEF, PULL_EXISTS]
+    \\ qexists_tac`\x m. if m = {||} then x else r.sum.id`
+    \\ reverse(rw[] \\ rw[])
+    >- (
+      simp[FUN_EQ_THM]
+      \\ rw[EMPTY_BAG]
+      \\ gs[monomials_def, rrestrict_def, EMPTY_BAG]
+      >- ( AP_TERM_TAC \\ simp[FUN_EQ_THM] )
+      \\ irule EQ_SYM  \\ CCONTR_TAC
+      \\ res_tac \\ fs[] )
+    \\ pop_assum mp_tac
+    \\ qmatch_goalsub_abbrev_tac`monomials r p`
+    \\ `monomials r p SUBSET {{||}}`
+    by (
+      rw[monomials_def, SUBSET_DEF, Abbr`p`]
+      \\ CCONTR_TAC \\ gs[rrestrict_def] )
+    >- fs[SUBSET_DEF]
+    \\ rw[]
+    \\ irule SUBSET_FINITE
+    \\ goal_assum(first_assum o mp_then Any mp_tac)
+    \\ simp[] )
+  \\ simp[RingHomo_def]
+  \\ conj_asm1_tac >- fs[BIJ_DEF, INJ_DEF]
+  \\ simp[GroupHomo_def]
+  \\ conj_tac
+  >- (
+    gs[mpoly_ring_def]
+    \\ gs[mpoly_add_def]
+    \\ simp[rrestrict_def] )
+  \\ simp[MonoidHomo_def]
+  \\ gs[mpoly_ring_def]
+  \\ simp[mpoly_one_def]
+  \\ rpt gen_tac
+  \\ strip_tac
+  \\ simp[mpoly_mul_BAG_FILTER_cross]
+  \\ Cases_on`monomials r p = {}` \\ gs[]
+  >- (
+    `p {||} = #0` suffices_by rw[]
+    \\ fs[monomials_def, mpoly_def, SUBSET_DEF, PULL_EXISTS]
+    \\ pop_assum mp_tac \\ simp[Once EXTENSION]
+    \\ simp[rrestrict_def] )
+  \\ Cases_on`monomials r p' = {}` \\ gs[]
+  >- (
+    `p' {||} = #0` suffices_by rw[]
+    \\ fs[monomials_def, mpoly_def, SUBSET_DEF, PULL_EXISTS]
+    \\ pop_assum mp_tac \\ simp[Once EXTENSION]
+    \\ simp[rrestrict_def] )
+  \\ gs[empty_support]
+  \\ `monomials r p = {{||}} /\ monomials r p' = {{||}}`
+  by (
+    simp[SET_EQ_SUBSET]
+    \\ Cases_on`monomials r p` \\ gs[]
+    \\ Cases_on`monomials r p'` \\ gs[] )
+  \\ simp[BAG_FILTER_BAG_OF_SET]
+  \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+  \\ `s = {({||},{||})}` by (simp[Abbr`s`, Once EXTENSION, FORALL_PROD] \\ metis_tac[])
+  \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ gs[mpoly_def, SUBSET_DEF, PULL_EXISTS]
+  \\ rw[rrestrict_def]
+QED
 
 val _ = export_theory();
