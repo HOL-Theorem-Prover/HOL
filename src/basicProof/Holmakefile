@@ -2,3 +2,13 @@ all: $(DEFAULT_TARGETS) selftest.exe
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+
+selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+
+all: selftest.log
+endif
+
+EXTRA_CLEANS = selftest.log selftest.exe

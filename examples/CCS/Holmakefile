@@ -1,7 +1,7 @@
 INCDIRS = examples/lambda/basics src/finite_maps
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/%),$(INCDIRS))
 
-EXTRA_CLEANS = heap munge.exe selftest.exe
+EXTRA_CLEANS = heap munge.exe selftest.exe ccs-test.log
 
 ifdef POLY
 HOLHEAP = heap
@@ -39,3 +39,10 @@ all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 endif
 
 .PHONY: all output
+
+ifdef HOLSELFTESTLEVEL
+all: ccs-test.log
+
+ccs-test.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+endif
