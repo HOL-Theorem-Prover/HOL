@@ -1384,9 +1384,9 @@ val poly_one_eq_zero = store_thm(
   "poly_one_eq_zero",
   ``!r:'a ring. Ring r ==> (( |1| = |0|) <=> !p. poly p ==> (p = |0|))``,
   rw_tac std_ss[EQ_IMP_THM] >| [
-    `(PolyRing r).carrier = {|0|}` by rw_tac std_ss[GSYM poly_one_eq_zero] >>
+    `(PolyRing r).carrier = { |0| }` by rw_tac std_ss[GSYM poly_one_eq_zero] >>
     metis_tac [poly_ring_property, IN_SING],
-    `(PolyRing r).carrier = {|0|}` by metis_tac [poly_ring_property, poly_zero_poly, MEMBER_NOT_EMPTY, ONE_ELEMENT_SING] >>
+    `(PolyRing r).carrier = { |0| }` by metis_tac [poly_ring_property, poly_zero_poly, MEMBER_NOT_EMPTY, ONE_ELEMENT_SING] >>
     metis_tac [poly_one_eq_zero]
   ]);
 
@@ -2763,12 +2763,6 @@ val poly_mult_cross = store_thm(
   `_ = chop ([h * k] || chop (chop ((chop (h o q) >> 1) || (chop (k o p) >> 1)) || ((chop (p o q) >> 1) >> 1)))`
     by rw_tac std_ss[poly_chop_shift] >>
   rw_tac std_ss[poly_mult_def, poly_cmult_def, poly_add_def]);
-
-Theorem HD_chop:
-  !p. chop p <> [] ==> HD (chop p) = HD p
-Proof
-  Cases \\ simp[] \\ rw[]
-QED
 
 Theorem HD_poly_mult:
   Ring r /\ poly p /\ poly q /\ p * q <> |0| ==>

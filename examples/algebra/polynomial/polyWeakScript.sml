@@ -22,7 +22,7 @@ open jcLib;
 (* (* val _ = load "groupTheory"; *) *)
 (* (* val _ = load "ringTheory"; *) *)
 (* val _ = load "polynomialTheory"; *)
-open monoidTheory groupTheory ringTheory polynomialTheory;
+open monoidTheory gbagTheory groupTheory ringTheory polynomialTheory;
 
 (* Instances for examples. *)
 (* (* val _ = load "ringInstancesTheory"; *) *)
@@ -30,7 +30,7 @@ open monoidTheory groupTheory ringTheory polynomialTheory;
 (* open ringInstancesTheory fieldInstancesTheory; *)
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory;
 (* (* val _ = load "dividesTheory"; *) *)
 (* (* val _ = load "gcdTheory"; *) *)
 (* open dividesTheory gcdTheory; *)
@@ -2295,6 +2295,24 @@ Proof
   \\ fs[weak_every_element]
 QED
 
+Theorem EL_weak_add:
+  k < LENGTH (p || q) ==>
+  EL k (p || q) = if k < LENGTH p then
+                    if k < LENGTH q then EL k p + EL k q
+                    else EL k p
+                  else EL k q
+Proof
+  rw[weak_add_length, weak_add_element]
+  \\ rpt (pop_assum mp_tac)
+  \\ map_every qid_spec_tac[`k`,`q`,`p`]
+  \\ Induct \\ rw[]
+  >- (
+    Cases_on`k` \\ fs[]
+    \\ Cases_on`q` \\ fs[] )
+  \\ Cases_on`q` \\ fs[]
+  \\ Cases_on`k` \\ fs[]
+QED
+
 (* Theorem: c IN R ==> (c o p) >> 1 = c o (p >> 1) *)
 (* Proof:
    By cases on p.
@@ -2511,6 +2529,163 @@ Proof
   \\ rw[MAX_DEF]
   \\ Cases_on`q` \\ fs[]
 QED
+
+Theorem EL_poly_shift:
+  !r p n k. k < LENGTH (p >> n) ==>
+  EL k (p >> n) = if ~(k < n) /\ k < n + LENGTH p then
+                     EL (k - n) p else r.sum.id
+Proof
+  ho_match_mp_tac poly_shift_ind
+  \\ rw[]
+  \\ pop_assum mp_tac
+  \\ rewrite_tac[GSYM poly_shift_SUC]
+  \\ dep_rewrite.DEP_REWRITE_TAC[poly_shift_length]
+  \\ simp[]
+  \\ fs[poly_shift_length]
+  \\ simp[rich_listTheory.EL_CONS, PRE_SUB1, ADD1]
+  \\ qmatch_goalsub_abbrev_tac`ls >> 1`
+  \\ qmatch_asmsub_rename_tac`ls = (h::t) >> n`
+  \\ `LENGTH ls = LENGTH t + n + 1`
+  by simp[poly_shift_length, Abbr`ls`]
+  \\ strip_tac
+  \\ Cases_on`ls=[]` \\ fs[]
+  \\ `ls >> 1 = #0 :: ((h::t) >> n)`
+  by (
+    Cases_on`ls` \\ fs[]
+    \\ rewrite_tac[arithmeticTheory.ONE]
+    \\ rewrite_tac[polynomialTheory.poly_shift_def] )
+  \\ simp[]
+  \\ Cases_on`k`\\ fs[]
+  \\ fs[ADD1]
+QED
+
+Theorem EL_weak_mult:
+  !p q k. Ring r /\ k < LENGTH (weak_mult r p q) /\ weak p /\ weak q ==>
+          EL k (weak_mult r p q) =
+      GBAG r.sum (BAG_IMAGE (λ(n,m). r.prod.op (EL n p) (EL m q))
+                   (BAG_FILTER (λ(n,m). n + m = k)
+                     (BAG_OF_SET ((count (LENGTH p) × count (LENGTH q))))))
+Proof
+  Induct
+  \\ rw[] \\ fs[]
+  \\ simp[EL_weak_add]
+  \\ simp[helperSetTheory.COUNT_SUC_BY_SUC]
+  \\ simp[Once CROSS_INSERT_LEFT]
+  \\ dep_rewrite.DEP_REWRITE_TAC[BAG_OF_SET_DISJOINT_UNION]
+  \\ conj_tac >- simp[IN_DISJOINT]
+  \\ simp[weak_cmult_length]
+  \\ simp[weak_cmult_element]
+  \\ simp[BAG_FILTER_BAG_UNION]
+  \\ simp[Once BAG_FILTER_BAG_OF_SET]
+  \\ Cases_on`weak_mult r p q = |0|` \\ fs[]
+  >- (
+    fs[weak_cmult_length]
+    \\ `q <> |0|` by (strip_tac \\fs[])
+    \\ `weak_mult r p q = |0|` by fs[]
+    \\ `p = |0|` by metis_tac[weak_mult_eq_zero]
+    \\ fs[]
+    \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+    \\ `s = {(0,k)}`
+    by (
+      simp[Abbr`s`, SET_EQ_SUBSET]
+      \\ simp[SUBSET_DEF, FORALL_PROD] )
+    \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+    \\ fs[weak_every_element]
+    \\ gs[listTheory.EVERY_MEM, PULL_EXISTS, listTheory.MEM_EL] )
+  \\ dep_rewrite.DEP_REWRITE_TAC[poly_shift_length]
+  \\ simp[]
+  \\ simp[EL_poly_shift, poly_shift_length]
+  \\ Cases_on`k=0` \\ gs[]
+  >- (
+    simp[BAG_FILTER_BAG_OF_SET]
+    \\ Cases_on`q` \\ fs[]
+    \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+    \\ `s = {(0,0)}`
+    by ( simp[Abbr`s`, Once EXTENSION, FORALL_PROD])
+    \\ simp[Abbr`s`, BAG_OF_SET_INSERT_NON_ELEMENT]
+    \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+    \\ `s = {}`
+    by (
+      simp[Abbr`s`, Once EXTENSION]
+      \\ simp[SUBSET_DEF, FORALL_PROD])
+    \\ simp[])
+  \\ qmatch_goalsub_abbrev_tac`lhs = _`
+  \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+  \\ `s = if k < LENGTH q then {(0, k)} else {}`
+  by ( simp[Abbr`s`, SET_EQ_SUBSET, SUBSET_DEF, FORALL_PROD] \\ rw[] )
+  \\ simp[Abbr`s`] \\ pop_assum kall_tac
+  \\ simp[Abbr`lhs`]
+  \\ IF_CASES_TAC
+  >- (
+    simp[weak_mult_length]
+    \\ Cases_on`p=[]`\\ fs[]
+    \\ Cases_on`q=[]`\\ fs[]
+    \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+    \\ dep_rewrite.DEP_REWRITE_TAC[GBAG_UNION]
+    \\ simp[]
+    \\ fs[weak_every_mem, listTheory.MEM_EL, PULL_EXISTS]
+    \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD]
+    \\ conj_asm1_tac >- simp[abelian_group_is_abelian_monoid]
+    \\ AP_TERM_TAC
+    \\ dep_rewrite.DEP_REWRITE_TAC[MP_CANON GBAG_IMAGE_FILTER]
+    \\ simp[]
+    \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD]
+    \\ qmatch_goalsub_abbrev_tac`_ = GBAG _ (BAG_IMAGE _ (BAG_OF_SET s))`
+    \\ `s = IMAGE (λ(n,m). (SUC n, m)) (count (LENGTH p) × count(LENGTH q))`
+    by (
+      simp[Abbr`s`, SET_EQ_SUBSET, SUBSET_DEF, PULL_EXISTS,
+           FORALL_PROD, EXISTS_PROD])
+    \\ simp[Abbr`s`]
+    \\ dep_rewrite.DEP_REWRITE_TAC[BAG_OF_SET_IMAGE_INJ]
+    \\ simp[FORALL_PROD]
+    \\ dep_rewrite.DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
+    \\ simp[]
+    \\ irule GITBAG_CONG
+    \\ simp[PULL_EXISTS, EXISTS_PROD, FORALL_PROD]
+    \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD]
+    \\ reverse conj_tac >- rw[]
+    \\ gen_tac
+    \\ simp[combinTheory.o_DEF, LAMBDA_PROD, arithmeticTheory.ADD1]
+    \\ disch_then assume_tac
+    \\ AP_THM_TAC
+    \\ irule BAG_IMAGE_CONG
+    \\ simp[FORALL_PROD]
+    \\ simp[rich_listTheory.EL_CONS, arithmeticTheory.PRE_SUB1]
+    \\ pop_assum kall_tac
+    \\ rw[] \\ gs[] )
+  \\ simp[]
+  \\ fs[weak_add_length, weak_cmult_length]
+  \\ simp[EL_poly_shift]
+  \\ fs[poly_shift_length]
+  \\ dep_rewrite.DEP_REWRITE_TAC[MP_CANON GBAG_IMAGE_FILTER]
+  \\ fs[weak_every_mem, listTheory.MEM_EL, PULL_EXISTS]
+  \\ simp[SUBSET_DEF, PULL_EXISTS, EXISTS_PROD, FORALL_PROD]
+  \\ qmatch_goalsub_abbrev_tac`_ = GBAG _ (BAG_IMAGE _ (BAG_OF_SET s))`
+  \\ `s = IMAGE (λ(n,m). (SUC n, m)) (count (LENGTH p) × count(LENGTH q))`
+  by (
+    simp[Abbr`s`, SET_EQ_SUBSET, SUBSET_DEF, PULL_EXISTS,
+         FORALL_PROD, EXISTS_PROD])
+  \\ simp[Abbr`s`]
+  \\ dep_rewrite.DEP_REWRITE_TAC[BAG_OF_SET_IMAGE_INJ]
+  \\ simp[FORALL_PROD]
+  \\ dep_rewrite.DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
+  \\ simp[]
+  \\ conj_asm1_tac >- simp[abelian_group_is_abelian_monoid]
+  \\ irule GITBAG_CONG
+  \\ simp[PULL_EXISTS, EXISTS_PROD, FORALL_PROD]
+  \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD]
+  \\ reverse conj_tac >- rw[]
+  \\ gen_tac
+  \\ simp[combinTheory.o_DEF, LAMBDA_PROD, ADD1]
+  \\ disch_then assume_tac
+  \\ AP_THM_TAC
+  \\ irule BAG_IMAGE_CONG
+  \\ simp[FORALL_PROD]
+  \\ simp[rich_listTheory.EL_CONS, PRE_SUB1]
+  \\ pop_assum kall_tac
+  \\ rw[] \\ gs[]
+QED
+
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems on polynomial multiplication with scalar multiplication.         *)
@@ -4171,6 +4346,33 @@ val poly_chop_pad_right = store_thm(
   "poly_chop_pad_right",
   ``!r:'a ring. !p n. chop (PAD_RIGHT #0 n p) = chop p``,
   rw[PAD_RIGHT, poly_chop_add_genlist_zero]);
+
+Theorem HD_chop:
+  !p. chop p <> [] ==> HD (chop p) = HD p
+Proof
+  Cases \\ simp[] \\ rw[]
+QED
+
+Theorem EL_chop:
+  !p n. n < LENGTH (chop p) ==>
+        EL n (chop p) = EL n p
+Proof
+  Induct
+  \\ rw[] \\ fs[]
+  \\ Cases_on`n` \\ fs[]
+QED
+
+Theorem EL_chop_0:
+  !p n. n < LENGTH p /\ ~(n < LENGTH (chop p)) ==>
+        EL n p = #0
+Proof
+  Induct
+  \\ rw[] \\ fs[]
+  \\ Cases_on`n` \\ fs[]
+  \\ fs[zero_poly_every_zero,
+        listTheory.EVERY_MEM, listTheory.MEM_EL, PULL_EXISTS]
+QED
+
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Exponentiation.                                                *)
