@@ -1658,6 +1658,240 @@ Proof
   \\ rw[]
 QED
 
+Theorem mpoly_of_poly_mul:
+  Ring r /\ poly p /\ poly q ==>
+  mpoly_of_poly r v (p * q) =
+  mpoly_mul r (mpoly_of_poly r v p) (mpoly_of_poly r v q)
+Proof
+  rw[mpoly_of_poly_def, Once FUN_EQ_THM, mpoly_mul_BAG_FILTER_cross]
+  \\ simp[monomials_mpoly_of_poly]
+  \\ simp[BAG_FILTER_BAG_OF_SET]
+  \\ Cases_on`x = {||}` \\ gs[]
+  >- (
+    qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+    \\ `s ⊆ {({||},{||})}`
+    by simp[Abbr`s`, SUBSET_DEF, PULL_EXISTS, FORALL_PROD]
+    \\ Cases_on`s = {}` \\ gs[]
+    >- (
+      rw[]
+      \\ DEP_REWRITE_TAC[polyRingTheory.HD_poly_mult]
+      \\ simp[]
+      \\ conj_asm1_tac >- (strip_tac \\ fs[])
+      \\ qpat_x_assum`_ = {}`mp_tac
+      \\ simp[Once EXTENSION, FORALL_PROD]
+      \\ simp[Once FUN_EQ_THM, EMPTY_BAG]
+      \\ simp[Once FUN_EQ_THM, EMPTY_BAG]
+      \\ Cases_on`p = |0|`
+      >- (
+        pop_assum SUBST_ALL_TAC
+        \\ rewrite_tac[polyRingTheory.poly_mult_zero]
+        \\ gs[] )
+      \\ Cases_on`q = |0|`
+      >- (
+        pop_assum SUBST_ALL_TAC
+        \\ rewrite_tac[polyRingTheory.poly_mult_zero]
+        \\ gs[] )
+      \\ Cases_on`p` >- fs[]
+      \\ Cases_on`q` >- fs[]
+      \\ fs[]
+      \\ simp[rrestrict_def]
+      \\ Cases_on`h = #0` \\ simp[]
+      \\ Cases_on`h' = #0` \\ simp[]
+      \\ dsimp[]
+      \\ conj_tac \\ disch_then(qspec_then`0`mp_tac)
+      \\ (impl_tac >- rw[]) \\ simp[] )
+    \\ `s = {({||},{||})}`
+    by (
+      simp[SET_EQ_SUBSET]
+      \\ fs[GSYM pred_setTheory.MEMBER_NOT_EMPTY, SUBSET_DEF]
+      \\ metis_tac[] )
+    \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+    \\ Cases_on`p = |0|`
+    >- ( `p * q = |0|` by metis_tac[polyRingTheory.poly_mult_zero] \\ gs[] )
+    \\ Cases_on`q = |0|`
+    >- ( `p * q = |0|` by metis_tac[polyRingTheory.poly_mult_zero] \\ gs[] )
+    \\ `0 < LENGTH p /\ 0 < LENGTH q` by (Cases_on`p` \\ Cases_on`q` \\ fs[])
+    \\ simp[]
+    \\ fs[Abbr`s`]
+    \\ Cases_on`p` \\ Cases_on`q` \\ fs[]
+    \\ rw[]
+    >- (
+      DEP_REWRITE_TAC[polyRingTheory.HD_poly_mult]
+      \\ simp[]
+      \\ conj_tac >- (strip_tac \\ fs[])
+      \\ simp[rrestrict_def] )
+    \\ simp[rrestrict_def]
+    \\ pop_assum mp_tac
+    \\ DEP_REWRITE_TAC[polyRingTheory.poly_mult_cross]
+    \\ conj_tac >- simp[]
+    \\ DEP_REWRITE_TAC[GSYM polyRingTheory.poly_add_shift]
+    \\ conj_tac >- simp[]
+    \\ qmatch_goalsub_abbrev_tac`LENGTH l`
+    \\ strip_tac
+    \\ `l = []` by (Cases_on`l` \\ fs[])
+    \\ qunabbrev_tac`l`
+    \\ pop_assum mp_tac
+    \\ rewrite_tac[polynomialTheory.poly_add_def]
+    \\ rewrite_tac[GSYM polyWeakTheory.zero_poly_chop]
+    \\ DEP_REWRITE_TAC[GSYM polyWeakTheory.weak_cons_eq_add_shift]
+    \\ conj_tac
+    >- (
+      conj_tac >- simp[]
+      \\ rewrite_tac[polynomialTheory.Weak_def]
+      \\ conj_tac >- simp[]
+      \\ irule polyWeakTheory.poly_chop_weak
+      \\ irule polyWeakTheory.weak_add_weak
+      \\ conj_tac >- simp[]
+      \\ conj_tac
+      >- (
+        irule polyWeakTheory.poly_chop_weak
+        \\ irule polyWeakTheory.weak_add_weak
+        \\ simp[] )
+      \\ simp[] )
+    \\ rewrite_tac[polynomialTheory.zero_poly_def]
+    \\ strip_tac
+    \\ simp[] )
+  \\ reverse(Cases_on`SET_OF_BAG x = {v}`) \\ gs[]
+  >- (
+    qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+    \\ Cases_on`s = {}` \\ gs[]
+    \\ fs[Abbr`s`, GSYM pred_setTheory.MEMBER_NOT_EMPTY, EXISTS_PROD]
+    \\ rw[]
+    \\ fs[SET_OF_BAG_UNION]
+    \\ fs[SET_OF_BAG, BAG_IN, BAG_INN, EMPTY_BAG, FUN_EQ_THM]
+    \\ Cases_on`x=v`\\ fs[]
+    \\ Cases_on`n` \\ fs[]
+    \\ Cases_on`n'` \\ fs[] )
+  \\ rewrite_tac[polynomialTheory.poly_mult_def]
+  \\ qmatch_goalsub_abbrev_tac`lhs = _`
+  \\ `lhs = if x v < LENGTH (weak_mult r p q) then
+               EL (x v) (weak_mult r p q) else #0`
+  by (
+    unabbrev_all_tac
+    \\ IF_CASES_TAC
+    >- (
+      qspec_then`weak_mult r p q`assume_tac polyWeakTheory.poly_chop_length
+      \\ reverse IF_CASES_TAC >- fs[]
+      \\ simp[EL_chop]
+      \\ rw[rrestrict_def]
+      \\ imp_res_tac polyRingTheory.poly_is_weak
+      \\ `weak (weak_mult r p q)` by simp[]
+      \\ fs[polyWeakTheory.weak_every_mem]
+      \\ fs[listTheory.MEM_EL, PULL_EXISTS]
+      \\ metis_tac[] )
+    \\ rw[]
+    \\ irule EQ_SYM
+    \\ irule EL_chop_0
+    \\ simp[] )
+  \\ simp[Abbr`lhs`]
+  \\ pop_assum kall_tac
+  \\ simp[polyWeakTheory.weak_mult_length]
+  \\ Cases_on`p= []` \\ simp[]
+  \\ Cases_on`q= []` \\ simp[]
+  \\ reverse IF_CASES_TAC \\ simp[]
+  >- (
+    qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+    \\ `s = {}` suffices_by simp[]
+    \\ simp[Abbr`s`]
+    \\ simp[Once EXTENSION, FORALL_PROD]
+    \\ rpt strip_tac
+    \\ fs[BAG_UNION]
+    \\ simp[DISJ_EQ_IMP]
+    \\ strip_tac \\ fs[] \\ rw[]
+    \\ fs[] )
+  \\ DEP_REWRITE_TAC[polyWeakTheory.EL_weak_mult]
+  \\ simp[polyWeakTheory.weak_mult_length]
+  \\ simp[BAG_FILTER_BAG_OF_SET]
+  \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+  \\ qabbrev_tac`z = {n | EL n p <> #0 } × {n | EL n q <> #0}`
+  \\ `s = s INTER z UNION s INTER (COMPL z)`
+  by ( simp[Once EXTENSION] \\ metis_tac[] )
+  \\ pop_assum SUBST1_TAC
+  \\ DEP_REWRITE_TAC[BAG_OF_SET_DISJOINT_UNION]
+  \\ conj_tac >- (simp[IN_DISJOINT] \\ metis_tac[])
+  \\ DEP_REWRITE_TAC[BAG_IMAGE_FINITE_UNION]
+  \\ conj_tac >- simp[Abbr`s`]
+  \\ DEP_REWRITE_TAC[GBAG_UNION]
+  \\ imp_res_tac polyRingTheory.poly_is_weak
+  \\ fs[polyWeakTheory.weak_every_mem, listTheory.MEM_EL, PULL_EXISTS]
+  \\ simp[GSYM CONJ_ASSOC]
+  \\ conj_asm1_tac >- simp[groupTheory.abelian_group_is_abelian_monoid]
+  \\ simp[CONJ_ASSOC]
+  \\ conj_tac
+  >- ( simp[Abbr`s`] \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD] )
+  \\ qmatch_goalsub_abbrev_tac`_ + zz`
+  \\ `zz = #0`
+  by (
+    qunabbrev_tac`zz`
+    \\ irule IMP_GBAG_EQ_ID
+    \\ simp[BAG_EVERY, Abbr`s`, PULL_EXISTS, FORALL_PROD]
+    \\ simp[Abbr`z`]
+    \\ rw[] \\ rw[] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`g + _`
+  \\ `g ∈ r.sum.carrier`
+  by (
+    qunabbrev_tac`g`
+    \\ irule GBAG_in_carrier
+    \\ simp[Abbr`s`]
+    \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD] )
+  \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET t`
+  \\ `t = IMAGE (λ(n,m). ((λx. if x = v then n else 0),
+                          (λx. if x = v then m else 0))) (s INTER z)`
+  by (
+    simp[Abbr`t`]
+    \\ simp[Abbr`s`, Once EXTENSION, PULL_EXISTS]
+    \\ simp[FORALL_PROD, EXISTS_PROD, Abbr`z`]
+    \\ rw[EQ_IMP_THM]
+    >- (
+      simp[BAG_UNION]
+      \\ simp[FUN_EQ_THM]
+      \\ qmatch_asmsub_rename_tac`n < LENGTH p`
+      \\ qmatch_asmsub_rename_tac`m < LENGTH q`
+      \\ qexistsl_tac[`n`,`m`]
+      \\ simp[] )
+    \\ simp[Once FUN_EQ_THM]
+    \\ simp[Once FUN_EQ_THM]
+    \\ qmatch_asmsub_rename_tac`n + m = x v`
+    \\ qexistsl_tac[`n`,`m`]
+    \\ simp[]
+    \\ simp[Once FUN_EQ_THM]
+    \\ simp[BAG_UNION]
+    \\ fs[SET_OF_BAG, BAG_IN, BAG_INN, Once EXTENSION]
+    \\ rw[]
+    \\ qmatch_goalsub_rename_tac`x k`
+    \\ `~(x k >= 1)` by metis_tac[]
+    \\ simp[] )
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[BAG_OF_SET_IMAGE_INJ]
+  \\ simp[FORALL_PROD]
+  \\ conj_tac
+  >- ( rw[FUN_EQ_THM] \\ metis_tac[] )
+  \\ DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
+  \\ simp[Abbr`s`]
+  \\ simp[Abbr`g`]
+  \\ AP_THM_TAC
+  \\ AP_TERM_TAC
+  \\ irule BAG_IMAGE_CONG
+  \\ simp[FORALL_PROD]
+  \\ simp[Abbr`z`]
+  \\ rpt strip_tac
+  \\ `!n. SET_OF_BAG (\x. if x = v then n else 0) = if n = 0 then {} else {v}`
+  by ( rw[SET_OF_BAG, BAG_IN, BAG_INN, EXTENSION] \\ rw[] )
+  \\ simp[]
+  \\ `!n. (\x. if x = v then n else 0) = {||} <=> n = 0`
+  by (
+    rw[FUN_EQ_THM, EMPTY_BAG]
+    \\ rw[EQ_IMP_THM]
+    \\ metis_tac[] )
+  \\ simp[]
+  \\ qmatch_asmsub_rename_tac`EL n p`
+  \\ qmatch_asmsub_rename_tac`EL m q`
+  \\ Cases_on`n=0` \\ Cases_on`m=0` \\ fs[]
+  \\ simp[rrestrict_def]
+  \\ rpt(first_x_assum(qspec_then`0`mp_tac)) \\ rw[]
+QED
+
 (* Distributivity *)
 
 Theorem mpoly_mul_add:
