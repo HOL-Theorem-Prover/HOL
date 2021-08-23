@@ -1,6 +1,7 @@
 open HolKernel boolLib bossLib Parse dep_rewrite
      pairTheory pred_setTheory listTheory helperListTheory bagTheory ringTheory
      gbagTheory polynomialTheory polyWeakTheory polyRingTheory polyEvalTheory
+     monoidMapTheory groupMapTheory ringMapTheory
 
 val _ = new_theory"multipoly"
 
@@ -484,6 +485,30 @@ Proof
   \\ metis_tac[mpoly_of_poly_of_mpoly, poly_of_mpoly_of_poly, mpoly_def]
 QED
 
+Theorem BIJ_mpoly_of_poly:
+  Ring r ==>
+  BIJ (mpoly_of_poly r v) {p | poly p} {p | mpoly r p /\ support r p SUBSET {v}}
+Proof
+  strip_tac
+  \\ drule BIJ_poly_of_mpoly
+  \\ disch_then(qspec_then`v`strip_assume_tac)
+  \\ drule BIJ_LINV_BIJ
+  \\ qmatch_goalsub_abbrev_tac`BIJ f s` \\ strip_tac
+  \\ `∀x. x IN s ==> f x = mpoly_of_poly r v x`
+  suffices_by metis_tac[helperSetTheory.BIJ_CONG]
+  \\ simp[Abbr`f`]
+  \\ rpt strip_tac
+  \\ qmatch_goalsub_abbrev_tac`LINV f t x`
+  \\ `mpoly_of_poly r v x = mpoly_of_poly r v (f (LINV f t x))`
+  by metis_tac[helperSetTheory.BIJ_LINV_THM]
+  \\ pop_assum SUBST1_TAC
+  \\ qunabbrev_tac`f`
+  \\ DEP_REWRITE_TAC[mpoly_of_poly_of_mpoly]
+  \\ qmatch_goalsub_abbrev_tac`f x`
+  \\ `f x IN t` by metis_tac[BIJ_DEF, INJ_DEF]
+  \\ fs[Abbr`t`]
+QED
+
 Theorem eval_mpoly_of_poly:
   Ring r /\ poly p /\ f v IN r.carrier ==>
   mpoly_eval r f (mpoly_of_poly r v p) = poly_eval r p (f v)
@@ -948,7 +973,7 @@ Proof
       \\ Cases_on`q=[]` \\ gs[]
       \\ rw[] \\ gs[]
       \\ `p = -q` by
-      metis_tac[polyRingTheory.poly_add_eq_zero, polynomialTheory.poly_zero]
+      metis_tac[poly_add_eq_zero, polynomialTheory.poly_zero]
       \\ Cases_on`p` \\ Cases_on`q` \\ gs[]
       \\ rw[rrestrict_def] )
     \\ Cases_on`p=[]` \\ gs[] >- rw[]
@@ -985,9 +1010,9 @@ Proof
   >- ( Cases_on`n` \\ gs[] \\ rw[rrestrict_def] )
   \\ `(h'::t) = -(h::p)`
   by (
-    DEP_REWRITE_TAC[GSYM polyRingTheory.poly_add_eq_zero]
+    DEP_REWRITE_TAC[GSYM poly_add_eq_zero]
     \\ conj_tac >- simp[]
-    \\ DEP_ONCE_REWRITE_TAC[polyRingTheory.poly_add_comm]
+    \\ DEP_ONCE_REWRITE_TAC[poly_add_comm]
     \\ simp[] )
   \\ simp[]
   \\ Cases_on`n` >- simp[rrestrict_def]
@@ -2334,5 +2359,62 @@ Proof
   \\ goal_assum(first_assum o mp_then Any mp_tac)
   \\ rw[]
 QED
+
+(* mpoly_of_poly is a ring isomorphism *)
+
+Theorem RingIso_mpoly_of_poly:
+  Ring r ==>
+  RingIso (mpoly_of_poly r v) (poly_ring r) (mpoly_ring r {v})
+Proof
+  strip_tac
+  \\ rewrite_tac[RingIso_def]
+  \\ reverse conj_asm2_tac
+  >- (
+    simp[mpoly_ring_def, polynomialTheory.poly_ring_def]
+    \\ irule BIJ_mpoly_of_poly \\ simp[] )
+  \\ simp[RingHomo_def]
+  \\ conj_asm1_tac >- fs[BIJ_DEF, INJ_DEF]
+  \\ simp[GroupHomo_def, poly_ring_ring]
+  \\ conj_tac
+  >- (
+    simp[mpoly_ring_def]
+    \\ rpt strip_tac
+    \\ irule mpoly_of_poly_add
+    \\ fs[polynomialTheory.poly_ring_def] )
+  \\ simp[MonoidHomo_def, poly_ring_ring]
+  \\ reverse conj_tac
+  >- (
+    simp[mpoly_ring_def]
+    \\ simp[mpoly_of_poly_def, FUN_EQ_THM]
+    \\ simp[polynomialTheory.poly_ring_def]
+    \\ rw[mpoly_one_def] \\ gs[] \\ rw[rrestrict_def]
+    \\ gs[EMPTY_BAG] \\ pop_assum mp_tac \\ rw[]
+    >- (
+      Cases_on`x v` \\ gs[]
+      \\ fs[FUN_EQ_THM, SET_OF_BAG, BAG_IN, BAG_INN]
+      \\ metis_tac[DECIDE``~(0 >= 1n)``] )
+    \\ fs[FUN_EQ_THM]
+    \\ metis_tac[] )
+  \\ simp[mpoly_ring_def]
+  \\ rpt strip_tac
+  \\ irule mpoly_of_poly_mul
+  \\ fs[polynomialTheory.poly_ring_def]
+QED
+
+Theorem RingIso_poly_of_mpoly:
+  Ring r ==>
+  RingIso (poly_of_mpoly r) (mpoly_ring r {v}) (poly_ring r)
+Proof
+  strip_tac
+  \\ drule RingIso_mpoly_of_poly
+  \\ disch_then(qspec_then`v`strip_assume_tac)
+  \\ irule ring_iso_sym_any
+  \\ simp[poly_ring_ring]
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ simp[polynomialTheory.poly_ring_def, mpoly_ring_def]
+  \\ metis_tac[poly_of_mpoly_of_poly, mpoly_of_poly_of_mpoly,
+               poly_poly_of_mpoly, mpoly_def]
+QED
+
 
 val _ = export_theory();
