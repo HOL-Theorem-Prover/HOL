@@ -2764,6 +2764,35 @@ val poly_mult_cross = store_thm(
     by rw_tac std_ss[poly_chop_shift] >>
   rw_tac std_ss[poly_mult_def, poly_cmult_def, poly_add_def]);
 
+Theorem HD_chop:
+  !p. chop p <> [] ==> HD (chop p) = HD p
+Proof
+  Cases \\ simp[] \\ rw[]
+QED
+
+Theorem HD_poly_mult:
+  Ring r /\ poly p /\ poly q /\ p * q <> |0| ==>
+  HD (poly_mult r p q) = r.prod.op (HD p) (HD q)
+Proof
+  strip_tac
+  \\ Cases_on`p = |0|` >- metis_tac[poly_mult_zero]
+  \\ Cases_on`q = |0|` >- metis_tac[poly_mult_zero]
+  \\ Cases_on`p` \\ Cases_on`q` \\ fs[]
+  \\ qpat_x_assum`_ <> _`mp_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[poly_mult_cross]
+  \\ dep_rewrite.DEP_REWRITE_TAC[GSYM poly_add_shift]
+  \\ conj_tac >- simp[]
+  \\ conj_tac >- simp[]
+  \\ qmatch_goalsub_abbrev_tac`a + b >> 1`
+  \\ rewrite_tac[poly_add_def]
+  \\ strip_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[HD_chop]
+  \\ conj_tac >- simp[]
+  \\ dep_rewrite.DEP_REWRITE_TAC[HD_weak_add_shift]
+  \\ simp[Abbr`a`]
+QED
+
+
 (* Theorem: h::t = [h] + t >> 1 *)
 (* Proof: (almost)
      poly (h::t)

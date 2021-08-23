@@ -1400,6 +1400,70 @@ Proof
   \\ rw[]
 QED
 
+Theorem mpoly_of_poly_add:
+  Ring r /\ poly p /\ poly q ==>
+  mpoly_of_poly r v (p + q) =
+  mpoly_add r (mpoly_of_poly r v p) (mpoly_of_poly r v q)
+Proof
+  rw[mpoly_of_poly_def, Once FUN_EQ_THM, mpoly_add_def]
+  \\ Cases_on`x = {||}` \\ simp[]
+  >- (
+    Cases_on`p + q = []` \\ simp[]
+    >- (
+      `p + q = |0|` by simp[]
+      \\ Cases_on`p=[]` \\ gs[]
+      \\ Cases_on`q=[]` \\ gs[]
+      \\ rw[] \\ gs[]
+      \\ `p = -q` by
+      metis_tac[polyRingTheory.poly_add_eq_zero, polynomialTheory.poly_zero]
+      \\ Cases_on`p` \\ Cases_on`q` \\ gs[]
+      \\ rw[rrestrict_def] )
+    \\ Cases_on`p=[]` \\ gs[] >- rw[]
+    \\ Cases_on`q=[]` \\ gs[] >- rw[]
+    \\ rw[] \\ gs[]
+    \\ Cases_on`p` \\ Cases_on`q` \\ gs[]
+    \\ qpat_x_assum`_ <> _`mp_tac
+    \\ rewrite_tac[polynomialTheory.poly_add_def]
+    \\ rewrite_tac[polynomialTheory.weak_add_def]
+    \\ rewrite_tac[polynomialTheory.poly_chop_def]
+    \\ rewrite_tac[polyWeakTheory.zero_poly_cons]
+    \\ IF_CASES_TAC \\ gs[]
+    \\ rw[rrestrict_def] )
+  \\ Cases_on`SET_OF_BAG x = {v}` \\ gs[]
+  \\ ntac 2 (pop_assum kall_tac)
+  \\ qspec_tac(`x v`,`n`)
+  \\ ntac 2 (pop_assum mp_tac)
+  \\ map_every qid_spec_tac[`q`,`p`]
+  \\ Induct \\ simp[]
+  >- ( rw[] \\ rw[] )
+  \\ rw[] \\ fs[]
+  \\ Cases_on`q=[]` \\ gs[] >- rw[]
+  \\ Cases_on`q` \\ gs[]
+  \\ qmatch_goalsub_abbrev_tac`LENGTH ls`
+  \\ `ls <> [] ==> ls = (h+h')::(p+t)`
+  by (
+    rw[Abbr`ls`]
+    \\ pop_assum mp_tac
+    \\ rewrite_tac[polynomialTheory.poly_add_def]
+    \\ rewrite_tac[polynomialTheory.weak_add_def]
+    \\ rewrite_tac[polynomialTheory.poly_chop_def]
+    \\ IF_CASES_TAC >- rw[] \\ rw[] )
+  \\ reverse(Cases_on`ls = []` \\ gs[])
+  >- ( Cases_on`n` \\ gs[] \\ rw[rrestrict_def] )
+  \\ `(h'::t) = -(h::p)`
+  by (
+    DEP_REWRITE_TAC[GSYM polyRingTheory.poly_add_eq_zero]
+    \\ conj_tac >- simp[]
+    \\ DEP_ONCE_REWRITE_TAC[polyRingTheory.poly_add_comm]
+    \\ simp[] )
+  \\ simp[]
+  \\ Cases_on`n` >- simp[rrestrict_def]
+  \\ simp[]
+  \\ first_x_assum(qspec_then`-p`mp_tac)
+  \\ simp[]
+  \\ rfs[]
+QED
+
 (* Multiplication of polynomials *)
 
 Definition mpoly_mul_def:
