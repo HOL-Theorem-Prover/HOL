@@ -2278,6 +2278,23 @@ val weak_add_shift = store_thm(
   `((p || q) >> n) >> 1 = (p >> n) >> 1 || (q >> n) >> 1` by rw[weak_add_shift_1] >>
   metis_tac[poly_shift_cons, weak_add_eq_zero, list_CASES, poly_zero]);
 
+Theorem HD_weak_add_shift:
+  Ring r /\ weak p /\ p <> |0| ==>
+  HD (weak_add r p (q >> 1)) = HD p
+Proof
+  strip_tac
+  \\ Cases_on`q`
+  >- (
+    rewrite_tac[poly_shift_def]
+    \\ metis_tac[weak_add_zero, poly_zero])
+  \\ rewrite_tac[ONE]
+  \\ rewrite_tac[poly_shift_def]
+  \\ Cases_on`p` >- metis_tac[weak_add_zero, poly_zero]
+  \\ rewrite_tac[weak_add_def]
+  \\ simp[]
+  \\ fs[weak_every_element]
+QED
+
 (* Theorem: c IN R ==> (c o p) >> 1 = c o (p >> 1) *)
 (* Proof:
    By cases on p.
@@ -2476,6 +2493,24 @@ val weak_mult_weak = store_thm(
   rw[]);
 
 val _ = export_rewrites ["weak_mult_weak"];
+
+Theorem weak_mult_length:
+  !r p q. LENGTH (weak_mult r p q) =
+          if LENGTH p = 0 \/ LENGTH q = 0 then 0
+          else LENGTH p + LENGTH q - 1
+Proof
+  strip_tac
+  \\ Induct
+  \\ rw[]
+  \\ simp[weak_add_length]
+  \\ Cases_on`p = |0|` \\ fs[weak_cmult_length]
+  \\ Cases_on`q = |0|` \\ fs[]
+  \\ `weak_mult r p q <> |0|` by simp[weak_mult_eq_zero]
+  \\ simp[poly_shift_length]
+  \\ simp[ADD1]
+  \\ rw[MAX_DEF]
+  \\ Cases_on`q` \\ fs[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems on polynomial multiplication with scalar multiplication.         *)
