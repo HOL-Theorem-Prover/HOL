@@ -1,5 +1,3 @@
-!examples/RL_Environment
-!examples/parity
 !!examples/category
 !!examples/miller
 !!examples/miller/miller
@@ -31,9 +29,6 @@
 !!examples/algebra
 !!examples/simple_complexity
 !!examples/AKS
-
-# Dependability examples
-!examples/dependability/
 
 # Lassie examples
 !examples/lassie/
