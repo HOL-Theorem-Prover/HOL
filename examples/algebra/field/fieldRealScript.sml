@@ -15,4 +15,10 @@ Proof
   \\ metis_tac[real_mul_group, AbelianGroup_def]
 QED
 
+Theorem IntegralDomainReals[simp]:
+  IntegralDomain Reals
+Proof
+  metis_tac[field_is_integral_domain, FieldReals]
+QED
+
 val _ = export_theory();
