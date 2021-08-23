@@ -101,7 +101,7 @@ fun graphbuild optinfo g =
                           k (error (OS.Process.isSuccess r) = Succeeded) g
                       | NONE =>
                         let
-                          val others = find_nodes_by_command g cmd
+                          val others = find_nodes_by_command g (#dir nI, cmd)
                           val _ = diag ("Found nodes " ^
                                         String.concatWith ", "
                                            (map node_toString others) ^
