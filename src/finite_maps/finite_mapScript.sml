@@ -2516,7 +2516,7 @@ Cases_on `b` THEN FULL_SIMP_TAC(srw_ss())[] THEN
 SRW_TAC[][fmap_rel_FUPDATE_same])
 
 Theorem fmap_rel_FEMPTY[simp]:
-  (fmap_rel (R : 'a -> 'b -> bool) FEMPTY (f2 : 'c |-> 'b) <=> f2 = FEMPTY) ∧
+  (fmap_rel (R : 'a -> 'b -> bool) FEMPTY (f2 : 'c |-> 'b) <=> f2 = FEMPTY) /\
   (fmap_rel R (f1 : 'c |-> 'a) FEMPTY <=> f1 = FEMPTY)
 Proof
   rw[fmap_rel_def] >> simp[FDOM_EQ_EMPTY] >> eq_tac >> rw[]
@@ -3161,7 +3161,7 @@ Proof
 QED
 
 Theorem FDIFF_FDIFF:
-  !fm s1 s2. FDIFF (FDIFF fm s1) s2 = FDIFF fm (s1 ∪ s2)
+  !fm s1 s2. FDIFF (FDIFF fm s1) s2 = FDIFF fm (s1 UNION s2)
 Proof
   rw[FDIFF_def, DRESTRICT_DRESTRICT, fmap_eq_flookup, FLOOKUP_DRESTRICT]
 QED
