@@ -1308,6 +1308,12 @@ Proof
         metis_tac[FINITE_BAG_DIFF_dual,FINITE_BAG])
 QED
 
+Theorem FINITE_EL_BAG[simp]:
+  FINITE_BAG (EL_BAG e)
+Proof
+  rw[EL_BAG]
+QED
+
 val _ = print "Developing theory of bag cardinality\n"
 
 val BAG_CARD_RELn = Q.new_definition(
@@ -1585,6 +1591,13 @@ val BAG_FILTER_SUB_BAG = store_thm(
   ``!P b. BAG_FILTER P b <= b``,
   dsimp[BAG_FILTER_DEF, SUB_BAG]);
 
+Theorem BAG_FILTER_BAG_UNION:
+  BAG_FILTER P (BAG_UNION b1 b2) =
+  BAG_UNION (BAG_FILTER P b1) (BAG_FILTER P b2)
+Proof
+  rw[FUN_EQ_THM, BAG_FILTER_DEF, BAG_UNION] \\ rw[]
+QED
+
 Theorem BAG_OF_SET_DIFF:
   !b b'. BAG_OF_SET (b DIFF b') = BAG_FILTER (COMPL b') (BAG_OF_SET b)
 Proof
@@ -1748,6 +1761,15 @@ Proof
   \\ last_x_assum(assume_tac o SYM) \\ simp[]
   \\ simp[BAG_CARD_THM, arithmeticTheory.ADD1]
   \\ fs[BAG_INSERT]
+QED
+
+Theorem BAG_OF_SET_INJ[simp]:
+  !s1 s2. BAG_OF_SET s1 = BAG_OF_SET s2 <=> s1 = s2
+Proof
+  rw[Once FUN_EQ_THM, BAG_OF_SET]
+  \\ simp[Once EXTENSION]
+  \\ rw[EQ_IMP_THM]
+  \\ first_x_assum(qspec_then`x`mp_tac) \\ rw[]
 QED
 
 
