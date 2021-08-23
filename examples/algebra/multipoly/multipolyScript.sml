@@ -324,6 +324,16 @@ Proof
   \\ IF_CASES_TAC \\ simp[]
 QED
 
+Theorem GITBAG_same_op:
+  g1.op = g2.op ==>
+  !b. FINITE_BAG b ==>
+  !a. GITBAG g1 b a = GITBAG g2 b a
+Proof
+  strip_tac
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ rw[GITBAG_THM]
+QED
+
 Theorem GBAG_IMAGE_PARTITION:
   AbelianMonoid g /\ FINITE s ==>
   !b. FINITE_BAG b ==>
@@ -412,6 +422,57 @@ Proof
   \\ irule GBAG_IMAGE_PARTITION
   \\ simp[]
   \\ metis_tac[]
+QED
+
+Theorem GBAG_IMAGE_FILTER:
+  AbelianMonoid g ==>
+  !b. FINITE_BAG b ==> IMAGE f (SET_OF_BAG b ∩ P) SUBSET g.carrier ==>
+  GBAG g (BAG_IMAGE f (BAG_FILTER P b)) =
+  GBAG g (BAG_IMAGE (\x. if P x then f x else g.id) b)
+Proof
+  strip_tac
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ rw[]
+  \\ fs[SUBSET_DEF, PULL_EXISTS]
+  \\ DEP_REWRITE_TAC[GITBAG_INSERT_THM]
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
+  \\ conj_asm1_tac
+  >- (
+    rw[]
+    \\ fs[monoidTheory.AbelianMonoid_def]
+    \\ metis_tac[IN_DEF] )
+  \\ irule EQ_SYM
+  \\ DEP_ONCE_REWRITE_TAC[GITBAG_GBAG]
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
+  \\ fs[monoidTheory.AbelianMonoid_def]
+  \\ qmatch_goalsub_abbrev_tac`_ * gg`
+  \\ `gg IN g.carrier`
+  by (
+    simp[Abbr`gg`]
+    \\ irule GBAG_in_carrier
+    \\ simp[monoidTheory.AbelianMonoid_def, SUBSET_DEF, PULL_EXISTS] )
+  \\ IF_CASES_TAC \\ gs[]
+  \\ simp[Abbr`gg`]
+  \\ irule EQ_SYM
+  \\ DEP_REWRITE_TAC[GITBAG_INSERT_THM]
+  \\ simp[PULL_EXISTS, SUBSET_DEF, monoidTheory.AbelianMonoid_def]
+  \\ conj_tac >- metis_tac[]
+  \\ qpat_x_assum`_ = _`(assume_tac o SYM) \\ simp[]
+  \\ irule GITBAG_GBAG
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
+  \\ metis_tac[monoidTheory.AbelianMonoid_def]
+QED
+
+Theorem GBAG_INSERT:
+  AbelianMonoid g /\ FINITE_BAG b /\ SET_OF_BAG b SUBSET g.carrier /\ x IN g.carrier ==>
+  GBAG g (BAG_INSERT x b) = g.op x (GBAG g b)
+Proof
+  strip_tac
+  \\ DEP_REWRITE_TAC[GITBAG_INSERT_THM]
+  \\ simp[]
+  \\ `Monoid g` by fs[monoidTheory.AbelianMonoid_def] \\ simp[]
+  \\ irule GITBAG_GBAG
+  \\ simp[]
 QED
 
 Theorem ring_mult_lsum:
@@ -534,7 +595,6 @@ Proof
   \\ simp[]
   \\ DEP_REWRITE_TAC[GSYM BAG_OF_SET_IMAGE_INJ]
   \\ simp[]
-  \\ AP_TERM_TAC
   \\ simp[Once EXTENSION, FORALL_PROD]
 QED
 
@@ -600,6 +660,12 @@ Theorem rrestrict_rrestrict[simp]:
   rrestrict r (rrestrict r v) = rrestrict r v
 Proof
   rw[rrestrict_def] \\ fs[]
+QED
+
+Theorem rrestrict_zero[simp]:
+  Ring r ==> rrestrict r r.sum.id = r.sum.id
+Proof
+  rw[rrestrict_def]
 QED
 
 (* The monomials of a polynomial (with coefficients in a ring r) are those
@@ -1412,7 +1478,6 @@ Proof
   \\ AP_THM_TAC \\ AP_TERM_TAC
   \\ AP_TERM_TAC
   \\ simp[BAG_FILTER_BAG_OF_SET]
-  \\ AP_TERM_TAC
   \\ simp[Once EXTENSION, FORALL_PROD]
   \\ metis_tac[]
 QED
@@ -1486,7 +1551,6 @@ Proof
     \\ `BAG_OF_SET mp = BAG_FILTER mp (BAG_OF_SET mu)`
     by (
       simp[BAG_FILTER_BAG_OF_SET]
-      \\ AP_TERM_TAC
       \\ simp[Once EXTENSION]
       \\ fs[SUBSET_DEF] \\ fs[IN_DEF]
       \\ metis_tac[] )
@@ -1937,6 +2001,12 @@ Proof
   \\ metis_tac[]
 QED
 
+Theorem imp_mpoly_mul_zero:
+  monomials r p = {} \/ monomials r q = {} ==> mpoly_mul r p q = K #0
+Proof
+  strip_tac \\ rw[mpoly_mul_def, Once FUN_EQ_THM]
+QED
+
 Definition mpoly_one_def:
   mpoly_one r m = if m = {||} then r.prod.id else r.sum.id
 End
@@ -2215,7 +2285,7 @@ Proof
   \\ fs[mpoly_def]
 QED
 
-Theorem mpoly_ring:
+Theorem mpoly_ring[simp]:
   Ring r ==> Ring (mpoly_ring r s)
 Proof
   strip_tac
@@ -2227,6 +2297,211 @@ Proof
   \\ rw[mpoly_ring_def]
   \\ irule mpoly_mul_add
   \\ fs[mpoly_def]
+QED
+
+(* Some facts in the ring of polynomials *)
+
+Theorem mpoly_ring_sum_applied:
+  !b. FINITE_BAG b ==> Ring r /\ SET_OF_BAG b SUBSET (mpoly_ring r s).carrier
+  ==> !x.
+  GBAG (mpoly_ring r s).sum b x =
+  GBAG r.sum (BAG_IMAGE (\f. f x) b)
+Proof
+  ho_match_mp_tac STRONG_FINITE_BAG_INDUCT \\ rw[]
+  >- rw[mpoly_ring_def]
+  \\ DEP_REWRITE_TAC[GITBAG_INSERT_THM]
+  \\ fs[SET_OF_BAG_INSERT]
+  \\ conj_asm1_tac
+  >- (
+    fs[SUBSET_DEF, PULL_EXISTS, abelian_group_is_abelian_monoid]
+    \\ fs[mpoly_ring_def]
+    \\ fs[mpoly_def, SUBSET_DEF, PULL_EXISTS] )
+  \\ DEP_ONCE_REWRITE_TAC[GITBAG_GBAG]
+  \\ simp[]
+  \\ irule EQ_SYM
+  \\ DEP_ONCE_REWRITE_TAC[GITBAG_GBAG]
+  \\ simp[]
+  \\ simp[Once mpoly_ring_def]
+  \\ simp[mpoly_add_def]
+  \\ simp[rrestrict_def]
+  \\ rw[]
+  \\ `F` suffices_by rw[]
+  \\ qpat_x_assum`_ NOTIN _`mp_tac
+  \\ simp[]
+  \\ `r.carrier = r.sum.carrier`by metis_tac[ringTheory.ring_carriers]
+  \\ pop_assum SUBST1_TAC
+  \\ irule GBAG_in_carrier
+  \\ simp[]
+QED
+
+Theorem mpoly_sum_monomials:
+  Ring r /\ mpoly r p /\ support r p SUBSET s ==>
+  GBAG (mpoly_ring r s).sum
+    (BAG_IMAGE (\m t. if t = m then p m else r.sum.id)
+      (BAG_OF_SET (monomials r p))) = p
+Proof
+  strip_tac
+  \\ simp[Once FUN_EQ_THM]
+  \\ strip_tac
+  \\ DEP_REWRITE_TAC[mpoly_ring_sum_applied]
+  \\ `FINITE (monomials r p)` by fs[mpoly_def]
+  \\ simp[]
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
+  \\ simp[mpoly_ring_def]
+  \\ conj_asm1_tac
+  >- (
+    ntac 2 strip_tac
+    \\ fs[mpoly_def, SUBSET_DEF, PULL_EXISTS]
+    \\ simp[support_def, monomials_def, PULL_EXISTS]
+    \\ rw[] \\ fs[support_def, PULL_EXISTS]
+    >- (
+      qmatch_goalsub_abbrev_tac`FINITE z`
+      \\ `z = {m}` suffices_by rw[]
+      \\ rw[Abbr`z`, EXTENSION]
+      \\ rw[] \\ fs[monomials_def] )
+    \\ metis_tac[] )
+  \\ simp[GSYM BAG_IMAGE_COMPOSE, combinTheory.o_DEF]
+  \\ reverse(Cases_on`x IN monomials r p`)
+  >- (
+    `p x = #0` by
+    gs[monomials_def, mpoly_def, SUBSET_DEF, PULL_EXISTS, rrestrict_def]
+    \\ simp[]
+    \\ irule IMP_GBAG_EQ_ID
+    \\ simp[BAG_EVERY, PULL_EXISTS, abelian_group_is_abelian_monoid]
+    \\ rw[] \\ fs[] )
+  \\ drule INSERT_DELETE
+  \\ disch_then(SUBST1_TAC o GSYM)
+  \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ DEP_REWRITE_TAC[GITBAG_INSERT_THM]
+  \\ simp[GSYM CONJ_ASSOC]
+  \\ conj_asm1_tac >- simp[abelian_group_is_abelian_monoid]
+  \\ `∀x. p x IN r.carrier` by fs[mpoly_def, SUBSET_DEF, PULL_EXISTS]
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
+  \\ DEP_ONCE_REWRITE_TAC[GITBAG_GBAG]
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
+  \\ qmatch_goalsub_abbrev_tac`_ + g`
+  \\ `g = #0` suffices_by rw[]
+  \\ qunabbrev_tac`g`
+  \\ irule IMP_GBAG_EQ_ID
+  \\ simp[BAG_EVERY, PULL_EXISTS]
+QED
+
+(* Degree of a variable in a polynomial *)
+
+Definition degree_of_def:
+  degree_of r (p:('c,'v) mpoly) v =
+    MAX_SET (IMAGE (λt. t v) (monomials r p))
+End
+
+Theorem degree_of_mpoly_add_le:
+  Ring r /\ FINITE (monomials r p) ∧ FINITE (monomials r q) ⇒
+  degree_of r (mpoly_add r p q) v ≤ MAX (degree_of r p v) (degree_of r q v)
+Proof
+  rw[degree_of_def]
+  \\ simp[monomials_mpoly_add]
+  \\ Cases_on`monomials r p = {}` \\ gs[]
+  >- ( disj2_tac \\ irule SUBSET_MAX_SET \\ simp[SUBSET_DEF] )
+  \\ Cases_on`monomials r q = {}` \\ gs[]
+  >- ( disj1_tac \\ irule SUBSET_MAX_SET \\ simp[SUBSET_DEF] )
+  \\ qmatch_goalsub_abbrev_tac`MAX_SET a ≤ MAX_SET tp ∨ _ ≤ _ tq`
+  \\ Cases_on`a = {}` \\ simp[]
+  \\ `FINITE a` by simp[Abbr`a`]
+  \\ `MAX_SET a ∈ a` by metis_tac[MAX_SET_DEF]
+  \\ `FINITE tp ∧ FINITE tq` by simp[Abbr`tp`, Abbr`tq`]
+  \\ `tp <> {} /\ tq <> {}` by simp[Abbr`tp`, Abbr`tq`]
+  \\ `MAX_SET tp ∈ tp` by metis_tac[MAX_SET_DEF]
+  \\ `MAX_SET tq ∈ tq` by metis_tac[MAX_SET_DEF]
+  \\ Cases_on`MAX_SET a ≤ MAX_SET tp` \\ simp[]
+  \\ `MAX_SET a ∉ tp` by metis_tac[X_LE_MAX_SET]
+  \\ `MAX_SET a ∈ tq`
+  by (
+    qmatch_goalsub_abbrev_tac`ma ∈ tq`
+    \\ fs[Abbr`a`, Abbr`tp`, Abbr`tq`]
+    \\ metis_tac[] )
+  \\ irule X_LE_MAX_SET
+  \\ simp[]
+QED
+
+Theorem degree_of_mpoly_add_less:
+  Ring r /\ FINITE (monomials r p) /\ FINITE (monomials r q) /\
+  degree_of r p v < degree_of r q v
+  ==>
+  degree_of r (mpoly_add r p q) v = degree_of r q v
+Proof
+  strip_tac
+  \\ pop_assum mp_tac
+  \\ simp[degree_of_def]
+  \\ simp[monomials_mpoly_add]
+  \\ strip_tac
+  \\ qmatch_asmsub_abbrev_tac`MAX_SET mp < MAX_SET mq`
+  \\ Cases_on`mq = {}` \\ fs[]
+  \\ `FINITE mq` by simp[Abbr`mq`]
+  \\ `MAX_SET mq ∈ mq` by metis_tac[MAX_SET_DEF]
+  \\ irule arithmeticTheory.LESS_EQUAL_ANTISYM
+  \\ conj_tac
+  >- (
+    irule X_LE_MAX_SET
+    \\ fs[Abbr`mq`]
+    \\ qexists_tac`t`
+    \\ simp[]
+    \\ pop_assum mp_tac
+    \\ simp[monomials_def]
+    \\ strip_tac
+    \\ `rrestrict r (p t) = #0` suffices_by simp[]
+    \\ rw[rrestrict_def]
+    \\ CCONTR_TAC
+    \\ `t v ∈ mp`
+    by (
+      simp[Abbr`mp`]
+      \\ simp[monomials_def, rrestrict_def]
+      \\ metis_tac[] )
+    \\ `t v <= MAX_SET mp`
+    by ( irule X_LE_MAX_SET \\ simp[Abbr`mp`] )
+    \\ fs[] )
+  \\ simp[GSYM monomials_mpoly_add]
+  \\ qunabbrev_tac`mq`
+  \\ simp[GSYM degree_of_def]
+  \\ drule degree_of_mpoly_add_le
+  \\ disch_then (qspecl_then[`v`,`q`,`p`]mp_tac)
+  \\ simp[]
+  \\ strip_tac \\ simp[]
+  \\ fs[Abbr`mp`, GSYM degree_of_def]
+QED
+
+Theorem degree_of_mpoly_add_less_sym:
+  Ring r /\ FINITE (monomials r p) /\ FINITE (monomials r q) /\
+  degree_of r q v < degree_of r p v
+  ==>
+  degree_of r (mpoly_add r p q) v = degree_of r p v
+Proof
+  strip_tac
+  \\ simp[Once mpoly_add_comm]
+  \\ irule degree_of_mpoly_add_less
+  \\ simp[]
+QED
+
+Theorem degree_of_zero[simp]:
+  degree_of r (K #0) v = 0
+Proof
+  rw[degree_of_def]
+QED
+
+Theorem support_degree_of:
+  FINITE (monomials r p) ==>
+  (v IN support r p <=> 1 <= degree_of r p v)
+Proof
+  rw[support_def, degree_of_def, PULL_EXISTS]
+  \\ qmatch_goalsub_abbrev_tac`1 <= MAX_SET ls`
+  \\ `1 <= MAX_SET ls <=> MAX_SET ls <> 0` by simp[]
+  \\ pop_assum SUBST1_TAC
+  \\ `FINITE ls` by simp[Abbr`ls`]
+  \\ simp[helperSetTheory.MAX_SET_EQ_0, Abbr`ls`]
+  \\ simp[IMAGE_EQ_SING]
+  \\ Cases_on`monomials r p = {}` \\ simp[]
+  \\ rw[BAG_IN, BAG_INN]
+  \\ rw[EQ_IMP_THM]
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ rw[]
 QED
 
 val _ = export_theory();
