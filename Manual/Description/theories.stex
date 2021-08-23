@@ -4813,7 +4813,7 @@ set. These notions have recursive versions as well
 \end{hol}
 The removal of a single element from the domain of a map
 (\holtxt{\bs\bs}, infix) is a simple application of
-(\holtxt{DRESTRICT}), but sufficiently useful to deserve its own
+\holtxt{DRESTRICT}, but sufficiently useful to deserve its own
 definition. Again, this concept has a alternate recursive presentation
 (\holtxt{DOMSUB\_FUPDATE\_THM}).
 %
@@ -4821,6 +4821,16 @@ definition. Again, this concept has a alternate recursive presentation
 \begin{alltt}
    ##thm fmap_domsub
    ##thm DOMSUB_FUPDATE_THM
+\end{alltt}
+\end{hol}
+%
+Similarly, the removal of multiple elements from the domain of a map (\holtxt{FDIFF}) is defined in terms of \holtxt{DRESTRICT}.
+It too has an alternate recursive presentation.
+%
+\begin{hol}
+\begin{alltt}
+   ##thm FDIFF_def
+   ##thm FDIFF_FUPDATE
 \end{alltt}
 \end{hol}
 
@@ -4832,6 +4842,24 @@ The notion of a finite map being a submap of another (\holtxt{SUBMAP}, infix) is
 \begin{alltt}
    ##thm FUNION_DEF
    ##thm SUBMAP_DEF
+\end{alltt}
+\end{hol}
+
+\paragraph {Merges}
+
+The key-aware merge of two finite maps (\holtxt{FMERGE_WITH_KEY}) generalises the left-biased union of two finite maps (\holtxt{FUNION}).
+In \holtxt{FMERGE_WITH_KEY f m1 m2}, rather than the domain of \holtxt{m1} taking precedence (as in \holtxt{FUNION}), overlapping keys and their associated values are processed by the function parameter \holtxt{f}.
+\begin{hol}
+\begin{alltt}
+   ##thm FMERGE_WITH_KEY_DEF
+\end{alltt}
+\end{hol}
+%
+The key-ignorant merge of two finite maps (\holtxt{FMERGE}) specialises \holtxt{FMERGE_WITH_KEY}, and is itself a generalisation of \holtxt{FUNION}.
+\begin{hol}
+\begin{alltt}
+   ##thm FMERGE_WITH_KEY_FMERGE
+   ##thm FMERGE_FUNION
 \end{alltt}
 \end{hol}
 
