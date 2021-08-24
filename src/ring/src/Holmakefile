@@ -22,4 +22,11 @@ endif
 selftest.exe: selftest.uo numRingLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe ring-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: ring-selftest.log
+
+ring-selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+endif

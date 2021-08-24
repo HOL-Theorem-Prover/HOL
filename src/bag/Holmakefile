@@ -4,4 +4,12 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo bagTheory.uo bagSimps.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe bag-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+bag-selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+
+all: bag-selftest.log
+
+endif

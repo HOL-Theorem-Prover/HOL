@@ -5,3 +5,13 @@ selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe
+
+ifdef HOLSELFTESTLEVEL
+all: selftest.log
+
+selftest.log: ./selftest.exe
+	./selftest.exe > $@ 2>&1
+
+endif
+
+EXTRA_CLEANS += selftest.log

@@ -2,7 +2,7 @@ ifdef POLY
 HOLHEAP = ../../num/termination/numheap
 endif
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe selftest.log
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
@@ -20,3 +20,13 @@ all: $(ARTFILES) hol4-monad-unint.art
 hol4-monad-unint.art: hol4-monad-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 endif
+
+ifdef HOLSELFTESTLEVEL
+all: selftest.log
+
+selftest.log: ./selftest.exe
+	./selftest.exe > $@ 2>&1
+
+endif
+
+EXTRA_CLEANS += selftest.log

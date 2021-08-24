@@ -17,3 +17,13 @@ hol4-string.art: hol4-string.thy hol4-string-unint.art ../opentheory/hol4.int
 string.art: string.otd
 
 endif
+
+ifdef HOLSELFTESTLEVEL
+all: string-selftest.log
+
+string-selftest.log: ./selftest.exe
+	./selftest.exe > $@ 2>&1
+
+endif
+
+EXTRA_CLEANS += string-selftest.log
