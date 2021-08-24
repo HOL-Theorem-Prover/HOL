@@ -3726,9 +3726,25 @@ val CONNECTED_EQUIVALENCE_RELATION = store_thm ("CONNECTED_EQUIVALENCE_RELATION"
 
 val _ = set_fixity "limit_point_of" (Infix(NONASSOC, 450));
 
-val limit_point_of = new_definition ("limit_point_of",
- ``x limit_point_of s <=>
-        !t. x IN t /\ open t ==> ?y. ~(y = x) /\ y IN s /\ y IN t``);
+(* ‘limpt’ is defined in topologyTheory *)
+Definition limit_point_of_def :
+    x limit_point_of s <=> limpt(euclidean) x s
+End
+
+Theorem limit_point_of :
+    !x s. x limit_point_of s <=>
+          !t. x IN t /\ Open t ==> ?y. ~(y = x) /\ y IN s /\ y IN t
+Proof
+    rw [limit_point_of_def, limpt, neigh, TOPSPACE_EUCLIDEAN, GSYM OPEN_IN, IN_APP]
+ >> EQ_TAC >> rw []
+ >- (Q.PAT_X_ASSUM ‘!N. _ ==> ?y. x <> y /\ s y /\ N y’ (MP_TAC o (Q.SPEC ‘t’)) \\
+     Know ‘?P. Open P /\ P SUBSET t /\ P x’
+     >- (Q.EXISTS_TAC ‘t’ >> rw []) >> rw [] \\
+     Q.EXISTS_TAC ‘y’ >> rw [])
+ >> Q.PAT_X_ASSUM ‘!t. t x /\ Open t ==> _’ (MP_TAC o (Q.SPEC ‘P’))
+ >> rw []
+ >> Q.EXISTS_TAC ‘y’ >> fs [SUBSET_DEF, IN_APP]
+QED
 
 val LIMPT_SUBSET = store_thm ("LIMPT_SUBSET",
  ``!x s t. x limit_point_of s /\ s SUBSET t ==> x limit_point_of t``,
