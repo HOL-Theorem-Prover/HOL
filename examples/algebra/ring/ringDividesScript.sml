@@ -31,6 +31,8 @@ open ringTheory;
 open groupTheory;
 open monoidTheory;
 
+open ringMapTheory monoidMapTheory groupMapTheory;
+
 (* Get dependent theories in lib *)
 (* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
 (* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
@@ -714,6 +716,53 @@ val ring_divides_le = store_thm(
   `?s. s IN R /\ (p = s * q)` by rw[GSYM ring_divides_def] >>
   `_ = q * s` by rw[ring_mult_comm] >>
   metis_tac[ring_ordering_def, ring_mult_rzero]);
+
+(* division and primality are preserved by isomorphism *)
+
+Theorem ring_divides_iso:
+  !r r_ f. Ring r /\ Ring r_ /\ RingIso f r r_ ==>
+    !p q. p IN r.carrier /\ ring_divides r p q ==>
+      ring_divides r_ (f p) (f q)
+Proof
+  rw[ring_divides_def]
+  \\ qexists_tac`f s`
+  \\ fs[RingIso_def, RingHomo_def]
+  \\ rfs[MonoidHomo_def]
+QED
+
+Theorem ring_prime_iso:
+  !r r_ f. Ring r /\ Ring r_ /\ RingIso f r r_ ==>
+    !p. p IN r.carrier /\ ring_prime r p ==> ring_prime r_ (f p)
+Proof
+  rw[ring_prime_def]
+  \\ `BIJ f r.carrier r_.carrier` by fs[RingIso_def]
+  \\ `∃x y. a = f x /\ b = f y /\ x IN r.carrier /\ y IN r.carrier`
+  by (
+    fs[BIJ_DEF, SURJ_DEF]
+    \\ res_tac \\ rw[]
+    \\ metis_tac[] )
+  \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ drule_then (drule_then drule) ring_iso_sym
+  \\ strip_tac
+  \\ first_x_assum(qspecl_then[`x`,`y`]mp_tac)
+  \\ qspecl_then[`r`,`r_`,`f `]mp_tac ring_divides_iso
+  \\ simp[] \\ strip_tac
+  \\ impl_tac
+  >- (
+    `p = LINV f R (f p) /\ x = LINV f R (f x) /\ y = LINV f R (f y)`
+    by metis_tac[helperSetTheory.BIJ_LINV_THM]
+    \\ ntac 3 (pop_assum SUBST1_TAC)
+    \\ `r.prod.op (LINV f R (f x)) (LINV f R (f y)) =
+        LINV f R (r_.prod.op (f x) (f y))`
+    by (
+      qhdtm_x_assum`RingIso`mp_tac
+      \\ simp_tac(srw_ss())[RingIso_def, RingHomo_def]
+      \\ simp[MonoidHomo_def] )
+    \\ pop_assum SUBST1_TAC
+    \\ irule ring_divides_iso
+    \\ metis_tac[BIJ_DEF, INJ_DEF] )
+  \\ metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Principal Ideal Ring: Irreducibles and Primes                             *)
