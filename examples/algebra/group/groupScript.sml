@@ -319,6 +319,7 @@ val abelian_group_is_abelian_monoid = store_thm(
   "abelian_group_is_abelian_monoid",
   ``!g. AbelianGroup g ==> AbelianMonoid g``,
   rw[AbelianGroup_def, AbelianMonoid_def]);
+val _ = export_rewrites["abelian_group_is_abelian_monoid"];
 
 (* Theorem: FiniteAbelianGroup g ==> FiniteAbelianMonoid g *)
 (* Proof: by FiniteAbelianGroup_def, FiniteAbelianMonoid_def, abelian_group_is_abelian_monoid. *)
