@@ -23,21 +23,22 @@ val _ = augment_srw_ss [
     wordsLib.WORD_ss
   ];
 
+
 (********************* Word operations *******************)
 
-Theorem shiftr:
+Theorem shiftr[simp]:
   shiftr w i = w >>> (nat_of_int i)
 Proof
   EVAL_TAC
 QED
 
-Theorem shiftl:
+Theorem shiftl[simp]:
   shiftl w i = w << (nat_of_int i)
 Proof
   EVAL_TAC
 QED
 
-Theorem nat_of_int:
+Theorem nat_of_int[simp]:
   nat_of_int i = if i < 0 then 0 else Num i
 Proof
   rw[sail2_valuesTheory.nat_of_int_def, INT_ABS]
@@ -170,6 +171,14 @@ Proof
   >- (irule FALSITY >> ARITH_TAC)
   >- (irule FALSITY >> ARITH_TAC)
   >- (irule FALSITY >> ARITH_TAC)
+  >- (irule FALSITY >> ARITH_TAC)
+  >- (irule FALSITY >> ARITH_TAC)
+  >- gvs[v2n_0, add_one_bool_ignore_overflow, EVERY_MAP, SF ETA_ss]
+  >- (
+    gvs[v2n_0, add_one_bool_ignore_overflow, EVERY_MAP, SF ETA_ss] >>
+    IF_CASES_TAC >> gvs[combinTheory.o_DEF, EVERY_MEM, EXISTS_MEM]
+    )
+  >- (irule FALSITY >> ARITH_TAC)
   >- gvs[v2n_0, add_one_bool_ignore_overflow, EVERY_MAP, SF ETA_ss]
   >- (
     gvs[v2n_0, add_one_bool_ignore_overflow, EVERY_MAP, SF ETA_ss] >>
@@ -182,6 +191,7 @@ Theorem LENGTH_bools_of_int:
 Proof
   rw[sail2_valuesTheory.bools_of_int_def, LENGTH_add] >>
   gvs[nat_of_int, bools_of_nat] >> rw[]
+  >- simp[fixwidth_def, DROP_LENGTH_NIL, add_one_bool_ignore_overflow]
   >- simp[fixwidth_def, DROP_LENGTH_NIL, add_one_bool_ignore_overflow] >>
   Cases_on `len = 0`
   >- gvs[fixwidth_def, DROP_LENGTH_NIL, add_one_bool_ignore_overflow] >>
@@ -259,6 +269,33 @@ Proof
   rw[sail2_valuesTheory.bitU_of_bool_def, sail2_valuesTheory.bool_of_bitU_def]
 QED
 
+Theorem ROR[simp]:
+  ROR (a : α word) b = word_ror a (Num (b % &dimindex (:α)))
+Proof
+  simp[ROR_def, sail2_operators_mwordsTheory.or_vec_def] >>
+  assume_tac $ EXISTS_HB >> gvs[] >>
+  IF_CASES_TAC >> gvs[] >>
+  qspecl_then [`b`,`&dimindex (:α)`] assume_tac INT_MOD_BOUNDS >> gvs[] >>
+  IF_CASES_TAC >> gvs[] >- (irule FALSITY >> ARITH_TAC) >>
+  IF_CASES_TAC >> gvs[] >- (irule FALSITY >> ARITH_TAC) >>
+  qpat_abbrev_tac `rot = b % _` >>
+  `∃r. rot = &r` by ARITH_TAC >> pop_assum SUBST_ALL_TAC >> gvs[INT_SUB] >>
+  simp[word_ror_alt]
+QED
+
+Theorem repeat[simp]:
+  ∀n e. repeat e n = FLAT $ REPLICATE (nat_of_int n) e
+Proof
+  rw[Once sail2_valuesAuxiliaryTheory.repeat_rw]
+  >- (`n = 0` by ARITH_TAC >> simp[])
+  >- (irule FALSITY >> ARITH_TAC)
+  >- (irule FALSITY >> ARITH_TAC) >>
+  qsuff_tac `∀m e. repeat e &m = FLAT $ REPLICATE m e`
+  >- (`∃m. n = &SUC m` by ARITH_TAC >> gvs[INT_SUB]) >>
+  Induct >> rw[Once sail2_valuesAuxiliaryTheory.repeat_rw, INT_SUB]
+QED
+
+
 (********************* Monad lemmas *******************)
 
 Theorem bindS = sail2_state_monadTheory.bindS_def;
@@ -287,6 +324,45 @@ Theorem returnS_bindS:
 Proof
   rw[bindS, returnS]
 QED
+
+Theorem returnS_bindS_unit = returnS_bindS |> INST_TYPE [gamma |-> ``:unit``]
+
+Theorem seqS_bindS_assoc[simp]:
+  ∀x f g. seqS (bindS x (λx. f x)) g = bindS x (λx. seqS (f x) g)
+Proof
+  rw[FUN_EQ_THM, seqS, bindS] >>
+  CASE_TAC >> gvs[] >> CASE_TAC >> gvs[]
+QED
+
+Theorem bindS_bindS_assoc[simp]:
+  ∀x f g. bindS (bindS x (λx. f x)) g = bindS x (λx. bindS (f x) g)
+Proof
+  rw[FUN_EQ_THM, bindS] >>
+  CASE_TAC >> gvs[] >> CASE_TAC >> gvs[]
+QED
+
+Theorem bindS_seqS_assoc[simp]:
+  ∀x f g.  bindS (seqS x f) g = seqS x (bindS f g)
+Proof
+  rw[FUN_EQ_THM, bindS, seqS] >>
+  CASE_TAC >> gvs[] >> CASE_TAC >> gvs[]
+QED
+
+Theorem bindS_seqS_assoc'[simp]:
+  ∀f g h.
+    (λx. bindS (seqS (f x) (g x)) h) = (λx. seqS (f x) (bindS (g x) h))
+Proof
+  rw[FUN_EQ_THM, bindS, seqS] >>
+  CASE_TAC >> gvs[] >> CASE_TAC >> gvs[]
+QED
+
+Theorem seqS_seqS_assoc[simp]:
+  ∀f g h.
+    seqS (seqS f g) h = seqS f (seqS g h)
+Proof
+  rw[FUN_EQ_THM, seqS] >> every_case_tac >> gvs[]
+QED
+
 
 (********************* Other lemmas *******************)
 
