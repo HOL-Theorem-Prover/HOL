@@ -1,9 +1,10 @@
 (* ------------------------------------------------------------------------- *)
 (* Reals as a ring.                                                          *)
 (* ------------------------------------------------------------------------- *)
-open HolKernel boolLib bossLib Parse
+open HolKernel boolLib bossLib Parse dep_rewrite
      realTheory ringTheory ringMapTheory ringUnitTheory
      ringDividesTheory monoidRealTheory groupRealTheory
+     pred_setTheory bagTheory gbagTheory real_sigmaTheory iterateTheory
 
 val _ = new_theory"ringReal";
 
@@ -59,6 +60,51 @@ Proof
   rw[ring_prime_def]
   \\ fs[ring_divides_Reals]
   \\ fs[Reals_def]
+QED
+
+Theorem Reals_sum_inv:
+  Reals.sum.inv = real_neg
+Proof
+  rw[FUN_EQ_THM, Reals_def]
+  \\ DEP_REWRITE_TAC[GSYM groupTheory.group_linv_unique]
+  \\ simp[]
+  \\ metis_tac[groupRealTheory.real_add_group, groupTheory.AbelianGroup_def]
+QED
+
+Theorem GBAG_Reals_sum_BAG_IMAGE_BAG_OF_SET:
+  !f s. FINITE s ==>
+  GBAG Reals.sum (BAG_IMAGE f (BAG_OF_SET s)) =
+  REAL_SUM_IMAGE f s
+Proof
+  strip_tac
+  \\ ho_match_mp_tac FINITE_INDUCT
+  \\ rw[]
+  >- rw[Reals_def, real_sigmaTheory.REAL_SUM_IMAGE_THM]
+  \\ rw[real_sigmaTheory.REAL_SUM_IMAGE_THM]
+  \\ fs[DELETE_NON_ELEMENT]
+  \\ fs[GSYM DELETE_NON_ELEMENT]
+  \\ rw[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ simp[Reals_def]
+QED
+
+Theorem GBAG_Reals_prod_BAG_OF_SET:
+  !f s. FINITE s ==>
+  GBAG Reals.prod (BAG_IMAGE f (BAG_OF_SET s)) =
+  product s f
+Proof
+  strip_tac
+  \\ ho_match_mp_tac FINITE_INDUCT
+  \\ rw[]
+  >- rw[Reals_def, iterateTheory.PRODUCT_CLAUSES]
+  \\ rw[iterateTheory.PRODUCT_CLAUSES]
+  \\ fs[DELETE_NON_ELEMENT]
+  \\ fs[GSYM DELETE_NON_ELEMENT]
+  \\ rw[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ simp[Reals_def]
 QED
 
 val _ = export_theory();
