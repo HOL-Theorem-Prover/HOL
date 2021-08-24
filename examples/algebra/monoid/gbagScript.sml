@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse dep_rewrite
-     pred_setTheory bagTheory
-     monoidTheory helperSetTheory
+     pred_setTheory bagTheory helperSetTheory
+     monoidTheory monoidMapTheory
 
 (* Theory about folding a monoid (or group) operation over a bag of elements *)
 
@@ -471,6 +471,26 @@ Proof
   \\ `Monoid g` by fs[monoidTheory.AbelianMonoid_def] \\ simp[]
   \\ irule GITBAG_GBAG
   \\ simp[]
+QED
+
+Theorem MonoidHomo_GBAG:
+  AbelianMonoid g /\ AbelianMonoid h /\
+  MonoidHomo f g h /\ FINITE_BAG b /\ SET_OF_BAG b SUBSET g.carrier ==>
+  f (GBAG g b) = GBAG h (BAG_IMAGE f b)
+Proof
+  strip_tac
+  \\ ntac 2 (pop_assum mp_tac)
+  \\ qid_spec_tac`b`
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ simp[]
+  \\ fs[MonoidHomo_def]
+  \\ rpt strip_tac
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ fs[SUBSET_DEF, PULL_EXISTS]
+  \\ `GBAG g b IN g.carrier` suffices_by metis_tac[]
+  \\ irule GBAG_in_carrier
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
 QED
 
 val _ = export_theory();

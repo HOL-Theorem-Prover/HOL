@@ -1,6 +1,7 @@
 open HolKernel boolLib bossLib Parse dep_rewrite
      pairTheory pred_setTheory listTheory helperListTheory bagTheory ringTheory
      gbagTheory polynomialTheory polyWeakTheory polyRingTheory polyEvalTheory
+     polyFieldTheory integralDomainTheory
      monoidMapTheory groupMapTheory ringMapTheory
 
 val _ = new_theory"multipoly"
@@ -1963,6 +1964,96 @@ Proof
   \\ rpt(first_x_assum(qspec_then`0`mp_tac)) \\ rw[]
 QED
 
+(* multiplication by a constant *)
+
+Theorem monomials_cmul:
+  IntegralDomain r /\ mpoly r p /\ c IN r.carrier /\ c <> r.sum.id ==>
+  monomials r (r.prod.op c o p) = monomials r p
+Proof
+  rw[monomials_def, EXTENSION, IntegralDomain_def]
+  \\ rw[rrestrict_def]
+  \\ gs[mpoly_def, SUBSET_DEF, PULL_EXISTS]
+QED
+
+Theorem support_cmul:
+  IntegralDomain r /\ mpoly r p /\ c IN r.carrier /\ c <> r.sum.id ==>
+  support r (r.prod.op c o p) = support r p
+Proof
+  rw[support_def, monomials_cmul]
+QED
+
+Theorem mpoly_cmul:
+  Ring r /\ mpoly r p /\ c IN r.carrier ==>
+  mpoly r (r.prod.op c o p)
+Proof
+  rw[mpoly_def]
+  \\ fs[SUBSET_DEF, PULL_EXISTS]
+  \\ fs[monomials_def]
+  \\ irule SUBSET_FINITE
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ simp[SUBSET_DEF]
+  \\ rw[rrestrict_def]
+  \\ strip_tac \\ gs[]
+QED
+
+Theorem mpoly_mul_cmul:
+  Ring r /\ mpoly r p /\ mpoly r q /\ c IN r.carrier ==>
+  mpoly_mul r (r.prod.op c o p) q =
+  r.prod.op c o mpoly_mul r p q
+Proof
+  strip_tac
+  \\ imp_res_tac mpoly_cmul
+  \\ ntac 4 (pop_assum kall_tac)
+  \\ rw[mpoly_mul_BAG_FILTER_cross, FUN_EQ_THM]
+  \\ DEP_REWRITE_TAC[MP_CANON ring_mult_rsum]
+  \\ imp_res_tac mpoly_def
+  \\ simp[]
+  \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD]
+  \\ DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
+  \\ simp[combinTheory.o_DEF]
+  \\ simp[UNCURRY, LAMBDA_PROD]
+  \\ simp[rrestrict_def]
+  \\ fs[SUBSET_DEF, PULL_EXISTS]
+  \\ irule GITBAG_CONG
+  \\ simp[SUBSET_DEF, PULL_EXISTS, EXISTS_PROD]
+  \\ fs[combinTheory.o_DEF, PULL_EXISTS, EXISTS_PROD]
+  \\ reverse conj_asm2_tac >- simp[abelian_group_is_abelian_monoid]
+  \\ qx_gen_tac`z`
+  \\ simp[BAG_IMAGE_DEF]
+  \\ simp[BAG_FILTER_BAG_OF_SET]
+  \\ simp[UNCURRY, LAMBDA_PROD]
+  \\ disch_then assume_tac
+  \\ AP_TERM_TAC \\ AP_TERM_TAC
+  \\ simp[Once EXTENSION, FORALL_PROD]
+  \\ qx_genl_tac[`m1`,`m2`]
+  \\ DEP_REWRITE_TAC[ring_mult_assoc]
+  \\ simp[]
+  \\ Cases_on`c * (p m1 * q m2) = z` \\ simp[]
+  \\ Cases_on`x = BAG_UNION m1 m2` \\ simp[]
+  \\ Cases_on`m2 IN monomials r q` \\ simp[]
+  \\ simp[monomials_def]
+  \\ simp[rrestrict_def]
+  \\ Cases_on`p m1 = r.sum.id` >- gs[]
+  \\ simp[]
+  \\ `z = (c * p m1) * q m2` by metis_tac[ring_mult_assoc]
+  \\ strip_tac \\ gs[]
+QED
+
+Theorem cmul_zero:
+  Ring r /\ mpoly r p ==> r.prod.op r.sum.id o p = K r.sum.id
+Proof
+  rw[mpoly_def]
+  \\ rw[FUN_EQ_THM]
+  \\ fs[SUBSET_DEF, PULL_EXISTS]
+QED
+
+Theorem cmul_one:
+  Ring r /\ mpoly r p ==> r.prod.op r.prod.id o p = p
+Proof
+  rw[mpoly_def, FUN_EQ_THM]
+  \\ fs[SUBSET_DEF, PULL_EXISTS]
+QED
+
 (* Distributivity *)
 
 Theorem mpoly_mul_add:
@@ -3144,6 +3235,25 @@ Proof
   \\ metis_tac[]
 QED
 
+Theorem degree_of_isolate_var:
+  Ring r /\ mpoly r p /\ support r p SUBSET s ==>
+  degree_of (mpoly_ring r (s DELETE v)) (isolate_var r v p) v =
+  degree_of r p v
+Proof
+  strip_tac
+  \\ rw[degree_of_def]
+  \\ `monomials (mpoly_ring r (s DELETE v)) (isolate_var r v p) =
+      monomials (mpoly_ring r (support r p DELETE v)) (isolate_var r v p)`
+  by (
+    irule EQ_SYM
+    \\ irule monomials_mpoly_ring_more_support
+    \\ simp[mpoly_isolate_var]
+    \\ fs[SUBSET_DEF] )
+  \\ pop_assum SUBST1_TAC
+  \\ simp[monomials_isolate_var]
+  \\ simp[GSYM IMAGE_COMPOSE, combinTheory.o_DEF]
+QED
+
 (* Restoring the isolated variable *)
 
 Definition restore_var_def:
@@ -3942,6 +4052,221 @@ Proof
   \\ conj_tac >- simp[RingIso_isolate_var]
   \\ irule RingIso_poly_of_mpoly
   \\ simp[]
+QED
+
+Theorem degree_of_mpoly_mul_deg:
+  Ring r /\ mpoly r p /\ mpoly r q /\
+  support r p ⊆ s /\ support r q ⊆ s /\ v IN s ==>
+  degree_of r (mpoly_mul r p q) v =
+  Deg (mpoly_ring r (s DELETE v))
+    (poly_mult (mpoly_ring r (s DELETE v))
+         (poly_of_mpoly (mpoly_ring r (s DELETE v)) (isolate_var r v p))
+         (poly_of_mpoly (mpoly_ring r (s DELETE v)) (isolate_var r v q)))
+Proof
+  strip_tac
+  \\ `p IN (mpoly_ring r s).carrier`
+  by ( simp[mpoly_ring_def] \\ simp[SUBSET_DEF] )
+  \\ `q IN (mpoly_ring r s).carrier`
+  by ( simp[mpoly_ring_def] \\ simp[SUBSET_DEF] )
+  \\ drule RingIso_mpoly_ring_poly_ring
+  \\ disch_then drule
+  \\ simp[RingIso_def]
+  \\ strip_tac
+  \\ fs[RingHomo_def]
+  \\ fs[MonoidHomo_def]
+  \\ first_x_assum(qspecl_then[`p`,`q`]mp_tac)
+  \\ simp[]
+  \\ disch_then(SUBST1_TAC o SYM)
+  \\ qmatch_goalsub_abbrev_tac`poly_of_mpoly rr`
+  \\ simp[mpoly_ring_def]
+  \\ qmatch_goalsub_abbrev_tac`degree_of r pq`
+  \\ `mpoly r pq` by (
+    simp[Abbr`pq`]
+    \\ irule mpoly_mpoly_mul
+    \\ fs[mpoly_def] )
+  \\ `support r pq DELETE v SUBSET s DELETE v`
+  by (
+    irule SUBSET_TRANS
+    \\ qexists_tac `(support r p ∪ support r q) DELETE v`
+    \\ reverse conj_tac >- (fs[SUBSET_DEF] \\ metis_tac[])
+    \\ drule support_mpoly_mul_SUBSET
+    \\ fs[SUBSET_DEF] )
+  \\ `mpoly rr (isolate_var r v pq)`
+  by (
+    qunabbrev_tac`rr`
+    \\ irule mpoly_mpoly_ring_more_support
+    \\ goal_assum(first_assum o mp_then Any mp_tac)
+    \\ simp[] )
+  \\ `support rr (isolate_var r v pq) SUBSET {v}`
+  by (
+    qunabbrev_tac`rr`
+    \\ irule SUBSET_TRANS
+    \\ qexists_tac`support (mpoly_ring r (support r pq DELETE v)) (isolate_var r v pq)`
+    \\ reverse conj_tac >- simp[support_isolate_var]
+    \\ qmatch_goalsub_abbrev_tac`a ⊆ b`
+    \\ `b = a` suffices_by rw[]
+    \\ unabbrev_all_tac
+    \\ irule support_mpoly_ring_more_support
+    \\ simp[] )
+  \\ DEP_REWRITE_TAC[GSYM degree_of_mpoly_of_poly]
+  \\ conj_asm1_tac
+  >- (
+    simp[Abbr`rr`]
+    \\ irule poly_poly_of_mpoly
+    \\ simp[]
+    \\ reverse conj_tac >- metis_tac[]
+    \\ qmatch_goalsub_abbrev_tac`monomials _ ipq`
+    \\ `monomials (mpoly_ring r (s DELETE v)) ipq =
+        monomials (mpoly_ring r (support r pq DELETE v)) ipq`
+    by (
+      irule EQ_SYM
+      \\ irule monomials_mpoly_ring_more_support
+      \\ simp[Abbr`ipq`])
+    \\ simp[monomials_isolate_var, Abbr`ipq`]
+    \\ irule IMAGE_FINITE
+    \\ fs[mpoly_def] )
+  \\ DEP_REWRITE_TAC[mpoly_of_poly_of_mpoly]
+  \\ simp[]
+  \\ qunabbrev_tac`rr`
+  \\ DEP_REWRITE_TAC[degree_of_isolate_var]
+  \\ simp[Abbr`pq`]
+  \\ fs[SUBSET_DEF]
+  \\ metis_tac[]
+QED
+
+Theorem mpoly_integral_domain:
+  !s. FINITE s ==>
+      !r. IntegralDomain r ==> IntegralDomain (mpoly_ring r s)
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[]
+  >- (
+    `Ring r` by simp[integral_domain_is_ring]
+    \\ `Ring (mpoly_ring r {})` by simp[]
+    \\ `∃f. RingIso f r (mpoly_ring r {})`
+    suffices_by metis_tac[integral_domain_ring_iso]
+    \\ metis_tac[mpoly_ring_empty_support_iso, ring_iso_sym] )
+  \\ `Ring r` by simp[integral_domain_is_ring]
+  \\ qmatch_goalsub_abbrev_tac`IntegralDomain d`
+  \\ `e IN (e INSERT s) /\ (e INSERT s) DELETE e = s`
+  by ( simp[Once EXTENSION] \\ metis_tac[] )
+  \\ `Ring (mpoly_ring r (e INSERT s))` by simp[]
+  \\ `Ring (PolyRing (mpoly_ring r s))` by simp[poly_ring_ring]
+  \\ `∃f. RingIso f (PolyRing (mpoly_ring r s)) (mpoly_ring r (e INSERT s))`
+  by metis_tac[RingIso_mpoly_ring_poly_ring, ring_iso_sym]
+  \\ metis_tac[integral_domain_ring_iso, poly_integral_domain]
+QED
+
+Theorem degree_of_mpoly_mul:
+  IntegralDomain r /\ mpoly r p /\ mpoly r q /\
+  support r p SUBSET s /\ support r q SUBSET s /\ v IN s /\ FINITE s /\
+  p <> K r.sum.id /\ q <> K r.sum.id
+  ==>
+  degree_of r (mpoly_mul r p q) v = degree_of r p v + degree_of r q v
+Proof
+  strip_tac
+  \\ `Ring r` by simp[integral_domain_is_ring]
+  \\ DEP_REWRITE_TAC[degree_of_mpoly_mul_deg]
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`Deg rr (poly_mult rr pp qq)`
+  \\ `mpoly rr (isolate_var r v p)`
+  by (
+    qunabbrev_tac`rr`
+    \\ irule mpoly_mpoly_ring_more_support
+    \\ qexists_tac`support r p DELETE v`
+    \\ fs[SUBSET_DEF] )
+  \\ `mpoly rr (isolate_var r v q)`
+  by (
+    qunabbrev_tac`rr`
+    \\ irule mpoly_mpoly_ring_more_support
+    \\ qexists_tac`support r q DELETE v`
+    \\ fs[SUBSET_DEF] )
+  \\ `support rr (isolate_var r v p) = {v} INTER support r p`
+  by (
+    irule EQ_TRANS
+    \\ qexists_tac`support (mpoly_ring r (support r p DELETE v)) (isolate_var r v p)`
+    \\ reverse conj_tac >- simp[support_isolate_var]
+    \\ qunabbrev_tac`rr`
+    \\ irule EQ_SYM
+    \\ irule support_mpoly_ring_more_support
+    \\ fs[SUBSET_DEF] )
+  \\ `support rr (isolate_var r v q) = {v} INTER support r q`
+  by (
+    irule EQ_TRANS
+    \\ qexists_tac`support (mpoly_ring r (support r q DELETE v)) (isolate_var r v q)`
+    \\ reverse conj_tac >- simp[support_isolate_var]
+    \\ qunabbrev_tac`rr`
+    \\ irule EQ_SYM
+    \\ irule support_mpoly_ring_more_support
+    \\ fs[SUBSET_DEF] )
+  \\ `Poly rr pp`
+  by (
+    simp[Abbr`rr`, Abbr`pp`]
+    \\ irule poly_poly_of_mpoly
+    \\ fs[mpoly_def]
+    \\ qexists_tac`v` \\ simp[SUBSET_DEF] )
+  \\ `Poly rr qq`
+  by (
+    simp[Abbr`rr`, Abbr`qq`]
+    \\ irule poly_poly_of_mpoly
+    \\ fs[mpoly_def]
+    \\ qexists_tac`v` \\ simp[SUBSET_DEF] )
+  \\ DEP_REWRITE_TAC[polyRingTheory.weak_deg_mult_nonzero]
+  \\ simp[GSYM CONJ_ASSOC]
+  \\ conj_asm1_tac >- simp[Abbr`rr`]
+  \\ `FINITE (s DELETE v)` by simp[]
+  \\ `IntegralDomain rr` by metis_tac[mpoly_integral_domain]
+  \\ conj_asm1_tac
+  >- (
+    `Lead rr pp <> rr.sum.id /\ Lead rr qq <> rr.sum.id`
+    suffices_by metis_tac[poly_lead_element, IntegralDomain_def]
+    \\ simp[poly_lead_eq_zero]
+    \\ qspecl_then[`r`,`v`,`s`]mp_tac
+         (Q.GENL[`r`,`x`,`s`]RingIso_mpoly_ring_poly_ring)
+    \\ impl_tac >- simp[]
+    \\ qmatch_goalsub_abbrev_tac`RingIso f r1 r2`
+    \\ strip_tac
+    \\ `Ring r1 /\ Ring r2` by simp[Abbr`r1`, Abbr`r2`, poly_ring_ring]
+    \\ `∀x. x IN r1.carrier ==> (f x = r2.sum.id <=> x = r1.sum.id)`
+    by metis_tac[ring_iso_eq_zero]
+    \\ `pp = f p /\ qq = f q` by simp[Abbr`f`]
+    \\ `r2.sum.id = []` by simp[Abbr`r2`]
+    \\ `p IN r1.carrier /\ q IN r1.carrier`
+    by ( simp[Abbr`r1`, mpoly_ring_def] )
+    \\ fs[]
+    \\ simp[Abbr`r1`, mpoly_ring_def] )
+  \\ DEP_REWRITE_TAC[GSYM degree_of_mpoly_of_poly]
+  \\ simp[]
+  \\ map_every qunabbrev_tac[`pp`,`qq`]
+  \\ DEP_REWRITE_TAC[mpoly_of_poly_of_mpoly]
+  \\ simp[]
+  \\ qunabbrev_tac`rr`
+  \\ DEP_REWRITE_TAC[degree_of_isolate_var]
+  \\ simp[]
+QED
+
+(* this gives us a strong version of support_mpoly_mul_SUBSET for IDs *)
+Theorem support_mpoly_mul:
+  IntegralDomain r /\
+  mpoly r p /\ mpoly r q /\ p <> K r.sum.id /\ q <> K r.sum.id /\
+  FINITE (support r p) /\ FINITE (support r q)
+  ==>
+  support r (mpoly_mul r p q) = support r p ∪ support r q
+Proof
+  strip_tac
+  \\ `Ring r` by simp[integral_domain_is_ring]
+  \\ rewrite_tac[SET_EQ_SUBSET]
+  \\ conj_tac >- simp[support_mpoly_mul_SUBSET]
+  \\ simp[SUBSET_DEF]
+  \\ `mpoly r (mpoly_mul r p q)` by metis_tac[mpoly_mpoly_mul, mpoly_def]
+  \\ simp[GSYM FORALL_AND_THM]
+  \\ gen_tac
+  \\ DEP_REWRITE_TAC[support_degree_of]
+  \\ conj_tac >- metis_tac[mpoly_def]
+  \\ DEP_REWRITE_TAC[Q.GEN`s`degree_of_mpoly_mul]
+  \\ simp[]
+  \\ qexists_tac`support r p UNION support r q UNION {x}`
+  \\ simp[SUBSET_DEF]
 QED
 
 val _ = export_theory();

@@ -39,6 +39,7 @@ open jcLib;
 (* val _ = load "ringIdealTheory"; *)
 open groupTheory monoidTheory ringTheory ringUnitTheory ringIdealTheory;
 open monoidOrderTheory groupOrderTheory;
+open monoidMapTheory ringMapTheory;
 
 (* open dependent theories *)
 (* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
@@ -255,6 +256,33 @@ val integral_domain_nonzero_monoid = store_thm(
   ``!r:'a ring. IntegralDomain r ==> Monoid f*``,
   rw_tac std_ss[IntegralDomain_def, Monoid_def, integral_domain_nonzero_mult_property] >>
   fs[ring_nonzero_eq, ring_mult_assoc]);
+
+(* ring isomorphisms preserve domain properties *)
+
+Theorem integral_domain_ring_iso:
+  IntegralDomain r /\ Ring s /\ RingIso f r s ==> IntegralDomain s
+Proof
+  simp[IntegralDomain_def]
+  \\ strip_tac
+  \\ drule_then (drule_then drule) ring_iso_sym
+  \\ simp[RingIso_def, RingHomo_def]
+  \\ strip_tac
+  \\ qmatch_asmsub_abbrev_tac`BIJ g s.carrier r.carrier`
+  \\ `Group s.sum /\ Group r.sum` by
+  metis_tac[Ring_def, groupTheory.AbelianGroup_def]
+  \\ `g s.sum.id = r.sum.id` by metis_tac[groupMapTheory.group_homo_id]
+  \\ conj_asm1_tac >- metis_tac[monoidMapTheory.monoid_homo_id]
+  \\ rw[]
+  \\ first_x_assum(qspecl_then[`g x`,`g y`]mp_tac)
+  \\ impl_keep_tac >- metis_tac[BIJ_DEF, INJ_DEF]
+  \\ fs[MonoidHomo_def]
+  \\ `s.prod.carrier = s.carrier` by metis_tac[ring_carriers] \\ fs[]
+  \\ first_x_assum(qspecl_then[`x`,`y`]mp_tac)
+  \\ simp[]
+  \\ `s.sum.id IN s.carrier` by simp[]
+  \\ `s.prod.op x y IN s.carrier` by simp[]
+  \\ PROVE_TAC[BIJ_DEF, INJ_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Left and Right Multiplicative Cancellation                                *)
