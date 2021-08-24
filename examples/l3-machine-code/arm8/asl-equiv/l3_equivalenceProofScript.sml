@@ -538,6 +538,127 @@ Proof
   simp[l3_models_asl_LogicalImmediate_T, l3_models_asl_LogicalImmediate_F]
 QED
 
+Definition l3_to_asl_ShiftType_def:
+  l3_to_asl_ShiftType (arm8$ShiftType_LSL) = armv86a_types$ShiftType_LSL ∧
+  l3_to_asl_ShiftType (ShiftType_LSR) = ShiftType_LSR ∧
+  l3_to_asl_ShiftType (ShiftType_ASR) = ShiftType_ASR ∧
+  l3_to_asl_ShiftType (ShiftType_ROR) = ShiftType_ROR
+End
+
+Theorem l3_asl_ShiftReg:
+  ∀l3 asl. state_rel l3 asl ⇒
+    ∀r asl_shift_type amount l3_shift_type.
+      0 ≤ r ∧ r ≤ 31 ∧
+      l3_to_asl_ShiftType l3_shift_type = asl_shift_type ∧
+      l3_shift_type ≠ ShiftType_ROR
+    ⇒ armv86a$ShiftReg 64 r asl_shift_type amount asl : word64 res =
+      returnS (arm8$ShiftReg (n2w (Num r), l3_shift_type, nat_of_int amount) l3) asl
+Proof
+  rw[armv86aTheory.ShiftReg_def, ShiftReg_def, ShiftValue_def] >>
+  drule X_read >> disch_then $ drule_at Any >> simp[int_ge] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[] >>
+  disch_then kall_tac >> simp[returnS] >>
+  `¬ (r < 0)` by ARITH_TAC >> gvs[] >>
+  Cases_on `l3_shift_type` >> gvs[l3_to_asl_ShiftType_def]
+QED
+
+Theorem l3_asl_ShiftReg_ROR:
+  ∀l3 asl. state_rel l3 asl ⇒
+    ∀r amount. 0 ≤ r ∧ r ≤ 31
+    ⇒ armv86a$ShiftReg 64 r ShiftType_ROR amount asl : word64 res =
+      returnS (arm8$ShiftReg (n2w (Num r), ShiftType_ROR, Num (amount % 64)) l3) asl
+Proof
+  rw[armv86aTheory.ShiftReg_def, ShiftReg_def, ShiftValue_def] >>
+  drule X_read >> disch_then $ drule_at Any >> simp[int_ge] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[]
+QED
+
+Theorem l3_models_asl_AddSubShiftedRegister:
+  ∀shift_type b1 b2 r3 w r2 r1.
+    l3_models_asl_instr
+      (Data (AddSubShiftedRegister@64 (1w, b1, b2, shift_type, r3, w, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  qmatch_goalsub_abbrev_tac `Decode opc` >>
+  `shift_type = ShiftType_ROR ⇒ Decode opc = Reserved` by (
+    unabbrev_all_tac >> rw[] >>
+    Cases_on `b1` >> Cases_on `b2` >> l3_decode_tac) >>
+  `shift_type ≠ ShiftType_ROR ⇒
+    Decode opc =
+    Data (AddSubShiftedRegister@64 (1w, b1, b2, shift_type, r3, w, r2, r1))` by (
+      unabbrev_all_tac >> rw[] >>
+      Cases_on `b1` >> Cases_on `b2` >> Cases_on `shift_type` >> simp[] >>
+      l3_decode_tac >> gvs[DecodeShift_def]) >>
+  Cases_on `shift_type = ShiftType_ROR` >> gvs[]
+  (* TODO why is l3_run_tac not working here? *)
+  >- (
+    rw[] >> gvs[Run_def, dfn'Reserved_def, raise'exception_def] >>
+    IF_CASES_TAC >> gvs[]
+    ) >>
+  rw[Run_def, Abbr `opc`] >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg
+      (&w2n r1) (:64) (&w2n r3) (&w2n r2)
+      b2 (&w2n w) (l3_to_asl_ShiftType shift_type) b1 od asl)` by (
+    unabbrev_all_tac >>
+    Cases_on `shift_type` >> gvs[l3_to_asl_ShiftType_def] >>
+    Cases_on `b1` >> Cases_on `b2` >>
+    asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+    simp[
+      decode_subs_addsub_shift_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg_def,
+      decode_sub_addsub_shift_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg_def,
+      decode_adds_addsub_shift_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg_def,
+      decode_add_addsub_shift_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg_def
+      ] >>
+    simp[armv86aTheory.DecodeShift_def] >>
+    simp[asl_reg_rws, seqS, Once returnS] >>
+    irule_at Any EQ_REFL) >>
+  simp[] >> pop_assum kall_tac >> unabbrev_all_tac >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg_def] >>
+  simp[dfn'AddSubShiftedRegister_def] >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >> impl_tac
+  >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule l3_asl_ShiftReg >>
+  disch_then $ qspecl_then
+    [`&w2n r3`,`l3_to_asl_ShiftType shift_type`,`&w2n w`,`shift_type`] mp_tac >>
+  simp[] >> impl_tac >- WORD_DECIDE_TAC >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qpat_abbrev_tac `asl_cond = if b1 then _ else _` >>
+  qpat_abbrev_tac `l3_cond = if b1 then _ else _` >>
+  `asl_cond = (λ(a,b). (v2w [b], a)) l3_cond` by (
+    unabbrev_all_tac >> IF_CASES_TAC >> simp[]) >>
+  simp[] >> pop_assum kall_tac >> simp[Abbr `asl_cond`] >>
+  PairCases_on `l3_cond` >> gvs[] >>
+  qspecl_then [`X r2 l3`,`l3_cond0`,`l3_cond1`] mp_tac l3_asl_AddWithCarry >>
+  simp[flag_rel_def] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `(_ ## _) add_res` >>
+  PairCases_on `add_res` >> gvs[] >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (
+    Cases_on `r1 = 31w` >> gvs[X_set_31]
+    >- (simp[returnS, write'X_def]) >>
+    drule $ b64 alpha X_set_not_31 >>
+    disch_then $ qspecl_then [`64`,`&w2n r1`,`add_res0`] mp_tac >> simp[] >>
+    impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> simp[returnS]
+    ) >>
+  dxrule l3_asl_SetTheFlags >>
+  disch_then $ qspecl_then
+    [`v2w [add_res1]`,`v2w [add_res2]`,
+      `v2w [add_res3]`,`v2w [add_res4]`,`X_set 64 (&w2n r1) add_res0`] mp_tac >>
+  strip_tac >> simp[] >> gvs[SetTheFlags_def, w2v_v2w] >>
+  Cases_on `r1 = 31w` >> gvs[X_set_31]
+  >- (simp[returnS, write'X_def]) >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`add_res0`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> simp[returnS]
+QED
+
 (****************************************)
 
 val _ = export_theory();
