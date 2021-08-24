@@ -381,6 +381,35 @@ Proof
   EVAL_TAC
 QED
 
+(* Ported from CakeML *)
+Theorem DecodeBitMasks_SOME:
+  ∀r s. ∃wmask :word64 tmask.
+    DecodeBitMasks (1w, s, r, F) = SOME (wmask, tmask)
+Proof
+  simp[DecodeBitMasks_def, HighestSetBit_def] >>
+  blastLib.FULL_BBLAST_TAC >> rw[] >>
+  Cases_on_word_value `s` >> EVAL_TAC
+QED
+
+(* Ported from CakeML *)
+Theorem Decode_T_EncodeBitMask:
+  ∀w :word64 n s r.
+    EncodeBitMask w = SOME (n, s, r)
+  ⇒ ∃v. DecodeBitMasks (n, s, r, T) = SOME (w, v)
+Proof
+  lrw[EncodeBitMask_def, EncodeBitMaskAux_def] >>
+  rpt (full_case_tac >> gvs[])
+QED
+
+Theorem l3_asl_DecodeBitMasks:
+  ∀n s r b res : (word64 # word64).
+    DecodeBitMasks (n,s,r,b) = SOME res
+  ⇒ DecodeBitMasks 64 n s r b = returnS res
+Proof
+  cheat (* TODO *)
+QED
+
+
 (****************************************)
 
 val _ = export_theory ();
