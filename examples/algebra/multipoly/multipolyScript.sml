@@ -2830,6 +2830,111 @@ Proof
     \\ metis_tac[ring_mult_assoc] )
 QED
 
+Theorem DISJOINT_support_mpoly_mul:
+  IntegralDomain r /\ mpoly r p /\ mpoly r q /\
+  DISJOINT (support r p) (support r q) ==>
+  monomials r (mpoly_mul r p q) =
+  IMAGE (UNCURRY BAG_UNION) (monomials r p × monomials r q) /\
+  !m1 m2. m1 IN monomials r p /\ m2 IN monomials r q ==>
+    mpoly_mul r p q (BAG_UNION m1 m2) = r.prod.op(p m1)(q m2)
+Proof
+  strip_tac
+  \\ `Ring r` by simp[integral_domain_is_ring]
+  \\ conj_asm1_tac
+  >- (
+    rw[Once monomials_def]
+    \\ simp[mpoly_mul_BAG_FILTER_cross]
+    \\ rw[Once EXTENSION, PULL_EXISTS, EXISTS_PROD]
+    \\ rewrite_tac[rrestrict_def]
+    \\ reverse IF_CASES_TAC
+    >- (
+      `F` suffices_by rw[]
+      \\ pop_assum mp_tac
+      \\ simp[]
+      \\ `r.carrier = r.sum.carrier` by simp[]
+      \\ pop_assum SUBST1_TAC
+      \\ irule GBAG_in_carrier
+      \\ imp_res_tac mpoly_def
+      \\ fs[SUBSET_DEF, PULL_EXISTS, EXISTS_PROD] )
+    \\ pop_assum kall_tac
+    \\ eq_tac
+    >- (
+      simp[BAG_FILTER_BAG_OF_SET]
+      \\ qmatch_goalsub_abbrev_tac`BAG_IMAGE _ (BAG_OF_SET s)`
+      \\ Cases_on`s = {}` \\ simp[]
+      \\ pop_assum mp_tac \\ simp[Abbr`s`]
+      \\ simp[Once EXTENSION, EXISTS_PROD] )
+    \\ disch_then(qx_choosel_then[`m1`,`m2`]strip_assume_tac)
+    \\ simp[BAG_FILTER_BAG_OF_SET]
+    \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+    \\ `s = {(m1,m2)}` suffices_by (
+      simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+      \\ imp_res_tac mpoly_def
+      \\ fs[SUBSET_DEF, PULL_EXISTS]
+      \\ fs[monomials_def, rrestrict_def]
+      \\ fs[IntegralDomain_def] )
+    \\ simp[Abbr`s`, Once EXTENSION, FORALL_PROD]
+    \\ qx_genl_tac[`t1`,`t2`]
+    \\ reverse eq_tac >- metis_tac[]
+    \\ strip_tac
+    \\ fs[IN_DISJOINT, support_def, PULL_EXISTS]
+    \\ pop_assum mp_tac
+    \\ simp[FUN_EQ_THM, BAG_UNION]
+    \\ strip_tac
+    \\ simp[GSYM FORALL_AND_THM]
+    \\ qx_gen_tac`z`
+    \\ first_x_assum(qspec_then`z`mp_tac)
+    \\ Cases_on`BAG_IN z m1`
+    >- (
+      `¬BAG_IN z m2` by metis_tac[]
+      \\ `¬BAG_IN z m2` by metis_tac[]
+      \\ `¬BAG_IN z t2` by metis_tac[]
+      \\ `m2 z = 0 /\ t2 z = 0` by fs[BAG_IN, BAG_INN]
+      \\ simp[] )
+    \\ Cases_on`BAG_IN z m2`
+    >- (
+      `¬BAG_IN z t1` by metis_tac[]
+      \\ `m1 z = 0 /\ t1 z = 0` by fs[BAG_IN, BAG_INN]
+      \\ simp[] )
+    \\ `m1 z = 0 ∧ m2 z = 0` by fs[BAG_IN, BAG_INN]
+    \\ simp[])
+  \\ rw[]
+  \\ simp[mpoly_mul_BAG_FILTER_cross]
+  \\ simp[BAG_FILTER_BAG_OF_SET]
+  \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+  \\ `s = {(m1,m2)}` suffices_by (
+    simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+    \\ imp_res_tac mpoly_def
+    \\ fs[SUBSET_DEF, PULL_EXISTS]
+    \\ fs[monomials_def, rrestrict_def]
+    \\ fs[IntegralDomain_def] )
+  \\ simp[Abbr`s`, Once EXTENSION, FORALL_PROD]
+  \\ qx_genl_tac[`t1`,`t2`]
+  \\ reverse eq_tac >- metis_tac[]
+  \\ strip_tac
+  \\ fs[IN_DISJOINT, support_def, PULL_EXISTS]
+  \\ pop_assum mp_tac
+  \\ simp[FUN_EQ_THM, BAG_UNION]
+  \\ strip_tac
+  \\ simp[GSYM FORALL_AND_THM]
+  \\ qx_gen_tac`z`
+  \\ first_x_assum(qspec_then`z`mp_tac)
+  \\ Cases_on`BAG_IN z m1`
+  >- (
+    `¬BAG_IN z m2` by metis_tac[]
+    \\ `¬BAG_IN z m2` by metis_tac[]
+    \\ `¬BAG_IN z t2` by metis_tac[]
+    \\ `m2 z = 0 /\ t2 z = 0` by fs[BAG_IN, BAG_INN]
+    \\ simp[] )
+  \\ Cases_on`BAG_IN z m2`
+  >- (
+    `¬BAG_IN z t1` by metis_tac[]
+    \\ `m1 z = 0 /\ t1 z = 0` by fs[BAG_IN, BAG_INN]
+    \\ simp[] )
+  \\ `m1 z = 0 ∧ m2 z = 0` by fs[BAG_IN, BAG_INN]
+  \\ simp[]
+QED
+
 (* Degree of a variable in a polynomial *)
 
 Definition degree_of_def:
