@@ -414,9 +414,10 @@ present at all.
 
 A variable definition is of the form
 \[
-\textsl{Ident} \texttt{ = } \textsl{text}  \texttt{ <NEWLINE> }
+\textsl{Ident} \;\;\textsl{op}\;\; \textsl{text}\;\;  \texttt{<NEWLINE>}
 \]
-and a rule is of the form
+where $\textsl{op}$ is either \texttt{=} or \texttt{+=}.
+A rule is of the form
 \[
 \textsl{text } \texttt{:} \textsl{ text} \texttt{ <NEWLINE>}
 (\texttt{<TAB>}\textsl{text}\texttt{ <NEWLINE>})^*
@@ -434,16 +435,19 @@ include white-space itself, those white-space characters should be
 escaped with back-slashes.
 
 \newcommand{\varref}[1]{\texttt{\$(#1)}}
-\paragraph{Variable definitions} The text on the RHS of a variable
+\paragraph{Variable definitions and references} The text on the RHS of a variable
 definition can be substituted into any other context by using a
-\emph{variable reference}, of the form \varref{VARNAME}.  References
-are evaluated \emph{late}, not at time of definition, so it is quite
-permissible to have forward references.  On the other hand, this makes
-it impossible to write things like \[ \texttt{VAR = \varref{VAR}
-something\_new}
-\] because the evaluation of \varref{VAR} would lead to an infinite
-loop. GNU \textsf{make}'s facility for immediate
-definition of variables with \texttt{:=} is not supported.
+\emph{variable reference}, of the form \varref{VARNAME}.
+References on right-hand sides are evaluated \emph{late}, at time of use, not at time of definition.
+This means it is permissible to have forward references.
+This makes it impossible to write things like
+\[
+  \texttt{VAR = \varref{VAR} something\_new}
+\]
+because the eventual evaluation of \varref{VAR} would lead to an infinite loop.
+GNU \textsf{make}'s facility for immediate definition of variables with \texttt{:=} is not supported, but the \texttt{+=} definition form does allow variables to be ``extended''.
+In particular, this form ``acts essentially as if you had included the extra text in the initial definition of the variable'' (as \emph{per} GNU \textsf{make}'s documentation).
+Extending a variable \texttt{VAR} in this way does not constitute a \emph{use} of this variable, so any variable references in its original definition will remain unexpanded until \texttt{VAR} is used in a rule.
 
 Note also that white-space around the equals-sign in a variable
 definition is stripped.  This means that

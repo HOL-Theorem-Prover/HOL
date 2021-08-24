@@ -4,6 +4,7 @@
 !tools/Holmake/tests/wildcard
 !tools/Holmake/tests/dashn_works
 !tools/Holmake/tests/dupcommands
+!tools/Holmake/tests/varextension
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml

@@ -72,10 +72,16 @@ end
 
 
 fun first_special s = let
-  fun recurse i = if i = size s then NONE
-                  else if String.sub(s,i) = #"=" then SOME #"="
-                  else if String.sub(s,i) = #":" then SOME #":"
-                  else recurse (i + 1)
+  fun recurse i =
+      if i = size s then NONE
+      else
+        case String.sub(s,i) of
+            #"=" => SOME "="
+          | #":" => SOME ":"
+          | #"+" => if i + 1 < size s andalso String.sub(s,i+1) = #"=" then
+                      SOME "+="
+                    else recurse (i + 1)
+          | _ => recurse (i + 1)
 in
   recurse 0
 end
@@ -260,8 +266,11 @@ in
             case first_special s' of
                 NONE => error b ("Unrecognised character: \""^
                                  String.toString (str c1) ^ "\"")
-              | SOME #"=" => ((condstate, advance b), DEFN (strip_trailing_comment s))
-              | SOME #":" => read_commands
+              | SOME "=" => ((condstate, advance b),
+                              DEFN (strip_trailing_comment s))
+              | SOME "+=" => ((condstate, advance b),
+                              DEFN_EXTEND (strip_trailing_comment s))
+              | SOME ":" => read_commands
                                  env
                                  (condstate, advance b)
                                  (strip_trailing_comment s' ^ "\n")
@@ -287,7 +296,7 @@ fun readall (acc as (tgt1,env,ruledb,depdb)) csb =
     | (csb, x) => let
         fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
       in
-        case to_token x of
+        case to_token env x of
           HM_defn def => readall (tgt1,env_extend def env, ruledb, depdb) csb
         | HM_rule rinfo => let
             val (rdb',depdb',tgts) = extend_ruledb warn env rinfo (ruledb,depdb)

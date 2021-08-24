@@ -1,7 +1,9 @@
 signature Holmake_types =
 sig
 
-datatype pretoken = DEFN of string | RULE of string | EOF
+datatype pretoken = DEFN of string
+                  | DEFN_EXTEND of string
+                  | RULE of string | EOF
 
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
@@ -19,7 +21,7 @@ val lookup : env -> string -> quotation
 
 val env_extend : string * quotation -> env -> env
 
-val to_token : pretoken -> token
+val to_token : env -> pretoken -> token
 
 val perform_substitution : env -> quotation -> string
 
