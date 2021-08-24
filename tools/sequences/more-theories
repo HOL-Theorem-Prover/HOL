@@ -3,7 +3,6 @@
 src/TeX
 !src/TeX/theory_tests
 !src/TeX/theory_tests/proj1paper
-!src/parallel_builds/testlevel1
 src/parallel_builds/core
 src/monad/more_monads
 src/string
