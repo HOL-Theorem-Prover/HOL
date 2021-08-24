@@ -976,6 +976,74 @@ val PROB_DISCRETE_EVENTS_COUNTABLE = store_thm
           >> RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_IMAGE])
   >> METIS_TAC [EVENTS_COUNTABLE_UNION]);
 
+Theorem prob_normal:
+  !p. prob_space p ==>
+  !x. x IN events p ==> ?r. prob p x = Normal r /\ 0 <= r /\ r <= 1
+Proof
+  rpt strip_tac
+  \\ imp_res_tac PROB_LE_1
+  \\ imp_res_tac PROB_POSITIVE
+  \\ qexists_tac`real (prob p x)`
+  \\ dep_rewrite.DEP_REWRITE_TAC[normal_real]
+  \\ conj_asm1_tac >- (
+    rpt strip_tac \\ fs[le_infty] )
+  \\ Cases_on`prob p x` \\ fs[]
+  \\ metis_tac[extreal_of_num_def, extreal_le_eq]
+QED
+
+Theorem prob_on_finite_set:
+  !p. FINITE (m_space p) /\ measurable_sets p = POW (m_space p) ==>
+  (prob_space p <=>
+   positive p /\ prob p (p_space p) = 1 /\ additive p)
+Proof
+  ntac 2 strip_tac
+  \\ simp[prob_space_def]
+  \\ simp[p_space_def, prob_def]
+  \\ simp[measure_space_def]
+  \\ Cases_on`positive p` \\ simp[]
+  \\ Cases_on`measure p (m_space p) = 1` \\ simp[]
+  \\ eq_tac \\ strip_tac
+  >- (
+    `measure_space p` by simp[measure_space_def]
+    \\ imp_res_tac MEASURE_SPACE_EMPTY_MEASURABLE
+    \\ imp_res_tac COUNTABLY_ADDITIVE_FINITE_ADDITIVE
+    \\ fs[finite_additive_def, additive_def]
+    \\ rpt strip_tac
+    \\ first_x_assum(qspecl_then[`(0n =+ s) ((1 =+ t) (K {}))`,`2`]mp_tac)
+    \\ simp[count_EQN]
+    \\ simp[DECIDE``n < 2n <=> (n = 0) \/ (n = 1)``]
+    \\ dsimp[combinTheory.APPLY_UPDATE_THM]
+    \\ fs[events_def, DISJOINT_SYM, UNION_COMM]
+    \\ `measure p s ≠ PosInf ∧ measure p t ≠ PosInf`
+    by (
+      conj_tac \\ irule MEASURE_SPACE_FINITE_MEASURE
+      \\ simp[]
+      \\ simp[measure_space_def] )
+    \\ dep_rewrite.DEP_REWRITE_TAC[extrealTheory.EXTREAL_SUM_IMAGE_INSERT]
+    \\ simp[combinTheory.APPLY_UPDATE_THM]
+    \\ dep_rewrite.DEP_REWRITE_TAC[DELETE_NON_ELEMENT |> SPEC_ALL |> EQ_IMP_RULE |> #1]
+    \\ simp[]
+    \\ dep_rewrite.DEP_REWRITE_TAC[extrealTheory.EXTREAL_SUM_IMAGE_INSERT]
+    \\ simp[combinTheory.APPLY_UPDATE_THM]
+    \\ simp[extrealTheory.EXTREAL_SUM_IMAGE_EMPTY]
+    \\ reverse conj_asm1_tac
+    >- ( simp[] \\ simp[extrealTheory.add_comm] )
+    \\ disj1_tac
+    \\ rw[]
+    \\ dep_rewrite.DEP_REWRITE_TAC[MEASURE_EMPTY]
+    \\ simp[measure_space_def] )
+  \\ reverse conj_asm1_tac
+  >- (
+    imp_res_tac finite_additivity_sufficient_for_finite_spaces2
+    \\ fs[measure_space_def] )
+  \\ simp[sigma_algebraTheory.SIGMA_ALGEBRA]
+  \\ conj_asm1_tac >- simp[sigma_algebraTheory.subset_class_POW]
+  \\ simp[IN_POW]
+  \\ simp[SUBSET_DEF, PULL_EXISTS]
+  \\ simp[IN_POW, SUBSET_DEF]
+  \\ metis_tac[]
+QED
+
 (* ************************************************************************* *)
 
 Theorem distribution_distr :
