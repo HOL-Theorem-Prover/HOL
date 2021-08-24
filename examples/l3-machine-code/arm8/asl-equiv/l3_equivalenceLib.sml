@@ -259,12 +259,12 @@ val armv86a_ss =
     combinTheory.I_THM,
     lemTheory.w2ui_def,
     sail2_valuesTheory.make_the_value_def,
-    nat_of_int,
     sail2_operators_mwordsTheory.zeros_def,
     sail2_operators_mwordsTheory.concat_vec_def,
     armv86aTheory.sail_ones_def,
     armv86aTheory.Zeros_def,
     armv86aTheory.IsZero_def,
+    armv86aTheory.IsZeroBit_def,
     armv86aTheory.id_def,
     lem_machine_wordTheory.size_itself_def,
     sail2_valuesTheory.size_itself_int_def,
@@ -272,10 +272,13 @@ val armv86a_ss =
     sail2_operators_mwordsTheory.zero_extend_def,
     sail2_operators_mwordsTheory.not_vec_def,
     EL0_def, EL1_def, EL2_def, EL3_def,
-    place_slice_def, shiftl, shiftr,
+    place_slice_def,
     sail2_operators_mwordsTheory.extz_vec_def,
     sail2_operators_mwordsTheory.and_vec_def,
     sail2_operators_mwordsTheory.not_vec_def,
+    sail2_operators_mwordsTheory.or_vec_def,
+    sail2_operators_mwordsTheory.xor_vec_def,
+    sail2_operators_mwordsTheory.slice_def,
     sail2_operators_mwordsTheory.vector_truncate_def,
     sail2_stateTheory.internal_pickS_def,
     sail2_state_monadTheory.chooseS_def,
@@ -288,6 +291,7 @@ val armv86a_ss =
     sail2_operators_mwordsTheory.subrange_vec_inc_def,
     sail2_operators_mwordsTheory.update_subrange_vec_dec_def,
     sail2_operators_mwordsTheory.update_subrange_vec_inc_def,
+    sail2_operators_mwordsTheory.arith_shiftr_def,
     sail2_valuesTheory.update_list_def,
     sail2_valuesTheory.update_list_inc_def,
     sail2_valuesTheory.update_list_dec_def,
@@ -298,7 +302,8 @@ val armv86a_ss =
     sail2_valuesTheory.subrange_list_dec_def,
     sail2_valuesTheory.subrange_list_inc_def,
     sail2_operators_mwordsTheory.access_vec_inc_def,
-    sail2_operators_mwordsTheory.access_vec_dec_def
+    sail2_operators_mwordsTheory.access_vec_dec_def,
+    sail2_operatorsTheory.arith_shiftr_mword_def
   ];
 
 val _ = augment_srw_ss [armv86a_ss];

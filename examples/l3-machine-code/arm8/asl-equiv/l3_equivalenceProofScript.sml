@@ -8,28 +8,29 @@ open wordsLib intLib l3_equivalenceLib
 
 val _ = new_theory "l3_equivalenceProof";
 
+Type res = ``:('a, exception) result # regstate sequential_state``;
+
 (****************************************)
 
 Theorem l3_asl_SetTheFlags:
   ∀l3 asl1. state_rel l3 asl1 ⇒
-  ∀n z c v. ∃asl2.
+  ∀n z c v f. ∃asl2.
     do
       p1 <- read_regS PSTATE_ref;
-      p2 <- do
-          write_regS PSTATE_ref (p1 with ProcState_N := n);
-          read_regS PSTATE_ref od;
-      p3 <- do
-          write_regS PSTATE_ref (p2 with ProcState_Z := z);
-          read_regS PSTATE_ref od;
-      p4 <- do
-          write_regS PSTATE_ref (p3 with ProcState_C := c);
-          read_regS PSTATE_ref od;
+      write_regS PSTATE_ref (p1 with ProcState_N := n);
+      p2 <- read_regS PSTATE_ref;
+      write_regS PSTATE_ref (p2 with ProcState_Z := z);
+      p3 <- read_regS PSTATE_ref;
+      write_regS PSTATE_ref (p3 with ProcState_C := c);
+      p4 <- read_regS PSTATE_ref;
       write_regS PSTATE_ref (p4 with ProcState_V := v);
+      f
     od asl1 =
-    returnS () asl2 : (unit, exception) result # regstate sequential_state ∧
+    f asl2 : unit res ∧
     state_rel (SetTheFlags (T,HD (w2v n),HD (w2v z),HD (w2v c),HD (w2v v)) l3) asl2
 Proof
   rw[returnS, seqS, bindS, asl_reg_rws, COND_RATOR, SetTheFlags_def] >>
+  irule_at Any EQ_REFL >>
   state_rel_tac[] >> rpt $ pop_assum kall_tac >>
   rename1 `foo = _` >> Cases_on_word_value `foo` >> gvs[]
 QED
@@ -117,7 +118,6 @@ Proof
   simp[undefined_MoveWideOp_def] >>
   simp[execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
   reverse IF_CASES_TAC >> gvs[] >- (Cases_on_word_value `hw` >> gvs[]) >>
-  IF_CASES_TAC >> gvs[] >- (irule FALSITY >> ARITH_TAC) >>
   Cases_on `r = 31w` >> gvs[INT_ADD_CALCULATE]
   >- (DEP_REWRITE_TAC[X_set_31] >> simp[returnS] >> state_rel_tac[]) >>
   qmatch_goalsub_abbrev_tac `X_set _ reg v asl1` >>
@@ -140,7 +140,6 @@ Proof
   gvs[undefined_MoveWideOp_def] >>
   gvs[execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
   reverse IF_CASES_TAC >> gvs[] >- (Cases_on_word_value `hw` >> gvs[]) >>
-  IF_CASES_TAC >> gvs[] >- (irule FALSITY >> ARITH_TAC) >>
   Cases_on `r = 31w` >> gvs[INT_ADD_CALCULATE]
   >- (DEP_REWRITE_TAC[X_set_31] >> simp[returnS] >> state_rel_tac[]) >>
   qmatch_goalsub_abbrev_tac `X_set _ reg v asl1` >>
@@ -163,7 +162,6 @@ Proof
   gvs[undefined_MoveWideOp_def] >>
   gvs[execute_aarch64_instrs_integer_ins_ext_insert_movewide_def] >>
   reverse IF_CASES_TAC >> gvs[] >- (Cases_on_word_value `hw` >> gvs[]) >>
-  IF_CASES_TAC >> gvs[] >- (irule FALSITY >> ARITH_TAC) >>
   qmatch_goalsub_abbrev_tac `bindS x f asl1` >>
   `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
   qpat_x_assum `state_rel _ asl` kall_tac >>
@@ -244,11 +242,7 @@ Proof
         decode_adds_addsub_imm_aarch64_instrs_integer_arithmetic_add_sub_immediate_def,
         decode_add_addsub_imm_aarch64_instrs_integer_arithmetic_add_sub_immediate_def
         ] >>
-      simp[asl_reg_rws, seqS, returnS]
-      >- (qexists_tac `13` >> simp[])
-      >- (qexists_tac `14` >> simp[])
-      >- (qexists_tac `11` >> simp[])
-      >- (qexists_tac `12` >> simp[])) >>
+      simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL) >>
     simp[] >> pop_assum kall_tac >> unabbrev_all_tac >>
     simp[asl_reg_rws, seqS, Once returnS] >>
     qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
@@ -272,8 +266,7 @@ Proof
       >- (DEP_REWRITE_TAC[X_read] >> simp[int_ge] >> WORD_DECIDE_TAC)) >>
     simp[] >>
     qmatch_goalsub_abbrev_tac `bindS _ rest` >>
-    drule $ INST_TYPE [gamma |-> ``:unit``] returnS_bindS >>
-    simp[] >> strip_tac >> simp[Abbr `rest`] >>
+    drule returnS_bindS_unit >> simp[] >> strip_tac >> simp[Abbr `rest`] >>
     qspecl_then [`read_l3`,`branch_l30`,`branch_l31`] mp_tac l3_asl_AddWithCarry >>
     simp[flag_rel_def] >> strip_tac >>
     qmatch_goalsub_abbrev_tac `(_ ## _) add_res` >>
@@ -291,8 +284,8 @@ Proof
       dxrule l3_asl_SetTheFlags >>
       disch_then $ qspecl_then
         [`v2w [add_res1]`,`v2w [add_res2]`,
-         `v2w [add_res3]`,`v2w [add_res4]`] mp_tac >>
-      strip_tac >> simp[seqS, returnS] >>
+         `v2w [add_res3]`,`v2w [add_res4]`,`X_set 64 (&w2n r1) add_res0`] mp_tac >>
+      strip_tac >> simp[] >>
       drule $ b64 alpha X_set_not_31 >>
       disch_then $ qspecl_then [`64`,`&w2n r1`,`add_res0`] mp_tac >> simp[int_ge] >>
       Cases_on `r1 = 31w` >> gvs[]
@@ -367,8 +360,7 @@ Proof
       >- (DEP_REWRITE_TAC[X_read] >> simp[int_ge] >> WORD_DECIDE_TAC)) >>
     simp[] >>
     qmatch_goalsub_abbrev_tac `bindS _ rest` >>
-    drule $ INST_TYPE [gamma |-> ``:unit``] returnS_bindS >>
-    simp[] >> strip_tac >> simp[Abbr `rest`] >>
+    drule returnS_bindS_unit >> simp[] >> strip_tac >> simp[Abbr `rest`] >>
     qspecl_then [`read_l3`,`branch_l30`,`branch_l31`] mp_tac l3_asl_AddWithCarry >>
     simp[flag_rel_def] >> strip_tac >>
     qmatch_goalsub_abbrev_tac `(_ ## _) add_res` >>
@@ -386,8 +378,8 @@ Proof
       dxrule l3_asl_SetTheFlags >>
       disch_then $ qspecl_then
         [`v2w [add_res1]`,`v2w [add_res2]`,
-         `v2w [add_res3]`,`v2w [add_res4]`] mp_tac >>
-      strip_tac >> simp[seqS, returnS] >>
+         `v2w [add_res3]`,`v2w [add_res4]`,`X_set 64 (&w2n r1) add_res0`] mp_tac >>
+      strip_tac >> simp[] >>
       drule $ b64 alpha X_set_not_31 >>
       disch_then $ qspecl_then [`64`,`&w2n r1`,`add_res0`] mp_tac >> simp[int_ge] >>
       Cases_on `r1 = 31w` >> gvs[]
