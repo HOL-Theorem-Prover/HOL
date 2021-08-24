@@ -390,6 +390,154 @@ Proof
     )
 QED
 
+Theorem l3_models_asl_LogicalImmediate_T:
+  ∀i r2 r1.
+    IS_SOME (EncodeBitMask i)
+  ⇒ l3_models_asl_instr
+      (Data (LogicalImmediate@64 (1w, LogicalOp_AND, T, i, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >>
+  Cases_on `EncodeBitMask i` >> gvs[] >> rename1 `EncodeBitMask _ = SOME enc` >>
+  PairCases_on `enc` >> simp[encode_rws] >>
+  qmatch_goalsub_abbrev_tac `Decode opc` >>
+  `Decode opc = Data (LogicalImmediate@64 (1w, LogicalOp_AND, T, i, r2, r1))` by (
+    unabbrev_all_tac >>
+    simp[Decode_def, boolify32_def] >> blastLib.BBLAST_TAC >>
+    drule Decode_T_EncodeBitMask >> strip_tac >>
+    map_every qcollapse_tac [`enc0`,`enc1`,`enc2`,`r1`,`r2`] >>
+    simp[DecodeLogicalOp_def]) >>
+  unabbrev_all_tac >> simp[] >> rw[] >>
+  l3_run_tac >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_logical_immediate
+      (&w2n r1) 64 i (&w2n r2) LogicalOp_AND T od asl)` by (
+    unabbrev_all_tac >> asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+    simp[decode_ands_log_imm_aarch64_instrs_integer_logical_immediate_def] >>
+    simp[sail2_state_monadTheory.undefined_boolS_def,
+         armv86aTheory.undefined_LogicalOp_def] >>
+    imp_res_tac Decode_T_EncodeBitMask >>
+    imp_res_tac l3_asl_DecodeBitMasks >> simp[] >>
+    simp[asl_reg_rws, seqS, Once returnS] >> irule_at Any EQ_REFL) >>
+  simp[] >> pop_assum kall_tac >> unabbrev_all_tac >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_logical_immediate_def] >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >> impl_tac
+  >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> simp[asl_word_rws] >>
+  DEP_REWRITE_TAC[HD_MAP] >> simp[sail2_valuesTheory.just_list_def, w2v_not_NIL] >>
+  qmatch_goalsub_abbrev_tac `(_ >< _) flag` >>
+  qmatch_goalsub_abbrev_tac `X_set _ a b` >>
+  dxrule l3_asl_SetTheFlags >>
+  disch_then $ qspecl_then
+    [`(3 >< 3) flag`,`(2 >< 2) flag`,
+     `(1 >< 1) flag`,`(0 >< 0) flag`,`X_set 64 a b`] mp_tac >>
+  strip_tac >> simp[Abbr `a`, Abbr `b`] >>
+  Cases_on `r1 = 31w` >> gvs[X_set_31]
+  >- (
+    unabbrev_all_tac >> simp[returnS] >> gvs[SetTheFlags_def] >>
+    pop_assum mp_tac >> rpt $ pop_assum kall_tac >> strip_tac >>
+    state_rel_tac[] >> gvs[X_def] >> rpt $ pop_assum kall_tac >>
+    rename1 `v2w [HD (w2v foo)] @@ _` >> Cases_on `HD (w2v foo)` >> simp[] >>
+    pop_assum mp_tac >>
+    rewrite_tac[GSYM EL] >> DEP_REWRITE_TAC[el_w2v] >> simp[word_msb_def]
+    ) >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`i && X r2 l3`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> simp[returnS] >>
+  gvs[SetTheFlags_def, write'X_def, X_def, Abbr `flag`] >>
+  state_rel_tac[] >> rpt $ pop_assum kall_tac >>
+  rename1 `v2w [HD (w2v foo)] @@ _` >> Cases_on `HD (w2v foo)` >> simp[] >>
+  pop_assum mp_tac >>
+  rewrite_tac[GSYM EL] >> DEP_REWRITE_TAC[el_w2v] >> simp[word_msb_def]
+QED
+
+Definition l3_to_asl_LogicalOp:
+  l3_to_asl_LogicalOp (arm8$LogicalOp_AND) = armv86a_types$LogicalOp_AND ∧
+  l3_to_asl_LogicalOp (LogicalOp_ORR) = LogicalOp_ORR ∧
+  l3_to_asl_LogicalOp (LogicalOp_EOR) = LogicalOp_EOR
+End
+
+Theorem l3_models_asl_LogicalImmediate_F:
+  ∀op i r2 r1.
+    IS_SOME (EncodeBitMask i)
+  ⇒ l3_models_asl_instr (Data (LogicalImmediate@64 (1w, op, F, i, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >>
+  Cases_on `EncodeBitMask i` >> gvs[] >> rename1 `EncodeBitMask _ = SOME enc` >>
+  PairCases_on `enc` >> simp[] >>
+  `∃lop. EncodeLogicalOp (op, F) = SOME lop` by (
+    Cases_on `op` >> gvs[encode_rws]) >>
+  simp[encode_rws] >>
+  qmatch_goalsub_abbrev_tac `Decode opc` >>
+  `Decode opc = Data (LogicalImmediate@64 (1w, op, F, i, r2, r1))` by (
+    unabbrev_all_tac >>
+    simp[Decode_def, boolify32_def] >> blastLib.BBLAST_TAC >>
+    drule Decode_T_EncodeBitMask >> strip_tac >>
+    map_every qcollapse_tac [`enc0`,`enc1`,`enc2`,`r1`,`r2`,`lop`] >> simp[] >>
+    Cases_on `op` >> gvs[encode_rws, DecodeLogicalOp_def]) >>
+  unabbrev_all_tac >> simp[] >> rw[] >>
+  l3_run_tac >> pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_logical_immediate
+      (&w2n r1) 64 i (&w2n r2) (l3_to_asl_LogicalOp op) F od asl)` by (
+    unabbrev_all_tac >>
+    Cases_on `op` >> gvs[EncodeLogicalOp_def, LogicalOp_of_num_def] >>
+    asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+    simp[
+      decode_and_log_imm_aarch64_instrs_integer_logical_immediate_def,
+      decode_orr_log_imm_aarch64_instrs_integer_logical_immediate_def,
+      decode_eor_log_imm_aarch64_instrs_integer_logical_immediate_def
+      ] >>
+    simp[sail2_state_monadTheory.undefined_boolS_def,
+         armv86aTheory.undefined_LogicalOp_def] >>
+    imp_res_tac Decode_T_EncodeBitMask >>
+    imp_res_tac l3_asl_DecodeBitMasks >> simp[] >>
+    simp[asl_reg_rws, seqS, Once returnS, l3_to_asl_LogicalOp] >>
+    irule_at Any EQ_REFL) >>
+  simp[] >> pop_assum kall_tac >> unabbrev_all_tac >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_logical_immediate_def] >>
+  simp[dfn'LogicalImmediate_def] >>
+  `(w2n r1 = 31 ⇔ r1 = 0b11111w) ∧ (w2n r2 = 31 ⇔ r2 = 0b11111w)` by WORD_DECIDE_TAC >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >> impl_tac
+  >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `SP_set _ aslw` >>
+  qmatch_goalsub_abbrev_tac `write'SP l3w` >>
+  `aslw = l3w` by (
+    unabbrev_all_tac >> Cases_on `op` >> simp[l3_to_asl_LogicalOp]) >>
+  simp[] >> ntac 3 $ pop_assum kall_tac >>
+  IF_CASES_TAC >> simp[]
+  >- (
+    drule $ b64 alpha SP_set >>
+    disch_then $ qspec_then `l3w` assume_tac >> gvs[returnS]
+    )
+  >- (
+    drule $ b64 alpha X_set_not_31 >>
+    disch_then $ qspecl_then [`64`,`&w2n r1`,`l3w`] mp_tac >> simp[] >>
+    impl_tac >- ( simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> simp[returnS]
+    )
+QED
+
+Theorem l3_models_asl_LogicalImmediate:
+  ∀op b i r2 r1.
+    IS_SOME (EncodeBitMask i) ∧
+    IS_SOME (EncodeLogicalOp (op, b))
+  ⇒ l3_models_asl_instr (Data (LogicalImmediate@64 (1w, op, b, i, r2, r1)))
+Proof
+  Cases >> Cases >> gvs[EncodeLogicalOp_def] >>
+  simp[l3_models_asl_LogicalImmediate_T, l3_models_asl_LogicalImmediate_F]
+QED
+
 (****************************************)
 
 val _ = export_theory();
