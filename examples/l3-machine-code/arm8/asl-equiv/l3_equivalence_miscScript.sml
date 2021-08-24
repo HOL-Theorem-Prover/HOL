@@ -337,6 +337,53 @@ Proof
   Cases_on `l` >> rw[]
 QED
 
+Theorem v2w_word1_eq[simp]:
+  (∀b. v2w [b] : word1 = 0w ⇔ ¬b) ∧
+  (∀b. v2w [b] : word1 = 1w ⇔ b)
+Proof
+  conj_tac >> Cases >> gvs[]
+QED
+
+Theorem extract_bit:
+  ∀i w. i < dimindex (:α) ⇒ (i >< i) w : 1 word = v2w [word_bit i (w : α word)]
+Proof
+  rw[] >> bitstringLib.Cases_on_v2w `w` >>
+  simp[word_extract_v2w] >>
+  irule $ iffLR WORD_EQ >> rw[] >> Cases_on `x` >> gvs[] >>
+  simp[bit_v2w, testbit_el, word_bits_v2w, field_def, shiftr_def, fixwidth] >>
+  simp[DROP_TAKE, TAKE1, HD_DROP] >>
+  Cases_on `EL (dimindex (:α) - (i + 1)) v` >> gvs[] >> WORD_DECIDE_TAC
+QED
+
+Theorem extract_bit_64:
+  ∀i w. i < 64 ⇒ (i >< i) w : 1 word = v2w [word_bit i (w : 64 word)]
+Proof
+  rw[extract_bit]
+QED
+
+Theorem w2v_not_NIL:
+  ∀w. w2v w ≠ []
+Proof
+  rw[] >> qsuff_tac `LENGTH (w2v w) ≠ 0` >- rw[] >>
+  rewrite_tac[length_w2v] >> assume_tac EXISTS_HB >> gvs[]
+QED
+
+Theorem word_ror_alt:
+  ∀r (a : α word).  r < dimindex (:α) ⇒
+    a ⇄ r = a ≪ (dimindex (:α) − r) ‖ a ⋙ r
+Proof
+  rw[] >> bitstringLib.Cases_on_v2w `a` >> gvs[] >>
+  simp[word_ror_v2w, rotate_def] >> IF_CASES_TAC >> gvs[] >>
+  simp[word_lsl_v2w, word_lsr_v2w, rotate_def, word_or_v2w] >>
+  simp[Once v2w_11] >> simp[field_def, ADD1] >>
+  `shiftr v 0 = v` by simp[shiftr_def] >> simp[fixwidth] >>
+  simp[bor_def, bitwise_def, shiftl_def, shiftr_def, PAD_LEFT, PAD_RIGHT, MAX_DEF] >>
+  simp[fixwidth_REPLICATE, GSYM MAP_DROP, GSYM ZIP_DROP, DROP_APPEND] >>
+  `dimindex (:α) − r − dimindex (:α) = 0` by ARITH_TAC >> simp[] >>
+  rw[LIST_EQ_REWRITE, EL_DROP, EL_MAP, EL_ZIP, EL_APPEND_EQN, EL_REPLICATE] >> rw[]
+QED
+
+
 (****************************************)
 
 val _ = export_theory();
