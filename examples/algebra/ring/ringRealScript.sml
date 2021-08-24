@@ -3,7 +3,7 @@
 (* ------------------------------------------------------------------------- *)
 open HolKernel boolLib bossLib Parse
      realTheory ringTheory ringMapTheory ringUnitTheory
-     monoidRealTheory groupRealTheory
+     ringDividesTheory monoidRealTheory groupRealTheory
 
 val _ = new_theory"ringReal";
 
@@ -41,6 +41,24 @@ Proof
   \\ irule ring_unit_linv_unique
   \\ simp[]
   \\ simp[Reals_def, REAL_MUL_LINV, monoidOrderTheory.Invertibles_carrier]
+QED
+
+Theorem ring_divides_Reals:
+  ring_divides Reals p q <=> (p = 0 ==> q = 0)
+Proof
+  rw[ring_divides_def]
+  \\ rw[Reals_def]
+  \\ Cases_on`p = 0` \\ simp[]
+  \\ qexists_tac`q / p`
+  \\ simp[REAL_DIV_RMUL]
+QED
+
+Theorem ring_prime_Reals[simp]:
+  ring_prime Reals p
+Proof
+  rw[ring_prime_def]
+  \\ fs[ring_divides_Reals]
+  \\ fs[Reals_def]
 QED
 
 val _ = export_theory();
