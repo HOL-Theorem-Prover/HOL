@@ -12,6 +12,186 @@ Type res = ``:('a, exception) result # regstate sequential_state``;
 
 (****************************************)
 
+Theorem HaveEL_T[simp]:
+  ∀el. HaveEL el = returnS T
+Proof
+  rw[FUN_EQ_THM, HaveEL_def, returnS] >>
+  Cases_on_word_value `el` >> gvs[]
+QED
+
+Theorem HaveVirtHostExt_T[simp]:
+  HaveVirtHostExt () = T
+Proof
+  rw[HaveVirtHostExt_def]
+QED
+
+Theorem HavePACExt_T[simp]:
+  HavePACExt () = T
+Proof
+  rw[HavePACExt_def]
+QED
+
+Theorem HaveAnyAArch32_T[simp]:
+  HaveAnyAArch32 () = T
+Proof
+  rw[HaveAnyAArch32_def]
+QED
+
+Theorem HighestELUsingAArch32_F:
+  ∀asl.  ¬ asl.regstate.bool_reg "__highest_el_aarch32"
+  ⇒ HighestELUsingAArch32 () asl = returnS F asl
+Proof
+  simp[HighestELUsingAArch32_def, asl_reg_rws, highest_el_aarch32_ref_def]
+QED
+
+Theorem UsingAArch32_F:
+  (asl.regstate.ProcState_reg "PSTATE").ProcState_nRW = 0b0w ∧
+  ¬ asl.regstate.bool_reg "__highest_el_aarch32"
+  ⇒ UsingAArch32 () asl = returnS F asl
+Proof
+  rw[UsingAArch32_def] >>
+  simp[Once bindS, asl_reg_rws, returnS] >>
+  simp[HighestELUsingAArch32_def, asl_reg_rws, highest_el_aarch32_ref_def] >>
+  simp[bindS, returnS]
+QED
+
+Theorem HighestEL_EL3[simp]:
+  HighestEL () = returnS EL3
+Proof
+  rw[HighestEL_def]
+QED
+
+Theorem HaveSecureEL2Ext_T[simp]:
+  HaveSecureEL2Ext () = T
+Proof
+  rw[HaveSecureEL2Ext_def]
+QED
+
+Theorem HaveAArch32EL:
+  ∀asl el. ¬ asl.regstate.bool_reg "__highest_el_aarch32"
+  ⇒ HaveAArch32EL el asl = returnS (el ≠ EL3) asl
+Proof
+  rpt gen_tac >> strip_tac >> simp[HaveAArch32EL_def] >>
+  drule HighestELUsingAArch32_F >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >>
+  disch_then kall_tac >>
+  Cases_on_word_value `el` >> simp[returnS]
+QED
+
+Theorem IsSecureBelowEL3:
+  ∀asl. ¬ asl.regstate.bool_reg "__highest_el_aarch32"
+  ⇒ IsSecureBelowEL3 () asl =
+    returnS (¬ word_bit 0 (asl.regstate.bitvector_64_dec_reg "SCR_EL3")) asl
+Proof
+  rw[IsSecureBelowEL3_def, SCR_GEN_read_def, SCR_read_def] >>
+  drule HighestELUsingAArch32_F >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >>
+  disch_then kall_tac >> simp[asl_reg_rws, returnS, bindS, asl_word_rws] >>
+  simp[EL_MAP, sail2_valuesTheory.just_list_def] >>
+  DEP_REWRITE_TAC[el_w2v] >> simp[] >> blastLib.BBLAST_TAC >> simp[SCR_EL3_ref_def]
+QED
+
+(*
+  Alternatively:
+  ¬ word_bit 31 HCR_EL2 ⇒
+    word_bit 31 HCR_EL3 ∧ ¬ word_bit 27 HCR_EL2
+*)
+Theorem ELUsingAArch32_F:
+  ∀asl el.
+    ¬ asl.regstate.bool_reg "__highest_el_aarch32" ∧
+    (let SCR_EL3 = asl.regstate.bitvector_64_dec_reg "SCR_EL3" in
+      word_bit 0 SCR_EL3 (* ELs below 3 are non-secure *) ∧
+      word_bit 10 SCR_EL3 (* RW bit - ELs below 3 are not AArch32 *)) ∧
+    (let HCR_EL2 = asl.regstate.bitvector_64_dec_reg "HCR_EL2" in
+      word_bit 31 HCR_EL2 (* RW bit - EL1 is AArch64 *)) ∧
+    (asl.regstate.ProcState_reg "PSTATE").ProcState_nRW = 0b0w ∧
+    (el = EL0 ⇒ (asl.regstate.ProcState_reg "PSTATE").ProcState_EL = EL0)
+  ⇒ ELUsingAArch32 el asl = returnS F asl
+Proof
+  rw[] >> simp[ELUsingAArch32_def] >>
+  drule IsSecureBelowEL3 >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >>
+  disch_then kall_tac >> pop_assum kall_tac >>
+  simp[ELStateUsingAArch32_def, sail2_state_monadTheory.undefined_boolS_def] >>
+  simp[ELStateUsingAArch32K_def] >>
+  drule HaveAArch32EL >> disch_then $ qspec_then `el` assume_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >> strip_tac >>
+  IF_CASES_TAC >> simp[] >>
+  drule HighestELUsingAArch32_F >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >>
+  rw[sail2_state_monadTheory.undefined_boolS_def] >>
+  simp[pairTheory.LAMBDA_PROD] >>
+  simp[asl_reg_rws, asl_word_rws, SCR_EL3_ref_def, HCR_EL2_ref_def] >>
+  simp[sail2_operators_mwordsTheory.slice_def] >>
+  simp[extract_bit_64, v2w_word1_eq] >>
+  ntac 3 $ simp[Once bindS, Once returnS] >>
+  IF_CASES_TAC >> simp[] >>
+  ntac 2 $ simp[Once bindS, Once returnS]
+QED
+
+Theorem IsSecureEL2Enabled_F:
+  ∀asl.
+    ¬ asl.regstate.bool_reg "__highest_el_aarch32" ∧
+    (let SCR_EL3 = asl.regstate.bitvector_64_dec_reg "SCR_EL3" in
+     word_bit 0 SCR_EL3 (* ELs below 3 are non-secure *) ∧
+     word_bit 10 SCR_EL3 (* RW bit - ELs below 3 are not AArch32 *) ∧
+     ¬ word_bit 18 SCR_EL3 (* Secure EL2 disabled *)) ∧
+    (let HCR_EL2 = asl.regstate.bitvector_64_dec_reg "HCR_EL2" in
+      word_bit 31 HCR_EL2 (* RW bit - EL1 is AArch64 *)) ∧
+    (asl.regstate.ProcState_reg "PSTATE").ProcState_nRW = 0b0w
+  ⇒ IsSecureEL2Enabled () asl = returnS F asl
+Proof
+  rw[] >> simp[IsSecureEL2Enabled_def] >>
+  qspecl_then [`asl`,`EL3`] mp_tac ELUsingAArch32_F >> rw[] >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> rw[] >>
+  simp[asl_reg_rws, SCR_EL3_ref_def, returnS, bindS, extract_bit_64]
+QED
+
+Theorem ELIsInHost_F:
+  ∀asl el.
+    ¬ asl.regstate.bool_reg "__highest_el_aarch32" ∧
+    (let SCR_EL3 = asl.regstate.bitvector_64_dec_reg "SCR_EL3" in
+     word_bit 0 SCR_EL3 (* ELs below 3 are non-secure *) ∧
+     word_bit 10 SCR_EL3 (* RW bit - ELs below 3 are not AArch32 *) ∧
+     ¬ word_bit 18 SCR_EL3 (* Secure EL2 disabled *)) ∧
+    (let HCR_EL2 = asl.regstate.bitvector_64_dec_reg "HCR_EL2" in
+      word_bit 31 HCR_EL2 (* RW bit - EL1 is AArch64 *) ∧
+      ¬ word_bit 34 HCR_EL2 (* Virtualization Host Extension (FEAT_VHE) disabled *)) ∧
+    (asl.regstate.ProcState_reg "PSTATE").ProcState_nRW = 0b0w
+  ⇒ ELIsInHost el asl = returnS F asl
+Proof
+  rw[] >> simp[ELIsInHost_def] >>
+  qspec_then `asl` mp_tac IsSecureEL2Enabled_F >> simp[] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >> disch_then kall_tac >>
+  drule IsSecureBelowEL3 >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >> disch_then kall_tac >>
+  qspecl_then [`asl`,`EL2`] mp_tac ELUsingAArch32_F >> simp[] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >> disch_then kall_tac >>
+  simp[asl_reg_rws, HCR_EL2_ref_def, returnS, bindS, COND_RATOR, extract_bit_64]
+QED
+
+Theorem S1TranslationRegime:
+  ∀asl el.
+    ¬ asl.regstate.bool_reg "__highest_el_aarch32" ∧
+    (let SCR_EL3 = asl.regstate.bitvector_64_dec_reg "SCR_EL3" in
+     word_bit 0 SCR_EL3 (* ELs below 3 are non-secure *) ∧
+     word_bit 10 SCR_EL3 (* RW bit - ELs below 3 are not AArch32 *) ∧
+     ¬ word_bit 18 SCR_EL3 (* Secure EL2 disabled *)) ∧
+    (let HCR_EL2 = asl.regstate.bitvector_64_dec_reg "HCR_EL2" in
+      word_bit 31 HCR_EL2 (* RW bit - EL1 is AArch64 *) ∧
+      ¬ word_bit 34 HCR_EL2 (* Virtualization Host Extension (FEAT_VHE) disabled *)) ∧
+    (asl.regstate.ProcState_reg "PSTATE").ProcState_nRW = 0b0w
+  ⇒ S1TranslationRegime el asl = returnS (if el = 0w then 1w else el) asl
+Proof
+  rw[] >> simp[S1TranslationRegime_def] >>
+  qspecl_then [`asl`,`3w`] mp_tac ELUsingAArch32_F >> simp[] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word2``] returnS_bindS >> simp[] >> strip_tac >>
+  qspecl_then [`asl`,`0w`] mp_tac ELIsInHost_F >> simp[] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word2``] returnS_bindS >> simp[] >> strip_tac
+QED
+
+(****************************************)
+
 Theorem l3_asl_SetTheFlags:
   ∀l3 asl1. state_rel l3 asl1 ⇒
   ∀n z c v f. ∃asl2.
@@ -92,6 +272,29 @@ Proof
   IF_CASES_TAC >> gvs[] >- state_rel_tac[] >>
   simp[bindS, COND_RATOR, returnS] >>
   Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> state_rel_tac[]
+QED
+
+Theorem PC_read:
+  ∀l3 asl. state_rel l3 asl ⇒
+    PC_read () asl = returnS l3.PC asl
+Proof
+  rw[] >> simp[PC_read_def] >> state_rel_tac[]
+QED
+
+Theorem PSTATE_read:
+  ∀asl.
+    read_regS PSTATE_ref asl =
+    returnS (asl.regstate.ProcState_reg "PSTATE") asl : ProcState res
+Proof
+  rw[asl_reg_rws]
+QED
+
+Theorem TCR_EL1_read:
+  ∀l3 asl. state_rel l3 asl ⇒
+    read_regS TCR_EL1_ref asl =
+    returnS (reg'TCR_EL1 l3.TCR_EL1) asl : word64 res
+Proof
+  rw[asl_reg_rws] >> state_rel_tac[]
 QED
 
 (****************************************)

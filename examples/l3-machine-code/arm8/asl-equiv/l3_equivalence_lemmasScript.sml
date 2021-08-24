@@ -409,6 +409,26 @@ Proof
   cheat (* TODO *)
 QED
 
+Theorem HasArchVersion_T[simp]:
+  ∀version. HasArchVersion version = T
+Proof
+  simp [
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL0_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL1_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL2_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL3_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_MPAM_def,
+    armv86aTheory.CFG_ID_AA64PFR1_EL1_MPAM_frac_def,
+    armv86aTheory.HasArchVersion_def,
+    armv86aTheory.v81_implemented_def,
+    armv86aTheory.v82_implemented_def,
+    armv86aTheory.v83_implemented_def,
+    armv86aTheory.v84_implemented_def,
+    armv86aTheory.v85_implemented_def,
+    armv86aTheory.v86_implemented_def
+  ] >>
+  Cases >> simp[]
+QED
 
 (****************************************)
 

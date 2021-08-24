@@ -303,7 +303,19 @@ val armv86a_ss =
     sail2_valuesTheory.subrange_list_inc_def,
     sail2_operators_mwordsTheory.access_vec_inc_def,
     sail2_operators_mwordsTheory.access_vec_dec_def,
-    sail2_operatorsTheory.arith_shiftr_mword_def
+    sail2_operatorsTheory.arith_shiftr_mword_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL0_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL1_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL2_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_EL3_def,
+    armv86aTheory.CFG_ID_AA64PFR0_EL1_MPAM_def,
+    armv86aTheory.CFG_ID_AA64PFR1_EL1_MPAM_frac_def,
+    armv86aTheory.v81_implemented_def,
+    armv86aTheory.v82_implemented_def,
+    armv86aTheory.v83_implemented_def,
+    armv86aTheory.v84_implemented_def,
+    armv86aTheory.v85_implemented_def,
+    armv86aTheory.v86_implemented_def
   ];
 
 val _ = augment_srw_ss [armv86a_ss];
