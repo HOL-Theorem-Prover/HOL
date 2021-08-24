@@ -2625,7 +2625,6 @@ Proof
     \\ simp[]
     \\ fs[weak_every_mem, listTheory.MEM_EL, PULL_EXISTS]
     \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD]
-    \\ conj_asm1_tac >- simp[abelian_group_is_abelian_monoid]
     \\ AP_TERM_TAC
     \\ dep_rewrite.DEP_REWRITE_TAC[MP_CANON GBAG_IMAGE_FILTER]
     \\ simp[]
@@ -2670,7 +2669,6 @@ Proof
   \\ simp[FORALL_PROD]
   \\ dep_rewrite.DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
   \\ simp[]
-  \\ conj_asm1_tac >- simp[abelian_group_is_abelian_monoid]
   \\ irule GITBAG_CONG
   \\ simp[PULL_EXISTS, EXISTS_PROD, FORALL_PROD]
   \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD]

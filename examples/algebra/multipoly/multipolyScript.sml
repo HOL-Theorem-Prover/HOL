@@ -194,8 +194,6 @@ Proof
   \\ simp[]
   \\ DEP_REWRITE_TAC[GITBAG_INSERT_THM]
   \\ simp[EL_LENGTH_SNOC]
-  \\ simp[GSYM CONJ_ASSOC]
-  \\ conj_asm1_tac >- metis_tac[Ring_def, AbelianMonoid_def, AbelianGroup_def, Group_def]
   \\ conj_asm1_tac
   >- fs[SUBSET_DEF, PULL_EXISTS, EL_SNOC, weak_every_mem, MEM_EL]
   \\ irule EQ_SYM
@@ -205,7 +203,8 @@ Proof
   \\ irule EQ_TRANS
   \\ qexists_tac`a + b'`
   \\ reverse conj_tac >- (
-    imp_res_tac AbelianMonoid_def
+    `AbelianMonoid r.sum` by simp[]
+    \\ imp_res_tac AbelianMonoid_def
     \\ first_x_assum irule
     \\ conj_tac >- simp[Abbr`a`]
     \\ qunabbrev_tac`b'`
@@ -1124,7 +1123,6 @@ Proof
   \\ pop_assum SUBST1_TAC
   \\ irule GBAG_in_carrier
   \\ simp[SUBSET_DEF]
-  \\ conj_asm1_tac >- metis_tac[Ring_def, AbelianGroup_def, Group_def, AbelianMonoid_def]
   \\ reverse conj_tac
   >- (
     rw[]
@@ -1886,9 +1884,6 @@ Proof
   \\ DEP_REWRITE_TAC[GBAG_UNION]
   \\ imp_res_tac polyRingTheory.poly_is_weak
   \\ fs[polyWeakTheory.weak_every_mem, listTheory.MEM_EL, PULL_EXISTS]
-  \\ simp[GSYM CONJ_ASSOC]
-  \\ conj_asm1_tac >- simp[groupTheory.abelian_group_is_abelian_monoid]
-  \\ simp[CONJ_ASSOC]
   \\ conj_tac
   >- ( simp[Abbr`s`] \\ simp[SUBSET_DEF, PULL_EXISTS, FORALL_PROD] )
   \\ qmatch_goalsub_abbrev_tac`_ + zz`
@@ -2017,7 +2012,6 @@ Proof
   \\ irule GITBAG_CONG
   \\ simp[SUBSET_DEF, PULL_EXISTS, EXISTS_PROD]
   \\ fs[combinTheory.o_DEF, PULL_EXISTS, EXISTS_PROD]
-  \\ reverse conj_asm2_tac >- simp[abelian_group_is_abelian_monoid]
   \\ qx_gen_tac`z`
   \\ simp[BAG_IMAGE_DEF]
   \\ simp[BAG_FILTER_BAG_OF_SET]
@@ -2402,8 +2396,6 @@ Proof
   \\ disch_then(SUBST1_TAC o GSYM)
   \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
   \\ DEP_REWRITE_TAC[GITBAG_INSERT_THM]
-  \\ simp[GSYM CONJ_ASSOC]
-  \\ conj_asm1_tac >- simp[abelian_group_is_abelian_monoid]
   \\ `∀x. p x IN r.carrier` by fs[mpoly_def, SUBSET_DEF, PULL_EXISTS]
   \\ simp[SUBSET_DEF, PULL_EXISTS]
   \\ DEP_ONCE_REWRITE_TAC[GITBAG_GBAG]
