@@ -4,6 +4,8 @@ sig
 
   val mk_blast_thm : term -> thm
   val b64 : hol_type -> thm -> thm
+  val one : hol_type
+  val qcollapse_tac : term quotation -> tactic
 
   val l3_eval : thm list -> term -> thm
   val l3_eval_tac : thm list -> tactic

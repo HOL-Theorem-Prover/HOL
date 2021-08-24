@@ -21,6 +21,7 @@ val _ = wordsLib.guess_lengths();
 val _ = numLib.prefer_num();
 
 val _ = Globals.show_assums := false;
+val _ = Globals.max_print_depth := 50;
 
 val _ = augment_srw_ss [
     bitstringLib.v2w_n2w_ss,
@@ -65,6 +66,11 @@ in
       blastLib.BBLAST_PROVE (boolSyntax.mk_eq (r, l)) |> SIMP_RULE bool_ss []
     end
 end
+
+fun qcollapse_tac q (gl as (asl,w)) =
+  let val ctxt = free_varsl (w::asl)
+      val tm = Parse.parse_in_context ctxt q
+  in SUBST_ALL_TAC (mk_blast_thm tm) end gl;
 
 (* Takes an opcode (which may be multiple concatenated fields) and attempts to
    decode fully, simplifying result. Uses arm8_stepLib.arm8_decode. *)
@@ -229,7 +235,11 @@ val asl_cexecute_tac = asl_execute_tac_helper CEVAL;
 
 (******************** Other stuff ********************)
 
+(***** types *****)
 fun b64 ty = INST_TYPE [ty |-> ``:64``];
+
+val one = ``:unit``;
+
 
 (***** current compset *****)
 (*
