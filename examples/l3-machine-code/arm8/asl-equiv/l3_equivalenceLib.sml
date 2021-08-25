@@ -315,7 +315,21 @@ val armv86a_ss =
     armv86aTheory.v83_implemented_def,
     armv86aTheory.v84_implemented_def,
     armv86aTheory.v85_implemented_def,
-    armv86aTheory.v86_implemented_def
+    armv86aTheory.v86_implemented_def,
+    armv86aTheory.sext_subrange_def,
+    armv86aTheory.sext_slice_def,
+    armv86aTheory.zext_subrange_def,
+    armv86aTheory.zext_slice_def,
+    armv86aTheory.slice_mask_def,
+    armv86aTheory.sail_mask_def,
+    sail2_operators_mwordsTheory.sub_vec_def,
+    sail2_valuesTheory.int_of_mword_def,
+    sail2_operators_mwordsTheory.exts_vec_def,
+    sail2_operators_mwordsTheory.add_vec_def,
+    sail2_operators_mwordsTheory.add_vec_int_def,
+    sail2_operatorsTheory.arith_op_bv_int_def,
+    sail2_valuesTheory.int_of_mword_def,
+    sail2_operators_mwordsTheory.sign_extend_def
   ];
 
 val _ = augment_srw_ss [armv86a_ss];

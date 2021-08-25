@@ -105,5 +105,54 @@ Definition l3_models_asl_instr_def:
       | _ => F
 End
 
+Definition l3_models_asl_subject_to_def:
+  l3_models_asl_subject_to P opcode ⇔
+    Decode opcode ≠ Unallocated ∧
+    ∀ l3 asl l3'.
+      state_rel l3 asl ∧
+      Run (Decode opcode) l3 = l3' ∧
+      l3'.exception = NoException ∧
+      P asl
+    ⇒ case seqS (write_regS SEE_ref (~1)) (ExecuteA64 opcode) asl of
+        | (Value _, asl') => state_rel l3' asl' ∧ P asl'
+        | _ => F
+End
+
+Definition l3_models_asl_instr_subject_to_def:
+  l3_models_asl_instr_subject_to P instr ⇔
+    case Encode instr of
+      | ARM8 opcode => l3_models_asl_subject_to P opcode
+      | _ => F
+End
+
+Theorem l3_models_asl_K:
+  l3_models_asl = l3_models_asl_subject_to (K T)
+Proof
+  rw[FUN_EQ_THM, l3_models_asl_def, l3_models_asl_subject_to_def]
+QED
+
+Theorem l3_models_asl_instr_K:
+  l3_models_asl_instr = l3_models_asl_instr_subject_to (K T)
+Proof
+  rw[FUN_EQ_THM, l3_models_asl_instr_def, l3_models_asl_instr_subject_to_def] >>
+  CASE_TAC >> gvs[l3_models_asl_K]
+QED
+
+Definition asl_sys_regs_ok_def:
+  asl_sys_regs_ok asl ⇔
+
+    ¬ asl.regstate.bool_reg "__highest_el_aarch32" ∧
+    (asl.regstate.ProcState_reg "PSTATE").ProcState_nRW = 0b0w ∧
+
+    (let SCR_EL3 = asl.regstate.bitvector_64_dec_reg "SCR_EL3" in
+     word_bit 0 SCR_EL3 (* ELs below 3 are non-secure *) ∧
+     word_bit 10 SCR_EL3 (* RW bit - ELs below 3 are not AArch32 *) ∧
+     ¬word_bit 18 SCR_EL3 (* Secure EL2 disabled *)) ∧
+
+    (let HCR_EL2 = asl.regstate.bitvector_64_dec_reg "HCR_EL2" in
+      word_bit 31 HCR_EL2 (* RW bit - EL1 is AArch64 *) ∧
+      ¬word_bit 34 HCR_EL2 (* Virtualization Host Extension (FEAT_VHE) disabled *))
+End
+
 val _ = export_theory();
 
