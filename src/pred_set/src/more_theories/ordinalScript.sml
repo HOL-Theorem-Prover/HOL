@@ -172,6 +172,13 @@ val preds_11 = store_thm(
   metis_tac [ordlt_REFL]);
 val _ = export_rewrites ["preds_11"]
 
+Theorem ordlt_preds_mono:
+  a < b ==> preds a <<= preds b
+Proof
+  strip_tac >> irule CARD_LE_SUBSET >> simp[SUBSET_DEF] >>
+  metis_tac[ordlt_TRANS]
+QED
+
 val downward_closed_def = Define`
   downward_closed s <=>
     !a b. a IN s /\ ordlt b a ==> b IN s
@@ -2202,7 +2209,7 @@ Definition csuc_def:
 End
 
 Definition cardSUC_def:
-  cardSUC (s : 'a set) = csuc (oleast a:'a ordinal. preds a =~ s)
+  cardSUC (s : 'a set) = preds $ csuc (oleast a:'a ordinal. preds a =~ s)
 End
 
 Theorem bumpUNIV_cardlt:
@@ -2349,7 +2356,7 @@ Proof
 QED
 
 Theorem cardSUC_EQ0[simp]:
-  cardSUC A <> 0 /\ cardSUC A <> 0
+  cardSUC A <> {}
 Proof
   simp[cardSUC_def]
 QED
@@ -2548,7 +2555,7 @@ Proof
 QED
 
 Theorem lt_cardSUC:
-  A <</= preds (cardSUC A)
+  A <</= cardSUC A
 Proof
   simp[cardSUC_def] >> qabbrev_tac ‘Aord = oleast a:'a ordinal. preds a =~ A’ >>
   ‘preds Aord =~ A’
@@ -2579,8 +2586,8 @@ Proof
   simp[cardlt_lepreds]
 QED
 
-Theorem le_cardSUC:
-  A <<= preds (cardSUC A)
+Theorem le_cardSUC[simp]:
+  A <<= cardSUC A
 Proof
   metis_tac[lt_cardSUC, cardleq_lteq]
 QED
@@ -2620,35 +2627,47 @@ Proof
   simp[preds_nat, CARD_LE_CARD, CARD_INJ_IMAGE]
 QED
 
-Theorem cardSUC_EQN:
-  cardSUC A = &n <=> ?m. n = SUC m /\ FINITE A /\ CARD A = m
+Theorem FINITE_cardSUC[simp]:
+  FINITE (cardSUC A) <=> FINITE A
 Proof
-  simp[cardSUC_def, GSYM fromNat_SUC, Excl "fromNat_SUC", EQ_IMP_THM,
-       PULL_EXISTS] >> conj_tac
-  >- (qx_gen_tac ‘m’ >> DEEP_INTRO_TAC oleast_intro >> conj_tac
-      >- (irule cardeq_ordinals_exist >>
-          resolve_then (Pos hd) irule CARD_LE_UNIV cardleq_TRANS >>
-          simp[disjUNION_UNIV, CARD_LE_ADDL]) >> qx_gen_tac ‘a’ >> strip_tac >>
-      strip_tac >> gvs[preds_nat] >>
-      ‘FINITE A’
-        by (first_assum $ C (resolve_then Any irule)
-            (ONCE_REWRITE_RULE [cardeq_SYM] CARD_EQ_FINITE) >>
-            simp[]) >>
-      gs[CARD_EQ_CARD, CARD_INJ_IMAGE]) >>
-  strip_tac >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+  simp[cardSUC_def, FINITE_preds] >> DEEP_INTRO_TAC oleast_intro >>
+  rpt strip_tac
   >- (irule cardeq_ordinals_exist >>
       resolve_then (Pos hd) irule CARD_LE_UNIV cardleq_TRANS >>
-      simp[disjUNION_UNIV, CARD_LE_ADDL]) >> rpt strip_tac >>
-  ‘FINITE (preds a)’ by metis_tac[CARD_EQ_FINITE] >>
-  gvs[FINITE_preds, preds_nat, CARD_EQ_CARD, CARD_INJ_IMAGE]
+      simp[disjUNION_UNIV, CARD_LE_ADDL]) >>
+  eq_tac
+  >- (strip_tac >> gvs[] >> drule_then irule (iffLR CARDEQ_FINITE) >>
+      simp[preds_nat]) >>
+  strip_tac >> drule_then drule (iffRL CARDEQ_FINITE) >>
+  simp[FINITE_preds]
 QED
 
-
-
+Theorem cardleq_preds_csuc:
+  preds a <<= preds b ==> preds (csuc a) <<= preds (csuc b)
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> rw[] >>
+  DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> rw[] >>
+  rename [‘preds a <<= preds b’, ‘preds b <</= preds c’,
+          ‘preds a <</= preds d’] >>
+  CCONTR_TAC >>
+  ‘?c' : ('a + num -> bool) ordinal.
+     orderiso (wobound c allOrds) (wobound c' allOrds) /\
+     preds c =~ preds c'’
+    by (irule transfer_ordinals >>
+        resolve_then (Pos last) irule preds_inj_univ cardleq_TRANS >>
+        metis_tac[cardleq_lteq]) >>
+  ‘preds c' <</= preds d’ by metis_tac[CARD_LT_CONG, cardeq_REFL] >>
+  drule_then assume_tac cardlt_preds >> first_x_assum drule >>
+  metis_tac[CARD_LE_TRANS, CARD_LET_TRANS, CARD_LT_REFL, CARD_LT_CONG,
+            cardeq_REFL]
+QED
 
 (* uncountable ordinals *)
-Type ucinf = “:('a + (num -> bool)) inf”
-Type ucord = “:('a + (num -> bool)) ordinal”
+Type ucinf = “:('a + num -> bool) inf”
+Type ucord = “:('a + num -> bool) ordinal”
+
 
 Theorem ucinf_uncountable: ~countable univ(:'a ucinf)
 Proof
@@ -2659,8 +2678,10 @@ Theorem Unum_cardlt_ucinf: univ(:num) <</= univ(:'a ucinf)
 Proof
   simp[cardlt_lenoteq] >> conj_tac
   >- (simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]) >>
-  strip_tac >> imp_res_tac countable_cardeq >>
-  fs[ucinf_uncountable, num_countable]
+  strip_tac >> drule countable_cardeq >>
+  simp[ucinf_uncountable, num_countable] >> strip_tac >>
+  resolve_then Any drule UNIV_fun_exp (iffLR countable_cardeq) >>
+  simp[countable_setexp, SUM_UNIV]
 QED
 
 Theorem Unum_cardle_ucinf: univ(:num) <<= univ(:'a ucinf)
@@ -2674,18 +2695,19 @@ Proof
   spose_not_then assume_tac >> fs[cardlt_lenoteq] >>
   `?f. INJ f univ(:'a ucinf) {a:'a ucord | countableOrd a}`
      by metis_tac[cardleq_def] >>
-  `(!u. countableOrd (f u)) /\ (!u v. f u = f v ==> u = v)`
-      by fs[INJ_DEF] >>
+  `(!u. countableOrd (f u)) /\ (!u v. f u = f v <=> u = v)`
+      by fs[INJ_IFF] >>
   qabbrev_tac `fU = IMAGE f univ(:'a ucinf)` >>
   `fU <<= univ(:'a ucinf)` by simp[Abbr`fU`, IMAGE_cardleq] >>
-  first_assum (ASSUME_TAC o MATCH_MP (GEN_ALL sup_thm)) >>
+  drule_then assume_tac sup_thm >>
   Cases_on `countableOrd (sup fU)`
   >- (`!u. f u <= sup fU`
         by (gen_tac >> match_mp_tac suple_thm >> simp[Abbr`fU`]) >>
       qsuff_tac `univ(:'a ucinf) <<= preds (sup fU)`
       >- (strip_tac >>
           `preds (sup fU) <<= univ(:num)` by fs[countable_thm] >>
-          metis_tac[countable_thm, ucinf_uncountable, cardleq_TRANS]) >>
+          drule_all cardleq_TRANS >>
+          REWRITE_TAC [GSYM countable_thm, ucinf_uncountable]) >>
       Cases_on `?u. f u = sup fU`
       >- (pop_assum strip_assume_tac >>
           `!v. v <> u ==> f v < sup fU` by metis_tac[ordle_lteq] >>
@@ -2733,5 +2755,35 @@ QED
 (* |- ~countableOrd omega1 *)
 Theorem omega1_not_countable =
   x_lt_omega1_countable |> Q.INST[`x` |-> `omega1`] |> SIMP_RULE (srw_ss()) []
+
+Theorem preds_omega_UNIV:
+  preds omega =~ univ(:num)
+Proof
+  simp[cardeq_def] >>
+  ONCE_REWRITE_TAC [BIJ_SYM] >>
+  simp[BIJ_DEF, INJ_IFF, SURJ_DEF, lt_omega, PULL_EXISTS] >>
+  qexists_tac ‘fromNat’ >> simp[]
+QED
+
+Theorem preds_omega_lt_preds_omega1:
+  preds omega <</= preds (omega1 : ('a + num -> bool) ordinal)
+Proof
+  assume_tac omega1_not_countable >>
+  gs[countable_thm] >>
+  resolve_then (Pos hd) (resolve_then (Pos hd) irule cardeq_REFL)
+               preds_omega_UNIV (iffRL CARD_LT_CONG) >> simp[]
+QED
+
+Theorem csuc_omega:
+  csuc omega = omega1
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- irule_at Any preds_omega_lt_preds_omega1 >>
+  rpt strip_tac >> irule ordle_ANTISYM >> CCONTR_TAC >> gs[]
+  >- (rename [‘a < omega1’, ‘preds omega <</= preds a’] >>
+      gs[x_lt_omega1_countable, countable_thm] >>
+      metis_tac[CARD_LE_CONG, cardeq_REFL, preds_omega_UNIV]) >>
+  first_x_assum drule >> simp[preds_omega_lt_preds_omega1]
+QED
 
 val _ = export_theory()
