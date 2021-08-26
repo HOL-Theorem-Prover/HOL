@@ -2266,6 +2266,12 @@ Definition mpoly_ring_def:
          prod := <| carrier := m; op := mpoly_mul r; id := mpoly_one r |> |>
 End
 
+Theorem mpoly_ring_carrier:
+  (mpoly_ring r s).carrier = { p | mpoly r p /\ support r p SUBSET s }
+Proof
+  rw[mpoly_ring_def]
+QED
+
 Theorem mpoly_add_group:
   Ring r ==> Group (mpoly_ring r s).sum
 Proof
@@ -4970,6 +4976,708 @@ Proof
   >- metis_tac[polyWeakTheory.poly_root_zero]
   \\ imp_res_tac poly_nonzero_with_root_deg_pos
   \\ fs[]
+QED
+
+(* a polynomial that evaluates to zero at sufficiently
+   many points (determined by its degrees) is identically zero *)
+
+Theorem monomials_mpoly_eval_o_isolate_var:
+  Ring r /\ mpoly r p
+  ==>
+  monomials r (flip (mpoly_eval r) f o isolate_var r e p) SUBSET
+    IMAGE (λm v. if v = e then m e else 0) (monomials r p)
+Proof
+  simp[monomials_def]
+  \\ simp[SUBSET_DEF]
+  \\ strip_tac
+  \\ qx_gen_tac`t`
+  \\ simp[rrestrict_def]
+  \\ IF_CASES_TAC \\ simp[]
+  \\ Cases_on`∃y. e <> y /\ BAG_IN y t`
+  >- (
+    `isolate_var r e p t = K r.sum.id` by (
+      irule isolate_var_coeff_zero \\ metis_tac[] )
+    \\ simp[mpoly_eval_zero] )
+  \\ Cases_on`∀m. m IN monomials r p ==> m e <> t e`
+  >- (
+    `isolate_var r e p t = K r.sum.id` by (
+      irule isolate_var_coeff_zero \\ metis_tac[] )
+    \\ simp[mpoly_eval_zero] )
+  \\ ntac 2 (pop_assum mp_tac) \\ simp[]
+  \\ strip_tac \\ strip_tac
+  \\ `t = λy. if y = e then m e else 0`
+  by (
+    simp[FUN_EQ_THM]
+    \\ rw[]
+    \\ fs[BAG_IN, BAG_INN]
+    \\ first_x_assum(qspec_then`y`mp_tac)
+    \\ simp[] )
+  \\ pop_assum SUBST_ALL_TAC
+  \\ strip_tac
+  \\ qexists_tac`m`
+  \\ simp[] \\ rw[]
+  \\ fs[mpoly_def, monomials_def, SUBSET_DEF, PULL_EXISTS]
+  \\ rfs[rrestrict_def]
+QED
+
+Theorem update_zero_BAG_DIFF:
+  (x =+ 0)b = b - (\y. if x = y then b x else 0)
+Proof
+  rw[FUN_EQ_THM, combinTheory.APPLY_UPDATE_THM]
+  \\ rw[BAG_DIFF]
+QED
+
+Theorem mpoly_eval_mpoly_eval_o_isolate_var:
+  Ring r /\ mpoly r p /\ IMAGE f (support r p DELETE x) SUBSET r.carrier /\
+  g x IN r.carrier /\ FINITE (support r p) ==>
+  mpoly_eval r (flip (mpoly_eval r) f o isolate_var r x p) g =
+  mpoly_eval r p ((x =+ g x) f)
+Proof
+  strip_tac
+  \\ simp[Once mpoly_eval_def]
+  \\ simp[Once mpoly_eval_def, SimpRHS]
+  \\ drule monomials_mpoly_eval_o_isolate_var
+  \\ disch_then drule
+  \\ disch_then(qspecl_then[`f`,`x`]strip_assume_tac)
+  \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
+  \\ qmatch_asmsub_abbrev_tac`s ⊆ ss`
+  \\ qmatch_goalsub_abbrev_tac`GBAG r.sum (BAG_IMAGE h _)`
+  \\ `FINITE ss` by metis_tac[mpoly_def, SUBSET_FINITE, IMAGE_FINITE]
+  \\ `FINITE s` by metis_tac[SUBSET_FINITE]
+  \\ `∀t. t IN ss ==>
+        GBAG r.prod (BAG_IMAGE g t) = r.prod.exp (g x) (t x)`
+  by (
+    gen_tac
+    \\ simp_tac (srw_ss())[Abbr`ss`]
+    \\ strip_tac
+    \\ `BAG_IMAGE g t = (λv. if v = g x then m x else 0)`
+    by (
+      simp[BAG_EXTENSION]
+      \\ simp[BAG_INN, BAG_IMAGE_DEF, BAG_FILTER_DEF]
+      \\ rpt gen_tac
+      \\ Cases_on`e = g x` \\ simp[]
+      >- (
+        qmatch_goalsub_abbrev_tac`FINITE_BAG b`
+        \\ `b = λv. if v = x then m x else 0`
+        by ( simp[Abbr`b`, FUN_EQ_THM] \\ rw[] )
+        \\ `SET_OF_BAG b SUBSET {x}`
+        by (
+          simp[SET_OF_BAG, BAG_IN, BAG_INN, Abbr`b`, SUBSET_DEF]
+          \\ rw[] )
+        \\ rewrite_tac[GSYM FINITE_SET_OF_BAG]
+        \\ reverse IF_CASES_TAC
+        >- ( `INFINITE {x}` by metis_tac[SUBSET_FINITE] \\ fs[] )
+        \\ `BAG_CARD b = m x` suffices_by simp[]
+        \\ Cases_on`SET_OF_BAG b = {}` \\ fs[]
+        >- ( fs[EMPTY_BAG, FUN_EQ_THM] \\ metis_tac[] )
+        \\ `SET_OF_BAG b = {x}` by (
+          Cases_on`SET_OF_BAG b` \\ fs[]
+          \\ fs[SUBSET_DEF] \\ rw[]
+          \\ Cases_on`t'` \\ fs[] \\ metis_tac[] )
+        \\ drule SET_OF_BAG_SING_CARD
+        \\ simp[] )
+      \\ qmatch_goalsub_abbrev_tac`FINITE_BAG b`
+      \\ `b = {||}`
+      by (
+        simp[EMPTY_BAG, Abbr`b`, FUN_EQ_THM]
+        \\ rw[] )
+      \\ simp[] )
+    \\ `t x = (BAG_IMAGE g t) (g x)` by simp[]
+    \\ pop_assum SUBST1_TAC
+    \\ irule IMP_GBAG_EQ_EXP
+    \\ conj_tac >- metis_tac[Ring_def]
+    \\ conj_tac >- simp[]
+    \\ rw[SUBSET_DEF, BAG_IN, BAG_INN]
+    \\ CCONTR_TAC \\ fs[] )
+  \\ `GBAG r.sum (BAG_IMAGE h (BAG_OF_SET (ss DIFF s))) = r.sum.id`
+  by (
+    irule IMP_GBAG_EQ_ID
+    \\ simp[BAG_EVERY, PULL_EXISTS]
+    \\ simp[Abbr`s`]
+    \\ simp[Abbr`h`]
+    \\ rw[monomials_def]
+    \\ DEP_REWRITE_TAC[ring_mult_lzero]
+    \\ simp[]
+    \\ `r.carrier = r.prod.carrier` by simp[]
+    \\ pop_assum SUBST1_TAC
+    \\ metis_tac[] )
+  \\ `!s. s SUBSET ss ==>
+          GBAG r.sum (BAG_IMAGE h (BAG_OF_SET s)) IN r.sum.carrier`
+  by (
+    rpt strip_tac
+    \\ irule GBAG_in_carrier
+    \\ qmatch_assum_rename_tac`xx SUBSET ss`
+    \\ `FINITE xx` by metis_tac[SUBSET_FINITE]
+    \\ simp[Abbr`h`, SUBSET_DEF, PULL_EXISTS]
+    \\ rpt strip_tac
+    \\ irule ring_mult_element
+    \\ simp[]
+    \\ metis_tac[SUBSET_DEF, ring_carriers, ring_exp_element] )
+  \\ irule EQ_TRANS
+  \\ qexists_tac`r.sum.op (GBAG r.sum (BAG_IMAGE h (BAG_OF_SET s)))
+                          (GBAG r.sum (BAG_IMAGE h (BAG_OF_SET (ss DIFF s))))`
+  \\ conj_tac >- simp[]
+  \\ DEP_REWRITE_TAC[GSYM GBAG_UNION]
+  \\ conj_tac
+  >- (
+    simp[]
+    \\ simp[SUBSET_DEF, PULL_EXISTS, Abbr`h`]
+    \\ rw[]
+    \\ irule ring_mult_element
+    \\ simp[]
+    \\ metis_tac[SUBSET_DEF, ring_carriers, ring_exp_element] )
+  \\ DEP_REWRITE_TAC[GSYM BAG_IMAGE_FINITE_UNION]
+  \\ conj_tac >- simp[]
+  \\ DEP_REWRITE_TAC[GSYM BAG_OF_SET_DISJOINT_UNION]
+  \\ conj_tac >- (simp[IN_DISJOINT] \\ metis_tac[])
+  \\ `s UNION (ss DIFF s) = ss`
+  by ( simp[EXTENSION] \\ metis_tac[SUBSET_DEF] )
+  \\ pop_assum SUBST1_TAC
+  \\ `∀t. t IN ss ==> mpoly_eval r (isolate_var r x p t) f IN r.carrier`
+  by (
+    rpt strip_tac
+    \\ irule mpoly_eval_in_carrier
+    \\ drule mpoly_isolate_var
+    \\ disch_then drule
+    \\ drule support_isolate_var
+    \\ disch_then drule
+    \\ disch_then(qspec_then`x`strip_assume_tac)
+    \\ disch_then(qspec_then`x`strip_assume_tac)
+    \\ imp_res_tac mpoly_def
+    \\ fs[mpoly_ring_carrier]
+    \\ fs[SUBSET_DEF, PULL_EXISTS]
+    \\ DEP_REWRITE_TAC[GSYM FINITE_support_finite_mpoly]
+    \\ conj_tac >- metis_tac[]
+    \\ conj_tac >- metis_tac[]
+    \\ metis_tac[SUBSET_FINITE, SUBSET_DEF] )
+  \\ irule EQ_TRANS
+  \\ qexists_tac`GBAG r.sum (BAG_IMAGE
+         (λt. mpoly_eval r (isolate_var r x p t) f * g x ** t x)
+         (BAG_OF_SET ss))`
+  \\ conj_tac
+  >- (
+    AP_THM_TAC \\ AP_TERM_TAC
+    \\ irule BAG_IMAGE_CONG
+    \\ simp[]
+    \\ simp[Abbr`h`]
+    \\ simp[rrestrict_def] )
+  \\ qunabbrev_tac`h`
+  \\ pop_assum mp_tac
+  \\ ntac 2 (pop_assum kall_tac)
+  \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`BAG_IMAGE h _`
+  \\ `∀t. t IN ss ==> h t =
+        GBAG r.sum (BAG_IMAGE (flip (mpoly_eval r) f)
+          (BAG_OF_SET (IMAGE (remove_var_mono r x p)
+                             (monomials r p INTER {m | m x = t x})))) * g x ** t x`
+  by (
+    gen_tac
+    \\ simp[Abbr`ss`]
+    \\ strip_tac
+    \\ simp[Abbr`h`]
+    \\ DEP_REWRITE_TAC[isolate_var_coeff]
+    \\ simp[]
+    \\ DEP_REWRITE_TAC[MP_CANON mpoly_eval_sum]
+    \\ simp[SUBSET_DEF, PULL_EXISTS]
+    \\ simp[mpoly_ring_carrier]
+    \\ simp[mpoly_remove_var_mono]
+    \\ imp_res_tac mpoly_def
+    \\ simp[]
+    \\ simp[BAG_EVERY, PULL_EXISTS]
+    \\ conj_asm1_tac >- simp[support_remove_var_mono]
+    \\ reverse conj_tac
+    >- metis_tac[FINITE_support_finite_mpoly, mpoly_remove_var_mono,
+                 SUBSET_FINITE, FINITE_DELETE]
+    \\ fs[SUBSET_DEF, PULL_EXISTS]
+    \\ metis_tac[] )
+  \\ pop_assum mp_tac
+  \\ qho_match_abbrev_tac`(∀t. t IN ss ==> h t = h2 t) ==> _`
+  \\ strip_tac
+  \\ irule EQ_TRANS
+  \\ qexists_tac`GBAG r.sum (BAG_IMAGE h2 (BAG_OF_SET ss))`
+  \\ conj_tac
+  >- (
+    AP_THM_TAC \\ AP_TERM_TAC
+    \\ irule BAG_IMAGE_CONG
+    \\ simp[] )
+  \\ pop_assum kall_tac
+  \\ qunabbrev_tac`h`
+  \\ `BAG_IMAGE h2 (BAG_OF_SET ss) =
+      BAG_IMAGE (λt. GBAG r.sum
+        (BAG_IMAGE (λm. mpoly_eval r (remove_var_mono r x p m) f * g x ** m x)
+                   (BAG_OF_SET (monomials r p INTER {m | m x = t x}))))
+        (BAG_OF_SET ss)`
+  by (
+    irule BAG_IMAGE_CONG
+    \\ simp[Abbr`h2`]
+    \\ qx_gen_tac`t` \\ strip_tac
+    \\ DEP_REWRITE_TAC[BAG_OF_SET_IMAGE_INJ]
+    \\ conj_tac
+    >- (
+      rw[remove_var_mono_def, Once FUN_EQ_THM]
+      \\ first_x_assum(qspec_then`(x =+ 0) y`mp_tac)
+      \\ simp[Once FUN_EQ_THM]
+      \\ reverse(rw[]) >- fs[monomials_def]
+      \\ fs[combinTheory.APPLY_UPDATE_THM]
+      \\ simp[FUN_EQ_THM]
+      \\ metis_tac[] )
+    \\ DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
+    \\ imp_res_tac mpoly_def
+    \\ simp[]
+    \\ simp[combinTheory.o_DEF]
+    \\ DEP_REWRITE_TAC[MP_CANON ring_mult_lsum]
+    \\ DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
+    \\ simp[combinTheory.o_DEF]
+    \\ simp[SUBSET_DEF, PULL_EXISTS]
+    \\ reverse conj_tac
+    >- (
+      AP_THM_TAC \\ AP_TERM_TAC
+      \\ irule BAG_IMAGE_CONG
+      \\ simp[] )
+    \\ rw[]
+    \\ irule mpoly_eval_in_carrier
+    \\ simp[mpoly_remove_var_mono]
+    \\ DEP_REWRITE_TAC[GSYM FINITE_support_finite_mpoly]
+    \\ simp[mpoly_remove_var_mono]
+    \\ drule support_remove_var_mono
+    \\ disch_then(qspec_then`x`mp_tac)
+    \\ strip_tac
+    \\ reverse conj_tac >- metis_tac[SUBSET_FINITE, FINITE_DELETE]
+    \\ fs[SUBSET_DEF, PULL_EXISTS] )
+  \\ pop_assum SUBST1_TAC
+  \\ qunabbrev_tac`h2`
+  \\ simp[GSYM BAG_FILTER_BAG_OF_SET]
+  \\ qmatch_goalsub_abbrev_tac`BAG_IMAGE ff (BAG_FILTER _ b)`
+  \\ qmatch_goalsub_abbrev_tac`BAG_IMAGE h (BAG_OF_SET ss)`
+  \\ `BAG_IMAGE h (BAG_OF_SET ss) =
+      BAG_IMAGE (λP. GBAG r.sum (BAG_IMAGE ff (BAG_FILTER P b)))
+        (BAG_IMAGE (λt m. m x = t x) (BAG_OF_SET ss))`
+  by (
+    DEP_REWRITE_TAC[GSYM BAG_IMAGE_COMPOSE]
+    \\ simp[combinTheory.o_DEF] )
+  \\ pop_assum SUBST1_TAC
+  \\ qunabbrev_tac`h`
+  \\ DEP_ONCE_REWRITE_TAC[GSYM BAG_OF_SET_IMAGE_INJ]
+  \\ conj_tac
+  >- (
+    simp[Abbr`ss`, PULL_EXISTS]
+    \\ rw[FUN_EQ_THM] \\ rw[]
+    \\ metis_tac[] )
+  \\ DEP_REWRITE_TAC[MP_CANON GBAG_IMAGE_PARTITION]
+  \\ simp[]
+  \\ simp[Abbr`b`]
+  \\ imp_res_tac mpoly_def
+  \\ simp[PULL_EXISTS]
+  \\ simp[Once FUN_EQ_THM]
+  \\ conj_tac
+  >- (
+    simp[Abbr`ss`, PULL_EXISTS]
+    \\ reverse conj_tac >- metis_tac[]
+    \\ simp[Abbr`ff`, SUBSET_DEF, PULL_EXISTS]
+    \\ rw[]
+    \\ irule ring_mult_element
+    \\ simp[]
+    \\ irule mpoly_eval_in_carrier
+    \\ simp[mpoly_remove_var_mono]
+    \\ DEP_REWRITE_TAC[GSYM FINITE_support_finite_mpoly]
+    \\ simp[mpoly_remove_var_mono]
+    \\ drule support_remove_var_mono
+    \\ disch_then(qspec_then`x`mp_tac)
+    \\ strip_tac
+    \\ reverse conj_tac >- metis_tac[SUBSET_FINITE, FINITE_DELETE]
+    \\ fs[SUBSET_DEF, PULL_EXISTS] )
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ irule BAG_IMAGE_CONG
+  \\ simp[Abbr`ff`]
+  \\ qx_gen_tac`m` \\ strip_tac
+  \\ fs[SUBSET_DEF, PULL_EXISTS]
+  \\ simp[rrestrict_def]
+  \\ simp[mpoly_eval_def]
+  \\ `monomials r (remove_var_mono r x p m) SUBSET {(x =+ 0) m}`
+  by (
+    rw[SUBSET_DEF, monomials_def, remove_var_mono_def]
+    \\ CCONTR_TAC \\ fs[] \\ rfs[] )
+  \\ Cases_on`monomials r (remove_var_mono r x p m) = {}`
+  >- (
+    simp[]
+    \\ fs[empty_monomials]
+    \\ pop_assum mp_tac
+    \\ simp[remove_var_mono_def]
+    \\ disch_then(qspec_then`(x =+ 0) m`mp_tac)
+    \\ simp[rrestrict_def] \\ strip_tac
+    \\ DEP_REWRITE_TAC[ring_mult_lzero]
+    \\ simp[]
+    \\ `r.carrier = r.prod.carrier` by simp[]
+    \\ pop_assum SUBST1_TAC
+    \\ irule GBAG_in_carrier
+    \\ imp_res_tac FINITE_support_finite_mpoly
+    \\ fs[finite_mpoly_def]
+    \\ conj_tac >- metis_tac[Ring_def]
+    \\ fs[SUBSET_DEF, PULL_EXISTS]
+    \\ simp[combinTheory.APPLY_UPDATE_THM]
+    \\ fs[support_def, PULL_EXISTS]
+    \\ metis_tac[])
+  \\ `monomials r (remove_var_mono r x p m) = {(x =+ 0) m}`
+  by (
+    simp[SET_EQ_SUBSET]
+    \\ Cases_on`monomials r (remove_var_mono r x p m)` \\ fs[] )
+  \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ simp[remove_var_mono_def]
+  \\ simp[rrestrict_def]
+  \\ qmatch_goalsub_abbrev_tac`GBAG r.prod b1`
+  \\ qmatch_goalsub_abbrev_tac`_ = _ * GBAG r.prod b2`
+  \\ `GBAG r.prod b1 IN r.prod.carrier /\ GBAG r.prod b2 IN r.prod.carrier`
+  by (
+    conj_tac \\ irule GBAG_in_carrier
+    \\ (conj_tac >- metis_tac[Ring_def])
+    \\ imp_res_tac FINITE_support_finite_mpoly
+    \\ fs[finite_mpoly_def]
+    \\ simp[Abbr`b1`, Abbr`b2`]
+    \\ fs[SUBSET_DEF, PULL_EXISTS, support_def, combinTheory.APPLY_UPDATE_THM]
+    >- (
+      fs[BAG_IN, BAG_INN, combinTheory.APPLY_UPDATE_THM]
+      \\ reverse conj_tac
+      >- ( rw[] \\ metis_tac[] )
+      \\ irule BAG_IMAGE_FINITE
+      \\ simp[update_zero_BAG_DIFF]
+      \\ irule FINITE_BAG_DIFF
+      \\ simp[] )
+    \\ rw[] \\ metis_tac[] )
+  \\ rfs[]
+  \\ DEP_REWRITE_TAC[ring_mult_assoc]
+  \\ conj_tac >- simp[]
+  \\ AP_TERM_TAC
+  \\ `m = BAG_UNION ((x =+ 0) m) (λy. if y = x then m x else 0)`
+  by (
+    simp[FUN_EQ_THM, BAG_UNION, combinTheory.APPLY_UPDATE_THM]
+    \\ gen_tac \\ IF_CASES_TAC \\ simp[] )
+  \\ `FINITE_BAG m` by metis_tac[FINITE_support_finite_mpoly, finite_mpoly_def]
+  \\ qmatch_asmsub_abbrev_tac`m = BAG_UNION m1 m2`
+  \\ `FINITE_BAG m1 /\ FINITE_BAG m2` by metis_tac[FINITE_BAG_UNION]
+  \\ qpat_x_assum`m = _`(assume_tac o SYM)
+  \\ simp[Abbr`b2`]
+  \\ qmatch_goalsub_abbrev_tac`_ * gmx`
+  \\ first_assum(fn th => CHANGED_TAC(rewrite_tac[(SYM th)]))
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[GBAG_UNION]
+  \\ conj_tac
+  >- (
+    simp[]
+    \\ conj_tac >- metis_tac[Ring_def]
+    \\ fs[SUBSET_DEF, PULL_EXISTS, support_def, Abbr`m1`, Abbr`m2`]
+    \\ fs[combinTheory.APPLY_UPDATE_THM, BAG_IN, BAG_INN]
+    \\ rpt strip_tac \\ IF_CASES_TAC \\ fs[]
+    \\ metis_tac[] )
+  \\ `BAG_IMAGE ((x =+ g x) f) m1 = b1`
+  by (
+    qunabbrev_tac`b1`
+    \\ irule BAG_IMAGE_CONG
+    \\ simp[combinTheory.APPLY_UPDATE_THM]
+    \\ simp[Abbr`m1`, update_zero_BAG_DIFF]
+    \\ simp[BAG_IN, BAG_INN, BAG_DIFF]
+    \\ strip_tac \\ IF_CASES_TAC \\ simp[] )
+  \\ simp[]
+  \\ AP_TERM_TAC
+  \\ irule EQ_SYM
+  \\ qunabbrev_tac`gmx`
+  \\ qmatch_goalsub_abbrev_tac`GBAG r.prod b2`
+  \\ `m x = b2 (g x)`
+  by (
+    simp[Abbr`b2`]
+    \\ `BAG_IMAGE ((x =+ g x) f) m2 = (λv. if v = g x then m x else 0)`
+    by (
+      simp[BAG_EXTENSION]
+      \\ simp[BAG_INN, BAG_IMAGE_DEF, BAG_FILTER_DEF]
+      \\ rpt gen_tac
+      \\ simp[combinTheory.APPLY_UPDATE_THM]
+      \\ Cases_on`e = g x` \\ simp[]
+      >- (
+        qmatch_goalsub_abbrev_tac`FINITE_BAG b`
+        \\ `b = λv. if v = x then m x else 0`
+        by ( simp[Abbr`b`, FUN_EQ_THM, Abbr`m2`] \\ rw[] )
+        \\ `SET_OF_BAG b SUBSET {x}`
+        by (
+          simp[SET_OF_BAG, BAG_IN, BAG_INN, Abbr`b`, SUBSET_DEF, Abbr`m2`]
+          \\ rw[] )
+        \\ rewrite_tac[GSYM FINITE_SET_OF_BAG]
+        \\ reverse IF_CASES_TAC
+        >- ( `INFINITE {x}` by metis_tac[SUBSET_FINITE] \\ fs[] )
+        \\ `BAG_CARD b = m x` suffices_by simp[]
+        \\ Cases_on`SET_OF_BAG b = {}` \\ fs[Abbr`m2`]
+        >- ( fs[EMPTY_BAG, FUN_EQ_THM] \\ metis_tac[] )
+        \\ `SET_OF_BAG b = {x}` by (
+          Cases_on`SET_OF_BAG b` \\ fs[]
+          \\ fs[SUBSET_DEF] \\ rw[]
+          \\ Cases_on`t` >- simp[]
+          \\ metis_tac[IN_INSERT])
+        \\ drule SET_OF_BAG_SING_CARD
+        \\ simp[] )
+      \\ qmatch_goalsub_abbrev_tac`FINITE_BAG b`
+      \\ `b = {||}`
+      by (
+        simp[EMPTY_BAG, Abbr`b`, FUN_EQ_THM, Abbr`m2`]
+        \\ rw[] )
+      \\ simp[] )
+    \\ simp[] )
+  \\ pop_assum SUBST1_TAC
+  \\ irule IMP_GBAG_EQ_EXP
+  \\ simp[]
+  \\ conj_tac >- metis_tac[Ring_def]
+  \\ rw[SUBSET_DEF, BAG_IN, BAG_INN, Abbr`b2`, Abbr`m2`]
+  \\ rw[combinTheory.APPLY_UPDATE_THM] \\ fs[]
+QED
+
+Theorem zero_degree_of_is_zero:
+  IntegralDomain r /\ mpoly r p /\ FINITE (support r p) /\
+  BIGUNION (IMAGE s (support r p)) SUBSET r.carrier /\
+  (!x. x IN support r p /\ FINITE (s x) ==> degree_of r p x < CARD (s x)) ∧
+  (∀f. (∀x. x IN support r p ==> f x IN s x)
+       ==> mpoly_eval r p f = r.sum.id)
+  ==>
+  p = K r.sum.id
+Proof
+  strip_tac
+  \\ ntac 4 (pop_assum mp_tac)
+  \\ qmatch_goalsub_abbrev_tac`FINITE supp`
+  \\ `support r p ⊆ supp` by simp[Abbr`supp`]
+  \\ strip_tac
+  \\ qpat_x_assum`_ SUBSET _`mp_tac
+  \\ qpat_x_assum`mpoly _ _`mp_tac
+  \\ qid_spec_tac`s`
+  \\ qid_spec_tac`p`
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac`supp`
+  \\ pop_assum kall_tac
+  \\ ho_match_mp_tac FINITE_INDUCT
+  \\ simp[]
+  \\ conj_tac
+  >- (
+    rw[empty_support]
+    \\ gs[mpoly_eval_def]
+    \\ Cases_on`monomials r p` \\ gs[empty_monomials]
+    >- gs[mpoly_def, PULL_EXISTS, SUBSET_DEF, FUN_EQ_THM]
+    \\ fs[BAG_OF_SET_INSERT_NON_ELEMENT]
+    \\ simp[FUN_EQ_THM]
+    \\ fs[monomials_def, Once EXTENSION]
+    \\ `Ring r` by fs[IntegralDomain_def]
+    \\ fs[]
+    \\ rfs[mpoly_def, SUBSET_DEF, PULL_EXISTS, rrestrict_def]
+    \\ metis_tac[] )
+  \\ rpt strip_tac
+  \\ reverse(Cases_on`e IN support r p`)
+  >- (
+    first_x_assum irule
+    \\ reverse conj_tac >- fs[SUBSET_DEF]
+    \\ qexists_tac`s` \\ rw[]
+    \\ first_x_assum(qspec_then`λx. if x = e then CHOICE (s e) else f x`mp_tac)
+    \\ impl_tac
+    >- (
+      reverse(rw[])
+      \\ irule CHOICE_DEF
+      \\ `degree_of r p e = 0`
+      by (
+        imp_res_tac mpoly_def
+        \\ imp_res_tac support_degree_of
+        \\ `¬(1 <= degree_of r p e)` by metis_tac[]
+        \\ fs[] )
+      \\ reverse(Cases_on`FINITE (s e)`)
+      >- metis_tac[cardinalTheory.INFINITE_NONEMPTY]
+      \\ `0 < CARD (s e)` by metis_tac[]
+      \\ Cases_on`s e` \\ fs[] )
+    \\ disch_then(SUBST1_TAC o SYM)
+    \\ irule mpoly_eval_support
+    \\ rw[] )
+  \\ `Ring r` by fs[IntegralDomain_def]
+  \\ `∀f. (∀x. x IN supp ==> f x IN s x) ==>
+          mpoly r (flip (mpoly_eval r) f o (isolate_var r e p)) /\
+          support r (flip (mpoly_eval r) f o (isolate_var r e p)) SUBSET {e}`
+  by (
+    gen_tac \\ strip_tac
+    \\ first_x_assum(qspecl_then[`p`,`s`]kall_tac)
+    \\ drule monomials_mpoly_eval_o_isolate_var
+    \\ disch_then drule
+    \\ disch_then(qspecl_then[`f`,`e`]mp_tac)
+    \\ strip_tac
+    \\ reverse conj_tac
+    >- (
+      pop_assum mp_tac
+      \\ simp[support_def, SUBSET_DEF, PULL_EXISTS]
+      \\ rw[]
+      \\ first_x_assum drule \\ strip_tac
+      \\ fs[BAG_IN, BAG_INN]
+      \\ CCONTR_TAC \\ fs[] )
+    \\ simp[mpoly_def]
+    \\ simp[SUBSET_DEF, PULL_EXISTS]
+    \\ conj_tac
+    >- (
+      qx_gen_tac`t`
+      \\ irule mpoly_eval_in_carrier
+      \\ `mpoly (mpoly_ring r (support r p DELETE e)) (isolate_var r e p)`
+      by ( irule mpoly_isolate_var \\ simp[] )
+      \\ imp_res_tac mpoly_def
+      \\ fs[SUBSET_DEF, PULL_EXISTS]
+      \\ fs[mpoly_ring_carrier]
+      \\ DEP_REWRITE_TAC[GSYM FINITE_support_finite_mpoly]
+      \\ `support r p SUBSET e INSERT supp` by simp[SUBSET_DEF]
+      \\ `FINITE (support r p)` by
+      metis_tac[SUBSET_DEF, SUBSET_FINITE, FINITE_INSERT]
+      \\ conj_tac >- metis_tac[]
+      \\ conj_tac >- metis_tac[IN_DELETE, SUBSET_DEF]
+      \\ metis_tac[SUBSET_FINITE, FINITE_DELETE])
+    \\ metis_tac[SUBSET_FINITE, IMAGE_FINITE, mpoly_def])
+  \\ `∀f g. (∀x. x IN supp ==> f x IN s x) /\ g e IN s e ==>
+            mpoly_eval r
+              (flip (mpoly_eval r) f o (isolate_var r e p)) g = r.sum.id`
+  by (
+    rpt strip_tac
+    \\ irule EQ_TRANS
+    \\ qexists_tac`mpoly_eval r p ((e =+ g e) f)`
+    \\ reverse conj_tac
+    >- (
+      first_x_assum irule
+      \\ simp[combinTheory.APPLY_UPDATE_THM]
+      \\ rw[] \\ rw[] )
+    \\ irule mpoly_eval_mpoly_eval_o_isolate_var
+    \\ conj_tac >- metis_tac[SUBSET_FINITE, FINITE_INSERT]
+    \\ conj_tac >- simp[]
+    \\ conj_tac >- metis_tac[SUBSET_DEF]
+    \\ simp_tac(srw_ss())[SUBSET_DEF, PULL_EXISTS]
+    \\ qpat_x_assum`BIGUNION _ SUBSET _`mp_tac
+    \\ simp_tac(srw_ss())[SUBSET_DEF, PULL_EXISTS]
+    \\ metis_tac[SUBSET_DEF, IN_INSERT])
+  \\ `∀f. (∀x. x IN supp ==> f x IN s x) ==>
+          (flip (mpoly_eval r) f o (isolate_var r e p)) = K r.sum.id`
+  by (
+    rpt strip_tac
+    \\ qmatch_goalsub_abbrev_tac`q = _`
+    \\ CCONTR_TAC
+    \\ `q IN (mpoly_ring r {e}).carrier`
+    by ( simp[mpoly_ring_carrier] \\ metis_tac[] )
+    \\ `poly_of_mpoly r q <> (PolyRing r).sum.id`
+    by (
+      disch_then(mp_tac o Q.AP_TERM`mpoly_of_poly r e`)
+      \\ DEP_REWRITE_TAC[mpoly_of_poly_of_mpoly]
+      \\ conj_tac >- metis_tac[]
+      \\ `mpoly_of_poly r e (PolyRing r).sum.id = K r.sum.id`
+      suffices_by simp[]
+      \\ simp[FUN_EQ_THM]
+      \\ simp[mpoly_of_poly_def] )
+    \\ `poly (poly_of_mpoly r q)` by (
+      irule poly_poly_of_mpoly
+      \\ metis_tac[mpoly_def] )
+    \\ `FINITE (roots (poly_of_mpoly r q))`
+    by metis_tac[polyRootTheory.poly_roots_finite_id]
+    \\ `CARD (roots (poly_of_mpoly r q)) <= Deg r (poly_of_mpoly r q)`
+    by metis_tac[polyRootTheory.poly_roots_count_id]
+    \\ `Deg r (poly_of_mpoly r q) = degree_of r q e`
+    by (
+      DEP_REWRITE_TAC[GSYM (Q.SPEC`e`(Q.GEN`v`degree_of_mpoly_of_poly))]
+      \\ DEP_REWRITE_TAC[mpoly_of_poly_of_mpoly]
+      \\ metis_tac[] )
+    \\ drule poly_roots_of_mpoly
+    \\ disch_then (qspecl_then[`e`,`q`]mp_tac)
+    \\ impl_tac >- metis_tac[]
+    \\ qmatch_goalsub_abbrev_tac`_ = ss`
+    \\ `s e SUBSET ss`
+    by (
+      simp[Abbr`ss`, SUBSET_DEF]
+      \\ qx_gen_tac`v` \\ strip_tac
+      \\ qexists_tac`K v`
+      \\ simp[]
+      \\ simp[mpoly_roots_def]
+      \\ simp[SUBSET_DEF, PULL_EXISTS]
+      \\ conj_tac >- metis_tac[SUBSET_DEF]
+      \\ simp[mpoly_root_def]
+      \\ first_x_assum(qspecl_then[`f`,`K v`]mp_tac)
+      \\ simp[] )
+    \\ `FINITE ss ==> CARD (s e) <= CARD ss`
+    by (
+      strip_tac
+      \\ irule CARD_SUBSET
+      \\ simp[] )
+    \\ strip_tac
+    \\ `degree_of r q e <= degree_of r p e`
+    by (
+      simp[degree_of_def]
+      \\ drule monomials_mpoly_eval_o_isolate_var
+      \\ disch_then drule
+      \\ disch_then(qspecl_then[`f`,`e`]mp_tac)
+      \\ simp[] \\ strip_tac
+      \\ Cases_on`monomials r q = {}` \\ simp[]
+      \\ irule X_LE_MAX_SET
+      \\ simp[]
+      \\ imp_res_tac mpoly_def \\ simp[]
+      \\ qmatch_goalsub_abbrev_tac`MAX_SET ms`
+      \\ `FINITE ms` by metis_tac[mpoly_def, IMAGE_FINITE]
+      \\ `ms <> {}` by (strip_tac \\ fs[Abbr`ms`])
+      \\ `MAX_SET ms IN ms` by metis_tac[MAX_SET_DEF]
+      \\ qmatch_goalsub_abbrev_tac`mms = _`
+      \\ fs[Abbr`ms`]
+      \\ fs[SUBSET_DEF]
+      \\ res_tac
+      \\ qexists_tac`m`
+      \\ rw[] )
+    \\ `FINITE ss` by metis_tac[]
+    \\ `FINITE (s e)` by metis_tac[SUBSET_FINITE]
+    \\ `degree_of r p e < CARD (s e)` by metis_tac[]
+    \\ `degree_of r q e < CARD (s e)` by simp[]
+    \\ `CARD ss <= degree_of r q e` by metis_tac[]
+    \\ fs[] )
+  \\ `p IN (mpoly_ring r (support r p)).carrier`
+  by simp[mpoly_ring_carrier]
+  \\ qmatch_asmsub_abbrev_tac`p IN rr.carrier`
+  \\ `p = rr.sum.id` suffices_by simp[Abbr`rr`, mpoly_ring_def]
+  \\ drule RingIso_isolate_var
+  \\ disch_then drule \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`RingIso _ _ re`
+  \\ strip_tac
+  \\ `Ring rr /\ Ring re` by simp[Abbr`rr`, Abbr`re`]
+  \\ `rr.sum.id IN rr.carrier` by metis_tac[ring_zero_element]
+  \\ `isolate_var r e p = re.sum.id` suffices_by metis_tac[ring_iso_eq_zero]
+  \\ qmatch_asmsub_abbrev_tac`re = mpoly_ring rd _`
+  \\ simp[Once FUN_EQ_THM]
+  \\ qx_gen_tac`t`
+  \\ `re.sum.id = K (K r.sum.id)` by
+  simp_tac(srw_ss()++boolSimps.LET_ss)[Abbr`rd`, Abbr`re`, mpoly_ring_def]
+  \\ pop_assum SUBST1_TAC \\ simp[]
+  \\ first_x_assum irule
+  \\ drule_then drule mpoly_isolate_var
+  \\ disch_then(qspec_then`e`mp_tac)
+  \\ asm_simp_tac pure_ss []
+  \\ strip_tac
+  \\ drule (mpoly_def |> SPEC_ALL |> EQ_IMP_RULE |> #1)
+  \\ strip_tac
+  \\ `isolate_var r e p t IN rd.carrier` by fs[SUBSET_DEF, PULL_EXISTS]
+  \\ reverse conj_asm2_tac
+  >- (
+    fs[Abbr`rd`, mpoly_ring_def]
+    \\ fs[SUBSET_DEF, PULL_EXISTS]
+    \\ metis_tac[] )
+  \\ qexists_tac`s`
+  \\ conj_asm1_tac
+  >- (
+    rpt strip_tac
+    \\ irule arithmeticTheory.LESS_EQ_LESS_TRANS
+    \\ qexists_tac`degree_of r p x`
+    \\ conj_tac >- metis_tac[]
+    \\ irule degree_of_isolate_var_le
+    \\ simp[] )
+  \\ reverse conj_tac >- simp[]
+  \\ rpt strip_tac
+  \\ reverse(Cases_on`t IN monomials rd (isolate_var r e p)`)
+  >- (
+    pop_assum mp_tac
+    \\ simp[monomials_def]
+    \\ simp[rrestrict_def]
+    \\ `rd.sum.id = K r.sum.id` by simp[Abbr`rd`, mpoly_ring_def]
+    \\ simp[mpoly_eval_zero] )
+  \\ pop_assum mp_tac
+  \\ qunabbrev_tac`rd`
+  \\ DEP_REWRITE_TAC[monomials_isolate_var]
+  \\ conj_tac >- simp[]
+  \\ strip_tac
+  \\ first_x_assum drule
+  \\ simp[FUN_EQ_THM]
 QED
 
 val _ = export_theory();

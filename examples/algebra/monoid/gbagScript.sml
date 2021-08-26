@@ -493,4 +493,36 @@ Proof
   \\ simp[SUBSET_DEF, PULL_EXISTS]
 QED
 
+Theorem IMP_GBAG_EQ_EXP:
+  AbelianMonoid g /\ x IN g.carrier /\ SET_OF_BAG b SUBSET {x} ==>
+  GBAG g b = g.exp x (b x)
+Proof
+  Induct_on`b x` \\ rw[]
+  >- (
+    Cases_on`b = {||}` \\ simp[]
+    \\ fs[SUBSET_DEF]
+    \\ Cases_on`b` \\ fs[BAG_INSERT] )
+  \\ `b = BAG_INSERT x (b - {|x|})`
+  by (
+    simp[BAG_EXTENSION]
+    \\ simp[BAG_INN, BAG_INSERT, EMPTY_BAG, BAG_DIFF]
+    \\ rw[] )
+  \\ qmatch_asmsub_abbrev_tac`BAG_INSERT x b0`
+  \\ fs[]
+  \\ `b0 x = v` by fs[BAG_INSERT]
+  \\ first_x_assum(qspecl_then[`b0`,`x`]mp_tac)
+  \\ simp[]
+  \\ impl_tac >- fs[SUBSET_DEF]
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ simp[BAG_INSERT]
+  \\ rewrite_tac[GSYM arithmeticTheory.ADD1]
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[GSYM FINITE_SET_OF_BAG]
+  \\ `SET_OF_BAG b0 SUBSET {x}` by fs[SUBSET_DEF]
+  \\ `FINITE {x}` by simp[]
+  \\ reverse conj_tac >- fs[SUBSET_DEF]
+  \\ metis_tac[SUBSET_FINITE]
+QED
+
 val _ = export_theory();
