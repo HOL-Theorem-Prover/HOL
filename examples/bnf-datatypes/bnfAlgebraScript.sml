@@ -7,11 +7,6 @@ open ordinalTheory
 
 val _ = new_theory "bnfAlgebra";
 
-Overload "𝟙"[local] = “{()}”
-Overload "𝟚"[local] = “{T;F}”
-Overload "≉"[local] = “λa b. ¬(a ≈ b)”
-
-val _ = set_fixity "≉" (Infix(NONASSOC, 450))
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
 val _ = new_type ("F", 2)
@@ -446,28 +441,28 @@ Theorem CBDb:
   ω ≤ (bd : γ ordinal) ∧ (∀x:(α,β)F. setBF x ≼ preds bd) ∧
   (∃x:(α,γ ordinal)F. setBF x ≠ ∅)
 ⇒
-  ∀B:β set. {T;F} ≼ B ⇒ Fin 𝕌(:α) B ≼ B ** preds(cardSUC (Fin 𝕌(:α) (preds bd)))
+  ∀B:β set. 𝟚 ≼ B ⇒ Fin 𝕌(:α) B ≼ B ** cardSUC (Fin 𝕌(:α) (preds bd))
 Proof
   rpt strip_tac >>
   qabbrev_tac ‘kA = Fin 𝕌(:α) (preds bd) CROSS (B ** preds bd)’ >>
   qmatch_abbrev_tac ‘_ ≼ B ** k’ >>
   ‘kA ≼ B ** k’
     by (simp[Abbr‘k’, Abbr‘kA’] >> irule CARD_MUL2_ABSORB_LE >>
-        simp[] >> rpt strip_tac
-        >- (drule_all cardleq_TRANS >> simp[cardleq_def, INJ_IFF] >>
-            qexistsl_tac [‘T’, ‘F’] >> simp[])
-        >- (disj2_tac >> simp[FINITE_preds, cardSUC_EQN] >>
-            ‘INFINITE (preds bd)’
+        simp[] >> rpt strip_tac >~
+        [‘𝟚 ≼ B’, ‘B ≼ 𝟙’] >- (drule_all cardleq_TRANS >> simp[]) >~
+        [‘INFINITE (Fin 𝕌(:α) (preds bd))’]
+        >- (‘INFINITE (preds bd)’
               by (simp[FINITE_preds] >> rpt strip_tac >> gvs[]) >>
             ‘preds bd ≼ Fin 𝕌(:α) (preds bd)’ by metis_tac[nontrivialBs] >>
-            metis_tac[CARD_LE_FINITE])
+            metis_tac[CARD_LE_FINITE]) >~
+        [‘Fin UNIV (preds bd) ≼ B ** cardSUC _’]
         >- (resolve_then (Pos last) irule CARD_LE_EXP cardleq_TRANS >>
-            simp[] >> irule (iffRL cardleq_lteq) >> simp[lt_cardSUC]) >>
+            simp[]) >>
         irule set_exp_cardle_cong >> simp[] >> rpt strip_tac >>
         gvs[cardleq_empty] >>
         ‘preds bd ≼ Fin 𝕌(:α) (preds bd)’ by metis_tac[nontrivialBs] >>
         first_x_assum $ C (resolve_then (Pos hd) irule) cardleq_TRANS >>
-        irule (iffRL cardleq_lteq) >> simp[lt_cardSUC]) >>
+        simp[]) >>
   first_assum $ C (resolve_then (Pos last) irule) cardleq_TRANS >>
   qabbrev_tac ‘d = λ(y:('a,'c ordinal)F ,f). mapF I (THE o f) y’ >>
   simp[cardleq_def] >>
@@ -499,27 +494,6 @@ Proof
   simp[Abbr‘d’, Abbr‘y’, mapO] >>
   simp[Once (GSYM mapID), SimpRHS] >> irule map_CONG >> simp[] >>
   gs[INJ_IFF]
-QED
-
-Theorem cardleq_preds_csuc:
-  preds a ≼ preds b ⇒ preds (csuc a) ≼ preds (csuc b)
-Proof
-  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
-  simp[cardinality_bump_exists] >> rw[] >>
-  DEEP_INTRO_TAC oleast_intro >>
-  simp[cardinality_bump_exists] >> rw[] >>
-  rename [‘preds a ≼ preds b’, ‘preds b ≺ preds c’, ‘preds a ≺ preds d’] >>
-  CCONTR_TAC >>
-  ‘∃c' : (α + num -> bool) ordinal.
-     orderiso (wobound c allOrds) (wobound c' allOrds) ∧
-     preds c ≈ preds c'’
-    by (irule transfer_ordinals >>
-        resolve_then (Pos last) irule preds_inj_univ cardleq_TRANS >>
-        metis_tac[cardleq_lteq]) >>
-  ‘preds c' ≺ preds d’ by metis_tac[CARD_LT_CONG, cardeq_REFL] >>
-  drule_then assume_tac cardlt_preds >> first_x_assum drule >>
-  metis_tac[CARD_LE_TRANS, CARD_LET_TRANS, CARD_LT_REFL, CARD_LT_CONG,
-            cardeq_REFL]
 QED
 
 Theorem preds_bd_lemma[local]:
@@ -554,7 +528,6 @@ Proof
   simp[cardinality_bump_exists] >> metis_tac[cardleq_lteq]
 QED
 
-
 Theorem Fin_MONO:
   s ⊆ t ⇒ Fin A s ⊆ Fin A t
 Proof
@@ -582,34 +555,24 @@ Proof
   simp[CARD_LE_ADDR]
 QED
 
-
-
-Theorem CARD_12[simp]:
-  𝟙 ≺ 𝟚 ∧ 𝟙 ≉ 𝟚 ∧ 𝟚 ≉ 𝟙 ∧ 𝟙 ≼ 𝟚
-Proof
-  conj_asm1_tac
-  >- (simp[cardleq_def, INJ_IFF] >> qexistsl_tac [‘T’, ‘F’] >> simp[]) >>
-  metis_tac[CARD_LT_CONG, CARD_LT_REFL, cardeq_REFL, cardleq_lteq]
-QED
-
 Theorem alg_cardinality_bound:
   ω ≤ (bd : γ ordinal) ∧ (∀x:(α,β+bool)F. setBF x ≼ preds bd) ∧
   (∃x:(α,γ ordinal)F. setBF x ≠ ∅) ⇒
-  KK (s:(α,β)F -> β) (csuc bd) ≼ {T;F} ** preds (cardSUC $ Fin 𝕌(:α) (preds bd))
+  KK (s:(α,β)F -> β) (csuc bd) ≼ 𝟚 ** (cardSUC $ Fin 𝕌(:α) (preds bd))
 Proof
   strip_tac >> rename [‘setBF gv ≠ ∅’] >>
   qmatch_abbrev_tac ‘_ ≼ 𝟚 ** BD’ >>
   ‘INFINITE BD’
-    by (strip_tac >> gs[Abbr‘BD’, FINITE_preds, cardSUC_EQN] >>
+    by (simp[Abbr‘BD’] >>
         ‘preds bd ≼ Fin 𝕌(:α) (preds bd)’ by metis_tac[nontrivialBs] >>
+        strip_tac >>
         ‘FINITE (preds bd)’ by metis_tac[CARD_LE_FINITE] >>
         gs[FINITE_preds]) >>
-  ‘BD ≠ ∅’ by simp[Abbr‘BD’] >>
+  ‘BD ≠ ∅’ by (rpt strip_tac >> gs[]) >>
   ‘∀i. i < csuc bd ⇒ KK s i ≼ 𝟚 ** BD’
-    suffices_by (strip_tac >> simp[csuc_is_nonzero_limit, KK_def] >>
+    suffices_by (strip_tac >> simp[KK_def, csuc_is_nonzero_limit] >>
                  irule CARD_BIGUNION >> simp[PULL_EXISTS] >>
-                 rpt strip_tac >>
-                 irule IMAGE_cardleq_rwt >> simp[cardSUC_def] >>
+                 irule IMAGE_cardleq_rwt >>
                  resolve_then Any
                               (fn th =>
                                  resolve_then (Pos hd) irule th cardleq_TRANS)
@@ -620,7 +583,7 @@ Proof
   ho_match_mp_tac ord_induction >> rw[] >>
   simp[Once KK_thm] >> rw[] >> irule CARD_BIGUNION >>
   simp[PULL_EXISTS] >> reverse (rpt conj_tac)
-  >- (irule IMAGE_cardleq_rwt >> gs[lt_csuc] >> simp[cardSUC_def] >>
+  >- (irule IMAGE_cardleq_rwt >> gs[lt_csuc] >>
       resolve_then Any
                    (fn th =>
                       resolve_then (Pos hd) irule th cardleq_TRANS)
@@ -630,8 +593,7 @@ Proof
       dxrule_then assume_tac cardleq_preds_csuc >>
       simp[Abbr‘BD’, cardSUC_def] >>
       pop_assum (C (resolve_then (Pos last) irule) cardleq_TRANS) >>
-      first_assum (C (resolve_then (Pos hd) irule) cardleq_TRANS) >>
-      simp[preds_csuc_lemma]) >>
+      simp[lt_csuc, ordlt_preds_mono]) >>
   qx_gen_tac ‘j’ >> strip_tac >>
   ‘{ s fv | fv | setBF fv ⊆ KK s j} = IMAGE s (Fin 𝕌(:α) (KK s j))’
     by simp[EXTENSION, Fin_def] >> simp[] >>
@@ -650,18 +612,17 @@ Proof
     C (resolve_then (Pos (el 2)) (resolve_then (Pos last)
                                   (qspec_then ‘BD’ mp_tac) cardleq_REFL))
     set_exp_cardle_cong) >>
-  impl_tac >- simp[Abbr‘BD’] >>
+  impl_tac >- simp[] >>
   disch_then (C (resolve_then (Pos hd) irule) cardleq_TRANS) >>
-  ‘𝟚 ≼ 𝟚 ** BD’ by (simp[cardleq_setexp] >> simp[Abbr‘BD’]) >>
+  ‘𝟚 ≼ 𝟚 ** BD’ by (simp[cardleq_setexp]) >>
   ‘INFINITE (𝟚 ** BD)’ by simp[] >>
   ‘𝟚 ** BD +_c 𝟚 ≈ 𝟚 ** BD’
     by metis_tac[CARD_ADD_SYM, CARD_ADD_ABSORB, cardeq_TRANS] >>
-  qspecl_then [‘(𝟚 ** BD +_c 𝟚) ** BD’, ‘(𝟚 ** BD) ** BD’,
-               ‘𝟚 ** BD’, ‘𝟚 ** BD’] mp_tac
-              (INST_TYPE [“:γ” |-> “:'z”] CARD_LE_CONG) >>
-  simp[cardeq_REFL] >> impl_tac
-  >- (irule set_exp_card_cong >> simp[cardeq_REFL]) >>
-  simp[] >> strip_tac >>
+  drule_then (qspecl_then [‘BD’, ‘BD’] mp_tac) set_exp_card_cong >>
+  simp[cardeq_REFL] >> strip_tac >>
+  pop_assum (C (resolve_then (Pos hd)
+                (resolve_then (Pos hd) irule cardeq_REFL))
+             (iffRL CARD_LE_CONG)) >>
   resolve_then (Pos hd) (resolve_then (Pos hd) irule cardeq_REFL)
                set_exp_product (iffRL CARD_LE_CONG) >>
   irule set_exp_cardle_cong >> simp[] >> ONCE_REWRITE_TAC [cardleq_lteq] >>
