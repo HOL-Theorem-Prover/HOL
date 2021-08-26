@@ -24,6 +24,10 @@ val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 (* Cardinal comparisons                                                      *)
 (* ------------------------------------------------------------------------- *)
 
+(* first of these clashes with indicator_fn in extreal etc *)
+Overload "𝟙"[local] = “{()}”                                           (* UOK *)
+Overload "𝟚" = “{T;F}”                                                 (* UOK *)
+
 val cardeq_def = Define`
   cardeq s1 s2 <=> ?f. BIJ f s1 s2
 `
@@ -33,6 +37,9 @@ val _ = TeX_notation {hol = "=~",            TeX = ("\\ensuremath{\\approx}", 1)
 val _ = TeX_notation {hol = UTF8.chr 0x2248, TeX = ("\\ensuremath{\\approx}", 1)};
 
 val _ = overload_on("=~", ``cardeq``)
+
+Overload "≉" = “λa b. ¬(a ≈ b)”                                        (* UOK *)
+val _ = set_fixity "≉" (Infix(NONASSOC, 450))                          (* UOK *)
 
 val cardeq_REFL = store_thm(
   "cardeq_REFL",
@@ -1500,6 +1507,55 @@ val POW_EQ_X_EXP_X = Q.store_thm(
   irule set_exp_cardle_cong >> simp[] >> irule CARDEQ_SUBSET_CARDLEQ >>
   simp[SET_SQUARED_CARDEQ_SET]);
 
+Theorem setexp_eq_EMPTY[simp]:
+  A ** B = {} <=> A = {} /\ B <> {}
+Proof
+  simp[set_exp_def] >> simp[SimpLHS, EXTENSION] >>
+  simp[] >> eq_tac >> rpt strip_tac
+  >- (Cases_on ‘B = {}’ >> gvs[]
+      >- (pop_assum $ qspec_then ‘K NONE’ mp_tac >> simp[]) >>
+      CCONTR_TAC >> gs[GSYM MEMBER_NOT_EMPTY] >>
+      rename [‘_ = SOME _ ==> _ NOTIN A’, ‘_ NOTIN B /\ _’, ‘b IN B’, ‘a IN A’] >>
+      first_x_assum $ qspec_then ‘λb0. if b0 IN B then SOME a else NONE’ mp_tac>>
+      simp[])
+  >- (gvs[] >> pop_assum $ qspec_then ‘K NONE’ mp_tac >> simp[]) >>
+  simp[] >> metis_tac[MEMBER_NOT_EMPTY]
+QED
+
+
+Theorem FINITE_EXPONENT_SETEXP_UNCOUNTABLE:
+  FINITE B /\ B <> {} /\ ~countable A ==>
+  ~countable (A ** B)
+Proof
+  Induct_on ‘FINITE’ >> simp[] >> rpt strip_tac >>
+  rename [‘A ** (e INSERT B) ’] >>
+  ‘A ** (e INSERT B) =~ A CROSS (A ** B)’
+    by simp[exp_INSERT_cardeq] >>
+  drule_all (iffLR countable_cardeq) >> simp[cross_countable_IFF] >>
+  rpt strip_tac >> gvs[CARDEQ_0, setexp_eq_EMPTY]
+QED
+
+Theorem FINITE_EXPONENT_SETEXP_COUNTABLE:
+  FINITE (B:'b set) ==>
+  (countable ((A:'a set) ** B) <=> B = {} \/ countable A)
+Proof
+  simp[EQ_IMP_THM, IMP_CONJ_THM] >> conj_tac
+  >- metis_tac[FINITE_EXPONENT_SETEXP_UNCOUNTABLE] >>
+  ‘!(A:'a set) (B:'b set). FINITE B /\ countable A ==> countable (A ** B)’
+    suffices_by (rw[] >> simp[EMPTY_set_exp]) >>
+  Induct_on ‘FINITE’ >> simp[EMPTY_set_exp] >> rpt strip_tac >>
+  ‘A ** (e INSERT B) =~ A CROSS (A ** B)’ by simp[exp_INSERT_cardeq] >>
+  drule_then irule (iffRL countable_cardeq) >> simp[cross_countable_IFF]
+QED
+
+Theorem FINITE_012:
+  FINITE A ==> A = {} \/ A =~ {()} \/ 2 <= CARD A
+Proof
+  Induct_on ‘FINITE’ >> simp[] >> rw[] >> gvs[CARD1_SING]
+QED
+
+
+
 (* bijections modelled as functions into options so that they can be everywhere
    NONE outside of their domains *)
 val bijns_def = Define‘
@@ -2427,6 +2483,14 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
+Theorem CARD_12[simp]:
+  {()} <</= {T;F} /\ ~({()} =~ {T;F}) /\ ~({T;F} =~ {()}) /\ {()} <<= {T;F}
+Proof
+  conj_asm1_tac
+  >- (simp[cardleq_def, INJ_IFF] >> qexistsl_tac [‘T’, ‘F’] >> simp[]) >>
+  metis_tac[CARD_LT_CONG, CARD_LT_REFL, cardeq_REFL, cardleq_lteq]
+QED
+
 Theorem CARD_EQ_TRANS = cardeq_TRANS
 
 Theorem CARD_EQ_CONG:
@@ -3036,6 +3100,37 @@ Proof
       (s :'a -> bool) <=_c t /\ t <=_c univ((:num) :num itself)``
  >- (EXISTS_TAC ``t:'b->bool`` >> ASM_REWRITE_TAC[])
  >> METIS_TAC [CARD_LE_TRANS]
+QED
+
+Theorem countable_setexp:
+  countable (A ** B) <=>
+    B = {} \/ FINITE B /\ countable A \/ A =~ {()} \/ A = {}
+Proof
+  rw[EQ_IMP_THM] >~
+  [‘countable (A ** {})’]
+  >- (resolve_then (Pos hd) irule EMPTY_set_exp_CARD (iffRL countable_cardeq) >>
+      simp[COUNTABLE_COUNT]) >~
+  [‘countable ({} ** B)’]
+  >- (Cases_on ‘B = {}’
+      >- (simp[] >>
+          resolve_then (Pos hd) irule EMPTY_set_exp_CARD
+                       (iffRL countable_cardeq) >>
+          simp[COUNTABLE_COUNT]) >>
+      simp[EMPTY_set_exp]) >~
+  [‘FINITE B /\ countable A’]
+  >- (Cases_on ‘B = {}’ >> simp[] >> Cases_on ‘A = {}’ >> simp[] >>
+      Cases_on ‘A =~ {()}’ >> simp[] >>
+      Cases_on ‘FINITE B’ >> simp[]
+      >- metis_tac[FINITE_EXPONENT_SETEXP_UNCOUNTABLE] >>
+      ‘~countable (POW B)’ by metis_tac[infinite_pow_uncountable] >>
+      ‘~countable (count 2 ** B)’
+        by metis_tac[countable_cardeq, POW_TWO_set_exp] >>
+      pop_assum mp_tac >> simp[] >>
+      ‘count 2 ** B <<= A ** B’ suffices_by metis_tac[CARD_LE_COUNTABLE] >>
+      irule set_exp_cardle_cong >> simp[] >> metis_tac[FINITE_012]) >~
+  [‘A =~ {()}’]
+  >- gvs[CARD1_SING, SING_set_exp] >>
+  metis_tac[FINITE_EXPONENT_SETEXP_COUNTABLE]
 QED
 
 val CARD_EQ_COUNTABLE = store_thm ("CARD_EQ_COUNTABLE",
