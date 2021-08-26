@@ -85,7 +85,7 @@ fun l3_decode tm =
       val blast_thm = mk_blast_thm tm
       val opc_list = concl blast_thm |> lhs
       val sub_blast_thms = if is_var tm then [] else
-                           map mk_blast_thm (remove_dups (find_terms is_var tm))
+                           mapfilter mk_blast_thm (remove_dups (find_terms is_var tm))
       val decode_thm = arm8_decode (rand opc_list) |>
                        REWRITE_RULE sub_blast_thms
   in REWRITE_RULE [blast_thm] decode_thm end
@@ -209,7 +209,7 @@ fun asl_execute_helper eval tm =
       fun remove_dups [] = []
         | remove_dups (x::xs) = x::(remove_dups (remove x xs));
       val sub_blast_thms = if is_var tm then [] else
-                           map mk_blast_thm (remove_dups (find_terms is_var tm))
+                           mapfilter mk_blast_thm (remove_dups (find_terms is_var tm))
       val eval_tm = ``seqS (write_regS SEE_ref (~1)) (ExecuteA64 ^v2w_tm) asl``
   in eval eval_tm |> GEN_ALL |> REWRITE_RULE (blast_thm::sub_blast_thms) end
   handle _ => raise (
