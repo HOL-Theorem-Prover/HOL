@@ -682,7 +682,7 @@ Proof
   rewrite_tac[GSYM EL] >> DEP_REWRITE_TAC[el_w2v] >> simp[word_msb_def]
 QED
 
-Definition l3_to_asl_LogicalOp:
+Definition l3_to_asl_LogicalOp_def:
   l3_to_asl_LogicalOp (arm8$LogicalOp_AND) = armv86a_types$LogicalOp_AND ∧
   l3_to_asl_LogicalOp (LogicalOp_ORR) = LogicalOp_ORR ∧
   l3_to_asl_LogicalOp (LogicalOp_EOR) = LogicalOp_EOR
@@ -724,7 +724,7 @@ Proof
          armv86aTheory.undefined_LogicalOp_def] >>
     imp_res_tac Decode_T_EncodeBitMask >>
     imp_res_tac l3_asl_DecodeBitMasks >> simp[] >>
-    simp[asl_reg_rws, seqS, Once returnS, l3_to_asl_LogicalOp] >>
+    simp[asl_reg_rws, seqS, Once returnS, l3_to_asl_LogicalOp_def] >>
     irule_at Any EQ_REFL) >>
   simp[] >> pop_assum kall_tac >> unabbrev_all_tac >>
   simp[asl_reg_rws, seqS, Once returnS] >>
@@ -740,7 +740,7 @@ Proof
   qmatch_goalsub_abbrev_tac `SP_set _ aslw` >>
   qmatch_goalsub_abbrev_tac `write'SP l3w` >>
   `aslw = l3w` by (
-    unabbrev_all_tac >> Cases_on `op` >> simp[l3_to_asl_LogicalOp]) >>
+    unabbrev_all_tac >> Cases_on `op` >> simp[l3_to_asl_LogicalOp_def]) >>
   simp[] >> ntac 3 $ pop_assum kall_tac >>
   IF_CASES_TAC >> simp[]
   >- (
@@ -815,13 +815,13 @@ Proof
       unabbrev_all_tac >> rw[] >>
       Cases_on `b1` >> Cases_on `b2` >> Cases_on `shift_type` >> simp[] >>
       l3_decode_tac >> gvs[DecodeShift_def]) >>
-  Cases_on `shift_type = ShiftType_ROR` >> gvs[]
+  Cases_on `shift_type = ShiftType_ROR` >> rw[] >> gvs[]
   (* TODO why is l3_run_tac not working here? *)
   >- (
-    rw[] >> gvs[Run_def, dfn'Reserved_def, raise'exception_def] >>
+    gvs[Run_def, dfn'Reserved_def, raise'exception_def] >>
     IF_CASES_TAC >> gvs[]
     ) >>
-  rw[Run_def, Abbr `opc`] >>
+  l3_run_tac >> unabbrev_all_tac >>
   qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
   `∃s'. (do wr s; ex od asl) = (do wr s';
     execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg
@@ -885,6 +885,170 @@ Proof
   impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> simp[returnS]
 QED
 
+Theorem l3_models_asl_LogicalShiftedRegister_T:
+  ∀b1 shift_type i r3 r2 r1. i < 64 ⇒
+  l3_models_asl_instr
+      (Data (LogicalShiftedRegister@64
+        (1w, LogicalOp_AND, b1, T, shift_type, i, r3, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  qmatch_goalsub_abbrev_tac `Decode opc` >>
+  `Decode opc = Data (LogicalShiftedRegister@64
+    (1w, LogicalOp_AND, b1, T, shift_type, i, r3, r2, r1))` by (
+    unabbrev_all_tac >> l3_decode_tac >>
+    qcollapse_tac `n2w i : 6 word` >> simp[] >>
+    Cases_on `shift_type` >> gvs[DecodeShift_def]) >>
+  unabbrev_all_tac >> simp[] >> rw[] >>
+  l3_run_tac >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  gvs[GSYM $ ShiftReg_def |> SIMP_RULE std_ss [FUN_EQ_THM]] >>
+  gvs[PULL_FORALL] >> ntac 2 $ first_x_assum $ qspec_then `l3` assume_tac >>
+  qmatch_asmsub_abbrev_tac `word_msb shift_res` >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_logical_shiftedreg
+      (&w2n r1) (:64) b1 (&w2n r3) (&w2n r2) LogicalOp_AND T (&i)
+      (l3_to_asl_ShiftType shift_type) od asl)` by (
+    unabbrev_all_tac >> Cases_on `b1` >> asl_cexecute_tac >> gvs[] >>
+    map_every qcollapse_tac
+      [`n2w i : 6 word`,`n2w (ShiftType2num shift_type) : 2 word`] >>
+    simp[
+      decode_bics_aarch64_instrs_integer_logical_shiftedreg_def,
+      decode_ands_log_shift_aarch64_instrs_integer_logical_shiftedreg_def
+      ] >>
+    simp[sail2_state_monadTheory.undefined_boolS_def,
+         armv86aTheory.undefined_LogicalOp_def] >>
+    Cases_on `shift_type` >> gvs[armv86aTheory.DecodeShift_def] >>
+    simp[asl_reg_rws, returnS, seqS, l3_to_asl_ShiftType_def] >>
+    irule_at Any EQ_REFL) >>
+  simp[] >> pop_assum kall_tac >> simp[Abbr `wr`, Abbr `s`, Abbr `ex`] >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_logical_shiftedreg_def] >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >> impl_tac
+  >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> simp[asl_word_rws] >>
+  `ShiftReg 64 (&w2n r3) (l3_to_asl_ShiftType shift_type) (&i) asl1 =
+    returnS (ShiftReg (r3,shift_type,i) l3) asl1 : word64 res` by (
+      Cases_on `shift_type = ShiftType_ROR` >> gvs[l3_to_asl_ShiftType_def] >> (
+      gvs[ShiftReg_def, ShiftValue_def, armv86aTheory.ShiftReg_def] >>
+      drule X_read >> disch_then $ qspec_then `&w2n r3` mp_tac >> impl_tac
+      >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+      drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[returnS] >>
+      disch_then kall_tac >>
+      Cases_on `shift_type` >> gvs[l3_to_asl_ShiftType_def])) >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  DEP_REWRITE_TAC[HD_MAP] >> simp[sail2_valuesTheory.just_list_def, w2v_not_NIL] >>
+  qmatch_goalsub_abbrev_tac `(_ >< _) flag` >>
+  `flag = v2w [word_msb shift_res; (shift_res = 0w); F; F]` by (
+    gvs[Abbr `flag`] >> blastLib.BBLAST_TAC >> simp[] >>
+    rewrite_tac[GSYM EL] >> DEP_REWRITE_TAC[el_w2v] >> simp[word_msb_def]) >>
+  simp[] >>
+  dxrule l3_asl_SetTheFlags >>
+  disch_then $ qspecl_then
+    [`(3 >< 3) flag`,`(2 >< 2) flag`,
+     `(1 >< 1) flag`,`(0 >< 0) flag`,`X_set 64 (&w2n r1) shift_res`] mp_tac >>
+  strip_tac >> gvs[Abbr `flag`] >>
+  Cases_on `r1 = 31w` >> gvs[X_set_31]
+  >- (simp[returnS] >> gvs[SetTheFlags_def, w2v_v2w]) >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`shift_res`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> simp[returnS] >>
+  gvs[SetTheFlags_def, write'X_def, X_def, w2v_v2w]
+QED
+
+Theorem l3_models_asl_LogicalShiftedRegister_F:
+  ∀lop b1 shift_type i r3 r2 r1. i < 64 ⇒
+  l3_models_asl_instr
+      (Data (LogicalShiftedRegister@64
+        (1w, lop, b1, F, shift_type, i, r3, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >>
+  `∃wlop. EncodeLogicalOp (lop, F) = SOME wlop` by (
+    Cases_on `lop` >> gvs[encode_rws]) >>
+  simp[encode_rws] >>
+  qmatch_goalsub_abbrev_tac `Decode opc` >>
+  `Decode opc = Data (LogicalShiftedRegister@64
+    (1w, lop, b1, F, shift_type, i, r3, r2, r1))` by (
+    unabbrev_all_tac >> l3_decode_tac >>
+    qcollapse_tac `n2w i : 6 word` >> simp[] >>
+    Cases_on `lop` >> gvs[EncodeLogicalOp_def] >>
+    Cases_on `shift_type` >> gvs[DecodeShift_def]) >>
+  unabbrev_all_tac >> simp[] >> rw[] >>
+  l3_run_tac >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  gvs[GSYM $ ShiftReg_def |> SIMP_RULE std_ss [FUN_EQ_THM]] >>
+  gvs[PULL_FORALL] >> ntac 2 $ first_x_assum $ qspec_then `l3` assume_tac >>
+  pop_assum mp_tac >> qpat_abbrev_tac `shift_res = _ && b` >> strip_tac >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_logical_shiftedreg
+      (&w2n r1) (:64) b1 (&w2n r3) (&w2n r2) (l3_to_asl_LogicalOp lop) F (&i)
+      (l3_to_asl_ShiftType shift_type) od asl)` by (
+    unabbrev_all_tac >>
+    Cases_on `b1` >> Cases_on `lop` >> gvs[EncodeLogicalOp_def, LogicalOp_of_num_def] >>
+    asl_cexecute_tac >> gvs[] >>
+    map_every qcollapse_tac
+      [`n2w i : 6 word`,`n2w (ShiftType2num shift_type) : 2 word`] >>
+    simp[
+      decode_bic_log_shift_aarch64_instrs_integer_logical_shiftedreg_def,
+      decode_orn_log_shift_aarch64_instrs_integer_logical_shiftedreg_def,
+      decode_eon_aarch64_instrs_integer_logical_shiftedreg_def,
+      decode_and_log_shift_aarch64_instrs_integer_logical_shiftedreg_def,
+      decode_orr_log_shift_aarch64_instrs_integer_logical_shiftedreg_def,
+      decode_eor_log_shift_aarch64_instrs_integer_logical_shiftedreg_def
+      ] >>
+    simp[sail2_state_monadTheory.undefined_boolS_def,
+         armv86aTheory.undefined_LogicalOp_def] >>
+    Cases_on `shift_type` >> gvs[armv86aTheory.DecodeShift_def] >>
+    simp[asl_reg_rws, returnS, seqS, l3_to_asl_LogicalOp_def, l3_to_asl_ShiftType_def] >>
+    irule_at Any EQ_REFL
+    ) >>
+  simp[] >> pop_assum kall_tac >> simp[Abbr `wr`, Abbr `s`, Abbr `ex`] >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_logical_shiftedreg_def] >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >> impl_tac
+  >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> simp[asl_word_rws] >>
+  `ShiftReg 64 (&w2n r3) (l3_to_asl_ShiftType shift_type) (&i) asl1 =
+    returnS (ShiftReg (r3,shift_type,i) l3) asl1 : word64 res` by (
+      Cases_on `shift_type = ShiftType_ROR` >> gvs[l3_to_asl_ShiftType_def] >> (
+      gvs[ShiftReg_def, ShiftValue_def, armv86aTheory.ShiftReg_def] >>
+      drule X_read >> disch_then $ qspec_then `&w2n r3` mp_tac >> impl_tac
+      >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+      drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[returnS] >>
+      disch_then kall_tac >>
+      Cases_on `shift_type` >> gvs[l3_to_asl_ShiftType_def])) >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  Cases_on `r1 = 31w` >> gvs[X_set_31]
+  >- (simp[returnS] >> gvs[SetTheFlags_def, w2v_v2w]) >>
+  drule $ b64 alpha X_set_not_31 >>
+  qmatch_goalsub_abbrev_tac `X_set _ _ shift` >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`shift`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  simp[Abbr `shift`, returnS] >>
+  Cases_on `lop` >> gvs[write'X_def, l3_to_asl_LogicalOp_def]
+QED
+
+Theorem l3_models_asl_LogicalShiftedRegister:
+  ∀lop b1 b2 shift_type i r3 r2 r1. i < 64 ⇒
+    IS_SOME (EncodeLogicalOp (lop, b2))
+  ⇒ l3_models_asl_instr
+      (Data (LogicalShiftedRegister@64
+        (1w, lop, b1, b2, shift_type, i, r3, r2, r1)))
+Proof
+  Cases >> Cases >> Cases >> gvs[EncodeLogicalOp_def] >>
+  simp[l3_models_asl_LogicalShiftedRegister_T,
+       l3_models_asl_LogicalShiftedRegister_F]
+QED
+
+(* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
 Theorem l3_asl_BranchTo_CALL:
   ¬ HavePACExt () ⇒ (* TODO versioning issue here *)
   ∀target l3 asl1.
@@ -1135,6 +1299,24 @@ Proof
   >- state_rel_tac[]
   >- gvs[asl_sys_regs_ok_def]
 QED
+
+(****************************************)
+
+(* TODO for CakeML
+  Data (LogicalShiftedRegister@64 _)
+  Data (BitfieldMove@64 _)
+  Data (Division@64 _)
+  Data (MultiplyHigh _)
+  Data (MultiplyAddSub@64 _)
+  Data (ConditionalCompareImmediate@64 _)
+  Data (AddSubCarry@64 _)
+  Data (ConditionalSelect@64 _)
+  Branch (BranchImmediate (_, BranchType_JMP))
+  Branch (BranchConditional _)
+  Branch (BranchRegister _)
+  LoadStore (LoadStoreImmediate@64 _)
+  LoadStore (LoadStoreImmediate@8 _) (* XXX *)
+*)
 
 (****************************************)
 
