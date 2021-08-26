@@ -444,6 +444,10 @@
 (define-key hol-unicode-bboard-map (kbd "X") "𝕏")  ; U+1D54F
 (define-key hol-unicode-bboard-map (kbd "Y") "𝕐")  ; U+1D550
 (define-key hol-unicode-bboard-map (kbd "Z") "ℤ")  ; U+1D551
+; and numbers
+(dotimes (i 10)
+  (define-key hol-unicode-bboard-map (kbd (format "%d" i))
+    (char-to-string (+ i #x1d7d8))))
 
 
 
