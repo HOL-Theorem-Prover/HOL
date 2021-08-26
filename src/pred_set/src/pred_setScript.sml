@@ -6297,22 +6297,24 @@ val finite_countable = store_thm (* from util_prob *)
    >> Q.EXISTS_TAC `SUC n`
    >> RW_TAC std_ss [SUC_SUB1]);
 
-val COUNTABLE_COUNT = store_thm (* from util_prob *)
-  ("COUNTABLE_COUNT",
-   ``!n. countable (count n)``,
-   PROVE_TAC [FINITE_COUNT, finite_countable]);
+Theorem COUNTABLE_COUNT[simp]:
+  !n. countable (count n)
+Proof PROVE_TAC [FINITE_COUNT, finite_countable]
+QED
 
-val COUNTABLE_NUM = store_thm (* from util_prob *)
-  ("COUNTABLE_NUM",
-   ``!s :num -> bool. countable s``,
+Theorem COUNTABLE_NUM[simp]:
+  !s :num -> bool. countable s
+Proof
    RW_TAC std_ss [COUNTABLE_ALT]
    >> Q.EXISTS_TAC `I`
-   >> RW_TAC std_ss [combinTheory.I_THM]);
+   >> RW_TAC std_ss [combinTheory.I_THM]
+QED
 
-val COUNTABLE_IMAGE_NUM = store_thm (* from util_prob *)
-  ("COUNTABLE_IMAGE_NUM",
-   ``!f :num -> 'a. !s. countable (IMAGE f s)``,
-   PROVE_TAC [COUNTABLE_NUM, image_countable]);
+Theorem COUNTABLE_IMAGE_NUM[simp]:
+  !f :num -> 'a. !s. countable (IMAGE f s)
+Proof
+   PROVE_TAC [COUNTABLE_NUM, image_countable]
+QED
 
 open numpairTheory
 
