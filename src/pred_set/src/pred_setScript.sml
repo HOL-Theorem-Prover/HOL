@@ -4951,6 +4951,14 @@ val SUM_IMAGE_PERMUTES = store_thm(
   `SIGMA (f o g) s = SIGMA f (IMAGE g s)` by SRW_TAC[][SUM_IMAGE_INJ_o] THEN
   SRW_TAC[][]);
 
+Theorem SUM_IMAGE_SUM:
+  !s. FINITE s ==> SIGMA f s + SIGMA g s = SIGMA (\x. f x + g x) s
+Proof
+ ho_match_mp_tac FINITE_INDUCT
+ \\ rw[SUM_IMAGE_THM]
+ \\ fs[DELETE_NON_ELEMENT]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)
 (*---------------------------------------------------------------------------*)
@@ -5841,6 +5849,96 @@ Proof
   \\ goal_assum(first_assum o mp_then Any mp_tac)
   \\ rw[SUBSET_DEF]
   \\ METIS_TAC[LINV_DEF]
+QED
+
+Theorem partitions_INSERT:
+  !x w v. x NOTIN w ==>
+  (v partitions (x INSERT w) <=>
+   (?u s. u partitions w /\ v = (x INSERT s) INSERT (u DELETE s) /\
+    (s <> {} ==> s IN u)))
+Proof
+  rw[partitions_thm]
+  \\ EQ_TAC \\ strip_tac
+  >- (
+    pop_assum mp_tac \\ ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[]
+    \\ strip_tac
+    \\ fs[EXISTS_UNIQUE_ALT]
+    \\ Q.MATCH_ASMSUB_RENAME_TAC`_ <=> s = _`
+    \\ `x IN s /\ s IN v` by METIS_TAC[]
+    \\ Q.EXISTS_TAC`if SING s then v DELETE s
+                    else (s DELETE x) INSERT (v DELETE s)`
+    \\ Q.EXISTS_TAC`s DELETE x`
+    \\ IF_CASES_TAC \\ fs[SING_DEF]
+    \\ ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[] \\ fs[]
+    >- (
+      fs[SUBSET_DEF, PULL_EXISTS]
+      \\ rw[]
+      \\ TRY (`y NOTIN {x}` by (strip_tac \\ fs[]))
+      \\ simp[Once EXTENSION]
+      \\ METIS_TAC[])
+    \\ fs[SUBSET_DEF, PULL_EXISTS, GSYM CONJ_ASSOC]
+    \\ REV_FULL_SIMP_TAC(srw_ss())[]
+    \\ conj_tac >- METIS_TAC[DELETE_EQ_SING]
+    \\ conj_tac >- METIS_TAC[]
+    \\ conj_tac >- METIS_TAC[]
+    \\ conj_tac >- METIS_TAC[]
+    \\ reverse conj_tac
+    >- (
+      ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[Once EXTENSION]
+      \\ rw[EQ_IMP_THM] \\ rw[INSERT_DELETE]
+      \\ CCONTR_TAC \\ fs[] \\ REV_FULL_SIMP_TAC(srw_ss())[]
+      \\ pop_assum mp_tac
+      \\ FULL_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[Once EQ_IMP_THM]
+      \\ `s <> {x}` by METIS_TAC[]
+      \\ `s DELETE x <> {}` by (fs[EXTENSION] \\ METIS_TAC[])
+      \\ `?z. z IN s DELETE x` by METIS_TAC[MEMBER_NOT_EMPTY]
+      \\ `z <> x` by fs[]
+      \\ `z IN w` by METIS_TAC[IN_DELETE]
+      \\ first_x_assum drule
+      \\ strip_tac
+      \\ `z IN s` by fs[]
+      \\ METIS_TAC[])
+    \\ rw[] \\ rw[INSERT_SUBSET, NOT_EMPTY_INSERT]
+    \\ first_x_assum drule
+    \\ disch_then(Q.X_CHOOSE_THEN`z`strip_assume_tac)
+    \\ ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[EQ_IMP_THM]
+    \\ `y <> x` by METIS_TAC[] \\ fs[]
+    \\ Cases_on`y IN s` \\ fs[]
+    >- ( disj1_tac \\ rw[] \\ METIS_TAC[] )
+    \\ Q.EXISTS_TAC`z`
+    \\ METIS_TAC[])
+  \\ ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[]
+  \\ fs[SUBSET_DEF, GSYM CONJ_ASSOC]
+  \\ conj_tac >- METIS_TAC[NOT_IN_EMPTY]
+  \\ conj_tac >- METIS_TAC[]
+  \\ fs[EXISTS_UNIQUE_THM, GSYM CONJ_ASSOC]
+  \\ conj_tac >- ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[]
+  \\ conj_tac >- (
+      rw[] \\ REV_FULL_SIMP_TAC(srw_ss())[GSYM MEMBER_NOT_EMPTY, PULL_EXISTS]
+      \\ METIS_TAC[] )
+  \\ rw[] \\ ASM_SIMP_TAC(srw_ss()++boolSimps.DNF_ss)[]
+  \\ REV_FULL_SIMP_TAC(srw_ss())[GSYM MEMBER_NOT_EMPTY, PULL_EXISTS]
+  \\ METIS_TAC[]
+QED
+
+Theorem FINITE_partitions:
+  !x. FINITE x ==>
+      FINITE { v | v partitions x }
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[partitions_empty, partitions_INSERT]
+  \\ Q.MATCH_ASMSUB_ABBREV_TAC`FINITE px`
+  \\ Q.ABBREV_TAC`ss = {} INSERT BIGUNION px`
+  \\ `FINITE (px CROSS ss)` by (
+    simp[Abbr`ss`, Abbr`px`]
+    \\ METIS_TAC[partitions_FINITE])
+  \\ `FINITE (IMAGE (\(u,s). (e INSERT s) INSERT u DELETE s) (px CROSS ss))`
+  by simp[FINITE_CROSS, IMAGE_FINITE]
+  \\ irule SUBSET_FINITE
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ simp[SUBSET_DEF, PULL_EXISTS, EXISTS_PROD]
+  \\ simp[Abbr`px`, Abbr`ss`]
+  \\ METIS_TAC[]
 QED
 
 val part_def = TotalDefn.Define`
