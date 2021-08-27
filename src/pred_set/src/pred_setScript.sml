@@ -5776,6 +5776,32 @@ Proof
   \\ fs[SUBSET_DEF, EXISTS_UNIQUE_THM] \\ REV_FULL_SIMP_TAC(srw_ss())[]
 QED
 
+Theorem partitions_covers:
+  !x y. x partitions y ==> BIGUNION x = y
+Proof
+  rw[partitions_def]
+  \\ irule BIGUNION_partition
+  \\ rw[]
+QED
+
+Theorem partitions_PAIR_DISJOINT:
+  !x y. x partitions y <=>
+        {} NOTIN x /\
+        (!s t. s IN x /\ t IN x /\ ~(s = t) ==> DISJOINT s t) /\
+        BIGUNION x = y
+Proof
+  rw[EQ_IMP_THM]
+  >- METIS_TAC[partitions_thm]
+  >- METIS_TAC[partitions_DISJOINT]
+  >- METIS_TAC[partitions_covers]
+  \\ rw[partitions_thm]
+  >- METIS_TAC[]
+  >- (simp[SUBSET_DEF, PULL_EXISTS] \\ METIS_TAC[])
+  \\ simp[EXISTS_UNIQUE_THM]
+  \\ conj_tac >- METIS_TAC[]
+  \\ METIS_TAC[IN_DISJOINT]
+QED
+
 Theorem partitions_SING:
   !v x. SING x ==>
         (v partitions x <=> v = {{CHOICE x}})
