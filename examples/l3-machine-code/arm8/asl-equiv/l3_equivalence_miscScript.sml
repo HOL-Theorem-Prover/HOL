@@ -383,6 +383,11 @@ Proof
   rw[LIST_EQ_REWRITE, EL_DROP, EL_MAP, EL_ZIP, EL_APPEND_EQN, EL_REPLICATE] >> rw[]
 QED
 
+Theorem FLAT_REPLICATE_singleton[simp]:
+  FLAT (REPLICATE n [e]) = REPLICATE n e
+Proof
+  Induct_on `n` >> rw[]
+QED
 
 (****************************************)
 

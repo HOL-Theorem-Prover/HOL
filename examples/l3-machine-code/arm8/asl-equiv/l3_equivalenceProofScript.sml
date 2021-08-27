@@ -821,7 +821,7 @@ Proof
     gvs[Run_def, dfn'Reserved_def, raise'exception_def] >>
     IF_CASES_TAC >> gvs[]
     ) >>
-  l3_run_tac >> unabbrev_all_tac >>
+  unabbrev_all_tac >> rw[Run_def] >>
   qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
   `∃s'. (do wr s; ex od asl) = (do wr s';
     execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg
@@ -1046,6 +1046,85 @@ Proof
   Cases >> Cases >> Cases >> gvs[EncodeLogicalOp_def] >>
   simp[l3_models_asl_LogicalShiftedRegister_T,
        l3_models_asl_LogicalShiftedRegister_F]
+QED
+
+Theorem l3_models_asl_BitfieldMove:
+  ∀b1 b2 w t r s r2 r1.
+    r < 64 ∧ s < 64 ∧ (b2 ⇒ b1) ∧
+    arm8$DecodeBitMasks (1w, n2w s, n2w r, F) = SOME (w, t)
+  ⇒ l3_models_asl_instr
+      (Data (BitfieldMove@64 (1w, b1, b2, w, t, r, s, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  qmatch_goalsub_abbrev_tac `if c then e1 else e2` >>
+  `∃b. (if c then e1 else e2) = SOME b` by (
+    unabbrev_all_tac >> every_case_tac >> gvs[]) >>
+  simp[] >>
+  qmatch_goalsub_abbrev_tac `Decode opc` >>
+  `Decode opc = Data (BitfieldMove@64 (1w, b1, b2, w, t, r, s, r2, r1))` by (
+    unabbrev_all_tac >>
+    simp[Decode_def, boolify32_def] >> blastLib.BBLAST_TAC >>
+    map_every qcollapse_tac [`n2w r : 6 word`,`n2w s : 6 word`,`r2`,`r1`] >>
+    simp[] >> Cases_on_word_value `b` >> gvs[] >> every_case_tac >> gvs[]) >>
+  unabbrev_all_tac >> simp[] >> rw[] >>
+  l3_run_tac >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  gvs[PULL_FORALL] >> ntac 2 $ first_x_assum $ qspec_then `l3` assume_tac >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s1) ex` >>
+  `∃s'. (do wr s1; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_bitfield
+      (&r) (&s) (&w2n r1) 64 b2 b1 (&w2n r2) t w od asl)` by (
+    unabbrev_all_tac >>
+    qpat_x_assum `_ = SOME b` mp_tac >> rpt IF_CASES_TAC >> rw[] >> gvs[] >>
+    asl_cexecute_tac >> simp[] >>
+    map_every qcollapse_tac [`n2w s : 6 word`,`n2w r : 6 word`] >>
+    simp[
+      decode_sbfm_aarch64_instrs_integer_bitfield_def,
+      decode_ubfm_aarch64_instrs_integer_bitfield_def,
+      decode_bfm_aarch64_instrs_integer_bitfield_def
+      ] >>
+    simp[sail2_state_monadTheory.undefined_boolS_def] >>
+    drule l3_asl_DecodeBitMasks >> simp[] >> disch_then kall_tac >>
+    simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL) >>
+  simp[] >> pop_assum kall_tac >> unabbrev_all_tac >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_bitfield_def] >>
+  qmatch_goalsub_abbrev_tac `bindS br1 _` >>
+  `br1 asl1 = returnS (if b1 then 0b0w else X r1 l3) asl1` by (
+    simp[Abbr `br1`] >> IF_CASES_TAC >> gvs[] >>
+    drule X_read >> disch_then $ qspec_then `&w2n r1` mp_tac >> simp[] >>
+    disch_then irule >> simp[int_ge] >> WORD_DECIDE_TAC) >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  simp[asl_word_rws] >>
+  DEP_REWRITE_TAC[EL_MAP, el_w2v] >> simp[sail2_valuesTheory.just_list_def] >>
+  `¬(63i - &s < 0) ∧ Num (63 - &s) < 64 ∧ 63 - Num (63 - &s) = s` by (
+    ntac 2 $ last_x_assum mp_tac >> rpt $ pop_assum kall_tac >> ARITH_TAC) >>
+  simp[w2v_v2w] >>
+  Cases_on `r1 = 31w` >> gvs[] >- (simp[X_set_31, returnS]) >>
+  qmatch_goalsub_abbrev_tac `X_set _ _ v` >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`v`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> gvs[] >>
+  simp[returnS] >> gvs[write'X_def] >>
+  qmatch_goalsub_abbrev_tac `_⦇r1 ↦ vl⦈` >>
+  qsuff_tac `v = vl` >- (rw[] >> simp[]) >>
+  unabbrev_all_tac >>
+  simp[X_def] >> rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  IF_CASES_TAC >> gvs[]
+  >- (
+    qspec_then `s` assume_tac $ b64 alpha word_bit_0 >>
+    pop_assum mp_tac >> rewrite_tac[word_bit_def] >> simp[] >> EVAL_TAC
+    )
+  >- (
+    simp[word_bit_def] >>
+    Cases_on_word `l3.REG r2 ' s` >> gvs[] >> EVAL_TAC
+    )
 QED
 
 (* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
@@ -1303,8 +1382,6 @@ QED
 (****************************************)
 
 (* TODO for CakeML
-  Data (LogicalShiftedRegister@64 _)
-  Data (BitfieldMove@64 _)
   Data (Division@64 _)
   Data (MultiplyHigh _)
   Data (MultiplyAddSub@64 _)
