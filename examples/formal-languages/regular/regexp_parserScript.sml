@@ -116,6 +116,9 @@ QED
 Definition rePEG_def :
   rePEG = <|
     start := pnt Top ;
+    tokFALSE := "Failed to see expected token";
+    tokEOF := "Failed to see expected token; saw EOF instead";
+    notFAIL := "Not combinator failed";
     rules := FEMPTY |++ [
       (mkNT Atom,
        choicel [
@@ -303,14 +306,14 @@ Proof
 QED
 
 Definition add_loc_def :
-  add_loc c = (c, Locs (locn 0 0 0) (locn 0 0 0))
+  add_loc c = (c, Locs (POSN 0 0) (POSN 0 0))
 End
 
 
 Definition parse_regexp_def :
   parse_regexp s =
-    case peg_exec rePEG rePEG.start (MAP add_loc s) [] done failed
-    of Result (SOME ([],SOME r)) => SOME r | _ => NONE
+    case peg_exec rePEG rePEG.start (MAP add_loc s) [] fail [] done failed
+    of Result (Success [] (SOME r) _) => SOME r | _ => NONE
 End
 
 
