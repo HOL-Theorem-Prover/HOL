@@ -333,8 +333,8 @@ Proof
 QED
 
 Theorem l3_models_asl_MoveWideOp_Z:
-  ∀hw imm16 r.
-    l3_models_asl_instr (Data (MoveWide@64 (1w, MoveWideOp_Z, hw, imm16, r)))
+  ∀b hw imm16 r.
+    l3_models_asl_instr (Data (MoveWide@64 (b, MoveWideOp_Z, hw, imm16, r)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >>
   gvs[encode_rws] >>
@@ -355,8 +355,8 @@ Proof
 QED
 
 Theorem l3_models_asl_MoveWideOp_N:
-  ∀hw imm16 r.
-    l3_models_asl_instr (Data (MoveWide@64 (1w, MoveWideOp_N, hw, imm16, r)))
+  ∀b hw imm16 r.
+    l3_models_asl_instr (Data (MoveWide@64 (b, MoveWideOp_N, hw, imm16, r)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >>
   gvs[encode_rws] >>
@@ -377,8 +377,8 @@ Proof
 QED
 
 Theorem l3_models_asl_MoveWideOp_K:
-  ∀hw r.
-    l3_models_asl_instr (Data (MoveWide@64 (1w, MoveWideOp_K, hw, i, r)))
+  ∀b hw r.
+    l3_models_asl_instr (Data (MoveWide@64 (b, MoveWideOp_K, hw, i, r)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >>
   gvs[encode_rws] >>
@@ -435,10 +435,10 @@ QED
 
 (* TODO this proof has two very similar halves - perhaps these could be combined *)
 Theorem l3_models_asl_AddSubImmediate:
-  ∀b1 b2 i r2 r1.
+  ∀b b1 b2 i r2 r1.
     (i && ¬0b111111111111w ≠ 0b0w ⇒ i && ¬0b111111111111000000000000w = 0b0w)
   ⇒ l3_models_asl_instr
-      (Data (AddSubImmediate@64 (1w, b1, b2, i, r2, r1)))
+      (Data (AddSubImmediate@64 (b, b1, b2, i, r2, r1)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
   IF_CASES_TAC >> gvs[]
@@ -617,10 +617,10 @@ Proof
 QED
 
 Theorem l3_models_asl_LogicalImmediate_T:
-  ∀i r2 r1.
+  ∀b i r2 r1.
     IS_SOME (EncodeBitMask i)
   ⇒ l3_models_asl_instr
-      (Data (LogicalImmediate@64 (1w, LogicalOp_AND, T, i, r2, r1)))
+      (Data (LogicalImmediate@64 (b, LogicalOp_AND, T, i, r2, r1)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >>
   Cases_on `EncodeBitMask i` >> gvs[] >> rename1 `EncodeBitMask _ = SOME enc` >>
@@ -689,9 +689,9 @@ Definition l3_to_asl_LogicalOp_def:
 End
 
 Theorem l3_models_asl_LogicalImmediate_F:
-  ∀op i r2 r1.
+  ∀b op i r2 r1.
     IS_SOME (EncodeBitMask i)
-  ⇒ l3_models_asl_instr (Data (LogicalImmediate@64 (1w, op, F, i, r2, r1)))
+  ⇒ l3_models_asl_instr (Data (LogicalImmediate@64 (b, op, F, i, r2, r1)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >>
   Cases_on `EncodeBitMask i` >> gvs[] >> rename1 `EncodeBitMask _ = SOME enc` >>
@@ -755,12 +755,12 @@ Proof
 QED
 
 Theorem l3_models_asl_LogicalImmediate:
-  ∀op b i r2 r1.
+  ∀bb op b i r2 r1.
     IS_SOME (EncodeBitMask i) ∧
     IS_SOME (EncodeLogicalOp (op, b))
-  ⇒ l3_models_asl_instr (Data (LogicalImmediate@64 (1w, op, b, i, r2, r1)))
+  ⇒ l3_models_asl_instr (Data (LogicalImmediate@64 (bb, op, b, i, r2, r1)))
 Proof
-  Cases >> Cases >> gvs[EncodeLogicalOp_def] >>
+  gen_tac >> Cases >> Cases >> gvs[EncodeLogicalOp_def] >>
   simp[l3_models_asl_LogicalImmediate_T, l3_models_asl_LogicalImmediate_F]
 QED
 
@@ -800,9 +800,9 @@ Proof
 QED
 
 Theorem l3_models_asl_AddSubShiftedRegister:
-  ∀shift_type b1 b2 r3 w r2 r1.
+  ∀b shift_type b1 b2 r3 w r2 r1.
     l3_models_asl_instr
-      (Data (AddSubShiftedRegister@64 (1w, b1, b2, shift_type, r3, w, r2, r1)))
+      (Data (AddSubShiftedRegister@64 (b, b1, b2, shift_type, r3, w, r2, r1)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
   qmatch_goalsub_abbrev_tac `Decode opc` >>
@@ -886,10 +886,10 @@ Proof
 QED
 
 Theorem l3_models_asl_LogicalShiftedRegister_T:
-  ∀b1 shift_type i r3 r2 r1. i < 64 ⇒
+  ∀b b1 shift_type i r3 r2 r1. i < 64 ⇒
   l3_models_asl_instr
       (Data (LogicalShiftedRegister@64
-        (1w, LogicalOp_AND, b1, T, shift_type, i, r3, r2, r1)))
+        (b, LogicalOp_AND, b1, T, shift_type, i, r3, r2, r1)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
   qmatch_goalsub_abbrev_tac `Decode opc` >>
@@ -961,10 +961,10 @@ Proof
 QED
 
 Theorem l3_models_asl_LogicalShiftedRegister_F:
-  ∀lop b1 shift_type i r3 r2 r1. i < 64 ⇒
+  ∀b lop b1 shift_type i r3 r2 r1. i < 64 ⇒
   l3_models_asl_instr
       (Data (LogicalShiftedRegister@64
-        (1w, lop, b1, F, shift_type, i, r3, r2, r1)))
+        (b, lop, b1, F, shift_type, i, r3, r2, r1)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >>
   `∃wlop. EncodeLogicalOp (lop, F) = SOME wlop` by (
@@ -1037,23 +1037,23 @@ Proof
 QED
 
 Theorem l3_models_asl_LogicalShiftedRegister:
-  ∀lop b1 b2 shift_type i r3 r2 r1. i < 64 ⇒
+  ∀b lop b1 b2 shift_type i r3 r2 r1. i < 64 ⇒
     IS_SOME (EncodeLogicalOp (lop, b2))
   ⇒ l3_models_asl_instr
       (Data (LogicalShiftedRegister@64
-        (1w, lop, b1, b2, shift_type, i, r3, r2, r1)))
+        (b, lop, b1, b2, shift_type, i, r3, r2, r1)))
 Proof
-  Cases >> Cases >> Cases >> gvs[EncodeLogicalOp_def] >>
+  gen_tac >> Cases >> Cases >> Cases >> gvs[EncodeLogicalOp_def] >>
   simp[l3_models_asl_LogicalShiftedRegister_T,
        l3_models_asl_LogicalShiftedRegister_F]
 QED
 
 Theorem l3_models_asl_BitfieldMove:
-  ∀b1 b2 w t r s r2 r1.
+  ∀bb b1 b2 w t r s r2 r1.
     r < 64 ∧ s < 64 ∧ (b2 ⇒ b1) ∧
     arm8$DecodeBitMasks (1w, n2w s, n2w r, F) = SOME (w, t)
   ⇒ l3_models_asl_instr
-      (Data (BitfieldMove@64 (1w, b1, b2, w, t, r, s, r2, r1)))
+      (Data (BitfieldMove@64 (bb, b1, b2, w, t, r, s, r2, r1)))
 Proof
   rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
   qmatch_goalsub_abbrev_tac `if c then e1 else e2` >>
