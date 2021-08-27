@@ -4951,8 +4951,8 @@ val SUM_IMAGE_PERMUTES = store_thm(
   `SIGMA (f o g) s = SIGMA f (IMAGE g s)` by SRW_TAC[][SUM_IMAGE_INJ_o] THEN
   SRW_TAC[][]);
 
-Theorem SUM_IMAGE_SUM:
-  !s. FINITE s ==> SIGMA f s + SIGMA g s = SIGMA (\x. f x + g x) s
+Theorem SUM_IMAGE_ADD:
+  !s. FINITE s ==> SIGMA (\x. f x + g x) s = SIGMA f s + SIGMA g s
 Proof
  ho_match_mp_tac FINITE_INDUCT
  \\ rw[SUM_IMAGE_THM]
