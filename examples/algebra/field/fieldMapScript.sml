@@ -314,38 +314,27 @@ val field_homo_zero = store_thm(
   ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (f #0 = #0_)``,
   rw[FieldHomo_def, ring_homo_zero]);
 
-(* export simple result *)
-val _ = export_rewrites ["field_homo_zero"];
-
 (* Theorem: (r ~~~ r_) f ==> (f #1 = #1_) *)
 (* Proof:by FieldHomo_def, ring_homo_one. *)
-val field_homo_one = store_thm(
-  "field_homo_one",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (f #1 = #1_)``,
-  rw[FieldHomo_def, ring_homo_one]);
-
-(* export simple result *)
-val _ = export_rewrites ["field_homo_one"];
+Theorem field_homo_one:
+  !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (f #1 = #1_)
+Proof rw[FieldHomo_def, ring_homo_one]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by field_homo_zero, field_homo_one. *)
-val field_homo_ids = store_thm(
-  "field_homo_ids",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)``,
-  rw_tac std_ss[field_homo_zero, field_homo_one]);
-
-(* export simple result *)
-val _ = export_rewrites ["field_homo_ids"];
+Theorem field_homo_ids[simp]:
+  !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
+Proof rw_tac std_ss[field_homo_zero, field_homo_one]
+QED
 
 (* Theorem: FieldHomo f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by FieldHomo_def, ring_homo_element. *)
 val field_homo_element = store_thm(
   "field_homo_element",
-  ``!(r:'a field) (r_:'b field) f. FieldHomo f r r_ ==> !x. x IN R ==> f x IN R_``,
+  ``!(r:'a field) (r_:'b field) f.
+     FieldHomo f r r_ ==> !x. x IN R ==> f x IN R_``,
   metis_tac[FieldHomo_def, ring_homo_element]);
-
-(* export simple result *)
-val _ = export_rewrites ["field_homo_element"];
 
 (* Theorem: FieldHomo f r r_ <=> RingHomo f r r_ *)
 (* Proof: by FieldHomo_def *)
@@ -1612,23 +1601,23 @@ val homo_field_by_inj = store_thm(
            = f #1                             by field_mult_rinv
            = #1_                              by field_homo_one
 *)
-val ring_homo_image_field = store_thm(
-  "ring_homo_image_field",
-  ``!(r:'a field) (r_:'b field). !f. (r ~~~ r_) f ==> Field (ring_homo_image f r r_)``,
+Theorem ring_homo_image_field:
+  !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> Field (ring_homo_image f r r_)
+Proof
   rpt strip_tac >>
-  rw[field_def_by_inv] >-
-  rw[ring_homo_image_ring, GSYM FieldHomo_def] >-
-  rw[ring_homo_image_def, homo_image_def] >>
+  rw[field_def_by_inv] (* 3 *)
+  >- rw[ring_homo_image_ring, GSYM FieldHomo_def]
+  >- rw[ring_homo_image_def, homo_image_def] >>
   fs[ring_homo_image_def, homo_image_def, ring_nonzero_def] >>
-  `x' <> #0` by metis_tac[field_homo_zero] >>
-  `x' IN R+` by rw[field_nonzero_eq] >>
-  `|/ x' IN R /\ |/ x' IN R+` by rw[field_nonzero_eq] >>
-  `|/ x' <> #0` by metis_tac[field_nonzero_eq] >>
-  qexists_tac `f ( |/ x')` >>
-  rw[] >-
-  metis_tac[] >>
-  `f x' *_ f ( |/ x') = f (x' * |/ x')` by rw[field_homo_property] >>
-  rw[]);
+  rename [‘FieldHomo f r r_’, ‘x = f x'’] >>
+  ‘x' <> #0’ by metis_tac[field_homo_zero] >>
+  ‘x' IN R+’ by rw[field_nonzero_eq] >>
+  ‘|/ x' IN R /\ |/ x' IN R+’ by rw[field_nonzero_eq] >>
+  ‘|/ x' <> #0’ by metis_tac[field_nonzero_eq] >>
+  simp[PULL_EXISTS] >> qexists_tac ‘|/ x'’ >> rw[] >>
+  ‘f x' *_ f ( |/ x') = f (x' * |/ x')’ by rw[field_homo_property] >>
+  rw[]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> subfield (ring_homo_image f r r_) r_ *)
 (* Proof:

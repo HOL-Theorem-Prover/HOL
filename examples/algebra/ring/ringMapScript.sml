@@ -305,9 +305,6 @@ val ring_homo_zero = store_thm(
   ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_)``,
   rw_tac std_ss[ring_add_group, RingHomo_def, group_homo_id]);
 
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_zero"];
-
 (* Theorem: (r ~r~ r_) f ==> (f #1 = #1_) *)
 (* Proof:
    Ring r ==> Monoid r.prod                         by ring_mult_monoid
@@ -319,9 +316,6 @@ val ring_homo_one = store_thm(
   "ring_homo_one",
   ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #1 = #1_)``,
   rw_tac std_ss[ring_mult_monoid, RingHomo_def, MonoidHomo_def]);
-
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_one"];
 
 (* Theorem: (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_homo_zero, ring_homo_one *)
@@ -339,9 +333,6 @@ val ring_homo_element = store_thm(
   "ring_homo_element",
   ``!(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !x. x IN R ==> f x IN R_``,
   rw[RingHomo_def]);
-
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_element"];
 
 (* Theorem: Ring r /\ RingHomo f r r_ ==>
             !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y)) *)
@@ -1405,9 +1396,6 @@ val subring_element_alt = store_thm(
   "subring_element_alt",
   ``!(r s):'a ring. s <= r ==> !x. x IN B ==> x IN R``,
   metis_tac[subring_def, ring_homo_element, i_thm]);
-
-(* export simple result *)
-val _ = export_rewrites["subring_element_alt"];
 
 (* Theorem: subring preserves sum and product. *)
 (* Proof: by subring_def, ring_homo_property. *)
