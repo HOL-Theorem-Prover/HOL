@@ -2,7 +2,7 @@ open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
 open armv86aTheory armv86a_terminationTheory armv86a_typesTheory
 open arm8Theory arm8Lib arm8_stepTheory arm8_stepLib
 open wordsTheory bitstringTheory finite_mapTheory listTheory
-     arithmeticTheory integerTheory
+     arithmeticTheory integerTheory realTheory intrealTheory
 open l3_equivalenceTheory l3_equivalence_miscTheory l3_equivalence_lemmasTheory
 open wordsLib intLib l3_equivalenceLib
 
@@ -1127,6 +1127,130 @@ Proof
     )
 QED
 
+Theorem l3_models_asl_Division:
+  ∀bb b r3 r2 r1.
+    l3_models_asl_instr (Data (Division@64 (bb, b, r3, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  l3_decode_tac >> l3_run_tac >> rw[] >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_arithmetic_div
+      (&w2n r1) (:64) (&w2n r3) (&w2n r2) b od asl)` by (
+    unabbrev_all_tac >> Cases_on `b` >> gvs[] >> asl_cexecute_tac >> simp[] >>
+    simp[
+      decode_udiv_aarch64_instrs_integer_arithmetic_div_def,
+      decode_sdiv_aarch64_instrs_integer_arithmetic_div_def
+      ] >>
+    simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL) >>
+  simp[] >> pop_assum kall_tac >> unabbrev_all_tac >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_arithmetic_div_def] >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `&w2n r3` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  simp[preludeTheory.undefined_int_def] >>
+  Cases_on `r1 = 31w` >> gvs[] >- (simp[X_set_31, returnS]) >>
+  qmatch_goalsub_abbrev_tac `X_set _ _ v` >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`v`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> gvs[] >>
+  simp[returnS] >> gvs[write'X_def] >>
+  qmatch_goalsub_abbrev_tac `_⦇r1 ↦ vl⦈` >>
+  qsuff_tac `v = vl` >- (rw[] >> simp[]) >>
+  unabbrev_all_tac >>
+  map_every qabbrev_tac [`x3 = X r3 l3 : 64 word`,`x2 = X r2 l3 : 64 word`] >>
+  IF_CASES_TAC >> gvs[] >- EVAL_TAC >>
+  simp[
+    armv86aTheory.asl_Int_def,
+    armv86aTheory.RoundTowardsZero_def
+    ] >>
+  ntac 11 $ last_x_assum kall_tac >>
+  Cases_on `b` >> gvs[]
+  >- (
+    `¬ (&w2n x2 / &w2n x3 < 0 : real)` by (
+      simp[realTheory.REAL_NOT_LT] >> irule realTheory.REAL_LE_DIV >> simp[]) >>
+    simp[] >>
+    DEP_REWRITE_TAC[intrealTheory.INT_FLOOR_EQNS] >> conj_tac >- WORD_DECIDE_TAC >>
+    simp[integer_subrange_def, asl_word_rws, TAKE_LENGTH_ID_rwt] >>
+    assume_tac $ b64 alpha v2w_fixwidth >> gvs[] >> simp[word_div_def]
+    ) >>
+  gvs[w2i_alt_def] >>
+  ntac 2 $ once_rewrite_tac[COND_RAND] >> simp[] >>
+  once_rewrite_tac[word_quot_alt_def] >>
+  rewrite_tac[LET_DEF] >> BETA_TAC >>
+  qabbrev_tac `n2 = w2n $ word_abs x2` >>
+  qabbrev_tac `n3 = w2n $ word_abs x3` >>
+  `n3 ≠ 0` by (
+    unabbrev_all_tac >> rw[w2n_11] >>
+    rewrite_tac[word_abs_def] >> IF_CASES_TAC >> simp[]) >>
+  qabbrev_tac `posve = n2w (n2 DIV n3) : word64` >>
+  qabbrev_tac `negve = -posve` >> gvs[] >>
+  `-&n2 / -&n3 = &n2 / &n3 : real` by (
+    qspecl_then [`-1`,`-&n3`] mp_tac REAL_DIV_MUL2 >> gvs[] >>
+    disch_then $ qspec_then `-&n2` mp_tac >> simp[REAL_NEG_MUL2]) >>
+  Cases_on `word_msb x2` >> Cases_on `word_msb x3` >> gvs[]
+  >- (
+    simp[lt_ratl, INT_FLOOR_EQNS] >>
+    simp[Abbr `posve`] >>
+    simp[integer_subrange_def, asl_word_rws] >>
+    DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+    qspec_then `n2v (n2 DIV n3)` assume_tac $ b64 alpha v2w_fixwidth >> gvs[]
+    )
+  >- (
+    simp[lt_ratl] >> gvs[INT_CEILING_NEG_DIV, INT_FLOOR_EQNS] >>
+    reverse IF_CASES_TAC >> gvs[]
+    >- (gvs[ZERO_DIV] >> simp[integer_subrange_def, asl_word_rws]) >>
+    simp[integer_subrange_def, asl_word_rws] >>
+    qmatch_goalsub_abbrev_tac `foo = 0` >>
+    Cases_on `foo = 0` >> gvs[] >- (unabbrev_all_tac >> gvs[]) >>
+    simp[v2n_fixwidth] >>
+    `foo < 2 ** 64` by (
+      simp[Abbr `foo`, DIV_LT_X] >>
+      qspec_then `word_abs x2` assume_tac w2n_lt >> gvs[]) >>
+    gvs[] >>
+    qmatch_goalsub_abbrev_tac `&s`
+    `64 ≤ s` by simp[Abbr `s`, LENGTH_add] >>
+    `&s - 1i - 63 = &(s - 64)` by (
+      simp[int_arithTheory.INT_NUM_SUB] >> ARITH_TAC) >>
+    pop_assum SUBST_ALL_TAC >> simp[Abbr `s`] >>
+    cheat (* TODO *)
+    )
+  >- (
+    simp[neg_rat, lt_ratl, INT_CEILING_NEG_DIV, INT_FLOOR_EQNS] >>
+    reverse IF_CASES_TAC >> gvs[]
+    >- (gvs[ZERO_DIV] >> simp[integer_subrange_def, asl_word_rws]) >>
+    simp[integer_subrange_def, asl_word_rws] >>
+    qmatch_goalsub_abbrev_tac `foo = 0` >>
+    Cases_on `foo = 0` >> gvs[] >- (unabbrev_all_tac >> gvs[]) >>
+    simp[v2n_fixwidth] >>
+    `foo < 2 ** 64` by (
+      simp[Abbr `foo`, DIV_LT_X] >>
+      qspec_then `word_abs x2` assume_tac w2n_lt >> gvs[]) >>
+    gvs[] >>
+    qmatch_goalsub_abbrev_tac `&s`
+    `64 ≤ s` by simp[Abbr `s`, LENGTH_add] >>
+    `&s - 1i - 63 = &(s - 64)` by (
+      simp[int_arithTheory.INT_NUM_SUB] >> ARITH_TAC) >>
+    pop_assum SUBST_ALL_TAC >> simp[Abbr `s`] >>
+    cheat (* TODO *)
+    )
+  >- (
+    simp[lt_ratl, INT_FLOOR_EQNS] >>
+    simp[Abbr `posve`] >>
+    simp[integer_subrange_def, asl_word_rws] >>
+    DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+    qspec_then `n2v (n2 DIV n3)` assume_tac $ b64 alpha v2w_fixwidth >> gvs[]
+    )
+QED
+
 (* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
 Theorem l3_asl_BranchTo_CALL:
   ¬ HavePACExt () ⇒ (* TODO versioning issue here *)
@@ -1382,7 +1506,6 @@ QED
 (****************************************)
 
 (* TODO for CakeML
-  Data (Division@64 _)
   Data (MultiplyHigh _)
   Data (MultiplyAddSub@64 _)
   Data (ConditionalCompareImmediate@64 _)
