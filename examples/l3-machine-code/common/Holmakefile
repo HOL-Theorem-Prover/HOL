@@ -1,5 +1,7 @@
-INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = $(dprot $(HOLDIR)/examples/machine-code/hoare-triple) \
+	   $(dprot $(HOLDIR)/src/monad/more_monads) \
+	   $(dprot $(HOLDIR)/src/integer) \
+	   $(dprot $(HOLDIR)/src/floating-point)
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
