@@ -24,4 +24,11 @@ INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
 ifdef HOLSELFTESTLEVEL
 INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
             $(patsubst %,../../../examples/%,$(EXDIRS)) ../core
+
+ifneq($(HOLSELFTESTLEVEL),1)
+EX2DIRS = miller
+
+INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
+endif
+
 endif
