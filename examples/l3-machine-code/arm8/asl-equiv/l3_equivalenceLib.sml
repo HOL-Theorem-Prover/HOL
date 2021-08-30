@@ -4,8 +4,8 @@ struct
 open HolKernel boolLib bossLib Parse
 open armv86aTheory armv86a_terminationTheory armv86a_typesTheory
 open arm8Theory arm8Lib arm8_stepTheory arm8_stepLib
-open wordsTheory bitstringTheory finite_mapTheory listTheory
-     arithmeticTheory integerTheory updateTheory
+open wordsTheory bitstringTheory integer_wordTheory finite_mapTheory listTheory
+     arithmeticTheory integerTheory updateTheory realTheory intrealTheory
 open wordsLib optionLib combinLib
 open l3_equivalence_miscTheory l3_equivalence_lemmasTheory l3_equivalenceTheory
 

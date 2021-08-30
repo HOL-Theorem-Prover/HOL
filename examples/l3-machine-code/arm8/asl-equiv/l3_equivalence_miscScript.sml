@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
-open wordsTheory bitstringTheory listTheory rich_listTheory
-     integerTheory arithmeticTheory
+open wordsTheory bitstringTheory integer_wordTheory listTheory rich_listTheory
+     integerTheory arithmeticTheory realTheory intrealTheory
 open wordsLib bitstringLib intLib
 
 val _ = new_theory "l3_equivalence_misc";
@@ -387,6 +387,51 @@ Theorem FLAT_REPLICATE_singleton[simp]:
   FLAT (REPLICATE n [e]) = REPLICATE n e
 Proof
   Induct_on `n` >> rw[]
+QED
+
+Theorem w2i_alt_def:
+  ∀w. w2i w = if word_msb w then -&w2n (word_abs w) else &w2n (word_abs w)
+Proof
+  rw[word_abs_def, word_msb_neg, integer_wordTheory.w2i_def]
+QED
+
+Theorem word_quot_alt_def:
+  ∀a b. word_quot a b =
+    let d = n2w (w2n (word_abs a) DIV w2n (word_abs b)) in
+    if word_msb a ∧ word_msb b then d
+    else if word_msb a then -d
+    else if word_msb b then -d
+    else d
+Proof
+  rw[word_quot_def, word_div_def, word_abs_def, word_msb_neg] >> gvs[] >>
+  metis_tac[WORD_SUB_INTRO]
+QED
+
+Theorem INT_DIV_NEGL:
+  ∀n m. m ≠ 0 ⇒
+    -&n / &m = if n MOD m = 0 then -&(n DIV m) else -&((n DIV m) + 1) :int
+Proof
+  rw[] >> rw[int_div, ZERO_DIV] >> gvs[] >> ARITH_TAC
+QED
+
+Theorem INT_CEILING_NEG_DIV:
+  ∀a b. b ≠ 0 ⇒ ⌈-&a / &b⌉ = -⌊&a / &b⌋
+Proof
+  rw[] >> rw[INT_CEILING_INT_FLOOR, INT_FLOOR_EQNS, INT_DIV_NEGL] >> gvs[]
+  >- (
+    qpat_x_assum `_ = _ / _` mp_tac >> simp[] >>
+    once_rewrite_tac[GSYM neg_rat] >> simp[] >>
+    simp[REAL_EQ_RDIV_EQ] >>
+    gvs[MOD_EQ_0_DIVISOR]
+    )
+  >- (
+    qpat_x_assum `_ ≠ _ / _` mp_tac >> simp[] >>
+    once_rewrite_tac[GSYM neg_rat] >> simp[] >>
+    simp[REAL_EQ_RDIV_EQ] >>
+    qspec_then `b` assume_tac $ cj 1 DIVISION >> gvs[] >>
+    pop_assum $ qspec_then `a` assume_tac >> gvs[]
+    )
+  >- ARITH_TAC
 QED
 
 (****************************************)
