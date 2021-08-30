@@ -3246,14 +3246,14 @@ val CONNECTED_REAL_LEMMA = store_thm ("CONNECTED_REAL_LEMMA",
                   REAL_ARITH ``&0 < e /\ x <= b ==> x - e <= b:real``,
       REAL_ARITH ``&0 < e /\ e < d ==> x - e < x /\ abs((x - e) - x) < d:real``]]);
 
-(* TODO *)
 Theorem CONNECTED_SEGMENT :
    (!a b:real. connected(segment[a,b])) /\
    (!a b:real. connected(segment(a,b)))
 Proof
   CONJ_TAC THEN REPEAT GEN_TAC THENL
- [ASM_CASES_TAC ``b:real = a`` THEN
-  ASM_SIMP_TAC std_ss' [SEGMENT_REFL, CONNECTED_EMPTY, CONNECTED_SING] THEN
+ [ (* goal 1 (of 2): connected(segment[a,b]) *)
+  ASM_CASES_TAC ``b:real = a`` THEN
+  ASM_SIMP_TAC std_ss [SEGMENT_REFL, CONNECTED_EMPTY, CONNECTED_SING] THEN
   ASM_SIMP_TAC std_ss' [connected, OPEN_SEGMENT_ALT, CONJUNCT1 segment,
                NOT_EXISTS_THM] THEN
   REWRITE_TAC [METIS [DE_MORGAN_THM]
@@ -3265,11 +3265,11 @@ Proof
   PURE_ONCE_REWRITE_TAC[INTER_COMM] THEN
   PURE_REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN REWRITE_TAC [IN_INTER] THEN
   DISCH_TAC THEN DISCH_TAC THEN
-  POP_ASSUM (MP_TAC o SIMP_RULE std_ss' [EXISTS_IN_GSPEC]) THEN
-  POP_ASSUM (MP_TAC o SIMP_RULE std_ss' [EXISTS_IN_GSPEC]) THEN
+  POP_ASSUM (MP_TAC o SIMP_RULE std_ss [EXISTS_IN_GSPEC]) THEN
+  POP_ASSUM (MP_TAC o SIMP_RULE std_ss [EXISTS_IN_GSPEC]) THEN
   REWRITE_TAC [GSYM CONJ_ASSOC] THEN
-  SIMP_TAC std_ss' [NOT_EXISTS_THM, LEFT_IMP_EXISTS_THM] THEN
-  SIMP_TAC std_ss' [RIGHT_IMP_FORALL_THM] THEN
+  SIMP_TAC std_ss [NOT_EXISTS_THM, LEFT_IMP_EXISTS_THM] THEN
+  SIMP_TAC std_ss [RIGHT_IMP_FORALL_THM] THEN
   MAP_EVERY X_GEN_TAC [``u:real``, ``v:real``] THEN
   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
   MAP_EVERY (fn t => SPEC_TAC(t,t))
@@ -3316,11 +3316,11 @@ Proof
       ((1 :real) - u) * a + u * b NOTIN e2`` THENL
         [ALL_TAC, METIS_TAC [SWAP_FORALL_THM]] THEN
     REPEAT(AP_TERM_TAC THEN ABS_TAC) THEN
-    SIMP_TAC std_ss' [UNION_ACI, INTER_ACI] THEN METIS_TAC[],
+    SIMP_TAC std_ss [UNION_ACI, INTER_ACI] THEN METIS_TAC[],
     ALL_TAC] THEN
   MAP_EVERY X_GEN_TAC [``u:real``, ``v:real``] THEN
-  SIMP_TAC std_ss' [] THEN
-  REPEAT STRIP_TAC THEN CCONTR_TAC THEN FULL_SIMP_TAC std_ss' [] THEN
+  SIMP_TAC std_ss [] THEN
+  REPEAT STRIP_TAC THEN CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
   MP_TAC(ISPECL
    [``\u. (&1 - u) * a + u * b:real``, ``u:real``, ``v:real``,
     ``e1:real->bool``, ``e2:real->bool``]
@@ -3329,17 +3329,19 @@ Proof
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN CONJ_TAC THENL
    [MAP_EVERY X_GEN_TAC [``e:real``, ``x:real``] THEN STRIP_TAC THEN
     EXISTS_TAC ``e / dist(a:real,b)`` THEN
-    ASM_SIMP_TAC std_ss' [REAL_LT_DIV, GSYM DIST_NZ] THEN
+    ASM_SIMP_TAC std_ss [REAL_LT_DIV, GSYM DIST_NZ] THEN
     GEN_TAC THEN REWRITE_TAC[dist] THEN STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss' [ABS_MUL, GSYM REAL_LT_RDIV_EQ, GSYM ABS_NZ, REAL_SUB_0,
+    ASM_SIMP_TAC std_ss [ABS_MUL, GSYM REAL_LT_RDIV_EQ, GSYM ABS_NZ, REAL_SUB_0,
                  ABS_NEG, REAL_ARITH
      ``((&1 - y') * a + y' * b) - ((&1 - x') * a + x' * b):real =
        -((y' - x') * (a - b))``],
-    RULE_ASSUM_TAC(SIMP_RULE std_ss' [EXTENSION, IN_INTER, GSPECIFICATION,
+    RULE_ASSUM_TAC(SIMP_RULE std_ss [EXTENSION, IN_INTER, GSPECIFICATION,
                                 SUBSET_DEF, IN_UNION, NOT_IN_EMPTY]) THEN
-    METIS_TAC[REAL_LE_TRANS, REAL_LET_TRANS, REAL_LTE_TRANS]], ALL_TAC] THEN
+    METIS_TAC[REAL_LE_TRANS, REAL_LET_TRANS, REAL_LTE_TRANS]],
+
+  (* goal 2 (of 2): connected(segment(a,b)) *)
   ASM_CASES_TAC ``b:real = a`` THEN
-  ASM_SIMP_TAC std_ss' [SEGMENT_REFL, CONNECTED_EMPTY, CONNECTED_SING] THEN
+  ASM_SIMP_TAC std_ss [SEGMENT_REFL, CONNECTED_EMPTY, CONNECTED_SING] THEN
   ASM_SIMP_TAC std_ss' [connected, OPEN_SEGMENT_ALT, CONJUNCT1 segment,
                NOT_EXISTS_THM] THEN
   REWRITE_TAC [METIS [DE_MORGAN_THM]
@@ -3351,11 +3353,11 @@ Proof
   PURE_ONCE_REWRITE_TAC[INTER_COMM] THEN
   PURE_REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN REWRITE_TAC [IN_INTER] THEN
   DISCH_TAC THEN DISCH_TAC THEN
-  POP_ASSUM (MP_TAC o SIMP_RULE std_ss' [EXISTS_IN_GSPEC]) THEN
-  POP_ASSUM (MP_TAC o SIMP_RULE std_ss' [EXISTS_IN_GSPEC]) THEN
+  POP_ASSUM (MP_TAC o SIMP_RULE std_ss [EXISTS_IN_GSPEC]) THEN
+  POP_ASSUM (MP_TAC o SIMP_RULE std_ss [EXISTS_IN_GSPEC]) THEN
   REWRITE_TAC [GSYM CONJ_ASSOC] THEN
-  SIMP_TAC std_ss' [NOT_EXISTS_THM, LEFT_IMP_EXISTS_THM] THEN
-  SIMP_TAC std_ss' [RIGHT_IMP_FORALL_THM] THEN
+  SIMP_TAC std_ss [NOT_EXISTS_THM, LEFT_IMP_EXISTS_THM] THEN
+  SIMP_TAC std_ss [RIGHT_IMP_FORALL_THM] THEN
   MAP_EVERY X_GEN_TAC [``u:real``, ``v:real``] THEN
   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
   MAP_EVERY (fn t => SPEC_TAC(t,t))
@@ -3399,11 +3401,11 @@ Proof
       ((1 :real) - u) * a + u * b NOTIN e2`` THENL
         [ALL_TAC, METIS_TAC [SWAP_FORALL_THM]] THEN
     REPEAT(AP_TERM_TAC THEN ABS_TAC) THEN
-    SIMP_TAC std_ss' [UNION_ACI, INTER_ACI] THEN METIS_TAC[],
+    SIMP_TAC std_ss [UNION_ACI, INTER_ACI] THEN METIS_TAC[],
     ALL_TAC] THEN
   MAP_EVERY X_GEN_TAC [``u:real``, ``v:real``] THEN
-  SIMP_TAC std_ss' [] THEN
-  REPEAT STRIP_TAC THEN CCONTR_TAC THEN FULL_SIMP_TAC std_ss' [] THEN
+  SIMP_TAC std_ss [] THEN
+  REPEAT STRIP_TAC THEN CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
   MP_TAC(ISPECL
    [``\u. (&1 - u) * a + u * b:real``, ``u:real``, ``v:real``,
     ``e1:real->bool``, ``e2:real->bool``]
@@ -3412,15 +3414,15 @@ Proof
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN CONJ_TAC THENL
    [MAP_EVERY X_GEN_TAC [``e:real``, ``x:real``] THEN STRIP_TAC THEN
     EXISTS_TAC ``e / dist(a:real,b)`` THEN
-    ASM_SIMP_TAC std_ss' [REAL_LT_DIV, GSYM DIST_NZ] THEN
+    ASM_SIMP_TAC std_ss [REAL_LT_DIV, GSYM DIST_NZ] THEN
     GEN_TAC THEN REWRITE_TAC[dist] THEN STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss' [ABS_MUL, GSYM REAL_LT_RDIV_EQ, GSYM ABS_NZ, REAL_SUB_0,
+    ASM_SIMP_TAC std_ss [ABS_MUL, GSYM REAL_LT_RDIV_EQ, GSYM ABS_NZ, REAL_SUB_0,
                  ABS_NEG, REAL_ARITH
      ``((&1 - y') * a + y' * b) - ((&1 - x') * a + x' * b):real =
        -((y' - x') * (a - b))``],
-    RULE_ASSUM_TAC(SIMP_RULE std_ss' [EXTENSION, IN_INTER, GSPECIFICATION,
+    RULE_ASSUM_TAC(SIMP_RULE std_ss [EXTENSION, IN_INTER, GSPECIFICATION,
                                 SUBSET_DEF, IN_UNION, NOT_IN_EMPTY]) THEN
-    METIS_TAC[REAL_LE_TRANS, REAL_LET_TRANS, REAL_LTE_TRANS]]
+    METIS_TAC[REAL_LE_TRANS, REAL_LET_TRANS, REAL_LTE_TRANS]] ]
 QED
 
 val CONNECTED_UNIV = store_thm ("CONNECTED_UNIV",
@@ -9909,7 +9911,6 @@ val QUOTIENT_MAP_RESTRICT = store_thm ("QUOTIENT_MAP_RESTRICT",
    MATCH_MP_TAC CONTINUOUS_CLOSED_IN_PREIMAGE_GEN ORELSE ASM_SIMP_TAC std_ss []) THEN
   ASM_SET_TAC[]);
 
-(* TODO *)
 Theorem CONNECTED_MONOTONE_QUOTIENT_PREIMAGE :
    !f:real->real s t.
     f continuous_on s /\ (IMAGE f s = t) /\
@@ -9919,9 +9920,9 @@ Theorem CONNECTED_MONOTONE_QUOTIENT_PREIMAGE :
        (!y. y IN t ==> connected {x | x IN s /\ (f x = y)}) /\
         connected t ==> connected s
 Proof
-  REPEAT STRIP_TAC THEN SIMP_TAC std_ss' [connected, NOT_EXISTS_THM] THEN
+  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [connected, NOT_EXISTS_THM] THEN
   MAP_EVERY X_GEN_TAC [``u:real->bool``, ``v:real->bool``] THEN CCONTR_TAC THEN
-  FULL_SIMP_TAC std_ss' [] THEN UNDISCH_TAC ``connected(t:real->bool)`` THEN
+  FULL_SIMP_TAC std_ss [] THEN UNDISCH_TAC ``connected(t:real->bool)`` THEN
   SIMP_TAC std_ss' [CONNECTED_OPEN_IN] THEN
   MAP_EVERY EXISTS_TAC
   [``IMAGE (f:real->real) (s INTER u)``,
@@ -9948,7 +9949,7 @@ Proof
   MATCH_MP_TAC(MESON[]
    ``({x | x IN s /\ f x IN IMAGE f u} = u) /\ open_in top u
        ==> open_in top {x | x IN s /\ f x IN IMAGE f u}``) THEN
-  ASM_SIMP_TAC std_ss' [OPEN_IN_OPEN_INTER] THEN ASM_SET_TAC[]
+  ASM_SIMP_TAC std_ss [OPEN_IN_OPEN_INTER] THEN ASM_SET_TAC[]
 QED
 
 val CONNECTED_MONOTONE_QUOTIENT_PREIMAGE_GEN = store_thm ("CONNECTED_MONOTONE_QUOTIENT_PREIMAGE_GEN",
@@ -13618,7 +13619,6 @@ val SEPARATE_POINT_CLOSED = store_thm ("SEPARATE_POINT_CLOSED",
   STRIP_TAC THEN EXISTS_TAC ``dist(a:real,b)`` THEN
   METIS_TAC[DIST_POS_LT]);
 
-(* TODO *)
 Theorem SEPARATE_COMPACT_CLOSED :
    !s t:real->bool.
         compact s /\ closed t /\ (s INTER t = {})
@@ -13634,7 +13634,7 @@ Proof
     p_2 NOTIN (t :real -> bool))`` THENL
   [ASM_SET_TAC[], DISCH_TAC THEN ASM_REWRITE_TAC []] THEN
   DISCH_THEN (X_CHOOSE_TAC ``d:real``) THEN EXISTS_TAC ``d:real`` THEN
-  POP_ASSUM MP_TAC THEN SIMP_TAC std_ss' [LEFT_IMP_EXISTS_THM] THEN
+  POP_ASSUM MP_TAC THEN SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM] THEN
   REWRITE_TAC [dist] THEN
   METIS_TAC[REAL_ARITH ``abs(0 - (x - y)) = abs(x - y:real)``]
 QED
@@ -17390,21 +17390,20 @@ val CLOSED_SUBSTANDARD = store_thm ("CLOSED_SUBSTANDARD",
  ``closed {x:real | x = &0}``,
   REWRITE_TAC [GSPEC_EQ, CLOSED_SING]);
 
-(* TODO *)
 Theorem DIM_SUBSTANDARD :
     dim {x:real | x = &0} = 0
 Proof
   REWRITE_TAC [dim, GSPEC_EQ] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
-  RW_TAC std_ss' [] THEN EQ_TAC THENL
-  [ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss' [] THEN
+  RW_TAC std_ss [] THEN EQ_TAC THENL
+  [ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
    ASM_CASES_TAC ``~(b SUBSET {0:real})`` THEN
-   ASM_REWRITE_TAC [] THEN FULL_SIMP_TAC std_ss' [SET_RULE
+   ASM_REWRITE_TAC [] THEN FULL_SIMP_TAC std_ss [SET_RULE
     ``b SUBSET {0:real} <=> (b = {}) \/ (b = {0})``] THENL
    [DISJ2_TAC THEN DISJ2_TAC THEN SIMP_TAC std_ss' [HAS_SIZE] THEN
     DISJ2_TAC THEN REWRITE_TAC [CARD_EMPTY] THEN METIS_TAC [],
     REWRITE_TAC [INDEPENDENT_SING]], ALL_TAC] THEN
   DISCH_TAC THEN EXISTS_TAC ``{}:real->bool`` THEN
-  ASM_SIMP_TAC std_ss' [SPAN_EMPTY, SUBSET_REFL, EMPTY_SUBSET, INDEPENDENT_EMPTY] THEN
+  ASM_SIMP_TAC std_ss [SPAN_EMPTY, SUBSET_REFL, EMPTY_SUBSET, INDEPENDENT_EMPTY] THEN
   ASM_REWRITE_TAC [HAS_SIZE_0]
 QED
 
@@ -20017,7 +20016,6 @@ val HAUSDIST_SINGS = store_thm ("HAUSDIST_SINGS",
   SIMP_TAC std_ss [IN_SING, UNWIND_FORALL_THM2] THEN
   METIS_TAC[REAL_LE_REFL]);
 
-(* TODO *)
 Theorem HAUSDIST_EQ :
    !s t:real->bool s' t':real->bool.
         (!b. (!x. x IN s ==> setdist({x},t) <= b) /\
@@ -20035,7 +20033,7 @@ Proof
      [PURE_REWRITE_TAC[SET_RULE ``(s = {}) <=> !x. x IN s ==> F``],
       AP_TERM_TAC THEN ABS_TAC],
     MATCH_MP_TAC SUP_EQ] THEN
-  SIMP_TAC std_ss' [FORALL_IN_UNION, FORALL_IN_GSPEC] THEN
+  SIMP_TAC std_ss [FORALL_IN_UNION, FORALL_IN_GSPEC] THEN
   ASM_REWRITE_TAC[] THEN
   ONCE_REWRITE_TAC [METIS [] ``(a = b) = (~a = ~b:bool)``] THEN
   REWRITE_TAC [DE_MORGAN_THM] THEN
@@ -20044,7 +20042,7 @@ Proof
   DISCH_THEN(fn th => POP_ASSUM MP_TAC THEN ASSUME_TAC th) THEN
   ASM_REWRITE_TAC[NOT_IN_EMPTY] THEN
   DISCH_THEN(MP_TAC o SPEC ``-(&1):real``) THEN
-  SIMP_TAC std_ss' [SETDIST_POS_LE, REAL_ARITH ``&0 <= x ==> ~(x <= -(&1:real))``] THEN
+  SIMP_TAC std_ss [SETDIST_POS_LE, REAL_ARITH ``&0 <= x ==> ~(x <= -(&1:real))``] THEN
   SET_TAC[]
 QED
 
