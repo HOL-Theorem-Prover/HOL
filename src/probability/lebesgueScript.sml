@@ -4527,6 +4527,55 @@ Proof
  >> MATCH_MP_TAC pos_fn_integral_mono >> art []
 QED
 
+(* cf. lebesgue_monotone_convergence_subset *)
+Theorem lebesgue_monotone_convergence_decreasing' :
+    !m f fi A. measure_space m /\
+        (!i. fi i IN measurable (m_space m, measurable_sets m) Borel) /\
+        (!i x. x IN m_space m ==> 0 <= fi i x /\ fi i x < PosInf) /\
+        (!i. pos_fn_integral m (fi i) <> PosInf) /\
+        (!x. x IN m_space m ==> mono_decreasing (\i. fi i x)) /\
+        (!x. x IN m_space m ==> inf (IMAGE (\i. fi i x) UNIV) = f x) /\
+         A IN measurable_sets m ==>
+        (pos_fn_integral m (\x. f x * indicator_fn A x) =
+         inf (IMAGE (\i. pos_fn_integral m (\x. fi i x * indicator_fn A x)) UNIV))
+Proof
+    RW_TAC std_ss []
+ >> (MP_TAC o Q.SPECL [`m`, `(\x. f x * indicator_fn A x)`,
+                       `(\i. (\x. fi i x * indicator_fn A x))`])
+       lebesgue_monotone_convergence_decreasing
+ >> RW_TAC std_ss []
+ >> POP_ASSUM MATCH_MP_TAC
+ >> CONJ_TAC
+ >- METIS_TAC [IN_MEASURABLE_BOREL_MUL_INDICATOR, measure_space_def, subsets_def,
+               measurable_sets_def]
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [GSYM lt_infty] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS],
+       (* goal 2 (of 2) *)
+       STRIP_ASSUME_TAC (Q.SPECL [‘A’, ‘x’] indicator_fn_normal) \\
+      ‘fi i x <> PosInf’ by METIS_TAC [lt_infty] \\
+      ‘fi i x <> NegInf’ by METIS_TAC [pos_not_neginf] \\
+      ‘?z. fi i x = Normal z’ by METIS_TAC [extreal_cases] \\
+       rw [extreal_mul_eq] ])
+ >> CONJ_TAC
+ >- (rw [lt_infty] >> MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘pos_fn_integral m (fi i)’ \\
+     reverse CONJ_TAC >- rw [GSYM lt_infty] \\
+     MATCH_MP_TAC pos_fn_integral_mono >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS],
+       (* goal 1 (of 2) *)
+       GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM mul_rone] \\
+       MATCH_MP_TAC le_lmul_imp >> rw [INDICATOR_FN_LE_1] ])
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero, le_refl, ext_mono_decreasing_def] \\
+     FULL_SIMP_TAC std_ss [ext_mono_decreasing_def])
+ >> RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero]
+ >> Suff `IMAGE (\i:num. 0:extreal) UNIV = (\y. y = 0)` >- RW_TAC std_ss [inf_const]
+ >> RW_TAC std_ss [EXTENSION, IN_ABS, IN_IMAGE, IN_UNIV]
+QED
+
 (* added ‘x IN m_space m’ *)
 Theorem pos_fn_integral_sum :
     !m f s. FINITE s /\ measure_space m /\
@@ -6336,6 +6385,43 @@ val integral_cmul_infty = store_thm
      REWRITE_TAC [extreal_of_num_def, le_infty]) >> Rewr'
  >> MATCH_MP_TAC pos_fn_integral_cmul_infty >> art []);
 
+Theorem integral_cmul_infty' :
+    !m s. measure_space m /\ s IN measurable_sets m ==>
+         (integral m (\x. NegInf * indicator_fn s x) = NegInf * (measure m s))
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m (\x. PosInf) = integral m (\x. (\x. PosInf) x * indicator_fn (m_space m) x)`
+ >- (MATCH_MP_TAC integral_mspace >> art [])
+ >> Rewr'
+ >> REWRITE_TAC [integral_def]
+ >> Know ‘pos_fn_integral m (\x. NegInf * indicator_fn s x)^+ = pos_fn_integral m (\x. 0)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [FN_PLUS_ALT, le_max] \\
+     rw [indicator_fn_def])
+ >> Rewr'
+ >> Know ‘pos_fn_integral m (\x. NegInf * indicator_fn s x)^- =
+          pos_fn_integral m (\x. PosInf * indicator_fn s x)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [fn_minus_def, GSYM mul_lneg, extreal_ainv_def] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       MATCH_MP_TAC le_mul >> rw [le_infty, INDICATOR_FN_POS],
+       (* goal 2 (of 3) *)
+       MATCH_MP_TAC le_mul >> rw [le_infty, INDICATOR_FN_POS],
+       (* goal 3 (of 3) *)
+       fs [extreal_lt_def] \\
+       STRIP_ASSUME_TAC (Q.SPECL [‘s’, ‘x’] indicator_fn_normal) \\
+       FULL_SIMP_TAC std_ss [extreal_mul_def, le_infty, extreal_of_num_def, extreal_11] \\
+       Cases_on ‘r = 0’ >- rw [] \\
+      ‘0 < r’ by PROVE_TAC [REAL_LE_LT] \\
+       FULL_SIMP_TAC std_ss [le_infty, extreal_not_infty] ])
+ >> Rewr'
+ >> ASM_SIMP_TAC std_ss [pos_fn_integral_zero, sub_lzero]
+ >> Know ‘pos_fn_integral m (\x. PosInf * indicator_fn s x) = PosInf * measure m s’
+ >- (MATCH_MP_TAC pos_fn_integral_cmul_infty >> art [])
+ >> Rewr'
+ >> rw [GSYM mul_lneg, extreal_ainv_def]
+QED
+
 val integral_posinf = store_thm
   ("integral_posinf",
   ``!m. measure_space m /\ 0 < measure m (m_space m) ==> (integral m (\x. PosInf) = PosInf)``,
@@ -6350,6 +6436,23 @@ val integral_posinf = store_thm
  >> Cases_on `measure m (m_space m) = PosInf`
  >- (POP_ORW >> REWRITE_TAC [extreal_mul_def])
  >> METIS_TAC [mul_infty]);
+
+Theorem integral_neginf :
+    !m. measure_space m /\ 0 < measure m (m_space m) ==> (integral m (\x. NegInf) = NegInf)
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m (\x. NegInf) =
+          integral m (\x. (\x. NegInf) x * indicator_fn (m_space m) x)`
+ >- (MATCH_MP_TAC integral_mspace >> art [])
+ >> Rewr' >> BETA_TAC
+ >> Know `integral m (\x. NegInf * indicator_fn (m_space m) x) = NegInf * (measure m (m_space m))`
+ >- (MATCH_MP_TAC integral_cmul_infty' >> art [] \\
+     MATCH_MP_TAC MEASURE_SPACE_MSPACE_MEASURABLE >> art [])
+ >> Rewr'
+ >> Cases_on `measure m (m_space m) = PosInf`
+ >- (POP_ORW >> REWRITE_TAC [extreal_mul_def])
+ >> METIS_TAC [mul_infty]
+QED
 
 val integral_indicator_pow_eq = store_thm (* new *)
   ("integral_indicator_pow_eq",
