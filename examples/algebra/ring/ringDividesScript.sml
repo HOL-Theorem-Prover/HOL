@@ -18,7 +18,7 @@ val _ = new_theory "ringDivides";
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory dep_rewrite;
 
 (* Get dependent theories local *)
 (* (* val _ = load "groupTheory"; *) *)
@@ -29,7 +29,8 @@ open ringIdealTheory;
 open ringUnitTheory;
 open ringTheory;
 open groupTheory;
-open monoidTheory;
+open monoidTheory gbagTheory bagTheory;
+val MEMBER_NOT_EMPTY = pred_setTheory.MEMBER_NOT_EMPTY;
 
 open ringMapTheory monoidMapTheory groupMapTheory;
 
@@ -377,6 +378,55 @@ val ring_factor_multiple = store_thm(
   rpt strip_tac >>
   qexists_tac `s * k` >>
   rw[ring_mult_assoc]);
+
+Theorem ring_prime_divides_product:
+  !r. Ring r ==>
+  !p. p IN r.carrier ==>
+    (ring_prime r p /\ ~Unit r p <=>
+     (!b. FINITE_BAG b /\ SET_OF_BAG b SUBSET r.carrier /\
+          ring_divides r p (GBAG r.prod b) ==>
+          ?x. BAG_IN x b /\ ring_divides r p x))
+Proof
+  rpt strip_tac
+  \\ reverse eq_tac
+  >- (
+    strip_tac
+    \\ conj_tac
+    >- (
+      rw[ring_prime_def]
+      \\ first_x_assum(qspec_then`{|a; b|}`mp_tac)
+      \\ simp[SUBSET_DEF]
+      \\ DEP_REWRITE_TAC[GBAG_INSERT]
+      \\ simp[SUBSET_DEF]
+      \\ dsimp[]
+      \\ metis_tac[Ring_def])
+    \\ strip_tac
+    \\ `ring_divides r p r.prod.id`
+    by (
+      rfs[ring_unit_property, ring_divides_def]
+      \\ metis_tac[ring_mult_comm] )
+    \\ first_x_assum(qspec_then`{||}`mp_tac)
+    \\ simp[] )
+  \\ strip_tac
+  \\ simp[Once(GSYM AND_IMP_INTRO)]
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ simp[]
+  \\ simp[Once ring_divides_def]
+  \\ conj_tac >- metis_tac[ring_unit_property, ring_mult_comm]
+  \\ rpt strip_tac
+  \\ fs[SUBSET_DEF]
+  \\ pop_assum mp_tac
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ fs[SUBSET_DEF]
+  \\ conj_asm1_tac >- metis_tac[Ring_def]
+  \\ fs[ring_prime_def]
+  \\ `GBAG r.prod b IN r.prod.carrier`
+  by ( irule GBAG_in_carrier \\ fs[SUBSET_DEF] )
+  \\ rfs[] \\ strip_tac
+  \\ `e IN r.carrier` by metis_tac[]
+  \\ first_x_assum(drule_then (drule_then drule))
+  \\ metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Euclidean Ring Greatest Common Divisor                                    *)
