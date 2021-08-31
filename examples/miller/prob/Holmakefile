@@ -1,2 +1,2 @@
-INCLUDES = ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/Crypto/RSA
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = ../formalize ../ho_prover ../subtypes ../../Crypto/RSA \
+	   $(dprot $(HOLDIR)/src/real)
