@@ -1513,6 +1513,68 @@ Proof
   unabbrev_all_tac >> rpt (IF_CASES_TAC >> gvs[]) >> simp[word_add_def]
 QED
 
+Theorem l3_models_asl_AddSubCarry:
+  ∀bb b1 b2 r3 r2 r1.
+    l3_models_asl_instr
+      (Data (AddSubCarry@64 (bb, b1, b2, r3, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  l3_decode_tac >> rw[] >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_arithmetic_add_sub_carry
+      (&w2n r1) (:64) (&w2n r3) (&w2n r2) b2 b1 od) asl` by (
+    unabbrev_all_tac >>
+    Cases_on `b1` >> Cases_on `b2` >> gvs[] >> asl_cexecute_tac >> simp[] >>
+    simp[
+      decode_sbcs_aarch64_instrs_integer_arithmetic_add_sub_carry_def,
+      decode_sbc_aarch64_instrs_integer_arithmetic_add_sub_carry_def,
+      decode_adcs_aarch64_instrs_integer_arithmetic_add_sub_carry_def,
+      decode_adc_aarch64_instrs_integer_arithmetic_add_sub_carry_def
+      ] >>
+    simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL) >>
+  simp[Abbr `wr`, Abbr `s`, asl_reg_rws, seqS, returnS] >>
+  ntac 2 $ pop_assum kall_tac >> qpat_x_assum `Decode _ = _` kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[Run_def, dfn'AddSubCarry_def] >>
+  simp[execute_aarch64_instrs_integer_arithmetic_add_sub_carry_def] >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r2)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r3)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `AddWithCarry _ x3` >>
+  qspec_then `asl1` assume_tac PSTATE_read >>
+  drule returnS_bindS_unit >> simp[] >> strip_tac >>
+  qmatch_goalsub_abbrev_tac `pst.ProcState_C` >>
+  `pst.ProcState_C = v2w [l3.PSTATE.C]` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  simp[] >>
+  qspecl_then [`X r2 l3`,`x3`,`l3.PSTATE.C`] mp_tac l3_asl_AddWithCarry >>
+  simp[flag_rel_def] >> disch_then kall_tac >>
+  qpat_abbrev_tac `res = arm8$AddWithCarry _` >>
+  PairCases_on `res` >> gvs[] >> reverse IF_CASES_TAC >> gvs[]
+  >- (
+    Cases_on `r1 = 31w` >> gvs[X_set_31, returnS, write'X_def] >>
+    drule $ b64 alpha X_set_not_31 >>
+    disch_then $ qspecl_then [`64`,`&w2n r1`,`res0`] mp_tac >> simp[] >>
+    impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> gvs[] >>
+    simp[returnS] >> gvs[write'X_def]
+    ) >>
+  drule l3_asl_SetTheFlags >>
+  disch_then $ qspecl_then [
+    `v2w [res1]`,`v2w [res2]`,`v2w [res3]`,`v2w [res4]`,
+    `X_set 64 (&w2n r1) res0`] assume_tac >> gvs[] >>
+  gvs[w2v_v2w] >>
+  Cases_on `r1 = 31w` >> gvs[X_set_31, returnS, write'X_def] >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`res0`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> gvs[] >>
+  simp[returnS] >> gvs[write'X_def]
+QED
+
 (* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
 Theorem l3_asl_BranchTo_CALL:
   ¬ HavePACExt () ⇒ (* TODO versioning issue here *)
@@ -1768,7 +1830,6 @@ QED
 (****************************************)
 
 (* TODO for CakeML
-  Data (AddSubCarry@64 _)
   Branch (BranchImmediate (_, BranchType_JMP))
   Branch (BranchConditional _)
   Branch (BranchRegister _)
