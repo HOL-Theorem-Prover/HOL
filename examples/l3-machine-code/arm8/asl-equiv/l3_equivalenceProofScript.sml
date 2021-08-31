@@ -218,6 +218,27 @@ Proof
   rename1 `foo = _` >> Cases_on_word_value `foo` >> gvs[]
 QED
 
+Theorem l3_asl_SetTheFlags_alt:
+  ∀l3 asl1. state_rel l3 asl1 ⇒
+  ∀n z c v. ∃asl2.
+    do
+      p1 <- read_regS PSTATE_ref;
+      write_regS PSTATE_ref (p1 with ProcState_N := n);
+      p2 <- read_regS PSTATE_ref;
+      write_regS PSTATE_ref (p2 with ProcState_Z := z);
+      p3 <- read_regS PSTATE_ref;
+      write_regS PSTATE_ref (p3 with ProcState_C := c);
+      p4 <- read_regS PSTATE_ref;
+      write_regS PSTATE_ref (p4 with ProcState_V := v);
+    od asl1 =
+    returnS () asl2 : unit res ∧
+    state_rel (SetTheFlags (T,HD (w2v n),HD (w2v z),HD (w2v c),HD (w2v v)) l3) asl2
+Proof
+  rw[returnS, seqS, bindS, asl_reg_rws, COND_RATOR, SetTheFlags_def] >>
+  state_rel_tac[] >> rpt $ pop_assum kall_tac >>
+  rename1 `foo = _` >> Cases_on_word_value `foo` >> gvs[]
+QED
+
 Theorem X_set_31:
   width = 32 ∨ width = 64 ⇒
   X_set width 31 v = returnS ()
@@ -1364,6 +1385,85 @@ Proof
   cheat (* TODO *)
 QED
 
+Theorem l3_asl_ConditionHolds:
+  ∀l3 asl. state_rel l3 asl ⇒
+    ∀w. ConditionHolds w asl = returnS (ConditionHolds w l3) asl
+Proof
+  rw[arm8Theory.ConditionHolds_def, armv86aTheory.ConditionHolds_def,
+     ConditionTest_def] >>
+  simp[asl_word_rws, EL_MAP] >>
+  simp[sail2_valuesTheory.just_list_def] >>
+  Cases_on_word_value `(3 >< 1) w` >> gvs[el_w2v, word_bit_def] >>
+  simp[sail2_state_monadTheory.undefined_boolS_def] >>
+  qspec_then `asl` assume_tac PSTATE_read >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >> strip_tac >>
+  qabbrev_tac `pst = asl.regstate.ProcState_reg "PSTATE"` >>
+  `pst.ProcState_N = v2w [l3.PSTATE.N] ∧
+   pst.ProcState_Z = v2w [l3.PSTATE.Z] ∧
+   pst.ProcState_C = v2w [l3.PSTATE.C] ∧
+   pst.ProcState_V = v2w [l3.PSTATE.V]` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  simp[] >>
+  map_every Cases_on [`l3.PSTATE.N`,`l3.PSTATE.Z`,`l3.PSTATE.C`,`l3.PSTATE.V`] >>
+  gvs[returnS]
+QED
+
+Theorem l3_models_asl_ConditionalCompareImmediate:
+  ∀bb b w1 w2 flgs r. w2n w1 < 32 ∧ w2 ≠ 31w ⇒
+    l3_models_asl_instr
+      (Data (ConditionalCompareImmediate@64 (bb, b, w1, w2, flgs, r)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  PairCases_on `flgs` >> simp[w2w_def] >>
+  qabbrev_tac `ww1 = n2w (w2n w1) : 5 word` >>
+  l3_decode_tac >> rw[] >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_conditional_compare_immediate
+      w2 64 (v2w [flgs0;flgs1;flgs2;flgs3]) w1 (&w2n r) b od) asl` by (
+    unabbrev_all_tac >>
+    Cases_on `b` >> gvs[] >> Cases_on_word_value `w2` >> gvs[] >>
+    asl_cexecute_tac >> simp[] >>
+    simp[
+      decode_ccmp_imm_aarch64_instrs_integer_conditional_compare_immediate_def,
+      decode_ccmn_imm_aarch64_instrs_integer_conditional_compare_immediate_def
+      ] >>
+    qcollapse_tac `n2w (w2n w1) : 5 word` >>
+    simp[asl_reg_rws, seqS, returnS] >>
+    simp[w2w_n2w, n2w_BITS, WORD_BITS_EXTRACT] >>
+    DEP_REWRITE_TAC[WORD_EXTRACT_ID] >> simp[] >>
+    irule_at Any EQ_REFL) >>
+  simp[Abbr `wr`, Abbr `s`, asl_reg_rws, seqS, returnS] >>
+  ntac 2 $ pop_assum kall_tac >> qpat_x_assum `Decode _ = _` kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[Run_def, dfn'ConditionalCompareImmediate_def] >>
+  simp[execute_aarch64_instrs_integer_conditional_compare_immediate_def] >>
+  `w2w ww1 : 64 word = w1` by (unabbrev_all_tac >> gvs[w2w_def]) >> simp[] >>
+  qpat_abbrev_tac `asl_cnd = if b then _ else _` >>
+  qpat_abbrev_tac `cnd = if b then _ else _` >>
+  `asl_cnd = (λ(w,b). (v2w [b],w)) cnd` by (
+    unabbrev_all_tac >> IF_CASES_TAC >> gvs[]) >>
+  simp[] >> PairCases_on `cnd` >> gvs[] >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qspecl_then [`X r l3`,`cnd0`,`cnd1`] mp_tac l3_asl_AddWithCarry >>
+  simp[flag_rel_def] >> disch_then kall_tac >>
+  qpat_abbrev_tac `res = arm8$AddWithCarry _` >>
+  PairCases_on `res` >> simp[] >>
+  drule l3_asl_ConditionHolds >> disch_then $ qspec_then `w2` assume_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `(_ >< _) flgs` >>
+  drule l3_asl_SetTheFlags_alt >>
+  disch_then $ qspecl_then [
+    `(3 >< 3) flgs`,`(2 >< 2) flgs`,`(1 >< 1) flgs`,`(0 >< 0) flgs`] assume_tac >>
+  gvs[] >> simp[returnS] >>
+  qpat_x_assum `state_rel _ _` mp_tac >> gvs[Abbr `flgs`] >>
+  rewrite_tac[GSYM EL] >> DEP_REWRITE_TAC[el_w2v] >> simp[] >>
+  IF_CASES_TAC >> gvs[] >> EVAL_TAC
+QED
+
 (* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
 Theorem l3_asl_BranchTo_CALL:
   ¬ HavePACExt () ⇒ (* TODO versioning issue here *)
@@ -1619,8 +1719,6 @@ QED
 (****************************************)
 
 (* TODO for CakeML
-  Data (MultiplyAddSub@64 _)
-  Data (ConditionalCompareImmediate@64 _)
   Data (AddSubCarry@64 _)
   Data (ConditionalSelect@64 _)
   Branch (BranchImmediate (_, BranchType_JMP))
