@@ -1464,6 +1464,55 @@ Proof
   IF_CASES_TAC >> gvs[] >> EVAL_TAC
 QED
 
+Theorem l3_models_asl_ConditionalSelect:
+  ∀bb b1 b2 w r3 r2 r1. w ≠ 31w ⇒
+    l3_models_asl_instr
+      (Data (ConditionalSelect@64 (bb, b1, b2, w, r3, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  l3_decode_tac >> rw[] >> l3_run_tac >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  gvs[GSYM ConditionHolds_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_conditional_select
+      w (&w2n r1) (:64) b2 b1 (&w2n r3) (&w2n r2) od) asl` by (
+    unabbrev_all_tac >>
+    Cases_on `b1` >> Cases_on `b2` >> gvs[] >> Cases_on_word_value `w` >> gvs[] >>
+    asl_cexecute_tac >> simp[] >>
+    simp[
+      decode_csneg_aarch64_instrs_integer_conditional_select_def,
+      decode_csinv_aarch64_instrs_integer_conditional_select_def,
+      decode_csinc_aarch64_instrs_integer_conditional_select_def,
+      decode_csel_aarch64_instrs_integer_conditional_select_def
+      ] >>
+    simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL) >>
+  simp[Abbr `wr`, Abbr `s`, asl_reg_rws, seqS, returnS] >>
+  ntac 2 $ pop_assum kall_tac >> qpat_x_assum `Decode _ = _` kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_conditional_select_def] >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r2)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r3)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule l3_asl_ConditionHolds >> disch_then $ qspec_then `w` assume_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  Cases_on `r1 = 31w` >> gvs[] >- gvs[X_set_31, returnS] >>
+  simp[asl_word_rws, INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, n2w_w2n] >>
+  qmatch_goalsub_abbrev_tac `X_set _ _ res` >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`res`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> gvs[] >>
+  simp[returnS] >>
+  qmatch_goalsub_abbrev_tac `_⦇ r1 ↦ l3_res ⦈` >>
+  qsuff_tac `res = l3_res` >> rw[] >> gvs[write'X_def] >>
+  unabbrev_all_tac >> rpt (IF_CASES_TAC >> gvs[]) >> simp[word_add_def]
+QED
+
 (* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
 Theorem l3_asl_BranchTo_CALL:
   ¬ HavePACExt () ⇒ (* TODO versioning issue here *)
@@ -1720,7 +1769,6 @@ QED
 
 (* TODO for CakeML
   Data (AddSubCarry@64 _)
-  Data (ConditionalSelect@64 _)
   Branch (BranchImmediate (_, BranchType_JMP))
   Branch (BranchConditional _)
   Branch (BranchRegister _)
