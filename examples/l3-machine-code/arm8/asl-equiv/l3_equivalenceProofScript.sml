@@ -1286,8 +1286,8 @@ Proof
   qmatch_goalsub_abbrev_tac `X_set _ _ res` >>
   drule $ b64 alpha X_set_not_31 >>
   disch_then $ qspecl_then [`64`,`&w2n r1`,`res`] mp_tac >> simp[] >>
-  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
-  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >> simp[returnS] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >>
+  strip_tac >> simp[returnS] >>
   qmatch_goalsub_abbrev_tac `_⦇ r1 ↦ l3_res ⦈` >>
   qsuff_tac `res = l3_res` >> rw[] >> gvs[write'X_def] >>
   unabbrev_all_tac >>
@@ -1301,6 +1301,67 @@ Proof
   >- (
     cheat (* TODO *)
     )
+QED
+
+Theorem l3_models_asl_MultiplyAddSub:
+  ∀bb b r4 r3 r2 r1.
+    l3_models_asl_instr (Data (MultiplyAddSub@64 (bb, b, r4, r3, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  l3_decode_tac >> rw[] >> l3_run_tac >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_arithmetic_mul_uniform_add_sub
+      (&w2n r3) (&w2n r1) (:64) (:64) (&w2n r4) (&w2n r2) b od) asl` by (
+    unabbrev_all_tac >> Cases_on `b` >> gvs[] >> asl_cexecute_tac >> simp[] >>
+    simp[
+      decode_msub_aarch64_instrs_integer_arithmetic_mul_uniform_add_sub_def,
+      decode_madd_aarch64_instrs_integer_arithmetic_mul_uniform_add_sub_def
+      ] >>
+    simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL) >>
+  simp[Abbr `wr`, Abbr `s`, asl_reg_rws, seqS, returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_arithmetic_mul_uniform_add_sub_def] >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r2)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r4)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `(&w2n r3)` mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule $ returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  simp[preludeTheory.undefined_int_def] >>
+  Cases_on `r1 = 31w` >> gvs[] >- (simp[X_set_31, returnS]) >>
+  qmatch_goalsub_abbrev_tac `X_set _ _ res` >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,`res`] mp_tac >> simp[] >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >>
+  strip_tac >> simp[returnS] >>
+  qmatch_goalsub_abbrev_tac `_⦇ r1 ↦ l3_res ⦈` >>
+  qsuff_tac `res = l3_res` >> rw[] >> gvs[write'X_def] >>
+  unabbrev_all_tac >>
+  map_every qabbrev_tac [
+    `x2 = X r2 l3 : 64 word`,`x3 = X r3 l3 : 64 word`, `x4 = X r4 l3 : 64 word`] >>
+  rpt $ pop_assum kall_tac >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (
+    simp[INT_ADD_CALCULATE, integer_subrange_def, asl_word_rws] >>
+    DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+    assume_tac $ b64 alpha v2w_fixwidth >> gvs[] >> pop_assum kall_tac >>
+    simp[word_mul_def, word_add_def]
+    ) >>
+  simp[INT_SUB_CALCULATE, INT_ADD_CALCULATE] >> IF_CASES_TAC >> gvs[]
+  >- (
+    simp[integer_subrange_def, asl_word_rws] >>
+    DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+    assume_tac $ b64 alpha v2w_fixwidth >> gvs[] >> pop_assum kall_tac >>
+    simp[word_mul_def, word_sub_def, word_add_def] >> ARITH_TAC
+    ) >>
+  cheat (* TODO *)
 QED
 
 (* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
