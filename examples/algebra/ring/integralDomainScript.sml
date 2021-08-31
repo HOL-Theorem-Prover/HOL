@@ -39,7 +39,7 @@ open jcLib;
 (* val _ = load "ringIdealTheory"; *)
 open groupTheory monoidTheory ringTheory ringUnitTheory ringIdealTheory;
 open monoidOrderTheory groupOrderTheory;
-open monoidMapTheory ringMapTheory;
+open monoidMapTheory ringMapTheory ringDividesTheory;
 
 (* open dependent theories *)
 (* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
@@ -608,6 +608,43 @@ val integral_domain_char = store_thm(
   `#0 = ##(char r)` by rw_tac std_ss[char_property] >>
   `_ = ## k * ## p` by rw_tac std_ss[ring_num_mult] >>
   metis_tac[integral_domain_zero_product, char_minimal, ring_num_element]);
+
+(* ------------------------------------------------------------------------- *)
+(* Primes are irreducible in an Integral Domain                              *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem prime_is_irreducible:
+  !r p. IntegralDomain r /\ p IN r.carrier /\ ring_prime r p
+        /\ p <> r.sum.id /\ ~Unit r p
+        ==> irreducible r p
+Proof
+  rw[ring_prime_def]
+  \\ simp[irreducible_def, ring_nonzero_def]
+  \\ `Ring r` by fs[IntegralDomain_def]
+  \\ rw[]
+  \\ fs[ring_divides_def, PULL_EXISTS]
+  \\ simp[Invertibles_carrier, monoid_invertibles_element]
+  \\ Cases_on`x = #0` \\ gs[]
+  \\ Cases_on`y = #0` \\ gs[]
+  \\ first_x_assum(qspecl_then[`x`,`y`,`#1`]mp_tac)
+  \\ simp[] \\ strip_tac
+  >- (
+    `x = x * (s * y)` by metis_tac[ring_mult_assoc, ring_mult_comm]
+    \\ `#1 * x = x /\ x * #1 = x` by metis_tac[ring_mult_rone, ring_mult_lone]
+    \\ `x = (s * y) * x` by metis_tac[ring_mult_comm, ring_mult_element]
+    \\ qspec_then`r`mp_tac integral_domain_mult_lcancel
+    \\ impl_tac >- simp[]
+    \\ disch_then(qspecl_then[`x`,`#1`,`s * y`]mp_tac) \\ simp[]
+    \\ metis_tac[ring_mult_comm] )
+  >- (
+    `y = y * (s * x)` by metis_tac[ring_mult_assoc, ring_mult_comm]
+    \\ `#1 * y = y /\ y * #1 = y` by metis_tac[ring_mult_rone, ring_mult_lone]
+    \\ `y = (s * x) * y` by metis_tac[ring_mult_comm, ring_mult_element]
+    \\ qspec_then`r`mp_tac integral_domain_mult_lcancel
+    \\ impl_tac >- simp[]
+    \\ disch_then(qspecl_then[`y`,`#1`,`s * x`]mp_tac) \\ simp[]
+    \\ metis_tac[ring_mult_comm] )
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Principal Ideals in Integral Domain                                       *)
