@@ -1,12 +1,20 @@
 CLINE_OPTIONS = -r
 
+# directories to build under src/
 SRCRELNAMES = \
   monad/more_monads string sort res_quan/src quotient/src hol88 bag n-bit \
   finite_maps ring/src integer topology transfer update emit \
   pred_set/src/more_theories coalgebras rational datatype/inftree search \
   real floating-point probability temporal/src float Boolify/src HolQbf HolSmt
 
+INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
 
+ifdef POLY
+INCLUDES += ../../floating-point/native
+endif
+
+ifdef HOLSELFTESTLEVEL
+# example directories to build at selftest level 1
 EXDIRS = Crypto/RSA zipper logic/folcompactness logic/ncfolproofs \
          logic/modal-tableaux STE ind_def ARM/arm6-verification rings \
 	 dev imperative hfs CCS formal-languages/lambek \
@@ -17,13 +25,11 @@ EXDIRS = Crypto/RSA zipper logic/folcompactness logic/ncfolproofs \
 	 set-theory/zfset set-theory/vbg fun-op-sem/lprefix_lub fun-op-sem/for \
 	 logic/propositional_logic algorithms dependability lassie misc
 
+# selftest directories under src/quotient
 QUOTDIRS = examples examples/lambda examples/sigma
 
-INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
-
-ifdef HOLSELFTESTLEVEL
 INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
-            $(patsubst %,../../../examples/%,$(EXDIRS)) ../core
+            $(patsubst %,../../../examples/%,$(EXDIRS))
 
 ifneq($(HOLSELFTESTLEVEL),1)
 EX2DIRS = miller

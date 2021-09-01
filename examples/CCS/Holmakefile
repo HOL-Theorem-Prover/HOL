@@ -1,7 +1,7 @@
 INCDIRS = examples/lambda/basics src/finite_maps
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/%),$(INCDIRS))
 
-EXTRA_CLEANS = heap munge.exe selftest.exe ccs-test.log
+EXTRA_CLEANS = heap munge.exe selftest.exe ccs-selftest.log
 
 ifdef POLY
 HOLHEAP = heap
@@ -19,16 +19,12 @@ all: $(DEFAULT_TARGETS) munge.exe selftest.exe
 selftest.exe: selftest.uo CCSConv.uo
 	$(HOLMOSMLC) -o $@ $<
 
-MUNGE_DEPS = CCSTheory StrongEQTheory StrongLawsTheory \
-	     WeakEQTheory WeakLawsTheory ObsCongrTheory ObsCongrLawsTheory \
-	     BisimulationUptoTheory \
-	     CongruenceTheory CoarsestCongrTheory \
-	     TraceTheory ExpansionTheory ContractionTheory \
-	     UniqueSolutionsTheory MultivariateTheory \
-             ExampleTheory
+MUNGE_DEPS = CCS StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws \
+	     BisimulationUpto Congruence CoarsestCongr Trace Expansion \
+             Contraction UniqueSolutions Multivariate Example
 
-munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
-	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
+munge.exe: $(patsubst %,%Theory.uo,$(MUNGE_DEPS))
+	$(HOLDIR)/bin/mkmunge.exe $(patsubst %,%Theory,$(MUNGE_DEPS))
 
 output: munge.exe
 	echo '\HOLtm{R1 RUNION R2}' | ./munge.exe
@@ -41,8 +37,8 @@ endif
 .PHONY: all output
 
 ifdef HOLSELFTESTLEVEL
-all: ccs-test.log
+all: ccs-selftest.log
 
-ccs-test.log: selftest.exe
-	./selftest.exe > $@ 2>&1
+ccs-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
 endif

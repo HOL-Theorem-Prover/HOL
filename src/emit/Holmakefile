@@ -8,4 +8,12 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo basis_emitTheory.uo ConstMapML.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe emit-selftest.log
+
+ifdef HOLSEFLTESTLEVEL
+all: emit-selftest.log
+
+emit-selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+
+endif

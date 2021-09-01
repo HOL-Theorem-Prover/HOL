@@ -4,12 +4,12 @@ all: selftest.exe
 selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo CoIndDefLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
-ifdef HOLSELFTESTLEVEL
-all: selftest.log
+EXTRA_CLEANS = selftest.exe inddef-selftest.log
 
-selftest.log: ./selftest.exe
-	./selftest.exe > $@ 2>&1
+ifdef HOLSELFTESTLEVEL
+all: inddef-selftest.log
+
+inddef-selftest.log: ./selftest.exe
+	./selftest.exe 2>&1 | tee $@
 
 endif
-
-EXTRA_CLEANS += selftest.log
