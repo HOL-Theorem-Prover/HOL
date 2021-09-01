@@ -43,7 +43,8 @@ open monoidMapTheory ringMapTheory ringDividesTheory;
 
 (* open dependent theories *)
 (* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory;
+open pred_setTheory listTheory sortingTheory containerTheory gbagTheory
+     dep_rewrite arithmeticTheory dividesTheory;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -644,6 +645,162 @@ Proof
     \\ impl_tac >- simp[]
     \\ disch_then(qspecl_then[`y`,`#1`,`s * x`]mp_tac) \\ simp[]
     \\ metis_tac[ring_mult_comm] )
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Prime factorizations are unique (up to order and associates)              *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem integral_domain_divides_prime:
+  !r p x. IntegralDomain r /\ x IN r.carrier /\ p IN r.carrier /\
+          p <> r.sum.id /\ ring_prime r p /\ ~Unit r p /\ ~Unit r x /\
+          ring_divides r x p
+          ==>
+          ring_associates r x p
+Proof
+  rw[ring_associates_def]
+  \\ `Ring r` by metis_tac[IntegralDomain_def]
+  \\ drule_then (drule_then drule) prime_is_irreducible
+  \\ simp[]
+  \\ rw[irreducible_def]
+  \\ fs[ring_divides_def]
+  \\ `Unit r s` by metis_tac[]
+  \\ pop_assum mp_tac
+  \\ simp[ring_unit_property]
+  \\ simp[PULL_EXISTS]
+  \\ rpt strip_tac
+  \\ qexists_tac`v`
+  \\ qexists_tac`s`
+  \\ simp[]
+  \\ simp[Once ring_mult_comm]
+  \\ simp[GSYM ring_mult_assoc]
+  \\ metis_tac[ring_mult_comm, ring_mult_lone]
+QED
+
+Theorem integral_domain_prime_factors_unique:
+  IntegralDomain r ==>
+  !l1 l2.
+  (!m. MEM m l1 ==>
+       m IN r.carrier /\ ring_prime r m /\ m <> r.sum.id /\ ~Unit r m) /\
+  (!m. MEM m l2 ==>
+       m IN r.carrier /\ ring_prime r m /\ m <> r.sum.id /\ ~Unit r m) /\
+  ring_associates r
+    (GBAG r.prod (LIST_TO_BAG l1))
+    (GBAG r.prod (LIST_TO_BAG l2)) ==>
+  ?l3. PERM l2 l3 /\ LIST_REL (ring_associates r) l1 l3
+Proof
+  strip_tac
+  \\ `Ring r` by metis_tac[IntegralDomain_def]
+  \\ Induct \\ simp[]
+  >- (
+    Cases \\ rw[]
+    \\ spose_not_then strip_assume_tac
+    \\ pop_assum mp_tac
+    \\ DEP_REWRITE_TAC[GBAG_INSERT]
+    \\ simp[SUBSET_DEF, IN_LIST_TO_BAG]
+    \\ conj_asm1_tac >- metis_tac[Ring_def]
+    \\ simp[ring_associates_def]
+    \\ rpt strip_tac
+    \\ qmatch_asmsub_abbrev_tac`GBAG r.prod b0`
+    \\ `GBAG r.prod b0 IN r.prod.carrier`
+    by ( irule GBAG_in_carrier \\ simp[SUBSET_DEF, Abbr`b0`, IN_LIST_TO_BAG] )
+    \\ `!v. v IN r.carrier ==> r.prod.id <> r.prod.op h v`
+    by metis_tac[ringUnitTheory.ring_unit_property]
+    \\ first_x_assum(qspec_then`r.prod.op s (GBAG r.prod b0)`mp_tac)
+    \\ rfs[]
+    \\ metis_tac[ring_unit_property, ring_mult_comm, ring_mult_assoc] )
+  \\ rpt strip_tac
+  \\ pop_assum mp_tac
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[SUBSET_DEF, IN_LIST_TO_BAG]
+  \\ conj_asm1_tac >- metis_tac[Ring_def]
+  \\ `GBAG r.prod (LIST_TO_BAG l1) IN r.prod.carrier`
+  by ( irule GBAG_in_carrier \\ simp[SUBSET_DEF, IN_LIST_TO_BAG] )
+  \\ `GBAG r.prod (LIST_TO_BAG l2) IN r.prod.carrier`
+  by ( irule GBAG_in_carrier \\ simp[SUBSET_DEF, IN_LIST_TO_BAG] )
+  \\ strip_tac
+  \\ `ring_divides r h (GBAG r.prod (LIST_TO_BAG l2))`
+  by (
+    simp[ring_divides_def] \\ rfs[ring_associates_def]
+    \\ pop_assum mp_tac \\ simp[ring_unit_property]
+    \\ strip_tac
+    \\ qexists_tac`r.prod.op (GBAG r.prod (LIST_TO_BAG l1)) v`
+    \\ simp[]
+    \\ last_x_assum(mp_tac o Q.AP_TERM`r.prod.op v`)
+    \\ simp[GSYM ring_mult_assoc]
+    \\ simp[Once ring_mult_comm]
+    \\ simp[GSYM ring_mult_assoc]
+    \\ metis_tac[ring_mult_comm, ring_mult_lone])
+  \\ simp[PULL_EXISTS]
+  \\ `SET_OF_BAG (LIST_TO_BAG l2) SUBSET r.carrier`
+  by simp[SUBSET_DEF, IN_LIST_TO_BAG]
+  \\ `?q. BAG_IN q (LIST_TO_BAG l2) /\ ring_divides r h q`
+  by metis_tac[ring_prime_divides_product, FINITE_LIST_TO_BAG]
+  \\ fs[IN_LIST_TO_BAG]
+  \\ `ring_associates r h q` by metis_tac[integral_domain_divides_prime]
+  \\ qmatch_asmsub_rename_tac`ring_divides r p q`
+  \\ drule (#1(EQ_IMP_RULE MEM_SPLIT_APPEND_first))
+  \\ strip_tac
+  \\ `PERM l2 (q::(pfx++sfx))`
+  by (
+    simp[Once PERM_SYM]
+    \\ rewrite_tac[GSYM APPEND_ASSOC, APPEND]
+    \\ irule CONS_PERM
+    \\ simp[] )
+  \\ `LIST_TO_BAG l2 = LIST_TO_BAG (q::(pfx++sfx))`
+  by simp[PERM_LIST_TO_BAG]
+  \\ `GBAG r.prod (LIST_TO_BAG l2) =
+      r.prod.op q (GBAG r.prod (LIST_TO_BAG (pfx++sfx)))`
+  by (
+    simp[]
+    \\ DEP_REWRITE_TAC[GBAG_INSERT]
+    \\ fs[SUBSET_DEF] )
+  \\ `∃s. Unit r s /\ p = s * q` by metis_tac[ring_associates_def]
+  \\ qmatch_asmsub_abbrev_tac`r.prod.op p p1`
+  \\ qmatch_asmsub_abbrev_tac`rassoc (p * p1) p2`
+  \\ `∃s2. Unit r s2 /\ p * p1 = s2 * p2` by metis_tac[ring_associates_def]
+  \\ qmatch_asmsub_abbrev_tac`q * q1`
+  \\ `q1 IN r.prod.carrier`
+  by ( qunabbrev_tac`q1` \\ irule GBAG_in_carrier \\ fs[SUBSET_DEF] )
+  \\ `s IN r.carrier /\ s2 IN r.carrier` by metis_tac[ring_unit_property]
+  \\ `r.prod.carrier = r.carrier` by simp[]
+  \\ `∃s3. s3 IN r.carrier /\ s * s3 = #1` by metis_tac[ring_unit_property]
+  \\ `s3 * (s * q * p1) = s3 * (s2 * q * q1)` by metis_tac[ring_mult_assoc]
+  \\ `q IN r.carrier` by fs[SUBSET_DEF]
+  \\ `s3 * s * q * p1 = s3 * s2 * q * q1` by (
+    fs[] \\ rfs[ring_mult_assoc] )
+  \\ `s3 * s = #1` by simp[ring_mult_comm]
+  \\ `q * p1 = s3 * s2 * q * q1` by metis_tac[ring_mult_lone]
+  \\ `unit (s3 * s2)` by metis_tac[ring_unit_mult_eq_unit, ring_unit_property]
+  \\ `q * p1 = q * (s3 * s2) * q1` by metis_tac[ring_mult_comm, ring_mult_assoc]
+  \\ `q * p1 = q * ((s3 * s2) * q1)` by rfs[ring_mult_assoc]
+  \\ qmatch_asmsub_abbrev_tac`unit u`
+  \\ `ring_sub r (q * p1) (q * (u * q1)) = #0`
+  by metis_tac[ring_sub_eq_zero, ring_mult_element]
+  \\ `q * (ring_sub r p1 (u * q1)) = #0`
+  by (
+    DEP_REWRITE_TAC[GSYM ring_mult_rsub]
+    \\ simp[] \\ fs[] )
+  \\ `MEM q l2` by simp[]
+  \\ `ring_prime r q ∧ q <> #0 /\ ~Unit r q` by metis_tac[]
+  \\ `u IN r.carrier` by metis_tac[ring_unit_property]
+  \\ `u * q1 IN r.carrier` by metis_tac[ring_mult_element]
+  \\ `ring_sub r p1 (u * q1) = #0`
+  by metis_tac[IntegralDomain_def, ring_sub_element]
+  \\ `p1 = u * q1` by metis_tac[ring_sub_eq_zero]
+  \\ qexists_tac`q`
+  \\ first_x_assum(qspec_then`pfx ++ sfx`mp_tac)
+  \\ impl_tac
+  >- (
+    conj_tac >- (fs[] \\ metis_tac[])
+    \\ metis_tac[ring_associates_def] )
+  \\ strip_tac
+  \\ qexists_tac`l3`
+  \\ reverse conj_tac >- simp[]
+  \\ irule PERM_TRANS
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ irule PERM_MONO
+  \\ simp[]
 QED
 
 (* ------------------------------------------------------------------------- *)
