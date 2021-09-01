@@ -1237,7 +1237,7 @@ Proof
       simp[Abbr `foo`, DIV_LT_X] >>
       qspec_then `word_abs x2` assume_tac w2n_lt >> gvs[]) >>
     gvs[] >>
-    qmatch_goalsub_abbrev_tac `&s`
+    qmatch_goalsub_abbrev_tac `&s` >>
     `64 ≤ s` by simp[Abbr `s`, LENGTH_add] >>
     `&s - 1i - 63 = &(s - 64)` by (
       simp[int_arithTheory.INT_NUM_SUB] >> ARITH_TAC) >>
@@ -1256,7 +1256,7 @@ Proof
       simp[Abbr `foo`, DIV_LT_X] >>
       qspec_then `word_abs x2` assume_tac w2n_lt >> gvs[]) >>
     gvs[] >>
-    qmatch_goalsub_abbrev_tac `&s`
+    qmatch_goalsub_abbrev_tac `&s` >>
     `64 ≤ s` by simp[Abbr `s`, LENGTH_add] >>
     `&s - 1i - 63 = &(s - 64)` by (
       simp[int_arithTheory.INT_NUM_SUB] >> ARITH_TAC) >>
@@ -1576,14 +1576,14 @@ Proof
 QED
 
 (* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
-Theorem l3_asl_BranchTo_CALL:
+Theorem l3_asl_BranchTo:
   ¬ HavePACExt () ⇒ (* TODO versioning issue here *)
-  ∀target l3 asl1.
+  ∀l3 asl1.
     state_rel l3 asl1 ∧ asl_sys_regs_ok asl1
-  ⇒ ∃asl2.
+  ⇒ ∀target btype. ∃asl2.
       do addr <- AArch64_BranchAddr target; write_regS PC_ref addr od asl1 =
         returnS () asl2 ∧
-      state_rel (BranchTo (target, BranchType_CALL) l3) asl2 ∧
+      state_rel (BranchTo (target, btype) l3) asl2 ∧
       asl_sys_regs_ok asl2
 Proof
   rw[AArch64_BranchAddr_def] >>
@@ -1609,8 +1609,8 @@ Proof
   >- ( (* EL0 and EL1 *)
     ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
     simp[extract_bit_64, v2w_word1_eq] >>
-    `arm8$BranchTo (target, BranchType_CALL) l3 =
-      let s1 = arm8$Hint_Branch BranchType_CALL l3 in
+    `arm8$BranchTo (target, btype) l3 =
+      let s1 = arm8$Hint_Branch btype l3 in
       let s0 = (if word_bit 55 target ∧ s1.TCR_EL1.TBI1 then
                   bit_field_insert 63 56 (0b11111111w : 8 word) target else target) in
       let s = (if ¬word_bit 55 s0 ∧ s1.TCR_EL1.TBI0 then
@@ -1780,17 +1780,8 @@ Proof
   simp[encode_rws] >>
   l3_decode_tac >> rw[] >> l3_run_tac >> pop_assum kall_tac >>
   asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
-  qmatch_goalsub_abbrev_tac `v2w aa` >>
-  qmatch_goalsub_abbrev_tac `sw2sw $ v2w aF` >>
-  `aa = w2v $ (27 >< 2) a` by (
-    unabbrev_all_tac >> assume_tac $ GSYM $ mk_blast_thm ``a : 64 word`` >>
-    pop_assum SUBST1_TAC >> EVAL_TAC) >>
-  `aF = w2v $ (27 >< 2) a @@ (0b0w : 2 word)` by (
-    unabbrev_all_tac >>
-    assume_tac $ mk_blast_thm ``(27 >< 2) (a : 64 word) : 26 word`` >>
-    pop_assum $ SUBST1_TAC o GSYM >> once_rewrite_tac[ops_to_v2w] >>
-    once_rewrite_tac[word_concat_v2w_rwt] >> simp[w2v_v2w]) >>
-  simp[] >> ntac 4 $ pop_assum kall_tac >>
+  qcollapse_tac `(27 >< 2) a : 26 word` >>
+  qcollapse_tac `(((27 >< 2) a : 26 word) @@ (0w : 2 word)) : 28 word` >>
   simp[dfn'BranchImmediate_def] >>
   simp[
     decode_bl_aarch64_instrs_branch_unconditional_immediate_def,
@@ -1817,11 +1808,50 @@ Proof
   drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
   DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
   qmatch_goalsub_abbrev_tac `AArch64_BranchAddr addr` >>
-  drule l3_asl_BranchTo_CALL >> disch_then drule_all >>
-  disch_then $ qspec_then `addr` strip_assume_tac >>
+  drule l3_asl_BranchTo >> disch_then drule_all >>
+  disch_then $ qspecl_then [`addr`,`BranchType_CALL`] strip_assume_tac >>
   qpat_x_assum `_ = returnS _ _` mp_tac >>
   simp[returnS, bindS, seqS] >>
   Cases_on `AArch64_BranchAddr addr asl2` >> Cases_on `q` >> simp[] >>
+  strip_tac >> simp[asl_reg_rws, returnS, BranchTaken_ref_def] >> conj_tac
+  >- state_rel_tac[]
+  >- gvs[asl_sys_regs_ok_def]
+QED
+
+Theorem l3_models_asl_BranchImmediate_JMP:
+  ¬ HavePACExt () ⇒
+  ∀a. a = sw2sw ((27 >< 2) a @@ (0b0w : word2)) ⇒
+    l3_models_asl_instr_subject_to asl_sys_regs_ok
+      (Branch (BranchImmediate (a, BranchType_JMP)))
+Proof
+  rw[l3_models_asl_instr_subject_to_def, l3_models_asl_subject_to_def] >>
+  simp[encode_rws] >>
+  l3_decode_tac >> rw[] >> l3_run_tac >> pop_assum kall_tac >>
+  asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+  qcollapse_tac `(27 >< 2) a : 26 word` >>
+  qcollapse_tac `(((27 >< 2) a : 26 word) @@ (0w : 2 word)) : 28 word` >>
+  simp[dfn'BranchImmediate_def] >>
+  simp[
+    decode_b_uncond_aarch64_instrs_branch_unconditional_immediate_def,
+    execute_aarch64_instrs_branch_unconditional_immediate_def
+    ] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl1` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+  drule PC_read >> strip_tac >> drule returnS_bindS_unit >> rw[] >>
+  ntac 2 $ pop_assum kall_tac >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  qmatch_goalsub_abbrev_tac `BranchTo (addr, _)` >>
+  simp[armv86aTheory.BranchTo_def] >>
+  qspec_then `asl1` mp_tac $ GEN_ALL UsingAArch32_F >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
+  drule l3_asl_BranchTo >> disch_then drule_all >>
+  disch_then $ qspecl_then [`addr`,`BranchType_JMP`] strip_assume_tac >>
+  qpat_x_assum `_ = returnS _ _` mp_tac >>
+  simp[returnS, bindS, seqS] >>
+  Cases_on `AArch64_BranchAddr addr asl1` >> Cases_on `q` >> simp[] >>
   strip_tac >> simp[asl_reg_rws, returnS, BranchTaken_ref_def] >> conj_tac
   >- state_rel_tac[]
   >- gvs[asl_sys_regs_ok_def]
