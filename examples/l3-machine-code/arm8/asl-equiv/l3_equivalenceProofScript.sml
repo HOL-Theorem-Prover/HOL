@@ -1857,11 +1857,57 @@ Proof
   >- gvs[asl_sys_regs_ok_def]
 QED
 
+Theorem l3_models_asl_BranchConditional:
+  ¬ HavePACExt () ⇒
+  ∀a i. a = sw2sw ((20 >< 2) a @@ (0b0w : word2)) ∧ i ≠ 0b1111w ⇒
+    l3_models_asl_instr_subject_to asl_sys_regs_ok
+      (Branch (BranchConditional (a, i)))
+Proof
+  rw[l3_models_asl_instr_subject_to_def, l3_models_asl_subject_to_def] >>
+  simp[encode_rws] >>
+  l3_decode_tac >> rw[] >> l3_run_tac >> pop_assum kall_tac >>
+  asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+  qcollapse_tac `(20 >< 2) a : 19 word` >>
+  qcollapse_tac `(((20 >< 2) a : 19 word) @@ (0w : 2 word)) : 21 word` >>
+  qmatch_goalsub_abbrev_tac `if cnd then _ else _` >>
+  `cnd` by (
+    unabbrev_all_tac >> CCONTR_TAC >> gvs[] >>
+    qpat_x_assum `i ≠ _` mp_tac >> blastLib.BBLAST_TAC >> simp[]) >>
+  simp[bindS, returnS] >>
+  qpat_x_assum `Abbrev (cnd ⇔ _)` kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl1` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+  simp[dfn'BranchConditional_def] >>
+  simp[
+    decode_b_cond_aarch64_instrs_branch_conditional_cond_def,
+    execute_aarch64_instrs_branch_conditional_cond_def
+    ] >>
+  drule l3_asl_ConditionHolds >> disch_then $ qspec_then `i` assume_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  reverse IF_CASES_TAC >> gvs[] >- simp[returnS] >>
+  drule PC_read >> strip_tac >> drule returnS_bindS_unit >> rw[] >>
+  ntac 2 $ pop_assum kall_tac >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  qmatch_goalsub_abbrev_tac `BranchTo (addr, _)` >>
+  simp[armv86aTheory.BranchTo_def] >>
+  qspec_then `asl1` mp_tac $ GEN_ALL UsingAArch32_F >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
+  drule l3_asl_BranchTo >> disch_then drule_all >>
+  disch_then $ qspecl_then [`addr`,`BranchType_JMP`] strip_assume_tac >>
+  qpat_x_assum `_ = returnS _ _` mp_tac >>
+  simp[returnS, bindS, seqS] >>
+  Cases_on `AArch64_BranchAddr addr asl1` >> Cases_on `q` >> simp[] >>
+  strip_tac >> simp[asl_reg_rws, returnS, BranchTaken_ref_def] >> conj_tac
+  >- state_rel_tac[]
+  >- gvs[asl_sys_regs_ok_def]
+QED
+
 (****************************************)
 
 (* TODO for CakeML
-  Branch (BranchImmediate (_, BranchType_JMP))
-  Branch (BranchConditional _)
   Branch (BranchRegister _)
   LoadStore (LoadStoreImmediate@64 _)
   LoadStore (LoadStoreImmediate@8 _) (* XXX *)
