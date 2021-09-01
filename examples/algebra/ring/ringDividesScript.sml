@@ -428,6 +428,20 @@ Proof
   \\ metis_tac[]
 QED
 
+Theorem ring_associates_mult:
+  !r p q x.
+    Ring r /\ p IN r.carrier /\ q IN r.carrier /\ x IN r.carrier /\
+    ring_associates r p q ==>
+    ring_associates r (r.prod.op x p) (r.prod.op x q)
+Proof
+  rw[ring_associates_def]
+  \\ rfs[ring_unit_property]
+  \\ simp[PULL_EXISTS]
+  \\ qexistsl_tac[`s`,`v`]
+  \\ simp[GSYM ring_mult_assoc]
+  \\ metis_tac[ring_mult_comm]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Euclidean Ring Greatest Common Divisor                                    *)
 (* ------------------------------------------------------------------------- *)
