@@ -132,7 +132,9 @@ in
                                 )
                    | h :: t =>
                        let
-                          val fupd_name = concat_ [ty_name tm, h, "fupd"]
+                          val fupd_name =
+                              TypeBasePure.mk_recordtype_fieldfupd
+                                {tyname = ty_name tm, fieldname = h}
                           val fupd =
                              Term.prim_mk_const {Name = fupd_name, Thy = thy}
                           val d = utilsLib.dom (dom_of fupd)

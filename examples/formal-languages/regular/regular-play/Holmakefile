@@ -15,4 +15,14 @@ selftest.exe: selftest.uo $(EMIT_DEPS)
 	$(HOLMOSMLC) -o $@ $<
 
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe regular-play-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: regular-play-selftest.log
+
+regular-play-selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+
+.PHONY: regular-play-selftest
+
+endif

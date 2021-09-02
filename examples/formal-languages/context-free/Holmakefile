@@ -1,10 +1,17 @@
-CLINE_OPTIONS = --qof
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+INCLUDES = $(dprot $(HOLDIR)/src/finite_maps)
 
-all: $(TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 
 selftest.exe: selftest.uo pegexecTheory.uo simpleSexpPEGTheory.uo pegLib.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: context-free-test.log
+
+context-free-test.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+endif
+
+EXTRA_CLEANS = selftest.exe context-free-test.log

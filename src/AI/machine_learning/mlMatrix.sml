@@ -29,12 +29,29 @@ fun diff_rvect v1 v2 =
     Vector.tabulate (Vector.length v1, f)
   end
 
+fun vect_add v1 v2 =
+  let fun f i = Vector.sub (v1,i) + Vector.sub (v2,i) in
+    Vector.tabulate (Vector.length v1, f)
+  end
+
+
 fun mult_rvect v1 v2 =
   let fun f i = Vector.sub (v1,i) * Vector.sub (v2,i) in
     Vector.tabulate (Vector.length v1, f)
   end
 
-fun scalar_product v1 v2 = sum_rvect (mult_rvect v1 v2)
+fun sp_vecl l1 l2 = case (l1,l2) of
+    (a1 :: m1, a2 :: m2) => a1 * a2 + sp_vecl m1 m2
+  | _ => 0.0
+
+fun scalar_product v1 v2 =
+  let
+    val sum = ref 0.0
+    fun f (i,x) = (sum := !sum + x * Vector.sub (v2,i))
+  in
+    Vector.appi f v1;
+    !sum
+  end
 
 fun scalar_mult k v = Vector.map (fn x => k * x) v
 
@@ -51,6 +68,14 @@ fun mat_mult m inv =
   let fun f line = scalar_product line inv in Vector.map f m end
 
 fun mat_map f m = Vector.map (Vector.map f) m
+
+fun mat_app f m =
+  let
+    fun felem i (j,elem) = f i j
+    fun fline (i,line) = Vector.appi (felem i) line
+  in
+    Vector.appi fline m
+  end
 
 fun mat_tabulate f (linen,coln) =
   let fun mk_line i = Vector.tabulate (coln, f i) in
@@ -77,6 +102,29 @@ fun matl_add ml = case ml of
     [] => raise ERR "mat_addl" ""
   | [m] => m
   | m :: contl => mat_add m (matl_add contl)
+
+
+fun mat_add_mem mem m =
+  let fun f i j =
+    let val r = mat_sub mem i j in r := !r + mat_sub m i j end
+  in
+    mat_app f mem
+  end
+
+fun matl_add_mem mem ml = case ml of
+    [] => ()
+  | m :: cont => (mat_add_mem mem m; matl_add_mem mem cont)
+
+fun add_colrow mv i j =
+  let
+    val sum = ref 0.0
+    fun g m = sum := !sum + (mat_sub m i j)
+  in
+    Vector.app g mv; !sum
+  end
+
+fun matv_add mv =
+  mat_tabulate (add_colrow mv) (mat_dim (Vector.sub (mv,0)))
 
 fun inv_dim (a,b) = (b,a)
 

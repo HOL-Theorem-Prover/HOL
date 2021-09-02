@@ -1,5 +1,4 @@
 INCLUDES = ../prob ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/Crypto/RSA ../groups
-OPTIONS = QUIT_ON_FAILURE
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
@@ -7,4 +6,12 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo miller_rabinTools.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe miller-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: miller-selftest.log
+
+miller-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+
+endif

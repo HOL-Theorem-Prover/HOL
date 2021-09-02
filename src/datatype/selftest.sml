@@ -258,6 +258,25 @@ fun s t = let open HolKernel boolLib
           end
 
 val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
+val _ = tprint "dest_record on simple literal"
+val _ = let
+  fun checkid (n,t) = n = "id" andalso aconv t “0”
+  fun checkopn (n,t) = n = "opn" andalso aconv t “SUC”
+  fun checknops nops =
+      case nops of
+          [f1, f2] => (checkid f1 andalso checkopn f2) orelse
+                      (checkopn f1 andalso checkid f2)
+        | _ => false
+  fun check (ty,nops) = ty = “:ovlrcd” andalso checknops nops
+  fun prnop (n,t) = "(" ^ n ^ ", " ^ term_to_string t ^ ")"
+  fun pr (ty,nops) = "(" ^ type_to_string ty ^",[" ^
+                     String.concatWith "," (map prnop nops) ^ ")"
+in
+  require_msg (check_result check) pr TypeBase.dest_record
+              “<| id := 0; opn := SUC|>”
+end
+
+
 val _ = overload_on ("ID", ``f.id``)
 val _ = overload_on ("inv", ``f.opn``)
 val _ = overload_on ("ovlfoo", ``\n r:ovlrcd. opn_fupd (K (K n)) r``)
@@ -297,7 +316,8 @@ val _ = List.app pptest
             "r with pfld1 := K 1"),
          ("poly simple seln", ``(r : ('c,'d)polyrcd).pfld1``, "r.pfld1"),
          ("bare ('a,'b) polyrcd_pfld1",
-             ``polyrcd_pfld1 : ('a,'b) polyrcd -> 'a ms``, "polyrcd_pfld1"),
+             “polyrcd_pfld1 : ('a,'b) polyrcd -> 'a ms”,
+             "polyrcd_pfld1"),
          ("bare ('a,'b) polyrcd_pfld1_fupd",
             ``polyrcd_pfld1_fupd :
                 ('a ms -> 'a ms) -> ('a,'b) polyrcd -> ('a,'b) polyrcd``,
@@ -316,6 +336,10 @@ val _ = List.app pptest
             ``polyrcd_pfld1_fupd f : ('a,'b) polyrcd -> ('a,'b) polyrcd``,
             "pfld1_fupd f")
          ]
+
+val _ = tprint "bare accessor name parses to constant"
+val _ = require_msg (check_result is_const) term_to_string Parse.Term
+                    ‘polyrcd_pfld1’
 
 val _ = with_flag (Globals.linewidth, 40) pptest
                   ("multiline record 1",

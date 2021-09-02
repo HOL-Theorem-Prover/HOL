@@ -4194,11 +4194,12 @@ in
 end
 
 local
+   fun mkselnm ty f = TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
    val get_pair = pairSyntax.dest_pair o rhsc
    val get_val = fst o get_pair
    val get_state = snd o get_pair
-   val state_exception_tm = mk_arm_const "arm_state_exception"
-   val state_encoding_tm = mk_arm_const "arm_state_Encoding"
+   val state_exception_tm = mk_arm_const $ mkselnm "arm_state" "exception"
+   val state_encoding_tm = mk_arm_const $ mkselnm "arm_state" "Encoding"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
    fun mk_proj_encoding r = Term.mk_comb (state_encoding_tm, r)
    fun mk_state e c = Term.subst [state_with_pre (c, e)]

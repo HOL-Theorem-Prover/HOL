@@ -14,9 +14,10 @@ sig
   (* 'a: type of parameter, 'b: type of arguments, 'c: returned type *)
   type ('a,'b,'c) extspec =
     {
+    self_dir : string,
     self: string,
     parallel_dir: string,
-    reflect_globals : unit -> string,
+    reflect_globals : string,
     function : 'a -> 'b -> 'c,
     write_param : string -> 'a -> unit,
     read_param : string -> 'a,
@@ -30,6 +31,6 @@ sig
     int -> ('a,'b,'c) extspec -> 'a -> 'b list -> 'c list
 
   (* example *)
-  val idspec : (unit,int,int) extspec
+  val examplespec : (unit,int,int) extspec
 
 end

@@ -17,6 +17,11 @@ fun type_names ty =
   in (Thy,Tyop)
   end;
 
+fun mk_recordtype_constructor s = "recordtype." ^ s
+fun mk_recordtype_fieldsel {tyname=ty,fieldname=s} =
+    String.concatWith "." ["recordtype",ty,"seldef",s]
+fun mk_recordtype_fieldfupd r = mk_recordtype_fieldsel r ^ "_fupd"
+
 datatype shared_thm
     = ORIG of thm
     | COPY of (string * string) * thm;
@@ -975,15 +980,16 @@ fun dest_K_1 tm =
   end;
 
 fun get_field_name s1 s2 =
-  let val prefix = String.extract(s2,0,SOME(String.size s1))
-      val rest = String.extract(s2,String.size s1 + 1, NONE)
-      val middle = String.extract(rest,0,SOME(String.size rest - 5))
-      val suffix = String.extract(rest,String.size middle, NONE)
-  in
-    if prefix = s1 andalso suffix = "_fupd"
-      then middle
-      else raise ERR "get_field" ("unable to parse "^Lib.quote s2)
-  end;
+    let
+      val err = ERR "get_field_name" ("unable to parse "^Lib.quote s2)
+    in
+      case String.fields (equal #".") s2 of
+          ["recordtype", ty, "seldef", fld] =>
+          if ty = s1 andalso String.isSuffix "_fupd" fld then
+            String.extract (fld, 0, SOME(String.size fld - 5))
+          else raise err
+        | _ => raise err
+    end;
 
 (*---------------------------------------------------------------------------*)
 (* A record looks like `fupd arg_1 (fupd arg_2 ... (fupd arg_n ARB) ...)`    *)
@@ -1019,21 +1025,23 @@ fun dest_record tybase tm =
 fun is_record tybase = can (dest_record tybase);
 
 fun mk_record tybase (ty,fields) =
- if is_record_type tybase ty
- then let val (Thy,Tyop) = type_names ty
-        val fupds = map (fn p => String.concat[Tyop,"_",fst p,"_fupd"]) fields
-        val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) fupds
-        fun ifn c = let val (_,ty') = dom_rng (type_of c)
-                        val theta = match_type ty' (ty --> ty)
-                    in inst theta c
-                    end
-        val updfns' = map ifn updfns
-        fun mk_field (updfn,v) tm =
-              mk_comb(mk_comb(updfn, mk_K_1(v,type_of v)),tm)
-       in
-         itlist mk_field (zip updfns' (map snd fields)) (mk_arb ty)
-       end
-  else raise ERR "mk_record" "first arg. not a record type";
+ if is_record_type tybase ty then
+   let
+     val (Thy,Tyop) = type_names ty
+     fun mkrtfup f = mk_recordtype_fieldfupd {tyname=Tyop, fieldname = f}
+     val fupds = map (mkrtfup o #1) fields
+     val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) fupds
+     fun ifn c = let val (_,ty') = dom_rng (type_of c)
+                     val theta = match_type ty' (ty --> ty)
+                 in inst theta c
+                 end
+     val updfns' = map ifn updfns
+     fun mk_field (updfn,v) tm =
+         mk_comb(mk_comb(updfn, mk_K_1(v,type_of v)),tm)
+   in
+     itlist mk_field (zip updfns' (map snd fields)) (mk_arb ty)
+   end
+ else raise ERR "mk_record" "first arg. not a record type";
 
 exception OptionExn = Option
 open ThyDataSexp

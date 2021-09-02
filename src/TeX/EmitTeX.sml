@@ -269,6 +269,18 @@ local
       case overrides s of
         NONE => string_map (s,sz)
       | SOME r => r
+  fun translate_prime s =
+      if s = "'" then "\\prime{}" else
+      if s = UnicodeChars.sup_0 then "0" else
+      if s = UnicodeChars.sup_1 then "1" else
+      if s = UnicodeChars.sup_2 then "2" else
+      if s = UnicodeChars.sup_3 then "3" else
+      if s = UnicodeChars.sup_4 then "4" else
+      if s = UnicodeChars.sup_5 then "5" else
+      if s = UnicodeChars.sup_6 then "6" else
+      if s = UnicodeChars.sup_7 then "7" else
+      if s = UnicodeChars.sup_8 then "8" else
+      if s = UnicodeChars.sup_9 then "9" else s
   fun varmunge s =
       if String.sub(s,0) = #"_" andalso
          CharVector.all (fn c => Char.isDigit c) (String.extract(s,1,NONE))
@@ -277,8 +289,9 @@ local
       else let
           open Substring
           val ss = full s
-          val (pfx,primes) = splitr (equal #"'") ss
-          val prime_str_interior = translate (fn _ => "\\prime") primes
+          val (pfx,primes) = splitl (not o equal #"'") ss
+          val prime_str_interior =
+            UTF8.translate translate_prime (string primes)
           val prime_str = if prime_str_interior = "" then ""
                           else "\\sp{" ^ prime_str_interior ^ "}"
           val (core,digits) = splitr Char.isDigit pfx

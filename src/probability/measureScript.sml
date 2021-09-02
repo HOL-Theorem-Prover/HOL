@@ -1660,16 +1660,75 @@ val measure_split = store_thm
 (*  Uniqueness of Measure - Dynkin system [3]                                *)
 (* ------------------------------------------------------------------------- *)
 
-(* `sigma-finite` is a property of measure space but sigma algebra *)
-val sigma_finite_def = Define
-   `sigma_finite m =
-    ?f :num -> 'a set.
-     f IN (UNIV -> measurable_sets m) /\
-     (!n. f n SUBSET f (SUC n)) /\
-     (BIGUNION (IMAGE f UNIV) = m_space m) /\
-     (!n. measure m (f n) < PosInf)`;
+(* an "exhausting" sequence in a system of sets, moved from martingaleTheory *)
+Definition exhausting_sequence_def :
+    exhausting_sequence (a :'a algebra) (f :num -> 'a -> bool) =
+      (f IN (UNIV -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
+       BIGUNION (IMAGE f UNIV) = space a)
+End
 
-(* this definition is sometimes useful for not repeating ‘m’ *)
+Theorem exhausting_sequence_alt :
+   !a f. exhausting_sequence a f <=>
+         f IN (univ(:num) -> subsets a) /\ (!m n. m <= n ==> f m SUBSET f n) /\
+         BIGUNION (IMAGE f univ(:num)) = space a
+Proof
+    RW_TAC std_ss [exhausting_sequence_def]
+ >> reverse EQ_TAC >- RW_TAC std_ss []
+ >> STRIP_TAC >> art []
+ >> GEN_TAC >> Induct_on ‘n’ >- RW_TAC arith_ss [SUBSET_REFL]
+ >> DISCH_TAC
+ >> ‘(m = SUC n) \/ m <= n’ by RW_TAC arith_ss [] >- rw [SUBSET_REFL]
+ >> MATCH_MP_TAC SUBSET_TRANS
+ >> Q.EXISTS_TAC ‘f n’ >> art []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Definition has_exhausting_sequence :
+    has_exhausting_sequence a = ?f. exhausting_sequence a f
+End
+
+(* This was part of sigma_finite_def, but no requirement on the measure of each
+   (f n). The definition is useful because ‘space a IN subsets a’ does not hold
+   in general for semiring.
+
+   |- !a. has_exhausting_sequence a <=>
+          ?f. f IN (univ(:num) -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
+              BIGUNION (IMAGE f univ(:num)) = space a
+ *)
+Theorem has_exhausting_sequence_def =
+    REWRITE_RULE [exhausting_sequence_def] has_exhausting_sequence
+
+(* |- !a. has_exhausting_sequence a <=>
+          ?f. f IN (univ(:num) -> subsets a) /\
+              (!m n. m <= n ==> f m SUBSET f n) /\
+              BIGUNION (IMAGE f univ(:num)) = space a
+ *)
+Theorem has_exhausting_sequence_alt =
+    REWRITE_RULE [exhausting_sequence_alt] has_exhausting_sequence
+
+(* `sigma-finite` is a property of measure space but sigma algebra.
+
+   The new definition based on ‘exhausting_sequence’ (was in martingaleTheory):
+ *)
+Definition sigma_finite :
+    sigma_finite m = ?f. exhausting_sequence (m_space m,measurable_sets m) f /\
+                         !n. measure m (f n) < PosInf
+End
+
+(* The old definition now becomes an equivalent theorem: *)
+Theorem sigma_finite_def :
+    !m. sigma_finite m <=>
+        ?f :num -> 'a set.
+           f IN (UNIV -> measurable_sets m) /\
+           (!n. f n SUBSET f (SUC n)) /\
+           (BIGUNION (IMAGE f UNIV) = m_space m) /\
+           (!n. measure m (f n) < PosInf)
+Proof
+    rw [sigma_finite, exhausting_sequence_def]
+ >> METIS_TAC []
+QED
+
+(* This definition is sometimes useful for not repeating ‘m’ *)
 Definition sigma_finite_measure_space_def :
     sigma_finite_measure_space m = (measure_space m /\ sigma_finite m)
 End
@@ -1678,6 +1737,37 @@ End
    e.g. algebra, ring, semiring, ... because by itself `m` is not meaningful. *)
 val premeasure_def = Define `
     premeasure m <=> positive m /\ countably_additive m`;
+
+(* connection with ‘sigma_finite’ *)
+Theorem sigma_finite_has_exhausting_sequence :
+    !sp sts u. sigma_finite (sp,sts,u) ==> has_exhausting_sequence (sp,sts)
+Proof
+    RW_TAC std_ss [sigma_finite_def, has_exhausting_sequence_def,
+                   m_space_def, measurable_sets_def, space_def, subsets_def]
+ >> Q.EXISTS_TAC ‘f’ >> rw []
+QED
+
+(* alternative definition of ‘sigma_finite’ *)
+Theorem sigma_finite_alt_exhausting_sequence :
+    !m. sigma_finite m <=>
+        ?f. exhausting_sequence (m_space m,measurable_sets m) f /\
+            !n. measure m (f n) < PosInf
+Proof
+    RW_TAC std_ss [sigma_finite_def, exhausting_sequence_def,
+                   space_def, subsets_def]
+ >> EQ_TAC >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘f’ >> art []
+QED
+
+(* |- !m. sigma_finite m <=>
+          ?f. (f IN (univ(:num) -> measurable_sets m) /\
+               (!m n. m <= n ==> f m SUBSET f n) /\
+               BIGUNION (IMAGE f univ(:num)) = m_space m) /\
+              !n. measure m (f n) < PosInf
+ *)
+Theorem sigma_finite_alt =
+    REWRITE_RULE [exhausting_sequence_alt, subsets_def, space_def]
+                 sigma_finite_alt_exhausting_sequence;
 
 (*****************************************************************************)
 (*            Premeasure properties of various systems of sets               *)
@@ -4414,7 +4504,8 @@ Proof
  >> fs [algebra_def, space_def, subsets_def]
 QED
 
-(* The "algebra" version (weakest) of Caratheodory theorem *)
+(* The "algebra" version (weakest) of Caratheodory theorem
+   cf. real_measureTheory.CARATHEODORY *)
 Theorem CARATHEODORY :
     !m0. algebra (m_space m0, measurable_sets m0) /\
          positive m0 /\ countably_additive m0 ==>
@@ -4426,6 +4517,163 @@ Proof
  >> MATCH_MP_TAC CARATHEODORY_SEMIRING
  >> IMP_RES_TAC ALGEBRA_IMP_SEMIRING >> art [premeasure_def]
  >> fs [algebra_def, space_def, subsets_def]
+QED
+
+Theorem measure_space_add :
+    !sp sts u v. measure_space (sp,sts,u) /\ measure_space (sp,sts,v) ==>
+                 measure_space (sp,sts,\s. u s + v s)
+Proof
+    rw [measure_space_def]
+ >- (fs [positive_def] >> rpt STRIP_TAC \\
+     MATCH_MP_TAC le_add >> rw [])
+ >> fs [countably_additive_def, IN_FUNSET]
+ >> rw [o_DEF]
+ (* applying ext_suminf_add *)
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> Know ‘suminf (\n. (\x. u (f x)) n + (\x. v (f x)) n) =
+          suminf (\x. u (f x)) + suminf (\x. v (f x))’
+ >- (MATCH_MP_TAC ext_suminf_add >> fs [positive_def])
+ >> rw []
+QED
+
+(* Lemma 16.6 [1, p.167] (cf. UNIQUENESS_OF_MEASURE, where ‘<=’ becomes ‘=’)
+
+   This theorem is used by sub|super_martingale_alt_generator (martingaleTheory).
+   It's also a nice application of CARATHEODORY_SEMIRING + UNIQUENESS_OF_MEASURE.
+ *)
+Theorem SEMIRING_SIGMA_MONOTONE :
+    !sp sts u v. semiring (sp,sts) /\ has_exhausting_sequence (sp,sts) /\
+                 measure_space (sp,subsets (sigma sp sts),u) /\
+                 measure_space (sp,subsets (sigma sp sts),v) /\
+                (!s. s IN sts ==> u s <= v s /\ v s < PosInf) ==>
+                (!s. s IN subsets (sigma sp sts) ==> (u s <= v s))
+Proof
+    rpt STRIP_TAC
+ >> Know ‘!s. s IN sts ==> u s < PosInf’
+ >- (Q.X_GEN_TAC ‘t’ >> STRIP_TAC \\
+     MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘v t’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘!s. s IN sts ==> 0 <= u s’
+ >- (Know ‘positive (sp,subsets (sigma sp sts),u)’
+     >- PROVE_TAC [measure_space_def] \\
+     simp [positive_def] >> STRIP_TAC \\
+     Q.X_GEN_TAC ‘t’ >> STRIP_TAC \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+     REWRITE_TAC [SIGMA_SUBSET_SUBSETS])
+ >> DISCH_TAC
+ >> Know ‘!s. s IN sts ==> 0 <= v s’
+ >- (Know ‘positive (sp,subsets (sigma sp sts),v)’
+     >- PROVE_TAC [measure_space_def] \\
+     simp [positive_def] >> STRIP_TAC \\
+     Q.X_GEN_TAC ‘t’ >> STRIP_TAC \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+     REWRITE_TAC [SIGMA_SUBSET_SUBSETS])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘r = \s. v s - u s’
+ (* preparing for CARATHEODORY_SEMIRING *)
+ >> Know ‘premeasure (sp,sts,r)’
+ >- (REWRITE_TAC [premeasure_def] \\
+     STRONG_CONJ_TAC (* positive *)
+     >- (simp [positive_def, Abbr ‘r’] \\
+        ‘positive (sp,subsets (sigma sp sts),u) /\
+         positive (sp,subsets (sigma sp sts),v)’ by PROVE_TAC [measure_space_def] \\
+         fs [positive_def, sub_rzero] \\
+         Q.X_GEN_TAC ‘t’ >> STRIP_TAC \\
+         Suff ‘0 <= v t - u t <=> u t <= v t’ >- (Rewr' >> PROVE_TAC []) \\
+         ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+         MATCH_MP_TAC sub_zero_le \\
+         reverse CONJ_TAC >- (REWRITE_TAC [lt_infty] \\
+                              FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+         MATCH_MP_TAC pos_not_neginf \\
+         FIRST_X_ASSUM MATCH_MP_TAC \\
+         Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+         REWRITE_TAC [SIGMA_SUBSET_SUBSETS]) >> DISCH_TAC \\
+     rw [countably_additive_def, Abbr ‘r’, o_DEF, IN_FUNSET] \\
+  (* applying ext_suminf_sub *)
+     Know ‘suminf (\x. (v o f) x - (u o f) x) = suminf (v o f) - suminf (u o f)’
+     >- (MATCH_MP_TAC ext_suminf_sub >> rw [o_DEF] \\
+         Know ‘suminf (measure (sp,subsets (sigma sp sts),v) o f) =
+               measure (sp,subsets (sigma sp sts),v) (BIGUNION (IMAGE f UNIV))’
+         >- (MATCH_MP_TAC COUNTABLY_ADDITIVE >> simp [IN_FUNSET] \\
+             CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+             Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+             REWRITE_TAC [SIGMA_SUBSET_SUBSETS]) \\
+         rw [o_DEF, lt_infty]) \\
+     rw [o_DEF] \\
+     Know ‘suminf (measure (sp,subsets (sigma sp sts),v) o f) =
+           measure (sp,subsets (sigma sp sts),v) (BIGUNION (IMAGE f UNIV))’
+     >- (MATCH_MP_TAC COUNTABLY_ADDITIVE >> simp [IN_FUNSET] \\
+         CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+         Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+         REWRITE_TAC [SIGMA_SUBSET_SUBSETS]) \\
+     Know ‘suminf (measure (sp,subsets (sigma sp sts),u) o f) =
+           measure (sp,subsets (sigma sp sts),u) (BIGUNION (IMAGE f UNIV))’
+     >- (MATCH_MP_TAC COUNTABLY_ADDITIVE >> simp [IN_FUNSET] \\
+         CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+         Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+         REWRITE_TAC [SIGMA_SUBSET_SUBSETS]) \\
+     rw [o_DEF])
+ >> DISCH_TAC
+ (* applying CARATHEODORY_SEMIRING, this asserts ‘measure_space m’ *)
+ >> MP_TAC (Q.SPEC ‘(sp,sts,r)’ CARATHEODORY_SEMIRING) >> rw []
+ (* stage work *)
+ >> Know ‘!s. s IN sts ==> v s = r s + u s’
+ >- (Q.X_GEN_TAC ‘t’ >> rw [Abbr ‘r’, Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC sub_add \\
+     reverse CONJ_TAC >- rw [lt_infty] \\
+     MATCH_MP_TAC pos_not_neginf >> rw [])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘v' = \s. r s + u s’
+ >> Know ‘premeasure (sp,sts,v')’
+ >- (REWRITE_TAC [premeasure_def] \\
+     STRONG_CONJ_TAC (* positive *)
+     >- (simp [positive_def, Abbr ‘v'’] \\
+        ‘positive (sp,subsets (sigma sp sts),u)’ by PROVE_TAC [measure_space_def] \\
+        ‘positive (sp,sts,r)’ by PROVE_TAC [premeasure_def] \\
+         fs [positive_def, sub_rzero]) >> DISCH_TAC \\
+     rw [countably_additive_def, Abbr ‘v'’, o_DEF, IN_FUNSET] \\
+  (* applying ext_suminf_sub *)
+     Know ‘suminf (\x. (r o f) x + (u o f) x) = suminf (r o f) + suminf (u o f)’
+     >- (MATCH_MP_TAC ext_suminf_add >> rw [o_DEF] \\
+        ‘positive (sp,sts,r)’ by PROVE_TAC [premeasure_def] \\
+         fs [positive_def]) \\
+     rw [o_DEF] \\
+     Know ‘suminf (measure (sp,sts,r) o f) =
+           measure (sp,sts,r) (BIGUNION (IMAGE f UNIV))’
+     >- (MATCH_MP_TAC COUNTABLY_ADDITIVE >> simp [IN_FUNSET] \\
+         FULL_SIMP_TAC std_ss [premeasure_def]) \\
+     Know ‘suminf (measure (sp,subsets (sigma sp sts),u) o f) =
+           measure (sp,subsets (sigma sp sts),u) (BIGUNION (IMAGE f UNIV))’
+     >- (MATCH_MP_TAC COUNTABLY_ADDITIVE >> simp [IN_FUNSET] \\
+         CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+         Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+         REWRITE_TAC [SIGMA_SUBSET_SUBSETS]) \\
+     rw [o_DEF])
+ >> DISCH_TAC
+ (* applying CARATHEODORY_SEMIRING, this asserts ‘measure_space m'’ *)
+ >> MP_TAC (Q.SPEC ‘(sp,sts,v')’ CARATHEODORY_SEMIRING) >> rw []
+ (* preparing for UNIQUENESS_OF_MEASURE *)
+ >> Q.ABBREV_TAC ‘v'' = \s. measure m s + u s’
+ (* applying UNIQUENESS_OF_MEASURE *)
+ >> Know ‘!s. s IN subsets (sigma sp sts) ==> v s = v'' s’
+ >- (‘!s. s IN sts ==> v s = v'' s’ by METIS_TAC [] \\
+     MATCH_MP_TAC UNIQUENESS_OF_MEASURE >> simp [sigma_finite] \\
+     fs [semiring_def, has_exhausting_sequence] \\
+     CONJ_TAC >- (Q.EXISTS_TAC ‘f’ >> art [] \\
+                  fs [exhausting_sequence_def, IN_FUNSET]) \\
+     Q.UNABBREV_TAC ‘v''’ \\
+     MATCH_MP_TAC measure_space_add >> art [] \\
+    ‘subsets (sigma sp sts) = measurable_sets m’ by METIS_TAC [subsets_def] \\
+     POP_ORW \\
+    ‘sp = m_space m’ by METIS_TAC [SPACE_SIGMA, space_def] >> POP_ORW \\
+     rw [MEASURE_SPACE_REDUCE])
+ >> rw [Abbr ‘v''’]
+ >> MATCH_MP_TAC le_addl_imp
+ >> ‘s IN measurable_sets m’ by METIS_TAC [subsets_def]
+ >> Suff ‘positive m’ >- rw [positive_def]
+ >> PROVE_TAC [MEASURE_SPACE_POSITIVE]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -4544,6 +4792,28 @@ Proof
  >> MATCH_MP_TAC INCREASING >> art []
  >> reverse CONJ_TAC >- SET_TAC []
  >> IMP_RES_TAC MEASURE_SPACE_INCREASING
+QED
+
+Theorem NULL_SET_BIGUNION :
+    !m f. measure_space m /\ (!n. f n IN null_set m) ==>
+          BIGUNION (IMAGE f univ(:num)) IN null_set m
+Proof
+    rpt GEN_TAC
+ >> simp [IN_NULL_SET, null_set_def]
+ >> STRIP_TAC
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC MEASURE_SPACE_BIGUNION >> art [])
+ >> DISCH_TAC
+ >> REWRITE_TAC [GSYM le_antisym]
+ >> reverse CONJ_TAC
+ >- (IMP_RES_TAC MEASURE_SPACE_POSITIVE \\
+     fs [positive_def])
+ >> Know ‘suminf (measure m o f) = 0’
+ >- (MATCH_MP_TAC ext_suminf_zero >> rw [o_DEF])
+ >> DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM)
+ >> IMP_RES_TAC MEASURE_SPACE_COUNTABLY_SUBADDITIVE
+ >> MATCH_MP_TAC COUNTABLY_SUBADDITIVE
+ >> rw [IN_FUNSET]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -4805,6 +5075,190 @@ Proof
  >> MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE
  >> rw [extreal_of_num_def, extreal_not_infty]
 QED
+
+(* NOTE: added `measure p (BIGUNION (IMAGE A UNIV)) < PosInf` into antecendents,
+   this is weaker than `measure p (m_space p) < PosInf` *)
+val measure_limsup = store_thm
+  ("measure_limsup",
+  ``!p A. measure_space p /\ measure p (BIGUNION (IMAGE A UNIV)) < PosInf /\
+         (!n. A n IN measurable_sets p) ==>
+         (measure p (limsup A) = inf (IMAGE (\m. measure p (BIGUNION {A n | m <= n})) UNIV))``,
+    RW_TAC std_ss []
+ >> Know `(\m. measure p (BIGUNION {A n | m <= n})) =
+          measure p o (\m. BIGUNION {A n | m <= n})`
+ >- (FUN_EQ_TAC >> RW_TAC std_ss [o_DEF])
+ >> Rewr'
+ >> Suff `inf (IMAGE (measure p o (\m. BIGUNION {A n | m <= n})) UNIV) =
+          measure p (BIGINTER (IMAGE (\m. BIGUNION {A n | m <= n}) UNIV))`
+ >- (Rewr' >> REWRITE_TAC [set_limsup_def])
+ >> MATCH_MP_TAC MONOTONE_CONVERGENCE_BIGINTER2
+ >> Know `!m. BIGUNION {A n | m <= n} IN measurable_sets p`
+ >- (GEN_TAC \\
+     fs [measure_space_def, sigma_algebra_def, space_def, subsets_def] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     RW_TAC std_ss [tail_countable, SUBSET_DEF, GSPECIFICATION] >> art [])
+ >> RW_TAC std_ss [IN_FUNSET, IN_UNIV] (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      REWRITE_TAC [lt_infty] \\
+      MATCH_MP_TAC let_trans \\
+      Q.EXISTS_TAC `measure p (BIGUNION (IMAGE A UNIV))` >> art [] \\
+      MATCH_MP_TAC INCREASING >> art [] \\
+      CONJ_TAC >- PROVE_TAC [MEASURE_SPACE_INCREASING] \\
+      CONJ_TAC
+      >- (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION_IMAGE, IN_UNIV, IN_BIGUNION, GSPECIFICATION] \\
+          Q.EXISTS_TAC `n'` >> art []) \\
+      POP_ASSUM (ASSUME_TAC o (Q.SPEC `0`)) \\
+      Suff `BIGUNION (IMAGE A UNIV) = BIGUNION {A n | 0 <= n}`
+      >- DISCH_THEN (ASM_REWRITE_TAC o wrap) \\
+      RW_TAC arith_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_UNIV, IN_BIGUNION, GSPECIFICATION] \\
+      EQ_TAC >> RW_TAC std_ss [] >| (* 3 subgoals *)
+      [ Q.EXISTS_TAC `A x'` >> art [] \\
+        Q.EXISTS_TAC `x'` >> REWRITE_TAC [],
+        Q.EXISTS_TAC `n` >> art [] ],
+      (* goal 2 (of 2) *)
+      RW_TAC arith_ss [SUBSET_DEF, IN_BIGUNION, GSPECIFICATION] \\
+      Q.EXISTS_TAC `A n'` >> art [] \\
+      Q.EXISTS_TAC `n'` >> RW_TAC arith_ss [] ]);
+
+val measure_limsup_finite = store_thm
+  ("measure_limsup_finite",
+  ``!p A. measure_space p /\ measure p (m_space p) < PosInf /\
+         (!n. A n IN measurable_sets p) ==>
+         (measure p (limsup A) = inf (IMAGE (\m. measure p (BIGUNION {A n | m <= n})) UNIV))``,
+    RW_TAC std_ss []
+ >> Know `(\m. measure p (BIGUNION {A n | m <= n})) =
+          measure p o (\m. BIGUNION {A n | m <= n})`
+ >- (FUN_EQ_TAC >> RW_TAC std_ss [o_DEF])
+ >> Rewr'
+ >> Suff `inf (IMAGE (measure p o (\m. BIGUNION {A n | m <= n})) UNIV) =
+          measure p (BIGINTER (IMAGE (\m. BIGUNION {A n | m <= n}) UNIV))`
+ >- (Rewr' >> REWRITE_TAC [set_limsup_def])
+ >> MATCH_MP_TAC MONOTONE_CONVERGENCE_BIGINTER2
+ >> Know `!m. BIGUNION {A n | m <= n} IN measurable_sets p`
+ >- (GEN_TAC \\
+     fs [measure_space_def, sigma_algebra_def, space_def, subsets_def] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     RW_TAC std_ss [tail_countable, SUBSET_DEF, GSPECIFICATION] >> art [])
+ >> RW_TAC std_ss [IN_FUNSET, IN_UNIV] (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      REWRITE_TAC [lt_infty] \\
+      MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `measure p (m_space p)` \\
+      reverse CONJ_TAC >- art [] \\
+      MATCH_MP_TAC INCREASING >> art [] \\
+      CONJ_TAC >- PROVE_TAC [MEASURE_SPACE_INCREASING] \\
+      fs [measure_space_def, sigma_algebra_def, space_def, subsets_def] \\
+      reverse CONJ_TAC >- PROVE_TAC [ALGEBRA_SPACE, space_def, subsets_def] \\
+      METIS_TAC [algebra_def, subset_class_def, space_def, subsets_def],
+      (* goal 2 (of 2) *)
+      RW_TAC arith_ss [SUBSET_DEF, IN_BIGUNION, GSPECIFICATION] \\
+      Q.EXISTS_TAC `A n'` >> art [] \\
+      Q.EXISTS_TAC `n'` >> RW_TAC arith_ss [] ]);
+
+val measure_liminf = store_thm
+  ("measure_liminf",
+  ``!p A. measure_space p /\ (!n. A n IN measurable_sets p) ==>
+         (measure p (liminf A) = sup (IMAGE (\m. measure p (BIGINTER {A n | m <= n})) UNIV))``,
+    RW_TAC std_ss []
+ >> Know `(\m. measure p (BIGINTER {A n | m <= n})) =
+          measure p o (\m. BIGINTER {A n | m <= n})`
+ >- (FUN_EQ_TAC >> RW_TAC std_ss [o_DEF]) >> Rewr'
+ >> Suff `sup (IMAGE (measure p o (\m. BIGINTER {A n | m <= n})) UNIV) =
+          measure p (BIGUNION (IMAGE (\m. BIGINTER {A n | m <= n}) UNIV))`
+ >- (Rewr' >> REWRITE_TAC [set_liminf_def])
+ >> MATCH_MP_TAC MONOTONE_CONVERGENCE2
+ >> RW_TAC std_ss [IN_FUNSET, IN_UNIV] (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      Know `{A n | m <= n} <> {}` >- METIS_TAC [tail_not_empty] \\
+      Know `countable {A n | m <= n}` >- METIS_TAC [tail_countable] \\
+      RW_TAC std_ss [COUNTABLE_ENUM] >> art [] \\
+      MATCH_MP_TAC MEASURE_SPACE_BIGINTER >> art [] \\
+      Q.PAT_X_ASSUM `{A n | m <= n} = X` (MP_TAC o (MATCH_MP EQ_SYM)) \\
+      RW_TAC std_ss [Once EXTENSION, IN_IMAGE, IN_UNIV, GSPECIFICATION] \\
+      POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `f (n :num)`)) \\
+      Know `?x'. f n = f x'` >- (Q.EXISTS_TAC `n` >> REWRITE_TAC []) \\
+      RW_TAC std_ss [] >> PROVE_TAC [],
+      (* goal 2 (of 2) *)
+      RW_TAC arith_ss [SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      Q.EXISTS_TAC `n'` >> RW_TAC arith_ss [] ]);
+
+(* An extended version of `limsup_suminf_indicator` with spaces (moved from borelTheory) *)
+val limsup_suminf_indicator_space = store_thm
+  ("limsup_suminf_indicator_space",
+  ``!a A. sigma_algebra a /\ (!n. A n IN subsets a) ==>
+         (limsup A = {x | x IN space a /\ (suminf (\n. indicator_fn (A n) x) = PosInf)})``,
+ (* proof *)
+    RW_TAC std_ss [EXTENSION, IN_LIMSUP, GSPECIFICATION, indicator_fn_def]
+ >> `(?N. INFINITE N /\ !n. n IN N ==> x IN A n) = ~(?m. !n. m <= n ==> x NOTIN A n)`
+     by METIS_TAC [Q.SPEC `\n. x IN A n` infinitely_often_lemma]
+ >> POP_ORW
+ >> Suff `(?m. !n. m <= n ==> x NOTIN A n) <=>
+          (x IN space a ==> suminf (\n. if x IN A n then 1 else 0) <> PosInf)`
+ >- METIS_TAC []
+ >> EQ_TAC (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      NTAC 2 STRIP_TAC \\
+      Know `suminf (\n. if x IN A n then 1 else 0) = SIGMA (\n. if x IN A n then 1 else 0) (count m)`
+      >- (MATCH_MP_TAC ext_suminf_sum \\
+          RW_TAC std_ss [le_01, le_refl]) >> Rewr' \\
+      MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+      RW_TAC std_ss [FINITE_COUNT, IN_COUNT, extreal_of_num_def, extreal_not_infty],
+      (* goal 2 (of 2) *)
+      Suff `~(?m. !n. m <= n ==> x NOTIN A n) ==>
+               (x IN space a /\ (suminf (\n. if x IN A n then 1 else 0) = PosInf))`
+      >- METIS_TAC [] \\
+      DISCH_TAC \\
+      CONJ_TAC >- (fs [SKOLEM_THM, sigma_algebra_def, algebra_def, subset_class_def] \\
+                   PROVE_TAC [SUBSET_DEF]) \\
+      MATCH_MP_TAC ext_suminf_eq_infty \\
+      CONJ_TAC >- RW_TAC std_ss [le_01, le_refl] \\
+      RW_TAC std_ss [] >> fs [] \\
+      Cases_on `e <= 0`
+      >- (Q.EXISTS_TAC `0` >> ASM_SIMP_TAC std_ss [COUNT_ZERO, EXTREAL_SUM_IMAGE_EMPTY]) \\
+      fs [GSYM extreal_lt_def] \\
+     `e <> NegInf /\ e <> PosInf` by PROVE_TAC [lt_imp_le, pos_not_neginf, lt_infty] \\
+     `?r. Normal r = e` by PROVE_TAC [extreal_cases] \\
+      fs [SKOLEM_THM] \\ (* n = f m *)
+      STRIP_ASSUME_TAC (Q.SPEC `r` SIMP_REAL_ARCH) \\
+     `e <= Normal (&n)` by PROVE_TAC [extreal_le_eq] \\
+      fs [GSYM extreal_of_num_def] \\
+      Know `!N. ?n. &N <= SIGMA (\n. if x IN A n then 1 else 0) (count n)`
+      >- (Induct
+          >- (Q.EXISTS_TAC `0` >> SIMP_TAC std_ss [COUNT_ZERO, EXTREAL_SUM_IMAGE_EMPTY, le_refl]) \\
+          POP_ASSUM STRIP_ASSUME_TAC \\
+         `n' <= f n' /\ x IN A (f n')` by PROVE_TAC [] \\
+         `0 <= f n' - n'` by RW_TAC arith_ss [] \\
+          Q.EXISTS_TAC `SUC (f n')` \\
+          Know `count (SUC (f n')) = count n' UNION {x | n' <= x /\ x <= f n'}`
+          >- (RW_TAC arith_ss [EXTENSION, IN_COUNT, IN_UNION, GSPECIFICATION]) >> Rewr' \\
+          Know `DISJOINT (count n') {x | n' <= x /\ x <= f n'}`
+          >- (RW_TAC arith_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_COUNT, GSPECIFICATION,
+                               IN_INTER]) >> DISCH_TAC \\
+          Know `SIGMA (\n. if x IN A n then 1 else 0) (count n' UNION {x | n' <= x /\ x <= f n'}) =
+                SIGMA (\n. if x IN A n then 1 else 0) (count n') +
+                SIGMA (\n. if x IN A n then 1 else 0) {x | n' <= x /\ x <= f n'}`
+          >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> art [FINITE_COUNT] \\
+              CONJ_TAC >- (MATCH_MP_TAC SUBSET_FINITE_I \\
+                           Q.EXISTS_TAC `count (SUC (f n'))` >> art [FINITE_COUNT] \\
+                           RW_TAC arith_ss [SUBSET_DEF, IN_COUNT, GSPECIFICATION]) \\
+              DISJ2_TAC >> RW_TAC std_ss [extreal_of_num_def, extreal_not_infty]) >> Rewr' \\
+          Know `&SUC N = &N + &1`
+          >- (SIMP_TAC real_ss [extreal_of_num_def, extreal_add_def, extreal_11]) >> Rewr' \\
+          MATCH_MP_TAC le_add2 >> art [] \\
+          Know `{f n'} SUBSET {x | n' <= x /\ x <= f n'}`
+          >- (RW_TAC arith_ss [SUBSET_DEF, IN_SING, GSPECIFICATION]) >> DISCH_TAC \\
+          Know `SIGMA (\n. if x IN A n then 1 else 0) {f n'} = 1`
+          >- (ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING]) \\
+          DISCH_THEN
+            ((GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites) o wrap o SYM) \\
+          MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET \\
+          RW_TAC std_ss [FINITE_SING, le_01, le_refl] \\
+          MATCH_MP_TAC SUBSET_FINITE_I \\
+          Q.EXISTS_TAC `count (SUC (f n'))` >> art [FINITE_COUNT] \\
+          RW_TAC arith_ss [SUBSET_DEF, IN_COUNT, GSPECIFICATION]) \\
+      DISCH_THEN (STRIP_ASSUME_TAC o (Q.SPEC `n`)) \\
+      Q.EXISTS_TAC `n'` \\
+      MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `&n` >> art [] ]);
 
 val _ = export_theory ();
 

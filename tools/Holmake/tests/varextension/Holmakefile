@@ -1,0 +1,15 @@
+CLINE_OPTIONS = -j1
+
+VAR1 = foo bar
+VAR2 += foo bar baz
+VAR1 += baz
+
+VAR3 = $(VAR4) bar
+VAR3 += baz
+
+.PHONY: all
+
+all:
+	[ "$(VAR1)" = "$(VAR2)" ] && [ "$(VAR3)" = "$(VAR2)" ]
+
+VAR4 = foo

@@ -1384,9 +1384,9 @@ val poly_one_eq_zero = store_thm(
   "poly_one_eq_zero",
   ``!r:'a ring. Ring r ==> (( |1| = |0|) <=> !p. poly p ==> (p = |0|))``,
   rw_tac std_ss[EQ_IMP_THM] >| [
-    `(PolyRing r).carrier = {|0|}` by rw_tac std_ss[GSYM poly_one_eq_zero] >>
+    `(PolyRing r).carrier = { |0| }` by rw_tac std_ss[GSYM poly_one_eq_zero] >>
     metis_tac [poly_ring_property, IN_SING],
-    `(PolyRing r).carrier = {|0|}` by metis_tac [poly_ring_property, poly_zero_poly, MEMBER_NOT_EMPTY, ONE_ELEMENT_SING] >>
+    `(PolyRing r).carrier = { |0| }` by metis_tac [poly_ring_property, poly_zero_poly, MEMBER_NOT_EMPTY, ONE_ELEMENT_SING] >>
     metis_tac [poly_one_eq_zero]
   ]);
 
@@ -2763,6 +2763,29 @@ val poly_mult_cross = store_thm(
   `_ = chop ([h * k] || chop (chop ((chop (h o q) >> 1) || (chop (k o p) >> 1)) || ((chop (p o q) >> 1) >> 1)))`
     by rw_tac std_ss[poly_chop_shift] >>
   rw_tac std_ss[poly_mult_def, poly_cmult_def, poly_add_def]);
+
+Theorem HD_poly_mult:
+  Ring r /\ poly p /\ poly q /\ p * q <> |0| ==>
+  HD (poly_mult r p q) = r.prod.op (HD p) (HD q)
+Proof
+  strip_tac
+  \\ Cases_on`p = |0|` >- metis_tac[poly_mult_zero]
+  \\ Cases_on`q = |0|` >- metis_tac[poly_mult_zero]
+  \\ Cases_on`p` \\ Cases_on`q` \\ fs[]
+  \\ qpat_x_assum`_ <> _`mp_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[poly_mult_cross]
+  \\ dep_rewrite.DEP_REWRITE_TAC[GSYM poly_add_shift]
+  \\ conj_tac >- simp[]
+  \\ conj_tac >- simp[]
+  \\ qmatch_goalsub_abbrev_tac`a + b >> 1`
+  \\ rewrite_tac[poly_add_def]
+  \\ strip_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[HD_chop]
+  \\ conj_tac >- simp[]
+  \\ dep_rewrite.DEP_REWRITE_TAC[HD_weak_add_shift]
+  \\ simp[Abbr`a`]
+QED
+
 
 (* Theorem: h::t = [h] + t >> 1 *)
 (* Proof: (almost)

@@ -9,4 +9,11 @@ selftest.exe: selftest.uo gh725
 gh725: gh725Theory.dat gh725_expected.html
 	$(protect $(HOLDIR)/tools/cmp/cmp.exe) gh725_expected.html gh725Theory.html
 
-EXTRA_CLEANS = selftest.exe gh725Theory.html
+EXTRA_CLEANS = selftest.exe gh725Theory.html proofman-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: proofman-selftest.log
+
+proofman-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+endif

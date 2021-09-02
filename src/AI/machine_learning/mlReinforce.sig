@@ -19,31 +19,26 @@ sig
   (* players *)
   type splayer =
     {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
-  type 'a dplayer =
-    {pretob : ('a * tnn) option -> 'a -> term list,
-     schedule : schedule,
-     tnndim : tnndim}
-  val player_from_tnn :
-    tnn -> ('a -> term list) -> ('a,'b) psMCTS.game -> 'a ->
-    (real * ('b * real) list)
+  type ('a,'b)  dplayer =
+    {player_from_tnn : tnn -> ('a,'b) psMCTS.player,
+     tob : 'a -> term list, schedule : schedule, tnndim : tnndim}
 
   (* parallelization of the search *)
   type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 
   (* reinforcement learning parameters *)
   type rlparam =
-    {expname : string, exwindow : int, ncore : int,
-     ntarget : int, nsim : int, decay : real}
+    {expdir : string, exwindow : int, ncore : int, ntarget : int, nsim : int}
   type ('a,'b) rlobj =
     {
     rlparam : rlparam,
     game : ('a,'b) psMCTS.game,
     gameio : 'a gameio,
-    dplayer : 'a dplayer,
+    dplayer : ('a,'b) dplayer,
     infobs : 'a list -> unit
     }
-  val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
-  val mk_extsearch : string -> ('a,'b) rlobj -> 'a es
+  val mk_mctsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psMCTS.mctsobj
+  val mk_extsearch : string -> string -> ('a,'b) rlobj -> 'a es
 
   (* storage *)
   val log : ('a,'b) rlobj -> string -> unit

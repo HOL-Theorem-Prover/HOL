@@ -1,24 +1,22 @@
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
-     pred_setLib stringLib
-     listTheory state_transformerTheory
+open HolKernel Parse boolLib bossLib;
+
+open metisLib arithmeticTheory pred_setTheory
+     pred_setLib stringLib listTheory state_transformerTheory
      extra_numTheory combinTheory
      pairTheory realTheory realLib jrhUtils
-     realSimps numTheory
-     simpLib seqTheory subtypeTheory
+     realSimps numTheory simpLib seqTheory subtypeTheory
      transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
-     informationTheory leakageTheory
-     leakageLib wordsTheory wordsLib;
+     informationTheory leakageTheory leakageLib wordsTheory wordsLib;
 
 open extra_boolTheory extra_pred_setTheory extra_realTheory extra_listTheory
      extra_stringTheory extra_stringLib;
 
 open real_sigmaTheory;
+
 open hurdUtils util_probTheory real_measureTheory real_lebesgueTheory
      real_probabilityTheory;
 
 val _ = new_theory "basic_leakage_examples";
-
-val REVERSE = Tactical.REVERSE;
 
 val safe_set_ss = (simpLib.++ (bool_ss, PRED_SET_ss));
 
@@ -161,11 +159,11 @@ Definition M1:
          (\s':string. if (s' = "out") then (H s "high") + (L s "low") else 0))
 End
 
-val example1_conv = SIMP_CONV arith_ss [high, low, random, lem1,lem2,lem3];
+val example1_conv = SIMP_CONV arith_ss [high, low, random, lem1, lem2, lem3];
 
 Theorem leakage_example1:
-  leakage (unif_prog_space (high (SUC (SUC (SUC 0))))
-           (low (SUC (SUC (SUC 0)))) random) M1 = 2
+    leakage (unif_prog_space (high (SUC (SUC (SUC 0))))
+                             (low (SUC (SUC (SUC 0)))) random) M1 = 2
 Proof
   CONV_TAC (LAND_CONV
             (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,

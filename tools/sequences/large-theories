@@ -5,17 +5,12 @@ src/HolSmt
 !!examples/separationLogic/src/holfoot
 [poly]!!examples/separationLogic/src/holfoot/poly
 [mosml]!!examples/separationLogic/src/holfoot/mosml
-!examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
 [mosml]!examples/muddy
 [mosml]!examples/HolBdd
 [mosml]!!examples/HolCheck
-!examples/lambda/basics
-!examples/logic
 !!examples/algorithms/unification/triangular/nominal
-!examples/lambda/barendregt
-!examples/computability
 !!examples/lambda/other-models
 !!examples/lambda/typing
 !!examples/computability/lambda
@@ -26,7 +21,6 @@ src/HolSmt
 src/Boolify/src
 src/float
 src/floating-point
-!examples/l3-machine-code/common
 !!examples/l3-machine-code/decompilers
 [poly]src/floating-point/native
 src/probability

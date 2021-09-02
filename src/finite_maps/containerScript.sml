@@ -226,6 +226,22 @@ Proof
   imp_res_tac IN_LIST_TO_BAG >> fs[]
 QED
 
+Theorem LIST_TO_BAG_SET_TO_LIST:
+  !s. FINITE s ==>
+      LIST_TO_BAG (SET_TO_LIST s) = BAG_OF_SET s
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ irule EQ_TRANS
+  \\ qexists_tac`LIST_TO_BAG (e :: SET_TO_LIST s)`
+  \\ conj_tac
+  >- (
+    simp[PERM_LIST_TO_BAG]
+    \\ drule PERM_SET_TO_LIST_INSERT
+    \\ disch_then(qspec_then`e`mp_tac) \\ simp[] )
+  \\ simp[]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Following packaging of multiset order applied to lists is easier to use   *)
 (* in some termination proofs, typically those of worklist algorithms, where *)

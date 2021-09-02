@@ -1,2 +1,15 @@
+all: selftest.exe
+.PHONY: all
+
 selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo CoIndDefLib.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe inddef-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: inddef-selftest.log
+
+inddef-selftest.log: ./selftest.exe
+	./selftest.exe 2>&1 | tee $@
+
+endif

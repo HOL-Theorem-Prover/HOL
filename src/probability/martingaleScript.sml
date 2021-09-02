@@ -1,15 +1,16 @@
 (* ------------------------------------------------------------------------- *)
-(* The theory of martingales for sigma-finite measure spaces                 *)
-(* (with product measures and Fubini-Tonelli's theorems)                     *)
+(* The Theory of Martingales for Sigma-finite Measure Spaces                 *)
+(*  (Lebesgue Integral extras, Product Measure and Fubini-Tonelli's theorem) *)
 (*                                                                           *)
-(* Author: Chun Tian (2019-2020)                                             *)
+(* Author: Chun Tian (2019 - 2021)                                           *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory relationTheory prim_recTheory arithmeticTheory fcpTheory
-     pred_setTheory combinTheory realTheory realLib seqTheory posetTheory;
+     pred_setTheory combinTheory realTheory realLib seqTheory posetTheory
+     iterateTheory real_sigmaTheory real_topologyTheory;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
      measureTheory real_borelTheory borelTheory lebesgueTheory;
@@ -18,16 +19,18 @@ val _ = new_theory "martingale";
 
 val _ = hide "S";
 
-(* "The theory of martingales as we know it now goes back to
-    Doob and most of the material of this and the following chapter can be found in
-    his seminal monograph [2] from 1953.
+fun METIS ths tm = prove(tm, METIS_TAC ths);
+
+(* "The theory of martingales as we know it now goes back to Doob and most of
+    the material of this and the following chapter can be found in his seminal
+    monograph [2] from 1953.
 
     We want to understand martingales as an analysis tool which will be useful
     for the study of L^p- and almost everywhere convergence and, in particular,
     for the further development of measure and integration theory. Our presentation
     differs somewhat from the standard way to introduce martingales - conditional
-    expectations will be defined later in Chapter 22 - but the results and their
-    proofs are pretty much the usual ones."
+    expectations will be defined later in [1, Chapter 22] - but the results and
+    their proofs are pretty much the usual ones."
 
   -- Rene L. Schilling, "Measures, Integrals and Martingales" [1]
 
@@ -37,6 +40,1209 @@ val _ = hide "S";
     and contributing to other field."
 
   -- J. L. Doob, "What is a Martingale?" [3] *)
+
+(* ------------------------------------------------------------------------- *)
+(*  Martingale definitions ([1, Chapter 23])                                 *)
+(* ------------------------------------------------------------------------- *)
+
+Definition sub_sigma_algebra_def :
+   sub_sigma_algebra a b =
+      (sigma_algebra a /\ sigma_algebra b /\ (space a = space b) /\
+       (subsets a) SUBSET (subsets b))
+End
+
+(* the set of all filtrations of A *)
+Definition filtration_def :
+   filtration A (a :num -> 'a algebra) =
+     ((!n. sub_sigma_algebra (a n) A) /\
+      (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j)))
+End
+
+(* usually denoted by (sp,sts,a,m) in textbooks *)
+Definition filtered_measure_space_def :
+   filtered_measure_space (sp,sts,m) a =
+           (measure_space (sp,sts,m) /\ filtration (sp,sts) a)
+End
+
+Definition sigma_finite_filtered_measure_space_def :
+   sigma_finite_filtered_measure_space (sp,sts,m) a =
+      (filtered_measure_space (sp,sts,m) a /\ sigma_finite (sp,subsets (a 0),m))
+End
+
+Definition martingale_def :
+   martingale m a u =
+     (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !n s. s IN (subsets (a n)) ==>
+           (integral m (\x. u (SUC n) x * indicator_fn s x) =
+            integral m (\x. u n x * indicator_fn s x)))
+End
+
+Definition super_martingale_def :
+   super_martingale m a u =
+     (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !n s. s IN (subsets (a n)) ==>
+           (integral m (\x. u (SUC n) x * indicator_fn s x) <=
+            integral m (\x. u n x * indicator_fn s x)))
+End
+
+Definition sub_martingale_def :
+   sub_martingale m a u =
+     (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !n s. s IN (subsets (a n)) ==>
+           (integral m (\x. u n x * indicator_fn s x) <=
+            integral m (\x. u (SUC n) x * indicator_fn s x)))
+End
+
+(* ------------------------------------------------------------------------- *)
+(*   Convergence theorems and their applications [1, Chapter 9 & 12]         *)
+(* ------------------------------------------------------------------------- *)
+
+(* Another convergence theorem, usually called Fatou's lemma,
+   named after Pierre Fatou (1878-1929), a French mathematician and astronomer.
+
+   This is mainly to prove the validity of the definition of `ext_liminf`. The value
+   of any of the integrals may be infinite.
+
+   This is Theorem 9.11 of [1, p.78], a simple version (enough for now).
+
+   cf. integrationTheory.FATOU for the version of Henstock-Kurzweil integrals.
+ *)
+Theorem fatou_lemma :
+    !m f. measure_space m /\ (!x n. x IN m_space m ==> 0 <= f n x) /\
+         (!n. f n IN measurable (m_space m,measurable_sets m) Borel) ==>
+          pos_fn_integral m (\x. liminf (\n. f n x)) <=
+          liminf (\n. pos_fn_integral m (f n))
+Proof
+    rw [ext_liminf_def]
+ >> Know ‘pos_fn_integral m (\x. sup (IMAGE (\m. inf {f n x | m <= n}) UNIV)) =
+          sup (IMAGE (\i. pos_fn_integral m (\x. inf {f n x | i <= n})) UNIV)’
+ >- (HO_MATCH_MP_TAC lebesgue_monotone_convergence >> rw [] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       MATCH_MP_TAC IN_MEASURABLE_BOREL_INF >> simp [] \\
+       qexistsl_tac [‘f’, ‘from i’] >> rw [IN_FROM] >| (* 3 subgoals *)
+       [ (* goal 1 (of 3) *)
+         FULL_SIMP_TAC std_ss [measure_space_def],
+         (* goal 2 (of 3) *)
+         rw [Once EXTENSION, IN_FROM] \\
+         Q.EXISTS_TAC ‘i’ >> rw [],
+         (* goal 3 (of 3) *)
+         Suff ‘{f n x | i <= n} = (IMAGE (\n. f n x) (from i))’ >- rw [] \\
+         rw [Once EXTENSION, IN_FROM] ],
+       (* goal 2 (of 3) *)
+       rw [le_inf'] >> METIS_TAC [],
+       (* goal 3 (of 3) *)
+       rw [ext_mono_increasing_def] \\
+       MATCH_MP_TAC inf_mono_subset >> rw [SUBSET_DEF] \\
+       Q.EXISTS_TAC ‘n’ >> rw [] ]) >> Rewr'
+ >> MATCH_MP_TAC sup_mono >> rw []
+ >> rw [le_inf']
+ >> MATCH_MP_TAC pos_fn_integral_mono >> rw []
+ >| [ (* goal 1 (of 2) *)
+      rw [le_inf'] >> rw [],
+      (* goal 2 (of 2) *)
+      rw [inf_le'] \\
+      POP_ASSUM MATCH_MP_TAC \\
+      Q.EXISTS_TAC ‘n'’ >> rw [] ]
+QED
+
+(* This is also called Reverse Fatou Lemma, c.f. [1, p. 80]
+
+   NOTE: the antecedents are just to make sure that WLLN_IID can be proved.
+ *)
+Theorem fatou_lemma' :
+    !m f w. measure_space m /\ pos_fn_integral m w < PosInf /\
+           (!x n. x IN m_space m ==> 0 <= f n x /\ f n x <= w x /\ w x < PosInf) /\
+           (!n. f n IN measurable (m_space m,measurable_sets m) Borel) ==>
+            limsup (\n. pos_fn_integral m (f n)) <=
+            pos_fn_integral m (\x. limsup (\n. f n x))
+Proof
+    rw [ext_limsup_def]
+ >> Know ‘pos_fn_integral m (\x. inf (IMAGE (\m. sup {f n x | m <= n}) UNIV)) =
+          inf (IMAGE (\i. pos_fn_integral m (\x. sup {f n x | i <= n})) UNIV)’
+ >- (HO_MATCH_MP_TAC lebesgue_monotone_convergence_decreasing >> rw [] >| (* 5 subgoals *)
+     [ (* goal 1 (of 5) *)
+       MATCH_MP_TAC IN_MEASURABLE_BOREL_SUP >> simp [] \\
+       qexistsl_tac [‘f’, ‘from i’] >> rw [IN_FROM] >| (* 3 subgoals *)
+       [ (* goal 5.1 (of 3) *)
+         FULL_SIMP_TAC std_ss [measure_space_def],
+         (* goal 5.2 (of 3) *)
+         rw [Once EXTENSION, IN_FROM] \\
+         Q.EXISTS_TAC ‘i’ >> rw [],
+         (* goal 5.3 (of 3) *)
+         Suff ‘{f n x | i <= n} = (IMAGE (\n. f n x) (from i))’ >- rw [] \\
+         rw [Once EXTENSION, IN_FROM] ],
+       (* goal 2 (of 5) *)
+       rw [le_sup'] \\
+       MATCH_MP_TAC le_trans >> Q.EXISTS_TAC ‘f i x’ >> rw [] \\
+       POP_ASSUM MATCH_MP_TAC \\
+       Q.EXISTS_TAC ‘i’ >> rw [],
+       (* goal 3 (of 5): sup {f n x | i <= n} < PosInf *)
+       MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘w x’ \\
+       reverse CONJ_TAC >- rw [GSYM lt_infty] \\
+       rw [sup_le'] >> METIS_TAC [],
+       (* goal 4 (of 5): pos_fn_integral m (\x. sup {f n x | i <= n}) <> PosInf *)
+       REWRITE_TAC [lt_infty] \\
+       MATCH_MP_TAC let_trans \\
+       Q.EXISTS_TAC ‘pos_fn_integral m w’ >> art [] \\
+       MATCH_MP_TAC pos_fn_integral_mono >> rw [] >| (* 2 subgoals *)
+       [ (* goal 4.1 (of 2) *)
+         rw [le_sup'] \\
+         MATCH_MP_TAC le_trans >> Q.EXISTS_TAC ‘f i x’ >> rw [] \\
+         POP_ASSUM MATCH_MP_TAC \\
+         Q.EXISTS_TAC ‘i’ >> rw [],
+         (* goal 4.2 (of 2) *)
+         rw [sup_le'] >> METIS_TAC [] ],
+       (* goal 5 (of 5) *)
+       rw [ext_mono_decreasing_def] \\
+       MATCH_MP_TAC sup_mono_subset >> rw [SUBSET_DEF] \\
+       Q.EXISTS_TAC ‘n’ >> rw [] ])
+ >> Rewr'
+ >> MATCH_MP_TAC inf_mono >> rw []
+ >> rw [sup_le']
+ >> MATCH_MP_TAC pos_fn_integral_mono >> rw []
+ >> rw [le_sup']
+ >> POP_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘n'’ >> rw []
+QED
+
+Theorem LIM_SEQUENTIALLY_real_normal :
+    !a l. (!n. a n <> PosInf /\ a n <> NegInf) ==>
+          ((real o a --> l) sequentially <=>
+           !e. 0 < e ==> ?N. !n. N <= n ==> abs (a n - Normal l) < Normal e)
+Proof
+    rw [LIM_SEQUENTIALLY, dist, o_DEF]
+ >> EQ_TAC
+ >- (rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. P’ (MP_TAC o (Q.SPEC ‘e’)) \\
+     RW_TAC std_ss [] \\
+     Know ‘!n. real (a n) - l = real (a n - Normal l)’
+     >- (Q.X_GEN_TAC ‘n’ \\
+        ‘?A. a n = Normal A’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [real_normal, extreal_sub_eq]) \\
+     DISCH_THEN (FULL_SIMP_TAC std_ss o wrap) \\
+     Know ‘!n. abs (real (a n - Normal l)) = real (abs (a n - Normal l))’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         MATCH_MP_TAC abs_real \\
+        ‘?A. a n = Normal A’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def]) \\
+     DISCH_THEN (FULL_SIMP_TAC std_ss o wrap) \\
+     POP_ASSUM MP_TAC \\
+     ONCE_REWRITE_TAC [GSYM extreal_lt_eq] \\
+     Know ‘!n. Normal (real (abs (a n - Normal l))) = abs (a n - Normal l)’
+     >- (Q.X_GEN_TAC ‘n’ \\
+         MATCH_MP_TAC normal_real \\
+        ‘?A. a n = Normal A’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def, extreal_abs_def]) >> Rewr' \\
+     DISCH_TAC \\
+     Q.EXISTS_TAC ‘N’ >> rw [])
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. P’ (MP_TAC o (Q.SPEC ‘e’))
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘N’
+ >> rpt STRIP_TAC
+ >> Know ‘real (a n) - l = real (a n - Normal l)’
+ >- (‘?A. a n = Normal A’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [real_normal, extreal_sub_eq]) >> Rewr'
+ >> Know ‘abs (real (a n - Normal l)) = real (abs (a n - Normal l))’
+ >- (MATCH_MP_TAC abs_real \\
+    ‘?A. a n = Normal A’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_sub_def]) >> Rewr'
+ >> ONCE_REWRITE_TAC [GSYM extreal_lt_eq]
+ >> Know ‘Normal (real (abs (a n - Normal l))) = abs (a n - Normal l)’
+ >- (MATCH_MP_TAC normal_real \\
+    ‘?A. a n = Normal A’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_sub_def, extreal_abs_def]) >> Rewr'
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+(* The limit of the arithmetic means of the first n partial sums is called
+  "Cesaro summation". cf. https://en.wikipedia.org/wiki/Cesaro_summation
+
+   This proof uses iterateTheory (numseg), added for WLLN_IID and SLLN_IID.
+ *)
+Theorem LIM_SEQUENTIALLY_CESARO :
+    !f l. ((\n. f n) --> l) sequentially ==>
+          ((\n. SIGMA f (count (SUC n)) / &SUC n) --> l) sequentially
+Proof
+    RW_TAC std_ss [LIM_SEQUENTIALLY, dist]
+ >> Q.ABBREV_TAC ‘g = \n. f n - l’
+ >> Know ‘!n. SIGMA f (count (SUC n)) / &SUC n - l =
+              SIGMA g (count (SUC n)) / &SUC n’
+ >- (rw [Abbr ‘g’] \\
+     Know ‘SIGMA (\n. f n - l) (count (SUC n)) =
+           SIGMA f (count (SUC n)) - SIGMA (\x. l) (count (SUC n))’
+     >- (HO_MATCH_MP_TAC REAL_SUM_IMAGE_SUB >> rw []) >> Rewr' \\
+    ‘FINITE (count (SUC n))’ by rw [] \\
+     rw [REAL_SUM_IMAGE_FINITE_CONST3, CARD_COUNT, real_div, REAL_SUB_LDISTRIB])
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> _’ MP_TAC
+ >> ‘!n. f n - l = g n’ by METIS_TAC [] >> POP_ORW
+ >> DISCH_THEN (MP_TAC o (Q.SPEC ‘(1 / 2) * e’))
+ >> ‘0 < 1 / 2 * e’ by rw []
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘Abbrev (g = (\n. f n - l))’ K_TAC
+ (* special case: N = 0 *)
+ >> Cases_on ‘N = 0’
+ >- (fs [] >> Q.EXISTS_TAC ‘0’ >> rw [real_div] \\
+    ‘abs (inv (&SUC n) * SIGMA g (count (SUC n))) =
+     abs (inv (&SUC n)) * abs (SIGMA g (count (SUC n)))’
+       by rw [REAL_ABS_MUL] >> POP_ORW \\
+    ‘abs (inv (&SUC n)) = inv (&SUC n) :real’ by rw [] >> POP_ORW \\
+     MATCH_MP_TAC REAL_LET_TRANS \\
+     Q.EXISTS_TAC ‘inv (&SUC n) * SIGMA (abs o g) (count (SUC n))’ \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LE_LMUL_IMP >> rw [] \\
+                  MATCH_MP_TAC REAL_SUM_IMAGE_ABS_TRIANGLE >> rw []) \\
+     MATCH_MP_TAC REAL_LET_TRANS \\
+     Q.EXISTS_TAC ‘inv (&SUC n) * SIGMA (\i. 1 / 2 * e) (count (SUC n))’ \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LE_LMUL_IMP >> rw [] \\
+                  irule REAL_SUM_IMAGE_MONO >> rw [o_DEF] \\
+                  MATCH_MP_TAC REAL_LT_IMP_LE >> rw []) \\
+     rw [REAL_SUM_IMAGE_FINITE_CONST3])
+ (* stage work, now ‘0 < N’ *)
+ >> ‘0 < N’ by RW_TAC arith_ss []
+ >> Q.ABBREV_TAC ‘M = abs (SIGMA g (count N))’
+ >> Q.EXISTS_TAC ‘MAX N (2 * clg (M * inv e))’
+ >> RW_TAC std_ss [MAX_LE]
+ (* applying LE_NUM_CEILING *)
+ >> ‘M * realinv e <= &clg (M * realinv e)’ by PROVE_TAC [LE_NUM_CEILING]
+ >> Know ‘2 * &clg (M * realinv e) <= (&n :real)’
+ >- (REWRITE_TAC [GSYM REAL_DOUBLE] \\
+    ‘!n. &n + (&n :real) = &(n + n)’ by rw [] >> POP_ORW \\
+     REWRITE_TAC [GSYM TIMES2] >> rw [])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘2 * clg (M * realinv e) <= n’ K_TAC
+ >> Know ‘2 * (M * realinv e) <= &n’
+ >- (MATCH_MP_TAC REAL_LE_TRANS \\
+     Q.EXISTS_TAC ‘2 * &clg (M * realinv e)’ >> art [] \\
+     MATCH_MP_TAC REAL_LE_LMUL_IMP >> rw [])
+ >> NTAC 2 (POP_ASSUM K_TAC) (* clg is gone *)
+ >> DISCH_TAC
+ >> ‘count (SUC n) = (count N) UNION (N .. n)’
+      by (rw [Once EXTENSION, numseg, IN_COUNT]) >> POP_ORW
+ >> ‘DISJOINT (count N) (N .. n)’
+      by (rw [DISJOINT_ALT, IN_COUNT, IN_NUMSEG])
+ >> Know ‘SIGMA g ((count N) UNION (N .. n)) = SIGMA g (count N) + SIGMA g (N .. n)’
+ >- (MATCH_MP_TAC REAL_SUM_IMAGE_DISJOINT_UNION \\
+     rw [FINITE_COUNT, FINITE_NUMSEG]) >> Rewr'
+ >> REWRITE_TAC [real_div, REAL_ADD_RDISTRIB]
+ (* applying ABS_TRIANGLE *)
+ >> MATCH_MP_TAC REAL_LET_TRANS
+ >> Q.EXISTS_TAC ‘abs (SIGMA g (count N) * inv (&SUC n)) +
+                  abs (SIGMA g (N .. n)  * inv (&SUC n))’
+ >> REWRITE_TAC [ABS_TRIANGLE]
+ >> Suff ‘abs (SIGMA g (count N) * inv (&SUC n)) < 1 / 2 * e /\
+          abs (SIGMA g (N .. n) * inv (&SUC n)) < 1 / 2 * e’
+ >- (DISCH_TAC \\
+     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM X_HALF_HALF] \\
+     MATCH_MP_TAC REAL_LT_ADD2 >> art [])
+ (* applying REAL_SUM_IMAGE_ABS_TRIANGLE *)
+ >> reverse CONJ_TAC
+ >- (Know ‘abs (SIGMA g (N .. n) * inv (&SUC n)) =
+           abs (SIGMA g (N .. n)) * abs (inv (&SUC n))’
+     >- (rw [REAL_ABS_MUL]) >> Rewr' \\
+    ‘abs (inv (&SUC n)) = inv (&SUC n) :real’ by rw [] >> POP_ORW \\
+     MATCH_MP_TAC REAL_LET_TRANS \\
+     Q.EXISTS_TAC ‘SIGMA (abs o g) (N .. n) * inv (&SUC n)’ \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LE_RMUL_IMP >> rw [] \\
+                  MATCH_MP_TAC REAL_SUM_IMAGE_ABS_TRIANGLE \\
+                  REWRITE_TAC [FINITE_NUMSEG]) \\
+     MATCH_MP_TAC REAL_LET_TRANS \\
+     Q.EXISTS_TAC ‘SIGMA (\i. 1 / 2 * e) (N .. n) * inv (&SUC n)’ \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LE_RMUL_IMP >> rw [] \\
+                  irule REAL_SUM_IMAGE_MONO >> rw [FINITE_NUMSEG, IN_NUMSEG, o_DEF] \\
+                  MATCH_MP_TAC REAL_LT_IMP_LE >> fs []) \\
+    ‘FINITE (N .. n)’ by PROVE_TAC [FINITE_NUMSEG] \\
+     rw [REAL_SUM_IMAGE_FINITE_CONST3, CARD_NUMSEG, GSYM ADD1])
+ (* final part *)
+ >> Know ‘abs (SIGMA g (count N) * inv (&SUC n)) = M * abs (inv (&SUC n))’
+ >- (rw [Abbr ‘M’, REAL_ABS_MUL]) >> Rewr'
+ >> ‘abs (inv (&SUC n)) = inv (&SUC n) :real’ by rw [] >> POP_ORW
+ >> Q.PAT_X_ASSUM ‘2 * (M * realinv e) <= &n’
+      (MP_TAC o (ONCE_REWRITE_RULE [REAL_MUL_ASSOC]))
+ >> ‘e <> (0 :real)’ by PROVE_TAC [REAL_LT_IMP_NE] >> rw []
+ >> MATCH_MP_TAC REAL_LET_TRANS
+ >> Q.EXISTS_TAC ‘e * &n’ >> rw []
+QED
+
+(* Properties A.1 (iv) [1, p.409] *)
+Theorem ext_liminf_le_subseq :
+    !a f l. (!n. a n <> PosInf /\ a n <> NegInf) /\
+            (!m n. m < n ==> f m < f n) /\
+            ((real o a o f) --> l) sequentially ==> liminf a <= Normal l
+Proof
+    rpt STRIP_TAC
+ >> POP_ASSUM MP_TAC
+ >> Know ‘((real o a o f) --> l) sequentially <=>
+          !e. 0 < e ==> ?N. !n. N <= n ==> abs ((a o f) n - Normal l) < Normal e’
+ >- (HO_MATCH_MP_TAC LIM_SEQUENTIALLY_real_normal >> rw [])
+ >> Rewr'
+ >> rw [o_DEF, abs_bounds_lt, ext_liminf_def, sup_le']
+ >> MATCH_MP_TAC le_trans
+ >> Q.EXISTS_TAC ‘inf {a (f n) | m <= n}’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC inf_mono_subset \\
+     rw [SUBSET_DEF] \\
+     Q.EXISTS_TAC ‘f n’ >> rw [] \\
+     MATCH_MP_TAC LESS_EQ_TRANS \\
+     Q.EXISTS_TAC ‘n’ >> rw [] \\
+     MATCH_MP_TAC MONOTONE_BIGGER >> rw [])
+ >> rw [inf_le']
+ >> MATCH_MP_TAC le_epsilon
+ >> rpt STRIP_TAC
+ >> ‘e <> NegInf’ by METIS_TAC [lt_imp_le, pos_not_neginf]
+ >> ‘?E. 0 < E /\ e = Normal E’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> POP_ORW
+ >> Q.PAT_X_ASSUM ‘e <> PosInf’ K_TAC
+ >> Q.PAT_X_ASSUM ‘e <> NegInf’ K_TAC
+ >> Q.PAT_X_ASSUM ‘0 < e’       K_TAC
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘E’))
+ >> RW_TAC std_ss []
+ >> POP_ASSUM (MP_TAC o (Q.SPEC ‘N + m’))
+ >> RW_TAC arith_ss []
+ >> MATCH_MP_TAC le_trans
+ >> Q.EXISTS_TAC ‘a (f (N + m))’
+ >> CONJ_TAC
+ >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘N + m’ >> rw [])
+ >> MATCH_MP_TAC lt_imp_le
+ >> ONCE_REWRITE_TAC [add_comm_normal]
+ >> Suff ‘a (f (N + m)) < Normal E + Normal l <=>
+          a (f (N + m)) - Normal l < Normal E’ >- rw []
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC sub_lt_eq >> rw []
+QED
+
+(* Properties A.1 (iv) [1, p.409] (dual of previous lemma) *)
+Theorem ext_limsup_le_subseq :
+    !a f l. (!n. a n <> PosInf /\ a n <> NegInf) /\
+            (!m n. m < n ==> f m < f n) /\
+            ((real o a o f) --> l) sequentially ==> Normal l <= limsup a
+Proof
+    rw [ext_limsup_alt_liminf]
+ >> ‘Normal l = -Normal (-l)’ by rw [extreal_ainv_def] >> POP_ORW
+ >> rw [le_neg]
+ >> MATCH_MP_TAC ext_liminf_le_subseq
+ >> Q.EXISTS_TAC ‘f’ >> rw []
+ >| [ (* goal 1 (of 3) *)
+     ‘?r. a n = Normal r’ by METIS_TAC [extreal_cases] >> rw [extreal_ainv_def],
+      (* goal 2 (of 3) *)
+     ‘?r. a n = Normal r’ by METIS_TAC [extreal_cases] >> rw [extreal_ainv_def],
+      (* goal 3 (of 3) *)
+      Suff ‘real o numeric_negate o a o f = (\n. -(real o a o f) n)’
+      >- (Rewr' >> MATCH_MP_TAC LIM_NEG >> art []) \\
+      rw [o_DEF, FUN_EQ_THM] \\
+      ‘?r. a (f n) = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+      ASM_SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_ainv_def] \\
+      Know ‘Normal (real (-Normal r)) = -Normal r’
+      >- (MATCH_MP_TAC normal_real \\
+          SIMP_TAC std_ss [extreal_ainv_def, extreal_not_infty]) >> Rewr' \\
+      Know ‘Normal (real (Normal r)) = Normal r’
+      >- (MATCH_MP_TAC normal_real >> rw []) >> Rewr' \\
+      rw [extreal_ainv_def] ]
+QED
+
+(* Properties A.1 (iv) [1, p.409] (construction of subsequence with liminf as the limit) *)
+Theorem ext_liminf_imp_subseq :
+    !a. (!n. a n <> PosInf /\ a n <> NegInf) /\
+        liminf a <> PosInf /\ liminf a <> NegInf ==>
+        ?f. (!m n. m < n ==> f m < f n) /\
+            ((real o a o f) --> real (liminf a)) sequentially
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘L = liminf a’
+ >> Know ‘!k. inf {a n | k <= n} <= L’
+ >- (rw [Abbr ‘L’, ext_liminf_def] \\
+     MATCH_MP_TAC le_sup_imp' >> rw [] \\
+     Q.EXISTS_TAC ‘k’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘!k. inf {a n | k <= n} <> PosInf’
+ >- (rw [lt_infty] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘L’ >> art [] \\
+    ‘?r. L = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [lt_infty])
+ >> DISCH_TAC
+ (* it's impossible that ‘inf {a n | k <= n}’ (increasing) is always NegInf *)
+ >> Cases_on ‘!Z. inf {a n | Z <= n} = NegInf’
+ >- (Suff ‘L = NegInf’ >- PROVE_TAC [] \\
+     SIMP_TAC std_ss [Abbr ‘L’, ext_liminf_def] >> POP_ORW \\
+     Know ‘IMAGE (\m. NegInf) univ(:num) = (\y. y = NegInf)’
+     >- (rw [Once EXTENSION]) >> Rewr' \\
+     rw [sup_const])
+ >> FULL_SIMP_TAC bool_ss [] (* this asserts ‘Z’ *)
+ >> Know ‘!k. Z <= k ==> inf {a n | k <= n} <> NegInf’
+ >- (rw [lt_infty] \\
+     MATCH_MP_TAC lte_trans \\
+     Q.EXISTS_TAC ‘inf {a n | Z <= n}’ \\
+     reverse CONJ_TAC >- (MATCH_MP_TAC inf_mono_subset >> rw [SUBSET_DEF] \\
+                          Q.EXISTS_TAC ‘n’ >> rw []) \\
+     rw [GSYM lt_infty])
+ >> DISCH_TAC
+ (* applying sup_lt_epsilon' *)
+ >> Know ‘!e. 0 < e ==> ?N. Z <= N /\ !k. N <= k ==> abs (L - inf {a n | k <= n}) < Normal e’
+ >- (rpt STRIP_TAC \\
+     Q.ABBREV_TAC ‘P = IMAGE (\m. inf {a n | m <= n}) UNIV’ \\
+     Know ‘?x. x IN P /\ sup P < x + Normal e’
+     >- (MATCH_MP_TAC sup_lt_epsilon' \\
+        ‘sup P = L’ by METIS_TAC [ext_liminf_def] >> POP_ORW \\
+         rw [extreal_of_num_def, extreal_lt_eq, Abbr ‘P’] \\
+         Q.EXISTS_TAC ‘inf {a n | Z <= n}’ >> rw [] \\
+         Q.EXISTS_TAC ‘Z’ >> rw []) \\
+     rw [Abbr ‘P’, GSYM ext_liminf_def] (* this asserts ‘m’ *) \\
+     Q.EXISTS_TAC ‘MAX m Z’ >> rw [] \\
+     Know ‘abs (L - inf {a n | k <= n}) = L - inf {a n | k <= n}’
+     >- (rw [abs_refl] \\
+         Suff ‘0 <= L - inf {a n | k <= n} <=> inf {a n | k <= n} <= L’ >- rw [] \\
+         ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+         MATCH_MP_TAC sub_zero_le >> rw []) >> Rewr' \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘L - inf {a n | m <= n}’ \\
+     CONJ_TAC >- (MATCH_MP_TAC le_lsub_imp \\
+                  MATCH_MP_TAC inf_mono_subset >> rw [SUBSET_DEF] \\
+                  Q.EXISTS_TAC ‘n’ >> rw []) \\
+     MATCH_MP_TAC sub_lt_imp2 >> rw [add_comm_normal])
+ >> DISCH_TAC
+ (* applying lt_inf_epsilon' *)
+ >> Know ‘!e. 0 < e ==> !k. Z <= k ==> ?l. k <= l /\ abs (a l - inf {a n | k <= n}) < Normal e’
+ >- (rpt STRIP_TAC \\
+     Q.ABBREV_TAC ‘P = {a n | k <= n}’ \\
+     Know ‘?x. x IN P /\ x < inf P + Normal e’
+     >- (MATCH_MP_TAC lt_inf_epsilon' \\
+         rw [Abbr ‘P’, extreal_of_num_def, extreal_lt_eq] \\
+         Q.EXISTS_TAC ‘a k’ >> rw [] \\
+         Q.EXISTS_TAC ‘k’ >> rw []) >> rw [Abbr ‘P’] \\
+     Q.EXISTS_TAC ‘n’ >> rw [] \\
+     Know ‘abs (a n - inf {a n | k <= n}) = a n - inf {a n | k <= n}’
+     >- (rw [abs_refl] \\
+         Know ‘0 <= a n - inf {a n | k <= n} <=> inf {a n | k <= n} <= a n’
+         >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+             MATCH_MP_TAC sub_zero_le >> rw []) >> Rewr' \\
+         rw [inf_le'] >> FIRST_X_ASSUM MATCH_MP_TAC \\
+         Q.EXISTS_TAC ‘n’ >> rw []) >> Rewr' \\
+     MATCH_MP_TAC sub_lt_imp2 >> rw [add_comm_normal])
+ >> DISCH_TAC
+ (* combine the previous two results, applying abs_triangle_neg
+
+    NOTE: now we go beyond the textbook proofs, to assert a "successor" function f
+    which turns a previous (a l) (l starts from 0) to the next (a l'), such that
+   ‘abs (a l' - L) < Normal (inv &SUC l)’.
+
+    The resulting subsequence is ‘g = \n. FUNPOW f n 0’.
+ *)
+ >> Know ‘!l. ?l'. l < l' /\ abs (a l' - L) < Normal (inv (&SUC l))’
+ >- (rpt STRIP_TAC \\
+     Q.ABBREV_TAC ‘(e :real) = inv (&SUC l)’ \\
+     Know ‘0 < e’
+     >- (Q.UNABBREV_TAC ‘e’ \\
+         MATCH_MP_TAC REAL_INV_POS >> rw []) >> DISCH_TAC \\
+    ‘0 < e / 2’ by rw [REAL_LT_DIV] \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. P’ (MP_TAC o (Q.SPEC ‘e / 2’)) \\
+     RW_TAC std_ss [] (* this asserts ‘N’ *) \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> !k. P’ (MP_TAC o (Q.SPEC ‘e / 2’)) \\
+     RW_TAC std_ss [] \\
+     Q.PAT_X_ASSUM ‘!k. Z <= k ==> ?l. P’ (MP_TAC o (Q.SPEC ‘MAX N (SUC l)’)) \\
+     RW_TAC std_ss [MAX_LE] (* this asserts ‘l'’ *) \\
+     Q.EXISTS_TAC ‘l'’ >> rw [] (* l < l' *) \\
+
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘abs (a l' - inf {a n | MAX N (SUC l) <= n}) +
+                   abs (L    - inf {a n | MAX N (SUC l) <= n})’ \\
+     reverse CONJ_TAC
+     >- (‘e = e / 2 + e / 2’ by PROVE_TAC [REAL_HALF_DOUBLE] >> POP_ORW \\
+         REWRITE_TAC [GSYM extreal_add_def] \\
+         MATCH_MP_TAC lt_add2 >> rw []) \\
+    ‘?r1. a l' = Normal r1’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r2. L = Normal r2’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     Know ‘inf {a n | MAX N (SUC l) <= n} <> NegInf’
+     >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw []) >> DISCH_TAC \\
+    ‘?r3. inf {a n | MAX N (SUC l) <= n} = Normal r3’
+       by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_sub_def, extreal_abs_def, extreal_add_def, extreal_le_eq] \\
+     Suff ‘r1 - r2 = (r1 - r3) - (r2 - r3)’ >- rw [ABS_TRIANGLE_NEG] \\
+     REAL_ARITH_TAC)
+ >> DISCH_THEN (STRIP_ASSUME_TAC o
+                (SIMP_RULE std_ss [SKOLEM_THM])) (* this asserts ‘f’ *)
+ >> Q.ABBREV_TAC ‘g = \n. FUNPOW f n 0’
+ >> Q.EXISTS_TAC ‘g’
+ (* applying STRICTLY_INCREASING_TC (arithmeticTheory) *)
+ >> STRONG_CONJ_TAC (* !m n. m < n ==> g m < g n *)
+ >- (MATCH_MP_TAC STRICTLY_INCREASING_TC \\
+     rw [Abbr ‘g’, FUNPOW_SUC])
+ >> DISCH_TAC
+ (* applying MONOTONE_BIGGER (real_topologyTheory) *)
+ >> Know ‘!n. n <= g n’
+ >- (MATCH_MP_TAC MONOTONE_BIGGER >> art [])
+ >> DISCH_TAC
+ (* stage work, now touching the goal *)
+ >> Know ‘(real o a o g --> real L) sequentially <=>
+          !e. 0 < e ==> ?N. !n. N <= n ==> abs ((a o g) n - Normal (real L)) < Normal e’
+ >- (MATCH_MP_TAC LIM_SEQUENTIALLY_real_normal >> rw []) >> Rewr'
+ >> rw [normal_real, o_DEF] (* this asserts ‘e’ *)
+ (* find ‘N’ such that ‘&SUC N < 1 / e’ *)
+ >> ‘?n. n <> 0 /\ (0 :real) < inv (&n) /\ inv (&n) < (e :real)’ by METIS_TAC [REAL_ARCH_INV]
+ (* stage work, the purpose of ‘N’ is to eliminate ‘Normal e’ *)
+ >> Q.EXISTS_TAC ‘n’
+ >> Q.X_GEN_TAC ‘m’ >> DISCH_TAC (* this asserts ‘m’ (‘n <= m’) *)
+ >> ‘m <> 0’ by rw [] >> Cases_on ‘m’ >- fs []
+ >> rename1 ‘SUC N <> 0’
+ >> FULL_SIMP_TAC std_ss [Abbr ‘g’, FUNPOW_SUC]
+ >> MATCH_MP_TAC lt_trans
+ >> Q.ABBREV_TAC ‘l = FUNPOW f N 0’
+ >> Q.EXISTS_TAC ‘Normal (inv (&SUC l))’
+ >> Q.PAT_X_ASSUM ‘!l. l < f l /\ P’ (MP_TAC o (Q.SPEC ‘l’))
+ >> RW_TAC std_ss [Abbr ‘l’, extreal_lt_eq]
+ >> MATCH_MP_TAC REAL_LET_TRANS
+ >> Q.EXISTS_TAC ‘inv (&SUC N)’
+ >> CONJ_TAC
+ >- (Know ‘inv (&SUC (FUNPOW f N 0)) <= (inv (&SUC N) :real) <=>
+           &SUC N <= (&SUC (FUNPOW f N 0)) :real’
+     >- (MATCH_MP_TAC REAL_INV_LE_ANTIMONO >> rw []) >> Rewr' \\
+     rw [])
+ >> MATCH_MP_TAC REAL_LET_TRANS
+ >> Q.EXISTS_TAC ‘inv (&n)’ >> art []
+ >> Know ‘inv (&SUC N) <= (inv (&n) :real) <=> &n <= (&SUC N :real)’
+ >- (MATCH_MP_TAC REAL_INV_LE_ANTIMONO >> rw [])
+ >> Rewr'
+ >> RW_TAC real_ss []
+QED
+
+(* Properties A.1 (iv) [1, p.409] *)
+Theorem ext_limsup_imp_subseq :
+    !a. (!n. a n <> PosInf /\ a n <> NegInf) /\
+        limsup a <> PosInf /\ limsup a <> NegInf ==>
+        ?f. (!m n. m < n ==> f m < f n) /\
+            ((real o a o f) --> real (limsup a)) sequentially
+Proof
+    rw [ext_limsup_alt_liminf]
+ >> Know ‘liminf (numeric_negate o a) <> PosInf’
+ >- (CCONTR_TAC >> fs [extreal_ainv_def])
+ >> DISCH_TAC
+ >> Know ‘liminf (numeric_negate o a) <> NegInf’
+ >- (CCONTR_TAC >> fs [extreal_ainv_def])
+ >> DISCH_TAC
+ >> Know ‘real (-liminf (numeric_negate o a)) = -real (liminf (numeric_negate o a))’
+ >- (REWRITE_TAC [GSYM extreal_11, GSYM extreal_ainv_def] \\
+     rw [normal_real])
+ >> Rewr'
+ >> Know ‘?f. (!m n. m < n ==> f m < f n) /\
+              (real o (numeric_negate o a) o f --> real (liminf (numeric_negate o a))) sequentially’
+ >- (MATCH_MP_TAC ext_liminf_imp_subseq >> rw [o_DEF] \\
+    ‘?r. a n = Normal r’ by METIS_TAC [extreal_cases] >> rw [extreal_ainv_def])
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘f’ >> art []
+ >> Q.ABBREV_TAC ‘l = real (liminf (numeric_negate o a))’
+ >> Q.ABBREV_TAC ‘g = real o (numeric_negate o a) o f’
+ >> Suff ‘real o a o f = \n. -g n’
+ >- (Rewr' >> MATCH_MP_TAC LIM_NEG >> art [])
+ >> rw [o_DEF, Abbr ‘g’, FUN_EQ_THM]
+ >> REWRITE_TAC [GSYM extreal_11, GSYM extreal_ainv_def]
+ >> Know ‘-a (f n) <> PosInf /\ -a (f n) <> NegInf’
+ >- (‘?r. a (f n) = Normal r’ by METIS_TAC [extreal_cases] \\
+     rw [extreal_ainv_def])
+ >> STRIP_TAC
+ >> rw [normal_real]
+QED
+
+(* Properties A.1 (v) [1, p.409] (full version) *)
+Theorem ext_limsup_thm :
+    !a l. (!n. a n <> PosInf /\ a n <> NegInf) ==>
+          ((real o a --> l) sequentially <=>
+           limsup a = Normal l /\ liminf a = Normal l)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC (* easy part first *)
+ >- (DISCH_TAC \\
+     MP_TAC (Q.SPECL [‘a’, ‘I’, ‘l’] ext_limsup_le_subseq) \\
+     MP_TAC (Q.SPECL [‘a’, ‘I’, ‘l’] ext_liminf_le_subseq) \\
+     RW_TAC arith_ss [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Know ‘limsup a <> NegInf’
+       >- (fs [lt_infty] >> MATCH_MP_TAC lte_trans \\
+           Q.EXISTS_TAC ‘Normal l’ >> rw [lt_infty]) >> DISCH_TAC \\
+       (* ‘(real o a --> l) sequentially’ cannot hold if limsup a = PosInf *)
+       Know ‘limsup a <> PosInf’
+       >- (rw [ext_limsup_def] \\
+           CCONTR_TAC >> fs [] \\
+          ‘!e. 0 < e ==> ?N. !n. N <= n ==> abs (a n - Normal l) < Normal e’
+             by METIS_TAC [LIM_SEQUENTIALLY_real_normal] \\
+           Q.ABBREV_TAC ‘P = IMAGE (\m. sup {a n | m <= n}) UNIV’ \\
+           Suff ‘?x. x IN P /\ x < PosInf’
+           >- (DISCH_TAC >> fs [Abbr ‘P’] \\
+               Know ‘inf (IMAGE (\m. sup {a n | m <= n}) UNIV) < PosInf’
+               >- (rw [GSYM inf_lt'] \\
+                   Q.EXISTS_TAC ‘sup {a n | m <= n}’ >> rw [] \\
+                   Q.EXISTS_TAC ‘m’ >> rw []) \\
+               rw [lt_infty]) \\
+           rw [Abbr ‘P’] \\
+           POP_ASSUM (MP_TAC o (Q.SPEC ‘1’)) >> rw [abs_bounds_lt] \\
+           Q.EXISTS_TAC ‘sup {a n | N <= n}’ \\
+           CONJ_TAC >- (Q.EXISTS_TAC ‘N’ >> rw []) \\
+           MATCH_MP_TAC let_trans \\
+           Q.EXISTS_TAC ‘Normal (1 + l)’ >> rw [lt_infty, sup_le'] \\
+           rw [GSYM extreal_add_def] \\
+           MATCH_MP_TAC lt_imp_le \\
+           Know ‘a n < Normal 1 + Normal l <=> a n - Normal l < Normal 1’
+           >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+               MATCH_MP_TAC sub_lt_eq >> rw []) >> Rewr' \\
+           METIS_TAC []) >> DISCH_TAC \\
+       Know ‘?f. (!m n. m < n ==> f m < f n) /\
+                 (real o a o f --> real (limsup a)) sequentially’
+       >- (MATCH_MP_TAC ext_limsup_imp_subseq >> art []) >> STRIP_TAC \\
+       Know ‘(real o a o f --> l) sequentially’
+       >- (REWRITE_TAC [o_ASSOC] \\
+           MATCH_MP_TAC LIM_SUBSEQUENCE >> art []) >> DISCH_TAC \\
+       Know ‘real (limsup a) = l’
+       >- (METIS_TAC [LIM_UNIQUE, TRIVIAL_LIMIT_SEQUENTIALLY]) \\
+       REWRITE_TAC [GSYM extreal_11] \\
+       ASM_SIMP_TAC std_ss [normal_real],
+       (* goal 2 (of 2) *)
+       Know ‘liminf a <> PosInf’
+       >- (fs [lt_infty] >> MATCH_MP_TAC let_trans \\
+           Q.EXISTS_TAC ‘Normal l’ >> rw [lt_infty]) >> DISCH_TAC \\
+       (* if liminf a = NegInf, ‘(real o a --> l) sequentially’ cannot hold *)
+       Know ‘liminf a <> NegInf’
+       >- (rw [ext_liminf_def] \\
+           CCONTR_TAC >> fs [] \\
+          ‘!e. 0 < e ==> ?N. !n. N <= n ==> abs (a n - Normal l) < Normal e’
+             by METIS_TAC [LIM_SEQUENTIALLY_real_normal] \\
+           Q.ABBREV_TAC ‘P = IMAGE (\m. inf {a n | m <= n}) UNIV’ \\
+           Suff ‘?x. x IN P /\ NegInf < x’
+           >- (DISCH_TAC >> fs [Abbr ‘P’] \\
+               Know ‘NegInf < sup (IMAGE (\m. inf {a n | m <= n}) UNIV)’
+               >- (rw [lt_sup] \\
+                   Q.EXISTS_TAC ‘inf {a n | m <= n}’ >> rw [] \\
+                   Q.EXISTS_TAC ‘m’ >> rw []) \\
+               rw [lt_infty]) \\
+           rw [Abbr ‘P’] \\
+           POP_ASSUM (MP_TAC o (Q.SPEC ‘1’)) >> rw [abs_bounds_lt] \\
+           Q.EXISTS_TAC ‘inf {a n | N <= n}’ \\
+           CONJ_TAC >- (Q.EXISTS_TAC ‘N’ >> rw []) \\
+           MATCH_MP_TAC lte_trans \\
+           Q.EXISTS_TAC ‘Normal (-1 + l)’ >> rw [lt_infty, le_inf'] \\
+           rw [GSYM extreal_add_def, GSYM extreal_ainv_def] \\
+           MATCH_MP_TAC lt_imp_le \\
+           Know ‘-Normal 1 + Normal l < a n <=> -Normal 1 < a n - Normal l’
+           >- (MATCH_MP_TAC lt_sub >> rw [extreal_ainv_def]) >> Rewr' \\
+           METIS_TAC []) >> DISCH_TAC \\
+       Know ‘?f. (!m n. m < n ==> f m < f n) /\
+                 (real o a o f --> real (liminf a)) sequentially’
+       >- (MATCH_MP_TAC ext_liminf_imp_subseq >> art []) >> STRIP_TAC \\
+       Know ‘(real o a o f --> l) sequentially’
+       >- (REWRITE_TAC [o_ASSOC] \\
+           MATCH_MP_TAC LIM_SUBSEQUENCE >> art []) >> DISCH_TAC \\
+    (* applying LIM_UNIQUE *)
+       Know ‘real (liminf a) = l’
+       >- (METIS_TAC [LIM_UNIQUE, TRIVIAL_LIMIT_SEQUENTIALLY]) \\
+       REWRITE_TAC [GSYM extreal_11] \\
+       ASM_SIMP_TAC std_ss [normal_real] ])
+ (* stage work, now the hard part *)
+ >> STRIP_TAC
+ (* eventually ‘inf {a n | k <= n}’ (increasing) is normal *)
+ >> Cases_on ‘!N1. inf {a n | N1 <= n} = NegInf’
+ >- (Suff ‘liminf a = NegInf’ >- fs [] \\
+     SIMP_TAC std_ss [ext_liminf_def] >> POP_ORW \\
+     Know ‘IMAGE (\m. NegInf) univ(:num) = (\y. y = NegInf)’
+     >- (rw [Once EXTENSION]) >> Rewr' \\
+     rw [sup_const])
+ (* eventually ‘sup {a n | k <= n}’ (decreasing) is normal *)
+ >> Cases_on ‘!N2. sup {a n | N2 <= n} = PosInf’
+ >- (Suff ‘limsup a = PosInf’ >- fs [] \\
+     SIMP_TAC std_ss [ext_limsup_def] >> POP_ORW \\
+     Know ‘IMAGE (\m. PosInf) univ(:num) = (\y. y = PosInf)’
+     >- (rw [Once EXTENSION]) >> Rewr' \\
+     rw [inf_const])
+ >> FULL_SIMP_TAC bool_ss [] (* this asserts N1 and N2 *)
+ >> Know ‘!k. N1 <= k ==> inf {a n | k <= n} <> NegInf’
+ >- (rw [lt_infty] >> MATCH_MP_TAC lte_trans \\
+     Q.EXISTS_TAC ‘inf {a n | N1 <= n}’ \\
+     CONJ_TAC >- rw [GSYM lt_infty] \\
+     MATCH_MP_TAC inf_mono_subset >> rw [SUBSET_DEF] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘!k. N2 <= k ==> sup {a n | k <= n} <> PosInf’
+ >- (rw [lt_infty] >> MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘sup {a n | N2 <= n}’ \\
+     reverse CONJ_TAC >- rw [GSYM lt_infty] \\
+     MATCH_MP_TAC sup_mono_subset >> rw [SUBSET_DEF] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘inf {a n | N1 <= n} <> NegInf’ K_TAC
+ >> Q.PAT_X_ASSUM ‘sup {a n | N2 <= n} <> PosInf’ K_TAC
+ (* stage work *)
+ >> Know ‘!k. 0 <= a k - inf {a n | k <= n}’
+ >- (Q.X_GEN_TAC ‘k’ \\
+     MATCH_MP_TAC le_sub_imp2 >> rw [inf_le'] \\
+     POP_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘k’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘!k. inf {a n | k <= n} <> PosInf’
+ >- (Q.X_GEN_TAC ‘k’ \\
+     SPOSE_NOT_THEN (ASSUME_TAC o (SIMP_RULE std_ss [])) \\
+     Q.PAT_X_ASSUM ‘!k. 0 <= a k - inf {a n | k <= n}’ (MP_TAC o (Q.SPEC ‘k’)) \\
+    ‘?r. a k = Normal r’ by METIS_TAC [extreal_cases] >> art [] \\
+     simp [extreal_sub_def, GSYM extreal_lt_def, lt_infty, extreal_of_num_def])
+ >> DISCH_TAC
+ >> Know ‘!k. sup {a n | k <= n} <> NegInf’
+ >- (rw [lt_infty] \\
+     MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC ‘a k’ \\
+     CONJ_TAC >- (‘?r. a k = Normal r’ by METIS_TAC [extreal_cases] \\
+                  rw [GSYM lt_infty]) \\
+     rw [le_sup'] \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘k’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘!k. a k - inf {a n | k <= n} <= sup {a n | k <= n} - inf {a n | k <= n}’
+ >- (Q.X_GEN_TAC ‘k’ \\
+     MATCH_MP_TAC le_rsub_imp >> rw [le_sup'] \\
+     POP_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘k’ >> rw [])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘P = \(k :num). sup {a n | k <= n} - inf {a n | k <= n}’
+ >> Know ‘!k. 0 <= P k’
+ >- (rw [Abbr ‘P’] \\
+     MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC ‘a k - inf {a n | k <= n}’ >> rw [])
+ >> DISCH_TAC
+ (* applying lt_inf_epsilon' on liminf a *)
+ >> Q.ABBREV_TAC ‘Q = IMAGE (\m. inf {a n | m <= n}) UNIV’
+ >> ‘sup Q = liminf a’ by METIS_TAC [ext_liminf_def]
+ >> Know ‘!z. 0 < z ==> ?x. x IN Q /\ sup Q < x + z’
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC sup_lt_epsilon' >> rw [Abbr ‘Q’] \\
+     Q.EXISTS_TAC ‘inf {a n | N1 <= n}’ >> rw [] \\
+     Q.EXISTS_TAC ‘N1’ >> rw [])
+ >> POP_ORW >> rw [Abbr ‘Q’]
+ (* applying sup_lt_epsilon' on limsup a *)
+ >> Q.ABBREV_TAC ‘Q = IMAGE (\m. sup {a n | m <= n}) UNIV’
+ >> ‘inf Q = limsup a’ by METIS_TAC [ext_limsup_def]
+ >> Know ‘!z. 0 < z ==> ?x. x IN Q /\ x < inf Q + z’
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC lt_inf_epsilon' >> rw [Abbr ‘Q’] \\
+     Q.EXISTS_TAC ‘sup {a n | N2 <= n}’ >> rw [] \\
+     Q.EXISTS_TAC ‘N2’ >> rw [])
+ >> POP_ORW >> rw [Abbr ‘Q’]
+ (* This is stronger than ‘inf (IMAGE P UNIV) = 0’ *)
+ >> Know ‘(real o P --> 0) sequentially’
+ >- (rw [LIM_SEQUENTIALLY, o_DEF, dist] \\
+    ‘0 < e / 2’ by rw [] \\
+     NTAC 2 (Q.PAT_X_ASSUM ‘!z. 0 < z ==> ?x. R’ (MP_TAC o (Q.SPEC ‘Normal (e / 2)’))) \\
+     rw [extreal_of_num_def, extreal_lt_eq] (* this asserts ‘m’ and ‘m'’ *) \\
+     fs [Abbr ‘P’] \\
+     Q.EXISTS_TAC ‘MAX m m'’ \\
+     Q.X_GEN_TAC ‘i’ >> rw [] \\
+     Know ‘inf {a n | m <= n} <> NegInf’
+     >- (SPOSE_NOT_THEN (ASSUME_TAC o (SIMP_RULE std_ss [])) \\
+         Q.PAT_X_ASSUM ‘Normal l < inf {a n | m <= n} + Normal (e / 2)’ MP_TAC \\
+         ASM_REWRITE_TAC [extreal_add_def, lt_infty]) >> DISCH_TAC \\
+     Know ‘inf {a n | i <= n} <> NegInf’
+     >- (REWRITE_TAC [lt_infty] >> MATCH_MP_TAC lte_trans \\
+         Q.EXISTS_TAC ‘inf {a n | m <= n}’ >> rw [GSYM lt_infty] \\
+         MATCH_MP_TAC inf_mono_subset >> rw [SUBSET_DEF] \\
+         Q.EXISTS_TAC ‘n’ >> rw []) >> DISCH_TAC \\
+     Know ‘sup {a n | m' <= n} <> PosInf’
+     >- (SPOSE_NOT_THEN (ASSUME_TAC o (SIMP_RULE std_ss [])) \\
+         Q.PAT_X_ASSUM ‘sup {a n | m' <= n} < Normal l + Normal (e / 2)’ MP_TAC \\
+         ASM_REWRITE_TAC [extreal_add_def, lt_infty]) >> DISCH_TAC \\
+     Know ‘sup {a n | i <= n} <> PosInf’
+     >- (REWRITE_TAC [lt_infty] >> MATCH_MP_TAC let_trans \\
+         Q.EXISTS_TAC ‘sup {a n | m' <= n}’ >> rw [GSYM lt_infty] \\
+         MATCH_MP_TAC sup_mono_subset >> rw [SUBSET_DEF] \\
+         Q.EXISTS_TAC ‘n’ >> rw []) >> DISCH_TAC \\
+     Know ‘abs (real (sup {a n | i <= n} - inf {a n | i <= n})) =
+                real (sup {a n | i <= n} - inf {a n | i <= n})’
+     >- (rw [abs_refl, GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
+         Suff ‘Normal (real (sup {a n | i <= n} - inf {a n | i <= n})) =
+                             sup {a n | i <= n} - inf {a n | i <= n}’ >- rw [] \\
+         MATCH_MP_TAC normal_real \\
+        ‘?r. sup {a n | i <= n} = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def]) >> Rewr' \\
+     REWRITE_TAC [GSYM extreal_lt_eq] \\
+     Know ‘Normal (real (sup {a n | i <= n} - inf {a n | i <= n})) =
+                         sup {a n | i <= n} - inf {a n | i <= n}’
+     >- (MATCH_MP_TAC normal_real \\
+        ‘?r. sup {a n | i <= n} = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def]) >> Rewr' \\
+    ‘Normal e = Normal (e / 2) + Normal (e / 2)’
+       by METIS_TAC [REAL_HALF_DOUBLE, extreal_add_def, extreal_11] >> POP_ORW \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘sup {a n | m' <= n} - inf {a n | i <= n}’ \\
+     CONJ_TAC >- (MATCH_MP_TAC le_rsub_imp \\
+                  MATCH_MP_TAC sup_mono_subset >> rw [SUBSET_DEF] \\
+                  Q.EXISTS_TAC ‘n’ >> rw []) \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘sup {a n | m' <= n} - inf {a n | m <= n}’ \\
+     CONJ_TAC >- (MATCH_MP_TAC le_lsub_imp \\
+                  MATCH_MP_TAC inf_mono_subset >> rw [SUBSET_DEF] \\
+                  Q.EXISTS_TAC ‘n’ >> rw []) \\
+     MATCH_MP_TAC lt_trans \\
+     Q.EXISTS_TAC ‘Normal l + Normal (e / 2) - inf {a n | m <= n}’ \\
+     CONJ_TAC >- (MATCH_MP_TAC lt_rsub_imp >> rw []) \\
+     MATCH_MP_TAC sub_lt_imp2 \\
+     NTAC 2 (CONJ_TAC >- rw [extreal_add_def]) \\
+     Q.ABBREV_TAC ‘E = e / 2’ \\
+     Q.PAT_X_ASSUM ‘Normal l < inf {a n | m <= n} + Normal E’ MP_TAC \\
+    ‘?r. inf {a n | m <= n} = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     simp [extreal_add_def, extreal_lt_eq] \\
+     REAL_ARITH_TAC)
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘Q = \(k :num). a k - inf {a n | k <= n}’
+ >> ‘!k. 0 <= Q k /\ Q k <= P k’ by METIS_TAC []
+ >> Know ‘(real o Q --> 0) sequentially’
+ >- (Q.PAT_X_ASSUM ‘(real o P --> 0) sequentially’ MP_TAC \\
+     rw [LIM_SEQUENTIALLY, o_DEF, dist] \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. !n. N <= n ==> abs (real (P n)) < e’
+       (MP_TAC o (Q.SPEC ‘e’)) \\
+     RW_TAC std_ss [] (* this asserts ‘N’ *) \\
+     Q.EXISTS_TAC ‘MAX N (MAX N1 N2)’ \\
+     Q.X_GEN_TAC ‘i’ >> rw [] \\
+     Know ‘P i <> PosInf /\ P i <> NegInf’
+     >- (simp [Abbr ‘P’] \\
+        ‘?r. sup {a n | i <= n} = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def]) >> STRIP_TAC \\
+     Know ‘Q i <> PosInf /\ Q i <> NegInf’
+     >- (simp [Abbr ‘Q’] \\
+        ‘?r. a i = Normal r’                by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def]) >> STRIP_TAC \\
+     Know ‘abs (real (Q i)) = real (Q i)’
+     >- (rw [abs_refl, GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
+         Suff ‘Normal (real (Q i)) = Q i’ >- rw [] \\
+         MATCH_MP_TAC normal_real >> rw []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘!n. N <= n ==> abs (real (P n)) < e’
+       (fn th => ASSUME_TAC (MATCH_MP th (ASSUME “N <= (i :num)”))) \\
+     Know ‘abs (real (P i)) = real (P i)’
+     >- (rw [abs_refl, GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
+         Suff ‘Normal (real (P i)) = P i’ >- rw [] \\
+         MATCH_MP_TAC normal_real >> rw []) >> DISCH_THEN (fs o wrap) \\
+     MATCH_MP_TAC REAL_LET_TRANS \\
+     Q.EXISTS_TAC ‘real (P i)’ >> art [] \\
+     REWRITE_TAC [GSYM extreal_le_eq] \\
+     rw [normal_real])
+ >> DISCH_TAC
+ (* final stage *)
+ >> rw [LIM_SEQUENTIALLY_real_normal]
+ >> ‘0 < e / 2’ by rw []
+ >> Q.PAT_X_ASSUM ‘(real o Q --> 0) sequentially’ MP_TAC
+ >> rw [LIM_SEQUENTIALLY, dist]
+ >> POP_ASSUM (MP_TAC o (Q.SPEC ‘e / 2’))
+ >> RW_TAC std_ss [] (* this asserts ‘N’ *)
+ >> FULL_SIMP_TAC std_ss [Abbr ‘Q’]
+ >> Q.PAT_X_ASSUM ‘!z. 0 < z ==> ?x. _ /\ Normal l < x + z’
+      (MP_TAC o (Q.SPEC ‘Normal (e / 2)’))
+ >> rw [extreal_of_num_def, extreal_lt_eq] (* this asserts ‘m’ *)
+ >> Q.EXISTS_TAC ‘MAX (MAX N1 N) m’
+ >> Q.X_GEN_TAC ‘i’ >> rw []
+ >> Know ‘a i - Normal l = (a i - inf {a n | i <= n}) + (inf {a n | i <= n} - Normal l)’
+ >- (‘?r. a i = Normal r’                by METIS_TAC [extreal_cases] >> POP_ORW \\
+     ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_add_def, extreal_sub_def] >> REAL_ARITH_TAC)
+ >> Rewr'
+ (* applying abs_triangle *)
+ >> MATCH_MP_TAC let_trans
+ >> Q.EXISTS_TAC ‘abs (a i - inf {a n | i <= n}) + abs (inf {a n | i <= n} - Normal l)’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC abs_triangle \\
+    ‘?r. a i = Normal r’                by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_sub_def])
+ >> ‘Normal e = Normal (e / 2) + Normal (e / 2)’
+       by METIS_TAC [REAL_HALF_DOUBLE, extreal_add_def, extreal_11] >> POP_ORW
+ >> MATCH_MP_TAC lt_add2
+ >> CONJ_TAC
+ >| [ (* goal 1 (of 2) *)
+     ‘abs (a i - inf {a n | i <= n}) = a i - inf {a n | i <= n}’
+        by (rw [abs_refl]) >> POP_ORW \\
+      Q.PAT_X_ASSUM ‘!n. N <= n ==> _ < e / 2’ (MP_TAC o (Q.SPEC ‘i’)) \\
+      RW_TAC std_ss [] \\
+     ‘?r. a i = Normal r’                by METIS_TAC [extreal_cases] \\
+      POP_ASSUM (FULL_SIMP_TAC std_ss o wrap) \\
+     ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] \\
+      POP_ASSUM (FULL_SIMP_TAC std_ss o wrap) \\
+      FULL_SIMP_TAC std_ss [extreal_sub_def, real_normal, extreal_lt_eq] \\
+      FULL_SIMP_TAC std_ss [ABS_BOUNDS_LT],
+      (* goal 2 (of 2) *)
+      Know ‘abs (inf {a n | i <= n} - Normal l) = -(inf {a n | i <= n} - Normal l)’
+      >- (MATCH_MP_TAC abs_neg' \\
+          Know ‘inf {a n | i <= n} - Normal l <= 0 <=> inf {a n | i <= n} <= Normal l’
+          >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+              MATCH_MP_TAC sub_le_zero >> rw []) >> Rewr' \\
+          Q.PAT_X_ASSUM ‘liminf a = Normal l’ (ONCE_REWRITE_TAC o wrap o SYM) \\
+          rw [ext_liminf_def, le_sup'] \\
+          POP_ASSUM MATCH_MP_TAC \\
+          Q.EXISTS_TAC ‘i’ >> rw []) >> Rewr' \\
+      Know ‘-(inf {a n | i <= n} - Normal l) = Normal l - inf {a n | i <= n}’
+      >- (MATCH_MP_TAC neg_sub \\
+          DISJ2_TAC >> rw []) >> Rewr' \\
+      MATCH_MP_TAC sub_lt_imp2 >> rw [] \\
+      MATCH_MP_TAC lte_trans \\
+      Q.EXISTS_TAC ‘inf {a n | m <= n} + Normal (e / 2)’ >> rw [add_comm_normal] \\
+      MATCH_MP_TAC le_radd_imp \\
+      MATCH_MP_TAC inf_mono_subset >> rw [SUBSET_DEF] \\
+      Q.EXISTS_TAC ‘n’ >> rw [] ]
+QED
+
+(* Properties A.1 (v) [1, p.409] (a simple version for non-negative sequences) *)
+Theorem ext_limsup_thm'[local] :
+    !a. (!n. 0 <= a n /\ a n <> PosInf) ==>
+        (((\n. real (a n)) --> 0) sequentially <=> limsup a = 0 /\ liminf a = 0)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC (REWRITE_RULE [o_DEF, GSYM extreal_of_num_def]
+                               (Q.SPECL [‘a’, ‘0’] ext_limsup_thm))
+ >> rw []
+ >> MATCH_MP_TAC pos_not_neginf >> rw []
+QED
+
+(* Theorem 12.2 of [1, p.97], in slightly simplified form
+
+   NOTE: ‘integrable m f’ can be moved to conclusions, but the current form is
+          enough for WLLN_IID (directly used by truncated_vars_expectation).
+ *)
+Theorem lebesgue_dominated_convergence :
+    !m f fi. measure_space m /\ (!i. integrable m (fi i)) /\ integrable m f /\
+            (!i x. x IN m_space m ==> fi i x <> PosInf /\ fi i x <> NegInf) /\
+            (!x. x IN m_space m ==> f x <> PosInf /\ f x <> NegInf) /\
+            (!x. x IN m_space m ==>
+                ((\i. real (fi i x)) --> real (f x)) sequentially) /\
+            (?w. integrable m w /\
+                (!x. x IN m_space m ==> 0 <= w x /\ w x <> PosInf) /\
+                 !i x. x IN m_space m ==> abs (fi i x) <= w x)
+        ==> ((\i. real (integral m (fi i))) --> real (integral m f)) sequentially
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘((\i. real (integral m (\x. abs (fi i x - f x)))) --> 0) sequentially’
+ >- (rw [LIM_SEQUENTIALLY, dist] \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’)) \\
+     RW_TAC std_ss [] \\
+     Q.EXISTS_TAC ‘N’ >> rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!i. N <= i ==> P’ (MP_TAC o (Q.SPEC ‘i’)) \\
+     RW_TAC std_ss [] \\
+     Know ‘integrable m (\x. fi i x - f x)’
+     >- (MATCH_MP_TAC integrable_sub >> rw []) >> DISCH_TAC \\
+     Know ‘integrable m (\x. abs (fi i x - f x))’
+     >- (HO_MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) \\
+     DISCH_TAC \\
+     Know ‘abs (real (integral m (\x. abs (fi i x - f x)))) =
+           real (abs (integral m (\x. abs (fi i x - f x))))’
+     >- (MATCH_MP_TAC abs_real >> METIS_TAC [integrable_finite_integral]) \\
+     DISCH_THEN (FULL_SIMP_TAC std_ss o wrap) \\
+     Know ‘real (abs (integral m (\x. abs (fi i x - f x)))) < e <=>
+           Normal (real (abs (integral m (\x. abs (fi i x - f x))))) < Normal e’
+     >- rw [extreal_lt_eq] \\
+     Know ‘Normal (real (abs (integral m (\x. abs (fi i x - f x))))) =
+                        (abs (integral m (\x. abs (fi i x - f x))))’
+     >- (MATCH_MP_TAC normal_real \\
+        ‘?r. integral m (\x. abs (fi i x - f x)) = Normal r’
+            by METIS_TAC [extreal_cases, integrable_finite_integral] >> POP_ORW \\
+         rw [extreal_abs_def, extreal_not_infty]) >> Rewr' \\
+     DISCH_THEN (FULL_SIMP_TAC std_ss o wrap) \\
+     Know ‘abs (integral m (\x. abs (fi i x - f x))) =
+                integral m (\x. abs (fi i x - f x))’
+     >- (REWRITE_TAC [abs_refl] \\
+         MATCH_MP_TAC integral_pos >> rw [abs_pos]) \\
+     DISCH_THEN (FULL_SIMP_TAC std_ss o wrap) \\
+     Know ‘real (integral m (fi i)) - real (integral m f) =
+           real (integral m (fi i) - integral m f)’
+     >- (‘?a. integral m (fi i) = Normal a’
+            by METIS_TAC [extreal_cases, integrable_finite_integral] >> POP_ORW \\
+         ‘?b. integral m f = Normal b’
+            by METIS_TAC [extreal_cases, integrable_finite_integral] >> POP_ORW \\
+         rw [extreal_sub_def, real_normal]) >> Rewr' \\
+     Know ‘abs (real (integral m (fi i) - integral m f)) =
+           real (abs (integral m (fi i) - integral m f))’
+     >- (MATCH_MP_TAC abs_real \\
+         ‘?a. integral m (fi i) = Normal a’
+            by METIS_TAC [extreal_cases, integrable_finite_integral] >> POP_ORW \\
+         ‘?b. integral m f = Normal b’
+            by METIS_TAC [extreal_cases, integrable_finite_integral] >> POP_ORW \\
+         rw [extreal_sub_def, extreal_not_infty]) >> Rewr' \\
+     ONCE_REWRITE_TAC [GSYM extreal_lt_eq] \\
+     Know ‘Normal (real (abs (integral m (fi i) - integral m f))) =
+                         abs (integral m (fi i) - integral m f)’
+     >- (MATCH_MP_TAC normal_real \\
+         ‘?a. integral m (fi i) = Normal a’
+            by METIS_TAC [extreal_cases, integrable_finite_integral] >> POP_ORW \\
+         ‘?b. integral m f = Normal b’
+            by METIS_TAC [extreal_cases, integrable_finite_integral] >> POP_ORW \\
+         rw [extreal_abs_def, extreal_sub_def, extreal_not_infty]) >> Rewr' \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘integral m (\x. abs (fi i x - f x))’ >> art [] \\
+     Know ‘integral m (fi i) - integral m f = integral m (\x. fi i x - f x)’
+     >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+         MATCH_MP_TAC integral_sub >> rw []) >> Rewr' \\
+     HO_MATCH_MP_TAC (REWRITE_RULE [o_DEF] integral_triangle_ineq) >> art [])
+ (* stage work, renamed ‘fi’ to ‘u’ *)
+ >> rename1 ‘!i. integrable m (u i)’
+ (* simplify ‘((\i. real (u i x)) --> real (f x)) sequentially’ *)
+ >> Know ‘!x. x IN m_space m ==>
+              !e. 0 < e ==> ?N. !i. N <= i ==> abs (u i x - f x) < Normal e’
+ >- (RW_TAC std_ss [] \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space m ==>
+                        ((\i. real (u i x)) --> real (f x)) sequentially’ MP_TAC \\
+     rw [LIM_SEQUENTIALLY, dist] \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space m ==> !e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. P’ (MP_TAC o (Q.SPEC ‘e’)) \\
+     RW_TAC std_ss [] \\
+     Know ‘!i. real (u i x) - real (f x) = real (u i x - f x)’
+     >- (Q.X_GEN_TAC ‘i’ \\
+        ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [real_normal, extreal_sub_eq]) \\
+     DISCH_THEN (FULL_SIMP_TAC std_ss o wrap) \\
+     Know ‘!i. abs (real (u i x - f x)) = real (abs (u i x - f x))’
+     >- (Q.X_GEN_TAC ‘i’ \\
+         MATCH_MP_TAC abs_real \\
+        ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def]) \\
+     DISCH_THEN (FULL_SIMP_TAC std_ss o wrap) \\
+     POP_ASSUM MP_TAC >> ONCE_REWRITE_TAC [GSYM extreal_lt_eq] \\
+     Know ‘!i. Normal (real (abs (u i x - f x))) = abs (u i x - f x)’
+     >- (Q.X_GEN_TAC ‘i’ \\
+         MATCH_MP_TAC normal_real \\
+        ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def, extreal_abs_def]) >> Rewr' \\
+     DISCH_TAC \\
+     Q.EXISTS_TAC ‘N’ >> rw [])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘a = \i x. abs (u i x - f x)’
+ >> Know ‘!x. x IN m_space m ==> ((\i. real (a i x)) --> 0) sequentially’
+ >- (rw [Abbr ‘a’, LIM_SEQUENTIALLY, dist] \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space m ==> !e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. P’ (MP_TAC o (Q.SPEC ‘e’)) \\
+     RW_TAC std_ss [] \\
+     Q.EXISTS_TAC ‘N’ >> rpt STRIP_TAC \\
+     Know ‘abs (real (abs (u i x - f x))) =
+           real (abs (abs (u i x - f x)))’
+     >- (MATCH_MP_TAC abs_real \\
+        ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def, extreal_abs_def]) >> Rewr' \\
+     rw [abs_abs, GSYM extreal_lt_eq] \\
+     Suff ‘Normal (real (abs (u i x - f x))) = abs (u i x - f x)’ >- rw [] \\
+     MATCH_MP_TAC normal_real \\
+    ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_sub_def, extreal_abs_def])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘b = \i. integral m (a i)’
+ >> Know ‘!n. integrable m (a n)’
+ >- (rw [Abbr ‘a’] \\
+     HO_MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art [] \\
+     MATCH_MP_TAC integrable_sub >> rw [])
+ >> DISCH_TAC
+ >> ‘!i. integral m (\x. abs (u i x - f x)) = b i’ by rw [Abbr ‘a’, Abbr ‘b’] >> POP_ORW
+ (* applying ext_limsup_thm' *)
+ >> Know ‘!n. 0 <= b n /\ b n <> PosInf’
+ >- (Q.X_GEN_TAC ‘n’ >> SIMP_TAC std_ss [Abbr ‘b’] \\
+     reverse CONJ_TAC >- METIS_TAC [integrable_finite_integral] \\
+     MATCH_MP_TAC integral_pos >> rw [Abbr ‘a’, abs_pos])
+ >> DISCH_THEN
+     (ONCE_REWRITE_TAC o wrap o (MATCH_MP ext_limsup_thm'))
+ >> Q.UNABBREV_TAC ‘b’
+ (* applying ext_limsup_thm' again *)
+ >> Know ‘!x. x IN m_space m ==>
+              limsup (\i. a i x) = Normal 0 /\ liminf (\i. a i x) = Normal 0’
+ >- (Q.X_GEN_TAC ‘x’ >> DISCH_TAC \\
+     Know ‘((\i. real (a i x)) --> 0) sequentially’
+     >- (FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+     Q.ABBREV_TAC ‘c = \i. a i x’ \\
+    ‘!i. a i x = c i’ by rw [Abbr ‘c’] >> POP_ORW \\
+     Know ‘!n. 0 <= c n /\ c n <> PosInf’
+     >- (Q.X_GEN_TAC ‘n’ >> SIMP_TAC std_ss [Abbr ‘c’, Abbr ‘a’, abs_pos] \\
+        ‘?r. u n x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+        ‘?z. f x   = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_sub_def, extreal_abs_def]) \\
+     DISCH_THEN (REWRITE_TAC o wrap o (MATCH_MP ext_limsup_thm')) \\
+     REWRITE_TAC [GSYM extreal_of_num_def])
+ >> REWRITE_TAC [GSYM extreal_of_num_def]
+ >> DISCH_TAC
+ (* f is also bounded by w *)
+ >> Know ‘!x. x IN m_space m ==> abs (f x) <= w x’
+ >- (RW_TAC std_ss [] \\
+     MATCH_MP_TAC le_epsilon >> rpt STRIP_TAC \\
+    ‘0 <= e’ by PROVE_TAC [lt_imp_le] \\
+    ‘e <> NegInf’ by PROVE_TAC [pos_not_neginf] \\
+    ‘?E. e = Normal E /\ 0 < E’
+        by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space m ==> !e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] \\
+     Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. P’ (MP_TAC o (Q.SPEC ‘E’)) \\
+     RW_TAC std_ss [] \\
+     MATCH_MP_TAC le_trans >> Q.EXISTS_TAC ‘abs (u N x) + Normal E’ \\
+     reverse CONJ_TAC
+     >- (MATCH_MP_TAC le_radd_imp >> METIS_TAC []) \\
+     MATCH_MP_TAC le_trans >> Q.EXISTS_TAC ‘abs (u N x) + abs (u N x - f x)’ \\
+     CONJ_TAC >- (MATCH_MP_TAC abs_triangle_sub' >> rw []) \\
+     MATCH_MP_TAC le_ladd_imp \\
+     MATCH_MP_TAC lt_imp_le \\
+     Q.UNABBREV_TAC ‘a’ >> FULL_SIMP_TAC std_ss [])
+ >> DISCH_TAC
+ (* preparing for fatou_lemma *)
+ >> Know ‘!i x. x IN m_space m ==> a i x <= 2 * w x’
+ >- (RW_TAC std_ss [GSYM extreal_double, Abbr ‘a’] \\
+     MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC ‘abs (u i x) + abs (f x)’ \\
+     CONJ_TAC >- (MATCH_MP_TAC abs_triangle_neg >> rw []) \\
+     MATCH_MP_TAC le_add2 >> rw [])
+ >> DISCH_TAC
+ (* applying ext_liminf_le_limsup *)
+ >> Know ‘!i. 0 <= integral m (a i)’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     MATCH_MP_TAC integral_pos >> rw [Abbr ‘a’, abs_pos])
+ >> DISCH_TAC
+ >> Suff ‘limsup (\i. integral m (a i)) <= 0’
+ >- (DISCH_TAC \\
+     STRONG_CONJ_TAC
+     >- (rw [GSYM le_antisym] \\
+         MATCH_MP_TAC ext_limsup_pos >> rw []) \\
+     DISCH_TAC \\
+     REWRITE_TAC [GSYM le_antisym] \\
+     reverse CONJ_TAC >- (MATCH_MP_TAC ext_liminf_pos >> rw []) \\
+     MATCH_MP_TAC le_trans \\
+     POP_ASSUM K_TAC \\
+     Q.EXISTS_TAC ‘limsup (\i. integral m (a i))’ >> art [] \\
+     REWRITE_TAC [ext_liminf_le_limsup])
+ (* stage work *)
+ >> Suff ‘limsup (\n. integral m (a n)) <= integral m (\x. limsup (\n. a n x))’
+ >- (DISCH_TAC \\
+     MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC ‘integral m (\x. limsup (\n. a n x))’ >> art [] \\
+     MATCH_MP_TAC integral_neg >> rw [])
+ (* final: applying fatou_lemma' *)
+ >> Know ‘!n. integral m (a n) = pos_fn_integral m (a n)’
+ >- (Q.X_GEN_TAC ‘n’ \\
+     MATCH_MP_TAC integral_pos_fn >> rw [Abbr ‘a’, abs_pos])
+ >> Rewr'
+ >> Know  ‘integral m (\x. limsup (\n. a n x)) =
+    pos_fn_integral m (\x. limsup (\n. a n x))’
+ >- (MATCH_MP_TAC integral_pos_fn >> rw [])
+ >> Rewr'
+ >> MATCH_MP_TAC fatou_lemma'
+ >> Q.EXISTS_TAC ‘\x. 2 * w x’ >> simp []
+ >> CONJ_TAC (* pos_fn_integral m (\x. 2 * w x) < PosInf *)
+ >- (REWRITE_TAC [extreal_of_num_def] \\
+     Know ‘pos_fn_integral m (\x. Normal 2 * w x) = Normal 2 * pos_fn_integral m w’
+     >- (MATCH_MP_TAC pos_fn_integral_cmul >> rw [le_02]) >> Rewr' \\
+     Know ‘integral m w <> PosInf /\ integral m w <> NegInf’
+     >- (MATCH_MP_TAC integrable_finite_integral >> art []) \\
+     Know ‘integral m w = pos_fn_integral m w’
+     >- (MATCH_MP_TAC integral_pos_fn >> rw []) >> Rewr' \\
+     STRIP_TAC \\
+    ‘?r. pos_fn_integral m w = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [GSYM lt_infty, extreal_mul_def])
+ >> reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [integrable_def]
+ >> rw [Abbr ‘a’, abs_pos, GSYM lt_infty]
+ >> ‘w x <> NegInf’ by METIS_TAC [pos_not_neginf]
+ >> ‘?r. w x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> rw [extreal_of_num_def, extreal_mul_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Integrals with Respect to Image Measures [1, Chapter 15]                 *)
@@ -588,74 +1794,6 @@ Proof
  >> qexistsl_tac [‘a'’, ‘b'’] >> art []
  >> METIS_TAC [SUBSET_DEF]
 QED
-
-(* "exhausting" sequence in a system of sets *)
-Definition exhausting_sequence_def :
-    exhausting_sequence (a :'a algebra) (f :num -> 'a -> bool) =
-      (f IN (UNIV -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
-       BIGUNION (IMAGE f UNIV) = space a)
-End
-
-Theorem exhausting_sequence_alt :
-   !a f. exhausting_sequence a f <=>
-         f IN (univ(:num) -> subsets a) /\ (!m n. m <= n ==> f m SUBSET f n) /\
-         BIGUNION (IMAGE f univ(:num)) = space a
-Proof
-    RW_TAC std_ss [exhausting_sequence_def]
- >> reverse EQ_TAC >- RW_TAC std_ss []
- >> STRIP_TAC >> art []
- >> GEN_TAC >> Induct_on ‘n’ >- RW_TAC arith_ss [SUBSET_REFL]
- >> DISCH_TAC
- >> ‘(m = SUC n) \/ m <= n’ by RW_TAC arith_ss [] >- rw [SUBSET_REFL]
- >> MATCH_MP_TAC SUBSET_TRANS
- >> Q.EXISTS_TAC ‘f n’ >> art []
- >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
-QED
-
-Definition has_exhausting_sequence :
-    has_exhausting_sequence a = ?f. exhausting_sequence a f
-End
-
-(* This was part of sigma_finite_def, but no requirement on the measure of each
-   (f n). The definition is useful because ‘space a IN subsets a’ does not hold
-   in general for semiring.
- *)
-Theorem has_exhausting_sequence_def =
-    REWRITE_RULE [exhausting_sequence_def] has_exhausting_sequence;
-
-Theorem has_exhausting_sequence_alt =
-    REWRITE_RULE [exhausting_sequence_alt] has_exhausting_sequence;
-
-(* connection with ‘sigma_finite’ *)
-Theorem sigma_finite_has_exhausting_sequence :
-    !sp sts u. sigma_finite (sp,sts,u) ==> has_exhausting_sequence (sp,sts)
-Proof
-    RW_TAC std_ss [sigma_finite_def, has_exhausting_sequence_def,
-                   m_space_def, measurable_sets_def, space_def, subsets_def]
- >> Q.EXISTS_TAC ‘f’ >> rw []
-QED
-
-(* alternative definition of ‘sigma_finite’ *)
-Theorem sigma_finite_alt_exhausting_sequence :
-    !m. sigma_finite m <=>
-        ?f. exhausting_sequence (m_space m,measurable_sets m) f /\
-            !n. measure m (f n) < PosInf
-Proof
-    RW_TAC std_ss [sigma_finite_def, exhausting_sequence_def,
-                   space_def, subsets_def]
- >> EQ_TAC >> RW_TAC std_ss []
- >> Q.EXISTS_TAC ‘f’ >> art []
-QED
-
-(* |- !m. sigma_finite m <=>
-          ?f. (f IN (univ(:num) -> measurable_sets m) /\
-               (!m n. m <= n ==> f m SUBSET f n) /\
-               BIGUNION (IMAGE f univ(:num)) = m_space m) /\
-              !n. measure m (f n) < PosInf
- *)
-Theorem sigma_finite_alt =
-    REWRITE_RULE [exhausting_sequence_alt, subsets_def, space_def]
-                 sigma_finite_alt_exhausting_sequence;
 
 Theorem exhausting_sequence_general_cross :
     !(cons :'a -> 'b -> 'c) X Y A B f g.
@@ -4171,7 +5309,7 @@ Proof
          Q.X_GEN_TAC ‘y’ >> DISCH_TAC \\
          MATCH_MP_TAC pos_fn_integral_pos >> rw [FN_MINUS_POS]) \\
      simp [] >> DISCH_TAC \\
-     rw [AE_THM, almost_everywhere_def] \\
+     rw [AE_DEF] \\
      Q.EXISTS_TAC ‘{y | y IN Y /\ pos_fn_integral (X,A,u) (\x. (fn_plus f) (x,y)) = PosInf} UNION
                    {y | y IN Y /\ pos_fn_integral (X,A,u) (\x. (fn_minus f) (x,y)) = PosInf}’ \\
      CONJ_TAC >- (PROVE_TAC [NULL_SET_UNION, GSYM IN_NULL_SET]) \\
@@ -4200,7 +5338,7 @@ Proof
          Q.X_GEN_TAC ‘x’ >> DISCH_TAC \\
          MATCH_MP_TAC pos_fn_integral_pos >> rw [FN_MINUS_POS]) \\
      simp [] >> DISCH_TAC \\
-     rw [AE_THM, almost_everywhere_def] \\
+     rw [AE_DEF] \\
      Q.EXISTS_TAC ‘{x | x IN X /\ pos_fn_integral (Y,B,v) (\y. (fn_plus f) (x,y)) = PosInf} UNION
                    {x | x IN X /\ pos_fn_integral (Y,B,v) (\y. (fn_minus f) (x,y)) = PosInf}’ \\
      CONJ_TAC >- (PROVE_TAC [NULL_SET_UNION, GSYM IN_NULL_SET]) \\
@@ -4234,7 +5372,7 @@ Proof
        MATCH_MP_TAC pos_fn_integral_mono_AE >> rw [FN_PLUS_POS]
        >- (MATCH_MP_TAC pos_fn_integral_pos >> rw [abs_pos]) \\
        Q.PAT_X_ASSUM ‘AE x::(X,A,u). integrable (Y,B,v) (\y. f (x,y))’ MP_TAC \\
-       rw [AE_THM, almost_everywhere_def] \\
+       rw [AE_DEF] \\
        Q.EXISTS_TAC ‘N’ >> rw [] \\
        MATCH_MP_TAC le_trans \\
        Q.EXISTS_TAC ‘abs ((\x. integral (Y,B,v) (\y. f (x,y))) x)’ \\
@@ -4249,7 +5387,7 @@ Proof
        MATCH_MP_TAC pos_fn_integral_mono_AE >> rw [FN_MINUS_POS]
        >- (MATCH_MP_TAC pos_fn_integral_pos >> rw [abs_pos]) \\
        Q.PAT_X_ASSUM ‘AE x::(X,A,u). integrable (Y,B,v) (\y. f (x,y))’ MP_TAC \\
-       rw [AE_THM, almost_everywhere_def] \\
+       rw [AE_DEF] \\
        Q.EXISTS_TAC ‘N’ >> rw [] \\
        MATCH_MP_TAC le_trans \\
        Q.EXISTS_TAC ‘abs ((\x. integral (Y,B,v) (\y. f (x,y))) x)’ \\
@@ -4279,7 +5417,7 @@ Proof
        MATCH_MP_TAC pos_fn_integral_mono_AE >> rw [FN_PLUS_POS]
        >- (MATCH_MP_TAC pos_fn_integral_pos >> rw [abs_pos]) \\
        Q.PAT_X_ASSUM ‘AE y::(Y,B,v). integrable (X,A,u) (\x. f (x,y))’ MP_TAC \\
-       rw [AE_THM, almost_everywhere_def] \\
+       rw [AE_DEF] \\
        Q.EXISTS_TAC ‘N’ >> rw [] >> rename1 ‘y IN Y’ \\
        MATCH_MP_TAC le_trans \\
        Q.EXISTS_TAC ‘abs ((\y. integral (X,A,u) (\x. f (x,y))) y)’ \\
@@ -4293,7 +5431,7 @@ Proof
        MATCH_MP_TAC pos_fn_integral_mono_AE >> rw [FN_MINUS_POS]
        >- (MATCH_MP_TAC pos_fn_integral_pos >> rw [abs_pos]) \\
        Q.PAT_X_ASSUM ‘AE y::(Y,B,v). integrable (X,A,u) (\x. f (x,y))’ MP_TAC \\
-       rw [AE_THM, almost_everywhere_def] \\
+       rw [AE_DEF] \\
        Q.EXISTS_TAC ‘N’ >> rw [] >> rename1 ‘y IN Y’ \\
        MATCH_MP_TAC le_trans \\
        Q.EXISTS_TAC ‘abs ((\y. integral (X,A,u) (\x. f (x,y))) y)’ \\
@@ -4508,13 +5646,8 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-(*  Filtration and basic version of martingales (Chapter 17 of [1])          *)
+(*  Filtration and basic version of martingales (Chapter 23 of [1])          *)
 (* ------------------------------------------------------------------------- *)
-
-val sub_sigma_algebra_def = Define
-   `sub_sigma_algebra a b =
-      (sigma_algebra a /\ sigma_algebra b /\ (space a = space b) /\
-       (subsets a) SUBSET (subsets b))`;
 
 (* ‘sub_sigma_algebra’ is a partial-order between sigma-algebra *)
 val SUB_SIGMA_ALGEBRA_REFL = store_thm
@@ -4554,12 +5687,6 @@ val SUB_SIGMA_ALGEBRA_MEASURE_SPACE = store_thm
  >> simp [MEASURE_SPACE_REDUCE]
  >> METIS_TAC [SPACE]);
 
-(* `filtration A` is the set of all filtrations of A *)
-val filtration_def = Define
-   `filtration A (a :num -> 'a algebra) <=>
-      (!n. sub_sigma_algebra (a n) A) /\
-      (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j))`;
-
 val FILTRATION_BOUNDED = store_thm
   ("FILTRATION_BOUNDED",
   ``!A a. filtration A a ==> !n. sub_sigma_algebra (a n) A``,
@@ -4585,34 +5712,29 @@ val FILTRATION = store_thm
  >- (DISCH_TAC >> IMP_RES_TAC FILTRATION_SUBSETS >> fs [filtration_def])
  >> RW_TAC std_ss [filtration_def]);
 
-(* usually denoted by (sp,sts,a,m) in textbooks *)
-val filtered_measure_space_def = Define
-   `filtered_measure_space (sp,sts,m) a <=>
-             measure_space (sp,sts,m) /\ filtration (sp,sts) a`;
-
-val filtered_measure_space_alt = store_thm
-  ("filtered_measure_space_alt",
-  ``!m a. filtered_measure_space m a <=>
-          measure_space m /\ filtration (m_space m,measurable_sets m) a``,
+Theorem filtered_measure_space_alt :
+    !m a. filtered_measure_space m a <=>
+          measure_space m /\ filtration (m_space m,measurable_sets m) a
+Proof
     rpt GEN_TAC
  >> Cases_on `m` >> Cases_on `r`
- >> REWRITE_TAC [filtered_measure_space_def, m_space_def, measurable_sets_def]);
+ >> REWRITE_TAC [filtered_measure_space_def, m_space_def, measurable_sets_def]
+QED
 
-val sigma_finite_filtered_measure_space_def = Define
-   `sigma_finite_filtered_measure_space (sp,sts,m) a =
-      (filtered_measure_space (sp,sts,m) a /\ sigma_finite (sp,subsets (a 0),m))`;
-
-val sigma_finite_filtered_measure_space_alt = store_thm
-  ("sigma_finite_filtered_measure_space_alt",
-  ``!m a. sigma_finite_filtered_measure_space m a <=>
-          filtered_measure_space m a /\ sigma_finite (m_space m,subsets (a 0),measure m)``,
+Theorem sigma_finite_filtered_measure_space :
+    !m a. sigma_finite_filtered_measure_space m a <=>
+          measure_space m /\ filtration (m_space m,measurable_sets m) a /\
+          sigma_finite (m_space m,subsets (a 0),measure m)
+Proof
     rpt GEN_TAC
- >> Cases_on `m` >> Cases_on `r`
- >> REWRITE_TAC [sigma_finite_filtered_measure_space_def, m_space_def, measure_def]);
+ >> Cases_on ‘m’ >> Cases_on ‘r’ >> rename1 ‘measure_space (sp,sts,m)’
+ >> rw [sigma_finite_filtered_measure_space_def,
+        filtered_measure_space_def, GSYM CONJ_ASSOC]
+QED
 
 (* all sub measure spaces of a sigma-finite fms are also sigma-finite *)
-Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE_I :
-    !sp sts a m. sigma_finite_filtered_measure_space (sp,sts,m) a ==>
+Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE[local] :
+    !sp sts m a. sigma_finite_filtered_measure_space (sp,sts,m) a ==>
                  !n. sigma_finite (sp,subsets (a n),m)
 Proof
     RW_TAC std_ss [sigma_finite_filtered_measure_space_def,
@@ -4632,15 +5754,27 @@ Proof
  >> METIS_TAC [SUBSET_DEF]
 QED
 
-Theorem sigma_finite_filtered_measure_space_alt :
-    !sp sts a m. sigma_finite_filtered_measure_space (sp,sts,m) a =
-                   (filtered_measure_space (sp,sts,m) a /\
-                    !n. sigma_finite (sp,subsets (a n),m))
+(* |- !m a.
+        sigma_finite_filtered_measure_space m a ==>
+        !n. sigma_finite (m_space m,subsets (a n),measure m)
+ *)
+Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE_I =
+        SIGMA_FINITE_FILTERED_MEASURE_SPACE
+    |> (Q.SPECL [‘m_space m’, ‘measurable_sets m’, ‘measure m’])
+    |> (Q.GEN ‘m’)
+    |> (REWRITE_RULE [MEASURE_SPACE_REDUCE])
+
+Theorem sigma_finite_filtered_measure_space_alt_all :
+    !m a. sigma_finite_filtered_measure_space m a <=>
+          measure_space m /\ filtration (m_space m,measurable_sets m) a /\
+          !n. sigma_finite (m_space m,subsets (a n),measure m)
 Proof
-    rpt GEN_TAC >> EQ_TAC
- >- (DISCH_TAC >> IMP_RES_TAC SIGMA_FINITE_FILTERED_MEASURE_SPACE_I \\
-     fs [sigma_finite_filtered_measure_space_def])
- >> RW_TAC std_ss [sigma_finite_filtered_measure_space_def]
+    rpt GEN_TAC
+ >> reverse EQ_TAC
+ >- RW_TAC std_ss [sigma_finite_filtered_measure_space]
+ >> DISCH_TAC
+ >> IMP_RES_TAC SIGMA_FINITE_FILTERED_MEASURE_SPACE_I
+ >> fs [sigma_finite_filtered_measure_space]
 QED
 
 (* the smallest sigma-algebra generated by all (a n) *)
@@ -4679,62 +5813,425 @@ val INFTY_SIGMA_ALGEBRA_MAXIMAL = store_thm
      Q.EXISTS_TAC `n` >> art [])
  >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]);
 
-(* `prob_martingale` will be the probability version of `martingale` *)
-Definition martingale_def :
-   martingale m a u =
-     (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
-      !n s. s IN (subsets (a n)) ==>
-           (integral m (\x. u (SUC n) x * indicator_fn s x) =
-            integral m (\x. u n x * indicator_fn s x)))
-End
+(* ------------------------------------------------------------------------- *)
+(*  Martingale alternative definitions and properties (Chapter 23 of [1])    *)
+(* ------------------------------------------------------------------------- *)
 
-(* super-martingale: changed `=` with `<=` *)
-Definition super_martingale_def :
-   super_martingale m a u =
-     (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
-      !n s. s IN (subsets (a n)) ==>
-           (integral m (\x. u (SUC n) x * indicator_fn s x) <=
-            integral m (\x. u n x * indicator_fn s x)))
-End
+(* ‘u’ is a martingale if, and only if, it is both a sub- and a super-martingale
 
-(* sub-martingale: integral (u n) <= integral (u (SUC n)), looks more natural *)
-Definition sub_martingale_def :
-   sub_martingale m a u =
-     (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
-      !n s. s IN (subsets (a n)) ==>
-           (integral m (\x. u n x * indicator_fn s x) <=
-            integral m (\x. u (SUC n) x * indicator_fn s x)))
-End
-
-(* u is a martingale if, and only if, it is both a sub- and a supermartingale *)
-val MARTINGALE_BOTH_SUB_SUPER = store_thm
-  ("MARTINGALE_BOTH_SUB_SUPER",
-  ``!m a u. martingale m a u <=> sub_martingale m a u /\ super_martingale m a u``,
+   This is Example 23.3 (i) [1, p.277]
+ *)
+Theorem MARTINGALE_EQ_SUB_SUPER :
+    !m a u. martingale m a u <=> sub_martingale m a u /\ super_martingale m a u
+Proof
     RW_TAC std_ss [martingale_def, sub_martingale_def, super_martingale_def]
  >> EQ_TAC >> RW_TAC std_ss [le_refl]
- >> ASM_SIMP_TAC std_ss [GSYM le_antisym]);
+ >> ASM_SIMP_TAC std_ss [GSYM le_antisym]
+QED
+
+(* simple alternative definitions: ‘n < SUC n’ is replaced by ‘i <= j’ *)
+val martingale_shared_tactics_1 =
+    reverse EQ_TAC >- RW_TAC arith_ss []
+ >> RW_TAC arith_ss [sigma_finite_filtered_measure_space]
+ >> Q.PAT_X_ASSUM ‘i <= j’ MP_TAC
+ >> Induct_on ‘j - i’
+ >- (RW_TAC arith_ss [] \\
+    ‘j = i’ by RW_TAC arith_ss [] >> RW_TAC arith_ss [le_refl])
+ >> RW_TAC arith_ss []
+ >> ‘v = PRE j - i’ by RW_TAC arith_ss []
+ >> ‘i < j /\ i <= PRE j’ by RW_TAC arith_ss []
+ >> ‘SUC (PRE j) = j’ by RW_TAC arith_ss []
+ >> ‘s IN subsets (a (PRE j))’ by METIS_TAC [FILTRATION_MONO, SUBSET_DEF]
+ >> Q.PAT_X_ASSUM ‘!n s. s IN subsets (a n) ==> P’
+     (MP_TAC o (Q.SPECL [‘PRE j’, ‘s’]))
+ >> RW_TAC arith_ss [];
+
+val martingale_shared_tactics_2 =
+    MATCH_MP_TAC le_trans
+ >> Q.EXISTS_TAC ‘integral m (\x. u (PRE j) x * indicator_fn s x)’
+ >> POP_ASSUM (REWRITE_TAC o wrap)
+ >> FIRST_X_ASSUM irule
+ >> RW_TAC arith_ss [];
+
+Theorem martingale_alt :
+   !m a u.
+      martingale m a u <=>
+      sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !i j s. i <= j /\ s IN subsets (a i) ==>
+             (integral m (\x. u i x * indicator_fn s x) =
+              integral m (\x. u j x * indicator_fn s x))
+Proof
+    RW_TAC std_ss [martingale_def]
+ >> martingale_shared_tactics_1
+QED
+
+Theorem super_martingale_alt :
+   !m a u.
+      super_martingale m a u <=>
+      sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !i j s. i <= j /\ s IN subsets (a i) ==>
+             (integral m (\x. u j x * indicator_fn s x) <=
+              integral m (\x. u i x * indicator_fn s x))
+Proof
+    RW_TAC std_ss [super_martingale_def]
+ >> martingale_shared_tactics_1
+ >> martingale_shared_tactics_2
+QED
+
+Theorem sub_martingale_alt :
+   !m a u.
+      sub_martingale m a u <=>
+      sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !i j s. i <= j /\ s IN subsets (a i) ==>
+             (integral m (\x. u i x * indicator_fn s x) <=
+              integral m (\x. u j x * indicator_fn s x))
+Proof
+    RW_TAC std_ss [sub_martingale_def]
+ >> martingale_shared_tactics_1
+ >> martingale_shared_tactics_2
+QED
+
+(* Remark 23.2 [1, p.276]: we can replace the sigma-algebra (a n) with any
+   INTER-stable generator (g n) of (a n) containing an exhausive sequence.
+
+   NOTE: in typical applications, it's expected to have (g n) such that
+  ‘!i j. i <= j ==> g i SUBSET g j’ and thus the exhausting sequence of (g 0)
+   is also the exhausting sequence of all (g n).
+ *)
+
+val martingale_alt_generator_shared_tactics_1 =
+    qx_genl_tac [‘m’, ‘a’, ‘u’, ‘G’]
+ >> RW_TAC std_ss [sigma_finite_filtered_measure_space, filtered_measure_space_alt,
+                   martingale_alt, sub_martingale_alt, super_martingale_alt]
+ >> EQ_TAC (* easy part first *)
+ >- (RW_TAC std_ss [] \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> rw [] \\
+     Suff ‘(G i) SUBSET subsets (sigma (m_space m) (G i))’ >- METIS_TAC [SUBSET_DEF] \\
+     REWRITE_TAC [SIGMA_SUBSET_SUBSETS])
+ >> rw [sigma_finite_alt_exhausting_sequence, exhausting_sequence_def, IN_FUNSET]
+ >- (fs [has_exhausting_sequence_def, IN_FUNSET, IN_UNIV] \\
+     Q.PAT_X_ASSUM ‘!n. ?f. P’ (MP_TAC o (Q.SPEC ‘0’)) \\
+     RW_TAC std_ss [] \\
+     Q.EXISTS_TAC ‘f’ >> rw []
+     >- (Suff ‘(G 0) SUBSET subsets (sigma (m_space m) (G 0))’
+         >- METIS_TAC [SUBSET_DEF] \\
+         REWRITE_TAC [SIGMA_SUBSET_SUBSETS]) \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘0’ >> art [])
+ (* stage work *)
+ >> FULL_SIMP_TAC std_ss [integral_def]
+ >> Know ‘!n. subsets (a n) SUBSET (measurable_sets m)’
+ >- (fs [filtration_def, sub_sigma_algebra_def])
+ >> DISCH_TAC
+ >> ‘!n s. s IN G n ==> s IN measurable_sets m’
+      by METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]
+ >> Know ‘!n s. (\x. u n x * indicator_fn s x)^+ =
+                (\x. fn_plus (u n) x * indicator_fn s x)’
+ >- (rpt GEN_TAC >> ONCE_REWRITE_TAC [mul_comm] \\
+     MATCH_MP_TAC FN_PLUS_FMUL >> rw [INDICATOR_FN_POS])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> Know ‘!n s. (\x. u n x * indicator_fn s x)^- =
+                (\x. fn_minus (u n) x * indicator_fn s x)’
+ >- (rpt GEN_TAC >> ONCE_REWRITE_TAC [mul_comm] \\
+     MATCH_MP_TAC FN_MINUS_FMUL >> rw [INDICATOR_FN_POS])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ (* simplifications by abbreviations *)
+ >> Q.ABBREV_TAC ‘A = \n s. pos_fn_integral m (\x. (u n)^+ x * indicator_fn s x)’
+ >> Q.ABBREV_TAC ‘B = \n s. pos_fn_integral m (\x. (u n)^- x * indicator_fn s x)’
+ >> FULL_SIMP_TAC std_ss []
+ >> Know ‘!n s. 0 <= A n s /\ 0 <= B n s’
+ >- (rw [Abbr ‘A’, Abbr ‘B’] \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw [] \\
+     MATCH_MP_TAC le_mul \\
+     rw [FN_PLUS_POS, FN_MINUS_POS, INDICATOR_FN_POS])
+ >> DISCH_TAC
+ >> Know ‘!n s. A n s < PosInf /\ B n s < PosInf’
+ >- (rw [Abbr ‘A’, Abbr ‘B’] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC let_trans \\
+       Q.EXISTS_TAC ‘pos_fn_integral m (fn_plus (u n))’ \\
+       reverse CONJ_TAC >- (REWRITE_TAC [GSYM lt_infty] \\
+                            METIS_TAC [integrable_def]) \\
+       MATCH_MP_TAC pos_fn_integral_mono >> rw []
+       >- (MATCH_MP_TAC le_mul >> rw [FN_PLUS_POS, INDICATOR_FN_POS]) \\
+       GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM mul_rone] \\
+       MATCH_MP_TAC le_lmul_imp >> rw [FN_PLUS_POS, INDICATOR_FN_LE_1],
+       (* goal 2 (of 2) *)
+       MATCH_MP_TAC let_trans \\
+       Q.EXISTS_TAC ‘pos_fn_integral m (fn_minus (u n))’ \\
+       reverse CONJ_TAC >- (REWRITE_TAC [GSYM lt_infty] \\
+                            METIS_TAC [integrable_def]) \\
+       MATCH_MP_TAC pos_fn_integral_mono >> rw []
+       >- (MATCH_MP_TAC le_mul >> rw [FN_MINUS_POS, INDICATOR_FN_POS]) \\
+       GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM mul_rone] \\
+       MATCH_MP_TAC le_lmul_imp >> rw [FN_MINUS_POS, INDICATOR_FN_LE_1] ])
+ >> DISCH_TAC;
+ (* end of martingale_alt_generator_shared_tactics_1 *)
+
+val martingale_alt_generator_shared_tactics_2 =
+    Q.ABBREV_TAC ‘f = \i j x. fn_plus (u i) x + fn_minus (u j) x’
+ >> Know ‘!i j s. s IN measurable_sets m ==> A i s + B j s = (f i j * m) s’
+ >- (qx_genl_tac [‘k’, ‘n’, ‘t’] \\
+     RW_TAC std_ss [Abbr ‘f’, Abbr ‘A’, Abbr ‘B’, density_measure_def] \\
+     Know ‘pos_fn_integral m (\x. (u k)^+ x * indicator_fn t x) +
+           pos_fn_integral m (\x. (u n)^- x * indicator_fn t x) =
+           pos_fn_integral m (\x. (u k)^+ x * indicator_fn t x +
+                                  (u n)^- x * indicator_fn t x)’
+     >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+         HO_MATCH_MP_TAC pos_fn_integral_add >> rw [] >| (* 4 subgoals *)
+         [ (* goal 1 (of 4) *)
+           MATCH_MP_TAC le_mul >> rw [FN_PLUS_POS, INDICATOR_FN_POS],
+           (* goal 2 (of 4) *)
+           MATCH_MP_TAC le_mul >> rw [FN_MINUS_POS, INDICATOR_FN_POS],
+           (* goal 3 (of 4) *)
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw []
+           >- (FULL_SIMP_TAC std_ss [measure_space_def]) \\
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS \\
+           FULL_SIMP_TAC std_ss [integrable_def],
+           (* goal 4 (of 4) *)
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw []
+           >- (FULL_SIMP_TAC std_ss [measure_space_def]) \\
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS \\
+           FULL_SIMP_TAC std_ss [integrable_def] ]) >> Rewr' \\
+     MATCH_MP_TAC pos_fn_integral_cong >> rw [] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       MATCH_MP_TAC le_add >> CONJ_TAC >> MATCH_MP_TAC le_mul \\
+       rw [FN_PLUS_POS, FN_MINUS_POS, INDICATOR_FN_POS],
+       (* goal 2 (of 3) *)
+       MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS] \\
+       MATCH_MP_TAC le_add >> rw [FN_PLUS_POS, FN_MINUS_POS],
+       (* goal 3 (of 3) *)
+       rw [indicator_fn_def] ])
+ >> DISCH_TAC
+ >> ‘s IN measurable_sets m’ by METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF];
+ (* end of martingale_alt_generator_shared_tactics_2 *)
+
+val martingale_alt_generator_shared_tactics_3 =
+    Know ‘!i j. measure_space (m_space m,measurable_sets m,f i j * m)’
+ >- (qx_genl_tac [‘M’, ‘N’] \\
+     MATCH_MP_TAC (REWRITE_RULE [density_def] measure_space_density) \\
+     RW_TAC std_ss [Abbr ‘f’] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD' \\
+       qexistsl_tac [‘fn_plus (u M)’, ‘fn_minus (u N)’] >> simp [] \\
+       CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+       FULL_SIMP_TAC std_ss [integrable_def] \\
+       PROVE_TAC [IN_MEASURABLE_BOREL_FN_PLUS, IN_MEASURABLE_BOREL_FN_MINUS],
+       (* goal 2 (of 2) *)
+       MATCH_MP_TAC le_add >> rw [FN_PLUS_POS, FN_MINUS_POS] ])
+ >> DISCH_TAC;
+(* end of martingale_alt_generator_shared_tactics_3 *)
+
+val martingale_alt_generator_shared_tactics_4 =
+    Suff ‘!i j n. measure_space (m_space m,subsets (sigma (m_space m) (G n)),f i j * m)’
+ >- Rewr
+ >> Q.PAT_X_ASSUM ‘i <= j’ K_TAC
+ >> Q.PAT_X_ASSUM ‘s IN subsets (sigma (m_space m) (G i))’ K_TAC
+ >> Q.PAT_X_ASSUM ‘s IN measurable_sets m’ K_TAC
+ >> rpt GEN_TAC
+ >> MATCH_MP_TAC MEASURE_SPACE_RESTRICTION
+ >> Q.EXISTS_TAC ‘measurable_sets m’ >> art []
+ >> CONJ_TAC >- PROVE_TAC [] (* sigma (G n) SUBSET measurable_sets m *)
+ >> ‘(m_space m,subsets (sigma (m_space m) (G n))) = sigma (m_space m) (G n)’
+       by METIS_TAC [SPACE, SPACE_SIGMA]
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> art [];
+ (* end of martingale_alt_generator_shared_tactics_4 *)
+
+Theorem martingale_alt_generator :
+   !m a u g. (!n. a n = sigma (m_space m) (g n)) /\
+             (!n. has_exhausting_sequence (m_space m,g n)) /\
+             (!n s. s IN (g n) ==> measure m s < PosInf) /\
+             (!n s t. s IN (g n) /\ t IN (g n) ==> s INTER t IN (g n)) ==>
+     (martingale m a u <=>
+      filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !i j s. i <= j /\ s IN (g i) ==>
+             (integral m (\x. u i x * indicator_fn s x) =
+              integral m (\x. u j x * indicator_fn s x)))
+Proof
+    martingale_alt_generator_shared_tactics_1
+ (* stage work on transforming the goal into equivalence of two measures *)
+ >> Know ‘!i j s. (A i s - B i s = A j s - B j s <=>
+                   A i s + B j s = A j s + B i s)’
+ >- (qx_genl_tac [‘M’, ‘N’, ‘t’] \\
+    ‘A M t <> NegInf /\ A N t <> NegInf /\ B M t <> NegInf /\ B N t <> NegInf’
+       by METIS_TAC [pos_not_neginf] \\
+    ‘A M t <> PosInf /\ A N t <> PosInf /\ B M t <> PosInf /\ B N t <> PosInf’
+       by METIS_TAC [lt_infty] \\
+    ‘?r1. A M t = Normal r1’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r2. A N t = Normal r2’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r3. B M t = Normal r3’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r4. B N t = Normal r4’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_add_def, extreal_sub_def, extreal_le_eq] >> REAL_ARITH_TAC)
+ >> DISCH_THEN (FULL_SIMP_TAC pure_ss o wrap)
+ (* applying density_measure_def *)
+ >> martingale_alt_generator_shared_tactics_2
+ (* final modification of the goal *)
+ >> ‘A i s + B j s = A j s + B i s <=> (f i j * m) s = (f j i * m) s’
+      by METIS_TAC [] >> POP_ORW
+ (* final modification of the major assumption *)
+ >> Know ‘!i j s. i <= j /\ s IN G i ==> (f i j * m) s = (f j i * m) s’
+ >- (qx_genl_tac [‘k’, ‘n’, ‘t’] >> rpt STRIP_TAC \\
+    ‘t IN measurable_sets m’ by PROVE_TAC [] \\
+     METIS_TAC [])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘!i j s. i <= j /\ s IN G i ==> A i s + B j s = A j s + B i s’ K_TAC
+ (* applying measure_space_density, density_def *)
+ >> martingale_alt_generator_shared_tactics_3
+ (* applying UNIQUENESS_OF_MEASURE *)
+ >> irule UNIQUENESS_OF_MEASURE
+ >> qexistsl_tac [‘m_space m’, ‘G i’] >> simp []
+ >> CONJ_TAC (* f i j * m = f j i * m *)
+ >- (rpt STRIP_TAC >> FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> Know ‘!n. subset_class (m_space m) (G n)’
+ >- (rw [subset_class_def] \\
+    ‘x IN measurable_sets m’ by METIS_TAC [SUBSET_DEF] \\
+     FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
+                           subset_class_def, space_def, subsets_def])
+ >> DISCH_TAC
+ (* easy goals first *)
+ >> ASM_REWRITE_TAC [CONJ_ASSOC]
+ >> reverse CONJ_TAC (* sigma_finite of G *)
+ >- (Q.PAT_X_ASSUM ‘!n. has_exhausting_sequence (m_space m,G n)’ (MP_TAC o (Q.SPEC ‘i’)) \\
+     rw [sigma_finite_def, has_exhausting_sequence_def, IN_FUNSET] \\
+     rename1 ‘!x. g x IN G i’ >> Q.EXISTS_TAC ‘g’ >> rw [] \\
+    ‘g n IN measurable_sets m’ by METIS_TAC [SUBSET_DEF] \\
+    ‘(f i j * m) (g n) = A i (g n) + B j (g n)’ by METIS_TAC [] >> POP_ORW \\
+     METIS_TAC [add_not_infty, lt_infty])
+ (* final: applying MEASURE_SPACE_RESTRICTION *)
+ >> martingale_alt_generator_shared_tactics_4
+QED
+
+val martingale_alt_generator_shared_tactics_5 =
+    Know ‘!i j s. (A i s - B i s <= A j s - B j s <=>
+                   A i s + B j s <= A j s + B i s)’
+ >- (qx_genl_tac [‘M’, ‘N’, ‘t’] \\
+    ‘A M t <> NegInf /\ A N t <> NegInf /\ B M t <> NegInf /\ B N t <> NegInf’
+       by METIS_TAC [pos_not_neginf] \\
+    ‘A M t <> PosInf /\ A N t <> PosInf /\ B M t <> PosInf /\ B N t <> PosInf’
+       by METIS_TAC [lt_infty] \\
+    ‘?r1. A M t = Normal r1’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r2. A N t = Normal r2’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r3. B M t = Normal r3’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r4. B N t = Normal r4’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     rw [extreal_add_def, extreal_sub_def, extreal_le_eq] >> REAL_ARITH_TAC)
+ >> DISCH_THEN (FULL_SIMP_TAC pure_ss o wrap);
+ (* end of martingale_alt_generator_shared_tactics_5 *)
+
+(* For sub- and super-martingales, we need, in addition, that (g n) is a semi-ring.
+
+   This theorem (and the next one) relies on measureTheory.SEMIRING_SIGMA_MONOTONE
+ *)
+Theorem sub_martingale_alt_generator :
+   !m a u g. (!n. a n = sigma (m_space m) (g n)) /\
+             (!n. has_exhausting_sequence (m_space m,g n)) /\
+             (!n s. s IN (g n) ==> measure m s < PosInf) /\
+             (!n. semiring (m_space m,g n)) ==>
+     (sub_martingale m a u <=>
+      filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !i j s. i <= j /\ s IN (g i) ==>
+             (integral m (\x. u i x * indicator_fn s x) <=
+              integral m (\x. u j x * indicator_fn s x)))
+Proof
+    martingale_alt_generator_shared_tactics_1
+ (* stage work on transforming the goal into equivalence of two measures *)
+ >> martingale_alt_generator_shared_tactics_5
+ (* applying density_measure_def *)
+ >> martingale_alt_generator_shared_tactics_2
+ (* final modification of the goal *)
+ >> ‘A i s + B j s <= A j s + B i s <=> (f i j * m) s <= (f j i * m) s’
+      by METIS_TAC [] >> POP_ORW
+ (* final modification of the major assumption *)
+ >> Know ‘!i j s. i <= j /\ s IN G i ==> (f i j * m) s <= (f j i * m) s’
+ >- (qx_genl_tac [‘M’, ‘N’, ‘t’] >> rpt STRIP_TAC \\
+    ‘t IN measurable_sets m’ by PROVE_TAC [] \\
+     METIS_TAC [])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘!i j s. i <= j /\ s IN G i ==> A i s + B j s <= _’ K_TAC
+ (* applying measure_space_density, density_def *)
+ >> martingale_alt_generator_shared_tactics_3
+ (* applying SEMIRING_SIGMA_MONOTONE *)
+ >> irule SEMIRING_SIGMA_MONOTONE
+ >> qexistsl_tac [‘m_space m’, ‘G i’] >> simp []
+ >> CONJ_TAC (* (f j i * m) s < PosInf *)
+ >- (Q.X_GEN_TAC ‘t’ >> DISCH_TAC \\
+    ‘t IN measurable_sets m’ by METIS_TAC [SUBSET_DEF] \\
+    ‘(f j i * m) t = A j t + B i t’ by METIS_TAC [] >> POP_ORW \\
+     METIS_TAC [add_not_infty, lt_infty])
+ (* applying MEASURE_SPACE_RESTRICTION *)
+ >> martingale_alt_generator_shared_tactics_4
+ (* subset_class *)
+ >> Q.PAT_X_ASSUM ‘!n. semiring (m_space m,G n)’ (MP_TAC o (Q.SPEC ‘n’))
+ >> rw [semiring_def]
+QED
+
+Theorem super_martingale_alt_generator :
+   !m a u g. (!n. a n = sigma (m_space m) (g n)) /\
+             (!n. has_exhausting_sequence (m_space m,g n)) /\
+             (!n s. s IN (g n) ==> measure m s < PosInf) /\
+             (!n. semiring (m_space m,g n)) ==>
+     (super_martingale m a u <=>
+      filtered_measure_space m a /\ (!n. integrable m (u n)) /\
+      !i j s. i <= j /\ s IN (g i) ==>
+             (integral m (\x. u j x * indicator_fn s x) <=
+              integral m (\x. u i x * indicator_fn s x)))
+Proof
+    martingale_alt_generator_shared_tactics_1
+ (* stage work on transforming the goal into equivalence of two measures *)
+ >> martingale_alt_generator_shared_tactics_5
+ (* applying density_measure_def *)
+ >> martingale_alt_generator_shared_tactics_2
+ (* final modification of the goal *)
+ >> ‘A j s + B i s <= A i s + B j s <=> (f j i * m) s <= (f i j * m) s’
+      by METIS_TAC [] >> POP_ORW
+ (* final modification of the major assumption *)
+ >> Know ‘!i j s. i <= j /\ s IN G i ==> (f j i * m) s <= (f i j * m) s’
+ >- (qx_genl_tac [‘M’, ‘N’, ‘t’] >> rpt STRIP_TAC \\
+    ‘t IN measurable_sets m’ by PROVE_TAC [] \\
+     METIS_TAC [])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘!i j s. i <= j /\ s IN G i ==> A j s + B i s <= _’ K_TAC
+ (* applying measure_space_density, density_def *)
+ >> martingale_alt_generator_shared_tactics_3
+ (* applying SEMIRING_SIGMA_MONOTONE *)
+ >> irule SEMIRING_SIGMA_MONOTONE
+ >> qexistsl_tac [‘m_space m’, ‘G i’] >> simp []
+ >> CONJ_TAC (* (f i j * m) s < PosInf *)
+ >- (Q.X_GEN_TAC ‘t’ >> DISCH_TAC \\
+    ‘t IN measurable_sets m’ by METIS_TAC [SUBSET_DEF] \\
+    ‘(f i j * m) t = A i t + B j t’ by METIS_TAC [] >> POP_ORW \\
+     METIS_TAC [add_not_infty, lt_infty])
+ (* applying MEASURE_SPACE_RESTRICTION *)
+ >> martingale_alt_generator_shared_tactics_4
+ (* subset_class *)
+ >> Q.PAT_X_ASSUM ‘!n. semiring (m_space m,G n)’ (MP_TAC o (Q.SPEC ‘n’))
+ >> rw [semiring_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
-(*  General version of martingales with poset indexes (Chapter 19 of [1])    *)
+(*  General version of martingales with poset indexes (Chapter 25 of [1])    *)
 (* ------------------------------------------------------------------------- *)
 
-val POSET_NUM_LE = store_thm
-  ("POSET_NUM_LE", ``poset (univ(:num),$<=)``,
+Theorem POSET_NUM_LE :
+    poset (univ(:num),$<=)
+Proof
     RW_TAC std_ss [poset_def]
  >- (Q.EXISTS_TAC `0` >> REWRITE_TAC [GSYM IN_APP, IN_UNIV])
  >- (MATCH_MP_TAC LESS_EQUAL_ANTISYM >> art [])
  >> MATCH_MP_TAC LESS_EQ_TRANS
- >> Q.EXISTS_TAC `y` >> art []);
+ >> Q.EXISTS_TAC `y` >> art []
+QED
 
 (* below J is an index set, R is a partial order on J *)
-val general_filtration_def = Define
-   `general_filtration (J,R) A a <=>
-      poset (J,R) /\ (!n. n IN J ==> sub_sigma_algebra (a n) A) /\
-      (!i j. i IN J /\ j IN J /\ R i j ==> subsets (a i) SUBSET subsets (a j))`;
+Definition general_filtration_def :
+   general_filtration (J,R) A a =
+     (poset (J,R) /\ (!n. n IN J ==> sub_sigma_algebra (a n) A) /\
+      (!i j. i IN J /\ j IN J /\ R i j ==> subsets (a i) SUBSET subsets (a j)))
+End
 
 val _ = overload_on ("filtration", “general_filtration”);
 
-Theorem filtration_alt :
+Theorem filtration_alt_general : (* was: filtration_alt *)
     !A a. filtration A a = general_filtration (univ(:num),$<=) A a
 Proof
     RW_TAC std_ss [filtration_def, general_filtration_def, POSET_NUM_LE, IN_UNIV]
@@ -4747,12 +6244,13 @@ End
 
 val _ = overload_on ("filtered_measure_space", “general_filtered_measure_space”);
 
-Theorem general_filtered_measure_space_alt :
+(* was: general_filtered_measure_space_alt *)
+Theorem filtered_measure_space_alt_general :
     !sp sts m a. filtered_measure_space (sp,sts,m) a <=>
                  general_filtered_measure_space (univ(:num),$<=) (sp,sts,m) a
 Proof
     RW_TAC std_ss [filtered_measure_space_def, general_filtered_measure_space_def,
-                   filtration_alt, POSET_NUM_LE, IN_UNIV]
+                   filtration_alt_general, POSET_NUM_LE, IN_UNIV]
 QED
 
 Definition sigma_finite_general_filtered_measure_space_def :
@@ -4764,16 +6262,20 @@ End
 val _ = overload_on ("sigma_finite_filtered_measure_space",
                      “sigma_finite_general_filtered_measure_space”);
 
-Theorem sigma_finite_filtered_measure_space_alt :
+(* was: sigma_finite_filtered_measure_space_alt *)
+Theorem sigma_finite_filtered_measure_space_alt_general :
     !sp sts m a. sigma_finite_filtered_measure_space (sp,sts,m) a <=>
                  sigma_finite_general_filtered_measure_space (univ(:num),$<=) (sp,sts,m) a
 Proof
-    RW_TAC std_ss [sigma_finite_filtered_measure_space_alt,
-                   sigma_finite_general_filtered_measure_space_def,
-                   general_filtered_measure_space_alt, IN_UNIV]
+    rw [sigma_finite_filtered_measure_space_alt_all, GSYM CONJ_ASSOC,
+        sigma_finite_general_filtered_measure_space_def,
+        GSYM filtered_measure_space_alt_general, filtered_measure_space_def]
 QED
 
-(* `general_martingale m a u (univ(:num),$<=) = martingale m a u` *)
+(* `general_martingale m a u (univ(:num),$<=) = martingale m a u`
+
+   This is Definition 25.3 [1, p.301].
+ *)
 Definition general_martingale_def :
    general_martingale (J,R) m a u =
      (sigma_finite_general_filtered_measure_space (J,R) m a /\

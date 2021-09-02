@@ -9,6 +9,9 @@ sig
    type simpfrag = simpfrag.simpfrag
    type rcd_fieldinfo = {ty: hol_type, accessor: term, fupd : term}
 
+   val mk_recordtype_constructor : string -> string
+   val mk_recordtype_fieldsel : {tyname:string,fieldname:string} -> string
+   val mk_recordtype_fieldfupd : {tyname:string,fieldname:string} -> string
 
    datatype shared_thm = ORIG of thm
                        | COPY of (string * string) * thm

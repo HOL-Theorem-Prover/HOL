@@ -65,14 +65,10 @@ Proof
     Cases_on `A` >> EVAL_TAC >> PROVE_TAC []
 QED
 
-val symbolic_semi_automaton_S  = DB.fetch "-" "symbolic_semi_automaton_S";
-val symbolic_semi_automaton_S0 = DB.fetch "-" "symbolic_semi_automaton_S0";
-val symbolic_semi_automaton_R  = DB.fetch "-" "symbolic_semi_automaton_R";
-val symbolic_semi_automaton_11 = DB.fetch "-" "symbolic_semi_automaton_11";
-
-Theorem symbolic_semi_automaton_REWRITES = LIST_CONJ
-    [symbolic_semi_automaton_S, symbolic_semi_automaton_S0,
-     symbolic_semi_automaton_R, symbolic_semi_automaton_11];
+Theorem symbolic_semi_automaton_REWRITES =
+        LIST_CONJ
+        (TypeBase.one_one_of “:α symbolic_semi_automaton” ::
+         TypeBase.accessors_of “:α symbolic_semi_automaton”)
 
 (*=============================================================================
 = Semantics

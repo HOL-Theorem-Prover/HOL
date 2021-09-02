@@ -3,7 +3,8 @@ struct
 
 open internal_functions
 
-datatype pretoken = DEFN of string | RULE of string | EOF
+datatype pretoken =
+         DEFN of string | DEFN_EXTEND of string | RULE of string | EOF
 
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
@@ -152,7 +153,7 @@ in
   Substring.full (recurse [] ss0)
 end
 
-fun to_token pt =
+fun to_token env pt =
     case pt of
       DEFN s => let
         open Substring
@@ -165,6 +166,20 @@ fun to_token pt =
       in
         HM_defn(string varname, extract_normal_quotation rest)
       end
+    | DEFN_EXTEND s => let
+        open Substring
+        val ss = convert_newlines (full s)
+        fun endp c = c <> #"+" andalso not (Char.isSpace c)
+        val (varname, rest) = splitl endp ss
+        val rest = dropl Char.isSpace rest
+        val rest = triml 2 rest (* drop += *)
+        val rest = dropl Char.isSpace rest
+        val key = string varname
+        val old = case Binarymap.peek(env,key) of NONE => []
+                                                | SOME s => s @ [LIT " "]
+     in
+       HM_defn(key, old @ extract_normal_quotation rest)
+     end
     | RULE s => let
         open Substring
         val ss = convert_newlines (full s)

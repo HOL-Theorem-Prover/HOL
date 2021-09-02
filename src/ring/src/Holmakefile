@@ -1,7 +1,6 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+INCLUDES = ../../sort
 
-all: $(TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
@@ -23,4 +22,11 @@ endif
 selftest.exe: selftest.uo numRingLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe ring-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: ring-selftest.log
+
+ring-selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+endif

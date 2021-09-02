@@ -543,16 +543,6 @@ val REAL_LT_MIN = store_thm("REAL_LT_MIN",
   RW_TAC boolSimps.bool_ss [min_def] THENL [PROVE_TAC[REAL_LTE_TRANS],
   RULE_ASSUM_TAC(REWRITE_RULE[REAL_NOT_LE]) THEN PROVE_TAC[REAL_LT_TRANS]]);
 
-val REAL_LE_RMUL1 = store_thm("REAL_LE_RMUL1",
-  ``!x y z. x <= y /\ &0 <= z ==> x * z <= y * z``,
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
-  REWRITE_TAC[GSYM REAL_SUB_RDISTRIB, REAL_SUB_RZERO, REAL_LE_MUL]);
-
-val REAL_LE_LMUL1 = store_thm("REAL_LE_LMUL1",
-  ``!x y z. &0 <= x /\ y <= z ==> x * y <= x * z``,
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
-  REWRITE_TAC[GSYM REAL_SUB_LDISTRIB, REAL_SUB_RZERO, REAL_LE_MUL]);
-
 val INTEGRAL_LE = store_thm("INTEGRAL_LE",
   ``!f g a b i j.
         a <= b /\ integrable(a,b) f /\ integrable(a,b) g /\
@@ -1324,64 +1314,6 @@ val DINT_FINITE_SPIKE = store_thm("DINT_FINITE_SPIKE",
 (* ------------------------------------------------------------------------- *)
 (* Cauchy-type integrability criterion.                                      *)
 (* ------------------------------------------------------------------------- *)
-
-val REAL_POW_LBOUND = store_thm("REAL_POW_LBOUND",
-  ``!x n. &0 <= x ==> &1 + &n * x <= (&1 + x) pow n``,
-  GEN_TAC THEN SIMP_TAC arith_ss[RIGHT_FORALL_IMP_THM] THEN
-  DISCH_TAC THEN INDUCT_TAC THEN
-  REWRITE_TAC[pow, REAL_MUL_LZERO, REAL_ADD_RID, REAL_LE_REFL] THEN
-  REWRITE_TAC[GSYM REAL_OF_NUM_SUC] THEN
-  MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``(&1 + x) * (&1 + &n * x)`` THEN
-  ASM_SIMP_TAC arith_ss[REAL_LE_MUL, REAL_POS, REAL_ARITH
-   ``&1 + (n + &1) * x <= (&1 + x) * (&1 + n * x) <=> &0 <= n * x * x``] THEN
-  REWRITE_TAC[SUC_ONE_ADD, REAL_POW_ADD, POW_1] THEN
-  ASM_SIMP_TAC arith_ss[REAL_LE_LMUL1, REAL_ARITH ``&0 <= x ==> &0 <= &1 + x``]);
-
-val REAL_ARCH_POW = store_thm("REAL_ARCH_POW",
-  ``!x y. &1 < x ==> ?n. y < x pow n``,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPEC ``x - &1`` REAL_ARCH) THEN ASM_REWRITE_TAC[REAL_SUB_LT] THEN
-  DISCH_THEN(MP_TAC o SPEC ``y:real``) THEN HO_MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC ``n:num`` THEN DISCH_TAC THEN MATCH_MP_TAC REAL_LTE_TRANS THEN
-  EXISTS_TAC ``&1 + &n * (x - &1)`` THEN
-  ASM_SIMP_TAC arith_ss[REAL_ARITH ``x < y ==> x < &1 + y``] THEN
-  ASM_MESON_TAC[REAL_POW_LBOUND, REAL_SUB_ADD2, REAL_ARITH
-    ``&1 < x ==> &0 <= x - &1``]);
-
-val REAL_ARCH_POW2 = store_thm("REAL_ARCH_POW2",
-  ``!x. ?n. x < &2 pow n``,
-  SIMP_TAC arith_ss[REAL_ARCH_POW, REAL_LT]);
-
-val REAL_POW_LE_1 = store_thm(
-  "REAL_POW_LE_1",
-  “!(n:num) (x:real). (&1:real) <= x ==> (&1:real) <= x pow n”,
-  INDUCT_TAC THENL
-   [REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[pow, REAL_LE_REFL],
-    GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [pow] THEN
-    GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_LID] [] THEN
-    MATCH_MP_TAC REAL_LE_MUL2 THEN ASM_REWRITE_TAC[REAL_LE_01] THEN
-    FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);
-
-val REAL_POW_MONO = store_thm (
-  "REAL_POW_MONO",
-  “!(m:num) n x. &1 <= x /\ m <= n ==> x pow m <= x pow n”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[LESS_EQ_EXISTS] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  DISCH_THEN(X_CHOOSE_THEN “d:num” SUBST1_TAC) THEN
-  REWRITE_TAC[REAL_POW_ADD] THEN
-  GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID] [] THEN
-  MATCH_MP_TAC REAL_LE_LMUL_IMP THEN CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “&1” THEN
-    RW_TAC arith_ss [REAL_OF_NUM_LE] THEN
-    MATCH_MP_TAC REAL_POW_LE_1 THEN ASM_REWRITE_TAC[],
-    MATCH_MP_TAC REAL_POW_LE_1 THEN ASM_REWRITE_TAC[]]);
-
-val REAL_LE_INV2 = store_thm ("REAL_LE_INV2",
-  “!x y. (&0:real) < x /\ x <= y ==> inv(y) <= inv(x)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
-  ASM_CASES_TAC “x:real = y” THEN ASM_REWRITE_TAC[] THEN
-  STRIP_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_INV THEN
-  ASM_REWRITE_TAC[]);
 
 val GAUGE_MIN_FINITE = store_thm("GAUGE_MIN_FINITE",
     ``!s gs n. (!m:num. m <= n ==> gauge s (gs m))

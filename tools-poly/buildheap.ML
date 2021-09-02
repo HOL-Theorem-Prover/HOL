@@ -15,30 +15,29 @@ val _ = use "execompile.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate13 z
+  fun makeUpdateT z = makeUpdate14 z
 in
 fun updateT z = let
-  fun from all_forced base_state checkfors debug defaultout exe extra_data
-           forced_objs
-           help multithread output quietp repl =
-    {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
-     debug = debug,
+  fun from all_forced base_state checkerr checkfors debug defaultout exe
+           extra_data forced_objs help multithread output quietp repl =
+    {all_forced = all_forced, base_state = base_state,
+     checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, repl = repl}
   fun from' repl quietp output multithread help forced_objs extra_data exe
-            defaultout debug checkfors base_state all_forced =
+            defaultout debug checkfors checkerr base_state all_forced =
     {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
-     debug = debug,
+     checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, repl = repl}
-  fun to f {all_forced, base_state, checkfors, debug, defaultout, exe,
+  fun to f {all_forced, base_state, checkerr, checkfors, debug, defaultout, exe,
             extra_data,
             forced_objs, help, multithread, output, quietp, repl} =
-    f all_forced base_state checkfors debug defaultout exe extra_data
+    f all_forced base_state checkerr checkfors debug defaultout exe extra_data
       forced_objs help multithread
       output quietp repl
 in
@@ -57,6 +56,7 @@ datatype option_record = OR of {
   all_forced : bool,
   base_state : string option,
   checkfors : string list,
+  checkerr : string option,
   debug : bool,
   defaultout : string option,
   exe : string option,
@@ -107,6 +107,8 @@ local
             (fn (OR r) => OR (updateT r (U #multithread (SOME i)) $$)))
 in
 val cline_opts = [
+  {help = "error if checked for file is absent", long = ["checkerr"],
+   short = "e", desc = setStringOpt "message" #checkerr},
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
    short = "c", desc = addString "filename"},
   {help = "provide debug output & preserve temp files",
@@ -138,6 +140,7 @@ val cline_opts = [
 ]
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
+                        checkerr = NONE,
                         checkfors = [],
                         debug = false,
                         defaultout = NONE,
@@ -381,7 +384,10 @@ in
                            keep_temp_files = debug}
             | _ => ();
         List.app (fn s => if OS.FileSys.access(s, [OS.FileSys.A_READ]) then ()
-                          else die ("Couldn't find required output file: "^s))
+                          else die ("Couldn't find required output file: "^s ^
+                                    (case #checkerr options of
+                                         NONE => ""
+                                       | SOME s => "\n" ^ s)))
                  (#checkfors options);
         diag "Buildheap done; about to exit successfully";
         OS.Process.exit OS.Process.success

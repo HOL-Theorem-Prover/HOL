@@ -298,4 +298,12 @@ Proof
   tactic
 QED
 
+Datatype:
+  peg = <| start : ('a,'b,'c,'e) pegsym ;
+           anyEOF : 'e ;
+           tokFALSE : 'e ; tokEOF : 'e;
+           notFAIL : 'e;
+           rules : 'b inf |-> ('a,'b,'c,'e) pegsym |>
+End
+
 val _ = export_theory();

@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlLexer smlParser smlExecute smlRedirect smlInfix
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
-  psMinimize tttSetup tttToken tttLearn tttSearch
+  psMinimize tttSetup tttToken tttLearn tttSearch tttTrain
 
 val ERR = mk_HOL_ERR "tacticToe"
 
@@ -77,11 +77,35 @@ fun select_tacfea tacdata gfea =
   end
 
 (* -------------------------------------------------------------------------
+   Import holyhammer if metis is available. We do not want the dependencies
+   to be loaded that is why the code is executed at run time.
+   ------------------------------------------------------------------------- *)
+
+val hh_use = ref false
+val hh_time = ref 30
+val hh_lemmas = ref NONE
+val atp_dir = ref (tactictoe_dir ^ "/provers")
+
+fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
+
+fun import_hh () =
+  let val _ =
+     metis_avail () andalso
+     quse_string ("load \"holyHammer\"; " ^
+       "holyHammer.set_timeout " ^ its (!hh_time) ^ ";" ^
+       "tacticToe.hh_lemmas := Option.SOME (holyHammer.main_hh_lemmas);")
+  in
+    !hh_lemmas
+  end
+
+(* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
 fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   let
+    val _ = if not (!ttt_metis_flag)
+            then prioritize_stacl := [] else ()
     val _ = hidef QUse.use infix_file
     (* preselection *)
     val _ = print_endline "preselection"
@@ -111,6 +135,14 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     val atyd = dnew String.compare (map_assoc extract_atyl stacl_filtered)
     val thm_cache = ref (dempty goal_compare)
     val tac_cache = ref (dempty goal_compare)
+    (* holyhammer if available *)
+    val hh_cache = ref (dempty goal_compare)
+    val hho = if !hh_use then import_hh () else NONE
+    fun predhh g =
+      dfind g (!hh_cache) handle NotFound =>
+      let val r = (valOf hho) (!atp_dir) thmdata g in
+         hh_cache := dadd g r (!hh_cache); r
+      end
     fun predthml g =
       dfind g (!thm_cache) handle NotFound =>
       let
@@ -123,8 +155,14 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     fun predarg stac aty g = case aty of
         Athml =>
         let val thml = predthml g in
-          if stac = metis_stac
-          then map Sthml (mk_batch_full (!ttt_metis_radius) thml)
+          if stac = metis_stac andalso (!ttt_metis_flag)
+          then
+            if isSome hho then
+              case predhh g of
+                NONE => map Sthml [first_n (!ttt_metis_radius) thml]
+              | SOME lemmas => map Sthml [lemmas]
+            else
+              map Sthml [first_n (!ttt_metis_radius) thml]
           else map Sthml (mk_batch_full 1 thml)
         end
       | Aterm => map Sterm (pred_svar 8 g)
@@ -135,14 +173,16 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
         val stacl1 = tacknn (tacsymweight,tacfea_filtered)
           (!ttt_presel_radius) gfea
         val stacl2 = mk_sameorder_set String.compare (map fst pstacl @ stacl1)
-        val stacl3 = map_assoc (fn x => dfind x atyd) stacl2
+        val stacl3 = map Stac stacl2
       in
         tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
   in
     {predtac = predtac, predarg = predarg,
-     parsetoken = parsetoken,
-     vnno = vnno, pnno = pnno, anno = anno}
+     atyd = atyd, parsetoken = parsetoken,
+     vnno = Option.map add_mask_val vnno,
+     pnno = Option.map add_mask_pol pnno,
+     anno = Option.map add_mask_arg anno}
   end
 
 fun main_tactictoe (thmdata,tacdata) nnol goal =
@@ -157,9 +197,9 @@ fun main_tactictoe (thmdata,tacdata) nnol goal =
 fun read_status status = case status of
    ProofSaturated =>
    (print_endline "saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
- | ProofTimeout   =>
+ | ProofTimeout =>
    (print_endline "timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
- | Proof s        =>
+ | Proof s =>
    (print_endline ("  " ^ s);
     (SOME s, hidef (tactic_of_sml (!ttt_search_time)) s))
 
@@ -174,7 +214,9 @@ fun clean_ttt_tacdata_cache () =
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
-fun tactictoe_aux goal =
+val searchtree_glob = ref NONE
+
+fun tactictoe_aux vnno goal =
   if not (has_boolty_goal goal)
   then raise ERR "tactictoe" "type bool expected"
   else
@@ -187,17 +229,41 @@ fun tactictoe_aux goal =
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val (proofstatus,_) = hidef
-      (main_tactictoe (thmdata,tacdata) (NONE,NONE,NONE)) goal
+    val (proofstatus,tree) = hidef
+      (main_tactictoe (thmdata,tacdata) (vnno,NONE,NONE)) goal
+    val _ = searchtree_glob := SOME tree
     val (staco,tac) = read_status proofstatus
   in
     tac
   end
 
-fun ttt goal = (tactictoe_aux goal) goal
+fun ttt goal = (tactictoe_aux NONE goal) goal
 
 fun tactictoe term =
-  let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
+  let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux NONE goal) end
+
+(* -------------------------------------------------------------------------
+   TNN-based functions
+   ------------------------------------------------------------------------- *)
+
+fun ttt_tnn tnn goal = (tactictoe_aux (SOME tnn) goal) goal
+
+fun tactictoe_tnn tnn term =
+  let val goal = ([],term) in
+    TAC_PROOF (goal, tactictoe_aux (SOME tnn) goal)
+  end
+
+val confidence_tnn = eval_goal
+
+(* -------------------------------------------------------------------------
+   Proof suggestion
+   ------------------------------------------------------------------------- *)
+
+fun suggest () =
+  let val s = suggest_proof (valOf (!searchtree_glob)) in
+    print_endline s;
+    hidef (tactic_of_sml (!ttt_search_time)) s
+  end
 
 
 end (* struct *)

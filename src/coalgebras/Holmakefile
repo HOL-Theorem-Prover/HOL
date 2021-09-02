@@ -1,3 +1,5 @@
+INCLUDES = ../pred_set/src/more_theories
+
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 

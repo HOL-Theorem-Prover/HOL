@@ -10,7 +10,7 @@ structure tttTrain :> tttTrain =
 struct
 
 open HolKernel boolLib Abbrev aiLib mlNeuralNetwork smlLexer smlParser
-  mlTacticData mlTreeNeuralNetwork tttToken
+  mlTacticData mlTreeNeuralNetwork mlThmData tttToken
 
 val ERR = mk_HOL_ERR "tttTrain"
 
@@ -18,35 +18,29 @@ val ERR = mk_HOL_ERR "tttTrain"
    Mask unknown operators
    ------------------------------------------------------------------------- *)
 
-fun mask_unknown (tnn,dim) tm =
-  let
-    val (oper,argl) = strip_comb tm
-  in
+val mask_var = mk_var ("tactictoe_mask",alpha)
+
+fun mask_unknown tnn tm =
+  let val (oper,argl) = strip_comb tm in
     if dmem oper tnn
-    then (list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
-          handle HOL_ERR _ => raise ERR "mask_unknown" (term_to_string tm))
-    else mk_embedding_var (Vector.fromList
-      (List.tabulate (dim,fn _ => 0.0)), alpha)
+    then list_mk_comb (oper, map (mask_unknown tnn) argl)
+    else mask_var
   end
+
+val mask_unknown_val = mask_unknown
+val mask_unknown_pol = mask_unknown
+val mask_unknown_arg = mask_unknown
 
 val vhead = mk_var ("head_val", rpt_fun_type 2 alpha)
 val phead = mk_var ("head_pol", rpt_fun_type 2 alpha)
 val ahead = mk_var ("head_arg", rpt_fun_type 2 alpha)
 
-fun mask_unknown_val tnn tm =
-  let val dim = dimin_nn (dfind vhead tnn) in
-    mask_unknown (tnn,dim) tm
-  end
+fun add_mask dim tnn =
+  dadd mask_var (random_nn (idactiv,didactiv) [0,dim]) tnn
 
-fun mask_unknown_pol tnn tm =
-  let val dim = dimin_nn (dfind phead tnn) in
-    mask_unknown (tnn,dim) tm
-  end
-
-fun mask_unknown_arg tnn tm =
-  let val dim = dimin_nn (dfind ahead tnn) in
-    mask_unknown (tnn,dim) tm
-  end
+fun add_mask_val tnn = add_mask (dimin_nn (dfind vhead tnn)) tnn
+fun add_mask_pol tnn = add_mask (dimin_nn (dfind phead tnn)) tnn
+fun add_mask_arg tnn = add_mask (dimin_nn (dfind ahead tnn)) tnn
 
 (* -------------------------------------------------------------------------
    Convert a goal to a neural network term
@@ -145,17 +139,29 @@ fun nntm_of_statepol (g,stac) =
 
 val gstacarg_cat = mk_var ("gstacarg_cat", rpt_fun_type 3 alpha);
 
-fun thm_of_thmid s =
-  snd (valOf (smlExecute.thm_of_sml (mlThmData.dbfetch_of_thmid s)))
-  handle Option => raise ERR "thm_of_thmid" ""
 
+(* todo: get rid of the cache and use the preparsed theorems *)
+val thm_cache = ref (dempty String.compare)
+
+fun thm_of_name_cached x =
+  dfind x (!thm_cache) handle NotFound =>
+  let val r = thm_of_name x in thm_cache := dadd x r (!thm_cache); r end
+
+(* todo: lookup a dictionary of preparsed theorems necessary to speed up
+   looking up the namespace *)
 fun nntm_of_arg arg = case arg of
-    Sthml [s] => nntm_of_goal (dest_thm (thm_of_thmid s))
+    Sthml [s] => ((nntm_of_goal o dest_thm o snd o valOf o
+      thm_of_name_cached) s
+      handle Option => raise ERR "nntm_of_arg" "option")
   | _ => raise ERR "nntm_of_arg" "not supported"
 
 fun nntm_of_statearg ((g,stac),arg) =
   mk_comb (ahead,
     mk_binop gstacarg_cat (nntm_of_gstac (g,stac), nntm_of_arg arg))
+
+(* ignores stac for now *)
+fun nntm_of_statearg ((g,stac),arg) =
+  mk_comb (ahead, mk_binop gstacarg_cat (nntm_of_goal g, nntm_of_arg arg))
 
 (* ------------------------------------------------------------------------
    Training
@@ -167,7 +173,8 @@ fun train_fixed pct exl =
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,8) x)) operl
+    val operset = mk_fast_set (cpl_compare Term.compare Int.compare) operl
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,8) x)) operset
     val randtnn = random_tnn operdiml
     val schedule =
       [{ncore = 4, verbose = true,

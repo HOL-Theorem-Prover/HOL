@@ -1,3 +1,5 @@
+INCLUDES = ../../src/string
+
 UNITTESTS = reflectOnFailure.uo necec2010.uo
 
 .PHONY: all

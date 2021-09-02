@@ -40,7 +40,11 @@ fun derive_compset_distincts ty =
     CONJ th (GSYM th)
   end
 
-val peg_rules_t = prim_mk_const{Thy = "peg", Name = "peg_rules"}
+val peg_rules_t = prim_mk_const{
+      Thy = "peg",
+      Name = TypeBasePure.mk_recordtype_fieldsel
+               {tyname ="peg", fieldname = "rules"}
+    }
 
 fun strip_insert t = let
   open pred_setSyntax

@@ -8,14 +8,17 @@ open metisLib arithmeticTheory pred_setTheory listTheory combinTheory
      pairTheory realTheory realLib jrhUtils realSimps numTheory
      simpLib seqTheory whileTheory real_sigmaTheory transcTheory limTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory real_measureTheory
-     real_borelTheory;
+open hurdUtils iterateTheory util_probTheory sigma_algebraTheory
+     real_measureTheory real_borelTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "lebesgue"                                      *)
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "real_lebesgue";
+
+Overload indicator_fn[local] = “indicator”
+Theorem indicator_fn_def[local] = indicator
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
@@ -52,9 +55,6 @@ val fn_plus_def = Define
 
 val fn_minus_def = Define
    `fn_minus f = (\x. if 0 <= f x then 0 else ~ f x)`;
-
-val mono_increasing_def = Define
-   `mono_increasing (f:num->real) <=> !m n. m <= n ==> f m <= f n`;
 
 (* c.f. "pos_fn_integral_def" in (new) lebesgueScript.sml *)
 val nnfis_def = Define
@@ -1049,44 +1049,6 @@ val psfis_nonneg = store_thm
    >> (MP_TAC o Q.ISPEC `(r :(num -> 'a -> bool) # (num -> real))`) pair_CASES
    >> RW_TAC std_ss []
    >> FULL_SIMP_TAC std_ss [PAIR_EQ, pos_simple_fn_def]);
-
-val mono_increasing_converges_to_sup = store_thm
-  ("mono_increasing_converges_to_sup",
- ``!f r. (!i. 0 <= f i) /\ mono_increasing f /\ f --> r ==>
-          (r = sup (IMAGE f UNIV))``,
-   RW_TAC std_ss [mono_increasing_def]
-   >> Suff `f --> sup (IMAGE f UNIV)`
-   >- METIS_TAC [SEQ_UNIQ]
-   >> RW_TAC std_ss [SEQ]
-   >> (MP_TAC o Q.ISPECL [`IMAGE (f:num->real) UNIV`,`e:real/2`]) SUP_EPSILON
-   >> SIMP_TAC std_ss [REAL_LT_HALF1]
-   >> `!y x z. IMAGE f UNIV x <=> x IN IMAGE f UNIV` by RW_TAC std_ss [IN_DEF]
-   >> POP_ORW
-   >> Know `(?z. !x. x IN IMAGE f UNIV ==> x <= z)`
-   >- (Q.EXISTS_TAC `r` >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
-            >> MATCH_MP_TAC SEQ_MONO_LE
-            >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``])
-   >> SIMP_TAC std_ss [] >> STRIP_TAC >> POP_ASSUM (K ALL_TAC)
-   >> RW_TAC std_ss [IN_IMAGE, IN_UNIV, GSYM ABS_BETWEEN, GREATER_EQ]
-   >> Q.EXISTS_TAC `x'`
-   >> RW_TAC std_ss [REAL_LT_SUB_RADD]
-   >- (MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `f x' + e / 2`
-       >> RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LET_TRANS
-       >> Q.EXISTS_TAC `f n + e / 2` >> RW_TAC std_ss [REAL_LE_ADD2, REAL_LE_REFL]
-       >> MATCH_MP_TAC REAL_LT_IADD >> RW_TAC std_ss [REAL_LT_HALF2])
-   >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `sup (IMAGE f UNIV)`
-   >> RW_TAC std_ss [REAL_LT_ADDR]
-   >> Suff `!y. (\y. y IN IMAGE f UNIV) y ==> y <= sup (IMAGE f UNIV)`
-   >- METIS_TAC [IN_IMAGE, IN_UNIV]
-   >> SIMP_TAC std_ss [IN_DEF]
-   >> MATCH_MP_TAC REAL_SUP_UBOUND_LE
-   >> `!y x z. IMAGE f UNIV x <=> x IN IMAGE f UNIV` by RW_TAC std_ss [IN_DEF]
-   >> POP_ORW
-   >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
-   >> Q.EXISTS_TAC `r`
-   >> RW_TAC std_ss []
-   >> MATCH_MP_TAC SEQ_MONO_LE
-   >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``]);
 
 val IN_psfis = store_thm
   ("IN_psfis",

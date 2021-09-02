@@ -31,7 +31,7 @@ open involuteTheory; (* for involute_bij *)
 open involuteFixTheory;
 
 (* val _ = load "iterateComposeTheory"; *)
-open iterateTheory;
+open iterationTheory;
 open iterateComposeTheory;
 
 (* val _ = load "iterateComputeTheory"; *)

@@ -20,6 +20,10 @@ Contents
 New features:
 -------------
 
+- A `HOL_CONFIG` environment variable is considered to allow for a custom `hol-config` configuration at a non-standard location or potentially ignoring any present hol-config.
+  If the variable is set, any other hol-config file will be ignored. If the value of `HOL_CONFIG` is a readable file, it will be used.
+
+
 Bugs fixed:
 -----------
 
@@ -43,8 +47,8 @@ for developing safe hardware and software systems.
 number of components.
 
            Datatype: rbd = series (rbd list)
-						 | parallel (rbd list)
-						 | atomic (α event)
+                         | parallel (rbd list)
+                         | atomic (α event)
            End
 
            Datatype: gate = AND (gate list)
@@ -55,9 +59,16 @@ number of components.
 
    Some case studies are also formalized and placed with dependability theories, for illustration purposes, including smart grids, WSN data transport protocols, satellite solar arrays, virtual data centers, oil and gas pipeline systems and an air traffic management system.
 
+-   __large_numberTheory__ (in `examples/probability`): various versions of The Law of Large Numbers (LLN) of Probability Theory.
+
+    Some LLN theorems (`WLLN_uncorrelated` and `SLLN_uncorrelated`) previously in `probabilityTheory`
+    are now moved to `large_numberTheory` with unified statements.
 
 Incompatibilities:
 ------------------
+
+*   The small `productTheory` (Products of natural numbers and real numbers, ported from HOL-Light)
+    has been merged into `iterateTheory` (which is now dependent by `extrealTheory`).
 
 * * * * *
 

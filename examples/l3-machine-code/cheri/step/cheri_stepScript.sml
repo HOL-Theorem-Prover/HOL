@@ -140,55 +140,62 @@ val isAligned = Q.store_thm("isAligned",
   \\ blastLib.BBLAST_TAC
   )
 
-val aligned_pc = Q.prove(
-  `!pc : word64.  ((1 >< 0) pc = 0w : word2) = aligned 2 pc`,
+Triviality aligned_pc:
+  !pc : word64.  ((1 >< 0) pc = 0w : word2) = aligned 2 pc
+Proof
   simp [alignmentTheory.aligned_extract]
-  \\ blastLib.BBLAST_TAC)
+  \\ blastLib.BBLAST_TAC
+QED
 
 val word1_lem = utilsLib.mk_cond_exhaustive_thm 1
 val word2_lem = utilsLib.mk_cond_exhaustive_thm 2
 val word3_lem = utilsLib.mk_cond_exhaustive_thm 3
 
-val write_data_lem0 = Q.prove(
-  `!d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
+Triviality write_data_lem0:
+  !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d4 && (63 >< 0) (~mask) ||
      (63 >< 0) data && (63 >< 0) mask || (63 >< 0) d1 << 192 ||
      (63 >< 0) d2 << 128 || (63 >< 0) d3 << 64 =
-     (d1 @@ d2 @@ d3 @@ (d4 && ~mask || data && mask)) : 256 word`,
-  blastLib.BBLAST_TAC)
+     (d1 @@ d2 @@ d3 @@ (d4 && ~mask || data && mask)) : 256 word
+Proof blastLib.BBLAST_TAC
+QED
 
-val write_data_lem1 = Q.prove(
-  `!d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
+Triviality write_data_lem1:
+  !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d3 << 64 && (63 >< 0) (~mask) << 64 ||
      (63 >< 0) data << 64 && (63 >< 0) mask << 64 ||
      (63 >< 0) d1 << 192 || (63 >< 0) d2 << 128 || (63 >< 0) d4 =
-     (d1 @@ d2 @@ (d3 && ~mask || data && mask) @@ d4) : 256 word`,
-  blastLib.BBLAST_TAC)
+     (d1 @@ d2 @@ (d3 && ~mask || data && mask) @@ d4) : 256 word
+Proof blastLib.BBLAST_TAC
+QED
 
-val write_data_lem2 = Q.prove(
-  `!d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
+Triviality write_data_lem2:
+  !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d2 << 128 && (63 >< 0) (~mask) << 128 ||
      (63 >< 0) data << 128 && (63 >< 0) mask << 128 ||
      (63 >< 0) d1 << 192 || (63 >< 0) d3 << 64 || (63 >< 0) d4 =
-     (d1 @@ (d2 && ~mask || data && mask) @@ d3 @@ d4) : 256 word`,
-  blastLib.BBLAST_TAC)
+     (d1 @@ (d2 && ~mask || data && mask) @@ d3 @@ d4) : 256 word
+Proof blastLib.BBLAST_TAC
+QED
 
-val write_data_lem3 = Q.prove(
-  `!d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
+Triviality write_data_lem3:
+  !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d1 << 192 && (63 >< 0) (~mask) << 192 ||
      (63 >< 0) data << 192 && (63 >< 0) mask << 192 ||
      (63 >< 0) d2 << 128 || (63 >< 0) d3 << 64 || (63 >< 0) d4 =
-     ((d1 && ~mask || data && mask) @@ d2 @@ d3 @@ d4) : 256 word`,
-  blastLib.BBLAST_TAC)
+     ((d1 && ~mask || data && mask) @@ d2 @@ d3 @@ d4) : 256 word
+Proof blastLib.BBLAST_TAC
+QED
 
-val write_data_lem =
+Triviality write_data_lem =
   LIST_CONJ [write_data_lem0, write_data_lem1, write_data_lem2, write_data_lem3]
 
-val B_ZALL_lem = Q.prove(
-  `(if b then s with <| c_gpr := x; c_state := y |> else s) =
+Triviality B_ZALL_lem:
+  (if b then s with <| c_gpr := x; c_state := y |> else s) =
     s with <| c_gpr := if b then x else s.c_gpr;
-              c_state := if b then y else s.c_state |>`,
-  rw [cheri_state_component_equality])
+              c_state := if b then y else s.c_state |>
+Proof rw [cheri_state_component_equality]
+QED
 
 val for_end =
   state_transformerTheory.FOR_def
@@ -227,7 +234,10 @@ local
        [state_id, updateTheory.APPLY_UPDATE_ID, CP0_def,
         BETA_RULE (utilsLib.mk_cond_rand_thms [``\f. f (w2n a)``]),
         utilsLib.mk_cond_rand_thms
-           [``cheri$CP0_Status``,
+           [prim_mk_const{Thy = "cheri",
+                          Name = TypeBasePure.mk_recordtype_fieldsel
+                                             {tyname = "CP0",
+                                              fieldname = "Status"}},
             pairSyntax.fst_tm, pairSyntax.snd_tm,
             optionSyntax.is_some_tm,
             wordsSyntax.sw2sw_tm, wordsSyntax.w2w_tm,

@@ -25,8 +25,8 @@ val (even_rules,even_ind,even_cases) = (fn q => fn _ => IndDefLib.xHol_reln "eve
 \(!n. even n ==> odd (n + 1)) /\\\n\
 \\n\
 \  (!m. odd m ==> even (m + 1))"
-] NONE; val _ = CompilerSpecific.quietbind "val even_strongind = DB.fetch \"-\" \"even_strongind\" handle HOL_ERR _ => TRUTH;";val even_0 = boolLib.save_thm("even_0[simp]", Drule.cj 1 even_rules);val even_suc = boolLib.save_thm("even_suc", Drule.cj 3 even_rules);
+] NONE; val _ = CompilerSpecific.quietbind "val even_strongind = DB.fetch \"-\" \"even_strongind\" handle HOL_ERR _ => boolTheory.TRUTH;";val even_0 = boolLib.save_thm("even_0[simp]", Drule.cj 1 even_rules);val even_suc = boolLib.save_thm("even_suc", Drule.cj 3 even_rules);
 
 val foo = TotalDefn.qDefine "foo" [QUOTE " (*#loc 30 16*)\n\
 \  foo x = if x < 2 then 1 else x * foo (x - 1)"
-] NONE; val _ = CompilerSpecific.quietbind "val foo_ind = DB.fetch \"-\" \"foo_ind\" handle HOL_ERR _ => TRUTH;";
+] NONE; val _ = CompilerSpecific.quietbind "val foo_ind = DB.fetch \"-\" \"foo_ind\" handle HOL_ERR _ => boolTheory.TRUTH;";

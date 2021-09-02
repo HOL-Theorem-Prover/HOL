@@ -1,0 +1,19 @@
+EXTRA_CLEANS = heap \
+	$(patsubst %Theory.uo,%Theory.html,$(TARGETS)) \
+	$(patsubst %Theory.uo,%Theory.lst,$(TARGETS))
+
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = probabilityTheory
+
+OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+endif
+
+all: $(DEFAULT_TARGETS)
+
+.PHONY: all

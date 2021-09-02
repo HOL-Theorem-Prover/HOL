@@ -1,0 +1,1 @@
+INCLUDES = $(dprot $(HOLDIR)/src/ring/src) $(dprot $(HOLDIR)/src/integer)

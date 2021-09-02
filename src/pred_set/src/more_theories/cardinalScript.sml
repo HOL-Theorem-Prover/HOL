@@ -1,8 +1,8 @@
 open HolKernel Parse boolLib bossLib mesonLib
 
-open boolSimps pred_setTheory set_relationTheory jrhUtils tautLib
+open boolSimps pred_setTheory set_relationTheory tautLib
 
-open prim_recTheory arithmeticTheory numTheory numLib pairTheory quotientTheory;
+open prim_recTheory arithmeticTheory numTheory numLib pairTheory
 open sumTheory ind_typeTheory wellorderTheory;
 
 val _ = new_theory "cardinal";
@@ -24,6 +24,10 @@ val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 (* Cardinal comparisons                                                      *)
 (* ------------------------------------------------------------------------- *)
 
+(* first of these clashes with indicator_fn in extreal etc *)
+Overload "𝟙"[local] = “{()}”                                           (* UOK *)
+Overload "𝟚" = “{T;F}”                                                 (* UOK *)
+
 val cardeq_def = Define`
   cardeq s1 s2 <=> ?f. BIJ f s1 s2
 `
@@ -33,6 +37,9 @@ val _ = TeX_notation {hol = "=~",            TeX = ("\\ensuremath{\\approx}", 1)
 val _ = TeX_notation {hol = UTF8.chr 0x2248, TeX = ("\\ensuremath{\\approx}", 1)};
 
 val _ = overload_on("=~", ``cardeq``)
+
+Overload "≉" = “λa b. ¬(a ≈ b)”                                        (* UOK *)
+val _ = set_fixity "≉" (Infix(NONASSOC, 450))                          (* UOK *)
 
 val cardeq_REFL = store_thm(
   "cardeq_REFL",
@@ -689,8 +696,16 @@ val set_exp_def = Define`
 `;
 val _ = overload_on ("**", ``set_exp``)
 
-val csimp = asm_simp_tac (srw_ss() ++ boolSimps.CONJ_ss)
-val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
+Theorem UNIV_fun_exp:
+  univ(:'a -> 'b) =~ univ(:'b) ** univ(:'a)
+Proof
+  simp[set_exp_def] >>
+  irule cardleq_ANTISYM >> simp[cardleq_def, INJ_IFF] >> rw[]
+  >- (qexists_tac ‘λf a. SOME (f a)’ >> simp[] >>
+      simp[FUN_EQ_THM]) >>
+  qexists_tac ‘λf a. THE (f a)’ >> simp[FUN_EQ_THM] >> rw[] >>
+  gs[SKOLEM_THM]
+QED
 
 val BIJ_functions_agree = store_thm(
   "BIJ_functions_agree",
@@ -914,6 +929,81 @@ val exp_count_cardeq = store_thm(
   `A CROSS A ** count n =~ A CROSS A` by metis_tac[CARDEQ_CROSS, cardeq_REFL] >>
   `A CROSS A =~ A` by simp[SET_SQUARED_CARDEQ_SET] >>
   metis_tac [cardeq_TRANS]);
+
+Theorem K_lemma[local]:
+  (!x. f x = y) <=> f = K y
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem FINITE_setexp[simp]:
+  FINITE ((A:'a set) ** (B:'b set)) <=>
+  B = {} \/ A <<= {()} \/ FINITE A /\ FINITE B
+Proof
+  simp[set_exp_def, EQ_IMP_THM] >> rpt strip_tac >> gvs[K_lemma]
+  >- (Cases_on ‘B = {}’ >> simp[] >>
+      Cases_on ‘A = {}’ >> gvs[] >>
+      Cases_on ‘?a. A = {a}’ >> gvs[]
+      >- (simp[cardleq_def] >> disj1_tac >> qexists_tac ‘K ()’ >>
+          simp[INJ_IFF]) >> disj2_tac >>
+      ‘?a1 a2. a1 <> a2 /\ a1 IN A /\ a2 IN A’
+        by (pop_assum mp_tac >> simp[EXTENSION] >> gs[GSYM MEMBER_NOT_EMPTY] >>
+            metis_tac[]) >> conj_tac
+      >- (CCONTR_TAC >>
+          qpat_x_assum ‘FINITE _’ mp_tac >> simp[] >>
+          ‘?b. b IN B’ by simp[MEMBER_NOT_EMPTY] >>
+          qabbrev_tac ‘ff = λa b. if b IN B then SOME a else NONE’ >>
+          ‘(!a1 a2. ff a1 = ff a2 ==> a1 = a2)’
+            by (simp[Abbr‘ff’, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]) >>
+          drule_then (drule_then assume_tac) IMAGE_11_INFINITE >>
+          qmatch_abbrev_tac ‘INFINITE s’ >>
+          ‘IMAGE ff A SUBSET s’ suffices_by metis_tac[SUBSET_FINITE] >>
+          simp[Abbr‘ff’, Abbr‘s’, SUBSET_DEF, PULL_EXISTS]) >>
+      CCONTR_TAC >> qpat_x_assum ‘FINITE _’ mp_tac >> simp[] >>
+      qabbrev_tac ‘ff = λb1 b2. if b1 = b2 then SOME a1
+                                else if b2 IN B then SOME a2 else NONE’ >>
+      ‘(!b1 b2. ff b1 = ff b2 ==> b1 = b2)’
+        by (simp[Abbr‘ff’, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]) >>
+      drule_then (drule_then assume_tac) IMAGE_11_INFINITE >>
+      qmatch_abbrev_tac ‘INFINITE s’ >>
+      ‘IMAGE ff B SUBSET s’ suffices_by metis_tac[SUBSET_FINITE] >>
+      first_x_assum $ qspecl_then [‘ARB : 'b’, ‘ARB : 'b’] kall_tac >>
+      simp[Abbr‘ff’, Abbr‘s’, SUBSET_DEF, PULL_EXISTS, AllCaseEqs()] >>
+      metis_tac[])
+  >- (Cases_on ‘A = {}’ >> gvs[]
+      >- (csimp[K_lemma] >> Cases_on ‘!b. b NOTIN B’ >> simp[]) >>
+      ‘?a. A = {a}’
+        by (gs[cardleq_def, INJ_IFF, GSYM MEMBER_NOT_EMPTY] >>
+            rename [‘a IN A’] >> qexists_tac ‘a’ >> simp[EXTENSION] >>
+            metis_tac[]) >>
+      gvs[] >> qmatch_abbrev_tac ‘FINITE s’ >>
+      ‘s = {λb. if b IN B then SOME a else NONE}’ suffices_by simp[] >>
+      simp[Abbr‘s’, Once FUN_EQ_THM, AllCaseEqs(), EQ_IMP_THM] >>
+      rpt strip_tac >> csimp[FUN_EQ_THM, AllCaseEqs()])
+  >- (‘FINITE (A CROSS B)’ by simp[] >>
+      ‘FINITE (POW (A CROSS B))’ by simp[] >>
+      first_assum $ C (resolve_then (Pos hd) irule) CARDLEQ_FINITE >>
+      simp[INJ_IFF, cardleq_def, IN_POW, SUBSET_DEF, FORALL_PROD] >>
+      qexists_tac ‘λf. { (a,b) | f b = SOME a}’ >> simp[] >> rw[] >~
+      [‘GSPEC _ = GSPEC _ <=> _ = _’]
+      >- (simp[EXTENSION] >> simp[FUN_EQ_THM, FORALL_PROD] >>
+          simp[Once EQ_IMP_THM] >> rw[] >> rename [‘f1 a = f2 a’] >>
+          Cases_on ‘f1 a’ >>
+          metis_tac[optionTheory.SOME_11, optionTheory.NOT_SOME_NONE]) >>
+      metis_tac[optionTheory.SOME_11, optionTheory.NOT_SOME_NONE])
+QED
+
+Theorem CARD_LE_EXP:
+  {T; F} <<= B ==> (A:'a set) <<= (B:'b set) ** A
+Proof
+  simp[cardleq_def, set_exp_def, INJ_IFF] >>
+  disch_then $ qx_choose_then ‘bf’ strip_assume_tac >>
+  qexists_tac ‘λa1 a2. if a1 = a2 then SOME (bf T)
+                       else if a2 IN A then SOME (bf F)
+                       else NONE’ >>
+  simp[AllCaseEqs()] >> simp[FUN_EQ_THM, AllCaseEqs()] >> rw[] >>
+  metis_tac[]
+QED
 
 val INFINITE_Unum = store_thm(
   "INFINITE_Unum",
@@ -1362,6 +1452,32 @@ val set_exp_product = Q.store_thm(
   simp[FUN_EQ_THM, FORALL_PROD] >> qx_genl_tac [‘b1’, ‘b2’] >>
   Cases_on ‘b2 IN B2’ >> simp[] >> rw[]);
 
+Theorem CARD1_SING:
+  (A:'a set) =~ {()} <=> ?a. A = {a}
+Proof
+  simp[cardeq_def, EQ_IMP_THM, PULL_EXISTS, BIJ_IFF_INV] >>
+  rpt strip_tac
+  >- (rename [‘g () IN A’] >> qexists_tac ‘g()’ >> simp[EXTENSION] >>
+      metis_tac[]) >>
+  qexists_tac ‘K a’ >> simp[]
+QED
+
+Theorem cardleq_setexp:
+  x <<= x ** e <=> x = {} \/ x =~ {()} \/ e <> {}
+Proof
+  Cases_on ‘x = {}’ >> simp[] >>
+  Cases_on ‘e = {}’ >> simp[EMPTY_set_exp, CARD1_SING]
+  >- (simp[INJ_IFF, EQ_IMP_THM, PULL_EXISTS] >> reverse (rpt strip_tac)
+      >- (simp[INJ_IFF, cardleq_def] >> qexists_tac ‘λa. K NONE’ >> simp[]) >>
+      gs[cardleq_def, INJ_IFF, GSYM MEMBER_NOT_EMPTY] >> simp[EXTENSION] >>
+      metis_tac[]) >>
+  simp[cardleq_def, INJ_IFF] >> gs[GSYM MEMBER_NOT_EMPTY] >>
+  rename [‘X ** E’, ‘x IN X’, ‘e IN E’] >>
+  qexists_tac ‘λx0 e0. if e0 IN E then SOME x0 else NONE’ >>
+  simp[set_exp_def, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]
+QED
+
+
 val COUNT_EQ_EMPTY = Q.store_thm(
   "COUNT_EQ_EMPTY[simp]",
   ‘(count n = {}) <=> (n = 0)’,
@@ -1390,6 +1506,55 @@ val POW_EQ_X_EXP_X = Q.store_thm(
     suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL, set_exp_product] >>
   irule set_exp_cardle_cong >> simp[] >> irule CARDEQ_SUBSET_CARDLEQ >>
   simp[SET_SQUARED_CARDEQ_SET]);
+
+Theorem setexp_eq_EMPTY[simp]:
+  A ** B = {} <=> A = {} /\ B <> {}
+Proof
+  simp[set_exp_def] >> simp[SimpLHS, EXTENSION] >>
+  simp[] >> eq_tac >> rpt strip_tac
+  >- (Cases_on ‘B = {}’ >> gvs[]
+      >- (pop_assum $ qspec_then ‘K NONE’ mp_tac >> simp[]) >>
+      CCONTR_TAC >> gs[GSYM MEMBER_NOT_EMPTY] >>
+      rename [‘_ = SOME _ ==> _ NOTIN A’, ‘_ NOTIN B /\ _’, ‘b IN B’, ‘a IN A’] >>
+      first_x_assum $ qspec_then ‘λb0. if b0 IN B then SOME a else NONE’ mp_tac>>
+      simp[])
+  >- (gvs[] >> pop_assum $ qspec_then ‘K NONE’ mp_tac >> simp[]) >>
+  simp[] >> metis_tac[MEMBER_NOT_EMPTY]
+QED
+
+
+Theorem FINITE_EXPONENT_SETEXP_UNCOUNTABLE:
+  FINITE B /\ B <> {} /\ ~countable A ==>
+  ~countable (A ** B)
+Proof
+  Induct_on ‘FINITE’ >> simp[] >> rpt strip_tac >>
+  rename [‘A ** (e INSERT B) ’] >>
+  ‘A ** (e INSERT B) =~ A CROSS (A ** B)’
+    by simp[exp_INSERT_cardeq] >>
+  drule_all (iffLR countable_cardeq) >> simp[cross_countable_IFF] >>
+  rpt strip_tac >> gvs[CARDEQ_0, setexp_eq_EMPTY]
+QED
+
+Theorem FINITE_EXPONENT_SETEXP_COUNTABLE:
+  FINITE (B:'b set) ==>
+  (countable ((A:'a set) ** B) <=> B = {} \/ countable A)
+Proof
+  simp[EQ_IMP_THM, IMP_CONJ_THM] >> conj_tac
+  >- metis_tac[FINITE_EXPONENT_SETEXP_UNCOUNTABLE] >>
+  ‘!(A:'a set) (B:'b set). FINITE B /\ countable A ==> countable (A ** B)’
+    suffices_by (rw[] >> simp[EMPTY_set_exp]) >>
+  Induct_on ‘FINITE’ >> simp[EMPTY_set_exp] >> rpt strip_tac >>
+  ‘A ** (e INSERT B) =~ A CROSS (A ** B)’ by simp[exp_INSERT_cardeq] >>
+  drule_then irule (iffRL countable_cardeq) >> simp[cross_countable_IFF]
+QED
+
+Theorem FINITE_012:
+  FINITE A ==> A = {} \/ A =~ {()} \/ 2 <= CARD A
+Proof
+  Induct_on ‘FINITE’ >> simp[] >> rw[] >> gvs[CARD1_SING]
+QED
+
+
 
 (* bijections modelled as functions into options so that they can be everywhere
    NONE outside of their domains *)
@@ -1562,28 +1727,25 @@ val FINITE_IMAGE_INJ = store_thm ("FINITE_IMAGE_INJ",
   MP_TAC(SPECL [``f:'a->'b``, ``A:'b->bool``, ``UNIV:'a->bool``]
     FINITE_IMAGE_INJ_GENERAL) THEN REWRITE_TAC[IN_UNIV]);
 
-val FINITE_IMAGE_INJ_EQ = store_thm ("FINITE_IMAGE_INJ_EQ",
- ``!(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y))
-                ==> (FINITE(IMAGE f s) <=> FINITE s)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [IMAGE_FINITE] THEN
-  POP_ASSUM MP_TAC THEN REWRITE_TAC[AND_IMP_INTRO] THEN
-  DISCH_THEN(MP_TAC o MATCH_MP FINITE_IMAGE_INJ_GENERAL) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN
-  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_IMAGE] THEN METIS_TAC []);
+Theorem FINITE_IMAGE_INJ_EQ:
+ !(f:'a->'b) s.
+   (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) ==>
+   (FINITE(IMAGE f s) <=> FINITE s)
+Proof
+  metis_tac[FINITE_IMAGE_INJ']
+QED
 
-val INFINITE_IMAGE_INJ = store_thm ("INFINITE_IMAGE_INJ",
- ``!f:'a->'b. (!x y. (f x = f y) ==> (x = y))
-            ==> !s. INFINITE s ==> INFINITE(IMAGE f s)``,
-  GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
-  ONCE_REWRITE_TAC[GSYM MONO_NOT_EQ] THEN DISCH_TAC THEN
-  MATCH_MP_TAC SUBSET_FINITE_I THEN
-  EXISTS_TAC ``{x | f(x) IN IMAGE (f:'a->'b) s}`` THEN CONJ_TAC THENL
-   [MATCH_MP_TAC FINITE_IMAGE_INJ THEN ASM_REWRITE_TAC[],
-    SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IMAGE_DEF] THEN MESON_TAC[]]);
+Theorem INFINITE_IMAGE_INJ:
+ !f:'a->'b. (!x y. (f x = f y) ==> (x = y)) ==>
+            !s. INFINITE s ==> INFINITE(IMAGE f s)
+Proof
+  metis_tac[FINITE_IMAGE_INJ_EQ]
+QED
 
-val INFINITE_NONEMPTY = store_thm ("INFINITE_NONEMPTY",
- ``!s. INFINITE(s) ==> ~(s = EMPTY)``,
-  MESON_TAC[FINITE_EMPTY, FINITE_INSERT]);
+Theorem INFINITE_NONEMPTY:
+  !s. INFINITE(s) ==> ~(s = EMPTY)
+Proof MESON_TAC[FINITE_EMPTY]
+QED
 
 val FINITE_PRODUCT_DEPENDENT = store_thm ("FINITE_PRODUCT_DEPENDENT",
  ``!f:'a->'b->'c s t.
@@ -1883,39 +2045,30 @@ val HAS_SIZE_INDEX = store_thm ("HAS_SIZE_INDEX",
   Cases_on `x <> a` THEN1 METIS_TAC [] THEN
   METIS_TAC [LESS_REFL, IN_DELETE]);
 
-val CARD_BIGUNION_LE = store_thm ("CARD_BIGUNION_LE",
- ``!s t:'a->'b->bool m n.
-        s HAS_SIZE m /\ (!x. x IN s ==> FINITE(t x) /\ CARD(t x) <= n)
-        ==> CARD(BIGUNION {t(x) | x IN s}) <= m * n``,
-  GEN_REWR_TAC (funpow 4 BINDER_CONV o funpow 2 LAND_CONV) [HAS_SIZE] THEN
-  REWRITE_TAC[GSYM CONJ_ASSOC] THEN
-  ONCE_REWRITE_TAC[CONJ_EQ_IMP] THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN ONCE_REWRITE_TAC [METIS []
-    ``(!(t :'a -> 'b -> bool) (n :num).
-  (!(x :'a). x IN s ==> FINITE (t x) /\ CARD (t x) <= n) ==>
-  CARD (BIGUNION {t x | x IN s}) <= CARD s * n) =
-      (\s. !(t :'a -> 'b -> bool) (n :num).
-  (!(x :'a). x IN s ==> FINITE (t x) /\ CARD (t x) <= n) ==>
-  CARD (BIGUNION {t x | x IN s}) <= CARD s * n) s``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN CONJ_TAC THEN
-  SIMP_TAC std_ss [SET_RULE ``BIGUNION {t x | x IN {}} = {}``,
-                   CARD_EMPTY, CARD_INSERT, ZERO_LESS_EQ] THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN
-  ASM_SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY, FINITE_INSERT] THEN
-  DISCH_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[SET_RULE
-   ``BIGUNION {t x | x IN a INSERT s} = t(a) UNION BIGUNION {t x | x IN s}``] THEN
-  MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC
-   ``CARD((t:'a->'b->bool) e) + CARD(BIGUNION {(t:'a->'b->bool) x | x IN s})`` THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC CARD_UNION_LE THEN ASM_SIMP_TAC std_ss [IN_INSERT] THEN
-    REWRITE_TAC[SET_RULE ``{t x | x IN s} = IMAGE t s``] THEN
+Theorem CARD_BIGUNION_LE:
+ !s t:'a->'b->bool m n.
+   s HAS_SIZE m /\ (!x. x IN s ==> FINITE(t x) /\ CARD(t x) <= n) ==>
+   CARD(BIGUNION {t(x) | x IN s}) <= m * n
+Proof
+  REWRITE_TAC[HAS_SIZE] >> Induct_on ‘FINITE’ >> simp[] >>
+  REPEAT GEN_TAC >> STRIP_TAC >>
+  SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] >>
+  rw[DISJ_IMP_THM, FORALL_AND_THM,
+     SET_RULE “BIGUNION {t x | x = a \/ x IN s} =
+               t(a) UNION BIGUNION {t x | x IN s}”] >>
+  MATCH_MP_TAC LESS_EQ_TRANS >>
+  EXISTS_TAC
+   “CARD((t:'a->'b->bool) e) + CARD(BIGUNION {(t:'a->'b->bool) x | x IN s})” >>
+  CONJ_TAC >| [
+    MATCH_MP_TAC CARD_UNION_LE >> ASM_SIMP_TAC std_ss [IN_INSERT] >>
+    REWRITE_TAC[SET_RULE ``{t x | x IN s} = IMAGE t s``] >>
     ASM_SIMP_TAC std_ss [FINITE_FINITE_BIGUNION, IMAGE_FINITE, FORALL_IN_IMAGE,
                  IN_INSERT],
-    REWRITE_TAC [ADD1] THEN
-    MATCH_MP_TAC(ARITH_PROVE ``a <= n /\ b <= x * n ==> a + b <= (x + 1:num) * n``) THEN
-    ASM_SIMP_TAC arith_ss [IN_INSERT]]);
+    REWRITE_TAC [ADD1] >>
+    irule(ARITH_PROVE “a <= n /\ b <= x * n ==> a + b <= n * (x + 1:num)”) >>
+    ASM_SIMP_TAC arith_ss [IN_INSERT]
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cardinality of type bool.                                                 *)
@@ -2317,44 +2470,35 @@ val CARD_LT_LE = store_thm ("CARD_LT_LE",
  ``!s t. s <_c t <=> s <=_c t /\ ~(s =_c t)``,
   REWRITE_TAC[Once lt_c, GSYM CARD_LE_ANTISYM] THEN TAUT_TAC);
 
-val CARD_LE_LT = store_thm ("CARD_LE_LT",
- ``!s t. s <=_c t <=> s <_c t \/ s =_c t``,
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM CARD_NOT_LT] THEN
-  GEN_REWR_TAC (LAND_CONV o RAND_CONV) [CARD_LT_LE] THEN
-  METIS_TAC [DE_MORGAN_THM, CARD_NOT_LE, CARD_EQ_SYM]);
+Theorem CARD_LE_LT = cardleq_lteq
 
-val CARD_LE_CONG = store_thm ("CARD_LE_CONG",
- ``!s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
-      s =_c s' /\ t =_c t' ==> (s <=_c t <=> s' <=_c t')``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN
-  MATCH_MP_TAC(TAUT
-   `!x y. (b /\ e ==> x) /\ (x /\ c ==> f) /\ (a /\ f ==> y) /\ (y /\ d ==> e)
-          ==> (a /\ b) /\ (c /\ d) ==> (e <=> f)`) THEN
-  MAP_EVERY EXISTS_TAC
-   [``(s':'b->bool) <=_c (t:'c->bool)``,
-    ``(s:'a->bool) <=_c (t':'d->bool)``] THEN
-  METIS_TAC [CARD_LE_TRANS]);
+Theorem CARD_LE_CONG = CARDEQ_CARDLEQ
 
-val CARD_LT_CONG = store_thm ("CARD_LT_CONG",
- ``!s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
-      s =_c s' /\ t =_c t' ==> (s <_c t <=> s' <_c t')``,
+Theorem CARD_LT_CONG:
+ !s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
+   s =_c s' /\ t =_c t' ==> (s <_c t <=> s' <_c t')
+Proof
   REPEAT STRIP_TAC THEN
   AP_TERM_TAC THEN MATCH_MP_TAC CARD_LE_CONG THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val CARD_EQ_TRANS = store_thm ("CARD_EQ_TRANS",
- ``!s:'a->bool t:'b->bool u:'c->bool.
-       s =_c t /\ t =_c u ==> s =_c u``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN
-  REPEAT STRIP_TAC THEN ASM_MESON_TAC[CARD_LE_TRANS]);
+Theorem CARD_12[simp]:
+  {()} <</= {T;F} /\ ~({()} =~ {T;F}) /\ ~({T;F} =~ {()}) /\ {()} <<= {T;F}
+Proof
+  conj_asm1_tac
+  >- (simp[cardleq_def, INJ_IFF] >> qexistsl_tac [‘T’, ‘F’] >> simp[]) >>
+  metis_tac[CARD_LT_CONG, CARD_LT_REFL, cardeq_REFL, cardleq_lteq]
+QED
 
-val CARD_EQ_CONG = store_thm ("CARD_EQ_CONG",
- ``!s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
-      s =_c s' /\ t =_c t' ==> (s =_c t <=> s' =_c t')``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN DISCH_TAC THENL
-   [KNOW_TAC ``(s' :'b -> bool) =_c (t :'c -> bool)``,
-    KNOW_TAC ``(s :'a -> bool) =_c (t' :'d -> bool)``] THEN
-  METIS_TAC[CARD_EQ_TRANS, CARD_EQ_SYM]);
+Theorem CARD_EQ_TRANS = cardeq_TRANS
+
+Theorem CARD_EQ_CONG:
+  !s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
+    s =_c s' /\ t =_c t' ==> (s =_c t <=> s' =_c t')
+Proof
+  METIS_TAC[CARD_EQ_TRANS, CARD_EQ_SYM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finiteness and infiniteness in terms of cardinality of N.                 *)
@@ -2437,20 +2581,22 @@ val CARD_EQ_CARD_IMP = store_thm ("CARD_EQ_CARD_IMP",
   METIS_TAC[CARD_FINITE_CONG, ARITH_PROVE ``m <= n /\ n <= m <=> (m = n:num)``,
             CARD_LE_ANTISYM, CARD_LE_CARD_IMP]);
 
-val CARD_LE_CARD = store_thm ("CARD_LE_CARD",
- ``!s:'a->bool t:'b->bool.
-        FINITE s /\ FINITE t ==> (s <=_c t <=> CARD s <= CARD t)``,
+Theorem CARD_LE_CARD:
+  !s:'a->bool t:'b->bool.
+    FINITE s /\ FINITE t ==> (s <=_c t <=> CARD s <= CARD t)
+Proof
   REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC(TAUT `(a ==> b) /\ (~a ==> ~b) ==> (a <=> b)`) THEN
+  MATCH_MP_TAC(TAUT ‘(a ==> b) /\ (~a ==> ~b) ==> (a <=> b)’) THEN
   ASM_SIMP_TAC std_ss [CARD_LE_CARD_IMP] THEN
   REWRITE_TAC[NOT_LESS_EQUAL] THEN REWRITE_TAC[Once lt_c, LT_LE] THEN
   ASM_SIMP_TAC std_ss [CARD_LE_CARD_IMP] THEN
-  MATCH_MP_TAC(TAUT `(c ==> a ==> b) ==> a /\ ~b ==> ~c`) THEN
-  DISCH_TAC THEN GEN_REWR_TAC LAND_CONV [CARD_LE_EQ_SUBSET] THEN
-  DISCH_THEN(X_CHOOSE_THEN ``u:'a->bool`` STRIP_ASSUME_TAC) THEN
+  MATCH_MP_TAC(TAUT ‘(c ==> a ==> b) ==> a /\ ~b ==> ~c’) THEN
+  DISCH_TAC THEN simp[CARD_LE_EQ_SUBSET, SimpL “$==>”] THEN
+  DISCH_THEN(qx_choose_then ‘u’ STRIP_ASSUME_TAC) THEN
   MATCH_MP_TAC CARD_EQ_IMP_LE THEN
-  SUBGOAL_THEN ``u:'a->bool = s`` (fn th => ASM_MESON_TAC[th, CARD_EQ_SYM]) THEN
-  METIS_TAC[CARD_SUBSET_EQ, CARD_EQ_CARD_IMP, CARD_EQ_SYM]);
+  ‘u = s’ suffices_by ASM_MESON_TAC[CARD_EQ_SYM] THEN
+  METIS_TAC[CARD_SUBSET_EQ, CARD_EQ_CARD_IMP, CARD_EQ_SYM]
+QED
 
 val CARD_EQ_CARD = store_thm ("CARD_EQ_CARD",
  ``!s:'a->bool t:'b->bool.
@@ -2489,16 +2635,20 @@ val CARD_EQ_IMAGE = store_thm ("CARD_EQ_IMAGE",
 (* Cardinal arithmetic operations.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "+_c" (Infixl 500);
+
+val add_c = disjUNION_def
+
+val _ = set_mapped_fixity {tok = "+_c", fixity = Infixl 500,
+                           term_name = "disjUNION"}
+val _ = set_mapped_fixity {fixity = Infixl 500,
+                           term_name = "disjUNION",
+                           tok = UTF8.chr 0x2294}
+
+val _ = temp_overload_on ("+", ``disjUNION``);
+
 val _ = set_fixity "*_c" (Infixl 600);
-
-val add_c = new_definition ("add_c",
-  ``s +_c t = {INL x | x IN s} UNION {INR y | y IN t}``);
-
-val _ = overload_on ("+", ``$+_c``);
 val _ = overload_on ("*_c", ``$CROSS``); (* defined in pred_setTheory *)
 val _ = overload_on ("CROSS", ``$CROSS``);
-val _ = TeX_notation {hol = "*_c", TeX = ("\\ensuremath{\\times}", 1)};
 
 val mul_c = store_thm ("mul_c",
   ``!s t. s *_c t = {(x,y) | x IN s /\ y IN t}``,
@@ -2600,13 +2750,13 @@ val UNION_LE_ADD_C = store_thm ("UNION_LE_ADD_C",
    DISJ2_TAC THEN EXISTS_TAC ``x:'a`` THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN
    COND_CASES_TAC THENL [METIS_TAC [OUTR], METIS_TAC []]]);
 
-val CARD_DISJOINT_UNION = store_thm
-  ("CARD_DISJOINT_UNION",
-  ``!s t.
-         FINITE s /\ FINITE t /\ (s INTER t = {})
-         ==> (CARD (s UNION t) = CARD s + CARD t)``,
-  REPEAT STRIP_TAC THEN GEN_REWR_TAC LAND_CONV [ARITH_PROVE ``x = x + 0:num``] THEN
-  ONCE_REWRITE_TAC [GSYM CARD_EMPTY] THEN METIS_TAC [CARD_UNION]);
+Theorem CARD_DISJOINT_UNION:
+  !s t.
+    FINITE s /\ FINITE t /\ s INTER t = {} ==>
+    CARD (s UNION t) = CARD s + CARD t
+Proof
+  simp[CARD_UNION_EQN]
+QED
 
 val CARD_ADD_C = store_thm ("CARD_ADD_C",
  ``!s t. FINITE s /\ FINITE t ==> (CARD(s +_c t) = CARD s + CARD t)``,
@@ -2952,6 +3102,37 @@ Proof
  >> METIS_TAC [CARD_LE_TRANS]
 QED
 
+Theorem countable_setexp:
+  countable (A ** B) <=>
+    B = {} \/ FINITE B /\ countable A \/ A =~ {()} \/ A = {}
+Proof
+  rw[EQ_IMP_THM] >~
+  [‘countable (A ** {})’]
+  >- (resolve_then (Pos hd) irule EMPTY_set_exp_CARD (iffRL countable_cardeq) >>
+      simp[COUNTABLE_COUNT]) >~
+  [‘countable ({} ** B)’]
+  >- (Cases_on ‘B = {}’
+      >- (simp[] >>
+          resolve_then (Pos hd) irule EMPTY_set_exp_CARD
+                       (iffRL countable_cardeq) >>
+          simp[COUNTABLE_COUNT]) >>
+      simp[EMPTY_set_exp]) >~
+  [‘FINITE B /\ countable A’]
+  >- (Cases_on ‘B = {}’ >> simp[] >> Cases_on ‘A = {}’ >> simp[] >>
+      Cases_on ‘A =~ {()}’ >> simp[] >>
+      Cases_on ‘FINITE B’ >> simp[]
+      >- metis_tac[FINITE_EXPONENT_SETEXP_UNCOUNTABLE] >>
+      ‘~countable (POW B)’ by metis_tac[infinite_pow_uncountable] >>
+      ‘~countable (count 2 ** B)’
+        by metis_tac[countable_cardeq, POW_TWO_set_exp] >>
+      pop_assum mp_tac >> simp[] >>
+      ‘count 2 ** B <<= A ** B’ suffices_by metis_tac[CARD_LE_COUNTABLE] >>
+      irule set_exp_cardle_cong >> simp[] >> metis_tac[FINITE_012]) >~
+  [‘A =~ {()}’]
+  >- gvs[CARD1_SING, SING_set_exp] >>
+  metis_tac[FINITE_EXPONENT_SETEXP_COUNTABLE]
+QED
+
 val CARD_EQ_COUNTABLE = store_thm ("CARD_EQ_COUNTABLE",
  ``!s:'a->bool t:'a->bool. COUNTABLE t /\ s =_c t ==> COUNTABLE s``,
   REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_COUNTABLE]);
@@ -2989,14 +3170,16 @@ val COUNTABLE_IMAGE_INJ_GENERAL = store_thm ("COUNTABLE_IMAGE_INJ_GENERAL",
   MATCH_MP_TAC COUNTABLE_SUBSET THEN EXISTS_TAC ``IMAGE (g:'b->'a) A`` THEN
   ASM_SIMP_TAC std_ss [COUNTABLE_IMAGE] THEN ASM_SET_TAC[]);
 
-val COUNTABLE_IMAGE_INJ_EQ = store_thm ("COUNTABLE_IMAGE_INJ_EQ",
- ``!(f:'a->'b) s.
-        (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y))
-        ==> (COUNTABLE(IMAGE f s) <=> COUNTABLE s)``,
+Theorem COUNTABLE_IMAGE_INJ_EQ:
+  !(f:'a->'b) s.
+    (!x y. x IN s /\ y IN s /\ f x = f y ==> x = y) ==>
+    (COUNTABLE(IMAGE f s) <=> COUNTABLE s)
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [COUNTABLE_IMAGE] THEN
   POP_ASSUM MP_TAC THEN REWRITE_TAC[AND_IMP_INTRO] THEN
   DISCH_THEN(MP_TAC o MATCH_MP COUNTABLE_IMAGE_INJ_GENERAL) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN SET_TAC[]);
+  csimp[IMAGE_IN]
+QED
 
 val COUNTABLE_IMAGE_INJ = store_thm ("COUNTABLE_IMAGE_INJ",
  ``!(f:'a->'b) A.
@@ -3099,54 +3282,38 @@ val COUNTABLE_AS_INJECTIVE_IMAGE = store_thm ("COUNTABLE_AS_INJECTIVE_IMAGE",
   REWRITE_TAC[INFINITE_CARD_LE, COUNTABLE, ge_c] THEN
   SIMP_TAC std_ss [CARD_LE_ANTISYM, eq_c] THEN SET_TAC[]);
 
-val COUNTABLE_BIGUNION = store_thm ("COUNTABLE_BIGUNION",
- ``!A:('a->bool)->bool.
-        COUNTABLE A /\ (!s. s IN A ==> COUNTABLE s)
-        ==> COUNTABLE (BIGUNION A)``,
-  GEN_TAC THEN
-  GEN_REWR_TAC (LAND_CONV o TOP_DEPTH_CONV)
-   [COUNTABLE_AS_IMAGE_SUBSET_EQ] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``f:num->'a->bool``) MP_TAC) THEN
-  DISCH_THEN (MP_TAC o SIMP_RULE std_ss [RIGHT_IMP_EXISTS_THM]) THEN
-  SIMP_TAC std_ss [SKOLEM_THM] THEN
-  DISCH_THEN(X_CHOOSE_TAC ``g:('a->bool)->num->'a``) THEN
-  MATCH_MP_TAC COUNTABLE_SUBSET THEN
-  EXISTS_TAC ``IMAGE (\(m,n). (g:('a->bool)->num->'a) ((f:num->'a->bool) m) n)
-                    (univ(:num) CROSS univ(:num))`` THEN
-  ASM_SIMP_TAC std_ss [COUNTABLE_IMAGE, COUNTABLE_CROSS, NUM_COUNTABLE] THEN
-  SIMP_TAC std_ss [SUBSET_DEF, FORALL_IN_BIGUNION] THEN
-  SIMP_TAC std_ss [IN_IMAGE, EXISTS_PROD, IN_CROSS, IN_UNIV] THEN
-  ASM_SET_TAC[]);
+Theorem COUNTABLE_BIGUNION = bigunion_countable
 
 val IN_ELIM_PAIR_THM = store_thm ("IN_ELIM_PAIR_THM",
  ``!P a b. (a,b) IN {(x,y) | P x y} <=> P a b``,
   SRW_TAC [][]);
 
-val COUNTABLE_PRODUCT_DEPENDENT = store_thm ("COUNTABLE_PRODUCT_DEPENDENT",
- ``!f:'a->'b->'c s t.
-        COUNTABLE s /\ (!x. x IN s ==> COUNTABLE(t x))
-        ==> COUNTABLE {f x y | x IN s /\ y IN (t x)}``,
+Theorem COUNTABLE_PRODUCT_DEPENDENT:
+  !f:'a->'b->'c s t.
+    COUNTABLE s /\ (!x. x IN s ==> COUNTABLE(t x)) ==>
+    COUNTABLE {f x y | x IN s /\ y IN (t x)}
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
-  SUBGOAL_THEN ``{(f:'a->'b->'c) x y | x IN s /\ y IN (t x)} =
-                 IMAGE (\(x,y). f x y) {(x,y) | x IN s /\ y IN (t x)}``
+  SUBGOAL_THEN “{(f:'a->'b->'c) x y | x IN s /\ y IN (t x)} =
+                 IMAGE (λ(x,y). f x y) {(x,y) | x IN s /\ y IN (t x)}”
   SUBST1_TAC THENL
    [SIMP_TAC std_ss [EXTENSION, IN_IMAGE, EXISTS_PROD, IN_ELIM_PAIR_THM] THEN
     SET_TAC[],
     MATCH_MP_TAC COUNTABLE_IMAGE THEN POP_ASSUM MP_TAC] THEN
-  GEN_REWR_TAC (LAND_CONV o TOP_DEPTH_CONV)
-   [COUNTABLE_AS_IMAGE_SUBSET_EQ] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``f:num->'a``) MP_TAC) THEN
+  CONV_TAC $ LAND_CONV  $ REWRITE_CONV [COUNTABLE_AS_IMAGE_SUBSET_EQ] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC “f:num->'a”) MP_TAC) THEN
   DISCH_THEN (MP_TAC o SIMP_RULE std_ss [RIGHT_IMP_EXISTS_THM]) THEN
   SIMP_TAC std_ss [SKOLEM_THM] THEN
-  DISCH_THEN(X_CHOOSE_TAC ``g:'a->num->'b``) THEN
+  DISCH_THEN(X_CHOOSE_TAC “g:'a->num->'b”) THEN
   MATCH_MP_TAC COUNTABLE_SUBSET THEN
-  EXISTS_TAC ``IMAGE (\(m,n). (f:num->'a) m,(g:'a->num->'b)(f m) n)
-                    (univ(:num) CROSS univ(:num))`` THEN
+  EXISTS_TAC “IMAGE (λ(m,n). (f:num->'a) m,(g:'a->num->'b)(f m) n)
+                    (univ(:num) CROSS univ(:num))” THEN
   ASM_SIMP_TAC std_ss [COUNTABLE_IMAGE, COUNTABLE_CROSS, NUM_COUNTABLE] THEN
   SIMP_TAC std_ss [SUBSET_DEF, FORALL_IN_BIGUNION] THEN
   SIMP_TAC std_ss [IN_IMAGE, FORALL_PROD, IN_ELIM_PAIR_THM,
               EXISTS_PROD, IN_CROSS, IN_UNIV] THEN
-  ASM_SET_TAC[]);
+  ASM_SET_TAC[]
+QED
 
 Definition BIGPRODi_def:
   BIGPRODi (A : 'i -> ('a -> bool) option) =
@@ -3367,6 +3534,44 @@ Proof
   pop_assum mp_tac >> REWRITE_TAC [BIGPRODi_def] >>
   simp[combinTheory.APPLY_UPDATE_THM] >> rw[AllCaseEqs()] >>
   metis_tac[optionTheory.SOME_11]
+QED
+
+Theorem cardeq_addUnum:
+  INFINITE (univ(:'a)) ==> univ(:num + 'a) =~ univ(:'a)
+Proof
+  strip_tac >> irule cardleq_ANTISYM >>
+  ‘univ(:'a) <<= univ(:num + 'a)’
+    by (simp[cardleq_def]>> qexists_tac ‘INR’ >>
+        simp[INJ_DEF]) >> simp[] >>
+  ‘univ(:num) <<= univ(:'a)’ by gs[INFINITE_Unum] >>
+  simp[disjUNION_UNIV, CARD_ADD_ABSORB_LE]
+QED
+
+Theorem wellorder_destWO =
+        wellorder_ABSREP |> cj 2
+                         |> Q.SPEC ‘destWO r’
+                         |> REWRITE_RULE [mkWO_destWO]
+
+Theorem cardleq_copy_wellorders:
+  univ(:'a) <<= univ(:'b) ==>
+  !w1 : 'a wellorder. ?w2: 'b wellorder. orderiso w1 w2
+Proof
+  simp[orderiso_def, cardleq_def, INJ_IFF] >>
+  disch_then $ qx_choose_then ‘f’ strip_assume_tac >>
+  qx_gen_tac ‘w1’ >> qabbrev_tac ‘W2 = {(f x, f y) | (x,y) IN destWO w1 }’ >>
+  ‘wellorder (destWO w1)’ by simp[wellorder_destWO] >>
+  ‘wellorder W2’
+    by (‘W2 = IMAGE (f ## f) (destWO w1)’
+          by simp[Abbr‘W2’, EXTENSION, EXISTS_PROD] >>
+        simp[] >> irule INJ_preserves_wellorder >>
+        simp[wellorder_destWO] >> qexists_tac ‘UNIV’ >>
+        simp[INJ_IFF]) >>
+  qexistsl_tac [‘mkWO W2’, ‘f’] >>
+  ‘elsOf (mkWO W2) = { f x | x IN elsOf w1}’
+    by (simp[elsOf_def, Abbr‘W2’, destWO_mkWO, domain_def, range_def] >>
+        dsimp[EXTENSION] >> metis_tac[]) >>
+  simp[PULL_EXISTS] >>
+  simp[destWO_mkWO] >> simp[strict_def, Abbr‘W2’]
 QED
 
 val _ = export_theory()

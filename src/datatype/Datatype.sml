@@ -136,7 +136,7 @@ in
                     Args = List.tabulate (arity, fn n => Type.alpha)}
 end
 
-val mk_recordtype_constructor = RecordType.mk_recordtype_constructor
+val mk_recordtype_constructor = TypeBasePure.mk_recordtype_constructor
 
 fun check_constrs_unique_in_theory asts = let
   fun cnames (s, Record _) = [(s,mk_recordtype_constructor s)]
@@ -696,19 +696,21 @@ fun persistent_tyinfo tyinfos =
 
 fun mk_datatype_presentation thy tyspecl =
   let open ParseDatatype
-      fun mkc (n,_) = prim_mk_const{Name=n,Thy=thy}
+      fun mkc n = prim_mk_const{Name=n,Thy=thy}
       fun type_dec (tyname,Constructors dforms) =
-          let val constrs = map mkc dforms
+          let val constrs = map (mkc o #1) dforms
               val tyn_var = mk_var(tyname,list_mk_fun(map type_of constrs,bool))
           in
             list_mk_comb(tyn_var,constrs)
           end
         | type_dec (tyname,Record fields) =
           let
-            val hdc =
-                prim_mk_const{Name = tyname ^ "_" ^ #1 (hd fields), Thy = thy}
+            fun pmc f =
+                mkc (TypeBasePure.mk_recordtype_fieldsel
+                       {tyname = tyname, fieldname = f})
+            val hdc = pmc (#1 (hd fields))
             fun fieldvar (n, _) = let
-              val c = prim_mk_const{Name = tyname ^ "_" ^ n, Thy = thy}
+              val c = pmc n
               val (_, ty) = dom_rng (type_of c)
             in
               mk_var(n, ty)

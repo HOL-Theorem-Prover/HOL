@@ -1,2 +1,1 @@
-INCLUDES = ../ho_prover ../subtypes
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = ../ho_prover ../subtypes $(dprot $(HOLDIR)/src/monad/more_monads)

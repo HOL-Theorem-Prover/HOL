@@ -1,3 +1,4 @@
+CLINE_OPTIONS = -j1
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
 all: selftest.exe $(UOFILES)
@@ -6,3 +7,13 @@ all: selftest.exe $(UOFILES)
 
 selftest.exe: selftest.uo Q.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+
+.PHONY: q-selftest
+all: q-selftest
+
+q-selftest: selftest.exe
+	./selftest.exe
+
+endif

@@ -66,16 +66,26 @@ end
 (*** parse command line *)
 fun apply_updates fs v = List.foldl (fn (f,v) => #update f (warn,v)) v fs
 
-fun getcline args = let
-  open GetOpt
-in
-  getOpt {argOrder = Permute,
-          options = HM_Cline.option_descriptions,
-          errFn = die}
-         args
-end
+fun getcline args =
+  let
+    open GetOpt
+    val (opts, rest) = getOpt {argOrder = Permute,
+                               options = HM_Cline.option_descriptions,
+                               errFn = die}
+                              args
+    fun is_varassign str =
+      let
+        val fs = String.fields (fn x => x = #"=") str
+      in
+        List.length fs = 2 andalso List.all (fn s => String.size s > 0) fs
+      end
+    val (vars, targets) = List.partition is_varassign rest
+  in
+    (opts, vars, targets)
+  end
 
-val (master_cline_options, targets) = getcline (CommandLine.arguments())
+val (master_cline_options, cline_vars, targets) =
+  getcline (CommandLine.arguments())
 
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
@@ -99,19 +109,29 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
                     Binarymap.dict
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 
+(* Extend the base environment with vars passed at commandline. *)
+fun extend_with_cline_vars env =
+  List.foldl (fn (vstr, env) =>
+                case String.fields (fn x => x = #"=") vstr of
+                  [vname, contents] => env_extend (vname, [LIT contents]) env
+                | _ => die ("Malformed variable assignment " ^
+                            "passed at commandline: " ^ vstr))
+             env
+             cline_vars
 
 local
   open hm_target
-  val base = read_holpathdb()
+  val base = extend_with_cline_vars (read_holpathdb())
   val hmcache = ref (Binarymap.mkDict String.compare)
   val default = (base,empty_trdb,NONE)
   fun get_hmf0 d =
       if OS.FileSys.access("Holmakefile", [OS.FileSys.A_READ]) then
         let
           val (env, rdb, tgt0) =
-              ReadHMF.read "Holmakefile" (read_holpathdb())
+              ReadHMF.read "Holmakefile"
+                           (extend_with_cline_vars (read_holpathdb()))
               handle Fail s =>
-                     (warn ("Bad Holmakefile in " ^ d ^ ": " ^ s);
+                     (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
                       (base,Binarymap.mkDict String.compare,NONE))
           fun hmfstr_to_tgt s = s |> filestr_to_tgt |> setHMF_text s
           fun foldthis (k,{commands,dependencies=deps0},A) =
@@ -159,7 +179,7 @@ val (cline_hmakefile, cline_nohmf) =
 fun get_hmf_cline_updates hmenv =
   let
     val hmf_cline = envlist hmenv "CLINE_OPTIONS"
-    val (hmf_options, hmf_rest) = getcline hmf_cline
+    val (hmf_options, _, hmf_rest) = getcline hmf_cline
     val _ = if null hmf_rest then ()
             else
               warn ("Unused c/line options in makefile: "^
@@ -178,9 +198,9 @@ val starting_holmakefile =
         | x => x
 
 val (start_hmenv, start_rules, start_tgt) = get_hmf()
+
 val start_envlist = envlist start_hmenv
 val start_options = start_envlist "OPTIONS"
-
 
 fun chattiness_level switches =
   case (#debug switches, #verbose switches, #quiet switches) of
@@ -504,6 +524,8 @@ in
   diag "startup" (fn _ => "Additional includes = [" ^
                           String.concatWith ", "
                                             cline_additional_includes ^ "]");
+  diag "startup" (fn _ => "Additional Holmake variables = [" ^
+                          String.concatWith "," cline_vars ^ "]");
   diag "startup" (fn _ => HM_BaseEnv.debug_info option_value)
 end
 
@@ -1077,7 +1099,7 @@ fun work() =
               OS.FileSys.chDir (hmdir.toAbsPath original_dir)
             end
         fun transform_thy_target s =
-            if String.isSuffix "Theory" s then s ^ ".dat"
+            if String.isSuffix "Theory" s then s ^ ".uo"
             else s
         val xs = map transform_thy_target xs
       in

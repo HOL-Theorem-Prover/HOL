@@ -35,9 +35,10 @@ datatype command =
          NoCmd
        | SomeCmd of string
        | BuiltInCmd of builtincmd * Holmake_tools.include_info
+type dir = Holmake_tools.hmdir.t
 type 'a nodeInfo = { target : dep, status : target_status, extra : 'a,
                      command : command, phony : bool,
-                     seqnum : int, dir : Holmake_tools.hmdir.t,
+                     seqnum : int, dir : dir,
                      dependencies : (node * Holmake_tools.dep) list  }
 
 fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
@@ -71,17 +72,18 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
 
 type 'a t = { nodes : (node, 'a nodeInfo) Map.dict,
               target_map : (dep,node) Map.dict,
-              command_map : (command,node list) Map.dict }
+              command_map : (dir * command,node list) Map.dict }
 
 
-fun empty() : 'a t = { nodes = Map.mkDict node_compare,
-                       target_map = Map.mkDict hm_target.compare,
-                       command_map = Map.mkDict command_compare }
+fun empty() : 'a t =
+    { nodes = Map.mkDict node_compare,
+      target_map = Map.mkDict hm_target.compare,
+      command_map = Map.mkDict (pair_compare(hmdir.compare, command_compare)) }
 fun fupd_nodes f ({nodes, target_map, command_map}: 'a t) : 'a t =
   {nodes = f nodes, target_map = target_map, command_map = command_map}
 
-fun find_nodes_by_command (g : 'a t) c =
-  case Map.peek (#command_map g, c) of
+fun find_nodes_by_command (g : 'a t) dc =
+  case Map.peek (#command_map g, dc) of
       NONE => []
     | SOME ns => ns
 
@@ -121,7 +123,7 @@ fun add_node (nI : 'a nodeInfo) (g :'a t) =
       in
         ({ nodes = Map.insert(#nodes g,n,nI),
            target_map = Map.insert(#target_map g, #target nI, n),
-           command_map = extend_map_list (#command_map g) copt n },
+           command_map = extend_map_list (#command_map g) (#dir nI,copt) n },
          n)
       end
     val {target=tgt,dir,...} = nI

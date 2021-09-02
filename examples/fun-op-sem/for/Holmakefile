@@ -1,2 +1,2 @@
-OPTIONS = QUIT_ON_FAILURE
-INCLUDES = ../lprefix_lub
+INCDIRS = integer monad/more_monads
+INCLUDES = ../lprefix_lub $(patsubst %,$(dprot $(HOLDIR)/src/%),$(INCDIRS))

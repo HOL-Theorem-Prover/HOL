@@ -122,7 +122,6 @@ numpair {
   import: pair
   import: numeral
   import: relation
-  import: marker
   import: prim-rec
   import: relation
   article: "../num/extra_theories/numpair.ot.art"
@@ -147,6 +146,7 @@ logroot {
 }
 gcd {
   import: bool
+  import: marker
   import: combin
   import: num
   import: arithmetic
@@ -194,6 +194,7 @@ pred-set {
   import: numeral
   import: numpair
   import: marker
+  import: divides
   article: "../pred_set/src/pred_set.ot.art"
 }
 ind-type {
@@ -217,6 +218,7 @@ list {
 rich-list {
   import: arithmetic
   import: bool
+  import: marker
   import: combin
   import: list
   import: pred-set

@@ -1,3 +1,6 @@
+INCLUDES = ../integer ../hol88 ../topology ../pred_set/src/more_theories \
+           ../res_quan/src ../quotient/src
+
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
@@ -8,7 +11,7 @@ selftest.exe: selftest.uo realSimps.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = real intreal transc powser integral poly real_sigma seq metric lim nets
+BARE_THYS = real intreal transc powser integral poly real_sigma seq metric lim nets iterate
 
 hol4-real-unint.art: hol4-real-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 	opentheory info --article -o $@ $<

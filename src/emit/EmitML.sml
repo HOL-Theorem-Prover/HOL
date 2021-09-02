@@ -63,7 +63,14 @@ val int_of_term_hook = ref
 
 val is_pair_type = Lib.can pairSyntax.dest_prod;
 val is_num_literal = Lib.can Literal.relaxed_dest_numeral;
-fun nameOfC t = #Name (dest_thy_const t)
+fun handle_record s =
+    if String.isPrefix "recordtype." s then
+      case String.fields (equal #".") s of
+          [_, tyname, "seldef", accupd] => tyname ^ "_" ^ accupd
+        | _ => s
+    else s
+
+fun nameOfC t = handle_record (#Name (dest_thy_const t))
 
 (*---------------------------------------------------------------------------*)
 (* Version of dest_string that doesn't care if characters look like          *)
@@ -169,7 +176,7 @@ fun fix_name (prefix,is_type_cons,s) =
           prefix ^ (if Char.isUpper c0 then "_" ^ s1 else fix_reserved s1)
       end
     else
-      prefix ^ (fix_reserved s1)
+      prefix ^ (fix_reserved (handle_record s1))
   end;
 
 fun ML s = capitalize s ^ "ML";
@@ -984,7 +991,7 @@ local
   open ParseDatatype
   fun cmk s = {name = s, terms = Term.decls s}
   fun rmk s =
-    {name = s, terms = Term.decls (RecordType.mk_recordtype_constructor s)}
+    {name = s, terms = Term.decls (TypeBasePure.mk_recordtype_constructor s)}
 in
 fun constructors decls =
     case decls of
@@ -995,7 +1002,7 @@ fun constructors decls =
 fun constrl [] = []
   | constrl ((s,Constructors clist)::rst) = (s,clist)::constrl rst
   | constrl ((s,Record flds)::rst) =
-      (s, [(RecordType.mk_recordtype_constructor s,map snd flds)])::constrl rst
+    (s, [(TypeBasePure.mk_recordtype_constructor s,map snd flds)])::constrl rst
 end;
 
 

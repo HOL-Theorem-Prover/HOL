@@ -138,6 +138,16 @@ val LEQ_DIVIDES_FACT = store_thm
    THEN METIS_TAC [FACT, LESS_REFL, num_CASES, DIVIDES_MULT,
                    MULT_COMM, DIVIDES_REFL, ADD_CLAUSES]);
 
+(* Idea: a convenient form of divides_def. *)
+
+(* Theorem: n divides (m * n) /\ n divides (n * m) *)
+(* Proof: by divides_def. *)
+Theorem factor_divides[simp]:
+  !m n. divides n (m * n) /\ divides n (n * m)
+Proof
+  METIS_TAC[divides_def, MULT_COMM]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Definition and trivial facts about primality.                             *)
 (*---------------------------------------------------------------------------*)
@@ -202,6 +212,29 @@ val prime_divides_only_self = Q.store_thm
  Q.PAT_X_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN
  METIS_TAC [divides_def,MULT_SYM]);
 
+Theorem prime_MULT:
+  !n m. prime (n * m) <=>
+        ((n <= m ==> (n = 1 /\ prime m)) /\
+         (m <= n ==> (m = 1 /\ prime n)))
+Proof
+  `!m n. m <= n ==> (prime (m * n) <=> m = 1 /\ prime n)`
+  suffices_by METIS_TAC[LESS_EQ_CASES, MULT_COMM]
+  \\ gen_tac
+  \\ Cases_on`m = 0` \\ ASM_SIMP_TAC arith_ss [NOT_PRIME_0]
+  \\ RW_TAC arith_ss [EQ_IMP_THM]
+  \\ FULL_SIMP_TAC arith_ss [prime_def]
+  >- (
+    `divides m (m * n)` by METIS_TAC[factor_divides]
+    \\ CCONTR_TAC
+    \\ `m = m * n` by METIS_TAC[]
+    \\ `~(m < m * n)` by DECIDE_TAC
+    \\ FULL_SIMP_TAC arith_ss [])
+  \\ rpt strip_tac \\ FULL_SIMP_TAC arith_ss []
+  \\ Cases_on`b=1` \\ ASM_SIMP_TAC arith_ss []
+  \\ `divides b (m * n)` by METIS_TAC[DIVIDES_MULT, MULT_COMM]
+  \\ `b = m * n` by METIS_TAC[]
+  \\ FULL_SIMP_TAC arith_ss [DIVIDES_MULT_LEFT]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every number has a prime factor, except for 1. The proof proceeds by a    *)

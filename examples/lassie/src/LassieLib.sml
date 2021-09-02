@@ -59,7 +59,7 @@ struct
       val s = TextIO.input(instream);
       val _ = if !logging then print s else ()
     in
-      if String.isSuffix "\n> " s orelse s = "> " then s
+      if String.isSuffix "#SEMPRE# " s orelse s = "#SEMPRE# " then s
       (* else if s = "" then raise LassieException "Reached EOS? Empty string was read."  *)
       else s ^ (waitSempre instream)
     end;
@@ -210,7 +210,9 @@ struct
                 end
                 (* The Lassie separator was a HOL4 level token *)
                 handle LassieException diag =>
-                  (strAcc ^ " " ^ str, goalpos, gl, vld))
+                  if (diag = "Could not extract formula")
+                  then (strAcc ^ " " ^ str, goalpos, gl, vld)
+                  else raise LassieException diag)
              ("", All, gls1, vld1) theStrings)
     in
       if (str = "") then (gls, vld)
