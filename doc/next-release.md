@@ -68,7 +68,13 @@ Incompatibilities:
 ------------------
 
 *   The small `productTheory` (Products of natural numbers and real numbers, ported from HOL-Light)
-    has been merged into `iterateTheory` (which is now dependent by `extrealTheory`).
+    has been merged into `iterateTheory` (on which `extrealTheory` now depends).
+
+*   Changes in the `formal-languages/context-free` example:
+
+    -   The location type (defined in `locationTheory`) has been simplified
+    -   The PEG machinery now has a simple error-reporting facility that attempts to report the end of the longest prefix of the input that might still be in the PEG’s language.
+        This means that instead of returning either `SOME result` or `NONE`, PEG’s now return a custom `Success`/`Failure` data type with values attached to both constructors.
 
 * * * * *
 
