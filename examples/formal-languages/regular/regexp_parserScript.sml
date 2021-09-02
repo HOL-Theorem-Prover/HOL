@@ -119,6 +119,7 @@ Definition rePEG_def :
     tokFALSE := "Failed to see expected token";
     tokEOF := "Failed to see expected token; saw EOF instead";
     notFAIL := "Not combinator failed";
+    anyEOF := "EOF";
     rules := FEMPTY |++ [
       (mkNT Atom,
        choicel [
