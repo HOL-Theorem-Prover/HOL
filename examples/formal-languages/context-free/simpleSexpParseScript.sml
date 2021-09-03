@@ -376,6 +376,25 @@ Proof
   simp[Once peg_eval_cases] >> metis_tac[]
 QED
 
+Theorem peg_eval_not:
+  peg_eval G (i0, not s c) r ⇔
+    ∃r0. peg_eval G (i0, s) r0 ∧
+         ((∃v eo i. r0 = Success i v eo ∧
+                    r = Failure (sloc i0) G.notFAIL) ∨
+          (∃fl fe. r0 = Failure fl fe ∧ r = Success i0 c NONE))
+Proof
+  simp[Once peg_eval_cases, SimpLHS] >> dsimp[EXISTS_result] >>
+  metis_tac[]
+QED
+
+Theorem peg_eval_any:
+  peg_eval G (i0, any f) r ⇔
+    i0 = [] ∧ r = Failure (Locs EOFpt EOFpt) G.anyEOF ∨
+    ∃h t. i0 = h::t ∧ r = Success t (f h) NONE
+Proof
+  simp[Once peg_eval_cases] >> metis_tac[]
+QED
+
 Theorem peg_eval_valid_symbol[local]:
   ∀s. valid_symbol (MAP FST s) ⇒
       ∃eo.
@@ -387,6 +406,7 @@ Proof
   simp[peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied, ignoreR_def,
        peg_eval_seq_SOME, peg_eval_rpt, PULL_EXISTS] >>
   irule_at Any peg_eval_list_nil >> simp[peg_eval_tok_NONE] >>
+  dsimp[peg_eval_not, peg_eval_any] >>
   simp[pnt_def, peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied, ignoreL_def,
        peg_eval_seq_SOME, peg_eval_rpt, PULL_EXISTS] >>
   irule_at Any peg_eval_list_nil >> simp[peg_eval_tok_NONE] >>
@@ -405,7 +425,8 @@ Proof
   dsimp[FDOM_sexpPEG, sexpPEG_applied, peg_eval_seq_NONE, pnt_def,
         peg_eval_rpt, peg_eval_seq_SOME, peg_eval_tok_SOME,
         destSXSYM_def] >>
-  drule peg_eval_valid_symchars >> simp[peg_eval_rpt] >> metis_tac[]
+  drule peg_eval_valid_symchars >> simp[peg_eval_rpt] >>
+  metis_tac[]
 QED
 
 val valid_symbol_no_spaces = Q.store_thm("valid_symbol_no_spaces",
@@ -583,28 +604,6 @@ val print_nt_sexp0_no_leading_rparen = Q.store_thm("print_nt_sexp0_no_leading_rp
   \\ TRY (EVAL_TAC \\ NO_TAC)
   \\ fs[isGraph_def,isSpace_def]);
 
-Theorem peg_eval_sexp_sexp0:
-  peg_eval sexpPEG (str ++ rst, pnt sxnt_sexp0) (Success rst s eo) ∧
-  (str ≠ [] ⇒ ¬isSpace (FST(HD str))) ∧
-  (rst ≠ [] ⇒ ¬isSpace (FST(HD rst))) ⇒
-  ∃eo'.
-    peg_eval sexpPEG (str ++ rst, pnt sxnt_sexp) (Success rst s eo')
-Proof
-  strip_tac
-  \\ simp[pnt_def, Once peg_eval_cases, FDOM_sexpPEG,sexpPEG_applied,
-          ignoreL_def, ignoreR_def, peg_eval_seq_SOME, peg_eval_rpt,
-          PULL_EXISTS]
-  \\ irule_at Any peg_eval_list_nil >> simp[peg_eval_tok_NONE, EXISTS_PROD]
-  \\ simp[Once peg_eval_cases, FDOM_sexpPEG, sexpPEG_applied, ignoreL_def,
-          peg_eval_rpt, peg_eval_seq_SOME, PULL_EXISTS]
-  \\ irule_at Any peg_eval_list_nil
-  \\ map_every Cases_on [‘str’, ‘rst’]
-  \\ gs[PULL_EXISTS, peg_eval_tok_NONE]
-  \\ rpt (rename [‘FST h’] \\ Cases_on ‘h’ \\
-          gs[peg_eval_tok_NONE, PULL_EXISTS])
-  \\ gs[SF SFY_ss]
-QED
-
 Theorem sexpnum_requires_digits:
   ¬isDigit c ⇒
   (peg_eval sexpPEG ((c,l)::rest, pnt sxnt_sexpnum) r ⇔
@@ -646,7 +645,7 @@ Proof
   csimp[sexpnum_requires_digits, isDigit_def, MAXerr_def]
 QED
 
-val stoppers_def = Define`
+Definition stoppers_def:
   (stoppers sxnt_sexpnum = UNIV DIFF isDigit) ∧
   (stoppers sxnt_normstrchar = UNIV) ∧
   (stoppers sxnt_escapedstrchar = UNIV) ∧
@@ -655,7 +654,8 @@ val stoppers_def = Define`
   (stoppers sxnt_sexpsym = UNIV DIFF valid_symchar) ∧
   (stoppers sxnt_sexp0 = UNIV DIFF valid_symchar DIFF isDigit) ∧
   (stoppers sxnt_sexpseq = UNIV) ∧
-  (stoppers sxnt_sexp = UNIV DIFF valid_symchar DIFF isDigit DIFF isSpace)`;
+  (stoppers sxnt_sexp = ∅)
+End
 
 Overload EOF = “Locs EOFpt EOFpt”
 Theorem peg_eval_tokNIL[simp]:
@@ -1079,8 +1079,8 @@ Proof
       gvs[MAP_EQ_CONS, PULL_EXISTS, FORALL_PROD, pnt_def] >>
       gvs[GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >>
       first_x_assum $ irule_at Any >> simp[] >>
-      irule_at Any peg_eval_list_nil >> simp[] >>
-      Cases_on ‘rst’ >> simp[peg_eval_tok_NONE] >> gvs[stoppers_def, IN_DEF]) >>
+      irule_at Any peg_eval_list_nil >>
+      dsimp[peg_eval_not, peg_eval_any] >> gvs[stoppers_def]) >>
   (* default tactic *)
   rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
      peg_eval_tok_SOME,peg_eval_choicel_CONS,tokeq_def,peg_eval_tok_NONE,

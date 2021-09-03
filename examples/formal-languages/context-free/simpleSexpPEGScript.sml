@@ -84,7 +84,10 @@ Definition sexpPEG_def[nocompute]:
     rules :=
     FEMPTY |++
            [(mkNT sxnt_sexp,
-             pnt sxnt_WSsexp <~ rpt (tok isSpace (K arb_sexp)) (K arb_sexp));
+             pnt sxnt_WSsexp <~
+             seq (rpt (tok isSpace (K arb_sexp)) (K arb_sexp))
+                 (not (any (K arb_sexp)) arb_sexp)
+                 (K (K arb_sexp)));
             (mkNT sxnt_sexp0,
              choicel [
                  pnt sxnt_sexpnum ;
@@ -144,11 +147,14 @@ Definition sexpPEG_def[nocompute]:
 End
 
 Theorem sexpPEG_start[simp] = SIMP_CONV(srw_ss())[sexpPEG_def]“sexpPEG.start”
+Theorem sexpPEG_notFAIL[simp] =
+        SIMP_CONV(srw_ss())[sexpPEG_def]“sexpPEG.notFAIL”
 val ds = derive_compset_distincts “:sexpNT”
 val {lookups,fdom_thm,applieds} =
   derive_lookup_ths {pegth = sexpPEG_def, ntty = “:sexpNT”,
                      simp = SIMP_CONV (srw_ss())}
-Theorem sexpPEG_exec_thm[compute] = LIST_CONJ(sexpPEG_start::ds::lookups)
+Theorem sexpPEG_exec_thm[compute] =
+        LIST_CONJ(sexpPEG_start::sexpPEG_notFAIL::ds::lookups)
 Theorem FDOM_sexpPEG = fdom_thm
 Theorem sexpPEG_applied = LIST_CONJ applieds
 

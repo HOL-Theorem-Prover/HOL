@@ -21,10 +21,9 @@ fun test0 nt s = let
                      (pnt ^nt)
                      (MAPi (λi c.
                                (c,
-                                Locs <| row := 1; col := i + 1; offset := 0|>
-                                     <| row := 1; col := i + 1; offset := 0|>))
-                           (^str_t))
-                     [] [] done failed``
+                                Locs (POSN 1 (i + 1)) (POSN 1 (i + 1))))
+                      ^str_t)
+                     [] NONE [] done failed``
 in
   rhs (concl th)
 end
@@ -32,15 +31,18 @@ end (* local *)
 
 fun test (s, exp) = let
   val exp_t =
-      ``Result (Success [] ^exp) : (char, sexpNT, sexp, string) evalcase``
+      ``Result (Success [] ^exp eo) : (char, sexpNT, sexp, string) evalcase``
 in
   timed_tprint (s ^ " --> " ^ term_to_string exp_t);
-  require_msg (check_result (aconv exp_t))
+  require_msg (check_result (can (match_term exp_t)))
               term_to_string (test0 ``sxnt_sexp``)
               s
 end
-val _ = temp_overload_on ("Ok", ``λt. Result (Success [] t)``)
-val _ = temp_overload_on ("Fails", “λi j m. Result (Failure (Locs <| row := 1; col := i; offset := 0|> <| row := 1; col := j; offset := 0|>) m)”)
+val _ = temp_overload_on ("Ok", ``λt eo. Result (Success [] t eo)``)
+val _ = temp_overload_on ("Fails",
+  “λi j m. Result (Failure (Locs (POSN 1 i) (POSN 1 j)) m)”)
+val _ = temp_overload_on ("Fails@EOF",
+                          “λm. Result (Failure (Locs EOFpt EOFpt) m)”)
 
 val _ = print "\n" before app (ignore o test) [
   ("123", ``123s``),
@@ -72,7 +74,8 @@ val _ = print "\n" before app (ignore o test) [
 fun failtest (s, loc1, loc2, msg) =
     let
       fun mknum i = numSyntax.mk_numeral (Arbnum.fromInt i)
-      fun mkloc i = “<| row := 1; col := ^(mknum i); offset := 0|>”
+      fun mkloc iopt = case iopt of SOME i => “POSN 1 ^(mknum i)”
+                                  | NONE => “EOFpt”
       val exp_t = “Result (Failure (Locs ^(mkloc loc1) ^(mkloc loc2))
                                     ^(stringSyntax.fromMLstring msg))
                   : (char, sexpNT, sexp, string) evalcase”
@@ -84,7 +87,9 @@ fun failtest (s, loc1, loc2, msg) =
     end;
 
 val _ = app failtest [
-      ("\"foo\\3", 5, 5, "Expected \"")
+      ("\"foo", NONE, NONE, "Expected \""),
+      ("\"foo\\3", SOME 5, SOME 5, "Expected \""),
+      ("foo)", SOME 4, SOME 4, "Failed to fail in a not rule")
     ]
 
 

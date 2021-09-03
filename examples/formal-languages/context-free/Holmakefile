@@ -11,7 +11,7 @@ ifdef HOLSELFTESTLEVEL
 all: context-free-test.log
 
 context-free-test.log: selftest.exe
-	./selftest.exe > $@ 2>&1
+	./selftest.exe 2>&1 | tee $@
 endif
 
 EXTRA_CLEANS = selftest.exe context-free-test.log
