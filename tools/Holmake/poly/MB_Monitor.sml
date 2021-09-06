@@ -174,7 +174,7 @@ fun new {info,warn,genLogFile,time_limit} =
             val tgtw = width div job_count - 4
           in
             Binarymap.app (
-              fn (jk as (_, tag),{status,...}) =>
+              fn (jk as (_, {tag,dir}),{status,...}) =>
                  print (polish tgtw tag ^ statusString status ^ " ")
             ) (!monitor_map);
             print CLR_EOL
@@ -182,7 +182,7 @@ fun new {info,warn,genLogFile,time_limit} =
         else
           case Binarymap.listItems (!monitor_map) of
               [] => ()
-            | (jk as (_, tag),{tb,status,...}) :: _ =>
+            | (jk as (_, {tag,dir}),{tb,status,...}) :: _ =>
               let
                 val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
                 val tgtw = width div 4
@@ -208,13 +208,13 @@ fun new {info,warn,genLogFile,time_limit} =
       case Binarymap.peek (!monitor_map, jkey) of
           NONE => (warn ("Lost monitor info for "^jobkey_toString jkey); NONE)
         | SOME info => f info
-    fun taginfo tag colour pfx s =
+    fun taginfo {tag,dir} colour pfx s =
       info (infopfx ^
             squash_to (Width() - (7 + String.size pfx) - 1) (delsml_sfx tag) ^
             pfx ^ colour (StringCvt.padLeft #" " 7 s) ^ CLR_EOL)
     fun monitor msg =
       case msg of
-          StartJob (jk as (_, tag), {dir}) =>
+          StartJob (jk as (_, {tag,...}), {dir}) =>
           let
             val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {

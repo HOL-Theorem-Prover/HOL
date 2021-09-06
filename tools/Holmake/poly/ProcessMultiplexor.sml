@@ -21,6 +21,7 @@ struct
 
   type 'a working_job = {
     tag : string,
+    dir : string,
     command : command,
     update : 'a * bool -> 'a,
     starttime : Time.time,
@@ -31,7 +32,7 @@ struct
     erreof : bool,
     pid : pid
   }
-  type jobkey = pid * string
+  type jobkey = pid * {dir:string, tag : string}
   datatype strmtype = OUT | ERR
   datatype monitor_message =
            Output of jobkey * Time.time * strmtype * string
@@ -45,23 +46,23 @@ struct
 
   local
     open FunctionalRecordUpdate
-    fun makeUpdateWJ z = makeUpdate10 z (* 10 fields *)
+    fun makeUpdateWJ z = makeUpdate11 z (* 10 fields *)
     fun makeUpdateWL z = makeUpdate4 z (* 4 fields *)
   in
     fun updateWJ z = let
-      fun from tag command update starttime lastevent out err
+      fun from dir tag command update starttime lastevent out err
                outeof erreof pid =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid}
+           erreof = erreof, pid = pid, dir = dir}
       fun from' pid erreof outeof err out lastevent starttime update command
-                tag =
+                tag dir =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid}
+           erreof = erreof, pid = pid, dir = dir}
       fun to f {tag, command, update, starttime, lastevent, out,
-                err, outeof, erreof, pid} =
-        f  tag command update starttime lastevent out err
+                err, outeof, erreof, pid, dir} =
+        f  dir tag command update starttime lastevent out err
            outeof erreof pid
     in
       makeUpdateWJ (from, from', to)
@@ -95,13 +96,14 @@ struct
     TextIO.mkInstream (TextIO.StreamIO.mkInstream (rdr, ""))
   end
 
-  fun jobkey_compare((p1,s1), (p2,s2)) =
+  fun jobkey_compare((p1,{tag=t1,dir=d1}), (p2,{tag=t2,dir=d2})) =
     case SysWord.compare(pidToWord p1, pidToWord p2) of
-        EQUAL => String.compare(s1,s2)
+        EQUAL => (case String.compare(t1,t2) of EQUAL => String.compare(d1,d2)
+                                              | x => x)
       | x => x
-  fun jobkey_toString (p,s) =
-      s ^ "(" ^ SysWord.toString (pidToWord p) ^ ")"
-  fun wjkey ({tag,pid,...} : 'a working_job) = (pid,tag)
+  fun jobkey_toString (p,{tag,dir}) =
+      dir ^ "/" ^ tag ^ "(" ^ SysWord.toString (pidToWord p) ^ ")"
+  fun wjkey ({tag,pid,dir,...} : 'a working_job) = (pid,{tag=tag,dir=dir})
   fun wjk_member x [] = false
     | wjk_member x (h::t) = jobkey_compare(x,h) = EQUAL orelse wjk_member x t
 
@@ -181,6 +183,7 @@ struct
             val () = List.app close [outoutfd, erroutfd, ininfd, inoutfd]
           in
             {
+              dir = dir,
               tag = tag,
               command = command,
               update = update,
@@ -253,17 +256,17 @@ struct
       fun p tag t msg = p0 tag t msg NONE
     in
       case m of
-          Output((pid,tag), t, chan, s) =>
+          Output((pid,{tag,...}), t, chan, s) =>
             p tag t ("["^chan_name chan^"]: " ^ s)
-        | NothingSeen ((pid,tag), {delay,total_elapsed}) =>
+        | NothingSeen ((pid,{tag,...}), {delay,total_elapsed}) =>
             p tag total_elapsed ("delayed " ^ Time.toString delay)
-        | Terminated((pid,tag), st, t) =>
+        | Terminated((pid,{tag,...}), st, t) =>
           p0 tag t ("exited " ^ (if st = W_EXITED then "OK" else "FAILED"))
              (if st = W_EXITED then NONE else SOME KillAll)
-        | MonitorKilled((pid,tag), t) => p tag t "monitor-killed"
-        | EOF ((pid,tag), chan, t) =>
+        | MonitorKilled((pid,{tag,...}), t) => p tag t "monitor-killed"
+        | EOF ((pid,{tag,...}), chan, t) =>
             p tag t ("EOF on " ^ chan_name chan)
-        | StartJob ((pid,tag), _) => p tag (Time.fromSeconds 0) "beginning"
+        | StartJob ((pid,{tag,...}), _) =>p tag (Time.fromSeconds 0) "beginning"
     end
 
   fun wjstrm ERR (wj:'a working_job) = #err wj
