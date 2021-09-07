@@ -138,6 +138,28 @@ fun squash_to wdth s =
     else "..." ^ String.extract(s, size s - (wdth - 4), NONE) ^ " "
 
 
+fun prettydir dir =
+    let
+      (* input dir is already absolute *)
+      val hmdir = Holmake_tools.hmdir.fromPath {origin = "/", path = dir}
+      val dir = Holmake_tools.hmdir.pretty_dir hmdir
+      val dir = Holmake_tools.nice_dir dir
+      val {arcs,...} = OS.Path.fromString dir
+      val arcs = if hd arcs = "~" orelse String.sub(hd arcs, 0) = #"$" then
+                   tl arcs
+                 else arcs
+      val s0 = String.concatWith "\\" (List.rev arcs)
+    in
+      (dim s0, String.size s0)
+    end
+
+infix ^^ ^~ ~^
+fun (s1,n1) ^^ (s2,n2) = (s1 ^ s2, n1 + n2)
+fun s1 ^~ (s2,n2) = (s1 ^ s2, String.size s1 + n2)
+fun (s1,n1) ~^ s2 = (s1 ^ s2, n1 + String.size s2)
+fun ssize (s,n) = n
+
+
 fun new {info,warn,genLogFile,time_limit} =
   let
     val monitor_map =
@@ -208,10 +230,12 @@ fun new {info,warn,genLogFile,time_limit} =
       case Binarymap.peek (!monitor_map, jkey) of
           NONE => (warn ("Lost monitor info for "^jobkey_toString jkey); NONE)
         | SOME info => f info
+    val info0 = info
+    val info = fn (s,_) => info s
     fun taginfo {tag,dir} colour pfx s =
       info (infopfx ^
-            squash_to (Width() - (7 + String.size pfx) - 1) (delsml_sfx tag) ^
-            pfx ^ colour (StringCvt.padLeft #" " 7 s) ^ CLR_EOL)
+            squash_to (Width() - (7 + ssize pfx) - 1) (delsml_sfx tag) ^~
+            pfx ~^ colour (StringCvt.padLeft #" " 7 s) ^ CLR_EOL)
     fun monitor msg =
       case msg of
           StartJob (jk as (_, {tag,...}), {dir}) =>
@@ -269,14 +293,14 @@ fun new {info,warn,genLogFile,time_limit} =
               (fn pinfo =>
                   check_time (delay, jkey, (fn () => after_check pinfo)))
           end
-        | Terminated(jk as (_, tag), st, _) =>
+        | Terminated(jk as (_, td as {tag,dir}), st, _) =>
           stdhandle jk
             (fn {os = strm,tb,status=stat,start_time} =>
                 let
                   val {fulllines,lastpartial,patterns_seen} =
                     tailbuffer.output tb
                   fun seen s = Holmake_tools.member s patterns_seen
-                  val taginfo = taginfo tag
+                  val taginfo = taginfo td
                   val status_string = Pstatus_to_string st
                   val {cutime,...} = Posix.ProcEnv.times()
                   val this_childs_time = Time.-(cutime, !last_child_cputime)
@@ -284,7 +308,7 @@ fun new {info,warn,genLogFile,time_limit} =
                   val utstr = compact_time 5 true this_childs_time
                   val rtstr = compact_time 5 true
                                            (Time.-(Time.now(), start_time))
-                  val pfx = "real: " ^ rtstr ^ "  user: " ^ utstr
+                  val pfx = prettydir dir ~^ " (" ~^ utstr ~^ ")"
                 in
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then
@@ -294,8 +318,8 @@ fun new {info,warn,genLogFile,time_limit} =
                         (if seen oracle_string then boldyellow else green)
                         pfx "OK"
                   else (taginfo red pfx ("FAIL<" ^ status_string ^ ">");
-                        List.app (fn s => info (" " ^ dim s)) fulllines;
-                        if lastpartial <> "" then info (" " ^ dim lastpartial)
+                        List.app (fn s => info0 (" " ^ dim s)) fulllines;
+                        if lastpartial <> "" then info0 (" " ^ dim lastpartial)
                         else ());
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
@@ -305,7 +329,7 @@ fun new {info,warn,genLogFile,time_limit} =
         | MonitorKilled(jk as (_, tag), _) =>
           stdhandle jk
             (fn {os = strm,tb, status = stat,...} =>
-                (taginfo tag red "" "M-KILLED";
+                (taginfo tag red ("",0) "M-KILLED";
                  TextIO.closeOut strm;
                  monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                  display_map();
