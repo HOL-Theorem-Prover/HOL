@@ -77,7 +77,7 @@ fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
       NONE => s
     | SOME term =>
-      if String.isPrefix "xterm" term orelse term = "screen" then
+      if String.isPrefix "xterm" term orelse String.isPrefix "screen" term then
         pfx ^ s ^ "\027[0m"
       else
         s
