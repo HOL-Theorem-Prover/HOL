@@ -41,24 +41,25 @@ fun nextchar #"|" = #"/"
 
 val time_units = [("m", 60), ("h", 60), ("d", 24)]
 
-fun compact_time sz withsecs t =
+fun compact_time sz0 withsecs ld rd t =
     let
+      val sz = sz0 - (size ld + size rd)
       val numSecs = Time.toSeconds t
       val n_s = LargeInt.toString numSecs
       val (su,sn) = if withsecs then ("s", 1) else ("", 0)
       fun helper i n =
-          if i > 2 then CharVector.tabulate(sz-1, fn _ => #"9") ^ "d"
+          if i > 2 then ld ^ CharVector.tabulate(sz-1, fn _ => #"9") ^ "d" ^ rd
           else let
             val (u, f) = List.nth(time_units, i)
             val n' = LargeInt.div(n,f)
             val n'_s = LargeInt.toString n'
           in
             if size n'_s + 1 > sz then helper (i + 1) n'
-            else StringCvt.padLeft #" " sz (n'_s ^ u)
+            else StringCvt.padLeft #" " sz0 (ld ^ n'_s ^ u ^ rd)
           end
     in
       if size n_s + sn > sz then helper 0 numSecs
-      else StringCvt.padLeft #" " sz (n_s ^ su)
+      else StringCvt.padLeft #" " sz0 (ld ^ n_s ^ su ^ rd)
     end
 
 val yellow_timelimit = Time.fromSeconds 10
@@ -76,7 +77,7 @@ fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c)
                     else red
     in
       if Time.<(t, Time.fromSeconds 5) then "   "
-      else colourf (compact_time 3 false t)
+      else colourf (compact_time 3 false "" "" t)
     end
 
 fun rtrunc n s =
@@ -160,7 +161,7 @@ fun (s1,n1) ~^ s2 = (s1 ^ s2, n1 + String.size s2)
 fun ssize (s,n) = n
 
 
-fun new {info,warn,genLogFile,time_limit} =
+fun new {info,warn,genLogFile,time_limit,multidir} =
   let
     val monitor_map =
         ref (Binarymap.mkDict jobkey_compare : (jobkey,procinfo)Binarymap.dict)
@@ -305,10 +306,10 @@ fun new {info,warn,genLogFile,time_limit} =
                   val {cutime,...} = Posix.ProcEnv.times()
                   val this_childs_time = Time.-(cutime, !last_child_cputime)
                   val _ = last_child_cputime := cutime
-                  val utstr = compact_time 5 true this_childs_time
-                  val rtstr = compact_time 5 true
-                                           (Time.-(Time.now(), start_time))
-                  val pfx = prettydir dir ~^ " (" ~^ utstr ~^ ")"
+                  val utstr = compact_time 6 true "(" ")" this_childs_time
+                  val pfx = if multidir then
+                              prettydir dir ~^ " " ~^ utstr
+                            else (utstr, String.size utstr)
                 in
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then

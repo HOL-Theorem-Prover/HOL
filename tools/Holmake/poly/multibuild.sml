@@ -13,11 +13,28 @@ datatype buildresult =
        | BR_Failed
 
 val RealFail = Failed{needed=true}
+structure Map = Binarymap
+
+fun fupdkey m f k dflt =
+    case Map.peek (m,k) of
+        NONE => Map.insert(m,k,dflt)
+      | SOME v => Map.insert(m,k,f v)
 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hollogs"
 
+fun graph_dirinfo g =
+    let
+      fun foldthis (_, nI) A =
+          case #status nI of
+              Pending {needed=true} => fupdkey A (fn n => n + 1) (#dir nI) 0
+            | _ => A
+    in
+      HM_DepGraph.fold foldthis g (Map.mkDict Holmake_tools.hmdir.compare)
+    end
+
+fun is_multidir gdi = Map.numItems gdi > 1
 
 
 fun graphbuild optinfo g =
@@ -28,6 +45,7 @@ fun graphbuild optinfo g =
           keep_going, quiet, hmenv, jobs, info, time_limit,
           relocbuild } = optinfo
     val _ = diag "Starting graphbuild"
+    val dirmap = graph_dirinfo g
     fun dropthySuffix s =
         if List.exists
              (fn sfx => String.isSuffix ("Theory." ^ sfx) s)
@@ -46,7 +64,8 @@ fun graphbuild optinfo g =
 
     val monitor =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
-                        time_limit = time_limit}
+                        time_limit = time_limit,
+                        multidir = is_multidir dirmap}
 
     val env =
         (if relocbuild then [Systeml.build_after_reloc_envvar^"=1"] else []) @

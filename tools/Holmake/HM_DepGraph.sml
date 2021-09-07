@@ -75,6 +75,9 @@ type 'a t = { nodes : (node, 'a nodeInfo) Map.dict,
               command_map : (dir * command,node list) Map.dict }
 
 
+fun fold f (g:'a t) A =
+    Map.foldl (fn (n,ni,acc) => f (n,ni) acc) A (#nodes g)
+
 fun empty() : 'a t =
     { nodes = Map.mkDict node_compare,
       target_map = Map.mkDict hm_target.compare,

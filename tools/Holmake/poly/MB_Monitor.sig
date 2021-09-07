@@ -1,8 +1,8 @@
 signature MB_Monitor =
 sig
 
-  val new : {info : string -> unit,
-             warn : string -> unit,
+  val new : {info : string -> unit, warn : string -> unit,
+             multidir : bool,
              genLogFile : {tag:string,dir:string} -> string,
              time_limit : Time.time option} ->
             ProcessMultiplexor.monitor

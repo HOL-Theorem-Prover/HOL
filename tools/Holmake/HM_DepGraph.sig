@@ -42,6 +42,7 @@ sig
   val find_nodes_by_command : 'a t -> dir * command -> node list
   val mkneeded : dep list -> 'a t -> 'a t
   val mk_dirneeded : Holmake_tools.hmdir.t -> 'a t -> 'a t
+  val fold : (node * 'a nodeInfo -> 'b -> 'b) -> 'a t -> 'b -> 'b
 
   val find_runnable : 'a t -> (node * 'a nodeInfo) option
 
