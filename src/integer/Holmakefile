@@ -3,6 +3,8 @@ INCLUDES = ../quotient/src ../ring/src ../n-bit ../finite_maps ../res_quan/src
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
+EXTRA_CLEANS = selftest.exe integer-selftest.log
+
 intLib.uo: int_arithTheory.uo intLib.sml
 
 selftest.exe: selftest.uo intLib.uo
@@ -20,4 +22,12 @@ hol4-integer-unint.art: hol4-integer-unint.thy $(ARTFILES)
 
 hol4-integer.art: hol4-integer.thy hol4-integer-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: integer-selftest.log
+
+integer-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+
 endif

@@ -4,4 +4,12 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe tactictoe-selftest.log
+
+ifdef HOLSEFLTESTLEVEL
+all: tactictoe-selftest.log
+
+tactictoe-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+
+endif

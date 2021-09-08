@@ -2,7 +2,7 @@ ifdef POLY
 HOLHEAP = ../../num/termination/numheap
 endif
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe pred_set-selftest.log
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
@@ -16,4 +16,11 @@ selftest.exe: selftest.uo PFset_conv.uo pred_setTheory.uo
 ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: pred_set-selftest.log
+
+pred_set-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
 endif

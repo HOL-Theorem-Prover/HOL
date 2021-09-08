@@ -8,4 +8,12 @@ selftest.exe : selftest.uo ratLib.uo ratTheory.uo ratReduce.uo
 
 intExtensionTheory.sml: ../integer/int_arithTheory.uo
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe rational-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: rational-selftest.log
+
+rational-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+
+endif

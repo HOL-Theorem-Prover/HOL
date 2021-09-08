@@ -2,7 +2,7 @@ PRE_INCLUDES = ..
 TEST_PROGS = test_coopers.exe test_omega.exe selftest.exe
 
 EXTRA_CLEANS = $(TEST_PROGS) tcooper genproblem gen_bc_problem \
-               testdp
+               testdp integer2-selftest.log
 
 COOPER_DEPS = test_coopers.uo ../Cooper.uo ../CooperShell.uo \
               ../CooperMath.uo ../CooperSyntax.uo ../CooperCore.uo \
@@ -34,3 +34,10 @@ testdp: testdp.uo ../Cooper.uo readproblemfile.uo
 selftest.exe: selftest.uo $(COOPER_DEPS) $(OMEGA_DEPS)
 	$(HOLMOSMLC) -o $@ $<
 
+ifdef HOLSELFTESTLEVEL
+all: integer2-selftest.log
+
+integer2-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+
+endif
