@@ -260,7 +260,7 @@ val confidence_tnn = eval_goal
    ------------------------------------------------------------------------- *)
 
 fun suggest () =
-  let val s = suggest_proof (valOf (!searchtree_glob)) in
+  let val s = hidef suggest_proof (valOf (!searchtree_glob)) in
     print_endline s;
     hidef (tactic_of_sml (!ttt_search_time)) s
   end

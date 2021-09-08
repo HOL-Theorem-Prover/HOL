@@ -28,7 +28,7 @@ val ex1 = store_thm("ex1",
 
 open listTheory
 
-(* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
+(* ttt ([],``(!n. f (n:'a) = c:'b) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
 val ex2 = store_thm("ex2",
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``,
   asm_simp_tac (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) [LIST_EQ_REWRITE] >>
