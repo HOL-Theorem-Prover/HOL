@@ -296,7 +296,38 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
 
   end
 
+structure Set = Binaryset
 
-
+fun topo_sort g =
+    let
+      val unmarked = fold (fn (n, _) => fn A => Set.add(A,n))
+                          g (Set.empty node_compare)
+      fun visit (n, (tempmarked, unmarked, L)) =
+          let
+            val _ = not (Set.member(tempmarked, n)) orelse
+                    raise Fail "Cyclic graph"
+          in
+            if Set.member(unmarked, n) then
+              case peeknode g n of
+                  NONE => raise Fail ("No node for " ^ node_toString n)
+                | SOME nI =>
+                  let val (temp', marked', L') =
+                          List.foldl (fn ((m,nI), A) => visit(m,A))
+                                     (Set.add (tempmarked, n),
+                                      Set.delete(unmarked, n),
+                                      L)
+                                     (#dependencies nI)
+                  in
+                    (Set.delete(temp',n), marked', n::L')
+                  end
+            else (tempmarked, unmarked, L)
+          end
+      fun recurse (A as (tempmarked, unmarked, L)) =
+          case Set.find (fn _ => true) unmarked of
+              NONE => L
+            | SOME n => recurse (visit(n,A))
+    in
+      recurse (Set.empty node_compare, unmarked, [])
+    end
 
 end

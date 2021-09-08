@@ -43,6 +43,7 @@ sig
   val mkneeded : dep list -> 'a t -> 'a t
   val mk_dirneeded : Holmake_tools.hmdir.t -> 'a t -> 'a t
   val fold : (node * 'a nodeInfo -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  val topo_sort : 'a t -> node list
 
   val find_runnable : 'a t -> (node * 'a nodeInfo) option
 

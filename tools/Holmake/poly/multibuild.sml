@@ -20,6 +20,9 @@ fun fupdkey m f k dflt =
         NONE => Map.insert(m,k,dflt)
       | SOME v => Map.insert(m,k,f v)
 
+fun lmap_insert k v m =
+    fupdkey m (fn l => v::l) k [v]
+
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hollogs"
@@ -35,6 +38,16 @@ fun graph_dirinfo g =
     end
 
 fun is_multidir gdi = Map.numItems gdi > 1
+
+fun build_predmap g =
+    let
+      fun foldthis (n, nI) A =
+          List.foldl (fn ((sn,_), A) => lmap_insert sn n A) A (#dependencies nI)
+    in
+      HM_DepGraph.fold foldthis g (Binarymap.mkDict node_compare)
+    end
+
+
 
 
 fun graphbuild optinfo g =

@@ -1092,8 +1092,25 @@ fun work() =
                      (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph)
       in
         if cline_nobuild then
-          (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
-           OS.Process.success)
+          let val _ = print ("Dependency graph" ^
+                             HM_DepGraph.toString depgraph ^
+                             "\n\nTop-sorted:\n")
+              val sorted = HM_DepGraph.topo_sort depgraph
+              fun pr n =
+                  case HM_DepGraph.peeknode depgraph n of
+                      NONE => die ("No node " ^
+                                   HM_DepGraph.node_toString n)
+                    | SOME nI =>
+                      case #status nI of
+                          Pending {needed = true} =>
+                          print (hmdir.pretty_dir (#dir nI) ^
+                                 " - " ^
+                                 hm_target.toString (#target nI) ^ "\n")
+                        | _ => ()
+              val _ = app pr sorted
+          in
+            OS.Process.success
+          end
         else
           postmortem outputfns (build_graph depgraph)
           handle e => die ("Exception: "^General.exnMessage e)
