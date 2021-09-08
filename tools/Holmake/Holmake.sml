@@ -43,6 +43,14 @@ fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
 fun die s = (warn s; Process.exit Process.failure)
 val original_dir = hmdir.curdir()
 
+fun is_src_dir hmd =
+    let val s = nice_dir (hmdir.pretty_dir hmd)
+    in
+      String.isPrefix "$(HOLDIR)/src/" s
+    end
+fun in_src () = is_src_dir (hmdir.curdir())
+val originally_in_src = is_src_dir original_dir
+
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
 val DEPDIR = ".HOLMK";
@@ -1012,11 +1020,13 @@ fun do_clean_target x = let
   fun clean_action () =
       Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans()}
 in
-  case x of
-      "clean" => clean_action()
-    | "cleanDeps" => ignore (clean_deps())
-    | "cleanAll" => (clean_action(); ignore (clean_deps()))
+  if originally_in_src orelse not (in_src()) then
+    case x of
+        "clean" => clean_action()
+      | "cleanDeps" => ignore (clean_deps())
+      | "cleanAll" => (clean_action(); ignore (clean_deps()))
     | _ => die ("Bad clean target " ^ x)
+  else ()
 end
 
 val _ = not cline_always_rebuild_deps orelse clean_deps()
