@@ -34,6 +34,7 @@ sig
               does update_copy bincopy *)
 
   val clean_sigobj : unit -> unit
+  val remove_all_holmkdirs : unit -> unit
 
   val check_against : string -> string -> unit
     (* [check_against f1 f2] checks to see if file f1 is older than file f2

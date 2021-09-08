@@ -123,20 +123,10 @@ fun buildDir symlink s =
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
-fun remove_holmkdir (dirname,_) =
-    let
-      open OS.FileSys
-      val holmkdir = OS.Path.concat (dirname, ".HOLMK")
-    in
-      if access (holmkdir, [A_READ, A_EXEC]) andalso isDir holmkdir then
-        (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) holmkdir;
-         OS.FileSys.rmDir holmkdir)
-      else ()
-    end
 
 fun build_hol symlink = let
 in
-  List.app remove_holmkdir SRCDIRS;
+  remove_all_holmkdirs();
   clean_sigobj();
   setup_logfile();
   build_src symlink

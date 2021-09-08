@@ -117,7 +117,7 @@ fun remove_holmkdir (dirname,_) =
 
 fun build_hol symlink = let
 in
-  List.app remove_holmkdir SRCDIRS;
+  remove_all_holmkdirs();
   clean_sigobj();
   setup_logfile();
   upload_holmake_files (exns_link holmake_exns);

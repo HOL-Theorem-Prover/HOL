@@ -937,6 +937,67 @@ fun make_buildstamp () =
     closeOut stamp_stream
 end
 
+local open OS.FileSys
+in
+fun dirchildren d =
+    let val dstrm = openDir d
+        fun recurse A =
+            case readDir dstrm of
+                NONE => A
+              | SOME f =>
+                let val p = OS.Path.concat(d,f)
+                in
+                  if not (isLink p) andalso isDir p andalso
+                     access(p, [A_READ, A_EXEC])
+                  then
+                    recurse (p::A)
+                  else recurse A
+                end
+                handle e =>
+                       die ("build.dirchildren(" ^ d ^ ", " ^ f ^ "): "^
+                            General.exnMessage e)
+    in
+      recurse [] before OS.FileSys.closeDir dstrm
+    end
+    handle e => die ("build.dirchildren(" ^ d ^ "): " ^ General.exnMessage e)
+end
+
+fun preorder_directory_recurse f d =
+    let
+      fun recurse worklist =
+          case worklist of
+              [] => ()
+            | []::ds => recurse ds
+            | (d::ds)::ds' =>
+              let
+                open OS.FileSys
+              in
+                f d;
+                recurse (dirchildren d :: ds :: ds')
+              end
+    in
+      recurse [[d]]
+    end handle e => die ("build.preorder_directory_recurse: " ^
+                         General.exnMessage e)
+
+fun remove_holmkdir parent =
+    let
+      open OS.FileSys
+      val dir = OS.Path.concat(parent, ".HOLMK")
+    in
+      if access (dir, [A_READ, A_EXEC]) andalso not (isLink dir) andalso
+         isDir dir
+      then
+        (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) dir;
+         OS.FileSys.rmDir dir)
+      else ()
+    end handle e => die ("build.remove_holmkdir(" ^ parent ^ "): " ^
+                         General.exnMessage e)
+
+fun remove_all_holmkdirs () =
+    preorder_directory_recurse remove_holmkdir HOLDIR
+
+
 val logdir = Systeml.build_log_dir
 val logfilename = Systeml.build_log_file
 val hostname = if Systeml.isUnix then
