@@ -428,6 +428,43 @@ Proof
   \\ metis_tac[]
 QED
 
+Theorem ring_associates_sym:
+  !r p q.
+    Ring r /\ q IN r.carrier /\ ring_associates r p q ==>
+    ring_associates r q p
+Proof
+  rw[ring_associates_def]
+  \\ rfs[ring_unit_property]
+  \\ simp[PULL_EXISTS]
+  \\ qexists_tac`v`
+  \\ qexists_tac`s`
+  \\ simp[]
+  \\ simp[Once ring_mult_comm]
+  \\ simp[GSYM ring_mult_assoc]
+  \\ metis_tac[ring_mult_comm, ring_mult_lone]
+QED
+
+Theorem ring_associates_trans:
+  !r x y z.
+    Ring r /\ z IN r.carrier /\
+    ring_associates r x y /\
+    ring_associates r y z ==>
+    ring_associates r x z
+Proof
+  rw[ring_associates_def]
+  \\ qexists_tac`s * s'`
+  \\ simp[ring_mult_assoc]
+  \\ simp[ring_unit_mult_unit]
+QED
+
+Theorem ring_associates_refl:
+  !r x. Ring r /\ x IN r.carrier ==> ring_associates r x x
+Proof
+  rw[ring_associates_def]
+  \\ qexists_tac`#1`
+  \\ simp[]
+QED
+
 Theorem ring_associates_mult:
   !r p q x.
     Ring r /\ p IN r.carrier /\ q IN r.carrier /\ x IN r.carrier /\
