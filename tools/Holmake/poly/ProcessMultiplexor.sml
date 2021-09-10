@@ -158,6 +158,8 @@ struct
     let
       open Posix.Process Posix.IO
       val {tag, command, update, dir} = j
+      val _ = OS.Path.isAbsolute dir orelse
+              raise Fail "Relative path in job directory"
       val {executable,env,nm_args} = command
       val {infd=outinfd, outfd = outoutfd} = pipe()
       val {infd=errinfd, outfd = erroutfd} = pipe()

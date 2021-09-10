@@ -31,7 +31,7 @@ fun graph_dirinfo g =
     let
       fun foldthis (_, nI) A =
           case #status nI of
-              Pending {needed=true} => fupdkey A (fn n => n + 1) (#dir nI) 0
+              Pending {needed=true} => fupdkey A (fn n => n + 1) (#dir nI) 1
             | _ => A
     in
       HM_DepGraph.fold foldthis g (Map.mkDict Holmake_tools.hmdir.compare)
@@ -75,6 +75,37 @@ fun graphbuild optinfo g =
           ldir ++ safetag dir tag
         end
 
+    fun dircomplete dir (good, bad) t =
+        info (bold ("Completed work in directory " ^ hmdir.pretty_dir dir) ^
+              " - " ^
+              boldgreen (Int.toString good) ^ " good" ^ "; " ^
+              red (Int.toString bad) ^ " bad")
+
+    fun tgtcompletion_cb dirmap =
+        if not (is_multidir dirmap) then fn _ => ()
+        else
+          let
+            fun foldthis (d,n,A) =
+                (diag (hmdir.pretty_dir d ^ " has " ^ Int.toString n ^
+                       " targets to build");
+                 Map.insert(A, d, {good = ref 0, bad = ref 0, tgt = n,
+                                   elapsed = ref Time.zeroTime}))
+            val dirprogress_map =
+                Map.foldl foldthis (Map.mkDict hmdir.compare) dirmap
+          in
+            fn (dir, goodp, t) =>
+               let
+                 val {tgt,good,bad,elapsed} = Map.find(dirprogress_map, dir)
+                 val _ = if goodp then good := !good + 1 else bad := !bad + 1
+                 val _ = elapsed := Time.+(!elapsed, t)
+               in
+                 if !good + !bad >= tgt then
+                   dircomplete dir (!good,!bad) (!elapsed)
+                 else ()
+               end
+          end
+
+
     val monitor =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit,
@@ -87,6 +118,7 @@ fun graphbuild optinfo g =
     fun shell_command s =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
 
+    val tgtcomplete = tgtcompletion_cb dirmap
     fun genjob (g,ok) =
       case (ok,find_runnable g) of
           (false, _) => GiveUpAndDie (g, false)
@@ -99,12 +131,14 @@ fun graphbuild optinfo g =
             fun eBuildScript (s,deps) = BuildScript(s,deps,extra)
             fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
             fun eProcessArticle s = ProcessArticle(s,extra)
-            fun k b g =
-              if b orelse keep_going then
-                genjob (updnode(n, if b then Succeeded else RealFail) g, true)
-              else GiveUpAndDie (g, ok)
-            val deps = map #2 (#dependencies nI)
             val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
+            fun k b g =
+                (tgtcomplete (dir, 1, b, Time.zeroTime);
+                 if b orelse keep_going then
+                   genjob (updnode(n, if b then Succeeded else RealFail) g,
+                           true)
+                 else GiveUpAndDie (g, ok))
+            val deps = map #2 (#dependencies nI)
             val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
             val target_s = tgt_toString (#target nI)
@@ -139,9 +173,14 @@ fun graphbuild optinfo g =
                                            (map node_toString others) ^
                                         " with duplicate commands")
                           fun updall (g, st) =
-                            List.foldl (fn (n, g) => updnode (n, st) g)
-                                       g
-                                       (n::others)
+                            List.foldl
+                              (fn (n, g) =>
+                                  (if st <> Running then
+                                     tgtcomplete (#dir nI, st = Succeeded)
+                                   else ();
+                                   updnode (n, st) g))
+                              g
+                              others
                           fun update ((g,ok), b) =
                               let
                                 val status = error b
@@ -169,8 +208,14 @@ fun graphbuild optinfo g =
                             fun b2res b = if b then OS.Process.success
                                           else OS.Process.failure
                             fun updall s g =
-                              List.foldl (fn (n,g) => updnode(n,s) g) g
-                                         (n::other_nodes)
+                              List.foldl
+                                (fn (n,g) =>
+                                    (if s <> Running then
+                                       tgtcomplete (#dir nI, s = Succeeded)
+                                     else ();
+                                     updnode(n,s) g))
+                                g
+                                other_nodes
                             fun update ((g,ok), b) =
                               if job_kont (fn s => ()) (b2res b) then
                                 (updall Succeeded g, true)
@@ -181,7 +226,7 @@ fun graphbuild optinfo g =
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);
-                            diag ("Other nodes are: "^
+                            diag ("All nodes are: "^
                                   String.concatWith ", "
                                         (map node_toString other_nodes));
                             NewJob({tag = tag, dir = dir,
