@@ -173,15 +173,10 @@ fun graphbuild optinfo g =
                                            (map node_toString others) ^
                                         " with duplicate commands")
                           fun updall (g, st) =
-                            List.foldl
-                              (fn (n, g) =>
-                                  (if st <> Running then
-                                     tgtcomplete (#dir nI, st = Succeeded)
-                                   else ();
-                                   updnode (n, st) g))
-                              g
-                              others
-                          fun update ((g,ok), b) =
+                            List.foldl (fn (n, g) => updnode (n, st) g)
+                                       g
+                                       others
+                          fun update ((g,ok), b, t) =
                               let
                                 val status = error b
                                 val g' = updall (g, status)

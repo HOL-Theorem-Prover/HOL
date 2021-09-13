@@ -13,8 +13,8 @@ struct
   type exit_status = Posix.Process.exit_status
 
   type command = {executable: string, nm_args : string list, env : string list}
-  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a,
-                 dir : string}
+  type 'a job = {tag : string, command : command, dir : string,
+                 update : 'a * bool * Time.time -> 'a}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
   type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
@@ -23,7 +23,7 @@ struct
     tag : string,
     dir : string,
     command : command,
-    update : 'a * bool -> 'a,
+    update : 'a * bool * Time.time -> 'a,
     starttime : Time.time,
     lastevent : Time.time,
     out : TextIO.instream,
@@ -47,7 +47,7 @@ struct
   local
     open FunctionalRecordUpdate
     fun makeUpdateWJ z = makeUpdate11 z (* 10 fields *)
-    fun makeUpdateWL z = makeUpdate4 z (* 4 fields *)
+    fun makeUpdateWL z = makeUpdate5 z (* 5 fields *)
   in
     fun updateWJ z = let
       fun from dir tag command update starttime lastevent out err
@@ -68,14 +68,14 @@ struct
       makeUpdateWJ (from, from', to)
     end z
     fun updateWL z = let
-      fun from current_jobs current_state worklimit genjob =
+      fun from current_jobs current_state genjob last_cutime worklimit =
         {current_state = current_state, current_jobs = current_jobs,
-         worklimit = worklimit, genjob = genjob}
-      fun from' genjob worklimit current_state current_jobs =
+         worklimit = worklimit, genjob = genjob, last_cutime = last_cutime}
+      fun from' worklimit last_cutime genjob current_state current_jobs =
         {current_state = current_state, current_jobs = current_jobs,
-         worklimit = worklimit, genjob = genjob}
-      fun to f {current_state, current_jobs, worklimit, genjob} =
-        f current_jobs current_state worklimit genjob
+         worklimit = worklimit, genjob = genjob, last_cutime = last_cutime}
+      fun to f {current_jobs, current_state, genjob, last_cutime, worklimit} =
+        f current_jobs current_state genjob last_cutime worklimit
     in
       makeUpdateWL (from, from', to)
     end z
@@ -111,6 +111,7 @@ struct
     current_jobs : (jobkey, 'a working_job) Binarymap.dict,
     current_state : 'a,
     worklimit : int,
+    last_cutime : Time.time,
     genjob : 'a -> 'a genjob_result
   }
 
@@ -127,6 +128,14 @@ struct
                     handle Option => raise Fail "Can't poll instream"
     end
 
+  fun cutime_delta wl (com : unit -> unit) =
+      let
+        val _ = com()
+        val {cutime = t,...} = Posix.ProcEnv.times()
+      in
+        (Time.-(t,#last_cutime wl), updateWL wl (U #last_cutime t) $$)
+      end
+
   fun workjob_polls (wj : 'a working_job) =
     [(inStreamInPoll (#out wj), (OUT, wj)),
      (inStreamInPoll (#err wj), (ERR, wj))]
@@ -139,6 +148,7 @@ struct
     {current_jobs = Binarymap.mkDict jobkey_compare,
      genjob = #genjob provider,
      current_state = #initial provider,
+     last_cutime = #cutime (Posix.ProcEnv.times()),
      worklimit = worklimit}
 
   fun fupdjob k f (wl : 'a worklist) : 'a worklist =
@@ -280,13 +290,15 @@ struct
       val cjs = #current_jobs wl
       val job = Binarymap.find (cjs, jk)
       val pid = #pid job
-      val state = #update job (#current_state wl, false)
+      val (ct,wl) = cutime_delta wl
+                                 (fn () =>
+                                     (kill (K_PROC pid, Posix.Signal.kill);
+                                      ignore (waitpid(W_CHILD pid, []))))
+      val state = #update job (#current_state wl, false, ct)
     in
-      kill (K_PROC pid, Posix.Signal.kill);
       TextIO.closeIn (#out job);
       TextIO.closeIn (#err job);
-      waitpid(W_CHILD pid, []);
-      ignore (mfn (MonitorKilled(jk,Time.-(Time.now(),#starttime job))));
+      ignore (mfn (MonitorKilled(jk,ct)));
       updateWL wl
                (U #current_state state)
                (U #current_jobs (#1 (Binarymap.remove(cjs, jk)))) $$
@@ -327,12 +339,18 @@ struct
         end
       fun exitstatus wj status (cs, wl) =
         let
-          val msg = Terminated (wjkey wj, status, elapsed wj)
-          val newstate = #update wj (#current_state wl, status = W_EXITED)
+          val {cutime,...} = Posix.ProcEnv.times()
+          val elapsed = Time.-(cutime, #last_cutime wl)
+          val msg = Terminated (wjkey wj, status, elapsed)
+          val newstate =
+              #update wj (#current_state wl, status = W_EXITED, elapsed)
           val _ = TextIO.closeIn (#out wj)
           val _ = TextIO.closeIn (#err wj)
+          val wl' = updateWL wl
+                             (U #current_state newstate)
+                             (U #last_cutime cutime) $$
         in
-          monitor msg (cs, updateWL wl (U #current_state newstate) $$)
+          monitor msg (cs, wl')
         end
       fun eof wj chan (cmds, wl) =
         monitor (EOF (wjkey wj, chan, elapsed wj))
@@ -428,7 +446,8 @@ struct
               NONE => NoMoreJobs clist
             | SOME (t, (c, _)) =>
               let
-                fun upd(clist, b) = fupdAlist t (fn (c,_) => (c,Done b)) clist
+                fun upd(clist, b, _) =
+                    fupdAlist t (fn (c,_) => (c,Done b)) clist
               in
                 NewJob ({tag = t, command = simple_shell c, update = upd,
                          dir = "."}, l)
