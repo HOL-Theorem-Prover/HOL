@@ -90,6 +90,28 @@ val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 val CLR_EOL = "\027[0K" (* ANSI clear to EOL code *)
 
+fun strip_codes s =
+    let
+      fun recurse A ss =
+          let
+            open Substring
+            val (pfx,sfx) = position "\027[" ss
+          in
+            if isEmpty sfx then concat (List.rev (pfx :: A))
+            else
+              let
+                val sfx = slice(sfx,2,NONE)
+                val sfx = dropl (fn c => Char.isDigit c orelse c = #";") sfx
+                val sfx = slice(sfx,1,NONE) (* terminating char *)
+              in
+                recurse (pfx::A) sfx
+              end
+          end
+    in
+      recurse [] (Substring.full s)
+    end
+fun noesc_size s = String.size (strip_codes s)
+
 fun optbind x f =
   case x of
       SOME y => f y
