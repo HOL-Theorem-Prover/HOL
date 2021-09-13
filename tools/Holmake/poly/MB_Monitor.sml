@@ -219,14 +219,15 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
               end
       end
     fun id (s:string) = s
-    val (startmsg, infopfx, display_map, green, red, boldyellow, dim, CLR_EOL) =
+    val (startmsg, infopfx, display_map, green, red, boldyellow, dim, bold,
+         CLR_EOL) =
         if strmIsTTY TextIO.stdOut then
-          ((fn s => ()), "\r", ttydisplay_map, green, red, boldyellow, dim,
-           CLR_EOL)
+          ((fn s => ()), "\027[1G", ttydisplay_map, green, red, boldyellow, dim,
+           bold, CLR_EOL)
         else
           ((fn s => info ("Starting work on " ^ delsml_sfx s)), "",
            (fn () => ()),
-           id, id, id, id, "")
+           id, id, id, id, id, "")
     fun stdhandle jkey f =
       case Binarymap.peek (!monitor_map, jkey) of
           NONE => (warn ("Lost monitor info for "^jobkey_toString jkey); NONE)
@@ -237,6 +238,13 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
       info (infopfx ^
             squash_to (Width() - (7 + ssize pfx) - 1) (delsml_sfx tag) ^~
             pfx ~^ colour (StringCvt.padLeft #" " 7 s) ^ CLR_EOL)
+    fun lrpad (s1,s2) =
+        let val w = Width () and sz1 = noesc_size s1 and sz2 = noesc_size s2
+        in
+          if sz1 + sz2 < w then
+            s1 ^ CharVector.tabulate(w - (sz1 + sz2), fn _ => #" ") ^ s2
+          else s1 ^ " " ^ s2
+        end
     fun monitor msg =
       case msg of
           StartJob (jk as (_, {tag,...}), {dir}) =>
@@ -337,7 +345,10 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
                  NONE))
         | _ => NONE
   in
-    monitor
+    (monitor,
+     {coloured_info =
+      (fn (s1,s2) => info0 (lrpad (infopfx ^ s1, s2 ^ " " ^ CLR_EOL))),
+      red = red, green = green, bold = bold})
   end
 
 
