@@ -144,20 +144,17 @@ fun prettydir dir =
       val arcs = if hd arcs = "~" orelse String.sub(hd arcs, 0) = #"$" then
                    tl arcs
                  else arcs
-      val s0 = String.concatWith "\\" (List.rev arcs)
     in
-      s0
+      String.concatWith "/" arcs
     end
 
-(* right align, and put dots on right *)
-fun rrsquash_to wdth s =
+(* right align, and put dots on left *)
+fun rlsquash_to wdth s =
     if size s < wdth then
       StringCvt.padLeft #" " wdth s
-    else " " ^ String.extract(s, 0, SOME (wdth - 4)) ^ "..."
-
-
-
-
+    else if wdth <= 6 then
+      " " ^ String.extract(s, size s + 1 - wdth, NONE)
+    else " ..." ^ String.extract(s, size s + 4 - wdth, NONE)
 
 fun new {info,warn,genLogFile,time_limit,multidir} =
   let
@@ -240,7 +237,7 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
           fun maybe_dim s = if size s <> 0 then dim s else s
         in
           info (infopfx ^ tagstr ^
-                maybe_dim (rrsquash_to (remspace - tagsz) dirstr) ^
+                maybe_dim (rlsquash_to (remspace - tagsz) dirstr) ^
                 sfxstr ^ CLR_EOL)
         end
     fun lrpad (s1,s2) =
