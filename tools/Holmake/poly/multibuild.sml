@@ -135,21 +135,22 @@ fun graphbuild optinfo g =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
 
     val tgtcomplete = tgtcompletion_cb dirmap
-    fun count_theories0 c ns =
+    fun really_needed nI = #status nI = Pending{needed=true}
+    fun b2n true = 1 | b2n false = 0
+    fun count_theories_needed0 (A as (thys,nd)) ns =
         case ns of
-            [] => c
+            [] => A
           | n::rest =>
             (case peeknode g n of
-                 NONE => count_theories0 c rest
+                 NONE => count_theories_needed0 A rest
                | SOME nI =>
-                 count_theories0
-                   (c +
-                    (if String.isSuffix "Theory.dat"
-                                        (hm_target.toString (#target nI))
-                     then 1
-                     else 0))
+                 count_theories_needed0
+                   (thys +
+                    b2n (String.isSuffix "Theory.dat"
+                                         (hm_target.toString (#target nI))),
+                    nd + b2n (really_needed nI))
                    rest)
-    val count_theories = count_theories0 0
+    val count_theories_needed = count_theories_needed0 (0,0)
 
     fun genjob (g,ok) =
       case (ok,find_runnable g) of
@@ -159,13 +160,15 @@ fun graphbuild optinfo g =
           let
             val _ = diag ("Found runnable node "^node_toString n)
             val extra = #extra nI
+            val needed = #status nI = Pending{needed=true}
             fun eCompile ds = Compile(ds, extra)
             fun eBuildScript (s,deps) = BuildScript(s,deps,extra)
             fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
             fun eProcessArticle s = ProcessArticle(s,extra)
             val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
             fun k b g =
-                (tgtcomplete (#dir nI, 1, 0, b, Time.zeroTime);
+                (if needed then tgtcomplete (#dir nI, 1, 0, b, Time.zeroTime)
+                 else ();
                  if b orelse keep_going then
                    genjob (updnode(n, if b then Succeeded else RealFail) g,
                            true)
@@ -208,14 +211,14 @@ fun graphbuild optinfo g =
                             List.foldl (fn (n, g) => updnode (n, st) g)
                                        g
                                        others
-                          val thycount = count_theories others
+                          val (thycount,neededi) = count_theories_needed others
                           fun update ((g,ok), b, t) =
                               let
                                 val status = error b
                                 val g' = updall (g, status)
                                 val ok' = status = Succeeded orelse keep_going
                                 val _ =
-                                    tgtcomplete(#dir nI, length others,thycount,
+                                    tgtcomplete(#dir nI, neededi, thycount,
                                                 ok, t)
                               in
                                 (g',ok')
@@ -236,8 +239,7 @@ fun graphbuild optinfo g =
                         | BR_Failed => k false g
                         | BR_ClineK{cline, job_kont, other_nodes} =>
                           let
-                            val n = length other_nodes
-                            val thyc = count_theories other_nodes
+                            val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
                                           else OS.Process.failure
                             fun updall s g =
@@ -246,10 +248,10 @@ fun graphbuild optinfo g =
                                          other_nodes
                             fun update ((g,ok), b, t) =
                               if job_kont (fn s => ()) (b2res b) then
-                                (tgtcomplete(#dir nI, n, thyc, true, t);
+                                (tgtcomplete(#dir nI, ndi, thyc, true, t);
                                  (updall Succeeded g, true))
                               else
-                                (tgtcomplete(#dir nI, n, thyc, false, t);
+                                (tgtcomplete(#dir nI, ndi, thyc, false, t);
                                  (updall RealFail g, keep_going))
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
