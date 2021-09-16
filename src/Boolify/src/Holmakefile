@@ -15,3 +15,10 @@ selftest.log: ./selftest.exe
 endif
 
 EXTRA_CLEANS += selftest.log
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

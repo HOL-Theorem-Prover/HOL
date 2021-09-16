@@ -1045,7 +1045,7 @@ fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir =
       val args = (if selftest_level > 0 then
                     cons ("HOLSELFTESTLEVEL=" ^ Int.toString selftest_level)
                   else (fn x => x))
-                 ("--qof" :: extra_args())
+                 ("HOLBUILD=1" :: "--qof" :: extra_args())
       val hmstatus = sysl HOLMAKE args
     in
       if isSuccess hmstatus then ()

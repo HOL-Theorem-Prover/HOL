@@ -1,5 +1,14 @@
-all: $(DEFAULT_TARGETS) selftest.exe
+all: selftest.exe $(DEFAULT_TARGETS)
 .PHONY: all
+
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))

@@ -1,11 +1,19 @@
 INCLUDES = ../integer ../hol88 ../topology ../pred_set/src/more_theories \
            ../res_quan/src ../quotient/src
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+TARGETS = $(subst prove_real_assumsTheory.uo,,$(DEFAULT_TARGETS))
 
-all: $(subst prove_real_assumsTheory.uo,,$(TARGETS)) selftest.exe
+all:  selftest.exe $(TARGETS)
 .PHONY: all
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+
+link-to-sigobj: $(TARGETS)
+	for i in *.uo *.ui *.sig ; do ln -fs `pwd`/$$i $(SIGOBJ) ; done && \
+        for i in *.sig ; do echo `pwd`/$$(basename $$i .sig) >> $(SIGOBJ)/SRCFILES ; done
+endif
 
 selftest.exe: selftest.uo realSimps.uo
 	$(HOLMOSMLC) -o $@ $<

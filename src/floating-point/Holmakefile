@@ -1,10 +1,16 @@
 INCLUDES = ../real ../integer ../n-bit
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS)
+all: $(DEFAULT_TARGETS)
 .PHONY: all
+
+ifdef HOLBUILD
+all: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ) && echo `pwd`/fp >> $(protect $(SIGOBJ)/SRCFILES)
+
+.PHONY: link-to-sigobj
+endif
 
 fp-sig.uo: fp-sig.sml
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.sml

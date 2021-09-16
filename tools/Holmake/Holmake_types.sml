@@ -377,6 +377,13 @@ val base_environment0 = let
         [VREF ("patsubst %.sml,%.uo,$(patsubst %Theory.sml,,"^
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
        ("HOLDIR", [LIT HOLDIR]),
+       ("HOL_LNSIGOBJ",
+        [LIT "for i in *.uo *.ui *.sig ; do ln -fs `pwd`/$i ",
+         VREF "SIGOBJ",
+         LIT " ; done && \
+             \for i in *.sig ; do echo `pwd`/$(basename $i .sig) >> ",
+         VREF "SIGOBJ",
+         LIT "/SRCFILES ; done"]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),
        ("ML_SYSNAME", [LIT ML_SYSNAME]),

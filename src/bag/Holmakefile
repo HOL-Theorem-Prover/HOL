@@ -13,3 +13,12 @@ bag-selftest.log: selftest.exe
 all: bag-selftest.log
 
 endif
+
+
+ifdef HOLBUILD
+all: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+
+.PHONY: link-to-sigobj
+endif

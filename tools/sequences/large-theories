@@ -1,4 +1,3 @@
-src/real
 src/HolQbf
 src/HolSmt
 !!examples/separationLogic/src/
@@ -18,12 +17,8 @@ src/HolSmt
 !!examples/computability/turing
 !!examples/balanced_bst
 !!examples/formal-languages/regular
-src/Boolify/src
-src/float
-src/floating-point
 !!examples/l3-machine-code/decompilers
 [poly]src/floating-point/native
-src/probability
 src/temporal/src
 !!examples/temporal_deep
 [mosml]!!examples/temporal_deep/src/model_check

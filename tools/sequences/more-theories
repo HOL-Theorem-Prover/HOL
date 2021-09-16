@@ -5,14 +5,11 @@ src/TeX
 !src/TeX/theory_tests/proj1paper
 src/parallel_builds/core
 src/monad/more_monads
-src/string
-src/sort
 !src/string/theorytesting
 !src/tfl/examples
 src/res_quan/src
 src/quotient/src
 src/hol88
-src/bag
 src/n-bit
 [poly]!src/n-bit/interactive_tests
 src/finite_maps

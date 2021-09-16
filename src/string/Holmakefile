@@ -1,6 +1,15 @@
 INCLUDES = ../sort  # for ternaryComparisons
 
-all: $(DEFAULT_TARGETS) selftest.exe
+all: selftest.exe $(DEFAULT_TARGETS)
+
+.PHONY: all link-to-sigobj
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
 
 selftest.exe: selftest.uo stringSyntax.uo stringLib.uo stringTheory.uo $(dprot $(SIGOBJ)/term_pp.uo)
 	$(HOLMOSMLC) -o $@ $<

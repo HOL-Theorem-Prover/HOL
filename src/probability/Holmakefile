@@ -53,3 +53,10 @@ probability.art: probability.otd
 endif
 
 .PHONY: all
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
