@@ -325,23 +325,24 @@ struct
     let
       open Posix.Process
       val (cmds, wl1) = fill_workq monitorfn ([], wl0)
-      fun monitor msg (acc as (cmds, wl)) =
+      fun monitor msg cmds =
         case monitorfn msg of
-            NONE => acc
-          | SOME c => (c::cmds, wl)
+            NONE => cmds
+          | SOME c => c::cmds
       fun nothing wj (cmds, wl) =
         let
           val msg =
               NothingSeen (wjkey wj, {delay = Time.-(Time.now(), #lastevent wj),
                                       total_elapsed = elapsed wj})
         in
-          monitor msg (cmds, addjob wj wl)
+          (monitor msg cmds, addjob wj wl)
         end
       fun exitstatus wj status (cs, wl) =
         let
           val {cutime,...} = Posix.ProcEnv.times()
           val elapsed = Time.-(cutime, #last_cutime wl)
           val msg = Terminated (wjkey wj, status, elapsed)
+          val cs' = monitor msg cs
           val newstate =
               #update wj (#current_state wl, status = W_EXITED, elapsed)
           val _ = TextIO.closeIn (#out wj)
@@ -350,11 +351,11 @@ struct
                              (U #current_state newstate)
                              (U #last_cutime cutime) $$
         in
-          monitor msg (cs, wl')
+          (cs', wl')
         end
       fun eof wj chan (cmds, wl) =
-        monitor (EOF (wjkey wj, chan, elapsed wj))
-                (cmds, addjob (markeof chan wj) wl)
+        (monitor (EOF (wjkey wj, chan, elapsed wj)) cmds,
+         addjob (markeof chan wj) wl)
       fun is_neweof wj chan =
         case chan of
             ERR => not (#erreof wj)
@@ -401,7 +402,7 @@ struct
                         let
                           val msg = Output(wjkey wj, elapsed wj, chan, s)
                         in
-                          (monitor msg (cmds, addjob (touch wj) wl), didio')
+                          ((monitor msg cmds, addjob (touch wj) wl), didio')
                         end
                     end
               end
