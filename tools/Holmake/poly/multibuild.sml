@@ -37,7 +37,10 @@ fun graph_dirinfo g =
       HM_DepGraph.fold foldthis g (Map.mkDict Holmake_tools.hmdir.compare)
     end
 
-fun is_multidir gdi = Map.numItems gdi > 1
+fun is_multidir gdi =
+    Map.numItems gdi > 1 orelse
+    (Map.numItems gdi = 1 andalso
+     Binarymap.peek(gdi, hmdir.curdir()) = NONE)
 
 fun build_predmap g =
     let
