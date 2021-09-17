@@ -16,4 +16,18 @@ endif
 selftest.exe: selftest.uo llistTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe coalgebra-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: coalgebra-selftest.log
+
+coalgebra-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

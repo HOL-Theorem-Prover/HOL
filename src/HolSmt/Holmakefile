@@ -5,3 +5,19 @@ all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: holsmt-selftest.log
+
+holsmt-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+endif
+
+EXTRA_CLEANS = selftest.exe holsmt-selftest.log
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

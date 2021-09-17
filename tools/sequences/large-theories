@@ -1,5 +1,4 @@
 src/HolQbf
-src/HolSmt
 !!examples/separationLogic/src/
 !!examples/separationLogic/src/holfoot
 [poly]!!examples/separationLogic/src/holfoot/poly
@@ -18,8 +17,6 @@ src/HolSmt
 !!examples/balanced_bst
 !!examples/formal-languages/regular
 !!examples/l3-machine-code/decompilers
-[poly]src/floating-point/native
-src/temporal/src
 !!examples/temporal_deep
 [mosml]!!examples/temporal_deep/src/model_check
 [poly]!!examples/temporal_deep/src/examples

@@ -15,21 +15,31 @@ endif
 
 ifdef HOLSELFTESTLEVEL
 # example directories to build at selftest level 1
-EXDIRS = Crypto/RSA zipper logic/folcompactness logic/ncfolproofs \
-         logic/modal-tableaux STE ind_def ARM/arm6-verification rings \
-	 dev imperative hfs CCS formal-languages/lambek \
+EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-	 computability lambda/barendregt logic l3-machine-code/common \
-         RL_Environment parity formal-languages formal-languages/context-free \
-	 formal-languages/regular/regular-play Hoare-for-divergence MLsyntax \
-	 set-theory/zfset set-theory/vbg fun-op-sem/lprefix_lub fun-op-sem/for \
-	 logic/propositional_logic algorithms dependability lassie misc
+         RL_Environment \
+	 STE algorithms computability dependability dev \
+	 formal-languages formal-languages/context-free \
+	 formal-languages/lambek formal-languages/regular/regular-play \
+	 fun-op-sem/lprefix_lub fun-op-sem/for \
+         hfs imperative ind_def l3-machine-code/common lambda/barendregt \
+         lassie \
+         logic logic/folcompactness logic/modal-tableaux logic/ncfolproofs \
+	 logic/propositional_logic \
+         misc parity rings set-theory/zfset set-theory/vbg zipper
 
 # selftest directories under src/quotient
 QUOTDIRS = examples examples/lambda examples/sigma
 
+SRCTESTDIRS = integer/testing emit/theory_tests1
+
+ifdef POLY
+SRCTESTDIRS += n-bit/interactive_tests
+endif
+
 INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
-            $(patsubst %,../../../examples/%,$(EXDIRS))
+            $(patsubst %,../../../examples/%,$(EXDIRS)) \
+            $(patsubst %,../../%,$(SRCTESTDIRS))
 
 ifneq($(HOLSELFTESTLEVEL),1)
 EX2DIRS = miller

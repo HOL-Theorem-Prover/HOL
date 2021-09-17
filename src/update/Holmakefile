@@ -1,1 +1,6 @@
 INCLUDES = ../sort ../n-bit
+
+ifdef HOLBUILD
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

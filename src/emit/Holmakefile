@@ -17,3 +17,10 @@ emit-selftest.log: selftest.exe
 	./selftest.exe > $@ 2>&1
 
 endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

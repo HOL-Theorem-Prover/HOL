@@ -3,6 +3,19 @@ INCLUDES = ../finite_maps
 .PHONY: all
 all: $(DEFAULT_TARGETS) selftest.exe
 
-
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSEFLTESTLEVEL
+all: transfer-selftest.log
+
+transfer-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

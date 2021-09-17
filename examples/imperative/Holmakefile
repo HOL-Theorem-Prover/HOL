@@ -2,8 +2,17 @@ INCLUDES = ../../src/string
 
 UNITTESTS = reflectOnFailure.uo necec2010.uo
 
+EXTRA_CLEANS = selftest.exe imperative-selftest.log
+
 .PHONY: all
 all: $(DEFAULT_TARGETS) selftest.exe
 
 selftest.exe: $(UNITTESTS)
 	$(HOLMOSMLC) -o $@ $(UNITTESTS)
+
+ifdef HOLSELFTESTLEVEL
+all: imperative-selftest.log
+
+imperative-selftest.log: selftest.exe
+	./selftest.exe 2>&1 | tee $@
+endif

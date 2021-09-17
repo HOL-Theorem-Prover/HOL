@@ -1,3 +1,9 @@
 INCLUDES = ../../../transfer ../../../quotient/src
 
 EXTRA_CLEANS = ordinalML.sig ordinalML.sml
+
+ifdef HOLBUILD
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

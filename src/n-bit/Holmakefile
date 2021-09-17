@@ -23,3 +23,11 @@ hol4-words.art: hol4-words.thy hol4-words-unint.art ../opentheory/hol4.int
 fcp.art: fcp.otd
 
 endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
