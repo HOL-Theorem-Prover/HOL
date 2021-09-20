@@ -1,3 +1,0 @@
-all: $(DEFAULT_TARGETS)
-
-../ML/emitRecordTestML.sml: *emitrecordScript.sml

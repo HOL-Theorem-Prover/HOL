@@ -18,6 +18,8 @@ src/ring/src
 !!examples/ARM/v4
 !!examples/ARM/v7
 !!src/emit/ML
+!src/emit/theory_tests
+!src/emit/theory_tests1
 src/datatype/inftree
 src/search
 !!examples/algorithms/boyer_moore
