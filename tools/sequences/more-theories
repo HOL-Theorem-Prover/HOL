@@ -15,7 +15,6 @@ src/hol88
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
-src/topology
 !!examples/ARM/v4
 !!examples/ARM/v7
 !!src/emit/ML
