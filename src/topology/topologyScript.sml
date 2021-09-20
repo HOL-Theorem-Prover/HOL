@@ -167,7 +167,7 @@ val OPEN_IN_SUBOPEN = store_thm ("OPEN_IN_SUBOPEN",
 (*---------------------------------------------------------------------------*)
 
 Definition neigh:
-  neigh(top)(N,(x:'a)) = ?P. (open_in top) P /\ P SUBSET N /\ P x ∧
+  neigh(top)(N,(x:'a)) = ?P. (open_in top) P /\ P SUBSET N /\ P x /\
                              N SUBSET topspace top
 End
 
