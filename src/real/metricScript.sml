@@ -166,7 +166,7 @@ Proof
   ASM_REWRITE_TAC[METRIC_TRIANGLE]
 QED
 
-Theorem TOPSPACE_MTOP:
+Theorem TOPSPACE_MTOP[simp]:
   topspace (mtop m) = UNIV
 Proof
   simp[topspace, EXTENSION] >> csimp[IN_DEF] >> qx_gen_tac ‘x’ >>
@@ -178,7 +178,7 @@ val BALL_NEIGH = store_thm("BALL_NEIGH",
   “!m:('a)metric. !x e. &0 < e ==> neigh(mtop(m))(B(m)(x,e),x)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[neigh] THEN EXISTS_TAC “B(m)(x:'a,e)” THEN
-  REWRITE_TAC[SUBSET_REFL] THEN CONJ_TAC THENL
+  REWRITE_TAC[SUBSET_REFL, TOPSPACE_MTOP, SUBSET_UNIV] THEN CONJ_TAC THENL
    [MATCH_MP_TAC BALL_OPEN,
     REWRITE_TAC[ball] THEN BETA_TAC THEN REWRITE_TAC[METRIC_SAME]] THEN
   POP_ASSUM ACCEPT_TAC);

@@ -166,17 +166,21 @@ val OPEN_IN_SUBOPEN = store_thm ("OPEN_IN_SUBOPEN",
 (* Characterize a neighbourhood of a point relative to a topology            *)
 (*---------------------------------------------------------------------------*)
 
-val neigh = new_definition ("neigh",
-   “neigh(top)(N,(x:'a)) = ?P. (open_in top) P /\ P SUBSET N /\ P x”);
+Definition neigh:
+  neigh(top)(N,(x:'a)) = ?P. (open_in top) P /\ P SUBSET N /\ P x ∧
+                             N SUBSET topspace top
+End
 
 (*---------------------------------------------------------------------------*)
 (* Prove various properties / characterizations of open sets                 *)
 (*---------------------------------------------------------------------------*)
 
-val OPEN_OWN_NEIGH = store_thm("OPEN_OWN_NEIGH",
-  “!S' top. !x:'a. open_in(top) S' /\ S' x ==> neigh(top)(S',x)”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[neigh] THEN
-  EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL]);
+Theorem OPEN_OWN_NEIGH:
+  !A top. !x:'a. open_in(top) A /\ A x ==> neigh(top)(A,x)
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[neigh] THEN Q.EXISTS_TAC ‘A’ THEN
+  simp[SUBSET_REFL, OPEN_IN_SUBSET]
+QED
 
 Theorem OPEN_UNOPEN :
     !S' top. open_in(top) S' <=>
@@ -214,21 +218,19 @@ val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
       MATCH_MP_TAC OPEN_IN_BIGUNION THEN
       SIMP_TAC (srw_ss()) []]]);
 
-val OPEN_NEIGH = store_thm("OPEN_NEIGH",
-  “!S' top.
-     open_in(top) S' = !x:'a. S' x ==> ?N. neigh(top)(N,x) /\ N SUBSET S'”,
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN EXISTS_TAC “S':'a->bool” THEN
-    REWRITE_TAC[SUBSET_REFL, neigh] THEN
-    EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL],
-    DISCH_TAC THEN ONCE_REWRITE_TAC[OPEN_SUBOPEN] THEN
-    GEN_TAC THEN DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th)) THEN
-    DISCH_THEN(X_CHOOSE_THEN “N:'a->bool” (CONJUNCTS_THEN2 MP_TAC ASSUME_TAC))
-    THEN REWRITE_TAC[neigh] THEN
-    DISCH_THEN(X_CHOOSE_THEN “P:'a->bool” STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC “P:'a->bool” THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC SUBSET_TRANS THEN EXISTS_TAC “N:'a->bool” THEN
-    ASM_REWRITE_TAC[]]);
+Theorem OPEN_NEIGH:
+  !A top.
+    open_in(top) A <=> !x:'a. A x ==> ?N. neigh(top)(N,x) /\ N SUBSET A
+Proof
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    REPEAT STRIP_TAC THEN simp[neigh, PULL_EXISTS] THEN
+    REPEAT (Q.EXISTS_TAC ‘A’) THEN simp[OPEN_IN_SUBSET]
+    ,
+    DISCH_TAC THEN ONCE_REWRITE_TAC[OPEN_SUBOPEN] THEN REPEAT STRIP_TAC THEN
+    first_assum $ drule_then strip_assume_tac THEN gs[neigh] THEN
+    metis_tac[SUBSET_TRANS]
+  ]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Characterize closed sets in a topological space                           *)
