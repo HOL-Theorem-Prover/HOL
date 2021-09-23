@@ -255,6 +255,7 @@ signature Parse = sig
   val ParoundPrec      : ParenStyle
   val Always           : ParenStyle
   val NotEvenIfRand    : ParenStyle
+  val IfNotTop         : {realonly:bool} -> ParenStyle
 
   val AroundEachPhrase : PhraseBlockStyle
   val AroundSamePrec   : PhraseBlockStyle

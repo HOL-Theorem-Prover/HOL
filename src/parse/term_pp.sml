@@ -228,6 +228,8 @@ fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   | NotEvenIfRand => false
   | ParoundName => grav_name pgrav <> fname
   | ParoundPrec => grav_prec pgrav <> fprec
+  | IfNotTop {realonly=true} => pgrav <> RealTop
+  | IfNotTop {realonly=false} => pgrav <> RealTop andalso pgrav <> Top
 
 fun countP P [] = 0
   | countP P (x::xs) = if P x then 1 + countP P xs else countP P xs

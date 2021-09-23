@@ -45,5 +45,6 @@ datatype ParenStyle =
        | NotEvenIfRand
        | ParoundName
        | ParoundPrec
+       | IfNotTop of {realonly:bool}
 
 end

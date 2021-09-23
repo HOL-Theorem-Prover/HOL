@@ -105,6 +105,7 @@ standard Oppen-style pretty-printing package.) They are
    val ParoundName : term_grammar.ParenStyle
    val ParoundPrec : term_grammar.ParenStyle
    val Always : term_grammar.ParenStyle
+   val IfNotTop : {realonly:bool} -> term_grammar.ParenStyle
 
    val AroundEachPhrase : term_grammar.PhraseBlockStyle
    val AroundSamePrec   : term_grammar.PhraseBlockStyle
@@ -146,15 +147,25 @@ the kernel represented by the {pp_element} list.  There is an example
 of this below.
 
 The possible {ParenStyle} values describe when parentheses should be
-added to terms.  The {OnlyIfNecessary} value will cause parentheses to
-be added only when required to disambiguate syntax.  The {ParoundName}
+added to terms. The {OnlyIfNecessary} value will cause parentheses to
+be added only when required to disambiguate syntax. The {ParoundName}
 will cause parentheses to be added if necessary, or where the head
 symbol has the given {term_name} and where this term is not the
-argument of a function with the same head name.  This style of
-parenthesisation is used with tuples, for example.  The {ParoundPrec}
+argument of a function with the same head name. This style of
+parenthesisation is used with tuples, for example. The {ParoundPrec}
 value is similar, but causes parentheses to be added when the term is
-the argument to a function with a different precedence level.
-Finally, the {Always} value causes parentheses always to be added.
+the argument to a function with a different precedence level. The
+{IfNotTop} value will cause parentheses to appear whenever the term is
+not being printed as the “top” term. A term is considered to be “top”
+if it is the whole term being printed (and this is known as the “real
+top”), or if it occurs between two tokens that always delimit complete
+terms. For example, the semi-colons in a list-like form are such
+delimiters, as are the list-form's left and right brackets, as are the
+``if'' and ``then'' tokens in an if-then-else form. Having the
+{realonly} parameter set to true will cause parentheses whenever the
+context is anything not the real top, while having it set to false
+will cause parentheses if in neither sort of ``top''. Finally, the
+{Always} value causes parentheses always to be added.
 
 The {PhraseBlockStyle} values describe when pretty-printing blocks
 involving this term should be entered.  The {AroundEachPhrase} style
@@ -180,10 +191,10 @@ a fixity with a precedence, and if that precedence level in the
 grammar is already taken by rules with a different sort of fixity.
 
 \EXAMPLE
-There are two conditional expression syntaxes defined in the theory
-{bool}.  The first is the traditional HOL88/90 syntax.  Because the
-syntax involves ``dangling'' terms to the left and right, it is
-an infix (and one of very weak precedence at that).
+The traditional (now discontinued) HOL88/90 syntax for conditionals is
+{b => t | e}. With ``dangling'' terms (the {b} and the {e}) to the
+left and right, it is an infix (and one of very weak precedence at
+that).
 {
    val _ = add_rule{term_name = "COND",
                     fixity = Infix (HOLgrammars.RIGHT, 3),
@@ -195,13 +206,12 @@ an infix (and one of very weak precedence at that).
                     block_style = (AroundEachPhrase,
                                    (PP.INCONSISTENT, 0))};
 }
-The second rule added uses the more familiar {if-then-else}
-syntax.  Here there is only a ``dangling'' term to the right of the
-construction, so this rule's fixity is of type {Prefix}. (If the
-rule was made a {Closefix}, strings such as {`if P then Q else R`}
-would still parse, but so too would {`if P then Q else`}.)  This
-example also illustrates the use of blocks within rules to improve
-pretty-printing.
+The more familiar {if-then-else} syntax has a ``dangling'' term only
+to the right of the construction, so this rule's fixity is of type
+{Prefix}. (If the rule was made a {Closefix}, strings such as {`if P
+then Q else R`} would still parse, but so too would {`if P then Q else`}.) 
+This example also illustrates the use of blocks within rules
+to improve pretty-printing.
 {
    val _ = add_rule{term_name = "COND", fixity = Prefix 70,
                     pp_elements = [PPBlock([TOK "if", BreakSpace(1,2),
@@ -221,12 +231,16 @@ as:
    if P then
       <very long term> else Q
 }
-because the {block_style} is {INCONSISTENT}.
+because the {block_style} is {INCONSISTENT}. 
+The actual pretty-printer for if-then-else is a custom piece of code
+installed with {add_user_printer}. This handles nice printing of
+chained conditionals.
 
-The pretty-printer prefers later rules over earlier rules by
-default (though this choice can be changed with {prefer_form_with_tok}
-(q.v.)), so conditional expressions print using the {if-then-else}
-syntax rather than the {_ => _ | _} syntax.
+The pretty-printer prefers later rules over earlier rules by default
+(though this choice can be changed with {prefer_form_with_tok}
+(q.v.)), so if both of these calls were made, conditional expressions
+would print using the {if-then-else} syntax rather than the 
+{_ => _ | _} syntax.
 
 \USES
 For making pretty concrete syntax possible.
