@@ -2055,6 +2055,23 @@ val EL_BAG_SUB_BAG = store_thm(
            [SUB_BAG, BAG_INN, BAG_IN, BAG_INSERT, EMPTY_BAG, EQ_IMP_THM,
             arithmeticTheory.GREATER_EQ] >> simp[]);
 
+Theorem FINITE_SUB_BAGS:
+  !b. FINITE_BAG b ==> FINITE { s | s <= b }
+Proof
+  ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ rw[]
+  \\ qmatch_asmsub_abbrev_tac`FINITE sb`
+  \\ qmatch_goalsub_abbrev_tac`FINITE eb`
+  \\ `eb = sb UNION (IMAGE (BAG_INSERT e) sb)` suffices_by simp[]
+  \\ simp[SET_EQ_SUBSET, SUBSET_DEF, Abbr`sb`, Abbr`eb`, PULL_EXISTS]
+  \\ reverse conj_tac
+  >- simp[SUB_BAG_INSERT, SUB_BAG_INSERT_I]
+  \\ rw[]
+  \\ reverse(Cases_on`BAG_IN e x`)
+  >- metis_tac[NOT_IN_SUB_BAG_INSERT]
+  \\ imp_res_tac BAG_DECOMPOSE \\ rw[]
+  \\ fs[SUB_BAG_INSERT]
+QED
 
 
 (* ----------------------------------------------------------------------
