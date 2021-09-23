@@ -1445,6 +1445,18 @@ Proof
   \\ PROVE_TAC[]
 QED
 
+Theorem LIST_REL_PERM:
+  !l1 l2 l3. LIST_REL P l1 l2 /\ PERM l2 l3 ==>
+             ?l4. PERM l1 l4 /\ LIST_REL P l4 l3
+Proof
+  Induct_on ‘LIST_REL’
+  \\ rw[PERM_CONS_EQ_APPEND, PULL_EXISTS]
+  \\ ntac 2 (irule_at Any listTheory.LIST_REL_APPEND_suff)
+  \\ simp[]
+  \\ first_x_assum $ drule_then strip_assume_tac
+  \\ gs[LIST_REL_SPLIT2, SF SFY_ss]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* QSORT3 - A stable version of QSORT (James Reynolds - 10/2010)             *)
 (*    Lists are stable if filtering using any predicate that implies two     *)
