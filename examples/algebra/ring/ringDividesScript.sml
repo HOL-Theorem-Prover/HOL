@@ -29,7 +29,7 @@ open ringIdealTheory;
 open ringUnitTheory;
 open ringTheory;
 open groupTheory;
-open monoidTheory gbagTheory bagTheory;
+open monoidTheory gbagTheory bagTheory containerTheory;
 val MEMBER_NOT_EMPTY = pred_setTheory.MEMBER_NOT_EMPTY;
 
 open ringMapTheory monoidMapTheory groupMapTheory;
@@ -552,6 +552,46 @@ Proof
   \\ simp[ring_unit_inv_element, ring_mult_assoc]
   \\ simp[ring_unit_inv_element, GSYM ring_mult_assoc]
   \\ simp[ring_unit_linv]
+QED
+
+Theorem LIST_REL_ring_associates_product:
+  Ring r ==>
+  !l1 l2. LIST_REL (ring_associates r) l1 l2 /\
+          set l2 SUBSET r.carrier
+          ==>
+          ring_associates r (GBAG r.prod (LIST_TO_BAG l1))
+                            (GBAG r.prod (LIST_TO_BAG l2))
+Proof
+  strip_tac
+  \\ Induct_on`LIST_REL`
+  \\ rw[]
+  >- ( simp[ring_associates_def] \\ qexists_tac`#1` \\ simp[] )
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ fs[SUBSET_DEF, IN_LIST_TO_BAG]
+  \\ conj_asm1_tac >- (
+    fs[LIST_REL_EL_EQN, MEM_EL, PULL_EXISTS]
+    \\ fs[ring_associates_def]
+    \\ reverse conj_tac >- metis_tac[Ring_def]
+    \\ rw[] \\ res_tac \\ rfs[]
+    \\ res_tac \\ fs[] )
+  \\ irule ring_associates_trans
+  \\ simp[]
+  \\ `GBAG r.prod (LIST_TO_BAG l2) IN r.prod.carrier` by (
+    irule GBAG_in_carrier
+    \\ simp[SUBSET_DEF, IN_LIST_TO_BAG] )
+  \\ `GBAG r.prod (LIST_TO_BAG l1) IN r.prod.carrier` by (
+    irule GBAG_in_carrier
+    \\ simp[SUBSET_DEF, IN_LIST_TO_BAG] )
+  \\ conj_tac >- ( irule ring_mult_element \\ rfs[] )
+  \\ qexists_tac`h2 * GBAG r.prod (LIST_TO_BAG l1)`
+  \\ reverse conj_tac
+  >- ( irule ring_associates_mult \\ rfs[] )
+  \\ DEP_ONCE_REWRITE_TAC[ring_mult_comm] \\ rfs[]
+  \\ qmatch_goalsub_abbrev_tac`rassoc foo _`
+  \\ DEP_ONCE_REWRITE_TAC[ring_mult_comm] \\ rfs[]
+  \\ qunabbrev_tac`foo`
+  \\ irule ring_associates_mult \\ rfs[]
 QED
 
 (* ------------------------------------------------------------------------- *)
