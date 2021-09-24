@@ -428,6 +428,60 @@ Proof
   \\ metis_tac[]
 QED
 
+Theorem ring_product_factors_divide:
+  !r. Ring r ==>
+  !b. FINITE_BAG b ==>
+      SET_OF_BAG b SUBSET r.carrier /\
+      ring_divides r (GBAG r.prod b) x ==>
+      !y. BAG_IN y b ==> ring_divides r y x
+Proof
+  ntac 2 strip_tac
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ simp[]
+  \\ gen_tac \\ strip_tac
+  \\ gen_tac \\ strip_tac
+  \\ pop_assum mp_tac
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ fs[SUBSET_DEF]
+  \\ conj_asm1_tac >- metis_tac[Ring_def]
+  \\ gs[ring_divides_def, PULL_EXISTS]
+  \\ gen_tac \\ strip_tac
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ last_x_assum(qspec_then`s * e`mp_tac)
+  \\ simp[]
+  \\ `GBAG r.prod b IN r.prod.carrier`
+  by ( irule GBAG_in_carrier \\ simp[SUBSET_DEF] )
+  \\ rfs[]
+  \\ simp[ring_mult_assoc]
+  \\ strip_tac
+  \\ strip_tac
+  \\ strip_tac
+  >- (
+    qexists_tac`s * GBAG r.prod b`
+    \\ simp[ring_mult_assoc]
+    \\ AP_TERM_TAC
+    \\ simp[ring_mult_comm] )
+  \\ res_tac
+  \\ simp[]
+QED
+
+Theorem ring_mult_divides:
+  !r p q x.
+    Ring r /\ ring_divides r (r.prod.op p q) x /\
+    p IN R /\ q IN R
+    ==>
+    ring_divides r p x /\ ring_divides r q x
+Proof
+  rpt strip_tac
+  \\ drule ring_product_factors_divide
+  \\ disch_then(qspecl_then[`x`,`{|p;q|}`]mp_tac)
+  \\ simp[SUBSET_DEF]
+  \\ dsimp[]
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ metis_tac[Ring_def]
+QED
+
 Theorem ring_associates_sym:
   !r p q.
     Ring r /\ q IN r.carrier /\ ring_associates r p q ==>
@@ -477,6 +531,27 @@ Proof
   \\ qexistsl_tac[`s`,`v`]
   \\ simp[GSYM ring_mult_assoc]
   \\ metis_tac[ring_mult_comm]
+QED
+
+Theorem ring_associates_divides:
+  !r p q x. Ring r /\ ring_associates r p q /\ q IN R /\
+  ring_divides r p x ==> ring_divides r q x
+Proof
+  rw[ring_associates_def, ring_divides_def]
+  \\ qexists_tac`s' * s`
+  \\ simp[]
+  \\ simp[ring_mult_assoc]
+QED
+
+Theorem ring_divides_associates:
+  !r x y p. Ring r /\ ring_associates r x y /\ p IN R /\ y IN R /\ ring_divides r p x ==>
+  ring_divides r p y
+Proof
+  rw[ring_associates_def, ring_divides_def]
+  \\ qexists_tac`|/ s * s'`
+  \\ simp[ring_unit_inv_element, ring_mult_assoc]
+  \\ simp[ring_unit_inv_element, GSYM ring_mult_assoc]
+  \\ simp[ring_unit_linv]
 QED
 
 (* ------------------------------------------------------------------------- *)
