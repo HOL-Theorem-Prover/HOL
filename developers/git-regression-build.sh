@@ -133,7 +133,7 @@ maybeBuild ()
             return 0
         fi
     fi
-    git clean -xd -e build-logs
+    git clean -xdf -e build-logs
     (touch build-running &&
      $ML < tools/smart-configure.sml 2>&1 &&
      bin/build cleanAll 2>&1 &&
