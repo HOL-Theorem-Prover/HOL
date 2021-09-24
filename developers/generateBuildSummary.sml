@@ -77,7 +77,9 @@ fun filter_input instr = let
                       (dirlines, true)
                   else let
                       val dirlines =
-                          if String.isPrefix "Building directory" s then
+                          if String.isPrefix "Building directory" s orelse
+                             String.isPrefix "Finished $(HOLDIR)" s
+                          then
                             s :: dirlines
                           else dirlines
                       val (lines, cnt) =
