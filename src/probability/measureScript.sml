@@ -130,6 +130,16 @@ val measure_preserving_def = Define
       s IN measurable_sets m2 ==>
            (measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s)}`;
 
+(* This substitutes HVG's ‘measure_of’ methodology: instead of writing things like
+   ‘measure_of m1 = measure_of m2’ now we write ‘measure_space_eq m1 m2’ instead.
+ *)
+Definition measure_space_eq_def :
+    measure_space_eq m1 m2 =
+      (m_space m1 = m_space m2 /\
+       measurable_sets m1 = measurable_sets m2 /\
+       (!s. s IN measurable_sets m1 ==> (measure m1 s = measure m2 s)))
+End
+
 (* ------------------------------------------------------------------------- *)
 (*  Basic measure theory theorems                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -699,6 +709,27 @@ Proof
       (* goal 3 (of 3) *)
       rw [countably_additive_def, IN_FUNSET, IN_UNIV, o_DEF] \\
       fs [measure_space_def, countably_additive_def, IN_FUNSET, IN_UNIV, o_DEF] ]
+QED
+
+Theorem measure_space_eq' :
+    !m1 m2. measure_space m1 /\ measure_space_eq m1 m2 ==> measure_space m2
+Proof
+    RW_TAC std_ss [measure_space_eq_def]
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘m1’ >> rw []
+QED
+
+Theorem measure_space_eq_comm :
+    !m1 m2. measure_space_eq m1 m2 ==> measure_space_eq m2 m1
+Proof
+    RW_TAC std_ss [measure_space_eq_def]
+QED
+
+Theorem measure_space_eq_trans :
+    !m1 m2 m3. measure_space_eq m1 m2 /\ measure_space_eq m2 m3 ==>
+               measure_space_eq m1 m3
+Proof
+    RW_TAC std_ss [measure_space_eq_def]
 QED
 
 val MEASURE_SPACE_INTER = store_thm

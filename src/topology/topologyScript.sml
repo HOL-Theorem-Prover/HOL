@@ -25,15 +25,6 @@ val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
 (*---------------------------------------------------------------------------*)
-(* Minimal amount of set notation is convenient                              *)
-(*---------------------------------------------------------------------------*)
-
-val COMPL_MEM = prove (
-  ``!P:'a->bool. !x. P x = ~(COMPL P x)``,
-    REPEAT GEN_TAC THEN REWRITE_TAC[COMPL_applied, IN_DEF] THEN
-    BETA_TAC THEN REWRITE_TAC[]);
-
-(*---------------------------------------------------------------------------*)
 (* Characterize an (alpha)topology                                           *)
 (*---------------------------------------------------------------------------*)
 
@@ -367,8 +358,8 @@ Proof
  >> REWRITE_TAC[closed_in, limpt]
  >> ASM_REWRITE_TAC [SUBSET_UNIV, GSYM COMPL_DEF, IN_UNIV]
  >> CONV_TAC(ONCE_DEPTH_CONV NOT_FORALL_CONV)
- >> FREEZE_THEN (fn th => ONCE_REWRITE_TAC[th]) (SPEC “S':'a->bool” COMPL_MEM)
- >> REWRITE_TAC []
+ >> ‘!x. S' x = ~COMPL S' x’ by rw [COMPL_applied, IN_APP]
+ >> ASM_REWRITE_TAC []
  >> SPEC_TAC(“COMPL(S':'a->bool)”,“S':'a->bool”)
  >> GEN_TAC >> REWRITE_TAC [NOT_IMP]
  >> CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV)

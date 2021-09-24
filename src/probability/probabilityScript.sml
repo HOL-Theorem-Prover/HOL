@@ -1172,6 +1172,17 @@ val distribution_partition = store_thm
      by RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_IMAGE, IN_SING]
  >> METIS_TAC []);
 
+Theorem distribution_space_eq_1 : (* was: lemma1 (normal_rvScript.sml) *)
+    !p X. prob_space p ==> (distribution p X (IMAGE X (p_space p)) = 1)
+Proof
+    RW_TAC std_ss [prob_space_def, p_space_def]
+ >> SIMP_TAC std_ss [distribution_def]
+ >> SIMP_TAC std_ss [IMAGE_DEF, PREIMAGE_def, INTER_DEF, GSPECIFICATION]
+ >> REWRITE_TAC [prob_def, p_space_def]
+ >> REWRITE_TAC [SET_RULE ``{x | (?x''. (X x = X x'') /\ x'' IN s) /\ x IN s} = s``]
+ >> ASM_REWRITE_TAC []
+QED
+
 val distribution_lebesgue_thm1 = store_thm
   ("distribution_lebesgue_thm1",
  ``!X p s A. prob_space p /\ random_variable X p s /\ A IN subsets s ==>
@@ -2088,27 +2099,39 @@ Proof
  >> MATCH_MP_TAC integral_pos >> rw []
 QED
 
-Theorem expectation_posinf :
+Theorem expectation_posinf[local] :
     !p. prob_space p ==> expectation p (\x. PosInf) = PosInf
 Proof
     RW_TAC std_ss [prob_space_def, p_space_def, expectation_def]
  >> MATCH_MP_TAC integral_posinf >> art [lt_01]
 QED
 
-(* TODO: extend `Normal c` to all extreals *)
-Theorem expectation_const :
-    !p c. prob_space p ==> expectation p (\x. Normal c) = Normal c
+Theorem expectation_neginf[local] :
+    !p. prob_space p ==> expectation p (\x. NegInf) = NegInf
 Proof
-    rpt GEN_TAC
- >> MP_TAC (Q.SPECL [`p`, `c`] integral_const)
- >> `1 < PosInf` by PROVE_TAC [lt_infty, extreal_of_num_def]
- >> RW_TAC std_ss [prob_space_def, p_space_def, expectation_def, mul_rone]
+    RW_TAC std_ss [prob_space_def, p_space_def, expectation_def]
+ >> MATCH_MP_TAC integral_neginf >> art [lt_01]
 QED
 
+(* NOTE: the type of ‘c’ has changed from “:real” to “:extreal” *)
+Theorem expectation_const :
+    !p c. prob_space p ==> expectation p (\x. c) = c
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘c’
+ >| [ (* goal 1 (of 3) *)
+      MATCH_MP_TAC expectation_neginf >> art [],
+      (* goal 2 (of 3) *)
+      MATCH_MP_TAC expectation_posinf >> art [],
+      (* goal 3 (of 3) *)
+      MP_TAC (Q.SPECL [`p`, `r`] integral_const) \\
+     `1 < PosInf` by PROVE_TAC [lt_infty, extreal_of_num_def] \\
+      fs [prob_space_def, p_space_def, expectation_def, mul_rone] ]
+QED
+
+(* |- !p. prob_space p ==> expectation p (\x. 0) = 0 *)
 Theorem expectation_zero =
-        expectation_const |> Q.SPECL [‘p’, ‘0’]
-                          |> REWRITE_RULE [GSYM extreal_of_num_def]
-                          |> Q.GEN ‘p’
+    Q.GEN ‘p’ (Q.SPECL [‘p’, ‘0’] expectation_const)
 
 Theorem variance_const :
     !p c. prob_space p ==> variance p (\x. Normal c) = 0
@@ -2118,6 +2141,7 @@ Proof
  >> rw [extreal_pow_def, expectation_zero]
 QED
 
+(* |- !p. prob_space p ==> variance p (\x. 0) = 0 *)
 Theorem variance_zero =
         variance_const |> Q.SPECL [‘p’, ‘0’]
                        |> REWRITE_RULE [GSYM extreal_of_num_def]
@@ -2160,7 +2184,7 @@ Proof
          Know ‘expectation p (\x. (X x - a) pow 2) =
                expectation p (\x. PosInf)’
          >- (MATCH_MP_TAC expectation_cong >> simp []) \\
-         simp [expectation_posinf] \\
+         simp [expectation_const] \\
          METIS_TAC [lt_infty]) \\
      rpt STRIP_TAC \\
     `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
