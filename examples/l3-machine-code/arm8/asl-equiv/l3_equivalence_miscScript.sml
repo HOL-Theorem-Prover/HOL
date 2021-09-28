@@ -434,6 +434,23 @@ Proof
   >- ARITH_TAC
 QED
 
+Theorem v2w_fixwidth_dimindex:
+  dimindex(:α) ≤ l ⇒
+  v2w (fixwidth l v) : α word = v2w v
+Proof
+  rw[GSYM WORD_EQ, bit_v2w] >>
+  Cases_on `x < LENGTH v` >> gvs[NOT_LESS, testbit_geq_len] >>
+  simp[testbit_el, fixwidth_REPLICATE, Once COND_RAND,
+       EL_APPEND_EQN, rich_listTheory.EL_REPLICATE, EL_DROP]
+QED
+
+Theorem TAKE_REPLICATE:
+  TAKE n (REPLICATE m e) = REPLICATE (MIN n m) e
+Proof
+  rw[LIST_EQ_REWRITE, MIN_DEF, EL_TAKE,
+     rich_listTheory.EL_REPLICATE, LENGTH_TAKE_EQ]
+QED
+
 (****************************************)
 
 val _ = export_theory();

@@ -295,6 +295,39 @@ Proof
   Induct >> rw[Once sail2_valuesAuxiliaryTheory.repeat_rw, INT_SUB]
 QED
 
+Theorem integer_subrange_pos:
+  lo ≤ hi ∧ hi - lo + 1 = dimindex(:α) ⇒
+  integer_subrange (&i) (&hi) (&lo) : α word =
+  v2w (field hi lo (fixwidth (hi + 1) (n2v i)))
+Proof
+  simp[integer_subrange_def] >>
+  simp[INT_SUB_CALCULATE, INT_ADD_CALCULATE] >>
+  rewrite_tac [``get_slice_int (&dimindex(:α)) (&i) (&lo)`` |>
+    SIMP_CONV (srw_ss()) [
+      sail2_operators_mwordsTheory.get_slice_int_def,
+      sail2_operatorsTheory.get_slice_int_bv_def,
+      sail2_valuesTheory.instance_Sail2_values_Bitvector_Machine_word_mword_dict_def,
+      bools_of_int_def,
+      sail2_valuesTheory.subrange_list_def,
+      sail2_valuesTheory.subrange_list_dec_def,
+      sail2_valuesTheory.subrange_list_inc_def
+      ]] >>
+  LET_ELIM_TAC >>
+  `hi' = &hi` by (unabbrev_all_tac >> ARITH_TAC) >> pop_assum SUBST_ALL_TAC >>
+  `¬(&hi + 1i < 0)` by (unabbrev_all_tac >> ARITH_TAC) >> gvs[] >>
+  gvs[INT_ADD_CALCULATE] >>
+  `top = &hi` by (unabbrev_all_tac >> gvs[] >> ARITH_TAC) >> gvs[] >>
+  unabbrev_all_tac >> gvs[INT_ADD_CALCULATE, INT_SUB_CALCULATE] >>
+  qmatch_goalsub_abbrev_tac `TAKE len` >>
+  `0 < len` by (unabbrev_all_tac >> gvs[]) >>
+  `TAKE len (fixwidth (hi + 1) (n2v i)) =
+    shiftr (fixwidth (hi + 1) (n2v i)) lo` by simp[shiftr_def] >>
+  pop_assum SUBST_ALL_TAC >>
+  `shiftr (fixwidth (hi + 1) (n2v i)) lo =
+   field hi lo (fixwidth (hi + 1) (n2v i))` by simp[field_def, ADD1] >>
+  pop_assum $ SUBST_ALL_TAC >> simp[]
+QED
+
 
 (********************* Monad lemmas *******************)
 
