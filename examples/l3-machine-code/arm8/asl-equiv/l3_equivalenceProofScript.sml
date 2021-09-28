@@ -1316,8 +1316,12 @@ Proof
   rpt $ pop_assum kall_tac >>
   simp[asl_Int_def, ExtendWord_def] >> IF_CASES_TAC >> gvs[]
   >- (
-    simp[integer_subrange_def, asl_word_rws] >>
-    cheat (* TODO *)
+    DEP_REWRITE_TAC[integer_subrange_pos] >> simp[] >>
+    `w2w x2 : word128 * w2w x3 = n2w (w2n x2 * w2n x3)` by rw[word_mul_def, w2n_w2w] >>
+    pop_assum SUBST_ALL_TAC >> qmatch_goalsub_abbrev_tac `n2w n` >>
+    DEP_REWRITE_TAC[GSYM extract_v2w |>
+      INST_TYPE [alpha |-> ``:128``, beta |-> ``:64``]] >> simp[] >>
+    DEP_REWRITE_TAC[v2w_fixwidth_dimindex] >> simp[]
     )
   >- (
     cheat (* TODO *)
