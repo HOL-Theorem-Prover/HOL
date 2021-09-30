@@ -73,23 +73,26 @@ fun filter_input instr = let
       case Option.map remove_nulls (TextIO.inputLine instr) of
         NONE => (if length lines > lastlines then List.take(lines, lastlines)
                  else lines, false)
-      | SOME s => if s = "Hol built successfully.\n" then
-                      (dirlines, true)
-                  else let
-                      val dirlines =
-                          if String.isPrefix "Building directory" s orelse
-                             String.isPrefix "Finished $(HOLDIR)" s
-                          then
-                            s :: dirlines
-                          else dirlines
-                      val (lines, cnt) =
-                          if cnt = lastlines * 2 then
-                            (s :: List.take(lines, lastlines - 1), lastlines)
-                          else
-                            (s::lines, cnt + 1)
-                    in
-                      phase2 (lines, dirlines, cnt)
+      | SOME s0 =>
+        let val s = Holmake_tools.strip_codes s0
+        in
+          if s = "Hol built successfully.\n" then (dirlines, true)
+          else let
+            val dirlines =
+                if String.isPrefix "Building directory" s orelse
+                   String.isPrefix "Finished $(HOLDIR)" s
+                then
+                  s :: dirlines
+                else dirlines
+            val (lines, cnt) =
+                if cnt = lastlines * 2 then
+                  (s :: List.take(lines, lastlines - 1), lastlines)
+                else
+                  (s::lines, cnt + 1)
+          in
+            phase2 (lines, dirlines, cnt)
                     end
+        end
   val (p1_lines, p1_ok) = phase1 []
 in
   if not p1_ok then (String.concat (List.rev p1_lines), false)
