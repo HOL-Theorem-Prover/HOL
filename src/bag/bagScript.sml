@@ -557,10 +557,11 @@ val BAG_INN_EMPTY_BAG = Q.store_thm(
   SIMP_TAC arith_ss [BAG_INN, EMPTY_BAG, EQ_IMP_THM])
 val _ = export_rewrites ["BAG_INN_EMPTY_BAG"];
 
-val MEMBER_NOT_EMPTY = store_thm(
-  "MEMBER_NOT_EMPTY",
-  ``!b. (?x. BAG_IN x b) = ~(b = EMPTY_BAG)``,
-  METIS_TAC [BAG_cases, BAG_IN_BAG_INSERT, NOT_IN_EMPTY_BAG]);
+Theorem BAG_MEMBER_NOT_EMPTY:
+  !b. (?x. BAG_IN x b) <=> b <> EMPTY_BAG
+Proof
+  METIS_TAC [BAG_cases, BAG_IN_BAG_INSERT, NOT_IN_EMPTY_BAG]
+QED
 
 val _ = print "Properties of SUB_BAG\n"
 
