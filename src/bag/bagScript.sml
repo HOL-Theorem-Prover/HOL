@@ -1697,7 +1697,7 @@ Proof
       HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT >>
       rw[]
         >- (Cases_on `s={}` >- rw[] >>
-            `?e. e IN s` by simp[pred_setTheory.MEMBER_NOT_EMPTY] >>
+            `?e. e IN s` by simp[MEMBER_NOT_EMPTY] >>
             fs[BAG_OF_SET,EMPTY_BAG_alt,FUN_EQ_THM] >>
             first_x_assum (qspec_then `e` mp_tac) >>
             rw[])
@@ -1953,7 +1953,7 @@ QED
 val BAG_CHOICE_DEF = new_specification
   ("BAG_CHOICE_DEF",["BAG_CHOICE"],
    Q.prove(`?ch:('a -> num) -> 'a. !b. ~(b = {||}) ==> BAG_IN (ch b) b`,
-           PROVE_TAC [MEMBER_NOT_EMPTY]));
+           PROVE_TAC [BAG_MEMBER_NOT_EMPTY]));
 
 
 (* ===================================================================== *)
