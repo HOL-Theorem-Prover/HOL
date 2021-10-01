@@ -50,14 +50,20 @@ fun tidy_p2_lines linelist = let
     if size s = maxlen then s
     else let
         fun findlbrack i =
-            if String.sub(s, i) = #"[" then i else findlbrack (i - 1)
+            if i < 0 orelse String.sub(s, i) = #"[" then i
+            else findlbrack (i - 1)
         val lbrack_i = findlbrack (size s - 1)
-        val pfx = String.extract(s, 0, SOME lbrack_i)
-        val spaces = CharVector.tabulate(maxlen - size s, (fn _ => #" "))
-        val sfx = String.extract(s, lbrack_i, NONE)
-      in
-        pfx ^ spaces ^ sfx
-      end
+    in
+      if lbrack_i < 0 then StringCvt.padRight #" " maxlen s
+      else
+        let
+          val pfx = String.extract(s, 0, SOME lbrack_i)
+          val spaces = CharVector.tabulate(maxlen - size s, (fn _ => #" "))
+          val sfx = String.extract(s, lbrack_i, NONE)
+        in
+          pfx ^ spaces ^ sfx
+        end
+    end
 in
   map make_maxlen linelist
 end
