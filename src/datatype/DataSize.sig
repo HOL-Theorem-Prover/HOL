@@ -2,7 +2,8 @@ signature DataSize =
 sig
   include Abbrev
 
-  val define_size : thm -> TypeBasePure.typeBase
+  val define_size : {induction:thm, recursion:thm}
+                        -> TypeBasePure.typeBase
                         -> {def : thm,
                             const_tyopl : (term * (string*string)) list} option
 

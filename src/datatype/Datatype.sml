@@ -300,7 +300,7 @@ fun build_tyinfos db {induction,recursion} =
      val tyinfol = TypeBasePure.gen_datatype_info
                     {ax=recursion, ind=induction, case_defs=case_defs}
  in
-   case define_size recursion db
+   case define_size {induction = induction, recursion = recursion} db
     of NONE => (HOL_MESG "Couldn't define size function"; tyinfol)
      | SOME s => insert_size s tyinfol
     end

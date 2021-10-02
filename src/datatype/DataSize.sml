@@ -97,7 +97,7 @@ fun crunch [] = []
 
 val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
 
-fun define_size ax db =
+fun define_size_rec ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
      val tyvars = Lib.U (map (snd o dest_type) dtys)
      val (_, abody) = strip_forall(concl ax)
@@ -176,5 +176,57 @@ fun define_size ax db =
     SOME {def=defn,const_tyopl=const_tyopl}
  end
  handle HOL_ERR _ => NONE;
+
+fun size_def_to_comb (db : TypeBasePure.typeBase) ind size_def = let
+    val eq_rator = rator o lhs o snd o strip_forall
+    val size_rators = size_def |> concl |> strip_conj |> map eq_rator
+        |> HOLset.fromList Term.compare |> HOLset.listItems
+    val aux_measures = map (snd o strip_comb) size_rators |> List.concat
+    val measures = size_rators @ aux_measures
+        |> HOLset.fromList Term.compare |> HOLset.listItems
+    fun def_measure ty = hd (filter (fn m => fst (dom_rng (type_of m)) = ty) measures)
+    fun fix_measure t = if is_abs t
+        then hd (filter (fn m => type_of m = type_of t) measures @ [t])
+        else if is_comb t then mk_comb (fix_measure (rator t), fix_measure (rand t))
+        else t
+    fun measure sz = TypeBasePure.type_size db (fst (dom_rng (type_of sz)))
+        |> fix_measure
+    val hd_ty = size_def |> concl |> strip_conj |> hd |> eq_rator
+        |> type_of |> dom_rng |> fst
+    val ind_tys = concl ind |> strip_forall |> snd |> strip_imp |> snd |> strip_conj
+        |> map (type_of o fst o dest_forall)
+    fun remdups (x :: y :: zs) = if term_eq x y then remdups (y :: zs)
+        else x :: remdups (y :: zs)
+      | remdups xs = xs
+    val szs = size_def |> concl |> strip_conj |> map eq_rator |> remdups
+    fun sz_all_eq sz = let
+        val m = measure sz
+        val x = mk_var ("x", fst (dom_rng (type_of m)))
+        val eq = mk_eq (mk_comb (sz, x), mk_comb (m, x))
+      in mk_forall (x, eq) end
+    val eqs = map sz_all_eq szs |> list_mk_conj
+    val others = filter (fn sz => not (term_eq (measure sz) sz)) size_rators
+    fun size_rule ty = TypeBasePure.fetch db ty |> valOf |> TypeBasePure.size_of
+            |> valOf |> snd
+    val size_rules = others |> map (fst o dom_rng o type_of) |> map size_rule
+  in if null others
+    then TRUTH
+    else prove (eqs,
+    ho_match_mp_tac ind
+    \\ REWRITE_TAC (size_def :: size_rules)
+    \\ rpt strip_tac
+    \\ BETA_TAC
+    \\ ASSUM_LIST REWRITE_TAC)
+    |> REWRITE_RULE [GSYM FUN_EQ_THM]
+  end
+
+fun define_size {induction, recursion} db = case define_size_rec recursion db of
+    NONE => NONE
+  | SOME r => let
+    val comb_eqs = size_def_to_comb db induction (#def r)
+    val dtys = Prim_rec.doms_of_tyaxiom recursion
+    val def_name = fst(dest_type(hd dtys))
+    val _ = save_thm (def_name ^ "_size_eq", comb_eqs)
+  in SOME r end
 
 end
