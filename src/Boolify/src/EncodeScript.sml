@@ -541,9 +541,7 @@ val tree_ind = store_thm
    >> HO_MATCH_MP_TAC tree_induction
    >> RW_TAC std_ss [EVERY_DEF]
    >> Q.PAT_X_ASSUM `!x. Q x` MATCH_MP_TAC
-   >> Induct_on `l`
-   >> RW_TAC std_ss [EVERY_DEF, MEM]
-   >> METIS_TAC []);
+   >> FULL_SIMP_TAC std_ss [EVERY_MEM]);
 
 val (encode_tree_def, _) =
   Defn.tprove
