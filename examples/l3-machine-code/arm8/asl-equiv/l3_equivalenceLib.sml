@@ -331,7 +331,8 @@ val armv86a_ss =
     sail2_valuesTheory.int_of_mword_def,
     sail2_operators_mwordsTheory.sign_extend_def,
     armv86aTheory.Replicate__1_def,
-    sail2_operators_mwordsTheory.replicate_bits_def
+    sail2_operators_mwordsTheory.replicate_bits_def,
+    armv86aTheory.AArch64_SecondStageTranslate_def
   ];
 
 val _ = augment_srw_ss [armv86a_ss];
@@ -366,6 +367,7 @@ val asl_word_ss =
     sail2_operators_mwordsTheory.vec_of_bits_def ,
     sail2_valuesTheory.of_bits_failwith_def,
     sail2_valuesTheory.maybe_failwith_def,
+    sail2_valuesTheory.nat_of_bv_def,
     wordsTheory.bit_field_insert_def,
     preludeTheory.undefined_bitvector_def |>
       REWRITE_RULE [Once FUN_EQ_THM, sail2_state_monadTheory.returnS_def],
@@ -395,9 +397,22 @@ val l3_reg_ss =
     reg'TCR_EL1_def, reg'TCR_EL2_EL3_def, reg'SCTLRType_def
   ]
 
-val sss = [encode_ss, monad_ss, asl_word_ss, asl_reg_ss, l3_reg_ss];
+val asl_sys_reg_ss =
+  simpLib.named_rewrites "asl_sys_reg_ss" [
+    sail2_state_monadTheory.read_regS_def,
+    sail2_state_monadTheory.write_regS_def,
+    sail2_state_monadTheory.readS_def,
+    sail2_state_monadTheory.updateS_def,
+    PSTATE_ref_def,
+    highest_el_aarch32_ref_def,
+    SCR_EL3_ref_def,
+    HCR_EL2_ref_def,
+    CNTControlBase_ref_def
+    ];
+
+val sss = [encode_ss, monad_ss, asl_word_ss, asl_reg_ss, l3_reg_ss, asl_sys_reg_ss];
 val _ = map simpLib.register_frag sss;
-val [encode_rws, monad_rws, asl_word_rws, asl_reg_rws, l3_reg_rws] = map SF sss;
+val [encode_rws, monad_rws, asl_word_rws, asl_reg_rws, l3_reg_rws, asl_sys_reg_rws] = map SF sss;
 
 (* Rewrites using various state theorems and state relation *)
 fun state_rel_tac thms =

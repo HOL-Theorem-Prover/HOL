@@ -451,6 +451,35 @@ Proof
      rich_listTheory.EL_REPLICATE, LENGTH_TAKE_EQ]
 QED
 
+Theorem MAX_ALT_DEF:
+  MAX a b = if a ≤ b then b else a
+Proof
+  rw[MAX_DEF] >> gvs[]
+QED
+
+Theorem MIN_ALT_DEF:
+  MIN a b = if a ≤ b then a else b
+Proof
+  rw[MIN_DEF] >> gvs[]
+QED
+
+Theorem w2n_word_abs_lt:
+  ∀w. w2n (word_abs w : α word) ≤ 2 ** (dimindex(:α) - 1)
+Proof
+  rw[] >> simp[integer_wordTheory.word_abs_w2i, dimword_def] >>
+  qspec_then `w` assume_tac integer_wordTheory.w2i_ge >>
+  qspec_then `w` assume_tac integer_wordTheory.w2i_le >>
+  gvs[INT_MAX_def, wordsTheory.INT_MIN_def] >>
+  rename1 `ABS a` >> qmatch_goalsub_abbrev_tac `dim - 1` >>
+  `0 < dim` by (unabbrev_all_tac >> gvs[]) >> qpat_x_assum `Abbrev _` kall_tac >>
+  `ABS a ≤ 2 ** (dim - 1)` by (
+    simp[INT_ABS_LE] >> Cases_on `dim` >> gvs[ADD1] >>
+    last_x_assum kall_tac >> ARITH_TAC) >>
+  ntac 2 $ last_x_assum kall_tac >>
+  qspec_then `a` assume_tac INT_ABS_POS >> rename1 `Num posve` >>
+  Cases_on `posve` >> gvs[] >> Cases_on `dim` >> gvs[EXP]
+QED
+
 (****************************************)
 
 val _ = export_theory();

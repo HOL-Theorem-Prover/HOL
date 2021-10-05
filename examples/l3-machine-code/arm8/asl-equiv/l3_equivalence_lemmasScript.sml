@@ -328,6 +328,76 @@ Proof
   pop_assum $ SUBST_ALL_TAC >> simp[]
 QED
 
+Theorem integer_subrange_neg:
+  lo ≤ hi ∧ hi - lo + 1 = dimindex(:α) ⇒
+  integer_subrange (-&i) (&hi) (&lo) : α word =
+  if i MOD 2 ** (hi + 1) = 0 then 0w else
+  v2w (field hi lo (add (MAP $¬ (fixwidth (hi + 1) (n2v i))) [T]))
+Proof
+  simp[integer_subrange_def] >>
+  simp[INT_SUB_CALCULATE, INT_ADD_CALCULATE] >>
+  rewrite_tac [``get_slice_int (&dimindex(:α)) (-&i) (&lo)`` |>
+    SIMP_CONV (srw_ss()) [
+      sail2_operators_mwordsTheory.get_slice_int_def,
+      sail2_operatorsTheory.get_slice_int_bv_def,
+      sail2_valuesTheory.instance_Sail2_values_Bitvector_Machine_word_mword_dict_def,
+      bools_of_int_def,
+      sail2_valuesTheory.subrange_list_def,
+      sail2_valuesTheory.subrange_list_dec_def,
+      sail2_valuesTheory.subrange_list_inc_def
+      ]] >>
+  LET_ELIM_TAC >>
+  `hi' = &hi` by (unabbrev_all_tac >> ARITH_TAC) >> pop_assum SUBST_ALL_TAC >>
+  `¬(&hi + 1i < 0)` by (unabbrev_all_tac >> ARITH_TAC) >> gvs[] >>
+  gvs[INT_ADD_CALCULATE] >>
+  `LENGTH bs' = LENGTH bs` by (
+    unabbrev_all_tac >> every_case_tac >> gvs[v2n_0, combinTheory.o_DEF] >>
+    qmatch_goalsub_abbrev_tac `add neg` >>
+    `EXISTS $¬ neg` by (unabbrev_all_tac >> gvs[EXISTS_MEM, MEM_MAP]) >>
+    simp[LENGTH_add] >>
+    `MAX (LENGTH neg) 1 = LENGTH neg` by (unabbrev_all_tac >> simp[MAX_DEF]) >>
+    pop_assum SUBST_ALL_TAC >> simp[MAX_DEF, LENGTH_n2v] >>
+    reverse IF_CASES_TAC >> gvs[] >- (unabbrev_all_tac >> simp[]) >>
+    Cases_on `v2n neg = 0` >- (unabbrev_all_tac >> gvs[]) >>
+    irule FALSITY >> qpat_x_assum `_ < _` mp_tac >> simp[NOT_LESS, LE_LT1, ADD1] >>
+    irule LOG_LT >> simp[] >>
+    qspec_then `neg` assume_tac v2n_lt >>
+    qsuff_tac `v2n neg ≠ 2 ** LENGTH neg - 1` >> rw[] >> gvs[] >>
+    simp[GSYM v2n_EVERY_T, combinTheory.o_DEF] >> gvs[EXISTS_MEM]) >>
+  gvs[] >>
+  `top = &hi` by (unabbrev_all_tac >> every_case_tac >> gvs[] >> ARITH_TAC) >>
+  gvs[] >>
+  unabbrev_all_tac >> gvs[INT_ADD_CALCULATE, INT_SUB_CALCULATE, v2n_fixwidth] >>
+  IF_CASES_TAC >> gvs[]
+  >- (
+    simp[fixwidth_REPLICATE] >>
+    map_every (once_rewrite_tac o single) [
+      GSYM SNOC_APPEND, rich_listTheory.SNOC_REPLICATE, Once ADD1] >>
+    simp[TAKE_REPLICATE, MIN_ALT_DEF] >>
+    srw_tac[fcpLib.FCP_ss][v2w_def] >>
+    simp[testbit_el, rich_listTheory.EL_REPLICATE, word_0]
+    ) >>
+  IF_CASES_TAC >> gvs[]
+  >- (
+    simp[TAKE_REPLICATE, MIN_ALT_DEF] >>
+    srw_tac[fcpLib.FCP_ss][v2w_def] >>
+    simp[testbit_el, rich_listTheory.EL_REPLICATE, word_0]
+    ) >>
+  qmatch_goalsub_abbrev_tac `TAKE len foo` >>
+  `0 < len` by (unabbrev_all_tac >> gvs[]) >>
+  `TAKE len foo = shiftr foo lo` by (unabbrev_all_tac >> simp[shiftr_def]) >>
+  pop_assum SUBST_ALL_TAC >>
+  `shiftr foo lo = field hi lo foo` by (unabbrev_all_tac >> simp[field_def]) >>
+  pop_assum $ SUBST_ALL_TAC >> simp[]
+QED
+
+Theorem OPTION_MAP_just_list:
+  ∀l.  EVERY IS_SOME l ⇒ just_list l = SOME (MAP THE l)
+Proof
+  Induct >> rw[] >>
+  simp[Once sail2_valuesTheory.just_list_def] >> TOP_CASE_TAC >> gvs[]
+QED
+
 
 (********************* Monad lemmas *******************)
 
@@ -396,6 +466,24 @@ Proof
   rw[FUN_EQ_THM, seqS] >> every_case_tac >> gvs[]
 QED
 
+Theorem maybe_failS_SOME[simp]:
+  maybe_failS msg (SOME v) = returnS v
+Proof
+  simp[sail2_state_monadTheory.maybe_failS_def]
+QED
+
+Theorem try_catchS_returnS[simp]:
+  try_catchS (returnS v) h = returnS v
+Proof
+  rw[FUN_EQ_THM, sail2_state_monadTheory.try_catchS_def, returnS]
+QED
+
+Theorem liftRS_returnS[simp]:
+  liftRS (returnS v) = returnS v
+Proof
+  simp[sail2_state_monadTheory.liftRS_def]
+QED
+
 
 (********************* Other lemmas *******************)
 
@@ -403,6 +491,21 @@ Theorem SetTheFlags_F[simp]:
   ∀rest s. SetTheFlags (F, rest) s = s
 Proof
   PairCases >> rw[SetTheFlags_def]
+QED
+
+Theorem ByteList_w2v_byte[simp]:
+  ByteList (w2v (w : word8)) = [w2v w]
+Proof
+  qspec_then `w` mp_tac length_w2v >>
+  rewrite_tac[dimindex_8, LENGTH_EQ_NUM_compute] >> strip_tac >>
+  last_x_assum mp_tac >> rw[LENGTH_EQ_NUM_compute] >>
+  simp[ByteList_def]
+QED
+
+Theorem ByteList_APPEND_bytes:
+  ∀l1 l2. LENGTH l1 = 8 ⇒ ByteList (l1 ++ l2) = l1::ByteList l2
+Proof
+  rw[LENGTH_EQ_NUM_compute] >> simp[Once ByteList_def]
 QED
 
 Theorem asl_extract_flags[simp]:

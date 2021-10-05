@@ -60,10 +60,12 @@ End
 
 Definition mem_rel_def:
   mem_rel (l3 : word64 -> word8) (asl : num |-> bitU list) tags =
-    ∀n. FLOOKUP tags n = SOME B0
-      ⇒ ∃byt.
-          FLOOKUP asl n = SOME byt ∧
-          l3 (n2w n) = vec_of_bits byt
+    ∀n. n < UINT_MAX (:64) ⇒
+      FLOOKUP tags n = SOME B0 ∧
+      ∃byt.
+        FLOOKUP asl n = SOME (MAP bitU_of_bool byt) ∧
+        LENGTH byt = 8 ∧
+        l3 (n2w n) = v2w byt
 End
 
 (* what to do about tagstate? *)
@@ -106,33 +108,33 @@ Definition l3_models_asl_instr_def:
 End
 
 Definition l3_models_asl_subject_to_def:
-  l3_models_asl_subject_to P opcode ⇔
+  l3_models_asl_subject_to P Q opcode ⇔
     Decode opcode ≠ Unallocated ∧
     ∀ l3 asl l3'.
       state_rel l3 asl ∧
       Run (Decode opcode) l3 = l3' ∧
       l3'.exception = NoException ∧
-      P asl
+      P asl ∧ Q l3
     ⇒ case seqS (write_regS SEE_ref (~1)) (ExecuteA64 opcode) asl of
-        | (Value _, asl') => state_rel l3' asl' ∧ P asl'
+        | (Value _, asl') => state_rel l3' asl' ∧ P asl' ∧ Q l3'
         | _ => F
 End
 
 Definition l3_models_asl_instr_subject_to_def:
-  l3_models_asl_instr_subject_to P instr ⇔
+  l3_models_asl_instr_subject_to P Q instr ⇔
     case Encode instr of
-      | ARM8 opcode => l3_models_asl_subject_to P opcode
+      | ARM8 opcode => l3_models_asl_subject_to P Q opcode
       | _ => F
 End
 
 Theorem l3_models_asl_K:
-  l3_models_asl = l3_models_asl_subject_to (K T)
+  l3_models_asl = l3_models_asl_subject_to (K T) (K T)
 Proof
   rw[FUN_EQ_THM, l3_models_asl_def, l3_models_asl_subject_to_def]
 QED
 
 Theorem l3_models_asl_instr_K:
-  l3_models_asl_instr = l3_models_asl_instr_subject_to (K T)
+  l3_models_asl_instr = l3_models_asl_instr_subject_to (K T) (K T)
 Proof
   rw[FUN_EQ_THM, l3_models_asl_instr_def, l3_models_asl_instr_subject_to_def] >>
   CASE_TAC >> gvs[l3_models_asl_K]
@@ -151,7 +153,10 @@ Definition asl_sys_regs_ok_def:
 
     (let HCR_EL2 = asl.regstate.bitvector_64_dec_reg "HCR_EL2" in
       word_bit 31 HCR_EL2 (* RW bit - EL1 is AArch64 *) ∧
-      ¬word_bit 34 HCR_EL2 (* Virtualization Host Extension (FEAT_VHE) disabled *))
+      ¬word_bit 34 HCR_EL2 (* Virtualization Host Extension (FEAT_VHE) disabled *)) ∧
+
+    asl.regstate.bitvector_52_dec_reg "__CNTControlBase" = 0b0w ∧
+    word_bit 4 ((asl.regstate.ProcState_reg "PSTATE").ProcState_M)
 End
 
 val _ = export_theory();

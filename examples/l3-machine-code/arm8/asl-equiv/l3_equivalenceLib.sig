@@ -24,6 +24,7 @@ sig
   val asl_word_rws : thm
   val asl_reg_rws : thm
   val l3_reg_rws : thm
+  val asl_sys_reg_rws : thm
 
   val state_rel_tac : thm list -> tactic
 
