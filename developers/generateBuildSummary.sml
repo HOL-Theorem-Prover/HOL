@@ -48,25 +48,39 @@ fun tidy_p2_lines linelist = let
   val maxlen = Int.max(78, maxlen)
   fun make_maxlen s =
     if size s = maxlen then s
-    else let
-        fun findlbrack i =
-            if i < 0 orelse String.sub(s, i) = #"[" then i
-            else findlbrack (i - 1)
-        val lbrack_i = findlbrack (size s - 1)
-    in
-      if lbrack_i < 0 then StringCvt.padRight #" " maxlen s
-      else
-        let
-          val pfx = String.extract(s, 0, SOME lbrack_i)
-          val spaces = CharVector.tabulate(maxlen - size s, (fn _ => #" "))
-          val sfx = String.extract(s, lbrack_i, NONE)
-        in
-          pfx ^ spaces ^ sfx
-        end
+    else
+      let
+        val szs1 = size s - 1
+        fun findldelim c i =
+            if i < 0 orelse String.sub(s, i) = c then i
+            else findldelim c (i - 1)
+        val cutpoint =
+            let
+              val lbi = findldelim #"[" szs1
+            in
+              if lbi < 0 then findldelim #"(" szs1 else lbi
+            end
+      in
+        if cutpoint < 0 then StringCvt.padRight #" " maxlen s
+        else
+          let
+            val pfx = String.extract(s, 0, SOME cutpoint)
+            val spaces = CharVector.tabulate(maxlen - size s, (fn _ => #" "))
+            val sfx = String.extract(s, cutpoint, NONE)
+          in
+            pfx ^ spaces ^ sfx
+          end
     end
 in
-  map make_maxlen linelist
+  map (fn s => make_maxlen s ^ "\n") linelist
 end
+
+fun delete_trailing_wspace s =
+    let
+      open Substring
+    in
+      s |> full |> dropr Char.isSpace |> string
+    end
 
 fun filter_input instr = let
   fun phase1 lines =
@@ -80,9 +94,10 @@ fun filter_input instr = let
         NONE => (if length lines > lastlines then List.take(lines, lastlines)
                  else lines, false)
       | SOME s0 =>
-        let val s = Holmake_tools.strip_codes s0
+        let val s = s0 |> Holmake_tools.strip_codes
+                       |> delete_trailing_wspace
         in
-          if s = "Hol built successfully.\n" then (dirlines, true)
+          if s = "Hol built successfully." then (dirlines, true)
           else let
             val dirlines =
                 if String.isPrefix "Building directory" s orelse
@@ -97,14 +112,15 @@ fun filter_input instr = let
                   (s::lines, cnt + 1)
           in
             phase2 (lines, dirlines, cnt)
-                    end
+          end
         end
   val (p1_lines, p1_ok) = phase1 []
 in
   if not p1_ok then (String.concat (List.rev p1_lines), false)
   else let
       val (p2_lines, p2_ok) = phase2 ([], [], 0)
-      val p2_lines = if p2_ok then tidy_p2_lines p2_lines else p2_lines
+      val p2_lines = if p2_ok then tidy_p2_lines p2_lines
+                     else map (fn s => s ^ "\n") p2_lines
       val all_lines = String.concat (List.rev p1_lines @ List.rev p2_lines)
     in
       (all_lines, p2_ok)
