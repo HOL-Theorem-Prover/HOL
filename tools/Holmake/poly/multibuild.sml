@@ -85,19 +85,20 @@ fun graphbuild optinfo g =
 
     fun dircomplete dir (good, bad) t =
         let
-          val pfx = bold ("Finished " ^ hmdir.pretty_dir dir)
+          val pfx0 = bold ("Finished " ^ hmdir.pretty_dir dir)
           val timetaken = "(" ^ Time.toString t ^ "s)"
+          val pfx = if good > 0 orelse bad > 0 then
+                      pfx0 ^ " [" ^
+                      (if good > 0 then
+                         "#theories: " ^ green (Int.toString good) ^
+                         (if bad > 0 then "; " else "")
+                       else "") ^
+                      (if bad > 0 then
+                         "#fails: " ^ red (Int.toString bad)
+                       else "") ^ "]"
+                    else pfx0
         in
-          if good > 0 orelse bad > 0 then
-            info (pfx ^ " " ^ timetaken ^ ";",
-                  (if good > 0 then
-                     "#theories: " ^ green (Int.toString good) ^
-                     (if bad > 0 then "; " else "")
-                   else "") ^
-                  (if bad > 0 then
-                     "#fails: " ^ red (Int.toString bad)
-                   else ""))
-          else info (pfx,timetaken)
+          info (pfx,timetaken)
         end
 
     fun tgtcompletion_cb dirmap =
