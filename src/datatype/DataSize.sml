@@ -177,7 +177,9 @@ fun define_size_rec ax db =
  end
  handle HOL_ERR _ => NONE;
 
-fun size_def_to_comb (db : TypeBasePure.typeBase) ind size_def = let
+val thm_compare = inv_img_cmp concl Term.compare
+
+fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind size_def = let
     val eq_rator = rator o lhs o snd o strip_forall
     val size_rators = size_def |> concl |> strip_conj |> map eq_rator
         |> HOLset.fromList Term.compare |> HOLset.listItems
@@ -193,6 +195,8 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) ind size_def = let
         |> fix_measure
     val hd_ty = size_def |> concl |> strip_conj |> hd |> eq_rator
         |> type_of |> dom_rng |> fst
+    val ind = case opt_ind of SOME ind => ind
+        | _ => TypeBasePure.fetch db hd_ty |> valOf |> TypeBasePure.induction_of
     val ind_tys = concl ind |> strip_forall |> snd |> strip_imp |> snd |> strip_conj
         |> map (type_of o fst o dest_forall)
     fun remdups (x :: y :: zs) = if term_eq x y then remdups (y :: zs)
@@ -209,21 +213,24 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) ind size_def = let
     fun size_rule ty = TypeBasePure.fetch db ty |> valOf |> TypeBasePure.size_of
             |> valOf |> snd
     val size_rules = others |> map (fst o dom_rng o type_of) |> map size_rule
+    val size_eqs = size_rules |> HOLset.fromList thm_compare |> HOLset.listItems
+        |> map (size_def_to_comb db NONE)
   in if null others
     then TRUTH
     else prove (eqs,
     ho_match_mp_tac ind
-    \\ REWRITE_TAC (size_def :: size_rules)
+    \\ REWRITE_TAC (size_def :: size_eqs @ size_rules)
     \\ rpt strip_tac
     \\ BETA_TAC
     \\ ASSUM_LIST REWRITE_TAC)
+    |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
     |> REWRITE_RULE [GSYM FUN_EQ_THM]
   end
 
 fun define_size {induction, recursion} db = case define_size_rec recursion db of
     NONE => NONE
   | SOME r => let
-    val comb_eqs = size_def_to_comb db induction (#def r)
+    val comb_eqs = size_def_to_comb db (SOME induction) (#def r)
     val dtys = Prim_rec.doms_of_tyaxiom recursion
     val def_name = fst(dest_type(hd dtys))
     val _ = save_thm (def_name ^ "_size_eq", comb_eqs)
