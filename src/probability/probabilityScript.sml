@@ -1014,7 +1014,7 @@ Proof
     \\ simp[DECIDE``n < 2n <=> (n = 0) \/ (n = 1)``]
     \\ dsimp[combinTheory.APPLY_UPDATE_THM]
     \\ fs[events_def, DISJOINT_SYM, UNION_COMM]
-    \\ `measure p s ≠ PosInf ∧ measure p t ≠ PosInf`
+    \\ ‘measure p s <> PosInf /\ measure p t <> PosInf’
     by (
       conj_tac \\ irule MEASURE_SPACE_FINITE_MEASURE
       \\ simp[]
