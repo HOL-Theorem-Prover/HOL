@@ -56,9 +56,9 @@ fun tidy_p2_lines linelist = let
             else findldelim c (i - 1)
         val cutpoint =
             let
-              val lbi = findldelim #"[" szs1
+              val lpi = findldelim #"(" szs1
             in
-              if lbi < 0 then findldelim #"(" szs1 else lbi
+              if lpi < 0 then findldelim #"[" szs1 else lpi
             end
       in
         if cutpoint < 0 then StringCvt.padRight #" " maxlen s
