@@ -30,3 +30,14 @@ all: ring-selftest.log
 ring-selftest.log: selftest.exe
 	./selftest.exe > $@ 2>&1
 endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+
+.PHONY: link-to-sigobj
+endif
+
+.PHONY: all
