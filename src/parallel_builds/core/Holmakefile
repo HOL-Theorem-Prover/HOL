@@ -42,9 +42,19 @@ INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
             $(patsubst %,../../%,$(SRCTESTDIRS))
 
 ifneq($(HOLSELFTESTLEVEL),1)
-EX2DIRS = miller
+EX2DIRS = algorithms/unification/triangular/nominal \
+          balanced_bst \
+          computability/kolmog computability/lambda computability/recdegrees \
+          computability/register computability/turing \
+          formal-languages/regular \
+          lambda/other-models lambda/typing \
+          l3-machine-code/decompilers \
+          miller \
+          separationLogic/src separationLogic/src/holfoot \
+          temporal_deep
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
+
 endif
 
 endif

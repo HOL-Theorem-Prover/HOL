@@ -1,5 +1,3 @@
-!!examples/separationLogic/src/
-!!examples/separationLogic/src/holfoot
 [poly]!!examples/separationLogic/src/holfoot/poly
 [mosml]!!examples/separationLogic/src/holfoot/mosml
 # these examples require Muddy, which is MoscowML specific
@@ -7,17 +5,5 @@
 [mosml]!examples/muddy
 [mosml]!examples/HolBdd
 [mosml]!!examples/HolCheck
-!!examples/algorithms/unification/triangular/nominal
-!!examples/lambda/other-models
-!!examples/lambda/typing
-!!examples/computability/lambda
-!!examples/computability/register
-!!examples/computability/turing
-!!examples/balanced_bst
-!!examples/formal-languages/regular
-!!examples/l3-machine-code/decompilers
-!!examples/temporal_deep
 [mosml]!!examples/temporal_deep/src/model_check
 [poly]!!examples/temporal_deep/src/examples
-!!examples/computability/kolmog
-!!examples/computability/recdegrees
