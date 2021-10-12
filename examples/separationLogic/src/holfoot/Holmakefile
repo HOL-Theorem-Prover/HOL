@@ -8,7 +8,7 @@ EXTRA_CLEANS = holfoot.grm-sig.sml holfoot.grm.sml holfoot.lex.sig \
 all: $(DEFAULT_TARGETS) holfootLib.ui selftest.exe
 .PHONY: all clean-lib
 
-selftest.exe: selftest.uo ../treeSyntax.uo
+selftest.exe: selftest.uo ../treeSyntax.uo ../vars_as_resourceFunctor.uo
 	$(HOLMOSMLC) -o $@ $<
 
 Parsetree.uo : Parsetree.sml

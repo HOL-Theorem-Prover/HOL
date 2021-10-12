@@ -1,8 +1,9 @@
+INCLUDES = $(HOLDIR)/src/bag
 
 all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-vars_as_resourceBaseFunctor.ui vars_as_resourceBaseFunctor.uo: vars_as_resourceBaseFunctor.sml vars_as_resourceSyntax.uo $(dprot $(SIGOBJ)/listLib.uo) $(dprot $(SIGOBJ)/bagLib.uo)
+vars_as_resourceBaseFunctor.ui vars_as_resourceBaseFunctor.uo: vars_as_resourceBaseFunctor.sml vars_as_resourceSyntax.uo $(dprot $(SIGOBJ)/listLib.uo) $(HOLDIR)/src/bag/bagLib.uo
 	$(HOLMOSMLC) -c -toplevel Overlay.ui vars_as_resourceBaseFunctor.sml
 
 vars_as_resourceFunctor.uo: vars_as_resourceFunctor.sml vars_as_resourceBaseFunctor.uo
