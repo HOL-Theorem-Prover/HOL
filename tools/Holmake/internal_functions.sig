@@ -7,6 +7,7 @@ sig
   val pattern_match : string -> string -> string option
   val tokenize : string -> string list
   val find_unescaped : char list -> Substring.substring -> int option
+  val tee : string * string -> string
   val wildcard : string -> string list
   val which : string -> string
   val function_call : (string *

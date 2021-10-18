@@ -291,6 +291,13 @@ fun shell arg =
   end
   handle OS.SysErr _ => ""
 
+(* taken from
+     https://unix.stackexchange.com/a/70675/287940
+   by user lesmana
+*)
+fun tee (cmd, fname) =
+    "{ { { { " ^ cmd ^ " ; echo $? >&3; } | tee " ^ fname ^ " >&4; } 3>&1; } | { read xs; exit $xs; } } 4>&1"
+
 fun function_call (fnname, args, eval) = let
   open Substring
 in
@@ -368,6 +375,12 @@ in
                  val arg_evalled = eval (hd args)
                in
                   shell arg_evalled
+               end
+  | "tee" => if length args <> 2 then
+               raise Fail "Bad number of arguments to 'tee' function"
+             else
+               let val args_evalled = map eval args
+               in tee (hd args_evalled, hd (tl args_evalled))
                end
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
