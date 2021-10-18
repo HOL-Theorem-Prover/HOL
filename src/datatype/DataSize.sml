@@ -179,7 +179,11 @@ fun define_size_rec ax db =
 
 val thm_compare = inv_img_cmp concl Term.compare
 
-fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind size_def = let
+val useful_ths = List.take(CONJUNCTS arithmeticTheory.ADD_CLAUSES, 2)
+
+
+fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind size_def =
+  let
     val eq_rator = rator o lhs o snd o strip_forall
     val size_rators = size_def |> concl |> strip_conj |> map eq_rator
         |> HOLset.fromList Term.compare |> HOLset.listItems
@@ -218,13 +222,13 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind size_def = let
   in if null others
     then TRUTH
     else prove (eqs,
-    ho_match_mp_tac ind
-    \\ REWRITE_TAC (size_def :: size_eqs @ size_rules)
-    \\ rpt strip_tac
-    \\ BETA_TAC
-    \\ ASSUM_LIST REWRITE_TAC)
-    |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-    |> REWRITE_RULE [GSYM FUN_EQ_THM]
+                ho_match_mp_tac ind
+                \\ REWRITE_TAC (size_def' :: size_eqs @ size_rules @ useful_ths)
+                \\ rpt strip_tac
+                \\ BETA_TAC
+                \\ ASSUM_LIST REWRITE_TAC)
+               |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
+               |> REWRITE_RULE [GSYM FUN_EQ_THM]
   end
 
 fun define_size {induction, recursion} db = case define_size_rec recursion db of

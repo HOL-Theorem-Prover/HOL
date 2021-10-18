@@ -4214,6 +4214,23 @@ in
            CHOOSE (“rep:'a itself -> 'a”, ITSELF_TYPE_DEF) all_eq_thevalue)
 end
 
+(* ITSELF_EQN_RWT = |- f (:'a) = e <=> !x. f x = e *)
+val ITSELF_EQN_RWT = let
+  fun mk_itty ty = mk_thy_type{Args = [ty], Thy = "bool", Tyop = "itself"}
+  val aitty = mk_itty alpha
+  val f = mk_var("f", aitty --> beta)
+  val e = mk_var("e", beta)
+  val x = mk_var("x", aitty)
+  val r = mk_forall(x, mk_eq(mk_comb(f,x), e))
+  val itv = mk_thy_const{Name = "the_value", Thy = "bool", Ty = aitty}
+  val l = mk_eq(mk_comb(f,itv), e)
+  val r2l = SPEC itv (ASSUME r) |> DISCH r
+  val l2r = SPEC x ITSELF_UNIQUE |> AP_TERM f |> C TRANS (ASSUME l) |> GEN x
+                 |> DISCH l
+in
+  save_thm("ITSELF_EQN_RWT", GENL [f,e] $ IMP_ANTISYM_RULE l2r r2l)
+end
+
 (* prove a datatype axiom for the type, allowing definitions of the form
     f (:'a) = ...
 *)
