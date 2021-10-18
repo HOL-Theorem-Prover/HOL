@@ -46,5 +46,5 @@ ifdef HOLSELFTESTLEVEL
 all: holfoot-selftest.log
 
 holfoot-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe,$@)
 endif

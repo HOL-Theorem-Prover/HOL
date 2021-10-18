@@ -28,7 +28,7 @@ ifdef HOLSELFTESTLEVEL
 all: integer-selftest.log
 
 integer-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1, $@)
 
 endif
 

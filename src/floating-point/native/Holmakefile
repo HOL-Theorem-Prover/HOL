@@ -12,7 +12,7 @@ ifdef HOLSELFTESTLEVEL
 all: floating-point-selftest.log
 
 floating-point-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 
 endif
 

@@ -11,7 +11,7 @@ ifdef HOLSELFTESTLEVEL
 all: finite-maps-selftest.log
 
 finite-maps-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 endif
 
 ifdef HOLBUILD

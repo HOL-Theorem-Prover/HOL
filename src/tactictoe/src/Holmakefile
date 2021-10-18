@@ -10,6 +10,6 @@ ifdef HOLSEFLTESTLEVEL
 all: tactictoe-selftest.log
 
 tactictoe-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1, $@)
 
 endif

@@ -22,7 +22,7 @@ ifdef HOLSELFTESTLEVEL
 all: coalgebra-selftest.log
 
 coalgebra-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 endif
 
 ifdef HOLBUILD

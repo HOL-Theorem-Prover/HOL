@@ -15,5 +15,5 @@ ifdef HOLSELFTESTLEVEL
 all: proofman-selftest.log
 
 proofman-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1, $@)
 endif

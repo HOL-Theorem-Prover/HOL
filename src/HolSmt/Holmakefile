@@ -10,7 +10,7 @@ ifdef HOLSELFTESTLEVEL
 all: holsmt-selftest.log
 
 holsmt-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 endif
 
 EXTRA_CLEANS = selftest.exe holsmt-selftest.log

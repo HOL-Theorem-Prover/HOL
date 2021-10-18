@@ -14,7 +14,7 @@ ifdef HOLSELFTESTLEVEL
 all: rational-selftest.log
 
 rational-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1, $@)
 
 endif
 

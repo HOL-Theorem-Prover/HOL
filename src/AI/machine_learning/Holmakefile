@@ -10,6 +10,6 @@ ifdef HOLSELFTESTLEVEL
 all: ai-ml-selftest.log
 
 ai-ml-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 
 endif

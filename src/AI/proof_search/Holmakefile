@@ -10,5 +10,5 @@ ifdef HOLSELFTESTLEVEL
 all: ai-proof-search-selftest.log
 
 ai-proof-search-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 endif

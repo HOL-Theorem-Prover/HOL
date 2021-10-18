@@ -40,5 +40,5 @@ ifdef HOLSELFTESTLEVEL
 all: ccs-selftest.log
 
 ccs-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 endif

@@ -20,7 +20,7 @@ ifdef HOLSELFTESTLEVEL
 all: quotient-selftest.log
 
 quotient-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 
 endif
 

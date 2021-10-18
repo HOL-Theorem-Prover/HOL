@@ -10,7 +10,7 @@ ifdef HOLSEFLTESTLEVEL
 all: transfer-selftest.log
 
 transfer-selftest.log: selftest.exe
-	./selftest.exe 2>&1 | tee $@
+	$(tee ./selftest.exe 2>&1,$@)
 endif
 
 ifdef HOLBUILD

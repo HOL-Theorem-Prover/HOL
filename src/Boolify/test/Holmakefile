@@ -9,11 +9,11 @@ all: result diff
 
 EXTRA_CLEANS = result
 
-diff:
+diff: result result.ok
 	@grep -v 'HOL.* (built \|^\(- \)*runtime: \|User: ' <result.ok >$(TMPFILE1)
 	@grep -v 'HOL.* (built \|^\(- \)*runtime: \|User: ' <result >$(TMPFILE2)
 	@diff $(TMPFILE1) $(TMPFILE2)
 
 result: test.sml ../src/Encode.uo
 	rm -f result
-	$(protect $(HOLDIR)/bin/hol) <test.sml 2>&1 | tee result
+	$(tee $(protect $(HOLDIR)/bin/hol) <test.sml 2>&1,result)
