@@ -168,6 +168,9 @@ sig
   (* name cases of an induction theorem *)
   val name_ind_cases : term list -> thm -> thm
 
+  (* convert aux size operators to combinators and use append rules *)
+  val size_comb_tac : tactic
+
   (* more simplification variants *)
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
   val simp : thm list -> tactic
