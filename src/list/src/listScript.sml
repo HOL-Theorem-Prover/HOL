@@ -1325,6 +1325,10 @@ Induct
      THEN REWRITE_TAC [MEM] THEN REPEAT STRIP_TAC
      THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);
 
+val list_size_append = Q.store_thm("list_size_append",
+  `!f xs ys. list_size f (xs ++ ys) = list_size f xs + list_size f ys`,
+  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_def]);
+
 val FOLDR_CONG = store_thm("FOLDR_CONG",
 Term
   ‘!l l' b b' (f:'a->'b->'b) f'.

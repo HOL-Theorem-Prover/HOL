@@ -548,10 +548,7 @@ val (encode_tree_def, _) =
   (Defn.Hol_defn "encode_tree"
    `encode_tree e (Node a ts) = APPEND (e a) (encode_list (encode_tree e) ts)`,
    TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` >>
-   (Induct_on `ts` >>
-    RW_TAC list_ss [tree_size_def, K_THM]) >- DECIDE_TAC >>
-   RES_THEN (MP_TAC o SPEC_ALL) >>
-   SIMP_TAC arith_ss [K_THM]);
+   rw [] >> size_comb_tac >> simp []);
 
 val encode_tree_def =
   save_thm ("encode_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) encode_tree_def);
@@ -561,11 +558,7 @@ val (lift_tree_def, _) =
   (Defn.Hol_defn "lift_tree"
    `lift_tree p (Node a ts) <=> p a /\ EVERY (lift_tree p) ts`,
    TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` >>
-   RW_TAC list_ss [tree_size_def, K_THM] >>
-   (Induct_on `ts` >>
-    RW_TAC list_ss [tree_size_def, K_THM]) >- DECIDE_TAC >>
-   RES_THEN (MP_TAC o SPEC_ALL) >>
-   SIMP_TAC arith_ss [K_THM]);
+   rw_tac bool_ss [] >> size_comb_tac >> simp []);
 
 val lift_tree_def =
   save_thm ("lift_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) lift_tree_def);

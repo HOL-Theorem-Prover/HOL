@@ -507,6 +507,20 @@ fun PRIM_WF_REL_TAC q WFthms simps g =
 fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
 
 
+(*---------------------------------------------------------------------------*)
+(* Apply _size_eq theorems.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+fun size_eq_conv tm = let
+    val tys = tm |> find_terms is_const |> map type_of
+      |> map (fst o strip_fun) |> List.concat
+      |> HOLset.fromList Type.compare |> HOLset.listItems
+    val size_eqs = mapfilter TypeBase.size_of tys
+      |> map fst |> mapfilter dest_thy_const
+      |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
+  in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
+
+
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt
        to prove termination. If the termination proof
