@@ -236,13 +236,16 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind size_def =
                |> REWRITE_RULE [GSYM FUN_EQ_THM]
   end
 
+val prove_size_eqs = ref true
+
 fun define_size {induction, recursion} db = case define_size_rec recursion db of
     NONE => NONE
-  | SOME r => let
+  | SOME r => if ! prove_size_eqs then let
     val comb_eqs = size_def_to_comb db (SOME induction) (#def r)
     val dtys = Prim_rec.doms_of_tyaxiom recursion
     val def_name = fst(dest_type(hd dtys))
     val _ = save_thm (def_name ^ "_size_eq", comb_eqs)
   in SOME r end
+  else SOME r
 
 end
