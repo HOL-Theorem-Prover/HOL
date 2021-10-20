@@ -20,6 +20,13 @@ val sum_size_def =
     name="sum_size_def",
     rec_axiom = sumTheory.sum_Axiom};
 
+val full_sum_size_def = new_definition
+  ("full_sum_size_def", ``full_sum_size f g sum = 1 + (sum_size f g sum)``);
+val full_sum_size_thm = Q.store_thm ("full_sum_size_thm",
+  `(full_sum_size f g (INL x) = 1 + (f x)) /\
+    (full_sum_size f g (INR y) = 1 + (g y))`,
+  REWRITE_TAC [full_sum_size_def, sum_size_def]);
+
 val option_size_def =
  new_recursive_definition
    {def = ``(option_size f NONE = 0) /\

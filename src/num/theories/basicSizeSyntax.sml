@@ -8,6 +8,7 @@ val ERR = mk_HOL_ERR "basicSizeSyntax";
 val bool_size_tm = prim_mk_const {Thy = "basicSize", Name = "bool_size"};
 val pair_size_tm = prim_mk_const {Thy = "basicSize", Name = "pair_size"};
 val sum_size_tm = prim_mk_const {Thy = "basicSize", Name = "sum_size"};
+val full_sum_size_tm = prim_mk_const {Thy = "basicSize", Name = "full_sum_size"};
 val one_size_tm = prim_mk_const {Thy = "basicSize", Name = "one_size"};
 val option_size_tm = prim_mk_const {Thy = "basicSize", Name = "option_size"};
 

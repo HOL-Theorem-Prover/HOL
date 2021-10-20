@@ -6,6 +6,7 @@ sig
   val bool_size_tm : term
   val pair_size_tm : term
   val sum_size_tm : term
+  val full_sum_size_tm : term
   val one_size_tm : term
   val option_size_tm : term
 
