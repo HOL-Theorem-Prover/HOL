@@ -4,7 +4,7 @@ EXTRA_CLEANS = heap \
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = probabilityTheory
+OBJNAMES = realLib hurdUtils probabilityTheory
 
 OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
 

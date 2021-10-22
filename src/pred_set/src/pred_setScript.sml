@@ -3416,18 +3416,26 @@ Proof
    RW_TAC bool_ss [GSPECIFICATION, count_def]
 QED
 
-val COUNT_ZERO = store_thm
-  ("COUNT_ZERO",
-   ``count 0 = {}``,
-   RW_TAC bool_ss [EXTENSION, IN_COUNT, NOT_IN_EMPTY]
-   THEN CONV_TAC Arith.ARITH_CONV);
-val _ = export_rewrites ["COUNT_ZERO"]
+Theorem COUNT_ZERO[simp] :
+    count 0 = {}
+Proof
+    RW_TAC bool_ss [EXTENSION, IN_COUNT, NOT_IN_EMPTY]
+ >> CONV_TAC Arith.ARITH_CONV
+QED
 
-val COUNT_SUC = store_thm
-  ("COUNT_SUC",
-   ``!n. count (SUC n) = n INSERT count n``,
-   RW_TAC bool_ss [EXTENSION, IN_INSERT, IN_COUNT]
-   THEN CONV_TAC Arith.ARITH_CONV);
+Theorem COUNT_SUC :
+    !n. count (SUC n) = n INSERT count n
+Proof
+    RW_TAC bool_ss [EXTENSION, IN_INSERT, IN_COUNT]
+ >> CONV_TAC Arith.ARITH_CONV
+QED
+
+(* This lemma may appear at the induction base of ‘!n. P (count (SUC n))’ *)
+Theorem COUNT_ONE :
+    count 1 = {0}
+Proof
+    RW_TAC bool_ss [ONE, COUNT_SUC, COUNT_ZERO]
+QED
 
 val FINITE_COUNT = store_thm
   ("FINITE_COUNT",
