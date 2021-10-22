@@ -340,6 +340,18 @@ val simplifyR =
  end;
 
 (*---------------------------------------------------------------------------*)
+(* Build a type size, not counting outer sum or pair constructors,           *)
+(* which are likely to be created by mutual recursion.                       *)
+(*---------------------------------------------------------------------------*)
+fun flat_type_size ty = case
+        (total sumSyntax.dest_sum ty, total pairSyntax.dest_prod ty) of
+    (SOME (lty, rty), _) => list_mk_icomb (basicSizeSyntax.sum_size_tm,
+        map flat_type_size [lty, rty])
+  | (NONE, SOME (lty, rty)) => list_mk_icomb (basicSizeSyntax.min_pair_size_tm,
+        map flat_type_size [lty, rty])
+  | _ => TypeBasePure.type_size (TypeBase.theTypeBase()) ty
+
+(*---------------------------------------------------------------------------*)
 (* "guessR" guesses a list of termination measures. Quite ad hoc.            *)
 (* First guess covers recursions on proper subterms, e.g. prim. recs. Next   *)
 (* guess measure sum of sizes of all arguments. Next guess generates         *)
@@ -402,7 +414,8 @@ fun guessR defn =
                         in (v::alist, if b then size_app v::slist else slist)
                         end) indices domtyl_2 ([],[])
            val lex_combs = mk_sized_subsets argvars subset
-           val allrels = [mk_cmeasure domty0, mk_cmeasure (tysize domty)]
+           val allrels = [mk_cmeasure domty0, mk_cmeasure (tysize domty),
+                             mk_cmeasure (flat_type_size domty)]
                          @ it_prim_rec @ lex_combs
            val allrels' = mk_term_set (map simplifyR allrels)
        in
