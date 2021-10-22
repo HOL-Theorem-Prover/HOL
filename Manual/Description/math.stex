@@ -1373,6 +1373,23 @@ the Strong and Weak Law of Large Numbers are also proven:
 ##thm WLLN_IID
 
 ##thm SLLN_IID
+or
+##thm SLLN_IID_applied
+\end{alltt}
+\end{hol}
+
+The Strong Law of Large Numbers (for I.I.D. r.v.'s) admits a converse in the following sense.
+If the expectation of each $|X_i|$ is infinite, then the \emph{upper limit} of
+$\displaystyle\frac{|S_n|}{n}$
+is almost-everywhere infinite~\cite[p.133]{Chung:2001}:
+\begin{hol}
+\begin{alltt}
+##thm SLLN_IID_diverge
+\end{alltt}
+\end{hol}
+
+\begin{hol}
+\begin{alltt}
 >>__ val _ = Globals.linewidth := oldwidth;
 \end{alltt}
 \end{hol}

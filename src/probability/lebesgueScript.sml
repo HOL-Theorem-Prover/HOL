@@ -186,29 +186,6 @@ val _ = overload_on ("*", ``\f m. density_measure m f``);
 val distr_def = Define
    `distr m f = \s. measure m (PREIMAGE f s INTER m_space m)`;
 
-(* Radon-Nikodym derivative (RN_deriv)
-
-  `RN_deriv v m` (HOL) = `RN_deriv m (m_space m, measurable_sets m, v)` (Isabelle/HOL)
-
-   The existence of `RN_deriv v m` is then asserted by Radon-Nikodym theorem, and
-   its uniqueness is asserted by the following (unproved) theorem:
-
-   ``!m f f'. measure_space m /\ sigma_finite m /\
-              f IN borel_measurable (m_space m,measurable_sets m) /\
-              f' IN borel_measurable (m_space m,measurable_sets m) /\
-              nonneg f /\ nonneg f' /\
-              (!s. s IN measurable_sets m ==> ((f * m) s = (f' * m) s))
-          ==> AE x::m. (f x = f' x)``
- *)
-val RN_deriv_def = Define (* or `v / m` (dv/dm) *)
-   `RN_deriv v m =
-      @f. f IN measurable (m_space m,measurable_sets m) Borel /\
-          (!x. x IN m_space m ==> 0 <= f x) /\
-          !s. s IN measurable_sets m ==> ((f * m) s = v s)`;
-
-(* `f = RN_deriv v m` is denoted by `f = v / m`, cf. "density_def" above *)
-val _ = overload_on ("/", ``RN_deriv``);
-
 (* unused for now:
 val diff_measure_space_def = Define
    `diff_measure_space m v =
@@ -10776,6 +10753,74 @@ Proof
  >> ‘?f. f IN measurable (m_space m,measurable_sets m) Borel /\ (!x. 0 <= f x) /\
          !s. s IN (measurable_sets m) ==> ((f * m) s = v s)’
       by METIS_TAC [Radon_Nikodym]
+ >> Q.EXISTS_TAC ‘f’ >> rw []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*   Applications of Radon_Nikodym (ported from HVG's normal_rvScript.sml)   *)
+(* ------------------------------------------------------------------------- *)
+
+(* Radon-Nikodym derivative (RN_deriv)
+
+  `RN_deriv v m` (HOL) = `RN_deriv m (m_space m,measurable_sets m,v)` (Isabelle/HOL)
+
+   The existence of `RN_deriv v m` is then asserted by Radon-Nikodym theorem, and
+   its uniqueness is asserted by the following (unproved) theorem:
+
+     !m f f'. measure_space m /\ sigma_finite m /\
+              f IN borel_measurable (m_space m,measurable_sets m) /\
+              f' IN borel_measurable (m_space m,measurable_sets m) /\
+              nonneg f /\ nonneg f' /\
+              (!s. s IN measurable_sets m ==> ((f * m) s = (f' * m) s))
+          ==> AE x::m. (f x = f' x)
+
+   see also density_measure_def for the overload of ‘*’ in `f * m`.
+ *)
+Definition RN_deriv_def : (* or `v / m` (dv/dm) *)
+    RN_deriv v m =
+      @f. f IN measurable (m_space m,measurable_sets m) Borel /\
+          (!x. x IN m_space m ==> 0 <= f x) /\
+          !s. s IN measurable_sets m ==> ((f * m) s = v s)
+End
+
+(* `f = RN_deriv v m` is denoted by `f = v / m`
+   NOTE: cannot use the Overload syntax sugar here (on "/").
+ *)
+val _ = overload_on ("/", “RN_deriv”);
+
+Theorem RN_deriv_thm :
+    !m v. measure_space m /\
+          (?f. f IN measurable (m_space m,measurable_sets m) Borel /\
+              (!x. x IN m_space m ==> 0 <= f x) /\
+              (!s. s IN measurable_sets m ==> (f * m) s = v s)) ==>
+          !s. s IN measurable_sets m ==> (v / m * m) s = v s
+Proof
+    RW_TAC std_ss [RN_deriv_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC >- (Q.EXISTS_TAC ‘f’ >> rw [])
+ >> Q.X_GEN_TAC ‘g’
+ >> rpt STRIP_TAC
+ >> POP_ASSUM MATCH_MP_TAC >> art []
+QED
+
+(* This is ported from the following theorem (RN_derivI)
+
+    !f M N. f IN measurable (m_space M, measurable_sets M) Borel /\
+            (!x. 0 <= f x) /\ (density M f = measure_of N) /\
+             measure_space M /\ measure_space N /\
+            (measurable_sets M = measurable_sets N) ==>
+            (density M (RN_deriv M N) = measure_of N)
+ *)
+Theorem RN_deriv_thm' : (* was: RN_derivI *)
+    !f m v. measure_space m /\
+            f IN measurable (m_space m,measurable_sets m) Borel /\
+           (!x. x IN m_space m ==> 0 <= f x) /\
+           (!s. s IN measurable_sets m ==> (f * m) s = v s) ==>
+            measure_space_eq (density m (v / m))
+                             (m_space m,measurable_sets m,v)
+Proof
+    rw [measure_space_eq_def, density_def]
+ >> irule RN_deriv_thm >> art []
  >> Q.EXISTS_TAC ‘f’ >> rw []
 QED
 

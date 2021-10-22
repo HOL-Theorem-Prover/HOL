@@ -2275,66 +2275,63 @@ QED
 (*  liminf and limsup [1, p.74] [2, p.76] - the set-theoretic version         *)
 (******************************************************************************)
 
-(* this lemma is provided by Konrad Slind *)
-val set_ss = arith_ss ++ PRED_SET_ss;
+val set_ss' = arith_ss ++ PRED_SET_ss;
 
+(* This lemma is provided by Konrad Slind *)
 val lemma = Q.prove
   (`!P. ~(?N. INFINITE N /\ !n. N n ==> P n) <=> !N. N SUBSET P ==> FINITE N`,
-  rw_tac set_ss [EQ_IMP_THM, SUBSET_DEF, IN_DEF]
+  rw_tac set_ss' [EQ_IMP_THM, SUBSET_DEF, IN_DEF]
   >- (`FINITE P \/ ?n. P n /\ ~P n` by metis_tac []
        >> imp_res_tac SUBSET_FINITE
        >> full_simp_tac std_ss [SUBSET_DEF, IN_DEF])
   >- metis_tac[]);
 
-(* TODO: use above lemma to simplify this proof with the following hints:
-
-   "From this and the original assumption, you should be able to get that P is finite,
+(* "From this and the original assumption, you should be able to get that P is finite,
     so has a maximum element." -- Konrad Slind, Feb 17, 2019.
  *)
-val infinitely_often_lemma = store_thm
-  ("infinitely_often_lemma",
-  ``!P. ~(?N. INFINITE N /\ !n:num. n IN N ==> P n) <=> ?m. !n. m <= n ==> ~(P n)``,
-    GEN_TAC
- >> `!N. (!n. n IN N ==> P n) <=> N SUBSET P` by PROVE_TAC [SUBSET_DEF, IN_APP]
- >> ASM_REWRITE_TAC []
- >> SIMP_TAC std_ss []
+Theorem infinitely_often_lemma :
+    !P. ~(?N. INFINITE N /\ !n:num. n IN N ==> P n) <=> ?m. !n. m <= n ==> ~(P n)
+Proof
+    Q.X_GEN_TAC ‘P’
+ >> `!N. (!n. n IN N ==> P n) <=> !n. N n ==> P n` by PROVE_TAC [SUBSET_DEF, IN_APP]
+ >> POP_ORW
+ >> REWRITE_TAC [lemma]
  >> reverse EQ_TAC >> rpt STRIP_TAC
  >| [ (* goal 1 (of 2) *)
-      Cases_on `~(N SUBSET P)` >- art [] >> fs [] \\
-      Suff `FINITE P` >- PROVE_TAC [SUBSET_FINITE_I] \\
-      Know `P SUBSET {n | ~(m <= n)}`
-      >- (RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_APP] \\
-          METIS_TAC []) \\
+      Suff ‘FINITE P’ >- PROVE_TAC [SUBSET_FINITE_I] \\
+      Know ‘P SUBSET (count m)’
+      >- (REWRITE_TAC [count_def, GSYM NOT_LESS_EQUAL] \\
+          ASM_SET_TAC []) \\
       DISCH_TAC \\
-      Suff `FINITE {n | ~(m <= n)}` >- PROVE_TAC [SUBSET_FINITE_I] \\
-      REWRITE_TAC [FINITE_WEAK_ENUMERATE] \\
-      Q.EXISTS_TAC `I` \\
-      Q.EXISTS_TAC `m` \\
-      RW_TAC arith_ss [I_THM, GSPECIFICATION],
+      MATCH_MP_TAC SUBSET_FINITE_I \\
+      Q.EXISTS_TAC ‘count m’ >> art [FINITE_COUNT],
       (* goal 2 (of 2) *)
       POP_ASSUM (MP_TAC o (Q.SPEC `P`)) \\
       RW_TAC std_ss [SUBSET_REFL] \\
-      IMP_RES_TAC finite_decomposition_simple \\
-      Q.EXISTS_TAC `SUC (MAX_SET P)` \\
-      Q.X_GEN_TAC `m` >> DISCH_TAC \\
-      CCONTR_TAC >> fs [EXTENSION, IN_IMAGE, IN_COUNT, IN_APP] \\
-     `P <> {}` by METIS_TAC [IN_APP, NOT_IN_EMPTY] \\
-     `!y. y IN P ==> y <= MAX_SET P` by PROVE_TAC [MAX_SET_DEF] \\
-     `m <= MAX_SET P` by PROVE_TAC [IN_APP] \\
-     `MAX_SET P < m` by RW_TAC arith_ss [] \\
-      FULL_SIMP_TAC arith_ss [] ]);
+      Cases_on ‘P = {}’ >- rw [] \\
+      MP_TAC (FINITE_is_measure_maximal |> Q.GEN ‘m’
+                                        |> INST_TYPE [“:'a” |-> “:num”]
+                                        |> Q.SPECL [‘I’, ‘P’]) \\
+      rw [is_measure_maximal_def, IN_APP] \\
+      Q.EXISTS_TAC ‘SUC x’ >> rw [] \\
+      CCONTR_TAC >> fs [] \\
+     ‘x < n’ by rw [] \\
+     ‘n <= x’ by PROVE_TAC [] \\
+      METIS_TAC [LESS_EQ_ANTISYM] ]
+QED
 
-(* this proof is provided by Konrad Slind, slightly shorter than mine. *)
-val infinity_bound_lemma = store_thm
-  ("infinity_bound_lemma",
-  ``!N m. INFINITE N ==> ?n:num. m <= n /\ n IN N``,
+(* This proof is provided by Konrad Slind. *)
+Theorem infinity_bound_lemma :
+    !N m. INFINITE N ==> ?n:num. m <= n /\ n IN N
+Proof
     spose_not_then strip_assume_tac
  >> `FINITE (count m)` by metis_tac [FINITE_COUNT]
  >> `N SUBSET (count m)`
-      by (rw_tac set_ss [SUBSET_DEF]
+      by (rw_tac set_ss' [SUBSET_DEF]
            >> `~(m <= x)` by metis_tac []
            >> decide_tac)
- >> metis_tac [SUBSET_FINITE]);
+ >> metis_tac [SUBSET_FINITE]
+QED
 
 (* TODO: restate this lemma by real_topologyTheory.from *)
 val tail_not_empty = store_thm
@@ -2348,10 +2345,6 @@ val tail_countable = store_thm
  >> Suff `{A n | m <= n} = IMAGE A {n | m <= n}`
  >- PROVE_TAC [COUNTABLE_IMAGE_NUM]
  >> RW_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION]);
-
-(* ------------------------------------------------------------------------- *)
-(*  limsup and liminf for sets [1, p.78] (moved from borelTheory)            *)
-(* ------------------------------------------------------------------------- *)
 
 val set_limsup_def = Define (* "infinitely often" *)
    `set_limsup (E :num -> 'a set) =
@@ -2458,6 +2451,38 @@ Proof
                                  (Q.SPECL [`COMPL o A`, `x`] IN_LIMSUP))
  >> `x IN liminf A <=> ~(?N. INFINITE N /\ !n. n IN N ==> x NOTIN A n)` by PROVE_TAC []
  >> fs [infinitely_often_lemma]
+QED
+
+(* This version of LIMSUP_MONO is used in large_numberTheory.SLLN_IID_diverge *)
+Theorem LIMSUP_MONO_STRONGER :
+    !A B. (?d. !y n. y IN A n ==> ?m. n - d <= m /\ y IN B m) ==> limsup A SUBSET limsup B
+Proof
+    RW_TAC std_ss [set_limsup_alt]
+ >> RW_TAC std_ss [IN_BIGINTER_IMAGE, IN_BIGUNION_IMAGE, SUBSET_DEF, IN_UNIV, IN_FROM]
+ >> POP_ASSUM ((Q.X_CHOOSE_THEN ‘N’ STRIP_ASSUME_TAC) o (Q.SPEC ‘d + n’))
+ >> Q.PAT_X_ASSUM ‘!y n. y IN A n ==> _’ (MP_TAC o (Q.SPECL [‘x’, ‘N’]))
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘m’
+ >> FULL_SIMP_TAC arith_ss []
+QED
+
+Theorem LIMSUP_MONO_STRONG :
+    !A B. (!y n. y IN A n ==> ?m. n <= m /\ y IN B m) ==> limsup A SUBSET limsup B
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC LIMSUP_MONO_STRONGER
+ >> Q.EXISTS_TAC ‘0’ >> rw []
+QED
+
+Theorem LIMSUP_MONO_WEAK :
+    !A B. (!n. A n SUBSET B n) ==> limsup A SUBSET limsup B
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC LIMSUP_MONO_STRONG
+ >> qx_genl_tac [‘x’, ‘n’]
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss [SUBSET_DEF]
+ >> Q.EXISTS_TAC ‘n’ >> fs []
 QED
 
 (* ================================================================= *)

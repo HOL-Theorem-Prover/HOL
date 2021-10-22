@@ -9,7 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory relationTheory prim_recTheory arithmeticTheory fcpTheory
-     pred_setTheory combinTheory realTheory realLib seqTheory posetTheory
+     pred_setTheory combinTheory realTheory realLib seqTheory
      iterateTheory real_sigmaTheory real_topologyTheory;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
@@ -6208,88 +6208,8 @@ Proof
  >> rw [semiring_def]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(*  General version of martingales with poset indexes (Chapter 25 of [1])    *)
-(* ------------------------------------------------------------------------- *)
-
-Theorem POSET_NUM_LE :
-    poset (univ(:num),$<=)
-Proof
-    RW_TAC std_ss [poset_def]
- >- (Q.EXISTS_TAC `0` >> REWRITE_TAC [GSYM IN_APP, IN_UNIV])
- >- (MATCH_MP_TAC LESS_EQUAL_ANTISYM >> art [])
- >> MATCH_MP_TAC LESS_EQ_TRANS
- >> Q.EXISTS_TAC `y` >> art []
-QED
-
-(* below J is an index set, R is a partial order on J *)
-Definition general_filtration_def :
-   general_filtration (J,R) A a =
-     (poset (J,R) /\ (!n. n IN J ==> sub_sigma_algebra (a n) A) /\
-      (!i j. i IN J /\ j IN J /\ R i j ==> subsets (a i) SUBSET subsets (a j)))
-End
-
-val _ = overload_on ("filtration", “general_filtration”);
-
-Theorem filtration_alt_general : (* was: filtration_alt *)
-    !A a. filtration A a = general_filtration (univ(:num),$<=) A a
-Proof
-    RW_TAC std_ss [filtration_def, general_filtration_def, POSET_NUM_LE, IN_UNIV]
-QED
-
-Definition general_filtered_measure_space_def :
-    general_filtered_measure_space (J,R) (sp,sts,m) a =
-      (measure_space (sp,sts,m) /\ general_filtration (J,R) (sp,sts) a)
-End
-
-val _ = overload_on ("filtered_measure_space", “general_filtered_measure_space”);
-
-(* was: general_filtered_measure_space_alt *)
-Theorem filtered_measure_space_alt_general :
-    !sp sts m a. filtered_measure_space (sp,sts,m) a <=>
-                 general_filtered_measure_space (univ(:num),$<=) (sp,sts,m) a
-Proof
-    RW_TAC std_ss [filtered_measure_space_def, general_filtered_measure_space_def,
-                   filtration_alt_general, POSET_NUM_LE, IN_UNIV]
-QED
-
-Definition sigma_finite_general_filtered_measure_space_def :
-    sigma_finite_general_filtered_measure_space (J,R) (sp,sts,m) a =
-      (general_filtered_measure_space (J,R) (sp,sts,m) a /\
-       !n. n IN J ==> sigma_finite (sp,subsets (a n),m))
-End
-
-val _ = overload_on ("sigma_finite_filtered_measure_space",
-                     “sigma_finite_general_filtered_measure_space”);
-
-(* was: sigma_finite_filtered_measure_space_alt *)
-Theorem sigma_finite_filtered_measure_space_alt_general :
-    !sp sts m a. sigma_finite_filtered_measure_space (sp,sts,m) a <=>
-                 sigma_finite_general_filtered_measure_space (univ(:num),$<=) (sp,sts,m) a
-Proof
-    rw [sigma_finite_filtered_measure_space_alt_all, GSYM CONJ_ASSOC,
-        sigma_finite_general_filtered_measure_space_def,
-        GSYM filtered_measure_space_alt_general, filtered_measure_space_def]
-QED
-
-(* `general_martingale m a u (univ(:num),$<=) = martingale m a u`
-
-   This is Definition 25.3 [1, p.301].
- *)
-Definition general_martingale_def :
-   general_martingale (J,R) m a u =
-     (sigma_finite_general_filtered_measure_space (J,R) m a /\
-      (!n. n IN J ==> integrable m (u n)) /\
-      !i j s. i IN J /\ j IN J /\ R i j /\ s IN (subsets (a i)) ==>
-             (integral m (\x. u i x * indicator_fn s x) =
-              integral m (\x. u j x * indicator_fn s x)))
-End
-
-val _ = overload_on ("martingale", “general_martingale”);
-
-(* or "upwards directed" *)
-val upwards_filtering_def = Define
-   `upwards_filtering (J,R) = !a b. a IN J /\ b IN J ==> ?c. c IN J /\ R a c /\ R b c`;
+(* NOTE: general_filtration_def, general_martingale_def, etc. are moved to
+        "examples/probability/stochastic_processScript.sml" *)
 
 val _ = export_theory ();
 
