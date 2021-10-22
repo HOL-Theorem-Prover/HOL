@@ -6,6 +6,7 @@ open HolKernel boolLib Abbrev basicSizeTheory;
 val ERR = mk_HOL_ERR "basicSizeSyntax";
 
 val bool_size_tm = prim_mk_const {Thy = "basicSize", Name = "bool_size"};
+val min_pair_size_tm = prim_mk_const {Thy = "basicSize", Name = "min_pair_size"};
 val pair_size_tm = prim_mk_const {Thy = "basicSize", Name = "pair_size"};
 val sum_size_tm = prim_mk_const {Thy = "basicSize", Name = "sum_size"};
 val full_sum_size_tm = prim_mk_const {Thy = "basicSize", Name = "full_sum_size"};
