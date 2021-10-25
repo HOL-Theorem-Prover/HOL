@@ -109,6 +109,8 @@ numeral {
 basic-size {
   import: bool
   import: pair
+  import: sum
+  import: option
   article: "../num/theories/basicSize.ot.art"
 }
 while {
@@ -154,6 +156,7 @@ gcd {
   import: divides
   import: pair
   import: relation
+  import: basic-size
   article: "../num/extra_theories/gcd.ot.art"
 }
 bit {
@@ -239,6 +242,7 @@ numposrep {
   import: numeral
   import: marker
   import: relation
+  import: basic-size
   article: "../list/src/numposrep.ot.art"
 }
 sat {
