@@ -3,14 +3,16 @@ INCLUDES = ../pred_set/src/more_theories
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-ifdef OTKNL
-all: llist.ot.art
+ifeq ($(KERNELID),otknl)
+BARE_THYS = llist ltree lbtree path
 
-llist.ot.art: llist.art
+all: llist.ot.art ltree.ot.art
+
+hol4-coalgebras-unint.art: hol4-coalgebras-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 	opentheory info --article -o $@ $<
 
-llist.art: llistScript.sml
-	Holmake --ot llistTheory.uo
+hol4-coalgebras.art: hol4-coalgebras.thy hol4-coalgebras-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
 endif
 
 selftest.exe: selftest.uo llistTheory.uo
