@@ -2049,6 +2049,11 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key global-map [menu-bar hol-menu hol-goalstack top-thm]
    '("Name top theorem" . hol-name-top-theorem))
 
+(defun hol-suffices-tactic () (interactive) (hol-subgoal-tactic 1))
+(define-key global-map [menu-bar hol-menu hol-goalstack suffices-tac]
+  '(menu-item "Suffices-by tactic" hol-suffices-tactic
+              :keys "C-u M-h M-s"))
+
 (define-key global-map [menu-bar hol-menu hol-goalstack subgoal-tac]
    '("Subgoal tactic" . hol-subgoal-tactic))
 
