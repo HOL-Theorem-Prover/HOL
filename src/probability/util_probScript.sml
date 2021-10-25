@@ -13,7 +13,7 @@ open metisLib pairTheory combinTheory pred_setTheory pred_setLib jrhUtils
      arithmeticTheory realTheory realLib transcTheory seqTheory numLib
      real_sigmaTheory numpairTheory hurdUtils RealArith fcpTheory fcpLib;
 
-open iterateTheory;
+open whileTheory iterateTheory;
 
 val _ = new_theory "util_prob";
 
@@ -1152,34 +1152,45 @@ Proof
  >> rw [Abbr `f`, REAL_SUB_NEG2, REAL_LE_SUB_RADD, REAL_LE_ADDR]
 QED
 
-(* ********************************************* *)
-(*   The mininal element in num sets             *)
-(* ********************************************* *)
+(* ************************************************************************* *)
+(*  The minimal element in num sets (:num -> bool), mostly used by "miller"  *)
+(* ************************************************************************* *)
 
-val minimal_def = Define
-   `minimal p = @(n:num). p n /\ (!m. m < n ==> ~(p m))`;
+(* The new definition *)
+Definition minimal_def :
+    minimal = MIN_SET
+End
 
-val MINIMAL_EXISTS0 = store_thm
-  ("MINIMAL_EXISTS0", ``(?(n:num). P n) = (?n. P n /\ (!m. m < n ==> ~(P m)))``,
+(* The old definition (which itself seems not used anywhere):
+Definition minimal_def :
+    minimal p = @(n:num). p n /\ (!m. m < n ==> ~(p m))
+End
+
+(* This lemma seems not needed any more *)
+Theorem MINIMAL_EXISTS0[local] :
+    (?(n:num). P n) <=> (?n. P n /\ (!m. m < n ==> ~(P m)))
+Proof
     reverse EQ_TAC >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> CCONTR_TAC
-   >> Suff `!n. ~P n` >- PROVE_TAC []
-   >> STRIP_TAC
-   >> completeInduct_on `n'`
-   >> PROVE_TAC []);
+ >> RW_TAC std_ss []
+ >> CCONTR_TAC
+ >> Suff `!n. ~P n` >- PROVE_TAC []
+ >> STRIP_TAC
+ >> completeInduct_on `n'`
+ >> PROVE_TAC []
+QED
+ *)
 
-val MINIMAL_EXISTS = store_thm
-  ("MINIMAL_EXISTS",
-   ``!P. (?n. P n) = (P (minimal P) /\ !n. n < minimal P ==> ~P n)``,
-   REWRITE_TAC [MINIMAL_EXISTS0, boolTheory.EXISTS_DEF]
-   >> CONV_TAC (DEPTH_CONV BETA_CONV)
-   >> REWRITE_TAC [GSYM minimal_def]);
+Theorem MINIMAL_EXISTS :
+    !P. (?n. P n) = (P (minimal P) /\ !n. n < minimal P ==> ~P n)
+Proof
+    rw [minimal_def, MIN_SET_DEF, LEAST_EXISTS]
+QED
 
-val MINIMAL_EXISTS_IMP = store_thm
-  ("MINIMAL_EXISTS_IMP",
-   ``!P. (?n : num. P n) ==> ?m. (P m /\ !n. n < m ==> ~P n)``,
-   PROVE_TAC [MINIMAL_EXISTS]);
+Theorem MINIMAL_EXISTS_IMP :
+    !P. (?n : num. P n) ==> ?m. (P m /\ !n. n < m ==> ~P n)
+Proof
+    PROVE_TAC [MINIMAL_EXISTS]
+QED
 
 val MINIMAL_EQ_IMP = store_thm
   ("MINIMAL_EQ_IMP",
