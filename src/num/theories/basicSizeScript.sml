@@ -8,7 +8,7 @@ val bool_size_def = new_definition
   ("bool_size_def", ``bool_size (b:bool) = 0``);
 
 val min_pair_size_def = new_definition
-  ("pair_size_def", ``min_pair_size f g (x, y) = f x + g y``);
+  ("min_pair_size_def", ``min_pair_size f g (x, y) = f x + g y``);
 
 val pair_size_def = new_definition
   ("pair_size_def", ``pair_size f g (x, y) = 1 + (f x + g y)``);
