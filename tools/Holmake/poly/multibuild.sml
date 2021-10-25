@@ -246,6 +246,10 @@ fun graphbuild optinfo g =
                             val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
                                           else OS.Process.failure
+                            val other_nodes =
+                                case hm_target.filepart (#target nI) of
+                                    ART _ => n::other_nodes
+                                  | _ => other_nodes
                             fun updall s g =
                               List.foldl (fn (n,g) => updnode(n,s) g)
                                          g
