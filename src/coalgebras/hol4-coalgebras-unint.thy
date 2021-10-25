@@ -5,16 +5,11 @@ author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: GPL
 main {
   import: llist
-  import: ltree
   import: lbtree
   import: path
 }
 llist {
   article: "llist.ot.art"
-}
-ltree {
-  import: llist
-  article: "ltree.ot.art"
 }
 lbtree {
   import: llist

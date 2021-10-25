@@ -4,9 +4,9 @@ all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = llist ltree lbtree path
+BARE_THYS = llist lbtree path # ltree is temporarily removed
 
-all: llist.ot.art ltree.ot.art
+all: hol4-coalgebras.art
 
 hol4-coalgebras-unint.art: hol4-coalgebras-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 	opentheory info --article -o $@ $<
