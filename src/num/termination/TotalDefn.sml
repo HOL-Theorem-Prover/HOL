@@ -156,6 +156,7 @@ val termination_simps =
           prim_recTheory.measure_def,
           relationTheory.inv_image_def,
           basicSizeTheory.sum_size_def,
+          basicSizeTheory.min_pair_size_def,
           pairTheory.LEX_DEF,
           pairTheory.RPROD_DEF,
           SUB_LESS_I,DIV_LESS_I,MOD_LESS_I];
