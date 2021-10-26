@@ -55,3 +55,15 @@ val _ = tprint "Testing 2-arg recursive function with lambda"
 val f1_def = require (check_result (K true)) (quietly Define)`
   f3 (y : 'a) (z : 'a) = \x. case x of 0 => 0n | SUC n => f3 y z n
 `;
+
+val _ = tprint "Testing 2-arg mutual recursive function"
+
+val f4_def = require (check_result (K true)) (quietly Define)`
+  f4 0 x = (0, x) /\
+  f4 (SUC n) x = f5 n (x, x) /\
+  f5 0 (x, y) = (0, y) /\
+  f5 (SUC n) (x, y) = f4 n x
+`;
+
+
+
