@@ -46,6 +46,7 @@ EX2DIRS = algorithms/unification/triangular/nominal \
           balanced_bst \
           computability/kolmog computability/lambda computability/recdegrees \
           computability/register computability/turing \
+          Crypto/AES Crypto/IDEA Crypto/MARS Crypto/RC6 \
           formal-languages/regular \
           lambda/other-models lambda/typing \
           l3-machine-code/decompilers \
@@ -54,6 +55,10 @@ EX2DIRS = algorithms/unification/triangular/nominal \
           temporal_deep
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
+
+ifeq ($(KERNELID),stdknl)
+INCLUDES += ../../../examples/bootstrap
+endif
 
 endif
 
