@@ -3,6 +3,8 @@ fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 infix |>
 fun x |> f = f x
+fun warn iref s =
+    TextIO.output(TextIO.stdErr,"Line " ^ Int.toString (!iref) ^ ": " ^ s ^ "\n")
 
 fun bslash_escape c =
     "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
@@ -520,7 +522,7 @@ HOLconjunction = "/\092" | "\226\136\167";
                                 else bslash_escape_s yytext));
 <string>[^\\"\n\015\128-\255]{1,100} => ((yypos, (ECHO yyarg yytext)));
 <string>. => ((yypos, (ECHO yyarg yytext)));
-<comment,tmcomment,tycomment,qcomment>"(*" => ((yypos, (inc comdepth; ECHO yyarg yytext)));
+<comment,tmcomment,tycomment,qcomment,defncomment>"(*" => ((yypos, (inc comdepth; ECHO yyarg yytext)));
 <comment>"*)" => (
  (yypos, (
     dec comdepth;
@@ -539,9 +541,11 @@ HOLconjunction = "/\092" | "\226\136\167";
 <qcomment>"*)" => ((yypos, (dec comdepth;
                    if !comdepth < 1 then YYBEGIN quote else ();
                    ECHO yyarg yytext)));
-<defncomment>"*)" => ((yypos, (dec comdepth;
-                   if !comdepth < 1 then YYBEGIN defnquote else ();
-                   ECHO yyarg yytext)));
+<defncomment>"*)" => (
+  dec comdepth;
+  if !comdepth < 1 then YYBEGIN defnquote else ();
+  (yypos, ECHO yyarg yytext)
+);
 <datatypecomment>"*)" => (
   (yypos, (
      dec comdepth;
@@ -615,8 +619,7 @@ HOLconjunction = "/\092" | "\226\136\167";
   (yypos, if quotefix then yytext else ECHO yyarg "`")
 );
 <defnquote>{HOLconjunction} => (
-  (* TextIO.output(TextIO.stdErr,
-       "Saw conjunction at depth " ^ Int.toString (!pardepth) ^ "!\n") ; *)
+  (* warn row ("Saw conjunction at depth " ^ Int.toString (!pardepth) ^ "!");*)
   (if !pardepth = 0 then (inc conjcount) else ());
   (yypos, if Char.isPrint (String.sub(yytext,0)) then String.toString yytext
           else mk_strsafe yytext)
@@ -625,9 +628,9 @@ HOLconjunction = "/\092" | "\226\136\167";
   (yypos,
    if quotefix then yytext
    else (
-    (* TextIO.output(TextIO.stdErr,
-      "Saw label with pd = " ^ Int.toString (!pardepth) ^ ", cc = " ^
-      Int.toString (!conjcount) ^ "\n"); *)
+     (* warn row
+      ("Saw label with pd = " ^ Int.toString (!pardepth) ^ ", cc = " ^
+       Int.toString (!conjcount)); *)
     process_defnlabel labelidxs (!conjcount + 1) yytext;
     qnewline yyarg (yypos, yytext)
    )
@@ -637,7 +640,10 @@ HOLconjunction = "/\092" | "\226\136\167";
   (yypos, (inc comdepth; YYBEGIN defncomment; ECHO yyarg yytext))
 );
 <defnquote>"(" => (inc pardepth; (yypos, ECHO yyarg yytext));
-<defnquote>")" => (dec pardepth; (yypos, ECHO yyarg yytext));
+<defnquote>")" => (
+  dec pardepth;
+  (* if !pardepth < 0 then warn row "Decremented pardepth below zero" else ();*)
+  (yypos, ECHO yyarg yytext));
 <quote,tmquote,tyquote,defnquote,datatypequote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
 <quote,tmquote,tyquote,defnquote,datatypequote>{newline} => (
   (yypos, if quotefix then yytext else qnewline yyarg (yypos,yytext))
