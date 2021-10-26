@@ -54,6 +54,10 @@ EX2DIRS = algorithms/unification/triangular/nominal \
           separationLogic/src separationLogic/src/holfoot \
           temporal_deep
 
+ifdef POLY
+EX2DIRS = separationLogic/src/holfoot/poly temporal_deep/src/examples
+endif
+
 INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
 
 ifeq ($(KERNELID),stdknl)
