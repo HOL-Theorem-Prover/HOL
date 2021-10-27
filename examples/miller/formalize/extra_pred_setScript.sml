@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory combinTheory
      pred_setTheory hurdUtils listTheory rich_listTheory
      res_quanTools res_quanTheory
-     extra_listTheory extra_numTheory util_probTheory
+     extra_listTheory extra_numTheory
      pairTheory realTheory realLib real_sigmaTheory
      state_transformerTheory simpLib seqTheory;
 
