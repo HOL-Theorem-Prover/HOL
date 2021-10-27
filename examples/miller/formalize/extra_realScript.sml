@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open realTheory realLib util_probTheory
+open realTheory realLib 
      hurdUtils subtypeTheory extra_numTheory transcTheory
      pred_setTheory arithmeticTheory seqTheory combinTheory pairTheory
      extra_pred_setTheory extra_boolTheory real_sigmaTheory
