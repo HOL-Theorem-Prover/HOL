@@ -7,8 +7,6 @@ open listTheory hurdUtils subtypeTools res_quanTools
      subtypeTheory extra_numTheory gcdTheory dividesTheory
      extra_arithTheory;
 
-open util_probTheory; (* needs only the minimal_def *)
-
 val _ = new_theory "finite_group";
 val _ = ParseExtras.temp_loose_equality()
 
@@ -38,8 +36,9 @@ val finite_group_def = Define
 val add_group_def = Define
   `add_group (n : num) = ((\x. x < n), (\x y. (x + y) MOD n))`;
 
-val gord_def = Define `gord G g
-  = minimal (\n. 0 < n /\ (gpow G g n = gid G))`;
+Definition gord_def:
+  gord G g = LEAST n. 0 < n /\ (gpow G g n = gid G)
+End
 
 val elt_subgroup_def = Define
   `elt_subgroup G g = ((\x. ?i. x = gpow G g i), gop G)`;
@@ -198,15 +197,15 @@ val GORD_EXISTS = store_thm
    >> Suff `gpow G g ((j - i) + i) = gpow G g i` >- G_TAC []
    >> R_TAC []);
 
-val GORD = store_thm
-  ("GORD",
-   ``!G :: finite_group. !g :: gset G.
+Theorem GORD:
+   !G :: finite_group. !g :: gset G.
        (0 < gord G g /\ (gpow G g (gord G g) = gid G)) /\
-       !n. 0 < n /\ n < gord G g ==> ~(gpow G g n = gid G)``,
+       !n. 0 < n /\ n < gord G g ==> ~(gpow G g n = gid G)
+Proof
    NTAC 2 RESQ_STRIP_TAC
-   >> MP_TAC (Q_RESQ_SPECL [`G`, `g`] GORD_EXISTS)
-   >> R_TAC [MINIMAL_EXISTS, GSYM gord_def]
-   >> ho_PROVE_TAC []);
+   >> simp[gord_def] >> numLib.LEAST_ELIM_TAC >> simp[]
+   >> metis_tac[GORD_EXISTS, prim_recTheory.LESS_REFL]
+QED
 
 val GORD_SUBTYPE = store_thm
   ("GORD_SUBTYPE",
