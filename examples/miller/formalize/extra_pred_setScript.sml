@@ -35,27 +35,6 @@ val DISJOINTL_def = Define
   `(DISJOINTL [] = T) /\
    (DISJOINTL (s::ss) = (DISJOINT (s:'a->bool) (UNIONL ss) /\ DISJOINTL ss))`;
 
-val (list_elts_def, list_elts_ind) = ((Q.GEN `s` ## I) o Defn.tprove)
-  let val d = Defn.Hol_defn "list_elts" `list_elts (s:'a->bool)
-        = if FINITE s then
-            (if s = {} then []
-             else (CHOICE s)::(list_elts (s DELETE (CHOICE s))))
-          else ARB`
-      val m = `measure CARD`
-  in (d,
-      WF_REL_TAC m
-      >> RW_TAC std_ss []
-      >> MP_TAC (Q.SPEC `s` CARD_DELETE)
-      >> ASM_REWRITE_TAC []
-      >> DISCH_THEN (MP_TAC o Q.SPEC `CHOICE s`)
-      >> RW_TAC arith_ss [CHOICE_DEF]
-      >> MP_TAC (Q.SPEC `s` CARD_EQ_0)
-      >> RW_TAC arith_ss [])
-  end;
-
-val _ = save_thm ("list_elts_def", list_elts_def);
-val _ = save_thm ("list_elts_ind", list_elts_ind);
-
 val set_def = Define `set p s = (s SUBSET p)`;
 
 val nonempty_def = Define `nonempty s = ~(s = {})`;
@@ -211,26 +190,6 @@ val CARD_SUBSET_PROPER = store_thm
    >> ASM_REWRITE_TAC []
    >> DISCH_THEN (MP_TAC o Q.SPEC `s`)
    >> RW_TAC arith_ss []);
-
-val LIST_ELTS = store_thm
-  ("LIST_ELTS",
-   ``!(s:'a->bool). FINITE s ==> (!v. MEM v (list_elts s) <=> v IN s)``,
-   recInduct list_elts_ind
-   >> RW_TAC std_ss []
-   >> Cases_on `s = {}`
-   >- (MP_TAC (Q.SPEC `s` list_elts_def)
-       >> RW_TAC std_ss [FINITE_EMPTY, MEM, NOT_IN_EMPTY])
-   >> Know `FINITE (s DELETE CHOICE s)` >- PROVE_TAC [FINITE_DELETE]
-   >> STRIP_TAC >> FULL_SIMP_TAC std_ss []
-   >> ONCE_REWRITE_TAC [list_elts_def]
-   >> RW_TAC std_ss []
-   >> Cases_on `v = CHOICE s`
-   >- (RW_TAC std_ss [CHOICE_DEF]
-       >> RW_TAC std_ss [SPECIFICATION, MEM])
-   >> Q.PAT_X_ASSUM `!v. P v` (MP_TAC o Q.SPEC `v`)
-   >> MP_TAC (Q.SPECL [`s`, `v`, `CHOICE s`] IN_DELETE)
-   >> ASM_REWRITE_TAC []
-   >> RW_TAC std_ss [MEM, SPECIFICATION]);
 
 val FINITE_UNIONL = store_thm
   ("FINITE_UNIONL",

@@ -45,7 +45,7 @@ val elt_subgroup_def = Define
   `elt_subgroup G g = ((\x. ?i. x = gpow G g i), gop G)`;
 
 Definition lcoset_list_def:
-  lcoset_list G H = nub (MAP (\g. lcoset G g H) (list_elts (gset G)))
+  lcoset_list G H = nub (MAP (\g. lcoset G g H) (SET_TO_LIST (gset G)))
 End
 
 val cyclic_def = Define
@@ -354,21 +354,21 @@ val UNIONL_LCOSET_LIST = store_thm
     >> S_TAC
     >> AR_TAC []
     >> POP_ASSUM K_TAC
-    >> AR_TAC [LIST_ELTS, IN_FINITE_GROUP]
+    >> AR_TAC [MEM_SET_TO_LIST, IN_FINITE_GROUP]
     >> Q.PAT_X_ASSUM `v IN lcoset G y H` MP_TAC
     >> R_TAC [lcoset_def, IN_IMAGE]
     >> S_TAC
     >> G_TAC [],
     RW_TAC std_ss [lcoset_list_def, IN_UNIONL, MEM_nub, MEM_MAP]
     >> Q.EXISTS_TAC `lcoset G x H`
-    >> G_TAC [LIST_ELTS, LCOSET_REFL]
+    >> G_TAC [MEM_SET_TO_LIST, LCOSET_REFL]
     >> ho_PROVE_TAC []]);
 
 val DISJOINTL_LCOSET_LIST = store_thm
   ("DISJOINTL_LCOSET_LIST",
    ``!G :: finite_group. !H :: subgroup G. DISJOINTL (lcoset_list G H)``,
    S_TAC
-   >> G_TAC [lcoset_list_def, DISJOINTL_KILL_DUPS, MEM_MAP, LIST_ELTS]
+   >> G_TAC [lcoset_list_def, DISJOINTL_KILL_DUPS, MEM_MAP, MEM_SET_TO_LIST]
    >> S_TAC
    >> G_TAC [LCOSETS_EQUAL_OR_DISJOINT]);
 
@@ -379,7 +379,7 @@ val CARD_LCOSET_LIST = store_thm
    G_TAC [lcoset_list_def, MEM_nub, MAP_MEM]
    >> S_TAC
    >> Q.PAT_X_ASSUM `MEM y x` MP_TAC
-   >> G_TAC [LIST_ELTS, CARD_LCOSET]);
+   >> G_TAC [MEM_SET_TO_LIST, CARD_LCOSET]);
 
 val LAGRANGE = store_thm
   ("LAGRANGE",
