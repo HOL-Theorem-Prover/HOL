@@ -1,22 +1,8 @@
-(* interactive mode
-show_assums := true;
-loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
-app load
-  ["bossLib", "arithmeticTheory", "dividesTheory", "gcdTheory",
-   "pred_setTheory", "subtypeTheory",
-   "res_quanTools", "subtypeTools", "ho_proverTools", "numContext",
-   "extra_numTheory", "ho_basicTools",
-   "prob_extraTheory"];
-installPP subtypeTools.pp_precontext;
-installPP subtypeTools.pp_context;
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib;
 open bossLib arithmeticTheory dividesTheory gcdTheory
      res_quanTheory pred_setTheory subtypeTheory
      res_quanTools subtypeTools ho_proverTools numContext hurdUtils
-     extra_numTheory ho_basicTools util_probTheory;
+     extra_numTheory ho_basicTools
 
 (* interactive mode
 quietdec := false;
@@ -57,8 +43,9 @@ val is_lcm_def = Define
 val lcm_def = Define
   `lcm a b = if (a = 0) /\ (b = 0) then 0 else (a * b) DIV gcd a b`;
 
-val exponent_def = Define
-  `exponent m n = minimal (\k. ~divides (m EXP SUC k) n)`;
+Definition exponent_def:
+  exponent m n = LEAST k. ~divides (m EXP SUC k) n
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -899,19 +886,21 @@ val PRIME_EXPONENT_EXISTS0 = store_thm
    ++ Q.EXISTS_TAC `p`
    ++ R_TAC [GCD_1_PRIME_POWERR]);
 
-val PRIME_EXPONENT = store_thm
-  ("PRIME_EXPONENT",
-   ``!n p.
-       0 < n /\ prime p ==>
-       divides (p EXP exponent p n) n /\
-       ~divides (p EXP (SUC (exponent p n))) n``,
+Theorem PRIME_EXPONENT:
+   !n p.
+     0 < n /\ prime p ==>
+     divides (p EXP exponent p n) n /\
+     ~divides (p EXP (SUC (exponent p n))) n
+Proof
    NTAC 3 STRIP_TAC
-   ++ MP_TAC (Q.SPECL [`n`, `p`] PRIME_EXPONENT_EXISTS0)
-   ++ R_TAC [MINIMAL_EXISTS, exponent_def]
-   ++ S_TAC
-   ++ Cases_on `minimal (\k. ~divides (p EXP SUC k) n)` >> R_TAC [EXP]
-   ++ Q.PAT_X_ASSUM `!n''. P n''` (MP_TAC o Q.SPEC `n'`)
-   ++ R_TAC []);
+   ++ simp[exponent_def]
+   ++ numLib.LEAST_ELIM_TAC
+   ++ conj_tac >> simp[PRIME_EXPONENT_EXISTS0, SF SFY_ss]
+   ++ rpt strip_tac
+   ++ rename [‘¬divides (p ** SUC k) n’]
+   ++ Cases_on ‘k’ >> R_TAC [EXP]
+   ++ gs[]
+QED
 
 val PRIME_EXPONENT_DIVIDES = store_thm
   ("PRIME_EXPONENT_DIVIDES",
