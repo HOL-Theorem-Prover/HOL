@@ -13,6 +13,10 @@
 bar``
 ``"an embedded string with \
 \protected newlines"``
+`"more embedding \
+ \ho hum"`
+“"embedded string without
+   protected newlines"”
 `s1 ^ s2`
 `s1 ^^
 s2`
@@ -38,3 +42,18 @@ Inductive compile_rel:
 [~Ret:]
   compile_rel foo bar
 End
+
+(* next_sym reads the next symbol from a string, returning NONE if at eof *)
+Definition next_sym_def:
+     foo = isPREFIX "(*" (c::str) 
+Termination
+  WF_REL_TAC `measure (LENGTH o FST) ` THEN REPEAT STRIP_TAC
+End
+
+“f ‹foo"›”
+
+Definition sexpPEG_def:
+  #"\\";
+End
+
+Theorem sexpPEG_start[simp] = SIMP_CONV(srw_ss())[sexpPEG_def]“sexpPEG.start”;

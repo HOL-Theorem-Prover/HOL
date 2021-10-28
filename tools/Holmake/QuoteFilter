@@ -21,6 +21,12 @@ val rdquo = "\226\128\157"
 val lsquo = "\226\128\152"
 val rsquo = "\226\128\153"
 
+fun strlit_match _ NONE = false
+  | strlit_match "\"" (SOME "\"") = true
+  | strlit_match "\226\128\186" (SOME "\226\128\185") = true
+  | strlit_match "\194\187" (SOME "\194\171") = true
+  | strlit_match _ _ = false
+
 val mk_strsafe =
     String.translate (fn c => if Char.isPrint c then str c else
                               bslash_escape c)
@@ -32,6 +38,7 @@ datatype qfs = QFS of {comdepth : int ref,
                        pardepth : int ref,
                        antiquote_stack : quotetype list ref,
                        mltype_stack : mltype list ref,
+                       strlitstart : string option ref,
                        induction_thm : string ref,
                        labelidxs : (string * int) list ref,
                        conjcount : int ref,
@@ -59,14 +66,15 @@ fun newstate {inscriptp,quotefixp}  =
        conjcount = ref 0,
        stem = ref "",
        induction_thm = ref "",
-       mltype_stack = ref []}
+       mltype_stack = ref [],
+       strlitstart = ref NONE}
 
 fun linenum (QFS{row,...}) = !row + 1
 
 fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,
-                    labelidxs, conjcount, stem, ...}) =
+                    labelidxs, conjcount, stem, strlitstart, ...}) =
     (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := [];
-     conjcount := 0; labelidxs := []; stem := "");
+     conjcount := 0; labelidxs := []; stem := ""; strlitstart := NONE);
 
 
 fun ECHO (QFS _) s = s
@@ -210,8 +218,8 @@ fun eof (QFS {mltype_stack,...}) =
       | _ => (~1, "")
 %%
 %structure QuoteFilter
-%s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL;
-%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, labelidxs, conjcount, stem});
+%s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL holstrlit holstrlitlbrk;
+%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, labelidxs, conjcount, stem,strlitstart});
 %full
 
 letter = [A-Za-z];
@@ -225,7 +233,7 @@ defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
 defn_attribute_list = {defn_attribute} (","{defn_attribute})*;
 MLid =  {alphaMLid} | {symbol}+;
 ws = [\ \t];
-newline = "\n" | "\015\n";
+newline = "\n" | "\013\n";
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 fullquotebegin = "``" | "\226\128\156" ;
@@ -240,6 +248,8 @@ Definitionpfx =
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";
+HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
+HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
 %%
 
 {locpragma} => ((yypos,
@@ -604,6 +614,71 @@ HOLconjunction = "/\092" | "\226\136\167";
   )
 );
 <comment,tmcomment,tycomment,qcomment,defncomment,datatypecomment>. => ((yypos, (ECHO yyarg yytext)));
+
+<quote>{HOLSTRLITstart} => (
+  antiquote_stack := inQUOTE :: !antiquote_stack ;
+  strlitstart := SOME yytext;
+  YYBEGIN holstrlit;
+  (yypos, (if yytext = "\"" then "\\" else "") ^ safeprint yyarg yytext)
+);
+<tmquote>{HOLSTRLITstart} => (
+  antiquote_stack := inTMQUOTE :: !antiquote_stack ;
+  strlitstart := SOME yytext;
+  YYBEGIN holstrlit;
+  (yypos, (if yytext = "\"" then "\\" else "") ^ safeprint yyarg yytext)
+);
+<tyquote>{HOLSTRLITstart} => (
+  antiquote_stack := inTYQUOTE :: !antiquote_stack ;
+  strlitstart := SOME yytext;
+  YYBEGIN holstrlit;
+  (yypos, (if yytext = "\"" then "\\" else "") ^ safeprint yyarg yytext)
+);
+<defnquote>{HOLSTRLITstart} => (
+  antiquote_stack := inDFQUOTE :: !antiquote_stack ;
+  strlitstart := SOME yytext;
+  YYBEGIN holstrlit;
+  (yypos, (if yytext = "\"" then "\\" else "") ^ safeprint yyarg yytext)
+);
+<datatypequote>{HOLSTRLITstart} => (
+  antiquote_stack := inDTYQUOTE :: !antiquote_stack ;
+  strlitstart := SOME yytext;
+  YYBEGIN holstrlit;
+  (yypos, (if yytext = "\"" then "\\" else "") ^ safeprint yyarg yytext)
+);
+
+<holstrlit>"\\"{HOLSTRLITend} => (
+  (yypos,
+   "\\" ^ (if yytext = "\\\"" then "\\" else "") ^ safeprint yyarg yytext)
+);
+<holstrlit>{HOLSTRLITend} => (
+   if strlit_match yytext (!strlitstart) then
+     (YYBEGIN (case !antiquote_stack of
+                 [] => INITIAL (* shouldn't happen *)
+               | inQUOTE :: _ => quote
+               | inTMQUOTE :: _ => tmquote
+               | inTYQUOTE :: _ => tyquote
+               | inDFQUOTE :: _ => defnquote
+               | inDTYQUOTE :: _ => datatypequote);
+      antiquote_stack := List.tl (!antiquote_stack);
+      strlitstart := NONE)
+   else ();
+   (yypos, (if yytext = "\"" then "\\" else "") ^ safeprint yyarg yytext)
+);
+<holstrlit>"\\\\" => ((yypos, ECHO yyarg "\\\\\\\\"));
+<holstrlit>"\\" {newline} => (
+  YYBEGIN holstrlitlbrk;
+  (yypos, "\\\\" ^ qnewline yyarg (yypos, yytext))
+);
+<holstrlit>"\\ " => (YYBEGIN holstrlitlbrk; (yypos, yytext));
+<holstrlit>"\\" . => ((yypos, "\\" ^ ECHO yyarg yytext));
+<holstrlit>{newline} => ((yypos, (qnewline yyarg (yypos, yytext))));
+<holstrlit>. => ((yypos, safeprint yyarg yytext));
+
+<holstrlitlbrk>"\\" => (
+  YYBEGIN holstrlit;
+  (yypos, "\\\\")
+);
+<holstrlitlbrk> . => ((yypos, yytext));
 
 <quote,tmquote,tyquote,defnquote,datatypequote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
 <quote,tmquote,tyquote,defnquote,datatypequote>"^"+{newline} => (
