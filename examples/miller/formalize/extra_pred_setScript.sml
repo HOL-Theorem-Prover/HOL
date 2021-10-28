@@ -4,8 +4,8 @@ open arithmeticTheory combinTheory
      pred_setTheory hurdUtils listTheory rich_listTheory
      res_quanTools res_quanTheory
      extra_listTheory extra_numTheory
-     pairTheory 
-     state_transformerTheory simpLib 
+     pairTheory
+     state_transformerTheory simpLib
 
 open ho_proverTools subtypeTheory subtypeTools boolContext listContext;
 
