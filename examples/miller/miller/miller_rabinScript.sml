@@ -349,11 +349,11 @@ val NONWITNESS_MULT_GROUP = store_thm
    >> Q.EXISTS_TAC `n - 1`
    >> RW_TAC arith_ss [NONWITNESS_1]);
 
-val CARD_WITNESS = store_thm
-  ("CARD_WITNESS",
-   ``!n.
+Theorem CARD_WITNESS:
+   !n.
        1 < n /\ ODD n /\ ~prime n ==>
-       (n - 1) <= 2 * CARD {a | 0 < a /\ a < n /\ witness n a}``,
+       (n - 1) <= 2 * CARD {a | 0 < a /\ a < n /\ witness n a}
+Proof
    RW_TAC std_ss [GSPEC_DEST]
    >> Suff `2 * CARD (\a. 0 < a /\ a < n /\ ~witness n a) <= (n - 1)`
    >- (Suff `CARD (\a. 0 < a /\ a < n /\ witness n a) +
@@ -532,7 +532,7 @@ val CARD_WITNESS = store_thm
        >> Suff `gpow (mult_group n) (n - 1) 2 = gid (mult_group n)`
        >- G_TAC []
        >> G_TAC [GPOW_GID_GORD, MULT_GROUP_GORD_MINUS_1])
-   >> DISCH_THEN (MP_TAC o HO_MATCH_MP MINIMAL_EXISTS_IMP)
+   >> DISCH_THEN (MP_TAC o HO_MATCH_MP WOP)
    >> Strip
    >> Know `!j x. t - m < j /\ j <= t /\ x IN gset (mult_group n) ==>
               ~(gpow (mult_group n) x (2 EXP j * u) = n - 1)`
@@ -707,7 +707,8 @@ val CARD_WITNESS = store_thm
    >> ONCE_REWRITE_TAC [MULT_COMM]
    >> Simplify [MOD_MULT_MOD, MINUS_1_MULT_MOD]
    >> Suff `2 < p` >- (KILL_TAC >> DECIDE_TAC)
-   >> PROVE_TAC [ODD_GT_1]);
+   >> PROVE_TAC [ODD_GT_1]
+QED
 
 val MILLER_RABIN_1_PRIME = store_thm
   ("MILLER_RABIN_1_PRIME",

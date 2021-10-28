@@ -877,11 +877,11 @@ val INF_MEASURE_LE = store_thm
     >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
     >> RW_TAC std_ss []
     >> Know `?n. x IN f n` >- PROVE_TAC []
-    >> DISCH_THEN (MP_TAC o Ho_Rewrite.REWRITE_RULE [MINIMAL_EXISTS])
+    >> DISCH_THEN (MP_TAC o Ho_Rewrite.REWRITE_RULE [whileTheory.LEAST_EXISTS])
     >> RW_TAC std_ss []
     >> Q.EXISTS_TAC
-       `f (minimal (\n. x IN f n)) DIFF
-        BIGUNION (IMAGE f (count (minimal (\n. x IN f n))))`
+       `f (LEAST n. x IN f n) DIFF
+        BIGUNION (IMAGE f (count (LEAST n. x IN f n)))`
     >> reverse CONJ_TAC >- PROVE_TAC []
     >> RW_TAC std_ss [IN_DIFF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
     >> PROVE_TAC []]);
