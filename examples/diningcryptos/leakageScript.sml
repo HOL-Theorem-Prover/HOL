@@ -1780,6 +1780,18 @@ val unif_prog_space_visible_leakage_computation_reduce = store_thm
                   unif_prog_space_visible_leakage_lemma4, REAL_SUB_LDISTRIB, REAL_SUB_LZERO]);
 
 
+Definition REAL_SUM_def:
+  (REAL_SUM [] = 0:real) /\
+  (REAL_SUM (x::l) = x + REAL_SUM l)
+End
+
+Theorem ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM:
+   !l. ALL_DISTINCT l ==>
+       (REAL_SUM_IMAGE f (LIST_TO_SET l) = REAL_SUM (MAP f l))
+Proof
+   Induct >> simp[REAL_SUM_def, REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT_RWT]
+QED
+
 Theorem unif_prog_space_leakage_LIST_TO_SET_computation_reduce:
   !high low random f.
     ALL_DISTINCT high /\ ALL_DISTINCT low /\
