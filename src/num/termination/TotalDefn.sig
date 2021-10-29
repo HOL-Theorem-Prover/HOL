@@ -14,11 +14,13 @@ sig
 
    val WF_thms : thm list ref
    val termination_simps : thm list ref
+   val termination_solve_simps : thm list ref
+
 
    val PRIM_WF_TAC        : thm list -> tactic
    val PRIM_TC_SIMP_CONV  : thm list -> conv
-   val PRIM_TC_SIMP_TAC   : thm list -> tactic
-   val PRIM_WF_REL_TAC    : term quotation -> thm list -> thm list -> tactic
+   val PRIM_TC_SIMP_TAC   : thm list -> thm list -> tactic
+   val PRIM_WF_REL_TAC    : term quotation -> thm list -> thm list -> thm list -> tactic
 
    val size_eq_conv : conv
    val WF_TAC       : tactic
