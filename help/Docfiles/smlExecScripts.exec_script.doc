@@ -44,7 +44,7 @@ val scriptout = dir ^ "/script-out";
 An Holmakefile might be placed in the same directory as the script to help
 {exec_script} ({heapname},{genscriptdep}) figure out the dependencies of the
 script. For example, a Holmakefile might include the line 
-{INCLUDES = path-to- your-dependency}.
+{INCLUDES = path-to-your-dependency}.
 
 \SEEALSO
 smlOpen.view_struct, smlExecute.quse_string, smlParallel.parmap_queue_extern.
