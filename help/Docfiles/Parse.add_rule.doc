@@ -208,10 +208,10 @@ that).
 }
 The more familiar {if-then-else} syntax has a ``dangling'' term only
 to the right of the construction, so this rule's fixity is of type
-{Prefix}. (If the rule was made a {Closefix}, strings such as {`if P
-then Q else R`} would still parse, but so too would {`if P then Q else`}.) 
-This example also illustrates the use of blocks within rules
-to improve pretty-printing.
+{Prefix}. (If the rule was made a {Closefix}, strings such as
+{`if P then Q else R`} would still parse, but so too would
+{`if P then Q else`}.) This example also illustrates the use of blocks
+within rules to improve pretty-printing.
 {
    val _ = add_rule{term_name = "COND", fixity = Prefix 70,
                     pp_elements = [PPBlock([TOK "if", BreakSpace(1,2),
@@ -231,7 +231,7 @@ as:
    if P then
       <very long term> else Q
 }
-because the {block_style} is {INCONSISTENT}. 
+because the {block_style} is {INCONSISTENT}.
 The actual pretty-printer for if-then-else is a custom piece of code
 installed with {add_user_printer}. This handles nice printing of
 chained conditionals.
@@ -239,7 +239,7 @@ chained conditionals.
 The pretty-printer prefers later rules over earlier rules by default
 (though this choice can be changed with {prefer_form_with_tok}
 (q.v.)), so if both of these calls were made, conditional expressions
-would print using the {if-then-else} syntax rather than the 
+would print using the {if-then-else} syntax rather than the
 {_ => _ | _} syntax.
 
 \USES
