@@ -162,6 +162,12 @@ val termination_simps =
           SUB_LESS_I,DIV_LESS_I,MOD_LESS_I];
 
 (*---------------------------------------------------------------------------*)
+(* Extra rewrites, used only if they would solve a termination conjunct.     *)
+(*---------------------------------------------------------------------------*)
+
+val termination_solve_simps = ref ([] : thm list);
+
+(*---------------------------------------------------------------------------*)
 (* Adjustable set of WF theorems for doing WF proofs.                        *)
 (*---------------------------------------------------------------------------*)
 
@@ -443,6 +449,19 @@ fun BC_TAC th =
 fun PRIM_WF_TAC thl = REPEAT (MAP_FIRST BC_TAC thl ORELSE CONJ_TAC);
 fun WF_TAC g = PRIM_WF_TAC (!WF_thms) g;
 
+(*---------------------------------------------------------------------------*)
+(* Apply _size_eq theorems.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+fun size_eq_conv tm = let
+    val tys = tm |> find_terms is_const |> map type_of
+      |> map (fst o strip_fun) |> List.concat
+      |> HOLset.fromList Type.compare |> HOLset.listItems
+    val size_eqs = mapfilter TypeBase.size_of tys
+      |> map fst |> mapfilter dest_thy_const
+      |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
+  in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
+
 (*--------------------------------------------------------------------------*)
 (* Basic simplification and proof for remaining termination conditions.     *)
 (*--------------------------------------------------------------------------*)
@@ -468,10 +487,24 @@ val ASM_ARITH_TAC =
                    then MP_TAC th else ALL_TAC))
     THEN CONV_TAC Arith.ARITH_CONV;
 
-fun PRIM_TC_SIMP_TAC thl =
-  CONV_TAC (PRIM_TC_SIMP_CONV thl) THEN TRY ASM_ARITH_TAC;
+fun EX_ARITH_TAC exthl =
+ CHANGED_TAC (CONV_TAC size_eq_conv THEN simpLib.SIMP_TAC term_ss exthl)
+    THEN REPEAT STRIP_TAC THEN simpLib.ASM_SIMP_TAC term_ss []
+    THEN CONV_TAC (PRIM_TC_SIMP_CONV exthl)
+    THEN ASM_ARITH_TAC
 
-fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC (!termination_simps) g;
+fun solve_conv tac tm = prove (mk_eq (tm, T),
+        EQ_TAC THEN REWRITE_TAC [] THEN tac)
+
+fun solve_conjs tac = EVERY_CONJ_CONV (TRY_CONV (solve_conv tac))
+
+fun PRIM_TC_SIMP_TAC thl exthl =
+  CONV_TAC (PRIM_TC_SIMP_CONV thl)
+    THEN CONV_TAC (solve_conjs (TRY ASM_ARITH_TAC THEN TRY (EX_ARITH_TAC (exthl @ thl))))
+    THEN REWRITE_TAC []
+
+fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC
+    (!termination_simps) (!termination_solve_simps) g;
 
 fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
 
@@ -500,25 +533,11 @@ end;
 (* wellfoundedness and remaining termination conditions.                     *)
 (*---------------------------------------------------------------------------*)
 
-fun PRIM_WF_REL_TAC q WFthms simps g =
+fun PRIM_WF_REL_TAC q WFthms simps exsimps g =
   (Q.EXISTS_TAC q THEN CONJ_TAC THENL
-   [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps]) g;
+   [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps exsimps]) g;
 
 fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
-
-
-(*---------------------------------------------------------------------------*)
-(* Apply _size_eq theorems.                                                  *)
-(*---------------------------------------------------------------------------*)
-
-fun size_eq_conv tm = let
-    val tys = tm |> find_terms is_const |> map type_of
-      |> map (fst o strip_fun) |> List.concat
-      |> HOLset.fromList Type.compare |> HOLset.listItems
-    val size_eqs = mapfilter TypeBase.size_of tys
-      |> map fst |> mapfilter dest_thy_const
-      |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
-  in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
 
 
 (*---------------------------------------------------------------------------
