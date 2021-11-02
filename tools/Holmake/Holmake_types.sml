@@ -14,7 +14,7 @@ type raw_rule_info = { targets : quotation, dependencies : quotation,
                        commands : quotation list }
 type ruledb =
      (string, {dependencies: string list, commands: quotation list}) Binarymap.dict
-datatype token = HM_defn of string * quotation
+datatype token = HM_defn of {vname : string, rhs : quotation, extendp : bool}
                | HM_rule of raw_rule_info
 
 fun normquote acc [] = List.rev acc
@@ -164,7 +164,8 @@ fun to_token env pt =
         val rest = #2 (valOf (getc rest)) (* drops = sign *)
         val rest = dropl Char.isSpace rest
       in
-        HM_defn(string varname, extract_normal_quotation rest)
+        HM_defn{vname = string varname, rhs = extract_normal_quotation rest,
+                extendp = false}
       end
     | DEFN_EXTEND s => let
         open Substring
@@ -178,7 +179,8 @@ fun to_token env pt =
         val old = case Binarymap.peek(env,key) of NONE => []
                                                 | SOME s => s @ [LIT " "]
      in
-       HM_defn(key, old @ extract_normal_quotation rest)
+       HM_defn{vname = key, rhs = old @ extract_normal_quotation rest,
+               extendp = true}
      end
     | RULE s => let
         open Substring

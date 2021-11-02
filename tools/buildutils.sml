@@ -461,7 +461,10 @@ end
 fun hmakefile_data HOLDIR =
     if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
         open Holmake_types
-        val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
+        fun quietly s = ()
+        val qdiags = {info = quietly, die = quietly, warn = quietly}
+        val (env, _, _) =
+            ReadHMF.diagread qdiags "Holmakefile" (base_environment())
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in

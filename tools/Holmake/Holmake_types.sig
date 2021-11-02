@@ -11,7 +11,7 @@ type quotation = frag list
 type raw_rule_info = { targets : quotation, dependencies : quotation,
                        commands : quotation list }
 
-datatype token = HM_defn of string * quotation
+datatype token = HM_defn of {vname : string, rhs : quotation, extendp : bool}
                | HM_rule of raw_rule_info
 
 type env

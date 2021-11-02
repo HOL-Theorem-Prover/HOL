@@ -303,16 +303,18 @@ fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
               end
             | (csb, x) =>
               (case to_token env x of
-                   HM_defn (def as (n,_)) =>
-                   (if Binaryset.member(defs_seen, n) then
-                      if n = "INCLUDES" then
+                   HM_defn {vname, extendp, rhs} =>
+                   (if Binaryset.member(defs_seen, vname) andalso
+                       not (extendp)
+                    then
+                      if vname = "INCLUDES" then
                         die "Can't redefine INCLUDES variable"
                       else
-                        warn ("Repeated definition of variable " ^ n ^
+                        warn ("Repeated definition of variable " ^ vname ^
                               " (use += instead?)")
                     else ();
-                    recurse (tgt1,env_extend def env, ruledb, depdb,
-                             Binaryset.add(defs_seen, n)) csb)
+                    recurse (tgt1,env_extend (vname,rhs) env, ruledb, depdb,
+                             Binaryset.add(defs_seen, vname)) csb)
                  | HM_rule rinfo =>
                    let
                      val (rdb',depdb',tgts) =
