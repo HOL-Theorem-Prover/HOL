@@ -1,0 +1,6 @@
+FOO = ../dir1
+
+all:
+	echo "Doing it!"
+
+FOO = ../dir3

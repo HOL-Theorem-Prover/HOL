@@ -279,40 +279,66 @@ in
     end
 end
 
-fun readall (acc as (tgt1,env,ruledb,depdb)) csb =
-    case process_line env csb of
-      (csb as (cs, b), EOF) => let
-        val _ = close_buf b
-        fun foldthis (tgt,deps,acc) =
-            case Binarymap.peek(acc,tgt) of
-              NONE => Binarymap.insert(acc,tgt,
-                                       {dependencies = deps, commands = []})
-            | SOME {dependencies, commands} =>
-              Binarymap.insert(acc,tgt, {dependencies = dependencies @ deps,
-                                         commands = commands})
-      in
-        (env,Binarymap.foldl foldthis ruledb depdb,tgt1)
-      end
-    | (csb, x) => let
-        fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
-      in
-        case to_token env x of
-          HM_defn def => readall (tgt1,env_extend def env, ruledb, depdb) csb
-        | HM_rule rinfo => let
-            val (rdb',depdb',tgts) = extend_ruledb warn env rinfo (ruledb,depdb)
-            val tgt1' =
-                case tgt1 of
-                  NONE => List.find (fn s => s <> ".PHONY") tgts
-                | _ => tgt1
-          in
-            readall (tgt1',env,rdb',depdb') csb
-          end
-      end
+fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
+    let
+      val {warn=warn0,die=die0,info=info0} = diags
+      fun aug f s = f ("*** " ^ fname ^ ": " ^ s)
+      val warn = aug warn0 and die = aug die0 and info = aug info0
+      fun recurse (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
+          case process_line env csb of
+              (csb as (cs, b), EOF) =>
+              let
+                val _ = close_buf b
+                fun foldthis (tgt,deps,acc) =
+                    case Binarymap.peek(acc,tgt) of
+                        NONE =>
+                        Binarymap.insert(acc,tgt,
+                                         {dependencies = deps, commands = []})
+                   | SOME {dependencies, commands} =>
+                     Binarymap.insert(acc,tgt,
+                                      {dependencies = dependencies @ deps,
+                                       commands = commands})
+              in
+                (env,Binarymap.foldl foldthis ruledb depdb,tgt1)
+              end
+            | (csb, x) =>
+              (case to_token env x of
+                   HM_defn (def as (n,_)) =>
+                   (if Binaryset.member(defs_seen, n) then
+                      if n = "INCLUDES" then
+                        die "Can't redefine INCLUDES variable"
+                      else
+                        warn ("Repeated definition of variable " ^ n ^
+                              " (use += instead?)")
+                    else ();
+                    recurse (tgt1,env_extend def env, ruledb, depdb,
+                             Binaryset.add(defs_seen, n)) csb)
+                 | HM_rule rinfo =>
+                   let
+                     val (rdb',depdb',tgts) =
+                         extend_ruledb warn env rinfo (ruledb,depdb)
+                     val tgt1' =
+                         case tgt1 of
+                             NONE => List.find (fn s => s <> ".PHONY") tgts
+                           | _ => tgt1
+                   in
+                     recurse (tgt1',env,rdb',depdb',defs_seen) csb
+                   end)
+    in
+      recurse acc csb
+    end
 
-fun read fname env =
-    readall (NONE, env, empty_ruledb,
-             Binarymap.mkDict String.compare)
+fun diagread diags fname env =
+    readall diags fname (NONE, env, empty_ruledb,
+                         Binarymap.mkDict String.compare,
+                         Binaryset.empty String.compare)
             (empty_condstate, init_buf fname)
+
+fun dflt_warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+val read =
+    diagread {warn = dflt_warn,
+              die = fn s => (dflt_warn s ; OS.Process.exit OS.Process.failure),
+              info = fn s => (TextIO.print (s ^ "\n"))}
 
 fun readlist e vref =
   map dequote (tokenize (perform_substitution e [VREF vref]))
