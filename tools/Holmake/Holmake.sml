@@ -32,8 +32,14 @@ in
   map dequote (tokenize (perform_substitution env [VREF id]))
 end
 
+fun println s = TextIO.print(s ^ "\n")
 
-
+fun chattiness_level switches =
+  case (#debug switches, #verbose switches, #quiet switches) of
+      (SOME _, _, _) => 3
+    | (_, true, _) => 2
+    | (_, _, true) => 0
+    | _ => 1
 
 fun main() = let
 
@@ -98,6 +104,8 @@ val (master_cline_options, cline_vars, targets) =
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
 
+val usepfx = #jobs (#core master_cline_nohmf) = 1
+
 fun read_holpathdb() =
     let
       val holpathdb_extensions =
@@ -130,14 +138,21 @@ fun extend_with_cline_vars env =
 local
   open hm_target
   val base = extend_with_cline_vars (read_holpathdb())
+  val coption_value = #core master_cline_nohmf
+  val (initial_outputfns as {warn,tgtfatal,diag,info,chatty}) =
+      output_functions {chattiness = chattiness_level coption_value,
+                        debug = #debug coption_value,
+                        usepfx = usepfx}
+
   val hmcache = ref (Binarymap.mkDict String.compare)
   val default = (base,empty_trdb,NONE)
   fun get_hmf0 d =
       if OS.FileSys.access("Holmakefile", [OS.FileSys.A_READ]) then
         let
           val (env, rdb, tgt0) =
-              ReadHMF.read "Holmakefile"
-                           (extend_with_cline_vars (read_holpathdb()))
+              ReadHMF.diagread {warn=warn,die=die,info=info}
+                               "Holmakefile"
+                               (extend_with_cline_vars (read_holpathdb()))
               handle Fail s =>
                      (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
                       (base,Binarymap.mkDict String.compare,NONE))
@@ -210,13 +225,6 @@ val (start_hmenv, start_rules, start_tgt) = get_hmf()
 val start_envlist = envlist start_hmenv
 val start_options = start_envlist "OPTIONS"
 
-fun chattiness_level switches =
-  case (#debug switches, #verbose switches, #quiet switches) of
-      (SOME _, _, _) => 3
-    | (_, true, _) => 2
-    | (_, _, true) => 0
-    | _ => 1
-
 val option_value : HM_Cline.t =
     HM_Cline.default_options
       |> apply_updates (get_hmf_cline_updates start_hmenv)
@@ -226,11 +234,6 @@ val cmdl_HOLDIR = #holdir coption_value
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 
-
-val usepfx =
-  #jobs (#core
-           (HM_Cline.default_options |> apply_updates master_cline_options)) =
-  1
 
 (* things that need to be read out of the first Holmakefile, and which will
    govern the behaviour even when recursing into other directories that may
