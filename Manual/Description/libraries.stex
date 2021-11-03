@@ -3192,6 +3192,7 @@ At high values of the trace, output can be particularly voluminous.
 
 \section{Efficient Applicative Order Reduction---\texttt{computeLib}}
 \label{sec:computeLib}
+\index{computeLib@\ml{computeLib}|see{\ml{EVAL}}}
 
 Section \ref{sec:datatype} and Section \ref{TFL} show the ability of
 \HOL{} to represent many of the standard constructs of functional
@@ -3228,6 +3229,7 @@ augments this database with relevant definitions, that of Quicksort
 >> EVAL ``QSORT (<=) [76;34;102;3;4]``;
 \end{alltt}
 \end{session}
+\index{EVAL@\ml{EVAL}!on symbolic arguments}
 Often, the argument to a function has no variables: in that case
 application of \ml{EVAL} ought to return a ground result,
 as in the above example. However, \ml{EVAL} can also evaluate functions on
@@ -3321,6 +3323,7 @@ non-terminating symbolic evaluation.
 
 \paragraph{Custom evaluators}
 
+\index{EVAL@\ml{EVAL}!custom compsets@custom \ml{compsets}}
 For some problems, it is desirable to construct a customized
 evaluator, specialized to a fixed set of definitions. The \ml{compset}
 type found in \ml{computeLib} is the type of definition databases. The
@@ -3333,35 +3336,52 @@ terms with numbers and booleans.  Given a \ml{compset}, the function
 See \REFERENCE{} for more details.
 
 \paragraph{Dealing with Functions over Peano Numbers}
+\index{EVAL@\ml{EVAL}!functions over numbers}
+Functions defined by pattern-matching over Peano-style numbers cannot be used by \ml{EVAL} to compute the application of those functions to numerals.
+This is because numerals are represented with a binary positional notation (described in Section~\ref{sec:numerals}).
+The Peano-style presentation is important for proofs about these functions, so we encourage definitions in this style.
+For the sake of computation, \HOL{}'s definitional facilities will automatically use the \ML{} function
+\ml{numLib.SUC\_TO\_NUMERAL\_DEFN\_CONV} to derive equations over numerals from an equation over \holtxt{SUC}.
+\begin{session}
+\begin{alltt}
+>>_ Definition mod3_def:
+      mod3 0 = 0 /\
+      mod3 (SUC n) = let m = mod3 n in
+                     if m = 2 then 0 else m + 1
+    End
+>> EVAL “mod3 11”;
+\end{alltt}
+\end{session}
 
-Functions defined by pattern-matching over Peano-style numbers are not
-in the right format for \ml{EVAL}, since the calculations will be
-asymptotically inefficient. Instead, the same definition should be
-used over numerals, which is a positional notation described in
-Section~\ref{sec:numerals}. However, it is preferable for proofs to
-work over Peano numbers. In order to bridge this gap, the function
-\ml{numLib.SUC\_TO\_NUMERAL\_DEFN\_CONV} is used to convert a function
-over Peano numbers to one over numerals, which is the format that
-\ml{EVAL} prefers. \ml{Define} will automatically call
-\ml{SUC\_TO\_NUMERAL\_DEFN\_CONV} on its result.
-
-\paragraph{Storing definitions}
-
+\paragraph{Storing and using definitions}
+\index{EVAL@\ml{EVAL}!automatic use of definitions}
+\index{EVAL@\ml{EVAL}!compute and nocompute attributes@\ml{compute} and \ml{nocompute} attributes}
 \HOL{}'s top-level definition facilities (\ie, the \ml{Define} function and the \ml{Definition} syntax) automatically add definitions to the global compset
 used by \ml{EVAL} and \ml{EVAL\_TAC}.
-However, when \ml{Hol\_defn} is used to define a function, its defining equations are not added to the global compset until \ml{tprove} is used to prove the termination constraints.
-Moreover, \ml{tprove} does not add the definition persistently into the global compset.
-Therefore, one must use \ml{add\_persistent\_funs} in a theory to be sure that definitions made by \ml{Hol\_defn} are available to \ml{EVAL} in descendant theories.
-Another point: one must call \ml{add\_persistent\_funs} before \ml{export\_theory} is called.
 
 Occasionally, one does \emph{not} want a definition automatically added to the global compset.
 \index{theorem attributes!nocompute@\ml{nocompute}}
-The easiest way to achieve this is to use the \ml{nocompute} ``pseudo-attribute'':
+The easiest way to achieve this is to use the \ml{nocompute} ``pseudo-attribute'':\footnote{The \ml{nocompute} attribute does nothing when applied to \ml{Theorem} declarations.}
 \begin{session}
 \begin{alltt}
 >> Definition f_def[nocompute]: f x = x + 10
    End
 >> EVAL ``f 6``;
+\end{alltt}
+\end{session}
+
+By using the \ml{nocompute} attribute, or lower level tools such as \ml{Hol\_defn}, defining equations are not added to the global compset.
+Subsequently, one may want to specify theorems to be used as the basis for \ml{EVAL}'s computation.
+This can be done with the \ml{compute} attribute attached to a theorem declaration.
+\index{theorem attributes!compute@\ml{compute}}
+For example, one might write
+\begin{session}
+\begin{alltt}
+>> Theorem f_6[compute]: f 6 = 16
+   Proof simp[f_def]
+   QED
+
+>> EVAL “f 6 = f 7”;
 \end{alltt}
 \end{session}
 
