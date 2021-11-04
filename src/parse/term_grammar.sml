@@ -740,16 +740,6 @@ fun remove_form_with_toklist r = map_rules (remove_toklist r)
 fun remove_rules_with_tok s =
   map_rules (remove_tok (fn _ => true) s)
 
-
-fun fixityToString f =
-  case f of
-    Infix(a,i) => "Infix("^assocToString a^", "^Int.toString i^")"
-  | Closefix => "Closefix"
-  | Suffix p => "Suffix "^Int.toString p
-  | Prefix p => "Prefix "^Int.toString p
-  | Binder => "Binder"
-
-
 fun rrec2delta rf (rr : rule_record) = let
   val {term_name,paren_style,block_style,elements,...} = rr
 in

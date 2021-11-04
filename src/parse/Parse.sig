@@ -12,7 +12,6 @@ signature Parse = sig
   type 'a pprinter = 'a -> HOLPP.pretty
 
   datatype fixity = datatype term_grammar_dtype.fixity
-  val fixityToString : fixity -> string
 
   type grammarDB_info = type_grammar.grammar * term_grammar.grammar
   val grammarDB : {thyname:string} -> grammarDB_info option
