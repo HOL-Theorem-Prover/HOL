@@ -2313,11 +2313,13 @@ Proof
  >> RW_TAC std_ss [extreal_pow_def, extreal_of_num_def, POW_ZERO_EQ]
 QED
 
-val pow_zero_imp = store_thm
-  ("pow_zero_imp[simp]", ``!n x. (x pow n = 0) ==> (x = 0)``,
+Theorem pow_zero_imp:
+  !n x. (x pow n = 0) ==> (x = 0)
+Proof
     STRIP_TAC >> Cases
  >> RW_TAC std_ss [extreal_pow_def,extreal_of_num_def,REAL_LT_01,REAL_LT_IMP_NE]
- >> METIS_TAC [POW_ZERO]);
+ >> METIS_TAC [POW_ZERO]
+QED
 
 val le_pow2 = store_thm
   ("le_pow2", ``!x. 0 <= x pow 2``,
