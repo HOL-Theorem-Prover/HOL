@@ -34,7 +34,7 @@ end
 
 fun println s = TextIO.print(s ^ "\n")
 
-fun chattiness_level switches =
+fun chattiness_level (switches : HM_Core_Cline.t) =
   case (#debug switches, #verbose switches, #quiet switches) of
       (SOME _, _, _) => 3
     | (_, true, _) => 2
