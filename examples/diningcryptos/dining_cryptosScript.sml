@@ -18,6 +18,8 @@ open hurdUtils util_probTheory sigma_algebraTheory
 
 val _ = new_theory "dining_cryptos";
 
+val _ = temp_set_fixity "CROSS" (Infixl 600)
+
 (* ----------------------------------------------------------------------
     Helpful proof tools
    ---------------------------------------------------------------------- *)

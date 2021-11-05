@@ -24,6 +24,8 @@ val _ = new_theory "information";
 Overload indicator_fn[local] = “indicator”
 Theorem indicator_fn_def[local] = indicator
 
+val _ = temp_set_fixity "CROSS" (Infixl 600)
+
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
