@@ -1,10 +1,10 @@
 EXTRA_CLEANS = heap \
-	$(patsubst %Theory.uo,%Theory.html,$(TARGETS)) \
-	$(patsubst %Theory.uo,%Theory.lst,$(TARGETS))
+	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
+	$(patsubst %Theory.uo,%Theory.lst,$(DEFAULT_TARGETS))
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = realLib hurdUtils probabilityTheory
+OBJNAMES = realLib fcpLib hurdUtils probabilityTheory posetTheory
 
 OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
 
