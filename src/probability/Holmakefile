@@ -1,12 +1,15 @@
 INCLUDES = ../real ../sort ../res_quan/src ../n-bit ../pred_set/src/more_theories \
 	../topology ../quotient/src
-EXTRA_CLEANS = heap
 
 ifdef POLY
 HOLHEAP = heap
+EXTRA_CLEANS = $(HOLHEAP)
+
 REAL_OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
 	RealArith iterateTheory
-OTHER_OBJNAMES = ../sort/sortingTheory ../res_quan/src/res_quanTools
+
+OTHER_OBJNAMES = ../sort/sortingTheory ../res_quan/src/res_quanTools \
+	../res_quan/src/hurdUtils ../res_quan/src/jrhUtils
 
 SIGOBJ_OBJNAMES = pred_setLib numpairTheory logrootTheory
 
@@ -17,7 +20,7 @@ OBJS = $(patsubst %,../real/%.uo,$(REAL_OBJNAMES)) \
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJS)
 endif
 
 all: $(DEFAULT_TARGETS) selftest.exe
