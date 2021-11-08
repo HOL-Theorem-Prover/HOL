@@ -10,7 +10,7 @@ selftest.exe: selftest.uo basis_emitTheory.uo ConstMapML.uo
 
 EXTRA_CLEANS = selftest.exe emit-selftest.log
 
-ifdef HOLSEFLTESTLEVEL
+ifdef HOLSELFTESTLEVEL
 all: emit-selftest.log
 
 emit-selftest.log: selftest.exe

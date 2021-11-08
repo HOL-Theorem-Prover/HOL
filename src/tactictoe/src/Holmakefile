@@ -6,7 +6,7 @@ selftest.exe: selftest.uo
 
 EXTRA_CLEANS = selftest.exe tactictoe-selftest.log
 
-ifdef HOLSEFLTESTLEVEL
+ifdef HOLSELFTESTLEVEL
 all: tactictoe-selftest.log
 
 tactictoe-selftest.log: selftest.exe
