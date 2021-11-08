@@ -44,4 +44,7 @@ sig
         val rat_rewrites : thm list
         val rat_num_rewrites : thm list
 
+	(* syntax *)
+        val prefer_rat     : unit -> unit
+        val deprecate_rat  : unit -> unit
 end

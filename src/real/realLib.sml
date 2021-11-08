@@ -19,6 +19,7 @@ struct
 
   val operators = [("+", realSyntax.plus_tm),
                    ("-", realSyntax.minus_tm),
+                   ("~", realSyntax.negate_tm),
                    ("numeric_negate", realSyntax.negate_tm),
                    ("*", realSyntax.mult_tm),
                    ("/", realSyntax.div_tm),
