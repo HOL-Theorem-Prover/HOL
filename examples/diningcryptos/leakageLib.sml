@@ -58,19 +58,6 @@ fun T_UNCHANGED_CONV (conv:term->thm) tm =
 fun T_F_UNCHANGED_CONV (conv:term->thm) tm =
         T_UNCHANGED_CONV (F_UNCHANGED_CONV conv) tm;
 
-val unif_prog_space_leakage_computation_reduce_COMPUTE = prove
-  (“!high low random f. FINITE high /\ FINITE low /\ FINITE random /\
-       ~((high CROSS low) CROSS random={}) ==>
-         (leakage (unif_prog_space high low random) f =
-           (1/(&(CARD high * CARD low * CARD random)))*
-            (SIGMA (λ(out,h,l). (\x. x * lg (((1/(&(CARD random)))* x)))
-                                (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random))
-            (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)) -
-             SIGMA (λ(out,l). (\x. x * lg (((1/(&(CARD high * CARD random)))* x)))
-                        (SIGMA (λ(h,r). if (f((h,l),r)=out) then 1 else 0) (high CROSS random)))
-                  (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random))))”,
-   METIS_TAC [unif_prog_space_leakage_computation_reduce]);
-
 val FINITE_t = prim_mk_const {Thy = "pred_set", Name = "FINITE"}
 fun LEAKAGE_COMPUTE_PROVE_FINITE (t:term) (tl:Abbrev.thm list) =
     prove (pred_setSyntax.mk_finite t, CONV_TAC (SIMP_CONV set_ss tl));

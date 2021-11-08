@@ -1888,5 +1888,22 @@ Proof
    >> simp[ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM]
 QED
 
+Theorem unif_prog_space_leakage_computation_reduce_COMPUTE:
+  !high low random f.
+    FINITE high /\ FINITE low /\ FINITE random /\
+    ((high CROSS low) CROSS random <> {}) ==>
+    (leakage (unif_prog_space high low random) f =
+     (1/(&(CARD high * CARD low * CARD random)))*
+     (SIGMA (λ(out,h,l). (\x. x * lg (((1/(&(CARD random)))* x)))
+                         (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random))
+      (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)) -
+      SIGMA (λ(out,l). (\x. x * lg (((1/(&(CARD high * CARD random)))* x)))
+                       (SIGMA (λ(h,r). if (f((h,l),r)=out) then 1 else 0)
+                        (high CROSS random)))
+      (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random))))
+Proof
+   METIS_TAC [unif_prog_space_leakage_computation_reduce]
+QED
+
 
 val _ = export_theory ();
