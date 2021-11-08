@@ -27,7 +27,6 @@ struct
                    ("<=", realSyntax.leq_tm),
                    (">", realSyntax.greater_tm),
                    (">=", realSyntax.geq_tm),
-                   ("**", realSyntax.exp_tm),
                    (GrammarSpecials.fromNum_str, realSyntax.real_injection),
                    (GrammarSpecials.num_injection, realSyntax.real_injection)];
 

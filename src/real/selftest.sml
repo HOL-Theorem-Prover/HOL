@@ -255,4 +255,22 @@ val _ = List.app diff_test [
                            (inv (x pow 2) * (2 * x pow (2 - 1) * 1))) x”)
     ];
 
+(* check prefer/deprecate real *)
+val grammars = (type_grammar(),term_grammar())
+val _ = realLib.prefer_real()
+val _ = tprint "Checking parse of 0 < x gives reals when reals preferred"
+val expected1 = realSyntax.mk_less(realSyntax.zero_tm,
+                                   mk_var("x", realSyntax.real_ty))
+val _ = require_msg (check_result (aconv expected1)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+val _ = temp_set_grammars grammars
+
+val _ = realLib.deprecate_real();
+val _ = tprint "Checking parse of 0 < x gives nats when reals deprecated"
+val expected2 = numSyntax.mk_less(numSyntax.zero_tm,
+                                  mk_var("x", numSyntax.num))
+val _ = require_msg (check_result (aconv expected2)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+val _ = temp_set_grammars grammars
+
 val _ = Process.exit Process.success
