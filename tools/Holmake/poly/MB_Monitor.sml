@@ -150,11 +150,21 @@ fun prettydir dir =
 
 (* right align, and put dots on left *)
 fun rlsquash_to wdth s =
-    if size s < wdth then
+    if wdth <= 0 then ""
+    else if size s < wdth then
       StringCvt.padLeft #" " wdth s
     else if wdth <= 6 then
+      (*   1 <= wdth <= 6 /\ wdth <= size s ==>
+           size s + 1 - wdth IN [1..size s]
+         and String.extract(s, size s, NONE) returns empty string
+      *)
       " " ^ String.extract(s, size s + 1 - wdth, NONE)
-    else " ..." ^ String.extract(s, size s + 4 - wdth, NONE)
+    else
+      (*   6 < wdth <= size s ==>
+           size s + 4 - wdth IN [4..size s - 3]
+         4 is fine as size s > 6, and size s - 3 < size s
+      *)
+      " ..." ^ String.extract(s, size s + 4 - wdth, NONE)
 
 fun new {info,warn,genLogFile,time_limit,multidir} =
   let
