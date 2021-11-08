@@ -59,71 +59,20 @@ val PAIR_MAP_I = store_thm
     THEN REWRITE_TAC[PAIR_MAP_THM,I_THM]
    );
 
-(* just like RPROD_DEF, except infix: *)
+Theorem PAIR_REL = pairTheory.PAIR_REL
+Theorem PAIR_REL_THM = pairTheory.PAIR_REL_THM
+Theorem PAIR_REL_EQ = pairTheory.PAIR_REL_EQ
 
-val PAIR_REL =
-    new_infixr_definition
-    ("PAIR_REL",
-     (“$### R1 R2 = \(a:'a,b:'b) (c:'c,d:'d). R1 a c /\ R2 b d”),
-     490);
-
-Theorem PAIR_REL_THM:
-   !R1 R2 (a:'a) (b:'b) (c:'c) (d:'d).
-         (R1 ### R2) (a,b) (c,d) <=> R1 a c /\ R2 b d
+Theorem PAIR_EQUIV:
+  !(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
+    EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 ### R2)
 Proof
-    REPEAT GEN_TAC
-    THEN PURE_ONCE_REWRITE_TAC[PAIR_REL]
-    THEN GEN_BETA_TAC
-    THEN REFL_TAC
+  REPEAT GEN_TAC >> REWRITE_TAC[EQUIV_def, EQUIV_REFL_SYM_TRANS]
+  >> simp[PAIR_REL_REFL] >> rpt strip_tac
+  >- (irule $ iffLR PAIR_REL_SYM >> simp[EQ_IMP_THM, FORALL_AND_THM]) >>
+  irule PAIR_REL_TRANS >> METIS_TAC[]
 QED
 
-val PAIR_REL_EQ = store_thm
-   ("PAIR_REL_EQ",
-    (“($= ### $=) = ($= : 'a # 'b -> 'a # 'b -> bool)”),
-    CONV_TAC FUN_EQ_CONV
-    THEN Cases
-    THEN CONV_TAC FUN_EQ_CONV
-    THEN Cases
-    THEN REWRITE_TAC[PAIR_REL_THM,PAIR_EQ]
-   );
-
-val PAIR_REL_REFL = store_thm
-   ("PAIR_REL_REFL",
-    (“!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) /\
-                (!x y:'b. R2 x y = (R2 x = R2 y)) ==>
-                !x. (R1 ### R2) x x”),
-    REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN Cases
-    THEN REWRITE_TAC[PAIR_REL_THM]
-    THEN ASM_REWRITE_TAC[]
-   );
-
-val PAIR_EQUIV = store_thm
-   ("PAIR_EQUIV",
-    (“!(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
-            EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 ### R2)”),
-    REPEAT GEN_TAC
-    THEN REWRITE_TAC[EQUIV_def]
-    THEN REPEAT DISCH_TAC
-    THEN Cases
-    THEN Cases
-    THEN REWRITE_TAC[PAIR_REL_THM]
-    THEN CONV_TAC (RAND_CONV FUN_EQ_CONV)
-    THEN EQ_TAC
-    THENL
-      [ STRIP_TAC
-        THEN Cases
-        THEN REWRITE_TAC[PAIR_REL_THM]
-        THEN PROVE_TAC[],
-
-        DISCH_THEN (MP_TAC o GEN ``a:'a`` o GEN ``b:'b``
-                               o SPEC ``(a:'a, b:'b)``)
-        THEN REWRITE_TAC[PAIR_REL_THM]
-        THEN IMP_RES_TAC PAIR_REL_REFL
-        THEN PROVE_TAC[]
-      ]
-   );
 
 val PAIR_QUOTIENT = store_thm
    ("PAIR_QUOTIENT",
