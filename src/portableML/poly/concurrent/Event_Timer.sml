@@ -42,13 +42,17 @@ fun add_request time entry (requests: requests) =
 fun del_request req (requests: requests) =
   let
     val old_request =
-      requests |> Requests.get_first (fn (key, entries) =>
-        entries |> get_first (fn entry => if fst entry = req then SOME (key, entry) else NONE));
+      requests
+        |> Requests.get_first
+             (fn (key, entries) =>
+                 entries |> get_first (fn entry => if fst entry = req then
+                                                     SOME (key, entry)
+                                                   else NONE))
   in
-    (case old_request of
-      NONE => (false, requests)
-    | SOME old => (true, Requests.remove_list (fst_eq equal) old requests))
-  end;
+    case old_request of
+        NONE => (false, requests)
+      | SOME old => (true, Requests.remove_list (fst_eq equal) old requests)
+  end
 
 fun next_request_time (requests: requests) =
   Option.map fst (Requests.min requests);
@@ -116,15 +120,19 @@ fun manager_check manager =
 
 fun shutdown () =
   Thread_Attributes.uninterruptible (fn restore_attributes => fn () =>
-    if Synchronized.change_result state (fn st as State {requests, manager, ...} =>
-      if is_shutdown Normal st then (false, st)
-      else if is_shutdown Shutdown_Ack st orelse is_shutdown_req st then
-        raise Fail "Concurrent attempt to shutdown event timer"
-      else (true, make_state (requests, Shutdown_Req, manager_check manager)))
+    if Synchronized.change_result
+         state
+         (fn st as State {requests, manager, ...} =>
+             if is_shutdown Normal st then (false, st)
+             else if is_shutdown Shutdown_Ack st orelse is_shutdown_req st then
+               raise Fail "Concurrent attempt to shutdown event timer"
+             else (true,
+                   make_state (requests, Shutdown_Req, manager_check manager)))
     then
       restore_attributes (fn () =>
         Synchronized.guarded_access state
-          (fn st => if is_shutdown Shutdown_Ack st then SOME ((), normal_state) else NONE)) ()
+          (fn st => if is_shutdown Shutdown_Ack st then SOME ((), normal_state)
+                    else NONE)) ()
       handle exn =>
         if Exn.is_interrupt exn then
           Synchronized.change state (fn State {requests, manager, ...} =>

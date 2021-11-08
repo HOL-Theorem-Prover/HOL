@@ -440,11 +440,11 @@ fun splice ({redex, ...}:{redex:term, residue:term}) v occs tm2 =
           else if (is_comb tm)
                then let val (Rator, Rand) = dest_comb tm
                         val {tm=Rator', occs=occs', count=count'} =
-                                        graft {tm=Rator, occs=occs, count=count}
+                            graft {tm=Rator, occs=occs, count=count}
                         val {tm=Rand', occs=occs'', count=count''} =
-                                        graft {tm=Rand, occs=occs', count=count'}
-                    in {tm=mk_comb (Rator', Rand'),
-                        occs=occs'', count=count''}
+                            graft {tm=Rand, occs=occs', count=count'}
+                    in
+                      {tm=mk_comb (Rator', Rand'), occs=occs'', count=count''}
                     end
                else if is_abs tm
                     then let val (Bvar, Body) = dest_abs tm

@@ -162,10 +162,12 @@ val strip_prod =
 fun mk_prod(ty1,ty2) = mk_thy_type{Thy="pair",Tyop="prod",Args=[ty1,ty2]}
 
 fun mk_pair (t1,t2) =
- let val pair_const = prim_mk_const {Name=",",Thy="pair"}
-     val pair_const' = inst [alpha |-> type_of t1, beta |-> type_of t2] pair_const
- in list_mk_comb(pair_const',[t1,t2])
- end
+    let
+      val pair_const = prim_mk_const {Name=",",Thy="pair"}
+      val pair_const' =
+          inst [alpha |-> type_of t1, beta |-> type_of t2] pair_const
+    in list_mk_comb(pair_const',[t1,t2])
+    end
 
 (*---------------------------------------------------------------------------*)
 (*                                                                           *)
@@ -218,8 +220,9 @@ fun tupleCases names0 v =
      val vars = Lib.map2 (curry mk_var) names tys
      fun tmpvar_types 0 ty = [ty]
        | tmpvar_types n ty =
-          case dest_thy_type ty
-           of {Thy="pair",Tyop="prod",Args=[ty1,ty2]} => ty::tmpvar_types (n-1) ty2
+          case dest_thy_type ty of
+              {Thy="pair",Tyop="prod",Args=[ty1,ty2]} =>
+                ty::tmpvar_types (n-1) ty2
             | otherwise => [ty]
      val tmp_vars = map genvar (tl (tmpvar_types (length tys - 2) vty))
      val left_vars = List.take (vars,length vars - 2)
@@ -268,7 +271,7 @@ fun set_names names ty thm0 =
          fun rename (slist,clause) =
           let val (bvs,M) = strip_exists clause
           in if length bvs <> length slist then
-                clause (* fail in such a way that tactic can still be applied. *)
+                clause (* fail in such a way that tactic can still be applied.*)
              else
              let val vlist = map2 envar slist bvs
                  val theta = map2 (curry (op |->)) bvs vlist
