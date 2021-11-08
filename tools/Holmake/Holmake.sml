@@ -740,7 +740,7 @@ let
   val dir = hm_target.dirpart tgt and target = hm_target.filepart tgt
   val {preincludes,includes} = incinfo
   val incinfo = {preincludes = preincludes,
-                 includes = std_include_flags @ includes}
+                 includes = includes @ std_include_flags}
   val pdep = primary_dependent target
   val target_s = tgt_toString tgt
   val actual_dir = hmdir.curdir()

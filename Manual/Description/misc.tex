@@ -282,6 +282,7 @@ However, it is probably impossible (or at least, painfully difficult) to describ
 Nor will \holmake{} perform its automatic dependency analysis on such ``remote'' files.
 
 \index{Holmake@\holmake!recursive invocation}%
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}%
 The right approach when a development spans multiple directories is to indicate that there is a dependency on other directories by using the \texttt{-I} flag, or (better) the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
 \holmake{} requires that, just as files must have an acyclic dependency graph, the directories containing those files must have a compatible, and acyclic, \texttt{INCLUDES} graph.
 With \texttt{INCLUDES} information to hand, \holmake{} will process the entire \texttt{INCLUDES} graph, looking throughout the graph for theory files that the current directory may depend on, and rebuilding those remote targets as necessary.
@@ -600,10 +601,11 @@ If the pattern doesn't match any files, then the function returns \texttt{patter
 \paragraph{Special and pre-defined variables}
 
 \index{Holmake@\holmake!variables in makefiles}
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}
 If defined, the \texttt{INCLUDES} variable is used to add directories to the list of directories consulted when files are compiled and linked.
 The effect is as if the directories specified had all been included on the command-line with \texttt{-I} options.
-The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before the \mbox{\texttt{-I <sigobj>}} option that is used in invocations of compiler.
-This option gives the user a way of over-riding code in the core distribution as the compiler will find their code before the distribution's.
+The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before any \texttt{INCLUDES} directories when dependency analysis is done.
+Both \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directories are consulted before the distribution's \texttt{sigobj} directory (containing all core material).
 
 \index{Holmake@\holmake!recursive invocation}
 By default, directories specified in the \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directory are also built by \holmake{} before it attempts to build in the current directory.

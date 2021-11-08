@@ -3,6 +3,7 @@ src/HolSat/sat_solvers/minisat
 src/HolSat/sat_solvers/zc2hs
 src/HolSat
 src/taut
+!tools/Holmake/tests/incs_vs_sigobj/dir2
 src/marker
 src/q
 src/combin
