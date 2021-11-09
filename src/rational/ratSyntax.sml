@@ -1,14 +1,7 @@
 structure ratSyntax :> ratSyntax =
 struct
 
-open HolKernel boolLib Parse;
-
-(* interactive mode
-app load ["ratTheory"];
-*)
-
-open ratTheory;
-
+open HolKernel boolLib Parse ratTheory;
 
 val ERR = mk_HOL_ERR "ratSyntax";
 
@@ -17,10 +10,14 @@ val ERR = mk_HOL_ERR "ratSyntax";
  *--------------------------------------------------------------------------*)
 
 (*val int_ty = intSyntax.int_ty;*)
-val rat = mk_thy_type{Tyop = "rat", Thy="rat", Args = []};
+val rat_ty = mk_thy_type{Tyop = "rat", Thy="rat", Args = []};
 
+(* old definitions:
 val rat_0_tm = prim_mk_const {Name="rat_0",Thy="rat"};
 val rat_1_tm = prim_mk_const {Name="rat_1",Thy="rat"};
+ *)
+val rat_0_tm = “0q”;
+val rat_1_tm = “1q”;
 
 val rat_nmr_tm = prim_mk_const {Name="rat_nmr",Thy="rat"};
 val rat_dnm_tm = prim_mk_const {Name="rat_dnm",Thy="rat"};

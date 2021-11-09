@@ -1,4 +1,6 @@
-open HolKernel Portable Parse boolLib intLib testutils
+open HolKernel Portable Parse boolLib;
+
+open intLib testutils;
 
 fun noamb_parse s = trace ("guess overloads", 0) Parse.Term [QUOTE s]
 fun okparse_exnstruct s = s = "Parse" orelse s = "Preterm"
@@ -49,3 +51,29 @@ val _ = List.app (ignore o rma_p) [
       (“((x:num) ** (y:num)):num”, "x ** y"),
       (“x:int / (y + 1)”, "x / (y + 1)")
     ]
+
+
+(* check prefer/deprecate rat *)
+val grammars = (type_grammar(),term_grammar());
+(* val _ = temp_set_grammars grammars *)
+
+val _ = intLib.prefer_int();
+val _ = tprint "Checking parse of 0 < x gives ints when ints are preferred";
+
+val expected1 = intSyntax.mk_less(intSyntax.zero_tm,
+                                  mk_var("x", intSyntax.int_ty))
+val _ = require_msg (check_result (aconv expected1)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+
+val _ = intLib.deprecate_int();
+val _ = tprint "Checking parse of 0 < x gives nats when ints deprecated"
+
+val expected2 = numSyntax.mk_less(numSyntax.zero_tm,
+                                  mk_var("x", numSyntax.num))
+
+val _ = require_msg (check_result (aconv expected2)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+
+val _ = temp_set_grammars grammars;
+
+val _ = Process.exit Process.success

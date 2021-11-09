@@ -498,7 +498,7 @@ val RAT_BASIC_ARITH_CONV =
 val RAT_BASIC_ARITH_TAC = CONV_TAC RAT_BASIC_ARITH_CONV;
 
 (* generic normalisation *)
-fun mk_rvar s = mk_var(s, rat);
+fun mk_rvar s = mk_var(s, rat_ty);
 val x = mk_rvar "x"
 val y = mk_rvar "y"
 val z = mk_rvar "z"
