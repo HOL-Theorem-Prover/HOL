@@ -3221,15 +3221,26 @@ val REAL_IMP_SUP_LE = store_thm
           THEN RW_TAC boolSimps.bool_ss []
           THEN PROVE_TAC [real_lte]]);
 
-val REAL_IMP_LE_SUP = store_thm
-  ("REAL_IMP_LE_SUP",
-   ``!p x.
-       (?r. p r) /\ (?z. !r. p r ==> r <= z) /\ (?r. p r /\ x <= r) ==>
-       x <= sup p``,
-   RW_TAC boolSimps.bool_ss []
-   THEN (SUFF_TAC ``!y. p y ==> y <= sup p`` THEN1 PROVE_TAC [REAL_LE_TRANS])
-   THEN MATCH_MP_TAC REAL_SUP_UBOUND_LE
-   THEN PROVE_TAC []);
+(* NOTE: removed unnecessary ‘(?r. p r)’ from antecedents *)
+Theorem REAL_IMP_LE_SUP :
+    !p x. (?z. !r. p r ==> r <= z) /\ (?r. p r /\ x <= r) ==> x <= sup p
+Proof
+    RW_TAC bool_ss []
+ >> (SUFF_TAC ``!y. p y ==> y <= sup p`` >- PROVE_TAC [REAL_LE_TRANS])
+ >> MATCH_MP_TAC REAL_SUP_UBOUND_LE
+ >> PROVE_TAC []
+QED
+
+Theorem REAL_IMP_LT_SUP :
+    !p x. (?z. !r. p r ==> r <= z) /\ ~p (sup p) /\ p x ==> x < sup p
+Proof
+    reverse (RW_TAC bool_ss [REAL_LT_LE])
+ >- (CCONTR_TAC >> FULL_SIMP_TAC bool_ss [])
+ >> MATCH_MP_TAC REAL_IMP_LE_SUP
+ >> reverse CONJ_TAC
+ >- (Q.EXISTS_TAC ‘x’ >> ASM_REWRITE_TAC [REAL_LE_REFL])
+ >> Q.EXISTS_TAC ‘z’ >> RW_TAC bool_ss []
+QED
 
 val REAL_INF_MIN = store_thm
   ("REAL_INF_MIN",
@@ -3356,6 +3367,30 @@ val SUP_EPSILON = store_thm
    THEN POP_ASSUM (MP_TAC o Q.SPEC `n`)
    THEN RW_TAC boolSimps.bool_ss [prim_recTheory.LESS_SUC_REFL, GSYM real_lt]
    THEN PROVE_TAC [REAL_LT_LE]);
+
+(* This theorem is slightly more general than SUP_EPSILON (in sense of REAL_LT_IMP_LE)
+   but actually can be proved as a corollary of SUP_EPSILON.
+ *)
+Theorem SUP_LT_EPSILON :
+    !p e. 0 < e /\ (?x. p x) /\ (?z. !x. p x ==> x <= z) ==>
+          ?x. p x /\ sup p < x + e
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘e / 2’] SUP_EPSILON)
+ >> KNOW_TAC “0 < e / 2”
+ >- (MATCH_MP_TAC REAL_LT_DIV >> RW_TAC arith_ss [REAL_LT])
+ >> KNOW_TAC “?(x :real). p x”
+ >- (Q.EXISTS_TAC ‘x’ >> ASM_REWRITE_TAC [])
+ >> KNOW_TAC “?(z :real). !x. p x ==> x <= z”
+ >- (Q.EXISTS_TAC ‘z’ >> RW_TAC std_ss [])
+ >> RW_TAC std_ss []
+ >> rename1 ‘sup p <= y + e / 2’
+ >> Q.EXISTS_TAC ‘y’ >> ASM_REWRITE_TAC []
+ >> MATCH_MP_TAC REAL_LET_TRANS
+ >> Q.EXISTS_TAC ‘y + e / 2’ >> ASM_REWRITE_TAC []
+ >> MATCH_MP_TAC REAL_LT_IADD
+ >> ASM_REWRITE_TAC [REAL_LT_HALF2]
+QED
 
 val REAL_LE_SUP = store_thm
   ("REAL_LE_SUP",

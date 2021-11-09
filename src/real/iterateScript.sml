@@ -914,6 +914,56 @@ val SUP_UNION = store_thm ("SUP_UNION",
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUP_UNIQUE THEN
   SIMP_TAC real_ss [FORALL_IN_UNION, REAL_MAX_LE] THEN METIS_TAC[SUP, REAL_LE_TRANS]);
 
+Theorem REAL_IMP_SUP_LE' :
+    !p x. (?r. r IN p) /\ (!r. r IN p ==> r <= x) ==> sup p <= x
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_SUP_LE]
+QED
+
+Theorem REAL_IMP_LE_SUP' :
+    !p x. (?z. !r. r IN p ==> r <= z) /\ (?r. r IN p /\ x <= r) ==> x <= sup p
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_LE_SUP]
+QED
+
+Theorem REAL_LE_SUP_EQ :
+    !p x : real.
+       (?y. y IN p) /\ (?y. !z. z IN p ==> z <= y) ==>
+       (x <= sup p <=> !y. (!z. z IN p ==> z <= y) ==> x <= y)
+Proof
+    REWRITE_TAC [IN_APP, REAL_LE_SUP]
+QED
+
+(* This requires REAL_SUP_LE_EQ + REAL_LE_SUP_EQ *)
+Theorem SUP_MONO :
+    !p q. (?b. !n. p n <= b) /\ (?c. !n. q n <= c) /\
+          (!n:num. p n <= q n) ==> sup (IMAGE p UNIV) <= sup (IMAGE q UNIV)
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘y = sup (IMAGE q UNIV)’
+ >> Q.ABBREV_TAC ‘s = IMAGE p UNIV’
+ >> Know ‘sup s <= y <=> !x. x IN s ==> x <= y’
+ >- (MATCH_MP_TAC REAL_SUP_LE_EQ \\
+     rw [Abbr ‘s’, Once EXTENSION] \\
+     Q.EXISTS_TAC ‘b’ >> rw [] >> art [])
+ >> Rewr'
+ >> rw [Abbr ‘s’, IN_IMAGE]
+ >> rename1 ‘p x <= y’
+ >> Q.UNABBREV_TAC ‘y’
+ >> Q.ABBREV_TAC ‘s = IMAGE q UNIV’
+ >> Know ‘p x <= sup s <=> !y. (!z. z IN s ==> z <= y) ==> p x <= y’
+ >- (MATCH_MP_TAC REAL_LE_SUP_EQ \\
+     rw [Abbr ‘s’, IN_IMAGE] \\
+     Q.EXISTS_TAC ‘c’ >> rw [] >> art [])
+ >> Rewr'
+ >> rw [Abbr ‘s’, IN_IMAGE]
+ (* here it indicates that ‘!n. p n <= q n’ is too strong *)
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘q x’ >> art []
+ >> POP_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘x’ >> rw []
+QED
+
 (* The original definition of "inf" in HOL Light (sets.ml) *)
 val inf_tm = ``@a:real. (!x. x IN s ==> a <= x) /\
                         !b. (!x. x IN s ==> b <= x) ==> b <= a``;

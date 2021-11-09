@@ -24,8 +24,8 @@ val set_ss = std_ss ++ PRED_SET_ss;
 (*              Type Definiton                   *)
 (* ********************************************* *)
 
-val extreal_def = Datatype
-   `extreal = NegInf | PosInf | Normal real`;
+Datatype : extreal = NegInf | PosInf | Normal real
+End
 
 (* INFINITY, the vertical position of UTF8.chr 0x2212 is better than "-" *)
 val _ = Unicode.unicode_version {u = "+" ^ UTF8.chr 0x221E,
@@ -4534,65 +4534,80 @@ val extreal_inf_def = Define
 val _ = overload_on ("sup", Term `extreal_sup`);
 val _ = overload_on ("inf", Term `extreal_inf`);
 
-val le_sup_imp = store_thm
-  ("le_sup_imp", ``!p x. p x ==> x <= sup p``,
+Theorem le_sup_imp :
+    !p x. p x ==> x <= sup p
+Proof
     RW_TAC std_ss [extreal_sup_def, le_infty, le_refl]
  >> FULL_SIMP_TAC std_ss []
- >> Cases_on `x`
- >| [ RW_TAC std_ss [le_infty],
-     `x' < PosInf` by (Cases_on `x'` >> RW_TAC std_ss [lt_infty]) \\
+ >> Cases_on `x` (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      RW_TAC std_ss [le_infty],
+      (* goal 2 (of 3) *)
+      rename1 ‘y <> PosInf’ \\
+     `y < PosInf` by (Cases_on `y` >> RW_TAC std_ss [lt_infty]) \\
       METIS_TAC [let_trans, lt_refl],
+      (* goal 3 (of 3) *)
       RW_TAC std_ss [extreal_le_def] \\
       MATCH_MP_TAC REAL_IMP_LE_SUP \\
-      CONJ_TAC >- METIS_TAC [] \\
       reverse CONJ_TAC >- (Q.EXISTS_TAC `r` >> RW_TAC real_ss []) \\
-      Cases_on `x'` >| (* 3 subgoals *)
+      rename1 ‘y <> PosInf’ \\
+      Cases_on `y` >| (* 3 subgoals *)
       [ METIS_TAC [le_infty],
         RW_TAC std_ss [],
-        Q.EXISTS_TAC `r'` \\
+        rename1 ‘Normal z <> PosInf’ \\
+        Q.EXISTS_TAC `z` \\
         RW_TAC std_ss [] \\
-        METIS_TAC [extreal_le_def] ] ]);
+        METIS_TAC [extreal_le_def] ] ]
+QED
 
 val le_sup_imp' = store_thm
   ("le_sup_imp'", ``!p x. x IN p ==> x <= sup p``,
     REWRITE_TAC [IN_APP]
  >> PROVE_TAC [le_sup_imp]);
 
-val sup_le = store_thm
-  ("sup_le", ``!p x. sup p <= x <=> (!y. p y ==> y <= x)``,
+Theorem sup_le :
+    !p x. sup p <= x <=> (!y. p y ==> y <= x)
+Proof
     RW_TAC std_ss [extreal_sup_def, le_infty]
  >- (EQ_TAC >- RW_TAC std_ss [le_infty] >> METIS_TAC [])
  >> FULL_SIMP_TAC std_ss []
- >> Cases_on `x` (* 3 subgoals *)
- >| [ METIS_TAC [le_infty, extreal_not_infty],
-      METIS_TAC [le_infty],
-      Cases_on `x'` >| (* 3 gubgoals *)
-      [ METIS_TAC [le_infty],
-        RW_TAC std_ss [],
-        RW_TAC std_ss [extreal_le_def] \\
-        EQ_TAC
-        >- (RW_TAC std_ss [] \\
-            Cases_on `y` >|
-            [ METIS_TAC [le_infty],
-              METIS_TAC [le_infty,extreal_not_infty],
-              RW_TAC std_ss [extreal_le_def] \\
-              MATCH_MP_TAC REAL_LE_TRANS \\
-              Q.EXISTS_TAC `sup (\r. p (Normal r))` \\
-              RW_TAC std_ss [] \\
-              MATCH_MP_TAC REAL_IMP_LE_SUP \\
-              CONJ_TAC >- METIS_TAC [] \\
-              reverse CONJ_TAC >- (Q.EXISTS_TAC `r''` >> RW_TAC real_ss []) \\
-              Q.EXISTS_TAC `r'` \\
-              RW_TAC std_ss [] \\
-              METIS_TAC [extreal_le_def] ]) \\
-        RW_TAC std_ss [] \\
-        MATCH_MP_TAC REAL_IMP_SUP_LE \\
-        RW_TAC std_ss []
-        >- (Cases_on `x''` >| (* 3 subgoals *)
-            [ RW_TAC std_ss [],
-              METIS_TAC [le_infty, extreal_not_infty],
-              METIS_TAC [] ]) \\
-        METIS_TAC [extreal_le_def] ] ]);
+ >> Cases_on `x`
+ >- METIS_TAC [le_infty, extreal_not_infty]
+ >- METIS_TAC [le_infty]
+ >> rename1 ‘y <> PosInf’
+ >> Cases_on `y`
+ >- METIS_TAC [le_infty]
+ >- RW_TAC std_ss []
+ >> RW_TAC std_ss [extreal_le_def]
+ >> EQ_TAC
+ >- (RW_TAC std_ss [] \\
+     Cases_on `y` >| (* 3 subgoals *)
+     [ (* goal 1 (of 2) *)
+       METIS_TAC [le_infty],
+       (* goal 2 (of 3) *)
+       METIS_TAC [le_infty, extreal_not_infty],
+       (* goal 3 (of 3) *)
+       RW_TAC std_ss [extreal_le_def] \\
+       MATCH_MP_TAC REAL_LE_TRANS \\
+       Q.EXISTS_TAC `sup (\r. p (Normal r))` \\
+       RW_TAC std_ss [] \\
+       MATCH_MP_TAC REAL_IMP_LE_SUP \\
+       rename1 ‘p (Normal z)’ \\
+       reverse CONJ_TAC >- (Q.EXISTS_TAC `z` >> RW_TAC real_ss []) \\
+       rename1 ‘!y. p y ==> y <= Normal u’ \\
+       Q.EXISTS_TAC `u` \\
+       RW_TAC std_ss [] \\
+       METIS_TAC [extreal_le_def] ])
+ >> RW_TAC std_ss []
+ >> MATCH_MP_TAC REAL_IMP_SUP_LE
+ >> reverse (RW_TAC std_ss [])
+ >- METIS_TAC [extreal_le_def]
+ >> rename1 ‘z <> NegInf’
+ >> Cases_on `z`
+ >- RW_TAC std_ss []
+ >- METIS_TAC [le_infty, extreal_not_infty]
+ >> METIS_TAC []
+QED
 
 Theorem sup_le' : (* was: Sup_le_iff *)
     !p x. sup p <= x <=> (!y. y IN p ==> y <= x)
@@ -5164,7 +5179,7 @@ val sup_lt' = store_thm
     RW_TAC std_ss [IN_APP]
  >> REWRITE_TAC [sup_lt]);
 
-val sup_lt_epsilon = store_thm (* cf. SUP_EPSILON *)
+val sup_lt_epsilon = store_thm (* cf. realTheory.SUP_LT_EPSILON *)
   ("sup_lt_epsilon",
   ``!P e. (0 < e) /\ (?x. P x /\ x <> NegInf) /\ (sup P <> PosInf) ==>
           ?x. P x /\ sup P < x + e``,
@@ -7136,6 +7151,14 @@ val max_le2_imp = store_thm
     RW_TAC std_ss [max_le]
  >> RW_TAC std_ss [le_max]);
 
+(* cf. REAL_LT_MAX *)
+Theorem lt_max :
+    !x y z :extreal. x < max y z <=> x < y \/ x < z
+Proof
+    rw [extreal_lt_def]
+ >> METIS_TAC [max_le]
+QED
+
 Theorem max_refl[simp] :
     !x. max x x = x
 Proof
@@ -7573,11 +7596,8 @@ QED
 Theorem CROSS_COUNTABLE_UNIV :
     countable (univ(:num) CROSS univ(:num))
 Proof
-  RW_TAC std_ss [COUNTABLE_ALT]
-  >> `?(f :num -> num # num). BIJ f UNIV (UNIV CROSS UNIV)` by METIS_TAC [NUM_2D_BIJ_INV]
-  >> Q.EXISTS_TAC `f`
-  >> RW_TAC std_ss []
-  >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, CROSS_DEF, IN_UNIV]
+    MATCH_MP_TAC COUNTABLE_CROSS
+ >> REWRITE_TAC [COUNTABLE_NUM]
 QED
 
 (* `open interval` of extreal sets. c.f. `OPEN_interval` / `CLOSE_interval`
@@ -7900,6 +7920,21 @@ Proof
  >> EQ_TAC >> rw []
  >> ‘i = SUC n \/ i <= n’ by rw [] >- rw []
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Theorem lt_max_fn_seq :
+    !f x y n. x < max_fn_seq f n y <=> ?i. i <= n /\ x < f i y
+Proof
+    NTAC 3 GEN_TAC
+ >> Induct_on ‘n’ >> rw [max_fn_seq_def, lt_max]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 3) *)
+      Q.EXISTS_TAC ‘i’ >> rw [],
+      (* goal 2 (of 3) *)
+      Q.EXISTS_TAC ‘SUC n’ >> rw [],
+      (* goal 3 (of 3) *)
+     ‘i = SUC n \/ i <= n’ by rw [] >- rw [] \\
+      DISJ1_TAC >> Q.EXISTS_TAC ‘i’ >> rw [] ]
 QED
 
 Theorem max_fn_seq_mono :

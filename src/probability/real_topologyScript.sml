@@ -5317,6 +5317,12 @@ val LIM_SEQUENTIALLY = store_thm ("LIM_SEQUENTIALLY",
           !e. &0 < e ==> ?N. !n. N <= n ==> dist(s(n),l) < e``,
   REWRITE_TAC[tendsto, EVENTUALLY_SEQUENTIALLY] THEN MESON_TAC[]);
 
+Theorem LIM_SEQUENTIALLY_SEQ :
+    !s l. (s --> l) sequentially <=> (seq$--> s l)
+Proof
+    REWRITE_TAC [LIM_SEQUENTIALLY, seqTheory.SEQ, GREATER_EQ, dist]
+QED
+
 val LIM_EVENTUALLY = store_thm ("LIM_EVENTUALLY",
  ``!net f l. eventually (\x. f x = l) net ==> (f --> l) net``,
   REWRITE_TAC[eventually, LIM] THEN MESON_TAC[DIST_REFL]);
