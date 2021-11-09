@@ -1,5 +1,8 @@
-open testutils
-open ratLib ratReduce
+open HolKernel Parse bossLib boolLib;
+
+open ratLib ratReduce;
+
+open testutils;
 
 fun mkt s c (t1, t2) i =
   (s ^ "(" ^ StringCvt.padLeft #"0" 2 (Int.toString i) ^ ")", c, t1, t2)
@@ -34,3 +37,37 @@ val _ = Lib.appi (fn i => fn p => convtest (rac p i)) [
   (“2/3q + 4”,     “14/3q”),
   (“2/3q + -4/6”,  “0q”)
 ]
+
+(* check prefer/deprecate rat *)
+val grammars = (type_grammar(),term_grammar());
+
+val _ = ratLib.prefer_rat();
+val _ = tprint "Checking parse of 0 < x gives rats when rats are preferred";
+val expected1 = ratSyntax.mk_rat_les(ratSyntax.rat_0_tm,
+                                     mk_var("x", ratSyntax.rat_ty));
+
+val _ = require_msg (check_result (aconv expected1)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+
+(* val _ = temp_set_grammars grammars *)
+
+val _ = ratLib.deprecate_rat();
+val _ = tprint "Checking parse of 0 < x gives ints when rats deprecated"
+
+val expected2 = intSyntax.mk_less(intSyntax.zero_tm,
+                                  mk_var("x", intSyntax.int_ty))
+val _ = require_msg (check_result (aconv expected2)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+
+val _ = intLib.deprecate_int();
+val _ = tprint "Checking parse of 0 < x gives nats when ints deprecated too"
+
+val expected3 = numSyntax.mk_less(numSyntax.zero_tm,
+                                  mk_var("x", numSyntax.num))
+
+val _ = require_msg (check_result (aconv expected3)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+
+val _ = temp_set_grammars grammars;
+
+val _ = Process.exit Process.success
