@@ -5342,74 +5342,15 @@ Proof
           THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]
 QED
 
-(* cf. extrealTheory.sup_seq *)
-Theorem sup_sequence :
+Theorem sup_seq' : (* was: sup_sequence *)
     !f l. mono_increasing f ==> ((f --> l) sequentially =
           (sup (IMAGE (\n. Normal (f n)) UNIV) = Normal l))
 Proof
-  RW_TAC std_ss [] THEN EQ_TAC THENL
-  [RW_TAC std_ss [sup_eq] THENL
-   [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-    RW_TAC std_ss [IN_IMAGE,IN_UNIV] THEN RW_TAC std_ss [extreal_le_def] THEN
-    METIS_TAC [mono_increasing_suc,seq_mono_le,ADD1], ALL_TAC] THEN
-   KNOW_TAC ``!n:num. Normal (f n) <= y`` THENL
-   [RW_TAC std_ss [] THEN POP_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN RW_TAC std_ss [IN_IMAGE,IN_UNIV] THEN
-    METIS_TAC [], ALL_TAC] THEN
-   Cases_on `y` THENL
-   [METIS_TAC [le_infty,extreal_not_infty],
-    METIS_TAC [le_infty],
-    METIS_TAC [seq_le_imp_lim_le,extreal_le_def]], ALL_TAC] THEN
-  RW_TAC std_ss [extreal_sup_def] THEN
-  KNOW_TAC ``(\r. IMAGE (\n. Normal ((f:num->real) n)) UNIV (Normal r)) =
-                  IMAGE f UNIV`` THENL
-  [RW_TAC std_ss [EXTENSION,IN_ABS,IN_IMAGE,IN_UNIV] THEN EQ_TAC THENL
-   [RW_TAC std_ss [] THEN POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-    RW_TAC std_ss [IN_IMAGE,IN_UNIV], ALL_TAC] THEN
-   RW_TAC std_ss [] THEN ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN
-   RW_TAC std_ss [IN_UNIV,IN_IMAGE] THEN METIS_TAC [], ALL_TAC] THEN
-  FULL_SIMP_TAC std_ss [] THEN KNOW_TAC ``!n:num. Normal (f n) <= x`` THENL
-  [RW_TAC std_ss [] THEN Q.PAT_X_ASSUM `!y. P` MATCH_MP_TAC THEN
-   ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN RW_TAC std_ss [IN_UNIV,IN_IMAGE] THEN
-   METIS_TAC [], ALL_TAC] THEN
-  `x <> NegInf` by METIS_TAC [lt_infty,extreal_not_infty,lte_trans] THEN
-  `?z. x = Normal z` by METIS_TAC [extreal_cases] THEN
-  KNOW_TAC ``!n:num. f n <= z:real`` THENL
-  [RW_TAC std_ss [GSYM extreal_le_def] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-   ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN SIMP_TAC std_ss [IN_IMAGE, IN_UNIV] THEN
-   METIS_TAC [], ALL_TAC] THEN
-  RW_TAC std_ss [LIM_SEQUENTIALLY, dist] THEN
-  (MP_TAC o Q.ISPECL [`IMAGE (f:num->real) UNIV`,`e:real/2`]) SUP_EPSILON THEN
-  SIMP_TAC std_ss [REAL_LT_HALF1] THEN
-  KNOW_TAC ``!y x z. IMAGE f UNIV x <=> x IN IMAGE (f:num->real) UNIV`` THENL
-  [RW_TAC std_ss [SPECIFICATION], DISCH_TAC] THEN
-  STRIP_TAC THEN KNOW_TAC ``(?z. !x. x IN IMAGE (f:num->real) UNIV ==> x <= z)`` THENL
-  [Q.EXISTS_TAC `z:real` THEN RW_TAC std_ss [IN_IMAGE,IN_UNIV] THEN
-   METIS_TAC [], DISCH_TAC] THEN
-  KNOW_TAC ``?x. x IN IMAGE (f:num->real) UNIV`` THENL
-  [RW_TAC std_ss [IN_UNIV,IN_IMAGE], ALL_TAC] THEN
-  RW_TAC std_ss [] THEN KNOW_TAC ``?x. x IN IMAGE (f:num->real) UNIV /\
-                                   real$sup (IMAGE f UNIV) <= x + e / 2`` THENL
-  [METIS_TAC [], DISCH_TAC] THEN
-  RW_TAC std_ss [GSYM ABS_BETWEEN, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [IN_IMAGE,IN_UNIV] THEN
-  Q.EXISTS_TAC `x''''` THEN RW_TAC std_ss [REAL_LT_SUB_RADD] THENL
-  [MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `f x'''' + e / 2` THEN
-   RW_TAC std_ss [] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-   Q.EXISTS_TAC `(f:num->real) n + e / 2` THEN reverse CONJ_TAC THENL
-   [METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL], ALL_TAC] THEN
-   RW_TAC std_ss [REAL_LE_RADD] THEN
-   METIS_TAC [mono_increasing_def], ALL_TAC] THEN
-  MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `real$sup (IMAGE f UNIV)` THEN
-  RW_TAC std_ss [REAL_LT_ADDR] THEN
-  Q_TAC SUFF_TAC `!y. (\y. y IN IMAGE f UNIV) y ==> y <= real$sup (IMAGE f UNIV)` THENL
-  [METIS_TAC [IN_IMAGE, IN_UNIV], ALL_TAC] THEN
-  SIMP_TAC std_ss [IN_DEF] THEN
-  MATCH_MP_TAC REAL_SUP_UBOUND_LE THEN
-  KNOW_TAC ``!y x z. IMAGE (f:num->bool) UNIV x <=> x IN IMAGE f UNIV`` THENL
-  [RW_TAC std_ss [IN_DEF], DISCH_TAC] THEN
-  RW_TAC std_ss [IN_IMAGE, IN_UNIV] THEN
-  Q.EXISTS_TAC `z'` THEN RW_TAC std_ss []
+    rpt STRIP_TAC
+ >> Suff ‘(f --> l) sequentially <=> (f --> l)’
+ >- (Rewr' \\
+     MATCH_MP_TAC sup_seq >> art [])
+ >> REWRITE_TAC [LIM_SEQUENTIALLY_SEQ]
 QED
 
 Theorem countably_additive_lebesgue :
@@ -5467,7 +5408,7 @@ Proof
      REPEAT STRIP_TAC THEN REWRITE_TAC [extreal_of_num_def, extreal_le_def] THEN
      MATCH_MP_TAC INTEGRAL_COMPONENT_POS THEN
      ASM_SIMP_TAC std_ss [DROP_INDICATOR_POS_LE]) >> DISCH_TAC
- >> ASM_SIMP_TAC std_ss [GSYM sup_sequence, REAL_SUM_IMAGE_COUNT]
+ >> ASM_SIMP_TAC std_ss [GSYM sup_seq', REAL_SUM_IMAGE_COUNT]
  >> Know `!n m. sum (0,m) (\x. integral (line n) (indicator ((f:num->real->bool) x))) =
                 integral (line n) (indicator (BIGUNION {f i | i < m}))`
  THENL (* the rest works fine *)
@@ -5640,7 +5581,7 @@ Proof
   `!n. Normal (integral (line n) (indicator A)) =
   Normal ((\n. integral (line n) (indicator A)) n)` by METIS_TAC [] THEN
   SIMP_TAC std_ss [measure_lebesgue, GSYM IMAGE_DEF] THEN
-  ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC sup_sequence THEN
+  ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC sup_seq' THEN
   RW_TAC std_ss [mono_increasing_def] THEN MATCH_MP_TAC INTEGRAL_SUBSET_COMPONENT_LE THEN
   ASM_SIMP_TAC std_ss [LINE_MONO, lebesgueD, DROP_INDICATOR_POS_LE]
 QED

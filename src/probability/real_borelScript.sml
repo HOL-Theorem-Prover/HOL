@@ -1877,7 +1877,6 @@ Proof
  >> `b <= y + e <=> b - e <= y` by REAL_ARITH_TAC >> POP_ORW
  >> Q.UNABBREV_TAC `y`
  >> MATCH_MP_TAC REAL_IMP_LE_SUP >> rw []
- >- (Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL])
  >- (Q.EXISTS_TAC `b` >> rw [] \\
      MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
  >> Cases_on `a <= b - e`
