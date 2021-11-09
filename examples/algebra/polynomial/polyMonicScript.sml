@@ -679,8 +679,9 @@ val poly_monic_exp_eq_self = store_thm(
 
 (* set proper overloads *)
 val _ = clear_overloads_on "##";
-val _ = overload_on ("##", ``r.sum.exp #1``);
-val _ = overload_on ("###", ``(poly_ring r).sum.exp |1|``);
+val _ = remove_termtok{term_name = "PAIR_REL", tok = "###"}
+Overload "##" = “r.sum.exp #1”
+Overload "###" = “(poly_ring r).sum.exp |1|”
 
 (* val _ = overload_on ("|c|", ``chop [##c]``); *)
 (* val _ = overload_on ("|n|", ``chop [##n]``); *)
