@@ -1,6 +1,7 @@
 all: selftest.exe $(DEFAULT_TARGETS)
 .PHONY: all
 
+EXTRA_CLEANS = selftest.exe sort-selftest.log
 
 ifdef HOLBUILD
 all: link-to-sigobj
@@ -25,3 +26,10 @@ endif
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: sort-selftest.log
+
+sort-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

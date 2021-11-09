@@ -1,9 +1,11 @@
 INCLUDES = ../real ../sort ../res_quan/src ../n-bit ../pred_set/src/more_theories \
 	../topology ../quotient/src
 
+EXTRA_CLEANS = selftest.exe prob-selftest.log
+
 ifdef POLY
 HOLHEAP = heap
-EXTRA_CLEANS = $(HOLHEAP)
+EXTRA_CLEANS += $(HOLHEAP)
 
 REAL_OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
 	RealArith iterateTheory
@@ -62,4 +64,11 @@ all: link-to-sigobj
 .PHONY: link-to-sigobj
 link-to-sigobj: $(DEFAULT_TARGETS)
 	$(HOL_LNSIGOBJ)
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: prob-selftest.log
+
+prob-selftest.log: selftest.exe
+	$(tee ./$<, $@)
 endif

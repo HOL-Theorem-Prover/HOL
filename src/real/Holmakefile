@@ -11,8 +11,7 @@ all: link-to-sigobj
 .PHONY: link-to-sigobj
 
 link-to-sigobj: $(TARGETS)
-	for i in *.uo *.ui *.sig ; do ln -fs `pwd`/$$i $(SIGOBJ) ; done && \
-        for i in *.sig ; do echo `pwd`/$$(basename $$i .sig) >> $(SIGOBJ)/SRCFILES ; done
+	$(HOL_LNSIGOBJ)
 endif
 
 selftest.exe: selftest.uo realSimps.uo
@@ -37,5 +36,15 @@ real.art: real.otd
 prove_real_assums.art: hol4-real-assums.art
 
 all: hol4-real-unint.art hol4-real-unsat.art
+
+endif
+
+EXTRA_CLEANS = selftest.exe real-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: real-selftest.log
+
+real-selftest.log: selftest.exe
+	$(tee ./$<, $@)
 
 endif
