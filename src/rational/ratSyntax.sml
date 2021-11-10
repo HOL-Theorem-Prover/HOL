@@ -1,9 +1,17 @@
 structure ratSyntax :> ratSyntax =
 struct
 
-open HolKernel boolLib Parse ratTheory;
+open HolKernel boolLib ratTheory;
 
 val ERR = mk_HOL_ERR "ratSyntax";
+
+(* Fix the grammar used by this file (when it's really needed)
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars ratTheory.rat_grammars
+end
+ *)
+open Parse;
 
 (*--------------------------------------------------------------------------*
  * constants
@@ -11,13 +19,6 @@ val ERR = mk_HOL_ERR "ratSyntax";
 
 (*val int_ty = intSyntax.int_ty;*)
 val rat_ty = mk_thy_type{Tyop = "rat", Thy="rat", Args = []};
-
-(* old definitions:
-val rat_0_tm = prim_mk_const {Name="rat_0",Thy="rat"};
-val rat_1_tm = prim_mk_const {Name="rat_1",Thy="rat"};
- *)
-val rat_0_tm = “0q”;
-val rat_1_tm = “1q”;
 
 val rat_nmr_tm = prim_mk_const {Name="rat_nmr",Thy="rat"};
 val rat_dnm_tm = prim_mk_const {Name="rat_dnm",Thy="rat"};
@@ -36,6 +37,13 @@ val rat_gre_tm = prim_mk_const {Name="rat_gre",Thy="rat"};
 val rat_leq_tm = prim_mk_const {Name="rat_leq",Thy="rat"};
 val rat_geq_tm = prim_mk_const {Name="rat_geq",Thy="rat"};
 val rat_of_num_tm = prim_mk_const {Name = "rat_of_num", Thy = "rat"}
+
+(* old definitions:
+val rat_0_tm = prim_mk_const {Name="rat_0",Thy="rat"};
+val rat_1_tm = prim_mk_const {Name="rat_1",Thy="rat"};
+ *)
+val rat_0_tm = mk_comb(rat_of_num_tm, numSyntax.term_of_int 0);
+val rat_1_tm = mk_comb(rat_of_num_tm, numSyntax.term_of_int 1);
 
 (*--------------------------------------------------------------------------*
  * constructors
