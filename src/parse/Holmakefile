@@ -26,3 +26,12 @@ Overload.uo: Overload.sml Overload.ui $(dprot $(SIGOBJ)/Lexis.ui) $(dprot $(SIGO
 
 selftest.exe: selftest.uo $(SELFTEST_DEPS)
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS += selftest.exe parse-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: parse-selftest.log
+
+parse-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif
