@@ -2,4 +2,5 @@ PRE_INCLUDES = ../../algebra/ring
 
 ALGEBRA_INCLUDES = lib monoid group field polynomial finitefield
 INCLUDES = $(patsubst %,../../algebra/%,$(ALGEBRA_INCLUDES)) \
-           ../../simple_complexity/lib ../../simple_complexity/loop ../compute
+           ../../simple_complexity/lib ../../simple_complexity/loop ../compute \
+           $(HOLDIR)/src/monad/more_monads

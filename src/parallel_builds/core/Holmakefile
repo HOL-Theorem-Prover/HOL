@@ -42,7 +42,7 @@ INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
             $(patsubst %,../../%,$(SRCTESTDIRS))
 
 ifneq($(HOLSELFTESTLEVEL),1)
-EX2DIRS = algorithms/unification/triangular/nominal \
+EX2DIRS = AKS algebra algorithms/unification/triangular/nominal \
           balanced_bst \
           computability/kolmog computability/lambda computability/recdegrees \
           computability/register computability/turing \
@@ -51,7 +51,7 @@ EX2DIRS = algorithms/unification/triangular/nominal \
           lambda/other-models lambda/typing \
           l3-machine-code/decompilers \
           miller \
-          separationLogic/src separationLogic/src/holfoot \
+          separationLogic/src separationLogic/src/holfoot simple_complexity \
           temporal_deep
 
 ifdef POLY
