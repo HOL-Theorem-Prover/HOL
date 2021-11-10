@@ -156,13 +156,18 @@ fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
           handle HOL_ERR _ => raise InternalDie (S "Parse failed!")
-  val res = HOLPP.pp_to_string width Parse.pp_term t
+  val cres = Exn.capture (HOLPP.pp_to_string width Parse.pp_term) t
   fun f s = String.translate
               (fn #" " => UTF8.chr 0x2423 | #"\n" => "\n      " | c => str c) s
 in
-  if res = output then OK() else
-  die ("  Saw:\n    >|" ^ clear (f res) ^
-       "|<\n  rather than \n    >|" ^ clear (f output) ^ "|<\n")
+  case cres of
+      Exn.Exn e => die ("  Pretty printer raised exception:\n    " ^
+                        General.exnMessage e)
+    | Exn.Res res =>
+      if res = output then OK()
+      else
+        die ("  Saw:\n    >|" ^ clear (f res) ^
+             "|<\n  rather than \n    >|" ^ clear (f output) ^ "|<\n")
 end handle InternalDie p => pretty_die p
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
