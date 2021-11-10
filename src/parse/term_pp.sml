@@ -1896,14 +1896,16 @@ fun pp_term (G : grammar) TyG backend = let
              which is in turn a string literal *)
           (fn _ => case total Literal.dest_string_lit (rand tm) of
                        SOME s =>
-                       (case overloads_to_string_form G {tmnm=atom_name f} of
-                            NONE => fail
-                          | SOME ldelim =>
-                            uadd_ann_string
-                              (Literal.string_literalpp
-                                 (Literal.delim_pair {ldelim=ldelim})
-                                 s,
-                               PPBackEnd.Literal PPBackEnd.StringLit))
+                       if is_constish f then
+                         case overloads_to_string_form G {tmnm=atom_name f} of
+                             NONE => fail
+                           | SOME ldelim =>
+                             uadd_ann_string
+                               (Literal.string_literalpp
+                                  (Literal.delim_pair {ldelim=ldelim})
+                                  s,
+                                PPBackEnd.Literal PPBackEnd.StringLit)
+                       else fail
                      | NONE => fail) |||
 
           (* characters *)
