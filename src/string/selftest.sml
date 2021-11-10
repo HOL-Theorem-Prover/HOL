@@ -92,7 +92,9 @@ val _ = app tpp ["P \"a\" /\\ Q",
                  "\"foo\\nbar\"",
                  quote (String.toString "foo\\bar"),
                  "\"(*\"",
-                 "\"*)\""]
+                 "\"*)\"",
+                 "(\\s. STRLEN s) \"foo\""
+                ]
 
 val t = ``"*)"``
 val _ = tprint "Paranoid printing of ‘\"*)\"’"
