@@ -60,15 +60,15 @@ End
 
 Definition mem_rel_def:
   mem_rel (l3 : word64 -> word8) (asl : num |-> bitU list) tags =
-    ∀n. n < UINT_MAX (:64) ⇒
-      FLOOKUP tags n = SOME B0 ∧
+    ∀w.
+      FLOOKUP tags (w2n w) = SOME B0 ∧
       ∃byt.
-        FLOOKUP asl n = SOME (MAP bitU_of_bool byt) ∧
+        FLOOKUP asl (w2n w) = SOME (MAP bitU_of_bool byt) ∧
         LENGTH byt = 8 ∧
-        l3 (n2w n) = v2w byt
+        l3 w = v2w byt
 End
 
-(* what to do about tagstate? *)
+
 Definition state_rel_def:
   state_rel (l3 : arm8_state) (asl : regstate sequential_state) ⇔
     read_rel pstate_rel l3.PSTATE asl.regstate PSTATE_ref ∧
@@ -155,7 +155,7 @@ Definition asl_sys_regs_ok_def:
       word_bit 31 HCR_EL2 (* RW bit - EL1 is AArch64 *) ∧
       ¬word_bit 34 HCR_EL2 (* Virtualization Host Extension (FEAT_VHE) disabled *)) ∧
 
-    asl.regstate.bitvector_52_dec_reg "__CNTControlBase" = 0b0w ∧
+    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0b0w ∧
     word_bit 4 ((asl.regstate.ProcState_reg "PSTATE").ProcState_M)
 End
 

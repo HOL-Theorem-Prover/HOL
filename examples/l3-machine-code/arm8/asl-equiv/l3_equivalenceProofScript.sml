@@ -2185,33 +2185,37 @@ Proof
   >- gvs[asl_sys_regs_ok_def]
 QED
 
-
-(*******)
-
-(* TODO cheated for now - fix model *)
-Theorem trickbox_enabled_F[simp]:
-  trickbox_enabled ⇔ F
-Proof
-  cheat (* XXX *)
-QED
+(*********)
 
 Theorem AArch64_TranslateAddress:
   ∀vaddr acctype iswrite aligned size asl.
     ∃addrdesc.
       AArch64_TranslateAddress vaddr acctype iswrite aligned size asl =
       returnS addrdesc asl ∧
-      addrdesc.AddressDescriptor_paddress.FullAddress_address = (51 >< 0) vaddr ∧
+      addrdesc.AddressDescriptor_paddress.FullAddress_address = vaddr ∧
       ¬IsFault addrdesc
 Proof
-  cheat (* TODO - re-stub out? *)
+  rw[AArch64_TranslateAddress_def, bindS, returnS] >>
+  simp[
+    undefined_AddressDescriptor_def,
+    undefined_FaultRecord_def,
+    undefined_MemoryAttributes_def,
+    undefined_FullAddress_def,
+    undefined_Fault_def,
+    undefined_AccType_def,
+    undefined_MemType_def,
+    undefined_DeviceType_def,
+    undefined_MemAttrHints_def,
+    preludeTheory.undefined_int_def,
+    sail2_state_monadTheory.undefined_boolS_def
+    ] >>
+  simp[returnS, IsFault_def]
 QED
-
-(*********)
 
 Theorem l3_asl_Mem_read_8:
   ∀l3 asl addrdesc accdesc.
     mem_rel l3 asl.memstate asl.tagstate ∧
-    asl.regstate.bitvector_52_dec_reg "__CNTControlBase" = 0w
+    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0w
   ⇒ let p = addrdesc.AddressDescriptor_paddress.FullAddress_address in
     Mem_read addrdesc 8 accdesc asl = returnS (mem_dword l3 (w2w p)) asl
 Proof
@@ -2232,18 +2236,16 @@ Proof
     ] >>
   simp[
     sail2_state_monadTheory.read_memt_bytesS_def,
-    sail2_state_monadTheory.read_memt_bytesS_def,
     sail2_state_monadTheory.readS_def,
     bindS, returnS
     ] >>
   simp[sail2_state_monadTheory.get_mem_bytes_def] >>
-  gvs[mem_rel_def, FORALL_AND_THM] >>
+  gvs[mem_rel_def] >>
   qspec_then `p` assume_tac w2n_lt >> gvs[] >>
-  qpat_abbrev_tac `np = w2n p` >>
-  map_every (fn qt =>
-    last_assum $ qspec_then qt mp_tac >> impl_tac >- simp[] >> strip_tac)
-    [`np`,`np+1`,`np+2`,`np+3`,`np+4`,`np+5`,`np+6`,`np+7`] >>
-  gvs[] >> simp[sail2_valuesTheory.and_bit_def] >>
+  map_every (fn qt => last_assum $ qspec_then qt assume_tac)
+    [`p`,`p+1w`,`p+2w`,`p+3w`,`p+4w`,`p+5w`,`p+6w`,`p+7w`] >>
+  last_x_assum kall_tac >> gvs[word_add_def] >>
+  simp[sail2_valuesTheory.and_bit_def] >>
   ntac 9 $ simp[Once sail2_valuesTheory.just_list_def] >>
   simp[returnS] >>
   simp[sail2_valuesTheory.bits_of_mem_bytes_def,
@@ -2253,14 +2255,13 @@ Proof
   simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss, EVERY_MAP] >>
   simp[returnS, mem_dword_def] >>
   gvs[GSYM word_add_n2w] >>
-  `n2w np = w2w p : 64 word` by simp[Abbr `np`, w2w_def] >>
   gvs[LENGTH_EQ_NUM_compute] >> blastLib.BBLAST_TAC
 QED
 
 Theorem l3_asl_Mem_read_1:
   ∀l3 asl addrdesc accdesc.
     mem_rel l3 asl.memstate asl.tagstate ∧
-    asl.regstate.bitvector_52_dec_reg "__CNTControlBase" = 0w
+    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0w
   ⇒ let p = addrdesc.AddressDescriptor_paddress.FullAddress_address in
     Mem_read addrdesc 1 accdesc asl = returnS (l3 (w2w p)) asl
 Proof
@@ -2286,10 +2287,8 @@ Proof
     bindS, returnS
     ] >>
   simp[sail2_state_monadTheory.get_mem_bytes_def] >>
-  gvs[mem_rel_def, FORALL_AND_THM] >>
   qspec_then `p` assume_tac w2n_lt >> gvs[] >>
-  qpat_abbrev_tac `np = w2n p` >>
-  last_x_assum $ qspec_then `np` mp_tac >> impl_tac >- simp[] >> strip_tac >>
+  gvs[mem_rel_def] >> last_x_assum $ qspec_then `p` assume_tac >> gvs[] >>
   gvs[] >> simp[sail2_valuesTheory.and_bit_def] >>
   ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
   simp[returnS] >>
@@ -2298,9 +2297,7 @@ Proof
   simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss] >>
   DEP_REWRITE_TAC[OPTION_MAP_just_list] >>
   simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss, EVERY_MAP] >>
-  simp[returnS] >>
-  `n2w np = w2w p : 64 word` by simp[Abbr `np`, w2w_def] >>
-  gvs[LENGTH_EQ_NUM_compute]
+  simp[returnS]
 QED
 
 Theorem l3_asl_Align:
@@ -2346,7 +2343,6 @@ QED
 
 Theorem l3_asl_Mem_read0_8_AccType_NORMAL:
   ∀l3 asl addr. state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
-    (∀n. n < 8 ⇒ w2w ((51 >< 0) (addr + n2w n)) = (addr + n2w n)) ∧
     ((SCTLR l3).A ⇒ Aligned (addr, 8)) ⇒
   Mem_read0 addr 8 AccType_NORMAL asl =
   returnS (FST (Mem (addr,8,AccType_NORMAL) l3)) asl : word64 res
@@ -2380,6 +2376,7 @@ Proof
     qspec_then `asl` mp_tac IsSecure >>
     impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
     ntac 2 $ simp[Once returnS] >> simp[HaveMTEExt] >>
+    qpat_abbrev_tac `addr = _.FullAddress_address` >>
     qspecl_then [`addr`,`AccType_NORMAL`,`asl`] mp_tac AArch64_AccessIsTagChecked >>
     impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
     drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
@@ -2389,7 +2386,6 @@ Proof
     impl_tac >- state_rel_tac[asl_sys_regs_ok_def] >> rw[] >>
     drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
     simp[] >> disch_then kall_tac >>
-    last_x_assum $ qspec_then `0` assume_tac >> gvs[] >>
     drule_all l3_asl_BigEndian >> strip_tac >>
     drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
     simp[] >> disch_then kall_tac >>
@@ -2424,9 +2420,9 @@ Proof
   ntac 8 $ simp[Once sail2_valuesAuxiliaryTheory.index_list_rw] >>
   ntac 8 $ simp[Once sail2_stateAuxiliaryTheory.foreachS_rw] >>
   simp[GSYM bit_field_insert_def] >>
+  qpat_abbrev_tac `addr = _.FullAddress_address` >>
   qmatch_goalsub_abbrev_tac `word_modify bar _` >>
-  `word_modify bar : word64 -> word64 =
-    bit_field_insert 7 0 (l3.MEM (w2w ((51 >< 0) addr)))` by (
+  `word_modify bar : word64 -> word64 = bit_field_insert 7 0 (l3.MEM addr)` by (
       simp[Abbr `bar`, bit_field_insert_def]) >>
   simp[Abbr `bar`] >>
   map_every (fn qt =>
@@ -2454,16 +2450,15 @@ Proof
   map_every (rewrite_tac o single) [
     GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
   simp[reverse_endianness0_def] >>
-  last_x_assum $ qspec_then `0` assume_tac >> gvs[] >>
   `mem = mem_dword l3.MEM addr` by (
     unabbrev_all_tac >> simp[mem_dword_def] >> blastLib.BBLAST_TAC) >>
   simp[mem_dword_def] >> IF_CASES_TAC >> gvs[] >> blastLib.BBLAST_TAC
 QED
 
+(*
 Theorem l3_asl_Mem_read0_8_AccType_NORMAL_aligned:
   ∀l3 asl addr. state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
-    w2w ((51 >< 0) addr) = addr ∧
-    asl.regstate.bitvector_52_dec_reg "__CNTControlBase" = 0b0w ∧
+    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0b0w ∧
     word_bit 4 ((asl.regstate.ProcState_reg "PSTATE").ProcState_M) ∧
     Aligned (addr,8) ⇒
   Mem_read0 addr 8 AccType_NORMAL asl =
@@ -2495,6 +2490,7 @@ Proof
   qspec_then `asl` mp_tac IsSecure >>
   impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
   ntac 2 $ simp[Once returnS] >> simp[HaveMTEExt] >>
+  qpat_abbrev_tac `addr = _.FullAddress_address` >>
   qspecl_then [`addr`,`AccType_NORMAL`,`asl`] mp_tac AArch64_AccessIsTagChecked >>
   impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
   drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
@@ -2519,6 +2515,7 @@ Proof
   IF_CASES_TAC >> gvs[] >> simp[returnS] >>
   WORD_DECIDE_TAC
 QED
+*)
 
 Theorem l3_asl_CheckSPAlignment:
   ∀l3 asl. state_rel l3 asl ∧ asl_sys_regs_ok asl ⇒
@@ -2554,28 +2551,12 @@ Proof
   simp[] >> gvs[Aligned_def, l3_asl_Align]
 QED
 
-Definition address_ok_def:
-  address_ok addr width =
-    ∀n. n < width ⇒ w2w ((51 >< 0) (addr + n2w n)) = addr + n2w n
-End
-
 Theorem l3_models_asl_LoadStoreImmediate_NORMAL_LOAD_FFFFF_unsigned_aligned:
   ∀b (j : word12) r2 r1.
-    case Encode (LoadStore (LoadStoreImmediate@64
+    l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
+      (LoadStore (LoadStoreImmediate@64
         (3w, b, MemOp_LOAD, AccType_NORMAL, F,F,F,F,F, T,
-         (0w :49 word) @@ j @@ (0w :word3), r2, r1))) of
-    | BadCode v3 => F
-    | ARM8 opcode =>
-      Decode opcode ≠ Unallocated ∧
-      ∀l3 asl.
-        state_rel l3 asl ∧
-        (Run (Decode opcode) l3).exception = NoException ∧ asl_sys_regs_ok asl ∧
-        (let addr :word64 = (if r2 = 31w then SP l3 else X r2 l3) + w2w j ≪ 3 in
-          address_ok addr 8 ∧ ((SCTLR l3).A ⇒ Aligned (addr, 8))) ⇒
-         case do write_regS SEE_ref (-1); ExecuteA64 opcode od asl of
-           (Value v6,asl') =>
-             state_rel (Run (Decode opcode) l3) asl' ∧ asl_sys_regs_ok asl'
-         | (Ex v7,asl') => F
+         (0w :49 word) @@ j @@ (0w :word3), r2, r1)))
 Proof
   rw[l3_models_asl_instr_subject_to_def, l3_models_asl_subject_to_def] >>
   simp[encode_rws] >>
@@ -2619,15 +2600,25 @@ Proof
     `state_rel l3 asl2` by (unabbrev_all_tac >> state_rel_tac[]) >>
     `asl_sys_regs_ok asl2` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
     drule l3_asl_Mem_read0_8_AccType_NORMAL >> simp[] >>
-    disch_then $ drule_at Any >> simp[] >>
-    impl_tac >- gvs[address_ok_def] >> strip_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    disch_then $ qspec_then `X r2 l3 + w2w j ≪ 3` mp_tac >> impl_keep_tac
+    >- (
+      CCONTR_TAC >> gvs[] >>
+      qpat_x_assum `_.exception = NoException` mp_tac >>
+      simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'X_def] >>
+      pairarg_tac >> simp[] >> qsuff_tac `s.exception ≠ NoException` >> rw[] >>
+      qpat_x_assum `Mem _ _ = _` mp_tac >>
+      simp[Mem_def, CheckAlignment_def, raise'exception_def] >>
+      ntac 4 (ntac 8 $ simp[Once state_transformerTheory.FOR_def]) >>
+      simp[state_transformerTheory.BIND_DEF] >>
+      Cases_on `l3.exception = NoException` >> gvs[] >>
+      strip_tac >> simp[] >> gvs[arm8_state_component_equality]
+      ) >>
+    strip_tac >> drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
     pairarg_tac >> gvs[] >>
     `s = l3` by (
       pop_assum mp_tac >> simp[Mem_def, CheckAlignment_def] >>
       ntac 4 (ntac 8 $ simp[Once state_transformerTheory.FOR_def]) >>
-      simp[state_transformerTheory.BIND_DEF] >>
-      Cases_on `(SCTLR l3).A` >> gvs[]) >>
+      simp[state_transformerTheory.BIND_DEF] >> Cases_on `(SCTLR l3).A` >> gvs[]) >>
     gvs[] >> simp[write'X_def] >> reverse IF_CASES_TAC >> gvs[]
     >- simp[X_set_31, returnS] >>
     drule $ b64 alpha X_set_not_31 >>
@@ -2652,7 +2643,7 @@ Proof
   `asl_sys_regs_ok asl2` by (
     unabbrev_all_tac >> gvs[sp_rel_access_pc_ref_def] >>
     state_rel_tac[asl_sys_regs_ok_def]) >>
-  drule l3_asl_CheckSPAlignment >> simp[] >> impl_tac
+  drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
     CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
@@ -2679,9 +2670,20 @@ Proof
   `state_rel l3 asl3` by (unabbrev_all_tac >> state_rel_tac[]) >>
   `asl_sys_regs_ok asl3` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
   drule l3_asl_Mem_read0_8_AccType_NORMAL >> simp[] >>
-  disch_then $ drule_at Any >> simp[] >>
-  impl_tac >- gvs[address_ok_def] >> strip_tac >>
-  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  disch_then $ qspec_then `SP l3 + w2w j ≪ 3` mp_tac >> impl_keep_tac
+  >- (
+    CCONTR_TAC >> gvs[] >>
+    qpat_x_assum `(_ _).exception = NoException` mp_tac >>
+    simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'X_def] >>
+    pairarg_tac >> simp[] >> qsuff_tac `s.exception ≠ NoException` >> rw[] >>
+    qpat_x_assum `Mem _ _ = _` mp_tac >>
+    simp[Mem_def, CheckAlignment_def, raise'exception_def] >>
+    ntac 4 (ntac 8 $ simp[Once state_transformerTheory.FOR_def]) >>
+    simp[state_transformerTheory.BIND_DEF] >>
+    Cases_on `l3.exception = NoException` >> gvs[] >>
+    strip_tac >> simp[] >> gvs[arm8_state_component_equality]
+    ) >>
+  strip_tac >> drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
   pairarg_tac >> gvs[] >>
   `s = l3` by (
     pop_assum mp_tac >> simp[Mem_def, CheckAlignment_def] >>
