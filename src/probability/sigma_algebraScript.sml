@@ -177,6 +177,78 @@ val ALGEBRA_DIFF = store_thm
        >> PROVE_TAC [])
    >> RW_TAC std_ss [ALGEBRA_INTER, ALGEBRA_COMPL]);
 
+Theorem ALGEBRA_FINITE_UNION :
+    !a c. algebra a /\ FINITE c /\ c SUBSET (subsets a) ==>
+          BIGUNION c IN (subsets a)
+Proof
+    RW_TAC std_ss [algebra_def]
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> Q.SPEC_TAC (`c`, `c`)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss [BIGUNION_EMPTY, BIGUNION_INSERT, INSERT_SUBSET]
+QED
+
+(* prove "*_FINITE_INTER" from "*_INTER" *)
+fun prove_finite_inter tm thm =
+    Q.X_GEN_TAC `r`
+ >> Suff `^tm r ==>
+           !f n. 0 < n ==> (!i. i < n ==> f i IN (subsets r)) ==>
+                 BIGINTER (IMAGE f (count n)) IN (subsets r)`
+ >- METIS_TAC []
+ >> DISCH_TAC
+ >> Q.X_GEN_TAC ‘f’
+ >> Induct_on `n` >- RW_TAC arith_ss []
+ >> RW_TAC arith_ss []
+ >> Cases_on `n = 0` >- fs [COUNT_SUC, COUNT_ZERO, IMAGE_INSERT, IMAGE_EMPTY,
+                            BIGINTER_INSERT]
+ >> `0 < n` by RW_TAC arith_ss []
+ >> REWRITE_TAC [COUNT_SUC, IMAGE_INSERT, BIGINTER_INSERT]
+ >> `!s t. s IN (subsets r) /\ t IN (subsets r) ==> s INTER t IN (subsets r)`
+        by PROVE_TAC [thm] (* thm is used here *)
+ >> POP_ASSUM MATCH_MP_TAC
+ >> STRONG_CONJ_TAC
+ >- (Q.PAT_X_ASSUM `!i. i < SUC n ==> f i IN X` (MP_TAC o (Q.SPEC `n`)) \\
+     RW_TAC arith_ss [])
+ >> DISCH_TAC
+ >> FIRST_X_ASSUM irule >> art []
+ >> rpt STRIP_TAC >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> RW_TAC arith_ss [];
+
+(* This version is more applicable than ALGEBRA_FINITE_INTER' *)
+Theorem ALGEBRA_FINITE_INTER :
+    !a f n. algebra a /\ 0 < n /\ (!i. i < n ==> f i IN (subsets a)) ==>
+            BIGINTER (IMAGE f (count n)) IN (subsets a)
+Proof
+    prove_finite_inter “algebra” ALGEBRA_INTER
+QED
+
+(* prove "*_FINITE_INTER'" from "*_INTER" *)
+fun prove_finite_inter' thm =
+    rpt STRIP_TAC
+ >> NTAC 3 (POP_ASSUM MP_TAC)
+ >> Q.SPEC_TAC (`c`, `c`)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss [BIGINTER_EMPTY, BIGINTER_INSERT, INSERT_SUBSET]
+ >> Cases_on ‘c = {}’ >- rw []
+ >> MATCH_MP_TAC thm (* used here *) >> art []
+ >> FIRST_X_ASSUM irule >> art [];
+
+(* ‘c <> {}’ is necessary, otherwise ‘UNIV IN subset a’ does not hold. *)
+Theorem ALGEBRA_FINITE_INTER' :
+    !a c. algebra a /\ FINITE c /\ c SUBSET (subsets a) /\ c <> {} ==>
+          BIGINTER c IN (subsets a)
+Proof
+    prove_finite_inter' ALGEBRA_INTER
+QED
+
+Theorem ALGEBRA_INTER_SPACE :
+    !a s. algebra a /\ s IN subsets a ==>
+          ((space a INTER s = s) /\ (s INTER space a = s))
+Proof
+    RW_TAC std_ss [algebra_def, SUBSET_DEF, IN_INTER, EXTENSION, subset_class_def]
+ >> PROVE_TAC []
+QED
+
 fun shared_tactics tm =
     rpt STRIP_TAC >> MATCH_MP_TAC tm >> fs [sigma_algebra_def];
 
@@ -219,20 +291,26 @@ Proof
     shared_tactics ALGEBRA_DIFF
 QED
 
-val ALGEBRA_FINITE_UNION = store_thm
-  ("ALGEBRA_FINITE_UNION",
-   ``!a c. algebra a /\ FINITE c /\ c SUBSET (subsets a) ==> BIGUNION c IN (subsets a)``,
-   RW_TAC std_ss [algebra_def]
-   >> NTAC 2 (POP_ASSUM MP_TAC)
-   >> Q.SPEC_TAC (`c`, `c`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [BIGUNION_EMPTY, BIGUNION_INSERT, INSERT_SUBSET]);
+Theorem SIGMA_ALGEBRA_FINITE_UNION :
+    !a c. sigma_algebra a /\ FINITE c /\ c SUBSET (subsets a) ==>
+          BIGUNION c IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_FINITE_UNION
+QED
 
-val ALGEBRA_INTER_SPACE = store_thm
-  ("ALGEBRA_INTER_SPACE",
-   ``!a s. algebra a /\ s IN subsets a ==> ((space a INTER s = s) /\ (s INTER space a = s))``,
-   RW_TAC std_ss [algebra_def, SUBSET_DEF, IN_INTER, EXTENSION, subset_class_def]
-   >> PROVE_TAC []);
+Theorem SIGMA_ALGEBRA_FINITE_INTER :
+    !a f n. sigma_algebra a /\ 0 < n /\ (!i. i < n ==> f i IN (subsets a)) ==>
+            BIGINTER (IMAGE f (count n)) IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_FINITE_INTER
+QED
+
+Theorem SIGMA_ALGEBRA_FINITE_INTER' :
+    !a c. sigma_algebra a /\ FINITE c /\ c SUBSET (subsets a) /\ c <> {} ==>
+          BIGINTER c IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_FINITE_INTER'
+QED
 
 val SIGMA_ALGEBRA_ALT = store_thm
   ("SIGMA_ALGEBRA_ALT",
@@ -775,6 +853,21 @@ val SEMIRING_DIFF_ALT = store_thm
  >> RW_TAC std_ss []
  >> PROVE_TAC [SUBSET_DEF]);
 
+Theorem SEMIRING_FINITE_INTER :
+    !r f n. semiring r /\ 0 < n /\ (!i. i < n ==> f i IN (subsets r)) ==>
+            BIGINTER (IMAGE f (count n)) IN (subsets r)
+Proof
+    prove_finite_inter “semiring” SEMIRING_INTER
+QED
+
+(* ‘c <> {}’ is necessary, otherwise ‘UNIV IN subset a’ does not hold. *)
+Theorem SEMIRING_FINITE_INTER' :
+    !r c. semiring r /\ FINITE c /\ c SUBSET (subsets r) /\ c <> {} ==>
+          BIGINTER c IN (subsets r)
+Proof
+    prove_finite_inter' SEMIRING_INTER
+QED
+
 val RING_EMPTY = store_thm
   ("RING_EMPTY", ``!r. ring r ==> {} IN (subsets r)``,
     RW_TAC std_ss [ring_def]);
@@ -824,31 +917,20 @@ val RING_INTER = store_thm
  >> Q.PAT_ASSUM `!s t. X ==> s DIFF t IN subsets r` MATCH_MP_TAC >> art []
  >> Q.PAT_ASSUM `!s t. X ==> s DIFF t IN subsets r` MATCH_MP_TAC >> art []);
 
-val RING_FINITE_INTER = store_thm
-  ("RING_FINITE_INTER",
-  ``!r f n. ring r /\ 0 < n /\ (!i. i < n ==> f i IN (subsets r)) ==>
-            BIGINTER (IMAGE f (count n)) IN (subsets r)``,
-    Q.X_GEN_TAC `r`
- >> Suff `ring r ==>
-           !f n. 0 < n ==> (!i. i < n ==> f i IN (subsets r))
-                 ==> BIGINTER (IMAGE f (count n)) IN (subsets r)` >- METIS_TAC []
- >> DISCH_TAC
- >> GEN_TAC >> Induct_on `n` >- RW_TAC arith_ss []
- >> RW_TAC arith_ss []
- >> Cases_on `n = 0` >- fs [COUNT_SUC, COUNT_ZERO, IMAGE_INSERT, IMAGE_EMPTY,
-                            BIGINTER_INSERT]
- >> `0 < n` by RW_TAC arith_ss []
- >> REWRITE_TAC [COUNT_SUC, IMAGE_INSERT, BIGINTER_INSERT]
- >> `!s t. s IN (subsets r) /\ t IN (subsets r) ==> s INTER t IN (subsets r)`
-        by PROVE_TAC [RING_INTER]
- >> POP_ASSUM MATCH_MP_TAC
- >> STRONG_CONJ_TAC
- >- (Q.PAT_X_ASSUM `!i. i < SUC n ==> f i IN X` (MP_TAC o (Q.SPEC `n`)) \\
-     RW_TAC arith_ss [])
- >> DISCH_TAC
- >> FIRST_X_ASSUM irule >> art []
- >> rpt STRIP_TAC >> FIRST_X_ASSUM MATCH_MP_TAC
- >> RW_TAC arith_ss []);
+Theorem RING_FINITE_INTER :
+    !r f n. ring r /\ 0 < n /\ (!i. i < n ==> f i IN (subsets r)) ==>
+            BIGINTER (IMAGE f (count n)) IN (subsets r)
+Proof
+    prove_finite_inter “ring” RING_INTER
+QED
+
+(* ‘c <> {}’ is necessary, otherwise ‘UNIV IN subset a’ does not hold. *)
+Theorem RING_FINITE_INTER' :
+    !r c. ring r /\ FINITE c /\ c SUBSET (subsets r) /\ c <> {} ==>
+          BIGINTER c IN (subsets r)
+Proof
+    prove_finite_inter' RING_INTER
+QED
 
 (* a ring is also a semiring (but not vice versa) *)
 val RING_IMP_SEMIRING = store_thm
@@ -2004,16 +2086,17 @@ val DYNKIN_THM = store_thm
 (*  Some further additions by Concordia HVG (M. Qasim & W. Ahmed)            *)
 (* ------------------------------------------------------------------------- *)
 
-(* |- semiring (sp,sts) <=>
-     subset_class sp sts /\ {} IN sts /\
-     (!s t. s IN sts /\ t IN sts ==> s INTER t IN sts) /\
-     !s t.
-         s IN sts /\ t IN sts ==>
-         ?c. c SUBSET sts /\ FINITE c /\ disjoint c /\ (s DIFF t = BIGUNION c)
+(* |- !sp sts.
+        semiring (sp,sts) <=>
+        subset_class sp sts /\ {} IN sts /\
+        (!s t. s IN sts /\ t IN sts ==> s INTER t IN sts) /\
+        !s t.
+          s IN sts /\ t IN sts ==>
+          ?c. c SUBSET sts /\ FINITE c /\ disjoint c /\ s DIFF t = BIGUNION c
  *)
-val semiring_alt = save_thm
-  ("semiring_alt",
-    REWRITE_RULE [space_def, subsets_def] (Q.SPEC `(sp,sts)` semiring_def));
+Theorem semiring_alt = semiring_def |> (Q.SPEC ‘(sp,sts)’)
+                                    |> REWRITE_RULE [space_def, subsets_def]
+                                    |> Q.GENL [‘sp’, ‘sts’]
 
 Theorem INTER_SPACE_EQ1 : (* was: Int_space_eq1 *)
     !sp sts . subset_class sp sts ==> !x. x IN sts ==> (sp INTER x = x)
@@ -2033,25 +2116,24 @@ Theorem SEMIRING_SETS_COLLECT : (* was: sets_Collect_conj *)
                 {x | x IN sp /\ Q x} IN sts ==>
                 {x | x IN sp /\ P x /\ Q x} IN sts
 Proof
- rpt GEN_TAC THEN SIMP_TAC std_ss [semiring_def] THEN
- rpt STRIP_TAC THEN
- FIRST_X_ASSUM (K_TAC o SPECL
-  [``{x | x IN sp /\ P x}``,``{x | x IN sp /\ Q x}``]) THEN
- FIRST_X_ASSUM (MP_TAC o SPECL
-  [``{x | x IN sp /\ P x}``,``{x | x IN sp /\ Q x}``]) THEN
- ASM_SIMP_TAC std_ss [GSPECIFICATION, INTER_DEF] THEN
- REWRITE_TAC [SET_RULE ``(A /\ B) /\ A /\ C <=> A /\ B /\ C``] THEN
- METIS_TAC[subsets_def]
+    rpt GEN_TAC
+ >> SIMP_TAC std_ss [semiring_def, space_def, subsets_def]
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!s t. s IN sts /\ t IN sts ==> ?c. _’ K_TAC
+ >> FIRST_X_ASSUM (MP_TAC o Q.SPECL [‘{x | x IN sp /\ P x}’, ‘{x | x IN sp /\ Q x}’])
+ >> ASM_SIMP_TAC std_ss [GSPECIFICATION, INTER_DEF]
+ >> REWRITE_TAC [SET_RULE “(A /\ B) /\ A /\ C <=> A /\ B /\ C”]
 QED
 
-(* |- ring (sp,sts) <=>
-     subset_class sp sts /\ {} IN sts /\
-     (!s t. s IN sts /\ t IN sts ==> s UNION t IN sts) /\
-     !s t. s IN sts /\ t IN sts ==> s DIFF t IN sts
+(* |- !sp sts.
+        ring (sp,sts) <=>
+        subset_class sp sts /\ {} IN sts /\
+        (!s t. s IN sts /\ t IN sts ==> s UNION t IN sts) /\
+        !s t. s IN sts /\ t IN sts ==> s DIFF t IN sts
  *)
-val ring_alt = save_thm
-  ("ring_alt",
-    REWRITE_RULE [space_def, subsets_def] (Q.SPEC `(sp,sts)` ring_def));
+Theorem ring_alt = ring_def |> Q.SPEC ‘(sp,sts)’
+                            |> REWRITE_RULE [space_def, subsets_def]
+                            |> Q.GENL [‘sp’, ‘sts’]
 
 (* A semiring becomes a ring if it's stable under finite union *)
 val ring_and_semiring = store_thm
@@ -3117,9 +3199,12 @@ Proof
  >> PROVE_TAC [SUBSET_DEF]
 QED
 
-(* Theorem 14.17 (i): alternative definition of product sigma-algebra [7, p.149] *)
-Theorem prod_sigma_alt_sigma_functions :
-    !A B. sigma_algebra A /\ sigma_algebra B ==>
+(* Theorem 14.17 (i): alternative definition of product sigma-algebra [7, p.149]
+
+   NOTE: previous antecedents ‘sigma_algebra A /\ sigma_algebra B’ has been weakened.
+ *)
+Theorem prod_sigma_alt_sigma_functions' :
+    !A B. algebra A /\ algebra B ==>
           prod_sigma A B =
           sigma_functions (space A CROSS space B)
                           (binary A B) (binary FST SND) {0; 1 :num}
@@ -3137,26 +3222,26 @@ Proof
        rw [Once EXTENSION, IN_CROSS] \\
        EQ_TAC >> rw [] \\
        Suff ‘s SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
-       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       FULL_SIMP_TAC std_ss [algebra_def, subset_class_def],
        (* goal 2 (of 4) *)
        rename1 ‘s IN subsets B’ \\
        DISJ2_TAC >> Q.EXISTS_TAC ‘s’ >> art [] \\
        rw [Once EXTENSION, IN_CROSS] \\
        EQ_TAC >> rw [] \\
        Suff ‘s SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
-       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       FULL_SIMP_TAC std_ss [algebra_def, subset_class_def],
        (* goal 3 (of 4) *)
        DISJ1_TAC >> Q.EXISTS_TAC ‘a’ >> art [] \\
        rw [Once EXTENSION, IN_CROSS] \\
        EQ_TAC >> rw [] \\
        Suff ‘a SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
-       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       FULL_SIMP_TAC std_ss [algebra_def, subset_class_def],
        (* goal 4 (of 4) *)
        DISJ2_TAC >> Q.EXISTS_TAC ‘b’ >> art [] \\
        rw [Once EXTENSION, IN_CROSS] \\
        EQ_TAC >> rw [] \\
        Suff ‘b SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
-       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def] ])
+       FULL_SIMP_TAC std_ss [algebra_def, subset_class_def] ])
  >> Rewr'
  >> ‘sts SUBSET subsets (sigma (space A CROSS space B) sts)’
        by PROVE_TAC [SIGMA_SUBSET_SUBSETS]
@@ -3166,11 +3251,11 @@ Proof
      [ (* goal 1 (of 2) *)
        rename1 ‘FST y IN a’ \\
        Suff ‘a SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
-       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+       FULL_SIMP_TAC std_ss [algebra_def, subset_class_def],
        (* goal 2 (of 2) *)
        rename1 ‘SND y IN b’ \\
        Suff ‘b SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
-       FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def] ])
+       FULL_SIMP_TAC std_ss [algebra_def, subset_class_def] ])
  >> DISCH_TAC
  >> Know ‘prod_sets (subsets A) (subsets B) SUBSET
           subsets (sigma (space A CROSS space B) sts)’
@@ -3180,10 +3265,10 @@ Proof
          EQ_TAC >> rw [] >| (* 2 subgoals *)
          [ (* goal 1 (of 2) *)
            Suff ‘u SUBSET space B’ >- METIS_TAC [SUBSET_DEF] \\
-           FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def],
+           FULL_SIMP_TAC std_ss [algebra_def, subset_class_def],
            (* goal 2 (of 2) *)
            Suff ‘t SUBSET space A’ >- METIS_TAC [SUBSET_DEF] \\
-           FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def] ]) \\
+           FULL_SIMP_TAC std_ss [algebra_def, subset_class_def] ]) \\
      Rewr' \\
      MATCH_MP_TAC SIGMA_ALGEBRA_INTER \\
      RW_TAC std_ss [] >| (* 2 subgoals *)
@@ -3212,17 +3297,30 @@ Proof
  >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
      rw [subset_class_def, IN_PROD_SETS] \\
      MATCH_MP_TAC SUBSET_CROSS \\
-     FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def, subset_class_def])
+     FULL_SIMP_TAC std_ss [algebra_def, subset_class_def])
  >> MATCH_MP_TAC SUBSET_TRANS
  >> Q.EXISTS_TAC ‘prod_sets (subsets A) (subsets B)’
  >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]
  >> rw [Abbr ‘sts’, SUBSET_DEF, IN_PROD_SETS]
  >| [ (* goal 1 (of 2) *)
       qexistsl_tac [‘a’, ‘space B’] >> art [] \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art [],
+      MATCH_MP_TAC ALGEBRA_SPACE >> art [],
       (* goal 2 (of 2) *)
       qexistsl_tac [‘space A’, ‘b’] >> art [] \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art [] ]
+      MATCH_MP_TAC ALGEBRA_SPACE >> art [] ]
+QED
+
+(* for compatibility purposes (and sometimes more applicable) *)
+Theorem prod_sigma_alt_sigma_functions :
+    !A B. sigma_algebra A /\ sigma_algebra B ==>
+          prod_sigma A B =
+          sigma_functions (space A CROSS space B)
+                          (binary A B) (binary FST SND) {0; 1 :num}
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC prod_sigma_alt_sigma_functions'
+ >> CONJ_TAC (* 2 subgoals, same tactics *)
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_ALGEBRA >> art []
 QED
 
 (* ------------------------------------------------------------------------- *)

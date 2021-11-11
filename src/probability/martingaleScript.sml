@@ -1,6 +1,6 @@
 (* ------------------------------------------------------------------------- *)
-(* The Theory of Martingales for Sigma-finite Measure Spaces                 *)
-(*  (Lebesgue Integral extras, Product Measure and Fubini-Tonelli's theorem) *)
+(* The Theory of Martingales for sigma-finite Measure Spaces                 *)
+(* (+ Lebesgue Integral extras, Product Measure and Fubini-Tonelli theorem)  *)
 (*                                                                           *)
 (* Author: Chun Tian (2019 - 2021)                                           *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
@@ -60,13 +60,13 @@ End
 
 (* usually denoted by (sp,sts,a,m) in textbooks *)
 Definition filtered_measure_space_def :
-   filtered_measure_space (sp,sts,m) a =
-           (measure_space (sp,sts,m) /\ filtration (sp,sts) a)
+   filtered_measure_space m a =
+      (measure_space m /\ filtration (m_space m,measurable_sets m) a)
 End
 
 Definition sigma_finite_filtered_measure_space_def :
-   sigma_finite_filtered_measure_space (sp,sts,m) a =
-      (filtered_measure_space (sp,sts,m) a /\ sigma_finite (sp,subsets (a 0),m))
+   sigma_finite_filtered_measure_space m a =
+      (filtered_measure_space m a /\ sigma_finite (m_space m,subsets (a 0),measure m))
 End
 
 Definition martingale_def :
@@ -1736,6 +1736,342 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*  Product measures and Fubini's theorem (Chapter 14 of [1])                *)
 (* ------------------------------------------------------------------------- *)
+
+(* ‘FCP_CONCAT s t’ is in place of ‘(a,b)’ (pair), thus ’fcp_pair a b’ is ‘a CROSS b’ *)
+val fcp_cross_def = Define (* cf. CROSS_DEF *)
+   ‘fcp_cross A B = {FCP_CONCAT a b | a IN A /\ b IN B}’;
+
+Theorem IN_FCP_CROSS : (* cf. IN_CROSS *)
+    !s a b. s IN fcp_cross a b <=> ?t u. (s = FCP_CONCAT t u) /\ t IN a /\ u IN b
+Proof
+    RW_TAC std_ss [fcp_cross_def, GSPECIFICATION, UNCURRY]
+ >> EQ_TAC >- PROVE_TAC []
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC `(t,u)`
+ >> RW_TAC std_ss []
+QED
+
+(* high dimensional space are made by lower dimensional spaces *)
+Theorem fcp_cross_UNIV :
+    FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+    fcp_cross univ(:'a['b]) univ(:'a['c]) = univ(:'a['b + 'c])
+Proof
+    rw [Once EXTENSION, IN_UNIV, GSPECIFICATION, IN_FCP_CROSS]
+ >> Q.EXISTS_TAC ‘FCP i. x ' (i + dimindex(:'c))’
+ >> Q.EXISTS_TAC ‘FCP i. x ' i’
+ >> rw [FCP_CONCAT_def, CART_EQ, index_sum, FCP_BETA]
+QED
+
+val fcp_prod_def = Define (* cf. prod_sets_def *)
+   ‘fcp_prod a b = {fcp_cross s t | s IN a /\ t IN b}’;
+
+Theorem IN_FCP_PROD :
+    !s A B. s IN fcp_prod A B <=> ?a b. (s = fcp_cross a b) /\ a IN A /\ b IN B
+Proof
+    RW_TAC std_ss [fcp_prod_def, GSPECIFICATION, UNCURRY]
+ >> EQ_TAC >- PROVE_TAC []
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC `(a,b)`
+ >> RW_TAC std_ss []
+QED
+
+Theorem FCP_BIGUNION_CROSS :
+    !f s t. fcp_cross (BIGUNION (IMAGE f s)) t = BIGUNION (IMAGE (\n. fcp_cross (f n) t) s)
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     rename1 ‘x = FCP_CONCAT c u’ \\
+     qexistsl_tac [‘c’,‘u’] >> art [])
+ >> rename1 ‘x = FCP_CONCAT c u’
+ >> qexistsl_tac [‘c’,‘u’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem FCP_CROSS_BIGUNION :
+    !f s t. fcp_cross t (BIGUNION (IMAGE f s)) = BIGUNION (IMAGE (\n. fcp_cross t (f n)) s)
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     rename1 ‘x = FCP_CONCAT c u’ \\
+     qexistsl_tac [‘c’,‘u’] >> art [])
+ >> rename1 ‘x = FCP_CONCAT c u’
+ >> qexistsl_tac [‘c’,‘u’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem FCP_CROSS_DIFF :
+    !(X :'a['b] set) s (t :'a['c] set).
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+        fcp_cross (X DIFF s) t = (fcp_cross X t) DIFF (fcp_cross s t)
+Proof
+    rw [Once EXTENSION, IN_FCP_CROSS, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      rename1 ‘c IN X’ >> qexistsl_tac [‘c’,‘u’] >> art [],
+      (* goal 2 (of 3) *)
+      rename1 ‘c IN X’ \\
+      rename [‘x = FCP_CONCAT c' u'’, ‘c' NOTIN s \/ u' NOTIN t’] \\
+      DISJ1_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
+      Suff ‘c = c'’ >- METIS_TAC [] \\
+      PROVE_TAC [FCP_CONCAT_11],
+      (* goal 3 (of 3) *)
+      rename1 ‘x = FCP_CONCAT c u’ \\
+      qexistsl_tac [‘c’,‘u’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem FCP_CROSS_DIFF' :
+    !(s :'a['b] set) (X :'a['c] set) t.
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+        fcp_cross s (X DIFF t) = (fcp_cross s X) DIFF (fcp_cross s t)
+Proof
+    rw [Once EXTENSION, IN_FCP_CROSS, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      rename1 ‘c IN s’ >> qexistsl_tac [‘c’,‘u’] >> art [],
+      (* goal 2 (of 3) *)
+      rename1 ‘c IN s’ \\
+      rename[‘x = FCP_CONCAT c' u'’,‘c' NOTIN s \/ u' NOTIN t’] \\
+      DISJ2_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
+      Suff ‘u = u'’ >- METIS_TAC [] \\
+      PROVE_TAC [FCP_CONCAT_11],
+      (* goal 3 (of 3) *)
+      rename1 ‘x = FCP_CONCAT c u’ \\
+      qexistsl_tac [‘c’,‘u’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem FCP_SUBSET_CROSS :
+    !(a :'a['b] set) b (c :'a['c] set) d.
+        a SUBSET b /\ c SUBSET d ==> (fcp_cross a c) SUBSET (fcp_cross b d)
+Proof
+    rpt STRIP_TAC
+ >> rw [SUBSET_DEF, IN_FCP_CROSS]
+ >> qexistsl_tac [‘t’, ‘u’] >> art []
+ >> PROVE_TAC [SUBSET_DEF]
+QED
+
+Theorem FCP_INTER_CROSS :
+    !(a :'a['b] set) (b :'a['c] set) c d.
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+       (fcp_cross a b) INTER (fcp_cross c d) = fcp_cross (a INTER c) (b INTER d)
+Proof
+    rw [Once EXTENSION, IN_INTER, IN_FCP_CROSS]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      fs [] >> qexistsl_tac [‘t’, ‘u’] >> art [] \\
+      PROVE_TAC [FCP_CONCAT_11],
+      (* goal 2 (of 3) *)
+      qexistsl_tac [‘t’, ‘u’] >> art [],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘t’, ‘u’] >> art [] ]
+QED
+
+(* see also LISP ... *)
+val pair_operation_def = Define
+   ‘pair_operation (cons :'a -> 'b -> 'c) car cdr =
+      ((!a b. (car (cons a b) = a) /\ (cdr (cons a b) = b)) /\
+       (!a b c d. (cons a b = cons c d) <=> (a = c) /\ (b = d)))’;
+
+(* two sample pair operations: comma (pairTheory) and FCP_CONCAT (fcpTheory) *)
+Theorem pair_operation_pair :
+    pair_operation (pair$, :'a -> 'b -> 'a # 'b)
+                   (FST :'a # 'b -> 'a) (SND :'a # 'b -> 'b)
+Proof
+    rw [pair_operation_def]
+QED
+
+Theorem pair_operation_FCP_CONCAT :
+    FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+    pair_operation (FCP_CONCAT :'a['b] -> 'a['c] -> 'a['b + 'c])
+                   (FCP_FST :'a['b + 'c] -> 'a['b])
+                   (FCP_SND :'a['b + 'c] -> 'a['c])
+Proof
+    DISCH_TAC
+ >> ASM_SIMP_TAC std_ss [pair_operation_def]
+ >> reverse CONJ_TAC >- METIS_TAC [FCP_CONCAT_11]
+ >> rpt GEN_TAC
+ >> PROVE_TAC [FCP_CONCAT_THM]
+QED
+
+val general_cross_def = Define
+   ‘general_cross (cons :'a -> 'b -> 'c) A B = {cons a b | a IN A /\ b IN B}’;
+
+Theorem IN_general_cross :
+    !cons s A B. s IN (general_cross cons A B) <=>
+                 ?a b. s = cons a b /\ a IN A /\ b IN B
+Proof
+    RW_TAC std_ss [general_cross_def, GSPECIFICATION]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (Cases_on ‘x’ >> fs [] >> qexistsl_tac [‘q’,‘r’] >> art [])
+ >> Q.EXISTS_TAC ‘(a,b)’ >> rw []
+QED
+
+(* alternative definition of pred_set$CROSS *)
+Theorem CROSS_ALT :
+    !A B. A CROSS B = general_cross pair$, A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_CROSS, IN_general_cross]
+ >> EQ_TAC >> rw [] >> fs []
+ >> qexistsl_tac [‘FST x’,‘SND x’] >> rw [PAIR]
+QED
+
+(* alternative definition of fcp_cross *)
+Theorem fcp_cross_alt :
+    !A B. fcp_cross A B = general_cross FCP_CONCAT A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_FCP_CROSS, IN_general_cross]
+QED
+
+val general_prod_def = Define
+   ‘general_prod (cons :'a -> 'b -> 'c) A B =
+      {general_cross cons a b | a IN A /\ b IN B}’;
+
+Theorem IN_general_prod :
+    !(cons :'a -> 'b -> 'c) s A B.
+        s IN general_prod cons A B <=> ?a b. (s = general_cross cons a b) /\ a IN A /\ b IN B
+Proof
+    RW_TAC std_ss [general_prod_def, GSPECIFICATION, UNCURRY]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (qexistsl_tac [‘FST x’, ‘SND x’] >> art [])
+ >> Q.EXISTS_TAC `(a,b)`
+ >> RW_TAC std_ss []
+QED
+
+(* alternative definition of prod_sets *)
+Theorem prod_sets_alt :
+    !A B. prod_sets A B = general_prod pair$, A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_PROD_SETS, IN_general_prod, GSYM CROSS_ALT]
+QED
+
+(* alternative definition of fcp_prod *)
+Theorem fcp_prod_alt :
+    !A B. fcp_prod A B = general_prod FCP_CONCAT A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_FCP_PROD, IN_general_prod, GSYM fcp_cross_alt]
+QED
+
+Theorem general_BIGUNION_CROSS :
+    !(cons :'a -> 'b -> 'c) f (s :'index set) t.
+       (general_cross cons (BIGUNION (IMAGE f s)) t =
+        BIGUNION (IMAGE (\n. general_cross cons (f n) t) s))
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_general_cross]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     qexistsl_tac [‘a’,‘b’] >> art [])
+ >> qexistsl_tac [‘a’,‘b’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem general_CROSS_BIGUNION :
+    !(cons :'a -> 'b -> 'c) f (s :'index set) t.
+       (general_cross cons t (BIGUNION (IMAGE f s)) =
+        BIGUNION (IMAGE (\n. general_cross cons t (f n)) s))
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_general_cross]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     qexistsl_tac [‘a’,‘b’] >> art [])
+ >> qexistsl_tac [‘a’,‘b’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem general_CROSS_DIFF :
+    !(cons :'a -> 'b -> 'c) car cdr (X :'a set) s (t :'b set).
+        pair_operation cons car cdr ==>
+       (general_cross cons (X DIFF s) t =
+        (general_cross cons X t) DIFF (general_cross cons s t))
+Proof
+    rw [Once EXTENSION, IN_general_cross, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [],
+      (* goal 2 (of 3) *)
+      DISJ1_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
+      Suff ‘a = a'’ >- METIS_TAC [] \\
+      METIS_TAC [pair_operation_def],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem general_CROSS_DIFF' :
+    !(cons :'a -> 'b -> 'c) car cdr (s :'a set) (X :'b set) t.
+        pair_operation cons car cdr ==>
+       (general_cross cons s (X DIFF t) =
+        (general_cross cons s X) DIFF (general_cross cons s t))
+Proof
+    rw [Once EXTENSION, IN_general_cross, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [],
+      (* goal 2 (of 3) *)
+      DISJ2_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
+      Suff ‘b = b'’ >- METIS_TAC [] \\
+      METIS_TAC [pair_operation_def],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem general_SUBSET_CROSS :
+    !(cons :'a -> 'b -> 'c) (a :'a set) b (c :'b set) d.
+        a SUBSET b /\ c SUBSET d ==>
+        (general_cross cons a c) SUBSET (general_cross cons b d)
+Proof
+    rpt STRIP_TAC
+ >> rw [SUBSET_DEF, IN_general_cross]
+ >> qexistsl_tac [‘a'’, ‘b'’] >> art []
+ >> PROVE_TAC [SUBSET_DEF]
+QED
+
+Theorem general_INTER_CROSS :
+    !(cons :'a -> 'b -> 'c) car cdr (a :'a set) (b :'b set) c d.
+        pair_operation cons car cdr ==>
+       ((general_cross cons a b) INTER (general_cross cons c d) =
+        general_cross cons (a INTER c) (b INTER d))
+Proof
+    rw [Once EXTENSION, IN_INTER, IN_general_cross]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      fs [] >> rename1 ‘x = cons s t’ \\
+      qexistsl_tac [‘s’, ‘t’] >> art [] \\
+      METIS_TAC [pair_operation_def],
+      (* goal 2 (of 3) *)
+      qexistsl_tac [‘a'’, ‘b'’] >> art [],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘a'’, ‘b'’] >> art [] ]
+QED
+
+Theorem INDICATOR_FN_FCP_CROSS :
+    !(s :'a['b] set) (t :'a['c] set) x y.
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+       (indicator_fn (fcp_cross s t) (FCP_CONCAT x y) =
+        indicator_fn s x * indicator_fn t y)
+Proof
+    rpt STRIP_TAC
+ >> rw [IN_FCP_CROSS, indicator_fn_def] (* 4 subgoals *)
+ >> METIS_TAC [FCP_CONCAT_11]
+QED
+
+Theorem indicator_fn_general_cross :
+    !(cons :'a -> 'b -> 'c) car cdr (s :'a set) (t :'b set) x y.
+        pair_operation cons car cdr ==>
+       (indicator_fn (general_cross cons s t) (cons x y) =
+        indicator_fn s x * indicator_fn t y)
+Proof
+    rpt STRIP_TAC
+ >> rw [IN_general_cross, indicator_fn_def] (* 4 subgoals *)
+ >> METIS_TAC [pair_operation_def]
+QED
 
 (* FCP version of ‘prod_sigma’ *)
 val fcp_sigma_def = Define
@@ -3642,14 +3978,34 @@ in
   val lborel_2d_def = new_specification ("lborel_2d_def", ["lborel_2d"], thm);
 end;
 
-Definition prod_measure_def : (* was: pair_measure_def *)
+(* NOTE: symbols are now aligned with real_measureTheory *)
+Definition prod_measure_def :
     prod_measure m1 m2 =
-      (m_space m1 CROSS m_space m2,
-       subsets ((m_space m1,measurable_sets m1) CROSS (m_space m2,measurable_sets m2)),
-       \s. pos_fn_integral m2 (\y. pos_fn_integral m1 (\x. indicator_fn s (x,y))))
+      \s. pos_fn_integral m2 (\y. pos_fn_integral m1 (\x. indicator_fn s (x,y)))
 End
 
-val _ = overload_on ("CROSS", “prod_measure”);
+Definition prod_measure_space_def : (* was: prod_measure_def or pair_measure_def *)
+    prod_measure_space m1 m2 =
+      (m_space m1 CROSS m_space m2,
+       subsets (prod_sigma (m_space m1,measurable_sets m1)
+                           (m_space m2,measurable_sets m2)),
+       prod_measure m1 m2)
+End
+
+val _ = overload_on ("CROSS", “prod_measure_space”);
+
+(* |- !m1 m2.
+        m1 CROSS m2 =
+        (m_space m1 CROSS m_space m2,
+         subsets
+           ((m_space m1,measurable_sets m1) CROSS
+            (m_space m2,measurable_sets m2)),
+         (\s.
+              pos_fn_integral m2
+                (\y. pos_fn_integral m1 (\x. indicator_fn s (x,y)))))
+ *)
+Theorem prod_measure_space_alt =
+    REWRITE_RULE [prod_measure_def] prod_measure_space_def
 
 Theorem measure_space_prod_measure : (* was: measure_space_pair_measure *)
     !m1 m2. sigma_finite_measure_space m1 /\
@@ -3681,15 +4037,15 @@ Proof
                                   (REWRITE_RULE [GSYM MEMBER_NOT_EMPTY])) \\
          rename1 ‘y IN s’ >> Q.EXISTS_TAC ‘(y,x)’ >> rw []) >> Rewr)
  >> RW_TAC std_ss []
- >> ‘m_space ((X,A,u) CROSS (Y,B,v)) = X CROSS Y’ by rw [prod_measure_def]
+ >> ‘m_space ((X,A,u) CROSS (Y,B,v)) = X CROSS Y’ by rw [prod_measure_space_alt]
  >> ‘measurable_sets ((X,A,u) CROSS (Y,B,v)) =
-     subsets ((X,A) CROSS (Y,B))’ by rw [prod_measure_def]
+     subsets ((X,A) CROSS (Y,B))’ by rw [prod_measure_space_alt]
  >> Know ‘space ((X,A) CROSS (Y,B)) = X CROSS Y’
  >- (rw [prod_sigma_def] >> REWRITE_TAC [SPACE_SIGMA]) >> DISCH_TAC
  >> fs [sigma_finite_measure_space_def]
  >> MATCH_MP_TAC measure_space_eq
  >> Q.EXISTS_TAC ‘(X CROSS Y,subsets ((X,A) CROSS (Y,B)),m)’
- >> rw [prod_measure_def]
+ >> rw [prod_measure_space_alt]
 QED
 
 (* ‘lborel_2d = lborel CROSS lborel’ doesn't hold *)
@@ -3697,7 +4053,7 @@ Theorem lborel_2d_prod_measure :
     !s. s IN measurable_sets lborel_2d ==>
         measure lborel_2d s = measure (lborel CROSS lborel) s
 Proof
-    RW_TAC std_ss [prod_measure_def]
+    RW_TAC std_ss [prod_measure_space_alt]
  >> STRIP_ASSUME_TAC lborel_2d_def
  >> rw [space_lborel, sets_lborel]
  >> METIS_TAC []
@@ -3784,10 +4140,10 @@ Proof
  (* applying lemma_fn_seq_sup *)
  >> MP_TAC (Q.SPECL [‘(X,A,u) CROSS (Y,B,v)’, ‘f’]
                     (INST_TYPE [alpha |-> “:'a # 'b”] lemma_fn_seq_sup))
- >> ‘m_space ((X,A,u) CROSS (Y,B,v)) = X CROSS Y’ by rw [prod_measure_def]
+ >> ‘m_space ((X,A,u) CROSS (Y,B,v)) = X CROSS Y’ by rw [prod_measure_space_alt]
  >> ASM_REWRITE_TAC [] >> DISCH_TAC
  >> ‘measurable_sets ((X,A,u) CROSS (Y,B,v)) =
-       subsets ((X,A) CROSS (Y,B))’ by rw [prod_measure_def]
+       subsets ((X,A) CROSS (Y,B))’ by rw [prod_measure_space_alt]
  >> Know ‘space ((X,A) CROSS (Y,B)) = X CROSS Y’
  >- (rw [prod_sigma_def] >> REWRITE_TAC [SPACE_SIGMA]) >> DISCH_TAC
  >> fs [sigma_finite_measure_space_def]
@@ -4528,7 +4884,7 @@ Proof
       measure ((X,A,u) CROSS (Y,B,v)) (t n)’
          by METIS_TAC [pos_fn_integral_indicator] >> POP_ORW \\
       Know ‘measure ((X,A,u) CROSS (Y,B,v)) (t n) = m (t n)’
-      >- (rw [prod_measure_def]) >> Rewr' \\
+      >- (rw [prod_measure_space_alt]) >> Rewr' \\
    (* stage work *)
       Suff ‘pos_fn_integral (Y,B,v)
               (\y. pos_fn_integral (X,A,u)
@@ -4567,7 +4923,7 @@ Proof
           measure ((X,A,u) CROSS (Y,B,v)) (s n k)’
          by METIS_TAC [pos_fn_integral_indicator] >> POP_ORW \\
       Know ‘!k. measure ((X,A,u) CROSS (Y,B,v)) (s n k) = m (s n k)’
-      >- (rw [prod_measure_def]) >> Rewr' \\
+      >- (rw [prod_measure_space_alt]) >> Rewr' \\
    (* LHS simplification *)
       Know ‘pos_fn_integral (Y,B,v)
               (\y. pos_fn_integral (X,A,u)
@@ -4975,7 +5331,7 @@ Proof
       measure ((X,A,u) CROSS (Y,B,v)) (t n)’
          by METIS_TAC [pos_fn_integral_indicator] >> POP_ORW \\
       Know ‘measure ((X,A,u) CROSS (Y,B,v)) (t n) = m (t n)’
-      >- (rw [prod_measure_def]) >> Rewr' \\
+      >- (rw [prod_measure_space_alt]) >> Rewr' \\
    (* stage work *)
       Suff ‘pos_fn_integral (X,A,u)
               (\x. pos_fn_integral (Y,B,v)
@@ -5014,7 +5370,7 @@ Proof
           measure ((X,A,u) CROSS (Y,B,v)) (s n k)’
          by METIS_TAC [pos_fn_integral_indicator] >> POP_ORW \\
       Know ‘!k. measure ((X,A,u) CROSS (Y,B,v)) (s n k) = m (s n k)’
-      >- (rw [prod_measure_def]) >> Rewr' \\
+      >- (rw [prod_measure_space_alt]) >> Rewr' \\
    (* LHS simplification *)
       Know ‘pos_fn_integral (X,A,u)
               (\x. pos_fn_integral (Y,B,v)
@@ -5182,9 +5538,9 @@ Proof
  >> STRIP_TAC (* P /\ Q /\ R *)
  >> Know ‘space ((X,A) CROSS (Y,B)) = X CROSS Y’
  >- (rw [prod_sigma_def] >> REWRITE_TAC [SPACE_SIGMA]) >> DISCH_TAC
- >> ‘m_space ((X,A,u) CROSS (Y,B,v)) = X CROSS Y’ by rw [prod_measure_def]
+ >> ‘m_space ((X,A,u) CROSS (Y,B,v)) = X CROSS Y’ by rw [prod_measure_space_alt]
  >> ‘measurable_sets ((X,A,u) CROSS (Y,B,v)) =
-       subsets ((X,A) CROSS (Y,B))’ by rw [prod_measure_def]
+       subsets ((X,A) CROSS (Y,B))’ by rw [prod_measure_space_alt]
  >> ‘(X CROSS Y,subsets ((X,A) CROSS (Y,B))) = (X,A) CROSS (Y,B)’
        by METIS_TAC [SPACE]
  >> STRONG_CONJ_TAC
@@ -5712,57 +6068,29 @@ val FILTRATION = store_thm
  >- (DISCH_TAC >> IMP_RES_TAC FILTRATION_SUBSETS >> fs [filtration_def])
  >> RW_TAC std_ss [filtration_def]);
 
-Theorem filtered_measure_space_alt :
-    !m a. filtered_measure_space m a <=>
-          measure_space m /\ filtration (m_space m,measurable_sets m) a
-Proof
-    rpt GEN_TAC
- >> Cases_on `m` >> Cases_on `r`
- >> REWRITE_TAC [filtered_measure_space_def, m_space_def, measurable_sets_def]
-QED
-
-Theorem sigma_finite_filtered_measure_space :
-    !m a. sigma_finite_filtered_measure_space m a <=>
-          measure_space m /\ filtration (m_space m,measurable_sets m) a /\
-          sigma_finite (m_space m,subsets (a 0),measure m)
-Proof
-    rpt GEN_TAC
- >> Cases_on ‘m’ >> Cases_on ‘r’ >> rename1 ‘measure_space (sp,sts,m)’
- >> rw [sigma_finite_filtered_measure_space_def,
-        filtered_measure_space_def, GSYM CONJ_ASSOC]
-QED
-
 (* all sub measure spaces of a sigma-finite fms are also sigma-finite *)
-Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE[local] :
-    !sp sts m a. sigma_finite_filtered_measure_space (sp,sts,m) a ==>
-                 !n. sigma_finite (sp,subsets (a n),m)
+Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE :
+    !m a. sigma_finite_filtered_measure_space m a ==>
+          !n. sigma_finite (m_space m,subsets (a n),measure m)
 Proof
     RW_TAC std_ss [sigma_finite_filtered_measure_space_def,
                    filtered_measure_space_def, filtration_def]
- >> Know `measure_space (sp,subsets (a 0),m) /\
-          measure_space (sp,subsets (a n),m)`
+ >> Know ‘measure_space (m_space m,subsets (a 0),measure m) /\
+          measure_space (m_space m,subsets (a n),measure m)’
  >- (CONJ_TAC \\ (* 2 subgoals, same tactics *)
-     MATCH_MP_TAC
-       (REWRITE_RULE [m_space_def, measurable_sets_def, measure_def]
-                     (Q.SPEC `(sp,sts,m)` SUB_SIGMA_ALGEBRA_MEASURE_SPACE)) >> art [])
+     MATCH_MP_TAC (Q.SPEC ‘m’ SUB_SIGMA_ALGEBRA_MEASURE_SPACE) >> art [])
  >> STRIP_TAC
  >> POP_ASSUM (simp o wrap o (MATCH_MP SIGMA_FINITE_ALT))
  >> POP_ASSUM (fs o wrap o (MATCH_MP SIGMA_FINITE_ALT))
- >> Q.EXISTS_TAC `f`
- >> fs [IN_FUNSET, IN_UNIV, measurable_sets_def, m_space_def, measure_def]
- >> `0 <= n` by RW_TAC arith_ss []
+ >> Q.EXISTS_TAC ‘f’
+ >> fs [IN_FUNSET, measurable_sets_def, m_space_def, measure_def]
+ >> ‘0 <= n’ by rw []
  >> METIS_TAC [SUBSET_DEF]
 QED
 
-(* |- !m a.
-        sigma_finite_filtered_measure_space m a ==>
-        !n. sigma_finite (m_space m,subsets (a n),measure m)
- *)
-Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE_I =
-        SIGMA_FINITE_FILTERED_MEASURE_SPACE
-    |> (Q.SPECL [‘m_space m’, ‘measurable_sets m’, ‘measure m’])
-    |> (Q.GEN ‘m’)
-    |> (REWRITE_RULE [MEASURE_SPACE_REDUCE])
+Theorem sigma_finite_filtered_measure_space_alt =
+    REWRITE_RULE [filtered_measure_space_def]
+                 sigma_finite_filtered_measure_space_def
 
 Theorem sigma_finite_filtered_measure_space_alt_all :
     !m a. sigma_finite_filtered_measure_space m a <=>
@@ -5771,10 +6099,10 @@ Theorem sigma_finite_filtered_measure_space_alt_all :
 Proof
     rpt GEN_TAC
  >> reverse EQ_TAC
- >- RW_TAC std_ss [sigma_finite_filtered_measure_space]
+ >- rw [sigma_finite_filtered_measure_space_alt]
  >> DISCH_TAC
- >> IMP_RES_TAC SIGMA_FINITE_FILTERED_MEASURE_SPACE_I
- >> fs [sigma_finite_filtered_measure_space]
+ >> IMP_RES_TAC SIGMA_FINITE_FILTERED_MEASURE_SPACE
+ >> fs [sigma_finite_filtered_measure_space_alt]
 QED
 
 (* the smallest sigma-algebra generated by all (a n) *)
@@ -5832,7 +6160,7 @@ QED
 (* simple alternative definitions: ‘n < SUC n’ is replaced by ‘i <= j’ *)
 val martingale_shared_tactics_1 =
     reverse EQ_TAC >- RW_TAC arith_ss []
- >> RW_TAC arith_ss [sigma_finite_filtered_measure_space]
+ >> RW_TAC arith_ss [sigma_finite_filtered_measure_space_alt]
  >> Q.PAT_X_ASSUM ‘i <= j’ MP_TAC
  >> Induct_on ‘j - i’
  >- (RW_TAC arith_ss [] \\
@@ -5901,7 +6229,8 @@ QED
 
 val martingale_alt_generator_shared_tactics_1 =
     qx_genl_tac [‘m’, ‘a’, ‘u’, ‘G’]
- >> RW_TAC std_ss [sigma_finite_filtered_measure_space, filtered_measure_space_alt,
+ >> RW_TAC std_ss [sigma_finite_filtered_measure_space_alt,
+                   filtered_measure_space_def,
                    martingale_alt, sub_martingale_alt, super_martingale_alt]
  >> EQ_TAC (* easy part first *)
  >- (RW_TAC std_ss [] \\
