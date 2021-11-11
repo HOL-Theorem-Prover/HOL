@@ -780,14 +780,14 @@ val FCP_CONCAT_def = Define`
            else
               a ' (i - dimindex(:'c))): 'a ** ('b + 'c)`
 
-(* FCP_SND returns the "higher" dimension part (:'a['b]) of :'a['b + 'c] *)
+(* FCP_FST returns the "higher" dimensional part (:'a['b]) of ‘v :'a['b + 'c]’ *)
 Definition FCP_FST_def :
-   FCP_FST (a :'a ** ('b + 'c)) = (FCP i. a ' (i + dimindex (:'c))) :'a ** 'b
+   FCP_FST (v :'a ** ('b + 'c)) = (FCP i. v ' (i + dimindex (:'c))) :'a ** 'b
 End
 
-(* FCP_SND returns the "lower" dimension part (:'a['c]) of :'a['b + 'c] *)
+(* FCP_SND returns the "lower" dimensional part (:'a['c]) of ‘v :'a['b + 'c]’ *)
 Definition FCP_SND_def :
-   FCP_SND (b :'a ** ('b + 'c)) = (FCP i. b ' i) :'a ** 'c
+   FCP_SND (v :'a ** ('b + 'c)) = (FCP i. v ' i) :'a ** 'c
 End
 
 val FCP_ZIP_def = Define`
@@ -879,7 +879,7 @@ val fcp_subst_comp = Q.store_thm("fcp_subst_comp",
 
 val () = computeLib.add_persistent_funs ["FCP_EXISTS", "FCP_EVERY"]
 
-(* connections to FCP_FST and FCP_SND, added by Chun Tian *)
+(* Connections between FCP_CONCAT, FCP_FST and FCP_SND *)
 Theorem FCP_CONCAT_THM :
     !(a :'a['b]) (b :'a['c]).
         FINITE univ(:'b) /\ FINITE univ(:'c) ==>
@@ -894,7 +894,7 @@ Proof
       REWRITE_TAC [FCP_CONCAT_def, index_comp] >> simp [index_sum] ]
 QED
 
-Theorem FCP_CONCAT_11 : (* added by Chun Tian *)
+Theorem FCP_CONCAT_11 :
     !(a :'a['b]) (b :'a['c]) c d.
         FINITE univ(:'b) /\ FINITE univ(:'c) /\
        (FCP_CONCAT a b = FCP_CONCAT c d) ==> (a = c) /\ (b = d)
