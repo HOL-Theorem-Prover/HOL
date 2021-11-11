@@ -47,13 +47,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    ONE_LT_NONZERO    |- !n. 1 < n ==> n <> 0
    NOT_LT_ONE        |- !n. ~(1 < n) <=> (n = 0) \/ (n = 1)
    NOT_ZERO_GE_ONE   |- !n. n <> 0 <=> 1 <= n
-   ONE_LE_NONZERO    |- !n. 1 <= n <=> n <> 0
    LE_ONE            |- !n. n <= 1 <=> (n = 0) \/ (n = 1)
-   LT_ONE            |- !n. n < 1 <=> (n = 0)
-   LT_TWO            |- !n. n < 2 <=> (n = 0) \/ (n = 1)
-   LESS_TWICE        |- !m n. m < TWICE n ==> m - n < n
-   LESS_NOT_EQ       |- !m n. m < n ==> m <> n
-   LESS_SELF         |- !n. ~(n < n)
    LESS_SUC          |- !n. n < SUC n
    PRE_LESS          |- !n. 0 < n ==> PRE n < n
    LESS_EQ_SUC       |- !n. 0 < n ==> ?m. n = SUC m
@@ -434,52 +428,12 @@ val NOT_ZERO_GE_ONE = store_thm(
   ``!n. n <> 0 <=> 1 <= n``,
   decide_tac);
 
-(* Theorem: 1 <= n <=> n <> 0 *)
-(* Proof: by arithmetic *)
-val ONE_LE_NONZERO = store_thm(
-  "ONE_LE_NONZERO",
-  ``!n. 1 <= n <=> n <> 0``,
-  decide_tac);
-(* This is the reverse of: NOT_ZERO_GE_ONE *)
-
 (* Theorem: n <= 1 <=> (n = 0) \/ (n = 1) *)
 (* Proof: by arithmetic *)
 val LE_ONE = store_thm(
   "LE_ONE",
   ``!n. n <= 1 <=> (n = 0) \/ (n = 1)``,
   decide_tac);
-
-(* Theorem: n < 1 <=> (n = 0) *)
-(* Proof: by arithmetic *)
-val LT_ONE = store_thm(
-  "LT_ONE",
-  ``!n. n < 1 <=> (n = 0)``,
-  decide_tac);
-
-(* Theorem: n < 2 <=> (n = 0) \/ (n = 1) *)
-(* Proof: by arithmetic *)
-val LT_TWO = store_thm(
-  "LT_TWO",
-  ``!n. n < 2 <=> (n = 0) \/ (n = 1)``,
-  decide_tac);
-
-(* Theorem: m < 2 * n ==> m - n < n *)
-(* Proof: by arithmetic *)
-val LESS_TWICE = store_thm(
-  "LESS_TWICE",
-  ``!m n. m < 2 * n ==> m - n < n``,
-  decide_tac);
-
-(* Theorem: m < n ==> m <> n *)
-(* Proof: by arithmetic. *)
-val LESS_NOT_EQ = store_thm(
-  "LESS_NOT_EQ",
-  ``!m n. m < n ==> m <> n``,
-  decide_tac);
-
-(* Theorem alias *)
-val LESS_SELF = save_thm("LESS_SELF", prim_recTheory.LESS_REFL);
-(* val LESS_SELF = |- !n. ~(n < n): thm *)
 
 (* arithmeticTheory.LESS_EQ_SUC_REFL |- !m. m <= SUC m *)
 (* Theorem: n < SUC n *)

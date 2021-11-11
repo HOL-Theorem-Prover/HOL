@@ -14,22 +14,11 @@ val _ = new_theory "Mobius";
 
 
 
-(* val _ = load "jcLib"; *)
 open jcLib;
-
-(* Get dependent theories in lib *)
-(*
-(* val _ = load "helperNumTheory"; *)
-(* val _ = load "helperSetTheory"; *)
-(* val _ = load "helperListTheory"; *)
-*)
-(* val _ = load "GaussTheory"; *)
 
 (* open dependent theories *)
 open pred_setTheory listTheory;
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open arithmeticTheory dividesTheory gcdTheory;
+open prim_recTheory arithmeticTheory dividesTheory gcdTheory;
 
 open helperNumTheory helperSetTheory helperListTheory;
 

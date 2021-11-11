@@ -37,14 +37,10 @@ open subgroupTheory;
 (* val _ = load "groupProductTheory"; *)
 open groupProductTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperFunctionTheory"; -- in groupOrderTheory *) *)
-(* (* val _ = load "helperNumTheory"; -- in helperFunctionTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in helperFunctionTheory *) *)
 open helperNumTheory helperSetTheory helperFunctionTheory;
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
+open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory;
 
 (* val _ = load "GaussTheory"; *)
 open EulerTheory GaussTheory; (* for residue *)

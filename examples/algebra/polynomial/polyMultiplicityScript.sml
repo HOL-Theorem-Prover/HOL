@@ -14,18 +14,9 @@ val _ = new_theory "polyMultiplicity";
 
 
 
-(* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
 (* Get dependent theories local *)
-
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* (* val _ = load "polyDivisionTheory"; *) *)
-(* val _ = load "polyGCDTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 open polyBinomialTheory polyDivisionTheory polyEvalTheory;
 open polyMonicTheory;
@@ -36,33 +27,15 @@ open polyIrreducibleTheory;
 open polyDerivativeTheory;
 open polyGCDTheory;
 
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
 open monoidTheory groupTheory ringTheory;
-(* ringUnitTheory; *)
-(* (* val _ = load "fieldTheory"; *) *)
 open fieldTheory;
 
-(*
-open subgroupTheory;
-open groupOrderTheory;
-
-(* val _ = load "groupCyclicTheory"; *)
-open groupCyclicTheory;
-*)
-
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open prim_recTheory pred_setTheory listTheory arithmeticTheory;
 
 (* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
 open helperNumTheory helperSetTheory;
 
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
 open dividesTheory gcdTheory;
 
 

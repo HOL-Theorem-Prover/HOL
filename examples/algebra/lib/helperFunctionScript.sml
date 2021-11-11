@@ -23,15 +23,16 @@ open helperNumTheory helperListTheory;
 open helperSetTheory;
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory;
+open pred_setTheory prim_recTheory arithmeticTheory;
 open dividesTheory gcdTheory;
 
 
 (* ------------------------------------------------------------------------- *)
 (* Helper Function Documentation                                             *)
 (* ------------------------------------------------------------------------- *)
-(* Overloading:
-   x == y (f)          = fequiv x y f
+(* Overloading/syntax:
+   (x == y) f          = fequiv x y f
+   feq                 = flip (flip o fequiv)
    RISING f            = !x:num. x <= f x
    FALLING f           = !x:num. f x <= x
    SQRT n              = ROOT 2 n
@@ -44,13 +45,12 @@ open dividesTheory gcdTheory;
 
    Function Equivalence as Relation:
    fequiv_def         |- !x y f. fequiv x y f <=> (f x = f y)
-#  fequiv_refl        |- !f x. (x == x) f
+   fequiv_refl        |- !f x. (x == x) f
    fequiv_sym         |- !f x y. (x == y) f ==> (y == x) f
    fequiv_trans       |- !f x y z. (x == y) f /\ (y == z) f ==> (x == z) f
    fequiv_equiv_class |- !f. (\x y. (x == y) f) equiv_on univ(:'a)
 
    Function-based Equivalence:
-   feq_def             |- !f x y. feq f x y <=> (f x = f y)
    feq_class_def       |- !s f n. feq_class f s n = {x | x IN s /\ (f x = n)}
    feq_class_element   |- !f s n x. x IN feq_class f s n <=> x IN s /\ (f x = n)
    feq_class_property  |- !f s x. feq_class f s (f x) = {y | y IN s /\ feq f x y}

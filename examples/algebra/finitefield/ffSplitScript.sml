@@ -14,13 +14,10 @@ val _ = new_theory "ffSplit";
 
 
 
-(* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
 
 (* Get dependent theories local *)
-(* val _ = load "ffExtendTheory"; *)
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
@@ -32,25 +29,15 @@ open ffUnityTheory;
 open ffExistTheory;
 open ffExtendTheory;
 
-(* Bag theory before pre_setTheory *)
-(* val _ = load "bagTheory"; (* for helper *) *)
 open bagTheory; (* also has MEMBER_NOT_EMPTY *)
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open prim_recTheory pred_setTheory listTheory arithmeticTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringTheory *) *)
 open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
 
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
 open dividesTheory gcdTheory;
 
-(* (* val _ = load "fieldTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
 open monoidInstancesTheory;
 open groupInstancesTheory;
@@ -63,14 +50,10 @@ open subgroupTheory;
 open groupOrderTheory;
 open fieldOrderTheory;
 
-(* (* val _ = load "groupCyclicTheory"; *) *)
 open groupCyclicTheory;
 
-(* (* val _ = load "ringBinomialTheory"; *) *)
 open ringBinomialTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 open polyDivisionTheory polyBinomialTheory;
 open polyDividesTheory;
@@ -81,16 +64,13 @@ open polyFieldModuloTheory;
 open polyRingModuloTheory;
 open polyModuloRingTheory;
 
-(* (* val _ = load "polyMapTheory"; *) *)
 open polyIrreducibleTheory;
 open polyGCDTheory;
 open polyMultiplicityTheory;
 open polyMapTheory;
 
-(* (* val _ = load "polyProductTheory"; *) *)
 open polyProductTheory; (* for PPROD *)
 
-(* (* val _ = load "GaussTheory"; *) *)
 open GaussTheory; (* for divisors *)
 
 

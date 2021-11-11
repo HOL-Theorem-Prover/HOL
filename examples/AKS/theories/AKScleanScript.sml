@@ -12,16 +12,9 @@ val _ = new_theory "AKSclean";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
-(* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
 (* Get dependent theories local *)
-
-(* val _ = load "AKSimprovedTheory"; *)
 open AKSimprovedTheory;
 open AKSrevisedTheory;
 open AKStheoremTheory;
@@ -30,24 +23,18 @@ open AKSsetsTheory;
 open AKSintroTheory;
 open AKSshiftTheory;
 
-(* val _ = load "countAKSTheory"; *)
 open countAKSTheory; (* for aks0_eq_aks *)
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open prim_recTheory pred_setTheory listTheory arithmeticTheory;
 
 (* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
 open helperNumTheory helperSetTheory helperListTheory;
 open helperFunctionTheory;
 
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
 open dividesTheory gcdTheory;
 open logPowerTheory;
 
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open fieldInstancesTheory;
 open ringInstancesTheory;
 open groupInstancesTheory; (* for Estar_group *)
@@ -59,7 +46,6 @@ open polyRingModuloTheory; (* for poly_mod_ring_has_monomials *)
 open polyFieldModuloTheory; (* for poly_mod_prod_group *)
 open polyIrreducibleTheory; (* for poly_irreducible_poly *)
 
-(* (* val _ = load "computeRingTheory"; *) *)
 open computeBasicTheory;
 open computeOrderTheory;
 open computePolyTheory;
@@ -67,7 +53,6 @@ open computeRingTheory;
 open computeParamTheory;
 open computeAKSTheory;
 
-(* (* val _ = load "GaussTheory"; *) *)
 open GaussTheory; (* for phi_le *)
 
 
