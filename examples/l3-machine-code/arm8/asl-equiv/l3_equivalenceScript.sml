@@ -156,7 +156,16 @@ Definition asl_sys_regs_ok_def:
       ¬word_bit 34 HCR_EL2 (* Virtualization Host Extension (FEAT_VHE) disabled *)) ∧
 
     asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0b0w ∧
-    word_bit 4 ((asl.regstate.ProcState_reg "PSTATE").ProcState_M)
+    word_bit 4 ((asl.regstate.ProcState_reg "PSTATE").ProcState_M) ∧
+
+    (let TCR_EL1 = asl.regstate.bitvector_64_dec_reg "TCR_EL1" in
+      ¬word_bit 51 TCR_EL1 ∧ ¬word_bit 52 TCR_EL1) ∧
+
+    (let TCR_EL2 = asl.regstate.bitvector_64_dec_reg "TCR_EL2" in
+      ¬word_bit 29 TCR_EL2) ∧
+
+    (let TCR_EL3 = asl.regstate.bitvector_32_dec_reg "TCR_EL3" in
+      ¬word_bit 29 TCR_EL3)
 End
 
 val _ = export_theory();

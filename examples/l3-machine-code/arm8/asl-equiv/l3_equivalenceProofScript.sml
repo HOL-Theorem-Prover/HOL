@@ -25,13 +25,11 @@ Proof
   rw[HaveVirtHostExt_def]
 QED
 
-(*
 Theorem HavePACExt_T[simp]:
   HavePACExt () = T
 Proof
   rw[HavePACExt_def]
 QED
-*)
 
 Theorem HaveAnyAArch32_T[simp]:
   HaveAnyAArch32 () = T
@@ -1808,203 +1806,141 @@ Proof
   simp[returnS] >> gvs[write'X_def]
 QED
 
-(* TODO alternatively unset bits 29 of TCR_EL3, ??? of TCR_EL2, and 51/52 of TCR_EL1? *)
-Theorem l3_asl_BranchTo:
-  ¬ HavePACExt () ⇒ (* TODO versioning issue here *)
-  ∀l3 asl1.
-    state_rel l3 asl1 ∧ asl_sys_regs_ok asl1
-  ⇒ ∀target btype. ∃asl2.
-      do addr <- AArch64_BranchAddr target; write_regS PC_ref addr od asl1 =
-        returnS () asl2 ∧
-      state_rel (BranchTo (target, btype) l3) asl2 ∧
-      asl_sys_regs_ok asl2
+Theorem l3_asl_AddrTop:
+  ∀l3 asl.
+    state_rel l3 asl ∧ asl_sys_regs_ok asl
+  ⇒ ∀target.
+      AddrTop target T l3.PSTATE.EL asl = returnS
+        (case l3.PSTATE.EL of
+        | 2w =>
+          if l3.TCR_EL2.TBI ∧ ¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL2) then 55 else 63
+        | 3w =>
+          if l3.TCR_EL3.TBI ∧ ¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL3) then 55 else 63
+        | _ =>
+          if word_bit 55 target then
+            if l3.TCR_EL1.TBI1 ∧ ¬word_bit 52 (reg'TCR_EL1 l3.TCR_EL1) then 55 else 63
+          else if l3.TCR_EL1.TBI0 ∧ ¬word_bit 51 (reg'TCR_EL1 l3.TCR_EL1) then 55 else 63
+        ) asl
 Proof
-  rw[AArch64_BranchAddr_def] >>
-  qspec_then `asl1` mp_tac UsingAArch32_F >>
+  rpt gen_tac >> strip_tac >> gen_tac >> simp[AddrTop_def] >>
+  qspecl_then [`asl`,`l3.PSTATE.EL`] mp_tac S1TranslationRegime >>
   impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
-  drule returnS_bindS_unit >> rw[] >> pop_assum kall_tac >>
-  qspec_then `asl1` assume_tac PSTATE_read >>
-  drule returnS_bindS_unit >> rw[] >>
-  pop_assum kall_tac >> simp[AddrTop_def] >>
-  qmatch_goalsub_abbrev_tac `S1TranslationRegime el` >>
-  `el = l3.PSTATE.EL` by (unabbrev_all_tac >> state_rel_tac[]) >> gvs[] >>
-  qspecl_then [`asl1`,`l3.PSTATE.EL`] mp_tac S1TranslationRegime >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
-  drule returnS_bindS_unit >> simp[] >>
+  drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
   disch_then kall_tac >> qmatch_goalsub_abbrev_tac `ELUsingAArch32 el` >>
-  qspecl_then [`asl1`,`el`] mp_tac ELUsingAArch32_F >> simp[] >> impl_tac
+  qspecl_then [`asl`,`el`] mp_tac ELUsingAArch32_F >> simp[] >> impl_tac
   >- (unabbrev_all_tac >> rw[] >> gvs[asl_sys_regs_ok_def]) >> strip_tac >>
-  drule returnS_bindS_unit >> simp[] >>
+  drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
   disch_then kall_tac >>
   `el = 1w ∨ el = 2w ∨ el = 3w` by (
     rw[Abbr `el`] >> Cases_on_word_value `l3.PSTATE.EL` >> gvs[]) >>
   simp[asl_word_rws, EL_MAP, el_w2v]
-  >- ( (* EL0 and EL1 *)
-    ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
-    simp[extract_bit_64, v2w_word1_eq] >>
-    `arm8$BranchTo (target, btype) l3 =
-      let s1 = arm8$Hint_Branch btype l3 in
-      let s0 = (if word_bit 55 target ∧ s1.TCR_EL1.TBI1 then
-                  bit_field_insert 63 56 (0b11111111w : 8 word) target else target) in
-      let s = (if ¬word_bit 55 s0 ∧ s1.TCR_EL1.TBI0 then
-                    bit_field_insert 63 56 (0b0w : 8 word) s0 else s0,s1) in
-      SND s with PC := FST s` by (
-        LET_ELIM_TAC >>
-        `l3.PSTATE.EL = EL0 ∨ l3.PSTATE.EL = EL1` by (
-          unabbrev_all_tac >> gvs[] >> every_case_tac >> gvs[]) >>
-        simp[BranchTo_def, Abbr `s1`, Hint_Branch_def] >>
-        unabbrev_all_tac >> gvs[Hint_Branch_def]) >>
-    simp[Hint_Branch_def] >>
+  >- (
+    ntac 4 $ simp[Once sail2_valuesTheory.just_list_def] >>
     `target ' 55 = word_bit 55 target` by WORD_DECIDE_TAC >> simp[] >>
-    IF_CASES_TAC >> gvs[]
-    >- (
-      ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
-      drule TCR_EL1_read >> strip_tac >>
-      drule returnS_bindS_unit >> simp[] >>
-      disch_then kall_tac >>
-      qpat_x_assum `ELUsingAArch32 _ _ = _` assume_tac >>
-      drule returnS_bindS_unit >> simp[] >>
-      disch_then kall_tac >>
-      `word_bit 38 (reg'TCR_EL1 l3.TCR_EL1) = l3.TCR_EL1.TBI1` by (
-        rpt $ pop_assum kall_tac >> simp[reg'TCR_EL1_def] >>
-        CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
-      simp[] >>
-      qpat_abbrev_tac `con = if _ then 55 else 63i` >>
-      `¬ (63 - con < 0)` by (unabbrev_all_tac >> IF_CASES_TAC >> gvs[]) >>
-      gvs[] >> DEP_REWRITE_TAC[EL_MAP] >> simp[sail2_valuesTheory.just_list_def] >>
-      conj_tac >- (unabbrev_all_tac >> IF_CASES_TAC >> gvs[]) >>
-      qmatch_goalsub_abbrev_tac `word_bit 55 foo` >>
-      `word_bit 55 foo = word_bit 55 target` by (
-        unabbrev_all_tac >> rpt $ pop_assum kall_tac >>
-        IF_CASES_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
-      gvs[Abbr `foo`] >> pop_assum kall_tac >> simp[Abbr `con`] >>
-      reverse $ Cases_on `l3.TCR_EL1.TBI1` >> gvs[]
-      >- (simp[asl_reg_rws, returnS] >> state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
-      qspec_then `asl1` assume_tac PSTATE_read >>
-      drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-      qmatch_goalsub_abbrev_tac `monad_bind x f` >>
-      `x asl1 = returnS T asl1` by (
-        simp[Abbr `x`] >> IF_CASES_TAC >> simp[] >>
-        drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >>
-        disch_then kall_tac >> Cases_on `l3.PSTATE.EL` >> gvs[]) >>
-      drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-      gvs[Abbr `x`, Abbr `f`, el_w2v] >>
-      qmatch_goalsub_abbrev_tac `write_regS _ bfi` >>
-      qsuff_tac `bfi = bit_field_insert 63 56 (0b11111111w : 8 word) target`
-      >- (
-        rw[Abbr `bfi`, asl_reg_rws, returnS] >> state_rel_tac[] >>
-        gvs[asl_sys_regs_ok_def]
-        ) >>
-      simp[Abbr `bfi`, EVAL ``i2w 72057594037927935 : word64``] >>
-      blastLib.BBLAST_TAC >> simp[]
-      )
-    >- (
-      ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
-      drule TCR_EL1_read >> strip_tac >>
-      drule returnS_bindS_unit >> simp[] >>
-      disch_then kall_tac >>
-      qpat_x_assum `ELUsingAArch32 _ _ = _` assume_tac >>
-      drule returnS_bindS_unit >> simp[] >>
-      disch_then kall_tac >>
-      `word_bit 37 (reg'TCR_EL1 l3.TCR_EL1) = l3.TCR_EL1.TBI0` by (
-        rpt $ pop_assum kall_tac >> simp[reg'TCR_EL1_def] >>
-        CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
-      simp[] >>
-      qpat_abbrev_tac `con = if _ then 55 else 63i` >>
-      `¬ (63 - con < 0)` by (unabbrev_all_tac >> IF_CASES_TAC >> gvs[]) >>
-      gvs[] >> DEP_REWRITE_TAC[EL_MAP] >> simp[sail2_valuesTheory.just_list_def] >>
-      conj_tac >- (unabbrev_all_tac >> IF_CASES_TAC >> gvs[]) >>
-      simp[Abbr `con`] >> reverse $ Cases_on `l3.TCR_EL1.TBI0` >> gvs[]
-      >- (simp[asl_reg_rws, returnS] >> state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
-      qspec_then `asl1` assume_tac PSTATE_read >>
-      drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-      qmatch_goalsub_abbrev_tac `monad_bind x f` >>
-      `x asl1 = returnS T asl1` by (
-        simp[Abbr `x`] >> IF_CASES_TAC >> simp[] >>
-        drule $ INST_TYPE [gamma |-> bool] returnS_bindS >> simp[] >>
-        disch_then kall_tac >> Cases_on `l3.PSTATE.EL` >> gvs[]) >>
-      drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-      gvs[Abbr `x`, Abbr `f`, el_w2v] >>
-      qmatch_goalsub_abbrev_tac `write_regS _ bfi` >>
-      qsuff_tac `bfi = bit_field_insert 63 56 (0b0w : 8 word) target`
-      >- (
-        rw[Abbr `bfi`, asl_reg_rws, returnS] >> state_rel_tac[] >>
-        gvs[asl_sys_regs_ok_def]
-        ) >>
-      simp[Abbr `bfi`, EVAL ``i2w 72057594037927935 : word64``] >>
-      blastLib.BBLAST_TAC >> simp[]
-      )
+    IF_CASES_TAC >> simp[] >>
+    drule TCR_EL1_read >> strip_tac >>
+    drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
+    disch_then kall_tac >>
+    qpat_x_assum `ELUsingAArch32 _ _ = _` assume_tac >>
+    drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
+    disch_then kall_tac >> simp[extract_bit_64] >>
+    simp[returnS] >>
+    `word_bit 37 (reg'TCR_EL1 l3.TCR_EL1) = l3.TCR_EL1.TBI0` by (
+      simp[reg'TCR_EL1_def] >> CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
+    `word_bit 38 (reg'TCR_EL1 l3.TCR_EL1) = l3.TCR_EL1.TBI1` by (
+      simp[reg'TCR_EL1_def] >> CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
+    simp[] >> Cases_on_word_value `l3.PSTATE.EL` >> gvs[]
     )
-  >- ( (* EL2 *)
-    gvs[Abbr `el`] >> `l3.PSTATE.EL = EL2` by (gvs[] >> every_case_tac >> gvs[]) >>
-    gvs[] >>
-    ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
-    simp[extract_bit_64, v2w_word1_eq] >>
-    qspecl_then [`asl1`,`EL2`] mp_tac ELIsInHost_F >>
+  >- (
+    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >>
+    ntac 4 $ simp[Once sail2_valuesTheory.just_list_def] >>
+    qspecl_then [`asl`,`l3.PSTATE.EL`] mp_tac ELIsInHost_F >>
     impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
+    disch_then kall_tac >>
     drule TCR_EL2_read >> strip_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-    qmatch_goalsub_abbrev_tac `word_bit _ (hi @@ lo)` >>
-    `word_bit 20 (hi @@ lo) = word_bit 20 lo` by WORD_DECIDE_TAC >> simp[] >>
-    simp[BranchTo_def, Hint_Branch_def] >>
-    `word_bit 20 lo = l3.TCR_EL2.TBI` by (
-      unabbrev_all_tac >> simp[reg'TCR_EL2_EL3_def] >> CASE_TAC >> gvs[] >>
-      blastLib.BBLAST_TAC) >>
-    simp[] >>
+    drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
+    disch_then kall_tac >>
     qpat_x_assum `ELUsingAArch32 _ _ = _` assume_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-    reverse $ Cases_on `l3.TCR_EL2.TBI` >> gvs[]
-    >- (rw[asl_reg_rws, returnS] >> state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
-    simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
-    qpat_x_assum `read_regS PSTATE_ref _ = _` assume_tac >> simp[IsInHost_def] >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-    qpat_x_assum `ELIsInHost _ _ = _` assume_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-    qmatch_goalsub_abbrev_tac `write_regS _ bfi` >>
-    qsuff_tac `bfi = bit_field_insert 63 56 (0b0w : 8 word) target`
-    >- (
-      rw[Abbr `bfi`, asl_reg_rws, returnS] >> state_rel_tac[] >>
-      gvs[asl_sys_regs_ok_def]
-      ) >>
-    simp[Abbr `bfi`, EVAL ``i2w 72057594037927935 : word64``] >>
-    blastLib.BBLAST_TAC >> simp[]
+    drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
+    disch_then kall_tac >> simp[extract_bit_64] >>
+    qmatch_goalsub_abbrev_tac `word_bit _ tcr_el2` >>
+    `word_bit 20 tcr_el2 = l3.TCR_EL2.TBI` by (
+      unabbrev_all_tac >> simp[reg'TCR_EL2_EL3_def] >>
+      CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
+    `word_bit 29 tcr_el2 = word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL2)` by (
+      unabbrev_all_tac >> simp[reg'TCR_EL2_EL3_def] >>
+      CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
+    simp[returnS]
     )
-  >- ( (* EL3 *)
-    gvs[Abbr `el`] >> `l3.PSTATE.EL = EL3` by (gvs[] >> every_case_tac >> gvs[]) >>
-    gvs[] >>
-    ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
-    simp[extract_bit |> INST_TYPE [alpha |-> ``:32``] |> SIMP_RULE (srw_ss()) []] >>
+  >- (
+    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >>
     drule TCR_EL3_read >> strip_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
+    disch_then kall_tac >>
     qpat_x_assum `ELUsingAArch32 _ _ = _` assume_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-    simp[BranchTo_def, Hint_Branch_def] >>
-    `word_bit 20 (reg'TCR_EL2_EL3 l3.TCR_EL3) = l3.TCR_EL3.TBI` by (
-      simp[reg'TCR_EL2_EL3_def] >> CASE_TAC >> gvs[] >> blastLib.BBLAST_TAC) >>
-    simp[] >> DEP_REWRITE_TAC[EL_MAP] >> simp[] >>
-    conj_tac >- (every_case_tac >> gvs[]) >>
-    reverse $ Cases_on `l3.TCR_EL3.TBI` >> gvs[]
-    >- (rw[asl_reg_rws, returnS] >> state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
-    simp[el_w2v] >>
-    qpat_x_assum `read_regS PSTATE_ref _ = _` assume_tac >> simp[IsInHost_def] >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-    qspecl_then [`asl1`,`EL3`] mp_tac ELIsInHost_F >>
-    impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
-    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-    qmatch_goalsub_abbrev_tac `write_regS _ bfi` >>
-    qsuff_tac `bfi = bit_field_insert 63 56 (0b0w : 8 word) target`
-    >- (
-      rw[Abbr `bfi`, asl_reg_rws, returnS] >> state_rel_tac[] >>
-      gvs[asl_sys_regs_ok_def]
-      ) >>
-    simp[Abbr `bfi`, EVAL ``i2w 72057594037927935 : word64``] >>
-    blastLib.BBLAST_TAC >> simp[]
+    drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
+    disch_then kall_tac >> DEP_REWRITE_TAC[extract_bit] >> simp[] >>
+    qmatch_goalsub_abbrev_tac `word_bit _ tcr_el3` >>
+    `word_bit 20 tcr_el3 = l3.TCR_EL3.TBI` by (
+      unabbrev_all_tac >> simp[reg'TCR_EL2_EL3_def] >>
+      CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
+    `word_bit 29 tcr_el3 = word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL3)` by (
+      unabbrev_all_tac >> simp[reg'TCR_EL2_EL3_def] >>
+      CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
+    ntac 2 $ pop_assum $ SUBST_ALL_TAC >> rpt $ pop_assum kall_tac >> simp[]
     )
 QED
 
+Theorem l3_asl_AArch64_BranchAddr:
+  ∀l3 asl.
+    state_rel l3 asl ∧ asl_sys_regs_ok asl
+  ⇒ ∀target.
+      AArch64_BranchAddr target asl = returnS
+      (case l3.PSTATE.EL of
+      | 2w =>
+        if l3.TCR_EL2.TBI ∧ ¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL2)
+        then (55 >< 0) target else target
+      | 3w =>
+        if l3.TCR_EL3.TBI ∧ ¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL3)
+        then (55 >< 0) target else target
+      | _ =>
+        if word_bit 55 target then
+          if l3.TCR_EL1.TBI1 ∧ ¬word_bit 52 (reg'TCR_EL1 l3.TCR_EL1)
+          then (55 --- 0) target else target
+        else if l3.TCR_EL1.TBI0 ∧ ¬word_bit 51 (reg'TCR_EL1 l3.TCR_EL1)
+             then (55 >< 0) target else target
+      ) asl
+Proof
+  rpt gen_tac >> strip_tac >> gen_tac >>
+  simp[AArch64_BranchAddr_def] >>
+  qspec_then `asl` mp_tac UsingAArch32_F >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[] >>
+  disch_then kall_tac >>
+  qspec_then `asl` assume_tac PSTATE_read >>
+  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[] >> strip_tac >>
+  qmatch_goalsub_abbrev_tac `AddrTop _ _ el` >>
+  `el = l3.PSTATE.EL` by (unabbrev_all_tac >> state_rel_tac[]) >> gvs[] >>
+  drule_all l3_asl_AddrTop >> disch_then $ qspec_then `target` assume_tac >>
+  qmatch_asmsub_abbrev_tac `_ = returnS addrtop _` >>
+  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[] >>
+  disch_then kall_tac >> qpat_x_assum `AddrTop _ _ _ _ = _` kall_tac >>
+  IF_CASES_TAC >> simp[]
+  >- (unabbrev_all_tac >> gvs[COND_RATOR] >> rpt (IF_CASES_TAC >> gvs[returnS])) >>
+  `addrtop = 55` by (unabbrev_all_tac >> rpt (CASE_TAC >> gvs[])) >>
+  simp[asl_word_rws, EL_MAP] >> ntac 2 $ simp[sail2_valuesTheory.just_list_def] >>
+  simp[el_w2v] >> `target ' 55 = word_bit 55 target` by WORD_DECIDE_TAC >> simp[] >>
+  simp[IsInHost_def] >>
+  qspec_then `asl` mp_tac ELIsInHost_F >> impl_tac >- gvs[asl_sys_regs_ok_def] >>
+  disch_then $ qspec_then `l3.PSTATE.EL` assume_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >> simp[] >> strip_tac >>
+  Cases_on_word_value `l3.PSTATE.EL` >> simp[] >> unabbrev_all_tac >> gvs[] >>
+  rpt (IF_CASES_TAC >> gvs[]) >>
+  simp[returnS, EVAL ``i2w 72057594037927935 : word64``] >> blastLib.BBLAST_TAC
+QED
+
 Theorem l3_models_asl_BranchImmediate_CALL:
-  ¬ HavePACExt () ⇒
   ∀a. a = sw2sw ((27 >< 2) a @@ (0b0w : word2)) ⇒
     l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
       (Branch (BranchImmediate (a, BranchType_CALL)))
@@ -2041,18 +1977,47 @@ Proof
   drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
   DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
   qmatch_goalsub_abbrev_tac `AArch64_BranchAddr addr` >>
-  drule l3_asl_BranchTo >> disch_then drule_all >>
-  disch_then $ qspecl_then [`addr`,`BranchType_CALL`] strip_assume_tac >>
-  qpat_x_assum `_ = returnS _ _` mp_tac >>
-  simp[returnS, bindS, seqS] >>
-  Cases_on `AArch64_BranchAddr addr asl2` >> Cases_on `q` >> simp[] >>
-  strip_tac >> simp[asl_reg_rws, returnS, BranchTaken_ref_def] >> conj_tac
-  >- state_rel_tac[]
-  >- gvs[asl_sys_regs_ok_def]
+  drule l3_asl_AArch64_BranchAddr >> simp[] >>
+  disch_then $ qspecl_then [`addr`] strip_assume_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  pop_assum kall_tac >> simp[returnS, bindS, seqS] >>
+  ntac 10 $ last_x_assum kall_tac >>
+  gvs[asl_reg_rws, returnS, BranchTaken_ref_def] >>
+  gvs[BranchTo_def, write'X_def, Hint_Branch_def] >>
+  reverse conj_tac >- gvs[asl_sys_regs_ok_def] >>
+  Cases_on_word_value `l3.PSTATE.EL` >> simp[]
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL3)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el3))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el3` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    )
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL2)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el2))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el2` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    ) >>
+  `¬word_bit 51 (reg'TCR_EL1 l3.TCR_EL1) ∧
+   ¬word_bit 52 (reg'TCR_EL1 l3.TCR_EL1)` by (
+    state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
+  simp[] >>
+  qmatch_goalsub_abbrev_tac `word_bit 55 foo` >>
+  `word_bit 55 foo = word_bit 55 addr` by (
+    simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
+    pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
+  simp[Abbr `foo`] >>
+  rpt (IF_CASES_TAC >> simp[]) >>
+  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
 QED
 
 Theorem l3_models_asl_BranchImmediate_JMP:
-  ¬ HavePACExt () ⇒
   ∀a. a = sw2sw ((27 >< 2) a @@ (0b0w : word2)) ⇒
     l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
       (Branch (BranchImmediate (a, BranchType_JMP)))
@@ -2080,18 +2045,46 @@ Proof
   impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
   drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
   DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
-  drule l3_asl_BranchTo >> disch_then drule_all >>
-  disch_then $ qspecl_then [`addr`,`BranchType_JMP`] strip_assume_tac >>
-  qpat_x_assum `_ = returnS _ _` mp_tac >>
-  simp[returnS, bindS, seqS] >>
-  Cases_on `AArch64_BranchAddr addr asl1` >> Cases_on `q` >> simp[] >>
-  strip_tac >> simp[asl_reg_rws, returnS, BranchTaken_ref_def] >> conj_tac
-  >- state_rel_tac[]
-  >- gvs[asl_sys_regs_ok_def]
+  drule l3_asl_AArch64_BranchAddr >> simp[] >>
+  disch_then $ qspecl_then [`addr`] strip_assume_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  pop_assum kall_tac >> simp[returnS, bindS, seqS] >>
+  gvs[asl_reg_rws, returnS, BranchTaken_ref_def] >>
+  gvs[BranchTo_def, Hint_Branch_def] >>
+  reverse conj_tac >- gvs[asl_sys_regs_ok_def] >>
+  Cases_on_word_value `l3.PSTATE.EL` >> simp[]
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL3)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el3))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el3` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    )
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL2)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el2))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el2` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    ) >>
+  `¬word_bit 51 (reg'TCR_EL1 l3.TCR_EL1) ∧
+   ¬word_bit 52 (reg'TCR_EL1 l3.TCR_EL1)` by (
+    state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
+  simp[] >>
+  qmatch_goalsub_abbrev_tac `word_bit 55 foo` >>
+  `word_bit 55 foo = word_bit 55 addr` by (
+    simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
+    pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
+  simp[Abbr `foo`] >>
+  rpt (IF_CASES_TAC >> simp[]) >>
+  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
 QED
 
 Theorem l3_models_asl_BranchConditional:
-  ¬ HavePACExt () ⇒
   ∀a i. a = sw2sw ((20 >< 2) a @@ (0b0w : word2)) ∧ i ≠ 0b1111w ⇒
     l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
       (Branch (BranchConditional (a, i)))
@@ -2102,12 +2095,6 @@ Proof
   asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
   qcollapse_tac `(20 >< 2) a : 19 word` >>
   qcollapse_tac `(((20 >< 2) a : 19 word) @@ (0w : 2 word)) : 21 word` >>
-  qmatch_goalsub_abbrev_tac `if cnd then _ else _` >>
-  `cnd` by (
-    unabbrev_all_tac >> CCONTR_TAC >> gvs[] >>
-    qpat_x_assum `i ≠ _` mp_tac >> blastLib.BBLAST_TAC >> simp[]) >>
-  simp[bindS, returnS] >>
-  qpat_x_assum `Abbrev (cnd ⇔ _)` kall_tac >>
   qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
   `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
   `asl_sys_regs_ok asl1` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
@@ -2128,18 +2115,46 @@ Proof
   impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
   drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
   DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
-  drule l3_asl_BranchTo >> disch_then drule_all >>
-  disch_then $ qspecl_then [`addr`,`BranchType_JMP`] strip_assume_tac >>
-  qpat_x_assum `_ = returnS _ _` mp_tac >>
-  simp[returnS, bindS, seqS] >>
-  Cases_on `AArch64_BranchAddr addr asl1` >> Cases_on `q` >> simp[] >>
-  strip_tac >> simp[asl_reg_rws, returnS, BranchTaken_ref_def] >> conj_tac
-  >- state_rel_tac[]
-  >- gvs[asl_sys_regs_ok_def]
+  drule l3_asl_AArch64_BranchAddr >> simp[] >>
+  disch_then $ qspecl_then [`addr`] strip_assume_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  pop_assum kall_tac >> simp[returnS, bindS, seqS] >>
+  gvs[asl_reg_rws, returnS, BranchTaken_ref_def] >>
+  gvs[BranchTo_def, Hint_Branch_def] >>
+  reverse conj_tac >- gvs[asl_sys_regs_ok_def] >>
+  Cases_on_word_value `l3.PSTATE.EL` >> simp[]
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL3)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el3))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el3` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    )
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL2)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el2))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el2` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    ) >>
+  `¬word_bit 51 (reg'TCR_EL1 l3.TCR_EL1) ∧
+   ¬word_bit 52 (reg'TCR_EL1 l3.TCR_EL1)` by (
+    state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
+  simp[] >>
+  qmatch_goalsub_abbrev_tac `word_bit 55 foo` >>
+  `word_bit 55 foo = word_bit 55 addr` by (
+    simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
+    pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
+  simp[Abbr `foo`] >>
+  rpt (IF_CASES_TAC >> simp[]) >>
+  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
 QED
 
 Theorem l3_models_asl_BranchRegister_JMP:
-  ¬ HavePACExt () ⇒
   ∀r.
     l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
       (Branch (BranchRegister (r, BranchType_JMP)))
@@ -2175,14 +2190,44 @@ Proof
   impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
   drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
   DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
-  drule l3_asl_BranchTo >> disch_then drule_all >>
-  disch_then $ qspecl_then [`X r l3`,`BranchType_JMP`] strip_assume_tac >>
-  qpat_x_assum `_ = returnS _ _` mp_tac >>
-  simp[returnS, bindS, seqS] >>
-  Cases_on `AArch64_BranchAddr (X r l3) asl2` >> Cases_on `q` >> simp[] >>
-  strip_tac >> simp[asl_reg_rws, returnS, BranchTaken_ref_def] >> conj_tac
-  >- state_rel_tac[]
-  >- gvs[asl_sys_regs_ok_def]
+  drule l3_asl_AArch64_BranchAddr >> simp[] >>
+  disch_then $ qspecl_then [`X r l3`] strip_assume_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  pop_assum kall_tac >> simp[returnS, bindS, seqS] >>
+  gvs[asl_reg_rws, returnS, BranchTaken_ref_def] >>
+  gvs[BranchTo_def, Hint_Branch_def] >>
+  reverse conj_tac >- gvs[asl_sys_regs_ok_def] >>
+  Cases_on_word_value `l3.PSTATE.EL` >> simp[]
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL3)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el3))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el3` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    )
+  >- (
+    `¬word_bit 29 (reg'TCR_EL2_EL3 l3.TCR_EL2)` by (
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def] >>
+      qmatch_goalsub_abbrev_tac `_ (_ (_ tcr_el2))` >>
+      qpat_x_assum `¬word_bit 29 tcr_el2` mp_tac >>
+      blastLib.BBLAST_TAC >> gvs[]) >>
+    simp[] >> IF_CASES_TAC >> simp[] >>
+    state_rel_tac[] >> blastLib.BBLAST_TAC
+    ) >>
+  `¬word_bit 51 (reg'TCR_EL1 l3.TCR_EL1) ∧
+   ¬word_bit 52 (reg'TCR_EL1 l3.TCR_EL1)` by (
+    state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
+  simp[] >>
+  qmatch_goalsub_abbrev_tac `bit_field_insert _ _ _ xx` >>
+  qmatch_goalsub_abbrev_tac `word_bit 55 foo` >>
+  `word_bit 55 foo = word_bit 55 xx` by (
+    simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
+    pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
+  simp[Abbr `foo`] >>
+  rpt (IF_CASES_TAC >> simp[]) >>
+  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
 QED
 
 (*********)
