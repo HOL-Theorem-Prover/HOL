@@ -332,7 +332,8 @@ val armv86a_ss =
     sail2_operators_mwordsTheory.sign_extend_def,
     armv86aTheory.Replicate__1_def,
     sail2_operators_mwordsTheory.replicate_bits_def,
-    armv86aTheory.AArch64_SecondStageTranslate_def
+    armv86aTheory.AArch64_SecondStageTranslate_def,
+    armv86aTheory.trickbox_enabled_def
   ];
 
 val _ = augment_srw_ss [armv86a_ss];
