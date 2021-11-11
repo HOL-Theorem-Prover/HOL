@@ -1184,7 +1184,7 @@ val cyclic_eq_order_partition_by_card = store_thm(
 val eq_order_is_feq_order = store_thm(
   "eq_order_is_feq_order",
   ``!g:'a group. eq_order g = feq ord``,
-  rw[eq_order_def, feq_def, FUN_EQ_THM]);
+  rw[eq_order_def, FUN_EQ_THM, fequiv_def]);
 
 (* Theorem: orders g = feq_class ord G *)
 (* Proof:
@@ -1193,10 +1193,11 @@ val eq_order_is_feq_order = store_thm(
    = feq_class ord G n             by feq_class_def
    Hence true by FUN_EQ_THM.
 *)
-val orders_is_feq_class_order = store_thm(
-  "orders_is_feq_class_order",
-  ``!g:'a group. orders g = feq_class ord G``,
-  rw[orders_def, feq_class_def, FUN_EQ_THM]);
+Theorem orders_is_feq_class_order:
+  !g:'a group. orders g = feq_class ord G
+Proof
+  rw[orders_def, in_preimage, EXTENSION, Once FUN_EQ_THM]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> (IMAGE ord G = divisors (CARD G)) *)
 (* Proof:
