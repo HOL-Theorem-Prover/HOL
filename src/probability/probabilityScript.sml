@@ -97,36 +97,23 @@ Definition identical_distribution_def :
              (distribution p (X i) s = distribution p (X j) s)
 End
 
-(* alternative definition *)
-Theorem distribution_function :
-    !p X t. distribution_function p X t = distribution p X {x | x <= t}
-Proof
-    RW_TAC std_ss [distribution_function_def, distribution_def,
-                   PREIMAGE_def, GSPECIFICATION]
-QED
-
-val joint_distribution_def = Define
-   `joint_distribution (p :'a p_space) X Y =
-      (\a. prob p (PREIMAGE (\x. (X x, Y x)) a INTER p_space p))`;
-
-val joint_distribution3_def = Define
-   `joint_distribution3 (p :'a p_space) X Y Z =
-      (\a. prob p (PREIMAGE (\x. (X x,Y x,Z x)) a INTER p_space p))`;
-
-(* from [10], not used
-Definition joint_distributions_def : (* was: joint_pmf_sequence *)
-    joint_distributions p X s =
-      (\V. prob p (BIGINTER (IMAGE (\i. PREIMAGE (X i) (V i)) s)) INTER p_space p)
+Definition joint_distribution_def :
+    joint_distribution (p :'a p_space) X Y =
+      (\a. prob p (PREIMAGE (\x. (X x,Y x)) a INTER p_space p))
 End
- *)
+
+Definition joint_distribution3_def :
+    joint_distribution3 (p :'a p_space) X Y Z =
+      (\a. prob p (PREIMAGE (\x. (X x,Y x,Z x)) a INTER p_space p))
+End
 
 val conditional_distribution_def = Define
    `conditional_distribution (p :'a p_space) X Y a b =
       joint_distribution p X Y (a CROSS b) / distribution p Y b`;
 
-(* `expectation` is just (Lebesgue) `integral` *)
-val expectation_def = Define
-   `expectation = integral`;
+Definition expectation_def :
+    expectation = integral
+End
 
 (* not used *)
 val conditional_expectation_def = Define
@@ -1041,6 +1028,28 @@ Theorem distribution_distr :
 Proof
     rpt FUN_EQ_TAC >> qx_genl_tac [`p`, `X`, `s`]
  >> RW_TAC std_ss [distribution_def, distr_def, prob_def, p_space_def]
+QED
+
+(* alternative definition of ‘distribution_function’ *)
+Theorem distribution_function :
+    !p X t. distribution_function p X t = distribution p X {x | x <= t}
+Proof
+    rw [distribution_function_def, distribution_def, PREIMAGE_def]
+QED
+
+Theorem joint_distribution_alt :
+   !p X Y. joint_distribution p X Y = distribution p (\x. (X x,Y x))
+Proof
+   rw [joint_distribution_def, distribution_def]
+QED
+
+(* See "stochastic_processTheory.finite_dimensional_distribution_def" for the joint
+   distribution of a finite sequence of random variables.
+ *)
+Theorem joint_distribution3_alt :
+   !p X Y Z. joint_distribution3 p X Y Z = distribution p (\x. (X x,Y x,Z x))
+Proof
+   rw [joint_distribution3_def, distribution_def]
 QED
 
 (* ************************************************************************* *)
@@ -7636,8 +7645,8 @@ Proof
           integral (m1 CROSS m2) u’
  >- (MATCH_MP_TAC integral_cong_measure' >> simp [] \\
      CONJ_TAC >- (MATCH_MP_TAC measure_space_distr >> rw [SIGMA_ALGEBRA_BOREL_2D]) \\
-     CONJ_TAC >- rw [SPACE_PROD_SIGMA, prod_measure_def, Abbr ‘m1’, Abbr ‘m2’] \\
-     CONJ_TAC >- rw [prod_measure_def, Abbr ‘m1’, Abbr ‘m2’] \\
+     CONJ_TAC >- rw [SPACE_PROD_SIGMA, prod_measure_space_alt, Abbr ‘m1’, Abbr ‘m2’] \\
+     CONJ_TAC >- rw [prod_measure_space_alt, Abbr ‘m1’, Abbr ‘m2’] \\
      MATCH_MP_TAC UNIQUENESS_OF_PROD_MEASURE \\
      qexistsl_tac [‘space Borel’, ‘space Borel’] \\
      qexistsl_tac [‘subsets Borel’, ‘subsets Borel’] \\
@@ -7660,9 +7669,9 @@ Proof
      CONJ_TAC >- (MATCH_MP_TAC measure_space_distr >> art [SIGMA_ALGEBRA_BOREL_2D]) \\
      CONJ_TAC
      >- (Know ‘space (Borel CROSS Borel) = m_space (m1 CROSS m2)’
-         >- (rw [Abbr ‘m1’, Abbr ‘m2’, SPACE_PROD_SIGMA, prod_measure_def]) >> Rewr' \\
+         >- (rw [Abbr ‘m1’, Abbr ‘m2’, SPACE_PROD_SIGMA, prod_measure_space_alt]) >> Rewr' \\
          Know ‘subsets (Borel CROSS Borel) = measurable_sets (m1 CROSS m2)’
-         >- (rw [Abbr ‘m1’, Abbr ‘m2’, prod_sigma_def, prod_measure_def]) >> Rewr' \\
+         >- (rw [Abbr ‘m1’, Abbr ‘m2’, prod_sigma_def, prod_measure_space_alt]) >> Rewr' \\
          art [MEASURE_SPACE_REDUCE]) \\
      CONJ_TAC
      >- (rw [distr_def, PREIMAGE_CROSS, Abbr ‘f’, o_DEF, ETA_AX] \\
@@ -7670,7 +7679,7 @@ Proof
           (PREIMAGE X s INTER m_space p) INTER (PREIMAGE Y t INTER m_space p)’
            by SET_TAC [] >> POP_ORW \\
          METIS_TAC [indep_def, prob_def]) \\ (* independence is used here!!! *)
-     rw [prod_measure_def, INDICATOR_FN_CROSS] \\
+     rw [prod_measure_space_alt, INDICATOR_FN_CROSS] \\
      ONCE_REWRITE_TAC [mul_comm] \\
      Know ‘!y. pos_fn_integral m1 (\x. indicator_fn t y * indicator_fn s x) =
                indicator_fn t y * pos_fn_integral m1 (indicator_fn s)’

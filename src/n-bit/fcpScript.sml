@@ -6,7 +6,8 @@
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
-open pred_setTheory listTheory
+
+open arithmeticTheory pred_setTheory listTheory;
 
 val () = new_theory "fcp";
 val _ = set_grammar_ancestry ["list"]
@@ -158,7 +159,8 @@ val DIMINDEX_GE_1 = Q.store_thm("DIMINDEX_GE_1",
    REWRITE_TAC [DECIDE ``1 <= x <=> ~(x = 0)``, DIMINDEX_NONZERO]
    )
 
-val DIMINDEX_GT_0 =
+(* |- 0 < dimindex(:'a) *)
+Theorem DIMINDEX_GT_0 =
    REWRITE_RULE [arithmeticTheory.NOT_ZERO_LT_ZERO] DIMINDEX_NONZERO
 
 val DIMINDEX_FINITE_IMAGE = Q.prove(
@@ -314,20 +316,22 @@ val CART_EQ = Q.store_thm("CART_EQ",
 val FCP = new_binder_definition("FCP",
    ``($FCP) = \g.  @(f:'a ** 'b). (!i. i < dimindex(:'b) ==> (f ' i = g i))``)
 
-val FCP_BETA = Q.store_thm("FCP_BETA",
-   `!i. i < dimindex(:'b) ==> (((FCP) g:'a ** 'b) ' i = g i)`,
-   SIMP_TAC std_ss [FCP]
-   THEN CONV_TAC SELECT_CONV
-   THEN Q.EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
-                                  (finite_index i = k))):'a ** 'b`
-   THEN SIMP_TAC std_ss [fcp_index_def, cart_tybij]
-   THEN REPEAT STRIP_TAC
-   THEN AP_TERM_TAC
-   THEN MATCH_MP_TAC SELECT_UNIQUE
-   THEN GEN_TAC
-   THEN REWRITE_TAC []
-   THEN PROVE_TAC [FINITE_INDEX_INJ, DIMINDEX_FINITE_IMAGE]
-   )
+(* NOTE: generalizing ‘g’ will break blastLib.sml *)
+Theorem FCP_BETA :
+    !i. i < dimindex(:'b) ==> (((FCP) g:'a ** 'b) ' i = g i)
+Proof
+    SIMP_TAC std_ss [FCP]
+ >> CONV_TAC SELECT_CONV
+ >> Q.EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
+                                   (finite_index i = k))):'a ** 'b`
+ >> SIMP_TAC std_ss [fcp_index_def, cart_tybij]
+ >> REPEAT STRIP_TAC
+ >> AP_TERM_TAC
+ >> MATCH_MP_TAC SELECT_UNIQUE
+ >> GEN_TAC
+ >> REWRITE_TAC []
+ >> PROVE_TAC [FINITE_INDEX_INJ, DIMINDEX_FINITE_IMAGE]
+QED
 
 val FCP_UNIQUE = Q.store_thm("FCP_UNIQUE",
    `!(f:'a ** 'b) g. (!i. i < dimindex(:'b) ==> (f ' i = g i)) = ((FCP) g = f)`,
@@ -337,9 +341,10 @@ val FCP_ETA = Q.store_thm("FCP_ETA",
    `!g. (FCP i. g ' i) = g`,
    SIMP_TAC std_ss [CART_EQ, FCP_BETA])
 
+(* |- FINITE univ(:'a) ==> CARD univ(:'a) = dimindex (:'a) *)
 val card_dimindex = save_thm("card_dimindex",
    METIS_PROVE [dimindex_def]
-      ``FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))``)
+      ``FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))``);
 
 (* ------------------------------------------------------------------------- *
  * Support for introducing finite index types                                *
@@ -775,11 +780,15 @@ val FCP_CONCAT_def = Define`
            else
               a ' (i - dimindex(:'c))): 'a ** ('b + 'c)`
 
-val FCP_FST_def = Define
-   ‘FCP_FST (a :'a['b + 'c]) = (FCP(i :num). a ' ((i + dimindex (:'c)) :num)) :'a['b]’;
+(* FCP_SND returns the "higher" dimension part (:'a['b]) of :'a['b + 'c] *)
+Definition FCP_FST_def :
+   FCP_FST (a :'a ** ('b + 'c)) = (FCP i. a ' (i + dimindex (:'c))) :'a ** 'b
+End
 
-val FCP_SND_def = Define
-   ‘FCP_SND (b :'a['b + 'c]) = (FCP(i :num). b ' i) :'a['c]’;
+(* FCP_SND returns the "lower" dimension part (:'a['c]) of :'a['b + 'c] *)
+Definition FCP_SND_def :
+   FCP_SND (b :'a ** ('b + 'c)) = (FCP i. b ' i) :'a ** 'c
+End
 
 val FCP_ZIP_def = Define`
    FCP_ZIP (a:'a ** 'b) (b:'c ** 'b) = (FCP i. (a ' i, b ' i)): ('a # 'c) ** 'b`
@@ -891,6 +900,19 @@ Theorem FCP_CONCAT_11 : (* added by Chun Tian *)
        (FCP_CONCAT a b = FCP_CONCAT c d) ==> (a = c) /\ (b = d)
 Proof
     METIS_TAC [FCP_CONCAT_THM]
+QED
+
+Theorem FCP_CONCAT_REDUCE :
+    !(x :'a['b + 'c]). FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+                       FCP_CONCAT (FCP_FST x) (FCP_SND x) = x
+Proof
+    rw [FCP_CONCAT_def, FCP_FST_def, FCP_SND_def, CART_EQ]
+ >> SRW_TAC [FCP_ss] []
+ >> rfs [NOT_LESS, index_sum]
+ >> ‘i - dimindex(:'c) < dimindex(:'b)’ by rw []
+ >> SRW_TAC [FCP_ss] []
+ >> ‘0 < dimindex(:'c)’ by PROVE_TAC [DIMINDEX_GT_0]
+ >> rw []
 QED
 
 (* ------------------------------------------------------------------------- *)

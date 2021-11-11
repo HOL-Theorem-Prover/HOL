@@ -6,7 +6,7 @@
 (* Based on the work of Aaron Coble [3] (2010)                               *)
 (* Cambridge University                                                      *)
 (* ------------------------------------------------------------------------- *)
-(* Updated by Chun Tian (2019-2021) using some materials from:               *)
+(* Extended by Chun Tian (2019-2021) using some materials from:              *)
 (*                                                                           *)
 (*        Lebesgue Measure Theory (lebesgue_measure_hvgScript.sml)           *)
 (*                                                                           *)
@@ -44,22 +44,34 @@ val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = hide "S";
 
-(* ******************************************* *)
-(*    Borel Space and Measurable functions     *)
-(* ******************************************* *)
+(* ************************************************************************* *)
+(*    Borel Space and Measurable functions                                   *)
+(* ************************************************************************* *)
 
 (* This is actually the (extended) Borel set $\overline{\mathscr{B}}$ generated
    by extended open sets. The pure real version is ‘real_borel$borel’.
 
    Named after Emile Borel [7], a French mathematician and politician.
 
-   new definition according to [1, p.61]:
+   See martingaleTheory for 2-dimensional Borel space based on pairTheory
+   (term: ‘Borel CROSS Borel’).
+
+   See examples/probability/stochastic_processesTheory for n-dimensional Borel
+   spaces based on fcpTheory (term: ‘Borel of_dimension(:'N)’).
+
+   See "Borel_def" for the old definition.
+
+   Below is the new definition according to [1, p.61]:
  *)
 Definition Borel :
     Borel = (univ(:extreal),
              {B' | ?B S. B' = (IMAGE Normal B) UNION S /\ B IN subsets borel /\
                          S IN {EMPTY; {NegInf}; {PosInf}; {NegInf; PosInf}}})
 End
+
+(* MATHEMATICAL DOUBLE-STRUCK CAPITAL B *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x1D539, tmnm = "Borel"};
+val _ = TeX_notation {hol = "Borel", TeX = ("\\ensuremath{{\\cal{B}}}", 1)};
 
 (* for compatibility and abbreviation purposes *)
 Overload Borel_measurable = “\a. measurable a Borel”;
@@ -8836,6 +8848,11 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_I, SPACE_BOREL]
 QED
 
+(* NOTE: ‘Borel’ here can be generalized to any sigma_algebra
+
+   cf. stochastic_processTheory.random_variable_sigma_of_dimension for a generalization
+       of this theorem to arbitrary finite dimensions.
+ *)
 Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
     !a X Y. sigma_algebra a /\
             X IN measurable a Borel /\ Y IN measurable a Borel ==>

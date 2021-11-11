@@ -13,7 +13,7 @@ open metisLib combinTheory pred_setTheory res_quanTools pairTheory RealArith
      prim_recTheory arithmeticTheory realTheory realLib real_sigmaTheory
      seqTheory limTheory transcTheory jrhUtils pred_setLib tautLib;
 
-open hurdUtils util_probTheory cardinalTheory iterateTheory fcpTheory;
+open hurdUtils util_probTheory cardinalTheory iterateTheory;
 
 val _ = new_theory "extreal";
 
@@ -7271,7 +7271,7 @@ End
 (* DOUBLE-STRUCK CAPITAL Q *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x211A, tmnm = "Q_set"};
 
-(* old definition as equivalent theorem *)
+(* old definition as equivalent theorem (not used anywhere) *)
 Theorem Q_set_def :
     Q_set = {x | ?a b. (x =  (&a / &b)) /\ ((0 :extreal) < &b)} UNION
             {x | ?a b. (x = -(&a / &b)) /\ ((0 :extreal) < &b)}
@@ -7593,6 +7593,7 @@ Proof
   >> METIS_TAC [INSERT_SING_UNION,UNION_COMM]
 QED
 
+(* not used anywhere *)
 Theorem CROSS_COUNTABLE_UNIV :
     countable (univ(:num) CROSS univ(:num))
 Proof
@@ -8649,28 +8650,6 @@ Theorem INDICATOR_FN_CROSS :
 Proof
     rw [indicator_fn_def]
  >> PROVE_TAC []
-QED
-
-Theorem INDICATOR_FN_FCP_CROSS :
-    !(s :'a['b] set) (t :'a['c] set) x y.
-        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
-       (indicator_fn (fcp_cross s t) (FCP_CONCAT x y) =
-        indicator_fn s x * indicator_fn t y)
-Proof
-    rpt STRIP_TAC
- >> rw [IN_FCP_CROSS, indicator_fn_def] (* 4 subgoals *)
- >> METIS_TAC [FCP_CONCAT_11]
-QED
-
-Theorem indicator_fn_general_cross :
-    !(cons :'a -> 'b -> 'c) car cdr (s :'a set) (t :'b set) x y.
-        pair_operation cons car cdr ==>
-       (indicator_fn (general_cross cons s t) (cons x y) =
-        indicator_fn s x * indicator_fn t y)
-Proof
-    rpt STRIP_TAC
- >> rw [IN_general_cross, indicator_fn_def] (* 4 subgoals *)
- >> METIS_TAC [pair_operation_def]
 QED
 
 Theorem indicator_fn_split :
