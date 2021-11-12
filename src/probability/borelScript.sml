@@ -69,9 +69,10 @@ Definition Borel :
                          S IN {EMPTY; {NegInf}; {PosInf}; {NegInf; PosInf}}})
 End
 
-(* MATHEMATICAL DOUBLE-STRUCK CAPITAL B *)
+(* MATHEMATICAL DOUBLE-STRUCK CAPITAL B
 val _ = Unicode.unicode_version {u = UTF8.chr 0x1D539, tmnm = "Borel"};
 val _ = TeX_notation {hol = "Borel", TeX = ("\\ensuremath{{\\cal{B}}}", 1)};
+ *)
 
 (* for compatibility and abbreviation purposes *)
 Overload Borel_measurable = “\a. measurable a Borel”;
