@@ -40,8 +40,8 @@ val _ = hide "S";
 (*  Basic measure theory definitions.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = type_abbrev_pp ("measure", ``:'a set -> extreal``);
-val _ = type_abbrev_pp ("m_space", ``:'a set # 'a set set # 'a measure``);
+Type measure[pp] = “:'a set -> extreal”
+Type m_space[pp] = “:'a set # 'a set set # 'a measure”
 
 (* These're accessors of the triple of measure space *)
 val m_space_def = Define

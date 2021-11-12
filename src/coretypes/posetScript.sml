@@ -43,7 +43,7 @@ val function_def = new_definition
 (* A HOL type of partial orders                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = type_abbrev_pp ("poset", “:('a -> bool) # ('a -> 'a -> bool)”);
+Type poset[pp] = “:('a -> bool) # ('a -> 'a -> bool)”
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of partially-ordered sets                                      *)
