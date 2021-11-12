@@ -2500,6 +2500,495 @@ Proof
   simp[mem_dword_def] >> IF_CASES_TAC >> gvs[] >> blastLib.BBLAST_TAC
 QED
 
+Triviality APPLY_UPDATE_ALT_THM:
+  ∀f a b c. f⦇a ↦ b⦈ c = if c = a then b else f c
+Proof
+  rw[combinTheory.APPLY_UPDATE_THM]
+QED
+
+Triviality FLOOKUP_UPDATE_ALT:
+  ∀fm k1 v k2. FLOOKUP (fm |+ (k1,v)) k2 = if k2 = k1 then SOME v else FLOOKUP fm k2
+Proof
+  rw[FLOOKUP_UPDATE]
+QED
+
+Theorem Mem_set_1:
+  ∀asl addrdesc a w:word8. asl_sys_regs_ok asl ⇒
+    Mem_set addrdesc 1 a w asl = returnS () $ asl with
+    <|memstate :=
+            asl.memstate |+
+            (w2n addrdesc.AddressDescriptor_paddress.FullAddress_address
+              MOD dimword(:64), MAP bitU_of_bool $ w2v w);
+      tagstate :=
+        asl.tagstate |+
+        (w2n addrdesc.AddressDescriptor_paddress.FullAddress_address
+          MOD dimword(:64),B0) |>
+Proof
+  rw[Mem_set_def] >>
+  simp[
+    sail2_state_monadTheory.undefined_boolS_def, undefined_FaultRecord_def,
+    undefined_MemoryAttributes_def, undefined_FullAddress_def,
+    undefined_Fault_def, undefined_AccType_def,
+    preludeTheory.undefined_int_def, preludeTheory.undefined_unit_def
+    ] >>
+  simp[asl_sys_reg_rws] >>
+  simp[Once returnS, Once bindS] >> IF_CASES_TAC >> gvs[]
+  >- (irule FALSITY >> gvs[asl_sys_regs_ok_def]) >>
+  simp[
+    preludeTheory.WriteMemory_def,
+    sail2_state_monadTheory.write_memS_def,
+    sail2_state_monadTheory.write_memtS_def,
+    sail2_valuesTheory.mem_bytes_of_bits_def,
+    sail2_valuesTheory.bytes_of_bits_def,
+    asl_word_rws, w2n_w2w
+    ] >>
+  simp[byte_chunks_MAP, optionTheory.OPTION_MAP_COMPOSE] >>
+  DEP_REWRITE_TAC[byte_chunks_ByteList] >> simp[] >>
+  simp[
+    sail2_state_monadTheory.write_memt_bytesS_def,
+    sail2_state_monadTheory.updateS_def,
+    bindS, returnS, seqS
+    ] >>
+  simp[sail2_state_monadTheory.put_mem_bytes_def, list_combine]
+QED
+
+Theorem AArch64_MemSingle_set_1:
+  ∀asl addr val:word8. asl_sys_regs_ok asl ⇒
+    ∃v. AArch64_MemSingle_set addr 1 AccType_NORMAL F val asl =
+      (write_regS exclusive_block_address_ref v (asl with
+        <|memstate :=
+            asl.memstate |+
+              (w2n addr MOD dimword(:64),MAP bitU_of_bool (w2v val));
+          tagstate :=
+            asl.tagstate |+ (w2n addr MOD dimword(:64),B0)|>))
+Proof
+  rw[AArch64_MemSingle_set_def, l3_asl_Align, Align_def] >>
+  qspecl_then [`addr`,`AccType_NORMAL`,`T`,`F`,`1`,`asl`]
+    assume_tac AArch64_TranslateAddress >> gvs[] >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `seqS a b` >>
+  `∃v. a asl = write_regS exclusive_block_address_ref v asl` by (
+    unabbrev_all_tac >> simp[COND_RATOR] >>
+    simp[ProcessorID_def, asl_reg_rws, MPIDR_EL1_ref_def, bindS, returnS] >>
+    simp[ClearExclusiveByAddress_def, asl_reg_rws, bindS, returnS] >>
+    simp[GetExclusiveBlockAddress_def, exclusive_block_address_ref_def] >>
+    simp[COND_RATOR] >> rw[returnS]
+    >- irule_at Any EQ_REFL
+    >- (
+      simp[sail2_state_monadTheory.sequential_state_component_equality] >>
+      simp[regstate_component_equality, FUN_EQ_THM] >>
+      qexists_tac `asl.regstate.bitvector_64_dec_reg "__exclusive_block_address"` >>
+      rw[]
+      )
+    >- (
+      simp[sail2_state_monadTheory.sequential_state_component_equality] >>
+      simp[regstate_component_equality, FUN_EQ_THM] >>
+      qexists_tac `asl.regstate.bitvector_64_dec_reg "__exclusive_block_address"` >>
+      rw[]
+      )
+    ) >>
+  simp[Abbr `b`, Once seqS, Once returnS, asl_reg_rws] >>
+  simp[exclusive_block_address_ref_def] >>
+  qmatch_goalsub_abbrev_tac `asl0 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl0` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+  qspecl_then [`AccType_NORMAL`,`asl0`] mp_tac CreateAccessDescriptor >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >> simp[Once bindS] >>
+  qspec_then `asl0` mp_tac IsSecure >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >> simp[Once bindS] >>
+  ntac 2 $ simp[Once returnS] >>
+  `∀addr. AArch64_AccessIsTagChecked addr AccType_NORMAL asl0 = returnS F asl0` by (
+    rw[] >> irule AArch64_AccessIsTagChecked >> gvs[asl_sys_regs_ok_def]) >>
+  simp[Once bindS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `Mem_set _ _ accdesc _` >>
+  drule Mem_set_1 >> disch_then $ qspecl_then [`addrdesc`,`accdesc`,`val`] assume_tac >>
+  simp[returnS] >> unabbrev_all_tac >> simp[] >> irule_at Any EQ_REFL
+QED
+
+Theorem l3_asl_Mem_set0_8_AccType_NORMAL:
+  ∀l3 asl addr (val : word64) l3'.
+    state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
+    write'Mem (val, addr, 8, AccType_NORMAL) l3 = l3' ∧
+    l3'.exception = NoException
+  ⇒ ∃asl'.
+      Mem_set0 addr 8 AccType_NORMAL val asl = returnS () asl' ∧
+      state_rel l3' asl' ∧
+      asl_sys_regs_ok asl'
+Proof
+  rw[] >> simp[Mem_set0_def, AArch64_CheckAlignment_def] >>
+  simp[sail2_state_monadTheory.undefined_boolS_def, undefined_Constraint_def,
+       ConstrainUnpredictable_def] >>
+  simp[l3_asl_Align, asl_word_rws] >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
+  drule_all l3_asl_BigEndian >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule_all SCTLR_read__1 >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `foo ' 1` >>
+  `foo ' 1 = (SCTLR l3).A` by (
+    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
+    gvs[SCTLR_def, TranslationRegime_def] >>
+    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> blastLib.BBLAST_TAC) >>
+  simp[Once $ GSYM COND_RAND] >> ntac 2 $ pop_assum kall_tac >>
+  `(SCTLR l3).A ⇒ addr = Align (addr, 8)` by (
+    CCONTR_TAC >> gvs[] >>
+    qpat_x_assum `_.exception = NoException` mp_tac >> simp[write'Mem_def] >>
+    ntac 4 (ntac 8 $ simp[Once state_transformerTheory.FOR_def]) >>
+    simp[state_transformerTheory.BIND_DEF] >>
+    simp[CheckAlignment_def, Aligned_def, raise'exception_def] >>
+    IF_CASES_TAC >> gvs[]) >>
+  IF_CASES_TAC >- gvs[] >> pop_assum kall_tac >> simp[] >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (
+    simp[AArch64_MemSingle_set_def, l3_asl_Align] >>
+    qspecl_then [`addr`,`AccType_NORMAL`,`T`,`T`,`8`,`asl`]
+      assume_tac AArch64_TranslateAddress >> gvs[] >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    qmatch_goalsub_abbrev_tac `seqS x _` >>
+    `∃asl1. x asl = returnS () asl1 ∧ state_rel l3 asl1 ∧ asl_sys_regs_ok asl1` by (
+      simp[Abbr `x`] >> reverse $ rw[] >- simp[returnS] >>
+      simp[ProcessorID_def, asl_reg_rws, bindS, returnS] >>
+      simp[ClearExclusiveByAddress_def, asl_reg_rws, bindS, returnS] >>
+      simp[GetExclusiveBlockAddress_def, COND_RATOR, returnS] >>
+      IF_CASES_TAC >> simp[exclusive_block_address_ref_def] >>
+      state_rel_tac[] >> gvs[asl_sys_regs_ok_def]) >>
+    simp[Once seqS, Once returnS] >>
+    qpat_x_assum `x _ = _` kall_tac >> gvs[Abbr `x`] >>
+    qspecl_then [`AccType_NORMAL`,`asl1`] mp_tac CreateAccessDescriptor >>
+    impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >> simp[Once bindS] >>
+    qspec_then `asl1` mp_tac IsSecure >>
+    impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >> simp[Once bindS] >>
+    ntac 2 $ simp[Once returnS] >>
+    qpat_abbrev_tac `addr = _.FullAddress_address` >>
+    qspecl_then [`addr`,`AccType_NORMAL`,`asl1`] mp_tac AArch64_AccessIsTagChecked >>
+    impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    qmatch_goalsub_abbrev_tac `Mem_set _ _ accdesc` >>
+    simp[Mem_set_def] >>
+    simp[
+      sail2_state_monadTheory.undefined_boolS_def, undefined_FaultRecord_def,
+      undefined_MemoryAttributes_def, undefined_FullAddress_def,
+      undefined_Fault_def, undefined_AccType_def,
+      preludeTheory.undefined_int_def, preludeTheory.undefined_unit_def
+      ] >>
+    simp[asl_sys_reg_rws] >>
+    simp[Once returnS, Once bindS] >> IF_CASES_TAC >> gvs[]
+    >- (irule FALSITY >> gvs[asl_sys_regs_ok_def]) >>
+    simp[
+      preludeTheory.WriteMemory_def,
+      sail2_state_monadTheory.write_memS_def,
+      sail2_state_monadTheory.write_memtS_def,
+      sail2_valuesTheory.mem_bytes_of_bits_def,
+      sail2_valuesTheory.bytes_of_bits_def,
+      asl_word_rws, w2n_w2w
+      ] >>
+    simp[byte_chunks_MAP, optionTheory.OPTION_MAP_COMPOSE] >>
+    DEP_REWRITE_TAC[byte_chunks_ByteList] >> simp[] >>
+    simp[
+      sail2_state_monadTheory.write_memt_bytesS_def,
+      sail2_state_monadTheory.updateS_def,
+      bindS, returnS, seqS
+      ] >>
+    simp[sail2_state_monadTheory.put_mem_bytes_def] >>
+    reverse conj_tac >- gvs[asl_sys_regs_ok_def] >>
+    `∃mem. write'Mem (val,addr,8,AccType_NORMAL) l3 = l3 with MEM := mem` by (
+      simp[write'Mem_def] >>
+      ntac 8 $ simp[Once state_transformerTheory.FOR_def] >>
+      simp[state_transformerTheory.BIND_DEF] >>
+      simp[CheckAlignment_def, Aligned_def] >> irule_at Any EQ_REFL) >>
+    simp[] >> gvs[state_rel_def] >>
+    simp[list_combine, LENGTH_ByteList] >>
+    pop_assum mp_tac >> simp[write'Mem_def] >>
+    ntac 8 $ simp[Once state_transformerTheory.FOR_def] >>
+    simp[state_transformerTheory.BIND_DEF] >>
+    simp[CheckAlignment_def, Aligned_def] >>
+    simp[arm8_state_component_equality] >> strip_tac >> gvs[] >>
+    qpat_x_assum `mem_rel _ _ _` mp_tac >> rpt $ pop_assum kall_tac >>
+    simp[word_add_def] >> reverse $ rw[]
+    >- (
+      `w2v val =
+        w2v ((63 >< 56) val) ++ w2v ((55 >< 48) val) ++ w2v ((47 >< 40) val) ++
+        w2v ((39 >< 32) val) ++ w2v ((31 >< 24) val) ++ w2v ((23 >< 16) val) ++
+        w2v ((15 >< 8) val) ++ w2v ((7 >< 0) val)` by (
+        rewrite_tac[GSYM APPEND_ASSOC] >>
+        map_every (rewrite_tac o single) [
+          GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
+        AP_TERM_TAC >> blastLib.BBLAST_TAC) >>
+      pop_assum SUBST_ALL_TAC >>
+      rewrite_tac[GSYM APPEND_ASSOC] >>
+      DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+      simp[field_concat_left, field_concat_right] >> rw[mem_rel_def]
+      >- (simp[FLOOKUP_UPDATE] >> rpt IF_CASES_TAC >> simp[] >> gvs[mem_rel_def]) >>
+      simp[FLOOKUP_UPDATE_ALT, APPLY_UPDATE_ALT_THM] >> simp[Once CONJ_SYM] >>
+      ntac 7 (
+        IF_CASES_TAC >> simp[] >> gvs[]
+        >- (
+          rpt (IF_CASES_TAC >> gvs[]) >>
+          irule_at Any EQ_REFL >> simp[] >> rpt AP_TERM_TAC >>
+          SUBST_ALL_TAC $ GSYM $ mk_blast_thm ``val : word64`` >> EVAL_TAC
+          )
+        ) >>
+      IF_CASES_TAC >> gvs[]
+      >- (
+        reverse $ rpt IF_CASES_TAC >> gvs[]
+        >- (
+          irule FALSITY >> pop_assum mp_tac >> simp[] >>
+          qspec_then `addr` mp_tac w2n_lt >> simp[]
+          )
+        >- (Q.REFINE_EXISTS_TAC `w2v (_ : word8)` >> simp[]) >>
+        irule FALSITY >> ARITH_TAC
+        )
+      >- (
+        reverse $ rpt IF_CASES_TAC >> gvs[]
+        >- (
+          gvs[mem_rel_def] >> first_x_assum $ qspec_then `w` mp_tac >> rw[] >>
+          goal_assum $ drule_at Any >> simp[]
+          )
+        >- (irule FALSITY >> qspec_then `addr` assume_tac w2n_lt >> gvs[]) >>
+        irule FALSITY >>
+        qmatch_asmsub_abbrev_tac `w2n _ = (w2n _ + offset) MOD _` >>
+        qpat_x_assum `_ ≠ _ (_ + offset)` mp_tac >> simp[] >>
+        once_rewrite_tac[GSYM w2n_11] >> unabbrev_all_tac >>
+        first_assum SUBST1_TAC >> simp[]
+        )
+      )
+    >- (
+      simp[w2v_reverse_endianness0_64] >>
+      `w2v val =
+        w2v ((63 >< 56) val) ++ w2v ((55 >< 48) val) ++ w2v ((47 >< 40) val) ++
+        w2v ((39 >< 32) val) ++ w2v ((31 >< 24) val) ++ w2v ((23 >< 16) val) ++
+        w2v ((15 >< 8) val) ++ w2v ((7 >< 0) val)` by (
+        rewrite_tac[GSYM APPEND_ASSOC] >>
+        map_every (rewrite_tac o single) [
+          GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
+        AP_TERM_TAC >> blastLib.BBLAST_TAC) >>
+      pop_assum SUBST_ALL_TAC >>
+      simp[BigEndianReverse_def] >>
+      rewrite_tac[GSYM APPEND_ASSOC] >>
+      DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+      rewrite_tac[GSYM APPEND_ASSOC] >>
+      DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+      simp[field_concat_left, field_concat_right] >> rw[mem_rel_def]
+      >- (simp[FLOOKUP_UPDATE] >> rpt IF_CASES_TAC >> simp[] >> gvs[mem_rel_def]) >>
+      simp[FLOOKUP_UPDATE_ALT, APPLY_UPDATE_ALT_THM] >> simp[Once CONJ_SYM] >>
+      ntac 7 (
+        IF_CASES_TAC >> simp[] >> gvs[]
+        >- (
+          rpt (IF_CASES_TAC >> gvs[]) >>
+          irule_at Any EQ_REFL >> simp[] >> rpt AP_TERM_TAC >>
+          SUBST_ALL_TAC $ GSYM $ mk_blast_thm ``val : word64`` >> EVAL_TAC
+          )
+        ) >>
+      IF_CASES_TAC >> gvs[]
+      >- (
+        reverse $ rpt IF_CASES_TAC >> gvs[]
+        >- (
+          irule FALSITY >> pop_assum mp_tac >> simp[] >>
+          qspec_then `addr` mp_tac w2n_lt >> simp[]
+          )
+        >- (Q.REFINE_EXISTS_TAC `w2v (_ : word8)` >> simp[]) >>
+        irule FALSITY >> ARITH_TAC
+        )
+      >- (
+        reverse $ rpt IF_CASES_TAC >> gvs[]
+        >- (
+          gvs[mem_rel_def] >> first_x_assum $ qspec_then `w` mp_tac >> rw[] >>
+          goal_assum $ drule_at Any >> simp[]
+          )
+        >- (irule FALSITY >> qspec_then `addr` assume_tac w2n_lt >> gvs[]) >>
+        irule FALSITY >>
+        qmatch_asmsub_abbrev_tac `w2n _ = (w2n _ + offset) MOD _` >>
+        qpat_x_assum `_ ≠ _ (_ + offset)` mp_tac >> simp[] >>
+        once_rewrite_tac[GSYM w2n_11] >> unabbrev_all_tac >>
+        first_assum SUBST1_TAC >> simp[]
+        )
+      )
+    ) >>
+  ntac 8 $ simp[Once sail2_valuesAuxiliaryTheory.index_list_rw] >>
+  ntac 8 $ simp[Once sail2_stateAuxiliaryTheory.foreachS_rw] >>
+  map_every (simp o single o EVAL o Term)
+    [`i2w 1`,`i2w 2`,`i2w 3`,`i2w 4`,`i2w 5`,`i2w 6`,`i2w 7`] >>
+  qmatch_goalsub_abbrev_tac `(_ >< _) rv` >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr`,`(7 >< 0) rv`] assume_tac >> gvs[] >>
+  simp[Once seqS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl1` by (
+    qpat_x_assum `asl_sys_regs_ok _` mp_tac >> simp[Abbr `asl1`, asl_sys_regs_ok_def]) >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr + 1w`,`(15 >< 8) rv`] assume_tac >> gvs[] >>
+  simp[Once bindS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl2 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl2` by (
+    qpat_x_assum `asl_sys_regs_ok _` mp_tac >> simp[Abbr `asl2`, asl_sys_regs_ok_def]) >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr + 2w`,`(23 >< 16) rv`] assume_tac >> gvs[] >>
+  simp[Once bindS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl3 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl3` by (
+    qpat_x_assum `asl_sys_regs_ok _` mp_tac >> simp[Abbr `asl3`, asl_sys_regs_ok_def]) >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr + 3w`,`(31 >< 24) rv`] assume_tac >> gvs[] >>
+  simp[Once bindS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl4 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl4` by (
+    qpat_x_assum `asl_sys_regs_ok _` mp_tac >> simp[Abbr `asl4`, asl_sys_regs_ok_def]) >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr + 4w`,`(39 >< 32) rv`] assume_tac >> gvs[] >>
+  simp[Once bindS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl5 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl5` by (
+    qpat_x_assum `asl_sys_regs_ok _` mp_tac >> simp[Abbr `asl5`, asl_sys_regs_ok_def]) >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr + 5w`,`(47 >< 40) rv`] assume_tac >> gvs[] >>
+  simp[Once bindS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl6 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl6` by (
+    qpat_x_assum `asl_sys_regs_ok _` mp_tac >> simp[Abbr `asl6`, asl_sys_regs_ok_def]) >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr + 6w`,`(55 >< 48) rv`] assume_tac >> gvs[] >>
+  simp[Once bindS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl7 : regstate sequential_state` >>
+  `asl_sys_regs_ok asl7` by (
+    qpat_x_assum `asl_sys_regs_ok _` mp_tac >> simp[Abbr `asl7`, asl_sys_regs_ok_def]) >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr + 7w`,`(63 >< 56) rv`] assume_tac >> gvs[] >>
+  simp[Once bindS, asl_reg_rws, exclusive_block_address_ref_def, Once returnS] >>
+  pop_assum kall_tac >> simp[returnS] >> reverse conj_tac
+  >- (pop_assum mp_tac >> rpt $ pop_assum kall_tac >> simp[asl_sys_regs_ok_def]) >>
+  `CheckAlignment (addr,8,AccType_NORMAL,T) l3 = l3` by (
+    qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
+    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    simp[write'Mem_def] >>
+    ntac 8 $ simp[Once state_transformerTheory.FOR_def] >>
+    simp[state_transformerTheory.BIND_DEF] >>
+    gvs[CheckAlignment_def] >> IF_CASES_TAC >> gvs[] >>
+    simp[raise'exception_def] >> rw[]) >>
+  qpat_x_assum `asl_sys_regs_ok asl` mp_tac >>
+  rpt $ qpat_x_assum `asl_sys_regs_ok _` kall_tac >>
+  rpt $ qpat_x_assum `AArch64_MemSingle_set _ _ _ _ _ _ = _` kall_tac >>
+  unabbrev_all_tac >> simp[] >> strip_tac >>
+  simp[write'Mem_def] >>
+  ntac 8 $ simp[Once state_transformerTheory.FOR_def] >>
+  simp[state_transformerTheory.BIND_DEF] >> simp[word_add_def] >>
+  reverse $ IF_CASES_TAC >> simp[]
+  >- (
+    `w2v val =
+      w2v ((63 >< 56) val) ++ w2v ((55 >< 48) val) ++ w2v ((47 >< 40) val) ++
+      w2v ((39 >< 32) val) ++ w2v ((31 >< 24) val) ++ w2v ((23 >< 16) val) ++
+      w2v ((15 >< 8) val) ++ w2v ((7 >< 0) val)` by (
+      rewrite_tac[GSYM APPEND_ASSOC] >>
+      map_every (rewrite_tac o single) [
+        GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
+      AP_TERM_TAC >> blastLib.BBLAST_TAC) >>
+    pop_assum SUBST_ALL_TAC >>
+    rewrite_tac[GSYM APPEND_ASSOC] >>
+    DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+    simp[field_concat_left, field_concat_right] >>
+    `v2w (field 7 0 (w2v ((63 >< 56) val : word8))) : word8 = (63 >< 56) val` by (
+      SUBST1_TAC $ GSYM $ mk_blast_thm ``val : word64`` >> EVAL_TAC) >>
+    simp[] >> pop_assum kall_tac >> gvs[state_rel_def] >>
+    simp[CONJ_ASSOC] >> conj_tac >- state_rel_tac[] >>
+    rw[mem_rel_def]
+    >- (simp[FLOOKUP_UPDATE] >> rpt IF_CASES_TAC >> simp[] >> gvs[mem_rel_def]) >>
+    simp[FLOOKUP_UPDATE_ALT, APPLY_UPDATE_ALT_THM] >> simp[Once CONJ_SYM] >>
+    ntac 7 (
+      IF_CASES_TAC >> simp[] >> gvs[]
+      >- (
+        rpt (IF_CASES_TAC >> gvs[]) >>
+        irule_at Any EQ_REFL >> simp[] >> rpt AP_TERM_TAC >>
+        SUBST_ALL_TAC $ GSYM $ mk_blast_thm ``val : word64`` >> EVAL_TAC
+        )
+      ) >>
+    IF_CASES_TAC >> gvs[]
+    >- (
+      reverse $ rpt IF_CASES_TAC >> gvs[]
+      >- (
+        irule FALSITY >> pop_assum mp_tac >> simp[] >>
+        qspec_then `addr` mp_tac w2n_lt >> simp[]
+        )
+      >- (Q.REFINE_EXISTS_TAC `w2v (_ : word8)` >> simp[]) >>
+      irule FALSITY >> ARITH_TAC
+      )
+    >- (
+      reverse $ rpt IF_CASES_TAC >> gvs[]
+      >- (
+        gvs[mem_rel_def] >> first_x_assum $ qspec_then `w` mp_tac >> rw[] >>
+        goal_assum $ drule_at Any >> simp[]
+        )
+      >- (irule FALSITY >> qspec_then `addr` assume_tac w2n_lt >> gvs[]) >>
+      irule FALSITY >>
+      qmatch_asmsub_abbrev_tac `w2n _ = (w2n _ + offset) MOD _` >>
+      qpat_x_assum `_ ≠ _ (_ + offset)` mp_tac >> simp[] >>
+      once_rewrite_tac[GSYM w2n_11] >> unabbrev_all_tac >>
+      first_assum SUBST1_TAC >> simp[]
+      )
+    )
+  >- (
+    simp[extract_bits_reverse_endianness0_64] >>
+    `w2v val =
+      w2v ((63 >< 56) val) ++ w2v ((55 >< 48) val) ++ w2v ((47 >< 40) val) ++
+      w2v ((39 >< 32) val) ++ w2v ((31 >< 24) val) ++ w2v ((23 >< 16) val) ++
+      w2v ((15 >< 8) val) ++ w2v ((7 >< 0) val)` by (
+      rewrite_tac[GSYM APPEND_ASSOC] >>
+      map_every (rewrite_tac o single) [
+        GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
+      AP_TERM_TAC >> blastLib.BBLAST_TAC) >>
+    pop_assum SUBST_ALL_TAC >>
+    simp[BigEndianReverse_def] >>
+    rewrite_tac[GSYM APPEND_ASSOC] >>
+    DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+    rewrite_tac[GSYM APPEND_ASSOC] >>
+    DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+    simp[field_concat_left, field_concat_right] >>
+    `v2w (field 7 0 (w2v ((63 >< 56) val : word8))) : word8 = (63 >< 56) val` by (
+      SUBST1_TAC $ GSYM $ mk_blast_thm ``val : word64`` >> EVAL_TAC) >>
+    simp[] >> pop_assum kall_tac >> gvs[state_rel_def] >>
+    simp[CONJ_ASSOC] >> conj_tac >- state_rel_tac[] >>
+    rw[mem_rel_def]
+    >- (simp[FLOOKUP_UPDATE] >> rpt IF_CASES_TAC >> simp[] >> gvs[mem_rel_def]) >>
+    simp[FLOOKUP_UPDATE_ALT, APPLY_UPDATE_ALT_THM] >> simp[Once CONJ_SYM] >>
+    ntac 7 (
+      IF_CASES_TAC >> simp[] >> gvs[]
+      >- (
+        rpt (IF_CASES_TAC >> gvs[]) >>
+        irule_at Any EQ_REFL >> simp[] >> rpt AP_TERM_TAC >>
+        SUBST_ALL_TAC $ GSYM $ mk_blast_thm ``val : word64`` >> EVAL_TAC
+        )
+      ) >>
+    IF_CASES_TAC >> gvs[]
+    >- (
+      reverse $ rpt IF_CASES_TAC >> gvs[]
+      >- (
+        irule FALSITY >> pop_assum mp_tac >> simp[] >>
+        qspec_then `addr` mp_tac w2n_lt >> simp[]
+        )
+      >- (Q.REFINE_EXISTS_TAC `w2v (_ : word8)` >> simp[]) >>
+      irule FALSITY >> ARITH_TAC
+      )
+    >- (
+      reverse $ rpt IF_CASES_TAC >> gvs[]
+      >- (
+        gvs[mem_rel_def] >> first_x_assum $ qspec_then `w` mp_tac >> rw[] >>
+        goal_assum $ drule_at Any >> simp[]
+        )
+      >- (irule FALSITY >> qspec_then `addr` assume_tac w2n_lt >> gvs[]) >>
+      irule FALSITY >>
+      qmatch_asmsub_abbrev_tac `w2n _ = (w2n _ + offset) MOD _` >>
+      qpat_x_assum `_ ≠ _ (_ + offset)` mp_tac >> simp[] >>
+      once_rewrite_tac[GSYM w2n_11] >> unabbrev_all_tac >>
+      first_assum SUBST1_TAC >> simp[]
+      )
+    )
+QED
+
 (*
 Theorem l3_asl_Mem_read0_8_AccType_NORMAL_aligned:
   ∀l3 asl addr. state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
@@ -3091,11 +3580,337 @@ Proof
     )
 QED
 
+Theorem l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_1:
+  ∀b (j : word12) r2 r1.
+    l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
+      (LoadStore (LoadStoreImmediate@64
+        (3w, b, MemOp_STORE, AccType_NORMAL, F,F,F,F,F, T,
+         (0w :49 word) @@ j @@ (0w :word3), r2, r1)))
+Proof
+  rw[l3_models_asl_instr_subject_to_def, l3_models_asl_subject_to_def] >>
+  simp[encode_rws] >>
+  `(11 >< 0) ((0w :49 word) @@ j @@ (0w :word3) ⋙ 3) = j` by WORD_DECIDE_TAC >>
+  simp[] >> pop_assum kall_tac >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (irule FALSITY >> pop_assum mp_tac >> simp[] >> WORD_DECIDE_TAC) >>
+  l3_decode_tac >> simp[] >> l3_run_tac >> ntac 2 $ pop_assum kall_tac >> rw[] >>
+  asl_cexecute_tac >>
+  simp[
+    decode_str_imm_gen_aarch64_instrs_memory_single_general_immediate_unsigned_def,
+    execute_aarch64_instrs_memory_single_general_immediate_signed_post_idx_def
+    ] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl1` by (unabbrev_all_tac >> state_rel_tac[asl_sys_regs_ok_def]) >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  simp[undefined_MemOp_def, undefined_Constraint_def,
+       sail2_state_monadTheory.undefined_boolS_def] >>
+  simp[SetNotTagCheckedInstruction_def] >>
+  simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def] >>
+  reverse $ Cases_on `r2 = 31w` >> gvs[]
+  >- (
+    `w2n r2 ≠ 31` by WORD_DECIDE_TAC >> gvs[] >>
+    drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >>
+    impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    drule X_read >> disch_then $ qspec_then `&w2n r1` mp_tac >>
+    impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    qspecl_then [`8`,`F`,`&w2n r1`,`T`,`F`,`asl1`]
+      mp_tac AArch64_SetLSInstructionSyndrome >> simp[] >>
+    impl_tac >- WORD_DECIDE_TAC >>
+    simp[asl_reg_rws] >> strip_tac >> simp[Once seqS, Once returnS] >>
+    simp[LSISyndrome_ref_def] >>
+    qmatch_goalsub_abbrev_tac `asl2 : regstate sequential_state` >>
+    `state_rel l3 asl2` by (unabbrev_all_tac >> state_rel_tac[]) >>
+    `asl_sys_regs_ok asl2` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+    drule l3_asl_Mem_set0_8_AccType_NORMAL >> simp[] >>
+    disch_then $ qspecl_then [`X r2 l3 + w2w j ≪ 3`,`X r1 l3`] mp_tac >> impl_keep_tac
+    >- gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def] >>
+    simp[Once returnS] >> strip_tac >> simp[seqS, returnS]
+    ) >>
+  simp[ThisInstrAddr_def] >>
+  `read_regS PC_ref asl1 = returnS l3.PC asl1 : word64 res` by state_rel_tac[] >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
+  simp[Once seqS, asl_reg_rws, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl2 : regstate sequential_state` >>
+  `state_rel l3 asl2` by (
+    unabbrev_all_tac >> state_rel_tac[sp_rel_access_pc_ref_def]) >>
+  `asl_sys_regs_ok asl2` by (
+    unabbrev_all_tac >> gvs[sp_rel_access_pc_ref_def] >>
+    state_rel_tac[asl_sys_regs_ok_def]) >>
+  drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
+  >- (
+    qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
+    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
+    gvs[CheckAlignment_def, raise'exception_def] >>
+    rpt $ simp[Once state_transformerTheory.FOR_def,
+                    state_transformerTheory.BIND_DEF]
+    ) >>
+  strip_tac >> qpat_x_assum `_ = CheckSPAlignment _` $ assume_tac o GSYM >>
+  simp[Once seqS, Once returnS] >>
+  drule SP_read >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `&w2n r1` mp_tac >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qspecl_then [`8`,`F`,`&w2n r1`,`T`,`F`,`asl2`]
+    mp_tac AArch64_SetLSInstructionSyndrome >> simp[] >>
+  impl_tac >- WORD_DECIDE_TAC >>
+  simp[asl_reg_rws] >> strip_tac >> simp[Once seqS, Once returnS] >>
+  simp[LSISyndrome_ref_def] >>
+  qmatch_goalsub_abbrev_tac `asl3 : regstate sequential_state` >>
+  `state_rel l3 asl3` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl3` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+  drule l3_asl_Mem_set0_8_AccType_NORMAL >> simp[] >>
+  disch_then $ qspecl_then [`SP l3 + w2w j ≪ 3`,`X r1 l3`] mp_tac >> impl_tac
+  >- (
+    qpat_x_assum `(_ (_,_) _).exception = NoException` mp_tac >>
+    simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def]
+    ) >>
+  simp[returnS] >> strip_tac >> simp[seqS, returnS]
+QED
+
+Theorem l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_2:
+  ∀b (j : word8) unsigned r2 r1.
+    l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
+      (LoadStore (LoadStoreImmediate@64
+        (3w, b, MemOp_STORE, AccType_NORMAL, F,F,F,F,F, unsigned,
+         w2w j, r2, r1)))
+Proof
+  rw[] >>
+  Cases_on `
+    ∃i :word12. unsigned ∧ w2w j : word64 = (0w : 49 word) @@ i @@ (0w : word3)` >>
+  gvs[l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_1] >>
+  rw[l3_models_asl_instr_subject_to_def, l3_models_asl_subject_to_def] >>
+  simp[encode_rws] >> IF_CASES_TAC >> gvs[] >- gvs[load_encode_lemma] >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (pop_assum mp_tac >> simp[] >> blastLib.BBLAST_TAC) >>
+  ntac 3 $ pop_assum kall_tac >>
+  l3_decode_tac >> simp[] >> l3_run_tac >> ntac 2 $ pop_assum kall_tac >> rw[] >>
+  asl_cexecute_tac >>
+  simp[
+    decode_stur_gen_aarch64_instrs_memory_single_general_immediate_signed_offset_normal_def,
+    execute_aarch64_instrs_memory_single_general_immediate_signed_offset_normal_def
+    ] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl1` by (unabbrev_all_tac >> state_rel_tac[asl_sys_regs_ok_def]) >>
+  qcollapse_tac `0w : word1 @@ j` >> gvs[sw2sw_w2w] >>
+  `¬word_msb (0w : word1 @@ j)` by blastLib.BBLAST_TAC >> simp[] >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  simp[undefined_MemOp_def, undefined_Constraint_def,
+       sail2_state_monadTheory.undefined_boolS_def] >>
+  simp[SetNotTagCheckedInstruction_def] >>
+  simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def] >>
+  reverse $ Cases_on `r2 = 31w` >> gvs[]
+  >- (
+    `w2n r2 ≠ 31` by WORD_DECIDE_TAC >> gvs[] >>
+    drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >>
+    impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    drule X_read >> disch_then $ qspec_then `&w2n r1` mp_tac >>
+    impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    qspecl_then [`8`,`F`,`&w2n r1`,`T`,`F`,`asl1`]
+      mp_tac AArch64_SetLSInstructionSyndrome >> simp[] >>
+    impl_tac >- WORD_DECIDE_TAC >>
+    simp[asl_reg_rws] >> strip_tac >> simp[Once seqS, Once returnS] >>
+    simp[LSISyndrome_ref_def] >>
+    qmatch_goalsub_abbrev_tac `asl2 : regstate sequential_state` >>
+    `state_rel l3 asl2` by (unabbrev_all_tac >> state_rel_tac[]) >>
+    `asl_sys_regs_ok asl2` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+    drule l3_asl_Mem_set0_8_AccType_NORMAL >> simp[] >>
+    disch_then $ qspecl_then [`w2w (0w :word1 @@ j) + X r2 l3`,`X r1 l3`] mp_tac >>
+    impl_tac
+    >- (
+      qpat_x_assum `_.exception = NoException` mp_tac >>
+      simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def]
+      ) >>
+    simp[returnS] >> strip_tac >> simp[seqS, returnS]
+    ) >>
+  simp[ThisInstrAddr_def] >>
+  `read_regS PC_ref asl1 = returnS l3.PC asl1 : word64 res` by state_rel_tac[] >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
+  simp[Once seqS, asl_reg_rws, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl2 : regstate sequential_state` >>
+  `state_rel l3 asl2` by (
+    unabbrev_all_tac >> state_rel_tac[sp_rel_access_pc_ref_def]) >>
+  `asl_sys_regs_ok asl2` by (
+    unabbrev_all_tac >> gvs[sp_rel_access_pc_ref_def] >>
+    state_rel_tac[asl_sys_regs_ok_def]) >>
+  drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
+  >- (
+    qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
+    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
+    gvs[CheckAlignment_def, raise'exception_def] >>
+    rpt $ simp[Once state_transformerTheory.FOR_def,
+                    state_transformerTheory.BIND_DEF]
+    ) >>
+  strip_tac >> qpat_x_assum `_ = CheckSPAlignment _` $ assume_tac o GSYM >>
+  simp[Once seqS, Once returnS] >>
+  drule SP_read >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `&w2n r1` mp_tac >>
+  impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qspecl_then [`8`,`F`,`&w2n r1`,`T`,`F`,`asl2`]
+    mp_tac AArch64_SetLSInstructionSyndrome >> simp[] >>
+  impl_tac >- WORD_DECIDE_TAC >>
+  simp[asl_reg_rws] >> strip_tac >> simp[Once seqS, Once returnS] >>
+  simp[LSISyndrome_ref_def] >>
+  qmatch_goalsub_abbrev_tac `asl3 : regstate sequential_state` >>
+  `state_rel l3 asl3` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl3` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+  drule l3_asl_Mem_set0_8_AccType_NORMAL >> simp[] >>
+  disch_then $ qspecl_then [`SP l3 + w2w (0w : word1 @@ j)`,`X r1 l3`] mp_tac >>
+  impl_tac
+  >- (
+    qpat_x_assum `(_ (_,_) _).exception = NoException` mp_tac >>
+    simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def]
+    ) >>
+  simp[returnS] >> strip_tac >> simp[seqS, returnS]
+QED
+
+Theorem l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_3:
+  ∀b (j : word8) unsigned r2 r1.
+    l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
+      (LoadStore (LoadStoreImmediate@64
+        (3w, b, MemOp_STORE, AccType_NORMAL, F,F,F,F,F, unsigned,
+         (-1w : 56 word) @@ j, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_subject_to_def, l3_models_asl_subject_to_def] >>
+  simp[encode_rws] >> IF_CASES_TAC >> gvs[]
+  >- (irule FALSITY >> pop_assum mp_tac >> simp[] >> blastLib.BBLAST_TAC) >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (pop_assum mp_tac >> simp[] >> blastLib.BBLAST_TAC) >>
+  ntac 2 $ pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `(_ >< _) (w @@ _)` >>
+  `(8 >< 0) (w @@ j) : 9 word = (0b1w : 1 word) @@ j` by (
+    unabbrev_all_tac >> blastLib.BBLAST_TAC) >>
+  simp[] >> ntac 2 $ pop_assum kall_tac >>
+  DEP_REWRITE_TAC[word_concat_assoc |> INST_TYPE [``:ε`` |-> ``:20``]] >> simp[] >>
+  l3_decode_tac >> simp[] >> l3_run_tac >> ntac 2 $ pop_assum kall_tac >>
+  rw[] >> asl_cexecute_tac >>
+  simp[
+    decode_stur_gen_aarch64_instrs_memory_single_general_immediate_signed_offset_normal_def,
+    execute_aarch64_instrs_memory_single_general_immediate_signed_offset_normal_def
+    ] >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl1` by (unabbrev_all_tac >> state_rel_tac[asl_sys_regs_ok_def]) >>
+  qcollapse_tac `1w : word1 @@ j` >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  simp[undefined_MemOp_def, undefined_Constraint_def,
+       sail2_state_monadTheory.undefined_boolS_def] >>
+  simp[SetNotTagCheckedInstruction_def] >>
+  simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def] >>
+  reverse $ Cases_on `r2 = 31w` >> gvs[]
+  >- (
+    `w2n r2 ≠ 31` by WORD_DECIDE_TAC >> gvs[] >>
+    drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >>
+    impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    drule X_read >> disch_then $ qspec_then `&w2n r1` mp_tac >>
+    impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+    drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+    qspecl_then [`8`,`F`,`&w2n r1`,`T`,`F`,`asl1`]
+      mp_tac AArch64_SetLSInstructionSyndrome >> simp[] >>
+    impl_tac >- WORD_DECIDE_TAC >>
+    simp[asl_reg_rws] >> strip_tac >> simp[Once seqS, Once returnS] >>
+    simp[LSISyndrome_ref_def] >>
+    qmatch_goalsub_abbrev_tac `asl2 : regstate sequential_state` >>
+    `state_rel l3 asl2` by (unabbrev_all_tac >> state_rel_tac[]) >>
+    `asl_sys_regs_ok asl2` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+    drule l3_asl_Mem_set0_8_AccType_NORMAL >> simp[] >>
+    disch_then $ qspecl_then [`sw2sw (1w :word1 @@ j) + X r2 l3`,`X r1 l3`] mp_tac >>
+    impl_tac
+    >- (
+      qpat_x_assum `_.exception = NoException` mp_tac >>
+      simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def]
+      ) >>
+    simp[returnS] >> strip_tac >> simp[seqS, returnS]
+    ) >>
+  simp[ThisInstrAddr_def] >>
+  `read_regS PC_ref asl1 = returnS l3.PC asl1 : word64 res` by state_rel_tac[] >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
+  simp[Once seqS, asl_reg_rws, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl2 : regstate sequential_state` >>
+  `state_rel l3 asl2` by (
+    unabbrev_all_tac >> state_rel_tac[sp_rel_access_pc_ref_def]) >>
+  `asl_sys_regs_ok asl2` by (
+    unabbrev_all_tac >> gvs[sp_rel_access_pc_ref_def] >>
+    state_rel_tac[asl_sys_regs_ok_def]) >>
+  drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
+  >- (
+    qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
+    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
+    gvs[CheckAlignment_def, raise'exception_def] >>
+    rpt $ simp[Once state_transformerTheory.FOR_def,
+                    state_transformerTheory.BIND_DEF]
+    ) >>
+  strip_tac >> qpat_x_assum `_ = CheckSPAlignment _` $ assume_tac o GSYM >>
+  simp[Once seqS, Once returnS] >>
+  drule SP_read >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule X_read >> disch_then $ qspec_then `&w2n r1` mp_tac >>
+  impl_tac >- (simp[INT_GE_CALCULATE] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qspecl_then [`8`,`F`,`&w2n r1`,`T`,`F`,`asl2`]
+    mp_tac AArch64_SetLSInstructionSyndrome >> simp[] >>
+  impl_tac >- WORD_DECIDE_TAC >>
+  simp[asl_reg_rws] >> strip_tac >> simp[Once seqS, Once returnS] >>
+  simp[LSISyndrome_ref_def] >>
+  qmatch_goalsub_abbrev_tac `asl3 : regstate sequential_state` >>
+  `state_rel l3 asl3` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  `asl_sys_regs_ok asl3` by (unabbrev_all_tac >> gvs[asl_sys_regs_ok_def]) >>
+  drule l3_asl_Mem_set0_8_AccType_NORMAL >> simp[] >>
+  disch_then $ qspecl_then [`SP l3 + sw2sw (1w : word1 @@ j)`,`X r1 l3`] mp_tac >>
+  impl_tac
+  >- (
+    qpat_x_assum `(_ (_,_) _).exception = NoException` mp_tac >>
+    simp[dfn'LoadStoreImmediate_def, LoadStoreSingle_def]
+    ) >>
+  simp[returnS] >> strip_tac >> simp[seqS, returnS]
+QED
+
+Theorem l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF:
+  ∀b w unsigned r2 r1.
+    let instr =
+      LoadStore (LoadStoreImmediate@64
+        (3w, b, MemOp_STORE, AccType_NORMAL, F,F,F,F,F, unsigned, w, r2, r1))
+    in
+  (∀s. Encode instr ≠ BadCode s) ⇒
+    l3_models_asl_instr_subject_to asl_sys_regs_ok (K T) instr
+Proof
+  rw[encode_rws] >> gvs[load_encode_lemma]
+  >- simp[l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_1] >>
+  Cases_on `word_bit 8 w` >> gvs[] >> pop_assum SUBST_ALL_TAC
+  >- (
+    assume_tac l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_3 >>
+    gvs[]
+    )
+  >- (
+    `∃j : word8. (7 >< 0) w : word64 = w2w j` by (
+      qexists_tac `(7 >< 0) w` >> blastLib.BBLAST_TAC) >>
+    pop_assum SUBST_ALL_TAC >>
+    simp[l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_2]
+    )
+QED
+
 
 (****************************************)
 
 (* TODO for CakeML
-  LoadStore (LoadStoreImmediate@64 _)
   LoadStore (LoadStoreImmediate@8 _) (* XXX *)
 *)
 

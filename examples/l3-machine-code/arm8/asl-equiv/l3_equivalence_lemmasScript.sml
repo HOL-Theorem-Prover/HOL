@@ -566,6 +566,88 @@ Proof
   Cases >> simp[]
 QED
 
+Theorem byte_chunks_NONE:
+  ∀l. LENGTH l MOD 8 ≠ 0 ⇔ byte_chunks l = NONE
+Proof
+  gen_tac >> completeInduct_on `LENGTH l` >> rw[] >> gvs[PULL_FORALL] >>
+  Cases_on `l` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  Cases_on `t` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  Cases_on `t'` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  Cases_on `t` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  Cases_on `t'` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  Cases_on `t` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  Cases_on `t'` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  Cases_on `t` >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  simp[Once sail2_valuesTheory.byte_chunks_def] >> gvs[ADD1]
+QED
+
+Theorem byte_chunks_MAP:
+  ∀f l. byte_chunks (MAP f l) = OPTION_MAP (MAP (MAP f)) (byte_chunks l)
+Proof
+  rw[] >> Cases_on `LENGTH l MOD 8 ≠ 0` >> gvs[]
+  >- (`LENGTH (MAP f l) MOD 8 ≠ 0` by gvs[] >> gvs[byte_chunks_NONE]) >>
+  gvs[MOD_EQ_0_DIVISOR] >>
+  pop_assum mp_tac >> map_every qid_spec_tac [`l`,`d`] >>
+  Induct >> rw[] >- simp[sail2_valuesTheory.byte_chunks_def] >>
+  gvs[ADD1, LEFT_ADD_DISTRIB] >>
+  pop_assum mp_tac >> once_rewrite_tac[ADD_COMM] >> rw[LENGTH_EQ_NUM_compute] >>
+  simp[] >>
+  once_rewrite_tac[sail2_valuesTheory.byte_chunks_def] >> simp[] >>
+  Cases_on `byte_chunks l2` >> gvs[]
+QED
+
+Theorem byte_chunks_ByteList:
+  ∀n l.  LENGTH l = n * 8 ⇒ byte_chunks l = SOME $ ByteList l
+Proof
+  Induct >> rw[]
+  >- simp[Once sail2_valuesTheory.byte_chunks_def, Once ByteList_def] >>
+  gvs[ADD1, LEFT_ADD_DISTRIB] >>
+  pop_assum mp_tac >> once_rewrite_tac[ADD_COMM] >> rw[LENGTH_EQ_NUM_compute] >>
+  simp[Once sail2_valuesTheory.byte_chunks_def] >>
+  simp[SimpRHS, Once ByteList_def]
+QED
+
+Theorem LENGTH_ByteList:
+  ∀l. LENGTH (ByteList l) =
+    if LENGTH l MOD 8 = 0 then LENGTH l DIV 8 else LENGTH l DIV 8 + 1
+Proof
+  gen_tac >> completeInduct_on `LENGTH l` >> rw[] >> gvs[PULL_FORALL] >>
+  simp[Once ByteList_def] >> every_case_tac >> gvs[ADD1] >>
+  DEP_REWRITE_TAC[ADD_DIV_RWT] >> simp[]
+QED
+
+Theorem w2v_reverse_endianness0_64:
+  w2v (reverse_endianness0 (w : word64)) = BigEndianReverse (w2v w)
+Proof
+  rw[reverse_endianness0_def, BigEndianReverse_def] >>
+  SUBST_ALL_TAC $ GSYM $ mk_blast_thm ``w:word64`` >>
+  simp[w2v_v2w] >> simp[ByteList_def] >> EVAL_TAC
+QED
+
+Theorem extract_bits_reverse_endianness0_64:
+  ∀v:word64.
+    (7  >< 0)  (reverse_endianness0 v) = (63 >< 56) v ∧
+    (15 >< 8)  (reverse_endianness0 v) = (55 >< 48) v ∧
+    (23 >< 16) (reverse_endianness0 v) = (47 >< 40) v ∧
+    (31 >< 24) (reverse_endianness0 v) = (39 >< 32) v ∧
+    (39 >< 32) (reverse_endianness0 v) = (31 >< 24) v ∧
+    (47 >< 40) (reverse_endianness0 v) = (23 >< 16) v ∧
+    (55 >< 48) (reverse_endianness0 v) = (15 >< 8) v ∧
+    (63 >< 56) (reverse_endianness0 v) = (7  >< 0) v
+Proof
+  rw[] >> simp[reverse_endianness0_def] >> blastLib.BBLAST_TAC
+QED
+
+Theorem list_combine:
+  ∀l1 l2.
+    list_combine l1 l2 =
+      if LENGTH l1 < LENGTH l2 then ZIP (l1, TAKE (LENGTH l1) l2)
+      else if LENGTH l2 < LENGTH l1 then ZIP (TAKE (LENGTH l2) l1, l2)
+      else ZIP (l1,l2)
+Proof
+  Induct >> rw[lem_listTheory.list_combine_def] >> CASE_TAC >> gvs[]
+QED
+
 (****************************************)
 
 val _ = export_theory ();
