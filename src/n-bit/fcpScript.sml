@@ -341,10 +341,11 @@ val FCP_ETA = Q.store_thm("FCP_ETA",
    `!g. (FCP i. g ' i) = g`,
    SIMP_TAC std_ss [CART_EQ, FCP_BETA])
 
-(* |- FINITE univ(:'a) ==> CARD univ(:'a) = dimindex (:'a) *)
-val card_dimindex = save_thm("card_dimindex",
-   METIS_PROVE [dimindex_def]
-      ``FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))``);
+Theorem card_dimindex :
+    FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))
+Proof
+    METIS_TAC [dimindex_def]
+QED
 
 (* ------------------------------------------------------------------------- *
  * Support for introducing finite index types                                *

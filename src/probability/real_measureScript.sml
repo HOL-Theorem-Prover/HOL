@@ -19,8 +19,8 @@ val _ = new_theory "real_measure";
 (* Basic measure theory definitions.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = type_abbrev_pp ("measure", ``:'a set -> real``);
-val _ = type_abbrev_pp ("m_space", ``:'a set # 'a set set # 'a measure``);
+Type measure[pp] = “:'a set -> real”
+Type m_space[pp] = “:'a set # 'a set set # 'a measure”
 
 val m_space_def = Define
    `m_space (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sp`;

@@ -3992,7 +3992,7 @@ Definition prod_measure_space_def : (* was: prod_measure_def or pair_measure_def
        prod_measure m1 m2)
 End
 
-val _ = overload_on ("CROSS", “prod_measure_space”);
+Overload CROSS = “prod_measure_space”
 
 (* |- !m1 m2.
         m1 CROSS m2 =
