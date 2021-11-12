@@ -181,7 +181,7 @@ val verbose = ref false
 val sections = [#"a", #"b", #"c", #"d", #"e", #"f", #"g", #"h",
                 #"i",       #"k", #"l", #"m", #"n", #"o", #"p",
                 #"q", #"r", #"s", #"t", #"u", #"v", #"w", #"x",
-                            #"a"]; (* last letter is a loopback *)
+                      #"z", #"a"]; (* the last letter is a loopback *)
 
 val current_section = ref 0; (* starting from A *)
 
