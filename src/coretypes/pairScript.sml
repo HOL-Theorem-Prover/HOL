@@ -677,8 +677,8 @@ REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
 val RPROD_DEF =
 Q.new_definition
 ("RPROD_DEF",
-   `RPROD (R1:'a->'a->bool)
-          (R2:'b->'b->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
+   `RPROD (R1:'a->'b->bool)
+          (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
 
 
 val WF_RPROD =
