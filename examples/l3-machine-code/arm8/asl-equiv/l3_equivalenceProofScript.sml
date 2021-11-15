@@ -2230,6 +2230,57 @@ Proof
   state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
 QED
 
+Theorem l3_models_asl_ExtractRegister:
+  ∀b w r3 r2 r1.
+    l3_models_asl_instr (Data (ExtractRegister@64 (b, w, r3, r2, r1)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >>
+  simp[encode_rws] >>
+  l3_decode_tac >> rw[] >> l3_run_tac >>
+  asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  simp[
+    decode_extr_aarch64_instrs_integer_ins_ext_extract_immediate_def,
+    execute_aarch64_instrs_integer_ins_ext_extract_immediate_def
+    ] >>
+  simp[INT_ADD_CALCULATE, INT_SUB_CALCULATE] >>
+  drule X_read >> disch_then $ qspec_then `&w2n r2` mp_tac >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> pop_assum kall_tac >>
+  drule X_read >> disch_then $ qspec_then `&w2n r3` mp_tac >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> pop_assum kall_tac >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (irule FALSITY >> pop_assum mp_tac >> simp[] >> WORD_DECIDE_TAC) >>
+  Cases_on `r1 = 31w` >> gvs[] >- simp[X_set_31, returnS] >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r1`,
+    `(w2n w + 63 >< w2n w) (((X r2 l3 :word64) @@ (X r3 l3 :word64)) :word128)`]
+    mp_tac >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> simp[returnS] >>
+  qpat_x_assum `_ = returnS _ _` kall_tac >>
+  pop_assum mp_tac >> simp[write'X_def] >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (
+    irule FALSITY >> pop_assum mp_tac >> simp[] >>
+    DEP_REWRITE_TAC[LESS_MOD] >> simp[] >> WORD_DECIDE_TAC
+    ) >>
+  qmatch_goalsub_abbrev_tac `_⦇r1 ↦ asl_val⦈` >>
+  qmatch_goalsub_abbrev_tac `_⦇r1 ↦ v2w l3_val⦈` >>
+  qsuff_tac `asl_val = v2w l3_val` >> rw[] >> unabbrev_all_tac >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  qmatch_goalsub_abbrev_tac `x2 @@ x3` >>
+  `w2v x2 ++ w2v x3 = w2v ((x2 @@ x3) : word128)` by (
+    bitstringLib.Cases_on_v2w `x2` >> bitstringLib.Cases_on_v2w `x3` >>
+    once_rewrite_tac[word_concat_v2w_rwt] >> gvs[w2v_v2w]) >>
+  simp[] >> qmatch_goalsub_abbrev_tac `shiftr (w2v x23)` >>
+  qmatch_goalsub_abbrev_tac `lo + 63` >>
+  qspec_then `w` assume_tac w2n_lt >> gvs[] >>
+  blastLib.BBLAST_TAC >> `lo + 63 < 127` by gvs[] >>
+  simp[MIN_DEF, shiftr_def, testbit_el, EL_TAKE, el_w2v]
+QED
+
 (*********)
 
 Theorem AArch64_TranslateAddress:
