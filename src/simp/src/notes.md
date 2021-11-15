@@ -100,3 +100,12 @@
 
     One flaw in the current code is that the UNCHANGED-optimisation doesn’t get a chance to fire; unchangedness gets turned into reflexivity theorems so that the congruence rule can be refined with successive calls to `MP`.
     This is hard to avoid if the output of one recursive descent feeds into a subsequent one (as with the congruence for implication).
+
+    Another problem is that reprocessing of assumptions can unnecessarily descend into terms that have already been processed once.
+    For example, in the rule for conditional expressions, we have
+
+        p = p’ ==> (p’ ==> t = t’) ==> (~p’ ==> e = e’) ==>
+        (COND p t e = COND p’ t’ e’)
+
+    and the reprocess flag will be set to true for the `~p’` assumption (it’s not just a variable).
+    Sure, if negation descends over a disjunction or similar, this is an important thing to do (though the `mk_cond_rewr` could presumably do it too), but if nothing simplifies at the top level, it’s painful to have to descend into `p’` again.
