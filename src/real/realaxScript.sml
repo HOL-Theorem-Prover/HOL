@@ -559,18 +559,7 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
                    TREAL_ISO,TREAL_INV_0])}
  end;
 
-val _ =
-   add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-              fixity = Suffix 2100,
-              paren_style = OnlyIfNecessary,
-              pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)],
-              term_name = "realinv"};
-
-val _ = overload_on("realinv", ``inv``);
-
-val _ = TeX_notation {hol = "realinv", TeX = ("\\HOLTokenInverse{}", 1)};
-val _ = TeX_notation {hol = (UnicodeChars.sup_minus ^ UnicodeChars.sup_1),
-                      TeX = ("\\HOLTokenInverse{}", 1)};
+Overload realinv = “inv”;
 
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.
