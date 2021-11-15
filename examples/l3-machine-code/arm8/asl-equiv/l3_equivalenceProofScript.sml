@@ -2370,7 +2370,44 @@ Proof
   irule l3_models_asl_Address_T >> pop_assum mp_tac >> blastLib.BBLAST_TAC
 QED
 
-(*********)
+(******************** Loads/store ********************)
+
+(********** Misc lemmas **********)
+
+Triviality APPLY_UPDATE_ALT_THM:
+  ∀f a b c. f⦇a ↦ b⦈ c = if c = a then b else f c
+Proof
+  rw[combinTheory.APPLY_UPDATE_THM]
+QED
+
+Triviality FLOOKUP_UPDATE_ALT:
+  ∀fm k1 v k2. FLOOKUP (fm |+ (k1,v)) k2 = if k2 = k1 then SOME v else FLOOKUP fm k2
+Proof
+  rw[FLOOKUP_UPDATE]
+QED
+
+Triviality load_store_encode_lemma:
+  (w : word64 = w2w ((11 >< 0) (w ⋙ 3)) ≪ 3 ⇔
+    ∃j : word12. w = (0w : 49 word) @@ j @@ (0w : word3)) ∧
+  (w : word64 = sw2sw ((8 >< 0) w) ⇔
+    (word_bit 8 w ⇔ w = (-1w : 56 word) @@ (7 >< 0) w) ∧
+    (¬word_bit 8 w ⇔ w = (7 >< 0) w)) ∧
+  (w : word64 = w2w ((11 >< 0) w : word12) ⇔
+    ∃j : word12. w = (0w : 52 word) @@ j)
+Proof
+  rpt conj_tac
+  >- (
+    reverse eq_tac >> rw[] >- blastLib.BBLAST_TAC >>
+    qexists_tac `(14 >< 3) w` >> pop_assum mp_tac >> blastLib.BBLAST_TAC
+    )
+  >- blastLib.BBLAST_TAC
+  >- (
+    reverse eq_tac >> rw[] >- blastLib.BBLAST_TAC >>
+    qexists_tac `(11 >< 0) w` >> pop_assum mp_tac >> blastLib.BBLAST_TAC
+    )
+QED
+
+(********** Relational lemmas **********)
 
 Theorem AArch64_TranslateAddress:
   ∀vaddr acctype iswrite aligned size asl.
@@ -2395,6 +2432,125 @@ Proof
     sail2_state_monadTheory.undefined_boolS_def
     ] >>
   simp[returnS, IsFault_def]
+QED
+
+Theorem l3_asl_Align:
+  Align w (&i) = Align (w,i)
+Proof
+  simp[armv86aTheory.Align_def, arm8Theory.Align_def, Align__1_def] >>
+  Cases_on `i = 0` >> gvs[] >>
+  simp[integer_subrange_def, INT_MUL_CALCULATE, INT_DIV_CALCULATE, asl_word_rws] >>
+  DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+  DEP_REWRITE_TAC[v2w_fixwidth_dimindex] >> simp[]
+QED
+
+Theorem l3_asl_BigEndian:
+  ∀l3 asl. state_rel l3 asl ∧ asl_sys_regs_ok asl
+  ⇒ BigEndian () asl = returnS (BigEndian l3) asl
+Proof
+  rw[] >> simp[armv86aTheory.BigEndian_def, arm8Theory.BigEndian_def] >>
+  simp[sail2_state_monadTheory.undefined_boolS_def] >>
+  qspec_then `asl` mp_tac UsingAArch32_F >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  simp[asl_reg_rws, asl_word_rws] >>
+  simp[Once bindS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `el = 0w` >>
+  `el = l3.PSTATE.EL` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  drule_all SCTLR_read__1 >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >>
+  simp[COND_RATOR] >> disch_then kall_tac >>
+  simp[EL_MAP, el_w2v, sail2_valuesTheory.just_list_def] >>
+  qmatch_goalsub_abbrev_tac `foo ' 24` >>
+  `foo ' 24 = (SCTLR l3).E0E` by (
+    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
+    Cases_on_word_value `l3.PSTATE.EL` >>
+    gvs[SCTLR_def, TranslationRegime_def, aslSCTLR_def] >> blastLib.BBLAST_TAC) >>
+  qmatch_goalsub_abbrev_tac `bar ' 25` >>
+  `bar ' 25 = (SCTLR l3).EE` by (
+    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
+    Cases_on_word_value `l3.PSTATE.EL` >>
+    gvs[SCTLR_def, TranslationRegime_def, aslSCTLR_def] >> blastLib.BBLAST_TAC) >>
+  simp[] >> rw[SCTLR_def, TranslationRegime_def]
+QED
+
+Theorem l3_asl_CheckSPAlignment:
+  ∀l3 asl. state_rel l3 asl ∧ asl_sys_regs_ok asl ⇒
+    ∀l3'. CheckSPAlignment l3 = l3' ∧ l3'.exception = NoException
+    ⇒ l3 = l3' ∧ CheckSPAlignment () asl = returnS () asl
+Proof
+  rw[CheckSPAlignment_def, raise'exception_def] >>
+  rw[armv86aTheory.CheckSPAlignment_def] >>
+  simp[sail2_state_monadTheory.undefined_boolS_def] >>
+  drule SP_read >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qspec_then `asl` assume_tac PSTATE_read >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  `(asl.regstate.ProcState_reg "PSTATE").ProcState_EL = l3.PSTATE.EL` by
+      state_rel_tac[] >>
+  simp[asl_word_rws, EL_MAP] >> simp[sail2_valuesTheory.just_list_def, el_w2v] >>
+  drule_all SCTLR_read__1 >> strip_tac >> drule returnS_bindS_unit >>
+  IF_CASES_TAC >> simp[] >> disch_then kall_tac
+  >- (
+    simp[aslSCTLR_def, SCTLR_def, TranslationRegime_def] >>
+    qmatch_goalsub_abbrev_tac `(foo @@ bar) ' 4` >>
+    `(foo @@ bar) ' 4 = l3.SCTLR_EL1.SA0` by (
+      unabbrev_all_tac >> simp[reg'SCTLRType_def] >>
+      CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
+    simp[l3_asl_Align] >> gvs[Aligned_def]
+    ) >>
+  qmatch_goalsub_abbrev_tac `foo ' 3` >>
+  `foo ' 3 = (SCTLR l3).SA` by (
+    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
+    simp[aslSCTLR_def, SCTLR_def, TranslationRegime_def] >>
+    Cases_on_word_value `l3.PSTATE.EL` >>
+    gvs[SCTLR_def, TranslationRegime_def] >> blastLib.BBLAST_TAC) >>
+  simp[] >> gvs[Aligned_def, l3_asl_Align]
+QED
+
+(********** Memory reads/writes **********)
+
+Theorem l3_asl_Mem_read_1:
+  ∀l3 asl addrdesc accdesc.
+    mem_rel l3 asl.memstate asl.tagstate ∧
+    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0w
+  ⇒ let p = addrdesc.AddressDescriptor_paddress.FullAddress_address in
+    Mem_read addrdesc 1 accdesc asl = returnS (l3 (w2w p)) asl
+Proof
+  LET_ELIM_TAC >> rw[Mem_read_def] >>
+  simp[
+    sail2_state_monadTheory.undefined_boolS_def, undefined_FaultRecord_def,
+    undefined_MemoryAttributes_def, undefined_FullAddress_def,
+    undefined_Fault_def, undefined_AccType_def,
+    preludeTheory.undefined_int_def
+    ] >>
+  simp[asl_sys_reg_rws] >>
+  simp[Once returnS, Once bindS] >>
+  simp[
+    preludeTheory.ReadMemory_def,
+    sail2_state_monadTheory.read_memS_def,
+    sail2_state_monadTheory.read_memtS_def,
+    asl_word_rws, w2n_w2w
+    ] >>
+  simp[
+    sail2_state_monadTheory.read_memt_bytesS_def,
+    sail2_state_monadTheory.read_memt_bytesS_def,
+    sail2_state_monadTheory.readS_def,
+    bindS, returnS
+    ] >>
+  simp[sail2_state_monadTheory.get_mem_bytes_def] >>
+  qspec_then `p` assume_tac w2n_lt >> gvs[] >>
+  gvs[mem_rel_def] >> last_x_assum $ qspec_then `p` assume_tac >> gvs[] >>
+  gvs[] >> simp[sail2_valuesTheory.and_bit_def] >>
+  ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
+  simp[returnS] >>
+  simp[sail2_valuesTheory.bits_of_mem_bytes_def,
+       sail2_valuesTheory.bits_of_bytes_def] >>
+  simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss] >>
+  DEP_REWRITE_TAC[OPTION_MAP_just_list] >>
+  simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss, EVERY_MAP] >>
+  simp[returnS]
 QED
 
 Theorem l3_asl_Mem_read_8:
@@ -2443,87 +2599,51 @@ Proof
   gvs[LENGTH_EQ_NUM_compute] >> blastLib.BBLAST_TAC
 QED
 
-Theorem l3_asl_Mem_read_1:
-  ∀l3 asl addrdesc accdesc.
-    mem_rel l3 asl.memstate asl.tagstate ∧
-    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0w
-  ⇒ let p = addrdesc.AddressDescriptor_paddress.FullAddress_address in
-    Mem_read addrdesc 1 accdesc asl = returnS (l3 (w2w p)) asl
+Theorem l3_asl_Mem_read0_1_AccType_NORMAL:
+  ∀l3 asl addr. state_rel l3 asl ∧ asl_sys_regs_ok asl ⇒
+  Mem_read0 addr 1 AccType_NORMAL asl =
+  returnS (FST (Mem (addr,1,AccType_NORMAL) l3)) asl : word8 res
 Proof
-  LET_ELIM_TAC >> rw[Mem_read_def] >>
-  simp[
-    sail2_state_monadTheory.undefined_boolS_def, undefined_FaultRecord_def,
-    undefined_MemoryAttributes_def, undefined_FullAddress_def,
-    undefined_Fault_def, undefined_AccType_def,
-    preludeTheory.undefined_int_def
-    ] >>
-  simp[asl_sys_reg_rws] >>
-  simp[Once returnS, Once bindS] >>
-  simp[
-    preludeTheory.ReadMemory_def,
-    sail2_state_monadTheory.read_memS_def,
-    sail2_state_monadTheory.read_memtS_def,
-    asl_word_rws, w2n_w2w
-    ] >>
-  simp[
-    sail2_state_monadTheory.read_memt_bytesS_def,
-    sail2_state_monadTheory.read_memt_bytesS_def,
-    sail2_state_monadTheory.readS_def,
-    bindS, returnS
-    ] >>
-  simp[sail2_state_monadTheory.get_mem_bytes_def] >>
-  qspec_then `p` assume_tac w2n_lt >> gvs[] >>
-  gvs[mem_rel_def] >> last_x_assum $ qspec_then `p` assume_tac >> gvs[] >>
-  gvs[] >> simp[sail2_valuesTheory.and_bit_def] >>
-  ntac 2 $ simp[Once sail2_valuesTheory.just_list_def] >>
-  simp[returnS] >>
-  simp[sail2_valuesTheory.bits_of_mem_bytes_def,
-       sail2_valuesTheory.bits_of_bytes_def] >>
-  simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss] >>
-  DEP_REWRITE_TAC[OPTION_MAP_just_list] >>
-  simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss, EVERY_MAP] >>
-  simp[returnS]
-QED
-
-Theorem l3_asl_Align:
-  Align w (&i) = Align (w,i)
-Proof
-  simp[armv86aTheory.Align_def, arm8Theory.Align_def, Align__1_def] >>
-  Cases_on `i = 0` >> gvs[] >>
-  simp[integer_subrange_def, INT_MUL_CALCULATE, INT_DIV_CALCULATE, asl_word_rws] >>
-  DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
-  DEP_REWRITE_TAC[v2w_fixwidth_dimindex] >> simp[]
-QED
-
-Theorem l3_asl_BigEndian:
-  ∀l3 asl. state_rel l3 asl ∧ asl_sys_regs_ok asl
-  ⇒ BigEndian () asl = returnS (BigEndian l3) asl
-Proof
-  rw[] >> simp[armv86aTheory.BigEndian_def, arm8Theory.BigEndian_def] >>
-  simp[sail2_state_monadTheory.undefined_boolS_def] >>
-  qspec_then `asl` mp_tac UsingAArch32_F >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  simp[asl_reg_rws, asl_word_rws] >>
-  simp[Once bindS, Once returnS] >>
-  qmatch_goalsub_abbrev_tac `el = 0w` >>
-  `el = l3.PSTATE.EL` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  rw[] >> simp[Mem_read0_def, AArch64_CheckAlignment_def] >>
+  simp[sail2_state_monadTheory.undefined_boolS_def, undefined_Constraint_def,
+       ConstrainUnpredictable_def] >>
+  simp[l3_asl_Align, asl_word_rws, Align_def] >>
+  simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
   drule_all SCTLR_read__1 >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> bool] returnS_bindS >>
-  simp[COND_RATOR] >> disch_then kall_tac >>
-  simp[EL_MAP, el_w2v, sail2_valuesTheory.just_list_def] >>
-  qmatch_goalsub_abbrev_tac `foo ' 24` >>
-  `foo ' 24 = (SCTLR l3).E0E` by (
+  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `foo ' 1` >>
+  `foo ' 1 = (SCTLR l3).A` by (
     unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
-    Cases_on_word_value `l3.PSTATE.EL` >>
-    gvs[SCTLR_def, TranslationRegime_def, aslSCTLR_def] >> blastLib.BBLAST_TAC) >>
-  qmatch_goalsub_abbrev_tac `bar ' 25` >>
-  `bar ' 25 = (SCTLR l3).EE` by (
-    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
-    Cases_on_word_value `l3.PSTATE.EL` >>
-    gvs[SCTLR_def, TranslationRegime_def, aslSCTLR_def] >> blastLib.BBLAST_TAC) >>
-  simp[] >> rw[SCTLR_def, TranslationRegime_def]
+    gvs[SCTLR_def, TranslationRegime_def] >>
+    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> blastLib.BBLAST_TAC) >>
+  simp[Once $ GSYM COND_RAND] >> ntac 2 $ pop_assum kall_tac >>
+  simp[AArch64_MemSingle_read_def, l3_asl_Align, Align_def] >>
+  qspecl_then [`addr`,`AccType_NORMAL`,`F`,`T`,`1`,`asl`]
+    assume_tac AArch64_TranslateAddress >> gvs[] >>
+  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  qspecl_then [`AccType_NORMAL`,`asl`] mp_tac CreateAccessDescriptor >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
+  qspec_then `asl` mp_tac IsSecure >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
+  ntac 2 $ simp[Once returnS] >> simp[] >>
+  qpat_abbrev_tac `addr = _.FullAddress_address` >>
+  qspecl_then [`addr`,`AccType_NORMAL`,`asl`] mp_tac AArch64_AccessIsTagChecked >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `Mem_read _ _ accdesc` >>
+  qspecl_then [`l3.MEM`,`asl`,`addrdesc`,`accdesc`] mp_tac l3_asl_Mem_read_1 >>
+  impl_tac >- state_rel_tac[asl_sys_regs_ok_def] >> rw[] >>
+  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  drule_all l3_asl_BigEndian >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  simp[Mem_def, CheckAlignment_def, Aligned_def] >>
+  ntac 3 $ simp[Once state_transformerTheory.FOR_def] >>
+  simp[reverse_endianness0_def, Align_def, BigEndianReverse_def]
 QED
 
 Theorem l3_asl_Mem_read0_8_AccType_NORMAL:
@@ -2640,64 +2760,7 @@ Proof
   simp[mem_dword_def] >> IF_CASES_TAC >> gvs[] >> blastLib.BBLAST_TAC
 QED
 
-Theorem l3_asl_Mem_read0_1_AccType_NORMAL:
-  ∀l3 asl addr. state_rel l3 asl ∧ asl_sys_regs_ok asl ⇒
-  Mem_read0 addr 1 AccType_NORMAL asl =
-  returnS (FST (Mem (addr,1,AccType_NORMAL) l3)) asl : word8 res
-Proof
-  rw[] >> simp[Mem_read0_def, AArch64_CheckAlignment_def] >>
-  simp[sail2_state_monadTheory.undefined_boolS_def, undefined_Constraint_def,
-       ConstrainUnpredictable_def] >>
-  simp[l3_asl_Align, asl_word_rws, Align_def] >>
-  simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
-  drule_all SCTLR_read__1 >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  qmatch_goalsub_abbrev_tac `foo ' 1` >>
-  `foo ' 1 = (SCTLR l3).A` by (
-    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
-    gvs[SCTLR_def, TranslationRegime_def] >>
-    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> blastLib.BBLAST_TAC) >>
-  simp[Once $ GSYM COND_RAND] >> ntac 2 $ pop_assum kall_tac >>
-  simp[AArch64_MemSingle_read_def, l3_asl_Align, Align_def] >>
-  qspecl_then [`addr`,`AccType_NORMAL`,`F`,`T`,`1`,`asl`]
-    assume_tac AArch64_TranslateAddress >> gvs[] >>
-  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  qspecl_then [`AccType_NORMAL`,`asl`] mp_tac CreateAccessDescriptor >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
-  qspec_then `asl` mp_tac IsSecure >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
-  ntac 2 $ simp[Once returnS] >> simp[] >>
-  qpat_abbrev_tac `addr = _.FullAddress_address` >>
-  qspecl_then [`addr`,`AccType_NORMAL`,`asl`] mp_tac AArch64_AccessIsTagChecked >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  qmatch_goalsub_abbrev_tac `Mem_read _ _ accdesc` >>
-  qspecl_then [`l3.MEM`,`asl`,`addrdesc`,`accdesc`] mp_tac l3_asl_Mem_read_1 >>
-  impl_tac >- state_rel_tac[asl_sys_regs_ok_def] >> rw[] >>
-  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  drule_all l3_asl_BigEndian >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> ``:word8``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  simp[Mem_def, CheckAlignment_def, Aligned_def] >>
-  ntac 3 $ simp[Once state_transformerTheory.FOR_def] >>
-  simp[reverse_endianness0_def, Align_def, BigEndianReverse_def]
-QED
-
-Triviality APPLY_UPDATE_ALT_THM:
-  ∀f a b c. f⦇a ↦ b⦈ c = if c = a then b else f c
-Proof
-  rw[combinTheory.APPLY_UPDATE_THM]
-QED
-
-Triviality FLOOKUP_UPDATE_ALT:
-  ∀fm k1 v k2. FLOOKUP (fm |+ (k1,v)) k2 = if k2 = k1 then SOME v else FLOOKUP fm k2
-Proof
-  rw[FLOOKUP_UPDATE]
-QED
+(**)
 
 Theorem Mem_set_1:
   ∀asl addrdesc a w:word8. asl_sys_regs_ok asl ⇒
@@ -2789,6 +2852,49 @@ Proof
   qmatch_goalsub_abbrev_tac `Mem_set _ _ accdesc _` >>
   drule Mem_set_1 >> disch_then $ qspecl_then [`addrdesc`,`accdesc`,`val`] assume_tac >>
   simp[returnS] >> unabbrev_all_tac >> simp[] >> irule_at Any EQ_REFL
+QED
+
+Theorem l3_asl_Mem_set0_1_AccType_NORMAL:
+  ∀l3 asl addr (val : word8) l3'.
+    state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
+    write'Mem (val, addr, 1, AccType_NORMAL) l3 = l3' ∧
+    l3'.exception = NoException
+  ⇒ ∃asl'.
+      Mem_set0 addr 1 AccType_NORMAL val asl = returnS () asl' ∧
+      state_rel l3' asl' ∧
+      asl_sys_regs_ok asl'
+Proof
+  rw[] >> simp[Mem_set0_def, AArch64_CheckAlignment_def] >>
+  simp[sail2_state_monadTheory.undefined_boolS_def, undefined_Constraint_def,
+       ConstrainUnpredictable_def] >>
+  simp[l3_asl_Align, asl_word_rws] >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
+  drule_all l3_asl_BigEndian >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  drule_all SCTLR_read__1 >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `foo ' 1` >>
+  `foo ' 1 = (SCTLR l3).A` by (
+    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
+    gvs[SCTLR_def, TranslationRegime_def] >>
+    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> blastLib.BBLAST_TAC) >>
+  simp[Once $ GSYM COND_RAND] >> ntac 2 $ pop_assum kall_tac >>
+  simp[Align_def, reverse_endianness0_def] >>
+  drule AArch64_MemSingle_set_1 >>
+  disch_then $ qspecl_then [`addr`,`T`,`val`] assume_tac >> gvs[] >>
+  simp[asl_reg_rws, exclusive_block_address_ref_def, returnS] >>
+  reverse conj_tac >- gvs[asl_sys_regs_ok_def] >>
+  simp[write'Mem_def] >>
+  simp[Once state_transformerTheory.FOR_def] >>
+  simp[CheckAlignment_def, Aligned_def, Align_def, BigEndianReverse_def, fields] >>
+  gvs[state_rel_def] >> rewrite_tac[CONJ_ASSOC] >> conj_tac >- state_rel_tac[] >>
+  gvs[mem_rel_def, FLOOKUP_UPDATE_ALT, APPLY_UPDATE_ALT_THM] >> gen_tac >>
+  last_x_assum $ qspec_then `w` assume_tac >> gvs[] >> rw[]
+  >- (irule_at Any EQ_REFL >> simp[])
+  >- (irule FALSITY >> pop_assum mp_tac >> WORD_DECIDE_TAC)
+  >- (irule FALSITY >> pop_assum mp_tac >> WORD_DECIDE_TAC)
+  >- (irule_at Any EQ_REFL >> simp[])
 QED
 
 Theorem l3_asl_Mem_set0_8_AccType_NORMAL:
@@ -3176,124 +3282,11 @@ Proof
     )
 QED
 
-(*
-Theorem l3_asl_Mem_read0_8_AccType_NORMAL_aligned:
-  ∀l3 asl addr. state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
-    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0b0w ∧
-    word_bit 4 ((asl.regstate.ProcState_reg "PSTATE").ProcState_M) ∧
-    Aligned (addr,8) ⇒
-  Mem_read0 addr 8 AccType_NORMAL asl =
-  returnS (FST (Mem (addr,8,AccType_NORMAL) l3)) asl : word64 res
-Proof
-  rw[] >> simp[Mem_read0_def, AArch64_CheckAlignment_def] >>
-  simp[sail2_state_monadTheory.undefined_boolS_def, undefined_Constraint_def,
-       ConstrainUnpredictable_def] >>
-  simp[l3_asl_Align, asl_word_rws] >>
-  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
-  simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
-  drule_all SCTLR_read__1 >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  qmatch_goalsub_abbrev_tac `foo ' 1` >>
-  `foo ' 1 = (SCTLR l3).A` by (
-    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
-    gvs[SCTLR_def, TranslationRegime_def] >>
-    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> blastLib.BBLAST_TAC) >>
-  simp[Once $ GSYM COND_RAND] >> ntac 2 $ pop_assum kall_tac >>
-  gvs[Aligned_def] >>
-  simp[AArch64_MemSingle_read_def, l3_asl_Align] >>
-  qspecl_then [`addr`,`AccType_NORMAL`,`F`,`T`,`8`,`asl`]
-    assume_tac AArch64_TranslateAddress >> gvs[] >>
-  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  qspecl_then [`AccType_NORMAL`,`asl`] mp_tac CreateAccessDescriptor >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
-  qspec_then `asl` mp_tac IsSecure >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
-  ntac 2 $ simp[Once returnS] >> simp[HaveMTEExt] >>
-  qpat_abbrev_tac `addr = _.FullAddress_address` >>
-  qspecl_then [`addr`,`AccType_NORMAL`,`asl`] mp_tac AArch64_AccessIsTagChecked >>
-  impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  qmatch_goalsub_abbrev_tac `Mem_read _ _ accdesc` >>
-  qspecl_then [`l3.MEM`,`asl`,`addrdesc`,`accdesc`] mp_tac l3_asl_Mem_read_8 >>
-  impl_tac >- state_rel_tac[] >> rw[] >>
-  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  drule_all l3_asl_BigEndian >> strip_tac >>
-  drule $ INST_TYPE [gamma |-> ``:word64``] returnS_bindS >>
-  simp[] >> disch_then kall_tac >>
-  simp[Mem_def, CheckAlignment_def, Aligned_def] >>
-  ntac 3 (ntac 8 $ simp[Once state_transformerTheory.FOR_def]) >>
-  simp[state_transformerTheory.BIND_DEF] >>
-  simp[BigEndianReverse_def] >>
-  rewrite_tac[GSYM APPEND_ASSOC] >>
-  DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
-  map_every (rewrite_tac o single) [
-    GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
-  simp[reverse_endianness0_def, mem_dword_def] >>
-  IF_CASES_TAC >> gvs[] >> simp[returnS] >>
-  WORD_DECIDE_TAC
-QED
-*)
 
-Theorem l3_asl_CheckSPAlignment:
-  ∀l3 asl. state_rel l3 asl ∧ asl_sys_regs_ok asl ⇒
-    ∀l3'. CheckSPAlignment l3 = l3' ∧ l3'.exception = NoException
-    ⇒ l3 = l3' ∧ CheckSPAlignment () asl = returnS () asl
-Proof
-  rw[CheckSPAlignment_def, raise'exception_def] >>
-  rw[armv86aTheory.CheckSPAlignment_def] >>
-  simp[sail2_state_monadTheory.undefined_boolS_def] >>
-  drule SP_read >> strip_tac >>
-  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-  qspec_then `asl` assume_tac PSTATE_read >>
-  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-  `(asl.regstate.ProcState_reg "PSTATE").ProcState_EL = l3.PSTATE.EL` by
-      state_rel_tac[] >>
-  simp[asl_word_rws, EL_MAP] >> simp[sail2_valuesTheory.just_list_def, el_w2v] >>
-  drule_all SCTLR_read__1 >> strip_tac >> drule returnS_bindS_unit >>
-  IF_CASES_TAC >> simp[] >> disch_then kall_tac
-  >- (
-    simp[aslSCTLR_def, SCTLR_def, TranslationRegime_def] >>
-    qmatch_goalsub_abbrev_tac `(foo @@ bar) ' 4` >>
-    `(foo @@ bar) ' 4 = l3.SCTLR_EL1.SA0` by (
-      unabbrev_all_tac >> simp[reg'SCTLRType_def] >>
-      CASE_TAC >> simp[] >> blastLib.BBLAST_TAC) >>
-    simp[l3_asl_Align] >> gvs[Aligned_def]
-    ) >>
-  qmatch_goalsub_abbrev_tac `foo ' 3` >>
-  `foo ' 3 = (SCTLR l3).SA` by (
-    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
-    simp[aslSCTLR_def, SCTLR_def, TranslationRegime_def] >>
-    Cases_on_word_value `l3.PSTATE.EL` >>
-    gvs[SCTLR_def, TranslationRegime_def] >> blastLib.BBLAST_TAC) >>
-  simp[] >> gvs[Aligned_def, l3_asl_Align]
-QED
+(* TODO a lot of the proofs below are very similar - perhaps they could be combined *)
 
-Triviality load_store_encode_lemma:
-  (w : word64 = w2w ((11 >< 0) (w ⋙ 3)) ≪ 3 ⇔
-    ∃j : word12. w = (0w : 49 word) @@ j @@ (0w : word3)) ∧
-  (w : word64 = sw2sw ((8 >< 0) w) ⇔
-    (word_bit 8 w ⇔ w = (-1w : 56 word) @@ (7 >< 0) w) ∧
-    (¬word_bit 8 w ⇔ w = (7 >< 0) w)) ∧
-  (w : word64 = w2w ((11 >< 0) w : word12) ⇔
-    ∃j : word12. w = (0w : 52 word) @@ j)
-Proof
-  rpt conj_tac
-  >- (
-    reverse eq_tac >> rw[] >- blastLib.BBLAST_TAC >>
-    qexists_tac `(14 >< 3) w` >> pop_assum mp_tac >> blastLib.BBLAST_TAC
-    )
-  >- blastLib.BBLAST_TAC
-  >- (
-    reverse eq_tac >> rw[] >- blastLib.BBLAST_TAC >>
-    qexists_tac `(11 >< 0) w` >> pop_assum mp_tac >> blastLib.BBLAST_TAC
-    )
-QED
+(********** 64-bit loads **********)
 
-(* TODO these proofs are very similar - perhaps they could be combined *)
 Theorem l3_models_asl_LoadStoreImmediate_NORMAL_LOAD_FFFFF_1:
   ∀b (j : word12) r2 r1.
     l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
@@ -3776,6 +3769,8 @@ Proof
     )
 QED
 
+(********** 64-bit stores **********)
+
 Theorem l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_1:
   ∀b (j : word12) r2 r1.
     l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
@@ -4103,48 +4098,7 @@ Proof
     )
 QED
 
-Theorem l3_asl_Mem_set0_1_AccType_NORMAL:
-  ∀l3 asl addr (val : word8) l3'.
-    state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
-    write'Mem (val, addr, 1, AccType_NORMAL) l3 = l3' ∧
-    l3'.exception = NoException
-  ⇒ ∃asl'.
-      Mem_set0 addr 1 AccType_NORMAL val asl = returnS () asl' ∧
-      state_rel l3' asl' ∧
-      asl_sys_regs_ok asl'
-Proof
-  rw[] >> simp[Mem_set0_def, AArch64_CheckAlignment_def] >>
-  simp[sail2_state_monadTheory.undefined_boolS_def, undefined_Constraint_def,
-       ConstrainUnpredictable_def] >>
-  simp[l3_asl_Align, asl_word_rws] >>
-  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
-  simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
-  drule_all l3_asl_BigEndian >> strip_tac >>
-  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-  drule_all SCTLR_read__1 >> strip_tac >>
-  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >>
-  qmatch_goalsub_abbrev_tac `foo ' 1` >>
-  `foo ' 1 = (SCTLR l3).A` by (
-    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
-    gvs[SCTLR_def, TranslationRegime_def] >>
-    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> blastLib.BBLAST_TAC) >>
-  simp[Once $ GSYM COND_RAND] >> ntac 2 $ pop_assum kall_tac >>
-  simp[Align_def, reverse_endianness0_def] >>
-  drule AArch64_MemSingle_set_1 >>
-  disch_then $ qspecl_then [`addr`,`T`,`val`] assume_tac >> gvs[] >>
-  simp[asl_reg_rws, exclusive_block_address_ref_def, returnS] >>
-  reverse conj_tac >- gvs[asl_sys_regs_ok_def] >>
-  simp[write'Mem_def] >>
-  simp[Once state_transformerTheory.FOR_def] >>
-  simp[CheckAlignment_def, Aligned_def, Align_def, BigEndianReverse_def, fields] >>
-  gvs[state_rel_def] >> rewrite_tac[CONJ_ASSOC] >> conj_tac >- state_rel_tac[] >>
-  gvs[mem_rel_def, FLOOKUP_UPDATE_ALT, APPLY_UPDATE_ALT_THM] >> gen_tac >>
-  last_x_assum $ qspec_then `w` assume_tac >> gvs[] >> rw[]
-  >- (irule_at Any EQ_REFL >> simp[])
-  >- (irule FALSITY >> pop_assum mp_tac >> WORD_DECIDE_TAC)
-  >- (irule FALSITY >> pop_assum mp_tac >> WORD_DECIDE_TAC)
-  >- (irule_at Any EQ_REFL >> simp[])
-QED
+(********** 8-bit loads **********)
 
 Theorem l3_models_asl_LoadStoreImmediate_8_NORMAL_LOAD_FFFFF_1:
   ∀b (j : word12) r2 r1.
@@ -4499,6 +4453,8 @@ Proof
     )
 QED
 
+(********** 8-bit stores **********)
+
 Theorem l3_models_asl_LoadStoreImmediate_8_NORMAL_STORE_FFFFF_1:
   ∀b (j : word12) r2 r1.
     l3_models_asl_instr_subject_to asl_sys_regs_ok (K T)
@@ -4815,12 +4771,6 @@ Proof
     )
 QED
 
-
-(****************************************)
-
-(* TODO for CakeML
-  LoadStore (LoadStoreImmediate@8 _) (* XXX *)
-*)
 
 (****************************************)
 
