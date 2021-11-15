@@ -1,7 +1,9 @@
 INCDIRS = examples/lambda/basics src/finite_maps
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/%),$(INCDIRS))
 
-EXTRA_CLEANS = heap munge.exe selftest.exe ccs-selftest.log
+EXTRA_CLEANS = heap munge.exe selftest.exe ccs-selftest.log \
+	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
+	$(patsubst %Theory.uo,%Theory.lst,$(DEFAULT_TARGETS))
 
 ifdef POLY
 HOLHEAP = heap
@@ -11,7 +13,8 @@ OBJS = $(patsubst %,$(dprot $(HOLDIR)/%Theory.uo),$(OBJNAMES))
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(protect $(HOLDIR)/src/finite_maps/finite_mapTheory) bisimulationTheory
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ \
+	$(protect $(HOLDIR)/src/finite_maps/finite_mapTheory) bisimulationTheory
 endif
 
 all: $(DEFAULT_TARGETS) munge.exe selftest.exe

@@ -5,18 +5,11 @@
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory combinTheory res_quanTools pairTheory pred_setTheory
-     realTheory realLib seqTheory transcTheory;
+     hurdUtils;
 
-open iterateTheory;
+open realTheory realLib seqTheory transcTheory iterateTheory;
 
 val _ = new_theory "real_sigma";
-
-fun K_TAC _ = ALL_TAC;
-val KILL_TAC = POP_ASSUM_LIST K_TAC;
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-val art = ASM_REWRITE_TAC;
 
 (* ----------------------------------------------------------------------
     REAL_SUM_IMAGE
@@ -953,5 +946,156 @@ val jensen_pos_concave_SIGMA = store_thm
    >> (MATCH_MP_TAC o UNDISCH o Q.SPEC `s`) jensen_pos_convex_SIGMA
    >> Q.UNABBREV_TAC `f'`
    >> FULL_SIMP_TAC std_ss [pos_concave_fn, GSPECIFICATION]);
+
+(* ------------------------------------------------------------------------- *)
+(* Some convexity-derived inequalities including AGM and Young's inequality. *)
+(* Ported from hol-light (AGM stands for "arithmetic and geometric means")   *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: changed ‘0 <= x i’ (hol-light) to ‘0 < x i’ *)
+Theorem AGM_GEN :
+    !a x s. FINITE s /\ sum s a = &1 /\ (!i. i IN s ==> &0 <= a i /\ &0 < x i)
+        ==> product s (\i. x i rpow a i) <= sum s (\i. a i * x i)
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘f = \i. x i rpow a i’
+ >> Know ‘!n. n IN s ==> 0 < f n’
+ >- (rw [Abbr ‘f’] \\
+     MATCH_MP_TAC RPOW_POS_LT >> rw [])
+ >> DISCH_TAC
+ >> Know ‘product s f <= sum s (\i. a i * x i) <=>
+          ln (product s f) <= ln (sum s (\i. a i * x i))’
+ >- (MATCH_MP_TAC (GSYM LN_MONO_LE) >> CONJ_TAC >|
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC PRODUCT_POS_LT >> simp [],
+       (* goal 2 (of 2) *)
+       MATCH_MP_TAC SUM_POS_LT >> simp [] \\
+       CONJ_TAC >- (Q.X_GEN_TAC ‘n’ >> DISCH_TAC \\
+                    MATCH_MP_TAC REAL_LE_MUL >> rw [] \\
+                    MATCH_MP_TAC REAL_LT_IMP_LE >> rw []) \\
+       Cases_on ‘?i. i IN s /\ 0 < a i’
+       >- (POP_ASSUM STRIP_ASSUME_TAC >> Q.EXISTS_TAC ‘i’ >> art [] \\
+           MATCH_MP_TAC REAL_LT_MUL >> rw []) \\
+       FULL_SIMP_TAC std_ss [GSYM IMP_DISJ_THM, GSYM real_lte] \\
+       Know ‘sum s a <= &CARD s * 0’
+       >- (MATCH_MP_TAC SUM_BOUND >> rw []) >> rw [] ])
+ >> Rewr'
+ >> Know ‘ln (product s f) = sum s (\x. ln (f x))’
+ >- (MATCH_MP_TAC LN_PRODUCT >> rw [])
+ >> Rewr'
+ >> Know ‘!g. sum s g = SIGMA g s’
+ >- (Q.X_GEN_TAC ‘g’ \\
+     MATCH_MP_TAC (GSYM REAL_SUM_IMAGE_sum) >> art [])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> simp [Abbr ‘f’]
+ >> Know ‘SIGMA (\x'. ln (x x' rpow a x')) s = SIGMA (\i. a i * ln (x i)) s’
+ >- (MATCH_MP_TAC REAL_SUM_IMAGE_EQ >> art [] \\
+     Q.X_GEN_TAC ‘i’ >> rw [] \\
+     MATCH_MP_TAC LN_RPOW >> rw [])
+ >> Rewr'
+ >> MP_TAC (Q.SPECL [‘ln’, ‘a’, ‘x’]
+                    (MATCH_MP jensen_pos_concave_SIGMA (ASSUME “FINITE s”)))
+ >> rw [pos_concave_ln]
+ >> POP_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC SUM_POS_BOUND >> rw []
+ >> Suff ‘sum s a = SIGMA a s’ >- rw [REAL_LE_REFL]
+ >> MATCH_MP_TAC (GSYM REAL_SUM_IMAGE_sum) >> art []
+QED
+
+(* NOTE: changed ‘0 <= x i’ (hol-light) to ‘0 < x i’ *)
+Theorem AGM_RPOW :
+    !s x n. s HAS_SIZE n /\ ~(n = 0) /\ (!i. i IN s ==> &0 < x(i))
+        ==> product s (\i. x(i) rpow (&1 / &n)) <= sum s (\i. x(i) / &n)
+Proof
+    RW_TAC std_ss [HAS_SIZE]
+ >> MP_TAC (Q.SPECL [‘\i. &1 / &CARD (s :'a set)’, ‘x’, ‘s’] AGM_GEN)
+ >> rw [SUM_CONST, GSYM real_div]
+QED
+
+Theorem AGM_ROOT :
+    !s x n. s HAS_SIZE n /\ ~(n = 0) /\ (!i. i IN s ==> &0 <= x(i))
+        ==> root n (product s x) <= sum s x / &n
+Proof
+    RW_TAC std_ss [HAS_SIZE]
+ >> Cases_on ‘!i. i IN s ==> &0 < x(i)’
+ >- (RW_TAC std_ss [ROOT_PRODUCT, real_div] \\
+     Know ‘product s (\i. root (CARD s) (x i)) =
+           product s (\i. (x i) rpow (inv &CARD s))’
+     >- (MATCH_MP_TAC PRODUCT_EQ \\
+         Q.X_GEN_TAC ‘i’ >> rw [REAL_ROOT_RPOW]) >> Rewr' \\
+     REWRITE_TAC [GSYM SUM_RMUL] \\
+     REWRITE_TAC [GSYM real_div, REAL_INV_1OVER] \\
+     MATCH_MP_TAC AGM_RPOW >> rw [HAS_SIZE])
+ (* extra work to support ‘!i. i IN s ==> 0 <= x i’ *)
+ >> FULL_SIMP_TAC std_ss [real_lt]
+ >> ‘x i = 0’ by PROVE_TAC [REAL_LE_ANTISYM]
+ >> Know ‘product s x = 0’
+ >- (REWRITE_TAC [MATCH_MP PRODUCT_EQ_0 (ASSUME “FINITE s”)] \\
+     Q.EXISTS_TAC ‘i’ >> art [])
+ >> Rewr'
+ >> Q.ABBREV_TAC ‘n = CARD s’
+ >> Cases_on ‘n’ >- fs []
+ >> rw [ROOT_0]
+ >> MATCH_MP_TAC SUM_POS_LE >> rw []
+QED
+
+Theorem AGM_SQRT :
+    !x y. &0 <= x /\ &0 <= y ==> sqrt(x * y) <= (x + y) / &2
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (ISPECL [“{0; (1:num)}”,
+                    “\(n :num). if n = 0 then (x:real) else (y:real)”,
+                    “(2:num)”] AGM_ROOT)
+ >> ‘FINITE {0; (1:num)}’ by PROVE_TAC [FINITE_INSERT, FINITE_SING]
+ >> simp [SUM_CLAUSES, PRODUCT_CLAUSES, sqrt]
+ >> DISCH_THEN MATCH_MP_TAC
+ >> rw [HAS_SIZE]
+QED
+
+Theorem AGM :
+    !s x n. s HAS_SIZE n /\ ~(n = 0) /\ (!i. i IN s ==> &0 <= x(i))
+        ==> product s x <= (sum s x / &n) pow n
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘n’ >- fs []
+ >> rename1 ‘SUC n <> 0’
+ >> Know ‘0 <= sum s x / &SUC n’
+ >- (MATCH_MP_TAC REAL_LE_DIV >> rw [] \\
+     MATCH_MP_TAC SUM_POS_LE >> rw [])
+ >> DISCH_TAC
+ >> Know ‘product s x <= (sum s x / &SUC n) pow (SUC n) <=>
+          root (SUC n) (product s x) <=
+          root (SUC n) ((sum s x / &(SUC n)) pow (SUC n))’
+ >- (MATCH_MP_TAC (GSYM ROOT_MONO_LE_EQ) >> rw [] \\
+     MATCH_MP_TAC PRODUCT_POS_LE >> fs [HAS_SIZE])
+ >> Rewr'
+ >> RW_TAC std_ss [POW_ROOT_POS]
+ >> MATCH_MP_TAC AGM_ROOT >> rw []
+QED
+
+(* NOTE: changed ‘0 <= x /\ 0 <= y’ (hol-light) to ‘0 < x /\ 0 < y’ *)
+Theorem AGM_2 :
+    !x y u v. &0 < x /\ &0 < y /\ &0 <= u /\ &0 <= v /\ u + v = &1
+          ==> x rpow u * y rpow v <= u * x + v * y
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (ISPECL [“\i:num. if i = 0 then u:real else v”,
+                    “\i:num. if i = 0 then x:real else y”, “0..SUC 0”] AGM_GEN)
+ >> simp [SUM_CLAUSES_NUMSEG, PRODUCT_CLAUSES_NUMSEG, FINITE_NUMSEG, IN_NUMSEG]
+ >> DISCH_THEN MATCH_MP_TAC
+ >> rw []
+QED
+
+(* NOTE: changed ‘0 <= a /\ 0 <= b’ (hol-light) to ‘0 < a /\ 0 < b’ *)
+Theorem YOUNG_INEQUALITY :
+    !a b p q. &0 < a /\ &0 < b /\ &0 < p /\ &0 < q /\ inv(p) + inv(q) = &1
+          ==> a * b <= a rpow p / p + b rpow q / q
+Proof
+    rpt STRIP_TAC
+ >> ‘p <> 0 /\ q <> 0’ by PROVE_TAC [REAL_LT_IMP_NE]
+ >> ‘0 <= p /\ 0 <= q’ by PROVE_TAC [REAL_LT_IMP_LE]
+ >> MP_TAC (Q.SPECL [`a rpow p`, `b rpow q`, `inv p:real`, `inv q:real`] AGM_2)
+ >> rw [RPOW_RPOW, RPOW_1, RPOW_POS_LT, real_div]
+QED
 
 val _ = export_theory ();
