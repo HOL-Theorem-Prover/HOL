@@ -2281,6 +2281,81 @@ Proof
   simp[MIN_DEF, shiftr_def, testbit_el, EL_TAKE, el_w2v]
 QED
 
+Theorem l3_models_asl_Address_F:
+  ∀i r. sw2sw ((20 >< 0) i : 21 word) = i ⇒
+    l3_models_asl_instr (Address (F, i, r))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  `((20 >< 2) i : 19 word) @@ ((1 >< 0) i : 2 word) = (20 >< 0) i` by WORD_DECIDE_TAC >>
+  simp[] >> l3_decode_tac >> rw[] >> qcollapse_tac `(20 >< 0) i` >>
+  simp[Run_def, dfn'Address_def] >>
+  asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+  map_every qcollapse_tac [`(20 >< 2) i`,`(1 >< 0) i`] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  simp[
+    decode_adr_aarch64_instrs_integer_arithmetic_address_pc_rel_def,
+    execute_aarch64_instrs_integer_arithmetic_address_pc_rel_def
+    ] >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  drule PC_read >> rw[Once bindS, returnS] >>
+  Cases_on `r = 31w` >> gvs[] >- simp[write'X_def, X_set_31, returnS] >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r`,`i + l3.PC`] mp_tac >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> gvs[returnS]
+QED
+
+Theorem l3_models_asl_Address_T:
+  ∀(j : 52 word) r. sw2sw ((20 >< 0) j @@ (0w : word12)) = j @@ (0w : word12) ⇒
+    l3_models_asl_instr (Address (T, j @@ (0w : word12), r))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >> simp[encode_rws] >>
+  `(13 >< 12) (j @@ (0w : word12)) = (1 >< 0) j` by blastLib.BBLAST_TAC >>
+  `(32 >< 14) (j @@ (0w : word12)) = (20 >< 2) j` by blastLib.BBLAST_TAC >>
+  `(20 >< 2) j @@ (1 >< 0) j @@ (0w : word12) = (20 >< 0) j @@ (0w : word12)`
+    by blastLib.BBLAST_TAC >>
+  gvs[] >>
+  l3_decode_tac >> rw[] >> qcollapse_tac `(20 >< 0) j @@ (0w : word12)` >>
+  simp[Run_def, dfn'Address_def] >>
+  simp[] >> asl_cexecute_tac >> simp[] >> pop_assum kall_tac >>
+  map_every qcollapse_tac [`(20 >< 2) j`,`(1 >< 0) j`] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  simp[
+    decode_adrp_aarch64_instrs_integer_arithmetic_address_pc_rel_def,
+    execute_aarch64_instrs_integer_arithmetic_address_pc_rel_def
+    ] >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  drule PC_read >> rw[Once bindS, returnS] >>
+  Cases_on `r = 31w` >> gvs[] >- simp[write'X_def, X_set_31, returnS] >>
+  DEP_REWRITE_TAC[word_concat_assoc |> INST_TYPE [``:ε`` |-> ``:14``]] >> simp[] >>
+  qmatch_goalsub_abbrev_tac `X_set _ _ asl_val` >>
+  drule $ b64 alpha X_set_not_31 >>
+  disch_then $ qspecl_then [`64`,`&w2n r`,`asl_val`] mp_tac >>
+  impl_tac >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >> simp[returnS] >>
+  qmatch_goalsub_abbrev_tac `write'X (l3_val,_)` >> gvs[] >>
+  qsuff_tac `asl_val = l3_val` >> rw[] >> gvs[] >> unabbrev_all_tac >>
+  simp[set_subrange_zeros_def, set_slice_zeros_def, EVAL ``i2w 4095``] >>
+  blastLib.BBLAST_TAC
+QED
+
+Theorem l3_models_asl_Address:
+  ∀b i r.
+    let instr = Address (b, i, r) in
+    (∀s. Encode instr ≠ BadCode s) ⇒ l3_models_asl_instr instr
+Proof
+  reverse $ rw[encode_rws]
+  >- (
+    `((20 >< 2) i : 19 word) @@ ((1 >< 0) i : 2 word) = (20 >< 0) i` by
+      WORD_DECIDE_TAC >>
+    gvs[l3_models_asl_Address_F]
+    ) >>
+  `∃j : 52 word. i = j @@ (0w : word12)` by (
+    qexists_tac `(63 >< 12) i` >> pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
+  gvs[] >>
+  irule l3_models_asl_Address_T >> pop_assum mp_tac >> blastLib.BBLAST_TAC
+QED
+
 (*********)
 
 Theorem AArch64_TranslateAddress:
