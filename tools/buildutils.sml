@@ -906,6 +906,7 @@ fun process_cline () =
             end
       in
         full_clean SRCDIRS per_dir_action;
+        safedelete Systeml.build_log_file;
         post_action();
         Process.exit Process.success
       end
