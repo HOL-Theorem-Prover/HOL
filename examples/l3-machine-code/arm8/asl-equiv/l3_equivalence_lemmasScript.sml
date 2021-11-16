@@ -406,6 +406,8 @@ Theorem bindS = sail2_state_monadTheory.bindS_def;
 Theorem seqS =
   sail2_state_monadTheory.seqS_def |> SIMP_RULE std_ss [bindS, FUN_EQ_THM];
 
+Theorem failS = sail2_state_monadTheory.failS_def;
+
 Theorem returnS = sail2_state_monadTheory.returnS_def;
 
 Theorem bindS_returnS[simp]:
@@ -620,8 +622,13 @@ Theorem w2v_reverse_endianness0_64:
   w2v (reverse_endianness0 (w : word64)) = BigEndianReverse (w2v w)
 Proof
   rw[reverse_endianness0_def, BigEndianReverse_def] >>
-  SUBST_ALL_TAC $ GSYM $ mk_blast_thm ``w:word64`` >>
-  simp[w2v_v2w] >> simp[ByteList_def] >> EVAL_TAC
+  simp[
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.concat_vec_def
+    ] >>
+  qspec_then `w` assume_tac length_w2v >> gvs[SimpRHS] >>
+  gvs[LENGTH_EQ_NUM_compute] >> simp[ByteList_def] >>
+  pop_assum mp_tac >> EVAL_TAC >> blastLib.BBLAST_TAC
 QED
 
 Theorem extract_bits_reverse_endianness0_64:
@@ -635,7 +642,12 @@ Theorem extract_bits_reverse_endianness0_64:
     (55 >< 48) (reverse_endianness0 v) = (15 >< 8) v ∧
     (63 >< 56) (reverse_endianness0 v) = (7  >< 0) v
 Proof
-  rw[] >> simp[reverse_endianness0_def] >> blastLib.BBLAST_TAC
+  rw[] >> simp[reverse_endianness0_def] >>
+  simp[
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.concat_vec_def
+    ] >>
+  blastLib.BBLAST_TAC
 QED
 
 Theorem list_combine:
