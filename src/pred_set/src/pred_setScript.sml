@@ -6881,19 +6881,6 @@ val compl_insert = Q.store_thm ("compl_insert",
 (* PREIMAGE lemmas from util_probTheory                                      *)
 (*---------------------------------------------------------------------------*)
 
-(* moved Unicode/TeX notation of ‘realinv’ here from realaxTheory *)
-val _ =
-   add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-              fixity = Suffix 2100,
-              paren_style = OnlyIfNecessary,
-              pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)],
-              term_name = "realinv"};
-
-val _ = TeX_notation {hol = "realinv", TeX = ("\\HOLTokenInverse{}", 1)};
-val _ = TeX_notation {hol = (UnicodeChars.sup_minus ^ UnicodeChars.sup_1),
-                      TeX = ("\\HOLTokenInverse{}", 1)};
-
-(* This is also called "inverse mapping" in some textbooks *)
 val PREIMAGE_def = new_definition (
    "PREIMAGE_def", ``PREIMAGE f s = {x | f x IN s}``);
 
