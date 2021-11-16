@@ -88,58 +88,6 @@ Definition state_rel_def:
     l3.exception = NoException
 End
 
-Definition l3_models_asl_def:
-  l3_models_asl opcode ⇔
-    Decode opcode ≠ Unallocated ∧
-    ∀ l3 asl l3'.
-      state_rel l3 asl ∧
-      Run (Decode opcode) l3 = l3' ∧
-      l3'.exception = NoException
-    ⇒ case seqS (write_regS SEE_ref (~1)) (ExecuteA64 opcode) asl of
-        | (Value _, asl') => state_rel l3' asl'
-        | _ => F
-End
-
-Definition l3_models_asl_instr_def:
-  l3_models_asl_instr instr ⇔
-    case Encode instr of
-      | ARM8 opcode => l3_models_asl opcode
-      | _ => F
-End
-
-Definition l3_models_asl_subject_to_def:
-  l3_models_asl_subject_to P Q opcode ⇔
-    Decode opcode ≠ Unallocated ∧
-    ∀ l3 asl l3'.
-      state_rel l3 asl ∧
-      Run (Decode opcode) l3 = l3' ∧
-      l3'.exception = NoException ∧
-      P asl ∧ Q l3
-    ⇒ case seqS (write_regS SEE_ref (~1)) (ExecuteA64 opcode) asl of
-        | (Value _, asl') => state_rel l3' asl' ∧ P asl' ∧ Q l3'
-        | _ => F
-End
-
-Definition l3_models_asl_instr_subject_to_def:
-  l3_models_asl_instr_subject_to P Q instr ⇔
-    case Encode instr of
-      | ARM8 opcode => l3_models_asl_subject_to P Q opcode
-      | _ => F
-End
-
-Theorem l3_models_asl_K:
-  l3_models_asl = l3_models_asl_subject_to (K T) (K T)
-Proof
-  rw[FUN_EQ_THM, l3_models_asl_def, l3_models_asl_subject_to_def]
-QED
-
-Theorem l3_models_asl_instr_K:
-  l3_models_asl_instr = l3_models_asl_instr_subject_to (K T) (K T)
-Proof
-  rw[FUN_EQ_THM, l3_models_asl_instr_def, l3_models_asl_instr_subject_to_def] >>
-  CASE_TAC >> gvs[l3_models_asl_K]
-QED
-
 Definition asl_sys_regs_ok_def:
   asl_sys_regs_ok asl ⇔
 
@@ -166,6 +114,25 @@ Definition asl_sys_regs_ok_def:
 
     (let TCR_EL3 = asl.regstate.bitvector_32_dec_reg "TCR_EL3" in
       ¬word_bit 29 TCR_EL3)
+End
+
+Definition l3_models_asl_def:
+  l3_models_asl opcode ⇔
+    Decode opcode ≠ Unallocated ∧
+    ∀ l3 asl l3'.
+      state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
+      Run (Decode opcode) l3 = l3' ∧
+      l3'.exception = NoException
+    ⇒ case seqS (write_regS SEE_ref (~1)) (ExecuteA64 opcode) asl of
+        | (Value _, asl') => state_rel l3' asl' ∧ asl_sys_regs_ok asl'
+        | _ => F
+End
+
+Definition l3_models_asl_instr_def:
+  l3_models_asl_instr instr ⇔
+    case Encode instr of
+      | ARM8 opcode => l3_models_asl opcode
+      | _ => F
 End
 
 val _ = export_theory();
