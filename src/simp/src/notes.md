@@ -98,10 +98,7 @@
     This builds a *congproc* given a `congrule` theorem and a general notion of reflexivity in the function `refl`.
     It’s important that `refl` be able to generate reflexivity theorems for multiple relations at once: this allows different relations to appear in the assumptions of `congrule`; the conclusion might want to draw conclusions about equality even as one of the assumptions is about another relation again (as happens in weakening congruences).
 
-    One flaw in the current code is that the UNCHANGED-optimisation doesn’t get a chance to fire; unchangedness gets turned into reflexivity theorems so that the congruence rule can be refined with successive calls to `MP`.
-    This is hard to avoid if the output of one recursive descent feeds into a subsequent one (as with the congruence for implication).
-
-    Another problem is that reprocessing of assumptions can unnecessarily descend into terms that have already been processed once.
+    One problem here is that reprocessing of assumptions can unnecessarily descend into terms that have already been processed once.
     For example, in the rule for conditional expressions, we have
 
         p = p’ ==> (p’ ==> t = t’) ==> (~p’ ==> e = e’) ==>

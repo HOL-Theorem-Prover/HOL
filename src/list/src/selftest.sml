@@ -197,3 +197,17 @@ in
               (TAC $ Induct_on ‘RTC’ using relationTheory.RTC_INDUCT_RIGHT1)
               ([], rtcg)
 end
+
+
+val _ = let
+  open BasicProvers simpLib listTheory
+  val _ = tprint
+  val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
+
+  val t = “(!x:'a. MEM x l ==> g x = c:'b option) ==> P (MAP THE (MAP g l))”
+  val expected =
+      “(!x:'a. MEM x l ==> g x = c:'b option) ==> P (MAP THE (MAP (\x. c) l))”
+in
+  convtest("simplify with MAP_CONG; get eta-redex?",
+           SIMP_CONV (quietly srw_ss()) [Cong MAP_CONG'], t, expected)
+end

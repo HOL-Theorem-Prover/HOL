@@ -336,7 +336,7 @@ Theorem LOWMOD_termval:
 Proof
   simp[SimpL “$==>”, valuation_def, LOWMOD_def] >> strip_tac >>
   Induct >> simp[Cong MAP_CONG'] >- metis_tac[TERM_OF_NUM] >>
-  simp[LOWMOD_def, MAP_MAP_o, combinTheory.o_ABS_R]
+  simp[LOWMOD_def, MAP_MAP_o, Cong MAP_CONG']
 QED
 
 Theorem term_of_num_composition:
@@ -351,7 +351,7 @@ Theorem holds_LOWMOD[simp]:
         (holds (LOWMOD M) v p ⇔ holds M (term_of_num o v) p)
 Proof
   Induct >> simp[Cong MAP_CONG', LOWMOD_termval]
-  >- simp[LOWMOD_def, MAP_MAP_o, combinTheory.o_ABS_R] >>
+  >- simp[LOWMOD_def, MAP_MAP_o, Cong MAP_CONG'] >>
   rw[] >> simp[LOWMOD_def, PULL_EXISTS, term_of_num_composition]
 QED
 
@@ -362,7 +362,7 @@ Proof
   rw[EQ_IMP_THM]
   >- (rename [‘M.Fun f zs ∈ M.Dom’] >>
       first_x_assum (qspecl_then [‘f’, ‘MAP num_of_term zs’] mp_tac) >>
-      simp[MEM_MAP, PULL_EXISTS, MAP_MAP_o, combinTheory.o_DEF]) >>
+      simp[MEM_MAP, PULL_EXISTS, MAP_MAP_o, Cong MAP_CONG']) >>
   first_x_assum irule >> simp[MEM_MAP, PULL_EXISTS] >> rpt strip_tac >>
   first_x_assum drule >> simp[PULL_EXISTS]
 QED

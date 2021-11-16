@@ -89,6 +89,12 @@ fun strip_n_imp 0 tm = ([],tm)
       in (x::z,w)
       end;
 
+fun strip_ncomb 0 A tm = SOME (tm, A)
+  | strip_ncomb n A tm =
+    case Lib.total dest_comb tm of
+        NONE => NONE
+      | SOME (fxs,x) => strip_ncomb (n - 1) (x::A) fxs
+
 (* ---------------------------------------------------------------------
  * strip_imp_until_rel
  *
@@ -130,6 +136,10 @@ let
    val rel = rel_of_congrule congrule'
 
    val (conditions,conc) = strip_n_imp nconds (concl congrule')
+   val normal = let val (_, l,r) = dest_binop conc
+                in
+                  can (match_term l) r andalso can (match_term r) l
+                end
    val matcher =
       HO_PART_MATCH (rator o snd o strip_n_imp nconds) congrule'
 
@@ -160,9 +170,9 @@ in fn {relation,solver,depther,freevars} =>
        remaining to be discharged.  Most of the side conditions
        will be sub-congruences of the form (--`A = ?A`--)  *)
 
-    fun process_subgoals (0,match_thm,_) = match_thm
-      | process_subgoals (_,_,[]) = raise Fail "process_subgoals BIND"
-      | process_subgoals (n,match_thm,flags::more_flags) =
+    fun process_subgoals (0,match_thm,_,allunch) = (match_thm, allunch)
+      | process_subgoals (_,_,[],_) = raise Fail "process_subgoals BIND"
+      | process_subgoals (n,match_thm,flags::more_flags,allunch) =
         let val condition = #1 (dest_imp (concl match_thm))
 
            (* work out whether the condition is a congruence condition
@@ -190,21 +200,41 @@ in fn {relation,solver,depther,freevars} =>
                     (trace(5,PRODUCE(concl thm,"UNCHANGED",thm));thm)
                   else thm
                 val reprocessed_assum_thms = map2 reprocess assum_thms flags
-                val rewr_thm =
-                  (depther (reprocessed_assum_thms,oper) orig)
+                val (rewr_thm,changed) =
+                  (depther (reprocessed_assum_thms,oper) orig,true)
                   handle HOL_ERR _ =>
                   let val thm = refl {Rinst = oper, arg = orig}
-                  in (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
+                  in (trace(5,PRODUCE(orig,"UNCHANGED",thm));(thm,false))
                   end
-                val abs_rewr_thm =
-                    CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars)) rewr_thm
+                val absify = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars))
+                val abs_rewr_thmf =
+                    if null ho_vars then (fn x => x)
+                    else
+                      let val r = rhs (concl rewr_thm)
+                      in
+                        case strip_ncomb (length ho_vars) [] r of
+                            NONE => absify
+                          | SOME (fxs, sfx) =>
+                            if list_eq aconv sfx ho_vars then
+                              let val fvs = free_vars fxs
+                              in
+                                if List.all (fn hv => not (op_mem aconv hv fvs))
+                                            ho_vars
+                                then
+                                  (fn x => x)
+                                else absify
+                              end
+                            else absify
+                      end
+                val abs_rewr_thm = abs_rewr_thmf rewr_thm
                 val disch_abs_rewr_thm = itlist DISCH assums abs_rewr_thm
                 val gen_abs_rewr_thm = GENL ho_vars disch_abs_rewr_thm
                 val gen_abs_res =
                     funpow (length ho_vars) rator (rand (concl abs_rewr_thm))
                 val spec_match_thm = SPEC gen_abs_res (GEN genv match_thm)
                 val new_match_thm = MP spec_match_thm gen_abs_rewr_thm
-            in process_subgoals (n-1,new_match_thm,more_flags)
+            in process_subgoals (n-1,new_match_thm,more_flags,
+                                 allunch andalso not changed)
             end
           else let
               fun output() =
@@ -213,14 +243,17 @@ in fn {relation,solver,depther,freevars} =>
               val _ = trace (6, LZ_TEXT output)
               val side_condition_thm = solver condition
               val new_match_thm = MP match_thm side_condition_thm
-            in process_subgoals (n-1,new_match_thm,more_flags)
+            in process_subgoals (n-1,new_match_thm,more_flags,allunch)
             end
         end
 
-    val final_thm = process_subgoals (nconds,match_thm,reprocess_flags)
+    val (final_thm,allunch) =
+        process_subgoals (nconds,match_thm,reprocess_flags,normal)
 
   in
-    if aconv (rand (rator (concl final_thm))) (rand (concl final_thm)) then
+    if allunch then
+      (* note critical link between this exception and traversal code in
+         Traverse.FIRSTCQC_CONV *)
       raise HOL_ERR { origin_structure = "Opening",
                       origin_function = "CONGPROC",
                       message = "Congruence gives no change" }
