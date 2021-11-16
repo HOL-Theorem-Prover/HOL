@@ -125,15 +125,22 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
                     Binarymap.dict
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 
-(* Extend the base environment with vars passed at commandline. *)
+(* Extend the base environment with vars passed at commandline (foldl below),
+   as well as environment variables "magically" derived from other options,
+   (handled by HM_Core_Cline.extend_env). *)
 fun extend_with_cline_vars env =
-  List.foldl (fn (vstr, env) =>
-                case String.fields (fn x => x = #"=") vstr of
-                  [vname, contents] => env_extend (vname, [LIT contents]) env
-                | _ => die ("Malformed variable assignment " ^
-                            "passed at commandline: " ^ vstr))
-             env
-             cline_vars
+    let val env =
+            List.foldl (fn (vstr, env) =>
+                           case String.fields (fn x => x = #"=") vstr of
+                               [vname, contents] =>
+                                 env_extend (vname, [LIT contents]) env
+                             | _ => die ("Malformed variable assignment " ^
+                                         "passed at commandline: " ^ vstr))
+                       env
+                       cline_vars
+    in
+      HM_Core_Cline.extend_env (#core master_cline_nohmf) env
+    end
 
 local
   open hm_target

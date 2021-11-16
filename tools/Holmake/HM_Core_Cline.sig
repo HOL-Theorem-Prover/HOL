@@ -37,4 +37,6 @@ val core_option_descriptions : t cline_result GetOpt.opt_descr list
 
 val sort_descriptions : 'a GetOpt.opt_descr list -> 'a GetOpt.opt_descr list
 
+val extend_env : t -> Holmake_types.env -> Holmake_types.env
+
 end
