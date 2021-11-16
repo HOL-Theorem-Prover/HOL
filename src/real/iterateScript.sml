@@ -10,7 +10,6 @@
 (*                                                                           *)
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
-(*                                                                           *)
 (*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
 (*              (c) Copyright, John Harrison and others 1998-2012            *)
@@ -19,27 +18,12 @@
 open HolKernel Parse boolLib bossLib;
 
 open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
-     arithmeticTheory realTheory realLib jrhUtils pairTheory mesonLib
-     pred_setTheory;
+     arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory hurdUtils;
 
+open realTheory realLib transcTheory;
 open wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
-
-(* Minimal version of hurdUtils *)
-fun K_TAC _ = ALL_TAC;
-fun wrap a = [a];
-val art = ASM_REWRITE_TAC;
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-
-local
-  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
-in
-  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
-end;
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -4440,6 +4424,38 @@ val PRODUCT_DELTA = store_thm ("PRODUCT_DELTA",
          (if a IN s then b else &1)``,
   REWRITE_TAC[product, GSYM NEUTRAL_REAL_MUL] THEN
   SIMP_TAC std_ss [ITERATE_DELTA, MONOIDAL_REAL_MUL]);
+
+Theorem LN_PRODUCT :
+    !f s. FINITE s /\ (!x. x IN s ==> &0 < f x) ==>
+          ln (product s f) = sum s (\x. ln (f x))
+Proof
+    rpt STRIP_TAC
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> Q.SPEC_TAC (‘s’, ‘s’)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> rw [PRODUCT_CLAUSES, SUM_CLAUSES, LN_1]
+ >> ‘0 < f e’ by PROVE_TAC []
+ >> ‘0 < product s f’ by (MATCH_MP_TAC PRODUCT_POS_LT >> rw [])
+ >> rw [LN_MUL]
+QED
+
+(* added ‘n <> 0 /\ (!x. x IN s ==> &0 <= f x)’ to hol-light's statements *)
+Theorem ROOT_PRODUCT :
+    !n f s. FINITE s /\ n <> 0 /\ (!x. x IN s ==> &0 <= f x)
+        ==> root n (product s f) = product s (\i. root n (f i))
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘n’ >- fs []
+ >> rename1 ‘SUC n <> 0’
+ >> POP_ASSUM MP_TAC
+ >> Q.PAT_X_ASSUM ‘FINITE s’ MP_TAC
+ >> Q.SPEC_TAC (‘s’, ‘s’)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> rw [PRODUCT_CLAUSES, ROOT_1]
+ >> ‘0 <= f e’ by PROVE_TAC []
+ >> ‘0 <= product s f’ by (MATCH_MP_TAC PRODUCT_POS_LE >> rw [])
+ >> rw [ROOT_MUL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extend congruences.                                                       *)
