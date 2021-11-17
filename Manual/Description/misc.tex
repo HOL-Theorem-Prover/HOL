@@ -594,7 +594,7 @@ whose value are commas instead), but can otherwise be arbitrary text.
   so that the above will be read as one unit by the underlying shell.
 \item[\texttt{\$(subst arg1,arg2,text)}] replaces every occurrence
   of \texttt{arg1} in \texttt{text} with \texttt{arg2}.
-\item[\texttt{\$(tee arg1,arg2)}]\index{tee@\texttt{tee}!Holmake function@\texttt{Holmake} function} produces a (moderately complicated) shell command line that behaves like \texttt{arg1~|~tee~arg2}, but whose exit code is \texttt{arg1}'s rather than \texttt{arg2}'s.
+\item[\texttt{\$(tee arg1,arg2)}]\index{tee@\texttt{tee}!Holmake function@\texttt{Holmake} function} produces a (moderately complicated) shell command line that behaves like \texttt{arg1~|~tee~arg2}, but whose exit code is \texttt{arg1}'s rather than \texttt{tee}'s.
 \item[\texttt{\$(which arg)}] is replaced by the full path to an executable and readable occurrence of a file called \texttt{arg} within a directory in the list of directories in the \texttt{PATH} environment variable.
 For example \texttt{\$(which cat)} will usually expand to \texttt{/bin/cat} on Unix-like systems.
 If there is no occurrence of \texttt{arg} in any directory in \texttt{PATH}, this function call expands to the empty string.
