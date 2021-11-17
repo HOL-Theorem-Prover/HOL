@@ -4397,10 +4397,6 @@ val lemma2 = prove (
     ==> abs(i - s) < e / &3:real ==> abs(sg - i) < e / &3:real ==> abs(sf - s) < e)``,
   REWRITE_TAC [lemma12]);
 
-val ABS_TRIANGLE_LE = store_thm ("ABS_TRIANGLE_LE",
- ``!x y. abs(x) + abs(y) <= e ==> abs(x + y) <= e:real``,
-  METIS_TAC[REAL_LE_TRANS, ABS_TRIANGLE]);
-
 val INTEGRABLE_UNIFORM_LIMIT = store_thm ("INTEGRABLE_UNIFORM_LIMIT",
  ``!f a b. (!e. &0 < e
                 ==> ?g. (!x. x IN interval[a,b] ==> abs(f x - g x) <= e) /\
