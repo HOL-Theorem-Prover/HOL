@@ -9162,6 +9162,7 @@ Proof
      >- (rw [Abbr ‘A’, NOT_IN_EMPTY, Once EXTENSION, extreal_lt_def]) >> Rewr' \\
      MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [])
  >> fs [GSYM extreal_lt_def]
+ >> Q.PAT_X_ASSUM ‘sigma_algebra Borel’ K_TAC (* not needed *)
  (* step 3 *)
  >> Cases_on ‘?z. f z = Normal c’
  >- (FULL_SIMP_TAC bool_ss [] (* but z may not be unique! *) \\
@@ -9176,9 +9177,8 @@ Proof
          SPOSE_NOT_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [extreal_lt_def])) \\
          POP_ASSUM (MP_TAC o (REWRITE_RULE [inf_le'])) \\
          rw [GSYM extreal_lt_def] \\
-         Q.PAT_X_ASSUM ‘sigma_algebra Borel’ K_TAC (* irrelevent *) \\
-         Q.PAT_X_ASSUM ‘Normal c <= f y’ K_TAC     (* useless *) \\
-         Q.PAT_X_ASSUM ‘f x < Normal c’ K_TAC      (* useless *) \\
+         Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
+         Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
          Q.EXISTS_TAC ‘inf {x | f x = Normal c}’ \\
          reverse CONJ_TAC >- METIS_TAC [extreal_lt_def] \\
          Q.X_GEN_TAC ‘y’ >> rw [inf_le'],
@@ -9190,7 +9190,6 @@ Proof
                       MATCH_MP_TAC lt_imp_le >> art []) \\
          SPOSE_NOT_THEN (STRIP_ASSUME_TAC o REWRITE_RULE []) \\
          Q.PAT_X_ASSUM ‘f _ = Normal c’ (fs o wrap) \\
-         Q.PAT_X_ASSUM ‘sigma_algebra Borel’ K_TAC (* irrelevent *) \\
          Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
          Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
          Suff ‘inf {x | f x = Normal c} <= t’ >- METIS_TAC [extreal_lt_def] \\
@@ -9216,9 +9215,9 @@ Proof
         ‘inf {x | f x = Normal c} < t’ by METIS_TAC [extreal_lt_def] \\
         ‘t <= inf {x | f x = Normal c}’ by rw [le_inf'] \\
          METIS_TAC [let_antisym] ] ])
- >> FULL_SIMP_TAC std_ss []
  (* step 4, now take ‘z’ as the last position where ‘f’ jumps over ‘Normal c’.
     Note that ‘f z’ as the function of ‘sup’ may be above or below ‘Normal c’. *)
+ >> FULL_SIMP_TAC std_ss []
  >> Q.ABBREV_TAC ‘z = sup {x | f x < Normal c}’
  >> Cases_on ‘f z < Normal c’
  >- (Suff ‘A = {x | x <= z}’ >- rw [BOREL_MEASURABLE_SETS] \\
@@ -9240,7 +9239,6 @@ Proof
      ‘f t < f (sup {x | f x < Normal c})’ by PROVE_TAC [lte_trans] \\
       METIS_TAC [extreal_lt_def],
       (* goal 2 (of 2) *)
-      Q.PAT_X_ASSUM ‘sigma_algebra Borel’ K_TAC (* irrelevant *) \\
       Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
       Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
       Q.PAT_X_ASSUM ‘Normal c <= f _’     K_TAC (* useless *) \\
