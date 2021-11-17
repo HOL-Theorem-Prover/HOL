@@ -9,11 +9,13 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open metisLib combinTheory pred_setTheory res_quanTools pairTheory RealArith
-     prim_recTheory arithmeticTheory realTheory realLib real_sigmaTheory
-     seqTheory limTheory transcTheory jrhUtils pred_setLib tautLib;
+open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
+     prim_recTheory arithmeticTheory tautLib pred_setLib hurdUtils;
 
-open hurdUtils util_probTheory cardinalTheory iterateTheory;
+open realTheory realLib real_sigmaTheory RealArith seqTheory limTheory
+     transcTheory iterateTheory;
+
+open util_probTheory cardinalTheory;
 
 val _ = new_theory "extreal";
 
@@ -2890,6 +2892,20 @@ Proof
  >> MATCH_MP_TAC ln_neg_lt >> art []
 QED
 
+(* cf. transcTheory.LN_INV *)
+Theorem ln_inv :
+    !x. 0 < x ==> ln (inv x) = ~(ln x)
+Proof
+    rpt STRIP_TAC
+ >> ‘0 <= x’ by rw [le_lt]
+ >> ‘x <> NegInf’ by rw [pos_not_neginf]
+ >> Cases_on ‘x’ >> fs [extreal_ln_def, extreal_inv_def, extreal_ainv_def]
+ >> fs [extreal_of_num_def, extreal_lt_eq, extreal_le_eq]
+ >> ‘r <> 0’ by rw [REAL_LT_IMP_NE]
+ >> rw [extreal_inv_def, extreal_ln_def, extreal_ainv_def]
+ >> MATCH_MP_TAC LN_INV >> art []
+QED
+
 (***************************)
 (*      Exp and powr       *)
 (***************************)
@@ -2897,7 +2913,7 @@ QED
 Theorem exp_pos :
     !x :extreal. 0 <= exp x
 Proof
-    GEN_TAC >> Cases_on `x`
+    Q.X_GEN_TAC ‘x’ >> Cases_on `x`
  >> RW_TAC real_ss [extreal_exp_def, le_infty, extreal_of_num_def,
                     extreal_le_eq, EXP_POS_LE]
 QED
@@ -2911,22 +2927,16 @@ Proof
  >> rw [extreal_of_num_def, extreal_lt_eq, EXP_POS_LT]
 QED
 
-Theorem powr_pos :
-    !x a :extreal. 0 <= x powr a
-Proof
-    RW_TAC std_ss [extreal_powr_def, exp_pos]
-QED
-
-Theorem infty_powr :
-    !a. 0 < a ==> PosInf powr a = PosInf
-Proof
-    rw [extreal_powr_def, extreal_ln_def, mul_infty, extreal_exp_def]
-QED
-
 Theorem normal_exp :
     !r. exp (Normal r) = Normal (exp r)
 Proof
     RW_TAC std_ss [extreal_exp_def]
+QED
+
+Theorem exp_0[simp] :
+    exp 0 = (1 :extreal)
+Proof
+    rw [extreal_of_num_def, normal_exp, extreal_11, EXP_0]
 QED
 
 Theorem exp_add_lemma[local] :
@@ -2963,18 +2973,72 @@ Proof
     METIS_TAC [exp_add_lemma, exp_add_lemma']
 QED
 
-(* `0 rpow a` is not defined in transcTheory (cf. rpow_def) *)
+(* cf. transcTheory.EXP_NEG, with ‘x <> NegInf’ added *)
+Theorem exp_neg :
+    !x. x <> NegInf ==> exp (~x) = inv (exp(x))
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on ‘x’
+ >> rw [extreal_exp_def, extreal_ainv_def, extreal_inv_def]
+ >> ‘0 < exp r’ by rw [EXP_POS_LT]
+ >> ‘exp r <> 0’ by rw [REAL_LT_IMP_NE]
+ >> rw [extreal_inv_def, EXP_NEG]
+QED
+
+(* cf. transcTheory.EXP_LE_X_FULL *)
+Theorem exp_le_x :
+    !x :extreal. &1 + x <= exp x
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on ‘x’
+ >> rw [extreal_of_num_def, extreal_add_def, extreal_exp_def, le_infty,
+        extreal_le_eq, EXP_LE_X_FULL]
+QED
+
+Theorem exp_le_x' :
+    !x :extreal. &1 - x <= exp (-x)
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> MP_TAC (Q.SPEC ‘-x’ exp_le_x)
+ >> Suff ‘1 - x = 1 + -x’ >- rw []
+ >> MATCH_MP_TAC extreal_sub_add
+ >> rw [extreal_of_num_def]
+QED
+
+(***************************)
+
+Theorem powr_pos :
+    !x a :extreal. 0 <= x powr a
+Proof
+    RW_TAC std_ss [extreal_powr_def, exp_pos]
+QED
+
+(* cf. transcTheory.RPOW_POS_LT *)
+Theorem powr_pos_lt :
+    !x a. 0 < x /\ 0 <= a /\ a <> PosInf ==> 0 < x powr a
+Proof
+    RW_TAC std_ss [extreal_powr_def]
+ >> MATCH_MP_TAC exp_pos_lt
+ >> ‘a <> NegInf’ by rw [pos_not_neginf]
+ >> ‘?r. 0 <= r /\ a = Normal r’
+      by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq]
+ >> POP_ORW
+ >> ‘ln x <> NegInf’ by PROVE_TAC [ln_not_neginf]
+ >> METIS_TAC [mul_not_infty]
+QED
+
+Theorem infty_powr :
+    !a. 0 < a ==> PosInf powr a = PosInf
+Proof
+    rw [extreal_powr_def, extreal_ln_def, mul_infty, extreal_exp_def]
+QED
+
+(* NOTE: ‘0 rpow a’ is not defined (see transcTheory.rpow_def) *)
 Theorem normal_powr :
     !r a. 0 < r /\ 0 < a ==> (Normal r) powr (Normal a) = Normal (r powr a)
 Proof
     RW_TAC real_ss [extreal_exp_def, extreal_mul_def, extreal_powr_def,
                     extreal_ln_def, rpow_def]
-QED
-
-Theorem exp_0[simp] :
-    exp 0 = (1 :extreal)
-Proof
-    rw [extreal_of_num_def, normal_exp, extreal_11, EXP_0]
 QED
 
 (* cf. transc.ONE_RPOW *)
@@ -3001,6 +3065,20 @@ Proof
  >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_lt_eq]
  >> `r <> 0` by PROVE_TAC [REAL_LT_LE]
  >> ASM_SIMP_TAC std_ss [extreal_exp_def]
+QED
+
+Theorem powr_eq_0 :
+    !x a. 0 <= x /\ 0 < a /\ a <> PosInf ==> (x powr a = 0 <=> x = 0)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >- rw [zero_rpow]
+ >> ‘0 <= a’ by rw [lt_imp_le]
+ >> ‘a <> NegInf’ by rw [pos_not_neginf]
+ >> DISCH_TAC
+ >> CCONTR_TAC
+ >> ‘0 < x’ by PROVE_TAC [le_lt]
+ >> ‘0 < x powr a’ by PROVE_TAC [powr_pos_lt]
+ >> METIS_TAC [lt_antisym]
 QED
 
 (* cf. transcTheory.RPOW_1, changed to ‘0 <= x’
@@ -3034,6 +3112,42 @@ Proof
     ‘PosInf * ln x = NegInf’ by PROVE_TAC [mul_infty'] \\
      rw [extreal_exp_def])
  >> MATCH_MP_TAC ln_neg_lt >> art []
+QED
+
+(* cf. transcTheory.BASE_RPOW_LE *)
+Theorem powr_mono_eq :
+    !a b c. 0 <= a /\ 0 <= c /\ 0 < b /\ b <> PosInf ==> (a powr b <= c powr b <=> a <= c)
+Proof
+    rpt STRIP_TAC
+ >> ‘0 <= b’ by rw [lt_imp_le]
+ >> ‘a <> NegInf /\ b <> NegInf /\ c <> NegInf’ by rw [pos_not_neginf]
+ >> Cases_on ‘a = 0’ >- rw [zero_rpow, powr_pos]
+ >> Cases_on ‘c = 0’
+ >- (rw [zero_rpow, powr_pos] \\
+    ‘0 <= a powr b’ by rw [powr_pos] \\
+     EQ_TAC >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+      ‘a powr b = 0’ by PROVE_TAC [le_antisym] \\
+       rfs [powr_eq_0],
+       (* goal 2 (of 2) *)
+       PROVE_TAC [le_antisym] ])
+ >> ‘0 < a /\ 0 < c’ by PROVE_TAC [le_lt]
+ >> Cases_on ‘a = PosInf’ >> rw [infty_powr, le_infty]
+ >- (EQ_TAC >> rw [infty_powr] \\
+     CCONTR_TAC \\
+    ‘?r. 0 < r /\ c = Normal r’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+    ‘?p. 0 < p /\ b = Normal p’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+     fs [normal_powr])
+ >> Cases_on ‘c = PosInf’ >> rw [infty_powr, le_infty]
+ >> ‘?A. 0 < A /\ a = Normal A’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?B. 0 < B /\ b = Normal B’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?C. 0 < C /\ c = Normal C’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> rw [BASE_RPOW_LE, normal_powr, extreal_le_eq]
 QED
 
 (* cf. transcTheory.RPOW_RPOW
@@ -3102,32 +3216,6 @@ Proof
  >> MATCH_MP_TAC SQRT_RPOW >> art []
 QED
 
-(* cf. transcTheory.LN_INV *)
-Theorem ln_inv :
-    !x. 0 < x ==> ln (inv x) = ~(ln x)
-Proof
-    rpt STRIP_TAC
- >> ‘0 <= x’ by rw [le_lt]
- >> ‘x <> NegInf’ by rw [pos_not_neginf]
- >> Cases_on ‘x’ >> fs [extreal_ln_def, extreal_inv_def, extreal_ainv_def]
- >> fs [extreal_of_num_def, extreal_lt_eq, extreal_le_eq]
- >> ‘r <> 0’ by rw [REAL_LT_IMP_NE]
- >> rw [extreal_inv_def, extreal_ln_def, extreal_ainv_def]
- >> MATCH_MP_TAC LN_INV >> art []
-QED
-
-(* cf. transcTheory.EXP_NEG, with ‘x <> NegInf’ added *)
-Theorem exp_neg :
-    !x. x <> NegInf ==> exp (~x) = inv (exp(x))
-Proof
-    Q.X_GEN_TAC ‘x’
- >> Cases_on ‘x’
- >> rw [extreal_exp_def, extreal_ainv_def, extreal_inv_def]
- >> ‘0 < exp r’ by rw [EXP_POS_LT]
- >> ‘exp r <> 0’ by rw [REAL_LT_IMP_NE]
- >> rw [extreal_inv_def, EXP_NEG]
-QED
-
 (* cf. transcTheory.RPOW_INV *)
 Theorem inv_powr :
     !x p. 0 < x /\ 0 < p /\ p <> PosInf ==> (inv x) powr p = inv (x powr p)
@@ -3170,26 +3258,6 @@ Proof
  >> ASM_SIMP_TAC std_ss [zero_rpow]
  >> MATCH_MP_TAC zero_pow
  >> RW_TAC arith_ss []
-QED
-
-(* cf. transcTheory.EXP_LE_X_FULL *)
-Theorem exp_le_x :
-    !x :extreal. &1 + x <= exp x
-Proof
-    Q.X_GEN_TAC ‘x’
- >> Cases_on ‘x’
- >> rw [extreal_of_num_def, extreal_add_def, extreal_exp_def, le_infty,
-        extreal_le_eq, EXP_LE_X_FULL]
-QED
-
-Theorem exp_le_x' :
-    !x :extreal. &1 - x <= exp (-x)
-Proof
-    Q.X_GEN_TAC ‘x’
- >> MP_TAC (Q.SPEC ‘-x’ exp_le_x)
- >> Suff ‘1 - x = 1 + -x’ >- rw []
- >> MATCH_MP_TAC extreal_sub_add
- >> rw [extreal_of_num_def]
 QED
 
 (* cf. real_sigmaTheory.YOUNG_INEQUALITY, note that the extreal version supports

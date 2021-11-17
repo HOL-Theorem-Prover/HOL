@@ -45,39 +45,44 @@ val _ = hide "I";
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-(* The simple function (g) of f in measurable space m:
-   f is a normal function defined on extended reals ('a -> extreal),
-   a_i (i IN s) are mutually disjoint measurable sets in m,
-   x_i are (normal) reals.
-  `g = \t. SIGMA (\i. Normal (x i) * (indicator_fn (a i) t)) s`
-      is the simple function of f.
+(* This defines a simple function ‘f’ in measurable space m by (s,a,x):
 
-   BIGUNION and DISJOINT indicate that this is a standard representation of g.
+   s is a (finite) set of indices,
+   a_i (each i IN s) are mutually disjoint measurable sets in m,
+   x_i are (normal) reals indicating the "height" of each a(i).
 
-   changed from `!t. 0 <= f t` to `!t. t IN m_space m ==> 0 <= f t`
+   Then `f(t) = SIGMA (\i. Normal (x i) * indicator_fn (a i) t) s` is a simple function.
+
+   BIGUNION and DISJOINT indicate that this is a standard representation.
+
+   NOTE: changed from `!t. 0 <= f t` to `!t. t IN m_space m ==> 0 <= f t`
  *)
-val pos_simple_fn_def = Define
-   `pos_simple_fn m f (s :num set) (a :num -> 'a set) (x :num -> real) =
+Definition pos_simple_fn_def :
+    pos_simple_fn m f (s :num set) (a :num -> 'a set) (x :num -> real) =
        ((!t. t IN m_space m ==> 0 <= f t) /\ (* was: !t. 0 <= f t *)
         (!t. t IN m_space m ==>
             (f t = SIGMA (\i. Normal (x i) * indicator_fn (a i) t) s)) /\
         (!i. i IN s ==> a i IN measurable_sets m) /\
         FINITE s /\ (!i. i IN s ==> 0 <= x i) /\
         (!i j. i IN s /\ j IN s /\ (i <> j) ==> DISJOINT (a i) (a j)) /\
-        (BIGUNION (IMAGE a s) = m_space m))`;
+        (BIGUNION (IMAGE a s) = m_space m))
+End
 
-(* The integration of a positive simple function: s is a set of indices,
-   a(n) is a sequence of sets, x(n) is a sequence of reals.
+(* The integral of a positive simple function: s is a set of indices,
+   a(n) is a sequence of disjoint sets, x(n) is a sequence of reals.
 
    old definition: Normal (SIGMA (\i:num. (x i) * (measure m (a i))) s)
  *)
-val pos_simple_fn_integral_def = Define
-   `pos_simple_fn_integral m (s :num set) (a :num -> 'a set) (x :num -> real) =
-        SIGMA (\i:num. Normal (x i) * (measure m (a i))) s`;
+Definition pos_simple_fn_integral_def :
+    pos_simple_fn_integral (m :'a m_space)
+                           (s :num set) (a :num -> 'a set) (x :num -> real) =
+        SIGMA (\i:num. Normal (x i) * (measure m (a i))) s
+End
 
-(* `psfs m f` is the set of all positive simple functions equivalent to f *)
-val psfs_def = Define
-   `psfs m f = {(s,a,x) | pos_simple_fn m f s a x}`;
+(* ‘psfs m f’ is the set of all positive simple functions equivalent to f *)
+Definition psfs_def :
+    psfs m f = {(s,a,x) | pos_simple_fn m f s a x}
+End
 
 (* `psfis m f ` is the set of integrals of positive simple functions equivalent to f *)
 val psfis_def = Define
@@ -7334,17 +7339,6 @@ Proof
  >> METIS_TAC [countably_additive_alt_eq, space_def, subsets_def]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(*  The Function Spaces L^p and Important Inequalities [1, Chapter 13]       *)
-(* ------------------------------------------------------------------------- *)
-
-(* [1, p.116], not used so far *)
-val norm_def = Define
-   `norm m u p = if p < PosInf then
-                     (integral m (\x. (abs (u x)) powr p)) powr (inv p)
-                 else
-                     inf {c | 0 < c /\ (measure m {x | c <= abs (u x)} = 0)}`;
-
 (* Proposition 11.5 [1, p.91]
 
    NOTE: "markov_ineq" in real_lebesgueTheory is a variant [1, p.93] that we shall
@@ -7800,17 +7794,24 @@ Proof
  >> MATCH_MP_TAC ext_suminf_zero >> art []
 QED
 
+(* NOTE: changed ‘nonneg f’ to ‘!x. x IN m_space m ==> 0 <= f x’ *)
 Theorem pos_fn_integral_eq_0 : (* was: positive_integral_0_iff *)
-    !m f. measure_space m /\ nonneg f /\
+    !m f. measure_space m /\ (!x. x IN m_space m ==> 0 <= f x) /\
           f IN measurable (m_space m, measurable_sets m) Borel ==>
         ((pos_fn_integral m f = 0) <=> (measure m {x | x IN m_space m /\ f x <> 0} = 0))
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [`m`, `f`] integral_abs_eq_0)
- >> RW_TAC std_ss [nonneg_fn_abs]
- >> Know `integral m f = pos_fn_integral m f`
- >- (MATCH_MP_TAC integral_pos_fn >> fs [nonneg_def])
- >> PROVE_TAC []
+ >> RW_TAC std_ss []
+ >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
+ >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
+ >> Know `integral m (abs o f) = pos_fn_integral m (abs o f)`
+ >- (MATCH_MP_TAC integral_pos_fn >> rw [abs_pos])
+ >> Rewr'
+ >> Suff ‘pos_fn_integral m f = pos_fn_integral m (abs o f)’ >- rw []
+ >> MATCH_MP_TAC pos_fn_integral_cong
+ >> rw [abs_pos]
+ >> METIS_TAC [abs_refl]
 QED
 
 Theorem integral_eq_0 :
@@ -10707,9 +10708,9 @@ Proof
  >> Q.UNABBREV_TAC `mt`
  >> FULL_SIMP_TAC std_ss [m_space_def, measurable_sets_def, measure_def]
  >> MP_TAC (Q.SPECL [`M`, `\x. h x * indicator_fn A x`] pos_fn_integral_eq_0)
- >> Know `nonneg (\x. h x * indicator_fn A x)`
- >- (RW_TAC std_ss [nonneg_def] \\
-     MATCH_MP_TAC le_mul >> art [INDICATOR_FN_POS])
+ >> ASM_SIMP_TAC std_ss []
+ >> Know ‘!x. x IN m_space M ==> 0 <= h x * indicator_fn A x’
+ >- rw [le_mul, INDICATOR_FN_POS]
  >> Know `(\x. h x * indicator_fn A x) IN Borel_measurable (m_space M,measurable_sets M)`
  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR \\
      fs [measure_space_def, subsets_def])
