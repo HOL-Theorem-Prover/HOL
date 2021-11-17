@@ -1548,39 +1548,49 @@ Proof
     simp[lt_ratl] >> gvs[INT_CEILING_NEG_DIV, INT_FLOOR_EQNS] >>
     reverse IF_CASES_TAC >> gvs[]
     >- (gvs[ZERO_DIV] >> simp[integer_subrange_def, asl_word_rws]) >>
-    simp[integer_subrange_neg, Abbr `posve`, Abbr `negve`] >>
-    once_rewrite_tac[GSYM $ SIMP_CONV (srw_ss()) [] ``-(x : word64)``] >>
-    once_rewrite_tac[WORD_NEG] >>
-    simp[field_fixwidth, v2w_fixwidth_dimindex] >>
-    qmatch_goalsub_abbrev_tac `_ MOD foo` >>
-    `(n2 DIV n3) ≤ dimword(:63)` by (
-      qspec_then `x2` assume_tac w2n_word_abs_lt >>
-      qspec_then `x3` assume_tac w2n_word_abs_lt >> gvs[] >>
-      `0 < w2n (word_abs x3)` by cheat >>
-      drule DIV_LESS_EQ >>
-      disch_then $ qspec_then `w2n (word_abs x2)` assume_tac >> gvs[]) >>
-    DEP_REWRITE_TAC[LESS_MOD] >> conj_tac >- (unabbrev_all_tac >> gvs[]) >>
-    IF_CASES_TAC >> gvs[] >>
-    cheat (* TODO *)
+    simp[Abbr `posve`, Abbr `negve`, Abbr `n2`, Abbr `n3`] >>
+    once_rewrite_tac[GSYM $ SIMP_CONV (srw_ss()) [] ``-(x : word64)``]
+    \\ Cases_on ‘word_abs x2’
+    \\ Cases_on ‘word_abs x3’
+    \\ asm_simp_tac std_ss [LET_THM,w2n_n2w]
+    \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM bitstringTheory.v2n_n2v]))
+    \\ qabbrev_tac ‘xs = n2v (n DIV n')’
+    \\ rewrite_tac [neg_v2n_lemma]
+    \\ fs [integer_subrange_neg]
+    \\ ‘n DIV n' < 18446744073709551616’ by fs [DIV_LT_X]
+    \\ fs [] \\ fs [DIV_EQ_X]
+    \\ IF_CASES_TAC
+    \\ TRY (
+        ‘n DIV n' = 0’ by fs [DIV_EQ_X] \\ fs [GSYM neg_v2n_lemma,Abbr‘xs’] \\ NO_TAC)
+    \\ fs [field_def, shiftr_def]
+    \\ fs[b64 alpha v2w_fixwidth |> SIMP_RULE (srw_ss()) []]
+    \\ rw [] \\ unabbrev_all_tac
+    \\ gvs [v2n_fixwidth,DIV_EQ_X]
+    \\ EVAL_TAC
     )
   >- (
     simp[neg_rat, lt_ratl, INT_CEILING_NEG_DIV, INT_FLOOR_EQNS] >>
     reverse IF_CASES_TAC >> gvs[]
     >- (gvs[ZERO_DIV] >> simp[integer_subrange_def, asl_word_rws]) >>
-    simp[integer_subrange_neg, Abbr `posve`, Abbr `negve`] >>
-    once_rewrite_tac[GSYM $ SIMP_CONV (srw_ss()) [] ``-(x : word64)``] >>
-    once_rewrite_tac[WORD_NEG] >>
-    simp[field_fixwidth, v2w_fixwidth_dimindex] >>
-    qmatch_goalsub_abbrev_tac `_ MOD foo` >>
-    `(n2 DIV n3) ≤ dimword(:63)` by (
-      qspec_then `x2` assume_tac w2n_word_abs_lt >>
-      qspec_then `x3` assume_tac w2n_word_abs_lt >> gvs[] >>
-      `0 < w2n (word_abs x3)` by cheat >>
-      drule DIV_LESS_EQ >>
-      disch_then $ qspec_then `w2n (word_abs x2)` assume_tac >> gvs[]) >>
-    DEP_REWRITE_TAC[LESS_MOD] >> conj_tac >- (unabbrev_all_tac >> gvs[]) >>
-    IF_CASES_TAC >> gvs[] >>
-    cheat (* TODO *)
+    simp[Abbr `posve`, Abbr `negve`, Abbr `n2`, Abbr `n3`] >>
+    once_rewrite_tac[GSYM $ SIMP_CONV (srw_ss()) [] ``-(x : word64)``]
+    \\ Cases_on ‘word_abs x2’
+    \\ Cases_on ‘word_abs x3’
+    \\ asm_simp_tac std_ss [LET_THM,w2n_n2w]
+    \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM bitstringTheory.v2n_n2v]))
+    \\ qabbrev_tac ‘xs = n2v (n DIV n')’
+    \\ rewrite_tac [neg_v2n_lemma]
+    \\ fs [integer_subrange_neg]
+    \\ ‘n DIV n' < 18446744073709551616’ by fs [DIV_LT_X]
+    \\ fs [] \\ fs [DIV_EQ_X]
+    \\ IF_CASES_TAC
+    \\ TRY (
+        ‘n DIV n' = 0’ by fs [DIV_EQ_X] \\ fs [GSYM neg_v2n_lemma,Abbr‘xs’] \\ NO_TAC)
+    \\ fs [field_def, shiftr_def]
+    \\ fs[b64 alpha v2w_fixwidth |> SIMP_RULE (srw_ss()) []]
+    \\ rw [] \\ unabbrev_all_tac
+    \\ gvs [v2n_fixwidth,DIV_EQ_X]
+    \\ EVAL_TAC
     )
   >- (
     simp[lt_ratl, INT_FLOOR_EQNS] >>
@@ -1642,10 +1652,44 @@ Proof
     DEP_REWRITE_TAC[GSYM extract_v2w |>
       INST_TYPE [alpha |-> ``:128``, beta |-> ``:64``]] >> simp[] >>
     DEP_REWRITE_TAC[v2w_fixwidth_dimindex] >> simp[]
-    )
-  >- (
-    cheat (* TODO *)
-    )
+    ) >>
+  Cases_on `x2` using integer_wordTheory.ranged_int_word_nchotomy
+  \\ Cases_on `x3` using integer_wordTheory.ranged_int_word_nchotomy
+  \\ fs [integer_wordTheory.sw2sw_i2w,integer_wordTheory.word_i2w_mul,
+         integer_wordTheory.w2i_i2w]
+  \\ reverse (Cases_on ‘i’) \\ fs []
+  THEN1 EVAL_TAC
+  \\ (reverse (Cases_on ‘i'’) THEN1 EVAL_TAC) \\ fs []
+  \\ ‘n * n' ≤ 9223372036854775808 * 9223372036854775808’ by
+       (irule LESS_MONO_MULT2 \\ fs [])
+  \\ gvs [INT_MUL_REDUCE |> REWRITE_RULE[NUMERAL_DEF]]
+  \\ rewrite_tac [integer_wordTheory.i2w_def]
+  \\ IF_CASES_TAC \\ TRY (gvs [] \\ NO_TAC)
+  \\ rewrite_tac [INT_NEGNEG,NUM_OF_INT]
+  \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM bitstringTheory.v2n_n2v]))
+  \\ qabbrev_tac ‘xs = n2v (n * n')’
+  \\ rewrite_tac [neg_v2n_lemma,bitstringTheory.v2n_n2v]
+  \\ TRY (
+      gvs [integer_subrange_pos,v2w_TAKE_64_fixwidth_128,field_def,shiftr_def]
+      \\ NO_TAC)
+  \\ fs [integer_subrange_neg]
+  \\ qid_spec_tac ‘xs’
+  \\ ho_match_mp_tac $ Q.SPEC `128` forall_fixwidth
+  \\ strip_tac
+  \\ rename [‘v2n ys’]
+  \\ Cases_on ‘v2n ys = 0’ \\ fs []
+  \\ TRY (pop_assum mp_tac \\ rename [‘v2n ys = 0 ⇒ _’] \\ strip_tac
+          \\ strip_tac \\ gvs [LENGTH_eq_128,v2n_0] \\ EVAL_TAC \\ NO_TAC)
+  \\ simp_tac std_ss [fcpTheory.CART_EQ]
+  \\ once_rewrite_tac [bitstringTheory.word_index_v2w]
+  \\ fs [word_extract_def,w2w,word_bits_def,fcpTheory.FCP_BETA]
+  \\ once_rewrite_tac [bitstringTheory.word_index_v2w] \\ fs []
+  \\ qsuff_tac `∀xs i. i < 64 ⇒ (testbit i (field 127 64 xs) ⇔ testbit (i + 64) xs)`
+  \\ rw[] \\ gvs[]
+  \\ fs [field_def,shiftr_def]
+  \\ fs [testbit,bitstringTheory.el_fixwidth] \\ rw []
+  \\ fs [EL_TAKE]
+  \\ Cases_on ‘i + 64 < LENGTH xs'’ \\ gvs [] \\ fs [EL_TAKE]
 QED
 
 Theorem l3_models_asl_MultiplyAddSub:
@@ -1708,9 +1752,24 @@ Proof
     simp[word_mul_def, word_sub_def, word_add_def] >> ARITH_TAC
     ) >>
   once_rewrite_tac[GSYM $ SIMP_CONV (srw_ss()) [] ``-(x : word64)``] >>
-  once_rewrite_tac[WORD_NEG] >>
-  simp[integer_subrange_neg] >>
-  cheat (* TODO *)
+  Cases_on ‘x2’ \\ Cases_on ‘x3’ \\ Cases_on ‘x4’
+  \\ rewrite_tac [word_mul_n2w,GSYM word_sub_def,word_arith_lemma2]
+  \\ reverse IF_CASES_TAC THEN1 gvs []
+  \\ rename [‘a < b * c:num’]
+  \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM bitstringTheory.v2n_n2v]))
+  \\ qabbrev_tac ‘xs = n2v (b * c − a)’
+  \\ rewrite_tac [neg_v2n_lemma]
+  \\ asm_rewrite_tac []
+  \\ gvs[integer_subrange_def, asl_word_rws]
+  \\ qid_spec_tac ‘xs’
+  \\ ho_match_mp_tac $ Q.SPEC `64` forall_fixwidth
+  \\ strip_tac
+  \\ rename [‘v2n ys’]
+  \\ Cases_on ‘v2n ys = 0’ \\ fs []
+  \\ fs [LENGTH_add]
+  \\ CASE_TAC \\ fs []
+  \\ strip_tac
+  \\ gvs [LENGTH_eq_64]
 QED
 
 Theorem l3_asl_ConditionHolds:

@@ -101,6 +101,13 @@ Proof
   once_rewrite_tac[MULT_COMM] >> simp[MULT_DIV]
 QED
 
+Theorem n2v_2_POW:
+  ∀n. n2v (2 ** n) = T::REPLICATE n F
+Proof
+  Induct >> rw[EXP, n2v_TIMES2] >>
+  rewrite_tac[GSYM REPLICATE, GSYM SNOC_REPLICATE] >> simp[]
+QED
+
 Theorem LENGTH_n2v_v2n:
   LENGTH (n2v (v2n bs)) = if EVERY $¬ bs then 1 else SUC (LOG 2 (v2n bs))
 Proof
@@ -267,7 +274,7 @@ Proof
   rename1 `REPLICATE foo _` >> Induct_on `foo` >> gvs[v2n]
 QED
 
-Theorem LENGTH_add:
+Theorem LENGTH_add_MAX:
   LENGTH (add as bs) =
     MAX (MAX (LENGTH as) (LENGTH bs)) (LENGTH (n2v (v2n as + v2n bs)))
 Proof
@@ -478,6 +485,139 @@ Proof
   ntac 2 $ last_x_assum kall_tac >>
   qspec_then `a` assume_tac INT_ABS_POS >> rename1 `Num posve` >>
   Cases_on `posve` >> gvs[] >> Cases_on `dim` >> gvs[EXP]
+QED
+
+(* copied from HOL/examples/machine-code/hoare-triple/addressScript.sml  *)
+Theorem word_arith_lemma2:
+  ∀n m. n2w n - (n2w m) : α word =
+    if n < m then - (n2w (m - n)) else n2w (n - m)
+Proof
+  REPEAT STRIP_TAC \\ Cases_on `n < m` \\ ASM_REWRITE_TAC []
+  \\ FULL_SIMP_TAC bool_ss [NOT_LESS,LESS_EQ]
+  \\ FULL_SIMP_TAC bool_ss [LESS_EQ_EXISTS,ADD1,DECIDE ``n+1+p-n = 1+p:num``]
+  \\ REWRITE_TAC [GSYM word_add_n2w,WORD_SUB_PLUS,WORD_SUB_REFL]
+  \\ REWRITE_TAC [GSYM WORD_SUB_PLUS]
+  \\ REWRITE_TAC [word_sub_def,WORD_ADD_0,DECIDE ``m+p-m=p:num``]
+  \\ REWRITE_TAC [GSYM WORD_ADD_ASSOC] \\ ONCE_REWRITE_TAC [WORD_ADD_COMM]
+  \\ REWRITE_TAC [GSYM word_sub_def,WORD_SUB_ADD]
+QED
+
+Triviality v2n_add_less_limit:
+  ∀xs. EXISTS I xs ⇒  v2n (MAP $¬ xs) + 1 < 2 ** LENGTH xs
+Proof
+  rw[] >> gvs[] >>
+  `v2n (MAP $¬ xs) ≠ 2 ** LENGTH (MAP $¬ xs) - 1` by (
+    gvs[GSYM v2n_EVERY_T, EXISTS_MAP, EXISTS_MEM]) >>
+  qspec_then `MAP $¬ xs` assume_tac v2n_lt >> gvs[]
+QED
+
+Theorem v2n_add_v2n_not:
+  ∀xs. v2n xs + v2n (MAP $¬ xs) = 2 ** LENGTH xs - 1
+Proof
+  Induct using SNOC_INDUCT >> rw[v2n_SNOC, MAP_SNOC] >> simp[EXP] >>
+  rewrite_tac[ADD_ASSOC] >> rewrite_tac[GSYM LEFT_ADD_DISTRIB] >>
+  first_x_assum SUBST1_TAC >> simp[] >>
+  simp[LEFT_ADD_DISTRIB] >>
+  qmatch_goalsub_abbrev_tac `foo - 1` >>
+  qsuff_tac `1 ≤ foo` >> rw[] >> unabbrev_all_tac >> simp[]
+QED
+
+Theorem forall_fixwidth:
+  ∀n. (∀xs. LENGTH xs = n ⇒ P xs) ⇒ (∀xs. P (fixwidth n xs))
+Proof
+  rw []
+QED
+
+Theorem neg_v2n_lemma:
+  -n2w (v2n xs) =
+    if v2n (fixwidth (dimindex(:α)) xs) = 0 then v2w (REPLICATE (dimindex (:α)) F)
+    else v2w (add (MAP $¬ (fixwidth (dimindex(:α)) xs)) [T]) : α word
+Proof
+  irule EQ_TRANS >> qexists_tac `-n2w (v2n (fixwidth (dimindex(:α)) xs))` >>
+  conj_tac
+  >- (
+    rewrite_tac[WORD_EQ_NEG, bitstringTheory.n2w_v2n] >>
+    rewrite_tac[v2w_11] >> gvs[]
+    ) >>
+  qid_spec_tac `xs` >>
+  ho_match_mp_tac $ Q.SPEC `dimindex(:α)` forall_fixwidth >> rw[v2n_0]
+  >- (
+    qsuff_tac `v2n xs = 0` >> rw[REPLICATE_compute] >> simp[v2n_0] >>
+    rw[v2w_def] >> simp[testbit] >> simp[EL_REPLICATE] >> WORD_DECIDE_TAC
+    ) >>
+  gvs[word_2comp_n2w, GSYM bitstringTheory.n2w_v2n,
+      add_def, zero_extend_def, PAD_LEFT, GSYM REPLICATE_GENLIST,
+      v2n_APPEND, v2n_REPLICATE_F, MOD_MOD, dimword_def] >>
+  qspec_then `xs` assume_tac v2n_lt >> gvs[] >>
+  `v2n xs ≠ 0` by gvs[v2n_0, EXISTS_MEM, EVERY_MEM] >>
+  `EXISTS I xs` by gvs[EXISTS_MEM] >>
+  drule v2n_add_less_limit >> rw[] >>
+  gvs[SUB_RIGHT_EQ] >> rewrite_tac[ADD_ASSOC] >> simp[v2n_add_v2n_not]
+QED
+
+Theorem LENGTH_add:
+  LENGTH (add (MAP $¬ ys) [T]) = if EXISTS I ys then LENGTH ys else LENGTH ys + 1
+Proof
+  rw[] >> gvs[]
+  >- (
+    gvs[LENGTH_add_MAX] >> reverse $ rw[MAX_DEF] >- (Cases_on `ys` >> gvs[]) >>
+    qpat_x_assum `LENGTH _ < _` mp_tac >>
+    simp[LENGTH_n2v, NOT_LESS, LE_LT1, ADD1] >>
+    irule LOG_LT >> simp[v2n_add_less_limit]
+    ) >>
+  Cases_on `ys` using SNOC_CASES >> gvs[] >>
+  simp[add_def, MAX_DEF, ADD1] >>
+  qmatch_goalsub_abbrev_tac `v2n foo` >>
+  `v2n foo = 2 ** LENGTH foo - 1` by (
+    unabbrev_all_tac >> simp[GSYM v2n_EVERY_T] >> gvs[EVERY_MAP, EVERY_MEM]) >>
+  unabbrev_all_tac >> simp[ADD1] >>
+  `1 < 2 ** (LENGTH l + 1)` by rw[GSYM ADD1, EXP] >> simp[] >>
+  simp[n2v_2_POW, zero_extend_def, PAD_LEFT]
+QED
+
+Triviality LENGTH_ADD:
+  ∀m n. LENGTH xs = m + n ⇔
+        ∃ys zs. LENGTH ys = m ∧ LENGTH zs = n ∧ xs = ys ++ zs
+Proof
+  Induct_on ‘xs’ \\ fs [] \\ rw []
+  \\ Cases_on ‘m’ \\ fs [] \\ fs [ADD1] \\ rw []
+  \\ asm_rewrite_tac [DECIDE “m + 1 = k + (n + 1) ⇔  m = n + k:num”]
+  \\ rw [] \\ eq_tac \\ rw []
+  THEN1 (qexists_tac ‘h::ys’ \\ fs [ADD1])
+  \\ Cases_on ‘ys’ \\ gvs [ADD1]
+  \\ metis_tac []
+QED
+
+Theorem LENGTH_eq_64 = “LENGTH xs = 64”
+  |> (SIMP_CONV std_ss [LENGTH_EQ_NUM_compute]
+      THENC SIMP_CONV bool_ss [PULL_EXISTS]);
+
+Theorem LENGTH_eq_128 = “LENGTH xs = 128”
+  |> SIMP_CONV std_ss
+        [LENGTH_eq_64,PULL_EXISTS,APPEND,
+        LENGTH_ADD |> Q.SPECL [‘64’,‘64’] |> SIMP_RULE std_ss []];
+
+Theorem v2w_TAKE_64_fixwidth_128:
+  v2w (TAKE 64 (fixwidth 128 xs)) = (127 >< 64) (n2w (v2n xs):word128) : word64
+Proof
+  simp_tac std_ss [fcpTheory.CART_EQ]
+  \\ once_rewrite_tac [bitstringTheory.word_index_v2w]
+  \\ fs [word_extract_def,w2w,word_bits_def,fcpTheory.FCP_BETA,n2w_v2n]
+  \\ once_rewrite_tac [bitstringTheory.word_index_v2w] \\ fs [] \\ rw []
+  \\ ‘testbit (i + 64) xs = testbit (i + 64) (fixwidth 128 xs)’ by (
+        simp[testbit, el_fixwidth] >> rw[] >> eq_tac >> rw[])
+  \\ fs []
+  \\ qid_spec_tac ‘xs’
+  \\ ho_match_mp_tac $ Q.SPEC `128` forall_fixwidth
+  \\ strip_tac
+  \\ rename [‘LENGTH ys = _’]
+  \\ pop_assum kall_tac
+  \\ strip_tac
+  \\ gvs [LENGTH_eq_128]
+  \\ Cases_on ‘i’ THEN1 EVAL_TAC
+  \\ rpt (Cases_on ‘n’ THEN1 EVAL_TAC
+          \\ Cases_on ‘n'’ THEN1 EVAL_TAC
+          \\ fs [ADD1])
 QED
 
 (****************************************)

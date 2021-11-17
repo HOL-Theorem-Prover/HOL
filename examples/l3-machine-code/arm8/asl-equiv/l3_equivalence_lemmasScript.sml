@@ -118,7 +118,7 @@ Proof
     once_rewrite_tac[GSYM SNOC_APPEND] >>
     rewrite_tac[add_one_bool_ignore_overflow_def] >> rw[]
     >- (
-      rw[bool_list_eq, v2n_APPEND, v2n_add, LENGTH_add] >>
+      rw[bool_list_eq, v2n_APPEND, v2n_add, LENGTH_add_MAX] >>
       `MAX (LENGTH a) 1 = LENGTH a ∧ MAX (LENGTH a + 1) 1 = LENGTH a + 1` by (
         rw[MAX_DEF] >> Cases_on `a` >> gvs[]) >>
       rw[] >> simp[LENGTH_n2v] >>
@@ -128,7 +128,7 @@ Proof
       )
     >- (
       rw[bool_list_eq] >- rw[v2n_APPEND, v2n_add] >>
-      simp[LENGTH_add] >>
+      simp[LENGTH_add_MAX] >>
       `MAX (LENGTH a + 1) 1 = LENGTH a + 1` by (
         rw[MAX_DEF] >> Cases_on `a` >> gvs[]) >>
       `v2n (a ++ [F]) + 1 = v2n (a ++ [T])` by simp[v2n_APPEND] >> simp[] >>
@@ -139,7 +139,7 @@ Proof
     once_rewrite_tac[GSYM SNOC_APPEND] >>
     rewrite_tac[add_one_bool_ignore_overflow_def] >> rw[] >>
     rw[bool_list_eq] >- rw[v2n_APPEND, v2n_add] >>
-    simp[LENGTH_add] >>
+    simp[LENGTH_add_MAX] >>
     `MAX (LENGTH a + 1) 1 = LENGTH a + 1` by (
       rw[MAX_DEF] >> Cases_on `a` >> gvs[]) >>
     `v2n (a ++ [F]) + 1 = v2n (a ++ [T])` by simp[v2n_APPEND] >> simp[] >>
@@ -189,14 +189,14 @@ QED
 Theorem LENGTH_bools_of_int:
   LENGTH (bools_of_int len n) = nat_of_int len
 Proof
-  rw[sail2_valuesTheory.bools_of_int_def, LENGTH_add] >>
+  rw[sail2_valuesTheory.bools_of_int_def, LENGTH_add_MAX] >>
   gvs[nat_of_int, bools_of_nat] >> rw[]
   >- simp[fixwidth_def, DROP_LENGTH_NIL, add_one_bool_ignore_overflow]
   >- simp[fixwidth_def, DROP_LENGTH_NIL, add_one_bool_ignore_overflow] >>
   Cases_on `len = 0`
   >- gvs[fixwidth_def, DROP_LENGTH_NIL, add_one_bool_ignore_overflow] >>
   simp[add_one_bool_ignore_overflow, EVERY_MAP, SF ETA_ss] >>
-  IF_CASES_TAC >> gvs[combinTheory.o_DEF, LENGTH_add] >>
+  IF_CASES_TAC >> gvs[combinTheory.o_DEF, LENGTH_add_MAX] >>
   `MAX (Num len) 1 = Num len` by (simp[MAX_DEF] >> ARITH_TAC) >> simp[] >>
   qmatch_goalsub_abbrev_tac `MAP _ fix` >>
   `fix ≠ []` by (
@@ -354,7 +354,7 @@ Proof
     unabbrev_all_tac >> every_case_tac >> gvs[v2n_0, combinTheory.o_DEF] >>
     qmatch_goalsub_abbrev_tac `add neg` >>
     `EXISTS $¬ neg` by (unabbrev_all_tac >> gvs[EXISTS_MEM, MEM_MAP]) >>
-    simp[LENGTH_add] >>
+    simp[LENGTH_add_MAX] >>
     `MAX (LENGTH neg) 1 = LENGTH neg` by (unabbrev_all_tac >> simp[MAX_DEF]) >>
     pop_assum SUBST_ALL_TAC >> simp[MAX_DEF, LENGTH_n2v] >>
     reverse IF_CASES_TAC >> gvs[] >- (unabbrev_all_tac >> simp[]) >>
