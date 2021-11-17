@@ -3460,29 +3460,6 @@ Proof
  >> ASM_SET_TAC []
 QED
 
-Theorem in_borel_measurable_continuous_on : (* was: borel_measurable_continuous_on1 *)
-    !f. f continuous_on UNIV ==> f IN measurable borel borel
-Proof
-    rpt STRIP_TAC
- >> Q.ABBREV_TAC `M = (space borel, subsets borel, (\x:real->bool. 0))`
- >> Suff `f IN measurable (m_space M, measurable_sets M) borel`
- >- (SIMP_TAC std_ss [Abbr ‘M’, m_space_def, measurable_sets_def] \\
-     SIMP_TAC std_ss [SPACE])
- >> MATCH_MP_TAC in_borel_measurable_imp
- >> reverse CONJ_TAC
- >- (RW_TAC std_ss [] \\
-     Know `open {x | x IN UNIV /\ f x IN s}`
-     >- (MATCH_MP_TAC CONTINUOUS_OPEN_PREIMAGE (* key lemma *) \\
-         ASM_SIMP_TAC std_ss [OPEN_UNIV]) >> DISCH_TAC \\
-     SIMP_TAC std_ss [Abbr ‘M’, m_space_def, measurable_sets_def] \\
-     SIMP_TAC std_ss [PREIMAGE_def, space_borel, INTER_UNIV] \\
-     MATCH_MP_TAC borel_open >> ASM_SET_TAC [])
- >> Q.UNABBREV_TAC ‘M’
- >> MP_TAC (REWRITE_RULE [sigma_finite_measure_space_def]
-                         (ISPEC “borel” measure_space_trivial))
- >> RW_TAC std_ss [sigma_algebra_borel]
-QED
-
 (* ------------------------------------------------------------------------- *)
 (*  Construction of Borel measure space by CARATHEODORY_SEMIRING             *)
 (* ------------------------------------------------------------------------- *)
@@ -3501,8 +3478,8 @@ in
   val lambda0_def = new_specification ("lambda0_def", ["lambda0"], thm);
 end;
 
-val _ = overload_on ("lborel0",
-          ``(space right_open_intervals,subsets right_open_intervals,lambda0)``);
+Overload lborel0 =
+        “(space right_open_intervals,subsets right_open_intervals,lambda0)”
 
 Theorem lambda0_empty :
     lambda0 {} = 0
@@ -9162,6 +9139,164 @@ Proof
  >> MATCH_MP_TAC MEASURABLE_COMP
  >> Q.EXISTS_TAC ‘Borel’
  >> rw [IN_MEASURABLE_BOREL_BOREL_POW]
+QED
+
+(* IMPORTANT: every mono-increasing function is Borel measurable!
+
+   This is also Problem 8.21 of [1, p.70], the easy part!
+ *)
+Theorem IN_MEASURABLE_BOREL_BOREL_MONO_INCREASING :
+    !f. (!x y. x <= y ==> f x <= f y) ==> f IN measurable Borel Borel
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC SIGMA_ALGEBRA_BOREL
+ >> rw [IN_MEASURABLE_BOREL, IN_FUNSET, SPACE_BOREL]
+ >> Q.ABBREV_TAC ‘A = {x | f x < Normal c}’
+ (* step 1 *)
+ >> Cases_on ‘!y. f y < Normal c’
+ >- rw [Abbr ‘A’, GSYM SPACE_BOREL, SIGMA_ALGEBRA_SPACE]
+ >> POP_ASSUM (STRIP_ASSUME_TAC o (SIMP_RULE bool_ss [extreal_lt_def]))
+ (* step 2 *)
+ >> Cases_on ‘!x. Normal c <= f x’
+ >- (Know ‘A = EMPTY’
+     >- (rw [Abbr ‘A’, NOT_IN_EMPTY, Once EXTENSION, extreal_lt_def]) >> Rewr' \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [])
+ >> fs [GSYM extreal_lt_def]
+ (* step 3 *)
+ >> Cases_on ‘?z. f z = Normal c’
+ >- (FULL_SIMP_TAC bool_ss [] (* but z may not be unique! *) \\
+     Q.ABBREV_TAC ‘z0 = inf {x | f x = Normal c}’ \\
+     Cases_on ‘f z0 = Normal c’ >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Suff ‘A = {x | x < z0}’ >- rw [BOREL_MEASURABLE_SETS] \\
+       rw [Abbr ‘A’, Once EXTENSION] \\
+       rename1 ‘f t < Normal c <=> t < z0’ \\
+       EQ_TAC >> rw [Abbr ‘z0’] >| (* 2 subgoals *)
+       [ (* goal 1.1 (of 2) *)
+         SPOSE_NOT_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [extreal_lt_def])) \\
+         POP_ASSUM (MP_TAC o (REWRITE_RULE [inf_le'])) \\
+         rw [GSYM extreal_lt_def] \\
+         Q.PAT_X_ASSUM ‘sigma_algebra Borel’ K_TAC (* irrelevent *) \\
+         Q.PAT_X_ASSUM ‘Normal c <= f y’ K_TAC     (* useless *) \\
+         Q.PAT_X_ASSUM ‘f x < Normal c’ K_TAC      (* useless *) \\
+         Q.EXISTS_TAC ‘inf {x | f x = Normal c}’ \\
+         reverse CONJ_TAC >- METIS_TAC [extreal_lt_def] \\
+         Q.X_GEN_TAC ‘y’ >> rw [inf_le'],
+         (* goal 1.2 (of 2) *)
+         Q.PAT_X_ASSUM ‘f z = Normal c’ K_TAC      (* useless *) \\
+         Q.PAT_ASSUM ‘f _ = Normal c’ (ONCE_REWRITE_TAC o wrap o SYM) \\
+         REWRITE_TAC [lt_le] \\
+         CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+                      MATCH_MP_TAC lt_imp_le >> art []) \\
+         SPOSE_NOT_THEN (STRIP_ASSUME_TAC o REWRITE_RULE []) \\
+         Q.PAT_X_ASSUM ‘f _ = Normal c’ (fs o wrap) \\
+         Q.PAT_X_ASSUM ‘sigma_algebra Borel’ K_TAC (* irrelevent *) \\
+         Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
+         Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
+         Suff ‘inf {x | f x = Normal c} <= t’ >- METIS_TAC [extreal_lt_def] \\
+         Q.PAT_X_ASSUM ‘t < inf _’           K_TAC (* just used *) \\
+         rw [inf_le'] ],
+       (* goal 2 (of 2) *)
+       Suff ‘A = {x | x <= z0}’ >- rw [BOREL_MEASURABLE_SETS] \\
+       rw [Abbr ‘A’, Once EXTENSION] \\
+       rename1 ‘f t < Normal c <=> t <= z0’ \\
+       EQ_TAC >> rw [Abbr ‘z0’, le_inf'] >| (* 2 subgoals *)
+       [ (* goal 2.1 (of 2) *)
+         MATCH_MP_TAC lt_imp_le >> METIS_TAC [extreal_lt_def],
+         (* goal 2.2 (of 2) *)
+         REWRITE_TAC [lt_le] \\
+         CONJ_TAC
+         >- (Q.PAT_ASSUM ‘f z = Normal c’ (ONCE_REWRITE_TAC o wrap o SYM) \\
+             FIRST_X_ASSUM MATCH_MP_TAC \\
+             FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+         SPOSE_NOT_THEN (STRIP_ASSUME_TAC o REWRITE_RULE []) \\
+        ‘inf {x | f x = Normal c} <= t’ by rw [inf_le'] \\
+        ‘f (inf {x | f x = Normal c}) <= f t’ by PROVE_TAC [] \\
+        ‘f (inf {x | f x = Normal c}) < f t’ by METIS_TAC [le_lt] \\
+        ‘inf {x | f x = Normal c} < t’ by METIS_TAC [extreal_lt_def] \\
+        ‘t <= inf {x | f x = Normal c}’ by rw [le_inf'] \\
+         METIS_TAC [let_antisym] ] ])
+ >> FULL_SIMP_TAC std_ss []
+ (* step 4, now take ‘z’ as the last position where ‘f’ jumps over ‘Normal c’.
+    Note that ‘f z’ as the function of ‘sup’ may be above or below ‘Normal c’. *)
+ >> Q.ABBREV_TAC ‘z = sup {x | f x < Normal c}’
+ >> Cases_on ‘f z < Normal c’
+ >- (Suff ‘A = {x | x <= z}’ >- rw [BOREL_MEASURABLE_SETS] \\
+     rw [Abbr ‘A’, Once EXTENSION] \\
+     rename1 ‘f t < Normal c <=> t <= z’ \\
+     EQ_TAC >> rw [Abbr ‘z’, le_sup'] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘f (sup {x | f x < Normal c})’ >> art [] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     rw [le_sup'])
+ >> POP_ASSUM (STRIP_ASSUME_TAC o (SIMP_RULE bool_ss [extreal_lt_def]))
+ (* step 5 *)
+ >> Suff ‘A = {x | x < z}’ >- rw [BOREL_MEASURABLE_SETS]
+ >> rw [Abbr ‘A’, Once EXTENSION]
+ >> rename1 ‘f t < Normal c <=> t < z’
+ >> EQ_TAC >> rw [Abbr ‘z’]
+ >| [ (* goal 1 (of 2) *)
+     ‘f t < f (sup {x | f x < Normal c})’ by PROVE_TAC [lte_trans] \\
+      METIS_TAC [extreal_lt_def],
+      (* goal 2 (of 2) *)
+      Q.PAT_X_ASSUM ‘sigma_algebra Borel’ K_TAC (* irrelevant *) \\
+      Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
+      Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
+      Q.PAT_X_ASSUM ‘Normal c <= f _’     K_TAC (* useless *) \\
+      fs [lt_sup] >> rename1 ‘t < y’ \\
+      MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘f y’ >> art [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> rw [lt_imp_le] ]
+QED
+
+(* An easy corollary of the previous theorem *)
+Theorem IN_MEASURABLE_BOREL_BOREL_MONO_DECREASING :
+    !f. (!x y. x <= y ==> f y <= f x) ==> f IN measurable Borel Borel
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = numeric_negate o f’
+ >> Know ‘f = numeric_negate o g’
+ >- (rw [Abbr ‘g’, FUN_EQ_THM]) >> Rewr'
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘Borel’ >> rw [IN_MEASURABLE_BOREL_BOREL_AINV]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_BOREL_MONO_INCREASING
+ >> rw [Abbr ‘g’, le_neg]
+QED
+
+(* NOTE: we put ‘abs’ together because ‘powr’ is only defined on [0, PosInf] *)
+Theorem IN_MEASURABLE_BOREL_BOREL_ABS_POWR :
+    !p. 0 < p /\ p <> PosInf ==> (\x. (abs x) powr p) IN measurable Borel Borel
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = \x. if 0 <= x then x powr p else 0’
+ >> ‘(\x. abs x powr p) = g o abs’ by (rw [FUN_EQ_THM, Abbr ‘g’]) >> POP_ORW
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘Borel’
+ >> rw [IN_MEASURABLE_BOREL_BOREL_ABS]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_BOREL_MONO_INCREASING
+ >> rpt GEN_TAC
+ >> Cases_on ‘0 <= x’ >> Cases_on ‘0 <= y’
+ >> rw [Abbr ‘g’] (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      Suff ‘x powr p <= y powr p <=> x <= y’ >- rw [] \\
+      MATCH_MP_TAC powr_mono_eq >> art [],
+      (* goal 2 (of 3) *)
+      fs [GSYM extreal_lt_def] \\
+     ‘x < 0’ by PROVE_TAC [let_trans] \\
+      METIS_TAC [let_antisym],
+      (* goal 3 (of 3) *)
+      rw [powr_pos] ]
+QED
+
+Theorem IN_MEASURABLE_BOREL_ABS_POWR :
+    !a p f. f IN measurable a Borel /\ 0 < p /\ p <> PosInf ==>
+           (\x. (abs (f x)) powr p) IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> ‘(\x. (abs (f x)) powr p) = (\x. (abs x) powr p) o f’ by rw [o_DEF] >> POP_ORW
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘Borel’
+ >> rw [IN_MEASURABLE_BOREL_BOREL_ABS_POWR]
 QED
 
 val _ = export_theory ();

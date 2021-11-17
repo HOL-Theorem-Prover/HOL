@@ -1448,6 +1448,47 @@ Proof
  >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []
 QED
 
+(* cf. borelTheory.in_measurable_sigma_pow for measure_space version *)
+Theorem in_measurable_sigma_pow' :
+    !a sp N f. sigma_algebra a /\
+               N SUBSET POW sp /\ f IN (space a -> sp) /\
+              (!y. y IN N ==> (PREIMAGE f y) INTER space a IN subsets a) ==>
+               f IN measurable a (sigma sp N)
+Proof
+    RW_TAC std_ss []
+ >> MATCH_MP_TAC MEASURABLE_SIGMA
+ >> rw [subset_class_def]
+ >> fs [SUBSET_DEF, IN_POW]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+(* cf. borelTheory.in_borel_measurable_imp' for measure_space version *)
+Theorem in_borel_measurable_open :
+    !a f. sigma_algebra a /\
+         (!s. open s ==> (PREIMAGE f s) INTER space a IN subsets a) ==>
+          f IN measurable a borel
+Proof
+    RW_TAC std_ss [borel]
+ >> MATCH_MP_TAC in_measurable_sigma_pow'
+ >> ASM_SIMP_TAC std_ss [IN_FUNSET, IN_UNIV]
+ >> CONJ_TAC >- SET_TAC [POW_DEF]
+ >> ASM_SET_TAC []
+QED
+
+Theorem in_borel_measurable_continuous_on : (* was: borel_measurable_continuous_on1 *)
+    !f. f continuous_on UNIV ==> f IN measurable borel borel
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC in_borel_measurable_open
+ >> rw [sigma_algebra_borel]
+ >> Know `open {x | x IN UNIV /\ f x IN s}`
+ >- (MATCH_MP_TAC CONTINUOUS_OPEN_PREIMAGE (* key lemma *) \\
+     ASM_SIMP_TAC std_ss [OPEN_UNIV])
+ >> DISCH_TAC
+ >> SIMP_TAC std_ss [PREIMAGE_def, space_borel, INTER_UNIV]
+ >> MATCH_MP_TAC borel_open >> fs []
+QED
+
 (************************************************************)
 (*  right-open (left-closed) intervals [a, b) in R          *)
 (************************************************************)

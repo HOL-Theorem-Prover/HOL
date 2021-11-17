@@ -25,28 +25,41 @@ Theorem indicator_fn_def[local] = indicator
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-val pos_simple_fn_def = Define
-   `pos_simple_fn m f (s:num->bool) a x <=>
-        (!t. 0 <= f t) /\
+(* This defines a simple function ‘f’ in measurable space m by (s,a,x):
+
+   s is a (finite) num index set
+   a(i) (each i IN s) are mutually disjoint measurable sets in m,
+   x(i) are reals indicating the "height" of each a(i).
+
+   Then `f(t) = SIGMA (\i. x i * indicator_fn (a i) t) s` is a simple function.
+
+   BIGUNION and DISJOINT indicate that this is a standard representation.
+ *)
+Definition pos_simple_fn_def :
+    pos_simple_fn m f (s :num set) (a :num -> 'a set) (x :num -> real) =
+       ((!t. 0 <= f t) /\
         (!t. t IN m_space m ==> (f t = SIGMA (\i. (x i) * (indicator_fn (a i) t)) s)) /\
         (!i. i IN s ==> a i IN measurable_sets m) /\
         (!i. 0 <= x i) /\
         FINITE s /\
-        (!i j. i IN s /\ j IN s /\ (~(i=j)) ==> DISJOINT (a i) (a j)) /\
-        (BIGUNION (IMAGE a s) = m_space m)`;
+        (!i j. i IN s /\ j IN s /\ i <> j ==> DISJOINT (a i) (a j)) /\
+        (BIGUNION (IMAGE a s) = m_space m))
+End
 
-val pos_simple_fn_integral_def = Define
-   `pos_simple_fn_integral m s a x =
-        SIGMA (\i. (x i) * ((measure m) (a i))) s`;
+(* The integral of a positive simple function *)
+Definition pos_simple_fn_integral_def :
+    pos_simple_fn_integral (m :'a m_space)
+                           (s :num set) (a :num -> 'a set) (x :num -> real) =
+        SIGMA (\i. (x i) * (measure m (a i))) s
+End
 
-val psfs_def = Define
-   `psfs m f = {(s,a,x) | pos_simple_fn m f s a x}`;
+(* ‘psfs m f’ is the set of all positive simple functions equivalent to f *)
+Definition psfs_def :
+    psfs m f = {(s,a,x) | pos_simple_fn m f s a x}
+End
 
 val psfis_def = Define
    `psfis m f = IMAGE (\(s,a,x). pos_simple_fn_integral m s a x) (psfs m f)`;
-
-val pos_fn_integral_def = Define
-   `pos_fn_integral m f = sup {r:real | ?g. r IN psfis m g /\ !x. g x <= f x}`;
 
 val nonneg_def = Define
    `nonneg f = !x. 0 <= f x`;
@@ -56,6 +69,9 @@ val fn_plus_def = Define
 
 val fn_minus_def = Define
    `fn_minus f = (\x. if 0 <= f x then 0 else ~ f x)`;
+
+val pos_fn_integral_def = Define
+   `pos_fn_integral m f = sup {r:real | ?g. r IN psfis m g /\ !x. g x <= f x}`;
 
 (* c.f. "pos_fn_integral_def" in (new) lebesgueScript.sml *)
 val nnfis_def = Define
@@ -3787,8 +3803,6 @@ Proof
       by (Induct >- RW_TAC std_ss [max_fn_seq_def,REAL_LE_REFL]
           >> METIS_TAC [REAL_LE_MAX2, max_fn_seq_def])
  >> `!n. f (g n) <= f (max_fn_seq g n)` by METIS_TAC []
-
-
  >> `sup (IMAGE (\n. f (g n)) UNIV) <= sup (IMAGE (\n. f (max_fn_seq g n)) UNIV)`
       by (MATCH_MP_TAC SUP_MONO >> rw [] >| (* 2 subgoals *)
           [ (* goal 1 (of 2) *)
