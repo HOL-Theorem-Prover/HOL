@@ -58,13 +58,21 @@ fun read_file (fname,m) = let
     | SOME s => let
         val [thyname, number_s] = String.tokens Char.isSpace s
         val number = valOf (Real.fromString number_s)
-        val basemap =
+        val basemaps as (dups, times) =
             case Binarymap.peek(m, fname) of
-              NONE => Binarymap.mkDict String.compare
-            | SOME m0 => m0
-        val submap = Binarymap.insert(basemap, thyname, number)
+              NONE => (Binaryset.empty String.compare,
+                       Binarymap.mkDict String.compare)
+            | SOME (dups,m0) => (dups,m0)
+        val newdata =
+            if Binaryset.member(dups, thyname) then
+              basemaps
+            else
+              case Binarymap.peek(times, thyname) of
+                  NONE => (dups, Binarymap.insert(times, thyname, number))
+                | SOME _ => (Binaryset.add(dups, thyname),
+                             #1 (Binarymap.remove(times, thyname)))
       in
-        recurse (Binarymap.insert(m, fname, submap))
+        recurse (Binarymap.insert(m, fname, newdata))
       end
 in
   recurse m before TextIO.closeIn instr
@@ -73,7 +81,7 @@ end
 fun lookup m fname thy =
     case Binarymap.peek(m, fname) of
       NONE => NONE
-    | SOME m' => Binarymap.peek(m', thy)
+    | SOME (dups, times) => Binarymap.peek(times, thy)
 
 fun fmt_fname s = let
   val s' = if size s > 14 then String.extract(s, size s - 14, NONE) else s
@@ -132,7 +140,7 @@ fun main() = let
   val base = hd args
   val final_map = List.foldl read_file (Binarymap.mkDict String.compare) args
   val base_theories =
-      map #1 (Binarymap.listItems (Binarymap.find(final_map, base)))
+      map #1 (Binarymap.listItems (#2 (Binarymap.find(final_map, base))))
       handle NotFound => die ("No data in base file: "^hd args)
   val base_theories =
     if diffsort then let
@@ -175,7 +183,7 @@ fun main() = let
         (* m a map from filenames to maps from theory-names to times;
            output a map from theory-names to average times
         *)
-        fun perfile(fname, fmap, A) =
+        fun perfile(fname, (_, fmap), A) =
             let
               fun pertheory (thyname, thytime, A) =
                   insert_list (A, thyname, thytime)
@@ -185,10 +193,17 @@ fun main() = let
       in
         Binarymap.foldl perfile (Binarymap.mkDict String.compare) m
       end
+  val args' =
+      map (fn a => case Binarymap.peek(final_map, a) of
+                       NONE => a
+                     | SOME (dups, _) => if Binaryset.numItems dups <> 0 then
+                                           a ^ "*"
+                                         else a)
+          args
 
   val _ = if not bequiet andalso not averages then
             (print (StringCvt.padLeft #" " theory_width "");
-             app (print o fmt_fname) args;
+             app (print o fmt_fname) args';
              print "\n";
              print_dashes (length args))
           else ()
