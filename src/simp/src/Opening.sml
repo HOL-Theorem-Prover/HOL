@@ -210,7 +210,7 @@ in fn {relation,solver,depther,freevars} =>
                 val abs_rewr_thmf =
                     if null ho_vars then (fn x => x)
                     else
-                      let val r = rhs (concl rewr_thm)
+                      let val r = rand (concl rewr_thm)
                       in
                         case strip_ncomb (length ho_vars) [] r of
                             NONE => absify
