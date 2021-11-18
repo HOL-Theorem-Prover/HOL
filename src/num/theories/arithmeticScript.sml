@@ -4123,4 +4123,115 @@ Proof
   SRW_TAC [][ODD_EVEN,EVEN_SUB]
 QED
 
+(* CEILING_DIV and CEILING_MOD *)
+
+val CEILING_DIV_def = curry new_definition
+   "CEILING_DIV_def"
+   “CEILING_DIV m n = (m + (n - 1)) DIV n”
+
+val CEILING_MOD_def = curry new_definition
+   "CEILING_MOD_def"
+   “CEILING_MOD m n = (n - m MOD n) MOD n”
+
+Overload "\\\\" = “CEILING_DIV”;  (* prints as \\ *)
+Overload "%%" = “CEILING_MOD”;
+
+val _ = set_fixity "\\\\" (Infixl 600);
+val _ = set_fixity "%%" (Infixl 650);
+
+fun qspec_then q f th = f (Q.SPEC q th);
+
+Theorem CEILING_DIV_LE_X:
+  !k m n. 0 < k ==> (CEILING_DIV n k <= m <=> n <= m * k)
+Proof
+  rewrite_tac [CEILING_DIV_def]
+  \\ rpt strip_tac
+  \\ imp_res_tac DIV_LE_X
+  \\ asm_rewrite_tac [RIGHT_ADD_DISTRIB,MULT_CLAUSES,LESS_EQ]
+  \\ qspec_then ‘k’ strip_assume_tac num_CASES
+  \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
+  \\ rewrite_tac [ADD_SUB,ADD1,LESS_EQ_MONO_ADD_EQ,ADD_ASSOC]
+  \\ rewrite_tac [SUB_0,ADD_CLAUSES,MULT_CLAUSES,LESS_EQ_0,ADD_EQ_0]
+QED
+
+Theorem CEILING_DIV:
+  !k. 0 < k ==> !n. CEILING_DIV n k = n DIV k + MIN (n MOD k) 1
+Proof
+  rewrite_tac [CEILING_DIV_def]
+  \\ rpt strip_tac
+  \\ drule_then (qspec_then ‘n’ mp_tac) DIVISION
+  \\ strip_tac
+  \\ PAT_X_ASSUM “n = _:num” (fn th => CONV_TAC (RATOR_CONV (SIMP_CONV bool_ss [Once th])))
+  \\ rewrite_tac [GSYM ADD_ASSOC]
+  \\ imp_res_tac ADD_DIV_ADD_DIV
+  \\ asm_rewrite_tac [EQ_ADD_LCANCEL]
+  \\ qspec_then ‘n MOD k = 0’ strip_assume_tac EXCLUDED_MIDDLE
+  THEN1
+   (imp_res_tac DIV_EQ_X
+    \\ asm_rewrite_tac [ADD_CLAUSES,MIN_0,MULT_CLAUSES,ZERO_LESS_EQ]
+    \\ qspec_then ‘k’ strip_assume_tac num_CASES
+    \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
+    \\ rewrite_tac [ADD_SUB,ADD1,LESS_EQ,LESS_EQ_REFL])
+  \\ ‘MIN (n MOD k) 1 = 1’  by
+   (rewrite_tac [MIN,LESS_EQ]
+    \\ qspec_then ‘n MOD k’ strip_assume_tac num_CASES
+    \\ full_simp_tac bool_ss []
+    \\ rewrite_tac [ONE,LESS_EQ_MONO,NOT_SUC_LESS_EQ_0])
+  \\ imp_res_tac DIV_EQ_X
+  \\ asm_rewrite_tac [MULT_CLAUSES]
+  \\ qspec_then ‘n MOD k’ strip_assume_tac num_CASES
+  \\ qspec_then ‘k’ strip_assume_tac num_CASES
+  \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
+  \\ rewrite_tac [ADD_SUB,ADD1,LESS_EQ,LESS_EQ_REFL]
+  \\ full_simp_tac bool_ss [GSYM ADD1,ADD_CLAUSES,LESS_EQ_MONO]
+  \\ once_rewrite_tac [ADD_COMM]
+  \\ full_simp_tac bool_ss [LESS_EQ_ADD,LE_ADD_LCANCEL,LESS_MONO_EQ]
+  \\ asm_rewrite_tac [LESS_OR_EQ]
+QED
+
+Theorem CEILING_DIV_MOD:
+  !k.
+    0 < k ==>
+    !n. (n = k * CEILING_DIV n k - CEILING_MOD n k) /\ CEILING_MOD n k < k
+Proof
+  rpt strip_tac
+  \\ imp_res_tac CEILING_DIV
+  \\ imp_res_tac MOD_LESS
+  \\ asm_rewrite_tac [CEILING_MOD_def,LEFT_ADD_DISTRIB]
+  \\ qspec_then ‘n MOD k = 0’ strip_assume_tac EXCLUDED_MIDDLE
+  THEN1
+   (imp_res_tac DIVMOD_ID
+    \\ asm_rewrite_tac [MIN_0,MULT_CLAUSES,ADD_CLAUSES,SUB_0]
+    \\ drule_then (qspec_then ‘n’ mp_tac) DIVISION
+    \\ disch_then (fn th => simp_tac bool_ss [Once th])
+    \\ asm_rewrite_tac [ADD_CLAUSES]
+    \\ simp_tac bool_ss [Once MULT_COMM])
+  \\ drule_then (qspec_then ‘n’ mp_tac) DIVISION
+  \\ disch_then (fn th => simp_tac bool_ss [Once th])
+  \\ ‘MIN (n MOD k) 1 = 1’ by
+   (qspec_then ‘n MOD k’ strip_assume_tac num_CASES
+    \\ full_simp_tac bool_ss []
+    \\ rewrite_tac [MIN,ONE,LESS_MONO_EQ,prim_recTheory.NOT_LESS_0])
+  \\ asm_rewrite_tac [MULT_CLAUSES]
+  \\ ‘(k - n MOD k) < k’ by
+   (qspec_then ‘n MOD k’ strip_assume_tac num_CASES
+    \\ qspec_then ‘k’ strip_assume_tac num_CASES
+    \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
+    \\ rewrite_tac [SUB_MONO_EQ,SUB_LESS_SUC])
+  \\ drule_then (rewrite_tac o single) LESS_MOD
+  \\ asm_rewrite_tac [SUB_LEFT_SUB,GSYM NOT_LESS]
+  \\ once_rewrite_tac [ADD_COMM]
+  \\ rewrite_tac [ADD_ASSOC,ADD_SUB]
+  \\ simp_tac bool_ss [Once MULT_COMM]
+QED
+
+Theorem LE_MULT_CEILING_DIV:
+  !k. 0 < k ==> !n. n <= k * CEILING_DIV n k
+Proof
+  rpt strip_tac
+  \\ imp_res_tac CEILING_DIV_MOD
+  \\ pop_assum (K ALL_TAC)
+  \\ pop_assum (fn th => simp_tac bool_ss [Once th,SUB_LESS_EQ])
+QED
+
 val _ = export_theory()
