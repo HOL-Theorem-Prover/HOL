@@ -4133,6 +4133,9 @@ val CEILING_MOD_def = curry new_definition
    "CEILING_MOD_def"
    “CEILING_MOD m n = (n - m MOD n) MOD n”
 
+Theorem CEILING_DIV_def[compute] = CEILING_DIV_def;
+Theorem CEILING_MOD_def[compute] = CEILING_MOD_def;
+
 Overload "\\\\" = “CEILING_DIV”;  (* prints as \\ *)
 Overload "%%" = “CEILING_MOD”;
 
