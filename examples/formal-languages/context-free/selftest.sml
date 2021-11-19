@@ -95,10 +95,6 @@ val _ = app failtest [
 
 val _ = app tpp ["⟪2; 3⟫", "⟪ ⟫", "⟪SX_SYM \"foo\"⟫", "⟪ ⟪3 • 4⟫; ⟪3; 4⟫ ⟫"]
 
-val _ = tprint "Can EVAL ptree_size"
-val _ = require_msg (check_result (aconv “1n” o rhs o concl))
-                    (term_to_string o rhs o concl)
-                    EVAL “ptree_size (Lf x)”
 local
   val t = “TOK 1n”
   val _ = tprint "Can EVAL ptree_fringe"
