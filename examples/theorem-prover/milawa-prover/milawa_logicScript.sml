@@ -69,10 +69,7 @@ val free_vars_def = tDefine "free_vars" `
   (free_vars (mVar v) = [v]) /\
   (free_vars (mApp fc vs) = FLAT (MAP free_vars vs)) /\
   (free_vars (mLamApp xs z ys) = FLAT (MAP free_vars ys))`
- (WF_REL_TAC `measure logic_term_size` \\ SRW_TAC [] []
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ys` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  \\ DECIDE_TAC);
+ (WF_REL_TAC `measure logic_term_size`);
 
 val primitive_arity_def = Define `
   (primitive_arity logic_CONSP = 1) /\
@@ -109,10 +106,7 @@ val term_ok_def = tDefine "term_ok" `
   (term_ok ctxt (mLamApp xs y zs) =
      (LIST_TO_SET (free_vars y) SUBSET LIST_TO_SET xs) /\ ALL_DISTINCT xs /\
      EVERY (term_ok ctxt) zs /\ term_ok ctxt y /\ (LENGTH xs = LENGTH zs))`
- (WF_REL_TAC `measure (logic_term_size o SND)` \\ SRW_TAC [] [] THEN1 DECIDE_TAC
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `zs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  \\ DECIDE_TAC);
+ (WF_REL_TAC `measure (logic_term_size o SND)`);
 
 val formula_ok_def = Define `
   (formula_ok ctxt (Not x) = formula_ok ctxt x) /\
@@ -464,10 +458,7 @@ val term_sub_def = tDefine "term_sub" `
   (term_sub ss (mVar v) = LOOKUP v ss (mVar v)) /\
   (term_sub ss (mApp fc vs) = mApp fc (MAP (term_sub ss) vs)) /\
   (term_sub ss (mLamApp xs z ys) = mLamApp xs z (MAP (term_sub ss) ys))`
- (WF_REL_TAC `measure (logic_term_size o SND)` \\ SRW_TAC [] []
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ys` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  \\ DECIDE_TAC);
+ (WF_REL_TAC `measure (logic_term_size o SND)`);
 
 val formula_sub_def = Define `
   (formula_sub ss (Not x) = Not (formula_sub ss x)) /\

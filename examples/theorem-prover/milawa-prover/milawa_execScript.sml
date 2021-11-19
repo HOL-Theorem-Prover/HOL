@@ -739,9 +739,7 @@ val t2sexp_def = tDefine "t2sexp" `
   (t2sexp (mVar v) = Sym v) /\
   (t2sexp (mApp fc vs) = list2sexp (logic_func2sexp fc :: MAP t2sexp vs)) /\
   (t2sexp (mLamApp xs z ys) = list2sexp (list2sexp [Sym "LAMBDA"; list2sexp (MAP Sym xs); t2sexp z]::MAP t2sexp ys))`
- (WF_REL_TAC `measure (logic_term_size)` \\ SRW_TAC [] [] \\ REPEAT DECIDE_TAC
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ys` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC));
+ (WF_REL_TAC `measure (logic_term_size)`);
 
 val f2sexp_def = Define `
   (f2sexp (Or x y) = list2sexp [Sym "POR*"; f2sexp x; f2sexp y]) /\
