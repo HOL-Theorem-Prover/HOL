@@ -207,26 +207,24 @@ in fn {relation,solver,depther,freevars} =>
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));(thm,false))
                   end
                 val absify = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars))
-                val abs_rewr_thmf =
-                    if null ho_vars then (fn x => x)
+                val abs_rewr_thm =
+                    if null ho_vars then rewr_thm
                     else
                       let val r = rand (concl rewr_thm)
                       in
                         case strip_ncomb (length ho_vars) [] r of
-                            NONE => absify
+                            NONE => absify rewr_thm
                           | SOME (fxs, sfx) =>
                             if list_eq aconv sfx ho_vars then
                               let val fvs = free_vars fxs
                               in
                                 if List.all (fn hv => not (op_mem aconv hv fvs))
                                             ho_vars
-                                then
-                                  (fn x => x)
-                                else absify
+                                then rewr_thm
+                                else absify rewr_thm
                               end
-                            else absify
+                            else absify rewr_thm
                       end
-                val abs_rewr_thm = abs_rewr_thmf rewr_thm
                 val disch_abs_rewr_thm = itlist DISCH assums abs_rewr_thm
                 val gen_abs_rewr_thm = GENL ho_vars disch_abs_rewr_thm
                 val gen_abs_res =
