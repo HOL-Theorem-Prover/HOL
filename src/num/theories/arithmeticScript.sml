@@ -4142,8 +4142,6 @@ Overload "%%" = “CEILING_MOD”;
 val _ = set_fixity "\\\\" (Infixl 600);
 val _ = set_fixity "%%" (Infixl 650);
 
-fun qspec_then q f th = f (Q.SPEC q th);
-
 Theorem CEILING_DIV_LE_X:
   !k m n. 0 < k ==> (CEILING_DIV n k <= m <=> n <= m * k)
 Proof
@@ -4151,7 +4149,7 @@ Proof
   \\ rpt strip_tac
   \\ imp_res_tac DIV_LE_X
   \\ asm_rewrite_tac [RIGHT_ADD_DISTRIB,MULT_CLAUSES,LESS_EQ]
-  \\ qspec_then ‘k’ strip_assume_tac num_CASES
+  \\ Q.SPEC_THEN ‘k’ strip_assume_tac num_CASES
   \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
   \\ rewrite_tac [ADD_SUB,ADD1,LESS_EQ_MONO_ADD_EQ,ADD_ASSOC]
   \\ rewrite_tac [SUB_0,ADD_CLAUSES,MULT_CLAUSES,LESS_EQ_0,ADD_EQ_0]
@@ -4162,28 +4160,28 @@ Theorem CEILING_DIV:
 Proof
   rewrite_tac [CEILING_DIV_def]
   \\ rpt strip_tac
-  \\ drule_then (qspec_then ‘n’ mp_tac) DIVISION
+  \\ drule_then (Q.SPEC_THEN ‘n’ mp_tac) DIVISION
   \\ strip_tac
   \\ PAT_X_ASSUM “n = _:num” (fn th => CONV_TAC (RATOR_CONV (SIMP_CONV bool_ss [Once th])))
   \\ rewrite_tac [GSYM ADD_ASSOC]
   \\ imp_res_tac ADD_DIV_ADD_DIV
   \\ asm_rewrite_tac [EQ_ADD_LCANCEL]
-  \\ qspec_then ‘n MOD k = 0’ strip_assume_tac EXCLUDED_MIDDLE
+  \\ Q.SPEC_THEN ‘n MOD k = 0’ strip_assume_tac EXCLUDED_MIDDLE
   THEN1
    (imp_res_tac DIV_EQ_X
     \\ asm_rewrite_tac [ADD_CLAUSES,MIN_0,MULT_CLAUSES,ZERO_LESS_EQ]
-    \\ qspec_then ‘k’ strip_assume_tac num_CASES
+    \\ Q.SPEC_THEN ‘k’ strip_assume_tac num_CASES
     \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
     \\ rewrite_tac [ADD_SUB,ADD1,LESS_EQ,LESS_EQ_REFL])
   \\ ‘MIN (n MOD k) 1 = 1’  by
    (rewrite_tac [MIN,LESS_EQ]
-    \\ qspec_then ‘n MOD k’ strip_assume_tac num_CASES
+    \\ Q.SPEC_THEN ‘n MOD k’ strip_assume_tac num_CASES
     \\ full_simp_tac bool_ss []
     \\ rewrite_tac [ONE,LESS_EQ_MONO,NOT_SUC_LESS_EQ_0])
   \\ imp_res_tac DIV_EQ_X
   \\ asm_rewrite_tac [MULT_CLAUSES]
-  \\ qspec_then ‘n MOD k’ strip_assume_tac num_CASES
-  \\ qspec_then ‘k’ strip_assume_tac num_CASES
+  \\ Q.SPEC_THEN ‘n MOD k’ strip_assume_tac num_CASES
+  \\ Q.SPEC_THEN ‘k’ strip_assume_tac num_CASES
   \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
   \\ rewrite_tac [ADD_SUB,ADD1,LESS_EQ,LESS_EQ_REFL]
   \\ full_simp_tac bool_ss [GSYM ADD1,ADD_CLAUSES,LESS_EQ_MONO]
@@ -4201,24 +4199,24 @@ Proof
   \\ imp_res_tac CEILING_DIV
   \\ imp_res_tac MOD_LESS
   \\ asm_rewrite_tac [CEILING_MOD_def,LEFT_ADD_DISTRIB]
-  \\ qspec_then ‘n MOD k = 0’ strip_assume_tac EXCLUDED_MIDDLE
+  \\ Q.SPEC_THEN ‘n MOD k = 0’ strip_assume_tac EXCLUDED_MIDDLE
   THEN1
    (imp_res_tac DIVMOD_ID
     \\ asm_rewrite_tac [MIN_0,MULT_CLAUSES,ADD_CLAUSES,SUB_0]
-    \\ drule_then (qspec_then ‘n’ mp_tac) DIVISION
+    \\ drule_then (Q.SPEC_THEN ‘n’ mp_tac) DIVISION
     \\ disch_then (fn th => simp_tac bool_ss [Once th])
     \\ asm_rewrite_tac [ADD_CLAUSES]
     \\ simp_tac bool_ss [Once MULT_COMM])
-  \\ drule_then (qspec_then ‘n’ mp_tac) DIVISION
+  \\ drule_then (Q.SPEC_THEN ‘n’ mp_tac) DIVISION
   \\ disch_then (fn th => simp_tac bool_ss [Once th])
   \\ ‘MIN (n MOD k) 1 = 1’ by
-   (qspec_then ‘n MOD k’ strip_assume_tac num_CASES
+   (Q.SPEC_THEN ‘n MOD k’ strip_assume_tac num_CASES
     \\ full_simp_tac bool_ss []
     \\ rewrite_tac [MIN,ONE,LESS_MONO_EQ,prim_recTheory.NOT_LESS_0])
   \\ asm_rewrite_tac [MULT_CLAUSES]
   \\ ‘(k - n MOD k) < k’ by
-   (qspec_then ‘n MOD k’ strip_assume_tac num_CASES
-    \\ qspec_then ‘k’ strip_assume_tac num_CASES
+   (Q.SPEC_THEN ‘n MOD k’ strip_assume_tac num_CASES
+    \\ Q.SPEC_THEN ‘k’ strip_assume_tac num_CASES
     \\ full_simp_tac bool_ss [prim_recTheory.LESS_REFL]
     \\ rewrite_tac [SUB_MONO_EQ,SUB_LESS_SUC])
   \\ drule_then (rewrite_tac o single) LESS_MOD
