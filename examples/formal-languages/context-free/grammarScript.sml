@@ -45,25 +45,12 @@ Definition ptree_list_loc_def:
   ptree_list_loc l = merge_list_locs (MAP ptree_loc l)
 End
 
-
-Definition ptree_size_def:
-  (ptree_size (Lf _) = 1) ∧
-  (ptree_size (Nd nt children) = 1 + SUM (MAP ptree_size children))
-Termination
-   WF_REL_TAC `measure (parsetree_size (K 1) (K 1) (K 1))` >>
-   Induct_on `children` >>
-   rw[definition "parsetree_size_def"] >- decide_tac >>
-   res_tac >> pop_assum (qspecl_then [`p_2`, `p_1`] mp_tac) >>
-   simp_tac (srw_ss()) [] >> decide_tac
-End
-
-Theorem ptree_size_def[simp,compute] =
-   CONV_RULE (DEPTH_CONV ETA_CONV) ptree_size_def;
-
 Definition ptree_head_def[simp]:
   (ptree_head (Lf (tok,l)) = tok) ∧
   (ptree_head (Nd (nt,l) children) = NT nt)
 End
+
+Overload ptree_size[local] = ``parsetree_size (K 0) (K 0) (K 0)``;
 
 Definition valid_ptree_def[simp,nocompute]:
   (valid_ptree G (Lf _) ⇔ T) ∧
@@ -71,19 +58,14 @@ Definition valid_ptree_def[simp,nocompute]:
     nt ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' nt ∧
     ∀pt. pt ∈ set children ⇒ valid_ptree G pt)
 Termination
-   WF_REL_TAC `measure (ptree_size o SND)` THEN
-   Induct_on `children` THEN SRW_TAC [][] THEN1 DECIDE_TAC THEN
-   RES_TAC THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+   WF_REL_TAC `measure (ptree_size o SND)`
 End
 
 Definition ptree_fringe_def:
   (ptree_fringe (Lf (t,_)) = [t]) ∧
   (ptree_fringe (Nd _ children) = FLAT (MAP ptree_fringe children))
 Termination
-   WF_REL_TAC `measure ptree_size` THEN Induct_on `children` THEN
-   SRW_TAC [][ptree_size_def] THEN1 DECIDE_TAC THEN
-   FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [ptree_size_def] THEN
-   RES_TAC THEN DECIDE_TAC
+   WF_REL_TAC `measure ptree_size`
 End
 
 Theorem ptree_fringe_def[simp,compute] =
@@ -101,8 +83,8 @@ Type lfptree = “:(α,β,one) parsetree”
 Definition real_fringe_def[simp]:
   (real_fringe (Lf t) = [t]) ∧
   (real_fringe (Nd n ptl) = FLAT (MAP real_fringe ptl))
-Termination WF_REL_TAC `measure ptree_size` >> Induct_on `ptl` >> dsimp[] >>
-            fs[] >> rpt strip_tac >> res_tac >> simp[]
+Termination
+  WF_REL_TAC `measure ptree_size`
 End
 
 Theorem MAP_TKI_11[simp]:
@@ -137,8 +119,7 @@ Definition valid_locs_def[simp]:
      l = merge_list_locs (MAP ptree_loc children) ∧
      ∀pt. MEM pt children ⇒ valid_locs pt)
 Termination
-  (WF_REL_TAC ‘measure ptree_size’ >> simp[] >> Induct >> dsimp[] >>
-   rpt strip_tac >> res_tac >> simp[])
+  WF_REL_TAC ‘measure ptree_size’
 End
 
 Definition valid_lptree_def:

@@ -144,8 +144,7 @@ Definition ptree_NTs_def:
   (ptree_NTs (Lf (l,_)) = case l of NT N => {N} | _ => ∅) ∧
   (ptree_NTs (Nd (n,_) subs) = n INSERT BIGUNION (IMAGE ptree_NTs (set subs)))
 Termination
-  WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
-  rpt strip_tac >> res_tac >> asimp[]
+  WF_REL_TAC `measure (parsetree_size (K 0) (K 0) (K 0))`
 End
 
 Definition ptree_rptfree_def:
@@ -153,8 +152,7 @@ Definition ptree_rptfree_def:
   ptree_rptfree (Nd (N,_) subs) =
     ∀s. MEM s subs ⇒ ptree_rptfree s ∧ N ∉ ptree_NTs s
 Termination
-  WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
-  rpt strip_tac >> res_tac >> asimp[]
+  WF_REL_TAC `measure (parsetree_size (K 0) (K 0) (K 0))`
 End
 
 Theorem nullableML_by_singletons:
