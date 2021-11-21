@@ -197,7 +197,8 @@ sig
    val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
    val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
 
-   type simptac_config = {strip : bool, elimvars : bool, droptrues : bool}
+   type simptac_config =
+        {strip : bool, elimvars : bool, droptrues : bool, oldestfirst : bool}
    val psr : simptac_config -> simpset -> tactic
      (* Pop, Simp, Rotate to back *)
    val allasms : simptac_config -> simpset -> tactic

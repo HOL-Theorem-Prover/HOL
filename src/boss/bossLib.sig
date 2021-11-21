@@ -183,6 +183,7 @@ sig
   val gvs : thm list -> tactic
   val gns : thm list -> tactic
   val gnvs : thm list -> tactic
+  val rgs : thm list -> tactic
 
   (* without loss of generality (from wlogLib) *)
   val wlog_then : term quotation ->

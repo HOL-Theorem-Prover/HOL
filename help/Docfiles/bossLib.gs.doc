@@ -57,6 +57,12 @@ functions with {n} in the name do not use {STRIP_ASSUME_TAC} when
 adding assumptions back to the goal. The latter can prevent
 case-splits.
 
+The {rgs} variant attacks the assumptions in the reverse order to
+{gs}. The latter simplifies older assumptions using newer assumptions,
+but {rgs} uses the opposite order. If, for example, the assumption
+list includes both {0 < n} and {n ≠ 0}, then {gs} will preserve one of
+these and {rgs} will preserve the other.
+
 \SEEALSO
 Tactical.CHANGED_TAC, bossLib.simp.
 

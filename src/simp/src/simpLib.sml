@@ -821,13 +821,17 @@ val asm_simp_tac = ASM_SIMP_TAC
    discard if droptrues is true.
 *)
 
-type simptac_config = {strip : bool, elimvars : bool, droptrues : bool}
+type simptac_config =
+     {strip : bool, elimvars : bool, droptrues : bool, oldestfirst : bool}
 
+(* back/front assume_tac; backp is true if the new assumption should go at the
+   back of the list *)
 fun BF_ASSUME_TAC backp th (g as (asl,w)) =
     if backp then ([(asl @ [concl th], w)],
                    fn resths => PROVE_HYP th (hd resths))
     else ASSUME_TAC th g
 
+(* contr/accept/assume *)
 fun caa_tac0 backp (c : simptac_config) th =
     let
       val base = FIRST [CONTR_TAC th, ACCEPT_TAC th,
@@ -838,8 +842,9 @@ fun caa_tac0 backp (c : simptac_config) th =
     end
 
 local
-   val caa_tac = caa_tac0 false
-                          {elimvars = false, droptrues = false, strip = false}
+   val caa_tac =
+       caa_tac0 false {elimvars = false, droptrues = false, strip = false,
+                       oldestfirst = true}
    val STRIP_ASSUME_TAC' = REPEAT_TCL STRIP_THM_THEN caa_tac
    fun drop r =
       fn n =>
@@ -874,11 +879,16 @@ end
 fun stdcon (c : simptac_config) th =
     if #elimvars c andalso eliminable (concl th) then VSUBST_TAC th
     else
-      (if #strip c then REPEAT_TCL STRIP_THM_THEN else I) (caa_tac0 true c) th
+      (if #strip c then REPEAT_TCL STRIP_THM_THEN else I)
+        (caa_tac0 (not (#oldestfirst c)) c)
+        th
 
 fun psr (cfg : simptac_config) ss =
-    pop_assum (fn th =>
-                  ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+    let val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
+    in
+      popper (fn th =>
+                 ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+    end
 
 fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
 

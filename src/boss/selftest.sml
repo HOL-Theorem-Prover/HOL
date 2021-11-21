@@ -340,9 +340,17 @@ val _ =
 val _ = tprint "gs with ordering works"
 val _ = require_msg
           (check_result
-             (goals_eq [([“y <= b”, “x:num = y”], “y ** 2 < 10”)]))
+             (goals_eq [([“x:num = y”, “y <= b”], “y ** 2 < 10”)]))
           goalpp
           (testtac (gs[arithmeticTheory.SUB_CANCEL]))
+          gstest_goal
+
+val _ = tprint "rgs with ordering works"
+val _ = require_msg
+          (check_result
+             (goals_eq [([“y <= b”, “x:num = y”], “y ** 2 < 10”)]))
+          goalpp
+          (testtac (rgs[arithmeticTheory.SUB_CANCEL]))
           gstest_goal
 
 val _ = tprint "gvs with ordering works"

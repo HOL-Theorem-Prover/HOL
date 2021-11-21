@@ -251,11 +251,14 @@ val lfs = fs
 val lrfs = rfs
 
 
-fun cfg ev s = global_simp_tac {elimvars = ev, strip = s, droptrues = true}
-val gns = stateful (cfg false false) []
-val gs = stateful (cfg false true) []
-val gnvs = stateful (cfg true false) []
-val gvs = stateful (cfg true true) []
+fun cfg ev s ofirst =
+    global_simp_tac {elimvars = ev, strip = s, droptrues = true,
+                     oldestfirst = ofirst}
+val gns = stateful (cfg false false true) []
+val gs = stateful (cfg false true true) []
+val gnvs = stateful (cfg true false true) []
+val gvs = stateful (cfg true true true) []
+val rgs = stateful (cfg false true false) []
 
 (* Without loss of generality tactics *)
 val wlog_tac = wlog_tac
