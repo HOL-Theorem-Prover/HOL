@@ -346,6 +346,30 @@ in
   require_msg (check_result verdict) goalprint (fst o tac) G
 end
 
+val _ = let
+  open boolLib
+  val _ = tprint "POP_LAST_ASSUM succeeds"
+  val asl = [“x:'a = y”, “x:'a = z”]
+  val g = “(P:'a -> bool) x”
+  fun verdict [(asl',sg)] = tml_eq asl' [“x:'a = y”] andalso
+                            sg ~~ “(P:'a -> bool) z”
+    | verdict _ = false
+in
+  require_msg (check_result verdict) goalprint
+              (fst o POP_LAST_ASSUM (REWRITE_TAC o single)) (asl,g)
+end
+
+val _ = let
+  open boolLib
+in
+  shouldfail {checkexn = is_struct_HOL_ERR "Tactical",
+              testfn = fst o POP_LAST_ASSUM (REWRITE_TAC o single),
+              printresult = goalprint,
+              printarg = fn _ => "POP_LAST_ASSUM fails (no assums)"}
+             ([], “(P:'a -> bool) x”)
+end
+
+
 val _ = new_constant ("foo", bool --> bool --> bool);
 val foo1y = "p /\\ (q ~~ r)"
 val foo1n = "p /\\ q ~~ r"
