@@ -25,6 +25,7 @@ sig
   val RW_TAC          : simpset -> thm list -> tactic
   val rw_tac          : simpset -> thm list -> tactic
   val NORM_TAC        : simpset -> thm list -> tactic
+  val PRIM_SRW_TAC    : simpset -> simpLib.ssfrag list -> thm list -> tactic
   val SRW_TAC         : simpLib.ssfrag list -> thm list -> tactic
   val srw_tac         : simpLib.ssfrag list -> thm list -> tactic
   val augment_srw_ss  : simpLib.ssfrag list -> unit
@@ -46,6 +47,9 @@ sig
   val temp_set_simpset_ancestry : string list -> unit
   val set_simpset_ancestry : string list -> unit
   val recreate_sset_at_parentage : string list -> unit
+
+  val make_simpset_derived_value :
+      (simpset -> 'a -> 'a) -> 'a -> {get : unit -> 'a, set : 'a -> unit}
 
   (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic

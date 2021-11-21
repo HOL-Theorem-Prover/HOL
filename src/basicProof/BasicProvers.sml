@@ -1076,24 +1076,6 @@ fun apply_delta d ((sset,initp,upds):srw_state) : srw_state =
         (sset ++ ssf1 nth, true, [])
       | ThmSetData.REMOVE s => (sset -* [s], true, [])
 
-fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
-    if not initp then
-      case d of
-          ThmSetData.ADD nth =>
-          let
-            open simpLib
-            val upds' =
-                case upds of
-                    ADD_SSFRAG ssf :: rest =>
-                    ADD_SSFRAG (add_named_rwt nth ssf) :: rest
-                  | _ => ADD_SSFRAG (ssf1 nth) :: upds
-          in
-            (sset, initp, upds')
-          end
-        | ThmSetData.REMOVE s => (sset, initp, REMOVE_RWT s :: upds)
-    else
-      apply_delta d st
-
 fun apply_srw_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
   | apply_srw_update (REMOVE_RWT n, ss) = ss -* [n]
 
@@ -1121,6 +1103,28 @@ fun opt_partition f g ls =
       recurse [] [] ls
     end
 
+val stale_flags = Sref.new ([] : bool Sref.t list)
+fun notify () =
+    List.app (fn br => Sref.update br (K true)) (Sref.value stale_flags)
+
+fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
+    if not initp then
+      case d of
+          ThmSetData.ADD nth =>
+          let
+            open simpLib
+            val upds' =
+                case upds of
+                    ADD_SSFRAG ssf :: rest =>
+                    ADD_SSFRAG (add_named_rwt nth ssf) :: rest
+                  | _ => ADD_SSFRAG (ssf1 nth) :: upds
+          in
+            (sset, initp, upds')
+          end
+        | ThmSetData.REMOVE s => (sset, initp, REMOVE_RWT s :: upds)
+    else
+      apply_delta d st before notify()
+
 fun finaliser {thyname} deltas (sset,initp,upds) =
     let
       fun toNamedAdd (ThmSetData.ADD p) = SOME p | toNamedAdd _ = NONE
@@ -1132,7 +1136,8 @@ fun finaliser {thyname} deltas (sset,initp,upds) =
            overall rewrite system is not confluent *)
       val new_upds = ADD_SSFRAG ssfrag :: map REMOVE_RWT rms
     in
-      if initp then (List.foldl apply_srw_update sset new_upds, true, [])
+      if initp then
+        (List.foldl apply_srw_update sset new_upds, true, []) before notify()
       else (sset, false, List.revAppend(new_upds, upds))
     end
 
@@ -1146,6 +1151,7 @@ val adresult as {DB,get_global_value,record_delta,update_global_value,...} =
       },
       settype = "simp"
     };
+fun updnote_global_value f = (update_global_value f; notify())
 val get_deltas = #get_deltas adresult
 fun merge_simpsets ps =
     case Option.map (#1 o quiet_messages init_state) (#merge adresult ps) of
@@ -1156,20 +1162,21 @@ fun augment_srw_ss0 ssdl ((sset, initp, upds):srw_state):srw_state =
     if initp then (foldl (fn (ssd,ss) => ss ++ ssd) sset ssdl, true, [])
     else
       (sset, false, List.revAppend(map ADD_SSFRAG ssdl, upds))
-val augment_srw_ss = update_global_value o augment_srw_ss0
+
+val augment_srw_ss = updnote_global_value o augment_srw_ss0
 
 fun diminish_srw_ss0 names st0 =
     let val st' as (sset, _, _) = init_state st0
     in
       (simpLib.remove_ssfrags names sset, true, [])
     end
-val diminish_srw_ss = update_global_value o diminish_srw_ss0
+val diminish_srw_ss = updnote_global_value o diminish_srw_ss0
 
 fun temp_delsimps0 names (sset, initp, upds) =
     if initp then (sset -* names, true, [])
     else
       (sset, false, List.revAppend (map REMOVE_RWT names, upds))
-val temp_delsimps = update_global_value o temp_delsimps0;
+val temp_delsimps = updnote_global_value o temp_delsimps0;
 
 fun tyi_update tyi sset = sset ++ simpLib.tyi_to_ssdata tyi
 fun update_fn tyi =
@@ -1187,7 +1194,7 @@ val update_log =
     Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
 fun ap13 f (x,y,z) = (f x, y, z)
 fun logged_update {thyname} f =
-    (update_global_value (ap13 f);
+    (updnote_global_value (ap13 f);
      Sref.update update_log (Symtab.cons_list (thyname,f)))
 
 fun logged_addfrags thy fgs =
@@ -1212,17 +1219,21 @@ fun apply_logged_updates {theories} simpset =
     end
 
 fun do_logged_updates thys =
-    update_global_value (ap13 (apply_logged_updates thys) o init_state)
+    updnote_global_value (ap13 (apply_logged_updates thys) o init_state)
 
 fun option_fold f NONE x = x
   | option_fold f (SOME a) x = f a x
 
-fun SRW_TAC ssdl thl g = let
-  val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
-in
-  markerLib.ABBRS_THEN
-    (markerLib.mk_require_tac (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC)) thl
-end g;
+fun PRIM_SRW_TAC ss0 ssdl thl g =
+    let
+      val ss = foldl (fn (ssd,ss) => ss ++ ssd) ss0 ssdl
+    in
+      markerLib.ABBRS_THEN
+        (markerLib.mk_require_tac (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC))
+        thl
+    end g;
+fun SRW_TAC ssdl thms g =
+    PRIM_SRW_TAC (srw_ss()) ssdl thms g (* don't eta-reduce *)
 val srw_tac = SRW_TAC
 
 fun export_rewrites slist =
@@ -1249,22 +1260,41 @@ fun temp_set_simpset_ancestry sl =
         NONE => HOL_WARNING "BasicProvers" "temp_set_simpset_ancestry"
                             "Merge of parental values produces no value; \
                             \nothing done"
-      | SOME v => update_global_value (K v)
+      | SOME v => updnote_global_value (K v)
 
 fun set_simpset_ancestry sl =
     case #set_parents adresult sl of
         NONE => HOL_WARNING "BasicProvers" "set_simpset_ancestry"
                             "Merge of parental values produces no value; \
                             \nothing done"
-      | SOME _ => ()
+      | SOME _ => notify()
 
-fun temp_setsimpset ss = update_global_value (K (ss, true, []))
+fun temp_setsimpset ss = updnote_global_value (K (ss, true, []))
 val simpset_state = get_global_value
 fun recreate_sset_at_parentage ps =
     ps |> merge_simpsets
        |> option_fold augment_with_typebase (TypeBase.merge_typebases ps)
        |> apply_logged_updates {theories = ps}
        |> temp_setsimpset
+
+
+fun make_simpset_derived_value (deriver : simpset -> 'a -> 'a) init =
+    let
+      val _ = update_global_value init_state
+      val vref = Sref.new (deriver (srw_ss()) init)
+      val stale_flag = Sref.new false
+      val _ = Sref.update stale_flags (cons stale_flag)
+      fun get() =
+          (if Sref.value stale_flag then
+             (Sref.update vref (deriver (srw_ss()));
+              Sref.update stale_flag (K false))
+           else ();
+           Sref.value vref)
+      fun set v = (Sref.update vref (K v); Sref.update stale_flag (K false))
+    in
+      {get=get,set=set}
+    end
+
 
 
 end
