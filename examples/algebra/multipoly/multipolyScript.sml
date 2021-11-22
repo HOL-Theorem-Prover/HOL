@@ -1766,7 +1766,7 @@ Proof
     rw[FUN_EQ_THM]
     \\ rw[mpoly_mul_def, monomials_mpoly_one]
     \\ imp_res_tac ring_one_eq_zero
-    \\ gs[SUBSET_DEF, PULL_EXISTS, mpoly_def]
+    \\ rgs[SUBSET_DEF, PULL_EXISTS, mpoly_def]
     \\ qmatch_goalsub_abbrev_tac`BAG_OF_SET s`
     \\ `s = if x IN monomials r p then {({||},x)} else {}`
     by ( rw[Abbr`s`, Once EXTENSION] )
@@ -1829,9 +1829,9 @@ Proof
       \\ metis_tac[] )
     \\ simp[BAG_OF_SET_INSERT_NON_ELEMENT]
     \\ Cases_on`p = |0|`
-    >- ( `p * q = |0|` by metis_tac[polyRingTheory.poly_mult_zero] \\ gs[] )
+    >- ( `p * q = |0|` by metis_tac[polyRingTheory.poly_mult_zero] \\ rgs[] )
     \\ Cases_on`q = |0|`
-    >- ( `p * q = |0|` by metis_tac[polyRingTheory.poly_mult_zero] \\ gs[] )
+    >- ( `p * q = |0|` by metis_tac[polyRingTheory.poly_mult_zero] \\ rgs[] )
     \\ `0 < LENGTH p /\ 0 < LENGTH q` by (Cases_on`p` \\ Cases_on`q` \\ fs[])
     \\ simp[]
     \\ fs[Abbr`s`]
