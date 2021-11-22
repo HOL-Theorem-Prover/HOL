@@ -512,36 +512,10 @@ val DINT_LINEAR = store_thm("DINT_LINEAR",
 (* Ordering properties of integral.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-(*Auxiliary lemmas.*)
-val LT = store_thm("LT",
-  ``(!(m:num). m < 0 = F) /\ (!m n. m < SUC n = ((m = n) \/ m < n))``,
-  SIMP_TAC arith_ss[ZERO_LESS_EQ, LESS_OR_EQ]);
-
-val LE_0 = store_thm ("LE_0",``!(n:num). 0 <= n``,
-      INDUCT_TAC THEN ASM_REWRITE_TAC[LE]);
-
-val LT_0 = store_thm("LT_0",``!(n:num). 0 < SUC n``,
-      SIMP_TAC arith_ss[SUC_ONE_ADD]);
-val EQ_SUC = store_thm("EQ_SUC", ``!(m:num) (n:num). (SUC m = SUC n) = (m = n)``,
-        SIMP_TAC arith_ss[]);
-
-val LE_LT = store_thm("LE_LT",
-        ``!(m:num) (n:num). (m <= n) <=> (m < n) \/ (m = n)``,
-        REPEAT INDUCT_TAC THEN
-        ASM_SIMP_TAC arith_ss[LESS_EQ_MONO, LESS_MONO_EQ, EQ_SUC, ZERO_LESS_EQ, LT_0]
-        THEN REWRITE_TAC[LE, LT]);
-
-val LT_LE = store_thm("LT_LE",
-        ``!(m:num) (n:num). (m < n) <=> (m <= n) /\ ~(m = n)``,
-        REWRITE_TAC[LE_LT] THEN REPEAT GEN_TAC THEN EQ_TAC THENL
-         [DISCH_TAC THEN ASM_SIMP_TAC arith_ss[],
-          DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
-          ASM_REWRITE_TAC[]]);
-
-val REAL_LT_MIN = store_thm("REAL_LT_MIN",
-  ``!x y z. z < min x y <=> z < x /\ z < y``,
-  RW_TAC boolSimps.bool_ss [min_def] THENL [PROVE_TAC[REAL_LTE_TRANS],
-  RULE_ASSUM_TAC(REWRITE_RULE[REAL_NOT_LE]) THEN PROVE_TAC[REAL_LT_TRANS]]);
+val LE_0   = arithmeticTheory.ZERO_LESS_EQ;
+val LT_0   = prim_recTheory.LESS_0;
+val EQ_SUC = prim_recTheory.INV_SUC_EQ;
+val LE_LT  = arithmeticTheory.LESS_OR_EQ;
 
 val INTEGRAL_LE = store_thm("INTEGRAL_LE",
   ``!f g a b i j.

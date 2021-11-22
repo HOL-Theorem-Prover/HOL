@@ -5182,10 +5182,6 @@ Proof
   ASM_SIMP_TAC std_ss [LIM_CONST]
 QED
 
-val LT = prove ((* HOL Light compatibility *)
-  ``(!m:num. m < 0 <=> F) /\ (!m n. m < SUC n <=> (m = n) \/ m < n)``,
-    METIS_TAC [LESS_THM, NOT_LESS_0]);
-
 val LIMSEQ_indicator_UN = limseq_indicator_BIGUNION;
 
 Theorem sigma_algebra_lebesgue :

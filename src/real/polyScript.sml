@@ -74,23 +74,7 @@ val SUC_INJ = prim_recTheory.INV_SUC_EQ
 
 val LT_SUC_LE = prove (Term`!m n. m < SUC n = m <= n`, ARITH_TAC);
 
-val LT = prove(
-  Term`(!m:num. m < 0 = F) /\ (!m n. m < SUC n = (m = n) \/ m < n)`,
-  ARITH_TAC);
-
-val LT_ADD_LCANCEL = prove (
-  Term`!m n p:num. m + n < m + p = n < p`,
-  ARITH_TAC);
-
-val LE_EXISTS = prove (
-  Term`!m n:num. m <= n = (?d. n = m + d)`,
-  REPEAT (STRIP_TAC ORELSE EQ_TAC)
-  THENL [
-    EXISTS_TAC (Term`n - m:num`),
-    ALL_TAC
-  ]
-  THEN POP_ASSUM (MP_TAC)
-  THEN ARITH_TAC);
+val LE_EXISTS = arithmeticTheory.LESS_EQ_EXISTS;
 
 val LE_SUC_LT = prove (
   Term`!m n. SUC m <= n = m < n`,
