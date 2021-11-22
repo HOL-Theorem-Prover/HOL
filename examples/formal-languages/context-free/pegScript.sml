@@ -366,7 +366,7 @@ Proof
   >- (rpt strip_tac >> rule_match peg0_rules >>
       imp_res_tac peg_eval_suffix' >> gvs[])
   >- (rpt strip_tac >> rule_match peg0_rules >> gvs[] >>
-      imp_res_tac peg_eval_suffix' >> gvs[]) >>
+      imp_res_tac peg_eval_suffix' >> rgs[]) >>
   rpt strip_tac
   >- (first_x_assum match_mp_tac >> rw[] >>
       imp_res_tac peg_eval_suffix >> fs[IS_SUFFIX_compute] >>

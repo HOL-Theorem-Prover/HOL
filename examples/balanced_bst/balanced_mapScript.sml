@@ -2730,9 +2730,10 @@ Proof
   inv_mp_tac hedgeUnionWithKey_thm >> simp[] >>
   rw[bounded_all_NONE, bounded_root_def, restrict_set_def, option_cmp_def,
      restrict_domain_def, option_cmp2_def, to_fmap_def] >>
-  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_DRESTRICT] >> gvs[] >>
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_DRESTRICT] >>
   IF_CASES_TAC >> gvs[] >> simp[FLOOKUP_UPDATE, FLOOKUP_DEF] >>
-  every_case_tac >> gvs[] >> imp_res_tac to_fmap_key_set >> gvs[]
+  every_case_tac >> gvs[] >> imp_res_tac to_fmap_key_set >>
+  rgs[]
 QED
 
 Theorem lookup_unionWith:
