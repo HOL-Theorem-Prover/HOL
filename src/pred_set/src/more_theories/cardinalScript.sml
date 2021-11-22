@@ -2153,14 +2153,6 @@ val LT_CASES = store_thm ("LT_CASES",
  ``!m n:num. (m < n) \/ (n < m) \/ (m = n)``,
   METIS_TAC [LESS_CASES, LESS_OR_EQ]);
 
-val LT = store_thm ("LT",
- ``(!m:num. m < 0 <=> F) /\ (!m n. m < SUC n <=> (m = n) \/ m < n)``,
-  METIS_TAC [LESS_THM, NOT_LESS_0]);
-
-val LT_LE = store_thm ("LT_LE",
- ``!m n:num. m < n <=> m <= n /\ ~(m = n)``,
-  METIS_TAC [LESS_NOT_EQ, LESS_OR_EQ]);
-
 val GE = store_thm ("GE",
   ``!n m:num. m >= n <=> n <= m``,
   METIS_TAC [GREATER_EQ]);

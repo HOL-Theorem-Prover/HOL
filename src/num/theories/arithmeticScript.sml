@@ -517,6 +517,22 @@ val LESS_EQ_0 = store_thm ("LESS_EQ_0",
   “!n. (n <= 0) = (n = 0)”,
   REWRITE_TAC [LESS_OR_EQ, NOT_LESS_0]) ;
 
+(*---------------------------------------------------------------------------
+ *  HOL Light compatibility
+ *---------------------------------------------------------------------------*)
+
+Theorem LT :
+    (!m:num. m < 0 <=> F) /\ (!m n. m < SUC n <=> (m = n) \/ m < n)
+Proof
+    METIS_TAC [LESS_THM, NOT_LESS_0]
+QED
+
+Theorem LT_LE :
+    !m n:num. m < n <=> m <= n /\ ~(m = n)
+Proof
+    METIS_TAC [LESS_NOT_EQ, LESS_OR_EQ]
+QED
+
 val _ = print "Now proving properties of subtraction\n"
 
 val SUB_0 = store_thm ("SUB_0",
