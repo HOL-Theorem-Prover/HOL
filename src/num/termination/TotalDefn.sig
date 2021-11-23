@@ -11,9 +11,13 @@ sig
 
 
    (* Support for interactive termination proofs *)
-
    val WF_thms : thm list ref
-   val termination_simps : thm list ref
+
+   val termination_simps : unit -> thm list
+   val termination_simpdb : unit -> (string,thm) Binarymap.dict
+   val temp_exclude_termsimp  : string -> unit
+   val exclude_termsimp  : string -> unit
+   val with_termsimps : thm list -> ('a -> 'b) -> ('a -> 'b)
    val termination_solve_simps : thm list ref
 
 

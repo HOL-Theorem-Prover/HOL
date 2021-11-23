@@ -150,16 +150,71 @@ val SUB_LESS_I = prove
 (``!m n. 0n < n /\ n <= m ==> I(m - n) < I(m)``,
  REWRITE_TAC[SUB_LESS,combinTheory.I_THM]);
 
-val termination_simps =
-     ref [combinTheory.o_DEF,
-          combinTheory.I_THM,
-          prim_recTheory.measure_def,
-          relationTheory.inv_image_def,
-          basicSizeTheory.sum_size_def,
-          basicSizeTheory.min_pair_size_def,
-          pairTheory.LEX_DEF,
-          pairTheory.RPROD_DEF,
-          SUB_LESS_I,DIV_LESS_I,MOD_LESS_I];
+open ThmSetData
+fun apply_delta delta d =
+    case delta of
+        ADD({Thy,Name}, th) => Binarymap.insert(d, Thy ^ "." ^ Name, th)
+      | REMOVE n => #1 (Binarymap.remove(d, n)) handle NotFound => d
+
+local open combinTheory prim_recTheory relationTheory basicSizeTheory pairTheory
+in end
+val initial_termination_simps =
+    List.foldl (fn ((thy,nm), d) =>
+                   let val k = thy ^ "." ^ nm
+                   in
+                     Binarymap.insert(d, k, DB.fetch thy nm)
+                   end)
+               (Binarymap.mkDict String.compare)
+               [("combin", "o_DEF"),
+                ("combin", "I_THM"),
+                ("prim_rec", "measure_def"),
+                ("relation", "inv_image_def"),
+                ("basicSize", "sum_size_def"),
+                ("basicSize","min_pair_size_def"),
+                ("pair","LEX_DEF"),
+                ("pair","RPROD_DEF")]
+val initial_termination_simps =
+    List.foldl (fn ((nm,thm),d) => Binarymap.insert(d,nm,thm))
+               initial_termination_simps
+               [("SUB_LESS_I", SUB_LESS_I),
+                ("DIV_LESS_I", DIV_LESS_I),
+                ("MOD_LESS_I", MOD_LESS_I)];
+
+val termsimp_res as
+    {get_global_value = termination_simpdb,
+     record_delta = termsimp_record_delta,
+     update_global_value = termsimp_updgv,
+     ...} =
+    export_with_ancestry {settype = "tfl_termsimp",
+                          delta_ops = {
+                            apply_to_global = apply_delta,
+                            thy_finaliser = NONE,
+                            uptodate_delta = K true,
+                            initial_value = initial_termination_simps,
+                            apply_delta = apply_delta
+                          }
+                         }
+
+fun termination_simps () =
+    Binarymap.foldl (fn (_, th, A) => th :: A) [] (termination_simpdb())
+fun temp_exclude_termsimp nm =
+  termsimp_updgv (apply_delta (REMOVE nm))
+fun exclude_termsimp nm = (
+  termsimp_record_delta (REMOVE nm);
+  temp_exclude_termsimp nm
+);
+
+fun with_termsimps thms f x =
+    let
+      open Binarymap
+      val (_, tdb) =
+          List.foldl (fn (th,(n,db)) => (n + 1, insert(db, Int.toString n, th)))
+                     (0, mkDict String.compare)
+                     thms
+    in
+      AncestryData.with_temp_value termsimp_res tdb f x
+    end
+
 
 (*---------------------------------------------------------------------------*)
 (* Extra rewrites, used only if they would solve a termination conjunct.     *)
@@ -375,7 +430,7 @@ fun known_fun tm =
      fun get_lhs th =
             rand (fst(dest_order(snd(strip_imp
                   (snd(strip_forall(concl th)))))))
-     val pats = mapfilter get_lhs (!termination_simps)
+     val pats = mapfilter get_lhs (termination_simps())
  in
     0 < length (mapfilter (C match_term tm) pats)
  end;
@@ -478,7 +533,7 @@ fun PRIM_TC_SIMP_CONV simps =
   simpLib.SIMP_CONV term_ss (simps@size_defs@case_defs)
  end;
 
-fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!termination_simps) tm;
+fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (termination_simps()) tm;
 
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
@@ -504,7 +559,7 @@ fun PRIM_TC_SIMP_TAC thl exthl =
     THEN REWRITE_TAC []
 
 fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC
-    (!termination_simps) (!termination_solve_simps) g;
+    (termination_simps()) (!termination_solve_simps) g;
 
 fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
 
@@ -519,7 +574,7 @@ local
 in
 fun PROVE_TERM_TAC g =
  let open combinTheory simpLib
-     val simps = map (PURE_REWRITE_RULE [I_THM]) (!termination_simps)
+     val simps = map (PURE_REWRITE_RULE [I_THM]) (termination_simps())
      val ss = term_dp_ss ++ rewrites simps
  in
    PRIM_TERM_TAC WF_TAC

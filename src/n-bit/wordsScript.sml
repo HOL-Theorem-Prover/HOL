@@ -4805,9 +4805,10 @@ val SUC_WORD_PRED = Q.store_thm("SUC_WORD_PRED",
   \\ `n' < dimword (:'a)` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [w2n_n2w])
 
-val WORD_PRED_THM = Q.store_thm("WORD_PRED_THM",
-  `!m:'a word. ~(m = 0w) ==> w2n (m - 1w) < w2n m`,
-  REPEAT STRIP_TAC \\ IMP_RES_TAC SUC_WORD_PRED \\ DECIDE_TAC)
+Theorem WORD_PRED_THM[tfl_termsimp]:
+  !m:'a word. ~(m = 0w) ==> w2n (m - 1w) < w2n m
+Proof REPEAT STRIP_TAC \\ IMP_RES_TAC SUC_WORD_PRED \\ DECIDE_TAC
+QED
 
 val triv_exp = Q.prove
 (`!m. 0 < 2 **  m`,
@@ -4818,7 +4819,7 @@ val ONE_LESS_TWO_EXP = Q.prove
 Cases THEN RW_TAC arith_ss [EXP] THEN
  `0 < 2 ** n` by METIS_TAC [triv_exp] THEN DECIDE_TAC)
 
-Theorem LSR_LESS:
+Theorem LSR_LESS[tfl_termsimp]:
    !m y. ~(y = 0w) /\ 0<m ==> w2n (y >>> m) < w2n y
 Proof
  RW_TAC arith_ss [w2n_lsr] THEN
@@ -5000,9 +5001,7 @@ val _ = List.app mk_word_size sizes
    ------------------------------------------------------------------------- *)
 
 val _ = Theory.quote_adjoin_to_theory `none`
-`val _ = TotalDefn.termination_simps :=
-  LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps
-
+`
 val _ =
   let
     open Lib boolSyntax numSyntax Drule

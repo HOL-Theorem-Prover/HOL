@@ -142,6 +142,21 @@ val _ = qtest_conv "simp+WORD_CANCEL" c
    (a + 4w:word32 = b + -2w) <=> (a + 6w = b)
   ’
 
+val _ = let
+  val _ = tprint "Word factorial termination with good simp"
+  val fact_defn =
+      trace ("auto Defn.tgoal", 0) $ quietly $
+          TotalDefn.qDefine "wfact"
+             ‘wfact w = if w = 0w then 1 else w2n w * wfact (w - 1w)’
+in
+  require_msg (check_result (K true)) thm_to_string fact_defn NONE;
+  TotalDefn.temp_exclude_termsimp "words.WORD_PRED_THM";
+  shouldfail {checkexn = is_struct_HOL_ERR "TotalDefn",
+              printarg = K "Word factorial fails after exclusion",
+              printresult = thm_to_string,
+              testfn = fact_defn} NONE
+end;
+
 val blast_true = test blastLib.BBLAST_PROVE
 val blast_fail = test_fail "BBLAST_PROVE" blastLib.BBLAST_PROVE
 val blast_counter = test_counter blastLib.BBLAST_PROVE

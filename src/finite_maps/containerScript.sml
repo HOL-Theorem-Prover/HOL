@@ -248,14 +248,14 @@ QED
 (* the head of the list is replaced by a list of smaller elements.           *)
 (*---------------------------------------------------------------------------*)
 
-val mlt_list_def =
- Define
-   `mlt_list R =
+Definition mlt_list_def[tfl_termsimp]:
+  mlt_list R =
      \l1 l2.
        ?h t list.
          (l1 = list ++ t) /\
          (l2 = h::t) /\
-         (!e. MEM e list ==> R e h)`;
+         (!e. MEM e list ==> R e h)
+End
 
 val WF_mlt_list = Q.store_thm
 ("WF_mlt_list",
@@ -285,9 +285,7 @@ val _ = adjoin_to_theory
    fun S s = [PP.add_string s, PP.add_newline]
  in
    PP.block PP.CONSISTENT 0 (
-     S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);" @
-     S "val _ = TotalDefn.termination_simps := \
-         \(!TotalDefn.termination_simps @ [mlt_list_def]);"
+     S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);"
    )
   end)};
 
