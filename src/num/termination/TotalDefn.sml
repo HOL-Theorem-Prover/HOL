@@ -548,8 +548,8 @@ fun EX_ARITH_TAC exthl =
     THEN CONV_TAC (PRIM_TC_SIMP_CONV exthl)
     THEN ASM_ARITH_TAC
 
-fun solve_conv tac tm = prove (mk_eq (tm, T),
-        EQ_TAC THEN REWRITE_TAC [] THEN tac)
+fun solve_conv tac tm =
+    TAC_PROOF (([], tm), REWRITE_TAC [] THEN tac) |> EQT_INTRO
 
 fun solve_conjs tac = EVERY_CONJ_CONV (TRY_CONV (solve_conv tac))
 
