@@ -227,7 +227,7 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
     val (startmsg, infopfx, display_map, green, red, boldyellow, dim, bold,
          CLR_EOL) =
         if strmIsTTY TextIO.stdOut then
-          ((fn s => ()), "\027[1G", ttydisplay_map, green, red, boldyellow, dim,
+          ((fn s => ()), "\r", ttydisplay_map, green, red, boldyellow, dim,
            bold, CLR_EOL)
         else
           ((fn s => info ("Starting work on " ^ delsml_sfx s)), "",

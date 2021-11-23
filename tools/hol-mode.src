@@ -811,24 +811,26 @@ region instead. With prefix ARG prompt for a file-name to load."
         (setq font-lock-defaults nil)))
   (setq font-lock-mode nil))
 
+(require 'term)
 (defun holmake (&optional dir)
-   (interactive "DRun Holmake in dir: ")
-   (if (not (null dir))
-      (with-current-buffer (get-buffer-create "*Holmake*")
-         (delete-region (point-min) (point-max))
-         (cd (expand-file-name dir)))
-      )
-   (let* ((buf (make-comint "Holmake"
-                  holmake-executable nil "--qof" "-k")))
-      (with-current-buffer buf
-         (font-lock-mode 0)
-         (make-local-variable 'font-lock-function)
-         (setq font-lock-function 'turn-off-hol-font-lock)
-         (setq comint-preoutput-filter-functions '(holmakepp-output-filter)))
-         (setq comint-scroll-show-maximum-output t)
-         (setq comint-scroll-to-bottom-on-output t)
-      (display-buffer buf)
-   ))
+  (interactive "DRun Holmake in dir: ")
+  (let ((holmake-buffer
+         (let ((holmake-buffer-candidate (get-buffer-create "*Holmake*")))
+           (if (get-buffer-process holmake-buffer-candidate)
+               (generate-new-buffer "*Holmake*")
+             holmake-buffer-candidate))))
+    (set-buffer holmake-buffer)
+    (cd dir)
+    (goto-char (point-max))
+    (setq buffer-read-only nil)
+    (delete-region (point-min) (point-max))
+    (insert "Running Holmake in directory " dir "\n\n")
+    (term-ansi-make-term
+     (buffer-name)
+     holmake-executable nil "--qof" "-k")
+    (term-mode)
+    (term-char-mode)
+    (switch-to-buffer-other-frame holmake-buffer t)))
 
 ;** hol map keys and function definitions
 (defun hol-executable-with-bare ()
