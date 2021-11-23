@@ -283,7 +283,7 @@ of a term. The function
 \noindent implements the $\alpha$-convertibility test for
 $\lambda$-calculus terms.
 %
-\index{$\alpha$-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL{} logic!determination of}
+\index{alpha-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL{} logic!determination of}
 %
 From the point of view of the \HOL{} logic, $\alpha$-convertible terms
 are identical. A variety of other functions are available for
@@ -1731,6 +1731,7 @@ Once a theorem has been proved, it can be saved with the function
 
 \noindent
 Evaluating \ml{save\_thm("}\mname\ml{",}\mth\ml{)} will save the theorem \mth{} with name \mname{} in the current theory segment.
+\index{attributes, for theorems|see{theorem attributes}}
 \index{theorem attributes|(}
 In addition, various tools can be primed to pay particular attention to saved theorems through the use of special attributes.
 Such attributes are indicated by appending the list of the attribute names to the \mname.

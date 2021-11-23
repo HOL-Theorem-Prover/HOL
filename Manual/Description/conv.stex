@@ -401,7 +401,7 @@ converts the conclusion of a goal using $c$. \ml{CONV\_RULE} is defined by:
 \end{hol}
 
 \noindent (The validation of \ml{CONV\_TAC} also
-uses \ml{EQ\_MP}\footnote{For \ml{EQ\_MP}, see ~\ref{sec:eqmp}.}.)
+uses \ml{EQ\_MP}.\footnote{For \ml{EQ\_MP}, see ~\ref{sec:eqmp}.})
 For example, the built-in rule \ml{BETA\_RULE} reduces some
 of the $\beta$-redex subterms of a term.
 
@@ -615,11 +615,11 @@ of a term.
 \noindent In particular:
 
 \begin{itemize}
-\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{"}$x$\ml{"} $\;=\;$\ \ml{|- }$x$\ml{=}$x$;
-\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{"}$u\;v$\ml{"} $\;=\;$ \ml{|- }$u\;v$\ml{=}$u'\;v'$,\ \  if
-$c\;\;u$\ $=$\ \ml{|- }$u$\ml{=}$u'$ and
-$c\;\;v$\ $=$\ \ml{|- }$v$\ml{=}$v'$;
-\item\ml{SUB\_CONV}$\;\;c\;\;$\ml{"}{\small\verb%\%}$x$\ml{.}$u$\ml{"} $\;=\;$
+\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{\fldq}$x$\ml{\frdq} $\;=\;$\ \ml{|- }$x$\ml{=}$x\;$;
+\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{\fldq}$u\;v$\ml{\frdq} $\;=\;$ \ml{|- }$u\;v$\ml{=}$u'\;v'$,\ \  if
+$c\;u$\ $=$\ \ml{|- }$u$\ml{=}$u'$ and
+$c\;v$\ $=$\ \ml{|- }$v$\ml{=}$v'$;
+\item\ml{SUB\_CONV}$\;\;c\;\;$\ml{\fldq}{\small\verb%\%}$x$\ml{.}$u$\ml{\frdq} $\;=\;$
 \ml{|- (}{\small\verb%\%}$x$\ml{.}$u$\ml{) = (}{\small\verb%\%}$x$\ml{.}$u'$\ml{)}, \ \ if
 $c\;\;u$\ $=$\ \ml{|- }$u$\ml{=}$u'$.
 \end{itemize}
@@ -745,16 +745,17 @@ tuples.
 Given the term:
 
 \begin{hol}
-\begin{verbatim}
-   ``(\(x1, ... ,xn).t) (t1, ... ,tn)``
-\end{verbatim}\end{hol}
+\begin{alltt}
+   \fldq(\(\lambda\)(x1, ... ,xn).t) (t1, ... ,tn)\frdq
+\end{alltt}\end{hol}
 
 \noindent \ml{PAIRED\_BETA\_CONV} proves that:
 
 \begin{hol}
-\begin{verbatim}
-   |- (\(x1, ... ,xn). t[x1,...,xn]) (t1, ... ,tn)  =  t[t1, ... ,tn]
-\end{verbatim}\end{hol}
+\begin{alltt}
+   |- (\(\lambda\)x1, ... ,xn). t[x1,...,xn]) (t1, ... ,tn)  =  t[t1, ... ,tn]
+\end{alltt}
+\end{hol}
 
 \noindent The conversion works for arbitrarily nested tuples.  For example:
 
@@ -763,7 +764,7 @@ Given the term:
 \begin{alltt}
 >>__ load "pairLib";
 >>__ open pairLib;
->> PAIRED_BETA_CONV ``(\((a,b),(c,d)). [a;b;c;d]) ((1,2),(3,4))``;
+>> PAIRED_BETA_CONV “(\((a,b),(c,d)). [a;b;c;d]) ((1,2),(3,4))”;
 \end{alltt}\end{session}
 
 \subsection{Arithmetical conversions}
