@@ -1259,22 +1259,29 @@ specified by the original input.
 \index{termination!of recursively defined functions}
 
 When processing the specification of a recursive function, \ml{Definition}
-must perform a termination proof. It automatically constructs
-termination conditions for the function, and invokes a termination
-prover in an attempt to prove the termination conditions.  If the
-function is primitive recursive, in the sense that it exactly follows
-the recursion pattern of a previously declared \HOL{} datatype, then this
-proof always succeeds, and \ml{Definition} stores the derived equations in
-the current theory segment.
-Otherwise, the function is not an
-instance of primitive recursion, and the termination prover may
-succeed or fail. If the termination proof fails, then \ml{Definition} fails.
+must perform a termination proof.
+It automatically constructs termination conditions for the function, and invokes a termination prover in an attempt to prove the termination conditions.
+If the function is primitive recursive, in the sense that it exactly follows the recursion pattern of a previously declared \HOL{} datatype, then this proof always succeeds, and \ml{Definition} stores the derived equations in the current theory segment.
+Otherwise, the function is not an instance of primitive recursion, and the termination prover may succeed or fail.
+If the automatic termination proof fails, the user-provided termination argument (if any) after the \ml{Termination} keyword is attempted.
+If this also fails, then the \ml{Definition} fails.
 If it succeeds, then \ml{Definition} stores the specified equations in the
-current theory segment. An induction theorem customized for the defined
-function is also stored in the current segment. Note, however, that an
-induction theorem is not stored for primitive recursive functions, since
-that theorem would be identical to the induction theorem resulting from
-the declaration of the datatype.
+current theory segment.
+An induction theorem customized for the defined function is also stored in the current segment.
+Note, however, that an induction theorem is not stored for primitive recursive functions, since that theorem would be identical to the induction theorem resulting from the declaration of the datatype.
+
+Part of the process of the automatic termination proof involves the use of ``termination simplification'' theorems.
+These encode facts about the way in which arguments to desired functions may be smaller than originals.
+For example, with the theory of fixed-width words (see Section~\ref{sec:bit-vectors}) in the context, the theorem \ml{WORD\_PRED\_THM} is included in this set:
+\begin{hol}
+\begin{alltt}
+>>__ load "wordsTheory";
+##thm wordsTheory.WORD_PRED_THM
+\end{alltt}
+\end{hol}
+If a function is defined recursively with a word argument being decremented with every call, including this theorem will let the automatic procedure prove termination.
+\index{theorem attributes!tfl_termsimp@\ml{tfl\_termsimp}}
+The set of theorems used in this way can be augmented by using the \ml{tfl\_termsimp} theorem attribute when a theorem is proved.
 
 
 \paragraph{Storing definitions in the theory segment}
@@ -1284,9 +1291,9 @@ If there is an associated induction theorem, its name is derived as follows:
 \begin{itemize}
 \item
 If the principal name ends with \ml{\_def} or with \ml{\_DEF}, then the induction theorem is the same as the principal name with the suffix replaced by \ml{\_ind} or \ml{\_IND} respectively.
-\item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.
-\index{theorem attributes!induction_thm@\ml{induction\_thm}}
-\item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} ``attribute'' to the principal name.
+\item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.%
+\index{theorem attributes!induction_thm@\ml{induction\_thm}}%
+\item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} attribute to the principal name.
 \end{itemize}
 
 \subsection{Function definition examples}
