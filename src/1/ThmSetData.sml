@@ -283,4 +283,116 @@ fun export_with_ancestry
     end
 
 
+(* ----------------------------------------------------------------------
+    Some simple instances
+   ---------------------------------------------------------------------- *)
+
+type simple_dictionary = (string,thm) Binarymap.dict
+fun sdict_apply_delta delta (d : simple_dictionary) =
+    case delta of
+        ADD({Thy,Name}, th) => Binarymap.insert(d, Thy ^ "." ^ Name, th)
+      | REMOVE n => #1 (Binarymap.remove(d, n)) handle NotFound => d
+fun simple_dictionary_ops i =
+    {apply_to_global = sdict_apply_delta, apply_delta = sdict_apply_delta,
+     thy_finaliser = NONE, uptodate_delta = K true, initial_value = i}
+fun export_simple_dictionary {settype,initial} =
+    let
+      val i =
+          List.foldl (fn ((n,th), d) => Binarymap.insert(d, n, th))
+                     (Binarymap.mkDict String.compare) initial
+      val ops as {apply_delta,...} = simple_dictionary_ops i
+      val res = export_with_ancestry {settype = settype, delta_ops = ops}
+      val updgv = #update_global_value res
+      fun temp_exclude s = updgv (apply_delta (REMOVE s))
+      fun temp_export s = updgv (apply_delta (mk_add s))
+      val getDB = #get_global_value res
+    in
+      {merge = #merge res, DB = #DB res,
+       temp_exclude = temp_exclude,
+       exclude = (fn s => (temp_exclude s; #record_delta res (REMOVE s))),
+       temp_export = temp_export,
+       export = (fn s => (temp_export s; #record_delta res (mk_add s))),
+       getDB = getDB,
+       get_thms = Binarymap.foldl (fn (n,th,A) => th::A) [] o getDB,
+       temp_setDB = updgv o K}
+    end
+
+fun sdict_withflag_thms({getDB,temp_setDB}, thms) f x =
+    let
+      open Binarymap
+      val (_, tdb) =
+          List.foldl (fn (th,(n,db)) => (n + 1, insert(db, Int.toString n, th)))
+                     (0, mkDict String.compare)
+                     thms
+    in
+      Portable.genwith_flag({get=getDB,set=temp_setDB}, tdb) f x
+    end
+
+type alist = (string * thm) list
+fun alist_rm n [] = []
+  | alist_rm n ((kv as (m,_)) :: rest) =
+    if m = n then rest else (kv :: alist_rm n rest)
+fun assoc_cons (n, th) alist = (n,th) :: alist_rm n alist
+fun alist_apply_delta delta (d : alist) =
+    case delta of
+        ADD({Thy,Name}, th) => assoc_cons (Thy ^ "." ^ Name, th) d
+      | REMOVE n => alist_rm n d
+fun alist_ops i =
+    {apply_to_global = alist_apply_delta, apply_delta = alist_apply_delta,
+     thy_finaliser = NONE, uptodate_delta = K true, initial_value = i}
+fun export_alist {settype,initial} =
+    let
+      val ops as {apply_delta,...} = alist_ops initial
+      val res = export_with_ancestry {settype = settype, delta_ops = ops}
+      val updgv = #update_global_value res
+      fun temp_exclude s = updgv (apply_delta (REMOVE s))
+      fun temp_export s = updgv (apply_delta (mk_add s))
+      val getDB = #get_global_value res
+    in
+      {merge = #merge res, DB = #DB res,
+       temp_exclude = temp_exclude,
+       exclude = (fn s => (temp_exclude s; #record_delta res (REMOVE s))),
+       temp_export = temp_export,
+       export = (fn s => (temp_export s; #record_delta res (mk_add s))),
+       getDB = getDB,
+       get_thms = List.foldr (fn ((_,th),A) => th::A) [] o getDB,
+       temp_setDB = updgv o K}
+    end
+
+fun alist_withflag_thms({getDB,temp_setDB}, thms) f x =
+    let
+      open Binarymap
+      val (_, tdb) =
+          List.foldr (fn (th,(n,db)) => (n + 1, (Int.toString n, th)::db))
+                     (0, []) thms
+    in
+      Portable.genwith_flag({get=getDB,set=temp_setDB}, tdb) f x
+    end
+
+fun list_apply_delta delta ( d : thm list) =
+    case delta of
+        ADD(_, th) => th :: d
+      | REMOVE _ => raise mk_HOL_ERR "ThmSetData" "list_apply_delta"
+                          "Can't REMOVE in list set"
+fun list_ops i =
+    {apply_to_global = list_apply_delta, apply_delta = list_apply_delta,
+     thy_finaliser = NONE, uptodate_delta = K true, initial_value = i}
+fun thm_eq th1 th2 = aconv (concl th1) (concl th2)
+fun export_list {settype,initial} =
+    let
+      val ops as {apply_delta,...} = list_ops initial
+      val res = export_with_ancestry {settype = settype, delta_ops = ops}
+      val updgv = #update_global_value res
+      fun temp_exclude th = updgv (fn ths => op_set_diff thm_eq ths [th])
+      fun temp_export s = updgv (apply_delta (mk_add s))
+      val getDB = #get_global_value res
+    in
+      {merge = #merge res, DB = #DB res,
+       temp_exclude = temp_exclude,
+       temp_export = temp_export,
+       export = (fn s => (temp_export s; #record_delta res (mk_add s))),
+       getDB = getDB,
+       temp_setDB = updgv o K}
+    end
+
 end (* struct *)

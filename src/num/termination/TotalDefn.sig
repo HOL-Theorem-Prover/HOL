@@ -17,6 +17,8 @@ sig
    val termination_simpdb : unit -> (string,thm) Binarymap.dict
    val temp_exclude_termsimp  : string -> unit
    val exclude_termsimp  : string -> unit
+   val temp_export_termsimp : string -> unit
+   val export_termsimp : string -> unit
    val with_termsimps : thm list -> ('a -> 'b) -> ('a -> 'b)
    val termination_solve_simps : thm list ref
 

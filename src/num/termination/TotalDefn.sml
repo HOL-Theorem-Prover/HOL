@@ -150,71 +150,31 @@ val SUB_LESS_I = prove
 (``!m n. 0n < n /\ n <= m ==> I(m - n) < I(m)``,
  REWRITE_TAC[SUB_LESS,combinTheory.I_THM]);
 
-open ThmSetData
-fun apply_delta delta d =
-    case delta of
-        ADD({Thy,Name}, th) => Binarymap.insert(d, Thy ^ "." ^ Name, th)
-      | REMOVE n => #1 (Binarymap.remove(d, n)) handle NotFound => d
-
 local open combinTheory prim_recTheory relationTheory basicSizeTheory pairTheory
 in end
-val initial_termination_simps =
-    List.foldl (fn ((thy,nm), d) =>
-                   let val k = thy ^ "." ^ nm
-                   in
-                     Binarymap.insert(d, k, DB.fetch thy nm)
-                   end)
-               (Binarymap.mkDict String.compare)
-               [("combin", "o_DEF"),
-                ("combin", "I_THM"),
-                ("prim_rec", "measure_def"),
-                ("relation", "inv_image_def"),
-                ("basicSize", "sum_size_def"),
-                ("basicSize","min_pair_size_def"),
-                ("pair","LEX_DEF"),
-                ("pair","RPROD_DEF")]
-val initial_termination_simps =
-    List.foldl (fn ((nm,thm),d) => Binarymap.insert(d,nm,thm))
-               initial_termination_simps
-               [("SUB_LESS_I", SUB_LESS_I),
-                ("DIV_LESS_I", DIV_LESS_I),
-                ("MOD_LESS_I", MOD_LESS_I)];
+val initial_termination_simps = [("SUB_LESS_I", SUB_LESS_I),
+                                 ("DIV_LESS_I", DIV_LESS_I),
+                                 ("MOD_LESS_I", MOD_LESS_I)]
 
-val termsimp_res as
-    {get_global_value = termination_simpdb,
-     record_delta = termsimp_record_delta,
-     update_global_value = termsimp_updgv,
-     ...} =
-    export_with_ancestry {settype = "tfl_termsimp",
-                          delta_ops = {
-                            apply_to_global = apply_delta,
-                            thy_finaliser = NONE,
-                            uptodate_delta = K true,
-                            initial_value = initial_termination_simps,
-                            apply_delta = apply_delta
-                          }
-                         }
+val {exclude = exclude_termsimp, temp_exclude = temp_exclude_termsimp,
+     export = export_termsimp,   temp_export = temp_export_termsimp,
+     getDB = termination_simpdb, temp_setDB = termination_tempsetDB,
+     get_thms = termination_simps, ...} =
+    ThmSetData.export_simple_dictionary {settype = "tfl_termsimp",
+                                         initial = initial_termination_simps}
+val _ =
+    List.app temp_export_termsimp ["combin.o_DEF",
+                                   "combin.I_THM",
+                                   "prim_rec.measure_def",
+                                   "relation.inv_image_def",
+                                   "basicSize.sum_size_def",
+                                   "basicSize.min_pair_size_def",
+                                   "pair.LEX_DEF",
+                                   "pair.RPROD_DEF"]
 
-fun termination_simps () =
-    Binarymap.foldl (fn (_, th, A) => th :: A) [] (termination_simpdb())
-fun temp_exclude_termsimp nm =
-  termsimp_updgv (apply_delta (REMOVE nm))
-fun exclude_termsimp nm = (
-  termsimp_record_delta (REMOVE nm);
-  temp_exclude_termsimp nm
-);
-
-fun with_termsimps thms f x =
-    let
-      open Binarymap
-      val (_, tdb) =
-          List.foldl (fn (th,(n,db)) => (n + 1, insert(db, Int.toString n, th)))
-                     (0, mkDict String.compare)
-                     thms
-    in
-      AncestryData.with_temp_value termsimp_res tdb f x
-    end
-
+fun with_termsimps ths =
+    ThmSetData.sdict_withflag_thms
+      ({getDB = termination_simpdb, temp_setDB = termination_tempsetDB}, ths)
 
 (*---------------------------------------------------------------------------*)
 (* Extra rewrites, used only if they would solve a termination conjunct.     *)
