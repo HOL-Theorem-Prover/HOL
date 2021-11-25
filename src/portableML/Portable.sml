@@ -686,11 +686,19 @@ end
 fun with_flag (flag, b) f x =
    let
       val fval = !flag
-      val () = flag := b
-      val res = f x handle e => (flag := fval; raise e)
+      fun doit () = (flag := b; f x)
+      val res = Exn.capture doit ()
    in
-      flag := fval; res
+      flag := fval; Exn.release res
    end
+
+fun genwith_flag({get,set}, v) f x =
+    let
+      val old = get()
+      val res = Exn.capture (fn () => (set v; f x)) ()
+    in
+      set old; Exn.release res
+    end
 
 (*---------------------------------------------------------------------------*
  * An abstract type of imperative streams.                                   *

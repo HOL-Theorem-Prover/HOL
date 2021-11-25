@@ -155,6 +155,8 @@ sig
   val hash : int -> string -> int * int -> int
 
   val with_flag : 'a ref * 'a -> ('b -> 'c) -> 'b -> 'c
+  val genwith_flag : {get: unit -> 'a, set : 'a -> unit} * 'a -> ('b -> 'c) ->
+                     ('b -> 'c)
 
   type ('a, 'b) istream
   val mk_istream : ('a -> 'a) -> 'a -> ('a -> 'b) -> ('a, 'b) istream
