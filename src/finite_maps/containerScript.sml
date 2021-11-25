@@ -257,9 +257,9 @@ Definition mlt_list_def[tfl_termsimp]:
          (!e. MEM e list ==> R e h)
 End
 
-val WF_mlt_list = Q.store_thm
-("WF_mlt_list",
- `!R. WF(R) ==> WF (mlt_list R)`,
+Theorem WF_mlt_list[tfl_WF]:
+  !R. WF(R) ==> WF (mlt_list R)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET THEN
   Q.EXISTS_TAC `inv_image (mlt1 R) LIST_TO_BAG` THEN
   CONJ_TAC THENL
@@ -271,24 +271,8 @@ val WF_mlt_list = Q.store_thm
     MAP_EVERY Q.EXISTS_TAC [`h`, `LIST_TO_BAG list`, `LIST_TO_BAG t`]
      THEN RW_TAC std_ss [BAG_INSERT_UNION,LIST_TO_BAG_APPEND,LIST_TO_BAG_def]
       THENL [METIS_TAC [COMM_BAG_UNION,ASSOC_BAG_UNION,BAG_UNION_EMPTY],
-             METIS_TAC [IN_LIST_TO_BAG]]]]);
-
-
-(*---------------------------------------------------------------------------*)
-(* Tell the termination proof infrastructure about mlt_list                  *)
-(*---------------------------------------------------------------------------*)
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn _ => let
-   fun S s = [PP.add_string s, PP.add_newline]
- in
-   PP.block PP.CONSISTENT 0 (
-     S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);"
-   )
-  end)};
-
+             METIS_TAC [IN_LIST_TO_BAG]]]]
+QED
 
 (*---------------------------------------------------------------------------
     finite maps and bags.

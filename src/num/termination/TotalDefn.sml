@@ -186,12 +186,16 @@ val termination_solve_simps = ref ([] : thm list);
 (* Adjustable set of WF theorems for doing WF proofs.                        *)
 (*---------------------------------------------------------------------------*)
 
-val WF_thms =
- let open relationTheory prim_recTheory pairTheory
- in
-   ref [WF_inv_image, WF_measure, WF_LESS,
-        WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
- end;
+val {getDB = WF_thms, export = export_WF_thm, ...} =
+    ThmSetData.export_list {
+      settype = "tfl_WF",
+      initial = let
+        open relationTheory prim_recTheory pairTheory
+      in
+        [WF_inv_image, WF_measure, WF_LESS,
+         WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
+      end
+    }
 
 
 (*---------------------------------------------------------------------------*)
@@ -462,7 +466,7 @@ fun BC_TAC th =
     else MATCH_ACCEPT_TAC th;
 
 fun PRIM_WF_TAC thl = REPEAT (MAP_FIRST BC_TAC thl ORELSE CONJ_TAC);
-fun WF_TAC g = PRIM_WF_TAC (!WF_thms) g;
+fun WF_TAC g = PRIM_WF_TAC (WF_thms()) g;
 
 (*---------------------------------------------------------------------------*)
 (* Apply _size_eq theorems.                                                  *)
