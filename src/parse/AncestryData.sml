@@ -304,15 +304,9 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
        update_global_value = update_global_value}
     end
 
-fun with_temp_value (fr:('delta,'value)fullresult) v (f:'a -> 'b) x =
-    let
-      val old = #get_global_value fr ()
-      fun doit() = (#update_global_value fr (K v); f x)
-      val res = Exn.capture doit ()
-      val _ = #update_global_value fr (K old)
-    in
-      Exn.release res
-    end
+fun with_temp_value (fr:('delta,'value)fullresult) v =
+    Portable.genwith_flag ({ get = #get_global_value fr,
+                             set = #update_global_value fr o K }, v)
 
 
 end; (* struct *)
