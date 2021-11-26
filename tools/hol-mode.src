@@ -830,7 +830,7 @@ region instead. With prefix ARG prompt for a file-name to load."
      holmake-executable nil "--qof" "-k")
     (term-mode)
     (term-char-mode)
-    (switch-to-buffer-other-frame holmake-buffer t)))
+    (display-buffer holmake-buffer '(nil (allow-no-window . t)))))
 
 ;** hol map keys and function definitions
 (defun hol-executable-with-bare ()
