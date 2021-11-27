@@ -620,6 +620,98 @@ Proof
           \\ fs [ADD1])
 QED
 
+Theorem v2w_REPLICATE_F[simp]:
+  v2w (REPLICATE n F ++ l) = v2w l
+Proof
+  srw_tac[fcpLib.FCP_ss][v2w_def] >>
+  simp[testbit, EL_APPEND_EQN, EL_REPLICATE] >> eq_tac >> rw[]
+QED
+
+Theorem v2w_PAD_LEFT[simp]:
+  v2w (PAD_LEFT F n l) = v2w l
+Proof
+  srw_tac[fcpLib.FCP_ss][v2w_def] >>
+  simp[testbit, PAD_LEFT, EL_APPEND_EQN, EL_REPLICATE] >> eq_tac >> rw[]
+QED
+
+Theorem sw2sw_word1:
+  sw2sw (1w : word1) = -1w : α word ∧
+  sw2sw (0w : word1) = 0w : α word
+Proof
+  `0b1w : 1 word = -1w` by simp[] >>
+  pop_assum SUBST_ALL_TAC >> rewrite_tac[sw2sw_word_T] >> simp[]
+QED
+
+Theorem v2n_w2v[simp]:
+  v2n (w2v w) = w2n w
+Proof
+  Cases_on_v2w `w` >>
+  simp[w2n_v2w, bitTheory.MOD_2EXP_def] >>
+  DEP_REWRITE_TAC[LESS_MOD] >> simp[v2n_lt] >>
+  simp[w2v_v2w]
+QED
+
+Theorem v2n_DROP_w2v:
+  v2n (DROP n (w2v (w: α word))) = w2n w MOD 2 ** (dimindex(:α) - n)
+Proof
+  rw[] >> Cases_on_v2w `w` >>
+  simp[w2n_v2w, bitTheory.MOD_2EXP_def] >>
+  simp[w2v_v2w] >>
+  `v2n v MOD 2 ** LENGTH v = v2n v` by (
+    DEP_ONCE_REWRITE_TAC[LESS_MOD] >> simp[v2n_lt]) >>
+  simp[] >>
+  rpt $ pop_assum kall_tac >> map_every qid_spec_tac [`v`,`n`] >>
+  Induct >> rw[v2n_lt] >>
+  Cases_on `v` >> rw[v2n] >>
+  DEP_ONCE_REWRITE_TAC[GSYM bitTheory.MOD_PLUS_RIGHT] >> conj_tac >- simp[] >>
+  qsuff_tac `2 ** LENGTH t MOD 2 ** (LENGTH t - n) = 0`
+  >- (disch_then SUBST_ALL_TAC >> simp[]) >>
+  pop_assum kall_tac >>
+  qmatch_goalsub_abbrev_tac `_ MOD _ ** foo` >>
+  `foo ≤ LENGTH t` by (unabbrev_all_tac >> gvs[]) >>
+  drule LESS_EQUAL_ADD >> rw[] >> gvs[] >>
+  rpt $ pop_assum kall_tac >>
+  Induct_on `p` >> simp[ADD1] >>
+  map_every (rewrite_tac o single) [ADD_ASSOC, GSYM ADD1, EXP] >>
+  DEP_ONCE_REWRITE_TAC[GSYM MOD_TIMES2] >> simp[]
+QED
+
+Theorem MOD_ADDITION:
+  0 < c ⇒
+  (a + b) MOD c =
+    if a MOD c + b MOD c < c then a MOD c + b MOD c else
+    a MOD c + b MOD c - c
+Proof
+  rw[] >- (DEP_ONCE_REWRITE_TAC[GSYM MOD_PLUS] >> simp[]) >>
+  gvs[NOT_LESS] >>
+  `a MOD c + b MOD c < c + c` by (
+    qspecl_then [`a`,`c`] assume_tac MOD_LESS >>
+    qspecl_then [`b`,`c`] assume_tac MOD_LESS >> simp[]) >>
+  qabbrev_tac `ab = a MOD c + b MOD c` >>
+  DEP_ONCE_REWRITE_TAC[GSYM MOD_PLUS] >> simp[] >>
+  drule LESS_EQUAL_ADD >> rw[] >> simp[]
+QED
+
+Theorem MOD_SUBTRACT:
+  0 < c ⇒
+  (a - b) MOD c =
+    if a ≤ b then 0
+    else if b MOD c ≤ a MOD c then a MOD c - b MOD c
+    else c + a MOD c - b MOD c
+Proof
+  rw[MAX_DEF, MIN_DEF] >> gvs[NOT_LESS_EQUAL] >>
+  last_x_assum assume_tac >> drule LESS_ADD >> rw[] >> gvs[] >>
+  gvs[MOD_ADDITION] >> rw[] >> gvs[NOT_LESS, SUB_LEFT_LESS_EQ] >>
+  qpat_x_assum `_ ≤ _` mp_tac >> simp[NOT_LESS_EQUAL]
+QED
+
+Theorem ZIP_REPLICATE:
+  ∀n x y. ZIP (REPLICATE n x, REPLICATE n y) = REPLICATE n (x,y)
+Proof
+  Induct >> rw[]
+QED
+
+
 (****************************************)
 
 val _ = export_theory();
