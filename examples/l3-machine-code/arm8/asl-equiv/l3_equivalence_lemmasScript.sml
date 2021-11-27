@@ -6,6 +6,7 @@ open integerTheory int_arithTheory arithmeticTheory
 open wordsLib bitstringLib intLib
 open l3_equivalence_miscTheory
 
+
 val _ = new_theory "l3_equivalence_lemmas";
 val _ = set_grammar_ancestry ["arm8_step", "arm8", "armv86a_termination"];
 
@@ -16,6 +17,9 @@ val _ = numLib.prefer_num();
 val _ = intLib.deprecate_int()
 
 val _ = Globals.show_assums := false;
+
+val _ = computeLib.add_convs [
+          (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV)];
 
 val _ = augment_srw_ss [
     bitstringLib.v2w_n2w_ss,
@@ -398,6 +402,68 @@ Proof
   simp[Once sail2_valuesTheory.just_list_def] >> TOP_CASE_TAC >> gvs[]
 QED
 
+Theorem shl_int_pos:
+  ∀shift n. shl_int n (&shift) = &(2 ** shift) * n
+Proof
+  Induct >> rw[] >> rw[Once sail2_valuesAuxiliaryTheory.shl_int_rw] >>
+  gvs[ADD1, INT_SUB_CALCULATE, INT_ADD_CALCULATE]
+  >- (gvs[GSYM ADD1] >> simp[Once EXP] >> ARITH_TAC)
+  >- (irule FALSITY >> ARITH_TAC)
+QED
+
+Theorem vec_of_bits_access_vec_dec_single:
+  i < dimindex(:α) ⇒
+  vec_of_bits [access_vec_dec (w:α word) &i] :word1 = (i >< i) w
+Proof
+  rw[
+    sail2_operators_mwordsTheory.vec_of_bits_def,
+    sail2_operators_mwordsTheory.access_vec_dec_def,
+    sail2_valuesTheory.of_bits_failwith_def,
+    sail2_valuesTheory.instance_Sail2_values_Bitvector_Machine_word_mword_dict_def,
+    sail2_valuesTheory.access_bv_dec_def,
+    sail2_valuesTheory.access_list_def,
+    sail2_valuesTheory.access_list_dec_def,
+    sail2_valuesTheory.access_list_inc_def,
+    sail2_valuesTheory.maybe_failwith_def
+    ]
+  >- (irule FALSITY >> ARITH_TAC) >>
+  DEP_REWRITE_TAC[EL_MAP] >> simp[] >> conj_asm1_tac >- ARITH_TAC >>
+  simp[ReqD sail2_valuesTheory.just_list_def] >>
+  simp[el_w2v, extract_bit, word_bit_def] >>
+  rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >> ARITH_TAC
+QED
+
+Theorem replicate_bits_pos:
+  ∀n v. replicate_bits v (&n) = v2w (FLAT (REPLICATE n (w2v v)))
+Proof
+  rw[sail2_operators_mwordsTheory.replicate_bits_def]
+QED
+
+Theorem zext_ones_pos:
+  n = dimindex(:α) ⇒
+  zext_ones (&n) (&m) : α word = v2w (Ones m)
+Proof
+  rw[zext_ones_def, id_def] >>
+  rewrite_tac[sail2_operators_mwordsTheory.exts_vec_def, sw2sw_word1]
+  >- (
+    `dimindex(:α) < m` by ARITH_TAC >> last_x_assum kall_tac >>
+    simp[Ones_def, PAD_LEFT] >>
+    once_rewrite_tac[GSYM v2w_fixwidth] >> simp[fixwidth_REPLICATE] >>
+    pop_assum kall_tac >>
+    rw[GSYM WORD_EQ, bit_v2w, testbit_el, EL_REPLICATE] >>
+    rw[GSYM word_bit, WORD_NEG_1_T]
+    )
+  >- (
+    `m ≤ dimindex(:α)` by ARITH_TAC >> last_x_assum kall_tac >>
+    simp[Ones_def, PAD_LEFT] >>
+    `-1w : α word = v2w (REPLICATE (dimindex (:α)) T)` by (
+      rw[GSYM WORD_EQ, bit_v2w, testbit_el, EL_REPLICATE] >>
+      rw[GSYM word_bit, WORD_NEG_1_T]) >>
+    simp[word_lsr_v2w, shiftr_def, INT_SUB_CALCULATE, INT_ADD_CALCULATE] >>
+    simp[TAKE_REPLICATE, MIN_ALT_DEF]
+    )
+QED
+
 
 (********************* Monad lemmas *******************)
 
@@ -510,6 +576,39 @@ Proof
   rw[LENGTH_EQ_NUM_compute] >> simp[Once ByteList_def]
 QED
 
+Theorem LENGTH_Ones[simp]:
+  LENGTH (Ones a) = a
+Proof
+  rw[Ones_def, PAD_LEFT]
+QED
+
+Theorem LENGTH_bitwise[simp]:
+  LENGTH (bitwise op l1 l2) = MAX (LENGTH l1) (LENGTH l2)
+Proof
+  rw[bitwise_def]
+QED
+
+Theorem bitwise_APPEND[simp]:
+  LENGTH a1 = LENGTH b1 ∧ LENGTH a2 = LENGTH b2 ⇒
+  bitwise op (a1 ++ a2) (b1 ++ b2) = bitwise op a1 b1 ++ bitwise op a2 b2
+Proof
+  rw[bitwise_def, GSYM ZIP_APPEND]
+QED
+
+Theorem bitwise_replicate:
+  ∀n l1 l2 op. LENGTH l1 = LENGTH l2 ⇒
+  bitwise op (replicate l1 n) (replicate l2 n) = replicate (bitwise op l1 l2) n
+Proof
+  Induct >> rw[] >> gvs[replicate_def, GSYM REPLICATE_GENLIST] >>
+  simp[bitwise_def]
+QED
+
+Theorem bitwise_REPLICATE:
+  bitwise op (REPLICATE n x) (REPLICATE n y) = REPLICATE n (op x y)
+Proof
+  rw[bitwise_def, ZIP_REPLICATE]
+QED
+
 Theorem asl_extract_flags[simp]:
   (3 >< 3) (v2w [n;z;c;v] : word4) = v2w [n] : word1 ∧
   (2 >< 2) (v2w [n;z;c;v] : word4) = v2w [z] : word1 ∧
@@ -539,12 +638,643 @@ Proof
   rpt (full_case_tac >> gvs[])
 QED
 
+Theorem HighestSetBit_7_LE:
+  ∀w:word7. HighestSetBit w ≤ 6
+Proof
+  rw[] >> Cases_on_word_value `w` >> simp[HighestSetBit_def] >> EVAL_TAC
+QED
+
+Theorem l3_asl_HighestSetBit_7:
+  ∀w:word7. HighestSetBit w = returnS (HighestSetBit w)
+Proof
+  rw[arm8Theory.HighestSetBit_def, armv86aTheory.HighestSetBit_def] >>
+  simp[sail2_state_monadTheory.catch_early_returnS_def] >>
+  ntac 8 $ once_rewrite_tac[sail2_valuesAuxiliaryTheory.index_list_rw] >> simp[] >>
+  ntac 8 $ once_rewrite_tac[sail2_stateAuxiliaryTheory.foreachS_rw] >> simp[] >>
+  simp[vec_of_bits_access_vec_dec_single] >>
+  simp[FUN_EQ_THM] >> gen_tac >>
+  Cases_on_word_value `w` >> EVAL_TAC >> WORD_DECIDE_TAC
+QED
+
+Definition create_tmask_def[nocompute]:
+  create_tmask (diff : word6) n =
+  let
+   (tmask_and :word6) = or_vec (diff :word6) (not_vec (v2w (Ones n) :word6));
+   (tmask_or :word6) = and_vec (diff :word6) (v2w (Ones n) : word6);
+   (tmask :word64) = (Ones (64 :int) :word64);
+   (tmask :word64) =
+     or_vec
+       (and_vec tmask
+          (replicate_bits
+             (concat_vec
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec tmask_and (0 :int)] :
+                    word1) (1 :int) :word1) (Ones (1 :int) :word1) :
+              word2) (32 :int) :word64))
+       (replicate_bits
+          (concat_vec (Zeros (1 :int) :word1)
+             (replicate_bits
+                (vec_of_bits [access_vec_dec tmask_or (0 :int)] :word1)
+                (1 :int) :word1) :word2) (32 :int) :word64);
+   (tmask :word64) =
+     or_vec
+       (and_vec tmask
+          (replicate_bits
+             (concat_vec
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec tmask_and (1 :int)] :
+                    word1) (2 :int) :word2) (Ones (2 :int) :word2) :
+              word4) (16 :int) :word64))
+       (replicate_bits
+          (concat_vec (Zeros (2 :int) :word2)
+             (replicate_bits
+                (vec_of_bits [access_vec_dec tmask_or (1 :int)] :word1)
+                (2 :int) :word2) :word4) (16 :int) :word64);
+   (tmask :word64) =
+     or_vec
+       (and_vec tmask
+          (replicate_bits
+             (concat_vec
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec tmask_and (2 :int)] :
+                    word1) (4 :int) :word4) (Ones (4 :int) :word4) :
+              word8) (8 :int) :word64))
+       (replicate_bits
+          (concat_vec (Zeros (4 :int) :word4)
+             (replicate_bits
+                (vec_of_bits [access_vec_dec tmask_or (2 :int)] :word1)
+                (4 :int) :word4) :word8) (8 :int) :word64);
+   (tmask :word64) =
+     or_vec
+       (and_vec tmask
+          (replicate_bits
+             (concat_vec
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec tmask_and (3 :int)] :
+                    word1) (8 :int) :word8) (Ones (8 :int) :word8) :
+              word16) (4 :int) :word64))
+       (replicate_bits
+          (concat_vec (Zeros (8 :int) :word8)
+             (replicate_bits
+                (vec_of_bits [access_vec_dec tmask_or (3 :int)] :word1)
+                (8 :int) :word8) :word16) (4 :int) :word64);
+   (tmask :word64) =
+     or_vec
+       (and_vec tmask
+          (replicate_bits
+             (concat_vec
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec tmask_and (4 :int)] :
+                    word1) (16 :int) :word16)
+                (Ones (16 :int) :word16) :word32) (2 :int) :word64))
+       (replicate_bits
+          (concat_vec (Zeros (16 :int) :word16)
+             (replicate_bits
+                (vec_of_bits [access_vec_dec tmask_or (4 :int)] :word1)
+                (16 :int) :word16) :word32) (2 :int) :word64);
+   (tmask :word64) =
+     or_vec
+       (and_vec tmask
+          (replicate_bits
+             (concat_vec
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec tmask_and (5 :int)] :
+                    word1) (32 :int) :word32)
+                (Ones (32 :int) :word32) :word64) (1 :int) :word64))
+       (replicate_bits
+          (concat_vec (Zeros (32 :int) :word32)
+             (replicate_bits
+                (vec_of_bits [access_vec_dec tmask_or (5 :int)] :word1)
+                (32 :int) :word32) :word64) (1 :int) :word64)
+  in tmask
+End
+
+Definition create_wmask_def[nocompute]:
+  create_wmask (immr : word6) n =
+  let
+   (wmask_and :word6) = or_vec immr (not_vec (v2w (Ones n) : word6));
+   (wmask_or :word6) = and_vec immr (v2w (Ones n) : word6);
+   (wmask :word64) = (Zeros (64 :int) :word64);
+   (wmask :word64) =
+     or_vec
+       (and_vec wmask
+          (replicate_bits
+             (concat_vec (Ones (1 :int) :word1)
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec wmask_and (0 :int)] :
+                    word1) (1 :int) :word1) :word2) (32 :int) :word64))
+       (replicate_bits
+          (concat_vec
+             (replicate_bits
+                (vec_of_bits [access_vec_dec wmask_or (0 :int)] :word1)
+                (1 :int) :word1) (Zeros (1 :int) :word1) :word2)
+          (32 :int) :word64);
+   (wmask :word64) =
+     or_vec
+       (and_vec wmask
+          (replicate_bits
+             (concat_vec (Ones (2 :int) :word2)
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec wmask_and (1 :int)] :
+                    word1) (2 :int) :word2) :word4) (16 :int) :word64))
+       (replicate_bits
+          (concat_vec
+             (replicate_bits
+                (vec_of_bits [access_vec_dec wmask_or (1 :int)] :word1)
+                (2 :int) :word2) (Zeros (2 :int) :word2) :word4)
+          (16 :int) :word64);
+   (wmask :word64) =
+     or_vec
+       (and_vec wmask
+          (replicate_bits
+             (concat_vec (Ones (4 :int) :word4)
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec wmask_and (2 :int)] :
+                    word1) (4 :int) :word4) :word8) (8 :int) :word64))
+       (replicate_bits
+          (concat_vec
+             (replicate_bits
+                (vec_of_bits [access_vec_dec wmask_or (2 :int)] :word1)
+                (4 :int) :word4) (Zeros (4 :int) :word4) :word8)
+          (8 :int) :word64);
+   (wmask :word64) =
+     or_vec
+       (and_vec wmask
+          (replicate_bits
+             (concat_vec (Ones (8 :int) :word8)
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec wmask_and (3 :int)] :
+                    word1) (8 :int) :word8) :word16) (4 :int) :word64))
+       (replicate_bits
+          (concat_vec
+             (replicate_bits
+                (vec_of_bits [access_vec_dec wmask_or (3 :int)] :word1)
+                (8 :int) :word8) (Zeros (8 :int) :word8) :word16)
+          (4 :int) :word64);
+   (wmask :word64) =
+     or_vec
+       (and_vec wmask
+          (replicate_bits
+             (concat_vec (Ones (16 :int) :word16)
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec wmask_and (4 :int)] :
+                    word1) (16 :int) :word16) :word32) (2 :int) :word64))
+       (replicate_bits
+          (concat_vec
+             (replicate_bits
+                (vec_of_bits [access_vec_dec wmask_or (4 :int)] :word1)
+                (16 :int) :word16) (Zeros (16 :int) :word16) :word32)
+          (2 :int) :word64);
+   (wmask :word64) =
+     or_vec
+       (and_vec wmask
+          (replicate_bits
+             (concat_vec (Ones (32 :int) :word32)
+                (replicate_bits
+                   (vec_of_bits [access_vec_dec wmask_and (5 :int)] :
+                    word1) (32 :int) :word32) :word64) (1 :int) :word64))
+       (replicate_bits
+          (concat_vec
+             (replicate_bits
+                (vec_of_bits [access_vec_dec wmask_or (5 :int)] :word1)
+                (32 :int) :word32) (Zeros (32 :int) :word32) :word64)
+          (1 :int) :word64)
+  in wmask
+End
+
+Theorem DecodeBitMasks_64_lemma[local]:
+  armv86a$DecodeBitMasks 64 immN imms immr immediate : (word64 # word64) M =
+  do
+   len <- HighestSetBit (concat_vec immN (not_vec imms) : word7);
+   do
+     if len < 1 then throwS (Error_Undefined ()) else returnS ();
+     assert_expS (64 ≥ shl_int 1 len) "v8_base.sail 75487:26 - 75487:27"
+   od;
+   levels <<- zext_ones 6 len;
+   if immediate ∧ and_vec imms levels = levels then
+     throwS (Error_Undefined ())
+   else returnS ();
+   S1 <<- w2ui (and_vec imms levels);
+   R <<- w2ui (and_vec immr levels);
+   diff <<- S1 − R;
+   tmask <<- create_tmask (integer_subrange diff 5 0) (Num len);
+   wmask <<- create_wmask immr (Num len);
+   wmask <<-
+     if vec_of_bits [integer_access diff 6] :word1 ≠ 0b0w then
+       and_vec wmask tmask
+     else or_vec wmask tmask;
+   returnS
+    (subrange_vec_dec wmask 63 0, subrange_vec_dec tmask 63 0)
+  od
+Proof
+  rewrite_tac[armv86aTheory.DecodeBitMasks_def] >>
+  rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  rewrite_tac[FUN_EQ_THM] >> rpt gen_tac >> BETA_TAC >>
+  Cases_on `x < 1`
+  >- (simp[sail2_state_monadTheory.throwS_def, bindS, seqS, returnS]) >>
+  asm_rewrite_tac[seqS_returnS] >>
+  `∃n. x = &n` by ARITH_TAC >> pop_assum SUBST_ALL_TAC >>
+  reverse $ Cases_on `64 ≥ shl_int 1 (&n)` >>
+  asm_rewrite_tac[sail2_state_monadTheory.assert_expS_def] >- simp[seqS, failS] >>
+  rewrite_tac[seqS_returnS] >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  `zext_ones 6 (&n) = v2w (Ones n) : word6` by simp[zext_ones_pos] >>
+  pop_assum SUBST_ALL_TAC >>
+  IF_CASES_TAC >- simp[sail2_state_monadTheory.throwS_def, seqS] >>
+  rewrite_tac[seqS_returnS] >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  rewrite_tac[Once LET_DEF] >> BETA_TAC >> irule EQ_SYM >>
+  rename1 `integer_subrange foo` >>
+  simp[create_tmask_def, create_wmask_def]
+QED
+
+Theorem DecodeBitMasks_64:
+  armv86a$DecodeBitMasks 64 immN imms immr immediate : (word64 # word64) M =
+   do
+    len <- HighestSetBit (immN @@ ¬imms);
+    if len < 1 then throwS (Error_Undefined ()) else returnS ();
+    assert_expS (64n ≥ 2 ** Num len) "v8_base.sail 75487:26 - 75487:27";
+    levels <<- v2w (Ones (Num len)) : word6;
+    if immediate ∧ imms && levels = levels then throwS (Error_Undefined ())
+    else returnS ();
+    S1 <<- &w2n (imms && levels);
+    R <<- &w2n (immr && levels);
+    diff <<- S1 − R;
+    tmask <<- create_tmask ((imms && levels) - (immr && levels)) (Num len);
+    wmask <<- create_wmask immr (Num len);
+    wmask <<- if S1 < R then wmask && tmask else wmask || tmask;
+    returnS (wmask, tmask)
+  od
+Proof
+  rw[DecodeBitMasks_64_lemma] >>
+  rw[
+    sail2_operators_mwordsTheory.and_vec_def,
+    sail2_operators_mwordsTheory.not_vec_def,
+    sail2_operators_mwordsTheory.or_vec_def,
+    sail2_operators_mwordsTheory.concat_vec_def,
+    armv86aTheory.Ones_def, sail_ones_def, armv86aTheory.Zeros_def,
+    sail2_operators_mwordsTheory.zeros_def,
+    lemTheory.w2ui_def
+    ] >>
+  rw[FUN_EQ_THM, bindS, seqS, returnS] >>
+  ntac 5 (reverse TOP_CASE_TAC >> simp[]) >>
+  `∃b. a = &b` by (
+    every_case_tac >> gvs[sail2_state_monadTheory.throwS_def, returnS] >> ARITH_TAC) >>
+  gvs[shl_int_pos, int_ge, GREATER_EQ, zext_ones_pos] >>
+  reverse TOP_CASE_TAC >> simp[] >>
+  IF_CASES_TAC >> gvs[] >- simp[sail2_state_monadTheory.throwS_def] >>
+  simp[returnS] >>
+  simp[integer_access_def, vec_of_bits_access_vec_dec_single] >>
+  simp[sail2_operators_mwordsTheory.subrange_vec_dec_def] >>
+  DEP_REWRITE_TAC[EXTRACT_ALL_BITS] >> simp[] >>
+  qmatch_goalsub_abbrev_tac `integer_subrange (&w2n ss - &w2n rr)` >>
+  `integer_subrange (&w2n ss - &w2n rr) 5 0 = ss - rr` by (
+    simp[INT_SUB_CALCULATE, INT_ADD_CALCULATE] >> IF_CASES_TAC >> gvs[]
+    >- (
+      simp[integer_subrange_pos, field_def, shiftr_def, TAKE_LENGTH_ID_rwt] >>
+      simp[INST_TYPE [alpha |-> ``:6``] v2w_fixwidth |> SIMP_RULE (srw_ss()) []] >>
+      Cases_on_word_value `ss` >> Cases_on_word_value `rr` >> gvs[]
+      ) >>
+    simp[integer_subrange_neg] >> IF_CASES_TAC >> gvs[NOT_LESS_EQUAL]
+    >- (
+      gvs[NOT_LESS_EQUAL] >>
+      drule $ GSYM LESS_ADD >> rw[] >> gvs[] >>
+      qsuff_tac `p < 64` >> rw[] >> gvs[] >>
+      irule LESS_LESS_EQ_TRANS >>
+      qexists_tac `SUC (w2n rr)` >> gvs[] >>
+      qspec_then `rr` assume_tac w2n_lt >> gvs[]
+      ) >>
+    Cases_on_word_value `ss` >> Cases_on_word_value `rr` >> gvs[]
+    ) >>
+  pop_assum SUBST_ALL_TAC >> simp[] >>
+  qsuff_tac
+    `(integer_subrange (&w2n ss - &w2n rr) 6 6 ≠ 0w :word1) = (w2n ss < w2n rr)`>>
+  rw[] >>
+  Cases_on_word_value `rr` >> Cases_on_word_value `ss` >> simp[] >> EVAL_TAC
+QED
+
+Theorem replicate_bits_concat_64_lemma:
+  replicate_bits (v64 :word64) 1  = v64                            :word64 ∧
+  replicate_bits (v32 :word32) 2  = (v32 @@ v32)                   :word64 ∧
+  replicate_bits (v16 :word16) 4  = replicate_bits (v16 @@ v16) 2  :word64 ∧
+  replicate_bits (v8 :word8)   8  = replicate_bits (v8 @@ v8)   4  :word64 ∧
+  replicate_bits (v4 :word4)   16 = replicate_bits (v4 @@ v4)   8  :word64 ∧
+  replicate_bits (v2 :word2)   32 = replicate_bits (v2 @@ v2)   16 :word64 ∧
+  replicate_bits (v1 :word1)   64 = replicate_bits (v1 @@ v1)   32 :word64 ∧
+
+  replicate_bits (v32 :word32) 1  = v32                            :word32 ∧
+  replicate_bits (v16 :word16) 2  = (v16 @@ v16)                   :word32 ∧
+  replicate_bits (v8 :word8)   4  = replicate_bits (v8 @@ v8)   2  :word32 ∧
+  replicate_bits (v4 :word4)   8  = replicate_bits (v4 @@ v4)   4  :word32 ∧
+  replicate_bits (v2 :word2)   16 = replicate_bits (v2 @@ v2)   8  :word32 ∧
+  replicate_bits (v1 :word1)   32 = replicate_bits (v1 @@ v1)   16 :word32 ∧
+
+  replicate_bits (v16 :word16) 1  = v16                            :word16 ∧
+  replicate_bits (v8 :word8)   2  = (v8 @@ v8)                     :word16 ∧
+  replicate_bits (v4 :word4)   4  = replicate_bits (v4 @@ v4)   2  :word16 ∧
+  replicate_bits (v2 :word2)   8  = replicate_bits (v2 @@ v2)   4  :word16 ∧
+  replicate_bits (v1 :word1)   16 = replicate_bits (v1 @@ v1)   8  :word16 ∧
+
+  replicate_bits (v8 :word8)   1  = v8                             :word8 ∧
+  replicate_bits (v4 :word4)   2  = (v4 @@ v4)                     :word8 ∧
+  replicate_bits (v2 :word2)   4  = replicate_bits (v2 @@ v2)   2  :word8 ∧
+  replicate_bits (v1 :word1)   8  = replicate_bits (v1 @@ v1)   4  :word8 ∧
+
+  replicate_bits (v4 :word4)   1  = v4                             :word4 ∧
+  replicate_bits (v2 :word2)   2  = (v2 @@ v2)                     :word4 ∧
+  replicate_bits (v1 :word1)   4  = replicate_bits (v1 @@ v1)   2  :word4 ∧
+
+  replicate_bits (v2 :word2)   1  = v2                             :word2 ∧
+  replicate_bits (v1 :word1)   2  = (v1 @@ v1)                     :word2 ∧
+
+  replicate_bits (v1 :word1)   1  = v1                             :word1
+Proof
+  rpt conj_asm1_tac >> rw[replicate_bits_pos] >> simp[REPLICATE_compute]
+  >| [
+    Cases_on_v2w `v32`, Cases_on_v2w `v16`, Cases_on_v2w `v8`,
+    Cases_on_v2w `v4`, Cases_on_v2w `v2`, Cases_on_v2w `v1`,
+
+    Cases_on_v2w `v16`, Cases_on_v2w `v8`,
+    Cases_on_v2w `v4`, Cases_on_v2w `v2`, Cases_on_v2w `v1`,
+
+    Cases_on_v2w `v8`, Cases_on_v2w `v4`, Cases_on_v2w `v2`, Cases_on_v2w `v1`,
+
+    Cases_on_v2w `v4`, Cases_on_v2w `v2`, Cases_on_v2w `v1`,
+
+    Cases_on_v2w `v2`, Cases_on_v2w `v1`,
+
+    Cases_on_v2w `v1`
+    ] >>
+  gvs[markerTheory.Abbrev_def] >>
+  rpt (once_rewrite_tac[word_concat_v2w_rwt] >> simp[w2v_v2w])
+QED
+
+local
+  fun expand [] done = done
+    | expand (x::xs) done =
+        let val x' = SIMP_RULE (srw_ss()) done x in expand xs (x'::done) end
+
+  val fcp_tys =
+    List.tabulate (64, fn i => fcpLib.index_type $ Arbnum.fromInt $ i + 1)
+
+  val concat_rwts =
+    List.map (fn ty => INST_TYPE [``:ε`` |-> ty] word_concat_assoc) fcp_tys;
+
+in
+
+Theorem replicate_bits_concat_64 =
+  expand (CONJUNCTS replicate_bits_concat_64_lemma) [] |> LIST_CONJ |>
+    SIMP_RULE (srw_ss()) concat_rwts;
+
+end
+
+Theorem create_tmask_compute[compute] =
+  create_tmask_def |> SIMP_RULE (srw_ss()) [
+    sail2_operators_mwordsTheory.and_vec_def,
+    sail2_operators_mwordsTheory.not_vec_def,
+    sail2_operators_mwordsTheory.or_vec_def,
+    sail2_operators_mwordsTheory.concat_vec_def,
+    armv86aTheory.Ones_def, sail_ones_def, armv86aTheory.Zeros_def,
+    sail2_operators_mwordsTheory.zeros_def,
+    vec_of_bits_access_vec_dec_single,
+    replicate_bits_concat_64,
+    Ones_def, PAD_LEFT
+    ]
+
+Theorem create_wmask_compute[compute] =
+  create_wmask_def |> SIMP_RULE (srw_ss()) [
+    sail2_operators_mwordsTheory.and_vec_def,
+    sail2_operators_mwordsTheory.not_vec_def,
+    sail2_operators_mwordsTheory.or_vec_def,
+    sail2_operators_mwordsTheory.concat_vec_def,
+    armv86aTheory.Ones_def, sail_ones_def, armv86aTheory.Zeros_def,
+    sail2_operators_mwordsTheory.zeros_def,
+    vec_of_bits_access_vec_dec_single,
+    replicate_bits_concat_64,
+    Ones_def, PAD_LEFT
+    ]
+
+(* Takes 5 mins *)
+Theorem create_tmask:
+  len ≥ 1 ∧ len < 7 ⇒
+  create_tmask diff len =
+    Replicate
+     (PAD_LEFT F (2 ** len)
+        (Ones (v2n (field (len − 1) 0 (w2v diff)) + 1)))
+Proof
+  rw[] >> gvs[NUMERAL_LESS_THM] >>
+  rw[Replicate_def, replicate_def, PAD_LEFT, GSYM REPLICATE_GENLIST] >>
+  simp[field_def, shiftr_def] >>
+  DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+  simp[fixwidth_REPLICATE, v2n_DROP_w2v]
+  >- (
+    qspec_then `diff` assume_tac w2n_lt >> gvs[REPLICATE_compute] >>
+    simp[Ones_def, PAD_LEFT] >>
+    Cases_on_word_value `diff` >> simp[REPLICATE_compute] >> EVAL_TAC
+    ) >>
+  qmatch_goalsub_abbrev_tac `a - b + _` >>
+  `b ≤ a` by (unabbrev_all_tac >> ARITH_TAC) >>
+  unabbrev_all_tac >> simp[REPLICATE_compute] >>
+  simp[Ones_def, PAD_LEFT] >>
+  Cases_on_word_value `diff` >> simp[REPLICATE_compute] >> EVAL_TAC
+QED
+
+(* Takes 6 mins *)
+Theorem create_wmask:
+  len ≥ 1 ∧ len < 7 ⇒
+  create_wmask immr len =
+    Replicate (rotate (PAD_LEFT F (2 ** len)
+      (Ones (v2n (field (len - 1) 0 (w2v immr))))) (w2n immr))
+Proof
+  rw[] >> gvs[NUMERAL_LESS_THM] >>
+  rw[Replicate_def, replicate_def, PAD_LEFT, GSYM REPLICATE_GENLIST] >>
+  simp[field_def, shiftr_def] >>
+  DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+  simp[fixwidth_REPLICATE, v2n_DROP_w2v]
+  >- (
+    qspec_then `immr` assume_tac w2n_lt >> gvs[] >>
+    simp[REPLICATE_compute, Ones_def, PAD_LEFT] >>
+    simp[rotate_def, field_def, shiftr_def] >>
+    IF_CASES_TAC >> gvs[REPLICATE_compute] >- EVAL_TAC >>
+    `0 < w2n immr` by WORD_DECIDE_TAC >> simp[ADD1] >>
+    simp[TAKE_APPEND, TAKE_REPLICATE, MIN_DEF] >>
+    simp[fixwidth_def, DROP_APPEND] >>
+    Cases_on_word_value `immr` >> simp[REPLICATE_compute] >> EVAL_TAC
+    ) >>
+  qmatch_goalsub_abbrev_tac `a - b + _` >>
+  `b ≤ a` by (unabbrev_all_tac >> ARITH_TAC) >>
+  unabbrev_all_tac >> simp[REPLICATE_compute, Ones_def, PAD_LEFT] >>
+  simp[rotate_def, field_def, shiftr_def] >>
+  (
+    IF_CASES_TAC >> gvs[REPLICATE_compute]
+    >- (Cases_on_word_value `immr` >> gvs[] >> EVAL_TAC)
+  ) >>
+  simp[ADD1, TAKE_APPEND, TAKE_REPLICATE, MIN_DEF] >>
+  simp[fixwidth_def, DROP_APPEND] >>
+  Cases_on_word_value `immr` >> simp[REPLICATE_compute] >> EVAL_TAC
+QED
+(*
+  Alternatively:
+    Replicate (PAD_RIGHT F (2 ** len)
+      (Ones (v2n (field (len - 1) 0 (w2v immr)))))
+Proof
+  rw[] >> gvs[NUMERAL_LESS_THM] >>
+  rw[Replicate_def, replicate_def, PAD_RIGHT, GSYM REPLICATE_GENLIST] >>
+  simp[field_def, shiftr_def] >>
+  DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+  simp[fixwidth_REPLICATE, v2n_DROP_w2v]
+  >- (
+    qspec_then `immr` assume_tac w2n_lt >> gvs[] >>
+    simp[REPLICATE_compute, Ones_def, PAD_LEFT] >>
+    Cases_on_word_value `immr` >> simp[REPLICATE_compute] >> EVAL_TAC
+    ) >>
+  qmatch_goalsub_abbrev_tac `_ + (a - b)` >>
+  `b ≤ a` by (unabbrev_all_tac >> ARITH_TAC) >>
+  unabbrev_all_tac >> simp[REPLICATE_compute, Ones_def, PAD_LEFT] >>
+  Cases_on_word_value `immr` >> simp[REPLICATE_compute] >> EVAL_TAC
+QED
+*)
+
+Triviality Replicate_64_word_and:
+  LENGTH l1 = LENGTH l2 ⇒
+  Replicate l1 && Replicate l2 = Replicate (band l1 l2) :word64
+Proof
+  rw[Replicate_def, word_and_v2w] >> AP_TERM_TAC >>
+  simp[band_def, bitwise_replicate]
+QED
+
+Triviality Replicate_64_word_or:
+  LENGTH l1 = LENGTH l2 ⇒
+  Replicate l1 || Replicate l2 = Replicate (bor l1 l2) :word64
+Proof
+  rw[Replicate_def, word_or_v2w] >> AP_TERM_TAC >>
+  simp[bor_def, bitwise_replicate]
+QED
+
+Triviality word_neg_6:
+  w2n (-a : word6) = (64 - w2n a) MOD 64
+Proof
+  Cases_on_word_value `a` >> simp[]
+QED
+
 Theorem l3_asl_DecodeBitMasks:
   ∀n s r b res : (word64 # word64).
     DecodeBitMasks (n,s,r,b) = SOME res
   ⇒ DecodeBitMasks 64 n s r b = returnS res
 Proof
-  cheat (* TODO *)
+  rw[FUN_EQ_THM, DecodeBitMasks_def, DecodeBitMasks_64, returnS] >>
+  simp[l3_asl_HighestSetBit_7] >>
+  qmatch_goalsub_abbrev_tac `Num hb` >>
+  `∃len. hb = &len` by ARITH_TAC >> gvs[] >>
+  `len ≤ 6` by (
+    qspec_then `n @@ ¬s` assume_tac HighestSetBit_7_LE >> gvs[]) >>
+  `64 ≥ 2 ** len` by gvs[LE_LT1, NUMERAL_LESS_THM] >>
+  simp[sail2_state_monadTheory.assert_expS_def] >> IF_CASES_TAC >> gvs[] >>
+  qmatch_goalsub_abbrev_tac `_ * R + S1` >>
+  simp[returnS] >> reverse $ conj_tac >- simp[create_tmask] >>
+  simp[create_tmask, create_wmask] >>
+  DEP_REWRITE_TAC[Replicate_64_word_and, Replicate_64_word_or] >> conj_tac
+  >- (
+    simp[PAD_LEFT] >>
+    qspec_then `field (len - 1) 0 (w2v r)` assume_tac v2n_lt >> gvs[ADD1] >>
+    qspec_then `field (len - 1) 0 (w2v (S1 - R))` assume_tac v2n_lt >> gvs[ADD1]
+    ) >>
+  `v2n (field (len - 1) 0 (w2v r)) = w2n R` by (
+    simp[Abbr `R`, field_def, v2n_fixwidth, ADD1, shiftr_def] >>
+    DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[] >>
+    qpat_x_assum `_ ≤ _` mp_tac >>
+    simp[LE_LT1, NUMERAL_LESS_THM] >> rw[] >>
+    simp[Ones_def, PAD_LEFT, REPLICATE_compute] >>
+    Cases_on_word_value `r` >> simp[]) >>
+  pop_assum SUBST_ALL_TAC >>
+  `v2n (field (len - 1) 0 (w2v (S1 - R))) = w2n (S1 - R) MOD 2 ** len` by (
+    simp[field_def, v2n_fixwidth, ADD1, shiftr_def] >>
+    DEP_REWRITE_TAC[TAKE_LENGTH_ID_rwt] >> simp[]) >>
+  gvs[] >> pop_assum kall_tac >>
+  rw[] >> AP_TERM_TAC
+  >- (
+    simp[rotate_def, PAD_LEFT, field_def, ADD1, Ones_def] >>
+    `w2n r MOD 2 ** len = w2n R` by (
+      unabbrev_all_tac >> simp[Ones_def, PAD_LEFT] >>
+      qpat_x_assum `_ ≤ _` mp_tac >>
+      simp[LE_LT1] >> simp[NUMERAL_LESS_THM] >> rw[] >>
+      simp[REPLICATE_compute] >> Cases_on_word_value `r` >> simp[]) >>
+    simp[] >>
+    `w2n R < 2 ** len` by (pop_assum $ SUBST_ALL_TAC o GSYM >> simp[]) >> simp[] >>
+    simp[shiftr_def, fixwidth_REPLICATE] >>
+    simp[TAKE_APPEND, TAKE_REPLICATE] >>
+    ntac 2 $ simp[Once MIN_DEF] >> simp[Once MIN_ALT_DEF] >> simp[MIN_DEF] >>
+    simp[DROP_APPEND] >>
+    `w2n S1 + 1 - w2n R = 0` by ARITH_TAC >> simp[] >>
+    `w2n (S1 - R) MOD 2 ** len = w2n S1 + 2 ** len - w2n R` by (
+      rewrite_tac[word_sub_def, word_add_def, word_neg_6] >> simp[] >>
+      simp[MOD_SUBTRACT, MOD_ADDITION] >>
+      qsuff_tac `64 MOD 2 ** len = 0` >> rw[] >>
+      qpat_x_assum `_ ≤ _` mp_tac >> simp[LE_LT1] >>
+      simp[NUMERAL_LESS_THM] >> strip_tac >> gvs[]) >>
+    gvs[] >> `R ≠ 0w` by (CCONTR_TAC >> gvs[]) >> simp[] >>
+    map_every qabbrev_tac [`rr = w2n R`,`ss = w2n S1`] >>
+    simp[band_def] >>
+    `REPLICATE rr T = REPLICATE (rr - (ss + 1)) T ++ REPLICATE (ss + 1) T` by
+      simp[REPLICATE_APPEND] >>
+    pop_assum SUBST1_TAC >> rewrite_tac[APPEND_ASSOC] >>
+    `REPLICATE (ss + (2 ** len + 1) - rr) T =
+      REPLICATE (ss + 1) T ++ REPLICATE (2 ** len - rr) T` by
+      simp[REPLICATE_APPEND] >>
+    pop_assum SUBST1_TAC >> rewrite_tac[APPEND_ASSOC] >>
+    DEP_REWRITE_TAC[bitwise_APPEND] >> simp[] >>
+    simp[bitwise_REPLICATE]
+    )
+  >- (
+    simp[rotate_def, PAD_LEFT, field_def, ADD1, Ones_def] >>
+    `w2n r MOD 2 ** len = w2n R` by (
+      unabbrev_all_tac >> simp[Ones_def, PAD_LEFT] >>
+      qpat_x_assum `_ ≤ _` mp_tac >>
+      simp[LE_LT1] >> simp[NUMERAL_LESS_THM] >> rw[] >>
+      simp[REPLICATE_compute] >> Cases_on_word_value `r` >> simp[]) >>
+    simp[] >>
+    `w2n R < 2 ** len` by (pop_assum $ SUBST_ALL_TAC o GSYM >> simp[]) >> simp[] >>
+    simp[shiftr_def, fixwidth_REPLICATE] >>
+    simp[TAKE_APPEND, TAKE_REPLICATE] >>
+    ntac 3 $ simp[Once MIN_DEF] >> simp[MIN_ALT_DEF] >>
+    `w2n S1 + 1 ≤ 2 ** len` by (
+      unabbrev_all_tac >> simp[Ones_def, PAD_LEFT] >>
+      qpat_x_assum `_ ≤ _` mp_tac >>
+      simp[LE_LT1] >> simp[NUMERAL_LESS_THM] >> rw[] >>
+      simp[REPLICATE_compute] >> Cases_on_word_value `s` >> simp[]) >>
+    simp[] >>
+    `w2n (S1 - R) MOD 2 ** len = w2n S1 - w2n R` by (
+      rewrite_tac[word_sub_def, word_add_def, word_neg_6] >> simp[] >>
+      simp[MOD_SUBTRACT, MOD_ADDITION]) >>
+    gvs[] >>
+    map_every qabbrev_tac [`rr = w2n R`,`ss = w2n S1`] >>
+    `R = 0w ⇔ w2n r MOD 2 ** len = 0` by (
+      unabbrev_all_tac >> eq_tac >> rw[] >> gvs[]) >>
+    simp[bor_def] >> IF_CASES_TAC >> simp[]
+    >- (
+      `REPLICATE (2 ** len) F =
+        REPLICATE (rr + 2 ** len - (ss + 1)) F ++ REPLICATE (ss + 1 - rr) F` by
+        simp[REPLICATE_APPEND] >>
+      pop_assum SUBST1_TAC >> DEP_REWRITE_TAC[bitwise_APPEND] >> simp[] >>
+      simp[bitwise_REPLICATE] >> gvs[]
+      ) >>
+    simp[DROP_APPEND] >>
+    `REPLICATE (rr + 2 ** len - (ss + 1)) F =
+      REPLICATE rr F ++ REPLICATE (2 ** len - (ss + 1)) F` by
+      simp[REPLICATE_APPEND] >>
+    pop_assum SUBST1_TAC >> rewrite_tac[APPEND_ASSOC] >>
+    `REPLICATE (2 ** len - rr) F =
+      REPLICATE (2 ** len - (ss + 1)) F ++ REPLICATE (ss + 1 - rr) F` by
+      simp[REPLICATE_APPEND] >>
+    pop_assum SUBST1_TAC >> rewrite_tac[APPEND_ASSOC] >>
+    DEP_REWRITE_TAC[bitwise_APPEND] >> simp[] >>
+    simp[bitwise_REPLICATE]
+    )
 QED
 
 Theorem HasArchVersion_T[simp]:

@@ -369,6 +369,8 @@ val asl_word_ss =
     sail2_valuesTheory.of_bits_failwith_def,
     sail2_valuesTheory.maybe_failwith_def,
     sail2_valuesTheory.nat_of_bv_def,
+    sail2_valuesTheory.mem_bytes_of_bits_def,
+    sail2_valuesTheory.bytes_of_bits_def,
     wordsTheory.bit_field_insert_def,
     preludeTheory.undefined_bitvector_def |>
       REWRITE_RULE [Once FUN_EQ_THM, sail2_state_monadTheory.returnS_def],
@@ -420,6 +422,7 @@ fun state_rel_tac thms =
   gvs ([
     flag_rel_def, pstate_rel_def, tcr_el1_rel_def, tcr_el2_3_rel_def,
     sctlr_rel_def, read_rel_def, reg_rel_def, mem_rel_def, state_rel_def,
+    asl_sys_regs_ok_def,
     asl_reg_rws, l3_reg_rws,
     sail2_operators_mwordsTheory.vec_of_bits_def,
     sail2_valuesTheory.of_bits_failwith_def,
