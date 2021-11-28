@@ -2027,10 +2027,13 @@ Proof
     simp[] >> Cases_on_word_value `l3.PSTATE.EL` >> gvs[]
     )
   >- (
-    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >>
+    `l3.PSTATE.EL = 2w` by (
+      unabbrev_all_tac >> Cases_on_word_value `l3.PSTATE.EL` >> gvs[]) >>
+    rpt var_eq_tac >> gvs[] >>
     ntac 4 $ simp[Once sail2_valuesTheory.just_list_def] >>
     qspecl_then [`asl`,`l3.PSTATE.EL`] mp_tac ELIsInHost_F >>
-    impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+    impl_tac >- gvs[asl_sys_regs_ok_def] >>
+    strip_tac >>
     drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
     disch_then kall_tac >>
     drule TCR_EL2_read >> strip_tac >>
@@ -2049,7 +2052,9 @@ Proof
     simp[returnS]
     )
   >- (
-    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >>
+    `l3.PSTATE.EL = 3w` by (
+      unabbrev_all_tac >> Cases_on_word_value `l3.PSTATE.EL` >> gvs[]) >>
+    rpt var_eq_tac >> gvs[] >>
     drule TCR_EL3_read >> strip_tac >>
     drule $ INST_TYPE [gamma |-> ``:int``] returnS_bindS >> simp[] >>
     disch_then kall_tac >>
@@ -2186,8 +2191,17 @@ Proof
     simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
     pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
   simp[Abbr `foo`] >>
-  rpt (IF_CASES_TAC >> simp[]) >>
-  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
+  (
+    Cases_on `word_bit 55 addr` >> simp[]
+    >- (
+      Cases_on `l3.TCR_EL1.TBI1` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+    >- (
+      Cases_on `l3.TCR_EL1.TBI0` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+  )
 QED
 
 Theorem l3_models_asl_BranchImmediate_JMP:
@@ -2251,8 +2265,17 @@ Proof
     simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
     pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
   simp[Abbr `foo`] >>
-  rpt (IF_CASES_TAC >> simp[]) >>
-  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
+  (
+    Cases_on `word_bit 55 addr` >> simp[]
+    >- (
+      Cases_on `l3.TCR_EL1.TBI1` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+    >- (
+      Cases_on `l3.TCR_EL1.TBI0` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+  )
 QED
 
 Theorem l3_models_asl_BranchConditional:
@@ -2319,8 +2342,17 @@ Proof
     simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
     pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
   simp[Abbr `foo`] >>
-  rpt (IF_CASES_TAC >> simp[]) >>
-  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
+  (
+    Cases_on `word_bit 55 addr` >> simp[]
+    >- (
+      Cases_on `l3.TCR_EL1.TBI1` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+    >- (
+      Cases_on `l3.TCR_EL1.TBI0` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+  )
 QED
 
 Theorem l3_models_asl_BranchRegister_JMP:
@@ -2392,8 +2424,17 @@ Proof
     simp[Abbr `foo`] >> IF_CASES_TAC >> simp[] >>
     pop_assum mp_tac >> blastLib.BBLAST_TAC) >>
   simp[Abbr `foo`] >>
-  rpt (IF_CASES_TAC >> simp[]) >>
-  state_rel_tac[] >> pop_assum mp_tac >> blastLib.BBLAST_TAC
+  (
+    Cases_on `word_bit 55 addr` >> simp[]
+    >- (
+      Cases_on `l3.TCR_EL1.TBI1` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+    >- (
+      Cases_on `l3.TCR_EL1.TBI0` >> simp[] >> state_rel_tac[] >>
+      qpat_x_assum `word_bit _ _` mp_tac >> blastLib.BBLAST_TAC
+      )
+  )
 QED
 
 Theorem l3_models_asl_ExtractRegister:
@@ -3314,7 +3355,7 @@ Proof
   >- (pop_assum mp_tac >> rpt $ pop_assum kall_tac >> simp[asl_sys_regs_ok_def]) >>
   `CheckAlignment (addr,8,AccType_NORMAL,T) l3 = l3` by (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     simp[write'Mem_def] >>
     ntac 8 $ simp[Once state_transformerTheory.FOR_def] >>
     simp[state_transformerTheory.BIND_DEF] >>
@@ -3534,7 +3575,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def] >>
     simp[write'X_def] >> pairarg_tac >> simp[] >>
     qsuff_tac `s.exception ≠ NoException` >> rw[] >>
@@ -3683,7 +3724,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def] >>
     simp[write'X_def] >> pairarg_tac >> simp[] >>
     qsuff_tac `s.exception ≠ NoException` >> rw[] >>
@@ -3834,7 +3875,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def] >>
     simp[write'X_def] >> pairarg_tac >> simp[] >>
     qsuff_tac `s.exception ≠ NoException` >> rw[] >>
@@ -3900,7 +3941,7 @@ Theorem l3_models_asl_LoadStoreImmediate_NORMAL_LOAD_FFFFF:
 Proof
   rw[encode_rws] >> gvs[load_store_encode_lemma]
   >- simp[l3_models_asl_LoadStoreImmediate_NORMAL_LOAD_FFFFF_1] >>
-  Cases_on `word_bit 8 w` >> gvs[] >> pop_assum SUBST_ALL_TAC
+  Cases_on `word_bit 8 w` >> gvs[] >> qpat_x_assum `w = _` SUBST_ALL_TAC
   >- (
     assume_tac l3_models_asl_LoadStoreImmediate_NORMAL_LOAD_FFFFF_3 >>
     gvs[]
@@ -3977,7 +4018,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     rpt $ simp[Once state_transformerTheory.FOR_def,
@@ -4076,7 +4117,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     rpt $ simp[Once state_transformerTheory.FOR_def,
@@ -4179,7 +4220,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     rpt $ simp[Once state_transformerTheory.FOR_def,
@@ -4218,7 +4259,7 @@ Theorem l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF:
 Proof
   rw[encode_rws] >> gvs[load_store_encode_lemma]
   >- simp[l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_1] >>
-  Cases_on `word_bit 8 w` >> gvs[] >> pop_assum SUBST_ALL_TAC
+  Cases_on `word_bit 8 w` >> gvs[] >> qpat_x_assum `w = _` SUBST_ALL_TAC
   >- (
     assume_tac l3_models_asl_LoadStoreImmediate_NORMAL_STORE_FFFFF_3 >>
     gvs[]
@@ -4303,7 +4344,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     ntac 4 $ simp[Once state_transformerTheory.FOR_def,
@@ -4411,7 +4452,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     ntac 4 $ simp[Once state_transformerTheory.FOR_def,
@@ -4518,7 +4559,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     ntac 4 $ simp[Once state_transformerTheory.FOR_def,
@@ -4562,7 +4603,7 @@ Theorem l3_models_asl_LoadStoreImmediate_8_NORMAL_LOAD_FFFFF:
 Proof
   rw[encode_rws] >> gvs[load_store_encode_lemma]
   >- simp[l3_models_asl_LoadStoreImmediate_8_NORMAL_LOAD_FFFFF_1] >>
-  Cases_on `word_bit 8 w` >> gvs[] >> pop_assum SUBST_ALL_TAC
+  Cases_on `word_bit 8 w` >> gvs[] >> qpat_x_assum `w = _` SUBST_ALL_TAC
   >- (
     assume_tac l3_models_asl_LoadStoreImmediate_8_NORMAL_LOAD_FFFFF_3 >> gvs[]
     )
@@ -4635,7 +4676,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     rpt $ simp[Once state_transformerTheory.FOR_def,
@@ -4728,7 +4769,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     rpt $ simp[Once state_transformerTheory.FOR_def,
@@ -4823,7 +4864,7 @@ Proof
   drule l3_asl_CheckSPAlignment >> simp[] >> impl_keep_tac
   >- (
     qpat_x_assum `_ = NoException` mp_tac >> rpt $ pop_assum kall_tac >>
-    CCONTR_TAC >> gvs[] >> pop_assum mp_tac >> simp[] >>
+    CCONTR_TAC >> gvs[] >> last_x_assum mp_tac >> simp[] >>
     gvs[dfn'LoadStoreImmediate_def, LoadStoreSingle_def, write'Mem_def] >>
     gvs[CheckAlignment_def, raise'exception_def] >>
     rpt $ simp[Once state_transformerTheory.FOR_def,
@@ -4862,7 +4903,7 @@ Theorem l3_models_asl_LoadStoreImmediate_8_NORMAL_STORE_FFFFF:
 Proof
   rw[encode_rws] >> gvs[load_store_encode_lemma]
   >- simp[l3_models_asl_LoadStoreImmediate_8_NORMAL_STORE_FFFFF_1] >>
-  Cases_on `word_bit 8 w` >> gvs[] >> pop_assum SUBST_ALL_TAC
+  Cases_on `word_bit 8 w` >> gvs[] >> qpat_x_assum `w = _` SUBST_ALL_TAC
   >- (
     assume_tac l3_models_asl_LoadStoreImmediate_8_NORMAL_STORE_FFFFF_3 >>
     gvs[]
