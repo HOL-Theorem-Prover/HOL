@@ -8,10 +8,12 @@
 open HolKernel Parse boolLib bossLib;
 
 open combinTheory arithmeticTheory pred_setTheory pred_setLib logrootTheory
-     realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
-     real_topologyTheory numLib;
+     numLib hurdUtils topologyTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory extrealTheory measureTheory
+open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
+     real_topologyTheory;
+
+open util_probTheory sigma_algebraTheory extrealTheory measureTheory
      borelTheory lebesgueTheory martingaleTheory probabilityTheory;
 
 val _ = new_theory "large_number";
