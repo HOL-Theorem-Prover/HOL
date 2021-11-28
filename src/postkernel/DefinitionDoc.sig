@@ -12,6 +12,7 @@ sig
   val new_specification     : string * string list * thm -> thm
   val gen_new_specification : string * thm -> thm
 
-  val new_definition_hook   : ((term -> term list * term) * (term list * thm -> thm)) ref
+  val new_definition_hook   : ((term -> term list * term) *
+                               (term list * thm -> thm)) ref
 
 end

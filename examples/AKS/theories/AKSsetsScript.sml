@@ -13,40 +13,21 @@ val _ = new_theory "AKSsets";
 (* ------------------------------------------------------------------------- *)
 
 
-
-(* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
 (* Get dependent theories local *)
-(* val _ = load "AKSintroTheory"; *)
 open AKSintroTheory;
 open logPowerTheory; (* for perfect_power_condition *)
 
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
 open monoidTheory groupTheory ringTheory ringUnitTheory;
 
-(* (* val _ = load "fieldTheory"; *) *)
 open fieldTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* (* val _ = load "polyDivisionTheory"; *) *)
-(* (* val _ = load "polyBinomialTheory"; *) *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
+open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
+     polyBinomialTheory;
 
-(* (* val _ = load "polyMonicTheory"; *) *)
 open polyMonicTheory;
 
-(* (* val _ = load "polyFieldTheory"; *) *)
-(* (* val _ = load "polyFieldDivisionTheory"; *) *)
-(* val _ = load "polyFieldModuloTheory"; *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
@@ -60,24 +41,16 @@ open subgroupTheory;
 open monoidOrderTheory groupOrderTheory;
 
 (* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringTheory *) *)
 open helperNumTheory helperSetTheory helperFunctionTheory;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory;
 open dividesTheory gcdTheory;
 
-(* (* val _ = load "binomialTheory"; *) *)
 open binomialTheory;
 
-(* (* val _ = load "ringBinomialTheory"; *) *)
 open ringBinomialTheory;
 
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open monoidInstancesTheory;
 open groupInstancesTheory;
 open ringInstancesTheory;

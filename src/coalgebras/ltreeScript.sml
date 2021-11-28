@@ -689,11 +689,6 @@ Definition from_rose_def:
   from_rose (Rose a ts) = Branch a (fromList (MAP from_rose ts))
 Termination
   WF_REL_TAC `measure (rose_tree_size (K 0))` \\ rw []
-  \\ qsuff_tac
-       `!a ts. MEM a ts ==> rose_tree_size (K 0) a <= rose_tree1_size (K 0) ts`
-  THEN1 (rw [] \\ res_tac \\ fs []) \\ rpt (pop_assum kall_tac)
-  \\ Induct_on `ts` \\ fs [] \\ rw [] \\ res_tac
-  \\ fs [fetch "-" "rose_tree_size_def"]
 End
 
 Theorem rose_tree_induction = from_rose_ind;

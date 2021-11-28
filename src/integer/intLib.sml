@@ -5,6 +5,7 @@ struct
 
   val operators = [("+", intSyntax.plus_tm),
                    ("-", intSyntax.minus_tm),
+                   ("~", intSyntax.negate_tm),
                    ("numeric_negate", intSyntax.negate_tm),
                    ("*", intSyntax.mult_tm),
                    ("/", intSyntax.div_tm),

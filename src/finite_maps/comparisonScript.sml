@@ -67,15 +67,11 @@ val num_cmp_def = save_thm(
   "num_cmp_def",
   ternaryComparisonsTheory.num_compare_def)
 
-val _ = overload_on ("char_cmp", ``char_compare``);
-val char_cmp_def = save_thm(
-  "char_cmp_def",
-  ternaryComparisonsTheory.char_compare_def);
+Overload char_cmp = “char_compare”
+Theorem char_cmp_def = stringTheory.char_compare_def
 
-val _ = overload_on ("string_cmp", ``string_compare``);
-val string_cmp_def = save_thm(
-  "string_cmp_def",
-  ternaryComparisonsTheory.string_compare_def)
+Overload string_cmp = “string_compare”
+Theorem string_cmp_def = stringTheory.string_compare_def
 (* relationship to toto *)
 
 val TotOrder_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",

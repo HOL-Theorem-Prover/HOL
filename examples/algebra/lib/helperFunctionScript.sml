@@ -23,15 +23,16 @@ open helperNumTheory helperListTheory;
 open helperSetTheory;
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory;
+open pred_setTheory prim_recTheory arithmeticTheory;
 open dividesTheory gcdTheory;
 
 
 (* ------------------------------------------------------------------------- *)
 (* Helper Function Documentation                                             *)
 (* ------------------------------------------------------------------------- *)
-(* Overloading:
-   x == y (f)          = fequiv x y f
+(* Overloading/syntax:
+   (x == y) f          = fequiv x y f
+   feq                 = flip (flip o fequiv)
    RISING f            = !x:num. x <= f x
    FALLING f           = !x:num. f x <= x
    SQRT n              = ROOT 2 n
@@ -44,13 +45,12 @@ open dividesTheory gcdTheory;
 
    Function Equivalence as Relation:
    fequiv_def         |- !x y f. fequiv x y f <=> (f x = f y)
-#  fequiv_refl        |- !f x. (x == x) f
+   fequiv_refl        |- !f x. (x == x) f
    fequiv_sym         |- !f x y. (x == y) f ==> (y == x) f
    fequiv_trans       |- !f x y z. (x == y) f /\ (y == z) f ==> (x == z) f
    fequiv_equiv_class |- !f. (\x y. (x == y) f) equiv_on univ(:'a)
 
    Function-based Equivalence:
-   feq_def             |- !f x y. feq f x y <=> (f x = f y)
    feq_class_def       |- !s f n. feq_class f s n = {x | x IN s /\ (f x = n)}
    feq_class_element   |- !f s n x. x IN feq_class f s n <=> x IN s /\ (f x = n)
    feq_class_property  |- !f s x. feq_class f s (f x) = {y | y IN s /\ feq f x y}
@@ -309,24 +309,19 @@ open dividesTheory gcdTheory;
 (* ------------------------------------------------------------------------- *)
 
 (* For function f on a domain D, x, y in D are "equal" if f x = f y. *)
-val fequiv_def = Define`
+Definition fequiv_def:
   fequiv x y f <=> (f x = f y)
-`;
-
-val _ = overload_on ("==", ``fequiv``);
+End
+Overload "==" = ``fequiv``
 val _ = set_fixity "==" (Infix(NONASSOC, 450));
 
 (* Theorem: [Reflexive] (x == x) f *)
 (* Proof: by definition,
    and f x = f x.
 *)
-val fequiv_refl = store_thm(
-  "fequiv_refl",
-  ``!f x. (x == x) f``,
-  rw_tac std_ss[fequiv_def]);
-
-(* export simple definition *)
-val _ = export_rewrites ["fequiv_refl"];
+Theorem fequiv_refl[simp]:  !f x. (x == x) f
+Proof rw_tac std_ss[fequiv_def]
+QED
 
 (* Theorem: [Symmetric] (x == y) f ==> (y == x) f *)
 (* Proof: by defintion,
@@ -361,22 +356,12 @@ val fequiv_equiv_class = store_thm(
 (* Function-based Equivalence                                                *)
 (* ------------------------------------------------------------------------- *)
 
-(* Define an equivalence relation based on a function *)
-val feq_def = Define `
-   feq f x y = (f x = f y)
-`;
-
-(* Define equivalence class based on a function *)
-val feq_class_def = Define `
-   feq_class f s n = {x | x IN s /\ (f x = n)}
-`;
+Overload feq = “flip (flip o fequiv)”
+Overload feq_class[inferior] = “preimage”
 
 (* Theorem: x IN feq_class f s n <=> x IN s /\ (f x = n) *)
 (* Proof: by feq_class_def *)
-val feq_class_element = store_thm(
-  "feq_class_element",
-  ``!f s n x. x IN feq_class f s n <=> x IN s /\ (f x = n)``,
-  rw[feq_class_def]);
+Theorem feq_class_element = in_preimage
 
 (* Note:
     y IN equiv_class (feq f) s x
@@ -395,7 +380,7 @@ val feq_class_element = store_thm(
 val feq_class_property = store_thm(
   "feq_class_property",
   ``!f s x. feq_class f s (f x) = equiv_class (feq f) s x``,
-  (rw[feq_class_def, feq_def, EXTENSION] >> metis_tac[]));
+  rw[in_preimage, EXTENSION, fequiv_def] >> metis_tac[]);
 
 (* Theorem: (feq_class f s) o f = equiv_class (feq f) s *)
 (* Proof: by FUN_EQ_THM, feq_class_property *)
@@ -409,7 +394,7 @@ val feq_class_fun = store_thm(
 val feq_equiv = store_thm(
   "feq_equiv",
   ``!s f. feq f equiv_on s``,
-  rw[equiv_on_def, feq_def] >>
+  rw[equiv_on_def, fequiv_def] >>
   metis_tac[]);
 
 (* Theorem: partition (feq f) s = IMAGE ((feq_class f s) o f) s *)
@@ -427,14 +412,17 @@ val feq_equiv = store_thm(
 val feq_partition = store_thm(
   "feq_partition",
   ``!s f. partition (feq f) s = IMAGE ((feq_class f s) o f) s``,
-  (rw[partition_def, feq_def, feq_class_def, EXTENSION, EQ_IMP_THM] >> metis_tac[]));
+  rw[partition_def, fequiv_def, in_preimage, EXTENSION, EQ_IMP_THM] >>
+  metis_tac[]);
 
 (* Theorem: t IN partition (feq f) s <=> ?z. z IN s /\ (!x. x IN t <=> x IN s /\ (f x = f z)) *)
 (* Proof: by feq_partition, feq_class_def, EXTENSION *)
-val feq_partition_element = store_thm(
-  "feq_partition_element",
-  ``!s f t. t IN partition (feq f) s <=> ?z. z IN s /\ (!x. x IN t <=> x IN s /\ (f x = f z))``,
-  (rw[feq_partition, feq_class_def, EXTENSION] >> metis_tac[]));
+Theorem feq_partition_element:
+  !s f t. t IN partition (feq f) s <=>
+          ?z. z IN s /\ (!x. x IN t <=> x IN s /\ (f x = f z))
+Proof
+  rw[feq_partition, in_preimage, EXTENSION] >> metis_tac[]
+QED
 
 (* Theorem: x IN s <=> ?e. e IN partition (feq f) s /\ x IN e *)
 (* Proof:
@@ -458,18 +446,6 @@ Proof
   metis_tac[feq_equiv, partition_element_not_empty]
 QED
 
-(* Theorem: feq_class f s = preimage f s *)
-(* Proof:
-     feq_class f s n
-   = {x | x IN s /\ (f x = n)}          by feq_class_def
-   = preimage f s n                     by preimage_def
-   Hence feq_class f s = preimage f s   by FUN_EQ_THM
-*)
-val feq_class_eq_preimage = store_thm(
-  "feq_class_eq_preimage",
-  ``!f s. feq_class f s = preimage f s``,
-  rw[feq_class_def, preimage_def, FUN_EQ_THM]);
-
 (* Theorem: partition (feq f) s = IMAGE (preimage f s o f) s *)
 (* Proof:
        x IN partition (feq f) s
@@ -485,10 +461,7 @@ val feq_class_eq_preimage = store_thm(
    = IMAGE (feq_class f s o f) s     by feq_partition
    = IMAGE (preiamge f s o f) s      by feq_class_eq_preimage
 *)
-val feq_partition_by_preimage = store_thm(
-  "feq_partition_by_preimage",
-  ``!f s. partition (feq f) s = IMAGE (preimage f s o f) s``,
-  rw[feq_partition, feq_class_eq_preimage]);
+val feq_partition_by_preimage = feq_partition
 
 (* Theorem: FINITE s ==> !f g. SIGMA g s = SIGMA (SIGMA g) (partition (feq f) s) *)
 (* Proof:
@@ -520,7 +493,7 @@ val finite_card_by_feq_partition = store_thm(
 val finite_card_by_image_preimage = store_thm(
   "finite_card_by_image_preimage",
   ``!s. FINITE s ==> !f. CARD s = SIGMA CARD (IMAGE ((preimage f s) o f) s)``,
-  rw[feq_equiv, partition_CARD, GSYM feq_partition_by_preimage]);
+  rw[feq_equiv, partition_CARD, GSYM feq_partition]);
 
 (* Theorem: FINITE s /\ SURJ f s t ==>
             CARD s = SIGMA CARD (IMAGE (preimage f s) t) *)
@@ -559,7 +532,7 @@ Proof
   qabbrev_tac `g = preimage f s` >>
   qabbrev_tac `t = IMAGE f s` >>
   `BIJ g t (IMAGE g t)` by metis_tac[preimage_image_inj, INJ_IMAGE_BIJ] >>
-  simp[IMAGE_COMPOSE, feq_partition_by_preimage, Abbr`g`, Abbr`t`]
+  simp[IMAGE_COMPOSE, feq_partition, Abbr`g`, Abbr`t`]
 QED
 
 (* ------------------------------------------------------------------------- *)

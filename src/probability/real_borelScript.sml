@@ -3,7 +3,7 @@
 (* Author: Aaron Coble (2010)                                                *)
 (* Cambridge University                                                      *)
 (* ------------------------------------------------------------------------- *)
-(* Updated by Chun Tian (2020-2021) using some materials from:               *)
+(* Extended by Chun Tian (2020-2021) using some materials from:              *)
 (*                                                                           *)
 (*        Lebesgue Measure Theory (lebesgue_measure_hvgScript.sml)           *)
 (*                                                                           *)
@@ -46,7 +46,16 @@ val set_ss = std_ss ++ PRED_SET_ss;
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-(* The new definition is based on open sets. See "borel_def" for the old definition *)
+(* The new definition is based on open sets.
+
+   See martingaleTheory for 2-dimensional Borel space based on pairTheory
+   (term: ‘borel CROSS borel’).
+
+   See examples/probability/stochastic_processesTheory for n-dimensional Borel
+   spaces based on fcpTheory (term: ‘borel of_dimension(:'N)’).
+
+   See "borel_def" for the old definition.
+ *)
 Definition borel :
     borel = sigma univ(:real) {s | open s}
 End
@@ -1337,6 +1346,149 @@ Proof
       MATCH_MP_TAC in_borel_measurable_sqr >> METIS_TAC [] ]
 QED
 
+(* cf. borelTheory.IN_MEASURABLE_BOREL_MAX *)
+Theorem in_borel_measurable_max :
+    !a f g. f IN measurable a borel /\ g IN measurable a borel
+        ==> (\x. max (f x) (g x)) IN measurable a borel
+Proof
+    RW_TAC std_ss [in_borel_measurable_less, max_def, IN_FUNSET, IN_UNIV]
+ >> `!c. {x | x IN space a /\ (if f x <= g x then g x else f x) < c} =
+         {x | x IN space a /\ f x < c} INTER
+         {x | x IN space a /\ g x < c}`
+        by (rw [Once EXTENSION] \\
+            EQ_TAC >> rw [] >- METIS_TAC [REAL_LET_TRANS] \\
+            METIS_TAC [real_lte, REAL_LT_TRANS])
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []
+QED
+
+(* cf. borelTheory.IN_MEASURABLE_BOREL_MIN *)
+Theorem in_borel_measurable_min :
+    !a f g. f IN measurable a borel /\ g IN measurable a borel
+        ==> (\x. min (f x) (g x)) IN measurable a borel
+Proof
+    RW_TAC std_ss [in_borel_measurable_less, min_def, IN_FUNSET, IN_UNIV]
+ >> `!c. {x | x IN space a /\ (if f x <= g x then f x else g x) < c} =
+         {x | x IN space a /\ f x < c} UNION
+         {x | x IN space a /\ g x < c}`
+        by (rw [Once EXTENSION] \\
+            EQ_TAC >> rw [] >> rw [] >- METIS_TAC [REAL_LET_TRANS] \\
+            METIS_TAC [real_lte, REAL_LT_TRANS])
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art []
+QED
+
+(* cf. borelTheory.IN_MEASURABLE_BOREL_LT *)
+Theorem in_borel_measurable_lt2 :
+    !a f g. f IN measurable a borel /\ g IN measurable a borel ==>
+            {x | x IN space a /\ f x < g x} IN subsets a
+Proof
+    RW_TAC std_ss []
+ >> ‘sigma_algebra a’ by PROVE_TAC [in_borel_measurable]
+ >> `{x | x IN space a /\ f x < g x} =
+      BIGUNION (IMAGE (\r. {x | f x < r /\ r < g x} INTER space a) q_set)`
+        by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_INTER] \\
+            EQ_TAC >- RW_TAC std_ss [Q_DENSE_IN_REAL] \\
+            METIS_TAC [REAL_LT_TRANS])
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION >> art []
+ >> CONJ_TAC >- (MATCH_MP_TAC image_countable \\
+                 REWRITE_TAC [QSET_COUNTABLE])
+ >> rw [SUBSET_DEF]
+ >> `{x | f x < r /\ r < g x} INTER space a =
+     {x | x IN space a /\ f x < r} INTER {x | x IN space a /\ r < g x}` by SET_TAC []
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []
+ >> CONJ_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.PAT_X_ASSUM ‘f IN borel_measurable a’
+         (MP_TAC o (SIMP_RULE (srw_ss()) [in_borel_measurable_less, IN_FUNSET])) \\
+      RW_TAC std_ss [],
+      (* goal 2 (of 2) *)
+      Q.PAT_X_ASSUM ‘g IN borel_measurable a’
+         (MP_TAC o (SIMP_RULE (srw_ss()) [in_borel_measurable_gr, IN_FUNSET])) \\
+      RW_TAC std_ss [] ]
+QED
+
+(* cf. borelTheory.IN_MEASURABLE_BOREL_LE *)
+Theorem in_borel_measurable_le2 :
+    !a f g. f IN measurable a borel /\ g IN measurable a borel ==>
+            {x | x IN space a /\ f x <= g x} IN subsets a
+Proof
+    RW_TAC std_ss []
+ >> `{x | x IN space a /\ f x <= g x} = space a DIFF {x | x IN space a /\ g x < f x}`
+      by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_DIFF] \\
+          METIS_TAC [real_lte])
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_COMPL
+ >> rw [in_borel_measurable_lt2]
+ >> fs [in_borel_measurable]
+QED
+
+(* cf. borelTheory.IN_MEASURABLE_BOREL_MUL_INDICATOR *)
+Theorem in_borel_measurable_mul_indicator :
+    !a f s. f IN measurable a borel /\ s IN subsets a ==>
+            (\x. f x * indicator_fn s x) IN measurable a borel
+Proof
+    RW_TAC std_ss [in_borel_measurable_le, IN_FUNSET, IN_UNIV]
+ >> rename1 ‘{x | x IN space a /\ f x * indicator_fn s x <= c} IN subsets a’
+ >> Cases_on `0 <= c`
+ >- (`{x | x IN space a /\ f x * indicator_fn s x <= c} =
+      ({x | x IN space a /\ f x <= c} INTER s) UNION (space a DIFF s)`
+         by (RW_TAC std_ss [indicator_fn_def, EXTENSION, GSPECIFICATION, IN_INTER,
+                            IN_UNION, IN_DIFF] \\
+             Cases_on `x IN s` >> RW_TAC real_ss []) >> POP_ORW \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     reverse CONJ_TAC >- (MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art []) \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [])
+ >> `{x | x IN space a /\ f x * indicator_fn s x <= c} =
+     {x | x IN space a /\ f x <= c} INTER s`
+         by (RW_TAC std_ss [indicator_fn_def, EXTENSION, GSPECIFICATION, IN_INTER] \\
+             Cases_on `x IN s` >> RW_TAC real_ss []) >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []
+QED
+
+(* cf. borelTheory.in_measurable_sigma_pow for measure_space version *)
+Theorem in_measurable_sigma_pow' :
+    !a sp N f. sigma_algebra a /\
+               N SUBSET POW sp /\ f IN (space a -> sp) /\
+              (!y. y IN N ==> (PREIMAGE f y) INTER space a IN subsets a) ==>
+               f IN measurable a (sigma sp N)
+Proof
+    RW_TAC std_ss []
+ >> MATCH_MP_TAC MEASURABLE_SIGMA
+ >> rw [subset_class_def]
+ >> fs [SUBSET_DEF, IN_POW]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+(* cf. borelTheory.in_borel_measurable_imp' for measure_space version *)
+Theorem in_borel_measurable_open :
+    !a f. sigma_algebra a /\
+         (!s. open s ==> (PREIMAGE f s) INTER space a IN subsets a) ==>
+          f IN measurable a borel
+Proof
+    RW_TAC std_ss [borel]
+ >> MATCH_MP_TAC in_measurable_sigma_pow'
+ >> ASM_SIMP_TAC std_ss [IN_FUNSET, IN_UNIV]
+ >> CONJ_TAC >- SET_TAC [POW_DEF]
+ >> ASM_SET_TAC []
+QED
+
+Theorem in_borel_measurable_continuous_on : (* was: borel_measurable_continuous_on1 *)
+    !f. f continuous_on UNIV ==> f IN measurable borel borel
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC in_borel_measurable_open
+ >> rw [sigma_algebra_borel]
+ >> Know `open {x | x IN UNIV /\ f x IN s}`
+ >- (MATCH_MP_TAC CONTINUOUS_OPEN_PREIMAGE (* key lemma *) \\
+     ASM_SIMP_TAC std_ss [OPEN_UNIV])
+ >> DISCH_TAC
+ >> SIMP_TAC std_ss [PREIMAGE_def, space_borel, INTER_UNIV]
+ >> MATCH_MP_TAC borel_open >> fs []
+QED
+
 (************************************************************)
 (*  right-open (left-closed) intervals [a, b) in R          *)
 (************************************************************)
@@ -1877,7 +2029,6 @@ Proof
  >> `b <= y + e <=> b - e <= y` by REAL_ARITH_TAC >> POP_ORW
  >> Q.UNABBREV_TAC `y`
  >> MATCH_MP_TAC REAL_IMP_LE_SUP >> rw []
- >- (Q.EXISTS_TAC `a` >> rw [REAL_LE_REFL])
  >- (Q.EXISTS_TAC `b` >> rw [] \\
      MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
  >> Cases_on `a <= b - e`

@@ -14,7 +14,7 @@ val _ = new_theory "iterateCompute";
 
 
 (* open dependent theories *)
-val _ = load("iterateTheory");
+val _ = load("iterationTheory");
 open helperFunctionTheory;
 open helperSetTheory;
 open helperNumTheory;
@@ -23,7 +23,7 @@ open helperNumTheory;
 open arithmeticTheory pred_setTheory;
 open dividesTheory; (* for divides_def *)
 
-open iterateTheory;
+open iterationTheory;
 open listTheory;
 open listRangeTheory;
 open helperListTheory; (* for listRangeINC_SNOC *)

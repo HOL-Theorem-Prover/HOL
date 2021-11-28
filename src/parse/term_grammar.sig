@@ -135,7 +135,6 @@ sig
   val add_listform : grammar -> listspec -> grammar
   val listform_to_rule : listspec -> grule
 
-  val fixityToString : fixity -> string
   val add_rule : grule -> grammar -> grammar
   val add_delta : user_delta -> grammar -> grammar
   val add_deltas : user_delta list -> grammar -> grammar

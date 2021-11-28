@@ -32,8 +32,14 @@ in
   map dequote (tokenize (perform_substitution env [VREF id]))
 end
 
+fun println s = TextIO.print(s ^ "\n")
 
-
+fun chattiness_level (switches : HM_Core_Cline.t) =
+  case (#debug switches, #verbose switches, #quiet switches) of
+      (SOME _, _, _) => 3
+    | (_, true, _) => 2
+    | (_, _, true) => 0
+    | _ => 1
 
 fun main() = let
 
@@ -42,6 +48,14 @@ fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
               TextIO.flushOut TextIO.stdErr)
 fun die s = (warn s; Process.exit Process.failure)
 val original_dir = hmdir.curdir()
+
+fun is_src_dir hmd =
+    let val s = nice_dir (hmdir.pretty_dir hmd)
+    in
+      String.isPrefix "$(HOLDIR)/src/" s
+    end
+fun in_src () = is_src_dir (hmdir.curdir())
+val originally_in_src = is_src_dir original_dir
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
@@ -90,6 +104,8 @@ val (master_cline_options, cline_vars, targets) =
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
 
+val usepfx = #jobs (#core master_cline_nohmf) = 1
+
 fun read_holpathdb() =
     let
       val holpathdb_extensions =
@@ -109,29 +125,43 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
                     Binarymap.dict
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 
-(* Extend the base environment with vars passed at commandline. *)
+(* Extend the base environment with vars passed at commandline (foldl below),
+   as well as environment variables "magically" derived from other options,
+   (handled by HM_Core_Cline.extend_env). *)
 fun extend_with_cline_vars env =
-  List.foldl (fn (vstr, env) =>
-                case String.fields (fn x => x = #"=") vstr of
-                  [vname, contents] => env_extend (vname, [LIT contents]) env
-                | _ => die ("Malformed variable assignment " ^
-                            "passed at commandline: " ^ vstr))
-             env
-             cline_vars
+    let val env =
+            List.foldl (fn (vstr, env) =>
+                           case String.fields (fn x => x = #"=") vstr of
+                               [vname, contents] =>
+                                 env_extend (vname, [LIT contents]) env
+                             | _ => die ("Malformed variable assignment " ^
+                                         "passed at commandline: " ^ vstr))
+                       env
+                       cline_vars
+    in
+      HM_Core_Cline.extend_env (#core master_cline_nohmf) env
+    end
 
 local
   open hm_target
   val base = extend_with_cline_vars (read_holpathdb())
+  val coption_value = #core master_cline_nohmf
+  val (initial_outputfns as {warn,tgtfatal,diag,info,chatty}) =
+      output_functions {chattiness = chattiness_level coption_value,
+                        debug = #debug coption_value,
+                        usepfx = usepfx}
+
   val hmcache = ref (Binarymap.mkDict String.compare)
   val default = (base,empty_trdb,NONE)
   fun get_hmf0 d =
       if OS.FileSys.access("Holmakefile", [OS.FileSys.A_READ]) then
         let
           val (env, rdb, tgt0) =
-              ReadHMF.read "Holmakefile"
-                           (extend_with_cline_vars (read_holpathdb()))
+              ReadHMF.diagread {warn=warn,die=die,info=info}
+                               "Holmakefile"
+                               (extend_with_cline_vars (read_holpathdb()))
               handle Fail s =>
-                     (warn ("Bad Holmakefile in " ^ d ^ ": " ^ s);
+                     (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
                       (base,Binarymap.mkDict String.compare,NONE))
           fun hmfstr_to_tgt s = s |> filestr_to_tgt |> setHMF_text s
           fun foldthis (k,{commands,dependencies=deps0},A) =
@@ -202,13 +232,6 @@ val (start_hmenv, start_rules, start_tgt) = get_hmf()
 val start_envlist = envlist start_hmenv
 val start_options = start_envlist "OPTIONS"
 
-fun chattiness_level switches =
-  case (#debug switches, #verbose switches, #quiet switches) of
-      (SOME _, _, _) => 3
-    | (_, true, _) => 2
-    | (_, _, true) => 0
-    | _ => 1
-
 val option_value : HM_Cline.t =
     HM_Cline.default_options
       |> apply_updates (get_hmf_cline_updates start_hmenv)
@@ -218,11 +241,6 @@ val cmdl_HOLDIR = #holdir coption_value
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 
-
-val usepfx =
-  #jobs (#core
-           (HM_Cline.default_options |> apply_updates master_cline_options)) =
-  1
 
 (* things that need to be read out of the first Holmakefile, and which will
    govern the behaviour even when recursing into other directories that may
@@ -729,7 +747,7 @@ let
   val dir = hm_target.dirpart tgt and target = hm_target.filepart tgt
   val {preincludes,includes} = incinfo
   val incinfo = {preincludes = preincludes,
-                 includes = std_include_flags @ includes}
+                 includes = includes @ std_include_flags}
   val pdep = primary_dependent target
   val target_s = tgt_toString tgt
   val actual_dir = hmdir.curdir()
@@ -1012,11 +1030,13 @@ fun do_clean_target x = let
   fun clean_action () =
       Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans()}
 in
-  case x of
-      "clean" => clean_action()
-    | "cleanDeps" => ignore (clean_deps())
-    | "cleanAll" => (clean_action(); ignore (clean_deps()))
+  if originally_in_src orelse not (in_src()) then
+    case x of
+        "clean" => clean_action()
+      | "cleanDeps" => ignore (clean_deps())
+      | "cleanAll" => (clean_action(); ignore (clean_deps()))
     | _ => die ("Bad clean target " ^ x)
+  else ()
 end
 
 val _ = not cline_always_rebuild_deps orelse clean_deps()
@@ -1082,8 +1102,25 @@ fun work() =
                      (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph)
       in
         if cline_nobuild then
-          (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
-           OS.Process.success)
+          let val _ = print ("Dependency graph" ^
+                             HM_DepGraph.toString depgraph ^
+                             "\n\nTop-sorted:\n")
+              val sorted = HM_DepGraph.topo_sort depgraph
+              fun pr n =
+                  case HM_DepGraph.peeknode depgraph n of
+                      NONE => die ("No node " ^
+                                   HM_DepGraph.node_toString n)
+                    | SOME nI =>
+                      case #status nI of
+                          Pending {needed = true} =>
+                          print (hmdir.pretty_dir (#dir nI) ^
+                                 " - " ^
+                                 hm_target.toString (#target nI) ^ "\n")
+                        | _ => ()
+              val _ = app pr sorted
+          in
+            OS.Process.success
+          end
         else
           postmortem outputfns (build_graph depgraph)
           handle e => die ("Exception: "^General.exnMessage e)

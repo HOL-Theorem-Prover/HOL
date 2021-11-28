@@ -4,12 +4,13 @@
 
 open HolKernel Parse boolLib bossLib
 
-open metisLib arithmeticTheory pred_setTheory listTheory combinTheory
-     pairTheory realTheory realLib jrhUtils realSimps numTheory
-     simpLib seqTheory whileTheory real_sigmaTheory transcTheory limTheory;
+open metisLib numTheory arithmeticTheory pred_setTheory listTheory combinTheory
+     pairTheory jrhUtils hurdUtils simpLib whileTheory;
 
-open hurdUtils iterateTheory util_probTheory sigma_algebraTheory
-     real_measureTheory real_borelTheory;
+open realTheory realLib realSimps seqTheory real_sigmaTheory transcTheory
+     limTheory iterateTheory;
+
+open util_probTheory sigma_algebraTheory real_measureTheory real_borelTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "lebesgue"                                      *)
@@ -24,28 +25,41 @@ Theorem indicator_fn_def[local] = indicator
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-val pos_simple_fn_def = Define
-   `pos_simple_fn m f (s:num->bool) a x <=>
-        (!t. 0 <= f t) /\
+(* This defines a simple function ‘f’ in measurable space m by (s,a,x):
+
+   s is a (finite) num index set
+   a(i) (each i IN s) are mutually disjoint measurable sets in m,
+   x(i) are reals indicating the "height" of each a(i).
+
+   Then `f(t) = SIGMA (\i. x i * indicator_fn (a i) t) s` is a simple function.
+
+   BIGUNION and DISJOINT indicate that this is a standard representation.
+ *)
+Definition pos_simple_fn_def :
+    pos_simple_fn m f (s :num set) (a :num -> 'a set) (x :num -> real) =
+       ((!t. 0 <= f t) /\
         (!t. t IN m_space m ==> (f t = SIGMA (\i. (x i) * (indicator_fn (a i) t)) s)) /\
         (!i. i IN s ==> a i IN measurable_sets m) /\
         (!i. 0 <= x i) /\
         FINITE s /\
-        (!i j. i IN s /\ j IN s /\ (~(i=j)) ==> DISJOINT (a i) (a j)) /\
-        (BIGUNION (IMAGE a s) = m_space m)`;
+        (!i j. i IN s /\ j IN s /\ i <> j ==> DISJOINT (a i) (a j)) /\
+        (BIGUNION (IMAGE a s) = m_space m))
+End
 
-val pos_simple_fn_integral_def = Define
-   `pos_simple_fn_integral m s a x =
-        SIGMA (\i. (x i) * ((measure m) (a i))) s`;
+(* The integral of a positive simple function *)
+Definition pos_simple_fn_integral_def :
+    pos_simple_fn_integral (m :'a m_space)
+                           (s :num set) (a :num -> 'a set) (x :num -> real) =
+        SIGMA (\i. (x i) * (measure m (a i))) s
+End
 
-val psfs_def = Define
-   `psfs m f = {(s,a,x) | pos_simple_fn m f s a x}`;
+(* ‘psfs m f’ is the set of all positive simple functions equivalent to f *)
+Definition psfs_def :
+    psfs m f = {(s,a,x) | pos_simple_fn m f s a x}
+End
 
 val psfis_def = Define
    `psfis m f = IMAGE (\(s,a,x). pos_simple_fn_integral m s a x) (psfs m f)`;
-
-val pos_fn_integral_def = Define
-   `pos_fn_integral m f = sup {r:real | ?g. r IN psfis m g /\ !x. g x <= f x}`;
 
 val nonneg_def = Define
    `nonneg f = !x. 0 <= f x`;
@@ -56,8 +70,8 @@ val fn_plus_def = Define
 val fn_minus_def = Define
    `fn_minus f = (\x. if 0 <= f x then 0 else ~ f x)`;
 
-val mono_increasing_def = Define
-   `mono_increasing (f:num->real) <=> !m n. m <= n ==> f m <= f n`;
+val pos_fn_integral_def = Define
+   `pos_fn_integral m f = sup {r:real | ?g. r IN psfis m g /\ !x. g x <= f x}`;
 
 (* c.f. "pos_fn_integral_def" in (new) lebesgueScript.sml *)
 val nnfis_def = Define
@@ -95,12 +109,27 @@ val prod_measure_def = Define
    `prod_measure m0 m1 =
         (\a. integral m0 (\s0. (measure m1) (PREIMAGE (\s1. (s0,s1)) a)))`;
 
+(* cf. martingaleTheory.prod_measure_def for the extreal-based version *)
 val prod_measure_space_def = Define
    `prod_measure_space m0 m1 =
         ((m_space m0) CROSS (m_space m1),
          subsets (sigma ((m_space m0) CROSS (m_space m1))
                         (prod_sets (measurable_sets m0) (measurable_sets m1))),
          prod_measure m0 m1)`;
+
+val prod_sets3_def = Define
+   `prod_sets3 (a :'a set set) (b :'b set set) (c :'c set set) =
+       {s CROSS (t CROSS u) | s IN a /\ t IN b /\ u IN c}`;
+
+val prod_measure3_def = Define
+   `prod_measure3 m0 m1 m2 = prod_measure m0 (prod_measure_space m1 m2)`;
+
+val prod_measure_space3_def = Define
+   `prod_measure_space3 m0 m1 m2 =
+      (m_space m0 CROSS (m_space m1 CROSS m_space m2),
+       subsets (sigma (m_space m0 CROSS (m_space m1 CROSS m_space m2))
+                      (prod_sets3 (measurable_sets m0) (measurable_sets m1) (measurable_sets m2))),
+       prod_measure3 m0 m1 m2)`;
 
 val RN_deriv_def = Define
    `RN_deriv m v =
@@ -1052,44 +1081,6 @@ val psfis_nonneg = store_thm
    >> (MP_TAC o Q.ISPEC `(r :(num -> 'a -> bool) # (num -> real))`) pair_CASES
    >> RW_TAC std_ss []
    >> FULL_SIMP_TAC std_ss [PAIR_EQ, pos_simple_fn_def]);
-
-val mono_increasing_converges_to_sup = store_thm
-  ("mono_increasing_converges_to_sup",
- ``!f r. (!i. 0 <= f i) /\ mono_increasing f /\ f --> r ==>
-          (r = sup (IMAGE f UNIV))``,
-   RW_TAC std_ss [mono_increasing_def]
-   >> Suff `f --> sup (IMAGE f UNIV)`
-   >- METIS_TAC [SEQ_UNIQ]
-   >> RW_TAC std_ss [SEQ]
-   >> (MP_TAC o Q.ISPECL [`IMAGE (f:num->real) UNIV`,`e:real/2`]) SUP_EPSILON
-   >> SIMP_TAC std_ss [REAL_LT_HALF1]
-   >> `!y x z. IMAGE f UNIV x <=> x IN IMAGE f UNIV` by RW_TAC std_ss [IN_DEF]
-   >> POP_ORW
-   >> Know `(?z. !x. x IN IMAGE f UNIV ==> x <= z)`
-   >- (Q.EXISTS_TAC `r` >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
-            >> MATCH_MP_TAC SEQ_MONO_LE
-            >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``])
-   >> SIMP_TAC std_ss [] >> STRIP_TAC >> POP_ASSUM (K ALL_TAC)
-   >> RW_TAC std_ss [IN_IMAGE, IN_UNIV, GSYM ABS_BETWEEN, GREATER_EQ]
-   >> Q.EXISTS_TAC `x'`
-   >> RW_TAC std_ss [REAL_LT_SUB_RADD]
-   >- (MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `f x' + e / 2`
-       >> RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LET_TRANS
-       >> Q.EXISTS_TAC `f n + e / 2` >> RW_TAC std_ss [REAL_LE_ADD2, REAL_LE_REFL]
-       >> MATCH_MP_TAC REAL_LT_IADD >> RW_TAC std_ss [REAL_LT_HALF2])
-   >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `sup (IMAGE f UNIV)`
-   >> RW_TAC std_ss [REAL_LT_ADDR]
-   >> Suff `!y. (\y. y IN IMAGE f UNIV) y ==> y <= sup (IMAGE f UNIV)`
-   >- METIS_TAC [IN_IMAGE, IN_UNIV]
-   >> SIMP_TAC std_ss [IN_DEF]
-   >> MATCH_MP_TAC REAL_SUP_UBOUND_LE
-   >> `!y x z. IMAGE f UNIV x <=> x IN IMAGE f UNIV` by RW_TAC std_ss [IN_DEF]
-   >> POP_ORW
-   >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
-   >> Q.EXISTS_TAC `r`
-   >> RW_TAC std_ss []
-   >> MATCH_MP_TAC SEQ_MONO_LE
-   >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``]);
 
 val IN_psfis = store_thm
   ("IN_psfis",
@@ -2385,20 +2376,22 @@ val markov_ineq = store_thm
    >> `0 <= f t` by METIS_TAC [REAL_LE_TRANS, REAL_LT_IMP_LE]
    >> RW_TAC real_ss [abs, REAL_LT_IMP_LE]);
 
-val finite_space_integral_reduce = store_thm
-  ("finite_space_integral_reduce",
-  ``!m f. measure_space m /\
+Theorem finite_space_integral_reduce :
+    !m f. measure_space m /\
           f IN borel_measurable (m_space m, measurable_sets m) /\
-          FINITE (m_space m) ==> (integral m f = finite_space_integral m f)``,
-   rpt STRIP_TAC
-   >> `?c n. BIJ c (count n) (IMAGE f (m_space m))`
+          FINITE (m_space m) ==> (integral m f = finite_space_integral m f)
+Proof
+    rpt STRIP_TAC
+ >> `?c n. BIJ c (count n) (IMAGE f (m_space m))`
        by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ, IMAGE_FINITE]
-   >> `pos_simple_fn m (fn_plus f)
+ >> Know `pos_simple_fn m (fn_plus f)
         (count n) (\i. PREIMAGE f {c i} INTER m_space m) (\i. if 0 <= c i then c i else 0) /\
         pos_simple_fn m (fn_minus f)
         (count n) (\i. PREIMAGE f {c i} INTER m_space m) (\i. if c i <= 0 then ~ c i else 0)`
-    by (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT]
-   >| [RW_TAC real_ss [fn_plus_def],
+ >- (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT] >| (* 12 subgoals *)
+     [ (* goal 1 (of 12) *)
+       RW_TAC real_ss [fn_plus_def],
+       (* goal 2 (of 12) *)
        `FINITE (count n)` by RW_TAC std_ss [FINITE_COUNT]
        >> ONCE_REWRITE_TAC [(UNDISCH o Q.ISPEC `count n`) REAL_SUM_IMAGE_IN_IF]
        >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
@@ -2422,21 +2415,28 @@ val finite_space_integral_reduce = store_thm
        >> (MP_TAC o Q.SPECL [`\x.0`, `0`] o UNDISCH o Q.ISPEC `count n DELETE i`)
                 REAL_SUM_IMAGE_FINITE_CONST
        >> RW_TAC real_ss [fn_plus_def],
+       (* goal 3 (of 12) *)
        `PREIMAGE f {c i} INTER m_space m =
         {w | w IN m_space m /\ (f w = (\n. c i) w)}`
-                by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_PREIMAGE, IN_SING, GSPECIFICATION, CONJ_SYM])
+          by (ONCE_REWRITE_TAC [EXTENSION] \\
+              RW_TAC std_ss [IN_INTER, IN_PREIMAGE, IN_SING, GSPECIFICATION, CONJ_SYM])
         >> POP_ORW
         >> MATCH_MP_TAC borel_measurable_eq_borel_measurable
         >> METIS_TAC [borel_measurable_const, measure_space_def],
+       (* goal 4 (of 12) *)
         RW_TAC real_ss [],
+       (* goal 5 (of 12) *)
         RW_TAC std_ss [DISJOINT_DEF]
         >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, NOT_IN_EMPTY, IN_PREIMAGE, IN_SING]
         >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE] >> METIS_TAC [],
+       (* goal 6 (of 12) *)
         ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_INTER, IN_PREIMAGE, IN_SING]
         >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
         >> METIS_TAC [],
+       (* goal 7 (of 12) *)
         RW_TAC real_ss [fn_minus_def, REAL_LT_IMP_LE, REAL_LE_RNEG]
         >> FULL_SIMP_TAC std_ss [GSYM real_lt, REAL_LT_IMP_LE],
+       (* goal 8 (of 12) *)
         `FINITE (count n)` by RW_TAC std_ss [FINITE_COUNT]
        >> ONCE_REWRITE_TAC [(UNDISCH o Q.ISPEC `count n`) REAL_SUM_IMAGE_IN_IF]
        >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
@@ -2459,43 +2459,59 @@ val finite_space_integral_reduce = store_thm
        >> SIMP_TAC std_ss [IN_DELETE]
        >> (MP_TAC o Q.SPECL [`\x.0`, `0`] o UNDISCH o Q.ISPEC `count n DELETE i`)
                 REAL_SUM_IMAGE_FINITE_CONST
-       >> RW_TAC real_ss [fn_minus_def] >> METIS_TAC [real_lt, REAL_LT_ANTISYM, REAL_LE_ANTISYM, REAL_NEG_0],
+       >> RW_TAC real_ss [fn_minus_def]
+       >> METIS_TAC [real_lt, REAL_LT_ANTISYM, REAL_LE_ANTISYM, REAL_NEG_0],
+       (* goal 9 (of 12) *)
        `PREIMAGE f {c i} INTER m_space m =
         {w | w IN m_space m /\ (f w = (\n. c i) w)}`
-                by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_PREIMAGE, IN_SING, GSPECIFICATION, CONJ_SYM])
+           by (ONCE_REWRITE_TAC [EXTENSION] \\
+               RW_TAC std_ss [IN_INTER, IN_PREIMAGE, IN_SING, GSPECIFICATION, CONJ_SYM])
         >> POP_ORW
         >> MATCH_MP_TAC borel_measurable_eq_borel_measurable
         >> METIS_TAC [borel_measurable_const, measure_space_def],
+       (* goal 10 (of 12) *)
         RW_TAC real_ss [REAL_LE_RNEG],
+       (* goal 11 (of 12) *)
         RW_TAC std_ss [DISJOINT_DEF]
         >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, NOT_IN_EMPTY, IN_PREIMAGE, IN_SING]
         >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE] >> METIS_TAC [],
-        ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_INTER, IN_PREIMAGE, IN_SING]
+       (* goal 12 (of 12) *)
+        ONCE_REWRITE_TAC [EXTENSION]
+        >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_INTER, IN_PREIMAGE, IN_SING]
         >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
-        >> METIS_TAC []])
-   >> RW_TAC std_ss [finite_space_integral_def]
-   >> `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m) (\i. (if 0 <= c i then c i else 0))
+        >> METIS_TAC [] ])
+ >> DISCH_TAC
+ >> RW_TAC std_ss [finite_space_integral_def]
+ >> `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m)
+                                        (\i. (if 0 <= c i then c i else 0))
         IN nnfis m (fn_plus f)`
         by (MATCH_MP_TAC psfis_nnfis
             >> RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
-            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m), (\i. (if 0 <= c i then c i else 0)))`
+            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m),
+                                         (\i. (if 0 <= c i then c i else 0)))`
             >> RW_TAC std_ss []
-            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m), (\i. (if 0 <= c i then c i else 0)))`
+            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m),
+                                         (\i. (if 0 <= c i then c i else 0)))`
             >> RW_TAC std_ss [])
-   >> `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m) (\i. (if c i <= 0 then ~ c i else 0))
+ >> `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m)
+                                        (\i. (if c i <= 0 then ~ c i else 0))
         IN nnfis m (fn_minus f)`
         by (MATCH_MP_TAC psfis_nnfis
             >> RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
-            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m), (\i. (if c i <= 0 then ~ c i else 0)))`
+            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m),
+                                         (\i. (if c i <= 0 then ~ c i else 0)))`
             >> RW_TAC std_ss []
-            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m), (\i. (if c i <= 0 then ~ c i else 0)))`
+            >> Q.EXISTS_TAC `((count n), (\i. PREIMAGE f {c i} INTER m_space m),
+                                         (\i. (if c i <= 0 then ~ c i else 0)))`
             >> RW_TAC std_ss [])
    >> `!f. (\t. fn_plus f t - fn_minus f t) = f`
         by (RW_TAC real_ss [fn_plus_def, fn_minus_def, Once FUN_EQ_THM]
             >> RW_TAC real_ss [])
    >> (MP_TAC o Q.SPECL [`m`, `fn_plus f`, `fn_minus f`,
-        `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m) (\i. (if 0 <= c i then c i else 0))`,
-        `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m) (\i. (if c i <= 0 then ~ c i else 0))`])
+        `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m)
+                                            (\i. (if 0 <= c i then c i else 0))`,
+        `pos_simple_fn_integral m (count n) (\i. PREIMAGE f {c i} INTER m_space m)
+                                            (\i. (if c i <= 0 then ~ c i else 0))`])
         nnfis_minus_nnfis_integral
    >> RW_TAC std_ss [pos_simple_fn_integral_def, real_sub]
    >> `!x. ~x = ~1 * x` by RW_TAC real_ss [] >> POP_ORW
@@ -2520,7 +2536,8 @@ val finite_space_integral_reduce = store_thm
         by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE]
             >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
             >> METIS_TAC [])
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
 val integral_cmul_indicator = store_thm
   ("integral_cmul_indicator",
@@ -3181,7 +3198,7 @@ Proof
      >> FULL_SIMP_TAC std_ss [sums, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_UNIV]
      >> Q.EXISTS_TAC `(\n t. if t IN m_space m /\
                                 fn_plus f t IN IMAGE (enumerate (IMAGE (fn_plus f) (m_space m)))
-                                               (pred_set$count n)
+                                               (count n)
                              then fn_plus f t else 0)`
      >> Q.EXISTS_TAC `(\n.
          sum (0,n)
@@ -3192,49 +3209,49 @@ Proof
      >> ASM_SIMP_TAC std_ss []
      >> CONJ_TAC
      >- (RW_TAC std_ss [mono_convergent_def]
-           >- (RW_TAC real_ss [IN_IMAGE, pred_setTheory.IN_COUNT, fn_plus_def] >> METIS_TAC [LESS_LESS_EQ_TRANS])
+           >- (RW_TAC real_ss [IN_IMAGE, IN_COUNT, fn_plus_def] >> METIS_TAC [LESS_LESS_EQ_TRANS])
            >> RW_TAC std_ss [SEQ]
            >> `?N. enumerate (IMAGE (fn_plus f) (m_space m)) N = (fn_plus f) t`
                 by METIS_TAC [IN_IMAGE]
            >> Q.EXISTS_TAC `SUC N`
            >> RW_TAC real_ss [GREATER_EQ, real_ge, IN_IMAGE, REAL_SUB_LZERO]
-           >> FULL_SIMP_TAC std_ss [pred_setTheory.IN_COUNT]
+           >> FULL_SIMP_TAC std_ss [IN_COUNT]
            >> METIS_TAC [DECIDE ``!n:num. n < SUC n``, LESS_LESS_EQ_TRANS, fn_plus_def])
      >> STRIP_TAC >> MATCH_MP_TAC psfis_nnfis
      >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_COUNT]
-     >> `(\t. (if t IN m_space m /\ fn_plus f t IN IMAGE (enumerate (IMAGE (fn_plus f) (m_space m))) (pred_set$count n')
+     >> `(\t. (if t IN m_space m /\ fn_plus f t IN IMAGE (enumerate (IMAGE (fn_plus f) (m_space m))) (count n')
                  then fn_plus f t else  0)) =
                 (\t. SIGMA (\i. (\i. enumerate (IMAGE (fn_plus f) (m_space m)) i) i *
                         indicator_fn ((\i. PREIMAGE (fn_plus f) {enumerate (IMAGE (fn_plus f) (m_space m)) i}
                                            INTER (m_space m)) i) t)
-                     (pred_set$count n'))`
+                     (count n'))`
                 by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [IN_IMAGE]
-                    >- (`pred_set$count n' = x INSERT (pred_set$count n')`
+                    >- (`count n' = x INSERT (count n')`
                                 by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INSERT] >> METIS_TAC [])
                         >> POP_ORW
-                        >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, pred_setTheory.FINITE_COUNT]
-                        >> ONCE_REWRITE_TAC [(REWRITE_RULE [pred_setTheory.FINITE_COUNT] o
-                                REWRITE_RULE [FINITE_DELETE] o Q.ISPEC `pred_set$count n' DELETE x`) REAL_SUM_IMAGE_IN_IF]
+                        >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, FINITE_COUNT]
+                        >> ONCE_REWRITE_TAC [(REWRITE_RULE [FINITE_COUNT] o
+                                REWRITE_RULE [FINITE_DELETE] o Q.ISPEC `count n' DELETE x`) REAL_SUM_IMAGE_IN_IF]
                         >> RW_TAC real_ss [IN_DELETE, indicator_fn_def, IN_INTER, IN_SING, IN_PREIMAGE]
-                        >> `(\x'. (if x' IN pred_set$count n' /\ ~(x' = x) then
+                        >> `(\x'. (if x' IN count n' /\ ~(x' = x) then
                                 enumerate (IMAGE (fn_plus f) (m_space m)) x' *
                                 (if enumerate (IMAGE (fn_plus f) (m_space m)) x =
                                 enumerate (IMAGE (fn_plus f) (m_space m)) x'
                                 then 1 else 0) else 0)) = (\x. 0)`
                                 by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [] >> METIS_TAC [])
                         >> POP_ORW
-                        >> RW_TAC real_ss [REAL_SUM_IMAGE_0, pred_setTheory.FINITE_COUNT, FINITE_DELETE])
+                        >> RW_TAC real_ss [REAL_SUM_IMAGE_0, FINITE_COUNT, FINITE_DELETE])
                     >> FULL_SIMP_TAC real_ss [IN_IMAGE, indicator_fn_def, IN_INTER, IN_PREIMAGE, IN_SING]
-                    >- RW_TAC real_ss [REAL_SUM_IMAGE_0, pred_setTheory.FINITE_COUNT, FINITE_DELETE]
-                    >> ONCE_REWRITE_TAC [(REWRITE_RULE [pred_setTheory.FINITE_COUNT] o Q.ISPEC `pred_set$count n'`)
+                    >- RW_TAC real_ss [REAL_SUM_IMAGE_0, FINITE_COUNT, FINITE_DELETE]
+                    >> ONCE_REWRITE_TAC [(REWRITE_RULE [FINITE_COUNT] o Q.ISPEC `count n'`)
                         REAL_SUM_IMAGE_IN_IF]
-                    >> `(\x. (if x IN pred_set$count n' then
+                    >> `(\x. (if x IN count n' then
                         (\i. enumerate (IMAGE (fn_plus f) (m_space m)) i *
                         (if (fn_plus f t = enumerate (IMAGE (fn_plus f) (m_space m)) i) /\
                          t IN m_space m then 1 else 0)) x else 0)) = (\x. 0)`
                         by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [] >> METIS_TAC [])
                     >> POP_ORW
-                    >> RW_TAC real_ss [REAL_SUM_IMAGE_0, pred_setTheory.FINITE_COUNT])
+                    >> RW_TAC real_ss [REAL_SUM_IMAGE_0, FINITE_COUNT])
      >> POP_ORW
      >> `((\r. r * measure m (PREIMAGE (fn_plus f) {r} INTER m_space m)) o
                 enumerate (IMAGE (fn_plus f) (m_space m))) =
@@ -3246,7 +3263,7 @@ Proof
                 by (RW_TAC std_ss [FUN_EQ_THM, o_DEF] >> RW_TAC real_ss [])
      >> POP_ORW
      >> MATCH_MP_TAC psfis_intro
-     >> ASM_SIMP_TAC std_ss [pred_setTheory.FINITE_COUNT]
+     >> ASM_SIMP_TAC std_ss [FINITE_COUNT]
      >> reverse CONJ_TAC
      >- (FULL_SIMP_TAC real_ss [IN_IMAGE, fn_plus_def]
          >> METIS_TAC [REAL_LE_REFL])
@@ -3254,76 +3271,76 @@ Proof
                 by METIS_TAC [fn_plus_fn_minus_borel_measurable]
      >> rpt STRIP_TAC
      >> `PREIMAGE (fn_plus f) {enumerate (IMAGE (fn_plus f) (m_space m)) i} INTER m_space m =
-                {w | w IN m_space m /\ ((fn_plus f) w = (\w. enumerate (IMAGE (fn_plus f) (m_space m)) i) w)}`
-                by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [GSPECIFICATION, IN_INTER, IN_PREIMAGE, IN_SING]
-                    >> DECIDE_TAC)
+         {w | w IN m_space m /\ ((fn_plus f) w = (\w. enumerate (IMAGE (fn_plus f) (m_space m)) i) w)}`
+           by (ONCE_REWRITE_TAC [EXTENSION] \\
+               RW_TAC std_ss [GSPECIFICATION, IN_INTER, IN_PREIMAGE, IN_SING] \\
+               DECIDE_TAC)
      >> POP_ORW
      >> MATCH_MP_TAC borel_measurable_eq_borel_measurable
      >> METIS_TAC [borel_measurable_const, measure_space_def])
  >> Suff `n IN nnfis m (fn_minus f)` >- METIS_TAC [nnfis_unique]
  >> MATCH_MP_TAC nnfis_mon_conv
  >> `BIJ (enumerate(IMAGE (fn_minus f) (m_space m))) UNIV (IMAGE (fn_minus f) (m_space m))`
-                by (`countable (IMAGE (fn_minus f) (m_space m))`
-                        by (MATCH_MP_TAC COUNTABLE_SUBSET
-                            >> Q.EXISTS_TAC `0 INSERT (IMAGE abs (IMAGE f (m_space m)))`
-                            >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, abs, fn_minus_def, countable_INSERT, IN_INSERT, image_countable]
-                            >> METIS_TAC [])
-                     >> METIS_TAC [COUNTABLE_ALT_BIJ])
+      by (`countable (IMAGE (fn_minus f) (m_space m))`
+            by (MATCH_MP_TAC COUNTABLE_SUBSET \\
+                Q.EXISTS_TAC `0 INSERT (IMAGE abs (IMAGE f (m_space m)))` \\
+                RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, abs, fn_minus_def, countable_INSERT,
+                               IN_INSERT, image_countable] \\
+                METIS_TAC []) \\
+          METIS_TAC [COUNTABLE_ALT_BIJ])
  >> FULL_SIMP_TAC std_ss [sums, BIJ_DEF, INJ_DEF, SURJ_DEF, IN_UNIV]
- >> Q.EXISTS_TAC `(\n t. if t IN m_space m /\ fn_minus f t IN IMAGE (enumerate (IMAGE (fn_minus f) (m_space m)))
-                        (pred_set$count n) then fn_minus f t else 0)`
- >> Q.EXISTS_TAC `(\n.
-         sum (0,n)
-           ((\r.
-               r *
-               measure m (PREIMAGE (fn_minus f) {r} INTER m_space m)) o
-            enumerate (IMAGE (fn_minus f) (m_space m))))`
+ >> Q.EXISTS_TAC `(\n t. if t IN m_space m /\
+                            fn_minus f t IN IMAGE (enumerate (IMAGE (fn_minus f) (m_space m))) (count n)
+                         then fn_minus f t else 0)`
+ >> Q.EXISTS_TAC `(\n. sum (0,n)
+                        ((\r. r * measure m (PREIMAGE (fn_minus f) {r} INTER m_space m)) o
+                         enumerate (IMAGE (fn_minus f) (m_space m))))`
  >> ASM_SIMP_TAC std_ss []
  >> CONJ_TAC
  >- (RW_TAC std_ss [mono_convergent_def]
-           >- (RW_TAC real_ss [IN_IMAGE, pred_setTheory.IN_COUNT, fn_minus_def] >> METIS_TAC [LESS_LESS_EQ_TRANS, REAL_LE_NEGTOTAL])
+           >- (RW_TAC real_ss [IN_IMAGE, IN_COUNT, fn_minus_def] >> METIS_TAC [LESS_LESS_EQ_TRANS, REAL_LE_NEGTOTAL])
            >> RW_TAC std_ss [SEQ]
            >> `?N. enumerate (IMAGE (fn_minus f) (m_space m)) N = (fn_minus f) t`
                 by METIS_TAC [IN_IMAGE]
            >> Q.EXISTS_TAC `SUC N`
            >> RW_TAC real_ss [GREATER_EQ, real_ge, IN_IMAGE, REAL_SUB_LZERO]
-           >> FULL_SIMP_TAC std_ss [pred_setTheory.IN_COUNT]
+           >> FULL_SIMP_TAC std_ss [IN_COUNT]
            >> METIS_TAC [DECIDE ``!n:num. n < SUC n``, LESS_LESS_EQ_TRANS, fn_minus_def])
  >> STRIP_TAC >> MATCH_MP_TAC psfis_nnfis
  >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_COUNT]
- >> `(\t. (if t IN m_space m /\ fn_minus f t IN IMAGE (enumerate (IMAGE (fn_minus f) (m_space m))) (pred_set$count n')
+ >> `(\t. (if t IN m_space m /\ fn_minus f t IN IMAGE (enumerate (IMAGE (fn_minus f) (m_space m))) (count n')
              then fn_minus f t else  0)) =
                 (\t. SIGMA (\i. (\i. enumerate (IMAGE (fn_minus f) (m_space m)) i) i *
                         indicator_fn ((\i. PREIMAGE (fn_minus f) {enumerate (IMAGE (fn_minus f) (m_space m)) i}
                                            INTER (m_space m)) i) t)
-                     (pred_set$count n'))`
+                     (count n'))`
                 by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [IN_IMAGE]
-                    >- (`pred_set$count n' = x INSERT (pred_set$count n')`
+                    >- (`count n' = x INSERT (count n')`
                                 by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INSERT] >> METIS_TAC [])
                         >> POP_ORW
-                        >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, pred_setTheory.FINITE_COUNT]
-                        >> ONCE_REWRITE_TAC [(REWRITE_RULE [pred_setTheory.FINITE_COUNT] o
-                                REWRITE_RULE [FINITE_DELETE] o Q.ISPEC `pred_set$count n' DELETE x`) REAL_SUM_IMAGE_IN_IF]
+                        >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, FINITE_COUNT]
+                        >> ONCE_REWRITE_TAC [(REWRITE_RULE [FINITE_COUNT] o
+                                REWRITE_RULE [FINITE_DELETE] o Q.ISPEC `count n' DELETE x`) REAL_SUM_IMAGE_IN_IF]
                         >> RW_TAC real_ss [IN_DELETE, indicator_fn_def, IN_INTER, IN_SING, IN_PREIMAGE]
-                        >> `(\x'. (if x' IN pred_set$count n' /\ ~(x' = x) then
+                        >> `(\x'. (if x' IN count n' /\ ~(x' = x) then
                                 enumerate (IMAGE (fn_minus f) (m_space m)) x' *
                                 (if enumerate (IMAGE (fn_minus f) (m_space m)) x =
                                 enumerate (IMAGE (fn_minus f) (m_space m)) x'
                                 then 1 else 0) else 0)) = (\x. 0)`
                                 by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [] >> METIS_TAC [])
                         >> POP_ORW
-                        >> RW_TAC real_ss [REAL_SUM_IMAGE_0, pred_setTheory.FINITE_COUNT, FINITE_DELETE])
+                        >> RW_TAC real_ss [REAL_SUM_IMAGE_0, FINITE_COUNT, FINITE_DELETE])
                     >> FULL_SIMP_TAC real_ss [IN_IMAGE, indicator_fn_def, IN_INTER, IN_PREIMAGE, IN_SING]
-                    >- RW_TAC real_ss [REAL_SUM_IMAGE_0, pred_setTheory.FINITE_COUNT, FINITE_DELETE]
-                    >> ONCE_REWRITE_TAC [(REWRITE_RULE [pred_setTheory.FINITE_COUNT] o Q.ISPEC `pred_set$count n'`)
-                        REAL_SUM_IMAGE_IN_IF]
-                    >> `(\x. (if x IN pred_set$count n' then
+                    >- RW_TAC real_ss [REAL_SUM_IMAGE_0, FINITE_COUNT, FINITE_DELETE]
+                    >> ONCE_REWRITE_TAC [((REWRITE_RULE [FINITE_COUNT]) o
+                                          (Q.ISPEC `count n'`)) REAL_SUM_IMAGE_IN_IF]
+                    >> `(\x. (if x IN count n' then
                         (\i. enumerate (IMAGE (fn_minus f) (m_space m)) i *
                         (if (fn_minus f t = enumerate (IMAGE (fn_minus f) (m_space m)) i) /\
                          t IN m_space m then 1 else 0)) x else 0)) = (\x. 0)`
                         by (RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC real_ss [] >> METIS_TAC [])
                     >> POP_ORW
-                    >> RW_TAC real_ss [REAL_SUM_IMAGE_0, pred_setTheory.FINITE_COUNT])
+                    >> RW_TAC real_ss [REAL_SUM_IMAGE_0, FINITE_COUNT])
  >> POP_ORW
  >> `((\r. r * measure m (PREIMAGE (fn_minus f) {r} INTER m_space m)) o
                 enumerate (IMAGE (fn_minus f) (m_space m))) =
@@ -3335,7 +3352,7 @@ Proof
                 by (RW_TAC std_ss [FUN_EQ_THM, o_DEF] >> RW_TAC real_ss [])
  >> POP_ORW
  >> MATCH_MP_TAC psfis_intro
- >> ASM_SIMP_TAC std_ss [pred_setTheory.FINITE_COUNT]
+ >> ASM_SIMP_TAC std_ss [FINITE_COUNT]
  >> reverse CONJ_TAC
  >- (FULL_SIMP_TAC real_ss [IN_IMAGE, fn_minus_def]
      >> METIS_TAC [REAL_LE_REFL, REAL_LE_NEGTOTAL])
@@ -3343,12 +3360,481 @@ Proof
         by METIS_TAC [fn_plus_fn_minus_borel_measurable]
  >> rpt STRIP_TAC
  >> `PREIMAGE (fn_minus f) {enumerate (IMAGE (fn_minus f) (m_space m)) i} INTER m_space m =
-                {w | w IN m_space m /\ ((fn_minus f) w = (\w. enumerate (IMAGE (fn_minus f) (m_space m)) i) w)}`
-                by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [GSPECIFICATION, IN_INTER, IN_PREIMAGE, IN_SING]
-                    >> DECIDE_TAC)
+     {w | w IN m_space m /\
+          ((fn_minus f) w = (\w. enumerate (IMAGE (fn_minus f) (m_space m)) i) w)}`
+     by (ONCE_REWRITE_TAC [EXTENSION] \\
+         RW_TAC std_ss [GSPECIFICATION, IN_INTER, IN_PREIMAGE, IN_SING] \\
+         DECIDE_TAC)
  >> POP_ORW
  >> MATCH_MP_TAC borel_measurable_eq_borel_measurable
  >> METIS_TAC [borel_measurable_const, measure_space_def]
+QED
+
+(* ************************************************************************* *)
+(* Below are old theorems (including Radon-Nikodym) found in K13 and prior   *)
+(* ************************************************************************* *)
+
+Theorem finite_prod_measure_space_POW :
+    !s1 s2 u v. FINITE s1 /\ FINITE s2  ==>
+          (prod_measure_space (s1, POW s1, u) (s2, POW s2, v) =
+          (s1 CROSS s2, POW (s1 CROSS s2), prod_measure (s1, POW s1, u) (s2, POW s2, v)))
+Proof
+    RW_TAC std_ss [prod_measure_space_def, m_space_def, subsets_def, EXTENSION, subsets_def,
+                   sigma_def, prod_sets_def, IN_POW, IN_BIGINTER, measurable_sets_def,
+                   SUBSET_DEF, IN_CROSS, GSPECIFICATION]
+ >> RW_TAC std_ss [GSYM EXTENSION]
+ >> EQ_TAC
+ >- (RW_TAC std_ss [] >| (* 2 sub-goals here, same tacticals *)
+     [ rename1 ‘FST y IN s1’ >> rename1 ‘y IN s’,
+       rename1 ‘SND y IN s2’ >> rename1 ‘y IN s’] \\
+     (Q.PAT_X_ASSUM `!P. _ ==> s IN P` (MP_TAC o Q.SPEC `POW (s1 CROSS s2)`) \\
+      RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA] \\
+      Suff ‘(!x. (?z. (x,T) = (\(s,t). (s CROSS t,
+                                        (!x. x IN s ==> x IN s1) /\ !x. x IN t ==> x IN s2)) z) ==>
+             !x'. x' IN x ==> FST x' IN s1 /\ SND x' IN s2)’ >- METIS_TAC [] \\
+      RW_TAC std_ss [] \\
+      Cases_on ‘z’ >> FULL_SIMP_TAC std_ss [] >> METIS_TAC [IN_CROSS] ))
+ >> RW_TAC std_ss []
+ >> `x = BIGUNION (IMAGE (\a. {a}) x)`
+     by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_SING])
+ >> POP_ORW
+ >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, subsets_def]
+ >> POP_ASSUM MATCH_MP_TAC
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC finite_countable >> MATCH_MP_TAC IMAGE_FINITE \\
+     (MP_TAC o Q.ISPEC `(s1 :'a -> bool) CROSS (s2 :'b -> bool)`) SUBSET_FINITE \\
+     RW_TAC std_ss [FINITE_CROSS] \\
+     POP_ASSUM MATCH_MP_TAC \\
+     METIS_TAC [SUBSET_DEF, IN_CROSS])
+ >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_SING]
+ >> Q.PAT_X_ASSUM `!x. Q ==> x IN s` MATCH_MP_TAC
+ >> Q.EXISTS_TAC `({FST a}, {SND a})` >> RW_TAC std_ss [PAIR_EQ, IN_SING]
+ >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_CROSS, IN_SING]
+ >> METIS_TAC [PAIR_EQ, PAIR, FST, SND]
+QED
+
+Theorem finite_POW_prod_measure_reduce3 :
+    !m0 m1 m2. measure_space m0 /\ measure_space m1 /\ measure_space m2 /\
+               FINITE (m_space m0) /\ FINITE (m_space m1) /\ FINITE (m_space m2) /\
+              (POW (m_space m0) = measurable_sets m0) /\
+              (POW (m_space m1) = measurable_sets m1) /\
+              (POW (m_space m2) = measurable_sets m2) ==>
+             (!a0 a1 a2. a0 IN measurable_sets m0 /\
+                         a1 IN measurable_sets m1 /\
+                         a2 IN measurable_sets m2
+             ==> ((prod_measure3 m0 m1 m2) (a0 CROSS (a1 CROSS a2)) =
+                  measure m0 a0 * measure m1 a1 * measure m2 a2))
+Proof
+    RW_TAC std_ss [prod_measure3_def, measure_def]
+  >> `measure_space (prod_measure_space m1 m2)`
+      by METIS_TAC [measure_space_finite_prod_measure_POW1]
+  >> `FINITE (m_space (prod_measure_space m1 m2))`
+      by METIS_TAC [prod_measure_space_def,m_space_def,FINITE_CROSS]
+  >> `m_space (prod_measure_space m1 m2) = m_space m1 CROSS (m_space m2)`
+         by RW_TAC std_ss [prod_measure_space_def,m_space_def]
+  >> `measurable_sets (prod_measure_space m1 m2) =
+      POW (m_space m1 CROSS (m_space m2))`
+        by (`m1 = (m_space m1,measurable_sets m1,measure m1)`
+             by RW_TAC std_ss [MEASURE_SPACE_REDUCE]
+            >> `m2 = (m_space m2, measurable_sets m2, measure m2)`
+             by RW_TAC std_ss [MEASURE_SPACE_REDUCE]
+            >> METIS_TAC [finite_prod_measure_space_POW, m_space_def, measurable_sets_def])
+  >> `a1 CROSS a2 IN measurable_sets (prod_measure_space m1 m2)`
+        by (RW_TAC std_ss [IN_POW,SUBSET_DEF,IN_CROSS]
+            >> METIS_TAC [MEASURE_SPACE_SUBSET_MSPACE,SUBSET_DEF])
+  >> RW_TAC std_ss [finite_POW_prod_measure_reduce]
+  >> RW_TAC std_ss [prod_measure_space_def, measure_def]
+  >> METIS_TAC [finite_POW_prod_measure_reduce, REAL_MUL_ASSOC]
+QED
+
+Theorem measure_space_finite_prod_measure_POW3 :
+    !m0 m1 m2. measure_space m0 /\ measure_space m1 /\ measure_space m2 /\
+               FINITE (m_space m0) /\ FINITE (m_space m1) /\ FINITE (m_space m2) /\
+              (POW (m_space m0) = measurable_sets m0) /\
+              (POW (m_space m1) = measurable_sets m1) /\
+              (POW (m_space m2) = measurable_sets m2) ==>
+        measure_space (m_space m0 CROSS (m_space m1 CROSS m_space m2),
+                       POW (m_space m0 CROSS (m_space m1 CROSS m_space m2)),
+                       prod_measure3 m0 m1 m2)
+Proof
+   rpt STRIP_TAC
+   >> `(m_space m0 CROSS (m_space m1 CROSS m_space m2),
+        POW (m_space m0 CROSS (m_space m1 CROSS m_space m2)),
+        prod_measure3 m0 m1 m2) =
+        (space (m_space m0 CROSS (m_space m1 CROSS m_space m2),
+         POW (m_space m0 CROSS (m_space m1 CROSS m_space m2))),
+         subsets (m_space m0 CROSS (m_space m1 CROSS m_space m2),
+                  POW (m_space m0 CROSS (m_space m1 CROSS m_space m2))), prod_measure3 m0 m1 m2)`
+        by RW_TAC std_ss [space_def, subsets_def]
+   >> POP_ORW
+   >> `measure_space (prod_measure_space m1 m2)`
+       by METIS_TAC [measure_space_finite_prod_measure_POW1]
+   >> `prod_measure_space m1 m2 =
+       (m_space m1 CROSS m_space m2, POW (m_space m1 CROSS m_space m2), prod_measure m1 m2)`
+           by METIS_TAC [MEASURE_SPACE_REDUCE,finite_prod_measure_space_POW]
+   >> `!x s. s IN POW (m_space m0 CROSS (m_space m1 CROSS m_space m2)) ==>
+           (PREIMAGE (\s1. (x,s1)) s) SUBSET (m_space m1 CROSS (m_space m2))`
+                by (RW_TAC std_ss [IN_PREIMAGE, SUBSET_DEF]
+                    >> FULL_SIMP_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS]
+                    >> METIS_TAC [SND])
+  >> MATCH_MP_TAC finite_additivity_sufficient_for_finite_spaces
+  >> RW_TAC std_ss [POW_SIGMA_ALGEBRA, space_def, FINITE_CROSS, subsets_def]
+  >- (RW_TAC std_ss [positive_def, measure_def, measurable_sets_def]
+      >- (`{} = {} CROSS ({} CROSS {})` by RW_TAC std_ss [CROSS_EMPTY]
+          >> POP_ORW
+          >> RW_TAC std_ss [finite_POW_prod_measure_reduce3, MEASURE_SPACE_EMPTY_MEASURABLE,
+                            MEASURE_EMPTY, REAL_MUL_LZERO])
+      >> RW_TAC real_ss [Once prod_measure_def, prod_measure3_def,
+                         finite_space_POW_integral_reduce]
+      >> MATCH_MP_TAC REAL_SUM_IMAGE_POS
+      >> RW_TAC std_ss []
+      >> MATCH_MP_TAC REAL_LE_MUL
+      >> reverse CONJ_TAC
+      >- METIS_TAC [IN_POW, IN_SING, SUBSET_DEF, MEASURE_SPACE_POSITIVE, positive_def]
+      >> RW_TAC real_ss [measure_def,prod_measure_def, finite_space_POW_integral_reduce]
+      >> MATCH_MP_TAC REAL_SUM_IMAGE_POS
+      >> RW_TAC std_ss []
+      >> MATCH_MP_TAC REAL_LE_MUL
+      >> reverse CONJ_TAC
+      >- METIS_TAC [IN_POW, IN_SING, SUBSET_DEF, MEASURE_SPACE_POSITIVE, positive_def]
+      >> Suff `(PREIMAGE (\s1. (x',s1)) (PREIMAGE (\s1. (x,s1)) s)) SUBSET (m_space m2)`
+      >- METIS_TAC [IN_POW, IN_SING, SUBSET_DEF, MEASURE_SPACE_POSITIVE, positive_def]
+      >> RW_TAC std_ss [SUBSET_DEF,IN_PREIMAGE]
+      >> METIS_TAC [IN_CROSS,IN_POW,SUBSET_DEF, FST, SND])
+  >> RW_TAC std_ss [additive_def, measure_def, measurable_sets_def]
+  >> RW_TAC std_ss [prod_measure3_def]
+  >> ONCE_REWRITE_TAC [prod_measure_def]
+  >> RW_TAC std_ss [measure_def]
+  >> RW_TAC std_ss [finite_space_POW_integral_reduce, GSYM REAL_SUM_IMAGE_ADD]
+  >> MATCH_MP_TAC REAL_SUM_IMAGE_EQ
+  >> RW_TAC std_ss [GSYM REAL_ADD_RDISTRIB]
+  >> Suff `prod_measure m1 m2 (PREIMAGE (\s1. (x,s1)) (s UNION t)) =
+           (prod_measure m1 m2 (PREIMAGE (\s1. (x,s1)) s) +
+            prod_measure m1 m2 (PREIMAGE (\s1. (x,s1)) t))`
+  >- RW_TAC std_ss []
+  >> RW_TAC std_ss [prod_measure_def, finite_space_POW_integral_reduce,
+                    GSYM REAL_SUM_IMAGE_ADD]
+  >> MATCH_MP_TAC REAL_SUM_IMAGE_EQ
+  >> RW_TAC std_ss [GSYM REAL_ADD_RDISTRIB]
+  >> Suff `measure m2 (PREIMAGE (\s1. (x',s1)) (PREIMAGE (\s1. (x,s1)) (s UNION t))) =
+           measure m2 (PREIMAGE (\s1. (x',s1)) (PREIMAGE (\s1. (x,s1)) s)) +
+           measure m2 (PREIMAGE (\s1. (x',s1)) (PREIMAGE (\s1. (x,s1)) t))`
+  >- RW_TAC std_ss []
+  >> MATCH_MP_TAC MEASURE_ADDITIVE
+  >> CONJ_TAC >- RW_TAC std_ss []
+  >> CONJ_TAC
+  >- (Suff `PREIMAGE (\s1. (x',s1)) (PREIMAGE (\s1. (x,s1)) s) SUBSET m_space m2`
+      >- METIS_TAC [IN_POW]
+      >> RW_TAC std_ss [SUBSET_DEF,IN_PREIMAGE]
+      >> METIS_TAC [IN_POW, IN_CROSS, SUBSET_DEF, FST, SND])
+  >> CONJ_TAC
+  >- (Suff `PREIMAGE (\s1. (x',s1)) (PREIMAGE (\s1. (x,s1)) t) SUBSET m_space m2`
+      >- METIS_TAC [IN_POW]
+      >> RW_TAC std_ss [SUBSET_DEF,IN_PREIMAGE]
+      >> METIS_TAC [IN_POW, IN_CROSS, SUBSET_DEF, FST, SND])
+  >> CONJ_TAC
+  >- (RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY, IN_PREIMAGE]
+      >> METIS_TAC [IN_POW, IN_CROSS, SUBSET_DEF, FST, SND, DISJOINT_DEF, EXTENSION,
+                    IN_INTER,NOT_IN_EMPTY])
+  >> RW_TAC std_ss [EXTENSION,IN_PREIMAGE,IN_UNION]
+QED
+
+Theorem finite_prod_measure_space_POW3 :
+    !s1 s2 s3 u v w.
+         FINITE s1 /\ FINITE s2 /\ FINITE s3 ==>
+         (prod_measure_space3 (s1,POW s1,u) (s2,POW s2,v) (s3,POW s3,w) =
+          (s1 CROSS (s2 CROSS s3),POW (s1 CROSS (s2 CROSS s3)),
+           prod_measure3 (s1,POW s1,u) (s2,POW s2,v) (s3,POW s3,w)))
+Proof
+  RW_TAC std_ss [prod_measure_space3_def,m_space_def, subsets_def, EXTENSION, subsets_def,
+                sigma_def, prod_sets3_def, IN_POW, IN_BIGINTER, measurable_sets_def, SUBSET_DEF,
+                IN_CROSS, GSPECIFICATION]
+  >> RW_TAC std_ss [GSYM EXTENSION]
+  >> EQ_TAC
+  >- (RW_TAC std_ss [] \\ (* 3 sub-goals here, same tacticals *)
+      (Q.PAT_X_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS (s2 CROSS s3))`)
+       >> RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA]
+       >> Suff `(!x''. (?x'. (x'',T) =
+               (\(s,t,u'). (s CROSS (t CROSS u'),
+               (!x. x IN s ==> x IN s1) /\ (!x. x IN t ==> x IN s2) /\
+                !x. x IN u' ==> x IN s3)) x') ==>
+                !x. x IN x'' ==> FST x IN s1 /\ FST (SND x) IN s2 /\ SND (SND x) IN s3)`
+       >- METIS_TAC []
+       >> RW_TAC std_ss []
+       >> Cases_on `x'''` >> Cases_on `r`
+       >> FULL_SIMP_TAC std_ss []
+       >> METIS_TAC [IN_CROSS] ))
+  >> RW_TAC std_ss []
+  >> `x = BIGUNION (IMAGE (\a. {a}) x)`
+    by (ONCE_REWRITE_TAC [EXTENSION]
+        >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_SING])
+  >> POP_ORW
+  >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, subsets_def]
+  >> POP_ASSUM MATCH_MP_TAC
+  >> CONJ_TAC
+  >- (MATCH_MP_TAC finite_countable >> MATCH_MP_TAC IMAGE_FINITE
+      >> (MP_TAC o
+          Q.ISPEC `(s1 :'a -> bool) CROSS ((s2 :'b -> bool) CROSS (s3:'c -> bool))`)
+                SUBSET_FINITE
+      >> RW_TAC std_ss [FINITE_CROSS]
+      >> POP_ASSUM MATCH_MP_TAC
+      >> RW_TAC std_ss [SUBSET_DEF, IN_CROSS])
+  >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_SING]
+  >> Q.PAT_X_ASSUM `!x. Q ==> x IN s` MATCH_MP_TAC
+  >> Q.EXISTS_TAC `({FST a}, {FST (SND a)}, {SND(SND a)})` >> RW_TAC std_ss [IN_SING]
+  >> RW_TAC std_ss [IN_SING,EXTENSION,IN_CROSS,PAIR]
+  >> METIS_TAC [PAIR]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* The Radon-Nikodym Theorem (for real_lebesgueTheory)                       *)
+(* ------------------------------------------------------------------------- *)
+
+Definition seq_sup_def :
+   (seq_sup P 0       = @r. r IN P /\ sup P < r + 1) /\
+   (seq_sup P (SUC n) = @r. r IN P /\ sup P < r + (1 / 2) pow (SUC n) /\
+                                      seq_sup P n < r /\ r < sup P)
+End
+
+(* This theorem is general, the antecedents only assert that ‘sup P’ exists *)
+Theorem REAL_SUP_SEQ :
+    !P. (?x. P x) /\ (?z. !x. P x ==> x <= z) ==>
+        ?x. (!n. x n IN P) /\ (!n. x n <= x (SUC n)) /\ (sup (IMAGE x UNIV) = sup P)
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `?z. P z /\ (z = sup P)`
+ >- (Q.EXISTS_TAC `(\i. sup P)` \\
+     RW_TAC real_ss [REAL_LE_REFL, SPECIFICATION] \\
+    `IMAGE (\i:num. sup P) UNIV = (\i. i = sup P)`
+       by RW_TAC std_ss [EXTENSION, IN_IMAGE, IN_UNIV, IN_ABS] \\
+     RW_TAC std_ss [REAL_SUP_CONST])
+ >> FULL_SIMP_TAC std_ss []
+ >> Q.EXISTS_TAC `seq_sup P`
+ >> `!e. 0 < e ==> ?x. P x /\ sup P < x + e`
+      by (RW_TAC std_ss [] \\
+          MATCH_MP_TAC SUP_LT_EPSILON >> METIS_TAC [])
+ >> `!n. 0:real < (1 / 2) pow n` by METIS_TAC [HALF_POS, REAL_POW_LT]
+ >> STRONG_CONJ_TAC (* !n. seq_sup P n IN P *)
+ >- (Induct >- (RW_TAC std_ss [seq_sup_def] \\
+                SELECT_ELIM_TAC >> RW_TAC std_ss [] \\
+                METIS_TAC [REAL_LT_01, SPECIFICATION]) \\
+     RW_TAC std_ss [seq_sup_def] \\
+     SELECT_ELIM_TAC >> RW_TAC std_ss [] \\
+    `?y. P y /\ seq_sup P n < y`
+        by (Know ‘(?y. P y /\ seq_sup P n < y) <=> seq_sup P n < sup P’
+            >- (MATCH_MP_TAC REAL_SUP_LE \\
+                rpt STRIP_TAC >- (Q.EXISTS_TAC ‘x’ >> art []) \\
+                Q.EXISTS_TAC ‘z’ >> RW_TAC std_ss []) >> Rewr' \\
+            reverse (RW_TAC std_ss [REAL_LT_LE])
+            >- (CCONTR_TAC >> FULL_SIMP_TAC std_ss [IN_APP]) \\
+            MATCH_MP_TAC REAL_IMP_LE_SUP \\
+            RW_TAC std_ss [] >- (Q.EXISTS_TAC ‘z’ >> art []) \\
+            Q.EXISTS_TAC ‘seq_sup P n’ \\
+            FULL_SIMP_TAC std_ss [IN_APP, REAL_LE_REFL]) \\
+    `?w. P w /\ sup P < w + (1 / 2) pow (SUC n)` by METIS_TAC [] \\
+     Q.EXISTS_TAC `max y w` \\
+     RW_TAC std_ss [max_def, SPECIFICATION] >| (* 4 subgoals *)
+     [ (* goal 1 (of 4) *)
+      `w < y` by FULL_SIMP_TAC std_ss [real_lte] \\
+      `w + (1 / 2) pow (SUC n) < y + (1 / 2) pow (SUC n)` by METIS_TAC [REAL_LT_RADD] \\
+       METIS_TAC [REAL_LT_TRANS],
+       (* goal 2 (of 4) *)
+       METIS_TAC [REAL_LTE_TRANS],
+       (* goal 3 (of 4) *)
+       MATCH_MP_TAC REAL_IMP_LT_SUP >> rw [] \\
+       Q.EXISTS_TAC ‘z’ >> rw [],
+       (* goal 4 (of 4) *)
+       MATCH_MP_TAC REAL_IMP_LT_SUP >> rw [] \\
+       Q.EXISTS_TAC ‘z’ >> rw [] ])
+ >> DISCH_TAC
+ >> STRONG_CONJ_TAC (* !n. seq_sup P n <= seq_sup P (SUC n) *)
+ >- (RW_TAC std_ss [seq_sup_def] \\
+     SELECT_ELIM_TAC \\
+     reverse (RW_TAC std_ss []) >- METIS_TAC [REAL_LT_LE] \\
+    `?y. P y /\ seq_sup P n < y`
+        by (Know ‘(?y. P y /\ seq_sup P n < y) <=> seq_sup P n < sup P’
+            >- (MATCH_MP_TAC REAL_SUP_LE \\
+                rpt STRIP_TAC >- (Q.EXISTS_TAC ‘x’ >> art []) \\
+                Q.EXISTS_TAC ‘z’ >> RW_TAC std_ss []) >> Rewr' \\
+            reverse (RW_TAC std_ss [REAL_LT_LE])
+            >- (CCONTR_TAC >> FULL_SIMP_TAC std_ss [IN_APP] >> METIS_TAC []) \\
+            MATCH_MP_TAC REAL_IMP_LE_SUP \\
+            RW_TAC std_ss [] >- (Q.EXISTS_TAC ‘z’ >> art []) \\
+            Q.EXISTS_TAC ‘seq_sup P n’ \\
+            FULL_SIMP_TAC std_ss [IN_APP, REAL_LE_REFL]) \\
+    `?w. P w /\ sup P < w + (1 / 2) pow (SUC n)` by METIS_TAC [] \\
+     Q.EXISTS_TAC `max y w` \\
+     RW_TAC std_ss [max_def, SPECIFICATION] >| (* 4 subgoals *)
+     [ (* goal 1 (of 4) *)
+      `w < y` by FULL_SIMP_TAC std_ss [real_lte] \\
+      `w + (1 / 2) pow (SUC n) < y + (1 / 2) pow (SUC n)` by METIS_TAC [REAL_LT_RADD] \\
+       METIS_TAC [REAL_LT_TRANS],
+       (* goal 2 (of 4) *)
+       METIS_TAC [REAL_LTE_TRANS],
+       (* goal 3 (of 4) *)
+       MATCH_MP_TAC REAL_IMP_LT_SUP >> rw [] \\
+       Q.EXISTS_TAC ‘z’ >> rw [],
+       (* goal 4 (of 4) *)
+       MATCH_MP_TAC REAL_IMP_LT_SUP >> rw [] \\
+       Q.EXISTS_TAC ‘z’ >> rw [] ])
+ >> DISCH_TAC
+ (* stage work *)
+ >> `!n. sup P <= seq_sup P n + (1 / 2) pow n`
+       by (Induct
+           >- (RW_TAC std_ss [seq_sup_def, pow] \\
+               SELECT_ELIM_TAC \\
+               RW_TAC std_ss [] >- METIS_TAC [REAL_LT_01, SPECIFICATION] \\
+               METIS_TAC [REAL_LT_LE]) \\
+           RW_TAC std_ss [seq_sup_def] \\
+           SELECT_ELIM_TAC \\
+           reverse (RW_TAC std_ss []) >- METIS_TAC [REAL_LT_LE] \\
+          `?y. P y /\ seq_sup P n < y`
+              by (Know ‘(?y. P y /\ seq_sup P n < y) <=> seq_sup P n < sup P’
+                  >- (MATCH_MP_TAC REAL_SUP_LE \\
+                      rpt STRIP_TAC >- (Q.EXISTS_TAC ‘x’ >> art []) \\
+                      Q.EXISTS_TAC ‘z’ >> RW_TAC std_ss []) >> Rewr' \\
+                  reverse (RW_TAC std_ss [REAL_LT_LE])
+                  >- (CCONTR_TAC >> FULL_SIMP_TAC std_ss [IN_APP] >> METIS_TAC []) \\
+                  MATCH_MP_TAC REAL_IMP_LE_SUP \\
+                  RW_TAC std_ss [] >- (Q.EXISTS_TAC ‘z’ >> art []) \\
+                  Q.EXISTS_TAC ‘seq_sup P n’ \\
+                  FULL_SIMP_TAC std_ss [IN_APP, REAL_LE_REFL]) \\
+          `?w. P w /\ sup P < w + (1 / 2) pow (SUC n)` by METIS_TAC [] \\
+           Q.EXISTS_TAC `max y w` \\
+           RW_TAC std_ss [max_def, SPECIFICATION] >| (* 4 subgoals *)
+           [ (* goal 1 (of 4) *)
+            `w < y` by FULL_SIMP_TAC std_ss [real_lte] \\
+            `w + (1 / 2) pow (SUC n) < y + (1 / 2) pow (SUC n)` by METIS_TAC [REAL_LT_RADD] \\
+             METIS_TAC [REAL_LT_TRANS],
+             (* goal 2 (of 4) *)
+             METIS_TAC [REAL_LTE_TRANS],
+             (* goal 3 (of 4) *)
+             MATCH_MP_TAC REAL_IMP_LT_SUP >> rw [] \\
+             Q.EXISTS_TAC ‘z’ >> rw [],
+             (* goal 4 (of 4) *)
+             MATCH_MP_TAC REAL_IMP_LT_SUP >> rw [] \\
+             Q.EXISTS_TAC ‘z’ >> rw [] ])
+ >> MATCH_MP_TAC SUP_EQ
+ >> RW_TAC std_ss []
+ >> reverse EQ_TAC >> RW_TAC std_ss []
+ >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+     POP_ASSUM MP_TAC \\
+     rw [IN_IMAGE] >> art [])
+ >> rename1 ‘y IN P’
+ >> MATCH_MP_TAC REAL_LE_EPSILON
+ >> RW_TAC std_ss []
+ >> `?n. (1 / 2) pow n < e` by METIS_TAC [REAL_HALF_BETWEEN, REAL_ARCH_POW_INV]
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC `seq_sup P n + (1 / 2) pow n`
+ >> RW_TAC std_ss [] (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC REAL_LE_TRANS \\
+      Q.EXISTS_TAC ‘sup P’ >> art [] \\
+      MATCH_MP_TAC REAL_IMP_LE_SUP \\
+      CONJ_TAC >- (Q.EXISTS_TAC ‘z’ >> rw []) \\
+      Q.EXISTS_TAC ‘y’ \\
+      FULL_SIMP_TAC std_ss [IN_APP, REAL_LE_REFL],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC REAL_LE_ADD2 \\
+      reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [REAL_LT_LE] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      rw [IN_IMAGE] \\
+      Q.EXISTS_TAC ‘n’ >> REWRITE_TAC [] ]
+QED
+
+Theorem REAL_SUP_FUN_SEQ_IMAGE :
+    !(P:real->bool) (P':('a->real)->bool) f.
+         (?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P')
+      ==> ?g. (!n:num. g n IN P') /\
+              (sup (IMAGE (\n. f (g n)) UNIV) = sup P)
+Proof
+    rpt STRIP_TAC
+ >> `?y. (!n. y n IN P) /\ (!n. y n <= y (SUC n)) /\ (sup (IMAGE y UNIV) = sup P)`
+      by METIS_TAC [REAL_SUP_SEQ]
+ >> Q.EXISTS_TAC `(\n. @r. (r IN P') /\ (f r  = y n))`
+ >> `(\n. f (@r. r IN P' /\ (f r = y n))) = y`
+        by (RW_TAC std_ss [FUN_EQ_THM] >> SELECT_ELIM_TAC
+            >> RW_TAC std_ss []
+            >> METIS_TAC [IN_IMAGE])
+ >> ASM_SIMP_TAC std_ss []
+ >> RW_TAC std_ss []
+ >> SELECT_ELIM_TAC
+ >> RW_TAC std_ss []
+ >> METIS_TAC [IN_IMAGE]
+QED
+
+Definition max_fn_seq_def :
+   (max_fn_seq g       0 x = g 0 x) /\
+   (max_fn_seq g (SUC n) x = max (max_fn_seq g n x) (g (SUC n) x))
+End
+
+Theorem max_fn_seq_mono :
+    !g n x. max_fn_seq g n x <= max_fn_seq g (SUC n) x
+Proof
+    RW_TAC std_ss [max_fn_seq_def, max_def, REAL_LE_REFL]
+QED
+
+Theorem REAL_SUP_FUN_SEQ_MONO_IMAGE :
+    !(P:real->bool) (P':('a->real)->bool) f.
+       (?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
+       (!g1 g2. (g1 IN P' /\ g2 IN P' /\ (!x. g1 x <= g2 x))  ==> f g1 <= f g2) /\
+       (!g1 g2. g1 IN P' /\ g2 IN P' ==> (\x. max (g1 x) (g2 x)) IN P')
+    ==> ?g. (!n. g n IN P') /\
+                (!x n. g n x <= g (SUC n) x) /\
+                (sup (IMAGE (\n. f (g n)) UNIV) = sup P)
+Proof
+    rpt STRIP_TAC
+ >> `?g. (!n:num. g n IN P') /\ (sup (IMAGE (\n. f (g n)) UNIV) = sup P)`
+       by METIS_TAC [REAL_SUP_FUN_SEQ_IMAGE]
+ >> Q.EXISTS_TAC `max_fn_seq g`
+ >> `!n. max_fn_seq g n IN P'`
+      by (Induct
+          >- (`max_fn_seq g 0 = g 0` by RW_TAC std_ss [FUN_EQ_THM,max_fn_seq_def]
+              >> METIS_TAC [])
+              >> `max_fn_seq g (SUC n) = (\x. max (max_fn_seq g n x) (g (SUC n) x))`
+                  by RW_TAC std_ss [FUN_EQ_THM,max_fn_seq_def]
+              >> RW_TAC std_ss []
+              >> METIS_TAC [])
+ >> `!g n x. max_fn_seq g n x <= max_fn_seq g (SUC n) x`
+      by RW_TAC real_ss [max_fn_seq_def,max_def,REAL_LE_REFL]
+ >> CONJ_TAC >- RW_TAC std_ss []
+ >> CONJ_TAC >- RW_TAC std_ss []
+ >> `!n. (!x. g n x <= max_fn_seq g n x)`
+      by (Induct >- RW_TAC std_ss [max_fn_seq_def,REAL_LE_REFL]
+          >> METIS_TAC [REAL_LE_MAX2, max_fn_seq_def])
+ >> `!n. f (g n) <= f (max_fn_seq g n)` by METIS_TAC []
+ >> `sup (IMAGE (\n. f (g n)) UNIV) <= sup (IMAGE (\n. f (max_fn_seq g n)) UNIV)`
+      by (MATCH_MP_TAC SUP_MONO >> rw [] >| (* 2 subgoals *)
+          [ (* goal 1 (of 2) *)
+            Q.EXISTS_TAC ‘z’ >> Q.X_GEN_TAC ‘n’ \\
+            FIRST_X_ASSUM MATCH_MP_TAC \\
+            ONCE_REWRITE_TAC [GSYM SPECIFICATION] \\
+            rw [IN_IMAGE] \\
+            Q.EXISTS_TAC ‘g n’ >> art [],
+            (* goal 2 (of 2) *)
+            Q.EXISTS_TAC ‘z’ >> Q.X_GEN_TAC ‘n’ \\
+            FIRST_X_ASSUM MATCH_MP_TAC \\
+            ONCE_REWRITE_TAC [GSYM SPECIFICATION] \\
+            rw [IN_IMAGE] \\
+            Q.EXISTS_TAC ‘max_fn_seq g n’ >> art [] ])
+ >> `sup (IMAGE (\n. f (max_fn_seq g n)) UNIV) <= sup P`
+      by (Q.ABBREV_TAC ‘s = IMAGE (\n. f (max_fn_seq g n)) UNIV’ \\
+          Know ‘sup s <= sup P <=> !x. x IN s ==> x <= sup P’
+          >- (MATCH_MP_TAC REAL_SUP_LE_EQ \\
+              rw [Abbr ‘s’, IN_IMAGE] \\
+              Q.EXISTS_TAC ‘z’ >> rw [] \\
+              FIRST_X_ASSUM MATCH_MP_TAC \\
+              ONCE_REWRITE_TAC [GSYM SPECIFICATION] \\
+              rw [IN_IMAGE] \\
+              Q.EXISTS_TAC ‘max_fn_seq g n’ >> art [] ) >> Rewr' \\
+          rw [Abbr ‘s’, IN_IMAGE] \\
+          MATCH_MP_TAC REAL_IMP_LE_SUP \\
+          CONJ_TAC >- (Q.EXISTS_TAC ‘z’ >> art []) \\
+          Q.EXISTS_TAC ‘f (max_fn_seq g n)’ >> art [REAL_LE_REFL] \\
+          ONCE_REWRITE_TAC [GSYM SPECIFICATION] \\
+          rw [IN_IMAGE] \\
+          Q.EXISTS_TAC ‘max_fn_seq g n’ >> art [])
+ >> METIS_TAC [REAL_LE_ANTISYM]
 QED
 
 val _ = export_theory ();

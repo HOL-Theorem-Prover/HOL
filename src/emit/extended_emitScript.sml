@@ -24,13 +24,14 @@ val BAG_VAL_THM = Q.prove
  [RW_TAC arith_ss [EMPTY_BAG,BAG_VAL_DEF],
   RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]);
 
-val BAG_IN_EQNS = Q.prove
-(`(!x. BAG_IN x {||} = F) /\
-  !x y. BAG_IN x (BAG_INSERT y b) = (x = y) \/ BAG_IN x b`,
-METIS_TAC [NOT_IN_EMPTY_BAG,BAG_IN_BAG_INSERT]);
+Theorem BAG_IN_EQNS[local]:
+  (!x. BAG_IN x {||} <=> F) /\
+  !x y. BAG_IN x (BAG_INSERT y b) <=> x = y \/ BAG_IN x b
+Proof METIS_TAC [NOT_IN_EMPTY_BAG,BAG_IN_BAG_INSERT]
+QED
 
 val BAG_INN_EQN = Q.prove
-(`BAG_INN e n b = BAG_VAL b e >= n`,
+(`BAG_INN e n b <=> BAG_VAL b e >= n`,
  RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]);
 
 val BAG_DIFF_EQNS = Q.store_thm
@@ -74,40 +75,44 @@ val BAG_MERGE_EQNS = Q.store_thm
 
 val SUB_BAG_EQNS = Q.store_thm
 ("SUB_BAG_EQNS",
- `(!b:'a bag. SUB_BAG {||} b = T) /\
+ `(!b:'a bag. SUB_BAG {||} b <=> T) /\
   (!x:'a. !b1 b2:'a bag.
-      SUB_BAG (BAG_INSERT x b1) b2 =
+      SUB_BAG (BAG_INSERT x b1) b2 <=>
              BAG_IN x b2 /\ SUB_BAG b1 (BAG_DIFF b2 {|x|}))`,
  RW_TAC arith_ss [SUB_BAG_EMPTY,SUB_BAG, BAG_INSERT, BAG_INN,
-          BAG_IN, BAG_DIFF,EMPTY_BAG, ARITH`!m. 0 >= m = (m=0n)`]
+          BAG_IN, BAG_DIFF,EMPTY_BAG, ARITH`!m. 0 >= m <=> m=0n`]
   THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RW_TAC arith_ss []
   THEN RW_TAC arith_ss []
   THEN POP_ASSUM MP_TAC THEN RW_TAC arith_ss [] THENL
-  [FULL_SIMP_TAC bool_ss [ARITH `a+1n >= n = a >=n \/ (n=a+1)`]
+  [FULL_SIMP_TAC bool_ss [ARITH `a+1n >= n <=> a >=n \/ (n=a+1)`]
    THENL [RES_TAC THEN FULL_SIMP_TAC arith_ss [],
          `b1(x) >= n-1` by DECIDE_TAC THEN
          RES_THEN MP_TAC THEN REWRITE_TAC [] THEN DECIDE_TAC],
   RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]);
 
 val PSUB_BAG_LEM = Q.prove
-(`!b1 b2.PSUB_BAG b1 b2 = SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1`,
+(`!b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1`,
  METIS_TAC [SUB_BAG_PSUB_BAG,PSUB_BAG_ANTISYM]);
 
-val SET_OF_BAG_EQNS = Q.prove
-(`(SET_OF_BAG ({||}:'a bag) = ({}:'a set)) /\
-  (!(x:'a) b. SET_OF_BAG (BAG_INSERT x b) = x INSERT (SET_OF_BAG b))`,
+Theorem SET_OF_BAG_EQNS[local]:
+  (SET_OF_BAG ({||}:'a bag) = ({}:'a set)) /\
+  (!(x:'a) b. SET_OF_BAG (BAG_INSERT x b) = x INSERT (SET_OF_BAG b))
+Proof
  REWRITE_TAC [SET_OF_BAG_INSERT] THEN
  RW_TAC arith_ss [SET_OF_BAG,EMPTY_BAG,FUN_EQ_THM,NOT_IN_EMPTY_BAG,
-                pred_setTheory.EMPTY_DEF]);
+                pred_setTheory.EMPTY_DEF]
+QED
 
-val BAG_OF_SET_EQNS = Q.prove
-(`(BAG_OF_SET ({}:'a set) = ({||}:'a bag)) /\
+Theorem BAG_OF_SET_EQNS[local]:
+  (BAG_OF_SET ({}:'a set) = ({||}:'a bag)) /\
   (!(x:'a) (s:'a set).
-      BAG_OF_SET (x INSERT s) = if x IN s then BAG_OF_SET s
-                                 else BAG_INSERT x (BAG_OF_SET s))`,
+     BAG_OF_SET (x INSERT s) = if x IN s then BAG_OF_SET s
+                               else BAG_INSERT x (BAG_OF_SET s))
+Proof
  RW_TAC bool_ss [SET_OF_EMPTY] THEN
  RW_TAC arith_ss [BAG_OF_SET,FUN_EQ_THM,BAG_INSERT] THEN
- METIS_TAC [pred_setTheory.IN_INSERT]);
+ METIS_TAC [pred_setTheory.IN_INSERT]
+QED
 
 val defs =
   map DEFN_NOSIG
@@ -202,11 +207,13 @@ val _ = eCAML "gcd"
 
 (* == Lazy lists =========================================================== *)
 
-val llcases_exists0 = prove(
-  ``!l. ?v. (l = [||]) /\ (v = n) \/
-            ?h t. (l = h:::t) /\ (v = c (h, t))``,
+Theorem llcases_exists0[local]:
+  !l. ?v. (l = [||]) /\ (v = n) \/
+          ?h t. (l = h:::t) /\ (v = c (h, t))
+Proof
   GEN_TAC THEN Q.SPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][EXISTS_OR_THM])
+  SRW_TAC [][EXISTS_OR_THM]
+QED
 val llcases_exists =
     llcases_exists0 |> GEN_ALL |> SIMP_RULE bool_ss [SKOLEM_THM]
 val llcases_def = new_specification("llcases_def", ["llcases"],
@@ -221,46 +228,48 @@ val LLCONS_def = Define`
   LLCONS h t = LCONS h (t ())`;
 
 val LAPPEND_llcases = prove(
-  ``LAPPEND l1 l2 = llcases l2 (\(h,t). LLCONS h (\(). LAPPEND t l2)) l1``,
+  ``LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1``,
   Q.SPEC_THEN `l1` STRUCT_CASES_TAC llist_CASES THEN
   SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
 
 val LMAP_llcases = prove(
-  ``LMAP f l = llcases LNIL (\(h,t). LLCONS (f h) (\(). LMAP f t)) l``,
+  ``LMAP f l = llcases LNIL (λ(h,t). LLCONS (f h) (λ(). LMAP f t)) l``,
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
   SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
 
 val LFILTER_llcases = prove(
-  ``LFILTER P l = llcases LNIL (\(h,t). if P h then LLCONS h (\(). LFILTER P t)
+  ``LFILTER P l = llcases LNIL (λ(h,t). if P h then LLCONS h (λ(). LFILTER P t)
                                         else LFILTER P t) l``,
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
   SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
 
 val LHD_llcases = prove(
-  ``LHD ll = llcases NONE (\(h,t). SOME h) ll``,
+  ``LHD ll = llcases NONE (λ(h,t). SOME h) ll``,
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
   SRW_TAC [][llcases_LCONS, llcases_LNIL]);
 
 val LTL_llcases = prove(
-  ``LTL ll = llcases NONE (\(h,t). SOME t) ll``,
+  ``LTL ll = llcases NONE (λ(h,t). SOME t) ll``,
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
   SRW_TAC [][llcases_LCONS, llcases_LNIL]);
 
-val LTAKE_thm = prove(
-  ``!ll. LTAKE n ll =
-                if n = 0 then SOME []
-                else case LHD ll of
-                       NONE => NONE
-                     | SOME h => OPTION_MAP (\t. h::t)
-                                            (LTAKE (n - 1) (THE (LTL ll)))``,
+Theorem LTAKE_thm[local]:
+  !ll. LTAKE n ll =
+       if n = 0 then SOME []
+       else case LHD ll of
+              NONE => NONE
+            | SOME h => OPTION_MAP (\t. h::t)
+                                   (LTAKE (n - 1) (THE (LTL ll)))
+Proof
   Induct_on `n` THEN SRW_TAC [boolSimps.ETA_ss][LTAKE] THEN
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
   SRW_TAC [][] THEN Cases_on `LHD t` THEN SRW_TAC [][] THEN
   Cases_on `OPTION_MAP (CONS x) (LTAKE (n - 1) (THE (LTL t)))` THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 val toList_llcases = prove(
-  ``toList ll = llcases (SOME []) (\(h,t). OPTION_MAP (\t. h::t) (toList t)) ll``,
+  ``toList ll = llcases (SOME []) (λ(h,t). OPTION_MAP (\t. h::t) (toList t)) ll``,
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
   SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM])
 
@@ -272,19 +281,22 @@ val _ = insert_const "LLCONS"
 val _ = insert_const "LCONS"
 val _ = insert_const "LNIL"
 val _ = insert_const "LUNFOLD"
+val B = PP.block PP.CONSISTENT 0
+val S = PP.add_string
+val NL = PP.NL
+
 val _ = adjoin_to_theory
-{sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in S "fun insert_const c = let val t = Parse.Term [QUOTE c] in"; NL();
-     S "  ConstMapML.prim_insert(t, (false, \"\", c, type_of t))"; NL();
-     S "end"; NL();
-     S "val _ = insert_const \"llcases\""; NL();
-     S "val _ = insert_const \"LLCONS\""; NL();
-     S "val _ = insert_const \"LCONS\""; NL();
-     S "val _ = insert_const \"LNIL\""; NL();
-     S "val _ = insert_const \"LUNFOLD\""
-  end)}
+{sig_ps = NONE,
+ struct_ps =
+ SOME (fn _ =>
+         B [S "fun insert_const c = let val t = Parse.Term [QUOTE c] in", NL,
+            S "  ConstMapML.prim_insert(t, (false, \"\", c, type_of t))", NL,
+            S "end", NL,
+            S "val _ = insert_const \"llcases\"", NL,
+            S "val _ = insert_const \"LLCONS\"", NL,
+            S "val _ = insert_const \"LCONS\"", NL,
+            S "val _ = insert_const \"LNIL\"", NL,
+            S "val _ = insert_const \"LUNFOLD\""])}
 
 val _ = eSML "llist"
         (MLSIG "type 'a llist" ::
@@ -308,7 +320,7 @@ val _ = eSML "llist"
            LHD_llcases, LTL_llcases, LTAKE_thm,
            toList_llcases])
 
-(* == Patricia tress ======================================================= *)
+(* == Patricia trees ======================================================= *)
 
 val _ = set_trace "Unicode" 0
 fun Datatype x = DATATYPE [QUOTE (EmitTeX.datatype_thm_to_string x)]
@@ -318,7 +330,8 @@ val fun_rule = REWRITE_RULE [FUN_EQ_THM]
 val _ = ConstMapML.insert ``SKIP1``;
 val _ = ConstMapML.insert ``string_to_num``;
 
-val _ = temp_remove_rules_for_term "Empty"
+val _ = temp_remove_rules_for_term "ListForm<Empty,INSERT_PTREEs>"
+val _ = temp_remove_rules_for_term "ListForm<Empty,INSERT_PTREE>"
 val _ = temp_disable_tyabbrev_printing "ptreeset"
 val _ = temp_disable_tyabbrev_printing "word_ptreeset"
 
@@ -373,8 +386,7 @@ val _ = eSML "patricia_casts"
           KEYSs_def, IN_PTREEs_def, INSERT_PTREEs_def]);
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn ppstrm =>
-    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)};
+  struct_ps = SOME (fn _ => B (List.concat (map (fn s => [S s, NL]) l)))}
 
 val _ = adjoin_to_theory_struct
   ["val _ = ConstMapML.insert (\

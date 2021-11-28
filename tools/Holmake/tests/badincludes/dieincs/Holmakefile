@@ -1,0 +1,6 @@
+INCLUDES = ../dir1
+
+all:
+	echo "Doing it!"
+
+INCLUDES = ../dir3

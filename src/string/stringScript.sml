@@ -12,13 +12,14 @@
 
 open HolKernel boolLib bossLib Parse;
 open numLib numSyntax listTheory rich_listTheory arithmeticTheory;
+open ternaryComparisonsTheory
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory                                                *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "string";
-val _ = set_grammar_ancestry ["rich_list"]
+val _ = set_grammar_ancestry ["rich_list", "ternaryComparisons"]
 
 (* ---------------------------------------------------------------------*)
 (* Characters are represented by the natural numbers <= 255.            *)
@@ -135,6 +136,10 @@ val char_le_def = Define `char_le a b <=> ORD a <= ORD b`;
 val char_gt_def = Define `char_gt a b <=> ORD a > ORD b`;
 val char_ge_def = Define `char_ge a b <=> ORD a >= ORD b`;
 
+Definition char_compare_def:
+  char_compare c1 c2 = num_compare (ORD c1) (ORD c2)
+End
+
 Overload "<"[inferior] = “char_lt”
 Overload ">"[inferior] = “char_gt”
 Overload "<="[inferior] = “char_le”
@@ -213,6 +218,10 @@ val _ = type_abbrev_pp ("string", ``:char list``)
 Overload STRING[inferior] = “CONS : char -> string -> string”
 Overload EMPTYSTRING[inferior] = “[] : string”
 Overload CONCAT[inferior] = “FLAT : string list -> string”
+
+Definition string_compare_def:
+  string_compare = list_compare char_compare
+End
 
 val _ = new_definition(GrammarSpecials.string_elim_term,
                        “^(mk_var(GrammarSpecials.string_elim_term,

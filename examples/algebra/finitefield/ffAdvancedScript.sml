@@ -244,19 +244,19 @@ val _ = overload_on("fdim", ``\r:'a field. r <:> (PF r)``);
        and s.sum.op = $+   by subfield_property_alt
        Hence true          by field_mult_ladd
 *)
-val field_is_vspace_over_subfield = store_thm(
-  "field_is_vspace_over_subfield",
-  ``!r:'a field. Field r ==> !s. s <<= r ==> VSpace s r.sum r.prod.op``,
+Theorem field_is_vspace_over_subfield:
+  !r:'a field. Field r ==> !s. s <<= r ==> VSpace s r.sum r.prod.op
+Proof
   rpt strip_tac >>
-  `!z. z IN B ==> z IN R` by metis_tac[subfield_property_alt] >>
-  rw[VSpace_def] >-
-  metis_tac[field_def_alt] >-
- (`s.prod.op a b = a * b` by metis_tac[subfield_property_alt] >>
-  rw[field_mult_assoc]) >-
- (`s.prod.id = #1` by metis_tac[subfield_property_alt] >>
-  rw[]) >>
-  `s.sum.op a b = a + b` by metis_tac[subfield_property_alt] >>
-  rw[field_mult_ladd]);
+  ‘!z. z IN B ==> z IN R’ by metis_tac[subfield_property_alt] >>
+  rw[VSpace_def]
+  >- (‘s.prod.op a b = a * b’ by metis_tac[subfield_property_alt] >>
+      rw[field_mult_assoc])
+  >- (‘s.prod.id = #1’ by metis_tac[subfield_property_alt] >>
+      rw[]) >>
+  ‘s.sum.op a b = a + b’ by metis_tac[subfield_property_alt] >>
+  rw[field_mult_ladd]
+QED
 
 (* Theorem: s <<= r ==> VSpace s r.sum $* *)
 (* Proof: by field_is_vspace_over_subfield *)
@@ -378,17 +378,14 @@ val finite_field_over_subfield_dim = store_thm(
    (4) (PF r).prod.id * v = v, true by PF_property, field_mult_lone
    (5) (PF r).sum.op a b * v = a * v + b * v, true by PF_property, field_mult_ladd.
 *)
-val finite_field_is_vspace = store_thm(
-  "finite_field_is_vspace",
-  ``!r:'a field. FiniteField r ==> VSpace (PF r) r.sum r.prod.op``,
+Theorem finite_field_is_vspace:
+  !r:'a field. FiniteField r ==> VSpace (PF r) r.sum r.prod.op
+Proof
   rpt strip_tac >>
-  `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
-  rw[VSpace_def, prime_field_element_element] >-
-  rw[prime_field_field] >-
-  metis_tac[field_def_alt] >-
-  rw[PF_property, field_mult_assoc] >-
-  rw[PF_property] >>
-  rw[PF_property]);
+  ‘Field r /\ FINITE R’ by metis_tac[FiniteField_def] >>
+  drule_then assume_tac prime_field_element_element >>
+  rw[VSpace_def, prime_field_field, PF_property, field_mult_assoc]
+QED
 
 (* Theorem: FiniteVSpace (PF r) r.sum r.prod.op *)
 (* Proof:
@@ -888,28 +885,31 @@ field_neg_one_eq_one |- !r. Field r ==> ((-#1 = #1) <=> (char r = 2))
        and   s.prod.op = $*          by subfield_property_alt
        Hence true                    by field_mult_ladd.
 *)
-val finite_field_subfield_is_vspace = store_thm(
-  "finite_field_subfield_is_vspace",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> VSpace (PF r) s.sum r.prod.op``,
+Theorem finite_field_subfield_is_vspace:
+  !r:'a field. FiniteField r ==> !s. s <<= r ==> VSpace (PF r) s.sum r.prod.op
+Proof
   rpt strip_tac >>
-  `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
-  `subfield (PF r) s` by rw[prime_field_every_subfield] >>
-  `Field (PF r)` by rw[prime_field_field] >>
-  `!z. z IN Fp ==> z IN B` by metis_tac[subfield_property_alt] >>
-  rw[VSpace_def] >-
-  metis_tac[field_def_alt] >-
-  metis_tac[field_mult_element, subfield_property_alt] >-
- (`(s.prod.op (s.prod.op a b) v = s.prod.op a (s.prod.op b v))` by rw[field_mult_assoc] >>
-  `s.prod.op a b IN B /\ s.prod.op b v IN B` by rw[] >>
-  metis_tac[PF_property, subfield_property_alt]) >-
-  metis_tac[PF_property, subfield_property_alt, field_mult_lone] >-
- (`s.prod.op a (s.sum.op u v) = s.sum.op (s.prod.op a u) (s.prod.op a v)` by rw[field_mult_radd] >>
-  `s.sum.op u v IN B /\ s.prod.op a u IN B /\ s.prod.op a v IN B` by rw[] >>
-  metis_tac[subfield_property_alt]) >>
+  ‘Field r /\ FINITE R’ by metis_tac[FiniteField_def] >>
+  ‘subfield (PF r) s’ by rw[prime_field_every_subfield] >>
+  ‘Field (PF r)’ by rw[prime_field_field] >>
+  ‘!z. z IN Fp ==> z IN B’ by metis_tac[subfield_property_alt] >>
+  rw[VSpace_def]
+  >- metis_tac[field_mult_element, subfield_property_alt]
+  >- (‘(s.prod.op (s.prod.op a b) v = s.prod.op a (s.prod.op b v))’
+        by rw[field_mult_assoc] >>
+      ‘s.prod.op a b IN B /\ s.prod.op b v IN B’ by rw[] >>
+      metis_tac[PF_property, subfield_property_alt])
+  >- metis_tac[PF_property, subfield_property_alt, field_mult_lone]
+  >- (‘s.prod.op a (s.sum.op u v) = s.sum.op (s.prod.op a u) (s.prod.op a v)’
+        by rw[field_mult_radd] >>
+      ‘s.sum.op u v IN B /\ s.prod.op a u IN B /\ s.prod.op a v IN B’ by rw[] >>
+      metis_tac[subfield_property_alt]) >>
   rw[PF_property] >>
-  `s.prod.op (s.sum.op a b) v = s.sum.op (s.prod.op a v) (s.prod.op b v)` by rw[field_mult_ladd] >>
-  `s.sum.op a b IN B /\ s.prod.op a v IN B /\ s.prod.op b v IN B` by rw[] >>
-  metis_tac[subfield_property_alt]);
+  ‘s.prod.op (s.sum.op a b) v = s.sum.op (s.prod.op a v) (s.prod.op b v)’
+    by rw[field_mult_ladd] >>
+  ‘s.sum.op a b IN B /\ s.prod.op a v IN B /\ s.prod.op b v IN B’ by rw[] >>
+  metis_tac[subfield_property_alt]
+QED
 
 (* Theorem: Any subfield of finite field has p ** d elements, where p = char r, and some nonzero d:
             FiniteField r ==> !s. s <<= r ==>

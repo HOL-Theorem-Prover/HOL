@@ -8,7 +8,7 @@
 open HolKernel boolLib bossLib Parse;
 
 (* declare new theory at start *)
-val _ = new_theory "iterate";
+val _ = new_theory "iteration";
 
 (* ------------------------------------------------------------------------- *)
 

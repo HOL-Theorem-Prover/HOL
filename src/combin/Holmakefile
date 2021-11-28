@@ -11,4 +11,12 @@ endif
 selftest.exe: selftest.uo combinTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe combin-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: combin-selftest.log
+
+combin-selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+
+endif

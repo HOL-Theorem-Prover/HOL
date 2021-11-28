@@ -20,6 +20,10 @@ Contents
 New features:
 -------------
 
+- A `HOL_CONFIG` environment variable is considered to allow for a custom `hol-config` configuration at a non-standard location or potentially ignoring any present hol-config.
+  If the variable is set, any other hol-config file will be ignored. If the value of `HOL_CONFIG` is a readable file, it will be used.
+
+
 Bugs fixed:
 -----------
 
@@ -64,7 +68,15 @@ Incompatibilities:
 ------------------
 
 *   The small `productTheory` (Products of natural numbers and real numbers, ported from HOL-Light)
-    has been merged into `iterateTheory` (which is now dependent by `extrealTheory`).
+    has been merged into `iterateTheory` (on which `extrealTheory` now depends).
+
+*   Changes in the `formal-languages/context-free` example:
+
+    -   The location type (defined in `locationTheory`) has been simplified
+    -   The PEG machinery now has a simple error-reporting facility that attempts to report the end of the longest prefix of the input that might still be in the PEG’s language.
+        This means that instead of returning either `SOME result` or `NONE`, PEG’s now return a custom `Success`/`Failure` data type with values attached to both constructors.
+
+*   The `MEMBER_NOT_EMPTY` theorem in `bagTheory` has been renamed to `BAG_MEMBER_NOT_EMPTY` to avoid a name-clash with a theorem of the same name in `pred_setTheory`.
 
 * * * * *
 

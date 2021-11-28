@@ -45,39 +45,44 @@ val _ = hide "I";
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
 
-(* The simple function (g) of f in measurable space m:
-   f is a normal function defined on extended reals ('a -> extreal),
-   a_i (i IN s) are mutually disjoint measurable sets in m,
-   x_i are (normal) reals.
-  `g = \t. SIGMA (\i. Normal (x i) * (indicator_fn (a i) t)) s`
-      is the simple function of f.
+(* This defines a simple function ‘f’ in measurable space m by (s,a,x):
 
-   BIGUNION and DISJOINT indicate that this is a standard representation of g.
+   s is a (finite) set of indices,
+   a_i (each i IN s) are mutually disjoint measurable sets in m,
+   x_i are (normal) reals indicating the "height" of each a(i).
 
-   changed from `!t. 0 <= f t` to `!t. t IN m_space m ==> 0 <= f t`
+   Then `f(t) = SIGMA (\i. Normal (x i) * indicator_fn (a i) t) s` is a simple function.
+
+   BIGUNION and DISJOINT indicate that this is a standard representation.
+
+   NOTE: changed from `!t. 0 <= f t` to `!t. t IN m_space m ==> 0 <= f t`
  *)
-val pos_simple_fn_def = Define
-   `pos_simple_fn m f (s :num set) (a :num -> 'a set) (x :num -> real) =
+Definition pos_simple_fn_def :
+    pos_simple_fn m f (s :num set) (a :num -> 'a set) (x :num -> real) =
        ((!t. t IN m_space m ==> 0 <= f t) /\ (* was: !t. 0 <= f t *)
         (!t. t IN m_space m ==>
             (f t = SIGMA (\i. Normal (x i) * indicator_fn (a i) t) s)) /\
         (!i. i IN s ==> a i IN measurable_sets m) /\
         FINITE s /\ (!i. i IN s ==> 0 <= x i) /\
         (!i j. i IN s /\ j IN s /\ (i <> j) ==> DISJOINT (a i) (a j)) /\
-        (BIGUNION (IMAGE a s) = m_space m))`;
+        (BIGUNION (IMAGE a s) = m_space m))
+End
 
-(* The integration of a positive simple function: s is a set of indices,
-   a(n) is a sequence of sets, x(n) is a sequence of reals.
+(* The integral of a positive simple function: s is a set of indices,
+   a(n) is a sequence of disjoint sets, x(n) is a sequence of reals.
 
    old definition: Normal (SIGMA (\i:num. (x i) * (measure m (a i))) s)
  *)
-val pos_simple_fn_integral_def = Define
-   `pos_simple_fn_integral m (s :num set) (a :num -> 'a set) (x :num -> real) =
-        SIGMA (\i:num. Normal (x i) * (measure m (a i))) s`;
+Definition pos_simple_fn_integral_def :
+    pos_simple_fn_integral (m :'a m_space)
+                           (s :num set) (a :num -> 'a set) (x :num -> real) =
+        SIGMA (\i:num. Normal (x i) * (measure m (a i))) s
+End
 
-(* `psfs m f` is the set of all positive simple functions equivalent to f *)
-val psfs_def = Define
-   `psfs m f = {(s,a,x) | pos_simple_fn m f s a x}`;
+(* ‘psfs m f’ is the set of all positive simple functions equivalent to f *)
+Definition psfs_def :
+    psfs m f = {(s,a,x) | pos_simple_fn m f s a x}
+End
 
 (* `psfis m f ` is the set of integrals of positive simple functions equivalent to f *)
 val psfis_def = Define
@@ -185,29 +190,6 @@ val _ = overload_on ("*", ``\f m. density_measure m f``);
  *)
 val distr_def = Define
    `distr m f = \s. measure m (PREIMAGE f s INTER m_space m)`;
-
-(* Radon-Nikodym derivative (RN_deriv)
-
-  `RN_deriv v m` (HOL) = `RN_deriv m (m_space m, measurable_sets m, v)` (Isabelle/HOL)
-
-   The existence of `RN_deriv v m` is then asserted by Radon-Nikodym theorem, and
-   its uniqueness is asserted by the following (unproved) theorem:
-
-   ``!m f f'. measure_space m /\ sigma_finite m /\
-              f IN borel_measurable (m_space m,measurable_sets m) /\
-              f' IN borel_measurable (m_space m,measurable_sets m) /\
-              nonneg f /\ nonneg f' /\
-              (!s. s IN measurable_sets m ==> ((f * m) s = (f' * m) s))
-          ==> AE x::m. (f x = f' x)``
- *)
-val RN_deriv_def = Define (* or `v / m` (dv/dm) *)
-   `RN_deriv v m =
-      @f. f IN measurable (m_space m,measurable_sets m) Borel /\
-          (!x. x IN m_space m ==> 0 <= f x) /\
-          !s. s IN measurable_sets m ==> ((f * m) s = v s)`;
-
-(* `f = RN_deriv v m` is denoted by `f = v / m`, cf. "density_def" above *)
-val _ = overload_on ("/", ``RN_deriv``);
 
 (* unused for now:
 val diff_measure_space_def = Define
@@ -2907,7 +2889,7 @@ Proof
                 >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
                 >> METIS_TAC [])
       >> SPOSE_NOT_THEN ASSUME_TAC
-      >> METIS_TAC [EXTREAL_ARCH_POW,extreal_lt_def])
+      >> METIS_TAC [EXTREAL_ARCH_POW2, extreal_lt_def])
   >> `!n.  fn_seq m f n x <= f x` by METIS_TAC [lemma_fn_seq_upper_bounded]
   >> `?r. f x = Normal r` by METIS_TAC [extreal_cases,lt_infty,lte_trans,extreal_of_num_def]
   >> `!n. fn_seq m f n x <> PosInf` by METIS_TAC [lt_infty,let_trans]
@@ -2918,7 +2900,7 @@ Proof
              >> SELECT_ELIM_TAC
                 >> RW_TAC std_ss []
              >> METIS_TAC [extreal_cases])
-  >> `?N. f x < 2 pow N` by RW_TAC std_ss [EXTREAL_ARCH_POW]
+  >> `?N. f x < 2 pow N` by RW_TAC std_ss [EXTREAL_ARCH_POW2]
   >> `!p n. p <= n ==> 2 pow p <= 2 pow n` by METIS_TAC [pow_le_mono,EVAL ``1<=2``]
   >> `!n. N <= n ==> f x < 2 pow n` by METIS_TAC [lte_trans]
   >> `!n. N <= n ==> ?k. k IN count (4 ** n) /\ &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n`
@@ -4527,6 +4509,55 @@ Proof
  >> MATCH_MP_TAC pos_fn_integral_mono >> art []
 QED
 
+(* cf. lebesgue_monotone_convergence_subset *)
+Theorem lebesgue_monotone_convergence_decreasing' :
+    !m f fi A. measure_space m /\
+        (!i. fi i IN measurable (m_space m, measurable_sets m) Borel) /\
+        (!i x. x IN m_space m ==> 0 <= fi i x /\ fi i x < PosInf) /\
+        (!i. pos_fn_integral m (fi i) <> PosInf) /\
+        (!x. x IN m_space m ==> mono_decreasing (\i. fi i x)) /\
+        (!x. x IN m_space m ==> inf (IMAGE (\i. fi i x) UNIV) = f x) /\
+         A IN measurable_sets m ==>
+        (pos_fn_integral m (\x. f x * indicator_fn A x) =
+         inf (IMAGE (\i. pos_fn_integral m (\x. fi i x * indicator_fn A x)) UNIV))
+Proof
+    RW_TAC std_ss []
+ >> (MP_TAC o Q.SPECL [`m`, `(\x. f x * indicator_fn A x)`,
+                       `(\i. (\x. fi i x * indicator_fn A x))`])
+       lebesgue_monotone_convergence_decreasing
+ >> RW_TAC std_ss []
+ >> POP_ASSUM MATCH_MP_TAC
+ >> CONJ_TAC
+ >- METIS_TAC [IN_MEASURABLE_BOREL_MUL_INDICATOR, measure_space_def, subsets_def,
+               measurable_sets_def]
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [GSYM lt_infty] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS],
+       (* goal 2 (of 2) *)
+       STRIP_ASSUME_TAC (Q.SPECL [‘A’, ‘x’] indicator_fn_normal) \\
+      ‘fi i x <> PosInf’ by METIS_TAC [lt_infty] \\
+      ‘fi i x <> NegInf’ by METIS_TAC [pos_not_neginf] \\
+      ‘?z. fi i x = Normal z’ by METIS_TAC [extreal_cases] \\
+       rw [extreal_mul_eq] ])
+ >> CONJ_TAC
+ >- (rw [lt_infty] >> MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC ‘pos_fn_integral m (fi i)’ \\
+     reverse CONJ_TAC >- rw [GSYM lt_infty] \\
+     MATCH_MP_TAC pos_fn_integral_mono >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS],
+       (* goal 1 (of 2) *)
+       GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM mul_rone] \\
+       MATCH_MP_TAC le_lmul_imp >> rw [INDICATOR_FN_LE_1] ])
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero, le_refl, ext_mono_decreasing_def] \\
+     FULL_SIMP_TAC std_ss [ext_mono_decreasing_def])
+ >> RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero]
+ >> Suff `IMAGE (\i:num. 0:extreal) UNIV = (\y. y = 0)` >- RW_TAC std_ss [inf_const]
+ >> RW_TAC std_ss [EXTENSION, IN_ABS, IN_IMAGE, IN_UNIV]
+QED
+
 (* added ‘x IN m_space m’ *)
 Theorem pos_fn_integral_sum :
     !m f s. FINITE s /\ measure_space m /\
@@ -5245,22 +5276,23 @@ val integrable_normal_integral = store_thm (* new *)
  >> STRIP_TAC
  >> METIS_TAC [extreal_cases]);
 
-(* Updated with ``!x. x IN m_space m ==> (abs (g x) <= f x)`` *)
-val integrable_bounded = store_thm
-  ("integrable_bounded",
-  ``!m f g. measure_space m /\ integrable m f /\
+(* Updated with ‘!x. x IN m_space m ==> (abs (g x) <= f x)’ *)
+Theorem integrable_bounded :
+    !m f g. measure_space m /\ integrable m f /\
             g IN measurable (m_space m,measurable_sets m) Borel /\
             (!x. x IN m_space m ==> (abs (g x) <= f x))
-        ==> integrable m g``,
+        ==> integrable m g
+Proof
     RW_TAC std_ss [integrable_def, abs_bounds, GSYM fn_plus_def, GSYM fn_minus_def]
  >- (`!x. x IN m_space m ==> fn_plus g x <= fn_plus f x`
        by (RW_TAC real_ss [fn_plus_def, lt_imp_le, le_refl] \\
            METIS_TAC [extreal_lt_def, lte_trans]) \\
-     METIS_TAC [pos_fn_integral_mono_mspace, FN_PLUS_POS, lt_infty, let_trans])
+     METIS_TAC [pos_fn_integral_mono, FN_PLUS_POS, lt_infty, let_trans])
  >> `!x. x IN m_space m ==> fn_minus g x <= fn_plus f x`
         by (RW_TAC real_ss [fn_minus_def, fn_plus_def, lt_imp_le, le_refl] \\
             METIS_TAC [let_trans, lt_neg, le_neg, neg_neg, neg_0])
- >> METIS_TAC [pos_fn_integral_mono_mspace, FN_PLUS_POS, FN_MINUS_POS, lt_infty, let_trans]);
+ >> METIS_TAC [pos_fn_integral_mono, FN_PLUS_POS, FN_MINUS_POS, lt_infty, let_trans]
+QED
 
 val integrable_fn_plus = store_thm
   ("integrable_fn_plus",
@@ -6129,7 +6161,7 @@ Proof
            METIS_TAC [add_assoc, add_comm, add_not_infty, extreal_ainv_def, neg_neg]) \\
        Cases_on ‘fn_minus f x = PosInf’
        >- (‘fn_plus f x = 0’ by METIS_TAC [FN_MINUS_INFTY_IMP] >> rw [extreal_ainv_def] \\
-           ‘fn_plus g x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY'] \\
+           ‘fn_plus g x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY] \\
            ‘fn_plus g x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
            ‘?r. fn_plus g x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
            Cases_on ‘fn_minus g x = PosInf’ >- (rw [extreal_sub_def, extreal_add_def]) \\
@@ -6142,7 +6174,7 @@ Proof
            ‘fn_minus f x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_MINUS_POS] \\
            ‘?r. fn_minus f x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
            rw [extreal_add_def, extreal_ainv_def] \\
-           ‘fn_plus f x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY'] \\
+           ‘fn_plus f x <> PosInf’ by PROVE_TAC [FN_PLUS_NOT_INFTY] \\
            ‘fn_plus f x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
            ‘?s. fn_plus f x = Normal s’ by METIS_TAC [extreal_cases] >> POP_ORW \\
            rw [extreal_add_def, extreal_sub_def]) \\
@@ -6169,13 +6201,13 @@ Proof
          (* goal 4.2 (of 2) *)
          Cases_on ‘fn_minus f x = PosInf’
          >- (‘fn_plus f x = 0’ by METIS_TAC [FN_MINUS_INFTY_IMP] \\
-             ‘fn_plus g x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY'] \\
+             ‘fn_plus g x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY] \\
              ‘fn_plus g x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
              ‘?r. fn_plus g x = Normal r’ by METIS_TAC [extreal_cases] \\
              fs [add_lzero]) \\
          Cases_on ‘fn_minus g x = PosInf’
          >- (‘fn_plus g x = 0’ by METIS_TAC [FN_MINUS_INFTY_IMP] \\
-             ‘fn_plus f x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY'] \\
+             ‘fn_plus f x <> PosInf’ by METIS_TAC [FN_PLUS_NOT_INFTY] \\
              ‘fn_plus f x <> NegInf’ by METIS_TAC [pos_not_neginf, FN_PLUS_POS] \\
              ‘?r. fn_plus f x = Normal r’ by METIS_TAC [extreal_cases] \\
              fs [add_rzero]) \\
@@ -6335,6 +6367,43 @@ val integral_cmul_infty = store_thm
      REWRITE_TAC [extreal_of_num_def, le_infty]) >> Rewr'
  >> MATCH_MP_TAC pos_fn_integral_cmul_infty >> art []);
 
+Theorem integral_cmul_infty' :
+    !m s. measure_space m /\ s IN measurable_sets m ==>
+         (integral m (\x. NegInf * indicator_fn s x) = NegInf * (measure m s))
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m (\x. PosInf) = integral m (\x. (\x. PosInf) x * indicator_fn (m_space m) x)`
+ >- (MATCH_MP_TAC integral_mspace >> art [])
+ >> Rewr'
+ >> REWRITE_TAC [integral_def]
+ >> Know ‘pos_fn_integral m (\x. NegInf * indicator_fn s x)^+ = pos_fn_integral m (\x. 0)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [FN_PLUS_ALT, le_max] \\
+     rw [indicator_fn_def])
+ >> Rewr'
+ >> Know ‘pos_fn_integral m (\x. NegInf * indicator_fn s x)^- =
+          pos_fn_integral m (\x. PosInf * indicator_fn s x)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     rw [fn_minus_def, GSYM mul_lneg, extreal_ainv_def] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       MATCH_MP_TAC le_mul >> rw [le_infty, INDICATOR_FN_POS],
+       (* goal 2 (of 3) *)
+       MATCH_MP_TAC le_mul >> rw [le_infty, INDICATOR_FN_POS],
+       (* goal 3 (of 3) *)
+       fs [extreal_lt_def] \\
+       STRIP_ASSUME_TAC (Q.SPECL [‘s’, ‘x’] indicator_fn_normal) \\
+       FULL_SIMP_TAC std_ss [extreal_mul_def, le_infty, extreal_of_num_def, extreal_11] \\
+       Cases_on ‘r = 0’ >- rw [] \\
+      ‘0 < r’ by PROVE_TAC [REAL_LE_LT] \\
+       FULL_SIMP_TAC std_ss [le_infty, extreal_not_infty] ])
+ >> Rewr'
+ >> ASM_SIMP_TAC std_ss [pos_fn_integral_zero, sub_lzero]
+ >> Know ‘pos_fn_integral m (\x. PosInf * indicator_fn s x) = PosInf * measure m s’
+ >- (MATCH_MP_TAC pos_fn_integral_cmul_infty >> art [])
+ >> Rewr'
+ >> rw [GSYM mul_lneg, extreal_ainv_def]
+QED
+
 val integral_posinf = store_thm
   ("integral_posinf",
   ``!m. measure_space m /\ 0 < measure m (m_space m) ==> (integral m (\x. PosInf) = PosInf)``,
@@ -6349,6 +6418,23 @@ val integral_posinf = store_thm
  >> Cases_on `measure m (m_space m) = PosInf`
  >- (POP_ORW >> REWRITE_TAC [extreal_mul_def])
  >> METIS_TAC [mul_infty]);
+
+Theorem integral_neginf :
+    !m. measure_space m /\ 0 < measure m (m_space m) ==> (integral m (\x. NegInf) = NegInf)
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m (\x. NegInf) =
+          integral m (\x. (\x. NegInf) x * indicator_fn (m_space m) x)`
+ >- (MATCH_MP_TAC integral_mspace >> art [])
+ >> Rewr' >> BETA_TAC
+ >> Know `integral m (\x. NegInf * indicator_fn (m_space m) x) = NegInf * (measure m (m_space m))`
+ >- (MATCH_MP_TAC integral_cmul_infty' >> art [] \\
+     MATCH_MP_TAC MEASURE_SPACE_MSPACE_MEASURABLE >> art [])
+ >> Rewr'
+ >> Cases_on `measure m (m_space m) = PosInf`
+ >- (POP_ORW >> REWRITE_TAC [extreal_mul_def])
+ >> METIS_TAC [mul_infty]
+QED
 
 val integral_indicator_pow_eq = store_thm (* new *)
   ("integral_indicator_pow_eq",
@@ -7253,17 +7339,6 @@ Proof
  >> METIS_TAC [countably_additive_alt_eq, space_def, subsets_def]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(*  The Function Spaces L^p and Important Inequalities [1, Chapter 13]       *)
-(* ------------------------------------------------------------------------- *)
-
-(* [1, p.116], not used so far *)
-val norm_def = Define
-   `norm m u p = if p < PosInf then
-                     (integral m (\x. (abs (u x)) powr p)) powr (inv p)
-                 else
-                     inf {c | 0 < c /\ (measure m {x | c <= abs (u x)} = 0)}`;
-
 (* Proposition 11.5 [1, p.91]
 
    NOTE: "markov_ineq" in real_lebesgueTheory is a variant [1, p.93] that we shall
@@ -7719,17 +7794,24 @@ Proof
  >> MATCH_MP_TAC ext_suminf_zero >> art []
 QED
 
+(* NOTE: changed ‘nonneg f’ to ‘!x. x IN m_space m ==> 0 <= f x’ *)
 Theorem pos_fn_integral_eq_0 : (* was: positive_integral_0_iff *)
-    !m f. measure_space m /\ nonneg f /\
+    !m f. measure_space m /\ (!x. x IN m_space m ==> 0 <= f x) /\
           f IN measurable (m_space m, measurable_sets m) Borel ==>
         ((pos_fn_integral m f = 0) <=> (measure m {x | x IN m_space m /\ f x <> 0} = 0))
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [`m`, `f`] integral_abs_eq_0)
- >> RW_TAC std_ss [nonneg_fn_abs]
- >> Know `integral m f = pos_fn_integral m f`
- >- (MATCH_MP_TAC integral_pos_fn >> fs [nonneg_def])
- >> PROVE_TAC []
+ >> RW_TAC std_ss []
+ >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
+ >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
+ >> Know `integral m (abs o f) = pos_fn_integral m (abs o f)`
+ >- (MATCH_MP_TAC integral_pos_fn >> rw [abs_pos])
+ >> Rewr'
+ >> Suff ‘pos_fn_integral m f = pos_fn_integral m (abs o f)’ >- rw []
+ >> MATCH_MP_TAC pos_fn_integral_cong
+ >> rw [abs_pos]
+ >> METIS_TAC [abs_refl]
 QED
 
 Theorem integral_eq_0 :
@@ -8660,7 +8742,7 @@ val RN_lemma2 = Q.prove (
      FULL_SIMP_TAC std_ss [GSYM extreal_lt_def] \\
     `0 < - (measure m B - measure v B)` by METIS_TAC [lt_neg, neg_0] \\
     `?n. measure m B - measure v B < -Normal ((1 / 2) pow n)`
-         by METIS_TAC [EXTREAL_ARCH_POW_INV, lt_neg, neg_neg] \\
+         by METIS_TAC [EXTREAL_ARCH_POW2_INV, lt_neg, neg_neg] \\
     `d B < -Normal ((1 / 2) pow n)` by METIS_TAC [] \\
     `!n. B SUBSET A n` by METIS_TAC [SUBSET_BIGINTER, IN_IMAGE, IN_UNIV] \\
      METIS_TAC [lt_antisym])
@@ -10626,9 +10708,9 @@ Proof
  >> Q.UNABBREV_TAC `mt`
  >> FULL_SIMP_TAC std_ss [m_space_def, measurable_sets_def, measure_def]
  >> MP_TAC (Q.SPECL [`M`, `\x. h x * indicator_fn A x`] pos_fn_integral_eq_0)
- >> Know `nonneg (\x. h x * indicator_fn A x)`
- >- (RW_TAC std_ss [nonneg_def] \\
-     MATCH_MP_TAC le_mul >> art [INDICATOR_FN_POS])
+ >> ASM_SIMP_TAC std_ss []
+ >> Know ‘!x. x IN m_space M ==> 0 <= h x * indicator_fn A x’
+ >- rw [le_mul, INDICATOR_FN_POS]
  >> Know `(\x. h x * indicator_fn A x) IN Borel_measurable (m_space M,measurable_sets M)`
  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR \\
      fs [measure_space_def, subsets_def])
@@ -10672,6 +10754,74 @@ Proof
  >> ‘?f. f IN measurable (m_space m,measurable_sets m) Borel /\ (!x. 0 <= f x) /\
          !s. s IN (measurable_sets m) ==> ((f * m) s = v s)’
       by METIS_TAC [Radon_Nikodym]
+ >> Q.EXISTS_TAC ‘f’ >> rw []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*   Applications of Radon_Nikodym (ported from HVG's normal_rvScript.sml)   *)
+(* ------------------------------------------------------------------------- *)
+
+(* Radon-Nikodym derivative (RN_deriv)
+
+  `RN_deriv v m` (HOL) = `RN_deriv m (m_space m,measurable_sets m,v)` (Isabelle/HOL)
+
+   The existence of `RN_deriv v m` is then asserted by Radon-Nikodym theorem, and
+   its uniqueness is asserted by the following (unproved) theorem:
+
+     !m f f'. measure_space m /\ sigma_finite m /\
+              f IN borel_measurable (m_space m,measurable_sets m) /\
+              f' IN borel_measurable (m_space m,measurable_sets m) /\
+              nonneg f /\ nonneg f' /\
+              (!s. s IN measurable_sets m ==> ((f * m) s = (f' * m) s))
+          ==> AE x::m. (f x = f' x)
+
+   see also density_measure_def for the overload of ‘*’ in `f * m`.
+ *)
+Definition RN_deriv_def : (* or `v / m` (dv/dm) *)
+    RN_deriv v m =
+      @f. f IN measurable (m_space m,measurable_sets m) Borel /\
+          (!x. x IN m_space m ==> 0 <= f x) /\
+          !s. s IN measurable_sets m ==> ((f * m) s = v s)
+End
+
+(* `f = RN_deriv v m` is denoted by `f = v / m`
+   NOTE: cannot use the Overload syntax sugar here (on "/").
+ *)
+val _ = overload_on ("/", “RN_deriv”);
+
+Theorem RN_deriv_thm :
+    !m v. measure_space m /\
+          (?f. f IN measurable (m_space m,measurable_sets m) Borel /\
+              (!x. x IN m_space m ==> 0 <= f x) /\
+              (!s. s IN measurable_sets m ==> (f * m) s = v s)) ==>
+          !s. s IN measurable_sets m ==> (v / m * m) s = v s
+Proof
+    RW_TAC std_ss [RN_deriv_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC >- (Q.EXISTS_TAC ‘f’ >> rw [])
+ >> Q.X_GEN_TAC ‘g’
+ >> rpt STRIP_TAC
+ >> POP_ASSUM MATCH_MP_TAC >> art []
+QED
+
+(* This is ported from the following theorem (RN_derivI)
+
+    !f M N. f IN measurable (m_space M, measurable_sets M) Borel /\
+            (!x. 0 <= f x) /\ (density M f = measure_of N) /\
+             measure_space M /\ measure_space N /\
+            (measurable_sets M = measurable_sets N) ==>
+            (density M (RN_deriv M N) = measure_of N)
+ *)
+Theorem RN_deriv_thm' : (* was: RN_derivI *)
+    !f m v. measure_space m /\
+            f IN measurable (m_space m,measurable_sets m) Borel /\
+           (!x. x IN m_space m ==> 0 <= f x) /\
+           (!s. s IN measurable_sets m ==> (f * m) s = v s) ==>
+            measure_space_eq (density m (v / m))
+                             (m_space m,measurable_sets m,v)
+Proof
+    rw [measure_space_eq_def, density_def]
+ >> irule RN_deriv_thm >> art []
  >> Q.EXISTS_TAC ‘f’ >> rw []
 QED
 

@@ -10,6 +10,7 @@
 (global-set-key (kbd "C-:") "∈")
 (global-set-key (kbd "C-~") (lambda () (interactive) (insert "¬")))
 (global-set-key (kbd "C-S-c") "⊆")
+(global-set-key (kbd "C-*") (lambda () (interactive) (insert "×")))
 (global-set-key (kbd "C-S-q") "≤")
 (global-set-key (kbd "C-M-~") "∼")
 (global-set-key (kbd "C-M-S-b") "□")
@@ -240,6 +241,7 @@
 (define-key hol-unicode-C-map (kbd "p") "⊂")  ; "p" for proper
 (define-key hol-unicode-C-map (kbd "q") "≼")  ; "q" for less-or-eQual
 (define-key hol-unicode-C-map (kbd "=") "≈")
+(define-key hol-unicode-C-map (kbd "+") "≅")
 (define-key hol-unicode-C-map (kbd "<") "≺")
 (define-key hol-unicode-C-map (kbd "^") "⌢")
 
@@ -444,6 +446,10 @@
 (define-key hol-unicode-bboard-map (kbd "X") "𝕏")  ; U+1D54F
 (define-key hol-unicode-bboard-map (kbd "Y") "𝕐")  ; U+1D550
 (define-key hol-unicode-bboard-map (kbd "Z") "ℤ")  ; U+1D551
+; and numbers
+(dotimes (i 10)
+  (define-key hol-unicode-bboard-map (kbd (format "%d" i))
+    (char-to-string (+ i #x1d7d8))))
 
 
 

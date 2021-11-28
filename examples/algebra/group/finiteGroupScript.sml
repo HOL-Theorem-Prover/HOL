@@ -795,7 +795,7 @@ val subset_cross_to_preimage_cross_bij = store_thm(
 (* Proof:
    Let s = s1 CROSS s2.
    Note partition (feq f) s
-      = IMAGE ((preimage f s) o f) s       by feq_partition_by_preimage
+      = IMAGE ((preimage f s) o f) s       by feq_partition
       = IMAGE (preimage f s) (IMAGE f s)   by IMAGE_COMPOSE
       = IMAGE (preimage f s) (s1 o s2)     by subset_cross_alt
    With t IN partition (feq f) s           by given
@@ -814,7 +814,7 @@ val subset_cross_partition_property = store_thm(
    !t. t IN partition (feq f) (s1 CROSS s2) ==> (CARD t = CARD (s1 INTER s2))``,
   rw_tac std_ss[] >>
   qabbrev_tac `s = s1 CROSS s2` >>
-  `partition (feq f) s = IMAGE (preimage f s) (IMAGE f s)` by rw[feq_partition_by_preimage, IMAGE_COMPOSE] >>
+  `partition (feq f) s = IMAGE (preimage f s) (IMAGE f s)` by rw[feq_partition, IMAGE_COMPOSE] >>
   `_ = IMAGE (preimage f s) (s1 o s2)` by rw[subset_cross_alt, Abbr`s`] >>
   `?z. z IN (s1 o s2) /\ (preimage f s z = t)` by metis_tac[IN_IMAGE] >>
   `?m. BIJ m (s1 INTER s2) t` by metis_tac[subset_cross_to_preimage_cross_bij] >>
@@ -876,7 +876,7 @@ val subset_cross_preimage_inj = store_thm(
 
    Claim: CARD (partition (feq f) s) = CARD (s1 o s2)
    Proof:   partition (feq f) s
-          = IMAGE (preimage f s o f) s                         by feq_partition_by_preimage
+          = IMAGE (preimage f s o f) s                         by feq_partition
           = IMAGE (preimage f s) (IMAGE f s)                   by IMAGE_COMPOSE
           = IMAGE (preimage f s) (s1 o s2)                     by subset_cross_alt
           Note INJ (preimage f s) (s1 o s2) univ(:('a reln))   by subset_cross_preimage_inj
@@ -907,7 +907,7 @@ val subgroup_cross_card_eqn = store_thm(
   `FINITE s` by rw[Abbr`s`] >>
   qabbrev_tac `f = (\(x:'a, y:'a). x * y)` >>
   `CARD (partition (feq f) s) = CARD (s1 o s2)` by
-  (`partition (feq f) s = IMAGE (preimage f s) (IMAGE f s)` by rw[feq_partition_by_preimage, IMAGE_COMPOSE] >>
+  (`partition (feq f) s = IMAGE (preimage f s) (IMAGE f s)` by rw[feq_partition, IMAGE_COMPOSE] >>
   `_ = IMAGE (preimage f s) (s1 o s2)` by rw[subset_cross_alt, Abbr`s`] >>
   metis_tac[subset_cross_finite, subset_cross_preimage_inj, INJ_CARD_IMAGE]) >>
   `FINITE (partition (feq f) s)` by rw[FINITE_partition] >>

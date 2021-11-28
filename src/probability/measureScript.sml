@@ -40,8 +40,8 @@ val _ = hide "S";
 (*  Basic measure theory definitions.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = type_abbrev_pp ("measure", ``:'a set -> extreal``);
-val _ = type_abbrev_pp ("m_space", ``:'a set # 'a set set # 'a measure``);
+Type measure[pp] = “:'a set -> extreal”
+Type m_space[pp] = “:'a set # 'a set set # 'a measure”
 
 (* These're accessors of the triple of measure space *)
 val m_space_def = Define
@@ -129,6 +129,16 @@ val measure_preserving_def = Define
      !s.
       s IN measurable_sets m2 ==>
            (measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s)}`;
+
+(* This substitutes HVG's ‘measure_of’ methodology: instead of writing things like
+   ‘measure_of m1 = measure_of m2’ now we write ‘measure_space_eq m1 m2’ instead.
+ *)
+Definition measure_space_eq_def :
+    measure_space_eq m1 m2 =
+      (m_space m1 = m_space m2 /\
+       measurable_sets m1 = measurable_sets m2 /\
+       (!s. s IN measurable_sets m1 ==> (measure m1 s = measure m2 s)))
+End
 
 (* ------------------------------------------------------------------------- *)
 (*  Basic measure theory theorems                                            *)
@@ -699,6 +709,27 @@ Proof
       (* goal 3 (of 3) *)
       rw [countably_additive_def, IN_FUNSET, IN_UNIV, o_DEF] \\
       fs [measure_space_def, countably_additive_def, IN_FUNSET, IN_UNIV, o_DEF] ]
+QED
+
+Theorem measure_space_eq' :
+    !m1 m2. measure_space m1 /\ measure_space_eq m1 m2 ==> measure_space m2
+Proof
+    RW_TAC std_ss [measure_space_eq_def]
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘m1’ >> rw []
+QED
+
+Theorem measure_space_eq_comm :
+    !m1 m2. measure_space_eq m1 m2 ==> measure_space_eq m2 m1
+Proof
+    RW_TAC std_ss [measure_space_eq_def]
+QED
+
+Theorem measure_space_eq_trans :
+    !m1 m2 m3. measure_space_eq m1 m2 /\ measure_space_eq m2 m3 ==>
+               measure_space_eq m1 m3
+Proof
+    RW_TAC std_ss [measure_space_eq_def]
 QED
 
 val MEASURE_SPACE_INTER = store_thm
@@ -4792,6 +4823,28 @@ Proof
  >> MATCH_MP_TAC INCREASING >> art []
  >> reverse CONJ_TAC >- SET_TAC []
  >> IMP_RES_TAC MEASURE_SPACE_INCREASING
+QED
+
+Theorem NULL_SET_BIGUNION :
+    !m f. measure_space m /\ (!n. f n IN null_set m) ==>
+          BIGUNION (IMAGE f univ(:num)) IN null_set m
+Proof
+    rpt GEN_TAC
+ >> simp [IN_NULL_SET, null_set_def]
+ >> STRIP_TAC
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC MEASURE_SPACE_BIGUNION >> art [])
+ >> DISCH_TAC
+ >> REWRITE_TAC [GSYM le_antisym]
+ >> reverse CONJ_TAC
+ >- (IMP_RES_TAC MEASURE_SPACE_POSITIVE \\
+     fs [positive_def])
+ >> Know ‘suminf (measure m o f) = 0’
+ >- (MATCH_MP_TAC ext_suminf_zero >> rw [o_DEF])
+ >> DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM)
+ >> IMP_RES_TAC MEASURE_SPACE_COUNTABLY_SUBADDITIVE
+ >> MATCH_MP_TAC COUNTABLY_SUBADDITIVE
+ >> rw [IN_FUNSET]
 QED
 
 (* ------------------------------------------------------------------------- *)

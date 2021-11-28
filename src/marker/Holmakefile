@@ -8,3 +8,12 @@ endif
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+.PHONY: marker-selftest
+
+all: marker-selftest
+
+marker-selftest: selftest.exe
+	./selftest.exe
+endif

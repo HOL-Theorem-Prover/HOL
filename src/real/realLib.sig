@@ -17,4 +17,8 @@ sig
    val basic_diffs : unit -> thm list
    val DIFF_CONV : conv
 
+   (* syntax *)
+   val prefer_real     : unit -> unit
+   val deprecate_real  : unit -> unit
+
 end

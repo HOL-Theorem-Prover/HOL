@@ -1325,6 +1325,12 @@ Induct
      THEN REWRITE_TAC [MEM] THEN REPEAT STRIP_TAC
      THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);
 
+Theorem list_size_append:
+  !f xs ys. list_size f (xs ++ ys) = list_size f xs + list_size f ys
+Proof
+  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_def]
+QED
+
 val FOLDR_CONG = store_thm("FOLDR_CONG",
 Term
   ‘!l l' b b' (f:'a->'b->'b) f'.
@@ -2347,6 +2353,13 @@ val SET_TO_LIST_EMPTY = store_thm(
   “SET_TO_LIST {} = []”,
   SRW_TAC [] [SET_TO_LIST_THM])
 val _ = export_rewrites ["SET_TO_LIST_EMPTY"]
+
+Theorem SET_TO_LIST_EMPTY_IFF:
+  !s. FINITE s ==>
+  (SET_TO_LIST s = [] <=> s = {})
+Proof
+  ho_match_mp_tac FINITE_INDUCT \\ rw[SET_TO_LIST_THM]
+QED
 
 val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
 ‘!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)’,
@@ -3378,6 +3391,12 @@ val MAP_FLAT = store_thm(
   "MAP_FLAT",
   “MAP f (FLAT l) = FLAT (MAP (MAP f) l)”,
   Induct_on ‘l’ THEN ASM_SIMP_TAC (srw_ss()) [MAP_APPEND])
+
+Theorem FLAT_MAP_K_NIL:
+  !ls. FLAT (MAP (K []) ls) = []
+Proof
+  Induct \\ rw[]
+QED
 
 val LIST_APPLY_o = store_thm(
   "LIST_APPLY_o",

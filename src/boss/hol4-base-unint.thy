@@ -109,6 +109,8 @@ numeral {
 basic-size {
   import: bool
   import: pair
+  import: sum
+  import: option
   article: "../num/theories/basicSize.ot.art"
 }
 while {
@@ -122,7 +124,6 @@ numpair {
   import: pair
   import: numeral
   import: relation
-  import: marker
   import: prim-rec
   import: relation
   article: "../num/extra_theories/numpair.ot.art"
@@ -147,6 +148,7 @@ logroot {
 }
 gcd {
   import: bool
+  import: marker
   import: combin
   import: num
   import: arithmetic
@@ -154,6 +156,7 @@ gcd {
   import: divides
   import: pair
   import: relation
+  import: basic-size
   article: "../num/extra_theories/gcd.ot.art"
 }
 bit {
@@ -194,6 +197,7 @@ pred-set {
   import: numeral
   import: numpair
   import: marker
+  import: divides
   article: "../pred_set/src/pred_set.ot.art"
 }
 ind-type {
@@ -217,6 +221,7 @@ list {
 rich-list {
   import: arithmetic
   import: bool
+  import: marker
   import: combin
   import: list
   import: pred-set
@@ -237,6 +242,7 @@ numposrep {
   import: numeral
   import: marker
   import: relation
+  import: basic-size
   article: "../list/src/numposrep.ot.art"
 }
 sat {

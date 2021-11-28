@@ -665,15 +665,49 @@ val LN_LT_X = store_thm("LN_LT_X",
   REWRITE_TAC[REAL_LT_RADD, REAL_LT_01] THEN
   REWRITE_TAC[REAL_ADD_LID, REAL_LE_REFL]);
 
-val LN_POS = store_thm("LN_POS",
-  Term `!x. &1 <= x ==> &0 <= ln(x)`,
-  GEN_TAC THEN DISCH_TAC THEN SUBGOAL_THEN (Term `&0 < x`) ASSUME_TAC THENL
-   [MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC (Term`&1`) THEN
-    ASM_REWRITE_TAC[REAL_LT_01],
-    UNDISCH_TAC (Term`&1 <= x`) THEN SUBST1_TAC(SYM EXP_0) THEN
-    POP_ASSUM(MP_TAC o REWRITE_RULE[GSYM EXP_LN]) THEN
-    DISCH_THEN(fn th => GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [] [SYM th])
-    THEN REWRITE_TAC[EXP_MONO_LE]]);;
+Theorem LN_POS_LT :
+    !(x :real). 1 < x ==> 0 < ln x
+Proof
+    RW_TAC std_ss [GSYM LN_1]
+ >> ASSUME_TAC REAL_LT_01
+ >> ‘0 < x’ by PROVE_TAC [REAL_LT_TRANS]
+ >> RW_TAC std_ss [LN_MONO_LT]
+QED
+
+Theorem LN_POS :
+    !(x :real). 1 <= x ==> 0 <= ln x
+Proof
+    rpt STRIP_TAC
+ >> ‘x = 1 \/ 1 < x’ by PROVE_TAC [REAL_LE_LT] >- rw [LN_1]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> MATCH_MP_TAC LN_POS_LT >> art []
+QED
+
+Theorem LN_NEG_LT :
+    !(x :real). 0 < x /\ x < 1 ==> ln x < 0
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘y = inv x’
+ >> ‘1 < y’ by METIS_TAC [REAL_INV_LT1]
+ >> Know ‘x = inv y’
+ >- (MATCH_MP_TAC REAL_RINV_UNIQ \\
+     Q.UNABBREV_TAC ‘y’ \\
+     MATCH_MP_TAC REAL_MUL_LINV \\
+     PROVE_TAC [REAL_LT_IMP_NE])
+ >> Rewr'
+ >> ‘0 < y’ by PROVE_TAC [REAL_LT_01, REAL_LT_TRANS]
+ >> rw [LN_INV]
+ >> MATCH_MP_TAC LN_POS_LT >> art []
+QED
+
+Theorem LN_NEG :
+    !(x :real). 0 < x /\ x <= 1 ==> ln x <= 0
+Proof
+    rpt STRIP_TAC
+ >> ‘x = 1 \/ x < 1’ by PROVE_TAC [REAL_LE_LT] >- rw [LN_1]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> MATCH_MP_TAC LN_NEG_LT >> art []
+QED
 
 Theorem DIFF_LN[difftool]:
    !x. &0 < x ==> (ln diffl (inv x))(x)
@@ -763,6 +797,15 @@ val ROOT_POW_POS = store_thm("ROOT_POW_POS",
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[ROOT_0] THEN
     MATCH_ACCEPT_TAC POW_0]);
 
+Theorem ROOT_11 :
+    !n x y. &0 <= x /\ &0 <= y /\ root(SUC n) x = root(SUC n) y ==> x = y
+Proof
+    rpt STRIP_TAC
+ >> ‘(root (SUC n) x) pow (SUC n) = (root (SUC n) y) pow (SUC n)’
+      by PROVE_TAC []
+ >> rfs [ROOT_POW_POS]
+QED
+
 val POW_ROOT_POS = store_thm("POW_ROOT_POS",
   “!n x. &0 <= x ==> (root(SUC n)(x pow (SUC n)) = x)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
@@ -781,7 +824,6 @@ val POW_ROOT_POS = store_thm("POW_ROOT_POS",
     ASM_REWRITE_TAC[REAL_LT_LE] THEN CONV_TAC CONTRAPOS_CONV THEN
     REWRITE_TAC[] THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[POW_0]]);
-
 
 (* Known in GTT as ROOT_POS_POSITIVE *)
 val ROOT_POS = store_thm("ROOT_POS",
@@ -854,6 +896,19 @@ Proof
   THENL [IMP_RES_TAC (GSYM ROOT_POW_POS) THEN ASM_MESON_TAC[], ALL_TAC] THEN
   MATCH_MP_TAC REAL_POW_LT2 THEN
   ASM_REWRITE_TAC[NOT_SUC] THEN MATCH_MP_TAC ROOT_POS THEN ASM_REWRITE_TAC[]
+QED
+
+Theorem ROOT_MONO_LE_EQ :
+   !n x y. &0 <= x /\ &0 <= y ==> (root (SUC n) x <= root (SUC n) y <=> x <= y)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >- (DISCH_TAC >> MATCH_MP_TAC ROOT_MONO_LE >> art [])
+ >> DISCH_TAC
+ >> CCONTR_TAC >> FULL_SIMP_TAC std_ss [GSYM real_lt]
+ >> IMP_RES_TAC REAL_LT_IMP_LE
+ >> ‘root(SUC n) y <= root(SUC n) x’ by PROVE_TAC [ROOT_MONO_LE]
+ >> ‘root(SUC n) x = root(SUC n) y’ by PROVE_TAC [REAL_LE_ANTISYM]
+ >> METIS_TAC [ROOT_11, REAL_LT_LE]
 QED
 
 val SQRT_0 = store_thm("SQRT_0",
@@ -3933,6 +3988,24 @@ KNOW_TAC``exp(ln x)= (x:real)`` THEN1
 DISCH_TAC THEN ASM_REWRITE_TAC []
 QED
 
+(* Convert ‘root’ to ‘rpow’,
+   NOTE: hol-light's version is more general: ‘0 <= x \/ ODD n’
+  *)
+Theorem REAL_ROOT_RPOW :
+    !n x. ~(n = 0) /\ &0 < x ==> root n x = x rpow inv (&n)
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘n’ >- fs []
+ >> rename1 ‘SUC n <> 0’
+ >> rw [ROOT_LN, rpow, real_div]
+QED
+
+Theorem SQRT_RPOW :
+    !(x :real). 0 < x ==> sqrt x = x rpow (inv 2)
+Proof
+    rw [sqrt, REAL_ROOT_RPOW]
+QED
+
 (*----------------------------------------------------------------*)
 (* Differentiability of real powers                               *)
 (*----------------------------------------------------------------*)
@@ -4426,6 +4499,46 @@ Proof
  >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
  >> Rewr'
  >> rw [REAL_LE_SUB_LADD]
+QED
+
+(* |- 0 < -x /\ -x < 1 ==>
+      ?t. 0 < t /\ t < -x /\ ln (1 + x) = x * realinv (1 - t)
+ *)
+val lemma =
+    SIMP_RULE real_ss [REAL_NEG_0, real_div, REAL_INV_0, POW_1, REAL_EQ_NEG]
+                      (REWRITE_RULE [sum, ONE]
+                                    (Q.SPECL [‘-x’, ‘1’] MCLAURIN_LN_NEG));
+
+(* An extended version of EXP_LE_X to entire reals, based on MCLAURIN_LN_NEG *)
+Theorem EXP_LE_X_FULL :
+    !x :real. &1 + x <= exp x
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on `0 <= x`
+ >- (MATCH_MP_TAC EXP_LE_X >> art [])
+ >> FULL_SIMP_TAC std_ss [GSYM real_lt]
+ >> Cases_on `x <= -1`
+ >- (MATCH_MP_TAC REAL_LE_TRANS \\
+     Q.EXISTS_TAC `0` >> REWRITE_TAC [EXP_POS_LE] \\
+    `0r = 1 + -1` by RW_TAC real_ss [] \\
+     POP_ORW >> art [REAL_LE_LADD])
+ >> FULL_SIMP_TAC std_ss [GSYM real_lt]
+ >> MP_TAC lemma
+ >> ‘0 < -x /\ -x < 1’ by REAL_ASM_ARITH_TAC
+ >> RW_TAC std_ss []
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> Know ‘1 + x < exp x <=> ln (1 + x) < ln (exp x)’
+ >- (MATCH_MP_TAC (GSYM LN_MONO_LT) \\
+     REWRITE_TAC [EXP_POS_LT] >> REAL_ASM_ARITH_TAC)
+ >> Rewr'
+ >> POP_ORW
+ >> REWRITE_TAC [LN_EXP]
+ >> GEN_REWRITE_TAC RAND_CONV (* empty_rewrites *) [] [GSYM REAL_MUL_RID]
+ >> Know ‘x * inv (1 - t) < x * 1 <=> 1 < inv (1 - t)’
+ >- (MATCH_MP_TAC REAL_LT_LMUL_NEG >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC REAL_INV_LT1
+ >> REAL_ASM_ARITH_TAC
 QED
 
 (* NOTE: Jensen's inequalities are in real_sigmaScript.sml *)

@@ -528,6 +528,18 @@ fun POP_ASSUM thfun (a :: asl, w) = thfun (ASSUME a) (asl, w)
   | POP_ASSUM   _   ([], _) = raise ERR "POP_ASSUM" "no assum"
 val pop_assum = POP_ASSUM
 
+(* ----------------------------------------------------------------------
+    pop the last assumption and give it to a function
+   ---------------------------------------------------------------------- *)
+
+fun POP_LAST_ASSUM thfun (asl, w) =
+    let
+      val (front, last) = front_last asl
+    in
+      thfun (ASSUME last) (front, w)
+    end handle Empty => raise ERR "POP_LAST_ASSUM" "no assum"
+val pop_last_assum = POP_LAST_ASSUM
+
 (*---------------------------------------------------------------------------
  * Pop off the entire assumption list and give it to a function (tactic)
  *---------------------------------------------------------------------------*)

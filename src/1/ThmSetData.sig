@@ -31,4 +31,48 @@ sig
       {settype : string, delta_ops : 'value ops} ->
       (setdelta,'value) AncestryData.fullresult
 
+  type simple_dictionary = (string,thm) Binarymap.dict
+  val simple_dictionary_ops : simple_dictionary -> simple_dictionary ops
+  val export_simple_dictionary :
+      {settype : string, initial : (string * thm) list} ->
+      {merge : string list -> simple_dictionary option,
+       DB : {thyname:string} -> simple_dictionary option,
+       temp_exclude : string -> unit, exclude : string -> unit,
+       export : string -> unit, temp_export : string -> unit,
+       getDB : unit -> simple_dictionary,
+       get_thms : unit -> thm list,
+       temp_setDB : simple_dictionary -> unit}
+  (* creates a dictionary that names theorems "0", "1", etc *)
+  val sdict_withflag_thms : {getDB : unit -> simple_dictionary,
+                             temp_setDB : simple_dictionary -> unit} *
+                            thm list -> ('a -> 'b) -> ('a -> 'b)
+
+  type alist = (string * thm) list
+  val alist_ops : alist -> alist ops
+  val export_alist :
+      {settype : string, initial : (string * thm) list} ->
+      {merge : string list -> alist option,
+       DB : {thyname:string} -> alist option,
+       temp_exclude : string -> unit, exclude : string -> unit,
+       export : string -> unit, temp_export : string -> unit,
+       getDB : unit -> alist,
+       get_thms : unit -> thm list,
+       temp_setDB : alist -> unit}
+  (* creates alist that names theorems "0", "1", etc *)
+  val alist_withflag_thms : {getDB : unit -> alist,
+                             temp_setDB : alist -> unit} *
+                            thm list -> ('a -> 'b) -> ('a -> 'b)
+
+  val list_ops : thm list -> thm list ops
+  val export_list :
+      {settype : string, initial : thm list} ->
+      {merge : string list -> thm list option,
+       DB : {thyname:string} -> thm list option,
+       export : string -> unit, temp_export : string -> unit,
+       temp_exclude : thm -> unit, (* checks list with thm-concl-equality *)
+       getDB : unit -> thm list,
+       temp_setDB : thm list -> unit}
+
+
+
 end

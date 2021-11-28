@@ -633,23 +633,6 @@ fun temp_set_associativity (i,a) = let in
    term_grammar_changed := true
  end
 
-fun block_infoToString (Portable.CONSISTENT, n) =
-        "(Portable.CONSISTENT, "^Int.toString n^")"
-  | block_infoToString (Portable.INCONSISTENT, n) =
-    "(Portable.INCONSISTENT, "^Int.toString n^")"
-
-fun ParenStyleToString Always = "Always"
-  | ParenStyleToString OnlyIfNecessary = "OnlyIfNecessary"
-  | ParenStyleToString ParoundName = "ParoundName"
-  | ParenStyleToString ParoundPrec = "ParoundPrec"
-  | ParenStyleToString NotEvenIfRand = "NotEvenIfRand"
-
-fun BlockStyleToString AroundSameName = "AroundSameName"
-  | BlockStyleToString AroundSamePrec = "AroundSamePrec"
-  | BlockStyleToString AroundEachPhrase = "AroundEachPhrase"
-  | BlockStyleToString NoPhrasing = "NoPhrasing"
-
-
 (*---------------------------------------------------------------------------*)
 (* Apply a function to its argument. If it fails, revert the grammars        *)
 (*---------------------------------------------------------------------------*)

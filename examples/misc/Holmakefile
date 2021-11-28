@@ -1,3 +1,5 @@
+INCLUDES = $(dprot $(HOLDIR)/src/real) $(dprot $(HOLDIR)/src/bag)
+
 all: $(DEFAULT_TARGETS) euclid-OK
 .PHONY: all
 

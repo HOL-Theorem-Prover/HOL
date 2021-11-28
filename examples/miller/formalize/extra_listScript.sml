@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib;
 
 open listTheory numTheory arithmeticTheory hurdUtils
      pred_setTheory subtypeTheory extra_numTheory rich_listTheory
-     realTheory realLib pairTheory;
+     pairTheory;
 
 val _ = new_theory "extra_list";
 
@@ -226,16 +226,6 @@ val GTLIST1_SUBSET_GTLIST0 = store_thm
    RW_TAC std_ss [SUBSET_DEF, IN_GTLIST]
    >> DECIDE_TAC);
 
-val REAL_SUM = Define`
-  (REAL_SUM [] = 0:real) /\
-  (!x l. REAL_SUM (x::l) = x + REAL_SUM l)
-`;
-
-val REAL_SUM_MAP_CMUL = store_thm  ("REAL_SUM_MAP_CMUL",
-  ``!f c l. REAL_SUM (MAP (\x. c * f x) l) = c * REAL_SUM (MAP f l)``,
-  STRIP_TAC >> STRIP_TAC >> Induct >>
-  RW_TAC real_ss [REAL_SUM, MAP, REAL_ADD_LDISTRIB]);
-
 val LIST_COMBS = Define
   `(LIST_COMBS [] _ = []) /\
    (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))`;
@@ -254,7 +244,7 @@ Theorem LENGTH_LIST_COMBS :
     !x y. LENGTH (LIST_COMBS x y) = LENGTH x * LENGTH y
 Proof
     Induct
- >> RW_TAC real_ss [LENGTH, LIST_COMBS, LENGTH_APPEND, LENGTH_MAP]
+ >> rw[LENGTH, LIST_COMBS, LENGTH_APPEND, LENGTH_MAP]
  >> `LENGTH y + LENGTH x * LENGTH y =
        1 * LENGTH y + LENGTH x * LENGTH y`
     by RW_TAC arith_ss []

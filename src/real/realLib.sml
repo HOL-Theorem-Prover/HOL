@@ -15,6 +15,37 @@ struct
 
   local open transcTheory in end;
 
-  open RealArith realSimps Diff isqrtLib;
+  open HolKernel RealArith realSimps Diff isqrtLib;
+
+  val operators = [("+", realSyntax.plus_tm),
+                   ("-", realSyntax.minus_tm),
+                   ("~", realSyntax.negate_tm),
+                   ("numeric_negate", realSyntax.negate_tm),
+                   ("*", realSyntax.mult_tm),
+                   ("/", realSyntax.div_tm),
+                   ("<", realSyntax.less_tm),
+                   ("<=", realSyntax.leq_tm),
+                   (">", realSyntax.greater_tm),
+                   (">=", realSyntax.geq_tm),
+                   (GrammarSpecials.fromNum_str, realSyntax.real_injection),
+                   (GrammarSpecials.num_injection, realSyntax.real_injection)];
+
+  fun deprecate_real () = let
+    fun doit (s, t) =
+       let val {Name,Thy,...} = dest_thy_const t in
+          Parse.temp_send_to_back_overload s {Name = Name, Thy = Thy}
+       end
+  in
+    List.app doit operators
+  end
+
+  fun prefer_real () = let
+    fun doit (s, t) =
+       let val {Name,Thy,...} = dest_thy_const t in
+          Parse.temp_bring_to_front_overload s {Name = Name, Thy = Thy}
+       end
+  in
+    List.app doit operators
+  end
 
 end

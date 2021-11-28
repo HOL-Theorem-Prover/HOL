@@ -282,6 +282,7 @@ However, it is probably impossible (or at least, painfully difficult) to describ
 Nor will \holmake{} perform its automatic dependency analysis on such ``remote'' files.
 
 \index{Holmake@\holmake!recursive invocation}%
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}%
 The right approach when a development spans multiple directories is to indicate that there is a dependency on other directories by using the \texttt{-I} flag, or (better) the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
 \holmake{} requires that, just as files must have an acyclic dependency graph, the directories containing those files must have a compatible, and acyclic, \texttt{INCLUDES} graph.
 With \texttt{INCLUDES} information to hand, \holmake{} will process the entire \texttt{INCLUDES} graph, looking throughout the graph for theory files that the current directory may depend on, and rebuilding those remote targets as necessary.
@@ -335,6 +336,10 @@ with the following command-line options:
   runs when a theory building file is executed to have the flag
   \texttt{Globals.interactive} set to true.  This will alter the diagnostic
   output of a number of functions within the system.
+\item[\texttt{-j<n>} or \texttt{--jobs=<n>}] Specify the maximum number of parallel jobs \holmake{} should use when building targets.
+  Each job is a separate process, and so can only interfere with other jobs \emph{via} their interactions with the file system.
+  Under Moscow~ML this option is ignored; its \holmake{} can only run jobs sequentially.
+  If not set, the default value for this option is 4.
 \item[\texttt{-k} or \texttt{--keep-going}] Causes \holmake{} to try
   to build all specified targets, rather than stopping as soon as one
   fails to build.
@@ -414,9 +419,10 @@ present at all.
 
 A variable definition is of the form
 \[
-\textsl{Ident} \texttt{ = } \textsl{text}  \texttt{ <NEWLINE> }
+\textsl{Ident} \;\;\textsl{op}\;\; \textsl{text}\;\;  \texttt{<NEWLINE>}
 \]
-and a rule is of the form
+where $\textsl{op}$ is either \texttt{=} or \texttt{+=}.
+A rule is of the form
 \[
 \textsl{text } \texttt{:} \textsl{ text} \texttt{ <NEWLINE>}
 (\texttt{<TAB>}\textsl{text}\texttt{ <NEWLINE>})^*
@@ -434,16 +440,19 @@ include white-space itself, those white-space characters should be
 escaped with back-slashes.
 
 \newcommand{\varref}[1]{\texttt{\$(#1)}}
-\paragraph{Variable definitions} The text on the RHS of a variable
+\paragraph{Variable definitions and references} The text on the RHS of a variable
 definition can be substituted into any other context by using a
-\emph{variable reference}, of the form \varref{VARNAME}.  References
-are evaluated \emph{late}, not at time of definition, so it is quite
-permissible to have forward references.  On the other hand, this makes
-it impossible to write things like \[ \texttt{VAR = \varref{VAR}
-something\_new}
-\] because the evaluation of \varref{VAR} would lead to an infinite
-loop. GNU \textsf{make}'s facility for immediate
-definition of variables with \texttt{:=} is not supported.
+\emph{variable reference}, of the form \varref{VARNAME}.
+References on right-hand sides are evaluated \emph{late}, at time of use, not at time of definition.
+This means it is permissible to have forward references.
+This makes it impossible to write things like
+\[
+  \texttt{VAR = \varref{VAR} something\_new}
+\]
+because the eventual evaluation of \varref{VAR} would lead to an infinite loop.
+GNU \textsf{make}'s facility for immediate definition of variables with \texttt{:=} is not supported, but the \texttt{+=} definition form does allow variables to be ``extended''.
+In particular, this form ``acts essentially as if you had included the extra text in the initial definition of the variable'' (as \emph{per} GNU \textsf{make}'s documentation).
+Extending a variable \texttt{VAR} in this way does not constitute a \emph{use} of this variable, so any variable references in its original definition will remain unexpanded until \texttt{VAR} is used in a rule.
 
 Note also that white-space around the equals-sign in a variable
 definition is stripped.  This means that
@@ -585,6 +594,7 @@ whose value are commas instead), but can otherwise be arbitrary text.
   so that the above will be read as one unit by the underlying shell.
 \item[\texttt{\$(subst arg1,arg2,text)}] replaces every occurrence
   of \texttt{arg1} in \texttt{text} with \texttt{arg2}.
+\item[\texttt{\$(tee arg1,arg2)}]\index{tee@\texttt{tee}!Holmake function@\texttt{Holmake} function} produces a (moderately complicated) shell command line that behaves like \texttt{arg1~|~tee~arg2}, but whose exit code is \texttt{arg1}'s rather than \texttt{tee}'s.
 \item[\texttt{\$(which arg)}] is replaced by the full path to an executable and readable occurrence of a file called \texttt{arg} within a directory in the list of directories in the \texttt{PATH} environment variable.
 For example \texttt{\$(which cat)} will usually expand to \texttt{/bin/cat} on Unix-like systems.
 If there is no occurrence of \texttt{arg} in any directory in \texttt{PATH}, this function call expands to the empty string.
@@ -595,10 +605,11 @@ If the pattern doesn't match any files, then the function returns \texttt{patter
 \paragraph{Special and pre-defined variables}
 
 \index{Holmake@\holmake!variables in makefiles}
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}
 If defined, the \texttt{INCLUDES} variable is used to add directories to the list of directories consulted when files are compiled and linked.
 The effect is as if the directories specified had all been included on the command-line with \texttt{-I} options.
-The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before the \mbox{\texttt{-I <sigobj>}} option that is used in invocations of compiler.
-This option gives the user a way of over-riding code in the core distribution as the compiler will find their code before the distribution's.
+The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before any \texttt{INCLUDES} directories when dependency analysis is done.
+Both \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directories are consulted before the distribution's \texttt{sigobj} directory (containing all core material).
 
 \index{Holmake@\holmake!recursive invocation}
 By default, directories specified in the \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directory are also built by \holmake{} before it attempts to build in the current directory.
@@ -660,6 +671,7 @@ See Section~\ref{sec:polyml-heaps} below for more on using custom heaps with Pol
   system's overlay file.  This is needed for compilation of HOL source
   files, but not for linking of HOL object code, which can be done
   with \texttt{HOLMOSMLC}.
+\item[\texttt{HOL\_NUMJOBS}] The value of the \texttt{-j} option (4 by default under Poly/ML, 1 under Moscow~ML) controlling the number of parallel jobs that \holmake{} will use.
 \item[\texttt{KERNELID}]
   The kernel option that was passed to \HOL's \texttt{build} command, stripped of its leading hyphens.
   This will typically be \texttt{stdknl} (the standard kernel) but may take on other values if other custom kernels are being used.

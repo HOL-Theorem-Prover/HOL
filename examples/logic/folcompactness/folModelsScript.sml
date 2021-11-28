@@ -22,12 +22,15 @@ Proof
   simp[valuation_def, combinTheory.APPLY_UPDATE_THM] >> rw[] >> rw[]
 QED
 
-Definition termval_def[simp]:
+Definition termval_def:
   (termval M v (V x) = v x) ∧
   (termval M v (Fn f l) = M.Fun f (MAP (termval M v) l))
 Termination
   WF_REL_TAC ‘measure (term_size o SND o SND)’ >> simp[]
 End
+
+Theorem termval_def[simp] =
+        SIMP_RULE bool_ss [SF ETA_ss] termval_def
 
 Definition holds_def:
   (holds M v False ⇔ F) ∧
@@ -289,12 +292,12 @@ Proof
         >- (simp[valuation_def] >>
             ‘Mt.Dom = {f d | d ∈ Ms.Dom}’ by simp[Abbr‘Mt’] >> simp[] >>
             metis_tac[]) >>
-        simp[Abbr‘Mt’, MAP_MAP_o, combinTheory.o_ABS_R]) >>
+        simp[Abbr‘Mt’, MAP_MAP_o, Cong MAP_CONG']) >>
   ‘∀k v m:num->β. f' o m⦇ k ↦ f v ⦈ = (f' o m)⦇ k ↦ v ⦈’
     by (simp[combinTheory.APPLY_UPDATE_THM, FUN_EQ_THM] >> rw[]) >>
   ‘∀p v. valuation Mt v ⇒ (holds Mt v p ⇔ holds Ms (f' o v) p)’
      by (Induct >> simp[Cong MAP_CONG']
-         >- simp[Abbr‘Mt’, MAP_MAP_o, combinTheory.o_ABS_R] >>
+         >- simp[Abbr‘Mt’, Cong MAP_CONG', MAP_MAP_o] >>
          rw[Abbr‘Mt’, PULL_EXISTS]) >>
   simp[] >> fs[satisfies_def] >> rw[] >> first_x_assum irule >>
   fs[valuation_def] >> fs[Abbr‘Mt’] >> metis_tac[]

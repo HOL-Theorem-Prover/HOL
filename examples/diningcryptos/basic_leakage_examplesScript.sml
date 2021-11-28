@@ -17,6 +17,7 @@ open hurdUtils util_probTheory real_measureTheory real_lebesgueTheory
      real_probabilityTheory;
 
 val _ = new_theory "basic_leakage_examples";
+val _ = temp_set_fixity "CROSS" (Infixl 600)
 
 val safe_set_ss = (simpLib.++ (bool_ss, PRED_SET_ss));
 

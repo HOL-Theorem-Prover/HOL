@@ -123,8 +123,10 @@ fun buildDir symlink s =
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
+
 fun build_hol symlink = let
 in
+  remove_all_holmkdirs();
   clean_sigobj();
   setup_logfile();
   build_src symlink

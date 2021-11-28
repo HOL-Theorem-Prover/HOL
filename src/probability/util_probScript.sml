@@ -11,9 +11,9 @@ open HolKernel Parse boolLib bossLib;
 
 open metisLib pairTheory combinTheory pred_setTheory pred_setLib jrhUtils
      arithmeticTheory realTheory realLib transcTheory seqTheory numLib
-     real_sigmaTheory numpairTheory hurdUtils RealArith fcpTheory fcpLib;
+     real_sigmaTheory numpairTheory hurdUtils RealArith;
 
-open iterateTheory;
+open whileTheory iterateTheory;
 
 val _ = new_theory "util_prob";
 
@@ -62,320 +62,6 @@ Proof
  >> RW_TAC std_ss []
  >> Q.EXISTS_TAC `(t,u)`
  >> RW_TAC std_ss []
-QED
-
-(* ‘FCP_CONCAT s t’ is in place of ‘(a,b)’ (pair), thus ’fcp_pair a b’ is ‘a CROSS b’ *)
-val fcp_cross_def = Define (* cf. CROSS_DEF *)
-   ‘fcp_cross A B = {FCP_CONCAT a b | a IN A /\ b IN B}’;
-
-Theorem IN_FCP_CROSS : (* cf. IN_CROSS *)
-    !s a b. s IN fcp_cross a b <=> ?t u. (s = FCP_CONCAT t u) /\ t IN a /\ u IN b
-Proof
-    RW_TAC std_ss [fcp_cross_def, GSPECIFICATION, UNCURRY]
- >> EQ_TAC >- PROVE_TAC []
- >> RW_TAC std_ss []
- >> Q.EXISTS_TAC `(t,u)`
- >> RW_TAC std_ss []
-QED
-
-(* high dimensional space are made by lower dimensional spaces *)
-Theorem fcp_cross_UNIV :
-    FINITE univ(:'b) /\ FINITE univ(:'c) ==>
-    fcp_cross univ(:'a['b]) univ(:'a['c]) = univ(:'a['b + 'c])
-Proof
-    rw [Once EXTENSION, IN_UNIV, GSPECIFICATION, IN_FCP_CROSS]
- >> Q.EXISTS_TAC ‘FCP i. x ' (i + dimindex(:'c))’
- >> Q.EXISTS_TAC ‘FCP i. x ' i’
- >> rw [FCP_CONCAT_def, CART_EQ, index_sum, FCP_BETA]
-QED
-
-val fcp_prod_def = Define (* cf. prod_sets_def *)
-   ‘fcp_prod a b = {fcp_cross s t | s IN a /\ t IN b}’;
-
-Theorem IN_FCP_PROD :
-    !s A B. s IN fcp_prod A B <=> ?a b. (s = fcp_cross a b) /\ a IN A /\ b IN B
-Proof
-    RW_TAC std_ss [fcp_prod_def, GSPECIFICATION, UNCURRY]
- >> EQ_TAC >- PROVE_TAC []
- >> RW_TAC std_ss []
- >> Q.EXISTS_TAC `(a,b)`
- >> RW_TAC std_ss []
-QED
-
-Theorem FCP_BIGUNION_CROSS :
-    !f s t. fcp_cross (BIGUNION (IMAGE f s)) t = BIGUNION (IMAGE (\n. fcp_cross (f n) t) s)
-Proof
-    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
- >> EQ_TAC >> rpt STRIP_TAC
- >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
-     rename1 ‘x = FCP_CONCAT c u’ \\
-     qexistsl_tac [‘c’,‘u’] >> art [])
- >> rename1 ‘x = FCP_CONCAT c u’
- >> qexistsl_tac [‘c’,‘u’] >> art []
- >> Q.EXISTS_TAC ‘n’ >> art []
-QED
-
-Theorem FCP_CROSS_BIGUNION :
-    !f s t. fcp_cross t (BIGUNION (IMAGE f s)) = BIGUNION (IMAGE (\n. fcp_cross t (f n)) s)
-Proof
-    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
- >> EQ_TAC >> rpt STRIP_TAC
- >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
-     rename1 ‘x = FCP_CONCAT c u’ \\
-     qexistsl_tac [‘c’,‘u’] >> art [])
- >> rename1 ‘x = FCP_CONCAT c u’
- >> qexistsl_tac [‘c’,‘u’] >> art []
- >> Q.EXISTS_TAC ‘n’ >> art []
-QED
-
-Theorem FCP_CROSS_DIFF :
-    !(X :'a['b] set) s (t :'a['c] set).
-        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
-        fcp_cross (X DIFF s) t = (fcp_cross X t) DIFF (fcp_cross s t)
-Proof
-    rw [Once EXTENSION, IN_FCP_CROSS, IN_DIFF]
- >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      rename1 ‘c IN X’ >> qexistsl_tac [‘c’,‘u’] >> art [],
-      (* goal 2 (of 3) *)
-      rename1 ‘c IN X’ \\
-      rename [‘x = FCP_CONCAT c' u'’, ‘c' NOTIN s \/ u' NOTIN t’] \\
-      DISJ1_TAC \\
-      CCONTR_TAC >> fs [] \\
-      Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
-      Suff ‘c = c'’ >- METIS_TAC [] \\
-      PROVE_TAC [FCP_CONCAT_11],
-      (* goal 3 (of 3) *)
-      rename1 ‘x = FCP_CONCAT c u’ \\
-      qexistsl_tac [‘c’,‘u’] >> art [] >> PROVE_TAC [] ]
-QED
-
-Theorem FCP_CROSS_DIFF' :
-    !(s :'a['b] set) (X :'a['c] set) t.
-        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
-        fcp_cross s (X DIFF t) = (fcp_cross s X) DIFF (fcp_cross s t)
-Proof
-    rw [Once EXTENSION, IN_FCP_CROSS, IN_DIFF]
- >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      rename1 ‘c IN s’ >> qexistsl_tac [‘c’,‘u’] >> art [],
-      (* goal 2 (of 3) *)
-      rename1 ‘c IN s’ \\
-      rename[‘x = FCP_CONCAT c' u'’,‘c' NOTIN s \/ u' NOTIN t’] \\
-      DISJ2_TAC \\
-      CCONTR_TAC >> fs [] \\
-      Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
-      Suff ‘u = u'’ >- METIS_TAC [] \\
-      PROVE_TAC [FCP_CONCAT_11],
-      (* goal 3 (of 3) *)
-      rename1 ‘x = FCP_CONCAT c u’ \\
-      qexistsl_tac [‘c’,‘u’] >> art [] >> PROVE_TAC [] ]
-QED
-
-Theorem FCP_SUBSET_CROSS :
-    !(a :'a['b] set) b (c :'a['c] set) d.
-        a SUBSET b /\ c SUBSET d ==> (fcp_cross a c) SUBSET (fcp_cross b d)
-Proof
-    rpt STRIP_TAC
- >> rw [SUBSET_DEF, IN_FCP_CROSS]
- >> qexistsl_tac [‘t’, ‘u’] >> art []
- >> PROVE_TAC [SUBSET_DEF]
-QED
-
-Theorem FCP_INTER_CROSS :
-    !(a :'a['b] set) (b :'a['c] set) c d.
-        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
-       (fcp_cross a b) INTER (fcp_cross c d) = fcp_cross (a INTER c) (b INTER d)
-Proof
-    rw [Once EXTENSION, IN_INTER, IN_FCP_CROSS]
- >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      fs [] >> qexistsl_tac [‘t’, ‘u’] >> art [] \\
-      PROVE_TAC [FCP_CONCAT_11],
-      (* goal 2 (of 3) *)
-      qexistsl_tac [‘t’, ‘u’] >> art [],
-      (* goal 3 (of 3) *)
-      qexistsl_tac [‘t’, ‘u’] >> art [] ]
-QED
-
-(* see also LISP ... *)
-val pair_operation_def = Define
-   ‘pair_operation (cons :'a -> 'b -> 'c) car cdr =
-      ((!a b. (car (cons a b) = a) /\ (cdr (cons a b) = b)) /\
-       (!a b c d. (cons a b = cons c d) <=> (a = c) /\ (b = d)))’;
-
-(* two sample pair operations: comma (pairTheory) and FCP_CONCAT (fcpTheory) *)
-Theorem pair_operation_pair :
-    pair_operation (pair$, :'a -> 'b -> 'a # 'b)
-                   (FST :'a # 'b -> 'a) (SND :'a # 'b -> 'b)
-Proof
-    rw [pair_operation_def]
-QED
-
-Theorem pair_operation_FCP_CONCAT :
-    FINITE univ(:'b) /\ FINITE univ(:'c) ==>
-    pair_operation (FCP_CONCAT :'a['b] -> 'a['c] -> 'a['b + 'c])
-                   (FCP_FST :'a['b + 'c] -> 'a['b])
-                   (FCP_SND :'a['b + 'c] -> 'a['c])
-Proof
-    DISCH_TAC
- >> ASM_SIMP_TAC std_ss [pair_operation_def]
- >> reverse CONJ_TAC >- METIS_TAC [FCP_CONCAT_11]
- >> rpt GEN_TAC
- >> PROVE_TAC [FCP_CONCAT_THM]
-QED
-
-val general_cross_def = Define
-   ‘general_cross (cons :'a -> 'b -> 'c) A B = {cons a b | a IN A /\ b IN B}’;
-
-Theorem IN_general_cross :
-    !cons s A B. s IN (general_cross cons A B) <=>
-                 ?a b. s = cons a b /\ a IN A /\ b IN B
-Proof
-    RW_TAC std_ss [general_cross_def, GSPECIFICATION]
- >> EQ_TAC >> rpt STRIP_TAC
- >- (Cases_on ‘x’ >> fs [] >> qexistsl_tac [‘q’,‘r’] >> art [])
- >> Q.EXISTS_TAC ‘(a,b)’ >> rw []
-QED
-
-(* alternative definition of pred_set$CROSS *)
-Theorem CROSS_ALT :
-    !A B. A CROSS B = general_cross pair$, A B
-Proof
-    RW_TAC std_ss [Once EXTENSION, IN_CROSS, IN_general_cross]
- >> EQ_TAC >> rw [] >> fs []
- >> qexistsl_tac [‘FST x’,‘SND x’] >> rw [PAIR]
-QED
-
-(* alternative definition of fcp_cross *)
-Theorem fcp_cross_alt :
-    !A B. fcp_cross A B = general_cross FCP_CONCAT A B
-Proof
-    RW_TAC std_ss [Once EXTENSION, IN_FCP_CROSS, IN_general_cross]
-QED
-
-val general_prod_def = Define
-   ‘general_prod (cons :'a -> 'b -> 'c) A B =
-      {general_cross cons a b | a IN A /\ b IN B}’;
-
-Theorem IN_general_prod :
-    !(cons :'a -> 'b -> 'c) s A B.
-        s IN general_prod cons A B <=> ?a b. (s = general_cross cons a b) /\ a IN A /\ b IN B
-Proof
-    RW_TAC std_ss [general_prod_def, GSPECIFICATION, UNCURRY]
- >> EQ_TAC >> rpt STRIP_TAC
- >- (qexistsl_tac [‘FST x’, ‘SND x’] >> art [])
- >> Q.EXISTS_TAC `(a,b)`
- >> RW_TAC std_ss []
-QED
-
-(* alternative definition of prod_sets *)
-Theorem prod_sets_alt :
-    !A B. prod_sets A B = general_prod pair$, A B
-Proof
-    RW_TAC std_ss [Once EXTENSION, IN_PROD_SETS, IN_general_prod, GSYM CROSS_ALT]
-QED
-
-(* alternative definition of fcp_prod *)
-Theorem fcp_prod_alt :
-    !A B. fcp_prod A B = general_prod FCP_CONCAT A B
-Proof
-    RW_TAC std_ss [Once EXTENSION, IN_FCP_PROD, IN_general_prod, GSYM fcp_cross_alt]
-QED
-
-Theorem general_BIGUNION_CROSS :
-    !(cons :'a -> 'b -> 'c) f (s :'index set) t.
-       (general_cross cons (BIGUNION (IMAGE f s)) t =
-        BIGUNION (IMAGE (\n. general_cross cons (f n) t) s))
-Proof
-    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_general_cross]
- >> EQ_TAC >> rpt STRIP_TAC
- >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
-     qexistsl_tac [‘a’,‘b’] >> art [])
- >> qexistsl_tac [‘a’,‘b’] >> art []
- >> Q.EXISTS_TAC ‘n’ >> art []
-QED
-
-Theorem general_CROSS_BIGUNION :
-    !(cons :'a -> 'b -> 'c) f (s :'index set) t.
-       (general_cross cons t (BIGUNION (IMAGE f s)) =
-        BIGUNION (IMAGE (\n. general_cross cons t (f n)) s))
-Proof
-    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_general_cross]
- >> EQ_TAC >> rpt STRIP_TAC
- >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
-     qexistsl_tac [‘a’,‘b’] >> art [])
- >> qexistsl_tac [‘a’,‘b’] >> art []
- >> Q.EXISTS_TAC ‘n’ >> art []
-QED
-
-Theorem general_CROSS_DIFF :
-    !(cons :'a -> 'b -> 'c) car cdr (X :'a set) s (t :'b set).
-        pair_operation cons car cdr ==>
-       (general_cross cons (X DIFF s) t =
-        (general_cross cons X t) DIFF (general_cross cons s t))
-Proof
-    rw [Once EXTENSION, IN_general_cross, IN_DIFF]
- >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      qexistsl_tac [‘a’,‘b’] >> art [],
-      (* goal 2 (of 3) *)
-      DISJ1_TAC \\
-      CCONTR_TAC >> fs [] \\
-      Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
-      Suff ‘a = a'’ >- METIS_TAC [] \\
-      METIS_TAC [pair_operation_def],
-      (* goal 3 (of 3) *)
-      qexistsl_tac [‘a’,‘b’] >> art [] >> PROVE_TAC [] ]
-QED
-
-Theorem general_CROSS_DIFF' :
-    !(cons :'a -> 'b -> 'c) car cdr (s :'a set) (X :'b set) t.
-        pair_operation cons car cdr ==>
-       (general_cross cons s (X DIFF t) =
-        (general_cross cons s X) DIFF (general_cross cons s t))
-Proof
-    rw [Once EXTENSION, IN_general_cross, IN_DIFF]
- >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      qexistsl_tac [‘a’,‘b’] >> art [],
-      (* goal 2 (of 3) *)
-      DISJ2_TAC \\
-      CCONTR_TAC >> fs [] \\
-      Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
-      Suff ‘b = b'’ >- METIS_TAC [] \\
-      METIS_TAC [pair_operation_def],
-      (* goal 3 (of 3) *)
-      qexistsl_tac [‘a’,‘b’] >> art [] >> PROVE_TAC [] ]
-QED
-
-Theorem general_SUBSET_CROSS :
-    !(cons :'a -> 'b -> 'c) (a :'a set) b (c :'b set) d.
-        a SUBSET b /\ c SUBSET d ==>
-        (general_cross cons a c) SUBSET (general_cross cons b d)
-Proof
-    rpt STRIP_TAC
- >> rw [SUBSET_DEF, IN_general_cross]
- >> qexistsl_tac [‘a'’, ‘b'’] >> art []
- >> PROVE_TAC [SUBSET_DEF]
-QED
-
-Theorem general_INTER_CROSS :
-    !(cons :'a -> 'b -> 'c) car cdr (a :'a set) (b :'b set) c d.
-        pair_operation cons car cdr ==>
-       ((general_cross cons a b) INTER (general_cross cons c d) =
-        general_cross cons (a INTER c) (b INTER d))
-Proof
-    rw [Once EXTENSION, IN_INTER, IN_general_cross]
- >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      fs [] >> rename1 ‘x = cons s t’ \\
-      qexistsl_tac [‘s’, ‘t’] >> art [] \\
-      METIS_TAC [pair_operation_def],
-      (* goal 2 (of 3) *)
-      qexistsl_tac [‘a'’, ‘b'’] >> art [],
-      (* goal 3 (of 3) *)
-      qexistsl_tac [‘a'’, ‘b'’] >> art [] ]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -462,6 +148,31 @@ val lg_pow = store_thm
             >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `ln 1`
             >> RW_TAC real_ss [LN_POS, LN_MONO_LT])
    >> RW_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_RINV]);
+
+(* cf. LN_MONO_LT *)
+Theorem LOGR_MONO_LT :
+    !x :real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x < logr b y <=> x < y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+ >> METIS_TAC [REAL_LT_INV_EQ, REAL_LT_RMUL, LN_MONO_LT]
+QED
+
+Theorem LOGR_MONO_LE :
+    !x:real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x <= logr b y <=> x <= y)
+Proof
+  RW_TAC std_ss [logr_def,real_div]
+  >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+  >> METIS_TAC [REAL_LT_INV_EQ, REAL_LE_RMUL, LN_MONO_LE]
+QED
+
+Theorem LOGR_MONO_LE_IMP :
+    !x:real y b. 0 < x /\ x <= y /\ 1 <= b ==> (logr b x <= logr b y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 <= ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LTE_TRANS, LN_MONO_LE]
+ >> METIS_TAC [REAL_LE_INV_EQ, REAL_LE_RMUL_IMP, LN_MONO_LE, REAL_LTE_TRANS]
+QED
 
 (* from extra_realScript.sml of "miller" example *)
 val pos_concave_lg = store_thm
@@ -967,18 +678,6 @@ val POW_NEG_ODD = store_thm
   >> `0 < x pow n` by METIS_TAC [REAL_LT_LE]
   >> METIS_TAC [REAL_NEG_GT0, REAL_MUL_LNEG, REAL_LT_MUL]);
 
-val LOGR_MONO_LE = store_thm
-  ("LOGR_MONO_LE",``!x:real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x <= logr b y <=> x <= y)``,
-  RW_TAC std_ss [logr_def,real_div]
-  >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
-  >> METIS_TAC [REAL_LT_INV_EQ, REAL_LE_RMUL, LN_MONO_LE]);
-
-val LOGR_MONO_LE_IMP = store_thm
-  ("LOGR_MONO_LE_IMP",``!x:real y b. 0 < x /\ x <= y /\ 1 <= b ==> (logr b x <= logr b y)``,
-  RW_TAC std_ss [logr_def,real_div]
-  >> `0 <= ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LTE_TRANS, LN_MONO_LE]
-  >> METIS_TAC [REAL_LE_INV_EQ, REAL_LE_RMUL_IMP, LN_MONO_LE, REAL_LTE_TRANS]);
-
 Theorem REAL_MAX_REDUCE :
     !x y :real. x <= y \/ x < y ==> (max x y = y) /\ (max y x = y)
 Proof
@@ -1078,6 +777,22 @@ Proof
  >> rw [GSYM REAL_NEG_RMUL, REAL_LT_NEG]
 QED
 
+Theorem REAL_LT_LDIV_CANCEL :
+    !x y (z :real). 0 < x /\ 0 < y /\ 0 < z ==> (z / x < z / y <=> y < x)
+Proof
+    RW_TAC bool_ss [real_div, REAL_LT_LMUL]
+ >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem REAL_LE_LDIV_CANCEL :
+    !x y (z :real). 0 < x /\ 0 < y /\ 0 < z ==> (z / x <= z / y <=> y <= x)
+Proof
+    RW_TAC bool_ss [real_div, REAL_LE_LMUL]
+ >> MATCH_MP_TAC REAL_INV_LE_ANTIMONO
+ >> ASM_REWRITE_TAC []
+QED
+
 Theorem HARMONIC_SERIES_POW_2 :
     summable (\n. inv (&(SUC n) pow 2))
 Proof
@@ -1122,81 +837,6 @@ Proof
  >> REWRITE_TAC [SUM_CANCEL]
  >> rw [Abbr `f`, REAL_SUB_NEG2, REAL_LE_SUB_RADD, REAL_LE_ADDR]
 QED
-
-(* ********************************************* *)
-(*   The mininal element in num sets             *)
-(* ********************************************* *)
-
-val minimal_def = Define
-   `minimal p = @(n:num). p n /\ (!m. m < n ==> ~(p m))`;
-
-val MINIMAL_EXISTS0 = store_thm
-  ("MINIMAL_EXISTS0", ``(?(n:num). P n) = (?n. P n /\ (!m. m < n ==> ~(P m)))``,
-    reverse EQ_TAC >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> CCONTR_TAC
-   >> Suff `!n. ~P n` >- PROVE_TAC []
-   >> STRIP_TAC
-   >> completeInduct_on `n'`
-   >> PROVE_TAC []);
-
-val MINIMAL_EXISTS = store_thm
-  ("MINIMAL_EXISTS",
-   ``!P. (?n. P n) = (P (minimal P) /\ !n. n < minimal P ==> ~P n)``,
-   REWRITE_TAC [MINIMAL_EXISTS0, boolTheory.EXISTS_DEF]
-   >> CONV_TAC (DEPTH_CONV BETA_CONV)
-   >> REWRITE_TAC [GSYM minimal_def]);
-
-val MINIMAL_EXISTS_IMP = store_thm
-  ("MINIMAL_EXISTS_IMP",
-   ``!P. (?n : num. P n) ==> ?m. (P m /\ !n. n < m ==> ~P n)``,
-   PROVE_TAC [MINIMAL_EXISTS]);
-
-val MINIMAL_EQ_IMP = store_thm
-  ("MINIMAL_EQ_IMP",
-   ``!m p. (p m) /\ (!n. n < m ==> ~p n) ==> (m = minimal p)``,
-   RW_TAC std_ss []
-   >> MP_TAC (Q.SPEC `p` MINIMAL_EXISTS)
-   >> Know `?n. p n` >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> Suff `~(m < minimal p) /\ ~(minimal p < m)` >- DECIDE_TAC
-   >> PROVE_TAC []);
-
-val MINIMAL_SUC = store_thm
-  ("MINIMAL_SUC",
-   ``!n p.
-       (SUC n = minimal p) /\ p (SUC n) <=>
-       ~p 0 /\ (n = minimal (p o SUC)) /\ p (SUC n)``,
-   RW_TAC std_ss []
-   >> EQ_TAC >|
-   [RW_TAC std_ss [] >|
-    [Know `0 < SUC n` >- DECIDE_TAC
-     >> PROVE_TAC [MINIMAL_EXISTS],
-     MATCH_MP_TAC MINIMAL_EQ_IMP
-     >> RW_TAC std_ss [o_THM]
-     >> Know `SUC n' < SUC n` >- DECIDE_TAC
-     >> PROVE_TAC [MINIMAL_EXISTS]],
-    RW_TAC std_ss []
-    >> MATCH_MP_TAC MINIMAL_EQ_IMP
-    >> RW_TAC std_ss []
-    >> Cases_on `n` >- RW_TAC std_ss []
-    >> Suff `~((p o SUC) n')` >- RW_TAC std_ss [o_THM]
-    >> Know `n' < minimal (p o SUC)` >- DECIDE_TAC
-    >> PROVE_TAC [MINIMAL_EXISTS]]);
-
-val MINIMAL_EQ = store_thm
-  ("MINIMAL_EQ",
-  ``!p m. p m /\ (m = minimal p) <=> p m /\ (!n. n < m ==> ~p n)``,
-    RW_TAC std_ss []
- >> reverse EQ_TAC >- PROVE_TAC [MINIMAL_EQ_IMP]
- >> RW_TAC std_ss []
- >> Know `?n. p n` >- PROVE_TAC []
- >> RW_TAC std_ss [MINIMAL_EXISTS]);
-
-val MINIMAL_SUC_IMP = store_thm
-  ("MINIMAL_SUC_IMP",
-  ``!n p. p (SUC n) /\ ~p 0 /\ (n = minimal (p o SUC)) ==> (SUC n = minimal p)``,
-    PROVE_TAC [MINIMAL_SUC]);
 
 (* ------------------------------------------------------------------------- *)
 (*   Disjoint subsets (from HVG's lebesgue_measureTheory)                    *)
@@ -2246,66 +1886,63 @@ QED
 (*  liminf and limsup [1, p.74] [2, p.76] - the set-theoretic version         *)
 (******************************************************************************)
 
-(* this lemma is provided by Konrad Slind *)
-val set_ss = arith_ss ++ PRED_SET_ss;
+val set_ss' = arith_ss ++ PRED_SET_ss;
 
+(* This lemma is provided by Konrad Slind *)
 val lemma = Q.prove
   (`!P. ~(?N. INFINITE N /\ !n. N n ==> P n) <=> !N. N SUBSET P ==> FINITE N`,
-  rw_tac set_ss [EQ_IMP_THM, SUBSET_DEF, IN_DEF]
+  rw_tac set_ss' [EQ_IMP_THM, SUBSET_DEF, IN_DEF]
   >- (`FINITE P \/ ?n. P n /\ ~P n` by metis_tac []
        >> imp_res_tac SUBSET_FINITE
        >> full_simp_tac std_ss [SUBSET_DEF, IN_DEF])
   >- metis_tac[]);
 
-(* TODO: use above lemma to simplify this proof with the following hints:
-
-   "From this and the original assumption, you should be able to get that P is finite,
+(* "From this and the original assumption, you should be able to get that P is finite,
     so has a maximum element." -- Konrad Slind, Feb 17, 2019.
  *)
-val infinitely_often_lemma = store_thm
-  ("infinitely_often_lemma",
-  ``!P. ~(?N. INFINITE N /\ !n:num. n IN N ==> P n) <=> ?m. !n. m <= n ==> ~(P n)``,
-    GEN_TAC
- >> `!N. (!n. n IN N ==> P n) <=> N SUBSET P` by PROVE_TAC [SUBSET_DEF, IN_APP]
- >> ASM_REWRITE_TAC []
- >> SIMP_TAC std_ss []
+Theorem infinitely_often_lemma :
+    !P. ~(?N. INFINITE N /\ !n:num. n IN N ==> P n) <=> ?m. !n. m <= n ==> ~(P n)
+Proof
+    Q.X_GEN_TAC ‘P’
+ >> `!N. (!n. n IN N ==> P n) <=> !n. N n ==> P n` by PROVE_TAC [SUBSET_DEF, IN_APP]
+ >> POP_ORW
+ >> REWRITE_TAC [lemma]
  >> reverse EQ_TAC >> rpt STRIP_TAC
  >| [ (* goal 1 (of 2) *)
-      Cases_on `~(N SUBSET P)` >- art [] >> fs [] \\
-      Suff `FINITE P` >- PROVE_TAC [SUBSET_FINITE_I] \\
-      Know `P SUBSET {n | ~(m <= n)}`
-      >- (RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_APP] \\
-          METIS_TAC []) \\
+      Suff ‘FINITE P’ >- PROVE_TAC [SUBSET_FINITE_I] \\
+      Know ‘P SUBSET (count m)’
+      >- (REWRITE_TAC [count_def, GSYM NOT_LESS_EQUAL] \\
+          ASM_SET_TAC []) \\
       DISCH_TAC \\
-      Suff `FINITE {n | ~(m <= n)}` >- PROVE_TAC [SUBSET_FINITE_I] \\
-      REWRITE_TAC [FINITE_WEAK_ENUMERATE] \\
-      Q.EXISTS_TAC `I` \\
-      Q.EXISTS_TAC `m` \\
-      RW_TAC arith_ss [I_THM, GSPECIFICATION],
+      MATCH_MP_TAC SUBSET_FINITE_I \\
+      Q.EXISTS_TAC ‘count m’ >> art [FINITE_COUNT],
       (* goal 2 (of 2) *)
       POP_ASSUM (MP_TAC o (Q.SPEC `P`)) \\
       RW_TAC std_ss [SUBSET_REFL] \\
-      IMP_RES_TAC finite_decomposition_simple \\
-      Q.EXISTS_TAC `SUC (MAX_SET P)` \\
-      Q.X_GEN_TAC `m` >> DISCH_TAC \\
-      CCONTR_TAC >> fs [EXTENSION, IN_IMAGE, IN_COUNT, IN_APP] \\
-     `P <> {}` by METIS_TAC [IN_APP, NOT_IN_EMPTY] \\
-     `!y. y IN P ==> y <= MAX_SET P` by PROVE_TAC [MAX_SET_DEF] \\
-     `m <= MAX_SET P` by PROVE_TAC [IN_APP] \\
-     `MAX_SET P < m` by RW_TAC arith_ss [] \\
-      FULL_SIMP_TAC arith_ss [] ]);
+      Cases_on ‘P = {}’ >- rw [] \\
+      MP_TAC (FINITE_is_measure_maximal |> Q.GEN ‘m’
+                                        |> INST_TYPE [“:'a” |-> “:num”]
+                                        |> Q.SPECL [‘I’, ‘P’]) \\
+      rw [is_measure_maximal_def, IN_APP] \\
+      Q.EXISTS_TAC ‘SUC x’ >> rw [] \\
+      CCONTR_TAC >> fs [] \\
+     ‘x < n’ by rw [] \\
+     ‘n <= x’ by PROVE_TAC [] \\
+      METIS_TAC [LESS_EQ_ANTISYM] ]
+QED
 
-(* this proof is provided by Konrad Slind, slightly shorter than mine. *)
-val infinity_bound_lemma = store_thm
-  ("infinity_bound_lemma",
-  ``!N m. INFINITE N ==> ?n:num. m <= n /\ n IN N``,
+(* This proof is provided by Konrad Slind. *)
+Theorem infinity_bound_lemma :
+    !N m. INFINITE N ==> ?n:num. m <= n /\ n IN N
+Proof
     spose_not_then strip_assume_tac
  >> `FINITE (count m)` by metis_tac [FINITE_COUNT]
  >> `N SUBSET (count m)`
-      by (rw_tac set_ss [SUBSET_DEF]
+      by (rw_tac set_ss' [SUBSET_DEF]
            >> `~(m <= x)` by metis_tac []
            >> decide_tac)
- >> metis_tac [SUBSET_FINITE]);
+ >> metis_tac [SUBSET_FINITE]
+QED
 
 (* TODO: restate this lemma by real_topologyTheory.from *)
 val tail_not_empty = store_thm
@@ -2319,10 +1956,6 @@ val tail_countable = store_thm
  >> Suff `{A n | m <= n} = IMAGE A {n | m <= n}`
  >- PROVE_TAC [COUNTABLE_IMAGE_NUM]
  >> RW_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION]);
-
-(* ------------------------------------------------------------------------- *)
-(*  limsup and liminf for sets [1, p.78] (moved from borelTheory)            *)
-(* ------------------------------------------------------------------------- *)
 
 val set_limsup_def = Define (* "infinitely often" *)
    `set_limsup (E :num -> 'a set) =
@@ -2348,9 +1981,9 @@ val set_limsup_alt = store_thm
      Q.EXISTS_TAC `x'` >> art [])
  >> Q.EXISTS_TAC `n` >> PROVE_TAC []);
 
-(* this lemma implicitly assume `events p = UNIV` *)
-val liminf_limsup = store_thm
-  ("liminf_limsup", ``!(E :num -> 'a set). COMPL (liminf E) = limsup (COMPL o E)``,
+Theorem LIMSUP_COMPL : (* was: liminf_limsup *)
+    !(E :num -> 'a set). COMPL (liminf E) = limsup (COMPL o E)
+Proof
     RW_TAC std_ss [set_limsup_def, set_liminf_def]
  >> SIMP_TAC std_ss [COMPL_BIGUNION_IMAGE, o_DEF]
  >> Suff `!m. COMPL (BIGINTER {E n | m <= n}) = BIGUNION {COMPL (E n) | m <= n}` >- Rewr
@@ -2362,11 +1995,12 @@ val liminf_limsup = store_thm
  >- (fs [COMPL_COMPL] >> Q.EXISTS_TAC `n` >> art [])
  >> fs []
  >> Q.EXISTS_TAC `E n` >> art []
- >> Q.EXISTS_TAC `n` >> art []);
+ >> Q.EXISTS_TAC `n` >> art []
+QED
 
-val liminf_limsup_sp = store_thm (* more general form *)
-  ("liminf_limsup_sp",
-  ``!sp E. (!n. E n SUBSET sp) ==> (sp DIFF (liminf E) = limsup (\n. sp DIFF (E n)))``,
+Theorem LIMSUP_DIFF : (* was: liminf_limsup_sp *)
+    !sp E. (!n. E n SUBSET sp) ==> (sp DIFF (liminf E) = limsup (\n. sp DIFF (E n)))
+Proof
     RW_TAC std_ss [set_limsup_def, set_liminf_def]
  >> Q.ABBREV_TAC `f = (\m. BIGINTER {E n | m <= n})`
  >> Know `!m. f m SUBSET sp`
@@ -2388,7 +2022,8 @@ val liminf_limsup_sp = store_thm (* more general form *)
  >> EQ_TAC >> rpt STRIP_TAC
  >- (Q.EXISTS_TAC `n` >> METIS_TAC [])
  >> Q.EXISTS_TAC `E n` >> art []
- >> Q.EXISTS_TAC `n` >> art []);
+ >> Q.EXISTS_TAC `n` >> art []
+QED
 
 (* A point belongs to `limsup E` if and only if it belongs to infinitely
    many terms of the sequence E. [2, p.76]
@@ -2423,10 +2058,42 @@ Theorem IN_LIMINF :
     !A x. x IN liminf A <=> ?m. !n. m <= n ==> x IN (A n)
 Proof
     rpt GEN_TAC
- >> ASSUME_TAC (SIMP_RULE std_ss [GSYM liminf_limsup, IN_COMPL, o_DEF]
+ >> ASSUME_TAC (SIMP_RULE std_ss [GSYM LIMSUP_COMPL, IN_COMPL, o_DEF]
                                  (Q.SPECL [`COMPL o A`, `x`] IN_LIMSUP))
  >> `x IN liminf A <=> ~(?N. INFINITE N /\ !n. n IN N ==> x NOTIN A n)` by PROVE_TAC []
  >> fs [infinitely_often_lemma]
+QED
+
+(* This version of LIMSUP_MONO is used in large_numberTheory.SLLN_IID_diverge *)
+Theorem LIMSUP_MONO_STRONGER :
+    !A B. (?d. !y n. y IN A n ==> ?m. n - d <= m /\ y IN B m) ==> limsup A SUBSET limsup B
+Proof
+    RW_TAC std_ss [set_limsup_alt]
+ >> RW_TAC std_ss [IN_BIGINTER_IMAGE, IN_BIGUNION_IMAGE, SUBSET_DEF, IN_UNIV, IN_FROM]
+ >> POP_ASSUM ((Q.X_CHOOSE_THEN ‘N’ STRIP_ASSUME_TAC) o (Q.SPEC ‘d + n’))
+ >> Q.PAT_X_ASSUM ‘!y n. y IN A n ==> _’ (MP_TAC o (Q.SPECL [‘x’, ‘N’]))
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC ‘m’
+ >> FULL_SIMP_TAC arith_ss []
+QED
+
+Theorem LIMSUP_MONO_STRONG :
+    !A B. (!y n. y IN A n ==> ?m. n <= m /\ y IN B m) ==> limsup A SUBSET limsup B
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC LIMSUP_MONO_STRONGER
+ >> Q.EXISTS_TAC ‘0’ >> rw []
+QED
+
+Theorem LIMSUP_MONO_WEAK :
+    !A B. (!n. A n SUBSET B n) ==> limsup A SUBSET limsup B
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC LIMSUP_MONO_STRONG
+ >> qx_genl_tac [‘x’, ‘n’]
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss [SUBSET_DEF]
+ >> Q.EXISTS_TAC ‘n’ >> fs []
 QED
 
 (* ================================================================= *)
@@ -2448,7 +2115,7 @@ Theorem QSET_COUNTABLE :
 Proof
   RW_TAC std_ss [q_set_def] THEN
   MATCH_MP_TAC union_countable THEN CONJ_TAC THENL
-  [RW_TAC std_ss [pred_setTheory.COUNTABLE_ALT] THEN
+  [RW_TAC std_ss [COUNTABLE_ALT] THEN
    MP_TAC NUM_2D_BIJ_NZ_INV THEN RW_TAC std_ss [] THEN
    Q.EXISTS_TAC `(\(a,b). &a/(&b)) o f` THEN RW_TAC std_ss [GSPECIFICATION] THEN
    FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV] THEN
@@ -2458,7 +2125,7 @@ Proof
                           GSPECIFICATION,GSYM REAL_LT_NZ] THEN
    `?y. f y = (a,b)` by METIS_TAC [] THEN
    Q.EXISTS_TAC `y` THEN RW_TAC real_ss [], ALL_TAC] THEN
-  RW_TAC std_ss [pred_setTheory.COUNTABLE_ALT] THEN
+  RW_TAC std_ss [COUNTABLE_ALT] THEN
   MP_TAC NUM_2D_BIJ_NZ_INV THEN
   RW_TAC std_ss [] THEN Q.EXISTS_TAC `(\(a,b). -(&a/(&b))) o f` THEN
   RW_TAC std_ss [GSPECIFICATION] THEN
@@ -2649,25 +2316,7 @@ Proof
   METIS_TAC [MUL_IN_QSET, real_div]
 QED
 
-Theorem CLG_UBOUND :
-    !x. (0 <= x) ==> &(clg(x)) < (x) + 1
-Proof
-  RW_TAC std_ss [NUM_CEILING_def] THEN LEAST_ELIM_TAC THEN
-  REWRITE_TAC [SIMP_REAL_ARCH] THEN RW_TAC real_ss [] THEN
-  FULL_SIMP_TAC real_ss [GSYM real_lt] THEN
-  PAT_X_ASSUM ``!m. P`` (MP_TAC o Q.SPEC `n-1`) THEN
-  RW_TAC real_ss [] THEN Cases_on `n = 0` THENL
-  [METIS_TAC [REAL_LET_ADD2,REAL_LT_01,REAL_ADD_RID], ALL_TAC] THEN
-  `0 < n` by RW_TAC real_ss [] THEN
-  `&(n - 1) < x:real` by RW_TAC real_ss [] THEN
-  `0 <= n-1` by RW_TAC real_ss [] THEN
-  `0:real <= (&(n-1))` by RW_TAC real_ss [] THEN
-  `0 < x` by METIS_TAC [REAL_LET_TRANS] THEN Cases_on `n = 1` THENL
-  [METIS_TAC [REAL_LE_REFL,REAL_ADD_RID,REAL_LTE_ADD2,REAL_ADD_COMM], ALL_TAC] THEN
-  `0 <> n-1` by RW_TAC real_ss [] THEN
-  `&n - 1 < x` by RW_TAC real_ss [REAL_SUB] THEN
-  FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD]
-QED
+Theorem CLG_UBOUND = NUM_CEILING_UPPER_BOUND
 
 Theorem Q_DENSE_IN_REAL_LEMMA :
     !x y. (0 <= x) /\ (x < y) ==> ?r. (r IN q_set) /\ (x < r) /\ (r < y)
@@ -2723,80 +2372,26 @@ QED
 
 Theorem REAL_RAT_DENSE = Q_DENSE_IN_REAL
 
-(* not used anywhere *)
-Theorem NON_NEG_REAL_RAT_DENSE :
-    !(x:real)(y:real). 0 <= x /\ x < y ==> ?(m:num) (n:num). x < &m / & n /\ &m / &n < y
+Theorem EXT_SKOLEM_THM :
+    !P Q. (!x. x IN P ==> ?y. Q x y) <=> ?f. !x. x IN P ==> Q x (f x)
 Proof
-   rpt STRIP_TAC
-   >> `0 < y - x` by RW_TAC real_ss [REAL_SUB_LT]
-   >> (MP_TAC o Q.SPEC `y - x`) REAL_ARCH >> RW_TAC bool_ss []
-   >> POP_ASSUM (MP_TAC o Q.SPEC `1`) >> RW_TAC bool_ss []
-   >> Q.ABBREV_TAC `m = minimal (\a. y <= & (SUC a) / & n)`
-   >> Q.EXISTS_TAC `m` >> Q.EXISTS_TAC `n`
-   >> `0 < n`
-        by (ONCE_REWRITE_TAC [GSYM REAL_LT]
-            >> MATCH_MP_TAC REAL_LT_TRANS
-            >> Q.EXISTS_TAC `1/(y-x)`
-            >> CONJ_TAC >- (MATCH_MP_TAC REAL_LT_DIV >> RW_TAC real_ss [])
-            >> METIS_TAC [REAL_LT_LDIV_EQ])
-   >> (MP_TAC o Q.SPEC `inv (&n)`) REAL_ARCH >> ASM_SIMP_TAC real_ss [REAL_INV_POS]
-   >> STRIP_TAC
-   >> POP_ASSUM (MP_TAC o Q.SPEC `y`) >> STRIP_TAC
-   >> `y * &n < &n'`
-        by (FULL_SIMP_TAC std_ss [GSYM real_div]
-            >> METIS_TAC [REAL_LT, REAL_LT_RDIV_EQ])
-   >> FULL_SIMP_TAC std_ss [GSYM real_div]
-   >> `minimal (\a. y <= & a / & n) = SUC m`
-        by (MATCH_MP_TAC (GSYM MINIMAL_SUC_IMP)
-            >> reverse CONJ_TAC
-            >- (RW_TAC real_ss [o_DEF,GSYM real_lt] >> METIS_TAC [REAL_LET_TRANS])
-            >> Suff `(\a. y <= & (SUC a) / & n) m` >- RW_TAC std_ss []
-            >> Q.UNABBREV_TAC `m`
-            >> Q.ABBREV_TAC `P = (\a. y <= & (SUC a) / & n)`
-            >> Suff `?a. P a` >- METIS_TAC [MINIMAL_EXISTS]
-            >> Q.UNABBREV_TAC `P`
-            >> RW_TAC std_ss []
-            >> Cases_on `n' = 0`
-            >- (FULL_SIMP_TAC real_ss [] >> METIS_TAC [REAL_LT_ANTISYM, REAL_LET_TRANS])
-            >> METIS_TAC [num_CASES,REAL_LT_IMP_LE])
-   >> `y <= & (SUC m) / & n`
-        by (POP_ASSUM (MP_TAC o GSYM) >> RW_TAC std_ss []
-            >> Q.ABBREV_TAC `P = (\a. y <= & a / & n)`
-            >> METIS_TAC [MINIMAL_EXISTS, REAL_LT_IMP_LE])
-   >> CONJ_TAC
-   >- (Suff `y - (y - x) < (&(SUC m))/(&n) - inv(&n)`
-       >- (SIMP_TAC bool_ss [real_div]
-            >> ONCE_REWRITE_TAC [REAL_ARITH ``& m * inv (& n) - inv (& n) = (&m - 1) * inv (&n)``]
-            >> SIMP_TAC real_ss [ADD1] >> ONCE_REWRITE_TAC [GSYM REAL_ADD]
-            >> SIMP_TAC bool_ss [REAL_ADD_SUB_ALT])
-       >> RW_TAC bool_ss [real_div]
-       >> ONCE_REWRITE_TAC [REAL_ARITH ``& m * inv (& n) - inv (& n) = (&m - 1) * inv (&n)``]
-       >> RW_TAC bool_ss [GSYM real_div]
-       >> (MP_TAC o Q.SPECL [`y - (y - x)`,`&(SUC m) - 1`,`&n`]) REAL_LT_RDIV_EQ
-       >> RW_TAC arith_ss [REAL_LT] >> ONCE_REWRITE_TAC [REAL_SUB_RDISTRIB]
-       >> RW_TAC std_ss [REAL_LT_SUB_RADD]
-       >> (MP_TAC o GSYM o Q.SPECL [`y`,`(&(SUC m)) - 1 + ((y-x)*(&n))`,`&n`]) REAL_LT_RDIV_EQ
-       >> RW_TAC arith_ss [REAL_LT]
-       >> RW_TAC bool_ss [real_div]
-       >> ONCE_REWRITE_TAC [REAL_ARITH ``(& (SUC m) - 1 + (y - x) * & n) * inv (& n) =
-                                         ((&(SUC m))*(inv(&n))) + ((y - x)*(&n)*inv(&n) - inv (&n))``]
-       >> `(y - x) * (& n) * inv (& n) = (y - x)`
-                by METIS_TAC [REAL_MUL_RINV, GSYM REAL_MUL_ASSOC, REAL_INJ,
-                              DECIDE ``!(n:num). 0 < n ==> ~(n=0)``, REAL_MUL_RID]
-       >> POP_ORW
-       >> RW_TAC bool_ss [GSYM real_div]
-       >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `& (SUC m)/(&n)`
-       >> RW_TAC bool_ss [REAL_LT_ADDR, Once REAL_SUB_LT, REAL_INV_1OVER]
-       >> (MP_TAC o Q.SPECL [`1`,`y - x`,`&n`]) REAL_LT_LDIV_EQ
-       >> RW_TAC arith_ss [REAL_LT, REAL_MUL_COMM])
-   >> RW_TAC std_ss [real_lt]
-   >> Q.ABBREV_TAC `P = (\a. y <= & a / & n)`
-   >> Suff `?n. P n` >- METIS_TAC [DECIDE ``m < SUC m``, MINIMAL_EXISTS]
-   >> Q.UNABBREV_TAC `P`
-   >> RW_TAC std_ss []
-   >> Cases_on `n' = 0`
-   >- (FULL_SIMP_TAC real_ss [] >> METIS_TAC [REAL_LT_ANTISYM, REAL_LET_TRANS])
-   >> METIS_TAC [num_CASES,REAL_LT_IMP_LE]
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC `f x` \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> fs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+ >> Q.EXISTS_TAC `f` >> art []
+QED
+
+Theorem EXT_SKOLEM_THM' :
+    !P Q. (!x. P x ==> ?y. Q x y) <=> ?f. !x. P x ==> Q x (f x)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC `f x` \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> fs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+ >> Q.EXISTS_TAC `f` >> art []
 QED
 
 val _ = export_theory ();

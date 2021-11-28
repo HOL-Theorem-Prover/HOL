@@ -316,7 +316,7 @@ val finite_group_is_finite_monoid = store_thm(
 (* Theorem: AbelianGroup g ==> AbelianMonoid g *)
 (* Proof: by AbelianGroup_def, AbelianMonoid_def, group_is_monoid. *)
 val abelian_group_is_abelian_monoid = store_thm(
-  "abelian_group_is_abelian_monoid",
+  "abelian_group_is_abelian_monoid[simp]",
   ``!g. AbelianGroup g ==> AbelianMonoid g``,
   rw[AbelianGroup_def, AbelianMonoid_def]);
 

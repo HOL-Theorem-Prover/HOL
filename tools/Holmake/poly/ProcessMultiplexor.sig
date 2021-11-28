@@ -2,9 +2,10 @@ signature ProcessMultiplexor =
 sig
 
   type command = {executable: string, nm_args : string list, env : string list}
-  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a,
+  type 'a job = {tag : string, command : command,
+                 update : 'a * bool * Time.time -> 'a,
                  dir : string}
-  type jobkey = Posix.ProcEnv.pid * string
+  type jobkey = Posix.ProcEnv.pid * {tag : string, dir : string}
   val jobkey_compare : jobkey * jobkey -> order
   val jobkey_toString : jobkey -> string
 

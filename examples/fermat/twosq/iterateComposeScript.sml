@@ -29,7 +29,7 @@ open involuteTheory; (* for involute_bij *)
 open involuteFixTheory;
 
 (* val _ = load "iterateComputeTheory"; *)
-open iterateTheory;
+open iterationTheory;
 open iterateComputeTheory; (* for iterate_while_thm *)
 
 

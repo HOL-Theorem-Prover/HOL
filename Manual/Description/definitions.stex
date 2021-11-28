@@ -1,5 +1,63 @@
 \chapter{Advanced Definition Principles}\label{HOLdefinitions}
 
+\section{General-Purpose Definition}
+\label{sec:definition}
+
+\ml{Definition} takes a high-level specification of a \HOL{} function, and attempts to define the
+function in the logic. If this attempt is successful, the specification is derived from the
+definition. The derived specification is returned to the user, and also stored in the current
+theory. \ml{Definition} may be used to define \emph{abbreviations}, \emph{recursive functions},
+and \emph{mutually recursive functions}.
+
+\index{Definition@\ml{Definition}}
+The basic form of a \ml{Definition} is
+\begin{alltt}
+  Definition defname[\textit{attrs}]:
+    \textit{fn-spec}
+  End
+\end{alltt}
+Or
+\begin{alltt}
+  Definition defname[\textit{attrs}]:
+    \textit{fn-spec}
+  Termination
+    \textit{tactic}  
+  End
+\end{alltt}
+\index{Define@\ml{Define}}
+\index{tDefine@\ml{tDefine}}
+\index{xDefine@\ml{xDefine}}
+The latter form maps to a call to \ml{tDefine}; the former to \ml{xDefine} (or \ml{Define}).
+(See their entries of in \REFERENCE{} for more details.)
+The termination argument is only needed when
+defining certain recursive functions. (See Section~\ref{TFL} for more details on the support of
+recursive functions, and mutually recursive functions and the full syntax of the \textit{fn-spec} above.)
+
+\index{special syntactic forms for scripts!Definition@\ml{Definition}}
+Note that this is \emph{not} valid \ML{} syntax.
+Instead, \HOL{} is using lexical pre-processing to transform the above into something more complicated underneath.
+To make this reasonable, there are constraints introduced on the syntax above: all keywords (\ml{Definition},
+\ml{Termination} and \ml{End}) must appear in column $1$ of the input (hard against the left margin in one's input source file).
+
+In both cases, the \ml{defname} is taken to be the name of the theorem stored to disk
+(it does \emph{not} have a suffix such as \ml{_def} appended to it), and is also the name of the local SML binding.
+The attributes given by \textit{attrs} can be any standard attribute (such as \ml{simp}), and/or drawn from \ml{Definition}-specific options:
+
+\begin{itemize}
+\item The attribute \ml{schematic} alllows the definition to be \emph{schematic}.
+  (See Section~\ref{ss:recursionSchemas} for more details.)
+\item The attribute \ml{nocompute} stops the definition from being added to the global compset used by \ml{EVAL}.
+  This is equivalent to \ml{zDefine}.  \index{xDefine@\ml{xDefine}} (See Section~\ref{sec:computeLib} and
+  also the corresponding entry in \REFERENCE{} for more details.)
+\item The attribute \ml{induction=iname} makes the induction theorem that is automatically derived for definitions with interesting termination be called \ml{iname}.
+  If this is omitted, the name chosen will be derived from the \ml{defname} of the definition:
+  if \ml{defname} ends with \ml{_def} or \ml{_DEF}, the induction name will replace this suffix with \ml{_ind} or \ml{_IND} respectively; otherwise the induction name will simply be \ml{defname} with \ml{_ind} appended.
+\end{itemize}
+
+Note that, whether or not the \ml{induction=} attribute is used, the induction theorem is always
+made available as an SML binding under the appropriate name. This means that one does not need to follow one's definition with a call to something like \ml{DB.fetch} or \ml{theorem}
+just to make the induction theorem available at the SML level.
+
 \section{Datatypes}\label{sec:datatype}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
 \index{Datatype@\ml{Datatype}|(}
@@ -1096,24 +1154,11 @@ This induction theorem follows the recursion structure of the function, and may 
 The definition technology is not always successful in attempting
 to make the specified definition, usually because an automatic
 termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
-which defers the termination proof to the user, can be used. %
-\index{special syntactic forms for scripts!Definition@\ml{Definition}}%
-Once a termination argument is found, it can be provided as part of the final \ml{Definition} syntax.
+which defers the termination proof to the user, can be used.
+Once a termination argument is found, it can be provided as part of the final \ml{Definition} syntax
+(See Section~\ref{sec:definition} for more details.)
 The technology underlying \ml{Definition} and \ml{Hol\_defn} is explained
-in detail in Slind~\cite{slind-thesis}.
-
-\index{Define@\ml{Define}}
-\index{Definition@\ml{Definition}}
-The basic form of a \ml{Definition} (without a termination argument) is
-\begin{alltt}
-  Definition defname:
-    \textit{fn-spec}
-  End
-\end{alltt}
-Note that this is \emph{not} valid \ML{} syntax.
-Instead, \HOL{} is using lexical pre-processing to transform the above into something more complicated underneath.
-To make this reasonable, there are constraints introduced on the syntax above: both keywords (\ml{Definition} and \ml{End}) must appear in column $1$ of the input (hard against the left margin in one's input source file).
-For example
+in detail in Slind~\cite{slind-thesis}. For example,
 \begin{session}
 \begin{alltt}
 >> Definition last0_def:
@@ -1123,7 +1168,8 @@ For example
    End
 \end{alltt}
 \end{session}
-The \textit{fn-spec} above is quoted syntax representing a
+
+The \textit{fn-spec} in the syntax of \ml{Definition} and \ml{Hol\_defn} is quoted syntax representing a
 conjunction of equations.
 The specified function(s) may be phrased using ML-style pattern-matching.
 The \textit{fn-spec} should conform with the grammar in Table
@@ -1199,7 +1245,7 @@ equations
 from the above ambiguous and incomplete equations. The odd-looking
 variable names are due to the pre-processing steps described above. The
 above result is only an intermediate value: in the final result returned
-by \ml{Define}, the last equation is droppped since it was not
+by \ml{Definition}, the last equation is droppped since it was not
 specified by the original input.
 \begin{hol}
 \begin{verbatim}
@@ -1213,22 +1259,29 @@ specified by the original input.
 \index{termination!of recursively defined functions}
 
 When processing the specification of a recursive function, \ml{Definition}
-must perform a termination proof. It automatically constructs
-termination conditions for the function, and invokes a termination
-prover in an attempt to prove the termination conditions.  If the
-function is primitive recursive, in the sense that it exactly follows
-the recursion pattern of a previously declared \HOL{} datatype, then this
-proof always succeeds, and \ml{Definition} stores the derived equations in
-the current theory segment.
-Otherwise, the function is not an
-instance of primitive recursion, and the termination prover may
-succeed or fail. If the termination proof fails, then \ml{Definition} fails.
+must perform a termination proof.
+It automatically constructs termination conditions for the function, and invokes a termination prover in an attempt to prove the termination conditions.
+If the function is primitive recursive, in the sense that it exactly follows the recursion pattern of a previously declared \HOL{} datatype, then this proof always succeeds, and \ml{Definition} stores the derived equations in the current theory segment.
+Otherwise, the function is not an instance of primitive recursion, and the termination prover may succeed or fail.
+If the automatic termination proof fails, the user-provided termination argument (if any) after the \ml{Termination} keyword is attempted.
+If this also fails, then the \ml{Definition} fails.
 If it succeeds, then \ml{Definition} stores the specified equations in the
-current theory segment. An induction theorem customized for the defined
-function is also stored in the current segment. Note, however, that an
-induction theorem is not stored for primitive recursive functions, since
-that theorem would be identical to the induction theorem resulting from
-the declaration of the datatype.
+current theory segment.
+An induction theorem customized for the defined function is also stored in the current segment.
+Note, however, that an induction theorem is not stored for primitive recursive functions, since that theorem would be identical to the induction theorem resulting from the declaration of the datatype.
+
+Part of the process of the automatic termination proof involves the use of ``termination simplification'' theorems.
+These encode facts about the way in which arguments to desired functions may be smaller than originals.
+For example, with the theory of fixed-width words (see Section~\ref{sec:bit-vectors}) in the context, the theorem \ml{WORD\_PRED\_THM} is included in this set:
+\begin{hol}
+\begin{alltt}
+>>__ load "wordsTheory";
+##thm wordsTheory.WORD_PRED_THM
+\end{alltt}
+\end{hol}
+If a function is defined recursively with a word argument being decremented with every call, including this theorem will let the automatic procedure prove termination.
+\index{theorem attributes!tfl_termsimp@\ml{tfl\_termsimp}}
+The set of theorems used in this way can be augmented by using the \ml{tfl\_termsimp} theorem attribute when a theorem is proved.
 
 
 \paragraph{Storing definitions in the theory segment}
@@ -1238,14 +1291,14 @@ If there is an associated induction theorem, its name is derived as follows:
 \begin{itemize}
 \item
 If the principal name ends with \ml{\_def} or with \ml{\_DEF}, then the induction theorem is the same as the principal name with the suffix replaced by \ml{\_ind} or \ml{\_IND} respectively.
-\item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.
-\index{theorem attributes!induction_thm@\ml{induction\_thm}}
-\item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} ``attribute'' to the principal name.
+\item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.%
+\index{theorem attributes!induction_thm@\ml{induction\_thm}}%
+\item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} attribute to the principal name.
 \end{itemize}
 
 \subsection{Function definition examples}
  We will give a number of examples that display the range of functions
-that may be defined with \ml{Define}. First, we have a recursive function
+that may be defined with \ml{Definition}. First, we have a recursive function
 that uses ``destructors'' in the recursive call.
 
 \begin{hol}
@@ -1346,7 +1399,7 @@ are defined:
 \end{hol}
 
 Finally, \ml{Definition} may also be used to define non-recursive functions with complex pattern-matching.
-The pattern-matching pre-processing of {Define} can be convenient for this purpose, but can also generate a large number of equations.
+The pattern-matching pre-processing of \ml{Definition} can be convenient for this purpose, but can also generate a large number of equations.
 It may also return theorems that do not look quite like what was originally input.
 For more on this, see the discussion of case expressions (into which the clauses in a \ml{Definition} are converted internally) in Section~\ref{CaseExp}.
 
@@ -1852,6 +1905,7 @@ the termination conditions extracted for the definition are now provable, since 
 \end{session}
 
 \subsection{Recursion schemas}
+\label{ss:recursionSchemas}
 
 In higher order logic, very general patterns of recursion, known as
 \emph{recursion schemas} or sometimes \emph{program schemas}, can be

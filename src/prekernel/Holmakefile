@@ -28,4 +28,11 @@ KNametab.uo: KNametab.sml $(dprot $(SIGOBJ)/Table.ui)
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe prekernel-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: prekernel-selftest.log
+
+prekernel-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

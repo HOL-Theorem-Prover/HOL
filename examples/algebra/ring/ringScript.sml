@@ -414,6 +414,7 @@ val ring_add_abelian_group = store_thm(
   "ring_add_abelian_group",
   ``!r:'a ring. Ring r ==> AbelianGroup r.sum``,
   rw[AbelianGroup_def, ring_add_group]);
+val _ = export_rewrites ["ring_add_abelian_group"];
 
 (* Theorem: Ring multiplications form an Abelian monoid. *)
 (* Proof: by definition. *)

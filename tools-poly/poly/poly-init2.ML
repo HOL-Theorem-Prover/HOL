@@ -21,7 +21,6 @@ local
   fun warn s = (TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n");
                 TextIO.flushOut TextIO.stdErr)
 
-  val redirected_files = ["mlibOmegaint.sml"];
   val meta_debug = ref false
 
   fun MDBG s = if !meta_debug then
@@ -62,11 +61,7 @@ fun myuse f =
       val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
-    ((if List.exists (fn f => f = file) redirected_files then
-        quse (Systeml.HOLDIR ++ "tools-poly" ++ "poly" ++ "redirects" ++ file)
-      else
-        quse f)
-     handle e => (PolyML.print_depth pd; raise e));
+    (quse f handle e => (PolyML.print_depth pd; raise e));
     PolyML.print_depth pd
   end handle OS.Path.Path => die ("Path exception in myuse "^f)
 

@@ -12,51 +12,31 @@ val _ = new_theory "AKStheorem";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
-(* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
 (* Get dependent theories local *)
-(* val _ = load "AKSmapsTheory"; *)
 open AKSmapsTheory;
 open AKSsetsTheory;
 open AKSintroTheory;
 
-(* val _ = load "AKSshiftTheory"; *)
 open AKSshiftTheory;
 
-(* val _ = load "computeParamTheory"; *)
 open logPowerTheory;
 open computeRingTheory;
 open computeParamTheory;
 open EulerTheory;
 open helperFunctionTheory;
 
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
 open monoidTheory groupTheory ringTheory ringUnitTheory;
 
-(* (* val _ = load "fieldTheory"; *) *)
 open fieldTheory;
 
 (* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* (* val _ = load "polyDivisionTheory"; *) *)
-(* (* val _ = load "polyBinomialTheory"; *) *)
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
+open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
+     polyBinomialTheory;
 
-(* (* val _ = load "polyMonicTheory"; *) *)
 open polyMonicTheory;
 
-(* (* val _ = load "polyFieldTheory"; *) *)
-(* (* val _ = load "polyFieldDivisionTheory"; *) *)
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
@@ -67,31 +47,23 @@ open subgroupTheory;
 open groupOrderTheory;
 
 (* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
 open helperNumTheory helperSetTheory;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory;
 open dividesTheory gcdTheory;
 
-(* (* val _ = load "binomialTheory"; *) *)
 open binomialTheory;
 open GaussTheory; (* for phi *)
 
-(* (* val _ = load "ringBinomialTheory"; *) *)
 open ringBinomialTheory;
 open ringDividesTheory;
 
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open monoidInstancesTheory;
 open groupInstancesTheory;
 open ringInstancesTheory;
 open fieldInstancesTheory;
 
-(* (* val _ = load "ffUnityTheory"; *) *)
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;

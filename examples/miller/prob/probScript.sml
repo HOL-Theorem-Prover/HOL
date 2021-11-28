@@ -99,12 +99,11 @@ val prob_while_terminates_def = Define
   `prob_while_terminates c b =
    !a. !* s. ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, s)))`;
 
-val prob_while_witness_def = Define
-  `prob_while_witness c b a s =
-   if ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, s))) then
-     FUNPOW (UNCURRY b) (minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a, s)))))
-     (a, s)
-   else ARB`;
+Definition prob_while_witness_def:
+  prob_while_witness c b a s = case OWHILE (c o FST) (UNCURRY b) (a,s) of
+                                 NONE => ARB
+                               | SOME x => x
+End
 
 val nonevent_def = Define
    `nonevent = IMAGE (\x. @y. eventually (x :num->'a) (y :num->'a)) UNIV`;
@@ -2448,9 +2447,15 @@ val PREFIX_COVER_STAR = store_thm
     >> RW_TAC std_ss [IN_DISJOINT, PREFIX_SET_PREFIX_SUBSET]
     >> PROVE_TAC []]);
 
-val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
-  ("PROB_WHILE_TERMINATES_PREFIX_COVER_STAR",
-   ``!c b bc ca a.
+Theorem MINIMAL_EQ:
+  !P m. P m /\ (m = $LEAST P) <=> P m /\ (!n. n < m ⇒ ~P n)
+Proof
+  rpt gen_tac >> Cases_on ‘?k. P k’ >> gs[] >> numLib.LEAST_ELIM_TAC >>
+  simp[SF SFY_ss] >> rw[] >> metis_tac[DECIDE “x:num < y \/ (x = y) \/ y < x”]
+QED
+
+Theorem PROB_WHILE_TERMINATES_PREFIX_COVER_STAR:
+  !c b bc ca a.
        (!a. b a IN indep_fn) /\
        (!a. prefix_cover (ca a)) /\
        (!a l s.
@@ -2458,7 +2463,8 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
           (b a s = (FST (b a (prefix_seq l)),sdrop (LENGTH l) s))) /\
        (bc = (\a l. FST (b a (prefix_seq l)))) /\
        prob_while_terminates c b ==>
-       prefix_cover (prefix_cover_star c bc ca a)``,
+       prefix_cover (prefix_cover_star c bc ca a)
+Proof
    RW_TAC std_ss []
    >> MATCH_MP_TAC PREFIX_COVER_STAR
    >> RW_TAC std_ss []
@@ -2509,12 +2515,12 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
       `{s | ?n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))} =
        {s |
         ?m.
-          (m = minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s))))) /\
+          (m = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) /\
           ~c (FST (FUNPOW (UNCURRY b) m (a,s)))}`
-   >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION]
-       >> RW_TAC std_ss [GSYM EXTENSION]
-       >> reverse EQ_TAC >- PROVE_TAC []
-       >> RW_TAC std_ss [MINIMAL_EXISTS])
+   >- (RW_TAC std_ss [Once EXTENSION, GSPECIFICATION]
+       >> Cases_on ‘∃n. ¬c (FST (FUNPOW (UNCURRY b) n (a,x)))’
+       >> simp[SF SFY_ss] >> gs[]
+       >> numLib.LEAST_ELIM_TAC >> simp[SF SFY_ss])
    >> Rewr
    >> Ho_Rewrite.REWRITE_TAC [GBIGUNION_IMAGE]
    >> RW_TAC std_ss [GDEST]
@@ -2524,13 +2530,13 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    >> Know
       `!a m.
          {s |
-          (m = minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s))))) /\
+          (m = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) /\
           ~c (FST (FUNPOW (UNCURRY b) m (a,s)))} IN
          events bern`
    >- (RW_TAC std_ss []
        >> Know
           `{s |
-            (m = minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s))))) /\
+            (m = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) /\
             ~c (FST (FUNPOW (UNCURRY b) m (a,s)))} =
            {s | ~c (FST (FUNPOW (UNCURRY b) m (a,s)))} DIFF
            BIGUNION
@@ -2539,30 +2545,10 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
           >> KILL_TAC
           >> RW_TAC std_ss [GSPECIFICATION, IN_DIFF, IN_BIGUNION_IMAGE,
                             IN_COUNT]
-          >> (MP_TAC o
-              INST_TYPE [beta |-> ``:num -> bool``] o
-              Q.SPEC `\n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))`)
-             MINIMAL_EXISTS
-          >> Q.SPEC_TAC
-             (`minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,(x:num->bool)))))`,
-              `mini`)
-          >> RW_TAC std_ss []
-          >> EQ_TAC >|
-          [RW_TAC std_ss []
-           >> Q.PAT_X_ASSUM `X = Y` MP_TAC
-           >> Know `?n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))`
-           >- PROVE_TAC []
-           >> RW_TAC std_ss []
-           >> POP_ASSUM (MP_TAC o Q.SPEC `n`)
-           >> RW_TAC std_ss []
-           >> PROVE_TAC [],
-           RW_TAC std_ss []
-           >> Q.PAT_X_ASSUM `X = Y` MP_TAC
-           >> Know `?n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))`
-           >- PROVE_TAC []
-           >> RW_TAC std_ss []
-           >> Suff `~(m < mini) /\ ~(mini < m)` >- DECIDE_TAC
-           >> PROVE_TAC []])
+          >> simp[Once CONJ_COMM, SimpLHS]
+          >> qspecl_then [‘λn. ¬c(FST (FUNPOW (UNCURRY b) n (a,x)))’, ‘m’]
+                         (simp o single o SIMP_RULE std_ss[]) MINIMAL_EQ
+          >> eq_tac >> simp[] >> metis_tac[prim_recTheory.LESS_REFL])
       >> Rewr
       >> MATCH_MP_TAC EVENTS_DIFF
       >> RW_TAC std_ss [PROB_SPACE_BERN]
@@ -2591,8 +2577,8 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
        >> AP_TERM_TAC
        >> SET_EQ_TAC
        >> RW_TAC std_ss [GSPECIFICATION, IN_UNIV]
-       >> MATCH_MP_TAC MINIMAL_EQ_IMP
-       >> RW_TAC arith_ss [FUNPOW])
+       >> numLib.LEAST_ELIM_TAC >> simp[]
+       >> metis_tac[FUNPOW, NOT_ZERO_LT_ZERO, FST])
    >> STRIP_TAC
    >> (MP_TAC o
        INST_TYPE [beta |-> ``:num -> bool``] o
@@ -2609,7 +2595,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
        Q.SPECL
        [`ca a`,
         `{s |
-         (SUC n = minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s))))) /\
+         (SUC n = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) /\
          ~c (FST (FUNPOW (UNCURRY b) (SUC n) (a,s)))}`])
        PROB_BERN_PREFIX_COVER_INTER
    >> Cond >- RW_TAC std_ss []
@@ -2644,12 +2630,10 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    >> RW_TAC std_ss [] >- RW_TAC std_ss [INTER_EMPTY]
    >> RW_TAC std_ss []
    >> reverse (RW_TAC std_ss [prefix_cover_level_def, GDEST])
-   >- (Suff `!s. minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) = 0`
+   >- (Suff `!s. (LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) = 0`
        >- RW_TAC std_ss [GEMPTY, IMAGE_EMPTY, BIGUNION_EMPTY, INTER_EMPTY]
-       >> STRIP_TAC
-       >> MATCH_MP_TAC EQ_SYM
-       >> MATCH_MP_TAC MINIMAL_EQ_IMP
-       >> RW_TAC arith_ss [FUNPOW])
+       >> STRIP_TAC >> numLib.LEAST_ELIM_TAC >> simp[]
+       >> metis_tac[FUNPOW, NOT_ZERO_LT_ZERO, FST])
    >> Know
       `!g.
          BIGUNION
@@ -2685,25 +2669,31 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    >> RW_TAC std_ss [PROB_BERN_PREFIX_SET_INTER_SDROP]
    >> Know
       `!s.
-         (SUC n = minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s))))) /\
-         (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) (SUC n) =
-         ~(\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) 0 /\
-         (n = minimal ((\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) o SUC)) /\
-         (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) (SUC n)`
-   >- (STRIP_TAC
-       >> MATCH_ACCEPT_TAC MINIMAL_SUC)
+         (SUC n = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) /\
+         ~c (FST (FUNPOW (UNCURRY b) (SUC n) (a,s))) <=>
+         c (FST (FUNPOW (UNCURRY b) 0 (a,s))) /\
+         (n = $LEAST ((\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) o SUC)) /\
+         ~c (FST (FUNPOW (UNCURRY b) (SUC n) (a,s))) `
+   >- (STRIP_TAC >> simp[] >> ONCE_REWRITE_TAC [CONJ_COMM]
+       >> simp[combinTheory.o_ABS_L]
+       >> qspecl_then [‘λn. ¬c(FST (FUNPOW (UNCURRY b) n (a,s)))’, ‘SUC n’]
+                      (simp o single o SIMP_RULE std_ss []) MINIMAL_EQ
+       >> qspecl_then [‘λn. ¬c(FST (FUNPOW (UNCURRY b) (SUC n) (a,s)))’, ‘n’]
+                      (simp o single o SIMP_RULE std_ss []) MINIMAL_EQ
+       >> rw[EQ_IMP_THM]
+       >> rename [‘k < SUC n’] >> Cases_on ‘k’ >> gvs[])
    >> RW_TAC std_ss []
    >> POP_ASSUM K_TAC
    >> RW_TAC std_ss [FUNPOW, o_DEF]
    >> Know
       `prefix_set x' INTER
-       {s | (n = minimal (\x. ~c (FST (FUNPOW (UNCURRY b) x (b a s))))) /\
+       {s | (n = LEAST x. ~c (FST (FUNPOW (UNCURRY b) x (b a s)))) /\
             ~c (FST (FUNPOW (UNCURRY b) n (b a s)))} =
        prefix_set x' INTER
        {s |
         (n =
-         minimal
-         (\x. ~c (FST (FUNPOW (UNCURRY b) x (FST (b a (prefix_seq x')),s))))) /\
+         LEAST x.
+           ~c (FST (FUNPOW (UNCURRY b) x (FST (b a (prefix_seq x')),s)))) /\
         ~c (FST (FUNPOW (UNCURRY b) n (FST (b a (prefix_seq x')),s)))} o
        sdrop (LENGTH x')`
    >- (SET_EQ_TAC
@@ -2716,7 +2706,8 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
        >> RW_TAC std_ss [])
    >> DISCH_THEN (REWRITE_TAC o wrap o ONCE_REWRITE_RULE [INTER_COMM])
    >> ONCE_REWRITE_TAC [INTER_COMM]
-   >> RW_TAC std_ss [PROB_BERN_PREFIX_SET_INTER_SDROP]);
+   >> RW_TAC std_ss [PROB_BERN_PREFIX_SET_INTER_SDROP]
+QED
 
 val PROB_WHILE_WITNESS_CLOSED = store_thm
   ("PROB_WHILE_WITNESS_CLOSED",
@@ -2736,69 +2727,39 @@ val PROB_WHILE_WITNESS_CLOSED = store_thm
      Q.EXISTS_TAC `SUC n`
      >> RW_TAC std_ss [FUNPOW]]]);
 
-val PROB_WHILE_WITNESS_BIND = store_thm
-  ("PROB_WHILE_WITNESS_BIND",
-   ``!c b a.
-       prob_while_witness c b a =
-       if c a then BIND (b a) (prob_while_witness c b) else UNIT a``,
-   FUN_EQ_TAC
-   >> reverse (RW_TAC std_ss [])
-   >- (reverse (RW_TAC std_ss [prob_while_witness_def, UNIT_DEF])
-       >- PROVE_TAC [FUNPOW, FST]
-       >> Suff `minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))) = 0`
-       >- RW_TAC std_ss [FUNPOW]
-       >> MATCH_MP_TAC EQ_SYM
-       >> MATCH_MP_TAC MINIMAL_EQ_IMP
-       >> RW_TAC arith_ss [FUNPOW])
-   >> reverse (RW_TAC std_ss [prob_while_witness_def,
-                              PROB_WHILE_WITNESS_CLOSED])
-   >- RW_TAC std_ss [BIND_DEF, o_THM, prob_while_witness_def, UNCURRY]
-   >> reverse (RW_TAC std_ss [BIND_DEF, o_THM, prob_while_witness_def,
-                              UNCURRY])
-   >- PROVE_TAC []
-   >> Suff
-      `minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))) =
-       SUC (minimal (\n'. ~c (FST (FUNPOW (UNCURRY b) n' (b a x)))))`
-   >- RW_TAC std_ss [FUNPOW]
-   >> MATCH_MP_TAC EQ_SYM
-   >> POP_ASSUM K_TAC
-   >> MATCH_MP_TAC MINIMAL_SUC_IMP
-   >> RW_TAC std_ss [PROB_WHILE_WITNESS_CLOSED, FUNPOW, o_DEF]
-   >> Know `?n. ~c (FST (FUNPOW (UNCURRY b) n (b a x)))`
-   >- PROVE_TAC []
-   >> RW_TAC std_ss [MINIMAL_EXISTS]);
+Theorem PROB_WHILE_WITNESS_BIND:
+  !c b a.
+    prob_while_witness c b a =
+    if c a then BIND (b a) (prob_while_witness c b) else UNIT a
+Proof
+  simp[FUN_EQ_THM, prob_while_witness_def, UNIT_DEF, BIND_DEF] >>
+  simp[Once whileTheory.OWHILE_THM] >> rw[] >>
+  rename [‘_ = _ _ (b a s)’] >>
+  Cases_on ‘b a s’ >> simp[prob_while_witness_def]
+QED
 
-val PREFIX_COVER_STAR_FIXES_FN = store_thm
-  ("PREFIX_COVER_STAR_FIXES_FN",
-   ``!c b bc ca a s l n.
-       (!a. prefix_cover (ca a)) /\
-       (!a l s.
-          l IN ca a /\ s IN prefix_set l ==>
-          (b a s = (FST (b a (prefix_seq l)), sdrop (LENGTH l) s))) /\
-       (bc = (\a l. FST (b a (prefix_seq l)))) /\
-       s IN prefix_set l /\
-       l IN prefix_cover_level c bc ca a n ==>
-       (prob_while_witness c b a s =
-        (FST (prob_while_witness c b a (prefix_seq l)),
-         sdrop (LENGTH l) s))``,
+Theorem PREFIX_COVER_STAR_FIXES_FN:
+  !c b bc ca a s l n.
+    (!a. prefix_cover (ca a)) /\
+    (!a l s.
+       l IN ca a /\ s IN prefix_set l ==>
+       (b a s = (FST (b a (prefix_seq l)), sdrop (LENGTH l) s))) /\
+    (bc = (\a l. FST (b a (prefix_seq l)))) /\
+    s IN prefix_set l /\
+    l IN prefix_cover_level c bc ca a n ==>
+    (prob_while_witness c b a s =
+     (FST (prob_while_witness c b a (prefix_seq l)),
+      sdrop (LENGTH l) s))
+Proof
    REPEAT STRIP_TAC
    >> NTAC 2 (POP_ASSUM MP_TAC)
    >> Q.SPEC_TAC (`s`, `s`)
    >> Q.SPEC_TAC (`l`, `l`)
    >> Q.SPEC_TAC (`a`, `a`)
    >> Induct_on `n`
-   >- (RW_TAC std_ss [prefix_cover_level_def, NOT_IN_EMPTY, IN_SING]
-       >> Know `!s. ?n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))`
-       >- (STRIP_TAC
-           >> Q.EXISTS_TAC `0`
-           >> RW_TAC std_ss [FUNPOW, FST])
-       >> RW_TAC std_ss [prob_while_witness_def]
-       >> Know `!s. minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) = 0`
-       >- (GEN_TAC
-           >> MATCH_MP_TAC EQ_SYM
-           >> MATCH_MP_TAC MINIMAL_EQ_IMP
-           >> RW_TAC arith_ss [FUNPOW, FST])
-       >> RW_TAC std_ss [FUNPOW, FST, sdrop_def, I_THM, LENGTH])
+   >- (RW_TAC std_ss [prefix_cover_level_def, NOT_IN_EMPTY, IN_SING] >>
+       ONCE_REWRITE_TAC [PROB_WHILE_WITNESS_BIND] >>
+       simp[UNIT_DEF, sdrop_def])
    >> RW_TAC std_ss [prefix_cover_level_def, NOT_IN_EMPTY, append_sets_fn_def,
                      GSPECIFICATION, PROB_WHILE_WITNESS_BIND, BIND_DEF, o_THM]
    >> RW_TAC std_ss [UNCURRY]
@@ -2826,13 +2787,14 @@ val PREFIX_COVER_STAR_FIXES_FN = store_thm
    >> Rewr
    >> RW_TAC std_ss [LENGTH_APPEND]
    >> ONCE_REWRITE_TAC [ADD_COMM]
-   >> RW_TAC std_ss [SDROP_ADD]);
+   >> RW_TAC std_ss [SDROP_ADD]
+QED
 
-val PROB_WHILE_WITNESS_COUNTABLE_RANGE = store_thm
-  ("PROB_WHILE_WITNESS_COUNTABLE_RANGE",
-   ``!c b (a : 'a).
-       (!a. b a IN indep_fn) ==>
-       countable (range (FST o prob_while_witness c b a))``,
+Theorem PROB_WHILE_WITNESS_COUNTABLE_RANGE:
+  !c b (a : 'a).
+    (!a. b a IN indep_fn) ==>
+    countable (range (FST o prob_while_witness c b a))
+Proof
    RW_TAC std_ss []
    >> MATCH_MP_TAC COUNTABLE_SUBSET
    >> Q.EXISTS_TAC
@@ -2846,24 +2808,27 @@ val PROB_WHILE_WITNESS_COUNTABLE_RANGE = store_thm
        >- RW_TAC bool_ss [INDEP_FN_FUNPOW]
        >> RW_TAC bool_ss [indep_fn_def, GSPECIFICATION])
    >> POP_ASSUM MP_TAC
-   >> BasicProvers.NORM_TAC std_ss [range_def, IN_IMAGE, IN_UNIV, o_THM,
-                                    prob_while_witness_def]
-   >> DISJ2_TAC
-   >> RW_TAC std_ss [UNIT_DEF]
-   >> PROVE_TAC []);
+   >> simp[range_def, IN_IMAGE, IN_UNIV, o_THM, prob_while_witness_def,
+           UNIT_DEF, PULL_EXISTS]
+   >> qx_gen_tac ‘y’ >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,y)’
+   >> simp[]
+   >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+   >> PROVE_TAC []
+QED
 
 val EVENTS_COMPL_BERN = save_thm
   ("EVENTS_COMPL_BERN",
     REWRITE_RULE [PROB_SPACE_BERN, SPACE_BERN_UNIV, GSYM COMPL_DEF] (ISPEC ``bern`` EVENTS_COMPL));
 
-val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
-  ("PROB_WHILE_WITNESS_MEASURABLE_FST",
-   ``!c b (a : 'a).
-       (!a. b a IN indep_fn) ==>
-       FST o prob_while_witness c b a IN measurable (p_space bern, events bern) (UNIV, UNIV)``,
-   RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, UNIV_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BERN,
+Theorem PROB_WHILE_WITNESS_MEASURABLE_FST:
+  !c b (a : 'a).
+    (!a. b a IN indep_fn) ==>
+    FST o prob_while_witness c b a IN
+        measurable (p_space bern, events bern) (UNIV, UNIV)
+Proof
+  RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, UNIV_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BERN,
                  space_def, subsets_def, SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET]
-   >> Know
+  >> Know
       `PREIMAGE (FST o prob_while_witness c b a) s =
        (if FST (ARB : 'a # (num -> bool)) IN s then
           COMPL {x | ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, x)))}
@@ -2873,20 +2838,21 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
         (IMAGE
          (\m.
             {x | FST (FUNPOW (UNCURRY b) m (a, x)) IN s /\
-                 (m = minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a, x))))) /\
+                 (m = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a, x)))) /\
                  ~c (FST (FUNPOW (UNCURRY b) m (a, x)))})
          UNIV))`
    >- (SET_EQ_TAC
        >> RW_TAC std_ss [IN_PREIMAGE, o_THM, IN_UNION, IN_INTER,
                          GSPECIFICATION, NOT_IN_EMPTY,
-                         prob_while_witness_def, IN_COMPL] (* 2 sub-goals here *)
-       >> ( RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, GSPECIFICATION]
-            >> Know `!x. x = x /\ T` >- PROVE_TAC []
-            >> DISCH_THEN (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
-            >> MATCH_MP_TAC CONJ_EQ_IMP
-            >> RW_TAC std_ss []
-            >> Know `?n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))` >- PROVE_TAC []
-            >> RW_TAC std_ss [MINIMAL_EXISTS] ) )
+                         prob_while_witness_def, IN_COMPL]
+          (* 2 sub-goals here *)
+       >> rename [‘OWHILE _ _ (a,x)’]
+       >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,x)’
+       >> gs[whileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
+       >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+       >> numLib.LEAST_ELIM_TAC
+       >> simp[SF SFY_ss]
+       >> metis_tac[])
    >> Rewr
    >> Know `!n. (FUNPOW (UNCURRY b) n o UNIT a) IN indep_fn`
    >- RW_TAC std_ss [INDEP_FN_FUNPOW]
@@ -2921,12 +2887,9 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
    >> MATCH_MP_TAC EVENTS_INTER
    >> reverse (RW_TAC std_ss [PROB_SPACE_BERN]) (* 2 sub-goals here *)
    >- (ONCE_REWRITE_TAC [CONJ_COMM]
-       >> (MP_TAC o
-           Q.GEN `s` o
-           INST_TYPE [beta |-> ``:num -> bool``] o
-           Q.SPECL [`\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))`, `m`])
-          MINIMAL_EQ
-       >> RW_TAC std_ss []
+       >> qspecl_then [‘λn. ¬c (FST (FUNPOW (UNCURRY b) n (a,s)))’, ‘m’]
+                      (simp o single o SIMP_RULE std_ss [] o Q.GEN ‘s’)
+                      MINIMAL_EQ
        >> RW_TAC std_ss [GINTER]
        >> MATCH_MP_TAC EVENTS_INTER
        >> RW_TAC std_ss [PROB_SPACE_BERN]
@@ -2955,17 +2918,19 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
    >> Rewr
    >> Q.PAT_X_ASSUM `!n. X n IN indep_fn` (MP_TAC o Q.SPEC `m`)
    >> RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV]
-   >> FULL_SIMP_TAC std_ss [space_def, subsets_def, IN_UNIV, SPACE_BERN_UNIV, INTER_UNIV]);
+   >> FULL_SIMP_TAC std_ss [space_def, subsets_def, IN_UNIV, SPACE_BERN_UNIV,
+                            INTER_UNIV]
+QED
 
-val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
-  ("PROB_WHILE_WITNESS_MEASURABLE_SND",
-   ``!c b (a : 'a).
-       (!a. b a IN indep_fn) ==>
-       SND o prob_while_witness c b a IN
-       measurable (p_space bern, events bern) (p_space bern, events bern)``,
-   RW_TAC bool_ss [IN_MEASURABLE, IN_UNIV, SIGMA_ALGEBRA_BERN, space_def, subsets_def,
-                   SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET, IN_UNIV]
-   >> Know
+Theorem PROB_WHILE_WITNESS_MEASURABLE_SND:
+  !c b (a : 'a).
+    (!a. b a IN indep_fn) ==>
+    SND o prob_while_witness c b a IN
+        measurable (p_space bern, events bern) (p_space bern, events bern)
+Proof
+  RW_TAC bool_ss [IN_MEASURABLE, IN_UNIV, SIGMA_ALGEBRA_BERN, space_def,
+                  subsets_def, SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET, IN_UNIV]
+  >> Know
       `PREIMAGE (SND o prob_while_witness c b a) s =
        (if SND (ARB : 'a # (num -> bool)) IN s then
           COMPL {x | ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, x)))}
@@ -2975,20 +2940,21 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
         (IMAGE
          (\m.
             {x | SND (FUNPOW (UNCURRY b) m (a, x)) IN s /\
-                 (m = minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a, x))))) /\
+                 (m = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a, x)))) /\
                  ~c (FST (FUNPOW (UNCURRY b) m (a, x)))})
          UNIV))`
    >- (SET_EQ_TAC
        >> RW_TAC std_ss [IN_PREIMAGE, o_THM, IN_UNION, IN_INTER,
                          GSPECIFICATION, NOT_IN_EMPTY,
-                         prob_while_witness_def, IN_COMPL] (* 2 sub-goals here *)
-       >> ( RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, GSPECIFICATION]
-            >> Know `!x. x = x /\ T` >- PROVE_TAC []
-            >> DISCH_THEN (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
-            >> MATCH_MP_TAC CONJ_EQ_IMP
-            >> RW_TAC std_ss []
-            >> Know `?n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))` >- PROVE_TAC []
-            >> RW_TAC std_ss [MINIMAL_EXISTS] ) )
+                         prob_while_witness_def, IN_COMPL]
+                         (* 2 sub-goals here *)
+       >> rename [‘OWHILE _ _ (a,x)’]
+       >> Cases_on ‘OWHILE (c o FST) (UNCURRY b) (a,x)’
+       >> gs[whileTheory.OWHILE_EQ_NONE, PULL_EXISTS]
+       >> gvs[whileTheory.OWHILE_def, AllCaseEqs()]
+       >> numLib.LEAST_ELIM_TAC
+       >> simp[SF SFY_ss]
+       >> metis_tac[])
    >> Rewr
    >> Know `!n. (FUNPOW (UNCURRY b) n o UNIT a) IN indep_fn`
    >- RW_TAC std_ss [INDEP_FN_FUNPOW]
@@ -3022,12 +2988,9 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
    >> MATCH_MP_TAC EVENTS_INTER
    >> reverse (RW_TAC std_ss [PROB_SPACE_BERN]) (* 2 sub-goals here *)
    >- (ONCE_REWRITE_TAC [CONJ_COMM]
-       >> (MP_TAC o
-           Q.GEN `s` o
-           INST_TYPE [beta |-> ``:num -> bool``] o
-           Q.SPECL [`\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))`, `m`])
-          MINIMAL_EQ
-       >> RW_TAC std_ss []
+       >> qspecl_then [‘λn. ¬c(FST (FUNPOW (UNCURRY b) n (a,ss)))’, ‘m’]
+                      (simp o single o SIMP_RULE std_ss [] o Q.GEN ‘ss’)
+                      MINIMAL_EQ
        >> RW_TAC std_ss [GINTER]
        >> MATCH_MP_TAC EVENTS_INTER
        >> RW_TAC std_ss [PROB_SPACE_BERN]
@@ -3056,7 +3019,9 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
    >> Rewr
    >> Q.PAT_X_ASSUM `!n. X n IN indep_fn` (MP_TAC o Q.SPEC `m`)
    >> RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV]
-   >> FULL_SIMP_TAC std_ss [space_def, subsets_def, IN_UNIV, SPACE_BERN_UNIV, INTER_UNIV]);
+   >> FULL_SIMP_TAC std_ss [space_def, subsets_def, IN_UNIV, SPACE_BERN_UNIV,
+                            INTER_UNIV]
+QED
 
 val PROB_WHILE_EXISTS = store_thm
   ("PROB_WHILE_EXISTS",
@@ -3880,8 +3845,9 @@ Proof
        >> Q.PAT_X_ASSUM `!x. P x` MP_TAC
        >> RW_TAC std_ss [IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
        >> Know `?n'. c' n = c n'` >- PROVE_TAC []
-       >> DISCH_THEN (MP_TAC o Ho_Rewrite.ONCE_REWRITE_RULE [MINIMAL_EXISTS])
-       >> Q.SPEC_TAC (`minimal (\n'. c' n = c n')`, `k`)
+       >> DISCH_THEN (MP_TAC o
+                      Ho_Rewrite.ONCE_REWRITE_RULE [whileTheory.LEAST_EXISTS])
+       >> Q.SPEC_TAC (`LEAST n'. c' n = c n'`, `k`)
        >> Q.PAT_X_ASSUM `X = Y` K_TAC
        >> RW_TAC std_ss []
        >> Know
@@ -3949,7 +3915,8 @@ Proof
    >> Know `!m. ?h. (c h = j m) /\ !n. n < h ==> ~(c n = c h)`
    >- (STRIP_TAC
        >> Suff `?h. c h = j m`
-       >- (DISCH_THEN (MP_TAC o Ho_Rewrite.REWRITE_RULE [MINIMAL_EXISTS])
+       >- (DISCH_THEN (MP_TAC o
+                       Ho_Rewrite.REWRITE_RULE [whileTheory.LEAST_EXISTS])
            >> PROVE_TAC [])
        >> Suff `j m IN range (FST o f)`
        >- PROVE_TAC []

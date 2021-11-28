@@ -15,6 +15,12 @@ sig
          get_global_value : unit -> 'value,
          update_global_value : ('value -> 'value) -> unit }
 
+  (* doesn't lock, or in any way exclude others from seeing the adjusted
+     value while this code is executing *)
+  val with_temp_value : ('delta,'value)fullresult -> 'value ->
+                        ('a -> 'b) -> ('a -> 'b)
+
+
   val make : { info : ('delta, 'value) adata_info,
                get_deltas : {thyname:string} -> 'delta list,
                delta_side_effects : 'delta -> unit } ->

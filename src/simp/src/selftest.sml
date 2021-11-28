@@ -407,7 +407,8 @@ val _ = let
   val T_t = “?x:'a. p”
   fun gs c = global_simp_tac c
   val fs = full_simp_tac
-  val gsc = {droptrues=true,elimvars=false,strip=true}
+  val gsc = {droptrues=true,elimvars=false,strip=true,oldestfirst=true}
+  val gsc' = {droptrues=true,elimvars=false,strip=true,oldestfirst=false}
 in
   List.app (ignore o test) [
     ("Abbrev var not rewritten",
@@ -420,6 +421,10 @@ in
      [([], T_t)]),
     ("gs + Excl", gs gsc bool_ss [Excl "EXISTS_SIMP"], ([], T_t),
      [([], T_t)]),
+    ("gs oldestfirst", gs gsc bool_ss [], ([“x:'a = y”, “x:'a = z”], “p:bool”),
+     [([“x:'a = z”, “y:'a = z”], “p:bool”)]),
+    ("gs oldestfirst", gs gsc' bool_ss [], ([“x:'a = y”, “x:'a = z”], “p:bool”),
+     [([“z:'a = y”, “x:'a = y”], “p:bool”)]),
     ("fs + Excl (in assumptions)", fs bool_ss [Excl "EXISTS_SIMP"],
      ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
     ("gs + Excl (in assumptions)", gs gsc bool_ss [Excl "EXISTS_SIMP"],

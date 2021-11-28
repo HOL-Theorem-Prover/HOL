@@ -64,6 +64,8 @@ sig
   val dim : string -> string
   val CLR_EOL : string
   val getWidth : unit -> int
+  val strip_codes : string -> string
+  val noesc_size : string -> int
 
   (* diagnostics/output *)
   type output_functions = {warn : string -> unit,

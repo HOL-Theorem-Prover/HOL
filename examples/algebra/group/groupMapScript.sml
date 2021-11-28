@@ -260,6 +260,21 @@ val group_homo_sym = store_thm(
   `g.op x1 y1 IN G` by rw[] >>
   metis_tac[BIJ_LINV_THM]);
 
+Theorem group_homo_sym_any:
+  Group g /\ GroupHomo f g h /\
+  (!x. x IN h.carrier ==> i x IN g.carrier /\ f (i x) = x) /\
+  (!x. x IN g.carrier ==> i (f x) = x)
+  ==>
+  GroupHomo i h g
+Proof
+  rpt strip_tac \\ fs[GroupHomo_def]
+  \\ rpt strip_tac
+  \\ `h.op x y = f (g.op (i x) (i y))` by metis_tac[]
+  \\ pop_assum SUBST1_TAC
+  \\ first_assum irule
+  \\ PROVE_TAC[group_def_alt]
+QED
+
 (* Theorem: GroupHomo f1 g h /\ GroupHomo f2 h k ==> GroupHomo (f2 o f1) g k *)
 (* Proof: by GroupHomo_def *)
 val group_homo_compose = store_thm(

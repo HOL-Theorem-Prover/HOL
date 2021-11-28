@@ -18,7 +18,7 @@ val _ = new_theory "ringDivides";
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory dep_rewrite;
 
 (* Get dependent theories local *)
 (* (* val _ = load "groupTheory"; *) *)
@@ -29,7 +29,10 @@ open ringIdealTheory;
 open ringUnitTheory;
 open ringTheory;
 open groupTheory;
-open monoidTheory;
+open monoidTheory gbagTheory bagTheory containerTheory;
+val MEMBER_NOT_EMPTY = pred_setTheory.MEMBER_NOT_EMPTY;
+
+open ringMapTheory monoidMapTheory groupMapTheory;
 
 (* Get dependent theories in lib *)
 (* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
@@ -376,6 +379,221 @@ val ring_factor_multiple = store_thm(
   qexists_tac `s * k` >>
   rw[ring_mult_assoc]);
 
+Theorem ring_prime_divides_product:
+  !r. Ring r ==>
+  !p. p IN r.carrier ==>
+    (ring_prime r p /\ ~Unit r p <=>
+     (!b. FINITE_BAG b /\ SET_OF_BAG b SUBSET r.carrier /\
+          ring_divides r p (GBAG r.prod b) ==>
+          ?x. BAG_IN x b /\ ring_divides r p x))
+Proof
+  rpt strip_tac
+  \\ reverse eq_tac
+  >- (
+    strip_tac
+    \\ conj_tac
+    >- (
+      rw[ring_prime_def]
+      \\ first_x_assum(qspec_then`{|a; b|}`mp_tac)
+      \\ simp[SUBSET_DEF]
+      \\ DEP_REWRITE_TAC[GBAG_INSERT]
+      \\ simp[SUBSET_DEF]
+      \\ dsimp[]
+      \\ metis_tac[Ring_def])
+    \\ strip_tac
+    \\ `ring_divides r p r.prod.id`
+    by (
+      rfs[ring_unit_property, ring_divides_def]
+      \\ metis_tac[ring_mult_comm] )
+    \\ first_x_assum(qspec_then`{||}`mp_tac)
+    \\ simp[] )
+  \\ strip_tac
+  \\ simp[Once(GSYM AND_IMP_INTRO)]
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ simp[]
+  \\ simp[Once ring_divides_def]
+  \\ conj_tac >- metis_tac[ring_unit_property, ring_mult_comm]
+  \\ rpt strip_tac
+  \\ fs[SUBSET_DEF]
+  \\ pop_assum mp_tac
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ fs[SUBSET_DEF]
+  \\ conj_asm1_tac >- metis_tac[Ring_def]
+  \\ fs[ring_prime_def]
+  \\ `GBAG r.prod b IN r.prod.carrier`
+  by ( irule GBAG_in_carrier \\ fs[SUBSET_DEF] )
+  \\ rfs[] \\ strip_tac
+  \\ `e IN r.carrier` by metis_tac[]
+  \\ first_x_assum(drule_then (drule_then drule))
+  \\ metis_tac[]
+QED
+
+Theorem ring_product_factors_divide:
+  !r. Ring r ==>
+  !b. FINITE_BAG b ==>
+      SET_OF_BAG b SUBSET r.carrier /\
+      ring_divides r (GBAG r.prod b) x ==>
+      !y. BAG_IN y b ==> ring_divides r y x
+Proof
+  ntac 2 strip_tac
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ simp[]
+  \\ gen_tac \\ strip_tac
+  \\ gen_tac \\ strip_tac
+  \\ pop_assum mp_tac
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ fs[SUBSET_DEF]
+  \\ conj_asm1_tac >- metis_tac[Ring_def]
+  \\ gs[ring_divides_def, PULL_EXISTS]
+  \\ gen_tac \\ strip_tac
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ last_x_assum(qspec_then`s * e`mp_tac)
+  \\ simp[]
+  \\ `GBAG r.prod b IN r.prod.carrier`
+  by ( irule GBAG_in_carrier \\ simp[SUBSET_DEF] )
+  \\ rfs[]
+  \\ simp[ring_mult_assoc]
+  \\ strip_tac
+  \\ strip_tac
+  \\ strip_tac
+  >- (
+    qexists_tac`s * GBAG r.prod b`
+    \\ simp[ring_mult_assoc]
+    \\ AP_TERM_TAC
+    \\ simp[ring_mult_comm] )
+  \\ res_tac
+  \\ simp[]
+QED
+
+Theorem ring_mult_divides:
+  !r p q x.
+    Ring r /\ ring_divides r (r.prod.op p q) x /\
+    p IN R /\ q IN R
+    ==>
+    ring_divides r p x /\ ring_divides r q x
+Proof
+  rpt strip_tac
+  \\ drule ring_product_factors_divide
+  \\ disch_then(qspecl_then[`x`,`{|p;q|}`]mp_tac)
+  \\ simp[SUBSET_DEF]
+  \\ dsimp[]
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ metis_tac[Ring_def]
+QED
+
+Theorem ring_associates_sym:
+  !r p q.
+    Ring r /\ q IN r.carrier /\ ring_associates r p q ==>
+    ring_associates r q p
+Proof
+  rw[ring_associates_def]
+  \\ rfs[ring_unit_property]
+  \\ simp[PULL_EXISTS]
+  \\ qexists_tac`v`
+  \\ qexists_tac`s`
+  \\ simp[]
+  \\ simp[Once ring_mult_comm]
+  \\ simp[GSYM ring_mult_assoc]
+  \\ metis_tac[ring_mult_comm, ring_mult_lone]
+QED
+
+Theorem ring_associates_trans:
+  !r x y z.
+    Ring r /\ z IN r.carrier /\
+    ring_associates r x y /\
+    ring_associates r y z ==>
+    ring_associates r x z
+Proof
+  rw[ring_associates_def]
+  \\ qexists_tac`s * s'`
+  \\ simp[ring_mult_assoc]
+  \\ simp[ring_unit_mult_unit]
+QED
+
+Theorem ring_associates_refl:
+  !r x. Ring r /\ x IN r.carrier ==> ring_associates r x x
+Proof
+  rw[ring_associates_def]
+  \\ qexists_tac`#1`
+  \\ simp[]
+QED
+
+Theorem ring_associates_mult:
+  !r p q x.
+    Ring r /\ p IN r.carrier /\ q IN r.carrier /\ x IN r.carrier /\
+    ring_associates r p q ==>
+    ring_associates r (r.prod.op x p) (r.prod.op x q)
+Proof
+  rw[ring_associates_def]
+  \\ rfs[ring_unit_property]
+  \\ simp[PULL_EXISTS]
+  \\ qexistsl_tac[`s`,`v`]
+  \\ simp[GSYM ring_mult_assoc]
+  \\ metis_tac[ring_mult_comm]
+QED
+
+Theorem ring_associates_divides:
+  !r p q x. Ring r /\ ring_associates r p q /\ q IN R /\
+  ring_divides r p x ==> ring_divides r q x
+Proof
+  rw[ring_associates_def, ring_divides_def]
+  \\ qexists_tac`s' * s`
+  \\ simp[]
+  \\ simp[ring_mult_assoc]
+QED
+
+Theorem ring_divides_associates:
+  !r x y p. Ring r /\ ring_associates r x y /\ p IN R /\ y IN R /\ ring_divides r p x ==>
+  ring_divides r p y
+Proof
+  rw[ring_associates_def, ring_divides_def]
+  \\ qexists_tac`|/ s * s'`
+  \\ simp[ring_unit_inv_element, ring_mult_assoc]
+  \\ simp[ring_unit_inv_element, GSYM ring_mult_assoc]
+  \\ simp[ring_unit_linv]
+QED
+
+Theorem LIST_REL_ring_associates_product:
+  Ring r ==>
+  !l1 l2. LIST_REL (ring_associates r) l1 l2 /\
+          set l2 SUBSET r.carrier
+          ==>
+          ring_associates r (GBAG r.prod (LIST_TO_BAG l1))
+                            (GBAG r.prod (LIST_TO_BAG l2))
+Proof
+  strip_tac
+  \\ Induct_on`LIST_REL`
+  \\ rw[]
+  >- ( simp[ring_associates_def] \\ qexists_tac`#1` \\ simp[] )
+  \\ DEP_REWRITE_TAC[GBAG_INSERT]
+  \\ simp[]
+  \\ fs[SUBSET_DEF, IN_LIST_TO_BAG]
+  \\ conj_asm1_tac >- (
+    fs[LIST_REL_EL_EQN, MEM_EL, PULL_EXISTS]
+    \\ fs[ring_associates_def]
+    \\ reverse conj_tac >- metis_tac[Ring_def]
+    \\ rw[] \\ res_tac \\ rfs[]
+    \\ res_tac \\ fs[] )
+  \\ irule ring_associates_trans
+  \\ simp[]
+  \\ `GBAG r.prod (LIST_TO_BAG l2) IN r.prod.carrier` by (
+    irule GBAG_in_carrier
+    \\ simp[SUBSET_DEF, IN_LIST_TO_BAG] )
+  \\ `GBAG r.prod (LIST_TO_BAG l1) IN r.prod.carrier` by (
+    irule GBAG_in_carrier
+    \\ simp[SUBSET_DEF, IN_LIST_TO_BAG] )
+  \\ conj_tac >- ( irule ring_mult_element \\ rfs[] )
+  \\ qexists_tac`h2 * GBAG r.prod (LIST_TO_BAG l1)`
+  \\ reverse conj_tac
+  >- ( irule ring_associates_mult \\ rfs[] )
+  \\ DEP_ONCE_REWRITE_TAC[ring_mult_comm] \\ rfs[]
+  \\ qmatch_goalsub_abbrev_tac`rassoc foo _`
+  \\ DEP_ONCE_REWRITE_TAC[ring_mult_comm] \\ rfs[]
+  \\ qunabbrev_tac`foo`
+  \\ irule ring_associates_mult \\ rfs[]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Euclidean Ring Greatest Common Divisor                                    *)
 (* ------------------------------------------------------------------------- *)
@@ -714,6 +932,53 @@ val ring_divides_le = store_thm(
   `?s. s IN R /\ (p = s * q)` by rw[GSYM ring_divides_def] >>
   `_ = q * s` by rw[ring_mult_comm] >>
   metis_tac[ring_ordering_def, ring_mult_rzero]);
+
+(* division and primality are preserved by isomorphism *)
+
+Theorem ring_divides_iso:
+  !r r_ f. Ring r /\ Ring r_ /\ RingIso f r r_ ==>
+    !p q. p IN r.carrier /\ ring_divides r p q ==>
+      ring_divides r_ (f p) (f q)
+Proof
+  rw[ring_divides_def]
+  \\ qexists_tac`f s`
+  \\ fs[RingIso_def, RingHomo_def]
+  \\ rfs[MonoidHomo_def]
+QED
+
+Theorem ring_prime_iso:
+  !r r_ f. Ring r /\ Ring r_ /\ RingIso f r r_ ==>
+    !p. p IN r.carrier /\ ring_prime r p ==> ring_prime r_ (f p)
+Proof
+  rw[ring_prime_def]
+  \\ `BIJ f r.carrier r_.carrier` by fs[RingIso_def]
+  \\ `∃x y. a = f x /\ b = f y /\ x IN r.carrier /\ y IN r.carrier`
+  by (
+    fs[BIJ_DEF, SURJ_DEF]
+    \\ res_tac \\ rw[]
+    \\ metis_tac[] )
+  \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ drule_then (drule_then drule) ring_iso_sym
+  \\ strip_tac
+  \\ first_x_assum(qspecl_then[`x`,`y`]mp_tac)
+  \\ qspecl_then[`r`,`r_`,`f `]mp_tac ring_divides_iso
+  \\ simp[] \\ strip_tac
+  \\ impl_tac
+  >- (
+    `p = LINV f R (f p) /\ x = LINV f R (f x) /\ y = LINV f R (f y)`
+    by metis_tac[helperSetTheory.BIJ_LINV_THM]
+    \\ ntac 3 (pop_assum SUBST1_TAC)
+    \\ `r.prod.op (LINV f R (f x)) (LINV f R (f y)) =
+        LINV f R (r_.prod.op (f x) (f y))`
+    by (
+      qhdtm_x_assum`RingIso`mp_tac
+      \\ simp_tac(srw_ss())[RingIso_def, RingHomo_def]
+      \\ simp[MonoidHomo_def] )
+    \\ pop_assum SUBST1_TAC
+    \\ irule ring_divides_iso
+    \\ metis_tac[BIJ_DEF, INJ_DEF] )
+  \\ metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Principal Ideal Ring: Irreducibles and Primes                             *)

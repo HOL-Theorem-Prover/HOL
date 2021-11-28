@@ -1,0 +1,3 @@
+find . -name '*?Theory.sml' | while read i ; do [ -r "${i/Theory/Script}" ] || echo $i ; done
+find . -name '*?Theory.uo' -not -path '*sigobj/*' | while read i ; do [ -r "${i/Theory.uo/Script.sml}" ] || echo $i ; done
+find . -name '*?Theory.ui' -not -path '*sigobj/*' | while read i ; do [ -r "${i/Theory.ui/Script.sml}" ] || echo $i ; done

@@ -466,6 +466,118 @@ val SUM_ALL_CONG = store_thm(
        (SUM_ALL P Q s <=> SUM_ALL P' Q' s')``,
   SIMP_TAC (srw_ss()) [FORALL_SUM]);
 
+(* ----------------------------------------------------------------------
+    SUM_FIN, sums built from particular sets
+   ---------------------------------------------------------------------- *)
+
+val SUM_FIN_def = new_definition(
+  "SUM_FIN_def",
+  “SUM_FIN A B = \ab. sum_CASE ab (\a. a IN A) (\b. b IN B)”);
+
+Theorem IN_SUM_FIN_THM[simp]:
+  (INL a IN SUM_FIN A B <=> a IN A) /\
+  (INR b IN SUM_FIN A B <=> b IN B)
+Proof
+  SIMP_TAC (srw_ss()) [SUM_FIN_def, IN_DEF]
+QED
+
+(* ----------------------------------------------------------------------
+    SUM_REL, the sum "relator"
+   ---------------------------------------------------------------------- *)
+
+val SUM_REL_def = Prim_rec.new_recursive_definition {
+  def = “(SUM_REL R1 R2 (INL x:'a + 'b) ab <=> ISL ab /\ R1 x (OUTL ab)) /\
+         (SUM_REL R1 R2 (INR y) ab <=> ISR ab /\ R2 y (OUTR ab))”,
+  name = "SUM_REL_def",
+  rec_axiom = sum_Axiom};
+
+val _ = set_fixity "+++" (Infixl 480)
+Overload "+++" = “SUM_REL”
+
+Theorem SUM_REL_THM[simp,compute]:
+  (SUM_REL R1 R2 (INL x :'a + 'b) (INL a) <=> R1 x a) /\
+  (SUM_REL R1 R2 (INL x) (INR b) <=> F) /\
+  (SUM_REL R1 R2 (INR y) (INL a) <=> F) /\
+  (SUM_REL R1 R2 (INR y) (INR b) <=> R2 y b)
+Proof
+  SIMP_TAC (srw_ss()) [SUM_REL_def]
+QED
+
+Theorem SUM_REL_EQ[simp]:
+  SUM_REL $= $= = ($= : 'a + 'b -> 'a + 'b -> bool)
+Proof
+  REWRITE_TAC [FUN_EQ_THM] >> SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
+
+Theorem SUM_REL_REFL:
+  (!x:'a. R1 x x) /\ (!a:'b. R2 a a) ==>
+  !xy. SUM_REL R1 R2 xy xy
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
+
+Theorem SUM_REL_SYM:
+  (!x y:'a. R1 x y <=> R1 y x) /\ (!a b:'b. R2 a b <=> R2 b a) ==>
+  !xy ab. SUM_REL R1 R2 xy ab <=> SUM_REL R1 R2 ab xy
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
+
+Theorem SUM_REL_TRANS:
+  (!x y z:'a. R1 x y /\ R1 y z ==> R1 x z) /\
+  (!a b c:'b. R2 a b /\ R2 b c ==> R2 a c) ==>
+  !xy ab uv. SUM_REL R1 R2 xy ab /\ SUM_REL R1 R2 ab uv ==>
+             SUM_REL R1 R2 xy uv
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
+
+(* ----------------------------------------------------------------------
+    SUM_SET
+   ---------------------------------------------------------------------- *)
+
+val SUM_SET_def = Prim_rec.new_recursive_definition {
+  def = “SUM_SET f1 f2 (INL a : 'a + 'b) = f1 a : ('c -> bool) /\
+         SUM_SET f1 f2 (INR b) = f2 b”,
+  name = "SUM_SET_def", rec_axiom = sum_Axiom};
+
+Overload setL = “SUM_SET ($= : 'a -> 'a -> bool) (K (\x. F) : 'b -> 'a -> bool)”
+Overload setR = “SUM_SET (K (\x. F) : 'a -> 'b -> bool) ($= : 'b -> 'b -> bool)”
+
+Theorem SUM_SETLR_THM[simp]:
+  (a1 IN setL (INL a2 : 'a + 'b) <=> a1 = a2) /\
+  (a IN setL  (INR b  : 'a + 'b) <=> F) /\
+  (b IN setR  (INL a  : 'a + 'b) <=> F) /\
+  (b1 IN setR (INR b2 : 'a + 'b) <=> b1 = b2)
+Proof
+  SIMP_TAC (srw_ss()) [SUM_SET_def, IN_DEF, EQ_IMP_THM]
+QED
+
+(* used later for sigma *)
+val _ = remove_ovl_mapping "SUM_SET" {Name = "SUM_SET", Thy = "sum"}
+
+Theorem SUM_MAP_CONG:
+  (!a:'a. a IN setL ab ==> f1 a = f2 a :'c) /\
+  (!b:'b. b IN setR ab ==> g1 b = g2 b :'d) ==>
+  SUM_MAP f1 g1 ab = SUM_MAP f2 g2 ab
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
+
+Theorem SUM_ALL_SET:
+  SUM_ALL P Q ab <=> (!a. a IN setL ab ==> P a) /\ (!b. b IN setR ab ==> Q b)
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
+
+Theorem SUM_MAP_SET[simp]:
+  (c IN setL (SUM_MAP f g ab) <=> ?a:'a. c:'c = f a /\ a IN setL ab) /\
+  (d IN setR (SUM_MAP f g ab) <=> ?b:'b. d:'d = g b /\ b IN setR ab)
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM]
+QED
+
+
 val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
                                         "sum_distinct", "sum_distinct1",
                                         "SUM_ALL_def", "SUM_MAP_def",

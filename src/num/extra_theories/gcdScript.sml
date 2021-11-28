@@ -1,6 +1,10 @@
+(* gcd = greatest common divisor *)
+
 open HolKernel Parse boolLib TotalDefn BasicProvers
      arithmeticTheory dividesTheory simpLib boolSimps
      Induction;
+
+open numSimps metisLib;
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
@@ -269,8 +273,6 @@ val gcd_lemma = prove(
     Q.SPECL_THEN [`a - n * b`, `b`] MP_TAC gcd_lemma0 THEN
     ASM_SIMP_TAC arith_ss []
   ]);
-
-open numSimps metisLib;
 
 val GCD_EFFICIENTLY = store_thm(
   "GCD_EFFICIENTLY",

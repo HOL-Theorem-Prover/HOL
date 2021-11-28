@@ -1,0 +1,75 @@
+CLINE_OPTIONS = -r
+
+# directories to build under src/
+SRCRELNAMES = \
+  monad/more_monads string sort res_quan/src quotient/src hol88 bag n-bit \
+  finite_maps ring/src integer topology transfer update emit \
+  pred_set/src/more_theories coalgebras rational datatype/inftree search \
+  real floating-point probability temporal/src float Boolify/src HolQbf HolSmt
+
+INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
+
+ifdef POLY
+INCLUDES += ../../floating-point/native
+endif
+
+ifdef HOLSELFTESTLEVEL
+# example directories to build at selftest level 1
+EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
+         PSL/1.01/executable-semantics PSL/1.1/official-semantics \
+         RL_Environment \
+	 STE algorithms computability dependability dev \
+	 formal-languages formal-languages/context-free \
+	 formal-languages/lambek formal-languages/regular/regular-play \
+	 fun-op-sem/lprefix_lub fun-op-sem/for \
+         hfs imperative ind_def l3-machine-code/common lambda/barendregt \
+         lassie \
+         logic logic/folcompactness logic/modal-tableaux logic/ncfolproofs \
+	 logic/propositional_logic \
+         misc parity rings set-theory/zfset set-theory/vbg zipper
+
+# selftest directories under src/quotient
+QUOTDIRS = examples examples/lambda examples/sigma
+
+SRCTESTDIRS = integer/testing string/theorytesting tfl/examples
+
+ifdef POLY
+SRCTESTDIRS += n-bit/interactive_tests
+endif
+
+INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
+            $(patsubst %,../../../examples/%,$(EXDIRS)) \
+            $(patsubst %,../../%,$(SRCTESTDIRS))
+
+ifneq($(HOLSELFTESTLEVEL),1)
+EX2DIRS = AKS algebra algorithms/unification/triangular/nominal \
+          balanced_bst \
+          computability/kolmog computability/lambda computability/recdegrees \
+          computability/register computability/turing \
+          Crypto/AES Crypto/IDEA Crypto/MARS Crypto/RC6 \
+          formal-languages/regular \
+          lambda/other-models lambda/typing \
+          l3-machine-code/decompilers \
+          miller \
+          separationLogic/src separationLogic/src/holfoot simple_complexity \
+          temporal_deep
+
+ifdef POLY
+EX2DIRS += separationLogic/src/holfoot/poly temporal_deep/src/examples
+endif
+
+INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
+
+ifeq ($(KERNELID),stdknl)
+INCLUDES += ../../../examples/bootstrap
+endif
+
+endif
+
+ifeq($(HOLSELFTESTLEVEL),3)
+EX3DIRS = diningcryptos
+
+INCLUDES += $(patsubst %,../../../examples/%,$(EX3DIRS))
+endif
+
+endif

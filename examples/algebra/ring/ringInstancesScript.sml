@@ -25,34 +25,20 @@ val _ = new_theory "ringInstances";
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* val _ = load "ringMapTheory"; *)
 open monoidTheory groupTheory ringTheory;
-(* val _ = load "monoidInstancesTheory"; *)
 open monoidInstancesTheory;
-(* val _ = load "groupInstancesTheory"; *)
 open groupInstancesTheory;
 open monoidOrderTheory groupOrderTheory;
 
 open monoidMapTheory groupMapTheory ringMapTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringheory *) *)
 open helperNumTheory helperFunctionTheory;
 
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
+open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory;
 open EulerTheory;
 
-(* val _ = load "GaussTheory"; *)
 open GaussTheory;
 
-(* val _ = load "whileTheory"; *)
 open whileTheory; (* for order computation by WHILE loop *)
 
 

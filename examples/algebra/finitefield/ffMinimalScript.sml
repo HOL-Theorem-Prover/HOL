@@ -1408,7 +1408,7 @@ val poly_ring_zero_ideal = store_thm(
   `Ring (PolyRing r)` by rw[poly_ring_ring] >>
   `p IN (pfppideal p).carrier` by metis_tac[principal_ideal_has_element, poly_ring_property] >>
   `(pfppideal p).carrier = (pfppideal |0|).carrier` by rw[principal_ideal_ideal, ideal_eq_ideal] >>
-  `_ = {|0|}` by rw[zero_ideal_sing] >>
+  `_ = { |0| }` by rw[zero_ideal_sing] >> (* avoid bag syntax *)
   metis_tac[IN_SING]);
 
 (* Theorem: Field r ==> !i. i << (PolyRing r) /\ i <> pfppideal |0| ==> ?p. monic p /\ (i = pfppideal p) *)

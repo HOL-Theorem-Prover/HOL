@@ -267,9 +267,6 @@ val subgroup_element = store_thm(
   ``!(g:'a group) (h:'a group). h <= g ==> !z. z IN H ==> z IN G``,
   rw_tac std_ss[Subgroup_def, SUBSET_DEF]);
 
-(* export simple result *)
-val _ = export_rewrites ["subgroup_element"];
-
 (* Theorem: A subgroup h of g implies identity is a homomorphism from h to g.
         or  h <= g ==> Group h /\ Group g /\ GroupHomo I h g  *)
 (* Proof: check definitions. *)

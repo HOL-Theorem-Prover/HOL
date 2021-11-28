@@ -222,38 +222,57 @@ fun name_ind_cases nm_tms thm = let
 end
 
 (* ----------------------------------------------------------------------
+    useful for proving termination in fold and rose-tree settings
+   ---------------------------------------------------------------------- *)
+
+val size_comb_tac =
+  full_simp_tac boolSimps.bool_ss [listTheory.MEM_SPLIT]
+  THEN CONV_TAC TotalDefn.size_eq_conv
+  THEN simp_tac boolSimps.bool_ss
+    [listTheory.list_size_append, listTheory.list_size_def]
+
+val _ = let
+  val sref = TotalDefn.termination_solve_simps
+in sref := ([listTheory.MEM_SPLIT, listTheory.list_size_append] @ ! sref) end
+
+(* ----------------------------------------------------------------------
     convenient simplification aliases
    ---------------------------------------------------------------------- *)
 
 open simpLib
-fun stateful f ssfl thm : tactic =
-  let
-    val ss = List.foldl (simpLib.++ o Lib.swap) (srw_ss()) ssfl
-  in
-    f ss thm
-  end
+fun addfrags frags ss = List.foldl (fn (frag,ss) => ss ++ frag) ss frags
+fun fraglistify f base_ss fragl thms : tactic = f (addfrags fragl base_ss) thms
 
-val fsrw_tac = stateful full_simp_tac
-val rfsrw_tac = stateful rev_full_simp_tac
+val let_arith_frags = [boolSimps.LET_ss, ARITH_ss]
+fun boss_augment ss old = addfrags let_arith_frags ss
+val {get = boss_ss, set = set_boss_ss} =
+    BasicProvers.make_simpset_derived_value boss_augment bool_ss
 
-val let_arith_list = [boolSimps.LET_ss, ARITH_ss]
-val simp = stateful asm_simp_tac let_arith_list
-val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
-val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
+fun stateful f ssfl thms : tactic =
+    fn g => fraglistify f (boss_ss()) ssfl thms g
 
-val lrw = srw_tac let_arith_list
-val lfs = fsrw_tac let_arith_list
-val lrfs = rfsrw_tac let_arith_list
+val simp = stateful asm_simp_tac []
+val dsimp = stateful asm_simp_tac [boolSimps.DNF_ss]
+val csimp = stateful asm_simp_tac [boolSimps.CONJ_ss]
 
-val rw = srw_tac let_arith_list
-val fs = fsrw_tac let_arith_list
-val rfs = rfsrw_tac let_arith_list
+val rw = stateful (fn ss => BasicProvers.PRIM_SRW_TAC ss []) []
+fun fsrw_tac frags thms = fraglistify full_simp_tac (srw_ss()) frags thms
+val fs = stateful full_simp_tac []
+val rfs = stateful rev_full_simp_tac []
 
-fun cfg ev s = global_simp_tac {elimvars = ev, strip = s, droptrues = true}
-val gns = stateful (cfg false false) let_arith_list
-val gs = stateful (cfg false true) let_arith_list
-val gnvs = stateful (cfg true false) let_arith_list
-val gvs = stateful (cfg true true) let_arith_list
+val lrw = rw
+val lfs = fs
+val lrfs = rfs
+
+
+fun cfg ev s ofirst =
+    global_simp_tac {elimvars = ev, strip = s, droptrues = true,
+                     oldestfirst = ofirst}
+val gns = stateful (cfg false false true) []
+val gs = stateful (cfg false true true) []
+val gnvs = stateful (cfg true false true) []
+val gvs = stateful (cfg true true true) []
+val rgs = stateful (cfg false true false) []
 
 (* Without loss of generality tactics *)
 val wlog_tac = wlog_tac

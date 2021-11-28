@@ -79,6 +79,7 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
+  val boss_ss         : unit -> simpset (* srw_ss() + LET_ss + ARITH_ss *)
 
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
@@ -167,6 +168,9 @@ sig
   (* name cases of an induction theorem *)
   val name_ind_cases : term list -> thm -> thm
 
+  (* convert aux size operators to combinators and use append rules *)
+  val size_comb_tac : tactic
+
   (* more simplification variants *)
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
   val simp : thm list -> tactic
@@ -182,6 +186,7 @@ sig
   val gvs : thm list -> tactic
   val gns : thm list -> tactic
   val gnvs : thm list -> tactic
+  val rgs : thm list -> tactic
 
   (* without loss of generality (from wlogLib) *)
   val wlog_then : term quotation ->

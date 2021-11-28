@@ -1,0 +1,8 @@
+all: test1
+
+test1:
+	ls -1 > foo
+
+.PHONY: test1
+
+EXTRA_CLEANS = foo

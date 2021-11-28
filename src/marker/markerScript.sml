@@ -77,6 +77,7 @@ val move_right_disj = store_thm(
 val unint_def = new_definition(
   "unint_def",
   ``unint (x:'a) = x``);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="unint"},name=(["Unwanted"],"id")}
 
 (* ----------------------------------------------------------------------
     Abbrev
@@ -101,7 +102,7 @@ val Abbrev_CONG = store_thm(
    ---------------------------------------------------------------------- *)
 
 val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
-
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="IfCases"},name=(["Data","Bool"],"T")}
 
 (*---------------------------------------------------------------------------*)
 (* Support for the simplifier                                                *)
@@ -140,6 +141,7 @@ val label_def = new_definition(
 
 val using_def = new_definition("using_def", “using (x:label) = T”);
 val usingThm_def = new_definition("usingThm_def", “usingThm (b:bool) = b”);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="usingThm"},name=(["Unwanted"],"id")}
 
 val _ = remove_ovl_mapping  "using" {Name = "using", Thy = "marker"}
 val _ = remove_ovl_mapping  "usingThm" {Name = "usingThm", Thy = "marker"}

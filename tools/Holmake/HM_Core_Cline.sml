@@ -261,5 +261,9 @@ fun descr_compare (d1, d2) = String.compare(descr_key d1, descr_key d2)
 
 fun sort_descriptions dl = Listsort.sort descr_compare dl
 
-
+fun extend_env (t:t) =
+    let open Holmake_types
+    in
+      env_extend ("HOL_NUMJOBS", [LIT (Int.toString (#jobs t))])
+    end
 end

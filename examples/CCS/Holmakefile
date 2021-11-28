@@ -1,39 +1,30 @@
-INCLUDES = $(HOLDIR)/examples/lambda/basics
+INCDIRS = examples/lambda/basics src/finite_maps
+INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/%),$(INCDIRS))
 
-OPTIONS = QUIT_ON_FAILURE
-
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-EXTRA_CLEANS = heap munge.exe selftest.exe \
-	$(patsubst %Theory.uo,%Theory.html,$(TARGETS)) \
-	$(patsubst %Theory.uo,%Theory.lst,$(TARGETS))
+EXTRA_CLEANS = heap munge.exe selftest.exe ccs-selftest.log
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = finite_mapTheory bisimulationTheory
-OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+OBJNAMES = src/finite_maps/finite_map sigobj/bisimulation
+OBJS = $(patsubst %,$(dprot $(HOLDIR)/%Theory.uo),$(OBJNAMES))
 
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(protect $(HOLDIR)/src/finite_maps/finite_mapTheory) bisimulationTheory
 endif
 
-all: $(TARGETS) munge.exe selftest.exe
+all: $(DEFAULT_TARGETS) munge.exe selftest.exe
 
 selftest.exe: selftest.uo CCSConv.uo
 	$(HOLMOSMLC) -o $@ $<
 
-MUNGE_DEPS = CCSTheory StrongEQTheory StrongLawsTheory \
-	     WeakEQTheory WeakLawsTheory ObsCongrTheory ObsCongrLawsTheory \
-	     BisimulationUptoTheory \
-	     CongruenceTheory CoarsestCongrTheory \
-	     TraceTheory ExpansionTheory ContractionTheory \
-	     UniqueSolutionsTheory MultivariateTheory \
-             ExampleTheory
+MUNGE_DEPS = CCS StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws \
+	     BisimulationUpto Congruence CoarsestCongr Trace Expansion \
+             Contraction UniqueSolutions Multivariate Example
 
-munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
-	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
+munge.exe: $(patsubst %,%Theory.uo,$(MUNGE_DEPS))
+	$(HOLDIR)/bin/mkmunge.exe $(patsubst %,%Theory,$(MUNGE_DEPS))
 
 output: munge.exe
 	echo '\HOLtm{R1 RUNION R2}' | ./munge.exe
@@ -44,3 +35,10 @@ all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 endif
 
 .PHONY: all output
+
+ifdef HOLSELFTESTLEVEL
+all: ccs-selftest.log
+
+ccs-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif

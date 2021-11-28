@@ -2,6 +2,12 @@
    HTML-files.  Peter Sestoft 1997-05-08, 1997-07-31, 2000-01-10, 2000-06-01
 *)
 structure Htmlsigs :> Htmlsigs = struct
+
+fun die s =
+    (TextIO.output(TextIO.stdErr, s ^ "\n");
+     OS.Process.exit OS.Process.failure)
+
+
 fun indexbar out srcpath = out (String.concat
    ["<hr><table width=\"100%\">",
     "<tr align = center>\n",
@@ -60,6 +66,7 @@ fun find_most_appealing HOLpath docfile =
 fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
     let val strName = OS.Path.base (OS.Path.file sigfile)
 	val is = TextIO.openIn sigfile
+                 handle e as IO.Io _ => die (General.exnMessage e)
 	val lines = Substring.fields (fn c => c = #"\n")
 	                             (Substring.full (TextIO.inputAll is))
 	val _ = TextIO.closeIn is
@@ -316,7 +323,7 @@ fun processSigfile db version bgcolor stoplist
 	                (OS.Path.concat(sigdir, sigfile))
 	                (OS.Path.concat(htmldir, htmlfile))
      | otherwise => ()
- end
+ end handle e => die ("processSigfile: " ^ General.exnMessage e)
 
 fun listDir s = let
   val ds = OS.FileSys.openDir s

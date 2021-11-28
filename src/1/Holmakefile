@@ -9,3 +9,13 @@ selftest.exe: selftest.uo simpfrag.uo $(dprot $(SIGOBJ)/term_pp.uo) \
               $(dprot $(SIGOBJ)/Preterm.uo) $(dprot $(SIGOBJ)/Parse_support.uo)\
 	      $(dprot $(SIGOBJ)/LVTermNet.uo) LVTermNetFunctorApplied.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+
+selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+
+all: selftest.log
+endif
+
+EXTRA_CLEANS = selftest.log selftest.exe

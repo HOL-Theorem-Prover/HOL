@@ -88,7 +88,7 @@ fun 'a graphbuildj1 static_info =
                          | _ => raise Fail ("bad bic tgt = " ^ target_s))
                     | cmd as (BuiltInCmd (BIC_BuildScript thyname, ii)) =>
                       let
-                        val others = find_nodes_by_command g cmd
+                        val others = find_nodes_by_command g (#dir nI,cmd)
                       in
                         k (updall (n::others))
                           (bc ii
@@ -109,7 +109,7 @@ fun 'a graphbuildj1 static_info =
                                     (TextIO.output(TextIO.stdOut, c ^ "\n");
                                      TextIO.flushOut TextIO.stdOut)
                                   else ()
-                              val others = find_nodes_by_command g cmd
+                              val others = find_nodes_by_command g (#dir nI,cmd)
                               val result = system c
                               val res_b = OS.Process.isSuccess result
                             in

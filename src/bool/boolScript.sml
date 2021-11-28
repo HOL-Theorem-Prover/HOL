@@ -1111,6 +1111,22 @@ val IMP_CLAUSES = save_thm("IMP_CLAUSES",
                   SPEC t IMP_CLAUSE5])
    end);
 
+(* ----------------------------------------------------------------------
+    |- !t1 t2. (t1 <=> t2) ==> (t1 ==> t2)
+   ---------------------------------------------------------------------- *)
+
+val EQ_IMPLIES =
+  let
+    val impt1 = REFL $ mk_comb(implication, t1b)
+    val eqt = mk_eq(t1b,t2b)
+    val t1_eq_t2 = ASSUME eqt
+    val th0 = MK_COMB(impt1,t1_eq_t2)
+    val imp_refl = IMP_CLAUSES |> SPEC t1b |> CONJUNCTS |> el 4 |> EQT_ELIM
+  in
+    save_thm("EQ_IMPLIES", EQ_MP th0 imp_refl |> DISCH eqt |> GENL [t1b,t2b])
+  end
+
+
 (*----------------------------------------------------------------------------
  *    |- (~~t = t) /\ (~T = F) /\ (~F = T)
  *---------------------------------------------------------------------------*)
@@ -4196,6 +4212,23 @@ val ITSELF_UNIQUE = let
 in
   save_thm("ITSELF_UNIQUE",
            CHOOSE (“rep:'a itself -> 'a”, ITSELF_TYPE_DEF) all_eq_thevalue)
+end
+
+(* ITSELF_EQN_RWT = |- f (:'a) = e <=> !x. f x = e *)
+val ITSELF_EQN_RWT = let
+  fun mk_itty ty = mk_thy_type{Args = [ty], Thy = "bool", Tyop = "itself"}
+  val aitty = mk_itty alpha
+  val f = mk_var("f", aitty --> beta)
+  val e = mk_var("e", beta)
+  val x = mk_var("x", aitty)
+  val r = mk_forall(x, mk_eq(mk_comb(f,x), e))
+  val itv = mk_thy_const{Name = "the_value", Thy = "bool", Ty = aitty}
+  val l = mk_eq(mk_comb(f,itv), e)
+  val r2l = SPEC itv (ASSUME r) |> DISCH r
+  val l2r = SPEC x ITSELF_UNIQUE |> AP_TERM f |> C TRANS (ASSUME l) |> GEN x
+                 |> DISCH l
+in
+  save_thm("ITSELF_EQN_RWT", GENL [f,e] $ IMP_ANTISYM_RULE l2r r2l)
 end
 
 (* prove a datatype axiom for the type, allowing definitions of the form

@@ -1,30 +1,11 @@
-!examples/RL_Environment
-!examples/parity
-!examples/formal-languages
-!examples/formal-languages/context-free
-!examples/formal-languages/regular/regular-play
-!examples/Hoare-for-divergence
-!examples/MLsyntax
-!examples/set-theory/zfset
-!examples/set-theory/vbg
 !!examples/category
-!!examples/miller
-!!examples/miller/miller
 !!examples/probability
 !!!examples/ARM_security_properties
-!examples/fun-op-sem/lprefix_lub
-!examples/fun-op-sem/for
-!examples/logic/propositional_logic
 !!examples/logic/ltl
 !!examples/logic/ltl-transformations
 !!examples/fun-op-sem
-!examples/algorithms
 
 # Crypto examples
-!!examples/Crypto/AES
-!!examples/Crypto/IDEA
-!!examples/Crypto/MARS
-!!examples/Crypto/RC6
 !!examples/Crypto/Serpent/Reference
 !!examples/Crypto/Serpent/Bitslice
 !!examples/Crypto/SHA-1
@@ -32,19 +13,8 @@
 !!examples/Crypto/TWOFISH
 
 !!!examples/l3-machine-code/cheri/step
-[poly](stdknl)!!examples/bootstrap
 [poly]!!!examples/theorem-prover
 [poly]!!!examples/machine-code
-
-!!!examples/diningcryptos
-
-# AKS examples
-!!examples/algebra
-!!examples/simple_complexity
-!!examples/AKS
-
-# Dependability examples
-!examples/dependability/
 
 # Lassie examples
 !examples/lassie/

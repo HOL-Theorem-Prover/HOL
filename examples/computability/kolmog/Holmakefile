@@ -1,2 +1,5 @@
-INCLUDES = $(HOLDIR)/examples/computability/ $(HOLDIR)/examples/computability/lambda
+INCLUDES = $(HOLDIR)/examples/computability/ \
+           $(HOLDIR)/examples/computability/lambda \
+           $(HOLDIR)/src/real
+
 HOLHEAP = ../lambda/computability-heap

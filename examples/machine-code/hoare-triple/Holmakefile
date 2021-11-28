@@ -1,8 +1,7 @@
-OPTIONS=QUIT_ON_FAILURE
+INCLUDES = $(dprot $(HOLDIR)/src/n-bit) $(dprot $(HOLDIR)/src/quotient/src)
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-all: $(TARGETS)
+
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)

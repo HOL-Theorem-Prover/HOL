@@ -811,24 +811,26 @@ region instead. With prefix ARG prompt for a file-name to load."
         (setq font-lock-defaults nil)))
   (setq font-lock-mode nil))
 
+(require 'term)
 (defun holmake (&optional dir)
-   (interactive "DRun Holmake in dir: ")
-   (if (not (null dir))
-      (with-current-buffer (get-buffer-create "*Holmake*")
-         (delete-region (point-min) (point-max))
-         (cd (expand-file-name dir)))
-      )
-   (let* ((buf (make-comint "Holmake"
-                  holmake-executable nil "--qof" "-k")))
-      (with-current-buffer buf
-         (font-lock-mode 0)
-         (make-local-variable 'font-lock-function)
-         (setq font-lock-function 'turn-off-hol-font-lock)
-         (setq comint-preoutput-filter-functions '(holmakepp-output-filter)))
-         (setq comint-scroll-show-maximum-output t)
-         (setq comint-scroll-to-bottom-on-output t)
-      (display-buffer buf)
-   ))
+  (interactive "DRun Holmake in dir: ")
+  (let ((holmake-buffer
+         (let ((holmake-buffer-candidate (get-buffer-create "*Holmake*")))
+           (if (get-buffer-process holmake-buffer-candidate)
+               (generate-new-buffer "*Holmake*")
+             holmake-buffer-candidate))))
+    (set-buffer holmake-buffer)
+    (cd dir)
+    (goto-char (point-max))
+    (setq buffer-read-only nil)
+    (delete-region (point-min) (point-max))
+    (insert "Running Holmake in directory " dir "\n\n")
+    (term-ansi-make-term
+     (buffer-name)
+     holmake-executable nil "--qof" "-k")
+    (term-mode)
+    (term-char-mode)
+    (display-buffer holmake-buffer '(nil (allow-no-window . t)))))
 
 ;** hol map keys and function definitions
 (defun hol-executable-with-bare ()
@@ -2048,6 +2050,11 @@ the surrounding text (as done by ‘hol-do-goal’ and
 
 (define-key global-map [menu-bar hol-menu hol-goalstack top-thm]
    '("Name top theorem" . hol-name-top-theorem))
+
+(defun hol-suffices-tactic () (interactive) (hol-subgoal-tactic 1))
+(define-key global-map [menu-bar hol-menu hol-goalstack suffices-tac]
+  '(menu-item "Suffices-by tactic" hol-suffices-tactic
+              :keys "C-u M-h M-s"))
 
 (define-key global-map [menu-bar hol-menu hol-goalstack subgoal-tac]
    '("Subgoal tactic" . hol-subgoal-tactic))

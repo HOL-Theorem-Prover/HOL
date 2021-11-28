@@ -305,9 +305,6 @@ val ring_homo_zero = store_thm(
   ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_)``,
   rw_tac std_ss[ring_add_group, RingHomo_def, group_homo_id]);
 
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_zero"];
-
 (* Theorem: (r ~r~ r_) f ==> (f #1 = #1_) *)
 (* Proof:
    Ring r ==> Monoid r.prod                         by ring_mult_monoid
@@ -319,9 +316,6 @@ val ring_homo_one = store_thm(
   "ring_homo_one",
   ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #1 = #1_)``,
   rw_tac std_ss[ring_mult_monoid, RingHomo_def, MonoidHomo_def]);
-
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_one"];
 
 (* Theorem: (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_homo_zero, ring_homo_one *)
@@ -339,9 +333,6 @@ val ring_homo_element = store_thm(
   "ring_homo_element",
   ``!(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !x. x IN R ==> f x IN R_``,
   rw[RingHomo_def]);
-
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_element"];
 
 (* Theorem: Ring r /\ RingHomo f r r_ ==>
             !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y)) *)
@@ -536,6 +527,27 @@ val ring_homo_sym = store_thm(
   `Monoid r.prod /\ (r.prod.carrier = R)` by rw[ring_mult_monoid] >>
   `r_.prod.carrier = R_` by rw[ring_mult_monoid] >>
   metis_tac[monoid_homo_sym]);
+
+Theorem ring_homo_sym_any:
+  Ring r /\ Ring s /\ RingHomo f r s /\
+  (!x. x IN s.carrier ==> i x IN r.carrier /\ f (i x) = x) /\
+  (!x. x IN r.carrier ==> i (f x) = x)
+  ==>
+  RingHomo i s r
+Proof
+  rpt strip_tac
+  \\ fs[RingHomo_def]
+  \\ conj_tac
+  >- (
+    irule group_homo_sym_any
+    \\ conj_tac >- metis_tac[Ring_def, AbelianGroup_def]
+    \\ qexists_tac`f`
+    \\ metis_tac[ring_carriers] )
+  \\ irule monoid_homo_sym_any
+  \\ conj_tac >- metis_tac[Ring_def, AbelianMonoid_def]
+  \\ qexists_tac`f`
+  \\ metis_tac[ring_carriers]
+QED
 
 (* Theorem: RingHomo f1 r s /\ RingHomo f2 s t ==> RingHomo (f2 o f1) r t *)
 (* Proof:
@@ -937,6 +949,20 @@ val ring_iso_sym = store_thm(
   "ring_iso_sym",
   ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (LINV f R) r_ r``,
   rw[RingIso_def, ring_homo_sym, BIJ_LINV_BIJ]);
+
+Theorem ring_iso_sym_any:
+  Ring r /\ Ring s /\ RingIso f r s /\
+  (!x. x IN s.carrier ==> i x IN r.carrier /\ f (i x) = x) /\
+  (!x. x IN r.carrier ==> i (f x) = x)
+  ==>
+  RingIso i s r
+Proof
+  rpt strip_tac \\ fs[RingIso_def]
+  \\ conj_tac >- metis_tac[ring_homo_sym_any]
+  \\ simp[BIJ_IFF_INV]
+  \\ qexists_tac`f`
+  \\ metis_tac[BIJ_DEF, INJ_DEF]
+QED
 
 (* Theorem: RingIso f1 r s /\ RingIso f2 s t ==> RingIso (f2 o f1) r t *)
 (* Proof:
@@ -1370,9 +1396,6 @@ val subring_element_alt = store_thm(
   "subring_element_alt",
   ``!(r s):'a ring. s <= r ==> !x. x IN B ==> x IN R``,
   metis_tac[subring_def, ring_homo_element, i_thm]);
-
-(* export simple result *)
-val _ = export_rewrites["subring_element_alt"];
 
 (* Theorem: subring preserves sum and product. *)
 (* Proof: by subring_def, ring_homo_property. *)

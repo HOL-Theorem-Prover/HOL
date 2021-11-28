@@ -2938,7 +2938,8 @@ val SUM_GENLIST = store_thm(
   `SUM (GENLIST f (SUC n)) = SUM (SNOC (f n) (GENLIST f n))` by rw[GENLIST] >>
   `_ = f n + SUM (GENLIST f n)` by rw[SUM_SNOC] >>
   `_ = f n + SIGMA f (count n)` by rw[] >>
-  `_ = f n + SIGMA f (count n DELETE n)` by metis_tac[IN_COUNT, LESS_SELF, DELETE_NON_ELEMENT] >>
+  `_ = f n + SIGMA f (count n DELETE n)`
+    by metis_tac[IN_COUNT, prim_recTheory.LESS_REFL, DELETE_NON_ELEMENT] >>
   `_ = SIGMA f (n INSERT count n)` by rw[SUM_IMAGE_THM] >>
   `_ = SIGMA f (count (SUC n))` by rw[COUNT_SUC] >>
   decide_tac);

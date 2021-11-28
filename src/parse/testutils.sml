@@ -11,19 +11,41 @@ val output_linewidth = Holmake_tools.getWidth()
 
 fun is_result (Exn.Res _) = true
   | is_result _ = false
-fun crush extra w s =
+fun crush padding w s =
   let
+    val extra = " ..."
     val exsize = UTF8.size extra
     val desired_size = UTF8.size s + exsize
   in
-    if desired_size <= w then
+    if desired_size <= w - padding then
       UTF8.padRight #" " w (s ^ extra)
     else
-      UTF8.substring(s,0,w-exsize) ^ extra
+      UTF8.padRight #" " w (UTF8.substring(s,0,w - padding - exsize) ^ extra)
   end
-val rmNLs = String.translate (fn #"\n" => " " | c => str c)
+val rmNLs = String.translate (fn #"\n" => " " | #"\t" => " " | c => str c)
 
-fun tprint s = print (crush " ...  " (output_linewidth - 3) (rmNLs s))
+fun squish_spaces s =
+    let
+      fun recurse A ss =
+          let
+            val (pfx,sfx) = Substring.position "  " ss
+          in
+            if Substring.size sfx = 0 then
+              Substring.concatWith " " (List.rev (pfx::A))
+            else
+              recurse (pfx::A)
+                      (Substring.dropl Char.isSpace sfx)
+          end
+    in
+      recurse [] (Substring.full s)
+    end
+
+fun tprint0 n s =
+    s |> rmNLs |> squish_spaces
+      |> crush n (output_linewidth - 3)
+      |> print
+val tprint = tprint0 0
+val timed_tprint = tprint0 14 (* width of standard extra timing info *)
 
 fun printsize s =
     let
@@ -106,7 +128,9 @@ fun unicode_off f = Feedback.trace ("Unicode", 0) f
 fun raw_backend f =
     Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal) f
 
-fun quietly f = Feedback.quiet_messages (Feedback.quiet_warnings f)
+fun quietly f =
+    Feedback.quiet_messages $ Feedback.quiet_warnings $
+      Portable.with_flag (Feedback.emit_ERR, false) f
 
 local
   val pfxsize = size "Testing printing of ..." + 3
@@ -134,13 +158,18 @@ fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
           handle HOL_ERR _ => raise InternalDie (S "Parse failed!")
-  val res = HOLPP.pp_to_string width Parse.pp_term t
+  val cres = Exn.capture (HOLPP.pp_to_string width Parse.pp_term) t
   fun f s = String.translate
               (fn #" " => UTF8.chr 0x2423 | #"\n" => "\n      " | c => str c) s
 in
-  if res = output then OK() else
-  die ("  Saw:\n    >|" ^ clear (f res) ^
-       "|<\n  rather than \n    >|" ^ clear (f output) ^ "|<\n")
+  case cres of
+      Exn.Exn e => die ("  Pretty printer raised exception:\n    " ^
+                        General.exnMessage e)
+    | Exn.Res res =>
+      if res = output then OK()
+      else
+        die ("  Saw:\n    >|" ^ clear (f res) ^
+             "|<\n  rather than \n    >|" ^ clear (f output) ^ "|<\n")
 end handle InternalDie p => pretty_die p
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
@@ -168,7 +197,7 @@ fun exncheck f (Res a) = f a
 fun convtest (nm,conv,tm,expected) =
   let
     open Term
-    val _ = tprint nm
+    val _ = timed_tprint nm
     fun c th =
       let
         val (l,r) =

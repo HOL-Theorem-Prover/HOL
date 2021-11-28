@@ -21,14 +21,11 @@ open jcLib;
 open bitsizeTheory;
 open logrootTheory; (* for LOG_1 *)
 
-(* Get dependent theories in lib *)
-(* val _ = load "logPowerTheory"; (* has helperNum, helperSet, helperFunction *) *)
-(* (* val _ = load "helperListTheory"; -- in bitsizeTheory *) *)
 open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
 open logPowerTheory; (* for ulog_pos *)
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
+open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory;
 open listTheory rich_listTheory;;
 
 

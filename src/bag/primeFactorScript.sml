@@ -2,7 +2,7 @@
 (* Fundamental theorem of arithmetic for num.                                *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib simpLib BasicProvers metisLib
+open HolKernel Parse boolLib bossLib simpLib BasicProvers metisLib
      bagTheory dividesTheory arithmeticTheory;
 
 (* Interactive
@@ -225,5 +225,34 @@ val PRIME_FACTORS_EXP = Q.store_thm
  RW_TAC arith_ss [BAG_UNION_INSERT,BAG_UNION_EMPTY] THEN
  RW_TAC arith_ss [BAG_INSERT]);
 
+Theorem LESS_EQ_BAG_CARD_PRIME_FACTORS_PROD:
+  !b n.
+  FINITE_BAG b /\ BAG_GEN_PROD b 1 = n /\ (!x. BAG_IN x b ==> 2 <= x) ==>
+  BAG_CARD b <= BAG_CARD (PRIME_FACTORS n)
+Proof
+  rpt gen_tac \\ simp[GSYM AND_IMP_INTRO]
+  \\ strip_tac
+  \\ qid_spec_tac`n`
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac`b`
+  \\ ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
+  \\ rw[]
+  \\ simp[BAG_CARD_THM, BAG_GEN_PROD_REC]
+  \\ fsrw_tac[DNF_ss][]
+  \\ `0 < e` by simp[]
+  \\ Cases_on`BAG_GEN_PROD b 1 = 0`
+  >- (
+    gs[BAG_GEN_PROD_EQ_0]
+    \\ res_tac \\ fs[])
+  \\ simp[PRIME_FACTORS_MULT]
+  \\ simp[BAG_CARD_UNION, PRIME_FACTORS_def]
+  \\ `0 < BAG_CARD (PRIME_FACTORS e)` suffices_by simp[]
+  \\ `PRIME_FACTORS e <> {||}` suffices_by
+     metis_tac[BCARD_0, PRIME_FACTORS_def, NOT_LT_ZERO_EQ_ZERO]
+  \\ qspec_then`e`mp_tac PRIME_FACTORS_def
+  \\ simp[] \\ rpt strip_tac
+  \\ gs[]
+  \\ gs[BAG_GEN_PROD_def]
+QED
 
 val _ = export_theory();

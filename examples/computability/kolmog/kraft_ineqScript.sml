@@ -1848,7 +1848,7 @@ Proof
       ‘free_space ctr ≠ 0’
         by (strip_tac >> gvs[] >>
             ‘free_space ctl * 2 pow lg < 2 * free_space ctl * 2 pow m’ by fsr[]>>
-            ‘0 ≤ free_space ctl’ by simp[free_space_bounds] >> gvs[REAL_LE_LT] >>
+            ‘0 ≤ free_space ctl’ by simp[free_space_bounds] >> rgs[REAL_LE_LT] >>
             gvs[REAL_OF_NUM_POW, GSYM pow]) >>
       Cases_on ‘largest_gap ctr’ >> gvs[]
       >- gvs[largest_gap_def, full_open_paths_EMPTY, free_space_open_paths,

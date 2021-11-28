@@ -677,8 +677,8 @@ REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
 val RPROD_DEF =
 Q.new_definition
 ("RPROD_DEF",
-   `RPROD (R1:'a->'a->bool)
-          (R2:'b->'b->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
+   `RPROD (R1:'a->'b->bool)
+          (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
 
 
 val WF_RPROD =
@@ -735,6 +735,92 @@ val LEX_CONG = Q.store_thm
  Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ]
    THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
    THEN METIS_TAC[]);
+
+(* ----------------------------------------------------------------------
+    PAIR_REL : ('a -> 'c -> bool) -> ('b -> 'd -> bool) ->
+               ('a # 'b -> 'c # 'd -> bool)
+   ---------------------------------------------------------------------- *)
+
+Overload PAIR_REL = “RPROD”
+val _ = set_mapped_fixity{fixity = Infixr 490, term_name = "PAIR_REL",
+                          tok = "###"}
+
+Theorem PAIR_REL = RPROD_DEF
+Theorem PAIR_REL_THM[simp,compute]:
+  (R1 ### R2) (a,b) (c,d) <=> R1 a c /\ R2 b d
+Proof
+  SIMP_TAC (srw_ss()) [PAIR_REL]
+QED
+
+Theorem PAIR_REL_EQ[simp]:
+  ($= ### $=) = $=
+Proof
+  SIMP_TAC (srw_ss()) [FUN_EQ_THM, FORALL_PROD]
+QED
+
+Theorem PAIR_REL_REFL:
+  (!x:'a. R1 x x) /\ (!y:'b. R2 y y) ==>
+  !xy. (R1 ### R2) xy xy
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
+
+Theorem PAIR_REL_SYM:
+  (!x y:'a. R1 x y <=> R1 y x) /\ (!a b:'b. R2 a b <=> R2 b a) ==>
+  !xy ab. (R1 ### R2) xy ab <=> (R1 ### R2) ab xy
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
+
+Theorem PAIR_REL_TRANS:
+  (!x y z:'a. R1 x y /\ R1 y z ==> R1 x z) /\
+  (!a b c:'b. R2 a b /\ R2 b c ==> R2 a c) ==>
+  !xy ab uv. (R1 ### R2) xy ab /\ (R1 ### R2) ab uv ==>
+             (R1 ### R2) xy uv
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_PROD] >> METIS_TAC[]
+QED
+
+(* ----------------------------------------------------------------------
+    PAIR_SET : ('a -> 'c set) -> ('b -> 'c set) -> 'a # 'b -> 'c set
+   ---------------------------------------------------------------------- *)
+
+val PAIR_SET_def = new_definition(
+  "PAIR_SET_def",
+  “PAIR_SET f g = \(a:'a, b:'b) c:'c. c IN f a \/ c IN g b”);
+
+Theorem IN_PAIR_SET:
+  c IN PAIR_SET f g (a,b) <=> c IN f a \/ c IN g b
+Proof
+  SIMP_TAC (srw_ss()) [PAIR_SET_def, IN_DEF]
+QED
+
+Overload setFST = “PAIR_SET $= (K (\x. F))”
+Overload setSND = “PAIR_SET (K (\x. F)) $=”
+
+Theorem IN_setFSTSND[simp]:
+  (a IN setFST ab <=> FST ab = a) /\
+  (b IN setSND ab <=> SND ab = b)
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD, IN_PAIR_SET] >>
+  SIMP_TAC (srw_ss()) [IN_DEF]
+QED
+
+Theorem PAIR_MAP_CONG:
+  (!a:'a. a IN setFST ab ==> f1 a = f2 a :'c) /\
+  (!b:'b. b IN setSND ab ==> g1 b = g2 b :'d) ==>
+  (f1 ## g1) ab = (f2 ## g2) ab
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
+
+Theorem PAIR_MAP_SET:
+  (c IN setFST ((f ## g) ab) <=> ?a:'a. c:'c = f a /\ a IN setFST ab) /\
+  (d IN setSND ((f ## g) ab) <=> ?b:'b. d:'d = g b /\ b IN setSND ab)
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD] >>
+  METIS_TAC[]
+QED
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.

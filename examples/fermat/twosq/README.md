@@ -8,7 +8,7 @@ These theories support the formalisation of an algorithm for Fermat's Two Square
 * __involute__, basic properties of involution.
 * __involuteFix__, pairs and fixes of involution.
 * __involuteAction__, involution and group action.
-* __iterate__, iteration of a function, with period of iteration.
+* __iteration__, iteration of a function, with period of iteration.
 * __iterateCompose__, iteration of involution composition.
 * __iterateCompute__, iteration period computation, recursion and while-loop.
 

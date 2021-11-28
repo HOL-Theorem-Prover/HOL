@@ -330,7 +330,7 @@ For example, two existing tactics can be sequenced
 \index{sequencing!of tactics}%
 \index{tactics!sequencing of}%
  by use of the
-tactical \ml{>>}\footnote{The \ml{>>} function can also be written as \ml{THEN}.}:\index{THEN@\ml{THEN}}
+tactical \ml{>>}\footnote{The \ml{>>} function can also be written as \ml{THEN} or as \ml{\bs\bs}.}:\index{THEN@\ml{THEN}}\index{ THEN@\ml{\bs\bs} (\ml{THEN} tactical)|see{\ml{THEN}}}
 if $T_1$ and
 $T_2$ are  tactics,  then the  \ML{} expression  $T_1${\small\verb% >> %}$T_2$
 evaluates to a  tactic that first applies  $T_1$ to  a goal  and then applies
@@ -650,7 +650,7 @@ tactics can use these new results.
 \index{REPEAT@\ml{REPEAT}}
 \item Writing tacticals (see description of \ml{rpt} in Section~\ref{tacticals}).
 \index{THENL@\ml{THENL}}
-\index{>{"|}@\ml{\gt\pipe}|see{\ml{THENL}}}
+\index{ THENL tactical@\ml{\gt\pipe} (\ml{THENL} tactical)|see{\ml{THENL}}}
 \item
 With \ml{THENL} (see Section~\ref{sec:thenl}); for example, if tactic $T$ produces two subgoals and $T_1$ is to be applied to the first while nothing is to be done to the second, then $T\;\ml{THENL}\;[T_1,\,\ml{all\_tac}]$ is the
 tactic required.
@@ -822,17 +822,18 @@ tests whether two lists denote the same set (\ie\ contain the same elements).
 \index{tacticals!for sequencing|(}
 \index{tactics!sequencing of|(}
 \index{THEN@\ml{THEN}}
-\index{>>@\ml{\gt\gt}|see{\ml{THEN}}}
+\index{ THEN tactical@\ml{\gt\gt} (\ml{THEN} tactical)|see{\ml{THEN}}}
 
-\begin{holboxed}
+\begin{holboxed}%triple > is to escape in presence of polyscripter
 \begin{verbatim}
    THEN : tactic -> tactic -> tactic
    >>>   : tactic -> tactic -> tactic
+   \\   : tactic -> tactic -> tactic
 \end{verbatim}
 \end{holboxed}
 
 The tactical \ml{\gt\gt} is an \ML{} infix.
-Its alias \ml{THEN} is also an infix.
+Its aliases \ml{THEN} and \ml{\bs\bs} are also infixes.
 If $T_1$ and $T_2$ are tactics, then the \ML{} expression $T_1\;\ml{\gt\gt}\;T_2$ evaluates to a tactic which first applies $T_1$ and then applies $T_2$ to each subgoal produced by $T_1$.
 
 Both \ml{\gt\gt} and \ml{THEN} associate to the left, which can lead to some counter-intuitive behaviours when they combine with other sequencing operators.

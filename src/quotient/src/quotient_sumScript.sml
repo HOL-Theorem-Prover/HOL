@@ -48,68 +48,23 @@ val _ = temp_set_mapped_fixity { term_name = "SUM_MAP", tok = "++",
 
 
 
-(* for SUM of ABS / REP functions, use infix ++, defined in
-   src/sum/sumScript.sml. *)
+(* for SUM of ABS / REP functions, use infix ++, (sum$SUM_MAP) *)
+(* for SUM of equivalence relations, use infix +++ (sum$SUM_REL) *)
 
-(* for SUM of equivalence relations, use infix +++, defined here: *)
+Theorem SUM_REL_def = sumTheory.SUM_REL_THM
 
-val _ = Lib.try add_infix("+++", 480, HOLgrammars.LEFT)
+Theorem SUM_REL_EQ = sumTheory.SUM_REL_EQ
 
-val SUM_REL_def = xDefine "SUM_REL"
-       `(($+++ R1 R2) (INL (a1:'a)) (INL (a2:'a)) = R1 a1 a2) /\
-        (($+++ R1 R2) (INR (b1:'b)) (INR (b2:'b)) = R2 b1 b2) /\
-        (($+++ R1 R2) (INL a1) (INR b2) = F) /\
-        (($+++ R1 R2) (INR b1) (INL a2) = F)`;
-
-val SUM_REL_EQ = store_thm
-   ("SUM_REL_EQ",
-    (“($= +++ $=) = ($= : 'a + 'b -> 'a + 'b -> bool)”),
-    CONV_TAC FUN_EQ_CONV
-    THEN Cases
-    THEN CONV_TAC FUN_EQ_CONV
-    THEN Cases
-    THEN REWRITE_TAC[SUM_REL_def,INR_INL_11,sum_distinct,sum_distinct1]
-   );
-
-val SUM_EQUIV = store_thm
-   ("SUM_EQUIV",
-    (“!(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
-            EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)”),
-    REPEAT GEN_TAC
-    THEN REWRITE_TAC[EQUIV_def]
-    THEN REPEAT DISCH_TAC
-    THEN Cases
-    THEN Cases (* 4 subgoals *)
-    THEN ASM_REWRITE_TAC[SUM_REL_def]
-    THEN CONV_TAC (RAND_CONV FUN_EQ_CONV)
-    THENL
-      [ EQ_TAC
-        THENL
-          [ STRIP_TAC
-            THEN Cases
-            THEN ASM_REWRITE_TAC[SUM_REL_def],
-
-            DISCH_THEN (MP_TAC o SPEC ``INL x :'a + 'b``)
-            THEN ASM_REWRITE_TAC[SUM_REL_def]
-          ],
-
-        DISCH_THEN (MP_TAC o SPEC ``INL x' :'a + 'b``)
-        THEN ASM_REWRITE_TAC[SUM_REL_def],
-
-        DISCH_THEN (MP_TAC o SPEC ``INR y :'a + 'b``)
-        THEN ASM_REWRITE_TAC[SUM_REL_def],
-
-        EQ_TAC
-        THENL
-          [ STRIP_TAC
-            THEN Cases
-            THEN ASM_REWRITE_TAC[SUM_REL_def],
-
-            DISCH_THEN (MP_TAC o SPEC ``INR y'' :'a + 'b``)
-            THEN ASM_REWRITE_TAC[SUM_REL_def]
-          ]
-      ]
-   );
+Theorem SUM_EQUIV:
+  !(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
+    EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)
+Proof
+  REPEAT GEN_TAC
+  THEN REWRITE_TAC[EQUIV_def, EQUIV_REFL_SYM_TRANS]
+  THEN simp[sumTheory.FORALL_SUM]
+  THEN REPEAT (DISCH_THEN STRIP_ASSUME_TAC ORELSE CONJ_TAC)
+  THEN FIRST_ASSUM ACCEPT_TAC
+QED
 
 val SUM_QUOTIENT = store_thm
    ("SUM_QUOTIENT",

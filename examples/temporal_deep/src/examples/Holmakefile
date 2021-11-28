@@ -1,6 +1,7 @@
 INCLUDES = ../tools ../deep_embeddings ../translations ../model_check \
 	${HOLDIR}/examples/PSL/path \
-	${HOLDIR}/examples/PSL/1.1/official-semantics
+	${HOLDIR}/examples/PSL/1.1/official-semantics \
+        $(HOLDIR)/src/res_quan/src
 #	${HOLDIR}/examples/logic/ltl-transformations
 
 OPTIONS = QUIT_ON_FAILURE

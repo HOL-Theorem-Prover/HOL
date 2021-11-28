@@ -111,6 +111,8 @@ fun paren_style_encode Always = String "A"
   | paren_style_encode ParoundPrec = String "C"
   | paren_style_encode ParoundName = String "N"
   | paren_style_encode NotEvenIfRand = String "R"
+  | paren_style_encode (IfNotTop{realonly=true}) = String "TT"
+  | paren_style_encode (IfNotTop{realonly=false}) = String "TF"
 fun paren_style_decode t =
     case t of
         String "A" => SOME Always
@@ -118,6 +120,8 @@ fun paren_style_decode t =
       | String "C" => SOME ParoundPrec
       | String "N" => SOME ParoundName
       | String "R" => SOME NotEvenIfRand
+      | String "TT" => SOME (IfNotTop{realonly = true})
+      | String "TF" => SOME (IfNotTop{realonly = false})
       | _ => NONE
 
 fun ppel_encode ppel =

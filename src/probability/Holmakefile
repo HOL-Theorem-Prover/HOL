@@ -1,17 +1,28 @@
-EXTRA_CLEANS = heap
+INCLUDES = ../real ../sort ../res_quan/src ../n-bit ../pred_set/src/more_theories \
+	../topology ../quotient/src
+
+EXTRA_CLEANS = selftest.exe prob-selftest.log
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
-	RealArith sortingTheory pred_setLib numpairTheory res_quanTools \
-	logrootTheory iterateTheory listTheory rich_listTheory
+EXTRA_CLEANS += $(HOLHEAP)
 
-OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+REAL_OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
+	RealArith iterateTheory
+
+OTHER_OBJNAMES = ../sort/sortingTheory ../res_quan/src/res_quanTools \
+	../res_quan/src/hurdUtils ../res_quan/src/jrhUtils
+
+SIGOBJ_OBJNAMES = pred_setLib numpairTheory logrootTheory
+
+OBJS = $(patsubst %,../real/%.uo,$(REAL_OBJNAMES)) \
+       $(patsubst %,%.uo,$(OTHER_OBJNAMES)) \
+       $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(SIGOBJ_OBJNAMES))
 
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJS)
 endif
 
 all: $(DEFAULT_TARGETS) selftest.exe
@@ -23,8 +34,7 @@ ifeq ($(KERNELID),otknl)
 
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
-# This takes a lot of time, disabled by default
-extra: $(ARTFILES) hol4-analysis-unint.art hol4-probability-unint.art
+all: hol4-analysis-unint.art hol4-probability-unint.art
 
 # This requires more than 32GB memory! ("-j 1" is recommended)
 heavy: hol4-analysis.art hol4-probability.art
@@ -48,3 +58,17 @@ probability.art: probability.otd
 endif
 
 .PHONY: all
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: prob-selftest.log
+
+prob-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

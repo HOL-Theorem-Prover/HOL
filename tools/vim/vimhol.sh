@@ -68,8 +68,7 @@ WD="$(echo "$@" | xargs dirname 2>/dev/null \
 VIMHOL_FIFO="$(mktemp -u -p "${XDG_RUNTIME_DIR:-/tmp}" "hol-XXXXXXXXXX")"
 test -p "$VIMHOL_FIFO" || mkfifo "$VIMHOL_FIFO"
 
-# For $HOLDIR/bin/hol, reset $HOME to $HOLDIR/tools/vim
-# so it uses $HOLDIR/tools/vim/hol-config.sml
+# For $HOLDIR/bin/hol, set $HOL_CONFIG to use $HOLDIR/tools/vim/hol-config.sml
 # Early tmux versions neither support hooks (to delete VIMHOL_FIFO) nor the -c
 # flag (to set the cwd).
 tmux \
@@ -77,7 +76,7 @@ tmux \
     -s "$(basename "$VIMHOL_FIFO")" \
     "env VIMHOL_FIFO='$VIMHOL_FIFO' ${EDITOR:-vim} -c 'source $VIMOPT' \
         -c 'bufdo doautocmd BufRead' $*" \; \
-  split-window -h "cd '$WD'; env HOME='$HOLDIR/tools/vim/' VIMHOL_FIFO='$VIMHOL_FIFO' $RLWRAP $HOLDIR/bin/hol" \; \
+  split-window -h "cd '$WD'; env HOL_CONFIG='$HOLDIR/tools/vim/hol-config.sml' VIMHOL_FIFO='$VIMHOL_FIFO' $RLWRAP $HOLDIR/bin/hol" \; \
   select-pane -t :.- \; \
   bind-key C-q confirm-before -p "kill-session #S? (y/n)" \
     "run-shell 'rm -f $VIMHOL_FIFO'; kill-session" \; \

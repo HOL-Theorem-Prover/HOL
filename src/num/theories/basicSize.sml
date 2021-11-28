@@ -35,7 +35,7 @@ local
   (* Sums                                                                 *)
   (*----------------------------------------------------------------------*)
 
-  val sum_size_info = (sum_size_tm,TypeBasePure.ORIG sum_size_def)
+  val sum_size_info = (full_sum_size_tm,TypeBasePure.ORIG full_sum_size_thm)
   val sum_info' = TypeBasePure.put_size sum_size_info
                     (Option.valOf(TypeBase.read {Tyop="sum", Thy="sum"}));
 

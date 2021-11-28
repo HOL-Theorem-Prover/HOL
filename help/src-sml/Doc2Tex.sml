@@ -67,6 +67,7 @@ fun mktheta (com,argl,argr) =
         ("\226\136\146", "-"),
         ("\226\136\167", math "land" ),
         ("\226\136\168", math "lor"),
+        ("\226\137\160", math "ne"),
         ("\226\137\164", math "le"),
         ("\226\138\162", math "vdash"),
         ("\226\167\186", "++")
@@ -181,7 +182,7 @@ val verbose = ref false
 val sections = [#"a", #"b", #"c", #"d", #"e", #"f", #"g", #"h",
                 #"i",       #"k", #"l", #"m", #"n", #"o", #"p",
                 #"q", #"r", #"s", #"t", #"u", #"v", #"w", #"x",
-                            #"a"]; (* last letter is a loopback *)
+                      #"z", #"a"]; (* the last letter is a loopback *)
 
 val current_section = ref 0; (* starting from A *)
 

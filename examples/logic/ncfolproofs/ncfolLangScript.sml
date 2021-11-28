@@ -572,10 +572,10 @@ Proof
       >- (irule UG >> gvs[DISJ_IMP_THM, FORALL_AND_THM])
       >- (rename [‘hs0 ⊆ _’] >> irule ded_R >> simp[PULL_EXISTS] >>
           Cases_on ‘conj p q ∈ hs0’
-          >- (fs[Once DECOMPOSITION]>> last_x_assum $ irule_at (Pos hd) >>
+          >- (fs[Once DECOMPOSITION]>> first_x_assum $ irule_at (Pos hd) >>
               gvs[] >> irule_at (Pos hd) EQ_REFL >> simp[] >>
               gs[SUBSET_DEF]) >>
-          first_x_assum $ irule_at (Pos hd) >> gs[SUBSET_DEF])) >>
+          last_x_assum $ irule_at (Pos hd) >> gs[SUBSET_DEF])) >>
   rpt strip_tac >> gvs[ded_hyp, Excl "stripimp_rwt"]
   >- metis_tac[ded_MP]
   >- (irule UG >> gvs[DISJ_IMP_THM, FORALL_AND_THM])

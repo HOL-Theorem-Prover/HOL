@@ -266,7 +266,7 @@ Maintainable and readable files require organised proofs - in particular, carefu
 
 <code><i>tactic1</i> >- <i>tactic2</i></code><br><code><i>tactic1</i> THEN1 <i>tactic2</i></code>
 : Performs *`tactic1`* and then uses *`tactic2`* to solve the first subgoal produced.
-  This fails is the second tactic does not completely solve the subgoal.
+  This fails if the second tactic does not completely solve the subgoal.
 
 <code>&grave;<i>term</i>&grave; by <i>tactic</i></code>
 : Creates a new subgoal from the given term, and solves it with the given tactic.

@@ -461,7 +461,10 @@ end
 fun hmakefile_data HOLDIR =
     if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
         open Holmake_types
-        val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
+        fun quietly s = ()
+        val qdiags = {info = quietly, die = quietly, warn = quietly}
+        val (env, _, _) =
+            ReadHMF.diagread qdiags "Holmakefile" (base_environment())
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in
@@ -903,6 +906,7 @@ fun process_cline () =
             end
       in
         full_clean SRCDIRS per_dir_action;
+        safedelete Systeml.build_log_file;
         post_action();
         Process.exit Process.success
       end
@@ -936,6 +940,67 @@ fun make_buildstamp () =
     output(stamp_stream, "built "^date_string);
     closeOut stamp_stream
 end
+
+local open OS.FileSys
+in
+fun dirchildren d =
+    let val dstrm = openDir d
+        fun recurse A =
+            case readDir dstrm of
+                NONE => A
+              | SOME f =>
+                let val p = OS.Path.concat(d,f)
+                in
+                  if not (isLink p) andalso isDir p andalso
+                     access(p, [A_READ, A_EXEC])
+                  then
+                    recurse (p::A)
+                  else recurse A
+                end
+                handle e =>
+                       die ("build.dirchildren(" ^ d ^ ", " ^ f ^ "): "^
+                            General.exnMessage e)
+    in
+      recurse [] before OS.FileSys.closeDir dstrm
+    end
+    handle e => die ("build.dirchildren(" ^ d ^ "): " ^ General.exnMessage e)
+end
+
+fun preorder_directory_recurse f d =
+    let
+      fun recurse worklist =
+          case worklist of
+              [] => ()
+            | []::ds => recurse ds
+            | (d::ds)::ds' =>
+              let
+                open OS.FileSys
+              in
+                f d;
+                recurse (dirchildren d :: ds :: ds')
+              end
+    in
+      recurse [[d]]
+    end handle e => die ("build.preorder_directory_recurse: " ^
+                         General.exnMessage e)
+
+fun remove_holmkdir parent =
+    let
+      open OS.FileSys
+      val dir = OS.Path.concat(parent, ".HOLMK")
+    in
+      if access (dir, [A_READ, A_EXEC]) andalso not (isLink dir) andalso
+         isDir dir
+      then
+        (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) dir;
+         OS.FileSys.rmDir dir)
+      else ()
+    end handle e => die ("build.remove_holmkdir(" ^ parent ^ "): " ^
+                         General.exnMessage e)
+
+fun remove_all_holmkdirs () =
+    preorder_directory_recurse remove_holmkdir HOLDIR
+
 
 val logdir = Systeml.build_log_dir
 val logfilename = Systeml.build_log_file
@@ -978,28 +1043,23 @@ in
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
-fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir = let
-  val hmstatus = sysl HOLMAKE ("--qof" :: extra_args())
-in
-  if isSuccess hmstatus then
-    if selftest_level > 0 andalso
-       OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
-    then
-      (print "Performing self-test...\n";
-       if SYSTEML [dir ^ "/selftest.exe", Int.toString selftest_level]
-       then
-         print "Self-test was successful\n"
-       else
-         die ("Selftest failed in directory "^dir))
-    else
-      ()
-  else let
-      val info = analyse_failstatus hmstatus
+fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir =
+    let
+      fun cons h t = h::t
+      val args = (if selftest_level > 0 then
+                    cons ("HOLSELFTESTLEVEL=" ^ Int.toString selftest_level)
+                  else (fn x => x))
+                 ("HOLBUILD=1" :: "--qof" :: extra_args())
+      val hmstatus = sysl HOLMAKE args
     in
-      die ("Build failed in directory "^dir^
-           (if info <> "" then " ("^info^")" else ""))
+      if isSuccess hmstatus then ()
+      else let
+        val info = analyse_failstatus hmstatus
+      in
+        die ("Build failed in directory "^dir^
+             (if info <> "" then " ("^info^")" else ""))
+      end
     end
-end
 
 val () = OS.Process.atExit (fn () => finish_logging false)
         (* this will do nothing if finish_logging happened normally first;

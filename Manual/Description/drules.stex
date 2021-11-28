@@ -1006,7 +1006,9 @@ bound after substitution.
 \end{proof}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!inference rules for|)}
 
-\subsection{Use of a definition}
+\subsection{Applying a definition to one argument}
+
+Given an equation where the right-hand side is a lambda-abstraction, one can derive an equation characterising the application of the function to a specified argument.
 
 \begin{holboxed}
 \index{RIGHT_BETA@\ml{RIGHT\_BETA}|pin}
@@ -1037,7 +1039,7 @@ t'[t]$\hfill [\rul{BETA\_CONV}]
 \end{proof}
 
 
-\subsection{Use of a definition}
+\subsection{Applying a definition to multiple arguments}
 
 \begin{holboxed}
 \index{RIGHT_LIST_BETA@\ml{RIGHT\_LIST\_BETA}|pin}
@@ -1060,9 +1062,9 @@ $$\Gamma\turn t = \lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n]
 [Suitably type-instantiated hypothesis]
 \item $\Gamma\turn t\ t_1\cdots t_n =
 (\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n$\hfill
-[\rul{AP\_THM} 1 (n times)]
+[\rul{AP\_THM} 1 ($n$ times)]
 \item $\turn(\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n =
-t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} (n times)]
+t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} ($n$ times)]
 \item $\Gamma\turn t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$\hfill
 [\rul{TRANS} 2,3]
 \end{proof}

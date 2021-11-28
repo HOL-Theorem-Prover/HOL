@@ -325,6 +325,39 @@ val poly_mult_eq_zero = store_thm(
     ]
   ]);
 
+(* The same proof basically works for an integral domain *)
+Theorem poly_mult_eq_zero_domain:
+  IntegralDomain r ==>
+  !p q. poly p /\ poly q ==>
+    ((poly_mult r p q = |0|) <=> (p = |0|) \/ (q = |0|))
+Proof
+  strip_tac >>
+  Induct >-
+  metis_tac[poly_mult_lzero, poly_zero] >>
+  strip_tac >>
+  Induct >-
+  metis_tac[poly_mult_rzero, poly_zero] >>
+  rw_tac std_ss[poly_zero] >>
+  spose_not_then strip_assume_tac >>
+  `h::p <> [] /\ h'::q <> []` by rw_tac std_ss[] >>
+  `h IN R /\ poly p /\ h' IN R /\ poly q` by metis_tac[poly_cons_poly] >>
+  `Ring r` by rw_tac std_ss[integral_domain_is_ring] >>
+  Cases_on `h = #0` >- (
+    `p <> |0|` by metis_tac[poly_cons_property, poly_zero] >>
+    `(h::p) * (h'::q) = (p * (h'::q)) >> 1` by rw_tac std_ss[poly_shift_1, poly_mult_shift_1_comm] >>
+    metis_tac[poly_shift_eq_zero, poly_zero] ) >>
+  Cases_on `h' = #0` >- (
+    `q <> |0|` by metis_tac[poly_cons_property, poly_zero] >>
+    `(h::p) * (h'::q) = ((h::p) * q) >> 1` by rw_tac std_ss[poly_shift_1, poly_mult_shift_1] >>
+    metis_tac[poly_shift_eq_zero, poly_zero] ) >>
+  `h * h' IN R /\ h * h' <> #0` by metis_tac[ring_mult_element, IntegralDomain_def] >>
+  `poly [h*h'] /\ poly (h * q) /\ poly (h' * p) /\
+   poly ((p * q) >> 1) /\ poly (h * q + h' * p + (p * q) >> 1)` by rw[] >>
+  `(h::p) * (h'::q) = [h * h'] + ((h * q) >> 1 + (h' * p) >> 1 + ((p * q) >> 1) >> 1)` by metis_tac[poly_mult_cross] >>
+  `_ = [h * h'] + (h * q + h' * p + (p * q) >> 1) >> 1` by rw_tac std_ss[poly_add_shift_1, poly_add_poly] >>
+  metis_tac[poly_add_nonzero_const_shift_not_zero, poly_zero]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Polynomials with Addition and Multiplication F[x] form an Integral Domain *)
 (* ------------------------------------------------------------------------- *)
@@ -358,6 +391,17 @@ val poly_field_integral_domain = store_thm(
     rw[],
     rw_tac std_ss[poly_mult_eq_zero]
   ]);
+
+Theorem poly_integral_domain:
+  IntegralDomain r ==> IntegralDomain (PolyRing r)
+Proof
+  rw[IntegralDomain_def]
+  \\ simp[polyRingTheory.poly_ring_ring]
+  >- ( imp_res_tac polynomialTheory.poly_one_ne_poly_zero \\ fs[] )
+  \\ irule(SIMP_RULE(srw_ss())[]poly_mult_eq_zero_domain)
+  \\ fs[IntegralDomain_def]
+  \\ fs[poly_ring_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consequences of c * p = |0| <=> c = #0 or p = |0|.                        *)

@@ -63,10 +63,12 @@ sig
      term * (term * term -> term) * (term -> term * term) * (term -> bool)
   val syntax_fns3:
      string -> string ->
-     term * (term * term * term -> term) * (term -> term * term * term) * (term -> bool)
+     term * (term * term * term -> term) * (term -> term * term * term) *
+     (term -> bool)
   val syntax_fns4:
      string -> string ->
-     term * (term * term * term * term -> term) * (term -> term * term * term * term) * (term -> bool)
+     term * (term * term * term * term -> term) *
+     (term -> term * term * term * term) * (term -> bool)
   val term_size: term -> int
 
 end

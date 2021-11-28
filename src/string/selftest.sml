@@ -10,7 +10,8 @@ fun printq [] = ""
 open stringSyntax
 val testdata = [
   (`#"("`, fromMLchar #"("),
-  (`"\n^`)"`, fromMLstring "\n`)"),
+  (`"\n`)"`, fromMLstring "\n`)"),
+  (`"\n^`)"`, fromMLstring "\n^`)"),
   (`"foo\
     \bar"`, fromMLstring "foobar"),
   (`"foo\n\
@@ -41,8 +42,8 @@ val foo =
           #"H"; #"I"; #"J"; #"K"; #"L"; #"M";
           #"N"; #"O"; #"P"; #"Q"; #"R"; #"S";
           #"T"; #"U"; #"V"; #"W"; #"X"; #"Y";
-          #"Z"; #"["; #"\\"; #"]"; #"^^"; #"_";
-          #"^`"; #"a"; #"b"; #"c"; #"d"; #"e";
+          #"Z"; #"["; #"\\"; #"]"; #"^"; #"_";
+          #"`"; #"a"; #"b"; #"c"; #"d"; #"e";
           #"f"; #"g"; #"h"; #"i"; #"j"; #"k";
           #"l"; #"m"; #"n"; #"o"; #"p"; #"q";
           #"r"; #"s"; #"t"; #"u"; #"v"; #"w";
@@ -51,11 +52,12 @@ val foo =
 
 val bar = Define`
   bar = EXPLODE "\n !\"#$%&'()*+;-./0123456789:;<=>?@\
-                \ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^^_^`\
+                \ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`\
                 \abcdefghijklmnopqrstuvwxyz{|}~"
 `
 
-val testthm = prove(``foo = bar``, SRW_TAC [][foo,bar]);
+val testthm2 = prove(“LENGTH bar = 96”, SRW_TAC[][bar]);
+val testthm1 = prove(``foo = bar``, SRW_TAC [][foo,bar]);
 
 (* ----------------------------------------------------------------------
     string_eq_conv
@@ -90,7 +92,9 @@ val _ = app tpp ["P \"a\" /\\ Q",
                  "\"foo\\nbar\"",
                  quote (String.toString "foo\\bar"),
                  "\"(*\"",
-                 "\"*)\""]
+                 "\"*)\"",
+                 "(\\s. STRLEN s) \"foo\""
+                ]
 
 val t = ``"*)"``
 val _ = tprint "Paranoid printing of ‘\"*)\"’"

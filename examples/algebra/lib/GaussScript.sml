@@ -1429,8 +1429,8 @@ val divisors_eq_gcd_image = store_thm(
 val gcd_eq_equiv_class = store_thm(
   "gcd_eq_equiv_class",
   ``!n d. feq_class (gcd n) (natural n) d = gcd_matches n d``,
-  rewrite_tac[feq_class_def, gcd_matches_def] >>
-  rw[EXTENSION, GCD_SYM]);
+  rewrite_tac[gcd_matches_def] >>
+  rw[EXTENSION, GCD_SYM, in_preimage]);
 
 (* Theorem: feq_class (gcd n) (natural n) = gcd_matches n *)
 (* Proof: by FUN_EQ_THM, gcd_eq_equiv_class *)
@@ -2504,7 +2504,7 @@ val gcd_eq_equiv_on_upto = store_thm(
 (* Proof:
    Let f = gcd n, s = upto n.
      partition (feq f) s
-   = IMAGE (preimage f s o f) s                      by feq_partition_by_preimage
+   = IMAGE (preimage f s o f) s                      by feq_partition
    = IMAGE (preimage f s) (IMAGE f s)                by IMAGE_COMPOSE
    = IMAGE (preimage f s) (IMAGE (gcd n) (upto n))   by expansion
    = IMAGE (preimage f s) (divisors n)               by divisors_eq_image_gcd_upto
@@ -2515,7 +2515,7 @@ val gcd_eq_upto_partition_by_divisors = store_thm(
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = upto n` >>
-  `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition_by_preimage] >>
+  `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition] >>
   `_ = IMAGE (preimage f s) (IMAGE f s)` by rw[IMAGE_COMPOSE] >>
   rw[divisors_eq_image_gcd_upto, Abbr`f`, Abbr`s`]);
 
@@ -2580,7 +2580,7 @@ val gcd_eq_equiv_on_count = store_thm(
 (* Proof:
    Let f = gcd n, s = count n.
      partition (feq f) s
-   = IMAGE (preimage f s o f) s                      by feq_partition_by_preimage
+   = IMAGE (preimage f s o f) s                      by feq_partition
    = IMAGE (preimage f s) (IMAGE f s)                by IMAGE_COMPOSE
    = IMAGE (preimage f s) (IMAGE (gcd n) (count n))  by expansion
    = IMAGE (preimage f s) (divisors n)               by divisors_eq_image_gcd_count, 0 < n
@@ -2591,7 +2591,7 @@ val gcd_eq_count_partition_by_divisors = store_thm(
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = count n` >>
-  `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition_by_preimage] >>
+  `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition] >>
   `_ = IMAGE (preimage f s) (IMAGE f s)` by rw[IMAGE_COMPOSE] >>
   rw[divisors_eq_image_gcd_count, Abbr`f`, Abbr`s`]);
 
@@ -2646,7 +2646,7 @@ val divisors_eq_image_gcd_natural = store_thm(
 (* Proof:
    Let f = gcd n, s = natural n.
      partition (feq f) s
-   = IMAGE (preimage f s o f) s                        by feq_partition_by_preimage
+   = IMAGE (preimage f s o f) s                        by feq_partition
    = IMAGE (preimage f s) (IMAGE f s)                  by IMAGE_COMPOSE
    = IMAGE (preimage f s) (IMAGE (gcd n) (natural n))  by expansion
    = IMAGE (preimage f s) (divisors n)                 by divisors_eq_image_gcd_natural, 0 < n
@@ -2657,7 +2657,7 @@ val gcd_eq_natural_partition_by_divisors = store_thm(
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = natural n` >>
-  `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition_by_preimage] >>
+  `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition] >>
   `_ = IMAGE (preimage f s) (IMAGE f s)` by rw[IMAGE_COMPOSE] >>
   rw[divisors_eq_image_gcd_natural, Abbr`f`, Abbr`s`]);
 

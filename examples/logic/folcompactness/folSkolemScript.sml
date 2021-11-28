@@ -73,6 +73,12 @@ Proof
   simp[Skolem1_def]
 QED
 
+Theorem termval_o_V[simp]:
+  termval M v o V = v
+Proof
+  simp[FUN_EQ_THM]
+QED
+
 Theorem holds_Skolem1_I:
   (f,CARD (FV (Exists x p))) ∉ form_functions (Exists x p)
  ⇒
@@ -135,11 +141,10 @@ Proof
   simp[Abbr‘CF’, SET_TO_LIST_CARD, combinTheory.APPLY_UPDATE_THM] >>
   SELECT_ELIM_TAC >> conj_tac
   >- (first_x_assum irule >> fs[valuation_def] >>
-      ‘∀l. (∀n. v n ∈ M.Dom) ⇒
-           ∀n. FOLDR (λ(k,v) f. f ⦇ k ↦ v ⦈) (λz. @c. c ∈ M.Dom)
-                     (ZIP (l,MAP (λa. v a) l)) n ∈ M.Dom’
+      ‘∀l n. FOLDR (λ(k,v) f. f ⦇k ↦ v⦈) (λz. @c. c ∈ M.Dom)
+                   (ZIP (l,MAP v l)) n ∈ M.Dom’
         suffices_by metis_tac[] >> Induct >> simp[]
-      >- (SELECT_ELIM_TAC >> fs[EXTENSION] >>metis_tac[]) >>
+      >- (SELECT_ELIM_TAC >> fs[EXTENSION] >> metis_tac[]) >>
       rfs[combinTheory.APPLY_UPDATE_THM] >> rw[]) >>
   qx_gen_tac ‘a’ >>
   qmatch_abbrev_tac ‘a ∈ M.Dom ∧ holds M vv⦇ x ↦ a ⦈ p ⇒ holds M v⦇ x ↦ a ⦈ p’>>
@@ -150,7 +155,7 @@ Proof
   ‘∀vars (var:num).
      MEM var vars ∧ ALL_DISTINCT vars ⇒
      FOLDR (λ(k,v) f. f ⦇ k ↦ v ⦈) (λz. @c. c ∈ M.Dom)
-           (ZIP (vars,MAP (λa. v a) vars)) var = v var’
+           (ZIP (vars,MAP v vars)) var = v var’
     suffices_by (disch_then irule >> simp[] >> simp[Abbr‘FF’]) >>
   Induct >> simp[] >> rw[combinTheory.APPLY_UPDATE_THM]
 QED
@@ -463,12 +468,15 @@ Proof
   simp[valuation_def]
 QED
 
-Definition bumpterm_def[simp]:
+Definition bumpterm_def:
   bumpterm (V x) = V x ∧
   bumpterm (Fn k l) = Fn (0 ⊗ k) (MAP bumpterm l)
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
+
+Theorem bumpterm_def[simp] =
+        SIMP_RULE bool_ss [SF ETA_ss] bumpterm_def
 
 Theorem termval_bump[simp]:
   ∀M v t. termval (bumpmod M) v (bumpterm t) = termval M v t
@@ -479,7 +487,7 @@ QED
 Theorem TFV_bumpterm[simp]:
   FVT (bumpterm t) = FVT t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG']
 QED
 
 Definition bumpform_def[simp]:

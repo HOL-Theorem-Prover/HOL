@@ -271,6 +271,17 @@ val monoid_homo_sym = store_thm(
   `#e IN G` by rw[] >>
   metis_tac[BIJ_LINV_THM]);
 
+Theorem monoid_homo_sym_any:
+  Monoid g /\ MonoidHomo f g h /\
+  (!x. x IN h.carrier ==> i x IN g.carrier /\ f (i x) = x) /\
+  (!x. x IN g.carrier ==> i (f x) = x)
+  ==>
+  MonoidHomo i h g
+Proof
+  rpt strip_tac >> fs[MonoidHomo_def]
+  \\ metis_tac[Monoid_def]
+QED
+
 (* Theorem: MonoidHomo f1 g h /\ MonoidHomo f2 h k ==> MonoidHomo (f2 o f1) g k *)
 (* Proof: by MonoidHomo_def *)
 val monoid_homo_compose = store_thm(

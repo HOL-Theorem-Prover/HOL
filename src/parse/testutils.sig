@@ -12,6 +12,7 @@ val OK : unit -> unit
 val exit_count0 : int ref -> unit
 val die : string -> unit
 val tprint : string -> unit
+val timed_tprint : string -> unit
 val tadd : string -> unit
 val tpp : string -> unit
 val tpp_expected : {testf:string->string,input:string,output:string} -> unit

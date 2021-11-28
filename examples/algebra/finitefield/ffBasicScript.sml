@@ -333,14 +333,14 @@ val prime_field_char = store_thm(
    Fp SUBSET R                  by subfield_carrier_subset
    Hence true by SUBSET_DEF.
 *)
-val prime_field_element_element = store_thm(
-  "prime_field_element_element",
-  ``!r:'a field. Field r ==> !x. x IN Fp ==> x IN R``,
-  metis_tac[prime_field_subfield, subfield_carrier_subset, SUBSET_DEF]);
+Theorem prime_field_element_element:
+  !r:'a field. Field r ==> !x. x IN Fp ==> x IN R
+Proof
+  metis_tac[prime_field_subfield, subfield_carrier_subset, SUBSET_DEF]
+QED
 (* Note: this is more restrictive than prime_field_element: |- !r. Ring r ==> !x. x IN Fp ==> x IN R *)
 
-(* export simple result *)
-val _ = export_rewrites ["prime_field_element_element"];
+(* export simple result - terrible idea, causes massive simplifier slowdown *)
 
 (* Theorem: FiniteField r ==> FieldHomo $## (GF (char r)) (PF (char r)) *)
 (* Proof:
@@ -495,20 +495,22 @@ val finite_field_iso_ZN_PF = store_thm(
        (a) ##x' * ##x'' = s.prod.op (##x') (##x''), true by subfield_property.
        (b) #1 = s.prod.id, true       by subfield_ids.
 *)
-val prime_field_every_subfield = store_thm(
-  "prime_field_every_subfield",
-  ``!(r s):'a field. s <<= r ==> subfield (PF r) s``,
+Theorem prime_field_every_subfield:
+  !(r s):'a field. s <<= r ==> subfield (PF r) s
+Proof
   rpt strip_tac >>
-  `!n. s.sum.exp s.prod.id n = ##n` by rw[subfield_num] >>
+  ‘!n. s.sum.exp s.prod.id n = ##n’ by rw[subfield_num] >>
   rw_tac std_ss[subfield_def, FieldHomo_def, RingHomo_def] >| [
-    `?n. x = ##n` by metis_tac[PF_property, IN_IMAGE] >>
+    ‘?n. x = ##n’ by metis_tac[PF_property, IN_IMAGE] >>
     metis_tac[field_num_element],
     rw[GroupHomo_def, PF_property] >>
     metis_tac[subfield_property, field_num_element],
-    rw[MonoidHomo_def, PF_property] >-
-    metis_tac[subfield_property, field_num_element] >>
-    rw[subfield_ids]
-  ]);
+    rw[MonoidHomo_def, PF_property]
+    >- metis_tac[subfield_property, field_num_element]
+    >- metis_tac[subfield_property, field_num_element] >>
+    rw[subfield_ids, subfield_property]
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (PF r) <<= s *)
 (* Proof: by prime_field_every_subfield, prime_field_field *)
@@ -625,50 +627,55 @@ If there is another element e NOTIN Fp, then {i * #1 + j * e, i, j IN Fp} SUBSET
        and        FST e - FST e' = #0 * z = #0 ==> FST e = FST e',
        Hence e = e'   by PAIR_FST_SND_EQ.
 *)
-val finite_field_prime_sq = store_thm(
-  "finite_field_prime_sq",
-  ``!r:'a field. FiniteField r ==> !z. z IN R /\ z NOTIN Fp ==>
-     INJ (\e. (FST e) * #1 + (SND e) * z) (Fp CROSS Fp) R``,
+Theorem finite_field_prime_sq:
+  !r:'a field.
+    FiniteField r ==>
+    !z. z IN R /\ z NOTIN Fp ==>
+        INJ (\e. (FST e) * #1 + (SND e) * z) (Fp CROSS Fp) R
+Proof
   rpt (stripDup[FiniteField_def]) >>
+  drule_then assume_tac prime_field_element_element >>
   rw[INJ_DEF, pairTheory.EXISTS_PROD] >>
-  `FST e IN R /\ SND e IN R` by rw[] >>
-  `FST e' IN R /\ SND e' IN R` by rw[] >>
-  `SND e * z IN R /\ SND e' * z IN R` by rw[] >>
-  `(FST e + SND e * z = FST e' + SND e' * z) <=> (FST e = FST e' + SND e' * z - SND e * z)` by metis_tac[field_add_sub] >>
-  `_ = (FST e = FST e' + (SND e' * z - SND e * z))` by rw_tac std_ss[field_add_assoc, field_sub_def, field_neg_element] >>
-  `_ = (FST e = (SND e' * z - SND e * z) + FST e')` by rw_tac std_ss[field_add_comm, field_sub_element] >>
-  `_ = (FST e - FST e' = (SND e' * z - SND e * z) + FST e' - FST e')` by metis_tac[] >>
-  `_ = (FST e - FST e' = SND e' * z - SND e * z)` by rw_tac std_ss[field_add_sub, field_sub_element] >>
-  `_ = (FST e - FST e' = (SND e' - SND e) * z)` by rw_tac std_ss[field_mult_lsub] >>
-  Cases_on `SND e = SND e'` >| [
-    `SND e' - SND e = #0` by rw[] >>
-    `FST e - FST e' = #0` by metis_tac[field_mult_lzero] >>
-    `FST e = FST e'` by metis_tac[field_sub_eq_zero] >>
+  ‘FST e IN R /\ SND e IN R ∧ FST e' IN R /\ SND e' IN R’ by rw[] >>
+  ‘SND e * z IN R /\ SND e' * z IN R’ by rw[] >>
+  ‘(FST e + SND e * z = FST e' + SND e' * z) <=>
+   (FST e = FST e' + SND e' * z - SND e * z)’ by metis_tac[field_add_sub] >>
+  ‘_ = (FST e = FST e' + (SND e' * z - SND e * z))’ by rw_tac std_ss[field_add_assoc, field_sub_def, field_neg_element] >>
+  ‘_ = (FST e = (SND e' * z - SND e * z) + FST e')’ by rw_tac std_ss[field_add_comm, field_sub_element] >>
+  ‘_ = (FST e - FST e' = (SND e' * z - SND e * z) + FST e' - FST e')’ by metis_tac[] >>
+  ‘_ = (FST e - FST e' = SND e' * z - SND e * z)’ by rw_tac std_ss[field_add_sub, field_sub_element] >>
+  ‘_ = (FST e - FST e' = (SND e' - SND e) * z)’ by rw_tac std_ss[field_mult_lsub] >>
+  Cases_on ‘SND e = SND e'’ >| [
+    ‘SND e' - SND e = #0’ by rw[] >>
+    ‘FST e - FST e' = #0’ by metis_tac[field_mult_lzero] >>
+    ‘FST e = FST e'’ by metis_tac[field_sub_eq_zero] >>
     rw[pairTheory.PAIR_FST_SND_EQ],
-    `Field (PF r)` by rw[prime_field_field] >>
-    `((PF r).sum.op = $+) /\ ((PF r).sum.id = #0) /\ ((PF r).prod.op = $* ) /\ ((PF r).prod.id = #1)` by rw[PF_property] >>
-    `!x. x IN Fp ==> ((PF r).sum.inv x = -x)` by
-  (rpt strip_tac >>
-    `x + (PF r).sum.inv x = (PF r).sum.op x ((PF r).sum.inv x)` by metis_tac[] >>
-    `_ = #0` by rw[] >>
-    `x + -x = #0` by rw[] >>
-    `x + -x = x + (PF r).sum.inv x` by rw_tac std_ss[] >>
-    `!z. z IN Fp ==> z IN R` by rw[] >>
-    `(PF r).sum.inv x IN Fp` by rw[] >>
-    `x IN R /\ -x IN R` by rw[] >>
-    metis_tac[field_add_lcancel]) >>
-    `SND e' - SND e IN Fp` by metis_tac[field_sub_def, field_add_element, field_neg_element] >>
-    `SND e' - SND e <> #0` by metis_tac[field_sub_eq_zero] >>
-    `SND e' - SND e IN ring_nonzero (PF r)` by metis_tac[field_nonzero_eq] >>
-    `(Invertibles (PF r).prod).inv (SND e' - SND e) IN Fp` by metis_tac[field_inv_element] >>
-    qabbrev_tac `v = (Invertibles (PF r).prod).inv (SND e' - SND e)` >>
-    `v IN R /\ (SND e' - SND e) IN R` by rw[] >>
-    `v * (FST e - FST e') = v * ((SND e' - SND e) * z)` by metis_tac[] >>
-    `_ = v * (SND e' - SND e) * z` by rw_tac std_ss[field_mult_assoc] >>
-    `_ = z` by metis_tac[field_mult_linv, field_mult_lone] >>
-    `FST e - FST e' IN Fp` by metis_tac[field_sub_def, field_add_element, field_neg_element] >>
+    ‘Field (PF r)’ by rw[prime_field_field] >>
+    ‘((PF r).sum.op = $+) /\ ((PF r).sum.id = #0) /\ ((PF r).prod.op = $* ) /\ ((PF r).prod.id = #1)’ by rw[PF_property] >>
+    ‘!x. x IN Fp ==> ((PF r).sum.inv x = -x)’
+      by (rpt strip_tac >>
+          ‘x + (PF r).sum.inv x = (PF r).sum.op x ((PF r).sum.inv x)’
+            by metis_tac[] >>
+          ‘_ = #0’ by rw[] >>
+          ‘x + -x = #0’ by rw[] >>
+          ‘x + -x = x + (PF r).sum.inv x’ by rw_tac std_ss[] >>
+          ‘!z. z IN Fp ==> z IN R’ by rw[prime_field_element_element] >>
+          ‘(PF r).sum.inv x IN Fp’ by rw[] >>
+          ‘x IN R /\ -x IN R’ by rw[] >>
+          metis_tac[field_add_lcancel]) >>
+    ‘SND e' - SND e IN Fp’ by metis_tac[field_sub_def, field_add_element, field_neg_element] >>
+    ‘SND e' - SND e <> #0’ by metis_tac[field_sub_eq_zero] >>
+    ‘SND e' - SND e IN ring_nonzero (PF r)’ by metis_tac[field_nonzero_eq] >>
+    ‘(Invertibles (PF r).prod).inv (SND e' - SND e) IN Fp’ by metis_tac[field_inv_element] >>
+    qabbrev_tac ‘v = (Invertibles (PF r).prod).inv (SND e' - SND e)’ >>
+    ‘v IN R /\ (SND e' - SND e) IN R’ by rw[prime_field_element_element] >>
+    ‘v * (FST e - FST e') = v * ((SND e' - SND e) * z)’ by metis_tac[] >>
+    ‘_ = v * (SND e' - SND e) * z’ by rw_tac std_ss[field_mult_assoc] >>
+    ‘_ = z’ by metis_tac[field_mult_linv, field_mult_lone] >>
+    ‘FST e - FST e' IN Fp’ by metis_tac[field_sub_def, field_add_element, field_neg_element] >>
     metis_tac[field_mult_element]
-  ]);
+  ]
+QED
 
 (* Better Proof of same theorem. *)
 (* Theorem: If z NOTIN Fp, then Fp x Fp maps to distinct elements in R via (\(i, j). i * #1 + j * z). *)
@@ -690,38 +697,40 @@ val finite_field_prime_sq = store_thm(
               ==> FST x = FST y,
        Hence x = y   by PAIR_FST_SND_EQ.
 *)
-val finite_field_prime_sq_alt = store_thm(
-  "finite_field_prime_sq_alt",
-  ``!r:'a field. FiniteField r ==> !z. z IN R /\ z NOTIN Fp ==>
-     INJ (\(i, j). i * #1 + j * z) (Fp CROSS Fp) R``,
+Theorem finite_field_prime_sq_alt:
+  !r:'a field.
+    FiniteField r ==>
+    !z. z IN R /\ z NOTIN Fp ==> INJ (λ(i, j). i * #1 + j * z) (Fp CROSS Fp) R
+Proof
   rpt (stripDup[FiniteField_def]) >>
-  `!x. x IN Fp ==> x IN R` by rw[] >>
-  rw_tac std_ss[INJ_DEF, IN_CROSS, pairTheory.UNCURRY, field_mult_rone] >-
-  rw[] >>
-  `(FST x + SND x * z = FST y + SND y * z) <=>
-    (FST x - FST y = SND y * z - SND x * z)` by rw[GSYM field_add_sub_identity] >>
-  `_ = (FST x - FST y = (SND y - SND x) * z)` by rw_tac std_ss[field_mult_lsub] >>
-  Cases_on `SND x = SND y` >| [
-    `SND x - SND y = #0` by rw[] >>
-    `FST x - FST y = #0` by metis_tac[field_mult_lzero] >>
-    `FST x = FST y` by metis_tac[field_sub_eq_zero] >>
+  drule_then assume_tac prime_field_element_element >>
+  rw_tac std_ss[INJ_DEF, IN_CROSS, pairTheory.UNCURRY, field_mult_rone]
+  >- rw[] >>
+  ‘(FST x + SND x * z = FST y + SND y * z) <=>
+    (FST x - FST y = SND y * z - SND x * z)’ by rw[GSYM field_add_sub_identity] >>
+  ‘_ = (FST x - FST y = (SND y - SND x) * z)’ by rw_tac std_ss[field_mult_lsub] >>
+  Cases_on ‘SND x = SND y’ >| [
+    ‘SND x - SND y = #0’ by rw[] >>
+    ‘FST x - FST y = #0’ by metis_tac[field_mult_lzero] >>
+    ‘FST x = FST y’ by metis_tac[field_sub_eq_zero] >>
     rw[pairTheory.PAIR_FST_SND_EQ],
-    `Field (PF r)` by rw[prime_field_field] >>
-    qabbrev_tac `u = SND y - SND x` >>
-    `u <> #0` by metis_tac[field_sub_eq_zero] >>
-    `!x. x IN Fp ==> ((PF r).sum.inv x = -x)` by rw[prime_field_neg] >>
-    `u IN Fp` by metis_tac[field_sub_def, field_add_element, field_neg_element, PF_property] >>
-    `u IN ring_nonzero (PF r)` by metis_tac[field_nonzero_eq, PF_property] >>
-    `(Invertibles (PF r).prod).inv u IN Fp` by metis_tac[field_inv_element] >>
-    qabbrev_tac `v = (Invertibles (PF r).prod).inv u` >>
-    `v IN R /\ u IN R` by rw[] >>
-    `v * (FST x - FST y) = v * (u * z)` by metis_tac[] >>
-    `_ = v * u * z` by rw_tac std_ss[field_mult_assoc] >>
-    `_ = z` by metis_tac[field_mult_linv, field_mult_lone, PF_property] >>
-    `FST x - FST y IN Fp` by metis_tac[field_sub_def, field_add_element, field_neg_element, PF_property] >>
-    `v * (FST x - FST y) IN Fp` by metis_tac[field_mult_element, PF_property] >>
+    ‘Field (PF r)’ by rw[prime_field_field] >>
+    qabbrev_tac ‘u = SND y - SND x’ >>
+    ‘u <> #0’ by metis_tac[field_sub_eq_zero] >>
+    ‘!x. x IN Fp ==> ((PF r).sum.inv x = -x)’ by rw[prime_field_neg] >>
+    ‘u IN Fp’ by metis_tac[field_sub_def, field_add_element, field_neg_element, PF_property] >>
+    ‘u IN ring_nonzero (PF r)’ by metis_tac[field_nonzero_eq, PF_property] >>
+    ‘(Invertibles (PF r).prod).inv u IN Fp’ by metis_tac[field_inv_element] >>
+    qabbrev_tac ‘v = (Invertibles (PF r).prod).inv u’ >>
+    ‘v IN R /\ u IN R’ by rw[] >>
+    ‘v * (FST x - FST y) = v * (u * z)’ by metis_tac[] >>
+    ‘_ = v * u * z’ by rw_tac std_ss[field_mult_assoc] >>
+    ‘_ = z’ by metis_tac[field_mult_linv, field_mult_lone, PF_property] >>
+    ‘FST x - FST y IN Fp’ by metis_tac[field_sub_def, field_add_element, field_neg_element, PF_property] >>
+    ‘v * (FST x - FST y) IN Fp’ by metis_tac[field_mult_element, PF_property] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n ==> FieldIso I (PF (ZN n)) (ZN n) *)
 (* Proof:

@@ -1,0 +1,1 @@
+INCLUDES = $(dprot $(HOLDIR)/src/pred_set/src/more_theories)

@@ -345,3 +345,54 @@ val _ = let
 in
   require_msg (check_result verdict) goalprint (fst o tac) G
 end
+
+val _ = let
+  open boolLib
+  val _ = tprint "POP_LAST_ASSUM succeeds"
+  val asl = [“x:'a = y”, “x:'a = z”]
+  val g = “(P:'a -> bool) x”
+  fun verdict [(asl',sg)] = tml_eq asl' [“x:'a = y”] andalso
+                            sg ~~ “(P:'a -> bool) z”
+    | verdict _ = false
+in
+  require_msg (check_result verdict) goalprint
+              (fst o POP_LAST_ASSUM (REWRITE_TAC o single)) (asl,g)
+end
+
+val _ = let
+  open boolLib
+in
+  shouldfail {checkexn = is_struct_HOL_ERR "Tactical",
+              testfn = fst o POP_LAST_ASSUM (REWRITE_TAC o single),
+              printresult = goalprint,
+              printarg = fn _ => "POP_LAST_ASSUM fails (no assums)"}
+             ([], “(P:'a -> bool) x”)
+end
+
+
+val _ = new_constant ("foo", bool --> bool --> bool);
+val foo1y = "p /\\ (q ~~ r)"
+val foo1n = "p /\\ q ~~ r"
+val foo2n = "q ~~ r"
+val foo2y = "(q ~~ r)"
+val foo3y = "if (q ~~ r) then a else b"
+val foo3n = "if q ~~ r then a else b"
+fun dotests nm psty tests =
+    let
+      val _ = print (nm ^ "\n")
+      val _ = remove_termtok {term_name = "foo", tok = "~~"}
+      val _ = temp_add_rule {term_name = "foo",
+                             paren_style = psty,
+                       block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
+                       pp_elements = [HardSpace 1, TOK "~~", BreakSpace(1,0)],
+                       fixity = Infixl 500}
+    in
+      app tpp tests
+    end
+
+val _ = dotests "With IfNotTop{realonly=true}" (IfNotTop{realonly=true})
+                [foo1y, foo2n, foo3y]
+val _ = dotests "With IfNotTop{realonly=false}" (IfNotTop{realonly=false})
+                [foo1y, foo2n, foo3n]
+val _ = dotests "With Always" Always [foo1y, foo2y, foo3y]
+val _ = dotests "With OnlyIfNecessary" OnlyIfNecessary [foo1n, foo2n, foo3n]

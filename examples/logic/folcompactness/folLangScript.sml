@@ -57,12 +57,13 @@ Termination
   WF_REL_TAC ‘measure (term_size o SND o SND)’ >> simp[]
 End
 
-Definition FVT_def[simp]:
+Definition FVT_def:
   (FVT (V v) = {v}) ∧
   (FVT (Fn s ts) = LIST_UNION (MAP FVT ts))
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
+Theorem FVT_def[simp] = SIMP_RULE bool_ss [SF ETA_ss] FVT_def
 
 Theorem FVT_FINITE[simp]:
   ∀t. FINITE (FVT t)
@@ -90,12 +91,15 @@ Proof
   metis_tac[MEM_EL]
 QED
 
-Definition termsubst_def[simp]:
+Definition termsubst_def:
   (termsubst v (V x) = v x) ∧
   (termsubst v (Fn f l) = Fn f (MAP (termsubst v) l))
 Termination
   WF_REL_TAC ‘measure (term_size o SND)’ >> simp[]
 End
+
+Theorem termsubst_def[simp] =
+        SIMP_RULE bool_ss [SF ETA_ss] termsubst_def
 
 Theorem termsubst_termsubst:
   ∀t i j. termsubst j (termsubst i t) = termsubst (termsubst j o i) t
@@ -423,12 +427,13 @@ Proof
 QED
 
 (* show countability via Gödelization *)
-Definition num_of_term_def[simp]:
+Definition num_of_term_def:
   num_of_term (V x) = 0 ⊗ x ∧
   num_of_term (Fn f l) = 1 ⊗ (f ⊗ nlist_of (MAP num_of_term l))
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
+Theorem num_of_term_def[simp] = SIMP_RULE bool_ss [SF ETA_ss] num_of_term_def
 
 Theorem num_of_term_11[simp]:
   ∀t1 t2. num_of_term t1 = num_of_term t2 ⇔ t1 = t2

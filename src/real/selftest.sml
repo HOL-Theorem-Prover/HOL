@@ -134,6 +134,9 @@ val _ = List.app nftest [
       ("MULCANON35", REALMULCANON,
        “-exp hx * p pow 2 * exp hx * (1 - p)”,
        “-(p pow 2) * (exp hx) pow 2 * (1 - p)”),
+      ("MULCANON36", REALMULCANON, “-1 * (x * y) : real”, “-x * y:real”),
+      ("MULCANON37", REALMULCANON, “-1 * x : real”, “-x:real”),
+      ("MULCANON38", REALMULCANON, “1r * x”, “x:real”),
 
       ("MULRELNORM01", simp,
        “z <> 0 ⇒ 2r * z pow 2 * inv yy = 5 * z pow 2 * inv y * a”,
@@ -171,6 +174,23 @@ val _ = List.app nftest [
        “2 pow lg < 2 * 2 pow m”),
       ("MULRELNORM17", simpl [ASSUME “0r < U”],
        “U * a * b <= -U”, “a * b <= -1”),
+      ("MULRELNORM18", simp, “-x * y * z = a * -b * c:real”, “x * y * z = a * b * c:real”),
+      ("MULRELNORM19", simp, “-2 * x * y * z = a * -6 * b * c:real”,
+       “x * y * z = 3 * (a * b * c):real”),
+      ("MULRELNORM20", simp, “-x * y * z < a * -b * c:real”, “a * b * c < x * y * z:real”),
+      ("MULRELNORM21", simp, “-2 * x * y * z < a * -3 * b * c:real”,
+       “3 * (a * b * c) < 2 * (x * y * z):real”),
+      ("MULRELNORM22", simp, “-x * y * z <= a * -b * c:real”, “a * b * c <= x * y * z:real”),
+      ("MULRELNORM23", simp, “x * -2 * y * z <= a * -b * c:real”,
+       “a * b * c <= 2 * (x * y * z):real”),
+      ("MULRELNORM24", simp, “x * -2 * y * z <= a * b * c:real”,
+       “-2 * (x * y * z):real <= a * b * c”),
+      ("MULRELNORM25", simp, “x * -2 * y <= 6r”, “-x * y <= 3r”),
+      ("MULRELNORM26", simp, “x * -2 * y = 6r * z”, “x * y = -3r * z”),
+      ("MULRELNORM27", simp, “x * -2 * y = 6r”, “x * y = -3r”),
+      ("MULRELNORM28", simp, “x * -2 * y = z”, “2 * (x * y) = -z”),
+      ("MULRELNORM29", simp, “x * -2 * y = -a * z * -b”, “2 * (x * y) = -a * b * z”),
+      ("MULRELNORM30", simp, “4r * B <= 4 * (A * B)”, “B:real <= A * B”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
@@ -234,5 +254,23 @@ val _ = List.app diff_test [
                           ((\x. ln (x pow 2)) diffl
                            (inv (x pow 2) * (2 * x pow (2 - 1) * 1))) x”)
     ];
+
+(* check prefer/deprecate real *)
+val grammars = (type_grammar(),term_grammar())
+val _ = realLib.prefer_real()
+val _ = tprint "Checking parse of 0 < x gives reals when reals preferred"
+val expected1 = realSyntax.mk_less(realSyntax.zero_tm,
+                                   mk_var("x", realSyntax.real_ty))
+val _ = require_msg (check_result (aconv expected1)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+val _ = temp_set_grammars grammars
+
+val _ = realLib.deprecate_real();
+val _ = tprint "Checking parse of 0 < x gives nats when reals deprecated"
+val expected2 = numSyntax.mk_less(numSyntax.zero_tm,
+                                  mk_var("x", numSyntax.num))
+val _ = require_msg (check_result (aconv expected2)) term_to_string
+                    (quietly Parse.Term) ‘0 < x’
+val _ = temp_set_grammars grammars
 
 val _ = Process.exit Process.success

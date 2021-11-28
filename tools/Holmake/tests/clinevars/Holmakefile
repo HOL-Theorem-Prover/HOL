@@ -1,2 +1,7 @@
+hmclinevars-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = hmclinevars-selftest.log selftest.exe

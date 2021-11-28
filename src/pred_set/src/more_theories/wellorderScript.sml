@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib
-open boolSimps mesonLib numLib InductiveDefinition tautLib jrhUtils
+open boolSimps mesonLib numLib InductiveDefinition tautLib
 
 open relationTheory set_relationTheory pred_setTheory pairTheory
      arithmeticTheory
@@ -1387,18 +1387,20 @@ val WF_UREC_WF = store_thm ("WF_UREC_WF",
 val lemma = prove_nonschematic_inductive_relations_exist bool_monoset
    ``!f:'a->'b x. (!z. z << x ==> R z (f z)) ==> R x (H f x)``;
 
-val WF_REC_INVARIANT = store_thm ("WF_REC_INVARIANT",
- ``WF(<<)
-   ==> !H S. (!f g x. (!z. z << x ==> (f z = g z) /\ S z (f z))
-                      ==> (H f x = H g x) /\ S x (H f x))
-             ==> ?f:'a->'b. !x. (f x = H f x)``,
+Theorem WF_REC_INVARIANT:
+ WF(<<) ==>
+ !H S. (!f g x. (!z. z << x ==> f z = g z /\ S z (f z)) ==>
+                H f x = H g x /\ S x (H f x)) ==>
+       ?f:'a->'b. !x. f x = H f x
+Proof
   REWRITE_TAC[WF_IND] THEN REPEAT STRIP_TAC THEN
   X_CHOOSE_THEN ``R:'a->'b->bool`` STRIP_ASSUME_TAC lemma THEN
   SUBGOAL_THEN ``!x:'a. ?!y:'b. R x y`` (fn th => ASM_MESON_TAC[th]) THEN
   ONCE_REWRITE_TAC [METIS [] ``(?!y. R x y) = (\x. ?!y. R x y) x``] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(fn th => GEN_REWR_TAC BINDER_CONV [th]) THEN
-  SUBGOAL_THEN ``!x:'a y:'b. R x y ==> S' x y`` MP_TAC THEN METIS_TAC[]);
+  first_x_assum (CONV_TAC o BINDER_CONV o REWR_CONV) >>
+  SUBGOAL_THEN ``!x:'a y:'b. R x y ==> S' x y`` MP_TAC THEN METIS_TAC[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Equivalent to just *existence* part of recursion.                         *)
@@ -1568,17 +1570,19 @@ val FLATTEN_LEMMA = store_thm ("FLATTEN_LEMMA",
 (* Knaster-Tarski fixpoint theorem (used in Schroeder-Bernstein below).      *)
 (* ------------------------------------------------------------------------- *)
 
-val TARSKI_SET = store_thm ("TARSKI_SET",
-  ``!f. (!s t. s SUBSET t ==> f(s) SUBSET f(t)) ==> ?s:'a->bool. f(s) = s``,
-  REPEAT STRIP_TAC THEN MAP_EVERY ABBREV_TAC
-   [``Y = {b:'a->bool | f(b) SUBSET b}``, ``a:'a->bool = BIGINTER Y``] THEN
-  SUBGOAL_THEN ``!b:'a->bool. b IN Y <=> f(b) SUBSET b`` ASSUME_TAC THENL
-   [EXPAND_TAC "Y" THEN SIMP_TAC std_ss [GSPECIFICATION], ALL_TAC] THEN
-  SUBGOAL_THEN ``!b:'a->bool. b IN Y ==> f(a:'a->bool) SUBSET b`` ASSUME_TAC THENL
-   [ASM_MESON_TAC[SUBSET_TRANS, IN_BIGINTER, SUBSET_DEF], ALL_TAC] THEN
-  SUBGOAL_THEN ``f(a:'a->bool) SUBSET a``
-   (fn th => ASM_MESON_TAC[SUBSET_ANTISYM, IN_BIGINTER, th]) THEN
-  ASM_MESON_TAC[IN_BIGINTER, SUBSET_DEF]);
+Theorem TARSKI_SET:
+  !f. (!s t. s SUBSET t ==> f(s) SUBSET f(t)) ==> ?s:'a->bool. f(s) = s
+Proof
+  REPEAT STRIP_TAC THEN
+  MAP_EVERY Q.ABBREV_TAC
+            [`Y = {b:'a->bool | f(b) SUBSET b}`, `a:'a->bool = BIGINTER Y`] THEN
+  ‘!b:'a->bool. b IN Y <=> f(b) SUBSET b’
+    by SIMP_TAC std_ss [GSPECIFICATION, Abbr‘Y’] THEN
+  ‘!b:'a->bool. b IN Y ==> f(a:'a->bool) SUBSET b’
+    by METIS_TAC[SUBSET_TRANS, IN_BIGINTER, SUBSET_DEF] THEN
+  ‘f(a:'a->bool) SUBSET a’ by METIS_TAC[IN_BIGINTER, SUBSET_DEF] THEN
+   METIS_TAC[SUBSET_ANTISYM, IN_BIGINTER]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* We need a nonemptiness hypothesis for the nicest total function form.     *)

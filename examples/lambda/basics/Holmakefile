@@ -1,1 +1,3 @@
-OPTIONS = QUIT_ON_FAILURE
+SRCDIRS = string finite_maps quotient/src
+
+INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/src/%),$(SRCDIRS))

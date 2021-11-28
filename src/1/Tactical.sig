@@ -87,6 +87,8 @@ sig
   val ASSUM_LIST     : (thm list -> tactic) -> tactic
   val POP_ASSUM      : thm_tactic -> tactic
   val pop_assum      : thm_tactic -> tactic
+  val POP_LAST_ASSUM : thm_tactic -> tactic
+  val pop_last_assum : thm_tactic -> tactic
   val PRED_ASSUM     : (term -> bool) -> thm_tactic -> tactic
   val PAT_ASSUM      : term -> thm_tactic -> tactic
   val PAT_X_ASSUM    : term -> thm_tactic -> tactic

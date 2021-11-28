@@ -10,7 +10,6 @@
 (*                                                                           *)
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
-(*                                                                           *)
 (*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
 (*              (c) Copyright, John Harrison and others 1998-2012            *)
@@ -19,27 +18,12 @@
 open HolKernel Parse boolLib bossLib;
 
 open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
-     arithmeticTheory realTheory realLib jrhUtils pairTheory mesonLib
-     pred_setTheory;
+     arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory hurdUtils;
 
+open realTheory realLib transcTheory;
 open wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
-
-(* Minimal version of hurdUtils *)
-fun K_TAC _ = ALL_TAC;
-fun wrap a = [a];
-val art = ASM_REWRITE_TAC;
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-
-local
-  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
-in
-  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
-end;
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -187,10 +171,6 @@ val BIGINTER_IMAGE = store_thm ("BIGINTER_IMAGE",
  ``!f s. BIGINTER (IMAGE f s) = {y | !x. x IN s ==> y IN f x}``,
   REPEAT GEN_TAC THEN  GEN_REWR_TAC I [EXTENSION] THEN
   SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, GSPECIFICATION] THEN MESON_TAC[]);
-
-val REAL_LE_LMUL1 = store_thm ("REAL_LE_LMUL1",
- ``!x y z:real. &0 <= x /\ y <= z ==> x * y <= x * z``,
-  METIS_TAC [REAL_LE_LMUL, REAL_MUL_LZERO, REAL_LE_LT]);
 
 val LE_EXISTS = store_thm ("LE_EXISTS",
  ``!m n:num. (m <= n) <=> (?d. n = m + d)``,
@@ -352,13 +332,15 @@ val FUN_IN_IMAGE = store_thm ("FUN_IN_IMAGE",
  ``!f s x. x IN s ==> f(x) IN IMAGE f s``,
   SET_TAC[]);
 
-val DIFF_BIGINTER = store_thm ("DIFF_BIGINTER",
- ``!u s. u DIFF BIGINTER s = BIGUNION {u DIFF t | t IN s}``,
-  SIMP_TAC std_ss [BIGUNION_GSPEC] THEN SET_TAC[]);
+Theorem DIFF_BIGINTER2 : (* was: DIFF_BIGINTER *)
+    !u s. u DIFF BIGINTER s = BIGUNION {u DIFF t | t IN s}
+Proof
+  SIMP_TAC std_ss [BIGUNION_GSPEC] THEN SET_TAC[]
+QED
 
 val BIGINTER_BIGUNION = store_thm ("BIGINTER_BIGUNION",
  ``!s. BIGINTER s = UNIV DIFF (BIGUNION {UNIV DIFF t | t IN s})``,
-  REWRITE_TAC[GSYM DIFF_BIGINTER] THEN SET_TAC[]);
+  REWRITE_TAC[GSYM DIFF_BIGINTER2] THEN SET_TAC[]);
 
 val BIGUNION_BIGINTER = store_thm ("BIGUNION_BIGINTER",
  ``!s. BIGUNION s = UNIV DIFF (BIGINTER {UNIV DIFF t | t IN s})``,
@@ -367,43 +349,8 @@ val BIGUNION_BIGINTER = store_thm ("BIGUNION_BIGINTER",
    GSPECIFICATION] THEN
   MESON_TAC[]);
 
-val REAL_POW_1_LE = store_thm ("REAL_POW_1_LE",
- ``!n x:real. &0 <= x /\ x <= &1 ==> x pow n <= &1``,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [``n:num``, ``x:real``, ``&1:real``] POW_LE) THEN
-  ASM_REWRITE_TAC[POW_ONE]);
-
-val REAL_POW_LE_1 = store_thm ("REAL_POW_LE_1",
- ``!n x:real. &1 <= x ==> &1 <= x pow n``,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [``n:num``, ``&1:real``, ``x:real``] POW_LE) THEN
-  ASM_SIMP_TAC real_ss [POW_ONE, REAL_POS]);
-
-val REAL_LT_INV2 = store_thm ("REAL_LT_INV2",
- ``!x y. &0:real < x /\ x < y ==> inv(y) < inv(x)``,
-  REPEAT STRIP_TAC THEN KNOW_TAC ``&0:real < x * y`` THENL
-  [MATCH_MP_TAC REAL_LT_MUL THEN
-   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN REAL_ARITH_TAC, ALL_TAC] THEN
-  DISCH_TAC THEN KNOW_TAC ``inv y * (x * y) < inv x * (x * y:real)`` THENL
-  [ALL_TAC, FULL_SIMP_TAC std_ss [REAL_LT_RMUL]] THEN
-  SUBGOAL_THEN ``(inv x * x = &1:real) /\ (inv y * y = &1:real)`` ASSUME_TAC THENL
-  [CONJ_TAC THEN MATCH_MP_TAC REAL_MUL_LINV THEN
-   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN REAL_ARITH_TAC,
-   ASM_REWRITE_TAC[REAL_MUL_ASSOC, REAL_MUL_LID] THEN
-   GEN_REWR_TAC (LAND_CONV o LAND_CONV) [REAL_MUL_SYM] THEN
-   ASM_REWRITE_TAC[GSYM REAL_MUL_ASSOC, REAL_MUL_RID]]);
-
-val REAL_LE_INV2 = store_thm ("REAL_LE_INV2",
- ``!x y. &0:real < x /\ x <= y ==> inv(y) <= inv(x)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
-  ASM_CASES_TAC ``x:real = y`` THEN ASM_REWRITE_TAC[] THEN
-  STRIP_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_INV2 THEN
-  ASM_REWRITE_TAC[]);
-
-val REAL_INV_1_LE = store_thm ("REAL_INV_1_LE",
- ``!x:real. &0 < x /\ x <= &1 ==> &1 <= inv(x)``,
-  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
-  MATCH_MP_TAC REAL_LE_INV2 THEN ASM_REWRITE_TAC[REAL_LT_01]);
+(* for HOL-Light compatibility *)
+Theorem REAL_LT_INV2 = REAL_LT_INV
 
 val REAL_WLOG_LE = store_thm ("REAL_WLOG_LE",
  ``(!x y:real. P x y <=> P y x) /\ (!x y. x <= y ==> P x y) ==> !x y. P x y``,
@@ -952,6 +899,56 @@ val SUP_UNION = store_thm ("SUP_UNION",
           (?c. !x. x IN t ==> x <= c) ==> (sup(s UNION t) = max (sup s) (sup t))``,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUP_UNIQUE THEN
   SIMP_TAC real_ss [FORALL_IN_UNION, REAL_MAX_LE] THEN METIS_TAC[SUP, REAL_LE_TRANS]);
+
+Theorem REAL_IMP_SUP_LE' :
+    !p x. (?r. r IN p) /\ (!r. r IN p ==> r <= x) ==> sup p <= x
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_SUP_LE]
+QED
+
+Theorem REAL_IMP_LE_SUP' :
+    !p x. (?z. !r. r IN p ==> r <= z) /\ (?r. r IN p /\ x <= r) ==> x <= sup p
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_LE_SUP]
+QED
+
+Theorem REAL_LE_SUP_EQ :
+    !p x : real.
+       (?y. y IN p) /\ (?y. !z. z IN p ==> z <= y) ==>
+       (x <= sup p <=> !y. (!z. z IN p ==> z <= y) ==> x <= y)
+Proof
+    REWRITE_TAC [IN_APP, REAL_LE_SUP]
+QED
+
+(* This requires REAL_SUP_LE_EQ + REAL_LE_SUP_EQ *)
+Theorem SUP_MONO :
+    !p q. (?b. !n. p n <= b) /\ (?c. !n. q n <= c) /\
+          (!n:num. p n <= q n) ==> sup (IMAGE p UNIV) <= sup (IMAGE q UNIV)
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘y = sup (IMAGE q UNIV)’
+ >> Q.ABBREV_TAC ‘s = IMAGE p UNIV’
+ >> Know ‘sup s <= y <=> !x. x IN s ==> x <= y’
+ >- (MATCH_MP_TAC REAL_SUP_LE_EQ \\
+     rw [Abbr ‘s’, Once EXTENSION] \\
+     Q.EXISTS_TAC ‘b’ >> rw [] >> art [])
+ >> Rewr'
+ >> rw [Abbr ‘s’, IN_IMAGE]
+ >> rename1 ‘p x <= y’
+ >> Q.UNABBREV_TAC ‘y’
+ >> Q.ABBREV_TAC ‘s = IMAGE q UNIV’
+ >> Know ‘p x <= sup s <=> !y. (!z. z IN s ==> z <= y) ==> p x <= y’
+ >- (MATCH_MP_TAC REAL_LE_SUP_EQ \\
+     rw [Abbr ‘s’, IN_IMAGE] \\
+     Q.EXISTS_TAC ‘c’ >> rw [] >> art [])
+ >> Rewr'
+ >> rw [Abbr ‘s’, IN_IMAGE]
+ (* here it indicates that ‘!n. p n <= q n’ is too strong *)
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘q x’ >> art []
+ >> POP_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘x’ >> rw []
+QED
 
 (* The original definition of "inf" in HOL Light (sets.ml) *)
 val inf_tm = ``@a:real. (!x. x IN s ==> a <= x) /\
@@ -4429,6 +4426,38 @@ val PRODUCT_DELTA = store_thm ("PRODUCT_DELTA",
          (if a IN s then b else &1)``,
   REWRITE_TAC[product, GSYM NEUTRAL_REAL_MUL] THEN
   SIMP_TAC std_ss [ITERATE_DELTA, MONOIDAL_REAL_MUL]);
+
+Theorem LN_PRODUCT :
+    !f s. FINITE s /\ (!x. x IN s ==> &0 < f x) ==>
+          ln (product s f) = sum s (\x. ln (f x))
+Proof
+    rpt STRIP_TAC
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> Q.SPEC_TAC (‘s’, ‘s’)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> rw [PRODUCT_CLAUSES, SUM_CLAUSES, LN_1]
+ >> ‘0 < f e’ by PROVE_TAC []
+ >> ‘0 < product s f’ by (MATCH_MP_TAC PRODUCT_POS_LT >> rw [])
+ >> rw [LN_MUL]
+QED
+
+(* added ‘n <> 0 /\ (!x. x IN s ==> &0 <= f x)’ to hol-light's statements *)
+Theorem ROOT_PRODUCT :
+    !n f s. FINITE s /\ n <> 0 /\ (!x. x IN s ==> &0 <= f x)
+        ==> root n (product s f) = product s (\i. root n (f i))
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘n’ >- fs []
+ >> rename1 ‘SUC n <> 0’
+ >> POP_ASSUM MP_TAC
+ >> Q.PAT_X_ASSUM ‘FINITE s’ MP_TAC
+ >> Q.SPEC_TAC (‘s’, ‘s’)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> rw [PRODUCT_CLAUSES, ROOT_1]
+ >> ‘0 <= f e’ by PROVE_TAC []
+ >> ‘0 <= product s f’ by (MATCH_MP_TAC PRODUCT_POS_LE >> rw [])
+ >> rw [ROOT_MUL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extend congruences.                                                       *)

@@ -31,24 +31,7 @@ val x2sexp_def = tDefine "x2sexp" `
   (x2sexp (T,App f xs,yy) = list2sexp (x2sexp (F,Var "nil",f) :: MAP (\x. x2sexp (T,x,FunVar "nil")) xs)) /\
   (x2sexp (T,Ite cs,yy) = list2sexp (Sym "cond" :: MAP (\ (t1,t2).
        list2sexp [x2sexp (T,t1,FunVar "nil"); x2sexp (T,t2,FunVar "nil")]) cs))`
- (WF_REL_TAC `measure (\(x,y,z). if x then term_size y else func_size z)`
-  THEN REWRITE_TAC [CONJ_ASSOC]
-  THEN REVERSE STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
-  THEN REVERSE STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
-  THEN REVERSE STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
-  THEN REWRITE_TAC [GSYM CONJ_ASSOC]
-  THEN STRIP_TAC THEN1
-   (STRIP_TAC THEN Induct
-    THEN REWRITE_TAC [MEM,term_size_def] THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC [] THEN RES_TAC THEN DECIDE_TAC)
-  THEN STRIP_TAC THEN1
-   (Induct THEN (Cases ORELSE ALL_TAC)
-    THEN SIMP_TAC std_ss [MEM,term_size_def] THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC [] THEN RES_TAC THEN DECIDE_TAC)
-  THEN
-   (Induct THEN (Cases ORELSE ALL_TAC)
-    THEN SIMP_TAC std_ss [MEM,term_size_def] THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC [] THEN RES_TAC THEN DECIDE_TAC))
+ (WF_REL_TAC `measure (\(x,y,z). if x then term_size y else func_size z)`);
 
 val x2sexp = x2sexp_def |> CONJUNCTS |> map SPEC_ALL |> LIST_CONJ
 

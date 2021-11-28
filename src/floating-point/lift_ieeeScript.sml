@@ -134,7 +134,7 @@ val finite_word_cross = Q.prove(
    );
 
 val inj_float_to_tuple = Q.prove(
-  `INJ (\x. ((x.Sign, x.Significand), x.Exponent))
+  `INJ (\x. (x.Sign, x.Significand, x.Exponent))
      (univ (:('t, 'w) float))
      (univ (:word1) CROSS univ (:'t word) CROSS univ (:'w word))`,
    rw [pred_setTheory.INJ_DEF, float_component_equality]

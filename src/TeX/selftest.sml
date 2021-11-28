@@ -13,6 +13,12 @@ val s1 = pp_to_string 5 pp_term_as_tex v1
 val s2 = pp_to_string 5 (raw_pp_term_as_tex(fn"v2"=>SOME("v1",2)|_=>NONE)) v2
 val _ = if s1 = s2 then OK() else udie()
 
+val _ = tprint "Testing prime var printing"
+val v3 = Term.variant [``x:bool``, ``x':bool``, ``x'':bool``] ``x:bool``
+val s = pp_to_string 70 pp_term_as_tex v3
+val _ = if s = "\\ensuremath{\\HOLFreeVar{x}\\sp{\\prime{}3\\prime{}}}"
+        then OK() else gotdie s
+
 val _ = tprint "Testing const F overridden to T"
 val s1 = pp_to_string 5 pp_term_as_tex T
 val s2 = pp_to_string 5 (raw_pp_term_as_tex(fn"F"=>SOME("T",1)|_=>NONE)) F

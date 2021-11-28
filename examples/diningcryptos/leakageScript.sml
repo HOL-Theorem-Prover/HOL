@@ -21,6 +21,7 @@ open hurdUtils util_probTheory sigma_algebraTheory
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "leakage";
+val _ = temp_set_fixity "CROSS" (Infixl 600)
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"];
 val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"];
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"];
@@ -1780,6 +1781,18 @@ val unif_prog_space_visible_leakage_computation_reduce = store_thm
                   unif_prog_space_visible_leakage_lemma4, REAL_SUB_LDISTRIB, REAL_SUB_LZERO]);
 
 
+Definition REAL_SUM_def:
+  (REAL_SUM [] = 0:real) /\
+  (REAL_SUM (x::l) = x + REAL_SUM l)
+End
+
+Theorem ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM:
+   !l. ALL_DISTINCT l ==>
+       (REAL_SUM_IMAGE f (LIST_TO_SET l) = REAL_SUM (MAP f l))
+Proof
+   Induct >> simp[REAL_SUM_def, REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT_RWT]
+QED
+
 Theorem unif_prog_space_leakage_LIST_TO_SET_computation_reduce:
   !high low random f.
     ALL_DISTINCT high /\ ALL_DISTINCT low /\
@@ -1873,6 +1886,23 @@ Proof
    >> ‘set l = set (nub l)’ by RW_TAC std_ss [nub_set]
    >> POP_ORW
    >> simp[ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM]
+QED
+
+Theorem unif_prog_space_leakage_computation_reduce_COMPUTE:
+  !high low random f.
+    FINITE high /\ FINITE low /\ FINITE random /\
+    ((high CROSS low) CROSS random <> {}) ==>
+    (leakage (unif_prog_space high low random) f =
+     (1/(&(CARD high * CARD low * CARD random)))*
+     (SIGMA (λ(out,h,l). (\x. x * lg (((1/(&(CARD random)))* x)))
+                         (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random))
+      (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)) -
+      SIGMA (λ(out,l). (\x. x * lg (((1/(&(CARD high * CARD random)))* x)))
+                       (SIGMA (λ(h,r). if (f((h,l),r)=out) then 1 else 0)
+                        (high CROSS random)))
+      (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random))))
+Proof
+   METIS_TAC [unif_prog_space_leakage_computation_reduce]
 QED
 
 
