@@ -47,37 +47,6 @@ val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
 val SUM_LE             = SUM_MONO_LE;        (* iterateTheory *)
 
 (* ------------------------------------------------------------------------- *)
-(* Pairwise property over sets and lists.                                    *)
-(* ------------------------------------------------------------------------- *)
-
-val pairwise = new_definition ("pairwise",
-  ``pairwise r s <=> !x y. x IN s /\ y IN s /\ ~(x = y) ==> r x y``);
-
-val PAIRWISE_EMPTY = store_thm ("PAIRWISE_EMPTY",
- ``!r. pairwise r {} <=> T``,
-  REWRITE_TAC[pairwise, NOT_IN_EMPTY] THEN MESON_TAC[]);
-
-val PAIRWISE_SING = store_thm ("PAIRWISE_SING",
- ``!r x. pairwise r {x} <=> T``,
-  REWRITE_TAC[pairwise, IN_SING] THEN MESON_TAC[]);
-
-val PAIRWISE_MONO = store_thm ("PAIRWISE_MONO",
- ``!r s t. pairwise r s /\ t SUBSET s ==> pairwise r t``,
-  REWRITE_TAC[pairwise] THEN SET_TAC[]);
-
-val PAIRWISE_INSERT = store_thm ("PAIRWISE_INSERT",
- ``!r x s.
-        pairwise r (x INSERT s) <=>
-        (!y. y IN s /\ ~(y = x) ==> r x y /\ r y x) /\
-        pairwise r s``,
-  REWRITE_TAC[pairwise, IN_INSERT] THEN MESON_TAC[]);
-
-val PAIRWISE_IMAGE = store_thm ("PAIRWISE_IMAGE",
- ``!r f. pairwise r (IMAGE f s) <=>
-         pairwise (\x y. ~(f x = f y) ==> r (f x) (f y)) s``,
-  REWRITE_TAC[pairwise, IN_IMAGE] THEN MESON_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
 (* Permutes                                                                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -2021,60 +1990,53 @@ val DIM_SUBSET_UNIV = store_thm ("DIM_SUBSET_UNIV",
 (* Open and closed sets                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val open_def = new_definition ("open_def",
-  ``Open s <=> !x. x IN s ==> ?e. &0 < e /\ !x'. dist(x',x) < e ==> x' IN s``);
+(* new definition *)
+Definition euclidean_def :
+    euclidean = mtop mr1
+End
 
-val _ = overload_on ("open",``Open``);
+(* new definition *)
+Definition euclidean_open_def :
+    Open = open_in euclidean
+End
+Overload "open" = “Open”
 
-val closed_def = new_definition ("closed_def",
-  ``Closed(s:real->bool) <=> open(UNIV DIFF s)``);
+(* old definition as an equivalent theorem *)
+Theorem open_def :
+    !s. Open s <=> !x. x IN s ==> ?e. &0 < e /\ !x'. dist(x',x) < e ==> x' IN s
+Proof
+    rw [euclidean_def, MTOP_OPEN, euclidean_open_def, dist_def, IN_APP,
+        Once METRIC_SYM]
+QED
 
-val _ = overload_on ("closed",``Closed``);
+(* old definition as an equivalent theorem *)
+Theorem euclidean :
+    euclidean = topology open
+Proof
+    rw [euclidean_def, mtop]
+ >> AP_TERM_TAC (* eliminated ‘topology’ *)
+ >> rw [FUN_EQ_THM, open_def, dist_def, IN_APP, Once METRIC_SYM]
+QED
 
-val euclidean = new_definition ("euclidean",
- ``euclidean = topology open``);
+fun convert thm =
+    REWRITE_RULE [GSYM euclidean_open_def] (Q.ISPEC ‘euclidean’ thm);
 
-val OPEN_EMPTY = store_thm ("OPEN_EMPTY",
-  ``open {}``,
-  REWRITE_TAC[open_def, NOT_IN_EMPTY]);
+(* |- open {} *)
+Theorem OPEN_EMPTY = convert OPEN_IN_EMPTY
 
 val OPEN_UNIV = store_thm ("OPEN_UNIV",
  ``open univ(:real)``,
   REWRITE_TAC[open_def, IN_UNIV] THEN MESON_TAC[REAL_LT_01]);
 
-val OPEN_INTER = store_thm ("OPEN_INTER",
-  ``!s t. open s /\ open t ==> open (s INTER t)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC [open_def] THEN
-  SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN REWRITE_TAC [IN_INTER] THEN
-  DISCH_TAC THEN GEN_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN
-  STRIP_TAC THEN STRIP_TAC THEN FULL_SIMP_TAC real_ss [] THEN
-  Cases_on `e < e'` THENL [EXISTS_TAC ``e:real`` THEN
-  ASM_REWRITE_TAC [] THEN GEN_TAC THEN
-  UNDISCH_TAC (Term `!x'. dist (x',x) < e ==> x' IN s`) THEN
-  DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN RW_TAC std_ss [] THEN
-  UNDISCH_TAC (Term `!x'. dist (x',x) < e' ==> x' IN t`) THEN
-  DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN
-  KNOW_TAC ``dist (x',x) < e'`` THENL [MATCH_MP_TAC REAL_LT_TRANS THEN
-  EXISTS_TAC ``e:real`` THEN ASM_REWRITE_TAC [], ALL_TAC] THEN
-  RW_TAC std_ss [] THEN Cases_on `e' < e` THEN
-  EXISTS_TAC ``e':real`` THEN ASM_REWRITE_TAC [],
-  Cases_on `e' < e` THENL [EXISTS_TAC ``e':real`` THEN
-  ASM_REWRITE_TAC [] THEN GEN_TAC THEN
-  UNDISCH_TAC (Term `!x'. dist (x',x) < e' ==> x' IN t`) THEN
-  DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN
-  RW_TAC std_ss [] THEN
-  UNDISCH_TAC (Term `!x'. dist (x',x) < e ==> x' IN s`) THEN
-  DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN
-  KNOW_TAC ``dist (x',x) < e`` THENL [MATCH_MP_TAC REAL_LT_TRANS THEN
-  EXISTS_TAC ``e':real`` THEN ASM_REWRITE_TAC [], ALL_TAC] THEN
-  RW_TAC std_ss [],
-  FULL_SIMP_TAC std_ss [REAL_NOT_LT] THEN KNOW_TAC ``(e:real) = e'`` THENL
-  [METIS_TAC [REAL_LE_ANTISYM], ALL_TAC] THEN DISCH_TAC THEN
-  EXISTS_TAC ``e:real`` THEN CONJ_TAC THEN FULL_SIMP_TAC real_ss []]]);
+(* |- !s t. open s /\ open t ==> open (s INTER t) *)
+Theorem OPEN_INTER = convert OPEN_IN_INTER
 
-val OPEN_BIGUNION = store_thm ("OPEN_BIGUNION",
- ``(!s. s IN f ==> open s) ==> open(BIGUNION f)``,
-  REWRITE_TAC[open_def, IN_BIGUNION] THEN MESON_TAC[]);
+(* NOTE: added top quantifier for ‘f’ *)
+Theorem OPEN_BIGUNION :
+    !f. (!s. s IN f ==> open s) ==> open (BIGUNION f)
+Proof
+    REWRITE_TAC [open_def, IN_BIGUNION] >> MESON_TAC []
+QED
 
 val OPEN_EXISTS_IN = store_thm ("OPEN_EXISTS_IN",
  ``!P Q:'a->real->bool.
@@ -2090,13 +2052,11 @@ val OPEN_EXISTS = store_thm ("OPEN_EXISTS",
  ``!Q:'a->real->bool. (!a. open {x | Q a x}) ==> open {x | ?a. Q a x}``,
   MP_TAC(ISPEC ``\x:'a. T`` OPEN_EXISTS_IN) THEN REWRITE_TAC[]);
 
-val OPEN_IN = store_thm ("OPEN_IN",
- ``!s:real->bool. open s <=> open_in euclidean s``,
-  GEN_TAC THEN REWRITE_TAC[euclidean] THEN CONV_TAC SYM_CONV THEN
-  AP_THM_TAC THEN REWRITE_TAC[GSYM(CONJUNCT2 topology_tybij)] THEN
-  SIMP_TAC std_ss [REWRITE_RULE[IN_DEF] istopology] THEN
-  REWRITE_TAC[OPEN_EMPTY, OPEN_INTER, SUBSET_DEF] THEN
-  MESON_TAC[IN_DEF, OPEN_BIGUNION]);
+Theorem OPEN_IN :
+    !s. open s <=> open_in euclidean s
+Proof
+    rw [euclidean_open_def]
+QED
 
 val TOPSPACE_EUCLIDEAN = store_thm ("TOPSPACE_EUCLIDEAN",
  ``topspace euclidean = univ(:real)``,
@@ -2111,37 +2071,38 @@ val OPEN_IN_REFL = store_thm ("OPEN_IN_REFL",
  ``!s:real->bool. open_in (subtopology euclidean s) s``,
   REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_REFL, TOPSPACE_EUCLIDEAN, SUBSET_UNIV]);
 
+(* new definition *)
+Definition euclidean_closed_def :
+    Closed = closed_in euclidean
+End
+Overload closed = “Closed”
+
+(* old definition as an equivalent theorem *)
+Theorem closed_def :
+    !s. Closed s <=> open (UNIV DIFF s)
+Proof
+    rw [euclidean_closed_def, closed_in, euclidean_open_def, TOPSPACE_EUCLIDEAN]
+QED
+
 val CLOSED_IN_REFL = store_thm ("CLOSED_IN_REFL",
  ``!s:real->bool. closed_in (subtopology euclidean s) s``,
   REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY_REFL, TOPSPACE_EUCLIDEAN, SUBSET_UNIV]);
 
-val CLOSED_IN = store_thm ("CLOSED_IN",
- ``!s:real->bool. closed s <=> closed_in euclidean s``,
-  REWRITE_TAC[closed_def, closed_in, TOPSPACE_EUCLIDEAN, OPEN_IN, SUBSET_UNIV]);
+Theorem CLOSED_IN :
+    !s. closed s <=> closed_in euclidean s
+Proof
+    rw [euclidean_closed_def]
+QED
 
-val OPEN_UNION = store_thm ("OPEN_UNION",
- ``!s t. open s /\ open t ==> open(s UNION t)``,
-  REWRITE_TAC [open_def] THEN REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN
-  POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN
-  POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN
-  REPEAT STRIP_TAC THEN Cases_on `x IN s` THENL
-  [FULL_SIMP_TAC std_ss [] THEN EXISTS_TAC ``e:real`` THEN
-   FULL_SIMP_TAC std_ss [IN_UNION], FULL_SIMP_TAC std_ss [IN_UNION] THEN
-   EXISTS_TAC ``e:real`` THEN FULL_SIMP_TAC std_ss [IN_UNION]]);
+(* |- !s t. open s /\ open t ==> open (s UNION t) *)
+Theorem OPEN_UNION = convert OPEN_IN_UNION
 
-val OPEN_SUB_OPEN = store_thm ("OPEN_SUB_OPEN",
- ``!s. open s <=> !x. x IN s ==> ?t. open t /\ x IN t /\ t SUBSET s``,
- GEN_TAC THEN EQ_TAC THENL
- [RW_TAC std_ss [] THEN EXISTS_TAC ``s:real->bool`` THEN
-  ASM_REWRITE_TAC [SUBSET_REFL], DISCH_TAC THEN
-  REWRITE_TAC [open_def] THEN GEN_TAC THEN
-  POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN DISCH_TAC THEN DISCH_TAC THEN
-  FULL_SIMP_TAC std_ss [open_def] THEN
-  UNDISCH_TAC (Term `!x. x IN t ==> ?e. 0 < e /\ !x'. dist (x',x) < e ==> x' IN t `)
-  THEN DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN
-  RW_TAC std_ss [] THEN EXISTS_TAC ``e:real`` THEN ASM_REWRITE_TAC []
-  THEN GEN_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN
-  RW_TAC std_ss [] THEN METIS_TAC [SUBSET_DEF]]);
+Theorem OPEN_SUB_OPEN :
+    !s. open s <=> !x. x IN s ==> ?t. open t /\ x IN t /\ t SUBSET s
+Proof
+    rw [euclidean_open_def, Once OPEN_SUBOPEN, IN_APP]
+ >> METIS_TAC []
+QED
 
 val CLOSED_EMPTY = store_thm ("CLOSED_EMPTY",
  ``closed {}``,
@@ -4207,21 +4168,6 @@ val INTERIOR_UNIONS_OPEN_SUBSETS = store_thm ("INTERIOR_UNIONS_OPEN_SUBSETS",
  ``!s:real->bool. BIGUNION {t | open t /\ t SUBSET s} = interior s``,
   GEN_TAC THEN CONV_TAC SYM_CONV THEN MATCH_MP_TAC INTERIOR_UNIQUE THEN
   SIMP_TAC std_ss [OPEN_BIGUNION, GSPECIFICATION] THEN SET_TAC[]);
-
-val FORALL_POS_MONO = store_thm ("FORALL_POS_MONO",
- ``!P. (!d e:real. d < e /\ P d ==> P e) /\ (!n. ~(n = 0) ==> P(inv(&n)))
-       ==> !e. &0 < e ==> P e``,
-  MESON_TAC[REAL_ARCH_INV, REAL_LT_TRANS]);
-
-val FORALL_SUC = store_thm ("FORALL_SUC",
- ``(!n. n <> 0 ==> P n) <=> !n. P (SUC n)``,
-  EQ_TAC THENL [RW_TAC arith_ss [SUC_NOT, REAL_OF_NUM_EQ],
-  METIS_TAC [REAL_NZ_IMP_LT, SUC_PRE, REAL_LT, REAL_OF_NUM_EQ]]);
-
-val LT_NZ = store_thm ("LT_NZ",
- ``!n:num. 0 < n <=> ~(n = 0)``,
-  INDUCT_TAC THEN ASM_SIMP_TAC std_ss [NOT_SUC, LT, EQ_SYM_EQ] THEN
-  TAUT_TAC);
 
 val REAL_ARCH_RDIV_EQ_0 = store_thm ("REAL_ARCH_RDIV_EQ_0",
  ``!x c:real. &0 <= x /\ &0 <= c /\ (!m. 0 < m ==> &m * x <= c) ==> (x = &0)``,
@@ -7270,41 +7216,6 @@ Proof
   RW_TAC real_ss [abs, max_def, min_def] THEN (* 1024 subgoals (for each goals) *)
   ASM_REAL_ARITH_TAC
 QED
-
-(* ------------------------------------------------------------------------- *)
-(* Every closed set is a G_Delta.                                            *)
-(* ------------------------------------------------------------------------- *)
-
-val CLOSED_AS_GDELTA = store_thm ("CLOSED_AS_GDELTA",
- ``!s:real->bool. closed s ==> ?g. COUNTABLE g /\
-   (!u. u IN g ==> open u) /\ (BIGINTER g = s)``,
-  REPEAT STRIP_TAC THEN EXISTS_TAC
-   ``{ BIGUNION { ball(x:real,inv(&n + &1)) | x IN s} | n IN univ(:num)}`` THEN
-  SIMP_TAC std_ss [GSYM IMAGE_DEF, COUNTABLE_IMAGE, NUM_COUNTABLE] THEN
-  SIMP_TAC std_ss [FORALL_IN_IMAGE, OPEN_BIGUNION, OPEN_BALL] THEN
-  MATCH_MP_TAC(SET_RULE
-   ``(closure s = s) /\ s SUBSET t /\ t SUBSET closure s ==> (t = s)``) THEN
-  ASM_REWRITE_TAC[CLOSURE_EQ] THEN CONJ_TAC THENL
-  [SIMP_TAC std_ss [SUBSET_BIGINTER, FORALL_IN_IMAGE, IN_UNIV] THEN
-   X_GEN_TAC ``n:num`` THEN SIMP_TAC std_ss [BIGUNION_IMAGE, SUBSET_DEF, GSPECIFICATION] THEN
-   X_GEN_TAC ``x:real`` THEN DISCH_TAC THEN EXISTS_TAC ``x:real`` THEN
-   ASM_REWRITE_TAC[CENTRE_IN_BALL, REAL_LT_INV_EQ] THEN
-   MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC ``1:real`` THEN CONJ_TAC THENL
-   [REAL_ARITH_TAC, ALL_TAC] THEN REWRITE_TAC [REAL_LE_ADDL, REAL_POS],
-   SIMP_TAC std_ss [SUBSET_DEF, CLOSURE_APPROACHABLE, BIGINTER_IMAGE, IN_UNIV] THEN
-   X_GEN_TAC ``x:real`` THEN SIMP_TAC std_ss [GSPECIFICATION, BIGUNION_IMAGE] THEN
-   DISCH_TAC THEN X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN
-   POP_ASSUM MP_TAC THEN GEN_REWR_TAC LAND_CONV [REAL_ARCH_INV] THEN
-   DISCH_THEN(X_CHOOSE_THEN ``n:num`` STRIP_ASSUME_TAC) THEN
-   FIRST_X_ASSUM(MP_TAC o SPEC ``n:num``) THEN REWRITE_TAC[IN_BALL] THEN
-   DISCH_THEN (X_CHOOSE_TAC ``y:real``) THEN EXISTS_TAC ``y:real`` THEN
-   POP_ASSUM MP_TAC THEN MATCH_MP_TAC MONO_AND THEN REWRITE_TAC[] THEN
-   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] REAL_LT_TRANS) THEN
-   FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT] REAL_LT_TRANS)) THEN
-   MATCH_MP_TAC REAL_LT_INV2 THEN
-   REWRITE_TAC[REAL_OF_NUM_ADD, REAL_LT] THEN CONJ_TAC THENL
-   [FULL_SIMP_TAC std_ss [REAL_LT_INV_EQ, GSYM REAL_LT],
-    FULL_SIMP_TAC arith_ss [REAL_LT_ADDR]]]);
 
 (* ------------------------------------------------------------------------- *)
 (* Compactness (the definition is the one based on convegent subsequences).  *)
@@ -13094,10 +13005,24 @@ val COMPACT_AFFINITY = store_thm ("COMPACT_AFFINITY",
 (* We can state this in terms of diameter of a set.                          *)
 (* ------------------------------------------------------------------------- *)
 
-val diameter = new_definition ("diameter",
-  ``diameter s =
+(* This is a generalized ‘diameter’ with a metric parameter d *)
+Definition set_diameter_def :
+    set_diameter (d :'a metric) (s :'a set) =
+      if s = {} then (0 :real)
+      else sup {dist d (x,y) | x IN s /\ y IN s}
+End
+
+(* New definition of ‘diameter’ *)
+Overload diameter = “set_diameter mr1”
+
+(* Old definition of ‘diameter’ (now becomes a theorem) *)
+Theorem diameter :
+    !s. diameter s =
         if s = {} then (&0:real)
-        else sup {abs(x - y) | x IN s /\ y IN s}``);
+        else sup {abs(x - y) | x IN s /\ y IN s}
+Proof
+    RW_TAC std_ss [GSYM dist_def, dist, set_diameter_def]
+QED
 
 val DIAMETER_BOUNDED = store_thm ("DIAMETER_BOUNDED",
  ``!s. bounded s
@@ -19005,10 +18930,24 @@ val CLOSEST_POINT_IN_FRONTIER = store_thm ("CLOSEST_POINT_IN_FRONTIER",
 (* More general infimum of distance between two sets.                        *)
 (* ------------------------------------------------------------------------- *)
 
-val setdist = new_definition ("setdist",
- ``setdist(s,t) =
-        if (s = {}) \/ (t = {}) then &0
-        else inf {dist(x,y) | x IN s /\ y IN t}``);
+(* This is a generalized ‘setdist’ with a metric parameter d *)
+Definition set_dist_def :
+    set_dist (d :'a metric) ((s,t) :'a set # 'a set) =
+      if (s = {}) \/ (t = {}) then (0 :real)
+      else inf {dist d (x,y) | x IN s /\ y IN t}
+End
+
+(* New definition of ‘setdist’ *)
+Overload setdist = “set_dist mr1”
+
+(* Old definition of ‘diameter’ (now becomes a theorem) *)
+Theorem setdist :
+    !s t. setdist(s,t) =
+          if (s = {}) \/ (t = {}) then (&0 :real)
+          else inf {dist(x,y) | x IN s /\ y IN t}
+Proof
+    RW_TAC std_ss [GSYM dist_def, dist, set_dist_def]
+QED
 
 val SETDIST_EMPTY = store_thm ("SETDIST_EMPTY",
  ``(!t. setdist({},t) = &0) /\ (!s. setdist(s,{}) = &0)``,
@@ -21074,59 +21013,43 @@ val LOCALLY_OPEN_MAP_IMAGE = store_thm ("LOCALLY_OPEN_MAP_IMAGE",
 (* F_sigma and G_delta sets.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val gdelta = new_definition ("gdelta",
- ``gdelta(s:real->bool) <=>
-    ?g. COUNTABLE g /\ (!u. u IN g ==> open u) /\ (BIGINTER g = s)``);
+Overload gdelta = “gdelta_in euclidean”
+Overload fsigma = “fsigma_in euclidean”
 
-val fsigma = new_definition ("fsigma",
- ``fsigma(s:real->bool) <=>
-    ?g. COUNTABLE g /\ (!c. c IN g ==> closed c) /\ (BIGUNION g = s)``);
+Theorem gdelta :
+    !s. gdelta (s:real->bool) <=>
+        ?g. COUNTABLE g /\ (!u. u IN g ==> open u) /\ (BIGINTER g = s)
+Proof
+    rw [gdelta_in, INTERSECTION_OF, euclidean_open_def, SUBSET_DEF, IN_APP,
+        TOPSPACE_EUCLIDEAN, RELATIVE_TO_UNIV]
+QED
 
-val GDELTA_COMPLEMENT = store_thm ("GDELTA_COMPLEMENT",
- ``!s. gdelta(univ(:real) DIFF s) <=> fsigma s``,
-  GEN_TAC THEN REWRITE_TAC[gdelta, fsigma] THEN EQ_TAC THEN
-  DISCH_THEN(X_CHOOSE_THEN ``g:(real->bool)->bool`` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC ``IMAGE (\s. univ(:real) DIFF s) g`` THEN
-  ASM_SIMP_TAC real_ss [COUNTABLE_IMAGE, FORALL_IN_IMAGE] THEN
-  ASM_REWRITE_TAC[GSYM OPEN_CLOSED, GSYM closed_def] THEN
-  ONCE_REWRITE_TAC[BIGINTER_BIGUNION, BIGUNION_BIGINTER] THEN
-  SIMP_TAC real_ss [SET_RULE ``{f x | x IN IMAGE g s} = {f(g x) | x IN s}``] THEN
-  ASM_SIMP_TAC real_ss [SET_RULE ``UNIV DIFF (UNIV DIFF s) = s``,
-                  SET_RULE ``{x | x IN s} = s``]);
+Theorem fsigma :
+    !s. fsigma (s:real->bool) <=>
+        ?g. COUNTABLE g /\ (!c. c IN g ==> closed c) /\ (BIGUNION g = s)
+Proof
+    rw [fsigma_in, UNION_OF, euclidean_closed_def, SUBSET_DEF, IN_APP]
+QED
 
-val FSIGMA_COMPLEMENT = store_thm ("FSIGMA_COMPLEMENT",
- ``!s. fsigma(univ(:real) DIFF s) <=> gdelta s``,
-  ONCE_REWRITE_TAC[GSYM GDELTA_COMPLEMENT] THEN
-  REWRITE_TAC[SET_RULE ``UNIV DIFF (UNIV DIFF s) = s``]);
+Theorem GDELTA_COMPLEMENT :
+   !s. gdelta(univ(:real) DIFF s) <=> fsigma s
+Proof
+   rw [GDELTA_IN_FSIGMA_IN, TOPSPACE_EUCLIDEAN, COMPL_COMPL_applied]
+QED
 
-val CLOSED_AS_GDELTA = store_thm ("CLOSED_AS_GDELTA",
- ``!s:real->bool. closed s ==> gdelta s``,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[gdelta] THEN EXISTS_TAC
-   ``{ BIGUNION { ball(x:real,inv(&n + &1)) | x IN s} | n IN univ(:num)}`` THEN
-  SIMP_TAC real_ss [GSYM IMAGE_DEF, COUNTABLE_IMAGE, NUM_COUNTABLE] THEN
-  SIMP_TAC real_ss [FORALL_IN_IMAGE, OPEN_BIGUNION, OPEN_BALL] THEN
-  MATCH_MP_TAC(SET_RULE
-   ``(closure s = s) /\ s SUBSET t /\ t SUBSET closure s
-     ==> (t = s)``) THEN
-  ASM_REWRITE_TAC[CLOSURE_EQ] THEN CONJ_TAC THENL
-   [SIMP_TAC real_ss [SUBSET_BIGINTER, FORALL_IN_IMAGE, IN_UNIV] THEN
-    X_GEN_TAC ``n:num`` THEN SIMP_TAC real_ss [BIGUNION_IMAGE, SUBSET_DEF, GSPECIFICATION] THEN
-    X_GEN_TAC ``x:real`` THEN DISCH_TAC THEN EXISTS_TAC ``x:real`` THEN
-    ASM_REWRITE_TAC[CENTRE_IN_BALL, REAL_LT_INV_EQ] THEN
-    SIMP_TAC arith_ss [REAL_LT],
-    REWRITE_TAC[SUBSET_DEF, CLOSURE_APPROACHABLE, BIGINTER_IMAGE, IN_UNIV] THEN
-    X_GEN_TAC ``x:real`` THEN SIMP_TAC real_ss [GSPECIFICATION, BIGUNION_IMAGE] THEN
-    DISCH_TAC THEN X_GEN_TAC ``e:real`` THEN  DISCH_TAC THEN
-    FIRST_ASSUM(MP_TAC o ONCE_REWRITE_RULE [REAL_ARCH_INV]) THEN
-    DISCH_THEN(X_CHOOSE_THEN ``n:num`` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC o SPEC ``n:num``) THEN REWRITE_TAC[IN_BALL] THEN
-    DISCH_THEN (X_CHOOSE_TAC ``y:real``) THEN EXISTS_TAC ``y:real`` THEN
-    POP_ASSUM MP_TAC THEN MATCH_MP_TAC MONO_AND THEN REWRITE_TAC[] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] REAL_LT_TRANS) THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-        REAL_LT_TRANS)) THEN
-    MATCH_MP_TAC REAL_LT_INV2 THEN
-    SIMP_TAC arith_ss [REAL_OF_NUM_ADD, REAL_LT] THEN ASM_ARITH_TAC]);
+Theorem METRIZABLE_SPACE_EUCLIDEAN :
+   metrizable_space euclidean
+Proof
+   REWRITE_TAC[euclidean_def, METRIZABLE_SPACE_MTOPOLOGY]
+QED
+
+Theorem CLOSED_AS_GDELTA :
+   !s:real->bool. closed s ==> gdelta s
+Proof
+    RW_TAC std_ss [euclidean_closed_def]
+ >> MATCH_MP_TAC CLOSED_IMP_GDELTA_IN
+ >> ASM_REWRITE_TAC [METRIZABLE_SPACE_EUCLIDEAN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Local compactness.                                                        *)
@@ -22063,3 +21986,8 @@ val SUBORDINATE_PARTITION_OF_UNITY = store_thm ("SUBORDINATE_PARTITION_OF_UNITY"
     ASM_SIMP_TAC std_ss [CONTINUOUS_AT_SETDIST, CONTINUOUS_AT_WITHIN]]);
 
 val _ = export_theory();
+
+(* References:
+
+  [1] Bartle, R.G.: A Modern Theory of Integration. American Mathematical Soc. (2001).
+ *)

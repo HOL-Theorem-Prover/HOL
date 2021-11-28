@@ -2764,6 +2764,7 @@ val REAL_ADD_RDISTRIB = save_thm ("REAL_ADD_RDISTRIB", REAL_RDISTRIB);
 val REAL_OF_NUM_ADD = save_thm ("REAL_OF_NUM_ADD", REAL_ADD);
 
 val REAL_OF_NUM_LE = save_thm ("REAL_OF_NUM_LE", REAL_LE);
+val REAL_OF_NUM_LT = save_thm ("REAL_OF_NUM_LT", REAL_LT);
 
 val REAL_OF_NUM_MUL = save_thm ("REAL_OF_NUM_MUL", REAL_MUL);
 

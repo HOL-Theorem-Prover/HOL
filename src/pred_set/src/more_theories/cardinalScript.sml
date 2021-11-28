@@ -2314,8 +2314,6 @@ val GE_C = store_thm ("GE_C",
  ``!s t. s >=_c t <=> ?f. !y. y IN t ==> ?x. x IN s /\ (y = f x)``,
   REWRITE_TAC[ge_c, LE_C] THEN MESON_TAC[]);
 
-Overload COUNTABLE[inferior] = “countable”
-
 val COUNTABLE = store_thm
   ("COUNTABLE", ``!t. COUNTABLE t <=> univ(:num) >=_c t``,
     REWRITE_TAC [countable_def, cardgeq_def, cardleq_def]);
