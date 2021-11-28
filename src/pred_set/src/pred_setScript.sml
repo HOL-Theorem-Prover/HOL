@@ -6344,6 +6344,9 @@ RWTAC [] THENL
 val countable_def = TotalDefn.Define `
   countable s = ?f. INJ f s (UNIV:num set)`;
 
+(* for HOL-Light compatibility, moved here from cardinalTheory *)
+Overload COUNTABLE[inferior] = “countable”
+
 val countable_image_nats = store_thm( "countable_image_nats",
   ``countable (IMAGE f univ(:num))``, SIMP_TAC
   (srw_ss())[countable_def] THEN METIS_TAC[SURJ_IMAGE, SURJ_INJ_INV]);

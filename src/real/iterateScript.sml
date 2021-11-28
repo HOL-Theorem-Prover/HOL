@@ -1081,6 +1081,13 @@ val REAL_LE_INF_SUBSET = store_thm ("REAL_LE_INF_SUBSET",
   REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_LE_INF THEN
   MP_TAC(SPEC ``s:real->bool`` INF) THEN ASM_SET_TAC[]);
 
+Theorem REAL_INF_LE' :
+    !p x:real. (?y. y IN p) /\ (?y. !z. z IN p ==> y <= z) ==>
+               (inf p <= x <=> !y. (!z. z IN p ==> y <= z) ==> y <= x)
+Proof
+    REWRITE_TAC [IN_APP, REAL_INF_LE]
+QED
+
 val REAL_INF_BOUNDS = store_thm ("REAL_INF_BOUNDS",
  ``!s a b:real. ~(s = {}) /\ (!x. x IN s ==> a <= x /\ x <= b)
            ==> a <= inf s /\ inf s <= b``,
@@ -3579,14 +3586,6 @@ val REAL_SUB_POW_L1 = store_thm ("REAL_SUB_POW_L1",
 (* ------------------------------------------------------------------------- *)
 (* Some useful facts about real polynomial functions.                        *)
 (* ------------------------------------------------------------------------- *)
-
-val FORALL_IN_GSPEC = store_thm ("FORALL_IN_GSPEC",
- ``(!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
-   (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
-          (!x y. P x y ==> Q(f x y))) /\
-   (!P f. (!z. z IN {f w x y | P w x y} ==> Q z) <=>
-          (!w x y. P w x y ==> Q(f w x y)))``,
-   SRW_TAC [][] THEN SET_TAC []);
 
 val REAL_SUB_POLYFUN = store_thm ("REAL_SUB_POLYFUN",
  ``!a x y n. 1 <= n
