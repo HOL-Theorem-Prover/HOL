@@ -46,6 +46,11 @@ Definition sctlr_rel_def:
     reg'SCTLRType l3 = (31 >< 0) asl
 End
 
+Definition branch_hint_rel_def:
+  branch_hint_rel (l3 : arm8$BranchType option) (asl : bool) ⇔
+    asl = IS_SOME l3
+End
+
 Definition read_rel_def:
   read_rel rel l3 asl asl_reg ⇔
     rel l3 (asl_reg.read_from asl)
@@ -83,6 +88,7 @@ Definition state_rel_def:
     read_rel tcr_el1_rel l3.TCR_EL1 asl.regstate TCR_EL1_ref ∧
     read_rel tcr_el2_3_rel l3.TCR_EL2 asl.regstate TCR_EL2_ref ∧
     read_rel tcr_el2_3_rel l3.TCR_EL3 asl.regstate TCR_EL3_ref ∧
+    read_rel branch_hint_rel l3.branch_hint asl.regstate BranchTaken_ref ∧
     reg_rel l3.REG asl.regstate ∧
     mem_rel l3.MEM asl.memstate asl.tagstate ∧
     l3.exception = NoException
