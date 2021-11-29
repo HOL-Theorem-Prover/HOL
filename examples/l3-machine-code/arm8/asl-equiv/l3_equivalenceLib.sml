@@ -390,7 +390,7 @@ val asl_reg_ss =
     sail2_state_monadTheory.updateS_def,
     R_ref_def, PSTATE_ref_def, SEE_ref_def,
     SCTLR_EL1_ref_def, SCTLR_EL1_ref_def, SCTLR_EL2_ref_def, SCTLR_EL3_ref_def,
-    PC_ref_def,
+    PC_ref_def, BranchTaken_ref_def,
     SP_EL0_ref_def, SP_EL1_ref_def, SP_EL2_ref_def, SP_EL3_ref_def,
     TCR_EL1_ref_def, TCR_EL2_ref_def, TCR_EL3_ref_def
   ];
@@ -421,7 +421,8 @@ val [encode_rws, monad_rws, asl_word_rws, asl_reg_rws, l3_reg_rws, asl_sys_reg_r
 fun state_rel_tac thms =
   gvs ([
     flag_rel_def, pstate_rel_def, tcr_el1_rel_def, tcr_el2_3_rel_def,
-    sctlr_rel_def, read_rel_def, reg_rel_def, mem_rel_def, state_rel_def,
+    sctlr_rel_def, branch_hint_rel_def, read_rel_def,
+    reg_rel_def, mem_rel_def, state_rel_def,
     asl_sys_regs_ok_def,
     asl_reg_rws, l3_reg_rws,
     sail2_operators_mwordsTheory.vec_of_bits_def,
