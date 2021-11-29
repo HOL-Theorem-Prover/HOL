@@ -2713,7 +2713,7 @@ Theorem l3_asl_Mem_read_1:
     mem_rel l3 asl.memstate asl.tagstate ∧
     asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0w
   ⇒ let p = addrdesc.AddressDescriptor_paddress.FullAddress_address in
-    Mem_read addrdesc 1 accdesc asl = returnS (l3 (w2w p)) asl
+    Mem_read addrdesc 1 accdesc asl = returnS (l3 p) asl
 Proof
   LET_ELIM_TAC >> rw[Mem_read_def] >>
   simp[
@@ -2748,6 +2748,51 @@ Proof
   DEP_REWRITE_TAC[OPTION_MAP_just_list] >>
   simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss, EVERY_MAP] >>
   simp[returnS]
+QED
+
+Theorem l3_asl_Mem_read_4:
+  ∀l3 asl addrdesc accdesc.
+    mem_rel l3 asl.memstate asl.tagstate ∧
+    asl.regstate.bitvector_64_dec_reg "__CNTControlBase" = 0w
+  ⇒ let p = addrdesc.AddressDescriptor_paddress.FullAddress_address in
+    Mem_read addrdesc 4 accdesc asl =
+    returnS (l3 (p + 3w) @@ l3 (p + 2w) @@ l3 (p + 1w) @@ l3 p) asl
+Proof
+  LET_ELIM_TAC >> rw[Mem_read_def] >>
+  simp[
+    sail2_state_monadTheory.undefined_boolS_def, undefined_FaultRecord_def,
+    undefined_MemoryAttributes_def, undefined_FullAddress_def,
+    undefined_Fault_def, undefined_AccType_def,
+    preludeTheory.undefined_int_def
+    ] >>
+  simp[asl_sys_reg_rws] >>
+  simp[Once returnS, Once bindS] >>
+  simp[
+    preludeTheory.ReadMemory_def,
+    sail2_state_monadTheory.read_memS_def,
+    sail2_state_monadTheory.read_memtS_def,
+    asl_word_rws, w2n_w2w
+    ] >>
+  simp[
+    sail2_state_monadTheory.read_memt_bytesS_def,
+    sail2_state_monadTheory.readS_def,
+    bindS, returnS
+    ] >>
+  simp[sail2_state_monadTheory.get_mem_bytes_def] >>
+  gvs[mem_rel_def] >>
+  qspec_then `p` assume_tac w2n_lt >> gvs[] >>
+  map_every (fn qt => last_assum $ qspec_then qt assume_tac)
+    [`p`,`p+1w`,`p+2w`,`p+3w`] >>
+  last_x_assum kall_tac >> gvs[word_add_def] >>
+  simp[sail2_valuesTheory.and_bit_def] >>
+  ntac 5 $ simp[Once sail2_valuesTheory.just_list_def] >>
+  simp[returnS] >>
+  simp[sail2_valuesTheory.bits_of_mem_bytes_def,
+       sail2_valuesTheory.bits_of_bytes_def] >>
+  simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss] >>
+  DEP_REWRITE_TAC[OPTION_MAP_just_list] >>
+  simp[MAP_MAP_o, combinTheory.o_DEF, SF ETA_ss, EVERY_MAP] >>
+  simp[returnS] >> DEP_REWRITE_TAC[word_concat_v2w] >> simp[]
 QED
 
 Theorem l3_asl_Mem_read_8:
@@ -2955,6 +3000,120 @@ Proof
   `mem = mem_dword l3.MEM addr` by (
     unabbrev_all_tac >> simp[mem_dword_def] >> blastLib.BBLAST_TAC) >>
   simp[mem_dword_def] >> IF_CASES_TAC >> gvs[] >> blastLib.BBLAST_TAC
+QED
+
+Theorem l3_asl_Mem_read0_4_AccType_IFETCH:
+  ∀l3 asl addr. state_rel l3 asl ∧ asl_sys_regs_ok asl ∧
+    ((SCTLR l3).A ⇒ Aligned (addr, 4)) ⇒
+  Mem_read0 addr 4 AccType_IFETCH asl =
+  returnS (FST (Mem (addr,4,AccType_IFETCH) l3)) asl : word32 res
+Proof
+  rw[] >> simp[Mem_read0_def, AArch64_CheckAlignment_def] >>
+  simp[sail2_state_monadTheory.undefined_boolS_def, undefined_Constraint_def,
+       ConstrainUnpredictable_def] >>
+  simp[l3_asl_Align, asl_word_rws] >>
+  simp[INT_ADD_CALCULATE, integer_wordTheory.i2w_pos, GSYM word_add_def] >>
+  simp[EL_MAP, sail2_valuesTheory.just_list_def, el_w2v] >>
+  drule_all SCTLR_read__1 >> strip_tac >>
+  drule $ INST_TYPE [gamma |-> ``:word32``] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  qmatch_goalsub_abbrev_tac `foo ' 1` >>
+  `foo ' 1 = (SCTLR l3).A` by (
+    unabbrev_all_tac >> simp[reg'SCTLRType_def] >> CASE_TAC >> simp[] >>
+    gvs[SCTLR_def, TranslationRegime_def] >>
+    Cases_on_word_value `l3.PSTATE.EL` >> gvs[] >> blastLib.BBLAST_TAC) >>
+  simp[Once $ GSYM COND_RAND] >> ntac 2 $ pop_assum kall_tac >>
+  IF_CASES_TAC >- gvs[Aligned_def] >>
+  pop_assum mp_tac >> simp[DISJ_EQ_IMP] >> strip_tac >> gvs[] >>
+  reverse IF_CASES_TAC >> gvs[]
+  >- (
+    simp[AArch64_MemSingle_read_def, l3_asl_Align] >>
+    qspecl_then [`addr`,`AccType_IFETCH`,`F`,`T`,`4`,`asl`]
+      assume_tac AArch64_TranslateAddress >> gvs[] >>
+    drule $ INST_TYPE [gamma |-> ``:word32``] returnS_bindS >>
+    simp[] >> disch_then kall_tac >>
+    qspecl_then [`AccType_IFETCH`,`asl`] mp_tac CreateAccessDescriptor >>
+    impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
+    qspec_then `asl` mp_tac IsSecure >>
+    impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
+    ntac 2 $ simp[Once returnS] >> simp[HaveMTEExt] >>
+    qpat_abbrev_tac `addr = _.FullAddress_address` >>
+    qspecl_then [`addr`,`AccType_IFETCH`,`asl`] mp_tac AArch64_AccessIsTagChecked >>
+    impl_tac >- gvs[asl_sys_regs_ok_def] >> strip_tac >>
+    drule $ INST_TYPE [gamma |-> ``:word32``] returnS_bindS >>
+    simp[] >> disch_then kall_tac >>
+    qmatch_goalsub_abbrev_tac `Mem_read _ _ accdesc` >>
+    qspecl_then [`l3.MEM`,`asl`,`addrdesc`,`accdesc`] mp_tac l3_asl_Mem_read_4 >>
+    impl_tac >- state_rel_tac[] >> rw[] >>
+    drule $ INST_TYPE [gamma |-> ``:word32``] returnS_bindS >>
+    simp[] >> disch_then kall_tac >>
+    drule_all l3_asl_BigEndian >> strip_tac >>
+    drule $ INST_TYPE [gamma |-> ``:word32``] returnS_bindS >>
+    simp[] >> disch_then kall_tac >>
+    simp[Mem_def, CheckAlignment_def, Aligned_def] >>
+    ntac 3 (ntac 4 $ simp[Once state_transformerTheory.FOR_def]) >>
+    simp[state_transformerTheory.BIND_DEF] >>
+    simp[BigEndianReverse_def] >>
+    rewrite_tac[GSYM APPEND_ASSOC] >>
+    DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+    map_every (rewrite_tac o single) [
+      GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
+    simp[reverse_endianness0_def] >>
+    IF_CASES_TAC >> gvs[] >> simp[returnS] >>
+    WORD_DECIDE_TAC
+    ) >>
+  simp[AArch64_MemSingle_read_def, l3_asl_Align, Align_def] >>
+  qspecl_then [`addr`,`AccType_IFETCH`,`F`,`F`,`1`,`asl`]
+    assume_tac AArch64_TranslateAddress >> gvs[] >>
+  drule $ INST_TYPE [gamma |-> ``:word32``] returnS_bindS >>
+  simp[] >> disch_then kall_tac >>
+  qspecl_then [`AccType_IFETCH`,`asl`] mp_tac CreateAccessDescriptor >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
+  qspec_then `asl` mp_tac IsSecure >>
+  impl_tac >- gvs[asl_sys_regs_ok_def] >> rw[] >> simp[Once bindS] >>
+  ntac 2 $ simp[Once returnS] >> simp[HaveMTEExt] >>
+  `∀addr. AArch64_AccessIsTagChecked addr AccType_IFETCH asl = returnS F asl` by (
+    rw[] >> irule AArch64_AccessIsTagChecked >> gvs[asl_sys_regs_ok_def]) >>
+  simp[Once bindS, Once returnS] >>
+  qspecl_then [`l3.MEM`,`asl`] mp_tac l3_asl_Mem_read_1 >>
+  impl_tac >- state_rel_tac[] >> rw[] >>
+  simp[Once bindS, Once returnS] >>
+  ntac 4 $ simp[Once sail2_valuesAuxiliaryTheory.index_list_rw] >>
+  ntac 4 $ simp[Once sail2_stateAuxiliaryTheory.foreachS_rw] >>
+  simp[GSYM bit_field_insert_def] >>
+  qpat_abbrev_tac `addr = _.FullAddress_address` >>
+  qmatch_goalsub_abbrev_tac `word_modify bar _` >>
+  `word_modify bar : word64 -> word64 = bit_field_insert 7 0 (l3.MEM addr)` by (
+      simp[Abbr `bar`, bit_field_insert_def]) >>
+  simp[Abbr `bar`] >>
+  map_every (fn qt =>
+    qspecl_then [qt,`AccType_IFETCH`,`F`,`F`,`1`,`asl`]
+      strip_assume_tac AArch64_TranslateAddress)
+  [`addr + i2w 1`,`addr + i2w 2`,`addr + i2w 3`] >>
+  gvs $ map (EVAL o Term) [`i2w 1`,`i2w 2`,`i2w 3`,`i2w 4`,`i2w 5`,`i2w 6`,`i2w 7`] >>
+  ntac 3 (
+    simp[Once returnS, Once bindS] >>
+    simp[Once returnS, Once bindS] >>
+    simp[Once returnS, Once bindS] >>
+    simp[Once returnS] >>
+    simp[Once returnS, Once bindS] >>
+    simp[Once returnS, Once bindS]
+    ) >>
+  drule_all l3_asl_BigEndian >> strip_tac >> simp[bindS, returnS] >>
+  qmatch_goalsub_abbrev_tac `if _ then _ else mem` >>
+  simp[Mem_def, CheckAlignment_def, Aligned_def] >>
+  ntac 3 (ntac 4 $ simp[Once state_transformerTheory.FOR_def]) >>
+  simp[state_transformerTheory.BIND_DEF] >>
+  simp[BigEndianReverse_def] >>
+  rewrite_tac[GSYM APPEND_ASSOC] >>
+  DEP_REWRITE_TAC[ByteList_APPEND_bytes] >> simp[] >>
+  map_every (rewrite_tac o single) [
+    GSYM APPEND_ASSOC, concat16, concat32, concat64] >>
+  simp[reverse_endianness0_def] >>
+  `mem = l3.MEM (addr + 3w) @@ l3.MEM (addr + 2w) @@
+          l3.MEM (addr + 1w) @@ l3.MEM addr` by (
+    unabbrev_all_tac >> blastLib.BBLAST_TAC) >>
+  simp[] >> IF_CASES_TAC >> simp[] >> blastLib.BBLAST_TAC
 QED
 
 (**)
