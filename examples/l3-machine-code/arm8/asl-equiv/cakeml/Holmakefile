@@ -1,7 +1,0 @@
-INCLUDES = ../ $(CAKEMLDIR)/compiler/encoders/arm8
-
-ifdef POLY
-
-HOLHEAP=../mra-hol-snapshots/A64_ISA_v86A/armv86a-heap
-
-endif
