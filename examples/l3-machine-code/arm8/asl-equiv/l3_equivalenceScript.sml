@@ -58,7 +58,6 @@ End
 
 Definition reg_rel_def:
   reg_rel (l3 : word5 -> word64) (asl : regstate) ⇔
-    l3 (n2w 31) = 0w ∧
     LENGTH (R_ref.read_from asl) = 32 ∧
     ∀n. n ≤ 31 ⇒ l3 (n2w n) = EL n (R_ref.read_from asl)
 End
@@ -73,6 +72,16 @@ Definition mem_rel_def:
         l3 w = v2w byt
 End
 
+Theorem mem_rel:
+  mem_rel (l3 : word64 -> word8) (asl : num |-> bitU list) tags =
+    ∀w.
+      FLOOKUP tags (w2n w) = SOME B0 ∧
+      FLOOKUP asl (w2n w) = SOME $ MAP bitU_of_bool $ w2v (l3 w)
+Proof
+  rw[mem_rel_def] >> eq_tac >> rw[]
+  >- (first_x_assum $ qspec_then `w` assume_tac >> gvs[w2v_v2w])
+  >- (irule_at Any EQ_REFL >> simp[])
+QED
 
 Definition state_rel_def:
   state_rel (l3 : arm8_state) (asl : regstate sequential_state) ⇔
