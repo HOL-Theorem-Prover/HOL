@@ -1,3 +1,21 @@
+(* ========================================================================= *)
+(*  A basic theory of the cardinality partial order and equivalence          *)
+(*  relations (by Michael Norrish, see also README)                          *)
+(* ========================================================================= *)
+(*  Basic notions of cardinal arithmetic (by John Harrison from HOL-Light)   *)
+(* ------------------------------------------------------------------------- *)
+(*  HOL-Light's Cardinal Theory (Library/card.ml)                            *)
+(*                                                                           *)
+(*        (c) Copyright 2015                                                 *)
+(*                       Muhammad Qasim,                                     *)
+(*                       Osman Hasan,                                        *)
+(*                       Hardware Verification Group,                        *)
+(*                       Concordia University                                *)
+(*                                                                           *)
+(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
+(*                                                                           *)
+(* ========================================================================= *)
+
 open HolKernel Parse boolLib bossLib mesonLib
 
 open boolSimps pred_setTheory set_relationTheory tautLib
@@ -1631,21 +1649,6 @@ val bijections_cardeq = Q.store_thm(
   >- (first_x_assum (qspecl_then [‘T’, ‘a’] mp_tac) >> simp[] >> rw[])
   >- (first_x_assum (qspecl_then [‘F’, ‘a’] mp_tac) >> simp[] >> rw[]));
 
-(* ========================================================================= *)
-(*                                                                           *)
-(*               HOL-light's Cardinal Theory (Library/card.ml)               *)
-(*                                                                           *)
-(*        (c) Copyright 2015                                                 *)
-(*                       Muhammad Qasim,                                     *)
-(*                       Osman Hasan,                                        *)
-(*                       Hardware Verification Group,                        *)
-(*                       Concordia University                                *)
-(*                                                                           *)
-(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
-(*                                                                           *)
-(*      (merged into HOL4's cardinalTheory by Chun Tian <ctian@fbk.eu>)      *)
-(* ========================================================================= *)
-
 (* ------------------------------------------------------------------------- *)
 (* misc.                                                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -3065,9 +3068,7 @@ QED
 (* Lemmas about countability.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val NUM_COUNTABLE = store_thm ("NUM_COUNTABLE",
- ``COUNTABLE univ(:num)``,
-  REWRITE_TAC[COUNTABLE, ge_c, CARD_LE_REFL]);
+Theorem NUM_COUNTABLE = num_countable
 
 val COUNTABLE_ALT_cardleq = store_thm
   ("COUNTABLE_ALT_cardleq",
