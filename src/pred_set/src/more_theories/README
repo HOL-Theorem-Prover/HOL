@@ -22,6 +22,7 @@ ordinal:
   to get back a new ordinal). Derive the standard arithmetic
   operations, define constants such as ω and ε₀, and show that all
   ordinals have a standard "polynomial" representation.
+  (Also see [1] for more details.)
 
 ucord:
   Show the existence of uncountable ordinals if the underlying type is
@@ -42,3 +43,8 @@ ordinalNotation:
 
   Some minor additions to this theory show some of the connection with
   the other presentation of ordinals.
+
+[1] Norrish, M., Huffman, B.: Ordinals in HOL: Transfinite Arithmetic up to
+   (and Beyind) $\omega_1$. In: LNCS 7998 - Interactive Theorem Proving
+   (ITP 2013). pp. 133–146. Springer (2013).
+    URL: http://dx.doi.org/10.1007/978-3-642-39634-2_12
