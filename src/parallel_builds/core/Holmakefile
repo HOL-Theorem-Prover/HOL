@@ -53,7 +53,7 @@ INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
             $(patsubst %,../../%,$(SRCTESTDIRS))
 
 ifneq($(HOLSELFTESTLEVEL),1)
-EX2DIRS = AKS algebra algorithms/boyer-moore \
+EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/nominal \
             algorithms/unification/triangular/first-order \
           balanced_bst \
