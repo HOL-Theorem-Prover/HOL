@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib
 open boolSimps
 
 open set_relationTheory pred_setTheory cardinalTheory
-open wellorderTheory
+open wellorderTheory topologyTheory
 
 val _ = new_theory "ordinal"
 
@@ -2785,5 +2785,141 @@ Proof
       metis_tac[CARD_LE_CONG, cardeq_REFL, preds_omega_UNIV]) >>
   first_x_assum drule >> simp[preds_omega_lt_preds_omega1]
 QED
+
+(* ----------------------------------------------------------------------
+    Connection to topological notions
+   ---------------------------------------------------------------------- *)
+
+Definition ival_def:
+  ival (a:'a ordinal) b = { e | a < e /\ e < b }
+End
+
+(* including rays (2nd disj'n) lets the space cover all ordinals (incl. 0). *)
+Theorem order_topology_exists:
+  istopology { s | !e. e IN s ==>
+                       (?a:'a ordinal b. e IN ival a b /\ ival a b SUBSET s) \/
+                       ?b. e < b /\ !d. d < b ==> d IN s }
+Proof
+  simp[istopology, PULL_EXISTS, DISJ_IMP_THM, FORALL_AND_THM] >> rw[]
+  >- (rpt $ first_x_assum dxrule >> rpt strip_tac >~
+      [‘ival _ _ SUBSET s /\ ival _ _ SUBSET t’, ‘ival a b SUBSET s’,
+       ‘ival x y SUBSET t’]
+      >- (disj1_tac >>
+          wlog_tac ‘a <= x’ [‘a’, ‘b’, ‘x’, ‘y’, ‘s’, ‘t’]
+          >- (gvs[] >> metis_tac[ordle_lteq]) >>
+          qexistsl_tac [‘x’, ‘if y <= b then y else b’] >>
+          rw[] >> gvs[ival_def, SUBSET_DEF] >>
+          metis_tac[ordlet_TRANS, ordlte_TRANS, ordlt_TRANS]) >~
+      [‘ival _ _ SUBSET A /\ ival _ _ SUBSET B’, ‘_ < a ==> _ IN A’,
+       ‘_ < b ==> _ IN B’]
+      >- (disj2_tac >> qexists_tac ‘if a < b then a else b’ >> rw[] >>
+          metis_tac[ordlt_TRANS, ordlte_TRANS]) >>
+      rename [‘ival a b SUBSET A’, ‘e < c’] >>
+      disj1_tac >> qexistsl_tac [‘a’, ‘if b < c then b else c’] >> rw[] >>
+      gvs[ival_def, SUBSET_DEF] >> metis_tac[ordlte_TRANS, ordlt_TRANS]) >>
+  qpat_x_assum ‘_ SUBSET _’ mp_tac >>
+  simp[SUBSET_DEF, SimpL “$==>”] >> disch_then drule >> simp[] >>
+  disch_then drule >> strip_tac >> metis_tac[SUBSET_BIGUNION_SUBSET_I]
+QED
+
+Definition ordlt_top_def:
+  ordlt_top =
+  topology { s | !e. e IN s ==>
+                     (?a:'a ordinal b. e IN ival a b /\ ival a b SUBSET s) \/
+                     ?b. e < b /\ !d. d < b ==> d IN s }
+End
+
+Theorem open_in_ordlt:
+  open_in ordlt_top s <=>
+  !e. e IN s ==> (?a:'a ordinal b. e IN ival a b /\ ival a b SUBSET s) \/
+                 ?b. e < b /\ !d. d < b ==> d IN s
+Proof
+  simp[topology_tybij |> cj 2 |> iffLR, order_topology_exists, ordlt_top_def]
+QED
+
+Theorem topspace_ordlt_top[simp]:
+  topspace ordlt_top = UNIV
+Proof
+  simp[topspace, EXTENSION, open_in_ordlt] >> qx_gen_tac ‘a’ >>
+  qexists_tac ‘{ e | e < ordSUC a }’ >> simp[] >> metis_tac[]
+QED
+
+Theorem limpt_islimit:
+  limpt ordlt_top a (preds a) <=> islimit a /\ a <> 0
+Proof
+  simp[limpt_thm, EQ_IMP_THM] >> rpt strip_tac >> gvs[]
+  >- (Cases_on ‘a’ using ord_CASES >> simp[] >>
+      rename [‘ordSUC a IN _’] >>
+      pop_assum $ qspec_then ‘ival a (ordSUC (ordSUC a))’ mp_tac >> simp[] >>
+      rpt strip_tac >~
+      [‘open_in’]
+      >- (simp[open_in_ordlt] >> metis_tac[SUBSET_REFL]) >>
+      simp[ival_def] >>
+      rename [‘b = ordSUC a’] >> Cases_on ‘b = ordSUC a’ >> simp[] >>
+      ‘b < ordSUC a \/ ordSUC a < b’ by metis_tac[ordlt_trichotomy] >>
+      simp[] >> gs[ordlt_SUC_DISCRETE, ordle_lteq])
+  >- (pop_assum mp_tac >> simp[] >> qexists_tac ‘{ a | a < 1 }’ >>
+      simp[open_in_ordlt] >> metis_tac[]) >>
+  gs[open_in_ordlt] >> first_x_assum $ drule_then strip_assume_tac >~
+  [‘a IN ival x y’, ‘ival x y SUBSET A’]
+  >- (gs[SUBSET_DEF, ival_def] >>
+      ‘ordSUC x < a’ by metis_tac[islimit_SUC_lt] >>
+      ‘ordSUC x IN A’ by metis_tac[ordlt_SUC, ordlt_TRANS] >>
+      metis_tac[ordlt_REFL]) >>
+  qexists_tac ‘0’ >> simp[] >>
+  metis_tac[ordleq0, ordlt_TRANS]
+QED
+
+Theorem open_sing_nonlimit:
+  open_in ordlt_top {x} <=> ~islimit x \/ x = 0
+Proof
+  qspec_then ‘x’ strip_assume_tac ord_CASES >> simp[] >~
+  [‘open_in _ {0}’]
+  >- (simp[open_in_ordlt] >> disj2_tac >> qexists_tac ‘1’ >>
+      simp[ordlt_fromNat, PULL_EXISTS]) >~
+  [‘open_in _ {ordSUC a}’]
+  >- (simp[open_in_ordlt] >> disj1_tac >>
+      qexistsl_tac [‘a’, ‘ordSUC (ordSUC a)’] >>
+      simp[ival_def, SUBSET_DEF] >>
+      qx_gen_tac ‘b’ >> Cases_on ‘b = ordSUC a’ >> simp[] >>
+      ‘b < ordSUC a \/ ordSUC a < b’ by metis_tac[ordlt_trichotomy] >>
+      simp[] >> CCONTR_TAC >> gs[ordlt_SUC_DISCRETE, ordle_lteq] >>
+      metis_tac[ordlt_TRANS, ordlt_REFL]) >>
+  ‘x <> 0’ by (strip_tac >> gvs[]) >> simp[open_in_ordlt] >>
+  rw[] >> simp[ival_def, SUBSET_DEF] >~
+  [‘x <= a’, ‘b <= x’]
+  >- (Cases_on ‘x <= a’ >> gs[] >>
+      Cases_on ‘b <= x’ >> gs[] >>
+      ‘ordSUC a < x’ by simp[islimit_SUC_lt] >> qexists_tac ‘ordSUC a’ >>
+      simp[] >> metis_tac[ordlt_TRANS, ordlt_REFL]) >>
+  rename [‘a <= x’, ‘_ <> x’] >>
+  Cases_on ‘x < a’ >> simp[] >> qexists_tac ‘0’  >>
+  metis_tac[ordleq0, ordlt_TRANS]
+QED
+
+Theorem rays_open:
+  open_in ordlt_top { x | x < a } /\
+  open_in ordlt_top { x | a < x }
+Proof
+  conj_tac >- (simp[open_in_ordlt] >> metis_tac[]) >>
+  qabbrev_tac ‘k = { ival a b | b | T}’ >>
+  ‘!s. s IN k ==> open_in ordlt_top s’
+    by (simp[Abbr‘k’, open_in_ordlt, PULL_EXISTS] >>
+        metis_tac[SUBSET_REFL]) >>
+  ‘{ x | a < x } = BIGUNION k’ suffices_by metis_tac[OPEN_IN_BIGUNION] >>
+  simp[Once EXTENSION, Abbr‘k’, PULL_EXISTS, ival_def] >>
+  metis_tac[ordlt_SUC]
+QED
+
+
+Theorem closed_sing:
+  closed_in ordlt_top {x}
+Proof
+  simp[closed_in] >>
+  ‘UNIV DIFF {x} = {y | y < x} UNION {y | x < y}’
+    by (simp[EXTENSION] >> metis_tac[ordlt_trichotomy, ordlt_REFL]) >>
+  simp[OPEN_IN_UNION, rays_open]
+QED
+
 
 val _ = export_theory()
