@@ -53,7 +53,9 @@ INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
             $(patsubst %,../../%,$(SRCTESTDIRS))
 
 ifneq($(HOLSELFTESTLEVEL),1)
-EX2DIRS = AKS algebra algorithms/unification/triangular/nominal \
+EX2DIRS = AKS algebra algorithms/boyer-moore \
+            algorithms/unification/triangular/nominal \
+            algorithms/unification/triangular/first-order \
           balanced_bst \
           computability/kolmog computability/lambda computability/recdegrees \
           computability/register computability/turing \

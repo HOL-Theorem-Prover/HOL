@@ -4,7 +4,6 @@ src/TeX
 !src/TeX/theory_tests
 !src/TeX/theory_tests/proj1paper
 src/parallel_builds/core
-!!examples/algorithms/unification/triangular/first-order
 !!examples/decidable_separationLogic/src/
 !!examples/ARM/arm6-verification/correctness
 !!examples/ARM/v4
@@ -12,4 +11,3 @@ src/parallel_builds/core
 !!src/emit/ML
 !src/emit/theory_tests
 !src/emit/theory_tests1
-!!examples/algorithms/boyer_moore
