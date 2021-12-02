@@ -1,5 +1,5 @@
-INCLUDES = ../real ../sort ../res_quan/src ../n-bit ../pred_set/src/more_theories \
-	../topology ../quotient/src
+INCLUDES = ../real ../sort ../res_quan/src ../n-bit \
+           ../pred_set/src/more_theories ../quotient/src
 
 EXTRA_CLEANS = selftest.exe prob-selftest.log
 

@@ -2,10 +2,21 @@ CLINE_OPTIONS = -r
 
 # directories to build under src/
 SRCRELNAMES = \
-  monad/more_monads string sort res_quan/src quotient/src hol88 bag n-bit \
-  finite_maps ring/src integer topology transfer update emit \
-  pred_set/src/more_theories coalgebras rational datatype/inftree search \
-  real floating-point probability temporal/src float Boolify/src HolQbf HolSmt
+  bag Boolify/src \
+  coalgebras \
+  datatype/inftree \
+  emit \
+  finite_maps float floating-point \
+  hol88 HolQbf HolSmt \
+  integer \
+  monad/more_monads \
+  n-bit \
+  pred_set/src/more_theories probability \
+  quotient/src \
+  rational real res_quan/src ring/src \
+  search sort string \
+  temporal/src transfer \
+  update
 
 INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
 

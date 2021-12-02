@@ -1,4 +1,4 @@
-INCLUDES = ../n-bit ../integer ../real ../res_quan/src ../topology \
+INCLUDES = ../n-bit ../integer ../real ../res_quan/src \
            ../quotient/src ../hol88 ../string ../sort
 
 all: $(DEFAULT_TARGETS) selftest.exe
