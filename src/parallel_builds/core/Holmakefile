@@ -42,7 +42,10 @@ EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
 # selftest directories under src/quotient
 QUOTDIRS = examples examples/lambda examples/sigma
 
-SRCTESTDIRS = integer/testing string/theorytesting tfl/examples
+SRCTESTDIRS = \
+  integer/testing \
+  string/theorytesting \
+  tfl/examples transfer/examples
 
 ifdef POLY
 SRCTESTDIRS += n-bit/interactive_tests
