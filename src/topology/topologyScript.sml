@@ -344,6 +344,22 @@ Definition limpt:
   !N:'a->bool. neigh(top)(N,x) ==> ?y. ~(x = y) /\ S' y /\ N y
 End
 
+(* alternative characterisation without needing neigh, but using IN, rather
+   than application *)
+
+Theorem limpt_thm:
+  limpt t x A <=>
+  x IN topspace t /\
+  !U. open_in t U /\ x IN U ==> ?y. y IN U /\ y IN A /\ y <> x
+Proof
+  rw[limpt, neigh, PULL_EXISTS] >> EQ_TAC >>
+  rw[] >> fs[IN_DEF]
+  >- metis_tac[SUBSET_REFL, OPEN_IN_SUBSET]
+  >> metis_tac[SUBSET_DEF, IN_DEF]
+QED
+
+
+
 (*---------------------------------------------------------------------------*)
 (* Prove that a set is closed iff it contains all its limit points           *)
 (*---------------------------------------------------------------------------*)
