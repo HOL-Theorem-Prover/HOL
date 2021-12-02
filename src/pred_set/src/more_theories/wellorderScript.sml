@@ -1301,6 +1301,26 @@ val allsets_wellorderable = store_thm(
         metis_tac[WIN_elsOf]) >>
   metis_tac[]);
 
+Theorem reln_to_rel[local]:
+  reln_to_rel = CURRY
+Proof
+  simp[FUN_EQ_THM, reln_to_rel_def, IN_DEF]
+QED
+
+Theorem StrongWellOrderExists:
+  ?R:'a -> 'a -> bool. StrongLinearOrder R /\ WF R
+Proof
+  qspec_then ‘univ(:'a)’ (qx_choose_then ‘wo’ assume_tac)
+             allsets_wellorderable >>
+  qspec_then ‘wo’ mp_tac (GEN_ALL termP_term_REP) >>
+  simp[wellorder_def] >> gs[elsOf_def] >>
+  strip_tac >> qexists_tac ‘CURRY $ strict $ destWO wo’ >>
+  gs[wellfounded_WF] >>
+  simp[GSYM strict_linear_order_reln_to_rel_conv_UNIV, GSYM reln_to_rel,
+       strict_linear_order]
+QED
+
+
 (* ------------------------------------------------------------------------- *)
 (*    Wellfoundedness (WF) from hol-light's iterateTheory                    *)
 (* ------------------------------------------------------------------------- *)
