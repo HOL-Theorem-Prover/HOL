@@ -78,6 +78,10 @@ Incompatibilities:
 
 *   The `MEMBER_NOT_EMPTY` theorem in `bagTheory` has been renamed to `BAG_MEMBER_NOT_EMPTY` to avoid a name-clash with a theorem of the same name in `pred_setTheory`.
 
+*   The “global” simplification tactics (`gs`, `gvs` *et al*) have been adjusted to simplify older assumptions before later ones.
+    This will keep assumption *A* in the list if it is newer (more recently added) than, and equivalent to, older assumption *B*.
+    The new `rgs` is like the old `gs`.
+
 * * * * *
 
 <div class="footer">
