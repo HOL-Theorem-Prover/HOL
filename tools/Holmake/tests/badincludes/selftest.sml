@@ -40,3 +40,12 @@ val _ = inDir "warnincs"
 val _ = inDir "dieincs"
               (t (fail_and ["Can't redefine", "INCLUDES"])
                  "Repeated definition of INCLUDES") []
+
+val _ = inDir "selfloopdir"
+              (t (fail_and ["INCLUDES chain"]) "INCLUDES self-loop") []
+val _ = inDir "onesteploopdir"
+              (t (fail_and ["INCLUDES chain"]) "INCLUDES one-step-loop") []
+val _ = inDir "nestedloopdir"
+              (t (fail_and ["INCLUDES chain"]) "More complex INCLUDES loop") []
+val _ = inDir "loopish_but_ok"
+              (t (succeed_and ["Finished"]) "INCLUDES DAG OK") ["-r"]

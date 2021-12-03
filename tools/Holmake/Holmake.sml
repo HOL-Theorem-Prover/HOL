@@ -343,12 +343,19 @@ fun print_set ds =
   "{" ^ set_concatWith hmdir.pretty_dir ", " ds ^ "}"
 
 type incmap = (hmdir.t, {incs:dirset,pres:dirset}) Binarymap.dict
-type dirinfo = {incdirmap : incmap, visited : hmdir.t Binaryset.set}
+type dirinfo = {incdirmap : incmap, visited : hmdir.t Binaryset.set,
+                ancestors : hmdir.t list (* most recent hd of list *)}
 type 'a hmfold =
      {includes : string list, preincludes : string list} ->
      (string -> unit) ->
      hmdir.t ->
      'a -> 'a
+
+fun find_upto cmp pfx x els =
+    case els of
+        [] => NONE
+      | h::t => if cmp (h,x) = EQUAL then SOME (h::pfx)
+                else find_upto cmp (h::pfx) x t
 (* ----------------------------------------------------------------------
 
     Parameters
@@ -371,7 +378,7 @@ type 'a hmfold =
    ---------------------------------------------------------------------- *)
 fun 'a recursively getnewincs dsopt {outputfns,verb,hm,dirinfo,dir,data} =
 let
-  val {incdirmap,visited} = dirinfo : dirinfo
+  val {incdirmap,visited,ancestors} = dirinfo : dirinfo
   val hm : 'a hmfold = hm
   val {warn,diag,info,chatty,...} : output_functions = outputfns
   val {includes=incset, preincludes = preincset} = getnewincs dir
@@ -394,7 +401,23 @@ let
   val _ = diag (fn _ =>
                    "recursively: incdmap on dir " ^ hmdir.pretty_dir dir ^
                    " = " ^ print_set (#incs (idm_lookup incdirmap dir)))
+  val _ = diag (fn _ =>
+                   "recursively: ancestor chain = " ^
+                   String.concatWith ", " (map hmdir.pretty_dir ancestors))
   fun recurse (acc as {visited,incdirmap,data:'a}) newdir = let
+    val _ =
+        case find_upto hmdir.compare [newdir] newdir ancestors of
+            NONE => ()
+          | SOME badchain =>
+            let
+              val diag = if verb = "Cleaning" then warn
+                         else (fn s => (#tgtfatal outputfns s;
+                                        OS.Process.exit OS.Process.failure))
+            in
+              diag ("INCLUDES chain loops:\n  " ^
+                    String.concatWith " -->\n  "
+                                      (map hmdir.pretty_dir badchain))
+            end
   in
     if Binaryset.member(visited, newdir) then
       (* even if you don't want to rebuild newdir, you still want to learn
@@ -413,7 +436,10 @@ let
       val _ = diag (fn _ => "recursively: Visited set = " ^ print_set visited)
       val _ = OS.FileSys.chDir (hmdir.toAbsPath newdir)
       val result =
-          case recur_abbrev newdir data {incdirmap=incdirmap, visited=visited}of
+          case recur_abbrev newdir data
+                            {incdirmap=incdirmap, visited=visited,
+                             ancestors = newdir :: ancestors}
+           of
               {visited,incdirmap = idm0,data=data'} =>
               {visited = visited,
                incdirmap = extend_idmap dir (idm_lookup idm0 newdir) idm0,
@@ -1011,7 +1037,8 @@ fun create_complete_graph cline_incs idm =
           recursively getnewincs (SOME cline_incs) {
             outputfns = outputfns, verb = "Scanning",
             hm=extend_graph_in_dir,
-            dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare},
+            dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare,
+                     ancestors = [original_dir]},
             dir = d,
             data = HM_DepGraph.empty()
           }
@@ -1150,7 +1177,7 @@ fun work() =
               outputfns = outputfns, verb = "Cleaning",
               hm = (fn _ => fn _ => fn _ => fn _ =>
                        List.app (ignore o do_clean_target) cleanTargets),
-              dirinfo = {incdirmap=idmap0,
+              dirinfo = {incdirmap=idmap0, ancestors = [original_dir],
                          visited = Binaryset.empty hmdir.compare},
               dir = original_dir,
               data = ()
