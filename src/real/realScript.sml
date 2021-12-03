@@ -4667,4 +4667,12 @@ Proof
     SIMP_TAC arith_ss[REAL_ARCH_POW, REAL_LT]
 QED
 
+Definition root:
+  root(n) x = @u. (&0 < x ==> &0 < u) /\ (u pow n = x)
+End
+
+Definition sqrt: sqrt(x) = root(2) x
+End
+
+
 val _ = export_theory();

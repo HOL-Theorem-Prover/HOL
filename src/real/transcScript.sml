@@ -727,12 +727,6 @@ QED
 (* Some properties of roots (easier via logarithms)                          *)
 (*---------------------------------------------------------------------------*)
 
-val root = new_definition("root",
-  “root(n) x = @u. (&0 < x ==> &0 < u) /\ (u pow n = x)”);
-
-val sqrt = new_definition("sqrt",
-  “sqrt(x) = root(2) x”);
-
 val ROOT_LT_LEMMA = store_thm("ROOT_LT_LEMMA",
   “!n x. &0 < x ==> (exp(ln(x) / &(SUC n)) pow (SUC n) = x)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
