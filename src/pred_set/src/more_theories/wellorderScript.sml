@@ -1325,7 +1325,12 @@ QED
 (*    Wellfoundedness (WF) from hol-light's iterateTheory                    *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "<<" (Infix(NONASSOC, 450));
+(* Only used as a variable; don't want to contaminate other uses.
+   In particular, this is used at quite a different precedence for left-shift
+   in descendents of words
+*)
+val _ = temp_set_fixity "<<" (Infix(NONASSOC, 450));
+
 
 val WF = store_thm ("WF",
   ``WF(<<) <=> !P:'a->bool. (?x. P(x)) ==> (?x. P(x) /\ !y. y << x ==> ~P(y))``,

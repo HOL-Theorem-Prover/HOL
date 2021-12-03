@@ -1392,6 +1392,8 @@ val INFINITE_FROM = store_thm ("INFINITE_FROM",
 (* Topological sorting of a finite set.                                      *)
 (* ------------------------------------------------------------------------- *)
 
+val _ = temp_set_fixity "<<" (Infix(NONASSOC, 450))
+
 val TOPOLOGICAL_SORT = store_thm ("TOPOLOGICAL_SORT",
  ``!(<<). (!x y:'a. x << y /\ y << x ==> (x = y)) /\
           (!x y z. x << y /\ y << z ==> x << z)
