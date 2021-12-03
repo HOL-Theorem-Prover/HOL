@@ -3,7 +3,7 @@
    ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib
-open binary_ieeeTheory realTheory wordsLib realLib
+open binary_ieeeTheory realTheory wordsLib RealArith
 
 val () = new_theory "lift_ieee"
 val _ = ParseExtras.temp_loose_equality()
@@ -40,7 +40,7 @@ val float_le = Q.store_thm ("float_le",
   rw [float_less_equal_def, float_compare_def, float_is_finite_def,
       float_value_def]
   \\ rw [realTheory.REAL_LT_IMP_LE,
-         realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> ~(a <= b)``]
+         REAL_ARITH ``~(a < b : real) /\ a <> b ==> ~(a <= b)``]
   );
 
 val float_gt = Q.store_thm ("float_gt",
@@ -48,9 +48,9 @@ val float_gt = Q.store_thm ("float_gt",
          (float_greater_than x y = float_to_real x > float_to_real y)`,
   rw [float_greater_than_def, float_compare_def, float_is_finite_def,
       float_value_def]
-  \\ rw [realLib.REAL_ARITH ``a < b : real ==> ~(a > b)``,
-         realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> a > b``,
-         realLib.REAL_ARITH ``~(a > a : real)``]
+  \\ rw [REAL_ARITH ``a < b : real ==> ~(a > b)``,
+         REAL_ARITH ``~(a < b : real) /\ a <> b ==> a > b``,
+         REAL_ARITH ``~(a > a : real)``]
   );
 
 val float_ge = Q.store_thm ("float_ge",
@@ -58,9 +58,9 @@ val float_ge = Q.store_thm ("float_ge",
          (float_greater_equal x y = float_to_real x >= float_to_real y)`,
   rw [float_greater_equal_def, float_compare_def, float_is_finite_def,
       float_value_def]
-  \\ rw [realLib.REAL_ARITH ``a < b : real ==> ~(a >= b)``,
-         realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> a >= b``,
-         realLib.REAL_ARITH ``a >= a : real``]
+  \\ rw [REAL_ARITH ``a < b : real ==> ~(a >= b)``,
+         REAL_ARITH ``~(a < b : real) /\ a <> b ==> a >= b``,
+         REAL_ARITH ``a >= a : real``]
   );
 
 val float_eq = Q.store_thm ("float_eq",
@@ -68,7 +68,7 @@ val float_eq = Q.store_thm ("float_eq",
          (float_equal x y = (float_to_real x = float_to_real y))`,
   rw [float_equal_def, float_compare_def, float_is_finite_def,
       float_value_def]
-  \\ rw [realLib.REAL_ARITH ``a < b : real ==> a <> b``]
+  \\ rw [REAL_ARITH ``a < b : real ==> a <> b``]
   );
 
 val float_eq_refl = Q.store_thm ("float_eq_refl",
@@ -242,12 +242,12 @@ val float_to_real_finite = Q.store_thm("float_to_real_finite",
           2 pow u * (2 pow dimindex (:'t) - 1) +
           2 * 2 pow u`
       by (simp [REAL_SUB_LDISTRIB,
-                realLib.REAL_ARITH ``a * (2r * b) = a * b + a * b``,
-                realLib.REAL_ARITH ``2 * 2 pow x = 2 pow x + 2 pow x``]
+                REAL_ARITH ``a * (2r * b) = a * b + a * b``,
+                REAL_ARITH ``2 * 2 pow x = 2 pow x + 2 pow x``]
           \\ REAL_ARITH_TAC)
       \\ pop_assum SUBST1_TAC
       \\ once_rewrite_tac [GSYM REAL_MUL]
-      \\ simp_tac std_ss [realLib.REAL_ARITH ``2r * a = a + a``]
+      \\ simp_tac std_ss [REAL_ARITH ``2r * a = a + a``]
       \\ match_mp_tac realTheory.REAL_LE_ADD2
       \\ conj_tac
       >- (
@@ -270,7 +270,7 @@ val float_to_real_finite = Q.store_thm("float_to_real_finite",
   \\ match_mp_tac REAL_LE_MUL2
   \\ simp [REAL_POW_MONO, exponent_le, REAL_LE_SUB_LADD]
   \\ simp_tac std_ss [GSYM REAL_ADD_ASSOC, REAL_DIV_ADD]
-  \\ match_mp_tac (realLib.REAL_ARITH ``(x:real) <= 1 ==> (1 + x <= 2)``)
+  \\ match_mp_tac (REAL_ARITH ``(x:real) <= 1 ==> (1 + x <= 2)``)
   \\ simp [REAL_LE_LDIV_EQ, REAL_OF_NUM_POW, GSYM wordsTheory.dimword_def,
            wordsTheory.w2n_lt, DECIDE ``a < n ==> a + 1n <= n``]
   );

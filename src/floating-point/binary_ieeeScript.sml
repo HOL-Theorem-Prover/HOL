@@ -3,7 +3,7 @@
    ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib
-open intrealTheory realLib wordsLib
+open intrealTheory wordsLib RealArith
 
 val () = new_theory "binary_ieee"
 val _ = ParseExtras.temp_loose_equality()
@@ -710,7 +710,7 @@ val ge1_pow = Q.prove(
    \\ rw [realTheory.pow]
    \\ once_rewrite_tac [realTheory.REAL_MUL_COMM]
    \\ `0r < a /\ a <> 0`
-   by METIS_TAC [realLib.REAL_ARITH ``1 <= a ==> 0r < a``,
+   by METIS_TAC [REAL_ARITH ``1 <= a ==> 0r < a``,
                  realTheory.REAL_POS_NZ]
    \\ simp [GSYM realTheory.REAL_LE_LDIV_EQ, realTheory.REAL_DIV_REFL]
    \\ Cases_on `b = 0`
@@ -758,7 +758,7 @@ val ge2d = Q.prove(
    rrw [GSYM realTheory.REAL_LT_LDIV_EQ]
    \\ `2r / m <= 1`
    by (match_mp_tac le1 \\ ASM_SIMP_TAC (srw_ss()++realSimps.REAL_ARITH_ss) [])
-   \\ imp_res_tac (realLib.REAL_ARITH ``a <= 1 ==> a < 2r``)
+   \\ imp_res_tac (REAL_ARITH ``a <= 1 ==> a < 2r``)
    \\ METIS_TAC [realTheory.REAL_LTE_TRANS]
    )
 
@@ -1032,7 +1032,7 @@ val float_sets = Q.store_thm("float_sets",
        float_plus_infinity_def, float_minus_infinity_def,
        float_plus_zero_def, float_minus_zero_def, float_to_real_def,
        float_negate_def, float_component_equality]
-   \\ rw [sign_not_zero, realLib.REAL_ARITH ``0r <= n ==> 1 + n <> 0``]
+   \\ rw [sign_not_zero, REAL_ARITH ``0r <= n ==> 1 + n <> 0``]
    \\ wordsLib.Cases_on_word_value `x.Sign`
    \\ simp []
    )
@@ -1136,7 +1136,7 @@ Proof
        \\ simp []
        \\ rewrite_tac [realTheory.REAL, realTheory.REAL_RDISTRIB]
        \\ match_mp_tac
-            (realLib.REAL_ARITH ``2r < n /\ 0 <= x ==> 2 <> x + 1 * n``)
+            (REAL_ARITH ``2r < n /\ 0 <= x ==> 2 <> x + 1 * n``)
        \\ simp [realTheory.REAL_LT_IMP_LE, realTheory.REAL_LE_MUL]
        \\ imp_res_tac ge2b
        \\ match_mp_tac gt1_pow
@@ -1167,7 +1167,7 @@ val lem2 = Q.prove(
 val tac =
    tac
    \\ srw_tac[] [float_to_real_def, two_mod_eq_zero, wordsTheory.dimword_def,
-                 realLib.REAL_ARITH ``0r <= n ==> 1 + n <> 0``, exp_id, lem1,
+                 REAL_ARITH ``0r <= n ==> 1 + n <> 0``, exp_id, lem1,
                  DECIDE ``0 < n ==> n <> 0n``]
    \\ Cases_on `dimindex(:'w) = 1`
    \\ lrw [lem2]
@@ -1197,7 +1197,7 @@ QED
 val float_is_zero = Q.store_thm("float_is_zero",
    `!x. float_is_zero x = (x.Exponent = 0w) /\ (x.Significand = 0w)`,
    rw [float_is_zero_def, float_value_def, float_to_real_def, sign_not_zero,
-       realLib.REAL_ARITH ``0 <= x ==> 1 + x <> 0r``,
+       REAL_ARITH ``0 <= x ==> 1 + x <> 0r``,
        realTheory.REAL_LE_DIV, realTheory.REAL_LT_IMP_LE])
 
 val float_is_finite = Q.store_thm("float_is_finite",
@@ -1382,7 +1382,7 @@ val lem = Q.prove(
    \\ rw [Once realTheory.pow]
    \\ Cases_on `0 < n`
    \\ simp [DECIDE ``~(0n < n) ==> (n = 0)``,
-            realLib.REAL_ARITH ``3r < n ==> 3 < 2 * n``]
+            REAL_ARITH ``3r < n ==> 3 < 2 * n``]
    )
 
 val ulp_lt_largest = Q.store_thm("ulp_lt_largest",
@@ -1392,7 +1392,7 @@ val ulp_lt_largest = Q.store_thm("ulp_lt_largest",
    \\ simp [realTheory.REAL_SUB_RDISTRIB, realTheory.REAL_SUB_LDISTRIB,
             realTheory.REAL_MUL_LINV, GSYM realaxTheory.REAL_MUL_ASSOC,
             GSYM (CONJUNCT2 realTheory.pow)]
-   \\ simp [realLib.REAL_ARITH ``(a * b) - a = a * (b - 1): real``]
+   \\ simp [REAL_ARITH ``(a * b) - a = a * (b - 1): real``]
    \\ match_mp_tac ge2c
    \\ rw [GSYM realTheory.REAL_LT_ADD_SUB, realTheory.POW_2_LE1, lem]
    )
@@ -1405,23 +1405,23 @@ val ulp_lt_threshold = Q.store_thm("ulp_lt_threshold",
    \\ simp [realTheory.REAL_SUB_RDISTRIB, realTheory.REAL_SUB_LDISTRIB,
             realTheory.REAL_MUL_LINV, realTheory.REAL_INV_MUL,
             GSYM realaxTheory.REAL_MUL_ASSOC]
-   \\ simp [realLib.REAL_ARITH ``(a * b) - a * c = a * (b - c): real``]
+   \\ simp [REAL_ARITH ``(a * b) - a * c = a * (b - c): real``]
    \\ match_mp_tac ge2c
    \\ rw [realTheory.POW_2_LE1, GSYM realTheory.REAL_LT_ADD_SUB,
           realTheory.REAL_INV_1OVER, GSYM (CONJUNCT2 realTheory.pow),
           realTheory.REAL_LT_LDIV_EQ, lem,
-          realLib.REAL_ARITH ``3r < n ==> 5 < n * 2``]
+          REAL_ARITH ``3r < n ==> 5 < n * 2``]
    )
 
 val lt_ulp_not_infinity0 =
    MATCH_MP
-      (realLib.REAL_ARITH ``u < l ==> abs x < u ==> ~(x < -l) /\ ~(x > l)``)
+      (REAL_ARITH ``u < l ==> abs x < u ==> ~(x < -l) /\ ~(x > l)``)
       ulp_lt_largest
    |> Drule.GEN_ALL
 
 val lt_ulp_not_infinity1 =
    MATCH_MP
-      (realLib.REAL_ARITH
+      (REAL_ARITH
          ``u < l ==> 2 * abs x <= u ==> ~(x <= -l) /\ ~(x >= l)``)
       ulp_lt_threshold
    |> Drule.GEN_ALL
@@ -1435,7 +1435,7 @@ val abs_float_value = Q.store_thm("abs_float_value",
 
 (* |- !x n. abs (1 + &n / 2 pow x) = 1 + &n / 2 pow x *)
 val abs_significand =
-   realLib.REAL_ARITH ``!a b. 0 <= a /\ 0 <= b ==> (abs (a + b) = a + b)``
+   REAL_ARITH ``!a b. 0 <= a /\ 0 <= b ==> (abs (a + b) = a + b)``
    |> Q.SPECL [`1`, `&n / 2 pow x`]
    |> Conv.CONV_RULE
         (Conv.RATOR_CONV (SIMP_CONV (srw_ss()++realSimps.REAL_ARITH_ss)
@@ -1471,7 +1471,7 @@ val less_than_ulp = Q.store_thm("less_than_ulp",
           \\ Cases_on `a.Exponent`
           \\ lfs [])
       \\ match_mp_tac
-           (realLib.REAL_ARITH ``2r <= a /\ 0 <= x ==> 2 <= a + x``)
+           (REAL_ARITH ``2r <= a /\ 0 <= x ==> 2 <= a + x``)
       \\ simp [ge1_pow, DECIDE ``0n < a ==> 1 <= a``]
    ])
 
@@ -1492,7 +1492,7 @@ val float_is_zero_to_real = Q.store_thm("float_is_zero_to_real",
    rw [float_is_zero_def, float_value_def]
    \\ simp [float_to_real_def]
    \\ wordsLib.Cases_on_word_value `x.Sign`
-   \\ rsimp [realLib.REAL_ARITH ``0r <= x ==> 1 + x <> 0``]
+   \\ rsimp [REAL_ARITH ``0r <= x ==> 1 + x <> 0``]
    )
 
 (* !x. float_is_zero x ==> (float_to_real x = 0) *)
@@ -1511,17 +1511,17 @@ val pos_subnormal = Q.prove(
 val pos_normal = Q.prove(
    `!a b c n. 0 <= 2 pow a / 2 pow b * (1 + &n / 2 pow c)`,
    rw [realTheory.REAL_LE_DIV, realTheory.REAL_LE_MUL,
-       realLib.REAL_ARITH ``0r <= n ==> 0 <= 1 + n``]
+       REAL_ARITH ``0r <= n ==> 0 <= 1 + n``]
    )
 
 val pos_normal2 = Q.prove(
    `!a b c n. 0 <= 2 pow a / 2 pow b * (&n / 2 pow c)`,
    rw [realTheory.REAL_LE_DIV, realTheory.REAL_LE_MUL,
-       realLib.REAL_ARITH ``0r <= n ==> 0 <= 1 + n``]
+       REAL_ARITH ``0r <= n ==> 0 <= 1 + n``]
    )
 
 val thms =
-   List.map realLib.REAL_ARITH
+   List.map REAL_ARITH
       [``a <= b /\ 0 <= c ==> a <= b + c: real``,
        ``0 <= b /\ a <= c ==> a <= b + c: real``,
        ``0 <= b /\ a <= c /\ 0 <= d ==> a <= b + (c + d): real``,
@@ -1537,16 +1537,16 @@ val diff_sign_ULP = Q.prove(
    \\ wordsLib.Cases_on_word_value `y.Sign`
    \\ rw [ULP_def, float_to_real_def, float_is_zero, realTheory.ABS_NEG,
           pos_normal, pos_subnormal,
-          realLib.REAL_ARITH ``a - -1r * b * c = a + b * c``,
-          realLib.REAL_ARITH ``-1r * b * c - a = -(b * c + a)``,
-          realLib.REAL_ARITH ``0 <= a /\ 0 <= b ==> (abs (a + b) = a + b)``]
+          REAL_ARITH ``a - -1r * b * c = a + b * c``,
+          REAL_ARITH ``-1r * b * c - a = -(b * c + a)``,
+          REAL_ARITH ``0 <= a /\ 0 <= b ==> (abs (a + b) = a + b)``]
    \\ rw [realTheory.REAL_LDISTRIB]
    >| (List.map match_mp_tac (thms @ thms))
    \\ rrw [pos_subnormal, pos_normal2, word_lt0, realTheory.POW_ADD,
           realTheory.REAL_LE_LDIV_EQ, le2, pow_ge2, ge1_pow, le_mult,
           fcpTheory.DIMINDEX_GE_1, realTheory.REAL_LE_DIV, realTheory.POW_2_LE1,
           cancel_rwts, DECIDE ``n <> 0n ==> 1 <= 2 * n``,
-          realLib.REAL_ARITH ``2 <= a ==> 1r <= a``]
+          REAL_ARITH ``2 <= a ==> 1r <= a``]
    )
 
 Theorem diff_sign_ULP_gt[local]:
@@ -1559,9 +1559,9 @@ Proof
    \\ wordsLib.Cases_on_word_value `y.Sign`
    \\ rw [ULP_def, float_to_real_def, float_is_zero, realTheory.ABS_NEG,
           pos_normal, pos_subnormal,
-          realLib.REAL_ARITH ``a - -1r * b * c = a + b * c``,
-          realLib.REAL_ARITH ``-1r * b * c - a = -(b * c + a)``,
-          realLib.REAL_ARITH ``0 <= a /\ 0 <= b ==> (abs (a + b) = a + b)``]
+          REAL_ARITH ``a - -1r * b * c = a + b * c``,
+          REAL_ARITH ``-1r * b * c - a = -(b * c + a)``,
+          REAL_ARITH ``0 <= a /\ 0 <= b ==> (abs (a + b) = a + b)``]
    \\ rrw [realTheory.REAL_LDISTRIB, realTheory.REAL_RDISTRIB,
            realTheory.REAL_LT_LDIV_EQ, realTheory.REAL_LE_MUL,
            realTheory.POW_2_LE1, realTheory.POW_ADD,
@@ -1570,10 +1570,10 @@ Proof
            DECIDE ``0n < a /\ 0 < b ==> 2 < 2 * a + 2 * b``,
            DECIDE ``1n <= n = 0 < n``,
            DECIDE ``0n < x ==> 0 < 2 * x``,
-           realLib.REAL_ARITH ``a <= b /\ 0r <= c /\ 1 <= d ==> a < b + c + d``,
-           realLib.REAL_ARITH
+           REAL_ARITH ``a <= b /\ 0r <= c /\ 1 <= d ==> a < b + c + d``,
+           REAL_ARITH
               ``a <= b /\ 0r <= c /\ 2 <= d /\ 0 <= e ==> a < b + c + (d + e)``,
-           realLib.REAL_ARITH
+           REAL_ARITH
               ``1 <= a /\ 2r <= b /\ 0 <= c ==> 2 < 2 * a + (b + c)``
            |> Q.INST [`a` |-> `&n`]
            |> SIMP_RULE (srw_ss()) []
@@ -1605,7 +1605,7 @@ QED
 Theorem nobias_denormal_lt_2[local]:
   !w:'t word. 2 * (&w2n w / 2 pow precision (:'t)) < 2
 Proof
-  rw [realLib.REAL_ARITH ``2r * n < 2 = n < 1``, nobias_denormal_lt_1]
+  rw [REAL_ARITH ``2r * n < 2 = n < 1``, nobias_denormal_lt_1]
 QED
 
 Theorem subnormal_lt_normal[local]:
@@ -1623,7 +1623,7 @@ Proof
          |> GSYM]
    \\ rewrite_tac [cancel_rwts, realTheory.REAL_LDISTRIB]
    \\ match_mp_tac
-        (realLib.REAL_ARITH ``a < 2r /\ 2 <= b /\ 0 <= c ==> a < b + c``)
+        (REAL_ARITH ``a < 2r /\ 2 <= b /\ 0 <= c ==> a < b + c``)
    \\ rw [nobias_denormal_lt_2, pow_ge2, realTheory.REAL_LE_MUL]
 QED
 
@@ -1760,15 +1760,15 @@ Proof
    \\ abs_diff_tac abs_diff2e
    >- (match_mp_tac abs_diff2e
        \\ simp [realTheory.REAL_LT_RDIV_EQ, realTheory.REAL_LT_LMUL,
-                realLib.REAL_ARITH ``2 * a = a * 2r``,
-                realLib.REAL_ARITH ``1 + n < 2 = n < 1r``, cancel_rwts,
+                REAL_ARITH ``2 * a = a * 2r``,
+                REAL_ARITH ``1 + n < 2 = n < 1r``, cancel_rwts,
                 REWRITE_RULE [arithmeticTheory.ADD1] realTheory.pow]
        \\ simp [realTheory.REAL_LT_LDIV_EQ, realTheory.REAL_OF_NUM_POW,
                 w2n_lt_pow]
       )
    \\ simp [realTheory.REAL_EQ_RDIV_EQ, realTheory.POW_ADD,
             realTheory.REAL_SUB_RDISTRIB, cancel_rwts]
-   \\ simp [realLib.REAL_ARITH
+   \\ simp [REAL_ARITH
               ``(a * b * c - a * d * e) = a * (b * c - d * e: real)``,
             (GSYM o ONCE_REWRITE_RULE [realTheory.REAL_MUL_COMM])
                realTheory.REAL_EQ_RDIV_EQ,
@@ -1862,10 +1862,10 @@ local
       \\ rewrite_tac [cancel_rwts]
       \\ simp [realTheory.POW_ADD]
       \\ once_rewrite_tac
-           [realLib.REAL_ARITH ``a * (b * c) * d = b * (a * c * d): real``]
+           [REAL_ARITH ``a * (b * c) * d = b * (a * c * d): real``]
       \\ simp [realTheory.REAL_LT_LMUL, realTheory.REAL_LDISTRIB]
       \\ match_mp_tac
-           (realLib.REAL_ARITH
+           (REAL_ARITH
                ``a < 1r /\ 1 <= b /\ 0 <= c ==> 1 + a < b * 2 + c``)
       \\ simp [nobias_denormal_lt_1, realTheory.REAL_LE_MUL,
                realTheory.POW_2_LE1]
@@ -1874,22 +1874,22 @@ local
       \\ simp [realTheory.POW_ADD, cancel_rwts,
                realTheory.REAL_SUB_RDISTRIB, realTheory.REAL_DIV_RMUL]
       \\ simp [realTheory.REAL_DIV_RMUL,
-               realLib.REAL_ARITH
+               REAL_ARITH
                    ``a * (b + c) * d = a * (b * d + c * d): real``]
       \\ simp [realTheory.REAL_LE_SUB_LADD, realTheory.REAL_LT_SUB_LADD,
                realTheory.REAL_LDISTRIB]
    val t4 =
-      match_mp_tac (realLib.REAL_ARITH ``a <= b /\ 0r <= c ==> a <= b + c``)
+      match_mp_tac (REAL_ARITH ``a <= b /\ 0r <= c ==> a <= b + c``)
       \\ simp [realTheory.REAL_LE_MUL, GSYM realTheory.REAL_LE_SUB_LADD]
       \\ once_rewrite_tac
-           [realLib.REAL_ARITH
+           [REAL_ARITH
                ``p * (a * 2r) * x - (a * x + a * y) =
                  a * ((p * (2 * x)) - (x + y))``]
       \\ match_mp_tac le_mult
       \\ simp []
       \\ match_mp_tac weaken_leq
       \\ simp [realTheory.POW_2_LE1, realTheory.REAL_LT_MUL,
-               realLib.REAL_ARITH ``2r * a - (a + z) = a - z``]
+               REAL_ARITH ``2r * a - (a + z) = a - z``]
    fun tac thm q =
       abs_diff_tac thm
       >- (match_mp_tac thm \\ t2)
@@ -1900,7 +1900,7 @@ in
       abs_diff_tac thm
       >- (match_mp_tac thm \\ simp [subnormal_lt_normal])
       \\ t1
-      \\ match_mp_tac (realLib.REAL_ARITH ``0r <= c /\ a <= b ==> a <= b + c``)
+      \\ match_mp_tac (REAL_ARITH ``0r <= c /\ a <= b ==> a <= b + c``)
       \\ simp [realTheory.REAL_LE_MUL, realTheory.REAL_OF_NUM_POW,
                fcpTheory.DIMINDEX_GE_1, lem1, lem2, lem3, lem5,
                word_ge1, w2n_lt_pow]
@@ -1936,7 +1936,7 @@ in
       abs_diff_tac abs_diff1a
       >- (match_mp_tac abs_diff1a \\ simp [subnormal_lt_normal])
       \\ t1
-      \\ match_mp_tac (realLib.REAL_ARITH ``0r <= c /\ a < b ==> a < b + c``)
+      \\ match_mp_tac (REAL_ARITH ``0r <= c /\ a < b ==> a < b + c``)
       \\ simp [realTheory.REAL_LE_MUL, realTheory.REAL_OF_NUM_POW,
                fcpTheory.DIMINDEX_GE_1, not_max_suc_lt_dimword, lem1b, lem2]
    val tac5 =
@@ -1950,17 +1950,17 @@ in
                lem1b, lem2, word_ge1, w2n_lt_pow]
    val tac6 =
       tac abs_diff1b `(x: ('t, 'w) float).Significand`
-      \\ match_mp_tac (realLib.REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
+      \\ match_mp_tac (REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
       \\ simp [realTheory.REAL_LE_MUL, GSYM realTheory.REAL_LT_SUB_LADD]
       \\ once_rewrite_tac
-           [realLib.REAL_ARITH
+           [REAL_ARITH
                ``p * (a * 2r) * x - (a * x + a * y) =
                  a * ((p * (2 * x)) - (x + y))``]
       \\ match_mp_tac (ONCE_REWRITE_RULE [realTheory.REAL_MUL_COMM] gt_mult)
       \\ simp []
       \\ match_mp_tac weaken_lt
       \\ simp [realTheory.POW_2_LE1, realTheory.REAL_LT_MUL,
-               realLib.REAL_ARITH ``2r * a - (a + z) = a - z``]
+               REAL_ARITH ``2r * a - (a + z) = a - z``]
       \\ simp [GSYM realTheory.REAL_LT_ADD_SUB, not_max_suc_lt_dimword,
                realTheory.REAL_OF_NUM_POW, Abbr `z`]
    val tac7 =
@@ -2037,11 +2037,11 @@ Proof
        \\ simp [realTheory.REAL_LT_LDIV_EQ, realTheory.REAL_ADD_LDISTRIB,
                 cancel_rwts]
        \\ simp [realTheory.REAL_OF_NUM_POW, realTheory.REAL_LE_MUL,
-                realLib.REAL_ARITH ``a < b /\ 0 <= c ==> a < b + c: real``])
+                REAL_ARITH ``a < b /\ 0 <= c ==> a < b + c: real``])
    \\ simp [realTheory.REAL_LT_LDIV_EQ, realTheory.POW_ADD,
             realTheory.REAL_SUB_LDISTRIB, realTheory.REAL_SUB_RDISTRIB,
             realTheory.REAL_LT_SUB_LADD, cancel_rwts, cancel_rwt]
-   \\ match_mp_tac (realLib.REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
+   \\ match_mp_tac (REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
    \\ simp [realTheory.REAL_LE_MUL, realTheory.REAL_OF_NUM_POW]
    \\ imp_res_tac arithmeticTheory.LESS_ADD_1
    \\ simp [arithmeticTheory.EXP_ADD, lem, fcpTheory.DIMINDEX_GE_1, exp_ge4,
@@ -2062,8 +2062,8 @@ Proof
    rw [ULP_def, float_to_real_def, realTheory.ABS_NEG, abs_float_value,
        abs_significand, realTheory.ABS_MUL, realTheory.ABS_DIV,
        realTheory.ABS_N, gt0_abs, nobias_denormal_lt_1,
-       realLib.REAL_ARITH ``a - a * b = a * (1 - b): real``,
-       realLib.REAL_ARITH ``a < 1 ==> (abs (1 - a) = 1 - a)``]
+       REAL_ARITH ``a - a * b = a * (1 - b): real``,
+       REAL_ARITH ``a < 1 ==> (abs (1 - a) = 1 - a)``]
    >- (simp [realTheory.REAL_LT_LDIV_EQ, realTheory.POW_ADD, cancel_rwts,
              realTheory.REAL_SUB_LDISTRIB, realTheory.REAL_SUB_RDISTRIB,
              realTheory.REAL_LT_SUB_LADD]
@@ -2079,12 +2079,12 @@ Proof
    >- (match_mp_tac abs_diff1e
        \\ simp [realTheory.REAL_LT_LDIV_EQ, realTheory.REAL_LDISTRIB,
                 cancel_rwts, cancel_rwt]
-       \\ match_mp_tac (realLib.REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
+       \\ match_mp_tac (REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
        \\ simp [realTheory.REAL_LE_MUL, realTheory.REAL_OF_NUM_POW])
    \\ simp [realTheory.REAL_LT_LDIV_EQ, realTheory.POW_ADD,
             realTheory.REAL_SUB_LDISTRIB, realTheory.REAL_SUB_RDISTRIB,
             realTheory.REAL_LT_SUB_LADD, cancel_rwts, cancel_rwt]
-   \\ match_mp_tac (realLib.REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
+   \\ match_mp_tac (REAL_ARITH ``a < b /\ 0r <= c ==> a < b + c``)
    \\ simp [realTheory.REAL_LE_MUL, realTheory.REAL_OF_NUM_POW, lem,
             fcpTheory.DIMINDEX_GE_1, exp_ge4]
 QED
@@ -2156,8 +2156,8 @@ fun tac thm =
    >- (match_mp_tac thm
        \\ simp [realTheory.REAL_LT_LMUL, realTheory.REAL_LT_DIV,
                 realTheory.REAL_LT_LDIV_EQ, realTheory.REAL_DIV_RMUL])
-   \\ simp [realLib.REAL_ARITH ``a < b ==> (abs (a - b) = b - a)``,
-            realLib.REAL_ARITH ``b < a ==> (abs (a - b) = a - b)``,
+   \\ simp [REAL_ARITH ``a < b ==> (abs (a - b) = b - a)``,
+            REAL_ARITH ``b < a ==> (abs (a - b) = a - b)``,
             realTheory.REAL_SUB_RDISTRIB, realTheory.REAL_LDISTRIB,
             realTheory.POW_ADD, realTheory.mult_rat]
    \\ simp [realTheory.mult_ratr]
@@ -2167,9 +2167,9 @@ fun tac2 thm =
    >- (match_mp_tac thm
        \\ simp [realTheory.REAL_LT_LMUL, realTheory.REAL_LT_DIV,
                 realTheory.REAL_LT_LDIV_EQ, realTheory.REAL_DIV_RMUL])
-   \\ simp [realLib.REAL_ARITH ``a < b ==> (abs (a - b) = b - a)``,
-            realLib.REAL_ARITH ``b < a ==> (abs (a - b) = a - b)``,
-            realLib.REAL_ARITH ``1 + a - (1 + b) = a - b: real``,
+   \\ simp [REAL_ARITH ``a < b ==> (abs (a - b) = b - a)``,
+            REAL_ARITH ``b < a ==> (abs (a - b) = a - b)``,
+            REAL_ARITH ``1 + a - (1 + b) = a - b: real``,
             GSYM realTheory.REAL_SUB_LDISTRIB, sub_rat_same_base]
    \\ simp [realTheory.POW_ADD, realTheory.mult_rat]
    \\ simp_tac (srw_ss()++realSimps.real_ac_SS) [realTheory.mult_ratr]
@@ -2344,8 +2344,8 @@ Proof
       \\ Cases_on `x.Significand = y.Significand + -1w`
       \\ simp []
       \\ Cases_on `x.Significand = y.Significand + 1w`
-      \\ rsimp [realLib.REAL_ARITH ``(abs x = 1) = (x = 1) \/ (x = -1)``,
-                realLib.REAL_ARITH ``(a = -1 + c) = (c = a + 1r)``,
+      \\ rsimp [REAL_ARITH ``(abs x = 1) = (x = 1) \/ (x = -1)``,
+                REAL_ARITH ``(a = -1 + c) = (c = a + 1r)``,
                 realTheory.REAL_EQ_SUB_RADD, w2n_add1]
       \\ Cases_on `x.Significand = -1w`
       \\ simp [ONCE_REWRITE_RULE [arithmeticTheory.ADD_COMM] w2n_add1,
@@ -2358,7 +2358,7 @@ Proof
       \\ rw [float_to_real_def, abs_float_value, abs_significand,
              realTheory.ABS_MUL, realTheory.ABS_DIV, realTheory.ABS_N,
              gt0_abs, GSYM realTheory.REAL_SUB_LDISTRIB, sub_rat_same_base,
-             realLib.REAL_ARITH ``1r + a - (1 + b) = a - b``]
+             REAL_ARITH ``1r + a - (1 + b) = a - b``]
       \\ fs [diff1pos, diff1neg, realTheory.mult_rat, ULP_def,
              realTheory.POW_ADD]
    ]
@@ -2390,7 +2390,7 @@ Proof
       \\ rw [float_to_real_def, abs_float_value, abs_significand,
              realTheory.ABS_MUL, realTheory.ABS_DIV, realTheory.ABS_N,
              realTheory.ABS_NEG, gt0_abs, realTheory.REAL_LDISTRIB,
-             realLib.REAL_ARITH ``a - (a + c) = -c: real``]
+             REAL_ARITH ``a - (a + c) = -c: real``]
       \\ fs [diff1pos, diff1neg, realTheory.mult_rat, ULP_def,
              realTheory.POW_ADD]
    ]
@@ -2419,7 +2419,7 @@ Proof
       \\ rw [float_to_real_def, abs_float_value, abs_significand,
              realTheory.ABS_MUL, realTheory.ABS_DIV, realTheory.ABS_N,
              realTheory.ABS_NEG, gt0_abs, realTheory.REAL_LDISTRIB,
-             realLib.REAL_ARITH ``a - (a + c) = -c: real``]
+             REAL_ARITH ``a - (a + c) = -c: real``]
       \\ fs [diff1pos, diff1neg, realTheory.mult_rat, ULP_def,
              realTheory.POW_ADD]
    ]
@@ -2434,7 +2434,7 @@ Proof
    \\ Cases_on `float_is_zero y`
    >- fs [float_sets, zero_to_real, float_components, float_distinct,
           GSYM float_distinct, ULP_gt0,
-          realLib.REAL_ARITH ``0 < b ==> 0r <> b``]
+          REAL_ARITH ``0 < b ==> 0r <> b``]
    \\ Cases_on `(y = float_plus_min (:'t # 'w)) \/
                 (y = float_minus_min (:'t # 'w))`
    >- rw [GSYM neg_ulp, GSYM ulp, float_minus_min_def, float_components,
@@ -2542,7 +2542,7 @@ val exponent_boundary_lt = Q.prove(
    >- (match_mp_tac lt_mult
        \\ rsimp [nobias_denormal_lt_1, realTheory.REAL_LT_DIV])
    \\ simp [realTheory.REAL_LT_LMUL, realTheory.REAL_LT_RDIV_EQ, cancel_rwts,
-            realTheory.POW_ADD, realLib.REAL_ARITH ``1 + x < 2 = x < 1r``,
+            realTheory.POW_ADD, REAL_ARITH ``1 + x < 2 = x < 1r``,
             nobias_denormal_lt_1]
    )
 
@@ -2561,7 +2561,7 @@ val ULP_lt_float_to_real = Q.prove(
        gt0_abs, realTheory.REAL_LE_LDIV_EQ, float_is_zero, GSYM word_lt0]
    \\ simp [realTheory.POW_ADD, cancel_rwt, cancel_rwts]
    \\ simp [GSYM realTheory.REAL_LDISTRIB, realTheory.POW_2_LE1,
-            le_mult, realLib.REAL_ARITH ``1r <= x /\ 0 <= n ==> 1 <= x + n``]
+            le_mult, REAL_ARITH ``1r <= x /\ 0 <= n ==> 1 <= x + n``]
    )
 
 (* |- !y. ~float_is_zero y ==> ulp (:'t # 'w) <= abs (float_to_real y) *)
@@ -2572,10 +2572,10 @@ val ulp_lt_float_to_real =
          [realTheory.ABS_NEG, float_components, zero_to_real, zero_properties,
           exponent_boundary_def, GSYM ulp_def, GSYM float_is_zero_to_real]
 
-val abs_limits = realLib.REAL_ARITH ``!x l. abs x <= l = ~(x < -l) /\ ~(x > l)``
+val abs_limits = REAL_ARITH ``!x l. abs x <= l = ~(x < -l) /\ ~(x > l)``
 
 val abs_limits2 =
-   realLib.REAL_ARITH ``!x l. abs x < l = ~(x <= -l) /\ ~(x >= l)``
+   REAL_ARITH ``!x l. abs x < l = ~(x <= -l) /\ ~(x >= l)``
 
 (* ------------------------------------------------------------------------
    Rounding to regular value
@@ -2602,12 +2602,12 @@ val round_roundTowardZero = Q.store_thm("round_roundTowardZero",
       >- (`ULP (y.Exponent,(:'t)) <= abs (float_to_real y)`
           by metis_tac [ULP_lt_float_to_real, exponent_boundary_not_float_zero]
           \\ match_mp_tac
-               (realLib.REAL_ARITH
+               (REAL_ARITH
                    ``abs (a - x) < abs x /\ abs b < abs a /\ abs a <= abs x ==>
                      abs (a - x) <= abs (b - x)``)
           \\ rsimp [exponent_boundary_lt])
       \\ match_mp_tac
-            (realLib.REAL_ARITH
+            (REAL_ARITH
                ``ULP ((y: ('t, 'w) float).Exponent, (:'t)) <= abs (ra - rb) /\
                  abs (ra - x) < ULP (y.Exponent, (:'t)) /\
                  abs ra <= abs x /\ abs rb <= abs x ==>
@@ -2621,7 +2621,7 @@ val round_roundTowardZero = Q.store_thm("round_roundTowardZero",
           \\ `y.Exponent = 0w`
           by (qpat_x_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
           \\ rlfs [ulp_def]
-          \\ metis_tac [realLib.REAL_ARITH ``~(x < b /\ b <= x: real)``]
+          \\ metis_tac [REAL_ARITH ``~(x < b /\ b <= x: real)``]
          )
       \\ imp_res_tac Float_float_to_real
       \\ pop_assum (SUBST_ALL_TAC o SYM)
@@ -2635,14 +2635,14 @@ val round_roundTowardZero = Q.store_thm("round_roundTowardZero",
           by metis_tac [ULP_lt_float_to_real, exponent_boundary_not_float_zero]
           \\ `abs (float_to_real y - x) <= abs (float_to_real x' - x)`
           by (match_mp_tac
-               (realLib.REAL_ARITH
+               (REAL_ARITH
                    ``abs (a - x) < abs x /\ abs b < abs a /\ abs a <= abs x ==>
                      abs (a - x) <= abs (b - x)``)
               \\ rsimp [exponent_boundary_lt]
              )
           \\ simp [GSYM float_to_real_11_right]
           \\ match_mp_tac
-               (realLib.REAL_ARITH
+               (REAL_ARITH
                    ``abs a <= abs x /\ abs b <= abs x /\
                      (abs (a - x) = abs (b - x)) ==> (a = b)``)
           \\ rsimp []
@@ -2729,14 +2729,14 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
            \\ `2 * abs (float_to_real y - x) <= abs (float_to_real y)`
            by imp_res_tac realTheory.REAL_LE_TRANS
            \\ match_mp_tac
-                (realLib.REAL_ARITH
+                (REAL_ARITH
                     ``abs b < abs a /\ abs a <= abs x /\
                       2 * abs (a - x) <= abs a ==> abs (a - x) <= abs (b - x)``)
            \\ rlfs [exponent_boundary_def]
            )
          \\ metis_tac
                [diff_float_ULP,
-                realLib.REAL_ARITH
+                REAL_ARITH
                    ``2 * abs (r - x) <= u /\ u <= abs (r - b) ==>
                      abs (r - x) <= abs (b - x)``],
          (* -- *)
@@ -2753,7 +2753,7 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
          \\ `2 * abs (float_to_real y - x) <  ULP (y.Exponent,(:'t))`
          by rsimp []
          \\ metis_tac
-              [realLib.REAL_ARITH
+              [REAL_ARITH
                   ``2 * abs (r - x) < u /\ u <= abs (r - a) ==>
                     ~(abs (a - x) <= abs (r - x))``]
       ],
@@ -2765,7 +2765,7 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
           by (qpat_x_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
           \\ rlfs [ulp_def]
           \\ metis_tac [ULP_gt0,
-                realLib.REAL_ARITH ``~(0 < x /\ x < b /\ 2 * b <= x: real)``])
+                REAL_ARITH ``~(0 < x /\ x < b /\ 2 * b <= x: real)``])
       \\ imp_res_tac Float_float_to_real
       \\ pop_assum (SUBST_ALL_TAC o SYM)
       \\ Cases_on `exponent_boundary x' y`
@@ -2773,13 +2773,13 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
           \\ metis_tac
                [realTheory.REAL_LE_TRANS, exponent_boundary_lt,
                 ULP_lt_float_to_real,
-                realLib.REAL_ARITH
+                REAL_ARITH
                   ``~(2 * abs (a - x) <= abs a /\ abs a <= abs x /\
                       abs b < abs a /\ abs (b - x) <= abs (a - x))``])
       \\ Cases_on `2 * abs (float_to_real y - x) < ULP (y.Exponent,(:'t))`
       >- (`2 * abs (float_to_real x' - x) <= 2 * abs (float_to_real y - x)`
           by metis_tac [Float_is_finite,
-               realLib.REAL_ARITH ``2 * abs a <= 2 * abs b = abs a <= abs b``]
+               REAL_ARITH ``2 * abs a <= 2 * abs b = abs a <= abs b``]
           \\ metis_tac [realTheory.REAL_LET_TRANS, diff_lt_ulp_even])
       \\ `2 * abs (float_to_real y - x) = ULP (y.Exponent,(:'t))` by rsimp []
       \\ fs []
@@ -2791,7 +2791,7 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
       \\ `abs (float_to_real y - float_to_real x') =
           ULP (y.Exponent,(:'t))`
       by metis_tac
-           [realLib.REAL_ARITH
+           [REAL_ARITH
                ``(2 * abs (a - x) = u) /\ u <= abs (a - b) /\
                  abs (b - x) <= abs (a - x) ==> (abs (a - b) = u)``]
       \\ `y.Significand <> -1w` by (strip_tac \\ fs [])
@@ -2809,12 +2809,12 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
           \\ fs [realTheory.REAL_NOT_LT]
           >- metis_tac
                [realTheory.REAL_LE_TRANS, ULP_lt_float_to_real,
-                realLib.REAL_ARITH
+                REAL_ARITH
                   ``~(2 * abs (a - x) <= abs a /\ abs a <= abs x /\
                       abs b < abs a /\ abs (b - x) <= abs (a - x))``]
           \\ `abs (float_to_real x' - x) = abs (float_to_real y - x)`
           by imp_res_tac
-               (realLib.REAL_ARITH
+               (REAL_ARITH
                    ``(2 * abs (a - x) = u) /\ abs (b - x) <= abs (a - x) /\
                      (abs (a - b) = u) ==> (abs (b - x) = abs (a - x))``)
          \\ fs [diff_ulp_next_float0]
@@ -2866,14 +2866,14 @@ val round_roundTiesToEven0 = Q.store_thm("round_roundTiesToEven0",
             \\ rw [pow_add1, realTheory.mult_ratr]
             \\ fs [not_one_lem])
         \\ match_mp_tac
-             (realLib.REAL_ARITH
+             (REAL_ARITH
                 ``~(abs a <= abs x) /\ 4 * abs (a - x) <= 2 * abs (a - b) ==>
                   abs (a - x) <= abs (b - x)``)
         \\ simp []
         )
       \\ metis_tac
             [diff_float_ULP,
-             realLib.REAL_ARITH ``4 * abs (r - x) <= u /\ u <= abs (r - b) ==>
+             REAL_ARITH ``4 * abs (r - x) <= u /\ u <= abs (r - b) ==>
                                   abs (r - x) <= abs (b - x)``],
       (* -- *)
       `float_is_finite y` by simp [Float_is_finite]
@@ -2894,11 +2894,11 @@ val round_roundTiesToEven0 = Q.store_thm("round_roundTiesToEven0",
       \\ simp []
       \\ spose_not_then assume_tac
       \\ imp_res_tac exponent_boundary_ULPs
-      \\ fs [realLib.REAL_ARITH ``4r * a <= 2 * b = 2 * a <= b``]
+      \\ fs [REAL_ARITH ``4r * a <= 2 * b = 2 * a <= b``]
       \\ imp_res_tac diff_exponent_boundary
       \\ `abs (float_to_real x' - x) = abs (float_to_real y - x)`
       by metis_tac
-           [realLib.REAL_ARITH
+           [REAL_ARITH
               ``2 * abs (a - x) <= u /\
                 2 * abs (b - x) <= u /\
                 (abs (a - b) = u) ==> (abs (a - x) = abs (b - x))``]
@@ -2915,7 +2915,7 @@ val round_roundTowardPositive = Q.store_thm("round_roundTowardPositive",
       abs (x - r) < ulp (:'t # 'w) /\ r >= x /\
       ulp (:'t # 'w) <= abs x /\ abs x <= largest (:'t # 'w) ==>
       (round roundTowardPositive x = y)`,
-   tac (realLib.REAL_ARITH
+   tac (REAL_ARITH
           ``ulp (:'t # 'w) <= abs (ra - rb) /\
             abs (x - ra) < ulp (:'t # 'w) /\
             ra >= x /\ rb >= x ==>
@@ -2928,7 +2928,7 @@ val round_roundTowardNegative = Q.store_thm("round_roundTowardNegative",
       abs (x - r) < ulp (:'t # 'w) /\ r <= x /\
       ulp (:'t # 'w) <= abs x /\ abs x <= largest (:'t # 'w) ==>
       (round roundTowardNegative x = y)`,
-   tac (realLib.REAL_ARITH
+   tac (REAL_ARITH
           ``ulp (:'t # 'w) <= abs (ra - rb) /\
             abs (x - ra) < ulp (:'t # 'w) /\
             ra <= x /\ rb <= x ==>
@@ -2943,8 +2943,8 @@ val tac =
        \\ qpat_x_assum `float_is_zero y` mp_tac
        \\ rw [float_is_zero]
        \\ fs [ulp_def]
-       \\ prove_tac [realLib.REAL_ARITH ``~(x < b /\ b <= x: real)``,
-                     realLib.REAL_ARITH ``2 * abs (-x) <= u ==> abs x <= u``]
+       \\ prove_tac [REAL_ARITH ``~(x < b /\ b <= x: real)``,
+                     REAL_ARITH ``2 * abs (-x) <= u ==> abs x <= u``]
       )
    \\ lrw [float_round_def]
    \\ metis_tac [zero_properties, round_roundTowardZero, round_roundTiesToEven
@@ -3049,7 +3049,7 @@ val float_to_real_min_pos = Q.prove(
       simp [realTheory.REAL_EQ_RDIV_EQ]
       \\ simp [realTheory.POW_ADD, GSYM realTheory.REAL_LDISTRIB,
                cancel_rwts, cancel_rwt]
-      \\ match_mp_tac (realLib.REAL_ARITH ``2r < a * b ==> b * a <> 2``)
+      \\ match_mp_tac (REAL_ARITH ``2r < a * b ==> b * a <> 2``)
       \\ match_mp_tac ge2d
       \\ simp [realTheory.REAL_OF_NUM_POW, pow_ge2, exp_ge2,
                DECIDE ``2n <= a ==> 2 <= b + a``,
@@ -3082,7 +3082,7 @@ Proof
    \\ `abs (float_to_real r) = ulp (:'t # 'w)`
    by metis_tac
          [ulp_lt_float_to_real,
-          realLib.REAL_ARITH
+          REAL_ARITH
            ``(2 * abs x = u) /\ u <= abs r /\ abs (r - x) <= abs x ==>
              (abs r = u)``]
    \\ fs [float_to_real_min_pos]
@@ -3116,7 +3116,7 @@ val round_roundTiesToEven_is_zero = Q.store_thm("round_roundTiesToEven_is_zero",
       \\ rsimp [float_is_zero_to_real_imp]
       \\ metis_tac
            [ULP_lt_float_to_real, ulp_lt_ULP, realTheory.REAL_LE_TRANS,
-            realLib.REAL_ARITH ``2 * abs x <= abs c ==> abs x <= abs (c - x)``],
+            REAL_ARITH ``2 * abs x <= abs c ==> abs x <= abs (c - x)``],
       (* -- *)
       Cases_on `float_is_zero r`
       >- fs [float_sets]
@@ -3125,11 +3125,11 @@ val round_roundTiesToEven_is_zero = Q.store_thm("round_roundTiesToEven_is_zero",
          imp_res_tac ulp_lt_float_to_real
          \\ compare_with_zero_tac
          \\ metis_tac
-               [realLib.REAL_ARITH
+               [REAL_ARITH
                   ``~(2 * abs x < u /\ u <= abs r /\ abs (r - x) <= abs x)``],
          (* -- *)
          imp_res_tac
-            (realLib.REAL_ARITH ``a <= b /\ ~(a < b) ==> (a = b: real)``)
+            (REAL_ARITH ``a <= b /\ ~(a < b) ==> (a = b: real)``)
          \\ imp_res_tac half_ulp
          \\ imp_res_tac min_pos_odd
          \\ compare_with_zero_tac
@@ -3140,10 +3140,10 @@ val round_roundTiesToEven_is_zero = Q.store_thm("round_roundTiesToEven_is_zero",
                  float_components, GSYM ulp, GSYM neg_ulp]
          \\ qpat_x_assum `!b. p` (qspec_then `b` imp_res_tac)
          \\ metis_tac
-              [realLib.REAL_ARITH
+              [REAL_ARITH
                   ``~((2 * abs x = u) /\ abs (u - x) <= abs x /\
                       ~(abs x <= abs (b - x)) /\ abs (u - x) <= abs (b - x))``,
-               realLib.REAL_ARITH
+               REAL_ARITH
                   ``~((2 * abs x = u) /\ abs (-u - x) <= abs x /\
                       ~(abs x <= abs (b - x)) /\ abs (-u - x) <= abs (b - x))``]
       ]
@@ -3192,7 +3192,7 @@ Proof
    simp [largest_def, realTheory.REAL_LE_MUL, realTheory.REAL_LE_DIV,
          realTheory.REAL_SUB_LE, realTheory.POW_2_LE1,
          realTheory.REAL_INV_1OVER, realTheory.REAL_LE_LDIV_EQ,
-         realLib.REAL_ARITH ``1r <= n ==> 1 <= 2 * n``]
+         REAL_ARITH ``1r <= n ==> 1 <= 2 * n``]
 QED
 
 Theorem threshold_is_positive[simp]:
@@ -3201,15 +3201,15 @@ Proof
    simp [threshold_def, realTheory.REAL_LT_MUL, realTheory.REAL_LT_DIV,
          realTheory.REAL_SUB_LT, realTheory.POW_2_LE1,
          realTheory.REAL_INV_1OVER, realTheory.REAL_LT_LDIV_EQ, realTheory.pow,
-         realLib.REAL_ARITH ``1r <= n ==> 1 < 2 * (2 * n)``]
+         REAL_ARITH ``1r <= n ==> 1 < 2 * (2 * n)``]
 QED
 
 val tac =
    rrw  [round_def]
    \\ rlfs [largest_is_positive,
-           realLib.REAL_ARITH ``0 <= l /\ l < x ==> ~(x < -l: real)``]
+           REAL_ARITH ``0 <= l /\ l < x ==> ~(x < -l: real)``]
    \\ metis_tac [threshold_is_positive, largest_is_positive,
-                 realLib.REAL_ARITH “(0r < i /\ x <= -i ==> ~(i <= x)) /\
+                 REAL_ARITH “(0r < i /\ x <= -i ==> ~(i <= x)) /\
                                      (0r <= i /\ x < -i ==> ~(i < x))”]
 
 val round_roundTiesToEven_plus_infinity = Q.store_thm(
@@ -3460,7 +3460,7 @@ Theorem largest_lt_threshold:
   largest (:'t # 'w) < threshold (:'t # 'w)
 Proof
   rw [largest, threshold, realTheory.REAL_LT_RDIV, realTheory.REAL_LT_LMUL,
-      realLib.REAL_ARITH ``a - b < a - c = c < b : real``,
+      REAL_ARITH ``a - b < a - c = c < b : real``,
       realTheory.REAL_LT_RDIV_EQ, realTheory.REAL_LT_LDIV_EQ,
       realTheory.mult_ratl] >>
   fs[wordsTheory.dimword_def]
