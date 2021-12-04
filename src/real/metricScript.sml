@@ -11,7 +11,7 @@
 open HolKernel Parse bossLib boolLib;
 
 open arithmeticTheory numTheory boolSimps simpLib mesonLib metisLib jrhUtils
-     pairTheory pairLib quotientTheory pred_setTheory pred_setLib;
+     pairTheory pairLib quotientTheory pred_setTheory pred_setLib RealArith;
 
 open realTheory cardinalTheory topologyTheory;
 
@@ -20,6 +20,13 @@ val _ = new_theory "metric";
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 fun wrap a = [a];
+val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Handy lemmas switching between versions of limit arguments.               *)
@@ -367,10 +374,6 @@ val ISMET_R1 = store_thm("ISMET_R1",
       “(a + b) + (c + d) = (d + a) + (c + b):real”] THEN
     REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]);
 
-(* NOTE: the "usual" ‘mr2’ metric for 2-dimension Euclidean space is defined in
-  "src/probability/real_borelScript.sml". It cannot be moved here, because ‘mr2’
-   involves ‘sqrt’, which is defined in ‘transcTheory’ later. -- Chun Tian
- *)
 Definition mr1 :
     mr1 = metric(\(x,y). abs(y - x))
 End
@@ -855,6 +858,147 @@ Proof
   ASM_SIMP_TAC std_ss [FSIGMA_IN_GDELTA_IN, OPEN_IN_SUBSET] THEN
   MATCH_MP_TAC CLOSED_IMP_GDELTA_IN THEN
   ASM_SIMP_TAC std_ss [CLOSED_IN_DIFF, CLOSED_IN_TOPSPACE]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Euclidean metric on 2-D real plane (univ(:real) CROSS univ(:real))        *)
+(*---------------------------------------------------------------------------*)
+
+val mr2_tm =
+   “(\((x1,x2),(y1,y2)). sqrt ((x1 - y1) pow 2 + (x2 - y2) pow 2) :real)”;
+
+Theorem MR2_lemma1[local] :
+    !x1 x2 z1 z2. ^mr2_tm ((x1,x2),(z1,z2)) = ^mr2_tm ((x1-z1,x2-z2),(0,0))
+Proof
+    rw []
+QED
+
+Theorem MR2_lemma2[local] :
+    !x1 x2 y1 y2. ^mr2_tm ((x1+y1,x2+y2),(0,0)) <=
+                  ^mr2_tm ((x1,x2),(0,0)) + ^mr2_tm ((y1,y2),(0,0))
+Proof
+    rw []
+ >> CCONTR_TAC >> fs [real_lte]
+ >> Know ‘(sqrt (x1 pow 2 + x2 pow 2) + sqrt (y1 pow 2 + y2 pow 2)) pow 2 <
+          (sqrt ((x1 + y1) pow 2 + (x2 + y2) pow 2)) pow 2’
+ >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [] \\
+     MATCH_MP_TAC REAL_LE_ADD \\
+     CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC SQRT_POS_LE >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> KILL_TAC
+ >> REWRITE_TAC [GSYM real_lte]
+ >> Know ‘sqrt ((x1 + y1) pow 2 + (x2 + y2) pow 2) pow 2 =
+          (x1 + y1) pow 2 + (x2 + y2) pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [ADD_POW_2]
+ >> Know ‘sqrt (x1 pow 2 + x2 pow 2) pow 2 = x1 pow 2 + x2 pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> Know ‘sqrt (y1 pow 2 + y2 pow 2) pow 2 = y1 pow 2 + y2 pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> REWRITE_TAC [ADD_POW_2]
+ >> Suff ‘x1 * y1 + x2 * y2 <= sqrt (x1 pow 2 + x2 pow 2) * sqrt (y1 pow 2 + y2 pow 2)’
+ >- REAL_ARITH_TAC
+ >> Know ‘sqrt (x1 pow 2 + x2 pow 2) * sqrt (y1 pow 2 + y2 pow 2) =
+          sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2))’
+ >- (MATCH_MP_TAC EQ_SYM \\
+     MATCH_MP_TAC SQRT_MUL \\
+     CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> CCONTR_TAC >> fs [real_lte]
+ >> Know ‘(sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2))) pow 2 <
+          (x1 * y1 + x2 * y2) pow 2’
+ >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [] \\
+     MATCH_MP_TAC SQRT_POS_LE \\
+     MATCH_MP_TAC REAL_LE_MUL \\
+     CONJ_TAC >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> KILL_TAC
+ >> REWRITE_TAC [GSYM real_lte]
+ >> Know ‘sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2)) pow 2 =
+          (x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2)’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_MUL \\
+     CONJ_TAC >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> rw [ADD_POW_2, POW_MUL, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB]
+ >> Suff ‘2 * (x1 * x2 * y1 * y2) <= x1 pow 2 * y2 pow 2 + x2 pow 2 * y1 pow 2’
+ >- REAL_ARITH_TAC
+ >> Know ‘0 <= (x1 * y2 - x2 * y1) pow 2’ >- rw [REAL_LE_POW2]
+ >> ONCE_REWRITE_TAC [POW_2]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem MR2_lemma3[local] :
+    !x1 x2 y1 y2. ^mr2_tm ((x1,x2),(y1,y2)) = ^mr2_tm ((y1,y2),(x1,x2))
+Proof
+    rw []
+ >> Know ‘(x1 - y1) pow 2 = (y1 - x1) pow 2’
+ >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> Know ‘(x2 - y2) pow 2 = (y2 - x2) pow 2’
+ >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
+ >> Rewr
+QED
+
+Theorem ISMET_R2 :
+    ismet ^mr2_tm
+Proof
+    Q.ABBREV_TAC ‘d = ^mr2_tm’
+ >> RW_TAC std_ss [ismet] (* 2 subgoals *)
+ >- (Q.UNABBREV_TAC ‘d’ \\
+     Cases_on ‘x’ >> Cases_on ‘y’ >> simp [] \\
+     reverse EQ_TAC >- rw [SQRT_0, pow_rat] \\
+     STRIP_TAC >> rename1 ‘x1 = x2 /\ y1 = y2’ >>
+     Cases_on ‘x1 = x2’ >> gvs[pow_rat] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       CCONTR_TAC >>
+       Suff ‘0 < (y1 - y2) pow 2’
+       >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
+       simp[],
+       (* goal 2 (of 2) *)
+       Suff ‘0 < (x1 - x2) pow 2 + (y1 - y2) pow 2’
+       >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
+       irule REAL_LTE_TRANS >> qexists_tac ‘(x1 - x2) pow 2’ >> simp[]
+     ])
+ >> Cases_on ‘x’  >> Cases_on ‘y’ >> Cases_on ‘z’
+ >> rename1 ‘d ((x1,x2),(z1,z2)) <= d ((y1,y2),(x1,x2)) + d ((y1,y2),(z1,z2))’
+ >> Know ‘d ((x1,x2),z1,z2) = d ((x1-z1,x2-z2),(0,0))’
+ >- METIS_TAC [MR2_lemma1]
+ >> Rewr'
+ >> ‘x1 - z1 = x1 - y1 + (y1 - z1)’ by REAL_ARITH_TAC >> POP_ORW
+ >> ‘x2 - z2 = x2 - y2 + (y2 - z2)’ by REAL_ARITH_TAC >> POP_ORW
+ >> Know ‘d ((y1,y2),(x1,x2)) = d ((x1,x2),(y1,y2))’
+ >- METIS_TAC [MR2_lemma3]
+ >> Rewr'
+ >> Know ‘d ((x1 - y1 + (y1 - z1),x2 - y2 + (y2 - z2)),(0,0)) <=
+          d ((x1 - y1,x2 - y2),(0,0)) + d ((y1 - z1,y2 - z2),(0,0))’
+ >- METIS_TAC [MR2_lemma2]
+ >> Suff ‘d ((x1 - y1,x2 - y2),0,0) + d ((y1 - z1,y2 - z2),0,0) =
+          d ((x1,x2),y1,y2) + d ((y1,y2),z1,z2)’ >- rw []
+ >> METIS_TAC [MR2_lemma1]
+QED
+
+Definition mr2 :
+    mr2 = metric ^mr2_tm
+End
+
+Theorem MR2_DEF :
+    !x1 x2 y1 y2. (dist mr2) ((x1,x2),(y1,y2)) =
+                  sqrt ((x1 - y1) pow 2 + (x2 - y2) pow 2)
+Proof
+    rw [mr2, REWRITE_RULE [metric_tybij] ISMET_R2]
+QED
+
+Theorem MR2_MIRROR :
+    !x1 x2 y1 y2. (dist mr2) ((-x1,-x2),(-y1,-y2)) = (dist mr2) ((x1,x2),(y1,y2))
+Proof
+    rw [MR2_DEF, REAL_ARITH “-x - -y = -(x - y)”]
 QED
 
 val _ = remove_ovl_mapping "B" {Name = "B", Thy = "metric"};
