@@ -724,22 +724,6 @@ Proof
   METIS_TAC []
 QED
 
-Theorem ADD_POW_2 :
-    !x y :real. (x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y
-Proof
-    RW_TAC real_ss [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
-                    GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC
-QED
-
-Theorem SUB_POW_2 :
-   !x y :real. (x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y
-Proof
-    RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_ASSOC, POW_2,
-                    GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC
-QED
-
 Theorem REAL_LE_MUL' :
     !x y. x <= 0 /\ y <= 0 ==> 0 <= x * y
 Proof

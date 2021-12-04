@@ -905,42 +905,9 @@ Proof
  >> METIS_TAC [ROOT_11, REAL_LT_LE]
 QED
 
-val SQRT_0 = store_thm("SQRT_0",
-  “sqrt(&0) = &0”,
-  REWRITE_TAC[sqrt, TWO, ROOT_0]);
-
 val SQRT_1 = store_thm("SQRT_1",
   “sqrt(&1) = &1”,
   REWRITE_TAC[sqrt, TWO, ROOT_1]);
-
-val SQRT_POS_LT = store_thm("SQRT_POS_LT",
-  “!x. &0 < x ==> &0 < sqrt(x)”,
- REWRITE_TAC [sqrt,TWO] THEN REPEAT STRIP_TAC
-  THEN IMP_RES_TAC ROOT_LN THEN ASM_REWRITE_TAC[EXP_POS_LT]);
-
-Theorem SQRT_POS_NE :
-    !(x :real). &0 < x ==> sqrt(x) <> &0
-Proof
-    Q.X_GEN_TAC ‘x’
- >> DISCH_THEN (ASSUME_TAC o (MATCH_MP SQRT_POS_LT))
- >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
- >> MATCH_MP_TAC REAL_LT_IMP_NE
- >> ASM_REWRITE_TAC []
-QED
-
-val SQRT_POS_LE = store_thm("SQRT_POS_LE",
-  “!x. &0 <= x ==> &0 <= sqrt(x)”,
-  REWRITE_TAC[REAL_LE_LT] THEN MESON_TAC[SQRT_POS_LT, SQRT_0]);
-
-val SQRT_POW2 = store_thm("SQRT_POW2",
-  “!x. (sqrt(x) pow 2 = x) <=> &0 <= x”,
-  GEN_TAC THEN EQ_TAC THENL
-   [DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC REAL_LE_POW2,
-    REWRITE_TAC[sqrt, TWO, ROOT_POW_POS]]);
-
-val SQRT_POW_2 = store_thm("SQRT_POW_2",
-  “!x. &0 <= x ==> (sqrt(x) pow 2 = x)”,
-  REWRITE_TAC[SQRT_POW2]);
 
 val POW_2_SQRT = store_thm("POW_2_SQRT",
   “&0 <= x ==> (sqrt(x pow 2) = x)”,
@@ -949,10 +916,6 @@ val POW_2_SQRT = store_thm("POW_2_SQRT",
 val SQRT_POS_UNIQ = store_thm("SQRT_POS_UNIQ",
   “!x y. &0 <= x /\ &0 <= y /\ (y pow 2 = x) ==> (sqrt x = y)”,
   REWRITE_TAC[sqrt, TWO, ROOT_POS_UNIQ]);
-
-val SQRT_MUL = store_thm("SQRT_MUL",
-  “!x y. &0 <= x /\ &0 <= y ==> (sqrt(x * y) = sqrt x * sqrt y)”,
-  REWRITE_TAC[sqrt, TWO, ROOT_MUL]);
 
 val SQRT_INV = store_thm("SQRT_INV",
   “!x. &0 <= x ==> (sqrt (inv x) = inv(sqrt x))”,

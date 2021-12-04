@@ -15,6 +15,20 @@ val AC = AC.AC;
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 
+(* mini_hurdUtils *)
+fun K_TAC _ = ALL_TAC;
+fun wrap a = [a];
+val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
+
 (*---------------------------------------------------------------------------*)
 (* Now define the inclusion homomorphism &:num->real.                        *)
 (*---------------------------------------------------------------------------*)
@@ -4667,6 +4681,35 @@ Proof
     SIMP_TAC arith_ss[REAL_ARCH_POW, REAL_LT]
 QED
 
+(* moved here from util_probTheory, needed below and also in metricTheory *)
+Theorem ADD_POW_2 :
+    !x y :real. (x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y
+Proof
+    RW_TAC std_ss [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                   GSYM REAL_DOUBLE]
+ >> REWRITE_TAC [GSYM REAL_ADD_ASSOC, REAL_EQ_LADD]
+ >> ‘y * x = x * y’ by PROVE_TAC [REAL_MUL_COMM] >> POP_ORW
+ >> ‘x * y + y * y = y * y + x * y’ by PROVE_TAC [REAL_ADD_COMM] >> POP_ORW
+ >> REWRITE_TAC [REAL_ADD_ASSOC, REAL_EQ_RADD]
+ >> METIS_TAC [REAL_ADD_COMM]
+QED
+
+(* moved here from util_probTheory *)
+Theorem SUB_POW_2 :
+    !x y :real. (x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [SIMP_RULE (srw_ss()) [GSYM real_sub]
+                           (Q.SPECL [‘x’, ‘-y’] ADD_POW_2),
+                 real_sub]
+ >> AP_TERM_TAC
+ >> REWRITE_TAC [REAL_MUL_RNEG]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Some properties of (square) roots (without transcendental functions)      *)
+(*---------------------------------------------------------------------------*)
+
 Definition root:
   root(n) x = @u. (&0 < x ==> &0 < u) /\ (u pow n = x)
 End
@@ -4674,5 +4717,193 @@ End
 Definition sqrt: sqrt(x) = root(2) x
 End
 
+Theorem SQRT_0 :
+    sqrt(&0) = &0
+Proof
+    rw [sqrt, root]
+QED
+
+(* Elementary proofs by Chun Tian *)
+Theorem SQRT_EXISTS[local] :
+    !c. 0 < c ==> ?x. 0 < x /\ (x pow 2 = c)
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘?x. 0 <= x /\ (x pow 2 = c)’
+ >- (STRIP_TAC >> Q.EXISTS_TAC ‘x’ >> rw [] \\
+     fs [REAL_LE_LT] >> PROVE_TAC [])
+ >> Q.ABBREV_TAC ‘s = (\y. 0 < y /\ c <= y pow 2)’
+ >> Know ‘?x. s x’
+ >- (rw [Abbr ‘s’] \\
+     Cases_on ‘c < 1’
+     >- (Q.EXISTS_TAC ‘1’ >> rw [] \\
+         MATCH_MP_TAC REAL_LT_IMP_LE >> rw []) \\
+     POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [real_lt])) \\
+     Q.EXISTS_TAC ‘c’ >> rw [POW_2] \\
+     GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [GSYM REAL_MUL_RID] \\
+     MATCH_MP_TAC REAL_LE_LMUL_IMP >> rw [] \\
+     MATCH_MP_TAC REAL_LT_IMP_LE >> rw [])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘g = inf s’
+ >> Q.EXISTS_TAC ‘g’
+ >> STRONG_CONJ_TAC (* ‘0 <= g’ is useful later  *)
+ >- (Q.UNABBREV_TAC ‘g’ >> MATCH_MP_TAC REAL_IMP_LE_INF \\
+     rw [Abbr ‘s’] >> MATCH_MP_TAC REAL_LT_IMP_LE >> rw [])
+ >> DISCH_TAC
+ (* stage work, now "reductio ad absurdum" *)
+ >> CCONTR_TAC
+ >> ‘g pow 2 < c \/ c < g pow 2’ by PROVE_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+      MP_TAC (Q.SPEC ‘c - g pow 2’ REAL_ARCH) \\
+      ASM_SIMP_TAC std_ss [REAL_SUB_LT, real_lt] \\
+      Q.EXISTS_TAC ‘1 + 2 * g’ >> Q.X_GEN_TAC ‘n’ \\
+     ‘(n = 0) \/ 0 < n’ by RW_TAC arith_ss []
+      >- (rw [] >> MATCH_MP_TAC REAL_LE_ADD >> rw [] \\
+          MATCH_MP_TAC REAL_LE_MUL >> rw []) \\
+      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [REAL_MUL_COMM] \\
+      Know ‘(c - g pow 2) * &n <= 1 + 2 * g <=>
+             c - g pow 2 <= (1 + 2 * g) / &n’
+      >- (MATCH_MP_TAC (GSYM REAL_LE_RDIV_EQ) >> rw []) >> Rewr' \\
+      SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [GSYM real_lt, real_div]) \\
+      Know ‘(g + inv (&n)) pow 2 < c’
+      >- (rw [ADD_POW_2, GSYM REAL_ADD_ASSOC] \\
+         ‘c = g pow 2 + (c - g pow 2)’ by PROVE_TAC [REAL_SUB_ADD2] >> POP_ORW \\
+          MATCH_MP_TAC REAL_LT_IADD \\
+          MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘1 * inv (&n) + 2 * g * inv (&n)’ \\
+          CONJ_TAC >- (RW_TAC std_ss [REAL_LE_RADD, POW_2] \\
+                       MATCH_MP_TAC REAL_LE_RMUL_IMP >> rw [REAL_LE_INV_EQ] \\
+                       MATCH_MP_TAC REAL_INV_LE_1 >> rw []) \\
+          rw [GSYM REAL_ADD_RDISTRIB]) >> DISCH_TAC \\
+      Know ‘!x. s x ==> g + inv (&n) < x’
+      >- (Q.PAT_X_ASSUM ‘?x. s x’ K_TAC \\
+          rw [Abbr ‘s’] \\
+         ‘(g + inv (&n)) pow 2 < x pow 2’ by PROVE_TAC [REAL_LTE_TRANS] \\
+          SPOSE_NOT_THEN (ASSUME_TAC o (REWRITE_RULE [real_lt])) \\
+         ‘x pow 2 <= (g + inv (&n)) pow 2’ by METIS_TAC [REAL_LT_IMP_LE, POW_LE] \\
+          METIS_TAC [REAL_LET_ANTISYM]) >> DISCH_TAC \\
+      Suff ‘?x. s x /\ x < g + inv (&n)’ >- METIS_TAC [REAL_LT_ANTISYM] \\
+      MATCH_MP_TAC REAL_INF_LT >> rw [],
+      (* goal 2 (of 2) *)
+     ‘(g = 0) \/ 0 < g’ by METIS_TAC [REAL_LE_LT]
+      >- (fs [pow_rat] >> METIS_TAC [REAL_LT_ANTISYM]) \\
+      STRIP_ASSUME_TAC (REWRITE_RULE [ASSUME “0 < (g :real)”]
+                                     (Q.SPEC ‘g’ REAL_ARCH_INV)) \\
+      MP_TAC (Q.SPEC ‘g pow 2 - c’ REAL_ARCH) \\
+      ASM_SIMP_TAC std_ss [REAL_SUB_LT, real_lt] \\
+      Q.EXISTS_TAC ‘2 * g’ >> Q.X_GEN_TAC ‘m’ \\
+     ‘(m = 0) \/ 0 < m’ by RW_TAC arith_ss []
+      >- (rw [] >> MATCH_MP_TAC REAL_LE_MUL >> rw []) \\
+      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [REAL_MUL_COMM] \\
+      Know ‘(g pow 2 - c) * &m <= 2 * g <=>
+             g pow 2 - c <= (2 * g) / &m’
+      >- (MATCH_MP_TAC (GSYM REAL_LE_RDIV_EQ) >> rw []) >> Rewr' \\
+      SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [GSYM real_lt, real_div]) \\
+      Q.ABBREV_TAC ‘N = MAX m n’ \\
+      Know ‘c < (g - inv (&N)) pow 2’
+      >- (rw [SUB_POW_2] \\
+          REWRITE_TAC [real_sub, GSYM REAL_ADD_ASSOC] \\
+          REWRITE_TAC [GSYM real_sub] \\
+          ONCE_REWRITE_TAC [REAL_ADD_COMM] \\
+          REWRITE_TAC [GSYM REAL_LT_SUB_RADD] \\
+          ONCE_REWRITE_TAC [GSYM REAL_LT_NEG] \\
+          REWRITE_TAC [REAL_NEG_SUB] \\
+          MATCH_MP_TAC REAL_LET_TRANS \\
+          Q.EXISTS_TAC ‘2 * g * inv (&m)’ >> rw [REAL_LE_SUB_RADD] \\
+          MATCH_MP_TAC REAL_LE_TRANS \\
+          Q.EXISTS_TAC ‘2 * g * inv (&m)’ \\
+          CONJ_TAC >- (MATCH_MP_TAC REAL_LE_LMUL_IMP \\
+                       CONJ_TAC >- (MATCH_MP_TAC REAL_LE_MUL >> rw []) \\
+                       MATCH_MP_TAC REAL_LE_INV2 >> rw [Abbr ‘N’, REAL_LE_MAX]) \\
+          rw [REAL_LE_ADDR]) >> DISCH_TAC \\
+      Know ‘s (g - inv (&N))’
+      >- (rw [Abbr ‘s’, REAL_SUB_LT] >| (* 2 subgoals *)
+          [ (* goal 2.1 (of 2) *)
+            MATCH_MP_TAC REAL_LET_TRANS \\
+            Q.EXISTS_TAC ‘inv (&n)’ >> rw [] \\
+            MATCH_MP_TAC REAL_LE_INV2 >> rw [Abbr ‘N’, REAL_LE_MAX],
+            (* goal 2.2 (of 2) *)
+            MATCH_MP_TAC REAL_LT_IMP_LE >> rw [] ]) >> DISCH_TAC \\
+      Suff ‘inf s <= g - inv (&N)’
+      >- (simp [GSYM real_lt, REAL_LT_SUB_RADD, Abbr ‘N’, REAL_LT_MAX]) \\
+      MATCH_MP_TAC REAL_IMP_INF_LE \\
+      CONJ_TAC >- (Q.EXISTS_TAC ‘0’ >> rw [Abbr ‘s’] \\
+                   MATCH_MP_TAC REAL_LT_IMP_LE >> rw []) \\
+      Q.EXISTS_TAC ‘g - inv (&N)’ >> rw [] ]
+QED
+
+Theorem SQRT_POS_LT :
+    !x. &0 < x ==> &0 < sqrt(x)
+Proof
+    RW_TAC std_ss [sqrt, root]
+ >> SELECT_ELIM_TAC
+ >> rw [SQRT_EXISTS]
+QED
+
+Theorem SQRT_POS_NE :
+    !(x :real). &0 < x ==> sqrt(x) <> &0
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> DISCH_THEN (ASSUME_TAC o (MATCH_MP SQRT_POS_LT))
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC REAL_LT_IMP_NE
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem SQRT_POS_LE :
+   !x. &0 <= x ==> &0 <= sqrt(x)
+Proof
+    rpt STRIP_TAC
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
+ >- rw [SQRT_0]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> MATCH_MP_TAC SQRT_POS_LT >> rw []
+QED
+
+Theorem SQRT_POW2 :
+    !x. (sqrt(x) pow 2 = x) <=> &0 <= x
+Proof
+    GEN_TAC
+ >> EQ_TAC >> RW_TAC std_ss []
+ >- (SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [GSYM real_lt]) \\
+     ASSUME_TAC (Q.SPEC ‘sqrt x’ REAL_LE_POW2) \\
+    ‘x < sqrt x pow 2’ by PROVE_TAC [REAL_LTE_TRANS] \\
+     METIS_TAC [REAL_LT_IMP_NE])
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
+ >- rw [SQRT_0]
+ >> REWRITE_TAC [sqrt, root]
+ >> SELECT_ELIM_TAC
+ >> rw [SQRT_EXISTS]
+QED
+
+Theorem SQRT_POW_2 :
+    !x. &0 <= x ==> (sqrt(x) pow 2 = x)
+Proof
+    REWRITE_TAC[SQRT_POW2]
+QED
+
+Theorem SQRT_MUL :
+    !x y. &0 <= x /\ &0 <= y ==> (sqrt(x * y) = sqrt x * sqrt y)
+Proof
+    rpt STRIP_TAC
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT] >- rw [SQRT_0]
+ >> ‘(y = 0) \/ 0 < y’ by METIS_TAC [REAL_LE_LT] >- rw [SQRT_0]
+ >> REWRITE_TAC [sqrt, root]
+ >> SELECT_ELIM_TAC (* 1st *)
+ >> ‘0 < x * y’ by PROVE_TAC [REAL_LT_MUL]
+ >> rw [SQRT_EXISTS]
+ >> rename1 ‘c pow 2 = x * y’
+ >> SELECT_ELIM_TAC (* 2nd *)
+ >> rw [SQRT_EXISTS]
+ >> rename1 ‘0 < a pow 2 * y’
+ >> SELECT_ELIM_TAC (* 3rd *)
+ >> rw [SQRT_EXISTS]
+ >> fs [GSYM POW_MUL]
+ >> MATCH_MP_TAC POW_EQ
+ >> Q.EXISTS_TAC ‘1’ >> rw []
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> rw [])
+ >> MATCH_MP_TAC REAL_LE_MUL
+ >> CONJ_TAC
+ >> MATCH_MP_TAC REAL_LT_IMP_LE >> rw []
+QED
 
 val _ = export_theory();
