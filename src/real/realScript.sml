@@ -4742,9 +4742,9 @@ Proof
       >- (MATCH_MP_TAC POW_LT >> rw []) >> rw [] ]
 QED
 
-(* NOTE: added ‘!x’ *)
+(* NOTE: adding quantifier may break isqrtLib *)
 Theorem POW_2_SQRT :
-    !x. &0 <= x ==> (sqrt(x pow 2) = x)
+    &0 <= x ==> (sqrt(x pow 2) = x)
 Proof
     RW_TAC std_ss [sqrt_def]
  >> SELECT_ELIM_TAC
