@@ -1,3 +1,5 @@
+CLINE_OPTIONS = --no_overlay --poly_not_hol
+
 FOO = ../dir1
 
 all:
