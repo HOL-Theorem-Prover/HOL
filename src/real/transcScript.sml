@@ -905,40 +905,9 @@ Proof
  >> METIS_TAC [ROOT_11, REAL_LT_LE]
 QED
 
-val SQRT_1 = store_thm("SQRT_1",
-  “sqrt(&1) = &1”,
-  REWRITE_TAC[sqrt, TWO, ROOT_1]);
-
-val POW_2_SQRT = store_thm("POW_2_SQRT",
-  “&0 <= x ==> (sqrt(x pow 2) = x)”,
- REWRITE_TAC [sqrt,TWO,POW_ROOT_POS]);
-
-val SQRT_POS_UNIQ = store_thm("SQRT_POS_UNIQ",
-  “!x y. &0 <= x /\ &0 <= y /\ (y pow 2 = x) ==> (sqrt x = y)”,
-  REWRITE_TAC[sqrt, TWO, ROOT_POS_UNIQ]);
-
-val SQRT_INV = store_thm("SQRT_INV",
-  “!x. &0 <= x ==> (sqrt (inv x) = inv(sqrt x))”,
-  REWRITE_TAC[sqrt, TWO, ROOT_INV]);
-
 val SQRT_DIV = store_thm("SQRT_DIV",
   “!x y. &0 <= x /\ &0 <= y ==> (sqrt (x / y) = sqrt x / sqrt y)”,
   REWRITE_TAC[sqrt, TWO, ROOT_DIV]);
-
-val SQRT_MONO_LE = store_thm("SQRT_MONO_LE",
-  “!x y. &0 <= x /\ x <= y ==> sqrt(x) <= sqrt(y)”,
-  REWRITE_TAC[sqrt, TWO, ROOT_MONO_LE]);
-
-Theorem SQRT_MONO_LT :
-    !x y. &0 <= x /\ x < y ==> sqrt(x) < sqrt(y)
-Proof
-    rpt STRIP_TAC
- >> fs [REAL_LT_LE]
- >> CONJ_TAC >- (MATCH_MP_TAC SQRT_MONO_LE >> art [])
- >> ‘0 <= y’ by PROVE_TAC [REAL_LE_TRANS]
- >> CCONTR_TAC >> fs []
- >> METIS_TAC [SQRT_POW2]
-QED
 
 val lem = prove(Term`0<2:num`, REWRITE_TAC[TWO,LESS_0]);
 
