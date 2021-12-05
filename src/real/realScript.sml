@@ -4717,10 +4717,65 @@ End
 Definition sqrt: sqrt(x) = root(2) x
 End
 
+(* |- !x. sqrt x = @u. (0 < x ==> 0 < u) /\ (u pow 2 = x) *)
+Theorem sqrt_def = REWRITE_RULE [root] sqrt
+
 Theorem SQRT_0 :
     sqrt(&0) = &0
 Proof
-    rw [sqrt, root]
+    rw [sqrt_def]
+QED
+
+Theorem SQRT_1 :
+    sqrt(&1) = &1
+Proof
+    REWRITE_TAC [sqrt_def]
+ >> SELECT_ELIM_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘1’ >> rw [])
+ >> CCONTR_TAC
+ >> ‘x < 1 \/ 1 < x’ by METIS_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+      Know ‘x pow SUC 1 < 1 pow SUC 1’
+      >- (MATCH_MP_TAC POW_LT >> rw [REAL_LT_IMP_LE]) >> rw [],
+      (* goal 2 (of 2) *)
+      Know ‘1 pow SUC 1 < x pow SUC 1’
+      >- (MATCH_MP_TAC POW_LT >> rw []) >> rw [] ]
+QED
+
+(* NOTE: added ‘!x’ *)
+Theorem POW_2_SQRT :
+    !x. &0 <= x ==> (sqrt(x pow 2) = x)
+Proof
+    RW_TAC std_ss [sqrt_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘x’ >> rw [REAL_LT_LE])
+ >> Q.X_GEN_TAC ‘y’
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC POW_EQ
+ >> Q.EXISTS_TAC ‘1’ >> rw []
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
+ >- fs [pow_rat]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC REAL_POW_LT >> rw []
+QED
+
+Theorem SQRT_POS_UNIQ :
+    !x y. &0 <= x /\ &0 <= y /\ (y pow 2 = x) ==> (sqrt x = y)
+Proof
+    RW_TAC std_ss [sqrt_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘y’ >> rw [REAL_LT_LE])
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC POW_EQ
+ >> Q.EXISTS_TAC ‘1’ >> rw []
+ >> ‘(y = 0) \/ 0 < y’ by METIS_TAC [REAL_LE_LT]
+ >- fs [pow_rat]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC REAL_POW_LT >> rw []
 QED
 
 (* Elementary proofs by Chun Tian *)
@@ -4834,7 +4889,7 @@ QED
 Theorem SQRT_POS_LT :
     !x. &0 < x ==> &0 < sqrt(x)
 Proof
-    RW_TAC std_ss [sqrt, root]
+    RW_TAC std_ss [sqrt_def]
  >> SELECT_ELIM_TAC
  >> rw [SQRT_EXISTS]
 QED
@@ -4870,7 +4925,7 @@ Proof
      METIS_TAC [REAL_LT_IMP_NE])
  >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
  >- rw [SQRT_0]
- >> REWRITE_TAC [sqrt, root]
+ >> REWRITE_TAC [sqrt_def]
  >> SELECT_ELIM_TAC
  >> rw [SQRT_EXISTS]
 QED
@@ -4887,7 +4942,7 @@ Proof
     rpt STRIP_TAC
  >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT] >- rw [SQRT_0]
  >> ‘(y = 0) \/ 0 < y’ by METIS_TAC [REAL_LE_LT] >- rw [SQRT_0]
- >> REWRITE_TAC [sqrt, root]
+ >> REWRITE_TAC [sqrt_def]
  >> SELECT_ELIM_TAC (* 1st *)
  >> ‘0 < x * y’ by PROVE_TAC [REAL_LT_MUL]
  >> rw [SQRT_EXISTS]
@@ -4904,6 +4959,65 @@ Proof
  >> MATCH_MP_TAC REAL_LE_MUL
  >> CONJ_TAC
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> rw []
+QED
+
+(* NOTE: ‘inv 0’ doesn't exist when ‘x = 0’ *)
+Theorem SQRT_INV :
+    !x. &0 <= x ==> (sqrt (inv x) = inv(sqrt x))
+Proof
+    rpt STRIP_TAC
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
+ >- rw [SQRT_0]
+ >> RW_TAC std_ss [sqrt_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (‘0 < inv x’ by PROVE_TAC [REAL_INV_POS] \\
+     MP_TAC (MATCH_MP (Q.SPEC ‘inv x’ SQRT_EXISTS) (ASSUME “0 < inv x”)) \\
+     DISCH_THEN (Q.X_CHOOSE_THEN ‘y’ STRIP_ASSUME_TAC) \\
+     Q.EXISTS_TAC ‘y’ >> rw [])
+ >> Q.X_GEN_TAC ‘y’
+ >> rw [REAL_LT_INV_EQ]
+ >> SELECT_ELIM_TAC
+ >> rw [SQRT_EXISTS]
+ >> rename1 ‘y = inv z’
+ >> fs [GSYM REAL_POW_INV]
+ >> CCONTR_TAC
+ >> ‘y < inv z \/ inv z < y’ by METIS_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+      Know ‘y pow SUC 1 < (inv z) pow SUC 1’
+      >- (MATCH_MP_TAC POW_LT >> rw [REAL_LT_IMP_LE]) >> rw [],
+      (* goal 2 (of 2) *)
+      Know ‘(inv z) pow SUC 1 < y pow SUC 1’
+      >- (MATCH_MP_TAC POW_LT >> rw [REAL_LE_LT]) >> rw [] ]
+QED
+
+Theorem SQRT_MONO_LE :
+    !x y. &0 <= x /\ x <= y ==> sqrt(x) <= sqrt(y)
+Proof
+    rpt STRIP_TAC
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
+ >- rw [SQRT_0, SQRT_POS_LE]
+ >> REWRITE_TAC [sqrt_def]
+ >> SELECT_ELIM_TAC
+ >> rw [SQRT_EXISTS] >> rename1 ‘0 < x’
+ >> SELECT_ELIM_TAC
+ >> ‘0 < y’ by PROVE_TAC [REAL_LTE_TRANS]
+ >> rw [SQRT_EXISTS] >> rename1 ‘0 < z’
+ >> SPOSE_NOT_THEN (ASSUME_TAC o (REWRITE_RULE [GSYM real_lt]))
+ >> Know ‘z pow (SUC 1) < x pow (SUC 1)’
+ >- (MATCH_MP_TAC POW_LT >> rw [REAL_LT_IMP_LE])
+ >> rw [real_lt]
+QED
+
+Theorem SQRT_MONO_LT :
+    !x y. &0 <= x /\ x < y ==> sqrt(x) < sqrt(y)
+Proof
+    rpt STRIP_TAC
+ >> fs [REAL_LT_LE]
+ >> CONJ_TAC >- (MATCH_MP_TAC SQRT_MONO_LE >> rw [])
+ >> ‘0 <= y’ by PROVE_TAC [REAL_LE_TRANS]
+ >> CCONTR_TAC >> fs []
+ >> METIS_TAC [SQRT_POW2]
 QED
 
 val _ = export_theory();

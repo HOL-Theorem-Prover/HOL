@@ -18,7 +18,7 @@ local
       Lib.total (isqrt_square o numLib.dest_numeral o realSyntax.dest_injected)
    fun mk_ge_thm n = Thm.SPEC (realSyntax.dest_injected n) realTheory.REAL_POS
    fun sqrt_thm thm =
-      thm |> Drule.MATCH_MP transcTheory.POW_2_SQRT
+      thm |> Drule.MATCH_MP realTheory.POW_2_SQRT
           |> Conv.CONV_RULE (Conv.LAND_CONV (Conv.RAND_CONV bossLib.EVAL))
    val sqrt_conv = Conv.REWR_CONV o sqrt_thm
 in
