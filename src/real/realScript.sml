@@ -4710,15 +4710,9 @@ QED
 (* Some properties of (square) roots (without transcendental functions)      *)
 (*---------------------------------------------------------------------------*)
 
-Definition root:
-  root(n) x = @u. (&0 < x ==> &0 < u) /\ (u pow n = x)
+Definition sqrt_def :
+    sqrt x = @u. (0 < x ==> 0 < u) /\ (u pow 2 = x)
 End
-
-Definition sqrt: sqrt(x) = root(2) x
-End
-
-(* |- !x. sqrt x = @u. (0 < x ==> 0 < u) /\ (u pow 2 = x) *)
-Theorem sqrt_def = REWRITE_RULE [root] sqrt
 
 Theorem SQRT_0 :
     sqrt(&0) = &0
@@ -4961,7 +4955,6 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> rw []
 QED
 
-(* NOTE: ‘inv 0’ doesn't exist when ‘x = 0’ *)
 Theorem SQRT_INV :
     !x. &0 <= x ==> (sqrt (inv x) = inv(sqrt x))
 Proof
@@ -5018,6 +5011,53 @@ Proof
  >> ‘0 <= y’ by PROVE_TAC [REAL_LE_TRANS]
  >> CCONTR_TAC >> fs []
  >> METIS_TAC [SQRT_POW2]
+QED
+
+Theorem SQRT_DIV :
+    !x y. &0 <= x /\ &0 <= y ==> (sqrt (x / y) = sqrt x / sqrt y)
+Proof
+    rpt STRIP_TAC
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
+ >- rw [SQRT_0, REAL_DIV_LZERO]
+ >> ‘(y = 0) \/ 0 < y’ by METIS_TAC [REAL_LE_LT]
+ >- rw [SQRT_0, real_div, REAL_INV_0]
+ >> REWRITE_TAC [sqrt_def]
+ >> SELECT_ELIM_TAC (* 1st *)
+ >> ‘0 < x / y’ by PROVE_TAC [REAL_LT_DIV]
+ >> rw [SQRT_EXISTS]
+ >> rename1 ‘z pow 2 = x / y’
+ >> SELECT_ELIM_TAC (* 2nd *)
+ >> rw [SQRT_EXISTS]
+ >> rename1 ‘z pow 2 = u pow 2 / y’
+ >> SELECT_ELIM_TAC (* 3rd *)
+ >> rw [SQRT_EXISTS]
+ >> fs [GSYM REAL_POW_DIV]
+ >> ‘0 < u / x’ by PROVE_TAC [REAL_LT_DIV]
+ >> CCONTR_TAC
+ >> ‘z < u / x \/ u / x < z’ by METIS_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+      Know ‘z pow SUC 1 < (u / x) pow SUC 1’
+      >- (MATCH_MP_TAC POW_LT  >> rw [REAL_LT_IMP_LE]) >> rw [],
+      (* goal 2 (of 2) *)
+      Know ‘(u / x) pow SUC 1 < z pow SUC 1’
+      >- (MATCH_MP_TAC POW_LT >> rw [REAL_LE_LT]) >> rw [] ]
+QED
+
+Theorem SQRT_EQ :
+    !x y. (x pow 2 = y) /\ &0 <= x ==> (x = sqrt y)
+Proof
+    rpt STRIP_TAC
+ >> ‘(x = 0) \/ 0 < x’ by METIS_TAC [REAL_LE_LT]
+ >- fs [pow_rat, SQRT_0]
+ >> REWRITE_TAC [sqrt_def]
+ >> SELECT_ELIM_TAC
+ >> Know ‘0 < y’
+ >- (Q.PAT_X_ASSUM ‘x pow 2 = y’ (ONCE_REWRITE_TAC o wrap o SYM) \\
+     rw [REAL_POW_LT, REAL_LT_IMP_NE])
+ >> rw [SQRT_EXISTS]
+ >> rename1 ‘y pow 2 = x pow 2’
+ >> MATCH_MP_TAC POW_EQ
+ >> Q.EXISTS_TAC ‘1’ >> rw [REAL_LT_IMP_LE]
 QED
 
 val _ = export_theory();

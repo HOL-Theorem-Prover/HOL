@@ -2,7 +2,7 @@ structure isqrtLib :> isqrtLib =
 struct
 
 open HolKernel Parse boolLib
-open transcSyntax
+open realSyntax
 
 val ERR = mk_HOL_ERR "isqrtLib"
 
@@ -10,8 +10,8 @@ local
    fun isqrt_square i =
       let
          val sqr = Arbnum.isqrt i
-      in         if Arbnum.* (sqr, sqr) = i
-            then realSyntax.mk_injected (numLib.mk_numeral sqr)
+      in if Arbnum.* (sqr, sqr) = i
+         then realSyntax.mk_injected (numLib.mk_numeral sqr)
          else raise ERR "isqrt" "not a square"
       end
    val sqrt =
@@ -24,7 +24,7 @@ local
 in
    fun iSQRT_COMPUTE_CONV tm =
       let
-         val r = transcSyntax.dest_sqrt tm
+         val r = dest_sqrt tm
       in
          case Lib.total realSyntax.dest_div r of
             SOME (n, d) =>
@@ -41,7 +41,7 @@ in
                          val rx = mk_ge_thm rn
                          val ry = mk_ge_thm rd
                          val rwt1 =
-                            Drule.MATCH_MP transcTheory.SQRT_DIV (Thm.CONJ x y)
+                            Drule.MATCH_MP realTheory.SQRT_DIV (Thm.CONJ x y)
                       in
                          (Conv.REWR_CONV rwt1
                           THENC Conv.FORK_CONV (sqrt_conv rx, sqrt_conv ry)) tm
@@ -54,6 +54,6 @@ in
       end
 end
 
-val () = computeLib.add_convs [(transcSyntax.sqrt_tm, 1, iSQRT_COMPUTE_CONV)]
+val () = computeLib.add_convs [(sqrt_tm, 1, iSQRT_COMPUTE_CONV)]
 
 end
