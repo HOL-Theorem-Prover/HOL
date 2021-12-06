@@ -1,4 +1,8 @@
-INCLUDES = $(HOLDIR)/src/bag
+INCLUDES = \
+  $(HOLDIR)/src/bag \
+  $(HOLDIR)/src/finite_maps \
+  $(HOLDIR)/src/HolSmt \
+  $(HOLDIR)/src/real
 
 all: $(DEFAULT_TARGETS)
 .PHONY: all
