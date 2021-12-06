@@ -178,5 +178,6 @@ in
   end
 
   val (inv_tm,mk_inv,dest_inv,is_inv) = syntax_fns1 "realax" "inv"
+  val (sqrt_tm,mk_sqrt,dest_sqrt,is_sqrt) = syntax_fns1 "real" "sqrt"
 
 end ;

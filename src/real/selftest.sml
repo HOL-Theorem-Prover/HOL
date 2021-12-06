@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib;
 
-open simpLib realSimps Diff transcTheory;
+open simpLib realSimps Diff transcTheory isqrtLib;
 
 open testutils;
 
@@ -254,6 +254,19 @@ val _ = List.app diff_test [
                           ((\x. ln (x pow 2)) diffl
                            (inv (x pow 2) * (2 * x pow (2 - 1) * 1))) x”)
     ];
+
+fun isqrt_test (r as (n,f,df)) =
+    let
+      fun check res = aconv df (snd (dest_comb (concl res)));
+    in
+      tprint (n ^ ": " ^ term_to_string f ^ " = " ^ term_to_string df);
+      require_msg (check_result check) (term_to_string o concl) iSQRT_COMPUTE_CONV f
+    end;
+
+val _ = List.app isqrt_test [
+      ("iSQRT00", “sqrt 0”,    “(0 :real)”),
+      ("iSQRT01", “sqrt 4”,    “(2 :real)”),
+      ("iSQRT02", “sqrt 1024”, “(32 :real)”)];
 
 (* check prefer/deprecate real *)
 val grammars = (type_grammar(),term_grammar())
