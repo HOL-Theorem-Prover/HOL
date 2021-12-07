@@ -1079,9 +1079,9 @@ Theorem AGM_2 :
           ==> x rpow u * y rpow v <= u * x + v * y
 Proof
     rpt STRIP_TAC
- >> MP_TAC (ISPECL [“\i:num. if i = 0 then u:real else v”,
-                    “\i:num. if i = 0 then x:real else y”, “0..SUC 0”] AGM_GEN)
- >> simp [SUM_CLAUSES_NUMSEG, PRODUCT_CLAUSES_NUMSEG, FINITE_NUMSEG, IN_NUMSEG]
+ >> qspecl_then [‘\i. if i = 0n then u else v’, ‘\i. if i = 0 then x else y’,
+                 ‘{0..SUC 0}’] MP_TAC AGM_GEN
+ >> simp [SUM_CLAUSES_NUMSEG, PRODUCT_CLAUSES_NUMSEG, FINITE_NUMSEG]
  >> DISCH_THEN MATCH_MP_TAC
  >> rw []
 QED

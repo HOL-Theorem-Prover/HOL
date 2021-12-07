@@ -319,41 +319,41 @@ Proof
      MATCH_MP_TAC REAL_LE_LMUL_IMP >> rw [])
  >> NTAC 2 (POP_ASSUM K_TAC) (* clg is gone *)
  >> DISCH_TAC
- >> ‘count (SUC n) = (count N) UNION (N .. n)’
+ >> ‘count (SUC n) = (count N) UNION {N .. n}’
       by (rw [Once EXTENSION, numseg, IN_COUNT]) >> POP_ORW
- >> ‘DISJOINT (count N) (N .. n)’
+ >> ‘DISJOINT (count N) {N .. n}’
       by (rw [DISJOINT_ALT, IN_COUNT, IN_NUMSEG])
- >> Know ‘SIGMA g ((count N) UNION (N .. n)) = SIGMA g (count N) + SIGMA g (N .. n)’
+ >> Know ‘SIGMA g ((count N) UNION {N .. n}) = SIGMA g (count N) + SIGMA g {N .. n}’
  >- (MATCH_MP_TAC REAL_SUM_IMAGE_DISJOINT_UNION \\
      rw [FINITE_COUNT, FINITE_NUMSEG]) >> Rewr'
  >> REWRITE_TAC [real_div, REAL_ADD_RDISTRIB]
  (* applying ABS_TRIANGLE *)
  >> MATCH_MP_TAC REAL_LET_TRANS
  >> Q.EXISTS_TAC ‘abs (SIGMA g (count N) * inv (&SUC n)) +
-                  abs (SIGMA g (N .. n)  * inv (&SUC n))’
+                  abs (SIGMA g {N .. n}  * inv (&SUC n))’
  >> REWRITE_TAC [ABS_TRIANGLE]
  >> Suff ‘abs (SIGMA g (count N) * inv (&SUC n)) < 1 / 2 * e /\
-          abs (SIGMA g (N .. n) * inv (&SUC n)) < 1 / 2 * e’
+          abs (SIGMA g {N .. n} * inv (&SUC n)) < 1 / 2 * e’
  >- (DISCH_TAC \\
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM X_HALF_HALF] \\
      MATCH_MP_TAC REAL_LT_ADD2 >> art [])
  (* applying REAL_SUM_IMAGE_ABS_TRIANGLE *)
  >> reverse CONJ_TAC
- >- (Know ‘abs (SIGMA g (N .. n) * inv (&SUC n)) =
-           abs (SIGMA g (N .. n)) * abs (inv (&SUC n))’
+ >- (Know ‘abs (SIGMA g {N .. n} * inv (&SUC n)) =
+           abs (SIGMA g {N .. n}) * abs (inv (&SUC n))’
      >- (rw [REAL_ABS_MUL]) >> Rewr' \\
     ‘abs (inv (&SUC n)) = inv (&SUC n) :real’ by rw [] >> POP_ORW \\
      MATCH_MP_TAC REAL_LET_TRANS \\
-     Q.EXISTS_TAC ‘SIGMA (abs o g) (N .. n) * inv (&SUC n)’ \\
+     Q.EXISTS_TAC ‘SIGMA (abs o g) {N .. n} * inv (&SUC n)’ \\
      CONJ_TAC >- (MATCH_MP_TAC REAL_LE_RMUL_IMP >> rw [] \\
                   MATCH_MP_TAC REAL_SUM_IMAGE_ABS_TRIANGLE \\
                   REWRITE_TAC [FINITE_NUMSEG]) \\
      MATCH_MP_TAC REAL_LET_TRANS \\
-     Q.EXISTS_TAC ‘SIGMA (\i. 1 / 2 * e) (N .. n) * inv (&SUC n)’ \\
+     Q.EXISTS_TAC ‘SIGMA (\i. 1 / 2 * e) {N .. n} * inv (&SUC n)’ \\
      CONJ_TAC >- (MATCH_MP_TAC REAL_LE_RMUL_IMP >> rw [] \\
                   irule REAL_SUM_IMAGE_MONO >> rw [FINITE_NUMSEG, IN_NUMSEG, o_DEF] \\
                   MATCH_MP_TAC REAL_LT_IMP_LE >> fs []) \\
-    ‘FINITE (N .. n)’ by PROVE_TAC [FINITE_NUMSEG] \\
+    ‘FINITE {N .. n}’ by PROVE_TAC [FINITE_NUMSEG] \\
      rw [REAL_SUM_IMAGE_FINITE_CONST3, CARD_NUMSEG, GSYM ADD1])
  (* final part *)
  >> Know ‘abs (SIGMA g (count N) * inv (&SUC n)) = M * abs (inv (&SUC n))’

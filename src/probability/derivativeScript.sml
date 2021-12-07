@@ -204,8 +204,8 @@ val CONVEX_INDEXED = store_thm ("CONVEX_INDEXED",
  ``!s:real->bool.
         convex s <=>
             !k u x. (!i:num. 1 <= i /\ i <= k ==> &0 <= u(i) /\ x(i) IN s) /\
-                    (sum ((1:num)..k) u = &1)
-                    ==> sum ((1:num)..k) (\i. u(i) * x(i)) IN s``,
+                    (sum { 1n..k} u = &1)
+                    ==> sum { 1n..k} (\i. u(i) * x(i)) IN s``,
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THEN MATCH_MP_TAC CONVEX_SUM THEN
     ASM_SIMP_TAC std_ss [IN_NUMSEG, FINITE_NUMSEG],
@@ -1482,10 +1482,10 @@ val HAS_DERIVATIVE_SERIES = store_thm ("HAS_DERIVATIVE_SERIES",
                                (g has_derivative g'(x)) (at x within s)``,
   REPEAT GEN_TAC THEN REWRITE_TAC[sums, GSYM numseg] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ONCE_REWRITE_TAC [METIS [] ``sum (k INTER (0 .. n)) (\n. f n x) =
-                        (\n x. sum (k INTER (0 .. n)) (\n. f n x)) n x``] THEN
+  ONCE_REWRITE_TAC [METIS [] ``sum (k INTER {0 .. n}) (\n. f n x) =
+                        (\n x. sum (k INTER {0 .. n}) (\n. f n x)) n x``] THEN
   MATCH_MP_TAC HAS_DERIVATIVE_SEQUENCE THEN Q.EXISTS_TAC
-   `(\n:num x:real h:real. sum(k INTER ((0:num) .. n)) (\n. f' n x h):real)` THEN
+   `(\n:num x:real h:real. sum(k INTER { 0n .. n}) (\n. f' n x h):real)` THEN
   ASM_SIMP_TAC real_ss [FINITE_INTER_NUMSEG] THEN RW_TAC std_ss [] THEN
   ONCE_REWRITE_TAC [METIS [] ``(\n. f' n x h) = (\n. (\n h. f' n x h) n h)``] THEN
   MATCH_MP_TAC HAS_DERIVATIVE_SUM THEN METIS_TAC [FINITE_INTER_NUMSEG, ETA_AX]);
@@ -1497,7 +1497,7 @@ val HAS_DERIVATIVE_SERIES' = store_thm ("HAS_DERIVATIVE_SERIES'",
                 ==> (f n has_derivative (\y. f' n x * y)) (at x within s)) /\
          (!e. &0 < e
               ==> ?N. !n x. n >= N /\ x IN s
-                  ==> abs(sum (k INTER ((0:num)..n)) (\i. f' i x) - g' x) <= e) /\
+                  ==> abs(sum (k INTER { 0n..n}) (\i. f' i x) - g' x) <= e) /\
          (?x l. x IN s /\ ((\n. f n x) sums l) k)
          ==> ?g. !x. x IN s
                      ==> ((\n. f n x) sums g x) k /\
@@ -1510,7 +1510,7 @@ val HAS_DERIVATIVE_SERIES' = store_thm ("HAS_DERIVATIVE_SERIES'",
   ONCE_REWRITE_TAC [METIS [] ``(\i. (f':num->real->real) i x' * h) =
                            (\i. (\i. f' i x') i * h)``] THEN
   SIMP_TAC std_ss [SUM_RMUL, GSYM REAL_SUB_RDISTRIB, ABS_MUL] THEN
-  Q_TAC SUFF_TAC `!n. {x | x <= n} = ((0:num) .. n)` THENL
+  Q_TAC SUFF_TAC `!n. {x | x <= n} = { 0n .. n}` THENL
   [METIS_TAC[REAL_LE_RMUL_IMP, ABS_POS], ALL_TAC] THEN
   RW_TAC arith_ss [EXTENSION, GSPECIFICATION, IN_NUMSEG]);
 
@@ -1696,7 +1696,7 @@ QED
 val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
  ``!q0 n.
      ((\q. q pow n) has_derivative
-      (\q. sum ((1:num)..n) (\i. q0 pow (n - i) * q * q0 pow (i - 1))))
+      (\q. sum { 1n..n} (\i. q0 pow (n - i) * q * q0 pow (i - 1))))
      (at q0)``,
   GEN_TAC THEN INDUCT_TAC THENL
   [`0 < 1:num` by SIMP_TAC arith_ss [] THEN
@@ -1705,8 +1705,8 @@ val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
   REWRITE_TAC[pow, SUM_CLAUSES_NUMSEG, ARITH_PROVE ``1 <= SUC n``,
               REAL_SUB_REFL, REAL_MUL_LID, ARITH_PROVE ``SUC n - 1 = n``] THEN
   SUBGOAL_THEN
-    ``!q. sum ((1:num)..n) (\i. q0 pow (SUC n - i) * q * q0 pow (i - 1)) =
-         q0 * sum ((1:num)..n) (\i. q0 pow (n - i) * q * q0 pow (i - 1))``
+    ``!q. sum { 1n..n} (\i. q0 pow (SUC n - i) * q * q0 pow (i - 1)) =
+         q0 * sum { 1n..n} (\i. q0 pow (n - i) * q * q0 pow (i - 1))``
     (fn th => REWRITE_TAC[th]) THENL
   [GEN_TAC THEN SIMP_TAC std_ss [FINITE_NUMSEG, GSYM SUM_LMUL] THEN
    MATCH_MP_TAC SUM_EQ THEN
@@ -1716,7 +1716,7 @@ val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
   MP_TAC (Q.ISPEC `(at (q0:real))` HAS_DERIVATIVE_ID) THEN DISCH_TAC THEN
   FULL_SIMP_TAC real_ss [] THEN
   Q_TAC SUFF_TAC `((\q. (\q. q) q * (\q. q pow n) q) has_derivative
-   (\q. (\q. q) q0 * (\q. sum (1 .. n) (\i. q0 pow (n - i) * q * q0 pow (i - 1))) q +
+   (\q. (\q. q) q0 * (\q. sum {1 .. n} (\i. q0 pow (n - i) * q * q0 pow (i - 1))) q +
      (\q. q) q * (\q. q pow n) q0)) (at q0)` THENL
   [SIMP_TAC std_ss [], ALL_TAC] THEN MATCH_MP_TAC HAS_DERIVATIVE_MUL_AT THEN
   ASM_SIMP_TAC std_ss [HAS_DERIVATIVE_ID]);
@@ -1724,7 +1724,7 @@ val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
 val EXP_CONVERGES_UNIFORMLY_CAUCHY = store_thm ("EXP_CONVERGES_UNIFORMLY_CAUCHY",
  ``!R e. &0 < e /\ &0 < R
          ==> ?N. !m n z. m >= N /\ abs(z) <= R
-             ==> abs(sum(m..n) (\i. z pow i / (&(FACT i)))) < e``,
+             ==> abs(sum{m..n} (\i. z pow i / (&(FACT i)))) < e``,
   REPEAT STRIP_TAC THEN
   MP_TAC(Q.ISPECL [`&1 / &2:real`, `\i. R pow i / (&(FACT i):real)`,
                  `from 0`] SERIES_RATIO) THEN
@@ -1757,9 +1757,9 @@ val EXP_CONVERGES_UNIFORMLY_CAUCHY = store_thm ("EXP_CONVERGES_UNIFORMLY_CAUCHY"
    GEN_TAC THEN POP_ASSUM (MP_TAC o Q.SPECL [`m`,`n`]) THEN
    DISCH_THEN(fn th => REPEAT STRIP_TAC THEN MP_TAC th) THEN
    ASM_REWRITE_TAC [] THEN DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-   Q.EXISTS_TAC `abs (sum (m .. n) (\i. R pow i / &FACT i))` THEN
+   Q.EXISTS_TAC `abs (sum {m .. n} (\i. R pow i / &FACT i))` THEN
    ASM_REWRITE_TAC [] THEN MATCH_MP_TAC REAL_LE_TRANS THEN
-   Q.EXISTS_TAC `sum (m .. n) (\i. R pow i / &FACT i)` THEN
+   Q.EXISTS_TAC `sum {m .. n} (\i. R pow i / &FACT i)` THEN
    SIMP_TAC std_ss [ABS_LE] THEN MATCH_MP_TAC SUM_ABS_LE THEN
    RW_TAC std_ss [FINITE_NUMSEG, ABS_MUL, real_div] THEN
    MATCH_MP_TAC REAL_LE_MUL2 THEN SIMP_TAC std_ss [ABS_POS] THEN
@@ -1777,18 +1777,18 @@ val REAL_MUL_NZ = store_thm ("REAL_MUL_NZ",
   SIMP_TAC real_ss [REAL_ENTIRE]);
 
 (* `sum (0, SUC n)` is defined by realTheory.sum
-   `sum (0 ..   n)` is defined by iterateTheory.sum_def
+   `sum {0 ..   n}` is defined by iterateTheory.sum_def
 
    TODO: re-prove this lemma once `iterate` is re-defined by `pred_set$ITSET`
  *)
 val lemma_sum_eq = prove (
   ``!n x:real. sum (0, SUC n) (\n. (\n. inv(&(FACT n))) n * (x pow n)) =
-               sum (0  ..  n) (\n. (\n. inv(&(FACT n))) n * (x pow n))``,
+               sum {0  ..  n} (\n. (\n. inv(&(FACT n))) n * (x pow n))``,
     NTAC 2 GEN_TAC
  >> SIMP_TAC std_ss [sum_def, iterate, support]
- >> Know `FINITE {n' | n' IN 0 .. n /\ inv (&FACT n') * x pow n' <> neutral $+}`
+ >> Know`FINITE {n' | n' IN {0 .. n} /\ inv(&FACT n') * x pow n' <> neutral $+}`
  >- (MATCH_MP_TAC FINITE_SUBSET \\
-     Q.EXISTS_TAC `(0 .. n)` \\
+     Q.EXISTS_TAC `{0 .. n}` \\
      SIMP_TAC std_ss [FINITE_NUMSEG] >> SET_TAC [])
  >> DISCH_TAC
  >> ASM_SIMP_TAC std_ss []
@@ -1805,7 +1805,7 @@ val lemma_sum_eq = prove (
  THEN RW_TAC std_ss [] THEN ASM_CASES_TAC ``x = 0:real`` THENL
   [ASM_SIMP_TAC real_ss [ADD1] THEN ONCE_REWRITE_TAC [ADD_COMM] THEN
    SIMP_TAC std_ss [GSYM SUM_TWO] THEN
-   Q_TAC SUFF_TAC `{n' | n' IN 0 .. n /\ inv (&FACT n') * (0:real) pow n' <> 0} = {0}` THENL
+   Q_TAC SUFF_TAC `{n' | n' IN {0 .. n} /\ inv (&FACT n') * 0r pow n' <> 0} = {0}` THENL
    [DISCH_TAC,
     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_SING, IN_NUMSEG] THEN
     GEN_TAC THEN EQ_TAC THENL
@@ -1836,7 +1836,7 @@ val lemma_sum_eq = prove (
   ASM_SIMP_TAC real_ss [] THEN
   Q_TAC SUFF_TAC `(\p v.
     (!n s. FINITE s ==> (x' (n INSERT s) = if n IN s then x' s else v n + x' s)) ==>
-    (sum (FST p, SUC (SND p) - FST p) v = x' {n' | n' IN (FST p) .. (SND p)}))
+    (sum (FST p, SUC (SND p) - FST p) v = x' {n' | n' IN {FST p .. SND p}}))
       (0, n) (\n. inv (&FACT n) * x pow n)` THENL
   [ASM_SIMP_TAC arith_ss [], ALL_TAC] THEN MATCH_MP_TAC sum_ind THEN RW_TAC std_ss [] THENL
   [SIMP_TAC arith_ss [SUM_1, IN_NUMSEG] THEN
@@ -1852,19 +1852,19 @@ val lemma_sum_eq = prove (
    [DISC_RW_KILL, ASM_SIMP_TAC arith_ss [EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]] THEN
    ASM_SIMP_TAC real_ss [sum], ALL_TAC] THEN
   FULL_SIMP_TAC std_ss [] THEN
-  ONCE_REWRITE_TAC [SET_RULE ``{n'' | n'' IN n' .. SUC m} = (n' .. SUC m)``] THEN
+  ONCE_REWRITE_TAC [SET_RULE “{n'' | n'' IN {n' .. SUC m}} = {n' .. SUC m}”] >>
   ASM_CASES_TAC ``SUC m < n'`` THENL
-  [`(n' .. SUC m) = {}` by METIS_TAC [NUMSEG_EMPTY] THEN
+  [`{n' .. SUC m} = {}` by METIS_TAC [NUMSEG_EMPTY] THEN
    `SUC (SUC m) - n' = 0` by ASM_SIMP_TAC arith_ss [] THEN
    ASM_SIMP_TAC std_ss [sum], ALL_TAC] THEN
   POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
   POP_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ]) THEN
-  FIRST_X_ASSUM (MP_TAC o Q.SPECL [`SUC (m)`,`(n' .. m)`]) THEN
+  FIRST_X_ASSUM (MP_TAC o Q.SPECL [`SUC (m)`,`{n' .. m}`]) THEN
   RW_TAC arith_ss [FINITE_NUMSEG, IN_NUMSEG] THEN
-  Q_TAC SUFF_TAC `(SUC m INSERT (n' .. m)) = (n' .. m + 1)` THENL
+  Q_TAC SUFF_TAC `(SUC m INSERT {n' .. m}) = {n' .. m + 1}` THENL
   [DISCH_TAC THEN FULL_SIMP_TAC arith_ss [GSYM ADD1],
    ASM_SIMP_TAC arith_ss [EXTENSION, IN_NUMSEG, IN_INSERT, ADD1]] THEN
-  `{n'' | n'' IN n' .. m} = (n' .. m)` by SET_TAC [] THEN
+  `{n'' | n'' IN {n' .. m}} = {n' .. m}` by SET_TAC [] THEN
   FULL_SIMP_TAC std_ss [] THEN
   `SUC (SUC m) - n' = SUC (SUC m - n')` by ASM_SIMP_TAC arith_ss [] THEN
   ASM_SIMP_TAC std_ss [] THEN ONCE_REWRITE_TAC [sum] THEN
@@ -1913,7 +1913,7 @@ val EXP_CONVERGES_UNIQUE = store_thm ("EXP_CONVERGES_UNIQUE",
 val EXP_CONVERGES_UNIFORMLY = store_thm ("EXP_CONVERGES_UNIFORMLY",
  ``!R e. &0 < R /\ &0 < e
          ==> ?N. !n z. n >= N /\ abs(z) < R
-            ==> abs(sum((0:num)..n) (\i. z pow i / (&(FACT i))) - exp(z)) <= e``,
+            ==> abs(sum{ 0n..n} (\i. z pow i / (&(FACT i))) - exp(z)) <= e``,
   REPEAT STRIP_TAC THEN
   MP_TAC(Q.SPECL [`R:real`, `e / &2`] EXP_CONVERGES_UNIFORMLY_CAUCHY) THEN
   ASM_REWRITE_TAC[REAL_HALF] THEN STRIP_TAC THEN Q.EXISTS_TAC `N` THEN
@@ -1952,7 +1952,7 @@ val HAS_DERIVATIVE_EXP = store_thm ("HAS_DERIVATIVE_EXP",
       (at x)) /\
    (!e. 0 < e ==>
       ?N. !n x. n >= N /\ abs x < abs z + 1 ==>
-        abs (sum (from 0 INTER (0 .. n))
+        abs (sum (from 0 INTER {0 .. n})
              (\i. if i = 0 then 0 else x pow (i - 1) / &FACT (i - 1)) -
            exp x) <= e) /\
    (?x l. abs x < abs z + 1 /\ ((\n. x pow n / &FACT n) sums l) (from 0))` THENL
@@ -1981,7 +1981,7 @@ val HAS_DERIVATIVE_EXP = store_thm ("HAS_DERIVATIVE_EXP",
     REWRITE_TAC[FROM_0, INTER_UNIV] THEN MATCH_MP_TAC EQ_IMPLIES THEN
     AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
     AP_THM_TAC THEN AP_TERM_TAC THEN
-    SUBGOAL_THEN ``((0:num)..n) = 0 INSERT (IMAGE SUC ((0:num)..n-1))`` SUBST1_TAC THENL
+    SUBGOAL_THEN ``{ 0n..n} = 0 INSERT (IMAGE SUC { 0n..n-1})`` SUBST1_TAC THENL
     [REWRITE_TAC[EXTENSION, IN_INSERT, IN_IMAGE, IN_NUMSEG] THEN
      INDUCT_TAC THEN SIMP_TAC arith_ss [] THEN
      UNDISCH_TAC ``n >= N + 1:num`` THEN ARITH_TAC,
@@ -2014,9 +2014,9 @@ val HAS_DERIVATIVE_EXP = store_thm ("HAS_DERIVATIVE_EXP",
   [SIMP_TAC std_ss [], ALL_TAC] THEN
   MATCH_MP_TAC HAS_DERIVATIVE_CMUL THEN
   Q_TAC SUFF_TAC `(\y. &n * x pow (n - 1) * y) =
-    (\y. sum (1 .. n) (\i. x pow (n - i) * y * x pow (i - 1)))` THENL
+    (\y. sum {1 .. n} (\i. x pow (n - i) * y * x pow (i - 1)))` THENL
   [DISC_RW_KILL THEN SIMP_TAC std_ss [HAS_DERIVATIVE_POW], ALL_TAC] THEN
-  `FINITE (1 .. n)` by SIMP_TAC std_ss [FINITE_NUMSEG] THEN
+  `FINITE {1 .. n}` by SIMP_TAC std_ss [FINITE_NUMSEG] THEN
   POP_ASSUM (MP_TAC o MATCH_MP SUM_CONST) THEN
   DISCH_THEN (MP_TAC o Q.SPEC `x pow (n - 1)`) THEN SIMP_TAC arith_ss [CARD_NUMSEG] THEN
   DISCH_THEN (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ]) THEN
