@@ -146,11 +146,11 @@ Also commonly used when rewriting are:
 : Flips equalities in the conclusion of the theorem.
   This works even when the equality is nested below implications and/or `∀`-quantification.
 
-<code>iff{L,R} <i>theorem</i></code>
+<code>iff{LR,RL} <i>theorem</i></code>
 : Turns a bi-implication into an implication, going left-to-right or right-to-left respectively.
 
 <br>
-Note that `GSYM` and `iff{L,R}` are termed *rules* - these transform theorems to other theorems, allowing the above to be combined (e.g. `simp[Once $ GSYM thm]`).
+Note that `GSYM` and `iff{LR,RL}` are termed *rules* - these transform theorems to other theorems, allowing the above to be combined (e.g. `simp[Once $ GSYM thm]`).
 There are many other useful rules - see the HOL4 documentation for more details.
 
 In some cases we may wish to use a set of rewrites for simplification.
@@ -528,6 +528,7 @@ Some patterns arise very often in proofs.
   - **Rewrites which don't seem to do anything.**
     Sometimes it may seem that you have an assumption which should trigger simplification in the goal on rewriting - however, it doesn't seem to be doing anything.
     Often this is due to a type mismatch - i.e. your assumption involves more general types than your goal.
+    To diagnose it you can turn types annotations on using for instance `show_types:= true`.
     If this is the case, you cannot instantiate type variables once introduced into your goal-state for soundness reasons, so you must instead type-instantiate the assumption when it is introduced.
     You can use `INST_TYPE` for this, for example:<br>
     <code>assume_tac $ INST_TYPE [&grave;&grave;:'a&grave;&grave; |-> &grave;&grave;:num&grave;&grave;] listTheory.MAP</code>
