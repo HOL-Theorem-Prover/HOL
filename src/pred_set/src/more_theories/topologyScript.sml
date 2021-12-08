@@ -823,26 +823,6 @@ Theorem COMPL_COMPL_applied = REWRITE_RULE [COMPL_DEF] COMPL_COMPL
 (* |- !f s. {f x | x IN s} = IMAGE f s *)
 Theorem SIMPLE_IMAGE = GSYM IMAGE_DEF
 
-Theorem FORALL_IN_GSPEC :
-   (!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
-   (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
-          (!x y. P x y ==> Q(f x y))) /\
-   (!P f. (!z. z IN {f w x y | P w x y} ==> Q z) <=>
-          (!w x y. P w x y ==> Q(f w x y)))
-Proof
-   SRW_TAC [][] THEN SET_TAC []
-QED
-
-Theorem EXISTS_IN_GSPEC :
-   (!P f. (?z. z IN {f x | P x} /\ Q z) <=> (?x. P x /\ Q(f x))) /\
-   (!P f. (?z. z IN {f x y | P x y} /\ Q z) <=>
-          (?x y. P x y /\ Q(f x y))) /\
-   (!P f. (?z. z IN {f w x y | P w x y} /\ Q z) <=>
-          (?w x y. P w x y /\ Q(f w x y)))
-Proof
-  SRW_TAC [][] THEN SET_TAC []
-QED
-
 Theorem UNIONS_IMAGE :
    !f s. UNIONS (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}
 Proof

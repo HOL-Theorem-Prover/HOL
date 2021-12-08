@@ -952,6 +952,42 @@ val jensen_pos_concave_SIGMA = store_thm
 (* Ported from hol-light (AGM stands for "arithmetic and geometric means")   *)
 (* ------------------------------------------------------------------------- *)
 
+(* moved here from iterateTheory (which does not depend on transcTheory now) *)
+Theorem LN_PRODUCT :
+    !f s. FINITE s /\ (!x. x IN s ==> &0 < f x) ==>
+          ln (product s f) = sum s (\x. ln (f x))
+Proof
+    rpt STRIP_TAC
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> Q.SPEC_TAC (‘s’, ‘s’)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> rw [PRODUCT_CLAUSES, SUM_CLAUSES, LN_1]
+ >> ‘0 < f e’ by PROVE_TAC []
+ >> ‘0 < product s f’ by (MATCH_MP_TAC PRODUCT_POS_LT >> rw [])
+ >> rw [LN_MUL]
+QED
+
+(* moved here from iterateTheory (which does not depend on transcTheory now)
+
+   NOTE: added ‘n <> 0 /\ (!x. x IN s ==> &0 <= f x)’ to hol-light's statements
+ *)
+Theorem ROOT_PRODUCT :
+    !n f s. FINITE s /\ n <> 0 /\ (!x. x IN s ==> &0 <= f x)
+        ==> root n (product s f) = product s (\i. root n (f i))
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘n’ >- fs []
+ >> rename1 ‘SUC n <> 0’
+ >> POP_ASSUM MP_TAC
+ >> Q.PAT_X_ASSUM ‘FINITE s’ MP_TAC
+ >> Q.SPEC_TAC (‘s’, ‘s’)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> rw [PRODUCT_CLAUSES, ROOT_1]
+ >> ‘0 <= f e’ by PROVE_TAC []
+ >> ‘0 <= product s f’ by (MATCH_MP_TAC PRODUCT_POS_LE >> rw [])
+ >> rw [ROOT_MUL]
+QED
+
 (* NOTE: changed ‘0 <= x i’ (hol-light) to ‘0 < x i’ *)
 Theorem AGM_GEN :
     !a x s. FINITE s /\ sum s a = &1 /\ (!i. i IN s ==> &0 <= a i /\ &0 < x i)

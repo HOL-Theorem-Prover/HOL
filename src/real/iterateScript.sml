@@ -20,7 +20,7 @@ open HolKernel Parse boolLib bossLib;
 open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
      arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory hurdUtils;
 
-open realTheory realLib transcTheory;
+open realTheory RealArith realSimps;
 open wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
@@ -127,22 +127,6 @@ val FORALL_FINITE_SUBSET_IMAGE = store_thm ("FORALL_FINITE_SUBSET_IMAGE",
                             (\t. FINITE t /\ t SUBSET s ==> P (IMAGE f t)) t``] THEN
    ONCE_REWRITE_TAC [MESON[] ``(!x. P x) <=> ~(?x. ~P x)``] THEN
    SIMP_TAC std_ss [NOT_IMP, GSYM CONJ_ASSOC, EXISTS_FINITE_SUBSET_IMAGE]);
-
-val FORALL_IN_GSPEC = store_thm ("FORALL_IN_GSPEC",
- ``(!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
-   (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
-          (!x y. P x y ==> Q(f x y))) /\
-   (!P f. (!z. z IN {f w x y | P w x y} ==> Q z) <=>
-          (!w x y. P w x y ==> Q(f w x y)))``,
-   SRW_TAC [][] THEN SET_TAC []);
-
-val EXISTS_IN_GSPEC = store_thm ("EXISTS_IN_GSPEC",
- ``(!P f. (?z. z IN {f x | P x} /\ Q z) <=> (?x. P x /\ Q(f x))) /\
-   (!P f. (?z. z IN {f x y | P x y} /\ Q z) <=>
-          (?x y. P x y /\ Q(f x y))) /\
-   (!P f. (?z. z IN {f w x y | P w x y} /\ Q z) <=>
-          (?w x y. P w x y /\ Q(f w x y)))``,
-  SRW_TAC [][] THEN SET_TAC[]);
 
 val EMPTY_BIGUNION = store_thm ("EMPTY_BIGUNION",
  ``!s. (BIGUNION s = {}) <=> !t. t IN s ==> (t = {})``,
@@ -4448,38 +4432,6 @@ val PRODUCT_DELTA = store_thm ("PRODUCT_DELTA",
          (if a IN s then b else &1)``,
   REWRITE_TAC[product, GSYM NEUTRAL_REAL_MUL] THEN
   SIMP_TAC std_ss [ITERATE_DELTA, MONOIDAL_REAL_MUL]);
-
-Theorem LN_PRODUCT :
-    !f s. FINITE s /\ (!x. x IN s ==> &0 < f x) ==>
-          ln (product s f) = sum s (\x. ln (f x))
-Proof
-    rpt STRIP_TAC
- >> NTAC 2 (POP_ASSUM MP_TAC)
- >> Q.SPEC_TAC (‘s’, ‘s’)
- >> HO_MATCH_MP_TAC FINITE_INDUCT
- >> rw [PRODUCT_CLAUSES, SUM_CLAUSES, LN_1]
- >> ‘0 < f e’ by PROVE_TAC []
- >> ‘0 < product s f’ by (MATCH_MP_TAC PRODUCT_POS_LT >> rw [])
- >> rw [LN_MUL]
-QED
-
-(* added ‘n <> 0 /\ (!x. x IN s ==> &0 <= f x)’ to hol-light's statements *)
-Theorem ROOT_PRODUCT :
-    !n f s. FINITE s /\ n <> 0 /\ (!x. x IN s ==> &0 <= f x)
-        ==> root n (product s f) = product s (\i. root n (f i))
-Proof
-    rpt STRIP_TAC
- >> Cases_on ‘n’ >- fs []
- >> rename1 ‘SUC n <> 0’
- >> POP_ASSUM MP_TAC
- >> Q.PAT_X_ASSUM ‘FINITE s’ MP_TAC
- >> Q.SPEC_TAC (‘s’, ‘s’)
- >> HO_MATCH_MP_TAC FINITE_INDUCT
- >> rw [PRODUCT_CLAUSES, ROOT_1]
- >> ‘0 <= f e’ by PROVE_TAC []
- >> ‘0 <= product s f’ by (MATCH_MP_TAC PRODUCT_POS_LE >> rw [])
- >> rw [ROOT_MUL]
-QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extend congruences.                                                       *)
