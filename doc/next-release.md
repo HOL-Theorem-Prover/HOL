@@ -82,6 +82,11 @@ Incompatibilities:
     This will keep assumption *A* in the list if it is newer (more recently added) than, and equivalent to, older assumption *B*.
     The new `rgs` is like the old `gs`.
 
+*   The infix operator `..` from `iterateTheory` is now called `numseg` and is parsed/printed as `{m .. n}` (a “close-fix” operator).
+    This brings the syntax into line with `listRangeTheory`’s `[m..n]` syntax.
+    In many contexts, expressions with this had to use parentheses as delimiters, and so fixing the incompatibility will require turning something like `(t1..t2)` into `{t1..t2}`.
+    However, the old style did allow `e ∈ m..n`, which no longer works without the braces.
+
 * * * * *
 
 <div class="footer">
