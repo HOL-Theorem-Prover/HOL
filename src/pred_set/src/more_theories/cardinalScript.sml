@@ -1653,6 +1653,26 @@ val bijections_cardeq = Q.store_thm(
 (* misc.                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
+Theorem FORALL_IN_GSPEC :
+   (!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
+   (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
+          (!x y. P x y ==> Q(f x y))) /\
+   (!P f. (!z. z IN {f w x y | P w x y} ==> Q z) <=>
+          (!w x y. P w x y ==> Q(f w x y)))
+Proof
+   SRW_TAC [][] THEN SET_TAC []
+QED
+
+Theorem EXISTS_IN_GSPEC :
+   (!P f. (?z. z IN {f x | P x} /\ Q z) <=> (?x. P x /\ Q(f x))) /\
+   (!P f. (?z. z IN {f x y | P x y} /\ Q z) <=>
+          (?x y. P x y /\ Q(f x y))) /\
+   (!P f. (?z. z IN {f w x y | P w x y} /\ Q z) <=>
+          (?w x y. P w x y /\ Q(f w x y)))
+Proof
+  SRW_TAC [][] THEN SET_TAC []
+QED
+
 val LEFT_IMP_EXISTS_THM = store_thm ("LEFT_IMP_EXISTS_THM",
  ``!P Q. (?x. P x) ==> Q <=> (!x. P x ==> Q)``,
  SIMP_TAC std_ss [PULL_EXISTS]);
