@@ -14,10 +14,7 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
  * Next, bring in extra tools used.                                          *
  *---------------------------------------------------------------------------*)
 
-(*app load ["realTheory", "bossLib", "pred_setTheory","transcTheory","arithmeticTheory","Num_conv"];
-*)
-
-open realTheory bossLib pred_setTheory transcTheory arithmeticTheory Num_conv;
+open realTheory bossLib pred_setTheory arithmeticTheory Num_conv;
 
 (*---------------------------------------------------------------------------*
  * Create the theory.                                                        *
