@@ -7,9 +7,21 @@ val () = new_theory "lift_machine_ieee";
 
 val interval_def = Define `interval a b = {x : real | a <= x /\ x < b}`
 
-val () = ( Parse.add_infix ("..", 350, HOLgrammars.NONASSOC)
-         ; Parse.overload_on ("..", ``interval``)
-         )
+val lb = UTF8.chr 0x298B
+  (* square bracket with underbar, reminiscent of the way < gets an underbar
+     to include equality *)
+val cm = UTF8.chr 0x2B1D (* square dot *)
+val rp = UTF8.chr 0x27EF (* "flattened" right parenthesis *)
+
+val _ = add_rule {
+  term_name = "interval" , fixity = Closefix,
+  pp_elements = [TOK lb, PPBlock([TM, HardSpace 1, TOK cm, BreakSpace(1,0), TM],
+                                 (PP.CONSISTENT, 1)), TOK rp],
+  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+  paren_style = OnlyIfNecessary};
+
+(* I.e., [1,2) looks like ⦋1 ⬝ 2⟯                                         UOK *)
+(* which is perhaps a bit gross really                                        *)
 
 (* --------------------------------------------------------------------- *)
 
@@ -17,7 +29,7 @@ val rule =
   wordsLib.WORD_EVAL_RULE o
   REWRITE_RULE
     [normalizes_def, binary_ieeeTheory.threshold_def, realTheory.REAL_INV_1OVER,
-     GSYM (SIMP_CONV (srw_ss()) [interval_def] ``a IN (x .. y)``)]
+     GSYM (SIMP_CONV (srw_ss()) [interval_def] ``a IN interval x y``)]
 
 val word_msb16 = Q.prove(
   `!a: word16. ~word_msb a = ((fp16_to_float a).Sign = 0w)`,
