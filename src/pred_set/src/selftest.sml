@@ -1,5 +1,7 @@
 open HolKernel boolLib Parse PFset_conv
 open pred_setSimps
+open bossLib testutils
+local open countable_typesLib in end
 
 val _ = let
   open testutils
@@ -116,6 +118,31 @@ val _ = set_grammar_ancestry ["pred_set"]
 val _ = print "Setting grammar ancestry to be [\"pred_set\"]\n"
 val _ = set_trace "PP.avoid_unicode" 1
 val _ = List.app testutils.tpp tpp_cases
+
+open countable_typesLib;
+
+val _ = quietly Datatype `rose_tricky = RT_Empty | RT_List (num list) ((rose_tricky) list)`
+
+val _ = tprint "Testing mk_countable on rose-type datatype rose_tricky."
+val _ = require (check_result (fn thm => not (is_imp (concl thm))))
+    mk_countable ``: rose_tricky``;
+
+val _ = quietly Datatype `
+  rose_awful = RA_Empty | RA_List ((rose_awful_aux) list)
+  ;
+  rose_awful_aux = RAA_Empty | RAA (rose_awful) num 'a num (rose_awful)
+`
+
+val _ = quietly Datatype `
+  tier2 = T2_Empty ('a -> num) | T2_Loop (tier2 list) (num list rose_awful)
+`
+
+val _ = quietly Datatype `
+  tier3 = T3_Empty | T3_x ('a tier2) num
+`;
+
+val _ = tprint "Testing mk_countable on compound datatype tier3."
+val _ = require is_result mk_countable ``: 'a tier3``
 
 val _ =
     Process.exit
