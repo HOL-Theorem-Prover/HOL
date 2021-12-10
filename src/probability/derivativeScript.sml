@@ -1778,15 +1778,14 @@ val REAL_MUL_NZ = store_thm ("REAL_MUL_NZ",
 
 (* `sum (0, SUC n)` is defined by realTheory.sum
    `sum {0 ..   n}` is defined by iterateTheory.sum_def
-
-   TODO: re-prove this lemma once `iterate` is re-defined by `pred_set$ITSET`
  *)
-val lemma_sum_eq = prove (
-  ``!n x:real. sum (0, SUC n) (\n. (\n. inv(&(FACT n))) n * (x pow n)) =
-               sum {0  ..  n} (\n. (\n. inv(&(FACT n))) n * (x pow n))``,
+Theorem lemma_sum_eq[local] :
+    !n x:real. sum (0, SUC n) (\n. (\n. inv(&(FACT n))) n * (x pow n)) =
+               sum {0  ..  n} (\n. (\n. inv(&(FACT n))) n * (x pow n))
+Proof
     NTAC 2 GEN_TAC
  >> SIMP_TAC std_ss [sum_def, iterate, support]
- >> Know`FINITE {n' | n' IN {0 .. n} /\ inv(&FACT n') * x pow n' <> neutral $+}`
+ >> Know `FINITE {n' | n' IN {0 .. n} /\ inv(&FACT n') * x pow n' <> neutral $+}`
  >- (MATCH_MP_TAC FINITE_SUBSET \\
      Q.EXISTS_TAC `{0 .. n}` \\
      SIMP_TAC std_ss [FINITE_NUMSEG] >> SET_TAC [])
@@ -1798,11 +1797,24 @@ val lemma_sum_eq = prove (
      reverse EQ_TAC >- REAL_ARITH_TAC \\
      DISCH_THEN (MP_TAC o Q.SPEC `1`) >> REAL_ARITH_TAC)
  >> DISCH_THEN ((FULL_SIMP_TAC std_ss) o wrap)
- >> SIMP_TAC std_ss [ITSET'] >> SELECT_ELIM_TAC
+ (* applying ITSET_alt *)
+ >> Q.ABBREV_TAC ‘f = (\n a. inv (&FACT n) * x pow n + a)’
+ >> Q.ABBREV_TAC ‘s = {n' | n' IN {0 .. n} /\ inv (&FACT n') * x pow n' <> 0}’
+ >> Q.ABBREV_TAC ‘b = 0’
+ >> Know ‘ITSET f s b =
+          (@g. g {} = b /\
+               !x s. FINITE s ==>
+                     g (x INSERT s) = if x IN s then g s else f x (g s)) s’
+ >- (MATCH_MP_TAC ITSET_alt >> rw [Abbr ‘f’] \\
+     REAL_ARITH_TAC)
+ >> Rewr'
+ >> qunabbrevl_tac [‘f’, ‘s’, ‘b’]
+ (* end of changes *)
+ >> SELECT_ELIM_TAC
  >> CONJ_TAC
  >- (Q.EXISTS_TAC `(\s. sum s (\n. (\n. inv(&(FACT n))) n * (x pow n)))` \\
      SIMP_TAC std_ss [SUM_CLAUSES])
- THEN RW_TAC std_ss [] THEN ASM_CASES_TAC ``x = 0:real`` THENL
+ >> RW_TAC std_ss [] THEN ASM_CASES_TAC ``x = 0:real`` THENL
   [ASM_SIMP_TAC real_ss [ADD1] THEN ONCE_REWRITE_TAC [ADD_COMM] THEN
    SIMP_TAC std_ss [GSYM SUM_TWO] THEN
    Q_TAC SUFF_TAC `{n' | n' IN {0 .. n} /\ inv (&FACT n') * 0r pow n' <> 0} = {0}` THENL
@@ -1868,7 +1880,8 @@ val lemma_sum_eq = prove (
   FULL_SIMP_TAC std_ss [] THEN
   `SUC (SUC m) - n' = SUC (SUC m - n')` by ASM_SIMP_TAC arith_ss [] THEN
   ASM_SIMP_TAC std_ss [] THEN ONCE_REWRITE_TAC [sum] THEN
-  ASM_SIMP_TAC arith_ss [REAL_ADD_COMM]);
+  ASM_SIMP_TAC arith_ss [REAL_ADD_COMM]
+QED
 
 val lemma_sums_eq = prove (
   ``!l x. (seq$sums (\n. ((\n. inv(&(FACT n)))) n * (x pow n)) l) =
