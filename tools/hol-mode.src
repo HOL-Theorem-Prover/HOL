@@ -844,19 +844,24 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
-        (original-name (expand-file-name original-name0)))
+        (original-name (expand-file-name original-name0))
+        executable)
     ;; check for lastmaker file
-    (if-let*
-        (((file-readable-p ".HOLMK/lastmaker"))
-         ((> 500 (file-attribute-size (file-attributes ".HOLMK/lastmaker"))))
-         (lines (with-temp-buffer
-                  (insert-file-contents-literally ".HOLMK/lastmaker")
-                  (split-string (buffer-string) "\n" t)))
-         ((not (null lines)))
-         (dir1 (file-name-directory (car lines)))
-         (name (concat dir1 "hol"))
-         ((not (equal name original-name))))
-        (list (concat dir1 "hol") "(honouring last build in this directory)")
+    (if (and (file-readable-p ".HOLMK/lastmaker")
+             (> 500 (file-attribute-size (file-attributes ".HOLMK/lastmaker")))
+             (let ((lines (with-temp-buffer
+                            (insert-file-contents-literally ".HOLMK/lastmaker")
+                            (split-string (buffer-string) "\n" t))))
+               (and (not (null lines))
+                    (let* ((dir1 (file-name-directory (car lines)))
+                           (name (concat dir1 "hol")))
+                      (and (not (equal name original-name))
+                           (setq executable
+                                 (list (concat dir1 "hol")
+                                       "(honouring last build in this directory)")))))))
+        ;; then
+        executable
+      ;; else
       (while (and (not (hol--looks-like-root-holdir dir))
                   (not (equal "/" dir)))
         (setq dir (file-name-directory (directory-file-name dir))))
