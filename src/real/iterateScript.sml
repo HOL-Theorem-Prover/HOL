@@ -493,30 +493,35 @@ val SET_RECURSION_LEMMA = store_thm ("SET_RECURSION_LEMMA",
       REPEAT AP_TERM_TAC THEN UNDISCH_TAC ``~(x:'a IN s)`` THEN DISCH_TAC THEN
       EVAL_TAC THEN FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT, SUBSET_REFL]]]);
 
-(* TODO: re-define it as theorem of "ITSET" in pred_setTheory *)
-Definition ITSET' :
-    ITSET' f s b =
-      (@g. (g {} = b) /\
-           !x s. FINITE s ==>
-                 (g (x INSERT s) = if x IN s then g s else f x (g s))) s
-End
-
-(* This lemma is only needed by ITERATE_CLAUSES_GEN *)
-Triviality FINITE_RECURSION' :
-    !(f:'a->'b->'b) b.
-        (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
-        ==> (ITSET' f {} b = b) /\
-            !x s. FINITE s
-                  ==> (ITSET' f (x INSERT s) b =
-                       if x IN s then ITSET' f s b
-                                 else f x (ITSET' f s b))
+(* This is HOL Light's definition of ‘ITSET’ *)
+Theorem ITSET_alt :
+    !(f:'a->'b->'b) s b.
+        (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
+         ITSET f s b =
+         (@g. (g {} = b) /\
+              !x s. FINITE s ==>
+                    (g (x INSERT s) = if x IN s then g s else f x (g s))) s
 Proof
-  rpt GEN_TAC >> DISCH_TAC >> REWRITE_TAC [ITSET'] \\
-  CONV_TAC SELECT_CONV \\
-  MATCH_MP_TAC SET_RECURSION_LEMMA >> art []
+    RW_TAC std_ss []
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC SET_RECURSION_LEMMA >> rw [])
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘FINITE s’ MP_TAC
+ >> Q.SPEC_TAC (‘s’, ‘s’)
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> CONJ_TAC >- rw [ITSET_THM, FINITE_EMPTY]
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!x s. FINITE s ==> P’
+      (fn th => ONCE_REWRITE_TAC [MATCH_MP th (ASSUME “FINITE s”)])
+ >> simp []
+ >> Know ‘ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b)’
+ >- (MATCH_MP_TAC COMMUTING_ITSET_RECURSES >> rw [])
+ >> Rewr'
+ >> Suff ‘s DELETE e = s’ >- rw []
+ >> rw [GSYM DELETE_NON_ELEMENT]
 QED
 
-(* This proof is based on pred_set$ITSET (pred_setTheory.ITSET_def) *)
 Theorem FINITE_RECURSION :
     !(f:'a->'b->'b) b.
         (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
@@ -1483,7 +1488,7 @@ val support = new_definition ("support",
 val iterate = new_definition ("iterate",
   ``iterate op (s:'a->bool) f =
          if FINITE(support op f s)
-         then ITSET' (\x a. op (f x) a) (support op f s) (neutral op)
+         then ITSET (\x a. op (f x) a) (support op f s) (neutral op)
          else neutral op``);
 
 val IN_SUPPORT = store_thm  ("IN_SUPPORT",
@@ -1559,7 +1564,7 @@ val ITERATE_CLAUSES_GEN = store_thm ("ITERATE_CLAUSES_GEN",
                                 else op (f x) (iterate op s f)))``,
   GEN_TAC THEN STRIP_TAC THEN CONV_TAC AND_FORALL_CONV THEN
   GEN_TAC THEN MP_TAC(ISPECL [``\x a. (op:'b->'b->'b) ((f:'a->'b)(x)) a``,
-                              ``neutral op :'b``] FINITE_RECURSION') THEN
+                              ``neutral op :'b``] FINITE_RECURSION) THEN
   KNOW_TAC ``(!(x :'a) (y :'a) (s :'b). x <> y ==>
         ((\(x :'a) (a :'b). (op :'b -> 'b -> 'b) ((f :'a -> 'b) x) a) x
         ((\(x :'a) (a :'b). op (f x) a) y s) = (\(x :'a) (a :'b). op (f x) a) y
