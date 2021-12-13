@@ -38,9 +38,7 @@ fun mk_countable_lemma ty = let
     val assms = map (curry mk_icomb countable_tm o pred_setSyntax.mk_univ) ex_param_tys
     val sum_ty = sumSyntax.list_mk_sum lemma_tys
     val u_sum_ty = pred_setSyntax.mk_univ sum_ty
-    val _ = print ("Making countable lemma for: ")
-    val _ = Hol_pp.print_term u_sum_ty
-    val _ = print ("\n")
+    val _ = HOL_MESG ("Making countable lemma for: " ^ term_to_string u_sum_ty)
     fun mk_sum t = let
         val n = Option.valOf (ty_n (type_of t))
         val t2 = if n = length lemma_tys - 1 then t
