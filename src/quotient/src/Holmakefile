@@ -1,4 +1,3 @@
-INCLUDES = ../../res_quan/src
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
@@ -24,11 +23,11 @@ quotient-selftest.log: selftest.exe
 
 endif
 
-ifdef HOLBUILD
-all: link-to-sigobj
+# ifdef HOLBUILD
+# all: link-to-sigobj
 
-link-to-sigobj: $(DEFAULT_TARGETS)
-	$(HOL_LNSIGOBJ)
+# link-to-sigobj: $(DEFAULT_TARGETS)
+# 	$(HOL_LNSIGOBJ)
 
-.PHONY: link-to-sigobj
-endif
+# .PHONY: link-to-sigobj
+# endif

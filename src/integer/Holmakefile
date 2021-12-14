@@ -1,4 +1,4 @@
-INCLUDES = ../quotient/src ../ring/src ../n-bit ../finite_maps ../res_quan/src
+INCLUDES = ../ring/src ../n-bit ../finite_maps ../res_quan/src
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all

@@ -105,36 +105,6 @@ val identity_equiv :
               !x y. $= x y = ($= x = $= y)
 *)
 
-val pair_equiv :
-        Thm.thm ->     (* equivalence theorem for left element of pair *)
-        Thm.thm ->     (* equivalence theorem for right element of pair *)
-        Thm.thm        (* returns equivalence theorem for pair:
-
-              !x y. (R1 ### R2) x y = ((R1 ### R2) x = (R1 ### R2) y)
-*)
-
-val sum_equiv :
-        Thm.thm ->     (* equivalence theorem for left element of sum *)
-        Thm.thm ->     (* equivalence theorem for right element of sum *)
-        Thm.thm        (* returns equivalence theorem for sum:
-
-              !x y. (R1 +++ R2) x y = ((R1 +++ R2) x = (R1 +++ R2) y)
-*)
-
-val list_equiv :
-        Thm.thm ->     (* equivalence theorem for element of list *)
-        Thm.thm        (* returns equivalence theorem for list:
-
-              !x y. LIST_REL R x y = (LIST_REL R x = LIST_REL R y)
-*)
-
-val option_equiv :
-        Thm.thm ->     (* equivalence theorem for element of option *)
-        Thm.thm        (* returns equivalence theorem for option:
-
-              !x y. OPTION_REL R x y = (OPTION_REL R x = OPTION_REL R y)
-*)
-
 val make_equiv :
         Thm.thm list ->  (* base equivalence theorems *)
         Thm.thm list ->  (* polymorphic type operator equivalence theorems *)
@@ -159,40 +129,6 @@ val identity_quotient :
 
               (!a. I (I a) = a) /\
               (|x y. $= x y = (I x = I y))
-*)
-
-val pair_quotient :
-        Thm.thm ->     (* quotient theorem for left element of pair *)
-        Thm.thm ->     (* quotient theorem for right element of pair *)
-        Thm.thm        (* returns quotient theorem for pair:
-
-              (!a. (abs1 ## abs2) ((rep1 ## rep2) a) = a) /\
-              (|x y. (R1 ### R2) x y = ((abs1 ## abs2) x = (abs1 ## abs2) y))
-*)
-
-val sum_quotient :
-        Thm.thm ->     (* quotient theorem for left element of sum *)
-        Thm.thm ->     (* quotient theorem for right element of sum *)
-        Thm.thm        (* returns quotient theorem for sum:
-
-              (!a. (abs1 ++ abs2) ((rep1 ++ rep2) a) = a) /\
-              (|x y. (R1 +++ R2) x y = ((abs1 ++ abs2) x = (abs1 ++ abs2) y))
-*)
-
-val list_quotient :
-        Thm.thm ->     (* quotient theorem for element of list *)
-        Thm.thm        (* returns quotient theorem for list:
-
-              (!a. MAP abs (MAP rep a) = a) /\
-              (|x y. LIST_REL R x y = (MAP abs x = MAP abs y))
-*)
-
-val option_quotient :
-        Thm.thm ->     (* quotient theorem for base type of option *)
-        Thm.thm        (* returns quotient theorem for option:
-
-              (!a. OPTION_MAP abs (OPTION_MAP rep a) = a) /\
-              (|x y. OPTION_REL R x y = (OPTION_MAP abs x = OPTION_MAP abs y))
 *)
 
 val fun_quotient :

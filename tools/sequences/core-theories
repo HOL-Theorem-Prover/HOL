@@ -16,6 +16,7 @@ src/IndDef
 src/basicProof
 !src/basicProof/theory_tests
 src/relation
+src/quotient/src
 src/coretypes
 [poly]!!src/meson/test
 src/tfl/src

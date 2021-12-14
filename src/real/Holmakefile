@@ -1,5 +1,5 @@
 INCLUDES = ../integer ../hol88 ../pred_set/src/more_theories \
-           ../res_quan/src ../quotient/src
+           ../res_quan/src
 
 TARGETS = $(subst prove_real_assumsTheory.uo,,$(DEFAULT_TARGETS))
 

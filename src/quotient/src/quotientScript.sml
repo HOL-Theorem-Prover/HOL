@@ -9,13 +9,8 @@ open HolKernel Parse boolLib;
 
 val _ = new_theory "quotient";
 
-open prim_recTheory;
-open combinTheory;
-open pred_setTheory;
-open bossLib;
-open res_quanTheory;
-open res_quanLib;
-open dep_rewrite;
+open combinTheory dep_rewrite simpLib boolSimps
+local open Q in end
 
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
@@ -24,6 +19,7 @@ val REWRITE_ALL_THM = fn th => RULE_ASSUM_TAC (REWRITE_RULE[th])
                                THEN REWRITE_TAC[th];
 
 val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
+val PROVE_TAC = metisLib.METIS_TAC
 
 
 (* =================================================================== *)
@@ -47,34 +43,31 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 (* Equivalence relations: *)
 
-val EQUIV_def =
-    Define
-      `EQUIV E = !x y:'a. E x y = (E x = E y)`;
+val EQUIV_def = new_definition("EQUIV_def",
+   “EQUIV E = !x y:'a. E x y = (E x = E y)”);
 
 (* Partial Equivalence relations: *)
 
-val PARTIAL_EQUIV_def =
-    Define
-      `PARTIAL_EQUIV R <=> (?x:'a. R x x) /\
-                           (!x y.  R x y <=> R x x /\ R y y /\ (R x = R y))`;
+val PARTIAL_EQUIV_def = new_definition("PARTIAL_EQUIV_def",
+  “PARTIAL_EQUIV R <=> (?x:'a. R x x) /\
+                      (!x y.  R x y <=> R x x /\ R y y /\ (R x = R y))”);
 
-val EQUIV_IMP_PARTIAL_EQUIV = store_thm
-  ("EQUIV_IMP_PARTIAL_EQUIV",
-    (“!R :'a -> 'a -> bool. EQUIV R ==> PARTIAL_EQUIV R”),
+Theorem EQUIV_IMP_PARTIAL_EQUIV:
+  !R :'a -> 'a -> bool. EQUIV R ==> PARTIAL_EQUIV R
+Proof
     REWRITE_TAC[EQUIV_def,PARTIAL_EQUIV_def]
     THEN REPEAT STRIP_TAC
     THEN PROVE_TAC[]
-   );
+QED
 
 (* Quotients, with partial equivalence relation, abstraction function, and
    representation function: *)
 
-val QUOTIENT_def =
-    Define
-      `QUOTIENT R abs rep <=>
+val QUOTIENT_def = new_definition("QUOTIENT_def",
+  “QUOTIENT R abs rep <=>
         (!a:'b. abs (rep a) = a) /\
         (!a. R (rep a) (rep a)) /\
-        (!(r:'a) (s:'a). R r s <=> R r r /\ R s s /\ (abs r = abs s))`;
+        (!(r:'a) (s:'a). R r s <=> R r r /\ R s s /\ (abs r = abs s))”);
 
 val QUOTIENT_ABS_REP = store_thm
    ("QUOTIENT_ABS_REP",
@@ -225,8 +218,6 @@ val QUOTIENT_TRANS = store_thm
    );
 
 
-
-
 (* FUNCTIONS: *)
 
 (* for ABS / REP of functions,
@@ -374,9 +365,8 @@ val FUN_QUOTIENT = store_thm
 
 (* Definition of respectfulness for restricted quantification. *)
 
-val respects_def =
-    Define
-      `respects = W : ('a -> 'a -> 'b) -> 'a -> 'b`;
+val respects_def = new_definition ("respects_def",
+      “respects = W : ('a -> 'a -> 'b) -> 'a -> 'b”);
 
 (* Tests:
 
@@ -396,7 +386,7 @@ val RESPECTS = store_thm
 
 Theorem IN_RESPECTS:
    !(R:'a->'a->bool) x. x IN respects R <=> R x x
-Proof REWRITE_TAC[SPECIFICATION,RESPECTS]
+Proof SIMP_TAC bool_ss [IN_DEF,RESPECTS]
 QED
 
 val RESPECTS_THM = store_thm
@@ -732,49 +722,38 @@ val LAMBDA_RSP = store_thm
     REWRITE_TAC[ETA_AX]
    );
 
-val ABSTRACT_PRS = store_thm
-   ("ABSTRACT_PRS",
-    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
-        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !f. f = (rep1 --> abs2)
-                      (RES_ABSTRACT (respects R1)
-                                 ((abs1 --> rep2) f))”),
-    REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN REPEAT GEN_TAC
-    THEN CONV_TAC FUN_EQ_CONV
-    THEN GEN_TAC
-    THEN REWRITE_TAC[FUN_MAP_THM]
-    THEN DEP_REWRITE_TAC[res_quanTheory.RES_ABSTRACT]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
-    THEN IMP_RES_THEN REWRITE_THM QUOTIENT_REP_REFL
-    THEN REWRITE_TAC[FUN_MAP_THM]
-    THEN IMP_RES_THEN REWRITE_THM QUOTIENT_ABS_REP
-   );
+Theorem ABSTRACT_PRS:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !f. f = (rep1 --> abs2) (RES_ABSTRACT (respects R1) ((abs1 --> rep2) f))
+Proof
+    REPEAT STRIP_TAC
+    THEN IMP_RES_THEN ASSUME_TAC QUOTIENT_REP_REFL
+    THEN IMP_RES_THEN ASSUME_TAC QUOTIENT_ABS_REP
+    THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM, cj 1 RES_ABSTRACT_DEF, respects_def,
+                               W_THM, IN_DEF, FUN_MAP_THM]
+QED
 
-val RES_ABSTRACT_RSP = store_thm
-   ("RES_ABSTRACT_RSP",
-    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
-        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !f1 f2.
-          (R1 ===> R2) f1 f2 ==>
-          (R1 ===> R2) (RES_ABSTRACT (respects R1) f1)
-                       (RES_ABSTRACT (respects R1) f2)
-       ”),
-    ONCE_REWRITE_TAC[FUN_REL]
-    THEN REPEAT STRIP_TAC
-    THEN RES_TAC
-    THEN DEP_REWRITE_TAC[res_quanTheory.RES_ABSTRACT]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
-    THEN POP_ASSUM REWRITE_THM
-    THEN POP_ASSUM MP_TAC
-    THEN IMP_RES_THEN (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[th])))
-                  QUOTIENT_REL
-    THEN STRIP_TAC
-    THEN ASM_REWRITE_TAC[]
-   );
+Theorem RES_ABSTRACT_RSP:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !f1 f2.
+        (R1 ===> R2) f1 f2 ==>
+        (R1 ===> R2) (RES_ABSTRACT (respects R1) f1)
+                     (RES_ABSTRACT (respects R1) f2)
+Proof
+  REWRITE_TAC[FUN_REL]
+  THEN REPEAT STRIP_TAC
+  THEN first_x_assum $ drule_then assume_tac
+  THEN Q.RENAME_TAC [‘R2 (RES_ABSTRACT _ f1 x) (_ _ f2 y)’]
+  THEN Q.SUBGOAL_THEN ‘R1 x x /\ R1 y y’ strip_assume_tac
+  >- PROVE_TAC[QUOTIENT_REL] >>
+  asm_simp_tac bool_ss [IN_DEF, RES_ABSTRACT_DEF, respects_def, W_THM]
+QED
 
 val LET_RES_ABSTRACT = store_thm
    ("LET_RES_ABSTRACT",
@@ -783,10 +762,8 @@ val LET_RES_ABSTRACT = store_thm
     REPEAT GEN_TAC
     THEN ONCE_REWRITE_TAC[LET_DEF]
     THEN BETA_TAC
-    THEN REWRITE_TAC[res_quanTheory.RES_ABSTRACT]
+    THEN REWRITE_TAC[RES_ABSTRACT_DEF]
    );
-
-
 
 val LAMBDA_REP_ABS_RSP = store_thm
    ("LAMBDA_REP_ABS_RSP",
@@ -830,6 +807,10 @@ val REP_ABS_RSP = store_thm
 (*              RES_FORALL, RES_EXISTS, RES_EXISTS_EQUIV *)
 (* ----------------------------------------------------- *)
 
+val IN_THM = REFL “(x:'a) IN P”
+               |> CONV_RULE (RAND_CONV (REWRITE_CONV [IN_DEF]))
+               |> RIGHT_LIST_BETA
+
 val FORALL_PRS = store_thm
    ("FORALL_PRS",
     (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
@@ -837,13 +818,13 @@ val FORALL_PRS = store_thm
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN GEN_TAC
-    THEN REWRITE_TAC[FORALL_DEF,RES_FORALL]
+    THEN REWRITE_TAC[FORALL_DEF,RES_FORALL_THM]
     THEN BETA_TAC
     THEN CONV_TAC (LAND_CONV FUN_EQ_CONV
                    THENC RAND_CONV FUN_EQ_CONV)
     THEN BETA_TAC
     THEN REWRITE_TAC[FUN_MAP_THM,I_THM]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
+    THEN REWRITE_TAC[IN_THM,respects_def,W_THM]
     THEN EQ_TAC
     THENL
       [ DISCH_THEN REWRITE_THM,
@@ -856,6 +837,7 @@ val FORALL_PRS = store_thm
       ]
    );
 
+val RES_FORALL = RES_FORALL_THM
 val RES_FORALL_RSP = store_thm
    ("RES_FORALL_RSP",
     (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
@@ -868,7 +850,7 @@ val RES_FORALL_RSP = store_thm
     THEN REWRITE_TAC[FUN_REL]
     THEN DISCH_TAC
     THEN REWRITE_TAC[RES_FORALL]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
+    THEN REWRITE_TAC[IN_THM,respects_def,W_THM]
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
@@ -883,7 +865,7 @@ val RES_FORALL_PRS = store_thm
     THEN STRIP_TAC
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[RES_FORALL]
-    THEN REWRITE_TAC[SPECIFICATION,FUN_MAP_THM,I_THM]
+    THEN REWRITE_TAC[IN_THM,FUN_MAP_THM,I_THM]
     THEN EQ_TAC
     THENL
       [ DISCH_THEN REWRITE_THM,
@@ -895,7 +877,7 @@ val RES_FORALL_PRS = store_thm
       ]
    );
 
-
+val RES_EXISTS = RES_EXISTS_THM
 val EXISTS_PRS = store_thm
    ("EXISTS_PRS",
     (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
@@ -906,7 +888,7 @@ val EXISTS_PRS = store_thm
     THEN REWRITE_TAC[boolTheory.EXISTS_DEF,RES_EXISTS]
     THEN BETA_TAC
     THEN REWRITE_TAC[FUN_MAP_THM,I_THM]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
+    THEN REWRITE_TAC[IN_THM,respects_def,W_THM]
     THEN EQ_TAC
     THENL
       [ DISCH_TAC
@@ -936,7 +918,7 @@ val RES_EXISTS_RSP = store_thm
     THEN REWRITE_TAC[FUN_REL]
     THEN DISCH_TAC
     THEN REWRITE_TAC[RES_EXISTS]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
+    THEN REWRITE_TAC[IN_THM,respects_def,W_THM]
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
@@ -953,7 +935,7 @@ val RES_EXISTS_PRS = store_thm
     THEN STRIP_TAC
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[RES_EXISTS]
-    THEN REWRITE_TAC[SPECIFICATION,FUN_MAP_THM,I_THM]
+    THEN REWRITE_TAC[IN_THM,FUN_MAP_THM,I_THM]
     THEN EQ_TAC
     THENL
       [ STRIP_TAC
@@ -987,7 +969,7 @@ val EXISTS_UNIQUE_PRS = store_thm
 
         REWRITE_TAC[FUN_MAP_THM,I_THM]
         THEN REWRITE_TAC[RES_FORALL]
-        THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
+        THEN REWRITE_TAC[IN_THM,respects_def,W_THM]
         THEN BETA_TAC
         THEN EQ_TAC
         THENL
@@ -1033,7 +1015,7 @@ val RES_EXISTS_EQUIV_RSP = store_thm
         THEN ASM_REWRITE_TAC[FUN_REL],
 
         REWRITE_TAC[RES_FORALL]
-        THEN REWRITE_TAC[SPECIFICATION,respects_def,W_THM]
+        THEN REWRITE_TAC[IN_THM,respects_def,W_THM]
         THEN BETA_TAC
         THEN EQ_TAC
         THENL
@@ -1069,7 +1051,7 @@ val RES_EXISTS_UNIQUE_PRS = store_thm
         THEN ASM_REWRITE_TAC[FUN_MAP,I_THM,ETA_AX],
 
         CONV_TAC (DEPTH_CONV RES_FORALL_CONV)
-        THEN REWRITE_TAC[SPECIFICATION,FUN_MAP_THM,I_THM]
+        THEN REWRITE_TAC[IN_THM,FUN_MAP_THM,I_THM]
         THEN EQ_TAC
         THENL
           [ REPEAT STRIP_TAC
@@ -1112,7 +1094,7 @@ val RES_SELECT_FUN_PRS = store_thm
     THEN GEN_TAC
     THEN REWRITE_TAC[FUN_MAP_THM]
     THEN REWRITE_TAC[res_quanTheory.RES_SELECT]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def]
+    THEN REWRITE_TAC[IN_THM,respects_def]
     THEN BETA_TAC
     THEN ASM_REWRITE_TAC[FUN_MAP_THM,I_THM]
     THEN CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV (GSYM ETA_AX))))
@@ -1141,7 +1123,7 @@ val RES_SELECT_FUN_RSP = store_thm
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
     THEN DEP_REWRITE_TAC[res_quanTheory.RES_SELECT]
-    THEN REWRITE_TAC[SPECIFICATION,respects_def]
+    THEN REWRITE_TAC[IN_THM,respects_def]
     THEN BETA_TAC
     THEN POP_ASSUM REWRITE_THM
     THEN POP_ASSUM MP_TAC
@@ -1489,9 +1471,9 @@ val ABSTRACT_RES_ABSTRACT = store_thm
           (R1 ===> R2) f (RES_ABSTRACT (respects R1) g)”),
     REWRITE_TAC[FUN_REL]
     THEN REPEAT STRIP_TAC
-    THEN DEP_REWRITE_TAC[res_quanTheory.RES_ABSTRACT]
+    THEN DEP_REWRITE_TAC[cj 1 RES_ABSTRACT_DEF]
     THEN RES_THEN REWRITE_THM
-    THEN REWRITE_TAC[SPECIFICATION,RESPECTS]
+    THEN REWRITE_TAC[IN_THM,RESPECTS]
     THEN POP_ASSUM MP_TAC
     THEN IMP_RES_THEN (CONV_TAC o LAND_CONV o REWR_CONV) QUOTIENT_REL
     THEN STRIP_TAC
@@ -1505,9 +1487,9 @@ val RES_ABSTRACT_ABSTRACT = store_thm
           (R1 ===> R2) (RES_ABSTRACT (respects R1) f) g”),
     REWRITE_TAC[FUN_REL]
     THEN REPEAT STRIP_TAC
-    THEN DEP_REWRITE_TAC[res_quanTheory.RES_ABSTRACT]
+    THEN DEP_REWRITE_TAC[cj 1 RES_ABSTRACT_DEF]
     THEN RES_THEN REWRITE_THM
-    THEN REWRITE_TAC[SPECIFICATION,RESPECTS]
+    THEN REWRITE_TAC[IN_THM,RESPECTS]
     THEN POP_ASSUM MP_TAC
     THEN IMP_RES_THEN (CONV_TAC o LAND_CONV o REWR_CONV) QUOTIENT_REL
     THEN STRIP_TAC
@@ -1519,8 +1501,8 @@ val EQUIV_RES_ABSTRACT_LEFT = store_thm
           R2 (f1 x1) (f2 x2) /\ R1 x1 x1 ==>
           R2 (RES_ABSTRACT (respects R1) f1 x1) (f2 x2)”),
     REPEAT STRIP_TAC
-    THEN DEP_REWRITE_TAC[res_quanTheory.RES_ABSTRACT]
-    THEN REWRITE_TAC[SPECIFICATION,RESPECTS]
+    THEN DEP_REWRITE_TAC[cj 1 RES_ABSTRACT_DEF]
+    THEN REWRITE_TAC[IN_THM,RESPECTS]
     THEN ASM_REWRITE_TAC[]
    );
 
@@ -1530,8 +1512,8 @@ val EQUIV_RES_ABSTRACT_RIGHT = store_thm
           R2 (f1 x1) (f2 x2) /\ R1 x2 x2 ==>
           R2 (f1 x1) (RES_ABSTRACT (respects R1) f2 x2)”),
     REPEAT STRIP_TAC
-    THEN DEP_REWRITE_TAC[res_quanTheory.RES_ABSTRACT]
-    THEN REWRITE_TAC[SPECIFICATION,RESPECTS]
+    THEN DEP_REWRITE_TAC[cj 1 RES_ABSTRACT_DEF]
+    THEN REWRITE_TAC[IN_THM,RESPECTS]
     THEN ASM_REWRITE_TAC[]
    );
 
@@ -1544,8 +1526,7 @@ val EQUIV_RES_FORALL = store_thm
     THEN REPEAT STRIP_TAC
     THEN CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX))))
     THEN CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX))))
-    THEN CONV_TAC (LAND_CONV res_quanLib.RES_FORALL_CONV)
-    THEN ASM_REWRITE_TAC[SPECIFICATION,RESPECTS]
+    THEN asm_simp_tac bool_ss [RES_FORALL_THM, respects_def, W_THM, IN_THM]
    );
 
 val EQUIV_RES_EXISTS = store_thm
@@ -1557,8 +1538,7 @@ val EQUIV_RES_EXISTS = store_thm
     THEN REPEAT STRIP_TAC
     THEN CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX))))
     THEN CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX))))
-    THEN CONV_TAC (LAND_CONV res_quanLib.RES_EXISTS_CONV)
-    THEN ASM_REWRITE_TAC[SPECIFICATION,RESPECTS]
+    THEN asm_simp_tac bool_ss [RES_EXISTS_THM, respects_def, W_THM, IN_THM]
    );
 
 val EQUIV_RES_EXISTS_UNIQUE = store_thm
@@ -1570,10 +1550,9 @@ val EQUIV_RES_EXISTS_UNIQUE = store_thm
     THEN REPEAT STRIP_TAC
     THEN CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX))))
     THEN CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX))))
-    THEN CONV_TAC (LAND_CONV res_quanLib.RES_EXISTS_UNIQUE_CONV)
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_FORALL_CONV)
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_EXISTS_CONV)
-    THEN ASM_REWRITE_TAC[EXISTS_UNIQUE_THM,SPECIFICATION,RESPECTS]
+    THEN asm_simp_tac bool_ss [RES_EXISTS_UNIQUE_THM, RES_EXISTS_THM,
+                               RES_FORALL_THM, respects_def, W_THM, IN_THM,
+                               EXISTS_UNIQUE_THM]
    );
 
 val FORALL_REGULAR = store_thm
@@ -1614,10 +1593,7 @@ val RES_FORALL_REGULAR = store_thm
     THEN STRIP_TAC
     THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
     THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_FORALL_CONV)
-    THEN REWRITE_TAC[SPECIFICATION]
-    THEN REPEAT STRIP_TAC
-    THEN RES_TAC
+    THEN asm_simp_tac bool_ss [RES_FORALL_THM, IN_THM]
    );
 
 val RES_EXISTS_REGULAR = store_thm
@@ -1629,51 +1605,30 @@ val RES_EXISTS_REGULAR = store_thm
     THEN STRIP_TAC
     THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
     THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_EXISTS_CONV)
-    THEN REWRITE_TAC[SPECIFICATION]
-    THEN STRIP_TAC
-    THEN RES_TAC
-    THEN EXISTS_TAC (“x:'a”)
-    THEN ASM_REWRITE_TAC[]
+    THEN asm_simp_tac bool_ss [RES_EXISTS_THM, IN_THM]
+    THEN PROVE_TAC[]
    );
 
-val LEFT_RES_FORALL_REGULAR = store_thm
-   ("LEFT_RES_FORALL_REGULAR",
-    (“!P R Q.
-          (!x:'a. R x /\ (Q x ==> P x)) ==>
-          (RES_FORALL R Q ==> $! P)”),
-    REPEAT GEN_TAC
-    THEN CONV_TAC (LAND_CONV FORALL_AND_CONV)
-    THEN STRIP_TAC
-    THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (LAND_CONV res_quanLib.RES_FORALL_CONV)
-    THEN REWRITE_TAC[SPECIFICATION]
-    THEN STRIP_TAC
-    THEN GEN_TAC
-    THEN FIRST_ASSUM MATCH_MP_TAC
-    THEN FIRST_ASSUM MATCH_MP_TAC
-    THEN ASM_REWRITE_TAC[]
-   );
+Theorem LEFT_RES_FORALL_REGULAR:
+  !P R Q.
+    (!x:'a. R x /\ (Q x ==> P x)) ==>
+    (RES_FORALL R Q ==> $! P)
+Proof
+  simp_tac bool_ss [RES_FORALL_THM, IN_THM] >>
+  rpt strip_tac >>
+  CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])) >>
+  asm_simp_tac bool_ss []
+QED
 
-val RIGHT_RES_FORALL_REGULAR = store_thm
-   ("RIGHT_RES_FORALL_REGULAR",
-    (“!P R Q.
-          (!x:'a. R x ==> P x ==> Q x) ==>
-          ($! P ==> RES_FORALL R Q)”),
-    REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN STRIP_TAC
-    THEN CONV_TAC res_quanLib.RES_FORALL_CONV
-    THEN REWRITE_TAC[SPECIFICATION]
-    THEN GEN_TAC
-    THEN DISCH_TAC
-    THEN RES_TAC
-    THEN FIRST_ASSUM MATCH_MP_TAC
-    THEN ASM_REWRITE_TAC[]
-   );
+Theorem RIGHT_RES_FORALL_REGULAR:
+  !P R Q. (!x:'a. R x ==> P x ==> Q x) ==>
+          ($! P ==> RES_FORALL R Q)
+Proof
+  REPEAT GEN_TAC
+  THEN STRIP_TAC
+  THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
+  THEN asm_simp_tac bool_ss [RES_FORALL_THM, IN_THM]
+QED
 
 val LEFT_RES_EXISTS_REGULAR = store_thm
    ("LEFT_RES_EXISTS_REGULAR",
@@ -1684,11 +1639,9 @@ val LEFT_RES_EXISTS_REGULAR = store_thm
     THEN STRIP_TAC
     THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
     THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (LAND_CONV res_quanLib.RES_EXISTS_CONV)
-    THEN REWRITE_TAC[SPECIFICATION]
-    THEN STRIP_TAC
-    THEN EXISTS_TAC (“x:'a”)
-    THEN RES_TAC
+    THEN asm_simp_tac bool_ss [RES_EXISTS_THM, IN_THM]
+    THEN rpt strip_tac
+    THEN rpt (first_x_assum $ irule_at Any)
    );
 
 val RIGHT_RES_EXISTS_REGULAR = store_thm
@@ -1701,11 +1654,8 @@ val RIGHT_RES_EXISTS_REGULAR = store_thm
     THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
     THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
     THEN STRIP_TAC
-    THEN CONV_TAC res_quanLib.RES_EXISTS_CONV
-    THEN REWRITE_TAC[SPECIFICATION]
-    THEN RES_TAC
-    THEN EXISTS_TAC (“x:'a”)
-    THEN ASM_REWRITE_TAC[]
+    THEN asm_simp_tac bool_ss [RES_EXISTS_THM, IN_THM]
+    THEN rpt (first_x_assum $ irule_at Any)
    );
 
 val EXISTS_UNIQUE_REGULAR = store_thm
@@ -1720,10 +1670,7 @@ val EXISTS_UNIQUE_REGULAR = store_thm
     THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
     THEN CONV_TAC (LAND_CONV EXISTS_UNIQUE_CONV)
     THEN REWRITE_TAC[RES_EXISTS_EQUIV]
-    THEN BETA_TAC
-    THEN CONV_TAC (RAND_CONV (DEPTH_CONV res_quanLib.RES_EXISTS_CONV))
-    THEN CONV_TAC (RAND_CONV (DEPTH_CONV res_quanLib.RES_FORALL_CONV))
-    THEN REWRITE_TAC[SPECIFICATION]
+    THEN asm_simp_tac bool_ss [RES_EXISTS_THM, RES_FORALL_THM, IN_THM]
     THEN PROVE_TAC[]
    );
 
@@ -1736,7 +1683,7 @@ val RES_EXISTS_UNIQUE_RESPECTS_REGULAR = store_thm
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC RES_EXISTS_UNIQUE_EQUIV_REL
     THEN POP_ASSUM MATCH_MP_TAC
-    THEN REWRITE_TAC[SPECIFICATION,RESPECTS]
+    THEN REWRITE_TAC[IN_THM,RESPECTS]
    );
 *)
 
@@ -1745,18 +1692,9 @@ val RES_EXISTS_UNIQUE_RESPECTS_REGULAR = store_thm
     (“!R (P:'a -> bool).
          RES_EXISTS_UNIQUE (respects R) P ==>
          RES_EXISTS_EQUIV R P”),
-    REPEAT GEN_TAC
-    THEN REWRITE_TAC[res_quanTheory.RES_EXISTS_UNIQUE,RES_EXISTS_EQUIV]
-    THEN STRIP_TAC
-    THEN ASM_REWRITE_TAC[]
-    THEN REPEAT res_quanLib.RESQ_GEN_TAC
-    THEN STRIP_TAC
-    THEN res_quanLib.RESQ_RES_TAC
-    THEN RES_TAC
-    THEN POP_ASSUM MP_TAC
-    THEN POP_ASSUM MP_TAC
-    THEN POP_ASSUM MP_TAC
-    THEN ASM_REWRITE_TAC[GSYM IN_RESPECTS]
+    simp_tac bool_ss [RES_EXISTS_UNIQUE_THM, RES_EXISTS_EQUIV,
+                      RES_FORALL_THM, RES_EXISTS_THM, IN_RESPECTS] THEN
+    PROVE_TAC[]
    );
 
 val RES_EXISTS_UNIQUE_REGULAR = store_thm
@@ -1765,17 +1703,10 @@ val RES_EXISTS_UNIQUE_REGULAR = store_thm
           (!x:'a. P x ==> Q x) /\
           (!x y. respects R x /\ Q x /\ respects R y /\ Q y ==> R x y) ==>
           (RES_EXISTS_UNIQUE (respects R) P ==> RES_EXISTS_EQUIV R Q)”),
-    REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV[GSYM ETA_AX])))
-    THEN CONV_TAC (LAND_CONV res_quanLib.RES_EXISTS_UNIQUE_CONV)
-    THEN REWRITE_TAC[RES_EXISTS_EQUIV]
-    THEN BETA_TAC
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_EXISTS_CONV)
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_FORALL_CONV)
-    THEN REWRITE_TAC[SPECIFICATION]
-    THEN PROVE_TAC[]
+    simp_tac bool_ss [RES_EXISTS_UNIQUE_THM, RES_EXISTS_EQUIV, respects_def,
+                      W_THM, IN_THM,
+                      RES_FORALL_THM, RES_EXISTS_THM, IN_RESPECTS] THEN
+    PROVE_TAC[]
    );
 
 val RES_EXISTS_UNIQUE_REGULAR_SAME = store_thm
@@ -1784,33 +1715,10 @@ val RES_EXISTS_UNIQUE_REGULAR_SAME = store_thm
           (R ===> $=) P Q ==>
           (RES_EXISTS_UNIQUE (respects R) P ==>
            RES_EXISTS_EQUIV R Q)”),
-    REPEAT GEN_TAC
-    THEN REWRITE_TAC[FUN_REL]
-    THEN DISCH_TAC
-    THEN REWRITE_TAC[res_quanTheory.RES_EXISTS_UNIQUE,RES_EXISTS_EQUIV]
-    THEN MATCH_MP_TAC CONJ_IMPLIES
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_EXISTS_CONV)
-    THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_FORALL_CONV)
-    THEN REWRITE_TAC[SPECIFICATION,RESPECTS]
-    THEN CONJ_TAC
-    THEN STRIP_TAC
-    THENL
-      [ EXISTS_TAC “x:'a”
-        THEN ASM_REWRITE_TAC[]
-        THEN RES_TAC,
-
-        POP_ASSUM (fn th => GEN_TAC THEN DISCH_TAC
-                            THEN FIRST_ASSUM (MP_TAC o MATCH_MP th))
-        THEN DISCH_THEN (fn th =>
-                          GEN_TAC THEN DISCH_TAC
-                            THEN FIRST_ASSUM (MP_TAC o MATCH_MP th))
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[]
-        THEN DISCH_TAC
-        THEN STRIP_TAC
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[]
-      ]
+    simp_tac bool_ss [RES_EXISTS_UNIQUE_THM, RES_EXISTS_EQUIV, respects_def,
+                      W_THM, IN_THM, FUN_REL,
+                      RES_FORALL_THM, RES_EXISTS_THM, IN_RESPECTS] THEN
+    PROVE_TAC[]
    );
 
 
