@@ -595,6 +595,11 @@ fun scrubCT() = (scrub(); theCT());
  *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
 
+fun format_name_message {pfx, name} =
+    (if size pfx >= 20 then pfx
+     else StringCvt.padRight #"_" 21 (pfx ^ " ")) ^ " " ^
+    Lib.quote name ^ "\n"
+
 local
   fun check_name tempok (fname,s) =
     if Lexis.ok_sml_identifier s andalso
@@ -617,17 +622,14 @@ local
         then "ORACLE thm"
       else "CHEAT"
     end
+  val msgOut = with_flag(MESG_to_string,Lib.I) HOL_MESG
   fun save_mesg s name =
     if !save_thm_reporting = 0 orelse
        !Globals.interactive andalso !save_thm_reporting < 2
       then ()
-    else let
-           val s = if !Globals.interactive then s
-                   else StringCvt.padRight #"_" 13 (s ^ " ")
-         in
-           with_flag (MESG_to_string, Lib.I) HOL_MESG
-             ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
-         end
+    else if !Globals.interactive then
+      msgOut ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
+    else msgOut (format_name_message{pfx = "Saved " ^ s, name = name})
 in
   fun save_thm (name, th) =
     let
