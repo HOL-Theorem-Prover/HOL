@@ -18,8 +18,11 @@
 *)
 
 open HolKernel Parse boolLib relationTheory mesonLib metisLib
+open quotientLib simpLib boolSimps BasicProvers
 
 val _ = new_theory "pair";
+
+fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta reduce *)
 
 (*---------------------------------------------------------------------------*)
 (* Define the type of pairs and tell the grammar about it.                   *)
