@@ -269,6 +269,7 @@ val list_no_len_qp = combine_qps [
 val list_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
                      LIST_LENGTH_1]) list_no_len_qp;
 
+val LIST_LENGTH_20 = DB.fetch "quantHeuristics" "LIST_LENGTH_20"
 val list_len_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
                      LIST_LENGTH_20]) list_no_len_qp;
 

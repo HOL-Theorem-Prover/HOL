@@ -1069,7 +1069,7 @@ val LIST_LENGTH_5  = save_thm ("LIST_LENGTH_5",  LIST_CONJ (mk_length_upto_n_thm
 val LIST_LENGTH_7  = save_thm ("LIST_LENGTH_7",  LIST_CONJ (mk_length_upto_n_thms 7));
 val LIST_LENGTH_10 = save_thm ("LIST_LENGTH_10", LIST_CONJ (mk_length_upto_n_thms 10));
 val LIST_LENGTH_15 = save_thm ("LIST_LENGTH_15", LIST_CONJ (mk_length_upto_n_thms 15));
-val LIST_LENGTH_20 = save_thm ("LIST_LENGTH_20", LIST_CONJ (mk_length_upto_n_thms 20));
+Theorem LIST_LENGTH_20[private] = LIST_CONJ (mk_length_upto_n_thms 20)
 val LIST_LENGTH_25 = save_thm ("LIST_LENGTH_25", LIST_CONJ (mk_length_upto_n_thms 25));
 
 val LIST_LENGTH_COMPARE_SUC = store_thm ("LIST_LENGTH_COMPARE_SUC",

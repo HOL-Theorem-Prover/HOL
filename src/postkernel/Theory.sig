@@ -21,6 +21,7 @@ sig
   val new_constant       : string * hol_type -> unit
   val new_axiom          : string * term -> thm
   val save_thm           : string * thm -> thm
+  val save_private_thm   : string * thm -> thm
 
 (* Delete from the current theory segment *)
 

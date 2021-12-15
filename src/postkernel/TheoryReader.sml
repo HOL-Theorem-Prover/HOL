@@ -101,7 +101,8 @@ fun string_to_class "A" = SOME DB.Axm
   | string_to_class _ = NONE
 
 fun class_decode c =
-    Option.map (List.map (fn i => (i,c))) o
+    Option.map (List.map (fn i => if i < 0 then (~(i + 1), c, true)
+                                      else (i - 1, c, false))) o
     HOLsexp.list_decode HOLsexp.int_decode
 
 fun load_thydata thyname path =
@@ -158,13 +159,13 @@ fun load_thydata thyname path =
     val thmdict = Redblackmap.fromList String.compare named_thms
     val _ =
         let
-          fun mapthis (nm_i,c) =
+          fun mapthis (nm_i,c,private) =
               let val nm = read_string share_data nm_i
                   val th =
                       Redblackmap.find (thmdict,nm)
                       handle Redblackmap.NotFound =>
                              raise TheoryReader ("Couldn't lookup "^nm)
-              in (nm,th,c)
+              in (nm,th,c,{private=private})
               end
         in
           DB.bindl thyname (map mapthis classinfo)
