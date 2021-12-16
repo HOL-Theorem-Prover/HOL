@@ -1079,6 +1079,26 @@ val LIST_LENGTH_COMPARE_SUC = store_thm ("LIST_LENGTH_COMPARE_SUC",
   ((SUC x = LENGTH l) <=> ?l' e1. (LENGTH l' = x) /\ (l = e1::l'))``,
 SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]);
 
+(* alternative to LIST_LENGTH_n theorems (also use PULL_EXISTS) *)
+Theorem LENGTH_TO_EXISTS_CONS:
+  (n < LENGTH xs <=> (?y ys. (xs = y :: ys) /\ n <= LENGTH ys))
+  /\
+  (LENGTH xs > n <=> (?y ys. (xs = y :: ys) /\ n <= LENGTH ys))
+  /\
+  (0 < n ==> ((LENGTH xs = n) <=> (?y ys. (xs = y :: ys) /\ (LENGTH ys = PRE n))))
+  /\
+  (0 < n ==> ((n = LENGTH xs) <=> (?y ys. (xs = y :: ys) /\ (LENGTH ys = PRE n))))
+  /\
+  (0 < n ==> (n <= LENGTH xs <=> (?y ys. (xs = y :: ys) /\ PRE n <= LENGTH ys)))
+  /\
+  (0 < n ==> (LENGTH xs >= n <=> (?y ys. (xs = y :: ys) /\ PRE n <= LENGTH ys)))
+  /\
+  (0 < x ==> (PRE (x + y) = PRE x + y))
+  /\
+  (0 < y ==> (PRE (x + y) = x + PRE y))
+Proof
+  simp_tac list_ss [] \\ Cases_on `xs` \\ simp_tac list_ss []
+QED
 
 (* Useful rewrites *)
 val HD_TL_EQ_TAC = REPEAT (Cases THEN SIMP_TAC list_ss [] THEN SPEC_ALL_TAC)
@@ -1201,6 +1221,30 @@ val HD_TL_EQ_THMS_2 = map (
 
 val HD_TL_EQ_THMS = save_thm ("HD_TL_EQ_THMS", LIST_CONJ
   (HD_TL_EQ_THMS_1 @ HD_TL_EQ_THMS_2))
+
+(* alternative to HD_TL_EQ_THMS for any length *)
+Theorem CONS_EQ_REWRITE:
+  ((x :: xs = ys) <=> 1 <= LENGTH ys /\ (x = HD ys) /\ (xs = TL ys))
+  /\
+  ((ys = x :: xs) <=> 1 <= LENGTH ys /\ (HD ys = x) /\ (TL ys = xs))
+  /\
+  (0 < n ==> (n <= LENGTH (TL ys) <=> n + 1 <= LENGTH ys))
+  /\
+  (n <= m ==> (n <= rhs /\ m <= rhs <=> m <= rhs))
+  /\
+  (([] = TL ys) <=> LENGTH ys <= 1)
+  /\
+  ((TL ys = []) <=> LENGTH ys <= 1)
+  /\
+  (LENGTH (TL ys) <= n <=> LENGTH ys <= n + 1)
+  /\
+  (m <= n /\ n <= m <=> (m = n))
+  /\
+  (m <= LENGTH ys /\ (n = LENGTH ys) <=> m <= n /\ (n = LENGTH ys))
+Proof
+  Cases_on `ys` \\ simp_tac list_ss []
+  \\ Cases_on `t` \\ simp_tac list_ss []
+QED
 
 val SOME_THE_EQ = store_thm ("SOME_THE_EQ",
   ``!opt. (SOME (THE opt) = opt) <=> IS_SOME opt``,
