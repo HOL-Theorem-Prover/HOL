@@ -1746,11 +1746,11 @@ There are also attributes controlling the way in which a theorem is saved, rathe
 \index{theorem attributes!local@\ml{local}}
 The first, \ml{local}, is used to create theorems that will \emph{not} be exported to disk, but which are important locally.
 Such local theorems can have other attributes attached to them, which will have their effect within the given session/script-file.
-\index{private@\ml{private}!as theorem attribute}
-\index{theorem attributes!private@\ml{private}}
-The second, \ml{private}, makes the theorem more difficult to access (more ``private'').
+\index{unlisted@\ml{unlisted}!as theorem attribute}
+\index{theorem attributes!unlisted@\ml{unlisted}}
+The second, \ml{unlisted}, makes the theorem more difficult to access.
 This is appropriate when the theorem is being saved for the consumption of particular tools (which fact might be indicated by the use of other attributes), but the theorem is otherwise uninteresting, and unlikely to be something that a user is going to want to stumble across when searching or surveying theories.
-Concretely: private theorems do not appear in theory signature files; and private theorems will not be returned as the results of searches made for theorems using the functions in the \ml{DB} module.
+Concretely: unlisted theorems do not appear in theory signature files (so: cannot be accessed with the \ml{xTheory.thm\_name} syntax); and unlisted theorems will not be returned as the results of searches made for theorems using the functions in the \ml{DB} module.
 \index{theorem database (DB)@theorem database (\ml{DB})}
 \index{DB, database of theorem values@\ml{DB}, database of theorem values}
 

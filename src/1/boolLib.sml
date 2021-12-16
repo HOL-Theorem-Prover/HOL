@@ -120,7 +120,7 @@ fun prove_local privp (n,th) =
 fun extract_localpriv (loc,priv,acc) attrs =
     case attrs of
         [] => (loc,priv,List.rev acc)
-      | "private" :: rest => extract_localpriv (loc,true,acc) rest
+      | "unlisted" :: rest => extract_localpriv (loc,true,acc) rest
       | "local" :: rest => extract_localpriv (true,priv,acc) rest
       | a :: rest => extract_localpriv (loc,priv,a::acc) rest
 in
