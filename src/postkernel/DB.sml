@@ -354,6 +354,7 @@ in
 end
 
 fun fetch s1 s2 = #1 (thm_class "fetch" s1 s2);
+fun fetch_knm{Thy,Name} = fetch Thy Name
 
 fun thm_of ((_,n),dv) = (n,dv_thm dv);
 fun is x (_,dv) = (dv_class dv=x)
