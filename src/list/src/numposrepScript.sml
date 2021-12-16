@@ -5,12 +5,6 @@ open listTheory rich_listTheory logrootTheory arithmeticTheory bitTheory
 
 val ARITH_ss = numSimps.ARITH_ss
 
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
 val _ = new_theory "numposrep"
 
 (* ------------------------------------------------------------------------- *)
@@ -78,13 +72,13 @@ Theorem LENGTH_l2n:
 Proof
   Induct_on `l` \\ SRW_TAC [ARITH_ss] [l2n_def, GREATER_DEF] \\
   Cases_on ‘h MOD b = 0’ \\ FULL_SIMP_TAC (srw_ss()) []
-  >> (REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [MOD_EQ_0_DIVISOR] \\
+  >- (REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [MOD_EQ_0_DIVISOR] \\
       FULL_SIMP_TAC (srw_ss()) [LT_MULT_CANCEL_RBARE] \\ SRW_TAC[][] \\
       SRW_TAC[ARITH_ss][LOG_MULT]) \\
   ‘h <> 0’ by (STRIP_TAC \\ SRW_TAC[][] \\ REV_FULL_SIMP_TAC (srw_ss()) []) \\
   ‘0 < h + b * l2n b l’ by DECIDE_TAC \\
   Cases_on ‘l2n b l = 0’
-  >> (SRW_TAC[][] \\ SRW_TAC[ARITH_ss][LOG_RWT]) \\
+  >- (SRW_TAC[][] \\ SRW_TAC[ARITH_ss][LOG_RWT]) \\
   SRW_TAC[][LOG_RWT] \\
   ‘(h + b * l2n b l) DIV b = l2n b l’
      by METIS_TAC[DIV_MULT, MULT_COMM, ADD_COMM] \\
@@ -103,7 +97,7 @@ val l2n_DIGIT = Q.store_thm("l2n_DIGIT",
 val lem = Q.prove(
   `!b n. 1 < b ==> PRE (LENGTH (n2l b n)) <= LENGTH (n2l b (n DIV b))`,
   SRW_TAC [ARITH_ss] [LENGTH_n2l]
-    << [
+    >| [
       `0 <= n DIV b /\ 0 < n` by DECIDE_TAC
         \\ IMP_RES_TAC DIV_0_IMP_LT
         \\ SRW_TAC [ARITH_ss] [LOG_RWT],
@@ -118,11 +112,11 @@ val EL_n2l = Q.store_thm("EL_n2l",
     \\ SRW_TAC [] []
     \\ ONCE_REWRITE_TAC [n2l_def]
     \\ SRW_TAC [ARITH_ss] []
-    << [
+    >| [
       IMP_RES_TAC LENGTH_n2l
         \\ Cases_on `n = 0`
         \\ FULL_SIMP_TAC arith_ss []
-        << [ALL_TAC, `LOG b n = 0` by SRW_TAC [ARITH_ss] [LOG_RWT]]
+        >| [ALL_TAC, `LOG b n = 0` by SRW_TAC [ARITH_ss] [LOG_RWT]]
         \\ `x = 0` by DECIDE_TAC \\ SRW_TAC [ARITH_ss] [EXP],
       Cases_on `x = 0`
         \\ SRW_TAC [ARITH_ss] [EXP, EL_CONS]
@@ -147,7 +141,7 @@ val LIST_EQ = Q.prove(
 val n2l_l2n = Q.prove(
   `!b n l. 1 < b /\ EVERY ($> b) l /\ (n = l2n b l) ==>
       (n2l b n = if n = 0 then [0] else TAKE (SUC (LOG b n)) l)`,
-  SRW_TAC [] [] >> SRW_TAC [ARITH_ss] [Once n2l_def]
+  SRW_TAC [] [] >- SRW_TAC [ARITH_ss] [Once n2l_def]
     \\ MATCH_MP_TAC LIST_EQ \\ IMP_RES_TAC LENGTH_l2n
     \\ SRW_TAC [ARITH_ss] [LENGTH_n2l,LENGTH_TAKE,EL_TAKE,EL_n2l,l2n_DIGIT]);
 
@@ -156,13 +150,6 @@ val n2l_l2n = save_thm("n2l_l2n",
           |> REWRITE_RULE []
           |> Q.GEN `l` |> Q.GEN `b`);
 
-local
-  val simp = ASM_SIMP_TAC (srw_ss()++ARITH_ss)
-  val fs = FULL_SIMP_TAC (srw_ss()++ARITH_ss)
-  val rw = SRW_TAC[ARITH_ss]
-  val op >> = op THEN
-  val op >- = op THEN1
-in
 val l2n_eq_0 = store_thm("l2n_eq_0",
   ``!b. 0 < b ==> !l. (l2n b l = 0) <=> EVERY ($= 0 o combin$C $MOD b) l``,
   NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
@@ -232,8 +219,6 @@ val LOG_l2n_dropWhile = store_thm("LOG_l2n_dropWhile",
   Q.UNABBREV_TAC`ls` >>
   MATCH_MP_TAC HD_dropWhile >>
   fs[EXISTS_MEM] >> METIS_TAC[])
-
-end
 
 (* ------------------------------------------------------------------------- *)
 

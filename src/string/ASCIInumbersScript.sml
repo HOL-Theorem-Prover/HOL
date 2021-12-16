@@ -9,12 +9,6 @@ open arithmeticTheory listTheory combinTheory pairTheory
      numTheory stringTheory stringLib rich_listTheory listSimps numposrepTheory
      logrootTheory bitTheory
 
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
 val _ = new_theory "ASCIInumbers";
 val _ = set_grammar_ancestry ["string", "numposrep"]
 
@@ -112,7 +106,7 @@ val HEX_UNHEX = store_thm("HEX_UNHEX",
   Cases
   \\ SRW_TAC [] [isHexDigit_def]
   \\ Q.PAT_ASSUM `n < 256` (K ALL_TAC)
-  << [`n < 58` by DECIDE_TAC, `n < 103` by DECIDE_TAC,
+  >| [`n < 58` by DECIDE_TAC, `n < 103` by DECIDE_TAC,
       `n < 71` by DECIDE_TAC]
   \\ FULL_SIMP_TAC std_ss [LESS_THM]
   \\ FULL_SIMP_TAC arith_ss []
@@ -157,7 +151,7 @@ val n2s_s2n = Q.store_thm("n2s_s2n",
        if s2n b c2n s = 0 then STRING (n2c 0) ""
        else MAP (n2c o c2n) (LASTN (SUC (LOG b (s2n b c2n s))) s))`,
   SRW_TAC [] [s2n_def, n2s_def]
-    >> SRW_TAC [ARITH_ss] [l2n_def, Once n2l_def]
+    >- SRW_TAC [ARITH_ss] [l2n_def, Once n2l_def]
     \\ Q.ABBREV_TAC `l = MAP c2n (REVERSE s)`
     \\ `~(l = [])` by (STRIP_TAC \\ FULL_SIMP_TAC std_ss [l2n_def])
     \\ `EVERY ($> b) l` by (Q.UNABBREV_TAC `l`
