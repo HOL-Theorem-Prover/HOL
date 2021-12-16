@@ -357,15 +357,13 @@ fun SIMPLE_QUANT_INST_GEN_ss wcl = simpLib.SSFRAG
            trace=1,
            key=SOME ([],``@x:'a. P``),
            conv=K (K (SIMPLE_SELECT_INSTANTIATE_CONV_GEN wcl))}],
-   rewrs=map (fn (s, th) => (SOME {Thy = "", Name = s}, th)) [
-     ("HD_TL_EQ_THMS", HD_TL_EQ_THMS),
-     ("SOME_THE_EQ", SOME_THE_EQ),
-     ("FST_PAIR_EQ", FST_PAIR_EQ),
-     ("SND_PAIR_EQ", SND_PAIR_EQ),
-     ("SOME_THE_EQ_SYM", SOME_THE_EQ_SYM),
-     ("FST_PAIR_EQ_SYM", FST_PAIR_EQ_SYM),
-     ("SND_PAIR_EQ_SYM", SND_PAIR_EQ_SYM)
-   ],filter=NONE,ac=[],dprocs=[],congs=[]};
+   rewrs=map (fn s => let val knm = {Thy = "quantHeuristics", Name = s}
+                      in
+                        (SOME knm, DB.fetch_knm knm)
+                      end)
+             ["HD_TL_EQ_THMS", "SOME_THE_EQ", "FST_PAIR_EQ", "SND_PAIR_EQ",
+              "SOME_THE_EQ_SYM", "FST_PAIR_EQ_SYM", "SND_PAIR_EQ_SYM"],
+   filter=NONE,ac=[],dprocs=[],congs=[]};
 
 val SIMPLE_QUANT_INST_ss = SIMPLE_QUANT_INST_GEN_ss default_sgsfwcs;
 

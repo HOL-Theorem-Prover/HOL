@@ -1083,9 +1083,10 @@ SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]);
 (* Useful rewrites *)
 val HD_TL_EQ_TAC = REPEAT (Cases THEN SIMP_TAC list_ss [] THEN SPEC_ALL_TAC)
 
-val HD_TL_EQ_1 = prove (
-  ``!l. (HD l :: TL l = l) <=> l <> []``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_1[simp]:
+  !l. (HD l :: TL l = l) <=> l <> []
+Proof HD_TL_EQ_TAC
+QED
 
 val HD_TL_EQ_2 = prove (
   ``!l. (HD l :: (HD (TL l)) :: (TL (TL l)) = l) <=> (LENGTH l > 1)``,
@@ -1130,9 +1131,16 @@ val HD_TL_EQ_9 = prove (
 HD_TL_EQ_TAC)
 
 
-val HD_TL_EQ_NIL_1 = prove (
-  ``!l. (HD l :: [] = l) <=> (LENGTH l = 1)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_NIL_1[local]:
+  !l. ([HD l] = l) <=> (LENGTH l = 1)
+Proof HD_TL_EQ_TAC
+QED
+
+Theorem HD_TL_EQ_NIL_1_bothways[simp] =
+        CONJ HD_TL_EQ_NIL_1
+             (CONV_RULE (STRIP_QUANT_CONV
+                         (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
+                        HD_TL_EQ_NIL_1)
 
 val HD_TL_EQ_NIL_2 = prove (
   ``!l. (HD l :: (HD (TL l)) :: [] = l) <=> (LENGTH l = 2)``,
@@ -1199,8 +1207,8 @@ val HD_TL_EQ_THMS_1 = [
 val HD_TL_EQ_THMS_2 = map (
  CONV_RULE (QUANT_CONV (LHS_CONV (REWR_CONV EQ_SYM_EQ)))) HD_TL_EQ_THMS_1
 
-val HD_TL_EQ_THMS = save_thm ("HD_TL_EQ_THMS", LIST_CONJ
-  (HD_TL_EQ_THMS_1 @ HD_TL_EQ_THMS_2))
+Theorem HD_TL_EQ_THMS[unlisted] =
+        LIST_CONJ (HD_TL_EQ_THMS_1 @ HD_TL_EQ_THMS_2)
 
 val SOME_THE_EQ = store_thm ("SOME_THE_EQ",
   ``!opt. (SOME (THE opt) = opt) <=> IS_SOME opt``,
