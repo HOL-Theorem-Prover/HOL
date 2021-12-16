@@ -14,8 +14,13 @@ val _ = set_grammar_ancestry ["string", "numposrep"]
 
 (* ------------------------------------------------------------------------- *)
 
-val s2n_def = zDefine `s2n b f (s:string) = l2n b (MAP f (REVERSE s))`;
-val n2s_def = zDefine `n2s b f n : string = REVERSE (MAP f (n2l b n))`;
+Definition s2n_def[nocompute]:
+  s2n b f (s:string) = l2n b (MAP f (REVERSE s))
+End
+
+Definition n2s_def[nocompute]:
+  n2s b f n : string = REVERSE (MAP f (n2l b n))
+End
 
 val HEX_def = Define`
   (HEX 0 = #"0") /\
@@ -64,10 +69,20 @@ val num_from_oct_string_def = Define `num_from_oct_string = s2n 8 UNHEX`;
 val num_from_dec_string_def = Define `num_from_dec_string = s2n 10 UNHEX`;
 val num_from_hex_string_def = Define `num_from_hex_string = s2n 16 UNHEX`;
 
-val num_to_bin_string_def = Define `num_to_bin_string = n2s 2 HEX`;
-val num_to_oct_string_def = Define `num_to_oct_string = n2s 8 HEX`;
-val num_to_dec_string_def = Define `num_to_dec_string = n2s 10 HEX`;
-val num_to_hex_string_def = Define `num_to_hex_string = n2s 16 HEX`;
+Definition num_to_bin_string_def[nocompute]: num_to_bin_string = n2s 2 HEX
+End
+Definition num_to_oct_string_def[nocompute]: num_to_oct_string = n2s 8 HEX
+End
+Definition num_to_dec_string_def[nocompute]: num_to_dec_string = n2s 10 HEX
+End
+Definition num_to_hex_string_def[nocompute]: num_to_hex_string = n2s 16 HEX
+End
+
+Theorem num_to_dec_string_compute[compute]:
+  num_to_dec_string = n2lA [] HEX 10
+Proof
+  simp[num_to_dec_string_def, n2lA_n2l, n2s_def, FUN_EQ_THM, MAP_REVERSE]
+QED
 
 val fromBinString_def = Define`
    fromBinString s =

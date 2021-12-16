@@ -1,11 +1,15 @@
 open HolKernel boolLib Parse BasicProvers
 
-open simpLib numLib TotalDefn metisLib
+open simpLib boolSimps numLib TotalDefn metisLib
 open listTheory rich_listTheory logrootTheory arithmeticTheory bitTheory
 
 val ARITH_ss = numSimps.ARITH_ss
 
 val _ = new_theory "numposrep"
+
+val simp = ASM_SIMP_TAC (srw_ss()++ARITH_ss)
+val fs = FULL_SIMP_TAC (srw_ss()++ARITH_ss)
+val rw = SRW_TAC[ARITH_ss]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -15,13 +19,42 @@ val l2n_def = Define`
   (l2n b [] = 0) /\
   (l2n b (h::t) = h MOD b + b * l2n b t)`;
 
-val n2l_def = Define`
-  n2l b n = if n < b \/ b < 2 then [n MOD b] else n MOD b :: n2l b (n DIV b)`;
+Definition n2l_def:
+  n2l b n = if n < b \/ b < 2 then [n MOD b] else n MOD b :: n2l b (n DIV b)
+End
+
+(* related version that gives MS-digit first, using an accumulator, and passes
+   each digit through a function *)
+Definition n2lA_def:
+  n2lA A f b n = if n < b ∨ b < 2 then f (n MOD b)::A
+                 else n2lA (f (n MOD b) :: A) f b (n DIV b)
+End
 
 val num_from_bin_list_def = Define `num_from_bin_list = l2n 2`;
 val num_from_oct_list_def = Define `num_from_oct_list = l2n 8`;
 val num_from_dec_list_def = Define `num_from_dec_list = l2n 10`;
 val num_from_hex_list_def = Define `num_from_hex_list = l2n 16`;
+
+Theorem n2lA_10[compute]:
+  n2lA A f 10 n = if n < 10 then f n::A
+                  else n2lA (f (n MOD 10) :: A) f 10 (n DIV 10)
+Proof
+  simp[Once n2lA_def, SimpLHS]
+QED
+
+Theorem n2lA_n2l:
+  !A n. n2lA A f b n = MAP f (REVERSE (n2l b n)) ++ A
+Proof
+  completeInduct_on ‘n’ >> simp_tac (srw_ss()) [Once n2lA_def, Once n2l_def] >>
+  rw[] >> simp[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"]
+QED
+
+Theorem n2l_n2lA:
+  n2l b n = REVERSE (n2lA [] I b n)
+Proof simp[n2lA_n2l]
+QED
+
+
 
 val num_to_bin_list_def = Define `num_to_bin_list = n2l 2`;
 val num_to_oct_list_def = Define `num_to_oct_list = n2l 8`;
