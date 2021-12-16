@@ -222,19 +222,22 @@ val sanity_checks = [
    check_var_names___no_ident,
    check_var_names___const,
    check_free_vars,
-   check_redundant_quantors]:(DB.data -> bool) list
+   check_redundant_quantors]:(DB.public_data -> bool) list
 
-fun sanity_check_data (data:DB.data) =
-   (map_fail false (fn ff => ff data) sanity_checks)
+fun sanity_check_data (data:DB.public_data) =
+   (map_fail false (fn ff => ff ( data)) sanity_checks)
 
-fun sanity_check_theory thy =
-  (init_report_sanity_problem ();(map_fail false sanity_check_data (DB.thy thy)))
+fun sanity_check_theory thy = (
+  init_report_sanity_problem ();
+  map_fail false (sanity_check_data o DB_dtype.drop_private) (DB.thy thy)
+)
 
 fun sanity_check () = sanity_check_theory "-";
 
-fun sanity_check_all () =
-  (init_report_sanity_problem ();
-   (map_fail false sanity_check_data (DB.listDB ())))
+fun sanity_check_all () = (
+  init_report_sanity_problem ();
+  map_fail false (sanity_check_data o DB_dtype.drop_private) (DB.listDB ())
+)
 
 fun sanity_check_named_thm (name, thm) =
    sanity_check_data ((Theory.current_theory(), name), (thm, DB.Thm))
