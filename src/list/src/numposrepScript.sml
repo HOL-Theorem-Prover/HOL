@@ -26,7 +26,7 @@ End
 (* related version that gives MS-digit first, using an accumulator, and passes
    each digit through a function *)
 Definition n2lA_def:
-  n2lA A f b n = if n < b ∨ b < 2 then f (n MOD b)::A
+  n2lA A f b n = if n < b \/ b < 2 then f (n MOD b)::A
                  else n2lA (f (n MOD b) :: A) f b (n DIV b)
 End
 
