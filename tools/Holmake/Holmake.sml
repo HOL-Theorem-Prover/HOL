@@ -109,14 +109,13 @@ val usepfx = #jobs (#core master_cline_nohmf) = 1
 fun read_holpathdb() =
     let
       val holpathdb_extensions =
-          holpathdb.search_for_extensions (fn s => []) [OS.FileSys.getDir()]
+          holpathdb.search_for_extensions (fn s => [])
+            {starter_dirs = [OS.FileSys.getDir()], skip = holpathdb.db_dirs()}
       val _ = List.app holpathdb.extend_db holpathdb_extensions
       open Holmake_types
-      fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
+      fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
     in
-      List.foldl foldthis
-                 (HM_BaseEnv.make_base_env master_cline_nohmf)
-                 holpathdb_extensions
+      holpathdb.fold foldthis (HM_BaseEnv.make_base_env master_cline_nohmf)
     end
 
 (* The hmftext is the form of the target as it appears in the Holmakefile *)

@@ -1,10 +1,17 @@
 structure holpathdb :> holpathdb =
 struct
 
-val holpath_db =
-    ref (Binarymap.mkDict String.compare : (string,string) Binarymap.dict)
+val empty_strset = Binaryset.empty String.compare
+type dbrec = {mapf : (string,string) Binarymap.dict,
+              dom : string Binaryset.set, rng : string Binaryset.set}
+val holpath_db : dbrec ref =
+    ref {mapf = Binarymap.mkDict String.compare, dom = empty_strset,
+         rng = empty_strset}
 
-fun lookup_holpath {vname = s} = Binarymap.peek(!holpath_db, s)
+fun fold f x = Binarymap.foldl (fn (k,v,A) => f {vname = k, path = v} A) x
+                               (#mapf (!holpath_db))
+
+fun lookup_holpath {vname = s} = Binarymap.peek(#mapf (!holpath_db), s)
 
 fun reverse_lookup {path} =
   let
@@ -19,13 +26,21 @@ fun reverse_lookup {path} =
                               else acc
       else acc
   in
-    case Binarymap.foldl foldthis NONE (!holpath_db) of
+    case Binarymap.foldl foldthis NONE (#mapf (!holpath_db)) of
         NONE => path
       | SOME (_, p) => p
   end
 
 fun extend_db {vname, path} =
-  holpath_db := Binarymap.insert(!holpath_db, vname, path)
+    let val {mapf,dom,rng} = !holpath_db
+    in
+      holpath_db := {mapf = Binarymap.insert(mapf, vname, path),
+                     dom = Binaryset.add(dom, vname),
+                     rng = Binaryset.add(rng, path)}
+    end
+
+fun db_vnames() = #dom (!holpath_db)
+fun db_dirs() = #rng (!holpath_db)
 
 fun warn s = TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n")
 
@@ -71,7 +86,7 @@ fun read_whole_file{filename} =
     end
 
 fun set_member s e = Binaryset.member(s,e)
-fun files_upward_in_hierarchy gen_extras {filename, starter_dirs} =
+fun files_upward_in_hierarchy gen_extras {filename, starter_dirs, skip} =
     let
       val {arcs = farcs, isAbs = fabs, vol} = OS.Path.fromString filename
       val _ = not fabs andalso length farcs = 1 andalso vol = "" orelse
@@ -101,8 +116,8 @@ fun files_upward_in_hierarchy gen_extras {filename, starter_dirs} =
                 recurse A' visited' (to_visit :: ds :: rest)
               end
     in
-      recurse (Binarymap.mkDict String.compare) (Binaryset.empty String.compare)
-              [starter_dirs]
+      recurse (Binarymap.mkDict String.compare) skip
+              [List.filter (not o set_member skip) starter_dirs]
     end
 
 
@@ -132,10 +147,10 @@ fun process_filecontents s =
   end
 
 
-fun search_for_extensions gen dlist =
+fun search_for_extensions gen {skip,starter_dirs = dlist} =
   let
     val dmap = files_upward_in_hierarchy gen
-                 {filename = ".holpath", starter_dirs = dlist}
+                 {filename = ".holpath", starter_dirs = dlist, skip = skip}
     fun foldthis (dstr,filecontents,(l,revmap)) =
         let
           val nm = process_filecontents filecontents

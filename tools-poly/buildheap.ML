@@ -332,7 +332,8 @@ fun main() = let
                      NONE => "NONE"
                    | SOME s => "SOME(\"" ^ s ^"\")"))
   val exts = holpathdb.search_for_extensions ReadHMF.find_includes
-                                             [OS.FileSys.getDir()]
+               {skip = Binaryset.empty String.compare,
+                starter_dirs = [OS.FileSys.getDir()]}
   fun print_ext{vname,path} = vname ^ " |-> " ^ path
   val _ = diag ("holpathdb extensions: "^
                 String.concatWith ", " (map print_ext exts))
