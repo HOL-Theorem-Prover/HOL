@@ -59,6 +59,54 @@ fun subst_pathvars modPath =
     else modPath
   end
 
+fun read_whole_file{filename} =
+    let
+      val istrm = TextIO.openIn filename
+      fun readit A =
+          case TextIO.inputLine istrm of
+              NONE => (TextIO.closeIn istrm; String.concat (List.rev A))
+            | SOME s => readit (s::A)
+    in
+      readit []
+    end
+
+fun set_member s e = Binaryset.member(s,e)
+fun files_upward_in_hierarchy gen_extras {filename, starter_dirs} =
+    let
+      val {arcs = farcs, isAbs = fabs, vol} = OS.Path.fromString filename
+      val _ = not fabs andalso length farcs = 1 andalso vol = "" orelse
+              raise Fail "files_upward_in_hierarchy: bad filename"
+      fun maybe_readfile d A =
+          let
+            val f = OS.Path.concat (d,filename)
+          in
+            if OS.FileSys.access(f,[OS.FileSys.A_READ]) then
+              Binarymap.insert(A, d, read_whole_file{filename = f})
+            else A
+          end
+
+      fun recurse A visited worklist =
+          case worklist of
+              [] => A
+            | [] :: rest => recurse A visited rest
+            | (d::ds) :: rest =>
+              let
+                val A' = maybe_readfile d A
+                val visited' = Binaryset.add(visited, d)
+                val parent = OS.Path.getParent d
+                val to_maybe_visit = parent :: gen_extras d
+                val to_visit = List.filter (not o set_member visited)
+                                           to_maybe_visit
+              in
+                recurse A' visited' (to_visit :: ds :: rest)
+              end
+    in
+      recurse (Binarymap.mkDict String.compare) (Binaryset.empty String.compare)
+              [starter_dirs]
+    end
+
+
+
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1,p2)
 
@@ -75,51 +123,27 @@ fun check_insert(m,k,v) =
     Binarymap.insert(m,k,v)
   end
 
-fun readVName d m =
+fun process_filecontents s =
   let
-    val hp = d ++ ".holpath"
-    val istrm = TextIO.openIn hp
-    val m' =
-        case TextIO.inputLine istrm of
-            NONE => (warn (hp ^ " is empty"); m)
-          | SOME s =>
-            let
-              val sz = size s - 1
-              val nm = if String.sub(s,sz) = #"\n" then
-                         String.extract(s,0,SOME sz)
-                       else s
-            in
-              check_insert(m,nm,d)
-            end
+    val sz = size s - 1
+    val nm = if String.sub(s,sz) = #"\n" then String.extract(s,0,SOME sz) else s
   in
-    TextIO.closeIn istrm;
-    m'
-  end handle IO.Io _ => m
+    nm
+  end
 
 
 fun search_for_extensions gen dlist =
   let
-    fun recurse acc visited dlist =
-      case dlist of
-          [] => acc
-        | d::ds =>
-          let
-            val acc' = readVName d acc
-            val pd = OS.Path.getParent d
-            val visited' = Binaryset.add(visited, d)
-            val new_ds =
-                List.filter (fn d => not (Binaryset.member(visited', d)))
-                            (pd :: gen d)
-            val dlist' = new_ds @ ds
-          in
-            recurse acc' visited' dlist'
-          end
+    val dmap = files_upward_in_hierarchy gen
+                 {filename = ".holpath", starter_dirs = dlist}
+    fun foldthis (dstr,filecontents,(l,revmap)) =
+        let
+          val nm = process_filecontents filecontents
+        in
+          ({vname=nm,path=dstr}::l, check_insert(revmap,nm,dstr))
+        end
   in
-    Binarymap.foldl (fn (vnm,p,acc) => {vname=vnm,path=p} :: acc)
-                    []
-                    (recurse (Binarymap.mkDict String.compare)
-                             (Binaryset.empty String.compare)
-                             dlist)
+    #1 (Binarymap.foldl foldthis ([],Binarymap.mkDict String.compare) dmap)
   end
 
 

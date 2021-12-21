@@ -1,4 +1,4 @@
-CLINE_OPTIONS = --qof
+CLINE_OPTIONS = -r
 INCLUDES = ../proj1
 
 all: $(DEFAULT_TARGETS) $(HOLHEAP) test
