@@ -57,6 +57,7 @@ sig
   val set_mapPartial : ('a -> 'b option) -> 'b set -> 'a set -> 'b set
   val listItems : 'a set -> 'a list
   val set_member : 'a set -> 'a -> bool
+  val empty_strset : string set
 
   (* terminal stuff: colouring of strings, getting width *)
   val red : string -> string

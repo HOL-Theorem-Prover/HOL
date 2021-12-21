@@ -889,6 +889,7 @@ in
 end
 
 type 'a set = 'a Binaryset.set
+val empty_strset = Binaryset.empty String.compare
 fun set_member s m = Binaryset.member(s,m)
 fun set_diff s1 s2 = Binaryset.difference(s1,s2)
 fun set_union s1 s2 = Binaryset.union(s1,s2)
