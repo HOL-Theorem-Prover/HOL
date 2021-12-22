@@ -40,9 +40,11 @@ fun main() = let
           case heap_v of
             [] => default
           | [x] => x
-          | _ => (warn "Malformed HOLHEAP definition in Holmakefile - ignoring it";
+          | _ => (warn "Malformed HOLHEAP definition in Holmakefile - \
+                       \ignoring it";
                   default)
-        end handle e => (warn "Bogus Holmakefile in current directory - ignoring it]";
+        end handle e => (warn "Bogus Holmakefile in current directory - \
+                              \ignoring it]";
                          default)
       else default
   val heap = if Path.isRelative heap then Path.concat(FileSys.getDir(), heap)
