@@ -1,17 +1,22 @@
+INCLUDES = $(HOLDIR)/src/probability $(HOLDIR)/src/n-bit $(HOLDIR)/src/real \
+	   $(HOLDIR)/src/res_quan/src
+
 EXTRA_CLEANS = heap \
 	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
 	$(patsubst %Theory.uo,%Theory.lst,$(DEFAULT_TARGETS))
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = realLib fcpLib hurdUtils probabilityTheory posetTheory
+OBJS = real/realLib n-bit/fcpLib res_quan/src/hurdUtils probability/probabilityTheory
+FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
+                $(HOLDIR)/sigobj/posetTheory.uo
+HEAP0 = $(HOLDIR)/src/probability/heap
 
-OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
 
 all: $(HOLHEAP)
 
-$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+$(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state $(HEAP0)
+	$(protect $(HOLDIR)/bin/buildheap) -b $(HEAP0) -o $@ $(FULL_OBJPATHS)
 endif
 
 all: $(DEFAULT_TARGETS)

@@ -60,13 +60,16 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/nominal \
             algorithms/unification/triangular/first-order \
           balanced_bst \
-          computability/kolmog computability/lambda computability/recdegrees \
-          computability/register computability/turing \
-          Crypto/AES Crypto/IDEA Crypto/MARS Crypto/RC6 \
+          category computability/kolmog computability/lambda \
+            computability/recdegrees \
+            computability/register computability/turing \
+            Crypto \
           formal-languages/regular \
           lambda/other-models lambda/typing \
+            logic/ltl logic/ltl-transformations \
           l3-machine-code/decompilers \
           miller \
+	  probability \
           separationLogic/src separationLogic/src/holfoot simple_complexity \
           temporal_deep
 
