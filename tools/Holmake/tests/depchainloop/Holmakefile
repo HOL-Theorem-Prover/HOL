@@ -1,6 +1,10 @@
 OPTIONS = NO_OVERLAY
+CLINE_OPTIONS = --poly_not_hol
+
+depchainloop-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe depchainloop-selftest.log

@@ -1,5 +1,11 @@
-all: selftest.exe
-.PHONY: all
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+theorytarget-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe theorytarget-selftest.log

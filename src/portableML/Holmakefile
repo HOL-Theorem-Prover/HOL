@@ -3,7 +3,8 @@ CLINE_OPTIONS = --no_overlay
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
-EXTRA_CLEANS = HOLsexp.grm-sig.sml HOLsexp.grm.sml HOLsexp.lex.sml
+EXTRA_CLEANS = HOLsexp.grm-sig.sml HOLsexp.grm.sml HOLsexp.lex.sml \
+               portable-selftest.log
 
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
@@ -59,3 +60,10 @@ HOLsexp.lex.uo: HOLsexp.lex.sml
 HOLsexp_parser.uo: HOLsexp_parser.sml HOLsexp_parser.ui \
                    HOLsexp.grm.uo HOLsexp.lex.uo HOLsexp_dtype.uo
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) HOLsexp.grm.ui HOLsexp.lex.ui $<
+
+ifdef HOLSELFTESTLEVEL
+all: portable-selftest.log
+
+portable-selftest.log: selftest.exe
+	@$(tee ./$<,$@)
+endif

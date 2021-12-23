@@ -1,4 +1,9 @@
 INCLUDES = $(HOLDIR)/tools/cmp
 
+cheatspotting-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = cheatspotting-selftest.log selftest.exe

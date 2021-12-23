@@ -1,6 +1,14 @@
 OPTIONS = NO_OVERLAY
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+recursiveclean-selftest.log: selftest.exe
+	$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
 	$(MOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+
+
+EXTRA_CLEANS = selftest.exe recursiveclean-selftest.log
