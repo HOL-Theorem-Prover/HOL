@@ -32,10 +32,10 @@ open helperListTheory;
 open listRangeTheory;
 
 (* (* val _ = load "binomialTheory"; *) *)
-open binomialTheory;
+open binomialTheory; (* for binomial_iff, binomial_n_n, binomial_formula2 *)
 
 (* (* val _ = load "necklaceTheory"; *) *)
-open necklaceTheory;
+open necklaceTheory; (* for necklace_def, necklace_finite *)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -2409,7 +2409,7 @@ Theorem list_count_set_eq_class:
   !ls n k. ls IN list_count n k ==>
            equiv_class (feq set) (list_count n k) ls = perm_set (set ls)
 Proof
-  rw[list_count_def, perm_set_def, feq_def, Once EXTENSION] >>
+  rw[list_count_def, perm_set_def, fequiv_def, Once EXTENSION] >>
   rw[EQ_IMP_THM] >>
   metis_tac[ALL_DISTINCT_CARD_LIST_TO_SET]
 QED
@@ -2444,7 +2444,7 @@ QED
 Theorem list_count_set_partititon_element_card:
   !n k e. e IN partition (feq set) (list_count n k) ==> CARD e = perm k
 Proof
-  rw[partition_element] >>
+  rw_tac bool_ss [partition_element] >>
   simp[list_count_set_eq_class_card]
 QED
 
@@ -2487,7 +2487,7 @@ Theorem list_count_set_map_element:
   !s n k. s IN (partition (feq set) (list_count n k)) ==>
           (set o CHOICE) s IN (sub_count n k)
 Proof
-  rw[partition_element] >>
+  rw_tac bool_ss [partition_element] >>
   simp[list_count_set_eq_class] >>
   qabbrev_tac `ls = CHOICE (perm_set (set x))` >>
   `perm_set (set x) <> {}` by metis_tac[perm_set_list_not_empty] >>
