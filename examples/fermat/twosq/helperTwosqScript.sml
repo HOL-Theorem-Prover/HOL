@@ -34,6 +34,8 @@ open whileTheory; (* for HOARE_SPEC_DEF *)
 (* Helper Theorems Documentation                                             *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
+   pairing f         = !u x y. f u x /\ f u y ==> x = y
+   unique_bool f a b = f a b /\ !x y. f x y ==> (x = a) /\ (y = b)
 *)
 (*
 
@@ -107,6 +109,25 @@ open whileTheory; (* for HOARE_SPEC_DEF *)
                         (!x. Invariant x /\ ~Guard x ==> Postcond x) /\
                         HOARE_SPEC (\x. Invariant x /\ Guard x) Command Invariant ==>
                         HOARE_SPEC Precond (WHILE Guard Command) Postcond
+
+   Pair exists and exists uniquely:
+   pair_exists_iff         |- !f. (?(u,v). f u v) <=> ?u v. f u v
+   pair_exists_unique_imp  |- !f. (?!(u,v). f u v) ==> ?!u v. f u v
+
+   Pairing Function:
+   pair_exists_unique_fun  |- !f. (?!(u,v). f u v) ==> pairing f
+   pair_exists_unique_thm  |- !f. (?!(u,v). f u v) <=> (?!u v. f u v) /\ pairing f
+   pair_exists_unique_alt  |- !f. pairing f ==> ((?!(u,v). f u v) <=> ?!u v. f u v)
+
+   Unique Boolean Function:
+   unique_bool_unique_values |- !f a b. unique_bool f a b ==> ?!u v. f u v
+   unique_bool_unique_pair   |- !f a b. unique_bool f a b ==> ?!(u,v). f u v
+
+   An Example:
+   pairing_for_less          |- !m. (!x y. x < m /\ y < m ==> x = y) ==> m <= 1
+   exists_unique_values_less |- (?!m n. n < m) <=> T
+   exists_unique_pair_less   |- (?!(m,n). n < m) <=> F
+
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -898,6 +919,294 @@ Proof
   simp[] >>
   simp[]
 QED
+
+(* ------------------------------------------------------------------------- *)
+(* Pair exists and exists uniquely.                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: a pair exists iff two values exists. *)
+
+(* Theorem: !f. (?(u,v). f u v) <=> ?u v. f u v *)
+(* Proof:
+   Let x = (u,v). This is to show:
+       ?x. f (FST x) (SND x) <=> ?u v. f u v
+   If part: ?x. f (FST x) (SND x) ==> ?u v. f u v
+      Let u = FST x, v = (SND x).
+   Only-if part: ?u v. f u v ==> ?x. f (FST x) (SND x)
+      Let x = (u,v).
+*)
+Theorem pair_exists_iff:
+  !f. (?(u,v). f u v) <=> ?u v. f u v
+Proof
+  rw[pairTheory.ELIM_UNCURRY, EQ_IMP_THM] >-
+  metis_tac[] >>
+  qexists_tac `(u,v)` >>
+  simp[]
+QED
+
+(* Idea: a pair exists uniquely implies two values exists uniquely. *)
+
+(* Theorem: !f. (?!(u,v). f u v) ==> ?!u v. f u v *)
+(* Proof:
+   Let x = (u,v). This is to show:
+       ?!x. f (FST x) (SND x) ==> ?!u v. f u v
+   By EXISTS_UNIQUE_THM, we have:
+       f (FST x) (SND x)
+   and !x y. f (FST x) (SND x) /\ f (FST y) (SND y) ==> x = y   ...[1]
+   Also by EXISTS_UNIQUE_THM on ?!u, need to show:
+   (1) ?u. ?!v. f u v
+       Let u = FST x. Remains to show: ?!v. f u v
+       By EXISTS_UNIQUE_THM on ?!v, need to show:
+       (1.1) ?v. f (FST x) v
+             Let v = SND x, true by f (FST x) (SND x).
+       (1.2) f (FST x) v /\ f (FST x) v' ==> v = v'
+             Let u = FST x, to show: f u v /\ f u v' ==> v = v'
+             Thus (u,v) = (u,v')     by unique property [1], (u,v) and (u,v').
+             so v = v'               by PAIR_FST_SND_EQ
+   (2) ?!v. f u v /\ ?!v. f u' v ==> u = u'
+       Note ?v. f u v                by EXISTS_UNIQUE_THM
+        and ?v'. f u' v'`            by EXISTS_UNIQUE_THM
+       Thus (u,v) = (u',v')          by unique property [1], (u,v) and (u',v')
+         so u = u'                   by PAIR_FST_SND_EQ
+*)
+Theorem pair_exists_unique_imp:
+  !f. (?!(u,v). f u v) ==> ?!u v. f u v
+Proof
+  rw[pairTheory.ELIM_UNCURRY] >>
+  fs[Once EXISTS_UNIQUE_THM] >>
+  rpt strip_tac >| [
+    qexists_tac `FST x` >>
+    simp[EXISTS_UNIQUE_THM] >>
+    rpt strip_tac >-
+    metis_tac[] >>
+    qabbrev_tac `u = FST x` >>
+    first_x_assum (qspecl_then [`(u,v)`, `(u,v')`] strip_assume_tac) >>
+    fs[],
+    `?v v'. f u v /\ f u' v'` by metis_tac[EXISTS_UNIQUE_THM] >>
+    first_x_assum (qspecl_then [`(u,v)`, `(u',v')`] strip_assume_tac) >>
+    fs[]
+  ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Pairing Function.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* Overload a pairing function *)
+Overload pairing = ``\f. !u x y. f u x /\ f u y ==> x = y``;
+
+(* Idea: a pair exists uniquely implies a pairing function. *)
+
+(* Theorem: !f. (?!(u,v). f u v) ==> pairing f *)
+(* Proof:
+   Let x = (u,v). This is to show:
+       ?!x. f (FST x) (SND x) /\ f u x /\ f u y ==> x = y  by pairing
+   By EXISTS_UNIQUE_THM, we have
+       ?z. f (FST z) (SND z)
+   and !x y. f (FST x) (SND x) /\ f (FST y) (SND y) ==> x = y ... [1]
+   Thus (u,x) = (u,y)              by unique property [1], (u,x) and (u,y)
+     so x = y                      by PAIR_FST_SND_EQ
+*)
+Theorem pair_exists_unique_fun:
+  !f. (?!(u,v). f u v) ==> pairing f
+Proof
+  rw[pairTheory.ELIM_UNCURRY] >>
+  fs[EXISTS_UNIQUE_THM] >>
+  first_x_assum (qspecl_then [`(u,x)`, `(u,y)`] strip_assume_tac) >>
+  fs[]
+QED
+
+(* Idea: a pair exists uniquely iff two unique values and a pairing function. *)
+
+(* Theorem: !f. (?!(u,v). f u v) <=> (?!u v. f u v) /\ pairing f *)
+(* Proof:
+   If part: (?!(u,v). f u v) ==> (?!u v. f u v) /\ pairing f
+      Note ?!u v. f u v            by pair_exists_unique_imp
+       and pairing f               by pair_exists_unique_fun
+   Only-if part: (?!u v. f u v) /\ pairing f ==> (?!(u,v). f u v)
+      Let x = (u,v). This is to show: ?!x. f (FST x) (SND x)
+      By EXISTS_UNIQUE_THM for ?!u, we have:
+           ?!v. f u v
+       and !u u'. (?!v. f u v) /\ (?!v. f u' v) ==> u = u'
+      Also by EXISTS_UNIQUE_THM, need to show:
+      (1) ?x. f (FST x) (SND x)
+          Note ?v. f u v                             by EXISTS_UNIQUE_THM
+          Let x = (u,v), with FST x = u, SND x = v   by PAIR
+      (2) f (FST x) (SND x) /\ f (FST y) (SND y) ==> x = y
+          Let x = (a,b), y = (c,d), to show: f a b /\ f c d ==> (a,b) = (c,d)
+          By EXISTS_UNIQUE_THM for ?!v, we have:
+              f u v
+          and !u u'. ((?v. f u v) /\ !v v'. f u v /\ f u v' ==> v = v') /\
+                      (?v. f u' v) /\ (!v v'. f u' v /\ f u' v' ==> v = v') ==>
+                      u = u'
+          Thus a = c            by above property, u = a, u' = c, pairing f.
+           and b = d            by pairing f
+            so (a,b) = (c,d)    by PAIR_FST_SND_EQ
+*)
+Theorem pair_exists_unique_thm:
+  !f. (?!(u,v). f u v) <=> (?!u v. f u v) /\ pairing f
+Proof
+  rw[EQ_IMP_THM] >-
+  simp[pair_exists_unique_imp] >-
+  metis_tac[pair_exists_unique_fun] >>
+  rw[pairTheory.ELIM_UNCURRY] >>
+  fs[Once EXISTS_UNIQUE_THM] >>
+  rpt strip_tac >| [
+    `?v. f u v` by metis_tac[EXISTS_UNIQUE_THM] >>
+    qexists_tac `(u,v)` >>
+    simp[],
+    fs[EXISTS_UNIQUE_THM] >>
+    qabbrev_tac `a = FST x` >>
+    qabbrev_tac `b = SND x` >>
+    qabbrev_tac `c = FST x'` >>
+    qabbrev_tac `d = SND x'` >>
+    first_x_assum (qspecl_then [`a`, `c`] strip_assume_tac) >>
+    `a = c` by prove_tac[] >>
+    `b = d` by metis_tac[] >>
+    metis_tac[pairTheory.PAIR_FST_SND_EQ]
+  ]
+QED
+
+(* Idea: for a pairing function, exists unique pair iff exists unique two values. *)
+
+(* Theorem: !f. pairing f ==> ((?!(u,v). f u v) <=> ?!u v. f u v) *)
+(* Proof:
+   If part: pairing f /\ ?!(u,v). f u v ==> ?!u v. f u v
+      Note ?!(u,v). f u v ==> ?!u v. f u v  by pair_exists_unique_imp
+      There is no need to use pairing f.
+   Only-if part: pairing f /\ ?!u v. f u v ==> ?!(u,v). f u v
+      This is true by only-if part of pair_exists_unique_thm.
+*)
+Theorem pair_exists_unique_alt:
+  !f. pairing f ==> ((?!(u,v). f u v) <=> ?!u v. f u v)
+Proof
+  rw[EQ_IMP_THM] >-
+  simp[pair_exists_unique_imp] >>
+  irule (pair_exists_unique_thm |> SPEC_ALL |> #2 o EQ_IMP_RULE) >>
+  metis_tac[]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Unique Boolean Function.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Overload a unique boolean function *)
+Overload unique_bool = ``\f a b. f a b /\ !x y. f x y ==> (x = a) /\ (y = b)``;
+
+(* Idea: a unique function (f a b) has two unique values. *)
+
+(* Theorem: !f a b. unique_bool f a b ==> ?!u v. f u v *)
+(* Proof:
+   By EXISTS_UNIQUE_THM for ?!u, to show:
+   (1) ?u. ?!v. f u v
+       Let u = a. By EXISTS_UNIQUE_THM for ?!v, to show:
+       (1.1) ?v. f a v,                  true by takeing v = b.
+       (1.2) f a v /\ f a v' ==> v = v', true by unique_bool property
+   (2) ?!v. f u v /\ ?!v. f u' v ==> u = u'
+       Note ?v. f u v                    by EXISTS_UNIQUE_THM
+        and ?v'. f u' v'                 by EXISTS_UNIQUE_THM
+        But u = a and u' = a, so u = u'  by unique_bool property
+*)
+Theorem unique_bool_unique_values:
+  !f a b. unique_bool f a b ==> ?!u v. f u v
+Proof
+  rpt strip_tac >>
+  rw[Once EXISTS_UNIQUE_THM] >| [
+    qexists_tac `a` >>
+    rw[EXISTS_UNIQUE_THM] >-
+    metis_tac[] >>
+    metis_tac[],
+    metis_tac[EXISTS_UNIQUE_THM]
+  ]
+QED
+
+(* Idea: a unique function (f a b) has a unique pair. *)
+
+(* Theorem: !f a b. unique_bool f a b ==> ?!(u,v). f u v *)
+(* Proof:
+   Let x = (u,v). This is to show: ?!x. f (FST x) (SND x)
+   By EXISTS_UNIQUE_THM, this is to show:
+   (1) ?x. f (FST x) (SND x), true by taking x = (a,b).
+   (2) f (FST x) (SND x) /\ f (FST y) (SND y) ==> x = y
+       Note FST x = a = FST y      by unique_bool property
+        and SND x = b = SND y      by unique_bool property
+         so x = y                  by PAIR_FST_SND_EQ
+*)
+Theorem unique_bool_unique_pair:
+  !f a b. unique_bool f a b ==> ?!(u,v). f u v
+Proof
+  rw[pairTheory.ELIM_UNCURRY] >>
+  simp[EXISTS_UNIQUE_THM] >>
+  rpt strip_tac >| [
+    qexists_tac `(a,b)` >>
+    simp[],
+    metis_tac[pairTheory.PAIR_FST_SND_EQ]
+  ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* An Example: exists unique values not equivalent to exists unique pair.    *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: !m. (!x y. x < m /\ y < m ==> x = y ) ==> m <= 1 *)
+(* Proof:
+   By contradiction, suppose 1 < m.
+   Then 0 < m and 1 < m, but 0 <> 1.
+   Hence true.
+*)
+Theorem pairing_for_less:
+  !m. (!x y. x < m /\ y < m ==> x = y ) ==> m <= 1
+Proof
+  spose_not_then strip_assume_tac >>
+  `0 < m /\ 1 < m` by decide_tac >>
+  metis_tac[ONE_NOT_ZERO]
+QED
+
+(* Theorem: (?!m n. n < m) <=> T *)
+(* Proof:
+   By EXISTS_UNIQUE_THM for ?!m, this is to show:
+   (1) ?m. ?!n. n < m
+       This is asking for an m such that only one n < m.
+       Take m = 1. By EXISTS_UNIQUE_THM for ?!n, this is to show:
+       (1.1) ?n. n < 1,                      true by 0 < 1
+       (1.2) !x y. x < 1 /\ y < 1 ==> x = y, true by x = y = 0.
+   (2) ?!n. n < m /\ ?!n. n < m' ==> m = m'
+       Note m <= 1         by EXISTS_UNIQUE_THM, pairing_for_less
+        and m' <= 1        by EXISTS_UNIQUE_THM, pairing_for_less
+       With n < m and n < m', m <> 0 and m' <> 0.
+         so m = 1 = m'.
+*)
+Theorem exists_unique_values_less:
+  (?!m n. n < m) <=> T
+Proof
+  rw[Once EXISTS_UNIQUE_THM] >| [
+    qexists_tac `1` >>
+    simp[EXISTS_UNIQUE_THM],
+    fs[EXISTS_UNIQUE_THM] >>
+    `m <= 1 /\ m' <= 1` by rw[pairing_for_less] >>
+    decide_tac
+  ]
+QED
+
+(* Theorem: (?!(m,n). n < m) <=> F *)
+(* Proof:
+   Let x = (u,v). This is to show: ~?!x. SND x < FST x
+   By EXISTS_UNIQUE_THM, by contradiction, this is to show:
+      SND x < FST x /\
+      !x y. SND x < FST x /\ SND y < FST y ==> x = y ==> F
+      Let x = (1,0), y = (2,1),
+      but x <> y       by PAIR_FST_SND_EQ
+*)
+Theorem exists_unique_pair_less:
+  (?!(m,n). n < m) <=> F
+Proof
+  rw[pairTheory.ELIM_UNCURRY] >>
+  rw[EXISTS_UNIQUE_THM] >>
+  spose_not_then strip_assume_tac >>
+  first_x_assum (qspecl_then [`(1,0)`, `(2,1)`] strip_assume_tac) >>
+  fs[]
+QED
+
 
 (* ------------------------------------------------------------------------- *)
 

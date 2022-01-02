@@ -49,6 +49,9 @@ open involuteActionTheory;
 open groupActionTheory;
 open groupInstancesTheory;
 
+(* for pairs *)
+open pairTheory; (* for ELIM_UNCURRY, PAIR_FST_SND_EQ, PAIR_EQ, FORALL_PROD *)
+
 
 (* ------------------------------------------------------------------------- *)
 (* Windmills of the minds Documentation                                      *)
@@ -82,8 +85,7 @@ open groupInstancesTheory;
                    |- !p. prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill x y y
    fermat_two_squares_exists_odd_even
                    |- !p. prime p /\ (p MOD 4 = 1) ==>
-                          ?u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
-
+                          ?(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
 
    Fermat Two-Squares Theorem:
    flip_fixes_prime_sing
@@ -98,10 +100,10 @@ open groupInstancesTheory;
                               (fixes flip (mills p) = {FUNPOW (zagier o flip) (HALF n) u}
    fermat_two_squares_thm
                    |- !p. prime p /\ (p MOD 4 = 1) ==>
-                          ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
+                          ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
    fermat_two_squares_iff
                    |- !p. prime p ==> ((p MOD 4 = 1) <=>
-                                      ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2))
+                                      ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2))
 
    Fermat Two-Squares Algorithm:
    zagier_flip_1_1_z_period
@@ -145,8 +147,7 @@ open groupInstancesTheory;
                    |- !p. prime p /\ (p MOD 4 = 1) ==>
                          (fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)})
    fermat_two_squares_exists_alt
-                   |- !p. prime p /\ (p MOD 4 = 1) ==> ?u v. p = u ** 2 + v ** 2
-
+                   |- !p. prime p /\ (p MOD 4 = 1) ==> ?(u,v). p = u ** 2 + v ** 2
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -188,7 +189,7 @@ Proof
   qabbrev_tac `s = mills p` >>
   qabbrev_tac `k = p DIV 4` >>
   qabbrev_tac `a = fixes zagier s` >>
-  simp[EXTENSION, pairTheory.FORALL_PROD, EQ_IMP_THM] >>
+  simp[EXTENSION, FORALL_PROD, EQ_IMP_THM] >>
   ntac 5 strip_tac >| [
     `(p_1,p_1',p_2) IN s /\ (zagier (p_1,p_1',p_2) = (p_1,p_1',p_2))` by metis_tac[fixes_element] >>
     `p_1 = p_1'` by metis_tac[zagier_fix, mills_prime_triple_nonzero] >>
@@ -377,7 +378,7 @@ Proof
   `EVEN c /\ EVEN d` by rw[EVEN_DOUBLE, Abbr`c`, Abbr`d`] >>
   `(x = h) /\ (c = d)` by metis_tac[fermat_two_squares_unique_odd_even] >>
   `y = k` by fs[Abbr`c`, Abbr`d`] >>
-  metis_tac[pairTheory.PAIR_EQ]
+  metis_tac[PAIR_EQ]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -437,37 +438,41 @@ Proof
 QED
 
 
-(* Theorem: prime p /\ (p MOD 4 = 1) ==> ?u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) *)
+(* Theorem: prime p /\ (p MOD 4 = 1) ==>
+            ?(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) *)
 (* Proof:
    Note ?x y. p = windmill x y y          by fermat_two_squares_exists_windmill
                 = x ** 2 + (2 * y) ** 2   by windmill_by_squares
-   Put u = x, v = 2 * y.
-   Then p = u ** 2 + v ** 2               by above
+   Put (u, v) = (x, 2 * y).
+   Remains to show: ODD u /\ EVEN v.
+   Note EVEN v                            by EVEN_DOUBLE
+    and EVEN (v * v)                      by EVEN_MULT
+   Also p = u ** 2 + v ** 2               by above
           = u * u + v * v                 by EXP_2
      or p - u * u = v * v                 by arithmetic
-    and EVEN v                            by EVEN_DOUBLE
-    and EVEN (v * v)                      by EVEN_MULT
     Now ODD p                             by odd_by_mod_4, p MOD 4 = 1
      so ODD (u * u)                       by EVEN_SUB, EVEN_ODD
      or ODD u                             by ODD_MULT
 *)
 Theorem fermat_two_squares_exists_odd_even:
   !p. prime p /\ (p MOD 4 = 1) ==>
-   ?u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
+   ?(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
 Proof
-  rpt strip_tac >>
+  rw[ELIM_UNCURRY] >>
   `?x y. p = windmill x y y` by rw[fermat_two_squares_exists_windmill] >>
   `_ = x ** 2 + (2 * y) ** 2` by rw[windmill_by_squares] >>
   qabbrev_tac `u = x` >>
   qabbrev_tac `v = 2 * y` >>
-  `p = u * u + v * v` by simp[] >>
-  `v * v = p - u * u` by decide_tac >>
+  qexists_tac `(u,v)` >>
+  rfs[] >>
   `EVEN v` by rw[EVEN_DOUBLE, Abbr`v`] >>
   `EVEN (v * v)` by rw[EVEN_MULT] >>
   `ODD p` by rw[odd_by_mod_4] >>
+  `p = u * u + v * v` by simp[] >>
   `u * u <= p` by decide_tac >>
+  `v * v = p - u * u` by decide_tac >>
   `ODD (u * u)` by metis_tac[EVEN_SUB, EVEN_ODD] >>
-  metis_tac[ODD_MULT]
+  fs[ODD_MULT]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -591,32 +596,34 @@ QED
 
 
 (* Theorem: !p. prime p /\ (p MOD 4 = 1) ==>
-            ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) *)
+            ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) *)
 (* Proof:
    Existence part    by fermat_two_squares_exists_odd_even
    Uniqueness part   by fermat_two_squares_unique_odd_even
 *)
 Theorem fermat_two_squares_thm:
   !p. prime p /\ (p MOD 4 = 1) ==>
-   ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
+   ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
 Proof
-  rw[Once EXISTS_UNIQUE_THM] >| [
-    `?u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)` by rw[fermat_two_squares_exists_odd_even] >>
-    qexists_tac `u` >>
-    rw[Once EXISTS_UNIQUE_THM],
-    metis_tac[fermat_two_squares_unique_odd_even]
+  rw[ELIM_UNCURRY] >>
+  rw[EXISTS_UNIQUE_THM] >| [
+    drule_then strip_assume_tac fermat_two_squares_exists_odd_even >>
+    first_x_assum (drule_all_then strip_assume_tac) >>
+    fs[ELIM_UNCURRY] >>
+    metis_tac[],
+    metis_tac[fermat_two_squares_unique_odd_even, PAIR_FST_SND_EQ]
   ]
 QED
 
 
 (* Theorem: prime p ==>
-            ((p MOD 4 = 1) <=> ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)) *)
+            ((p MOD 4 = 1) <=> ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)) *)
 (* Proof:
-   If part: p MOD 4 = 1 ==> ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
+   If part: p MOD 4 = 1 ==> ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
       This is true                       by fermat_two_squares_thm
-   Only-if part: ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) ==> p MOD 4 = 1
-      Note ?u v. ODD u /\ EVEN v /\
-                 (p = u ** 2 + v ** 2)   by EXISTS_UNIQUE_THM
+   Only-if part: ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) ==> p MOD 4 = 1
+      Note ?(u,v). ODD u /\ EVEN v /\
+                  (p = u ** 2 + v ** 2)  by EXISTS_UNIQUE_THM
        but ODD (u ** 2)                  by ODD_EXP
        and EVEN (v ** 2)                 by EVEN_EXP
       Thus ODD p                         by ODD_ADD, EVEN_ODD
@@ -625,11 +632,15 @@ QED
        ==> p MOD 4 = 1
 *)
 Theorem fermat_two_squares_iff:
-  !p. prime p ==> ((p MOD 4 = 1) <=> ?!u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2))
+  !p. prime p ==>
+  ((p MOD 4 = 1) <=> ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2))
 Proof
   rw[EQ_IMP_THM] >-
   rw[fermat_two_squares_thm] >>
-  `?u v. ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)` by metis_tac[EXISTS_UNIQUE_THM] >>
+  fs[ELIM_UNCURRY, EXISTS_UNIQUE_THM] >>
+  `p MOD 4 = 1` suffices_by simp[] >>
+  qabbrev_tac `u = FST x` >>
+  qabbrev_tac `v = SND x` >>
   `ODD (u ** 2)` by rw[ODD_EXP] >>
   `EVEN (v ** 2)` by rw[EVEN_EXP] >>
   `ODD p` by fs[ODD_ADD, EVEN_ODD] >>
@@ -767,7 +778,7 @@ Proof
     `w IN (fixes flip s)` by fs[flip_fix, fixes_element] >>
     Cases_on `j = 0` >| [
       `w = u` by fs[Abbr`w`] >>
-      metis_tac[zagier_flip_1_1_z_period, pairTheory.PAIR_EQ],
+      metis_tac[zagier_flip_1_1_z_period, PAIR_EQ],
       `0 < j` by decide_tac >>
       `FUNPOW (zagier o flip) j u IN fixes flip s <=> (j = HALF n)` by rfs[] >>
       `j = h` by metis_tac[] >>
@@ -797,7 +808,7 @@ val found_def = Define`
 Theorem found_not:
   $~ o found = (\(x,y,z). y <> z)
 Proof
-  rw[found_def, pairTheory.FORALL_PROD, FUN_EQ_THM]
+  rw[found_def, FORALL_PROD, FUN_EQ_THM]
 QED
 
 (* Idea: use WHILE for search. Develop theory in iterateCompute. *)
@@ -1217,7 +1228,7 @@ Proof
   ]
 QED
 
-(* Theorem: prime p /\ p MOD 4 = 1 ==> ?u v. p = u ** 2 + v ** 2 *)
+(* Theorem: prime p /\ p MOD 4 = 1 ==> ?(u,v). p = u ** 2 + v ** 2 *)
 (* Proof:
    Let X = mills p, the solutions (x,y,z) of p = x ** 2 + 4 * y * z.
    Note ~square p                      by prime_non_square
@@ -1242,13 +1253,13 @@ QED
      so flip (x, y, z) = (x, y, z)     by involute_fixed_points
     ==> y = z                          by flip_fix
    Note (x,y,z) IN X                   by fixed_points_element
-   Put u = x, v = 2 * y.
+   Put (u,v) = (x,2 * y).
    Then p = u ** 2 + v ** 2            by mills_element, windmill_by_squares
 *)
 Theorem fermat_two_squares_exists_alt:
-  !p. prime p /\ p MOD 4 = 1 ==> ?u v. p = u ** 2 + v ** 2
+  !p. prime p /\ p MOD 4 = 1 ==> ?(u,v). p = u ** 2 + v ** 2
 Proof
-  rpt strip_tac >>
+  rw[ELIM_UNCURRY] >>
   qabbrev_tac `X = mills p` >>
   `~square p` by metis_tac[prime_non_square] >>
   `FINITE X` by fs[mills_non_square_finite, Abbr`X`] >>
@@ -1266,6 +1277,8 @@ Proof
   `flip (x, y, z) = (x, y, z)` by metis_tac[involute_fixed_points] >>
   `y = z` by fs[flip_fix] >>
   `(x,y,z) IN X` by fs[fixed_points_element, Abbr`b`] >>
+  qexists_tac `(x, 2 * y)` >>
+  simp[] >>
   metis_tac[mills_element, windmill_by_squares]
 QED
 
