@@ -1,7 +1,7 @@
 
 # Fermat's Little Theorem, various proofs.
 
-These scripts contain theories to support the formalisation of Fermat's Little Theorem.
+These scripts contain theories to support the formalisation of Fermat's Little Theorem. This is the source code for the paper `A String of Pearls: Proofs of Fermat's Little Theorem`, with [DOI: 10.6092/issn.1972-5787/3728](https://doi.org/10.6092/issn.1972-5787/3728) or [journal](https://jfr.unibo.it/article/view/3728).
 
 ## Theory
 * __necklace__, necklaces and colours.
