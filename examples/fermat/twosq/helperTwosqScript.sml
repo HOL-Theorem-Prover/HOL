@@ -117,6 +117,8 @@ open whileTheory; (* for HOARE_SPEC_DEF *)
    Pairing Function:
    pair_exists_unique_fun  |- !f. (?!(u,v). f u v) ==> pairing f
    pair_exists_unique_thm  |- !f. (?!(u,v). f u v) <=> (?!u v. f u v) /\ pairing f
+   pair_exists_unique_thm_1|- !f. (?!(u,v). f u v) ==> (?!u v. f u v) /\ pairing f
+   pair_exists_unique_thm_2|- !f. (?!u v. f u v) /\ pairing f ==> ?!(u,v). f u v
    pair_exists_unique_alt  |- !f. pairing f ==> ((?!(u,v). f u v) <=> ?!u v. f u v)
 
    Unique Boolean Function:
@@ -1067,6 +1069,20 @@ Proof
   ]
 QED
 
+(* Extract theorems *)
+(* If part of pair_exists_unique_thm *)
+Theorem pair_exists_unique_thm_1 =
+        pair_exists_unique_thm |> SPEC_ALL |> #1 o EQ_IMP_RULE |> GEN_ALL;
+(* Only-if part of pair_exists_unique_thm *)
+Theorem pair_exists_unique_thm_2 =
+        pair_exists_unique_thm |> SPEC_ALL |> #2 o EQ_IMP_RULE |> GEN_ALL;
+(*
+val pair_exists_unique_thm_1 =
+   |- !f. (?!(u,v). f u v) ==> (?!u v. f u v) /\ pairing f: thm
+val pair_exists_unique_thm_2 =
+   |- !f. (?!u v. f u v) /\ pairing f ==> ?!(u,v). f u v: thm
+*)
+
 (* Idea: for a pairing function, exists unique pair iff exists unique two values. *)
 
 (* Theorem: !f. pairing f ==> ((?!(u,v). f u v) <=> ?!u v. f u v) *)
@@ -1082,7 +1098,7 @@ Theorem pair_exists_unique_alt:
 Proof
   rw[EQ_IMP_THM] >-
   simp[pair_exists_unique_imp] >>
-  irule (pair_exists_unique_thm |> SPEC_ALL |> #2 o EQ_IMP_RULE) >>
+  irule pair_exists_unique_thm_2 >>
   metis_tac[]
 QED
 
