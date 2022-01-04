@@ -25,7 +25,7 @@ metis_tac[SELECT_AX])
  * evaluate before starting the evaluation. Thus preventing switching in the
  * middle of evaluating one of them.
  *)
-val _ = Datatype `
+Datatype:
 small_e =
   | Var string
   | Num int
@@ -34,10 +34,11 @@ small_e =
   | AddR small_e small_e
   | Assign string small_e
   | Getchar
-  | Putchar small_e`;
+  | Putchar small_e
+End
 
 (* Add a Handle statement that will stop breaks from propagating *)
-val _ = Datatype `
+Datatype:
 small_t =
   | Dec string small_t
   | Exp small_e
@@ -45,179 +46,211 @@ small_t =
   | Seq small_t small_t
   | If small_e small_t small_t
   | For small_e small_e small_t
-  | Handle small_t`;
+  | Handle small_t
+End
 
-val _ = Datatype `
-  lab = ND bool | W char | R char`;
+Datatype: lab = ND bool | W char | R char
+End
 
-val e_to_small_e_def = Define `
-(e_to_small_e ((Num i):e) = ((Num i) : small_e)) ∧
-(e_to_small_e (Var x) = Var x) ∧
-(e_to_small_e (Add e1 e2) = Add (e_to_small_e e1) (e_to_small_e e2)) ∧
-(e_to_small_e (Assign x e) = Assign x (e_to_small_e e)) ∧
-(e_to_small_e Getchar = Getchar) ∧
-(e_to_small_e (Putchar e) = Putchar (e_to_small_e e))`;
+Definition e_to_small_e_def:
+  e_to_small_e (Num i :e) = (Num i : small_e) ∧
+  e_to_small_e (Var x) = Var x ∧
+  e_to_small_e (Add e1 e2) = Add (e_to_small_e e1) (e_to_small_e e2) ∧
+  e_to_small_e (Assign x e) = Assign x (e_to_small_e e) ∧
+  e_to_small_e Getchar = Getchar ∧
+  e_to_small_e (Putchar e) = Putchar (e_to_small_e e)
+End
 
-val t_to_small_t_def = Define `
+Definition t_to_small_t_def:
 (t_to_small_t ((Dec string t):t) = ((Dec string (t_to_small_t t)) : small_t)) ∧
 (t_to_small_t (Exp e) = Exp (e_to_small_e e)) ∧
 (t_to_small_t Break = Break) ∧
 (t_to_small_t (Seq t1 t2) = Seq (t_to_small_t t1) (t_to_small_t t2)) ∧
 (t_to_small_t (If e t1 t2) = If (e_to_small_e e) (t_to_small_t t1) (t_to_small_t t2)) ∧
-(t_to_small_t (For e1 e2 t) = For (e_to_small_e e1) (e_to_small_e e2) (t_to_small_t t))`;
+(t_to_small_t (For e1 e2 t) = For (e_to_small_e e1) (e_to_small_e e2) (t_to_small_t t))
+End
 
-val is_val_e_def = Define `
-(is_val_e (Num n) = T) ∧
-(is_val_e _ = F)`;
+Definition is_val_e_def:
+  (is_val_e (Num n) = T) ∧
+  (is_val_e _ = F)
+End
 
-val (step_e_rules, step_e_ind, step_e_cases) = Hol_reln `
-(!s x n.
-  FLOOKUP s.store x = SOME n
-  ⇒
-  step_e (s, Var x) NONE (s, Num n)) ∧
-(!s e1 e2 o'.
-  oracle_get s.non_det_o = (F, o')
-  ⇒
-  step_e (s, Add e1 e2)
-         (SOME (INR F))
-         (s with <| non_det_o := o'; io_trace := s.io_trace ++ [INR F] |>, AddL e1 e2)) ∧
-(!s e1 e2 o'.
-  oracle_get s.non_det_o = (T, o')
-  ⇒
-  step_e (s, Add e1 e2) (SOME (INR T)) (s with <| non_det_o := o'; io_trace := s.io_trace ++ [INR T] |>, AddR e1 e2)) ∧
-(!s n1 n2.
-  step_e (s, AddL (Num n1) (Num n2)) NONE (s, Num (n1 + n2))) ∧
-(!s n1 n2.
-  step_e (s, AddR (Num n1) (Num n2)) NONE (s, Num (n1 + n2))) ∧
-(!s s2 e1 e2 e3 l.
-  step_e (s, e1) l (s2, e3)
-  ⇒
-  step_e (s, AddL e1 e2) l (s2, AddL e3 e2)) ∧
-(!s s2 i e1 e2 l.
-  step_e (s, e1) l (s2, e2)
-  ⇒
-  step_e (s, AddL (Num i) e1) l (s2, AddL (Num i) e2)) ∧
-(!s s2 i e1 e2 l.
-  step_e (s, e1) l (s2, e2)
-  ⇒
-  step_e (s, AddR e1 (Num i)) l (s2, AddR e2 (Num i))) ∧
-(!s s2 e1 e2 e3 l.
-  step_e (s, e2) l (s2, e3)
-  ⇒
-  step_e (s, AddR e1 e2) l (s2, AddR e1 e3)) ∧
-(!s x n.
-  step_e (s, Assign x (Num n)) NONE (s with store := s.store |+ (x, n), Num n)) ∧
-(!s s2 x e1 e2 l.
-  step_e (s, e1) l (s2, e2)
-  ⇒
-  step_e (s, Assign x e1) l (s2, Assign x e2)) ∧
-(!s i input'.
-  getchar s.input = (i,input')
-  ⇒
-  step_e (s, Getchar)
-         (SOME (INL (Itag i)))
-         (s with <| input := input'; io_trace := s.io_trace ++ [INL (Itag i)] |>, Num i)) ∧
-(!s s2 e1 e2 l.
-  step_e (s, e1) l (s2, e2)
-  ⇒
-  step_e (s, Putchar e1) l (s2, Putchar e2)) ∧
-(!s i.
-  step_e (s, Putchar (Num i))
-         (SOME (INL (Otag i)))
-         (s with io_trace := s.io_trace ++ [INL (Otag i)], Num i))`;
+Inductive step_e:
+  (!s x n.
+     FLOOKUP s.store x = SOME n
+     ⇒
+     step_e (s, Var x) NONE (s, Num n)) ∧
+  (!s e1 e2 o'.
+     oracle_get s.non_det_o = (F, o')
+     ⇒
+     step_e (s, Add e1 e2)
+            (SOME (INR F))
+            (s with <| non_det_o := o'; io_trace := s.io_trace ++ [INR F] |>,
+             AddL e1 e2)) ∧
+  (!s e1 e2 o'.
+     oracle_get s.non_det_o = (T, o')
+     ⇒
+     step_e (s, Add e1 e2)
+            (SOME (INR T))
+            (s with <| non_det_o := o'; io_trace := s.io_trace ++ [INR T] |>,
+             AddR e1 e2)) ∧
+  (!s n1 n2.
+     step_e (s, AddL (Num n1) (Num n2)) NONE (s, Num (n1 + n2))) ∧
+  (!s n1 n2.
+     step_e (s, AddR (Num n1) (Num n2)) NONE (s, Num (n1 + n2))) ∧
+  (!s s2 e1 e2 e3 l.
+     step_e (s, e1) l (s2, e3)
+     ⇒
+     step_e (s, AddL e1 e2) l (s2, AddL e3 e2)) ∧
+  (!s s2 i e1 e2 l.
+     step_e (s, e1) l (s2, e2)
+     ⇒
+     step_e (s, AddL (Num i) e1) l (s2, AddL (Num i) e2)) ∧
+  (!s s2 i e1 e2 l.
+     step_e (s, e1) l (s2, e2)
+     ⇒
+     step_e (s, AddR e1 (Num i)) l (s2, AddR e2 (Num i))) ∧
+  (!s s2 e1 e2 e3 l.
+     step_e (s, e2) l (s2, e3)
+     ⇒
+     step_e (s, AddR e1 e2) l (s2, AddR e1 e3)) ∧
+  (!s x n.
+     step_e (s, Assign x (Num n)) NONE
+            (s with store := s.store |+ (x, n), Num n)) ∧
+  (!s s2 x e1 e2 l.
+     step_e (s, e1) l (s2, e2)
+     ⇒
+     step_e (s, Assign x e1) l (s2, Assign x e2)) ∧
+  (!s i input'.
+     getchar s.input = (i,input')
+     ⇒
+     step_e (s, Getchar)
+            (SOME (INL (Itag i)))
+            (s with <| input := input';
+                       io_trace := s.io_trace ++ [INL (Itag i)] |>, Num i)) ∧
+  (!s s2 e1 e2 l.
+     step_e (s, e1) l (s2, e2)
+     ⇒
+     step_e (s, Putchar e1) l (s2, Putchar e2)) ∧
+  (!s i.
+     step_e (s, Putchar (Num i))
+            (SOME (INL (Otag i)))
+            (s with io_trace := s.io_trace ++ [INL (Otag i)], Num i))
+End
 
 val is_val_t_def = Define `
 (is_val_t (Exp (e : small_e)) = is_val_e e) ∧
 (is_val_t Break = T) ∧
 (is_val_t _ = F)`;
 
-val (step_t_rules, step_t_ind, step_t_cases) = Hol_reln `
-(!s t x.
-  step_t (s, Dec x t) NONE (s with store := s.store |+ (x, 0), t)) ∧
-(!s s2 e e2 l.
-  step_e (s, e) l (s2, e2)
+Inductive step_t:
+  (!s t x.
+     step_t (s, Dec x t) NONE (s with store := s.store |+ (x, 0), t))
+∧
+  (!s s2 e e2 l.
+     step_e (s, e) l (s2, e2)
   ⇒
-  step_t (s, Exp e) l (s2, Exp e2)) ∧
-(!s s2 t1 t2 t1' l.
-  step_t (s, t1) l (s2, t1')
-  ⇒
-  step_t (s, Seq t1 t2) l (s2, Seq t1' t2)) ∧
-(!s t.
-  step_t (s, Seq Break t) NONE (s, Break)) ∧
-(!s n t.
-  step_t (s, Seq (Exp (Num n)) t) NONE (s, t)) ∧
-(!s s2 e t1 t2 e2 l.
-  step_e (s, e) l (s2,e2)
-  ⇒
-  step_t (s, If e t1 t2) l (s2, If e2 t1 t2)) ∧
-(!s t1 t2.
-  step_t (s, If (Num 0) t1 t2) NONE (s, t2)) ∧
-(!s n t1 t2.
-  n ≠ 0
-  ⇒
-  step_t (s, If (Num n) t1 t2) NONE (s, t1)) ∧
-(!s.
-  step_t (s, Handle Break) NONE (s, Exp (Num 0))) ∧
-(!s t.
-  is_val_t t ∧
-  t ≠ Break
-  ⇒
-  step_t (s, Handle t) NONE (s, t)) ∧
-(!s1 s2 t1 t2 l.
-  step_t (s1, t1) l (s2, t2)
-  ⇒
-  step_t (s1, Handle t1) l (s2, Handle t2)) ∧
-(!s e1 e2 t.
-  step_t (s, For e1 e2 t) NONE (s, Handle (If e1 (Seq t (Seq (Exp e2) (For e1 e2 t))) (Exp (Num 0)))))`;
+     step_t (s, Exp e) l (s2, Exp e2))
+∧
+  (!s s2 t1 t2 t1' l.
+     step_t (s, t1) l (s2, t1')
+    ⇒
+     step_t (s, Seq t1 t2) l (s2, Seq t1' t2))
+∧
+  (!s t. step_t (s, Seq Break t) NONE (s, Break))
+∧
+  (!s n t. step_t (s, Seq (Exp (Num n)) t) NONE (s, t))
+∧
+  (!s s2 e t1 t2 e2 l.
+    step_e (s, e) l (s2,e2)
+   ⇒
+    step_t (s, If e t1 t2) l (s2, If e2 t1 t2))
+∧
+  (!s t1 t2.
+    step_t (s, If (Num 0) t1 t2) NONE (s, t2))
+∧
+  (!s n t1 t2.
+    n ≠ 0
+    ⇒
+    step_t (s, If (Num n) t1 t2) NONE (s, t1))
+∧
+  (!s.
+    step_t (s, Handle Break) NONE (s, Exp (Num 0)))
+∧
+  (!s t.
+    is_val_t t ∧
+    t ≠ Break
+    ⇒
+    step_t (s, Handle t) NONE (s, t))
+∧
+  (!s1 s2 t1 t2 l.
+    step_t (s1, t1) l (s2, t2)
+    ⇒
+    step_t (s1, Handle t1) l (s2, Handle t2))
+∧
+  (!s e1 e2 t.
+    step_t
+      (s, For e1 e2 t)
+      NONE
+      (s, Handle (If e1 (Seq t (Seq (Exp e2) (For e1 e2 t))) (Exp (Num 0)))))
+End
 
-val filter_map_def = Define `
-(filter_map f [] = []) ∧
-(filter_map f (h::t) =
-  case f h of
-  | NONE => filter_map f t
-  | SOME x => x :: filter_map f t)`;
+Definition filter_map_def:
+  filter_map f [] = [] ∧
+  filter_map f (h::t) =
+   case f h of
+   | NONE => filter_map f t
+   | SOME x => x :: filter_map f t
+End
 
-val path_to_obs_def = Define `
+Definition path_to_obs_def:
   path_to_obs p =
     if ¬finite p then
       Diverge (lfilter_map I (labels p))
     else if is_val_t (SND (last p)) then
       Terminate (filter_map I (THE (toList (labels p))))
     else
-      Crash`;
+      Crash
+End
 
-val semantics_small_def = Define `
-  (semantics_small input prog =
+Definition semantics_small_def:
+  semantics_small input prog =
     { path_to_obs p | p,nd |
-      okpath step_t p ∧ complete step_t p ∧ first p = (init_st 0 nd input, t_to_small_t prog) })`;
+      okpath step_t p ∧ complete step_t p ∧
+      first p = (init_st 0 nd input, t_to_small_t prog)
+    }
+End
 
 (* ----------- Connect to functional big step -------------- *)
 
-val for_small_sem_def = Define `
+Definition for_small_sem_def:
   for_small_sem input =
     <| step := (\st. some st'. ?l. step_t st l st');
        is_result := (\st. is_val_t (SND st));
        load := (\nd t. (init_st 0 nd input , t_to_small_t t));
-       unload := (\st. (FST st).io_trace) |>`;
+       unload := (\st. (FST st).io_trace) |>
+End
 
-val for_eval_def = Define `
+Definition for_eval_def:
   for_eval st env t =
     case sem_t st t of
       (Rval v, s) => (s, Val (SOME v))
     | (Rbreak, s) => (s, Val NONE)
     | (Rtimeout, s) => (s, Timeout)
-    | (Rfail, s) => (s, Error)`;
+    | (Rfail, s) => (s, Error)
+End
 
-val for_big_sem_def = Define `
+Definition for_big_sem_def:
   for_big_sem input =
     <| eval := for_eval;
        init_st := (\nd. init_st 0 nd input);
        init_env := ();
        get_clock := (\x. x.clock);
        set_clock := (\c st. st with clock := c);
-       get_oracle_events := (\st. st.io_trace) |>`;
+       get_oracle_events := (\st. st.io_trace) |>
+End
 
-val (res_rel_t_rules, res_rel_t_ind, res_rel_t_cases) = Hol_reln `
+Inductive res_rel_t:
 (!i s.
   res_rel_t (Rval i, s) (s with clock := 0, Exp (Num i))) ∧
 (!s t.
@@ -231,21 +264,19 @@ val (res_rel_t_rules, res_rel_t_ind, res_rel_t_cases) = Hol_reln `
   (?l s' t'. step_t (s, t) l (s', t')) ∧
   s.clock = 0
   ⇒
-  res_rel_t (Rtimeout, s) (s, t))`;
+  res_rel_t (Rtimeout, s) (s, t))
+End
 
-val (res_rel_e_rules, res_rel_e_ind, res_rel_e_cases) = Hol_reln `
-(!i s.
-  res_rel_e (Rval i, s) (s with clock:=0, Num i)) ∧
-(!s e.
-  (~?s' e' l. step_e (s, e) l (s', e')) ∧
-  ~is_val_e e
+Inductive res_rel_e:
+  (!i s.
+    res_rel_e (Rval i, s) (s with clock:=0, Num i))
+∧
+  (!s e.
+    (~?s' e' l. step_e (s, e) l (s', e')) ∧
+    ~is_val_e e
   ⇒
-  res_rel_e (Rfail, s) (s with clock:=0, e))`
-
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
-
-val step_t_strongind = (fetch "-" "step_t_strongind")
-val step_e_strongind = (fetch "-" "step_e_strongind")
+    res_rel_e (Rfail, s) (s with clock:=0, e))
+End
 
 val conjs_def = Define` conjs A B ⇔ A ∧ B`
 
@@ -253,11 +284,12 @@ val etac = (fs[Once step_t_cases]>>fs[Once step_t_cases,Once step_e_cases,conjs_
 
 (* Determinism of small-step w.r.t. an oracle *)
 
-val step_e_determ = Q.prove(
-` ∀se l1 se1.
+Theorem step_e_determ0[local]:
+ ∀se l1 se1.
   step_e se l1 se1 ⇒
   (∀l2 se2.
-  step_e se l2 se2 ⇒ conjs (se1 = se2) (l1 = l2))`,
+  step_e se l2 se2 ⇒ conjs (se1 = se2) (l1 = l2))
+Proof
   ho_match_mp_tac step_e_strongind>>rw[]>>fs[FORALL_PROD]
   >- (rw[conjs_def]>>fs[Once step_e_cases]>>rfs[])
   >- (rw[conjs_def]>>ntac 2(fs[Once step_e_cases]>>rfs[]))
@@ -269,13 +301,16 @@ val step_e_determ = Q.prove(
     (pop_assum mp_tac>>simp[Once step_e_cases]>>rw[]>>
     fs[Once step_e_cases])
   >>
-  fs[conjs_def])|>REWRITE_RULE[conjs_def]
+  fs[conjs_def]
+QED
+Theorem step_e_determ = step_e_determ0 |>REWRITE_RULE[conjs_def]
 
-val step_t_determ = Q.prove(
-` ∀st l1 st1.
+Theorem step_t_determ0[local]:
+ ∀st l1 st1.
   step_t st l1 st1 ⇒
-  (∀l2 st2.
-  step_t st l2 st2 ⇒ conjs (st1 = st2) (l1 = l2))`,
+  ∀l2 st2.
+    step_t st l2 st2 ⇒ conjs (st1 = st2) (l1 = l2)
+Proof
   ho_match_mp_tac step_t_strongind >>rw[]
   >- etac
   >-
@@ -313,286 +348,328 @@ val step_t_determ = Q.prove(
     >>
       fs[FORALL_PROD]>>metis_tac[])
   >>
-    fs[Once step_t_cases,conjs_def])|>REWRITE_RULE[conjs_def]
+    fs[Once step_t_cases,conjs_def]
+QED
+Theorem step_t_determ = step_t_determ0 |>REWRITE_RULE[conjs_def]
 
-val step_t_select_unique = Q.prove(
-`step_t (q,r) l st' ⇒
- (@st'. ∃l. step_t (q,r) l st') = st'`,
- rw[]>>
- metis_tac[step_t_determ])
+Theorem step_t_select_unique[local]:
+  step_t (q,r) l st' ⇒ (@st'. ∃l. step_t (q,r) l st') = st'
+Proof rw[]>> metis_tac[step_t_determ]
+QED
 
-val some_to_SOME_step_e = Q.prove(
-`step_e A l B ⇒
-  (some st'. ∃l. step_e A l st') = SOME B`,
- rw[]>>fs[some_def]>>
- metis_tac[step_e_determ]) |> GEN_ALL
+Theorem some_to_SOME_step_e[local]:
+  ∀A l B. step_e A l B ⇒ (some st'. ∃l. step_e A l st') = SOME B
+Proof rw[]>>fs[some_def]>> metis_tac[step_e_determ]
+QED
 
-val some_to_SOME_step_t = Q.prove(
-`step_t A l B ⇒
- (some st'. ∃l. step_t A l st') =
- SOME B`,
- rw[]>>fs[some_def]>>metis_tac[step_t_determ]) |>GEN_ALL
+Theorem some_to_SOME_step_t[local]:
+  ∀A l B. step_t A l B ⇒ (some st'. ∃l. step_t A l st') = SOME B
+Proof rw[]>>fs[some_def]>>metis_tac[step_t_determ]
+QED
 
 (* Contextual transitions of the small step semantics *)
-val check_trace_seq = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ∃l. step_t st l st') tr ⇒
- check_trace (λst. some st'. ∃l. step_t st l st') (MAP (λst,t. (st,Seq t p)) tr)`,
+Theorem check_trace_seq:
+  ∀tr.
+    check_trace (λst. some st'. ∃l. step_t st l st') tr ⇒
+    check_trace (λst. some st'. ∃l. step_t st l st')
+                (MAP (λst,t. (st,Seq t p)) tr)
+Proof
  Induct>>rw[]>>
  Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_t>>
  fs[some_def]>>
  simp[Once step_t_cases]>>
- metis_tac[step_t_select_unique])
+ metis_tac[step_t_select_unique]
+QED
 
-val check_trace_assign = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_e st l st') (MAP (λst,e. (st,Assign s e)) tr)`,
+Theorem check_trace_assign:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_e st l st')
+                (MAP (λ(st,e). (st,Assign s e)) tr)
+Proof
  Induct>>rw[]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_e>>
  fs[some_def]>>
  simp[Once step_e_cases]>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_putchar = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_e st l st') (MAP (λst,e. (st,Putchar e)) tr)`,
+Theorem check_trace_putchar:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_e st l st')
+                (MAP (λ(st,e). (st,Putchar e)) tr)
+Proof
  Induct>>rw[]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_e>>
  fs[some_def]>>
  simp[Once step_e_cases]>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_addl1 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_e st l st') (MAP (λst,e. (st,AddL e e')) tr)`,
+Theorem check_trace_addl1:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_e st l st')
+                (MAP (λst,e. (st,AddL e e')) tr)
+Proof
  Induct>>rw[]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_e>>
  fs[some_def]>>
  simp[Once step_e_cases]>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_addl2 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_e st l st') (MAP (λst,e'. (st,AddL (Num i) e')) tr)`,
+Theorem check_trace_addl2:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_e st l st')
+                (MAP (λ(st,e'). (st,AddL (Num i) e')) tr)
+Proof
  Induct>>rw[]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_e>>
  fs[some_def]>>
  simp[Once step_e_cases]>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_addr1 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_e st l st') (MAP (λst,e'. (st,AddR e e')) tr)`,
+Theorem check_trace_addr1:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_e st l st')
+                (MAP (λ(st,e'). (st,AddR e e')) tr)
+Proof
  Induct>>rw[]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_e>>
  fs[some_def]>>
  simp[Once step_e_cases]>>
- metis_tac[step_e_determ,is_val_e_def])
+ metis_tac[step_e_determ,is_val_e_def]
+QED
 
-val check_trace_addr2 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_e st l st') (MAP (λst,e'. (st,AddR e' (Num i))) tr)`,
+Theorem check_trace_addr2:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_e st l st')
+                (MAP (λst,e'. (st,AddR e' (Num i))) tr)
+Proof
  Induct>>rw[]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_e>>
  fs[some_def]>>
  simp[Once step_e_cases]>>
- metis_tac[step_e_determ,is_val_e_def])
+ metis_tac[step_e_determ,is_val_e_def]
+QED
 
-val check_trace_exp = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_t st l st') (MAP (λst,e'. (st,Exp e')) tr)`,
+Theorem check_trace_exp:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_t st l st')
+                (MAP (λst,e'. (st,Exp e')) tr)
+Proof
  Induct>>rw[check_trace_def]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_t>>
  fs[some_def]>>
  simp[Once step_t_cases]>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_if1 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_t st l st') (MAP (λst,e'. (st,If e' a b)) tr)`,
+Theorem check_trace_if1:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_t st l st')
+                (MAP (λst,e'. (st,If e' a b)) tr)
+Proof
  Induct>>rw[check_trace_def]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_t>>
  fs[some_def]>>
  simp[Once step_t_cases]>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_for1 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_t st l st')
-   (MAP (λst,e'. (st,
-   Handle (If e' a b))) tr)`,
+Theorem check_trace_for1:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_t st l st')
+                (MAP (λst,e'. (st, Handle (If e' a b))) tr)
+Proof
+  Induct>>rw[check_trace_def]>>Cases_on`tr`>>fs[check_trace_def]>>
+  Cases_on`h`>>Cases_on`h'`>>
+          match_mp_tac some_to_SOME_step_t>>
+  fs[some_def]>>
+  simp[Once step_t_cases]>>
+  simp[Once step_t_cases]>>
+  metis_tac[step_e_determ]
+QED
+
+Theorem check_trace_for2:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_t st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_t st l st')
+                (MAP (λst,t'. (st, Handle (Seq t' a))) tr)
+Proof
  Induct>>rw[check_trace_def]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_t>>
  fs[some_def]>>
  simp[Once step_t_cases]>>
  simp[Once step_t_cases]>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_for2 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_t st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_t st l st')
-   (MAP (λst,t'. (st,
-   Handle (Seq t' a))) tr)`,
- Induct>>rw[check_trace_def]>>Cases_on`tr`>>fs[check_trace_def]>>
- Cases_on`h`>>Cases_on`h'`>>
- match_mp_tac some_to_SOME_step_t>>
- fs[some_def]>>
- simp[Once step_t_cases]>>
- simp[Once step_t_cases]>>
- metis_tac[step_e_determ])
-
-val check_trace_for3 = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_t st l st')
-   (MAP (λst,e'. (st,
-   Handle (Seq (Exp e') a))) tr)`,
+Theorem check_trace_for3:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_e st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_t st l st')
+                (MAP (λst,e'. (st, Handle (Seq (Exp e') a))) tr)
+Proof
  Induct>>rw[check_trace_def]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_t>>
  fs[some_def]>>
  ntac 3 (simp[Once step_t_cases])>>
- metis_tac[step_e_determ])
+ metis_tac[step_e_determ]
+QED
 
-val check_trace_handle = Q.prove(
-`∀tr.
- check_trace (λst. some st'. ?l. step_t st l st') tr ⇒
- check_trace (λst. some st'. ?l. step_t st l st')
-   (MAP (λst,t'. (st,
-   Handle t')) tr)`,
+Theorem check_trace_handle:
+  ∀tr.
+    check_trace (λst. some st'. ?l. step_t st l st') tr ⇒
+    check_trace (λst. some st'. ?l. step_t st l st')
+                (MAP (λst,t'. (st, Handle t')) tr)
+Proof
  Induct>>rw[check_trace_def]>>Cases_on`tr`>>fs[check_trace_def]>>
  Cases_on`h`>>Cases_on`h'`>>
  match_mp_tac some_to_SOME_step_t>>
  fs[some_def]>>
  simp[Once step_t_cases]>>
- Cases_on`st'`>>metis_tac[step_t_determ])
+ Cases_on`st'`>>metis_tac[step_t_determ]
+QED
 
 (* Non-existence of contextual transitions in small-step *)
-val no_step_e_assign = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' e' l. ¬step_e (s,Assign v e) l (s',e')`,
+Theorem no_step_e_assign:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧ ¬is_val_e e
+    ⇒
+    ∀s' e' l. ¬step_e (s,Assign v e) l (s',e')
+Proof
+ Induct>>rw[is_val_e_def]>> simp[Once step_e_cases]
+QED
+
+Theorem no_step_e_putchar:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
+    ¬is_val_e e
+    ⇒
+    ∀s' e' l. ¬step_e (s,Putchar e) l (s',e')
+Proof
  Induct>>rw[is_val_e_def]>>
- simp[Once step_e_cases])
+ simp[Once step_e_cases]
+QED
 
-val no_step_e_putchar = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' e' l. ¬step_e (s,Putchar e) l (s',e')`,
+Theorem no_step_e_addl1:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
+    ¬is_val_e e
+    ⇒
+    ∀s' e' l. ¬step_e (s,AddL e e'') l (s',e')
+Proof Induct>>rw[is_val_e_def]>>simp[Once step_e_cases,is_val_e_def]
+QED
+
+Theorem no_step_e_addl2:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
+    ¬is_val_e e
+    ⇒
+    ∀s' e' l. ¬step_e (s,AddL (Num i) e) l (s',e')
+Proof Induct>>rw[is_val_e_def]>>rpt (simp[Once step_e_cases,is_val_e_def])
+QED
+
+Theorem no_step_e_addr1:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
+    ¬is_val_e e
+    ⇒
+    ∀s' e' l. ¬step_e (s,AddR e'' e) l (s',e')
+Proof
  Induct>>rw[is_val_e_def]>>
- simp[Once step_e_cases])
+ rpt (simp[Once step_e_cases])
+QED
 
-val no_step_e_addl1 = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' e' l. ¬step_e (s,AddL e e'') l (s',e')`,
- Induct>>rw[is_val_e_def]>>simp[Once step_e_cases,is_val_e_def])
-
-val no_step_e_addl2 = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' e' l. ¬step_e (s,AddL (Num i) e) l (s',e')`,
- Induct>>rw[is_val_e_def]>>rpt (simp[Once step_e_cases,is_val_e_def]))
-
-val no_step_e_addr1 = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' e' l. ¬step_e (s,AddR e'' e) l (s',e')`,
+Theorem no_step_e_addr2:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
+    ¬is_val_e e
+    ⇒
+    ∀s' e' l. ¬step_e (s,AddR e (Num i)) l (s',e')
+Proof
  Induct>>rw[is_val_e_def]>>
- rpt (simp[Once step_e_cases]))
+ rpt (simp[Once step_e_cases])
+QED
 
-val no_step_e_addr2 = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' e' l. ¬step_e (s,AddR e (Num i)) l (s',e')`,
+Theorem no_step_t_exp:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
+    ¬is_val_e e
+    ⇒
+    ∀s' t' l. ¬step_t (s,Exp e) l (s',t')
+Proof
  Induct>>rw[is_val_e_def]>>
- rpt (simp[Once step_e_cases]))
+ simp[Once step_t_cases]
+QED
 
-val no_step_t_exp = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' t' l. ¬step_t (s,Exp e) l (s',t')`,
- Induct>>rw[is_val_e_def]>>
- simp[Once step_t_cases])
-
-val no_step_t_seq = Q.prove(
-`∀t.
- (∀s' t' l. ¬step_t (s,t) l (s',t')) ∧
- ¬is_val_t t
- ⇒
- ∀s' t' l. ¬step_t (s,Seq t p) l (s',t')`,
+Theorem no_step_t_seq:
+  ∀t.
+    (∀s' t' l. ¬step_t (s,t) l (s',t')) ∧
+    ¬is_val_t t
+    ⇒
+    ∀s' t' l. ¬step_t (s,Seq t p) l (s',t')
+Proof
  Induct>>rw[is_val_t_def]>>
  simp[Once step_t_cases]>>
- Cases_on`s'`>>fs[is_val_e_def])
+ Cases_on`s'`>>fs[is_val_e_def]
+QED
 
-val no_step_t_if1 = Q.prove(
-`∀e.
- (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
- ¬is_val_e e
- ⇒
- ∀s' t' l. ¬step_t (s,If e a b) l (s',t')`,
+Theorem no_step_t_if1:
+  ∀e.
+    (∀s' e' l. ¬step_e (s,e) l (s',e')) ∧
+    ¬is_val_e e
+    ⇒
+    ∀s' t' l. ¬step_t (s,If e a b) l (s',t')
+Proof
  Induct>>rw[is_val_e_def]>>
- simp[Once step_t_cases])
+ simp[Once step_t_cases]
+QED
 
-val no_step_t_handle = Q.prove(
-`∀t.
- (∀s' t' l. ¬step_t (s,t) l (s',t')) ∧
- ¬is_val_t t
- ⇒
- ∀s' t' l. ¬step_t (s,Handle t) l (s',t')`,
+Theorem no_step_t_handle:
+  ∀t.
+    (∀s' t' l. ¬step_t (s,t) l (s',t')) ∧
+    ¬is_val_t t
+    ⇒
+    ∀s' t' l. ¬step_t (s,Handle t) l (s',t')
+Proof
  Induct>>rw[is_val_t_def]>>
- simp[Once step_t_cases,is_val_t_def])
+ simp[Once step_t_cases,is_val_t_def]
+QED
 
-val LAST_MAP = Q.prove(
-`∀ls. ls ≠ [] ⇒ LAST (MAP f ls) = f (LAST ls)`,
- Induct>>fs[LAST_DEF]>>rw[])
+Theorem HD_MAP[local]: ∀ls. ls ≠ [] ⇒ HD(MAP f ls) = f (HD ls)
+Proof Cases >> rw[]
+QED
 
-val HD_MAP = Q.prove(
-`∀ls. ls ≠ [] ⇒ HD(MAP f ls) = f (HD ls)`,
- Induct>>rw[])
+Theorem HD_APPEND[local]: ls ≠ [] ⇒ HD (ls ++ ls') = HD ls
+Proof Cases_on`ls`>>fs[]
+QED
 
-val HD_APPEND = Q.prove(
-`ls ≠ [] ⇒ HD (ls ++ ls') = HD ls`,
-Cases_on`ls`>>fs[])
-
-val LAST_APPEND = Q.prove(
-`ls' ≠ [] ⇒ LAST (ls ++ ls') = LAST ls'`,
-Cases_on`ls'`>>fs[])
+Theorem LAST_APPEND[local]: ls' ≠ [] ⇒ LAST (ls ++ ls') = LAST ls'
+Proof Cases_on`ls'`>>fs[]
+QED
 
 val sem_e_not_timeout = Q.prove (
 `!st e r. sem_e st e ≠ (Rtimeout, r)`,
@@ -639,15 +716,14 @@ val check_trace_tl = Q.prove(`
 
 (* Start connecting functional big step to small step traces *)
 local val rw = srw_tac[] val fs = fsrw_tac[] in
-val sem_e_big_small_lem = Q.prove(
-`!s e r.
-  sem_e s e = r
-  ⇒
-  ?tr.
-    tr ≠ [] ∧
-    check_trace (\st. some st'. ?l. step_e st l st') tr ∧
-    HD tr = (s with clock:=0, e_to_small_e e) ∧
-    res_rel_e r (LAST tr)`,
+Theorem sem_e_big_small_lem[local]:
+  !s e r. sem_e s e = r ⇒
+          ?tr.
+            tr ≠ [] ∧
+            check_trace (\st. some st'. ?l. step_e st l st') tr ∧
+            HD tr = (s with clock:=0, e_to_small_e e) ∧
+            res_rel_e r (LAST tr)
+Proof
  Induct_on`e`>>rw[]>>fs[sem_e_def,e_to_small_e_def]
   >- (
     fct>>fs[res_rel_e_cases]
@@ -681,26 +757,20 @@ val sem_e_big_small_lem = Q.prove(
         qabbrev_tac`ls2 = (MAP (λst,e'. (st,AddR e' (Num i))) tr')`>>
         qabbrev_tac`ls = BUTLASTN 1 ls1 ++ ls2`>>
         fs[res_rel_e_cases]>>
-        `LAST ls1 = HD ls2` by
-        (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
-        `ls = ls1 ++ (TL ls2)` by
-        (unabbrev_all_tac>>
-        fs[LAST_HD_eq])>>
+        `LAST ls1 = HD ls2` by (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
+        `ls = ls1 ++ (TL ls2)` by (unabbrev_all_tac>> fs[LAST_HD_eq])>>
         `check_trace (λst. some st'. ∃l. step_e st l st') ls2` by
-        fs[Abbr`ls2`,check_trace_addr2]>>
-        `check_trace (λst. some st'. ∃l. step_e st l st') ls` by (
-          fs[Abbr`ls`]>>Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
-          >- fs[check_trace_addr1,Abbr`ls1`] >>
-          match_mp_tac check_trace_append2>>rw[]
-          >- fs[check_trace_addr1,Abbr`ls1`]
-          >- (
-            fs[markerTheory.Abbrev_def]>>
-            `h''::t' = TL (LAST ls1::h''::t')` by fs[]>>
-            pop_assum SUBST_ALL_TAC>>
-            match_mp_tac check_trace_tl>>fs[check_trace_addr2]
-            ) >>
-          fs[check_trace_def]
-          )
+          fs[Abbr`ls2`,check_trace_addr2]>>
+        `check_trace (λst. some st'. ∃l. step_e st l st') ls`
+          by (fs[Abbr`ls`]>>Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
+              >- fs[check_trace_addr1,Abbr`ls1`] >>
+              match_mp_tac check_trace_append2>>rw[]
+              >- fs[check_trace_addr1,Abbr`ls1`]
+              >- (fs[markerTheory.Abbrev_def]>>
+                  `h''::t' = TL (LAST ls1::h''::t')` by fs[]>>
+                  pop_assum SUBST_ALL_TAC>>
+                  match_mp_tac check_trace_tl>>fs[check_trace_addr2]) >>
+              fs[check_trace_def])
         >- (
           qexists_tac`[h] ++ ls ++ [(r' with clock:=0,Num(i'+i))]`>>
           rw[]>>
@@ -708,6 +778,7 @@ val sem_e_big_small_lem = Q.prove(
           >- (
             match_mp_tac check_trace_append2>>
             fs[check_trace_def]>>
+            qpat_x_assum ‘BUTLASTN _ _ ++ _ = _’ (REWRITE_TAC o single o SYM) >>
             fs[markerTheory.Abbrev_def,LAST_APPEND,LAST_MAP]>>
             match_mp_tac some_to_SOME_step_e>>
             simp[Once step_e_cases]
@@ -724,6 +795,7 @@ val sem_e_big_small_lem = Q.prove(
           fs[Abbr`h`,Abbr`st`]>>
           simp[Once step_e_cases,oracle_get_def]
           ) >>
+        qpat_x_assum ‘BUTLASTN 1 _ ++ _ = _’ (REWRITE_TAC o single o SYM) >>
         fs[markerTheory.Abbrev_def,LAST_DEF,LAST_APPEND,LAST_MAP,
            is_val_e_def,no_step_e_addr2]
         )
@@ -753,11 +825,8 @@ val sem_e_big_small_lem = Q.prove(
         qabbrev_tac`ls2 = (MAP (λst,e'. (st,AddL (Num i) e')) tr')`>>
         qabbrev_tac`ls = BUTLASTN 1 ls1 ++ ls2`>>
         fs[res_rel_e_cases]>>
-        `LAST ls1 = HD ls2` by
-        (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
-        `ls = ls1 ++ (TL ls2)` by
-        (unabbrev_all_tac>>
-        fs[LAST_HD_eq])>>
+        `LAST ls1 = HD ls2` by (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
+        `ls = ls1 ++ (TL ls2)` by (unabbrev_all_tac>> fs[LAST_HD_eq])>>
         `check_trace (λst. some st'. ∃l. step_e st l st') ls2` by
         fs[Abbr`ls2`,check_trace_addl2]>>
         `check_trace (λst. some st'. ∃l. step_e st l st') ls` by (
@@ -780,6 +849,7 @@ val sem_e_big_small_lem = Q.prove(
           >- (
             match_mp_tac check_trace_append2>>
             fs[check_trace_def]>>
+            qpat_x_assum ‘BUTLASTN _ _ ++ _ = _’ (REWRITE_TAC o single o SYM) >>
             fs[markerTheory.Abbrev_def,LAST_APPEND,LAST_MAP]>>
             match_mp_tac some_to_SOME_step_e>>
             simp[Once step_e_cases]
@@ -797,6 +867,7 @@ val sem_e_big_small_lem = Q.prove(
             fs[Abbr`h`,Abbr`st`]>>
             simp[Once step_e_cases,oracle_get_def]
             ) >>
+          qpat_x_assum ‘BUTLASTN _ _ ++ _ = _’ (REWRITE_TAC o single o SYM) >>
           fs[markerTheory.Abbrev_def,LAST_DEF,LAST_APPEND,LAST_MAP,
              is_val_e_def,no_step_e_addl2]
           )
@@ -854,7 +925,7 @@ val sem_e_big_small_lem = Q.prove(
     fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,check_trace_putchar,
        no_step_e_putchar]
     )
-)
+QED
 end
 
 val sem_t_for_no_break = Q.prove(
@@ -1594,10 +1665,11 @@ val semantics_alt = save_thm("semantics_alt",
     |> SIMP_RULE bool_ss [prove(``f o g = λc. f (g c)``,rw[FUN_EQ_THM])]
     |> SIMP_RULE bool_ss [GSYM BIGSUP_def])
 
-val oracle_upd_def = Define`
-  oracle_upd s (b,a) =
-  s with <|non_det_o := a; io_trace:=s.io_trace ++[INR b]|>`
+Definition oracle_upd_def:
+  oracle_upd s (b,a) = s with <|non_det_o := a; io_trace:=s.io_trace ++[INR b]|>
+End
 
-val _ = save_thm ("step_e_rules_oracle_upd",step_e_rules|>REWRITE_RULE[GSYM oracle_upd_def])
+Theorem step_e_rules_oracle_upd =
+        step_e_rules|>REWRITE_RULE[GSYM oracle_upd_def]
 
 val _ = export_theory ();

@@ -272,7 +272,6 @@ Proof
      `s''.clock - 1 ≤ s''.clock` by decide_tac >>
      metis_tac [val_rel_mono])
   >- metis_tac []
-  >- metis_tac []
 QED
 end
 

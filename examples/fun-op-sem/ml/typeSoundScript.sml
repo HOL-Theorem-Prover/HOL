@@ -912,14 +912,15 @@ val tsaconv_imp_tysubst = store_thm("tsaconv_imp_tysubst",
   qexists_tac`FUN_FMAP (Tvar o f) (tvs1 ∩ tyvars t1)` >> rw[] >>
   fs[BIJ_DEF,IMAGE_COMPOSE,IMAGE_SURJ])
 
-val tysubst_imp_raconv = store_thm("tysubst_imp_raconv",
-  ``∀f tvs1 tvs2 t1 t2.
+Theorem tysubst_imp_raconv:
+  ∀f tvs1 tvs2 t1 t2.
       FINITE tvs1 ∧
       tysubst (FUN_FMAP (Tvar o f) tvs1) t1 = t2 ∧
       BIJ f tvs1 tvs2 ∧
       DISJOINT tvs2 (tyvars t1)
       ⇒
-      raconv f tvs1 tvs2 t1 t2``,
+      raconv f tvs1 tvs2 t1 t2
+Proof
   ho_match_mp_tac raconv_ind >> simp[] >>
   conj_tac >- (
     rw[] >> rfs[FLOOKUP_DEF,FLOOKUP_FUN_FMAP] ) >>
@@ -931,9 +932,10 @@ val tysubst_imp_raconv = store_thm("tysubst_imp_raconv",
     simp[MEM_EL] >>
     fs[PULL_EXISTS,MEM_EL] >>
     metis_tac[] ) >>
+  gs[AllCaseEqs()] >>
   spose_not_then strip_assume_tac >>
-  rfs[FLOOKUP_FUN_FMAP] >>
-  BasicProvers.EVERY_CASE_TAC >> fs[])
+  gs[FLOOKUP_FUN_FMAP]
+QED
 
 val tysubst_imp_aconv = store_thm("tysubst_imp_aconv",
   ``∀f tvs1 t1 tvs2.
@@ -1441,9 +1443,13 @@ val type_env_ALOOKUP_env_SOME = prove(
 val tysubst_Tfn = SIMP_CONV(srw_ss())[]``tysubst s (Tfn t1 t2)``
 val tysubst_Texn = SIMP_CONV(srw_ss())[]``tysubst s (Texn t1)``
 
-val type_e_subst = store_thm("type_e_subst",
-  ``∀tenv e t. type_e tenv e t ⇒ EVERY (FINITE o FST o SND) tenv
-    ⇒ ∀s tenv'. tenv_subst s tenv tenv' ⇒ type_e tenv' e (tysubst s t)``,
+Theorem type_e_subst:
+  ∀tenv e t.
+    type_e tenv e t ⇒
+    EVERY (FINITE o FST o SND) tenv ⇒
+    ∀s tenv'. tenv_subst s tenv tenv' ⇒
+              type_e tenv' e (tysubst s t)
+Proof
   ho_match_mp_tac type_e_ind >>
   rpt conj_tac >>
   (* most cases *)
@@ -1596,7 +1602,8 @@ val type_e_subst = store_thm("type_e_subst",
     spose_not_then strip_assume_tac >>
     pop_assum mp_tac >> simp[] >>
     fs[IN_DISJOINT,Abbr`a`,PULL_EXISTS,IN_FRANGE_FLOOKUP,Abbr`s1`,FLOOKUP_DRESTRICT] >>
-    metis_tac[] ))
+    metis_tac[] )
+QED
 
 (*
 We prove type soundness by induction on the semantics. This works because both
@@ -1606,26 +1613,30 @@ value has the same type as the original expression, and if they terminate with
 an exception, the exception's parameter matches the type of the exception.
 *)
 
-val type_soundness = Q.store_thm("type_soundness",
-  `∀env s e tenv rt et t r s'. type_e tenv e t ⇒
-       LIST_REL (type_v rt et) s.refs rt ⇒
-       type_env rt et env tenv ⇒
-       LENGTH et = s.next_exn ⇒
-       sem env s e = (r,s') ⇒
-         ∃rt' et'.
-         LIST_REL (type_v (rt++rt') (et++et')) s'.refs (rt++rt') ∧
-         type_env (rt++rt') (et++et') env tenv ∧
-         LENGTH (et++et') = s'.next_exn ∧
-         case r of
-         | Rfail => F
-         | Rval v => type_v (rt++rt') (et++et') v t
-         | Rraise n v =>
-           n < LENGTH (et++et') ∧
-           type_v (rt++rt') (et++et') v (EL n (et++et'))
-         | _ => T`,
+Theorem type_soundness:
+  ∀env s e tenv rt et t r s'.
+    type_e tenv e t ⇒
+    LIST_REL (type_v rt et) s.refs rt ⇒
+    type_env rt et env tenv ⇒
+    LENGTH et = s.next_exn ⇒
+    sem env s e = (r,s') ⇒
+    ∃rt' et'.
+      LIST_REL (type_v (rt++rt') (et++et')) s'.refs (rt++rt') ∧
+      type_env (rt++rt') (et++et') env tenv ∧
+      LENGTH (et++et') = s'.next_exn ∧
+      case r of
+      | Rfail => F
+      | Rval v => type_v (rt++rt') (et++et') v t
+      | Rraise n v =>
+          n < LENGTH (et++et') ∧
+          type_v (rt++rt') (et++et') v (EL n (et++et'))
+      | _ => T
+Proof
   ho_match_mp_tac sem_ind >>
   (* Lit *)
-  conj_tac >- ( simp[sem_def,type_v_clauses,type_e_clauses,LENGTH_NIL] >> metis_tac[APPEND_NIL]) >>
+  conj_tac
+  >- (simp[sem_def,type_v_clauses,type_e_clauses,LENGTH_NIL] >>
+      metis_tac[APPEND_NIL]) >>
   (* Var *)
   conj_tac >- (
     rw[sem_def,type_e_clauses] >>
@@ -1636,28 +1647,71 @@ val type_soundness = Q.store_thm("type_soundness",
   (* App *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >> pop_assum mp_tac >>
-    ntac 6 (BasicProvers.CASE_TAC >> fs[]) >> rw[] >>
-    first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[type_v_clauses] >> strip_tac >>
-    last_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[] >> strip_tac >>
-    TRY (
-      full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
-      first_assum(match_exists_tac o concl) >> simp[] >>
-      NO_TAC) >>
-    last_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[AND_IMP_INTRO] >>
-    (discharge_hyps >- (
-       simp[type_env_clauses,FDOM_EQ_EMPTY,type_v_clauses] >>
-       metis_tac[type_v_extend])) >>
-    strip_tac >>
-    full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
-    first_assum(match_exists_tac o concl) >> simp[] >>
-    BasicProvers.CASE_TAC >> fs[] >> simp[] >>
-    metis_tac[type_v_extend] ) >>
+    simp[AllCaseEqs(), PULL_EXISTS] >> rw[] >> gs[] >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rval (Litv _), _)’]
+    >- (first_x_assum drule_all >> simp[type_v_clauses]) >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rfail, _)’]
+    >- metis_tac[] >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rval (Loc _), _)’]
+    >- (first_x_assum drule_all >> simp[type_v_clauses]) >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rtimeout, _)’]
+    >- metis_tac[] >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rval (Exn _), _)’]
+    >- (first_x_assum drule_all >> simp[type_v_clauses]) >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rraise _ _, _)’]
+    >- metis_tac[] >~
+    [‘type_e _ f_e (Tfn dty _)’, ‘type_e _ a_e dty’,
+     ‘sem _ _ a_e = (Rraise _ _, _)’]
+    >- (first_x_assum
+        (qpat_assum ‘type_e _ f_e _’ o
+         mp_then (Pos hd)
+           (drule_then $ drule_then $ drule_then strip_assume_tac)) >>
+        first_x_assum (drule_then drule) >> simp[] >> strip_tac >>
+        gs [GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+        first_assum $ irule_at Any >> gs[]) >~
+    [‘type_e _ f_e (Tfn dty _)’, ‘type_e _ a_e dty’,
+     ‘sem _ _ a_e = (Rfail, _)’]
+    >- (first_x_assum $ drule_all_then strip_assume_tac >>
+        first_x_assum $ drule >> simp[] >> first_assum $ irule_at Any >>
+        simp[]) >~
+    [‘type_e _ f_e (Tfn dty _)’, ‘type_e _ a_e dty’,
+     ‘sem _ _ a_e = (Rtimeout, _)’]
+    >- (first_x_assum $ drule_all_then strip_assume_tac >>
+        first_x_assum (drule_then drule) >> simp[] >> strip_tac >>
+        gs [GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+        first_assum $ irule_at Any >> gs[]) >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rval (Clos _ _ _), _)’]
+    >- (first_x_assum
+          (qpat_assum ‘type_e _ f_e _’ o mp_then (Pos hd) drule_all) >>
+        simp[type_v_clauses] >> rpt strip_tac >>
+        rename [‘type_e _ f_e (Tfn dty _)’, ‘type_e _ a_e dty’] >>
+        first_x_assum $ drule_then drule >> simp[] >> strip_tac >>
+        first_x_assum drule >> disch_then drule >>
+        simp[type_env_clauses, FDOM_EQ_EMPTY, type_v_clauses] >> impl_tac
+        >- metis_tac[type_v_extend] >>
+        simp[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC", PULL_EXISTS] >>
+        rpt strip_tac >> first_assum $ irule_at Any >>
+        gs[] >>
+        rpt (qpat_x_assum ‘_ = _.next_exn’ (assume_tac o SYM)) >> gs[] >>
+        metis_tac[type_v_extend]) >~
+    [‘type_e _ f_e (Tfn _ _)’, ‘sem _ _ f_e = (Rval (Closrec _ _ _ _), _)’]
+    >- (first_x_assum
+          (qpat_assum ‘type_e _ f_e _’ o mp_then (Pos hd) drule_all) >>
+        simp[type_v_clauses] >> rpt strip_tac >>
+        rename [‘type_e _ f_e (Tfn dty _)’, ‘type_e _ a_e dty’] >>
+        first_x_assum $ drule_then drule >> simp[] >> strip_tac >>
+        first_x_assum drule >> disch_then drule >>
+        simp[type_env_clauses, FDOM_EQ_EMPTY, type_v_clauses] >> impl_tac
+        >- metis_tac[type_v_extend] >>
+        simp[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC", PULL_EXISTS] >>
+        rpt strip_tac >> first_assum $ irule_at Any >>
+        gs[] >>
+        rpt (qpat_x_assum ‘_ = _.next_exn’ (assume_tac o SYM)) >> gs[] >>
+        metis_tac[type_v_extend]) >>
+    first_x_assum $ drule_all_then strip_assume_tac >>
+    first_x_assum $ drule_then drule >> simp[] >> strip_tac >>
+    gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >> first_assum $ irule_at Any >>
+    gs[]) >>
   (* Let *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >> pop_assum mp_tac >>
@@ -1719,50 +1773,41 @@ val type_soundness = Q.store_thm("type_soundness",
   (* Deref *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >> pop_assum mp_tac >>
-    ntac 3 (BasicProvers.CASE_TAC >> fs[]) >> rw[] >>
-    first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[type_v_clauses] >> strip_tac >>
-    TRY (
-      first_assum(match_exists_tac o concl) >> simp[] >>
-      fs[LIST_REL_EL_EQN] >> NO_TAC) >>
-    spose_not_then strip_assume_tac >>
-    fs[LIST_REL_EL_EQN] ) >>
+    simp[AllCaseEqs(), PULL_EXISTS] >> rw[] >> first_x_assum drule >>
+    simp[type_v_clauses] >> rpt (first_assum $ irule_at Any) >> simp[]
+    >- (disch_then drule_all >> strip_tac >> rpt (first_assum $ irule_at Any) >>
+        fs[LIST_REL_EL_EQN]) >>
+    rw[] >> gs[LIST_REL_EL_EQN]) >>
   (* Assign *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >> pop_assum mp_tac >>
-    ntac 5 (BasicProvers.CASE_TAC >> fs[]) >> rw[] >>
-    first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[type_v_clauses] >> strip_tac >>
-    TRY ( qmatch_rename_tac`$! _` >> spose_not_then strip_assume_tac ) >>
-    first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[type_v_clauses] >> strip_tac >>
-    TRY (
-      full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
-      first_assum(match_exists_tac o concl) >> simp[] >>
-      fs[LIST_REL_EL_EQN] >> NO_TAC) >>
-    TRY ( qmatch_rename_tac`$! _` >>
-      spose_not_then strip_assume_tac >>
-      fsrw_tac[ARITH_ss][LIST_REL_EL_EQN] >> NO_TAC) >>
-    Cases_on`n < LENGTH rt` >- (
-      qexists_tac`rt' ++ rt''` >>
-      qexists_tac`et' ++ et''` >> simp[] >>
-      fs[LIST_REL_EL_EQN,EL_LUPDATE] >> rw[] >>
-      fs[rich_listTheory.EL_APPEND1] ) >>
-    qexists_tac`LUPDATE t' (n-LENGTH rt) (rt' ++ rt'')` >>
-    qexists_tac`et'++et''` >> simp[] >>
-    reverse conj_tac >- metis_tac[type_v_extend,APPEND_ASSOC] >>
-    simp[GSYM rich_listTheory.LUPDATE_APPEND2] >>
-    match_mp_tac EVERY2_LUPDATE_same >>
-    simp[rich_listTheory.EL_APPEND1,rich_listTheory.EL_APPEND2] >>
-    simp[rich_listTheory.LUPDATE_APPEND1,rich_listTheory.LUPDATE_APPEND2] >>
-    simp[LUPDATE_ID] >> rw[] >>
-    qpat_assum`type_v A X Y Z`mp_tac >>
-    fs[arithmeticTheory.NOT_LESS] >>
-    fs[rich_listTheory.EL_APPEND2]
-    ) >>
+    simp[AllCaseEqs(), PULL_EXISTS] >> rw[] >>
+    first_x_assum drule_all >> simp[type_v_clauses] >> strip_tac >>
+    first_x_assum (drule_then drule) >> rpt strip_tac >~
+    [‘sem env s0 e1 = (Rval (Locn n), s1)’,
+     ‘sem env s1 e2 = (Rval v, s2)’]
+    >- (pop_assum $ drule_then drule >> simp[] >> strip_tac >>
+        gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+        first_assum $ irule_at Any >> simp[] >>
+        gs[LIST_REL_EL_EQN, EL_LUPDATE] >> rw[] >>
+        gs[EL_APPEND_EQN]) >~
+    [‘¬(n < LENGTH s2.refs)’]
+    >- (simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+        first_x_assum drule >> simp[] >> rpt strip_tac >>
+        simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+        gs[LIST_REL_EL_EQN]) >~
+    [‘sem env s1 e2 = (Rraise _ _, s2)’]
+    >- (pop_assum $ drule_then drule >> simp[] >> strip_tac >>
+        gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+        first_assum $ irule_at Any >> simp[]) >~
+    [‘sem env s1 e2 = (Rfail, s2)’]
+    >- (simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+        first_x_assum drule >> simp[] >> rpt strip_tac >>
+        simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+        gs[LIST_REL_EL_EQN]) >>
+    pop_assum $ drule_then drule >> simp[] >> strip_tac >>
+    gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+    first_assum $ irule_at Any >> simp[]) >>
   (* Letexn *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >>
@@ -1783,50 +1828,74 @@ val type_soundness = Q.store_thm("type_soundness",
   (* Raise *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >> pop_assum mp_tac >>
-    ntac 5 (BasicProvers.CASE_TAC >> fs[]) >> rw[] >>
-    first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[type_v_clauses] >> strip_tac >>
-    first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[] >> strip_tac >>
-    full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
-    first_assum(match_exists_tac o concl) >> simp[] >>
-    rev_full_simp_tac(srw_ss()++ARITH_ss)[rich_listTheory.EL_APPEND1] ) >>
+    simp[AllCaseEqs(), PULL_EXISTS] >> rw[] >>
+    first_x_assum drule_all >> simp[type_v_clauses] >> strip_tac >>
+    first_x_assum $ drule_then drule >>
+    simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+    first_x_assum $ drule_then drule >> simp[] >>
+    strip_tac >>
+    gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+    first_assum $ irule_at Any >> simp[] >>
+    rpt (qpat_x_assum ‘_ = _.next_exn’ (assume_tac o SYM)) >>
+    gs[EL_APPEND_EQN]) >>
   (* Handle *)
   rw[type_e_clauses,sem_def] >> pop_assum mp_tac >>
-  ntac 8 (BasicProvers.CASE_TAC >> fs[]) >> TRY(BasicProvers.CASE_TAC >> fs[]) >> rw[] >>
-  qpat_assum`type_e tenv e' _`(fn th => first_x_assum(mp_tac o C MATCH_MP th)) >>
-  disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-  simp[type_v_clauses] >> strip_tac >>
-  TRY ( qmatch_rename_tac`$! _` >> spose_not_then strip_assume_tac ) >>
-  qpat_assum`type_e tenv e'' _`(fn th => first_x_assum(mp_tac o C MATCH_MP th)) >>
-  disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-  simp[type_v_clauses] >> strip_tac >>
-  TRY ( qmatch_rename_tac`$! _` >> spose_not_then strip_assume_tac ) >>
-  TRY (
-    qpat_assum`type_e tenv e _`(fn th => first_x_assum(mp_tac o C MATCH_MP th)) >>
-    disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-    simp[type_v_clauses] >> strip_tac >> fs[]) >>
-  TRY (
-    full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
-    first_assum(match_exists_tac o concl) >> simp[] >>
-    NO_TAC) >>
-  TRY ( Cases_on`v`>>fs[type_v_clauses]>>NO_TAC) >>
-  TRY ( Cases_on`v'`>>fs[type_v_clauses]>>NO_TAC) >>
-  first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
-  disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
-  simp[] >>
-  (discharge_hyps >- (
-     fs[type_env_clauses,FDOM_EQ_EMPTY] >>
-     rev_full_simp_tac(srw_ss()++ARITH_ss)[rich_listTheory.EL_APPEND1] >>
-     simp[type_v_clauses] >>
-     metis_tac[type_v_extend] )) >>
-  strip_tac >>
-  full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
-  first_assum(match_exists_tac o concl) >> simp[] >>
-  BasicProvers.CASE_TAC >> fs[] >> simp[] >>
-  metis_tac[type_v_extend]);
+  simp[AllCaseEqs(), PULL_EXISTS] >> rw[] >>
+  first_x_assum drule_all >> simp[type_v_clauses] >> rw[] >>
+  gvs[METIS_PROVE[]“x = a.next_exn ⇔ a.next_exn = x”] >>
+  first_x_assum drule >> simp[]
+  >- (disch_then $ drule_then drule >> simp[] >> strip_tac >>
+      first_x_assum $ drule_then $ drule_then drule >> simp[] >>
+      strip_tac >> simp[] >> gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+      first_assum $ irule_at Any >> gs[])
+  >- (rename [‘sem env s1 hfn = (Rval (Clos env' bv bod), s2)’] >>
+      simp[type_v_clauses] >> disch_then $ drule_then drule >> simp[] >>
+      strip_tac >> first_x_assum $ drule_then $ drule_then drule >> simp[] >>
+      strip_tac >> first_x_assum $ drule_then drule >>
+      simp[type_env_clauses, FDOM_EQ_EMPTY] >> impl_tac
+      >- (simp[type_v_extend] >> gs[EL_APPEND_EQN]) >>
+      strip_tac >> CASE_TAC >> gs[] >>
+      gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+      rpt (first_assum $ irule_at Any) >> gs[type_v_extend])
+  >- (rename [‘sem env s1 hfn = (Rval (Closrec env' bf bv bod), s2)’] >>
+      simp[type_v_clauses] >> disch_then $ drule_then drule >> simp[] >>
+      strip_tac >> first_x_assum $ drule_then $ drule_then drule >> simp[] >>
+      strip_tac >> first_x_assum $ drule_then drule >>
+      simp[type_env_clauses, FDOM_EQ_EMPTY] >> impl_tac
+      >- (simp[type_v_extend, type_v_clauses] >> gs[EL_APPEND_EQN] >> rw[] >>
+          metis_tac[type_v_extend]) >>
+      strip_tac >> CASE_TAC >> gs[] >>
+      gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+      rpt (first_assum $ irule_at Any) >> gs[type_v_extend])
+  >- (disch_then $ drule_then drule >> simp[] >> strip_tac >>
+      first_x_assum $ drule_then $ drule_then drule >> simp[] >>
+      strip_tac >> gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+      rpt (first_assum $ irule_at Any) >> gs[type_v_extend])
+  >- (disch_then $ drule_then drule >> simp[] >> strip_tac >>
+      first_x_assum $ drule_then $ drule_then drule >> simp[] >>
+      strip_tac >> gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+      rpt (first_assum $ irule_at Any) >> gs[type_v_extend])
+  >- (simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+      first_x_assum $ drule_then drule >> simp[] >>
+      simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+      first_x_assum $ drule_then drule >> simp[])
+  >- (disch_then $ drule_then drule >> simp[] >> strip_tac >>
+      first_x_assum $ drule_then $ drule_then drule >> simp[] >>
+      strip_tac >> gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+      rpt (first_assum $ irule_at Any) >> gs[type_v_extend])
+  >- (simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+      first_x_assum $ drule_then drule >>
+      simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+      rename [‘type_v _ _ fv (Tfn _ _)’] >> Cases_on ‘fv’ >> gs[type_v_clauses])
+  >- (disch_then $ drule_then drule >> simp[] >> strip_tac >>
+      gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+      rpt (first_assum $ irule_at Any) >> gs[type_v_extend])
+  >- (simp[DECIDE “~p ∨ q ⇔ p ⇒ q”] >> rpt strip_tac >>
+      first_x_assum $ drule_then drule >> simp[]) >>
+  disch_then $ drule_then drule >> simp[] >> strip_tac >>
+  gs[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
+  rpt (first_assum $ irule_at Any) >> gs[type_v_extend]
+QED
 
 (*
 "Type soundness" on the un-clocked relational semantics, for comparison.
