@@ -64,7 +64,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             computability/recdegrees \
             computability/register computability/turing \
             Crypto \
-          formal-languages/regular \
+          formal-languages/regular fun-op-sem \
           lambda/other-models lambda/typing \
             logic/ltl logic/ltl-transformations \
           l3-machine-code/decompilers \

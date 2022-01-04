@@ -1,5 +1,4 @@
 !!!examples/ARM_security_properties
-!!examples/fun-op-sem
 
 !!!examples/l3-machine-code/cheri/step
 [poly]!!!examples/theorem-prover
