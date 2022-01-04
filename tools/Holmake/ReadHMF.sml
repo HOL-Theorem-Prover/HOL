@@ -456,7 +456,7 @@ fun extend_path_with_includes (cfg as {lpref,verbosity=v}) =
           extend_paths (empty_strset, empty_strmap, empty_strmap) v wlist
       fun m s = holpathdb.reverse_lookup {path = s}
       fun foldthis nm (dirname,incs,acc) = (
-        if v > 0 then
+        if v > 1 then
           print (m dirname ^ "/Holmakefile:" ^ nm ^ " +=\n  " ^
                  String.concatWith "\n  " (map m incs) ^ "\n")
         else ();
