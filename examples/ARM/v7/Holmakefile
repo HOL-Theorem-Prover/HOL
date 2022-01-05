@@ -1,4 +1,4 @@
-INCLUDES = $(HOLDIR)/src/n-bit $(HOLDIR)/src/integer
+INCLUDES = $(HOLDIR)/src/n-bit $(HOLDIR)/src/integer $(HOLDIR)/src/update
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
