@@ -58,14 +58,20 @@ ifneq($(HOLSELFTESTLEVEL),1)
 EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/nominal \
             algorithms/unification/triangular/first-order \
+            ARM/arm6-verification/correctness \
+            ARM/v4 ARM/v7 \
           balanced_bst \
-          computability/kolmog computability/lambda computability/recdegrees \
-          computability/register computability/turing \
-          Crypto/AES Crypto/IDEA Crypto/MARS Crypto/RC6 \
-          formal-languages/regular \
+          category computability/kolmog computability/lambda \
+            computability/recdegrees \
+            computability/register computability/turing \
+            Crypto \
+          decidable_separationLogic/src \
+          formal-languages/regular fun-op-sem \
           lambda/other-models lambda/typing \
-          l3-machine-code/decompilers \
+            logic/ltl logic/ltl-transformations \
+            l3-machine-code/decompilers \
           miller \
+	  probability \
           separationLogic/src separationLogic/src/holfoot simple_complexity \
           temporal_deep
 

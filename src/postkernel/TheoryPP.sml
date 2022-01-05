@@ -12,14 +12,14 @@ type term     = Term.term
 type hol_type = Type.hol_type
 type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
-type struct_info_record = {
+ type struct_info_record = {
    theory      : string*Arbnum.num*Arbnum.num,
    parents     : (string*Arbnum.num*Arbnum.num) list,
    types       : (string*int) list,
    constants   : (string*hol_type) list,
    axioms      : (string * thm) list,
-   definitions : (string * thm) list,
-   theorems    : (string * thm) list,
+   definitions : (string * thm * {private:bool}) list,
+   theorems    : (string * thm * {private:bool}) list,
    struct_ps   : (unit -> PP.pretty) option list,
    struct_pcps : (unit -> PP.pretty) list,
    mldeps      : string list,
@@ -31,6 +31,7 @@ open Feedback Lib Portable Dep;
 
 val ERR = mk_HOL_ERR "TheoryPP";
 
+val mk_axms_visible = map (fn (s,th) => (s,th,{private=false}))
 val temp_binding_pfx = "@temp"
 val is_temp_binding = String.isPrefix temp_binding_pfx
 fun temp_binding s = temp_binding_pfx ^ s
@@ -44,7 +45,8 @@ val pp_sig_hook = ref (fn () => ());
 
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
-val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
+val psort =
+    Lib.sort (fn (s1:string,_:Thm.thm,_) => fn (s2,_:Thm.thm,_) => s1<=s2);
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
@@ -99,7 +101,8 @@ fun pp_sig pp_thm info_record = let
   open PP
   val {name,parents,axioms,definitions,theorems,sig_ps} = info_record
   val parents'     = sort parents
-  val rm_temp      = List.filter (fn (s, _) => not (is_temp_binding s))
+  val rm_temp      = List.filter (fn (s, _, _) => not (is_temp_binding s))
+  val axioms0 = axioms and axioms = mk_axms_visible axioms
   val axioms'      = psort axioms |> rm_temp
   val definitions' = psort definitions |> rm_temp
   val theorems'    = psort theorems |> rm_temp
@@ -120,16 +123,16 @@ fun pp_sig pp_thm info_record = let
         [block CONSISTENT 0 (pr_list pr_parent [NL, NL] slist), NL, NL]
 
   fun pr_thm class (s,th) =
-    block CONSISTENT 3 [
-      add_string (String.concat ["[", s, "]"]),
-      add_string ("  "^class), NL, NL,
-      if null (Thm.hyp th) andalso
-         (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
-      then pp_thm th
-      else
-        with_flag(Globals.show_tags,true)
-                 (with_flag(Globals.show_assums, true) pp_thm) th
-    ]
+     block CONSISTENT 3 [
+       add_string (String.concat ["[", s, "]"]),
+       add_string ("  "^class), NL, NL,
+       if null (Thm.hyp th) andalso
+          (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
+       then pp_thm th
+       else
+         with_flag(Globals.show_tags,true)
+                  (with_flag(Globals.show_assums, true) pp_thm) th
+     ]
       handle e => (print ("Failed to print theorem in theory export: "^s^"\n");
                    print (General.exnMessage e ^ "\n");
                    raise e)
@@ -144,22 +147,24 @@ fun pp_sig pp_thm info_record = let
         block CONSISTENT 0
               (pr_list (block CONSISTENT 0 o pr_sig_ps) [NL, NL] l)]
 
+  val filter_visible =
+      List.mapPartial (fn (s, th, {private=false}) => SOME (s,th) | _ => NONE)
   fun pr_docs() =
       if !include_docs then
         (!pp_sig_hook();
          [block CONSISTENT 3 (
              [add_string "(*", NL] @
              pr_parents parents' @
-             pr_thms "Axiom" axioms' @
-             pr_thms "Definition" definitions' @
-             pr_thms "Theorem" theorems'
+             pr_thms "Axiom" axioms0 @
+             pr_thms "Definition" (filter_visible definitions') @
+             pr_thms "Theorem" (filter_visible theorems')
            ), NL,
           add_string "*)", NL])
       else []
   fun pthms (heading, ths) =
     vblock(heading,
-           (fn (s,th) => block CONSISTENT 0
-                               (if is_temp_binding s then []
+           (fn (s,th,{private}) => block CONSISTENT 0
+                               (if is_temp_binding s orelse private then []
                                 else
                                   [add_string("val "^ s ^ " : thm")])),
            ths)
@@ -210,6 +215,7 @@ fun mlower s m =
       NONE => raise Fail ("Couldn't print Theory" ^ s)
     | SOME(_, (_, ps)) => PP.block PP.CONSISTENT 0 ps
 
+
 fun pp_struct (info_record : struct_info_record) = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, axioms,
@@ -218,7 +224,9 @@ fun pp_struct (info_record : struct_info_record) = let
   val parents1 =
     List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                     parents0
-  val thml = axioms@definitions@theorems
+  val thml = mk_axms_visible axioms @
+             definitions @
+             theorems
   val jump = add_newline >> add_newline
   fun pblock(ob_pr, obs) =
       case obs of
@@ -234,11 +242,11 @@ fun pp_struct (info_record : struct_info_record) = let
 
   fun pparent (s,i,j) = Thry s
 
-  fun pr_bind(s, th) = let
+  fun pr_bind(s, th, {private}) = let
     val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
     val addsbl = pr_list add_string (add_break(1,2))
   in
-    if is_temp_binding s then nothing
+    if is_temp_binding s orelse private then nothing
     else
       (* this rigmarole is necessary to allow ML bindings where the name is
          a datatype constructor or an infix, or both *)
@@ -332,12 +340,12 @@ fun pp_thydata (info_record : struct_info_record) = let
   val parents1 =
       List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
-  val thml = axioms@definitions@theorems
+  val thml = mk_axms_visible axioms @ definitions @ theorems
   open SharingTables
 
   val share_data = build_sharing_data {
         named_terms = [], named_types = [], unnamed_terms = [],
-        unnamed_types = [], theorems = thml
+        unnamed_types = [], theorems = map (fn (s,th,_) => (s,th)) thml
       }
   val share_data = add_strings thydata_strings share_data
   val share_data = add_terms thydata_tms share_data
@@ -368,14 +376,23 @@ fun pp_thydata (info_record : struct_info_record) = let
   val enc_dblist =
      let
        open HOLsexp
-       val enc_db = Integer o write_string share_data
+       fun enc_db (nm,privp) =
+           let val i0 = write_string share_data nm
+           in
+             if privp then Integer(~(i0 + 1)) else Integer (i0 + 1)
+           end
        val enc_dbl = list_encode enc_db
-       val check =
-           List.mapPartial (fn (nm, _) => if is_temp_binding nm then NONE
-                                          else SOME nm)
-       val axl  = check axioms
-       val defl = check definitions
-       val thml = check theorems
+       val checkth =
+           List.mapPartial (fn (nm, _, {private}) =>
+                               if is_temp_binding nm then NONE
+                               else SOME (nm,private))
+       val checkax =
+           List.mapPartial (fn (nm, _) =>
+                               if is_temp_binding nm then NONE
+                               else SOME (nm,false)) (* axs not private *)
+       val axl  = checkax axioms
+       val defl = checkth definitions
+       val thml = checkth theorems
      in
        tagged_encode "thm-classes"
                      (pair3_encode (enc_dbl, enc_dbl, enc_dbl)) (axl,defl,thml)

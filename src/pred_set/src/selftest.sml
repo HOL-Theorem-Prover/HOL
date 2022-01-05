@@ -1,5 +1,6 @@
 open HolKernel boolLib Parse PFset_conv
 open pred_setSimps
+open testutils
 
 val _ = let
   open testutils
@@ -116,6 +117,7 @@ val _ = set_grammar_ancestry ["pred_set"]
 val _ = print "Setting grammar ancestry to be [\"pred_set\"]\n"
 val _ = set_trace "PP.avoid_unicode" 1
 val _ = List.app testutils.tpp tpp_cases
+
 
 val _ =
     Process.exit

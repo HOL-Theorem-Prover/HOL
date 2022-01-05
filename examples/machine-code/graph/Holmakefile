@@ -13,16 +13,13 @@ INCLUDES = $(HOLDIR)/examples/l3-machine-code/common \
            $(HOLDIR)/examples/l3-machine-code/riscv/decompiler \
            $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/examples/machine-code/decompiler
-OPTIONS = QUIT_ON_FAILURE
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-all: $(TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 ifdef POLY
 HOLHEAP = local-hol-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe mcgraph-selftest.log
 
 BARE_THYS = $(HOLDIR)/examples/l3-machine-code/common/utilsLib \
             $(HOLDIR)/examples/l3-machine-code/common/stateTheory \
@@ -48,3 +45,10 @@ endif
 
 selftest.exe: selftest.uo decompileLib.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: mcgraph-selftest.log
+
+mcgraph-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
+endif

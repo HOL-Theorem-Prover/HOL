@@ -4,20 +4,18 @@ open pairTheory optionTheory finite_mapTheory arithmeticTheory pathTheory;
 open path_auxTheory simple_traceTheory lprefix_lubTheory;
 open for_ndTheory;
 
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
-val _ = ParseExtras.temp_tight_equality();
-
 val _ = new_theory "oracleSem";
 
-val lfilter_map_thm = Q.store_thm ("lfilter_map_thm",
-`(lfilter_map f [||] = [||]) ∧
- (lfilter_map f (x:::l) =
+Theorem lfilter_map_thm:
+  (lfilter_map f [||] = [||]) ∧
+  (lfilter_map f (x:::l) =
    case f x of
    | NONE => lfilter_map f l
-   | SOME y => y:::lfilter_map f l)`,
- rw [lfilter_map_def] >>
- every_case_tac >>
- fs []);
+   | SOME y => y:::lfilter_map f l)
+Proof
+ rw [lfilter_map_def, AllCaseEqs()] >> simp[] >> rename [‘f x = SOME _’] >>
+ Cases_on ‘f x’ >> gs[]
+QED
 
  (*
 val _ = Datatype `
@@ -27,27 +25,26 @@ val _ = Datatype `
   | Crash`;
   *)
 
-val _ = type_abbrev ("oracle", ``:num -> 'st -> 'v -> 'st # 'v``);
+Type oracle = “:num -> 'st -> 'v -> 'st # 'v”
 
-val _ = Datatype `
-  fbs_res =
-    Timeout
-  | Error
-  | Val 'a`;
+Datatype: fbs_res = Timeout | Error | Val 'a
+End
 
-val _ = Datatype `
+Datatype:
   ofbs = <| eval : 'st -> 'env -> 'prog -> 'st # 'v fbs_res;
             init_st : 'o -> 'st;
             init_env : 'env;
             set_clock : num -> 'st -> 'st;
             get_clock : 'st -> num;
-            get_oracle_events : 'st -> 'a list |>`;
+            get_oracle_events : 'st -> 'a list |>
+End
 
-val eval_with_clock_def = Define `
+Definition eval_with_clock_def:
   eval_with_clock sem c st p =
-    sem.eval (sem.set_clock c st) sem.init_env p`;
+    sem.eval (sem.set_clock c st) sem.init_env p
+End
 
-val ofbs_sem_def = Define `
+Definition ofbs_sem_def:
   (ofbs_sem sem p (Terminate io_list) ⇔
     ?oracle k st r.
       eval_with_clock sem k (sem.init_st oracle) p = (st, r) ∧
@@ -59,16 +56,19 @@ val ofbs_sem_def = Define `
       lprefix_lub {fromList (sem.get_oracle_events (FST (eval_with_clock sem k (sem.init_st oracle) p))) | k | T} io_trace) ∧
   (ofbs_sem sem p Crash ⇔
     ?oracle k st.
-      eval_with_clock sem k (sem.init_st oracle) p = (st, Error))`;
+      eval_with_clock sem k (sem.init_st oracle) p = (st, Error))
+End
 
-val _ = Datatype `
+Datatype:
   osmall = <| step : 'st -> 'st option;
               is_result : 'st -> bool;
               load : 'o -> 'prog -> 'st;
-              unload : 'st -> 'a list |>`;
+              unload : 'st -> 'a list |>
+End
 
-val step_rel_def = Define `
-  step_rel sem = (\s1 s2. sem.step s1 = SOME s2)^*`;
+Definition step_rel_def:
+  step_rel sem = (\s1 s2. sem.step s1 = SOME s2)^*
+End
 
 val osmall_sem_def = Define `
   (osmall_sem sem p (Terminate io_list) ⇔

@@ -13,8 +13,8 @@
 \newtheorem{definition}{Definition}
 \newtheorem{remark}{Remark}
 
-\newcommand{\smallfoot}{{\sf Smallfoot}}
-\newcommand{\HOL}{{\sf HOL}}
+\newcommand{\smallfoot}{{\textsf{Smallfoot}}}
+\newcommand{\HOL}{{\textsc{HOL}}}
 \newcommand{\emp}{{\textsf{emp}}}
 \newcommand{\nil}{{\textsf{nil}}}
 \newcommand{\pftrue}{{\textsf{true}}}
@@ -1202,7 +1202,7 @@ Lets now consider an entailment that does not hold:
 
 \[\begin{array}{lllc}
 \sfpointsto {x} {\textit{tl}:y} & \vdash & \sflist(\textit{tl},x,y) &
-\stackrel{\sf Unroll-Right-Cases}{\Longleftrightarrow} \\
+\stackrel{\textsf{Unroll-Right-Cases}}{\Longleftrightarrow} \\
 \\
 \pfunequal {x} {y},\sfpointsto {x} {\textit{tl}:y} & \vdash &
   \sflist(\textit{tl},x,y)\ \ \wedge  \\
@@ -1211,11 +1211,9 @@ Lets now consider an entailment that does not hold:
 \\
 & \vdots \\
 \pfequal x y,\sfpointsto {x} {\textit{tl}:y} & \vdash &
-  \sflist(\textit{tl},x,y) & {\stackrel{\sf
-    Substitution}{\Longleftrightarrow}} \\ \\
-\sfpointsto {x} {\textit{tl}:x} & \vdash & \sflist(\textit{tl},x,x) & {\stackrel{\sf
-    Remove-Trivial}{\Longleftrightarrow}} \\ \\
-\sfpointsto {x} {\textit{tl}:x} & \vdash & & {\stackrel{\sf NIL-NOT-LVAL}{\Longleftrightarrow}}\\
+  \sflist(\textit{tl},x,y) & {\stackrel{\textsf{Substitution}}{\Longleftrightarrow}} \\ \\
+\sfpointsto {x} {\textit{tl}:x} & \vdash & \sflist(\textit{tl},x,x) & {\stackrel{\textsf{Remove-Trivial}}{\Longleftrightarrow}} \\ \\
+\sfpointsto {x} {\textit{tl}:x} & \vdash & & {\stackrel{\textsf{NIL-NOT-LVAL}}{\Longleftrightarrow}}\\
 \pfunequal x \nil, \sfpointsto {x} {\textit{tl}:x} & \vdash &
 \end{array}
 \]

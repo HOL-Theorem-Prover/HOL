@@ -67,8 +67,8 @@ struct
             hd (tl spl) = theorem
     in
       case List.find cmp (DB.listDB()) of
-      NONE => NONE
-      | SOME (_, (th, _)) =>  SOME th
+          NONE => NONE
+        | SOME (_, (th, _, _)) =>  SOME th
     end;
 
   fun parseThm (strs:string list) : (string * thm * string list) =

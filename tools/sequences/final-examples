@@ -1,16 +1,4 @@
-!!examples/category
-!!examples/probability
 !!!examples/ARM_security_properties
-!!examples/logic/ltl
-!!examples/logic/ltl-transformations
-!!examples/fun-op-sem
-
-# Crypto examples
-!!examples/Crypto/Serpent/Reference
-!!examples/Crypto/Serpent/Bitslice
-!!examples/Crypto/SHA-1
-!!examples/Crypto/TEA
-!!examples/Crypto/TWOFISH
 
 !!!examples/l3-machine-code/cheri/step
 [poly]!!!examples/theorem-prover

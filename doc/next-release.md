@@ -23,6 +23,9 @@ New features:
 - A `HOL_CONFIG` environment variable is considered to allow for a custom `hol-config` configuration at a non-standard location or potentially ignoring any present hol-config.
   If the variable is set, any other hol-config file will be ignored. If the value of `HOL_CONFIG` is a readable file, it will be used.
 
+- There is a new theorem attribute, `private`, which causes theorems to be saved/stored in the usual fashion.
+  Such theorems can be accessed with `DB.fetch`, and may be passed to other tools though the action of other attributes, but will not appear in the results of `DB.find` and `DB.match`, and will not occur as SML bindings in theory files.
+
 
 Bugs fixed:
 -----------

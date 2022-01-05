@@ -244,7 +244,8 @@ fun drop_thmkind (Axiom(_,th)) = th
   | drop_thmkind (Thm th)      = th
   | drop_thmkind (Defn th)     = th;
 
-fun drop_pthmkind (s,th) = (s,drop_thmkind th);
+fun drop_pthmkind (s, (th,{private})) =
+    if private then NONE else SOME (s,drop_thmkind th)
 
 fun drop_Axkind (Axiom rth) = rth
   | drop_Axkind    _        = raise ERR "drop_Axkind" "";
@@ -267,12 +268,15 @@ type ThyDataMap = (string,thydata)Binarymap.dict
                      "LaTeX map", to the data itself. *)
 val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
 
-type segment = {thid    : thyid,                               (* unique id  *)
-                facts   : (string * thmkind) list,  (* stored ax,def,and thm *)
-                thydata : ThyDataMap,                   (* extra theory data *)
-                adjoin  : thy_addon list,              (*  extras for export *)
-                adjoinpc: (unit -> PP.pretty) list,
-                mldeps  : string HOLset.set}
+fun fact_thm (s, (th, _)) = th
+
+type segment =
+     {thid    : thyid,                                         (* unique id  *)
+      facts   : (string * (thmkind * {private:bool})) list,   (* stored thms *)
+      thydata : ThyDataMap,                             (* extra theory data *)
+      adjoin  : thy_addon list,                        (*  extras for export *)
+      adjoinpc: (unit -> PP.pretty) list,
+      mldeps  : string HOLset.set}
 local
   open FunctionalRecordUpdate
   fun seg_mkUp z = makeUpdate6 z
@@ -328,9 +332,9 @@ fun thy_types thyname               = Type.thy_types thyname
 fun thy_constants thyname           = Term.thy_consts thyname
 fun thy_parents thyname             = snd (Graph.first
                                            (equal thyname o thyid_name o fst))
-fun thy_axioms (th:segment)         = filter (is_axiom o #2)   (#facts th)
-fun thy_theorems (th:segment)       = filter (is_theorem o #2) (#facts th)
-fun thy_defns (th:segment)          = filter (is_defn o #2)    (#facts th)
+fun thy_axioms (th:segment)         = filter (is_axiom o fact_thm)   (#facts th)
+fun thy_theorems (th:segment)       = filter (is_theorem o fact_thm) (#facts th)
+fun thy_defns (th:segment)          = filter (is_defn o fact_thm)    (#facts th)
 fun thy_addons (th:segment)         = #adjoin th
 
 fun stamp thyname =
@@ -347,6 +351,7 @@ local fun norm_name "-" = CTname()
          of SOME (_,th) => th
           | NONE => raise ERR style
                       ("couldn't find "^style^" named "^Lib.quote name)
+      val cleaned = List.mapPartial drop_pthmkind
 in
  val types            = thy_types o norm_name
  val constants        = thy_constants o norm_name
@@ -354,9 +359,9 @@ in
                          then Graph.fringe() else thy_parents s
  val parents          = map thyid_name o get_parents
  val ancestry         = map thyid_name o Graph.ancestryl o get_parents
- fun current_axioms() = map drop_pthmkind (thy_axioms (theCT()))
- fun current_theorems() = map drop_pthmkind (thy_theorems (theCT()))
- fun current_definitions() = map drop_pthmkind (thy_defns (theCT()))
+ fun current_axioms() = cleaned (thy_axioms (theCT()))
+ fun current_theorems() = cleaned (thy_theorems (theCT()))
+ fun current_definitions() = cleaned (thy_defns (theCT()))
  fun current_ML_deps() = HOLset.listItems (#mldeps (theCT()))
 end;
 
@@ -383,14 +388,14 @@ fun add_term {name,theory,htype} thy =
 
 local fun pluck1 x L =
         let fun get [] A = NONE
-              | get ((p as (x',_))::rst) A =
-                if x=x' then SOME (p,rst@A) else get rst (p::A)
+              | get (p::rst) A =
+                if x = #1 p then SOME (p,rst@A) else get rst (p::A)
         in get L []
         end
-      fun overwrite (p as (s,f)) l =
+      fun overwrite (p as (s,_)) l =
        case pluck1 s l of
          NONE => p::l
-       | SOME ((_,f'),l') => p::l'
+       | SOME (_,l') => p::l'
 in
 fun add_fact th (seg : segment) =
     update_seg seg (U #facts (overwrite th (#facts seg))) $$
@@ -407,8 +412,8 @@ fun add_ML_dep s (seg as {mldeps, ...} : segment) =
 
 local fun plucky x L =
        let fun get [] A = NONE
-             | get ((p as (x',_))::rst) A =
-                if x=x' then SOME (rev A, p, rst) else get rst (p::A)
+             | get (p::rst) A =
+                if x = #1 p then SOME (rev A, p, rst) else get rst (p::A)
        in get L []
        end
 in
@@ -416,8 +421,8 @@ fun set_MLbind (s1,s2) (seg as {facts, ...} : segment) =
     case plucky s1 facts of
       NONE => (WARN "set_MLbind" (Lib.quote s1^" not found in current theory");
                seg)
-    | SOME (X,(_,b),Y) =>
-      update_seg seg (U #facts (X@((s2,b)::Y))) $$
+    | SOME (X,(_,data),Y) =>
+      update_seg seg (U #facts (X @ (s2,data)::Y)) $$
 end;
 
 (*---------------------------------------------------------------------------
@@ -460,9 +465,9 @@ local
 in
   val add_typeCT        = inCT add_type
   val add_termCT        = inCT add_term
-  fun add_axiomCT(r,ax) = add_factCT (Nonce.dest r, Axiom(r,ax))
-  fun add_defnCT(s,def) = add_factCT (s,  Defn def)
-  fun add_thmCT(s,th)   = add_factCT (s,  Thm th)
+  fun add_axiomCT(r,ax) = add_factCT(Nonce.dest r,(Axiom(r,ax),{private=false}))
+  fun add_defnCT(s,def) = add_factCT(s, (Defn def, {private=false}))
+  fun add_thmCT(s,th,v) = add_factCT(s, (Thm th, v))
   val add_ML_dependency = inCT add_ML_dep
 
   fun delete_type n     = (inCT del_type  (n,CTname());
@@ -562,7 +567,7 @@ fun uptodate_thm thm =
     uptodate_axioms (Tag.axioms_of (Thm.tag thm))
 and uptodate_axioms [] = true
   | uptodate_axioms rlist = let
-      val axs = map (drop_Axkind o snd) (thy_axioms(theCT()))
+      val axs = map (drop_Axkind o fact_thm) (thy_axioms(theCT()))
     in
       (* tempting to call uptodate_thm here, but this would put us into a loop
          because axioms have themselves as tags, also unnecessary because
@@ -571,19 +576,19 @@ and uptodate_axioms [] = true
     end handle HOL_ERR _ => false
 
 fun scrub_ax (s as {facts,...} : segment) =
-   let fun check (_, Thm _ ) = true
-         | check (_, Defn _) = true
-         | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
+   let fun check (Thm _) = true
+         | check (Defn _) = true
+         | check (Axiom(_,th)) = uptodate_term (Thm.concl th)
    in
-      update_seg s (U #facts (List.filter check facts)) $$
+      update_seg s (U #facts (List.filter (check o fact_thm) facts)) $$
    end
 
 fun scrub_thms (s as {facts,...}: segment) =
-   let fun check (_, Axiom _) = true
-         | check (_, Thm th ) = uptodate_thm th
-         | check (_, Defn th) = uptodate_thm th
+   let fun check (Axiom _) = true
+         | check (Thm th ) = uptodate_thm th
+         | check (Defn th) = uptodate_thm th
    in
-     update_seg s (U #facts (List.filter check facts)) $$
+     update_seg s (U #facts (List.filter (check o fact_thm) facts)) $$
    end
 
 fun scrub () = makeCT (scrub_thms (scrub_ax (theCT())))
@@ -594,6 +599,11 @@ fun scrubCT() = (scrub(); theCT());
 (*---------------------------------------------------------------------------*
  *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
+
+fun format_name_message {pfx, name} =
+    (if size pfx >= 20 then pfx
+     else StringCvt.padRight #"_" 21 (pfx ^ " ")) ^ " " ^
+    Lib.quote name ^ "\n"
 
 local
   fun check_name tempok (fname,s) =
@@ -617,28 +627,29 @@ local
         then "ORACLE thm"
       else "CHEAT"
     end
+  val msgOut = with_flag(MESG_to_string,Lib.I) HOL_MESG
   fun save_mesg s name =
     if !save_thm_reporting = 0 orelse
        !Globals.interactive andalso !save_thm_reporting < 2
       then ()
-    else let
-           val s = if !Globals.interactive then s
-                   else StringCvt.padRight #"_" 13 (s ^ " ")
-         in
-           with_flag (MESG_to_string, Lib.I) HOL_MESG
-             ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
-         end
+    else if !Globals.interactive then
+      msgOut ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
+    else msgOut (format_name_message{pfx = "Saved " ^ s, name = name})
 in
-  fun save_thm (name, th) =
+  fun save_thm0 fnm fmsg private (name, th) =
     let
       val th' = save_dep (CTname ()) th
     in
       check_name true ("save_thm", name)
-      ; if uptodate_thm th' then add_thmCT (name, th')
-        else raise DATED_ERR "save_thm" name
-      ; save_mesg (mesg_str th') name
+      ; if uptodate_thm th' then add_thmCT (name, th', private)
+        else raise DATED_ERR fnm name
+      ; save_mesg (fmsg th') name
       ; th'
     end
+  val save_thm = save_thm0 "save_thm" mesg_str {private=false}
+  val save_private_thm =
+      save_thm0 "save_private_thm" (fn th => "private " ^ mesg_str th)
+                {private=true}
 
   fun new_axiom (name,tm) =
     let
@@ -904,9 +915,10 @@ fun theory_out p ostrm =
  end;
 
 fun unkind facts =
-  List.foldl (fn ((s,Axiom (_,th)),(A,D,T)) => ((s,th)::A,D,T)
-               | ((s,Defn th),(A,D,T))     => (A,(s,th)::D,T)
-               | ((s,Thm th),(A,D,T))     => (A,D,(s,th)::T)) ([],[],[]) facts;
+  List.foldl (fn ((s,(Axiom (_,th), _)), (A,D,T)) => ((s,th)::A,D,T)
+               | ((s,(Defn th, v)), (A,D,T))      => (A,(s,th,v)::D,T)
+               | ((s,(Thm th, v)), (A,D,T))       => (A,D,(s,th,v)::T))
+             ([],[],[]) facts
 
 (* automatically reverses the list, which is what is needed. *)
 
@@ -999,7 +1011,7 @@ fun export_theory () = let
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
                 not (is_temp_binding s)
  in
-   case filter filtP (map fst (A@D@T)) of
+   case filter filtP (map #1 A @ map #1 (D@T)) of
      [] =>
      (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])

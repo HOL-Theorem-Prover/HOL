@@ -160,6 +160,9 @@ val _ = let
                        !a b c. (!d. f d = b ==> Q a d) /\ R b c ==>
                                !d. f d = c ==> Q a d”]
   val bit_cases = hd (Prim_rec.prove_cases_thm numeralTheory.bit_induction)
+  val bitind_goal = “0 < n”
+  val bitind_expected = [([], “0 < ZERO”), ([“0 < n”], “0 < BIT1 n”),
+                         ([“0 < n”], “0 < BIT2 n”)]
   fun TAC t g = fst (VALID t g)
 in
   tprint "Cases_on ‘m’ using bit_cases";
@@ -195,7 +198,13 @@ in
   require_msg (check_result ((list_eq aconv rtc_expected o map snd)))
               (HOLPP.pp_to_string 65 ppgs)
               (TAC $ Induct_on ‘RTC’ using relationTheory.RTC_INDUCT_RIGHT1)
-              ([], rtcg)
+              ([], rtcg);
+  tprint "Induct_on ‘n’ using numeralTheory.bit_induction";
+  require_msg (check_result
+                 (list_eq (pair_eq (list_eq aconv) aconv) bitind_expected))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Induct_on ‘n’ using numeralTheory.bit_induction)
+              ([], bitind_goal)
 end
 
 

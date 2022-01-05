@@ -1,1 +1,2 @@
-INCLUDES = $(HOLDIR)/examples/fun-op-sem/lprefix_lub
+INCLUDES = $(HOLDIR)/examples/fun-op-sem/lprefix_lub $(HOLDIR)/src/n-bit \
+           $(HOLDIR)/src/finite_maps

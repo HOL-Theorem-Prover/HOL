@@ -14,6 +14,8 @@ sig
   val delete : ''a -> ''a list -> ''a list
   val set_diffl : ''a list -> ''a list -> ''a list
   val remove_duplicates : ''a list -> ''a list
+  val front : 'a list -> 'a list (* exception Empty *)
+  val front_last : 'a list -> 'a list * 'a (* exception Empty *)
 
   (* comparisons *)
   type 'a cmp = 'a * 'a -> order
@@ -54,6 +56,8 @@ sig
   val set_concatWith : ('a -> string) -> string -> 'a set -> string
   val set_mapPartial : ('a -> 'b option) -> 'b set -> 'a set -> 'b set
   val listItems : 'a set -> 'a list
+  val set_member : 'a set -> 'a -> bool
+  val empty_strset : string set
 
   (* terminal stuff: colouring of strings, getting width *)
   val red : string -> string
@@ -116,6 +120,7 @@ sig
     val extend : {base : t, extension : t} -> t
     val toString : t -> string
     val toAbsPath : t -> string
+    val getParent : t -> t (* loops/fixpoint at root *)
     val pretty_dir : t -> string (* uses holpathdb abbreviations *)
     val fromPath : {origin: string, path : string} -> t
     val sort : t list -> t list

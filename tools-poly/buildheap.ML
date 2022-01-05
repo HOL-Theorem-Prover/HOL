@@ -311,6 +311,8 @@ fun main() = let
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val allincs = ReadHMF.find_includes (OS.FileSys.getDir())
+  val _ = ReadHMF.extend_path_with_includes
+            {verbosity = 1, lpref = Meta.loadPath}
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
@@ -332,7 +334,8 @@ fun main() = let
                      NONE => "NONE"
                    | SOME s => "SOME(\"" ^ s ^"\")"))
   val exts = holpathdb.search_for_extensions ReadHMF.find_includes
-                                             [OS.FileSys.getDir()]
+               {skip = Binaryset.empty String.compare,
+                starter_dirs = [OS.FileSys.getDir()]}
   fun print_ext{vname,path} = vname ^ " |-> " ^ path
   val _ = diag ("holpathdb extensions: "^
                 String.concatWith ", " (map print_ext exts))

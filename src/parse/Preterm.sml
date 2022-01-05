@@ -466,39 +466,42 @@ val remove_overloading : preterm -> preterm seqM = let
   fun unify t1 t2 = fromErr (Pretype.unify t1 t2)
 
   fun recurse ptm =
-    case ptm of
-        Overloaded {Name,Ty,Info,Locn} =>
-        let
-          val actual_ops = #actual_ops Info
-          fun try t =
-            if is_const t then
-              let
-                val {Ty=ty,Name=nm,Thy=thy} = Term.dest_thy_const t
-                val pty0 = Pretype.fromType ty
-              in
-                fromErr (Pretype.rename_typevars [] pty0) >- unify Ty >>
-                return (Const{Name=nm, Ty=Ty, Thy=thy, Locn=Locn})
-              end
-            else
-              let
-                val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
-              in
-                fromErr (term_to_preterm avds t) >- (fn ptm =>
-                fromErr (ptype_of ptm) >- (fn pty =>
-                unify Ty pty >>
-                return (Pattern{Ptm = ptm, Locn = Locn})))
-              end
-        in
-          tryall try actual_ops
-        end
-      | Comb{Rator, Rand, Locn} =>
-          lift2 (fn t1 => fn t2 => Comb{Rator=t1,Rand=t2,Locn=Locn})
-                (recurse Rator) (recurse Rand)
-      | Abs{Bvar, Body, Locn} =>
-          lift (fn t => Abs{Bvar=Bvar, Body=t, Locn=Locn}) (recurse Body)
-      | Constrained{Ptm,Ty,Locn} =>
-          lift (fn t => Constrained{Ptm=t, Ty=Ty, Locn=Locn}) (recurse Ptm)
-      | _ => return ptm
+      if not (contains_overload ptm) then return ptm
+      else
+        case ptm of
+            Overloaded {Name,Ty,Info,Locn} =>
+            let
+              val actual_ops = #actual_ops Info
+              fun try t =
+                  if is_const t then
+                    let
+                      val {Ty=ty,Name=nm,Thy=thy} = Term.dest_thy_const t
+                      val pty0 = Pretype.fromType ty
+                    in
+                      fromErr (Pretype.rename_typevars [] pty0) >- unify Ty >>
+                              return (Const{Name=nm, Ty=Ty, Thy=thy, Locn=Locn})
+                    end
+                  else
+                    let
+                      val avds = map Type.dest_vartype
+                                     (tmlist_tyvs (free_vars t))
+                    in
+                      fromErr (term_to_preterm avds t) >- (fn ptm =>
+                      fromErr (ptype_of ptm) >-           (fn pty =>
+                      unify Ty pty >>
+                      return (Pattern{Ptm = ptm, Locn = Locn})))
+                    end
+            in
+              tryall try actual_ops
+            end
+          | Comb{Rator, Rand, Locn} =>
+            lift2 (fn t1 => fn t2 => Comb{Rator=t1,Rand=t2,Locn=Locn})
+                  (recurse Rator) (recurse Rand)
+          | Abs{Bvar, Body, Locn} =>
+            lift (fn t => Abs{Bvar=Bvar, Body=t, Locn=Locn}) (recurse Body)
+          | Constrained{Ptm,Ty,Locn} =>
+            lift (fn t => Constrained{Ptm=t, Ty=Ty, Locn=Locn}) (recurse Ptm)
+          | _ => return ptm
 
 (*
   val overloads = overloaded_subterms [] ptm

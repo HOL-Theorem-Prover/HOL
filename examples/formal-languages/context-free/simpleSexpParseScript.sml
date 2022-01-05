@@ -265,8 +265,7 @@ Termination
    \\ imp_res_tac strip_dot_MEM_sizelt
    \\ imp_res_tac strip_dot_last_sizeleq
    \\ fsrw_tac[boolSimps.DNF_ss][] \\ simp[]
-   \\ fs[quantHeuristicsTheory.LIST_LENGTH_2] \\ rw[] \\ fs[]
-   \\ res_tac \\ simp[]
+   \\ fs[LENGTH_EQ_NUM_compute] \\ gvs[]
 End
 
 Theorem peg_eval_list_valid_symchars[local]:
@@ -564,7 +563,6 @@ Termination
   \\ qpat_x_assum`_ = strip_dot _`(assume_tac o SYM)
   \\ imp_res_tac strip_dot_last_sizelt
   \\ imp_res_tac strip_dot_MEM_sizelt
-  \\ fs[quantHeuristicsTheory.LIST_LENGTH_2]
 End
 
 val print_nt_sexp0_no_leading_space = Q.store_thm("print_nt_sexp0_no_leading_space",
@@ -1138,7 +1136,7 @@ Proof
     \\ pairarg_tac \\ fs[]
     \\ ntac 2 strip_tac \\ rpt var_eq_tac
     \\ simp[Abbr`b`] \\ spose_not_then strip_assume_tac
-    \\ fs[quantHeuristicsTheory.LIST_LENGTH_2]
+    \\ fs[LENGTH_EQ_NUM_compute]
     \\ qhdtm_x_assum`strip_dot`mp_tac
     \\ simp[Once strip_dot_def]
     \\ CASE_TAC \\ fs[] \\ rw[]

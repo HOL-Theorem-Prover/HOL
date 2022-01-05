@@ -21,6 +21,7 @@ sig
   val new_constant       : string * hol_type -> unit
   val new_axiom          : string * term -> thm
   val save_thm           : string * thm -> thm
+  val save_private_thm   : string * thm -> thm
 
 (* Delete from the current theory segment *)
 
@@ -113,6 +114,8 @@ sig
 
 (* recording a dependency of the theory on an ML module *)
   val add_ML_dependency  : string -> unit
+
+  val format_name_message : {pfx:string,name:string} -> string
 
 (* For internal use *)
 

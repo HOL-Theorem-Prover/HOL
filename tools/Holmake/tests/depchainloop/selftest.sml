@@ -13,22 +13,25 @@ val _ =
       let
         val now = Time.now()
         val res =
-            OS.Process.system ("/bin/sh -c 'ulimit -t 2 ; " ^
-                               Systeml.HOLDIR ++ "bin" ++ "Holmake'")
+            OS.Process.system ("/bin/sh -c 'ulimit -t 4 ; " ^
+                               Systeml.HOLDIR ++ "bin" ++ "Holmake" ^
+                               (if Systeml.ML_SYSNAME = "poly" then
+                                  " --poly_not_hol'"
+                                else "'"))
       in
-        if OS.Process.isSuccess res then die "FAILED!?"
+        if OS.Process.isSuccess res then die "sub-Holmake completed"
         else let
           val elapsed = Time.-(Time.now(), now)
         in
-          if Time.>(elapsed, Time.fromMilliseconds 1500) then
-            die "FAILED!"
+          if Time.>(elapsed, Time.fromMilliseconds 4000) then
+            die "sub-Holmake took too long"
           else print "OK\n"
         end
       end
     else
       let
-        val res = Systeml.systeml [Systeml.HOLDIR ++ "bin" ++ "Holmake'"]
+        val res = Systeml.systeml [Systeml.HOLDIR ++ "bin" ++ "Holmake"]
       in
-        if OS.Process.isSuccess res then die "FAILED!?"
+        if OS.Process.isSuccess res then die "sub-Holmake completed"
         else print "OK\n"
       end

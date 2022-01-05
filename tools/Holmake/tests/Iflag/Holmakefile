@@ -1,2 +1,7 @@
+Iflag-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe Iflag-selftest.log
