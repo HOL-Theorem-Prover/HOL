@@ -125,13 +125,18 @@ fun starting_tree obj board = fst (create_node obj board)
    Score of a choice in a policy according to pUCT formula.
    ------------------------------------------------------------------------- *)
 
+val avoid_decided = ref false
+
 fun score_puct param sqvtot (move,polv,ctree) =
   let
     val (sum,vis) = case ctree of
       Leaf => (0.0,0.0)
-    | Node (cnode,_) => (#sum cnode, #vis cnode)
+    | Node (cnode,_) => 
+      if !avoid_decided andalso not (is_undecided (#stati cnode))
+      then (Real.negInf, 0.0)
+      else (#sum cnode, #vis cnode)
   in
-    (sum + (#explo_coeff param) * polv * sqvtot) / (vis + 1.0)
+    (sum + #explo_coeff param * polv * sqvtot) / (vis + 1.0)
   end
 
 (* -------------------------------------------------------------------------
@@ -141,6 +146,7 @@ fun score_puct param sqvtot (move,polv,ctree) =
 fun rebuild_tree reward buildl tree = case buildl of
     [] => tree
   | build :: m => rebuild_tree reward m (build reward tree)
+
 
 fun select_child obj buildl (node,cv) =
   let
@@ -158,7 +164,8 @@ fun select_child obj buildl (node,cv) =
       val _ = if Vector.length cv = 0
         then raise ERR "no move available" "" else ()
       val sqrttot = Math.sqrt (#vis node)
-      val ci = vector_maxi (score_puct param sqrttot) cv
+      val scoref = score_puct param sqrttot
+      val ci = vector_maxi scoref cv
       val (cmove,cpol,ctree) = Vector.sub (cv,ci)
       fun build reward cfuture =
         Node (update_node reward node,
@@ -212,6 +219,13 @@ fun mcts obj starttree =
 fun score_visit (move,polv,ctree) = case ctree of
       Leaf => 0.0
     | Node (cnode,_) => (#vis cnode)
+
+fun number_of_node tree = case tree of
+    Leaf => 0
+  | Node (node,cv) =>
+    let fun f (cmove,_,ctree) = number_of_node ctree in
+      1 + sum_int (vector_to_list (Vector.map f cv))
+    end
 
 fun most_visited_path tree = case tree of
     Leaf => []

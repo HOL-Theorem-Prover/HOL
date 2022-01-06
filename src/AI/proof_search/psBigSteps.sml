@@ -45,13 +45,27 @@ fun mk_dis tree = case tree of
     val pol = mapi f (vector_to_list ctreev)
     val _ = if null pol then raise ERR "mk_dis" "pol" else ()
     val tot = sum_real (map snd pol)
-    val _ = if tot < 0.5 then raise ERR "mk_dis" "tot" else ()
   in
     (pol,tot)
   end
 
+fun mk_dis2 tree = case tree of
+    Leaf => raise ERR "mk_dis" "leaf"
+  | Node (node,ctreev) =>
+  let
+    fun f i (a,b,c) = ((a,i), b)
+    val pol = mapi f (vector_to_list ctreev)
+    val _ = if null pol then raise ERR "mk_dis" "pol" else ()
+  in
+    pol
+  end
+
+
+val pol_flag = ref false
+
 fun select_bigstep mctsobj tree =
-  let val (dis,_) = mk_dis tree in
+  if !pol_flag then select_in_distrib (mk_dis2 tree) else
+  let val (dis,_) = mk_dis tree in  
     if !temp_flag then select_in_distrib dis else best_in_distrib dis
   end
 

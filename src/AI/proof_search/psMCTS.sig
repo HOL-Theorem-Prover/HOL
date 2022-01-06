@@ -41,6 +41,7 @@ sig
     {time : real option, nsim : int option,
      explo_coeff : real,
      noise : bool, noise_coeff : real, noise_gen : unit -> real}
+  val avoid_decided : bool ref
 
   type ('a,'b) mctsobj =
     {mctsparam : mctsparam, game : ('a,'b) game, player : ('a,'b) player}
@@ -51,11 +52,12 @@ sig
 
   (* Statistics *)
   val most_visited_path : ('a,'b) tree -> ('a node * 'b option) list
-
+  val number_of_node : ('a,'b) tree -> int
 
   (* toy example *)
   type toy_board = (int * int * int)
   datatype toy_move = Incr | Decr
   val toy_game : (toy_board,toy_move) game
+
 
 end
