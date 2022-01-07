@@ -13,7 +13,7 @@ sig
 
   (* search tree: 'a is a board position, 'b is a move *)
   type 'a node =
-    {board : 'a, stati : status, sum : real, vis : real}
+    {board : 'a, stati : status, status : status, sum : real, vis : real}
   datatype ('a,'b) tree =
     Leaf | Node of 'a node * ('b * real * ('a,'b) tree) vector
   val dest_node : ('a,'b) tree -> 'a node * ('b * real * ('a,'b) tree) vector
@@ -41,7 +41,7 @@ sig
     {time : real option, nsim : int option,
      explo_coeff : real,
      noise : bool, noise_coeff : real, noise_gen : unit -> real}
-  val avoid_decided : bool ref
+  val avoid_lose : bool ref
 
   type ('a,'b) mctsobj =
     {mctsparam : mctsparam, game : ('a,'b) game, player : ('a,'b) player}

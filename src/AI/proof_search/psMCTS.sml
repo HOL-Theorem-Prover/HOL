@@ -35,12 +35,20 @@ datatype search_status = Success | Saturated | Timeout
    ------------------------------------------------------------------------- *)
 
 type 'a node =
-  {board : 'a, stati : status, sum : real, vis : real}
+  {board : 'a, stati : status, status : status, sum : real, vis : real}
 datatype ('a,'b) tree =
    Leaf | Node of 'a node * ('b * real * ('a,'b) tree) vector
 fun dest_node x = case x of Node y => y | _ => raise ERR "dest_node" ""
 fun is_node x = case x of Node y => true | _ => false
 fun is_leaf x = case x of Leaf => true | _ => false
+
+fun is_treewin x = case x of Node ({status,...},_) => is_win status 
+                         | _ => false
+fun is_treelose x = case x of Node ({status,...},_) => is_lose status 
+                         | _ => false
+fun is_treeundecided x = case x of 
+    Node ({status,...},_) => is_undecided status 
+  | _ => false
 
 (* -------------------------------------------------------------------------
    MCTS specification
@@ -107,17 +115,17 @@ fun create_node obj board =
     val game = #game obj
     val param = #mctsparam obj
     val stati = (#status_of game) board
-    val stati' = if is_undecided stati andalso
+    val status = if is_undecided stati andalso
                     null ((#available_movel game) board)
                  then Lose else stati
-     val (value,pol1) = case stati' of
+     val (value,pol1) = case status of
         Win => (1.0,[])
       | Lose => (0.0,[])
       | Undecided => (#player obj) board
     val pol2 = normalize_prepol pol1
     val pol3 = if #noise param then add_noise param pol2 else pol2
   in
-    (Node ({stati=stati',board=board,sum=value,vis=1.0},
+    (Node ({stati=stati,status = status,board=board,sum=value,vis=1.0},
             Vector.fromList (map (fn (a,b) => (a,b,Leaf)) pol3)),
      value)
   end
@@ -128,14 +136,14 @@ fun starting_tree obj board = fst (create_node obj board)
    Score of a choice in a policy according to pUCT formula.
    ------------------------------------------------------------------------- *)
 
-val avoid_decided = ref false
+val avoid_lose = ref false
 
 fun score_puct param sqvtot (move,polv,ctree) =
   let
     val (sum,vis) = case ctree of
       Leaf => (0.0,0.0)
-    | Node (cnode,_) => 
-      if !avoid_decided andalso not (is_undecided (#stati cnode))
+    | Node (cnode,_) =>  
+      if !avoid_lose andalso is_lose (#status cnode)
       then (Real.negInf, 0.0)
       else (#sum cnode, #vis cnode)
   in
@@ -154,13 +162,25 @@ fun rebuild_tree reward buildl tree = case buildl of
 fun select_child obj buildl (node,cv) =
   let
     val (stati,param) = (#stati node, #mctsparam obj)
-    fun update_node reward {stati,board,sum,vis} =
-        {stati=stati, board=board, sum=sum+reward, vis=vis+1.0}
+    fun update_node_bare reward {stati,status,board,sum,vis} =
+      {stati=stati, status=status, 
+       board=board, sum=sum+reward, vis=vis+1.0}
+    fun update_node cfuture ctreev reward {stati,status,board,sum,vis} =
+      let val newstatus = case status of Undecided =>
+        (if is_treeundecided cfuture then status
+         else if is_treewin cfuture then Win 
+         else if Vector.all (is_treelose o #3) ctreev then Lose 
+         else status)
+        | _ => status
+      in
+       {stati=stati, status=newstatus, 
+        board=board, sum=sum+reward, vis=vis+1.0}
+      end
   in
     if not (is_undecided stati)
     then
       let val reward = score_status stati in
-        rebuild_tree reward buildl (Node (update_node reward node,cv))
+        rebuild_tree reward buildl (Node (update_node_bare reward node,cv))
       end
     else
     let
@@ -171,8 +191,9 @@ fun select_child obj buildl (node,cv) =
       val ci = vector_maxi scoref cv
       val (cmove,cpol,ctree) = Vector.sub (cv,ci)
       fun build reward cfuture =
-        Node (update_node reward node,
-              Vector.update (cv,ci,(cmove,cpol,cfuture)))
+        let val ctreev = Vector.update (cv,ci,(cmove,cpol,cfuture)) in
+          Node (update_node cfuture ctreev reward node,ctreev)
+        end
       val newbuildl = build :: buildl
     in
       case ctree of
