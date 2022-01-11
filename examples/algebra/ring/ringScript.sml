@@ -2860,8 +2860,8 @@ val finite_ring_card_eq_1 = store_thm(
       so 0 < order r.sum #1                    by group_order_pos
       or 0 < char r /\ (char r = order r.sum #1)   by char_def
 *)
-val xfinite_ring_char = store_thm(
-  "xfinite_ring_char",
+val finite_ring_char = store_thm(
+  "finite_ring_char",
   ``!r:'a ring. FiniteRing r ==> (0 < char r) /\ (char r = order r.sum #1)``,
   (strip_tac >> stripDup[FiniteRing_def]) >>
   `FiniteGroup r.sum` by rw[finite_ring_add_finite_group] >>
