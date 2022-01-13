@@ -3,10 +3,13 @@ if exists("b:did_hol")
 endif
 
 let s:defaultholpipe =
-if empty($VIMHOL_FIFO)
-  let s:holpipe = s:defaultholpipe
-else
-  let s:holpipe = $VIMHOL_FIFO
+" initialise pipe if yet unset
+if ! has_key(s:,'holpipe')
+  if empty($VIMHOL_FIFO)
+    let s:holpipe = s:defaultholpipe
+  else
+    let s:holpipe = $VIMHOL_FIFO
+  endif
 endif
 let s:holtogglequiet = "val _ = HOL_Interactive.toggle_quietdec();"
 
@@ -17,6 +20,7 @@ setlocal nobuflisted
 setlocal noswapfile
 let s:holnr = bufnr("")
 hide
+
 
 let s:tmpprefix =
 fu! TempName()
@@ -241,6 +245,69 @@ nn <silent> <LocalLeader>a :call HOLSelect('^Triviality\\|^Theorem','^Proof')<CR
 nn <silent> <LocalLeader>y :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
 nn <silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
 no <LocalLeader>h h
+
+if ! exists('$HOLDIR') || (!has('terminal') && ! has('nvim'))
+  let b:did_hol = 1
+  " skip terminal feature
+  finish
+endif
+
+" if exists use readline wrapper
+if executable('rlwrap')
+  let s:rlwrap_str = 'rlwrap '
+else
+  let s:rlwrap_str = ''
+endif
+
+function! HOLREPLnew()
+  let l:cmd = getenv('HOLDIR') . '/bin/hol'
+  if ! executable(l:cmd)
+    echoerr 'hol command not found: ' . l:cmd
+    return 0
+  endif
+  let s:holpipe = tempname()
+  call system('mkfifo '. s:holpipe)
+  "echom "holrepl pipe " . s:holpipe
+  let options = {
+  \  "cwd": expand('%:p:h'),
+  \  "vertical": 1,
+  \  "env": {
+  \    "VIMHOL_FIFO": s:holpipe
+  \  }}
+  echom 'holrepl cmd: ' . s:rlwrap_str . l:cmd
+  if has('nvim') " neovim terminal
+    let options.stdin = "null"
+    vsplit | enew
+    let l:terminal_job_id = termopen(s:rlwrap_str . l:cmd, options)
+    let g:hol_repl = {'buf': bufnr(''), 'job': l:terminal_job_id}
+    " scroll to end of terminal buffer
+    silent! normal G
+  else " vim terminal
+    rightbelow let g:hol_repl = term_start(s:rlwrap_str . l:cmd, options)
+    call term_setkill(g:hol_repl, 'term')
+  endif
+  wincmd p
+endfunction
+
+if has('nvim')
+  function! HOLREPLsend(text)
+    call chansend(g:hol_repl.job, a:text)
+  endfunction
+else
+  function! HOLREPLsend(text)
+    call term_sendkeys(g:hol_repl, a:text)
+  endfunction
+endif
+
+" open a new hol terminal
+nn <silent> <LocalLeader>x :call HOLREPLnew()<CR>
+" close a hol_repl buffer
+nn <silent> <LocalLeader>X :call HOLREPLsend("\<C-D>")<CR>
+" send current line (or highlighted section) to terminal
+vn <silent> <LocalLeader>w "0y:call HOLREPLsend(getreg('0',1) . ";\n")<CR>
+nm <silent><expr> <LocalLeader>w "V".maplocalleader."w"
+" load the $HOL_CONFIG for non-standard HOL heaps
+nn <silent> <LocalLeader>C :call HOLREPLsend("Option.app use $ Process.getEnv \"HOL_CONFIG\";\n")<CR>
 
 let b:did_hol = 1
 " vim: ft=vim
