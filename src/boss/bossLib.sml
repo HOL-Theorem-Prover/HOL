@@ -274,6 +274,8 @@ val gnvs = stateful (cfg true false true) []
 val gvs = stateful (cfg true true true) []
 val rgs = stateful (cfg false true false) []
 
+fun SRULE ths th = SIMP_RULE (srw_ss()) ths th (* don't eta-reduce *)
+
 (* Without loss of generality tactics *)
 val wlog_tac = wlog_tac
 val wlog_then = wlog_then
