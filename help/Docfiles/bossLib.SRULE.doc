@@ -15,7 +15,7 @@ theorems {ths}, returning the simplified theorem.
 
 The implementation of {SRULE} is
 {
-   fun SRULE ths ths = SIMP_RULE (srw_ss()) ths th
+   fun SRULE ths th = SIMP_RULE (srw_ss()) ths th
 }
 The fact that this definition is not eta-reduced means that partial
 applications of {SRULE} will continue to pick up the current value of
