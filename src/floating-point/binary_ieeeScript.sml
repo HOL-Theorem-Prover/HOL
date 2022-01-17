@@ -378,15 +378,18 @@ val float_to_int_def = Define`
                   if x.Sign = 1w then INT_CEILING r else INT_FLOOR r)
     | _ => NONE`
 
-val float_sqrt_def = Define`
+Definition float_sqrt_def:
    float_sqrt mode (x: ('t, 'w) float) =
       if x.Sign = 0w then
          case float_value x of
             NaN => (check_for_signalling [x], float_some_qnan (FP_Sqrt mode x))
           | Infinity => (clear_flags, float_plus_infinity (:'t # 'w))
           | Float r => (float_round_with_flags mode F (sqrt r))
+      else if x = float_minus_zero (:'t # 'w) then
+        (clear_flags, float_minus_zero (:'t # 'w))
       else
-        (invalidop_flags, float_some_qnan (FP_Sqrt mode x))`
+        (invalidop_flags, float_some_qnan (FP_Sqrt mode x))
+End
 
 val float_add_def = Define`
    float_add mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
