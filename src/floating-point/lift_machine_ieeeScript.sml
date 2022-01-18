@@ -132,13 +132,16 @@ val fp16_float_div_relative = Q.prove(
 
 val fp16_float_sqrt_relative = Q.prove(
   `!a.
-      fp16_isFinite a /\ ~word_msb a /\
+      fp16_isFinite a /\ (~word_msb a \/ a = INT_MINw) /\
       normalizes (:10 # 5) (sqrt (fp16_to_real a)) ==>
       fp16_isFinite (fp16_sqrt roundTiesToEven a) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:10) + 1) /\
           (fp16_to_real (fp16_sqrt roundTiesToEven a) =
            (sqrt (fp16_to_real a)) * (1 + e))`,
-  tac
+  tac >> gen_tac >> strip_tac >> irule float_sqrt_relative >>
+  simp[sqrtable_def] >>
+  simp[fp16_to_float_def, binary_ieeeTheory.float_minus_zero_def,
+      binary_ieeeTheory.float_negate_def, binary_ieeeTheory.float_plus_zero_def]
   )
 
 val fp16_float_add_relative = save_thm("fp16_float_add_relative",
@@ -236,13 +239,16 @@ val fp32_float_div_relative = Q.prove(
 
 val fp32_float_sqrt_relative = Q.prove(
   `!a.
-      fp32_isFinite a /\ ~word_msb a /\
+      fp32_isFinite a /\ (~word_msb a \/ a = INT_MINw) /\
       normalizes (:23 # 8) (sqrt (fp32_to_real a)) ==>
       fp32_isFinite (fp32_sqrt roundTiesToEven a) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:23) + 1) /\
           (fp32_to_real (fp32_sqrt roundTiesToEven a) =
            (sqrt (fp32_to_real a)) * (1 + e))`,
-  tac
+  tac >> gen_tac >> strip_tac >> irule float_sqrt_relative >>
+  simp[sqrtable_def] >>
+  simp[fp32_to_float_def, binary_ieeeTheory.float_minus_zero_def,
+      binary_ieeeTheory.float_negate_def, binary_ieeeTheory.float_plus_zero_def]
   )
 
 val fp32_float_add_relative = save_thm("fp32_float_add_relative",
@@ -340,13 +346,17 @@ val fp64_float_div_relative = Q.prove(
 
 val fp64_float_sqrt_relative = Q.prove(
   `!a.
-      fp64_isFinite a /\ ~word_msb a /\
+      fp64_isFinite a /\ (~word_msb a \/ a = INT_MINw) /\
       normalizes (:52 # 11) (sqrt (fp64_to_real a)) ==>
       fp64_isFinite (fp64_sqrt roundTiesToEven a) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:52) + 1) /\
           (fp64_to_real (fp64_sqrt roundTiesToEven a) =
            (sqrt (fp64_to_real a)) * (1 + e))`,
-  tac
+  tac >> gen_tac >> strip_tac >> irule float_sqrt_relative >>
+  simp[sqrtable_def] >>
+  simp[fp64_to_float_def, binary_ieeeTheory.float_minus_zero_def,
+       binary_ieeeTheory.float_negate_def,
+       binary_ieeeTheory.float_plus_zero_def]
   )
 
 val fp64_float_add_relative = save_thm("fp64_float_add_relative",
