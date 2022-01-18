@@ -18,8 +18,11 @@
 *)
 
 open HolKernel Parse boolLib relationTheory mesonLib metisLib
+open simpLib boolSimps
 
 val _ = new_theory "pair";
+
+fun simp ths = ASM_SIMP_TAC (BasicProvers.srw_ss()) ths (* don't eta-reduce *)
 
 (*---------------------------------------------------------------------------*)
 (* Define the type of pairs and tell the grammar about it.                   *)
@@ -183,6 +186,11 @@ Proof
   REWRITE_TAC [UNCURRY,FST,SND]
 QED
 
+Theorem IN_UNCURRY_R[simp]:
+  (x,y) IN UNCURRY R <=> R x y
+Proof
+  simp[IN_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_UNCURRY_THM = |- !f. CURRY(UNCURRY f) = f                           *)
@@ -277,7 +285,6 @@ val pair_Axiom = Q.store_thm("pair_Axiom",
 (*                (UNCURRY f M = UNCURRY f' M')                             *)
 (* -------------------------------------------------------------------------*)
 
-open simpLib boolSimps
 val UNCURRY_CONG = store_thm(
   "UNCURRY_CONG",
   ``!f' f M' M.
