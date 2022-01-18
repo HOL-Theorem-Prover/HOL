@@ -213,7 +213,7 @@ type ('a,'b,'c) extspec =
   self_dir : string,
   self: string,
   parallel_dir : string,
-  reflect_globals : string,
+  reflect_globals : unit -> string,
   function : 'a -> 'b -> 'c,
   write_param : string -> 'a -> unit,
   read_param : string -> 'a,
@@ -388,7 +388,7 @@ fun code_of_extspec es wid =
   let val s = #self es in
     [
     "open smlParallel;",
-    "val _ = " ^ #reflect_globals es ^ ";",
+    "val _ = " ^ #reflect_globals es () ^ ";",
     "worker_start " ^ its wid ^ " " ^ s ^ ";"
     ]
   end
@@ -426,7 +426,7 @@ val examplespec : (unit,int,int) extspec =
   self_dir = HOLDIR ^ "/src/AI/sml_inspection",
   self = "smlParallel.examplespec",
   parallel_dir = default_parallel_dir,
-  reflect_globals = "()",
+  reflect_globals = fn () => "()",
   function = let fun f _ (x:int) = 2 * x in f end,
   write_param = let fun f _ () = () in f end,
   read_param = let fun f _ = () in f end,

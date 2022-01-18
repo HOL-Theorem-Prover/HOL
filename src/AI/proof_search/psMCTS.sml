@@ -115,17 +115,15 @@ fun create_node obj board =
     val game = #game obj
     val param = #mctsparam obj
     val stati = (#status_of game) board
-    val status = if is_undecided stati andalso
-                    null ((#available_movel game) board)
-                 then Lose else stati
-     val (value,pol1) = case status of
+     val (value,pol1) = case stati of
         Win => (1.0,[])
       | Lose => (0.0,[])
       | Undecided => (#player obj) board
+    val status = if is_undecided stati andalso null pol1 then Lose else stati
     val pol2 = normalize_prepol pol1
     val pol3 = if #noise param then add_noise param pol2 else pol2
   in
-    (Node ({stati=stati,status = status,board=board,sum=value,vis=1.0},
+    (Node ({stati=stati,status=status,board=board,sum=value,vis=1.0},
             Vector.fromList (map (fn (a,b) => (a,b,Leaf)) pol3)),
      value)
   end

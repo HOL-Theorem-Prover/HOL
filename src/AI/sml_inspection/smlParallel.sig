@@ -17,7 +17,7 @@ sig
     self_dir : string,
     self: string,
     parallel_dir: string,
-    reflect_globals : string,
+    reflect_globals : unit -> string,
     function : 'a -> 'b -> 'c,
     write_param : string -> 'a -> unit,
     read_param : string -> 'a,
