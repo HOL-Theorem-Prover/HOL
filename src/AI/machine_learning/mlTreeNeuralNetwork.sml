@@ -379,6 +379,7 @@ fun train_tnn_schedule schedule tnn (train,test) =
     let
       val _ = msg param ("learning rate: " ^ rts (#learning_rate param))
       val _ = msg param ("ncore: " ^ its (#ncore param))
+      val _ = msg param ("batch size: " ^ its (#batch_size param))
       val (pf,close_threadl) = parmap_gen (#ncore param)
       val newtnn = train_tnn_nepoch param pf 0 tnn (train,test)
       val _ = close_threadl ()
@@ -484,7 +485,7 @@ val traintnn_extspec =
   self_dir = HOLDIR ^ "/src/AI/machine_learning",
   self = "mlTreeNeuralNetwork.traintnn_extspec",
   parallel_dir = default_parallel_dir ^ "_train",
-  reflect_globals = "()",
+  reflect_globals = fn () => "()",
   function = train_tnn_fun,
   write_param = write_noparam,
   read_param = read_noparam,

@@ -494,7 +494,7 @@ val traintnn_extspec =
   self_dir = HOLDIR ^ "/src/AI/machine_learning",
   self = "mlTreeNeuralNetwork.traintnn_extspec",
   parallel_dir = default_parallel_dir ^ "_train",
-  reflect_globals = "()",
+  reflect_globals = fn () => "()",
   function = train_tnn_fun,
   write_param = write_noparam,
   read_param = read_noparam,
