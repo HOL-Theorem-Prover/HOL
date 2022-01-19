@@ -86,7 +86,7 @@ fun read_whole_file{filename} =
     end
 
 fun set_member s e = Binaryset.member(s,e)
-fun files_upward_in_hierarchy gen_extras {filename, starter_dirs, skip} =
+fun files_upward_in_hierarchy gen_extras {diag} {filename, starter_dirs, skip} =
     let
       val {arcs = farcs, isAbs = fabs, vol} = OS.Path.fromString filename
       val _ = not fabs andalso length farcs = 1 andalso vol = "" orelse
@@ -104,8 +104,10 @@ fun files_upward_in_hierarchy gen_extras {filename, starter_dirs, skip} =
           case worklist of
               [] => A
             | [] :: rest => recurse A visited rest
-            | (d::ds) :: rest =>
+            | (d0::ds) :: rest =>
               let
+                val d = OS.Path.mkCanonical d0
+                val _ = diag (fn _ => "Visiting " ^ d)
                 val A' = maybe_readfile d A
                 val visited' = Binaryset.add(visited, d)
                 val parent = OS.Path.getParent d
@@ -149,7 +151,7 @@ fun process_filecontents s =
 
 fun search_for_extensions gen {skip,starter_dirs = dlist} =
   let
-    val dmap = files_upward_in_hierarchy gen
+    val dmap = files_upward_in_hierarchy gen {diag = fn _ => ()}
                  {filename = ".holpath", starter_dirs = dlist, skip = skip}
     fun foldthis (dstr,filecontents,(l,revmap)) =
         let

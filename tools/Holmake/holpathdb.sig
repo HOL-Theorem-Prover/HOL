@@ -21,7 +21,7 @@ sig
      once.  All strings encoding directories must be absolute paths.
      Returns a map from directory name to file contents *)
   val files_upward_in_hierarchy :
-      (string -> string list) ->
+      (string -> string list) -> {diag: (unit -> string) -> unit} ->
       {filename : string, starter_dirs : string list,
        skip : string Binaryset.set} ->
       (string, string) Binarymap.dict
