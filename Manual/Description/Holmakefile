@@ -1,7 +1,8 @@
 INCLUDES = ../Tools ../../examples/probability
 
 TEX_CORES = description title preface system conv drules tactics \
-	theories math definitions libraries misc HolSat PatternMatchesLib
+	theories math definitions libraries misc HolSat PatternMatchesLib \
+        enumfset
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
