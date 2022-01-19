@@ -403,11 +403,10 @@ before and after the region is sent."
 
 
 
-(defun copy-region-as-hol-definition-quietly (start end)
-   (interactive "r")
-   (hol-toggle-quiet-quietdec)
-   (copy-region-as-hol-definition start end 0 t)
-   (hol-toggle-quiet-quietdec))
+(defun hol-what-was-copy-region-as-hol-definition-quietly ()
+   (interactive "")
+   (ding)
+   (message "Deprecated: use C-u C-u M-h M-r for quiet region execution instead"))
 
 
 (defun hol-name-top-theorem (string arg)
@@ -1712,7 +1711,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
-(define-key hol-map "\C-r" 'copy-region-as-hol-definition-quietly)
+(define-key hol-map "\C-r" 'hol-what-was-copy-region-as-hol-definition-quietly)
 (define-key hol-map "\M-p" 'hol-select-pattern-list-tactic)
 (define-key hol-map "\M-P" 'holpp-map)
 (define-key hol-map "\M-q" 'copy-region-as-hol-definition-real-quietly)
