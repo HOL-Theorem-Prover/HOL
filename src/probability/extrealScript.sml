@@ -13,7 +13,7 @@ open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
      prim_recTheory arithmeticTheory tautLib pred_setLib hurdUtils;
 
 open realTheory realLib real_sigmaTheory RealArith seqTheory limTheory
-     transcTheory iterateTheory;
+     transcTheory iterateTheory metricTheory;
 
 open util_probTheory cardinalTheory;
 
@@ -9397,6 +9397,70 @@ Proof
   RW_TAC std_ss [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
   ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
   SIMP_TAC arith_ss [count_def, GSPECIFICATION]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* univ(:extreal) is metrizable                                              *)
+(* ------------------------------------------------------------------------- *)
+
+Definition extreal_dist_def :
+    extreal_dist (Normal x) (Normal y) = dist (reduced_metric mr1) (x,y) /\
+    extreal_dist  PosInf     PosInf    = 0 /\
+    extreal_dist  NegInf     NegInf    = 0 /\
+    extreal_dist  _          _         = 1
+End
+
+(* ‘extreal_dist’ is a valid metric *)
+Theorem extreal_dist_ismet :
+    ismet (UNCURRY extreal_dist)
+Proof
+    rw [ismet]
+ >- (Cases_on ‘x’ >> Cases_on ‘y’ \\
+     rw [extreal_dist_def, reduced_metric_thm, MR1_DEF] \\
+     EQ_TAC >> rw [] \\
+     fs [REAL_DIV_ZERO] \\
+     rename1 ‘1 + abs (a - b)’ \\
+     Suff ‘0 < 1 + abs (a - b)’ >- METIS_TAC [REAL_LT_IMP_NE] \\
+     MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [])
+ >> Know ‘!a (b :real). dist (reduced_metric mr1) (a,b) <= 2’
+ >- (rpt GEN_TAC \\
+     MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC ‘1’ >> rw [] \\
+     MATCH_MP_TAC REAL_LT_IMP_LE >> rw [reduced_metric_lt_1])
+ >> DISCH_TAC
+ >> Cases_on ‘x’ >> Cases_on ‘y’ >> Cases_on ‘z’
+ >> rw [extreal_dist_def, METRIC_POS]
+ >> rename1 ‘dist (reduced_metric mr1) (x,z) <=
+             dist (reduced_metric mr1) (y,x) + dist (reduced_metric mr1) (y,z)’
+ >> ‘dist (reduced_metric mr1) (y,x) = dist (reduced_metric mr1) (x,y)’
+      by PROVE_TAC [METRIC_SYM]
+ >> rw [METRIC_TRIANGLE]
+QED
+
+(* Thus ‘mtop extreal_mr1’ will be a possible topology of all extreals, and
+  ‘open_in (mtop extreal_mr1)’ is the set of all extreal-valued "open" sets
+  (w.r.t. ‘extreal_mr1’).
+
+   TODO: is ‘Borel’ the smallest sigma-algebra generated from these open sets?
+ *)
+Definition extreal_mr1_def :
+    extreal_mr1 = metric (UNCURRY extreal_dist)
+End
+
+Theorem extreal_mr1_thm :
+    dist extreal_mr1 = UNCURRY extreal_dist
+Proof
+    METIS_TAC [extreal_mr1_def, extreal_dist_ismet, metric_tybij]
+QED
+
+Theorem extreal_mr1_le_1 :
+    !x y. dist extreal_mr1 (x,y) <= 1
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘x’ >> Cases_on ‘y’
+ >> rw [extreal_mr1_thm, extreal_dist_def]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> rw [reduced_metric_lt_1]
 QED
 
 val _ = export_theory();

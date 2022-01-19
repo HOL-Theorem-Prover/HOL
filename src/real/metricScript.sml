@@ -158,6 +158,118 @@ val METRIC_NZ = store_thm("METRIC_NZ",
   REWRITE_TAC[GSYM REAL_LE_LT, METRIC_POS]);
 
 (*---------------------------------------------------------------------------*)
+(* Get a bounded metric (<1) from any metric                                 *)
+(*---------------------------------------------------------------------------*)
+
+val bmetric_tm = “(dist m)(x,y) / (1 + (dist m)(x,y))”;
+
+Definition reduced_metric_def :
+    reduced_metric (m :'a metric) = metric (\(x,y). ^bmetric_tm)
+End
+
+Theorem reduced_metric_alt[local] :
+    !m x y. ^bmetric_tm = 1 - inv (1 + dist m (x,y))
+Proof
+    rw [FUN_EQ_THM]
+ >> Q.ABBREV_TAC ‘z = 1 + dist m (x,y)’
+ >> Know ‘0 < z’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [Abbr ‘z’, METRIC_POS])
+ >> DISCH_TAC
+ >> ‘z <> 0’ by PROVE_TAC [REAL_LT_IMP_NE]
+ >> Know ‘dist m (x,y) = z - 1’
+ >- (Q.UNABBREV_TAC ‘z’ >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> rw [real_div, REAL_SUB_RDISTRIB, REAL_MUL_RINV]
+QED
+
+Theorem reduced_metric_ismet :
+    !m. ismet (\(x,y). ^bmetric_tm)
+Proof
+    rw [ismet]
+ >- (fs [REAL_DIV_ZERO] \\
+     EQ_TAC >> rw [METRIC_ZERO] \\
+     Suff ‘0 < 1 + dist m (x,y)’ >- PROVE_TAC [REAL_LT_IMP_NE] \\
+     MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])
+ >> Know ‘!a b. 0 < 1 + dist m (a,b)’
+ >- (rpt GEN_TAC \\
+     MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> REWRITE_TAC [reduced_metric_alt]
+ >> ‘1 - inv (1 + dist m (x,y)) + (1 - inv (1 + dist m (x,z))) =
+     1 - (inv (1 + dist m (x,y)) + inv (1 + dist m (x,z)) - 1)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> RW_TAC std_ss [REAL_LE_SUB_CANCEL1, REAL_LE_SUB_RADD]
+ (* applying METRIC_TRIANGLE *)
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘inv (1 + dist m (x,y) + dist m (x,z)) + 1’
+ >> reverse CONJ_TAC
+ >- (REWRITE_TAC [REAL_LE_RADD] \\
+     MATCH_MP_TAC REAL_LE_INV2 \\
+     rw [REAL_LE_LADD, GSYM REAL_ADD_ASSOC] \\
+     METIS_TAC [METRIC_SYM, METRIC_TRIANGLE])
+ >> Q.ABBREV_TAC ‘a = dist m (x,y)’
+ >> Q.ABBREV_TAC ‘b = dist m (x,z)’
+ >> ‘1 + a <> 0 /\ 1 + b <> 0’ by METIS_TAC [REAL_LT_IMP_NE]
+ (* LHS simplification *)
+ >> Know ‘inv (1 + a) = (1 + b) * inv ((1 + a) * (1 + b))’
+ >- (rw [REAL_INV_MUL, REAL_MUL_ASSOC] \\
+    ‘(1 + b) * inv (1 + a) * inv (1 + b) =
+     (1 + b) * inv (1 + b) * inv (1 + a)’ by REAL_ARITH_TAC >> POP_ORW \\
+     rw [REAL_MUL_RINV]) >> Rewr'
+ >> Know ‘inv (1 + b) = (1 + a) * inv ((1 + a) * (1 + b))’
+ >- (rw [REAL_INV_MUL, REAL_MUL_ASSOC, REAL_MUL_RINV])
+ >> Rewr'
+ >> rw [GSYM REAL_ADD_RDISTRIB, REAL_ARITH “1 + b + (1 + a) = 2 + a + (b :real)”]
+ >> Know ‘0 < 1 + a + b’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [Abbr ‘a’, Abbr ‘b’, GSYM REAL_ADD_ASSOC] \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> Know ‘inv (1 + a + b) + 1 = (1 + (1 + a + b)) * inv (1 + a + b)’
+ >- (REWRITE_TAC [Once REAL_ADD_RDISTRIB, REAL_MUL_LID] \\
+    ‘1 + a + b <> 0’ by PROVE_TAC [REAL_LT_IMP_NE] \\
+     rw [REAL_MUL_RINV])
+ >> Rewr'
+ >> REWRITE_TAC [REAL_ARITH “1 + (1 + a + b) = 2 + a + (b :real)”]
+ >> Know ‘0 < 2 + a + b’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘2’ >> rw [Abbr ‘a’, Abbr ‘b’, GSYM REAL_ADD_ASSOC] \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> ASM_SIMP_TAC std_ss [REAL_LE_LMUL]
+ >> MATCH_MP_TAC REAL_LE_INV2
+ >> rw [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC]
+ >> REWRITE_TAC [REAL_ARITH “1 + b + a + a * b = 1 + a + b + a * (b :real)”]
+ >> rw [REAL_LE_ADDR, Abbr ‘a’, Abbr ‘b’]
+ >> MATCH_MP_TAC REAL_LE_MUL >> rw [METRIC_POS]
+QED
+
+Theorem reduced_metric_thm :
+    !m x y. dist (reduced_metric m) (x,y) = ^bmetric_tm
+Proof
+    rw [reduced_metric_def]
+ >> ‘dist (metric (\(x,y). ^bmetric_tm)) = (\(x,y). ^bmetric_tm)’
+       by (rw [GSYM metric_tybij, reduced_metric_ismet])
+ >> rw []
+QED
+
+Theorem reduced_metric_lt_1 :
+    !(m :'a metric) x y. dist (reduced_metric m) (x,y) < 1
+Proof
+    rw [reduced_metric_thm]
+ >> Know ‘0 < 1 + dist m (q,r)’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> ‘1 + dist m (q,r) <> 0’ by rw [REAL_LT_IMP_NE]
+ >> MATCH_MP_TAC REAL_LT_1
+ >> rw [METRIC_POS]
+QED
+
+(*---------------------------------------------------------------------------*)
 (* Now define metric topology and prove equivalent definition of "open"      *)
 (*---------------------------------------------------------------------------*)
 
