@@ -338,9 +338,9 @@ val ULP_def = Define`
 val ulp_def = Define `ulp (:'t # 'w) = ULP (0w:'w word, (:'t))`
 
 Theorem ULP_positive[simp]:
-  0 < ULP (e, i) /\ 0 <= ULP (e, i)
+  0 < ULP (e, i) /\ 0 <= ULP (e, i) /\ ~(ULP (e,i) < 0) /\ ~(ULP (e,i) <= 0)
 Proof
-  csimp[REAL_LE_LT] >>
+  csimp[REAL_LE_LT, REAL_NOT_LE, REAL_NOT_LT] >>
   Cases_on ‘i’ >>
   simp[ULP_def, REAL_LT_RDIV_0, REAL_OF_NUM_POW]
 QED
@@ -352,7 +352,8 @@ Proof
 QED
 
 Theorem ulp_positive[simp]:
-  0 < ulp(:'t # 'w) /\ 0 <= ulp(:'t # 'w)
+  0 < ulp(:'t # 'w) /\ 0 <= ulp(:'t # 'w) /\ ~(ulp(:'t#'w) < 0) /\
+  ~(ulp(:'t # 'w) <= 0)
 Proof
   simp[ulp_def]
 QED
