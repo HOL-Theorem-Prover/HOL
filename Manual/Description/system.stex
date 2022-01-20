@@ -452,7 +452,26 @@ a \HOL{} identifier can be of two forms:
   \index{tokens!Unicode characters}
   \index{Unicode}
   Unicode code characters that are not letters or digits are regarded
-  as symbolic.  None of these are non-aggregating.
+  as symbolic.
+  The non-aggregating Unicode characters are listed in Table~\ref{table:non-aggregating-unicode}.
+\begin{table}
+\begin{center}
+\newcommand{\tstrut}{\rule{0pt}{2.6ex}}
+\newcommand{\bstrut}{\rule[-0.9ex]{0pt}{0pt}}
+\begin{tabular}{cc@{\qquad}cc}
+Character        & Codepoint & Character        & Codepoint \bstrut\\ \hline
+$\neg$           & U+00AC    & $\langle$        & U+27E8    \tstrut \\
+$\lceil$         & U+2308    & $\rangle$        & U+27E9 \\
+$\rceil$         & U+2309    & $\llbrace$       & U+2983 \\
+$\lfloor$        & U+230A    & $\rrbrace$       & U+2984 \\
+$\rfloor$        & U+230B    & $\llparenthesis$ & U+2987 \\
+$\llbracket$     & U+27E6    & $\rrparenthesis$ & U+2988 \\
+$\rrbracket$     & U+27E7    \\
+\end{tabular}
+\end{center}
+\caption{Non-aggregating Unicode characters}
+\label{table:non-aggregating-unicode}
+\end{table}
 
 \item A \emph{number} is a string of one or more digits. If not the
   initial digit, an underscore can be used within the sequence to
