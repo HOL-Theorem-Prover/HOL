@@ -793,12 +793,15 @@ Note that environment variables with non-empty values are also considered to be 
 
 When building complicated projects, it may be useful to have programs executed before any invocation of \holmake{} properly begins.
 This can be done through the use of \texttt{.hol\_preexec} files.
-\index{holmake preexec files@\texttt{.hol\_preexec} files (\holmake{})}
+\index{Holmake@\holmake!hol_preexec files@\texttt{.hol\_preexec} files}
+\index{pre-execution files (Holmake)@pre-execution files (\holmake{})}
 When \holmake{} begins, and before it has even begun to examine \texttt{Holmakefile}s, it scans upwards in the directory hierarchy looking for files of this name.
 This scanning will also follow \texttt{INCLUDES} directives, possibly causing a jump sideways in the hierarchy.
-When this scanning is complete, the contents of all these files will be executed as shell commands (using the \ml{OS.Process.system} command).
+
+When this scanning is complete, the contents of all these files will be executed as shell commands (using the \ml{OS.Process.system} command, which is in turn a wrapper for the standard C library \texttt{system} function).
 Each command will be interpreted in the directory containing it, and (under Unix at least), in an environment where the \texttt{HOLORIG} variable is set to the path of the directory where \holmake{} was originally invoked.
-The commands are executed in a pre-order depth-first traversal of the directory hierarchy (relying on the behaviour of \ml{String.compare} on paths).
+The commands are executed sequentially in a pre-order depth-first traversal of the directory hierarchy (relying on the behaviour of \ml{String.compare} on paths).
+If any command fails (returns a non-zero exit code), \holmake{} will abort; in this way pre-execution commands can be used as checks as well as commands that are supposed to bring about useful changes to the state of the file-system.
 
 \textbf{Warning:} This facility allows for code at a higher-level (in terms of the parent-child relationship between paths) in the file-system hierarchy to execute.
 \holmake{} will log all such executions by default, printing out the commands as it executes them.
