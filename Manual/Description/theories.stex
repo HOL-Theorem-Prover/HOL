@@ -716,9 +716,9 @@ range over outputs).\footnote{Constants declared in new theories can
   inference.}  Variables with these names can be used in the current
 system if \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, and \ml{C} are first
 hidden (see Section~\ref{hidden}).
-In fact, this happens so often with the constant \holtxt{C} that it is ``hidden'' by default.
-While hidden, it must be written in fully-qualified form, as \holtxt{combin\$C}.
-It is also printed this way, as can be seen above.
+In fact, this happens so often with the constant \holtxt{C} that the name \holtxt{C} is ``hidden'' by default.
+\index{flip, as alias for HOL constant C@\holtxt{flip}, as alias for \HOL{} constant \holtxt{C}}
+Instead, it can be written in fully-qualified form, as \holtxt{combin\$C}, or with the alias \holtxt{flip}, as can be seen above.
 %
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|)}
