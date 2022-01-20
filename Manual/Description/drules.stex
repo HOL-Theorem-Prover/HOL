@@ -254,7 +254,7 @@ in proofs, because it takes over a very large number of inferences
 which may happen in a complex and unpredictable order. It is unlike
 any other primitive or pre-defined rule, first because of the number
 of inferences it generates\footnote{The number of inferences performed
-  by this rule is generally `inflated'; \ie\ is generally greater than
+  by this rule is generally `inflated'; \ie, is generally greater than
   the length of the proof itself, if the proof could be `seen'.  This
   is because, in the current implementation, some inference is done
   during the search phase that is not necessarily in support of

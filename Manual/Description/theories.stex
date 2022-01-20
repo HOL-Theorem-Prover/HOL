@@ -300,7 +300,7 @@ The constant \holtxt{LET}
 %
 \index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!constant for}
 %
-is used in representing terms containing local variable bindings (\ie\
+is used in representing terms containing local variable bindings (\ie,
 \holtxt{let}-terms).
 %
 \index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!definitional axiom for}
@@ -496,7 +496,7 @@ Conditional & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else
 \bigskip
 
 There are constructors, destructors and indicators for all the obvious
-constructs. (Indicators, \eg\ \ml{is\_neg}, return truth values
+constructs. (Indicators, \eg, \ml{is\_neg}, return truth values
 indicating whether or not a term belongs to the syntax class in
 question.) In addition to the constructors listed in the table there
 are constructors, destructors, and indicators for pairs and lists,
@@ -530,7 +530,7 @@ are examples of \label{binder} \textit{binders}
 and represent $\forall$, $\exists$ and $\hilbert$, respectively.  If
 $c$ is declared to be a binder, then the \HOL{} parser will translate
 \holtxt{$c$ $x$.$t$} to the combination \holtxt{\$$c$(\bs$x$.$t$)}
-(\ie\ the application of the constant $c$ to the representation of the
+(\ie, the application of the constant $c$ to the representation of the
 abstraction $\lquant{x}t$).
 \index{ function abstraction binder, in HOL logic@\holtxt{\bs} (function abstraction binder, in \HOL{} logic)}
 
@@ -710,7 +710,7 @@ as built-in constants
 \index{variables, in HOL logic@variables, in \HOL{} logic!with constant names}
 %
 is sometimes inconvenient because they are often wanted as mnemonic
-names for variables (\eg\ \ml{S} to range over sets and \ml{o} to
+names for variables (\eg, \ml{S} to range over sets and \ml{o} to
 range over outputs).\footnote{Constants declared in new theories can
   freely re-use these names, with ambiguous inputs resolved by type
   inference.}  Variables with these names can be used in the current
@@ -1357,7 +1357,7 @@ In higher order logic, Peano's axioms are sufficient for developing
 number theory because addition and multiplication can be defined. In
 first order logic these must be taken as primitive.  Note also that
 \ml{INDUCTION} could not be stated as a single axiom in first order
-logic because predicates (\eg\ \holtxt{P}) cannot be quantified.
+logic because predicates (\eg, \holtxt{P}) cannot be quantified.
 
 \subsubsection{The theory \theoryimp{prim\_rec}}
 \label{sec:prim-rec}
@@ -2042,7 +2042,7 @@ sequences.
 \item [seq] Sequences and series of real numbers.
 \item [lim] Limits, continuity and differentiation.
 \item [powser] Power series.
-\item [transc] Transcendental functions, e.g., exp, sin,
+\item [transc] Transcendental functions, \eg, exp, sin,
 cos, ln, root, sqrt, pi, tan, asn, acs, atn.
 \item [real_sigma] Summation of real numbers (the $\Sigma$ operator).
 \end{description}
@@ -2181,7 +2181,7 @@ The addition of extreals is not associative and commutative in general, because
 \holtxt{PosInf + NegInf} and \holtxt{NegInf + PosInf} are not defined (see
 Table~\ref{tab:extrealAdd}). To swap the elements of additions, the
 user must avoid mixing of PosInf and NegInf in
-the involved elements (e.g., by letting one of them be normal):
+the involved elements (\eg, by letting one of them be normal):
 \begin{hol}
 \begin{alltt}
 ##thm add_comm
@@ -2216,7 +2216,7 @@ To actually work with \holtxt{EXTREAL_SUM_IMAGE},
 beside that $s$ must be a
 finite set, there must be no mixing of
 \holtxt{PosInf} and \holtxt{NegInf} in the values of \holtxt{f},
-i.e.~either all $f(i)$ are not $+\infty$ or they are not $-\infty$ ($i \in s$).
+\ie,~either all $f(i)$ are not $+\infty$ or they are not $-\infty$ ($i \in s$).
 The following theorem fully captures the properties of
 \holtxt{EXTREAL_SUM_IMAGE}:
 \begin{hol}
@@ -2239,7 +2239,7 @@ of the $n$th partial sum:
 \end{hol}
 Thus mathematically \holtxt{ext_suminf} represents \emph{positive
   series}, which always has a unique nonnegative value: \holtxt{PosInf} if the
-positive series is \emph{divergent}, other normal extreals (i.e.~\holtxt{< PosInf}) if the
+positive series is \emph{divergent}, other normal extreals (\ie,~\holtxt{< PosInf}) if the
 positive series is \emph{convergent} (on that normal extreal). A
 fundamental result for positive series says that it converges if and
 only if its $n$th partial sums are bounded:
@@ -2261,7 +2261,7 @@ $\mathbb{N}$ and $\mathbb{N}\times\mathbb{N}$:
 \paragraph{Upper and lower limits of extreal sequences}
 
 For a sequence of extreal numbers, the \emph{limes inferior} or \emph{lower limit} is
-defined as (see, e.g., Appendix A of \cite{Schilling:2017} for more details.)
+defined as (see, \eg, Appendix A of \cite{Schilling:2017} for more details.)
 \begin{hol}
 \begin{alltt}
 ##thm ext_liminf_def
@@ -2333,7 +2333,9 @@ finite Cartesian products was ported from HOL Light.}  The type \holtxt{'a ** 'b
 \begin{hol}
 $\underbrace{\ty{'a}\;\hash\;\ty{'a}\;\hash\;\cdots\;\hash\;\ty{'a}}_{\holtxt{dimindex('b)}}$
 \end{hol}
-where \holtxt{dimindex('b)} is the cardinality of \holtxt{univ(:'b)} when \ty{'b} is finite and is one when it is infinite.  Thus, \fcp{'a}{\num} is similar to \ty{'a}, and \fcp{'a}{\bool} is similar to \ty{'a}\hash\ty{'a}.  Numeral type names are supported, so one can freely work with indexing sets of any size, \eg{} the type \ty{32} has thirty-two elements and \fcp{\bool}{32} represents 32-bit words.
+where \holtxt{dimindex('b)} is the cardinality of \holtxt{univ(:'b)} when \ty{'b} is finite and is one when it is infinite.
+Thus, \fcp{'a}{\num} is similar to \ty{'a}, and \fcp{'a}{\bool} is similar to \ty{'a}\hash\ty{'a}.
+Numeral type names are supported, so one can freely work with indexing sets of any size, \eg, the type \ty{32} has thirty-two elements and \fcp{\bool}{32} represents 32-bit words.
 
 The \emph{components} of a finite Cartesian product are accessed with an
 indexing function
@@ -2379,7 +2381,7 @@ provides a flexible means for defining words -- one can supply a function
 \subsubsection{Bit theory}
 
 The theory \theoryimp{bit} defines some bit operations over the natural numbers,
-e.g.\ \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
+\eg, \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
 \holtxt{BIT\_MODIFY}. In this context, natural numbers are treated as binary words of
 unbounded length.  The operations in \theoryimp{bit} are primarily defined using \holtxt{DIV}, \holtxt{MOD} and \holtxt{EXP}.  For example, from the definition of \holtxt{BIT}, the following theorem holds:
 \begin{hol}
@@ -2421,7 +2423,7 @@ defined in \HOL{} by:
 |- !n. n2w n = FCP i. BIT i n
 \end{verbatim}
 \end{hol}
-The suffix \holtxt{w} is used to denote word literals, \eg{}
+The suffix \holtxt{w} is used to denote word literals, \eg,
 \holtxt{255w} is the same as \holtxt{n2w 255}.
 
 The function \holtxt{w2w:\worda\rarr\wordb} provides word-to-word conversion (casting):
@@ -2433,7 +2435,7 @@ The function \holtxt{w2w:\worda\rarr\wordb} provides word-to-word conversion (ca
 If $\beta$ is smaller than $\alpha$ then the higher bits of \holtxt{w} will be
 lost (it performs bit extraction), otherwise the longer word will have the same value as the original (in effect providing zero padding).
 However, if one were treating \holtxt{w} as a two's complement number then the
-word needs to be sign extended, \ie{}
+word needs to be sign extended, \ie,
 \begin{eqnarray*}
 \mbox{\small ($-$ve)}\quad 1b_{n-2} \cdots b_0\ \mapsto \ 1 \cdots 1 1 b_{n-2}
 \cdots b_0 \\
@@ -2443,7 +2445,7 @@ word needs to be sign extended, \ie{}
 The function \holtxt{sw2sw:\worda\rarr\wordb} provides this sign extending version of
 \holtxt{w2w}.
 
-A collection of operations are provided for mapping to and from strings and number (digit) lists, \eg{}
+A collection of operations are provided for mapping to and from strings and number (digit) lists, \eg,
 \begin{hol}
 \begin{verbatim}
 |- word_to_dec_string 876w = "876"
@@ -2462,7 +2464,7 @@ These function are specialised versions of \holtxt{w2s} and \holtxt{w2l} respect
 The operation \holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc} concatenates words.
 Note that the return type is not constrained.
 This means that two sixteen bit words can be concatenated to give a word of any length -- which may be smaller or larger than the expected value of 32.
-The related function \holtxt{word\_join} does return a word of the expected length, \ie{} of type \fcp{\bool}{$\alpha+\beta$};  however, the concatenation operation is more useful because we often want \fcp{\bool}{\ty{32}} and not the logically distinct \fcp{\bool}{\ty{16}+\ty{16}}.
+The related function \holtxt{word\_join} does return a word of the expected length, \ie, of type \fcp{\bool}{$\alpha+\beta$};  however, the concatenation operation is more useful because we often want \fcp{\bool}{\ty{32}} and not the logically distinct \fcp{\bool}{\ty{16}+\ty{16}}.
 
 \paragraph{Signed and unsigned words}
 
@@ -2472,7 +2474,7 @@ made explicit within the theory\footnote{Words are not tagged as being
   signed/unsigned.  Mappings to/from the integers (\holtxt{w2i} and
   \holtxt{i2w}) are provided in the theory \theoryimp{integer\_word}.}
 and all of the arithmetic operations are defined using the natural
-numbers, \ie{} via \holtxt{w2n} and \holtxt{n2w}.  In particular,
+numbers, \ie, via \holtxt{w2n} and \holtxt{n2w}.  In particular,
 addition and multiplication work naturally (have the same definition)
 under the two's complement representation.  This is not the case
 however with word-to-word conversion, orderings, division and right
@@ -2486,7 +2488,7 @@ version is more natural: \holtxt{0w <+ (255w:word8)}.
 
 \paragraph{Bit field operations}
 
-The standard Boolean bit field operations are provided, \ie{} bitwise negation
+The standard Boolean bit field operations are provided, \ie, bitwise negation
 (one's complement), conjunction, disjunction and exclusive-or.  These functions
 are defined quite naturally using the Cartesian product binder; for example,
 bitwise conjunction is defined by:
@@ -2495,7 +2497,7 @@ bitwise conjunction is defined by:
 |- !v w. v && w = FCP i. v ' i /\ w ' i .
 \end{verbatim}
 \end{hol}
-There is also a collection of word \emph{reduction} operations, which reduce bit vectors to 1-bit words, e.g.
+There is also a collection of word \emph{reduction} operations, which reduce bit vectors to 1-bit words, \eg,
 \[ \mathrm{reduce\_and}(x)\;'\; 0= \bigwedge_{i = 0}^{n - 1} x_i\ .\]
 
 The functions \holtxt{word\_lsb}, \holtxt{word\_msb} and \holtxt{word\_bit(i)}
@@ -2512,19 +2514,19 @@ bit_field_insert 5 2 a b
 \end{hol}
 is word \holtxt{b} with bits 5--2 replaced by bits 3--0 of \holtxt{a}.
 
-A word's bit ordering can be flipped over with \holtxt{word\_reverse}, \ie{} bit zero is swapped with bit $n - 1$ and so forth.
+A word's bit ordering can be flipped over with \holtxt{word\_reverse}, \ie, bit zero is swapped with bit $n - 1$ and so forth.
 
 The function
 \holtxt{word\_modify:(\num\,\rarr\,\bool\,\rarr\,\bool)\,\rarr\,\worda\,\rarr\,\worda} changes
 a word by applying a map at each bit position.
 This operation provides a very flexible and convenient mechanism for
-manipulating words, \eg{}
+manipulating words, \eg,
 \begin{hol}
 \holtxt{word\_modify ($\lambda$i b.\,if EVEN i then $\sim$b else b) w}
 \end{hol}
 negates the bits of \holtxt{w} that are in even positions.  Of course, the
 binder \holtxt{FCP} also provides a very general means to represent words using
-a predicate \eg{} \holtxt{\$FCP ODD} represents a word where all the odd bits
+a predicate; \eg, \holtxt{\$FCP ODD} represents a word where all the odd bits
 are set.
 
 \paragraph{Shifts}
@@ -3376,7 +3378,7 @@ The principle of bisimulation states that two \ml{llist} values $l_1$
 and $l_2$ are equal if (and only if) it is possible to find a
 relation $R$ such that
 \begin{itemize}
-\item $R$ relates the two values, i.e., $R\;l_1\;l_2$; and
+\item $R$ relates the two values, \ie, $R\;l_1\;l_2$; and
 \item if $R$ holds of any two values $l_3$ and $l_4$, then either
   \begin{itemize}
   \item both $l_3$ and $l_4$ are empty; or
@@ -4603,7 +4605,7 @@ relations~\cite{Mil89}
 from any labelled transition relation of the type $\alpha\to\beta\to\alpha\to\konst{bool}$.
 Suppose there is a user-defined labelled transition system (LTS) and
 \holtxt{ts} is the transition relation in it, then \holtxt{ts p l
-  q} denotes a transition from $p$ to $q$ by an action $l$, i.e.~$p \overset{l}{\longrightarrow} q$.
+  q} denotes a transition from $p$ to $q$ by an action $l$, \ie,~$p \overset{l}{\longrightarrow} q$.
 A binary relation $R$ is called a \emph{bisimulation} if \holtxt{BISIM
   ts R} holds under the following definition:
 \begin{hol}

@@ -748,7 +748,7 @@ for type operators (see [HOQ] \S 5.2).
 These are used for lifting both constants and theorems.
 
 {\it tyop\_simps\/} is a list of theorems used to simplify type operator
-relations and map functions, e.g.,
+relations and map functions, \eg,
 for pairs,
 {\tt |- (\$= \#\#\# \$=) = \$=} and
 {\tt |- (I \#\# I) = I}.
@@ -868,7 +868,7 @@ Therefore, code generated from \pmatch{} case expressions tends to be better. Ho
 
 \subsection{Decision-tree case expressions}
 By default, \HOL{} uses decision-tree case expressions.
-Let the non-terminal $\mathit{term}$ stand for any \HOL{} term and the non-terminal $\mathit{cpat}$ represent any constructor pattern, i.e. any \HOL{} term containing only literals, datatype constructors and variables.
+Let the non-terminal $\mathit{term}$ stand for any \HOL{} term and the non-terminal $\mathit{cpat}$ represent any constructor pattern, \ie, any \HOL{} term containing only literals, datatype constructors and variables.
 Then, the syntax of decision-tree case expressions is given by
 \[
 \mathit{term} ::= \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{|}^?\; \mathit{cpat}\;\texttt{=>}\;\mathit{term}\; (\texttt{|}\;\mathit{cpat}\;\texttt{=>}\;\mathit{term})^*
@@ -1225,7 +1225,7 @@ value of \holtxt{f 0 0} is \holtxt{1}. In the implementation,
 ambiguities arising from such overlapping patterns are systematically
 translated away in a pre-processing step.
 
-Another case of ambiguity in patterns is shown above: the specification is incomplete since it does not tell how \holtxt{f} should behave when applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}.
+Another case of ambiguity in patterns is shown above: the specification is incomplete since it does not tell how \holtxt{f} should behave when applied to two non-zero arguments: \eg, \holtxt{f (SUC m) (SUC n)}.
 In the implementation, such missing clauses are filled in, and have the value \holtxt{ARB}.
 This `pattern-completion' step is a way of turning descriptions of partial functions into total functions suitable for \HOL.
 However, since the user has not completely specified the function, the system takes that as a hint that the user is not interested in using the function at the missing-but-filled-in clauses, and so such clauses are dropped from the final theorem.

@@ -24,7 +24,7 @@ type conv = term -> thm
 \end{hol}
 
 \noindent For example, \ml{BETA\_CONV}\index{BETA_CONV@\ml{BETA\_CONV}}
-is an \ML\ function of type \ml{conv} (\ie\ a conversion) that
+is an \ML\ function of type \ml{conv} (\ie, a conversion) that
 expresses $\beta$-conversion in \HOL.  It produces the appropriate
 equational theorem on $\beta$-redexes and fails elsewhere.
 
@@ -1082,7 +1082,7 @@ The conversions, rules and tactics for rewriting all take a list of
 theorems\index{theorems, in HOL logic@theorems, in \HOL{} logic!as rewrite rules}
 to be used as rewrites.
 The theorems in the list need not be in simple equational form
-(\eg\ a conjunction of equations is permissible); but are
+(\eg, a conjunction of equations is permissible); but are
 converted to equational form
 automatically (and internally).
 (For example, a conjunction of equations is split into
@@ -1098,7 +1098,7 @@ described in \REFERENCE.)
 
 The prefix `\ml{PURE\_}' indicates
 that the built-in equations in \ml{basic\_rewrites} are not used,
-(\ie\ only those
+(\ie, only those
 given explicitly are used).  The prefix `\ml{ONCE\_}' indicates that the
 tool
 makes only one rewriting pass through the expression
