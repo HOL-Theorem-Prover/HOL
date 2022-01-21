@@ -308,6 +308,8 @@ val _ =
     compile [] "FunctionalRecordUpdate.sml";
     compile [] "GetOpt.sig";
     compile [] "GetOpt.sml";
+    compile [] "Holmake_types.sig";
+    compile [] "Holmake_types.sml";
     compile [] "HM_Core_Cline.sig";
     compile [] "HM_Core_Cline.sml";
     compile [] "Holdep_tokens.sig";
@@ -329,8 +331,6 @@ val _ =
     compile [] "holpathdb.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
-    compile [] "Holmake_types.sig";
-    compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
     compile [] "HM_DepGraph.sig";
