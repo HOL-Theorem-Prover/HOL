@@ -271,8 +271,8 @@ rw[FIP_def]
    >- (`?U'. U' SUBSET U /\ S' = {B} UNION U'` by
       (qexists_tac `S' DIFF {B}` >> fs[SUBSET_DEF,DIFF_DEF] >> rw[]
        >- metis_tac[]
-       >- (rw[EXTENSION,EQ_IMP_THM] >- metis_tac[]
-                                    >- (`x = B` by simp[SET_EQ_SUBSET,SUBSET_DEF] >> metis_tac[]))) >> `{B} UNION U' = B INSERT U'` by rw[EXTENSION,INSERT_DEF] >> rw[BIGINTER_INSERT] >>
+       >- (rw[EXTENSION,EQ_IMP_THM] (*>- metis_tac[]*)
+                                    >> (`x = B` by simp[SET_EQ_SUBSET,SUBSET_DEF] >> metis_tac[]))) >> `{B} UNION U' = B INSERT U'` by rw[EXTENSION,INSERT_DEF] >> rw[BIGINTER_INSERT] >>
       `B <> {}` by (SPOSE_NOT_THEN ASSUME_TAC >> `W' DIFF B = W'` by simp[DIFF_DEF] >>
       metis_tac[proper_filter_def,filter_def]) >>
       Cases_on `U' = {}`
