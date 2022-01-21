@@ -10,10 +10,11 @@
 open HolKernel Parse boolLib bossLib;
 
 open metisLib pairTheory combinTheory pred_setTheory pred_setLib jrhUtils
-     arithmeticTheory realTheory realLib transcTheory seqTheory numLib
-     real_sigmaTheory numpairTheory hurdUtils RealArith;
+     arithmeticTheory numLib numpairTheory hurdUtils whileTheory;
 
-open whileTheory iterateTheory;
+open realTheory realLib transcTheory seqTheory real_sigmaTheory RealArith;
+
+open topologyTheory iterateTheory;
 
 val _ = new_theory "util_prob";
 
@@ -721,22 +722,6 @@ Theorem REAL_ARCH_INV' : (* was: ex_inverse_of_nat_less *)
 Proof
   RW_TAC std_ss [] THEN FIRST_ASSUM (MP_TAC o MATCH_MP REAL_ARCH_INV_SUC) THEN
   METIS_TAC []
-QED
-
-Theorem ADD_POW_2 :
-    !x y :real. (x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y
-Proof
-    RW_TAC real_ss [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
-                    GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC
-QED
-
-Theorem SUB_POW_2 :
-   !x y :real. (x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y
-Proof
-    RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_ASSOC, POW_2,
-                    GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC
 QED
 
 Theorem REAL_LE_MUL' :
@@ -2371,28 +2356,6 @@ Proof
 QED
 
 Theorem REAL_RAT_DENSE = Q_DENSE_IN_REAL
-
-Theorem EXT_SKOLEM_THM :
-    !P Q. (!x. x IN P ==> ?y. Q x y) <=> ?f. !x. x IN P ==> Q x (f x)
-Proof
-    rpt STRIP_TAC
- >> reverse EQ_TAC >> rpt STRIP_TAC
- >- (Q.EXISTS_TAC `f x` \\
-     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
- >> fs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
- >> Q.EXISTS_TAC `f` >> art []
-QED
-
-Theorem EXT_SKOLEM_THM' :
-    !P Q. (!x. P x ==> ?y. Q x y) <=> ?f. !x. P x ==> Q x (f x)
-Proof
-    rpt STRIP_TAC
- >> reverse EQ_TAC >> rpt STRIP_TAC
- >- (Q.EXISTS_TAC `f x` \\
-     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
- >> fs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
- >> Q.EXISTS_TAC `f` >> art []
-QED
 
 val _ = export_theory ();
 

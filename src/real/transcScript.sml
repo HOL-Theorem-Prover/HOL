@@ -415,6 +415,8 @@ val EXP_ADD = store_thm("EXP_ADD",
   REWRITE_TAC[ONCE_REWRITE_RULE[REAL_MUL_SYM] EXP_NEG_MUL, REAL_MUL_RID] THEN
   DISCH_THEN SUBST1_TAC THEN MATCH_ACCEPT_TAC REAL_MUL_SYM);
 
+Theorem REAL_EXP_ADD = EXP_ADD
+
 val EXP_POS_LE = store_thm("EXP_POS_LE",
   “!x. &0 <= exp(x)”,
   GEN_TAC THEN
@@ -727,11 +729,15 @@ QED
 (* Some properties of roots (easier via logarithms)                          *)
 (*---------------------------------------------------------------------------*)
 
-val root = new_definition("root",
-  “root(n) x = @u. (&0 < x ==> &0 < u) /\ (u pow n = x)”);
+Definition root:
+    root(n) x = @u. (&0 < x ==> &0 < u) /\ (u pow n = x)
+End
 
-val sqrt = new_definition("sqrt",
-  “sqrt(x) = root(2) x”);
+Theorem sqrt :
+    !x. sqrt(x) = root(2) x
+Proof
+    REWRITE_TAC [sqrt_def, root]
+QED
 
 val ROOT_LT_LEMMA = store_thm("ROOT_LT_LEMMA",
   “!n x. &0 < x ==> (exp(ln(x) / &(SUC n)) pow (SUC n) = x)”,
@@ -911,78 +917,6 @@ Proof
  >> METIS_TAC [ROOT_11, REAL_LT_LE]
 QED
 
-val SQRT_0 = store_thm("SQRT_0",
-  “sqrt(&0) = &0”,
-  REWRITE_TAC[sqrt, TWO, ROOT_0]);
-
-val SQRT_1 = store_thm("SQRT_1",
-  “sqrt(&1) = &1”,
-  REWRITE_TAC[sqrt, TWO, ROOT_1]);
-
-val SQRT_POS_LT = store_thm("SQRT_POS_LT",
-  “!x. &0 < x ==> &0 < sqrt(x)”,
- REWRITE_TAC [sqrt,TWO] THEN REPEAT STRIP_TAC
-  THEN IMP_RES_TAC ROOT_LN THEN ASM_REWRITE_TAC[EXP_POS_LT]);
-
-Theorem SQRT_POS_NE :
-    !(x :real). &0 < x ==> sqrt(x) <> &0
-Proof
-    Q.X_GEN_TAC ‘x’
- >> DISCH_THEN (ASSUME_TAC o (MATCH_MP SQRT_POS_LT))
- >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
- >> MATCH_MP_TAC REAL_LT_IMP_NE
- >> ASM_REWRITE_TAC []
-QED
-
-val SQRT_POS_LE = store_thm("SQRT_POS_LE",
-  “!x. &0 <= x ==> &0 <= sqrt(x)”,
-  REWRITE_TAC[REAL_LE_LT] THEN MESON_TAC[SQRT_POS_LT, SQRT_0]);
-
-val SQRT_POW2 = store_thm("SQRT_POW2",
-  “!x. (sqrt(x) pow 2 = x) <=> &0 <= x”,
-  GEN_TAC THEN EQ_TAC THENL
-   [DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC REAL_LE_POW2,
-    REWRITE_TAC[sqrt, TWO, ROOT_POW_POS]]);
-
-val SQRT_POW_2 = store_thm("SQRT_POW_2",
-  “!x. &0 <= x ==> (sqrt(x) pow 2 = x)”,
-  REWRITE_TAC[SQRT_POW2]);
-
-val POW_2_SQRT = store_thm("POW_2_SQRT",
-  “&0 <= x ==> (sqrt(x pow 2) = x)”,
- REWRITE_TAC [sqrt,TWO,POW_ROOT_POS]);
-
-val SQRT_POS_UNIQ = store_thm("SQRT_POS_UNIQ",
-  “!x y. &0 <= x /\ &0 <= y /\ (y pow 2 = x) ==> (sqrt x = y)”,
-  REWRITE_TAC[sqrt, TWO, ROOT_POS_UNIQ]);
-
-val SQRT_MUL = store_thm("SQRT_MUL",
-  “!x y. &0 <= x /\ &0 <= y ==> (sqrt(x * y) = sqrt x * sqrt y)”,
-  REWRITE_TAC[sqrt, TWO, ROOT_MUL]);
-
-val SQRT_INV = store_thm("SQRT_INV",
-  “!x. &0 <= x ==> (sqrt (inv x) = inv(sqrt x))”,
-  REWRITE_TAC[sqrt, TWO, ROOT_INV]);
-
-val SQRT_DIV = store_thm("SQRT_DIV",
-  “!x y. &0 <= x /\ &0 <= y ==> (sqrt (x / y) = sqrt x / sqrt y)”,
-  REWRITE_TAC[sqrt, TWO, ROOT_DIV]);
-
-val SQRT_MONO_LE = store_thm("SQRT_MONO_LE",
-  “!x y. &0 <= x /\ x <= y ==> sqrt(x) <= sqrt(y)”,
-  REWRITE_TAC[sqrt, TWO, ROOT_MONO_LE]);
-
-Theorem SQRT_MONO_LT :
-    !x y. &0 <= x /\ x < y ==> sqrt(x) < sqrt(y)
-Proof
-    rpt STRIP_TAC
- >> fs [REAL_LT_LE]
- >> CONJ_TAC >- (MATCH_MP_TAC SQRT_MONO_LE >> art [])
- >> ‘0 <= y’ by PROVE_TAC [REAL_LE_TRANS]
- >> CCONTR_TAC >> fs []
- >> METIS_TAC [SQRT_POW2]
-QED
-
 val lem = prove(Term`0<2:num`, REWRITE_TAC[TWO,LESS_0]);
 
 Theorem EVEN_MOD[local] :
@@ -1033,33 +967,6 @@ Proof
    PAT_X_ASSUM (Term `& 0 = _`) (SUBST_ALL_TAC o SYM)
    THEN REWRITE_TAC [POW_0, TWO, REAL_MUL_LZERO]]]
 QED
-
-val SQRT_EQ = store_thm("SQRT_EQ",
-  “!x y. (x pow 2 = y) /\ (&0 <= x) ==> (x = (sqrt(y)))”,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  SUBGOAL_THEN “&0 <= y” ASSUME_TAC THENL
-   [FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[POW_2, REAL_LE_SQUARE],
-    ALL_TAC] THEN
-  MP_TAC(SPECL [“1:num”, “y:real”] ROOT_POW_POS) THEN
-  ASM_REWRITE_TAC[GSYM(TWO), GSYM sqrt] THEN
-  FIRST_ASSUM(fn th => GEN_REWR_TAC (LAND_CONV o RAND_CONV)  [SYM th]) THEN
-  GEN_REWR_TAC LAND_CONV  [GSYM REAL_SUB_0] THEN
-  REWRITE_TAC[POW_2, GSYM REAL_DIFFSQ, REAL_ENTIRE] THEN
-  REWRITE_TAC[REAL_SUB_0] THEN
-  DISCH_THEN DISJ_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN “&0 <= sqrt(y)” ASSUME_TAC THENL
-   [REWRITE_TAC[sqrt, TWO] THEN MATCH_MP_TAC ROOT_POS THEN
-    ASM_REWRITE_TAC[], ALL_TAC] THEN
-  SUBGOAL_THEN “x = &0” SUBST_ALL_TAC THENL
-   [ASM_REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
-    GEN_REWR_TAC I  [TAUT_CONV “a:bool = ~~a”] THEN
-    PURE_REWRITE_TAC[REAL_NOT_LE] THEN DISCH_TAC THEN
-    UNDISCH_TAC “sqrt(y) + x = &0” THEN REWRITE_TAC[] THEN
-    MATCH_MP_TAC REAL_POS_NZ THEN
-    MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC “sqrt(y)” THEN
-    ASM_REWRITE_TAC[REAL_LT_ADDR],
-    UNDISCH_TAC “&0 pow 2 = y” THEN REWRITE_TAC[POW_0, TWO] THEN
-    DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[SQRT_0]]);
 
 (*---------------------------------------------------------------------------*)
 (* Basic properties of the trig functions                                    *)

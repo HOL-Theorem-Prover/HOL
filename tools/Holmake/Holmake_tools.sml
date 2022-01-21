@@ -577,6 +577,10 @@ fun toString {relpath,absdir} =
 
 fun toAbsPath {relpath,absdir} = absdir
 
+fun getParent {relpath,absdir} =
+    {relpath = Option.map OS.Path.getParent relpath,
+     absdir = OS.Path.getParent absdir}
+
 fun pretty_dir d =
   let
     val abs = toAbsPath d
@@ -885,6 +889,8 @@ in
 end
 
 type 'a set = 'a Binaryset.set
+val empty_strset = Binaryset.empty String.compare
+fun set_member s m = Binaryset.member(s,m)
 fun set_diff s1 s2 = Binaryset.difference(s1,s2)
 fun set_union s1 s2 = Binaryset.union(s1,s2)
 fun set_add i s = Binaryset.add(s,i)
@@ -953,6 +959,15 @@ fun generate_all_plausible_targets warn first_target =
           listItems (set_addList initially empty_tgtset)
         end
 
+fun front_last xs =
+    let fun recur A [] = raise Empty
+          | recur A [x] = (List.rev A, x)
+          | recur A (x::xs) = recur (x::A) xs
+    in
+      recur [] xs
+    end
+
+fun front xs = #1 (front_last xs)
 
 
 end (* struct *)

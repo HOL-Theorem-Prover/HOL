@@ -23,6 +23,13 @@ New features:
 - A `HOL_CONFIG` environment variable is considered to allow for a custom `hol-config` configuration at a non-standard location or potentially ignoring any present hol-config.
   If the variable is set, any other hol-config file will be ignored. If the value of `HOL_CONFIG` is a readable file, it will be used.
 
+- There is a new theorem attribute, `unlisted`, which causes theorems to be saved/stored in the usual fashion but kept somewhat hidden from user-view.
+  Such theorems can be accessed with `DB.fetch`, and may be passed to other tools though the action of other attributes, but will not appear in the results of `DB.find` and `DB.match`, and will not occur as SML bindings in theory files.
+
+- `Holmake` will now look for `.hol_preexec` files in the hierarchy surrounding its invocation.
+  The contents of such files will be executed by the shell before `Holmake` begins its work.
+  See the DESCRIPTION manual for more.
+
 
 Bugs fixed:
 -----------
@@ -77,6 +84,15 @@ Incompatibilities:
         This means that instead of returning either `SOME result` or `NONE`, PEG’s now return a custom `Success`/`Failure` data type with values attached to both constructors.
 
 *   The `MEMBER_NOT_EMPTY` theorem in `bagTheory` has been renamed to `BAG_MEMBER_NOT_EMPTY` to avoid a name-clash with a theorem of the same name in `pred_setTheory`.
+
+*   The “global” simplification tactics (`gs`, `gvs` *et al*) have been adjusted to simplify older assumptions before later ones.
+    This will keep assumption *A* in the list if it is newer (more recently added) than, and equivalent to, older assumption *B*.
+    The new `rgs` is like the old `gs`.
+
+*   The infix operator `..` from `iterateTheory` is now called `numseg` and is parsed/printed as `{m .. n}` (a “close-fix” operator).
+    This brings the syntax into line with `listRangeTheory`’s `[m..n]` syntax.
+    In many contexts, expressions with this had to use parentheses as delimiters, and so fixing the incompatibility will require turning something like `(t1..t2)` into `{t1..t2}`.
+    However, the old style did allow `e ∈ m..n`, which no longer works without the braces.
 
 * * * * *
 

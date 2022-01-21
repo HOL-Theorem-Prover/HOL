@@ -4637,9 +4637,11 @@ val word_rrx_word_T = Q.store_thm("word_rrx_word_T",
     [word_T, word_rrx_def, word_lsb_word_T, lsr_1_word_T, word_H, ZERO_SHIFT,
      REWRITE_RULE [SYM WORD_NEG_1] word_T])
 
-val word_T_not_zero = Q.store_thm("word_T_not_zero",
-  `~(- 1w = 0w)`,
-  SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T, word_0])
+Theorem word_T_not_zero[simp]:
+  -1w <> 0w
+Proof
+  SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T, word_0]
+QED
 
 Theorem WORD_LS_word_T[simp]:
   (!n. - 1w <=+ n <=> (n = - 1w)) /\ (!n. n <=+ - 1w)
@@ -4763,7 +4765,7 @@ val bit_count_is_zero = Q.store_thm("bit_count_is_zero",
     Theorems: sets of words
    ------------------------------------------------------------------------- *)
 
-Theorem WORD_FINITE:       !s:'a word set. FINITE s
+Theorem WORD_FINITE[simp]:       !s:'a word set. FINITE s
 Proof
   STRIP_TAC
   \\ MATCH_MP_TAC ((ONCE_REWRITE_RULE [CONJ_COMM] o

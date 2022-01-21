@@ -30,7 +30,6 @@ val (root_tm, mk_root, dest_root, is_root) = binop "root"
 val (rpow_tm, mk_rpow, dest_rpow, is_rpow) = binop "rpow"
 val (rsum_tm, mk_rsum, dest_rsum, is_rsum) = binop "rsum"
 val (sin_tm, mk_sin, dest_sin, is_sin) = monop "sin"
-val (sqrt_tm, mk_sqrt, dest_sqrt, is_sqrt) = monop "sqrt"
 val (tan_tm, mk_tan, dest_tan, is_tan) = monop "tan"
 val (tdiv_tm, mk_tdiv, dest_tdiv, is_tdiv) = binop "tdiv"
 

@@ -122,7 +122,7 @@ Proof METIS_TAC [option_induction]
 QED
 
 Theorem EXISTS_OPTION:
-  (?opt. P opt) = P NONE \/ ?x. P (SOME x)
+  (?opt. P opt) <=> P NONE \/ ?x. P (SOME x)
 Proof METIS_TAC [option_nchotomy]
 QED
 

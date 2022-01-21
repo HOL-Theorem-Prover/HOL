@@ -322,8 +322,8 @@ val cyclic_gen_power_order = store_thm(
     and (gen z).id = #e           by generated_property
    Therefore g = (gen z)          by monoid_component_equality
 *)
-val xcyclic_generated_by_gen = store_thm(
-  "xcyclic_generated_by_gen",
+val cyclic_generated_by_gen = store_thm(
+  "cyclic_generated_by_gen",
   ``!g:'a group. cyclic g ==> (g = (gen (cyclic_gen g)))``,
   rpt strip_tac >>
   `Group g` by rw[] >>

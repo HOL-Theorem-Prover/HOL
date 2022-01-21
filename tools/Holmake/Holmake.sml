@@ -101,23 +101,79 @@ fun getcline args =
 val (master_cline_options, cline_vars, targets) =
   getcline (CommandLine.arguments())
 
+val master_cleanp = List.exists (fn s => member s targets)
+                                ["clean", "cleanDeps", "cleanAll"]
+
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
-
-val usepfx = #jobs (#core master_cline_nohmf) = 1
 
 fun read_holpathdb() =
     let
       val holpathdb_extensions =
-          holpathdb.search_for_extensions (fn s => []) [OS.FileSys.getDir()]
+          holpathdb.search_for_extensions (fn s => [])
+            {starter_dirs = [OS.FileSys.getDir()], skip = holpathdb.db_dirs()}
       val _ = List.app holpathdb.extend_db holpathdb_extensions
       open Holmake_types
-      fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
+      fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
     in
-      List.foldl foldthis
-                 (HM_BaseEnv.make_base_env master_cline_nohmf)
-                 holpathdb_extensions
+      holpathdb.fold foldthis (HM_BaseEnv.make_base_env master_cline_nohmf)
     end
+
+val master_cline_option_value = #core master_cline_nohmf
+val usepfx = #jobs master_cline_option_value = 1
+val {warn=warn0,info=info0,diag=diag0,...} =
+      output_functions {chattiness = chattiness_level master_cline_option_value,
+                        debug = #debug master_cline_option_value,
+                        usepfx = usepfx}
+
+val _ = diag0 "startup"
+          (fn _ => "Started and have initial diagnostic/messaging functions")
+
+(* execute pre-execs *)
+val _ =
+    if master_cleanp orelse #help master_cline_option_value then ()
+    else
+      let
+        val preexec_map =
+            holpathdb.files_upward_in_hierarchy
+              ReadHMF.find_includes
+              {diag = diag0 "read-preexecs"}
+              {filename = ".hol_preexec",
+               starter_dirs = [OS.FileSys.getDir()],
+               skip = empty_strset}
+
+        val _ = diag0 "startup"
+                      (fn _ => "Read preexec_map, with " ^
+                               Int.toString (Binarymap.numItems preexec_map) ^
+                               " entries")
+        val (msg,pfx) =
+            if #no_preexecs master_cline_option_value then
+              (info0, "Not executing")
+            else (warn0, "Executing")
+        val esc = String.translate (fn #"'" => "'\\''" | c => str c)
+        fun appthis (k,c0) =
+            let
+              open Substring
+              val c =
+                  (if Systeml.OS = "winNT" then ""
+                   else "HOLORIG="^esc (hmdir.toAbsPath original_dir) ^ " ") ^
+                  string (dropr Char.isSpace (full c0))
+              val _ =
+                  msg (pfx ^ " " ^ OS.Path.concat(k,".hol_preexec") ^
+                       ":\n  " ^ c)
+      in
+        if #no_preexecs master_cline_option_value then ()
+        else
+          let val _ = OS.FileSys.chDir k
+              val res = OS.Process.system c
+          in
+            if OS.Process.isSuccess res then hmdir.chdir original_dir
+            else die "** FAILED"
+          end
+            end
+      in
+        Binarymap.app appthis preexec_map
+      end
 
 (* The hmftext is the form of the target as it appears in the Holmakefile *)
 type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
@@ -142,14 +198,10 @@ fun extend_with_cline_vars env =
       HM_Core_Cline.extend_env (#core master_cline_nohmf) env
     end
 
+
 local
   open hm_target
   val base = extend_with_cline_vars (read_holpathdb())
-  val coption_value = #core master_cline_nohmf
-  val (initial_outputfns as {warn,tgtfatal,diag,info,chatty}) =
-      output_functions {chattiness = chattiness_level coption_value,
-                        debug = #debug coption_value,
-                        usepfx = usepfx}
 
   val hmcache = ref (Binarymap.mkDict String.compare)
   val default = (base,empty_trdb,NONE)
@@ -157,7 +209,7 @@ local
       if OS.FileSys.access("Holmakefile", [OS.FileSys.A_READ]) then
         let
           val (env, rdb, tgt0) =
-              ReadHMF.diagread {warn=warn,die=die,info=info}
+              ReadHMF.diagread {warn=warn0,die=die,info=info0}
                                "Holmakefile"
                                (extend_with_cline_vars (read_holpathdb()))
               handle Fail s =>
@@ -343,12 +395,19 @@ fun print_set ds =
   "{" ^ set_concatWith hmdir.pretty_dir ", " ds ^ "}"
 
 type incmap = (hmdir.t, {incs:dirset,pres:dirset}) Binarymap.dict
-type dirinfo = {incdirmap : incmap, visited : hmdir.t Binaryset.set}
+type dirinfo = {incdirmap : incmap, visited : hmdir.t Binaryset.set,
+                ancestors : hmdir.t list (* most recent hd of list *)}
 type 'a hmfold =
      {includes : string list, preincludes : string list} ->
      (string -> unit) ->
      hmdir.t ->
      'a -> 'a
+
+fun find_upto cmp pfx x els =
+    case els of
+        [] => NONE
+      | h::t => if cmp (h,x) = EQUAL then SOME (h::pfx)
+                else find_upto cmp (h::pfx) x t
 (* ----------------------------------------------------------------------
 
     Parameters
@@ -371,7 +430,7 @@ type 'a hmfold =
    ---------------------------------------------------------------------- *)
 fun 'a recursively getnewincs dsopt {outputfns,verb,hm,dirinfo,dir,data} =
 let
-  val {incdirmap,visited} = dirinfo : dirinfo
+  val {incdirmap,visited,ancestors} = dirinfo : dirinfo
   val hm : 'a hmfold = hm
   val {warn,diag,info,chatty,...} : output_functions = outputfns
   val {includes=incset, preincludes = preincset} = getnewincs dir
@@ -394,7 +453,23 @@ let
   val _ = diag (fn _ =>
                    "recursively: incdmap on dir " ^ hmdir.pretty_dir dir ^
                    " = " ^ print_set (#incs (idm_lookup incdirmap dir)))
+  val _ = diag (fn _ =>
+                   "recursively: ancestor chain = " ^
+                   String.concatWith ", " (map hmdir.pretty_dir ancestors))
   fun recurse (acc as {visited,incdirmap,data:'a}) newdir = let
+    val _ =
+        case find_upto hmdir.compare [newdir] newdir ancestors of
+            NONE => ()
+          | SOME badchain =>
+            let
+              val diag = if verb = "Cleaning" then warn
+                         else (fn s => (#tgtfatal outputfns s;
+                                        OS.Process.exit OS.Process.failure))
+            in
+              diag ("INCLUDES chain loops:\n  " ^
+                    String.concatWith " -->\n  "
+                                      (map hmdir.pretty_dir badchain))
+            end
   in
     if Binaryset.member(visited, newdir) then
       (* even if you don't want to rebuild newdir, you still want to learn
@@ -413,7 +488,10 @@ let
       val _ = diag (fn _ => "recursively: Visited set = " ^ print_set visited)
       val _ = OS.FileSys.chDir (hmdir.toAbsPath newdir)
       val result =
-          case recur_abbrev newdir data {incdirmap=incdirmap, visited=visited}of
+          case recur_abbrev newdir data
+                            {incdirmap=incdirmap, visited=visited,
+                             ancestors = newdir :: ancestors}
+           of
               {visited,incdirmap = idm0,data=data'} =>
               {visited = visited,
                incdirmap = extend_idmap dir (idm_lookup idm0 newdir) idm0,
@@ -1011,7 +1089,8 @@ fun create_complete_graph cline_incs idm =
           recursively getnewincs (SOME cline_incs) {
             outputfns = outputfns, verb = "Scanning",
             hm=extend_graph_in_dir,
-            dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare},
+            dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare,
+                     ancestors = [original_dir]},
             dir = d,
             data = HM_DepGraph.empty()
           }
@@ -1150,7 +1229,7 @@ fun work() =
               outputfns = outputfns, verb = "Cleaning",
               hm = (fn _ => fn _ => fn _ => fn _ =>
                        List.app (ignore o do_clean_target) cleanTargets),
-              dirinfo = {incdirmap=idmap0,
+              dirinfo = {incdirmap=idmap0, ancestors = [original_dir],
                          visited = Binaryset.empty hmdir.compare},
               dir = original_dir,
               data = ()

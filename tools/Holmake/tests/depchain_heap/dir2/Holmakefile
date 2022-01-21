@@ -1,2 +1,11 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+
+depchain2-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+endif
+
+EXTRA_CLEANS = depchain2-selftest.log selftest.exe

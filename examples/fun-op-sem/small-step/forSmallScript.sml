@@ -550,40 +550,26 @@ val sem_e_big_small_lem = Q.prove(
      qabbrev_tac`ls2 = (MAP (λst,e'. (st,Add (Num i) e')) tr')`>>
      qabbrev_tac`ls = BUTLASTN 1 ls1 ++ ls2`>>
      fs[res_rel_e_cases]>>
-     `LAST ls1 = HD ls2` by
-       (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
-     `ls = ls1 ++ (TL ls2)` by
-       (unabbrev_all_tac>>
-       fs[LAST_HD_eq])
-     >-
-       (qexists_tac`ls ++ [(r'.store,Num(i+i'))]`>>reverse (rw[])
-       >-
-         fs[Abbr`ls1`,HD_MAP,HD_APPEND]
-       >>
-       match_mp_tac check_trace_append2>>fs[check_trace_def]>>rw[]
-       >-
-         (`check_trace (λst. some st'. step_e st st') ls2` by
-           fs[check_trace_add2,Abbr`ls2`]>>
-         Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
-         >-
-           metis_tac[check_trace_add1]
-         >>
-         match_mp_tac check_trace_append2>>fs[check_trace_def]>>rw[]>>
-         fs[Abbr`ls1`]>>metis_tac[check_trace_add1])
-       >-
-         (qsuff_tac `LAST (ls1 ++ TL ls2) = LAST ls2`
-         >-
-         (fs[Abbr`ls2`,LAST_APPEND,LAST_MAP]>>rw[]>>
-         `step_e (r'.store,Add (Num i) (Num i')) (r'.store,Num (i+i'))` by
-           simp[Once step_e_cases]>>
-         fs[some_def]>>
-         metis_tac[step_e_determ])
-         >>
-         rfs[markerTheory.Abbrev_def,LAST_APPEND]))
-     >>
-       qexists_tac`ls`>>rw[]
-       >-
-         (unabbrev_all_tac>>fs[])
+     `LAST ls1 = HD ls2` by (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
+     `ls = ls1 ++ (TL ls2)` by (unabbrev_all_tac>> fs[LAST_HD_eq])
+     >-(qexists_tac`ls ++ [(r'.store,Num(i+i'))]`>>reverse (rw[])
+        >- fs[Abbr`ls1`,HD_MAP,HD_APPEND] >>
+        match_mp_tac check_trace_append2>>fs[check_trace_def]>>rw[]
+        >- (`check_trace (λst. some st'. step_e st st') ls2` by
+              fs[check_trace_add2,Abbr`ls2`]>>
+            Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
+            >- metis_tac[check_trace_add1] >>
+            match_mp_tac check_trace_append2>>fs[check_trace_def]>>rw[]>>
+            fs[Abbr`ls1`]>>metis_tac[check_trace_add1])
+        >- (qsuff_tac `LAST (ls1 ++ TL ls2) = LAST ls2`
+            >- (fs[Abbr`ls2`,LAST_APPEND,LAST_MAP]>>rw[]>>
+                `step_e (r'.store,Add (Num i) (Num i')) (r'.store,Num (i+i'))`
+                  by simp[Once step_e_cases]>>
+                fs[some_def]>>
+                metis_tac[step_e_determ]) >>
+            qpat_x_assum ‘BUTLASTN _ _ ++ _ = _’ (REWRITE_TAC o single o SYM)>>
+            rfs[markerTheory.Abbrev_def,LAST_APPEND])) >>
+      qexists_tac`ls`>>rw[] >- (unabbrev_all_tac>>fs[])
        >-
          (`check_trace (λst. some st'. step_e st st') ls2` by
            fs[check_trace_add2,Abbr`ls2`]>>
@@ -596,13 +582,15 @@ val sem_e_big_small_lem = Q.prove(
        >-
          fs[HD_APPEND,Abbr`ls1`,HD_MAP]
        >>
+       qpat_x_assum ‘BUTLASTN _ _ ++ _ = _’ (REWRITE_TAC o single o SYM) >>
        unabbrev_all_tac>>
        fs[HD_MAP,HD_APPEND,LAST_APPEND,LAST_MAP,is_val_e_def]>>
        fs[no_step_e_add2])
    >>
      last_x_assum(qspec_then`s` assume_tac)>>rfs[]>>
      qexists_tac`(MAP (λst,e. (st,Add e e')) tr)`>>
-     fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,check_trace_add1,no_step_e_add1])
+     fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,check_trace_add1,
+        no_step_e_add1])
  >-
    (EVERY_CASE_TAC>>fs[res_rel_e_cases,sem_e_not_break,sem_e_not_timeout]>>
    first_x_assum(qspec_then`s'` assume_tac)>>rfs[]
@@ -1134,6 +1122,6 @@ val sem_equiv_thm = Q.store_thm ("sem_equiv_thm",
 val hideseq_def = Define`
   hideseq = Seq`
 
-val _ = save_thm ("step_t_rules_hideseq",step_t_rules |> REWRITE_RULE[GSYM hideseq_def])
+Theorem step_t_rules_hideseq = step_t_rules |> REWRITE_RULE[GSYM hideseq_def]
 
 val _ = export_theory ();

@@ -1,0 +1,14 @@
+ifdef POLY
+HOLHEAP = $(proj2)/heaptest/fakeheap
+
+all:
+	@echo "heapname is reported as `$(HOLDIR)/bin/heapname`"
+	[ `$(HOLDIR)/bin/heapname` = "$(HOLDIR)/tools/Holmake/tests/holpathdb/proj2/heaptest/fakeheap" ]
+
+fakeheap:
+	touch fakeheap
+
+.PHONY: all
+
+endif
+EXTRA_CLEANS = fakeheap

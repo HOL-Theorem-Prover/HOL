@@ -1062,15 +1062,15 @@ end
 
 val LIST_LENGTH_0  = save_thm ("LIST_LENGTH_0",  LIST_CONJ (mk_length_upto_n_thms 0));
 val LIST_LENGTH_1  = save_thm ("LIST_LENGTH_1",  LIST_CONJ (mk_length_upto_n_thms 1));
-val LIST_LENGTH_2  = save_thm ("LIST_LENGTH_2",  LIST_CONJ (mk_length_upto_n_thms 2));
-val LIST_LENGTH_3  = save_thm ("LIST_LENGTH_3",  LIST_CONJ (mk_length_upto_n_thms 3));
-val LIST_LENGTH_4  = save_thm ("LIST_LENGTH_4",  LIST_CONJ (mk_length_upto_n_thms 4));
-val LIST_LENGTH_5  = save_thm ("LIST_LENGTH_5",  LIST_CONJ (mk_length_upto_n_thms 5));
-val LIST_LENGTH_7  = save_thm ("LIST_LENGTH_7",  LIST_CONJ (mk_length_upto_n_thms 7));
-val LIST_LENGTH_10 = save_thm ("LIST_LENGTH_10", LIST_CONJ (mk_length_upto_n_thms 10));
-val LIST_LENGTH_15 = save_thm ("LIST_LENGTH_15", LIST_CONJ (mk_length_upto_n_thms 15));
-val LIST_LENGTH_20 = save_thm ("LIST_LENGTH_20", LIST_CONJ (mk_length_upto_n_thms 20));
-val LIST_LENGTH_25 = save_thm ("LIST_LENGTH_25", LIST_CONJ (mk_length_upto_n_thms 25));
+Theorem LIST_LENGTH_2[unlisted]  = LIST_CONJ (mk_length_upto_n_thms 2)
+Theorem LIST_LENGTH_3[unlisted] = LIST_CONJ (mk_length_upto_n_thms 3)
+Theorem LIST_LENGTH_4[unlisted] = LIST_CONJ (mk_length_upto_n_thms 4)
+Theorem LIST_LENGTH_5[unlisted] = LIST_CONJ (mk_length_upto_n_thms 5)
+Theorem LIST_LENGTH_7[unlisted] = LIST_CONJ (mk_length_upto_n_thms 7)
+Theorem LIST_LENGTH_10[unlisted] = LIST_CONJ (mk_length_upto_n_thms 10)
+Theorem LIST_LENGTH_15[unlisted] = LIST_CONJ (mk_length_upto_n_thms 15)
+Theorem LIST_LENGTH_20[unlisted] = LIST_CONJ (mk_length_upto_n_thms 20)
+Theorem LIST_LENGTH_25[unlisted] = LIST_CONJ (mk_length_upto_n_thms 25)
 
 val LIST_LENGTH_COMPARE_SUC = store_thm ("LIST_LENGTH_COMPARE_SUC",
 ``(SUC x <= LENGTH l <=> ?l' e1. x <= LENGTH l' /\ (l = e1::l')) /\
@@ -1083,9 +1083,10 @@ SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]);
 (* Useful rewrites *)
 val HD_TL_EQ_TAC = REPEAT (Cases THEN SIMP_TAC list_ss [] THEN SPEC_ALL_TAC)
 
-val HD_TL_EQ_1 = prove (
-  ``!l. (HD l :: TL l = l) <=> l <> []``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_1[simp]:
+  !l. (HD l :: TL l = l) <=> l <> []
+Proof HD_TL_EQ_TAC
+QED
 
 val HD_TL_EQ_2 = prove (
   ``!l. (HD l :: (HD (TL l)) :: (TL (TL l)) = l) <=> (LENGTH l > 1)``,
@@ -1130,9 +1131,16 @@ val HD_TL_EQ_9 = prove (
 HD_TL_EQ_TAC)
 
 
-val HD_TL_EQ_NIL_1 = prove (
-  ``!l. (HD l :: [] = l) <=> (LENGTH l = 1)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_NIL_1[local]:
+  !l. ([HD l] = l) <=> (LENGTH l = 1)
+Proof HD_TL_EQ_TAC
+QED
+
+Theorem HD_TL_EQ_NIL_1_bothways[simp] =
+        CONJ HD_TL_EQ_NIL_1
+             (CONV_RULE (STRIP_QUANT_CONV
+                         (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
+                        HD_TL_EQ_NIL_1)
 
 val HD_TL_EQ_NIL_2 = prove (
   ``!l. (HD l :: (HD (TL l)) :: [] = l) <=> (LENGTH l = 2)``,
@@ -1199,8 +1207,8 @@ val HD_TL_EQ_THMS_1 = [
 val HD_TL_EQ_THMS_2 = map (
  CONV_RULE (QUANT_CONV (LHS_CONV (REWR_CONV EQ_SYM_EQ)))) HD_TL_EQ_THMS_1
 
-val HD_TL_EQ_THMS = save_thm ("HD_TL_EQ_THMS", LIST_CONJ
-  (HD_TL_EQ_THMS_1 @ HD_TL_EQ_THMS_2))
+Theorem HD_TL_EQ_THMS[unlisted] =
+        LIST_CONJ (HD_TL_EQ_THMS_1 @ HD_TL_EQ_THMS_2)
 
 val SOME_THE_EQ = store_thm ("SOME_THE_EQ",
   ``!opt. (SOME (THE opt) = opt) <=> IS_SOME opt``,

@@ -17,8 +17,8 @@ sig
    types       : (string*int) list,
    constants   : (string*hol_type) list,
    axioms      : (string * thm) list,
-   definitions : (string * thm) list,
-   theorems    : (string * thm) list,
+   definitions : (string * thm * {private:bool}) list,
+   theorems    : (string * thm * {private:bool}) list,
    struct_ps   : (unit -> PP.pretty) option list,
    struct_pcps : (unit -> PP.pretty) list,
    mldeps      : string list,
@@ -34,8 +34,8 @@ sig
               {name        : string,
                parents     : string list,
                axioms      : (string * thm) list,
-               definitions : (string * thm) list,
-               theorems    : (string * thm) list,
+               definitions : (string * thm * {private:bool}) list,
+               theorems    : (string * thm * {private:bool}) list,
                sig_ps      : (unit -> PP.pretty) option list} PP.pprinter
 
  val pp_struct : struct_info_record PP.pprinter

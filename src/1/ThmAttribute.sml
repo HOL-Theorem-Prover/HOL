@@ -8,7 +8,7 @@ struct
 
   val funstore = ref (Map.empty : attrfuns Map.table)
 
-  val reserved_attrnames = ["local", "private", "nocompute", "schematic"]
+  val reserved_attrnames = ["local", "unlisted", "nocompute", "schematic"]
 
   fun okchar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
   fun illegal_attrname s = Lib.mem s reserved_attrnames orelse

@@ -1,6 +1,16 @@
 INCLUDES = $(HOLDIR)/tools/cmp $(proj2)
 
+all: selftest.exe
+.PHONY: all
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = output selftest.exe
+EXTRA_CLEANS = output selftest.exe holpathdb-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: holpathdb-selftest.log
+
+holpathdb-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

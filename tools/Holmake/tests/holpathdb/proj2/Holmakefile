@@ -1,5 +1,5 @@
-CLINE_OPTIONS = --qof
-INCLUDES = ../proj1
+CLINE_OPTIONS = -r
+INCLUDES = ../proj1 heaptest
 
 all: $(DEFAULT_TARGETS) $(HOLHEAP) test
 .PHONY: all

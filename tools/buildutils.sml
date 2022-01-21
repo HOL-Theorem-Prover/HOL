@@ -458,13 +458,19 @@ in
   else []
 end
 
+(* this function only used for finding information used by clean-ing actions;
+   we want cleaning to follow all links, even those hidden by conditionals
+   that look at HOLSEFLTESTLEVEL.  On the assumption that the INCLUDES
+   set grows monotonically, we set to 3 to get all extra INCLUDES.
+*)
 fun hmakefile_data HOLDIR =
     if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
         open Holmake_types
         fun quietly s = ()
         val qdiags = {info = quietly, die = quietly, warn = quietly}
-        val (env, _, _) =
-            ReadHMF.diagread qdiags "Holmakefile" (base_environment())
+        val env0 =
+            base_environment() |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
+        val (env, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in

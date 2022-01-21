@@ -8,7 +8,7 @@
     (bossLib.list_ss, boolSimps.COND_elim_ss), wordsLib.WORD_ss),
     wordsLib.WORD_BIT_EQ_ss)) [boolTheory.EQ_SYM_EQ]
   val A = intLib.ARITH_PROVE
-  val R = realLib.REAL_ARITH
+  val R = RealArith.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
   val B = blastLib.BBLAST_PROVE
 

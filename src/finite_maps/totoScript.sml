@@ -27,6 +27,8 @@ val _ = new_theory "toto";
 val _ = ParseExtras.temp_loose_equality()
 (* My habitual abbreviations: *)
 
+Type reln = “:'a -> 'a -> bool”
+
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
@@ -50,9 +52,11 @@ fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
 (* StrongLinearOrder part, which might be supplied from elsewhere.  *)
 (* **************************************************************** *)
 
-val StrongLinearOrderExists = maybe_thm ("StrongLinearOrderExists",
-``?R:'a reln. StrongLinearOrder R``,
-METIS_TAC [wotTheory.StrongWellOrderExists]);
+Theorem StrongLinearOrderExists:
+  ?R:'a reln. StrongLinearOrder R
+Proof
+  METIS_TAC [wellorderTheory.StrongWellOrderExists]
+QED
 
 (* Define cpn: *)
 

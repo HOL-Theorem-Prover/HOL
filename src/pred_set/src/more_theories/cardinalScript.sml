@@ -1,3 +1,21 @@
+(* ========================================================================= *)
+(*  A basic theory of the cardinality partial order and equivalence          *)
+(*  relations (by Michael Norrish, see also README)                          *)
+(* ========================================================================= *)
+(*  Basic notions of cardinal arithmetic (by John Harrison from HOL-Light)   *)
+(* ------------------------------------------------------------------------- *)
+(*  HOL-Light's Cardinal Theory (Library/card.ml)                            *)
+(*                                                                           *)
+(*        (c) Copyright 2015                                                 *)
+(*                       Muhammad Qasim,                                     *)
+(*                       Osman Hasan,                                        *)
+(*                       Hardware Verification Group,                        *)
+(*                       Concordia University                                *)
+(*                                                                           *)
+(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
+(*                                                                           *)
+(* ========================================================================= *)
+
 open HolKernel Parse boolLib bossLib mesonLib
 
 open boolSimps pred_setTheory set_relationTheory tautLib
@@ -1631,24 +1649,29 @@ val bijections_cardeq = Q.store_thm(
   >- (first_x_assum (qspecl_then [‘T’, ‘a’] mp_tac) >> simp[] >> rw[])
   >- (first_x_assum (qspecl_then [‘F’, ‘a’] mp_tac) >> simp[] >> rw[]));
 
-(* ========================================================================= *)
-(*                                                                           *)
-(*               HOL-light's Cardinal Theory (Library/card.ml)               *)
-(*                                                                           *)
-(*        (c) Copyright 2015                                                 *)
-(*                       Muhammad Qasim,                                     *)
-(*                       Osman Hasan,                                        *)
-(*                       Hardware Verification Group,                        *)
-(*                       Concordia University                                *)
-(*                                                                           *)
-(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
-(*                                                                           *)
-(*      (merged into HOL4's cardinalTheory by Chun Tian <ctian@fbk.eu>)      *)
-(* ========================================================================= *)
-
 (* ------------------------------------------------------------------------- *)
 (* misc.                                                                     *)
 (* ------------------------------------------------------------------------- *)
+
+Theorem FORALL_IN_GSPEC :
+   (!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
+   (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
+          (!x y. P x y ==> Q(f x y))) /\
+   (!P f. (!z. z IN {f w x y | P w x y} ==> Q z) <=>
+          (!w x y. P w x y ==> Q(f w x y)))
+Proof
+   SRW_TAC [][] THEN SET_TAC []
+QED
+
+Theorem EXISTS_IN_GSPEC :
+   (!P f. (?z. z IN {f x | P x} /\ Q z) <=> (?x. P x /\ Q(f x))) /\
+   (!P f. (?z. z IN {f x y | P x y} /\ Q z) <=>
+          (?x y. P x y /\ Q(f x y))) /\
+   (!P f. (?z. z IN {f w x y | P w x y} /\ Q z) <=>
+          (?w x y. P w x y /\ Q(f w x y)))
+Proof
+  SRW_TAC [][] THEN SET_TAC []
+QED
 
 val LEFT_IMP_EXISTS_THM = store_thm ("LEFT_IMP_EXISTS_THM",
  ``!P Q. (?x. P x) ==> Q <=> (!x. P x ==> Q)``,
@@ -2313,8 +2336,6 @@ val LE_C = store_thm ("LE_C",
 val GE_C = store_thm ("GE_C",
  ``!s t. s >=_c t <=> ?f. !y. y IN t ==> ?x. x IN s /\ (y = f x)``,
   REWRITE_TAC[ge_c, LE_C] THEN MESON_TAC[]);
-
-Overload COUNTABLE[inferior] = “countable”
 
 val COUNTABLE = store_thm
   ("COUNTABLE", ``!t. COUNTABLE t <=> univ(:num) >=_c t``,
@@ -3067,9 +3088,7 @@ QED
 (* Lemmas about countability.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val NUM_COUNTABLE = store_thm ("NUM_COUNTABLE",
- ``COUNTABLE univ(:num)``,
-  REWRITE_TAC[COUNTABLE, ge_c, CARD_LE_REFL]);
+Theorem NUM_COUNTABLE = num_countable
 
 val COUNTABLE_ALT_cardleq = store_thm
   ("COUNTABLE_ALT_cardleq",

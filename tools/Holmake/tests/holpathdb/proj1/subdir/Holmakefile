@@ -1,4 +1,5 @@
 .PHONY: all
 
 all:
-	[ "$(proj1)" = "$(HOLDIR)/tools/Holmake/tests/holpathdb/proj1" ]
+	[ "$(proj1)" = "$(HOLDIR)/tools/Holmake/tests/holpathdb/proj1" ] && \
+        [ "$(projroot)" = "$(HOLDIR)/tools/Holmake/tests/holpathdb" ]

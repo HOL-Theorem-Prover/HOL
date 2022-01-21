@@ -344,6 +344,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    "^\\(Theorem\\|Triviality\\|Definition\\|Inductive\\|CoInductive\\)"
    "[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*" ; name
    "\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:"; optional annotations
+   "\\|^Datatype[[:space:]]*:" ; or datatype (which has no following guff on same line)
    )
   "Regular expression marking the beginning of the special syntax that marks
 a store_thm equivalent.")

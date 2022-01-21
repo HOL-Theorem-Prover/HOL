@@ -495,14 +495,15 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun ARITH_DP_FILTER_ss fil =
-    SSFRAG {name=SOME"ARITH_DP",
-            convs = [{conv = K (K MUL_CANON_CONV),
-                      key = SOME([], ``x * y``),
-                      name = "MUL_CANON_CONV", trace = 2}],
-            rewrs = [], congs = [],
-            filter = NONE, ac = [], dprocs = [ARITH_REDUCER fil]};
+    simpLib.SSFRAG {
+      name=SOME"ARITH_DP",
+      convs = [{conv = K (K MUL_CANON_CONV),
+                key = SOME([], ``x * y``),
+                name = "MUL_CANON_CONV", trace = 2}],
+      rewrs = [], congs = [],
+      filter = NONE, ac = [], dprocs = [ARITH_REDUCER fil]};
 
-val ARITH_DP_ss = ARITH_DP_FILTER_ss (K true);
+val ARITH_DP_ss = register_frag (ARITH_DP_FILTER_ss (K true));
 
 val old_dp_ss =
     SSFRAG {name=SOME"OLD_ARITH_DP",

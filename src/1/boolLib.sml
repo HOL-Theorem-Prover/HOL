@@ -111,22 +111,26 @@ val def_suffix = ref "_def"
 
 local
 open Feedback Theory
-fun prove_local (n,th) =
+fun prove_local privp (n,th) =
    (if not (!Globals.interactive) then
       print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n")
     else ();
-    DB.store_local n th;
+    DB.store_local {private=privp} n th;
     th)
+fun extract_localpriv (loc,priv,acc) attrs =
+    case attrs of
+        [] => (loc,priv,List.rev acc)
+      | "unlisted" :: rest => extract_localpriv (loc,true,acc) rest
+      | "local" :: rest => extract_localpriv (true,priv,acc) rest
+      | a :: rest => extract_localpriv (loc,priv,a::acc) rest
 in
 fun save_thm_attrs fname (n, attrs, th) = let
-  val (save, attrf, attrs) = let
-    val nonlocal = List.filter (not o Lib.equal "local") attrs
-  in
-    if length nonlocal = length attrs then
-      (Theory.save_thm, ThmAttribute.store_at_attribute, attrs)
-    else
-      (prove_local, ThmAttribute.local_attribute, nonlocal)
-  end
+  val (localp,privp,attrs) = extract_localpriv (false,false,[]) attrs
+  val save = if localp then prove_local privp
+             else if privp then Theory.save_private_thm
+             else Theory.save_thm
+  val attrf = if localp then ThmAttribute.local_attribute
+              else ThmAttribute.store_at_attribute
   fun do_attr a = attrf {thm = th, name = n, attrname = a}
 in
   save(n,th) before app do_attr attrs

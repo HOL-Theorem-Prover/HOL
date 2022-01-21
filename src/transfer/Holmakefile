@@ -1,5 +1,3 @@
-INCLUDES = ../finite_maps
-
 .PHONY: all
 all: $(DEFAULT_TARGETS) selftest.exe
 

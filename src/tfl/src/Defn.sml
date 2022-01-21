@@ -442,10 +442,10 @@ in
 fun been_stored (s,thm) =
   (add_persistent_funs [(s,thm)];
    if !chatting then
-     mesg ((if !Globals.interactive then
-              "Definition has been stored under "
-            else
-              "Saved definition __ ") ^Lib.quote s^"\n")
+     mesg (if !Globals.interactive then
+             "Definition has been stored under " ^ Lib.quote s ^ "\n"
+           else
+             Theory.format_name_message {pfx = "Saved definition", name = s})
    else ()
    )
 
@@ -482,13 +482,13 @@ fun store(stem,eqs,ind) =
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
     if !chatting then
-       mesg (String.concat
-               (if !Globals.interactive then
-                  [   "Equations stored under ", Lib.quote eqs_bind,
-                   ".\nInduction stored under ", Lib.quote ind_bind, ".\n"]
-                else
-                  [  "Saved definition __ ", Lib.quote eqs_bind,
-                   "\nSaved induction ___ ", Lib.quote ind_bind, "\n"]))
+       mesg (if !Globals.interactive then
+               String.concat ["Equations stored under ", Lib.quote eqs_bind,
+                              ".\nInduction stored under ", Lib.quote ind_bind,
+                              ".\n"]
+             else
+               format_name_message{pfx = "Saved definition", name = eqs_bind} ^
+               format_name_message{pfx = "Saved induction", name = ind_bind})
     else ()
   end
 end

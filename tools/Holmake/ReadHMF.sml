@@ -352,9 +352,11 @@ fun memoise f =
           case Binarymap.peek(!stash, s) of
               NONE =>
               let
-                val actual = f s
+                val (actual, ignorablep) = f s
               in
-                stash := Binarymap.insert(!stash, s, actual);
+                if ignorablep then
+                  stash := Binarymap.insert(!stash, s, actual)
+                else ();
                 actual
               end
             | SOME r => r
@@ -372,13 +374,14 @@ fun find_includes0 dirname =
         val (e, _, _) = read hm_fname (base_environment())
         val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
       in
-        map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
-            raw_incs
+        (map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
+             raw_incs,
+         false)
       end handle e => (warn ("Bogus Holmakefile in " ^ dirname ^
                              " - ignoring it");
-                       [])
+                       ([], false))
 
-    else []
+    else ([], true)
   end
 
 val find_includes = memoise find_includes0
@@ -399,7 +402,8 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
                     print ("Visiting " ^ dir ^ " for first time\n")
                   else ()
           val extensions =
-              holpathdb.search_for_extensions find_includes [dir]
+              holpathdb.search_for_extensions find_includes
+                {starter_dirs = [dir], skip = Binaryset.empty String.compare}
           val _ = List.app holpathdb.extend_db extensions
           val base_env = let
             fun foldthis ({vname,path}, env) =
@@ -455,7 +459,7 @@ fun extend_path_with_includes (cfg as {lpref,verbosity=v}) =
           extend_paths (empty_strset, empty_strmap, empty_strmap) v wlist
       fun m s = holpathdb.reverse_lookup {path = s}
       fun foldthis nm (dirname,incs,acc) = (
-        if v > 0 then
+        if v > 1 then
           print (m dirname ^ "/Holmakefile:" ^ nm ^ " +=\n  " ^
                  String.concatWith "\n  " (map m incs) ^ "\n")
         else ();

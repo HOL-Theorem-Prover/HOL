@@ -1,0 +1,6 @@
+INCLUDES = dir1
+
+#
+# graph is  thisdir --> dir1 --> dir2 --> dir3
+#                                 |
+#                                 `-----> dir4 ---> dir2

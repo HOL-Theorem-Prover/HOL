@@ -1,0 +1,1 @@
+INCLUDES = $(HOLDIR)/src/string $(HOLDIR)/src/integer

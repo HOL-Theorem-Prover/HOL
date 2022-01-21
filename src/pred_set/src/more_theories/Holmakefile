@@ -1,9 +1,29 @@
 INCLUDES = ../../../transfer ../../../quotient/src
 
-EXTRA_CLEANS = ordinalML.sig ordinalML.sml
+EXTRA_CLEANS = ordinalML.sig ordinalML.sml selftest.exe more-set-selftest.log
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
 
 ifdef HOLBUILD
 .PHONY: link-to-sigobj
+all: link-to-sigobj
+
 link-to-sigobj: $(DEFAULT_TARGETS)
 	$(HOL_LNSIGOBJ)
+endif
+
+ifeq ($(KERNELID),otknl)
+all: topology.ot.art
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: more-set-selftest.log
+
+more-set-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
 endif

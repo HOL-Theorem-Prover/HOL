@@ -656,10 +656,10 @@ fun INDUCT_THEN th =
      val bconv = BETAS Bvar hy
      val tacsf = TACS hy
      val v = genvar (type_of Bvar)
-     val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH(SPEC v th))
-     val (asm,con) = case dest_thm eta_th
-                     of ([asm],con) => (asm,con)
-                      | _ => raise Match
+     val spec_th = SPEC v th
+     val (asm,_) = dest_imp (concl spec_th)
+     val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH spec_th)
+     val con = concl eta_th
      val ind = GEN v (SUBST [boolvar |-> GALPHA ty asm]
                             (mk_imp(boolvar, con))
                             (DISCH asm eta_th))

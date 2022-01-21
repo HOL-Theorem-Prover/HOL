@@ -360,6 +360,8 @@ with the following command-line options:
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
+\item[\texttt{--no\_preexecs}] Do not search for or execute any \texttt{.hol\_preexec} files in the file-system.
+See Section~\ref{sec:holmake-preexec} below for more on this facility.
 \item[\texttt{--no\_prereqs}]%
 \index{Holmake@\holmake!recursive invocation}%
 Do not recursively attempt to build ``include'' directories before working in the current directory.
@@ -785,6 +787,23 @@ VAR = $(NULL)
 \end{verbatim}
 \end{hol}
 Note that environment variables with non-empty values are also considered to be defined.
+
+\subsection{Execution of Commands before \holmake{} Begins}
+\label{sec:holmake-preexec}
+
+When building complicated projects, it may be useful to have programs executed before any invocation of \holmake{} properly begins.
+This can be done through the use of \texttt{.hol\_preexec} files.
+\index{holmake preexec files@\texttt{.hol\_preexec} files (\holmake{})}
+When \holmake{} begins, and before it has even begun to examine \texttt{Holmakefile}s, it scans upwards in the directory hierarchy looking for files of this name.
+This scanning will also follow \texttt{INCLUDES} directives, possibly causing a jump sideways in the hierarchy.
+When this scanning is complete, the contents of all these files will be executed as shell commands (using the \ml{OS.Process.system} command).
+Each command will be interpreted in the directory containing it, and (under Unix at least), in an environment where the \texttt{HOLORIG} variable is set to the path of the directory where \holmake{} was originally invoked.
+The commands are executed in a pre-order depth-first traversal of the directory hierarchy (relying on the behaviour of \ml{String.compare} on paths).
+
+\textbf{Warning:} This facility allows for code at a higher-level (in terms of the parent-child relationship between paths) in the file-system hierarchy to execute.
+\holmake{} will log all such executions by default, printing out the commands as it executes them.
+This execution does not happen with ``clean'' targets, or if the \texttt{-h} or \texttt{--no\_preexecs} command-line options are used.
+It is not possible to stop this behaviour by putting the \texttt{--no\_preexecs} option into a \texttt{CLINE\_OPTIONS} variable with a \texttt{Holmakefile}; all such execution will have occurred before any such are really consulted.
 
 \index{Holmake@\holmake|)}
 

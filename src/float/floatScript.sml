@@ -5,7 +5,8 @@
 open HolKernel boolLib bossLib
 open pairTheory pred_setTheory prim_recTheory numTheory arithmeticTheory
      realTheory ieeeTheory
-open numLib realLib Ho_Rewrite
+
+open numLib realSimps RealArith Ho_Rewrite
 
 val () = new_theory "float"
 
@@ -883,10 +884,6 @@ val ERROR_BOUND_SMALL1 = Q.prove (
   \\ simp [REAL_POW_LT, REAL_SUB_LDISTRIB, REAL_POS_NZ, REAL_INV_MUL]
   \\ NO_STRIP_FULL_SIMP_TAC (srw_ss()) [AC REAL_MUL_ASSOC REAL_MUL_COMM]
   )
-
-val REAL_LE_INV2 = Q.prove (
-  `!x y. 0 < x /\ x <= y ==> inv y <= inv x`,
-  metis_tac [REAL_LE_LT, REAL_LT_INV])
 
 val ERROR_BOUND_SMALL = Q.prove (
   `!k x. inv (2 pow (SUC k)) <= abs x /\ abs x < inv (2 pow k) /\

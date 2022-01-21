@@ -167,31 +167,23 @@ Proof
   THEN1 fs [flatten_def,pretty2toks_def,lexer_def]
   \\ fs [pretty2toks_def,flatten_def]
   \\ rpt strip_tac
-  \\ qmatch_goalsub_abbrev_tac ‘white_space ++ _’
+  \\ qmatch_goalsub_abbrev_tac ‘white_space:string ++ _’
   \\ ‘EVERY (λc. c = #" " ∨ c = #"\n") white_space ∧ white_space ≠ []’
         by (fs [Abbr‘white_space’] \\ rw [])
-  \\ ‘white_space = HD white_space :: TL white_space’ by
+  \\ ‘∃hws tws. white_space = hws :: tws’ by
         (Cases_on ‘white_space’ \\ fs [])
   \\ pop_assum (fn th => once_rewrite_tac [th] \\ assume_tac (GSYM th))
-  \\ full_simp_tac std_ss [GSYM APPEND_ASSOC,APPEND]
-  \\ ‘ORD (HD white_space) < ORD #"*"’ by
-        (Cases_on ‘white_space’ \\ fs [])
+  \\ ‘ORD hws < ORD #"*"’ by gvs[]
   \\ drule lex_APPEND_split
   \\ once_rewrite_tac [flatten_acc]
-  \\ qmatch_goalsub_abbrev_tac ‘lex _ (pat ++ _)’
-  \\ ‘EVERY (λx. x ≠ #"#") pat’ by
-   (fs [Abbr‘pat’]
-    \\ ‘EVERY (λx. x ≠ #"#") "" ∧ EVERY (λx. x ≠ #"#") indent’ by
-          (fs [] \\ fs [EVERY_MEM] \\ strip_tac \\ res_tac \\ fs [])
-    \\ imp_res_tac no_hash_flatten)
-  \\ disch_then drule \\ fs [Abbr‘pat’]
-  \\ once_rewrite_tac [flatten_acc] \\ fs []
-  \\ disch_then (qspecl_then [‘(TL white_space) ++ (flatten indent p' "")’] mp_tac)
-  \\ fs [] \\ asm_simp_tac std_ss [] \\ fs []
-  \\ simp_tac std_ss [GSYM APPEND |> CONJUNCT2]
-  \\ asm_rewrite_tac []
+  \\ ‘EVERY (λc. c = #" " ∨ c = #"\n") tws’ by gvs[]
+  \\ simp[]
+  \\ ‘EVERY (λx. x ≠ #"#") (flatten indent p "")’
+    by (irule $ iffRL no_hash_flatten >> gs[EVERY_MEM] >> strip_tac >>
+        first_x_assum drule >> simp[])
+  \\ asm_simp_tac std_ss [GSYM APPEND_ASSOC]
   \\ once_rewrite_tac [lex_acc]
-  \\ fs [lex_indent]
+  \\ gvs [lex_indent, lex_def]
 QED
 
 Theorem pretty2toks_annotate:
@@ -285,8 +277,7 @@ Proof
   ho_match_mp_tac num2str_ind \\ rw []
   \\ pop_assum mp_tac
   \\ once_rewrite_tac [num2str_def] \\ rw [] \\ fs []
-  \\ Cases_on ‘num2str (n DIV 10)’ \\ fs []
-  \\ rw [] \\ fs [num2str_not_nil]
+  \\ Cases_on ‘num2str (n DIV 10)’ \\ gvs[num2str_not_nil]
 QED
 
 Theorem num2ascii_SOME_IMP:

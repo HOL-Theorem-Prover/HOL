@@ -15,7 +15,7 @@ struct
 (* structure declaration is necessary so that Moscow ML does not get
    confused by the rebinding of structure Q below *)
 
-open HolKernel Parse boolLib Prim_rec pairLib numLib
+open HolKernel Parse boolLib Prim_rec pairLib numLib numpairTheory
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
      BasicProvers metisLib mesonLib simpLib boolSimps dividesTheory;
 
@@ -6344,6 +6344,9 @@ RWTAC [] THENL
 val countable_def = TotalDefn.Define `
   countable s = ?f. INJ f s (UNIV:num set)`;
 
+(* for HOL-Light compatibility, moved here from cardinalTheory *)
+Overload COUNTABLE[inferior] = “countable”
+
 val countable_image_nats = store_thm( "countable_image_nats",
   ``countable (IMAGE f univ(:num))``, SIMP_TAC
   (srw_ss())[countable_def] THEN METIS_TAC[SURJ_IMAGE, SURJ_INJ_INV]);
@@ -6447,8 +6450,6 @@ Theorem COUNTABLE_IMAGE_NUM[simp]:
 Proof
    PROVE_TAC [COUNTABLE_NUM, image_countable]
 QED
-
-open numpairTheory
 
 val num_to_pair_def = TotalDefn.Define `num_to_pair n = (nfst n, nsnd n)`
 val pair_to_num_def = TotalDefn.Define `pair_to_num (m,n) = m *, n`

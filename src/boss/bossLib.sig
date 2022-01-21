@@ -114,6 +114,7 @@ sig
 
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
+  val SRULE             : thm list -> thm -> thm (* uses srw_ss() *)
   val SIMP_TAC          : simpset -> thm list -> tactic
   val simp_tac          : simpset -> thm list -> tactic
   val ASM_SIMP_TAC      : simpset -> thm list -> tactic
