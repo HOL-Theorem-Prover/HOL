@@ -33,6 +33,8 @@ sig
   val DYNLIB : bool
   val ML_SYSNAME : string
   val DOT_PATH : string option
+  val MV : string
+  val CP : string
   val DEFAULT_STATE : string
 
   val isUnix : bool
