@@ -1,4 +1,4 @@
-Armv8 ISA specification equivalence proof (WIP).
+Armv8 ISA specification equivalence proof.
 
 Relates L3 model with an model derived from Arm ASL, see:
 
