@@ -20,7 +20,7 @@ IBC f1 s /\ IBC f2 s ==> IBC (DISJ f1 f2) s) /\
 (!f s. f IN s ==> IBC f s)`;
 
 Theorem subst_prop_letters:
-!phi σ1 σ2. 
+!phi σ1 σ2.
    (!p. p IN prop_letters phi ==> σ1 p = σ2 p) ==>
    subst σ1 phi = subst σ2 phi
 Proof
@@ -30,17 +30,17 @@ QED
 
 
 Theorem IBC_propform_EXISTS:
-!fs. FINITE fs ==> 
-  ?σ. 
+!fs. FINITE fs ==>
+  ?σ.
    !phi. IBC phi fs ==>
-        ?phi0. propform phi0 /\ 
-               prop_letters phi0 ⊆ count (CARD fs) /\ 
+        ?phi0. propform phi0 /\
+               prop_letters phi0 ⊆ count (CARD fs) /\
                subst σ phi0 = phi
 Proof
 Induct_on `FINITE` >> rw[]
 >- (qexists_tac `\p.ARB` >> rw[] >>
    `!phi. IBC phi ∅ ==>
-       ∃phi0. propform phi0 /\ 
+       ∃phi0. propform phi0 /\
               prop_letters phi0 = ∅ ∧
               subst (λp. ARB) phi0 = phi`
      suffices_by metis_tac[] >>
@@ -50,14 +50,14 @@ Induct_on `FINITE` >> rw[]
    >- (qexists_tac `NOT phi0` >> rw[subst_def,prop_letters_def])
    >- metis_tac[NOT_IN_EMPTY])
 >- (qabbrev_tac `n = (CARD fs)` >>
-   rw[ADD1] >> 
-   qexists_tac `\m. if m < n then σ m else e` >> 
+   rw[ADD1] >>
+   qexists_tac `\m. if m < n then σ m else e` >>
    Induct_on `IBC` >> rw[] (* 4 *)
    >- (qexists_tac `DISJ phi0 phi0'` >> rw[] >> simp[prop_letters_def])
    >- (qexists_tac `FALSE` >> rw[subst_def,prop_letters_def])
    >- (qexists_tac `NOT phi0` >> rw[subst_def,prop_letters_def])
    >- (Cases_on `phi IN fs` (* 2 *)
-      >- (`IBC phi fs` by metis_tac[IBC_rules] >> 
+      >- (`IBC phi fs` by metis_tac[IBC_rules] >>
          first_x_assum drule >> rw[] >> qexists_tac `phi0` >>
          fs[count_def,SUBSET_DEF] >> rw[] (* 2 *)
          >- (`x < n` by metis_tac[] >> fs[])
@@ -75,7 +75,7 @@ QED
 
 Theorem subst_DISJ:
 !phi0 σ phi1 phi2. subst σ phi0 = DISJ phi1 phi2 /\ (!p. VAR p <> phi0) ==>
-           ?phi01 phi02. 
+           ?phi01 phi02.
               phi0 = DISJ phi01 phi02 /\
               subst σ phi01 = phi1 /\ subst σ phi02 = phi2
 Proof
@@ -99,7 +99,7 @@ QED
 
 Theorem subst_DIAM:
 !phi0 σ phi. subst σ phi0 = ◇ phi /\ (!phi00. DIAM phi00 <> phi0) ==>
-         ?p. phi0 = VAR p 
+         ?p. phi0 = VAR p
 Proof
 Induct_on `phi0` >> rw[subst_def]
 QED
@@ -112,12 +112,12 @@ Proof
 Induct_on `phi` (* 5 *)
 >- (rw[subst_def,satis_def,peval_def] >>
    drule subst_VAR >> rw[] >> simp[peval_def,satis_def])
->- (rw[satis_def] >> 
+>- (rw[satis_def] >>
    Cases_on `!p. VAR p <> phi0` (* 2 *)
-   >- (drule subst_DISJ >> rw[] >> rw[peval_def] >> fs[propform_def] >> 
+   >- (drule subst_DISJ >> rw[] >> rw[peval_def] >> fs[propform_def] >>
       `(satis M w (subst σ phi01) <=> peval (λp. satis M w (σ p)) phi01) /\
        (satis M w (subst σ phi02) <=> peval (λp. satis M w (σ p)) phi02)`
-        suffices_by metis_tac[] >> 
+        suffices_by metis_tac[] >>
       metis_tac[])
    >- (fs[] >> pop_assum (assume_tac o SYM) >> rw[] >> fs[subst_def,satis_def]))
 >- (rw[] >>  Cases_on `!p. VAR p <> phi0` (* 2 *)
@@ -127,7 +127,7 @@ Induct_on `phi` (* 5 *)
    >- (drule subst_NOT >> rw[] >> rw[peval_def,satis_def] >> fs[propform_def])
    >- (fs[] >> pop_assum (assume_tac o SYM) >> fs[subst_def]))
 >- (rw[] >>
-   `!phi00. DIAM phi00 <> phi0` by 
+   `!phi00. DIAM phi00 <> phi0` by
      (rw[] >> SPOSE_NOT_THEN ASSUME_TAC >> pop_assum (assume_tac o SYM) >>
       fs[propform_def]) >>
    drule subst_DIAM >> rw[] >> fs[peval_def,subst_def])
@@ -149,7 +149,7 @@ Theorem subst_equiv0:
 !phi1 phi2. propform phi1 /\ propform phi2 /\ equiv0 (:β) phi1 phi2 ==>
     !σ. equiv0 (:β) (subst σ phi1) (subst σ phi2)
 Proof
-rw[equiv0_def] >> 
+rw[equiv0_def] >>
 Cases_on `w IN M.frame.world` (* 2 *)
 >- (`∀M w:β.
              w ∈ M.frame.world ⇒
@@ -160,7 +160,7 @@ Cases_on `w IN M.frame.world` (* 2 *)
              (satis M w (subst σ phi2) ⇔ peval (λp. satis M w (σ p)) phi2)`
      by metis_tac[subst_propform_satis] >>
    rw[] >>
-   qabbrev_tac `M' = 
+   qabbrev_tac `M' =
                      <| frame := <| world := M.frame.world ;
                                       rel := M.frame.rel; |>;
                          valt := λp w. satis M w (σ p);|>` >>
@@ -172,7 +172,7 @@ Cases_on `w IN M.frame.world` (* 2 *)
             w ∈ M.frame.world ⇒
             (satis M w phi1 ⇔ peval (λa. w ∈ M.valt a) phi1)`
      by metis_tac[peval_satis] >>
-   `w IN M'.frame.world` by fs[Abbr`M'`] >> 
+   `w IN M'.frame.world` by fs[Abbr`M'`] >>
    `(satis M' w phi2 ⇔ peval (λa. w ∈ M'.valt a) phi2) /\
     (satis M' w phi1 ⇔ peval (λa. w ∈ M'.valt a) phi1)` by metis_tac[] >>
    fs[Abbr`M'`] >> metis_tac[])
@@ -196,16 +196,16 @@ rw[partition_def,equiv_on_def] >> rw[EXTENSION,EQ_IMP_THM] >> fs[]
 
 Theorem IBC_INJ_propform_equiv0:
 !fs σ. FINITE fs ==>
-   (!phi. IBC phi fs ==> 
-      ?phi0. 
+   (!phi. IBC phi fs ==>
+      ?phi0.
            subst σ phi0 = phi /\ propform phi0 /\
-           prop_letters phi0 ⊆ count (CARD fs)) ==> 
-     INJ 
+           prop_letters phi0 ⊆ count (CARD fs)) ==>
+     INJ
         (\phis.
             {f |f ⊆ count (CARD fs) /\
-                peval f 
-                    (CHOICE 
-                          {phi0 | subst σ phi0 = CHOICE phis /\ 
+                peval f
+                    (CHOICE
+                          {phi0 | subst σ phi0 = CHOICE phis /\
                                   propform phi0 /\
                                   prop_letters phi0 ⊆ count (CARD fs)})})
         (partition (equiv0 (:β)) {phi | IBC phi fs})
@@ -232,26 +232,26 @@ rw[] >> rw[INJ_DEF] (* 2 *)
      (`phis <> {} /\ phis' <> {}` suffices_by metis_tac[CHOICE_DEF] >>
       `{} NOTIN partition (equiv0 (:β)) {phi | IBC phi fs}`
         suffices_by metis_tac[] >>
-      `(equiv0 (:β)) equiv_on {phi | IBC phi fs}` 
+      `(equiv0 (:β)) equiv_on {phi | IBC phi fs}`
         suffices_by metis_tac[EMPTY_NOT_IN_partition] >>
-      metis_tac[equiv0_equiv_on]) >> 
+      metis_tac[equiv0_equiv_on]) >>
    `rpf IN {phi0 |
               subst σ phi0 = rphi ∧ propform phi0 ∧
               prop_letters phi0 ⊆ count (CARD fs)} /\
     rpf' IN {phi0 |
               subst σ phi0 = rphi' ∧ propform phi0 ∧
-              prop_letters phi0 ⊆ count (CARD fs)}` by 
+              prop_letters phi0 ⊆ count (CARD fs)}` by
      (`{phi0 |
               subst σ phi0 = rphi ∧ propform phi0 ∧
-              prop_letters phi0 ⊆ count (CARD fs)} <> {} /\ 
+              prop_letters phi0 ⊆ count (CARD fs)} <> {} /\
        {phi0 |
               subst σ phi0 = rphi' ∧ propform phi0 ∧
               prop_letters phi0 ⊆ count (CARD fs)} <> {}`
        suffices_by metis_tac[CHOICE_DEF] >>
-      `(?phi0. phi0 IN 
+      `(?phi0. phi0 IN
            {phi0 |
               subst σ phi0 = rphi ∧ propform phi0 ∧
-              prop_letters phi0 ⊆ count (CARD fs)}) /\ 
+              prop_letters phi0 ⊆ count (CARD fs)}) /\
        (?phi0'. phi0' IN
            {phi0 |
               subst σ phi0 = rphi' ∧ propform phi0 ∧
@@ -260,62 +260,62 @@ rw[] >> rw[INJ_DEF] (* 2 *)
        simp[] >>
       `IBC rphi fs /\ IBC rphi' fs` suffices_by metis_tac[] >>
       fs[partition_def] >> rfs[]) >>
-   fs[] >> rfs[] >> 
-   `equiv0 (:β) rphi rphi'` suffices_by 
+   fs[] >> rfs[] >>
+   `equiv0 (:β) rphi rphi'` suffices_by
      (strip_tac >>
-      irule equiv_on_same_partition >> 
-      map_every qexists_tac 
+      irule equiv_on_same_partition >>
+      map_every qexists_tac
       [`equiv0 (:β)`,`{phi | IBC phi fs}`,`rphi`,`rphi'`] >> rw[] >>
       metis_tac[equiv0_equiv_on]) >>
-   `equiv0 (:β) rpf rpf'` by 
+   `equiv0 (:β) rpf rpf'` by
      (rw[equiv0_def] >> Cases_on `w IN M.frame.world` (* 2 *)
-      >- (qabbrev_tac 
-           `M' = 
+      >- (qabbrev_tac
+           `M' =
                 <| frame := <| world := M.frame.world ;
                                rel := M.frame.rel ;
                                |>;
-                    valt := \p v. if p IN (count (CARD fs)) 
-                                     then (M.valt p v) 
+                    valt := \p v. if p IN (count (CARD fs))
+                                     then (M.valt p v)
                                   else F |>` >>
          `(satis M w rpf <=> satis M' w rpf) /\
           (satis M w rpf' <=> satis M' w rpf')`
-           by 
+           by
             (rw[] >> irule exercise_1_3_1 >> rw[] (* 4 *)
-             >- (rw[Abbr`M'`,FUN_EQ_THM] >> 
-                `p < CARD fs` suffices_by metis_tac[] >> 
+             >- (rw[Abbr`M'`,FUN_EQ_THM] >>
+                `p < CARD fs` suffices_by metis_tac[] >>
                 fs[SUBSET_DEF,count_def])
              >- simp[frame_component_equality,Abbr`M'`]
-             >- (rw[Abbr`M'`,FUN_EQ_THM] >> 
-                `p < CARD fs` suffices_by metis_tac[] >> 
+             >- (rw[Abbr`M'`,FUN_EQ_THM] >>
+                `p < CARD fs` suffices_by metis_tac[] >>
                 fs[SUBSET_DEF,count_def])
-             >- simp[frame_component_equality,Abbr`M'`]) >> 
-         rw[] >> 
+             >- simp[frame_component_equality,Abbr`M'`]) >>
+         rw[] >>
          `w IN M'.frame.world` by fs[Abbr`M'`] >>
-         `(satis M' w rpf <=> peval (λa. w ∈ M'.valt a) rpf) /\ 
+         `(satis M' w rpf <=> peval (λa. w ∈ M'.valt a) rpf) /\
           (satis M' w rpf' <=> peval (λa. w ∈ M'.valt a) rpf')`
-           by metis_tac[peval_satis] >> 
-         rw[] >> 
-         `(λa. w ∈ M'.valt a) IN 
+           by metis_tac[peval_satis] >>
+         rw[] >>
+         `(λa. w ∈ M'.valt a) IN
           {f | f ⊆ count (CARD fs) ∧ peval f rpf} <=>
-          (λa. w ∈ M'.valt a) IN 
+          (λa. w ∈ M'.valt a) IN
           {f | f ⊆ count (CARD fs) ∧ peval f rpf'}`
-           suffices_by 
+           suffices_by
              (fs[] >> rw[] >>
-              `(λa. w ∈ M'.valt a) ⊆ count (CARD fs)` 
+              `(λa. w ∈ M'.valt a) ⊆ count (CARD fs)`
                 suffices_by metis_tac[] >>
               rw[Abbr`M'`,count_def,SUBSET_DEF]) >>
          metis_tac[EXTENSION])
       >- metis_tac[satis_in_world]) >>
    `equiv0 (:β) (subst σ rpf) (subst σ rpf')` suffices_by metis_tac[] >>
    irule subst_equiv0 >> rw[])
-QED  
+QED
 
 
 Theorem IBC_FINITE_equiv0:
 !fs. FINITE fs ==> FINITE (partition (equiv0 (:β)) {phi | IBC phi fs})
 Proof
-rw[] >> drule IBC_INJ_propform_equiv0 >> rw[] >> 
-drule IBC_propform_EXISTS >> rw[] >> 
+rw[] >> drule IBC_INJ_propform_equiv0 >> rw[] >>
+drule IBC_propform_EXISTS >> rw[] >>
 `INJ
               (λphis.
                    {f |
@@ -328,7 +328,7 @@ drule IBC_propform_EXISTS >> rw[] >>
               (partition (equiv0 (:β)) {phi | IBC phi fs})
               (POW (POW (count (CARD fs))))` by metis_tac[] >>
 `FINITE (POW (POW (count (CARD fs))))` suffices_by metis_tac[FINITE_INJ] >>
-`FINITE (count (CARD fs))` by metis_tac[FINITE_COUNT] >> 
+`FINITE (count (CARD fs))` by metis_tac[FINITE_COUNT] >>
 metis_tac[FINITE_POW]
 QED
 
@@ -353,13 +353,13 @@ val DEG_IBC_prop_letters = store_thm(
      ({VAR v | v ∈ s} ∪
       {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})``,
 Induct_on `phi` >> rw[DEG_def]
->- rw[Once IBC_cases,prop_letters_def,SUBSET_DEF] 
+>- rw[Once IBC_cases,prop_letters_def,SUBSET_DEF]
 >- (`IBC (DISJ phi phi')
          ({VAR v | v ∈ s} ∪
           {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}) ==>
     (IBC phi
         ({VAR v | v ∈ s} ∪
-         {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})) /\ 
+         {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})) /\
     (IBC phi'
         ({VAR v | v ∈ s} ∪
          {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}))`
@@ -385,7 +385,7 @@ Induct_on `phi` >> rw[DEG_def]
    >- metis_tac[IBC_cases]
    >- (fs[prop_letters_def] >> metis_tac[prop_letters_def]))
 >- fs[Once IBC_cases,prop_letters_def]);
- 
+
 
 val DEG_0_propform = store_thm(
 "DEG_0_propform",
@@ -393,30 +393,30 @@ val DEG_0_propform = store_thm(
 Induct_on `f` >> fs[DEG_def,propform_def]);
 
 Theorem FINITE_propform_equiv0:
-!s. FINITE s ==> 
-    FINITE (partition (equiv0 (:β)) 
+!s. FINITE s ==>
+    FINITE (partition (equiv0 (:β))
                       {phi | propform phi /\ prop_letters phi ⊆ s})
 Proof
 rw[] >>
 `FINITE (POW (POW s))` by metis_tac[FINITE_POW] >>
 `INJ (\phis. {σ | σ ⊆ s /\ peval σ (CHOICE phis)})
-     (partition (equiv0 (:β)) 
+     (partition (equiv0 (:β))
                       {phi | propform phi /\ prop_letters phi ⊆ s})
      (POW (POW s))`
   suffices_by metis_tac[FINITE_INJ] >>
 rw[INJ_DEF] (* 2 *)
 >- rw[POW_DEF,SUBSET_DEF]
 >- (irule equiv_on_same_partition >>
-   map_every qexists_tac 
+   map_every qexists_tac
    [`equiv0 (:β)`,`{phi | propform phi ∧ prop_letters phi ⊆ s}`,
     `CHOICE phis`,`CHOICE phis'`] >>
    rw[] (* 4 *)
-   >- (rw[equiv0_def] >> 
-      qabbrev_tac `phi = CHOICE phis` >> 
+   >- (rw[equiv0_def] >>
+      qabbrev_tac `phi = CHOICE phis` >>
       qabbrev_tac `phi' = CHOICE phis'` >>
       `phi IN phis /\ phi' IN phis'`
         by
-         (`phis <> {} /\ phis' <> {}` 
+         (`phis <> {} /\ phis' <> {}`
             suffices_by metis_tac[CHOICE_DEF,Abbr`phi`,Abbr`phi'`] >>
           metis_tac[EMPTY_NOT_IN_partition,equiv0_equiv_on]) >>
       `propform phi /\ propform phi'`
@@ -428,29 +428,29 @@ rw[INJ_DEF] (* 2 *)
              w ∈ M.frame.world ⇒
              (satis M w phi ⇔ peval (λa. w ∈ M.valt a) phi)`
            by metis_tac[peval_satis] >>
-         rw[] >> 
-         qabbrev_tac `M' = 
+         rw[] >>
+         qabbrev_tac `M' =
                      <| frame := <| world := M.frame.world ;
                                       rel := M.frame.rel; |>;
                          valt := λp w. if p IN s then M.valt p w else F;|>` >>
          `(satis M w phi <=> satis M' w phi) /\
           (satis M w phi' <=> satis M' w phi')`
            by
-            (strip_tac >> irule exercise_1_3_1 >> 
-            rw[frame_component_equality,Abbr`M'`] >> 
+            (strip_tac >> irule exercise_1_3_1 >>
+            rw[frame_component_equality,Abbr`M'`] >>
             fs[partition_def] >> rw[] >> fs[SUBSET_DEF,FUN_EQ_THM]) >>
          rw[] >>
          `w IN M'.frame.world` by fs[Abbr`M'`] >>
          `peval (λa. w ∈ M'.valt a) phi ⇔ peval (λa. w ∈ M'.valt a) phi'`
            suffices_by metis_tac[] >>
-         fs[EXTENSION] >> 
+         fs[EXTENSION] >>
          `(λa. w ∈ M'.valt a) ⊆ s` suffices_by metis_tac[] >>
          rw[SUBSET_DEF,Abbr`M'`])
       >- metis_tac[satis_in_world])
-   >- (`phis <> {}` 
+   >- (`phis <> {}`
             suffices_by metis_tac[CHOICE_DEF] >>
       metis_tac[EMPTY_NOT_IN_partition,equiv0_equiv_on])
-   >- (`phis' <> {}` 
+   >- (`phis' <> {}`
             suffices_by metis_tac[CHOICE_DEF] >>
       metis_tac[EMPTY_NOT_IN_partition,equiv0_equiv_on])
    >- metis_tac[equiv0_equiv_on])
@@ -497,31 +497,31 @@ val equiv0_SYM = store_thm(
 
 val IBC_CHOICE_equiv0 = store_thm(
   "IBC_CHOICE_equiv0",
-  ``!f fs. IBC f fs ==> 
+  ``!f fs. IBC f fs ==>
          ?p. IBC p (IMAGE CHOICE (partition (equiv0 (:β)) fs)) /\
                    equiv0 (:β) f p``,
 Induct_on `IBC` >> rw[]
->- (`∃p. IBC p (IMAGE CHOICE (partition (equiv0 (:β)) fs)) ∧ 
+>- (`∃p. IBC p (IMAGE CHOICE (partition (equiv0 (:β)) fs)) ∧
          equiv0 (:β) f p /\
-     ∃p'. IBC p' (IMAGE CHOICE (partition (equiv0 (:β)) fs)) ∧ 
+     ∃p'. IBC p' (IMAGE CHOICE (partition (equiv0 (:β)) fs)) ∧
           equiv0 (:β) f' p'` by metis_tac[] >>
    qexists_tac `DISJ p p'` >> rw[]
    >- metis_tac[IBC_cases]
    >- fs[equiv0_def,satis_def])
 >- (qexists_tac `FALSE` >> rw[Once IBC_cases])
->- (`∃p. IBC p (IMAGE CHOICE (partition (equiv0 (:β)) fs)) ∧ 
+>- (`∃p. IBC p (IMAGE CHOICE (partition (equiv0 (:β)) fs)) ∧
          equiv0 (:β) f p` by metis_tac[] >>
    qexists_tac `¬p` >> rw[Once IBC_cases] >> fs[equiv0_def,satis_def])
 >- (fs[partition_def] >>
    qexists_tac `CHOICE {y | y IN fs /\ equiv0 (:β) f y}` >> rw[]
-   >- (`(CHOICE {y | y ∈ fs ∧ equiv0 (:β) f y}) IN 
+   >- (`(CHOICE {y | y ∈ fs ∧ equiv0 (:β) f y}) IN
         (IMAGE CHOICE {t | ∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y}})`
-          by 
+          by
            (fs[IMAGE_DEF,PULL_EXISTS] >> qexists_tac `f` >> rw[]) >>
         metis_tac[IBC_cases]) >>
-   `{y | y ∈ fs ∧ equiv0 (:β) f y} <> {}` 
-     by 
-       (`f IN {y | y ∈ fs ∧ equiv0 (:β) f y}` by fs[] >> 
+   `{y | y ∈ fs ∧ equiv0 (:β) f y} <> {}`
+     by
+       (`f IN {y | y ∈ fs ∧ equiv0 (:β) f y}` by fs[] >>
         metis_tac[MEMBER_NOT_EMPTY]) >>
    `(CHOICE {y | y ∈ fs ∧ equiv0 (:β) f y}) IN {y | y ∈ fs ∧ equiv0 (:β) f y}`
      by metis_tac[CHOICE_DEF] >> fs[]));
@@ -532,9 +532,9 @@ Theorem FINITE_FINITE_IBC:
      FINITE (partition (equiv0 (:β)) {phi | IBC phi fs})
 Proof
 rw[] >>
-`FINITE (IMAGE CHOICE (partition (equiv0 (:β)) fs))` 
-  by metis_tac[IMAGE_FINITE] >> 
-drule IBC_FINITE_equiv0 >> rw[] >> 
+`FINITE (IMAGE CHOICE (partition (equiv0 (:β)) fs))`
+  by metis_tac[IMAGE_FINITE] >>
+drule IBC_FINITE_equiv0 >> rw[] >>
 `SURJ (\s. {phi | IBC phi fs /\ !f. f IN s ==> equiv0 (:β) phi f})
       (partition (equiv0 (:β))
              {phi | IBC phi (IMAGE CHOICE (partition (equiv0 (:β)) fs))})
@@ -543,10 +543,10 @@ drule IBC_FINITE_equiv0 >> rw[] >>
 rw[SURJ_DEF] (* 2 *)
 >- (rw[partition_def] >> qexists_tac `CHOICE s` >>
    fs[partition_def] >> rw[] (* 2 *)
-   >- (`IMAGE CHOICE 
-              {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})} 
+   >- (`IMAGE CHOICE
+              {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})}
        ⊆ fs`
-        by 
+        by
          (rw[IMAGE_DEF,SUBSET_DEF] >>
           qmatch_abbrev_tac ‘CHOICE smallset ∈ bigset’ >>
           `smallset <> {}`
@@ -554,41 +554,41 @@ rw[SURJ_DEF] (* 2 *)
           ‘smallset ⊆ bigset’
             suffices_by metis_tac[SUBSET_DEF, CHOICE_DEF] >>
           simp[SUBSET_DEF, Abbr`smallset`, Abbr`bigset`]) >>
-      irule IBC_SUBSET >> 
+      irule IBC_SUBSET >>
       qexists_tac
       `IMAGE CHOICE {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})}` >>
-      qmatch_abbrev_tac `IBC (CHOICE A) _ /\ _` >> 
-      rw[] >> 
-      `CHOICE A IN A` suffices_by fs[Abbr`A`] >> 
+      qmatch_abbrev_tac `IBC (CHOICE A) _ /\ _` >>
+      rw[] >>
+      `CHOICE A IN A` suffices_by fs[Abbr`A`] >>
       `A <> {}` suffices_by metis_tac[CHOICE_DEF] >>
       `x IN A` suffices_by metis_tac[NOT_IN_EMPTY] >> fs[Abbr`A`])
-   >- (qabbrev_tac `A = 
+   >- (qabbrev_tac `A =
                    (IMAGE CHOICE
                    {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})})` >>
-      simp[EXTENSION] >> rw[] >> 
-      `IBC x' fs ==> 
-       ((∀f. IBC f A ∧ equiv0 (:β) x f ⇒ equiv0 (:β) x' f) <=> 
+      simp[EXTENSION] >> rw[] >>
+      `IBC x' fs ==>
+       ((∀f. IBC f A ∧ equiv0 (:β) x f ⇒ equiv0 (:β) x' f) <=>
         equiv0 (:β) (CHOICE {y | IBC y A ∧ equiv0 (:β) x y}) x')`
         suffices_by metis_tac[] >>
-      rw[] >> 
-      `(CHOICE {y | IBC y A ∧ equiv0 (:β) x y}) IN 
-      {y | IBC y A ∧ equiv0 (:β) x y}` 
-       by 
-        (`x IN {y | IBC y A ∧ equiv0 (:β) x y}` 
+      rw[] >>
+      `(CHOICE {y | IBC y A ∧ equiv0 (:β) x y}) IN
+      {y | IBC y A ∧ equiv0 (:β) x y}`
+       by
+        (`x IN {y | IBC y A ∧ equiv0 (:β) x y}`
            suffices_by metis_tac[NOT_IN_EMPTY,CHOICE_DEF] >> fs[]) >>
       rw[EQ_IMP_THM] (* 2 *)
       >- (fs[] >> `IBC x A ∧ equiv0 (:β) x x` by fs[] >>
-         `equiv0 (:β) x' x` by metis_tac[] >> 
+         `equiv0 (:β) x' x` by metis_tac[] >>
          metis_tac[equiv0_SYM,equiv0_TRANS])
       >- (fs[] >> metis_tac[equiv0_SYM,equiv0_TRANS])))
 >- (fs[partition_def] >>
    qabbrev_tac `A = {t | ∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y}}` >>
    simp[PULL_EXISTS] >>
-   FREEZE_THEN drule IBC_CHOICE_equiv0 >> rw[] >>   
+   FREEZE_THEN drule IBC_CHOICE_equiv0 >> rw[] >>
    qexists_tac `p` >> rw[] (* 2 *)
    >- fs[partition_def,Abbr`A`]
    >- (rw[EXTENSION,EQ_IMP_THM] (* 2 *)
-      >- (fs[partition_def,Abbr`A`] >> 
+      >- (fs[partition_def,Abbr`A`] >>
           `equiv0 (:β) x p` by fs[] >>
           metis_tac[equiv0_SYM,equiv0_TRANS])
       >- metis_tac[equiv0_SYM,equiv0_TRANS]))
@@ -619,7 +619,7 @@ val NOT_equiv0_VAR_DIAM = store_thm(
 
 
 Theorem EQ_equiv0_def:
-!f g. equiv0 (:β) f g <=> 
+!f g. equiv0 (:β) f g <=>
       !M w:'b. w IN M.frame.world ==> (satis M w f <=> satis M w g)
 Proof
 rw[equiv0_def] >> eq_tac >> rw[] >>
@@ -635,45 +635,45 @@ Theorem equiv0_DIAM_lemma:
       ¬(equiv0 (:β) f g) ==> ¬(equiv0 (:β) (DIAM f) (DIAM g))
 Proof
 rw[EQ_equiv0_def] >>
-`∃f:'b -> 'b. (∀x y. f x = f y ⇒ x = y) ∧ 
-     ∃y. ∀x. f x ≠ y` 
+`∃f:'b -> 'b. (∀x y. f x = f y ⇒ x = y) ∧
+     ∃y. ∀x. f x ≠ y`
   by metis_tac[INFINITE_UNIV] >>
-`(satis M w f /\ ¬satis M w g) \/ 
+`(satis M w f /\ ¬satis M w g) \/
  (¬satis M w f /\ satis M w g)` by metis_tac[] (* 2 *)
->- (qexists_tac 
+>- (qexists_tac
     `<| frame := <| world := y INSERT (IMAGE f' M.frame.world);
-                    rel := λn1 n2. 
+                    rel := λn1 n2.
                         (?m1 m2. m1 IN M.frame.world /\ m2 IN M.frame.world /\
                             M.frame.rel m1 m2 /\ f' m1 = n1 /\ f' m2 = n2) \/
                         (n1 = y /\ n2 = f' w) |>;
          valt := \a b. (?c. f' c = b /\ M.valt a c) |>` >>
-    qmatch_abbrev_tac 
-    `?w'. w' IN M'.frame.world /\ 
+    qmatch_abbrev_tac
+    `?w'. w' IN M'.frame.world /\
           (satis M' w' (DIAM f) ⇎ satis M' w' (DIAM g))` >>
     qexists_tac `y` >> rw[] (* 2 *)
     >- fs[Abbr`M'`]
-    >- (`satis M' y (DIAM f) /\ ¬satis M' y (DIAM g)` 
+    >- (`satis M' y (DIAM f) /\ ¬satis M' y (DIAM g)`
           suffices_by metis_tac[] >> rw[satis_def] (* 3 *)
        >- fs[Abbr`M'`]
        >- (qexists_tac `f' w` >>
           `bounded_mor f' M M'`
-            by 
+            by
              (rw[bounded_mor_def] (* 4 *)
               >- fs[Abbr`M'`]
-              >- (fs[Abbr`M'`] >> rw[satis_def] >> 
+              >- (fs[Abbr`M'`] >> rw[satis_def] >>
                   fs[IN_DEF] >> rw[EQ_IMP_THM] >> metis_tac[])
               >- (fs[Abbr`M'`] >> metis_tac[])
               >- (fs[Abbr`M'`] (* 4 *) >> metis_tac[])) >>
           `satis M w f <=> satis M' (f' w) f` by fs[prop_2_14] >>
           fs[Abbr`M'`])
-       >- (`!v. M'.frame.rel y v /\ v IN M'.frame.world ==> 
-                ¬satis M' v g` suffices_by metis_tac[] >> 
+       >- (`!v. M'.frame.rel y v /\ v IN M'.frame.world ==>
+                ¬satis M' v g` suffices_by metis_tac[] >>
            rw[] >>
            `bounded_mor f' M M'`
-             by 
+             by
               (rw[bounded_mor_def] (* 4 *)
                >- fs[Abbr`M'`]
-               >- (fs[Abbr`M'`] >> rw[satis_def] >> fs[IN_DEF] >> 
+               >- (fs[Abbr`M'`] >> rw[satis_def] >> fs[IN_DEF] >>
                    rw[EQ_IMP_THM] >> metis_tac[])
                >- (fs[Abbr`M'`] >> metis_tac[])
                >- (fs[Abbr`M'`] (* 4 *) >> metis_tac[])) >>
@@ -683,27 +683,27 @@ rw[EQ_equiv0_def] >>
            >- metis_tac[]
            >- (qmatch_abbrev_tac `¬satis M' (f' x) g` >> rw[] >>
              metis_tac[prop_2_14]))))
->- (qexists_tac 
+>- (qexists_tac
     `<| frame := <| world := y INSERT (IMAGE f' M.frame.world);
-                      rel := λn1 n2. 
+                      rel := λn1 n2.
                          (?m1 m2. m1 IN M.frame.world /\ m2 IN M.frame.world /\
                               M.frame.rel m1 m2 /\ f' m1 = n1 /\ f' m2 = n2) \/
                                   (n1 = y /\ n2 = f' w) |>;
          valt := \a b. (?c. f' c = b /\ M.valt a c) |>` >>
-    qmatch_abbrev_tac 
-    `?w'. w' IN M'.frame.world /\ 
+    qmatch_abbrev_tac
+    `?w'. w' IN M'.frame.world /\
           (satis M' w' (DIAM f) ⇎ satis M' w' (DIAM g))` >>
     qexists_tac `y` >> rw[] (* 2 *)
     >- fs[Abbr`M'`]
-    >- (`¬satis M' y (DIAM f) /\ satis M' y (DIAM g)` 
+    >- (`¬satis M' y (DIAM f) /\ satis M' y (DIAM g)`
           suffices_by metis_tac[] >>
         rw[satis_def] (* 3 *)
-        >- (`!v. M'.frame.rel y v /\ v IN M'.frame.world ==> ¬satis M' v f` 
+        >- (`!v. M'.frame.rel y v /\ v IN M'.frame.world ==> ¬satis M' v f`
              suffices_by metis_tac[] >> rw[] >>
             `bounded_mor f' M M'`
               by (rw[bounded_mor_def] (* 4 *)
                   >- fs[Abbr`M'`]
-                  >- (fs[Abbr`M'`] >> rw[satis_def] >> fs[IN_DEF] >> 
+                  >- (fs[Abbr`M'`] >> rw[satis_def] >> fs[IN_DEF] >>
                       rw[EQ_IMP_THM] >> metis_tac[])
                   >- (fs[Abbr`M'`] >> metis_tac[])
                   >- (fs[Abbr`M'`] (* 4 *) >> metis_tac[])) >>
@@ -729,7 +729,7 @@ QED
 
 
 Theorem equiv0_DIAM:
-!f g. INFINITE univ(:'b) ==> 
+!f g. INFINITE univ(:'b) ==>
       (equiv0 (:β) (DIAM f) (DIAM g) <=> equiv0 (:β) f g)
 Proof
 rw[EQ_IMP_THM]
@@ -747,40 +747,40 @@ Theorem prop_2_29_prop_letters:
                         { f| DEG f <= n /\ prop_letters f ⊆ s})
 Proof
 gen_tac >> strip_tac >> Induct_on `n` (* 2 *)
->- (`{f | DEG f ≤ 0 ∧ prop_letters f ⊆ s} = 
+>- (`{f | DEG f ≤ 0 ∧ prop_letters f ⊆ s} =
     {f | propform f ∧ prop_letters f ⊆ s}`
-     by (rw[EXTENSION] >> metis_tac[DEG_0_propform]) >> 
+     by (rw[EXTENSION] >> metis_tac[DEG_0_propform]) >>
     metis_tac[FINITE_propform_equiv0]) >>
-rw[ADD1] >> 
-`{f | DEG f ≤ n + 1 ∧ prop_letters f ⊆ s} = 
- {phi| IBC phi ({VAR v | v ∈ s} ∪ 
+rw[ADD1] >>
+`{f | DEG f ≤ n + 1 ∧ prop_letters f ⊆ s} =
+ {phi| IBC phi ({VAR v | v ∈ s} ∪
                 {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})}`
-  by 
+  by
    (rw[EXTENSION] >> metis_tac[DEG_IBC_prop_letters]) >>
-rw[] >> 
-irule FINITE_FINITE_IBC >> rw[] >> 
-qmatch_abbrev_tac `FINITE (partition _ (A ∪ B))` >> 
-`(partition (equiv0 (:β)) (A ∪ B)) = 
+rw[] >>
+irule FINITE_FINITE_IBC >> rw[] >>
+qmatch_abbrev_tac `FINITE (partition _ (A ∪ B))` >>
+`(partition (equiv0 (:β)) (A ∪ B)) =
  (partition (equiv0 (:β)) A) ∪ (partition (equiv0 (:β)) B)`
   by
    (irule equiv_on_disjoint_partition >> rw[] (* 2 *)
     >- (fs[Abbr`A`,Abbr`B`] >> metis_tac[NOT_equiv0_VAR_DIAM])
     >- metis_tac[equiv0_equiv_on]) >>
 rw[] (* 2 *)
->- (`FINITE {VAR v | v IN s}` 
+>- (`FINITE {VAR v | v IN s}`
       suffices_by metis_tac[FINITE_partition] >>
-    `SURJ VAR s {VAR v | v IN s}` 
+    `SURJ VAR s {VAR v | v IN s}`
       suffices_by metis_tac[FINITE_SURJ] >>
     rw[SURJ_DEF])
->- (qabbrev_tac 
-    `A0 = 
+>- (qabbrev_tac
+    `A0 =
       partition (equiv0 (:β)) {psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}` >>
-   qabbrev_tac 
-    `B0 = 
+   qabbrev_tac
+    `B0 =
       partition (equiv0 (:β)) {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}` >>
    `?f. SURJ f A0 B0` suffices_by metis_tac[FINITE_SURJ] >>
    qexists_tac `\s. {DIAM t | t IN s}` >> rw[SURJ_DEF] (* 2 *)
-   >- (fs[Abbr`B0`] >> rw[Once EXTENSION,partition_def] >> 
+   >- (fs[Abbr`B0`] >> rw[Once EXTENSION,partition_def] >>
        fs[PULL_EXISTS] >> fs[Abbr`A0`,partition_def] >>
        qexists_tac `DIAM x` >> rw[] (* 2 *)
        >- fs[Abbr`B`]
@@ -788,7 +788,7 @@ rw[] (* 2 *)
           >- fs[Abbr`B`]
           >- metis_tac[equiv0_DIAM]
           >- (fs[Abbr`B`] >> rw[] >> metis_tac[equiv0_DIAM])))
-   >- (fs[Abbr`A0`,Abbr`B0`,partition_def,PULL_EXISTS] >> qexists_tac `psi` >> 
+   >- (fs[Abbr`A0`,Abbr`B0`,partition_def,PULL_EXISTS] >> qexists_tac `psi` >>
       rw[EXTENSION,EQ_IMP_THM] (* 2 same *)
       >> metis_tac[equiv0_DIAM]))
 QED
@@ -812,8 +812,8 @@ Induct_on `FINITE` >> rw[]
 `(∀f. f ∈ s ⇒ DEG f ≤ n) ∧
  (∀f. f ∈ s ⇒ prop_letters f ⊆ s0)` by metis_tac[] >>
 first_x_assum drule_all >> strip_tac >>
-qexists_tac `AND e ff` >> 
+qexists_tac `AND e ff` >>
 rw[AND_def,satis_AND,DEG_def,prop_letters_def] >> metis_tac[]
-QED 
+QED
 *)
 val _ = export_theory();

@@ -657,8 +657,8 @@ fs[countably_incomplete_def] >>
              (!i ff ll. i IN (In 0) ==> (FMS i).Fun ff ll IN (FMS i).Dom) ==>
                   (feval (ultraproduct_folmodel U (In 0) FMS) σ phi <=>
                   {i | i IN (In 0) /\ feval (FMS i) (\x. (CHOICE (σ x)) i) phi} IN U)`
-  by 
-   (drule thm_A_19_ii >> rw[] >> first_x_assum irule >> 
+  by
+   (drule thm_A_19_ii >> rw[] >> first_x_assum irule >>
     fs[wffm_def,valuation_def,IMAGE_DEF,SUBSET_DEF,ultraproduct_folmodel_def] >>    metis_tac[]) >>
 `?enum. BIJ enum (univ(:num)) s` by metis_tac[countable_INFINITE_form_set] >>
 (* cheated! need Godel numbering*)

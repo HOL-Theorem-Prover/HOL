@@ -366,7 +366,7 @@ qabbrev_tac `MA = <| Dom := (mm2folm M).Dom;
       (*map_every qexists_tac [`{w}`,`\n.w`,`1`] >> rw[]*) (* 4 *)
       >- (Cases_on `phi = fR (Fn 0 []) (fV x)` (* 2 *)
           >- fs[form_functions_def,FST] >>
-          fs[Abbr`Σ'`] >> 
+          fs[Abbr`Σ'`] >>
           metis_tac[ST_form_functions_EMPTY,MEMBER_NOT_EMPTY,SUBSET_DEF])
       >- rw[SUBSET_DEF,mm2folm_def,IMAGE_DEF]
       >- rw[BIJ_DEF,INJ_DEF,SURJ_DEF]

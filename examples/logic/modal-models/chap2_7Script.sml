@@ -396,7 +396,7 @@ QED
 
 Theorem thm_2_78_half2:
 INFINITE (univ (:β)) ==>
- !phi:chap1$form. 
+ !phi:chap1$form.
    preserved_under_sim (:(β -> bool) -> bool) (:(β -> bool) -> bool) phi ==>
      (?phi0. equiv0 (:β) phi phi0 /\ PE phi0)
 Proof
