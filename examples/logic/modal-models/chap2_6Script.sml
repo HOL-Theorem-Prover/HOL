@@ -7,7 +7,7 @@ open set_relationTheory;
 
 open chap2_1Theory;
 open chap2_2Theory;
-open chap2_4revisedTheory;
+open chap2_4Theory;
 open chap2_5Theory;
 open equiv_on_partitionTheory;
 open prim_recTheory;

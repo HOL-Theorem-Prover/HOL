@@ -12,7 +12,7 @@ open rich_listTheory;
 open combinTheory;
 open folLangTheory;
 open folModelsTheory;
-open chap2_4revisedTheory;
+open chap2_4Theory;
 open equiv_on_partitionTheory;
 val _ = new_theory "ultraproduct";
 

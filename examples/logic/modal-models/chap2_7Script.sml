@@ -7,7 +7,7 @@ open set_relationTheory;
 
 open chap2_1Theory;
 open chap2_2Theory;
-open chap2_4revisedTheory;
+open chap2_4Theory;
 open chap2_5Theory;
 open chap2_6Theory;
 open prop2_29Theory;
