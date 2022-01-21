@@ -1,8 +1,8 @@
-INCLUDES = mra-hol-snapshots/A64_ISA_v86A ../model ../step
+INCLUDES = armv8.6-asl-snapshot/A64_ISA_v86A ../model ../step
 
 ifdef POLY
 
-HOLHEAP=mra-hol-snapshots/A64_ISA_v86A/armv86a-heap
+HOLHEAP=armv8.6-asl-snapshot/A64_ISA_v86A/armv86a-heap
 HEAP = l3-equivalence-heap
 
 .PHONY: all
