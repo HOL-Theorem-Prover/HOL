@@ -56,15 +56,6 @@ val frealizes_def = Define`
   frealizes M x G <=> ?w. ftype x G /\ w IN M.Dom /\
                           !σ phi. (IMAGE σ univ(:num)) SUBSET M.Dom /\ phi IN G ==> fsatis M ((x=+w)σ) phi`;
 
-(*
-val expansion_def = Define`
-expansion M A M' f <=> (M'.Dom = M.Dom) /\
-                       (BIJ f (count (CARD A)) A) /\
-                       (M'.Fun = \n args. if n < CARD A /\ args = [] then f n
-                                           else CHOICE M.Dom) /\
-                        M'.Pred = M.Pred`
-
-*)
 
 
 val expand_def = Define`
@@ -365,21 +356,6 @@ End
 Definition shift_valuation_def:
   shift_valuation n σ f = \m. if m < n then (f m) else (σ (m-n))
 End
-(*
-Theorem expansion_shift_termval:
-  !M A M' f. expansion (mm2folm M) A M' f ==>
-            !t. (∀c. c ∈ FCT t ⇒ c < CARD A) ==>
-                !σ. (termval M' σ t =
-                    termval (mm2folm M) (shift_valuation (CARD A) σ f) (shift_term (CARD A) t))
-Proof
-  strip_tac >> strip_tac >> strip_tac >> strip_tac >> strip_tac >>
-  completeInduct_on `term_size t` >> Cases_on `t` >> rw[] (* 3 *)
-  >- rw[termval_def,shift_valuation_def,shift_term_def]
-  >- (rw[termval_def,shift_valuation_def,shift_term_def] >> fs[expansion_def])
-  >- (rw[termval_def,shift_valuation_def,shift_term_def] >> fs[expansion_def] >>
-      fs[mm2folm_def])
-QED
-*)
 
 Theorem expansion_shift_termval:
   !M A f. (BIJ f (count (CARD A)) A) ==>

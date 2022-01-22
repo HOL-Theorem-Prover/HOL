@@ -118,7 +118,6 @@ Proof
   rw[fsatis_def,feval_def,valuation_def] >> metis_tac[FC_EMPTY_feval]
 QED
 
-(*okay up to here*)
 
 
 val ST_form_functions_EMPTY = store_thm(
@@ -478,16 +477,7 @@ QED
 
 (*detour lemma 2.74 2.62*)
 
-(*
-val invar4bisim_def = Define`
-  invar4bisim x (t1: μ itself) (t2: ν itself) phi <=>
-     (FV phi ⊆ {x} /\ (* form_functions a = {} *)
-     !(M:(num,μ) chap1$model) (N:(num,ν) chap1$model) v w.
-        bisim_world M N (w:μ) (v:ν) ==>
-           (!(σm: num -> μ) (σn: num -> ν). fsatis (mm2folm M) σm(|x |-> w|) phi <=>
-                    fsatis (mm2folm N) σn(|x |-> v|) phi))`
 
-*)
 Theorem ST_CONJ:
 ST x (AND f1 f2) = fAND (ST x f1) (ST x f2)
 Proof
@@ -1140,7 +1130,7 @@ QED
 
 val invar4bisim_def = Define`
   invar4bisim x (t1: μ itself) (t2: ν itself) phi <=>
-     (FV phi ⊆ {x} /\ (* form_functions a = {} *)L1tau phi /\
+     (FV phi ⊆ {x} /\ L1tau phi /\
      !(M:μ chap1$model) (N:ν chap1$model) v w.
         bisim_world M N (w:μ) (v:ν) ==>
            (!(σm: num -> μ) (σn: num -> ν).
@@ -1277,8 +1267,6 @@ Theorem thm_2_68_half1:
                            (feval M v a <=> feval M v (ST x phi)))
 Proof
 rw[] >>
-(*qabbrev_tac
-  `MOC = {ST x phi | phi | entails (:α) {a} (ST x phi)}` >>*)
 qabbrev_tac
   `MOC = {ST x phi | phi |
            (!M:α folModels$model v.
@@ -1348,67 +1336,15 @@ qabbrev_tac `Tx = {ST x phi |phi| feval M v (ST x phi)}` >>
         SPOSE_NOT_THEN ASSUME_TAC >>
         `feval M' v' (fNOT a)` by metis_tac[] >>
         fs[feval_def,fNOT_def]) >>
-
-
-
-    (*drule ST_BIGCONJ >> strip_tac >>
-    first_x_assum (qspec_then `x` assume_tac) >>
-    `∀f. f ∈ Γ₀ ⇒ ∃phi. f = ST x phi`
-      by
-       (rw[] >> fs[Abbr`Tx`,SUBSET_DEF] >> metis_tac[]) >> *)
-   (* first_x_assum drule >> strip_tac >> rw[] >>
-    `entails (:α) {a} (ST x ¬psi)`
-      by
-       (rw[entails_def] >> strip_tac >>
-        `IMAGE v' 𝕌(:num) ⊆ M'.Dom`
-          by (fs[valuation_def,SUBSET_DEF,IMAGE_DEF] >> metis_tac[]) >>
-        `∀f. f ∈ Γ₀ ⇒ feval M' v' f` by metis_tac[] >>
-        fs[entails_def] >> fs[hold_def] >>
-        `¬feval M' v' a` suffices_by metis_tac[] >>
-        `valuation M' v' ∧ interpretation (language (fNOT a INSERT Γ₀)) M' ∧
-         M'.Dom ≠ ∅ ∧ (∀p. p ∈ Γ₀ ⇒ feval M' v' p) ⇒
-         ¬feval M' v' a` by metis_tac[] >>
-        `valuation M' v' ∧ interpretation (language (fNOT a INSERT Γ₀)) M' ∧
-         M'.Dom ≠ ∅ ∧ (∀p. p ∈ Γ₀ ⇒ feval M' v' p)` suffices_by metis_tac[] >>
-        rpt strip_tac (* 3 *)
-        >- (simp[GSYM MEMBER_NOT_EMPTY] >>
-            fs[valuation_def] >> metis_tac[])
-        >- (simp[interpretation_def,language_def] >> rw[] >>
-            `functions (fNOT a INSERT Γ₀) = {}`
-                by
-                 (rw[functions_def] >>
-                  `{form_functions f | f = fNOT a ∨ f ∈ Γ₀} = {∅}`
-                    suffices_by metis_tac[] >>
-                  rw[Once EXTENSION] >>
-                  `(!f. f IN Γ₀ ==> form_functions f = {}) /\
-                   form_functions (fNOT a) = {}`
-                    by
-                     (rw[] (* 2 *)
-                      >- metis_tac[ST_form_functions_EMPTY]
-                      >- (simp[form_functions_def,fNOT_def] >> fs[L1tau_def]))>>
-                  metis_tac[MEMBER_NOT_EMPTY]) >>
-            metis_tac[MEMBER_NOT_EMPTY])
-        >- metis_tac[hold_def]) >> *)
     `(ST x (¬psi)) IN MOC`
       by
        (rw[Abbr`MOC`] >> qexists_tac `¬psi` >> rw[ST_fNOT]) >>
-    (*`(ST x (¬psi)) IN MOC`
-      by
-       (rw[Abbr`MOC`] >> qexists_tac `¬psi` >> rw[ST_fNOT]) >>*)
     `feval M v (fNOT (ST x psi))` by fs[] >>
     fs[feval_def] >>
     `IMAGE v 𝕌(:num) ⊆ M.Dom`
       by (fs[IMAGE_DEF,SUBSET_DEF,valuation_def] >> metis_tac[]) >>
     `?f. f ∈ ss /\ ¬feval M v f` by metis_tac[] >>
     fs[Abbr`Tx`,SUBSET_DEF] >> metis_tac[]
-
-    (*fs[hold_def] >>
-    `feval M v (fNOT (ST x psi))` by fs[] >>
-    fs[feval_def] >>
-    `IMAGE v 𝕌(:num) ⊆ M.Dom`
-      by (fs[IMAGE_DEF,SUBSET_DEF,valuation_def] >> metis_tac[]) >>
-    `?f. f ∈ Γ₀ /\ ¬feval M v f` by metis_tac[] >>
-    fs[Abbr`Tx`,SUBSET_DEF] >> metis_tac[]*)
    ) >>
 (*existence of N*)
 `feval N σn a` by fs[] >>
@@ -1565,7 +1501,7 @@ suffices_by metis_tac[] >>
 metis_tac[L1tau_ultraproduct_mm2folm_folm2mm_comm_feval]
 QED
 
-(*----------------*)
+
 
 Theorem holds_functions_predicates:
    M2.Dom = M1.Dom ∧
@@ -1753,23 +1689,7 @@ Induct_on `phi` (* 4 *)
         >- (fs[] >>
             `form_predicates (Pred n (a::b::c::d)) ⊆
              (0,2) INSERT {(p,1) | p ∈ 𝕌(:num)}` by metis_tac[L1tau_def] >>
-             fs[]
-
-(*
-
-
-`(mm2folm
-              (ultraproduct_model U I' (λi. folm2mm (MS i)))).Pred n mapl = F`
-              by rw[mm2folm_def] >>
-            `(ultraproduct_folmodel U I' MS).Pred n mapl = F`
-              by
-              (`{i | i ∈ I' ∧ (MS i).Pred n (MAP (λfc. CHOICE fc i) mapl)} NOTIN
-                  U`
-                 suffices_by fs[ultraproduct_folmodel_def] >>
-               `{i | i ∈ I' ∧ (MS i).Pred n (MAP (λfc. CHOICE fc i) mapl)} = {}`
-                 suffices_by metis_tac[EMPTY_NOTIN_ultrafilter] >>
-               rw[Once EXTENSION] >> metis_tac[]) >>
-            metis_tac[] *))
+             fs[])
     )
    )
 >- (rw[] >>

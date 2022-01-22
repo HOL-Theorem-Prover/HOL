@@ -25,15 +25,6 @@ val mm2folm_def = Define`
                               |  _ => F
               |>`;
 
-(*
-val expansion_def = Define`
-  expansion M0 A M <=> A SUBSET M0.domain /\
-                       ?ns f. ns INTER (FDOM M0.consts) = {} /\
-                       BIJ f ns A /\
-                       FINITE A /\
-                       M = M0 with consts := FUNION M0.consts (FUN_FMAP f ns)`;
-
-*)
 val _ = overload_on ("fEXISTS", “folLang$Exists”);
 val _ = overload_on ("fDISJ", “folLang$Or”);
 val _ = overload_on ("fAND", “folLang$And”);
@@ -310,24 +301,7 @@ rw[EQ_IMP_THM] (* 2 *)
    (fs[fsatis_def,IMAGE_DEF,SUBSET_DEF,mm2folm_def,valuation_def]) >>
 drule prop_2_47_i >> rw[] >> metis_tac[]
 QED
-(*
 
-Theorem prop_2_47_i0':
-satis (folm2mm M) w phi ⇔ fsatis M (\n. w) (ST x phi)
-Proof
-rw[EQ_IMP_THM] (* 2 *)
->- (`IMAGE (\n.w) 𝕌(:num) ⊆ M.Dom`
-     by
-      (`(folm2mm M).frame.world = M.Dom` by fs[folm2mm_def] >>
-       rw[IMAGE_DEF,SUBSET_DEF] >> metis_tac[satis_in_world]) >>
-    drule prop_2_47_i' >> rw[fsatis_def]
-    >- fs[valuation_def,IMAGE_DEF,SUBSET_DEF] >>
-    metis_tac[])
->- (`IMAGE (\n.w) 𝕌(:num) ⊆ M.Dom`
-      by fs[IMAGE_DEF,SUBSET_DEF,fsatis_def,valuation_def] >>
-    drule prop_2_47_i' >> rw[] >> fs[fsatis_def] >> metis_tac[])
-QED
-*)
 
 Theorem non_ST_exists_lemma:
 !phi x n.
