@@ -306,6 +306,8 @@ val _ =
   in
     print "Calling mllex on QuoteFilter\n";
     systeml [mllex, "QuoteFilter"];
+    compile [] "holpathdb.sig";
+    compile [] "holpathdb.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";
@@ -335,8 +337,6 @@ val _ =
     compile [] "mosml_holdeptool.sml";
     link{extras = [], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
-    compile [] "holpathdb.sig";
-    compile [] "holpathdb.sml";
     compile [] "HM_DepGraph.sig";
     compile [] "HM_DepGraph.sml";
     compile [] "HM_GraphBuildJ1.sig";
