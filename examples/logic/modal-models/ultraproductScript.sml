@@ -947,7 +947,17 @@ completeInduct_on `term_size t` >> rw[] >> Cases_on `t` (* 2 *)
       >- (rw[folmodels2Doms_def] >> metis_tac[MEMBER_NOT_EMPTY])
       >- rw[Cart_prod_def,folmodels2Doms_def]
       >- rw[Cart_prod_def,folmodels2Doms_def]
-      >- fs[ultrafilter_def,proper_filter_def,filter_def])
+      >- (fs[ultrafilter_def,proper_filter_def,filter_def] >>
+         ‘{i |
+         i ∈ I' ∧
+         (FMS i).Fun n (MAP (λa. termval (FMS i) (λn. CHOICE (σ n) i) a) l) =
+         (FMS i).Fun n (MAP (termval (FMS i) (λn. CHOICE (σ n) i)) l)} = I'’
+         suffices_by metis_tac[] >>
+         rw[EXTENSION] >>
+         ‘(λa. termval (FMS x) (λn. CHOICE (σ n) x) a) =
+         (termval (FMS x) (λn. CHOICE (σ n) x))’ suffices_by metis_tac[] >>
+         qspec_then ‘termval (FMS x) (λn. CHOICE (σ n) x)’ assume_tac ETA_AX>>
+         rw[]))
    >- (* in card prod by definition, need lemmas *) (rw[partition_def,Cart_prod_def] >>
       qexists_tac `\i. (FMS i).Fun n
                 (MAP
@@ -979,10 +989,20 @@ completeInduct_on `term_size t` >> rw[] >> Cases_on `t` (* 2 *)
       >- rw[folmodels2Doms_def]
       >- (rw[EQ_IMP_THM,Once EXTENSION,Uequiv_def] (* 3 *)
           >- fs[Cart_prod_def,folmodels2Doms_def]
-          >> (`{i | i ∈ I' ∧ x i =
-              (FMS i).Fun n (MAP (λa. termval (FMS i) (λn. CHOICE (σ n) i) a) l)} =
+          >-  fs[Cart_prod_def,folmodels2Doms_def]
+          >- (`{i | i ∈ I' ∧ x i =
+              (FMS i).Fun n (MAP (termval (FMS i) (λn. CHOICE (σ n) i)) l)} =
               {i | i ∈ I' ∧ (FMS i).Fun n (MAP (λa. termval (FMS i) (λn. CHOICE (σ n) i) a) l) = x i}`
-                suffices_by metis_tac[] >> rw[EXTENSION] >> metis_tac[])))
+                suffices_by metis_tac[] >> rw[EXTENSION] >> metis_tac[])
+          >-  fs[Cart_prod_def,folmodels2Doms_def]
+          >>‘{i |
+         i ∈ I' ∧
+         x i = (FMS i).Fun n (MAP (termval (FMS i) (λn. CHOICE (σ n) i)) l)} =
+           {i |
+         i ∈ I' ∧
+         (FMS i).Fun n (MAP (λa. termval (FMS i) (λn. CHOICE (σ n) i) a) l) =
+         x i}’ suffices_by metis_tac[] >>
+         rw[EXTENSION] >> metis_tac[]))
    >- metis_tac[prop_A_16])
 QED
 

@@ -345,7 +345,11 @@ qabbrev_tac `MA = <| Dom := (mm2folm M).Dom;
 `{w} SUBSET (mm2folm M).Dom` by fs[SUBSET_DEF,mm2folm_def] >>
 `MA = expand (mm2folm M) {w} (\n.w)`
   by (rw[expand_def,folModelsTheory.model_component_equality,mm2folm_def,Abbr`MA`,FUN_EQ_THM] >>
-      Cases_on `x' = 0 ∧ x'' = []` >> fs[]) >>
+      Cases_on `x' = 0 ∧ x'' = []` >> fs[] >>
+      Cases_on ‘x' = 0’ >- (first_x_assum drule >>
+      strip_tac >> rw[]) >>
+      rw[]
+      ) >>
 (*
 `expansion (mm2folm M) {w} MA (\n.w)`
   by (rw[expansion_def] (* 4 *)
@@ -597,7 +601,7 @@ Induct_on `phi` (* 4 *)
          (?a b. l = [a;b]) \/
          (?a b c d. l = a :: b :: c :: d)`
           by
-           (Cases_on `l` >> fs[] >>
+           (Cases_on `l` >> fs[Abbr‘mapl’] >>
             Cases_on `t` >> fs[] >> Cases_on `t'` >> fs[]) (* 3 *)
         >- (rw[] >>
             qabbrev_tac
@@ -1640,7 +1644,7 @@ Induct_on `phi` (* 4 *)
          (?a b. l = [a;b]) \/
          (?a b c d. l = a :: b :: c :: d)`
           by
-           (Cases_on `l` >> fs[] >>
+           (Cases_on `l` >> fs[Abbr‘mapl’] >>
             Cases_on `t` >> fs[] >> Cases_on `t'` >> fs[]) (* 3 *)
         >- (rw[] >>
             qabbrev_tac

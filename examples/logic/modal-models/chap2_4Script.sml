@@ -12,7 +12,7 @@ open folModelsTheory;
 open folLangTheory;
 
 
-val _ = new_theory "chap2_4revised";
+val _ = new_theory "chap2_4";
 
 val mm2folm_def = Define`
   mm2folm M = <| Dom := M.frame.world ;

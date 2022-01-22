@@ -12,7 +12,7 @@ open prop2_29Theory;
 open prim_recTheory;
 open listTheory pairTheory;
 
-val _ = new_theory "chap2_3revised";
+val _ = new_theory "chap2_3";
 
 val irule = fn th => irule th >> rpt conj_tac
 

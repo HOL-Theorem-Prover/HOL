@@ -213,7 +213,7 @@ Proof
      >- (fs[] >> rw[mm2folm_def,ultraproduct_folmodel_def,ultraproduct_model_def] >>
         metis_tac[EMPTY_NOTIN_ultrafilter])
      >- (`(?a. l = [a]) \/ (?a b. l = [a;b]) \/ (?a b c d. l = a :: b :: c :: d)` by
-            (Cases_on `l` >> fs[] >> Cases_on `t` >> fs[] >> Cases_on `t'` >> fs[])
+            (Cases_on `l` >> fs[Abbr‘mapl’] >> Cases_on `t` >> fs[] >> Cases_on `t'` >> fs[])
         (* 3 *)
         >- (rw[] >>
             qabbrev_tac `sl = termval (mm2folm (ultraproduct_model U I' MS)) σ a` >>
@@ -234,7 +234,7 @@ Proof
                       first_x_assum
                        (qspecl_then [`models2worlds MS`,`sl`,`CHOICE sl`,`x`] assume_tac)>>
                       fs[models2worlds_def] >> first_x_assum irule >> rw[] >>
-                      `sl <> {}` suffices_by metis_tac[CHOICE_DEF] >>
+                      `termval (ultraproduct_folmodel U I' (λi. mm2folm (MS i))) σ a <> {}` suffices_by metis_tac[CHOICE_DEF] >>
                       drule ultraproduct_eqclass_non_empty >> rw[] >> metis_tac[])
                   >- fs[IN_DEF]) >>
                   (* proved subset *)
@@ -482,10 +482,10 @@ Theorem shift_FVT:
 Proof
 completeInduct_on `term_size t` >> Cases_on `t` >> rw[FVT_def,shift_term_def] >>
 rw[SUBSET_DEF] >> fs[MEM_MAP] >> rw[] >> fs[PULL_FORALL] >>
-first_x_assum (qspec_then `a'` assume_tac) >> drule term_size_lemma >>
+first_x_assum (qspec_then `a` assume_tac) >> drule term_size_lemma >>
 strip_tac >> first_x_assum (qspec_then `n` assume_tac) >> fs[ADD_CLAUSES] >>
 fs[PULL_EXISTS] >>
-`FVT (shift_term (CARD A) a') DIFF count (CARD A) ⊆ {x + CARD A| x IN s}`
+`FVT (shift_term (CARD A) a) DIFF (count (CARD A)) ⊆ {x + CARD A| x IN s}`
   suffices_by rw[DIFF_DEF,SUBSET_DEF] >>
 first_x_assum irule >> rw[] (* 3 *)
 >- (fs[SUBSET_DEF,PULL_EXISTS,PULL_FORALL,MEM_MAP] >> metis_tac[])
