@@ -18,7 +18,7 @@ open HolKernel Parse boolLib metisLib;
      Make sure that sumTheory and oneTheory is loaded.
  ---------------------------------------------------------------------------*)
 
-local open sumTheory oneTheory relationTheory in end;
+local open sumTheory oneTheory relationTheory DefnBase in end;
 open simpLib BasicProvers
 
 (* ---------------------------------------------------------------------*)
@@ -353,16 +353,16 @@ val OPTION_MAP_COMPOSE = store_thm(
   ``OPTION_MAP f (OPTION_MAP g (x:'a option)) = OPTION_MAP (f o g) x``,
   OPTION_CASES_TAC ``x:'a option`` THEN SRW_TAC [][]);
 
-val OPTION_MAP_CONG = store_thm(
-  "OPTION_MAP_CONG",
-  ``!opt1 opt2 f1 f2.
+Theorem OPTION_MAP_CONG[defncong]:
+  !opt1 opt2 f1 f2.
       (opt1 = opt2) /\ (!x. (opt2 = SOME x) ==> (f1 x = f2 x)) ==>
-      (OPTION_MAP f1 opt1 = OPTION_MAP f2 opt2)``,
+      (OPTION_MAP f1 opt1 = OPTION_MAP f2 opt2)
+Proof
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
   Q.SPEC_THEN `opt2` FULL_STRUCT_CASES_TAC option_nchotomy THEN
   REWRITE_TAC [OPTION_MAP_DEF, SOME_11] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11])
-val _ = DefnBase.export_cong "OPTION_MAP_CONG"
+  FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11]
+QED
 
 val IS_SOME_MAP = Q.store_thm ("IS_SOME_MAP",
   `IS_SOME (OPTION_MAP f x) = IS_SOME (x : 'a option)`,
@@ -408,16 +408,17 @@ val OPTION_MAP2_NONE = Q.store_thm(
   SRW_TAC [][]);
 val _ = export_rewrites["OPTION_MAP2_NONE"];
 
-val OPTION_MAP2_cong = store_thm("OPTION_MAP2_cong",
-  ``!x1 x2 y1 y2 f1 f2.
+Theorem OPTION_MAP2_cong[defncong]:
+  !x1 x2 y1 y2 f1 f2.
        (x1 = x2) /\ (y1 = y2) /\
        (!x y. (x2 = SOME x) /\ (y2 = SOME y) ==> (f1 x y = f2 x y)) ==>
-       (OPTION_MAP2 f1 x1 y1 = OPTION_MAP2 f2 x2 y2)``,
+       (OPTION_MAP2 f1 x1 y1 = OPTION_MAP2 f2 x2 y2)
+Proof
   SRW_TAC [][] THEN
   Q.SPEC_THEN `x1` FULL_STRUCT_CASES_TAC option_nchotomy THEN
   Q.ISPEC_THEN `y1` FULL_STRUCT_CASES_TAC option_nchotomy THEN
-  SRW_TAC [][]);
-val _ = DefnBase.export_cong "OPTION_MAP2_cong";
+  SRW_TAC [][]
+QED
 
 val OPTION_MAP_CASE = store_thm("OPTION_MAP_CASE",
   ``OPTION_MAP f (x:'a option) = option_CASE x NONE (SOME o f)``,
@@ -466,13 +467,12 @@ val OPTION_BIND_def = Prim_rec.new_recursive_definition
 val _= export_rewrites ["OPTION_BIND_def"]
 val _ = computeLib.add_persistent_funs ["OPTION_BIND_def"];
 
-val OPTION_BIND_cong = Q.store_thm(
-  "OPTION_BIND_cong",
-  `!o1 o2 f1 f2.
+Theorem OPTION_BIND_cong[defncong]:
+  !o1 o2 f1 f2.
      (o1:'a option = o2) /\ (!x. (o2 = SOME x) ==> (f1 x = f2 x)) ==>
-     (OPTION_BIND o1 f1 = OPTION_BIND o2 f2)`,
-  simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]);
-val _ = DefnBase.export_cong "OPTION_BIND_cong"
+     (OPTION_BIND o1 f1 = OPTION_BIND o2 f2)
+Proof simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]
+QED
 
 Theorem OPTION_BIND_EQUALS_OPTION[simp]:
   (OPTION_BIND (p:'a option) f = NONE <=>
