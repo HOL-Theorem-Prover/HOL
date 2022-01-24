@@ -406,7 +406,7 @@ before and after the region is sent."
 (defun hol-what-was-copy-region-as-hol-definition-quietly ()
    (interactive "")
    (ding)
-   (message "Deprecated: use C-u C-u M-h M-r for quiet region execution instead"))q
+   (message "Deprecated: use C-u C-u M-h M-r for quiet region execution instead"))
 
 
 (defun hol-name-top-theorem (string arg)
