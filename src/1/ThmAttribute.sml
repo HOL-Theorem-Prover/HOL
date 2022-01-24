@@ -36,6 +36,7 @@ struct
         funstore := newm
       end
 
+  fun is_attribute a = Map.defined (!funstore) a
   fun at_attribute nm sel (arg as {name,attrname,thm}) =
       case Map.lookup (!funstore) attrname of
           NONE => raise Feedback.mk_HOL_ERR "ThmAttribute"
@@ -59,6 +60,16 @@ struct
         (string bracketl, String.fields (fn c => c = #",") (string names))
     end
   end
+
+  fun toString (s, attrs) =
+      if null attrs then s
+      else s ^ "[" ^ String.concatWith "," attrs ^ "]"
+
+  fun insert_attribute {attr} s =
+      let val (s0,attrs) = extract_attributes s
+      in
+        toString (s0, attr::attrs)
+      end
 
 
 end
