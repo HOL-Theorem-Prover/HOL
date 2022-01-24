@@ -369,8 +369,9 @@ fun define_inductive_type_constructor defs consindex th = let
   val expth = valOf (List.find (fn th => aconv (lhand(concl th)) oldcon) defs)
   val rexpth = SUBS_CONV [expth] defrt
   val deflf = mk_var(fst(dest_var oldcon),type_of defrt)
-  val defth = new_definition(temp_binding (fst (dest_var oldcon) ^ "_def"),
-                             mk_eq(deflf,rand(concl rexpth)))
+  val defth = Definition.new_definition(
+        temp_binding (fst (dest_var oldcon) ^ "_def"),
+        mk_eq(deflf,rand(concl rexpth)))
 in
   TRANS defth (SYM rexpth)
 end;
@@ -1493,7 +1494,7 @@ local
           val rdef = list_mk_abs(vs,rdeb)
           val newname = fst(dest_var(safeid_genvar Type.bool))
           val def = mk_eq(mk_var(newname,type_of rdef),rdef)
-          val dth = new_definition (newname, def)
+          val dth = Definition.new_definition (newname, def)
         in
           SIMPLE_BETA_RULE dth
         end
@@ -1538,7 +1539,7 @@ val define_type_nested = fn def =>
      val gencons = map(repeat rator o rand o lhand o snd o strip_forall) relcls
      val cdefs =
          map2 (fn s => fn r =>
-                  SYM(new_definition (temp_binding s,
+                  SYM(Definition.new_definition (temp_binding s,
                                       mk_eq(mk_var(s,type_of r),r))))
               truecons
               gencons
