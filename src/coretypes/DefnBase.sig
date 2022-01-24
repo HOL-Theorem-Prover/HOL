@@ -36,8 +36,9 @@ sig
      Another might be "PMATCH", which would be the definition with
      case constants translated into PMATCH versions.
   *)
-  val register_defn : string -> thm -> unit
-  val lookup_defn : term -> string -> thm option
+  val register_defn : {tag: string, thmname:string} -> unit
+  val lookup_defn : term -> string -> (string * thm) option
+  val current_user_defns : unit -> (KernelSig.kernelname * string * thm) list
 
   val register_indn : thm * term list -> unit
   val lookup_indn : term -> (thm * term list) option

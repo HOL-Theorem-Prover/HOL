@@ -166,13 +166,14 @@ val {export = export_cong,...} =
     storage of definitions
    ---------------------------------------------------------------------- *)
 
-type defnstore = (string * KernelSig.kernelname, thm) Binarymap.dict
+
+
+type defnstore = (string * KernelSig.kernelname, string * thm) Binarymap.dict
 type indnstore = (KernelSig.kernelname, thm * term list) Binarymap.dict
 
-val the_defnstore : defnstore ref =
-    ref (Binarymap.mkDict(pair_compare(String.compare, KernelSig.name_compare)))
-val the_indnstore : indnstore ref =
-    ref (Binarymap.mkDict KernelSig.name_compare)
+val empty_dstore =
+    Binarymap.mkDict(pair_compare(String.compare, KernelSig.name_compare))
+val empty_istore = Binarymap.mkDict KernelSig.name_compare
 
 fun list_insert m k v =
     case Binarymap.peek(m,k) of
@@ -181,7 +182,9 @@ fun list_insert m k v =
 
 fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
 
-fun register_defn tag thm =
+(* _p versions are pure/functional *)
+
+fun register_defn_p tag (thname, thm) dstore =
     let
       val ths = thm |> CONJUNCTS
       val cs =
@@ -196,21 +199,63 @@ fun register_defn tag thm =
                          (Binarymap.mkDict KernelSig.name_compare)
                          cs
     in
-      the_defnstore :=
-      Binarymap.foldl (fn (k,cs,A) => Binarymap.insert(A,(tag,k),LIST_CONJ cs))
-                      (!the_defnstore)
-                      m
+      Binarymap.foldl
+        (fn (k,cs,A) => Binarymap.insert(A,(tag,k),(thname, LIST_CONJ cs)))
+        dstore
+        m
     end
 
-fun lookup_defn c tag =
+fun remove_def s dstore =
+    Binarymap.foldl (fn (k,v as (nm, th), A) =>
+                        if s <> nm then Binarymap.insert(A,k,v) else A)
+                    empty_dstore
+                    dstore
+
+fun udef_apply (ThmSetData.ADD v) dstore = register_defn_p "user" v dstore
+  | udef_apply (ThmSetData.REMOVE s) dstore =
+      remove_def (ThmSetData.toKName s) dstore
+val userdefs_db as {get_global_value = get_userdefs_db, ...} =
+    ThmSetData.export_with_ancestry {
+      settype = "userdef",
+      delta_ops = {apply_to_global = udef_apply, thy_finaliser = NONE,
+                   uptodate_delta = K true, initial_value = empty_dstore,
+                   apply_delta = udef_apply}
+    }
+
+fun register_defn {tag, thmname} =
+    let
+      val add = ThmSetData.mk_add thmname
+      val p = case add of ThmSetData.ADD p => p | _ => raise Fail "Impossible"
+    in
+      if tag <> "user" then
+        HOL_WARNING "DefnBase" "register_defn"
+                    "Non-'user' definitions are only stored transiently"
+      else
+        #record_delta userdefs_db add;
+      #update_global_value userdefs_db (register_defn_p tag p)
+    end
+
+
+fun kname_as_binding {Name,Thy} = Thy ^ "." ^ Name
+fun lookup_defn_p dstore c tag =
     let
       val {Name,Thy,...} =
           dest_thy_const c
           handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
                                     "lookup_defn" "Not a constant"
     in
-      Binarymap.peek (!the_defnstore, (tag, {Name = Name, Thy = Thy}))
+      Option.map (apfst kname_as_binding) $
+                 Binarymap.peek (dstore, (tag, {Name = Name, Thy = Thy}))
     end
+
+fun lookup_defn c tag = lookup_defn_p (get_userdefs_db()) c tag
+
+fun current_user_defns () =
+    Binarymap.foldl (fn ((tag,kid), (thmnm, th), A) =>
+                        if tag = "user" then
+                          (kid,kname_as_binding thmnm,th)::A else A)
+                    []
+                    (get_userdefs_db())
 
 fun isprefix l1 l2 =
     case (l1,l2) of
@@ -218,7 +263,7 @@ fun isprefix l1 l2 =
       | (h1::t1, []) => false
       | (h1::t1, h2::t2) => h1 = h2 andalso isprefix t1 t2
 
-fun register_indn (ind, cs) =
+fun register_indn_p (ind, cs) istore =
     let
       val _ = not (null cs) orelse
               raise mk_HOL_ERR "DefnBase" "register_indn"
@@ -236,23 +281,28 @@ fun register_indn (ind, cs) =
           end
       val _ = ListPair.all check (Ps, cs)
     in
-      the_indnstore :=
       List.foldl (fn (c, A) =>
                      Binarymap.insert(A, c |> dest_thy_const |> to_kid,
                                       (ind,cs)))
-                 (!the_indnstore)
+                 istore
                  cs
     end
 
-fun lookup_indn c =
+fun lookup_indn_p istore c =
     let
       val {Name,Thy,...} =
           dest_thy_const c
           handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
                                     "lookup_indn" "Not a constant"
     in
-      Binarymap.peek (!the_indnstore, {Name = Name, Thy = Thy})
+      Binarymap.peek (istore, {Name = Name, Thy = Thy})
     end
+
+val the_istore = Sref.new empty_istore
+
+fun register_indn ics = Sref.update the_istore (register_indn_p ics)
+fun lookup_indn c = lookup_indn_p (Sref.value the_istore) c
+
 
 (* ----------------------------------------------------------------------
 

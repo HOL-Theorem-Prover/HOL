@@ -14,16 +14,16 @@ datatype setdelta =
 datatype raw_delta = rADD of thname | rREMOVE of string
 val added_thms = List.mapPartial (fn ADD (_, th) => SOME th | _ => NONE)
 
-fun mk_store_name_safe s =
+fun toKName s =
    case String.fields (equal #".") s of
        [s0] => {Thy = current_theory(), Name = s}
      | [s1,s2] => {Thy = s1, Name = s2}
-     | _ => raise mk_HOL_ERR "ThmSetData" "mk_store_name_safe"
-                  ("Malformed name: " ^ s)
+     | _ => raise mk_HOL_ERR "ThmSetData" "toKName" ("Malformed name: " ^ s)
 
 fun lookup_exn {Thy,Name} = DB.fetch Thy Name
 fun mk_add s =
-    let val nm = mk_store_name_safe s in ADD(nm, lookup_exn nm) end
+    let val nm = toKName s in ADD(nm, lookup_exn nm) end
+      handle e as HOL_ERR _ => raise wrap_exn "ThmSetData" "mk_add" e
 
 local
   open ThyDataSexp
@@ -194,7 +194,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun onload thy = apply_deltas thy (segdata {thyname = thy})
 
   fun export_nameonly s =
-      let val thnm = mk_store_name_safe s
+      let val thnm = toKName s
       in
         export(thnm, lookup_exn thnm)
       end
@@ -205,7 +205,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
     export_deltasexp data
   end
 
-  fun store_attrfun {attrname,name,thm} = export (mk_store_name_safe name,thm)
+  fun store_attrfun {attrname,name,thm} = export (toKName name,thm)
   fun local_attrfun {attrname,name,thm} =
     add {named_thm = ({Thy = current_theory(), Name = name},thm),
          thy = current_theory()}

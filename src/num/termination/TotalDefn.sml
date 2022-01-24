@@ -734,6 +734,7 @@ fun qDefine stem q tacopt =
       val (corename, attrs) = ThmAttribute.extract_attributes stem
       val (nocomp, attrs) = test_remove "nocompute" attrs
       val (svarsok, attrs) = test_remove "schematic" attrs
+      val (notuserdef, attrs) = test_remove "notuserdef" attrs
       val (indopt,attrs) = find_indoption attrs
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
@@ -750,6 +751,7 @@ fun qDefine stem q tacopt =
       fun proc_attr a =
           ThmAttribute.store_at_attribute{name = corename, attrname = a,
                                           thm = thm}
+      val attrs = if notuserdef then attrs else "userdef" :: attrs
     in
       List.app proc_attr attrs;
       thm

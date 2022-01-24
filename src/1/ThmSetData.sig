@@ -4,6 +4,7 @@ sig
   type data = Theory.LoadableThyData.t
   type thm = Thm.thm
   type thname = KernelSig.kernelname
+  val toKName : string -> thname
   datatype setdelta = ADD of thname * thm | REMOVE of string
   type exportfns =
        { add : {thy : string, named_thm : thname * thm} -> unit,

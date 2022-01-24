@@ -54,7 +54,7 @@ val NUMPAIR_INJ = store_thm (
 val NUMPAIR_DEST = Rsyntax.new_specification {
   consts = [{const_name = "NUMFST", fixity = NONE},
             {const_name = "NUMSND", fixity = NONE}],
-  name = "NUMPAIR_DEST",
+  name = "NUMPAIR_DEST[notuserdef]",
   sat_thm = MATCH_MP INJ_INVERSE2 NUMPAIR_INJ};
 
 (* ------------------------------------------------------------------------- *)
@@ -77,7 +77,7 @@ QED
 val NUMSUM_DEST = Rsyntax.new_specification{
   consts = [{const_name = "NUMLEFT", fixity = NONE},
             {const_name = "NUMRIGHT", fixity = NONE}],
-  name = "NUMSUM_DEST",
+  name = "NUMSUM_DEST[notuserdef]",
   sat_thm = MATCH_MP INJ_INVERSE2 NUMSUM_INJ};
 
 (* ------------------------------------------------------------------------- *)
