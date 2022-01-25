@@ -2,8 +2,9 @@ signature DefnBase =
 sig
   type term = Term.term
   type thm  = Thm.thm
-
- datatype defn
+  type kname = KernelSig.kernelname
+  type defn_presentation = {const: term, thmname: kname, thm : thm}
+  datatype defn
    = ABBREV  of {eqn:thm, bind:string}
    | PRIMREC of {eqs:thm, ind:thm, bind:string}
    | NONREC  of {eqs:thm, ind:thm, SV:term list, stem:string}
@@ -35,10 +36,14 @@ sig
 
      Another might be "PMATCH", which would be the definition with
      case constants translated into PMATCH versions.
+
+     For the moment, as per all the names that talk of "userdefs", the
+     only useful tag is "user".
   *)
   val register_defn : {tag: string, thmname:string} -> unit
-  val lookup_defn : term -> string -> (string * thm) option
-  val current_user_defns : unit -> (KernelSig.kernelname * string * thm) list
+  val lookup_userdef : term -> defn_presentation option
+  val current_userdefs : unit -> defn_presentation list
+  val thy_userdefs : {thyname:string} -> defn_presentation list
 
   val register_indn : thm * term list -> unit
   val lookup_indn : term -> (thm * term list) option

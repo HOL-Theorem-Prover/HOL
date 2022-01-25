@@ -2,6 +2,8 @@ structure DefnBase :> DefnBase =
 struct
 
 open HolKernel boolTheory boolSyntax Drule Conv Rewrite
+type kname = KernelSig.kernelname
+type defn_presentation = {const: term, thmname: kname, thm : thm}
 
 val ERR = mk_HOL_ERR "DefnBase";
 
@@ -205,6 +207,27 @@ fun register_defn_p tag (thname, thm) dstore =
         m
     end
 
+fun add_thy thyname dstore =
+    let val defs = DB.definitions thyname
+    in
+      List.foldl
+        (fn ((n,th), A) =>
+            register_defn_p "user" ({Thy = thyname, Name = n}, th) A)
+        dstore
+        defs
+    end
+
+fun addboolth nm A =
+    register_defn_p "user" ({Thy = "bool", Name = nm}, DB.fetch "bool" nm) A
+
+val initial_dstore =
+    empty_dstore
+      |> rev_itlist add_thy ["relation", "combin"]
+      |> rev_itlist addboolth ["ONTO_DEF", "ONE_ONE_DEF", "IN_DEF",
+                               "RES_SELECT_DEF", "RES_EXISTS_UNIQUE_DEF",
+                               "RES_FORALL_DEF", "RES_EXISTS_DEF"]
+
+
 fun remove_def s dstore =
     Binarymap.foldl (fn (k,v as (nm, th), A) =>
                         if s <> nm then Binarymap.insert(A,k,v) else A)
@@ -214,11 +237,12 @@ fun remove_def s dstore =
 fun udef_apply (ThmSetData.ADD v) dstore = register_defn_p "user" v dstore
   | udef_apply (ThmSetData.REMOVE s) dstore =
       remove_def (ThmSetData.toKName s) dstore
-val userdefs_db as {get_global_value = get_userdefs_db, ...} =
+val userdefs_db as
+    {get_global_value = get_userdefs_db, get_deltas = thy_userdefs0,...} =
     ThmSetData.export_with_ancestry {
       settype = "userdef",
       delta_ops = {apply_to_global = udef_apply, thy_finaliser = NONE,
-                   uptodate_delta = K true, initial_value = empty_dstore,
+                   uptodate_delta = K true, initial_value = initial_dstore,
                    apply_delta = udef_apply}
     }
 
@@ -236,26 +260,36 @@ fun register_defn {tag, thmname} =
     end
 
 
-fun kname_as_binding {Name,Thy} = Thy ^ "." ^ Name
-fun lookup_defn_p dstore c tag =
+fun presentation (tag,kid) (thmnm, th) =
+    {const = prim_mk_const kid,thmname = thmnm,thm = th}
+fun lookup_userdef_p dstore c =
     let
       val {Name,Thy,...} =
           dest_thy_const c
           handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
-                                    "lookup_defn" "Not a constant"
+                                    "lookup_userdef" "Not a constant"
+      val k = ("user", {Name=Name,Thy=Thy})
     in
-      Option.map (apfst kname_as_binding) $
-                 Binarymap.peek (dstore, (tag, {Name = Name, Thy = Thy}))
+      Option.map (presentation k) $ Binarymap.peek(dstore, k)
+    end
+fun lookup_userdef c = lookup_userdef_p (get_userdefs_db()) c
+
+fun current_userdefs () =
+    let fun foldthis (k as (tag,kid), v, A) =
+            if tag = "user" then presentation k v::A else A
+    in
+      Binarymap.foldl foldthis [] $ get_userdefs_db()
     end
 
-fun lookup_defn c tag = lookup_defn_p (get_userdefs_db()) c tag
-
-fun current_user_defns () =
-    Binarymap.foldl (fn ((tag,kid), (thmnm, th), A) =>
-                        if tag = "user" then
-                          (kid,kname_as_binding thmnm,th)::A else A)
-                    []
-                    (get_userdefs_db())
+fun thy_userdefs {thyname} =
+    let
+      fun foldthis (k as (tag, kid), v, A) =
+          if tag = "user" andalso #Thy kid = thyname then
+            presentation k v :: A
+          else A
+    in
+      Binarymap.foldl foldthis [] $ get_userdefs_db()
+    end
 
 fun isprefix l1 l2 =
     case (l1,l2) of
