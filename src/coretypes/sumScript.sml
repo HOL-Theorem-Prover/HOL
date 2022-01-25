@@ -256,72 +256,26 @@ val sum_distinct_rev = save_thm("sum_distinct1", GSYM sum_distinct);
 (* The definitions of ISL, ISR, OUTL, OUTR follow.                      *)
 (* ---------------------------------------------------------------------*)
 
+val ISL = new_recursive_definition {
+  def = “ISL (INL x) = T ∧ ISL (INR y) = F”,
+  name = "ISL[simp,compute]",
+  rec_axiom = sum_Axiom
+};
 
-(* Derive the defining property for ISL.                                *)
-val ISL_DEF = TAC_PROOF(
-  ([], “?ISL. (!x:'a. ISL(INL x)) /\ (!y:'b. ~ISL(INR y))”),
-  let val inst = INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
-      val spec = SPECL [“\x:'a.T”, “\y:'b.F”] inst
-      val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
-      val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
-  in
-      STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
-      EXISTS_TAC “h:'a+'b->bool” THEN ASM_REWRITE_TAC []
-  end);
+val ISR = new_recursive_definition {
+  def = “ISR(INR x) = T /\ ISR(INL y) = F”, name = "ISR[simp,compute]",
+  rec_axiom = sum_Axiom
+};
 
-(* Then define ISL with a constant specification.                       *)
-val ISL = new_specification("ISL",["ISL"], ISL_DEF);
-val _ = export_rewrites ["ISL"]
+val OUTL = new_recursive_definition {
+  def = “OUTL (INL x) = x”, name = "OUTL[simp,compute]",
+  rec_axiom = sum_Axiom
+};
 
-(* Derive the defining property for ISR.                                *)
-val ISR_DEF = TAC_PROOF(
-  ([], “?ISR. (!x:'b. ISR(INR x)) /\ (!y:'a. ~ISR(INL y))”),
-  let val inst = INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
-      val spec = SPECL [“\x:'a.F”,  “\y:'b.T”] inst
-      val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
-      val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
-  in
-      STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
-      EXISTS_TAC “h:'a+'b->bool” THEN ASM_REWRITE_TAC []
-  end);
-
-(* Then define ISR with a constant specification.                       *)
-val ISR = new_specification("ISR",["ISR"], ISR_DEF);
-val _ = export_rewrites ["ISR"]
-
-(* Derive the defining property of OUTL.                                *)
-val OUTL_DEF = TAC_PROOF(([],
-“?OUTL. !x. OUTL(INL x:('a,'b)sum) = x”),
-   let val inst = INST_TYPE [Type.gamma |-> Type.alpha] sum_axiom
-       val spec = SPECL [“\x:'a.x”, “\y:'b.@x:'a.F”] inst
-       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
-       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
-   in
-   STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] (BETA_RULE conv)) THEN
-   EXISTS_TAC “h:'a+'b->'a” THEN ASM_REWRITE_TAC []
-   end);
-
-(* Then define OUTL with a constant specification.                      *)
-val OUTL = new_specification("OUTL",["OUTL"], OUTL_DEF)
-val _ = export_rewrites ["OUTL"]
-
-(* Derive the defining property of OUTR.                                *)
-val OUTR_DEF = TAC_PROOF(
-  ([], “?OUTR. !x. OUTR(INR x:'a+'b) = x”),
-   let val inst = INST_TYPE [Type.gamma |-> Type.beta] sum_axiom
-       val spec = SPECL [“\x:'a.@y:'b.F”,  “\y:'b.y”] inst
-       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
-       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
-   in
-   STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] (BETA_RULE conv)) THEN
-   EXISTS_TAC “h:'a+'b->'b” THEN ASM_REWRITE_TAC []
-   end);
-
-(* Then define OUTR with a constant specification.                      *)
-val OUTR = new_specification("OUTR", ["OUTR"], OUTR_DEF);
-val _ = export_rewrites ["OUTR"]
-
-
+val OUTR = new_recursive_definition {
+  def = “OUTR(INR x:'a+'b) = x”, name = "OUTR[simp,compute]",
+  rec_axiom = sum_Axiom
+};
 
 (* ---------------------------------------------------------------------*)
 (* Prove the following standard theorems about the sum type.            *)
@@ -389,11 +343,10 @@ val sum_case_cong = save_thm("sum_case_cong",
    ---------------------------------------------------------------------- *)
 
 val SUM_MAP_def = Prim_rec.new_recursive_definition{
-  name = "SUM_MAP_def",
+  name = "SUM_MAP_def[simp,compute]",
   def = ``(SUM_MAP f g (INL (a:'a)) = INL (f a:'c)) /\
           (SUM_MAP f g (INR (b:'b)) = INR (g b:'d))``,
   rec_axiom = sum_Axiom};
-val _ = export_rewrites ["SUM_MAP_def"]
 val _ = temp_set_mapped_fixity{tok = "++", term_name = "SUM_MAP",
                                fixity = Infixl 480}
 
@@ -580,8 +533,7 @@ QED
 
 val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
                                         "sum_distinct", "sum_distinct1",
-                                        "SUM_ALL_def", "SUM_MAP_def",
-                                        "OUTL", "OUTR", "ISL", "ISR"]
+                                        "SUM_ALL_def"]
 
 local open OpenTheoryMap
 val ns = ["Data","Sum"]

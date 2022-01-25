@@ -3,7 +3,9 @@ struct
 
 open HolKernel boolTheory boolSyntax Drule Conv Rewrite
 type kname = KernelSig.kernelname
-type defn_presentation = {const: term, thmname: kname, thm : thm}
+datatype defn_thm = STDEQNS of thm | OTHER of thm
+fun thm_of (STDEQNS th) = th | thm_of (OTHER th) = th
+type defn_presentation = {const: term, thmname: kname, thm : defn_thm}
 
 val ERR = mk_HOL_ERR "DefnBase";
 
@@ -183,9 +185,34 @@ fun list_insert m k v =
       | SOME vs => Binarymap.insert(m,k,v::vs)
 
 fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
+fun prim_dest_const t = let val {Thy,Name,...} = dest_thy_const t
+                        in
+                          {Thy = Thy, Name = Name}
+                        end
 
 (* _p versions are pure/functional *)
+fun register_nonstd_p tag (thname as {Thy,...}) thm dstore =
+    let
+      fun test t =
+          let val cinfo as {Thy = tthy,...} = prim_dest_const t
+          in
+            tthy = Thy andalso (
+            case Binarymap.peek(dstore, (tag, cinfo)) of
+                NONE => true
+              | SOME (_, defth) => not (uptodate_thm $ thm_of defth)
+            )
+          end handle HOL_ERR _ => false
+      val cs = find_terms test (concl thm)
+      val cinfS = List.foldl (fn (c,A) => Binaryset.add(A,prim_dest_const c))
+                             (Binaryset.empty KernelSig.name_compare)
+                             cs
+      fun fold (cinfo, A) =
+          Binarymap.insert(A, (tag, cinfo), (thname, OTHER thm))
+    in
+      Binaryset.foldl fold dstore cinfS
+    end
 
+exception nonstdform
 fun register_defn_p tag (thname, thm) dstore =
     let
       val ths = thm |> CONJUNCTS
@@ -195,17 +222,17 @@ fun register_defn_p tag (thname, thm) dstore =
                 (th |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #1
                     |> dest_thy_const |> to_kid,
                  th))
-            ths handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase" "register_defn"
-                                          "Malformed definition"
+            ths handle HOL_ERR _ => raise nonstdform
       val m = List.foldr (fn ((t,th),A) => list_insert A t th)
                          (Binarymap.mkDict KernelSig.name_compare)
                          cs
+      open Binarymap
     in
-      Binarymap.foldl
-        (fn (k,cs,A) => Binarymap.insert(A,(tag,k),(thname, LIST_CONJ cs)))
+      foldl
+        (fn (k,cs,A) => insert(A,(tag,k),(thname, STDEQNS $ LIST_CONJ cs)))
         dstore
         m
-    end
+    end handle nonstdform => register_nonstd_p tag thname thm dstore
 
 fun add_thy thyname dstore =
     let val defs = DB.definitions thyname

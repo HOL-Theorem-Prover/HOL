@@ -336,6 +336,12 @@ fun coredef nm =
                             Definition.new_definition
 val new_definition = coredef "new_definition"
 
+fun new_specification (nm,cs,th) =
+    new_thm_with_attributes
+      {call_str = "boolSyntax", call_f = "new_specification"}
+      (fn (nm, (cs,th)) => Definition.new_specification(nm,cs,th))
+      (nm, (cs,th))
+
 fun new_infixr_definition (s, t, p) =
    coredef "new_infixr_definition" (s, t) before
    set_fixity (defname t) (Infixr p)
