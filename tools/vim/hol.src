@@ -13,13 +13,16 @@ if ! has_key(s:,'holpipe')
 endif
 let s:holtogglequiet = "val _ = HOL_Interactive.toggle_quietdec();"
 
-new
-setlocal buftype=nofile
-setlocal bufhidden=hide
-setlocal nobuflisted
-setlocal noswapfile
-let s:holnr = bufnr("")
-hide
+" create the hidden buffer once
+if ! has_key(s:,'holnr') || ! bufexists(s:holnr)
+  new
+  setlocal buftype=nofile
+  setlocal bufhidden=hide
+  setlocal nobuflisted
+  setlocal noswapfile
+  let s:holnr = bufnr("")
+  hide
+endif
 
 
 let s:tmpprefix =
