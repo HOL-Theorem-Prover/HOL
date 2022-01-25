@@ -257,7 +257,7 @@ val sum_distinct_rev = save_thm("sum_distinct1", GSYM sum_distinct);
 (* ---------------------------------------------------------------------*)
 
 val ISL = new_recursive_definition {
-  def = “ISL (INL x) = T ∧ ISL (INR y) = F”,
+  def = “ISL (INL x) = T /\ ISL (INR y) = F”,
   name = "ISL[simp,compute]",
   rec_axiom = sum_Axiom
 };
