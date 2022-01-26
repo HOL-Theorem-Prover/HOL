@@ -257,25 +257,16 @@ val wf_encode_list = store_thm
 
 (* A congruence rule *)
 
-val encode_list_cong = store_thm
- ("encode_list_cong",
-  ``!l1 l2 f1 f2.
+Theorem encode_list_cong[defncong]:
+  !l1 l2 f1 f2.
       (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x))
               ==>
-      (encode_list f1 l1 = encode_list f2 l2)``,
+      (encode_list f1 l1 = encode_list f2 l2)
+Proof
   Induct >>
   SIMP_TAC list_ss [MEM,encode_list_def] >>
-  RW_TAC list_ss []);
-
-val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn _ =>
-   let val S = PP.add_string
-   in
-     S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());"
-   end)};
+  RW_TAC list_ss []
+QED
 
 (*---------------------------------------------------------------------------
         Bounded lists

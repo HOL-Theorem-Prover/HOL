@@ -1305,12 +1305,12 @@ val list_size_def =
 
 val Induct = INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC;
 
-val list_size_cong = store_thm("list_size_cong",
-Term
-  ‘!M N f f'.
-    (M=N) /\ (!x. MEM x N ==> (f x = f' x))
+Theorem list_size_cong[defncong]:
+  !M N f f'.
+    M=N /\ (!x. MEM x N ==> (f x = f' x))
           ==>
-    (list_size f M = list_size f' N)’,
+    list_size f M = list_size f' N
+Proof
 Induct
   THEN REWRITE_TAC [list_size_def, MEM]
   THEN REPEAT STRIP_TAC
@@ -1323,7 +1323,8 @@ Induct
      THEN PAT_X_ASSUM (Term‘!x. MEM x l ==> Q x’)
                     (MP_TAC o SPEC (Term‘x:'a’))
      THEN REWRITE_TAC [MEM] THEN REPEAT STRIP_TAC
-     THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);
+     THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]
+QED
 
 Theorem list_size_append:
   !f xs ys. list_size f (xs ++ ys) = list_size f xs + list_size f ys
@@ -1331,12 +1332,12 @@ Proof
   GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_def]
 QED
 
-val FOLDR_CONG = store_thm("FOLDR_CONG",
-Term
-  ‘!l l' b b' (f:'a->'b->'b) f'.
-    (l=l') /\ (b=b') /\ (!x a. MEM x l' ==> (f x a = f' x a))
+Theorem FOLDR_CONG[defncong]:
+  !l l' b b' (f:'a->'b->'b) f'.
+    l=l' /\ b=b' /\ (!x a. MEM x l' ==> (f x a = f' x a))
           ==>
-    (FOLDR f b l = FOLDR f' b' l')’,
+    FOLDR f b l = FOLDR f' b' l'
+Proof
 Induct
   THEN REWRITE_TAC [FOLDR, MEM]
   THEN REPEAT STRIP_TAC
@@ -1350,14 +1351,15 @@ Induct
          FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC []
            THEN REPEAT STRIP_TAC
            THEN FIRST_ASSUM MATCH_MP_TAC
-           THEN ASM_REWRITE_TAC [MEM]]);
+           THEN ASM_REWRITE_TAC [MEM]]
+QED
 
-val FOLDL_CONG = store_thm("FOLDL_CONG",
-Term
-  ‘!l l' b b' (f:'b->'a->'b) f'.
-    (l=l') /\ (b=b') /\ (!x a. MEM x l' ==> (f a x = f' a x))
+Theorem FOLDL_CONG[defncong]:
+  !l l' b b' (f:'b->'a->'b) f'.
+    l=l' /\ b=b' /\ (!x a. MEM x l' ==> (f a x = f' a x))
           ==>
-    (FOLDL f b l = FOLDL f' b' l')’,
+    FOLDL f b l = FOLDL f' b' l'
+Proof
 Induct
   THEN REWRITE_TAC [FOLDL, MEM]
   THEN REPEAT STRIP_TAC
@@ -1368,15 +1370,15 @@ Induct
   THEN CONJ_TAC
   THENL [FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC [MEM],
          REPEAT STRIP_TAC THEN FIRST_ASSUM MATCH_MP_TAC
-           THEN ASM_REWRITE_TAC [MEM]]);
+           THEN ASM_REWRITE_TAC [MEM]]
+QED
 
 
-val MAP_CONG = store_thm("MAP_CONG",
-Term
-  ‘!l1 l2 f f'.
-    (l1=l2) /\ (!x. MEM x l2 ==> (f x = f' x))
-          ==>
-    (MAP f l1 = MAP f' l2)’,
+Theorem MAP_CONG[defncong]:
+  !l1 l2 f f'.
+    l1=l2 /\ (!x. MEM x l2 ==> (f x = f' x)) ==>
+    MAP f l1 = MAP f' l2
+Proof
 Induct THEN REWRITE_TAC [MAP, MEM]
   THEN REPEAT STRIP_TAC
   THEN REPEAT (PAT_X_ASSUM (Term‘x = y’) (SUBST_ALL_TAC o SYM))
@@ -1388,7 +1390,8 @@ Induct THEN REWRITE_TAC [MAP, MEM]
          FIRST_ASSUM MATCH_MP_TAC
              THEN REWRITE_TAC [] THEN REPEAT STRIP_TAC
              THEN FIRST_ASSUM MATCH_MP_TAC
-             THEN ASM_REWRITE_TAC [MEM]]);
+             THEN ASM_REWRITE_TAC [MEM]]
+QED
 
 val MAP2_CONG = store_thm("MAP2_CONG",
 Term
@@ -1402,12 +1405,12 @@ SRW_TAC[] [MAP2_DEF] THEN
 Cases_on ‘l2’ THEN
 SRW_TAC[][MAP2_DEF])
 
-val EXISTS_CONG = store_thm("EXISTS_CONG",
-Term
-  ‘!l1 l2 P P'.
+Theorem EXISTS_CONG[defncong]:
+ !l1 l2 P P'.
     (l1=l2) /\ (!x. MEM x l2 ==> (P x = P' x))
           ==>
-    (EXISTS P l1 = EXISTS P' l2)’,
+    (EXISTS P l1 = EXISTS P' l2)
+Proof
 Induct THEN REWRITE_TAC [EXISTS_DEF, MEM]
   THEN REPEAT STRIP_TAC
   THEN REPEAT (PAT_X_ASSUM (Term‘x = y’) (SUBST_ALL_TAC o SYM))
@@ -1420,15 +1423,16 @@ Induct THEN REWRITE_TAC [EXISTS_DEF, MEM]
                   FIRST_ASSUM MATCH_MP_TAC
                     THEN REWRITE_TAC [] THEN REPEAT STRIP_TAC
                     THEN FIRST_ASSUM MATCH_MP_TAC
-                    THEN ASM_REWRITE_TAC [MEM]]]);;
+                    THEN ASM_REWRITE_TAC [MEM]]]
+QED
 
 
-val EVERY_CONG = store_thm("EVERY_CONG",
-Term
-  ‘!l1 l2 P P'.
-    (l1=l2) /\ (!x. MEM x l2 ==> (P x = P' x))
-          ==>
-    (EVERY P l1 = EVERY P' l2)’,
+Theorem EVERY_CONG[defncong]:
+  !l1 l2 P P'.
+    l1=l2 /\ (!x. MEM x l2 ==> (P x <=> P' x))
+    ==>
+    (EVERY P l1 <=> EVERY P' l2)
+Proof
 Induct THEN REWRITE_TAC [EVERY_DEF, MEM]
   THEN REPEAT STRIP_TAC
   THEN REPEAT (PAT_X_ASSUM (Term‘x = y’) (SUBST_ALL_TAC o SYM))
@@ -1439,7 +1443,8 @@ Induct THEN REWRITE_TAC [EVERY_DEF, MEM]
          FIRST_ASSUM MATCH_MP_TAC
            THEN REWRITE_TAC [] THEN REPEAT STRIP_TAC
            THEN FIRST_ASSUM MATCH_MP_TAC
-           THEN ASM_REWRITE_TAC [MEM]]);
+           THEN ASM_REWRITE_TAC [MEM]]
+QED
 
 val EVERY_MONOTONIC = store_thm(
   "EVERY_MONOTONIC",
@@ -1972,15 +1977,15 @@ val FOLDL2_def = Define‘
   (FOLDL2 f a bs cs = a)’
 val _ = export_rewrites["FOLDL2_def"]
 
-val FOLDL2_cong = store_thm(
-"FOLDL2_cong",
-“!l1 l1' l2 l2' a a' f f'.
-  (l1 = l1') /\ (l2 = l2') /\ (a = a') /\
-  (!z b c. MEM b l1' /\ MEM c l2' ==> (f z b c = f' z b c))
-  ==>
-  (FOLDL2 f a l1 l2 = FOLDL2 f' a' l1' l2')”,
+Theorem FOLDL2_cong[defncong]:
+  !l1 l1' l2 l2' a a' f f'.
+    l1 = l1' /\ l2 = l2' /\ a = a' /\
+    (!z b c. MEM b l1' /\ MEM c l2' ==> (f z b c = f' z b c)) ==>
+    FOLDL2 f a l1 l2 = FOLDL2 f' a' l1' l2'
+Proof
 Induct THEN SIMP_TAC(srw_ss()) [FOLDL2_def] THEN
-GEN_TAC THEN Cases THEN SRW_TAC[] [FOLDL2_def])
+GEN_TAC THEN Cases THEN SRW_TAC[] [FOLDL2_def]
+QED
 
 val FOLDL2_FOLDL = store_thm(
 "FOLDL2_FOLDL",
@@ -1991,15 +1996,16 @@ GEN_TAC THEN Cases THEN SRW_TAC [] [ZIP, FOLDL])
 val _ = overload_on ("EVERY2", “LIST_REL”)
 val _ = overload_on ("LIST_REL", “LIST_REL”)
 
-val EVERY2_cong = store_thm(
-"EVERY2_cong",
-“!l1 l1' l2 l2' P P'.
-  (l1 = l1') /\ (l2 = l2') /\
-  (!x y. MEM x l1' /\ MEM y l2' ==> (P x y = P' x y)) ==>
-  (EVERY2 P l1 l2 = EVERY2 P' l1' l2')”,
-Induct THEN SIMP_TAC (srw_ss()) [] THEN
-GEN_TAC THEN Cases THEN SRW_TAC [] [] THEN
-METIS_TAC[])
+Theorem EVERY2_cong[defncong]:
+  !l1 l1' l2 l2' P P'.
+    l1 = l1' /\ l2 = l2' /\
+    (!x y. MEM x l1' /\ MEM y l2' ==> (P x y = P' x y)) ==>
+    (EVERY2 P l1 l2 <=> EVERY2 P' l1' l2')
+Proof
+  Induct THEN SIMP_TAC (srw_ss()) [] THEN
+  GEN_TAC THEN Cases THEN SRW_TAC [] [] THEN
+  METIS_TAC[]
+QED
 
 Theorem MAP_EQ_EVERY2:
   !f1 f2 l1 l2. (MAP f1 l1 = MAP f2 l2) <=>
@@ -2845,11 +2851,13 @@ Proof
   SRW_TAC[numSimps.ARITH_ss][LIST_EQ_REWRITE,EL_DROP]
 QED
 
-Theorem GENLIST_CONG:
- (!m. m < n ==> f1 m = f2 m) ==> GENLIST f1 n = GENLIST f2 n
+Theorem GENLIST_CONG[defncong]:
+  !n1 n2 f1 f2.
+    n1 = n2 /\ (!m. m < n2 ==> f1 m = f2 m) ==> GENLIST f1 n1 = GENLIST f2 n2
 Proof
- map_every Q.ID_SPEC_TAC [`f1`, `f2`] >> Induct_on `n` >>
- simp[GENLIST_CONS]
+  simp[] >>
+  Prim_rec.INDUCT_THEN (TypeBase.induction_of “:num”) strip_assume_tac >>
+  simp[GENLIST_CONS]
 QED
 
 Theorem LIST_REL_O:
@@ -4438,10 +4446,6 @@ QED
 
 
 (* ---------------------------------------------------------------------- *)
-
-val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
-                                  "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
-                                  "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
 val lazy_list_case_compute = save_thm(
   "lazy_list_case_compute[compute]",

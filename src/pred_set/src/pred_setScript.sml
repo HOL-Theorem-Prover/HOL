@@ -1794,12 +1794,12 @@ val DISJOINT_IMAGE = Q.store_thm(
    (DISJOINT (IMAGE f s1) (IMAGE f s2) <=> DISJOINT s1 s2)’,
   simp[DISJOINT_DEF, EQ_IMP_THM, EXTENSION] >> METIS_TAC[]);
 
-val IMAGE_CONG = store_thm(
-"IMAGE_CONG",
-``!f s f' s'. (s = s') /\ (!x. x IN s' ==> (f x = f' x))
-==> (IMAGE f s = IMAGE f' s')``,
-SRW_TAC[][EXTENSION] THEN METIS_TAC[])
-val _ = DefnBase.export_cong"IMAGE_CONG"
+Theorem IMAGE_CONG[defncong]:
+  !f s f' s'. (s = s') /\ (!x. x IN s' ==> (f x = f' x)) ==>
+              IMAGE f s = IMAGE f' s'
+Proof
+  SRW_TAC[][EXTENSION] THEN METIS_TAC[]
+QED
 
 val GSPEC_IMAGE = Q.store_thm ("GSPEC_IMAGE",
   `GSPEC f = IMAGE (FST o f) (SND o f)`,
@@ -4863,10 +4863,9 @@ val SUM_SAME_IMAGE = Q.store_thm
     FULL_SIMP_TAC (srw_ss() ++ DNF_ss) []
   ]);
 
-val SUM_IMAGE_CONG = Q.store_thm(
-"SUM_IMAGE_CONG",
-`(s1 = s2) /\ (!x. x IN s2 ==> (f1 x = f2 x))
- ==> (SIGMA f1 s1 = SIGMA f2 s2)`,
+Theorem SUM_IMAGE_CONG[defncong]:
+  s1 = s2 /\ (!x. x IN s2 ==> (f1 x = f2 x)) ==> SIGMA f1 s1 = SIGMA f2 s2
+Proof
 SRW_TAC [][] THEN
 REVERSE (Cases_on `FINITE s1`) THEN1 (
   SRW_TAC [][SUM_IMAGE_DEF,Once ITSET_def] THEN
@@ -4875,8 +4874,8 @@ Q.PAT_X_ASSUM `!x.P` MP_TAC THEN
 POP_ASSUM MP_TAC THEN
 Q.ID_SPEC_TAC `s1` THEN
 HO_MATCH_MP_TAC FINITE_INDUCT THEN
-SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_DELETE])
-val _ = DefnBase.export_cong "SUM_IMAGE_CONG"
+SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_DELETE]
+QED
 
 Theorem SUM_IMAGE_ZERO:
   !s. FINITE s ==> ((SIGMA f s = 0) <=> (!x. x IN s ==> (f x = 0)))

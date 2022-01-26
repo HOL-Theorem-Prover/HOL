@@ -4,4 +4,7 @@ Iflag-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe Iflag-selftest.log
+EXTRA_CLEANS = selftest.exe Iflag-selftest.log \
+  $(patsubst %,testdir/BTheory.%,uo ui dat sig sml) \
+  $(patsubst %,testdir/includethis/ATheory.%,uo ui dat sig sml) \
+  $(patsubst %,%/.hollogs/ %/.HOLMK/,testdir testdir/includethis)

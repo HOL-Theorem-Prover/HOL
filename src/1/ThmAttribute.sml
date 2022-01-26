@@ -8,7 +8,8 @@ struct
 
   val funstore = ref (Map.empty : attrfuns Map.table)
 
-  val reserved_attrnames = ["local", "unlisted", "nocompute", "schematic"]
+  val reserved_attrnames = ["local", "unlisted", "nocompute", "schematic",
+                            "notuserdef"]
 
   fun okchar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
   fun illegal_attrname s = Lib.mem s reserved_attrnames orelse
@@ -36,6 +37,7 @@ struct
         funstore := newm
       end
 
+  fun is_attribute a = Map.defined (!funstore) a
   fun at_attribute nm sel (arg as {name,attrname,thm}) =
       case Map.lookup (!funstore) attrname of
           NONE => raise Feedback.mk_HOL_ERR "ThmAttribute"
@@ -59,6 +61,16 @@ struct
         (string bracketl, String.fields (fn c => c = #",") (string names))
     end
   end
+
+  fun toString (s, attrs) =
+      if null attrs then s
+      else s ^ "[" ^ String.concatWith "," attrs ^ "]"
+
+  fun insert_attribute {attr} s =
+      let val (s0,attrs) = extract_attributes s
+      in
+        toString (s0, attr::attrs)
+      end
 
 
 end

@@ -12,6 +12,8 @@ struct
    val (Type, Term) = parse_from_grammars addressTheory.address_grammars
 end
 
+val new_definition = Definition.new_definition (* not boolSyntax! *)
+
 (* -------------------------------------------------------------------------- *)
 (* Decompilation stages:                                                      *)
 (*   1. derive SPEC theorem for each machine instruction, abbreviate code     *)

@@ -298,14 +298,61 @@ fun defname t =
       fst (dest_var head handle HOL_ERR _ => dest_const head)
    end
 
+fun test_remove s [] = (false, [])
+  | test_remove s (t::ts) = if s = t then (true, Lib.set_diff ts [s])
+                            else apsnd (cons t) $ test_remove s ts
+fun bogus_attr cstr cnm a =
+    HOL_WARNING cstr cnm
+                ("No sense in " ^ a ^ " attribute on def'n")
+
+fun remove_junk cstr cnm junkas attrs0 =
+    let
+      fun recurse [] = []
+        | recurse (a::t) = if mem a junkas then (bogus_attr cstr cnm a;
+                                                 recurse t)
+                           else a::recurse t
+    in
+      recurse attrs0
+    end
+
+fun new_thm_with_attributes {call_str, call_f} genth (s, arg) =
+    let open ThmAttribute
+        val (s0,attrs) = ThmAttribute.extract_attributes s
+        val (notuserdefp, attrs) = test_remove "notuserdef" attrs
+        val attrs = remove_junk call_str call_f
+                                ["local", "schematic", "nocompute", "unlisted"]
+                                attrs
+        val attrs = if notuserdefp orelse not (is_attribute "userdef") then
+                      attrs
+                    else "userdef" :: attrs
+        val th = genth (s0, arg)
+        fun do_attr a = store_at_attribute {thm = th, name = s0, attrname = a}
+    in
+      List.app do_attr attrs; th
+    end
+
+fun coredef nm =
+    new_thm_with_attributes {call_str = "boolSyntax", call_f = nm}
+                            Definition.new_definition
+val new_definition = coredef "new_definition"
+
+fun new_specification (nm,cs,th) =
+    new_thm_with_attributes
+      {call_str = "boolSyntax", call_f = "new_specification"}
+      (fn (nm, (cs,th)) => Definition.new_specification(nm,cs,th))
+      (nm, (cs,th))
+
 fun new_infixr_definition (s, t, p) =
-   Definition.new_definition (s, t) before set_fixity (defname t) (Infixr p)
+   coredef "new_infixr_definition" (s, t) before
+   set_fixity (defname t) (Infixr p)
 
 fun new_infixl_definition (s, t, p) =
-   Definition.new_definition (s, t) before set_fixity (defname t) (Infixl p)
+   coredef "new_infixl_definition" (s, t) before
+   set_fixity (defname t) (Infixl p)
 
 fun new_binder_definition (s, t) =
-   Definition.new_definition (s, t) before Parse.set_fixity (defname t) Binder
+   coredef "new_binder_definition" (s, t) before
+   Parse.set_fixity (defname t) Binder
 
 fun new_type_definition (name, inhab_thm) =
    Definition.new_type_definition (name, inhab_thm)

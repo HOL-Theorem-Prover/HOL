@@ -13,7 +13,7 @@
 
 open HolKernel boolLib Parse
      Prim_rec simpLib boolSimps metisLib BasicProvers;
-local open OpenTheoryMap numTheory prim_recTheory SatisfySimps in end
+local open numTheory prim_recTheory SatisfySimps DefnBase in end
 
 local
   open OpenTheoryMap
@@ -75,9 +75,12 @@ val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
  * of the "numeral type".                                                    *
  *---------------------------------------------------------------------------*)
 
-val NUMERAL_DEF = new_definition("NUMERAL_DEF", “NUMERAL (x:num) = x”);
+val NUMERAL_DEF = new_definition(
+  "NUMERAL_DEF[notuserdef]",
+  “NUMERAL (x:num) = x”
+);
 
-val ALT_ZERO = new_definition("ALT_ZERO", “ZERO = 0”);
+val ALT_ZERO = new_definition("ALT_ZERO[notuserdef]", “ZERO = 0”);
 
 local
    open OpenTheoryMap
@@ -88,11 +91,11 @@ in
                                   name=(["Number", "Natural"], "zero")}
 end
 
-val BIT1 = new_definition("BIT1", “BIT1 n = n + (n + SUC 0)”);
-val BIT2 = new_definition("BIT2", “BIT2 n = n + (n + SUC (SUC 0))”);
+val BIT1 = new_definition("BIT1[notuserdef]", “BIT1 n = n + (n + SUC 0)”);
+val BIT2 = new_definition("BIT2[notuserdef]", “BIT2 n = n + (n + SUC (SUC 0))”);
 
 val _ = new_definition(
-  GrammarSpecials.nat_elim_term,
+  GrammarSpecials.nat_elim_term ^ "[notuserdef]",
   ``^(mk_var(GrammarSpecials.nat_elim_term, Type`:num->num`)) n = n``);
 
 val _ = otunwanted "NUMERAL"
