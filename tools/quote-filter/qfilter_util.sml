@@ -12,7 +12,7 @@ fun open_files intp infn outfn =
                        exit failure)
       val (os,cb) =
           let val strm = TextIO.openOut outfn
-                         handle Io {cause = OS.SysErr (_, eo), ...} =>
+                         handle IO.Io {cause = OS.SysErr (_, eo), ...} =>
                                 (case eo of
                                      SOME e => output(stdErr, OS.errorMsg e)
                                    | NONE => ();
