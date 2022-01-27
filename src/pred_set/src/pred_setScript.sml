@@ -10,11 +10,6 @@
 (* DATE:    January 1992                                                *)
 (* =====================================================================*)
 
-structure pred_setScript =
-struct
-(* structure declaration is necessary so that Moscow ML does not get
-   confused by the rebinding of structure Q below *)
-
 open HolKernel Parse boolLib Prim_rec pairLib numLib numpairTheory
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
      BasicProvers metisLib mesonLib simpLib boolSimps dividesTheory;
@@ -7106,4 +7101,3 @@ end
 
 val _ = export_theory();
 
-end (* struct *)
