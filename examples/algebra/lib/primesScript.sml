@@ -249,12 +249,14 @@ val prime_factor_estimate = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Seek the prime factor of number n, starting with q, up to cutoff c. *)
-val factor_seek_def = tDefine "factor_seek" `
+Definition factor_seek_def:
   factor_seek n c q =
     if c <= q then n
     else if 1 < q /\ (n MOD q = 0) then q
     else factor_seek n c (q + 1)
-`(WF_REL_TAC `measure (\(n,c,q). c - q)` >> simp[]);
+Termination
+  WF_REL_TAC ‘measure (λ(n,c,q). c - q)’ >> simp[]
+End
 (* Use 1 < q so that, for prime n, it gives a result n for any initial q, including q = 1. *)
 
 (* Primality test by seeking a factor exceeding (SQRT n). *)

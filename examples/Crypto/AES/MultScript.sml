@@ -38,16 +38,13 @@ val xtime_distrib = Q.store_thm
 
 val _ = set_fixity "**" (Infixl 675);
 
-val ConstMult_def =
- xDefine
-   "ConstMult"
-   `b1 ** b2 =
+Definition ConstMult_def:
+   b1 ** b2 =
       if b1 = 0w:word8 then 0w else
       if word_lsb b1
          then b2 ?? ((b1 >>> 1) ** xtime b2)
-         else       ((b1 >>> 1) ** xtime b2)`;
-
-val _ = computeLib.add_persistent_funs ["ConstMult_def"];
+         else       ((b1 >>> 1) ** xtime b2)
+End
 
 val ConstMultDistrib = Q.store_thm
 ("ConstMultDistrib",

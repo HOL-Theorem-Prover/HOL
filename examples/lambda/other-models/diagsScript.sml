@@ -210,9 +210,9 @@ val R0_cong_thm = store_thm(
     METIS_TAC []
   ]);
 
-val imp_def = xDefine "imp" `
+Definition imp_def:
   (f1:('a,'b,'c)diaform) ==> f2 <=> ~(f1 /\ ~f2)
-`
+End
 val imp_thm = store_thm(
   "imp_thm",
   ``evalform (f ==> g) R <=> evalform f R ==> evalform g R``,

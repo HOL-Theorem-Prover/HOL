@@ -2454,14 +2454,15 @@ val poly_shuffle_0 = store_thm(
 *)
 
 (* Define polynomimal remainder by unity k = X ** k - |1|, returns a weak list of length k *)
-val unity_mod_def = tDefine "unity_mod" `
+Definition unity_mod_def:
   unity_mod (r:'a ring) (k:num) (p:'a poly) =
       if 0 < k then
          if k < LENGTH p then unity_mod r k (shuffle (LENGTH p - k - 1) p) else (PAD_RIGHT #0 k p)
       else p % |0| (* whatever that is! *)
-` (WF_REL_TAC `measure (\(r, k, p). LENGTH p)` >>
-  rpt strip_tac >>
-  rw[poly_shuffle_length]);
+Termination WF_REL_TAC `measure (λ(r, k, p). LENGTH p)` >>
+            rpt strip_tac >>
+            rw[poly_shuffle_length]
+End
 (*
 val unity_mod_def =
    |- !r p k. unity_mod r k p =

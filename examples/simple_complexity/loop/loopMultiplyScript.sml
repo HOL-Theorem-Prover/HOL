@@ -425,11 +425,13 @@ val mop_def = Define`
     mop b m x = loop_count (\x. x = 0 \/ m <= x) (\x. b * x) x
 `;
 *)
-val mop_def = tDefine "mop" `
+Definition mop_def:
   mop b m x =
   if (b <= 1) \/ (x = 0) \/ (m <= x) then 0 else SUC (mop b m (b * x))
-`(WF_REL_TAC `measure (\(b,m,x). m - x)` >>
-  rw[] >> `x < b * x` by rw[] >> decide_tac);
+Termination
+  WF_REL_TAC `measure (λ(b,m,x). m - x)` >>
+  rw[] >> `x < b * x` by rw[] >> decide_tac
+End
 
 (* Theorem: b <= 1 \/ x = 0 \/ m <= x ==> (mop b m x = 0) *)
 (* Proof: by mop_def *)
@@ -1751,10 +1753,13 @@ val loop2_mul_mono_count_le = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Given a number x, generate a multiplying list of b * x, up to some maximum m. *)
-val multiply_by_def = tDefine "multiply_by" `
+Definition multiply_by_def:
   multiply_by b m x =
   if (b <= 1) \/ (x = 0) \/ (m <= x) then [] else x::multiply_by b m (b * x)
-`(WF_REL_TAC `measure (\(b,m,x). m - x)` >> rw[] >> `x < b * x` by rw[] >> decide_tac);
+Termination
+  WF_REL_TAC `measure (λ(b,m,x). m - x)` >> rw[] >> `x < b * x` by rw[] >>
+  decide_tac
+End
 
 (* Overload multiply_by 1 *)
 val _ = overload_on ("doubling", ``multiply_by 2``);

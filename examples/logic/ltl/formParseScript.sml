@@ -203,9 +203,10 @@ val parseFGX_CONG = Q.store_thm(
       rename [‘f2 s2 = SOME p’] >> Cases_on ‘p’ >> simp[UNIT_DEF]) >>
   simp[ES_CHOICE_DEF, BIND_DEF, token_def, literal_def] >> rw[]);
 
-val ParseFGX_def = tDefine "ParseFGX" `
+Definition ParseFGX_def:
   ParseFGX top s = parseFGX (ParseFGX top) top s
-` (WF_REL_TAC ‘inv_image $< (STRLEN o SND)’);
+Termination WF_REL_TAC ‘inv_image $< (STRLEN o SND)’
+End
 
 val ParseFGX_thm =
   ParseFGX_def
@@ -358,9 +359,10 @@ val parseU_CONG = Q.store_thm("parseU_CONG[defncong]",
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
   metis_tac[pairTheory.pair_CASES]);
 
-val ParseU_def = tDefine "ParseU" ‘
+Definition ParseU_def:
   ParseU top s = parseU (ParseU top) top s
-’ (WF_REL_TAC ‘inv_image $< (STRLEN o SND)’);
+Termination WF_REL_TAC ‘inv_image $< (STRLEN o SND)’
+End
 
 val ParseU_thm =
     ParseU_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseU_def]
@@ -440,9 +442,10 @@ val parseCNJ_CONG = Q.store_thm("parseCNJ_CONG[defncong]",
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
   metis_tac[pairTheory.pair_CASES]);
 
-val ParseCNJ_def = tDefine "ParseCNJ" ‘
+Definition ParseCNJ_def:
   ParseCNJ top s = parseCNJ (ParseCNJ top) top s
-’ (WF_REL_TAC ‘inv_image $< (STRLEN o SND)’)
+Termination WF_REL_TAC ‘inv_image $< (STRLEN o SND)’
+End
 
 val ParseCNJ_thm =
     ParseCNJ_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseCNJ_def]
@@ -526,9 +529,10 @@ val parseDSJ_CONG = Q.store_thm("parseDSJ_CONG[defncong]",
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
   metis_tac[pairTheory.pair_CASES]);
 
-val ParseDSJ_def = tDefine "ParseDSJ" ‘
+Definition ParseDSJ_def:
   ParseDSJ top s = parseDSJ (ParseDSJ top) top s
-’ (WF_REL_TAC ‘inv_image $< (STRLEN o SND)’)
+Termination WF_REL_TAC ‘inv_image $< (STRLEN o SND)’
+End
 
 val ParseDSJ_thm =
     ParseDSJ_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseDSJ_def]
@@ -563,9 +567,9 @@ val is_safe_ParseDSJ = Q.store_thm(
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
   metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
 
-val F_IMP_def = zDefine‘
+Definition F_IMP_def[nocompute]:
   F_IMP f1 f2 = F_DISJ (F_NEG f1) f2
-’;
+End
 
 val parseIMP_def = Define‘
   parseIMP d top =
@@ -612,9 +616,10 @@ val parseIMP_CONG = Q.store_thm("parseIMP_CONG[defncong]",
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
   metis_tac[pairTheory.pair_CASES]);
 
-val ParseIMP_def = tDefine "ParseIMP" ‘
+Definition ParseIMP_def:
   ParseIMP top s = parseIMP (ParseIMP top) top s
-’ (WF_REL_TAC ‘inv_image $< (STRLEN o SND)’)
+Termination WF_REL_TAC ‘inv_image $< (STRLEN o SND)’
+End
 
 val ParseIMP_thm =
     ParseIMP_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseIMP_def]
@@ -650,8 +655,9 @@ val is_safe_ParseIMP = Q.store_thm(
   metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
 
 
-val Parse_def = tDefine "Parse" ‘Parse s = ParseIMP Parse s’
-  (WF_REL_TAC ‘inv_image $< STRLEN’)
+Definition Parse_def: Parse s = ParseIMP Parse s
+Termination WF_REL_TAC ‘inv_image $< STRLEN’
+End
 
 val is_safe_Parse = Q.store_thm(
   "is_safe_Parse",

@@ -1831,13 +1831,14 @@ This modification is used in the next version, with two loops.
 *)
 
 (* Define the search for AKS parameter: given n and m, returns k, with cutoff at c. *)
-val aks_param_search_def = tDefine "aks_param_search"  `
+Definition aks_param_search_def:
     aks_param_search n m k c =
       if c < k then bad (* unreachable *)
       else if k divides n then nice k    (* if (k divides n) exit *)
       else if m <= k /\ m <= ordz_compute k n then good k  (* if (m <= ordz k n) exit *)
       else aks_param_search n m (k + 1) c  (* k <- k + 1 *)
-`(WF_REL_TAC `measure (\(n, m, k, c). c + 1 - k)`);
+Termination WF_REL_TAC `measure (λ(n, m, k, c). c + 1 - k)`
+End
 (* Check discussion in pseudo-code above for the good check: m <= k /\ m <= ordz_compute k n *)
 
 (* Define the AKS parameter: given n, return k, for better estimate:
@@ -2483,13 +2484,14 @@ val param_seek_def = tDefine "param_seek" `
 `(WF_REL_TAC `measure (\(m,c,n,k). c - k)`);
 *)
 (* Skip k = 0 check, as caller uses k = 2 *)
-val param_seek_def = tDefine "param_seek" `
+Definition param_seek_def:
   param_seek m c n k =
        if c <= k then bad
   else if n MOD k = 0 then nice k (* same as k divides n when k <> 0 *)
   else if m <= ordz k n then good k
   else param_seek m c n (k + 1)
-`(WF_REL_TAC `measure (\(m,c,n,k). c - k)`);
+Termination WF_REL_TAC `measure (λ(m,c,n,k). c - k)`
+End
 
 (* Define the caller to parameter seek loop *)
 val param_def = Define`

@@ -2320,11 +2320,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define phi by recursion *)
-val rec_phi_def = tDefine "rec_phi" `
+Definition rec_phi_def:
   rec_phi n = if n = 0 then 0
          else if n = 1 then 1
-         else n - SIGMA rec_phi { m | m < n /\ m divides n}`
-  (WF_REL_TAC `$< : num -> num -> bool` >> srw_tac[][]);
+         else n - SIGMA rec_phi { m | m < n /\ m divides n}
+Termination
+  WF_REL_TAC `$< : num -> num -> bool` >> srw_tac[][]
+End
 (* This is the recursive form of Gauss' Little Theorem:  n = SUM phi m, m divides n *)
 
 (* Just using Define without any condition will trigger:

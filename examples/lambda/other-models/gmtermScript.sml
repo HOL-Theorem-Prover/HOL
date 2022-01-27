@@ -55,10 +55,14 @@ val term_bij = define_new_type_bijections
 val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "nc"})
             ["LAM", "VAR", "CON", "@@", "FV", "SUB", "ABS", "size"]
 
-val VAR_def = Define`VAR s = to_term (nc$VAR s)`
-val APP_def = xDefine "APP"
-                      `M @@ N = to_term (nc$@@ (from_term M) (from_term N))`
-val LAM_def = Define`LAM v t = to_term (nc$LAM v (from_term t))`
+Definition VAR_def[notuserdef]: VAR s = to_term (nc$VAR s)
+End
+Definition APP_def[notuserdef]:
+  M @@ N = to_term (nc$@@ (from_term M) (from_term N))
+End
+Definition LAM_def[notuserdef]:
+  LAM v t = to_term (nc$LAM v (from_term t))
+End
 
 val fromto_inverse = prove(
   ``constfree t ==> (from_term (to_term t) = t)``,

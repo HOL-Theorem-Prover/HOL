@@ -684,8 +684,8 @@ val concr_min_rel_def = Define`
              ∧ MEM_EQUAL t1.sucs t2.sucs))`;
 
 
-val expandGBA_def = tDefine ("expandGBA")
-   `(expandGBA g_AA acc [] G = SOME G)
+Definition expandGBA_def:
+   (expandGBA g_AA acc [] G = SOME G)
  ∧ (expandGBA g_AA acc (id::ids) G =
     case lookup id G.nodeInfo of
       | NONE => NONE
@@ -724,8 +724,9 @@ val expandGBA_def = tDefine ("expandGBA")
                 (MAP (λ(cE,f). (edgeLabelGBA cE.pos cE.neg f,cE.sucs)) trans) ;
              expandGBA g_AA acc (nub (ids ++ new_ids)) G2
           od
-   )`
-   (qabbrev_tac `P = λ(g_AA:(α nodeLabelAA, α edgeLabelAA) gfg,
+   )
+Termination
+   qabbrev_tac `P = λ(g_AA:(α nodeLabelAA, α edgeLabelAA) gfg,
                        acc:(α ltl_frml, α concrEdge list) alist,
                        ids:num list,
                        G:(α nodeLabelGBA, α edgeLabelGBA) gfg). suff_wfg G`
@@ -966,7 +967,7 @@ val expandGBA_def = tDefine ("expandGBA")
         >> rw[]
         )
       )
-   );
+End
 
 val expandGBA_init_def = Define`
   expandGBA_init (concrAA g_AA initAA props) =

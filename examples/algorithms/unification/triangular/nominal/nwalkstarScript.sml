@@ -109,7 +109,7 @@ SRW_TAC [][EQ_IMP_THM] THENL [
 
 val noc_thm = RWsave_thm("noc_thm", LIST_CONJ [noc_nom, noc_var, noc_tie, noc_pair, noc_const])
 
-val pre_nwalkstar_def = TotalDefn.xDefineSchema "pre_nwalkstar"
+val (pre_nwalkstar_def, _) = TotalDefn.xDefineSchema "pre_nwalkstar"
 `nwalkstar t = case nwalk s t
                of Tie a t => Tie a (nwalkstar t)
                 | nPair t1 t2 => nPair (nwalkstar t1) (nwalkstar t2)

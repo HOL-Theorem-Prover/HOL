@@ -115,13 +115,15 @@ val UPDATE_TAPE_def = Define `
 val _ = overload_on("RUN",``FUNPOW UPDATE_TAPE``);
 
 
-val DECODE_def = tDefine "DECODE" `
+Definition DECODE_def:
   (DECODE 0 = []) ∧
   (DECODE n = if (ODD n) then [O] ++ (DECODE ((n-1) DIV 2))
-              else [Z] ++ (DECODE (n DIV 2)))`
-  (WF_REL_TAC `$<` >> rw[] >> fs[ODD_EXISTS] >>
+              else [Z] ++ (DECODE (n DIV 2)))
+Termination
+   WF_REL_TAC `$<` >> rw[] >> fs[ODD_EXISTS] >>
    `2 * m DIV 2 = m` by metis_tac[MULT_COMM, DECIDE “0 < 2”, MULT_DIV] >>
-   simp[])
+   simp[]
+End
 
 val ENCODE_def = Define `
   (ENCODE [] = 0) ∧

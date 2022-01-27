@@ -52,16 +52,15 @@ val CHECK_DELTAC_SET = store_thm(
     );
 
 (* Find minimum valid character mismatch based shift *)
-val cmRecur_def =
-    tDefine "cmRecur"
-    `
+Definition cmRecur_def:
     cmRecur pat all_chars j a d =
         if (j+1 < d) then d
         else if (checkDeltaC pat all_chars j a d) then d
         else (cmRecur pat all_chars j a (d+1))
-    `
-    (WF_REL_TAC `measure (\(p, c, j, a, d). SUC j - d)`
-    >> fs[ADD1,checkDeltaC_def]);
+Termination
+  WF_REL_TAC `measure (λ(p, c, j, a, d). SUC j - d)`
+    >> fs[ADD1,checkDeltaC_def]
+End
 
 (* Intermediate lemmas to reason about recursive function bounds *)
 val CMRECUR_LEM = store_thm(
@@ -252,15 +251,14 @@ val CHECK_DELTAS_SET = store_thm(
     rw [CHECK_DELTAS_THM, EXTENSION]
     );
 
-val smRecur_def =
-    tDefine "smRecur"
-    `
+Definition smRecur_def:
     smRecur pat j d =
         if (LENGTH pat < d) then d
         else if (checkDeltaS pat j d) then d
         else (smRecur pat j (d+1))
-    `
-    (WF_REL_TAC `measure (\(p, j, d). SUC (LENGTH p) - d)`);
+Termination
+  WF_REL_TAC `measure (λ(p, j, d). SUC (LENGTH p) - d)`
+End
 
 (* Find minimum valid suffix mismatch based shift *)
 val smVal_def =
@@ -502,9 +500,7 @@ QED
    solution. Returning LENGTH search indicates no substrings, returning
    LENGTH search + 1 indicates there's been an error likely due to a malformed
    patTab *)
-val bmRecur_def =
-    tDefine "bmRecur"
-    `
+Definition bmRecur_def:
     (bmRecur [] _ _ _ = 0) /\
     (bmRecur _ _ _ [] = 0) /\
     (bmRecur pat patTab all_chars search =
@@ -540,9 +536,9 @@ val bmRecur_def =
                                     (d + (bmRecur pat patTab
                                             all_chars (DROP d search)))
     )
-    `
-    (WF_REL_TAC `measure (LENGTH ∘ SND ∘ SND ∘ SND)`
-    >> rw[DROP]);
+Termination
+  WF_REL_TAC `measure (LENGTH ∘ SND ∘ SND ∘ SND)` >> rw[DROP]
+End
 
 (* Simple theorem for cleaness enforcing one definition
    of bmRecur for non-null lists *)
@@ -758,9 +754,7 @@ val ALPHABET_FIND_THM = store_thm(
     >> fs[]);
 
 (* Build up a bmRecur specialised to strings *)
-val bmRecurString_def =
-    tDefine "bmRecurString"
-    `
+Definition bmRecurString_def:
     (bmRecurString [] _ _ = 0) /\
     (bmRecurString  _ _ [] = 0) /\
     (bmRecurString pat patTab search =
@@ -795,9 +789,9 @@ val bmRecurString_def =
                                 else
                                     (d + (bmRecurString pat patTab (DROP d search)))
     )
-    `
-    (WF_REL_TAC `measure (\(p, t, s). LENGTH s)`
-    >> rw[DROP]);
+Termination
+  WF_REL_TAC `measure (λ(p, t, s). LENGTH s)` >> rw[DROP]
+End
 
 val BMRECUR_STRING_THM = store_thm(
     "BMRECUR_STRING_THM",

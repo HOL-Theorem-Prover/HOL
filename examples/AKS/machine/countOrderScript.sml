@@ -214,7 +214,7 @@ val it = |- !n m j c.
 *)
 
 (* Search for least index *)
-val ordz_seekM_def = tDefine "ordz_seekM" `
+Definition ordz_seekM_def:
   ordz_seekM m n c j =
       do
          b0 <- leqM c j;
@@ -229,7 +229,8 @@ val ordz_seekM_def = tDefine "ordz_seekM" `
                      od
               od
       od
-`(WF_REL_TAC `measure (\(m,n,c,j). c - j)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(m,n,c,j). c - j)` >> simp[]
+End
 
 (*
 > EVAL ``MAP (\n. ordz_seekM 7 n 7 1) [1 .. 6]``;  =

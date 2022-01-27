@@ -2294,11 +2294,12 @@ val power_free_check_all = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Find the power of 2 more or equal to n *)
-val count_up_def = tDefine "count_up" `
+Definition count_up_def:
   count_up n m k =
        if m = 0 then 0 (* just to provide m <> 0 for the next one *)
   else if n <= m then k else count_up n (2 * m) (SUC k)
-` (WF_REL_TAC `measure (\(n, m, k). n - m)`);
+Termination WF_REL_TAC `measure (λ(n, m, k). n - m)`
+End
 
 (* Define upper LOG2 n by count_up *)
 val ulog_def = Define`

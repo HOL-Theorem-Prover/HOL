@@ -194,7 +194,7 @@ val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 *)
 
 (* Define size monad *)
-val sizeM_def = tDefine "sizeM" `
+Definition sizeM_def:
     sizeM n =
       do
         b0 <- zeroM n;
@@ -206,7 +206,8 @@ val sizeM_def = tDefine "sizeM" `
                incM y';
              od
       od
-` (WF_REL_TAC `$<` >> simp[]);
+Termination WF_REL_TAC `$<` >> simp[]
+End
 
 (*
 EVAL ``MAP sizeM [0 .. 10]``;
@@ -448,7 +449,7 @@ val it = |- perfect_power n b <=>
 *)
 
 (* Define power_of monad *)
-val power_ofM_def = tDefine "power_ofM" `
+Definition power_ofM_def:
     power_ofM b n =
     do
        n0 <- zeroM n;
@@ -470,7 +471,8 @@ val power_ofM_def = tDefine "power_ofM" `
               else return F
             od
     od
-`(WF_REL_TAC `measure (\(b,n). n)` >> simp[]);
+Termination WF_REL_TAC `measure SND` >> simp[]
+End
 
 
 (* Theorem: valueOf (power_ofM b n) = perfect_power n b *)
