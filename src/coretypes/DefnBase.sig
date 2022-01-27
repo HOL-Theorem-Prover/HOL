@@ -41,13 +41,16 @@ sig
   *)
   datatype defn_thm = STDEQNS of thm | OTHER of thm
   type defn_presentation = {const: term, thmname: kname, thm : defn_thm}
+  exception nonstdform
+  val constants_of_defn : thm -> kname list                (* EXN: nonstdform *)
+  val defn_eqns : thm -> (kname * thm) list                (* EXN: nonstdform *)
   val register_defn : {tag: string, thmname:string} -> unit
   val lookup_userdef : term -> defn_presentation option
   val current_userdefs : unit -> defn_presentation list
   val thy_userdefs : {thyname:string} -> defn_presentation list
 
-  val register_indn : thm * term list -> unit
-  val lookup_indn : term -> (thm * term list) option
+  val register_indn : thm * kname list -> unit
+  val lookup_indn : term -> (thm * kname list) option
 
   (* register_defn is given a tag and a theorem which is a conjunction of
      possibly universally quantified equations.  The machinery here

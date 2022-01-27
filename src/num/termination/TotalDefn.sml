@@ -644,10 +644,13 @@ val primDefine = defnDefine PROVE_TERM_TAC;
 (* fails in the process, remove any constants introduced by the definition.  *)
 (*---------------------------------------------------------------------------*)
 
+fun def_n_ind (def, indopt, NONE) = (def, NONE)
+  | def_n_ind (def,indopt, SOME _) = (def, indopt)
+
 fun xDefine stem q =
  Parse.try_grammar_extension
    (Theory.try_theory_extension
-       (#1 o primDefine o Defn.Hol_defn stem)) q
+       (def_n_ind o primDefine o Defn.Hol_defn stem)) q
   handle e => Raise (wrap_exn "TotalDefn" "xDefine" e);
 
 (*---------------------------------------------------------------------------
@@ -697,15 +700,17 @@ fun tDefine stem q tac =
      fun thunk() =
        let val defn = Hol_defn stem q
        in
-        if triv_defn defn
-        then let val def = fetch_eqns defn
-                 val bind = stem ^ !Defn.def_suffix
-             in been_stored (bind,def); def
-             end
+        if triv_defn defn then
+          let val def = fetch_eqns defn
+              val bind = stem ^ !Defn.def_suffix
+          in been_stored (bind,def);
+             (def, NONE)
+          end
         else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
-                                         Defn.tprove0(defn,tac)
+                                           Defn.tprove0(defn,tac)
                  val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-             in Defn.store(stem,def,ind) ; def
+             in Defn.store(stem,def,ind) ;
+                (def, SOME ind)
              end
        end
  in
@@ -744,7 +749,7 @@ fun qDefine stem q tacopt =
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
-      val thm =
+      val (thm,indopt) =
           case tacopt of
               NONE => fmod (xDefine corename) q
             | SOME tac => fmod (tDefine corename q) tac
@@ -754,6 +759,10 @@ fun qDefine stem q tacopt =
       val attrs = if notuserdef then attrs else "userdef" :: attrs
     in
       List.app proc_attr attrs;
+      case indopt of
+          NONE => () |
+          SOME ith =>
+            DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
     end
 

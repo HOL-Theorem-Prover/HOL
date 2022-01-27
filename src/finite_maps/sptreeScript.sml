@@ -46,8 +46,7 @@ val wf_def = Define`
   (wf (BS t1 a t2) <=> wf t1 /\ wf t2 /\ ~(isEmpty t1 /\ isEmpty t2))
 `;
 
-fun tzDefine s q = Lib.with_flag (computeLib.auto_import_definitions,false) (tDefine s q)
-val lookup_def = tzDefine "lookup" `
+Definition lookup_def[nocompute]:
   (lookup k LN = NONE) /\
   (lookup k (LS a) = if k = 0 then SOME a else NONE) /\
   (lookup k (BN t1 t2) =
@@ -56,9 +55,10 @@ val lookup_def = tzDefine "lookup" `
   (lookup k (BS t1 a t2) =
      if k = 0 then SOME a
      else lookup ((k - 1) DIV 2) (if EVEN k then t1 else t2))
-` (WF_REL_TAC `measure FST` >> simp[DIV_LT_X])
+Termination WF_REL_TAC `measure FST` >> simp[DIV_LT_X]
+End
 
-val insert_def = tzDefine "insert" `
+Definition insert_def[nocompute]:
   (insert k a LN = if k = 0 then LS a
                      else if EVEN k then BN (insert ((k-1) DIV 2) a LN) LN
                      else BN LN (insert ((k-1) DIV 2) a LN)) /\
@@ -74,7 +74,9 @@ val insert_def = tzDefine "insert" `
      if k = 0 then BS t1 a t2
      else if EVEN k then BS (insert ((k - 1) DIV 2) a t1) a' t2
      else BS t1 a' (insert ((k - 1) DIV 2) a t2))
-` (WF_REL_TAC `measure FST` >> simp[DIV_LT_X]);
+Termination
+  WF_REL_TAC `measure FST` >> simp[DIV_LT_X]
+End
 
 val insert_ind = theorem "insert_ind";
 
@@ -375,9 +377,11 @@ val lookup_difference = store_thm(
   rw[optcase_lemma] >> REPEAT BasicProvers.CASE_TAC >>
   fs [lookup_def, lookup_mk_BS, lookup_mk_BN])
 
-val lrnext_real_def = tzDefine "lrnext" `
-  lrnext n = if n = 0 then 1 else 2 * lrnext ((n - 1) DIV 2)`
-  (WF_REL_TAC `measure I` \\ fs [DIV_LT_X] \\ REPEAT STRIP_TAC \\ DECIDE_TAC) ;
+Definition lrnext_real_def[nocompute]:
+  lrnext n = if n = 0 then 1 else 2 * lrnext ((n - 1) DIV 2)
+Termination
+  WF_REL_TAC `measure I` \\ fs [DIV_LT_X] \\ REPEAT STRIP_TAC \\ DECIDE_TAC
+End
 
 val lrnext_def = prove(
   ``(lrnext ZERO = 1) /\
@@ -631,11 +635,12 @@ val foldi_def = Define`
        foldi f (i + inc) (f i a (foldi f (i + 2 * inc) acc t1)) t2)
 `;
 
-val spt_acc_def = tDefine"spt_acc"`
+Definition spt_acc_def:
   (spt_acc i 0 = i) /\
-  (spt_acc i (SUC k) = spt_acc (i + if EVEN (SUC k) then 2 * lrnext i else lrnext i) (k DIV 2))`
-  (WF_REL_TAC`measure SND`
-   \\ simp[DIV_LT_X]);
+  (spt_acc i (SUC k) =
+     spt_acc (i + if EVEN (SUC k) then 2 * lrnext i else lrnext i) (k DIV 2))
+Termination WF_REL_TAC`measure SND` \\ simp[DIV_LT_X]
+End
 
 val spt_acc_thm = Q.store_thm("spt_acc_thm",
   `spt_acc i k = if k = 0 then i else spt_acc (i + if EVEN k then 2 * lrnext i else lrnext i) ((k-1) DIV 2)`,

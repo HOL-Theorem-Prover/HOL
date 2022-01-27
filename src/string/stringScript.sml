@@ -245,38 +245,39 @@ val SPLITP_MONO = Q.prove(
 val TAIL_MONO = Q.prove(
   `!l. ~(l = []) ==> LENGTH (TL l) < LENGTH l`, Cases THEN SRW_TAC [] []);
 
-val TOKENS_def = tDefine "TOKENS"
-  `(TOKENS P ([]:string) = []) /\
-   (TOKENS P (h::t) =
+Definition TOKENS_def:
+  (TOKENS P ([]:string) = []) /\
+  (TOKENS P (h::t) =
       let (l,r) = SPLITP P (h::t) in
         if NULL l then
           TOKENS P (TL r)
         else
-          l::TOKENS P r)`
-  (WF_REL_TAC `measure (LENGTH o SND)`
+          l::TOKENS P r)
+Termination
+  WF_REL_TAC `measure (LENGTH o SND)`
     THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
-    THEN METIS_TAC [SPLITP_MONO, DECIDE ``a <= b ==> a < SUC b``]);
+    THEN METIS_TAC [SPLITP_MONO, DECIDE ``a <= b ==> a < SUC b``]
+End
 
-val TOKENS_ind = theorem"TOKENS_ind";
-
-val FIELDS_def = tDefine "FIELDS"
-  `(FIELDS P ([]:string) = [[]]) /\
-   (FIELDS P (h::t) =
+Definition FIELDS_def:
+  (FIELDS P ([]:string) = [[]]) /\
+  (FIELDS P (h::t) =
       let (l,r) = SPLITP P (h::t) in
         if NULL l then
           []::FIELDS P (TL r)
         else
-          if NULL r then [l] else l::FIELDS P (TL r))`
-  (WF_REL_TAC `measure (LENGTH o SND)`
+          if NULL r then [l] else l::FIELDS P (TL r))
+Termination
+  WF_REL_TAC `measure (LENGTH o SND)`
     THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
     THEN METIS_TAC [SPLITP_MONO, TAIL_MONO, arithmeticTheory.LESS_TRANS,
-           DECIDE ``a <= b ==> a < SUC b``]);
+           DECIDE ``a <= b ==> a < SUC b``]
+End
 
-val IMPLODE_def = Define`
+Definition IMPLODE_def[simp]:
   (IMPLODE [] = "") /\
   (IMPLODE (c::cs) = STRING c (IMPLODE cs))
-`;
-val _ = export_rewrites ["IMPLODE_def"]
+End
 
 val EXPLODE_def = Define`
   (EXPLODE "" = []) /\

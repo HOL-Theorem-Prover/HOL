@@ -797,14 +797,13 @@ Cases_on `u x` THEN REWRITE_TAC [optry, option_CLAUSES]);
 (* ****** of type ('a#'b)bt -> ('a |-> 'b) (but call the definition    ***** *)
 (* ****** bt_to_fmap, like the bt_to_set of enumeralTheory).           ***** *)
 
-val bt_to_fmap = xDefine "bt_to_fmap"
-`(FMAPAL (cmp:'a toto) nt = (FEMPTY:'a|->'b)) /\
+Definition bt_to_fmap:
+ (FMAPAL (cmp:'a toto) nt = (FEMPTY:'a|->'b)) /\
  (FMAPAL (cmp:'a toto) (node l (x:'a,v:'b) r) =
   DRESTRICT (FMAPAL cmp l) {y | apto cmp y x = LESS} FUNION
   FEMPTY |+ (x,v) FUNION
-  DRESTRICT (FMAPAL cmp r) {z | apto cmp x z = LESS})`;
-
-val bt_to_fmap_ind  = theorem "bt_to_fmap_ind";
+  DRESTRICT (FMAPAL cmp r) {z | apto cmp x z = LESS})
+End
 
 (* bt_to_fmap_ind = |- !P.
      (!cmp. P cmp nt) /\

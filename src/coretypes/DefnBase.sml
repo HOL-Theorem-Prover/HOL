@@ -173,11 +173,9 @@ val {export = export_cong,...} =
 
 
 type defnstore = (string * KernelSig.kernelname, string * thm) Binarymap.dict
-type indnstore = (KernelSig.kernelname, thm * term list) Binarymap.dict
 
 val empty_dstore =
     Binarymap.mkDict(pair_compare(String.compare, KernelSig.name_compare))
-val empty_istore = Binarymap.mkDict KernelSig.name_compare
 
 fun list_insert m k v =
     case Binarymap.peek(m,k) of
@@ -185,10 +183,7 @@ fun list_insert m k v =
       | SOME vs => Binarymap.insert(m,k,v::vs)
 
 fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
-fun prim_dest_const t = let val {Thy,Name,...} = dest_thy_const t
-                        in
-                          {Thy = Thy, Name = Name}
-                        end
+val prim_dest_const = to_kid o dest_thy_const
 
 (* _p versions are pure/functional *)
 fun register_nonstd_p tag (thname as {Thy,...}) thm dstore =
@@ -213,19 +208,24 @@ fun register_nonstd_p tag (thname as {Thy,...}) thm dstore =
     end
 
 exception nonstdform
+fun defn_eqns th =
+    let
+      val ths = th |> CONJUNCTS
+    in
+      map
+        (fn th =>
+            (th |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #1
+                |> dest_thy_const |> to_kid,
+             th))
+        ths handle HOL_ERR _ => raise nonstdform
+    end
+val constants_of_defn = map #1 o defn_eqns
+
 fun register_defn_p tag (thname, thm) dstore =
     let
-      val ths = thm |> CONJUNCTS
-      val cs =
-          map
-            (fn th =>
-                (th |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #1
-                    |> dest_thy_const |> to_kid,
-                 th))
-            ths handle HOL_ERR _ => raise nonstdform
       val m = List.foldr (fn ((t,th),A) => list_insert A t th)
                          (Binarymap.mkDict KernelSig.name_compare)
-                         cs
+                         (defn_eqns thm)
       open Binarymap
     in
       foldl
@@ -318,23 +318,59 @@ fun thy_userdefs {thyname} =
       Binarymap.foldl foldthis [] $ get_userdefs_db()
     end
 
+
+(* ----------------------------------------------------------------------
+    Handling induction principles.
+
+    These are awkward because you can't tell by examining the induction
+    principle what constants they are supposed to be used with.  This
+    means that the register-function needs to pass those constants in
+    with the theorem, and those constants need to be stored on disk as
+    well.  Of course, being constants only, the kname can be used as a
+    substitute for the term value.
+   ---------------------------------------------------------------------- *)
+
+
+type indnstore = (KernelSig.kernelname, thm * kname list) Binarymap.dict
+val empty_istore = Binarymap.mkDict KernelSig.name_compare
+
+(* the 'delta' is a thm * kname list *)
+local open ThyDataSexp
+      fun mmap f [] = SOME []
+        | mmap f (h::t) = case f h of
+                              NONE => NONE
+                            | SOME fh => Option.map (cons fh) $ mmap f t
+in
+fun encode (th, knms) = List (Thm th :: map KName knms)
+fun decode sexp =
+    case sexp of
+        List (Thm th :: rest) =>
+        Option.map (pair th) $ mmap kname_decode rest
+      | _ => NONE
+end
+
 fun isprefix l1 l2 =
     case (l1,l2) of
         ([] , _) => true
       | (h1::t1, []) => false
       | (h1::t1, h2::t2) => h1 = h2 andalso isprefix t1 t2
 
-fun register_indn_p (ind, cs) istore =
+fun register_indn_p (ind, knms) istore =
     let
+      val cs = map prim_mk_const knms
       val _ = not (null cs) orelse
               raise mk_HOL_ERR "DefnBase" "register_indn"
                     "Must have non-empty list of constants"
-      val (Ps, body) = ind |> concl |> strip_forall
+      val c = concl ind
+      val numSchematics = length (free_vars c)
+      val (Ps, body) = strip_forall c
       fun check (P, c) =
           let
             val (Pdoms, _) = strip_fun (type_of P)
-            val (cdoms, _) = strip_fun (type_of c)
+            val cdoms = List.drop(fst $ strip_fun $ type_of c, numSchematics)
           in
+            (* check for prefix (via rev and isprefix) because of possibility
+               of returning higher order value (e.g., a set(!)) *)
             isprefix Pdoms cdoms orelse
             raise mk_HOL_ERR "DefnBase" "register_indn"
                     ("Induction variable type of ivar "^ #1 (dest_var P) ^
@@ -344,25 +380,44 @@ fun register_indn_p (ind, cs) istore =
     in
       List.foldl (fn (c, A) =>
                      Binarymap.insert(A, c |> dest_thy_const |> to_kid,
-                                      (ind,cs)))
+                                      (ind,knms)))
                  istore
                  cs
     end
 
+val adinfo = {tag = "DefnBase.indn",
+              initial_values = [("min", empty_istore)],
+              apply_delta = register_indn_p} :
+             (thm * KernelSig.kernelname list, indnstore)
+               AncestryData.adata_info
+
+val globinfo = {apply_to_global = register_indn_p,
+                thy_finaliser = NONE,
+                initial_value = empty_istore}
+fun uptodate_delta (ind, knms) = List.all (can prim_mk_const) knms
+
+val AData as {get_global_value = the_istore,
+              record_delta = record_istore_delta,
+              update_global_value = istore_fupd, ...} =
+    AncestryData.fullmake {adinfo = adinfo,
+                           uptodate_delta = uptodate_delta,
+                           sexps = {dec = decode, enc = encode},
+                           globinfo = globinfo}
+
 fun lookup_indn_p istore c =
     let
-      val {Name,Thy,...} =
-          dest_thy_const c
-          handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
-                                    "lookup_indn" "Not a constant"
+      val knm = prim_dest_const c
+                handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
+                                          "lookup_indn" "Not a constant"
     in
-      Binarymap.peek (istore, {Name = Name, Thy = Thy})
+      Binarymap.peek (istore, knm)
     end
+fun lookup_indn c = lookup_indn_p (the_istore()) c
 
-val the_istore = Sref.new empty_istore
-
-fun register_indn ics = Sref.update the_istore (register_indn_p ics)
-fun lookup_indn c = lookup_indn_p (Sref.value the_istore) c
+fun register_indn delta (* (thm, knms) *) = (
+  record_istore_delta delta;
+  istore_fupd (register_indn_p delta)
+)
 
 
 (* ----------------------------------------------------------------------

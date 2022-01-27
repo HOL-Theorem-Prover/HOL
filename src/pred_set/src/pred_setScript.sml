@@ -4539,20 +4539,16 @@ val DIFF_INTER_COMPL = store_thm
     A "fold"-like operation for sets.
  ---------------------------------------------------------------------------*)
 
-val ITSET_def =
- let open TotalDefn
- in
-   tDefine "ITSET"
-    `ITSET (s:'a->bool) (b:'b) =
+Definition ITSET_def[induction=ITSET_IND]:
+  ITSET (s:'a->bool) (b:'b) =
        if FINITE s then
           if s={} then b
           else ITSET (REST s) (f (CHOICE s) b)
-       else ARB`
-  (WF_REL_TAC `measure (CARD o FST)` THEN
-   METIS_TAC [CARD_PSUBSET, REST_PSUBSET])
- end;
-
-val ITSET_IND = fetch "-" "ITSET_ind";
+       else ARB
+Termination
+  TotalDefn.WF_REL_TAC ‘measure (CARD o FST)’ THEN
+  METIS_TAC [CARD_PSUBSET, REST_PSUBSET]
+End
 
 (*---------------------------------------------------------------------------
       Desired recursion equation.
@@ -4561,15 +4557,13 @@ val ITSET_IND = fetch "-" "ITSET_ind";
                                   else ITSET f (REST s) (f (CHOICE s) b)
  ---------------------------------------------------------------------------*)
 
-val ITSET_THM =
+Theorem ITSET_THM =
 W (GENL o rev o free_vars o concl)
   (DISCH_ALL(ASM_REWRITE_RULE [ASSUME ``FINITE s``] (SPEC_ALL ITSET_def)));
 
-val _ = save_thm("ITSET_IND",ITSET_IND);
-val _ = save_thm("ITSET_THM",ITSET_THM);
-val _ = save_thm("ITSET_EMPTY",
-                  REWRITE_RULE []
-                      (MATCH_MP (SPEC ``{}`` ITSET_THM) FINITE_EMPTY));
+Theorem ITSET_EMPTY =
+        REWRITE_RULE []
+                     (MATCH_MP (SPEC ``{}`` ITSET_THM) FINITE_EMPTY);
 
 (* Could also prove by
 

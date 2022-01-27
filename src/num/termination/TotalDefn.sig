@@ -40,8 +40,8 @@ sig
 
    val defnDefine  : tactic -> defn -> thm * thm option * thm option
    val primDefine  : defn -> thm * thm option * thm option
-   val tDefine     : string -> term quotation -> tactic -> thm
-   val xDefine     : string -> term quotation -> thm
+   val tDefine     : string -> term quotation -> tactic -> thm * thm option
+   val xDefine     : string -> term quotation -> thm * thm option
    val Define      : term quotation -> thm
    val multiDefine : term quotation -> thm list
    val qDefine     : string -> term quotation -> tactic option -> thm
@@ -57,7 +57,7 @@ sig
    val std_apiDefine  : string * term -> apidefn
    val std_apiDefineq : term quotation -> apidefn
 
-   val xDefineSchema  : string -> term quotation -> thm
+   val xDefineSchema  : string -> term quotation -> thm * thm option
    val DefineSchema   : term quotation -> thm
 
 end

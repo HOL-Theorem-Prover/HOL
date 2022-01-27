@@ -13,8 +13,8 @@ sig
   (* new functions *)
   val Define       : term quotation -> thm
   val zDefine      : term quotation -> thm
-  val xDefine      : string -> term quotation -> thm
-  val tDefine      : string -> term quotation -> tactic -> thm
+  val xDefine      : string -> term quotation -> thm * thm option
+  val tDefine      : string -> term quotation -> tactic -> thm * thm option
   val WF_REL_TAC   : term quotation -> tactic
   val Hol_defn     : string -> term quotation -> DefnBase.defn
 
