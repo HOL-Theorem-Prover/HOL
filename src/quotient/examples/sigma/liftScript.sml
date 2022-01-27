@@ -702,9 +702,10 @@ val object1_hom_def =
 
 val _ = set_fixity "+-+" (Infixr 490);
 
-val SUMVAL_def = xDefine "SUM_VAL"
-              `(($+-+ f g) (INL (x:'a)) = ((f x):'c)) /\
-               (($+-+ f g) (INR (y:'b)) = ((g y):'c))`;
+Definition SUMVAL_def:
+  (($+-+ f g) (INL (x:'a)) = ((f x):'c)) /\
+  (($+-+ f g) (INR (y:'b)) = ((g y):'c))
+End
 
 val PBETA_TAC = PairRules.PBETA_TAC
 val PGEN_TAC = PairRules.PGEN_TAC

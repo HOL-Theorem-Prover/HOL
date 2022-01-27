@@ -155,10 +155,8 @@ val ENCODE_11 = Q.store_thm
 (*       src/num/extra_theories/numpairScript.                               *)
 (*---------------------------------------------------------------------------*)
 
-val GDECODE_def =
- tDefine
- "GDECODE"
- `GDECODE i gn =
+Definition GDECODE_def:
+ GDECODE i gn =
    if gn = 0 then NONE else
    if gn = 1 then SOME [] else
    case PRIME_FACTORS gn (PRIMES i)
@@ -166,13 +164,13 @@ val GDECODE_def =
       | SUC n =>
           case GDECODE (i+1) (gn DIV (PRIMES i ** (n+1)))
            of NONE => NONE
-            | SOME l => SOME (n::l)`
-(WF_REL_TAC `measure SND` THEN
+            | SOME l => SOME (n::l)
+Termination
+ WF_REL_TAC `measure SND` THEN
  RW_TAC arith_ss [DECIDE “x ≠ 0 ⇔ 0 < x”] THEN
  MATCH_MP_TAC DIV_LESS THEN
- RW_TAC arith_ss [ONE_LT_EXP,ONE_LT_PRIMES,ZERO_LT_EXP]);
-
-val GDECODE_ind = fetch "-" "GDECODE_ind";
+ RW_TAC arith_ss [ONE_LT_EXP,ONE_LT_PRIMES,ZERO_LT_EXP]
+End
 
 val lem7 = Q.prove
 (`(PRIME_FACTORS (GCODE i (h::t)) (PRIMES i) = SUC n) ==> (h=n)`,

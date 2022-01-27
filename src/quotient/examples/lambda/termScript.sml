@@ -108,11 +108,12 @@ val MAX_LESS_EQ = store_thm
 
 
 
-val HEIGHT1_def = xDefine "HEIGHT1"
-   `(HEIGHT1 (Con1 a)    = 0)                                       /\
+Definition HEIGHT1_def:
+    (HEIGHT1 (Con1 a)    = 0)                                       /\
     (HEIGHT1 (Var1 x)    = 0)                                       /\
     (HEIGHT1 (App1 t u)  = SUC (HEIGHT1 t MAX HEIGHT1 u)) /\
-    (HEIGHT1 (Lam1 x u)  = SUC (HEIGHT1 u))`;
+    (HEIGHT1 (Lam1 x u)  = SUC (HEIGHT1 u))
+End
 
 
 val HEIGHT_LESS_EQ_ZERO1 = store_thm
@@ -183,13 +184,13 @@ val SUB1 = store_thm
 
 (* Variable-for-variable substitutions *)
 
-val vsubst1_def =
-    xDefine "vsubst1"
-       `($// NIL ys = NIL) /\
-        ($// (CONS (x:var) xs) ys =
-              (if ys = [] then [] else
-                          CONS (x, (Var1 (HD ys) :'a term1))
-                               ($// xs (TL ys))))`;
+Definition vsubst1_def:
+  ($// NIL ys = NIL) /\
+  ($// (CONS (x:var) xs) ys =
+   (if ys = [] then [] else
+      CONS (x, (Var1 (HD ys) :'a term1))
+           ($// xs (TL ys))))
+End
 
 val _ = set_fixity "//" (Infixl 470);
 
@@ -570,13 +571,14 @@ val _ = map (fn s => add_infix(s,250,LEFT))
 (* This DOES typecheck and create! Compare to PVS.                       *)
 (* --------------------------------------------------------------------- *)
 
-val SUB_term1_def = xDefine "SUB_term1"
-   `($SUB1t (Con1 (a:'a)) s = Con1 a)                                    /\
+Definition SUB_term1_def:
+    ($SUB1t (Con1 (a:'a)) s = Con1 a)                                    /\
     ($SUB1t (Var1 x) s      = SUB1 s x)                                  /\
     ($SUB1t (App1 t u) s    = App1 ($SUB1t t s) ($SUB1t u s))            /\
     ($SUB1t (Lam1 x u) s    =
           let x' = variant x (FV_subst1 s (FV1 u DIFF {x}))  in
-          Lam1 x' ($SUB1t u (CONS (x, Var1 x') s)))`;
+          Lam1 x' ($SUB1t u (CONS (x, Var1 x') s)))
+End
 
 
 (* Define the infix substitution operator, <[, with higher precedence *)

@@ -156,8 +156,8 @@ val MAX_LESS_EQ = store_thm
 
 
 
-val HEIGHT1_def = xDefine "HEIGHT1"
-   `(HEIGHT_obj1 (OVAR1 x)       = 0)                                        /\
+Definition HEIGHT1_def:
+    (HEIGHT_obj1 (OVAR1 x)       = 0)                                        /\
     (HEIGHT_obj1 (OBJ1 d)        = SUC (HEIGHT_dict1 d))                     /\
     (HEIGHT_obj1 (INVOKE1 a l)   = SUC (HEIGHT_obj1 a))                      /\
     (HEIGHT_obj1 (UPDATE1 a l m) = SUC (HEIGHT_obj1 a MAX HEIGHT_method1 m))
@@ -167,7 +167,8 @@ val HEIGHT1_def = xDefine "HEIGHT1"
      /\
     (HEIGHT_entry1 (l, m)        = SUC (HEIGHT_method1 m))
      /\
-    (HEIGHT_method1 (SIGMA1 x a) = SUC (HEIGHT_obj1 a))`;
+    (HEIGHT_method1 (SIGMA1 x a) = SUC (HEIGHT_obj1 a))
+End
 
 
 val HEIGHT_LESS_EQ_ZERO1 = store_thm
@@ -192,8 +193,8 @@ val HEIGHT_LESS_EQ_ZERO1 = store_thm
 (* Definition of free variables.                                         *)
 (* --------------------------------------------------------------------- *)
 
-val FV_object1_def = xDefine "FV_object1"
-   `(FV_obj1 (OVAR1 x)        = {x})                                /\
+Definition FV_object1_def:
+    (FV_obj1 (OVAR1 x)        = {x})                                /\
     (FV_obj1 (OBJ1 d)         = FV_dict1 d)                         /\
     (FV_obj1 (INVOKE1 a l)    = FV_obj1 a)                          /\
     (FV_obj1 (UPDATE1 a l m)  = FV_obj1 a UNION FV_method1 m)
@@ -203,7 +204,8 @@ val FV_object1_def = xDefine "FV_object1"
      /\
     (FV_entry1 (l, m)         = FV_method1 m)
      /\
-    (FV_method1 (SIGMA1 y b)  = FV_obj1 b DIFF {y})`;
+    (FV_method1 (SIGMA1 y b)  = FV_obj1 b DIFF {y})
+End
 
 
 
@@ -252,12 +254,12 @@ val SUB1 = store_thm
 
 (* Variable-for-variable substitutions *)
 
-val vsubst1_def =
-    xDefine "vsubst1"
-       `($// NIL ys = NIL) /\
+Definition vsubst1_def:
+        ($// NIL ys = NIL) /\
         ($// (CONS (x:var) xs) ys = (if ys = [] then [] else
                                                 CONS (x, OVAR1 (HD ys))
-                                                     ($// xs (TL ys))))`;
+                                                     ($// xs (TL ys))))
+End
 
 val _ = add_infix("//", 150, NONASSOC);
 
@@ -593,8 +595,8 @@ val FREE_IDENT_SUBST1 = store_thm
 (* Naive substitution; not proper; only here for pedagogical reasons.    *)
 (* --------------------------------------------------------------------- *)
 
-val NSUB_object1_def = xDefine  "NSUB_object1"
-   `($NSUB1o (OVAR1 x) s        = SUB1 s x)                                /\
+Definition NSUB_object1_def:
+    ($NSUB1o (OVAR1 x) s        = SUB1 s x)                                /\
     ($NSUB1o (OBJ1 d) s         = OBJ1 ($NSUB1d d s))                      /\
     ($NSUB1o (INVOKE1 a l) s    = INVOKE1 ($NSUB1o a s) l)                 /\
     ($NSUB1o (UPDATE1 a l m) s  = UPDATE1 ($NSUB1o a s) l ($NSUB1m m s))
@@ -604,7 +606,8 @@ val NSUB_object1_def = xDefine  "NSUB_object1"
      /\
     ($NSUB1e (l, m) s           = (l, ($NSUB1m m s)))
      /\
-    ($NSUB1m (SIGMA1 x a) s     = SIGMA1 x ($NSUB1o a s))`;
+    ($NSUB1m (SIGMA1 x a) s     = SIGMA1 x ($NSUB1o a s))
+End
 
 val _ = map (fn s => add_infix(s,250,LEFT))
             ["NSUB1o","NSUB1d","NSUB1e","NSUB1m"];
@@ -628,8 +631,8 @@ val _ = map (fn s => add_infix(s,250,LEFT))
 (* Proper substitution, including renaming of bound variables.           *)
 (* --------------------------------------------------------------------- *)
 
-val SUB_object1_def = xDefine "SUB_object1"
-   `($SUB1o (OVAR1 x) s        = SUB1 s x)                               /\
+Definition SUB_object1_def:
+    ($SUB1o (OVAR1 x) s        = SUB1 s x)                               /\
     ($SUB1o (OBJ1 d) s         = OBJ1 ($SUB1d d s))                      /\
     ($SUB1o (INVOKE1 a l) s    = INVOKE1 ($SUB1o a s) l)                 /\
     ($SUB1o (UPDATE1 a l m) s  = UPDATE1 ($SUB1o a s) l ($SUB1m m s))
@@ -641,7 +644,8 @@ val SUB_object1_def = xDefine "SUB_object1"
      /\
     ($SUB1m (SIGMA1 y b) s     =
           let y' = variant y (FV_subst1 s (FV_obj1 b DIFF {y}))  in
-          SIGMA1 y' ($SUB1o b (CONS (y, OVAR1 y') s)))`;
+          SIGMA1 y' ($SUB1o b (CONS (y, OVAR1 y') s)))
+End
 
 
 (* Define the infix substitution operator, <[, with higher precedence *)
