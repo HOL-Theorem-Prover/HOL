@@ -9,37 +9,43 @@ type 'a cline_result = {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate9 z
+  fun makeUpdateT z = makeUpdate10 z
 in
 fun updateT z = let
-  fun from build_theory_graph debug help jobcount kernelspec multithread
+  fun from build_theory_graph debug help jobcount keepgoing kernelspec
+           multithread
            relocbuild selftest
            seqname =
     {build_theory_graph = build_theory_graph,
      debug = debug,
      help = help,
      jobcount = jobcount,
+     keepgoing = keepgoing,
      kernelspec = kernelspec,
      multithread = multithread,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname}
-  fun from' seqname selftest relocbuild multithread kernelspec jobcount help
+  fun from' seqname selftest relocbuild multithread kernelspec keepgoing
+            jobcount help
             debug
             build_theory_graph =
     {build_theory_graph = build_theory_graph,
      debug = debug,
      help = help,
      jobcount = jobcount,
+     keepgoing = keepgoing,
      kernelspec = kernelspec,
      multithread = multithread,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname}
-  fun to f {build_theory_graph, debug, help, jobcount, kernelspec, multithread,
+  fun to f {build_theory_graph, debug, help, jobcount, keepgoing, kernelspec,
+            multithread,
             relocbuild,
             selftest, seqname} =
-    f build_theory_graph debug help jobcount kernelspec multithread relocbuild
+    f build_theory_graph debug help jobcount keepgoing kernelspec multithread
+      relocbuild
       selftest
       seqname
 in
@@ -130,6 +136,8 @@ val cline_opt_descrs = [
    desc = mkBool #help true},
   {help = "specify concurrency limit", long = [], short = "j",
    desc = mkIntOpt "-j" #jobcount},
+  {help = "pass -k to Holmake invocations", long = [], short = "k",
+   desc = mkBool #keepgoing true},
   {help = "thread count", long = ["mt"], short = "",
    desc = optInt "thread count" 0 #multithread},
   {help = "don't build a thy dep. graph", long = ["nograph"], short = "",

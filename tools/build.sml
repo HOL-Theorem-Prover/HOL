@@ -25,7 +25,7 @@ val _ = startup_check()
    ---------------------------------------------------------------------- *)
 
 val cline_record = process_cline ()
-val {cmdline,build_theory_graph,selftest_level,...} = cline_record
+val {cmdline,build_theory_graph,selftest_level,keepgoing,...} = cline_record
 val {extra={SRCDIRS},jobcount,relocbuild,debug,...} = cline_record
 
 
@@ -39,7 +39,8 @@ in
                      (fn () => (case jobcount of
                                     NONE => []
                                   | SOME j => ["-j"^Int.toString j]) @
-                               (if debug then ["--dbg"] else []))
+                               (if debug then ["--dbg"] else []) @
+                               (if keepgoing then ["-k"] else []))
                      (fn _ => "")
                      selftest_level
 end
