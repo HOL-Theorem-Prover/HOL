@@ -219,7 +219,7 @@ fun defn_eqns th =
              th))
         ths handle HOL_ERR _ => raise nonstdform
     end
-val constants_of_defn = map #1 o defn_eqns
+val constants_of_defn = mk_set o map #1 o defn_eqns
 
 fun register_defn_p tag (thname, thm) dstore =
     let
