@@ -186,7 +186,7 @@ fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
 val prim_dest_const = to_kid o dest_thy_const
 
 (* _p versions are pure/functional *)
-fun register_nonstd_p tag (thname as {Thy,...}) thm dstore =
+fun register_nonstd_p tag (thname as {Thy,...} :kname) thm dstore =
     let
       fun test t =
           let val cinfo as {Thy = tthy,...} = prim_dest_const t
