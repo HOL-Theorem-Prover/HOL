@@ -322,7 +322,9 @@ fun new_thm_with_attributes {call_str, call_f} genth (s, arg) =
         val attrs = remove_junk call_str call_f
                                 ["local", "schematic", "nocompute", "unlisted"]
                                 attrs
-        val attrs = if notuserdefp orelse not (is_attribute "userdef") then
+        val attrs = if notuserdefp orelse not (is_attribute "userdef") orelse
+                       Theory.is_temp_binding s0
+                    then
                       attrs
                     else "userdef" :: attrs
         val th = genth (s0, arg)
