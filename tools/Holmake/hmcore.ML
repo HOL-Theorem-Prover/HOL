@@ -19,6 +19,8 @@ val _ = let
 in
   app appthis ["regexpMatch", "parse_glob", "internal_functions",
                "Holdep_tokens"] ;
-  app (myuse hmakedir) ["QuoteFilter.sml", "Holmake_tools_dtype"];
+  app (myuse hmakedir) ["QuoteFilter.sml", "Holmake_tools_dtype.sml",
+                        "terminal_primitives.sig",
+                        "poly-terminal-prims.ML"];
   app appthis ["QFRead", "Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
 end;

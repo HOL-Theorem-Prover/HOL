@@ -317,6 +317,8 @@ val _ =
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
     compile [] "QuoteFilter.sml";
+    compile [] "terminal_primitives.sig";
+    compile [] "terminal_primitives.sml";
     compile [] "Holmake_tools_dtype.sml";
     compile [] "QFRead.sig";
     compile [] "QFRead.sml";

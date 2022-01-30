@@ -1,7 +1,7 @@
 structure MB_Monitor :> MB_Monitor =
 struct
 
-open ProcessMultiplexor Holmake_tools
+open terminal_primitives ProcessMultiplexor Holmake_tools
 
 val five_sec = Time.fromSeconds 5
 val W_EXITED = Posix.Process.W_EXITED
@@ -15,19 +15,6 @@ fun Pstatus_to_string st =
       | W_EXITSTATUS w8 => Word8.toString w8
       | W_SIGNALED s => "Signal "^SysWord.toString (Posix.Signal.toWord s)
       | W_STOPPED s => "Stopped "^SysWord.toString (Posix.Signal.toWord s)
-  end
-
-(* thanks to Rob Arthan for this function *)
-fun strmIsTTY (outstream : TextIO.outstream) =
-  let
-    val (wr as TextPrimIO.WR{ioDesc,...},buf) =
-	TextIO.StreamIO.getWriter(TextIO.getOutstream outstream);
-    val _ =
-        TextIO.setOutstream (outstream, TextIO.StreamIO.mkOutstream(wr, buf))
-  in
-    case ioDesc of
-	NONE => false
-      | SOME desc => (OS.IO.kind desc = OS.IO.Kind.tty)
   end
 
 val green = boldgreen

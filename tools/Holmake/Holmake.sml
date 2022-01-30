@@ -297,7 +297,7 @@ val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 (* things that need to be read out of the first Holmakefile, and which will
    govern the behaviour even when recursing into other directories that may
    have their own Holmakefiles *)
-val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
+val (outputfns as {warn,tgtfatal,diag,info,chatty,info_inline,info_inline_end})=
     output_functions {chattiness = chattiness_level coption_value,
                       debug = #debug coption_value,
                       usepfx = usepfx}
@@ -520,7 +520,7 @@ let
             val {pres, incs} = idm_lookup incdirmap dir
             val f = Binaryset.foldr (fn (d,acc) => hmdir.toAbsPath d :: acc) []
             val _ = if not (isSome dsopt) then
-                      info (verb ^ " " ^ bold (hmdir.pretty_dir dir))
+                      info_inline (verb ^ " " ^ bold (hmdir.pretty_dir dir))
                     else ()
             val data' = hm {includes=f incs,preincludes=f pres} warn dir data
           in
@@ -528,10 +528,12 @@ let
           end
         | x::xs => do_em (recurse accg x) xs
   val visited = Binaryset.add(visited, dir)
+  val result =
+      do_em {visited = visited, incdirmap = incdirmap, data = data}
+            (Binaryset.listItems recur_into)
 in
-  do_em {visited = visited, incdirmap = incdirmap, data = data}
-        (Binaryset.listItems recur_into) before
-  diag (fn _ => "recursively: Finished work in "^hmdir.pretty_dir dir)
+  diag (fn _ => "recursively: Finished work in "^hmdir.pretty_dir dir);
+  result
 end
 
 (* prepare to do logging *)

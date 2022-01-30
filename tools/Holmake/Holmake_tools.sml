@@ -3,6 +3,7 @@ struct
 
 
 open Systeml
+open terminal_primitives
 open Holmake_tools_dtype
 
 fun K x y = x
@@ -74,15 +75,8 @@ end
 
 val kernelid_fname = Path.concat(HOLDIR, ".kernelidstr")
 fun checkterm pfx s =
-  case OS.Process.getEnv "TERM" of
-      NONE => s
-    | SOME term =>
-      if String.isPrefix "xterm" term orelse
-         String.isPrefix "screen" term orelse term = "eterm-color"
-      then
-        pfx ^ s ^ "\027[0m"
-      else
-        s
+    if TERM_isANSI () then pfx ^ s ^ "\027[0m"
+    else s
 
 val bold = checkterm "\027[1m"
 val boldred = checkterm "\027[31m\027[1m"
@@ -198,6 +192,8 @@ end
 
 type output_functions = {warn : string -> unit,
                          info : string -> unit,
+                         info_inline : string -> unit,
+                         info_inline_end : unit -> unit,
                          chatty : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> (unit -> string) -> unit}
@@ -216,23 +212,30 @@ fun shorten_name name =
 fun output_functions {usepfx,chattiness=n,debug} = let
   val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
   open TextIO
-  fun msg strm s =
+  fun msg inlinep strm s =
     if s = "" then ()
     else
       let
         val ss = Substring.full s
         val (pfx_ss,sfx_ss) = Substring.splitl Char.isSpace ss
-        val pfx = Substring.string pfx_ss
-        val sfx = Substring.string sfx_ss
+        val pfx = (if inlinep then "\r" else "") ^ Substring.string pfx_ss
+        val sfx = Substring.string sfx_ss ^ (if inlinep then CLR_EOL else "\n")
       in
-        output(strm, pfx ^ execname ^ sfx^"\n");
+        output(strm, pfx ^ execname ^ sfx);
         flushOut strm
       end
   fun donothing _ = ()
-  val warn = if n >= 1 then msg stdErr else donothing
-  val info = if n >= 1 then msg stdOut else donothing
-  val chatty = if n >= 2 then msg stdOut else donothing
-  val tgtfatal = msg stdErr
+  val warn = if n >= 1 then msg false stdErr else donothing
+  val info = if n >= 1 then msg false stdOut else donothing
+  val fancyp = strmIsTTY TextIO.stdOut andalso TERM_isANSI()
+  val (info_inline, info_inline_end) =
+      if n >= 1 then
+        if fancyp then
+          (msg true stdOut, fn () => output(stdOut, "\n"))
+        else (msg false stdOut, donothing)
+      else (donothing, donothing)
+  val chatty = if n >= 2 then msg false stdOut else donothing
+  val tgtfatal = msg false stdErr
   fun pfx p s = "["^p^"] "^s
   val diag =
       if n >= 3 then
@@ -241,11 +244,12 @@ fun output_functions {usepfx,chattiness=n,debug} = let
           | SOME {ins,outs} =>
             (fn cat => fn sf => if member cat outs then () else
                                 if null ins orelse member cat ins then
-                                  msg stdErr (pfx cat (sf()))
+                                  msg false stdErr (pfx cat (sf()))
                                 else ())
       else fn _ => donothing
 in
-  {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
+  {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty,
+   info_inline_end = info_inline_end, info_inline = info_inline}
 end
 
 val default_ofns =
