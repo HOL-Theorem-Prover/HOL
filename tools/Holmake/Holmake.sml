@@ -1087,7 +1087,7 @@ fun extend_graph_in_dir incinfo warn dir graph =
 fun create_complete_graph cline_incs idm =
     let
       val d = hmdir.curdir()
-      val {data = g, incdirmap,...} =
+      val {data = g, incdirmap, visited, ...} =
           recursively getnewincs (SOME cline_incs) {
             outputfns = outputfns, verb = "Scanning",
             hm=extend_graph_in_dir,
@@ -1096,6 +1096,12 @@ fun create_complete_graph cline_incs idm =
             dir = d,
             data = HM_DepGraph.empty()
           }
+      val numScanned = Binaryset.numItems visited
+      val _ = if numScanned > 1 then
+                (#info_inline outputfns ("Scanned " ^ Int.toString numScanned ^
+                                         " directories");
+                 #info_inline_end outputfns())
+              else ()
       val diag = diag "builddepgraph"
     in
       diag (fn _ => "Finished building complete dep graph (has " ^
