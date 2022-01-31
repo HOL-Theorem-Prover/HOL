@@ -1,4 +1,4 @@
-INCDIRS = examples/lambda/basics src/finite_maps
+INCDIRS = examples/lambda/basics src/finite_maps src/TeX
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/%),$(INCDIRS))
 
 EXTRA_CLEANS = heap munge.exe selftest.exe ccs-selftest.log
@@ -23,7 +23,7 @@ MUNGE_DEPS = CCS StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws \
 	     BisimulationUpto Congruence CoarsestCongr Trace Expansion \
              Contraction UniqueSolutions Multivariate Example
 
-munge.exe: $(patsubst %,%Theory.uo,$(MUNGE_DEPS))
+munge.exe: $(patsubst %,%Theory.uo,$(MUNGE_DEPS)) $(HOLDIR)/bin/mkmunge.exe
 	$(HOLDIR)/bin/mkmunge.exe $(patsubst %,%Theory,$(MUNGE_DEPS))
 
 output: munge.exe

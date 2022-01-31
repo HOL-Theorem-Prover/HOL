@@ -1,8 +1,5 @@
 !src/boss/theory_tests
 !src/tfl/src/test
-src/TeX
-!src/TeX/theory_tests
-!src/TeX/theory_tests/proj1paper
 src/parallel_builds/core
 !!src/emit/ML
 !src/emit/theory_tests
