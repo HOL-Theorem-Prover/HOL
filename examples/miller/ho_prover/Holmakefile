@@ -1,0 +1,2 @@
+INCLUDES = \
+  $(HOLDIR)/src/res_quan/src   # for hurdUtils

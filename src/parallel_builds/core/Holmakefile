@@ -92,7 +92,14 @@ endif
 endif
 
 ifeq($(HOLSELFTESTLEVEL),3)
-EX3DIRS = diningcryptos
+EX3DIRS = ARM_security_properties \
+          diningcryptos \
+          l3-machine-code/cheri/step
+
+
+ifdef POLY
+EX3DIRS += machine-code theorem-prover
+endif
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX3DIRS))
 endif

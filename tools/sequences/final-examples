@@ -1,9 +1,1 @@
-!!!examples/ARM_security_properties
-
-!!!examples/l3-machine-code/cheri/step
-[poly]!!!examples/theorem-prover
-[poly]!!!examples/machine-code
-
-# Lassie examples
-!examples/lassie/
 

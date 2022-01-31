@@ -1,4 +1,4 @@
-INCLUDES= .. $(HOLDIR)/src/bag $(HOLDIR)/src/HolSmt
+INCLUDES= .. $(HOLDIR)/src/bag $(HOLDIR)/src/HolSmt $(HOLDIR)/src/string
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 

@@ -1,0 +1,3 @@
+INCLUDES =  \
+  $(HOLDIR)/src/integer \
+  $(HOLDIR)/src/n-bit
