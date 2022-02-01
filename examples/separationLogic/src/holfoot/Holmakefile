@@ -39,6 +39,8 @@ holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo \
    holfootParserGenpreds.ui holfootParserGenpreds.uo holfoot_pp_print.uo \
    holfootTheory.uo $(HOLDIR)/src/bag/bagLib.uo \
    $(HOLDIR)/src/finite_maps/finite_mapLib.uo \
+   $(HOLDIR)/src/sort/permLib.uo \
+   $(HOLDIR)/src/string/stringSimps.uo \
    ../vars_as_resourceBaseFunctor.ui ../vars_as_resourceFunctor.ui \
    ../treeSyntax.uo
 	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -I .. -I $(HOLDIR)/src/bag -I $(HOLDIR)/src/HolSmt -c ListConv1.uo treeTheory.uo HolSmtLib.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo listLib.uo bagLib.uo permLib.uo vars_as_resourceBaseFunctor.ui vars_as_resourceFunctor.uo Overlay.ui holfootLib.sml
