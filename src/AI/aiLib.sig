@@ -51,45 +51,59 @@ sig
   val remove_file : string -> unit
   val clean_dir : string -> unit
 
+  (* set shortcuts *)
+  type 'a set = 'a Redblackset.set 
+  val emin : 'a set -> 'a
+  val erem : 'a -> 'a set -> 'a set
+  val emem : 'a -> 'a set -> bool
+  val eadd : 'a -> 'a set -> 'a set
+  val eaddl : 'a list -> 'a set -> 'a set
+  val eempty : ('a * 'a -> order) -> 'a set
+  val enew : ('a * 'a -> order) -> 'a list -> 'a set
+  val elist : 'a set -> 'a list
+  val elength : 'a set -> int
+  val eapp : ('a -> unit) -> 'a set -> unit
+  val efoldl : ('a * 'b -> 'b) -> 'b -> 'a set -> 'b
+
   (* dictionnary *)
-  val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
-  val dmem   : 'a -> ('a, 'b) Redblackmap.dict -> bool
-  val drem   : 'a -> ('a, 'b) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
+  type ('a,'b) dict = ('a,'b) Redblackmap.dict 
+  val dfind  : 'a -> ('a, 'b) dict -> 'b
+  val dmem   : 'a -> ('a, 'b) dict -> bool
+  val drem   : 'a -> ('a, 'b) dict -> ('a, 'b) dict
   val dadd   :
-    'a -> 'b -> ('a, 'b) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
+    'a -> 'b -> ('a, 'b) dict -> ('a, 'b) dict
   val daddl  :
-    ('a * 'b) list -> ('a, 'b) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
-  val dempty : ('a * 'a -> order) -> ('a, 'b) Redblackmap.dict
+    ('a * 'b) list -> ('a, 'b) dict -> ('a, 'b) dict
+  val dempty : ('a * 'a -> order) -> ('a, 'b) dict
   val dnew   : ('a * 'a -> order) -> ('a * 'b) list ->
-    ('a, 'b) Redblackmap.dict
-  val dlist  : ('a, 'b) Redblackmap.dict -> ('a * 'b) list
-  val dlength : ('a, 'b) Redblackmap.dict -> int
-  val dapp : ('a * 'b -> unit) -> ('a, 'b) Redblackmap.dict -> unit
-  val dkeys : ('a, 'b) Redblackmap.dict -> 'a list
+    ('a, 'b) dict
+  val dlist  : ('a, 'b) dict -> ('a * 'b) list
+  val dlength : ('a, 'b) dict -> int
+  val dapp : ('a * 'b -> unit) -> ('a, 'b) dict -> unit
+  val dkeys : ('a, 'b) dict -> 'a list
   val dmap  : ('a * 'b -> 'c) ->
-    ('a, 'b) Redblackmap.dict -> ('a, 'c) Redblackmap.dict
-  val dfoldl : ('a * 'b * 'c -> 'c) -> 'c -> ('a, 'b) Redblackmap.dict -> 'c
+    ('a, 'b) dict -> ('a, 'c) dict
+  val dfoldl : ('a * 'b * 'c -> 'c) -> 'c -> ('a, 'b) dict -> 'c
   val inv_dict :
     ('a * 'a -> order) ->
-    ('b, 'a) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
+    ('b, 'a) dict -> ('a, 'b) dict
   val dregroup : ('a * 'a -> order) -> ('a * 'b) list ->
-    ('a, 'b list) Redblackmap.dict
+    ('a, 'b list) dict
   val distrib : ('a * 'b list) list -> ('a * 'b) list
   val dappend : 'a * 'b ->
-    ('a, 'b list) Redblackmap.dict -> ('a, 'b list) Redblackmap.dict
+    ('a, 'b list) dict -> ('a, 'b list) dict
   val dappendl : ('a * 'b) list ->
-    ('a, 'b list) Redblackmap.dict -> ('a, 'b list) Redblackmap.dict
+    ('a, 'b list) dict -> ('a, 'b list) dict
   val dconcat : ('a * 'a -> order) ->
-    ('a, 'b list) Redblackmap.dict list -> ('a, 'b list) Redblackmap.dict
-
+    ('a, 'b list) dict list -> ('a, 'b list) dict
   val dset : ('a * 'a -> order) -> 'a list ->
-    ('a, unit) Redblackmap.dict
+    ('a, unit) dict
   val daddset : 'a list ->
-    ('a, unit) Redblackmap.dict -> ('a, unit) Redblackmap.dict
+    ('a, unit) dict -> ('a, unit) dict
   val union_dict : ('a * 'a -> order) ->
-     ('a, 'b) Redblackmap.dict list -> ('a, 'b) Redblackmap.dict
+     ('a, 'b) dict list -> ('a, 'b) dict
   val count_dict :
-    ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
+    ('a, int) dict -> 'a list -> ('a, int) dict
 
   (* list *)
   val is_singleton : 'a list -> bool

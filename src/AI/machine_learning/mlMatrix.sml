@@ -66,7 +66,6 @@ fun add_vectl vl =
 
 fun mat_mult m inv =
   let fun f line = scalar_product line inv in Vector.map f m end
-
 fun mat_map f m = Vector.map (Vector.map f) m
 fun mat_app f m = Vector.app (Vector.app f) m
 

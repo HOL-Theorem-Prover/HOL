@@ -155,7 +155,6 @@ fun mult_rvect_da da v1 v2 =
     Vector.tabulate (Vector.length v1, f)
   end
 
-
 fun bp_layer (fpdata:fpdata) doutnv =
   let
     (* optimization trick *)
@@ -165,7 +164,7 @@ fun bp_layer (fpdata:fpdata) doutnv =
     val dw       = mat_tabulate dw_f (mat_dim w)
     val dinv     = rm_biais (mat_mult (mat_transpose w) doutv)
   in
-   {doutnv = doutnv, doutv = doutv, dinv = dinv, dw = dw}
+    {doutnv = doutnv, doutv = doutv, dinv = dinv, dw = dw}
   end
 
 fun bp_nn_aux rev_fpdatal doutnv =

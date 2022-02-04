@@ -102,9 +102,32 @@ fun compare_imin ((_,r1),(_,r2)) = Int.compare (r1,r2)
 fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
+
 (* -------------------------------------------------------------------------
-    Dictionaries
+   Set shortcuts
    ------------------------------------------------------------------------- *)
+
+type 'a set = 'a Redblackset.set 
+
+local open Redblackset in
+  fun emin m     = valOf (find (fn _ => true) m)
+  fun erem k m   = delete (m,k) handle NotFound => m
+  fun emem k m   = member (m,k)
+  fun eadd k m   = add (m,k)
+  fun eaddl kl m  = addList (m,kl)
+  val eempty     = empty
+  val enew       = fromList
+  val elist      = listItems
+  val elength    = numItems
+  val eapp       = app
+  val efoldl     = foldl
+end
+
+(* -------------------------------------------------------------------------
+    Dictionary shortcuts + utils
+   ------------------------------------------------------------------------- *)
+
+type ('a,'b) dict = ('a,'b) Redblackmap.dict 
 
 fun dfind k m  = Redblackmap.find (m,k)
 fun drem k m   = fst (Redblackmap.remove (m,k)) handle NotFound => m
@@ -254,13 +277,7 @@ fun number_list start l = case l of
     []      => []
   | a :: m  => (start,a) :: number_list (start + 1) m
 
-fun mk_fast_set compare l =
-  let
-    val empty_dict = dempty compare
-    fun f (k,dict) = dadd k () dict
-  in
-    map fst (Redblackmap.listItems (foldl f empty_dict l))
-  end
+fun mk_fast_set cmp l = elist (enew cmp l)
 
 (* preserve the order of elements and take the first seen element as representant *)
 fun mk_sameorder_set_aux memdict rl l =
