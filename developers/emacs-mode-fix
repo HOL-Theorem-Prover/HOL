@@ -20,5 +20,5 @@ then
 fi
 
 
-sed -e "s|HOL-EXECUTABLE|\"$holdir/bin/hol\"|" -e "s|HOLMAKE-EXECUTABLE|\"$holdir/bin/Holmake\"|" < $holdir/tools/hol-mode.src > $holdir/tools/hol-mode.el
-
+sed -e "s|HOL-EXECUTABLE|\"$holdir/bin/hol\"|" -e "s|HOLMAKE-EXECUTABLE|\"$holdir/bin/Holmake\"|" < $holdir/tools/hol-mode.src > $holdir/tools/hol-mode.el && \
+  echo "Successfully wrote 'munged' source into $holdir/tools/hol-mode.el"
