@@ -50,7 +50,7 @@ struct
     open Substring
     val (bracketl,rest) = position "[" (full s)
   in
-    if isEmpty rest then (s,[])
+    if Theory.is_temp_binding s orelse isEmpty rest then (s,[])
     else let
       val (names,bracketr) = position "]" (slice(rest,1,NONE))
     in
