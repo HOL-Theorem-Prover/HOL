@@ -988,7 +988,7 @@ region instead. With prefix ARG prompt for a file-name to load."
     (setq hol-new-buffer-style style)
     (save-mark-and-excursion (funcall starter))
     (if (region-active-p)
-        (copy-region-as-hol-definition-quietly (region-beginning) (region-end))
+        (copy-region-as-hol-definition (region-beginning) (region-end) 16 t)
       (let ((beg (point-min))
             (end (progn
                    (while (looking-at "[[:space:]]*\n") (forward-line 1))
@@ -997,7 +997,7 @@ region instead. With prefix ARG prompt for a file-name to load."
                    (point))))
         (push-mark (point-min))
         (activate-mark t)
-        (copy-region-as-hol-definition-quietly beg end)))))
+        (copy-region-as-hol-definition beg end 16 t)))))
 
 (defun run-program (filename niceness)
   "Runs a PROGRAM in a comint window, with a given (optional) NICENESS."
