@@ -331,7 +331,7 @@ fun se_of fpv (i,ev) =
     val r1 = vector_to_list grad
     val r2 = map (fn x => x * x) r1
   in
-    Math.sqrt (average_real r2)
+    Math.sqrt (sum_real r2)
   end
 
 fun mse_of fpv ievl = average_real (map (se_of fpv) ievl)

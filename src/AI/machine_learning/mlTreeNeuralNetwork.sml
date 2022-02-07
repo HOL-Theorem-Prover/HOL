@@ -319,7 +319,7 @@ fun se_of fpv (i,ev) =
     val r1 = vector_to_list grad
     val r2 = map (fn x => x * x) r1
   in
-    Math.sqrt (average_real r2)
+    Math.sqrt (sum_real r2)
   end
 
 fun mse_of fpv ievl = average_real (map (se_of fpv) ievl)
@@ -538,7 +538,7 @@ val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
 (* training *)
 val trainparam =
   {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 10};
+   learning_rate = 0.02, batch_size = 16, nepoch = 20};
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
