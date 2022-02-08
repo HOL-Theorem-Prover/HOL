@@ -237,7 +237,7 @@ fun bp_tnn_loop fpv gradv wud revgraph = case revgraph of
     end
 
 fun zero_vect n = Vector.tabulate (n, fn _ => 0.0)
-
+    
 fun bp_tnn fpv (graph,ievl) =
   let
     val gradv0 =
@@ -245,8 +245,10 @@ fun bp_tnn fpv (graph,ievl) =
         fn subtm => zero_vect (dimout_subtm fpv subtm))
     fun f (subtm,ev) =
       let
+        val _ = debugf "expectv\n" string_of_vect ev
         val fpdatal = Vector.sub (fpv,subtm)
         val doutnv = diff_rvect ev (#outnv (last fpdatal))
+        val _ = debugf "diff\n" string_of_vect doutnv
       in
         (subtm,doutnv)
       end
@@ -359,10 +361,13 @@ fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
       train_tnn_epoch param pf (loss :: lossl) newtnn m
     end
 
+val noshuffle_flag = ref false
+
 fun train_tnn_nepoch param pf i tnn (train,test) =
   if i >= #nepoch param then tnn else
   let
-    val batchl = mk_batch (#batch_size param) (shuffle train)
+    val batchl = mk_batch (#batch_size param)
+      (if !noshuffle_flag then train else shuffle train)
     val _ = if null batchl then msg_err "train_tnn_nepoch" "empty" else ()
     val (newtnn,loss) = train_tnn_epoch param pf [] tnn batchl
     val testloss = if null test then "" else
@@ -527,10 +532,11 @@ val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
 val (l1',l2') = (List.concat l1, List.concat l2);
 val (pos,neg) = (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
 val ex0 = shuffle (pos @ neg);
-val ex1 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) ex0;
-val (trainex,testex) = part_pct 0.9 ex1;
+
 
 (* TNN *)
+val ex1 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) ex0;
+val (trainex,testex) = part_pct 1.0 ex1;
 val nlayer = 1;
 val dim = 16;
 val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
@@ -538,7 +544,7 @@ val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
 (* training *)
 val trainparam =
   {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 20};
+   learning_rate = 0.02 / 16.0, batch_size = 1, nepoch = 20};
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 

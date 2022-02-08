@@ -142,7 +142,15 @@ fun mat_transpose m1 =
     mat_tabulate f (inv_dim (mat_dim m1))
   end
 
+fun mat_fixed (dim as (a,b)) =
+  let fun f i j = 0.1 in
+    mat_tabulate f dim
+  end
+
+val matfixed_flag = ref false
+
 fun mat_random (dim as (a,b)) =
+  if !matfixed_flag then mat_fixed dim else
   let
     val r = Math.sqrt (6.0 / (Real.fromInt (a + b)))
     fun f i j = r * (2.0 * random_real () - 1.0)

@@ -129,7 +129,9 @@ fun vect_dims v = its (Vector.length v + 1)
 fun fp_layer (layer : layer) inv =
   let
     val new_inv = add_biais inv
+    val _ = debugf "in\n" string_of_vect new_inv
     val outv = mat_mult (#w layer) new_inv
+    val _ = debugf "out\n" string_of_vect outv
     val outnv = Vector.map (#a layer) outv
   in
     {layer = layer, inv = new_inv, outv = outv, outnv = outnv}
@@ -159,12 +161,15 @@ fun bp_layer (fpdata:fpdata) doutnv =
   let
     (* optimization trick *)
     val doutv = mult_rvect_da (#da (#layer fpdata)) (#outnv fpdata) doutnv
+    val _ = debugf "dout\n" string_of_vect doutv
     val w        = #w (#layer fpdata)
     fun dw_f i j = Vector.sub (#inv fpdata,j) * Vector.sub (doutv,i)
     val dw       = mat_tabulate dw_f (mat_dim w)
-    val dinv     = rm_biais (mat_mult (mat_transpose w) doutv)
+    (* val _ = debugf "tensor\n" string_of_mat dw *)
+    val dinv     = mat_mult (mat_transpose w) doutv
+    val _ = debugf "din\n" string_of_vect dinv
   in
-    {doutnv = doutnv, doutv = doutv, dinv = dinv, dw = dw}
+    {doutnv = doutnv, doutv = doutv, dinv = rm_biais dinv, dw = dw}
   end
 
 fun bp_nn_aux rev_fpdatal doutnv =
@@ -179,9 +184,11 @@ fun bp_nn_doutnv fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
 
 fun bp_nn fpdatal expectv =
   let
+    val _ = debugf "expectv\n" string_of_vect expectv
     val rev_fpdatal = rev fpdatal
     val outnv = #outnv (hd rev_fpdatal)
     val doutnv = diff_rvect expectv outnv
+    val _ = debugf "diff\n" string_of_vect doutnv
   in
     rev (bp_nn_aux rev_fpdatal doutnv)
   end
@@ -204,7 +211,7 @@ fun smult_dwl k dwl = map (mat_smult k) dwl
 
 fun mean_square_error v =
   let fun square x = (x:real) * x in
-    Math.sqrt (average_rvect (Vector.map square v))
+    Math.sqrt (sum_rvect (Vector.map square v))
   end
 
 fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))

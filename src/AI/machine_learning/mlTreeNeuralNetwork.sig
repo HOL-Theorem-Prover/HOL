@@ -10,6 +10,9 @@ include Abbrev
   type vect = mlMatrix.vect
   type tnnbatch = (term list * (term * vect) list) list
 
+  (* debugging *)
+  val noshuffle_flag : bool ref
+
   (* dimension of neural networks *)
   val operl_of_term : term -> (term * int) list
   val oper_compare : (term * int) * (term * int) -> order

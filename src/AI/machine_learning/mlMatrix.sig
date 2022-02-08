@@ -4,6 +4,8 @@ sig
   type vect = real vector
   type mat = real vector vector
 
+  val matfixed_flag : bool ref
+
   (* vector *)
   val vector_to_list : 'a vector -> 'a list
   val sum_rvect      : vect -> real
