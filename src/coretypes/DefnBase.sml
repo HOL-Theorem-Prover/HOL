@@ -351,9 +351,18 @@ end
 
 fun isprefix l1 l2 =
     case (l1,l2) of
+        ([], _) => true
+      | (_, []) => false
+      | (h1::t1, h2::t2) => h1 = h2 andalso isprefix t1 t2
+
+fun issubseq l1 l2 =
+    case (l1,l2) of
         ([] , _) => true
       | (h1::t1, []) => false
-      | (h1::t1, h2::t2) => h1 = h2 andalso isprefix t1 t2
+      | (h1::t1, h2::t2) => h1 = h2 andalso isprefix t1 t2 orelse
+                            issubseq (h1::t1) t2
+(* Boyer-Moore or similar could be used here, but we only expect these lists
+   to be order <= 10 elements long, and even 10 would be super-surprising. *)
 
 fun register_indn_p (ind, knms) istore =
     let
@@ -362,16 +371,18 @@ fun register_indn_p (ind, knms) istore =
               raise mk_HOL_ERR "DefnBase" "register_indn"
                     "Must have non-empty list of constants"
       val c = concl ind
-      val numSchematics = length (free_vars c)
       val (Ps, body) = strip_forall c
       fun check (P, c) =
           let
             val (Pdoms, _) = strip_fun (type_of P)
-            val cdoms = List.drop(fst $ strip_fun $ type_of c, numSchematics)
+            val (cdoms, _) = strip_fun (type_of c)
           in
-            (* check for prefix (via rev and isprefix) because of possibility
-               of returning higher order value (e.g., a set(!)) *)
-            isprefix Pdoms cdoms orelse
+            (* might have to ignore suffix types because of possibility
+               of returning higher order value (e.g., a set);
+               might have to ignore  prefix types because of schematic
+               variables
+            *)
+            issubseq Pdoms cdoms orelse
             raise mk_HOL_ERR "DefnBase" "register_indn"
                     ("Induction variable type of ivar "^ #1 (dest_var P) ^
                      " doesn't match that of constant " ^ #1 (dest_const c))
