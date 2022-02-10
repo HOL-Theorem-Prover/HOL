@@ -1393,17 +1393,18 @@ Induct THEN REWRITE_TAC [MAP, MEM]
              THEN ASM_REWRITE_TAC [MEM]]
 QED
 
-val MAP2_CONG = store_thm("MAP2_CONG",
-Term
-  ‘!l1 l1' l2 l2' f f'.
-    (l1=l1') /\ (l2=l2') /\
+Theorem MAP2_CONG[defncong]:
+  !l1 l1' l2 l2' f f'.
+    l1=l1' /\ l2=l2' /\
     (!x y. MEM x l1' /\ MEM y l2' ==> (f x y = f' x y))
-          ==>
-    (MAP2 f l1 l2 = MAP2 f' l1' l2')’,
-Induct THEN SRW_TAC[] [MAP2_DEF, MEM] THEN
-SRW_TAC[] [MAP2_DEF] THEN
-Cases_on ‘l2’ THEN
-SRW_TAC[][MAP2_DEF])
+    ==>
+    (MAP2 f l1 l2 = MAP2 f' l1' l2')
+Proof
+  Induct THEN SRW_TAC[] [MAP2_DEF, MEM] THEN
+  SRW_TAC[] [MAP2_DEF] THEN
+  Cases_on ‘l2’ THEN
+  SRW_TAC[][MAP2_DEF]
+QED
 
 Theorem EXISTS_CONG[defncong]:
  !l1 l2 P P'.
