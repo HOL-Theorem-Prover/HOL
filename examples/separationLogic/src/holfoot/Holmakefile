@@ -9,7 +9,7 @@ all: $(DEFAULT_TARGETS) holfootLib.ui selftest.exe
 .PHONY: all clean-lib
 
 selftest.exe: selftest.uo ../treeSyntax.uo ../vars_as_resourceFunctor.uo \
-              $(HOLDIR)/src/HolSmt/HolSmtLib.uo \
+              $(HOLDIR)/src/HolSmt/HolSmtLib.uo holfootLib.uo holfootLib.ui \
               $(HOLDIR)/src/finite_maps/finite_mapLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
