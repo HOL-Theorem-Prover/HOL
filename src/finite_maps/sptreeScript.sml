@@ -377,34 +377,44 @@ val lookup_difference = store_thm(
   rw[optcase_lemma] >> REPEAT BasicProvers.CASE_TAC >>
   fs [lookup_def, lookup_mk_BS, lookup_mk_BN])
 
-Definition lrnext_real_def[nocompute]:
+Definition lrnext_def[nocompute]:
   lrnext n = if n = 0 then 1 else 2 * lrnext ((n - 1) DIV 2)
 Termination
   WF_REL_TAC `measure I` \\ fs [DIV_LT_X] \\ REPEAT STRIP_TAC \\ DECIDE_TAC
 End
 
-val lrnext_def = prove(
-  ``(lrnext ZERO = 1) /\
-    (!n. lrnext (BIT1 n) = 2 * lrnext n) /\
-    (!n. lrnext (BIT2 n) = 2 * lrnext n)``,
+Triviality silly:
+  NUMERAL (SUC x) = SUC x /\
+  ZERO + ZERO = 0 /\
+  BIT2 n <> 0 /\
+  (x + x) DIV 2 = x /\
+  (BIT2 n - 1) DIV 2 = n
+Proof
+  reverse (rpt conj_tac)
+  >- (simp_tac bool_ss [BIT2, SimpL “$DIV”, ONE, ADD_CLAUSES,
+                        SUB_MONO_EQ, SUB_0] >>
+      simp[ADD_DIV_RWT, ADD1] >>
+      metis_tac[MULT_DIV, DECIDE “0 < 2”, MULT_COMM])
+  >- simp_tac (srw_ss()) [DECIDE “n + n = n * 2”, MULT_DIV]
+  >- REWRITE_TAC[BIT2, ADD_CLAUSES, numTheory.NOT_SUC] >>
+  simp[NUMERAL_DEF, ALT_ZERO]
+QED
+Theorem lrnext_thm[compute]:
+  (lrnext ZERO = 1) /\
+  (!n. lrnext (BIT1 n) = 2 * lrnext n) /\
+  (!n. lrnext (BIT2 n) = 2 * lrnext n) /\
+  (!a. lrnext 0 = 1) /\
+  (!n a. lrnext (NUMERAL n) = lrnext n)
+Proof
   REPEAT STRIP_TAC
-  THEN1 (fs [Once ALT_ZERO,Once lrnext_real_def])
-  THEN1
-   (full_simp_tac (srw_ss()) [Once BIT1,Once lrnext_real_def]
-    \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT1]
-    \\ full_simp_tac (srw_ss()) [ADD_ASSOC,DECIDE ``n+n=n*2``,MULT_DIV])
-  THEN1
-   (simp_tac (srw_ss()) [Once BIT2,Once lrnext_real_def]
-    \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT2]
-    \\ `n + (n + 2) - 1 = n * 2 + 1` by DECIDE_TAC
-    \\ asm_simp_tac (srw_ss()) [DIV_MULT]))
-val lrnext' = prove(
-  ``(!a. lrnext 0 = 1) /\ (!n a. lrnext (NUMERAL n) = lrnext n)``,
-  simp[NUMERAL_DEF, GSYM ALT_ZERO, lrnext_def])
-val lrnext_thm = save_thm(
-  "lrnext_thm",
-  LIST_CONJ (CONJUNCTS lrnext' @ CONJUNCTS lrnext_def))
-val _ = computeLib.add_persistent_funs ["lrnext_thm"]
+  THEN1 simp[ALT_ZERO, Once lrnext_def]
+  THEN1 (simp[Once lrnext_def, SimpLHS] >>
+         REWRITE_TAC[BIT1, ADD_CLAUSES, numTheory.NOT_SUC,
+                     SUB_MONO_EQ, SUB_0, silly])
+  THEN1 (simp[Once lrnext_def, SimpLHS] >> REWRITE_TAC [silly])
+  THEN1 simp[Once lrnext_def]
+  THEN1 simp[NUMERAL_DEF]
+QED
 
 val domain_def = zDefine`
   (domain LN = {}) /\
