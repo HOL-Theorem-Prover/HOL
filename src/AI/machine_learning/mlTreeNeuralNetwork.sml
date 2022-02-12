@@ -245,10 +245,8 @@ fun bp_tnn fpv (graph,ievl) =
         fn subtm => zero_vect (dimout_subtm fpv subtm))
     fun f (subtm,ev) =
       let
-        val _ = debugf "expectv\n" string_of_vect ev
         val fpdatal = Vector.sub (fpv,subtm)
         val doutnv = diff_rvect ev (#outnv (last fpdatal))
-        val _ = debugf "diff\n" string_of_vect doutnv
       in
         (subtm,doutnv)
       end
