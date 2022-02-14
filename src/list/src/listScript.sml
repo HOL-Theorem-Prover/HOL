@@ -108,7 +108,7 @@ end
 val _ = add_rule {term_name = "CONS", fixity = Infixr 490,
                   pp_elements = [TOK "::", BreakSpace(0,2)],
                   paren_style = OnlyIfNecessary,
-                  block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
+                  block_style = (AroundSameName, (PP.INCONSISTENT, 0))};
 
 val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "["], rightdelim = [TOK "]"],
