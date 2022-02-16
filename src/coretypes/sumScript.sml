@@ -101,11 +101,11 @@ and A_ONTO = REWRITE_RULE [IS_SUM_REP] (prove_abs_fn_onto sum_ISO_DEF);
 (* --------------------------------------------------------------------- *)
 
 (* Define the injection function INL:'a->('a,'b)sum                     *)
-val INL_DEF = new_definition("INL_DEF",
+val INL_DEF = new_definition("INL_DEF[notuserdef]",
    “!e.(INL:'a->(('a,'b)sum)) e = ABS_sum(\b x (y:'b). (x = e) /\ b)”);
 
 (* Define the injection function INR:'b->( 'a,'b )sum                   *)
-val INR_DEF = new_definition("INR_DEF",
+val INR_DEF = new_definition("INR_DEF[notuserdef]",
    “!e.(INR:'b->(('a,'b)sum)) e = ABS_sum(\b (x:'a) y. (y = e) /\ ~b)”);
 
 (* --------------------------------------------------------------------- *)

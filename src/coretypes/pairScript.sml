@@ -75,7 +75,7 @@ val REP_ABS_PAIR = Q.prove
 
 val COMMA_DEF =
  Q.new_definition
-  ("COMMA_DEF",
+  ("COMMA_DEF[notuserdef]",
    `$, x y = ABS_prod ^pairfn`);
 val _ = ot","
 
@@ -133,10 +133,9 @@ val pair_CASES = save_thm("pair_CASES", ABS_PAIR_THM)
  *---------------------------------------------------------------------------*)
 
 val PAIR =
- Definition.new_specification
-  ("PAIR", ["FST","SND"],
+ boolLib.new_specification
+  ("PAIR[simp]", ["FST","SND"],
    Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM));
-val _ = BasicProvers.export_rewrites ["PAIR"]
 
 local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
       val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)
