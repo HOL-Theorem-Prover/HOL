@@ -668,27 +668,15 @@ local
       Lib.first Lexis.ok_identifier alist
       handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
-   fun define q =
-      let
-         val absyn0 = Parse.Absyn q
-         val locn = Absyn.locn_of_absyn absyn0
-         val (tm,names) = Defn.parse_absyn absyn0
-         val bindstem =
-            mk_bindstem (ERRloc "Define" locn "") "Define <quotation>" names
-      in
-         #1 (primDefine (Defn.mk_defn bindstem tm))
-         handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
-      end
+fun quotation_to_stem q =
+    let
+      val absyn0 = Parse.Absyn q
+      val locn = Absyn.locn_of_absyn absyn0
+      val (_,names) = Defn.parse_absyn absyn0
+    in
+      mk_bindstem (ERRloc "Define" locn "") "Define <quotation>" names
+    end
 
-   (* Use of Raise means that typecheck error exceptions will get printed
-      anyway; no need to also have the code in Preterm etc print them out
-      as well. *)
-
-   fun Define q =
-      trace ("show_typecheck_errors", 0)
-            (Parse.try_grammar_extension (Theory.try_theory_extension define))
-            q
-      handle e => Raise e
 end
 
 (*---------------------------------------------------------------------------*)
@@ -767,6 +755,13 @@ fun qDefine stem q tacopt =
          | SOME ith =>
             DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
+    end
+
+fun Define q =
+    let
+      val stem = quotation_to_stem q
+    in
+      qDefine (stem ^ !Defn.def_suffix) q NONE
     end
 
 (*---------------------------------------------------------------------------*)
