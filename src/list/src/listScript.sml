@@ -33,7 +33,7 @@ in end;
  * Open structures used in the body.
  *---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
+open HolKernel Parse boolLib Num_conv BasicProvers mesonLib
      simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
      relationTheory combinTheory
 
@@ -278,10 +278,10 @@ val EL = new_recursive_definition
 (* [TFM 92.04.21]                                                       *)
 (* ---------------------------------------------------------------------*)
 
-val MAP2_DEF = dDefine‘
+Definition MAP2_DEF[simp]:
   (MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2) /\
-  (MAP2 f x y = [])’;
-val _ = export_rewrites ["MAP2_DEF"]
+  (MAP2 f x y = [])
+End
 
 val MAP2 = store_thm ("MAP2",
 “(!f. MAP2 f [] [] = []) /\
@@ -313,13 +313,16 @@ QED
 
 (* Some searches *)
 
-val INDEX_FIND_def = Define‘
+Definition INDEX_FIND_def:
    (INDEX_FIND i P [] = NONE) /\
    (INDEX_FIND i P (h :: t) =
-      if P h then SOME (i, h) else INDEX_FIND (SUC i) P t)’;
+      if P h then SOME (i, h) else INDEX_FIND (SUC i) P t)
+End
 
-val FIND_def = Define ‘FIND P = OPTION_MAP SND o INDEX_FIND 0 P’
-val INDEX_OF_def = Define ‘INDEX_OF x = OPTION_MAP FST o INDEX_FIND 0 ($= x)’
+Definition FIND_def: FIND P = OPTION_MAP SND o INDEX_FIND 0 P
+End
+Definition INDEX_OF_def: INDEX_OF x = OPTION_MAP FST o INDEX_FIND 0 ($= x)
+End
 
 Theorem INDEX_FIND_add:
   !ls n. INDEX_FIND n P ls = OPTION_MAP (\(i, x). (i + n, x)) (INDEX_FIND 0 P ls)
@@ -1798,28 +1801,24 @@ val _ = export_rewrites ["LAST_APPEND_CONS"]
 
 (* these are FIRSTN and BUTFIRSTN from rich_listTheory, but made total *)
 
-val TAKE_def = zDefine‘
+Definition TAKE_def[nocompute]:
   (TAKE n [] = []) /\
   (TAKE n (x::xs) = if n = 0 then [] else x :: TAKE (n - 1) xs)
-’;
+End
 
-val DROP_def = zDefine‘
+Definition DROP_def[nocompute]:
   (DROP n [] = []) /\
   (DROP n (x::xs) = if n = 0 then x::xs else DROP (n - 1) xs)
-’;
+End
 
-val TAKE_nil = save_thm(
-  "TAKE_nil", CONJUNCT1 TAKE_def)
-val _ = export_rewrites ["TAKE_nil"];
+Theorem TAKE_nil[simp] = cj 1 TAKE_def
 
 val TAKE_cons = store_thm(
   "TAKE_cons", “0 < n ==> (TAKE n (x::xs) = x::(TAKE (n-1) xs))”,
   SRW_TAC[][TAKE_def]);
 val _ = export_rewrites ["TAKE_cons"];
 
-val DROP_nil = save_thm(
-  "DROP_nil", CONJUNCT1 DROP_def);
-val _ = export_rewrites ["DROP_nil"];
+Theorem DROP_nil[simp] = CONJUNCT1 DROP_def
 
 val DROP_cons = store_thm(
   "DROP_cons",“0 < n ==> (DROP n (x::xs) = DROP (n-1) xs)”,
@@ -1973,10 +1972,10 @@ QED
 
 (* More functions for operating on pairs of lists *)
 
-val FOLDL2_def = Define‘
+Definition FOLDL2_def[simp]:
   (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
-  (FOLDL2 f a bs cs = a)’
-val _ = export_rewrites["FOLDL2_def"]
+  (FOLDL2 f a bs cs = a)
+End
 
 Theorem FOLDL2_cong[defncong]:
   !l1 l1' l2 l2' a a' f f'.
@@ -2166,10 +2165,11 @@ QED
       LRC has a list of the elements in the path (excluding the rightmost)
    ---------------------------------------------------------------------- *)
 
-val LRC_def = Define‘
+Definition LRC_def:
   (LRC R [] x y <=> (x = y)) /\
   (LRC R (h::t) x y <=>
-     x = h /\ ?z. R x z /\ LRC R t z y)’;
+     x = h /\ ?z. R x z /\ LRC R t z y)
+End
 
 val NRC_LRC = Q.store_thm(
 "NRC_LRC",
@@ -2465,14 +2465,13 @@ QED
     isPREFIX
    ---------------------------------------------------------------------- *)
 
-val isPREFIX = bDefine‘
+Definition isPREFIX[simp]:
   (isPREFIX [] l = T) /\
   (isPREFIX (h::t) l = case l of [] => F
                                | h'::t' => (h = h') /\ isPREFIX t t')
-’;
-val _ = export_rewrites ["isPREFIX"]
+End
 
-val _ = overload_on ("<<=", “isPREFIX”)
+Overload "<<=" = “isPREFIX”
 
 (* type annotations are there solely to make theorem have only one
    type variable; without them the theorem ends up with three (because the
@@ -2675,32 +2674,34 @@ val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
 (*  GENLIST f n = [f 0;...; f(n-1)]                             *)
 (*--------------------------------------------------------------*)
 
-val GENLIST = new_recursive_definition
-      {name = "GENLIST",
-       rec_axiom =  num_Axiom,
-       def = “(GENLIST (f:num->'a) 0 = []) /\
-                (GENLIST f (SUC n) = SNOC (f n) (GENLIST f n))”};
+Definition GENLIST:
+  GENLIST (f:num->'a) 0 = [] /\
+  GENLIST f (SUC n) = SNOC (f n) (GENLIST f n)
+End
 
-val LENGTH_GENLIST = store_thm("LENGTH_GENLIST",
-    (“!(f:num->'a) n. LENGTH(GENLIST f n) = n”),
-    GEN_TAC THEN INDUCT_TAC
-    THEN ASM_REWRITE_TAC[GENLIST, LENGTH, LENGTH_SNOC]);
-val _ = export_rewrites ["LENGTH_GENLIST"]
+Theorem LENGTH_GENLIST[simp]:
+  !(f:num->'a) n. LENGTH(GENLIST f n) = n
+Proof
+  GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[GENLIST, LENGTH, LENGTH_SNOC]
+QED
 
-val GENLIST_AUX = bDefine‘
+Definition GENLIST_AUX:
   (GENLIST_AUX f 0 l = l) /\
-  (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))’;
+  (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))
+End
 val _ = export_rewrites ["GENLIST_AUX_compute"]
 
 (*---------------------------------------------------------------------------
        List padding (left and right)
  ---------------------------------------------------------------------------*)
 
-val PAD_LEFT = bDefine‘
-  PAD_LEFT c n s = (GENLIST (K c) (n - LENGTH s)) ++ s’;
+Definition PAD_LEFT:
+  PAD_LEFT c n s = (GENLIST (K c) (n - LENGTH s)) ++ s
+End
 
-val PAD_RIGHT = bDefine‘
-  PAD_RIGHT c n s = s ++ (GENLIST (K c) (n - LENGTH s))’;
+Definition PAD_RIGHT:
+  PAD_RIGHT c n s = s ++ (GENLIST (K c) (n - LENGTH s))
+End
 
 (*---------------------------------------------------------------------------
    Theorems about genlist. From Anthony Fox's theories. Added by Thomas Tuerk.
@@ -2978,13 +2979,15 @@ val _ = export_rewrites ["INFINITE_LIST_UNIV"]
 
 (* EVAL performance of LEN seems to be worse than of LENGTH *)
 
-val LEN_DEF = dDefine
-  ‘(LEN [] n = n) /\
-   (LEN (h::t) n = LEN t (n+1))’;
+Definition LEN_DEF:
+  LEN [] n = n /\
+  LEN (h::t) n = LEN t (n+1)
+End
 
-val REV_DEF = dDefine
-  ‘(REV [] acc = acc) /\
-   (REV (h::t) acc = REV t (h::acc))’;
+Definition REV_DEF:
+  (REV [] acc = acc) /\
+  (REV (h::t) acc = REV t (h::acc))
+End
 
 val LEN_LENGTH_LEM = Q.store_thm
 ("LEN_LENGTH_LEM",
@@ -3206,17 +3209,17 @@ Proof
  BasicProvers.Induct \\ simp [GENLIST_CONS] \\ Cases \\ simp [LUPDATE_def, combinTheory.APPLY_UPDATE_THM, GENLIST_FUN_EQ]
 QED
 
-val EVERYi_def = Define‘
+Definition EVERYi_def:
   (EVERYi P [] <=> T) /\
   (EVERYi P (h::t) <=> P 0 h /\ EVERYi (P o SUC) t)
-’
+End
 
-val splitAtPki_def = Define‘
+Definition splitAtPki_def:
   (splitAtPki P k [] = k [] []) /\
   (splitAtPki P k (h::t) =
      if P 0 h then k [] (h::t)
      else splitAtPki (P o SUC) (\p s. k (h::p) s) t)
-’
+End
 
 val splitAtPki_APPEND = store_thm(
   "splitAtPki_APPEND",
