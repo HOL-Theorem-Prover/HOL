@@ -2094,15 +2094,19 @@ fun conj_genll tyalist indth =
                  list_mk_fun(insert_at_n n (tmDom P) (map type_of vs), bool))
       fun mapthis P =
           let val dty = #1 $ dom_rng $ type_of P
+              fun test patty i (concty,info) =
+                  case total (match_type patty) concty of
+                      SOME sigma => SOME (concty, info, sigma)
+                    | NONE => NONE
           in
-            case Lib.assoc1 dty tyalist of
+            case first_opt (test dty) tyalist of
                 NONE => (NONE, ([], mk_abs(genvar dty, boolSyntax.T),
                                 {Thy = "min", Name = "fake"}))
-              | SOME (_, (n, vs, f)) =>
+              | SOME (cty, (n, vs, f), sigma) =>
                 let
-                  val gv = variant vs $ gen_nicevar dty
+                  val gv = variant vs $ gen_nicevar cty
                   val vs' = insert_at_n n gv vs
-                  val P' = mkP P n vs
+                  val P' = mkP (inst sigma P) n vs
                 in
                   (SOME P',
                    (vs,
@@ -2113,7 +2117,7 @@ fun conj_genll tyalist indth =
       val Pinfo = map mapthis indPvs
       val newPvs = List.mapPartial #1 Pinfo
       val indth' =
-          SPECL (map (#2 o #2) Pinfo) indth |> BETA_RULE
+          ISPECL (map (#2 o #2) Pinfo) indth |> BETA_RULE
                 |> PURE_REWRITE_RULE [IMP_CLAUSES, FORALL_SIMP,
                                       AND_CLAUSES]
                 |> CONV_RULE $ LAND_CONV $ EVERY_CONJ_CONV $
