@@ -211,6 +211,26 @@ val sum_Axiom0 = prove(
 val sum_INDUCT = save_thm("sum_INDUCT",
                           Prim_rec.prove_induction_thm sum_Axiom0);
 
+Theorem sum_Axiom:
+  !(f:'a -> 'c) (g:'b -> 'c).
+          ?h. (!x. h (INL x) = f x) /\ (!y. h (INR y) = g y)
+Proof
+  REPEAT GEN_TAC THEN
+  STRIP_ASSUME_TAC
+    ((SPECL [Term`f:'a -> 'c`, Term`g:'b -> 'c`] o
+         Ho_Rewrite.REWRITE_RULE [EXISTS_UNIQUE_THM]) sum_Axiom0) THEN
+  EXISTS_TAC (Term`h:'a + 'b -> 'c`) THEN
+  ASM_REWRITE_TAC []
+QED
+
+val [sum_case_def] = Prim_rec.define_case_constant sum_Axiom
+val _ = export_rewrites ["sum_case_def"]
+val _ = overload_on("case", ``sum_CASE``)
+
+
+val _ = TypeBase.export $ TypeBasePure.gen_datatype_info
+    {ax=sum_Axiom, case_defs=[sum_case_def], ind=sum_INDUCT}
+
 Theorem FORALL_SUM:
   (!s. P s) <=> (!x. P (INL x)) /\ (!y. P (INR y))
 Proof
@@ -227,16 +247,6 @@ val EXISTS_SUM = save_thm(
              |> CONV_RULE (BINOP_CONV (SIMP_CONV bool_ss []))
              |> Q.GEN `P`)
 
-val sum_Axiom = store_thm(
-  "sum_Axiom",
-  Term`!(f:'a -> 'c) (g:'b -> 'c).
-          ?h. (!x. h (INL x) = f x) /\ (!y. h (INR y) = g y)`,
-  REPEAT GEN_TAC THEN
-  STRIP_ASSUME_TAC
-    ((SPECL [Term`f:'a -> 'c`, Term`g:'b -> 'c`] o
-         Ho_Rewrite.REWRITE_RULE [EXISTS_UNIQUE_THM]) sum_Axiom0) THEN
-  EXISTS_TAC (Term`h:'a + 'b -> 'c`) THEN
-  ASM_REWRITE_TAC []);
 
 val sum_CASES = save_thm("sum_CASES",
                          hd (Prim_rec.prove_cases_thm sum_INDUCT));
@@ -276,6 +286,15 @@ val OUTR = new_recursive_definition {
   def = “OUTR(INR x:'a+'b) = x”, name = "OUTR[simp,compute]",
   rec_axiom = sum_Axiom
 };
+
+val _ = TypeBase.general_update “:'a + 'b”
+                (TypeBasePure.put_recognizers [ISL, ISR] o
+                 TypeBasePure.put_destructors [OUTL, OUTR] o
+                 TypeBasePure.put_lift (
+                     mk_var("sumSyntax.lift_sum",
+                            “:'type -> ('a -> 'term) ->
+                              ('b -> 'term) -> ('a,'b)sum -> 'term”)
+                  ))
 
 (* ---------------------------------------------------------------------*)
 (* Prove the following standard theorems about the sum type.            *)
@@ -329,10 +348,6 @@ val INR = store_thm("INR",
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISR,OUTR]);
 val _ = export_rewrites ["INR"]
-
-val [sum_case_def] = Prim_rec.define_case_constant sum_Axiom
-val _ = export_rewrites ["sum_case_def"]
-val _ = overload_on("case", ``sum_CASE``)
 
 val sum_case_cong = save_thm("sum_case_cong",
                              Prim_rec.case_cong_thm sum_CASES sum_case_def);
@@ -545,25 +560,6 @@ val _ = add "OUTR" "destRight"
 val _ = add "OUTL" "destLeft"
 end
 
-val _ = TypeBase.export
-  [TypeBasePure.mk_datatype_info_no_simpls
-     {ax=TypeBasePure.ORIG sum_Axiom,
-      case_def=sum_case_def,
-      case_cong=sum_case_cong,
-      case_eq = Prim_rec.prove_case_eq_thm {case_def = sum_case_def,
-                                            nchotomy = sum_CASES},
-      induction=TypeBasePure.ORIG sum_INDUCT,
-      nchotomy=sum_CASES,
-      size=NONE,
-      encode=NONE,
-      fields=[], accessors=[], updates=[],
-      recognizers = [ISL,ISR],
-      destructors = [OUTL,OUTR],
-      lift=SOME(mk_var("sumSyntax.lift_sum",
-                       “:'type -> ('a -> 'term) ->
-                         ('b -> 'term) -> ('a,'b)sum -> 'term”)),
-      one_one=SOME INR_INL_11,
-      distinct=SOME sum_distinct}];
 
 val datatype_sum = store_thm(
   "datatype_sum",

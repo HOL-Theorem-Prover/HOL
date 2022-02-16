@@ -12,7 +12,7 @@
 (* ===================================================================== *)
 
 open HolKernel boolLib Parse
-     Prim_rec simpLib boolSimps metisLib BasicProvers;
+     simpLib boolSimps metisLib BasicProvers;
 local open numTheory prim_recTheory SatisfySimps DefnBase in end
 
 local
@@ -35,7 +35,9 @@ val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
 and INDUCTION   = numTheory.INDUCTION;
 
-val num_Axiom     = prim_recTheory.num_Axiom;
+val num_Axiom     = prim_recTheory.num_Axiom
+Theorem num_case_def  = prim_recTheory.num_case_def
+
 val INV_SUC_EQ    = prim_recTheory.INV_SUC_EQ
 and LESS_REFL     = prim_recTheory.LESS_REFL
 and SUC_LESS      = prim_recTheory.SUC_LESS
@@ -220,9 +222,6 @@ val ODD = new_recursive_definition
     def = “(ODD 0 = F) /\
              (ODD (SUC n) = ~ODD n)”};
 val _ = ot0 "ODD" "odd"
-
-val [num_case_def] = Prim_rec.define_case_constant num_Axiom
-val _ = overload_on("case", “num_CASE”)
 
 val FUNPOW = new_recursive_definition
    {name = "FUNPOW",
@@ -4082,24 +4081,16 @@ val num_case_eq = Q.store_thm(
   Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES THEN
   SRW_TAC [][num_case_def, SUC_NOT, INV_SUC_EQ]);
 
-val _ = TypeBase.export
-  [TypeBasePure.mk_datatype_info_no_simpls
-     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,
-      case_def=num_case_def,
-      case_cong=num_case_cong,
-      case_eq = num_case_eq,
-      induction=TypeBasePure.ORIG numTheory.INDUCTION,
-      nchotomy=num_CASES,
-      size=SOME(“\x:num. x”, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),
-      encode=NONE,
-      fields=[],
-      accessors=[],
-      updates=[],
-      recognizers=[],
-      destructors=[CONJUNCT2(prim_recTheory.PRE)],
-      lift=SOME(mk_var("numSyntax.lift_num",“:'type -> num -> 'term”)),
-      one_one=SOME prim_recTheory.INV_SUC_EQ,
-      distinct=SOME numTheory.NOT_SUC}];
+val _ = TypeBase.general_update “:num” (
+          TypeBasePure.put_size (
+            “λx:num. x”,
+            TypeBasePure.ORIG boolTheory.REFL_CLAUSE
+          ) o
+          TypeBasePure.put_destructors [cj 2 prim_recTheory.PRE] o
+          TypeBasePure.put_lift (
+            mk_var("numSyntax.lift_num",“:'type -> num -> 'term”)
+          )
+        )
 
 val datatype_num = store_thm(
   "datatype_num",
