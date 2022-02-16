@@ -104,12 +104,12 @@ val _ = Datatype
       in a program.
  ----------------------------------------------------------------------------*)
 
-val patV_def = Define‘
+Definition patV_def:
  (patV wild_pat           = {}) /\
  (patV (var_pat v)        = {v})
-’
+End
 
-val Vars_def = Define‘
+Definition Vars_def:
     (atexpV (var_exp v)      = {v}) /\
     (atexpV (let_exp d e)    = (decV d) UNION (expV e))
      /\
@@ -129,6 +129,6 @@ val Vars_def = Define‘
     (valbindV (bind p e)     = (patV p) UNION (expV e)) /\
     (valbindV (bindl p e vb) = (patV p) UNION (expV e) UNION (valbindV vb)) /\
     (valbindV (rec_bind vb)  = (valbindV vb))
-’;
+End
 
 val _ = export_theory();
