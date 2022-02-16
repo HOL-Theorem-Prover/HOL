@@ -757,11 +757,14 @@ fun qDefine stem q tacopt =
           ThmAttribute.store_at_attribute{name = corename, attrname = a,
                                           thm = thm}
       val attrs = if notuserdef then attrs else "userdef" :: attrs
+      val gen_ind = Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
     in
       List.app proc_attr attrs;
       case indopt of
-          NONE => () |
-          SOME ith =>
+          NONE => (case total gen_ind thm of
+                       NONE => ()
+                     | SOME p => DefnBase.register_indn p)
+         | SOME ith =>
             DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
     end

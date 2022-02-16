@@ -59,4 +59,13 @@ sig
    (* A utility function *)
    val EXISTS_EQUATION             : term -> thm -> thm
 
+   (* ----------------------------------------------------------------------
+       Generate custom induction principles given recursive definitions.
+       The list of knames corresponds to the constants of the definition but
+       given in the order that corresponds to the generalised "P" variables
+       in the theorem result.
+      ---------------------------------------------------------------------- *)
+   val gen_indthm : {lookup_ind : hol_type -> thm} -> thm ->
+                    (thm * KernelSig.kernelname list)
+
 end
