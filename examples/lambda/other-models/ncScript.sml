@@ -495,7 +495,7 @@ val nc_RECURSION_WEAK = Q.store_thm(
 (* ===================================================================== *)
 
 fun nc_recDefine s q =
-  new_recursive_definition
+  Prim_rec.new_recursive_definition
      {rec_axiom = nc_RECURSION_WEAK, name=s, def=Term q};
 
 val VNAME_DEF = nc_recDefine "VNAME_DEF" `VNAME (VAR s) = s`;
