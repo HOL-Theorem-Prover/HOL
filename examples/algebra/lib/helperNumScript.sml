@@ -1348,22 +1348,17 @@ val HALF_TWICE = store_thm(
          = n * k + HALF n                by HALF_TWICE
          >= n * k                        by arithmetic
 *)
-val HALF_MULT = store_thm(
-  "HALF_MULT",
-  ``!m n. n * HALF m <= HALF (n * m)``,
+Theorem HALF_MULT: !m n. n * (m DIV 2) <= (n * m) DIV 2
+Proof
   rpt strip_tac >>
-  qabbrev_tac `k = HALF m` >>
-  Cases_on `EVEN m` >| [
-    `m = 2 * k` by rw[EVEN_HALF, Abbr`k`] >>
-    `HALF (n * m) = HALF (2 * (n * k))` by rw[] >>
-    `_ = n * k` by rw[GSYM HALF_TWICE] >>
-    decide_tac,
-    `ODD m` by rw[ODD_EVEN] >>
-    `m = 2 * k + 1` by rw[ODD_HALF, Abbr`k`] >>
-    `HALF (n * m) = HALF (2 * (n * k) + n)` by rw[LEFT_ADD_DISTRIB] >>
-    `_ = (n * k) + HALF n` by rw[HALF_TWICE, GSYM ADD_DIV_ADD_DIV] >>
-    decide_tac
-  ]);
+  qabbrev_tac `k = m DIV 2` >>
+  Cases_on `EVEN m`
+  >- (`m = 2 * k` by rw[EVEN_HALF, Abbr`k`] >>
+      simp[]) >>
+  `ODD m` by rw[ODD_EVEN] >>
+  `m = 2 * k + 1` by rw[ODD_HALF, Abbr`k`] >>
+  simp[LEFT_ADD_DISTRIB]
+QED
 
 (* Theorem: 2 * HALF n <= n /\ n <= SUC (2 * HALF n) *)
 (* Proof:

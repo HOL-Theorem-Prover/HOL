@@ -2520,6 +2520,48 @@ Proof
     AC CONJ_COMM CONJ_ASSOC]
 QED
 
+Theorem EQ_ADD_LCANCEL'[local]:
+  x + y = y + z <=> x = z
+Proof
+  METIS_TAC[ADD_COMM, EQ_ADD_LCANCEL]
+QED
+
+(* will work well under standard ARITH_ss type normalisation which makes
+   addition right-associative, and will put the numeral/coefficient first in
+   multiplications *)
+Theorem DIV_NUMERAL_THM[simp]:
+  (NUMERAL (BIT1 n) * x) DIV NUMERAL (BIT1 n) = x /\
+  (NUMERAL (BIT2 n) * x) DIV NUMERAL (BIT2 n) = x /\
+  (NUMERAL (BIT1 n) * x + y) DIV NUMERAL (BIT1 n) = x + y DIV NUMERAL (BIT1 n)/\
+  (NUMERAL (BIT2 n) * x + y) DIV NUMERAL (BIT2 n) = x + y DIV NUMERAL (BIT2 n)/\
+  (y + NUMERAL (BIT1 n) * x) DIV NUMERAL (BIT1 n) = x + y DIV NUMERAL (BIT1 n)/\
+  (y + NUMERAL (BIT2 n) * x) DIV NUMERAL (BIT2 n) = x + y DIV NUMERAL (BIT2 n)
+Proof
+  Q.ABBREV_TAC ‘N1 = NUMERAL(BIT1 n)’ >>
+  Q.ABBREV_TAC ‘N2 = NUMERAL(BIT2 n)’ >>
+  ‘0 < N1 /\ 0 < N2’
+    by (MAP_EVERY Q.UNABBREV_TAC [‘N1’, ‘N2’] >>
+        REWRITE_TAC[NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, LESS_0]) >>
+  ‘!x. x * N1 = N1 * x /\ x * N2 = N2 * x’
+    by REWRITE_TAC[MULT_COMM |> SPEC_ALL |> EQT_INTRO] >>
+  simp_tac bool_ss [AC ADD_COMM ADD_ASSOC, SF CONJ_ss] >>
+  rpt conj_tac >> irule DIV_UNIQUE
+  >- (first_assum $ irule_at Any >> ASM_REWRITE_TAC[ADD_CLAUSES])
+  >- (first_assum $ irule_at Any >> ASM_REWRITE_TAC[ADD_CLAUSES])
+  >- (ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, EQ_ADD_LCANCEL', GSYM ADD_ASSOC] >>
+      rpt (dxrule_then (mp_tac o GSYM) DIVISION) >>
+      ASM_REWRITE_TAC[] >>
+      rpt (disch_then (strip_assume_tac o CONV_RULE FORALL_AND_CONV)) >>
+      first_assum $ irule_at Any >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+      first_assum $ irule_at Any)
+  >- (ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, EQ_ADD_LCANCEL', GSYM ADD_ASSOC] >>
+      rpt (dxrule_then (mp_tac o GSYM) DIVISION) >>
+      ASM_REWRITE_TAC[] >>
+      rpt (disch_then (strip_assume_tac o CONV_RULE FORALL_AND_CONV)) >>
+      first_assum $ irule_at Any >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+      first_assum $ irule_at Any)
+QED
+
 val DIV_MOD_MOD_DIV = store_thm ("DIV_MOD_MOD_DIV",
   “!m n k. 0 < n /\ 0 < k ==> ((m DIV n) MOD k = (m MOD (n * k)) DIV n)”,
   REPEAT STRIP_TAC THEN

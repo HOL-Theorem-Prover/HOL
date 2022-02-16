@@ -4677,6 +4677,8 @@ val lcm_run_odd_lower = store_thm(
   `_ = 4 ** k` by rw[EXP_EXP_MULT] >>
   metis_tac[lcm_run_lower_odd]);
 
+Theorem HALF_MULT_EVEN'[local] = ONCE_REWRITE_RULE [MULT_COMM] HALF_MULT_EVEN
+
 (* Theorem: EVEN n ==> HALF (n - 2) * HALF (HALF (2 ** n)) <= lcm_run n *)
 (* Proof:
    If n = 0, HALF (n - 2) = 0, so trivially true.
@@ -4707,7 +4709,7 @@ Proof
   `h <> 0` by rw[Abbr`h`] >>
   `?k. h = k + 1` by metis_tac[num_CASES, ADD1] >>
   `HALF (HALF (2 ** n)) = HALF (HALF (2 ** SUC (SUC (2 * k))))` by simp[ADD1] >>
-  `_ = HALF (HALF (2 * (2 * 2 ** (2 * k))))` by rw[EXP] >>
+  `_ = HALF (HALF (2 * (2 * 2 ** (2 * k))))` by rw[EXP, HALF_MULT_EVEN'] >>
   `_ = 2 ** (2 * k)` by rw[HALF_TWICE] >>
   `_ = 4 ** k` by rw[EXP_EXP_MULT] >>
   `n - 2 = 2 * k` by decide_tac >>
@@ -4773,25 +4775,26 @@ val lcm_run_odd_lower_alt = store_thm(
           = 2 ** (SUC (SUC m))  by EXP
           = 2 ** n              by n = SUC (SUC m)
 *)
-val lcm_run_even_lower_alt = store_thm(
-  "lcm_run_even_lower_alt",
-  ``!n. EVEN n /\ 8 <= n ==> 2 ** n <= lcm_run n``,
+Theorem lcm_run_even_lower_alt:
+  !n. EVEN n /\ 8 <= n ==> 2 ** n <= lcm_run n
+Proof
   rpt strip_tac >>
-  Cases_on `n = 8` >-
-  rw[lcm_run_small] >>
-  `2 ** n <= HALF (n - 2) * HALF (HALF (2 ** n))` by
-  (`ODD 9` by rw[] >>
-  `n <> 9` by metis_tac[ODD_EVEN] >>
-  `8 <= n - 2` by decide_tac >>
-  qabbrev_tac `m = n - 2` >>
-  `n = SUC (SUC m)` by rw[Abbr`m`] >>
-  `HALF m * HALF (HALF (2 ** n)) = HALF m * HALF (HALF (2 * (2 * 2 ** m)))` by rw[EXP] >>
-  `_ = HALF m * 2 ** m` by rw[HALF_TWICE] >>
-  `HALF 8 <= HALF m` by rw[DIV_LE_MONOTONE] >>
-  `HALF 8 = 4` by EVAL_TAC >>
-  `2 * (2 * 2 ** m) <= HALF m * 2 ** m` by rw[LESS_MONO_MULT] >>
-  rw[EXP]) >>
-  metis_tac[lcm_run_even_lower, LESS_EQ_TRANS]);
+  Cases_on `n = 8` >- rw[lcm_run_small] >>
+  `2 ** n <= HALF (n - 2) * HALF (HALF (2 ** n))`
+    by (`ODD 9` by rw[] >>
+        `n <> 9` by metis_tac[ODD_EVEN] >>
+        `8 <= n - 2` by decide_tac >>
+        qabbrev_tac `m = n - 2` >>
+        `n = SUC (SUC m)` by rw[Abbr`m`] >>
+        ‘HALF m * HALF (HALF (2 ** n)) =
+         HALF m * HALF (HALF (2 * (2 * 2 ** m)))’ by rw[EXP, HALF_MULT_EVEN'] >>
+        `_ = HALF m * 2 ** m` by rw[HALF_TWICE] >>
+        `HALF 8 <= HALF m` by rw[DIV_LE_MONOTONE] >>
+        `HALF 8 = 4` by EVAL_TAC >>
+        `2 * (2 * 2 ** m) <= HALF m * 2 ** m` by rw[LESS_MONO_MULT] >>
+        rw[EXP]) >>
+  metis_tac[lcm_run_even_lower, LESS_EQ_TRANS]
+QED
 
 (* Theorem: 7 <= n ==> 2 ** n <= lcm_run n *)
 (* Proof:

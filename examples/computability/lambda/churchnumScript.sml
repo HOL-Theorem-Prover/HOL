@@ -141,18 +141,13 @@ val is_church_church = store_thm(
   Cases_on `z = "z"` THEN SRW_TAC [CONJ_ss][] THEN
   Cases_on `z = "s"` THEN SRW_TAC [CONJ_ss][]);
 
-val force_num_size = store_thm(
-  "force_num_size",
-  ``is_church t ⇒ (force_num t = size t DIV 2 - 1)``,
+Theorem force_num_size:
+  is_church t ⇒ (force_num t = size t DIV 2 - 1)
+Proof
   SRW_TAC [][force_num_def] THEN
-  `∃n. t = church n` by METIS_TAC [is_church_church] THEN
-  SRW_TAC [ARITH_ss][church_def, size_funpow] THEN
-  Q_TAC SUFF_TAC `(2 * n + 3) DIV 2 = n + 1` THEN1 DECIDE_TAC THEN
-  MATCH_MP_TAC arithmeticTheory.DIV_UNIQUE THEN Q.EXISTS_TAC `1` THEN
-  DECIDE_TAC);
-
-
-
+  ‘∃n. t = church n’ by METIS_TAC [is_church_church] THEN
+  SRW_TAC [ARITH_ss][church_def, size_funpow]
+QED
 
 val SUB_funpow_app = store_thm(
   "SUB_funpow_app",
