@@ -109,7 +109,6 @@ Command     | Description
 `hx`        | Open a HOL session inside (neo)vim at the path of the currently edited file.
 `hX`        | Close the HOL session.
 `hw`        | Send region (visual and normal mode). Writes directly into the HOL session buffer and does not need a fifo.
-`hC`        | Send HOL to `use` the file defined in the `$HOL_CONFIG` environment variable, if any. This is handy to teach custom heaps to load Vimhol (if `$HOL_CONFIG` contains the path to `hol-config.sml`, for example `~/.hol-config.sml`).
 
 The terminal buffer that is hosting the HOL repl can be navigated as usual (if in normal mode).
 In vim, to leave insert mode of a terminal buffer and return to Terminal-Normal mode press `CTRL-\ CTRL-N`, as documented in [`:help terminal-typing`](https://vimhelp.org/terminal.txt.html#terminal-typing).

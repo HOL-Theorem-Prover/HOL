@@ -309,8 +309,6 @@ nn <buffer><silent> <LocalLeader>X :call HOLREPLsend("\<C-D>")<CR>
 " send current line (or highlighted section) to terminal
 vn <buffer><silent> <LocalLeader>w "0y:call HOLREPLsend(getreg('0',1) . ";\n")<CR>
 nm <buffer><silent><expr> <LocalLeader>w "V".maplocalleader."w"
-" load the $HOL_CONFIG for non-standard HOL heaps
-nn <buffer><silent> <LocalLeader>C :call HOLREPLsend("Option.app use $ Process.getEnv \"HOL_CONFIG\";\n")<CR>
 
 let b:did_hol = 1
 " vim: ft=vim
