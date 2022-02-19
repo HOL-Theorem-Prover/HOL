@@ -29,7 +29,6 @@ val use_state0 = ref false
 fun find_heapname file =
   if !use_state0 then HOLDIR ^ "/bin/hol.state0" else
   let
-    val _ = mkDir_err heapname_dir
     val heapname_bin = HOLDIR ^ "/bin/heapname"
     val fileout = heapname_dir ^ "/heapname_" ^ bare file
     val cmd = String.concatWith " " [heapname_bin,">",fileout]
@@ -60,7 +59,6 @@ val genscriptdep_dir = HOLDIR ^ "/src/AI/sml_inspection/genscriptdep"
 
 fun find_genscriptdep file =
   let
-    val _ = mkDir_err genscriptdep_dir
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
     val fileout = genscriptdep_dir ^ "/genscriptdep_" ^ bare file
     val cmd = String.concatWith " "
@@ -77,12 +75,15 @@ fun find_genscriptdep file =
    ------------------------------------------------------------------------- *)
 
 val buildheap_options = ref ""
-val buildheap_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/buildheap")
+val buildheap_dir_init = HOLDIR ^ "/src/AI/sml_inspection/buildheap"
+val buildheap_dir = ref buildheap_dir_init
 val buildheap_bin = HOLDIR ^ "/bin/buildheap"
 
 fun exec_scriptb b script =
   let
-    val _ = mkDir_err (!buildheap_dir)
+    val _ = if !buildheap_dir <> buildheap_dir_init 
+            then mkDir_err (!buildheap_dir)
+            else ()
     val fileout = !buildheap_dir ^ "/buildheap_" ^ bare script
     val depl = find_genscriptdep script
     val heap = if b then find_tttheapname script else find_heapname script
