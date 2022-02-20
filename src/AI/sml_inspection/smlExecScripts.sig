@@ -6,6 +6,7 @@ sig
   val find_genscriptdep : string -> string list
 
   val buildheap_options : string ref (* see buildheap --help *)
+  val default_buildheap_dir : string
   val buildheap_dir : string ref (* standard out directory of exec_script *)
   val exec_script : string -> unit
 

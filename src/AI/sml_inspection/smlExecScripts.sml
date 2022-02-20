@@ -75,13 +75,13 @@ fun find_genscriptdep file =
    ------------------------------------------------------------------------- *)
 
 val buildheap_options = ref ""
-val buildheap_dir_init = HOLDIR ^ "/src/AI/sml_inspection/buildheap"
-val buildheap_dir = ref buildheap_dir_init
+val default_buildheap_dir = HOLDIR ^ "/src/AI/sml_inspection/buildheap"
+val buildheap_dir = ref default_buildheap_dir
 val buildheap_bin = HOLDIR ^ "/bin/buildheap"
 
 fun exec_scriptb b script =
   let
-    val _ = if !buildheap_dir <> buildheap_dir_init 
+    val _ = if !buildheap_dir <> default_buildheap_dir
             then mkDir_err (!buildheap_dir)
             else ()
     val fileout = !buildheap_dir ^ "/buildheap_" ^ bare script
