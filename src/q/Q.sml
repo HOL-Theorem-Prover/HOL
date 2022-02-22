@@ -601,4 +601,9 @@ fun SELECT_GOALS_LT_THEN pats tac = SELECT_LT (RENAME_TAC pats THEN tac)
 
 fun (tac >>~ pats) = tac THEN_LT SELECT_GOALS_LT pats
 
+fun SELECT_GOALS_LT_THEN1 pats tac =
+  SELECT_LT_THEN (RENAME_TAC pats) (tac THEN NO_TAC)
+
+fun (tac1 >>~- (pats, tac2)) = tac1 THEN_LT SELECT_GOALS_LT_THEN1 pats tac2
+
 end (* Q *)
