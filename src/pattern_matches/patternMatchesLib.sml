@@ -21,6 +21,9 @@ struct
 end
 open Parse
 
+val oldmeson = !mesonLib.chatting;
+val _ = mesonLib.chatting := 0
+
 val std_ss   = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss  =
     numLib.arith_ss ++ listSimps.LIST_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -499,7 +502,7 @@ end
    define some conversions then. *)
 
 val COND_CONG_STOP = prove (``
-  (c = c') ==> ((if c then x else y) = (if c' then x else y))``,
+  (c = c') ==> ((if c then x else y:'a) = (if c' then x else y))``,
 SIMP_TAC std_ss [])
 
 fun case_pmatch_eq_prove t t' = let
@@ -3972,5 +3975,6 @@ end handle HOL_ERR _ => init_pmatch_info
 
 end
 
+val _ = mesonLib.chatting := oldmeson;
 
 end

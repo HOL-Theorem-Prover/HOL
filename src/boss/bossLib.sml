@@ -246,7 +246,9 @@ fun fraglistify f base_ss fragl thms : tactic = f (addfrags fragl base_ss) thms
 val let_arith_frags = [boolSimps.LET_ss, ARITH_ss]
 fun boss_augment ss old = addfrags let_arith_frags ss
 val {get = boss_ss, set = set_boss_ss} =
-    BasicProvers.make_simpset_derived_value boss_augment bool_ss
+    Feedback.quiet_messages
+      (BasicProvers.make_simpset_derived_value boss_augment)
+      bool_ss
 
 fun stateful f ssfl thms : tactic =
     fn g => fraglistify f (boss_ss()) ssfl thms g
