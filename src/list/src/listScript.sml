@@ -1489,6 +1489,17 @@ val ZIP_def =
         }
     end;
 
+Theorem ZIP_ind:
+  !P. (!l2. P ([], l2)) /\ (!l1. P(l1, [])) /\
+      (!l1 l2 h1 h2. P (l1, l2) ==> P (h1::l1, h2::l2)) ==>
+      !l1 l2. P (l1,l2)
+Proof
+  gen_tac >> strip_tac >> Induct >> simp[] >>
+  Cases_on ‘l2’ >> simp[]
+QED
+
+val _ = DefnBase.register_indn(ZIP_ind, [{Thy = "list", Name = "ZIP"}])
+
 val ZIP = store_thm("ZIP",
   “(ZIP ([],[]) = []) /\
     (!(x1:'a) l1 (x2:'b) l2.
@@ -3104,30 +3115,18 @@ val APPEND_EQ_APPEND_MID = store_thm(
 
 (* --------------------------------------------------------------------- *)
 
-local
-   val lupdate_exists = prove(
-     “?lupdate.
-         (!e: 'a n: num. lupdate e n ([]: 'a list) = []: 'a list) /\
-         (!e x l. lupdate e 0 (x::l) = e::l) /\
-         (!e n x l. lupdate e (SUC n) (x::l) =
-                       CONS x (lupdate e n l))”,
-     REPEAT STRIP_TAC
-     THEN STRIP_ASSUME_TAC
-          (Q.ISPECL
-             [‘(\x1 x2. []): 'a -> num -> 'a list’,
-              ‘\(x: 'a) (l: 'a list) (r: 'a -> num -> 'a list) (e: 'a)
-                (n: num).
-                  if n = 0 then
-                     e::l
-                  else
-                     (CONS x (r e (PRE n)):'a list)’] list_Axiom)
-     THEN Q.EXISTS_TAC ‘\x1 x2 x3. fn x3 x1 x2’
-     THEN ASM_SIMP_TAC arith_ss [])
-in
-   val LUPDATE_def =
-      Definition.new_specification
-         ("LUPDATE_def", ["LUPDATE"], lupdate_exists)
-end;
+Definition LUPDATE_DEF[notuserdef,nocompute]:
+  LUPDATE e n [] = [] /\
+  LUPDATE e n (x::l) = if n = 0 then e :: l else x :: LUPDATE e (PRE n) l
+End
+
+Theorem LUPDATE_def[userdef]:
+  (!e n. LUPDATE e n [] = [] : 'a list) /\
+  (!e x l. LUPDATE e 0 (x::l) = e::l) /\
+  (!e n x l. LUPDATE e (SUC n) (x::l) = x :: LUPDATE e n l)
+Proof
+  simp[LUPDATE_DEF]
+QED
 
 val LUPDATE_NIL = store_thm("LUPDATE_NIL[simp]",
   “!xs n x. (LUPDATE x n xs = []) <=> (xs = [])”,
@@ -3195,8 +3194,7 @@ val MEM_LUPDATE = store_thm(
     ]
   ]);
 
-val LUPDATE_compute = save_thm("LUPDATE_compute",
-   numLib.SUC_RULE LUPDATE_def)
+Theorem LUPDATE_compute[compute] = numLib.SUC_RULE LUPDATE_def
 
 val LUPDATE_MAP = store_thm("LUPDATE_MAP",
 “!x n l f. MAP f (LUPDATE x n l) = LUPDATE (f x) n (MAP f l)”,
@@ -4461,7 +4459,7 @@ val _ = computeLib.add_persistent_funs [
       "UNZIP", "FILTER", "FOLDL", "FOLDR",
       "TAKE_compute", "FOLDL", "REVERSE_REV", "SUM_SUM_ACC", "ALL_DISTINCT",
       "GENLIST_AUX", "EL_restricted", "EL_simp_restricted", "SNOC",
-      "LUPDATE_compute", "GENLIST_NUMERALS", "list_size_def", "FRONT_DEF",
+      "GENLIST_NUMERALS", "list_size_def", "FRONT_DEF",
       "LAST_compute", "isPREFIX"
     ]
 
