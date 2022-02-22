@@ -453,7 +453,7 @@ val EXP_MOD_EQN = |- !b n m. 1 < m ==>
 *)
 
 (* Define modular exponentiation: (b ** n) MOD m *)
-val mexpM_def = tDefine "mexpM" `
+Definition mexpM_def:
   mexpM m b n =
       do
          m0 <- zeroM m;
@@ -468,7 +468,8 @@ val mexpM_def = tDefine "mexpM" `
                  ifM (evenM n) (return r) (mmulM m b r);
               od
       od
-`(WF_REL_TAC `measure (\(m,b,n). n)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(m,b,n). n)` >> simp[]
+End
 
 (*
 > EVAL ``MAP (mexpM 7 2) [0 .. 10]``; =

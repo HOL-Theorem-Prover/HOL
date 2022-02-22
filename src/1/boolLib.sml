@@ -149,6 +149,13 @@ in
   save_thm_attrs "save_thm" (n,attrs,th)
 end
 
+fun new_recursive_definition rcd =
+    let val thm = Prim_rec.new_recursive_definition rcd
+        val genind = gen_indthm {lookup_ind = TypeBase.induction_of}
+    in
+      DefnBaseCore.register_indn (genind thm);
+      thm
+    end
 
 (* ----------------------------------------------------------------------
     Gets a variant of an arbitrary term instead of a single variable.

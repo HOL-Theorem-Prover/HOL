@@ -1227,8 +1227,9 @@ fun z_def def =
 
 fun t_def s def m tac =
    Feedback.trace ("Define.storage_message", 0)
-   (bossLib.tDefine s [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
-     (MEASURE_TAC m THEN tac)
+   (TotalDefn.qDefine (s ^ !Defn.def_suffix)
+                      [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
+   (SOME (MEASURE_TAC m THEN tac))
 
 val mesg =
    Lib.with_flag

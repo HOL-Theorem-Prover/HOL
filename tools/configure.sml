@@ -182,7 +182,9 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"mosml\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
+   "val MV ="       --> ("val MV = " ^ quote MV^"\n"),
+   "val CP ="       --> ("val CP = " ^ quote CP^"\n")
   ];
   use destfile
 end;
@@ -282,7 +284,8 @@ end handle _ => die "Failed to build mllex.";
  ---------------------------------------------------------------------------*)
 
 fun compile opts s =
-      Process.isSuccess (systeml ([compiler, "-c"] @ opts @ [s]))
+    (echo ("Compiling " ^ s);
+     Process.isSuccess (systeml ([compiler, "-c"] @ opts @ [s])))
 
 val _ =
  let val _ = echo "Making bin/Holmake."
@@ -301,38 +304,41 @@ val _ =
        systeml (pfx @ extras @ [srcobj])
      end
   in
+    print "Calling mllex on QuoteFilter\n";
     systeml [mllex, "QuoteFilter"];
-    compile [] "QuoteFilter.sml";
-    compile [] "QFRead.sig";
-    compile [] "QFRead.sml";
-    compile [] "FunctionalRecordUpdate.sml";
-    compile [] "GetOpt.sig";
-    compile [] "GetOpt.sml";
-    compile [] "HM_Core_Cline.sig";
-    compile [] "HM_Core_Cline.sml";
-    compile [] "Holdep_tokens.sig";
-    compile [] "Holdep_tokens.sml";
-    compile [] "holdeptool.sml";
-    compile [] "mosml_holdeptool.sml";
-    link{extras = [], srcobj = "mosml_holdeptool.uo",
-         tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
-    compile ["-I", "mosml"] "Holdep.sig";
-    compile ["-I", "mosml"] "Holdep.sml";
+    compile [] "holpathdb.sig";
+    compile [] "holpathdb.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";
     compile [] "parse_glob.sml";
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
+    compile [] "Holdep_tokens.sig";
+    compile [] "Holdep_tokens.sml";
+    compile [] "QuoteFilter.sml";
+    compile [] "terminal_primitives.sig";
+    compile [] "terminal_primitives.sml";
     compile [] "Holmake_tools_dtype.sml";
-    compile [] "holpathdb.sig";
-    compile [] "holpathdb.sml";
+    compile [] "QFRead.sig";
+    compile [] "QFRead.sml";
+    compile ["-I", "mosml"] "Holdep.sig";
+    compile ["-I", "mosml"] "Holdep.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
     compile [] "Holmake_types.sig";
     compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
+    compile [] "GetOpt.sig";
+    compile [] "GetOpt.sml";
+    compile [] "FunctionalRecordUpdate.sml";
+    compile [] "HM_Core_Cline.sig";
+    compile [] "HM_Core_Cline.sml";
+    compile [] "holdeptool.sml";
+    compile [] "mosml_holdeptool.sml";
+    link{extras = [], srcobj = "mosml_holdeptool.uo",
+         tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     compile [] "HM_DepGraph.sig";
     compile [] "HM_DepGraph.sml";
     compile [] "HM_GraphBuildJ1.sig";
@@ -363,7 +369,7 @@ handle _ => (print "*** Couldn't build Holmake\n";
    ---------------------------------------------------------------------- *)
 
 val _ = let
-  val _ = echo "Making tooks/mlyacc/src/mlyacc.exe"
+  val _ = echo "Making tools/mlyacc/src/mlyacc.exe"
   val cdir = FileSys.getDir()
   val destdir = fullPath [holdir, "tools/mlyacc"]
   val systeml = fn clist => if Process.isSuccess (systeml clist) then ()

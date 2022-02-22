@@ -45,8 +45,8 @@ val Datatype = Datatype.Datatype
             Function definition
  ---------------------------------------------------------------------------*)
 
-val xDefine    = TotalDefn.xDefine
-val tDefine    = TotalDefn.tDefine
+fun xDefine s q = TotalDefn.qDefine (s ^ !Defn.def_suffix) q NONE
+fun tDefine s q tac = TotalDefn.qDefine (s ^ !Defn.def_suffix) q (SOME tac)
 val Define     = TotalDefn.Define
 val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 val Hol_defn   = Defn.Hol_defn
@@ -273,6 +273,8 @@ val gs = stateful (cfg false true true) []
 val gnvs = stateful (cfg true false true) []
 val gvs = stateful (cfg true true true) []
 val rgs = stateful (cfg false true false) []
+
+fun SRULE ths th = SIMP_RULE (srw_ss()) ths th (* don't eta-reduce *)
 
 (* Without loss of generality tactics *)
 val wlog_tac = wlog_tac

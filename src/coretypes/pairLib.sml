@@ -148,7 +148,7 @@ local
 
   in
 
-  fun new_specification (name,cnames,th) = let
+  fun new_specification0 (name,(cnames,th)) = let
     val n = List.length cnames in if n = 0 then
       Theory.Definition.gen_new_specification (name,th)
     else let
@@ -177,7 +177,15 @@ local
     val th5 = List.foldl (Lib.uncurry ADD_ASSUM) th4 eqs
     in
       Theory.Definition.gen_new_specification (name,th5)
-    end end
+    end
+  end
+
+  fun new_specification(n,cs,th) =
+      boolSyntax.new_thm_with_attributes
+        {call_f = "new_specification", call_str = "pairLib"}
+        new_specification0
+        (n, (cs,th))
+
 
 end
 

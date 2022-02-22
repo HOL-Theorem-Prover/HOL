@@ -1,0 +1,6 @@
+cat > Holmakefile <<'eof'
+tgt:
+	echo Hello > $@
+
+EXTRA_CLEANS = Holmakefile tgt
+eof

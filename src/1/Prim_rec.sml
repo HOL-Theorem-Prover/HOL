@@ -2043,6 +2043,154 @@ fun prove_case_ho_imp_thm ty_def = let
       |> GEN f
   end
 
+(* ----------------------------------------------------------------------
+    gen_indthm : given definition theorem that is output of
+                 new_recursive_definition, outputs a custom induction
+                 theorem that has as many parameters to its induction
+                 variables as the constants do in the definition.
+   ---------------------------------------------------------------------- *)
+
+fun insert_at_n n extra rest =
+    let
+      val (p,s) = split_after n rest
+    in
+      p @ [extra] @ s
+    end
+
+fun hdPs t =
+    case Lib.total dest_forall t of
+        SOME (_, t) => hdPs t
+      | NONE => (case Lib.total dest_conj t of
+                     SOME (c1,c2) => hdPs c1 @ hdPs c2
+                   | NONE =>
+                     (case Lib.total dest_imp t of
+                          SOME (h,c) => hdPs h @ hdPs c
+                        | NONE => [#1 (strip_comb t)]))
+
+fun top_assoc x y = Lib.op_assoc (option_eq aconv) x y
+
+fun nicestr ty =
+    if is_vartype ty then String.extract(dest_vartype ty, 1, NONE)
+    else let val {Tyop, Thy, Args} = dest_thy_type ty
+         in
+           if Tyop = "list" andalso Thy = "list" then
+             nicestr (hd Args) ^ "s"
+           else if Tyop = "prod" andalso Thy = "pair" then
+             nicestr (hd Args) ^ "_" ^ nicestr (hd (tl Args))
+           else String.substring(Tyop, 0, 1)
+         end
+fun gen_nicevar ty = mk_var(nicestr ty, ty)
+
+fun liftALLs t = TRY_CONV (RIGHT_IMP_FORALL_CONV THENC BINDER_CONV liftALLs) t
+
+fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
+val prim_dest_const = to_kid o dest_thy_const
+fun conj_genll tyalist indth =
+    let
+      val tmDom = #1 o dom_rng o type_of
+      val (indPvs, _) = strip_forall $ concl indth
+      fun mkP P n vs =
+          mk_var(#1 $ dest_var P,
+                 list_mk_fun(insert_at_n n (tmDom P) (map type_of vs), bool))
+      fun mapthis P =
+          let val dty = #1 $ dom_rng $ type_of P
+              fun test patty i (concty,info) =
+                  case total (match_type patty) concty of
+                      SOME sigma => SOME (concty, info, sigma)
+                    | NONE => NONE
+          in
+            case first_opt (test dty) tyalist of
+                NONE => (NONE, ([], mk_abs(genvar dty, boolSyntax.T),
+                                {Thy = "min", Name = "fake"}))
+              | SOME (cty, (n, vs, f), sigma) =>
+                let
+                  val gv = variant vs $ gen_nicevar cty
+                  val vs' = insert_at_n n gv vs
+                  val P' = mkP (inst sigma P) n vs
+                in
+                  (SOME P',
+                   (vs,
+                    mk_abs (gv, list_mk_forall(vs, list_mk_comb(P',vs'))),
+                    f))
+                end
+          end
+      val Pinfo = map mapthis indPvs
+      val newPvs = List.mapPartial #1 Pinfo
+      fun reorder_var_order th0 =
+          let fun mapthis th =
+                  let
+                    val th' = SPEC_ALL th
+                    val (_, fvs) = strip_comb $ concl th'
+                        (* works because there won't even be tuple structure in
+                           the conclusion *)
+                  in
+                    th' |> GENL fvs
+                  end
+          in
+            LIST_CONJ (map mapthis $ CONJUNCTS $ UNDISCH_ALL $ th0) |> DISCH_ALL
+          end
+      val indth' =
+          ISPECL (map (#2 o #2) Pinfo) indth |> BETA_RULE
+                |> PURE_REWRITE_RULE [IMP_CLAUSES, FORALL_SIMP,
+                                      AND_CLAUSES]
+                |> CONV_RULE $ LAND_CONV $ EVERY_CONJ_CONV $
+                     STRIP_QUANT_CONV liftALLs
+                |> reorder_var_order
+      val remaining_Pvs = filter (fn v => free_in v (concl indth')) newPvs
+      fun gen_P2const (SOME new, (_, _, f)) = SOME(new,f)
+        | gen_P2const (NONE, _) = NONE
+    in
+      (GENL remaining_Pvs indth', List.mapPartial gen_P2const Pinfo)
+    end
+
+
+open Portable
+fun variantl (avoids, vs) =
+    foldl' (fn v => fn (avs, vs0) =>
+               let val v' = variant avs v
+               in (v'::avs, v'::vs0)
+               end)
+           vs
+           (avoids, []) |> apsnd List.rev
+
+(* trickinesses stem from fact that the definition may not involve all of
+   the underlying types belonging to a mutual recursion, and those that it
+   does use may not be present in the definition in the same order. *)
+fun gen_indthm {lookup_ind} defth =
+    let
+      fun conj_fold cj (A as (indopt, avds, seen_consts, alist)) =
+          let val (_, eqn) = cj |> strip_forall
+              val (f, args) = strip_comb (lhs eqn)
+          in
+            if HOLset.member(seen_consts, f) then A
+            else
+              case plucki (not o is_var) args of
+                  NONE => raise ERR "gen_indthm"
+                                "Doesn't look like a recursive definition"
+                | SOME (a,i,others) =>
+                  let val (avds',vs) = variantl (avds, others)
+                      val aty = type_of a
+                      val indopt = case indopt of
+                                       NONE => SOME(lookup_ind aty)
+                                     | _ => indopt
+                  in
+                    (indopt, avds', HOLset.add(seen_consts, f),
+                     (aty, (i, vs, prim_dest_const f)) :: alist)
+                  end
+          end
+      val (indth_opt, _, _, tyalist) =
+          foldl' conj_fold (strip_conj (concl defth)) (NONE, [], empty_tmset,[])
+      val indth =
+          case indth_opt of
+              SOME th => th
+            | NONE => raise ERR "gen_indthm" "Didn't get an induction theorem"
+      val (thm, P2const_alist) = conj_genll tyalist indth
+      val (gvs, _) = thm |> concl |> strip_forall
+    in
+      (thm, map (C (op_assoc aconv) P2const_alist) gvs)
+    end
+
+
 
 
 end; (* Prim_rec *)

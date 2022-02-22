@@ -335,11 +335,12 @@ GEN_TAC THEN Induct THENL
 (* Following should really be called "bt_to_set", but ENUMERAL, like
    NUMERAL, will flag the terms that represent sets as trees. *)
 
-val bt_to_set = xDefine "bt_to_set"
-`(ENUMERAL cmp nt = {}) /\
+Definition bt_to_set:
+ (ENUMERAL cmp nt = {}) /\
  (ENUMERAL (cmp:'a toto) (node l x r) =
-{y | y IN ENUMERAL cmp l /\ (apto cmp y x = LESS)} UNION {x} UNION
-{z | z IN ENUMERAL cmp r /\ (apto cmp x z = LESS)})`;
+    {y | y IN ENUMERAL cmp l /\ (apto cmp y x = LESS)} UNION {x} UNION
+    {z | z IN ENUMERAL cmp r /\ (apto cmp x z = LESS)})
+End
 
 val bt_to_set_lb = Define`bt_to_set_lb cmp (lb:'a) t =
                      {x | x IN ENUMERAL cmp t /\ (apto cmp lb x = LESS)}`;

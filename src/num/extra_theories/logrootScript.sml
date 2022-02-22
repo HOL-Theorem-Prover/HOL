@@ -523,32 +523,23 @@ val iSQRT_lemma = Q.prove(
             METIS_PROVE [DECIDE ``SUC 1 = 2``, EXP, EXP_1]
                ``a ** 2 = a * a:num``]));
 
-val numeral_sqrt0 = Q.prove(
-  `(SQRTd ZERO = (0,0)) /\
-   (SQRTd (BIT1 ZERO)= (1,0)) /\
-   (SQRTd (BIT2 ZERO)= (1,1)) /\
-   (SQRTd (BIT1 (BIT1 n)) = iSQRTd (3,n)) /\
-   (SQRTd (BIT2 (BIT1 n)) = iSQRTd (0,SUC n)) /\
-   (SQRTd (BIT1 (BIT2 n)) = iSQRTd (1,SUC n)) /\
-   (SQRTd (BIT2 (BIT2 n)) = iSQRTd (2,SUC n)) /\
-   (SQRTd (SUC (BIT1 (BIT1 n))) = iSQRTd (0,SUC n)) /\
-   (SQRTd (SUC (BIT2 (BIT1 n))) = iSQRTd (1,SUC n)) /\
-   (SQRTd (SUC (BIT1 (BIT2 n))) = iSQRTd (2,SUC n)) /\
-   (SQRTd (SUC (BIT2 (BIT2 n))) = iSQRTd (3,SUC n))`,
-   REWRITE_TAC [BIT1, BIT2, ALT_ZERO, ADD_CLAUSES, NUMERAL_DEF]
-   THEN RW_TAC arith_ss [iSQRT_lemma, ADD1]
-   THENL [
-      RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, SQRTd_def, sqrt_zero],
-      RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, SQRTd_def, sqrt_zero],
-      RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, SQRTd_def, sqrt_zero],
-      ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC]
-   THEN METIS_TAC
-         [DIV_MULT, MOD_MULT, MULT_COMM,
-          DECIDE ``0 < 4n /\ 1 < 4n /\ 2 < 4n /\ 3 < 4n``,
-          DECIDE
-            ``(4 * n + 4 = 4 * (n + 1) + 0) /\ (4 * n + 5 = 4 * (n + 1) + 1) /\
-              (4 * n + 6 = 4 * (n + 1) + 2) /\ (4 * n + 7 = 4 * (n + 1) + 3)``]
-   );
+Theorem numeral_sqrt0[local]:
+  (SQRTd ZERO = (0,0)) /\
+  (SQRTd (BIT1 ZERO)= (1,0)) /\
+  (SQRTd (BIT2 ZERO)= (1,1)) /\
+  (SQRTd (BIT1 (BIT1 n)) = iSQRTd (3,n)) /\
+  (SQRTd (BIT2 (BIT1 n)) = iSQRTd (0,SUC n)) /\
+  (SQRTd (BIT1 (BIT2 n)) = iSQRTd (1,SUC n)) /\
+  (SQRTd (BIT2 (BIT2 n)) = iSQRTd (2,SUC n)) /\
+  (SQRTd (SUC (BIT1 (BIT1 n))) = iSQRTd (0,SUC n)) /\
+  (SQRTd (SUC (BIT2 (BIT1 n))) = iSQRTd (1,SUC n)) /\
+  (SQRTd (SUC (BIT1 (BIT2 n))) = iSQRTd (2,SUC n)) /\
+  (SQRTd (SUC (BIT2 (BIT2 n))) = iSQRTd (3,SUC n))
+Proof
+  REWRITE_TAC [BIT1, BIT2, ALT_ZERO, ADD_CLAUSES, NUMERAL_DEF]
+  THEN RW_TAC arith_ss [iSQRT_lemma, ADD1]
+  THEN RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, SQRTd_def, sqrt_zero]
+QED
 
 val iSQRT0_def = Define`
    iSQRT0 n =
@@ -579,29 +570,30 @@ val iSQRT3_def = Define`
       let e = SUC c - d in
          if e = 0 then (d,SUC (2 * c)) else (SUC d, 2 * (e - 1))`;
 
-val numeral_sqrt = Q.store_thm("numeral_sqrt",
-  `(SQRTd ZERO = (0,0)) /\
-   (SQRTd (BIT1 ZERO) = (1,0)) /\
-   (SQRTd (BIT2 ZERO) = (1,1)) /\
-   (SQRTd (BIT1 (BIT1 n)) = iSQRT3 n) /\
-   (SQRTd (BIT2 (BIT1 n)) = iSQRT0 (SUC n)) /\
-   (SQRTd (BIT1 (BIT2 n)) = iSQRT1 (SUC n)) /\
-   (SQRTd (BIT2 (BIT2 n)) = iSQRT2 (SUC n)) /\
-   (SQRTd (SUC (BIT1 (BIT1 n))) = iSQRT0 (SUC n)) /\
-   (SQRTd (SUC (BIT2 (BIT1 n))) = iSQRT1 (SUC n)) /\
-   (SQRTd (SUC (BIT1 (BIT2 n))) = iSQRT2 (SUC n)) /\
-   (SQRTd (SUC (BIT2 (BIT2 n))) = iSQRT3 (SUC n))`,
-   RW_TAC(arith_ss ++ boolSimps.LET_ss) [numeral_sqrt0]
-   THEN REWRITE_TAC [iSQRT0_def, iSQRT1_def, iSQRT2_def, iSQRT3_def]
-   THEN RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, ADD1]);
+Theorem numeral_sqrt[compute]:
+  (SQRTd ZERO = (0,0)) /\
+  (SQRTd (BIT1 ZERO) = (1,0)) /\
+  (SQRTd (BIT2 ZERO) = (1,1)) /\
+  (SQRTd (BIT1 (BIT1 n)) = iSQRT3 n) /\
+  (SQRTd (BIT2 (BIT1 n)) = iSQRT0 (SUC n)) /\
+  (SQRTd (BIT1 (BIT2 n)) = iSQRT1 (SUC n)) /\
+  (SQRTd (BIT2 (BIT2 n)) = iSQRT2 (SUC n)) /\
+  (SQRTd (SUC (BIT1 (BIT1 n))) = iSQRT0 (SUC n)) /\
+  (SQRTd (SUC (BIT2 (BIT1 n))) = iSQRT1 (SUC n)) /\
+  (SQRTd (SUC (BIT1 (BIT2 n))) = iSQRT2 (SUC n)) /\
+  (SQRTd (SUC (BIT2 (BIT2 n))) = iSQRT3 (SUC n))
+Proof
+  RW_TAC(arith_ss ++ boolSimps.LET_ss) [numeral_sqrt0]
+  THEN REWRITE_TAC [iSQRT0_def, iSQRT1_def, iSQRT2_def, iSQRT3_def]
+  THEN RW_TAC (arith_ss ++ boolSimps.LET_ss) [iSQRTd_def, ADD1]
+QED
 
-val numeral_root2 = Q.store_thm("numeral_root2",
-   `ROOT 2 (NUMERAL n) = FST (SQRTd n)`,
-   REWRITE_TAC [FST, SQRTd_def, NUMERAL_DEF]);
+Theorem numeral_root2[compute]:
+   ROOT 2 (NUMERAL n) = FST (SQRTd n)
+Proof REWRITE_TAC [FST, SQRTd_def, NUMERAL_DEF]
+QED
 
 val () = Theory.delete_const "iSQRTd"
-
-val () = computeLib.add_persistent_funs ["numeral_sqrt", "numeral_root2"]
 
 (* ----------------------------------------------------------------------- *)
 

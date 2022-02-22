@@ -1,1 +1,1 @@
-OPTIONS=QUIT_ON_FAILURE
+INCLUDES = $(HOLDIR)/src/string $(HOLDIR)/src/n-bit

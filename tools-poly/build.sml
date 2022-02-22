@@ -25,7 +25,7 @@ datatype phase = Initial | Bare | Full
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,...} = cline_record
 val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
-val {multithread,...} = cline_record
+val {multithread,keepgoing,...} = cline_record
 
 open Systeml;
 
@@ -70,6 +70,7 @@ in
     (fn () => (case jobcount of NONE => [] | SOME j => ["-j"^Int.toString j]) @
               (if relocbuild then ["--relocbuild"] else []) @
               (if debug then ["--dbg"] else []) @
+              (if keepgoing then ["-k"] else []) @
               (case multithread of
                    NONE => []
                  | SOME i => ["--mt="^Int.toString i]) @

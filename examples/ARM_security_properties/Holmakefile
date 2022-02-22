@@ -1,1 +1,2 @@
-INCLUDES = model $(HOLDIR)/src/res_quan/src
+INCLUDES = model \
+           $(HOLDIR)/src/res_quan/src

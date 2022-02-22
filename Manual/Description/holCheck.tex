@@ -140,7 +140,7 @@ At last we can call the model checker...
                  ``(v0,v1,~v2)``, ``(~v0,~v1,v2)``])] :
   (term_bdd * thm option * term list option) list option
 \end{verbatim}\end{session}
-The result is a list of triples, one triple per property checked. The first component contains the BDD representation of the set of states satisfying the property. The second component contains a theorem certifying that the property holds in the model i.e.\ it holds in the initial states. The third contains a witness trace that counts up to 4, at which point v2 goes high.
+The result is a list of triples, one triple per property checked. The first component contains the BDD representation of the set of states satisfying the property. The second component contains a theorem certifying that the property holds in the model \ie,\ it holds in the initial states. The third contains a witness trace that counts up to 4, at which point v2 goes high.
 
 Note that since we did not supply a name for the model, the system has chosen the default name \texttt{ctlKS}, which stands for ``CTL Kripke structure''. Names can be given via \texttt{set\_name}\index{holCheckLib!ML bindings!set\_name@\ml{set\_name}}\index{holCheckLib!models!naming}. See \S\ref{sec:formal_models} for more on how \hc{} represents formal models.
 
@@ -242,9 +242,9 @@ Thus \(\mathtt{S0}\) and \(\mathtt{TS}\) are just \HOL{} equivalents of \(S_0\) 
 > val ric = false : bool
 \end{verbatim}\end{session}
 \index{holCheckLib!ML bindings!get\_flag\_ric@\ml{get\_flag\_ric}}
-\(\mathtt{ric}\) is a boolean which is true if the transition system described by \(\mathtt{TS}\) is synchronous, and false otherwise. In a synchronous transition system, all actions must occur simultaneously. Otherwise \(\mathtt{TS}\) is asynchronous i.e., the actions are interleaved. In the case of our example for instance, \( \mathtt{TS} \) should be asynchronous since the players do not move together but interleave moves. The definition of \( \mathtt{TS} \) ensures that they do not play out of turn, or make illegal moves.
+\(\mathtt{ric}\) is a boolean which is true if the transition system described by \(\mathtt{TS}\) is synchronous, and false otherwise. In a synchronous transition system, all actions must occur simultaneously. Otherwise \(\mathtt{TS}\) is asynchronous \ie, the actions are interleaved. In the case of our example for instance, \( \mathtt{TS} \) should be asynchronous since the players do not move together but interleave moves. The definition of \( \mathtt{TS} \) ensures that they do not play out of turn, or make illegal moves.
 
-For an asynchronous system, the formal transition relation is internally represented as the disjunction of all the actions. For a synchronous system (e.g., a circuit with a single global clock), it is a conjunction. Indeed, the standard way to specify a synchronous transition relation is using the wildcard ``.'' action, with the corresponding relation being a conjunction over all possible actions. Step through the usage example given at the top of \texttt{alu.sml} in the \hc{} \texttt{examples} directory, and then examine the generated model to see how synchronous transition systems are modelled.
+For an asynchronous system, the formal transition relation is internally represented as the disjunction of all the actions. For a synchronous system (\eg, a circuit with a single global clock), it is a conjunction. Indeed, the standard way to specify a synchronous transition relation is using the wildcard ``.'' action, with the corresponding relation being a conjunction over all possible actions. Step through the usage example given at the top of \texttt{alu.sml} in the \hc{} \texttt{examples} directory, and then examine the generated model to see how synchronous transition systems are modelled.
 
 \begin{session}\begin{verbatim}
 - val nm = holCheckLib.get_name ttt1;
@@ -268,7 +268,7 @@ For an asynchronous system, the formal transition relation is internally represe
 \index{holCheckLib!ML bindings!get\_state@\ml{get\_state}}
 \(\mathtt{st}\) is an optional argument. It is a \HOL{} tuple that explicitly describes the order in which state variables appear in the state tuple. \hc{} can automatically calculate the state from \(\mathtt{S0}\) and \(\mathtt{TS}\), but in some cases the user may wish to use the resulting theorems in other work where the state tuple has already been defined in a certain manner. \(\mathtt{st}\) is used in such cases. Note we do not use the identifier \texttt{state} as this already exists in the default HOL interactive session namespace.
 
-At present the user must take care that \(\mathtt{vord}\) and \(\mathtt{st}\) are consistent with the rest of the arguments e.g.\ there are no missing variables.
+At present the user must take care that \(\mathtt{vord}\) and \(\mathtt{st}\) are consistent with the rest of the arguments \eg,\ there are no missing variables.
 
 \texttt{holCheckLib.get\_props} returns the properties to be model checked. This is simply a list of \ctl or \(\mu\)-calculus formulas. Since the formulas contain atomic propositions, which are modelled as functions on the state, the user inputting the formulas needs to know what the state is going to be. \hc{} provides a function \(\mathtt{mk\_state}\) for this purpose.
 
@@ -403,7 +403,7 @@ This result corresponds to the fourth property, that stated that A has a winning
 
 The last result is the same as the second and third, since B does not have a winning strategy, and counterexamples cannot be calculated for properties that assert the existence of specific paths (since the ``counterexample'' would effectively be the entire set of reachable states).\index{holCheckLib!traces}
 
-Finally, note that both success theorems have some assumptions. If the term\_bdd's were examined, they would also have the corresponding assumptions. This is because \hc{} uses postponed proof verification to speed up the model checking work-flow (i.e.\ no time is wasted proving intermediate lemmas for properties that fail eventually). Any success theorems and term\_bdd's thus end up with several undischarged assumptions. The idea is that the time-consuming proof verification can be postponed to a later time, when the user is otherwise occupied (e.g., asleep).
+Finally, note that both success theorems have some assumptions. If the term\_bdd's were examined, they would also have the corresponding assumptions. This is because \hc{} uses postponed proof verification to speed up the model checking work-flow (\ie,\ no time is wasted proving intermediate lemmas for properties that fail eventually). Any success theorems and term\_bdd's thus end up with several undischarged assumptions. The idea is that the time-consuming proof verification can be postponed to a later time, when the user is otherwise occupied (\eg, asleep).
 
 The assumptions are discharged as follows (chatting messages have been elided).
 
@@ -463,7 +463,7 @@ As long as we are restricted to model checking, this internal formal model is no
 
 \subsubsection{Writing properties}\label{sec:prop}\index{holCheckLib!models!properties}
 
-\hc{} supports model checking for \ctl and \(\mu\)-calculus properties. It is beyond the scope of this description to describe these languages in detail here (e.g., see \emph{Model Checking} by Clarke et al, MIT Press, 1999). Properties are specified as \HOL{} terms of type \texttt{ctl} or \texttt{mu}.
+\hc{} supports model checking for \ctl and \(\mu\)-calculus properties. It is beyond the scope of this description to describe these languages in detail here (\eg, see \emph{Model Checking} by Clarke et al, MIT Press, 1999). Properties are specified as \HOL{} terms of type \texttt{ctl} or \texttt{mu}.
 
 \begin{table}
 \caption{\HOL{} \(\mu\)-calculus formula syntax}
@@ -515,7 +515,7 @@ $\mathbf{E}(f\,\mathbf{U}\,g)$ & \texttt{C\_EU} & \texttt{C\_EU}(f,g) \\
 \end{tabular}
 \end{table}
 
-Table \ref{tab_ctl} describes the syntax for \ctl \index{holCheckLib!properties!ctl@\ctl}. Note that some of the operators are missing e.g.\ \( \mathtt{F} \) and \( \mathbf{AX} \). These are defined indirectly in terms of the rest, with the expected overloaded syntax. The syntax is structured slightly differently in that any subformula from the propositional fragment (i.e., the first four rows of Table \ref{tab_ctl}) is always wrapped within the type constructor \texttt{C\_BOOL}.
+Table \ref{tab_ctl} describes the syntax for \ctl \index{holCheckLib!properties!ctl@\ctl}. Note that some of the operators are missing \eg,\ \( \mathtt{F} \) and \( \mathbf{AX} \). These are defined indirectly in terms of the rest, with the expected overloaded syntax. The syntax is structured slightly differently in that any subformula from the propositional fragment (\ie, the first four rows of Table \ref{tab_ctl}) is always wrapped within the type constructor \texttt{C\_BOOL}.
 
 The example property above is the \ctl formula \( \mathbf{EF} (v_0 \land v_1) \) and would be written in \HOL{} as
 
@@ -549,7 +549,7 @@ This section contains information on some internal details and quirks that may h
 
 \subsubsection{Variable ordering}\index{holCheckLib!models!variable ordering}
 
-\hc{} users are strongly recommended to supply a BDD variable ordering for the model using the \texttt{set\_vord} function, even though it is optional. \hc{} does have its own variable ordering heuristic. This just interleaves current- and next-state variables however, and is not very good. Remember that the ordering supplied must include next-state (i.e., primed) variables, and must include all state variables.
+\hc{} users are strongly recommended to supply a BDD variable ordering for the model using the \texttt{set\_vord} function, even though it is optional. \hc{} does have its own variable ordering heuristic. This just interleaves current- and next-state variables however, and is not very good. Remember that the ordering supplied must include next-state (\ie, primed) variables, and must include all state variables.
 
 \subsubsection{Counterexamples}\index{holCheckLib!traces}
 
@@ -561,7 +561,7 @@ The generation of witness traces for properties of the form \(\mathbf{EG} f \) (
 
 \subsubsection{Lazy proof}
 
-All steps of the model checking (except BDD operations) are backed up by fully expansive proof. To get around the speed penalty imposed by this proof, \hc{} performs proof lazily. This means that any theorem produced by \hc{} may have several undischarged assumptions (it is then known as a lazy theorem). Typically, once all properties have been checked, the user calls \texttt{prove\_model}\index{holCheckLib!ML bindings!prove\_model@\ml{prove\_model}} on the model to discharge the assumptions. This step may take a while for big models and properties, in which case it is advisable to let it run when computing resources are expected to be free, e.g., overnight.
+All steps of the model checking (except BDD operations) are backed up by fully expansive proof. To get around the speed penalty imposed by this proof, \hc{} performs proof lazily. This means that any theorem produced by \hc{} may have several undischarged assumptions (it is then known as a lazy theorem). Typically, once all properties have been checked, the user calls \texttt{prove\_model}\index{holCheckLib!ML bindings!prove\_model@\ml{prove\_model}} on the model to discharge the assumptions. This step may take a while for big models and properties, in which case it is advisable to let it run when computing resources are expected to be free, \eg, overnight.
 
 A failure to discharge all assumptions means a completeness bug in the \hc{} proof verification machinery. However, it does not invalidate the soundness of the theorem, modulo the soundness of \HOL{}.
 

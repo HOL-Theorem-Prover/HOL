@@ -74,6 +74,8 @@ sig
   (* diagnostics/output *)
   type output_functions = {warn : string -> unit,
                            info : string -> unit,
+                           info_inline : string -> unit,
+                           info_inline_end : unit -> unit,
                            chatty : string -> unit,
                            tgtfatal : string -> unit,
                            diag : string -> (unit -> string) -> unit}

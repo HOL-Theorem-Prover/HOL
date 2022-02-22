@@ -648,7 +648,7 @@ Thus the little theory of ZN_unity_mod is based on weak polynomials.
 *)
 
 (* Extend poly to length k. *)
-val poly_extendM_def = tDefine "poly_extendM" `
+Definition poly_extendM_def:
   poly_extendM p k =
       do
         k0 <- zeroM k;
@@ -659,7 +659,9 @@ val poly_extendM_def = tDefine "poly_extendM" `
                poly_extendM q j;
              od
       od
-`(WF_REL_TAC `measure (\(p,k). k)` >> simp[]);
+Termination
+  WF_REL_TAC `measure (λ(p,k). k)` >> simp[]
+End
 
 (*
 > EVAL ``poly_extendM [] 7``; = ([0; 0; 0; 0; 0; 0; 0],Count 42): thm
@@ -928,7 +930,7 @@ val poly_extendM_steps_eqn = store_thm(
   qabbrev_tac `quit = \p:num list. 1` >>
   qabbrev_tac `f = \p. 0::p` >>
   qabbrev_tac `g = \j. 1 + 2 * size j` >>
-  qabbrev_tac `body = \(p:num list) k. g k` >>
+  qabbrev_tac `body = λ(p:num list) k. g k` >>
   qabbrev_tac `loop = \p k. stepsOf (poly_extendM p k)` >>
   `loop p k = 1 + SUM (MAP g [1 .. k])` suffices_by rw[] >>
   `0 < 1` by decide_tac >>
@@ -1773,7 +1775,7 @@ val it = |- !h1 h2. h1 = h2 ==> !l1 l2. l1 = l2 ==> h1::l1 = h2::l2: thm
              list_eq (tail p) (tail q)  // recursive call with tails: tails equal
 *)
 
-val poly_eqM_def = tDefine "poly_eqM" `
+Definition poly_eqM_def:
   poly_eqM p q =
       do
         p0 <- nullM p;
@@ -1790,7 +1792,9 @@ val poly_eqM_def = tDefine "poly_eqM" `
                else return F
              od
       od
-`(WF_REL_TAC `measure (\(p,q). LENGTH q)` >> simp[LENGTH_TL_LT]);
+Termination
+  WF_REL_TAC `measure (λ(p,q). LENGTH q)` >> simp[LENGTH_TL_LT]
+End
 
 (*
 EVAL ``poly_eqM [1;1;0;1;0;0;1] [1;1;0;1;0;0;1]``; = (T,Count 51): thm
@@ -2011,7 +2015,7 @@ val poly_eqM_steps_bound = store_thm(
       return h::t                  // combine to give result
 *)
 
-val poly_cmultM_def = tDefine "poly_cmultM" `
+Definition poly_cmultM_def:
     poly_cmultM n c p =
       do
         p0 <- nullM p;
@@ -2024,7 +2028,8 @@ val poly_cmultM_def = tDefine "poly_cmultM" `
                consM k q;
              od
       od
-`(WF_REL_TAC `measure (\(n,c,p). LENGTH p)` >> simp[LENGTH_TL_LT]);
+Termination WF_REL_TAC `measure (λ(n,c,p). LENGTH p)` >> simp[LENGTH_TL_LT]
+End
 
 (*
 > EVAL ``poly_cmultM 10 3 [1;4;5;2;1;1;3]``; = ([3; 2; 5; 6; 3; 3; 9],Count 139): thm
@@ -2278,7 +2283,7 @@ val poly_cmultM_steps_bound = store_thm(
       t <- list_add (tail p) (tail q)  // recursive call with tails: (tail p) || (tail q)
       return h::t                      // combine to give result
 *)
-val poly_addM_def = tDefine "poly_addM" `
+Definition poly_addM_def:
   poly_addM n p q =
       do
         p0 <- nullM p;
@@ -2295,7 +2300,9 @@ val poly_addM_def = tDefine "poly_addM" `
                consM h r;
              od
       od
-`(WF_REL_TAC `measure (\(n,p,q). LENGTH q)` >> simp[LENGTH_TL_LT]);
+Termination
+  WF_REL_TAC `measure (λ(n,p,q). LENGTH q)` >> simp[LENGTH_TL_LT]
+End
 
 (*
 > EVAL ``poly_addM 10 [1;4;5;6;1;1;3] [1;5;1;6;3;3;2]``; = ([2; 9; 6; 2; 4; 4; 5],Count 155): thm
@@ -2561,7 +2568,7 @@ val it = |- !h t. LAST (h::t) = if t = [] then h else LAST t: thm
       return list_last t                // skip head, recursive call for (LAST tail)
 *)
 
-val poly_lastM_def = tDefine "poly_lastM" `
+Definition poly_lastM_def:
   poly_lastM p =
       do
         p0 <- nullM p;
@@ -2574,7 +2581,8 @@ val poly_lastM_def = tDefine "poly_lastM" `
                 else poly_lastM t;
              od
       od
-`(WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]);
+Termination WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]
+End
 
 (* > FRONT_DEF;
 val it = |- !h t. FRONT (h::t) = if t = [] then [] else h::FRONT t: thm
@@ -2591,7 +2599,7 @@ val it = |- !h t. FRONT (h::t) = if t = [] then [] else h::FRONT t: thm
       return h::q                  // combine to give result
 *)
 
-val poly_frontM_def = tDefine "poly_frontM" `
+Definition poly_frontM_def:
   poly_frontM p =
       do
         p0 <- nullM p;
@@ -2607,7 +2615,8 @@ val poly_frontM_def = tDefine "poly_frontM" `
                      od
              od
       od
-`(WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]);
+Termination WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]
+End
 
 (* Pseudocode:
    Given a polynomial p, compute p * X (mod unity k), where k = LENGTH p.
@@ -3013,7 +3022,7 @@ val poly_turnM_steps_eqn = store_thm(
       return list_add p1 p2            // add the results, pair-wise
 *)
 
-val poly_multM_def = tDefine "poly_multM"  `
+Definition poly_multM_def:
   poly_multM n p q =
       do
         q0 <- nullM q;
@@ -3027,7 +3036,8 @@ val poly_multM_def = tDefine "poly_multM"  `
                poly_addM n p1 p2;
              od
       od
-`(WF_REL_TAC `measure (\(n,p,q). LENGTH q)` >> simp[LENGTH_TL_LT]);
+Termination WF_REL_TAC `measure (λ(n,p,q). LENGTH q)` >> simp[LENGTH_TL_LT]
+End
 (* Note: the final poly_addM n p1 p2 can also be poly_addM n p2 p1, as addition is commutative.
    However, the commutative property depends on Ring (ZN n) and weak polynomials.
    To avoid this complication, use of poly_addM n p1 p2 fits unity_mod_mult_cons. *)
@@ -3723,10 +3733,10 @@ val poly_expM_def = tDefine "poly_expM" `
                  ifM (evenM j) (return q) (poly_multM n p q)
               od
       od
-`(WF_REL_TAC `measure (\(n,p,j). j)` >> simp[]);
+`(WF_REL_TAC `measure (λ(n,p,j). j)` >> simp[]);
 -- the case j = 0 does not match unity_mod_exp (ZN n) p 0 = |1|
 *)
-val poly_expM_def = tDefine "poly_expM" `
+Definition poly_expM_def:
   poly_expM n p j = (* for p ** j. *)
       do
          j0 <- zeroM j;
@@ -3743,7 +3753,8 @@ val poly_expM_def = tDefine "poly_expM" `
                  ifM (evenM j) (return q) (poly_multM n p q)
               od
       od
-`(WF_REL_TAC `measure (\(n,p,j). j)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(n,p,j). j)` >> simp[]
+End
 
 
 (*
@@ -4202,7 +4213,7 @@ val poly_expM_steps_bound_alt = store_thm(
 (* > EL;
 val it = |- (!l. EL 0 l = HD l) /\ !l n. EL (SUC n) l = EL n (TL l): thm
 *)
-val poly_get_coeffM_def = tDefine "poly_get_coeffM" `
+Definition poly_get_coeffM_def:
   poly_get_coeffM p j = (* always assume p <> |0|, j < k *)
       do
         j0 <- zeroM j;
@@ -4213,14 +4224,15 @@ val poly_get_coeffM_def = tDefine "poly_get_coeffM" `
                poly_get_coeffM q i;
              od
       od
-`(WF_REL_TAC `measure (\(p,j). j)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(p,j). j)` >> simp[]
+End
 
 (* Put x as coefficient j of polynomial of length k *)
 (* > LUPDATE_def
 val it = |- (!e n. LUPDATE e n [] = []) /\ (!e x l. LUPDATE e 0 (x::l) = e::l) /\
              !e n x l. LUPDATE e (SUC n) (x::l) = x::LUPDATE e n l: thm
 *)
-val poly_put_coeffM_def = tDefine "poly_put_coeffM" `
+Definition poly_put_coeffM_def:
   poly_put_coeffM x p j = (* always assume p <> |0|, j < k *)
       do
         q <- tailM p;
@@ -4233,7 +4245,8 @@ val poly_put_coeffM_def = tDefine "poly_put_coeffM" `
                consM h p1;
              od
       od
-`(WF_REL_TAC `measure (\(x,p,j). j)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(x,p,j). j)` >> simp[]
+End
 
 (*
 > EVAL ``poly_get_coeffM [1;2;3;4;5] 2``; = (3,Count 10): thm

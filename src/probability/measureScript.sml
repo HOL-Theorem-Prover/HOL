@@ -4715,15 +4715,12 @@ QED
 val null_set_def = Define
    `null_set m s <=> s IN measurable_sets m /\ (measure m s = 0)`;
 
-(* MATHEMATICAL SCRIPT CAPITAL N, not very meaningful
-val _ = Unicode.unicode_version {u = UTF8.chr 0x1D4A9, tmnm = "null_set"};
- *)
-
-(* a measure space m which is not yet complete can be completed *)
-val complete_of_def = Define
-   `complete_of m =
-      (m_space m, {s UNION n | s IN measurable_sets m /\ ?t. n SUBSET t /\ null_set m t},
-       measure m)`;
+(* NOTE: the type of ‘completion m’ is “:'a algebra” *)
+Definition completion_def :
+    completion (m :'a m_space) =
+      (m_space m, {s UNION n | s IN measurable_sets m /\
+                               ?t. n SUBSET t /\ null_set m t})
+End
 
 (* the measure space m is called complete iff any subset of a null set is again
    in `subsets m` (thus also a null set) see [1] (p.29], [5] (p.382) *)
@@ -4845,6 +4842,112 @@ Proof
  >> IMP_RES_TAC MEASURE_SPACE_COUNTABLY_SUBADDITIVE
  >> MATCH_MP_TAC COUNTABLY_SUBADDITIVE
  >> rw [IN_FUNSET]
+QED
+
+Theorem SIGMA_ALGEBRA_COMPLETION :
+    !m. measure_space m ==> sigma_algebra (completion m)
+Proof
+    rw [completion_def, sigma_algebra_alt_pow]
+ >| [ (* goal 1 (of 5) *)
+      rw [SUBSET_DEF, IN_POW] \\
+      rename1 ‘y IN s UNION n’ \\
+      fs [IN_UNION] >| (* 2 subgoal *)
+      [ (* goal 1.1 (of 2) *)
+        POP_ASSUM MP_TAC \\
+        Q.SPEC_TAC (‘y’, ‘y’) >> REWRITE_TAC [GSYM SUBSET_DEF] \\
+        fs [measure_space_def, sigma_algebra_def, algebra_def, subset_class_def],
+        (* goal 1.2 (of 2) *)
+        Know ‘y IN t’ >- PROVE_TAC [] \\
+        Q.SPEC_TAC (‘y’, ‘y’) >> REWRITE_TAC [GSYM SUBSET_DEF] \\
+        fs [measure_space_def, sigma_algebra_def, algebra_def, subset_class_def,
+            null_set_def] ],
+      (* goal 2 (of 5) *)
+      MATCH_MP_TAC MEASURE_SPACE_EMPTY_MEASURABLE >> art [],
+      (* goal 3 (of 5) *)
+      Q.EXISTS_TAC ‘{}’ >> rw [null_set_def, MEASURE_EMPTY] \\
+      MATCH_MP_TAC MEASURE_SPACE_EMPTY_MEASURABLE >> art [],
+      (* goal 4 (of 5) *)
+      rename1 ‘s IN measurable_sets m’ \\
+      qexistsl_tac [‘m_space m DIFF (s UNION t)’, ‘t DIFF (s UNION n)’] \\
+      CONJ_TAC
+      >- (rw [Once EXTENSION] \\
+          fs [measure_space_def, sigma_algebra_def, algebra_def, subset_class_def,
+              null_set_def] \\
+          EQ_TAC >> rpt STRIP_TAC >> rw [] >| (* 2 subgoals *)
+          [ (* goal 4.1 (of 2) *)
+            METIS_TAC [SUBSET_DEF],
+            (* goal 4.2 (of 2) *)
+            METIS_TAC [SUBSET_DEF] ]) \\
+      CONJ_TAC
+      >- (MATCH_MP_TAC MEASURE_SPACE_COMPL >> art [] \\
+          MATCH_MP_TAC MEASURE_SPACE_UNION >> art [] \\
+          fs [null_set_def]) \\
+      Q.EXISTS_TAC ‘t’ >> art [] \\
+      SET_TAC [],
+      (* goal 5 (of 5) *)
+      fs [Once SUBSET_DEF, IN_IMAGE] \\
+      Know ‘!n. ?P. A n = (FST P) UNION (SND P) /\ (FST P) IN measurable_sets m /\
+                          ?t. (SND P) SUBSET t /\ null_set m t’
+      >- (Q.X_GEN_TAC ‘n’ \\
+          POP_ASSUM (MP_TAC o (Q.SPEC ‘A (n :num)’)) \\
+          Know ‘?x. A n = A x’ >- (Q.EXISTS_TAC ‘n’ >> rw []) \\
+          RW_TAC std_ss [] >> rename1 ‘A n = a UNION b’ \\
+          Q.EXISTS_TAC ‘(a,b)’ >> rw [] \\
+          Q.EXISTS_TAC ‘t’ >> art []) \\
+      POP_ASSUM K_TAC \\
+      DISCH_TAC >> fs [SKOLEM_THM] (* this asserts ‘f’ *) \\
+      qexistsl_tac [‘BIGUNION (IMAGE (FST o f) UNIV)’,
+                    ‘BIGUNION (IMAGE (SND o f) UNIV)’] \\
+      CONJ_TAC >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+                   EQ_TAC >> rw [] >| (* 3 subgoals *)
+                   [ (* goal 1 (of 3) *)
+                     fs [IN_UNION] >| (* 2 subgoals *)
+                     [ DISJ1_TAC >> Q.EXISTS_TAC ‘i’ >> art [],
+                       DISJ2_TAC >> Q.EXISTS_TAC ‘i’ >> art [] ],
+                     (* goal 2 (of 3) *)
+                     rename1 ‘x IN FST (f i)’ \\
+                     Q.EXISTS_TAC ‘FST (f i) UNION SND (f i)’ \\
+                     reverse CONJ_TAC >- (Q.EXISTS_TAC ‘i’ >> art []) \\
+                     rw [IN_UNION],
+                     (* goal 2 (of 3) *)
+                     rename1 ‘x IN SND (f i)’ \\
+                     Q.EXISTS_TAC ‘FST (f i) UNION SND (f i)’ \\
+                     reverse CONJ_TAC >- (Q.EXISTS_TAC ‘i’ >> art []) \\
+                     rw [IN_UNION] ]) \\
+      CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_BIGUNION >> rw [o_DEF]) \\
+     ‘!n. ?t. SND (f n) SUBSET t /\ null_set m t’ by PROVE_TAC [] \\
+      FULL_SIMP_TAC std_ss [SKOLEM_THM] \\
+      rename1 ‘!n. SND (f n) SUBSET g n /\ null_set m (g n)’ \\
+      Q.EXISTS_TAC ‘BIGUNION (IMAGE g UNIV)’ \\
+      reverse CONJ_TAC
+      >- (MATCH_MP_TAC (REWRITE_RULE [IN_NULL_SET] NULL_SET_BIGUNION) >> art []) \\
+      rw [o_DEF, IN_BIGUNION_IMAGE] \\
+      rename1 ‘x IN SND (f i)’ \\
+      Q.EXISTS_TAC ‘i’ >> METIS_TAC [SUBSET_DEF] ]
+QED
+
+Theorem COMPLETION_SUBSET_SUBSETS :
+    !m. measure_space m ==> measurable_sets m SUBSET subsets (completion m)
+Proof
+    rw [completion_def, SUBSET_DEF]
+ >> qexistsl_tac [‘x’, ‘{}’] >> rw []
+ >> Q.EXISTS_TAC ‘{}’ >> rw [NULL_SET_EMPTY]
+QED
+
+(* ‘completion’ is stable for complete measure spaces *)
+Theorem COMPLETION_STABLE :
+    !m. complete_measure_space m ==> space (completion m) = m_space m /\
+                                   subsets (completion m) = measurable_sets m
+Proof
+    rpt STRIP_TAC
+ >- rw [completion_def]
+ >> reverse (rw [GSYM SUBSET_ANTISYM_EQ])
+ >- (MATCH_MP_TAC COMPLETION_SUBSET_SUBSETS \\
+     fs [complete_measure_space_def])
+ >> fs [complete_measure_space_def, completion_def]
+ >> rw [Once SUBSET_DEF]
+ >> MATCH_MP_TAC MEASURE_SPACE_UNION >> art []
+ >> FIRST_X_ASSUM irule >> Q.EXISTS_TAC ‘t’ >> art []
 QED
 
 (* ------------------------------------------------------------------------- *)

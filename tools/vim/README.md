@@ -24,7 +24,8 @@ All files are located under tools/vim
 - `filetype.vim`: Template filetype.vim for automatically running hol.vim when
   vim starts.
 - `vimhol.sh`: Wraps hol and vim side-by-side in tmux. Below you find the
-  description of its usage.
+  description of its usage. See below for an alternative approach of running
+  an hol interactive session within vim.
 - `README.md`: Documentation. (This file.)
 
 ## Quickstart
@@ -48,9 +49,18 @@ The remedy is to read the fifo: either start hol (if everything is set up
 correctly) or simply cat `$(HOLDIR)/tools/vim/fifo` (or `$(VIMHOL_FIFO)` if you
 are using a custom fifo path).
 
+## HOL interactive session inside the vim editor
+
+Neovim and some versions of vim can run the interactive HOL session (HOL repl) in a terminal buffer within the editor, right next to a file buffer.
+Vim supports this feature if `:echo has('terminal')` prints `1`.
+For the supported versions, this plugin offers additional keyboard mappings to open and close a HOL session, as documented below in the section *key mappings for the HOL repl buffer*.
+Whenever a HOL session is started, a new unique fifo is created.
+
+Read more in the documentation on [vim terminal buffers](https://vimhelp.org/terminal.txt.html) (or [neovim terminal buffers](https://neovim.io/doc/user/nvim_terminal_emulator.html)).
+
 ## Key mappings
 
-(These are all set up at the bottom of `hol.vim`)
+(These are all set up in `hol.vim`)
 
 The following commands work in visual mode:
 
@@ -88,6 +98,20 @@ Command     | Description
 `hh`        | A normal h (usually means move cursor left). This one works in both normal and visual modes.
 `hy`        | Toggle HOL's show types trace.
 `hn`        | Toggle HOL's `PP.avoid_unicode` trace.
+
+## Key mappings for the HOL repl buffer
+
+For the HOL repl hosted by vim the following commands work in normal mode of
+any `*Script.sml` file:
+
+Command     | Description
+:---------- | :-----------------------------------
+`hx`        | Open a HOL session inside (neo)vim at the path of the currently edited file.
+`hX`        | Close the HOL session.
+`hw`        | Send region (visual and normal mode). Writes directly into the HOL session buffer and does not need a fifo.
+
+The terminal buffer that is hosting the HOL repl can be navigated as usual (if in normal mode).
+In vim, to leave insert mode of a terminal buffer and return to Terminal-Normal mode press `CTRL-\ CTRL-N`, as documented in [`:help terminal-typing`](https://vimhelp.org/terminal.txt.html#terminal-typing).
 
 ## Automatic stripping
 

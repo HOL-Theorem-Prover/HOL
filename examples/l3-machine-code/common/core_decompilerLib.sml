@@ -629,7 +629,8 @@ fun round (input, get_assert, triple_refl) =
       val () = echo 1 "."
       val ff = th |> concl |> rand |> rand |> rator
       val def =
-         new_definition (name ^ "_def", mk_eq (mk_var (name, type_of ff), ff))
+         Definition.new_definition (name ^ "_def",
+                                    mk_eq (mk_var (name, type_of ff), ff))
       val th = th |> CONV_RULE
                        ((RAND_CONV o RAND_CONV o RATOR_CONV) (fn _ => GSYM def))
       (* clean up result *)

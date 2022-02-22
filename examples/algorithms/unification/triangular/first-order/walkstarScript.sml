@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib ramanaLib relationTheory pairTheory
 
 val _ = new_theory "walkstar"
 
-val pre_walkstar_def = TotalDefn.xDefineSchema "pre_walkstar"
+val (pre_walkstar_def, _) = TotalDefn.xDefineSchema "pre_walkstar"
  `walkstar t =
     case walk s t
     of Pair t1 t2 => Pair (walkstar t1) (walkstar t2)

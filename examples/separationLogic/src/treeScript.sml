@@ -378,15 +378,16 @@ SIMP_TAC arith_ss [transitive_def, SIMP_RULE std_ss [IN_DEF] MAX_DEPTH___DIRECT_
 
 
 
-val TREE_FOLD_def = tDefine "TREE_FOLD"
-  `(TREE_FOLD (base, f) leaf = base) /\
+Definition TREE_FOLD_def:
+   (TREE_FOLD (base, f) leaf = base) /\
    (TREE_FOLD (base, f) (node v tL) =
-      f v (MAP (TREE_FOLD (base, f)) tL))`
-
-(Q.EXISTS_TAC `(measure (\(f,t). MAX_DEPTH t))` THEN
+      f v (MAP (TREE_FOLD (base, f)) tL))
+Termination
+ Q.EXISTS_TAC `(measure (λ(f,t). MAX_DEPTH t))` THEN
  REWRITE_TAC [prim_recTheory.WF_measure] THEN
  SIMP_TAC arith_ss [prim_recTheory.measure_thm,
-                    MAX_DEPTH___DIRECT_SUBTREES___NODE]);
+                    MAX_DEPTH___DIRECT_SUBTREES___NODE]
+End
 
 
 val WIDTH_def = Define `WIDTH t n = TREE_FOLD (F,

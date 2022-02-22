@@ -25,8 +25,6 @@ all: $(HOLHEAP) selftest.exe
 # dependency analysis will always find them.
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
 	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -F -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
-else
-EXTRA_CLEANS = selftest.exe
 endif
 
 selftest.exe: selftest.uo

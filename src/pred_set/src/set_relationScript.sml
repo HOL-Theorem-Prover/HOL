@@ -1734,7 +1734,6 @@ Definition nth_min_def:
         nth_min r' (s DELETE (THE min), r) n)
 End
 
-
 Triviality nth_min_surj_lem1:
   !r' s' x s r.
     linear_order r' s /\

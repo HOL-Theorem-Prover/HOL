@@ -677,9 +677,8 @@ end
 local
    val mk_net =
       NetFromList o
-      List.map (fn th => (rator (utilsLib.lhsc th),
-                          FULL_DATATYPE_RULE (inst_branch_hint th)))
-   val net = mk_net
+      List.map (fn th => (rator (utilsLib.lhsc th), FULL_DATATYPE_RULE th))
+   val net_list =
      (Address_rwt @ AddSubCarry_rwt @ AddSubExtendRegister_rwt @
       AddSubImmediate_rwt @ AddSubShiftedRegister_rwt @ LogicalImmediate_rwt @
       LogicalShiftedRegister_rwt @ Shift_rwt @ MoveWide_rwt @ BitfieldMove_rwt @
@@ -691,13 +690,14 @@ local
       CompareAndBranch_rwt @ TestBitAndBranch_rwt @ LoadStoreImmediate_rwt @
       LoadStoreRegister_rwt @ LoadLiteral_rwt @ LoadStorePair_rwt @ Nop_rwt
       )
+   val net = mk_net net_list
    val get_next = Term.rator o utilsLib.lhsc
    val r = REWRITE_RULE []
    fun make_match tm thm =
       r (Drule.INST_TY_TERM (Term.match_term (get_next thm) tm) thm)
 in
-   fun arm8_next tm =
-      List.mapPartial (Lib.total (make_match tm)) (Net.match tm net)
+   fun arm8_next tm = List.mapPartial
+    (Lib.total (make_match tm)) (Net.match tm net)
 end
 
 local
@@ -727,10 +727,11 @@ end
 
 val remove_vacuous = List.filter (not o utilsLib.vacuous)
 
+val arm8_run = utilsLib.Run_CONV ("arm8", st) o rhsc
+
 local
-  fun selnm ty fld =
+   fun selnm ty fld =
       TypeBasePure.mk_recordtype_fieldsel {tyname=ty,fieldname=fld}
-   val arm8_run = utilsLib.Run_CONV ("arm8", st) o rhsc
    val (_, mk_exception, _, _) = arm8_monop $ selnm "arm8_state" "exception"
    val arm8_exception = DATATYPE_CONV o mk_exception o utilsLib.rhsc
    val get_next = Term.rator o utilsLib.rhsc o Drule.SPEC_ALL
@@ -743,7 +744,8 @@ in
          val thm2 = arm8_decode v
          val thm3 = arm8_run thm2
          val tm = get_next thm3
-         val thm4s = arm8_next tm
+         val thm4s =
+          List.map (FULL_DATATYPE_RULE o inst_branch_hint) (arm8_next tm)
          fun conj th = Drule.LIST_CONJ [thm1, thm2, thm3, th, arm8_exception th]
       in
          remove_vacuous (List.map (rule o conj) thm4s)

@@ -839,17 +839,18 @@ val SPAN_FST_LEMM = store_thm
    >> Cases_on `SPAN R l` >> fs[]
   );
 
-val GROUP_BY_def = tDefine "GROUP_BY"
-  `(GROUP_BY P []  = [])
+Definition GROUP_BY_def:
+   (GROUP_BY P []  = [])
  ∧ (GROUP_BY P (x::xs) =
     let (ys,rs) = SPAN (P x) (xs)
     in (x::ys)::(GROUP_BY P rs)
-   )`
-   (WF_REL_TAC `measure (LENGTH o SND)` >> rpt strip_tac
+   )
+Termination
+   WF_REL_TAC `measure (LENGTH o SND)` >> rpt strip_tac
     >> `ys ++ rs = xs` by metis_tac[SPAN_APPEND]
     >> `LENGTH ys + LENGTH rs = LENGTH xs` by metis_tac[LENGTH_APPEND]
     >> fs[]
-   );
+End
 
 val GROUP_BY_FLAT = store_thm
   ("GROUP_BY_FLAT",

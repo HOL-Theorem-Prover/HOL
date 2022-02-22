@@ -64,7 +64,7 @@ val sn_v_term_fun_def = Define `
  * have to supply a well-founded relation with WF_REL_TAC and prove that it
  * works. Things in the store must be related at Int type, since higher-order
  * stores lose strong normalisation. *)
-val sn_v_def = tDefine "sn_v" `
+Definition sn_v_def:
 (sn_v Int (Litv l) ⇔ T) ∧
 (sn_v (Arrow t1 t2) (Clos env exp) ⇔
   !v s. sn_state s ∧ sn_v t1 v ⇒ sn_exec t2 s (v::env) exp) ∧
@@ -74,9 +74,11 @@ val sn_v_def = tDefine "sn_v" `
     sem env (s with clock := ck) exp = (Rval v, s') ∧
     sn_v t v ∧
     sn_state s') ∧
-(sn_state s ⇔ EVERY (sn_v Int) s.store)`
-(WF_REL_TAC `inv_image ((<) LEX (<)) sn_v_term_fun` >>
- rw [sn_v_term_fun_def, type_size_def]);
+(sn_state s ⇔ EVERY (sn_v Int) s.store)
+Termination
+ WF_REL_TAC `inv_image ((<) LEX (<)) sn_v_term_fun` >>
+ rw [sn_v_term_fun_def, type_size_def]
+End
 
 (* Define the logical relation for arbitrary expressions at a given type
  * and typing context *)

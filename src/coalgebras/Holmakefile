@@ -1,4 +1,4 @@
-INCLUDES = ../pred_set/src/more_theories
+INCLUDES = ../pred_set/src/more_theories $(HOLDIR)/src/finite_maps
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all

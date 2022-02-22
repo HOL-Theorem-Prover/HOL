@@ -488,7 +488,7 @@ val sem_e_clock = prove(
   Induct \\ fs [sem_e_def] \\ REPEAT STRIP_TAC
   \\ every_case_tac \\ SRW_TAC [] [] \\ fs [store_var_def] \\ METIS_TAC []) |> GSYM;
 
-val sem_a_def = tDefine "sem_a" `
+Definition sem_a_def:
 sem_a s =
   if s.pc < LENGTH s.instrs then
     case EL s.pc s.instrs of
@@ -523,15 +523,18 @@ sem_a s =
   else if s.pc = LENGTH s.instrs then
     (Rval 0, s)
   else
-    (Rfail, s)`
-  (WF_REL_TAC `inv_image (measure I LEX measure I)
+    (Rfail, s)
+Termination
+   WF_REL_TAC `inv_image (measure I LEX measure I)
        (\s. (s.store.clock,LENGTH s.instrs - s.pc))`
    \\ fs [inc_pc_def,do_jump_def,LET_DEF]
    \\ REPEAT STRIP_TAC
    \\ every_case_tac \\ fs []
    \\ SRW_TAC [] [] \\ fs []
    \\ IMP_RES_TAC sem_e_clock
-   \\ DECIDE_TAC);
+   \\ DECIDE_TAC
+End
+
 
 val a_state_def = Define `
   a_state code clock =

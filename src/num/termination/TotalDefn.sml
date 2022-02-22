@@ -644,10 +644,13 @@ val primDefine = defnDefine PROVE_TERM_TAC;
 (* fails in the process, remove any constants introduced by the definition.  *)
 (*---------------------------------------------------------------------------*)
 
+fun def_n_ind (def, indopt, NONE) = (def, NONE)
+  | def_n_ind (def,indopt, SOME _) = (def, indopt)
+
 fun xDefine stem q =
  Parse.try_grammar_extension
    (Theory.try_theory_extension
-       (#1 o primDefine o Defn.Hol_defn stem)) q
+       (def_n_ind o primDefine o Defn.Hol_defn stem)) q
   handle e => Raise (wrap_exn "TotalDefn" "xDefine" e);
 
 (*---------------------------------------------------------------------------
@@ -665,27 +668,15 @@ local
       Lib.first Lexis.ok_identifier alist
       handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
-   fun define q =
-      let
-         val absyn0 = Parse.Absyn q
-         val locn = Absyn.locn_of_absyn absyn0
-         val (tm,names) = Defn.parse_absyn absyn0
-         val bindstem =
-            mk_bindstem (ERRloc "Define" locn "") "Define <quotation>" names
-      in
-         #1 (primDefine (Defn.mk_defn bindstem tm))
-         handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
-      end
+fun quotation_to_stem q =
+    let
+      val absyn0 = Parse.Absyn q
+      val locn = Absyn.locn_of_absyn absyn0
+      val (_,names) = Defn.parse_absyn absyn0
+    in
+      mk_bindstem (ERRloc "Define" locn "") "Define <quotation>" names
+    end
 
-   (* Use of Raise means that typecheck error exceptions will get printed
-      anyway; no need to also have the code in Preterm etc print them out
-      as well. *)
-
-   fun Define q =
-      trace ("show_typecheck_errors", 0)
-            (Parse.try_grammar_extension (Theory.try_theory_extension define))
-            q
-      handle e => Raise e
 end
 
 (*---------------------------------------------------------------------------*)
@@ -697,15 +688,17 @@ fun tDefine stem q tac =
      fun thunk() =
        let val defn = Hol_defn stem q
        in
-        if triv_defn defn
-        then let val def = fetch_eqns defn
-                 val bind = stem ^ !Defn.def_suffix
-             in been_stored (bind,def); def
-             end
+        if triv_defn defn then
+          let val def = fetch_eqns defn
+              val bind = stem ^ !Defn.def_suffix
+          in been_stored (bind,def);
+             (def, NONE)
+          end
         else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
-                                         Defn.tprove0(defn,tac)
+                                           Defn.tprove0(defn,tac)
                  val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-             in Defn.store(stem,def,ind) ; def
+             in Defn.store(stem,def,ind) ;
+                (def, SOME ind)
              end
        end
  in
@@ -734,6 +727,7 @@ fun qDefine stem q tacopt =
       val (corename, attrs) = ThmAttribute.extract_attributes stem
       val (nocomp, attrs) = test_remove "nocompute" attrs
       val (svarsok, attrs) = test_remove "schematic" attrs
+      val (notuserdef, attrs) = test_remove "notuserdef" attrs
       val (indopt,attrs) = find_indoption attrs
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
@@ -743,16 +737,31 @@ fun qDefine stem q tacopt =
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
-      val thm =
+      val (thm,indopt) =
           case tacopt of
               NONE => fmod (xDefine corename) q
             | SOME tac => fmod (tDefine corename q) tac
       fun proc_attr a =
           ThmAttribute.store_at_attribute{name = corename, attrname = a,
                                           thm = thm}
+      val attrs = if notuserdef then attrs else "userdef" :: attrs
+      val gen_ind = Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
     in
       List.app proc_attr attrs;
+      case indopt of
+          NONE => (case total gen_ind thm of
+                       NONE => ()
+                     | SOME p => DefnBase.register_indn p)
+         | SOME ith =>
+            DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
+    end
+
+fun Define q =
+    let
+      val stem = quotation_to_stem q
+    in
+      qDefine (stem ^ !Defn.def_suffix) q NONE
     end
 
 (*---------------------------------------------------------------------------*)

@@ -4,7 +4,7 @@ open HolKernel boolLib bossLib Parse relationTheory finite_mapTheory
 
 val _ = new_theory "nwalk"
 
-val pre_nvwalk_def = TotalDefn.xDefineSchema "pre_nvwalk"
+val (pre_nvwalk_def, pre_nvwalk_indopt) = TotalDefn.xDefineSchema "pre_nvwalk"
  `nvwalk pi v =
     case FLOOKUP s v
     of SOME (Sus p u) => nvwalk (pi ++ p) u
@@ -33,8 +33,8 @@ in
       (hyp th))
 end
 
-val nvwalk_def = save_thm("nvwalk_def",pre_nvwalk_def |> nvwalk_nwfs_hyp |> DISCH_ALL)
-val nvwalk_ind = save_thm("nvwalk_ind",nvwalk_nwfs_hyp (theorem "pre_nvwalk_ind"))
+Theorem nvwalk_def = pre_nvwalk_def |> nvwalk_nwfs_hyp |> DISCH_ALL
+Theorem nvwalk_ind = nvwalk_nwfs_hyp (theorem "pre_nvwalk_ind")
 
 val NOT_FDOM_nvwalk = Q.store_thm(
   "NOT_FDOM_nvwalk",

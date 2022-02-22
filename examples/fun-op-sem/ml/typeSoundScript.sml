@@ -166,7 +166,7 @@ val _ = Datatype`
 
 (* big-step semantics as a function *)
 
-val sem_def = tDefine"sem"`
+Definition sem_def:
   (sem env s (Lit i) = (Rval (Litv i), s)) ∧
   (sem env s (Var x) =
     case ALOOKUP env x of
@@ -250,12 +250,14 @@ val sem_def = tDefine"sem"`
             else (Rfail, s2)
           | res => res)
        | _ => (Rfail, s1))
-    | res => res)`
-(WF_REL_TAC`inv_image (measure I LEX measure exp_size)
+    | res => res)
+Termination
+ WF_REL_TAC`inv_image (measure I LEX measure exp_size)
                       (λ(env,s,e). (s.clock,e))` >>
  rpt strip_tac >> TRY DECIDE_TAC >>
  fs[check_clock_def,dec_clock_def] >>
- rw[] >> fsrw_tac[ARITH_ss][])
+ rw[] >> fsrw_tac[ARITH_ss][]
+End
 
 (*
 clean-up of the definition and induction theorem, removing the check_clock
@@ -567,37 +569,35 @@ val _ = overload_on("Texn",``λt. Tapp [t] TC_exn``)
 
 (* substitution for variables in a type *)
 
-val tysubst_def = tDefine"tysubst"`
+Definition tysubst_def0[induction=tysubst_ind]:
   (tysubst s (Tvar x) =
      (case FLOOKUP s x of
       | SOME t => t
       | NONE => Tvar x)) ∧
   tysubst s (Tapp ts tc) =
-    Tapp (MAP (tysubst s) ts) tc`
-(WF_REL_TAC`measure (t_size o SND)` >>
+    Tapp (MAP (tysubst s) ts) tc
+Termination
+ WF_REL_TAC`measure (t_size o SND)` >>
  rpt gen_tac >> Induct_on`ts` >>
- rw[t_size_def] >> res_tac >>simp[])
-val tysubst_def =
-  tysubst_def
+ rw[t_size_def] >> res_tac >>simp[]
+End
+Theorem tysubst_def[simp] =
+  tysubst_def0
   |> SIMP_RULE (std_ss++boolSimps.ETA_ss)[]
-  |> curry save_thm "tysubst_def"
-val _ = export_rewrites["tysubst_def"]
-
-val tysubst_ind = theorem"tysubst_ind"
 
 (* free variables in a type *)
 
-val tyvars_def = tDefine"tyvars"`
+Definition tyvars_def0:
   (tyvars (Tvar x) = {x}) ∧
-  (tyvars (Tapp ts _) = BIGUNION (IMAGE tyvars (set ts)))`
-(WF_REL_TAC`measure (t_size)` >>
+  (tyvars (Tapp ts _) = BIGUNION (IMAGE tyvars (set ts)))
+Termination
+ WF_REL_TAC`measure (t_size)` >>
  rpt gen_tac >> Induct_on`ts` >>
- rw[t_size_def] >> res_tac >>simp[])
-val tyvars_def =
-  tyvars_def
+ rw[t_size_def] >> res_tac >>simp[]
+End
+Theorem tyvars_def[simp] =
+  tyvars_def0
   |> SIMP_RULE (std_ss++boolSimps.ETA_ss)[]
-  |> curry save_thm "tyvars_def"
-val _ = export_rewrites["tyvars_def"]
 
 (*
 A type environment is a map from (expression) variables to type schemes, where
@@ -784,22 +784,21 @@ val tysubst_frees_gen = store_thm("tysubst_frees_gen",
 
 (* alpha-equivalence of type schemes *)
 
-val raconv_def = tDefine"raconv"`
+Definition raconv_def0[induction=raconv_ind]:
   (raconv f tvs1 tvs2 (Tvar x1) (Tvar x2) ⇔
      if x1 ∈ tvs1 then f x1 = x2
      else x2 = x1 ∧ x1 ∉ tvs2) ∧
   (raconv f tvs1 tvs2 (Tapp ts1 tc1) (Tapp ts2 tc2) ⇔
      tc2 = tc1 ∧ LIST_REL (raconv f tvs1 tvs2) ts1 ts2) ∧
-  (raconv _ _ _ _ _ = F)`
+  (raconv _ _ _ _ _ = F)
+Termination
 (WF_REL_TAC`measure (t_size o SND o SND o SND o SND)` >>
  rpt gen_tac >> Induct_on`ts2` >> simp[t_size_def] >>
  rw[] >> res_tac >> simp[])
-val raconv_def =
-  raconv_def
+End
+Theorem raconv_def[simp] =
+  raconv_def0
   |> SIMP_RULE (std_ss++boolSimps.ETA_ss) []
-  |> curry save_thm "raconv_def"
-val _ = export_rewrites["raconv_def"]
-val raconv_ind = theorem"raconv_ind"
 
 val tsaconv_def = Define`
   tsaconv (ftvs1,t1) (ftvs2,t2) ⇔
@@ -1107,13 +1106,13 @@ val fresh_def = new_specification("fresh_def",["fresh"],
   |> Q.GEN`s`
   |> SIMP_RULE(srw_ss())[SKOLEM_THM])
 
-val fresh_seq_def = tDefine"fresh_seq"`
-  fresh_seq avoid n = fresh (avoid ∪ (IMAGE (fresh_seq avoid) (count n)))`
-(WF_REL_TAC`measure (I o SND)` >> simp[])
-val fresh_seq_def =
-  fresh_seq_def
+Definition fresh_seq_def0:
+  fresh_seq avoid n = fresh (avoid ∪ (IMAGE (fresh_seq avoid) (count n)))
+Termination WF_REL_TAC`measure (I o SND)` >> simp[]
+End
+Theorem fresh_seq_def =
+  fresh_seq_def0
   |> SIMP_RULE (std_ss++boolSimps.ETA_ss)[]
-  |> curry save_thm "fresh_seq_def"
 
 val fresh_seq_thm = store_thm("fresh_seq_thm",
   ``∀avoid n.

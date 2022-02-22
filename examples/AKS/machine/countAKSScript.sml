@@ -663,7 +663,7 @@ val poly_introM_alt = store_thm(
 
 (* Introspective range check for c = 1 .. s, (X + c) in (MOD n, unity k) *)
 (* use count down from s to match unity_mod_intro_range *)
-val poly_intro_rangeM_def = tDefine "poly_intro_rangeM" `
+Definition poly_intro_rangeM_def:
     poly_intro_rangeM n k c =
        do
          c0 <- zeroM c;
@@ -677,7 +677,8 @@ val poly_intro_rangeM_def = tDefine "poly_intro_rangeM" `
                 else return F
               od
        od
-`(WF_REL_TAC `measure (\(n,k,c). c)` >> simp[]);
+Termination WF_REL_TAC `measure (\(n,k,c). c)` >> simp[]
+End
 
 (*
 > EVAL ``poly_intro_rangeM 10 7 2``; = (F,Count 10726): thm

@@ -5,6 +5,7 @@ These folders for number theories contain interesting proofs of theorems stated 
 
 ## Fermat's Little Theorem
 * __little__ includes the source code for the paper `A String of Pearls: Proofs of Fermat's Little Theorem`.
+
     * `little/necklace`, necklaces with colours.
     * `little/cycle`, cycle operation on lists.
     * `little/pattern`, cycle patterns, period and order.
@@ -18,12 +19,13 @@ These folders for number theories contain interesting proofs of theorems stated 
     * `little/FLTpetersen`, proof by Julius Petersen, formalised in HOL4.
 
 ## Fermat's Two Squares Theorem
-* __twosq__ includes the source code for the paper `Windmills of the minds: an algorithm for Fermat's Two Squares Theorem`.
+* __twosq__ includes the source code for the paper `Windmills of the Minds: an Algorithm for Fermat's Two Squares Theorem`.
+
     * `twosq/helperTwosq`, useful library theorems.
     * `twosq/involute`, basic involution.
     * `twosq/involuteFix`, fixed points of involution.
     * `twosq/involuteAction`, group action with involution.
-    * `twosq/iterate`, function iteration and period.
+    * `twosq/iteration`, function iteration and period.
     * `twosq/iterateCompose`, iteration of composition of involutions.
     * `twosq/iterateCompute`, iteration period computation.
     * `twosq/windmill`, windmills and their involutions.
@@ -31,6 +33,7 @@ These folders for number theories contain interesting proofs of theorems stated 
 
 ## Counting and Combinatorics
 * __count__ includes formal proofs of theorems in combinatorics by counting sets.
+
     * `count/helperCount`, useful library theorems.
     * `count/combinatorics`, basic combinatorics.
     * `count/mapCount`, counting set mappings.

@@ -724,8 +724,9 @@ ASM_REWRITE_TAC [num_dtOrd, all_cpn_distinct, all_dt_distinct, num_dt_11] THEN
 GEN_TAC THEN Cases_on `z` THEN
 ASM_REWRITE_TAC [num_dtOrd, all_cpn_distinct, all_dt_distinct, num_dt_11]);
 
-val qk_numOrd_def = xDefine "qk_numOrd_def"
-`qk_numOrd m n = num_dtOrd (num_to_dt m) (num_to_dt n)`;
+Definition qk_numOrd_def:
+  qk_numOrd m n = num_dtOrd (num_to_dt m) (num_to_dt n)
+End
 
 (* Most of the work to prove TO_qk_numOrd (below) comes in showing that
    num_to_dt is a bijection, which we do first, with help of some lemmas. *)

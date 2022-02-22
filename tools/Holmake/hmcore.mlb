@@ -22,6 +22,8 @@ internal_functions.sml
 tailbuffer.sig
 tailbuffer.sml
 Holmake_tools_dtype.sml
+terminal_primitives.sig
+poly-terminal-prims.ML
 Holmake_tools.sig
 Holmake_tools.sml
 Holmake_types.sig

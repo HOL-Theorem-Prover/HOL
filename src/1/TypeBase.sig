@@ -74,4 +74,5 @@ sig
 
    val update_induction   : thm -> unit
    val update_axiom       : thm -> unit
+   val general_update     : hol_type -> (tyinfo -> tyinfo) -> unit
 end

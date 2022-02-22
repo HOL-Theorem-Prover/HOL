@@ -22,7 +22,7 @@ open quotientLib simpLib boolSimps BasicProvers
 
 val _ = new_theory "pair";
 
-fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta reduce *)
+fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
 
 (*---------------------------------------------------------------------------*)
 (* Define the type of pairs and tell the grammar about it.                   *)
@@ -75,7 +75,7 @@ val REP_ABS_PAIR = Q.prove
 
 val COMMA_DEF =
  Q.new_definition
-  ("COMMA_DEF",
+  ("COMMA_DEF[notuserdef]",
    `$, x y = ABS_prod ^pairfn`);
 val _ = ot","
 
@@ -133,10 +133,9 @@ val pair_CASES = save_thm("pair_CASES", ABS_PAIR_THM)
  *---------------------------------------------------------------------------*)
 
 val PAIR =
- Definition.new_specification
-  ("PAIR", ["FST","SND"],
+ boolLib.new_specification
+  ("PAIR[simp]", ["FST","SND"],
    Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM));
-val _ = BasicProvers.export_rewrites ["PAIR"]
 
 local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
       val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)
@@ -186,6 +185,11 @@ Proof
   REWRITE_TAC [UNCURRY,FST,SND]
 QED
 
+Theorem IN_UNCURRY_R[simp]:
+  (x,y) IN UNCURRY R <=> R x y
+Proof
+  simp[IN_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_UNCURRY_THM = |- !f. CURRY(UNCURRY f) = f                           *)
@@ -280,7 +284,6 @@ val pair_Axiom = Q.store_thm("pair_Axiom",
 (*                (UNCURRY f M = UNCURRY f' M')                             *)
 (* -------------------------------------------------------------------------*)
 
-open simpLib boolSimps
 val UNCURRY_CONG = store_thm(
   "UNCURRY_CONG",
   ``!f' f M' M.

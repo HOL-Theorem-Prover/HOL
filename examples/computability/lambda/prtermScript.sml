@@ -15,7 +15,7 @@ val _ = new_theory "prterm"
 
 val _ = augment_srw_ss [rewrites [DISJ_IMP_EQ]]
 
-val prtermrec_def = tDefine "prtermrec" `
+Definition prtermrec_def:
   prtermrec v c a list =
     case list of
       [] => v []
@@ -30,8 +30,9 @@ val prtermrec_def = tDefine "prtermrec" `
         else
           let t0 = n DIV 3
           in
-            a (t0 :: prtermrec v c a (t0::t) :: t)`
-  (WF_REL_TAC `measure (HD o SND o SND o SND)` THEN
+            a (t0 :: prtermrec v c a (t0::t) :: t)
+Termination
+  WF_REL_TAC `measure (HD o SND o SND o SND)` THEN
    SRW_TAC [][] THEN
    `0 < n` by (Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []) THENL [
      MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN Q.EXISTS_TAC `n DIV 3` THEN
@@ -39,7 +40,8 @@ val prtermrec_def = tDefine "prtermrec" `
      MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN Q.EXISTS_TAC `n DIV 3` THEN
      SRW_TAC [][DIV_LESS, nfst_le],
      SRW_TAC [][DIV_LESS]
-   ])
+  ]
+End
 
 val prK = prove(
   ``0 < m ⇒ primrec (λl. n) m``,

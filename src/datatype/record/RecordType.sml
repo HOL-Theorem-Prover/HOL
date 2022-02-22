@@ -285,7 +285,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                                             (fupd_terms, typeletters)
   val fupd_def_terms = List.rev fupd_def_terms0
   fun mk_defn_th (n, t) =
-      new_recursive_definition
+      Prim_rec.new_recursive_definition
         {def = t, name = mk_defname n, rec_axiom = typthm}
   val fupdfn_thms = ListPair.map mk_defn_th (fupd_names, fupd_def_terms)
   val fupdfn_thm =

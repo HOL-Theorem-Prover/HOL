@@ -1,3 +1,5 @@
+INCLUDES = ..
+
 .PHONY: all
 
 all: test1 $(DEFAULT_TARGETS)

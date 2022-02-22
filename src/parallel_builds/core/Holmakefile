@@ -14,7 +14,7 @@ SRCRELNAMES = \
   pred_set/src/more_theories probability \
   rational real res_quan/src ring/src \
   search sort string \
-  temporal/src transfer \
+  temporal/src TeX transfer \
   update
 
 INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
@@ -29,6 +29,7 @@ EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
          RL_Environment \
 	 STE algorithms computability dependability dev \
+         developers/ThmSetData \
 	 formal-languages formal-languages/context-free \
 	 formal-languages/lambek formal-languages/regular/regular-play \
 	 fun-op-sem/lprefix_lub fun-op-sem/for \
@@ -44,6 +45,7 @@ QUOTDIRS = examples examples/lambda examples/sigma
 SRCTESTDIRS = \
   integer/testing \
   string/theorytesting \
+  TeX/theory_tests TeX/theory_tests/proj1paper \
   tfl/examples transfer/examples
 
 ifdef POLY
@@ -52,7 +54,8 @@ endif
 
 INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
             $(patsubst %,../../../examples/%,$(EXDIRS)) \
-            $(patsubst %,../../%,$(SRCTESTDIRS))
+            $(patsubst %,../../%,$(SRCTESTDIRS)) \
+            $(HOLDIR)/tools/Holmake/tests/Iflag
 
 ifneq($(HOLSELFTESTLEVEL),1)
 EX2DIRS = AKS algebra algorithms/boyer_moore \
@@ -88,7 +91,14 @@ endif
 endif
 
 ifeq($(HOLSELFTESTLEVEL),3)
-EX3DIRS = diningcryptos
+EX3DIRS = ARM_security_properties \
+          diningcryptos \
+          l3-machine-code/cheri/step
+
+
+ifdef POLY
+EX3DIRS += machine-code theorem-prover
+endif
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX3DIRS))
 endif

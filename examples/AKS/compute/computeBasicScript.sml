@@ -321,11 +321,12 @@ log(n) --> cost_log(n) = ???   by log_compute_def
 
 (* Compute ulog by counting the number of doubles than equal or exceeds n *)
 (* This is just count_up renamed to ulog_step *)
-val ulog_step_def = tDefine "ulog_step" `
+Definition ulog_step_def:
   ulog_step n m k =
        if m = 0 then 0 (* just to provide m <> 0 for the next one *)
   else if n <= m then k else ulog_step n (2 * m) (SUC k)
-` (WF_REL_TAC `measure (\(n, m, k). n - m)`);
+Termination WF_REL_TAC `measure (λ(n, m, k). n - m)`
+End
 
 (* Theorem: ulog_step n m k = count_up n m k *)
 (* Proof: by ulog_step_def, count_up_def *)
@@ -1251,17 +1252,18 @@ else (* precompute *) let x = 2 * r-th root of (n DIV (2 ** r))
 
 
 (* Define root computation by root identity *)
-val root_compute_def = tDefine "root_compute" `
+Definition root_compute_def:
   root_compute r n =
   if 0 < r then
      if n = 0 then 0
      else (let x = 2 * root_compute r (n DIV (exp_compute 2 r)) in
            if n < exp_compute (SUC x) r then x else (SUC x))
   else ROOT 0 n
-` (WF_REL_TAC `measure (\(r, n). n)` >>
-  rw[] >>
+Termination
+  WF_REL_TAC `measure SND` >> rw[] >>
   `1 < 2 ** r` by rw[ONE_LT_EXP] >>
-  rw[exp_compute_eqn, DIV_LESS]);
+  rw[exp_compute_eqn, DIV_LESS]
+End
 
 (*
 > EVAL ``root_compute 3 0``; --> 0

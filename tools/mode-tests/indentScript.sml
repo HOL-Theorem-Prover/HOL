@@ -298,7 +298,7 @@ Proof
   tactic
 QED
 
-Datatype:
+Datatype :
   peg = <| start : ('a,'b,'c,'e) pegsym ;
            anyEOF : 'e ;
            tokFALSE : 'e ; tokEOF : 'e;

@@ -294,3 +294,25 @@
 
 \newcommand{\two}%standard 2-element set
  {\mbox{\rm 2}}
+
+
+\usepackage{scalerel}
+\usepackage[only,llbracket,rrbracket,llparenthesis,rrparenthesis]{stmaryrd}
+\parskip 1ex
+\parindent 0ex
+\usepackage{accsupp} % for ensuring the right Unicode codepoint upon pasting
+
+\newcommand*{\llbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2983}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+  \EndAccSupp{}%
+}
+\newcommand*{\rrbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2984}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
+  \EndAccSupp{}%
+}

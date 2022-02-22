@@ -177,7 +177,7 @@ val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 (* ------------------------------------------------------------------------- *)
 
 (* Seek a factor q to divide a number n, up to a cutoff c. *)
-val factor_seekM_def = tDefine "factor_seekM" `
+Definition factor_seekM_def:
   factor_seekM n c q =
     do
       b0 <- leqM c q;
@@ -191,7 +191,8 @@ val factor_seekM_def = tDefine "factor_seekM" `
                   od
            od
     od
-`(WF_REL_TAC `measure (\(n,c,q). c - q)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(n,c,q). c - q)` >> simp[]
+End
 (* Note: ~(1 < q) = q <= 1, ensure 1 < q before n MOD q. *)
 
 (* Primality test by seeking factor up to (1 + SQRT n) *)

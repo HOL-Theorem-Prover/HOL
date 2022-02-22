@@ -18,6 +18,8 @@ open Parse
 val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss ++
                numSimps.REDUCE_ss
 
+val SSFRAG = simpLib.register_frag o simpLib.SSFRAG
+
 val real_SS = simpLib.SSFRAG
   {name = SOME"real",
    ac = [],

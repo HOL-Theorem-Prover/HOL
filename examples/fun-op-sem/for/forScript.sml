@@ -126,7 +126,7 @@ val dec_clock_store = Q.store_thm ("dec_clock_store[simp]",
  rw [dec_clock_def]);
 
 (* Statement evaluation -- with redundant check_clock *)
-val sem_t_def = tDefine "sem_t" `
+Definition sem_t_def:
 (sem_t s (Exp e) = sem_e s e) ∧
 (sem_t s (Dec x t) =
   sem_t (store_var x 0 s) t) ∧
@@ -158,14 +158,16 @@ val sem_t_def = tDefine "sem_t" `
               | (Rbreak, s2) =>
                   (Rval 0, s2)
               | r => r)
-     | r => r)`
- (WF_REL_TAC `(inv_image (measure I LEX measure t_size)
-                            (\(s,t). (s.clock,t)))`
+     | r => r)
+Termination
+  WF_REL_TAC `(inv_image (measure I LEX measure t_size)
+                            (λ(s,t). (s.clock,t)))`
   \\ REPEAT STRIP_TAC \\ TRY DECIDE_TAC
   \\ fs [check_clock_def, dec_clock_def, LET_THM]
   \\ rw []
   \\ imp_res_tac sem_e_clock
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+End
 
 val sem_t_clock = Q.store_thm ("sem_t_clock",
 `!s t r s'. sem_t s t = (r, s') ⇒ s'.clock ≤ s.clock`,

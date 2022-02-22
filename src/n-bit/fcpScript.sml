@@ -150,17 +150,18 @@ val FINITE_FINITE_IMAGE =
    PROVE [HAS_SIZE_FINITE_IMAGE, HAS_SIZE]
       ``FINITE (UNIV:'a finite_image->bool)``
 
-val DIMINDEX_NONZERO =
+Theorem DIMINDEX_NONZERO[simp] =
    METIS_PROVE [HAS_SIZE_0, UNIV_NOT_EMPTY, HAS_SIZE_FINITE_IMAGE]
       ``~(dimindex(:'a) = 0)``
 
-val DIMINDEX_GE_1 = Q.store_thm("DIMINDEX_GE_1",
-   `1 <= dimindex(:'a)`,
-   REWRITE_TAC [DECIDE ``1 <= x <=> ~(x = 0)``, DIMINDEX_NONZERO]
-   )
+Theorem DIMINDEX_GE_1[simp]:
+   1 <= dimindex(:'a)
+Proof
+  REWRITE_TAC [DECIDE ``1 <= x <=> ~(x = 0)``, DIMINDEX_NONZERO]
+QED
 
 (* |- 0 < dimindex(:'a) *)
-Theorem DIMINDEX_GT_0 =
+Theorem DIMINDEX_GT_0[simp] =
    REWRITE_RULE [arithmeticTheory.NOT_ZERO_LT_ZERO] DIMINDEX_NONZERO
 
 val DIMINDEX_FINITE_IMAGE = Q.prove(
@@ -716,10 +717,9 @@ val FCP_ss = rewrites [FCP_BETA, FCP_ETA, CART_EQ]
 
 val () = set_fixity ":+" (Infixl 325)
 
-val FCP_UPDATE_def =
-   Lib.with_flag (computeLib.auto_import_definitions, false)
-      (xDefine "FCP_UPDATE")
-      `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b`
+Definition FCP_UPDATE_def[nocompute]:
+  $:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b
+End
 
 val FCP_UPDATE_COMMUTES = Q.store_thm ("FCP_UPDATE_COMMUTES",
    `!m a b c d. ~(a = b) ==> ((a :+ c) ((b :+ d) m) = (b :+ d) ((a :+ c) m))`,

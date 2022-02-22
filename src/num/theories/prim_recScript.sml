@@ -532,6 +532,13 @@ val num_Axiom = store_thm(
   EXISTS_TAC (Term`fn1 : num -> 'a`) THEN
   RULE_ASSUM_TAC BETA_RULE THEN ASM_REWRITE_TAC []);
 
+val [num_case_def] = Prim_rec.define_case_constant num_Axiom
+val _ = overload_on("case", “num_CASE”)
+
+val _ = TypeBase.export $ TypeBasePure.gen_datatype_info
+          {ax=num_Axiom, case_defs=[num_case_def], ind=INDUCTION}
+
+
 (*---------------------------------------------------------------------------*
  * Wellfoundedness taken as no infinite descending chains in 'a. This defn   *
  * is conceptually simpler (to some) than the original definition of         *

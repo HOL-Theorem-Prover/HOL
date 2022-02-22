@@ -356,7 +356,7 @@ val it = |- !m n. m ** n =
 *)
 
 (* Define exponentiation in monadic style *)
-val expM_def = tDefine "expM" `
+Definition expM_def:
   expM b n =
       do
          gd <- zeroM n;
@@ -368,7 +368,8 @@ val expM_def = tDefine "expM" `
                  ifM (evenM n) (return r) (mulM b r);
               od
       od
-`(WF_REL_TAC `measure (\(b,n). n)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(b,n). n)` >> simp[]
+End
 
 (*
 > EVAL ``MAP (expM 2) [0 .. 10]``; =
@@ -774,7 +775,7 @@ Then maintain two variables
       k <- DEC k
       goto loop
 *)
-val shrinkM_def = tDefine "shrinkM" `
+Definition shrinkM_def:
   shrinkM n k =
        do
           gd <- zeroM k;
@@ -785,7 +786,8 @@ val shrinkM_def = tDefine "shrinkM" `
                   shrinkM n' k'
                od
        od
-`(WF_REL_TAC `measure (\(n,k). k)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(n,k). k)` >> simp[]
+End
 (* Note: this is better or faster than:
    computing (2 ** k), then perform n DIV (2 ** k).
 *)
@@ -1035,7 +1037,7 @@ val it = |- !n. 0 < k ==>
 *)
 
 (* Define root in monadic style *)
-val rootM_def = tDefine "rootM" `
+Definition rootM_def:
   rootM k n =
        do
           k0 <- zeroM k;
@@ -1053,8 +1055,9 @@ val rootM_def = tDefine "rootM" `
                  addM x c;
                od
        od
-`(WF_REL_TAC `measure (\(k,n). n)` >> rw[] >>
-  `1 < 2 ** k` by rw[ONE_LT_EXP] >> rw[DIV_LESS]);
+Termination WF_REL_TAC `measure (λ(k,n). n)` >> rw[] >>
+            `1 < 2 ** k` by rw[ONE_LT_EXP] >> rw[DIV_LESS]
+End
 
 (*
 > EVAL ``MAP (rootM 3) [0 .. 10]``; =
@@ -1757,7 +1760,7 @@ val sqrtM_thm = |- !n. valueOf (sqrtM n) = SQRT n /\
 val it = |- !n k. n power_free_upto k <=> !j. 1 < j /\ j <= k ==> ROOT j n ** j <> n: thm
 *)
 
-val power_free_loopM_def = tDefine "power_free_loopM" `
+Definition power_free_loopM_def:
   power_free_loopM n k =
       do
         k0 <- zeroM k;
@@ -1774,7 +1777,8 @@ val power_free_loopM_def = tDefine "power_free_loopM" `
                     od
              od
       od
-`(WF_REL_TAC `measure (\(n,k). k)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(n,k). k)` >> simp[]
+End
 
 (*
 > power_free_test_def;
