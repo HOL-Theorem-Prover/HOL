@@ -2,6 +2,28 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "strange_indns";
 
+fun die msg t =
+  (TextIO.output(TextIO.stdOut, "Failed on " ^ term_to_string t ^
+                                (if msg = "" then "\n" else ": " ^ msg ^ "\n"));
+   TextIO.flushOut TextIO.stdOut;
+   OS.Process.exit OS.Process.failure)
+
+fun check_indconcl (t, pat) =
+  case DefnBase.lookup_indn t of
+    NONE => die "no induction registered" t
+  | SOME (th,_) =>
+      let val c = th |> concl |> strip_forall |> #2 |> dest_imp |> #2
+      in
+        if can (match_term pat) c then ()
+        else die "induction looks wrong" t
+    end
+
+val _ = app check_indconcl [
+    (“list$MAP”, “!f:'a -> 'b l:'a list. P f l : bool”),
+    (“list$LUPDATE”, “!e:'a n:num l:'a list. P e n l”),
+    (“list$ZIP”, “!l1:'a list l2:'b list. P (l1,l2)”)
+  ]
+
 Datatype:
   wtree = Nd wtree other | Lf num 'a ;
   other = OLf (num -> bool) | ONd num wtree wtree
@@ -12,13 +34,9 @@ Definition wsz_def:
   wsz (Lf _ _) = 1
 End
 
-fun die t =
-  (TextIO.output(TextIO.stdOut, "Failed on " ^ term_to_string t ^ "\n");
-   TextIO.flushOut TextIO.stdOut;
-   OS.Process.exit OS.Process.failure)
 fun check t = case (DefnBase.lookup_userdef t, DefnBase.lookup_indn t) of
           (SOME d, SOME i) => (d,i)
-        | _ => die t
+        | _ => die "one/both of defn and induction missing" t
 val _ = check “wsz”
 
 (* for reference: the use of the unit literal moves us out of what

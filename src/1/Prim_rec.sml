@@ -2116,12 +2116,26 @@ fun conj_genll tyalist indth =
           end
       val Pinfo = map mapthis indPvs
       val newPvs = List.mapPartial #1 Pinfo
+      fun reorder_var_order th0 =
+          let fun mapthis th =
+                  let
+                    val th' = SPEC_ALL th
+                    val (_, fvs) = strip_comb $ concl th'
+                        (* works because there won't even be tuple structure in
+                           the conclusion *)
+                  in
+                    th' |> GENL fvs
+                  end
+          in
+            LIST_CONJ (map mapthis $ CONJUNCTS $ UNDISCH_ALL $ th0) |> DISCH_ALL
+          end
       val indth' =
           ISPECL (map (#2 o #2) Pinfo) indth |> BETA_RULE
                 |> PURE_REWRITE_RULE [IMP_CLAUSES, FORALL_SIMP,
                                       AND_CLAUSES]
                 |> CONV_RULE $ LAND_CONV $ EVERY_CONJ_CONV $
                      STRIP_QUANT_CONV liftALLs
+                |> reorder_var_order
       val remaining_Pvs = filter (fn v => free_in v (concl indth')) newPvs
       fun gen_P2const (SOME new, (_, _, f)) = SOME(new,f)
         | gen_P2const (NONE, _) = NONE
