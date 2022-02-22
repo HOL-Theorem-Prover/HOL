@@ -279,12 +279,16 @@ Maintainable and readable files require organised proofs - in particular, carefu
 <code>&grave;<i>term</i>&grave; suffices_by <i>tactic</i></code>
 : Like `qsuff_tac`, but solves the first subgoal (i.e. that the supplied term implies the goal) using the given tactic.
 
-<code><i>tactic1</i> >~ [&grave;<i>pat</i>&grave;s]</code>
-: Performs *`tactic1`* and then searches for the first subgoal with subterms matching the supplied patterns.
+<code><i>tactic</i> >~ [&grave;<i>pat</i>&grave;s]</code>
+: Performs *`tactic`* and then searches for the first subgoal with subterms matching the supplied patterns.
   [Renames](#renaming-and-abbreviating) these subterms to match the patterns, and brings the goal into focus as the current goal.
 
-<code><i>tactic1</i> >>~ [&grave;<i>pat</i>&grave;s]</code>
+<code><i>tactic</i> >>~ [&grave;<i>pat</i>&grave;s]</code>
 : Like `>~`, but can match/rename multiple goals and bring them all to the top of the goal-stack.
+
+<code><i>tactic1</i> >>~- ([&grave;<i>pat</i>&grave;s], <i>tactic2</i>)</code>
+: Like `>>~`, but tries to solve the matched/renamed goals using *`tactic2`*.
+  This fails if any of the goals are not completely solved.
 
 <code>rpt <i>tactic</i></code>
 : Repeats the given tactic until it fails.
