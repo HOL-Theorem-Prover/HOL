@@ -13,7 +13,7 @@ hol4-quotient-unint.art: hol4-quotient-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 endif
 
-EXTRA_CLEANS = selftest.exe quotient-selftest.log
+EXTRA_CLEANS = selftest.exe quotient-selftest.log quotientTheory.html
 
 ifdef HOLSELFTESTLEVEL
 all: quotient-selftest.log
