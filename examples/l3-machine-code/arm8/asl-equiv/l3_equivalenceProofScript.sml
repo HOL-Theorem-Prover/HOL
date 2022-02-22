@@ -705,7 +705,7 @@ Proof
     qsuff_tac `LENGTH (w2v (n2w stuff)) ≠ 0` >- rw[] >>
     rewrite_tac[length_w2v] >> assume_tac EXISTS_HB >> gvs[]
     ) >>
-  simp[DefnBase.one_line_ify NONE sail2_valuesTheory.just_list_def] >>
+  simp[sail2_valuesTheory.just_list_def] >>
   unabbrev_all_tac >> blastLib.BBLAST_TAC >> rw[] >> gvs[] >>
   qmatch_goalsub_abbrev_tac `w2v stuff` >>
   qspecl_then [`stuff`,`0`] mp_tac el_w2v >> simp[]
@@ -1611,16 +1611,14 @@ Proof
   qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
   `∃s'. (do wr s; ex od asl) = (do wr s';
     execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi
-      (&w2n r1) 64 (&w2n r3) (&w2n r2) ¬b od) asl` by cheat (* (
+      (&w2n r1) 64 (&w2n r3) (&w2n r2) ¬b od) asl` by (
     unabbrev_all_tac >> Cases_on `b` >> gvs[] >> asl_cexecute_tac >> simp[] >>
-    simp[GSYM $ (SIMP_CONV (srw_ss()) [sail2_valuesTheory.just_list_def]
-                  THENC CEVAL) $ ``just_list``] >>
     simp[sail2_valuesTheory.just_list_def] >>
     simp[
       decode_smulh_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi_def,
       decode_umulh_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi_def
       ] >>
-    simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL)*) >>
+    simp[asl_reg_rws, seqS, returnS] >> irule_at Any EQ_REFL) >>
   simp[Abbr `wr`, Abbr `s`, asl_reg_rws, seqS, returnS] >>
   qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
   `state_rel l3 asl1 ∧ asl_sys_regs_ok asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
