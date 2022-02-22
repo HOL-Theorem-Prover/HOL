@@ -1492,10 +1492,10 @@ val ZIP_def =
 Theorem ZIP_ind:
   !P. (!l2. P ([], l2)) /\ (!l1. P(l1, [])) /\
       (!l1 l2 h1 h2. P (l1, l2) ==> P (h1::l1, h2::l2)) ==>
-      !l1 l2. P (l1,l2)
+      !p. P p
 Proof
-  gen_tac >> strip_tac >> Induct >> simp[] >>
-  Cases_on ‘l2’ >> simp[]
+  gen_tac >> strip_tac >> simp[pairTheory.FORALL_PROD] >> Induct >> simp[] >>
+  gen_tac >> Cases >> simp[]
 QED
 
 val _ = DefnBase.register_indn(ZIP_ind, [{Thy = "list", Name = "ZIP"}])
