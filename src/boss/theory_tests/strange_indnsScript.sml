@@ -21,7 +21,7 @@ fun check_indconcl (t, pat) =
 val _ = app check_indconcl [
     (“list$MAP”, “!f:'a -> 'b l:'a list. P f l : bool”),
     (“list$LUPDATE”, “!e:'a n:num l:'a list. P e n l”),
-    (“list$ZIP”, “!l1:'a list l2:'b list. P (l1,l2)”)
+    (“list$ZIP”, “!p:'a list # 'b list. P p”)
   ]
 
 Datatype:
