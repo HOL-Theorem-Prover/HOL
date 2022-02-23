@@ -92,6 +92,7 @@ val POLY_LDFLAGS_STATIC = []
 val CC = ""
 val DEPDIR = ""
 val GNUMAKE = ""
+val SHELL = ""
 val DYNLIB = ""
 val version = ""
 val ML_SYSNAME = ""

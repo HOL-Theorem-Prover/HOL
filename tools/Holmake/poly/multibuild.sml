@@ -136,7 +136,7 @@ fun graphbuild optinfo g =
         Posix.ProcEnv.environ()
     fun cline_to_command (s, args) = {executable = s, nm_args = args, env = env}
     fun shell_command s =
-      {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
+      {executable = Systeml.SHELL, nm_args = [Systeml.SHELL, "-c", s], env = env}
 
     val tgtcomplete = tgtcompletion_cb dirmap
     fun really_needed nI = #status nI = Pending{needed=true}

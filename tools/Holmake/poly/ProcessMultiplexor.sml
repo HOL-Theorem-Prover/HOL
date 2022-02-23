@@ -209,7 +209,7 @@ struct
     end
 
   fun mk_shell_command {cline,extra_env} : command =
-    {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", cline],
+    {executable = Systeml.SHELL, nm_args = [Systeml.SHELL, "-c", cline],
      env = extra_env @ Posix.ProcEnv.environ()}
   fun simple_shell s = mk_shell_command {cline = s, extra_env = []}
   fun shellcommand s =

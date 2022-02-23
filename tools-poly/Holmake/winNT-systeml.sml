@@ -53,6 +53,7 @@ val MOSMLDIR =
 val OS =
 val DEPDIR =
 val GNUMAKE =
+val SHELL =
 val DYNLIB =
 val version =
 val release =

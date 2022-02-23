@@ -253,6 +253,7 @@ in
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
+   "val SHELL ="    --> ("val SHELL = "^quote SHELL^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"poly\"\n",
@@ -542,7 +543,7 @@ val _ =
       val target_boss = fullPath [holdir, "bin", "hol"]
       val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-            "\"$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")\""
+            "`" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ "`"
       fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
       val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
       val prelude2 = prelude @ [TP "prelude2.ML"]

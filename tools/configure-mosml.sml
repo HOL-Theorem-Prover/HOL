@@ -186,6 +186,7 @@ val dynlib_available = (load "Dynlib"; true) handle _ => false;
 
 val DOT_PATH = SOME "";
 val GNUMAKE = "";
+val SHELL = "";
 
 val _ = let
   val override = Path.concat(holdir, "config-override")
@@ -203,6 +204,13 @@ val GNUMAKE = if GNUMAKE = "" then
                      NONE => "make"
                    | SOME s => s)
               else GNUMAKE;
+
+val SHELL = if SHELL = "" then
+               (determining "SHELL";
+                case OS.Process.getEnv "SHELL" of
+                     NONE => "/bin/sh"
+                   | SOME s => s)
+            else SHELL;
 
 val mosmldir = let
   val _ = determining "mosmldir"
@@ -267,6 +275,7 @@ verdict ("mosmldir", mosmldir);
 verdict ("holdir", holdir);
 verdict ("dynlib_available", Bool.toString dynlib_available);
 verdict ("GNUMAKE", GNUMAKE);
+verdict ("SHELL", SHELL);
 optverdict ("DOT_PATH", DOT_PATH);
 val MV = dfltverdict ("MV", find_in_bin_or_path "mv");
 val CP = dfltverdict ("CP", find_in_bin_or_path "cp");

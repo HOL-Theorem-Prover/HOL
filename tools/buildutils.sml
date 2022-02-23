@@ -81,6 +81,7 @@ val HOLDIR = Systeml.HOLDIR
 val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
+val SHELL = Systeml.SHELL
 val DYNLIB = Systeml.DYNLIB
 
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)

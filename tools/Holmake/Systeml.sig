@@ -30,6 +30,7 @@ sig
   val OS : string
   val DEPDIR : string
   val GNUMAKE : string
+  val SHELL : string
   val DYNLIB : bool
   val ML_SYSNAME : string
   val DOT_PATH : string option

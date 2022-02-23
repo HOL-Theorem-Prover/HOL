@@ -72,6 +72,7 @@ val polymllibdir = "";
 val DOT_PATH = SOME "";
 val MLTON = SOME "";
 val GNUMAKE = "";
+val SHELL = "";
 val POLY_LDFLAGS = [] : string list;
 val POLY_LDFLAGS_STATIC = [] : string list;
 
@@ -236,6 +237,17 @@ val GNUMAKE:string  =
       end
     else GNUMAKE
 
+val SHELL:string  =
+    if SHELL = "" then
+      let
+        val _ = determining "SHELL"
+      in
+        case OS.Process.getEnv "SHELL" of
+            NONE => "/bin/sh"
+          | SOME s => s
+      end
+    else SHELL
+
 val polylibinstruction =
     "Please write file tools-poly/poly-includes.ML to specify it.\n\
     \This file should include a line of the form\n\n\
@@ -313,6 +325,7 @@ verdict ("holdir", holdir);
 optverdict ("DOT_PATH", DOT_PATH);
 optverdict ("MLTON", MLTON);
 verdict ("GNUMAKE", GNUMAKE);
+verdict ("SHELL", SHELL);
 
 val MV = dfltverdict ("MV", find_in_bin_or_path "mv");
 val CP = dfltverdict ("CP", find_in_bin_or_path "cp");

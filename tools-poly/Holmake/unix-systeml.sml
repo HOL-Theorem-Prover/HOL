@@ -97,6 +97,7 @@ val OS = ""
 
 val DEPDIR = ""
 val GNUMAKE = ""
+val SHELL = ""
 val DYNLIB = ""
 val version = ""
 val ML_SYSNAME = ""
