@@ -55,6 +55,63 @@ struct
 end
 open Parse
 
+(* versions of pairSyntax functions that don't induce a dependency on pairs
+   being in ancestry *)
+val ERR = mk_HOL_ERR "quotient"
+fun Etry e f x = with_exn f x e
+fun mk_pair_ty (ty1,ty2) =
+    mk_thy_type{Args = [ty1,ty2], Thy = "pair", Tyop = "prod"}
+fun mk_pair (t1, t2) =
+    let val ty1 = type_of t1 and ty2 = type_of t2
+    in
+      list_mk_comb(mk_thy_const{Name = ",", Thy = "pair",
+                                Ty = ty1 --> (ty2 --> mk_pair_ty (ty1,ty2))},
+                   [t1,t2])
+    end
+
+fun dest_pair tm =
+    let val (f, args) = strip_comb tm
+        val e = ERR "dest_pair" "Not a pair"
+        val (t1,t2) = case args of
+                          [t1,t2] => (t1,t2)
+                        | _ => raise e
+        val {Name,Thy,...} = Etry e dest_thy_const f
+    in
+      if Name = "," andalso Thy = "pair" then (t1,t2)
+      else raise e
+    end
+
+fun mk_pabs (vstr,body) =
+    if is_var vstr then Term.mk_abs (vstr, body)
+    else let val (fst,snd) = dest_pair vstr
+             val ty1 = type_of fst and ty2 = type_of snd and bty = type_of body
+             val unc_t = mk_thy_const{
+                   Thy = "pair", Name = "UNCURRY",
+                   Ty = (ty1 --> ty2 --> bty) -->
+                        (mk_pair_ty (ty1,ty2) --> type_of body)
+                 }
+         in
+           Psyntax.mk_comb(unc_t, mk_pabs(fst, mk_pabs(snd,body)))
+         end
+
+fun dest_pabs tm =
+  Term.dest_abs tm
+  handle HOL_ERR _ =>
+    let
+      val e = ERR "dest_pabs" "Not a pabs"
+      val (Rator, Rand) = Etry e Psyntax.dest_comb tm
+      val {Name,Thy,...} = Etry e dest_thy_const Rator
+    in
+      if Name = "UNCURRY" andalso Thy = "pair" then
+        let
+          val (lv,body) = dest_pabs Rand
+          val (rv,body) = dest_pabs body
+        in
+          (mk_pair(lv,rv), body)
+        end
+      else raise e
+    end
+
 
 (* In interactive sessions, omit the chatting section below. *)
 
@@ -3099,8 +3156,7 @@ R2 (f[x']) (g[y']).
 
         fun regularize tm =
           let val ty = type_of tm
-              val regularize_abs = Psyntax.mk_abs o (I ## regularize) o
-                                   Psyntax.dest_abs
+              val regularize_abs = mk_pabs o (I ## regularize) o dest_pabs
           in
             (* abstraction *)
             if is_abs tm then
@@ -3932,15 +3988,16 @@ fun define_quotient_types_std {types, defs, respects, old_thms} =
 
 
 fun define_equivalence_type {name, equiv, defs, welldefs, old_thms} =
-    define_quotient_types {types=[{name=name, equiv=equiv}],
-                           defs=defs,
-                           tyop_equivs=[],
-                           tyop_quotients=[FUN_QUOTIENT],
-                           tyop_simps=[FUN_REL_EQ,FUN_MAP_I],
-                           respects=welldefs,
-                           poly_preserves=[FORALL_PRS,EXISTS_PRS],
-                           poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
-                           old_thms=old_thms};
+    define_quotient_types_full {
+      types=[{name=name, equiv=equiv}],
+      defs=defs,
+      tyop_equivs=[],
+      tyop_quotients=[FUN_QUOTIENT],
+      tyop_simps=[FUN_REL_EQ,FUN_MAP_I],
+      respects=welldefs,
+      poly_preserves=[FORALL_PRS,EXISTS_PRS],
+      poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
+      old_thms=old_thms};
 
 (* Subset types: *)
 
