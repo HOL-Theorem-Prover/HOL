@@ -4624,7 +4624,7 @@ QED
 
 Theorem SET_QUOTIENT:
   !R abs rep.
-    QUOTIENT R (abs : 'a -> 'b) rep ⇒
+    QUOTIENT R (abs : 'a -> 'b) rep ==>
     QUOTIENT (SET_REL R) (IMAGE abs) (IMAGE rep)
 Proof
   simp[QUOTIENT_def] >> rpt strip_tac >>
@@ -4644,7 +4644,7 @@ QED
 Theorem LIST_TO_SET_RSP[quotient_rsp]:
   !R (abs:'a -> 'b) rep.
     QUOTIENT R abs rep ==>
-    !l1 l2. LIST_REL R l1 l2 ⇒
+    !l1 l2. LIST_REL R l1 l2 ==>
             SET_REL R (LIST_TO_SET l1) (LIST_TO_SET l2)
 Proof
   simp[SET_REL_THM, LIST_REL_EL_EQN, MEM_EL, PULL_EXISTS] >>
