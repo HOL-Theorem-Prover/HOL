@@ -1,9 +1,6 @@
 
-all: $(DEFAULT_TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS)
 .PHONY: all
-
-selftest.exe: selftest.uo quotient.uo
-	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
@@ -13,15 +10,7 @@ hol4-quotient-unint.art: hol4-quotient-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 endif
 
-EXTRA_CLEANS = selftest.exe quotient-selftest.log quotientTheory.html
-
-ifdef HOLSELFTESTLEVEL
-all: quotient-selftest.log
-
-quotient-selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1,$@)
-
-endif
+EXTRA_CLEANS = quotientTheory.html
 
 # ifdef HOLBUILD
 # all: link-to-sigobj
