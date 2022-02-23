@@ -1,6 +1,4 @@
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 
 (* --------------------------------------------------------------------- *)
@@ -1384,17 +1382,9 @@ val respects = [OVAR1_RSP, OBJ1_RSP, INVOKE1_RSP, UPDATE1_RSP, SIGMA1_RSP,
                 REWRITE_RULE[ALPHA_dict_EQ] update_dict1_RSP,
                 update1_RSP]
 
-val polydfs = [BV_subst_PRS, COND_PRS, CONS_PRS, NIL_PRS,
-               COMMA_PRS, FST_PRS, SND_PRS,
-               LET_PRS, o_PRS, UNCURRY_PRS,
-               FORALL_PRS, EXISTS_PRS,
-               EXISTS_UNIQUE_PRS, ABSTRACT_PRS];
+val polydfs = [BV_subst_PRS]
 
-val polywfs = [BV_subst_RSP, COND_RSP, CONS_RSP, NIL_RSP,
-               COMMA_RSP, FST_RSP, SND_RSP,
-               LET_RSP, o_RSP, UNCURRY_RSP,
-               RES_FORALL_RSP, RES_EXISTS_RSP,
-               RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP];
+val polywfs = [BV_subst_RSP]
 
 
 fun gg tm = proofManagerLib.set_goal([],tm);
@@ -1542,13 +1532,12 @@ val [HEIGHT,
      object_induct,
      object_Axiom
      ] =
-    define_quotient_types
+    define_quotient_types_full
     {types = [{name = "obj",    equiv = ALPHA_obj_EQUIV},
               {name = "method", equiv = ALPHA_method_EQUIV}],
-     tyop_equivs = [LIST_EQUIV, PAIR_EQUIV],
-     tyop_quotients = [LIST_QUOTIENT, PAIR_QUOTIENT, FUN_QUOTIENT],
-     tyop_simps = [LIST_REL_EQ, LIST_MAP_I, PAIR_REL_EQ, PAIR_MAP_I,
-                   FUN_REL_EQ, FUN_MAP_I],
+     tyop_equivs = [],
+     tyop_quotients = [],
+     tyop_simps = [],
      defs = fnlist,
      respects = respects,
      poly_preserves = polydfs,
