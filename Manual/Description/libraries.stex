@@ -509,6 +509,7 @@ The prettiest way to introduce entries into the overload map is to use the \ml{O
 \begin{alltt}
    Overload name[attrs] = \fholquote{term/pattern}
 \end{alltt}
+(The \texttt{name} can be a bare \ML{} alpha-numeric identifier or enclosed in string-literal quotes; names that are ``symbolic'' in any way \emph{must} be enclosed in string-literal double quotes.  For example, \texttt{Overload~"-@-"~=~“...”}.)
 Depending on the choice of attributes, this will map into a call to one of a variety of underlying ``overload-on'' functions.
 \index{overload_on (ML function)@\ml{overload\_on} (\ML{} function)}
 The default (without any attributes) calls \ml{overload\_on}, whose effect is to make an entry in the map that will be exported with the theory.
@@ -566,12 +567,12 @@ establishing the new pattern for \holtxt{IS\_PREFIX}, the
 \holtxt{isPREFIX} form will no longer be printed.  Nor is it enough,
 to repeat the call
 \begin{alltt}
-   overload_on("isPREFIX", \fholquote{isPREFIX})
+   Overload isPREFIX = \fholquote{isPREFIX}
 \end{alltt}
 Instead (assuming that \holtxt{isPREFIX} is indeed the preferred
 printing form), the call must be
 \begin{alltt}
-   overload_on("isPREFIX", \fholquote{\bs{}x y. isPREFIX x y})
+   Overload isPREFIX = \fholquote{\bs{}x y. isPREFIX x y}
 \end{alltt}
 so that \ml{isPREFIX}'s pattern is as long as \ml{IS\_PREFIX}'s.
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|)}
@@ -743,11 +744,9 @@ Infix constants can associate in one of three different ways: right,
 left or not at all.  (If \holtxt{+} were non-associative, then
 \holtxt{3 + 4 + 5} would fail to parse; one would have to write
 \holtxt{(3 + 4) + 5} or \holtxt{3 + (4 + 5)} depending on the desired
-meaning.)  The precedence ordering for the initial set of infixes is
-\holtxt{/\bs}, \holtxt{\bs/}, \holtxt{==>}, \holtxt{=},
-\begin{Large}\holtxt{,}\end{Large} (comma\footnote{When
-  \theoryimp{pairTheory} has been loaded.}). Moreover, all of these
-constants are right associative. Thus
+meaning.)
+The precedence ordering for the initial set of infixes is \holtxt{/\bs}, \holtxt{\bs/}, \holtxt{==>}, \holtxt{=}, \begin{Large}\holtxt{,}\end{Large} (comma\footnote{When \theoryimp{pairTheory} has been loaded.}).
+Of these, equality is non-associative, and the remainder are right associative. Thus
 \begin{hol}
 \begin{verbatim}
    X /\ Y ==> C \/ D, P = E, Q
