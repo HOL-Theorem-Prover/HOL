@@ -49,8 +49,8 @@ val _ = hide "W";
 (* Basic probability theory definitions.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = type_abbrev ("p_space", ``:'a m_space``);
-val _ = type_abbrev ("events",  ``:'a set set``);
+Type "p_space" = “:'a m_space”
+Type events = “:'a set set”
 
 val p_space_def = Define `p_space = m_space`;
 
@@ -2888,7 +2888,7 @@ Definition indep_families_def :
     indep_families p q r = !s t. s IN q /\ t IN r ==> indep p s t
 End
 
-val _ = overload_on("indep_sets", “indep_families”);
+Overload indep_sets = “indep_families”
 
 (* 5. extension of `indep_families`: pairwise independent sets/collections of events *)
 Definition pairwise_indep_sets :
@@ -2919,7 +2919,7 @@ Definition indep_rv_def :
                     ((PREIMAGE Y b) INTER p_space p)
 End
 
-val _ = overload_on("indep_vars", “indep_rv”);
+Overload indep_vars = “indep_rv”
 
 (* 8. extension of `indep_rv`: pairwise independent random variables *)
 Definition pairwise_indep_vars :
@@ -3564,7 +3564,7 @@ val tail_algebra_of_rv_def = Define
       (p_space p,
        BIGINTER (IMAGE (\n. subsets (sigma_functions (p_space p) A X (from n))) UNIV))`;
 
-val _ = overload_on ("tail_algebra", ``tail_algebra_of_rv``);
+Overload tail_algebra = “tail_algebra_of_rv”
 
 (* Theorem 3.5.1 of [3, p.37], Kolmogorov 0-1 Law (for independent events).
 
@@ -4990,8 +4990,8 @@ Definition converge_def :
     *)
 End
 
-(* "-->" is defined in util_probTheory; The new Overload syntax doesn't work here *)
-val _ = overload_on ("-->", “converge”);
+(* "-->" is defined in util_probTheory; *)
+Overload "-->" = “converge”
 
 (* AE x::p. X_n(x) --> Y(x) *)
 Theorem converge_AE_def =
