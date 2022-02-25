@@ -140,6 +140,6 @@ Definition test_def:
 End
 
 Theorem oneline_test[local] = DefnBase.one_line_ify NONE test_def
-
+val _ = assert is_oneline oneline_test
 
 val _ = export_theory();

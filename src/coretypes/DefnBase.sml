@@ -468,8 +468,10 @@ fun one_line_ify heuristic def =
             let
               fun test ((_, args), bod) =
                   let val pat = List.nth(args, cnum)
+                      val (_, args_of) = strip_comb pat
                   in
                     not (is_var pat) andalso
+                    List.all is_var args_of andalso
                     null (op_intersect aconv (free_vars bod) (free_vars pat))
                   end
             in
