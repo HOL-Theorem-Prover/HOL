@@ -285,7 +285,7 @@ fun cases_prove case_const_def th k t =
                         else
                           CONJUNCTS (PURE_REWRITE_RULE [pairTheory.PAIR_EQ] th)
             in
-              ((PURE_REWRITE_CONV ths THENC
+              ((PURE_ONCE_REWRITE_CONV ths THENC
                 PURE_REWRITE_CONV [case_const_def, literal_case_THM] THENC
                 RAND_CONV BETAS_CONV THENC
                 RAND_CONV litresolve_conv) pTHENC k) t
@@ -351,7 +351,15 @@ fun attack_top_case stoppers k t =
       end
     else k t
 
-
+fun updi i x l =
+    let fun recur A i l =
+            case l of
+                [] => raise Fail "updi: bad index"
+              | (h::t) => if i = 0 then List.revAppend(A, x::t)
+                          else recur (h::A) (i - 1) t
+    in
+      recur [] i l
+    end
 
 fun one_line_ify heuristic def =
     let
@@ -433,7 +441,7 @@ fun one_line_ify heuristic def =
       val {functional = abs_body0,...} =
           let
             val f = case heuristic of
-                        NONE => (fn f => f)
+                        NONE => Pmatch.with_classic_heuristic
                       | SOME h => PmatchHeuristics.with_heuristic h
           in
             f (Feedback.quiet_messages (Pmatch.mk_functional thry))
@@ -451,22 +459,66 @@ fun one_line_ify heuristic def =
           PURE_REWRITE_CONV [REFL_CLAUSE]
          pTHENC
           GENASSUME
-      val neweqn = mk_eq(list_mk_comb(f, actual_args), body)
+      fun multi_constructor ty =
+          length (TypeBase.constructors_of ty) > 1
+      fun vfold (cnum,A) =
+          if multi_constructor (type_of (List.nth(actual_args, cnum))) then
+            HOLset.delete(A, cnum)
+          else
+            let
+              fun test ((_, args), bod) =
+                  let val pat = List.nth(args, cnum)
+                  in
+                    not (is_var pat) andalso
+                    null (op_intersect aconv (free_vars bod) (free_vars pat))
+                  end
+            in
+              if List.exists test fs_args then A
+              else HOLset.delete(A, cnum)
+            end
+      val vacuous_pats = HOLset.foldl vfold patcols patcols
     in
-      if List.exists (fn (_, r) => same_const boolSyntax.arb r) cases then
-        let
-          fun mapthis (l,r) =
-              if same_const boolSyntax.arb r then NONE
-              else SOME (list_mk_exists (free_vars l, mk_eq(seltm, l)))
-          val aa_asm = List.mapPartial mapthis cases
-                                       |> list_mk_disj |> ASSUME
-        in
-          cases_prove pairTheory.pair_case_def aa_asm
-                      (attack_top_case stoppers finisher)
-                      neweqn
-        end
-      else
-        attack_top_case stoppers finisher neweqn
+      case HOLset.find (fn _ => true) vacuous_pats of
+          SOME vcol =>
+          let
+            val arg = List.nth(actual_args, vcol)
+            val ty = type_of arg
+            val cdef = TypeBase.case_def_of ty
+            val ncho = ISPEC arg $ TypeBase.nchotomy_of ty
+            fun mapthis cth =
+                let val c = concl cth |> strip_forall |> #2
+                    val (l,r) = dest_eq c
+                    val (f, args) = strip_comb l
+                in
+                  if is_var (List.nth(args,vcol)) then cth
+                  else
+                    let val l' = list_mk_comb(f, updi vcol arg args)
+                    in
+                      cases_prove cdef ncho finisher (mk_eq(l',r))
+                    end
+                end
+            val newth = LIST_CONJ (map mapthis conjs)
+          in
+            one_line_ify heuristic newth
+          end
+        | NONE => let
+            val neweqn = mk_eq(list_mk_comb(f, actual_args), body)
+          in
+            if List.exists (fn (_, r) => same_const boolSyntax.arb r) cases then
+              let
+                fun mapthis (l,r) =
+                    if same_const boolSyntax.arb r then NONE
+                    else SOME (list_mk_exists (free_vars l, mk_eq(seltm, l)))
+                val aa_asm = List.mapPartial mapthis cases
+                                             |> list_mk_disj |> ASSUME
+              in
+                cases_prove pairTheory.pair_case_def aa_asm
+                            (attack_top_case stoppers finisher)
+                            neweqn
+              end
+            else
+              attack_top_case stoppers finisher neweqn
+          end
     end handle FastExit th => th
 
 end
