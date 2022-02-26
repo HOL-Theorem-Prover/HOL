@@ -218,7 +218,7 @@ fun foldri f A list =
     end
 
 fun GENASSUME t = if same_const t T then TRUTH
-                  else SPEC_ALL (ASSUME (gen_all t))
+                  else raise ERR "GENASSUME" "term <> T"
 infix pTHENC
 fun (c pTHENC k) t =
     case Exn.capture c t of
@@ -330,16 +330,15 @@ fun attack_top_case stoppers k t =
                 valOf (TypeBase.read {Thy = Thy,Tyop=Tyop})
                 handle Option => raise ERR "attack_top_case"
                                        ("No tyinfo for "^Thy^"$"^Tyop)
+            val std = cases_prove (TypeBasePure.case_def_of tyi)
+                                  (ISPEC a (TypeBasePure.nchotomy_of tyi))
+                                  (attack_top_case stoppers k)
           in
             if is_var a then
               if List.exists (fn pat => can (match_term pat) (lhs t)) stoppers
               then
-                k t
-              else
-                cases_prove (TypeBasePure.case_def_of tyi)
-                            (ISPEC a (TypeBasePure.nchotomy_of tyi))
-                            (attack_top_case stoppers k)
-                            t
+                k t handle HOL_ERR _ => std t
+              else std t
             else
               (RAND_CONV
                  (FIRST_CONV

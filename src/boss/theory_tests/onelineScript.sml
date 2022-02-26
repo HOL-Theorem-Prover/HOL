@@ -2,11 +2,21 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "oneline";
 
-fun is_oneline th =
-  let val cs = th |> concl |> strip_conj
+fun is_oneline th = is_eq (concl th)
+
+infix AND
+fun (P AND Q) x = P x andalso Q x
+val nullhyps = null o hyp
+fun defines th1 th2 =
+  let val cs = th1 |> concl |> strip_forall |> #2 |> strip_conj
+      val c = cs |> hd |> strip_forall |> #2 |> lhs |> strip_comb |> #1
   in
-    length cs = 1 andalso is_eq (hd cs)
+    same_const c (th2 |> concl |> lhs |> strip_comb |> #1)
   end
+
+fun stdcheck th =
+  assert (is_oneline AND nullhyps AND defines th) $
+         DefnBase.one_line_ify NONE th
 
 Definition ZIP2:
   (ZIP2 ([],[]) z = []) /\
@@ -22,7 +32,7 @@ val _ = assert
          (hyp oneline_zip2)
 val _ = assert is_oneline oneline_zip2
 
-val _ = assert is_oneline (DefnBase.one_line_ify NONE listTheory.ZIP_def)
+val _ = stdcheck listTheory.ZIP_def
 val _ = assert is_oneline
                (DefnBase.one_line_ify NONE
                 (INST_TYPE [gamma |-> alpha, delta |->beta] listTheory.ZIP))
@@ -34,10 +44,7 @@ Definition AEVERY_AUX_def:
      else
        P (x,y) /\ AEVERY_AUX (x::aux) P xs)
 End
-
-Theorem oneline_aevery_aux[local] = DefnBase.one_line_ify NONE AEVERY_AUX_def
-val _ = assert (null o hyp) oneline_aevery_aux
-val _ = assert is_oneline oneline_aevery_aux
+val _ = stdcheck AEVERY_AUX_def
 
 Definition incomplete_literal:
   incomplete_literal 1 = 10 /\
@@ -60,10 +67,7 @@ Definition complete_literal0:
   complete_literal0 2 = 12 /\
   complete_literal0 _ = 15
 End
-
-Theorem oneline_complete0[local] = DefnBase.one_line_ify NONE complete_literal0
-val _ = assert is_oneline oneline_complete0
-val _ = assert (null o hyp) oneline_complete0
+val _ = stdcheck complete_literal0
 
 Definition complete_literal1a:
   complete_literal1a [] 1 = 10 /\
@@ -71,12 +75,7 @@ Definition complete_literal1a:
   complete_literal1a (h::t) 2 = 12 + h /\
   complete_literal1a _ _ = 15
 End
-
-Theorem oneline_complete1a[local] =
-  DefnBase.one_line_ify NONE complete_literal1a
-
-val _ = assert null (hyp oneline_complete1a)
-val _ = assert is_oneline oneline_complete1a
+val _ = stdcheck complete_literal1a
 
 Definition complete_literal1b:
   complete_literal1b ([], 1) = 10 /\
@@ -84,47 +83,30 @@ Definition complete_literal1b:
   complete_literal1b (h::t, 2) = 12 + h /\
   complete_literal1b _ = 15
 End
-
-Theorem oneline_complete1b[local] =
-  DefnBase.one_line_ify NONE complete_literal1b
-
-val _ = assert (null o hyp) oneline_complete1b
-val _ = assert is_oneline oneline_complete1b
+val _ = stdcheck complete_literal1b
 
 Definition complete_literal2:
   complete_literal2 (3, [], 2) = 10 /\
   complete_literal2 (5, h::t, x) = 12 + h + x /\
   complete_literal2 _ = 15
 End
-
-Theorem oneline_complete2[local] = DefnBase.one_line_ify NONE complete_literal2
-val _ = assert (null o hyp) oneline_complete2
-val _ = assert is_oneline oneline_complete2
+val _ = stdcheck complete_literal2
 
 Definition ADEL_def:
   (ADEL [] z = []) /\
   (ADEL ((x:'a,y:'b)::xs) z = if x = z then ADEL xs z else (x,y)::ADEL xs z)
 End
-
-Theorem oneline_ADEL[local] = DefnBase.one_line_ify NONE ADEL_def
-val _ = assert (null o hyp) oneline_ADEL
-val _ = assert is_oneline oneline_ADEL
+val _ = stdcheck ADEL_def
 
 Definition bar_def:
   bar = [] : 'a list
 End
-
-Theorem oneline_bar[local] = DefnBase.one_line_ify NONE bar_def
-val _ = assert (null o hyp) oneline_bar
-val _ = assert is_oneline oneline_bar
+val _ = stdcheck bar_def
 
 Definition foo1_def:
   foo1 = if bar = []:'a list then []:'a list else []
 End
-
-Theorem oneline_foo1[local] = DefnBase.one_line_ify NONE foo1_def
-val _ = assert (null o hyp) oneline_foo1
-val _ = assert is_oneline oneline_foo1
+val _ = stdcheck foo1_def
 
 Datatype:
   tt = A1
@@ -143,9 +125,13 @@ Definition test_def:
                    | (tt :: tts) => test (D1 tts) ++ test tt) /\
   test (E1 (x, y)) = REVERSE (test x) ++ test y
 End
+val _ = stdcheck test_def
 
-Theorem oneline_test[local] = DefnBase.one_line_ify NONE test_def
-val _ = assert is_oneline oneline_test
-val _ = assert (null o hyp) oneline_test
+Definition nested_num_in_list:
+  nnil [] = 3 /\
+  nnil ((_, 4) :: t) = nnil t /\
+  nnil (h::t) = SND h + nnil t
+End
+val _ = stdcheck nested_num_in_list
 
 val _ = export_theory();
