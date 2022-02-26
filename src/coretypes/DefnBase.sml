@@ -391,7 +391,8 @@ fun one_line_ify heuristic def =
       val stoppers = map (list_mk_comb o #1) fs_args0
       val ((f,args1),rhs1) = hd fs_args
       val _ = List.all (aconv f o #1 o #1) fs_args orelse
-              raise ERR "one_line_ify" "Clauses defining more than one function"
+              raise ERR "one_line_ify"
+                    "Clauses defining more than one function/same fn at different types"
       fun rowfoldthis i arg (A as (patcols,patfvs)) =
           if is_var arg then A
           else (HOLset.add(patcols,i), FVL [arg] patfvs)
