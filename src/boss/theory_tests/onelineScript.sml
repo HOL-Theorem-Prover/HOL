@@ -2,6 +2,12 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "oneline";
 
+fun is_oneline th =
+  let val cs = th |> concl |> strip_conj
+  in
+    length cs = 1 andalso is_eq (hd cs)
+  end
+
 Definition ZIP2:
   (ZIP2 ([],[]) z = []) /\
   (ZIP2 (x::xs,y::ys) z = (x,y) :: ZIP2 (xs, ys) (5:num))
@@ -10,17 +16,16 @@ Termination
   simp[]
 End
 
-fun is_oneline th =
-  let val cs = th |> concl |> strip_conj
-  in
-    length cs = 1 andalso is_eq (hd cs)
-  end
-
 val oneline_zip2 = DefnBase.one_line_ify NONE ZIP2
 val _ = assert
          (fn l => length l = 1 andalso is_disj (hd l))
          (hyp oneline_zip2)
 val _ = assert is_oneline oneline_zip2
+
+val _ = assert is_oneline (DefnBase.one_line_ify NONE listTheory.ZIP_def)
+val _ = assert is_oneline
+               (DefnBase.one_line_ify NONE
+                (INST_TYPE [gamma |-> alpha, delta |->beta] listTheory.ZIP))
 
 Definition AEVERY_AUX_def:
   (AEVERY_AUX aux P [] <=> T) /\
@@ -141,5 +146,6 @@ End
 
 Theorem oneline_test[local] = DefnBase.one_line_ify NONE test_def
 val _ = assert is_oneline oneline_test
+val _ = assert (null o hyp) oneline_test
 
 val _ = export_theory();
