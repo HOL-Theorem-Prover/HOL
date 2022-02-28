@@ -286,8 +286,9 @@ fun cases_prove case_const_def th k t =
                           CONJUNCTS (PURE_REWRITE_RULE [pairTheory.PAIR_EQ] th)
             in
               ((PURE_ONCE_REWRITE_CONV ths THENC
-                PURE_REWRITE_CONV [case_const_def, literal_case_THM] THENC
-                RAND_CONV BETAS_CONV THENC
+                PURE_ONCE_REWRITE_CONV [case_const_def] THENC
+                PURE_REWRITE_CONV [literal_case_THM] THENC
+                RAND_CONV (REPEATC BETAS_CONV) THENC
                 RAND_CONV litresolve_conv) pTHENC k) t
             end
           else if is_disj (concl th) then

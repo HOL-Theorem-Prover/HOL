@@ -318,5 +318,12 @@ val nestedv_def = nestedv_def0
                     |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [FORALL_PROD]))
 val _ = test "nested vacuous pattern" nestedv_def
 
+val already_good1_def = new_definition("already_good1_def",
+  “already_good1 p q = (p,q)”);
+val _ = test "already good, simple RHS" already_good1_def
+
+val already_good2_def = new_definition("already_good2_def",
+  “already_good2 p q = case (p,q) of (T,_) => T | (F, q) => q”);
+val _ = test "already good, case on RHS" already_good2_def
 
 val _ = Process.exit Process.success

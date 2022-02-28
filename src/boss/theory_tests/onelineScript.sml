@@ -37,6 +37,20 @@ val _ = assert is_oneline
                (DefnBase.one_line_ify NONE
                 (INST_TYPE [gamma |-> alpha, delta |->beta] listTheory.ZIP))
 
+Theorem ZIP_again:
+  ZIP (l1,l2) =
+    case (l1,l2) of
+    | (x::l1, y::l2) => (x, y) :: ( ZIP (l1,l2) )
+    | _              => []
+Proof
+  Cases_on `l1` \\ Cases_on `l2` \\ fs[listTheory.ZIP_def]
+QED
+(* the arm of the top-level case (pair_CASE) is a use of the same case constant
+   all over again; one_line_ify takes the above and turns it into
+     ZIP p = pair_CASE p (\l1 l2. pair_CASE (l1,l2) (\v2 v3. list_CASE ...))
+*)
+val _ = stdcheck ZIP_again
+
 Definition AEVERY_AUX_def:
   (AEVERY_AUX aux P [] <=> T) /\
   (AEVERY_AUX aux P ((x:'a,y:'b)::xs) <=>
@@ -133,5 +147,13 @@ Definition nested_num_in_list:
   nnil (h::t) = SND h + nnil t
 End
 val _ = stdcheck nested_num_in_list
+
+Definition nested_nums_in_pairs:
+  nnip (3,4) = 1 /\
+  nnip (2,0) = 3 /\
+  nnip (10,x) = x /\
+  nnip _ = 6
+End
+val _ = stdcheck nested_nums_in_pairs
 
 val _ = export_theory();
