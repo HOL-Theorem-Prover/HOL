@@ -3128,6 +3128,9 @@ Proof
   simp[LUPDATE_DEF]
 QED
 
+val _ = DefnBase.register_indn $ Prim_rec.gen_indthm
+           {lookup_ind = TypeBase.induction_of} LUPDATE_DEF
+
 val LUPDATE_NIL = store_thm("LUPDATE_NIL[simp]",
   “!xs n x. (LUPDATE x n xs = []) <=> (xs = [])”,
   Cases \\ Cases_on ‘n’ \\ FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]);
