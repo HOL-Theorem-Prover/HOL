@@ -173,18 +173,19 @@ fun thy_userdefs {thyname} =
 type indnstore = (KernelSig.kernelname, thm * kname list) Binarymap.dict
 val empty_istore = Binarymap.mkDict KernelSig.name_compare
 
-(* the 'delta' is a thm * kname list *)
+(* the 'delta' is a thm * term list, with each term a constant *)
 local open ThyDataSexp
       fun mmap f [] = SOME []
         | mmap f (h::t) = case f h of
                               NONE => NONE
                             | SOME fh => Option.map (cons fh) $ mmap f t
 in
-fun encode (th, knms) = List (Thm th :: map KName knms)
+fun encode (th, knms) = List (Thm th :: map (Term o prim_mk_const) knms)
 fun decode sexp =
     case sexp of
         List (Thm th :: rest) =>
-        Option.map (pair th) $ mmap kname_decode rest
+        Option.map (pair th) $
+          mmap (Option.map prim_dest_const o term_decode) rest
       | _ => NONE
 end
 
@@ -244,13 +245,12 @@ val adinfo = {tag = "DefnBase.indn",
 val globinfo = {apply_to_global = register_indn_p,
                 thy_finaliser = NONE,
                 initial_value = empty_istore}
-fun uptodate_delta (ind, knms) = List.all (can prim_mk_const) knms
 
 val AData as {get_global_value = the_istore,
               record_delta = record_istore_delta,
               update_global_value = istore_fupd, ...} =
     AncestryData.fullmake {adinfo = adinfo,
-                           uptodate_delta = uptodate_delta,
+                           uptodate_delta = K true,
                            sexps = {dec = decode, enc = encode},
                            globinfo = globinfo}
 
