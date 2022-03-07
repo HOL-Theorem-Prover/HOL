@@ -34,8 +34,9 @@ EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
 	 formal-languages formal-languages/context-free \
 	 formal-languages/lambek formal-languages/regular/regular-play \
 	 fun-op-sem/lprefix_lub fun-op-sem/for \
-         hfs imperative ind_def l3-machine-code/common lambda/barendregt \
-         lassie \
+         hardware hfs \
+         imperative ind_def \
+         l3-machine-code/common lambda/barendregt lassie \
          logic logic/folcompactness logic/modal-tableaux logic/ncfolproofs \
 	 logic/propositional_logic \
          misc parity rings set-theory/zfset set-theory/vbg zipper

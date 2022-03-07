@@ -16,6 +16,8 @@ open arithmeticTheory stringTheory
 
 val _ = new_theory "tamarack";
 
+val _ = loose_equality()
+
 (* ----------------------------- *)
 (* - Definitions               - *)
 (* ----------------------------- *)
