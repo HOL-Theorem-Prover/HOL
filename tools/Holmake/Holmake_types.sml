@@ -9,6 +9,9 @@ datatype pretoken =
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
 type env = (string, quotation)Binarymap.dict
+fun env_keys e = Binarymap.foldr (fn (k,v,A) => k::A) [] e
+fun env_fold f e A = Binarymap.foldl (fn (k,v,A) => f k v A) A e
+
 type rule_info = {dependencies : string list, commands : string list}
 type raw_rule_info = { targets : quotation, dependencies : quotation,
                        commands : quotation list }
