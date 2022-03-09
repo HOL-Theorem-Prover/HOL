@@ -42,6 +42,7 @@ src/proofman
 !tools/Holmake/tests/quote-filter
 !tools/Holmake/tests/theorytarget
 !tools/Holmake/tests/commandmacros
+!tools/Holmake/tests/doublecrnl
 [poly]!tools/Holmake/tests/cheatspotting
 [poly]!tools/Holmake/tests/depchain_heap/
 [poly]!tools/Holmake/tests/depchain_heap/dir2
