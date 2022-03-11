@@ -424,22 +424,20 @@ val encode_bnum_length = store_thm
    Induct
    >> RW_TAC std_ss [LENGTH, encode_bnum_def]);
 
-val encode_bnum_inj = store_thm
-  ("encode_bnum_inj",
-   ``!m x y.
-       x < 2 ** m /\ y < 2 ** m /\ (encode_bnum m x = encode_bnum m y) ==>
-       (x = y)``,
-   Induct
-   >> RW_TAC std_ss
-      [encode_bnum_def, DECIDE “!n. n < 1 <=> (n = 0)”, GSYM EXP2_LT]
-   >> RES_TAC
-   >> Know `x DIV 2 = y DIV 2` >- RES_TAC
-   >> Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
+Theorem encode_bnum_inj:
+  !m x y.
+    x < 2 ** m /\ y < 2 ** m /\ encode_bnum m x = encode_bnum m y ==>
+    x = y
+Proof
+   Induct >> rw[encode_bnum_def] >>
+   first_x_assum $ drule_at Any >> simp[] >>
+   Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
    >> POP_ASSUM_LIST (K ALL_TAC)
    >> RW_TAC std_ss []
    >> MP_TAC (MP (Q.SPEC `2` DIVISION) (DECIDE ``0 < 2``))
    >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   >> RW_TAC std_ss [MOD_2]);
+   >> RW_TAC std_ss [MOD_2]
+QED
 
 val wf_encode_bnum_collision_free = store_thm
   ("wf_encode_bnum_collision_free",

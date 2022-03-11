@@ -170,6 +170,8 @@ val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);
 val _ = TeX_notation {hol = "**", TeX = ("\\HOLTokenExp{}", 2)}
 
+Theorem EXP0[simp] = cj 1 EXP
+
 (* special-case squares and cubes *)
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_2,
@@ -1314,10 +1316,12 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-Theorem MULT_EQ_ID:
-  !m n. (m * n = n) <=> (m=1) \/ (n=0)
+Theorem MULT_EQ_ID[simp]:
+  !m n. (m * n = n <=> m=1 \/ n=0) /\
+        (n * m = n <=> m=1 \/ n=0)
 Proof
- REPEAT GEN_TAC THEN
+ REPEAT GEN_TAC THEN REVERSE CONJ_ASM1_TAC
+ THEN1 (ONCE_REWRITE_TAC [MULT_COMM] THEN ASM_REWRITE_TAC[]) THEN
  STRUCT_CASES_TAC (SPEC “m:num” num_CASES) THEN
  REWRITE_TAC [MULT_CLAUSES,ONE,GSYM NOT_SUC,INV_SUC_EQ] THENL
  [METIS_TAC[], METIS_TAC [ADD_INV_0_EQ,MULT_EQ_0,ADD_SYM]]
@@ -2855,7 +2859,7 @@ val EXP_ALWAYS_BIG_ENOUGH = store_thm ("EXP_ALWAYS_BIG_ENOUGH",
     ]
   ]);
 
-Theorem EXP_EQ_0:
+Theorem EXP_EQ_0[simp]:
   !n m. (n EXP m = 0) <=> (n = 0) /\ (0 < m)
 Proof
   REPEAT GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `m` num_CASES) THEN
@@ -2871,21 +2875,36 @@ val ZERO_LT_EXP = store_thm ("ZERO_LT_EXP",
   “0 < x EXP y <=> 0 < x \/ (y = 0)”,
   METIS_TAC [NOT_ZERO_LT_ZERO, EXP_EQ_0]);
 
-val EXP_1 = store_thm ("EXP_1",
-  “!n. (1 EXP n = 1) /\ (n EXP 1 = n)”,
+Theorem EXP_1[simp]:
+  !n. (1 EXP n = 1) /\ (n EXP 1 = n)
+Proof
   CONV_TAC (QUANT_CONV (FORK_CONV (ALL_CONV, REWRITE_CONV [ONE]))) THEN
   REWRITE_TAC [EXP, MULT_CLAUSES] THEN
-  INDUCT_TAC THEN ASM_REWRITE_TAC [MULT_EQ_1, EXP]);
+  INDUCT_TAC THEN ASM_REWRITE_TAC [MULT_EQ_1, EXP]
+QED
 
-val EXP_EQ_1 = store_thm ("EXP_EQ_1",
-  “!n m. (n EXP m = 1) <=> (n = 1) \/ (m = 0)”,
+Theorem EXP_EQ_1[simp]:
+  !n m. (n EXP m = 1) <=> (n = 1) \/ (m = 0)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `m` THEN INDUCT_TAC THEN
     REWRITE_TAC [EXP, MULT_EQ_1] THEN STRIP_TAC THEN
     ASM_REWRITE_TAC [],
     ASM_REWRITE_TAC [EXP_1],
     ASM_REWRITE_TAC [EXP]
-  ]);
+  ]
+QED
+
+Theorem EXP_EQ_BASE[simp]:
+  !n m. n EXP m = n <=> m = 1 \/ n = 0 /\ 0 < m \/ n = 1
+Proof
+  Cases_on ‘m’ >>
+  REWRITE_TAC[EXP, ONE, SUC_NOT, LESS_REFL, INV_SUC_EQ, LESS_0, MULT_EQ_ID] >| [
+    GEN_TAC >> EQ_TAC >> DISCH_THEN (ACCEPT_TAC o SYM),
+    REWRITE_TAC [GSYM ONE, EXP_EQ_1] THEN GEN_TAC THEN EQ_TAC THEN
+    STRIP_TAC THEN ASM_REWRITE_TAC[]
+  ]
+QED
 
 (* theorems about exponentiation where the base is held constant *)
 val expbase_le_mono = prove(

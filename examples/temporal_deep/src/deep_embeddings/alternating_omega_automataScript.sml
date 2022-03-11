@@ -713,19 +713,17 @@ val IS_PATH_THROUGH_RUN___IS_REACHABLE_BY_RUN =
                       PATH_TO_REACHABLE_STATES_EXISTS]);
 
 
-val NO_EMPTY_SET_IN_RUN___PATH_THROUGH_RUN_AND_REACHABLE_STATE_EXISTS =
- store_thm
-  ("NO_EMPTY_SET_IN_RUN___PATH_THROUGH_RUN_AND_REACHABLE_STATE_EXISTS",
-
-    ``!r s n. ((IS_REACHABLE_BY_RUN (s, n) r) /\ (NO_EMPTY_SET_IN_RUN r)) ==>
-    ?w. ((IS_PATH_THROUGH_RUN w r) /\ (w n = s))``,
-
-REWRITE_TAC [IS_PATH_THROUGH_RUN_def] THEN
-REPEAT STRIP_TAC THEN
-`?w. w = \n'. (if (n' <= n) then ((@w1. IS_PATH_TO w1 r s n) n') else
-        ((CHOOSEN_PATH {s} (\S n''. r.R S (PRE n'' + n))) (n' - n)))` by METIS_TAC[] THEN
-SUBGOAL_THEN ``!n'. IS_REACHABLE_BY_RUN (w n', n') r`` ASSUME_TAC THEN1 (
-    Induct_on `n'` THENL [
+Theorem NO_EMPTY_SET_IN_RUN___PATH_THROUGH_RUN_AND_REACHABLE_STATE_EXISTS:
+  !r s n. IS_REACHABLE_BY_RUN (s, n) r /\ NO_EMPTY_SET_IN_RUN r ==>
+          ?w. IS_PATH_THROUGH_RUN w r /\ w n = s
+Proof
+  REWRITE_TAC [IS_PATH_THROUGH_RUN_def] THEN
+  REPEAT STRIP_TAC THEN
+  ‘?w. w = \n'. if n' <= n then (@w1. IS_PATH_TO w1 r s n) n'
+                else (CHOOSEN_PATH {s} (\S n''. r.R S (PRE n'' + n))) (n' - n)’
+    by simp[] THEN
+  SUBGOAL_THEN “!n'. IS_REACHABLE_BY_RUN (w n', n') r” ASSUME_TAC
+  >- (Induct_on ‘n'’ THENL [
         ASM_SIMP_TAC arith_ss [IS_REACHABLE_BY_RUN_def] THEN
         SELECT_ELIM_TAC THEN
         REPEAT STRIP_TAC THENL [
@@ -734,9 +732,9 @@ SUBGOAL_THEN ``!n'. IS_REACHABLE_BY_RUN (w n', n') r`` ASSUME_TAC THEN1 (
         ],
 
         ASM_SIMP_TAC arith_ss [IS_REACHABLE_BY_RUN_def] THEN
-        EXISTS_TAC ``(w:num->'a) n'`` THEN
+        EXISTS_TAC “(w:num->'a) n'” THEN
         ASM_REWRITE_TAC[] THEN
-        Cases_on `SUC n' <= n` THENL [
+        Cases_on ‘SUC n' <= n’ THENL [
             ASM_SIMP_TAC arith_ss [] THEN
             SELECT_ELIM_TAC THEN
             REPEAT STRIP_TAC THENL [
@@ -744,33 +742,33 @@ SUBGOAL_THEN ``!n'. IS_REACHABLE_BY_RUN (w n', n') r`` ASSUME_TAC THEN1 (
                 FULL_SIMP_TAC arith_ss [IS_PATH_TO_def]
             ],
 
-            Cases_on `n' <= n` THENL [
-                `n' = n` by DECIDE_TAC THEN
+            Cases_on ‘n' <= n’ THENL [
+                ‘n' = n’ by DECIDE_TAC THEN
                 FULL_SIMP_TAC arith_ss [] THEN
-                `(SUC n - n = SUC 0)` by DECIDE_TAC THEN
                 ASM_REWRITE_TAC [CHOOSEN_PATH_def, IN_SING] THEN
                 SIMP_TAC arith_ss [] THEN
                 SELECT_ELIM_TAC THEN
-                SELECT_ELIM_TAC THEN
                 REPEAT STRIP_TAC THENL [
                     PROVE_TAC[PATH_TO_REACHABLE_STATES_EXISTS],
-                    PROVE_TAC[NO_EMPTY_SET_IN_RUN_def, MEMBER_NOT_EMPTY],
-                    PROVE_TAC[IS_PATH_TO_def]
+                    REWRITE_TAC[ONE, CHOOSEN_PATH_def] THEN
+                    SELECT_ELIM_TAC THEN SELECT_ELIM_TAC THEN simp[] THEN
+                    METIS_TAC[NO_EMPTY_SET_IN_RUN_def, MEMBER_NOT_EMPTY,
+                              IS_PATH_TO_def]
                 ],
 
                 FULL_SIMP_TAC arith_ss [] THEN
-                `SUC n' - n = SUC (n' - n)` by DECIDE_TAC THEN
+                ‘SUC n' - n = SUC (n' - n)’ by DECIDE_TAC THEN
                 ASM_SIMP_TAC arith_ss [CHOOSEN_PATH_def] THEN
                 SELECT_ELIM_TAC THEN
                 REWRITE_TAC[MEMBER_NOT_EMPTY] THEN
-                UNDISCH_TAC ``IS_REACHABLE_BY_RUN (w n', n') r`` THEN
+                UNDISCH_TAC “IS_REACHABLE_BY_RUN (w n', n') r” THEN
                 FULL_SIMP_TAC arith_ss [] THEN
                 PROVE_TAC[NO_EMPTY_SET_IN_RUN_def]
             ]
         ]
     ]
 ) THEN
-EXISTS_TAC ``w:num -> 'a`` THEN
+EXISTS_TAC “w:num -> 'a” THEN
 REPEAT STRIP_TAC THENL [
     ASM_SIMP_TAC arith_ss [] THEN
     SELECT_ELIM_TAC THEN
@@ -779,7 +777,7 @@ REPEAT STRIP_TAC THENL [
         PROVE_TAC[IS_PATH_TO_def]
     ],
 
-    `(SUC n' <= n) \/ (n' = n) \/ (n < n')` by DECIDE_TAC THENL [
+    ‘(SUC n' <= n) \/ (n' = n) \/ (n < n')’ by DECIDE_TAC THENL [
         ASM_SIMP_TAC arith_ss [] THEN
         SELECT_ELIM_TAC THEN
         REPEAT STRIP_TAC THENL [
@@ -792,9 +790,8 @@ REPEAT STRIP_TAC THENL [
         REPEAT STRIP_TAC THENL [
             PROVE_TAC[PATH_TO_REACHABLE_STATES_EXISTS],
 
-            `x n = s` by PROVE_TAC[IS_PATH_TO_def] THEN
-            `SUC n - n = SUC 0` by DECIDE_TAC THEN
-            ASM_REWRITE_TAC [CHOOSEN_PATH_def, ADD_CLAUSES, IN_SING] THEN
+            ‘x n = s’ by PROVE_TAC[IS_PATH_TO_def] THEN
+            ASM_REWRITE_TAC [CHOOSEN_PATH_def, ADD_CLAUSES, IN_SING, ONE] THEN
             SIMP_TAC arith_ss [] THEN
             SELECT_ELIM_TAC THEN
             ASM_REWRITE_TAC [MEMBER_NOT_EMPTY] THEN
@@ -803,19 +800,19 @@ REPEAT STRIP_TAC THENL [
 
 
         ASM_SIMP_TAC arith_ss [] THEN
-        `SUC n' - n = SUC (n' - n)` by DECIDE_TAC THEN
+        ‘SUC n' - n = SUC (n' - n)’ by DECIDE_TAC THEN
         ASM_SIMP_TAC arith_ss [CHOOSEN_PATH_def] THEN
         SELECT_ELIM_TAC THEN
         ASM_REWRITE_TAC [MEMBER_NOT_EMPTY] THEN
         FULL_SIMP_TAC arith_ss [NO_EMPTY_SET_IN_RUN_def] THEN
-        `?m. n' - n = m` by PROVE_TAC[] THEN
-        `n' = n + m` by DECIDE_TAC THEN
+        ‘?m. n' - n = m’ by PROVE_TAC[] THEN
+        ‘n' = n + m’ by DECIDE_TAC THEN
         ASM_REWRITE_TAC[] THEN
-        `IS_REACHABLE_BY_RUN (w n', n') r` by PROVE_TAC[] THEN
-        `(CHOOSEN_PATH {s} (\S n'''. r.R S (n + PRE n''')) m) = w n'` by
+        ‘IS_REACHABLE_BY_RUN (w n', n') r’ by PROVE_TAC[] THEN
+        ‘(CHOOSEN_PATH {s} (\S n'''. r.R S (n + PRE n''')) m) = w n'’ by
             (ASM_REWRITE_TAC [] THEN
             SIMP_TAC std_ss [] THEN
-            `~(n + m <= n) /\ (n + m - n = m)` by DECIDE_TAC THEN
+            ‘~(n + m <= n) /\ (n + m - n = m)’ by DECIDE_TAC THEN
             ASM_REWRITE_TAC[]) THEN
         PROVE_TAC[NO_EMPTY_SET_IN_RUN_def]
      ],
@@ -826,7 +823,8 @@ REPEAT STRIP_TAC THENL [
         PROVE_TAC[PATH_TO_REACHABLE_STATES_EXISTS],
         PROVE_TAC[IS_PATH_TO_def]
     ]
-]);
+  ]
+QED
 
 
 

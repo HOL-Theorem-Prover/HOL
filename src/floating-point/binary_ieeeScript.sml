@@ -1252,6 +1252,17 @@ val some_nan_properties = Q.store_thm("some_nan_properties",
    \\ fs [lem]
    )
 
+Theorem NMUL_EQ_2:
+  ((m:num) * n = 2) <=> (m = 1) /\ (n = 2) \/ (m = 2) /\ (n = 1)
+Proof
+  assume_tac dividesTheory.PRIME_2 >>
+  gs[dividesTheory.prime_def, dividesTheory.divides_def, Excl "PRIME_2",
+     PULL_EXISTS] >>
+  eq_tac >> simp[DISJ_IMP_THM] >>
+  disch_then (assume_tac o SYM) >> first_x_assum drule >>
+  simp[DISJ_IMP_THM] >> strip_tac >> gs[]
+QED
+
 Theorem min_properties[simp]:
     ~float_is_zero (float_plus_min (:'t # 'w)) /\
     float_is_finite (float_plus_min (:'t # 'w)) /\
@@ -1270,23 +1281,12 @@ Theorem min_properties[simp]:
     float_is_subnormal (float_minus_min (:'t # 'w)) /\
     ~float_is_infinite (float_minus_min (:'t # 'w))
 Proof
-   tac (* after this the float_is_integral cases remain *)
-   \\ (simp [REAL_EQ_LDIV_EQ, ABS_DIV,
-             wordsTheory.INT_MAX_def, wordsTheory.INT_MIN_def, gt0_abs]
-       \\ Cases_on `precision (:'t) = 1`
-       \\ Cases_on `precision (:'w) = 1`
-       \\ imp_res_tac ge2
-       \\ srw_tac[][]
-       >- (qexists_tac `1n` \\ decide_tac)
-       \\ Cases_on `n`
-       \\ simp []
-       \\ rewrite_tac [REAL, REAL_RDISTRIB]
-       \\ match_mp_tac
-            (REAL_ARITH ``2r < n /\ 0 <= x ==> 2 <> x + 1 * n``)
-       \\ simp [REAL_LT_IMP_LE, REAL_LE_MUL]
-       \\ imp_res_tac ge2b
-       \\ match_mp_tac gt1_pow
-       \\ simp [])
+   tac (* after this the float_is_integral cases remain *) >>
+   simp[ABS_DIV, iffRL ABS_REFL, real_div, REAL_POW_ADD,
+        REAL_INV_MUL', SF realSimps.RMULRELNORM_ss] >>
+   simp[REAL_OF_NUM_POW, wordsTheory.INT_MAX_def,
+        wordsTheory.INT_MIN_def, NMUL_EQ_2] >>
+   simp[DECIDE “x <= 1n <=> (x = 1) \/ (x = 0)”]
 QED
 
 val lem1 = Q.prove(

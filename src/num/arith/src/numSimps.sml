@@ -92,7 +92,7 @@ val arithmetic_rewrites =
       "SUB_RIGHT_LESS", "SUB_RIGHT_GREATER_EQ", "SUB_RIGHT_LESS_EQ",
 
       (* exponentiation *)
-      "EXP_EQ_0", "EXP_1", "EXP_EQ_1", "ZERO_LT_EXP",
+      "ZERO_LT_EXP",
       "EXP_EXP_INJECTIVE", "EXP_BASE_INJECTIVE", "EXP_BASE_LT_MONO",
       "EXP_BASE_LE_MONO", "EXP_EXP_LT_MONO", "EXP_EXP_LE_MONO",
 

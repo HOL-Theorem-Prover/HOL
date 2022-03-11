@@ -480,18 +480,17 @@ End
 
 (* Theorem: valueOf (mexpM m b n) = (b ** n) MOD m *)
 (* Proof: by induction from mexpM_def, matching EXP_MOD_EQN. *)
-val mexpM_value = store_thm(
-  "mexpM_value[simp]",
-  ``!m b n. valueOf (mexpM m b n) = (b ** n) MOD m``,
-  ho_match_mp_tac (theorem "mexpM_ind") >>
-  rw[] >>
-  rw[Once mexpM_def] >-
-  rw[Once EXP_MOD_EQN] >>
+Theorem mexpM_value[simp]:
+  !m b n. valueOf (mexpM m b n) = (b ** n) MOD m
+Proof
+  ho_match_mp_tac (theorem "mexpM_ind") >> rw[] >>
+  rw[Once mexpM_def] >>
   `0 < m /\ 1 < m` by decide_tac >>
   assume_tac EXP_MOD_EQN >>
   first_x_assum (qspecl_then [`b`, `n`, `m`] strip_assume_tac) >>
   first_x_assum (drule_all_then strip_assume_tac) >>
-  fs[GSYM EXP_2]);
+  fs[GSYM EXP_2]
+QED
 
 (* Theorem: stepsOf (mexpM m b n) = if m <= 1 \/ n = 0 then 2 * size m + size n
             else 1 + 5 * size n + (size b) ** 2 + 2 * size m + size (b * b) * size m +

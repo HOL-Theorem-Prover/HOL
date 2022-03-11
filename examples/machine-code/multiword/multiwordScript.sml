@@ -939,8 +939,9 @@ val word_LSL_n2w = prove(
   ``!m k. ((n2w m):'a word) << k = n2w (m * 2 ** k)``,
   SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM,WORD_MUL_LSL,word_mul_n2w]);
 
-val mw_shift_thm = store_thm("mw_shift_thm",
-  ``!xs. mw2n (mw_shift xs) = mw2n (xs:'a word list) DIV 2``,
+Theorem mw_shift_thm:
+  !xs. mw2n (mw_shift xs) = mw2n (xs:'a word list) DIV 2
+Proof
   Induct \\ SIMP_TAC std_ss [mw_shift_def,mw2n_def]
   \\ Cases_on `xs` \\ ASM_SIMP_TAC std_ss [mw_shift_def,mw2n_def,w2n_lsr]
   \\ CONV_TAC (RAND_CONV (ALPHA_CONV ``w:'a word``)) \\ REPEAT STRIP_TAC
@@ -961,14 +962,15 @@ val mw_shift_thm = store_thm("mw_shift_thm",
   \\ SIMP_TAC std_ss [RW1 [MULT_COMM] (GSYM MOD_COMMON_FACTOR)]
   \\ `n DIV 2 + n' MOD 2 * 2 ** d < 2 * 2 ** d` by
     (ONCE_REWRITE_TAC [ADD_COMM] \\ MATCH_MP_TAC MULT_ADD_LESS_MULT
-     \\ FULL_SIMP_TAC std_ss [DIV_LT_X,AC MULT_COMM MULT_ASSOC])
+     \\ FULL_SIMP_TAC std_ss [DIV_LT_X,AC MULT_COMM MULT_ASSOC,EXP])
   \\ ASM_SIMP_TAC std_ss [GSYM MULT_ASSOC]
   \\ ASM_SIMP_TAC std_ss [RW1 [ADD_COMM] (RW1 [MULT_COMM] ADD_DIV_ADD_DIV)]
   \\ SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC,ADD_ASSOC]
   \\ `n' = n' DIV 2 * 2 + n' MOD 2` by METIS_TAC [DIVISION,DECIDE ``0<2``]
   \\ POP_ASSUM (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [th])))
   \\ SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC,ADD_ASSOC]
-  \\ SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC, AC MULT_COMM MULT_ASSOC]);
+  \\ SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC, AC MULT_COMM MULT_ASSOC]
+QED
 
 val LENGTH_mw_shift = store_thm("LENGTH_mw_shift",
   ``!xs. LENGTH (mw_shift xs) = LENGTH xs``,

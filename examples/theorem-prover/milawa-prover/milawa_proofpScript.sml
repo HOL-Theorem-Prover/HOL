@@ -13,7 +13,7 @@ val _ = temp_delsimps ["NORMEQ_CONV"]
 val _ = diminish_srw_ss ["ABBREV"]
 val _ = set_trace "BasicProvers.var_eq_old" 1
 val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
-val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj", "NOT_LT_ZERO_EQ_ZERO"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 

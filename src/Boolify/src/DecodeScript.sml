@@ -972,17 +972,12 @@ val dec_bnum_def = Define
        (case dec_bnum m t of NONE => NONE
         | SOME (n, t') => SOME (2 * n + (if h then 1 else 0), t')))`;
 
-val dec_bnum_lt = store_thm
-  ("dec_bnum_lt",
-   ``!m l n t. (dec_bnum m l = SOME (n, t)) ==> n < 2 ** m``,
-   Induct
-   >> REPEAT GEN_TAC
-   >> SIMP_TAC arith_ss [dec_bnum_def]
-   >> REPEAT TOP_CASE_TAC
-   >> RW_TAC bool_ss [GSYM EXP2_LT]
-   >> ONCE_REWRITE_TAC [MULT_COMM]
-   >> SIMP_TAC arith_ss [DIV_MULT]
-   >> PROVE_TAC []);
+Theorem dec_bnum_lt:
+  !m l n t. (dec_bnum m l = SOME (n, t)) ==> n < 2 ** m
+Proof
+   Induct >> rw[dec_bnum_def, AllCaseEqs()] >> first_x_assum drule >>
+   rw[EXP]
+QED
 
 val dec_bnum_inj = store_thm
   ("dec_bnum_inj",
@@ -1018,96 +1013,57 @@ val dec2enc_decode_bnum = store_thm
        (dec2enc (decode_bnum m p) x = encode_bnum m x)``,
    RW_TAC std_ss [decode_bnum_def, dec2enc_enc2dec, wf_encode_bnum]);
 
-val decode_bnum = store_thm
-  ("decode_bnum",
-   ``wf_pred_bnum m p ==>
+Theorem decode_bnum:
+  wf_pred_bnum m p ==>
      (decode_bnum m p l =
       case dec_bnum m l of NONE => NONE
-      | SOME (n, t) => if p n then SOME (n, t) else NONE)``,
-   Q.SPEC_TAC (`l`, `l`)
-   >> Q.SPEC_TAC (`p`, `p`)
-   >> Induct_on `m`
-   >- (RW_TAC std_ss [dec_bnum_def]
-       >> REPEAT TOP_CASE_TAC
-       >> RW_TAC std_ss
-          [decode_bnum_def, enc2dec_none, enc2dec_some, wf_encode_bnum,
-           encode_bnum_def, APPEND]
-       >> FULL_SIMP_TAC std_ss [wf_pred_bnum_def]
-       >> STRIP_TAC
-       >> RES_TAC
-       >> PROVE_TAC [DECIDE ``x < 1 ==> (x = 0)``])
-   >> RW_TAC std_ss [decode_bnum_def]
-   >> (REPEAT TOP_CASE_TAC
-       >> RW_TAC std_ss
-          [decode_bnum_def, enc2dec_none, enc2dec_some, wf_encode_bnum,
-           encode_bnum_def, APPEND])
-   >| [STRIP_TAC
-       >> RW_TAC std_ss []
-       >> Q.PAT_X_ASSUM `X = Y` MP_TAC
-       >> SIMP_TAC std_ss [dec_bnum_def, list_case_def]
-       >> REPEAT TOP_CASE_TAC
-       >> Q.PAT_X_ASSUM `!x. P x`
-          (MP_TAC o
-           Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (x DIV 2)) t`])
-       >> RW_TAC std_ss [wf_pred_bnum_total, decode_bnum_def, enc2dec_none]
-       >> Q.EXISTS_TAC `x DIV 2`
-       >> Q.EXISTS_TAC `t`
-       >> RW_TAC std_ss [EXP2_LT]
-       >> FULL_SIMP_TAC std_ss [wf_pred_bnum_def],
-
-       Q.PAT_X_ASSUM `!x. P x`
-          (MP_TAC o
-           Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (q DIV 2)) r`])
-       >> RW_TAC std_ss [wf_pred_bnum_total, decode_bnum_def, enc2dec_none]
-       >> POP_ASSUM MP_TAC
-       >> REPEAT TOP_CASE_TAC
-       >- (DISCH_THEN (fn th => CCONTR_TAC >> MP_TAC th)
-           >> RW_TAC std_ss [enc2dec_none]
-           >> Q.EXISTS_TAC `q DIV 2`
-           >> Q.EXISTS_TAC `r`
-           >> FULL_SIMP_TAC arith_ss [EXP2_LT, wf_pred_bnum_def])
-       >> IMP_RES_TAC dec_bnum_lt
-       >> ASM_SIMP_TAC std_ss []
-       >> RW_TAC std_ss [enc2dec_some, wf_encode_bnum, wf_pred_bnum_total]
-       >> Know `q' = q DIV 2`
-       >- (MP_TAC (Q.INST [`p` |-> `\x. x < 2 ** m`, `e` |-> `encode_bnum m`]
-                   (INST_TYPE [alpha |-> ``:num``] wf_encoder_alt))
-           >> SIMP_TAC arith_ss [wf_encode_bnum, wf_pred_bnum_total]
-           >> DISCH_THEN MATCH_MP_TAC
-           >> RW_TAC std_ss [EXP2_LT]
-           >> PROVE_TAC [biprefix_append, biprefix_refl])
-       >> RW_TAC std_ss []
-       >> FULL_SIMP_TAC std_ss [APPEND_11]
-       >> RW_TAC std_ss []
-       >> Q.PAT_X_ASSUM `dec_bnum (SUC m) l = X` (MP_TAC o MATCH_MP dec_bnum_inj)
-       >> RW_TAC std_ss [encode_bnum_def, APPEND],
-
-       STRIP_TAC
-       >> RW_TAC std_ss []
-       >> Q.PAT_X_ASSUM `X = Y` MP_TAC
-       >> SIMP_TAC std_ss [dec_bnum_def]
-       >> REPEAT TOP_CASE_TAC
-       >> REWRITE_TAC [GSYM DE_MORGAN_THM]
-       >> STRIP_TAC
-       >> RW_TAC std_ss []
-       >> (Know `x < 2 ** SUC m` >- PROVE_TAC [wf_pred_bnum_def])
-       >> STRIP_TAC
-       >> Q.PAT_X_ASSUM `p x` MP_TAC
-       >> MP_TAC (Q.SPEC `2` DIVISION)
-       >> SIMP_TAC arith_ss []
-       >> DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [MULT_COMM] o Q.SPEC `x`)
-       >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-       >> SIMP_TAC std_ss [MOD_2]
-       >> (Suff `q' = x DIV 2` >- PROVE_TAC [])
-       >> MP_TAC (Q.SPECL [`m`, `\x. x < 2 ** m`] wf_encode_bnum)
-       >> RW_TAC std_ss [wf_pred_bnum_total, wf_encoder_alt]
-       >> POP_ASSUM MATCH_MP_TAC
-       >> FULL_SIMP_TAC std_ss [GSYM EXP2_LT]
-       >> (Know `q' < 2 ** m` >- PROVE_TAC [dec_bnum_lt])
-       >> RW_TAC std_ss []
-       >> Q.PAT_X_ASSUM `X = Y` (MP_TAC o MATCH_MP dec_bnum_inj)
-       >> PROVE_TAC [biprefix_append, biprefix_refl]
-]);
+      | SOME (n, t) => if p n then SOME (n, t) else NONE)
+Proof
+  simp[decode_bnum_def] >>
+  map_every qid_spec_tac [‘p’, ‘l’] >> Induct_on `m`
+  >- (rw[dec_bnum_def, enc2dec_none, enc2dec_some,
+         wf_encode_bnum, encode_bnum_def] >>
+      gs[wf_pred_bnum_def] >> PROVE_TAC [DECIDE ``x < 1 ==> (x = 0)``]) >>
+  simp[dec_bnum_def] >> rpt strip_tac >>
+  Cases_on ‘l’ >> simp[enc2dec_none, encode_bnum_def] >>
+  Cases_on ‘dec_bnum m t’ >>
+  simp[enc2dec_none, encode_bnum_def, dec_bnum_def]
+  >- (rename [‘dec_bnum m t = NONE’] >>
+      first_x_assum $ qspec_then ‘t’ mp_tac >>
+      simp[enc2dec_none] >> rpt strip_tac >>
+      disj2_tac >> first_x_assum irule >>
+      gs[wf_pred_bnum_def] >> qexists_tac ‘λx. x < 2 ** m’ >>
+      simp[wf_pred_def] >> irule_at Any (iffRL ZERO_LT_EXP) >> simp[]) >>
+  rename [‘dec_bnum m t = SOME pair’] >> Cases_on ‘pair’ >> simp[] >>
+  qmatch_abbrev_tac ‘enc2dec _ _ _ = if p N then _ else NONE’ >> rw[] >>
+  simp[enc2dec_some, enc2dec_none, wf_encode_bnum]
+  >- (rename [‘dec_bnum m t = SOME (N0, t0)’] >>
+      simp[encode_bnum_def] >> conj_tac
+      >- (simp[Abbr‘N’, EVEN_ADD, EVEN_MULT] >> rw[]) >>
+      first_x_assum $ qspec_then ‘t’ mp_tac >> simp[] >>
+      disch_then $ qspec_then ‘λn. n < 2 ** m’ mp_tac >>
+      ‘N0 < 2 ** m’ by metis_tac[dec_bnum_lt] >>
+      simp[enc2dec_some, wf_encode_bnum] >> impl_tac
+      >- (simp[wf_pred_bnum_def, wf_pred_def] >>
+          irule_at Any (iffRL ZERO_LT_EXP) >> simp[]) >>
+      simp[Abbr‘N’] >> rw[]) >>
+  simp[encode_bnum_def] >> rpt strip_tac >>
+  first_x_assum $ qspec_then ‘t’ mp_tac >> simp[] >> strip_tac >>
+  gs[SF boolSimps.LIFT_COND_ss] >>
+  gs[enc2dec_none, wf_encode_bnum, enc2dec_some, COND_EXPAND_IMP,
+     FORALL_AND_THM] >>
+  rename [‘encode_bnum m (x DIV 2)’, ‘dec_bnum m t = SOME (N0, t0)’] >>
+  Cases_on ‘N0 = x DIV 2’
+  >- (Cases_on ‘h = ~EVEN x’ >> simp[] >> gvs[Abbr‘N’] >>
+      ‘(~EVEN x ==> 2 * (x DIV 2) + 1 = x) /\
+       (EVEN x ==> 2 * (x DIV 2) = x)’
+        by (rpt strip_tac >> mp_tac $ Q.SPEC ‘2’ DIVISION >> simp[] >>
+            disch_then $ qspec_then ‘x’ (fn th => simp[Once th, SimpRHS]) >>
+            simp[MOD_2]) >> gs[]) >>
+  disj2_tac >>
+  first_x_assum irule >>
+  qexists_tac ‘λn. n = x DIV 2’ >> simp[] >> gs[wf_pred_bnum_def, wf_pred_def]
+QED
 
 (*---------------------------------------------------------------------------
      Trees
