@@ -1247,11 +1247,21 @@ fun delsimps names =
     (List.app (record_delta o ThmSetData.REMOVE) names;
      temp_delsimps names)
 
-fun thy_ssfrag s =
-    get_deltas {thyname=s}
-               |> ThmSetData.added_thms
-               |> simpLib.rewrites
-               |> simpLib.name_ss s
+(* assume that there aren't any removes for things added in this theory;
+   it's not rational to do that; one should add it locally only, or not
+   add it at all
+*)
+fun mkfrag_from thy setdeltas =
+    let fun recurse ADDs [] = ADDs
+          | recurse ADDs (ThmSetData.ADD p :: rest) = recurse (p::ADDs) rest
+          | recurse ADDs (_ :: rest) = recurse ADDs rest
+        val ADDs = recurse [] setdeltas
+          (* order of addition is flipped; see above for why this is
+             "reasonable" *)
+    in
+      simpLib.named_rewrites_with_names thy ADDs
+    end
+fun thy_ssfrag s = get_deltas {thyname=s} |> mkfrag_from s
 
 fun thy_simpset s = Option.map (#1 o init_state) (DB {thyname=s})
 
