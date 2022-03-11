@@ -236,6 +236,10 @@ It is often useful to perform case splits over the course of a proof.
 : Given a variable `p` of a pair type, instantiates `p` to `(p0,p1,...,pn)`.
   This provides better naming than `Cases_on`, and requires fewer case splits for `n`-tuples where `n` is greater than 2.
 
+`pairarg_tac`
+: Searches the goal and assumptions for `(λ(x,y,...). body) arg`, and introduces the assumption `arg = (x,y,...)`.
+  This can often provide better naming than `PairCases_on`.
+
 `CASE_TAC`
 : Case splits the smallest `case` expression in the goal.
 
@@ -306,6 +310,9 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 
 `conj_asm{1,2}_tac`
 : Like `conj_tac`, but adds the first/second conjunct (respectively) as an assumption for the other subgoal.
+
+`disj{1,2}_tac`
+: Reduces a goal of the form `p \/ q` into `p` or `q` respectively.
 
 `gen_tac`
 : Removes a top-level `∀`-quantified variable.
