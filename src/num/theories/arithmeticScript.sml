@@ -1469,6 +1469,12 @@ val ODD_EXP = Q.store_thm(
   `!m n. 0 < n /\ ODD m ==> ODD (m ** n)`,
   METIS_TAC[ODD_EXP_IFF, NOT_LT_ZERO_EQ_ZERO]);
 
+Theorem ODD_POS:
+    ∀n. ODD n ⇒ 0 < n
+Proof
+    STRIP_TAC >> Cases_on ‘n’ >> REWRITE_TAC [ODD,LESS_0]
+QED
+
 (* --------------------------------------------------------------------- *)
 (* Theorems moved from the "more_arithmetic" library      [RJB 92.09.28] *)
 (* --------------------------------------------------------------------- *)
