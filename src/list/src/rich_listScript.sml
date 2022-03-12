@@ -2568,6 +2568,12 @@ val OR_EL_FOLDR = save_thm ("OR_EL_FOLDR",
     (REWRITE_RULE [EXISTS_FOLDR, combinTheory.I_THM]
       (AP_THM OR_EL_DEF ``l:bool list``))));
 
+Theorem ITSET_TO_FOLDR:
+    ∀f s b. FINITE s ⇒ ITSET f s b = FOLDR f b (REVERSE (SET_TO_LIST s))
+Proof
+    rw[listTheory.ITSET_eq_FOLDL_SET_TO_LIST,FOLDR_REVERSE,combinTheory.C_DEF]
+QED
+
 (*---------------------------------------------------------------------------
    A bunch of properties relating to the use of IS_PREFIX as a partial order
  ---------------------------------------------------------------------------*)

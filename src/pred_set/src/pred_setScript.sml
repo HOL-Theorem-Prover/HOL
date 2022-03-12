@@ -4657,6 +4657,13 @@ val COMMUTING_ITSET_RECURSES = store_thm(
     ASM_SIMP_TAC bool_ss [COMMUTING_ITSET_INSERT, delete_non_element]
   ]);
 
+(* Corollary *)
+Theorem ITSET_SING:
+    ∀f x a. ITSET f {x} a = f x a
+Proof
+    rw[] >> fs[ITSET_THM]
+QED
+
 (* ----------------------------------------------------------------------
     SUM_IMAGE
 
@@ -6451,6 +6458,14 @@ val pair_to_num_inv = Q.store_thm ("pair_to_num_inv",
    (!x y. num_to_pair (pair_to_num (x, y)) = (x, y))`,
   SRW_TAC [][pair_to_num_def, num_to_pair_def]);
 
+(* More generally applicable version of the above *)
+Theorem pair_to_num_inv':
+    (∀x. pair_to_num (num_to_pair x) = x) ∧
+    (∀x. num_to_pair (pair_to_num x) = x)
+Proof
+    simp[FORALL_PROD,pair_to_num_inv]
+QED
+
 val num_cross_countable = Q.prove (
   `countable (UNIV:num set CROSS UNIV:num set)`,
   RWTAC [countable_surj, SURJ_DEF, CROSS_DEF] THEN
@@ -6987,6 +7002,26 @@ Proof
 QED
 
 (* end PREIMAGE lemmas *)
+
+(* Miscellaneous bijections *)
+
+Theorem BIJ_NUM_TO_PAIR:
+    BIJ num_to_pair UNIV (UNIV CROSS UNIV)
+Proof
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘pair_to_num’ >> simp[pair_to_num_inv']
+QED
+
+Theorem BIJ_PAIR_TO_NUM:
+    BIJ pair_to_num (UNIV CROSS UNIV) UNIV
+Proof
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘num_to_pair’ >> simp[pair_to_num_inv']
+QED
+
+Theorem BIJ_SWAP:
+    BIJ SWAP (UNIV CROSS UNIV) (UNIV CROSS UNIV)
+Proof
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘SWAP’ >> simp[SWAP_SWAP]
+QED
 
 (* "<<=" is overloaded in listTheory, cardinalTheory and maybe others,
    we put its Unicode and TeX definitions here to make sure by loading any of the
