@@ -5394,6 +5394,103 @@ val limsup_suminf_indicator_space = store_thm
       Q.EXISTS_TAC `n'` \\
       MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `&n` >> art [] ]);
 
+(***********************)
+(*   Further Results   *)
+(***********************)
+
+(*  These do not require addition simplifier manipulations on my part. It would
+      probably be more appropriate to add these in the proper places above.
+      - Jared Yeager                                                                   *)
+
+val _ = reveal "C";
+
+(*** measure_space Theorems ***)
+
+Theorem measure_space_cong:
+    ∀sp sts mu nu. measure_space (sp,sts,mu) ∧ (∀s. s ∈ sts ⇒ nu s = mu s) ⇒ measure_space (sp,sts,nu)
+Proof
+    rw[measure_space_def,positive_def,countably_additive_def]
+    >- (‘∅ ∈ sts’ suffices_by rw[] >> drule SIGMA_ALGEBRA_EMPTY >> simp[])
+    >- (irule ext_suminf_eq >> rw[] >> first_x_assum $ irule o GSYM >> fs[FUNSET])
+QED
+
+Theorem measure_space_add:
+    ∀sa mu nu mnu. measure_space (space sa,subsets sa,mu) ∧
+        measure_space (space sa,subsets sa,nu) ∧
+        (∀s. s ∈ subsets sa ⇒ mnu s = mu s + nu s) ⇒
+        measure_space (space sa,subsets sa,mnu)
+Proof
+    rw[measure_space_def,positive_def,countably_additive_def,m_space_def,measurable_sets_def,measure_def]
+    >- (dxrule_then assume_tac $ SIGMA_ALGEBRA_EMPTY >> fs[])
+    >- (irule le_add >> fs[])
+    >- ((qspecl_then [‘mu ∘ f’,‘nu ∘ f’] assume_tac) ext_suminf_add >> rfs[o_DEF,FUNSET])
+QED
+
+Theorem measure_space_sum:
+    ∀sa mui nu s. FINITE s ∧ sigma_algebra sa ∧
+        (∀i. i ∈ s ⇒ measure_space (space sa,subsets sa,mui i)) ∧
+        (∀t. t ∈ subsets sa ⇒ nu t = ∑ (C mui t) s) ⇒ measure_space (space sa,subsets sa,nu)
+Proof
+    ‘∀(s:β->bool). FINITE s ⇒ ∀(sa:α algebra) mui nu. sigma_algebra sa ∧
+        (∀i. i ∈ s ⇒ measure_space (space sa,subsets sa,mui i)) ∧
+        (∀t. t ∈ subsets sa ⇒ nu t = ∑ (C mui t) s) ⇒
+        measure_space (space sa,subsets sa,nu)’ suffices_by (rw[] >>
+        last_x_assum $ drule_then assume_tac >> pop_assum $ drule_all_then assume_tac >> simp[]) >>
+    Induct_on ‘s’ >> rw[]
+    >- (fs[EXTREAL_SUM_IMAGE_EMPTY] >> irule measure_space_cong >>
+        qexists_tac ‘K 0’ >> simp[] >> dxrule_then assume_tac measure_space_trivial >>
+        fs[sigma_finite_measure_space_def,K_DEF]) >>
+    last_x_assum $ qspecl_then [‘sa’,‘mui’,‘λt. ∑ (C mui t) s’] assume_tac >> rfs[] >>
+    irule measure_space_add >> qexistsl_tac [‘mui e’,‘(λt. ∑ (C mui t) s)’] >>
+    simp[] >> qx_gen_tac ‘t’ >> rw[] >>
+    qspecl_then [‘C mui t’,‘s’,‘e’]
+        (fn th => assume_tac th >> rfs[DELETE_NON_ELEMENT_RWT] >> pop_assum irule) $
+        SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] EXTREAL_SUM_IMAGE_PROPERTY >>
+    DISJ1_TAC >> rw[] >> irule pos_not_neginf >> fs[measure_space_def,positive_def]
+QED
+
+Theorem measure_space_suminf:
+    ∀sa mun nu. (∀n. measure_space (space sa,subsets sa,mun n)) ∧
+        (∀s. s ∈ subsets sa ⇒ nu s = suminf (C mun s)) ⇒
+        measure_space (space sa,subsets sa,nu)
+Proof
+    rw[measure_space_def,positive_def,countably_additive_def,m_space_def,measurable_sets_def,measure_def] >>
+    fs[GSYM RIGHT_AND_FORALL_THM]
+    >- (dxrule_then assume_tac $ SIGMA_ALGEBRA_EMPTY >> simp[ext_suminf_0,C_DEF])
+    >- (irule ext_suminf_pos >> rw[])
+    >- (‘suminf (nu ∘ f) = suminf (λi. suminf (C mun (f i)))’ by (
+            irule ext_suminf_eq >> rw[] >> rfs[FUNSET]) >>
+        pop_assum SUBST1_TAC >> simp[C_DEF,o_DEF] >>
+        qspec_then ‘C mun ∘ f’ (irule o SIMP_RULE (srw_ss ()) []) ext_suminf_nested >>
+        rw[] >> last_x_assum $ irule o cj 2 >> fs[FUNSET])
+QED
+
+Theorem measure_space_cmul:
+    ∀sa mu nu c. measure_space (space sa,subsets sa,mu) ∧ 0 ≤ c ∧
+        (∀s. s ∈ subsets sa ⇒ nu s = c * mu s) ⇒
+        measure_space (space sa,subsets sa,nu)
+Proof
+    rw[measure_space_def,positive_def,countably_additive_def,m_space_def,measurable_sets_def,measure_def]
+    >- (dxrule_then assume_tac $ SIGMA_ALGEBRA_EMPTY >> fs[])
+    >- (irule le_mul >> fs[])
+    >- ((qspecl_then [‘mu ∘ f’,‘c’] assume_tac) ext_suminf_cmul >> rfs[o_DEF,FUNSET])
+QED
+
+Theorem measure_space_dirac_measure:
+    ∀sa x. sigma_algebra sa ⇒ measure_space (space sa,subsets sa,C 𝟙 x)
+Proof
+    simp[measure_space_def,positive_def,countably_additive_def,
+        m_space_def,measurable_sets_def,measure_def,indicator_fn_def] >>
+    rw[] >> rw[] >> fs[]
+    >- (rename [‘x ∈ f n’] >>
+        ‘(C 𝟙 x ∘ f) = (λi. if i = n then 1 else 0:extreal)’ suffices_by rw[ext_suminf_sing_general] >>
+        rw[FUN_EQ_THM,o_DEF,indicator_fn_def] >> Cases_on ‘i = n’ >> simp[] >>
+        last_x_assum (qspecl_then [‘i’,‘n’] assume_tac) >> rfs[DISJOINT_DEF,EXTENSION] >>
+        pop_assum $ qspec_then ‘x’ assume_tac >> rfs[])
+    >- (irule ext_suminf_zero >> rw[indicator_fn_def] >> first_x_assum $ qspec_then ‘f n’ assume_tac >>
+        rfs[] >> first_x_assum $ qspec_then ‘n’ assume_tac >> fs[])
+QED
+
 val _ = export_theory ();
 
 (* References:

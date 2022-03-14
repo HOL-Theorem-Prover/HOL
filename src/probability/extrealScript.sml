@@ -9463,6 +9463,268 @@ Proof
  >> rw [reduced_metric_lt_1]
 QED
 
+(************************************************************************)
+(*   Miscellaneous Results (generally for use in descendent theories)   *)
+(************************************************************************)
+
+(*  I add these results at the end
+      in order to manipulate the simplifier without breaking anything
+      - Jared Yeager                                                    *)
+
+(*** Simplification Definitions ***)
+
+val name_to_thname = fn s => ({Thy = "extreal", Name = s}, DB.fetch "extreal" s);
+
+val mk_local_simp = augment_srw_ss o single o
+  simpLib.rewrites_with_names o single o name_to_thname;
+
+(*** Basic Theorems ***)
+
+Theorem normal_0:
+    Normal 0 = 0
+Proof
+    simp[extreal_eq_zero]
+QED
+
+Theorem normal_1:
+    Normal 1 = 1
+Proof
+    simp[extreal_of_num_def]
+QED
+
+Theorem normal_minus1:
+    Normal (-1) = -1
+Proof
+    ‘Normal (-1) = -(Normal 1)’ suffices_by simp[normal_1] >> simp[extreal_ainv_def]
+QED
+
+Theorem extreal_le_simp:
+    (∀x y. Normal x ≤ Normal y ⇔ x ≤ y) ∧ (∀x. −∞ ≤ x ⇔ T) ∧ (∀x. x ≤ +∞ ⇔ T) ∧
+    (∀x. Normal x ≤ −∞ ⇔ F) ∧ (∀x. +∞ ≤ Normal x ⇔ F) ∧ (+∞ ≤ −∞ ⇔ F)
+Proof
+    rw[extreal_le_def] >> Cases_on ‘x’ >> simp[extreal_le_def]
+QED
+
+val _ = mk_local_simp "extreal_le_simp";
+
+Theorem extreal_lt_simp:
+    (∀x y. Normal x < Normal y ⇔ x < y) ∧ (∀x. x < −∞ ⇔ F) ∧ (∀x. +∞ < x ⇔ F) ∧
+    (∀x. Normal x < +∞ ⇔ T) ∧ (∀x. −∞ < Normal x ⇔ T) ∧ (−∞ < +∞ ⇔ T)
+Proof
+    simp[extreal_lt_eq] >> rw[extreal_lt_def]
+QED
+
+val _ = mk_local_simp "extreal_lt_simp";
+
+Theorem extreal_0_simp:
+    (0 ≤ +∞ ⇔ T) ∧ (0 < +∞ ⇔ T) ∧ (+∞ ≤ 0 ⇔ F) ∧ (+∞ < 0 ⇔ F) ∧ (0 = +∞ ⇔ F) ∧ (+∞ = 0 ⇔ F) ∧
+    (0 ≤ −∞ ⇔ F) ∧ (0 < −∞ ⇔ F) ∧ (−∞ ≤ 0 ⇔ T) ∧ (−∞ < 0 ⇔ T) ∧ (0 = −∞ ⇔ F) ∧ (−∞ = 0 ⇔ F) ∧
+    (∀r. 0 ≤ Normal r ⇔ 0 ≤ r) ∧ (∀r. 0 < Normal r ⇔ 0 < r) ∧ (∀r. 0 = Normal r ⇔ r = 0) ∧
+    (∀r. Normal r ≤ 0 ⇔ r ≤ 0) ∧ (∀r. Normal r < 0 ⇔ r < 0) ∧ (∀r. Normal r = 0 ⇔ r = 0)
+Proof
+    simp[GSYM normal_0]
+QED
+
+val _ = mk_local_simp "extreal_0_simp";
+
+(* do NOT add to a simpset, way too much overhead *)
+Theorem ineq_imp:
+    (∀x:extreal y. x < y ⇒ ¬(y < x)) ∧ (∀x:extreal y. x < y ⇒ x ≠ y) ∧ (∀x:extreal y. x < y ⇒ ¬(y ≤ x)) ∧ 
+    (∀x:extreal y. x < y ⇒ x ≤ y) ∧ (∀x:extreal y. x ≤ y ⇒ ¬(y < x))
+Proof
+    rw[] >> Cases_on ‘x’ >> Cases_on ‘y’ >> fs[SF realSimps.REAL_ARITH_ss]
+QED
+
+Theorem fn_plus_alt:
+    ∀f. f⁺ = (λx. if 0 ≤ f x then f x else (0: extreal))
+Proof
+    rw[fn_plus_def,FUN_EQ_THM] >> qspecl_then [‘f x’,‘0’] assume_tac lt_total >>
+    FULL_SIMP_TAC bool_ss [] >> simp[ineq_imp]
+QED
+
+Theorem extreal_pow_alt:
+    (∀x:extreal. x pow 0 = 1) ∧
+    (∀n x:extreal. x pow (SUC n) = x pow n * x)
+Proof
+    simp[pow_0,ADD1,pow_add,pow_1]
+QED
+
+(*** EXTREAL_SUM_IMAGE Theorems ***)
+
+Theorem EXTREAL_SUM_IMAGE_ALT_FOLDR:
+    ∀f s. FINITE s ⇒ ∑ f s = FOLDR (λe acc. f e + acc) 0x (REVERSE (SET_TO_LIST s))
+Proof
+    simp[EXTREAL_SUM_IMAGE_DEF,rich_listTheory.ITSET_TO_FOLDR]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_EQ':
+    ∀f g s. FINITE s ∧ (∀x. x ∈ s ⇒ f x = g x) ⇒ ∑ f s = ∑ g s: extreal
+Proof
+    rw[] >> simp[EXTREAL_SUM_IMAGE_ALT_FOLDR] >> irule listTheory.FOLDR_CONG >> rw[]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_MONO':
+    ∀f g s. FINITE s ∧ (∀x. x ∈ s ⇒ f x ≤ g x) ⇒ ∑ f s ≤ ∑ g s: extreal
+Proof
+    ‘∀f g l. (∀e. MEM e l ⇒ f e ≤ g e) ⇒
+      (FOLDR (λe acc. f e + acc) 0x l ≤ FOLDR (λe acc. g e + acc) 0x l)’
+        suffices_by rw[EXTREAL_SUM_IMAGE_ALT_FOLDR] >>
+    Induct_on ‘l’ >> rw[listTheory.FOLDR] >> irule le_add2 >> simp[]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_COUNT_ZERO:
+    ∀f. ∑ f (count 0) = 0:extreal
+Proof
+    simp[COUNT_ZERO,EXTREAL_SUM_IMAGE_EMPTY]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_COUNT_ONE:
+    ∀f. ∑ f (count 1) = f 0:extreal
+Proof
+    simp[COUNT_ONE,EXTREAL_SUM_IMAGE_SING]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_COUNT_SUC:
+    ∀f n. (∀m. m ≤ n ⇒ f m ≠ −∞) ∨ (∀m. m ≤ n ⇒ f m ≠ +∞) ⇒
+        ∑ f (count (SUC n)) = (∑ f (count n)) + f n:extreal
+Proof
+    rw[] >> ‘count (SUC n) = (count n) ∪ {n}’ by fs[count_def,EXTENSION] >>
+    rw[] >> pop_assum kall_tac >>
+    ‘∑ f (count n ∪ {n}) = ∑ f (count n) + ∑ f {n}’ suffices_by fs[EXTREAL_SUM_IMAGE_SING] >>
+    irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> simp[]
+QED
+
+(*** EXTREAL_PROD_IMAGE Theorems ***)
+
+Theorem EXTREAL_PROD_IMAGE_NOT_INFTY:
+    ∀f s. FINITE s ∧ (∀x. x ∈ s ⇒ f x ≠ −∞ ∧ f x ≠ +∞) ⇒ ∏ f s ≠ −∞ ∧ ∏ f s ≠ +∞
+Proof
+    strip_tac >> simp[Once $ GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >> CONJ_TAC
+    >- simp[EXTREAL_PROD_IMAGE_EMPTY,SYM normal_1] >>
+    NTAC 5 strip_tac >> fs[EXTREAL_PROD_IMAGE_PROPERTY,DELETE_NON_ELEMENT_RWT] >>
+    Cases_on ‘f e’ >> Cases_on ‘∏ f s’ >> rfs[extreal_mul_def]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_NORMAL:
+    ∀f s. FINITE s ⇒ ∏ (λx. Normal (f x)) s = Normal (∏ f s)
+Proof
+    strip_tac >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,REAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT,extreal_mul_def,normal_1]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_0:
+    ∀f s. FINITE s ∧ (∃x. x ∈ s ∧ f x = 0) ⇒ ∏ f s = 0
+Proof
+    NTAC 2 strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >- fs[] >>
+    DISJ2_TAC >> first_x_assum irule >> qexists_tac ‘x’ >> simp[]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_1:
+    ∀f s. FINITE s ∧ (∀x. x ∈ s ⇒ f x = 1) ⇒ ∏ f s = 1
+Proof
+    NTAC 2 strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_ONE:
+    ∀s. FINITE s ⇒ ∏ (λx. 1) s = 1x
+Proof
+    Induct_on ‘s’ >> simp[EXTREAL_PROD_IMAGE_EMPTY,EXTREAL_PROD_IMAGE_PROPERTY,DELETE_NON_ELEMENT_RWT]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_POS:
+    ∀f s. FINITE s ∧ (∀x. x ∈ s ⇒ 0 ≤ f x) ⇒ 0 ≤ ∏ f s
+Proof
+    strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >> irule le_mul >> simp[]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_MONO:
+    ∀f g s. FINITE s ∧ (∀x. x ∈ s ⇒ 0 ≤ f x ∧ f x ≤ g x) ⇒ ∏ f s ≤ ∏ g s
+Proof
+    NTAC 2 strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >> irule le_mul2 >>
+    simp[EXTREAL_PROD_IMAGE_POS]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_COUNT_ZERO:
+    ∀f. ∏ f (count 0) = 1x
+Proof
+    simp[COUNT_ZERO,EXTREAL_PROD_IMAGE_EMPTY]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_COUNT_ONE:
+    ∀f. ∏ f (count 1) = f 0: extreal
+Proof
+    simp[COUNT_ONE,EXTREAL_PROD_IMAGE_SING]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_COUNT_SUC:
+    ∀f n. ∏ f (count (SUC n)) = ∏ f (count n) * f n: extreal
+Proof
+    rw[] >> qspecl_then [‘f’,‘n’,‘count n’] assume_tac EXTREAL_PROD_IMAGE_PROPERTY >>
+    rfs[] >> simp[mul_comm] >> pop_assum $ SUBST1_TAC o SYM >>
+    ‘count (SUC n) = n INSERT count n’ suffices_by simp[] >> simp[EXTENSION]
+QED
+
+(*** Miscellany Within Miscellany ***)
+
+Theorem ext_suminf_sing_general:
+    ∀m r. 0 ≤ r ⇒ suminf (λn. if n = m then r else 0) = r
+Proof
+    rw[] >> ‘∀n. 0 ≤ (λn. if n = m then r else 0) n’ by rw[] >> fs[ext_suminf_def] >>
+    ‘(λn. ∑ (λn. if n = m then r else 0) (count n)) = (λn. if n < SUC m then 0 else r)’ by (
+        rw[FUN_EQ_THM] >> Induct_on ‘n’ >- simp[EXTREAL_SUM_IMAGE_COUNT_ZERO] >> simp[] >>
+        (qspecl_then [‘(λn. if n = m then r else 0)’,‘n’] assume_tac) EXTREAL_SUM_IMAGE_COUNT_SUC >>
+        rfs[pos_not_neginf] >> pop_assum kall_tac >>
+        map_every (fn tm => Cases_on tm >> simp[]) [‘n < m’,‘n = m’]) >>
+    simp[] >> pop_assum kall_tac >> rw[IMAGE_DEF,sup_eq] >- rw[] >>
+    pop_assum irule >> qexists_tac ‘SUC m’ >> simp[]
+QED
+
+Theorem ext_suminf_nested:
+    ∀f. (∀m n. 0 ≤ f m n) ⇒ suminf (λn. suminf (λm. f m n)) = suminf (λm. suminf (λn. f m n))
+Proof
+    rw[] >>
+    map_every (fn tms => qspecl_then tms assume_tac ext_suminf_2d_full)
+        [[‘λm n. f m n’,‘(λm. suminf (λn. f m n))’,‘num_to_pair’],
+        [‘λn m. f m n’,‘(λn. suminf (λm. f m n))’,‘SWAP ∘ num_to_pair’]] >>
+    rfs[BIJ_NUM_TO_PAIR,INST_TYPE [alpha |-> “:num”,beta |-> “:num”] BIJ_SWAP,BIJ_COMPOSE,SF SFY_ss] >>
+    NTAC 2 $ pop_assum $ SUBST1_TAC o SYM >> irule ext_suminf_eq >>
+    rw[o_DEF] >> Cases_on `num_to_pair n` >> simp[SWAP_def]
+QED
+
+Theorem exp_mono_le:
+    ∀x:extreal y. exp x ≤ exp y ⇔ x ≤ y
+Proof
+    rw[] >> Cases_on ‘x’ >> Cases_on ‘y’ >> simp[extreal_exp_def,EXP_MONO_LE]
+    >- (simp[EXP_POS_LE])
+    >- (simp[GSYM real_lt,EXP_POS_LT])
+QED
+
+Theorem pow_even_le:
+    ∀n. EVEN n ⇒ ∀x. 0 ≤ x pow n
+Proof
+    rw[] >> Cases_on ‘0 ≤ x’ >- simp[pow_pos_le] >> fs[GSYM extreal_lt_def] >> simp[le_lt,pow_pos_even]
+QED
+
+Theorem pow_ainv_odd:
+    ∀n. ODD n ⇒ ∀x. -x pow n = -(x pow n)
+Proof
+    rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
+    ‘-1 pow n = -1’ suffices_by simp[GSYM neg_minus1] >> completeInduct_on ‘n’ >>
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,ODD] >> rename [‘ODD n’]) >> simp[GSYM neg_minus1]
+QED
+
+Theorem pow_ainv_even:
+    ∀n. EVEN n ⇒ ∀x. -x pow n = x pow n
+Proof
+    rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
+    ‘-1 pow n = 1’ suffices_by simp[] >> completeInduct_on ‘n’ >>
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,EVEN] >> rename [‘EVEN n’]) >> simp[GSYM neg_minus1]
+QED
+
 val _ = export_theory();
 
 (* References:
