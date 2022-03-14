@@ -516,7 +516,7 @@ val _ =
     output(tar3, "use "^(qstr tar2));
     closeOut tar3;
     output(tar4,"augroup filetypedetect\n");
-    output(tar4,"  au BufRead,BufNewFile *?Script.sml let maplocalleader = \"h\" | source "^tar1^"\n");
+    output(tar4,"  au BufRead,BufNewFile *.sml let maplocalleader = \"h\" | source "^tar1^"\n");
     output(tar4,"  \" recognise pre-munger files as latex source\n");
     output(tar4,"  au BufRead,BufNewFile *.htex setlocal filetype=htex syntax=tex\n");
     output(tar4,"  \"Uncomment the line below to automatically load Unicode\n");
