@@ -9305,7 +9305,7 @@ QED
 (*** IN_MEASURABLE_BOREL Theorems ***)
 
 Theorem IN_MEASURABLE_BOREL_CONG:
-    ∀a f g. (∀x. x ∈ space a ⇒ f x = g x) ⇒ (f ∈ Borel_measurable a ⇔ g ∈ Borel_measurable a)
+    ∀a b f g. a = b ∧ (∀x. x ∈ space b ⇒ f x = g x) ⇒ (f ∈ Borel_measurable a ⇔ g ∈ Borel_measurable b)
 Proof
     rw[] >> eq_tac >> rw[] >> dxrule_at_then (Pos $ el 2) irule IN_MEASURABLE_BOREL_EQ' >> simp[]
 QED
