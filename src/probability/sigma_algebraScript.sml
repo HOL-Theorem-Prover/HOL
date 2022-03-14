@@ -3679,12 +3679,18 @@ Proof
     simp[prod_sets_def] >> qexistsl_tac [‘space a’,‘s’] >> simp[SIGMA_ALGEBRA_SPACE]
 QED
 
-Theorem IN_MEASURABLE_CONG:
-    ∀a b f g. (∀x. x ∈ space a ⇒ g x = f x) ∧ f ∈ measurable a b ⇒ g ∈ measurable a b
+Theorem IN_MEASURABLE_EQ:
+    ∀a b f g. f ∈ measurable a b ∧ (∀x. x ∈ space a ⇒ g x = f x) ⇒ g ∈ measurable a b
 Proof
     rw[measurable_def] >- fs[FUNSET] >> first_x_assum $ dxrule_then mp_tac >>
     `PREIMAGE g s ∩ space a = PREIMAGE f s ∩ space a` suffices_by simp[] >>
     rw[EXTENSION] >> Cases_on `x ∈ space a` >> fs[]
+QED
+
+Theorem IN_MEASURABLE_CONG:
+    ∀a b c d f g. a = c ∧ b = d ∧ (∀x. x ∈ space c ⇒ f x = g x) ⇒ (f ∈ measurable a b ⇔ g ∈ measurable c d)
+Proof
+    rw[] >> eq_tac >> rw[] >> dxrule_at_then (Pos $ el 1) irule IN_MEASURABLE_EQ >> simp[]
 QED
 
 (* for use with irule, often not super useful in prectice due to need to address β *)
@@ -3692,14 +3698,14 @@ Theorem IN_MEASURABLE_COMP:
     ∀f g h a b c. f ∈ measurable a b ∧ g ∈ measurable b c ∧ (∀x. x ∈ space a ⇒ h x = g (f x)) ⇒
         h ∈ measurable a c
 Proof
-    rw[] >> irule IN_MEASURABLE_CONG >> qexists_tac `g ∘ f` >> simp[MEASURABLE_COMP,SF SFY_ss]
+    rw[] >> irule IN_MEASURABLE_EQ >> qexists_tac `g ∘ f` >> simp[MEASURABLE_COMP,SF SFY_ss]
 QED
 
 Theorem IN_MEASURABLE_PROD_SIGMA:
     ∀a bx by fx fy f. sigma_algebra a ∧ fx ∈ measurable a bx ∧ fy ∈ measurable a by ∧
         (∀z. z ∈ space a ⇒ f z = (fx z,fy z)) ⇒ f ∈ measurable a (bx × by)
 Proof
-    rw[] >> irule IN_MEASURABLE_CONG >> qexists_tac `λz. (fx z,fy z)` >> simp[] >>
+    rw[] >> irule IN_MEASURABLE_EQ >> qexists_tac `λz. (fx z,fy z)` >> simp[] >>
     irule MEASURABLE_PROD_SIGMA' >> simp[o_DEF,ETA_AX]
 QED
 

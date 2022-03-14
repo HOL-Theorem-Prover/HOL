@@ -5406,12 +5406,19 @@ val _ = reveal "C";
 
 (*** measure_space Theorems ***)
 
-Theorem measure_space_cong:
+Theorem measure_space_measure_eq:
     ∀sp sts mu nu. measure_space (sp,sts,mu) ∧ (∀s. s ∈ sts ⇒ nu s = mu s) ⇒ measure_space (sp,sts,nu)
 Proof
     rw[measure_space_def,positive_def,countably_additive_def]
     >- (‘∅ ∈ sts’ suffices_by rw[] >> drule SIGMA_ALGEBRA_EMPTY >> simp[])
     >- (irule ext_suminf_eq >> rw[] >> first_x_assum $ irule o GSYM >> fs[FUNSET])
+QED
+
+Theorem measure_space_cong:
+    ∀X Y sig tau mu nu. X = Y ∧ sig = tau ∧ (∀s. s ∈ tau ⇒ mu s = nu s) ⇒
+        (measure_space (X,sig,mu) ⇔ measure_space (Y,tau,nu))
+Proof
+    rw[] >> eq_tac >> rw[] >> dxrule_at_then (Pos $ el 1) irule measure_space_measure_eq >> simp[]
 QED
 
 Theorem measure_space_add:
@@ -5437,7 +5444,7 @@ Proof
         measure_space (space sa,subsets sa,nu)’ suffices_by (rw[] >>
         last_x_assum $ drule_then assume_tac >> pop_assum $ drule_all_then assume_tac >> simp[]) >>
     Induct_on ‘s’ >> rw[]
-    >- (fs[EXTREAL_SUM_IMAGE_EMPTY] >> irule measure_space_cong >>
+    >- (fs[EXTREAL_SUM_IMAGE_EMPTY] >> irule measure_space_measure_eq >>
         qexists_tac ‘K 0’ >> simp[] >> dxrule_then assume_tac measure_space_trivial >>
         fs[sigma_finite_measure_space_def,K_DEF]) >>
     last_x_assum $ qspecl_then [‘sa’,‘mui’,‘λt. ∑ (C mui t) s’] assume_tac >> rfs[] >>
