@@ -634,6 +634,39 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
+(* Analogous notion of finite products                                       *)
+(*   (generally for use in descendent theories)                              *)
+(* ------------------------------------------------------------------------- *)
+
+Definition REAL_PROD_IMAGE_DEF:
+    REAL_PROD_IMAGE f s = ITSET (λe acc. f e * acc) s (1:real)
+End
+
+val _ = overload_on ("∏", Term ‘REAL_PROD_IMAGE’);
+
+Theorem REAL_PROD_IMAGE_EMPTY:
+    ∀(f:α -> real). ∏ f ∅ = 1
+Proof
+    simp[REAL_PROD_IMAGE_DEF,ITSET_EMPTY]
+QED
+
+Theorem REAL_PROD_IMAGE_INSERT:
+    ∀(f:α -> real) e s. FINITE s ⇒ ∏ f (e INSERT s) = f e * ∏ f (s DELETE e)
+Proof
+    rw[REAL_PROD_IMAGE_DEF] >>
+    qspecl_then [‘λe acc. f e * acc’,‘e’,‘s’,‘1r’]
+        (irule o SIMP_RULE (srw_ss ()) []) COMMUTING_ITSET_RECURSES >>
+    simp[]
+QED
+
+Theorem REAL_PROD_IMAGE_THM:
+    ∀f. ∏ f ∅ = 1r ∧
+        ∀e s. FINITE s ⇒ ∏ f (e INSERT s) = f e * ∏ f (s DELETE e)
+Proof
+    simp[REAL_PROD_IMAGE_EMPTY,REAL_PROD_IMAGE_INSERT]
+QED
+
+(* ------------------------------------------------------------------------- *)
 (* ---- jensen's inequality (from "miller" example)             ------------ *)
 (* ------------------------------------------------------------------------- *)
 
