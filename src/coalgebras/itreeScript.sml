@@ -49,7 +49,7 @@ Definition path_ok_def:
   path_ok path ^f <=>
     !xs y ys.
       path = xs ++ y::ys ==>
-      f xs ≠ Stuck ∧ ∀z. f xs ≠ Return z (* a path cannot continue past a Stuck/Return *)
+      f xs <> Stuck /\ !z. f xs <> Return z (* a path cannot continue past a Stuck/Return *)
 End
 
 Definition itree_rep_ok_def:
@@ -226,10 +226,10 @@ Theorem itree_distinct = itree_all_distinct
 (* prove cases theorem *)
 
 Theorem rep_exists[local]:
-  itree_rep_ok f ⇒
-    (∃x. f = Ret_rep x) ∨
-    (f = Div_rep) ∨
-    ∃a g. f = Vis_rep a g ∧ ∀v. itree_rep_ok (g v)
+  itree_rep_ok f ==>
+    (?x. f = Ret_rep x) \/
+    (f = Div_rep) \/
+    ?a g. f = Vis_rep a g /\ !v. itree_rep_ok (g v)
 Proof
   fs [itree_rep_ok_def] \\ rw []
   \\ reverse (Cases_on `f []`)
@@ -259,7 +259,7 @@ Proof
 QED
 
 Theorem itree_cases:
-  ∀t. (∃x. t = Ret x) ∨ (t = Div) ∨ (∃a g. t = Vis a g)
+  !t. (?x. t = Ret x) \/ (t = Div) \/ (?a g. t = Vis a g)
 Proof
   fs [GSYM itree_rep_11,Ret_def,Div_def,Vis_def] \\ gen_tac
   \\ qabbrev_tac `f = itree_rep t`
@@ -287,8 +287,8 @@ Definition itree_CASE[nocompute]:
 End
 
 Theorem itree_CASE[compute]:
-  itree_CASE (Ret r)   ret div vis = ret r ∧
-  itree_CASE Div       ret div vis = div ∧
+  itree_CASE (Ret r)   ret div vis = ret r /\
+  itree_CASE Div       ret div vis = div /\
   itree_CASE (Vis a g) ret div vis = vis a g
 Proof
   rw [itree_CASE,Ret_def,Div_def,Vis_def]
@@ -311,10 +311,10 @@ Proof
 QED
 
 Theorem itree_CASE_eq:
-  itree_CASE t ret div vis = v ⇔
-    (∃r. t = Ret r ∧ ret r = v) ∨
-    (t = Div ∧ div = v) ∨
-    (∃a g. t = Vis a g ∧ vis a g = v)
+  itree_CASE t ret div vis = v <=>
+    (?r. t = Ret r /\ ret r = v) \/
+    (t = Div /\ div = v) \/
+    (?a g. t = Vis a g /\ vis a g = v)
 Proof
   qspec_then `t` strip_assume_tac itree_cases \\ rw []
   \\ fs [itree_CASE,itree_11,itree_distinct]
@@ -390,7 +390,7 @@ Definition itree_unfold_err_path_def:
      case f seed of
      | Ret' r   => Return r
      | Div'     => Stuck
-     | Vis' e g => Event e) ∧
+     | Vis' e g => Event e) /\
   (itree_unfold_err_path f (rel, err_f, err) seed (n::rest) =
      case f seed of
      | Ret' r   => Return ARB
@@ -505,12 +505,12 @@ Proof
 QED
 
 Theorem itree_bisimulation:
-  ∀t1 t2.
+  !t1 t2.
     t1 = t2 <=>
-    ∃R. R t1 t2 /\
-        (∀x t. R (Ret x) t ==> t = Ret x) /\
-        (∀t. R Div t ==> t = Div) /\
-        (∀a f t. R (Vis a f) t ==> ∃b g. t = Vis a g /\ ∀s. R (f s) (g s))
+    ?R. R t1 t2 /\
+        (!x t. R (Ret x) t ==> t = Ret x) /\
+        (!t. R Div t ==> t = Div) /\
+        (!a f t. R (Vis a f) t ==> ?b g. t = Vis a g /\ !s. R (f s) (g s))
 Proof
   rw [] \\ eq_tac \\ rw []
   THEN1 (qexists_tac `(=)` \\ fs [itree_11])
@@ -528,11 +528,11 @@ QED
 (* register with TypeBase *)
 
 Theorem itree_CASE_cong:
-  ∀M M' ret div vis ret' div' vis'.
+  !M M' ret div vis ret' div' vis'.
     M = M' /\
-    (∀x. M' = Ret x ==> ret x = ret' x) /\
+    (!x. M' = Ret x ==> ret x = ret' x) /\
     (M' = Div ==> div = div') /\
-    (∀a g. M' = Vis a g ==> vis a g = vis' a g) ==>
+    (!a g. M' = Vis a g ==> vis a g = vis' a g) ==>
     itree_CASE M ret div vis = itree_CASE M' ret' div' vis'
 Proof
   rw [] \\ qspec_then `M` strip_assume_tac itree_cases
