@@ -30,11 +30,11 @@
 
 *)
 open HolKernel Parse boolLib bossLib BasicProvers dep_rewrite;
-open arithmeticTheory listTheory llistTheory alistTheory optionTheory;
-open mp_then pred_setTheory relationTheory pairTheory combinTheory;
+open listTheory combinTheory;
 
 val _ = new_theory "itree";
 
+val _ = set_grammar_ancestry ["list"];
 
 (* make type definition *)
 
