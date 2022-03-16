@@ -27,9 +27,8 @@
   messy. It causes a mess because one then has to deal with equality
   up to deletion of finite runs of Tau actions, ugh. We model an
   infinite run of Taus using Div.
-
 *)
-open HolKernel Parse boolLib bossLib BasicProvers dep_rewrite;
+open HolKernel Parse boolLib bossLib dep_rewrite;
 open listTheory combinTheory;
 
 val _ = new_theory "itree";
@@ -415,10 +414,10 @@ Proof
   gvs[GSYM itree_repabs, itree_rep_ok_def] >>
   qid_spec_tac `s` >> Induct_on `path` >- gvs[path_ok_def] >>
   PairCases_on `err` >> gvs[itree_unfold_err_path_def] >> rw[] >>
-  TOP_CASE_TAC >> fs [] >>
-  TOP_CASE_TAC >> fs []
+  Cases_on ‘f s’ >> fs [] >>
+  rename [‘h::path’] >> Cases_on ‘h’ >> fs []
   >- gvs[path_ok_def, APPEND_EQ_CONS, itree_unfold_err_path_def] >>
-  reverse $ TOP_CASE_TAC >> fs []
+  reverse IF_CASES_TAC >> fs []
   >- gvs[path_ok_def, APPEND_EQ_CONS, itree_unfold_err_path_def] >>
   first_x_assum irule >>
   gvs [path_ok_def] >>
@@ -439,10 +438,12 @@ Theorem itree_unfold_err:
                     if rel e y then itree_unfold_err f (rel, err_f, err) (g y)
                     else Ret $ err e)
 Proof
-  CASE_TAC >> once_rewrite_tac [itree_unfold_err] >>
+  Cases_on ‘f seed’ >> once_rewrite_tac [itree_unfold_err] >>
   gvs[Ret_def, Div_def, Vis_def] >> AP_TERM_TAC >> simp[FUN_EQ_THM] >>
   Cases >> gvs[itree_unfold_err_path_def, Ret_rep_def, Div_rep_def, Vis_rep_def] >>
-  rpt TOP_CASE_TAC >> gvs[itree_rep_abs_itree_unfold_err_path] >>
+  Cases_on ‘h’ >> gvs[itree_rep_abs_itree_unfold_err_path] >>
+  TRY IF_CASES_TAC >> Cases_on ‘t’ >> gvs[itree_rep_abs_itree_unfold_err_path] >>
+  Cases_on ‘f (f' y)’ >> gvs [] >>
   once_rewrite_tac [itree_unfold_err] >> gvs [] >>
   once_rewrite_tac [GSYM itree_unfold_err] >> gvs [] >>
   gvs[Ret_def, Div_def, Vis_def, Ret_rep_def, Div_rep_def, Vis_rep_def] >>
