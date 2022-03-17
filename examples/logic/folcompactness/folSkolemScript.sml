@@ -481,13 +481,13 @@ Theorem bumpterm_def[simp] =
 Theorem termval_bump[simp]:
   ∀M v t. termval (bumpmod M) v (bumpterm t) = termval M v t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
+  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG]
 QED
 
 Theorem TFV_bumpterm[simp]:
   FVT (bumpterm t) = FVT t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG']
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Definition bumpform_def[simp]:
@@ -507,13 +507,13 @@ QED
 Theorem holds_bump[simp]:
   ∀M v p. holds (bumpmod M) v (bumpform p) ⇔ holds M v p
 Proof
-  Induct_on ‘p’ >> simp[MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG']
+  Induct_on ‘p’ >> simp[MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG]
 QED
 
 Theorem term_functions_bumpterm[simp]:
   term_functions (bumpterm t) = { (0 ⊗ k, m) | (k,m) ∈ term_functions t }
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG', MEM_MAP, PULL_EXISTS] >>
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG, MEM_MAP, PULL_EXISTS] >>
   simp[Once EXTENSION, MEM_MAP, PULL_EXISTS] >> metis_tac[]
 QED
 
@@ -556,13 +556,13 @@ End
 Theorem bumpterm_inv[simp]:
   unbumpterm (bumpterm t) = t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG']
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Theorem bumpform_inv[simp]:
   unbumpform (bumpform p) = p
 Proof
-  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG']
+  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Definition unbumpmod_def:
@@ -580,13 +580,13 @@ QED
 Theorem termval_unbumpmod:
   termval (unbumpmod M) v t = termval M v (bumpterm t)
 Proof
-  Induct_on ‘t’ >> simp[Cong MAP_CONG', MAP_MAP_o] >> simp[unbumpmod_def]
+  Induct_on ‘t’ >> simp[Cong MAP_CONG, MAP_MAP_o] >> simp[unbumpmod_def]
 QED
 
 Theorem holds_unbumpmod:
   ∀M v p. holds (unbumpmod M) v p ⇔ holds M v (bumpform p)
 Proof
-  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG', termval_unbumpmod] >>
+  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG, termval_unbumpmod] >>
   simp[unbumpmod_def]
 QED
 

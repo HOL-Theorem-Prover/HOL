@@ -1722,6 +1722,7 @@ The first conjunct needs a case-split on \holtxt{s} before it is proved by
 rewriting, and the second is also easy to prove by rewriting.
 
 \subsubsection{How termination conditions are synthesized}
+\label{sec:tfl-congruence}
 
 \index{congruence rules!in termination analysis|(}
 It is occasionally important to understand, at least in part, how

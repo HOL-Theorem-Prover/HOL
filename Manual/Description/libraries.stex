@@ -2666,6 +2666,8 @@ users can choose to have the simplifier completely ignore
 a conditional's branches until that conditional's guard is simplified
 to either true or false.
 
+As a convenience, congruence rules expressed in the format used by termination analysis in defining recursive functions (see Section~\ref{sec:tfl-congruence}), can also be passed to the simplifier.
+
 
 \subsubsection{AC-normalisation}
 \index{simplification!AC-normalisation}
