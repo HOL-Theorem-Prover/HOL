@@ -128,6 +128,7 @@ end
    ------------------------------------------------------------------------- *)
 
 type ('a,'b) dict = ('a,'b) Redblackmap.dict 
+exception NotFound = Redblackmap.NotFound
 
 fun dfind k m  = Redblackmap.find (m,k)
 fun drem k m   = fst (Redblackmap.remove (m,k)) handle NotFound => m
@@ -142,6 +143,7 @@ val dapp       = Redblackmap.app
 val dmap       = Redblackmap.map
 val dfoldl     = Redblackmap.foldl
 fun dkeys d    = map fst (dlist d)
+
 
 fun inv_dict cmp d = dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
 

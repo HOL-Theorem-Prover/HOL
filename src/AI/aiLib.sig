@@ -67,6 +67,7 @@ sig
 
   (* dictionnary *)
   type ('a,'b) dict = ('a,'b) Redblackmap.dict 
+  exception NotFound
   val dfind  : 'a -> ('a, 'b) dict -> 'b
   val dmem   : 'a -> ('a, 'b) dict -> bool
   val drem   : 'a -> ('a, 'b) dict -> ('a, 'b) dict
