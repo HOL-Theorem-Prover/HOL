@@ -3,9 +3,9 @@
 \TYPE {SELECT_LT_THEN : tactic -> tactic -> list_tactic}
 
 \SYNOPSIS
-Applies a first tactic to the all the goals in the goal-list for which the
+Applies the first tactic to all goals in the goal-list for which the
 tactic succeeds.
-Then applies a second tactic to the goals resulting from the first tactic.
+Then applies the second tactic to the goals resulting from the first tactic.
 
 \KEYWORDS
 
