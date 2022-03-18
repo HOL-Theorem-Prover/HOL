@@ -152,7 +152,7 @@ Proof
   \\ Cases_on `path` \\ fs [] \\ rw []
   \\ CCONTR_TAC \\ fs []
   \\ rename [`xs ++ [y] ++ ys`] \\ fs []
-  \\ first_x_assum (qspecl_then [`h`,`xs ⧺ [y] ⧺ ys`] mp_tac)
+  \\ first_x_assum (qspecl_then [`h`,`xs ++ [y] ++ ys`] mp_tac)
   \\ fs [] \\ rw [] \\ fs [path_ok_def]
   \\ metis_tac []
 QED
