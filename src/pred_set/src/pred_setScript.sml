@@ -4658,7 +4658,7 @@ val COMMUTING_ITSET_RECURSES = store_thm(
   ]);
 
 (* Corollary *)
-Theorem ITSET_SING:
+Theorem ITSET_SING[simp]:
     ∀f x a. ITSET f {x} a = f x a
 Proof
     rw[] >> fs[ITSET_THM]
@@ -6459,7 +6459,7 @@ val pair_to_num_inv = Q.store_thm ("pair_to_num_inv",
   SRW_TAC [][pair_to_num_def, num_to_pair_def]);
 
 (* More generally applicable version of the above *)
-Theorem pair_to_num_inv':
+Theorem pair_to_num_inv'[simp]:
     (∀x. pair_to_num (num_to_pair x) = x) ∧
     (∀x. num_to_pair (pair_to_num x) = x)
 Proof
@@ -7008,19 +7008,19 @@ QED
 Theorem BIJ_NUM_TO_PAIR:
     BIJ num_to_pair UNIV (UNIV CROSS UNIV)
 Proof
-    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘pair_to_num’ >> simp[pair_to_num_inv']
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘pair_to_num’ >> simp[]
 QED
 
 Theorem BIJ_PAIR_TO_NUM:
     BIJ pair_to_num (UNIV CROSS UNIV) UNIV
 Proof
-    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘num_to_pair’ >> simp[pair_to_num_inv']
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘num_to_pair’ >> simp[]
 QED
 
 Theorem BIJ_SWAP:
     BIJ SWAP (UNIV CROSS UNIV) (UNIV CROSS UNIV)
 Proof
-    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘SWAP’ >> simp[SWAP_SWAP]
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘SWAP’ >> simp[]
 QED
 
 (* "<<=" is overloaded in listTheory, cardinalTheory and maybe others,
