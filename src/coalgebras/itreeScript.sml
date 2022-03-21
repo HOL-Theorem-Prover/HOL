@@ -142,13 +142,14 @@ Proof
 QED
 
 Theorem itree_rep_ok_Vis[local]:
-  !a g. (!a. itree_rep_ok (g a)) ==> itree_rep_ok (Vis_rep e g  : ('a,'b,'c) itree_rep)
+  !a g. (!a. itree_rep_ok (g a)) ==>
+        itree_rep_ok (Vis_rep e g  : ('a,'b,'c) itree_rep)
 Proof
   fs [itree_rep_ok_def,Vis_rep_def]
   \\ rw [] \\ CCONTR_TAC \\ fs [AllCaseEqs()]
   \\ Cases_on `path` \\ fs [] THEN1 fs [path_ok_def]
   \\ qpat_x_assum `~(path_ok _ _)` mp_tac \\ fs []
-  \\ simp [path_ok_def] \\ rw []
+  \\ simp [path_ok_def] \\ rw [] \\ rename [‘h::t = path ++ [y] ++ ys’]
   \\ Cases_on `path` \\ fs [] \\ rw []
   \\ CCONTR_TAC \\ fs []
   \\ rename [`xs ++ [y] ++ ys`] \\ fs []
