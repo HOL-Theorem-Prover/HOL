@@ -1470,7 +1470,7 @@ val ODD_EXP = Q.store_thm(
   METIS_TAC[ODD_EXP_IFF, NOT_LT_ZERO_EQ_ZERO]);
 
 Theorem ODD_POS:
-    ∀n. ODD n ⇒ 0 < n
+    !n. ODD n ==> 0 < n
 Proof
     STRIP_TAC >> Cases_on ‘n’ >> REWRITE_TAC [ODD,LESS_0]
 QED

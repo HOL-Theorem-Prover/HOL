@@ -4659,7 +4659,7 @@ val COMMUTING_ITSET_RECURSES = store_thm(
 
 (* Corollary *)
 Theorem ITSET_SING[simp]:
-    ∀f x a. ITSET f {x} a = f x a
+    !f x a. ITSET f {x} a = f x a
 Proof
     rw[] >> fs[ITSET_THM]
 QED
@@ -6460,8 +6460,8 @@ val pair_to_num_inv = Q.store_thm ("pair_to_num_inv",
 
 (* More generally applicable version of the above *)
 Theorem pair_to_num_inv'[simp]:
-    (∀x. pair_to_num (num_to_pair x) = x) ∧
-    (∀x. num_to_pair (pair_to_num x) = x)
+    (!x. pair_to_num (num_to_pair x) = x) /\
+    (!x. num_to_pair (pair_to_num x) = x)
 Proof
     simp[FORALL_PROD,pair_to_num_inv]
 QED
