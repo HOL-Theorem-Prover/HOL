@@ -642,16 +642,18 @@ Definition REAL_PROD_IMAGE_DEF:
     REAL_PROD_IMAGE f s = ITSET (λe acc. f e * acc) s (1:real)
 End
 
-val _ = overload_on ("∏", Term ‘REAL_PROD_IMAGE’);
+Overload PI = “REAL_PROD_IMAGE”
+val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
 
 Theorem REAL_PROD_IMAGE_EMPTY:
-    ∀(f:α -> real). ∏ f ∅ = 1
+    !(f:'a -> real). REAL_PROD_IMAGE f EMPTY = 1
 Proof
     simp[REAL_PROD_IMAGE_DEF,ITSET_EMPTY]
 QED
 
 Theorem REAL_PROD_IMAGE_INSERT:
-    ∀(f:α -> real) e s. FINITE s ⇒ ∏ f (e INSERT s) = f e * ∏ f (s DELETE e)
+    !(f:'a -> real) e s. FINITE s ==>
+        REAL_PROD_IMAGE f (e INSERT s) = f e * REAL_PROD_IMAGE f (s DELETE e)
 Proof
     rw[REAL_PROD_IMAGE_DEF] >>
     qspecl_then [‘λe acc. f e * acc’,‘e’,‘s’,‘1r’]
@@ -660,8 +662,8 @@ Proof
 QED
 
 Theorem REAL_PROD_IMAGE_THM:
-    ∀f. ∏ f ∅ = 1r ∧
-        ∀e s. FINITE s ⇒ ∏ f (e INSERT s) = f e * ∏ f (s DELETE e)
+    !f. REAL_PROD_IMAGE f EMPTY = 1r /\
+        !e s. FINITE s ==> REAL_PROD_IMAGE f (e INSERT s) = f e * REAL_PROD_IMAGE f (s DELETE e)
 Proof
     simp[REAL_PROD_IMAGE_EMPTY,REAL_PROD_IMAGE_INSERT]
 QED

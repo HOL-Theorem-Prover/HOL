@@ -5065,8 +5065,8 @@ QED
 (*---------------------------------------------------------------------------*)
 
 Theorem REAL_MUL_SIGN:
-    (∀x y. 0 ≤ x * y ⇔ (0 ≤ x ∧ 0 ≤ y) ∨ (x ≤ 0 ∧ y ≤ 0)) ∧
-    (∀x y. x * y ≤ 0 ⇔ (0 ≤ x ∧ y ≤ 0) ∨ (x ≤ 0 ∧ 0 ≤ y))
+    (!x y. 0 <= x * y <=> (0 <= x /\ 0 <= y) \/ (x <= 0 /\ y <= 0)) /\
+    (!x y. x * y <= 0 <=> (0 <= x /\ y <= 0) \/ (x <= 0 /\ 0 <= y))
 Proof
     rw[] >> eq_tac >> rw[] >> fs[GSYM REAL_NEG_GE0,Excl "REAL_NEG_GE0"] >>
     TRY $ dxrule_all_then assume_tac $ REAL_LE_MUL >>
