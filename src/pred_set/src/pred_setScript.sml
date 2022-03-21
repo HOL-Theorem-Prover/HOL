@@ -4561,7 +4561,7 @@ Theorem ITSET_THM =
 W (GENL o rev o free_vars o concl)
   (DISCH_ALL(ASM_REWRITE_RULE [ASSUME ``FINITE s``] (SPEC_ALL ITSET_def)));
 
-Theorem ITSET_EMPTY =
+Theorem ITSET_EMPTY[simp] =
         REWRITE_RULE []
                      (MATCH_MP (SPEC ``{}`` ITSET_THM) FINITE_EMPTY);
 

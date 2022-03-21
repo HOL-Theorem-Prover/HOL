@@ -648,7 +648,7 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
 Theorem REAL_PROD_IMAGE_EMPTY:
     !(f:'a -> real). REAL_PROD_IMAGE f EMPTY = 1
 Proof
-    simp[REAL_PROD_IMAGE_DEF,ITSET_EMPTY]
+    simp[REAL_PROD_IMAGE_DEF]
 QED
 
 Theorem REAL_PROD_IMAGE_INSERT:
