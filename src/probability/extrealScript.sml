@@ -9797,7 +9797,7 @@ Proof
     rw[o_DEF] >> Cases_on `num_to_pair n` >> simp[SWAP_def]
 QED
 
-Theorem exp_mono_le:
+Theorem exp_mono_le[simp]:
     !x:extreal y. exp x <= exp y <=> x <= y
 Proof
     rw[] >> Cases_on ‘x’ >> Cases_on ‘y’ >> simp[extreal_exp_def,EXP_MONO_LE]

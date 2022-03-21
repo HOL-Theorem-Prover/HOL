@@ -8853,7 +8853,7 @@ Proof
     fs[GSYM real_lte] >> rw[EXTENSION] >> REVERSE (fs[REAL_LE_LT])
     >- (simp[extreal_ln_def,normal_0] >> Cases_on ‘x’ >>
         simp[extreal_exp_def,GSYM real_lt,EXP_POS_LT]) >>
-    drule_then SUBST1_TAC $ GSYM $ iffRL EXP_LN >> simp[Once $ GSYM extreal_exp_def,exp_mono_le] >>
+    drule_then SUBST1_TAC $ GSYM $ iffRL EXP_LN >> simp[Once $ GSYM extreal_exp_def] >>
     simp[iffRL EXP_LN,extreal_ln_def]
 QED
 
