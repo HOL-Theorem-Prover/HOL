@@ -1,0 +1,12 @@
+\documentclass{article}
+
+\usepackage{alltt}
+\usepackage{holtexbasic}
+\begin{document}
+
+The following is a theorem:
+\begin{alltt}
+\HOLTokenTurnstile{} \HOLFreeVar{m} \HOLSymConst{\HOLTokenNotEqual{}} \HOLNumLit{0} \HOLSymConst{\HOLTokenImp{}} \HOLSymConst{&}\HOLFreeVar{n} \HOLSymConst{\%} \HOLSymConst{&}\HOLFreeVar{m} \HOLSymConst{=} \HOLSymConst{&}(\HOLFreeVar{n} \HOLConst{MOD} \HOLFreeVar{m})
+\end{alltt}
+
+\end{document}

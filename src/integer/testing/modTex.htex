@@ -1,0 +1,12 @@
+\documentclass{article}
+
+\usepackage{alltt}
+\usepackage{holtexbasic}
+\begin{document}
+
+The following is a theorem:
+\begin{alltt}
+\HOLthm{integer.INT_MOD}
+\end{alltt}
+
+\end{document}
