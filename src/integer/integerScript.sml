@@ -1868,8 +1868,6 @@ val int_mod = new_specification ("int_mod",["int_mod"],int_mod_exists);
 val _ = set_fixity "%" (Infixl 650)
 Overload "%" = “int_mod”
 
-val _ = TeX_notation {TeX = ("\\%", 1), hol = "%"}
-
 val little_lemma = prove(
   ``!x y z. ~x < y + ~z <=> z < y + x``,
   REWRITE_TAC [GSYM int_sub, INT_LT_SUB_LADD] THEN
