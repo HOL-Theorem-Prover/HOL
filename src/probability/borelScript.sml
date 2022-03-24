@@ -6,8 +6,6 @@
 (* Based on the work of Aaron Coble [3] (2010)                               *)
 (* Cambridge University                                                      *)
 (* ------------------------------------------------------------------------- *)
-(* Extended by Chun Tian (2019-2021) using some materials from:              *)
-(*                                                                           *)
 (*        Lebesgue Measure Theory (lebesgue_measure_hvgScript.sml)           *)
 (*                                                                           *)
 (*        (c) Copyright 2015,                                                *)
@@ -21,18 +19,23 @@
 (* Note: This theory is inspired by Isabelle/HOL                             *)
 (*                                                                           *)
 (* ------------------------------------------------------------------------- *)
+(* Construction of one-dimensional household Borel measure space (lborel)    *)
+(*                                                                           *)
+(* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2019 - 2021)          *)
+(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
+(* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory prim_recTheory numLib combinTheory optionTheory
-     res_quanTheory res_quanTools pairTheory jrhUtils mesonLib
-     pred_setTheory pred_setLib listTheory quotientTheory relationTheory
-     rich_listTheory sortingTheory fcpTheory;
+open prim_recTheory arithmeticTheory numLib combinTheory res_quanTheory
+     res_quanTools pairTheory pred_setTheory pred_setLib listTheory
+     relationTheory rich_listTheory sortingTheory hurdUtils;
 
-open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith;
+open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
+     real_topologyTheory integrationTheory
 
-open hurdUtils util_probTheory extrealTheory sigma_algebraTheory iterateTheory
-     real_borelTheory measureTheory real_topologyTheory integrationTheory;
+open util_probTheory extrealTheory sigma_algebraTheory iterateTheory
+     real_borelTheory measureTheory;
 
 val _ = new_theory "borel";
 
@@ -48,8 +51,7 @@ val _ = hide "S";
 (*    Borel Space and Measurable functions                                   *)
 (* ************************************************************************* *)
 
-(* This is actually the (extended) Borel set $\overline{\mathscr{B}}$ generated
-   by extended open sets. The pure real version is ‘real_borel$borel’.
+(* This is the (extreal-valued) Borel set. See ‘real_borel$borel’ for reals.
 
    Named after Emile Borel [7], a French mathematician and politician.
 
@@ -4923,41 +4925,25 @@ Definition ext_lborel_def :
     ext_lborel = (space Borel, subsets Borel, lambda o real_set)
 End
 
-local
-   val shared_tactics =
-     [ (* goal 1 (of 4) *)
-       Suff ‘real_set (IMAGE Normal B) = B’ >- rw [] \\
-       rw [Once EXTENSION, real_set_def] \\
-       EQ_TAC >> rw [] >- art [real_normal] \\
-       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty],
-       (* goal 2 (of 4) *)
-       Suff ‘real_set (IMAGE Normal B UNION {NegInf}) = B’ >- rw [] \\
-       rw [Once EXTENSION, real_set_def] \\
-       EQ_TAC >> rw [] >- art [real_normal] \\
-       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty],
-       (* goal 3 (of 4) *)
-       Suff ‘real_set (IMAGE Normal B UNION {PosInf}) = B’ >- rw [] \\
-       rw [Once EXTENSION, real_set_def] \\
-       EQ_TAC >> rw [] >- art [real_normal] \\
-       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty],
-       (* goal 4 (of 4) *)
-       Suff ‘real_set (IMAGE Normal B UNION {NegInf; PosInf}) = B’ >- rw [] \\
-       rw [Once EXTENSION, real_set_def] \\
-       EQ_TAC >> rw [] >- art [real_normal] \\
-       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty] ];
-in
 Theorem MEASURE_SPACE_LBOREL :
     measure_space ext_lborel
 Proof
-    rw [ext_lborel_def, measure_space_def, SIGMA_ALGEBRA_BOREL]
+    simp [ext_lborel_def, measure_space_def, SIGMA_ALGEBRA_BOREL]
+ >> Know ‘!B. real_set (IMAGE Normal B) = B /\
+              real_set (IMAGE Normal B UNION {NegInf}) = B /\
+              real_set (IMAGE Normal B UNION {PosInf}) = B /\
+              real_set (IMAGE Normal B UNION {NegInf; PosInf}) = B’
+ >- (rpt STRIP_TAC \\
+     rw [Once EXTENSION, real_set_def] \\
+     EQ_TAC >> rw [] >> art [real_normal] \\
+     Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty])
+ >> rpt STRIP_TAC
  (* positive *)
  >- (rw [positive_def] >- rw [real_set_def, lambda_empty] \\
      STRIP_ASSUME_TAC
        (REWRITE_RULE [positive_def] (MATCH_MP MEASURE_SPACE_POSITIVE
                                               measure_space_lborel)) \\
-     POP_ASSUM MATCH_MP_TAC \\
-     POP_ASSUM K_TAC \\
-     fs [Borel, sets_lborel] >| shared_tactics)
+     POP_ASSUM MATCH_MP_TAC >> fs [Borel, sets_lborel])
  (* countably_additive *)
  >> rw [countably_additive_def, SPACE_BOREL, IN_FUNSET, IN_UNIV]
  >> Q.ABBREV_TAC ‘rf = real_set o f’
@@ -4966,7 +4952,7 @@ Proof
      Q.PAT_X_ASSUM ‘BIGUNION (IMAGE f UNIV) IN subsets Borel’ K_TAC \\
      Q.PAT_X_ASSUM ‘!i j. i <> j ==> DISJOINT (f i) (f j)’ K_TAC \\
      fs [Abbr ‘rf’, Borel] \\
-     POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC ‘n’)) >> fs [] >| shared_tactics)
+     POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC ‘n’)) >> fs [])
  >> DISCH_TAC
  >> Know ‘real_set (BIGUNION (IMAGE f UNIV)) = BIGUNION (IMAGE rf UNIV)’
  >- (rw [Once EXTENSION, real_set_def, Abbr ‘rf’] \\
@@ -5000,7 +4986,6 @@ Proof
  >> POP_ASSUM MATCH_MP_TAC
  >> rw [IN_FUNSET]
 QED
-end (* local *)
 
 Theorem SIGMA_FINITE_LBOREL :
     sigma_finite ext_lborel
@@ -5315,7 +5300,7 @@ Proof
    [Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`) THEN ASM_REWRITE_TAC [dist] THEN
     REAL_ARITH_TAC, ALL_TAC] THEN FULL_SIMP_TAC std_ss [dist] THEN
    (SUFF_TAC ``!i : num. f (N - i) <= x + (e : real)`` THEN1 PROVE_TAC [LESS_EQUAL_DIFF]) THEN
-   numLib.INDUCT_TAC
+   INDUCT_TAC
    THENL [Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
           THEN RW_TAC boolSimps.bool_ss [abs, LESS_EQ_REFL, SUB_0]
           THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
@@ -5323,7 +5308,7 @@ Proof
                 REAL_LE_SUB_LADD]
           THEN PROVE_TAC
                [REAL_LT_LE, REAL_ADD_SYM, REAL_LE_TRANS, REAL_LE_ADDR],
-          MP_TAC (numLib.ARITH_PROVE
+          MP_TAC (ARITH_PROVE
                   ``(N - i = N - SUC i) \/ (N - i = (N - SUC i) + 1)``)
           THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]
 QED
@@ -5755,10 +5740,12 @@ QED
 val almost_everywhere_def = Define
    `almost_everywhere m P = ?N. null_set m N /\ !x. x IN (m_space m DIFF N) ==> P x`;
 
-(* This binder syntax is learnt from Thomas Tuerk. `lebesgue` is a required
+(* This binder syntax is learnt from Thomas Tuerk. ‘lborel’ is a required
    household measure space for `AE x. P x` without `::m`, but it's never used.
  *)
-val AE_def = Define `$AE = \P. almost_everywhere lebesgue P`;
+Definition AE_def :
+    $AE = \P. almost_everywhere lborel P
+End
 
 val _ = set_fixity "AE" Binder;
 val _ = associate_restriction ("AE", "almost_everywhere");
@@ -5767,9 +5754,11 @@ val _ = associate_restriction ("AE", "almost_everywhere");
 val _ = Unicode.unicode_version {u = UTF8.chr 0x00C6, tmnm = "AE"};
  *)
 
-val AE_THM = store_thm
-  ("AE_THM", ``!m P. (AE x::m. P x) <=> almost_everywhere m P``,
-    SIMP_TAC std_ss [almost_everywhere_def]);
+Theorem AE_THM :
+    !m P. (AE x::m. P x) <=> almost_everywhere m P
+Proof
+    SIMP_TAC std_ss [almost_everywhere_def]
+QED
 
 Theorem AE_DEF :
     !m P. (AE x::m. P x) <=>
@@ -5778,12 +5767,6 @@ Proof
     rw [AE_THM, almost_everywhere_def]
 QED
 
-(* `lebesgue` is the default measure used in `AE x. ...` (without restriction) *)
-val AE_default = store_thm
-  ("AE_default", ``!P. (AE x. P x) <=> (AE x::lebesgue. P x)``,
-    RW_TAC std_ss [AE_def]);
-
-(* see [1, p.89] *)
 Theorem AE_ALT :
     !m P. (AE x::m. P x) <=>
           ?N. null_set m N /\ {x | x IN m_space m /\ ~P x} SUBSET N
@@ -5801,12 +5784,13 @@ Proof
  >> fs [IN_APP]
 QED
 
-val FORALL_IMP_AE = store_thm
-  ("FORALL_IMP_AE",
-  ``!m P. measure_space m /\ (!x. x IN m_space m ==> P x) ==> AE x::m. P x``,
+Theorem FORALL_IMP_AE :
+    !m P. measure_space m /\ (!x. x IN m_space m ==> P x) ==> AE x::m. P x
+Proof
     RW_TAC std_ss [AE_DEF]
  >> Q.EXISTS_TAC `{}`
- >> RW_TAC std_ss [NULL_SET_EMPTY, IN_DIFF, NOT_IN_EMPTY]);
+ >> RW_TAC std_ss [NULL_SET_EMPTY, IN_DIFF, NOT_IN_EMPTY]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Some Useful Theorems about Almost everywhere (ported by Waqar Ahmed)      *)
@@ -5824,7 +5808,7 @@ QED
 Theorem AE_iff_null :
     !M P. measure_space M /\
           {x | x IN m_space M /\ ~P x} IN measurable_sets M ==>
-          ((AE x::M. P x) = (null_set M {x | x IN m_space M /\ ~P x}))
+          ((AE x::M. P x) <=> (null_set M {x | x IN m_space M /\ ~P x}))
 Proof
   RW_TAC std_ss [AE_ALT, null_set_def, GSPECIFICATION] THEN EQ_TAC THEN
   RW_TAC std_ss [] THENL [ALL_TAC, METIS_TAC [SUBSET_REFL]] THEN
@@ -5835,40 +5819,42 @@ Proof
   MATCH_MP_TAC INCREASING THEN METIS_TAC [MEASURE_SPACE_INCREASING]
 QED
 
+(* NOTE: changed ‘{x | ~N x} x’ to ‘~N x’ *)
 Theorem AE_iff_null_sets :
     !N M. measure_space M /\ N IN measurable_sets M ==>
-          ((null_set M N) = (AE x::M. {x | ~N x} x))
+         (null_set M N <=> AE x::M. ~N x)
 Proof
-  REPEAT STRIP_TAC THEN EQ_TAC THEN RW_TAC std_ss [] THEN
-  FULL_SIMP_TAC std_ss [AE_ALT, null_set_def] THENL
-  [FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN rw[EXTENSION] THEN ASM_SET_TAC [], ALL_TAC] THEN
-  fs[EXTENSION] THEN
-  Q_TAC SUFF_TAC `measure M N <= measure M N'` THENL
-  [DISCH_TAC THEN ONCE_REWRITE_TAC [GSYM le_antisym] THEN
-   METIS_TAC [measure_space_def, positive_def], ALL_TAC] THEN
-  MATCH_MP_TAC INCREASING THEN ASM_SIMP_TAC std_ss [MEASURE_SPACE_INCREASING] THEN
-  `N SUBSET m_space M` by METIS_TAC [MEASURABLE_SETS_SUBSET_SPACE] THEN
-  ASM_SET_TAC []
+    rpt STRIP_TAC
+ >> EQ_TAC >> RW_TAC std_ss [AE_ALT, null_set_def]
+ >- (Q.EXISTS_TAC ‘N’ >> rw [SUBSET_DEF, IN_DEF])
+ >> fs [SUBSET_DEF]
+ >> Suff ‘measure M N <= measure M N'’
+ >- (DISCH_TAC >> ONCE_REWRITE_TAC [GSYM le_antisym] \\
+     METIS_TAC [measure_space_def, positive_def])
+ >> MATCH_MP_TAC INCREASING
+ >> ASM_SIMP_TAC std_ss [MEASURE_SPACE_INCREASING]
+ >> ‘N SUBSET m_space M’ by METIS_TAC [MEASURABLE_SETS_SUBSET_SPACE]
+ >> fs [SUBSET_DEF, IN_DEF]
 QED
 
 Theorem AE_NOT_IN :
     !N M. null_set M N ==> AE x::M. x NOTIN N
 Proof
-    rw [AE_ALT, EXTENSION] >> Q.EXISTS_TAC `N`
- >> ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION] >> rw [IN_DEF]
+    RW_TAC std_ss [AE_ALT]
+ >> Q.EXISTS_TAC ‘N’
+ >> ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_DEF]
 QED
 
-Theorem AE_not_in :
-    !N M. null_set M N ==> AE x::M. {x | ~N x} x
-Proof
-  rw [AE_ALT, EXTENSION] THEN Q.EXISTS_TAC `N` THEN
-  ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION] THEN rw [IN_DEF]
-QED
+(* |- !N M. null_set M N ==> AE x::M. ~N x
+
+   NOTE: changed ‘{x | ~N x} x’ to ‘~N x’
+ *)
+Theorem AE_not_in = SIMP_RULE std_ss [IN_DEF] AE_NOT_IN
 
 Theorem AE_iff_measurable :
     !N M P. measure_space M /\ N IN measurable_sets M /\
             ({x | x IN m_space M /\ ~P x} = N) ==>
-            ((AE x::M. P x) = (measure M N = 0))
+            ((AE x::M. P x) <=> (measure M N = 0))
 Proof
   RW_TAC std_ss [AE_ALT, GSPECIFICATION] THEN
   EQ_TAC THEN RW_TAC std_ss [] THENL
@@ -5883,26 +5869,26 @@ Proof
 QED
 
 Theorem AE_impl :
-    !P M Q. measure_space M ==> ((P ==> (AE x::M. Q x)) ==>
-            (AE x::M. (\x. P ==> Q x) x))
+    !P M Q. measure_space M /\ (P ==> (AE x::M. Q x)) ==>
+           (AE x::M. (P ==> Q x))
 Proof
     Cases
  >- (RW_TAC bool_ss [AE_ALT] >> POP_ASSUM MP_TAC \\
-    rw [EXTENSION] >> Q.EXISTS_TAC `N` \\
-    RW_TAC std_ss [] >> METIS_TAC[IN_DEF])
+     rw [EXTENSION] >> Q.EXISTS_TAC `N` \\
+     RW_TAC std_ss [] >> METIS_TAC[IN_DEF])
  >> RW_TAC bool_ss [AE_ALT]
  >> rw [EXTENSION]
  >> Q.EXISTS_TAC `{}`
  >> RW_TAC bool_ss [null_set_def, NOT_IN_EMPTY,
                     MEASURE_SPACE_EMPTY_MEASURABLE]
- >> rw [MEASURE_SPACE_EMPTY_MEASURABLE]
  >> RW_TAC std_ss [MEASURE_EMPTY]
 QED
 
+(* NOTE: what's the role of ‘countable (t i)’ *)
 Theorem AE_all_countable :
     !(t :num->num->bool) M (P :num->'a->bool).
        measure_space M ==>
-       ((!i:num. countable (t i) ==> AE x::M. (\x. P i x) x) <=>
+       ((!i:num. countable (t i) ==> AE x::M. P i x) <=>
         (!i. AE x::M. (\x. P i x) x))
 Proof
     RW_TAC std_ss[]
@@ -9173,23 +9159,23 @@ Proof
          SPOSE_NOT_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [extreal_lt_def])) \\
          POP_ASSUM (MP_TAC o (REWRITE_RULE [inf_le'])) \\
          rw [GSYM extreal_lt_def] \\
-         Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
-         Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
+         Q.PAT_X_ASSUM ‘Normal c <= f y’ K_TAC (* useless *) \\
+         Q.PAT_X_ASSUM ‘f x < Normal c’  K_TAC (* useless *) \\
          Q.EXISTS_TAC ‘inf {x | f x = Normal c}’ \\
          reverse CONJ_TAC >- METIS_TAC [extreal_lt_def] \\
          Q.X_GEN_TAC ‘y’ >> rw [inf_le'],
          (* goal 1.2 (of 2) *)
-         Q.PAT_X_ASSUM ‘f z = Normal c’ K_TAC      (* useless *) \\
+         Q.PAT_X_ASSUM ‘f z = Normal c’ K_TAC (* useless *) \\
          Q.PAT_ASSUM ‘f _ = Normal c’ (ONCE_REWRITE_TAC o wrap o SYM) \\
          REWRITE_TAC [lt_le] \\
          CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
                       MATCH_MP_TAC lt_imp_le >> art []) \\
          SPOSE_NOT_THEN (STRIP_ASSUME_TAC o REWRITE_RULE []) \\
          Q.PAT_X_ASSUM ‘f _ = Normal c’ (fs o wrap) \\
-         Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
-         Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
+         Q.PAT_X_ASSUM ‘Normal c <= f y’ K_TAC (* useless *) \\
+         Q.PAT_X_ASSUM ‘f x < Normal c’  K_TAC (* useless *) \\
          Suff ‘inf {x | f x = Normal c} <= t’ >- METIS_TAC [extreal_lt_def] \\
-         Q.PAT_X_ASSUM ‘t < inf _’           K_TAC (* just used *) \\
+         Q.PAT_X_ASSUM ‘t < inf _’       K_TAC (* just used *) \\
          rw [inf_le'] ],
        (* goal 2 (of 2) *)
        Suff ‘A = {x | x <= z0}’ >- rw [BOREL_MEASURABLE_SETS] \\
@@ -9235,9 +9221,9 @@ Proof
      ‘f t < f (sup {x | f x < Normal c})’ by PROVE_TAC [lte_trans] \\
       METIS_TAC [extreal_lt_def],
       (* goal 2 (of 2) *)
-      Q.PAT_X_ASSUM ‘Normal c <= f y’     K_TAC (* useless *) \\
-      Q.PAT_X_ASSUM ‘f x < Normal c’      K_TAC (* useless *) \\
-      Q.PAT_X_ASSUM ‘Normal c <= f _’     K_TAC (* useless *) \\
+      Q.PAT_X_ASSUM ‘Normal c <= f y’ K_TAC (* useless *) \\
+      Q.PAT_X_ASSUM ‘f x < Normal c’  K_TAC (* useless *) \\
+      Q.PAT_X_ASSUM ‘Normal c <= f _’ K_TAC (* useless *) \\
       fs [lt_sup] >> rename1 ‘t < y’ \\
       MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘f y’ >> art [] \\
       FIRST_X_ASSUM MATCH_MP_TAC >> rw [lt_imp_le] ]
@@ -9259,9 +9245,11 @@ QED
 
 (* NOTE: we put ‘abs’ together because ‘powr’ is only defined on [0, PosInf] *)
 Theorem IN_MEASURABLE_BOREL_BOREL_ABS_POWR :
-    !p. 0 < p /\ p <> PosInf ==> (\x. (abs x) powr p) IN measurable Borel Borel
+    !p. 0 <= p /\ p <> PosInf ==> (\x. (abs x) powr p) IN measurable Borel Borel
 Proof
     rpt STRIP_TAC
+ >> Cases_on ‘p = 0’ >- rw [IN_MEASURABLE_BOREL_BOREL_CONST]
+ >> ‘0 < p’ by rw [lt_le]
  >> Q.ABBREV_TAC ‘g = \x. if 0 <= x then x powr p else 0’
  >> ‘(\x. abs x powr p) = g o abs’ by (rw [FUN_EQ_THM, Abbr ‘g’]) >> POP_ORW
  >> MATCH_MP_TAC MEASURABLE_COMP
@@ -9283,7 +9271,7 @@ Proof
 QED
 
 Theorem IN_MEASURABLE_BOREL_ABS_POWR :
-    !a p f. f IN measurable a Borel /\ 0 < p /\ p <> PosInf ==>
+    !a p f. f IN measurable a Borel /\ 0 <= p /\ p <> PosInf ==>
            (\x. (abs (f x)) powr p) IN measurable a Borel
 Proof
     rpt STRIP_TAC
@@ -9304,7 +9292,6 @@ val _ = export_theory ();
       ACM Trans. Embedded Comput. Syst. 12, 1--23 (2013).
   [3] Coble, A.R.: Anonymity, information, and machine-assisted proof, (2010).
   [4] Hurd, J.: Formal verification of probabilistic algorithms. (2001).
-  [5] Wikipedia: https://en.wikipedia.org/wiki/Henri_Lebesgue
   [7] Wikipedia: https://en.wikipedia.org/wiki/Emile_Borel
   [8] Hardy, G.H., Littlewood, J.E.: A Course of Pure Mathematics, Tenth Edition.
       Cambridge University Press, London (1967).

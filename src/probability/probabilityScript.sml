@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
-(* Further enriched by Chun Tian <binghe.lisp@gmail.com> (2019 - 2021)       *)
+(* Further enriched by Chun Tian <binghe.lisp@gmail.com> (2019 - 2022)       *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Joe Hurd [7] and Aaron Coble [8]                     *)
@@ -1378,6 +1378,26 @@ Proof
  >> MATCH_MP_TAC real_random_variable_cmul >> art []
 QED
 
+Theorem real_random_variable_sum :
+    !p X (J :'index set). prob_space p /\ FINITE J /\
+         (!i. i IN J ==> real_random_variable (X i) p) ==>
+          real_random_variable (\x. SIGMA (\n. X n x) J) p
+Proof
+    RW_TAC std_ss [real_random_variable]
+ >| [ (* goal 1 (of 3) *)
+      MATCH_MP_TAC (INST_TYPE [“:'b” |-> “:'index”] IN_MEASURABLE_BOREL_SUM) \\
+      qexistsl_tac [‘X’, ‘J’] \\
+     ‘sigma_algebra (p_space p,events p)’
+        by METIS_TAC [prob_space_def, measure_space_def, p_space_def, events_def] \\
+      rw [],
+      (* goal 2 (of 3) *)
+      MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+      RW_TAC std_ss [],
+      (* goal 3 (of 3) *)
+      MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+      RW_TAC std_ss [] ]
+QED
+
 Theorem real_random_variable_fn_plus :
     !p X. real_random_variable X p ==> real_random_variable (fn_plus X) p
 Proof
@@ -2631,6 +2651,70 @@ Theorem finite_second_moments_cdiv :
 Proof
     rw [extreal_div_def, extreal_inv_def, Once mul_comm]
  >> MATCH_MP_TAC finite_second_moments_cmul >> art []
+QED
+
+Theorem finite_second_moments_add :
+    !p X Y. prob_space p /\
+            real_random_variable X p /\ real_random_variable Y p /\
+            finite_second_moments p X /\ finite_second_moments p Y ==>
+            finite_second_moments p (\x. X x + Y x)
+Proof
+    rpt STRIP_TAC
+ >> ‘real_random_variable (\x. X x + Y x) p’
+       by METIS_TAC [real_random_variable_add]
+ >> rfs [finite_second_moments_eq_integrable_square, prob_space_def]
+ >> fs [real_random_variable, p_space_def, events_def]
+ >> Suff ‘(\x. X x + Y x) IN L2_space p’
+ >- rw [L2_space_alt_integrable_square]
+ (* applying Minkowski_inequality *)
+ >> MP_TAC (Q.SPECL [‘2’, ‘p’, ‘X’, ‘Y’] Minkowski_inequality)
+ >> ‘1 <= (2 :extreal)’ by rw [extreal_of_num_def, extreal_le_eq]
+ >> rw [L2_space_alt_integrable_square]
+QED
+
+Theorem finite_second_moments_cong :
+    !p X Y. prob_space p /\ (!x. x IN p_space p ==> X x = Y x) ==>
+           (finite_second_moments p X <=> finite_second_moments p Y)
+Proof
+    RW_TAC std_ss [finite_second_moments_def, second_moment_def, moment_def]
+ >> Suff ‘!a. expectation p (\x. (X x - a) pow 2) =
+              expectation p (\x. (Y x - a) pow 2)’ >- rw []
+ >> Q.X_GEN_TAC ‘a’
+ >> MATCH_MP_TAC expectation_cong >> rw []
+QED
+
+Theorem finite_second_moments_sum :
+    !p X (J :'index set). prob_space p /\ FINITE J /\
+         (!i. i IN J ==> real_random_variable (X i) p) /\
+         (!i. i IN J ==> finite_second_moments p (X i)) ==>
+          finite_second_moments p (\x. SIGMA (\n. X n x) J)
+Proof
+    rpt STRIP_TAC
+ >> NTAC 3 (POP_ASSUM MP_TAC)
+ >> Q.SPEC_TAC (‘J’,‘J’)
+ >> Induct_on ‘J’
+ >> rw [EXTREAL_SUM_IMAGE_EMPTY]
+ >- (IMP_RES_TAC real_random_variable_zero \\
+     rw [finite_second_moments_eq_finite_variance, variance_zero])
+ >> Know ‘finite_second_moments p (\x. SIGMA (\n. X n x) (e INSERT J)) <=>
+          finite_second_moments p (\x. X e x + SIGMA (\n. X n x) (J DELETE e))’
+ >- (MATCH_MP_TAC finite_second_moments_cong >> rw [] \\
+     MATCH_MP_TAC (List.nth
+                    (CONJUNCTS (BETA_RULE
+                                 (Q.SPEC ‘(\n. X n x)’ EXTREAL_SUM_IMAGE_THM)),2)) \\
+     simp [] >> DISJ1_TAC >> Q.X_GEN_TAC ‘i’ \\
+     METIS_TAC [real_random_variable])
+ >> Rewr'
+ >> ‘J DELETE e = J’ by PROVE_TAC [DELETE_NON_ELEMENT]
+ >> POP_ORW
+ >> HO_MATCH_MP_TAC finite_second_moments_add
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 3) *)
+      METIS_TAC [],
+      (* goal 2 (of 3) *)
+      MATCH_MP_TAC real_random_variable_sum >> RW_TAC std_ss [],
+      (* goal 3 (of 3) *)
+      METIS_TAC [] ]
 QED
 
 Theorem expectation_real_affine :
@@ -7308,7 +7392,7 @@ Proof
                expectation p (f o X n) =
                integral (space Borel,subsets Borel,distribution p (X n)) f’
      >- (METIS_TAC [expectation_distribution]) >> rw [] \\
-     MATCH_MP_TAC integral_cong_measure' >> simp [] \\
+     MATCH_MP_TAC integral_cong_measure' >> simp [measure_space_eq_def] \\
      Suff ‘!n. n IN J ==> measure_space (space Borel,subsets Borel,distribution p (X n))’
      >- rw [] \\
      Q.X_GEN_TAC ‘n’ >> STRIP_TAC \\
@@ -7645,7 +7729,7 @@ Proof
  (* applying UNIQUENESS_OF_PROD_MEASURE *)
  >> Know ‘integral (space (Borel CROSS Borel),subsets (Borel CROSS Borel),distr p f) u =
           integral (m1 CROSS m2) u’
- >- (MATCH_MP_TAC integral_cong_measure' >> simp [] \\
+ >- (MATCH_MP_TAC integral_cong_measure' >> simp [measure_space_eq_def] \\
      CONJ_TAC >- (MATCH_MP_TAC measure_space_distr >> rw [SIGMA_ALGEBRA_BOREL_2D]) \\
      CONJ_TAC >- rw [SPACE_PROD_SIGMA, prod_measure_space_alt, Abbr ‘m1’, Abbr ‘m2’] \\
      CONJ_TAC >- rw [prod_measure_space_alt, Abbr ‘m1’, Abbr ‘m2’] \\
