@@ -105,6 +105,7 @@ sig
      ('a, 'b) dict list -> ('a, 'b) dict
   val count_dict :
     ('a, int) dict -> 'a list -> ('a, int) dict
+  val dsum : ('a * 'a -> order) -> ('a * int) list -> ('a, int) dict
 
   (* list *)
   val is_singleton : 'a list -> bool

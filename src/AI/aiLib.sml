@@ -177,6 +177,17 @@ fun dconcat cmp dictl =
     dappendl l1 (dempty cmp)
   end
 
+fun dsum cmp l = 
+  let 
+    val d = ref (dempty cmp) 
+    fun f (a,i) = 
+      let val oldi = dfind a (!d) handle NotFound => 0 in
+        d := dadd a (oldi + i) (!d)
+      end
+  in
+    app f l; !d  
+  end;
+
 (* sets *)
 fun dset cmp l = dnew cmp (map (fn x => (x,())) l)
 fun daddset l d = daddl (map (fn x => (x,())) l) d
