@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)            *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
-(* Updated and further enriched by Chun Tian (2018 - 2021)                   *)
+(* Updated and further enriched by Chun Tian (2018 - 2022)                   *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -3041,17 +3041,20 @@ Proof
                     extreal_ln_def, rpow_def]
 QED
 
-(* cf. transc.ONE_RPOW *)
-Theorem one_powr :
-    !a. 0 < a ==> 1 powr a = 1
-Proof
-    rw [extreal_powr_def, ln_1]
-QED
-
 Theorem powr_0[simp] :
     !x. x powr 0 = (1 :extreal)
 Proof
     rw [extreal_powr_def, exp_0]
+QED
+
+(* cf. transc.ONE_RPOW, changed ‘0 < a’ to ‘0 <= a’ *)
+Theorem one_powr :
+    !a. 0 <= a ==> 1 powr a = 1
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘a = 0’ >- rw []
+ >> ‘0 < a’ by rw [lt_le]
+ >> rw [extreal_powr_def, ln_1]
 QED
 
 (* only possible after the new definition of `ln` *)
@@ -3102,16 +3105,21 @@ Theorem powr_infty :
         (x = 1 ==> x powr PosInf = 1) /\
         (0 <= x /\ x < 1 ==> x powr PosInf = 0)
 Proof
-    rw [one_powr]
- >- (rw [extreal_powr_def] \\
+    RW_TAC std_ss [] (* 3 goals *)
+ >| [ (* goal 1 (of 3) *)
+      rw [extreal_powr_def] \\
      ‘0 < ln x’ by PROVE_TAC [ln_pos_lt] \\
-     rw [mul_infty, extreal_exp_def])
- >> rw [extreal_powr_def]
- >> Suff ‘ln x < 0’
- >- (DISCH_TAC \\
-    ‘PosInf * ln x = NegInf’ by PROVE_TAC [mul_infty'] \\
-     rw [extreal_exp_def])
- >> MATCH_MP_TAC ln_neg_lt >> art []
+      rw [mul_infty, extreal_exp_def],
+      (* goal 2 (of 3) *)
+      MATCH_MP_TAC one_powr \\
+      rw [extreal_of_num_def, le_infty],
+      (* goal 3 (of 3) *)
+      rw [extreal_powr_def] \\
+      Suff ‘ln x < 0’
+      >- (DISCH_TAC \\
+         ‘PosInf * ln x = NegInf’ by PROVE_TAC [mul_infty'] \\
+          rw [extreal_exp_def]) \\
+      MATCH_MP_TAC ln_neg_lt >> art [] ]
 QED
 
 (* cf. transcTheory.BASE_RPOW_LE *)
@@ -3148,6 +3156,63 @@ Proof
  >> ‘?C. 0 < C /\ c = Normal C’
        by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
  >> rw [BASE_RPOW_LE, normal_powr, extreal_le_eq]
+QED
+
+(* cf. transcTheory.RPOW_LE *)
+Theorem powr_le_eq :
+    !a b c. 1 < a /\ a <> PosInf /\ 0 <= b /\ 0 <= c ==>
+           (a powr b <= a powr c <=> b <= c)
+Proof
+    rpt STRIP_TAC
+ >> ‘0 < a’ by PROVE_TAC [lt_trans, lt_01]
+ >> ‘0 <= a’ by PROVE_TAC [lt_imp_le]
+ >> ‘a <> NegInf /\ b <> NegInf /\ c <> NegInf’ by rw [pos_not_neginf]
+ >> Cases_on ‘b = 0’
+ >- (rw [powr_0] \\
+     Cases_on ‘c = 0’ >- rw [powr_0] \\
+     Cases_on ‘c = PosInf’
+     >- (rw [powr_infty, extreal_le_def, extreal_of_num_def]) \\
+    ‘0 < c’ by rw [lt_le] \\
+    ‘1 = 1 powr c’ by PROVE_TAC [one_powr] >> POP_ORW \\
+     rw [powr_mono_eq, lt_imp_le])
+ >> ‘0 < b’ by rw [lt_le]
+ >> Cases_on ‘c = 0’
+ >- (rw [powr_0] \\
+     Cases_on ‘b = PosInf’
+     >- (rw [powr_infty, extreal_le_def, extreal_of_num_def]) \\
+    ‘1 = 1 powr b’ by PROVE_TAC [one_powr] >> POP_ORW \\
+     rw [powr_mono_eq] \\
+     METIS_TAC [extreal_lt_def])
+ >> ‘0 < c’ by rw [lt_le]
+ >> Cases_on ‘b = PosInf’
+ >- (rw [powr_infty, extreal_le_def, extreal_of_num_def, le_infty] \\
+     Cases_on ‘c = PosInf’ >- rw [powr_infty] \\
+    ‘?A. 0 < A /\ a = Normal A’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+    ‘?C. 0 < C /\ c = Normal C’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+     rw [normal_powr])
+ >> Cases_on ‘c = PosInf’
+ >- rw [powr_infty, extreal_le_def, extreal_of_num_def, le_infty]
+ >> ‘?A. 0 < A /\ a = Normal A’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?B. 0 < B /\ b = Normal B’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?C. 0 < C /\ c = Normal C’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> gs [RPOW_LE, normal_powr, extreal_of_num_def, extreal_le_eq, extreal_lt_eq]
+QED
+
+Theorem powr_ge_1 :
+    !a p. 1 <= a /\ 0 <= p ==> 1 <= a powr p
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘p = 0’ >- rw [powr_0]
+ >> Cases_on ‘a = 1’ >- rw [one_powr]
+ >> ‘0 < p /\ 1 < a’ by rw [lt_le]
+ >> Cases_on ‘a = PosInf’ >- rw [infty_powr]
+ >> ‘1 = a powr 0’ by rw [] >> POP_ORW
+ >> rw [powr_le_eq]
 QED
 
 (* cf. transcTheory.RPOW_RPOW
@@ -3198,6 +3263,31 @@ Proof
  >> MATCH_MP_TAC exp_add
  >> DISJ1_TAC
  >> METIS_TAC [mul_not_infty, ln_not_neginf, REAL_LT_IMP_LE]
+QED
+
+(* cf. transcTheory.RPOW_ADD *)
+Theorem powr_add :
+    !a b c. 0 <= a /\ 0 <= b /\ b <> PosInf /\ 0 <= c /\ c <> PosInf ==>
+            a powr (b + c) = a powr b * a powr c
+Proof
+    rpt STRIP_TAC
+ >> ‘a <> NegInf /\ b <> NegInf /\ c <> NegInf’ by rw [pos_not_neginf]
+ >> Cases_on ‘b = 0’ >- rw []
+ >> Cases_on ‘c = 0’ >- rw []
+ >> ‘0 < b /\ 0 < c’ by rw [lt_le]
+ >> ‘0 < b + c’ by rw [lt_add]
+ >> Cases_on ‘a = 0’ >- rw [zero_rpow]
+ >> ‘0 < a’ by rw [lt_le]
+ >> Cases_on ‘a = PosInf’
+ >- rw [infty_powr, extreal_mul_def]
+ >> ‘?A. 0 < A /\ a = Normal A’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?B. 0 < B /\ b = Normal B’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?C. 0 < C /\ c = Normal C’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘0 < B + C’ by rw [REAL_LT_ADD]
+ >> rw [normal_powr, extreal_add_def, extreal_mul_def, RPOW_ADD]
 QED
 
 Theorem sqrt_powr :
@@ -8349,6 +8439,14 @@ Definition max_fn_seq_def :
    (max_fn_seq g 0       x = g 0 x) /\
    (max_fn_seq g (SUC n) x = max (max_fn_seq g n x) (g (SUC n) x))
 End
+
+Theorem max_fn_seq_cong :
+    !f g x. (!n. f n x = g n x) ==> !n. max_fn_seq f n x = max_fn_seq g n x
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> Induct_on ‘n’
+ >> rw [max_fn_seq_def]
+QED
 
 (* cf. real_topologyTheory.SUP_INSERT. For extreal, ‘bounded‘ is not needed. *)
 Theorem sup_insert :
