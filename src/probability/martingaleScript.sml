@@ -6760,6 +6760,25 @@ Proof
  >> rw [normal_powr]
 QED
 
+Theorem function_space_alt_seminorm :
+    !p m f. measure_space m /\ 1 <= p /\ p <> PosInf ==>
+           (f IN function_space p m <=>
+            f IN Borel_measurable (m_space m,measurable_sets m) /\
+            seminorm p m f < PosInf)
+Proof
+    RW_TAC std_ss [GSYM lt_infty]
+ >> EQ_TAC
+ >| [ (* goal 1 (of 2) *)
+      rpt STRIP_TAC >- rfs [function_space_alt_finite] \\
+      METIS_TAC [seminorm_not_infty],
+      (* goao 2 (of 2) *)
+      rw [function_space_alt_finite, seminorm_normal] \\
+      CCONTR_TAC \\
+     ‘0 < p’ by PROVE_TAC [lte_trans, lt_01] \\
+     ‘0 < inv p’ by PROVE_TAC [inv_pos'] \\
+      gs [infty_powr] ]
+QED
+
 (* Theorem 13.2 (Hoelder's inequality) [1, p.117]
 
    TODO: also prove the case for ‘p = PosInf’ (q = 1) or ‘q = PosInf’ (p = 1)
