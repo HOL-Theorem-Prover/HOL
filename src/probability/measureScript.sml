@@ -120,6 +120,9 @@ val measure_space_def = Define
    `measure_space m <=>
       sigma_algebra (m_space m, measurable_sets m) /\ positive m /\ countably_additive m`;
 
+(* ‘measurable_space m’ is the sigma_algebra of ‘measure_space m’ *)
+Overload measurable_space = “\m. m_space m, measurable_sets m”
+
 (* The set of measure-preserving measurable mappings.
    NOTE: ``measure_space m1 /\ measure_space m2`` was removed. *)
 val measure_preserving_def = Define
