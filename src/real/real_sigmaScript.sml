@@ -27,6 +27,12 @@ End
 
 Overload SIGMA = “REAL_SUM_IMAGE”
 
+Theorem REAL_SUM_IMAGE_EMPTY[simp]:
+    !f. REAL_SUM_IMAGE f EMPTY = 0
+Proof
+    simp[REAL_SUM_IMAGE_DEF]
+QED
+
 Theorem REAL_SUM_IMAGE_THM :
     !f. (REAL_SUM_IMAGE f {} = 0) /\
         (!e s. FINITE s ==>
@@ -61,7 +67,7 @@ QED
 (* it translates a sum theorem into a SIGMA theorem *)
 fun translate th = SIMP_RULE std_ss [GSYM REAL_SUM_IMAGE_sum] th;
 
-Theorem REAL_SUM_IMAGE_SING :
+Theorem REAL_SUM_IMAGE_SING[simp] :
     !f e. REAL_SUM_IMAGE f {e} = f e
 Proof
     SRW_TAC [][REAL_SUM_IMAGE_THM]
@@ -645,8 +651,14 @@ End
 Overload PI = “REAL_PROD_IMAGE”
 val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
 
-Theorem REAL_PROD_IMAGE_EMPTY:
+Theorem REAL_PROD_IMAGE_EMPTY[simp]:
     !(f:'a -> real). REAL_PROD_IMAGE f EMPTY = 1
+Proof
+    simp[REAL_PROD_IMAGE_DEF]
+QED
+
+Theorem REAL_PROD_IMAGE_SING[simp]:
+    !f. REAL_PROD_IMAGE f EMPTY = 1
 Proof
     simp[REAL_PROD_IMAGE_DEF]
 QED
