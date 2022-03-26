@@ -3898,6 +3898,7 @@ val EXTREAL_SUM_IMAGE_DEF = new_definition
   ``EXTREAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0 :extreal)``);
 
 (* Now theorems about EXTREAL_SUM_IMAGE itself *)
+(* TODO: make [simp] *)
 val EXTREAL_SUM_IMAGE_EMPTY = store_thm
   ("EXTREAL_SUM_IMAGE_EMPTY", ``!f. EXTREAL_SUM_IMAGE f {} = 0``,
     SIMP_TAC (srw_ss()) [ITSET_THM, EXTREAL_SUM_IMAGE_DEF]);
@@ -3905,7 +3906,7 @@ val EXTREAL_SUM_IMAGE_EMPTY = store_thm
 (* this is provable by (old) EXTREAL_SUM_IMAGE_THM but using original definition is much
    easier, because CHOICE and REST from singleton can be easily eliminated. *)
 val EXTREAL_SUM_IMAGE_SING = store_thm
-  ("EXTREAL_SUM_IMAGE_SING", ``!f e. EXTREAL_SUM_IMAGE f {e} = f e``,
+  ("EXTREAL_SUM_IMAGE_SING[simp]", ``!f e. EXTREAL_SUM_IMAGE f {e} = f e``,
     SRW_TAC [][EXTREAL_SUM_IMAGE_DEF, ITSET_THM, add_rzero]);
 
 (* This new theorem provides a "complete" picture for EXTREAL_SUM_IMAGE. *)
@@ -8150,11 +8151,11 @@ Proof
 QED
 
 val EXTREAL_PROD_IMAGE_EMPTY = store_thm
-  ("EXTREAL_PROD_IMAGE_EMPTY", ``!f. EXTREAL_PROD_IMAGE f {} = 1``,
+  ("EXTREAL_PROD_IMAGE_EMPTY[simp]", ``!f. EXTREAL_PROD_IMAGE f {} = 1``,
     SRW_TAC [] [EXTREAL_PROD_IMAGE_THM]);
 
 val EXTREAL_PROD_IMAGE_SING = store_thm
-  ("EXTREAL_PROD_IMAGE_SING", ``!f e. EXTREAL_PROD_IMAGE f {e} = f e``,
+  ("EXTREAL_PROD_IMAGE_SING[simp]", ``!f e. EXTREAL_PROD_IMAGE f {e} = f e``,
     SRW_TAC [] [EXTREAL_PROD_IMAGE_THM, mul_rone]);
 
 val EXTREAL_PROD_IMAGE_PROPERTY = store_thm
@@ -9498,6 +9499,7 @@ Proof
     ‘Normal (-1) = -(Normal 1)’ suffices_by simp[normal_1] >> simp[extreal_ainv_def]
 QED
 
+(* breaks borel$Borel_def, I think *)
 Theorem extreal_le_simp:
     (!x y. Normal x <= Normal y <=> x <= y) /\ (!x. NegInf <= x <=> T) /\ (!x. x <= PosInf <=> T) /\
     (!x. Normal x <= NegInf <=> F) /\ (!x. PosInf <= Normal x <=> F) /\ (PosInf <= NegInf <=> F)
@@ -9507,6 +9509,7 @@ QED
 
 val _ = mk_local_simp "extreal_le_simp";
 
+(* breaks borel$Borel_def, I think *)
 Theorem extreal_lt_simp:
     (!x y. Normal x < Normal y <=> x < y) /\ (!x. x < NegInf <=> F) /\ (!x. PosInf < x <=> F) /\
     (!x. Normal x < PosInf <=> T) /\ (!x. NegInf < Normal x <=> T) /\ (NegInf < PosInf <=> T)
@@ -9516,6 +9519,7 @@ QED
 
 val _ = mk_local_simp "extreal_lt_simp";
 
+(* breaks martingale$ext_limsup_thm, I think *)
 Theorem extreal_0_simp:
     (0 <= PosInf <=> T) /\ (0 < PosInf <=> T) /\ (PosInf <= 0 <=> F) /\ (PosInf < 0 <=> F) /\ (0 = PosInf <=> F) /\ (PosInf = 0 <=> F) /\
     (0 <= NegInf <=> F) /\ (0 < NegInf <=> F) /\ (NegInf <= 0 <=> T) /\ (NegInf < 0 <=> T) /\ (0 = NegInf <=> F) /\ (NegInf = 0 <=> F) /\
@@ -9526,6 +9530,19 @@ Proof
 QED
 
 val _ = mk_local_simp "extreal_0_simp";
+
+Theorem extreal_1_simp:
+    (1 <= PosInf <=> T) /\ (1 < PosInf <=> T) /\ (PosInf <= 1 <=> F) /\
+    (PosInf < 1 <=> F) /\ (1 = PosInf <=> F) /\ (PosInf = 1 <=> F) /\
+    (1 <= NegInf <=> F) /\ (1 < NegInf <=> F) /\ (NegInf <= 1 <=> T) /\
+    (NegInf < 1 <=> T) /\ (1 = NegInf <=> F) /\ (NegInf = 1 <=> F) /\
+    (!r. 1 <= Normal r <=> 1 <= r) /\ (!r. 1 < Normal r <=> 1 < r) /\ (!r. 1 = Normal r <=> r = 1) /\
+    (!r. Normal r <= 1 <=> r <= 1) /\ (!r. Normal r < 1 <=> r < 1) /\ (!r. Normal r = 1 <=> r = 1)
+Proof
+    simp[GSYM normal_1]
+QED
+
+val _ = mk_local_simp "extreal_1_simp";
 
 (* do NOT add to a simpset, way too much overhead *)
 Theorem ineq_imp:
@@ -9573,16 +9590,16 @@ Proof
     Induct_on ‘l’ >> rw[listTheory.FOLDR] >> irule le_add2 >> simp[]
 QED
 
-Theorem EXTREAL_SUM_IMAGE_COUNT_ZERO:
+Theorem EXTREAL_SUM_IMAGE_COUNT_ZERO[simp]:
     !f. EXTREAL_SUM_IMAGE f (count 0) = 0:extreal
 Proof
     simp[COUNT_ZERO,EXTREAL_SUM_IMAGE_EMPTY]
 QED
 
-Theorem EXTREAL_SUM_IMAGE_COUNT_ONE:
+Theorem EXTREAL_SUM_IMAGE_COUNT_ONE[simp]:
     !f. EXTREAL_SUM_IMAGE f (count 1) = f 0:extreal
 Proof
-    simp[COUNT_ONE,EXTREAL_SUM_IMAGE_SING]
+    simp[COUNT_ONE]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_COUNT_SUC:
@@ -9651,16 +9668,16 @@ Proof
     simp[EXTREAL_PROD_IMAGE_POS]
 QED
 
-Theorem EXTREAL_PROD_IMAGE_COUNT_ZERO:
+Theorem EXTREAL_PROD_IMAGE_COUNT_ZERO[simp]:
     !f. EXTREAL_PROD_IMAGE f (count 0) = 1x
 Proof
-    simp[COUNT_ZERO,EXTREAL_PROD_IMAGE_EMPTY]
+    simp[COUNT_ZERO]
 QED
 
-Theorem EXTREAL_PROD_IMAGE_COUNT_ONE:
+Theorem EXTREAL_PROD_IMAGE_COUNT_ONE[simp]:
     !f. EXTREAL_PROD_IMAGE f (count 1) = f 0: extreal
 Proof
-    simp[COUNT_ONE,EXTREAL_PROD_IMAGE_SING]
+    simp[COUNT_ONE]
 QED
 
 Theorem EXTREAL_PROD_IMAGE_COUNT_SUC:
@@ -9679,7 +9696,7 @@ Proof
     rw[] >> ‘!n. 0 <= (λn. if n = m then r else 0) n’ by rw[] >> fs[ext_suminf_def] >>
     ‘(λn. EXTREAL_SUM_IMAGE (λn. if n = m then r else 0) (count n)) =
       (λn. if n < SUC m then 0 else r)’ by (
-        rw[FUN_EQ_THM] >> Induct_on ‘n’ >- simp[EXTREAL_SUM_IMAGE_COUNT_ZERO] >> simp[] >>
+        rw[FUN_EQ_THM] >> Induct_on ‘n’ >> simp[] >>
         (qspecl_then [‘(λn. if n = m then r else 0)’,‘n’] assume_tac) EXTREAL_SUM_IMAGE_COUNT_SUC >>
         rfs[pos_not_neginf] >> pop_assum kall_tac >>
         map_every (fn tm => Cases_on tm >> simp[]) [‘n < m’,‘n = m’]) >>
