@@ -8719,10 +8719,27 @@ QED
 (*   Further Results   *)
 (***********************)
 
-(*  Some of these do require addition simplifier manipulations.
-      I try to have the simplifier modified for as little as possible in order to make
-      it easier to relocate things to more appropriate places above.
-      - Jared Yeager                                                                   *)
+(*  I add these results at the end
+      in order to manipulate the simplifier without breaking anything
+      - Jared Yeager                                                    *)
+
+val _ = augment_srw_ss [realSimps.REAL_ARITH_ss];
+
+(*  TODO: Remove as the following are [simp]s:
+        EXTREAL_SUM_IMAGE_EMPTY
+        extreal_le_simp
+        extreal_lt_simp
+        extreal_0_simp
+        extreal_1_simp
+*)
+val name_to_thname = fn (t,s) => ({Thy = t, Name = s}, DB.fetch t s);
+val mk_local_simp = augment_srw_ss o single o
+    simpLib.rewrites_with_names o single o name_to_thname;
+val _ = mk_local_simp ("extreal","EXTREAL_SUM_IMAGE_EMPTY");
+val _ = mk_local_simp ("extreal","extreal_le_simp");
+val _ = mk_local_simp ("extreal","extreal_lt_simp");
+val _ = mk_local_simp ("extreal","extreal_0_simp");
+val _ = mk_local_simp ("extreal","extreal_1_simp");
 
 (*** IN_MEASURABLE_BOREL Theorems ***)
 
@@ -8793,8 +8810,6 @@ Proof
     irule IN_MEASURABLE_BOREL_MUL' >> simp[] >> qexistsl_tac [‘f e’,‘λx. EXTREAL_PROD_IMAGE (λi. f i x) s’] >> simp[]
 QED
 
-val _ = augment_srw_ss [realSimps.REAL_ARITH_ss,extrealSimps.EXT_INEQ_ss];
-
 Theorem IN_MEASURABLE_BOREL_INV:
     !a f g. sigma_algebra a /\ f IN Borel_measurable a /\
         (!x. x IN space a ==> g x = extreal_inv (f x) * indicator_fn {y | f y <> 0} x) ==>
@@ -8856,8 +8871,6 @@ Proof
     drule_then SUBST1_TAC $ GSYM $ iffRL EXP_LN >> simp[Once $ GSYM extreal_exp_def] >>
     simp[iffRL EXP_LN,extreal_ln_def]
 QED
-
-val _ = diminish_srw_ss ["REAL_ARITH","EXT_INEQ"];
 
 Theorem IN_MEASURABLE_BOREL_POW':
     !n a f g. sigma_algebra a /\ f IN Borel_measurable a /\ (!x. x IN space a ==> g x = f x pow n) ==>
