@@ -5404,6 +5404,22 @@ val limsup_suminf_indicator_space = store_thm
 
 val _ = reveal "C";
 
+(*  TODO: Remove as the following are [simp]s:
+        EXTREAL_SUM_IMAGE_EMPTY
+        extreal_le_simp
+        extreal_lt_simp
+        extreal_0_simp
+        extreal_1_simp
+*)
+val name_to_thname = fn (t,s) => ({Thy = t, Name = s}, DB.fetch t s);
+val mk_local_simp = augment_srw_ss o single o
+    simpLib.rewrites_with_names o single o name_to_thname;
+val _ = mk_local_simp ("extreal","EXTREAL_SUM_IMAGE_EMPTY");
+val _ = mk_local_simp ("extreal","extreal_le_simp");
+val _ = mk_local_simp ("extreal","extreal_lt_simp");
+val _ = mk_local_simp ("extreal","extreal_0_simp");
+val _ = mk_local_simp ("extreal","extreal_1_simp");
+
 (*** measure_space Theorems ***)
 
 Theorem measure_space_measure_eq:

@@ -9474,10 +9474,21 @@ QED
 
 (*** Simplification Definitions ***)
 
+(*  TODO:
+    These next two definitions can be deleted once all of the following are [simp]s:
+        EXTREAL_SUM_IMAGE_EMPTY
+        extreal_le_simp
+        extreal_lt_simp
+        extreal_0_simp
+        extreal_1_simp
+*)
 val name_to_thname = fn s => ({Thy = "extreal", Name = s}, DB.fetch "extreal" s);
 
 val mk_local_simp = augment_srw_ss o single o
-  simpLib.rewrites_with_names o single o name_to_thname;
+    simpLib.rewrites_with_names o single o name_to_thname;
+
+(* TODO: remove once EXTREAL_SUM_IMAGE_EMPTY is a [simp] *)
+val _ = mk_local_simp "EXTREAL_SUM_IMAGE_EMPTY";
 
 (*** Basic Theorems ***)
 
@@ -9499,6 +9510,7 @@ Proof
     ‘Normal (-1) = -(Normal 1)’ suffices_by simp[normal_1] >> simp[extreal_ainv_def]
 QED
 
+(* TODO: make [simp] *)
 (* breaks borel$Borel_def, I think *)
 Theorem extreal_le_simp:
     (!x y. Normal x <= Normal y <=> x <= y) /\ (!x. NegInf <= x <=> T) /\ (!x. x <= PosInf <=> T) /\
@@ -9507,8 +9519,10 @@ Proof
     rw[extreal_le_def] >> Cases_on ‘x’ >> simp[extreal_le_def]
 QED
 
+(* TODO: remove once extreal_le_simp is a [simp] *)
 val _ = mk_local_simp "extreal_le_simp";
 
+(* TODO: make [simp] *)
 (* breaks borel$Borel_def, I think *)
 Theorem extreal_lt_simp:
     (!x y. Normal x < Normal y <=> x < y) /\ (!x. x < NegInf <=> F) /\ (!x. PosInf < x <=> F) /\
@@ -9517,8 +9531,10 @@ Proof
     simp[extreal_lt_eq] >> rw[extreal_lt_def]
 QED
 
+(* TODO: remove once extreal_le_simp is a [simp] *)
 val _ = mk_local_simp "extreal_lt_simp";
 
+(* TODO: make [simp] *)
 (* breaks martingale$ext_limsup_thm, I think *)
 Theorem extreal_0_simp:
     (0 <= PosInf <=> T) /\ (0 < PosInf <=> T) /\ (PosInf <= 0 <=> F) /\ (PosInf < 0 <=> F) /\ (0 = PosInf <=> F) /\ (PosInf = 0 <=> F) /\
@@ -9529,8 +9545,10 @@ Proof
     simp[GSYM normal_0]
 QED
 
+(* TODO: remove once extreal_0_simp is a [simp] *)
 val _ = mk_local_simp "extreal_0_simp";
 
+(* TODO: make [simp] *)
 Theorem extreal_1_simp:
     (1 <= PosInf <=> T) /\ (1 < PosInf <=> T) /\ (PosInf <= 1 <=> F) /\
     (PosInf < 1 <=> F) /\ (1 = PosInf <=> F) /\ (PosInf = 1 <=> F) /\
@@ -9542,6 +9560,7 @@ Proof
     simp[GSYM normal_1]
 QED
 
+(* TODO: remove once extreal_1_simp is a [simp] *)
 val _ = mk_local_simp "extreal_1_simp";
 
 (* do NOT add to a simpset, way too much overhead *)
@@ -9593,7 +9612,7 @@ QED
 Theorem EXTREAL_SUM_IMAGE_COUNT_ZERO[simp]:
     !f. EXTREAL_SUM_IMAGE f (count 0) = 0:extreal
 Proof
-    simp[COUNT_ZERO,EXTREAL_SUM_IMAGE_EMPTY]
+    simp[COUNT_ZERO]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_COUNT_ONE[simp]:
