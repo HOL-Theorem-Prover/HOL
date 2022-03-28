@@ -386,7 +386,7 @@ val base_environment0 = let
         [LIT "for i in *.uo *.ui *.sig ; do ln -fs `pwd`/$i ",
          VREF "SIGOBJ",
          LIT " ; done && \
-             \for i in *.sig ; do echo `pwd`/$(basename $i .sig) >> ",
+             \for i in *.sig ; do echo `pwd`/`basename $i .sig` >> ",
          VREF "SIGOBJ",
          LIT "/SRCFILES ; done"]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
