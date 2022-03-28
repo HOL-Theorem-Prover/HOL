@@ -28,7 +28,8 @@ sig
 
      Example:
 
-     PERM_TAKE_DROP_CONV ``PERM (DROP n l1++l2++TAKE n l1) (l1++TAKE n l2++DROP n l2)``
+     PERM_TAKE_DROP_CONV
+        “PERM (DROP n l1++l2++TAKE n l1) (l1++TAKE n l2++DROP n l2)”
 
      |- PERM (DROP n l1 ++ l2 ++ TAKE n l1) (l1 ++ TAKE n l2 ++ DROP n l2) <=>
         PERM (l1 ++ l2) (l2 ++ l1)
@@ -91,7 +92,9 @@ sig
      Afterwards PERM_NORMALISE_CONV is used.
 
      Example:
-     PERM_REWR_CONV (ASSUME ``PERM l1 [x;y;z]``) ``PERM (z::y::x'::l2) (l3++x'::l1)``
+     PERM_REWR_CONV
+       (ASSUME “PERM l1 [x;y;z]”)
+       “PERM (z::y::x'::l2) (l3++x'::l1)”
 
      [PERM l1 [x; y; z]]
        |- PERM (z::y::x'::l2) (l3 ++ x'::l1) <=> PERM (x::l3) l2 : thm
