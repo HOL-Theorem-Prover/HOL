@@ -1033,44 +1033,6 @@ Proof
              MEM_GENLIST]
 QED
 
-Theorem SUM_IMAGE_count_SUM_GENLIST:
-  SIGMA f (count n) = SUM (GENLIST f n)
-Proof
-  RW_TAC pure_ss [SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST,FINITE_COUNT] THEN
-  MATCH_MP_TAC PERM_SUM THEN
-  MATCH_MP_TAC PERM_TRANS THEN
-  Q.EXISTS_TAC ‘(MAP f (COUNT_LIST n))’ THEN
-  CONJ_TAC THEN1 (
-  MATCH_MP_TAC PERM_MAP THEN
-  MATCH_ACCEPT_TAC PERM_SET_TO_LIST_count_COUNT_LIST ) THEN
-  MATCH_MP_TAC PERM_INTRO THEN
-  REWRITE_TAC [rich_listTheory.COUNT_LIST_GENLIST] THEN
-  REWRITE_TAC [MAP_GENLIST,combinTheory.I_o_ID]
-QED
-
-Theorem SUM_IMAGE_count_MULT:
-  (!m. m < n ==> (g m = SIGMA (\x. f (x + k * m)) (count k))) ==>
-  (SIGMA f (count (k * n)) = SIGMA g (count n))
-Proof
-  simp[SUM_IMAGE_count_SUM_GENLIST] >>
-  Induct_on ‘n’ >- simp[] >>
-  simp[MULT_SUC, GENLIST_APPEND, GENLIST, SUM_APPEND, SUM_SNOC]
-QED
-
-Theorem sum_of_sums:
-  SIGMA (\m. SIGMA (f m) (count a)) (count b) =
-  SIGMA (\m. f (m DIV a) (m MOD a)) (count (a * b))
-Proof
-Cases_on ‘a=0’ THEN SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_ZERO] THEN
-Cases_on ‘b=0’ THEN SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_ZERO] THEN
-MATCH_MP_TAC EQ_SYM THEN
-MATCH_MP_TAC SUM_IMAGE_count_MULT THEN
-SRW_TAC [][] THEN
-MATCH_MP_TAC SUM_IMAGE_CONG THEN
-SRW_TAC [][] THEN
-METIS_TAC [ADD_SYM,MULT_SYM,DIV_MULT,MOD_MULT]
-QED
-
 Theorem SORTED_NIL:     !R. SORTED R []
 Proof SRW_TAC[][]
 QED

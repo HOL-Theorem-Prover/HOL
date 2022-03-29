@@ -2906,6 +2906,38 @@ Theorem MAP_COUNT_LIST:
 Proof  rw[COUNT_LIST_GENLIST,listTheory.MAP_GENLIST]
 QED
 
+Theorem SUM_IMAGE_count_SUM_GENLIST:
+  SIGMA f (count n) = SUM (GENLIST f n)
+Proof
+  Induct_on ‘n’ >>
+  simp[SUM_IMAGE_THM, COUNT_SUC, listTheory.GENLIST, listTheory.SUM_SNOC]
+QED
+
+Theorem SUM_IMAGE_count_MULT:
+  (!m. m < n ==> (g m = SIGMA (\x. f (x + k * m)) (count k))) ==>
+  (SIGMA f (count (k * n)) = SIGMA g (count n))
+Proof
+  simp[SUM_IMAGE_count_SUM_GENLIST] >>
+  Induct_on ‘n’ >- simp[] >>
+  simp[MULT_SUC, listTheory.GENLIST_APPEND, listTheory.GENLIST,
+       listTheory.SUM_APPEND,
+       listTheory.SUM_SNOC]
+QED
+
+Theorem sum_of_sums:
+  SIGMA (\m. SIGMA (f m) (count a)) (count b) =
+  SIGMA (\m. f (m DIV a) (m MOD a)) (count (a * b))
+Proof
+Cases_on ‘a=0’ THEN SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_ZERO] THEN
+Cases_on ‘b=0’ THEN SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_ZERO] THEN
+MATCH_MP_TAC EQ_SYM THEN
+MATCH_MP_TAC SUM_IMAGE_count_MULT THEN
+SRW_TAC [][] THEN
+MATCH_MP_TAC SUM_IMAGE_CONG THEN
+SRW_TAC [][] THEN
+METIS_TAC [ADD_SYM,MULT_SYM,DIV_MULT,MOD_MULT]
+QED
+
 (*---------------------------------------------------------------------------
    General theorems about lists. From Anthony Fox's and Thomas Tuerk's theories.
    Added by Thomas Tuerk
