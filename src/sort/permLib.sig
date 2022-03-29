@@ -44,8 +44,8 @@ sig
 
      |- PERM (x::l1++y::l2++l3) (y::l3++z::l2++l4) <=>
         PERM (x::y::(l1 ++ l2 ++ l3)) (y::z::(l2 ++ l3 ++ l4))
-  )*
-  val PERM_NO_ELIM_NORMALISE_CONV = fn : term -> thm
+  *)
+  val PERM_NO_ELIM_NORMALISE_CONV : term -> thm
 
 
   (* Turns ``PERM l1 l2`` into ``PERM l2 l1`` iff l1 is in some sence
@@ -62,7 +62,7 @@ sig
 
 
   (* Combines PERM_ELIM_DUPLICATES_CONV, PERM_NO_ELIM_NORMALISE_CONV and
-     PERM_TURN_CONV *)
+     PERM_TURN_CONV
 
 
      Example:
