@@ -439,6 +439,7 @@ Proof
   simp[sat_def] >> metis_tac[tableau_complete]
 QED
 
+(*
 Theorem PERM_leading_contradiction:
   PERM Γ₁ Γ₂ ⇒ (contradiction Γ₁ = NONE ⇔ contradiction Γ₂ = NONE)
 Proof
@@ -808,5 +809,6 @@ strip_tacrw[]recInduct_on ‘PERM’ >> simp[] >> rw[]
                 simp[contradiction_EQ_NONE] >>
                 metis_tac[PERM_MEM_EQ]) >>
           simp[] >>
+*)
 *)
 val _ = export_theory();
