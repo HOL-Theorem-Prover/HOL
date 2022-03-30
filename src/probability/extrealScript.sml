@@ -3988,16 +3988,20 @@ val EXTREAL_SUM_IMAGE_DEF = new_definition
   ``EXTREAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0 :extreal)``);
 
 (* Now theorems about EXTREAL_SUM_IMAGE itself *)
-(* TODO: make [simp] *)
-val EXTREAL_SUM_IMAGE_EMPTY = store_thm
-  ("EXTREAL_SUM_IMAGE_EMPTY", ``!f. EXTREAL_SUM_IMAGE f {} = 0``,
-    SIMP_TAC (srw_ss()) [ITSET_THM, EXTREAL_SUM_IMAGE_DEF]);
+Theorem EXTREAL_SUM_IMAGE_EMPTY[simp] :
+    !f. EXTREAL_SUM_IMAGE f {} = 0
+Proof
+    SRW_TAC [][ITSET_THM, EXTREAL_SUM_IMAGE_DEF]
+QED
 
-(* this is provable by (old) EXTREAL_SUM_IMAGE_THM but using original definition is much
-   easier, because CHOICE and REST from singleton can be easily eliminated. *)
-val EXTREAL_SUM_IMAGE_SING = store_thm
-  ("EXTREAL_SUM_IMAGE_SING[simp]", ``!f e. EXTREAL_SUM_IMAGE f {e} = f e``,
-    SRW_TAC [][EXTREAL_SUM_IMAGE_DEF, ITSET_THM, add_rzero]);
+(* This is provable by (old) EXTREAL_SUM_IMAGE_THM but using original definition is much
+   easier, because CHOICE and REST from singleton can be easily eliminated.
+ *)
+Theorem EXTREAL_SUM_IMAGE_SING[simp] :
+    !f e. EXTREAL_SUM_IMAGE f {e} = f e
+Proof
+    SRW_TAC [][EXTREAL_SUM_IMAGE_DEF, ITSET_THM, add_rzero]
+QED
 
 (* This new theorem provides a "complete" picture for EXTREAL_SUM_IMAGE. *)
 val EXTREAL_SUM_IMAGE_THM = store_thm
@@ -4205,10 +4209,9 @@ Theorem EXTREAL_SUM_IMAGE_FINITE_CONST : (* was: extreal_sum_image_finite_corr *
 Proof
     rw []
  >> Cases_on ‘P = {}’ >> simp []
- >- rw [EXTREAL_SUM_IMAGE_THM, mul_lzero]
  >> ‘?m. m IN P’ by metis_tac [MEMBER_NOT_EMPTY]
  >> ‘x = f m’ by fs [] >> rw []
- >> irule EXTREAL_SUM_IMAGE_FINITE_SAME >> rw[]
+ >> irule EXTREAL_SUM_IMAGE_FINITE_SAME >> rw []
 QED
 
 val EXTREAL_SUM_IMAGE_ZERO = store_thm
@@ -8441,6 +8444,12 @@ Definition max_fn_seq_def :
    (max_fn_seq g (SUC n) x = max (max_fn_seq g n x) (g (SUC n) x))
 End
 
+Theorem max_fn_seq_0[simp] :
+    !g. max_fn_seq g 0 = g 0
+Proof
+    rw [FUN_EQ_THM, max_fn_seq_def]
+QED
+
 Theorem max_fn_seq_cong :
     !f g x. (!n. f n x = g n x) ==> !n. max_fn_seq f n x = max_fn_seq g n x
 Proof
@@ -9570,24 +9579,6 @@ QED
       in order to manipulate the simplifier without breaking anything
       - Jared Yeager                                                    *)
 
-(*** Simplification Definitions ***)
-
-(*  TODO:
-    These next two definitions can be deleted once all of the following are [simp]s:
-        EXTREAL_SUM_IMAGE_EMPTY
-        extreal_le_simp
-        extreal_lt_simp
-        extreal_0_simp
-        extreal_1_simp
-*)
-val name_to_thname = fn s => ({Thy = "extreal", Name = s}, DB.fetch "extreal" s);
-
-val mk_local_simp = augment_srw_ss o single o
-    simpLib.rewrites_with_names o single o name_to_thname;
-
-(* TODO: remove once EXTREAL_SUM_IMAGE_EMPTY is a [simp] *)
-val _ = mk_local_simp "EXTREAL_SUM_IMAGE_EMPTY";
-
 (*** Basic Theorems ***)
 
 Theorem normal_0:
@@ -9608,46 +9599,34 @@ Proof
     ‘Normal (-1) = -(Normal 1)’ suffices_by simp[normal_1] >> simp[extreal_ainv_def]
 QED
 
-(* TODO: make [simp] *)
-(* breaks borel$Borel_def, I think *)
-Theorem extreal_le_simp:
+Theorem extreal_le_simps[simp]:
     (!x y. Normal x <= Normal y <=> x <= y) /\ (!x. NegInf <= x <=> T) /\ (!x. x <= PosInf <=> T) /\
     (!x. Normal x <= NegInf <=> F) /\ (!x. PosInf <= Normal x <=> F) /\ (PosInf <= NegInf <=> F)
 Proof
     rw[extreal_le_def] >> Cases_on ‘x’ >> simp[extreal_le_def]
 QED
 
-(* TODO: remove once extreal_le_simp is a [simp] *)
-val _ = mk_local_simp "extreal_le_simp";
-
-(* TODO: make [simp] *)
-(* breaks borel$Borel_def, I think *)
-Theorem extreal_lt_simp:
+Theorem extreal_lt_simps[simp]:
     (!x y. Normal x < Normal y <=> x < y) /\ (!x. x < NegInf <=> F) /\ (!x. PosInf < x <=> F) /\
     (!x. Normal x < PosInf <=> T) /\ (!x. NegInf < Normal x <=> T) /\ (NegInf < PosInf <=> T)
 Proof
     simp[extreal_lt_eq] >> rw[extreal_lt_def]
 QED
 
-(* TODO: remove once extreal_le_simp is a [simp] *)
-val _ = mk_local_simp "extreal_lt_simp";
-
-(* TODO: make [simp] *)
-(* breaks martingale$ext_limsup_thm, I think *)
-Theorem extreal_0_simp:
-    (0 <= PosInf <=> T) /\ (0 < PosInf <=> T) /\ (PosInf <= 0 <=> F) /\ (PosInf < 0 <=> F) /\ (0 = PosInf <=> F) /\ (PosInf = 0 <=> F) /\
-    (0 <= NegInf <=> F) /\ (0 < NegInf <=> F) /\ (NegInf <= 0 <=> T) /\ (NegInf < 0 <=> T) /\ (0 = NegInf <=> F) /\ (NegInf = 0 <=> F) /\
+Theorem extreal_0_simps[simp]:
+    (0 <= PosInf <=> T) /\ (0 < PosInf <=> T) /\
+    (PosInf <= 0 <=> F) /\ (PosInf < 0 <=> F) /\
+    (0 = PosInf <=> F) /\ (PosInf = 0 <=> F) /\
+    (0 <= NegInf <=> F) /\ (0 < NegInf <=> F) /\
+    (NegInf <= 0 <=> T) /\ (NegInf < 0 <=> T) /\
+    (0 = NegInf <=> F) /\ (NegInf = 0 <=> F) /\
     (!r. 0 <= Normal r <=> 0 <= r) /\ (!r. 0 < Normal r <=> 0 < r) /\ (!r. 0 = Normal r <=> r = 0) /\
     (!r. Normal r <= 0 <=> r <= 0) /\ (!r. Normal r < 0 <=> r < 0) /\ (!r. Normal r = 0 <=> r = 0)
 Proof
     simp[GSYM normal_0]
 QED
 
-(* TODO: remove once extreal_0_simp is a [simp] *)
-val _ = mk_local_simp "extreal_0_simp";
-
-(* TODO: make [simp] *)
-Theorem extreal_1_simp:
+Theorem extreal_1_simps[simp]:
     (1 <= PosInf <=> T) /\ (1 < PosInf <=> T) /\ (PosInf <= 1 <=> F) /\
     (PosInf < 1 <=> F) /\ (1 = PosInf <=> F) /\ (PosInf = 1 <=> F) /\
     (1 <= NegInf <=> F) /\ (1 < NegInf <=> F) /\ (NegInf <= 1 <=> T) /\
@@ -9657,9 +9636,6 @@ Theorem extreal_1_simp:
 Proof
     simp[GSYM normal_1]
 QED
-
-(* TODO: remove once extreal_1_simp is a [simp] *)
-val _ = mk_local_simp "extreal_1_simp";
 
 (* do NOT add to a simpset, way too much overhead *)
 Theorem ineq_imp:

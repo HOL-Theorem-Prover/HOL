@@ -852,9 +852,11 @@ Proof
          Q.EXISTS_TAC ‘n’ >> rw []) >> DISCH_TAC \\
      Know ‘abs (real (sup {a n | i <= n} - inf {a n | i <= n})) =
                 real (sup {a n | i <= n} - inf {a n | i <= n})’
-     >- (rw [abs_refl, GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
+     >- (rw [abs_refl] \\
+         RW_TAC std_ss [GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
          Suff ‘Normal (real (sup {a n | i <= n} - inf {a n | i <= n})) =
-                             sup {a n | i <= n} - inf {a n | i <= n}’ >- rw [] \\
+                             sup {a n | i <= n} - inf {a n | i <= n}’
+         >- RW_TAC std_ss [] \\
          MATCH_MP_TAC normal_real \\
         ‘?r. sup {a n | i <= n} = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
         ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
@@ -910,19 +912,21 @@ Proof
         ‘?z. inf {a n | i <= n} = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
          rw [extreal_sub_def]) >> STRIP_TAC \\
      Know ‘abs (real (Q i)) = real (Q i)’
-     >- (rw [abs_refl, GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
-         Suff ‘Normal (real (Q i)) = Q i’ >- rw [] \\
+     >- (rw [abs_refl] \\
+         RW_TAC std_ss [GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
+         Suff ‘Normal (real (Q i)) = Q i’ >- RW_TAC std_ss [] \\
          MATCH_MP_TAC normal_real >> rw []) >> Rewr' \\
      Q.PAT_X_ASSUM ‘!n. N <= n ==> abs (real (P n)) < e’
        (fn th => ASSUME_TAC (MATCH_MP th (ASSUME “N <= (i :num)”))) \\
      Know ‘abs (real (P i)) = real (P i)’
-     >- (rw [abs_refl, GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
-         Suff ‘Normal (real (P i)) = P i’ >- rw [] \\
+     >- (rw [abs_refl] \\
+         RW_TAC std_ss [GSYM extreal_le_eq, GSYM extreal_of_num_def] \\
+         Suff ‘Normal (real (P i)) = P i’ >- RW_TAC std_ss [] \\
          MATCH_MP_TAC normal_real >> rw []) >> DISCH_THEN (fs o wrap) \\
      MATCH_MP_TAC REAL_LET_TRANS \\
      Q.EXISTS_TAC ‘real (P i)’ >> art [] \\
      REWRITE_TAC [GSYM extreal_le_eq] \\
-     rw [normal_real])
+     RW_TAC std_ss [normal_real])
  >> DISCH_TAC
  (* final stage *)
  >> rw [LIM_SEQUENTIALLY_real_normal]
@@ -1126,8 +1130,8 @@ Proof
         ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
         ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
          rw [extreal_sub_def, extreal_abs_def]) >> Rewr' \\
-     rw [abs_abs, GSYM extreal_lt_eq] \\
-     Suff ‘Normal (real (abs (u i x - f x))) = abs (u i x - f x)’ >- rw [] \\
+     RW_TAC std_ss [abs_abs, GSYM extreal_lt_eq] \\
+     Suff ‘Normal (real (abs (u i x - f x))) = abs (u i x - f x)’ >- RW_TAC std_ss [] \\
      MATCH_MP_TAC normal_real \\
     ‘?a. u i x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
     ‘?b. f x   = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
