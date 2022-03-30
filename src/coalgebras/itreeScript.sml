@@ -46,9 +46,10 @@ val f = ``(f: ('a,'e,'r) itree_rep)``
 
 Definition path_ok_def:
   path_ok path ^f <=>
-    !xs y ys.
-      path = xs ++ y::ys ==>
-      f xs <> Stuck /\ !z. f xs <> Return z (* a path cannot continue past a Stuck/Return *)
+  !xs y ys.
+    path = xs ++ y::ys ==>
+    f xs <> Stuck /\
+    !z. f xs <> Return z (* a path cannot continue past a Stuck/Return *)
 End
 
 Definition itree_rep_ok_def:
@@ -84,7 +85,8 @@ Proof
 QED
 
 Theorem itree_abs_11[local]:
-  itree_rep_ok r1 /\ itree_rep_ok r2 ==> ((itree_abs r1 = itree_abs r2) = (r1 = r2))
+  itree_rep_ok r1 /\ itree_rep_ok r2 ==>
+  (itree_abs r1 = itree_abs r2 <=> r1 = r2)
 Proof
   fs [itree_repabs, EQ_IMP_THM] \\ metis_tac []
 QED
@@ -441,9 +443,9 @@ Theorem itree_unfold_err:
 Proof
   Cases_on ‘f seed’ >> once_rewrite_tac [itree_unfold_err] >>
   gvs[Ret_def, Div_def, Vis_def] >> AP_TERM_TAC >> simp[FUN_EQ_THM] >>
-  Cases >> gvs[itree_unfold_err_path_def, Ret_rep_def, Div_rep_def, Vis_rep_def] >>
+  Cases >> gvs[itree_unfold_err_path_def,Ret_rep_def,Div_rep_def,Vis_rep_def] >>
   Cases_on ‘h’ >> gvs[itree_rep_abs_itree_unfold_err_path] >>
-  TRY IF_CASES_TAC >> Cases_on ‘t’ >> gvs[itree_rep_abs_itree_unfold_err_path] >>
+  TRY IF_CASES_TAC >> Cases_on ‘t’ >> gvs[itree_rep_abs_itree_unfold_err_path]>>
   Cases_on ‘f (f' y)’ >> gvs [] >>
   once_rewrite_tac [itree_unfold_err] >> gvs [] >>
   once_rewrite_tac [GSYM itree_unfold_err] >> gvs [] >>
