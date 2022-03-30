@@ -7,9 +7,9 @@
 *)
 
 open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory listTheory
-open sortingTheory
+open pairTheory pred_setTheory listTheory;
+open sortingTheory;
+open relationTheory mp_then;
 val _ = new_theory "tableauK";
 
 Datatype: form = Var num | NVar num | Conj form form | Disj form form
@@ -19,6 +19,10 @@ val _ = export_rewrites ["form_size_def"]
 
 Datatype: model = <| rel : α -> α -> bool ; valt : α -> num -> bool ;
                      worlds : α set |>
+End
+
+Definition reflexive_M:
+  reflexive_M m ⇔ ∀w. w ∈ m.worlds ⇒ m.rel w w
 End
 
 Definition forces_def[simp]:
@@ -411,7 +415,7 @@ Proof
   simp[Once tableau_def] >> simp[AllCaseEqs()] >> rw[] >>
   fs[MEM_MAP, PULL_EXISTS, MEM_undia, MEM_unbox]
   >- ((* K rule *)
-      rw[] >> fs[RIGHT_AND_OVER_OR, EXISTS_OR_THM] >>
+      rw[] >>
       first_x_assum (drule_then (drule_then assume_tac)) >>
       rename [‘MEM (Dia d) Γ’] >>
       reverse (Cases_on ‘forces M w (Dia d)’) >- metis_tac[] >>
