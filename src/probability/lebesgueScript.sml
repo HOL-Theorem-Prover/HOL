@@ -4148,6 +4148,31 @@ Proof
  >> METIS_TAC [IN_psfis_eq, psfis_add, pos_fn_integral_pos_simple_fn]
 QED
 
+Theorem pos_fn_integral_add3 :
+    !m f g h. measure_space m /\
+             (!x. x IN m_space m ==> 0 <= f x) /\
+             (!x. x IN m_space m ==> 0 <= g x) /\
+             (!x. x IN m_space m ==> 0 <= h x) /\
+              f IN measurable (m_space m,measurable_sets m) Borel /\
+              g IN measurable (m_space m,measurable_sets m) Borel /\
+              h IN measurable (m_space m,measurable_sets m) Borel
+          ==> pos_fn_integral m (\x. f x + g x + h x) =
+              pos_fn_integral m f + pos_fn_integral m g + pos_fn_integral m h
+Proof
+    rpt STRIP_TAC
+ >> Know ‘pos_fn_integral m (\x. f x + g x + h x) =
+          pos_fn_integral m (\x. f x + g x) +
+          pos_fn_integral m h’
+ >- (HO_MATCH_MP_TAC pos_fn_integral_add >> rw [le_add] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD' \\
+     qexistsl_tac [‘f’, ‘g’] >> rw [] \\
+     fs [measure_space_def])
+ >> Rewr'
+ >> Suff ‘pos_fn_integral m (\x. f x + g x) =
+          pos_fn_integral m f + pos_fn_integral m g’ >- rw []
+ >> MATCH_MP_TAC pos_fn_integral_add >> art []
+QED
+
 (* added ‘x IN m_space m’. used by martingaleTheory.EXISTENCE_OF_PROD_MEASURE *)
 Theorem pos_fn_integral_sub :
     !m f g. measure_space m /\
@@ -4705,35 +4730,28 @@ QED
 
 Theorem pos_fn_integral_cmul_infty :
     !m s. measure_space m /\ s IN measurable_sets m ==>
-         (pos_fn_integral m (\x. PosInf * indicator_fn s x) = PosInf * (measure m s))
+          pos_fn_integral m (\x. PosInf * indicator_fn s x) = PosInf * measure m s
 Proof
     RW_TAC std_ss []
  >> Q.ABBREV_TAC `fi = (\i:num x. &i)`
  >> Q.ABBREV_TAC `f = (\x. PosInf)`
  >> `!x. x IN m_space m ==> (sup (IMAGE (\i. fi i x) UNIV) = f x)`
-      by (RW_TAC std_ss [] \\
-          Q.UNABBREV_TAC `fi` \\
-          Q.UNABBREV_TAC `f` \\
-          RW_TAC std_ss [] \\
+      by (RW_TAC std_ss [Abbr ‘fi’, Abbr ‘f’] \\
           Suff `IMAGE (\i. &i) univ(:num) = (\x. ?n. x = &n)`
           >- RW_TAC std_ss [sup_num] \\
           RW_TAC std_ss [EXTENSION, IN_IMAGE, IN_ABS, IN_UNIV])
  >> `!x. x IN m_space m ==> mono_increasing (\i. fi i x)`
       by (RW_TAC std_ss [ext_mono_increasing_def] \\
-          Q.UNABBREV_TAC `fi` \\
-          RW_TAC real_ss [extreal_of_num_def, extreal_le_def])
+          RW_TAC real_ss [Abbr ‘fi’, extreal_of_num_def, extreal_le_def])
  >> `!i x. x IN m_space m ==> 0 <= fi i x`
-      by (Q.UNABBREV_TAC `fi` \\
-          RW_TAC real_ss [extreal_of_num_def,extreal_le_def])
+      by RW_TAC real_ss [Abbr ‘fi’, extreal_of_num_def,extreal_le_def]
  >> `!x. x IN m_space m ==> 0 <= f x` by METIS_TAC [le_infty]
  >> `!i. fi i IN measurable (m_space m, measurable_sets m) Borel`
       by (RW_TAC std_ss [] \\
           MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST \\
           METIS_TAC [measure_space_def])
  >> (MP_TAC o Q.SPECL [`m`,`f`,`fi`,`s`]) lebesgue_monotone_convergence_subset
- >> RW_TAC std_ss []
- >> Q.UNABBREV_TAC `f`
- >> Q.UNABBREV_TAC `fi`
+ >> RW_TAC std_ss [Abbr ‘f’, Abbr ‘fi’]
  >> FULL_SIMP_TAC real_ss []
  >> RW_TAC real_ss [extreal_of_num_def, pos_fn_integral_cmul_indicator]
  >> RW_TAC std_ss [Once mul_comm]
@@ -4766,8 +4784,8 @@ Proof
      MATCH_MP_TAC pos_fn_integral_pos >> art [])
  >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> Know `!x. x IN m_space m ==>
-             (suminf (\i. f i x) =
-              sup (IMAGE (\n. SIGMA (\i. f i x) (count n)) univ(:num)))`
+              suminf (\i. f i x) =
+              sup (IMAGE (\n. SIGMA (\i. f i x) (count n)) UNIV)`
  >- (rpt STRIP_TAC >> MATCH_MP_TAC ext_suminf_def \\
      RW_TAC std_ss []) >> DISCH_TAC
  >> Know ‘pos_fn_integral m (\x. suminf (\i. f i x)) =
@@ -5620,13 +5638,11 @@ val integrable_indicator_pow = store_thm (* new *)
  >> Q.EXISTS_TAC `indicator_fn s`
  >> RW_TAC std_ss [integrable_indicator, indicator_fn_def, one_pow, zero_pow]);
 
-(* this result is used to simplify the definition of `RN_deriv`,
-
-   added `!x. x IN m_space m ==> f x <> NegInf /\ f x <> PosInf`
+(* deleted ‘measure m s < PosInf’ and
+   deleted ‘!x. x IN m_space m ==> f x <> NegInf /\ f x <> PosInf’
  *)
 Theorem integrable_mul_indicator :
-    !m s f. measure_space m /\ s IN measurable_sets m /\ measure m s < PosInf /\
-            (!x. x IN m_space m ==> f x <> NegInf /\ f x <> PosInf) /\
+    !m s f. measure_space m /\ s IN measurable_sets m /\
             integrable m f ==> integrable m (\x. f x * indicator_fn s x)
 Proof
     rpt STRIP_TAC
@@ -5638,15 +5654,8 @@ Proof
  >- (RW_TAC std_ss [] \\
      Cases_on `x IN s` >- ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rone, le_refl] \\
      ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rzero, abs_0, abs_pos])
- >> MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES
- >> BETA_TAC
- >> qexistsl_tac [`f`, `indicator_fn s`]
- >> ASM_SIMP_TAC std_ss [space_def]
- >> CONJ_TAC >- PROVE_TAC [integrable_def]
- >> MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR
- >> Q.EXISTS_TAC `s`
- >> CONJ_TAC >- PROVE_TAC [measure_space_def]
- >> fs [space_def, subsets_def]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR
+ >> fs [measure_space_def, integrable_def]
 QED
 
 (* IMPORTANT: all posinf-valued points (which forms a null set) in an integrable
@@ -6240,6 +6249,26 @@ Proof
  >> Q.ABBREV_TAC `d = pos_fn_integral m (fn_minus g)`
  >> MATCH_MP_TAC EQ_SYM
  >> MATCH_MP_TAC add2_sub2 >> art []
+QED
+
+(* in this theorem, the involved functions never take infinite values *)
+Theorem integral_add3 :
+    !m f g h. measure_space m /\
+              integrable m f /\ integrable m g /\ integrable m h /\
+             (!x. x IN m_space m ==> f x <> PosInf /\ f x <> NegInf) /\
+             (!x. x IN m_space m ==> g x <> PosInf /\ g x <> NegInf) /\
+             (!x. x IN m_space m ==> h x <> PosInf /\ h x <> NegInf)
+          ==> integral m (\x. f x + g x + h x) =
+              integral m f + integral m g + integral m h
+Proof
+    rpt STRIP_TAC
+ >> Know ‘integral m (\x. f x + g x + h x) =
+          integral m (\x. f x + g x) + integral m h’
+ >- (HO_MATCH_MP_TAC integral_add >> simp [] \\
+     MATCH_MP_TAC integrable_add >> rw [])
+ >> Rewr'
+ >> Suff ‘integral m (\x. f x + g x) = integral m f + integral m g’ >- rw []
+ >> MATCH_MP_TAC integral_add >> rw []
 QED
 
 (* cf. real_lebesgueTheory.integral_times *)

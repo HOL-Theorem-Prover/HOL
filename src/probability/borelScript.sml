@@ -276,11 +276,11 @@ val middle_tactics =
        rw [extreal_not_infty, real_normal, extreal_lt_eq, extreal_le_eq],
        (* goal 2 (of 3) *)
        rename1 ‘a <= real y’ >> REWRITE_TAC [GSYM extreal_le_eq] \\
-       Suff ‘Normal (real y) = y’ >- rw [] \\
+       Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
        MATCH_MP_TAC normal_real >> art [],
        (* goal 3 (of 3) *)
        rename1 ‘real y < b’ >> REWRITE_TAC [GSYM extreal_lt_eq] \\
-       Suff ‘Normal (real y) = y’ >- rw [] \\
+       Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
        MATCH_MP_TAC normal_real >> art [] ])
  >> DISCH_TAC
  (* applying SIGMA_SUBSET *)
@@ -304,11 +304,11 @@ val middle_tactics =
            rw [extreal_not_infty, real_normal, extreal_lt_eq, extreal_le_eq],
            (* goal 2 (of 3) *)
            rename1 ‘a <= real y’ >> REWRITE_TAC [GSYM extreal_le_eq] \\
-           Suff ‘Normal (real y) = y’ >- rw [] \\
+           Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
            MATCH_MP_TAC normal_real >> art [],
            (* goal 3 (of 3) *)
            rename1 ‘real y < b’ >> REWRITE_TAC [GSYM extreal_lt_eq] \\
-           Suff ‘Normal (real y) = y’ >- rw [] \\
+           Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
            MATCH_MP_TAC normal_real >> art [] ]) \\
      Know ‘{x | q <= x /\ x < r} = {}’
      >- (rw [Once EXTENSION, NOT_IN_EMPTY] \\
@@ -346,11 +346,11 @@ val middle_tactics' =
        rw [extreal_not_infty, real_normal, extreal_lt_eq, extreal_le_eq],
        (* goal 2 (of 3) *)
        rename1 ‘a < real y’ >> REWRITE_TAC [GSYM extreal_lt_eq] \\
-       Suff ‘Normal (real y) = y’ >- rw [] \\
+       Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
        MATCH_MP_TAC normal_real >> art [],
        (* goal 3 (of 3) *)
        rename1 ‘real y <= b’ >> REWRITE_TAC [GSYM extreal_le_eq] \\
-       Suff ‘Normal (real y) = y’ >- rw [] \\
+       Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
        MATCH_MP_TAC normal_real >> art [] ])
  >> DISCH_TAC
  (* applying SIGMA_SUBSET *)
@@ -374,11 +374,11 @@ val middle_tactics' =
            rw [extreal_not_infty, real_normal, extreal_lt_eq, extreal_le_eq],
            (* goal 2 (of 3) *)
            rename1 ‘q < real y’ >> REWRITE_TAC [GSYM extreal_lt_eq] \\
-           Suff ‘Normal (real y) = y’ >- rw [] \\
+           Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
            MATCH_MP_TAC normal_real >> art [],
            (* goal 3 (of 3) *)
            rename1 ‘real y <= r’ >> REWRITE_TAC [GSYM extreal_le_eq] \\
-           Suff ‘Normal (real y) = y’ >- rw [] \\
+           Suff ‘Normal (real y) = y’ >- RW_TAC std_ss [] \\
            MATCH_MP_TAC normal_real >> art [] ]) \\
      Know ‘{x | q < x /\ x <= r} = {}’
      >- (rw [Once EXTENSION, NOT_IN_EMPTY] \\
@@ -484,6 +484,10 @@ Proof
        Suff ‘{x | x < Normal a} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
        >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
        rw [IN_IMAGE] >> Q.EXISTS_TAC ‘a’ >> rw [] ]) >> DISCH_TAC
+ (* adding new assumptions:
+    3.  Abbrev (R = IMAGE Normal univ(:real))
+    4.  R IN S
+  *)
  >> early_tactics
  (* applying SIGMA_ALGEBRA_RESTRICT *)
  >> Know ‘sigma_algebra (R,IMAGE (\s. s INTER R) S)’
@@ -491,6 +495,11 @@ Proof
      Q.EXISTS_TAC ‘space (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’ \\
      rw [Abbr ‘S’, SPACE])
  >> DISCH_TAC
+ (* adding new assumptions:
+    6.  sigma_algebra (univ(:real),IMAGE real_set S)
+    7.  !a b. a <= b ==> {x | a <= x /\ x < b} IN IMAGE real_set S
+    8.  subsets borel SUBSET IMAGE real_set S
+  *)
  >> middle_tactics
  (* stage work *)
  >> simp [SUBSET_DEF, Borel]
@@ -2939,10 +2948,10 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR_EQ = store_thm
            >> METIS_TAC [mul_rzero, mul_rone])
  >> POP_ORW >> art []);
 
-val IN_MEASURABLE_BOREL_MAX = store_thm
-  ("IN_MEASURABLE_BOREL_MAX",
-  ``!a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
-        ==> (\x. max (f x) (g x)) IN measurable a Borel``,
+Theorem IN_MEASURABLE_BOREL_MAX :
+    !a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
+        ==> (\x. max (f x) (g x)) IN measurable a Borel
+Proof
     RW_TAC std_ss [IN_MEASURABLE_BOREL, extreal_max_def, IN_FUNSET, IN_UNIV]
  >> `!c. {x | (if f x <= g x then g x else f x) < c} = {x | f x < c} INTER {x | g x < c}`
         by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] \\
@@ -2953,12 +2962,13 @@ val IN_MEASURABLE_BOREL_MAX = store_thm
  >> `!c. {x | (if f x <= g x then g x else f x) < c} INTER space a =
          ({x | f x < c} INTER space a) INTER ({x | g x < c} INTER space a)`
         by METIS_TAC [INTER_ASSOC, INTER_COMM, INTER_IDEMPOT]
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]
+QED
 
-val IN_MEASURABLE_BOREL_MIN = store_thm
-  ("IN_MEASURABLE_BOREL_MIN",
-  ``!a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
-        ==> (\x. min (f x) (g x)) IN measurable a Borel``,
+Theorem IN_MEASURABLE_BOREL_MIN :
+    !a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
+        ==> (\x. min (f x) (g x)) IN measurable a Borel
+Proof
     RW_TAC std_ss [IN_MEASURABLE_BOREL, extreal_min_def, IN_FUNSET, IN_UNIV]
  >> Know `!c. {x | (if f x <= g x then f x else g x) < c} =
               {x | f x < c} UNION {x | g x < c}`
@@ -2969,7 +2979,21 @@ val IN_MEASURABLE_BOREL_MIN = store_thm
  >> `!c. {x | (if f x <= g x then f x else g x) < c} INTER space a =
          ({x | f x < c} INTER space a) UNION ({x | g x < c} INTER space a)`
        by ASM_SET_TAC []
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_UNION]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_UNION]
+QED
+
+(* see extrealTheory.max_fn_seq_def *)
+Theorem IN_MEASURABLE_BOREL_MAX_FN_SEQ :
+    !a f. sigma_algebra a /\ (!i. f i IN measurable a Borel) ==>
+          !n. max_fn_seq f n IN measurable a Borel
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> Induct_on ‘n’ >> rw [max_fn_seq_def]
+ >> ‘max_fn_seq f (SUC n) = \x. max (max_fn_seq f n x) (f (SUC n) x)’
+      by rw [max_fn_seq_def, FUN_EQ_THM]
+ >> POP_ORW
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MAX >> rw []
+QED
 
 (* TODO: ‘!n x. x IN space a ==> fn n x <= fn (SUC n) x’ (MONO) is unnecessary *)
 Theorem IN_MEASURABLE_BOREL_MONO_SUP :
@@ -5302,53 +5326,31 @@ Proof
   METIS_TAC [SUBSET_REFL]
 QED
 
-Theorem AE_impl :
-    !P M Q. measure_space M /\ (P ==> (AE x::M. Q x)) ==>
-           (AE x::M. (P ==> Q x))
-Proof
-    Cases
- >- (RW_TAC bool_ss [AE_ALT] >> POP_ASSUM MP_TAC \\
-     rw [EXTENSION] >> Q.EXISTS_TAC `N` \\
-     RW_TAC std_ss [] >> METIS_TAC[IN_DEF])
- >> RW_TAC bool_ss [AE_ALT]
- >> rw [EXTENSION]
- >> Q.EXISTS_TAC `{}`
- >> RW_TAC bool_ss [null_set_def, NOT_IN_EMPTY,
-                    MEASURE_SPACE_EMPTY_MEASURABLE]
- >> RW_TAC std_ss [MEASURE_EMPTY]
-QED
-
-(* NOTE: what's the role of ‘countable (t i)’ *)
-Theorem AE_all_countable :
-    !(t :num->num->bool) M (P :num->'a->bool).
-       measure_space M ==>
-       ((!i:num. countable (t i) ==> AE x::M. P i x) <=>
-        (!i. AE x::M. (\x. P i x) x))
-Proof
-    RW_TAC std_ss[]
- >> EQ_TAC
- >- (RW_TAC (srw_ss()) [AE_ALT] \\
-     FIRST_X_ASSUM (MP_TAC o Q.SPEC `i`) \\
-     FULL_SIMP_TAC (srw_ss()) [COUNTABLE_NUM])
- >> RW_TAC (srw_ss()) [AE_ALT]
-QED
-
-Theorem AE_all_S :
-    !M S' P. measure_space M ==>
-             (!i. (S' i ==> (AE x::M. (\x. P i x) x))) ==>
-             (!(i':num). AE x::M. (\x. (S' (i':num)) ==> (P :num->'a->bool) i' x) x)
+(* Quantifier movement conversions for AE *)
+Theorem RIGHT_IMP_AE_THM : (* was: AE_impl *)
+    !m P Q. measure_space m ==> ((P ==> AE x::m. Q x) <=> (AE x::m. P ==> Q x))
 Proof
     rpt STRIP_TAC
- >> `(\x. (S' (i' :num)) ==> P i' x) x =
-     ((\(i' :num) x. (S' (i' :num))  ==> P i' x) (i' :num)) x`
-       by RW_TAC std_ss []
- >> POP_ORW
- >> Q.SPEC_TAC (`i'`, `i`)
- >> dep_rewrite.DEP_REWRITE_TAC [GSYM AE_all_countable]
- >> RW_TAC std_ss []
- >> POP_ORW
- >> RW_TAC std_ss[]
- >> metis_tac [AE_impl]
+ >> EQ_TAC >> RW_TAC bool_ss [AE_DEF]
+ >- (Cases_on ‘P’ >- (fs [] >> Q.EXISTS_TAC ‘N’ >> rw []) \\
+     rw [] >> Q.EXISTS_TAC ‘{}’ \\
+     MATCH_MP_TAC NULL_SET_EMPTY >> art [])
+ >> Q.EXISTS_TAC ‘N’ >> rw []
+QED
+
+Theorem RIGHT_IMP_AE_THM' : (* was: AE_all_S *)
+    !m P Q. measure_space m ==>
+           ((!i. P i ==> AE x::m. Q i x) <=> (!i. AE x::m. P i ==> Q i x))
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >> RW_TAC bool_ss [AE_DEF]
+ >- (Q.PAT_X_ASSUM ‘!i. _’ (MP_TAC o Q.SPEC ‘i’) >> STRIP_TAC \\
+     Q.EXISTS_TAC ‘N’ >> rw [])
+ >> Cases_on ‘P i’
+ >- (Q.PAT_X_ASSUM ‘!i. _’ (MP_TAC o Q.SPEC ‘i’) >> STRIP_TAC \\
+     POP_ASSUM MP_TAC >> RW_TAC bool_ss [])
+ >> rw [] >> Q.EXISTS_TAC ‘{}’
+ >> MATCH_MP_TAC NULL_SET_EMPTY >> art []
 QED
 
 (* NOTE: the need of complete measure space is necessary if P is a generic property.
@@ -7818,9 +7820,8 @@ Theorem BOREL_2D :
 Proof
     Q.ABBREV_TAC ‘S = ^borel_2d_tm2’
  >> ONCE_REWRITE_TAC [GSYM SPACE]
- >> Know ‘space (Borel CROSS Borel) = space S’
- >- rw [SPACE_BOREL_2D, Abbr ‘S’]
- >> Rewr'
+ >> ‘space (Borel CROSS Borel) = space S’ by rw [SPACE_BOREL_2D, Abbr ‘S’]
+ >> POP_ORW
  >> Suff ‘subsets (Borel CROSS Borel) = subsets S’ >- rw []
  >> MATCH_MP_TAC SUBSET_ANTISYM
  (* stage work *)
@@ -7960,12 +7961,11 @@ Proof
        Know ‘r <> PosInf /\ r <> NegInf’
        >- (CONJ_TAC >> CCONTR_TAC >> fs [lt_infty]) >> STRIP_TAC \\
        Q.EXISTS_TAC ‘(real q,real r)’ >> rw [normal_real] \\ (* 4 subgoals, same tactics *)
-       rw [GSYM extreal_lt_eq, normal_real] ])
+       RW_TAC std_ss [GSYM extreal_lt_eq, normal_real] ])
  (* stage work (tedious part) *)
  >> REWRITE_TAC [prod_sigma_def]
- >> Know ‘space Borel CROSS space Borel = space S’
- >- (rw [Abbr ‘S’, SPACE_BOREL, CROSS_UNIV])
- >> Rewr'
+ >> ‘space Borel CROSS space Borel = space S’ by rw [Abbr ‘S’, SPACE_BOREL, CROSS_UNIV]
+ >> POP_ORW
  >> MATCH_MP_TAC SIGMA_SUBSET
  (* applying BOREL_2D_lemma3 *)
  >> CONJ_TAC >- rw [BOREL_2D_lemma3, Abbr ‘S’]
@@ -7996,7 +7996,6 @@ Proof
           rename1 ‘FST z IN B’ >> Cases_on ‘z’ >> fs [] ],
         (* goal 2.3 (of 2) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 3 (of 16) *)
       qexistsl_tac [‘{}’, ‘{}’, ‘IMAGE Normal B’, ‘{}’] \\
       rw [UNION_EMPTY, CROSS_EMPTY] >| (* 2 subgoals *)
@@ -8009,7 +8008,6 @@ Proof
           rename1 ‘FST z IN B’ >> Cases_on ‘z’ >> fs [] ],
         (* goal 3.3 (of 2) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 4 (of 16) *)
       qexistsl_tac [‘{}’, ‘{}’, ‘IMAGE Normal B’, ‘IMAGE Normal B’] \\
       rw [UNION_EMPTY, CROSS_EMPTY] >| (* 3 subgoals *)
@@ -8024,7 +8022,6 @@ Proof
         qexistsl_tac [‘B’, ‘{}’] >> rw [],
         (* goal 4.3 (of 3) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 5 (of 16) *)
       qexistsl_tac [‘{}’, ‘IMAGE Normal B'’, ‘{}’, ‘{}’] \\
       rw [UNION_EMPTY, CROSS_EMPTY] >| (* 2 subgoals *)
@@ -8037,7 +8034,6 @@ Proof
           rename1 ‘FST z IN B’ >> Cases_on ‘z’ >> fs [] ],
         (* goal 5.2 (of 2) *)
         qexistsl_tac [‘B'’, ‘{}’] >> rw [] ],
-
       (* goal 6 (of 16) *)
       qexistsl_tac [‘{}’, ‘(IMAGE Normal B') UNION {NegInf}’, ‘{}’, ‘IMAGE Normal B’] \\
       rw [UNION_EMPTY, CROSS_EMPTY] >| (* 3 subgoals *)
@@ -8052,7 +8048,6 @@ Proof
         qexistsl_tac [‘B'’, ‘{NegInf}’] >> rw [],
         (* goal 6.3 (of 3) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 7 (of 16) *)
       qexistsl_tac [‘{}’, ‘(IMAGE Normal B') UNION {PosInf}’, ‘IMAGE Normal B’, ‘{}’] \\
       rw [UNION_EMPTY, CROSS_EMPTY] >| (* 3 subgoals *)
@@ -8067,7 +8062,6 @@ Proof
         qexistsl_tac [‘B'’, ‘{PosInf}’] >> rw [],
         (* goal 7.3 (of 3) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 8 (of 16) *)
       qexistsl_tac [‘{}’, ‘(IMAGE Normal B') UNION {NegInf; PosInf}’,
                     ‘IMAGE Normal B’, ‘IMAGE Normal B’] \\
@@ -8085,7 +8079,6 @@ Proof
         qexistsl_tac [‘B’, ‘{}’] >> rw [],
         (* goal 8.4 (of 4) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 9 (of 16) *)
       qexistsl_tac [‘IMAGE Normal B'’, ‘{}’, ‘{}’, ‘{}’] \\
       rw [UNION_EMPTY, CROSS_EMPTY] >| (* 2 subgoals *)
@@ -8098,7 +8091,6 @@ Proof
           rename1 ‘FST z IN B’ >> Cases_on ‘z’ >> fs [] ],
         (* goal 9.2 (of 2) *)
         qexistsl_tac [‘B'’, ‘{}’] >> rw [] ],
-
       (* goal 10 (of 16) *)
       qexistsl_tac [‘(IMAGE Normal B') UNION {NegInf}’, ‘{}’,
                     ‘{}’, ‘IMAGE Normal B’] \\
@@ -8114,7 +8106,6 @@ Proof
         qexistsl_tac [‘B'’, ‘{NegInf}’] >> rw [],
         (* goal 10.3 (of 3) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 11 (of 16) *)
       qexistsl_tac [‘(IMAGE Normal B') UNION {PosInf}’, ‘{}’,
                     ‘IMAGE Normal B’, ‘{}’] \\
@@ -8130,7 +8121,6 @@ Proof
         qexistsl_tac [‘B'’, ‘{PosInf}’] >> rw [],
         (* goal 11.3 (of 3) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 12 (of 16) *)
       qexistsl_tac [‘(IMAGE Normal B') UNION {NegInf;PosInf}’, ‘{}’,
                     ‘IMAGE Normal B’, ‘IMAGE Normal B’] \\
@@ -8148,7 +8138,6 @@ Proof
         qexistsl_tac [‘B’, ‘{}’] >> rw [],
         (* goal 12.4 (of 4) *)
         qexistsl_tac [‘B’, ‘{}’] >> rw [] ],
-
       (* goal 13 (of 16) *)
       qexistsl_tac [‘IMAGE Normal B'’, ‘IMAGE Normal B'’, ‘{}’, ‘{}’] \\
       rw [UNION_EMPTY, CROSS_EMPTY] >| (* 3 subgoals *)
@@ -8163,7 +8152,6 @@ Proof
         qexistsl_tac [‘B'’, ‘{}’] >> rw [],
         (* goal 13.3 (of 3) *)
         qexistsl_tac [‘B'’, ‘{}’] >> rw [] ],
-
       (* goal 14 (of 16) *)
       qexistsl_tac [‘(IMAGE Normal B') UNION {NegInf}’,
                     ‘(IMAGE Normal B') UNION {NegInf}’,
@@ -8182,7 +8170,6 @@ Proof
         qexistsl_tac [‘B'’, ‘{NegInf}’] >> rw [],
         (* goal 14.4 (of 4) *)
         qexistsl_tac [‘B’, ‘{NegInf;PosInf}’] >> rw [] ],
-
       (* goal 15 (of 16) *)
       qexistsl_tac [‘(IMAGE Normal B') UNION {PosInf}’,
                     ‘(IMAGE Normal B') UNION {PosInf}’,
@@ -8201,7 +8188,6 @@ Proof
         qexistsl_tac [‘B'’, ‘{PosInf}’] >> rw [],
         (* goal 15.4 (of 4) *)
         qexistsl_tac [‘B’, ‘{NegInf;PosInf}’] >> rw [] ],
-
       (* goal 16 (of 16) *)
       qexistsl_tac [‘(IMAGE Normal B') UNION {NegInf;PosInf}’,
                     ‘(IMAGE Normal B') UNION {NegInf;PosInf}’,
@@ -8725,32 +8711,18 @@ QED
 
 val _ = augment_srw_ss [realSimps.REAL_ARITH_ss];
 
-(*  TODO: Remove as the following are [simp]s:
-        EXTREAL_SUM_IMAGE_EMPTY
-        extreal_le_simp
-        extreal_lt_simp
-        extreal_0_simp
-        extreal_1_simp
-*)
-val name_to_thname = fn (t,s) => ({Thy = t, Name = s}, DB.fetch t s);
-val mk_local_simp = augment_srw_ss o single o
-    simpLib.rewrites_with_names o single o name_to_thname;
-val _ = mk_local_simp ("extreal","EXTREAL_SUM_IMAGE_EMPTY");
-val _ = mk_local_simp ("extreal","extreal_le_simp");
-val _ = mk_local_simp ("extreal","extreal_lt_simp");
-val _ = mk_local_simp ("extreal","extreal_0_simp");
-val _ = mk_local_simp ("extreal","extreal_1_simp");
-
 (*** IN_MEASURABLE_BOREL Theorems ***)
 
-Theorem IN_MEASURABLE_BOREL_CONG:
-    !a b f g. a = b /\ (!x. x IN space b ==> f x = g x) ==> (f IN Borel_measurable a <=> g IN Borel_measurable b)
+(* There is already an IN_MEASURABLE_BOREL_CONG earlier in this theory *)
+Theorem IN_MEASURABLE_BOREL_CONG':
+    !a f g. (!x. x IN space a ==> f x = g x) ==>
+            (f IN Borel_measurable a <=> g IN Borel_measurable a)
 Proof
     rw[] >> eq_tac >> rw[] >> dxrule_at_then (Pos $ el 2) irule IN_MEASURABLE_BOREL_EQ' >> simp[]
 QED
 
 Theorem IN_MEASURABLE_BOREL_COMP:
-    !a b f g h. sigma_algebra a /\ sigma_algebra b /\ f IN Borel_measurable b /\ g IN measurable a b /\
+    !a b f g h. f IN Borel_measurable b /\ g IN measurable a b /\
         (!x. x IN space a ==> h x = f (g x)) ==> h IN Borel_measurable a
 Proof
     rw[] >> dxrule_all_then assume_tac MEASURABLE_COMP >>
@@ -8758,7 +8730,7 @@ Proof
 QED
 
 Theorem IN_MEASURABLE_BOREL_COMP_BOREL:
-    !a f g h. sigma_algebra a /\ f IN Borel_measurable Borel /\ g IN Borel_measurable a /\
+    !a f g h. f IN Borel_measurable Borel /\ g IN Borel_measurable a /\
         (!x. x IN space a ==> h x = f (g x)) ==> h IN Borel_measurable a
 Proof
     rw[] >> dxrule_all_then assume_tac MEASURABLE_COMP >>

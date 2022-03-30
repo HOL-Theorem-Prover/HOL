@@ -2644,6 +2644,17 @@ Proof
  >> rw [extreal_mul_def]
 QED
 
+Theorem finite_second_moments_ainv :
+    !p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
+          finite_second_moments p (\x. -X x)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘(\x. -X x) = (\x. Normal (-1) * X x)’
+ >- RW_TAC std_ss [FUN_EQ_THM, Once neg_minus1, extreal_of_num_def, extreal_ainv_def]
+ >> Rewr'
+ >> MATCH_MP_TAC finite_second_moments_cmul >> art []
+QED
+
 Theorem finite_second_moments_cdiv :
     !p X c. prob_space p /\ real_random_variable X p /\
             finite_second_moments p X /\ c <> 0 ==>
@@ -2653,6 +2664,18 @@ Proof
  >> MATCH_MP_TAC finite_second_moments_cmul >> art []
 QED
 
+Theorem finite_second_moments_cong :
+    !p X Y. prob_space p /\ (!x. x IN p_space p ==> X x = Y x) ==>
+           (finite_second_moments p X <=> finite_second_moments p Y)
+Proof
+    RW_TAC std_ss [finite_second_moments_def, second_moment_def, moment_def]
+ >> Suff ‘!a. expectation p (\x. (X x - a) pow 2) =
+              expectation p (\x. (Y x - a) pow 2)’ >- rw []
+ >> Q.X_GEN_TAC ‘a’
+ >> MATCH_MP_TAC expectation_cong >> rw []
+QED
+
+(* An easy corollary of Minkowski_inequality *)
 Theorem finite_second_moments_add :
     !p X Y. prob_space p /\
             real_random_variable X p /\ real_random_variable Y p /\
@@ -2666,21 +2689,9 @@ Proof
  >> fs [real_random_variable, p_space_def, events_def]
  >> Suff ‘(\x. X x + Y x) IN L2_space p’
  >- rw [L2_space_alt_integrable_square]
- (* applying Minkowski_inequality *)
  >> MP_TAC (Q.SPECL [‘2’, ‘p’, ‘X’, ‘Y’] Minkowski_inequality)
  >> ‘1 <= (2 :extreal)’ by rw [extreal_of_num_def, extreal_le_eq]
  >> rw [L2_space_alt_integrable_square]
-QED
-
-Theorem finite_second_moments_cong :
-    !p X Y. prob_space p /\ (!x. x IN p_space p ==> X x = Y x) ==>
-           (finite_second_moments p X <=> finite_second_moments p Y)
-Proof
-    RW_TAC std_ss [finite_second_moments_def, second_moment_def, moment_def]
- >> Suff ‘!a. expectation p (\x. (X x - a) pow 2) =
-              expectation p (\x. (Y x - a) pow 2)’ >- rw []
- >> Q.X_GEN_TAC ‘a’
- >> MATCH_MP_TAC expectation_cong >> rw []
 QED
 
 Theorem finite_second_moments_sum :
@@ -2715,6 +2726,39 @@ Proof
       MATCH_MP_TAC real_random_variable_sum >> RW_TAC std_ss [],
       (* goal 3 (of 3) *)
       METIS_TAC [] ]
+QED
+
+Theorem finite_second_moments_sub :
+    !p X Y. prob_space p /\
+            real_random_variable X p /\ real_random_variable Y p /\
+            finite_second_moments p X /\ finite_second_moments p Y ==>
+            finite_second_moments p (\x. X x - Y x)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘finite_second_moments p (\x. X x - Y x) <=>
+          finite_second_moments p (\x. X x + -Y x)’
+ >- (MATCH_MP_TAC finite_second_moments_cong >> rw [] \\
+     MATCH_MP_TAC extreal_sub_add >> METIS_TAC [real_random_variable])
+ >> Rewr'
+ >> HO_MATCH_MP_TAC finite_second_moments_add >> rw []
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC real_random_variable_ainv >> art [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC finite_second_moments_ainv >> art [] ]
+QED
+
+(* An easy corollary of Cauchy_Schwarz_inequality *)
+Theorem finite_second_moments_imp_integrable_mul :
+    !p X Y. prob_space p /\
+            real_random_variable X p /\ real_random_variable Y p /\
+            finite_second_moments p X /\ finite_second_moments p Y ==>
+            integrable p (\x. X x * Y x)
+Proof
+    rpt STRIP_TAC
+ >> rfs [finite_second_moments_eq_integrable_square, prob_space_def]
+ >> fs [real_random_variable, p_space_def, events_def]
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘Y’] Cauchy_Schwarz_inequality)
+ >> rw [L2_space_alt_integrable_square]
 QED
 
 Theorem expectation_real_affine :
