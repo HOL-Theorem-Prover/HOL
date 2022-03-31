@@ -68,12 +68,8 @@ seq {
   import: nets
   article: "seq.ot.art"
 }
-topology {
-  article: "../topology/topology.ot.art"
-}
 metric {
   import: real
-  import: topology
   article: "metric.ot.art"
 }
 lim {

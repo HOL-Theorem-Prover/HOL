@@ -1,21 +1,18 @@
-name: hol-real-unsat
+name: hol-set
 version: 1.0
-description: HOL real theories (with unsatisfied assumptions)
+description: HOL set theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 requires: base
 requires: hol-base
-requires: hol-set
-requires: hol-integer
 show: "HOL4"
 show: "Data.Bool"
 show: "Data.List"
 show: "Data.Pair"
 show: "Function"
 show: "Number.Natural"
-show: "Number.Real"
 show: "Relation"
 main {
-  article: "hol4-real-unint.art"
+  article: "hol4-set-unint.art"
   interpretation: "../opentheory/hol4.int"
 }
