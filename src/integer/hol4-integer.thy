@@ -9,6 +9,7 @@ requires: hol-words
 requires: hol-string
 requires: hol-ring
 requires: hol-quotient
+requires: hol-finite-map
 show: "HOL4"
 show: "Data.Bool"
 show: "Data.List"

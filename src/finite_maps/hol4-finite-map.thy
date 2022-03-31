@@ -1,4 +1,4 @@
-name: hol-fmaps
+name: hol-finite-map
 version: 1.0
 description: HOL finite maps
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
@@ -19,6 +19,6 @@ show: "Function"
 show: "Number.Natural"
 show: "Relation"
 main {
-  article: "hol4-fmaps-unint.art"
+  article: "hol4-finite-map-unint.art"
   interpretation: "../opentheory/hol4.int"
 }

@@ -26,12 +26,12 @@ endif
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
-all: $(ARTFILES) hol4-fmaps.art
+all: $(ARTFILES) hol4-finite-map.art
 
-hol4-fmaps-unint.art: hol4-fmaps-unint.thy $(ARTFILES)
+hol4-finite-map-unint.art: hol4-finite-map-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 
-hol4-fmaps.art: hol4-fmaps.thy hol4-fmaps-unint.art ../opentheory/hol4.int
+hol4-finite-map.art: hol4-finite-map.thy hol4-finite-map-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
-	opentheory install --reinstall hol4-fmaps.thy
+	opentheory install --reinstall hol4-finite-map.thy
 endif
