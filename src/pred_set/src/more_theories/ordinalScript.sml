@@ -1393,9 +1393,43 @@ val ordDIVISION0 = prove(
   `!c. b * c <= a ==> c <= d` by metis_tac [ordlt_REFL] >>
   metis_tac [ordlt_SUC, ordle_EXISTS_ADD]);
 
+(* old definition:
 val ordDIVISION = new_specification(
   "ordDIVISION", ["ordDIV", "ordMOD"],
-  SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION0)
+  SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION0
+ *)
+
+(* new definition (by Chun Tian as OpenTheory workarounds) *)
+Theorem ordDIVISION1[local] :
+    !a b:'a ordinal. 0 < b ==> ?c. a = b * FST c + SND c /\ SND c < b
+Proof
+    rpt STRIP_TAC
+ >> STRIP_ASSUME_TAC
+      (SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION0)
+ >> POP_ASSUM (MP_TAC o (Q.SPECL [‘a’, ‘b’]))
+ >> RW_TAC std_ss []
+ >> rename1 ‘g a b < b’
+ >> Q.EXISTS_TAC ‘(f a b,g a b)’ >> rw []
+QED
+
+(* The next 3 theorems are skipped in ordinal.otd *)
+val ordDIVMOD = new_specification(
+   "ordDIVMOD", ["ordDIVMOD"],
+    SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION1);
+
+Definition ordDIV_def :
+    ordDIV a b = FST (ordDIVMOD a b)
+End
+
+Definition ordMOD_def :
+    ordMOD a b = SND (ordDIVMOD a b)
+End
+
+(* |- !a b. 0 < b ==> a = b * ordDIV a b + ordMOD a b /\ ordMOD a b < b *)
+Theorem ordDIVISION =
+    REWRITE_RULE [GSYM ordDIV_def, GSYM ordMOD_def] ordDIVMOD
+
+(* end of new definition of ordDIV and ordMOD *)
 
 val _ = set_fixity "/" (Infixl 600)
 val _ = overload_on ("/", ``ordDIV``)

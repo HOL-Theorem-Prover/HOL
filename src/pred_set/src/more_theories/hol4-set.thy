@@ -14,5 +14,5 @@ show: "Number.Natural"
 show: "Relation"
 main {
   article: "hol4-set-unint.art"
-  interpretation: "../opentheory/hol4.int"
+  interpretation: "../../../opentheory/hol4.int"
 }

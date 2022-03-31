@@ -27,6 +27,9 @@ hol4-set-unint.art: hol4-set-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 hol4-set.art: hol4-set.thy hol4-set-unint.art $(HOLDIR)/src/opentheory/hol4.int
 	opentheory info --article -o $@ $<
 	opentheory install --reinstall hol4-set.thy
+
+ordinal.art: ordinal.otd
+
 endif
 
 ifdef HOLSELFTESTLEVEL
