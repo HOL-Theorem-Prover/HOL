@@ -14,9 +14,10 @@ cardinal {
   article: "cardinal.ot.art"
 }
 ordinal {
-  import: cardinal
   import: wellorder
+  import: cardinal
   import: topology
+  article: "ordinal.ot.art"
 }
 topology {
   import: cardinal
