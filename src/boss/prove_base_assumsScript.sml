@@ -153,9 +153,7 @@ val iff_F = hd(amatch``(t <=> F) <=> _``);
 
 val and_imp_intro = hd(amatch``(a ==> b ==> c) <=> _``);
 
-val eq_T = hd(amatch``(t <=> T) <=> _``);
-fun EQT_INTRO th = EQ_MP (SPEC (concl th) (GSYM eq_T)) th;
-
+fun EQT_INTRO th = EQ_MP (SPEC (concl th) (GSYM iff_T)) th;
 val EQF_INTRO = SYM o (CONV_RULE(REWR_CONV(GSYM F_iff)));
 
 val not_and = hd (amatch ``~(t1 /\ t2) <=> _``);
@@ -170,6 +168,15 @@ val or_i = hd(amatch``t \/ t``);
 
 val truth = hd(amatch``T``);
 val not_F = hd(amatch``~F``);
+
+fun EQT_ELIM th = EQ_MP (SYM th) truth;
+fun EQF_ELIM th =
+   let
+      val (lhs, rhs) = dest_eq (concl th)
+      val _ = assert Feq rhs
+   in
+      NOT_INTRO (DISCH lhs (EQ_MP th (ASSUME lhs)))
+   end;
 
 val bool_cases = hd(amatch``(x = T) \/ _``);
 
@@ -469,14 +476,16 @@ val th28 = store_thm("th28", el 28 goals |> concl, MATCH_ACCEPT_TAC (GSYM cons_n
 
 val some_neq_none = hd(amatch``_ <> Data_Option_none``);
 
-(* |- !x. Data_Option_none <> Data_Option_some x *)
-val th29 = store_thm("th29", el 29 goals |> concl, MATCH_ACCEPT_TAC (GSYM some_neq_none));
+(* |- !x. Data_Option_none <> Data_Option_some x
+val th29 = store_thm("th29", el 29 goals |> concl,
+    MATCH_ACCEPT_TAC (GSYM some_neq_none));
+ *)
 
-(* |- !t.
-          (T ==> t <=> t) /\ (t ==> T <=> T) /\ (F ==> t <=> T) /\
+(* |- !t. (T ==> t <=> t) /\ (t ==> T <=> T) /\ (F ==> t <=> T) /\
           (t ==> t <=> T) /\ (t ==> F <=> ~t)
  *)
-val th30 = store_thm("th30", el 30 goals |> concl,
+val th29 = store_thm
+  ("th29", el 29 goals |> concl,
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_imp
   \\ conj_tac >- MATCH_ACCEPT_TAC imp_T
@@ -484,11 +493,11 @@ val th30 = store_thm("th30", el 30 goals |> concl,
   \\ conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL imp_i))
   \\ MATCH_ACCEPT_TAC imp_F);
 
-(* |- !t.
-          (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\
+(* |- !t. (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\
           (t \/ F <=> t) /\ (t \/ t <=> t)
  *)
-val th31 = store_thm("th31", el 31 goals |> concl,
+val th30 = store_thm
+  ("th30", el 30 goals |> concl,
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_or
   \\ conj_tac >- MATCH_ACCEPT_TAC or_T
@@ -496,11 +505,11 @@ val th31 = store_thm("th31", el 31 goals |> concl,
   \\ conj_tac >- MATCH_ACCEPT_TAC or_F
   \\ MATCH_ACCEPT_TAC or_i);
 
-(* |- !t.
-          (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\
+(* |- !t. (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\
           (t /\ F <=> F) /\ (t /\ t <=> t)
  *)
-val th32 = store_thm("th32", el 32 goals |> concl,
+val th31 = store_thm
+  ("th31", el 31 goals |> concl,
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_and
   \\ conj_tac >- MATCH_ACCEPT_TAC and_T
@@ -508,11 +517,11 @@ val th32 = store_thm("th32", el 32 goals |> concl,
   \\ conj_tac >- MATCH_ACCEPT_TAC and_F
   \\ MATCH_ACCEPT_TAC and_i);
 
-(* |- !t.
-          ((T <=> t) <=> t) /\ ((t <=> T) <=> t) /\ ((F <=> t) <=> ~t) /\
+(* |- !t. ((T <=> t) <=> t) /\ ((t <=> T) <=> t) /\ ((F <=> t) <=> ~t) /\
           ((t <=> F) <=> ~t)
  *)
-val th33 = store_thm("th33", el 33 goals |> concl,
+val th32 = store_thm
+  ("th32", el 32 goals |> concl,
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_iff
   \\ conj_tac >- MATCH_ACCEPT_TAC iff_T
@@ -522,19 +531,22 @@ val th33 = store_thm("th33", el 33 goals |> concl,
 val select_eq = hd(amatch``@y. y = x``)
 
 (* |- !x. (@y. x = y) = x *)
-val th34 = store_thm("th34", el 34 goals |> concl,
+val th33 = store_thm
+  ("th33", el 33 goals |> concl,
   CONV_TAC(QUANT_CONV(LAND_CONV(RAND_CONV(ABS_CONV SYM_CONV))))
   \\ MATCH_ACCEPT_TAC select_eq);
 
 (* |- !t. t ==> F <=> (t <=> F) *)
-val th35 = store_thm("th35", el 35 goals |> concl,
+val th34 = store_thm
+  ("th34", el 34 goals |> concl,
   PURE_REWRITE_TAC[imp_F, iff_F]
   \\ gen_tac \\ REFL_TAC);
 
 val refl = hd(amatch``!x. x = x``);
 
 (* |- !x. x = x <=> T *)
-val th36 = store_thm("th36", el 36 goals |> concl,
+val th35 = store_thm
+  ("th35", el 35 goals |> concl,
   gen_tac \\ MATCH_ACCEPT_TAC(EQT_INTRO(SPEC_ALL refl)));
 
 val eq_trans = hd(amatch``(x = y) /\ (y = z) ==> _``);
@@ -544,7 +556,8 @@ val eq_trans = hd(amatch``(x = y) /\ (y = z) ==> _``);
           (!x y. f x y = f y x) ==>
           !x y z. f x (f y z) = f y (f x z)
  *)
-val th37 = store_thm("th37", el 37 goals |> concl,
+val th36 = store_thm
+  ("th36", el 36 goals |> concl,
   rpt strip_tac
   \\ first_assum(qspecl_then[`x`,`y`,`z`]SUBST_ALL_TAC)
   \\ last_assum(qspecl_then[`f x y`,`z`]SUBST_ALL_TAC)
@@ -555,19 +568,18 @@ val th37 = store_thm("th37", el 37 goals |> concl,
 
 val less_zero = hd(amatch``Number_Natural_less Number_Natural_zero n <=> _ <> _``);
 val div_mod = hd(amatch``Number_Natural_times (Number_Natural_div k n) n``);
-
 val less_mod = hd(amatch``Number_Natural_less (Number_Natural_mod _ _)``);
 
 (* |- !n.
           Number_Natural_less Number_Natural_zero n ==>
-          !k.
-              k =
+          !k. k =
               Number_Natural_plus
                 (Number_Natural_times (Number_Natural_div k n) n)
                 (Number_Natural_mod k n) /\
               Number_Natural_less (Number_Natural_mod k n) n
  *)
-val th38 = store_thm("th38", el 38 goals |> concl,
+val th37 = store_thm
+  ("th37", el 37 goals |> concl,
   PURE_REWRITE_TAC[less_zero]
   \\ gen_tac
   \\ disch_then(fn th => (strip_assume_tac (MATCH_MP less_mod th) >>
@@ -579,11 +591,11 @@ val th38 = store_thm("th38", el 38 goals |> concl,
 
 val list_ind = hd(amatch``_ ==> !(l:'a Data_List_list). P l``);
 
-(* |- !P.
-          P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
+(* |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
           !l. P l
  *)
-val th39 = store_thm("th39", el 39 goals |> concl,
+val th38 = store_thm
+  ("th38", el 38 goals |> concl,
   rpt strip_tac
   \\ match_mp_tac list_ind
   \\ conj_tac >- first_assum ACCEPT_TAC
@@ -591,25 +603,28 @@ val th39 = store_thm("th39", el 39 goals |> concl,
   \\ first_assum MATCH_ACCEPT_TAC);
 
 (* |- !t. (t ==> F) ==> ~t *)
-val th40 = store_thm("th40", el 40 goals |> concl,
+val th39 = store_thm
+  ("th39", el 39 goals |> concl,
   imp_F |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> MATCH_ACCEPT_TAC);
 
 (* |- !t. ~t ==> t ==> F *)
-val th41 = store_thm("th41", el 41 goals |> concl,
+val th40 = store_thm
+  ("th40", el 40 goals |> concl,
   imp_F |> SPEC_ALL |> EQ_IMP_RULE |> #2 |> MATCH_ACCEPT_TAC);
 
 (* |- !A. A ==> ~A ==> F *)
-val th42 = store_thm("th42", el 42 goals |> concl,
+val th41 = store_thm
+  ("th41", el 41 goals |> concl,
   PURE_REWRITE_TAC[GSYM imp_F]
   \\ gen_tac
   \\ disch_then(fn th => disch_then(ACCEPT_TAC o C MP th)));
 
 (* |- !t. F ==> t *)
-val th43 = store_thm("th43", el 43 goals |> concl,
+val th42 = store_thm
+  ("th42", el 42 goals |> concl,
   MATCH_ACCEPT_TAC(EQT_ELIM(SPEC_ALL F_imp)));
 
 val unpair = hd(amatch``Data_Pair_comma (Data_Pair_fst _) _``);
-
 val unzip_nil = hd(amatch``Data_List_unzip Data_List_nil``);
 val unzip_cons = hd(amatch``Data_List_unzip (Data_List_cons _ _)``);
 
@@ -623,7 +638,8 @@ val unzip_cons = hd(amatch``Data_List_unzip (Data_List_cons _ _)``);
             (Data_List_cons (Data_Pair_snd x)
                (Data_Pair_snd (Data_List_unzip l)))
  *)
-val th44 = store_thm("th44", el 44 goals |> concl,
+val th43 = store_thm
+  ("th43", el 43 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC unzip_nil
   \\ PURE_REWRITE_TAC[unzip_cons]
   \\ rpt gen_tac
@@ -639,7 +655,8 @@ val reverse_cons = hd(amatch``Data_List_reverse (Data_List_cons _ _)``);
           Data_List_append (Data_List_reverse t)
             (Data_List_cons h Data_List_nil)
  *)
-val th45 = store_thm("th45", el 45 goals |> concl,
+val th44 = store_thm
+  ("th44", el 44 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC reverse_nil
   \\ MATCH_ACCEPT_TAC reverse_cons);
 
@@ -651,7 +668,8 @@ val concat_cons = hd(amatch``Data_List_concat (Data_List_cons _ _)``);
           Data_List_concat (Data_List_cons h t) =
           Data_List_append h (Data_List_concat t)
  *)
-val th46 = store_thm("th46", el 46 goals |> concl,
+val th45 = store_thm
+  ("th45", el 45 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC concat_nil
   \\ MATCH_ACCEPT_TAC concat_cons);
 
@@ -665,7 +683,8 @@ val fact_suc = hd(amatch``Number_Natural_factorial (Number_Natural_suc _)``);
           Number_Natural_times (Number_Natural_suc n)
             (Number_Natural_factorial n)
  *)
-val th47 = store_thm("th47", el 47 goals |> concl,
+val th46 = store_thm
+  ("th46", el 46 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC fact_zero
   \\ MATCH_ACCEPT_TAC fact_suc);
 
@@ -677,19 +696,10 @@ val length_cons = hd(amatch``Data_List_length (Data_List_cons _ _)``);
           Data_List_length (Data_List_cons h t) =
           Number_Natural_suc (Data_List_length t)
  *)
-val th48 = store_thm("th48", el 48 goals |> concl,
+val th47 = store_thm
+  ("th47", el 47 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC length_nil
   \\ MATCH_ACCEPT_TAC length_cons);
-
-fun EQT_ELIM th = EQ_MP (SYM th) truth;
-
-fun EQF_ELIM th =
-   let
-      val (lhs, rhs) = dest_eq (concl th)
-      val _ = assert Feq rhs
-   in
-      NOT_INTRO (DISCH lhs (EQ_MP th (ASSUME lhs)))
-   end;
 
 val null_nil = hd(amatch``Data_List_null Data_List_nil``);
 val null_cons = hd(amatch``Data_List_null (Data_List_cons _ _)``);
@@ -697,7 +707,8 @@ val null_cons = hd(amatch``Data_List_null (Data_List_cons _ _)``);
 (* |- (Data_List_null Data_List_nil <=> T) /\
       !h t. Data_List_null (Data_List_cons h t) <=> F
  *)
-val th49 = store_thm("th49", el 49 goals |> concl,
+val th48 = store_thm
+  ("th48", el 48 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO null_nil)
   \\ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL null_cons)));
 
@@ -707,7 +718,8 @@ val odd_cons = hd(amatch``Number_Natural_odd (Number_Natural_suc _)``);
 (* |- (Number_Natural_odd Number_Natural_zero <=> F) /\
       !n. Number_Natural_odd (Number_Natural_suc n) <=> ~Number_Natural_odd n
  *)
-val th50 = store_thm("th50", el 50 goals |> concl,
+val th49 = store_thm
+  ("th49", el 49 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO odd_nil)
   \\ MATCH_ACCEPT_TAC odd_cons);
 
@@ -715,13 +727,24 @@ val even_nil = hd(amatch``Number_Natural_even Number_Natural_zero``);
 val even_cons = hd(amatch``Number_Natural_even (Number_Natural_suc _)``);
 
 (* |- (Number_Natural_even Number_Natural_zero <=> T) /\
-      !n.
-          Number_Natural_even (Number_Natural_suc n) <=>
-          ~Number_Natural_even n
+      !n. Number_Natural_even (Number_Natural_suc n) <=> ~Number_Natural_even n
  *)
-val th51 = store_thm("th51", el 51 goals |> concl,
+val th50 = store_thm
+  ("th50", el 50 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO even_nil)
   \\ MATCH_ACCEPT_TAC even_cons);
+
+val left_11 = hd(amatch``Data_Sum_left _ = Data_Sum_left _``);
+val right_11 = hd(amatch``Data_Sum_right _ = Data_Sum_right _``);
+
+(* |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\
+      !y y'. Data_Sum_right y = Data_Sum_right y' <=> y = y'
+ *)
+val th51 = store_thm
+  ("th51", el 51 goals |> concl,
+    conj_tac
+ >| [ MATCH_ACCEPT_TAC left_11,
+      MATCH_ACCEPT_TAC right_11 ]);
 
 val map_none = hd(amatch``Data_Option_map _ Data_Option_none = _``)
 val map_some = hd(amatch``Data_Option_map _ (Data_Option_some _) = _``)
@@ -839,15 +862,41 @@ val th61 = store_thm("th61", el 61 goals |> concl,
   PURE_REWRITE_TAC[not_not,iff_F,iff_T,truth,not_F,and_T]
   \\ gen_tac \\ REFL_TAC);
 
+val isRight_right = hd(amatch``Data_Sum_isRight (Data_Sum_right _)``);
+val isRight_left = hd(amatch``Data_Sum_isRight (Data_Sum_left _)``);
+
+(* |- (!x. Data_Sum_isRight (Data_Sum_right x)) /\
+      !y. ~Data_Sum_isRight (Data_Sum_left y)
+ *)
+val th62 = store_thm
+  ("th62", el 62 goals |> concl,
+    conj_tac
+ >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isRight_right,
+      PURE_REWRITE_TAC [iff_F] >> MATCH_ACCEPT_TAC isRight_left ]);
+
+val isLeft_right = hd(amatch``Data_Sum_isLeft (Data_Sum_right _)``);
+val isLeft_left = hd(amatch``Data_Sum_isLeft (Data_Sum_left _)``);
+
+(* |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\
+      !y. Data_Sum_isLeft (Data_Sum_right y) <=> F
+ *)
+val th63 = store_thm
+  ("th63", el 63 goals |> concl,
+    conj_tac
+ >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isLeft_left,
+      PURE_REWRITE_TAC [iff_F] >> MATCH_ACCEPT_TAC isLeft_right ]);
+
 val isSome_some = hd(amatch``Data_Option_isSome (Data_Option_some _)``);
 val isSome_none = hd(amatch``Data_Option_isSome (Data_Option_none)``);
 
 (* |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\
       (Data_Option_isSome Data_Option_none <=> F)
  *)
-val th62 = store_thm("th62", el 62 goals |> concl,
-  conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL isSome_some))
-  \\ MATCH_ACCEPT_TAC (EQF_INTRO isSome_none));
+val th64 = store_thm
+  ("th64", el 64 goals |> concl,
+    conj_tac
+ >| [ MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL isSome_some)),
+      MATCH_ACCEPT_TAC (EQF_INTRO isSome_none) ]);
 
 val isNone_some = hd(amatch``Data_Option_isNone (Data_Option_some _)``);
 val isNone_none = hd(amatch``Data_Option_isNone (Data_Option_none)``);
@@ -855,29 +904,11 @@ val isNone_none = hd(amatch``Data_Option_isNone (Data_Option_none)``);
 (* |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\
       (Data_Option_isNone Data_Option_none <=> T)
  *)
-val th63 = store_thm("th63", el 63 goals |> concl,
-  conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL isNone_some))
-  \\ MATCH_ACCEPT_TAC (EQT_INTRO isNone_none));
-
-val isRight_right = hd(amatch``Data_Sum_isRight (Data_Sum_right _)``);
-val isRight_left = hd(amatch``Data_Sum_isRight (Data_Sum_left _)``);
-
-(* |- (!x. Data_Sum_isRight (Data_Sum_right x)) /\
-      !y. ~Data_Sum_isRight (Data_Sum_left y)
- *)
-val th64 = store_thm("th64", el 64 goals |> concl,
-  conj_tac >- MATCH_ACCEPT_TAC isRight_right
-  \\ MATCH_ACCEPT_TAC isRight_left);
-
-val isLeft_right = hd(amatch``Data_Sum_isLeft (Data_Sum_right _)``);
-val isLeft_left = hd(amatch``Data_Sum_isLeft (Data_Sum_left _)``);
-
-(* |- (!x. Data_Sum_isLeft (Data_Sum_left x)) /\
-      !y. ~Data_Sum_isLeft (Data_Sum_right y)
- *)
-val th65 = store_thm("th65", el 65 goals |> concl,
-  conj_tac >- MATCH_ACCEPT_TAC isLeft_left
-  \\ MATCH_ACCEPT_TAC isLeft_right);
+val th65 = store_thm
+  ("th65", el 65 goals |> concl,
+    conj_tac
+ >| [ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL isNone_some)),
+      MATCH_ACCEPT_TAC (EQT_INTRO isNone_none) ]);
 
 (* |- (!x. P x ==> Q x) ==> (?x. P x) ==> ?x'. Q x' *)
 val th66 = store_thm("th66", el 66 goals |> concl,
@@ -1271,13 +1302,9 @@ val comma_11 = hd(amatch``Data_Pair_comma _ _ = Data_Pair_comma _ _``);
 val th101 = store_thm("th101", el 101 goals |> concl,
   MATCH_ACCEPT_TAC comma_11);
 
-val right_11 = hd(amatch``Data_Sum_right _ = Data_Sum_right _``);
-
 (* |- Data_Sum_right x = Data_Sum_right y <=> x = y *)
 val th102 = store_thm("th102", el 102 goals |> concl,
   MATCH_ACCEPT_TAC right_11);
-
-val left_11 = hd(amatch``Data_Sum_left _ = Data_Sum_left _``);
 
 (* |- Data_Sum_left x = Data_Sum_left y <=> x = y *)
 val th103 = store_thm("th103", el 103 goals |> concl,
@@ -1318,7 +1345,8 @@ val th108 = store_thm("th108", el 108 goals |> concl,
   \\ rpt gen_tac \\ REFL_TAC);
 
 (* |- Number_Natural_zero = Number_Natural_zero *)
-val th109 = store_thm("th108", el 109 goals |> concl,
+val th109 = store_thm
+  ("th109", el 109 goals |> concl,
   REFL_TAC);
 
 (* other theorems from boolTheory *)
