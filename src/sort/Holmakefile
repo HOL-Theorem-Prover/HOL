@@ -22,6 +22,7 @@ hol4-sort-unint.art: hol4-sort-unint.thy $(ARTFILES)
 
 hol4-sort.art: hol4-sort.thy hol4-sort-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
+	opentheory install --reinstall hol4-sort.thy
 endif
 
 selftest.exe: selftest.uo

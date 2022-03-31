@@ -35,7 +35,11 @@ real.art: real.otd
 
 prove_real_assums.art: hol4-real-assums.art
 
-all: hol4-real-unint.art hol4-real-unsat.art
+hol4-real.art: hol4-real.thy ../opentheory/hol4.int hol4-real-unsat.art prove_real_assums.ot.art 
+	opentheory info --article -o $@ $<
+	opentheory install --reinstall hol4-real.thy
+
+all: hol4-real.art
 
 endif
 
