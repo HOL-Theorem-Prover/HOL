@@ -1,5 +1,6 @@
-open HolKernel boolLib Parse BasicProvers simpLib numLib metisLib markerLib;
-open pred_setTheory pairTheory arithmeticTheory open optionTheory relationTheory;
+open HolKernel boolLib Parse BasicProvers;
+open simpLib numLib metisLib markerLib;
+open pred_setTheory pairTheory arithmeticTheory optionTheory relationTheory;
 
 val Define = TotalDefn.Define;
 val Hol_reln = IndDefLib.Hol_reln;
