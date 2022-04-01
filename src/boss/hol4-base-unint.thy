@@ -1,5 +1,5 @@
 name: hol-base-unint
-version: 1.1
+version: 1.0
 description: HOL basic theories (before re-interpretation)
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
@@ -207,6 +207,7 @@ set-relation {
   import: arithmetic
   import: option
   import: relation
+  import: marker
   article: "../pred_set/src/set_relation.ot.art"
 }
 ind-type {
