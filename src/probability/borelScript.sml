@@ -8711,6 +8711,8 @@ QED
 
 val _ = augment_srw_ss [realSimps.REAL_ARITH_ss];
 
+val _ = reveal "C";
+
 (*** IN_MEASURABLE_BOREL Theorems ***)
 
 (* There is already an IN_MEASURABLE_BOREL_CONG earlier in this theory *)
@@ -8899,6 +8901,90 @@ Proof
         ‘~(0 <= f x pow g x)’ suffices_by simp[] >> simp[GSYM extreal_lt_def,pow_neg_odd])
     >- (Cases_on ‘0 <= f x’ >> fs[GSYM extreal_lt_def] >> simp[ineq_imp])
     >- (rfs[EVEN_ODD,ODD])
+QED
+
+Theorem IN_MEASURABLE_BOREL_NORMAL_REAL:
+    !sa f. f IN Borel_measurable sa ==>
+       Normal o real o f IN Borel_measurable sa
+Proof
+    rw[] >> irule IN_MEASURABLE_BOREL_IMP_BOREL' >> irule_at Any in_borel_measurable_from_Borel >>
+    simp[] >> fs[IN_MEASURABLE]
+QED
+
+(*** AE Theorems ***)
+
+Theorem AE_subset:
+    !m P Q. (AE x::m. P x) /\ (!x. x IN m_space m /\ P x ==> Q x) ==> (AE x::m. Q x)
+Proof
+    rw[AE_ALT] >> qexists_tac `N` >> fs[SUBSET_DEF] >> rw[] >>
+    NTAC 2 $ first_x_assum $ drule_then assume_tac >> gs[]
+QED
+
+Theorem AE_cong:
+    !m P Q. (!x. x IN m_space m ==> P x = Q x) ==> ((AE x::m. P x) <=> (AE x::m. Q x))
+Proof
+    rw[] >> eq_tac >> rw[] >> dxrule_at_then (Pos $ el 1) irule AE_subset >> simp[SF CONJ_ss]
+QED
+
+Theorem AE_T:
+    !m. measure_space m ==> AE x::m. T
+Proof
+    rw[AE_ALT] >> qexists_tac ‘ {} ’ >> simp[NULL_SET_EMPTY]
+QED
+
+Theorem AE_UNION:
+    !m P Q. measure_space m /\ ((AE x::m. P x) \/ (AE x::m. Q x)) ==> (AE x::m. P x \/ Q x)
+Proof
+    rw[AE_ALT,null_set_def] >> qexists_tac ‘N’ >> fs[SUBSET_DEF]
+QED
+
+Theorem AE_BIGUNION:
+    !m P s. measure_space m /\ (?n. n IN s /\ AE x::m. P n x) ==> (AE x::m. ?n. n IN s /\ P n x)
+Proof
+    rw[AE_ALT,null_set_def] >> qexists_tac ‘N’ >> fs[SUBSET_DEF,GSYM IMP_DISJ_THM]
+QED
+
+Theorem AE_INTER:
+    !m P Q. measure_space m /\ (AE x::m. P x) /\ (AE x::m. Q x) ==> (AE x::m. P x /\ Q x)
+Proof
+    rw[AE_ALT] >> qexists_tac ‘N UNION N'’ >> rename [‘N UNION M’] >>
+    simp[SIMP_RULE (srw_ss ()) [IN_APP] NULL_SET_UNION] >>
+    fs[SUBSET_DEF] >> rw[] >> simp[]
+QED
+
+Theorem AE_BIGINTER:
+    !m P s. measure_space m /\ countable s /\ (!n. n IN s ==> AE x::m. P n x) ==> (AE x::m. !n. n IN s ==> P n x)
+Proof
+    rw[AE_ALT] >> fs[GSYM RIGHT_EXISTS_IMP_THM,SKOLEM_THM] >> qexists_tac ‘BIGUNION (IMAGE f s)’ >>
+    rename [‘IMAGE N s’] >> REVERSE CONJ_TAC
+    >- (fs[SUBSET_DEF] >> rw[] >> NTAC 2 (first_x_assum $ drule_then assume_tac >> rfs[]) >>
+        map_every (fn qex => qexists_tac qex >> simp[]) [‘N n’,‘n’]) >>
+    fs[COUNTABLE_ENUM] >- simp[NULL_SET_EMPTY] >> simp[IMAGE_IMAGE] >>
+    fs[null_set_def] >> CONJ_ASM1_TAC >- (irule MEASURE_SPACE_BIGUNION >> simp[]) >>
+    simp[GSYM le_antisym] >> irule_at Any $ cj 2 $ iffLR positive_def >> simp[iffLR measure_space_def] >>
+    irule leeq_trans >> qexists_tac ‘suminf (measure m o (N o f))’ >>
+    irule_at Any $ iffLR countably_subadditive_def >>
+    simp[MEASURE_SPACE_COUNTABLY_SUBADDITIVE,FUNSET,combinTheory.o_DEF,ext_suminf_0]
+QED
+
+Theorem AE_eq_add:
+    !m f fae g gae. measure_space m /\ (AE x::m. f x = fae x) /\ (AE x::m. g x = gae x) ==>
+        AE x::m. f x + g x = fae x + gae x
+Proof
+    rw[] >> fs[AE_ALT] >> qexists_tac ‘N UNION N'’ >>
+    (drule_then assume_tac) NULL_SET_UNION >> rfs[IN_APP] >> pop_assum kall_tac >>
+    fs[SUBSET_DEF] >> rw[] >> NTAC 2 (last_x_assum (drule_then assume_tac)) >>
+    CCONTR_TAC >> fs[]
+QED
+
+Theorem AE_eq_sum:
+    !m f fae s. FINITE s /\ measure_space m /\ (!n. n IN s ==> AE x::m. (f n x):extreal = fae n x) ==>
+        AE x::m. SIGMA (C f x) s = SIGMA (C fae x) s
+Proof
+    rw[] >> qspecl_then [‘m’,‘λn x. f n x = fae n x’,‘s’] assume_tac AE_BIGINTER >> rfs[finite_countable] >>
+    qspecl_then [‘m’,‘λx. !n. n IN s ==> f n x = fae n x’,‘λx. SIGMA (C f x) s = SIGMA (C fae x) s’]
+        (irule o SIMP_RULE (srw_ss ()) []) AE_subset >>
+    rw[] >> irule EXTREAL_SUM_IMAGE_EQ' >> rw[combinTheory.C_DEF]
 QED
 
 val _ = export_theory ();

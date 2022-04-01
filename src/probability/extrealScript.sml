@@ -9839,6 +9839,36 @@ Proof
     NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,EVEN] >> rename [‘EVEN n’]) >> simp[GSYM neg_minus1]
 QED
 
+Theorem sub_le_sub_imp:
+    !w x y z. w <= x /\ z <= y ==> w - y <= x - z
+Proof
+    rw[] >> irule le_trans >> qexists_tac ‘x - y’ >> simp[le_lsub_imp,le_rsub_imp]
+QED
+
+Theorem le_negl:
+    !x y. -x <= y <=> -y <= x
+Proof
+    rw[] >> ‘-x <= - -y <=> -y <= x’ suffices_by simp[] >> simp[le_neg,Excl "neg_neg"]
+QED
+
+Theorem le_negr:
+    !x y. x <= -y <=> y <= -x
+Proof
+    rw[] >> ‘- -x <= -y <=> y <= -x’ suffices_by simp[] >> simp[le_neg,Excl "neg_neg"]
+QED
+
+Theorem leeq_trans:
+    !x:extreal y z. x <= y /\ y = z ==> x <= z
+Proof
+    simp[]
+QED
+
+Theorem eqle_trans:
+    !x:extreal y z. x = y /\ y <= z ==> x <= z
+Proof
+    simp[]
+QED
+
 val _ = export_theory();
 
 (* References:
