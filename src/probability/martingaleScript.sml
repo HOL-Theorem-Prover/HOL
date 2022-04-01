@@ -23,6 +23,12 @@ val _ = hide "S";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 
+(* TODO: remove once MEASURE_SPACE_SIGMA_ALGEBRA is a simp *)
+val name_to_thname = fn (t,s) => ({Thy = t, Name = s}, DB.fetch t s);
+val mk_local_simp = augment_srw_ss o single o
+    simpLib.rewrites_with_names o single o name_to_thname;
+val _ = mk_local_simp("measure","MEASURE_SPACE_SIGMA_ALGEBRA");
+
 (* "The theory of martingales as we know it now goes back to Doob and most of
     the material of this and the following chapter can be found in his seminal
     monograph [2] from 1953.
@@ -121,13 +127,11 @@ Proof
  >- (HO_MATCH_MP_TAC lebesgue_monotone_convergence >> rw [] >| (* 3 subgoals *)
      [ (* goal 1 (of 3) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_INF >> simp [] \\
-       qexistsl_tac [‘f’, ‘from i’] >> rw [IN_FROM] >| (* 3 subgoals *)
-       [ (* goal 1 (of 3) *)
-         FULL_SIMP_TAC std_ss [measure_space_def],
-         (* goal 2 (of 3) *)
+       qexistsl_tac [‘f’, ‘from i’] >> rw [IN_FROM] >| (* 2 subgoals *)
+       [ (* goal 1 (of 2) *)
          rw [Once EXTENSION, IN_FROM] \\
          Q.EXISTS_TAC ‘i’ >> rw [],
-         (* goal 3 (of 3) *)
+         (* goal 1 (of 2) *)
          Suff ‘{f n x | i <= n} = (IMAGE (\n. f n x) (from i))’ >- rw [] \\
          rw [Once EXTENSION, IN_FROM] ],
        (* goal 2 (of 3) *)
@@ -164,13 +168,11 @@ Proof
  >- (HO_MATCH_MP_TAC lebesgue_monotone_convergence_decreasing >> rw [] >| (* 5 subgoals *)
      [ (* goal 1 (of 5) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_SUP >> simp [] \\
-       qexistsl_tac [‘f’, ‘from i’] >> rw [IN_FROM] >| (* 3 subgoals *)
+       qexistsl_tac [‘f’, ‘from i’] >> rw [IN_FROM] >| (* 2 subgoals *)
        [ (* goal 5.1 (of 3) *)
-         FULL_SIMP_TAC std_ss [measure_space_def],
-         (* goal 5.2 (of 3) *)
          rw [Once EXTENSION, IN_FROM] \\
          Q.EXISTS_TAC ‘i’ >> rw [],
-         (* goal 5.3 (of 3) *)
+         (* goal 5.2 (of 3) *)
          Suff ‘{f n x | i <= n} = (IMAGE (\n. f n x) (from i))’ >- rw [] \\
          rw [Once EXTENSION, IN_FROM] ],
        (* goal 2 (of 5) *)
@@ -6314,13 +6316,11 @@ val martingale_alt_generator_shared_tactics_2 =
            (* goal 2 (of 4) *)
            MATCH_MP_TAC le_mul >> rw [FN_MINUS_POS, INDICATOR_FN_POS],
            (* goal 3 (of 4) *)
-           MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw []
-           >- (FULL_SIMP_TAC std_ss [measure_space_def]) \\
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw [] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS \\
            FULL_SIMP_TAC std_ss [integrable_def],
            (* goal 4 (of 4) *)
-           MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw []
-           >- (FULL_SIMP_TAC std_ss [measure_space_def]) \\
+           MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw [] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS \\
            FULL_SIMP_TAC std_ss [integrable_def] ]) >> Rewr' \\
      MATCH_MP_TAC pos_fn_integral_cong >> rw [] >| (* 3 subgoals *)
@@ -6344,7 +6344,6 @@ val martingale_alt_generator_shared_tactics_3 =
      [ (* goal 1 (of 2) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD' \\
        qexistsl_tac [‘fn_plus (u M)’, ‘fn_minus (u N)’] >> simp [] \\
-       CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
        FULL_SIMP_TAC std_ss [integrable_def] \\
        PROVE_TAC [IN_MEASURABLE_BOREL_FN_PLUS, IN_MEASURABLE_BOREL_FN_MINUS],
        (* goal 2 (of 2) *)
@@ -6817,8 +6816,7 @@ Proof
            pos_fn_integral m g <> PosInf’
      >- (MATCH_MP_TAC integrable_pos >> rw [Abbr ‘g’, abs_pos]) >> Rewr' \\
      CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
-                  Q.EXISTS_TAC ‘\x. u x * v x’ >> rw [Abbr ‘g’] \\
-                  FULL_SIMP_TAC std_ss [measure_space_def]) \\
+                  Q.EXISTS_TAC ‘\x. u x * v x’ >> rw [Abbr ‘g’]) \\
      Know ‘pos_fn_integral m g = integral m g’
      >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
          MATCH_MP_TAC integral_pos_fn >> rw [Abbr ‘g’, abs_pos]) >> Rewr' \\
@@ -6863,9 +6861,9 @@ Proof
            measure m {x | x IN m_space m /\ abs (u x * v x) <> 0} = 0’
      >- (HO_MATCH_MP_TAC pos_fn_integral_eq_0 >> rw [] \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
-         Q.EXISTS_TAC ‘\x. u x * v x’ >> rw [] >- fs [measure_space_def] \\
+         Q.EXISTS_TAC ‘\x. u x * v x’ >> rw [] \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
-         qexistsl_tac [‘u’, ‘v’] >> fs [measure_space_def]) >> Rewr' \\
+         qexistsl_tac [‘u’, ‘v’] >> simp []) >> Rewr' \\
      rw [abs_not_zero] \\
      Know ‘{x | x IN m_space m /\ u x <> 0} IN measurable_sets m’
      >- (‘{x | x IN m_space m /\ u x <> 0} = {x | u x <> 0} INTER m_space m’
@@ -6918,9 +6916,9 @@ Proof
            measure m {x | x IN m_space m /\ abs (u x * v x) <> 0} = 0’
      >- (HO_MATCH_MP_TAC pos_fn_integral_eq_0 >> rw [] \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
-         Q.EXISTS_TAC ‘\x. u x * v x’ >> rw [] >- fs [measure_space_def] \\
+         Q.EXISTS_TAC ‘\x. u x * v x’ >> rw [] \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
-         qexistsl_tac [‘u’, ‘v’] >> fs [measure_space_def]) >> Rewr' \\
+         qexistsl_tac [‘u’, ‘v’] >> simp []) >> Rewr' \\
      rw [abs_not_zero] \\
      Know ‘{x | x IN m_space m /\ v x <> 0} IN measurable_sets m’
      >- (‘{x | x IN m_space m /\ v x <> 0} = {x | v x <> 0} INTER m_space m’
@@ -7037,7 +7035,7 @@ Proof
        qexistsl_tac [‘\x. abs (u x) powr Normal P’, ‘inv P * inv r powr P’] \\
        RW_TAC std_ss [] >| (* 3 subgoals *)
        [ (* goal 3.1 (of 3) *)
-         FULL_SIMP_TAC std_ss [measure_space_def],
+         simp [],
          (* goal 3.2 (of 3) *)
          MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS_POWR \\
         ‘0 <= P’ by rw [REAL_LT_IMP_LE] \\
@@ -7064,7 +7062,7 @@ Proof
        qexistsl_tac [‘\x. abs (v x) powr Normal Q’, ‘inv Q * inv r powr Q’] \\
        RW_TAC std_ss [] >| (* 3 subgoals *)
        [ (* goal 4.1 (of 3) *)
-         FULL_SIMP_TAC std_ss [measure_space_def],
+         simp [],
          (* goal 4.2 (of 3) *)
          MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS_POWR \\
         ‘0 <= Q’ by rw [REAL_LT_IMP_LE] \\
