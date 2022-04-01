@@ -772,41 +772,76 @@ Theorem tableau_EQ_NONE_weakening:
 Proof
   metis_tac[tableau_EQ_NONE_IFF, tableauR_weakening]
 QED
+
+Theorem CONS_EQ_APPEND:
+  h::t = l1 ++ l2 ⇔
+    l1 = [] ∧ l2 = h::t ∨
+    ∃t1. l1 = h::t1 ∧ t = t1 ++ l2
+Proof
+  Cases_on ‘l1’ >> simp[EQ_SYM_EQ]
+QED
+
+Theorem PERM_MEMBER:
+  ∀p1 x s1 l2. PERM (p1 ++ [x] ++ s1) l2 ⇒ ∃p2 s2. l2 = p2 ++ [x] ++ s2
+Proof
+  Induct_on ‘PERM’ >> simp[] >> rw[] >~
+  [‘p1 ++ [y] ++ s1 = x::t’, ‘PERM t l2’]
+  >- (gvs[CONS_EQ_APPEND, SF DNF_ss] >> metis_tac[]) >~
+  [‘p1 ++ [y] ++ s1 = x1::x2::t’]
+  >- (gvs[CONS_EQ_APPEND, SF DNF_ss] >> metis_tac[]) >>
+  metis_tac[]
+QED
+
+Theorem PERM_CONTRADICTION_NONE:
+  PERM Γ₁ Γ₂ ⇒ (contradiction Γ₁ = NONE ⇔ contradiction Γ₂ = NONE)
+Proof
+  Induct_on ‘PERM’ >> simp[] >> rw[] >~
+  [‘contradiction (x::Γ₁) = NONE’, ‘PERM Γ₁ Γ₂’]
+  >- (Cases_on ‘x’ >> simp[AllCaseEqs()] >> metis_tac[MEM_PERM]) >~
+  [‘contradiction (x1::x2::Γ₁)’]
+  >- (Cases_on ‘x1’ >> simp[AllCaseEqs()] >> Cases_on ‘x2’ >>
+      simp[AllCaseEqs()] >> metis_tac[MEM_PERM])
+QED
+
+
+Theorem LIST_REL_PERM1[local]:
+  ∀l11 l21 l12. LIST_REL R l11 l21 ∧ PERM l11 l12 ⇒
+                ∃l22. LIST_REL R l12 l22
+Proof
+  Induct_on ‘PERM’ >> simp[] >> rw[] >>
+  first_x_assum $ drule_then strip_assume_tac >>
+  metis_tac[LIST_REL_rules]
+QED
 (*
 Theorem tableauR_exchange:
   ∀Γ₁ t₁. tableauR Γ₁ t₁ ⇒ ∀Γ₂. PERM Γ₁ Γ₂ ⇒ ∃t₂. tableauR Γ₂ t₂
 Proof
-  Induct_on ‘tableauR’ >> rw[]
-  >- (
-  ho_match_mp_tac tableau_ind >> qx_gen_tac ‘G1’ >> strip_tac >>
-  qx_gen_tac ‘G2’ >> Cases_on ‘PERM G1 G2’ >> ASM_REWRITE_TAC [] >>
-  ONCE_REWRITE_TAC [tableau_def] >>
-  reverse (Cases_on ‘contradiction G1’)
-  >- (fs[] >> ‘∃i. contradiction G2 = SOME i’ suffices_by simp[PULL_EXISTS] >>
-      CCONTR_TAC>>
-      ‘contradiction G2 = NONE’ by (Cases_on ‘contradiction G2’ >> fs[]) >>
-      pop_assum mp_tac >> drule contradiction_EQ_SOME >>
-      simp[contradiction_EQ_NONE] >> metis_tac[PERM_MEM_EQ]) >>
-  ‘contradiction G2 = NONE’ by metis_tac[PERM_leading_contradiction] >>
-  ASM_REWRITE_TAC[] >> simp_tac(srw_ss()) [] >>
-  RULE_ASSUM_TAC (REWRITE_RULE []) >>
-  reverse (Cases_on ‘conjsplit G1’) >> fs[] >>
-
-strip_tacrw[]recInduct_on ‘PERM’ >> simp[] >> rw[]
-  >- ((* add common f to front of Γ₁ and Γ₂ that are permutations of each other
-      *)
-      rename [‘PERM Γ₁ Γ₂’, ‘tableau (f::Γ₁)’] >>
-      ONCE_REWRITE_TAC [tableau_def] >>
-      reverse (Cases_on ‘contradiction (f::Γ₁)’) >> simp[]
-      >- (‘∃j. contradiction (f::Γ₂) = SOME j’ suffices_by simp[PULL_EXISTS] >>
-          CCONTR_TAC >> fs[] >>
-          ‘contradiction (f::Γ₂) = NONE’
-            by (Cases_on ‘contradiction(f::Γ₂)’ >> fs[]) >>
-          metis_tac[PERM_leading_contradiction, optionTheory.NOT_NONE_SOME])
-      >- (‘contradiction (f::Γ₂) = NONE’
-            by metis_tac[PERM_leading_contradiction] >> simp[]
-                simp[contradiction_EQ_NONE] >>
-                metis_tac[PERM_MEM_EQ]) >>
-          simp[] >>
+  Induct_on ‘tableauR’ >> rw[] >~
+  [‘PERM (p1 ++ [Conj f1 f2] ++ s1) Γ₂’]
+  >- (drule_then strip_assume_tac PERM_MEMBER >> gvs[] >>
+      irule_at Any tableauR_conj >> first_x_assum $ irule_at Any >>
+      pop_assum mp_tac >> CONV_TAC (BINOP_CONV permLib.PERM_NORMALISE_CONV) >>
+      metis_tac[PERM_SYM]) >~
+  [‘PERM (p1 ++ [Disj f1 f2] ++ s1) _’, ‘tableauR (p1 ++ [f1] ++ s1) _’]
+  >- (drule_then strip_assume_tac PERM_MEMBER >> gvs[] >>
+      irule_at Any tableauR_disj1 >> first_x_assum $ irule_at Any >>
+      pop_assum mp_tac >> CONV_TAC (BINOP_CONV permLib.PERM_NORMALISE_CONV) >>
+      metis_tac[PERM_SYM]) >~
+  [‘PERM (p1 ++ [Disj f1 f2] ++ s1) _’, ‘tableauR (p1 ++ [f2] ++ s1) _’]
+  >- (drule_then strip_assume_tac PERM_MEMBER >> gvs[] >>
+      irule_at Any tableauR_disj2 >> first_x_assum $ irule_at Any >>
+      pop_assum mp_tac >> CONV_TAC (BINOP_CONV permLib.PERM_NORMALISE_CONV) >>
+      metis_tac[PERM_SYM]) >~
+  [‘contradiction Γ₁ = NONE’, ‘is_literal _ ∨ is_box _’]
+  >- metis_tac[tableauR_open, PERM_CONTRADICTION_NONE, MEM_PERM] >~
+  [‘contradiction Γ₁ = NONE’, ‘is_dia f’]
+  >- (irule_at Any tableauR_diam >>
+      first_assum $ irule_at (Pat ‘is_dia _’) >>
+      simp[RIGHT_EXISTS_AND_THM] >> reverse (rpt conj_tac)
+      >- (cheat >> irule LIST_REL_PERM1 >>
+          irule_at Any PERM_FILTER >> first_assum $ irule_at Any >>
+          rename [‘LIST_REL _ _ trees’]) >>
+      metis_tac[PERM_CONTRADICTION_NONE, MEM_PERM])
+QED
 *)
 val _ = export_theory();
