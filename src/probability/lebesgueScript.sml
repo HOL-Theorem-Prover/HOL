@@ -10868,7 +10868,7 @@ val mk_local_simp = augment_srw_ss o single o
     simpLib.rewrites_with_names o single o name_to_thname;
 val _ = mk_local_simp("measure","MEASURE_SPACE_SIGMA_ALGEBRA");
 
-val _ = augment_srw_ss [realSimps.REAL_ARITH_ss];
+(* val _ = augment_srw_ss [realSimps.REAL_ARITH_ss]; *)
 
 (*** integral and integrable Theorems with fewer preconditions ***)
 
@@ -11040,7 +11040,8 @@ Proof
     qspecl_then [‘m’,‘λx. P x /\ Q x’,‘R’] (resolve_then Any (qspecl_then
         [‘m’,‘λx. f x - g x = f x + -g x’,‘λx. g x = (Normal o real o g) x’,‘λx. f x = (Normal o real o f) x’] $
         irule o SIMP_RULE (srw_ss ()) []) AE_INTER o SIMP_RULE (srw_ss ()) []) AE_subset >>
-    fs[] >> rw[] >> NTAC 2 $ pop_assum SUBST1_TAC >> simp[extreal_add_def,extreal_sub_def,extreal_ainv_def]
+    fs[] >> rw[] >> NTAC 2 $ pop_assum SUBST1_TAC >>
+    simp[extreal_add_def,extreal_sub_def,extreal_ainv_def,real_sub]
 QED
 
 Theorem integrable_sub':
@@ -11056,7 +11057,8 @@ Proof
     qspecl_then [‘m’,‘λx. P x /\ Q x’,‘R’] (resolve_then Any (qspecl_then
         [‘m’,‘λx. f x + -g x = f x - g x’,‘λx. g x = (Normal o real o g) x’,‘λx. f x = (Normal o real o f) x’] $
         irule o SIMP_RULE (srw_ss ()) []) AE_INTER o SIMP_RULE (srw_ss ()) []) AE_subset >>
-    fs[] >> rw[] >> NTAC 2 $ pop_assum SUBST1_TAC >> simp[extreal_add_def,extreal_sub_def,extreal_ainv_def]
+    fs[] >> rw[] >> NTAC 2 $ pop_assum SUBST1_TAC >>
+    simp[extreal_add_def,extreal_sub_def,extreal_ainv_def,real_sub]
 QED
 
 val _ = export_theory ();
