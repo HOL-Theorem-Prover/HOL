@@ -20,14 +20,6 @@ Definition trule_def[simp]:
   trule Σ [] = (Σ, [])
 End
 
-Definition is_boxed_def[simp]:
-  (is_boxed (Box _) ⇔ T) ∧ (is_boxed _ ⇔ F)
-End
-
-Definition is_dia_def[simp]:
-  (is_dia (Dia _) ⇔ T) ∧ (is_dia _ ⇔ F)
-End
-
 Definition scmap2_def[simp]:
   scmap2 f _ [] = SOME [] ∧
   scmap2 f Σ (h :: t) =
@@ -62,7 +54,7 @@ Definition unbox_single_def[simp]:
 End
 
 Theorem trule_all_unboxed[simp]:
-  EVERY ($¬ ∘ is_boxed) Γ ⇒ trule Σ Γ = (Σ, Γ)
+  EVERY ($¬ ∘ is_box) Γ ⇒ trule Σ Γ = (Σ, Γ)
 Proof
   Induct_on `Γ` >> rw[] >> Cases_on`h` >> fs[]
 QED
@@ -90,7 +82,7 @@ QED
 (* in the right -> either stays in the right or moved to left with trule *)
 Theorem trule_mem_right:
   ∀f l r. MEM f r ⇒
-          is_boxed f ∧
+          is_box f ∧
             MEM f (FST (trule l r)) ∧
               MEM (HD (unbox [f])) (SND (trule l r)) ∨
           MEM f (SND (trule l r))
@@ -106,7 +98,7 @@ QED
     1. from the history at the beginning or
     2. is from the formulae set and is boxed*)
 Theorem trule_mem_left_rev:
-   ∀f l r. MEM f (FST (trule l r)) ⇒ MEM f l ∨ is_boxed f ∧ MEM f r
+   ∀f l r. MEM f (FST (trule l r)) ⇒ MEM f l ∨ is_box f ∧ MEM f r
 Proof
   Induct_on `r` >> rw[] >>
   Cases_on `f` >> simp[] >> fs[] >>
@@ -117,9 +109,9 @@ QED
 (* If all formulae in the history are boxed then
    all formulae in the history after trule are still all boxed *)
 Theorem trule_all_box:
-  ∀f l r. (∀p. MEM p l ⇒ is_boxed p) ⇒
+  ∀f l r. (∀p. MEM p l ⇒ is_box p) ⇒
           MEM f (FST (trule l r)) ⇒
-          is_boxed f
+          is_box f
 Proof
   Induct_on `r` >> rw[] >>
   Cases_on `f` >> simp[] >> fs[]
@@ -137,7 +129,7 @@ QED
 
 Theorem trule_result:
 ∀Sg p f s.
-  (EVERY ($¬ ∘ is_boxed) p) ⇒
+  (EVERY ($¬ ∘ is_box) p) ⇒
   (trule Sg (p ++ [Box f] ++ s) = ((Box f)::Sg, p ++ [f] ++ s))
 Proof
   ho_match_mp_tac trule_ind >> fs[] >> rw[]
@@ -227,7 +219,7 @@ Proof
 QED
 
 Theorem trule_length:
-  ∀Σ Γ. EXISTS is_boxed Γ ⇒
+  ∀Σ Γ. EXISTS is_box Γ ⇒
         degree (trule Σ Γ) = degree (Σ,Γ) ∧
         gsize (SND (trule Σ Γ)) < gsize Γ
 Proof
@@ -313,7 +305,7 @@ Definition tableau_KT_def:
                             SOME m => SOME m
                           | NONE =>
                             case tableau_KT Σ Γ2 of SOME m => SOME m | NONE => NONE)
-                  | NONE => if EXISTS is_boxed Γ then tableau_KT (FST (trule Σ Γ)) (SND (trule Σ Γ))
+                  | NONE => if EXISTS is_box Γ then tableau_KT (FST (trule Σ Γ)) (SND (trule Σ Γ))
                             else  if EXISTS is_dia Γ then
                                     let
                                       children = scmap2 tableau_KT [] (MAP (λd. d :: (unbox Σ))
@@ -496,9 +488,9 @@ QED
 Theorem reflexive_sequent_trule:
 ∀Σ Γ. reflexive_sequent (Σ,Γ) ⇒ reflexive_sequent (trule Σ Γ)
 Proof
-  rw[] >> Cases_on `EVERY ($¬ ∘ is_boxed) Γ` >> simp[] >>
-  `EXISTS is_boxed Γ` by metis_tac[EXISTS_NOT_EVERY] >>
-  `∃p f s. Γ = (p ++ [Box f] ++ s) ∧ EVERY ($¬ ∘ is_boxed) p`
+  rw[] >> Cases_on `EVERY ($¬ ∘ is_box) Γ` >> simp[] >>
+  `EXISTS is_box Γ` by metis_tac[EXISTS_NOT_EVERY] >>
+  `∃p f s. Γ = (p ++ [Box f] ++ s) ∧ EVERY ($¬ ∘ is_box) p`
     by (drule exists_split_first >> rw[] >>
         qexistsl_tac [`p`,`unbox_single e`, `s`] >> rw[] >>
         Cases_on`e` >> fs[]) >>
@@ -533,7 +525,7 @@ Theorem forces_every_literal:
   contradiction Γ = NONE ∧
   conjsplit Γ = NONE ∧
   disjsplit Γ = NONE ∧
-  EVERY ($¬ ∘ is_boxed) Γ ∧
+  EVERY ($¬ ∘ is_box) Γ ∧
   EVERY ($¬ ∘ is_dia) Γ
 ⇒
   ∀f. MEM f Γ ⇒ forces (T_tree_model  (Nd (unvar Γ) []))  (Nd (unvar Γ) []) f
@@ -604,7 +596,7 @@ QED
 (* TODO: wrap it: for all Σ Γ, if tableau_KT Σ Γ closes, then there must exist a tree model ... *)
 Theorem tableau_KT_sound:
    ∀Σ Γ t. tableau_KT Σ Γ = SOME t ⇒
-            (∀f. MEM f Σ ⇒ is_boxed f) ⇒
+            (∀f. MEM f Σ ⇒ is_box f) ⇒
             reflexive_sequent (Σ,Γ) ⇒
            ∀f. MEM f (Σ++Γ) ⇒
            forces (T_tree_model t) t f
@@ -614,7 +606,7 @@ Proof
   simp[AllCaseEqs()] >> strip_tac
 (* T rule *)
   >- (fs[] >> strip_tac >> strip_tac >> drule_then assume_tac trule_all_box >>
-      `∀f. MEM f (FST (trule Σ Γ)) ⇒ is_boxed f` by metis_tac[] >>
+      `∀f. MEM f (FST (trule Σ Γ)) ⇒ is_box f` by metis_tac[] >>
       first_x_assum (drule_then assume_tac) >> (* strip didn't do anything *)
       simp[DISJ_IMP_THM, FORALL_AND_THM] >>
       rw[]
@@ -689,7 +681,7 @@ Proof
       >> drule forces_every_literal >> rw[])
 (* Disj right *)
   >- (qpat_x_assum `∀Σ' Γ'.
-       _ ∧ _ ∧ _ ∧ ¬EXISTS is_boxed Γ ∧ EXISTS is_dia Γ ∧ _
+       _ ∧ _ ∧ _ ∧ ¬EXISTS is_box Γ ∧ EXISTS is_dia Γ ∧ _
         ==> _ ` (fn _ => all_tac) >>
       qpat_x_assum `∀Γ'.
         _ ∧ conjsplit Γ = SOME Γ' ==> _ ` (fn _ => all_tac) >>
@@ -709,7 +701,7 @@ Proof
           >> fs[DISJ_IMP_THM, FORALL_AND_THM])
 (* Disj left *)
   >- (qpat_x_assum `∀Σ' Γ'.
-       _ ∧ _ ∧ _ ∧ ¬EXISTS is_boxed Γ ∧ EXISTS is_dia Γ ∧ _
+       _ ∧ _ ∧ _ ∧ ¬EXISTS is_box Γ ∧ EXISTS is_dia Γ ∧ _
          ==> _ ` (fn _ => all_tac) >>
       qpat_x_assum `∀Γ'.
         _ ∧ conjsplit Γ = SOME Γ' ==> _ ` (fn _ => all_tac) >>
@@ -731,7 +723,7 @@ Proof
           >> fs[DISJ_IMP_THM, FORALL_AND_THM])
 (* Conj *)
   >> qpat_x_assum `∀Σ' Γ'.
-       _ ∧ _ ∧ _ ∧ ¬EXISTS is_boxed Γ ∧ EXISTS is_dia Γ ∧ _
+       _ ∧ _ ∧ _ ∧ ¬EXISTS is_box Γ ∧ EXISTS is_dia Γ ∧ _
          ==> _ ` (fn _ => all_tac) >>
   qpat_x_assum `∀Σ' Γ1 Γ'. _ ∧ _ ∧ disjsplit Γ = SOME Σ' ∧
     Σ' = (Γ1,Γ') ∧ tableau_KT Σ Γ1 = NONE ⇒ _ ` (fn _ => all_tac) >>
