@@ -812,7 +812,18 @@ Proof
   first_x_assum $ drule_then strip_assume_tac >>
   metis_tac[LIST_REL_rules]
 QED
-(*
+
+Theorem PERM_unbox:
+  PERM l1 l2 ⇒ PERM (unbox l1) (unbox l2)
+Proof
+  Induct_on ‘PERM’ >> simp[] >> rw[] >~
+  [‘unbox (x::y::t)’]
+  >- (map_every Cases_on [‘x’, ‘y’] >> simp[PERM_SWAP_AT_FRONT]) >~
+  [‘unbox (x::t)’]
+  >- (Cases_on ‘x’ >> simp[]) >>
+  metis_tac[PERM_TRANS]
+QED
+
 Theorem tableauR_exchange:
   ∀Γ₁ t₁. tableauR Γ₁ t₁ ⇒ ∀Γ₂. PERM Γ₁ Γ₂ ⇒ ∃t₂. tableauR Γ₂ t₂
 Proof
@@ -838,10 +849,43 @@ Proof
   >- (irule_at Any tableauR_diam >>
       first_assum $ irule_at (Pat ‘is_dia _’) >>
       simp[RIGHT_EXISTS_AND_THM] >> reverse (rpt conj_tac)
-      >- (cheat >> irule LIST_REL_PERM1 >>
+      >- (irule LIST_REL_PERM1 >>
           irule_at Any PERM_FILTER >> first_assum $ irule_at Any >>
-          rename [‘LIST_REL _ _ trees’]) >>
+          rename [‘LIST_REL _ _ trees’] >>
+          gvs[LIST_REL_CONJ] >>
+          qpat_x_assum ‘LIST_REL _ _ _’ mp_tac >>
+          simp[LIST_REL_EL_EQN, SF CONJ_ss] >>
+          qabbrev_tac ‘dia_fs = FILTER is_dia Γ₁’ >>
+          ‘∀n. n < LENGTH trees ⇒
+               PERM (dest_dia (EL n dia_fs) :: unbox Γ₁)
+                    (dest_dia (EL n dia_fs) :: unbox Γ₂)’
+            by simp[PERM_unbox] >>
+          strip_tac >>
+          first_assum (first_assum o resolve_then (Pat ‘PERM _ _’) mp_tac) >>
+          disch_then (qx_choose_then ‘mktree’ assume_tac o
+                      SRULE [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]) >>
+          qexists_tac ‘GENLIST mktree (LENGTH trees)’ >> simp[]) >>
       metis_tac[PERM_CONTRADICTION_NONE, MEM_PERM])
 QED
-*)
+
+Theorem tableau_EQ_NONE_PERM:
+  PERM Γ₁ Γ₂ ∧ tableau Γ₁ = NONE ⇒
+  tableau Γ₂ = NONE
+Proof
+  CCONTR_TAC >> gs[] >>
+  Cases_on ‘tableau Γ₂’ >> gs[] >>
+  drule_then assume_tac tableau_tableauR >>
+  ‘∃tr. tableauR Γ₁ tr’ by metis_tac[PERM_SYM, tableauR_exchange] >>
+  drule tableau_EQ_NONE_tableauR >> simp[SF SFY_ss]
+QED
+
+Theorem tableau_EQ_SOME_PERM:
+  PERM Γ₁ Γ₂ ∧ tableau Γ₁ = SOME tm1 ⇒
+  ∃tm2. tableau Γ₂ = SOME tm2
+Proof
+  Cases_on ‘tableau Γ₂’ >> simp[] >> rpt strip_tac >>
+  ‘tableau Γ₁ = NONE’ by metis_tac[tableau_EQ_NONE_PERM, PERM_SYM] >>
+  gs[]
+QED
+
 val _ = export_theory();
