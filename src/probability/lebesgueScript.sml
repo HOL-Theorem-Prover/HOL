@@ -41,6 +41,12 @@ fun METIS ths tm = prove (tm, METIS_TAC ths);
 
 val _ = hide "I";
 
+(* TODO: remove once MEASURE_SPACE_SIGMA_ALGEBRA is a simp *)
+val name_to_thname = fn (t,s) => ({Thy = t, Name = s}, DB.fetch t s);
+val mk_local_simp = augment_srw_ss o single o
+    simpLib.rewrites_with_names o single o name_to_thname;
+val _ = mk_local_simp("measure","MEASURE_SPACE_SIGMA_ALGEBRA");
+
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
@@ -4805,8 +4811,7 @@ Proof
  >> CONJ_TAC
  >- (GEN_TAC \\
      MATCH_MP_TAC (INST_TYPE [beta |-> ``:num``] IN_MEASURABLE_BOREL_SUM) \\
-     qexistsl_tac [`f`, `count i`] >> rw [FINITE_COUNT]
-     >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+     qexistsl_tac [`f`, `count i`] >> rw [FINITE_COUNT] \\
      METIS_TAC [lt_infty, lte_trans, num_not_infty])
  >> CONJ_TAC >- RW_TAC std_ss [FINITE_COUNT, EXTREAL_SUM_IMAGE_POS]
  >> RW_TAC std_ss [ext_mono_increasing_def]
@@ -10862,13 +10867,13 @@ QED
       in order to manipulate the simplifier without breaking anything
       - Jared Yeager                                                    *)
 
+(*
 (* TODO: remove once MEASURE_SPACE_SIGMA_ALGEBRA is a simp *)
 val name_to_thname = fn (t,s) => ({Thy = t, Name = s}, DB.fetch t s);
 val mk_local_simp = augment_srw_ss o single o
     simpLib.rewrites_with_names o single o name_to_thname;
 val _ = mk_local_simp("measure","MEASURE_SPACE_SIGMA_ALGEBRA");
-
-(* val _ = augment_srw_ss [realSimps.REAL_ARITH_ss]; *)
+*)
 
 (*** integral and integrable Theorems with fewer preconditions ***)
 
