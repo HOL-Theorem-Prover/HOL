@@ -23,12 +23,6 @@ val _ = hide "S";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 
-(* TODO: remove once MEASURE_SPACE_SIGMA_ALGEBRA is a simp *)
-val name_to_thname = fn (t,s) => ({Thy = t, Name = s}, DB.fetch t s);
-val mk_local_simp = augment_srw_ss o single o
-    simpLib.rewrites_with_names o single o name_to_thname;
-val _ = mk_local_simp("measure","MEASURE_SPACE_SIGMA_ALGEBRA");
-
 (* "The theory of martingales as we know it now goes back to Doob and most of
     the material of this and the following chapter can be found in his seminal
     monograph [2] from 1953.

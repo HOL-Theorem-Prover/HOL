@@ -2184,13 +2184,10 @@ Proof
      [ (* goal 1 (of 3) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL >> BETA_TAC \\
        qexistsl_tac [‘\x. SIGMA (\i. W i x) (count (SUC k))’, ‘inv r’] \\
-       FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def] \\
-       CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+       FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def] >> simp [] \\
        MATCH_MP_TAC (INST_TYPE [“:'b” |-> “:num”] IN_MEASURABLE_BOREL_SUM) >> rw [] \\
-       qexistsl_tac [‘W’, ‘count (SUC k)’] >> rw [FINITE_COUNT, IN_COUNT] >|
-       [ FULL_SIMP_TAC std_ss [measure_space_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def] ],
+       qexistsl_tac [‘W’, ‘count (SUC k)’] >> rw [FINITE_COUNT, IN_COUNT] \\
+       FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
        (* goal 2 (of 3) *)
       ‘?z. SIGMA (\i. W i x) (count (SUC k)) = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
        rw [extreal_mul_def, extreal_not_infty],
@@ -2363,10 +2360,8 @@ Proof
        FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def] \\
        CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
        MATCH_MP_TAC (INST_TYPE [“:'b” |-> “:num”] IN_MEASURABLE_BOREL_SUM) >> rw [] \\
-       qexistsl_tac [‘W’, ‘count n’] >> rw [FINITE_COUNT, IN_COUNT] >|
-       [ FULL_SIMP_TAC std_ss [measure_space_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def] ],
+       qexistsl_tac [‘W’, ‘count n’] >> rw [FINITE_COUNT, IN_COUNT] \\
+       FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
        (* goal 2 (of 3) *)
       ‘?z. SIGMA (\i. W i x) (count n) = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
        rw [extreal_mul_def, extreal_not_infty],
