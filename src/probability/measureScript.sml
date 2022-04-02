@@ -5504,9 +5504,7 @@ Proof
 QED
 
 Theorem MEASURE_SPACE_SIGMA_ALGEBRA[simp]:
-    (!m. measure_space (m:'a m_space) ==> sigma_algebra (measurable_space m)) /\
-    (!sa mu. measure_space ((space sa,subsets sa,mu):'a m_space) ==> sigma_algebra sa) /\
-    (!sp sts mu. measure_space ((sp,sts,mu):'a m_space) ==> sigma_algebra (sp,sts))
+    !m. measure_space m ==> sigma_algebra (measurable_space m)
 Proof
     simp[measure_space_def]
 QED
