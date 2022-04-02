@@ -5503,7 +5503,6 @@ Proof
  >> rfs[] >> first_x_assum $ qspec_then ‘n’ assume_tac >> fs[]
 QED
 
-(* TODO: I suggest this be made a [simp] *)
 Theorem MEASURE_SPACE_SIGMA_ALGEBRA[simp]:
     (!m. measure_space (m:'a m_space) ==> sigma_algebra (measurable_space m)) /\
     (!sa mu. measure_space ((space sa,subsets sa,mu):'a m_space) ==> sigma_algebra sa) /\
