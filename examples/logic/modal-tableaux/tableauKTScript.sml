@@ -10,7 +10,7 @@ open HolKernel Parse boolLib bossLib;
 
 open pairTheory pred_setTheory listTheory relationTheory;
 open mp_then;
-open tableauKTheory;
+open modalBasicsTheory tableauKTheory;
 
 val _ = new_theory "tableauKT";
 
@@ -114,17 +114,8 @@ Theorem trule_all_box:
           is_box f
 Proof
   Induct_on `r` >> rw[] >>
-  Cases_on `f` >> simp[] >> fs[]
-  >- (Cases_on `h` >> simp[] >> fs[] >>
-      first_x_assum drule >> rw[] >> qexists_tac `Var n` >> rw[])
-  >- (Cases_on `h` >> simp[] >> fs[] >>
-      first_x_assum drule >> rw[] >> qexists_tac `NVar n` >> rw[])
-  >- (Cases_on `h` >> simp[] >> fs[] >>
-      first_x_assum drule >> rw[] >> qexists_tac `Conj f' f0` >> rw[])
-  >- (Cases_on `h` >> simp[] >> fs[] >>
-      first_x_assum drule >> rw[] >> qexists_tac `Disj f' f0` >> rw[])
-  >- (Cases_on `h` >> simp[] >> fs[] >>
-      first_x_assum drule >> rw[] >> qexists_tac `Dia f'` >> rw[])
+  Cases_on `f` >> simp[] >> fs[] >>
+  Cases_on ‘h’ >> gs[] >> first_x_assum drule_all >> simp[]
 QED
 
 Theorem trule_result:
@@ -372,7 +363,9 @@ Proof
 QED
 
 Theorem tableau_KT_complete:
-  ∀Σ Γ. tableau_KT Σ Γ = NONE ⇒ ∀M w. w ∈ M.worlds ∧ reflexive_M M ⇒ ∃f. MEM f (Γ++Σ) ∧ ¬forces M w f
+  ∀Σ Γ. tableau_KT Σ Γ = NONE ⇒
+        ∀M w. w ∈ M.frame.world ∧ reflexive_M M ⇒
+              ∃f. MEM f (Γ++Σ) ∧ ¬forces M w f
 Proof
   ho_match_mp_tac tableau_KT_ind >> ntac 2 gen_tac >> strip_tac >>
   simp[Once tableau_KT_def] >> simp[AllCaseEqs()] >> rw[] >>
@@ -401,25 +394,31 @@ Proof
       >> metis_tac[])
   >> (rename [‘contradiction Γ = SOME j’] >>
       drule_then strip_assume_tac contradiction_EQ_SOME >>
-      Cases_on ‘M.valt w j’
+      Cases_on ‘w ∈ M.valt j’
       >- (qexists_tac ‘NVar j’ >> simp[]) >>
       qexists_tac ‘Var j’ >> simp[])
 QED
 
 Definition T_tree_model_def:
   T_tree_model t =
-    <| rel := RC tree_rel ;
-       valt := λt v. case t of Nd vs _ => MEM v vs ;
-       worlds := { t' | RTC tree_rel t t' }
+    <| frame := <| rel := RC tree_rel ; world := { t' | RTC tree_rel t t' } |>;
+       valt := λv t. case t of Nd vs _ => MEM v vs ;
+
     |>
 End
 
 Theorem T_tree_model_thm[simp]:
-  ((T_tree_model t).valt = λu v. case u of Nd vs _ => MEM v vs) ∧
-  (T_tree_model t).rel = RC tree_rel ∧
-  m ∈ (T_tree_model m).worlds
+  ((T_tree_model t).valt = λv u. case u of Nd vs _ => MEM v vs) ∧
+  (T_tree_model t).frame.rel = RC tree_rel ∧
+  m ∈ (T_tree_model m).frame.world
 Proof
   simp[T_tree_model_def]
+QED
+
+Theorem reflexive_T_tree_model:
+  reflexive_M (T_tree_model t)
+Proof
+   simp[reflexive_M]
 QED
 
 Definition subtree_def:
@@ -427,7 +426,7 @@ Definition subtree_def:
 End
 
 Theorem FINITE_T_tree_model_worlds[simp]:
-  ∀t. FINITE (T_tree_model t).worlds
+  ∀t. FINITE (T_tree_model t).frame.world
 Proof
   simp[T_tree_model_def] >> Induct >> simp[tree_rel_def] >>
   simp[Once relationTheory.RTC_CASES1] >> simp[GSPEC_OR, tree_rel_def] >>
@@ -445,13 +444,13 @@ QED
 
 Definition reflexive_sequent_def:
   reflexive_sequent (Σ,Γ) ⇔
-  ∀𝜑 v l. MEM (Box 𝜑) Σ ⇒
-          (∀f. MEM f Γ ⇒
-                  forces (T_tree_model (Nd v l)) (Nd v l) f) ∧
-          (∀s. MEM s l ⇒
-                (∀𝜓. MEM (Box 𝜓) Σ ⇒ forces (T_tree_model s) s 𝜓))
-  ⇒
-  forces (T_tree_model (Nd v l)) (Nd v l) 𝜑
+    ∀𝜑 v l. MEM (Box 𝜑) Σ ⇒
+            (∀f. MEM f Γ ⇒
+                 forces (T_tree_model (Nd v l)) (Nd v l) f) ∧
+            (∀s. MEM s l ⇒
+                 (∀𝜓. MEM (Box 𝜓) Σ ⇒ forces (T_tree_model s) s 𝜓))
+            ⇒
+            forces (T_tree_model (Nd v l)) (Nd v l) 𝜑
 End
 
 Theorem reflexive_sequent_trule1:
@@ -740,12 +739,8 @@ Proof
   >> fs[DISJ_IMP_THM, FORALL_AND_THM]
 QED
 
+Theorem tableau_KT_satisfies =
+        tableau_KT_sound |> Q.SPEC ‘[]’
+                         |> SRULE [reflexive_sequent_def]
 
-(*
-TODO
-  1. Define a new language which has ``not`` symbol;
-  2. Function(NNF) which converts any given formulae into NNF;
-  3. Prove using controposition in HOL
-  if the set GAMMA = {NNF NotPhi}, if GAMMA closes then Phi is valid;
-*)
 val _ = export_theory();

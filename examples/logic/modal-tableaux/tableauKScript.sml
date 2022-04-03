@@ -9,33 +9,18 @@
 open HolKernel Parse boolLib bossLib;
 open pairTheory pred_setTheory listTheory;
 open sortingTheory;
-open relationTheory mp_then;
+open relationTheory modalBasicsTheory
 val _ = new_theory "tableauK";
 
-Datatype: form = Var num | NVar num | Conj form form | Disj form form
-                | Box form | Dia form
-End
-val _ = export_rewrites ["form_size_def"]
-
-Datatype: model = <| rel : α -> α -> bool ; valt : α -> num -> bool ;
-                     worlds : α set |>
-End
+Overload form_size = “modalBasics$nnfform_size”
 
 Definition reflexive_M:
-  reflexive_M m ⇔ ∀w. w ∈ m.worlds ⇒ m.rel w w
-End
-
-Definition forces_def[simp]:
-  (forces M w (Var n)      ⇔ M.valt w n) ∧
-  (forces M w (NVar n)     ⇔ ¬M.valt w n) ∧
-  (forces M w (Conj f1 f2) ⇔ forces M w f1 ∧ forces M w f2) ∧
-  (forces M w (Disj f1 f2) ⇔ forces M w f1 ∨ forces M w f2) ∧
-  (forces M w (Box f)      ⇔ ∀v. v ∈ M.worlds ∧ M.rel w v ⇒ forces M v f) ∧
-  (forces M w (Dia f)      ⇔ ∃v. v ∈ M.worlds ∧ M.rel w v ∧ forces M v f)
+  reflexive_M m ⇔ ∀w. w ∈ m.frame.world ⇒ m.frame.rel w w
 End
 
 Definition sat_def:
-  sat (tyit : α itself) Γ ⇔ ∃M (w:α). w ∈ M.worlds ∧ ∀f. f ∈ Γ ⇒ forces M w f
+  sat (tyit : α itself) Γ ⇔
+    ∃M (w:α). w ∈ M.frame.world ∧ ∀f. f ∈ Γ ⇒ forces M w f
 End
 
 Definition contradiction_def[simp]:
@@ -313,16 +298,15 @@ QED
 
 Definition tree_model_def:
   tree_model t =
-    <| rel := tree_rel ;
-       valt := λt v. case t of Nd vs _ => MEM v vs ;
-       worlds := { t' | RTC tree_rel t t' }
+    <| frame := <| rel := tree_rel ; world := { t' | RTC tree_rel t t' } |> ;
+       valt := λv t. case t of Nd vs _ => MEM v vs ;
     |>
 End
 
 Theorem tree_model_thm[simp]:
-  ((tree_model t).valt = λu v. case u of Nd vs _ => MEM v vs) ∧
-  (tree_model t).rel = tree_rel ∧
-  m ∈ (tree_model m).worlds
+  ((tree_model t).valt = λv u. case u of Nd vs _ => MEM v vs) ∧
+  (tree_model t).frame.rel = tree_rel ∧
+  m ∈ (tree_model m).frame.world
 Proof
   simp[tree_model_def]
 QED
@@ -332,7 +316,7 @@ Definition subtree_def:
 End
 
 Theorem FINITE_tree_model_worlds[simp]:
-  ∀t. FINITE (tree_model t).worlds
+  ∀t. FINITE (tree_model t).frame.world
 Proof
   simp[tree_model_def] >> Induct >> simp[tree_rel_def] >>
   simp[Once relationTheory.RTC_CASES1] >> simp[GSPEC_OR, tree_rel_def] >>
@@ -343,12 +327,14 @@ Proof
 QED
 
 Theorem forces_grows_backward:
-  ∀w. forces M1 w f ∧ M2.valt = M1.valt ∧ M2.rel = M1.rel ∧
-      M1.worlds ⊆ M2.worlds ∧ w ∈ M1.worlds ∧
-      (∀w1 w2. M1.rel w1 w2 ∧ w1 ∈ M1.worlds ⇒ w2 ∈ M1.worlds) ⇒
+  ∀w. forces M1 w f ∧ M2.valt = M1.valt ∧ M2.frame.rel = M1.frame.rel ∧
+      M1.frame.world ⊆ M2.frame.world ∧ w ∈ M1.frame.world ∧
+      (∀w1 w2. M1.frame.rel w1 w2 ∧ w1 ∈ M1.frame.world ⇒ w2 ∈ M1.frame.world) ⇒
       forces M2 w f
 Proof
   Induct_on ‘f’ >> simp[]
+  >- metis_tac[SUBSET_DEF]
+  >- metis_tac[SUBSET_DEF]
   >- metis_tac[]
   >- metis_tac[]
   >- (rw[] >> fs[] >> metis_tac[SUBSET_DEF])
@@ -409,7 +395,7 @@ Proof
 QED
 
 Theorem tableau_complete:
-  ∀Γ. tableau Γ = NONE ⇒ ∀M w. w ∈ M.worlds ⇒ ∃f. MEM f Γ ∧ ¬forces M w f
+  ∀Γ. tableau Γ = NONE ⇒ ∀M w. w ∈ M.frame.world ⇒ ∃f. MEM f Γ ∧ ¬forces M w f
 Proof
   ho_match_mp_tac tableau_ind >> gen_tac >> strip_tac >>
   simp[Once tableau_def] >> simp[AllCaseEqs()] >> rw[] >>
@@ -428,7 +414,7 @@ Proof
       drule_all conjsplit_MEM2 >> metis_tac[forces_def])
   >- (rename [‘contradiction Γ = SOME j’] >>
       drule_then strip_assume_tac contradiction_EQ_SOME >>
-      Cases_on ‘M.valt w j’
+      Cases_on ‘w ∈ M.valt j’
       >- (qexists_tac ‘NVar j’ >> simp[]) >>
       qexists_tac ‘Var j’ >> simp[])
 QED

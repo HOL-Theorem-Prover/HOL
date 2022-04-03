@@ -10,7 +10,7 @@ open HolKernel Parse boolLib bossLib;
 
 open pairTheory pred_setTheory listTheory relationTheory;
 open mp_then;
-open tableauKTTheory;
+open modalBasicsTheory tableauKTTheory;
 open tableauKTheory;
 open arithmeticTheory;
 
@@ -47,17 +47,17 @@ val _ = add_record_field("l", ``get_kids``)
 
 Datatype:
   S4_sequent = <|
-          As : (form # form list) list;
-          Ss : (form # form list) option;
-          Hs : form list;
-          Sg : form list;
-          Gm : form list;
+          As : (nnfform # nnfform list) list;
+          Ss : (nnfform # nnfform list) option;
+          Hs : nnfform list;
+          Sg : nnfform list;
+          Gm : nnfform list;
          |>
 End
 
 Type S4_result = ``:(S4_sequent #
-                           form list #
-                           (form # form list) list)
+                           nnfform list #
+                           (nnfform # nnfform list) list)
                           premodel``
 
 Overload CLOSED = “NONE : S4_result option”
@@ -66,10 +66,16 @@ Overload OPEN = “SOME :  S4_result -> S4_result option”
 
 Definition closure_list_conc_def[simp]:
   closure_list_conc [] = [] ∧
-  closure_list_conc (Conj f1 f2::rest) = Conj f1 f2::closure_list_conc [f1] ⧺ closure_list_conc [f2] ⧺ closure_list_conc rest ∧
-  closure_list_conc (Disj f1 f2::rest) = Disj f1 f2::closure_list_conc [f1] ⧺ closure_list_conc [f2] ⧺ closure_list_conc rest ∧
-  closure_list_conc (Box f::rest) = Box f :: closure_list_conc [f] ++ (closure_list_conc rest) ∧
-  closure_list_conc (Dia f::rest) = Dia f :: closure_list_conc [f] ++ (closure_list_conc rest) ∧
+  closure_list_conc (Conj f1 f2::rest) =
+    Conj f1 f2::closure_list_conc [f1] ⧺ closure_list_conc [f2] ⧺
+    closure_list_conc rest ∧
+  closure_list_conc (Disj f1 f2::rest) =
+    Disj f1 f2::closure_list_conc [f1] ⧺ closure_list_conc [f2] ⧺
+    closure_list_conc rest ∧
+  closure_list_conc (Box f::rest) =
+    Box f :: closure_list_conc [f] ++ (closure_list_conc rest) ∧
+  closure_list_conc (Dia f::rest) =
+    Dia f :: closure_list_conc [f] ++ (closure_list_conc rest) ∧
   closure_list_conc (f::rest) = f :: (closure_list_conc rest)
 Termination
   WF_REL_TAC `measure (SUM o MAP form_size)` >> rw[]
@@ -215,21 +221,16 @@ Proof
   >- (`form_size f = 0 + form_size f` by rw[] >>
       `gsize l + form_size f ≤ 0 + form_size f` by fs[] >>
       `gsize l ≤ 0` by metis_tac[arithmeticTheory.LE_ADD_RCANCEL] >>
-      Cases_on `l` >> rw[] >> Cases_on `h` >> fs[form_size_def])
+      Cases_on `l` >> rw[] >> Cases_on `h` >> fs[])
   >> `gsize l ≤ form_size f` by fs[arithmeticTheory.LESS_EQ_TRANS, arithmeticTheory.LESS_EQ_ADD] >>
   first_x_assum (drule_then strip_assume_tac) >>
   first_x_assum (drule_then strip_assume_tac) >>
-  fs[] >> Cases_on `h` >> fs[form_size_def]
-QED
-
-Theorem non_empty_list_length:
-  ∀l. l ≠ [] ⇒ LENGTH l > 0
-Proof
-  Induct_on `l` >> rw[]
+  fs[] >> Cases_on `h` >> fs[]
 QED
 
 Theorem proper_subset:
-  ∀a l1 l2. ALL_DISTINCT l1 ∧ a ∉ set l1 ∧ a ∈ set l2 ∧ set l1 ⊆ set l2 ⇒ gsize l1 < gsize l2
+  ∀a l1 l2. ALL_DISTINCT l1 ∧ a ∉ set l1 ∧ a ∈ set l2 ∧ set l1 ⊆ set l2 ⇒
+            gsize l1 < gsize l2
 Proof
   Induct_on `l1` >> rw[]
   >- (Induct_on `l2` >> rw[]
@@ -294,14 +295,15 @@ Proof
 QED
 
 Definition wfm_S4_sequent:
-  wfm_S4_sequent Γ0 s ⇔ ALL_DISTINCT s.Sg ∧ ALL_DISTINCT s.Hs ∧
-                        set s.Sg PSUBSET set (closure_list_conc [Γ0]) ∧
-                        set s.Hs SUBSET set (closure_list_conc [Γ0]) ∧
-                        set s.Gm SUBSET set (closure_list_conc [Γ0]) ∧
-                        EVERY is_box s.Sg ∧
-                        (∀x. MEM x s.Hs ⇒ MEM (Dia x) (closure_list_conc [Γ0])) ∧
-                        (∀p. MEM p s.Hs ⇒ MEM (p, s.Sg) s.As) ∧
-                        (∀q r. s.Ss = SOME (q, r) ⇒ MEM q s.Gm ∧ set r ⊆ set s.Gm)
+  wfm_S4_sequent Γ0 s ⇔
+    ALL_DISTINCT s.Sg ∧ ALL_DISTINCT s.Hs ∧
+    set s.Sg PSUBSET set (closure_list_conc [Γ0]) ∧
+    set s.Hs SUBSET set (closure_list_conc [Γ0]) ∧
+    set s.Gm SUBSET set (closure_list_conc [Γ0]) ∧
+    EVERY is_box s.Sg ∧
+    (∀x. MEM x s.Hs ⇒ MEM (Dia x) (closure_list_conc [Γ0])) ∧
+    (∀p. MEM p s.Hs ⇒ MEM (p, s.Sg) s.As) ∧
+    (∀q r. s.Ss = SOME (q, r) ⇒ MEM q s.Gm ∧ set r ⊆ set s.Gm)
 End
 
 (* pluck the first element from list that satisfies P,
@@ -482,9 +484,10 @@ Proof
 QED
 
 Definition transitive_M:
-  transitive_M m ⇔ ∀u v w. u ∈ m.worlds ∧ v ∈ m.worlds ∧ w ∈ m.worlds ∧
-                           m.rel u v ∧ m.rel v w
-                          ⇒ m.rel u w
+  transitive_M m ⇔
+    ∀u v w. u ∈ m.frame.world ∧ v ∈ m.frame.world ∧ w ∈ m.frame.world ∧
+            m.frame.rel u v ∧ m.frame.rel v w ⇒
+            m.frame.rel u w
 End
 
 Theorem sublist_subset:
@@ -631,24 +634,11 @@ Theorem conjsplit_s4_MEM2:
            MEM ϕ Γ₀ ∨ (∃ϕ'. MEM (Conj ϕ ϕ') Γ₀) ∨
            (∃ϕ'. MEM (Conj ϕ' ϕ) Γ₀)
 Proof
-  Induct >> simp[] >> Cases
-  >- (rw[] >> Cases_on `z` >> fs[] >>
-      Cases_on `ϕ = Var n` >> fs[] >> Cases_on `MEM ϕ r` >> fs[]
-      >> `MEM ϕ (Var n::r)` by metis_tac[] >> fs[] >> fs[])
-  >- (rw[] >> Cases_on `z` >> fs[] >>
-      Cases_on `ϕ = NVar n` >> fs[] >> Cases_on `MEM ϕ r` >> fs[]
-      >> `MEM ϕ (NVar n::r)` by metis_tac[] >> fs[] >> fs[])
-  >- (rpt strip_tac >> rw[] >> fs[conjsplit_s4_def] >> Cases_on `MEM ϕ Γ₀` >> fs[] >>
-      `MEM ϕ (f'::f0::Γ₀)` by metis_tac[] >> fs[] >> metis_tac[])
-  >- (rw[] >> Cases_on `z` >> fs[] >>
-      Cases_on `ϕ = Disj f' f0` >> fs[] >> Cases_on `MEM ϕ r` >> fs[]
-      >> `MEM ϕ ((Disj f' f0)::r)` by metis_tac[] >> fs[] >> fs[])
-  >- (rw[] >> Cases_on `z` >> fs[] >>
-      Cases_on `ϕ = Box f'` >> fs[] >> Cases_on `MEM ϕ r` >> fs[]
-      >> `MEM ϕ (Box f'::r)` by metis_tac[] >> fs[] >> fs[])
-  >- (rw[] >> Cases_on `z` >> fs[] >>
-      Cases_on `ϕ = Dia f'` >> fs[] >> Cases_on `MEM ϕ r` >> fs[]
-      >> `MEM ϕ (Dia f'::r)` by metis_tac[] >> fs[] >> fs[])
+  Induct >> simp[] >> Cases >~
+  [‘Conj f1 f2’]
+  >- (rpt strip_tac >> rw[] >> fs[conjsplit_s4_def] >>
+      Cases_on `MEM ϕ Γ₀` >> gvs[] >> simp[EXISTS_OR_THM]) >>
+  rw[] >> Cases_on `z` >> gvs[] >> metis_tac[]
 QED
 
 Theorem wfm_S4_Conj:
@@ -735,7 +725,7 @@ Theorem tableau_S4_complete:
   ∀Γ0 s. wfm_S4_sequent Γ0 s ⇒
          tableau_S4 Γ0 s = CLOSED ⇒
          ∀M w.
-             w ∈ M.worlds ∧ reflexive_M M ∧ transitive_M M ⇒
+             w ∈ M.frame.world ∧ reflexive_M M ∧ transitive_M M ⇒
              ∃f. MEM f (s.Gm++s.Sg) ∧ ¬forces M w f
 Proof
    ho_match_mp_tac tableau_S4_ind >> ntac 2 gen_tac >>
@@ -818,7 +808,7 @@ Proof
    >> (* Literal *)fs[] >>
       rename [‘contradiction Γ = SOME j’] >>
       drule_then strip_assume_tac contradiction_EQ_SOME >>
-      Cases_on ‘M.valt w j’
+      Cases_on ‘w ∈ M.valt j’
       >- (qexists_tac ‘NVar j’ >> simp[]) >>
       qexists_tac ‘Var j’ >> simp[]
 QED
@@ -826,7 +816,7 @@ QED
 Theorem final_tableau_S4_complete:
   ∀f.  final_tableau_S4 f = CLOSED ⇒
        ∀M w.
-         w ∈ M.worlds ∧ reflexive_M M ∧ transitive_M M ⇒
+         w ∈ M.frame.world ∧ reflexive_M M ∧ transitive_M M ⇒
          ¬forces M w f
 Proof
   rw[final_tableau_S4_def] >> drule_at (Pos $ el 2) tableau_S4_complete >>
@@ -1410,12 +1400,11 @@ End
 
 Definition s4_tree_model:
   s4_tree_model m =
-    <|  rel    := RTC (reach_step m);
-        valt   := (λs v. MEM (Var v) s.htk);
-        worlds := {m' | RTC (reach_step m) m m'}
+    <| frame := <| rel := RTC (reach_step m);
+                   world := {m' | RTC (reach_step m) m m'}; |>;
+       valt   := (λv s. MEM (Var v) s.htk);
     |>
 End
-
 
 Theorem reach_step_from_root:
 ∀f m x w.
@@ -1574,7 +1563,7 @@ QED
 (* thm_3_22*)
 Theorem tableau_S4_sound:
   ∀f m. final_tableau_S4 f = OPEN m ⇒
-          ∀w. w ∈ (s4_tree_model m).worlds ⇒
+          ∀w. w ∈ (s4_tree_model m).frame.world ⇒
                ∀p. MEM p w.htk ⇒
                    forces (s4_tree_model m) w p
 Proof
@@ -1592,7 +1581,7 @@ Proof
      fs[pre_hintikka_def] >> metis_tac[contradiction_EQ_NONE])
   (* Conj *)
   >-(simp[forces_def, s4_tree_model] >> rpt strip_tac >>
-     `w ∈ (s4_tree_model m).worlds` by fs[s4_tree_model] >>
+     `w ∈ (s4_tree_model m).frame.world` by fs[s4_tree_model] >>
      drule reach_step_from_root >> strip_tac >> first_x_assum (drule_then strip_assume_tac) >>
      `RTC pt_rel m m` by metis_tac[RTC_def] >> first_x_assum (drule_then strip_assume_tac) >>
      fs[final_tableau_S4_def] >> drule thm_3_17 >> strip_tac >>
@@ -1608,7 +1597,7 @@ Proof
         fs[] >> first_x_assum (drule_then strip_assume_tac) >> fs[s4_tree_model])
   (* Disj *)
   >-(simp[forces_def, s4_tree_model] >> rpt strip_tac >>
-     `w ∈ (s4_tree_model m).worlds` by fs[s4_tree_model] >>
+     `w ∈ (s4_tree_model m).frame.world` by fs[s4_tree_model] >>
      drule reach_step_from_root >> strip_tac >> first_x_assum (drule_then strip_assume_tac) >>
      `RTC pt_rel m m` by metis_tac[RTC_def] >> first_x_assum (drule_then strip_assume_tac) >>
      fs[final_tableau_S4_def] >> drule thm_3_17 >> strip_tac >>
@@ -1621,7 +1610,7 @@ Proof
      fs[] >> first_x_assum (drule_then strip_assume_tac) >> fs[s4_tree_model])
   (* Box *)
   >-(simp[forces_def, s4_tree_model] >> rpt strip_tac >>
-     `v ∈ (s4_tree_model m).worlds` by fs[s4_tree_model] >>
+     `v ∈ (s4_tree_model m).frame.world` by fs[s4_tree_model] >>
      first_x_assum (drule_then strip_assume_tac) >>
      first_x_assum (drule_then strip_assume_tac) >>
      fs[s4_tree_model] >> last_x_assum irule >> rw[] >>
@@ -1634,7 +1623,7 @@ Proof
                                       fs[pre_hintikka_def] >> metis_tac[]) >>
      drule thm_3_19 >> rw[] >>
      drule thm_3_19_prop_RTC >> rw[] >> first_assum (drule_then strip_assume_tac) >>
-     `w ∈ (s4_tree_model m).worlds` by fs[s4_tree_model] >>
+     `w ∈ (s4_tree_model m).frame.world` by fs[s4_tree_model] >>
      last_assum (qspecl_then [`m`, `w`] (ASSUME_TAC)) >>
      `RTC pt_rel m m` by metis_tac[RTC_def] >> first_x_assum (drule_all_then strip_assume_tac) >>
      fs[] >> rw[] >> first_assum (drule_then strip_assume_tac) >>
@@ -1649,7 +1638,7 @@ Proof
      irule RTC_reach_step_reserve_box >> qexistsl_tac [`m`, `w`, `f`] >> rw[])
   (* Dia *)
   >> simp[forces_def, s4_tree_model] >> rpt strip_tac >>
-  `w ∈ (s4_tree_model m).worlds` by fs[s4_tree_model] >>
+  `w ∈ (s4_tree_model m).frame.world` by fs[s4_tree_model] >>
   drule reach_step_from_root >> rw[] >>
   first_assum (qspecl_then [`m`, `w`] (ASSUME_TAC)) >>
   `RTC pt_rel m m` by metis_tac[RTC_def] >> first_x_assum (drule_all_then strip_assume_tac) >>
@@ -1697,7 +1686,7 @@ QED
 
 Theorem tableau_S4_local_sound:
   ∀f m. final_tableau_S4 f = OPEN m ⇒
-          forces (s4_tree_model m) m f
+        forces (s4_tree_model m) m f
 Proof
   rw[] >> drule tableau_S4_sound >> rw[] >> first_x_assum irule >> rw[]
   >-(fs[final_tableau_S4_def] >> drule thm_3_17 >> rw[] >>
