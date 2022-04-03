@@ -10,7 +10,7 @@ open HolKernel Parse boolLib bossLib;
 
 open pairTheory pred_setTheory listTheory relationTheory;
 open mp_then;
-open modalBasicsTheory tableauKTTheory;
+open modalBasicsTheory
 open tableauKTheory;
 open arithmeticTheory;
 
