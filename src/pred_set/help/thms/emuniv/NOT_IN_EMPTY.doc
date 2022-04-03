@@ -1,3 +1,0 @@
-\THEOREM NOT_IN_EMPTY pred_sets
-|- !x. ~x IN {{}}
-\ENDTHEOREM

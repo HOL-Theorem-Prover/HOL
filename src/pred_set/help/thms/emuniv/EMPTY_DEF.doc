@@ -1,3 +1,0 @@
-\THEOREM EMPTY_DEF pred_sets
-|- {{}} = (\x. F)
-\ENDTHEOREM

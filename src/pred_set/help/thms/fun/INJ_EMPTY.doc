@@ -1,3 +1,0 @@
-\THEOREM INJ_EMPTY pred_sets
-|- !f. (!s. INJ f{{}}s) /\ (!s. INJ f s{{}} = (s = {{}}))
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM IMAGE_INSERT pred_sets
-|- !f x s. IMAGE f(x INSERT s) = (f x) INSERT (IMAGE f s)
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM INTER_DEF pred_sets
-|- !s t. s INTER t = {{x | x IN s /\ x IN t}}
-\ENDTHEOREM

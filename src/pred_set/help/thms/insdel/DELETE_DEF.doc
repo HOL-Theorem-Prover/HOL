@@ -1,3 +1,0 @@
-\THEOREM DELETE_DEF pred_sets
-|- !s x. s DELETE x = s DIFF {{x}}
-\ENDTHEOREM

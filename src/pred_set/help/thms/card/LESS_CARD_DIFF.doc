@@ -1,5 +1,0 @@
-\THEOREM LESS_CARD_DIFF pred_sets
-|- !t.
-    FINITE t ==>
-    (!s. FINITE s ==> (CARD t) < (CARD s) ==> 0 < (CARD(s DIFF t)))
-\ENDTHEOREM

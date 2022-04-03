@@ -1,3 +1,0 @@
-\THEOREM UNION_DEF pred_sets
-|- !s t. s UNION t = {{x | x IN s \/ x IN t}}
-\ENDTHEOREM

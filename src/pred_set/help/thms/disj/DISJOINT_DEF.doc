@@ -1,3 +1,0 @@
-\THEOREM DISJOINT_DEF pred_sets
-|- !s t. DISJOINT s t = (s INTER t = {{}})
-\ENDTHEOREM

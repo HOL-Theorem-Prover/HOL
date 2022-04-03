@@ -1,3 +1,0 @@
-\THEOREM SUBSET_INSERT_DELETE pred_sets
-|- !x s t. s SUBSET (x INSERT t) = (s DELETE x) SUBSET t
-\ENDTHEOREM

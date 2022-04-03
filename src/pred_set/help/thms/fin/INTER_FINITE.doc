@@ -1,3 +1,0 @@
-\THEOREM INTER_FINITE pred_sets
-|- !s. FINITE s ==> (!t. FINITE(s INTER t))
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM IMAGE_SUBSET pred_sets
-|- !s t. s SUBSET t ==> (!f. (IMAGE f s) SUBSET (IMAGE f t))
-\ENDTHEOREM

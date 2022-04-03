@@ -1,3 +1,0 @@
-\THEOREM SPECIFICATION pred\_sets
-|- !P x. x IN P = P x
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM CARD_EMPTY pred_sets
-|- CARD{{}} = 0
-\ENDTHEOREM

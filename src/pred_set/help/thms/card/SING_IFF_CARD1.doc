@@ -1,3 +1,0 @@
-\THEOREM SING_IFF_CARD1 pred_sets
-|- !s. SING s = (CARD s = 1) /\ FINITE s
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM UNIV_NOT_EMPTY pred_sets
-|- ~(UNIV = {{}})
-\ENDTHEOREM

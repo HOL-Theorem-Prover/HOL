@@ -1,3 +1,0 @@
-\THEOREM INTER_COMM pred_sets
-|- !s t. s INTER t = t INTER s
-\ENDTHEOREM

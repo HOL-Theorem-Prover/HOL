@@ -1,3 +1,0 @@
-\THEOREM FINITE_UNION pred_sets
-|- !s t. FINITE(s UNION t) = FINITE s /\ FINITE t
-\ENDTHEOREM

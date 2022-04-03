@@ -1,3 +1,0 @@
-\THEOREM DISJOINT_INSERT pred_sets
-|- !x s t. DISJOINT(x INSERT s)t = DISJOINT s t /\ ~x IN t
-\ENDTHEOREM

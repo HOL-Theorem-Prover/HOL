@@ -1,3 +1,0 @@
-\THEOREM UNIV_SUBSET pred_sets
-|- !s. UNIV SUBSET s = (s = UNIV)
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM IMAGE_EMPTY pred_sets
-|- !f. IMAGE f{{}} = {{}}
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM SUBSET_REFL pred_sets
-|- !s. s SUBSET s
-\ENDTHEOREM
