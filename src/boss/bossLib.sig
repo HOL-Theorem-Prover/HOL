@@ -115,6 +115,7 @@ sig
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
   val SRULE             : thm list -> thm -> thm (* uses srw_ss() *)
+  val SCONV             : thm list -> conv (* uses srw_ss() *)
   val SIMP_TAC          : simpset -> thm list -> tactic
   val simp_tac          : simpset -> thm list -> tactic
   val ASM_SIMP_TAC      : simpset -> thm list -> tactic
@@ -205,6 +206,9 @@ sig
   val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
   val qexists_tac : term quotation -> tactic
   val qexistsl_tac : term quotation list -> tactic
+  val qexists : term quotation -> tactic
+  val qexistsl : term quotation list -> tactic
+  val qrefine : term quotation -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
   val qspec_tac : term quotation * term quotation -> tactic
