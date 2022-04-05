@@ -331,12 +331,12 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 : For a goal of the form `(A ==> B) ==> C`, splits into the two subgoals `A` and `B ==> C`.
   `impl_keep_tac` is a variant which keeps `A` as an assumption in the `B ==> C` subgoal.
 
-<code>qexists_tac &grave;<i>term</i>&grave;</code>
+<code>qexists &grave;<i>term</i>&grave;</code>
 : Instantiates a top-level `∃` quantifer with the supplied term.
 
-<code>Q.REFINE_EXISTS_TAC &grave;<i>term</i>&grave;</code>
+<code>qrefine &grave;<i>term</i>&grave;</code>
 : Refines a top-level `∃` quantifer using the supplied term - any free variables in the term become`∃`-quantified.
-  For example, for a goal `∃ n : num. if n = 0 then P n else Q n`, applying ``Q.REFINE_EXISTS_TAC `SUC k` >> simp[]`` produces the goal `∃ k : num. Q (SUC k)` (where `SUC` is the successor function).
+  For example, for a goal `∃ n : num. if n = 0 then P n else Q n`, applying ``qrefine `SUC k` >> simp[]`` produces the goal `∃ k : num. Q (SUC k)` (where `SUC` is the successor function).
 
 <code>goal_assum $ drule_at Any</code>
 : For a goal of the form `∃ vars . P1 /\ ... /\ Pn` (where the `vars` may be free in the `Pi`), attempts to match the `Pi` against the assumptions.
