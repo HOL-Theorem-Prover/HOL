@@ -1,12 +1,13 @@
 signature file_readerLib =
 sig
 
-  datatype arch = ARM | M0 | RISCV
+  datatype arch = ARM | ARM8 | M0 | RISCV
 
   val arch_name : arch ref
   val int_to_hex : int -> string
   val get_tools : unit -> helperLib.decompiler_tools
   val arm_spec : string -> helperLib.instruction
+  val arm8_spec : string -> helperLib.instruction
   val m0_spec : string -> helperLib.instruction
   val riscv_spec : string -> helperLib.instruction
   val read_files : string -> string list -> unit

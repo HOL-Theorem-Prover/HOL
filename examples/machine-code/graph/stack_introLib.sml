@@ -9,13 +9,15 @@ open GraphLangTheory
 fun STACK_MEMORY_INTRO_RULE th = let
   val (_,p,_,_) = th |> concl |> dest_spec
   val ps = list_dest dest_star p
-  val pat = case !arch_name of ARM => ``arm_MEMORY d m``
-                             | M0 => ``m0_MEMORY d m``
+  val pat = case !arch_name of ARM   => ``arm_MEMORY d m``
+                             | ARM8  => ``arm8_MEMORY d m``
+                             | M0    => ``m0_MEMORY d m``
                              | RISCV => ``riscv_MEMORY d m``
   val x = first (can (match_term pat)) ps
   val d = x |> rator |> rand
   val m = x |> rand
   val th = th |> RW1 [GSYM arm_STACK_MEMORY_def,
+                      GSYM arm8_STACK_MEMORY_def,
                       GSYM m0_STACK_MEMORY_def,
                       GSYM riscv_STACK_MEMORY_def]
   val th = th |> INST [m |-> mk_var("stack" ,type_of m),
@@ -45,8 +47,9 @@ local
     in ``^pc w`` end
   fun dest_sp q = let
     val sp_pat = case !arch_name of
-                    ARM => ``arm_REG (R_mode mode 13w) r13``
-                  | M0 => ``m0_REG RName_SP_main r13``
+                    ARM   => ``arm_REG (R_mode mode 13w) r13``
+                  | ARM8  => ``arm8_SP_EL0 sp``
+                  | M0    => ``m0_REG RName_SP_main r13``
                   | RISCV => ``riscv_REG 2w r2``
     val sp = sp_pat |> rand
     val tm = find_term (can (match_term sp_pat)) q |> rand

@@ -9,8 +9,9 @@ open GraphLangTheory
 fun arch_max_return_words () = let
   val max = (case !arch_name of
                 RISCV => 2
-              | ARM => 1
-              | M0 => 1)
+              | ARM   => 1
+              | ARM8  => 2
+              | M0    => 1)
   in max end
 
 fun stack_offset_in_fst_arg sec_name = let
@@ -113,8 +114,9 @@ local
     val wty = wsize()
     val regs = (case !arch_name of
                   RISCV => ["r3"]
-                | ARM => ["r0","r1","r2","r3","r14"]
-                | M0 => ["r0","r1","r2","r3","r14"])
+                | ARM   => ["r0","r1","r2","r3","r14"]
+                | ARM8  => ["r0","r1","r2","r3","r14"] (* check! *)
+                | M0    => ["r0","r1","r2","r3","r14"])
     in map mk_arb_pair
          (map (fn s => mk_var(s,wty)) regs @
          [``n:bool``, ``z:bool``, ``c:bool``, ``v:bool``]) end
@@ -137,9 +139,10 @@ val tm = u1 |> hd |> snd
       val res = map tidy_up_summary (summary (i,(th1,i1,i2),thi2))
       val (p1,assum1,u1,addr,q1) = hd res
       val linkreg = (case !arch_name of
-                       RISCV => mk_var("r1",``:word64``)
-                     | M0 => mk_var("r14",``:word32``)
-                     | ARM => mk_var("r14",``:word32``))
+                       RISCV => mk_var("r1", ``:word64``)
+                     | M0    => mk_var("r14",``:word32``)
+                     | ARM   => mk_var("r14",``:word32``)
+                     | ARM8  => mk_var("r30",``:word64``))
       val dest = first (fn (x,_) => aconv x linkreg) u1 |> snd handle HOL_ERR _ => T
       in (p1,assum1,call_update(),addr,dest) :: tl res end
 end
@@ -147,6 +150,7 @@ end
 fun find_stack_accesses_for all_summaries sec_name = let
   val sp_var = (case !arch_name of
                   ARM   => ``r13:word32``
+                | ARM8  => ``sp:word64``
                 | M0    => ``r13:word32``
                 | RISCV => ``r2:word64``)
   val (init_pc,_,_,_,_) = hd all_summaries

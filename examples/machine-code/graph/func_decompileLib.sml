@@ -46,8 +46,9 @@ fun func_export sec_name th funcs_def = let
   val trans_def = new_definition(name,mk_eq(lhs,rhs))
   val _ = write_subsection "Evaluating graph"
   val c = REWRITE_CONV [func_body_trans_def,func_trans_def,funcs_def]
-          THENC REWRITE_CONV [wordsTheory.word_extract_mask,export_init_rw]
-          THENC EVAL THENC PURE_REWRITE_CONV [GSYM word_sub_def]
+          THENC REWRITE_CONV [wordsTheory.word_extract_mask,export_init_rw,
+                 GSYM SignedDiv_def, GSYM UnsignedDiv_def]
+          THENC EVAL THENC PURE_REWRITE_CONV [GSYM word_sub_def,GSYM w2w_def]
           THENC (DEPTH_CONV remove_bif_field_insert_conv)
           THENC prepare_for_export_conv
   val lemma = trans_def |> CONV_RULE (RAND_CONV c)
@@ -84,8 +85,9 @@ fun func_decompile print_title sec_name = let
 (*  val thms = clean_conds thms *)
   val code = thms |> hd |> concl |> rator |> rator |> rand
              handle Empty => (case !arch_name of
-                                ARM => ``ARM {}``
-                              | M0 => ``M0 {}``
+                                ARM   => ``ARM {}``
+                              | ARM8  => ``ARM8 {}``
+                              | M0    => ``M0 {}``
                               | RISCV => ``RISCV {}``)
   val lemma = prove(``LIST_IMPL_INST ^code locs []``,
                     SIMP_TAC std_ss [LIST_IMPL_INST_def])
@@ -121,8 +123,9 @@ fun list_mk_union [] = ``{}:'a set``
 fun arch_to_string () =
   case !arch_name of
     RISCV => "riscv"
-  | ARM => "arm"
-  | M0 => "m0";
+  | ARM   => "arm"
+  | ARM8  => "arm8"
+  | M0    => "m0";
 
 (*
   val sec_name = "bi_finalise"
@@ -162,7 +165,7 @@ fun prove_funcs_ok names = let
     val goal = th |> concl |> dest_imp |> fst
     val lemma = auto_prove "expand_code" (goal,
       REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of,
-                   ARM_def,M0_def,RISCV_def]
+                   ARM_def,ARM8_def,M0_def,RISCV_def]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
       \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -254,6 +257,15 @@ fun prove_funcs_ok names = let
   in th end
 
 (*
+
+  val base_name = "example-arm8/SysModel"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "after"
+  val _ = func_decompile print_title sec_name
+
+  val names = section_names()
+  val res = prove_funcs_ok names
 
   val base_name = "kernel-riscv/kernel-riscv"
   val base_name = "loop-riscv/example"

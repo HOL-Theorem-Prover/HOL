@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib Parse;
 open helperLib backgroundLib writerLib;
 
-datatype arch = ARM | M0 | RISCV
+datatype arch = ARM | ARM8 | M0 | RISCV
 
 (* refs begin *)
 
@@ -20,7 +20,7 @@ val complete_sections = ref ([]:(string * (* sec_name *)
 (* refs end *)
 
 fun arch_str () =
-  case (!arch_name) of ARM => "ARM" | M0 => "M0" | RISCV => "RISC-V"
+  case (!arch_name) of ARM => "ARM" | ARM8 => "Arm8" | M0 => "M0" | RISCV => "RISC-V"
 
 fun HOL_commit () = let
   val path = Globals.HOLDIR
@@ -123,6 +123,9 @@ fun read_complete_sections filename filename_sigs ignore = let
   val is_riscv = let
     val xs = lines_from_file filename
     in exists (fn s => String.isSubstring "riscv" s) xs end
+  val is_arm8 = let
+    val xs = lines_from_file filename
+    in exists (fn s => String.isSubstring "aarch64" s) xs end
   (* read in signature file *)
   val ss = lines_from_file filename_sigs
   fun every p [] = true
@@ -187,6 +190,7 @@ fun read_complete_sections filename filename_sigs ignore = let
     fun has_short_instr (_,_,_,lines,_) =
       exists (fn (_,hex,_) => size hex < 8) lines
     in if is_riscv then RISCV else
+       if is_arm8 then ARM8 else
        if exists has_short_instr all_sections then M0 else ARM end
   val _ = (arch_name := arch)
   in complete_sections := sort compare_secs all_sections end
@@ -209,6 +213,7 @@ fun section_length name = length (section_body name) handle HOL_ERR _ => 0
 (*
   val base_name = "loop-riscv/example"
   val base_name = "kernel-riscv/kernel-riscv"
+  val base_name = "example-arm8/SysModel"
   val ignore = [""]
 *)
 
@@ -289,6 +294,9 @@ val () = arm_progLib.arm_config "vfpv3" "mapped"
 val arm_tools = arm_decompLib.l3_arm_tools
 val (arm_spec,_,_,_) = arm_tools
 
+val arm8_tools = arm8_decompLib.arm8_tools
+val (arm8_spec,_,_,_) = arm8_tools
+
 val () = m0_progLib.m0_config false (* not bigendian *) "mapped"
 val m0_tools = m0_decompLib.l3_m0_tools
 val (m0_spec,_,_,_) = m0_tools
@@ -300,12 +308,14 @@ val (riscv_spec,_,_,_) = riscv_tools
 fun get_tools () =
   case !arch_name of
     ARM   => arm_tools
+  | ARM8  => arm8_tools
   | M0    => m0_tools
   | RISCV => riscv_tools ;
 
 fun tysize () =
   case !arch_name of
     ARM   => ``:32``
+  | ARM8  => ``:64``
   | M0    => ``:32``
   | RISCV => ``:64`` ;
 

@@ -11,6 +11,7 @@ open GraphLangTheory
 fun spec_rule x =
   case !arch_name of
     ARM   => arm_spec x
+  | ARM8  => arm8_spec x
   | M0    => m0_spec x
   | RISCV => riscv_spec x;
 
@@ -489,8 +490,9 @@ fun derive_individual_specs code = let
     val t = String.tokens (fn x => x = #":") asm |> last |> remove_tab
     in (SPECL [stringSyntax.fromMLstring t, numSyntax.term_of_int len]
           (case !arch_name of
-             ARM => SKIP_SPEC_ARM
-           | M0 => SKIP_SPEC_M0
+             ARM   => SKIP_SPEC_ARM
+           | ARM8  => SKIP_SPEC_ARM8
+           | M0    => SKIP_SPEC_M0
            | RISCV => SKIP_SPEC_RISCV), len, SOME len) end
 
 (*
@@ -756,8 +758,9 @@ fun derive_specs_for sec_name = let
 
 (*
 
-  val base_name = "loop-riscv/example"
   val base_name = "kernel-riscv/kernel-riscv"
+  val base_name = "loop-riscv/example"
+  val base_name = "example-arm8/SysModel"
   val _ = read_files base_name []
   val _ = open_current "test"
   val sec_name = "lookupSlot"
@@ -767,6 +770,7 @@ fun derive_specs_for sec_name = let
   val sec_name = "createNewObjects"
   val sec_name = "get_num_avail_p_regs"
   val sec_name = "ensureEmptySlot"
+  val sec_name = "after"
 
   val _ = file_readerLib.show_code sec_name
 
@@ -775,19 +779,21 @@ fun derive_specs_for sec_name = let
   val _ = open_current "test"
   val sec_name = "g"
 
-val l3_arm_tools = arm_decompLib.l3_arm_tools
-val (arm_spec,_,_,_) = l3_arm_tools
-val instruction = "e200300f"
-val th = arm_spec instruction
+  val l3_arm_tools = arm_decompLib.l3_arm_tools
+  val (arm_spec,_,_,_) = l3_arm_tools
+  val instruction = "e200300f"
+  val th = arm_spec instruction
 
-  val (f,_,_,_) = l3_arm_tools
-
-  ``increment``
-
-
-   [(0, "e200300f", "and\tr3, r0, #15"),
-    (4, "e0830180", "add\tr0, r3, r0, lsl #3"),
-    (8, "e12fff1e", "bx\tlr")]:
+  val l3_arm8_tools = arm8_decompLib.arm8_tools
+  val (arm8_spec,_,_,_) = l3_arm8_tools
+  val instruction = "0b000020"
+  val instruction = "540000ca"
+  val instruction = "6b01001f"
+  val instruction = "b9401fe0"
+  val instruction = "d65f03c0"
+  val instruction = "910083ff"
+  val instruction = "94000000"
+  val th = arm8_spec instruction
 
 *)
 

@@ -7,22 +7,24 @@ val _ = ParseExtras.temp_loose_equality()
 open wordsTheory wordsLib pairTheory listTheory relationTheory;
 open pred_setTheory arithmeticTheory combinTheory;
 open arm_decompTheory set_sepTheory progTheory addressTheory;
-open m0_decompTheory riscv_progTheory;
-open arm_decompLib m0_decompLib;
+open m0_decompTheory riscv_progTheory arm8_progTheory;
+open arm_decompLib arm8_decompLib m0_decompLib;
 
 val op by = BasicProvers.byA
 
 val RW1 = ONCE_REWRITE_RULE;
 val RW = REWRITE_RULE;
 
-val _ = Datatype `variable =
+Datatype:
+  variable =
     VarNone
   | VarNat num
   | VarWord8 word8
   | VarWord ('a word)
   | VarMem ('a word -> word8)
   | VarDom ('a word set)
-  | VarBool bool`;
+  | VarBool bool
+End
 
 (* States are a mapping from names to the variable type, which is
    a union of the available names. *)
@@ -246,6 +248,65 @@ val arm_STATE_thm = save_thm("arm_STATE_thm",
   |> REWRITE_RULE [arm_STATE_CPSR_def,arm_STATE_REGS_def,STAR_ASSOC]
   |> SPEC_ALL);
 
+(* representation in ARM8 SPEC *)
+
+val arm8_PSTATE_NZCV_def = Define `
+  arm8_PSTATE_NZCV s =
+    arm8_PSTATE_N (var_bool "n" s) *
+    arm8_PSTATE_Z (var_bool "z" s) *
+    arm8_PSTATE_C (var_bool "c" s) *
+    arm8_PSTATE_V (var_bool "v" s)`;
+
+val arm8_STATE_REGS_def = Define `
+  arm8_STATE_REGS s =
+    arm8_REG  0w (var_word  "r0" s) *
+    arm8_REG  1w (var_word  "r1" s) *
+    arm8_REG  2w (var_word  "r2" s) *
+    arm8_REG  3w (var_word  "r3" s) *
+    arm8_REG  4w (var_word  "r4" s) *
+    arm8_REG  5w (var_word  "r5" s) *
+    arm8_REG  6w (var_word  "r6" s) *
+    arm8_REG  7w (var_word  "r7" s) *
+    arm8_REG  8w (var_word  "r8" s) *
+    arm8_REG  9w (var_word  "r9" s) *
+    arm8_REG 10w (var_word "r10" s) *
+    arm8_REG 11w (var_word "r11" s) *
+    arm8_REG 12w (var_word "r12" s) *
+    arm8_REG 13w (var_word "r13" s) *
+    arm8_REG 14w (var_word "r14" s) *
+    arm8_REG 15w (var_word "r15" s) *
+    arm8_REG 16w (var_word "r16" s) *
+    arm8_REG 17w (var_word "r17" s) *
+    arm8_REG 18w (var_word "r18" s) *
+    arm8_REG 19w (var_word "r19" s) *
+    arm8_REG 20w (var_word "r20" s) *
+    arm8_REG 21w (var_word "r21" s) *
+    arm8_REG 22w (var_word "r22" s) *
+    arm8_REG 23w (var_word "r23" s) *
+    arm8_REG 24w (var_word "r24" s) *
+    arm8_REG 25w (var_word "r25" s) *
+    arm8_REG 26w (var_word "r26" s) *
+    arm8_REG 27w (var_word "r27" s) *
+    arm8_REG 28w (var_word "r28" s) *
+    arm8_REG 29w (var_word "r29" s) *
+    arm8_REG 30w (var_word "r30" s) *
+    arm8_REG 31w (var_word "r31" s) *
+    arm8_SP_EL0 (var_word "sp" s)`;
+
+val arm8_STACK_MEMORY_def = Define `
+  arm8_STACK_MEMORY = arm8_MEMORY`;
+
+val arm8_STATE_def = Define `
+  arm8_STATE s =
+    arm8_STATE_REGS s * arm8_PSTATE_NZCV s *
+    arm8_MEMORY (var_dom "dom" s) (var_mem "mem" s) *
+    arm8_STACK_MEMORY (var_dom "dom_stack" s) (var_mem "stack" s)`;
+
+val arm8_STATE_thm = save_thm("arm8_STATE_thm",
+  arm8_STATE_def
+  |> REWRITE_RULE [arm8_PSTATE_NZCV_def,arm8_STATE_REGS_def,STAR_ASSOC]
+  |> SPEC_ALL);
+
 (* representation in M0 SPEC *)
 
 val m0_STATE_PSR_def = Define `
@@ -369,7 +430,7 @@ val all_names_def = Define `
     ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9";
      "r10"; "r11"; "r12"; "r13"; "r14"; "r15"; "r16"; "r17"; "r18"; "r19";
      "r20"; "r21"; "r22"; "r23"; "r24"; "r25"; "r26"; "r27"; "r28"; "r29";
-     "r30"; "r31"; "mode"; "n"; "z"; "c"; "v";
+     "r30"; "r31"; "sp"; "mode"; "n"; "z"; "c"; "v";
      "mem"; "dom"; "stack"; "dom_stack"; "clock"]`;
 
 val ret_and_all_names_def = Define `
@@ -406,15 +467,18 @@ val IMPL_INST_def = Define `
       assert s /\ exec_next locs next s t w call ==>
       let (c,m,x,p) = code in SPEC m (x s * p n) c (x t * p w)`;
 
-val a_tools = ``(ARM_MODEL,arm_STATE,arm_PC)``
-val m_tools = ``(M0_MODEL,m0_STATE,m0_PC)``
-val r_tools = ``(RISCV_MODEL,riscv_STATE,riscv_PC)``
+val a_tools  = ``(ARM_MODEL,arm_STATE,arm_PC)``
+val a8_tools = ``(ARM8_MODEL,arm8_STATE,arm8_pc)``
+val m_tools  = ``(M0_MODEL,m0_STATE,m0_PC)``
+val r_tools  = ``(RISCV_MODEL,riscv_STATE,riscv_PC)``
 
 val ARM_def = Define `ARM (c:((word32 # word32) set)) = (c,^a_tools)`;
+val ARM8_def = Define `ARM8 (c:((word64 # word32) set)) = (c,^a8_tools)`;
 val M0_def = Define `M0 (c:(word32 # (word16 + word32)) set) = (c,^m_tools)`;
 val RISCV_def = Define `RISCV (c:(word64 # (word8 list)) set) = (c,^r_tools)`;
 
 val _ = ``IMPL_INST (ARM _)``;
+val _ = ``IMPL_INST (ARM8 _)``;
 val _ = ``IMPL_INST (M0 _)``;
 val _ = ``IMPL_INST (RISCV _)``;
 
@@ -550,6 +614,13 @@ val arm_STATE_all_names = store_thm("arm_STATE_all_names",
   ``EVERY (\n. s1 n = s2 n) all_names ==>
     (arm_STATE s1 = arm_STATE s2)``,
   SIMP_TAC std_ss [arm_STATE_thm,EVERY_DEF,all_names_def,
+    var_word8_def,var_dom_def,var_mem_def,var_nat_def,
+    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
+
+val arm8_STATE_all_names = store_thm("arm8_STATE_all_names",
+  ``EVERY (\n. s1 n = s2 n) all_names ==>
+    (arm8_STATE s1 = arm8_STATE s2)``,
+  SIMP_TAC std_ss [arm8_STATE_thm,EVERY_DEF,all_names_def,
     var_word8_def,var_dom_def,var_mem_def,var_nat_def,
     var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
 
@@ -1138,6 +1209,12 @@ val arm_assert_for_def = Define `
      arm_STATE state * arm_PC (case loc of NextNode n => n2w n
                                          | _ => var_word "ret" state))`;
 
+val arm8_assert_for_def = Define `
+  (arm8_assert_for ([]:64 stack) = SEP_F) /\
+  (arm8_assert_for ((loc,state,name)::rest) =
+     arm8_STATE state * arm8_pc (case loc of NextNode n => n2w n
+                                           | _ => var_word "ret" state))`;
+
 val m0_assert_for_def = Define `
   (m0_assert_for ([]:32 stack) = SEP_F) /\
   (m0_assert_for ((loc,state,name)::rest) =
@@ -1149,6 +1226,9 @@ fun exec_graph_step_IMP_exec_next arch = let
     if arch = "arm" then
       (arm_assert_for_def,``ARM code``,
        ``arm_assert_for s4 = arm_STATE s7 * arm_PC w``) else
+    if arch = "arm8" then
+      (arm8_assert_for_def,``ARM8 code``,
+       ``arm8_assert_for s4 = arm8_STATE s7 * arm8_pc w``) else
     if arch = "m0" then
       (m0_assert_for_def,``M0 code``,
        ``m0_assert_for s4 = m0_STATE s7 * m0_PC w``) else fail()
@@ -1208,7 +1288,7 @@ fun exec_graph_step_IMP_exec_next arch = let
       \\ REWRITE_TAC [NRC]
       \\ FULL_SIMP_TAC (srw_ss()) [exec_graph_step_def,exec_node_def,upd_stack_def]))
   THEN1 (* ASM *)
-   (Cases_on `^(mk_var("o'",``:32 assert option``))` THEN1
+   (rename [‘ASM ooo’] \\ Cases_on ‘ooo’ THEN1
      (Cases_on `n` \\ FULL_SIMP_TAC std_ss [NRC] \\ REPEAT STRIP_TAC
       \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
            ((NextNode i,st,name)::t) z` MP_TAC
@@ -1338,6 +1418,7 @@ fun exec_graph_step_IMP_exec_next arch = let
     THEN1 (FULL_SIMP_TAC (srw_ss()) [assert_for_def]
       \\ AP_THM_TAC \\ AP_TERM_TAC
       \\ TRY (MATCH_MP_TAC arm_STATE_all_names)
+      \\ TRY (MATCH_MP_TAC arm8_STATE_all_names)
       \\ TRY (MATCH_MP_TAC m0_STATE_all_names)
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MAP_MAP_o,o_DEF]
       \\ FULL_SIMP_TAC std_ss [next_ok_def]
@@ -1359,6 +1440,10 @@ fun exec_inst_progress arch = let
       (arm_assert_for_def,``ARM code``,
        ``SPEC ARM_MODEL (arm_assert_for ((NextNode i,st,name)::t)) code
                         (arm_assert_for s4)``) else
+    if arch = "arm8" then
+      (arm8_assert_for_def,``ARM8 code``,
+       ``SPEC ARM8_MODEL (arm8_assert_for ((NextNode i,st,name)::t)) code
+                         (arm8_assert_for s4)``) else
     if arch = "m0" then
       (m0_assert_for_def,``M0 code``,
        ``SPEC M0_MODEL (m0_assert_for ((NextNode i,st,name)::t)) code
@@ -1386,7 +1471,7 @@ fun exec_inst_progress arch = let
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [good_stack_def]
   \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ fs [ARM_def,M0_def,RISCV_def]
+  \\ fs [ARM_def,ARM8_def,M0_def,RISCV_def]
   \\ Q.LIST_EXISTS_TAC [`s4`,`j`,`j1`] \\ FULL_SIMP_TAC std_ss []) end;
 
 fun exec_func_step_IMP arch = let
@@ -1394,6 +1479,8 @@ fun exec_func_step_IMP arch = let
   val (assert_for_def,code,assert_for_tm,model_tm) =
     if arch = "arm" then
       (arm_assert_for_def,``ARM code``,``arm_assert_for``,``ARM_MODEL``) else
+    if arch = "arm8" then
+      (arm8_assert_for_def,``ARM8 code``,``arm8_assert_for``,``ARM8_MODEL``) else
     if arch = "m0" then
       (m0_assert_for_def,``M0 code``,``m0_assert_for``,``M0_MODEL``) else
     fail()
@@ -1465,6 +1552,7 @@ fun exec_func_step_IMP arch = let
       \\ STRIP_TAC THEN1
        (AP_TERM_TAC
         \\ TRY (MATCH_MP_TAC arm_STATE_all_names)
+        \\ TRY (MATCH_MP_TAC arm8_STATE_all_names)
         \\ TRY (MATCH_MP_TAC m0_STATE_all_names)
         \\ FULL_SIMP_TAC std_ss [EVERY_MEM]
         \\ METIS_TAC [return_vars_SAME])
@@ -1490,13 +1578,11 @@ fun exec_func_step_IMP arch = let
   \\ IMP_RES_TAC list_func_trans_EQ_SOME_IMP
   \\ FULL_SIMP_TAC std_ss [] \\ SRW_TAC [] []
   \\ `EVEN n'` by ALL_TAC THEN1 (FULL_SIMP_TAC (srw_ss()) [good_stack_def])
-  \\ `n' < 2 ** 32` by
-   (IMP_RES_TAC list_inst_trans_IMP_LESS
-    \\ FULL_SIMP_TAC std_ss [] \\ fs [])
-  \\ fs []
-  \\ IMP_RES_TAC (graph_list_inst_trans_EQ_SOME_IMP
-                  |> INST_TYPE [``:'a``|->``:32``]
-                  |> SIMP_RULE (srw_ss()) [])
+  \\ `ODD 1n` by EVAL_TAC
+  \\ drule_all list_inst_trans_IMP_LESS
+  \\ strip_tac
+  \\ drule_all graph_list_inst_trans_EQ_SOME_IMP
+  \\ strip_tac
   \\ FULL_SIMP_TAC std_ss []
   \\ Q.MATCH_ASSUM_RENAME_TAC `graph (list_inst_trans 1 l) i = SOME x`
   \\ Q.MATCH_ASSUM_RENAME_TAC `find_inst (n2w i) l = SOME (Inst (n2w i) a next)`
@@ -1505,10 +1591,7 @@ fun exec_func_step_IMP arch = let
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss [func_ok_def]
   \\ IMP_RES_TAC find_inst_IMP_MEM
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ `i < 4294967296` by DECIDE_TAC
-  \\ IMP_RES_TAC (find_inst_IMP_LIST_SUBSET
-                  |> INST_TYPE [``:'a``|->``:32``]
-                  |> SIMP_RULE (srw_ss()) [])
+  \\ drule_all find_inst_IMP_LIST_SUBSET \\ strip_tac
   \\ MP_TAC (lemma
              |> Q.INST [`x1`|->`ret_and_all_names`,
                         `x2`|->`all_names_with_input`,
@@ -1529,8 +1612,9 @@ fun exec_func_step_IMP arch = let
   \\ FIRST_X_ASSUM MATCH_MP_TAC
   \\ Q.EXISTS_TAC `j1` \\ FULL_SIMP_TAC std_ss []) end
 
-val _ = save_thm("arm_exec_func_step_IMP", exec_func_step_IMP "arm");
-val _ = save_thm("m0_exec_func_step_IMP", exec_func_step_IMP "m0");
+Theorem arm_exec_func_step_IMP  = exec_func_step_IMP "arm";
+Theorem arm8_exec_func_step_IMP = exec_func_step_IMP "arm8";
+Theorem m0_exec_func_step_IMP   = exec_func_step_IMP "m0";
 
 (* misc lemmas *)
 
@@ -1730,6 +1814,11 @@ val SKIP_TAG_def = zDefine `
 val SKIP_SPEC_ARM = store_thm("SKIP_SPEC_ARM",
   ``!asm n.
       SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + n2w n))``,
+  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
+
+val SKIP_SPEC_ARM8 = store_thm("SKIP_SPEC_ARM8",
+  ``!asm n.
+      SPEC ARM8_MODEL (arm8_pc p * cond (SKIP_TAG asm)) {} (arm8_pc (p + n2w n))``,
   SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
 
 val SKIP_SPEC_M0 = store_thm("SKIP_SPEC_M0",
@@ -2037,9 +2126,12 @@ val blast_append_0_lemma = prove(
     (((w2w:word32 -> 30 word) w @@ (0w:word2)) : word32 = w << 2)``,
   blastLib.BBLAST_TAC);
 
+val SignedDiv_def = zDefine ‘SignedDiv (w:'a word) (v:'a word) = word_div w v’;
+val UnsignedDiv_def = zDefine ‘UnsignedDiv (w:'a word) (v:'a word) = word_quot w v’;
+
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   LIST_CONJ [MemAcc8_def, MemAcc32_def, MemAcc64_def,
-             ShiftLeft_def, ShiftRight_def,
+             ShiftLeft_def, ShiftRight_def, SignedDiv_def, UnsignedDiv_def,
              MemUpdate8_def, MemUpdate32_def, MemUpdate64_def] |> GSYM
   |> CONJ rw1 |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8 |> CONJ rw4
   |> CONJ w2w_carry |> CONJ w2w_carry_alt
@@ -2160,6 +2252,7 @@ val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
             ("r29",var_acc "r29");
             ("r30",var_acc "r30");
             ("r31",var_acc "r31");
+            ("sp",var_acc "sp");
             ("mode",var_acc "mode"); ("n",var_acc "n");
             ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
@@ -2181,6 +2274,73 @@ val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
          var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
       arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
+
+val SKIP_TAG_IMP_CALL_ARM8 = store_thm("SKIP_TAG_IMP_CALL_ARM8",
+  ``IMPL_INST (ARM8 code) locs
+     (Inst entry (K T)
+        (ASM (SOME (\s. SKIP_TAG str)) []
+           (Jump exit))) ==>
+    !old. (old = str) ==>
+    !name.
+      (locs name = SOME entry) ==>
+      IMPL_INST (ARM8 code) locs
+       (Inst entry (K T)
+         (CALL NONE
+           [("ret",(\s. VarWord exit));
+            ("r0",var_acc "r0");
+            ("r1",var_acc "r1");
+            ("r2",var_acc "r2");
+            ("r3",var_acc "r3");
+            ("r4",var_acc "r4");
+            ("r5",var_acc "r5");
+            ("r6",var_acc "r6");
+            ("r7",var_acc "r7");
+            ("r8",var_acc "r8");
+            ("r9",var_acc "r9");
+            ("r10",var_acc "r10");
+            ("r11",var_acc "r11");
+            ("r12",var_acc "r12");
+            ("r13",var_acc "r13");
+            ("r14",var_acc "r14");
+            ("r15",var_acc "r15");
+            ("r16",var_acc "r16");
+            ("r17",var_acc "r17");
+            ("r18",var_acc "r18");
+            ("r19",var_acc "r19");
+            ("r20",var_acc "r20");
+            ("r21",var_acc "r21");
+            ("r22",var_acc "r22");
+            ("r23",var_acc "r23");
+            ("r24",var_acc "r24");
+            ("r25",var_acc "r25");
+            ("r26",var_acc "r26");
+            ("r27",var_acc "r27");
+            ("r28",var_acc "r28");
+            ("r29",var_acc "r29");
+            ("r30",var_acc "r30");
+            ("r31",var_acc "r31");
+            ("sp",var_acc "sp");
+            ("mode",var_acc "mode"); ("n",var_acc "n");
+            ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
+            ("mem",var_acc "mem"); ("dom",var_acc "dom");
+            ("stack",var_acc "stack");
+            ("dom_stack",var_acc "dom_stack");
+            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r0")]
+          name (Jump exit)))``,
+  fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
+      check_jump_def,get_assert_def,LET_THM]
+  \\ fs [ARM8_def] \\ rpt BasicProvers.TOP_CASE_TAC \\ fs []
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm8_STATE_def,m0_STATE_def,
+         arm8_PSTATE_NZCV_def,var_bool_def,var_nat_def,m0_STATE_PSR_def,
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm8_STATE_def,m0_STATE_def,
+         arm8_PSTATE_NZCV_def,var_bool_def,arm8_STATE_REGS_def,
+         m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm8_STATE_def,m0_STATE_def,
+      arm8_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
 
 val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
   ``IMPL_INST (M0 code) locs
@@ -2226,6 +2386,7 @@ val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
             ("r29",var_acc "r29");
             ("r30",var_acc "r30");
             ("r31",var_acc "r31");
+            ("sp",var_acc "sp");
             ("mode",var_acc "mode"); ("n",var_acc "n");
             ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
@@ -2292,6 +2453,7 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
             ("r29",var_acc "r29");
             ("r30",var_acc "r30");
             ("r31",var_acc "r31");
+            ("sp",var_acc "sp");
             ("mode",var_acc "mode"); ("n",var_acc "n");
             ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
@@ -2345,8 +2507,17 @@ val word_cancel_extra = store_thm("word_cancel_extra",
     (w + x − (w - y) = x + y:'a word)``,
   fs [WORD_LEFT_ADD_DISTRIB]);
 
+val aligned_rw =
+  LIST_CONJ [
+    Q.SPEC ‘1’ alignmentTheory.aligned_bitwise_and,
+    Q.SPEC ‘2’ alignmentTheory.aligned_bitwise_and,
+    Q.SPEC ‘3’ alignmentTheory.aligned_bitwise_and,
+    Q.SPEC ‘4’ alignmentTheory.aligned_bitwise_and] |> SIMP_RULE std_ss [];
+
 val export_init_rw = save_thm("export_init_rw",
-  CONJ bit_field_insert_31_16 v2w_field_insert_31_16);
+  LIST_CONJ [aligned_rw, GSYM wordsTheory.WORD_SUB_LZERO,
+             bit_field_insert_31_16,
+             v2w_field_insert_31_16]);
 
 val m0_preprocessing = save_thm("m0_preprocessing",
   CONJ (EVAL ``RName_LR = RName_PC``) (EVAL ``RName_PC = RName_LR``));
