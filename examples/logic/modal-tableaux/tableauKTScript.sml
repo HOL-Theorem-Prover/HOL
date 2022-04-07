@@ -9,8 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory pred_setTheory listTheory relationTheory;
-open mp_then;
-open modalBasicsTheory tableauKTheory;
+open modalBasicsTheory tableauBasicsTheory
 
 val _ = new_theory "tableauKT";
 
@@ -222,8 +221,9 @@ Proof
 QED
 
 Theorem degree_inv[simp]:
-∀Σ Γ Σ' Γ'. (Σ = Σ') ∧ ((max_list $ MAP modal_size Γ) < (max_list $ MAP modal_size Γ'))
-            ⇒ degree (Σ, Γ) <= degree (Σ', Γ')
+  ∀Σ Γ Σ' Γ'.
+    Σ = Σ' ∧ ((max_list $ MAP modal_size Γ) < (max_list $ MAP modal_size Γ')) ⇒
+    degree (Σ, Γ) <= degree (Σ', Γ')
 Proof
   rw[degree_max_list]
 QED
@@ -457,7 +457,7 @@ Theorem reflexive_sequent_trule1:
   reflexive_sequent (Σ, Box f::Γ) ⇒ reflexive_sequent (Box f::Σ, f::Γ)
 Proof
   dsimp[reflexive_sequent_def, DISJ_IMP_THM, FORALL_AND_THM, RC_DEF,
-       tree_rel_def] >> rw[] >>
+        tree_rel_def] >> rw[] >>
   last_x_assum irule >> rw[] >>
   irule forces_grows_backward >>
   rename [‘forces _ wld f’, ‘MEM wld l’] >>

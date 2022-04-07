@@ -9,9 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory pred_setTheory listTheory relationTheory;
-open mp_then;
-open modalBasicsTheory
-open tableauKTheory;
+open modalBasicsTheory tableauBasicsTheory
 open arithmeticTheory;
 
 val _ = new_theory "tableauS4";
@@ -78,7 +76,7 @@ Definition closure_list_conc_def[simp]:
     Dia f :: closure_list_conc [f] ++ (closure_list_conc rest) ∧
   closure_list_conc (f::rest) = f :: (closure_list_conc rest)
 Termination
-  WF_REL_TAC `measure (SUM o MAP form_size)` >> rw[]
+  WF_REL_TAC `measure gsize` >> rw[]
 End
 
 Theorem mem_lst_closure:
@@ -404,8 +402,8 @@ Theorem disjsplit_s4_size:
                   SUM (MAP form_size fs1) < SUM (MAP form_size Γ) ∧
                   SUM (MAP form_size fs2) < SUM (MAP form_size Γ)
 Proof
-  Induct_on ‘Γ’ >> simp[disjsplit_def] >> Cases >>
-  simp[disjsplit_def, FORALL_PROD, PULL_EXISTS]
+  Induct_on ‘Γ’ >> Cases >>
+  simp[FORALL_PROD, PULL_EXISTS]
 QED
 
 Definition s4_request_local[simp]:
@@ -502,13 +500,6 @@ Theorem tableau_S4_s_eq_id:
 Proof
   rw[Once tableau_S4_def] >> fs[AllCaseEqs()]
 QED
-
-Definition transitive_M:
-  transitive_M m ⇔
-    ∀u v w. u ∈ m.frame.world ∧ v ∈ m.frame.world ∧ w ∈ m.frame.world ∧
-            m.frame.rel u v ∧ m.frame.rel v w ⇒
-            m.frame.rel u w
-End
 
 Theorem sublist_subset:
   ∀l h v. l = h::v ⇒ set v SUBSET set l

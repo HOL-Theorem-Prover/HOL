@@ -108,4 +108,15 @@ Proof
   Induct_on ‘f’ >> simp[]
 QED
 
+Definition reflexive_M:
+  reflexive_M m ⇔ ∀w. w ∈ m.frame.world ⇒ m.frame.rel w w
+End
+
+Definition transitive_M:
+  transitive_M m ⇔
+    ∀u v w. u ∈ m.frame.world ∧ v ∈ m.frame.world ∧ w ∈ m.frame.world ∧
+            m.frame.rel u v ∧ m.frame.rel v w ⇒
+            m.frame.rel u w
+End
+
 val _ = export_theory();
