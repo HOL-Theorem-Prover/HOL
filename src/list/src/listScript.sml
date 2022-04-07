@@ -4299,18 +4299,20 @@ val UNIQUE_LENGTH_FILTER = store_thm (
 end; (* local *)
 
 (* OPT_MMAP : ('a -> 'b option) -> 'a list -> 'b list option *)
-val OPT_MMAP_def = Define‘
+Definition OPT_MMAP_def[simp]:
   (OPT_MMAP f [] = SOME []) /\
   (OPT_MMAP f (h0::t0) =
      OPTION_BIND (f h0) (\h. OPTION_BIND (OPT_MMAP f t0) (\t. SOME (h::t))))
-’;
+End
 
-val OPT_MMAP_cong = Q.store_thm("OPT_MMAP_cong[defncong]",
-  ‘!f1 f2 x1 x2.
-   (x1 = x2) /\ (!a. MEM a x2 ==> (f1 a = f2 a))
-   ==> (OPT_MMAP f1 x1 = OPT_MMAP f2 x2)’,
+Theorem OPT_MMAP_cong[defncong]:
+  !f1 f2 x1 x2.
+    x1 = x2 /\ (!a. MEM a x2 ==> f1 a = f2 a) ==>
+    OPT_MMAP f1 x1 = OPT_MMAP f2 x2
+Proof
   ntac 2 gen_tac \\ Induct \\ rw[] \\ computeLib.EVAL_TAC
-  \\ FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) []);
+  \\ FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) []
+QED
 
 val LAST_compute = Q.store_thm("LAST_compute",
    ‘(!x. LAST [x] = x) /\
