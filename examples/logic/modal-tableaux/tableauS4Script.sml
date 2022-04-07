@@ -759,10 +759,12 @@ Theorem tableau_S4_complete:
 Proof
    ho_match_mp_tac tableau_S4_ind >> ntac 2 gen_tac >>
    strip_tac >> simp[Once tableau_S4_def] >>
-   simp[AllCaseEqs()] >> rw[]
+   simp[AllCaseEqs()] >> rw[] >~
+   [‘trule_s4 s = NONE’]
    >- (* Trule contradiction *)
       (fs[] >> rw[] >> fs[trule_s4_def, AllCaseEqs(), PULL_EXISTS] >>
-       metis_tac[pluck_eq_none])
+       metis_tac[pluck_eq_none]) >~
+   [‘trule_s4 s = SOME (pf,s')’]
    >- (* Trule *)
       (fs[] >> rw[] >> `wfm_S4_sequent Γ0 s'` by metis_tac[wfm_S4_trule] >>
        first_x_assum (qspec_then `ARB` (fn _ => all_tac)) >>
@@ -772,7 +774,8 @@ Proof
            first_x_assum (drule_then strip_assume_tac)
            >- (qexists_tac `f` >> metis_tac[])
            >> qexists_tac `Box f` >> rw[] >> qexists_tac `w` >> fs[reflexive_M])
-       >> (*  MEM f s'.Sg *) metis_tac[mem_trule_sigma])
+       >> (*  MEM f s'.Sg *) metis_tac[mem_trule_sigma]) >~
+   [‘EXISTS is_dia s.Gm’, ‘MEM df _’]
    >- (* S4 *)
       (fs[MEM_FILTER] >>
        qpat_x_assum ‘∀pf s'. EXISTS is_box s.Gm ∧ trule_s4 s = SOME (pf,s') ⇒ _’
@@ -822,29 +825,30 @@ Proof
                fs[transitive_M] >> metis_tac[])
            >> fs[MEM_undia] >> qexists_tac `Dia df` >> rw[])
        >- (qexists_tac `f` >> fs[])
-       >> (qexists_tac `f` >> fs[]))
+       >> (qexists_tac `f` >> fs[])) >~
+   [‘disjsplit_s4 s.Gm = SOME (pf, Γ1, Γ2)’]
    >- (* Disj *)
       (drule_all_then strip_assume_tac wfm_S4_Disj >> fs[] >>
        rpt (first_x_assum (drule_all_then strip_assume_tac))
        >- (drule_all disjsplit_s4_MEM2 >> rw[]
            >- metis_tac[]
-           >- metis_tac[]
-           >> qexists_tac `Disj f f'` >> rw[] >> metis_tac[])
-       >> metis_tac[])
+           >- metis_tac[] >>
+           rename [‘MEM (Disj f1 f2) s.Gm’] >>
+           qexists_tac ‘Disj f1 f2’ >> rw[] >> metis_tac[])
+       >> metis_tac[]) >~
+   [‘conjsplit_s4 s.Gm = SOME (pf, Γ')’]
    >- (* Con j *)
       (drule_all_then strip_assume_tac wfm_S4_Conj >> fs[] >>
        rpt (first_x_assum (drule_all_then strip_assume_tac))
-       >- (drule_all conjsplit_s4_MEM2 >> rw[]
-           >- metis_tac[]
-           >- (qexists_tac `Conj f ϕ'` >> rw[])
-           >> qexists_tac `Conj ϕ' f` >> rw[])
-       >> metis_tac[])
-   >> (* Literal *)fs[] >>
-      rename [‘contradiction Γ = SOME j’] >>
-      drule_then strip_assume_tac contradiction_EQ_SOME >>
-      Cases_on ‘w ∈ M.valt j’
-      >- (qexists_tac ‘NVar j’ >> simp[]) >>
-      qexists_tac ‘Var j’ >> simp[]
+       >- (drule_all conjsplit_s4_MEM2 >> rw[] >>
+           metis_tac[forces_def])
+       >> metis_tac[]) >~
+   [‘contradiction Γ = SOME j’] >>
+   (* Literal *)fs[] >>
+   drule_then strip_assume_tac contradiction_EQ_SOME >>
+   Cases_on ‘w ∈ M.valt j’
+   >- (qexists_tac ‘NVar j’ >> simp[]) >>
+   qexists_tac ‘Var j’ >> simp[]
 QED
 
 Theorem final_tableau_S4_complete:
@@ -1545,23 +1549,24 @@ Theorem tableau_S4_Ss_eq_Gm:
 Proof
   ho_match_mp_tac tableau_S4_ind >> ntac 3 strip_tac >>
   simp[Once tableau_S4_Ss_eq_Gm_prop] >> simp[Once tableau_S4_def] >>
-  simp[AllCaseEqs()] >> ntac 2 strip_tac
+  simp[AllCaseEqs()] >> ntac 2 strip_tac >> gvs[] >~
+  [‘trule_s4 s = SOME (pf, s')’]
   (* Trule *)
-  >-(rw[] >> fs[] >> rw[]
+  >-(conj_tac
      >-(fs[wfm_S4_sequent] >> Cases_on `s.Ss` >> fs[] >>
-        Cases_on `x` >> qexistsl_tac [`q`, `r'`] >> rw[] >>
-        metis_tac[SUBSET_DEF])
-     >> first_x_assum (qspec_then `df` (K all_tac)) >>
+        rename [‘s.Ss = SOME x’] >> Cases_on ‘x’ >>
+        rw[]) >>
+     first_x_assum (qspec_then `df` (K all_tac)) >>
      drule wfm_S4_trule >> rw[] >> first_x_assum (drule_then strip_assume_tac)>>
-     `pt_rel (Nd (id, h, r) cs) s''` by fs[pt_rel_def] >>
-     metis_tac[tableau_S4_Ss_eq_Gm_prop])
+     rename [‘pt_rel (Nd (s,pf::h,r) cs) s''’] >>
+     ‘pt_rel (Nd (id, h, r) cs) s''’ by fs[pt_rel_def] >>
+     metis_tac[tableau_S4_Ss_eq_Gm_prop]) >~
+  [‘EXISTS is_dia s.Gm’]
   (* S4 *)
-  >-(rw[] >> fs[] >> rw[]
-     >-(first_x_assum (qspecl_then [`pf`, `gm`] (K all_tac)) >>
-        fs[wfm_S4_sequent] >>
-        Cases_on `s.Ss` >> fs[] >> Cases_on `x` >> qexistsl_tac [`q`, `r`] >>
-        rw[])
-     >> first_x_assum (qspecl_then [`pf`, `gm`] (K all_tac)) >>
+  >-(first_x_assum (qspecl_then [`pf`, `gm`] (K all_tac)) >> conj_tac
+     >-(fs[wfm_S4_sequent] >>
+        Cases_on `s.Ss` >> fs[] >>
+        rename [‘s.Ss = SOME x’] >> Cases_on `x` >> rw[]) >>
      fs[pt_rel_def] >> rw[] >> drule scmap_MEM >> rw[] >> first_x_assum drule >>
      rw[] >>
      `wfm_S4_sequent Γ0
@@ -1575,12 +1580,16 @@ Proof
            >- fs[MEM_FILTER, MEM_undia, SUBSET_DEF]
            >- metis_tac[]
            >- metis_tac[]
-           >> rw[SUBSET_DEF]) >> metis_tac[])
+           >> rw[SUBSET_DEF]) >> metis_tac[]) >~
+  [‘contradiction s.Gm = NONE’, ‘conjsplit_s4 _ = NONE’,
+   ‘disjsplit_s4 _ = NONE’, ‘EVERY ($¬ o is_box) _’, ‘EVERY ($¬ o is_dia) _’]
   (* Literal *)
-  >-(rw[] >> fs[] >> rw[]
+  >-(rw[]
      >-(fs[wfm_S4_sequent] >> rw[] >> Cases_on `s.Ss` >> fs[] >> Cases_on `x` >>
         metis_tac[])
-     >> fs[pt_rel_def] >> rw[])
+     >> fs[pt_rel_def] >> rw[]) >~
+  [‘disjsplit_s4 s.Gm = SOME (pf, Γ1, Γ2)’,
+   ‘tableau_S4 _ (s with <| Ss := NONE; Gm := Γ2|>) = OPEN(Nd(id,h,r) cs)’]
   (* disj2 *)
   >-(rw[] >> fs[] >> rw[]
      >-(fs[wfm_S4_sequent] >> rw[] >> Cases_on `s.Ss` >> fs[] >> Cases_on `x` >>
@@ -1590,7 +1599,9 @@ Proof
         by (fs[wfm_S4_sequent] >> drule disj_s4_g2_in_g0 >> rw[] >>
             `set (closure_list_conc s.Gm) ⊆ set (closure_list_conc [Γ0])`
                  by fs[closure_subset_closure] >> metis_tac[SUBSET_DEF]) >>
-     metis_tac[tableau_S4_Ss_eq_Gm_prop])
+     metis_tac[tableau_S4_Ss_eq_Gm_prop]) >~
+  [‘disjsplit_s4 s.Gm = SOME (pf, Γ1, Γ2)’,
+   ‘tableau_S4 _ (s with <| Ss := NONE; Gm := Γ1|>) = OPEN(Nd(id,h,r) cs)’]
   (* disj1 *)
   >-(rw[] >> fs[] >> rw[]
      >-(fs[wfm_S4_sequent] >> rw[] >> Cases_on `s.Ss` >> fs[] >> Cases_on `x` >>
@@ -1600,9 +1611,8 @@ Proof
         by (fs[wfm_S4_sequent] >> drule disj_s4_g1_in_g0 >> rw[] >>
             `set (closure_list_conc s.Gm) ⊆ set (closure_list_conc [Γ0])`
                  by fs[closure_subset_closure] >> metis_tac[SUBSET_DEF]) >>
-     metis_tac[tableau_S4_Ss_eq_Gm_prop])
-  (* conj *)
-  >> rw[] >> fs[] >> rw[]
+     metis_tac[tableau_S4_Ss_eq_Gm_prop]) >>
+  rw[]
   >-(fs[wfm_S4_sequent] >> rw[] >> Cases_on `s.Ss` >> fs[] >> Cases_on `x` >>
      metis_tac[])
   >> `pt_rel (Nd (id, h, r) cs) s'` by fs[pt_rel_def] >>
