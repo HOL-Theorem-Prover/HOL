@@ -1,5 +1,5 @@
 name: hol-analysis-unint
-version: 1.1
+version: 1.0
 description: HOL real analysis (before re-interpretation)
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

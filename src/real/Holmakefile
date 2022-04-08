@@ -26,7 +26,7 @@ hol4-real-unint.art: hol4-real-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 hol4-real-unsat.art: hol4-real-unsat.thy hol4-real-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
 
-hol4-real-assums.art: hol4-real-unsat.thy hol4-real-unint.art ../opentheory/hol4.int
+hol4-real-assums.art: hol4-real-assums.thy hol4-real-unsat.art
 	opentheory info --skip-definitions --assumptions -o $@ $<
 	touch hol4-real-assums.ui
 	touch hol4-real-assums.uo
@@ -35,8 +35,13 @@ real.art: real.otd
 
 prove_real_assums.art: hol4-real-assums.art
 
-all: hol4-real-unint.art hol4-real-unsat.art
+hol4-real.art: hol4-real.thy hol4-real-unsat.art prove_real_assums.ot.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
 
+install: hol4-real.thy hol4-real.art
+	opentheory install --reinstall $<
+
+all: hol4-real.art
 endif
 
 EXTRA_CLEANS = selftest.exe real-selftest.log

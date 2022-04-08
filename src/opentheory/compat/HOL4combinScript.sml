@@ -1,4 +1,5 @@
 open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryFunctionTheory
+open OpenTheoryReader
 
 val Thy = "HOL4combin"
 val _ = new_theory Thy

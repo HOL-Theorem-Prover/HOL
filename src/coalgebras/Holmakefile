@@ -4,7 +4,7 @@ all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = llist lbtree path # ltree is temporarily removed
+BARE_THYS = llist lbtree path itree # ltree has problems
 
 all: hol4-coalgebras.art
 
@@ -13,6 +13,15 @@ hol4-coalgebras-unint.art: hol4-coalgebras-unint.thy $(patsubst %,%.ot.art,$(BAR
 
 hol4-coalgebras.art: hol4-coalgebras.thy hol4-coalgebras-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
+
+install: hol4-coalgebras.thy hol4-coalgebras.art
+	opentheory install --reinstall $<
+
+ltree.art: ltree.otd
+itree.art: itree.otd
+lbtree.art: lbtree.otd
+llist.art: llist.otd
+path.art: path.otd
 endif
 
 selftest.exe: selftest.uo llistTheory.uo

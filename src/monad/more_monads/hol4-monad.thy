@@ -1,5 +1,5 @@
 name: hol-monad
-version: 1.1
+version: 1.2
 description: HOL monad theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

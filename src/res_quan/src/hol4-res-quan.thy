@@ -1,5 +1,5 @@
 name: hol-res-quan
-version: 1.1
+version: 1.2
 description: HOL theory about restricted quantifiers
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

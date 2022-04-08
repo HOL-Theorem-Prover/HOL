@@ -5,32 +5,34 @@ author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
   import: bool
+  import: normal-forms
   import: marker
+  import: num
   import: combin
+  import: sat
   import: relation
   import: one
   import: pair
-  import: poset
-  import: option
-  import: sat
-  import: sum
-  import: num
   import: prim-rec
   import: arithmetic
+  import: sum
+  import: poset
   import: numeral
+  import: option
   import: basic-size
   import: while
-  import: numpair
   import: divides
-  import: logroot
-  import: gcd
-  import: bit
-  import: numeral-bit
-  import: pred-set
+  import: numpair
   import: ind-type
+  import: gcd
+  import: pred-set
   import: list
   import: rich-list
+  import: logroot
+  import: set-relation
   import: indexed-lists
+  import: bit
+  import: numeral-bit
   import: numposrep
 }
 bool {
@@ -40,6 +42,10 @@ bool {
   interpret: const "HOL4.bool_defs.IN" as "HOL4.bool.IN"
   interpret: const "HOL4.bool_defs.TYPE_DEFINITION" as "HOL4.bool.TYPE_DEFINITION"
   interpret: const "HOL4.bool_defs.ARB" as "HOL4.bool.ARB"
+}
+normal-forms {
+  import: bool
+  article: "../metis/normalForms.ot.art"
 }
 marker {
   import: bool
@@ -53,6 +59,7 @@ combin {
 relation {
   import: bool
   import: combin
+  import: sat
   article: "../relation/relation.ot.art"
 }
 one {
@@ -114,9 +121,9 @@ basic-size {
   article: "../num/theories/basicSize.ot.art"
 }
 while {
-  import: arithmetic
   import: bool
   import: combin
+  import: arithmetic
   article: "../num/theories/while.ot.art"
 }
 numpair {
@@ -181,9 +188,6 @@ numeral-bit {
   import: bit
   article: "../num/extra_theories/numeral_bit.ot.art"
 }
-normal-forms {
-  article: "../metis/normalForms.ot.art"
-}
 pred-set {
   import: bool
   import: combin
@@ -199,6 +203,16 @@ pred-set {
   import: marker
   import: divides
   article: "../pred_set/src/pred_set.ot.art"
+}
+set-relation {
+  import: bool
+  import: marker
+  import: pred-set
+  import: pair
+  import: arithmetic
+  import: option
+  import: relation
+  article: "../pred_set/src/set_relation.ot.art"
 }
 ind-type {
   import: bool
@@ -219,11 +233,11 @@ list {
   article: "../list/src/list.ot.art"
 }
 rich-list {
-  import: arithmetic
   import: bool
   import: marker
   import: combin
   import: list
+  import: arithmetic
   import: pred-set
   article: "../list/src/rich_list.ot.art"
 }
@@ -231,6 +245,7 @@ indexed-lists {
   import: bool
   import: list
   import: relation
+  import: pred-set
   article: "../list/src/indexedLists.ot.art"
 }
 numposrep {

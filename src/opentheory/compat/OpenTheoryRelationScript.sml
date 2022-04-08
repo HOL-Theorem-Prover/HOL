@@ -1,4 +1,6 @@
 open HolKernel boolSyntax Opentheory
+open OpenTheoryReader
+
 val Thy = "OpenTheoryRelation"
 val pkg = "relation-1.61"
 val _ = new_theory Thy

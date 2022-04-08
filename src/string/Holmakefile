@@ -15,13 +15,18 @@ selftest.exe: selftest.uo stringSyntax.uo stringLib.uo stringTheory.uo $(dprot $
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
-all: string.ot.art string_num.ot.art ASCIInumbers.ot.art hol4-string.art
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
-hol4-string-unint.art: hol4-string-unint.thy string.ot.art string_num.ot.art ASCIInumbers.ot.art
+all: $(ARTFILES) hol4-string.art
+
+hol4-string-unint.art: hol4-string-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 
 hol4-string.art: hol4-string.thy hol4-string-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
+
+install: hol4-string.thy hol4-string.art
+	opentheory install --reinstall $<
 
 string.art: string.otd
 
