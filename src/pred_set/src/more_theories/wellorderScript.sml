@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib
 open boolSimps mesonLib numLib InductiveDefinition tautLib
 
 open relationTheory set_relationTheory pred_setTheory pairTheory
-     arithmeticTheory
+     arithmeticTheory optionTheory;
 
 val _ = new_theory "wellorder"
 
@@ -568,13 +568,13 @@ val wleast_IN_wo = store_thm(
   ``(wleast w s = SOME x) ==>
        x IN elsOf w /\ x NOTIN s /\
        !y. y IN elsOf w /\ y NOTIN s /\ x <> y ==> (x,y) WIN w``,
-  simp[wleast_def] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  simp[wleast_def] >> DEEP_INTRO_TAC some_intro >>
   simp[]);
 
 val wleast_EQ_NONE = store_thm(
   "wleast_EQ_NONE",
   ``(wleast w s = NONE) ==> elsOf w SUBSET s``,
-  simp[wleast_def] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >>
+  simp[wleast_def] >> DEEP_INTRO_TAC some_intro >> rw[] >>
   simp[SUBSET_DEF] >>
   qspec_then `w` ho_match_mp_tac WO_INDUCTION >>
   qx_gen_tac `x` >> rpt strip_tac >>
@@ -612,7 +612,7 @@ val wo2wo_EQ_SOME_downwards = store_thm(
   "wo2wo_EQ_SOME_downwards",
   ``!x y. (wo2wo w1 w2 x = SOME y) ==>
           !x0. (x0,x) WIN w1 ==> ?y0. wo2wo w1 w2 x0 = SOME y0``,
-  metis_tac [wo2wo_EQ_NONE, optionTheory.option_CASES]);
+  metis_tac [wo2wo_EQ_NONE, option_CASES]);
 
 val _ = overload_on (
   "woseg",
@@ -644,8 +644,8 @@ val wleast_SUBSET = store_thm(
   "wleast_SUBSET",
   ``(wleast w s1 = SOME x) /\ (wleast w s2 = SOME y) /\ s1 SUBSET s2 ==>
     (x = y) \/ (x,y) WIN w``,
-  simp[wleast_def] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
-  DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> metis_tac[SUBSET_DEF]);
+  simp[wleast_def] >> DEEP_INTRO_TAC some_intro >> simp[] >>
+  DEEP_INTRO_TAC some_intro >> simp[] >> metis_tac[SUBSET_DEF]);
 
 val wo2wo_mono = store_thm(
   "wo2wo_mono",
@@ -667,7 +667,7 @@ val wo2wo_ONTO = store_thm(
   `y0 NOTIN woseg w1 w2 x`
      by (asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qx_gen_tac `a` >>
          `(wo2wo w1 w2 a = NONE) \/ ?y'. wo2wo w1 w2 a = SOME y'`
-            by metis_tac [optionTheory.option_CASES] >> simp[iseg_def] >>
+            by metis_tac [option_CASES] >> simp[iseg_def] >>
          metis_tac[WIN_elsOf]) >>
   `y0 <> y` by metis_tac [WIN_REFL] >>
   `y0 IN elsOf w2 /\ y IN elsOf w2` by metis_tac [WIN_elsOf] >>
@@ -680,7 +680,7 @@ val wo2wo_EQ_NONE_woseg = store_thm(
   spose_not_then strip_assume_tac >>
   last_x_assum mp_tac >> simp[] >>
   spose_not_then strip_assume_tac >>
-  fs[optionTheory.NOT_IS_SOME_EQ_NONE] >>
+  fs[NOT_IS_SOME_EQ_NONE] >>
   imp_res_tac wleast_EQ_NONE >>
   metis_tac[IMAGE_wo2wo_SUBSET,SUBSET_DEF,EXTENSION]);
 
@@ -704,18 +704,18 @@ val orderlt_trichotomy = store_thm(
     qexists_tac `THE o wo2wo w1 w2` >>
     `elsOf (wobound x0 w1) = { x | (x,x0) WIN w1 }` by rw[elsOf_wobound] >>
     simp[] >> rpt conj_tac >| [
-      metis_tac [wo2wo_IN_w2, optionTheory.THE_DEF],
-      metis_tac [wo2wo_11, optionTheory.THE_DEF, WIN_elsOf],
+      metis_tac [wo2wo_IN_w2, THE_DEF],
+      metis_tac [wo2wo_11, THE_DEF, WIN_elsOf],
       `elsOf w2 = woseg w1 w2 x0`
-        by metis_tac [wo2wo_EQ_NONE_woseg, optionTheory.option_CASES] >>
+        by metis_tac [wo2wo_EQ_NONE_woseg, option_CASES] >>
       asm_simp_tac (srw_ss() ++ DNF_ss) [iseg_def] >>
-      metis_tac [optionTheory.option_CASES],
-      simp[WIN_wobound] >> metis_tac [optionTheory.THE_DEF, wo2wo_mono]
+      metis_tac [option_CASES],
+      simp[WIN_wobound] >> metis_tac [THE_DEF, wo2wo_mono]
     ],
     ALL_TAC
   ] >>
   fs[METIS_PROVE []``(!x. ~P x \/ Q x) = (!x. P x ==> Q x)``,
-     METIS_PROVE [optionTheory.option_CASES, optionTheory.NOT_SOME_NONE]
+     METIS_PROVE [option_CASES, NOT_SOME_NONE]
                   ``(x <> NONE) <=> ?y. x = SOME y``] >>
   Cases_on `elsOf w2 = { y | ?x. x IN elsOf w1 /\ (wo2wo w1 w2 x = SOME y) }`
   >| [
@@ -723,11 +723,11 @@ val orderlt_trichotomy = store_thm(
     rw[orderiso_def] >> qexists_tac `THE o wo2wo w1 w2` >>
     pop_assum (strip_assume_tac o SIMP_RULE (srw_ss()) [EXTENSION]) >>
     simp[] >> rpt conj_tac >| [
-      metis_tac [optionTheory.THE_DEF, optionTheory.option_CASES],
-      metis_tac [wo2wo_11, optionTheory.THE_DEF, optionTheory.option_CASES],
-      metis_tac [optionTheory.THE_DEF],
-      metis_tac [optionTheory.THE_DEF, wo2wo_mono, WIN_elsOf,
-                 optionTheory.option_CASES]
+      metis_tac [THE_DEF, option_CASES],
+      metis_tac [wo2wo_11, THE_DEF, option_CASES],
+      metis_tac [THE_DEF],
+      metis_tac [THE_DEF, wo2wo_mono, WIN_elsOf,
+                 option_CASES]
     ],
     ALL_TAC
   ] >>
@@ -739,7 +739,7 @@ val orderlt_trichotomy = store_thm(
   `y0_opt <> NONE`
      by (qunabbrev_tac `y0_opt` >> strip_tac >>
          imp_res_tac wleast_EQ_NONE >> fs[SUBSET_DEF] >> metis_tac[]) >>
-  `?y0. y0_opt = SOME y0` by metis_tac [optionTheory.option_CASES] >>
+  `?y0. y0_opt = SOME y0` by metis_tac [option_CASES] >>
   qunabbrev_tac `y0_opt` >>
   pop_assum (strip_assume_tac o MATCH_MP wleast_IN_wo) >> fs[] >>
   qsuff_tac `orderlt w1 w2` >- rw[] >> simp[orderlt_def] >>
@@ -749,16 +749,14 @@ val orderlt_trichotomy = store_thm(
     by (rpt strip_tac >>
         `b <> y0` by metis_tac [] >>
         `~((y0,b) WIN w2)`
-           by metis_tac [wo2wo_ONTO, optionTheory.NOT_SOME_NONE] >>
+           by metis_tac [wo2wo_ONTO, NOT_SOME_NONE] >>
         metis_tac [WIN_trichotomy, wo2wo_IN_w2]) >>
   simp[elsOf_wobound] >> rpt conj_tac >| [
-    metis_tac [optionTheory.THE_DEF, optionTheory.option_CASES],
-    metis_tac [optionTheory.THE_DEF, wo2wo_11, optionTheory.option_CASES],
-    metis_tac [WIN_REFL, WIN_TRANS, WIN_elsOf, optionTheory.THE_DEF,
-               optionTheory.option_CASES],
+    metis_tac [THE_DEF, option_CASES],
+    metis_tac [THE_DEF, wo2wo_11, option_CASES],
+    metis_tac [WIN_REFL, WIN_TRANS, WIN_elsOf, THE_DEF, option_CASES],
     simp[WIN_wobound] >>
-    metis_tac [wo2wo_mono, optionTheory.THE_DEF, WIN_elsOf,
-               optionTheory.option_CASES]
+    metis_tac [wo2wo_mono, THE_DEF, WIN_elsOf, option_CASES]
   ]);
 
 val wZERO_def = Define`wZERO = wellorder_ABS {}`

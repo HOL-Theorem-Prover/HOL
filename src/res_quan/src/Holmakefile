@@ -2,10 +2,18 @@ ifdef POLY
 HOLHEAP = ../../num/termination/numheap
 endif
 
+all: $(DEFAULT_TARGETS)
+
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES) $(DEFAULT_TARGETS)
 
+all: $(ARTFILES) hol4-res-quan.art
+
+hol4-res-quan.art: hol4-res-quan.thy $(ARTFILES) ../../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-res-quan.thy hol4-res-quan.art
+	opentheory install --reinstall $<
 endif
 
 ifdef HOLBUILD

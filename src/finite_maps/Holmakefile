@@ -2,6 +2,7 @@ INCLUDES = ../sort ../n-bit ../bag ../res_quan/src ../string \
            ../pred_set/src/more_theories
 
 all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
 
 selftest.exe: selftest.uo sptreeSyntax.uo sptreeTheory.uo
 	$(HOLMOSMLC) -o $@ $<
@@ -20,4 +21,20 @@ all: link-to-sigobj
 .PHONY: link-to-sigobj
 link-to-sigobj: $(DEFAULT_TARGETS)
 	$(HOL_LNSIGOBJ)
+endif
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+all: $(ARTFILES) hol4-finite-maps.art
+
+hol4-finite-maps-unint.art: hol4-finite-maps-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-finite-maps.art: hol4-finite-maps.thy hol4-finite-maps-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-finite-maps.thy hol4-finite-maps.art
+	opentheory install --reinstall $<
+
 endif

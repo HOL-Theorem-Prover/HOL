@@ -1,5 +1,5 @@
 name: hol-real-unint
-version: 1.1
+version: 1.0
 description: HOL real theories (before re-interpretation)
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
@@ -26,8 +26,6 @@ intreal {
 }
 transc {
   import: real
-  import: metric
-  import: nets
   import: seq
   import: lim
   import: powser
@@ -68,12 +66,8 @@ seq {
   import: nets
   article: "seq.ot.art"
 }
-topology {
-  article: "../topology/topology.ot.art"
-}
 metric {
   import: real
-  import: topology
   article: "metric.ot.art"
 }
 lim {

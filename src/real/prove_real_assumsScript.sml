@@ -71,7 +71,7 @@ local
       val P = rator(concl ax)
     in
       {abs_rep = mk_thm([],``(\a. ^abs (^rep a)) = (\a. a)``),
-       rep_abs = mk_thm([],``(\r. ^rep (^abs r) = r) <=> (\r. P r)``)}
+       rep_abs = mk_thm([],``(\r. ^rep (^abs r) = r) = (\r. P r)``)}
     end
 in
   val (reader:reader) = {
@@ -140,7 +140,9 @@ val REAL_MUL_LINV = mk_thm([],
 val real_div0 = mk_thm([],
   ``!x y. ~(y = 0) ==> (prove_real_assums$/ x y = x * prove_real_assums$inv y)``);
 
-val th1 = store_thm("th1",el 1 goals,
+(* |- !x y z. x < y /\ y < z ==> x < z *)
+val th1 = store_thm
+  ("th1", el 1 goals,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt]
   \\ reverse(qspecl_then[`x`,`y`]strip_assume_tac REAL_LE_TOTAL)
@@ -150,7 +152,9 @@ val th1 = store_thm("th1",el 1 goals,
   \\ rpt strip_tac
   \\ imp_res_tac REAL_LE_TRANS);
 
-val th2 = store_thm("th2",el 2 goals,
+(* |- !x y z. y < z ==> x + y < x + z *)
+val th2 = store_thm
+  ("th2", el 2 goals,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt]
   \\ reverse(qspecl_then[`y`,`z`]strip_assume_tac REAL_LE_TOTAL)
@@ -163,7 +167,7 @@ val th2 = store_thm("th2",el 2 goals,
   \\ metis_tac[REAL_LE_ANTISYM]);
 
 val REAL_ADD_LID_UNIQ = prove(
-  ``! x y. (x + y = y) = (x = 0)``,
+  ``!x y. (x + y = y) = (x = 0)``,
   metis_tac[REAL_ADD_LID,REAL_ADD_SYM,REAL_ADD_LINV,REAL_ADD_ASSOC]);
 
 val REAL_MUL_LZERO = prove(
@@ -174,7 +178,9 @@ val REAL_ENTIRE = prove(
   ``!x y. (x * y = 0) = (x = 0) \/ (y = 0)``,
   metis_tac[REAL_MUL_LINV,REAL_MUL_LID,REAL_MUL_ASSOC,REAL_MUL_LZERO,REAL_MUL_SYM]);
 
-val th3 = store_thm("th3",el 3 goals,
+(* |- !x y. real_0 < x /\ real_0 < y ==> real_0 < x * y *)
+val th3 = store_thm
+  ("th3", el 3 goals,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt,REAL_0]
   \\ qspecl_then[`x`,`0`]strip_assume_tac REAL_LE_TOTAL >- asm_simp_tac bool_ss []
@@ -184,7 +190,9 @@ val th3 = store_thm("th3",el 3 goals,
   \\ `x * y = 0` by metis_tac[REAL_LE_ANTISYM]
   \\ metis_tac[REAL_ENTIRE,REAL_LE_REFL]);
 
-val th4 = store_thm("th4",el 4 goals,
+(* |- !x y. x = y \/ x < y \/ y < x *)
+val th4 = store_thm
+  ("th4", el 4 goals,
   metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM])
 
 val otax = mk_thm([],
@@ -192,10 +200,14 @@ val otax = mk_thm([],
         ?s. (!x. p x ==> x <= s) /\ !m. (!x. p x ==> x <= m) ==> s <= m``);
 
 val REAL_LE_LT = prove(
-  ``!x y. x <= y = x < y \/ (x = y)``,
+  ``!x y. x <= y <=> x < y \/ (x = y)``,
   metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM]);
 
-val th5 = store_thm("th5",el 5 goals,
+(* |- !P. (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
+          ?s. !y. (?x. P x /\ y < x) <=> y < s
+ *)
+val th5 = store_thm
+  ("th5", el 5 goals,
   rpt strip_tac
   \\ qspec_then`P`mp_tac otax
   \\ impl_tac >- metis_tac[REAL_LE_LT]
@@ -206,61 +218,95 @@ val th5 = store_thm("th5",el 5 goals,
   >- metis_tac[th1,REAL_LE_LT]
   \\ metis_tac[REAL_LE_TOTAL,REAL_LE_LT,real_lt]);
 
-val th6 = store_thm("th6",el 6 goals,
+(* |- !x. x <> real_0 ==> inv0 x * x = real_1 *)
+val th6 = store_thm
+  ("th6", el 6 goals,
   metis_tac[REAL_MUL_LINV,REAL_0,REAL_1,inv0_def]);
 
-val th7 = store_thm("th7",el 7 goals,
+(* |- !x. -x + x = real_0 *)
+val th7 = store_thm
+  ("th7", el 7 goals,
   metis_tac[realTheory.REAL_ADD_LINV,REAL_0]);
 
-val th8 = store_thm("th8",el 8 goals,
+(* |- !x. real_0 + x = x *)
+val th8 = store_thm
+  ("th8", el 8 goals,
   metis_tac[realTheory.REAL_ADD_LID,REAL_0]);
 
-val th9 = store_thm("th9",el 9 goals,
+(* |- !x. real_1 * x = x *)
+val th9 = store_thm
+  ("th9", el 9 goals,
   metis_tac[realTheory.REAL_MUL_LID,REAL_1]);
 
-val th10 = store_thm("th10",el 10 goals,
+(* |- !x. ~(x < x) *)
+val th10 = store_thm
+  ("th10", el 10 goals,
   simp_tac bool_ss [real_lt,REAL_LE_REFL]);
 
 val (pow0,powsuc) = CONJ_PAIR realTheory.pow;
 val () = Thm.delete_proof pow0
 val () = Thm.delete_proof powsuc
 
-val th11 = store_thm("th11",el 11 goals,
+(* |- (!x. x pow 0 = 1) /\ !x n. x pow SUC n = x * x pow n *)
+val th11 = store_thm
+  ("th11", el 11 goals,
   MATCH_ACCEPT_TAC(CONJ pow0 powsuc));
 
-val th12 = store_thm("th12",el 12 goals,
+(* |- 0 = real_0 /\ !n. &SUC n = &n + real_1 *)
+val th12 = store_thm
+  ("th12", el 12 goals,
   REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_ADD,arithmeticTheory.ADD1]);
 
-val th13 = store_thm("th13",el 13 goals,
+(* |- abs = (\x. if 0 <= x then x else -x) *)
+val th13 = store_thm
+  ("th13", el 13 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM,abs]);
 
-val th14 = store_thm("th14",el 14 goals,
+(* |- abs = (\x. if 0 <= x then x else -x) *)
+val th14 = store_thm
+  ("th14", el 14 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM,min_def]);
 
-val th15 = store_thm("th15",el 15 goals,
+(* |- min = (\x y. if x <= y then x else y) *)
+val th15 = store_thm
+  ("th15", el 15 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM,max_def]);
 
-val th16 = store_thm("th16",el 16 goals,
+(* |- max = (\x y. if x <= y then y else x) *)
+val th16 = store_thm
+  ("th16", el 16 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM,real_sub]);
 
-val th17 = store_thm("th17",el 17 goals,
+(* |- $- = (\x y. x + -y) *)
+val th17 = store_thm
+  ("th17", el 17 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM,real_div_def,inv0_def]
   \\ metis_tac[real_div0,REAL_MUL_LZERO,REAL_MUL_SYM]);
 
-val th18 = store_thm("th18",el 18 goals,
+(* |- real_div = (\x y. x * inv0 y) *)
+val th18 = store_thm
+  ("th18", el 18 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM]
   \\ metis_tac[real_lt]);
 
-val th19 = store_thm("th19",el 19 goals,
+(* |- $>= = (\x y. y <= x) *)
+val th19 = store_thm
+  ("th19", el 19 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM,real_ge]);
 
-val th20 = store_thm("th20",el 20 goals,
+(* |- $> = (\x y. y < x) *)
+val th20 = store_thm
+  ("th20", el 20 goals,
   SIMP_TAC bool_ss [FUN_EQ_THM,real_gt]);
 
-val th21 = store_thm("th21",el 21 goals,
+(* |- inv0 real_0 = real_0 *)
+val th21 = store_thm
+  ("th21", el 21 goals,
   metis_tac[inv0_def,REAL_0]);
 
-val th22 = store_thm("th22",el 22 goals,
+(* |- real_1 <> real_0 *)
+val th22 = store_thm
+  ("th22", el 22 goals,
   PURE_REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_EQ,
     arithmeticTheory.ONE,prim_recTheory.SUC_ID]
   \\ strip_tac);

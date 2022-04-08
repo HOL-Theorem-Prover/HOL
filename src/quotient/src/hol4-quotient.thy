@@ -1,5 +1,5 @@
 name: hol-quotient
-version: 1.1
+version: 1.2
 description: HOL quotient theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
@@ -13,7 +13,6 @@ show: "Data.Pair"
 show: "Data.Option"
 show: "Function"
 show: "Number.Natural"
-show: "Relation"
 main {
   article: "hol4-quotient-unint.art"
   interpretation: "../../opentheory/hol4.int"
