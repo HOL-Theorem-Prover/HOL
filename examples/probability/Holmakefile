@@ -4,7 +4,9 @@ INCLUDES = $(HOLDIR)/src/probability $(HOLDIR)/src/n-bit $(HOLDIR)/src/real \
 EXTRA_CLEANS = heap \
 	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
 	$(patsubst %Theory.uo,%Theory.lst,$(DEFAULT_TARGETS)) \
-	hol4-large-numbers.art hol4-large-numbers.html hol4-large-numbers.log
+	hol4-large-numbers.art  hol4-large-numbers-only.art \
+	hol4-large-numbers.html hol4-large-numbers-only.html \
+	hol4-large-numbers.log  hol4-large-numbers-only.log
 
 ifdef POLY
 HOLHEAP = heap
@@ -54,8 +56,25 @@ hol4-large-numbers.art: hol4-large-numbers.thy large_number.ot.art \
 			$(HOLDIR)/src/opentheory/hol4.int
 	opentheory info --article -o $@ $<
 
-# This optional step takes about ~52GB memory but (only) two hours to complete.
+# With the rebuilt OpenTheory/Mlton (-default-type intinf), this step only takes
+# 2 minutes (otherwise 2 hours with OpenTheory/PolyML)
+
+# "&> file (aka >& file) is not part of the official POSIX shell spec, but has been
+# added to many Bourne shells as a convenience extension (it originally comes from
+# csh). In a portable shell script (and if you don't need portability, why are you
+# writing a shell script?), use > file 2>&1 only." (from stackoverflow)
 hol4-large-numbers.html: hol4-large-numbers.art
-	opentheory info --inference --document -o $@ $<
+	opentheory info --inference --document -o $@ $< \
+		> hol4-large-numbers.log 2>&1
+
+# A smaller version containing only theorems useful for proving LLN (and LLN itself)
+hol4-large-numbers-only.art: hol4-large-numbers-only.thy large_number.ot.art \
+			$(HOLDIR)/src/opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+# TODO: how to show ALL theorems in this article?
+hol4-large-numbers-only.html: hol4-large-numbers-only.art
+	opentheory info --inference --document -o $@ $< \
+		> hol4-large-numbers-only.log 2>&1
 
 endif
