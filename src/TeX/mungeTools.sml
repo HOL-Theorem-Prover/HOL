@@ -17,11 +17,11 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | AlignedDef
              | Mathmode of string | NoMath
              | AllTT | ShowTypes of int
              | Conj of int
-             | Rule | StackedRule
+             | Rule | StackedRule | IndRules
              | RuleName of string
              | NoDollarParens
              | Merge | NoMerge
-             | Unoverload of string
+             | Unoverload of string | Unabbrev of string
              | Depth of int
 
 val numErrors = ref 0
@@ -50,6 +50,7 @@ fun stringOpt pos s =
   | "alltt" => SOME AllTT
   | "case" => SOME Case
   | "def" => SOME Def
+  | "indrules" => SOME IndRules
   | "K" => SOME TermThm
   | "merge" => SOME Merge
   | "nodefsym" => SOME NoDefSym
@@ -138,6 +139,11 @@ fun stringOpt pos s =
           if size sfx < 2 then
             if String.isPrefix "m" s then
               SOME (Mathmode (String.extract(s,1,NONE)))
+            else if String.isPrefix "-:" s then
+              if String.size s >= 3 then
+                SOME (Unabbrev (String.extract(s,2,NONE)))
+              else
+                (warn (pos, s ^ " is not a valid option"); NONE)
             else if String.isPrefix "-" s then
               if String.size s >= 2 then
                 SOME (Unoverload (String.extract(s,1,NONE)))
@@ -242,6 +248,8 @@ fun optset_nomath s = OptSet.has NoMath s
 
 val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
+val optset_unabbrevs =
+    OptSet.fold (fn (e,l) => case e of Unabbrev s => s :: l | _ => l) []
 
 fun optset_traces opts f =
     OptSet.fold (fn (e, f) => case e of TraceSet p => trace p f | _ => f) f opts
@@ -410,6 +418,15 @@ in
       (fn x => (temp_set_grammars(tyg,newg);
                 f x before temp_set_grammars(tyg,oldg)))
     end
+    fun clear_abbrevs slist f = let
+      val oldg = type_grammar()
+      val tmg = term_grammar()
+      val _ = List.app temp_disable_tyabbrev_printing slist
+      val newg = type_grammar()
+    in
+      (fn x => (temp_set_grammars(newg,tmg);
+                f x before temp_set_grammars(oldg,tmg)))
+    end
 
     fun optprintermod f =
         f |> (case optset_showtypes opts of
@@ -431,6 +448,9 @@ in
           |> (case optset_unoverloads opts of
                   [] => (fn f => f)
                 | slist => clear_overloads slist)
+          |> (case optset_unabbrevs opts of
+                  [] => (fn f => f)
+                | slist => clear_abbrevs slist)
           |> optset_traces opts
 
     val overrides = let
@@ -443,18 +463,8 @@ in
     end
     fun stdtermprint t = optprintermod (raw_pp_term_as_tex overrides) t
 
-    fun clear_abbrevs slist f = let
-      val oldg = type_grammar()
-      val tmg = term_grammar()
-      val _ = List.app temp_disable_tyabbrev_printing slist
-      val newg = type_grammar()
-    in
-      (fn x => (temp_set_grammars(newg,tmg);
-                f x before temp_set_grammars(oldg,tmg)))
-    end
-
     fun opttyprintermod f =
-      f |> (case optset_unoverloads opts of
+      f |> (case optset_unabbrevs opts of
                 [] => (fn f => f)
               | slist => clear_abbrevs slist)
 
