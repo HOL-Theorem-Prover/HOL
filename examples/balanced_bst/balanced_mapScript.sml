@@ -610,10 +610,15 @@ Definition hedgeUnionWithKey_def:
       (hedgeUnionWithKey cmp f (SOME kx) bhi r (trim cmp (SOME kx) bhi t2)))
 End
 
+Definition unionWithKey_def:
+  (unionWithKey _ _ Tip t2 = t2) ∧
+  (unionWithKey _ _ t1 Tip = t1) ∧
+  (unionWithKey cmp f t1 t2 =
+    hedgeUnionWithKey cmp f NONE NONE t1 t2)
+End
+
 Definition unionWith_def:
-  (unionWith _ _ Tip t2 = t2) ∧
-  (unionWith _ _ t1 Tip = t1) ∧
-  (unionWith cmp f t1 t2 = hedgeUnionWithKey cmp (λk x y. f x y) NONE NONE t1 t2)
+  unionWith cmp f t1 t2 = unionWithKey cmp (λk x y. f x y) t1 t2
 End
 
 val foldrWithKey_def = Define `
@@ -627,9 +632,15 @@ toAscList t = foldrWithKey (\k x xs. (k,x)::xs) [] t`;
 val compare_def = Define `
 compare cmp1 cmp2 t1 t2 = list_cmp (pair_cmp cmp1 cmp2) (toAscList t1) (toAscList t2)`;
 
-val map_def = Define `
-(map _ Tip ⇔ Tip) ∧
-(map f (Bin sx kx x l r) ⇔ Bin sx kx (f x) (map f l) (map f r))`;
+Definition mapWithKey_def:
+  (mapWithKey f Tip = Tip) ∧
+  (mapWithKey f (Bin sx kx x l r) =
+     Bin sx kx (f kx x) (mapWithKey f l) (mapWithKey f r))
+End
+
+Definition map_def:
+  map f t = mapWithKey (λk x. f x) t
+End
 
 val splitLookup_def = Define `
 (splitLookup cmp k Tip = (Tip,NONE,Tip)) ∧
@@ -2716,6 +2727,29 @@ Proof
   imp_res_tac good_cmp_thm >> res_tac >> gvs[]
 QED
 
+Theorem unionWithKey_thm:
+  ∀cmp f t1 t2.
+    good_cmp cmp ∧
+    invariant cmp t1 ∧
+    invariant cmp t2 ∧
+    (∀k1 k2 x y. cmp k1 k2 = Equal ⇒ f k1 x y = f k2 x y)
+  ⇒ invariant cmp (unionWithKey cmp f t1 t2) ∧
+    to_fmap cmp (unionWithKey cmp f t1 t2) =
+      FMERGE_WITH_KEY (λks x y. f (CHOICE ks) x y)
+                      (to_fmap cmp t1)
+                      (to_fmap cmp t2)
+Proof
+  Cases_on `t1` >> Cases_on `t2` >> simp[unionWithKey_def, to_fmap_def] >>
+  ntac 2 gen_tac >> strip_tac >>
+  inv_mp_tac hedgeUnionWithKey_thm >> simp[] >>
+  rw[bounded_all_NONE, bounded_root_def, restrict_set_def, option_cmp_def,
+     restrict_domain_def, option_cmp2_def, to_fmap_def] >>
+  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_DRESTRICT] >>
+  IF_CASES_TAC >> gvs[] >> simp[FLOOKUP_UPDATE, FLOOKUP_DEF] >>
+  every_case_tac >> gvs[] >> imp_res_tac to_fmap_key_set >>
+  rgs[]
+QED
+
 Theorem unionWith_thm:
   ∀cmp f t1 t2.
     good_cmp cmp ∧
@@ -2725,15 +2759,29 @@ Theorem unionWith_thm:
     to_fmap cmp (unionWith cmp f t1 t2) =
       FMERGE_WITH_KEY (λks x y. f x y) (to_fmap cmp t1) (to_fmap cmp t2)
 Proof
-  Cases_on `t1` >> Cases_on `t2` >> simp[unionWith_def, to_fmap_def] >>
-  ntac 2 gen_tac >> strip_tac >>
-  inv_mp_tac hedgeUnionWithKey_thm >> simp[] >>
-  rw[bounded_all_NONE, bounded_root_def, restrict_set_def, option_cmp_def,
-     restrict_domain_def, option_cmp2_def, to_fmap_def] >>
-  rw[fmap_eq_flookup, FLOOKUP_FMERGE_WITH_KEY, FLOOKUP_DRESTRICT] >>
-  IF_CASES_TAC >> gvs[] >> simp[FLOOKUP_UPDATE, FLOOKUP_DEF] >>
-  every_case_tac >> gvs[] >> imp_res_tac to_fmap_key_set >>
-  rgs[]
+  rpt gen_tac \\ strip_tac
+  \\ simp [unionWith_def]
+  \\ inv_mp_tac unionWithKey_thm \\ gs []
+QED
+
+Theorem lookup_unionWithKey:
+  good_cmp cmp ∧ invariant cmp t1 ∧ invariant cmp t2 ∧
+  (∀k1 k2 x y. cmp k1 k2 = Equal ⇒ f k1 x y = f k2 x y) ⇒
+  lookup cmp k (unionWithKey cmp f t1 t2) =
+    case lookup cmp k t1 of
+    | NONE => lookup cmp k t2
+    | SOME v1 =>
+      case lookup cmp k t2 of
+      | NONE => SOME v1
+      | SOME v2 => SOME $ f k v1 v2
+Proof
+  rw[lookup_thm, unionWithKey_thm, FLOOKUP_FMERGE_WITH_KEY]
+  \\ CASE_TAC \\ gs []
+  \\ CASE_TAC \\ gs []
+  \\ ‘key_set cmp k ≠ {}’
+    by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+  \\ drule_then assume_tac CHOICE_DEF
+  \\ fs [key_set_def]
 QED
 
 Theorem lookup_unionWith:
@@ -2746,7 +2794,7 @@ Theorem lookup_unionWith:
       | NONE => SOME v1
       | SOME v2 => SOME $ f v1 v2
 Proof
-  rw[lookup_thm, unionWith_thm, FLOOKUP_FMERGE_WITH_KEY]
+  strip_tac \\ simp [unionWith_def, lookup_unionWithKey]
 QED
 
 val EXT2 = Q.prove (
@@ -3228,16 +3276,19 @@ val compare_thm = Q.store_thm ("compare_thm",
    fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2))`,
  metis_tac [compare_thm1, compare_thm2]);
 
-val map_thm = Q.store_thm ("map_thm",
-`!t.
-  good_cmp cmp ∧
-  invariant cmp t
-  ⇒
-  invariant cmp (map f t) ∧
-  to_fmap cmp (map f t) = f o_f to_fmap cmp t`,
+Theorem mapWithKey_thm:
+  ∀t.
+    good_cmp cmp ∧
+    invariant cmp t ∧
+    (∀k1 k2 x y. cmp k1 k2 = Equal ⇒ f k1 x = f k2 x)
+    ⇒
+    invariant cmp (mapWithKey f t) ∧
+    to_fmap cmp (mapWithKey f t) = FMAP_MAP2 (λ(ks,v). f (CHOICE ks) v)
+                                             (to_fmap cmp t)
+Proof
  Induct_on `t` >>
- simp [map_def, to_fmap_def]
- >- rw [invariant_def] >>
+ simp [mapWithKey_def, to_fmap_def]
+ >- rw [invariant_def, FMAP_MAP2_FEMPTY] >>
  rpt gen_tac >>
  strip_tac >>
  simp [invariant_def, GSYM CONJ_ASSOC] >>
@@ -3249,14 +3300,33 @@ val map_thm = Q.store_thm ("map_thm",
  imp_res_tac (GSYM structure_size_thm) >>
  imp_res_tac size_thm >>
  simp [FCARD_DEF] >>
- rw []
- >- rfs [key_ordered_to_fmap]
- >- rfs [key_ordered_to_fmap]
- >- fs [FCARD_DEF]
- >- (fmrw [FLOOKUP_EXT'] >>
-     fmrw [FLOOKUP_o_f, DOMSUB_FLOOKUP_THM] >>
-     every_case_tac >>
-     fs []));
+ rw [FMAP_MAP2_THM]
+ >- rfs [key_ordered_to_fmap, FMAP_MAP2_THM]
+ >- rfs [key_ordered_to_fmap, FMAP_MAP2_THM]
+ >- fs [FCARD_DEF, FMAP_MAP2_THM]
+ >- (
+  fmrw [FLOOKUP_EXT'] >>
+  fmrw [FLOOKUP_FMAP_MAP2, DOMSUB_FLOOKUP_THM] >>
+  every_case_tac >> fs [] >>
+  ‘key_set cmp k ≠ {}’
+    by (gs [EXTENSION, key_set_def]
+        \\ fs [good_cmp_thm]
+        \\ first_assum (irule_at Any)) >>
+  drule_then assume_tac CHOICE_DEF >>
+  fs [key_set_def])
+QED
+
+Theorem map_thm:
+  ∀t.
+    good_cmp cmp ∧
+    invariant cmp t
+    ⇒
+    invariant cmp (map f t) ∧
+    to_fmap cmp (map f t) = f o_f to_fmap cmp t
+Proof
+  rw [map_def, mapWithKey_thm, FMAP_MAP2_def, FLOOKUP_EXT, FUN_EQ_THM,
+      FLOOKUP_FUN_FMAP, FLOOKUP_o_f, CaseEq "option", flookup_thm]
+QED
 
 val splitLookup_thm = Q.store_thm ("splitLookup_thm",
 `!t lt v gt.
