@@ -9,36 +9,6 @@ open listTheory;
 
 val _ = new_theory "Prelims";
 
-
-
-
-(* ------------------
-   Decidable Predicates
-   ------------------ *)
-(* Not needed in HOL4 *)
-
-(* below is the coq code *)
-
-(* Decidable predicates. Allows to write e.g. [if Dec (x=y) then _ else _ ] in functions
-and [decide (x=y)] in Proofs to do case distinctions after showing that some property is decidable, e,g, see nat_eq_dec *)
-
-(*
-Definition dec (X: Prop) : Type := {X} + {~ X}.
-
-Existing Class dec.
-
-Definition Dec (X: Prop) (d: dec X) : dec X := d.
-Arguments Dec X {d}.
-
-Tactic Notation "decide" constr(p) :=
-  destruct (Dec p).
-Tactic Notation "decide" "_" :=
-  destruct (Dec _).
-*)
-
-
-
-
 (* ------------------
 	 Natural numbers
    ------------------ *)
@@ -52,32 +22,10 @@ Proof
 	Induct_on `n` >> rw[]
 QED
 
-(*
-Instance nat_le_dec (x y : nat) : dec (x <= y) :=
-  le_dec x y.
-
-Notation "'eq_dec' X" := (forall x y : X, dec (x=y)) (at level 70).
-Instance nat_eq_dec :
-  eq_dec nat.
-Proof.
-  unfold dec. decide equality.
-Defined.
-*)
-
-
-
-
 (* ------------------
 	   	 Lists
    ------------------ *)
 
-(* Notation "| A |" := (length A) (at level 65). *)
-
-(*Notation for lookup*)
-(* Notation "A .[ n ]" := (nth_error A n) (at level 1, format "A '.[' n ]").
-Notation "x '∈' A" := (In x A) (at level 70). *)
-
-(* A .[ n ]" := (nth_error n A) *)
 Definition nth_error:
 	nth_error 0 (h::_) = SOME h ∧
 	nth_error (SUC n) (_::t) = nth_error n t ∧
@@ -169,9 +117,6 @@ Proof
     first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
 QED
 
-
-(* https://coq.inria.fr/library/Coq.Lists.List.html#Forall *)
-
 Inductive Forall:
 	Forall P [] ∧
 	∀x l. P x ∧ Forall P l ⇒ Forall P (x::l)
@@ -208,18 +153,6 @@ Proof
   rw[Once Forall_cases]
 QED
 
-
-(*
-Hint Extern 4 =>
-match goal with
-|[ H: ?x ∈ nil |- _ ] => destruct H
-end.
-*)
-
-(*Register additional simplification rules with autorewrite*)
-(* Hint Rewrite <- app_assoc : list. *)
-
-(* not needed in HOL: already embedded in the tactics *)
 Theorem in_app_or:
   ∀l m a.
     MEM a (l ++ m) ⇒ MEM a l ∨ MEM a m
@@ -227,32 +160,13 @@ Proof
   Induct_on `l` >> rw[]
 QED
 
-
-
 (* ------------------
 	   Relations
    ------------------ *)
 
-
-(*
-Definition rcomp X Y Z (R : X -> Y -> Prop) (S : Y -> Z -> Prop) : X -> Z -> Prop :=
-  fun x z => exists y, R x y /\ S y z.
-*)
-
 Definition rcomp:
 	rcomp R S = (λx z. ∃y. R x y ∧ S y z)
 End
-
-(*
-Structure ARS :=
-  {
-    ARS_X :> Type ;
-    ARS_R : ARS_X -> ARS_X -> Prop
-  }.
-Notation "(≻)" := (@ARS_R _) (at level 0).
-Notation "(≻ X )" := (@ARS_R X) (at level 0).
-Notation "x  ≻  x'" := (ARS_R x x') (at level 40).
-*)
 
 Definition reducible:
 	reducible R x = ∃x'. R x x'
@@ -283,8 +197,6 @@ Proof
 	rw[computable, classical, computable]
 QED
 
-(* https://coq.inria.fr/library/Coq.Lists.List.html#Forall2 *)
-
 Inductive Forall2:
 [~nil:]
 	(∀R. Forall2 R [] []) ∧
@@ -298,10 +210,6 @@ Proof
 	Induct_on `Forall2` >> rw[Forall2_rules]
 QED
 
-(*
-Inductive terminatesOn (X : Type) (R : X -> X -> Prop) x: Prop :=
-  terminatesC (wf: forall x', R x x' -> terminatesOn R x').
-*)
 Inductive terminatesOn:
 	∀(R: 'a -> 'a -> bool) (x: 'a).
 		(∀x'. R x x' ⇒ terminatesOn R x') ⇒ terminatesOn R x
@@ -312,13 +220,6 @@ Inductive evaluates:
 	(∀x. ¬reducible R x ⇒ evaluates R x x) ∧
 	∀x y z. R x y ∧ evaluates R y z ⇒ evaluates R x z
 End
-
-(*
-Notation "(▷)" := (@evaluates _) (at level 0).
-Notation "(▷ X )" := (@evaluates X) (at level 0).*)
-(* workaround to prefere "x ≻ y" over "(≻) x y"*) (*Notation "x ▷ x'" := 0. *)
-
-(*Notation "x ▷ x'" := (@evaluates _ x x').*)
 
 Definition normalizes:
 	normalizes R x = ∃y. evaluates R x y
@@ -395,42 +296,6 @@ Definition exactlyOneHolds:
 			| [] => F
 			| P::Ps => (P ∧ noneHolds Ps) ∨ (¬P ∧ exactlyOneHolds Ps)
 End
-
-(*
-
-Ltac noneHoldsI :=
-  lazymatch goal with
-    |- noneHolds [] => now constructor
-  | |- noneHolds (_::_) => split;[|noneHoldsI]
-  end.
-
-Ltac exactlyOneHoldsI n :=
-  lazymatch n with
-  | 1 =>  left;split;[|noneHoldsI]
-  | S ?n => right;split;[|exactlyOneHoldsI n]
-  end.
-
-Ltac inv_noneHolds H :=
-  lazymatch type of H with
-  | noneHolds [] => clear H
-  | noneHolds (_::_) => let tmp := fresh "tmp" in destruct H as [? tmp];inv_noneHolds tmp
-  end.
-
-Ltac inv_exactlyOneHolds H :=
-  lazymatch type of H with
-  | exactlyOneHolds [] => now inversion H
-  | exactlyOneHolds (_::_) => let tmp := fresh "tmp" in destruct H as [[? tmp]|[? tmp]];[inv_noneHolds tmp|inv_exactlyOneHolds tmp]
-  end.
-
-*)
-
-(** Nicer Notation for Option *)
-
-(*
-Notation "'try' x ':='  t 'in' u":=
-  (match t with Some x => u | None => None end)
-    (at level 200, right associativity).
-*)
 
 (* ------------------
      Coq.Init.Logic
@@ -532,13 +397,6 @@ Theorem pow_add_R:
 Proof
   metis_tac[pow_add]
 QED
-
-(*
-Notation "p '<=1' q" := (forall x, p x -> q x) (at level 70).
-Notation "p '=1' q" := (p <=1 q /\ q <=1 p) (at level 70).
-Notation "R '<=2' S" := (forall x y, R x y -> S x y) (at level 70).
-Notation "R '=2' S"  := (R <=2 S /\ S <=2 R) (at level 70).
-*)
 
 Theorem rcomp_1:
   ∀R.
