@@ -15,13 +15,6 @@ val _ = new_theory "L";
 	      CBV LC
    ------------------ *)
 
-(*
-Instance term_eq_dec : eq_dec term.
-Proof.
-  intros s t; unfold dec; repeat decide equality.
-Defined.
-*)
-
 Definition size:
 	size s =
 		case s of
@@ -34,10 +27,6 @@ End
 	  Substitution and Closedness
    -------------------------------- *)
 
-(*
-	something in hol library already called subst
-		maybe change name?
-*)
 Definition subst:
 	subst s k u =
 		case s of
@@ -219,9 +208,6 @@ QED
 (* ----------------------------
 	  Deterministic Reduction
    ---------------------------- *)
-
-(* Reserved Notation "s '>>' t" (at level 50). *)
-(* "s '>>' t" := (step s t) *)
 
 Inductive step:
 [~App:]
