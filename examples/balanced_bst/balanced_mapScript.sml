@@ -561,6 +561,22 @@ val link_def = Define `
   else
     bin k v (Bin sizeL ky y ly ry) (Bin sizeR kz z lz rz))`;
 
+(* From the Haskell implementation:
+ * [link2 l r] merges two trees.
+ *)
+
+Definition link2_def:
+  (link2 l Tip = l) ∧
+  (link2 Tip r = r) ∧
+  (link2 (Bin sizeL kx x lx rx) (Bin sizeR ky y ly ry) =
+    if delta*sizeL < sizeR then
+      balanceL ky y (link2 (Bin sizeL kx x lx rx) ly) ry
+    else if delta*sizeR < sizeL then
+      balanceR kx x lx (link2 rx (Bin sizeR ky y ly ry))
+    else
+       glue (Bin sizeL kx x lx rx) (Bin sizeR ky y ly ry))
+End
+
 val filterLt_help_def = Define `
 (filterLt_help cmp b Tip = Tip) ∧
 (filterLt_help cmp b' (Bin s kx x l r) =
@@ -619,6 +635,18 @@ End
 
 Definition unionWith_def:
   unionWith cmp f t1 t2 = unionWithKey cmp (λk x y. f x y) t1 t2
+End
+
+Definition filterWithKey_def:
+  filterWithKey f Tip = Tip ∧
+  filterWithKey f (Bin s kx x l r) =
+    let l' = filterWithKey f l in
+    let r' = filterWithKey f r in
+      if f kx x then link kx x l' r' else link2 l' r'
+End
+
+Definition filter_def:
+  filter f t = filterWithKey (λk x. f x) t
 End
 
 val foldrWithKey_def = Define `
@@ -2084,6 +2112,33 @@ Proof
  fs [NOT_LESS, LESS_OR_EQ, MIN_DEF]
 QED
 
+Triviality link2_balanced_lem:
+  balanced lx l ∧
+  balanced r ry ∧
+  delta * (l + lx + 1) < r + ry + 1 ⇒
+    almost_balancedL (l + lx + r + 1) ry
+Proof
+  simp [almost_balancedL_def, balanced_def, TIMES_MIN, LESS_OR_EQ, delta_def,
+        LEFT_ADD_DISTRIB]
+  \\ CCONTR_TAC
+  \\ fs [NOT_LESS, LESS_OR_EQ] \\ fs [MIN_DEF]
+  \\ rw [] \\ every_case_tac \\ gs [NOT_LESS, LESS_OR_EQ]
+QED
+
+Triviality link2_balanced_lem2:
+  balanced lx l ∧
+  balanced r ry ∧
+  ¬(delta * (l + lx + 1) < r + ry + 1) ∧
+  delta * (r + ry + 1) < l + lx + 1 ⇒
+    almost_balancedR lx (l + r + ry + 1)
+Proof
+  simp [almost_balancedR_def, balanced_def, TIMES_MIN, LESS_OR_EQ, delta_def,
+        LEFT_ADD_DISTRIB]
+  \\ CCONTR_TAC
+  \\ fs [NOT_LESS, LESS_OR_EQ] \\ fs [MIN_DEF]
+  \\ rw [] \\ every_case_tac \\ gs [NOT_LESS, LESS_OR_EQ]
+QED
+
 Triviality link_thm:
 !k v l r.
   good_cmp cmp ∧
@@ -2183,6 +2238,75 @@ Proof
      fs [invariant_eq, size_def]
      >- metis_tac [link_balanced_lem3, structure_size_thm, ADD_ASSOC] >>
      to_fmap_tac)
+QED
+
+Triviality link2_thm:
+  ∀l r.
+    good_cmp cmp ∧
+    invariant cmp l ∧
+    invariant cmp r ∧
+    key_ordered cmp k l Greater ∧
+    key_ordered cmp k r Less ⇒
+      invariant cmp (link2 l r) ∧
+      to_fmap cmp (link2 l r) = FUNION (to_fmap cmp l) (to_fmap cmp r)
+Proof
+  ho_match_mp_tac link2_ind \\ rpt conj_tac \\ rpt gen_tac \\ strip_tac
+  \\ gs [link2_def, to_fmap_def]
+  \\ strip_tac \\ gs []
+  \\ Cases_on ‘sizeL * delta < sizeR’ \\ gs []
+  >- (
+    gs [invariant_eq, link2_def, key_ordered_def]
+    \\ inv_mp_tac balanceL_thm \\ gs [] \\ rw []
+    >- (
+      gs [key_ordered_to_fmap, to_fmap_def]
+      \\ rw [] \\ gs [key_set_cmp_thm]
+      \\ metis_tac [cmp_thms, key_set_cmp_thm, to_fmap_key_set])
+    >- (
+      imp_res_tac size_thm
+      \\ gs [to_fmap_def]
+      \\ gs [key_ordered_to_fmap]
+      \\ simp [FCARD_FUPDATE]
+      \\ ‘key_set cmp k ∉ FDOM (to_fmap cmp r) ∧
+          key_set cmp kx ∉ FDOM (to_fmap cmp r)’
+        by metis_tac [cmp_thms, key_set_cmp_thm]
+      \\ gs [] \\ simp [FCARD_DEF]
+      \\ ‘DISJOINT (FDOM (to_fmap cmp lx) ∪ FDOM (to_fmap cmp l))
+                   (FDOM (to_fmap cmp r))’
+        by (rw [DISJOINT_UNION]
+            \\ rw [DISJOINT_DEF, EXTENSION]
+            \\ metis_tac [cmp_thms, key_set_cmp_thm, to_fmap_key_set])
+      \\ simp [CARD_DISJOINT_UNION]
+      \\ imp_res_tac structure_size_to_fmap
+      \\ fs [GSYM FCARD_DEF]
+      \\ metis_tac [link2_balanced_lem, ADD_ASSOC])
+    \\ to_fmap_tac)
+  \\ Cases_on ‘sizeR * delta < sizeL’ \\ gs []
+  >- (
+    gs [invariant_eq, link2_def, key_ordered_def]
+    \\ inv_mp_tac balanceR_thm
+    \\ simp [] \\ rw []
+    >- (
+      gs [key_ordered_to_fmap, to_fmap_def]
+      \\ rw [] \\ rw [key_set_cmp_thm]
+      \\ metis_tac [cmp_thms, key_set_cmp_thm, to_fmap_key_set])
+    \\ imp_res_tac size_thm
+    \\ gs [to_fmap_def]
+    \\ gs [key_ordered_to_fmap]
+    \\ simp [FCARD_DEF]
+    \\ ‘DISJOINT (FDOM (to_fmap cmp l))
+                 (key_set cmp ky INSERT FDOM (to_fmap cmp r) ∪
+                  FDOM (to_fmap cmp ry))’
+      by (rw [DISJOINT_UNION]
+          \\ rw [DISJOINT_DEF, EXTENSION]
+          \\ metis_tac [cmp_thms, key_set_cmp_thm, to_fmap_key_set])
+    \\ simp [CARD_DISJOINT_UNION, AC UNION_COMM UNION_ASSOC]
+    \\ imp_res_tac structure_size_to_fmap
+    \\ gs [GSYM FCARD_DEF, ADD1]
+    \\ metis_tac [link2_balanced_lem2, ADD_ASSOC])
+  \\ inv_mp_tac glue_thm \\ gs []
+  \\ simp [to_fmap_def, balanced_def, size_def, LESS_OR_EQ, MIN_DEF]
+  \\ gs [key_ordered_to_fmap, to_fmap_def]
+  \\ metis_tac [key_set_cmp2_thm, to_fmap_key_set, key_set_cmp_thm, cmp_thms]
 QED
 
 Triviality filter_lt_help_thm:
@@ -3974,5 +4098,86 @@ val exists_thm = Q.store_thm ("exists_thm",
  >- (EVERY_CASE_TAC >>
      fs [] >>
      metis_tac []));
+
+Theorem filterWithKey_thm:
+  ∀f t cmp.
+    good_cmp cmp ∧
+    invariant cmp t ∧
+    (∀k1 k2 x. cmp k1 k2 = Equal ⇒ f k1 x = f k2 x) ⇒
+      invariant cmp (filterWithKey f t) ∧
+      to_fmap cmp (filterWithKey f t) =
+      FDIFF (to_fmap cmp t)
+            {k |k,v| FLOOKUP (to_fmap cmp t) k = SOME v ∧ ¬f (CHOICE k) v}
+Proof
+  Induct_on ‘t’
+  \\ simp [to_fmap_def, filterWithKey_def]
+  \\ rpt gen_tac \\ strip_tac
+  \\ gs [invariant_eq]
+  \\ first_x_assum (drule_all_then strip_assume_tac)
+  \\ first_x_assum (drule_all_then strip_assume_tac)
+  \\ IF_CASES_TAC \\ gs []
+  >- (
+    qspecl_then [‘k’,‘v’,‘filterWithKey f t’,‘filterWithKey f t'’]
+      mp_tac link_thm
+    \\ impl_keep_tac \\ gs []
+    >- gs [key_ordered_to_fmap]
+    \\ strip_tac \\ gs []
+    \\ rw [FLOOKUP_EXT']
+    \\ simp [FLOOKUP_FDIFF, FLOOKUP_FUNION, FLOOKUP_UPDATE]
+    \\ IF_CASES_TAC \\ gs []
+    >- (
+      qpat_x_assum ‘key_set _ _ = _’ (assume_tac o SYM) \\ gvs []
+      \\ rw [IN_DEF, FORALL_PROD]
+      \\ ‘key_set cmp k ≠ {}’
+        by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+      \\ drule_then assume_tac CHOICE_DEF
+      \\ ‘f k v = f (CHOICE (key_set cmp k)) v’
+        suffices_by rw []
+      \\ first_x_assum irule
+      \\ gs [key_set_def])
+    \\ gs [IN_DEF, LAMBDA_PROD, EXISTS_PROD]
+    \\ IF_CASES_TAC \\ gs []
+    >- (
+      rw [IS_SOME_EXISTS] \\ gs [flookup_thm, DISJOINT_ALT])
+    \\ IF_CASES_TAC \\ gs []
+    >- (
+      CASE_TAC \\ gs [flookup_thm, DISJOINT_ALT])
+    \\ IF_CASES_TAC \\ gs []
+    \\ gs [CaseEq "option"])
+  \\ qspecl_then [‘filterWithKey f t’,‘filterWithKey f t'’]
+       mp_tac link2_thm
+  \\ impl_keep_tac \\ gs []
+  >- gs [key_ordered_to_fmap]
+  \\ strip_tac \\ gs []
+  \\ rw [FLOOKUP_EXT']
+  \\ simp [FLOOKUP_FDIFF, FLOOKUP_FUNION, FLOOKUP_UPDATE]
+  \\ IF_CASES_TAC \\ gs []
+  >- (
+    pop_assum mp_tac
+    \\ rw [IN_DEF, LAMBDA_PROD, EXISTS_PROD, IS_SOME_EXISTS]
+    \\ gs [flookup_thm, DISJOINT_ALT])
+  \\ IF_CASES_TAC \\ gs []
+  \\ ntac 2 (pop_assum mp_tac)
+  \\ rw [IN_DEF, LAMBDA_PROD, EXISTS_PROD, IS_SOME_EXISTS]
+  \\ gs [flookup_thm, DISJOINT_ALT]
+  \\ gs [CaseEqs ["option", "bool"], flookup_thm]
+  \\ CCONTR_TAC \\ gs []
+  \\ ‘key_set cmp k ≠ {}’
+    by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+  \\ drule_then assume_tac CHOICE_DEF
+  \\ fs [good_cmp_def, key_set_def]
+  \\ metis_tac []
+QED
+
+Theorem filter_thm:
+  ∀f t cmp.
+    good_cmp cmp ∧
+    invariant cmp t ⇒
+      invariant cmp (filter f t) ∧
+      to_fmap cmp (filter f t) =
+      FDIFF (to_fmap cmp t) {k |k,v| FLOOKUP (to_fmap cmp t) k = SOME v ∧ ¬f v}
+Proof
+  simp [filter_def, filterWithKey_thm]
+QED
 
 val _ = export_theory ();
