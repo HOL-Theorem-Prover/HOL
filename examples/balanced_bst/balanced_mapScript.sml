@@ -4169,6 +4169,26 @@ Proof
   \\ metis_tac []
 QED
 
+Theorem every_filter:
+  good_cmp cmp ∧
+  invariant cmp t ∧
+  (∀k1 k2 x. cmp k1 k2 = Equal ⇒ f k1 x = f k2 x) ⇒
+    every f (filterWithKey f t)
+Proof
+  strip_tac
+  \\ drule_all_then strip_assume_tac filterWithKey_thm
+  \\ gs [GSYM resp_equiv_def]
+  \\ drule_all_then strip_assume_tac every_thm \\ rw []
+  \\ drule_all_then assume_tac lookup_thm
+  \\ gs [FLOOKUP_FDIFF, IN_DEF, LAMBDA_PROD, EXISTS_PROD, resp_equiv_def]
+  \\ ‘key_set cmp k ≠ {}’
+    by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+  \\ drule_then assume_tac CHOICE_DEF
+  \\ ‘f k v = f (CHOICE (key_set cmp k)) v’
+    suffices_by rw []
+  \\ fs [key_set_def]
+QED
+
 Theorem filter_thm:
   ∀f t cmp.
     good_cmp cmp ∧
