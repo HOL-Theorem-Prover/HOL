@@ -212,6 +212,7 @@ local
      | "\"" => token_string "DoubleQuote"
      | "&" => "\\&"
      | "%" => "\\%"
+     | "#" => "\\#"
      | "$"  => "\\$"
      | "α" => greek "alpha"
      | "β" => greek "beta"
