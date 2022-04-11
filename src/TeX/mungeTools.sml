@@ -60,6 +60,7 @@ fun stringOpt pos tok =
   | "def" => SOME Def
   | "indrules" => SOME IndRules
   | "K" => SOME TermThm
+  | "m" => SOME (Mathmode "")
   | "merge" => SOME Merge
   | "nodefsym" => SOME NoDefSym
   | "nodollarparens" => SOME NoDollarParens
@@ -69,11 +70,10 @@ fun stringOpt pos tok =
   | "nostile" => SOME NoTurnstile
   | "of" => SOME TypeOf
   | "rule" => SOME Rule
+  | "showtypes" => SOME (ShowTypes 1)
   | "spaceddef" => SOME SpacedDef
   | "stackedrule" => SOME StackedRule
   | "tt" => SOME TT
-  | "showtypes" => SOME (ShowTypes 1)
-  | "m" => SOME (Mathmode "")
   | ">>" => SOME (Indent (2, true))
   | ">>~" => SOME (Indent (2, false))
   | _ => let val (pfx,sfx) = splitl (isNotChar #"/") ss in
@@ -511,6 +511,10 @@ in
                 block_list (block INCONSISTENT 0) pr newline lines
               )
             end
+          else if OptSet.has IndRules opts then
+            ind_bl (
+              block_list (block INCONSISTENT 0) (rule_print stdtermprint) add_newline
+                (map (concl o SPEC_ALL) (CONJUNCTS thm)))
           else if rulep then ind_bl (rule_print stdtermprint (concl thm))
           else let
               val base = raw_pp_theorem_as_tex overrides
