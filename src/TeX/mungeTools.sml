@@ -369,43 +369,19 @@ in
       ]
     end
 
-    fun clear_overloads slist f = let
-      val tyg = type_grammar()
-      val oldg = term_grammar()
-      val _ = List.app temp_clear_overloads_on slist
-      val _ = List.map hide slist
-      val newg = term_grammar()
+    fun modify_grammar unoverloads unabbrevs overloads abbrevs f = let
+      val oldtyg = type_grammar()
+      val oldtmg = term_grammar()
+      val _ = List.app temp_clear_overloads_on unoverloads
+      val _ = List.map hide unoverloads
+      val _ = List.app temp_disable_tyabbrev_printing unabbrevs
+      val _ = List.app temp_type_abbrev_pp abbrevs
+      val _ = List.app temp_overload_on overloads
+      val newtmg = term_grammar()
+      val newtyg = type_grammar()
     in
-      (fn x => (temp_set_grammars(tyg,newg);
-                f x before temp_set_grammars(tyg,oldg)))
-    end
-    fun clear_abbrevs slist f = let
-      val oldg = type_grammar()
-      val tmg = term_grammar()
-      val _ = List.app temp_disable_tyabbrev_printing slist
-      val newg = type_grammar()
-    in
-      (fn x => (temp_set_grammars(newg,tmg);
-                f x before temp_set_grammars(oldg,tmg)))
-    end
-
-    fun add_overloads slist f = let
-      val tyg = type_grammar()
-      val oldg = term_grammar()
-      val _ = List.app temp_overload_on slist
-      val newg = term_grammar()
-    in
-      (fn x => (temp_set_grammars(tyg,newg);
-                f x before temp_set_grammars(tyg,oldg)))
-    end
-    fun add_abbrevs slist f = let
-      val oldg = type_grammar()
-      val tmg = term_grammar()
-      val _ = List.app temp_type_abbrev_pp slist
-      val newg = type_grammar()
-    in
-      (fn x => (temp_set_grammars(newg,tmg);
-                f x before temp_set_grammars(oldg,tmg)))
+      (fn x => (temp_set_grammars(newtyg,newtmg);
+                f x before temp_set_grammars(oldtyg,oldtmg)))
     end
 
     fun optprintermod f =
@@ -425,18 +401,8 @@ in
           |> (if OptSet.has Merge opts then
                 trace ("pp_avoids_symbol_merges", 1)
               else (fn f => f))
-          |> (case optset_unoverloads opts of
-                  [] => (fn f => f)
-                | slist => clear_overloads slist)
-          |> (case optset_overloads opts of
-                  [] => (fn f => f)
-                | olist => add_overloads olist)
-          |> (case optset_unabbrevs opts of
-                  [] => (fn f => f)
-                | slist => clear_abbrevs slist)
-          |> (case optset_abbrevs opts of
-                  [] => (fn f => f)
-                | alist => add_abbrevs alist)
+          |> (modify_grammar (optset_unoverloads opts) (optset_unabbrevs opts)
+                             (optset_overloads opts) (optset_abbrevs opts))
           |> optset_traces opts
 
     val overrides = let
@@ -450,12 +416,8 @@ in
     fun stdtermprint t = optprintermod (raw_pp_term_as_tex overrides) t
 
     fun opttyprintermod f =
-      f |> (case optset_unabbrevs opts of
-                [] => (fn f => f)
-              | slist => clear_abbrevs slist)
-        |> (case optset_abbrevs opts of
-                [] => (fn f => f)
-              | alist => add_abbrevs alist)
+      f |> (modify_grammar (optset_unoverloads opts) (optset_unabbrevs opts)
+                           (optset_overloads opts) (optset_abbrevs opts))
 
     fun stdtypeprint t = opttyprintermod (raw_pp_type_as_tex overrides) t
 
