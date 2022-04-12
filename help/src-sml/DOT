@@ -79,13 +79,16 @@ fun pp_dot_file {size,ranksep,nodesep} (dom,pairs) =
      block CONSISTENT 5 [
        add_string "digraph G {",
        add_break (1,0),
+       (* "orthogonal edge routing" is available in Graphviz versions from September 28, 2010 and newer. *)
+       add_string "splines = ortho", add_break(1,0),
        add_string "bgcolor = transparent", add_break(1,0),
        add_string "ratio = compress", add_break(1,0),
        add_string "size = ",    add_string (quote size), add_break(1,0),
        add_string "ranksep = ", add_string ranksep,      add_break(1,0),
        add_string "nodesep = ", add_string nodesep,      add_break(1,0),
-       add_string "node [target=_parent style=filled fillcolor=white fontcolor=darkgreen fontsize=30 fontname=Arial]",
+       add_string "node [target=_parent shape=box3d margin=0.2 style=filled fillcolor=white fontcolor=darkgreen fontsize=30 fontname=Arial]",
        add_break(1,0),
+       add_string "edge [arrowhead=dot]", add_break(1,0),
        add_newline,
        block CONSISTENT 0 (pr_list pp_thy [add_newline] dom),
        add_newline, add_newline,
@@ -100,7 +103,7 @@ fun gen_dotfile file node_info =
      val ostrm = openOut file
  in
    PP.prettyPrint(curry output ostrm, 75)
-                 (pp_dot_file {size="16,16",ranksep="1.0",nodesep="0.30"}
+                 (pp_dot_file {size="16,16",ranksep="1.2",nodesep="0.40"}
                               node_info);
    closeOut ostrm
  end;
