@@ -12,6 +12,8 @@ open pairTheory;
 
 val _ = new_theory "prop2_29";
 
+val _ = temp_delsimps ["satis_def"]
+
 val (IBC_rules, IBC_ind, IBC_cases) = Hol_reln`
 (!f1 f2 s.
 IBC f1 s /\ IBC f2 s ==> IBC (DISJ f1 f2) s) /\

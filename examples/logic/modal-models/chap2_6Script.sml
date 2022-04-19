@@ -25,6 +25,7 @@ open pairTheory;
 
 
 val _ = new_theory "chap2_6";
+val _ = temp_delsimps ["satis_def"]
 
 val L1tau_def = Define`
 L1tau phi <=> form_functions phi = {} /\
@@ -444,7 +445,7 @@ QED
 
 
 Theorem thm_2_74_half2:
-  !(M: α chap1$model) N w v. (w IN M.frame.world /\ v IN N.frame.world /\
+  !(M: α modalBasics$model) N w v. (w IN M.frame.world /\ v IN N.frame.world /\
             (!phi. satis M w phi <=> satis N v phi)) ==>
              ?U (I:num -> bool). ultrafilter U I /\
                bisim_world (ultraproduct_model U I (\i. M)) (ultraproduct_model U I (\i. N))
@@ -1131,7 +1132,7 @@ QED
 val invar4bisim_def = Define`
   invar4bisim x (t1: μ itself) (t2: ν itself) phi <=>
      (FV phi ⊆ {x} /\ L1tau phi /\
-     !(M:μ chap1$model) (N:ν chap1$model) v w.
+     !(M:μ modalBasics$model) (N:ν modalBasics$model) v w.
         bisim_world M N (w:μ) (v:ν) ==>
            (!(σm: num -> μ) (σn: num -> ν).
              (valuation (mm2folm M) σm /\ valuation (mm2folm N) σn) ==>
@@ -1778,7 +1779,7 @@ Theorem thm_2_68_half1':
 ∀a x.
             (INFINITE 𝕌(:α) /\
             invar4bisim x (:(num -> α) -> bool) (:(num -> α) -> bool) a) ⇒
-            ∃(phi:chap1$form). feq (:α) a (ST x phi)
+            ∃(phi:modalBasics$form). feq (:α) a (ST x phi)
 
 Proof
 rw[] >> drule thm_2_68_half1 >>  rw[feq_def] >> metis_tac[]

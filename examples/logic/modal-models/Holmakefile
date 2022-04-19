@@ -1,1 +1,1 @@
-INCLUDES = $(HOLDIR)/examples/logic/folcompactness
+INCLUDES = ../folcompactness ../modal-tableaux

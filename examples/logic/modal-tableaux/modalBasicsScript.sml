@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib;
 val _ = new_theory "modalBasics";
 
 Datatype:
-  form = DIAM form | VAR num | NOT form | DISJ form form | FALSE
+  form = VAR num | DISJ form form | FALSE | NOT form | DIAM form
 End
 
 Datatype:

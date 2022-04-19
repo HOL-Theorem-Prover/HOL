@@ -1,18 +1,12 @@
 open HolKernel Parse boolLib bossLib;
 open nlistTheory listTheory;
 open pred_setTheory;
+open modalBasicsTheory;
 
 val _ = new_theory "chap1";
 
 (* Def 1.9 *)
 (* definition of formula; define the box as the dual of diamond *)
-val _ = Datatype`
-  form
-  = VAR num
-  | DISJ form form
-  | FALSE
-  | NOT form
-  | DIAM form`;
 
 val BOX_def =
   Define
@@ -67,42 +61,11 @@ val subst_box = store_thm(
     rw[BOX_def]);
 
 
+Theorem satis_in_world = satis_only_in_worlds
+Theorem satis_def = satis_def
+val _ = temp_delsimps ["satis_def"]
 
-(* Def 1.19 *)
-(* definition of frame: is a pair (W,R) *)
-val _ = Hol_datatype`
-  frame = <| world: 'a set;
-             rel: 'a -> 'a -> bool;
-            |>`;
-
-
-(* prereq of Def 1.20 *)
-(* definition of model *)
-val _ = Hol_datatype`
-  model = <| frame: 'b frame;
-              valt: num -> 'b -> bool;
-            |>`;
-
-
-
-
-(* Def 1.20 *)
-(* definition of satisfy *)
-val satis_def =
-  Define
-  `(satis M w (VAR p) <=> w IN M.frame.world /\ w IN M.valt p)
-  /\ (satis M w FALSE <=> F)
-  /\ (satis M w (NOT form) <=> w IN M.frame.world /\ ¬ satis M w form)
-  /\ (satis M w (DISJ form1 form2) <=> satis M w form1 \/ satis M w form2)
-  /\ (satis M w (DIAM form) <=> w IN M.frame.world /\ ?v. M.frame.rel w v /\ v IN M.frame.world /\ satis M v form)`;
-
-
-val satis_in_world = store_thm(
-"satis_in_world",
-``!M w f. satis M w f ==> w IN M.frame.world``,
-Induct_on `f` >> metis_tac[satis_def]);
-
-
+Theorem frame_component_equality = frame_component_equality
 
 val satis_AND = store_thm(
 "satis_AND",
@@ -621,8 +584,7 @@ Theorem exercise_1_3_1:
    (!p. p IN (prop_letters phi) ==> M1.valt p = M2.valt p) ==>
    (!w. w IN M1.frame.world ==> (satis M1 w phi <=> satis M2 w phi))
 Proof
-Induct_on `phi` >> rw[satis_def] (* 4 *)
->- fs[prop_letters_def] >>
+Induct_on `phi` >> rw[satis_def] (* 4 *) >>
 fs[prop_letters_def] >> metis_tac[]
 QED
 

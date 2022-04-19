@@ -18,7 +18,7 @@ open ultraproductTheory;
 open ultrafilterTheory;
 
 val _ = new_theory "lemma2_73";
-
+val _ = temp_delsimps ["satis_def"]
 
 Theorem countable_INFINITE_form_set:
 !s: folLang$form -> bool.

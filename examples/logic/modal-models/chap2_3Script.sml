@@ -14,6 +14,7 @@ open listTheory pairTheory;
 
 val _ = new_theory "chap2_3";
 
+val _ = temp_delsimps ["satis_def"]
 val irule = fn th => irule th >> rpt conj_tac
 
 (* finite model property via selection *)
@@ -75,9 +76,11 @@ rpt strip_tac >>
 rw[nbisim_def]
 >- (`m + 1 <= n + 1` by simp[] >> metis_tac[nbisim_def])
 >- (`n + 1 <= n + 1` by simp[] >> metis_tac[nbisim_def])
->- metis_tac[nbisim_def]
+>- fs[nbisim_def]
 >- (`i + 1 <= n + 1` by simp[] >> fs[nbisim_def] >> metis_tac[])
->- (`i + 1 <= n + 1` by simp[] >> fs[nbisim_def] >> metis_tac[nbisim_def]));
+>- (`i + 1 <= n + 1` by simp[] >> fs[nbisim_def] >>
+   first_x_assum irule >- rw[] >- rw[] >- rw[] >>
+   qexists_tac ‘v'’ >> rw[]));
 
 val suc_nbisim_rel = store_thm(
 "suc_nbisim_rel",
@@ -121,7 +124,7 @@ rpt strip_tac >> Induct_on `n` >> rpt strip_tac
 
 val prop_2_31_half1 = store_thm(
 "prop_2_31_half1",
-``!M M' n w w'. (?f. nbisim M M' f n w w') ==> (!(phi:form). DEG phi <= n ==> (satis M w phi <=> satis M' w' phi))``,
+``!M M' n w w'. (?f. nbisim M M' f n w w') ==> (!phi. DEG phi <= n ==> (satis M w phi <=> satis M' w' phi))``,
 gen_tac >> gen_tac >> gen_tac >> Induct_on `n`
 >- (rpt strip_tac >>
     `DEG phi = 0` by simp[] >>
@@ -152,7 +155,7 @@ gen_tac >> gen_tac >> gen_tac >> Induct_on `n`
 
 
 val (heightLE_rules, heightLE_ind, heightLE_cases) = Hol_reln`
-  (!n. heightLE (M:'b model) x (M':'b model) x n) /\
+  (!n. heightLE (M:'b modalBasics$model) x (M':'b modalBasics$model) x n) /\
   (!v. v IN M.frame.world /\ (?w. w IN M.frame.world /\ M.frame.rel w v /\ heightLE M x M' w n) ==>
        heightLE M x M' v (n + 1))
 `;
@@ -161,7 +164,7 @@ val (heightLE_rules, heightLE_ind, heightLE_cases) = Hol_reln`
 val height_def = Define`height M x M' w = MIN_SET {n | heightLE M x M' w n}`;
 
 val model_height_def = Define`
-model_height (M:'b model) x (M':'b model) = MAX_SET {n | ?w. w IN M.frame.world /\ height M x M' w = n}`;
+model_height (M:'b modalBasics$model) x (M':'b modalBasics$model) = MAX_SET {n | ?w. w IN M.frame.world /\ height M x M' w = n}`;
 
 
 val hrestriction_def = Define`
@@ -480,7 +483,7 @@ val _ = overload_on ("part_equiv", ``\s tyi. partition (equiv0 tyi) s``);
 
 
 Theorem thm_2_34:
-!M1 w1:'b phi: chap1$form.
+!M1 w1:'b phi: modalBasics$form.
      satis M1 w1 phi ==>
          ?FM v:'b list. FINITE (FM.frame.world) /\
                         v IN FM.frame.world /\

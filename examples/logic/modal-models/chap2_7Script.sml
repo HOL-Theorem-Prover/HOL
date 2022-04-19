@@ -25,7 +25,7 @@ open folModelsTheory;
 open folCanonTheory;
 
 val _ = new_theory "chap2_7";
-
+val _ = temp_delsimps ["satis_def"]
 
 val sim_def = Define`
   sim Z M M' <=>
@@ -121,7 +121,7 @@ QED
 
 Theorem modal_compactness_thm:
 INFINITE (univ (:α)) ==>
-!s:chap1$form -> bool.
+!s:modalBasics$form -> bool.
   (!ss. FINITE ss /\ ss ⊆ s ==>
       ?M w:α. w IN M.frame.world /\ (!f. f IN ss ==> satis M w f)) ==>
   ?M w:α. w IN M.frame.world /\ (!f. f IN s ==> satis M w f)
@@ -132,7 +132,7 @@ qabbrev_tac `A = {ST x f | f IN s}` >>
      ?M:α folModels$model σ. valuation M σ /\
                    (!ff. ff IN ss ==> feval M σ ff)`
   by (rw[] >>
-      drule (FINITE_SUBSET_IMAGE_lemma |> INST_TYPE [alpha |-> ``:chap1$form``])>>
+      drule (FINITE_SUBSET_IMAGE_lemma |> INST_TYPE [alpha |-> ``:modalBasics$form``])>>
       strip_tac >>
       first_x_assum (qspecl_then [`s`, `ST x`] assume_tac) >>
       `A = IMAGE (ST x) s`
@@ -160,7 +160,7 @@ Theorem modal_compactness_corollary:
 INFINITE (univ (:α)) ==>
 !s a.
   (!M w:α. w IN M.frame.world ==>
-      (!f:chap1$form. f IN s ==> satis M w f) ==> satis M w a) ==>
+      (!f:modalBasics$form. f IN s ==> satis M w f) ==> satis M w a) ==>
    ?ss. FINITE ss /\ ss ⊆ s /\
         (!M w:α. w IN M.frame.world ==>
            (!f. f IN ss ==> satis M w f) ==> satis M w a)
@@ -280,7 +280,7 @@ QED
 
 Theorem thm_2_78_half2:
 INFINITE (univ (:β)) ==>
- !phi:chap1$form.
+ !phi:modalBasics$form.
    preserved_under_sim (:(β -> bool) -> bool) (:(β -> bool) -> bool) phi ==>
      (?phi0. equiv0 (:β) phi phi0 /\ PE phi0)
 Proof

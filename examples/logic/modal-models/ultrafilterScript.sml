@@ -175,7 +175,7 @@ rw[SET_EQ_SUBSET]
    `X ∩ (W' DIFF X) = {}` by (fs[INTER_DEF,DIFF_DEF] >> simp[EXTENSION] >> metis_tac[]) >> metis_tac[filter_def]));
 
 val FIP_def = Define`
-!W S. FIP S W = (S SUBSET (POW W) /\
+FIP S W = (S SUBSET (POW W) /\
 (!S'. (S' SUBSET S /\ FINITE S' /\ S' <> {}) ==> BIGINTER S' <> {}))`;
 
 

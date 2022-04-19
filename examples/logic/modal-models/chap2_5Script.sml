@@ -13,6 +13,7 @@ open ultrafilterTheory;
 
 val _ = new_theory "chap2_5";
 
+val _ = temp_delsimps ["satis_def"]
 
 
 val BIGCONJ_EXISTS_DIST_TYPE = store_thm(

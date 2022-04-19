@@ -13,6 +13,7 @@ open folLangTheory;
 
 
 val _ = new_theory "chap2_4";
+val _ = temp_delsimps ["satis_def"]
 
 val mm2folm_def = Define`
   mm2folm M = <| Dom := M.frame.world ;

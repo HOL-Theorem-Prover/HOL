@@ -16,6 +16,8 @@ open chap2_4Theory;
 open equiv_on_partitionTheory;
 val _ = new_theory "ultraproduct";
 
+val _ = temp_delsimps ["satis_def"]    
+
 val Cart_prod_def = Define`
   Cart_prod I A = {f | !i. i IN I ==> f i IN A i}`;
 

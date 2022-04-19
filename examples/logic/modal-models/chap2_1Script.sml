@@ -53,7 +53,7 @@ M_union M1 M2 = DU ((λn. if n = 0 then M1 else M2), {x | x = 0 \/ x = 1})`;
 
 
 val SUBMODEL_def = Define`
-!M1 M2. SUBMODEL M1 M2 <=> (M1.frame.world) ⊆ (M2.frame.world) /\
+SUBMODEL M1 M2 <=> (M1.frame.world) ⊆ (M2.frame.world) /\
                          (!w1. w1 IN M1.frame.world ==>
                          (!v. M1.valt v w1 <=> M2.valt v w1) /\
                          (!w2. w2 IN M1.frame.world ==> (M1.frame.rel w1 w2 <=> M2.frame.rel w1 w2)))`;
@@ -61,7 +61,7 @@ val SUBMODEL_def = Define`
 
 
 val GENSUBMODEL_def = Define`
-!M1 M2. GENSUBMODEL M1 M2 <=> SUBMODEL M1 M2 /\
+GENSUBMODEL M1 M2 <=> SUBMODEL M1 M2 /\
                      (!w1. w1 IN M1.frame.world ==>
                      (!w2. w2 IN M2.frame.world /\ M2.frame.rel w1 w2 ==> w2 IN M1.frame.world))`;
 
@@ -135,12 +135,12 @@ iso f M1 M2 <=> (strong_hom f M1 M2 /\ BIJ f M1.frame.world M2.frame.world)`;
 
 
 val tau_theory_def = Define`
-!M w. tau_theory M w  = {form | satis M w form}`;
+tau_theory M w  = {form | satis M w form}`;
 
 
 
 val modal_eq_def = Define`
-!M M' w w'. modal_eq M M' w w'<=> (tau_theory M w = tau_theory M' w')`;
+ modal_eq M M' w w'<=> (tau_theory M w = tau_theory M' w')`;
 
 val modal_eq_tau = store_thm(
 "modal_eq_tau",
@@ -150,12 +150,12 @@ rw[EQ_IMP_THM] >> fs[modal_eq_def,tau_theory_def,EXTENSION]
 >- rw[EQ_IMP_THM])
 
 val tau_theory_model_def = Define`
-!M. tau_theory_model M = {form | !w. w IN M.frame.world ==> satis M w form}`;
+tau_theory_model M = {form | !w. w IN M.frame.world ==> satis M w form}`;
 
 
 
 val modal_eq_model_def = Define`
-!M M'. modal_eq_model M M' <=> (tau_theory_model M = tau_theory_model M')`;
+modal_eq_model M M' <=> (tau_theory_model M = tau_theory_model M')`;
 
 
 
@@ -211,7 +211,7 @@ fs[modal_eq_model_def,iso_def,tau_theory_model_def]
 
 
 val bounded_mor_def = Define`
-!M M' f. bounded_mor f M M' <=> (!w. w IN M.frame.world ==>
+ bounded_mor f M M' <=> (!w. w IN M.frame.world ==>
 ((f w) IN M'.frame.world) /\
 (!a. (satis M w (VAR a) <=> satis M' (f w) (VAR a))) /\
 (!v. v IN M.frame.world /\ M.frame.rel w v ==> M'.frame.rel (f w) (f v)) /\
@@ -220,7 +220,7 @@ val bounded_mor_def = Define`
 
 
 val bounded_mor_image_def = Define`
-!f M M. bounded_mor_image f M M' = (bounded_mor f M M' /\ (SURJ f M.frame.world M'.frame.world))`;
+bounded_mor_image f M M' = (bounded_mor f M M' /\ (SURJ f M.frame.world M'.frame.world))`;
 
 
 
@@ -378,7 +378,7 @@ Cases_on `t0 = t1` >-
 
 
 val rooted_model_def = Define`
-!M x M'. rooted_model M x M' <=> x IN M'.frame.world /\
+rooted_model M x M' <=> x IN M'.frame.world /\
                                  (!a. a IN M.frame.world <=> (a IN M'.frame.world /\ (RTC (RESTRICT M'.frame.rel M'.frame.world)) x a)) /\
                                  (!n1 n2. n1 IN M.frame.world /\ n2 IN M.frame.world ==>
                                    (M.frame.rel n1 n2 <=> (RESTRICT M'.frame.rel M'.frame.world) n1 n2)) /\
@@ -387,7 +387,7 @@ val rooted_model_def = Define`
 
 
 val tree_like_model_def = Define`
-!M. tree_like_model M <=> ?x. tree M.frame x`;
+tree_like_model M <=> ?x. tree M.frame x`;
 
 
 
