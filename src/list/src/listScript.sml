@@ -799,8 +799,10 @@ Theorem LENGTH_EQ_NUM:
      LENGTH l = SUC n <=> ?h l'. LENGTH l' = n /\ l = h::l') /\
   (!l:'a list n1 n2.
      LENGTH l = n1+n2 <=>
-     ?l1 l2. LENGTH l1 = n1 /\ LENGTH l2 = n2 /\ l = l1++l2)”,
-  SIMP_TAC arith_ss [LENGTH_NIL, LENGTH_CONS, LENGTH_EQ_SUM]);
+     ?l1 l2. LENGTH l1 = n1 /\ LENGTH l2 = n2 /\ l = l1++l2)
+Proof
+  SIMP_TAC arith_ss [LENGTH_NIL, LENGTH_CONS, LENGTH_EQ_SUM]
+QED
 
 val LENGTH_EQ_NUM_compute = save_thm ("LENGTH_EQ_NUM_compute",
    CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV LENGTH_EQ_NUM);
@@ -4517,7 +4519,7 @@ val _ = export_rewrites
            "ZIP", "UNZIP", "ZIP_UNZIP", "UNZIP_ZIP",
            "LENGTH_ZIP", "LENGTH_UNZIP",
            "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
-           "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
+           "NOT_EVERY", "NOT_EXISTS",
            "FOLDL", "FOLDR", "LENGTH_LUPDATE",
            "LUPDATE_LENGTH"];
 
