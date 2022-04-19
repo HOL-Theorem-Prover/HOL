@@ -29,6 +29,6 @@ val it =
 }
 
 \SEEALSO
-Tactical.FIRST_LT, Tactical.THEN_LT, Tactical.HEADGOAL.
+Tactical.SELECT_LT_THEN, Tactical.FIRST_LT, Tactical.THEN_LT, Tactical.HEADGOAL.
 
 \ENDDOC

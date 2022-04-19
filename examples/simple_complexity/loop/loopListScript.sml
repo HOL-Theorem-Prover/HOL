@@ -1802,10 +1802,12 @@ Have to develop another little theory.
 *)
 
 (* Given a list ls, generate a diminishing list of ls, down to before []. *)
-val diminishing_def = tDefine "diminishing" `
+Definition diminishing_def:
   diminishing ls =
   if ls = [] then [] else ls::diminishing (TL ls)
-`(WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]);
+Termination
+  WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]
+End
 
 (*
 EVAL ``diminishing [4;5;3;2;1]``; = [[4; 5; 3; 2; 1]; [5; 3; 2; 1]; [3; 2; 1]; [2; 1]; [1]]: thm

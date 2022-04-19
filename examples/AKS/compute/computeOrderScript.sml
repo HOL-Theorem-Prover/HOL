@@ -210,11 +210,13 @@ val ordz_seek_def = tDefine "ordz_seek" `
 `(WF_REL_TAC `measure (\(m,n,c,j). c - j)`);
 *)
 (* Use of c <= j to simplify the checks for a total function. *)
-val ordz_seek_def = tDefine "ordz_seek" `
+Definition ordz_seek_def:
   ordz_seek m n c j =
   if c <= j then 0
   else if (n ** j) MOD m = 1 then j else ordz_seek m n c (SUC j)
-`(WF_REL_TAC `measure (\(m,n,c,j). c - j)`);
+Termination
+  WF_REL_TAC `measure (λ(m,n,c,j). c - j)`
+End
 (* Skip m = 0 as this is not critical to termination, and caller will pass m <> 0. *)
 
 (*
@@ -761,13 +763,14 @@ Step 2: Just search from j = 1 to (phi m),
 (* Question: How to show the number of steps is bounded? *)
 
 (* Formulate a recursive search for the least index, not using WHILE loop. *)
-val order_search_def = tDefine "order_search" `
+Definition order_search_def:
   order_search m n c k =
   (* search is from k to maximum c *)
   if c <= k then k (* when k reaches c, k = c, must divide c, and exp_mod_compute n c m = 1 always. *)
   else if exp_mod_compute n k m = 1 then k (* that is, found k such that (n ** k) MOD m = 1 *)
   else order_search m n c (k + 1) (* current k is not suitable, try k + 1 instead. *)
-` (WF_REL_TAC `measure (\(m,n,c,k). c - k)`);
+Termination WF_REL_TAC `measure (λ(m,n,c,k). c - k)`
+End
 (*
 val order_search_def = |- !n m k c. order_search m n c k =
      if c <= k then k
@@ -1131,13 +1134,15 @@ Step 2: By Euler-Fermat theorem, ordz m n = ordz m (n MOD m) is a divisor of (ph
 (* Question: How to show the number of steps is bounded? *)
 
 (* Formulate a recursive search for the least index, not using WHILE loop. *)
-val ordz_search_def = tDefine "ordz_search" `
+Definition ordz_search_def:
   ordz_search m n c k =
   (* search is from k to maximum c *)
   if c <= k then k (* when k reaches c, k = c, must divide c, and exp_mod_compute n c m = 1 always. *)
   else if k divides c /\ (exp_mod_compute n k m = 1) then k (* that is, found k such that (n ** k) MOD m = 1 *)
   else ordz_search m n c (k + 1) (* current k is not suitable, try k + 1 instead. *)
-` (WF_REL_TAC `measure (\(m,n,c,k). c - k)`);
+Termination
+  WF_REL_TAC `measure (λ(m,n,c,k). c - k)`
+End
 (*
 val ordz_search_def = |- !n m k c. ordz_search m n c k =
      if c <= k then k

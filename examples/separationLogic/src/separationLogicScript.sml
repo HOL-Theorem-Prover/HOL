@@ -4888,8 +4888,8 @@ METIS_TAC[SUBSET_DEF, COMM_DEF]);
 
 
 
-val ASL_TRACE_ZIP_def = tDefine "ASL_TRACE_ZIP"
-   `(ASL_TRACE_ZIP [] t = {t}) /\
+Definition ASL_TRACE_ZIP_def:
+   (ASL_TRACE_ZIP [] t = {t}) /\
    (ASL_TRACE_ZIP t [] = {t}) /\
    (ASL_TRACE_ZIP (aa1::t1) (aa2::t2) =
       (let z1 = IMAGE (\x. aa1::x) (ASL_TRACE_ZIP t1 (aa2::t2)) in
@@ -4898,10 +4898,11 @@ val ASL_TRACE_ZIP_def = tDefine "ASL_TRACE_ZIP"
        if (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION aa1 /\
            ASL_IS_PRIM_COMMAND_ATOMIC_ACTION aa2) then
       IMAGE (\x. (asl_aa_check (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION aa1) (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION aa2))::x) z3 else
-      z3))`
-
-   (WF_REL_TAC `measure (\(l1, l2). LENGTH l1 + LENGTH l2)` THEN
-   SIMP_TAC list_ss [])
+      z3))
+Termination
+   WF_REL_TAC `measure (λ(l1, l2). LENGTH l1 + LENGTH l2)` THEN
+   SIMP_TAC list_ss []
+End
 
 
 val ASL_TRACE_ZIP_PRIME_def = Define
@@ -5764,8 +5765,7 @@ val _ = export_rewrites ["asl_comments_TF_ELIM"]
 (* Program traces                       *)
 (* ------------------------------------ *)
 
-val ASL_PROTO_TRACES_EVAL_PROC_def_term_frag =
-`
+Definition ASL_PROTO_TRACES_EVAL_PROC_def:
    (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_prim_command pc) = {[asl_aa_pc pc]}) /\
    (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_seq p1 p2) =
       {t1 ++ t2 | t1 IN ASL_PROTO_TRACES_EVAL_PROC n penv p1 /\ t2 IN ASL_PROTO_TRACES_EVAL_PROC n penv p2}) /\
@@ -5784,30 +5784,18 @@ val ASL_PROTO_TRACES_EVAL_PROC_def_term_frag =
 
    (ASL_PROTO_TRACES_EVAL_PROC (SUC n) penv (asl_pt_procedure_call name arg) =
     if ~(name IN (FDOM penv)) then {[asl_aa_fail]} else (
-    BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL_PROC n penv) ((penv ' name) arg))))`;
-
-
-
-(*
-val ASL_PROTO_TRACES_EVAL_PROC_defn = Defn.Hol_defn "ASL_PROTO_TRACES_EVAL_PROC" ASL_PROTO_TRACES_EVAL_PROC_def_term_frag;
-
-Defn.tgoal ASL_PROTO_TRACES_EVAL_PROC_defn
-*)
-
-
-
-val ASL_PROTO_TRACES_EVAL_PROC_def = tDefine "ASL_PROTO_TRACES_EVAL_PROC"
-ASL_PROTO_TRACES_EVAL_PROC_def_term_frag
-
-(Q.EXISTS_TAC `(measure (\n. n))  LEX
-     (measure (\(X, p). asl_proto_trace_size (K 0) (K 0) (K 0) (K 0) p))` THEN
+    BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL_PROC n penv) ((penv ' name) arg))))
+Termination
+ Q.EXISTS_TAC `(measure (\n. n))  LEX
+     (measure (λ(X, p). asl_proto_trace_size (K 0) (K 0) (K 0) (K 0) p))` THEN
 CONJ_TAC THENL [
    MATCH_MP_TAC pairTheory.WF_LEX THEN
    REWRITE_TAC[prim_recTheory.WF_measure],
 
    SIMP_TAC arith_ss [pairTheory.LEX_DEF_THM, prim_recTheory.measure_thm,
       asl_proto_trace_size_def]
-]);
+]
+End
 
 
 val ASL_PROTO_TRACES_EVAL_def = Define `

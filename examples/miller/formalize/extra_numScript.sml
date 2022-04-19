@@ -192,17 +192,12 @@ val MOD_EXP = store_thm
       [EXP, GSYM (Q.SPECL [`n`, `a MOD n`, `(a MOD n) EXP b`] MOD_MULT2)]
    >> RW_TAC std_ss [MOD_MULT1, MOD_MULT2]);
 
-val DIV_TWO_UNIQUE = store_thm
-  ("DIV_TWO_UNIQUE",
-   ``!n q r. (n = 2 * q + r) /\ ((r = 0) \/ (r = 1))
-             ==> (q = n DIV 2) /\ (r = n MOD 2)``,
-   NTAC 3 STRIP_TAC
-   >> MP_TAC (Q.SPECL [`2`, `n`, `q`] DIV_UNIQUE)
-   >> MP_TAC (Q.SPECL [`2`, `n`, `r`] MOD_UNIQUE)
-   >> Know `((r = 0) \/ (r = 1)) <=> r < 2` >- DECIDE_TAC
-   >> DISCH_THEN (fn th => REWRITE_TAC [th])
-   >> RW_TAC std_ss []
-   >> PROVE_TAC [MULT_COMM]);
+Theorem DIV_TWO_UNIQUE:
+  !n q r. n = 2 * q + r /\ (r = 0 \/ r = 1) ==>
+          q = n DIV 2 /\ r = n MOD 2
+Proof
+  simp[DISJ_IMP_THM]
+QED
 
 val DIVISION_TWO = store_thm
   ("DIVISION_TWO",
@@ -266,14 +261,11 @@ val DIV_TWO_MONO_EVEN = store_thm
    >> Know `(m MOD 2 = 0) \/ (m MOD 2 = 1)` >- PROVE_TAC [MOD_TWO]
    >> DECIDE_TAC);
 
-val DIV_TWO_CANCEL = store_thm
-  ("DIV_TWO_CANCEL",
-   ``!n. (2 * n DIV 2 = n) /\ (SUC (2 * n) DIV 2 = n)``,
-   RW_TAC std_ss [] >|
-   [MP_TAC (Q.SPEC `2 * n` DIV_TWO)
-    >> RW_TAC arith_ss [MOD_TWO, EVEN_DOUBLE],
-    MP_TAC (Q.SPEC `SUC (2 * n)` DIV_TWO)
-    >> RW_TAC arith_ss [MOD_TWO, ODD_DOUBLE]]);
+Theorem DIV_TWO_CANCEL:
+  !n. (2 * n DIV 2 = n) /\ (SUC (2 * n) DIV 2 = n)
+Proof
+  RW_TAC std_ss [ADD1]
+QED
 
 val EXP_DIV_TWO = store_thm
   ("EXP_DIV_TWO",
@@ -392,19 +384,12 @@ val MIN_SUBTYPE = store_thm
    RW_TAC arith_ss [IN_FUNSET, min_def]
    >> PROVE_TAC []);
 
-val EXP_SUBTYPE = store_thm
-  ("EXP_SUBTYPE",
-   ``$EXP IN ((gtnum 0 -> UNIV -> gtnum 0) INTER
-              (gtnum 1 -> gtnum 0 -> gtnum 1))``,
-   RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_UNIV, IN_GTNUM]
-   >> Cases_on `x` >- DECIDE_TAC
-    >> Cases_on `n` >- DECIDE_TAC
-    >> Cases_on `x'` >- DECIDE_TAC
-    >> KILL_TAC
-    >> Induct_on `n` >- RW_TAC arith_ss [EXP]
-    >> ONCE_REWRITE_TAC [EXP]
-    >> MATCH_MP_TAC LESS_1_MULT2
-    >> RW_TAC arith_ss []);
+Theorem EXP_SUBTYPE:
+  $EXP IN ((gtnum 0 -> UNIV -> gtnum 0) INTER
+           (gtnum 1 -> gtnum 0 -> gtnum 1))
+Proof
+  RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_UNIV, IN_GTNUM]
+QED
 
 val FUNPOW_SUBTYPE = store_thm
   ("FUNPOW_SUBTYPE",

@@ -16,6 +16,8 @@ open arithmeticTheory stringTheory
 
 val _ = new_theory "tamarack";
 
+val _ = loose_equality()
+
 val _ = type_abbrev ("time",``:num``);
 val _ = type_abbrev ("wire",``:time->bool``);
 val _ = type_abbrev ("bus",``:time->num``);

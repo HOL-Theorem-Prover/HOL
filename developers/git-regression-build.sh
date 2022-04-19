@@ -137,7 +137,7 @@ maybeBuild ()
     (touch build-running &&
      $ML < tools/smart-configure.sml 2>&1 &&
      bin/build cleanAll 2>&1 &&
-     bin/build $kernel "$@" 2>&1 ;
+     timeout 4h bin/build $kernel "$@" 2>&1 ;
      /bin/rm build-running) | tee build-log
 }
 

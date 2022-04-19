@@ -1,9 +1,3 @@
-structure chap2Script =
-struct
-(* This structure bracketting is necessary for Moscow ML because of rebinding of
-   structure Q below
-*)
-
 open HolKernel Parse boolLib
 
 open bossLib binderLib
@@ -635,4 +629,3 @@ val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
 
 val _ = export_theory()
-end; (* struct *)

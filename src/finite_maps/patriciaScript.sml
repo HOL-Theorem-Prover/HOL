@@ -30,16 +30,18 @@ val _ = Datatype `ptree = Empty | Leaf num 'a | Branch num num ptree ptree`;
 
 val _ = computeLib.auto_import_definitions := false;
 
-val BRANCHING_BIT_def = tDefine "BRANCHING_BIT"
-  `BRANCHING_BIT p0 p1 =
+Definition BRANCHING_BIT_def:
+  BRANCHING_BIT p0 p1 =
     if (ODD p0 = EVEN p1) \/ (p0 = p1) then 0
-    else SUC (BRANCHING_BIT (DIV2 p0) (DIV2 p1))`
- (WF_REL_TAC `measure (\(x,y). x + y)` \\ SRW_TAC [ARITH_ss] [DIV2_def]
+    else SUC (BRANCHING_BIT (DIV2 p0) (DIV2 p1))
+Termination
+ WF_REL_TAC `measure (\(x,y). x + y)` \\ SRW_TAC [ARITH_ss] [DIV2_def]
     \\ Cases_on `ODD p0` \\ FULL_SIMP_TAC bool_ss []
     \\ FULL_SIMP_TAC bool_ss [GSYM ODD_EVEN, GSYM EVEN_ODD]
     \\ IMP_RES_TAC EVEN_ODD_EXISTS
     \\ SRW_TAC [ARITH_ss] [ADD1,
-         ONCE_REWRITE_RULE [MULT_COMM] (CONJ ADD_DIV_ADD_DIV MULT_DIV)]);
+         ONCE_REWRITE_RULE [MULT_COMM] (CONJ ADD_DIV_ADD_DIV MULT_DIV)]
+End
 
 val PEEK_def = Define`
   (PEEK Empty k = NONE) /\

@@ -1,5 +1,5 @@
 name: hol-integer
-version: 1.1
+version: 1.2
 description: HOL integer theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
@@ -11,11 +11,11 @@ requires: hol-ring
 requires: hol-quotient
 show: "HOL4"
 show: "Data.Bool"
-show: "Data.List"
 show: "Data.Pair"
+show: "Data.List"
 show: "Function"
-show: "Number.Natural"
 show: "Relation"
+show: "Number.Natural"
 main {
   article: "hol4-integer-unint.art"
   interpretation: "../opentheory/hol4.int"

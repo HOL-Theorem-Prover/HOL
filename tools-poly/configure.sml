@@ -257,8 +257,10 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"poly\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
-];
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
+   "val MV =" -->       ("val MV = "^quote MV^"\n"),
+   "val CP =" -->       ("val CP = "^quote CP^"\n")
+  ];
   use destfile
 end;
 
@@ -514,7 +516,7 @@ val _ =
     output(tar3, "use "^(qstr tar2));
     closeOut tar3;
     output(tar4,"augroup filetypedetect\n");
-    output(tar4,"  au BufRead,BufNewFile *?Script.sml let maplocalleader = \"h\" | source "^tar1^"\n");
+    output(tar4,"  au BufRead,BufNewFile *.sml let maplocalleader = \"h\" | source "^tar1^"\n");
     output(tar4,"  \" recognise pre-munger files as latex source\n");
     output(tar4,"  au BufRead,BufNewFile *.htex setlocal filetype=htex syntax=tex\n");
     output(tar4,"  \"Uncomment the line below to automatically load Unicode\n");
@@ -540,7 +542,7 @@ val _ =
       val target_boss = fullPath [holdir, "bin", "hol"]
       val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-            "\"$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")\""
+            "`" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ "`"
       fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
       val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
       val prelude2 = prelude @ [TP "prelude2.ML"]

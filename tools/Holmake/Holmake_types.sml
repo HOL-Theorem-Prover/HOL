@@ -9,6 +9,9 @@ datatype pretoken =
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
 type env = (string, quotation)Binarymap.dict
+fun env_keys e = Binarymap.foldr (fn (k,v,A) => k::A) [] e
+fun env_fold f e A = Binarymap.foldl (fn (k,v,A) => f k v A) A e
+
 type rule_info = {dependencies : string list, commands : string list}
 type raw_rule_info = { targets : quotation, dependencies : quotation,
                        commands : quotation list }
@@ -374,7 +377,7 @@ val base_environment0 = let
   fun p1 ++ p2 = OS.Path.concat(p1,p2)
   val alist =
       [("CC", [LIT CC]),
-       ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
+       ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT Systeml.CP]),
        ("DEFAULT_TARGETS",
         [VREF ("patsubst %.sml,%.uo,$(patsubst %Theory.sml,,"^
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
@@ -383,13 +386,14 @@ val base_environment0 = let
         [LIT "for i in *.uo *.ui *.sig ; do ln -fs `pwd`/$i ",
          VREF "SIGOBJ",
          LIT " ; done && \
-             \for i in *.sig ; do echo `pwd`/$(basename $i .sig) >> ",
+             \for i in *.sig ; do echo `pwd`/`basename $i .sig` >> ",
          VREF "SIGOBJ",
          LIT "/SRCFILES ; done"]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),
        ("ML_SYSNAME", [LIT ML_SYSNAME]),
-       ("MV", if OS = "winNT" then [LIT "move", LIT "/y"] else [LIT "/bin/mv"]),
+       ("MV", if OS = "winNT" then [LIT "move", LIT "/y"]
+              else [LIT Systeml.MV]),
        ("OS", [LIT OS]),
        ("SIGOBJ", [VREF "HOLDIR", LIT "/sigobj"]),
        ("UNQUOTE", [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")])] @

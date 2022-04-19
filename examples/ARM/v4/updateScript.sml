@@ -37,20 +37,27 @@ val _ = set_fixity "|:<" (Infix(NONASSOC, 320));
 
 val _ = computeLib.auto_import_definitions := false;
 
-val LUPDATE_def = xDefine "LUPDATE"
-  `$|: a l = \m b.
+Definition LUPDATE_def:
+  $|: a l = \m b.
       if a <=+ b /\ w2n b - w2n a < LENGTH l then
         EL (w2n b - w2n a) l
-      else m b`;
+      else m b
+End
 
-val Ua_def = xDefine "Ua" `$=+> = UPDATE`;
-val Ub_def = xDefine "Ub" `$=+< = UPDATE`;
+Definition Ua_def: $=+> = UPDATE
+End
+Definition Ub_def: $=+< = UPDATE
+End
 
-val LUa_def = xDefine "LUa" `$|:> = $|:`;
-val LUb_def = xDefine "LUb" `$|:< = $|:`;
+Definition LUa_def: $|:> = $|:
+End
+Definition LUb_def: $|:< = $|:
+End
 
-val FUa_def = xDefine "FUa" `$:+> = $:+`;
-val FUb_def = xDefine "FUb" `$:+< = $:+`;
+Definition FUa_def: $:+> = $:+
+End
+Definition FUb_def: $:+< = $:+
+End
 
 val JOIN_def = Define`
   JOIN n x y =

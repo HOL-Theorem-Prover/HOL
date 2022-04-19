@@ -1,6 +1,7 @@
 skipthm convergence_mode_TY_DEF
 skipthm convergence_mode_case_def
 skipthm convergence_mode_size_def
+skipthm convergence_mode_size_eq
 skipthm convergence_mode_11
 skipthm convergence_mode_Axiom
 skipthm convergence_mode_case_cong

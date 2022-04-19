@@ -81,8 +81,7 @@ end;
 (* Functions to be compatible with hol-light.                                *)
 (* ------------------------------------------------------------------------- *)
 
-fun failwith s = liteLib.failwith s
-fun fail () = failwith "No message";
+fun failwith s = raise mk_HOL_ERR "RealArith" "?" s
 
 fun term_lt u t = Term.compare(u,t) = LESS
 fun term_le t u = not (term_lt u t);
@@ -104,15 +103,6 @@ fun index_ac x = let
 in
   ind zero
 end
-
-
-fun remove P [] = failwith "remove"
-  | remove P (h::t) = if P h then (h,t) else
-      let
-        val (e,l) = remove P t
-      in
-        (e, h::l)
-      end;
 
 fun chop_list n l =
   if n = zero then ([],l) else

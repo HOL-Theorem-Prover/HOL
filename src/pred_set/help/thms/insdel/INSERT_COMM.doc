@@ -1,3 +1,0 @@
-\THEOREM INSERT_COMM pred_sets
-|- !x y s. x INSERT (y INSERT s) = y INSERT (x INSERT s)
-\ENDTHEOREM

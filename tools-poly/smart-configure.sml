@@ -263,6 +263,23 @@ val polymllibdir =
 
 val DOT_PATH = if DOT_PATH = SOME "" then which "dot" else DOT_PATH;
 
+fun find_in_bin_or_path s =
+    let
+      val binpath = OS.Path.concat("/bin", s)
+    in
+      if OS.FileSys.access (binpath, [OS.FileSys.A_EXEC]) then
+        (binpath, true)
+      else
+        case which s of
+            NONE => die ("Couldn't find `" ^ s ^
+                         "' executable. Please edit\n\
+                         \tools-poly/poly-includes to include\n\
+                         \  val " ^ String.translate (str o Char.toUpper) s ^
+                         " = \"...\"")
+          | SOME s => (s, false)
+    end
+
+
 val dynlib_available = false;
 
 val MLTON = if MLTON = SOME "" then which "mlton" else MLTON;
@@ -284,6 +301,10 @@ fun optverdict (prompt, optvalue) =
    print (case optvalue of NONE => "NONE" | SOME p => "SOME "^p);
    print "\n");
 
+fun dfltverdict (prompt, (value, dflt)) =
+    if dflt then value
+    else (print (StringCvt.padRight #" " 20 (prompt ^ ":") ^ value); value);
+
 verdict ("OS", OS);
 verdict ("poly", poly);
 verdict ("polyc", polyc);
@@ -292,6 +313,9 @@ verdict ("holdir", holdir);
 optverdict ("DOT_PATH", DOT_PATH);
 optverdict ("MLTON", MLTON);
 verdict ("GNUMAKE", GNUMAKE);
+
+val MV = dfltverdict ("MV", find_in_bin_or_path "mv");
+val CP = dfltverdict ("CP", find_in_bin_or_path "cp");
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";

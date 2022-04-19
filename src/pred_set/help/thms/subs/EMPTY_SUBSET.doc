@@ -1,3 +1,0 @@
-\THEOREM EMPTY_SUBSET pred_sets
-|- !s. {{}} SUBSET s
-\ENDTHEOREM

@@ -236,6 +236,10 @@ It is often useful to perform case splits over the course of a proof.
 : Given a variable `p` of a pair type, instantiates `p` to `(p0,p1,...,pn)`.
   This provides better naming than `Cases_on`, and requires fewer case splits for `n`-tuples where `n` is greater than 2.
 
+`pairarg_tac`
+: Searches the goal and assumptions for `(λ(x,y,...). body) arg`, and introduces the assumption `arg = (x,y,...)`.
+  This can often provide better naming than `PairCases_on`.
+
 `CASE_TAC`
 : Case splits the smallest `case` expression in the goal.
 
@@ -279,12 +283,16 @@ Maintainable and readable files require organised proofs - in particular, carefu
 <code>&grave;<i>term</i>&grave; suffices_by <i>tactic</i></code>
 : Like `qsuff_tac`, but solves the first subgoal (i.e. that the supplied term implies the goal) using the given tactic.
 
-<code><i>tactic1</i> >~ [&grave;<i>pat</i>&grave;s]</code>
-: Performs *`tactic1`* and then searches for the first subgoal with subterms matching the supplied patterns.
+<code><i>tactic</i> >~ [&grave;<i>pat</i>&grave;s]</code>
+: Performs *`tactic`* and then searches for the first subgoal with subterms matching the supplied patterns.
   [Renames](#renaming-and-abbreviating) these subterms to match the patterns, and brings the goal into focus as the current goal.
 
-<code><i>tactic1</i> >>~ [&grave;<i>pat</i>&grave;s]</code>
+<code><i>tactic</i> >>~ [&grave;<i>pat</i>&grave;s]</code>
 : Like `>~`, but can match/rename multiple goals and bring them all to the top of the goal-stack.
+
+<code><i>tactic1</i> >>~- ([&grave;<i>pat</i>&grave;s], <i>tactic2</i>)</code>
+: Like `>>~`, but tries to solve the matched/renamed goals using *`tactic2`*.
+  This fails if any of the goals are not completely solved.
 
 <code>rpt <i>tactic</i></code>
 : Repeats the given tactic until it fails.
@@ -307,6 +315,9 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 `conj_asm{1,2}_tac`
 : Like `conj_tac`, but adds the first/second conjunct (respectively) as an assumption for the other subgoal.
 
+`disj{1,2}_tac`
+: Reduces a goal of the form `p \/ q` into `p` or `q` respectively.
+
 `gen_tac`
 : Removes a top-level `∀`-quantified variable.
 
@@ -320,12 +331,12 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 : For a goal of the form `(A ==> B) ==> C`, splits into the two subgoals `A` and `B ==> C`.
   `impl_keep_tac` is a variant which keeps `A` as an assumption in the `B ==> C` subgoal.
 
-<code>qexists_tac &grave;<i>term</i>&grave;</code>
+<code>qexists &grave;<i>term</i>&grave;</code>
 : Instantiates a top-level `∃` quantifer with the supplied term.
 
-<code>Q.REFINE_EXISTS_TAC &grave;<i>term</i>&grave;</code>
+<code>qrefine &grave;<i>term</i>&grave;</code>
 : Refines a top-level `∃` quantifer using the supplied term - any free variables in the term become`∃`-quantified.
-  For example, for a goal `∃ n : num. if n = 0 then P n else Q n`, applying ``Q.REFINE_EXISTS_TAC `SUC k` >> simp[]`` produces the goal `∃ k : num. Q (SUC k)` (where `SUC` is the successor function).
+  For example, for a goal `∃ n : num. if n = 0 then P n else Q n`, applying ``qrefine `SUC k` >> simp[]`` produces the goal `∃ k : num. Q (SUC k)` (where `SUC` is the successor function).
 
 <code>goal_assum $ drule_at Any</code>
 : For a goal of the form `∃ vars . P1 /\ ... /\ Pn` (where the `vars` may be free in the `Pi`), attempts to match the `Pi` against the assumptions.

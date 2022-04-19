@@ -1,3 +1,0 @@
-\THEOREM BIJ_EMPTY pred_sets
-|- !f. (!s. BIJ f{{}}s = (s = {{}})) /\ (!s. BIJ f s{{}} = (s = {{}}))
-\ENDTHEOREM

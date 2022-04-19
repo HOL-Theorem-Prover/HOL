@@ -18,8 +18,9 @@ type env
 
 val base_environment : unit -> env
 val lookup : env -> string -> quotation
-
+val env_keys : env -> string list
 val env_extend : string * quotation -> env -> env
+val env_fold : (string -> quotation -> 'b -> 'b) -> env -> 'b -> 'b
 
 val to_token : env -> pretoken -> token
 

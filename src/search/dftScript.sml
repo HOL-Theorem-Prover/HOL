@@ -41,10 +41,8 @@ val Rel_def =   (* map arg. tuples into a pair of numbers for termination *)
 
 val () = computeLib.auto_import_definitions := false
 
-val def = (* Define function and prove termination *)
- tDefine
-  "DFT"
-  `DFT G f seen to_visit acc =
+Definition def[induction=DFT_ind0]:
+  DFT G f seen to_visit acc =
     if FINITE (Parents G)
       then case to_visit
            of [] => acc
@@ -54,8 +52,9 @@ val def = (* Define function and prove termination *)
                 else DFT G f (visit_now :: seen)
                              (G visit_now ++ visit_later)
                              (f visit_now acc)
-      else ARB`
- (WF_REL_TAC `inv_image ($< LEX $<) Rel`
+      else ARB
+Termination
+ WF_REL_TAC `inv_image ($< LEX $<) Rel`
    THEN RW_TAC set_ss [Rel_def, DECIDE ``(0 < p - q) <=> q < p ``]
    THEN Cases_on `visit_now IN Parents G` THENL
    [DISJ1_TAC, DISJ2_TAC] THEN RW_TAC set_ss [] THENL
@@ -71,7 +70,8 @@ val def = (* Define function and prove termination *)
     MATCH_MP_TAC (DECIDE ``(p=q) ==> (x-p = x-q)``)
       THEN MATCH_MP_TAC (METIS_PROVE [] ``(s1=s2) ==> (CARD s1 = CARD s2)``)
       THEN RW_TAC set_ss [INTER_DEF,EXTENSION] THEN METIS_TAC [],
-    FULL_SIMP_TAC set_ss [Parents_def]]);
+    FULL_SIMP_TAC set_ss [Parents_def]]
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -114,7 +114,7 @@ val DFT_ind = Q.store_thm
    ==>
    !v v1 v2 v3 v4. P v v1 v2 v3 v4`,
  NTAC 2 STRIP_TAC
- THEN HO_MATCH_MP_TAC (fetch "-" "DFT_ind")
+ THEN HO_MATCH_MP_TAC DFT_ind0
  THEN REPEAT GEN_TAC THEN Cases_on `to_visit`
  THEN RW_TAC list_ss []);
 

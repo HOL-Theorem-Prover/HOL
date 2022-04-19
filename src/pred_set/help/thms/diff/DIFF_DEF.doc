@@ -1,3 +1,0 @@
-\THEOREM DIFF_DEF pred_sets
-|- !s t. s DIFF t = {{x | x IN s /\ ~x IN t}}
-\ENDTHEOREM

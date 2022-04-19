@@ -1,3 +1,0 @@
-\THEOREM INSERT_SING_UNION pred_sets
-|- !s x. x INSERT s = {{x}} UNION s
-\ENDTHEOREM

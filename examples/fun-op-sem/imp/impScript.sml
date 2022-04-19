@@ -51,7 +51,7 @@ val STOP_def = Define `STOP x = x`;
    case. In cval_def_with_stop below, we remove this redundant
    if-statement. *)
 
-val cval_def = tDefine "cval" `
+Definition cval_def:
   (cval SKIP s (t:num) = SOME (s,t)) /\
   (cval (Assign x a) s t = SOME ((x =+ aval a s) s,t)) /\
   (cval (Seq c1 c2) s t =
@@ -63,10 +63,12 @@ val cval_def = tDefine "cval" `
   (cval (While b c) s t =
     if bval b s then
       if t = 0 then NONE else cval (Seq c (STOP (While b c))) s (t - 1)
-    else SOME (s,t))`
- (WF_REL_TAC `inv_image (measure I LEX measure com_size)
-                            (\(c,s,t). (t,c))`
-  \\ SRW_TAC [] [] \\ DECIDE_TAC)
+    else SOME (s,t))
+Termination
+  WF_REL_TAC `inv_image (measure I LEX measure com_size)
+                            (λ(c,s,t). (t,c))`
+  \\ SRW_TAC [] [] \\ DECIDE_TAC
+End
 
 val clock_bound = prove(
   ``!c s t s' t'. (cval c s t = SOME (s',t')) ==> t' <= t``,

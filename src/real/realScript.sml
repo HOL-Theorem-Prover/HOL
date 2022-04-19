@@ -5060,4 +5060,21 @@ Proof
  >> Q.EXISTS_TAC ‘1’ >> rw [REAL_LT_IMP_LE]
 QED
 
+(*---------------------------------------------------------------------------*)
+(* Miscellaneous Results (generally for use in descendent theories)          *)
+(*---------------------------------------------------------------------------*)
+
+Theorem REAL_MUL_SIGN:
+    (!x y. 0 <= x * y <=> (0 <= x /\ 0 <= y) \/ (x <= 0 /\ y <= 0)) /\
+    (!x y. x * y <= 0 <=> (0 <= x /\ y <= 0) \/ (x <= 0 /\ 0 <= y))
+Proof
+    rw[] >> eq_tac >> rw[] >> fs[GSYM REAL_NEG_GE0,Excl "REAL_NEG_GE0"] >>
+    TRY $ dxrule_all_then assume_tac $ REAL_LE_MUL >>
+    fs[REAL_MUL_LNEG,REAL_MUL_RNEG,REAL_MUL_COMM] >>
+    pop_assum mp_tac >> CONV_TAC CONTRAPOS_CONV >> rw[] >> fs[real_lte,REAL_LT_GT] >>
+    fs[GSYM REAL_NEG_GT0,Excl "REAL_NEG_GT0"] >>
+    dxrule_all_then assume_tac $ REAL_LT_MUL >>
+    fs[REAL_MUL_LNEG,REAL_MUL_RNEG,REAL_MUL_COMM]
+QED
+
 val _ = export_theory();

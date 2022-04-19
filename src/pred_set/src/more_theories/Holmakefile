@@ -17,7 +17,21 @@ link-to-sigobj: $(DEFAULT_TARGETS)
 endif
 
 ifeq ($(KERNELID),otknl)
-all: topology.ot.art
+BARE_THYS = cardinal ordinal topology wellorder
+
+all: hol4-set.art
+
+hol4-set-unint.art: hol4-set-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
+	opentheory info --article -o $@ $<
+
+hol4-set.art: hol4-set.thy hol4-set-unint.art ../../../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-set.thy hol4-set.art
+	opentheory install --reinstall $<
+
+ordinal.art: ordinal.otd
+
 endif
 
 ifdef HOLSELFTESTLEVEL

@@ -953,10 +953,11 @@ val coin_assignment = Define
              else
                 coin_assignment out h n choice i s))`;
 
-val coin_assignment_set = Define
-  `!out p n. coin_assignment_set out p n =
+Definition coin_assignment_set:
+  coin_assignment_set out p n =
         {coin_assignment out p n T (SUC(SUC n));
-          coin_assignment out p n F (SUC(SUC n))}`;
+          coin_assignment out p n F (SUC(SUC n))}
+End
 
 val coin_assignment_result1 = prove
   (``!out h choice x' n i. (!j. j <= i ==> ~(x' = STRCAT "coin" (toString j))) ==> ~(coin_assignment out h n choice i x')``,

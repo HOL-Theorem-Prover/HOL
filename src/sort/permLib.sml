@@ -39,7 +39,8 @@ val is_PERM = can dest_PERM;
 
 
 (*
-val t = ``PERM (x1::l1 ++ (l2 ++ (x2::x3::l3) ++ x4::l4)) (x1::l1 ++ ((x2::x3::l3) ++ x4::l4 ++ l2))``
+val t = “PERM (x1::l1 ++ (l2 ++ (x2::x3::l3) ++ x4::l4))
+              (x1::l1 ++ ((x2::x3::l3) ++ x4::l4 ++ l2))”
 val t1 =  ``x1::x2::x3::(l1 ++ (x2::x3::l3 ++ x4::l4 ++ l2 ++ l4))``
 val t2 =  ``x1::x2::x8::(x4::l4 ++ l2++l4)``
 *)
@@ -303,7 +304,9 @@ let
    val thm1 = CONV_RULE (RHS_CONV (REWRITE_CONV [GSYM (CONJUNCT2 APPEND)])) thm0
 
    val thm2 = CONV_RULE (RHS_CONV (RAND_CONV (
-                 quantHeuristicsLibBase.BOUNDED_REPEATC (length ls) (REWR_CONV APPEND_ASSOC)))) thm1;
+                 quantHeuristicsLibBase.BOUNDED_REPEATC
+                   (length ls)
+                   (REWR_CONV APPEND_ASSOC)))) thm1;
 
    val thm3 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV LIST_NIL_CONV))) thm2
 in
@@ -325,8 +328,9 @@ let
    val thm0 = ISPECL [lc,l1,l3',l2,l4'] PERM_CONG_APPEND_IFF;
    val thm1 = MP thm0 thm_l1
    val thm2 = MP thm1 thm_l2
-   val thm3 = CONV_RULE (RHS_CONV (REWRITE_CONV [PERM_REFL, PERM_NIL, NOT_CONS_NIL,
-                            APPEND_eq_NIL])) thm2
+   val thm3 =
+       CONV_RULE (RHS_CONV (REWRITE_CONV [PERM_REFL, PERM_NIL, NOT_CONS_NIL,
+                                          APPEND_eq_NIL])) thm2
 in
    thm3
 end;
@@ -404,7 +408,7 @@ val comm = [``l2 : num list``, ``x3 : num``]
 
 val test_IMP = PERM_ELIM_COMMON_IMP comm t1 t2
 
-fun mk_num_list is = listSyntax.mk_list (map numSyntax.term_of_int is, ``: num``);
+fun mk_num_list is = listSyntax.mk_list (map numSyntax.term_of_int is, “:num”);
 fun mk_PERM a b = list_mk_icomb PERM_tm [a, b];
 
 fun test1 n = mk_PERM (mk_num_list (upto 1 n)) (mk_num_list (rev (upto 1 n)))
@@ -413,9 +417,11 @@ val t1_200 = test1 200;
 
 fun test2 n = let
     val app = listSyntax.mk_append
-    val lhs = app (app (mk_num_list (upto 1 n), t1), mk_num_list (upto 12 (n + 11)))
-    val rhs = app (app (mk_num_list (rev (upto 12 (n + 11))), mk_num_list (upto 4 n)),
-        app (``rmn : num list``, t2))
+    val lhs = app (app (mk_num_list (upto 1 n), t1),
+                        mk_num_list (upto 12 (n + 11)))
+    val rhs = app (app (mk_num_list (rev (upto 12 (n + 11))),
+                        mk_num_list (upto 4 n)),
+                   app (``rmn : num list``, t2))
   in PERM_ELIM_DUPLICATES_CONV (mk_PERM lhs rhs) end
 
 val t2_200 = test2 200;
@@ -463,9 +469,11 @@ fun PERM_TAKE_DROP t =
       val take_ls = mapfilter listSyntax.dest_take ls
       val common = first (fn e => op_mem tmpair_eq e drop_ls) take_ls;
 
-      val common_t = listSyntax.mk_append (listSyntax.mk_take common, listSyntax.mk_drop common);
+      val common_t = listSyntax.mk_append (listSyntax.mk_take common,
+                                           listSyntax.mk_drop common);
       val thm0 = PERM_SPLIT common_t t;
-      val thm1 = CONV_RULE ((RAND_CONV o RATOR_CONV o RAND_CONV) (REWR_CONV listTheory.TAKE_DROP)) thm0
+      val thm1 = CONV_RULE ((RAND_CONV o RATOR_CONV o RAND_CONV)
+                              (REWR_CONV listTheory.TAKE_DROP)) thm0
 
       val thm2_opt = (total PERM_TAKE_DROP) (rand (concl thm1))
       val thm3 = if not (isSome thm2_opt) then thm1 else
@@ -486,10 +494,13 @@ let
 
    val thm_l1_opt = (total PERM_TAKE_DROP) l1;
    val thm_l2_opt = (total PERM_TAKE_DROP) l2;
-   val _ = if isSome thm_l1_opt orelse isSome thm_l2_opt then () else raise UNCHANGED;
+   val _ = if isSome thm_l1_opt orelse isSome thm_l2_opt then ()
+           else raise UNCHANGED;
 
-   val thm_l1 = if isSome thm_l1_opt then valOf thm_l1_opt else ISPEC l1 PERM_REFL;
-   val thm_l2 = if isSome thm_l2_opt then valOf thm_l2_opt else ISPEC l2 PERM_REFL;
+   val thm_l1 = if isSome thm_l1_opt then valOf thm_l1_opt
+                else ISPEC l1 PERM_REFL
+   val thm_l2 = if isSome thm_l2_opt then valOf thm_l2_opt
+                else ISPEC l2 PERM_REFL;
 
    val l1' = (rand o concl) thm_l1
    val l2' = (rand o concl) thm_l2
@@ -528,7 +539,7 @@ let
 
    val (xs1,ls1) = strip_perm_list l1;
    val (xs2,ls2) = strip_perm_list l2;
-   val comp = pair_compare (list_compare Term.compare, list_compare Term.compare);
+   val comp = pair_compare(list_compare Term.compare, list_compare Term.compare)
 
    val turn = (length xs1 + length ls1 < length xs2 + length ls2) orelse
               ((length xs1 + length ls1 = length xs2 + length ls2) andalso
@@ -567,7 +578,8 @@ let
      (false, PERM_SPLIT l l1) handle UNCHANGED =>
      (true,  PERM_SPLIT l l2);
 
-   val (thm0,l1,l2) = if turn then (ISPECL [l1,l2] PERM_SYM,l2,l1) else (REFL t,l1,l2);
+   val (thm0,l1,l2) = if turn then (ISPECL [l1,l2] PERM_SYM,l2,l1)
+                      else (REFL t,l1,l2);
 
    val l1' = (rand o concl) split_thm
    val thm1a = ISPECL [l1,l1',l2,l2] PERM_CONG_2
@@ -590,7 +602,9 @@ end;
 fun PERM_SIMP_CONV thmL t =
    let
       val _ = if is_PERM t then () else raise UNCHANGED;
-      val thm =  FIRST_CONV ((CHANGED_CONV PERM_NORMALISE_CONV)::(map (QCHANGED_CONV o PERM_REWR_CONV) thmL)) t;
+      val thm = FIRST_CONV ((CHANGED_CONV PERM_NORMALISE_CONV)::
+                            (map (QCHANGED_CONV o PERM_REWR_CONV) thmL))
+                           t
    in
       thm
    end;
@@ -607,7 +621,8 @@ fun perm_reducer_get_context e =
 
 fun clean_perm_thm thm = filter (is_PERM o concl) (BODY_CONJUNCTS thm);
 fun clean_perm_thmL thmL = flatten (map clean_perm_thm thmL);
-fun normalise_RULE l thm = CONV_RULE (REPEATC (PERM_SIMP_CONV l)) thm handle HOL_ERR _ => thm
+fun normalise_RULE l thm =
+    CONV_RULE (REPEATC (PERM_SIMP_CONV l)) thm handle HOL_ERR _ => thm
 fun normalise_RULE_bool l thm =
    let val thm' = normalise_RULE l thm; in
       (not (aconv (concl thm) (concl thm')), thm')
@@ -639,18 +654,24 @@ fun perm_reducer_add_context_simple (ctx, thmL) =
                                 (perm_reducer_get_context ctx));
 
 val PERM_REDUCER =
-  Traverse.REDUCER {name = SOME "PERM_REDUCER",
-           initial = perm_reducer_context [],
-           addcontext = perm_reducer_add_context2,
-           apply = fn args => QCHANGED_CONV (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
-              };
+  Traverse.REDUCER {
+    name = SOME "PERM_REDUCER",
+    initial = perm_reducer_context [],
+    addcontext = perm_reducer_add_context2,
+    apply = fn args =>
+               QCHANGED_CONV
+                 (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
+  };
 
 val PERM_REDUCER_SIMPLE =
-  Traverse.REDUCER {name = SOME "PERM_REDUCER_SIMPLE",
-           initial = perm_reducer_context [],
-           addcontext = perm_reducer_add_context_simple,
-           apply = fn args => QCHANGED_CONV (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
-              };
+  Traverse.REDUCER {
+    name = SOME "PERM_REDUCER_SIMPLE",
+    initial = perm_reducer_context [],
+    addcontext = perm_reducer_add_context_simple,
+    apply = fn args =>
+               QCHANGED_CONV
+                 (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
+  };
 
 in
 
@@ -662,8 +683,8 @@ val PERM_ss = simpLib.SSFRAG
 
 val PERM_SIMPLE_ss = simpLib.SSFRAG
     {name=SOME"PERM_SIMPLE_ss",
-     convs = [], rewrs = [], filter = NONE, dprocs = [PERM_REDUCER_SIMPLE], congs = [],
-     ac = []
+     convs = [], rewrs = [], filter = NONE, dprocs = [PERM_REDUCER_SIMPLE],
+     congs = [], ac = []
      }
 
 fun NORMALISE_ASM_PERM_TAC (asm, t) =
@@ -672,7 +693,8 @@ let
    val asm_perm_thmL = perm_simplify_thmL (map ASSUME asm_perm)
 
    val asm' = append asm_rest (map concl asm_perm_thmL);
-   fun reconstruct thm' = foldl (fn (h, thm) => PROVE_HYP h thm) thm' asm_perm_thmL
+   fun reconstruct thm' =
+       foldl (fn (h, thm) => PROVE_HYP h thm) thm' asm_perm_thmL
 in
    ([(asm', t)], fn thmL => reconstruct (hd thmL))
 end;
@@ -688,7 +710,8 @@ val conv = SIMP_CONV (std_ss++PERM_ss) []
 conv ``X /\ (PERM (x::l1++l2) (l2++[x])) /\ Z``
 conv ``(PERM (x::z::l1++l2) (l3++x::l1)) /\ Z``
 
-conv ``(X /\ (PERM (l2++[]++[z]) (y::l4)) /\ Y) ==> ((PERM (x::z::l1++l2) (l3++x::l1)))``
+conv ``(X /\ (PERM (l2++[]++[z]) (y::l4)) /\ Y) ==>
+       ((PERM (x::z::l1++l2) (l3++x::l1)))``
 
 conv ``(PERM l1 m1 /\
         PERM l2 m2 /\

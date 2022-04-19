@@ -78,6 +78,7 @@ sig
   val mapfilter : ('a -> 'b) -> 'a list -> 'b list
   val flatten : 'a list list -> 'a list
   val trypluck': ('a -> 'b option) -> 'a list -> ('b option * 'a list)
+  val plucki : ('a -> bool) -> 'a list -> ('a * int * 'a list) option
   val funpow : int -> ('a -> 'a) -> 'a -> 'a
   val repeat : ('a -> 'a) -> 'a -> 'a
   val enumerate : int -> 'a list -> (int * 'a) list

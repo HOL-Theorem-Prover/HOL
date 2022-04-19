@@ -54,11 +54,14 @@ val OK_ss = std_ss && [OK_REP, OK_REP_ABS, dOK_DEF, ABS_REP, dOK_dSUB];
 (* Definition of the constructors.                                       *)
 (* --------------------------------------------------------------------- *)
 
-val CON =  Define  `CON c   = ABS_nc (dCON c)`
-val VARR = Define  `VAR x   = ABS_nc (dVAR x)`
-val LAM =  Define  `LAM x m = ABS_nc (dLAMBDA x (REP_nc m))`;
-val APP =  xDefine
-            "APP"  `$@@ m n = ABS_nc (dAPP (REP_nc m) (REP_nc n))`
+Definition CON: CON c   = ABS_nc (dCON c)
+End
+Definition VARR: VAR x   = ABS_nc (dVAR x)
+End
+Definition LAM: LAM x m = ABS_nc (dLAMBDA x (REP_nc m))
+End
+Definition APP: $@@ m n = ABS_nc (dAPP (REP_nc m) (REP_nc n))
+End
 
 val _ = set_fixity "@@" (Infixl 901);
 
@@ -492,7 +495,7 @@ val nc_RECURSION_WEAK = Q.store_thm(
 (* ===================================================================== *)
 
 fun nc_recDefine s q =
-  new_recursive_definition
+  Prim_rec.new_recursive_definition
      {rec_axiom = nc_RECURSION_WEAK, name=s, def=Term q};
 
 val VNAME_DEF = nc_recDefine "VNAME_DEF" `VNAME (VAR s) = s`;

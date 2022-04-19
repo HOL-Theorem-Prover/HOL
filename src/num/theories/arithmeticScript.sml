@@ -12,8 +12,8 @@
 (* ===================================================================== *)
 
 open HolKernel boolLib Parse
-     Prim_rec simpLib boolSimps metisLib BasicProvers;
-local open OpenTheoryMap numTheory prim_recTheory SatisfySimps in end
+     simpLib boolSimps metisLib BasicProvers;
+local open numTheory prim_recTheory SatisfySimps DefnBase in end
 
 local
   open OpenTheoryMap
@@ -35,7 +35,9 @@ val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
 and INDUCTION   = numTheory.INDUCTION;
 
-val num_Axiom     = prim_recTheory.num_Axiom;
+val num_Axiom     = prim_recTheory.num_Axiom
+Theorem num_case_def  = prim_recTheory.num_case_def
+
 val INV_SUC_EQ    = prim_recTheory.INV_SUC_EQ
 and LESS_REFL     = prim_recTheory.LESS_REFL
 and SUC_LESS      = prim_recTheory.SUC_LESS
@@ -75,9 +77,12 @@ val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
  * of the "numeral type".                                                    *
  *---------------------------------------------------------------------------*)
 
-val NUMERAL_DEF = new_definition("NUMERAL_DEF", “NUMERAL (x:num) = x”);
+val NUMERAL_DEF = new_definition(
+  "NUMERAL_DEF[notuserdef]",
+  “NUMERAL (x:num) = x”
+);
 
-val ALT_ZERO = new_definition("ALT_ZERO", “ZERO = 0”);
+val ALT_ZERO = new_definition("ALT_ZERO[notuserdef]", “ZERO = 0”);
 
 local
    open OpenTheoryMap
@@ -88,11 +93,11 @@ in
                                   name=(["Number", "Natural"], "zero")}
 end
 
-val BIT1 = new_definition("BIT1", “BIT1 n = n + (n + SUC 0)”);
-val BIT2 = new_definition("BIT2", “BIT2 n = n + (n + SUC (SUC 0))”);
+val BIT1 = new_definition("BIT1[notuserdef]", “BIT1 n = n + (n + SUC 0)”);
+val BIT2 = new_definition("BIT2[notuserdef]", “BIT2 n = n + (n + SUC (SUC 0))”);
 
 val _ = new_definition(
-  GrammarSpecials.nat_elim_term,
+  GrammarSpecials.nat_elim_term ^ "[notuserdef]",
   ``^(mk_var(GrammarSpecials.nat_elim_term, Type`:num->num`)) n = n``);
 
 val _ = otunwanted "NUMERAL"
@@ -165,6 +170,8 @@ val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);
 val _ = TeX_notation {hol = "**", TeX = ("\\HOLTokenExp{}", 2)}
 
+Theorem EXP0[simp] = cj 1 EXP
+
 (* special-case squares and cubes *)
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_2,
@@ -217,9 +224,6 @@ val ODD = new_recursive_definition
     def = “(ODD 0 = F) /\
              (ODD (SUC n) = ~ODD n)”};
 val _ = ot0 "ODD" "odd"
-
-val [num_case_def] = Prim_rec.define_case_constant num_Axiom
-val _ = overload_on("case", “num_CASE”)
 
 val FUNPOW = new_recursive_definition
    {name = "FUNPOW",
@@ -1312,10 +1316,12 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-Theorem MULT_EQ_ID:
-  !m n. (m * n = n) <=> (m=1) \/ (n=0)
+Theorem MULT_EQ_ID[simp]:
+  !m n. (m * n = n <=> m=1 \/ n=0) /\
+        (n * m = n <=> m=1 \/ n=0)
 Proof
- REPEAT GEN_TAC THEN
+ REPEAT GEN_TAC THEN REVERSE CONJ_ASM1_TAC
+ THEN1 (ONCE_REWRITE_TAC [MULT_COMM] THEN ASM_REWRITE_TAC[]) THEN
  STRUCT_CASES_TAC (SPEC “m:num” num_CASES) THEN
  REWRITE_TAC [MULT_CLAUSES,ONE,GSYM NOT_SUC,INV_SUC_EQ] THENL
  [METIS_TAC[], METIS_TAC [ADD_INV_0_EQ,MULT_EQ_0,ADD_SYM]]
@@ -1462,6 +1468,12 @@ val ODD_EXP = Q.store_thm(
   "ODD_EXP",
   `!m n. 0 < n /\ ODD m ==> ODD (m ** n)`,
   METIS_TAC[ODD_EXP_IFF, NOT_LT_ZERO_EQ_ZERO]);
+
+Theorem ODD_POS:
+    !n. ODD n ==> 0 < n
+Proof
+    STRIP_TAC >> Cases_on ‘n’ >> REWRITE_TAC [ODD,LESS_0]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Theorems moved from the "more_arithmetic" library      [RJB 92.09.28] *)
@@ -2518,6 +2530,48 @@ Proof
     AC CONJ_COMM CONJ_ASSOC]
 QED
 
+Theorem EQ_ADD_LCANCEL'[local]:
+  x + y = y + z <=> x = z
+Proof
+  METIS_TAC[ADD_COMM, EQ_ADD_LCANCEL]
+QED
+
+(* will work well under standard ARITH_ss type normalisation which makes
+   addition right-associative, and will put the numeral/coefficient first in
+   multiplications *)
+Theorem DIV_NUMERAL_THM[simp]:
+  (NUMERAL (BIT1 n) * x) DIV NUMERAL (BIT1 n) = x /\
+  (NUMERAL (BIT2 n) * x) DIV NUMERAL (BIT2 n) = x /\
+  (NUMERAL (BIT1 n) * x + y) DIV NUMERAL (BIT1 n) = x + y DIV NUMERAL (BIT1 n)/\
+  (NUMERAL (BIT2 n) * x + y) DIV NUMERAL (BIT2 n) = x + y DIV NUMERAL (BIT2 n)/\
+  (y + NUMERAL (BIT1 n) * x) DIV NUMERAL (BIT1 n) = x + y DIV NUMERAL (BIT1 n)/\
+  (y + NUMERAL (BIT2 n) * x) DIV NUMERAL (BIT2 n) = x + y DIV NUMERAL (BIT2 n)
+Proof
+  Q.ABBREV_TAC ‘N1 = NUMERAL(BIT1 n)’ >>
+  Q.ABBREV_TAC ‘N2 = NUMERAL(BIT2 n)’ >>
+  ‘0 < N1 /\ 0 < N2’
+    by (MAP_EVERY Q.UNABBREV_TAC [‘N1’, ‘N2’] >>
+        REWRITE_TAC[NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, LESS_0]) >>
+  ‘!x. x * N1 = N1 * x /\ x * N2 = N2 * x’
+    by REWRITE_TAC[MULT_COMM |> SPEC_ALL |> EQT_INTRO] >>
+  simp_tac bool_ss [AC ADD_COMM ADD_ASSOC, SF CONJ_ss] >>
+  rpt conj_tac >> irule DIV_UNIQUE
+  >- (first_assum $ irule_at Any >> ASM_REWRITE_TAC[ADD_CLAUSES])
+  >- (first_assum $ irule_at Any >> ASM_REWRITE_TAC[ADD_CLAUSES])
+  >- (ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, EQ_ADD_LCANCEL', GSYM ADD_ASSOC] >>
+      rpt (dxrule_then (mp_tac o GSYM) DIVISION) >>
+      ASM_REWRITE_TAC[] >>
+      rpt (disch_then (strip_assume_tac o CONV_RULE FORALL_AND_CONV)) >>
+      first_assum $ irule_at Any >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+      first_assum $ irule_at Any)
+  >- (ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, EQ_ADD_LCANCEL', GSYM ADD_ASSOC] >>
+      rpt (dxrule_then (mp_tac o GSYM) DIVISION) >>
+      ASM_REWRITE_TAC[] >>
+      rpt (disch_then (strip_assume_tac o CONV_RULE FORALL_AND_CONV)) >>
+      first_assum $ irule_at Any >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+      first_assum $ irule_at Any)
+QED
+
 val DIV_MOD_MOD_DIV = store_thm ("DIV_MOD_MOD_DIV",
   “!m n k. 0 < n /\ 0 < k ==> ((m DIV n) MOD k = (m MOD (n * k)) DIV n)”,
   REPEAT STRIP_TAC THEN
@@ -2811,7 +2865,7 @@ val EXP_ALWAYS_BIG_ENOUGH = store_thm ("EXP_ALWAYS_BIG_ENOUGH",
     ]
   ]);
 
-Theorem EXP_EQ_0:
+Theorem EXP_EQ_0[simp]:
   !n m. (n EXP m = 0) <=> (n = 0) /\ (0 < m)
 Proof
   REPEAT GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `m` num_CASES) THEN
@@ -2827,21 +2881,36 @@ val ZERO_LT_EXP = store_thm ("ZERO_LT_EXP",
   “0 < x EXP y <=> 0 < x \/ (y = 0)”,
   METIS_TAC [NOT_ZERO_LT_ZERO, EXP_EQ_0]);
 
-val EXP_1 = store_thm ("EXP_1",
-  “!n. (1 EXP n = 1) /\ (n EXP 1 = n)”,
+Theorem EXP_1[simp]:
+  !n. (1 EXP n = 1) /\ (n EXP 1 = n)
+Proof
   CONV_TAC (QUANT_CONV (FORK_CONV (ALL_CONV, REWRITE_CONV [ONE]))) THEN
   REWRITE_TAC [EXP, MULT_CLAUSES] THEN
-  INDUCT_TAC THEN ASM_REWRITE_TAC [MULT_EQ_1, EXP]);
+  INDUCT_TAC THEN ASM_REWRITE_TAC [MULT_EQ_1, EXP]
+QED
 
-val EXP_EQ_1 = store_thm ("EXP_EQ_1",
-  “!n m. (n EXP m = 1) <=> (n = 1) \/ (m = 0)”,
+Theorem EXP_EQ_1[simp]:
+  !n m. (n EXP m = 1) <=> (n = 1) \/ (m = 0)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `m` THEN INDUCT_TAC THEN
     REWRITE_TAC [EXP, MULT_EQ_1] THEN STRIP_TAC THEN
     ASM_REWRITE_TAC [],
     ASM_REWRITE_TAC [EXP_1],
     ASM_REWRITE_TAC [EXP]
-  ]);
+  ]
+QED
+
+Theorem EXP_EQ_BASE[simp]:
+  !n m. n EXP m = n <=> m = 1 \/ n = 0 /\ 0 < m \/ n = 1
+Proof
+  Cases_on ‘m’ >>
+  REWRITE_TAC[EXP, ONE, SUC_NOT, LESS_REFL, INV_SUC_EQ, LESS_0, MULT_EQ_ID] >| [
+    GEN_TAC >> EQ_TAC >> DISCH_THEN (ACCEPT_TAC o SYM),
+    REWRITE_TAC [GSYM ONE, EXP_EQ_1] THEN GEN_TAC THEN EQ_TAC THEN
+    STRIP_TAC THEN ASM_REWRITE_TAC[]
+  ]
+QED
 
 (* theorems about exponentiation where the base is held constant *)
 val expbase_le_mono = prove(
@@ -4079,24 +4148,16 @@ val num_case_eq = Q.store_thm(
   Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES THEN
   SRW_TAC [][num_case_def, SUC_NOT, INV_SUC_EQ]);
 
-val _ = TypeBase.export
-  [TypeBasePure.mk_datatype_info_no_simpls
-     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,
-      case_def=num_case_def,
-      case_cong=num_case_cong,
-      case_eq = num_case_eq,
-      induction=TypeBasePure.ORIG numTheory.INDUCTION,
-      nchotomy=num_CASES,
-      size=SOME(“\x:num. x”, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),
-      encode=NONE,
-      fields=[],
-      accessors=[],
-      updates=[],
-      recognizers=[],
-      destructors=[CONJUNCT2(prim_recTheory.PRE)],
-      lift=SOME(mk_var("numSyntax.lift_num",“:'type -> num -> 'term”)),
-      one_one=SOME prim_recTheory.INV_SUC_EQ,
-      distinct=SOME numTheory.NOT_SUC}];
+val _ = TypeBase.general_update “:num” (
+          TypeBasePure.put_size (
+            “λx:num. x”,
+            TypeBasePure.ORIG boolTheory.REFL_CLAUSE
+          ) o
+          TypeBasePure.put_destructors [cj 2 prim_recTheory.PRE] o
+          TypeBasePure.put_lift (
+            mk_var("numSyntax.lift_num",“:'type -> num -> 'term”)
+          )
+        )
 
 val datatype_num = store_thm(
   "datatype_num",

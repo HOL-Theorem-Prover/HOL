@@ -1,5 +1,7 @@
 open testutils
 
+val _ = OS.FileSys.chDir "testdir"
+
 val _ = tprint "Testing a -I cleanAll"
 val res = OS.Process.system (Systeml.HOLDIR ^
                              "/bin/Holmake -q -I includethis -r cleanAll")

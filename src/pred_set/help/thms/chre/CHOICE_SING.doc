@@ -1,3 +1,0 @@
-\THEOREM CHOICE_SING pred_sets
-|- !x. CHOICE{{x}} = x
-\ENDTHEOREM

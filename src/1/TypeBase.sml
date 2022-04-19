@@ -294,19 +294,28 @@ fun ty2knm ty =
       {Thy = Thy, Tyop = Tyop}
     end
 
+fun general_update0 fname ty upd =
+    let
+      val knm = ty2knm ty
+    in
+      case read knm of
+          NONE => HOL_WARNING "TypeBase" fname
+                              ("No type corresponding to " ^
+                               #Thy knm ^ "$" ^ #Tyop knm ^ " to update")
+        | SOME tyi => export [upd tyi]
+    end
+val general_update = general_update0 "general_update"
+
+
 fun update_induction th =
     let
       open boolSyntax
       val (Ps, _) = strip_forall (concl th)
-      fun upd1 knm =
-          case read knm of
-              NONE => HOL_WARNING "TypeBase" "update_induction"
-                                  ("No type corresponding to " ^
-                                   #Thy knm ^ "$" ^ #Tyop knm ^ " to update")
-            | SOME tyi =>
-                export [TypeBasePure.put_induction (TypeBasePure.ORIG th) tyi]
+      val upd = TypeBasePure.put_induction (TypeBasePure.ORIG th)
     in
-      List.app (fn v => v |> type_of |> dom_rng |> #1 |> ty2knm |> upd1) Ps
+      List.app (fn v => v |> type_of |> dom_rng |> #1
+                          |> C (general_update0 "update_induction") upd)
+               Ps
     end
 
 fun update_axiom th =
@@ -314,15 +323,11 @@ fun update_axiom th =
       open boolSyntax
       val (_, b) = strip_forall (concl th)
       val (exvs, _) = strip_exists b
-      fun upd1 knm =
-          case read knm of
-              NONE => HOL_WARNING "TypeBase" "update_axiom"
-                                  ("No type corresponding to " ^
-                                   #Thy knm ^ "$" ^ #Tyop knm ^ " to update")
-            | SOME tyi =>
-                export [TypeBasePure.put_axiom (TypeBasePure.ORIG th) tyi]
+      val upd = TypeBasePure.put_axiom (TypeBasePure.ORIG th)
     in
-      List.app (fn v => v |> type_of |> dom_rng |> #1 |> ty2knm |> upd1) exvs
+      List.app (fn v => v |> type_of |> dom_rng |> #1
+                          |> C (general_update0 "update_axiom") upd)
+               exvs
     end
 
 (* ----------------------------------------------------------------------

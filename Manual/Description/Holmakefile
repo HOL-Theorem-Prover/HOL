@@ -1,7 +1,8 @@
 INCLUDES = ../Tools ../../examples/probability
 
 TEX_CORES = description title preface system conv drules tactics \
-	theories math definitions libraries misc HolSat PatternMatchesLib
+	theories math definitions libraries misc HolSat PatternMatchesLib \
+        enumfset
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
@@ -26,7 +27,9 @@ tactics.tex: tactics.stex $(PS_STUFF)
 theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo)
 	$(PS_COMMAND)
 
-math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) ../../examples/probability/large_numberTheory.uo
+math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
+	$(HOLDIR)/examples/probability/large_numberTheory.uo \
+	$(HOLDIR)/examples/probability/lebesgue_measureTheory.uo
 	$(PS_COMMAND)
 
 PatternMatchesLib.tex: PatternMatchesLib.stex $(PS_STUFF)

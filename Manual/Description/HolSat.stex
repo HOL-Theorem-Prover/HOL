@@ -108,7 +108,7 @@ For details, see the source file \t{src/taut/tautLib.sml} which contains compreh
 
 \subsection{Support for other SAT solvers}\label{subsec:hs-zchaff}
 
-The ZChaff SAT solver has a proof production mode and is supported by {\tt{HolSatLib}}. However, the ZChaff end user license is not compatible with the \HOL{} license, so we are unable to distribute it with \HOL{}. If you wish to use ZChaff, download and unpack it in the directory {\tt src/HolSat/sat\_solvers/} under the main \HOL{} directory, and compile it with proof production mode enabled (which is not the default). This should create a binary {\tt zchaff} in the directory {\tt src/HolSat/sat\_solvers/zchaff/}. ZChaff can now be used as the external proof engine instead of MiniSat, by using the HolSatLib functions described above, prefixed with a ``{\tt Z}'', e.g., {\tt ZSAT\_PROVE}.
+The ZChaff SAT solver has a proof production mode and is supported by {\tt{HolSatLib}}. However, the ZChaff end user license is not compatible with the \HOL{} license, so we are unable to distribute it with \HOL{}. If you wish to use ZChaff, download and unpack it in the directory {\tt src/HolSat/sat\_solvers/} under the main \HOL{} directory, and compile it with proof production mode enabled (which is not the default). This should create a binary {\tt zchaff} in the directory {\tt src/HolSat/sat\_solvers/zchaff/}. ZChaff can now be used as the external proof engine instead of MiniSat, by using the HolSatLib functions described above, prefixed with a ``{\tt Z}'', \eg, {\tt ZSAT\_PROVE}.
 
 A file \texttt{resolve\_trace} may be created in the current working directory, when working with ZChaff. This is the proof trace file produced by ZChaff, and is hardwired.
 

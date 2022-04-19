@@ -65,7 +65,7 @@ The function \ml{mk\_vartype} constructs a type variable
 \index{type variables, in HOL logic@type variables, in \HOL{} logic!constructor for}
 %
 with a given name; it gives a warning if the name is not an allowable
-type variable name (\ie\ not a \ml{'} followed by an alphanumeric).
+type variable name (\ie, not a \ml{'} followed by an alphanumeric).
 The function \ml{mk\_thy\_type} constructs a compound type
 %
 \index{compound types, in HOL logic@compound types, in \HOL{} logic!constructors for}
@@ -452,7 +452,26 @@ a \HOL{} identifier can be of two forms:
   \index{tokens!Unicode characters}
   \index{Unicode}
   Unicode code characters that are not letters or digits are regarded
-  as symbolic.  None of these are non-aggregating.
+  as symbolic.
+  The non-aggregating Unicode characters are listed in Table~\ref{table:non-aggregating-unicode}.
+\begin{table}
+\begin{center}
+\newcommand{\tstrut}{\rule{0pt}{2.6ex}}
+\newcommand{\bstrut}{\rule[-0.9ex]{0pt}{0pt}}
+\begin{tabular}{cc@{\qquad}cc}
+Character        & Codepoint & Character        & Codepoint \bstrut\\ \hline
+$\neg$           & U+00AC    & $\langle$        & U+27E8    \tstrut \\
+$\lceil$         & U+2308    & $\rangle$        & U+27E9 \\
+$\rceil$         & U+2309    & $\llbrace$       & U+2983 \\
+$\lfloor$        & U+230A    & $\rrbrace$       & U+2984 \\
+$\rfloor$        & U+230B    & $\llparenthesis$ & U+2987 \\
+$\llbracket$     & U+27E6    & $\rrparenthesis$ & U+2988 \\
+$\rrbracket$     & U+27E7    \\
+\end{tabular}
+\end{center}
+\caption{Non-aggregating Unicode characters}
+\label{table:non-aggregating-unicode}
+\end{table}
 
 \item A \emph{number} is a string of one or more digits. If not the
   initial digit, an underscore can be used within the sequence to
@@ -1002,7 +1021,7 @@ from the arbitrary and unrecorded construction
 of theorems, which would compromise
 the consistency
 \index{consistency, of HOL logic@consistency, of \HOL{} logic} of the logic.
-(Functions which return theorems as values, \eg\ functions representing primitive inferences,
+(Functions which return theorems as values, \eg, functions representing primitive inferences,
 are discussed in Section~\ref{rules}.)
 %% derived-rules reference is dead for the moment (until we
 %% resuscitate drules.tex)
@@ -1058,7 +1077,7 @@ The session below illustrates the use of the destructor functions:
 \noindent In addition to the print conventions mentioned above, the
 printing of theorems prints hypotheses
 \index{printing, in HOL logic@printing, in \HOL{} logic!of hypotheses of theorems}
-as periods (\ie\ full stops or dots).  The flag \ml{show\_assums}
+as periods (\ie, full stops or dots).  The flag \ml{show\_assums}
 \index{show_assums@\ml{show\_assums}} allows theorems
 to be printed with hypotheses shown in full. These points are illustrated with a
 theorem inferred, for example purposes, from another axiom mentioned
@@ -1190,7 +1209,7 @@ in $t_2$ becoming bound after substitution. The substitution
 \noindent \ml{BETA\_CONV ``(\bs$x$.$t_1$)$t_2$``} %''
 evaluates to the theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
 Failure occurs if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
-(\ie\ is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
+(\ie, is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
 
 \bigskip
 
@@ -1537,7 +1556,7 @@ Thus each theory segment provides a separate namespace of ML bindings of
 \HOL{} items.
 
 Various additional pieces of information are stored in a theory
-segment, including the parsing status of the constants (\eg\ whether
+segment, including the parsing status of the constants (\eg, whether
 they are infixes or binders).
 
 \paragraph {Determining the context}
@@ -1942,7 +1961,7 @@ In \LOGIC{} a constant definition
 \index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}%
 \index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for}%
 %
-over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie\
+over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie,
 a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
 \begin{myenumerate}
 \item $c$ is not the name of any constant in $\Sigma_{\Omega}$;
@@ -1956,7 +1975,7 @@ an equation:
 \[ c\ v_1\ \cdots\ v_n\ =\ t \]
 
 \noindent is  allowed  to  be a  definition where  $v_1$, $\dots$, $v_n$ are
-variable structures (\ie\ tuples of distinct variables).   Such  an equation is
+variable structures (\ie, tuples of distinct variables).   Such  an equation is
 logically equivalent to:
 
 \[ c\ =\ \lambda v_1\ \cdots\ v_n.\  t \]

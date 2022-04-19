@@ -200,6 +200,16 @@ fun trypluck' f list =
       recurse [] list
    end
 
+fun plucki P xs =
+    let fun recur A i l =
+            case l of
+                [] => NONE
+              | h::t => if P h then SOME(h, i, List.revAppend(A,t))
+                        else recur (h::A) (i + 1) t
+    in
+      recur [] 0 xs
+    end
+
 fun funpow n f x =
    let
       fun iter (0, res) = res

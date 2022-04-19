@@ -788,13 +788,13 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
 
 val UF_KS_SEM_def =
  Define
-   `!M f. UF_KS_SEM M f =
+   `UF_KS_SEM M f =
           (!p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==>
                 UF_SEM (CONVERT_PATH_LTL_PSL p) f)`;
 
 val F_KS_SEM_def =
  Define
-   `!M f c. F_KS_SEM M c f =
+   `F_KS_SEM M c f =
           (!p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==>
                 F_SEM (CONVERT_PATH_LTL_PSL p) c f)`;
 

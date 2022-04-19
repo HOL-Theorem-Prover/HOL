@@ -1,3 +1,0 @@
-\THEOREM SET\_MINIMUM pred\_sets
-|- !s M. (?x. x IN s) = (?x. x IN s /\ (!y. y IN s ==> (M x) <= (M y)))
-\ENDTHEOREM

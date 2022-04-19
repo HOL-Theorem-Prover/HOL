@@ -1,3 +1,0 @@
-\THEOREM SUBSET_FINITE pred_sets
-|- !s. FINITE s ==> (!t. t SUBSET s ==> FINITE t)
-\ENDTHEOREM

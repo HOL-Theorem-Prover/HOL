@@ -106,7 +106,7 @@ Proof
   rpt AP_TERM_TAC >>
   qmatch_abbrev_tac ‘MAP f l = l’ >>
   ‘∀t. f t = t’ suffices_by simp[LIST_EQ_REWRITE, EL_MAP] >>
-  Induct >> simp[Abbr‘f’, Cong MAP_CONG']
+  Induct >> simp[Abbr‘f’, Cong MAP_CONG]
 QED
 
 Theorem holds_canon_of_prop:
@@ -124,7 +124,7 @@ Proof
   drule_then (rewrite_tac o Portable.single o GSYM) pholds_prop_of_model >>
   Induct_on ‘p’ >> simp[] >>
   simp[prop_of_model_def, canon_of_prop_def] >>
-  simp[Cong MAP_CONG', GSYM termsubst_termval]
+  simp[Cong MAP_CONG, GSYM termsubst_termval]
 QED
 
 Theorem canonical_canon_of_prop:
@@ -335,8 +335,8 @@ Theorem LOWMOD_termval:
   ∀t. termval (LOWMOD M) v t = num_of_term (termval M (term_of_num o v) t)
 Proof
   simp[SimpL “$==>”, valuation_def, LOWMOD_def] >> strip_tac >>
-  Induct >> simp[Cong MAP_CONG'] >- metis_tac[TERM_OF_NUM] >>
-  simp[LOWMOD_def, MAP_MAP_o, Cong MAP_CONG']
+  Induct >> simp[Cong MAP_CONG] >- metis_tac[TERM_OF_NUM] >>
+  simp[LOWMOD_def, MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Theorem term_of_num_composition:
@@ -350,8 +350,8 @@ Theorem holds_LOWMOD[simp]:
   ∀p v. valuation (LOWMOD M) v ⇒
         (holds (LOWMOD M) v p ⇔ holds M (term_of_num o v) p)
 Proof
-  Induct >> simp[Cong MAP_CONG', LOWMOD_termval]
-  >- simp[LOWMOD_def, MAP_MAP_o, Cong MAP_CONG'] >>
+  Induct >> simp[Cong MAP_CONG, LOWMOD_termval]
+  >- simp[LOWMOD_def, MAP_MAP_o, Cong MAP_CONG] >>
   rw[] >> simp[LOWMOD_def, PULL_EXISTS, term_of_num_composition]
 QED
 
@@ -362,7 +362,7 @@ Proof
   rw[EQ_IMP_THM]
   >- (rename [‘M.Fun f zs ∈ M.Dom’] >>
       first_x_assum (qspecl_then [‘f’, ‘MAP num_of_term zs’] mp_tac) >>
-      simp[MEM_MAP, PULL_EXISTS, MAP_MAP_o, Cong MAP_CONG']) >>
+      simp[MEM_MAP, PULL_EXISTS, MAP_MAP_o, Cong MAP_CONG]) >>
   first_x_assum irule >> simp[MEM_MAP, PULL_EXISTS] >> rpt strip_tac >>
   first_x_assum drule >> simp[PULL_EXISTS]
 QED
@@ -422,7 +422,7 @@ Theorem tm_constify_varify:
   tm_constify keeps t =
     termsubst (varify_map keeps (λn. Fn (1 ⊗ n) [])) (bumpterm t)
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG'] >>
+  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG] >>
   simp[varify_map_def]
 QED
 
@@ -436,7 +436,7 @@ End
 Theorem FVT_tm_constify[simp]:
   ∀t. FVT (tm_constify kvs t) = kvs ∩ FVT t
 Proof
-  Induct >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
+  Induct >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG]
   >- (rw[EXTENSION] >> csimp[]) >>
   simp[Once EXTENSION, MEM_MAP, PULL_EXISTS] >> metis_tac[]
 QED
@@ -467,7 +467,7 @@ Theorem termval_constify[simp]:
   termval (constifymod v M) w (tm_constify kvs t) =
   termval M (λvnm. if vnm ∈ kvs then w vnm else v vnm) t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG'] >>
+  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG] >>
   simp[constifymod_def] >> rw[]
 QED
 
@@ -509,7 +509,7 @@ Theorem term_functions_tm_constify:
 Proof
   Induct_on ‘t’ >> simp[]
   >- (rw[] >> csimp[] >> simp[EXTENSION]) >>
-  simp[MEM_MAP, PULL_EXISTS, Cong MAP_CONG', MAP_MAP_o] >>
+  simp[MEM_MAP, PULL_EXISTS, Cong MAP_CONG, MAP_MAP_o] >>
   dsimp[Once EXTENSION, MEM_MAP, PULL_EXISTS] >> metis_tac[]
 QED
 
@@ -592,7 +592,7 @@ Proof
   strip_tac >> simp[MAP_MAP_o, combinTheory.o_ABS_R] >>
   ‘∀t. MEM t ts ⇒ FVT t DIFF kvs ⊆ fs’
     by (fs[SUBSET_DEF, MEM_MAP, PULL_EXISTS] >> metis_tac[]) >>
-  simp[Cong MAP_CONG']
+  simp[Cong MAP_CONG]
 QED
 
 Theorem UNION_DIFF_lemma:
@@ -613,7 +613,7 @@ Proof
       ‘∀t. MEM t zs ⇒ FVT t DIFF kvs ⊆ fs’
         by (fs[SUBSET_DEF, MEM_MAP, PULL_EXISTS] >> metis_tac[]) >>
       asm_simp_tac (srw_ss() ++ boolSimps.ETA_ss)
-        [GSYM termval_uncm, Cong MAP_CONG']) >>
+        [GSYM termval_uncm, Cong MAP_CONG]) >>
   rpt strip_tac >>
   ‘FV ϕ DIFF (n INSERT kvs) ⊆ fs’ by fs[SUBSET_DEF] >>
   first_x_assum (drule_then (assume_tac o GSYM)) >> simp[] >>

@@ -229,7 +229,7 @@ unless we develop a theory of partial cover and partial MONO, to derive partial 
 *)
 
 (* Define the parameter seek loop *)
-val param_seekM_def = tDefine "param_seekM" `
+Definition param_seekM_def:
     param_seekM m c n k =
       do
          k0 <- zeroM k;
@@ -253,7 +253,8 @@ val param_seekM_def = tDefine "param_seekM" `
                      od
               od
       od
-`(WF_REL_TAC `measure (\(m,c,n,k). c - k)` >> simp[]);
+Termination WF_REL_TAC `measure (λ(m,c,n,k). c - k)` >> simp[]
+End
 
 (*
 > EVAL ``param_seekM 25 31 31 2``;

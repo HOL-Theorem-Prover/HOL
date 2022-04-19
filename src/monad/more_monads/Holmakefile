@@ -15,10 +15,16 @@ selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo) state_transformerTheory.
 
 ifeq($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES) hol4-monad-unint.art
+all: $(ARTFILES) hol4-monad.art
 
 hol4-monad-unint.art: hol4-monad-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
+
+hol4-monad.art: hol4-monad.thy hol4-monad-unint.art ../../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-monad.thy hol4-monad.art
+	opentheory install --reinstall $<
 endif
 
 ifdef HOLSELFTESTLEVEL

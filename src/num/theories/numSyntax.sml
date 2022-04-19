@@ -35,7 +35,7 @@ struct
   val minus_tm     = prim_mk_const {Name="-",       Thy="arithmetic"}
   val mod_tm       = prim_mk_const {Name="MOD",     Thy="arithmetic"}
   val mult_tm      = prim_mk_const {Name="*",       Thy="arithmetic"}
-  val num_case_tm  = prim_mk_const {Name="num_CASE",Thy="arithmetic"}
+  val num_case_tm  = prim_mk_const {Name="num_CASE",Thy="prim_rec"}
   val numeral_tm   = prim_mk_const {Name="NUMERAL", Thy="arithmetic"}
   val odd_tm       = prim_mk_const {Name="ODD",     Thy="arithmetic"}
   val plus_tm      = prim_mk_const {Name="+",       Thy="arithmetic"}

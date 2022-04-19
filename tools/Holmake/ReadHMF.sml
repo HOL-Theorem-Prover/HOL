@@ -20,7 +20,8 @@ fun readline lnum strm = let
                      String.extract(s, 0, SOME (size s - 2))
                    else String.extract(s, 0, SOME (size s - 1))
         in
-          if String.sub(s0, size s0 - 1) = #"\\" then
+          if s0 = "" then SOME(lnum + 1, String.concat (List.rev acc))
+          else if String.sub(s0, size s0 - 1) = #"\\" then
             recurse (lnum + 1,
                      " " :: String.extract(s0, 0, SOME (size s0 - 1)) :: acc)
                     (TextIO.inputLine strm)
@@ -352,9 +353,11 @@ fun memoise f =
           case Binarymap.peek(!stash, s) of
               NONE =>
               let
-                val actual = f s
+                val (actual, ignorablep) = f s
               in
-                stash := Binarymap.insert(!stash, s, actual);
+                if ignorablep then
+                  stash := Binarymap.insert(!stash, s, actual)
+                else ();
                 actual
               end
             | SOME r => r
@@ -372,13 +375,14 @@ fun find_includes0 dirname =
         val (e, _, _) = read hm_fname (base_environment())
         val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
       in
-        map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
-            raw_incs
+        (map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
+             raw_incs,
+         false)
       end handle e => (warn ("Bogus Holmakefile in " ^ dirname ^
                              " - ignoring it");
-                       [])
+                       ([], false))
 
-    else []
+    else ([], true)
   end
 
 val find_includes = memoise find_includes0

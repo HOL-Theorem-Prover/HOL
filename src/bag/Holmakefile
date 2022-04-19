@@ -14,11 +14,26 @@ all: bag-selftest.log
 
 endif
 
-
 ifdef HOLBUILD
 all: link-to-sigobj
 link-to-sigobj: $(DEFAULT_TARGETS)
 	$(HOL_LNSIGOBJ)
 
 .PHONY: link-to-sigobj
+endif
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+all: $(ARTFILES) hol4-bag.art
+
+hol4-bag-unint.art: hol4-bag-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-bag.art: hol4-bag.thy hol4-bag-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-bag.thy hol4-bag.art
+	opentheory install --reinstall $<
+
 endif

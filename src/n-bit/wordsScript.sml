@@ -1539,16 +1539,17 @@ val lem = GEN_ALL (MATCH_MP LESS_LESS_EQ_TRANS (CONJ
 val lem2 = GEN_ALL (MATCH_MP LESS_LESS_EQ_TRANS (CONJ
    (DECIDE ``1 < 2``) TWO_EXP_DIMINDEX))
 
-val WORD_BIT_BITS = Q.store_thm("WORD_BIT_BITS",
-  `!b w. word_bit b w = ((b -- b) w = 1w)`,
+Theorem WORD_BIT_BITS:
+  !b w. word_bit b w = ((b -- b) w = 1w)
+Proof
   STRIP_TAC \\ Cases
-    \\ RW_TAC arith_ss [MIN_DEF,BIT_def,word_bit_n2w,word_bits_n2w,n2w_11,
-         LESS_MOD,lem,lem2,dimword_def]
-    \\ STRIP_ASSUME_TAC EXISTS_HB
-    \\ FULL_SIMP_TAC arith_ss [MIN_DEF,GSYM BITS_ZERO3,SUC_SUB1,BITS_COMP_THM2]
-    \\ Cases_on `b = 0` \\ FULL_SIMP_TAC arith_ss []
-    >| [`m = 0` by DECIDE_TAC \\ ASM_REWRITE_TAC [],
-      Cases_on `m = b` \\ ASM_SIMP_TAC arith_ss [BITS_ZERO]])
+  \\ RW_TAC arith_ss [MIN_DEF,BIT_def,word_bit_n2w,word_bits_n2w,n2w_11,
+                      LESS_MOD,lem,lem2,dimword_def]
+  \\ STRIP_ASSUME_TAC EXISTS_HB
+  \\ FULL_SIMP_TAC arith_ss [MIN_DEF,GSYM BITS_ZERO3,SUC_SUB1,BITS_COMP_THM2]
+  \\ Cases_on `b = 0` \\ FULL_SIMP_TAC arith_ss []
+  \\ Cases_on `m = b` \\ ASM_SIMP_TAC arith_ss [BITS_ZERO]
+QED
 
 val lem = Q.prove(`MIN d (l1 + MIN h2 d) = MIN (h2 + l1) d`,
   RW_TAC arith_ss [MIN_DEF])

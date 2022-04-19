@@ -763,7 +763,7 @@ val DS_EXPRESSION_EVAL_def = Define
 
 
 val DS_EXPRESSION_EQUAL_def = Define
-‘!s e1 e2. DS_EXPRESSION_EQUAL s e1 e2 =
+‘DS_EXPRESSION_EQUAL s e1 e2 <=>
           (DS_EXPRESSION_EVAL s e1 = DS_EXPRESSION_EVAL s e2)’;
 
 val DS_EXPRESSION_EVAL_VALUE_def = Define

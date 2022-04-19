@@ -10,11 +10,6 @@
 (* DATE:    January 1992                                                *)
 (* =====================================================================*)
 
-structure pred_setScript =
-struct
-(* structure declaration is necessary so that Moscow ML does not get
-   confused by the rebinding of structure Q below *)
-
 open HolKernel Parse boolLib Prim_rec pairLib numLib numpairTheory
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
      BasicProvers metisLib mesonLib simpLib boolSimps dividesTheory;
@@ -1794,12 +1789,12 @@ val DISJOINT_IMAGE = Q.store_thm(
    (DISJOINT (IMAGE f s1) (IMAGE f s2) <=> DISJOINT s1 s2)’,
   simp[DISJOINT_DEF, EQ_IMP_THM, EXTENSION] >> METIS_TAC[]);
 
-val IMAGE_CONG = store_thm(
-"IMAGE_CONG",
-``!f s f' s'. (s = s') /\ (!x. x IN s' ==> (f x = f' x))
-==> (IMAGE f s = IMAGE f' s')``,
-SRW_TAC[][EXTENSION] THEN METIS_TAC[])
-val _ = DefnBase.export_cong"IMAGE_CONG"
+Theorem IMAGE_CONG[defncong]:
+  !f s f' s'. (s = s') /\ (!x. x IN s' ==> (f x = f' x)) ==>
+              IMAGE f s = IMAGE f' s'
+Proof
+  SRW_TAC[][EXTENSION] THEN METIS_TAC[]
+QED
 
 val GSPEC_IMAGE = Q.store_thm ("GSPEC_IMAGE",
   `GSPEC f = IMAGE (FST o f) (SND o f)`,
@@ -4544,20 +4539,16 @@ val DIFF_INTER_COMPL = store_thm
     A "fold"-like operation for sets.
  ---------------------------------------------------------------------------*)
 
-val ITSET_def =
- let open TotalDefn
- in
-   tDefine "ITSET"
-    `ITSET (s:'a->bool) (b:'b) =
+Definition ITSET_def[induction=ITSET_IND]:
+  ITSET (s:'a->bool) (b:'b) =
        if FINITE s then
           if s={} then b
           else ITSET (REST s) (f (CHOICE s) b)
-       else ARB`
-  (WF_REL_TAC `measure (CARD o FST)` THEN
-   METIS_TAC [CARD_PSUBSET, REST_PSUBSET])
- end;
-
-val ITSET_IND = fetch "-" "ITSET_ind";
+       else ARB
+Termination
+  TotalDefn.WF_REL_TAC ‘measure (CARD o FST)’ THEN
+  METIS_TAC [CARD_PSUBSET, REST_PSUBSET]
+End
 
 (*---------------------------------------------------------------------------
       Desired recursion equation.
@@ -4566,15 +4557,13 @@ val ITSET_IND = fetch "-" "ITSET_ind";
                                   else ITSET f (REST s) (f (CHOICE s) b)
  ---------------------------------------------------------------------------*)
 
-val ITSET_THM =
+Theorem ITSET_THM =
 W (GENL o rev o free_vars o concl)
   (DISCH_ALL(ASM_REWRITE_RULE [ASSUME ``FINITE s``] (SPEC_ALL ITSET_def)));
 
-val _ = save_thm("ITSET_IND",ITSET_IND);
-val _ = save_thm("ITSET_THM",ITSET_THM);
-val _ = save_thm("ITSET_EMPTY",
-                  REWRITE_RULE []
-                      (MATCH_MP (SPEC ``{}`` ITSET_THM) FINITE_EMPTY));
+Theorem ITSET_EMPTY[simp] =
+        REWRITE_RULE []
+                     (MATCH_MP (SPEC ``{}`` ITSET_THM) FINITE_EMPTY);
 
 (* Could also prove by
 
@@ -4667,6 +4656,13 @@ val COMMUTING_ITSET_RECURSES = store_thm(
     SIMP_TAC bool_ss [ITSET_THM, FINITE_EMPTY],
     ASM_SIMP_TAC bool_ss [COMMUTING_ITSET_INSERT, delete_non_element]
   ]);
+
+(* Corollary *)
+Theorem ITSET_SING[simp]:
+    !f x a. ITSET f {x} a = f x a
+Proof
+    rw[] >> fs[ITSET_THM]
+QED
 
 (* ----------------------------------------------------------------------
     SUM_IMAGE
@@ -4863,10 +4859,9 @@ val SUM_SAME_IMAGE = Q.store_thm
     FULL_SIMP_TAC (srw_ss() ++ DNF_ss) []
   ]);
 
-val SUM_IMAGE_CONG = Q.store_thm(
-"SUM_IMAGE_CONG",
-`(s1 = s2) /\ (!x. x IN s2 ==> (f1 x = f2 x))
- ==> (SIGMA f1 s1 = SIGMA f2 s2)`,
+Theorem SUM_IMAGE_CONG[defncong]:
+  s1 = s2 /\ (!x. x IN s2 ==> (f1 x = f2 x)) ==> SIGMA f1 s1 = SIGMA f2 s2
+Proof
 SRW_TAC [][] THEN
 REVERSE (Cases_on `FINITE s1`) THEN1 (
   SRW_TAC [][SUM_IMAGE_DEF,Once ITSET_def] THEN
@@ -4875,8 +4870,8 @@ Q.PAT_X_ASSUM `!x.P` MP_TAC THEN
 POP_ASSUM MP_TAC THEN
 Q.ID_SPEC_TAC `s1` THEN
 HO_MATCH_MP_TAC FINITE_INDUCT THEN
-SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_DELETE])
-val _ = DefnBase.export_cong "SUM_IMAGE_CONG"
+SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_DELETE]
+QED
 
 Theorem SUM_IMAGE_ZERO:
   !s. FINITE s ==> ((SIGMA f s = 0) <=> (!x. x IN s ==> (f x = 0)))
@@ -6463,6 +6458,14 @@ val pair_to_num_inv = Q.store_thm ("pair_to_num_inv",
    (!x y. num_to_pair (pair_to_num (x, y)) = (x, y))`,
   SRW_TAC [][pair_to_num_def, num_to_pair_def]);
 
+(* More generally applicable version of the above *)
+Theorem pair_to_num_inv'[simp]:
+    (!x. pair_to_num (num_to_pair x) = x) /\
+    (!x. num_to_pair (pair_to_num x) = x)
+Proof
+    simp[FORALL_PROD,pair_to_num_inv]
+QED
+
 val num_cross_countable = Q.prove (
   `countable (UNIV:num set CROSS UNIV:num set)`,
   RWTAC [countable_surj, SURJ_DEF, CROSS_DEF] THEN
@@ -7000,6 +7003,26 @@ QED
 
 (* end PREIMAGE lemmas *)
 
+(* Miscellaneous bijections *)
+
+Theorem BIJ_NUM_TO_PAIR:
+    BIJ num_to_pair UNIV (UNIV CROSS UNIV)
+Proof
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘pair_to_num’ >> simp[]
+QED
+
+Theorem BIJ_PAIR_TO_NUM:
+    BIJ pair_to_num (UNIV CROSS UNIV) UNIV
+Proof
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘num_to_pair’ >> simp[]
+QED
+
+Theorem BIJ_SWAP:
+    BIJ SWAP (UNIV CROSS UNIV) (UNIV CROSS UNIV)
+Proof
+    simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘SWAP’ >> simp[]
+QED
+
 (* "<<=" is overloaded in listTheory, cardinalTheory and maybe others,
    we put its Unicode and TeX definitions here to make sure by loading any of the
    theories user could see the Unicode representations. *)
@@ -7107,4 +7130,3 @@ end
 
 val _ = export_theory();
 
-end (* struct *)

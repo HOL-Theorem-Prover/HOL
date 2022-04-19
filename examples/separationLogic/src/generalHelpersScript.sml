@@ -567,14 +567,15 @@ val MAP_ZIP_EQ = store_thm ("MAP_ZIP_EQ",
 Induct_on `l` THEN ASM_SIMP_TAC list_ss []);
 
 
-val LIST_ZIP_def = tDefine "LIST_ZIP"
-`LIST_ZIP L = if ((NULL (HD L)) \/ (NULL L)) then [] else
-              (MAP HD L)::LIST_ZIP (MAP TL L)`
-
-(Q.EXISTS_TAC `measure (\l. LENGTH (HD l))` THEN
-REWRITE_TAC[prim_recTheory.measure_thm, prim_recTheory.WF_measure] THEN
-Cases_on `L` THEN SIMP_TAC list_ss [] THEN
-Cases_on `h` THEN SIMP_TAC list_ss []);
+Definition LIST_ZIP_def:
+  LIST_ZIP L = if NULL (HD L) \/ NULL L then []
+               else (MAP HD L)::LIST_ZIP (MAP TL L)
+Termination
+  Q.EXISTS_TAC `measure (\l. LENGTH (HD l))` THEN
+  REWRITE_TAC[prim_recTheory.measure_thm, prim_recTheory.WF_measure] THEN
+  Cases_on `L` THEN SIMP_TAC list_ss [] THEN
+  Cases_on `h` THEN SIMP_TAC list_ss []
+End
 
 
 val LIST_ZIP_REWRITE = store_thm ("LIST_ZIP_REWRITE",

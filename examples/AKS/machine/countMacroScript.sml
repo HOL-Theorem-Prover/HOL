@@ -1541,7 +1541,7 @@ val le1M_steps = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define append monad *)
-val appendM_def = tDefine "appendM" `
+Definition appendM_def:
   appendM l1 l2 =
       do
          gd <- nullM l1;
@@ -1553,7 +1553,9 @@ val appendM_def = tDefine "appendM" `
                  consM h ls;
               od
       od
-`(WF_REL_TAC `measure (\(l1, l2). LENGTH l1)` >> simp[LENGTH_TL_LT]);
+Termination
+  WF_REL_TAC `measure (λ(l1, l2). LENGTH l1)` >> simp[LENGTH_TL_LT]
+End
 
 
 (* Theorem: valueOf (appendM l1 l2) = l1 ++ l2 *)
@@ -1568,7 +1570,7 @@ val appendM_value = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define snoc monoad *)
-val snocM_def = tDefine "snocM" `
+Definition snocM_def:
   snocM x ls =
        do
          gd <- nullM ls;
@@ -1580,7 +1582,9 @@ val snocM_def = tDefine "snocM" `
                  consM h l;
               od
        od
-`(WF_REL_TAC `measure (\(x,ls). LENGTH ls)` >> simp[LENGTH_TL_LT]);
+Termination
+  WF_REL_TAC `measure (λ(x,ls). LENGTH ls)` >> simp[LENGTH_TL_LT]
+End
 
 (* Theorem: valueOf (snocM x ls) = SNOC x ls *)
 (* Proof: induction on ls, snocM_def, SNOC. *)

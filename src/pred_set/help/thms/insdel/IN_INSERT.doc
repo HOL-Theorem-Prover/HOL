@@ -1,3 +1,0 @@
-\THEOREM IN_INSERT pred_sets
-|- !x y s. x IN (y INSERT s) = (x = y) \/ x IN s
-\ENDTHEOREM

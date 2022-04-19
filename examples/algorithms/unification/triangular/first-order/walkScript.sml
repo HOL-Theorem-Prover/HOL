@@ -19,13 +19,13 @@ in
       (hyp th))
 end
 
-val vwalk_def = save_thm("vwalk_def",vwalk_wfs_hyp
-(TotalDefn.xDefineSchema "pre_vwalk"
- `vwalk v =
+Theorem vwalk_def = DISCH_ALL $ vwalk_wfs_hyp (
+  TotalDefn.xDefineSchema "pre_vwalk"
+   `vwalk v =
     case FLOOKUP s v of
          SOME (Var u) => vwalk u
        | SOME t => t
-       | NONE => Var v`) |> DISCH_ALL)
+       | NONE => Var v` |> fst)
 val vwalk_ind = save_thm("vwalk_ind",vwalk_wfs_hyp (theorem "pre_vwalk_ind"))
 
 val _ = store_term_thm("vwalk_def_print",
@@ -225,13 +225,13 @@ val vwalk_rhsR_q = `
                        ∀e. MEM e pr ⇒ FST e ≠ v ∧ SND e ≠ Var v),
                   (v, s0), s1))`;
 
-val vwalk_rhs_def = tDefine "vwalk_rhs" vwalk_rhs_q
-(WF_REL_TAC vwalk_rhsR_q THEN
+val vwalk_rhs_def = TotalDefn.qDefine "vwalk_rhs_def" vwalk_rhs_q
+(SOME (WF_REL_TAC vwalk_rhsR_q THEN
 SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 SRW_TAC [][] THEN RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 Induct_on `pr` THEN SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss) [] THEN
 Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-METIS_TAC []);
+METIS_TAC []))
 
 val _ = store_term_thm("vwalk_rhsR", Term vwalk_rhsR_q);
 val _ = store_term_thm("vwalk_rhs_defn_print", Term vwalk_rhs_q);

@@ -1,3 +1,0 @@
-\THEOREM SUBSET_INTER_ABSORPTION pred_sets
-|- !s t. s SUBSET t = (s INTER t = s)
-\ENDTHEOREM

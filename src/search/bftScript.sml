@@ -41,10 +41,8 @@ val Rel_def =   (* map arg. tuples into a pair of numbers for termination *)
 
 val () = computeLib.auto_import_definitions := false
 
-val def = (* Define function and prove termination *)
- tDefine
-  "BFT"
-  `BFT G f seen fringe acc =
+Definition BFT_def0[induction=BFT_ind0]:
+  BFT G f seen fringe acc =
     if FINITE (Parents G)
       then case fringe
            of [] => acc
@@ -54,8 +52,9 @@ val def = (* Define function and prove termination *)
                 else BFT G f (h::seen)
                              (t ++ G h)
                              (f h acc)
-      else ARB`
- (WF_REL_TAC `inv_image ($< LEX $<) Rel`
+      else ARB
+Termination
+ WF_REL_TAC `inv_image ($< LEX $<) Rel`
    THEN RW_TAC set_ss [Rel_def, DECIDE ``(0 < p - q) <=> q < p ``]
    THEN Cases_on `h IN Parents G` THENL
    [DISJ1_TAC, DISJ2_TAC] THEN RW_TAC set_ss [] THENL
@@ -71,7 +70,8 @@ val def = (* Define function and prove termination *)
     MATCH_MP_TAC (DECIDE ``(p=q) ==> (x-p = x-q)``)
       THEN MATCH_MP_TAC (METIS_PROVE [] ``(s1=s2) ==> (CARD s1 = CARD s2)``)
       THEN RW_TAC set_ss [INTER_DEF,EXTENSION] THEN METIS_TAC [],
-    FULL_SIMP_TAC set_ss [Parents_def]]);
+    FULL_SIMP_TAC set_ss [Parents_def]]
+End
 
 (*---------------------------------------------------------------------------*)
 (* Desired recursion equations, constrained by finiteness of graph.          *)
@@ -88,10 +88,10 @@ val BFT_def = Q.store_thm
                     (t ++ G h)
                     (f h acc))`,
  RW_TAC std_ss [] THENL
- [RW_TAC list_ss [def],
-  GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss [],
-  RW_TAC list_ss [def],
-  GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss []]);
+ [RW_TAC list_ss [BFT_def0],
+  GEN_REWRITE_TAC LHS_CONV empty_rewrites [BFT_def0] THEN RW_TAC list_ss [],
+  RW_TAC list_ss [BFT_def0],
+  GEN_REWRITE_TAC LHS_CONV empty_rewrites [BFT_def0] THEN RW_TAC list_ss []]);
 
 (*---------------------------------------------------------------------------*)
 (* Desired induction theorem for BFT.                                        *)
@@ -109,7 +109,7 @@ val BFT_ind = Q.store_thm
    ==>
    !v v1 v2 v3 v4. P v v1 v2 v3 v4`,
  NTAC 2 STRIP_TAC
- THEN HO_MATCH_MP_TAC (fetch "-" "BFT_ind")
+ THEN HO_MATCH_MP_TAC BFT_ind0
  THEN REPEAT GEN_TAC THEN Cases_on `fringe`
  THEN RW_TAC list_ss []);
 

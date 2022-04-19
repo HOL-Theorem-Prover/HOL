@@ -717,10 +717,9 @@ val FCP_ss = rewrites [FCP_BETA, FCP_ETA, CART_EQ]
 
 val () = set_fixity ":+" (Infixl 325)
 
-val FCP_UPDATE_def =
-   Lib.with_flag (computeLib.auto_import_definitions, false)
-      (xDefine "FCP_UPDATE")
-      `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b`
+Definition FCP_UPDATE_def[nocompute]:
+  $:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b
+End
 
 val FCP_UPDATE_COMMUTES = Q.store_thm ("FCP_UPDATE_COMMUTES",
    `!m a b c d. ~(a = b) ==> ((a :+ c) ((b :+ d) m) = (b :+ d) ((a :+ c) m))`,

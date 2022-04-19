@@ -257,25 +257,16 @@ val wf_encode_list = store_thm
 
 (* A congruence rule *)
 
-val encode_list_cong = store_thm
- ("encode_list_cong",
-  ``!l1 l2 f1 f2.
+Theorem encode_list_cong[defncong]:
+  !l1 l2 f1 f2.
       (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x))
               ==>
-      (encode_list f1 l1 = encode_list f2 l2)``,
+      (encode_list f1 l1 = encode_list f2 l2)
+Proof
   Induct >>
   SIMP_TAC list_ss [MEM,encode_list_def] >>
-  RW_TAC list_ss []);
-
-val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn _ =>
-   let val S = PP.add_string
-   in
-     S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());"
-   end)};
+  RW_TAC list_ss []
+QED
 
 (*---------------------------------------------------------------------------
         Bounded lists
@@ -433,22 +424,20 @@ val encode_bnum_length = store_thm
    Induct
    >> RW_TAC std_ss [LENGTH, encode_bnum_def]);
 
-val encode_bnum_inj = store_thm
-  ("encode_bnum_inj",
-   ``!m x y.
-       x < 2 ** m /\ y < 2 ** m /\ (encode_bnum m x = encode_bnum m y) ==>
-       (x = y)``,
-   Induct
-   >> RW_TAC std_ss
-      [encode_bnum_def, DECIDE “!n. n < 1 <=> (n = 0)”, GSYM EXP2_LT]
-   >> RES_TAC
-   >> Know `x DIV 2 = y DIV 2` >- RES_TAC
-   >> Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
+Theorem encode_bnum_inj:
+  !m x y.
+    x < 2 ** m /\ y < 2 ** m /\ encode_bnum m x = encode_bnum m y ==>
+    x = y
+Proof
+   Induct >> rw[encode_bnum_def] >>
+   first_x_assum $ drule_at Any >> simp[] >>
+   Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
    >> POP_ASSUM_LIST (K ALL_TAC)
    >> RW_TAC std_ss []
    >> MP_TAC (MP (Q.SPEC `2` DIVISION) (DECIDE ``0 < 2``))
    >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   >> RW_TAC std_ss [MOD_2]);
+   >> RW_TAC std_ss [MOD_2]
+QED
 
 val wf_encode_bnum_collision_free = store_thm
   ("wf_encode_bnum_collision_free",

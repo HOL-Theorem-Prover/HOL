@@ -27,6 +27,12 @@ End
 
 Overload SIGMA = “REAL_SUM_IMAGE”
 
+Theorem REAL_SUM_IMAGE_EMPTY[simp]:
+    !f. REAL_SUM_IMAGE f EMPTY = 0
+Proof
+    simp[REAL_SUM_IMAGE_DEF]
+QED
+
 Theorem REAL_SUM_IMAGE_THM :
     !f. (REAL_SUM_IMAGE f {} = 0) /\
         (!e s. FINITE s ==>
@@ -61,7 +67,7 @@ QED
 (* it translates a sum theorem into a SIGMA theorem *)
 fun translate th = SIMP_RULE std_ss [GSYM REAL_SUM_IMAGE_sum] th;
 
-Theorem REAL_SUM_IMAGE_SING :
+Theorem REAL_SUM_IMAGE_SING[simp] :
     !f e. REAL_SUM_IMAGE f {e} = f e
 Proof
     SRW_TAC [][REAL_SUM_IMAGE_THM]
@@ -631,6 +637,47 @@ Proof
  >> Q.PAT_X_ASSUM ‘!y. y IN s ==> ?!x. P’ (MP_TAC o Q.SPEC ‘y’)
  >> RW_TAC bool_ss [EXISTS_UNIQUE_DEF] (* why it takes so long time? *)
  >> Q.EXISTS_TAC ‘x’ >> art []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Analogous notion of finite products                                       *)
+(*   (generally for use in descendent theories)                              *)
+(* ------------------------------------------------------------------------- *)
+
+Definition REAL_PROD_IMAGE_DEF:
+    REAL_PROD_IMAGE f s = ITSET (λe acc. f e * acc) s (1:real)
+End
+
+Overload PI = “REAL_PROD_IMAGE”
+val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
+
+Theorem REAL_PROD_IMAGE_EMPTY[simp]:
+    !(f:'a -> real). REAL_PROD_IMAGE f EMPTY = 1
+Proof
+    simp[REAL_PROD_IMAGE_DEF]
+QED
+
+Theorem REAL_PROD_IMAGE_SING[simp]:
+    !f. REAL_PROD_IMAGE f EMPTY = 1
+Proof
+    simp[REAL_PROD_IMAGE_DEF]
+QED
+
+Theorem REAL_PROD_IMAGE_INSERT:
+    !(f:'a -> real) e s. FINITE s ==>
+        REAL_PROD_IMAGE f (e INSERT s) = f e * REAL_PROD_IMAGE f (s DELETE e)
+Proof
+    rw[REAL_PROD_IMAGE_DEF] >>
+    qspecl_then [‘λe acc. f e * acc’,‘e’,‘s’,‘1r’]
+        (irule o SIMP_RULE (srw_ss ()) []) COMMUTING_ITSET_RECURSES >>
+    simp[]
+QED
+
+Theorem REAL_PROD_IMAGE_THM:
+    !f. REAL_PROD_IMAGE f EMPTY = 1r /\
+        !e s. FINITE s ==> REAL_PROD_IMAGE f (e INSERT s) = f e * REAL_PROD_IMAGE f (s DELETE e)
+Proof
+    simp[REAL_PROD_IMAGE_EMPTY,REAL_PROD_IMAGE_INSERT]
 QED
 
 (* ------------------------------------------------------------------------- *)

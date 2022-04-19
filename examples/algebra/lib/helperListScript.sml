@@ -7012,13 +7012,14 @@ MDILATE e m (MDILATE e n l) = MDILATE e (m * n) l, for 0 < m, 0 < n.
 (* ------------------------------------------------------------------------- *)
 
 (* Dilate by inserting m zeroes, at position n of tail *)
-val DILATE_def = tDefine "DILATE" `
+Definition DILATE_def:
   (DILATE e n m [] = []) /\
   (DILATE e n m [h] = [h]) /\
   (DILATE e n m (h::t) = h:: (TAKE n t ++ (GENLIST (K e) m) ++ DILATE e n m (DROP n t)))
-`(
-  WF_REL_TAC `measure (\(a,b,c,d). LENGTH d)` >>
-  rw[LENGTH_DROP]);
+Termination
+  WF_REL_TAC `measure (λ(a,b,c,d). LENGTH d)` >>
+  rw[LENGTH_DROP]
+End
 
 (*
 > EVAL ``DILATE 0 0 1 [1;2;3]``;

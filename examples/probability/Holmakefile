@@ -3,7 +3,10 @@ INCLUDES = $(HOLDIR)/src/probability $(HOLDIR)/src/n-bit $(HOLDIR)/src/real \
 
 EXTRA_CLEANS = heap \
 	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
-	$(patsubst %Theory.uo,%Theory.lst,$(DEFAULT_TARGETS))
+	$(patsubst %Theory.uo,%Theory.lst,$(DEFAULT_TARGETS)) \
+	hol4-large-numbers.art  hol4-large-numbers-only.art \
+	hol4-large-numbers.html hol4-large-numbers-only.html \
+	hol4-large-numbers.log  hol4-large-numbers-only.log
 
 ifdef POLY
 HOLHEAP = heap
@@ -11,7 +14,6 @@ OBJS = real/realLib n-bit/fcpLib res_quan/src/hurdUtils probability/probabilityT
 FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
                 $(HOLDIR)/sigobj/posetTheory.uo
 HEAP0 = $(HOLDIR)/src/probability/heap
-
 
 all: $(HOLHEAP)
 
@@ -22,3 +24,57 @@ endif
 all: $(DEFAULT_TARGETS)
 
 .PHONY: all
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+all: $(ARTFILES)
+
+# NOTE: the following targets are not included in "all". OpenTheory binary built
+# by Poly/ML (with Int.maxInt = NONE, i.e., --enable-intinf-as-int) must be used
+# here, since OpenTheory built by the Mlton (otherwise recommended!) will report
+# (integer?) "Overflow".  With PolyML built OT, this step takes (on 2019 MacBook
+# Pro) about 6 hours with 8 CPU cores (the total CPU time is ~8 hours) and ~52GB
+# memory to complete.  -- Chun Tian, Apr 8, 2022
+#
+# To easily switch between OpenTheory built by different SML platforms, below is
+# my recommended softlinks in my $(HOME)/bin:
+#
+# opentheory -> opentheory.mlton
+# opentheory.mlton -> ../ML/opentheory/bin/mlton/opentheory
+# opentheory.mosml -> ../ML/opentheory/bin/mosml/opentheory
+# opentheory.polyml -> ../ML/opentheory/bin/polyml/opentheory
+#
+# UPDATE: another (better) way is to rebuild OpenTheory with MLton by adding the
+# following MLton command-line option:
+#
+#   MLTON_OPTS += -default-type intinf
+#
+# into OpenTheory's Makefile (right after the line with "MLTON_OPTS = ..."), and
+# this may enable computers with 32GB memory to finish this build.
+hol4-large-numbers.art: hol4-large-numbers.thy large_number.ot.art \
+			$(HOLDIR)/src/opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+# With the rebuilt OpenTheory/Mlton (-default-type intinf), this step only takes
+# 2 minutes (otherwise 2 hours with OpenTheory/PolyML)
+
+# "&> file (aka >& file) is not part of the official POSIX shell spec, but has been
+# added to many Bourne shells as a convenience extension (it originally comes from
+# csh). In a portable shell script (and if you don't need portability, why are you
+# writing a shell script?), use > file 2>&1 only." (from stackoverflow)
+hol4-large-numbers.html: hol4-large-numbers.art
+	opentheory info --inference --document -o $@ $< \
+		> hol4-large-numbers.log 2>&1
+
+# A smaller version containing only theorems useful for proving LLN (and LLN itself)
+hol4-large-numbers-only.art: hol4-large-numbers-only.thy large_number.ot.art \
+			$(HOLDIR)/src/opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+# TODO: how to show ALL theorems in this article?
+hol4-large-numbers-only.html: hol4-large-numbers-only.art
+	opentheory info --inference --document -o $@ $< \
+		> hol4-large-numbers-only.log 2>&1
+
+endif

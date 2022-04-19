@@ -43,15 +43,14 @@ val POWER_LE = store_thm("POWER_LE",
                         Cases_on `n` THEN ARW[POWER]
                         THEN Cases_on `x` THEN ARW[LT_MULT_RIGHT,POWER_LT_0]);
 
-val POWER_LE_1 = store_thm("POWER_LE_1",
-                       Term `! a b. 1 <= $EXP (SUC a) b`,
-                       Cases_on `b` THEN ARW[]
-                       THENL [
-                         ARW[POWER],
-                         `1 <= (SUC a)` by ARW[]
-                           THEN `0 < SUC n` by ARW[]
-                           THEN PROVE_TAC[LESS_EQ_TRANS,POWER_LE]
-                       ]);
+Theorem POWER_LE_1:
+  ! a b. 1 <= $EXP (SUC a) b
+Proof
+  Cases_on `b` THEN ARW[] THEN
+  ‘1 <= SUC a’ by ARW[] THEN
+  ‘0 < SUC n’ by ARW[] THEN
+  PROVE_TAC[LESS_EQ_TRANS,POWER_LE]
+QED
 
 val POWER_MULT = store_thm("POWER_MULT",
                         Term `!x n m. $EXP x n * $EXP x m = $EXP x (n+m)`,

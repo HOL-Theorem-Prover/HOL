@@ -1,3 +1,0 @@
-\THEOREM CHOICE_INSERT_REST pred_sets
-|- !s. ~(s = {{}}) ==> ((CHOICE s) INSERT (REST s) = s)
-\ENDTHEOREM

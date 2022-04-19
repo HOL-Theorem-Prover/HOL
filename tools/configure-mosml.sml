@@ -228,6 +228,23 @@ in
   | SOME c => if check_mosml c then c else mosml_from_loadpath ()
 end;
 
+fun find_in_bin_or_path s =
+    let
+      val binpath = OS.Path.concat("/bin", s)
+    in
+      if OS.FileSys.access (binpath, [OS.FileSys.A_EXEC]) then
+        (binpath, true)
+      else
+        case which s of
+            NONE => die ("Couldn't find `" ^ s ^
+                         "' executable. Please edit\n\
+                         \config-overrides to include\n\
+                         \  val " ^ String.translate (str o Char.toUpper) s ^
+                         " = \"...\"")
+          | SOME s => (s, false)
+    end;
+
+
 print "\n";
 
 fun verdict (prompt, value) =
@@ -240,12 +257,19 @@ fun optverdict (prompt, optvalue) =
    print (case optvalue of NONE => "NONE" | SOME p => "SOME "^p);
    print "\n");
 
+fun dfltverdict (prompt, (value, dflt)) =
+    if dflt then value
+    else (print (StringCvt.padRight #" " 20 (prompt ^ ":") ^ value); value);
+
+
 verdict ("OS", OS);
 verdict ("mosmldir", mosmldir);
 verdict ("holdir", holdir);
 verdict ("dynlib_available", Bool.toString dynlib_available);
 verdict ("GNUMAKE", GNUMAKE);
 optverdict ("DOT_PATH", DOT_PATH);
+val MV = dfltverdict ("MV", find_in_bin_or_path "mv");
+val CP = dfltverdict ("CP", find_in_bin_or_path "cp");
 
 val _ = let
   val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"

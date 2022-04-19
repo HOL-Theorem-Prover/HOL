@@ -1,3 +1,0 @@
-\THEOREM FINITE_PSUBSET_INFINITE pred_sets
-|- !s. INFINITE s = (!t. FINITE t ==> t SUBSET s ==> t PSUBSET s)
-\ENDTHEOREM

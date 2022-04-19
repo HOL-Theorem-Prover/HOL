@@ -329,11 +329,12 @@ val merge_stable = Q.store_thm ("merge_stable",
   stable R (l1 ++ l2) (merge R l1 l2)`,
  srw_tac[][stable_def, filter_merge]);
 
-val mergesortN_stable = Q.store_thm ("mergesortN_stable",
-`!R n l.
-  total R /\ transitive R
-  ==>
-  stable R (TAKE n l) (mergesortN R n l)`,
+Theorem mergesortN_stable:
+  !R n l.
+    total R /\ transitive R
+    ==>
+    stable R (TAKE n l) (mergesortN R n l)
+Proof
  ho_match_mp_tac mergesortN_ind >>
  srw_tac[][] >>
  ONCE_REWRITE_TAC [mergesortN_def] >>
@@ -358,7 +359,9 @@ val mergesortN_stable = Q.store_thm ("mergesortN_stable",
  >- (`len1 <= n`
              by (UNABBREV_ALL_TAC >>
                  fs [DIV2_def, DIV_LESS_EQ]) >>
-     metis_tac [stable_cong, merge_stable, take_drop_partition, stable_trans, mergesortN_sorted]));
+     metis_tac [stable_cong, merge_stable, take_drop_partition, stable_trans,
+                mergesortN_sorted])
+QED
 
 val mergesort_stable = Q.store_thm ("mergesort_stable",
 `!R l. transitive R /\ total R ==> stable R l (mergesort R l)`,
@@ -383,11 +386,12 @@ val sort2_tail_correct = Q.store_thm ("sort2_tail_correct",
  srw_tac[][sort2_def, sort2_tail_def] >>
  fs []);
 
-val sort3_tail_correct = Q.store_thm ("sort3_tail_correct",
-`!neg R x y z.
-  sort3_tail neg R x y z = if neg then REVERSE (sort3 R x y z) else sort3 R x y z`,
- srw_tac[][sort3_def, sort3_tail_def] >>
- fs []);
+Theorem sort3_tail_correct:
+  !neg R x y z.
+    sort3_tail neg R x y z = if neg then REVERSE (sort3 R x y z)
+                             else sort3 R x y z
+Proof srw_tac[][sort3_def, sort3_tail_def] >> fs []
+QED
 
 val merge_tail_correct1 = Q.store_thm ("merge_tail_correct1",
 `!neg R l1 l2 acc.
@@ -453,13 +457,14 @@ val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
      `R x' x` by metis_tac [mem_sorted_append, MEM_REVERSE, MEM] >>
      metis_tac [transitive_def]));
 
-val mergesortN_correct = Q.store_thm ("mergesortN_correct",
-`!negate R n l.
-  total R /\
-  transitive R
-  ==>
-  mergesortN_tail negate R n l =
-    (if negate then REVERSE (mergesortN R n l) else mergesortN R n l)`,
+Theorem mergesortN_correct:
+  !negate R n l.
+    total R /\
+    transitive R
+    ==>
+    mergesortN_tail negate R n l =
+    (if negate then REVERSE (mergesortN R n l) else mergesortN R n l)
+Proof
  ho_match_mp_tac mergesortN_tail_ind >>
  srw_tac[][] >>
  ONCE_REWRITE_TAC [mergesortN_tail_def, mergesortN_def] >>
@@ -469,7 +474,8 @@ val mergesortN_correct = Q.store_thm ("mergesortN_correct",
  fs [] >>
  UNABBREV_ALL_TAC >>
  srw_tac[][merge_tail_correct1] >>
- metis_tac [merge_tail_correct2, mergesortN_sorted, REVERSE_REVERSE, APPEND_NIL]);
+ metis_tac [merge_tail_correct2, mergesortN_sorted, REVERSE_REVERSE,APPEND_NIL]
+QED
 
 val mergesort_tail_correct = Q.store_thm ("mergesort_tail_correct",
 `!R l.
@@ -494,7 +500,8 @@ val mergesortN'_def = tDefine "mergesortN'" `
 (mergesortN' R 2 [] = []) /\
 (mergesortN' R n l =
   let len1 = DIV2 n in
-    merge R (mergesortN' R (DIV2 n) l) (mergesortN' R (n - len1) (DROP len1 l)))`
+    merge R (mergesortN' R (DIV2 n) l)
+            (mergesortN' R (n - len1) (DROP len1 l)))`
  (WF_REL_TAC `measure (λ(R,n,l). n)` >>
   srw_tac[][DIV2_def] >>
   COOPER_TAC);
@@ -505,7 +512,8 @@ val mergesortN''_def = tDefine "mergesortN''" `
 (mergesortN'' R 1 [] = []) /\
 (mergesortN'' R n l =
   let len1 = DIV2 n in
-    merge R (mergesortN'' R (DIV2 n) l) (mergesortN'' R (n - len1) (DROP len1 l)))`
+    merge R (mergesortN'' R (DIV2 n) l)
+            (mergesortN'' R (n - len1) (DROP len1 l)))`
  (WF_REL_TAC `measure (λ(R,n,l). n)` >>
   srw_tac[][DIV2_def] >>
   COOPER_TAC);

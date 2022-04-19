@@ -17,12 +17,14 @@ val FIND_def = Define`
   (FIND P [] = NONE) /\
   (FIND P (h::t) = if P h then SOME h else FIND P t)`;
 
-val OVERRIDE_def = tDefine "OVERRIDE"
-  `(OVERRIDE [] = []) /\
-   (OVERRIDE (x::t) = x :: OVERRIDE (FILTER (\y. FST x <> FST y) t))`
-  (WF_REL_TAC `measure LENGTH`
+Definition OVERRIDE_def:
+  (OVERRIDE [] = []) /\
+  (OVERRIDE (x::t) = x :: OVERRIDE (FILTER (\y. FST x <> FST y) t))
+Termination
+  WF_REL_TAC `measure LENGTH`
    THEN SRW_TAC [] [rich_listTheory.LENGTH_FILTER_LEQ,
-          DECIDE ``!a b. a <= b ==> a < SUC b``]);
+          DECIDE ``!a b. a <= b ==> a < SUC b``]
+End
 
 val LIST_UPDATE_def = Define`
   (LIST_UPDATE [] = I) /\

@@ -1016,7 +1016,7 @@ val LASTN_CONV =
                  (let val (l1,l2) = (Lib.split_after (len - n) bits)
                       val l1' = mk_list{els=l1,ty=lty}
                       and l2' = mk_list{els=l2,ty=lty}
-                      val APP = (“APPEND:(^(ty_antiq lty))list -> (^(ty_antiq lty))list -> (^(ty_antiq lty))list”)
+                      val APP = inst [alpha |-> lty] append_tm
                       val thm2 = len_conv lty l2'
                       val thm3 = APPEND_CONV
                                  (mk_comb{Rator=mk_comb{Rator=APP,Rand=l1'},

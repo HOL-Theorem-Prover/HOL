@@ -398,10 +398,11 @@ val bop_def = Define`
 `;
 *)
 
-val bop_def = tDefine "bop" `
+Definition bop_def:
   bop b m x =
   if (b = 0) \/ (m <= x) then 0 else SUC (bop b m (x + b))
-`(WF_REL_TAC `measure (\(b,m,x). m - x)`);
+Termination WF_REL_TAC ‘measure (λ(b,m,x). m - x)’
+End
 
 (* Theorem: b = 0 \/ m <= x ==> (bop b m x = 0) *)
 (* Proof: by bop_def *)
@@ -1629,10 +1630,12 @@ val loop2_inc_mono_count_le = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Given a number x, generate a increasing list of x + b, up to some maximum m. *)
-val increase_by_def = tDefine "increase_by" `
+Definition increase_by_def:
   increase_by b m x =
   if (b = 0) \/ (m <= x) then [] else x::increase_by b m (x + b)
-`(WF_REL_TAC `measure (\(b,m,x). m - x)`);
+Termination WF_REL_TAC ‘measure (λ(b,m,x). m - x)’
+End
+
 
 (* Overload increase_by 1 *)
 val _ = overload_on ("increasing", ``increase_by 1``);

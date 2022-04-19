@@ -1243,16 +1243,17 @@ val lcm_special_for_prime_power = store_thm(
         or       n divides m                      by n = a * b
         so    lcm n m = m                         by divides_iff_lcm_fix
 *)
-val lcm_special_for_coprime_factors = store_thm(
-  "lcm_special_for_coprime_factors",
-  ``!n a b. (n = a * b) /\ coprime a b ==> !m. a divides m /\ b divides m ==> (lcm n m = m)``,
-  rpt strip_tac >>
-  Cases_on `n = 0` >| [
+Theorem lcm_special_for_coprime_factors:
+  !n a b. n = a * b /\ coprime a b ==>
+          !m. a divides m /\ b divides m ==> lcm n m = m
+Proof
+  rpt strip_tac >> Cases_on `n = 0` >| [
     `m = 0` by metis_tac[MULT_EQ_0, ZERO_DIVIDES] >>
-    rw[LCM_0],
+    simp[LCM_0],
     `n divides m` by rw[coprime_product_divides] >>
     rw[GSYM divides_iff_lcm_fix]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Divisors                                                            *)
@@ -3149,24 +3150,28 @@ val lcm_fun_1 = store_thm(
    = 2 * 1                        by lcm_fun_1
    = 2                            by arithmetic
 *)
-val lcm_fun_2 = store_thm(
-  "lcm_fun_2",
-  ``lcm_fun 2 = 2``,
+Theorem lcm_fun_2:
+  lcm_fun 2 = 2
+Proof
   simp_tac bool_ss[lcm_fun_def, lcm_fun_1, TWO] >>
   `prime 2 /\ (2 = 2 ** 1)` by rw[PRIME_2] >>
   DEEP_INTRO_TAC some_intro >>
-  rw_tac std_ss[] >-
-  metis_tac[prime_powers_eq] >>
-  metis_tac[DECIDE``0 < 1``]);
+  rw_tac std_ss[]
+  >- metis_tac[prime_powers_eq] >>
+  metis_tac[DECIDE``0 <> 1``]
+QED
 
 (* Theorem: prime p /\ (?k. 0 < k /\ (SUC n = p ** k)) ==> (lcm_fun (SUC n) = p * lcm_fun n) *)
 (* Proof: by lcm_fun_def, prime_powers_eq *)
-val lcm_fun_suc_some = store_thm(
-  "lcm_fun_suc_some",
-  ``!n p. prime p /\ (?k. 0 < k /\ (SUC n = p ** k)) ==> (lcm_fun (SUC n) = p * lcm_fun n)``,
+Theorem lcm_fun_suc_some:
+  !n p. prime p /\ (?k. 0 < k /\ (SUC n = p ** k)) ==>
+        lcm_fun (SUC n) = p * lcm_fun n
+Proof
   rw[lcm_fun_def] >>
   DEEP_INTRO_TAC some_intro >>
-  (rw_tac std_ss[] >> metis_tac[prime_powers_eq]));
+  rw_tac std_ss[] >>
+  metis_tac[prime_powers_eq, DECIDE “~(0 < 0)”]
+QED
 
 (* Theorem: ~(?p k. 0 < k /\ prime p /\ (SUC n = p ** k)) ==> (lcm_fun (SUC n) = lcm_fun n) *)
 (* Proof: by lcm_fun_def *)

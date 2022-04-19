@@ -1,3 +1,0 @@
-\THEOREM INTER_SUBSET pred_sets
-|- (!s t. (s INTER t) SUBSET s) /\ (!s t. (t INTER s) SUBSET s)
-\ENDTHEOREM

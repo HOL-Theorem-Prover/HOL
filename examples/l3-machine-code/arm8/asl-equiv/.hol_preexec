@@ -1,0 +1,1 @@
+[ -d "armv8.6-asl-snapshot" ] || ./get-armv8.6-hol-snapshot

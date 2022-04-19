@@ -21,7 +21,7 @@ open HolKernel Parse boolLib bossLib mesonLib
 open boolSimps pred_setTheory set_relationTheory tautLib
 
 open prim_recTheory arithmeticTheory numTheory numLib pairTheory
-open sumTheory ind_typeTheory wellorderTheory;
+open optionTheory sumTheory ind_typeTheory wellorderTheory;
 
 val _ = new_theory "cardinal";
 
@@ -137,14 +137,14 @@ val cardeq_INSERT = store_thm(
                         | SOME n => f (n + 1)` >>
   fs[INJ_DEF] >>
   `!x y. (f x = f y) <=> (x = y)` by metis_tac[] >> rw[] >| [
-    rw[optionTheory.option_case_compute],
-    DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >>
+    rw[option_case_compute],
+    DEEP_INTRO_TAC some_intro >> rw[] >>
     metis_tac [DECIDE ``0 <> x + 1``],
-    DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >>
+    DEEP_INTRO_TAC some_intro >> rw[] >>
     metis_tac [DECIDE ``0 <> x + 1``],
     pop_assum mp_tac >>
-    DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
-    DEEP_INTRO_TAC optionTheory.some_intro >> simp[]
+    DEEP_INTRO_TAC some_intro >> simp[] >>
+    DEEP_INTRO_TAC some_intro >> simp[]
   ]);
 
 (* !s. INFINITE s ==> x INSERT s =~ s
@@ -484,7 +484,7 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
                      qmatch_abbrev_tac `FST XX IN ss /\ SND XX IN ss` >>
                      `XX = sf a`
                         by (simp[Abbr`XX`] >>
-                            DEEP_INTRO_TAC optionTheory.some_intro >>
+                            DEEP_INTRO_TAC some_intro >>
                             simp[FORALL_PROD] >> metis_tac[]) >>
                      `BIJ sf ss (ss CROSS ss)` by metis_tac[] >> simp[] >>
                      pop_assum mp_tac >> simp_tac (srw_ss())[better_BIJ] >>
@@ -496,11 +496,11 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
                      qmatch_abbrev_tac `(XX1 = XX2) ==> (a1 = a2)` >>
                      `XX1 = f1 a1`
                         by (simp[Abbr`XX1`] >>
-                            DEEP_INTRO_TAC optionTheory.some_intro >>
+                            DEEP_INTRO_TAC some_intro >>
                             simp[FORALL_PROD] >> metis_tac[]) >>
                      `XX2 = f2 a2`
                         by (simp[Abbr`XX2`] >>
-                            DEEP_INTRO_TAC optionTheory.some_intro >>
+                            DEEP_INTRO_TAC some_intro >>
                             simp[FORALL_PROD] >> metis_tac[]) >>
                      map_every markerLib.RM_ABBREV_TAC ["XX1", "XX2"] >>
                      rw[] >>
@@ -529,7 +529,7 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
                      `?x. x IN s2 /\ (f2 x = (a,b))`
                        by metis_tac [SURJ_DEF, BIJ_DEF] >>
                      map_every qexists_tac [`x`, `s2`, `f2`] >>
-                     simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+                     simp[] >> DEEP_INTRO_TAC some_intro >>
                      simp[FORALL_PROD] >>
                      Tactical.REVERSE conj_tac >- metis_tac[] >>
                      map_every qx_gen_tac [`s3`, `f3`] >> strip_tac >>
@@ -543,7 +543,7 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
                  `?x. x IN s1 /\ (f1 x = (a,b))`
                    by metis_tac[BIJ_DEF, SURJ_DEF] >>
                  map_every qexists_tac [`x`, `s1`, `f1`] >> simp[] >>
-                 DEEP_INTRO_TAC optionTheory.some_intro >>
+                 DEEP_INTRO_TAC some_intro >>
                  simp[FORALL_PROD] >>
                  Tactical.REVERSE conj_tac >- metis_tac[] >>
                  map_every qx_gen_tac [`s3`, `f3`] >> strip_tac >>
@@ -557,7 +557,7 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
              asm_simp_tac (srw_ss() ++ DNF_ss)
                           [Abbr`BigF`, Abbr`BigSet`,
                            DECIDE ``~p\/q = (p ==> q)``, FORALL_PROD]>>
-             strip_tac >> DEEP_INTRO_TAC optionTheory.some_intro >>
+             strip_tac >> DEEP_INTRO_TAC some_intro >>
              simp[FORALL_PROD] >> metis_tac[]) >>
          qexists_tac `(BigSet, BigF)` >> conj_tac
          >- ((* (BigSet, BigF) IN range rr *)
@@ -570,7 +570,7 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
          >- (simp[Abbr`BigSet`] >> match_mp_tac SUBSET_BIGUNION_I >>
              simp[pairTheory.EXISTS_PROD] >> metis_tac[]) >>
          qx_gen_tac `x` >> strip_tac >> simp[Abbr`BigF`] >>
-         DEEP_INTRO_TAC optionTheory.some_intro >>
+         DEEP_INTRO_TAC some_intro >>
          simp[FORALL_PROD] >> metis_tac[]) >>
   PRINT_TAC "proved that upper bound works" >>
   `?Mf. Mf IN maximal_elements A rr` by metis_tac [zorns_lemma] >>
@@ -878,7 +878,7 @@ val set_exp_card_cong = store_thm(
   csimp[] >> csimp[] >>
   `(f b = NONE) \/ ?a. f b = SOME a` by (Cases_on `f b` >> simp[]) >> simp[] >>
   SELECT_ELIM_TAC >> simp[] >>
-  metis_tac [optionTheory.SOME_11]);
+  metis_tac [SOME_11]);
 
 val set_exp_cardle_cong = Q.store_thm(
   "set_exp_cardle_cong",
@@ -900,19 +900,19 @@ val set_exp_cardle_cong = Q.store_thm(
       dsimp[] >>
       Cases_on ‘?ci. ci IN c /\ (cdf ci = di)’ >> fs[]
       >- (‘(some ci. ci IN c /\ (cdf ci = di)) = SOME ci’
-             by (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+             by (DEEP_INTRO_TAC some_intro >> simp[] >>
                  metis_tac[INJ_DEF]) >>
           simp[] >>
           ‘?ai. ai IN a /\ (caf ci = SOME ai)’ by metis_tac[] >>
           metis_tac[INJ_DEF]) >>
       ‘(some ci. ci IN c /\ (cdf ci = di)) = NONE’
-         by (DEEP_INTRO_TAC optionTheory.some_intro >> simp[]) >>
+         by (DEEP_INTRO_TAC some_intro >> simp[]) >>
       simp[CHOICE_DEF]) >>
   rename [‘caf1 = caf2’] >> simp[FUN_EQ_THM] >>
   qx_gen_tac ‘ci’ >> Cases_on‘ci IN c’ >> simp[] >>
   ‘cdf ci IN d’ by metis_tac[INJ_DEF] >>
   ‘(some ci'. ci' IN c /\ (cdf ci' = cdf ci)) = SOME ci’
-    by (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+    by (DEEP_INTRO_TAC some_intro >> simp[] >>
         metis_tac[INJ_DEF]) >>
   first_assum (fn th => Q_TAC (mp_tac o AP_THM th) ‘cdf ci’) >> BETA_TAC >>
   simp[] >>
@@ -1007,8 +1007,8 @@ Proof
       >- (simp[EXTENSION] >> simp[FUN_EQ_THM, FORALL_PROD] >>
           simp[Once EQ_IMP_THM] >> rw[] >> rename [‘f1 a = f2 a’] >>
           Cases_on ‘f1 a’ >>
-          metis_tac[optionTheory.SOME_11, optionTheory.NOT_SOME_NONE]) >>
-      metis_tac[optionTheory.SOME_11, optionTheory.NOT_SOME_NONE])
+          metis_tac[SOME_11, NOT_SOME_NONE]) >>
+      metis_tac[SOME_11, NOT_SOME_NONE])
 QED
 
 Theorem CARD_LE_EXP:
@@ -1054,15 +1054,15 @@ val INFINITE_cardleq_INSERT = store_thm(
           Cases_on `some n. f y = g n` >> fs[INJ_DEF]) >>
       map_every qx_gen_tac [`i`, `j`] >> strip_tac >> Cases_on `i = x` >>
       Cases_on `j = x` >> simp[]
-      >- (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> fs[INJ_DEF])
-      >- (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> fs[INJ_DEF]) >>
-      ntac 2 (DEEP_INTRO_TAC optionTheory.some_intro) >> simp[] >>
+      >- (DEEP_INTRO_TAC some_intro >> simp[] >> fs[INJ_DEF])
+      >- (DEEP_INTRO_TAC some_intro >> simp[] >> fs[INJ_DEF]) >>
+      ntac 2 (DEEP_INTRO_TAC some_intro) >> simp[] >>
       fs[INJ_DEF] >> qx_gen_tac `m` >> strip_tac >>
       qx_gen_tac `n` >> rpt strip_tac >>
       metis_tac [DECIDE ``(n + 1 = m + 1) <=> (m = n)``])
   >- fs[INJ_DEF] >>
   qx_gen_tac `y` >> simp[] >> Cases_on `x = y` >> simp[] >>
-  Cases_on `y IN s` >> simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  Cases_on `y IN s` >> simp[] >> DEEP_INTRO_TAC some_intro >>
   simp[] >> fs[INJ_DEF] >> metis_tac [DECIDE ``0 <> n + 1``])
 
 val list_def = Define`
@@ -1098,9 +1098,8 @@ val list_BIGUNION_EXP = store_thm(
       >- (qx_gen_tac `l` >> strip_tac >> qexists_tac `LENGTH l` >>
           simp[set_exp_def] >> metis_tac[listTheory.MEM_EL]) >>
       simp[FUN_EQ_THM, listTheory.LIST_EQ_REWRITE] >>
-      metis_tac[optionTheory.NOT_SOME_NONE,
-                DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``,
-                optionTheory.SOME_11]) >>
+      metis_tac[NOT_SOME_NONE, SOME_11,
+                DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``]) >>
   qexists_tac `\f. GENLIST (THE o f) (LEAST n. f n = NONE)` >>
   dsimp[INJ_DEF, set_exp_def] >> conj_tac
   >- (map_every qx_gen_tac [`f`, `n`] >> strip_tac >>
@@ -1109,8 +1108,7 @@ val list_BIGUNION_EXP = store_thm(
         by (numLib.LEAST_ELIM_TAC >> conj_tac
             >- (qexists_tac `n` >> simp[]) >>
             metis_tac[DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``,
-                      optionTheory.NOT_SOME_NONE,
-                      DECIDE ``~(x < x)``]) >>
+                      NOT_SOME_NONE, DECIDE ``~(x < x)``]) >>
       simp[] >> rpt strip_tac >> res_tac >> simp[]) >>
   map_every qx_gen_tac [`f`, `g`, `m`, `n`] >> rpt strip_tac >>
   `((LEAST n. f n = NONE) = m) /\ ((LEAST n. g n = NONE) = n)`
@@ -1121,8 +1119,7 @@ val list_BIGUNION_EXP = store_thm(
           all_tac
         ] >>
         metis_tac[DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``,
-                  optionTheory.NOT_SOME_NONE,
-                  DECIDE ``~(x < x)``]) >>
+                  NOT_SOME_NONE, DECIDE ``~(x < x)``]) >>
   ntac 2 (pop_assum SUBST_ALL_TAC) >>
   `m = n` by metis_tac[listTheory.LENGTH_GENLIST] >>
   pop_assum SUBST_ALL_TAC >> simp[FUN_EQ_THM] >> qx_gen_tac `i` >>
@@ -1143,7 +1140,7 @@ val INFINITE_A_list_BIJ_A = store_thm(
       qexists_tac `\e n. if n = 0 then SOME e else NONE` >>
       dsimp[INJ_DEF, set_exp_def] >> conj_tac
       >- (rpt strip_tac >> qexists_tac `1` >> simp[]) >>
-      simp[FUN_EQ_THM] >> metis_tac[optionTheory.SOME_11]) >>
+      simp[FUN_EQ_THM] >> metis_tac[SOME_11]) >>
   match_mp_tac CARD_BIGUNION >> dsimp[] >> conj_tac
   >- simp[IMAGE_cardleq_rwt, GSYM INFINITE_Unum] >>
   qx_gen_tac `n` >> Cases_on `0 < n` >> fs[]
@@ -1592,12 +1589,12 @@ val cardeq_bijns_cong = Q.store_thm(
   >- metis_tac[]
   >- (simp[EQ_IMP_THM, FUN_EQ_THM] >> rw[] >>
       rename [‘bf1 b = bf2 b’] >> reverse (Cases_on ‘b IN B’)
-      >- metis_tac[optionTheory.option_nchotomy] >>
+      >- metis_tac[option_nchotomy] >>
       ‘b = f (g b)’ by metis_tac[] >> pop_assum SUBST1_TAC >>
       ‘g b IN A’ by metis_tac[] >> first_x_assum (qspec_then ‘g b’ mp_tac) >>
       simp[] >>
       ‘(?b1'. bf1 b = SOME b1') /\ (?b2'. bf2 b = SOME b2')’ by metis_tac[] >>
-      simp[] >> ‘b1' IN B /\ b2' IN B’ by metis_tac[optionTheory.THE_DEF] >>
+      simp[] >> ‘b1' IN B /\ b2' IN B’ by metis_tac[THE_DEF] >>
       metis_tac[])
   >- metis_tac[]
   >- metis_tac[]
@@ -1605,10 +1602,10 @@ val cardeq_bijns_cong = Q.store_thm(
       rename [‘THE (ff _) = _’] >>
       qexists_tac ‘\b. if b IN B then SOME (f (THE (ff (g b)))) else NONE’ >>
       simp[] >> rpt strip_tac
-      >- metis_tac[optionTheory.THE_DEF]
-      >- metis_tac[optionTheory.THE_DEF] >>
+      >- metis_tac[THE_DEF]
+      >- metis_tac[THE_DEF] >>
       simp[FUN_EQ_THM] >>
-      metis_tac[optionTheory.THE_DEF, optionTheory.option_nchotomy]))
+      metis_tac[THE_DEF, option_nchotomy]))
 
 val bijections_cardeq = Q.store_thm(
   "bijections_cardeq",
@@ -1621,7 +1618,7 @@ val bijections_cardeq = Q.store_thm(
       simp[bijns_def, SUBSET_DEF, BIJ_DEF, INJ_IFF, set_exp_def] >>
       qx_gen_tac `f` >> rpt strip_tac
       >- (simp[] >> rename [‘f a = SOME b’] >> ‘a IN s’ by metis_tac[] >>
-          ‘b IN s’ by metis_tac[optionTheory.THE_DEF] >> metis_tac[]) >>
+          ‘b IN s’ by metis_tac[THE_DEF] >> metis_tac[]) >>
       qmatch_abbrev_tac ‘f x = NONE’ >> Cases_on ‘f x’ >> simp[] >> fs[]) >>
   ‘s =~ {T;F} CROSS s’ by simp[SET_SUM_CARDEQ_SET] >>
   ‘bijns s =~ bijns ({T;F} CROSS s)’ by metis_tac[cardeq_bijns_cong] >>
@@ -3334,13 +3331,6 @@ Definition BIGPRODi_def:
   }
 End
 
-Theorem option_imp_elim =
-        TypeBase.case_pred_imp_of “:'a option”
-          |> INST_TYPE [beta |-> bool]
-          |> Q.SPEC ‘I’
-          |> REWRITE_RULE [combinTheory.I_THM]
-
-
 (* A^0 = 1 *)
 Theorem BIGPRODi_KNONE[simp]:
   BIGPRODi (K NONE) = {K NONE}
@@ -3407,7 +3397,7 @@ Proof
   CCONTR_TAC >>
   qpat_x_assum ‘!x. _’ mp_tac >> simp[] >>
   qexists_tac ‘λj. OPTION_MAP CHOICE (Af j)’ >>
-  simp[SF DISJ_ss] >> gs[] >> metis_tac[CHOICE_DEF, optionTheory.SOME_11]
+  simp[SF DISJ_ss] >> gs[] >> metis_tac[CHOICE_DEF, SOME_11]
 QED
 
 Definition BIGPROD_def:
@@ -3482,7 +3472,7 @@ Proof
                    SOME (INR (THE (SND p (IMAGE OUTR s))))
                  else NONE’ >>
   rw[] >> simp[AllCaseEqs(), PULL_EXISTS]
-  >- (metis_tac[optionTheory.THE_DEF, MEMBER_NOT_EMPTY])
+  >- (metis_tac[THE_DEF, MEMBER_NOT_EMPTY])
   >- (rename [‘s = {}’, ‘s <> IMAGE INL A’] >>
       pop_assum mp_tac >> rw[]
       >- (qpat_x_assum ‘s <> IMAGE INL _’ mp_tac >>
@@ -3544,7 +3534,7 @@ Proof
   qexists_tac ‘tup0(| j |-> SOME e |)’ >>
   pop_assum mp_tac >> REWRITE_TAC [BIGPRODi_def] >>
   simp[combinTheory.APPLY_UPDATE_THM] >> rw[AllCaseEqs()] >>
-  metis_tac[optionTheory.SOME_11]
+  metis_tac[SOME_11]
 QED
 
 Theorem cardeq_addUnum:

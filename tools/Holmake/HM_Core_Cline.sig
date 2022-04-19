@@ -15,6 +15,7 @@ type t = {
   no_hmakefile : bool,
   no_lastmaker_check : bool,
   no_overlay : bool,
+  no_preexecs : bool,
   no_prereqs : bool,
   opentheory : string option,
   quiet : bool,
