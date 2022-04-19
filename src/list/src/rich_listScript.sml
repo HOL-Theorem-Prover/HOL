@@ -2054,13 +2054,17 @@ val EXISTS_DROP = Q.store_thm ("EXISTS_DROP",
    `!l m P. EXISTS P (DROP m l) ==> EXISTS P l`,
    Induct \\ rw [DROP_def] \\ first_x_assum drule \\ simp []);
 
-val EXISTS_LASTN = Q.store_thm ("EXISTS_LASTN",
-   `!l m P. EXISTS P (LASTN m l) ==> EXISTS P l`,
-   rw [LASTN_def, EXISTS_REVERSE] \\ drule EXISTS_TAKE \\ simp [EXISTS_REVERSE]);
+Theorem EXISTS_LASTN:
+  !l m P. EXISTS P (LASTN m l) ==> EXISTS P l
+Proof
+  rw [LASTN_def, EXISTS_REVERSE] \\ drule EXISTS_TAKE \\ simp [EXISTS_REVERSE]
+QED
 
-val EXISTS_BUTLASTN = Q.store_thm ("EXISTS_BUTLASTN",
-   `!l m P. EXISTS P (BUTLASTN m l) ==> EXISTS P l`,
-   rw [BUTLASTN_def, EXISTS_REVERSE] \\ drule EXISTS_DROP \\ simp [EXISTS_REVERSE]);
+Theorem EXISTS_BUTLASTN:
+  !l m P. EXISTS P (BUTLASTN m l) ==> EXISTS P l
+Proof
+  rw[BUTLASTN_def, EXISTS_REVERSE] \\ drule EXISTS_DROP \\ simp[EXISTS_REVERSE]
+QED
 
 val MEM_SEG = Q.store_thm ("MEM_SEG",
    `!n m l. n + m <= LENGTH l ==> !x. MEM x (SEG n m l) ==> MEM x l`,
@@ -3400,8 +3404,9 @@ Proof
   \\ `B SUBSET count (SUC (LENGTH ls))` by simp[Abbr`B`, SUBSET_DEF]
   \\ `FINITE A /\ FINITE B` by metis_tac[SUBSET_FINITE, FINITE_COUNT]
   \\ `B = IMAGE SUC A UNION (if x = h then {0} else {})`
-  by ( simp[Abbr`A`, Abbr`B`, EXTENSION] \\ Cases \\ rw[] )
-  \\ Cases_on`x = h` \\ simp[LIST_ELEM_COUNT_THM, CARD_UNION_EQN, ADD1, CARD_INJ_IMAGE]
+    by ( simp[Abbr`A`, Abbr`B`, EXTENSION] \\ Cases \\ rw[] )
+  \\ Cases_on`x = h`
+  \\ simp[LIST_ELEM_COUNT_THM, CARD_UNION_EQN, ADD1, CARD_INJ_IMAGE]
   \\ `IMAGE SUC A INTER {0} = {}` by rw[EXTENSION]
   \\ simp[]
 QED
