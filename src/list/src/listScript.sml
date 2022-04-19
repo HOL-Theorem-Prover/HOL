@@ -624,7 +624,7 @@ val EXISTS_MAP = store_thm(
   NTAC 2 GEN_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [EXISTS_DEF, MAP] THEN BETA_TAC THEN REWRITE_TAC []);
 
-Theorem EXISTS_SIMP:
+Theorem LIST_EXISTS_SIMP[simp]:
   !c l:'a list. EXISTS (\x. c) l <=> l <> [] /\ c
 Proof
   GEN_TAC THEN LIST_INDUCT_TAC THEN
@@ -632,13 +632,12 @@ Proof
   EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []
 QED
 
-val MONO_EXISTS = store_thm(
-  "MONO_EXISTS",
-  “(!x. P x ==> Q x) ==> (EXISTS P l ==> EXISTS Q l)”,
+Theorem LIST_EXISTS_MONO[mono]:
+  (!x. P x ==> Q x) ==> (EXISTS P l ==> EXISTS Q l)
+Proof
   Q.ID_SPEC_TAC ‘l’ THEN LIST_INDUCT_TAC THEN
-  ASM_SIMP_TAC (srw_ss()) [DISJ_IMP_THM]);
-val _ = IndDefLib.export_mono "MONO_EXISTS"
-
+  ASM_SIMP_TAC (srw_ss()) [DISJ_IMP_THM]
+QED
 
 val EVERY_NOT_EXISTS = store_thm(
   "EVERY_NOT_EXISTS",
