@@ -398,7 +398,7 @@ val P_PROP_DISJUNCTION_MIN_SEM =
         `?Q. (\s. s IN S1) = Q` by METIS_TAC[] THEN
         FULL_SIMP_TAC std_ss [] THEN
         `!e. P e ==>  Q e` by METIS_TAC [IN_SING] THEN
-        PROVE_TAC[MONO_EXISTS],
+        PROVE_TAC[LIST_EXISTS_MONO],
 
         FULL_SIMP_TAC std_ss [EXISTS_MEM, PSUBSET_DEF] THEN
         `s' IN S1` by PROVE_TAC[SUBSET_DEF] THEN
