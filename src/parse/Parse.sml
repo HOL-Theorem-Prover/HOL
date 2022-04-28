@@ -79,7 +79,8 @@ fun interactive_ppbackend () = let
 in
   (* assumes interactive *)
   case getEnv "TERM" of
-    SOME s => if String.isPrefix "xterm" s then vt100_terminal
+    SOME s => if String.isPrefix "xterm" s orelse
+                 String.isPrefix "tmux" s then vt100_terminal
               else raw_terminal
   | _ => raw_terminal
 end
