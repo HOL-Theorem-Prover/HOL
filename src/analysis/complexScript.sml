@@ -1500,5 +1500,5 @@ val _ = export_theory()
 (* References:
 
  [1] Shi, Z., Guan, Y., Li, X.: Formalization of Complex Analysis and Matrix
-     Theory in HOL4. Appl. Math. Inf. Sci. 7, 279–286 (2013).
+     Theory in HOL4. Appl. Math. Inf. Sci. 7, 279-286 (2013).
  *)

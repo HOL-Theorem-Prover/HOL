@@ -1,8 +1,5 @@
 (*===========================================================================*)
 (* Theory of Moore-Smith covergence nets, and special cases like sequences   *)
-(*                                                                           *)
-(* Moore, E.H., Smith, H.L.: A General Theory of Limits. American Journal of *)
-(* Mathematics. 44, 102–121 (1922).                                          *)
 (*===========================================================================*)
 
 open HolKernel Parse boolLib hol88Lib;
@@ -18,7 +15,7 @@ val _ = Parse.reveal "B";
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 
 (*---------------------------------------------------------------------------*)
-(* Basic definitions: directed set, net, bounded net, pointwise limit        *)
+(* Basic definitions: directed set, net, bounded net, pointwise limit [1]    *)
 (*---------------------------------------------------------------------------*)
 
 val dorder = new_definition("dorder",
@@ -609,3 +606,9 @@ val NET_LE = store_thm("NET_LE",
   FIRST_ASSUM ACCEPT_TAC);
 
 val _ = export_theory();
+
+(* References:
+
+ [1] Moore, E.H., Smith, H.L.: A General Theory of Limits. American Journal of
+     Mathematics. 44, 102-121 (1922).
+ *)
