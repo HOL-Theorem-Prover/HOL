@@ -18,11 +18,12 @@
 open HolKernel Parse boolLib bossLib;
 
 open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
-     combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
-     realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
-     topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
+     combinTheory quotientTheory arithmeticTheory pred_setTheory 
+     jrhUtils listTheory mesonLib optionTheory pred_setLib;
 
-open hurdUtils iterateTheory real_topologyTheory;
+open realTheory realLib topologyTheory RealArith cardinalTheory;
+
+open hurdUtils iterateTheory seqTheory real_topologyTheory;
 
 val _ = new_theory "derivative";
 
@@ -40,6 +41,16 @@ val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
+val LIM                = LIM_DEF;            (* real_topologyTheory *)
+
+(* ------------------------------------------------------------------------- *)
+(* definition(s) moved from other theories                                   *)
+(* ------------------------------------------------------------------------- *)
+
+val exp_ser = “\n. inv(&(FACT n))”;
+
+val exp = new_definition("exp", (* moved from transcTheory *)
+   “exp(x) = suminf(\n. (^exp_ser) n * (x pow n))”);
 
 (* ------------------------------------------------------------------------- *)
 (* convex                                                                    *)
@@ -162,7 +173,7 @@ Proof
    [ASM_REWRITE_TAC[REAL_ARITH ``(&1 + a  = &1) <=> (a = &0:real)``] THEN
     SUBGOAL_THEN ``sum k (\i:'a. u i * x(i):real) = 0``
      (fn th => ASM_SIMP_TAC std_ss [th, REAL_ADD_RID, REAL_MUL_LID]) THEN
-    MATCH_MP_TAC SUM_EQ_0 THEN SIMP_TAC std_ss [REAL_ENTIRE] THEN
+    MATCH_MP_TAC SUM_EQ_0' THEN SIMP_TAC std_ss [REAL_ENTIRE] THEN
     REPEAT STRIP_TAC THEN DISJ1_TAC THEN
     POP_ASSUM MP_TAC THEN SPEC_TAC (``x':'a``,``x':'a``) THEN
     MATCH_MP_TAC SUM_POS_EQ_0 THEN ASM_SIMP_TAC std_ss [] THEN
@@ -1010,7 +1021,7 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-(* The traditional Rolle theorem in one dimension.      1056                     *)
+(* The traditional Rolle theorem in one dimension.      1056                 *)
 (* ------------------------------------------------------------------------- *)
 
 val ROLLE = store_thm ("ROLLE",
@@ -1330,7 +1341,7 @@ val HAS_DERIVATIVE_SEQUENCE = store_thm ("HAS_DERIVATIVE_SEQUENCE",
     X_GEN_TAC ``x:real`` THEN DISCH_TAC THEN
     GEN_REWR_TAC I [CONVERGENT_EQ_CAUCHY] THEN
     FIRST_X_ASSUM(MP_TAC o MATCH_MP CONVERGENT_IMP_CAUCHY) THEN
-    SIMP_TAC std_ss [cauchy, dist] THEN DISCH_TAC THEN
+    SIMP_TAC std_ss [cauchy_def, dist] THEN DISCH_TAC THEN
     X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN
     ASM_CASES_TAC ``x:real = x0`` THEN ASM_SIMP_TAC std_ss [] THEN
     FIRST_X_ASSUM (MP_TAC o Q.SPEC `e / &2`) THEN
@@ -1709,7 +1720,7 @@ val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
          q0 * sum { 1n..n} (\i. q0 pow (n - i) * q * q0 pow (i - 1))``
     (fn th => REWRITE_TAC[th]) THENL
   [GEN_TAC THEN SIMP_TAC std_ss [FINITE_NUMSEG, GSYM SUM_LMUL] THEN
-   MATCH_MP_TAC SUM_EQ THEN
+   MATCH_MP_TAC SUM_EQ' THEN
    REWRITE_TAC [IN_NUMSEG, FUN_EQ_THM] THEN REPEAT STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [ARITH_PROVE ``x <= n ==> (SUC n - x = SUC (n - x))``,
                 pow, GSYM REAL_MUL_ASSOC], ALL_TAC] THEN
@@ -1760,7 +1771,7 @@ val EXP_CONVERGES_UNIFORMLY_CAUCHY = store_thm ("EXP_CONVERGES_UNIFORMLY_CAUCHY"
    Q.EXISTS_TAC `abs (sum {m .. n} (\i. R pow i / &FACT i))` THEN
    ASM_REWRITE_TAC [] THEN MATCH_MP_TAC REAL_LE_TRANS THEN
    Q.EXISTS_TAC `sum {m .. n} (\i. R pow i / &FACT i)` THEN
-   SIMP_TAC std_ss [ABS_LE] THEN MATCH_MP_TAC SUM_ABS_LE THEN
+   SIMP_TAC std_ss [ABS_LE] THEN MATCH_MP_TAC SUM_ABS_LE' THEN
    RW_TAC std_ss [FINITE_NUMSEG, ABS_MUL, real_div] THEN
    MATCH_MP_TAC REAL_LE_MUL2 THEN SIMP_TAC std_ss [ABS_POS] THEN
    CONJ_TAC THENL
@@ -1902,6 +1913,7 @@ val lemma_sums_eq = prove (
   `n = SUC m` by ASM_SIMP_TAC arith_ss [] THEN
   ASM_REWRITE_TAC [SIMP_RULE std_ss [] lemma_sum_eq]);
 
+(* cf. transcTheory.EXP_CONVERGES *)
 val EXP_CONVERGES = store_thm ("EXP_CONVERGES",
  ``!z. ((\n. z pow n / (&(FACT n))) sums exp(z)) (from 0)``,
   SIMP_TAC std_ss [exp] THEN
@@ -2002,7 +2014,7 @@ val HAS_DERIVATIVE_EXP = store_thm ("HAS_DERIVATIVE_EXP",
     SIMP_TAC std_ss [SUM_CLAUSES, IMAGE_FINITE, FINITE_NUMSEG] THEN
     SIMP_TAC real_ss [IN_IMAGE, NOT_SUC, SUC_NOT, REAL_ADD_LID] THEN
     SIMP_TAC std_ss [SUM_IMAGE, FINITE_NUMSEG] THEN
-    MATCH_MP_TAC SUM_EQ THEN SIMP_TAC real_ss [IN_NUMSEG, NOT_SUC, o_THM, SUC_SUB1],
+    MATCH_MP_TAC SUM_EQ' THEN SIMP_TAC real_ss [IN_NUMSEG, NOT_SUC, o_THM, SUC_SUB1],
     MAP_EVERY Q.EXISTS_TAC [`(&0)`, `exp((&0))`] THEN
     REWRITE_TAC[EXP_CONVERGES, ABS_0] THEN
     SIMP_TAC std_ss [REAL_ARITH ``&0 <= z ==> &0 < z + &1:real``, ABS_POS]] THEN
@@ -2035,7 +2047,7 @@ val HAS_DERIVATIVE_EXP = store_thm ("HAS_DERIVATIVE_EXP",
   DISCH_THEN (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ]) THEN
   ASM_REWRITE_TAC [] THEN ONCE_REWRITE_TAC [REAL_ARITH ``a * b * c = (a * c) * b:real``] THEN
   ABS_TAC THEN SIMP_TAC std_ss [SUM_RMUL] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-  MATCH_MP_TAC SUM_EQ THEN SIMP_TAC arith_ss [GSYM POW_ADD, IN_NUMSEG]);
+  MATCH_MP_TAC SUM_EQ' THEN SIMP_TAC arith_ss [GSYM POW_ADD, IN_NUMSEG]);
 
 val HAS_DERIVATIVE_IMP_CONTINUOUS_AT = store_thm ("HAS_DERIVATIVE_IMP_CONTINUOUS_AT",
  ``!f f' x. (f has_derivative f') (at x) ==> f continuous at x``,

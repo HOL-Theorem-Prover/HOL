@@ -4314,4 +4314,48 @@ Proof
   \\ pop_assum (fn th => simp_tac bool_ss [Once th,SUB_LESS_EQ])
 QED
 
+(* moved here from integralTheory *)
+Theorem num_MAX :
+    !P. (?(x:num). P x) /\ (?(M:num). !x. P x ==> x <= M) <=>
+        ?m. P m /\ (!x. P x ==> x <= m)
+Proof
+    GEN_TAC >> reverse EQ_TAC
+ >- (rpt STRIP_TAC \\
+     Q.EXISTS_TAC ‘m’ >> ASM_REWRITE_TAC[] \\
+     Q.EXISTS_TAC ‘m’ >> ASM_REWRITE_TAC[])
+ >> DISCH_THEN (CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)
+ >> SUBGOAL_THEN
+       “(?(M:num). !(x:num). P x ==> x <= M) <=>
+        (?M. (\M. !x. P x ==> x <= M) M)” SUBST1_TAC
+ >- (BETA_TAC >> REFL_TAC)
+ >> DISCH_THEN (MP_TAC o MATCH_MP WOP)
+ >> BETA_TAC >> CONV_TAC (DEPTH_CONV NOT_FORALL_CONV)
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC[]
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> STRUCT_CASES_TAC (Q.SPEC ‘n’ num_CASES)
+ >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      UNDISCH_THEN “!(x:num). P x ==> x <= (0:num)”
+        (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV)) \\
+      REWRITE_TAC[NOT_LESS_EQUAL] >> STRIP_TAC \\
+      POP_ASSUM(MP_TAC o CONV_RULE (ONCE_DEPTH_CONV CONTRAPOS_CONV)) \\
+      REWRITE_TAC[] >> STRIP_TAC >> RES_TAC \\
+      MP_TAC (Q.SPEC ‘x’ LESS_0_CASES) >> ASM_REWRITE_TAC[] \\
+      DISCH_THEN (SUBST_ALL_TAC o SYM) >> ASM_REWRITE_TAC[],
+      (* goal 2 (of 2) *)
+      POP_ASSUM (MP_TAC o Q.SPEC ‘n'’) \\
+      REWRITE_TAC [LESS_SUC_REFL] \\
+      SUBGOAL_THEN “!x y. ~(x ==> y) <=> x /\ ~y”
+        (fn th => REWRITE_TAC[th] THEN STRIP_TAC) >- REWRITE_TAC [NOT_IMP] \\
+      UNDISCH_THEN “!(x:num). P x ==> x <= SUC n'” (MP_TAC o Q.SPEC ‘x'’) \\
+      ASM_REWRITE_TAC[LESS_OR_EQ] \\
+      DISCH_THEN (DISJ_CASES_THEN2 ASSUME_TAC SUBST_ALL_TAC) >| (* 2 subgoals *)
+      [ (* goal 2.1 (of 2) *)
+        NTAC 2 (POP_ASSUM MP_TAC) THEN REWRITE_TAC[NOT_LESS_EQUAL] \\
+        REPEAT STRIP_TAC THEN IMP_RES_TAC LESS_LESS_SUC,
+        (* goal 2.2 (of 2) *)
+        ASM_REWRITE_TAC[] ] ]
+QED
+
 val _ = export_theory()

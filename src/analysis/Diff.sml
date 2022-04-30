@@ -1,7 +1,8 @@
 structure Diff :> Diff =
 struct
 
-open HolKernel Parse boolLib hol88Lib jrhUtils limTheory;
+open HolKernel Parse boolLib bossLib;
+open jrhUtils realLib limTheory derivativeTheory;
 
 structure Parse = struct
   open Parse
@@ -59,7 +60,7 @@ val comths = [DIFF_ADD, DIFF_MUL, DIFF_SUB, DIFF_DIV', DIFF_NEG, DIFF_INV'];
 val CC = TAUT_CONV (``a ==> b ==> c <=> a /\ b ==> c``);
 
 fun DIFF_CONV tm =
-  let val xv = variant (frees tm) xreal
+  let val xv = variant (hol88Lib.frees tm) xreal
       fun is_diffl tm =
         (funpow 3 rator tm ~~ diffl_tm handle HOL_ERR _ => false)
       fun make_assoc th =
@@ -120,7 +121,7 @@ fun DIFF_CONV tm =
                GEN xv th6
                end handle HOL_ERR _ =>
                     let val tm1 = mk_comb(diffl_tm, tm)
-                        val var = variant (frees tm) lreal
+                        val var = variant (hol88Lib.frees tm) lreal
                         val tm2 = mk_comb(tm1,var)
                         val tm3 = mk_comb(tm2,xv)
                     in
@@ -136,5 +137,9 @@ fun DIFF_CONV tm =
   in
    CONV_RULE (ONCE_DEPTH_CONV(C ALPHA tm)) thb
 end;
+
+(* A variant of DIFF_CONV using on ‘has_vector_derivative’ instead, by Chun Tian *)
+fun DERIV_CONV tm =
+    SIMP_RULE real_ss [diffl_has_vector_derivative] (DIFF_CONV tm);
 
 end;

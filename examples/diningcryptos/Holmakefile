@@ -1,1 +1,1 @@
-INCLUDES = ../miller/subtypes ../miller/formalize ../../src/probability
+INCLUDES = ../miller/subtypes ../miller/formalize ../../src/probability ../../src/analysis
