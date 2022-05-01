@@ -138,8 +138,7 @@ fun DIFF_CONV tm =
    CONV_RULE (ONCE_DEPTH_CONV(C ALPHA tm)) thb
 end;
 
-(* A variant of DIFF_CONV using on ‘has_vector_derivative’ instead, by Chun Tian *)
-fun DERIV_CONV tm =
+fun HAS_VECTOR_DERIVATIVE_CONV tm =
     SIMP_RULE real_ss [diffl_has_vector_derivative] (DIFF_CONV tm);
 
 end;
