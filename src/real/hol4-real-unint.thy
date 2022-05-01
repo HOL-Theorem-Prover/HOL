@@ -24,7 +24,6 @@ iterate {
 }
 real-sigma {
   import: real
-  import: seq
   import: iterate
   import: transc
   article: "real_sigma.ot.art"
