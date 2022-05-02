@@ -25,7 +25,6 @@ iterate {
 real-sigma {
   import: real
   import: iterate
-  import: transc
   article: "real_sigma.ot.art"
 }
 metric {
