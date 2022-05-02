@@ -19,10 +19,14 @@ real-topology {
 }
 derivative {
   import: real-topology
+  import: seq
   article: "derivative.ot.art"
 }
 integration {
   import: real-topology
+  import: seq
+  import: lim
+  import: transc
   import: derivative
   article: "integration.ot.art"
 }
@@ -57,7 +61,6 @@ lim {
 }
 integral {
   import: real-topology
-  import: transc
   import: seq
   import: lim
   import: integration
