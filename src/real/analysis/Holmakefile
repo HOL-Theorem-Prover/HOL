@@ -5,7 +5,7 @@ EXTRA_CLEANS = selftest.exe real-selftest2.log
 
 all: $(DEFAULT_TARGETS) selftest.exe
 
-selftest.exe: selftest.uo $(HOLDIR)/real/realSimps.uo
+selftest.exe: selftest.uo $(HOLDIR)/src/real/realSimps.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
