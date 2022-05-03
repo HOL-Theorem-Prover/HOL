@@ -18,7 +18,7 @@ selftest.exe: selftest.uo realSimps.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = real intreal real_sigma metric iterate nets
+BARE_THYS = real intreal real_sigma metric nets iterate
 
 hol4-real-unint.art: hol4-real-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 	opentheory info --article -o $@ $<
