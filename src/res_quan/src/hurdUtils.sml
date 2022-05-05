@@ -1007,6 +1007,7 @@ val Cond =
 
 val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val POP_ORW = POP_ASSUM (ONCE_REWRITE_TAC o wrap);
 
 (* --------------------------------------------------------------------- *)
 (* EXACT_MP_TAC : thm -> tactic                                          *)
@@ -1046,6 +1047,8 @@ end;
 (*                                                                       *)
 (* By using ONCE_REWRITE_TAC[DISJ_COMM] first, a similar stronger tactic *)
 (* than DISJ1_TAC can be obtained.                                       *)
+(*                                                                       *)
+(* cf. LEFT_DISJ_TAC & RIGHT_DISJ_TAC (schneiderUtils)                   *)
 (* --------------------------------------------------------------------- *)
 
 val STRONG_DISJ_TAC :tactic =
@@ -1091,7 +1094,6 @@ fun FORWARD_TAC f (asms, g:term) =
 
 val Know = Q_TAC KNOW_TAC
 val Suff = Q_TAC SUFF_TAC
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 (* --------------------------------------------------------------------- *)
 (* A simple-minded CNF conversion.                                       *)
