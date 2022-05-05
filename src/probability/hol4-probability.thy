@@ -9,7 +9,6 @@ requires: hol-set
 requires: hol-real
 requires: hol-extreal
 requires: hol-words
-requires: hol-sort
 requires: hol-analysis
 show: "HOL4"
 show: "Data.Bool"

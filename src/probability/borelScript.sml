@@ -15,14 +15,13 @@
 open HolKernel Parse boolLib bossLib;
 
 open prim_recTheory arithmeticTheory numLib combinTheory res_quanTheory
-     res_quanTools pairTheory pred_setTheory pred_setLib listTheory
-     relationTheory rich_listTheory sortingTheory hurdUtils;
+     res_quanTools pairTheory pred_setTheory pred_setLib relationTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
-     real_topologyTheory;
+     real_topologyTheory listTheory;
 
 open util_probTheory extrealTheory sigma_algebraTheory iterateTheory
-     real_borelTheory measureTheory;
+     real_borelTheory measureTheory hurdUtils;
 
 val _ = new_theory "borel";
 
@@ -3651,185 +3650,140 @@ Proof
      RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_COUNT, NOT_IN_EMPTY] \\
      STRONG_DISJ_TAC >> rw [])
  >> FULL_SIMP_TAC bool_ss [] (* f k <> {} *)
- (* Part I: filter the list removing empty sets *)
- >> Q.ABBREV_TAC `filtered = FILTER (\i. f i <> {}) (COUNT_LIST n)`
- >> Know `!i. MEM i filtered ==> i < n /\ f i <> {}`
- >- (GEN_TAC >> Q.UNABBREV_TAC `filtered` \\
-     SIMP_TAC std_ss [MEM_FILTER, MEM_COUNT_LIST]) >> DISCH_TAC
- >> Q.ABBREV_TAC `n0 = LENGTH filtered`
- (* n0 <= n *)
- >> Know `n0 <= LENGTH (COUNT_LIST n)`
- >- (qunabbrevl_tac [`n0`, `filtered`] \\
-     REWRITE_TAC [LENGTH_FILTER_LEQ])
- >> DISCH_THEN (ASSUME_TAC o (REWRITE_RULE [LENGTH_COUNT_LIST]))
- >> Know `BIGUNION (IMAGE f (count n)) = BIGUNION (IMAGE f (set filtered))`
- >- (Q.UNABBREV_TAC `filtered` \\
-     RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_COUNT,
-                    MEM_FILTER, MEM_COUNT_LIST] \\
+ (* Below are new proofs based on TOPOLOGICAL_SORT' *)
+ >> Q.ABBREV_TAC ‘filtered = {i | i < n /\ f i <> {}}’
+ >> ‘filtered SUBSET (count n)’ by rw [Abbr ‘filtered’, SUBSET_DEF]
+ >> Know ‘FINITE filtered’
+ >- (MATCH_MP_TAC SUBSET_FINITE_I \\
+     Q.EXISTS_TAC ‘count n’ >> rw [IMAGE_FINITE])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘N = CARD filtered’
+ >> Know ‘0 < N /\ N <= n’
+ >- (rw [Abbr ‘N’, GSYM NOT_ZERO_LT_ZERO, CARD_EQ_0, GSYM MEMBER_NOT_EMPTY] >|
+     [ (* goal 1 (of 2) *)
+       rw [Abbr ‘filtered’] \\
+       Q.EXISTS_TAC ‘k’ >> rw [MEMBER_NOT_EMPTY],
+       (* goal 2 (of 2) *)
+      ‘n = CARD (count n)’ by PROVE_TAC [CARD_COUNT] >> POP_ORW \\
+       irule CARD_SUBSET >> rw [] ])
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘k < n’     K_TAC
+ >> Q.PAT_X_ASSUM ‘f k <> {}’ K_TAC
+ >> ‘filtered HAS_SIZE N’ by PROVE_TAC [HAS_SIZE]
+ (* preparing for TOPOLOGICAL_SORT' (on ‘filtered’) *)
+ >> Q.ABBREV_TAC ‘R = \i j. i < n /\ j < n /\ f i <> {} /\ f j <> {} /\
+                            interval_lowerbound (f i) <= interval_lowerbound (f j)’
+ >> Know ‘transitive R /\ antisymmetric R’
+ >- (rw [Abbr ‘R’, transitive_def, antisymmetric_def] >- PROVE_TAC [REAL_LE_TRANS] \\
+    ‘interval_lowerbound (f i) = interval_lowerbound (f j)’ by PROVE_TAC [REAL_LE_ANTISYM] \\
+    ‘?a1 b1. a1 < b1 /\ f i = right_open_interval a1 b1’
+        by METIS_TAC [in_right_open_intervals_nonempty] \\
+    ‘?a2 b2. a2 < b2 /\ f j = right_open_interval a2 b2’
+        by METIS_TAC [in_right_open_intervals_nonempty] \\
+     FULL_SIMP_TAC std_ss [right_open_interval_lowerbound] \\
+     CCONTR_TAC \\
+     Q.PAT_X_ASSUM ‘!i j. _ ==> DISJOINT (f i) (f j)’ (MP_TAC o (Q.SPECL [‘i’, ‘j’])) \\
+     simp [DISJOINT_ALT] \\
+    ‘a2 < min b1 b2’ by PROVE_TAC [REAL_LT_MIN] \\
+    ‘?z. a2 < z /\ z < min b1 b2’ by METIS_TAC [REAL_MEAN] \\
+     FULL_SIMP_TAC std_ss [REAL_LT_MIN] \\
+     Q.EXISTS_TAC ‘z’ >> rw [in_right_open_interval, REAL_LT_IMP_LE])
+ >> STRIP_TAC
+ (* applying TOPOLOGICAL_SORT' *)
+ >> drule_all TOPOLOGICAL_SORT'
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘g’ STRIP_ASSUME_TAC) (* this asserts ‘g’ *)
+ >> Know ‘!i. i < N ==> g i < n /\ f (g i) <> {}’
+ >- (rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘filtered = IMAGE g (count N)’ MP_TAC \\
+     rw [Once EXTENSION, Abbr ‘filtered’] >> METIS_TAC [])
+ >> DISCH_TAC
+ >> Know ‘!i j. i < N /\ j < N /\ i < j ==>
+                interval_lowerbound (f (g i)) < interval_lowerbound (f (g j))’
+ >- (rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!j k. _ ==> ~R (g k) (g j)’ (MP_TAC o (Q.SPECL [‘i’, ‘j’])) \\
+     rw [Abbr ‘R’, GSYM real_lt])
+ >> DISCH_TAC
+ >> Know ‘!i j. i < N /\ j < N /\ i <> j ==> g i <> g j’
+ >- (rpt STRIP_TAC \\
+    ‘i < j \/ j < i’ by rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Q.PAT_X_ASSUM ‘!i j. _ ==> interval_lowerbound (f (g i)) < interval_lowerbound (f (g j))’
+         (MP_TAC o (Q.SPECL [‘i’, ‘j’])) >> rw [],
+       (* goal 2 (of 2) *) 
+       Q.PAT_X_ASSUM ‘!i j. _ ==> interval_lowerbound (f (g i)) < interval_lowerbound (f (g j))’
+         (MP_TAC o (Q.SPECL [‘j’, ‘i’])) >> rw [] ])
+ >> DISCH_TAC
+ (* eliminate ‘R’ *)
+ >> Q.PAT_X_ASSUM ‘!j k. _ ==> ~R (g k) (g j)’ K_TAC (* superseded *)
+ >> Q.PAT_X_ASSUM ‘transitive R’        K_TAC
+ >> Q.PAT_X_ASSUM ‘antisymmetric R’     K_TAC
+ >> Q.PAT_X_ASSUM ‘filtered HAS_SIZE N’ K_TAC
+ >> Q.UNABBREV_TAC ‘R’
+ (* define h = f o g *)
+ >> Q.ABBREV_TAC ‘h = f o g’
+ (* LHS rewriting *)
+ >> Know ‘BIGUNION (IMAGE f (count n)) = BIGUNION (IMAGE h (count N))’
+ >- (Q.PAT_X_ASSUM ‘filtered = IMAGE g (count N)’ MP_TAC \\
+     rw [Abbr ‘filtered’, Once EXTENSION] \\
+     rw [Once EXTENSION, IN_BIGUNION_IMAGE, Abbr ‘h’] \\
      EQ_TAC >> rpt STRIP_TAC >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
-       rename1 `i < n` >> Q.EXISTS_TAC `i` \\
-       rw [GSYM MEMBER_NOT_EMPTY] \\
-       Q.EXISTS_TAC `x` >> art [],
+       rename1 ‘i < n’ >> ‘f i <> {}’ by METIS_TAC [MEMBER_NOT_EMPTY] \\
+      ‘?j. i = g j /\ j < N’ by METIS_TAC [] \\
+       Q.EXISTS_TAC ‘j’ >> rw [],
        (* goal 2 (of 2) *)
-       rename1 `i < n` >> Q.EXISTS_TAC `i` >> rw [] ])
- >> DISCH_THEN ((FULL_SIMP_TAC std_ss) o wrap)
- >> Know `SIGMA (lambda0 o f) (count n) = SIGMA (lambda0 o f) (set filtered)`
- >- (Q.ABBREV_TAC `empties = FILTER (\i. f i = {}) (COUNT_LIST n)` \\
-     Suff `set filtered = (count n) DIFF (set empties)`
-     >- (Rewr' >> irule EXTREAL_SUM_IMAGE_ZERO_DIFF \\
-         Q.UNABBREV_TAC `empties` \\
-         RW_TAC std_ss [MEM_FILTER, MEM_COUNT_LIST, FINITE_COUNT,
-                        IN_COUNT, o_DEF]
-         >- fs [positive_def, measure_def, measurable_sets_def] \\
-         DISJ1_TAC >> NTAC 2 STRIP_TAC \\
-         MATCH_MP_TAC pos_not_neginf \\
-         fs [positive_def, measure_def, measurable_sets_def]) \\
-     qunabbrevl_tac [`empties`, `filtered`] \\
-     RW_TAC std_ss [Once EXTENSION, MEM_FILTER, MEM_COUNT_LIST,
-                    IN_DIFF, IN_COUNT] \\
-     EQ_TAC >> RW_TAC std_ss [] \\
-     PROVE_TAC []) >> Rewr'
- (* Part II: sort the list by lowerbounds *)
- >> Q.ABBREV_TAC `R = \s t. interval_lowerbound s <= interval_lowerbound t`
- >> Know `transitive R /\ total R`
- >- (RW_TAC std_ss [transitive_def, total_def] >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-       Q.UNABBREV_TAC `R` >> fs [] \\
-       MATCH_MP_TAC REAL_LE_TRANS \\
-       Q.EXISTS_TAC `interval_lowerbound y` >> art [],
-       (* goal 2 (of 2) *)
-       Q.UNABBREV_TAC `R` >> fs [REAL_LE_TOTAL] ])
- >> STRIP_TAC
- >> Q.ABBREV_TAC `sorted = QSORT R (MAP f filtered)`
- >> `SORTED R sorted` by PROVE_TAC [QSORT_SORTED]
- (* establish a permutation *)
- >> Know `PERM sorted (MAP f filtered)`
- >- (ONCE_REWRITE_TAC [PERM_SYM] \\
-     Q.UNABBREV_TAC `sorted` \\
-     REWRITE_TAC [QSORT_PERM]) >> DISCH_TAC
- >> `LENGTH sorted = LENGTH filtered` by METIS_TAC [PERM_LENGTH, LENGTH_MAP]
- (* all distinctness of `sorted` from disjointness of `f` *)
- >> Know `ALL_DISTINCT sorted`
- >- (Suff `ALL_DISTINCT (MAP f filtered)`
-     >- METIS_TAC [ALL_DISTINCT_PERM] \\
-     MATCH_MP_TAC ALL_DISTINCT_MAP_INJ \\
-     reverse CONJ_TAC
-     >- (Q.UNABBREV_TAC `filtered` \\
-         MATCH_MP_TAC FILTER_ALL_DISTINCT \\
-         RW_TAC std_ss [COUNT_LIST_GENLIST, ALL_DISTINCT_GENLIST]) \\
-     RW_TAC std_ss [] \\
-     CCONTR_TAC >> METIS_TAC [DISJOINT_EMPTY_REFL]) >> DISCH_TAC
- (* from permutation to bijection (g) *)
- >> Q.PAT_X_ASSUM `PERM _ _` (MP_TAC o (MATCH_MP (GSYM PERM_BIJ)))
- >> RW_TAC std_ss []
- >> rename1 `g PERMUTES (count n0)`
- (* stage work *)
- >> Know `!i. i < n0 ==> g i < n0`
- >- (rpt STRIP_TAC >> `INJ g (count n0) (count n0)` by METIS_TAC [BIJ_DEF] \\
-     fs [INJ_DEF, IN_COUNT]) >> DISCH_TAC
- >> Know `SIGMA (lambda0 o f) (set filtered) =
-          SIGMA lambda0 (IMAGE f (set filtered))`
- >- (MATCH_MP_TAC EQ_SYM >> irule EXTREAL_SUM_IMAGE_IMAGE \\
-     SIMP_TAC std_ss [FINITE_LIST_TO_SET, IN_IMAGE, IN_COUNT] \\
-     reverse CONJ_TAC
-     >- (MATCH_MP_TAC INJ_IMAGE \\
-         Q.EXISTS_TAC `set (MAP f filtered)` \\
-         SIMP_TAC std_ss [INJ_DEF, MEM_MAP] \\
-         CONJ_TAC >- METIS_TAC [] \\
-         METIS_TAC [DISJOINT_EMPTY_REFL]) \\
-     DISJ1_TAC >> NTAC 2 STRIP_TAC \\
-     MATCH_MP_TAC pos_not_neginf \\
-     rename1 `x = f i` \\
-     Q.PAT_X_ASSUM `x = f i` (ONCE_REWRITE_TAC o wrap) \\
-     fs [positive_def, measure_def, measurable_sets_def]) >> Rewr'
- >> Know `IMAGE f (set filtered) = set (MAP f filtered)`
- >- RW_TAC std_ss [Once EXTENSION, IN_IMAGE, EL_MEM, MEM_MAP]
- >> DISCH_THEN ((FULL_SIMP_TAC std_ss) o wrap)
- (* lambda0 (BIGUNION (set (MAP f filtered))) =
-                      SIGMA lambda0 (set (MAP f filtered)) *)
- >> Know `set (MAP f filtered) = set sorted`
- >- (Q.PAT_X_ASSUM `_ = MAP f filtered` (ONCE_REWRITE_TAC o wrap o SYM) \\
-     ASM_SIMP_TAC std_ss [Once EXTENSION, MEM_GENLIST, MEM_EL] \\
-     GEN_TAC >> EQ_TAC >> rpt STRIP_TAC >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-       Q.EXISTS_TAC `g i` >> art [] \\
-       FIRST_X_ASSUM MATCH_MP_TAC >> art [],
-       (* goal 2 (of 2) *)
-       POP_ORW \\
-       FULL_SIMP_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_COUNT] \\
-       rename1 `i < n0` \\
-      `?y. y < n0 /\ g y = i` by METIS_TAC [] \\
-       Q.EXISTS_TAC `y` >> art [] ]) >> DISCH_TAC
- >> FULL_SIMP_TAC std_ss []
- (* Part III: index function h of `sorted` *)
- >> Q.ABBREV_TAC `h = \i. EL i sorted`
- >> Know `set sorted = IMAGE h (count n0)`
- >- (Q.UNABBREV_TAC `h` \\
-     RW_TAC std_ss [Once EXTENSION, IN_IMAGE, IN_COUNT, MEM_EL] \\
-     METIS_TAC [])
- >> DISCH_THEN ((REV_FULL_SIMP_TAC bool_ss) o wrap)
- (* meta h-properties *)
- >> Know `!i. i < n0 ==> h i <> {} /\ ?j. j < n /\ (h i = f j)`
- >- (NTAC 2 STRIP_TAC \\
-     Q.PAT_X_ASSUM `_ = IMAGE h (count n0)` MP_TAC \\
-     ASM_SIMP_TAC std_ss [Once EXTENSION, IN_IMAGE, IN_COUNT, MEM_EL,
-                          LENGTH_MAP, EL_MAP, NOT_IN_EMPTY] \\
-     DISCH_THEN (ASSUME_TAC o (Q.SPEC `(h :num -> real set) i`)) \\
-    `?j. j < n0 /\ h i = EL j (MAP f filtered)` by METIS_TAC [] \\
-     POP_ORW \\
-    `j < LENGTH filtered` by METIS_TAC [] \\
-     ASM_SIMP_TAC std_ss [EL_MAP] \\
-     CONJ_TAC >- METIS_TAC [EL_MEM] \\
-     Q.EXISTS_TAC `EL j filtered` >> REWRITE_TAC [] \\
-     METIS_TAC [EL_MEM]) >> DISCH_TAC
- (* h-properties *)
- >> Know `!i. i < n0 ==> (h i) IN subsets right_open_intervals`
- >- (rpt STRIP_TAC \\
-    `?j. j < n /\ (h i = f j)` by PROVE_TAC [] >> POP_ORW \\
-     FIRST_X_ASSUM MATCH_MP_TAC >> art []) >> DISCH_TAC
- >> Know `!i j. i < n0 /\ j < n0 /\ i <> j ==> DISJOINT (h i) (h j)`
- >- (rpt STRIP_TAC \\
-    `?n1. n1 < n /\ (h i = f n1)` by PROVE_TAC [] \\
-    `?n2. n2 < n /\ (h j = f n2)` by PROVE_TAC [] \\
-     Know `n1 <> n2`
-     >- (Q.UNABBREV_TAC `h` \\
-         CCONTR_TAC >> rfs [EL_ALL_DISTINCT_EL_EQ] \\
-         METIS_TAC []) >> DISCH_TAC >> art [] \\
-     FIRST_ASSUM MATCH_MP_TAC >> art []) >> DISCH_TAC
- >> Know `SIGMA lambda0 (IMAGE h (count n0)) =
-          SIGMA (lambda0 o h) (count n0)`
- >- (irule EXTREAL_SUM_IMAGE_IMAGE \\
-     SIMP_TAC std_ss [FINITE_COUNT, IN_IMAGE, IN_COUNT] \\
-     CONJ_TAC
-     >- (DISJ1_TAC >> NTAC 2 STRIP_TAC \\
-         MATCH_MP_TAC pos_not_neginf \\
-         rename1 `x = h i` \\
-         Q.PAT_X_ASSUM `x = h i` (ONCE_REWRITE_TAC o wrap) \\
-         fs [positive_def, measure_def, measurable_sets_def]) \\
-     MATCH_MP_TAC INJ_IMAGE \\
-     Q.EXISTS_TAC `set sorted` \\
-     qunabbrevl_tac [`h`, `n0`] >> rw [INJ_DEF, EL_MEM] \\
-     METIS_TAC [EL_ALL_DISTINCT_EL_EQ]) >> Rewr'
- (* clean up useless assumptions *)
- >> Q.PAT_X_ASSUM `GENLIST _ n0 = MAP f filtered`                K_TAC
- >> Q.PAT_X_ASSUM `set (MAP f filtered) = IMAGE h (count n0)`    K_TAC
- >> Q.PAT_X_ASSUM `!i. P ==> f i IN subsets right_open_intervals` K_TAC
- >> Q.PAT_X_ASSUM `!i j. P ==> DISJOINT (f i) (f j)`             K_TAC
- >> Q.PAT_X_ASSUM `!i. MEM i filtered ==> P`                     K_TAC
- >> Q.PAT_X_ASSUM `k < n`                                        K_TAC
- >> Q.PAT_X_ASSUM `f k <> {}`                                    K_TAC
- (* Part IV: core induction assuming the key h-property *)
- >> Suff `!i. i <= n0 ==>
+       rename1 ‘i < N’ >> Q.EXISTS_TAC ‘g i’ >> rw [] ])
+ >> DISCH_THEN (REV_FULL_SIMP_TAC std_ss o wrap)
+ (* RHS rewriting *)
+ >> Know ‘SIGMA (lambda0 o f) (count n) = SIGMA (lambda0 o f) filtered’
+ >- (Q.ABBREV_TAC ‘empties = {i | i < n /\ f i = {}}’ \\
+     Know ‘filtered = (count n) DIFF empties’
+     >- (qunabbrevl_tac [‘empties’, ‘filtered’] \\
+         rw [Once EXTENSION] >> METIS_TAC []) >> Rewr' \\
+     irule EXTREAL_SUM_IMAGE_ZERO_DIFF \\
+     rw [Abbr ‘empties’, o_DEF, lambda0_empty] \\
+     DISJ1_TAC >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC \\
+    ‘?a1 b1. f i = right_open_interval a1 b1’
+        by METIS_TAC [in_right_open_intervals] >> POP_ORW \\
+     PROVE_TAC [lambda0_not_infty])
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘filtered = IMAGE g (count N)’ (REWRITE_TAC o wrap)
+ >> Know ‘SIGMA (lambda0 o f) (IMAGE g (count N)) =
+          SIGMA ((lambda0 o f) o g) (count N)’
+ >- (irule EXTREAL_SUM_IMAGE_IMAGE >> simp [o_DEF] \\
+     reverse CONJ_TAC >- (rw [INJ_DEF] >> METIS_TAC []) \\
+     DISJ1_TAC >> Q.X_GEN_TAC ‘i’ >> STRIP_TAC >> rename1 ‘i = g j’ \\
+    ‘?a1 b1. f i = right_open_interval a1 b1’
+        by METIS_TAC [in_right_open_intervals] >> POP_ORW \\
+     PROVE_TAC [lambda0_not_infty])
+ >> Rewr'
+ >> simp [GSYM o_ASSOC]
+ (* clean up *)
+ >> ‘!i. i < N ==> h i IN subsets right_open_intervals’ by rw [Abbr ‘h’]
+ >> ‘!i j. i < N /\ j < N /\ i <> j ==> DISJOINT (h i) (h j)’ by rw [Abbr ‘h’]
+ >> ‘!i j. i < N /\ j < N /\ i < j ==>
+           interval_lowerbound (h i) < interval_lowerbound (h j)’ by rw [Abbr ‘h’]
+ >> ‘!i. i < N ==> h i <> {}’ by rw [Abbr ‘h’]
+ >> Q.PAT_X_ASSUM ‘!i. _ ==> f i IN subsets right_open_intervals’ K_TAC
+ >> Q.PAT_X_ASSUM ‘!i j. _ ==> DISJOINT (f i) (f j)’              K_TAC
+ >> Q.PAT_X_ASSUM ‘!i j. _ ==> interval_lowerbound (f (g i)) < _’ K_TAC
+ >> Q.PAT_X_ASSUM ‘!i. i < N ==> g i < n /\ f (g i) <> {}’        K_TAC
+ >> Q.PAT_X_ASSUM ‘FINITE filtered’         K_TAC
+ >> Q.PAT_X_ASSUM ‘filtered SUBSET count n’ K_TAC
+ >> Q.PAT_X_ASSUM ‘0 < n’ K_TAC
+ >> Q.PAT_X_ASSUM ‘N <= n’ K_TAC
+ >> Q.PAT_X_ASSUM ‘!i j. i < N /\ j < N /\ i <> j ==> g i <> g j’ K_TAC
+ >> Q.UNABBREV_TAC ‘filtered’
+ (* now the goal and assumptions are only about ‘h’ and ‘N’ *)
+ >> Suff `!i. i <= N ==>
               BIGUNION (IMAGE h (count i)) IN subsets right_open_intervals`
  >- (DISCH_TAC \\
-     Suff `!m. m <= n0 ==>
+     Suff `!m. m <= N ==>
                (lambda0 (BIGUNION (IMAGE h (count m))) =
                 SIGMA (lambda0 o h) (count m))`
      >- (DISCH_THEN MATCH_MP_TAC >> rw [LESS_EQ_REFL]) \\
      Induct_on `m` (* final induction *)
-     >- (rw [COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY, EXTREAL_SUM_IMAGE_EMPTY] \\
-         fs [positive_def, measure_def, measurable_sets_def]) \\
+     >- rw [COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY, EXTREAL_SUM_IMAGE_EMPTY, lambda0_empty] \\
      DISCH_TAC \\
      SIMP_TAC std_ss [COUNT_SUC, IMAGE_INSERT, BIGUNION_INSERT] \\
      Know `lambda0 (h m UNION BIGUNION (IMAGE h (count m))) =
@@ -3839,43 +3793,35 @@ Proof
          rw [] >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw []) \\
          REWRITE_TAC [GSYM BIGUNION_INSERT, GSYM IMAGE_INSERT, GSYM COUNT_SUC] \\
          FIRST_X_ASSUM MATCH_MP_TAC >> art []) >> Rewr' \\
-     Q.PAT_X_ASSUM `m <= n0 ==> _` MP_TAC \\
-    `m <= n0` by RW_TAC arith_ss [] \\
-     Q.UNABBREV_TAC `n0` >> RW_TAC std_ss [] \\
-     MATCH_MP_TAC EQ_SYM \\
+     Q.PAT_X_ASSUM `m <= N ==> _` MP_TAC \\
+    `m <= N` by RW_TAC arith_ss [] \\
+     RW_TAC std_ss [] \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
      Suff `SIGMA (lambda0 o h) (m INSERT count m) = (lambda0 o h) m +
            SIGMA (lambda0 o h) (count m DELETE m)`
      >- rw [o_DEF, COUNT_DELETE] \\
      irule EXTREAL_SUM_IMAGE_PROPERTY_NEG \\
      RW_TAC std_ss [GSYM COUNT_SUC, IN_COUNT, o_DEF, FINITE_COUNT] \\
      MATCH_MP_TAC pos_not_neginf \\
-     fs [positive_def, measure_def, measurable_sets_def] \\
-     FIRST_X_ASSUM MATCH_MP_TAC \\
-     Q.UNABBREV_TAC `h` >> rw [o_DEF])
- (* Part V: h-property of lowerbounds *)
- >> ‘!i j. i < j /\ j < n0 ==>
-           interval_lowerbound (h i) <= interval_lowerbound (h j)’
-      by (STRIP_TAC \\
-          Q.PAT_X_ASSUM `transitive R`
-                        (STRIP_ASSUME_TAC o (MATCH_MP SORTED_EL_LESS)) \\
-          pop_assum (qspec_then ‘sorted’ mp_tac) \\
-          simp[])
+     fs [positive_def, measure_def, measurable_sets_def])
  (* h-property of upper- and lowerbounds *)
- >> Know `!i j. i < j /\ j < n0 ==>
+ >> Know `!i j. i < N /\ j < N /\ i <= j ==>
+                interval_lowerbound (h i) <= interval_lowerbound (h j)`
+ >- (rw [REAL_LE_LT] \\
+    ‘j = i \/ i < j’ by rw [] >- rw [] >> DISJ1_TAC \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> DISCH_TAC
+ >> Know `!i j. i < N /\ j < N /\ i < j ==>
                 interval_upperbound (h i) <= interval_lowerbound (h j)`
- >- (rpt STRIP_TAC >> `i < n0` by RW_TAC arith_ss [] \\
-     Q.PAT_X_ASSUM `!i j. i < j /\ j < n0 ==> P`
-       (MP_TAC o Q.SPECL [`i`, `j`]) \\
-     qunabbrevl_tac [`n0`, `R`] >> RW_TAC std_ss [] \\
-     CCONTR_TAC \\
-    `h i IN subsets right_open_intervals /\
-     h j IN subsets right_open_intervals` by PROVE_TAC [] \\
+ >- (rpt STRIP_TAC \\
+     SPOSE_NOT_THEN (ASSUME_TAC o (REWRITE_RULE [GSYM real_lt])) \\
+    ‘interval_lowerbound (h i) < interval_lowerbound (h j)’ by PROVE_TAC [] \\
     `?a1 b1. a1 < b1 /\ (h i = right_open_interval a1 b1)`
          by METIS_TAC [in_right_open_intervals_nonempty] \\
     `?a2 b2. a2 < b2 /\ (h j = right_open_interval a2 b2)`
-         by METIS_TAC [in_right_open_intervals_nonempty] >> fs [] \\
-     fs [right_open_interval_upperbound,
-         right_open_interval_lowerbound] \\
+         by METIS_TAC [in_right_open_intervals_nonempty] \\
+     FULL_SIMP_TAC std_ss [right_open_interval_upperbound,
+                           right_open_interval_lowerbound] \\
     `i <> j` by RW_TAC arith_ss [] \\
      Know `DISJOINT (h i) (h j)` >- PROVE_TAC [] \\
      Q.PAT_X_ASSUM `h i = _` (PURE_ONCE_REWRITE_TAC o wrap) \\
@@ -3885,33 +3831,28 @@ Proof
      DISCH_THEN (ASSUME_TAC o (REWRITE_RULE [DISJOINT_ALT])) \\
      POP_ASSUM (MP_TAC o (Q.SPEC `a2`)) \\
      Know `a2 IN right_open_interval a1 b1`
-     >- (rw [in_right_open_interval] >> fs [real_lte]) \\
+     >- (rw [in_right_open_interval] >> rw [REAL_LT_IMP_LE]) \\
      Know `a2 IN right_open_interval a2 b2`
      >- (rw [in_right_open_interval]) \\
-     RW_TAC std_ss []) >> DISCH_TAC
+     RW_TAC bool_ss []) >> DISCH_TAC
  (* h-property of upperbounds *)
- >> Know `!i j. i < j /\ j < n0 ==>
+ >> Know `!i j. i < N /\ j < N /\ i < j ==>
                 interval_upperbound (h i) <= interval_upperbound (h j)`
- >- (rpt STRIP_TAC >> `i < n0` by RW_TAC arith_ss [] \\
-     Q.PAT_X_ASSUM `!i j. i < j /\ j < n0 ==> P`
-       (MP_TAC o Q.SPECL [`i`, `j`]) \\
-     Q.UNABBREV_TAC `n0` >> RW_TAC std_ss [] \\
+ >- (rpt STRIP_TAC \\
      MATCH_MP_TAC REAL_LE_TRANS \\
-     Q.EXISTS_TAC `interval_lowerbound (h j)` >> art [] \\
+     Q.EXISTS_TAC `interval_lowerbound (h j)` >> rw [] \\
     `h j IN subsets right_open_intervals` by PROVE_TAC [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o
-                (REWRITE_RULE [in_right_open_intervals])) \\
-     POP_ORW \\
+                (REWRITE_RULE [in_right_open_intervals])) >> POP_ORW \\
      REWRITE_TAC [right_open_interval_two_bounds]) >> DISCH_TAC
  (* h-compactness: there's no gap between each h(i) *)
- >> Know `!i. SUC i < n0 ==>
+ >> Know `!i. SUC i < N ==>
              (interval_lowerbound (h (SUC i)) = interval_upperbound (h i))`
- >- (rpt STRIP_TAC >> `i < n0` by RW_TAC arith_ss [] \\
-     MATCH_MP_TAC EQ_SYM \\
-    `(n0 = 0) \/ 0 < n0` by RW_TAC arith_ss [] >- fs [] \\
-     Know `BIGUNION (IMAGE h (count n0)) <> {} /\
-           BIGUNION (IMAGE h (count n0)) IN subsets right_open_intervals`
-     >- (Q.UNABBREV_TAC `n0` >> art [] \\
+ >- (rpt STRIP_TAC >> `i < N` by RW_TAC arith_ss [] \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     Know `BIGUNION (IMAGE h (count N)) <> {} /\
+           BIGUNION (IMAGE h (count N)) IN subsets right_open_intervals`
+     >- (Q.UNABBREV_TAC `N` >> art [] \\
          RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_COUNT, NOT_IN_EMPTY] \\
         `h i <> {}` by METIS_TAC [] \\
          FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] \\
@@ -3920,13 +3861,11 @@ Proof
      STRIP_TAC >> POP_ASSUM MP_TAC \\
      SIMP_TAC std_ss [GSPECIFICATION, right_open_interval, IN_BIGUNION_IMAGE,
                       IN_COUNT, Once EXTENSION] >> DISCH_TAC \\
-  (* |- !x. (?x'. x' < n0 /\ x IN h x') <=> a <= x /\ x < b *)
+  (* |- !x. (?x'. x' < N /\ x IN h x') <=> a <= x /\ x < b *)
      CCONTR_TAC \\ (* suppose there's a gap between h(i) and h(i+1) *)
     `i < SUC i` by RW_TAC arith_ss [] \\
-     Q.PAT_X_ASSUM `!i j. i < j /\ j < n0 ==>
-                          interval_upperbound (h i) <= interval_lowerbound (h j)`
-       (MP_TAC o (Q.SPECL [`i`, `SUC i`])) \\
-     Q.UNABBREV_TAC `n0` >> RW_TAC std_ss [] \\
+     Q.PAT_X_ASSUM `!i j. _ ==> interval_upperbound (h i) <= interval_lowerbound (h j)`
+       (MP_TAC o (Q.SPECL [`i`, `SUC i`])) >> rw [] \\
   (* now prove by contradiction *)
      CCONTR_TAC >> FULL_SIMP_TAC bool_ss [] \\
      Q.ABBREV_TAC `b1 = interval_upperbound (h i)` \\
@@ -3966,8 +3905,7 @@ Proof
              MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `a1` >> art []) \\
          MATCH_MP_TAC REAL_LT_TRANS \\
          Q.EXISTS_TAC `a2` >> art []) >> STRIP_TAC \\
-     Q.ABBREV_TAC `n0 = LENGTH filtered` \\
-    `?j. j < n0 /\ z IN h j` by METIS_TAC [] \\
+    `?j. j < N /\ z IN h j` by METIS_TAC [] \\
   (* now we show `i < j < SUC i`, i.e. j doesn't exist at all *)
      Know `h j <> {} /\ h j IN subsets right_open_intervals` >- PROVE_TAC [] \\
      DISCH_THEN (STRIP_ASSUME_TAC o
@@ -3989,9 +3927,7 @@ Proof
      Know `j < SUC i`
      >- (SPOSE_NOT_THEN (ASSUME_TAC o (REWRITE_RULE [NOT_LESS])) \\
          Know `interval_lowerbound (h (SUC i)) <= interval_lowerbound (h j)`
-         >- (`(j = SUC i) \/ SUC i < j` by RW_TAC arith_ss []
-             >- (POP_ORW >> REWRITE_TAC [REAL_LE_REFL]) \\
-             FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+         >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw []) \\
         `(interval_lowerbound (h (SUC i)) = a2) /\
          (interval_lowerbound (h j) = a3)` by PROVE_TAC [right_open_interval_lowerbound] \\
          NTAC 2 (POP_ASSUM (PURE_ONCE_REWRITE_TAC o wrap)) >> DISCH_TAC \\
@@ -3999,15 +3935,14 @@ Proof
          METIS_TAC [REAL_LTE_ANTISYM]) >> DISCH_TAC \\
     `SUC i <= j` by RW_TAC arith_ss [] \\
      METIS_TAC [LESS_EQ_ANTISYM]) >> DISCH_TAC
- (* Part VI: final strike *)
- >> NTAC 3 (Q.PAT_X_ASSUM `!i j. i < j /\ j < n0 ==> A <= B` K_TAC)
+ (* final strike *)
+ >> NTAC 3 (Q.PAT_X_ASSUM `!i j. i < N /\ j < N /\ _ ==> A <= B` K_TAC)
  >> rpt STRIP_TAC
  >> Cases_on `i`
  >- (rw [COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY, EXTREAL_SUM_IMAGE_EMPTY] \\
-     fs [semiring_def, space_def, subsets_def,
-         positive_def, measurable_sets_def, measure_def])
- >> rename1 `SUC i <= n0`
- >> Suff `!j. SUC j <= n0 ==>
+     MATCH_MP_TAC SEMIRING_EMPTY >> art [])
+ >> rename1 `SUC i <= N`
+ >> Suff `!j. SUC j <= N ==>
               BIGUNION (IMAGE h (count (SUC j))) <> {} /\
              (BIGUNION (IMAGE h (count (SUC j))) =
               right_open_interval (interval_lowerbound (h 0))
@@ -4018,7 +3953,6 @@ Proof
  >- (DISCH_TAC \\
      SIMP_TAC std_ss [COUNT_SUC, COUNT_ZERO, IMAGE_INSERT, BIGUNION_INSERT,
                       IMAGE_EMPTY, BIGUNION_EMPTY, UNION_EMPTY] \\
-    `0 < n0` by RW_TAC arith_ss [] \\
      CONJ_TAC >- PROVE_TAC [] (* h 0 <> {} *) \\
      Know `h 0 <> {} /\ h 0 IN subsets right_open_intervals` >- PROVE_TAC [] \\
      DISCH_THEN (STRIP_ASSUME_TAC o
@@ -4026,9 +3960,9 @@ Proof
      POP_ORW \\
      METIS_TAC [right_open_interval_lowerbound, right_open_interval_upperbound])
  >> DISCH_TAC
- >> `SUC j < n0 /\ SUC j <= n0` by RW_TAC arith_ss []
- >> Q.PAT_X_ASSUM `SUC j <= n0 ==> P` MP_TAC
- >> Q.UNABBREV_TAC `n0` >> RW_TAC std_ss []
+ >> `SUC j < N /\ SUC j <= N` by RW_TAC arith_ss []
+ >> Q.PAT_X_ASSUM `SUC j <= N ==> P` MP_TAC
+ >> Q.UNABBREV_TAC `N` >> RW_TAC std_ss []
  >- (SIMP_TAC std_ss [Once COUNT_SUC, IMAGE_INSERT, BIGUNION_INSERT] \\
      ASM_SET_TAC [])
  >> SIMP_TAC std_ss [Once COUNT_SUC, IMAGE_INSERT, BIGUNION_INSERT, Once UNION_COMM]
@@ -5351,6 +5285,31 @@ Proof
      POP_ASSUM MP_TAC >> RW_TAC bool_ss [])
  >> rw [] >> Q.EXISTS_TAC ‘{}’
  >> MATCH_MP_TAC NULL_SET_EMPTY >> art []
+QED
+
+(* Fixed statements by checking Isabelle's Measure_Space.thy *)
+Theorem AE_FORALL_SWAP_THM : (* was: AE_all_countable *)
+    !m P. measure_space m /\ countable univ(:'index) ==>
+         ((AE x::m. !i. P i x) <=> !(i:'index). AE x::m. P i x)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> rw [AE_DEF] >- (Q.EXISTS_TAC `N` >> rw [])
+ >> fs [SKOLEM_THM] (* this assert ‘f’ *)
+ >> fs [COUNTABLE_ENUM]
+ >> rename1 ‘IMAGE g univ(:num) = univ(:'index)’
+ >> Q.EXISTS_TAC ‘BIGUNION (IMAGE (f o g) univ(:num))’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC (REWRITE_RULE [IN_APP] NULL_SET_BIGUNION) >> rw [o_DEF])
+ >> rw [IN_BIGUNION]
+ >> Q.PAT_X_ASSUM ‘!i. null_set m (f i) /\ _’ (MP_TAC o (Q.SPEC ‘i’))
+ >> RW_TAC std_ss []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> RW_TAC std_ss []
+ >> CCONTR_TAC >> fs []
+ >> Q.PAT_X_ASSUM ‘!s. x NOTIN s \/ _’ (MP_TAC o (Q.SPEC ‘f (i :'index)’))
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘IMAGE g univ(:num) = univ(:'index)’ MP_TAC
+ >> rw [Once EXTENSION] 
+ >> METIS_TAC []
 QED
 
 (* NOTE: the need of complete measure space is necessary if P is a generic property.
