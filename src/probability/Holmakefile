@@ -1,4 +1,4 @@
-INCLUDES = ../real ../real/analysis ../sort ../res_quan/src ../n-bit \
+INCLUDES = ../real ../real/analysis ../res_quan/src ../n-bit \
            ../pred_set/src/more_theories ../quotient/src
 
 EXTRA_CLEANS = selftest.exe prob-selftest.log
@@ -9,11 +9,10 @@ EXTRA_CLEANS += $(HOLHEAP)
 
 REAL_OBJNAMES = realTheory realLib real_sigmaTheory RealArith iterateTheory
 
-OTHER_OBJNAMES = ../sort/sortingTheory ../res_quan/src/res_quanTools \
-	../res_quan/src/hurdUtils ../res_quan/src/jrhUtils \
-	../real/analysis/transcTheory
+OTHER_OBJNAMES = ../res_quan/src/res_quanTools ../res_quan/src/hurdUtils \
+	../res_quan/src/jrhUtils ../real/analysis/transcTheory
 
-SIGOBJ_OBJNAMES = pred_setLib numpairTheory logrootTheory
+SIGOBJ_OBJNAMES = pred_setLib logrootTheory
 
 OBJS = $(patsubst %,../real/%.uo,$(REAL_OBJNAMES)) \
        $(patsubst %,%.uo,$(OTHER_OBJNAMES)) \
