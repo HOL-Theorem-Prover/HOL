@@ -852,7 +852,7 @@ More precisely, we are interested in the sets:
 Or formally:
 \begin{hol}
 \begin{alltt}
-##thm function_space_alt_finite
+##thm lp_space_alt_finite
 \end{alltt}
 \end{hol}
 
@@ -871,7 +871,7 @@ Clearly, $u\in\mathcal{L}^p(\mu)$ if, and only if, $u\in\mathcal{M}(\mathscr{A})
 Furthermore, $\|u\|_p$ implies that $u(x) = 0$ for almost every $x$.
 \begin{hol}
 \begin{alltt}
-##thm function_space_alt_seminorm
+##thm lp_space_alt_seminorm
 
 ##thm seminorm_eq_0
 \end{alltt}

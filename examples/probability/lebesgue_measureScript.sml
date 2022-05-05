@@ -64,7 +64,7 @@ QED
 val integral_indicator_UNIV = store_thm ("integral_indicator_UNIV",
   ``!s A. integral UNIV (indicator (s INTER A)) =
           integral A (indicator s)``,
-  REWRITE_TAC [integral] THEN REPEAT STRIP_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC [integral_def] THEN REPEAT STRIP_TAC THEN AP_TERM_TAC THEN
   ABS_TAC THEN METIS_TAC [has_integral_indicator_UNIV]);
 
 val integrable_indicator_UNIV = store_thm ("integrable_indicator_UNIV",
@@ -463,7 +463,7 @@ Theorem lebesgue_of_negligible : (* was: lmeasure_eq_0 *)
 Proof
     RW_TAC std_ss [measure_lebesgue]
  >> Know `!n. integral (line n) (indicator s) = 0`
- >- (FULL_SIMP_TAC std_ss [integral, negligible, line, GSYM interval] \\
+ >- (FULL_SIMP_TAC std_ss [integral_def, negligible, line, GSYM interval] \\
      GEN_TAC >> MATCH_MP_TAC SELECT_UNIQUE \\
      GEN_TAC \\
      reverse EQ_TAC >- METIS_TAC [] \\
