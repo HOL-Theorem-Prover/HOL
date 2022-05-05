@@ -6247,26 +6247,6 @@ Proof
  >> MATCH_MP_TAC add2_sub2 >> art []
 QED
 
-(* in this theorem, the involved functions never take infinite values *)
-Theorem integral_add3 :
-    !m f g h. measure_space m /\
-              integrable m f /\ integrable m g /\ integrable m h /\
-             (!x. x IN m_space m ==> f x <> PosInf /\ f x <> NegInf) /\
-             (!x. x IN m_space m ==> g x <> PosInf /\ g x <> NegInf) /\
-             (!x. x IN m_space m ==> h x <> PosInf /\ h x <> NegInf)
-          ==> integral m (\x. f x + g x + h x) =
-              integral m f + integral m g + integral m h
-Proof
-    rpt STRIP_TAC
- >> Know ‘integral m (\x. f x + g x + h x) =
-          integral m (\x. f x + g x) + integral m h’
- >- (HO_MATCH_MP_TAC integral_add >> simp [] \\
-     MATCH_MP_TAC integrable_add >> rw [])
- >> Rewr'
- >> Suff ‘integral m (\x. f x + g x) = integral m f + integral m g’ >- rw []
- >> MATCH_MP_TAC integral_add >> rw []
-QED
-
 (* cf. real_lebesgueTheory.integral_times *)
 Theorem integral_cmul :
     !m f c. measure_space m /\ integrable m f ==>
@@ -11049,6 +11029,23 @@ Proof
         irule o SIMP_RULE (srw_ss ()) []) AE_INTER o SIMP_RULE (srw_ss ()) []) AE_subset >>
     fs[] >> rw[] >> NTAC 2 $ pop_assum SUBST1_TAC >>
     simp[extreal_add_def,extreal_sub_def,extreal_ainv_def,real_sub]
+QED
+
+(* An easy corollary of the new integral_add' and integrable_add' *)
+Theorem integral_add3 :
+    !m f g h. measure_space m /\
+              integrable m f /\ integrable m g /\ integrable m h
+          ==> integral m (\x. f x + g x + h x) =
+              integral m f + integral m g + integral m h
+Proof
+    rpt STRIP_TAC
+ >> Know ‘integral m (\x. f x + g x + h x) =
+          integral m (\x. f x + g x) + integral m h’
+ >- (HO_MATCH_MP_TAC integral_add' >> simp [] \\
+     MATCH_MP_TAC integrable_add' >> rw [])
+ >> Rewr'
+ >> Suff ‘integral m (\x. f x + g x) = integral m f + integral m g’ >- rw []
+ >> MATCH_MP_TAC integral_add' >> rw []
 QED
 
 val _ = export_theory ();
