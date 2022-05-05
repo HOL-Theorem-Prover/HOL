@@ -20,8 +20,8 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open prim_recTheory arithmeticTheory optionTheory pairTheory
-     numpairTheory combinTheory pred_setTheory pred_setLib;
+open prim_recTheory arithmeticTheory optionTheory pairTheory combinTheory
+     pred_setTheory pred_setLib;
 
 open realTheory realLib metricTheory seqTheory transcTheory real_sigmaTheory
      real_topologyTheory;
@@ -2367,13 +2367,24 @@ val outer_measure_space_def = Define `
      {} IN (measurable_sets m) /\
      positive m /\ increasing m /\ countably_subadditive m`;
 
-(* Defition 18.1 of [1]: the family of countable S-covers
+(* Definition 18.1 [1, p.198] (countable S-covers with a diameter)
 
-   Notice that `BIGUNION (IMAGE f UNIV)` needs not be disjoint or in `sts`
+   Notice that `BIGUNION (IMAGE f UNIV)` needs not be disjoint or in `sts`.
  *)
-val countable_covers_def = Define
-   `countable_covers (sts :'a set set) =
-      \a. {f | f IN (univ(:num) -> sts) /\ a SUBSET (BIGUNION (IMAGE f UNIV))}`;
+Definition metric_countable_covers_def :
+    metric_countable_covers (d :'a metric) (e :extreal) (sts :'a set set) =
+      \a. {f | f IN (univ(:num) -> sts) /\ a SUBSET (BIGUNION (IMAGE f UNIV)) /\
+               !i. Normal (set_diameter d (f i)) <= e}
+End
+
+Overload countable_covers = “metric_countable_covers ARB PosInf”
+
+Theorem countable_covers_def :
+    !sts. countable_covers (sts :'a set set) =
+          \a. {f | f IN (univ(:num) -> sts) /\ a SUBSET (BIGUNION (IMAGE f UNIV))}
+Proof
+    RW_TAC std_ss [metric_countable_covers_def, le_infty]
+QED
 
 (* Defition 18.1 of [1]: outer measure of the set-function m for C (covering),
    which could be `coutable_covers sts`. *)
@@ -2958,10 +2969,11 @@ Theorem OUTER_MEASURE_CONSTRUCTION :
              !x. x SUBSET sp ==> v x <= u x
 Proof
     rpt GEN_TAC >> STRIP_TAC
- >> rename1 `positive (sp,sts,mu)` >> rename1 `m = _` (* m -> mu, u -> m *)
+ >> rename1 `positive (sp,sts,mu)`                       (* m -> mu *)
+ >> rename1 `m = outer_measure mu (countable_covers sts)` (* u -> m *)
  >> Q.ABBREV_TAC `C = countable_covers sts`
  >> Q.ABBREV_TAC `A = caratheodory_sets sp m`
- >> STRONG_CONJ_TAC
+ >> STRONG_CONJ_TAC (* outer_measure_space (sp,POW sp,m) *)
  >- (REWRITE_TAC [outer_measure_space_def, m_space_def, measurable_sets_def,
                   subset_class_POW, EMPTY_IN_POW] \\
      fs [countable_covers_def, outer_measure_def] \\
@@ -3148,20 +3160,22 @@ Proof
          PROVE_TAC [SUBSET_DEF]) >> DISCH_TAC \\
   (* merge two nesting BIGUNIONs into one BIGUNION *)
     `!i j. g i j IN sts` by PROVE_TAC [IN_FUNSET, IN_UNIV] \\
-     Q.ABBREV_TAC `ff = \n. g (nfst n) (nsnd n)` \\
-    `ff IN (univ(:num) -> sts)` by PROVE_TAC [IN_FUNSET, IN_UNIV] \\
+  (* UPDATE: new proof steps without using numpairTheory *)
+     Q.X_CHOOSE_THEN ‘h’ STRIP_ASSUME_TAC NUM_2D_BIJ_INV \\
+     Q.X_CHOOSE_THEN ‘h2’ STRIP_ASSUME_TAC
+       (SIMP_RULE (srw_ss()) []
+         (MATCH_MP BIJ_INV (ASSUME “BIJ h univ(:num) (univ(:num) CROSS univ(:num))”))) \\
+     Q.ABBREV_TAC ‘ff = (UNCURRY g) o h’ \\
+    `ff IN (univ(:num) -> sts)` by rw [Abbr ‘ff’, o_DEF, IN_FUNSET, UNCURRY] \\
      Know `BIGUNION (IMAGE (\n. BIGUNION (IMAGE (g n) univ(:num))) univ(:num)) =
            BIGUNION (IMAGE ff (univ(:num)))`
-     >- (RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, IN_BIGUNION_IMAGE, IN_UNIV] >|
+     >- (rw [SET_EQ_SUBSET, SUBSET_DEF, IN_BIGUNION_IMAGE, Abbr ‘ff’, UNCURRY] >| (* 2 subgoals *)
          [ (* goal 1 (of 2) *)
-           Q.EXISTS_TAC `npair n x'` \\ (* numpairTheory is used here! *)
-           Q.UNABBREV_TAC `ff` >> BETA_TAC >> PROVE_TAC [nfst_npair, nsnd_npair],
+           rename1 ‘x IN g i j’ \\
+           Q.EXISTS_TAC ‘h2 (i,j)’ >> rw [],
            (* goal 2 (of 2) *)
-           Q.EXISTS_TAC `nfst x'` \\
-           Q.EXISTS_TAC `nsnd x'` \\
-           POP_ASSUM MP_TAC >> Q.UNABBREV_TAC `ff` >> BETA_TAC \\
-           REWRITE_TAC [] ]) \\
-     DISCH_TAC \\
+           rename1 ‘x IN g (FST (h n)) (SND (h n))’ (* last assum *) \\
+           qexistsl_tac [‘FST (h n)’, ‘SND (h n)’] >> art [] ]) >> DISCH_TAC \\
      Q.PAT_X_ASSUM `BIGUNION (IMAGE f UNIV) SUBSET X` MP_TAC \\
      POP_ORW >> DISCH_TAC \\
      Suff `suminf (\n. suminf (mu o g n)) = suminf (mu o ff)`
@@ -3169,19 +3183,14 @@ Proof
          FIRST_X_ASSUM MATCH_MP_TAC >> ASM_REWRITE_TAC []) \\
      Q.UNABBREV_TAC `ff` \\
   (* prepare for applying "ext_suminf_2d" *)
-     MATCH_MP_TAC EQ_SYM \\
-     Q.ABBREV_TAC `h = \n. (nfst n, nsnd n)` \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
      Q.ABBREV_TAC `ff = \m n. mu (g m n)` \\
-     Know `(mu o (\n. g (nfst n) (nsnd n))) = UNCURRY ff o h`
-     >- (SIMP_TAC std_ss [o_DEF, FUN_EQ_THM, UNCURRY] \\
-         Q.UNABBREV_TAC `h` >> Q.UNABBREV_TAC `ff` \\
-         ASM_SIMP_TAC std_ss []) >> Rewr \\
+     Know `mu o UNCURRY g o h = UNCURRY ff o h`
+     >- (SIMP_TAC std_ss [o_DEF, FUN_EQ_THM, UNCURRY, Abbr ‘ff’]) >> Rewr \\
   (* finally, apply "ext_suminf_2d", cleaning up easy goals *)
      MATCH_MP_TAC ext_suminf_2d \\
      `!n. suminf (ff n) = (\n. suminf (mu o g n)) n` by METIS_TAC [o_DEF] \\
      POP_ASSUM ((ASM_SIMP_TAC std_ss) o wrap) \\
-     Know `BIJ h univ(:num) (univ(:num) CROSS univ(:num))`
-     >- (Q.UNABBREV_TAC `h` >> REWRITE_TAC [NUM_2D_BIJ_nfst_nsnd]) >> Rewr \\
   (* !m n. 0 <= ff m n *)
      Q.UNABBREV_TAC `ff` >> BETA_TAC \\
      PROVE_TAC [positive_def, measure_def, measurable_sets_def])
