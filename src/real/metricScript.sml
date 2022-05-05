@@ -163,11 +163,11 @@ val METRIC_NZ = store_thm("METRIC_NZ",
 
 val bmetric_tm = “(dist m)(x,y) / (1 + (dist m)(x,y))”;
 
-Definition reduced_metric_def :
-    reduced_metric (m :'a metric) = metric (\(x,y). ^bmetric_tm)
+Definition bounded_metric_def :
+    bounded_metric (m :'a metric) = metric (\(x,y). ^bmetric_tm)
 End
 
-Theorem reduced_metric_alt[local] :
+Theorem bounded_metric_alt[local] :
     !m x y. ^bmetric_tm = 1 - inv (1 + dist m (x,y))
 Proof
     rw [FUN_EQ_THM]
@@ -183,7 +183,7 @@ Proof
  >> rw [real_div, REAL_SUB_RDISTRIB, REAL_MUL_RINV]
 QED
 
-Theorem reduced_metric_ismet :
+Theorem bounded_metric_ismet :
     !m. ismet (\(x,y). ^bmetric_tm)
 Proof
     rw [ismet]
@@ -197,7 +197,7 @@ Proof
      MATCH_MP_TAC REAL_LTE_TRANS \\
      Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])
  >> DISCH_TAC
- >> REWRITE_TAC [reduced_metric_alt]
+ >> REWRITE_TAC [bounded_metric_alt]
  >> ‘1 - inv (1 + dist m (x,y)) + (1 - inv (1 + dist m (x,z))) =
      1 - (inv (1 + dist m (x,y)) + inv (1 + dist m (x,z)) - 1)’ by REAL_ARITH_TAC
  >> POP_ORW
@@ -247,19 +247,19 @@ Proof
  >> MATCH_MP_TAC REAL_LE_MUL >> rw [METRIC_POS]
 QED
 
-Theorem reduced_metric_thm :
-    !m x y. dist (reduced_metric m) (x,y) = ^bmetric_tm
+Theorem bounded_metric_thm :
+    !m x y. dist (bounded_metric m) (x,y) = ^bmetric_tm
 Proof
-    rw [reduced_metric_def]
+    rw [bounded_metric_def]
  >> ‘dist (metric (\(x,y). ^bmetric_tm)) = (\(x,y). ^bmetric_tm)’
-       by (rw [GSYM metric_tybij, reduced_metric_ismet])
+       by (rw [GSYM metric_tybij, bounded_metric_ismet])
  >> rw []
 QED
 
-Theorem reduced_metric_lt_1 :
-    !(m :'a metric) x y. dist (reduced_metric m) (x,y) < 1
+Theorem bounded_metric_lt_1 :
+    !(m :'a metric) x y. dist (bounded_metric m) (x,y) < 1
 Proof
-    rw [reduced_metric_thm]
+    rw [bounded_metric_thm]
  >> Know ‘0 < 1 + dist m (q,r)’
  >- (MATCH_MP_TAC REAL_LTE_TRANS \\
      Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])

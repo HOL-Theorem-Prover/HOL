@@ -13,7 +13,7 @@ open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
      prim_recTheory arithmeticTheory tautLib pred_setLib hurdUtils;
 
 open realTheory realLib real_sigmaTheory RealArith seqTheory limTheory
-     transcTheory iterateTheory metricTheory;
+     transcTheory iterateTheory metricTheory listTheory rich_listTheory;
 
 open util_probTheory cardinalTheory;
 
@@ -9512,7 +9512,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Definition extreal_dist_def :
-    extreal_dist (Normal x) (Normal y) = dist (reduced_metric mr1) (x,y) /\
+    extreal_dist (Normal x) (Normal y) = dist (bounded_metric mr1) (x,y) /\
     extreal_dist  PosInf     PosInf    = 0 /\
     extreal_dist  NegInf     NegInf    = 0 /\
     extreal_dist  _          _         = 1
@@ -9524,23 +9524,23 @@ Theorem extreal_dist_ismet :
 Proof
     rw [ismet]
  >- (Cases_on ‘x’ >> Cases_on ‘y’ \\
-     rw [extreal_dist_def, reduced_metric_thm, MR1_DEF] \\
+     rw [extreal_dist_def, bounded_metric_thm, MR1_DEF] \\
      EQ_TAC >> rw [] \\
      fs [REAL_DIV_ZERO] \\
      rename1 ‘1 + abs (a - b)’ \\
      Suff ‘0 < 1 + abs (a - b)’ >- METIS_TAC [REAL_LT_IMP_NE] \\
      MATCH_MP_TAC REAL_LTE_TRANS \\
      Q.EXISTS_TAC ‘1’ >> rw [])
- >> Know ‘!a (b :real). dist (reduced_metric mr1) (a,b) <= 2’
+ >> Know ‘!a (b :real). dist (bounded_metric mr1) (a,b) <= 2’
  >- (rpt GEN_TAC \\
      MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC ‘1’ >> rw [] \\
-     MATCH_MP_TAC REAL_LT_IMP_LE >> rw [reduced_metric_lt_1])
+     MATCH_MP_TAC REAL_LT_IMP_LE >> rw [bounded_metric_lt_1])
  >> DISCH_TAC
  >> Cases_on ‘x’ >> Cases_on ‘y’ >> Cases_on ‘z’
  >> rw [extreal_dist_def, METRIC_POS]
- >> rename1 ‘dist (reduced_metric mr1) (x,z) <=
-             dist (reduced_metric mr1) (y,x) + dist (reduced_metric mr1) (y,z)’
- >> ‘dist (reduced_metric mr1) (y,x) = dist (reduced_metric mr1) (x,y)’
+ >> rename1 ‘dist (bounded_metric mr1) (x,z) <=
+             dist (bounded_metric mr1) (y,x) + dist (bounded_metric mr1) (y,z)’
+ >> ‘dist (bounded_metric mr1) (y,x) = dist (bounded_metric mr1) (x,y)’
       by PROVE_TAC [METRIC_SYM]
  >> rw [METRIC_TRIANGLE]
 QED
@@ -9568,7 +9568,7 @@ Proof
  >> Cases_on ‘x’ >> Cases_on ‘y’
  >> rw [extreal_mr1_thm, extreal_dist_def]
  >> MATCH_MP_TAC REAL_LT_IMP_LE
- >> rw [reduced_metric_lt_1]
+ >> rw [bounded_metric_lt_1]
 QED
 
 (************************************************************************)
@@ -9663,15 +9663,16 @@ QED
 (*** EXTREAL_SUM_IMAGE Theorems ***)
 
 Theorem EXTREAL_SUM_IMAGE_ALT_FOLDR:
-    !f s. FINITE s ==> EXTREAL_SUM_IMAGE f s = FOLDR (λe acc. f e + acc) 0x (REVERSE (SET_TO_LIST s))
+    !f s. FINITE s ==>
+          EXTREAL_SUM_IMAGE f s = FOLDR (λe acc. f e + acc) 0x (REVERSE (SET_TO_LIST s))
 Proof
-    simp[EXTREAL_SUM_IMAGE_DEF,rich_listTheory.ITSET_TO_FOLDR]
+    simp[EXTREAL_SUM_IMAGE_DEF,ITSET_TO_FOLDR]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_EQ':
     !f g s. FINITE s /\ (!x. x IN s ==> f x = g x) ==> EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE g s: extreal
 Proof
-    rw[] >> simp[EXTREAL_SUM_IMAGE_ALT_FOLDR] >> irule listTheory.FOLDR_CONG >> rw[]
+    rw[] >> simp[EXTREAL_SUM_IMAGE_ALT_FOLDR] >> irule FOLDR_CONG >> rw[]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_MONO':
@@ -9680,7 +9681,7 @@ Proof
     ‘!f g l. (!e. MEM e l ==> f e <= g e) ==>
       (FOLDR (λe acc. f e + acc) 0x l <= FOLDR (λe acc. g e + acc) 0x l)’
         suffices_by rw[EXTREAL_SUM_IMAGE_ALT_FOLDR] >>
-    Induct_on ‘l’ >> rw[listTheory.FOLDR] >> irule le_add2 >> simp[]
+    Induct_on ‘l’ >> rw[FOLDR] >> irule le_add2 >> simp[]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_COUNT_ZERO[simp]:
