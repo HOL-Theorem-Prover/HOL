@@ -13,7 +13,7 @@ SRCRELNAMES = \
   n-bit \
   pred_set/src/more_theories probability \
   quotient/src \
-  rational real res_quan/src ring/src \
+  rational real real/analysis res_quan/src ring/src \
   search sort string \
   temporal/src TeX transfer \
   update

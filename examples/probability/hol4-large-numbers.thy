@@ -99,6 +99,7 @@ hol-extreal {
   import: hol-base
   import: hol-set
   import: hol-real
+  import: hol-analysis
   package: hol-extreal-1.0
 }
 hol-probability {

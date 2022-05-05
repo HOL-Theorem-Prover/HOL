@@ -15,7 +15,7 @@ val _ = Parse.reveal "B";
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 
 (*---------------------------------------------------------------------------*)
-(* Basic definitions: directed set, net, bounded net, pointwise limit        *)
+(* Basic definitions: directed set, net, bounded net, pointwise limit [1]    *)
 (*---------------------------------------------------------------------------*)
 
 val dorder = new_definition("dorder",
@@ -31,6 +31,7 @@ val bounded = new_definition("bounded",
   “bounded(m:('a)metric,(g:'b->'b->bool)) f =
       ?k x N. g N N /\ (!n. g n N ==> (dist m)(f(n),x) < k)”);
 
+(* in the view of real_topologyTheory, this is a general ‘at’ (net) *)
 Definition tendsto :
    tendsto(m:('a)metric,x) y z =
       (&0 < (dist m)(x,y) /\ (dist m)(x,y) <= (dist m)(x,z))
@@ -605,3 +606,9 @@ val NET_LE = store_thm("NET_LE",
   FIRST_ASSUM ACCEPT_TAC);
 
 val _ = export_theory();
+
+(* References:
+
+ [1] Moore, E.H., Smith, H.L.: A General Theory of Limits. American Journal of
+     Mathematics. 44, 102-121 (1922).
+ *)

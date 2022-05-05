@@ -9,6 +9,8 @@ open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory prim_recTheo
 
 open combinTheory pred_setTheory res_quanTools realSimps RealArith;
 
+open iterateTheory real_sigmaTheory real_topologyTheory;
+
 val _ = new_theory "seq";
 val _ = ParseExtras.temp_loose_equality()
 
@@ -55,6 +57,13 @@ val SEQ = store_thm("SEQ",
   REPEAT GEN_TAC THEN REWRITE_TAC[tends_num_real, SEQ_TENDS, MR1_DEF] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)  [ABS_SUB]
   THEN REFL_TAC);
+
+(* connection to real_topologyTheory *)
+Theorem LIM_SEQUENTIALLY_SEQ :
+    !s l. (real_topology$--> s l) sequentially <=> (seq$--> s l)
+Proof
+    REWRITE_TAC [LIM_SEQUENTIALLY, SEQ, GREATER_EQ, dist]
+QED
 
 val SEQ_CONST = store_thm("SEQ_CONST",
   “!k. (\x. k) --> k”,
@@ -105,12 +114,25 @@ val SEQ_UNIQ = store_thm("SEQ_UNIQ",
 val convergent = new_definition("convergent",
   “convergent f = ?l. f --> l”);
 
-val cauchy = new_definition("cauchy",
-  “cauchy f = !e. &0 < e ==>
-        ?N:num. !m n. m >= N /\ n >= N ==> abs(f(m) - f(n)) < e”);
+(* already defined in real_topologyTheory *)
+Theorem cauchy :
+  !f. cauchy f <=>
+      !e. &0 < e ==> ?N:num. !m n. m >= N /\ n >= N ==> abs(f(m) - f(n)) < e
+Proof
+    rw [cauchy_def, dist]
+QED
+
+val _ = hide "lim";
 
 val lim = new_definition("lim",
   “lim f = @l. f --> l”);
+
+(* connection to real_topologyTheory *)
+Theorem LIM_SEQUENTIALLY_SEQ' :
+    !f. reallim sequentially f = lim f
+Proof
+    REWRITE_TAC [LIM_SEQUENTIALLY_SEQ, reallim, lim]
+QED
 
 val SEQ_LIM = store_thm("SEQ_LIM",
   “!f. convergent f = (f --> lim f)”,
@@ -885,18 +907,67 @@ val BOLZANO_LEMMA = store_thm("BOLZANO_LEMMA",
       REWRITE_TAC[GREATER_EQ, LESS_EQ_ADD] THEN
       ONCE_REWRITE_TAC[ADD_SYM] THEN REWRITE_TAC[LESS_EQ_ADD]]]);
 
+(* moved here from integralTheory *)
+Theorem BOLZANO_LEMMA_ALT :
+   !P. (!a b c. a <= b /\ b <= c /\ P a b /\ P b c ==> P a c) /\
+       (!x. ?d. &0 < d /\ (!a b. a <= x /\ x <= b /\ b - a < d ==> P a b))
+       ==> !a b. a <= b ==> P a b
+Proof
+  GEN_TAC THEN MP_TAC(SPEC ``\(x:real,y:real). P x y :bool`` BOLZANO_LEMMA) THEN
+  CONV_TAC(ONCE_DEPTH_CONV GEN_BETA_CONV) THEN REWRITE_TAC[]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Define infinite sums                                                      *)
 (*---------------------------------------------------------------------------*)
 
+val _ = hide "sums";
 val sums = new_infixr_definition("sums",
   “$sums f s = (\n. sum(0,n) f) --> s”,750);
 
+val _ = hide "summable";
 val summable = new_definition("summable",
   “summable f = ?s. f sums s”);
 
+val _ = hide "suminf";
 val suminf = new_definition("suminf",
   “suminf f = @s. f sums s”);
+
+(* connection to real_topologyTheory *)
+Theorem sums_univ :
+    !(f :num -> real) (l :real). real_topology$sums f l univ(:num) <=> f sums l
+Proof
+    RW_TAC std_ss [sums, real_topologyTheory.sums, dist, INTER_UNIV,
+                   SEQ, LIM_SEQUENTIALLY]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.PAT_X_ASSUM `!e. 0 < e ==> P` (MP_TAC o (Q.SPEC `e`)) \\
+      RW_TAC std_ss [] \\
+      Q.EXISTS_TAC `SUC N` >> rpt STRIP_TAC \\
+      Cases_on `n` >- fs [] \\
+      REWRITE_TAC [GSYM sum_real] \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> rw [],
+      (* goal 2 (of 2) *)
+      Q.PAT_X_ASSUM `!e. 0 < e ==> P` (MP_TAC o (Q.SPEC `e`)) \\
+      RW_TAC std_ss [] \\
+      Q.EXISTS_TAC `N` >> rpt STRIP_TAC \\
+      REWRITE_TAC [sum_real] \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> rw [] ]
+QED
+
+(* NOTE: this indicates that ‘suminf = infsum univ(:num)’ *)
+Theorem suminf_univ :
+    !(f :num -> real). infsum univ(:num) f = seq$suminf f
+Proof
+    RW_TAC std_ss [infsum, suminf, sums_univ]
+QED
+
+(* NOTE: this indicates that ‘summable = real_topology$summable univ(:num)’ *)
+Theorem summable_univ :
+    !(f :num -> real). real_topology$summable univ(:num) f <=> summable f
+Proof
+    RW_TAC std_ss [real_topologyTheory.summable, summable, sums_univ]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* If summable then it sums to the sum (!)                                   *)
@@ -1660,33 +1731,6 @@ val SUMINF_POS = store_thm
    >> MATCH_MP_TAC SER_POS_LE
    >> RW_TAC std_ss []);
 
- val SUM_PICK = store_thm
-  ("SUM_PICK",
-   ``!n k x. sum (0, n) (\m. if m = k then x else 0) = if k < n then x else 0``,
-   Induct >- RW_TAC arith_ss [sum]
-   >> RW_TAC arith_ss [sum, REAL_ADD_RID, REAL_ADD_LID]
-   >> Suff `F` >- PROVE_TAC []
-   >> NTAC 2 (POP_ASSUM MP_TAC)
-   >> DECIDE_TAC);
-
-val SUM_LT = store_thm
-  ("SUM_LT",
-   ``!f g m n.
-       (!r. m <= r /\ r < n + m ==> f r < g r) /\ 0 < n ==>
-       sum (m,n) f < sum (m,n) g``,
-   RW_TAC std_ss []
-   >> POP_ASSUM MP_TAC
-   >> Cases_on `n` >- RW_TAC arith_ss []
-   >> RW_TAC arith_ss []
-   >> Induct_on `n'` >- RW_TAC arith_ss [sum, REAL_ADD_LID]
-   >> ONCE_REWRITE_TAC [sum]
-   >> Strip
-   >> MATCH_MP_TAC REAL_LT_ADD2
-   >> CONJ_TAC
-   >- (Q.PAT_X_ASSUM `a ==> b` MATCH_MP_TAC
-       >> RW_TAC arith_ss [])
-   >> RW_TAC arith_ss []);
-
 val SUM_CONST_R = store_thm
   ("SUM_CONST_R",
    ``!n r. sum (0,n) (K r) = &n * r``,
@@ -2098,5 +2142,26 @@ val SER_POS_COMPARE = store_thm
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `0`
    >> RW_TAC arith_ss [abs]);
+
+(* moved here from real_sigmaTheory *)
+Theorem SEQ_REAL_SUM_IMAGE :
+    !s. FINITE s ==>
+        !f f'. (!x. x IN s ==> (\n. f n x) --> f' x) ==>
+                (\n. REAL_SUM_IMAGE (f n) s) -->
+                REAL_SUM_IMAGE f' s
+Proof
+   Suff `!s. FINITE s ==>
+                (\s. !f f'. (!x. x IN s ==> (\n. f n x) --> f' x) ==>
+                (\n. REAL_SUM_IMAGE (f n) s) -->
+                REAL_SUM_IMAGE f' s) s`
+   >- RW_TAC std_ss []
+   >> MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, SEQ_CONST, IN_INSERT, DELETE_NON_ELEMENT]
+   >> `(\n. f n e + REAL_SUM_IMAGE (f n) s) = (\n. (\n. f n e) n + (\n. REAL_SUM_IMAGE (f n) s) n)`
+        by RW_TAC std_ss []
+   >> POP_ORW
+   >> MATCH_MP_TAC SEQ_ADD
+   >> METIS_TAC []
+QED
 
 val _ = export_theory();

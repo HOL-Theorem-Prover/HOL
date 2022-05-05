@@ -18,5 +18,5 @@ show: "Number.Natural"
 show: "Number.Real"
 main {
   article: "hol4-analysis-unint.art"
-  interpretation: "../opentheory/hol4.int"
+  interpretation: "../../opentheory/hol4.int"
 }

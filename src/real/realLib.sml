@@ -13,9 +13,7 @@ structure realLib :> realLib =
 struct
   type conv = Abbrev.conv
 
-  local open transcTheory in end;
-
-  open HolKernel RealArith realSimps Diff isqrtLib;
+  open HolKernel RealArith realSimps isqrtLib;
 
   val operators = [("+", realSyntax.plus_tm),
                    ("-", realSyntax.minus_tm),

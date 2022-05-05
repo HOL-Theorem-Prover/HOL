@@ -39,8 +39,6 @@ val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove (tm, METIS_TAC ths);
 
-val _ = hide "I";
-
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
@@ -106,26 +104,25 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x222B ^ Unicode.UChar.sup_plus,
 val _ = TeX_notation {hol = UTF8.chr 0x222B ^ Unicode.UChar.sup_plus,
                       TeX = ("\\HOLTokenIntegralPlus{}", 1)};
 
-(* Lebesgue integral of arbitrary function is the integrals of positive parts minus
-   negative parts. Renamed to `L_integral` (Lebesgue integral) to prevent conflicts
-   with integrationTheory.
- *)
-Definition integral_def :
-    L_integral m f = pos_fn_integral m (fn_plus f) - pos_fn_integral m (fn_minus f)
-End
+val _ = hide "integral";
 
-val _ = overload_on ("integral", ``L_integral``);
+Definition integral_def :
+    integral m f = pos_fn_integral m (fn_plus f) - pos_fn_integral m (fn_minus f)
+End
 
 (* INTEGRAL *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x222B, tmnm = "integral"};
 val _ = TeX_notation {hol = UTF8.chr 0x222B, TeX = ("\\HOLTokenIntegral{}", 1)};
 
 (* Lebesgue integrable = the integral is specified (ie. no `PosInf - PosInf`) *)
-val integrable_def = Define
-   `integrable m f =
+val _ = hide "integrable";
+
+Definition integrable_def :
+    integrable m f =
        (f IN measurable (m_space m,measurable_sets m) Borel /\
         pos_fn_integral m (fn_plus f) <> PosInf /\
-        pos_fn_integral m (fn_minus f) <> PosInf)`;
+        pos_fn_integral m (fn_minus f) <> PosInf)
+End
 
 val finite_space_integral_def = Define
    `finite_space_integral m f =
@@ -9281,14 +9278,15 @@ val measure_density_indicator = save_thm
   ("measure_density_indicator",
     REWRITE_RULE [GSYM density_def, GSYM density_measure_def] measure_restricted);
 
-val measure_subadditive_finite = store_thm
-  ("measure_subadditive_finite",
- ``!I A M. measure_space M /\ FINITE I /\
-           IMAGE A I SUBSET measurable_sets M ==>
-           measure M (BIGUNION {A i | (i:num) IN I}) <=
-           SIGMA (\i. measure M (A i)) I``,
+(* NOTE: changed the universal quantifier ‘I’ to ‘J’ *)
+Theorem measure_subadditive_finite :
+   !J A M. measure_space M /\ FINITE J /\
+           IMAGE A J SUBSET measurable_sets M ==>
+           measure M (BIGUNION {A i | (i:num) IN J}) <=
+           SIGMA (\i. measure M (A i)) J
+Proof
   RW_TAC std_ss [] THEN NTAC 2 (POP_ASSUM MP_TAC) THEN
-  Q.SPEC_TAC (`I`,`I`) THEN SET_INDUCT_TAC THEN1
+  qid_spec_tac ‘J’ THEN SET_INDUCT_TAC THEN1
   (SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, NOT_IN_EMPTY] THEN
    REWRITE_TAC [SET_RULE ``{A i | i | F} = {}``] THEN
    FULL_SIMP_TAC std_ss [BIGUNION_EMPTY, measure_space_def, positive_def] THEN
@@ -9420,7 +9418,8 @@ val measure_subadditive_finite = store_thm
     ASM_SET_TAC []] THEN
    ASM_CASES_TAC ``measure M (A (e:num)) = PosInf`` THENL
    [FULL_SIMP_TAC std_ss [extreal_add_def], ALL_TAC] THEN
-   METIS_TAC [normal_real, extreal_add_def]);
+   METIS_TAC [normal_real, extreal_add_def]
+QED
 
 (* A0 and B (all djsjoint) are in measurable_sets M, together `m_space M`.
 

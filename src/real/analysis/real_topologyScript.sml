@@ -22,7 +22,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
      combinTheory quotientTheory arithmeticTheory realTheory real_sigmaTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
-     seqTheory limTheory transcTheory realLib topologyTheory metricTheory;
+     realLib topologyTheory metricTheory netsTheory;
 
 open wellorderTheory cardinalTheory iterateTheory hurdUtils;
 
@@ -44,7 +44,14 @@ val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
-val SUM_LE             = SUM_MONO_LE;        (* iterateTheory *)
+val SUM_ABS            = SUM_ABS';           (* iterateTheory *)
+val SUM_ABS_LE         = SUM_ABS_LE';        (* iterateTheory *)
+val SUM_EQ             = SUM_EQ';            (* iterateTheory *)
+val SUM_LE             = SUM_LE';            (* iterateTheory *)
+
+(* experimental overloads *)
+Overload uncountable           = “\s. ~countable s”
+Overload UNCOUNTABLE[inferior] = “uncountable”
 
 (* ------------------------------------------------------------------------- *)
 (* Permutes                                                                  *)
@@ -111,12 +118,6 @@ val BIGUNION_MONO = store_thm ("BIGUNION_MONO",
  >> Q.EXISTS_TAC `z` >> ASM_REWRITE_TAC []
  >> POP_ASSUM MATCH_MP_TAC
  >> ASM_REWRITE_TAC []
- *)
-
-(* unused lemma
-val th =
-  REWRITE_RULE[IN_UNIV]
-    (ISPECL [``f:'a->'b``, ``UNIV:'a->bool``] INJECTIVE_ON_LEFT_INVERSE);
  *)
 
 (* ------------------------------------------------------------------------- *)
@@ -1801,7 +1802,7 @@ val DEPENDENT_EXPLICIT = store_thm ("DEPENDENT_EXPLICIT",
     ASM_SIMP_TAC std_ss [SUM_DELETE, FINITE_DELETE] THEN
     KNOW_TAC ``sum s (\v. -u v / (u:real->real) a * v) - -u a / u a * a = a`` THENL
     [REWRITE_TAC[real_div] THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
-     REWRITE_TAC [REAL_MUL_ASSOC] THEN SIMP_TAC real_ss [SUM_RMUL, SUM_NEG] THEN
+     REWRITE_TAC [REAL_MUL_ASSOC] THEN SIMP_TAC real_ss [SUM_RMUL, SUM_NEG'] THEN
      RULE_ASSUM_TAC (ONCE_REWRITE_RULE [REAL_MUL_SYM]) THEN ASM_REWRITE_TAC [] THEN
      ASM_SIMP_TAC real_ss [REAL_MUL_LNEG, GSYM REAL_MUL_ASSOC,
                            REAL_MUL_RNEG, REAL_MUL_RZERO] THEN
@@ -4865,6 +4866,13 @@ val NET_DILEMMA = store_thm ("NET_DILEMMA",
          ==> ?c. (?x. netord net x c) /\ (!x. netord net x c ==> P x /\ Q x)``,
   MESON_TAC[NET]);
 
+(* connection to netsTheory *)
+Theorem DORDER_NET :
+    !n. dorder (netord n)
+Proof
+    RW_TAC std_ss [dorder, OLDNET]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Common nets and the "within" modifier for nets.                           *)
 (* ------------------------------------------------------------------------- *)
@@ -4872,8 +4880,20 @@ val NET_DILEMMA = store_thm ("NET_DILEMMA",
 val _ = set_fixity "within" (Infix(NONASSOC, 450));
 val _ = set_fixity "in_direction" (Infix(NONASSOC, 450));
 
-val at = new_definition ("at",
-  ``at a = mk_net(\x y. &0 < dist(x,a) /\ dist(x,a) <= dist(y,a))``);
+(* new definition, making connection to netsTheory *)
+Definition at_def :
+    at z = mk_net (nets$tendsto (mr1,z))
+End
+
+(* old definition, now becomes an equivalent theorem *)
+Theorem at :
+    !a. at a = mk_net(\x y. &0 < dist(x,a) /\ dist(x,a) <= dist(y,a))
+Proof
+    RW_TAC std_ss [at_def]
+ >> AP_TERM_TAC
+ >> RW_TAC std_ss [FUN_EQ_THM, tendsto, dist_def]
+ >> PROVE_TAC [METRIC_SYM]
+QED
 
 val at_infinity = new_definition ("at_infinity",
   ``at_infinity = mk_net(\x y. abs(x) >= abs(y))``);
@@ -5171,25 +5191,36 @@ val FORALL_EVENTUALLY = store_thm ("FORALL_EVENTUALLY",
 
 val _ = hide "-->";
 
-val tendsto = new_infixr_definition("tendsto",
+(* NOTE: This is for (f :'a -> real) (l :real) (net :'a net).
+         Now the name "tendsto_real" follows HOL-Light's "realanalysis.ml".
+ *)
+val tendsto_real = new_infixr_definition
+  ("tendsto_real",
   ``$--> f l net = !e. &0 < e ==> eventually (\x. dist(f(x),l) < e) net``,750);
+
+val tendsto = tendsto_real;
 
 (* LONG RIGHTWARDS ARROW *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x27F6, tmnm = "-->"};
 val _ = TeX_notation {hol = UTF8.chr 0x27F6, TeX = ("\\HOLTokenLongmap{}", 1)};
 val _ = TeX_notation {hol = "-->",           TeX = ("\\HOLTokenLongmap{}", 1)};
 
-val lim_def = new_definition ("lim_def",
- ``lim_def net f = @l. (f --> l) net``);
+(* Now the name "reallim" follows HOL-Light's "realanalysis.ml" *)
+Definition reallim :
+    reallim net f = @l. (f --> l) net
+End
+Overload lim = “reallim”
 
-val _ = overload_on ("lim",``lim_def``);
-
-val LIM = store_thm ("LIM",
- ``(f --> l) net <=>
+(* cf. limTheory.LIM *)
+Theorem LIM_DEF : (* was: LIM *)
+   !f l net. (f --> l) net <=>
         trivial_limit net \/
         !e. &0 < e ==> ?y. (?x. netord(net) x y) /\
-                           !x. netord(net) x y ==> dist(f(x),l) < e``,
-  REWRITE_TAC[tendsto, eventually] THEN MESON_TAC[]);
+                           !x. netord(net) x y ==> dist(f(x),l) < e
+Proof
+  REWRITE_TAC[tendsto, eventually] THEN MESON_TAC[]
+QED
+val LIM = LIM_DEF;
 
 (* ------------------------------------------------------------------------- *)
 (* Show that they yield usual definitions in the various cases.              *)
@@ -5254,12 +5285,6 @@ val LIM_SEQUENTIALLY = store_thm ("LIM_SEQUENTIALLY",
  ``!s l. (s --> l) sequentially <=>
           !e. &0 < e ==> ?N. !n. N <= n ==> dist(s(n),l) < e``,
   REWRITE_TAC[tendsto, EVENTUALLY_SEQUENTIALLY] THEN MESON_TAC[]);
-
-Theorem LIM_SEQUENTIALLY_SEQ :
-    !s l. (s --> l) sequentially <=> (seq$--> s l)
-Proof
-    REWRITE_TAC [LIM_SEQUENTIALLY, seqTheory.SEQ, GREATER_EQ, dist]
-QED
 
 val LIM_EVENTUALLY = store_thm ("LIM_EVENTUALLY",
  ``!net f l. eventually (\x. f x = l) net ==> (f --> l) net``,
@@ -5836,7 +5861,7 @@ val LIM_NULL_SUM = store_thm ("LIM_NULL_SUM",
   ONCE_REWRITE_TAC [METIS [] ``0:real = (\a. 0) (a:'b)``] THEN
   DISCH_THEN(MP_TAC o MATCH_MP LIM_SUM) THEN BETA_TAC THEN
    ONCE_REWRITE_TAC [METIS [] ``!i. (\i. f x i) = (\i. f x) i``] THEN
-  METIS_TAC [SUM_0, ETA_AX]);
+  METIS_TAC [SUM_0', ETA_AX]);
 
 (* ------------------------------------------------------------------------- *)
 (* Deducing things about the limit from the elements.                        *)
@@ -5919,7 +5944,7 @@ val LIM_UNIQUE = store_thm ("LIM_UNIQUE",
 
 val TENDSTO_LIM = store_thm ("TENDSTO_LIM",
  ``!net f l. ~(trivial_limit net) /\ (f --> l) net ==> (lim net f = l)``,
-  REWRITE_TAC[lim_def] THEN METIS_TAC[LIM_UNIQUE]);
+  REWRITE_TAC[reallim] THEN METIS_TAC[LIM_UNIQUE]);
 
 val LIM_CONST_EQ = store_thm ("LIM_CONST_EQ",
  ``!net:('a net) c d:real.
@@ -6633,10 +6658,10 @@ val CONNECTED_IMP_PERFECT_CLOSED = store_thm ("CONNECTED_IMP_PERFECT_CLOSED",
 (* Boundedness.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val bounded_def = new_definition ("bounded_def",
-  ``bounded_def s <=> ?a. !x:real. x IN s ==> abs(x) <= a``);
-
-val _ = overload_on ("bounded",``bounded_def``);
+Definition bounded_def :
+    Bounded s <=> ?a. !x:real. x IN s ==> abs(x) <= a
+End
+Overload bounded = “Bounded”
 
 val BOUNDED_EMPTY = store_thm ("BOUNDED_EMPTY",
  ``bounded {}``,
@@ -7369,9 +7394,11 @@ val BOUNDED_CLOSED_IMP_COMPACT = store_thm ("BOUNDED_CLOSED_IMP_COMPACT",
 (* Completeness.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val cauchy = new_definition ("cauchy",
-  ``cauchy (s:num->real) <=>
-     !e. &0 < e ==> ?N. !m n. m >= N /\ n >= N ==> dist(s m,s n) < e``);
+Definition cauchy_def :
+    cauchy (s:num->real) <=>
+     !e. &0 < e ==> ?N. !m n. m >= N /\ n >= N ==> dist(s m,s n) < e
+End
+Theorem cauchy[local] = cauchy_def
 
 val complete = new_definition ("complete",
   ``complete s <=>
@@ -15279,6 +15306,30 @@ val CONNECTED_IVT_COMPONENT = store_thm ("CONNECTED_IVT_COMPONENT",
     ``a:real``] CONNECTED_IVT_HYPERPLANE) THEN
   ASM_SIMP_TAC std_ss [REAL_MUL_LID]);
 
+(* This theorem is inspired by limTheory.IVT *)
+Theorem CONTINUOUS_ON_IVT :
+    !f a b y. a <= b /\ f(a) <= y /\ y <= f(b) /\
+              f continuous_on (interval [a,b])
+          ==> ?x. x IN interval [a,b] /\ (f(x) = y)
+Proof
+    rpt STRIP_TAC
+ >> ‘connected (interval [a,b])’ by METIS_TAC [CONNECTED_SEGMENT, SEGMENT]
+ >> ‘connected (IMAGE f (interval [a,b]))’
+      by PROVE_TAC [CONNECTED_CONTINUOUS_IMAGE]
+ >> MP_TAC (Q.SPECL [‘IMAGE f (interval [a,b])’,
+                     ‘(f :real->real) a’, ‘(f :real->real) b’, ‘y’]
+                    CONNECTED_IVT_COMPONENT)
+ >> Know ‘f a IN IMAGE f (interval [a,b]) /\
+          f b IN IMAGE f (interval [a,b])’
+ >- (rw [IN_IMAGE, IN_INTERVAL] >| (* 2 subgoals *)
+     [ Q.EXISTS_TAC ‘a’ >> rw [],
+       Q.EXISTS_TAC ‘b’ >> rw [] ])
+ >> RW_TAC std_ss []
+ >> POP_ASSUM MP_TAC
+ >> rw [IN_IMAGE]
+ >> Q.EXISTS_TAC ‘x’ >> art []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Rather trivial observation that we can map any connected set on segment.  *)
 (* ------------------------------------------------------------------------- *)
@@ -17366,39 +17417,6 @@ Definition summable : (* cf. seqTheory.summable *)
     summable s f = ?l. (f sums l) s
 End
 
-(* connections to related concepts in seqTheory *)
-Theorem sums_univ :
-    !(f :num -> real) (l :real). (f sums l) univ(:num) <=> seq$sums f l
-Proof
-    RW_TAC std_ss [seqTheory.sums, sums, dist, INTER_UNIV, SEQ, LIM_SEQUENTIALLY]
- >> EQ_TAC >> rpt STRIP_TAC
- >| [ (* goal 1 (of 2) *)
-      Q.PAT_X_ASSUM `!e. 0 < e ==> P` (MP_TAC o (Q.SPEC `e`)) \\
-      RW_TAC std_ss [] \\
-      Q.EXISTS_TAC `SUC N` >> rpt STRIP_TAC \\
-      Cases_on `n` >- fs [] \\
-      REWRITE_TAC [GSYM sum_real] \\
-      FIRST_X_ASSUM MATCH_MP_TAC >> rw [],
-      (* goal 2 (of 2) *)
-      Q.PAT_X_ASSUM `!e. 0 < e ==> P` (MP_TAC o (Q.SPEC `e`)) \\
-      RW_TAC std_ss [] \\
-      Q.EXISTS_TAC `N` >> rpt STRIP_TAC \\
-      REWRITE_TAC [sum_real] \\
-      FIRST_X_ASSUM MATCH_MP_TAC >> rw [] ]
-QED
-
-Theorem suminf_univ :
-    !(f :num -> real). infsum univ(:num) f = seq$suminf f
-Proof
-    RW_TAC std_ss [infsum, suminf, sums_univ]
-QED
-
-Theorem summable_univ :
-    !(f :num -> real). summable univ(:num) f <=> seq$summable f
-Proof
-    RW_TAC std_ss [summable, seqTheory.summable, sums_univ]
-QED
-
 val SUMS_SUMMABLE = store_thm ("SUMS_SUMMABLE",
  ``!f l s. (f sums l) s ==> summable s f``,
   REWRITE_TAC[summable] THEN MESON_TAC[]);
@@ -17412,7 +17430,7 @@ val SUMS_LIM = store_thm ("SUMS_LIM",
       (f sums lim sequentially (\n. sum (s INTER { 0n..n}) f)) s
       <=> summable s f``,
   GEN_TAC THEN GEN_TAC THEN EQ_TAC THENL [MESON_TAC[summable],
-  REWRITE_TAC[summable, sums] THEN STRIP_TAC THEN REWRITE_TAC[lim_def] THEN
+  REWRITE_TAC[summable, sums] THEN STRIP_TAC THEN REWRITE_TAC[reallim] THEN
   METIS_TAC[]]);
 
 val FINITE_INTER_NUMSEG = store_thm ("FINITE_INTER_NUMSEG",
@@ -17479,17 +17497,17 @@ val SERIES_LINEAR = store_thm ("SERIES_LINEAR",
 
 val SERIES_0 = store_thm ("SERIES_0",
  ``!s. ((\n. 0) sums (0)) s``,
-  REWRITE_TAC[sums, SUM_0, LIM_CONST]);
+  REWRITE_TAC[sums, SUM_0', LIM_CONST]);
 
 val SERIES_ADD = store_thm ("SERIES_ADD",
  ``!x x0 y y0 s.
      (x sums x0) s /\ (y sums y0) s ==> ((\n. x n + y n) sums (x0 + y0)) s``,
-  SIMP_TAC std_ss [sums, FINITE_INTER_NUMSEG, SUM_ADD, LIM_ADD]);
+  SIMP_TAC std_ss [sums, FINITE_INTER_NUMSEG, SUM_ADD', LIM_ADD]);
 
 val SERIES_SUB = store_thm ("SERIES_SUB",
  ``!x x0 y y0 s.
      (x sums x0) s /\ (y sums y0) s ==> ((\n. x n - y n) sums (x0 - y0)) s``,
-  SIMP_TAC std_ss [sums, FINITE_INTER_NUMSEG, SUM_SUB, LIM_SUB]);
+  SIMP_TAC std_ss [sums, FINITE_INTER_NUMSEG, SUM_SUB', LIM_SUB]);
 
 val SERIES_CMUL = store_thm ("SERIES_CMUL",
  ``!x x0 c s. (x sums x0) s ==> ((\n. c * x n) sums (c * x0)) s``,
@@ -17497,7 +17515,7 @@ val SERIES_CMUL = store_thm ("SERIES_CMUL",
 
 val SERIES_NEG = store_thm ("SERIES_NEG",
  ``!x x0 s. (x sums x0) s ==> ((\n. -(x n)) sums (-x0)) s``,
-  SIMP_TAC std_ss [sums, FINITE_INTER_NUMSEG, SUM_NEG, LIM_NEG]);
+  SIMP_TAC std_ss [sums, FINITE_INTER_NUMSEG, SUM_NEG', LIM_NEG]);
 
 val SUMS_IFF = store_thm ("SUMS_IFF",
  ``!f g k. (!x. x IN k ==> (f x = g x)) ==> ((f sums l) k <=> (g sums l) k)``,
@@ -17538,7 +17556,7 @@ val SERIES_COMPONENT = store_thm ("SERIES_COMPONENT",
 val SERIES_DIFFS = store_thm ("SERIES_DIFFS",
  ``!f:num->real k. (f --> 0) sequentially
         ==> ((\n. f(n) - f(n + 1)) sums f(k)) (from k)``,
-  REWRITE_TAC[sums, FROM_INTER_NUMSEG, SUM_DIFFS] THEN
+  REWRITE_TAC[sums, FROM_INTER_NUMSEG, SUM_DIFFS'] THEN
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LIM_TRANSFORM_EVENTUALLY THEN
   EXISTS_TAC ``\n. (f:num->real) k - f(n + 1)`` THEN CONJ_TAC THENL
    [REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN EXISTS_TAC ``k:num`` THEN
@@ -17579,7 +17597,7 @@ val SUMS_REINDEX = store_thm ("SUMS_REINDEX",
  ``!k a l:real n.
    ((\x. a(x + k)) sums l) (from n) <=> (a sums l) (from(n + k))``,
   REPEAT GEN_TAC THEN REWRITE_TAC[sums, FROM_INTER_NUMSEG] THEN
-  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM SUM_OFFSET] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM SUM_OFFSET'] THEN
   REWRITE_TAC[LIM_SEQUENTIALLY] THEN
   ASM_MESON_TAC[ARITH_PROVE ``N + k:num <= n ==> (n = (n - k) + k) /\ N <= n - k``,
                 ARITH_PROVE ``N + k:num <= n ==> N <= n + k``]);
@@ -17904,7 +17922,7 @@ val SUM_DIFF_LEMMA = store_thm ("SUM_DIFF_LEMMA",
              sum (k INTER {m+1 .. n}) f)``,
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPECL [``f:num->real``, ``k INTER { 0n..n}``, ``k INTER { 0n..m}``]
-    SUM_DIFF) THEN
+    SUM_DIFF') THEN
   KNOW_TAC ``FINITE (k INTER { 0n .. n}) /\
              k INTER { 0n .. m} SUBSET k INTER { 0n .. n}`` THENL
    [SIMP_TAC std_ss [FINITE_INTER, FINITE_NUMSEG] THEN MATCH_MP_TAC
@@ -18257,7 +18275,7 @@ val SERIES_RATIO = store_thm ("SERIES_RATIO",
    [ASM_SIMP_TAC std_ss [SUM_TRIV_NUMSEG, ABS_N, REAL_MUL_RZERO], ALL_TAC] THEN
   SUBGOAL_THEN ``(m = 0 + m) /\ (n = (n - m) + m:num)`` (CONJUNCTS_THEN SUBST1_TAC) THENL
    [UNDISCH_TAC ``m:num <= n`` THEN ARITH_TAC, ALL_TAC] THEN
-  REWRITE_TAC[SUM_OFFSET] THEN UNDISCH_TAC ``N + M:num <= m`` THEN
+  REWRITE_TAC[SUM_OFFSET'] THEN UNDISCH_TAC ``N + M:num <= m`` THEN
   SIMP_TAC std_ss [LESS_EQ_EXISTS] THEN DISCH_THEN(X_CHOOSE_THEN ``d:num`` SUBST_ALL_TAC) THEN
   REWRITE_TAC[ARITH_PROVE ``(i + (N + M + d) - N:num) = (M + d) + i``] THEN
   ONCE_REWRITE_TAC[POW_ADD] THEN SIMP_TAC arith_ss [SUM_LMUL, SUM_GP] THEN
@@ -18461,7 +18479,7 @@ val SERIES_DIRICHLET = store_thm ("SERIES_DIRICHLET",
       UNDISCH_TAC ``!n. N <= n ==> g (n + 1) <= (g:num->real) n`` THEN
       DISCH_THEN (MP_TAC o SPEC ``n:num``) THEN
       ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC,
-      SIMP_TAC std_ss [summable, sums, FROM_INTER_NUMSEG, SUM_DIFFS] THEN
+      SIMP_TAC std_ss [summable, sums, FROM_INTER_NUMSEG, SUM_DIFFS'] THEN
       SIMP_TAC std_ss [LIM_CASES_SEQUENTIALLY] THEN
       EXISTS_TAC ``(g(N:num)) - 0:real`` THEN
       ONCE_REWRITE_TAC [METIS [] ``((\n:num. g N - g (n + 1)) --> (g N - 0:real)) =
@@ -18487,7 +18505,7 @@ val lemma = prove (
           ==> (sum s f - sum t f = sum (s DIFF t) f - sum (t DIFF s) f)``,
     REPEAT STRIP_TAC THEN
     ONCE_REWRITE_TAC[SET_RULE ``s DIFF t = s DIFF (s INTER t)``] THEN
-    ASM_SIMP_TAC std_ss [SUM_DIFF, INTER_SUBSET] THEN
+    ASM_SIMP_TAC std_ss [SUM_DIFF', INTER_SUBSET] THEN
     GEN_REWR_TAC (RAND_CONV o RAND_CONV o ONCE_DEPTH_CONV) [INTER_COMM] THEN
     REAL_ARITH_TAC);
 
@@ -21984,6 +22002,246 @@ val SUBORDINATE_PARTITION_OF_UNITY = store_thm ("SUBORDINATE_PARTITION_OF_UNITY"
        (\v. (\v x. setdist ({x},s DIFF v)) v x))``] THEN
     MATCH_MP_TAC CONTINUOUS_SUM THEN
     ASM_SIMP_TAC std_ss [CONTINUOUS_AT_SETDIST, CONTINUOUS_AT_WITHIN]]);
+
+(* ------------------------------------------------------------------------- *)
+(* Bounds on intervals where they exist (moved from integrationTheory)       *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: HOL Light's original definitions:
+
+   `sup {a | ?x. x IN s /\ (x = a)}` = `sup s`
+   `inf {a | ?x. x IN s /\ (x = a)}` = `inf s`
+
+   are not specified on {} but `sup {} = inf {}` can be proven due to the
+   definition of `inf` in HOL Light. However in HOL4 this is not derivable.
+   Now we explicitly define that the upper and lower bounds of {} are both 0.
+   This change shouldn't cause anything wrong. -- Chun Tian, Oct 24, 2019.
+ *)
+Definition interval_upperbound :
+    (interval_upperbound:(real->bool)->real) s =
+       if s = {} then 0:real else sup s
+End
+
+Definition interval_lowerbound :
+    (interval_lowerbound:(real->bool)->real) s =
+       if s = {} then 0:real else inf s
+End
+
+Theorem INTERVAL_UPPERBOUND :
+    !a b:real. a <= b ==> (interval_upperbound(interval[a,b]) = b)
+Proof
+    RW_TAC std_ss [interval_upperbound]
+ >- (fs [EXTENSION, GSPECIFICATION, IN_INTERVAL] \\
+     METIS_TAC [REAL_LE_REFL])
+ >> MATCH_MP_TAC REAL_SUP_UNIQUE
+ >> SIMP_TAC std_ss [GSPECIFICATION, IN_INTERVAL]
+ >> ASM_MESON_TAC[REAL_LE_REFL]
+QED
+
+Theorem OPEN_INTERVAL_UPPERBOUND :
+    !a b:real. a < b ==> interval_upperbound(interval(a,b)) = b
+Proof
+    RW_TAC std_ss [interval_upperbound]
+ >- METIS_TAC [INTERVAL_EQ_EMPTY, GSYM real_lte]
+ >> MATCH_MP_TAC REAL_SUP_UNIQUE
+ >> rw [GSPECIFICATION, IN_INTERVAL]
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> MP_TAC (Q.SPECL [‘max a b'’, ‘b’] REAL_MEAN)
+ >> rw [REAL_MAX_LT]
+ >> Q.EXISTS_TAC ‘z’ >> art []
+QED
+
+Theorem INTERVAL_LOWERBOUND :
+    !a b:real. a <= b ==> (interval_lowerbound(interval[a,b]) = a)
+Proof
+    RW_TAC std_ss [interval_lowerbound]
+ >- (fs [EXTENSION, GSPECIFICATION, IN_INTERVAL] \\
+     METIS_TAC [REAL_LE_REFL])
+ >> MATCH_MP_TAC REAL_INF_UNIQUE
+ >> SIMP_TAC std_ss [GSPECIFICATION, IN_INTERVAL]
+ >> ASM_MESON_TAC [REAL_LE_REFL]
+QED
+
+Theorem OPEN_INTERVAL_LOWERBOUND :
+    !a b:real. a < b ==> interval_lowerbound(interval(a,b)) = a
+Proof
+    RW_TAC std_ss [interval_lowerbound]
+ >- METIS_TAC [INTERVAL_EQ_EMPTY, GSYM real_lte]
+ >> MATCH_MP_TAC REAL_INF_UNIQUE
+ >> rw [GSPECIFICATION, IN_INTERVAL]
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> MP_TAC (Q.SPECL [‘a’, ‘min b b'’] REAL_MEAN)
+ >> rw [REAL_LT_MIN]
+ >> Q.EXISTS_TAC ‘z’ >> art []
+QED
+
+Theorem INTERVAL_LOWERBOUND_NONEMPTY :
+    !a b:real. ~(interval[a,b] = {}) ==>
+               (interval_lowerbound(interval[a,b]) = a)
+Proof
+    SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_NE_EMPTY]
+QED
+
+Theorem INTERVAL_UPPERBOUND_NONEMPTY :
+    !a b:real. ~(interval[a,b] = {}) ==>
+               (interval_upperbound(interval[a,b]) = b)
+Proof
+    SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_NE_EMPTY]
+QED
+
+Theorem INTERVAL_BOUNDS_EMPTY :
+    (interval_upperbound {} = 0) /\
+    (interval_lowerbound {} = 0)
+Proof
+    rw [interval_upperbound, interval_lowerbound]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Content (length) of an interval (moved from integrationTheory)            *)
+(* ------------------------------------------------------------------------- *)
+
+val content = new_definition ("content",
+  ``content(s:real->bool) =
+    if s = {} then 0:real
+              else (interval_upperbound s - interval_lowerbound s)``);
+
+val CONTENT_CLOSED_INTERVAL = store_thm ("CONTENT_CLOSED_INTERVAL",
+ ``!a b:real. a <= b ==> (content(interval[a,b]) = b - a)``,
+ REPEAT GEN_TAC THEN DISCH_TAC THEN SIMP_TAC std_ss [interval] THEN
+ KNOW_TAC ``{x | (a :real) <= x /\ x <= (b :real)} <> {}`` THENL
+ [ONCE_REWRITE_TAC [GSYM MEMBER_NOT_EMPTY] THEN
+  FULL_SIMP_TAC std_ss [GSPECIFICATION, REAL_LE_LT] THENL
+  [KNOW_TAC ``(?(x :real). a < x /\ x < b)`` THENL
+  [FULL_SIMP_TAC std_ss [REAL_MEAN], ALL_TAC] THEN STRIP_TAC THEN
+  EXISTS_TAC ``x:real`` THEN ASM_REWRITE_TAC [],
+  EXISTS_TAC ``a:real`` THEN ASM_REWRITE_TAC []],
+  FULL_SIMP_TAC std_ss [content, INTERVAL_UPPERBOUND,
+                                 INTERVAL_LOWERBOUND, GSYM interval]]);
+
+val CONTENT_UNIT = store_thm ("CONTENT_UNIT",
+ ``content(interval[0,1]) = 1:real``,
+  SIMP_TAC arith_ss [CONTENT_CLOSED_INTERVAL, REAL_LE_01, REAL_SUB_RZERO]);
+
+val CONTENT_POS_LE = store_thm ("CONTENT_POS_LE",
+ ``!a b:real. &0 <= content(interval[a,b])``,
+  REPEAT GEN_TAC THEN REWRITE_TAC[content] THEN
+  COND_CASES_TAC THEN REWRITE_TAC[REAL_LE_REFL] THEN
+  FULL_SIMP_TAC std_ss [INTERVAL_NE_EMPTY] THEN
+  ASM_SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_LOWERBOUND, REAL_SUB_LE]);
+
+val CONTENT_POS_LT = store_thm ("CONTENT_POS_LT",
+ ``!a b:real. a < b ==> &0 < content(interval[a,b])``,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC std_ss [CONTENT_CLOSED_INTERVAL, REAL_LT_IMP_LE] THEN
+  ASM_SIMP_TAC std_ss [REAL_SUB_LT]);
+
+val CONTENT_EQ_0_GEN = store_thm ("CONTENT_EQ_0_GEN",
+ ``!s:real->bool. bounded s
+     ==> ((content s = &0) <=> ?a. !x. x IN s ==> (x = a))``,
+  REPEAT GEN_TAC THEN REWRITE_TAC[content] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[NOT_IN_EMPTY] THEN
+  REWRITE_TAC [bounded_def] THEN DISCH_TAC THEN
+  ASM_SIMP_TAC std_ss [interval_upperbound, interval_lowerbound,
+  GSPEC_ID, REAL_SUB_0, REAL_SUP_EQ_INF] THEN EQ_TAC THENL
+  [METIS_TAC [GSYM UNIQUE_MEMBER_SING],
+   REWRITE_TAC [GSYM UNIQUE_MEMBER_SING] THEN KNOW_TAC ``?a:real. a IN s`` THENL
+   [EXISTS_TAC ``CHOICE (s:real->bool)`` THEN
+    METIS_TAC [CHOICE_DEF, GSYM SPECIFICATION], METIS_TAC []]]);
+
+val CONTENT_EQ_0 = store_thm ("CONTENT_EQ_0",
+ ``!a b:real. (content(interval[a,b]) = &0) <=> b <= a``,
+  REPEAT GEN_TAC THEN REWRITE_TAC[content, INTERVAL_EQ_EMPTY] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THENL
+  [FULL_SIMP_TAC std_ss [GSYM INTERVAL_EQ_EMPTY, REAL_LT_IMP_LE],
+   FULL_SIMP_TAC std_ss [GSYM INTERVAL_EQ_EMPTY, REAL_NOT_LT,
+   INTERVAL_LOWERBOUND, INTERVAL_UPPERBOUND, REAL_SUB_0] THEN
+   METIS_TAC [REAL_LE_LT, REAL_LE_ANTISYM]]);
+
+val CONTENT_0_SUBSET_GEN = store_thm ("CONTENT_0_SUBSET_GEN",
+ ``!s t:real->bool.
+      s SUBSET t /\ bounded t /\ (content t = &0) ==> (content s = &0)``,
+  REPEAT GEN_TAC THEN
+  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
+  SUBGOAL_THEN ``bounded(s:real->bool)`` ASSUME_TAC THENL
+   [ASM_MESON_TAC[BOUNDED_SUBSET], ALL_TAC] THEN
+  ASM_SIMP_TAC std_ss [CONTENT_EQ_0_GEN] THEN
+  POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN SET_TAC[]);
+
+val CONTENT_0_SUBSET = store_thm ("CONTENT_0_SUBSET",
+ ``!s a b:real. s SUBSET interval[a,b] /\
+        (content(interval[a,b]) = &0) ==> (content s = &0)``,
+  MESON_TAC[CONTENT_0_SUBSET_GEN, BOUNDED_INTERVAL]);
+
+val CONTENT_CLOSED_INTERVAL_CASES = store_thm ("CONTENT_CLOSED_INTERVAL_CASES",
+ ``!a b:real. content(interval[a,b]) =
+              if a <= b then b - a else &0``,
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN
+  ASM_SIMP_TAC std_ss [CONTENT_EQ_0, CONTENT_CLOSED_INTERVAL] THEN
+  ASM_MESON_TAC[REAL_LE_TOTAL]);
+
+val CONTENT_EQ_0_INTERIOR = store_thm ("CONTENT_EQ_0_INTERIOR",
+ ``!a b:real.
+        (content(interval[a,b]) = &0) <=> (interior(interval[a,b]) = {})``,
+  REWRITE_TAC[CONTENT_EQ_0, INTERIOR_CLOSED_INTERVAL, INTERVAL_EQ_EMPTY]);
+
+val CONTENT_EQ_0_1 = store_thm ("CONTENT_EQ_0_1",
+ ``!a b:real.
+        (content(interval[a,b]) = &0) <=> b <= a``,
+  REWRITE_TAC [CONTENT_EQ_0]);
+
+val CONTENT_POS_LT_EQ = store_thm ("CONTENT_POS_LT_EQ",
+ ``!a b:real. &0 < content(interval[a,b]) <=> a < b``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN REWRITE_TAC[CONTENT_POS_LT] THEN
+  REWRITE_TAC[REAL_ARITH ``&0 < x:real <=> &0 <= x:real /\ ~(x = &0:real)``] THEN
+  REWRITE_TAC[CONTENT_POS_LE, CONTENT_EQ_0] THEN MESON_TAC[REAL_NOT_LE]);
+
+val CONTENT_EMPTY = store_thm ("CONTENT_EMPTY",
+ ``content {} = &0``,
+  REWRITE_TAC[content]);
+
+val CONTENT_SUBSET = store_thm ("CONTENT_SUBSET",
+ ``!a b c d:real.
+        interval[a,b] SUBSET interval[c,d]
+        ==> content(interval[a,b]) <= content(interval[c,d])``,
+  REPEAT STRIP_TAC THEN GEN_REWR_TAC LAND_CONV [content] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[CONTENT_POS_LE] THEN
+  UNDISCH_TAC ``interval [(a,b)] SUBSET interval [(c,d)]`` THEN
+  REWRITE_TAC [SUBSET_DEF] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[INTERVAL_NE_EMPTY]) THEN
+  REWRITE_TAC[IN_INTERVAL] THEN DISCH_THEN(fn th =>
+    MP_TAC(SPEC ``a:real`` th) THEN MP_TAC(SPEC ``b:real`` th)) THEN
+  ASM_SIMP_TAC std_ss [REAL_LE_REFL, content] THEN REPEAT STRIP_TAC THEN
+  ONCE_REWRITE_TAC[METIS [] ``(if b then c else d) = (if ~b then d else c)``] THEN
+  REWRITE_TAC[INTERVAL_NE_EMPTY] THEN COND_CASES_TAC THENL
+  [ALL_TAC, ASM_MESON_TAC[REAL_LE_TRANS]] THEN
+  ASM_SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_UPPERBOUND] THEN
+  METIS_TAC [real_sub, REAL_LE_ADD2, REAL_LE_NEG]);
+
+val CONTENT_LT_NZ = store_thm ("CONTENT_LT_NZ",
+ ``!a b. &0 < content(interval[a,b]) <=> ~(content(interval[a,b]) = &0)``,
+  REWRITE_TAC[CONTENT_POS_LT_EQ, CONTENT_EQ_0] THEN MESON_TAC[REAL_NOT_LE]);
+
+Theorem INTERVAL_BOUNDS_NULL :
+    !a b:real. (content(interval[a,b]) = &0)
+        ==> (interval_upperbound(interval[a,b]) =
+             interval_lowerbound(interval[a,b]))
+Proof
+    rpt GEN_TAC >> ASM_CASES_TAC ``interval[a:real,b] = {}``
+ >| [ (* goal 1 (of 2) *)
+      RW_TAC std_ss [interval_upperbound, interval_lowerbound,
+                     GSYM INTERVAL_EQ_EMPTY, NOT_IN_EMPTY] \\
+      fs [EXTENSION, GSPECIFICATION, NOT_IN_EMPTY, IN_INTERVAL] \\
+      METIS_TAC [real_lte, REAL_LE_REFL],
+      (* goal 2 (of 2) *)
+      RULE_ASSUM_TAC (SIMP_RULE std_ss [GSYM INTERVAL_EQ_EMPTY, REAL_NOT_LT]) \\
+      ASM_SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_LOWERBOUND] \\
+      REWRITE_TAC [CONTENT_EQ_0] >> ASM_REAL_ARITH_TAC ]
+QED
+
+val INTERVAL_BOUNDS_EMPTY = store_thm ("INTERVAL_BOUNDS_EMPTY",
+ ``interval_upperbound({}:real->bool) =
+   interval_lowerbound({}:real->bool)``,
+  METIS_TAC [INTERVAL_BOUNDS_NULL, CONTENT_EMPTY, EMPTY_AS_INTERVAL]);
 
 val _ = export_theory();
 

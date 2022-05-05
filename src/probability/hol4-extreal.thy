@@ -7,6 +7,7 @@ requires: base
 requires: hol-base
 requires: hol-set
 requires: hol-real
+requires: hol-analysis
 show: "HOL4"
 show: "Data.Bool"
 show: "Data.Pair"
