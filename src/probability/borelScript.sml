@@ -3709,7 +3709,7 @@ Proof
      [ (* goal 1 (of 2) *)
        Q.PAT_X_ASSUM ‘!i j. _ ==> interval_lowerbound (f (g i)) < interval_lowerbound (f (g j))’
          (MP_TAC o (Q.SPECL [‘i’, ‘j’])) >> rw [],
-       (* goal 2 (of 2) *) 
+       (* goal 2 (of 2) *)
        Q.PAT_X_ASSUM ‘!i j. _ ==> interval_lowerbound (f (g i)) < interval_lowerbound (f (g j))’
          (MP_TAC o (Q.SPECL [‘j’, ‘i’])) >> rw [] ])
  >> DISCH_TAC
@@ -5308,7 +5308,7 @@ Proof
  >> Q.PAT_X_ASSUM ‘!s. x NOTIN s \/ _’ (MP_TAC o (Q.SPEC ‘f (i :'index)’))
  >> RW_TAC std_ss []
  >> Q.PAT_X_ASSUM ‘IMAGE g univ(:num) = univ(:'index)’ MP_TAC
- >> rw [Once EXTENSION] 
+ >> rw [Once EXTENSION]
  >> METIS_TAC []
 QED
 
