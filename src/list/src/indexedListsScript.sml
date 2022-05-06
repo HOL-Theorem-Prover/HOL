@@ -21,18 +21,15 @@ open listTheory rich_listTheory
 
 val _ = new_theory "indexedLists";
 
-val _ = ParseExtras.temp_tight_equality()
-
-val MAPi_def = zDefine`
+Definition MAPi_def[simp,nocompute]:
   (MAPi f [] = []) /\
   (MAPi f (h::t) = f 0 h :: MAPi (f o SUC) t)
-`;
-val _ = export_rewrites ["MAPi_def"]
+End
 
-val MAPi_ACC_def = Define`
+Definition MAPi_ACC_def:
   (MAPi_ACC f i a [] = REVERSE a) /\
   (MAPi_ACC f i a (h::t) = MAPi_ACC f (i + 1) (f i h :: a) t)
-`;
+End
 
 val MAPi_ACC_MAPi = store_thm(
   "MAPi_ACC_MAPi",
@@ -42,13 +39,12 @@ val MAPi_ACC_MAPi = store_thm(
   REPEAT GEN_TAC >> REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) >>
   simp[FUN_EQ_THM]);
 
-val MAPi_compute = store_thm(
-  "MAPi_compute",
-  ``MAPi f l = MAPi_ACC f 0 [] l``,
+Theorem MAPi_compute[compute]:
+  MAPi f l = MAPi_ACC f 0 [] l
+Proof
   simp[MAPi_ACC_MAPi] >> REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) >>
-  simp[FUN_EQ_THM]);
-
-val _ = computeLib.add_persistent_funs ["MAPi_compute"]
+  simp[FUN_EQ_THM]
+QED
 
 val LT_SUC = arithmeticTheory.LT_SUC
 
@@ -100,10 +96,16 @@ val MAPi_GENLIST = store_thm(
   Induct >> simp[GENLIST_CONS] >> rpt gen_tac >>
   rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >> simp[FUN_EQ_THM]);
 
-val FOLDRi_def = Define`
+Theorem MAPi_EQ_MAP[simp]:
+  !l. MAPi (\i x. f x) l = MAP f l
+Proof
+  Induct >> simp[combinTheory.o_DEF]
+QED
+
+Definition FOLDRi_def[simp]:
   (FOLDRi f a [] = a) /\
-  (FOLDRi f a (h::t) = f 0 h (FOLDRi (f o SUC) a t))`
-val _ = export_rewrites ["FOLDRi_def"]
+  (FOLDRi f a (h::t) = f 0 h (FOLDRi (f o SUC) a t))
+End
 
 val FOLDR_MAPi = store_thm(
   "FOLDR_MAPi",
