@@ -79,6 +79,25 @@ hol4-base.art: hol4-base.thy hol4-base-unint.art ../opentheory/hol4.int \
 install: hol4-base.thy hol4-base.art 
 	opentheory install --reinstall $<
 
+# This installs all HOL-OT theories (after building) in correct order
+install-all: install
+	cd $(HOLDIR)/src/res_quan/src;               Holmake -j1 install
+	cd $(HOLDIR)/src/quotient/src;               Holmake -j1 install
+	cd $(HOLDIR)/src/sort;                       Holmake -j1 install
+	cd $(HOLDIR)/src/string;                     Holmake -j1 install
+	cd $(HOLDIR)/src/n-bit;                      Holmake -j1 install
+	cd $(HOLDIR)/src/ring/src;                   Holmake -j1 install
+	cd $(HOLDIR)/src/integer;                    Holmake -j1 install
+	cd $(HOLDIR)/src/pred_set/src/more_theories; Holmake -j1 install
+	cd $(HOLDIR)/src/real;                       Holmake -j1 install
+	cd $(HOLDIR)/src/real/analysis;              Holmake -j1 install
+	cd $(HOLDIR)/src/probability;                Holmake -j1 install
+	cd $(HOLDIR)/src/bag;                        Holmake -j1 install
+	cd $(HOLDIR)/src/finite_maps;                Holmake -j1 install
+	cd $(HOLDIR)/src/coalgebras;                 Holmake -j1 install
+	cd $(HOLDIR)/src/floating-point;             Holmake -j1 install
+	cd $(HOLDIR)/src/monad/more_monads;          Holmake -j1 install
+
 all: hol4-base.art
 
 endif

@@ -59,10 +59,10 @@ hol4-large-numbers.art: hol4-large-numbers.thy large_number.ot.art \
 # With the rebuilt OpenTheory/Mlton (-default-type intinf), this step only takes
 # 2 minutes (otherwise 2 hours with OpenTheory/PolyML)
 
-# "&> file (aka >& file) is not part of the official POSIX shell spec, but has been
-# added to many Bourne shells as a convenience extension (it originally comes from
-# csh). In a portable shell script (and if you don't need portability, why are you
-# writing a shell script?), use > file 2>&1 only." (from stackoverflow)
+# "&> file (aka >& file) is not part of the official POSIX /bin/sh spec, but has
+# been added to many Bourne shells as a convenience extension. (which originally
+# comes from csh). In a portable shell script (if you do not need portabilities,
+# why are you writing a shell script?), use > file 2>&1 only." (stackoverflow)
 hol4-large-numbers.html: hol4-large-numbers.art
 	opentheory info --inference --document -o $@ $< \
 		> hol4-large-numbers.log 2>&1
