@@ -15,7 +15,7 @@ val AC = AC.AC;
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 
-(* mini_hurdUtils *)
+(* from hurdUtils *)
 fun K_TAC _ = ALL_TAC;
 fun wrap a = [a];
 val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
@@ -30,7 +30,7 @@ in
 end;
 
 (*---------------------------------------------------------------------------*)
-(* Now define the inclusion homomorphism &:num->real.                        *)
+(* Now define the inclusion homomorphism &:num->real.           o             *)
 (*---------------------------------------------------------------------------*)
 
 val real_of_num = new_recursive_definition
@@ -643,6 +643,7 @@ val REAL_LT_RMUL_0 = store_thm("REAL_LT_RMUL_0",
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   MATCH_ACCEPT_TAC REAL_LT_LMUL_0);
 
+(* also known as REAL_LT_LMUL_EQ *)
 val REAL_LT_LMUL = store_thm("REAL_LT_LMUL",
   “!x y z. 0 < x ==> ((x * y) < (x * z) = y < z)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
@@ -650,6 +651,7 @@ val REAL_LT_LMUL = store_thm("REAL_LT_LMUL",
   REWRITE_TAC[GSYM REAL_SUB_LDISTRIB] THEN
   POP_ASSUM MP_TAC THEN MATCH_ACCEPT_TAC REAL_LT_LMUL_0);
 
+(* also known as REAL_LT_RMUL_EQ *)
 val REAL_LT_RMUL = store_thm("REAL_LT_RMUL",
   “!x y z. 0 < z ==> ((x * z) < (y * z) = x < y)”,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
@@ -1055,6 +1057,7 @@ val REAL_LTE_ADD = store_thm("REAL_LTE_ADD",
   MATCH_MP_TAC REAL_LTE_ADD2 THEN
   ASM_REWRITE_TAC[]);
 
+(* also known as REAL_LT_MUL2_ALT *)
 val REAL_LT_MUL2 = store_thm("REAL_LT_MUL2",
   “!x1 x2 y1 y2. 0 <= x1 /\ 0 <= y1 /\ x1 < x2 /\ y1 < y2 ==>
         (x1 * y1) < (x2 * y2)”,
@@ -1134,6 +1137,7 @@ val REAL_EQ_SUB_RADD = store_thm("REAL_EQ_SUB_RADD",
   REPEAT GEN_TAC THEN CONV_TAC(SUB_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
   MATCH_ACCEPT_TAC REAL_EQ_SUB_LADD);
 
+(* also known as REAL_INV_MUL_WEAK *)
 val REAL_INV_MUL = store_thm("REAL_INV_MUL",
   “!x y. ~(x = 0) /\ ~(y = 0) ==>
              (inv(x * y) = inv(x) * inv(y))”,
@@ -1163,15 +1167,26 @@ Proof
  >> PROVE_TAC [REAL_MUL_COMM]
 QED
 
+(* also known as REAL_LE_LMUL_LOCAL *)
 Theorem REAL_LE_LMUL:
-  !x y z. 0 < x ==> ((x * y) <= (x * z) = y <= z)
+  !x y z. 0 < x ==> ((x * y) <= (x * z) <=> y <= z)
 Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_NOT_LT] THEN
   AP_TERM_TAC THEN MATCH_MP_TAC REAL_LT_LMUL THEN ASM_REWRITE_TAC[]
 QED
 
+(* recovered from transc.ml *)
+Theorem REAL_LE_LCANCEL_IMP :
+    !x y z. 0 < x /\ x * y <= x * z ==> y <= z
+Proof
+    rpt STRIP_TAC
+ >> drule (GSYM REAL_LE_LMUL)
+ >> DISCH_THEN (fn th => ASM_REWRITE_TAC [th])
+QED
+
+(* also known as REAL_LE_RMUL_EQ *)
 val REAL_LE_RMUL = store_thm("REAL_LE_RMUL",
-  “!x y z. 0 < z ==> ((x * z) <= (y * z) = x <= y)”,
+  “!x y z. 0 < z ==> ((x * z) <= (y * z) <=> x <= y)”,
    REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
    MATCH_ACCEPT_TAC REAL_LE_LMUL);
 
@@ -1214,6 +1229,7 @@ val REAL_EQ_LMUL2 = store_thm("REAL_EQ_LMUL2",
   MP_TAC(SPECL [“x:real”, “y:real”, “z:real”] REAL_EQ_LMUL) THEN
   ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST_ALL_TAC THEN REFL_TAC);
 
+(* also known as REAL_LE_MUL2V *)
 val REAL_LE_MUL2 = store_thm("REAL_LE_MUL2",
   “!x1 x2 y1 y2.
     (& 0) <= x1 /\ (& 0) <= y1 /\ x1 <= x2 /\ y1 <= y2 ==>
@@ -2178,6 +2194,10 @@ val SUP_LEMMA3 = store_thm("SUP_LEMMA3",
   EXISTS_TAC “z + ~d” THEN GEN_TAC THEN BETA_TAC THEN
   DISCH_THEN(fn th => FIRST_ASSUM(ASSUME_TAC o C MATCH_MP th)) THEN
   ASM_REWRITE_TAC[REAL_LT_ADDNEG]);
+
+(*----------------------------------------------------------------------------*)
+(* Derive the supremum property for an arbitrary bounded nonempty set         *)
+(*----------------------------------------------------------------------------*)
 
 val REAL_SUP_EXISTS = store_thm("REAL_SUP_EXISTS",
   “!P. (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
@@ -4583,6 +4603,13 @@ Proof
   PURE_ONCE_REWRITE_TAC[DECIDE “(p <=> q) <=> (~p <=> ~q)”] >>
   PURE_REWRITE_TAC[REAL_NOT_LE] >>
   simp[REAL_POW_NEG, REAL_NOT_LE, arithmeticTheory.ODD_EVEN, CONJ_COMM]
+QED
+
+(* recovered from transc.ml *)
+Theorem REAL_POW_LE :
+    !x n. 0 <= x ==> 0 <= x pow n
+Proof
+    RW_TAC std_ss [REAL_POW_GE0]
 QED
 
 Theorem REAL_POW_LE0:

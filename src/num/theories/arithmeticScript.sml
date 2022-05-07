@@ -401,8 +401,6 @@ val LESS_OR = store_thm ("LESS_OR",
    “!m n. m < n ==> SUC m <= n”,
    REWRITE_TAC[LESS_EQ]) ;
 
-val LESS_SUC_EQ = LESS_OR;
-
 val OR_LESS = store_thm ("OR_LESS",
    “!m n. (SUC m <= n) ==> (m < n)”,
    REWRITE_TAC[LESS_EQ]) ;
@@ -522,7 +520,7 @@ val LESS_EQ_0 = store_thm ("LESS_EQ_0",
   REWRITE_TAC [LESS_OR_EQ, NOT_LESS_0]) ;
 
 (*---------------------------------------------------------------------------
- *  HOL Light compatibility
+ *  HOL Light (or HOL88) compatibility
  *---------------------------------------------------------------------------*)
 
 Theorem LT :
@@ -536,6 +534,19 @@ Theorem LT_LE :
 Proof
     METIS_TAC [LESS_NOT_EQ, LESS_OR_EQ]
 QED
+
+(* |- !m n. m <= n <=> m < n \/ (m = n) *)
+Theorem LE_LT = LESS_OR_EQ;
+
+(* from HOL88's transc.ml *)
+Theorem LESS_SUC_EQ :
+    !m n. m < SUC n <=> m <= n
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[CONJUNCT2 LT, LE_LT] THEN
+  EQ_TAC THEN DISCH_THEN(DISJ_CASES_THEN(fn th => REWRITE_TAC[th]))
+QED
+
+(*---------------------------------------------------------------------------*)
 
 val _ = print "Now proving properties of subtraction\n"
 
@@ -2748,6 +2759,26 @@ Theorem DIV_EQ_0:
   1 < b ==> ((n DIV b = 0) = (n < b))
 Proof
   PROVE_TAC[DIV_0_IMP_LT, LESS_DIV_EQ_ZERO]
+QED
+
+(* ------------------------------------------------------------------------ *)
+(* Some miscellaneous lemmas (from transc.ml)                               *)
+(* ------------------------------------------------------------------------ *)
+
+Theorem MULT_DIV_2 :
+    !n. (2 * n) DIV 2 = n
+Proof
+  GEN_TAC THEN REWRITE_TAC[GSYM DIV2_def, DIV2_DOUBLE]
+QED
+
+Theorem EVEN_DIV_2 : (* was: EVEN_DIV2 *)
+    !n. ~(EVEN n) ==> ((SUC n) DIV 2 = SUC((n - 1) DIV 2))
+Proof
+  GEN_TAC THEN REWRITE_TAC[GSYM ODD_EVEN, ODD_EXISTS] THEN
+  DISCH_THEN(Q.X_CHOOSE_THEN `m:num` SUBST1_TAC) THEN
+  REWRITE_TAC[SUC_SUB1] THEN REWRITE_TAC[ADD1, GSYM ADD_ASSOC] THEN
+  SUBST1_TAC(SYM (Q.SPEC ‘1’ TIMES2)) THEN
+  REWRITE_TAC[GSYM LEFT_ADD_DISTRIB, MULT_DIV_2]
 QED
 
 (* ----------------------------------------------------------------------
