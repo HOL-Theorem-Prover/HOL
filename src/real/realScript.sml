@@ -30,7 +30,7 @@ in
 end;
 
 (*---------------------------------------------------------------------------*)
-(* Now define the inclusion homomorphism &:num->real.           o             *)
+(* Now define the inclusion homomorphism &:num->real.                        *)
 (*---------------------------------------------------------------------------*)
 
 val real_of_num = new_recursive_definition
