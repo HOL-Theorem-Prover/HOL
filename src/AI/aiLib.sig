@@ -8,6 +8,7 @@ sig
   val number_snd : int -> 'a list -> ('a * int) list
   val print_endline : string -> unit
   val vector_to_list : 'a vector -> 'a list
+  val array_to_list : 'a array -> 'a list
   val hash_string : string -> int
   val hash_string_mod : int -> string -> int
 
