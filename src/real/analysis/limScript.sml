@@ -6,7 +6,7 @@ open HolKernel Parse bossLib boolLib;
 
 open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory jrhUtils
      prim_recTheory realTheory realLib metricTheory netsTheory combinTheory;
-open pred_setTheory;
+open pred_setTheory mesonLib;
 
 open topologyTheory real_topologyTheory derivativeTheory seqTheory;
 
@@ -1846,92 +1846,98 @@ val DIFF_INVERSE_OPEN = store_thm("DIFF_INVERSE_OPEN",
 (* Every derivative is Darboux continuous.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-(*
-let IVT_DERIVATIVE_0 = prove
- (`!f f' a b.
+Theorem IVT_DERIVATIVE_0 :
+    !f f' a b.
         a <= b /\
         (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
         f'(a) > &0 /\ f'(b) < &0
-        ==> ?z. a < z /\ z < b /\ (f'(z) = &0)`,
+        ==> ?z. a < z /\ z < b /\ (f'(z) = &0)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[real_gt] THEN
-  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) [REAL_LE_LT] THEN
-  STRIP_TAC THENL [ALL_TAC; ASM_MESON_TAC[REAL_LT_ANTISYM]] THEN
-  SUBGOAL_THEN `?w. (!x. a <= x /\ x <= b ==> f x <= w) /\
-                    (?x. a <= x /\ x <= b /\ (f x = w))`
+  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) empty_rewrites [REAL_LE_LT] THEN
+  STRIP_TAC THENL [ALL_TAC, ASM_MESON_TAC[REAL_LT_ANTISYM]] THEN
+  Q.SUBGOAL_THEN `?w. (!x. a <= x /\ x <= b ==> f x <= w) /\
+                      (?x. a <= x /\ x <= b /\ (f x = w))`
   MP_TAC THENL
-   [MATCH_MP_TAC CONT_ATTAINS THEN
-    ASM_MESON_TAC[REAL_LT_IMP_LE; DIFF_CONT]; ALL_TAC] THEN
+  [ MATCH_MP_TAC CONT_ATTAINS THEN
+    ASM_MESON_TAC[REAL_LT_IMP_LE, DIFF_CONT], ALL_TAC] THEN
   DISCH_THEN(CHOOSE_THEN (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  DISCH_THEN(X_CHOOSE_THEN `z:real` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `z:real` THEN ASM_CASES_TAC `z:real = a` THENL
-   [UNDISCH_THEN `z:real = a` SUBST_ALL_TAC  THEN
-    MP_TAC(SPECL[`f:real->real`; `a:real`; `(f':real->real) a`] DIFF_LINC) THEN
-    ASM_SIMP_TAC[REAL_LE_REFL; REAL_LT_IMP_LE] THEN
-    DISCH_THEN(X_CHOOSE_THEN `d:real` STRIP_ASSUME_TAC) THEN
-    MP_TAC(SPECL [`d:real`; `b - a`] REAL_DOWN2) THEN
-    ASM_REWRITE_TAC[REAL_LT_SUB_LADD; REAL_ADD_LID] THEN
-    DISCH_THEN(X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
-    UNDISCH_TAC `!h. &0 < h /\ h < d ==> w < f (a + h)` THEN
-    DISCH_THEN(MP_TAC o SPEC `e:real`) THEN ASM_REWRITE_TAC[] THEN
-    CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
-    REWRITE_TAC[REAL_NOT_LT] THEN FIRST_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-    ASM_SIMP_TAC[REAL_LE_ADDL; REAL_LT_IMP_LE]; ALL_TAC] THEN
-  ASM_CASES_TAC `z:real = b` THENL
-   [UNDISCH_THEN `z:real = b` SUBST_ALL_TAC  THEN
-    MP_TAC(SPECL[`f:real->real`; `b:real`; `(f':real->real) b`] DIFF_LDEC) THEN
-    ASM_SIMP_TAC[REAL_LE_REFL; REAL_LT_IMP_LE] THEN
-    DISCH_THEN(X_CHOOSE_THEN `d:real` STRIP_ASSUME_TAC) THEN
-    MP_TAC(SPECL [`d:real`; `b - a`] REAL_DOWN2) THEN
-    ASM_REWRITE_TAC[REAL_LT_SUB_LADD; REAL_ADD_LID] THEN
-    DISCH_THEN(X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
-    UNDISCH_TAC `!h. &0 < h /\ h < d ==> w < f (b - h)` THEN
-    DISCH_THEN(MP_TAC o SPEC `e:real`) THEN ASM_REWRITE_TAC[] THEN
-    CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
-    REWRITE_TAC[REAL_NOT_LT] THEN FIRST_ASSUM MATCH_MP_TAC THEN
-    REWRITE_TAC[REAL_LE_SUB_LADD; REAL_LE_SUB_RADD] THEN
-    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-    ASM_SIMP_TAC[REAL_LE_ADDL; REAL_LT_IMP_LE]; ALL_TAC] THEN
-  SUBGOAL_THEN `a < z /\ z < b` STRIP_ASSUME_TAC THENL
-   [ASM_REWRITE_TAC[REAL_LT_LE]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC DIFF_LMAX THEN
-  MP_TAC(SPECL [`z - a`; `b - z`] REAL_DOWN2) THEN
-  ASM_REWRITE_TAC[REAL_LT_SUB_LADD; REAL_ADD_LID] THEN
-  DISCH_THEN(X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
-  MAP_EVERY EXISTS_TAC [`f:real->real`; `z:real`] THEN
-  ASM_SIMP_TAC[REAL_LT_IMP_LE] THEN
-  EXISTS_TAC `e:real` THEN ASM_REWRITE_TAC[] THEN GEN_TAC THEN
-  DISCH_THEN(fun th -> FIRST_ASSUM MATCH_MP_TAC THEN MP_TAC th) THEN
-  MAP_EVERY UNDISCH_TAC [`e + z < b`; `e + a < z`] THEN
-  REAL_ARITH_TAC);;
+  DISCH_THEN(Q.X_CHOOSE_THEN `z:real` STRIP_ASSUME_TAC) THEN
 
-let IVT_DERIVATIVE_POS = prove
- (`!f f' a b y.
+  Q.EXISTS_TAC `z:real` >> Cases_on `z:real = a` >-
+  ( Q.UNDISCH_THEN `z:real = a` SUBST_ALL_TAC THEN
+    MP_TAC(Q.SPECL[`f:real->real`, `a:real`, `(f':real->real) a`] DIFF_LINC) THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_REFL, REAL_LT_IMP_LE] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `d:real` STRIP_ASSUME_TAC) THEN
+    MP_TAC(Q.SPECL [`d:real`, `b - a`] REAL_DOWN2) THEN
+    ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_ADD_LID] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
+    Q.UNDISCH_TAC `!h. &0 < h /\ h < d ==> w < f (a + h)` THEN
+    DISCH_THEN(MP_TAC o Q.SPEC `e:real`) THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
+    REWRITE_TAC[REAL_NOT_LT] THEN FIRST_ASSUM MATCH_MP_TAC THEN
+    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_ADDL, REAL_LT_IMP_LE] ) \\
+
+  Cases_on `z:real = b` >-
+  ( Q.UNDISCH_THEN `z:real = b` SUBST_ALL_TAC THEN
+    MP_TAC(Q.SPECL[`f:real->real`, `b:real`, `(f':real->real) b`] DIFF_LDEC) THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_REFL, REAL_LT_IMP_LE] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `d:real` STRIP_ASSUME_TAC) THEN
+    MP_TAC(Q.SPECL [`d:real`, `b - a`] REAL_DOWN2) THEN
+    ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_ADD_LID] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
+    Q.UNDISCH_TAC `!h. &0 < h /\ h < d ==> w < f (b - h)` THEN
+    DISCH_THEN(MP_TAC o Q.SPEC `e:real`) THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
+    REWRITE_TAC[REAL_NOT_LT] THEN FIRST_ASSUM MATCH_MP_TAC THEN
+    REWRITE_TAC[REAL_LE_SUB_LADD, REAL_LE_SUB_RADD] THEN
+    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_ADDL, REAL_LT_IMP_LE] ) \\
+  Q.SUBGOAL_THEN `a < z /\ z < b` STRIP_ASSUME_TAC THENL
+  [ ASM_SIMP_TAC std_ss [REAL_LT_LE], ALL_TAC ] THEN
+  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC DIFF_LMAX THEN
+  MP_TAC(Q.SPECL [`z - a`, `b - z`] REAL_DOWN2) THEN
+  ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_ADD_LID] THEN
+  DISCH_THEN(Q.X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
+  qexistsl_tac [`f:real->real`, `z:real`] THEN
+  ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN
+  Q.EXISTS_TAC `e:real` THEN ASM_REWRITE_TAC[] THEN GEN_TAC THEN
+  DISCH_THEN(fn th => FIRST_ASSUM MATCH_MP_TAC THEN MP_TAC th) THEN
+  MAP_EVERY Q.UNDISCH_TAC [`e + z < b`, `e + a < z`] THEN
+  REAL_ARITH_TAC
+QED
+
+Theorem IVT_DERIVATIVE_POS :
+   !f f' a b y.
         a <= b /\
         (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
         f'(a) > y /\ f'(b) < y
-        ==> ?z. a < z /\ z < b /\ (f'(z) = y)`,
+        ==> ?z. a < z /\ z < b /\ (f'(z) = y)
+Proof
   REWRITE_TAC[real_gt] THEN REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [`\x. f(x) - y * x`; `\x:real. f'(x) - y`;
-                `a:real`; `b:real`] IVT_DERIVATIVE_0) THEN
-  ASM_REWRITE_TAC[real_gt] THEN
-  ASM_REWRITE_TAC[REAL_LT_SUB_LADD; REAL_LT_SUB_RADD] THEN
-  ASM_REWRITE_TAC[REAL_EQ_SUB_RADD; REAL_ADD_LID] THEN
+  MP_TAC(Q.SPECL [`\x. f(x) - y * x`, `\x:real. f'(x) - y`,
+                  `a:real`, `b:real`] IVT_DERIVATIVE_0) THEN
+  ASM_SIMP_TAC std_ss [real_gt] THEN
+  ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_LT_SUB_RADD] THEN
+  ASM_REWRITE_TAC[REAL_EQ_SUB_RADD, REAL_ADD_LID] THEN
   GEN_REWRITE_TAC (funpow 2 LAND_CONV o BINDER_CONV o RAND_CONV o
-                   LAND_CONV o RAND_CONV) [GSYM REAL_MUL_RID] THEN
-  ASM_SIMP_TAC[DIFF_SUB; DIFF_X; DIFF_CMUL]);;
+                   LAND_CONV o RAND_CONV) empty_rewrites [GSYM REAL_MUL_RID] THEN
+  ASM_SIMP_TAC std_ss [DIFF_SUB, DIFF_X, DIFF_CMUL]
+QED
 
-let IVT_DERIVATIVE_NEG = prove
- (`!f f' a b y.
+Theorem IVT_DERIVATIVE_NEG :
+   !f f' a b y.
         a <= b /\
         (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
         f'(a) < y /\ f'(b) > y
-        ==> ?z. a < z /\ z < b /\ (f'(z) = y)`,
+        ==> ?z. a < z /\ z < b /\ (f'(z) = y)
+Proof
   REWRITE_TAC[real_gt] THEN REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [`\x:real. --(f x)`; `\x:real. --(f' x)`;
-                `a:real`; `b:real`; `--y`] IVT_DERIVATIVE_POS) THEN
-  ASM_REWRITE_TAC[real_gt; REAL_LT_NEG2; REAL_EQ_NEG2] THEN
-  ASM_SIMP_TAC[DIFF_NEG]);;
-*)
+  MP_TAC(Q.SPECL [`\x:real. ~(f x)`, `\x:real. ~(f' x)`,
+                  `a:real`, `b:real`, `~y`] IVT_DERIVATIVE_POS) THEN
+  ASM_SIMP_TAC std_ss [real_gt, REAL_LT_NEG, REAL_EQ_NEG] THEN
+  ASM_SIMP_TAC std_ss [DIFF_NEG]
+QED
 
 val _ = export_theory();
