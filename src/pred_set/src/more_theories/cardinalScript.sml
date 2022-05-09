@@ -1699,10 +1699,6 @@ Proof
     METIS_TAC [AND_IMP_INTRO]
 QED
 
-val LT_SUC_LE = store_thm ("LT_SUC_LE",
- ``!m n. (m < SUC n) <=> (m <= n)``,
-  ARITH_TAC);
-
 val lemma = prove (
   ``(!x. x IN s ==> (g(f(x)) = x)) <=>
     (!y x. x IN s /\ (y = f x) ==> (g y = x))``,

@@ -538,8 +538,8 @@ QED
 (* |- !m n. m <= n <=> m < n \/ (m = n) *)
 Theorem LE_LT = LESS_OR_EQ;
 
-(* from HOL88's transc.ml *)
-Theorem LESS_SUC_EQ :
+(* moved here from cardinalTheory (proof is from old transc.ml *)
+Theorem LT_SUC_LE : (* was: LESS_SUC_EQ *)
     !m n. m < SUC n <=> m <= n
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[CONJUNCT2 LT, LE_LT] THEN
