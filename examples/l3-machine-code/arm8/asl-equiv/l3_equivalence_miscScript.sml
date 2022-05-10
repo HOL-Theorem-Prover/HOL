@@ -477,14 +477,11 @@ Proof
   qspec_then `w` assume_tac integer_wordTheory.w2i_ge >>
   qspec_then `w` assume_tac integer_wordTheory.w2i_le >>
   gvs[INT_MAX_def, wordsTheory.INT_MIN_def] >>
-  rename1 `ABS a` >> qmatch_goalsub_abbrev_tac `dim - 1` >>
-  `0 < dim` by (unabbrev_all_tac >> gvs[]) >> qpat_x_assum `Abbrev _` kall_tac >>
-  `ABS a ≤ 2 ** (dim - 1)` by (
-    simp[INT_ABS_LE] >> Cases_on `dim` >> gvs[ADD1] >>
-    last_x_assum kall_tac >> ARITH_TAC) >>
-  ntac 2 $ last_x_assum kall_tac >>
-  qspec_then `a` assume_tac INT_ABS_POS >> rename1 `Num posve` >>
-  Cases_on `posve` >> gvs[] >> Cases_on `dim` >> gvs[EXP]
+  rename1 `ABS a` >>
+  qmatch_abbrev_tac ‘N MOD D1 ≤ D2’ >>
+  ‘D2 < D1’ by simp[Abbr‘D1’, Abbr‘D2’] >>
+  ‘N ≤ D2’ by (simp[Abbr‘N’, Abbr‘D2’] >> Cases_on ‘a’ >> gs[INT_SUB]) >>
+  simp[]
 QED
 
 (* copied from HOL/examples/machine-code/hoare-triple/addressScript.sml  *)
