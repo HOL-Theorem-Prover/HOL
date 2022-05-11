@@ -69,12 +69,11 @@ val texIndexDef = "index.tex"
 (* Default directory for signatures in HTML format: *)
 val htmlDirDef = "htmlsigs"
 
-(* Default filename for the HTML format database for identifiers: *)
-val htmlIndexDef = normPath[HOLpath,"help","src-sml",htmlDirDef,"idIndex.html"]
+(* Default (relative) filename for the HTML format database for identifiers: *)
+val htmlIndexDef = ["src-sml",htmlDirDef,"idIndex.html"]
 
-(* Default filename for the HTML format database for theories: *)
-val htmlTheoryIndexDef =
-   normPath[HOLpath,"help","src-sml",htmlDirDef,"TheoryIndex.html"]
+(* Default (relative) filename for the HTML format database for theories: *)
+val htmlTheoryIndexDef = ["src-sml",htmlDirDef,"TheoryIndex.html"]
 
 (* Default filename for the LaTeX signatures: *)
 val texSigs = "texsigsigs.tex"
@@ -226,7 +225,10 @@ val SRCFILES =
 fun process (libdir, helpfile, txtIndex,
              texIndex, htmldir, htmlIndex, htmlTheoryIndex, HOLpage)
  =
- (print ("Reading signatures in directory " ^ libdir ^
+ let val htmlIndexAbsolutePath       = normPath(concat[[HOLpath,"help"],htmlIndex]);
+     val htmlTheoryIndexAbsolutePath = normPath(concat[[HOLpath,"help"],htmlTheoryIndex]);
+ in
+   (print ("Reading signatures in directory " ^ libdir ^
         "\nand writing help database in file " ^ helpfile ^ "\n")
  ; dirToBase (libdir, docdirs, helpfile)
 
@@ -240,19 +242,21 @@ fun process (libdir, helpfile, txtIndex,
  ; Htmlsigs.sigsToHtml
      version bgcolor stoplist helpfile HOLpath SRCFILES (libdir, htmldir)
 
- ; print ("\nWriting HTML signature index in file " ^ htmlIndex ^ "\n")
+ ; print ("\nWriting HTML signature index in file " ^ htmlIndexAbsolutePath ^ "\n")
  ; Htmlsigs.printHTMLBase version bgcolor HOLpath
-         isSigId "HOL IDENTIFIER INDEX" (helpfile, htmlIndex)
+         isSigId "HOL IDENTIFIER INDEX" (helpfile, htmlIndexAbsolutePath)
 
  ; print ("\nWriting HTML theory signature index in file "
-          ^ htmlTheoryIndex ^ "\n")
+          ^ htmlTheoryIndexAbsolutePath ^ "\n")
  ; Htmlsigs.printHTMLBase version bgcolor HOLpath
-         isTheory "HOL THEORY BINDINGS" (helpfile, htmlTheoryIndex)
+         isTheory "HOL THEORY BINDINGS" (helpfile, htmlTheoryIndexAbsolutePath)
 
  ; print ("\nWriting HOLPage\n")
  ; HOLPage.printHOLPage version bgcolor HOLpath
-                        htmlIndex htmlTheoryIndex (helpfile, HOLpage)
- )
+                        normPath(htmlIndex)
+                        normPath(htmlTheoryIndex)
+                        (helpfile, HOLpage)
+ ) end; (* fun process *)
 
 in
     case CommandLine.arguments () of
