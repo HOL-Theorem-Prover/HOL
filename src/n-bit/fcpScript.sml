@@ -13,85 +13,25 @@ val () = new_theory "fcp";
 val _ = set_grammar_ancestry ["list"]
 
 (* ------------------------------------------------------------------------- *)
-
-val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
-
-val CARD_CLAUSES =
-   CONJ CARD_EMPTY
-     (PROVE [CARD_INSERT]
-        ``!x s.
-             FINITE s ==>
-             (CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s)))``)
-
-val IMAGE_CLAUSES = CONJ IMAGE_EMPTY IMAGE_INSERT
-val FINITE_RULES = CONJ FINITE_EMPTY FINITE_INSERT
-val NOT_SUC = numTheory.NOT_SUC
-val SUC_INJ = prim_recTheory.INV_SUC_EQ
-val LT = CONJ (DECIDE ``!m. ~(m < 0)``) prim_recTheory.LESS_THM
-val LT_REFL = prim_recTheory.LESS_REFL
-
+(*  NOTES for HOL-Light users (or HOL4 porters of HOL-Light theories)        *)
+(*                                                                           *)
+(*  FCP indexes in HOL-Light are ranged from 1 to ‘dimindex(:'N)’, while in  *)
+(*  HOL4 they are ranged from ‘0’ to ‘dimindex(:'N) - 1’. Thus, whenever in  *)
+(*  HOL-Light it says ‘1 <= i /\ i <= dimindex(:'N)’, here in HOL4 one says  *)
+(*  ‘i < dimindex(:'N)’ instead. (as ‘0 <= i’ is always true for naturals.)  *)
+(*                                                                           *)
+(*  In particular, the frequently needed DIMINDEX_GE_1 in many FCP-related   *)
+(*  proofs in HOL-Light, is not very useful here in HOL4. Porters may need   *)
+(*  to use the new DIMINDEX_GT_0 instead, in some ported proofs.             *)
+(*                                                                           *)
+(*  The other difference is that, in HOL-Light the ' ($) operator is total:  *)
+(*  ‘f ' i := 0’ if ‘1 <= i /\ i <= dimindex(:N)’ does not hold, while here  *)
+(*  ‘f ' i’ is unspecified if ‘i >= dimindex(:'N)’. Thus for some theorems,  *)
+(*  porters may need to add extra antecedents like ‘i < dimindex(:'N) ==> ’  *)
+(*  to some FCP-related theorems.       -- Chun Tian (binghe), May 12, 2022  *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_IMAGE_INJ = Q.prove(
-   `!(f:'a->'b) s.
-       (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
-       FINITE s ==> (CARD (IMAGE f s) = CARD s)`,
-   GEN_TAC
-   THEN REWRITE_TAC [DECIDE ``a /\ b ==> c <=> b ==> a ==> c``]
-   THEN Q.SPEC_THEN
-           `\s. (!x y. (f x = f y) ==> y IN s ==> x IN s ==> (x = y)) ==>
-                (CARD (IMAGE f s) = CARD s)`
-           (MATCH_MP_TAC o BETA_RULE) FINITE_INDUCT
-   THEN REWRITE_TAC [NOT_IN_EMPTY, IMAGE_CLAUSES]
-   THEN REPEAT STRIP_TAC
-   THEN ASM_SIMP_TAC std_ss [CARD_CLAUSES, IMAGE_FINITE, IN_IMAGE]
-   THEN COND_CASES_TAC
-   THEN PROVE_TAC [IN_INSERT]
-   )
-
-val HAS_SIZE_IMAGE_INJ = Q.prove(
-   `!(f:'a->'b) s n.
-        (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
-        (s HAS_SIZE n) ==> ((IMAGE f s) HAS_SIZE n)`,
-   SIMP_TAC std_ss [HAS_SIZE, IMAGE_FINITE] THEN PROVE_TAC[CARD_IMAGE_INJ])
-
-val HAS_SIZE_INDEX = Q.prove(
-   `!s n.
-      (s HAS_SIZE n) ==>
-      ?f:num->'a. (!m. m < n ==> f(m) IN s) /\
-                  (!x. x IN s ==> ?!m. m < n /\ (f m = x))`,
-   CONV_TAC SWAP_VARS_CONV
-   THEN numLib.INDUCT_TAC
-   THEN SIMP_TAC std_ss [HAS_SIZE_0, HAS_SIZE_SUC, LT, NOT_IN_EMPTY]
-   THEN Q.X_GEN_TAC `s:'a->bool`
-   THEN REWRITE_TAC [EXTENSION, NOT_IN_EMPTY]
-   THEN SIMP_TAC std_ss [NOT_FORALL_THM]
-   THEN DISCH_THEN
-           (CONJUNCTS_THEN2 (Q.X_CHOOSE_TAC `a:'a`) (MP_TAC o Q.SPEC `a:'a`))
-   THEN ASM_REWRITE_TAC[]
-   THEN DISCH_TAC
-   THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `s DELETE (a:'a)`)
-   THEN ASM_REWRITE_TAC []
-   THEN DISCH_THEN (Q.X_CHOOSE_THEN `f:num->'a` STRIP_ASSUME_TAC)
-   THEN Q.EXISTS_TAC `\m:num. if m < n then f(m) else a:'a`
-   THEN CONJ_TAC
-   THENL [
-      GEN_TAC
-      THEN REWRITE_TAC []
-      THEN BETA_TAC
-      THEN COND_CASES_TAC
-      THEN PROVE_TAC [IN_DELETE],
-      ALL_TAC
-   ]
-   THEN Q.X_GEN_TAC `x:'a`
-   THEN DISCH_TAC
-   THEN ASM_REWRITE_TAC []
-   THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `x:'a`)
-   THEN ASM_SIMP_TAC (std_ss++boolSimps.COND_elim_ss) [IN_DELETE]
-   THEN Q.ASM_CASES_TAC `a:'a = x`
-   THEN ASM_SIMP_TAC std_ss []
-   THEN PROVE_TAC [LT_REFL, IN_DELETE]
-   )
+val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
 
 (* ------------------------------------------------------------------------- *
  * An isomorphic image of any finite type, 1-element for infinite ones.      *

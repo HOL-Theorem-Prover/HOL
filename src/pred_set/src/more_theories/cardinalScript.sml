@@ -1862,28 +1862,6 @@ val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
   SIMP_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_IMAGE] THEN
   METIS_TAC[SUBSET_DEF, IN_IMAGE]);
 
-Theorem CARD_IMAGE_INJ:
-   !(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
-                  FINITE s ==> (CARD (IMAGE f s) = CARD s)
-Proof
-  GEN_TAC THEN ONCE_REWRITE_TAC [CONJ_SYM] THEN
-  REWRITE_TAC[GSYM AND_IMP_INTRO] THEN GEN_TAC THEN
-  KNOW_TAC “
-    (!(x :'a) (y :'a).
-       x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
-       (CARD (IMAGE f s) = CARD s) <=>
-    (\s. (!(x :'a) (y :'a).
-       x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
-      (CARD (IMAGE f s) = CARD s)) (s:'a->bool)” THENL
-  [FULL_SIMP_TAC std_ss[], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC []
-  THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[NOT_IN_EMPTY, IMAGE_EMPTY, IMAGE_INSERT] THEN
-  REPEAT STRIP_TAC THENL
-  [ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE],
-  ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-  COND_CASES_TAC THENL [ASM_MESON_TAC[IN_INSERT], ASM_MESON_TAC[IN_INSERT]]]]
-QED
-
 Theorem CARD_IMAGE_LE:
    !(f:'a->'b) s. FINITE s ==> CARD(IMAGE f s) <= CARD s
 Proof
@@ -2035,35 +2013,6 @@ val CARD_SUBSET_EQ = store_thm ("CARD_SUBSET_EQ",
    [REWRITE_TAC[GSYM HAS_SIZE_0] THEN
     FULL_SIMP_TAC std_ss [HAS_SIZE, CARD_EMPTY],
     UNDISCH_TAC ``a:'a->bool SUBSET b`` THEN SET_TAC[]]);
-
-val HAS_SIZE_INDEX = store_thm ("HAS_SIZE_INDEX",
- ``!s n. s HAS_SIZE n
-   ==> ?f:num->'a. (!m. m < n ==> f(m) IN s) /\
-   (!x. x IN s ==> ?!m. m < n /\ (f m = x))``,
-
-  KNOW_TAC ``(!(s:'a->bool) (n:num). s HAS_SIZE n ==>
-       ?f. (!m. m < n ==> f m IN s) /\ !x. x IN s ==> ?!m. m < n /\ (f m = x)) =
-             (!(n:num) (s:'a->bool). s HAS_SIZE n ==>
-       ?f. (!m. m < n ==> f m IN s) /\ !x. x IN s ==> ?!m. m < n /\ (f m = x))``
-  THENL [EQ_TAC THENL [FULL_SIMP_TAC std_ss [], FULL_SIMP_TAC std_ss []], ALL_TAC]
-  THEN DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
-  INDUCT_TAC THEN SIMP_TAC std_ss [HAS_SIZE_0, HAS_SIZE_SUC, NOT_IN_EMPTY,
-  ARITH_PROVE ``(!m. m < 0:num <=> F) /\ (!m n. m < SUC n <=> (m = n) \/ m < n)``] THEN
-  X_GEN_TAC ``s:'a->bool`` THEN REWRITE_TAC[EXTENSION, NOT_IN_EMPTY] THEN
-  SIMP_TAC std_ss [NOT_FORALL_THM] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``a:'a``) (MP_TAC o SPEC ``a:'a``)) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC ``s DELETE (a:'a)``) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN ``f:num->'a`` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC ``\m:num. if m < n then f(m) else a:'a`` THEN BETA_TAC THEN CONJ_TAC THENL
-  [GEN_TAC THEN REWRITE_TAC[] THEN COND_CASES_TAC THEN
-  ASM_MESON_TAC[IN_DELETE], ALL_TAC] THEN
-  X_GEN_TAC ``x:'a`` THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC ``x:'a``) THEN
-  ASM_REWRITE_TAC[IN_DELETE] THEN
-  DISCH_TAC THEN
-  Cases_on `x <> a` THEN1 METIS_TAC [] THEN
-  METIS_TAC [LESS_REFL, IN_DELETE]);
 
 Theorem CARD_BIGUNION_LE:
  !s t:'a->'b->bool m n.
