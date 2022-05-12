@@ -3399,6 +3399,86 @@ Proof
     REWRITE_TAC [HAS_SIZE]
 QED
 
+(* The next 3 theorems (up to HAS_SIZE_INDEX) were moved here from fcpTheory *)
+val CARD_CLAUSES =
+   CONJ CARD_EMPTY
+     (PROVE [CARD_INSERT]
+        ``!x s.
+             FINITE s ==>
+             (CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s)))``);
+
+val IMAGE_CLAUSES = CONJ IMAGE_EMPTY IMAGE_INSERT;
+val LT = CONJ (DECIDE ``!m. ~(m < 0)``) prim_recTheory.LESS_THM;
+val LT_REFL = prim_recTheory.LESS_REFL;
+
+Theorem CARD_IMAGE_INJ:
+   !(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
+                  FINITE s ==> (CARD (IMAGE f s) = CARD s)
+Proof
+  GEN_TAC THEN ONCE_REWRITE_TAC [CONJ_SYM] THEN
+  REWRITE_TAC[GSYM AND_IMP_INTRO] THEN GEN_TAC THEN
+  KNOW_TAC “
+    (!(x :'a) (y :'a).
+       x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
+       (CARD (IMAGE f s) = CARD s) <=>
+    (\s. (!(x :'a) (y :'a).
+       x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
+      (CARD (IMAGE f s) = CARD s)) (s:'a->bool)” THENL
+  [FULL_SIMP_TAC std_ss[], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC []
+  THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  REWRITE_TAC[NOT_IN_EMPTY, IMAGE_EMPTY, IMAGE_INSERT] THEN
+  REPEAT STRIP_TAC THENL
+  [ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE],
+  ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE] THEN
+  COND_CASES_TAC THENL [ASM_MESON_TAC[IN_INSERT], ASM_MESON_TAC[IN_INSERT]]]]
+QED
+
+Theorem HAS_SIZE_IMAGE_INJ :
+   !(f:'a->'b) s n.
+        (!x y. x IN s /\ y IN s /\ f(x) = f(y) ==> x = y) /\ (s HAS_SIZE n)
+        ==> ((IMAGE f s) HAS_SIZE n)
+Proof
+  SIMP_TAC std_ss [HAS_SIZE, IMAGE_FINITE] THEN PROVE_TAC[CARD_IMAGE_INJ]
+QED
+
+Theorem HAS_SIZE_INDEX :
+    !s n.
+      (s HAS_SIZE n) ==>
+      ?f:num->'a. (!m. m < n ==> f(m) IN s) /\
+                  (!x. x IN s ==> ?!m. m < n /\ (f m = x))
+Proof
+   CONV_TAC SWAP_VARS_CONV
+   THEN numLib.INDUCT_TAC
+   THEN SIMP_TAC std_ss [HAS_SIZE_0, HAS_SIZE_SUC, LT, NOT_IN_EMPTY]
+   THEN Q.X_GEN_TAC `s:'a->bool`
+   THEN REWRITE_TAC [EXTENSION, NOT_IN_EMPTY]
+   THEN SIMP_TAC std_ss [NOT_FORALL_THM]
+   THEN DISCH_THEN
+           (CONJUNCTS_THEN2 (Q.X_CHOOSE_TAC `a:'a`) (MP_TAC o Q.SPEC `a:'a`))
+   THEN ASM_REWRITE_TAC[]
+   THEN DISCH_TAC
+   THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `s DELETE (a:'a)`)
+   THEN ASM_REWRITE_TAC []
+   THEN DISCH_THEN (Q.X_CHOOSE_THEN `f:num->'a` STRIP_ASSUME_TAC)
+   THEN Q.EXISTS_TAC `\m:num. if m < n then f(m) else a:'a`
+   THEN CONJ_TAC
+   THEN1 (
+      GEN_TAC
+      THEN REWRITE_TAC []
+      THEN BETA_TAC
+      THEN COND_CASES_TAC
+      THEN PROVE_TAC [IN_DELETE]
+   )
+   THEN Q.X_GEN_TAC `x:'a`
+   THEN DISCH_TAC
+   THEN ASM_REWRITE_TAC []
+   THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `x:'a`)
+   THEN ASM_SIMP_TAC (std_ss++boolSimps.COND_elim_ss) [IN_DELETE]
+   THEN Q.ASM_CASES_TAC `a:'a = x`
+   THEN ASM_SIMP_TAC std_ss []
+   THEN PROVE_TAC [LT_REFL, IN_DELETE]
+QED
+
 (* ====================================================================== *)
 (* Sets of size n.                                                        *)
 (* ====================================================================== *)

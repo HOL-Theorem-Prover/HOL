@@ -2096,7 +2096,9 @@ val ITERATE_PAIR = store_thm ("ITERATE_PAIR",
 (* Sums of natural numbers.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val nsum = Define `(nsum :('a->bool)->('a->num)->num) = iterate (+)`;
+Definition nsum :
+   (nsum :('a->bool)->('a->num)->num) = iterate (+)
+End
 
 val NEUTRAL_ADD = store_thm ("NEUTRAL_ADD",
   ``neutral((+):num->num->num) = 0``,
@@ -4021,8 +4023,9 @@ QED
 (* Products over natural numbers.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val nproduct = new_definition ("nproduct",
-  ``nproduct = iterate(( * ):num->num->num)``);
+Definition nproduct :
+   nproduct = iterate(( * ):num->num->num)
+End
 
 val NPRODUCT_CLAUSES = store_thm ("NPRODUCT_CLAUSES",
  ``(!f. nproduct {} f = 1) /\
