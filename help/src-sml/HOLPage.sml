@@ -123,9 +123,11 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
         out "<P>";
 
         out"<DT><STRONG>";
-        href "IDENTIFIERS" idIndex;
+        href "IDENTIFIERS"
+             (normPath["src-sml","htmlsigs","idIndex.html"]); (* was: idIndex *)
         out "&nbsp;&nbsp;&nbsp;&nbsp;";
-        href "THEORY BINDINGS" TheoryIndex;
+        href "THEORY BINDINGS"
+             (normPath["src-sml","htmlsigs","TheoryIndex.html"]); (* was: TheoryIndex *)
         out "</STRONG>";
         out "<P>";
 	out "</DL>\n";
