@@ -242,6 +242,10 @@ fun define_size {induction, recursion} db = case define_size_rec recursion db of
     NONE => NONE
   | SOME r => if ! prove_size_eqs then let
     val comb_eqs = size_def_to_comb db (SOME induction) (#def r)
+      handle HOL_ERR err =>
+        let in
+        print "Error proving size_eqs, consider DataSize.prove_size_eqs := false\n\n";
+        raise (HOL_ERR err) end
     val dtys = Prim_rec.doms_of_tyaxiom recursion
     val def_name = fst(dest_type(hd dtys))
     val _ = save_thm (def_name ^ "_size_eq", comb_eqs)
