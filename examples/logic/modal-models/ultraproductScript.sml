@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
+
 open ultrafilterTheory;
-open HolKernel Parse boolLib bossLib;
 open chap1Theory;
 open pred_setTheory;
 open relationTheory;
@@ -14,18 +14,21 @@ open folLangTheory;
 open folModelsTheory;
 open chap2_4Theory;
 open equiv_on_partitionTheory;
+
 val _ = new_theory "ultraproduct";
 
-val _ = temp_delsimps ["satis_def"]    
+val _ = temp_delsimps ["satis_def"]
 
-val Cart_prod_def = Define`
-  Cart_prod I A = {f | !i. i IN I ==> f i IN A i}`;
+Definition Cart_prod_def:
+  Cart_prod I A = {f | !i. i IN I ==> f i IN A i}
+End
 
-val Uequiv_def = Define`
+Definition Uequiv_def:
   Uequiv U I A f g <=> ultrafilter U I /\
                      (!i. i IN I ==> A i <> {}) /\
                      f IN Cart_prod I A /\ g IN Cart_prod I A /\
-                     {i | i IN I /\ f i = g i} IN U`;
+                     {i | i IN I /\ f i = g i} IN U
+End
 
 Theorem prop_A_16:
   !U I A. ultrafilter U I ==> (Uequiv U I A) equiv_on Cart_prod I A
@@ -52,7 +55,8 @@ Theorem ultraproduct_same_eqclass:
          !x y. x IN fc /\ y IN fc ==>
               {i | i IN I /\ x i = y i} IN U
 Proof
-  rw[] >> fs[ultraproduct_def,partition_def] >> rfs[] >> drule prop_A_16 >> rw[] >>
+  rw[] >> fs[ultraproduct_def,partition_def] >> rfs[] >> drule prop_A_16 >>
+  rw[] >>
   fs[equiv_on_def] >> `Uequiv U I' A x y` by metis_tac[] >> fs[Uequiv_def]
 QED
 
@@ -64,7 +68,8 @@ Theorem ultraproduct_go_to_same_eq_class:
            ({i | i IN I /\ x i = y i} IN U) ==>
        !fc. fc IN (ultraproduct U I A) ==> (y IN fc <=> x IN fc)
 Proof
-  rw[] >> drule prop_A_16 >> rw[] >> fs[ultraproduct_def,partition_def,equiv_on_def] >>
+  rw[] >> drule prop_A_16 >> rw[] >>
+  fs[ultraproduct_def,partition_def,equiv_on_def] >>
   `y ∈ Cart_prod I' A /\ x ∈ Cart_prod I' A` by rw[Cart_prod_def] >>
   `Uequiv U I' A x y` by (rw[Uequiv_def] >> rw[GSYM MEMBER_NOT_EMPTY] >>
                          qexists_tac `x i` >> metis_tac[]) >>
@@ -76,8 +81,10 @@ Theorem ultraproduct_eqclass_non_empty:
   !U I A. ultrafilter U I ==>
       !fc. fc IN (ultraproduct U I A) ==> fc <> {}
 Proof
-  rw[ultraproduct_def] >> drule prop_A_16 >> rw[] >> metis_tac[EMPTY_NOT_IN_partition]
+  rw[ultraproduct_def] >> drule prop_A_16 >> rw[] >>
+  metis_tac[EMPTY_NOT_IN_partition]
 QED
+
 Theorem eqc_CHOICE:
 !U I. ultrafilter U I ==>
    !A fc. fc IN (ultraproduct U I A) ==>
@@ -95,7 +102,7 @@ rw[EXTENSION,Uequiv_def,EQ_IMP_THM] (* 5 *)
     map_every qexists_tac [`A`,`fc`] >> rw[] >>
     `fc <> {}` by metis_tac[ultraproduct_eqclass_non_empty] >>
     metis_tac[CHOICE_DEF])
->- (`CHOICE fc IN fc /\ (CHOICE fc IN fc <=> x IN fc)` suffices_by metis_tac[] >>
+>- (`CHOICE fc IN fc /\ (CHOICE fc IN fc <=> x IN fc)` suffices_by metis_tac[]>>
     `fc <> {}` by metis_tac[ultraproduct_eqclass_non_empty] >>
     `CHOICE fc IN fc` by metis_tac[CHOICE_DEF] >>
     strip_tac >- rw[] >>
@@ -106,34 +113,46 @@ QED
 
 
 
-val models2worlds_def = Define`
-  models2worlds MS = \i. (MS i).frame.world`;
+Definition models2worlds_def: models2worlds MS = \i. (MS i).frame.world
+End
 
-val ultraproduct_model_def = Define`
-  ultraproduct_model U I MS = <| frame := <| world := ultraproduct U I (models2worlds MS);
-                                               rel := \fu gu. (?f g. f IN fu /\ g IN gu /\
-                                                              {i | i IN I /\ (MS i).frame.rel (f i) (g i)} IN U) |>;
-                                  valt := \p fu. (?f. f IN fu /\ {i | i IN I /\ (f i) IN (MS i).valt p} IN U) |>`;
+Definition ultraproduct_model_def:
+  ultraproduct_model U I MS = <|
+    frame := <|
+      world := ultraproduct U I (models2worlds MS);
+      rel := \fu gu. (?f g. f IN fu /\ g IN gu /\
+                            {i | i IN I /\ (MS i).frame.rel (f i) (g i)} IN U)
+    |>;
+    valt := \p fu. (?f. f IN fu /\ {i | i IN I /\ (f i) IN (MS i).valt p} IN U)
+  |>
+End
 
 
-val ultraproduct_world_NOT_EMPTY = store_thm(
-  "ultraproduct_world_NOT_EMPTY",
-  ``!U J MS v. ultrafilter U J ==> v IN (ultraproduct_model U J MS).frame.world ==> v <> {}``,
-  rw[ultraproduct_def,ultraproduct_model_def, models2worlds_def] >> metis_tac[prop_A_16,EMPTY_NOT_IN_partition]);
-
-val ultraproduct_world = store_thm(
-  "ultraproduct_world",
-  ``!U J MS.
+Theorem ultraproduct_world_NOT_EMPTY:
+  !U J MS v.
     ultrafilter U J ==>
-       (!v.
-           v ∈ (ultraproduct_model U J MS).frame.world <=>
-               (!i. i IN J ==> (MS i).frame.world <> {}) /\
-               (∃x.
-                   (∀i. i ∈ J ⇒ x i ∈ (MS i).frame.world) /\
-                   v = {y | (∀i. i ∈ J ⇒ y i ∈ (MS i).frame.world) /\ {i | i ∈ J ∧ x i = y i} ∈ U}))``,
-  rw[ultraproduct_def,ultraproduct_model_def, models2worlds_def,partition_def,Uequiv_def,Cart_prod_def] >> rw[EQ_IMP_THM] (* 3 *)
+    v IN (ultraproduct_model U J MS).frame.world ==> v <> {}
+Proof
+  rw[ultraproduct_def,ultraproduct_model_def, models2worlds_def] >>
+  metis_tac[prop_A_16,EMPTY_NOT_IN_partition]
+QED
+
+Theorem ultraproduct_world:
+  !U J MS.
+    ultrafilter U J ==>
+    !v.
+      v ∈ (ultraproduct_model U J MS).frame.world <=>
+      (!i. i IN J ==> (MS i).frame.world <> {}) /\
+      ∃x.
+         (∀i. i ∈ J ⇒ x i ∈ (MS i).frame.world) /\
+         v = {y | (∀i. i ∈ J ⇒ y i ∈ (MS i).frame.world) /\
+                  {i | i ∈ J ∧ x i = y i} ∈ U}
+Proof
+  rw[ultraproduct_def,ultraproduct_model_def, models2worlds_def,partition_def,
+     Uequiv_def,Cart_prod_def] >> rw[EQ_IMP_THM] (* 3 *)
   >- metis_tac[MEMBER_NOT_EMPTY]
-  >> qexists_tac `x` >> rw[EXTENSION,EQ_IMP_THM] >> metis_tac[]);
+  >> qexists_tac `x` >> rw[EXTENSION,EQ_IMP_THM] >> metis_tac[]
+QED
 
 
 val ultraproduct_rel = save_thm(
@@ -157,7 +176,8 @@ val ultraproduct_world_constant = store_thm(
   <=> w ∈ M.frame.world)``,
   rw[EQ_IMP_THM]
   >- (`?i. i IN J`
-       by metis_tac[ultrafilter_def,proper_filter_def,filter_def,MEMBER_NOT_EMPTY] >>
+       by metis_tac[ultrafilter_def,proper_filter_def,filter_def,
+                    MEMBER_NOT_EMPTY] >>
      `{fw | Uequiv U J (models2worlds MS) (λi. w) fw} <> {}`
        by metis_tac[ultraproduct_world_NOT_EMPTY] >> fs[ultraproduct_world] >>
      fs[Uequiv_def,models2worlds_def,Cart_prod_def] >>
@@ -165,7 +185,8 @@ val ultraproduct_world_constant = store_thm(
        ultrafilter U J ∧ (∀i. i ∈ J ⇒ (MS i).frame.world ≠ ∅) ∧
        (∀i. i ∈ J ⇒ w ∈ (MS i).frame.world) ∧
        (∀i. i ∈ J ⇒ fw i ∈ (MS i).frame.world) ∧
-       {i | i ∈ J ∧ w = fw i} ∈ U}` by metis_tac[MEMBER_NOT_EMPTY] >> fs[] >> metis_tac[])
+       {i | i ∈ J ∧ w = fw i} ∈ U}` by metis_tac[MEMBER_NOT_EMPTY] >> fs[] >>
+      metis_tac[])
   >- (rw[ultraproduct_world] (* 2 *)
      >- metis_tac[MEMBER_NOT_EMPTY]
      >- (qexists_tac `\i.w` >> rw[Uequiv_def,models2worlds_def,Cart_prod_def] >>
@@ -183,13 +204,15 @@ val ultrapower_valt_well_defined = store_thm(
        by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
      `{i | i IN J /\ g i IN (Ms i).valt p} ⊆ J` by fs[SUBSET_DEF] >>
      `({i | i IN J /\ f i = g i} ∩ {i | i IN J /\ f i IN (Ms i).valt p}) ⊆
-     {i | i IN J /\ g i IN (Ms i).valt p}` suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
+     {i | i IN J /\ g i IN (Ms i).valt p}`
+        suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
      rw[INTER_DEF,SUBSET_DEF] >> metis_tac[])
   >- (`{i | i IN J /\ f i = g i} ∩ {i | i IN J /\ g i IN (Ms i).valt p} IN U`
        by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
      `{i | i IN J /\ f i IN (Ms i).valt p} ⊆ J` by fs[SUBSET_DEF] >>
      `({i | i IN J /\ f i = g i} ∩ {i | i IN J /\ g i IN (Ms i).valt p}) ⊆
-     {i | i IN J /\ f i IN (Ms i).valt p}` suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
+     {i | i IN J /\ f i IN (Ms i).valt p}`
+        suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
      rw[INTER_DEF,SUBSET_DEF] >> metis_tac[]));
 
 
@@ -200,12 +223,15 @@ Theorem Los_modal_thm:
                 (satis (ultraproduct_model U J Ms) fc phi ⇔
                  ∃f. f ∈ fc ∧ {i | i ∈ J ∧ satis (Ms i) (f i) phi} ∈ U)
 Proof
-`!U J Ms. ultrafilter U J ==>
-             !phi fc. fc IN (ultraproduct_model U J Ms).frame.world ==>
-                      (satis (ultraproduct_model U J Ms) fc phi <=>
-                      ?f. f IN fc /\ {i | i IN J /\ satis (Ms i) (f i) phi} IN U)` suffices_by metis_tac[] >>
-  strip_tac >> strip_tac >> strip_tac  >> strip_tac >> Induct_on `phi` >> rw[] (* 5 *)
-(*-----------------------------block 1 `` VAR case``------------------------------------- *)
+  ‘!U J Ms.
+     ultrafilter U J ==>
+     !phi fc. fc IN (ultraproduct_model U J Ms).frame.world ==>
+              (satis (ultraproduct_model U J Ms) fc phi <=>
+               ?f. f IN fc /\ {i | i IN J /\ satis (Ms i) (f i) phi} IN U)’
+    suffices_by metis_tac[] >>
+  strip_tac >> strip_tac >> strip_tac  >> strip_tac >> Induct_on `phi` >>
+  rw[] (* 5 *)
+(*---------------block 1 `` VAR case``------------------------------------- *)
 >-
 (fs[satis_def,ultraproduct_world,ultraproduct_valt] >> eq_tac >> rw[] (* 2 *)
 >- (qexists_tac `f` >> rw[] >> fs[] >>
@@ -218,35 +244,48 @@ Proof
             fc =
             {y |
              (!i. i IN J ==> y i IN (Ms i).frame.world) /\
-             {i | i IN J /\ x i = y i} IN U}` by metis_tac[ultraproduct_world] >>
-        `f IN {y | (!i. i IN J ==> y i IN (Ms i).frame.world) /\ {i | i IN J /\ x' i = y i} IN U}`
+             {i | i IN J /\ x i = y i} IN U}` by metis_tac[ultraproduct_world]>>
+        `f IN {y | (!i. i IN J ==> y i IN (Ms i).frame.world) /\
+         {i | i IN J /\ x' i = y i} IN U}`
           by metis_tac[] >> fs[])
 >- (`(!i. i IN J ==> (Ms i).frame.world <> {}) /\
    ?x. (!i. i IN J ==> x i IN (Ms i).frame.world) /\
-       fc = {y | (!i. i IN J ==> y i IN (Ms i).frame.world) /\ {i | i IN J /\ x i = y i} IN U}`
+       fc = {y | (!i. i IN J ==> y i IN (Ms i).frame.world) /\
+       {i | i IN J /\ x i = y i} IN U}`
      by metis_tac[ultraproduct_world] >>
    fs[] >> qexists_tac `f` >> rw[] >>
-   `{i | i IN J /\ f i IN (Ms i).frame.world /\ f i IN (Ms i).valt n} = {i | i IN J /\ f i IN (Ms i).valt n}`
+   `{i | i IN J /\ f i IN (Ms i).frame.world /\ f i IN (Ms i).valt n} =
+    {i | i IN J /\ f i IN (Ms i).valt n}`
      by rw[EXTENSION,EQ_IMP_THM] >>
    metis_tac[]))
-(*-----------------------------block 2 `` \/ case``------------------------------------- *)
+(*---------------block 2 `` \/ case``------------------------------------- *)
 >-
 (rw[satis_def,EQ_IMP_THM,ultraproduct_world] (* 3 *)
 >- (qexists_tac `f` >> rw[] >>
-        `{i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')} ⊆ J` by fs[SUBSET_DEF] >>
-        `{i | i IN J /\ satis (Ms i) (f i) phi} ⊆ {i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')}` suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >> fs[SUBSET_DEF])
+    `{i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')} ⊆ J`
+       by fs[SUBSET_DEF] >>
+    `{i | i IN J /\ satis (Ms i) (f i) phi} ⊆
+     {i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')}`
+      suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
+    fs[SUBSET_DEF])
 >- (qexists_tac `f` >> rw[] >>
-        `{i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')} ⊆ J` by fs[SUBSET_DEF] >>
-        `{i | i IN J /\ satis (Ms i) (f i) phi'} ⊆ {i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')}` suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >> fs[SUBSET_DEF])
+    `{i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')} ⊆ J`
+      by fs[SUBSET_DEF] >>
+    `{i | i IN J /\ satis (Ms i) (f i) phi'} ⊆
+     {i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')}`
+      suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
+    fs[SUBSET_DEF])
 >- (`{i | i IN J /\ (satis (Ms i) (f i) phi \/ satis (Ms i) (f i) phi')} =
-        {i | i IN J /\ satis (Ms i) (f i) phi} ∪ {i | i IN J /\ satis (Ms i) (f i) phi'}`
-          by (rw[EXTENSION,EQ_IMP_THM] >> metis_tac[]) >>
-        `{i | i IN J /\ satis (Ms i) (f i) phi} ⊆ J /\
-         {i | i IN J /\ satis (Ms i) (f i) phi'} ⊆ J` by fs[SUBSET_DEF] >>
-        `{i | i IN J /\ satis (Ms i) (f i) phi} IN U \/
-        {i | i IN J /\ satis (Ms i) (f i) phi'} IN U` by metis_tac[ultrafilter_UNION]
-        >> metis_tac[]))
-(*-----------------------------block 3 `` FALSE case``------------------------------------- *)
+       {i | i IN J /\ satis (Ms i) (f i) phi} ∪
+       {i | i IN J /\ satis (Ms i) (f i) phi'}`
+      by (rw[EXTENSION,EQ_IMP_THM] >> metis_tac[]) >>
+    `{i | i IN J /\ satis (Ms i) (f i) phi} ⊆ J /\
+     {i | i IN J /\ satis (Ms i) (f i) phi'} ⊆ J` by fs[SUBSET_DEF] >>
+    `{i | i IN J /\ satis (Ms i) (f i) phi} IN U \/
+     {i | i IN J /\ satis (Ms i) (f i) phi'} IN U`
+      by metis_tac[ultrafilter_UNION]
+    >> metis_tac[]))
+(*-------------block 3 `` FALSE case``------------------------------------- *)
 >-
 (`((satis (ultraproduct_model U J Ms) fc FALSE) = F) /\
 ((?f. f IN fc /\ {i | i IN J /\ satis (Ms i) (f i) FALSE} IN U) = F)` suffices_by metis_tac[] >> rw[] (* 2 *)
@@ -255,7 +294,7 @@ Proof
    `{i | i IN J /\ satis (Ms i) (f i) FALSE} = {}`
      by rw[EXTENSION,EQ_IMP_THM,satis_def] >>
    metis_tac[EMPTY_NOTIN_ultrafilter]))
-(*-----------------------------block 4 `` ¬ case``------------------------------------- *)
+(*-------------block 4 `` ¬ case``------------------------------------- *)
 >-
 (rw[satis_def,EQ_IMP_THM,ultraproduct_world] (* 2 *)
 >- (`(!i. i IN J ==> (Ms i).frame.world <> {}) /\
@@ -540,8 +579,8 @@ val prop_2_71 = store_thm(
 
 
 
-val folmodels2Doms_def = Define`
-  folmodels2Doms FMS = \i. (FMS i).Dom`
+Definition folmodels2Doms_def: folmodels2Doms FMS = \i. (FMS i).Dom
+End
 
 
  (*
@@ -557,37 +596,44 @@ val ultraproduct_folmodel_def = Define`
 
 
 
-val ultraproduct_folmodel_def = Define`
-   ultraproduct_folmodel U I FMS =
-    <| Dom := ultraproduct U I (folmodels2Doms FMS) ;
-       Fun := \n fs. {y | (!i. i IN I ==> (y i) IN (FMS i).Dom) /\
-                          {i | i IN I /\
-                               (y i) = (FMS i).Fun n (MAP (\fc. (CHOICE fc) i)fs)} IN U
-                     };
-       Pred := \p zs. {i | i IN I /\ (FMS i).Pred p (MAP (\fc. (CHOICE fc) i) zs)} IN U |>`;
+Definition ultraproduct_folmodel_def:
+  ultraproduct_folmodel U I FMS = <|
+    Dom := ultraproduct U I (folmodels2Doms FMS) ;
+    Fun := \n fs.
+             {y | (!i. i IN I ==> (y i) IN (FMS i).Dom) /\
+                  {i | i IN I /\
+                       y i = (FMS i).Fun n (MAP (\fc. (CHOICE fc) i)fs)} IN U};
+    Pred := \p zs.
+              {i | i IN I /\ (FMS i).Pred p (MAP (\fc. (CHOICE fc) i) zs)} IN U
+  |>
+End
 
-val wffm_def = Define`
-wffm M <=> (∀n0 l0. M.Fun n0 l0 ∈ M.Dom)`
+Definition wffm_def: wffm M <=> (∀n0 l0. M.Fun n0 l0 ∈ M.Dom)
+End
 
 Theorem thm_A_19_i_V_l3:
-  !U I A m eqc. ultrafilter U I ==>  (m IN eqc /\ eqc IN (ultraproduct U I A)) ==>
-      !i. i IN I ==> (m i) IN (A i)
+  !U I A m eqc.
+    ultrafilter U I ==> m IN eqc /\ eqc IN ultraproduct U I A ==>
+    !i. i IN I ==> (m i) IN (A i)
 Proof
   rw[ultraproduct_def,partition_def] >> fs[] >> fs[Cart_prod_def]
 QED
 
 Theorem thm_A_19_i_V_l2:
-  !U I A m eqc. ultrafilter U I ==>  (m IN eqc /\ eqc IN (ultraproduct U I A)) ==> m ∈ Cart_prod I A
+  !U I A m eqc. ultrafilter U I ==>
+                (m IN eqc /\ eqc IN (ultraproduct U I A)) ==> m ∈ Cart_prod I A
 Proof
   rw[Cart_prod_def] >> metis_tac[thm_A_19_i_V_l3]
 QED
 
 
 Theorem thm_A_19_i_V_l1:
-  !U I A m eqc. ultrafilter U I ==>  (m IN eqc /\ eqc IN (ultraproduct U I A)) ==> Uequiv U I A m m
+  !U I A m eqc. ultrafilter U I ==>
+                (m IN eqc /\ eqc IN (ultraproduct U I A)) ==> Uequiv U I A m m
 Proof
-  rw[] >> drule prop_A_16 >> rw[] >> first_x_assum (qspec_then `A` assume_tac) >>
-  `m IN (Cart_prod I' A)` suffices_by fs[equiv_on_def] >> metis_tac[thm_A_19_i_V_l2]
+  rw[] >> drule prop_A_16 >> rw[] >> first_x_assum (qspec_then `A` assume_tac)>>
+  `m IN (Cart_prod I' A)` suffices_by fs[equiv_on_def] >>
+  metis_tac[thm_A_19_i_V_l2]
 QED
 
 Theorem thm_A_19_i_V_l4:
@@ -1686,36 +1732,37 @@ rw[Uequiv_def,Cart_prod_def] (* 2 *)
 QED
 
 Theorem ultraproduct_suffices_rep:
-!U I FMS rv.
-  ultrafilter U I ==>
-  (∀i ff ll. i ∈ I ⇒ (FMS i).Fun ff ll ∈ (FMS i).Dom) ==>
-  !rv. (!v i. i IN I ==> (rv v i) IN (FMS i).Dom) ==>
-   !phi.
-     {i | i IN I /\ feval (FMS i) (\v. rv v i) phi} IN U ==>
-     feval (ultraproduct_folmodel U I FMS)
-           (\v. {g | Uequiv U I (folmodels2Doms FMS) g (rv v)}) phi
+  !U I FMS rv.
+    ultrafilter U I ==>
+    (∀i ff ll. i ∈ I ⇒ (FMS i).Fun ff ll ∈ (FMS i).Dom) ==>
+    !rv. (!v i. i IN I ==> (rv v i) IN (FMS i).Dom) ==>
+         !phi.
+           {i | i IN I /\ feval (FMS i) (\v. rv v i) phi} IN U ==>
+           feval (ultraproduct_folmodel U I FMS)
+                 (\v. {g | Uequiv U I (folmodels2Doms FMS) g (rv v)}) phi
 Proof
-rw[] >> drule thm_A_19_ii >> rw[] >> drule ultraproduct_rep_independence_lemma >> rw[] >>
-first_x_assum
- (qspecl_then
-  [`phi`,
-   `(λv. {g | Uequiv U I' (folmodels2Doms FMS) g (rv v)})`,
-   `FMS`] assume_tac) >>
-`IMAGE (λv. {g | Uequiv U I' (folmodels2Doms FMS) g (rv v)}) 𝕌(:num) ⊆
-        ultraproduct U I' (folmodels2Doms FMS)`
- by metis_tac[rep_give_wf_valuation] >>
-`valuation (ultraproduct_folmodel U I' FMS)
-  (λv. {g | Uequiv U I' (folmodels2Doms FMS) g (rv v)})`
-  by (fs[IMAGE_DEF,SUBSET_DEF,valuation_def,ultraproduct_folmodel_def] >> metis_tac[]) >>
- `∀i. i ∈ I' ⇒ wffm (FMS i)` by
-   (rw[wffm_def] >> metis_tac[]) >>
-first_x_assum drule >> rw[] >>
-first_x_assum drule >> rw[] >>
-first_x_assum (qspecl_then [`phi`,`rv`] assume_tac) >>
-`(∀v. v ∈ FV phi ⇒ Uequiv U I' (folmodels2Doms FMS) (rv v) (rv v))`
- by
-  (rw[] >> irule Uequiv_REFL >> rw[folmodels2Doms_def]) >>
-metis_tac[]
+  rw[] >> drule thm_A_19_ii >> rw[] >>
+  drule ultraproduct_rep_independence_lemma>>
+  rw[] >>
+  first_x_assum
+  (qspecl_then
+   [‘phi’,
+    ‘(λv. {g | Uequiv U I' (folmodels2Doms FMS) g (rv v)})’,
+    ‘FMS’] assume_tac) >>
+  ‘IMAGE (λv. {g | Uequiv U I' (folmodels2Doms FMS) g (rv v)}) 𝕌(:num) ⊆
+   ultraproduct U I' (folmodels2Doms FMS)’
+    by metis_tac[rep_give_wf_valuation] >>
+  ‘valuation (ultraproduct_folmodel U I' FMS)
+   (λv. {g | Uequiv U I' (folmodels2Doms FMS) g (rv v)})’
+    by (fs[IMAGE_DEF,SUBSET_DEF,valuation_def,ultraproduct_folmodel_def] >>
+        metis_tac[]) >>
+  ‘∀i. i ∈ I' ⇒ wffm (FMS i)’ by (rw[wffm_def] >> metis_tac[]) >>
+  first_x_assum drule >> rw[] >>
+  first_x_assum drule >> rw[] >>
+  first_x_assum (qspecl_then [‘phi’,‘rv’] assume_tac) >>
+  ‘(∀v. v ∈ FV phi ⇒ Uequiv U I' (folmodels2Doms FMS) (rv v) (rv v))’
+    by (rw[] >> irule Uequiv_REFL >> rw[folmodels2Doms_def]) >>
+  metis_tac[]
 QED
 
 
