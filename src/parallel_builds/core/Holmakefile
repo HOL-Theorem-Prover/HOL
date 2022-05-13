@@ -76,7 +76,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             logic/ltl logic/ltl-transformations \
             l3-machine-code/decompilers \
           miller \
-	  probability \
+	  probability vector \
           separationLogic/src separationLogic/src/holfoot simple_complexity \
           temporal_deep
 
