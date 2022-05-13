@@ -553,18 +553,14 @@ Proof
       (* goal 1.3 (of 3) *)
       Q.EXISTS_TAC `inv(&1 - x)` THEN MATCH_MP_TAC GP THEN
       ASM_REWRITE_TAC[abs] THEN
-      MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `inv(&2)` THEN
-      ASM_REWRITE_TAC[] THEN
-      REWRITE_TAC [REAL_INV_1OVER, REAL_HALF_BETWEEN] ],
+      MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `inv(&2)` >> rw [] ],
     (* goal 2 (of 2) *)
     Q.SUBGOAL_THEN `suminf (\n. x pow n) = inv (&1 - x)` SUBST1_TAC >| (* 2 subgoals *)
     [ (* goal 2.1 (of 2) *)
       CONV_TAC SYM_CONV THEN MATCH_MP_TAC SUM_UNIQ THEN
       MATCH_MP_TAC GP THEN
       ASM_REWRITE_TAC[abs] THEN
-      MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `inv(&2)` THEN
-      ASM_REWRITE_TAC[] THEN
-      REWRITE_TAC [REAL_INV_1OVER, REAL_HALF_BETWEEN],
+      MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `inv(&2)` >> rw [],
       (* goal 2.2 (of 2) *)
       MATCH_MP_TAC REAL_LE_LCANCEL_IMP THEN
       Q.EXISTS_TAC `&1 - x` THEN
@@ -573,8 +569,7 @@ Proof
         MATCH_MP_TAC REAL_MUL_RINV THEN
         REWRITE_TAC[REAL_ARITH ``(&1 - x = &0) <=> (x = &1)``] THEN
         DISCH_THEN SUBST_ALL_TAC THEN
-        POP_ASSUM MP_TAC THEN (* CONV_TAC REAL_RAT_REDUCE_CONV *)
-        REWRITE_TAC [REAL_INV_1OVER, REAL_HALF_BETWEEN, GSYM real_lt],
+        POP_ASSUM MP_TAC >> rw [],
         (* goal 2.2.2 (of 2) *)
         CONJ_TAC >| (* 2 subgoals *)
         [ (* goal 2.2.2.1 (of 2) *)
@@ -582,7 +577,7 @@ Proof
           Q.EXISTS_TAC `inv(&2) - x` THEN
           ASM_REWRITE_TAC[REAL_ARITH ``&0 <= x - y <=> y <= x``] THEN
           ASM_REWRITE_TAC[REAL_ARITH ``a - x < b - x <=> a < b``] THEN
-          REWRITE_TAC [REAL_INV_1OVER, REAL_HALF_BETWEEN],
+          rw [],
           (* goal 2.2.2.2 (of 2) *)
           REWRITE_TAC[REAL_ADD_LDISTRIB, REAL_SUB_RDISTRIB] THEN
           REWRITE_TAC[REAL_MUL_RID, REAL_MUL_LID] THEN
