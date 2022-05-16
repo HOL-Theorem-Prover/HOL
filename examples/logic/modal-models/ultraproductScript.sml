@@ -150,8 +150,9 @@ Theorem ultraproduct_world:
 Proof
   rw[ultraproduct_def,ultraproduct_model_def, models2worlds_def,partition_def,
      Uequiv_def,Cart_prod_def] >> rw[EQ_IMP_THM] (* 3 *)
-  >- metis_tac[MEMBER_NOT_EMPTY]
-  >> qexists_tac `x` >> rw[EXTENSION,EQ_IMP_THM] >> metis_tac[]
+  >- metis_tac[MEMBER_NOT_EMPTY] >>
+  rename [‘f _ ∈ (MS _).frame.world’] >>
+  qexists_tac `f` >> rw[EXTENSION,EQ_IMP_THM] >> metis_tac[]
 QED
 
 
@@ -688,12 +689,13 @@ val _ = temp_overload_on ("fm2D", ``folmodels2Doms``);
 val _ = temp_overload_on ("upfm", ``ultraproduct_folmodel``);
 *)
 Theorem thm_A_19_i:
-  !t U I. ultrafilter U I ==>
-          !σ FMS. IMAGE σ (univ(:num)) ⊆ ultraproduct U I (folmodels2Doms FMS) ==>
-             (!i ff ll. i IN I ==> (FMS i).Fun ff ll IN (FMS i).Dom) ==>
-          termval (ultraproduct_folmodel U I FMS) σ t =
-          {f | Uequiv U I (folmodels2Doms FMS) f
-               (\i. termval (FMS i) (\n. CHOICE (σ n) i) t)}
+  !t U I.
+    ultrafilter U I ==>
+    !σ FMS. IMAGE σ (univ(:num)) ⊆ ultraproduct U I (folmodels2Doms FMS) ==>
+            (!i ff ll. i IN I ==> (FMS i).Fun ff ll IN (FMS i).Dom) ==>
+            termval (ultraproduct_folmodel U I FMS) σ t =
+            {f | Uequiv U I (folmodels2Doms FMS) f
+                        (\i. termval (FMS i) (\n. CHOICE (σ n) i) t)}
 Proof
 completeInduct_on `term_size t` >> rw[] >> Cases_on `t` (* 2 *)
 >- (rw[termval_def] >> irule equiv_on_same_partition >>
@@ -979,6 +981,7 @@ completeInduct_on `term_size t` >> rw[] >> Cases_on `t` (* 2 *)
         irule termval_IN_Dom >> rw[] >> fs[IMAGE_DEF,SUBSET_DEF] >> rw[] >>
         `σ n' ∈ ultraproduct U I' (folmodels2Doms FMS)` by metis_tac[] >>
         fs[ultraproduct_def,folmodels2Doms_def,partition_def,Cart_prod_def] >>
+        rename [‘Uequiv U I' (λi. (FMS i).Dom) x _’] >>
         `CHOICE
           {y |
            (∀i. i ∈ I' ⇒ y i ∈ (FMS i).Dom) ∧

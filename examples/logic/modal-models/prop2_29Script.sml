@@ -8,7 +8,7 @@ open listTheory;
 open arithmeticTheory;
 open set_relationTheory;
 open pairTheory;
-
+open equiv_on_partitionTheory
 
 val _ = new_theory "prop2_29";
 
@@ -530,82 +530,75 @@ Induct_on `IBC` >> rw[]
 
 
 Theorem FINITE_FINITE_IBC:
-!fs. FINITE (partition (equiv0 (:β)) fs) ==>
-     FINITE (partition (equiv0 (:β)) {phi | IBC phi fs})
+  !fs. FINITE (partition (equiv0 (:β)) fs) ==>
+       FINITE (partition (equiv0 (:β)) {phi | IBC phi fs})
 Proof
-rw[] >>
-`FINITE (IMAGE CHOICE (partition (equiv0 (:β)) fs))`
-  by metis_tac[IMAGE_FINITE] >>
-drule IBC_FINITE_equiv0 >> rw[] >>
-`SURJ (\s. {phi | IBC phi fs /\ !f. f IN s ==> equiv0 (:β) phi f})
-      (partition (equiv0 (:β))
-             {phi | IBC phi (IMAGE CHOICE (partition (equiv0 (:β)) fs))})
-      (partition (equiv0 (:β)) {phi | IBC phi fs})`
-  suffices_by metis_tac[FINITE_SURJ] >>
-rw[SURJ_DEF] (* 2 *)
->- (rw[partition_def] >> qexists_tac `CHOICE s` >>
-   fs[partition_def] >> rw[] (* 2 *)
-   >- (`IMAGE CHOICE
-              {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})}
-       ⊆ fs`
-        by
-         (rw[IMAGE_DEF,SUBSET_DEF] >>
-          qmatch_abbrev_tac ‘CHOICE smallset ∈ bigset’ >>
-          `smallset <> {}`
-            by (simp[Abbr`smallset`, EXTENSION] >> metis_tac[equiv0_REFL]) >>
-          ‘smallset ⊆ bigset’
-            suffices_by metis_tac[SUBSET_DEF, CHOICE_DEF] >>
-          simp[SUBSET_DEF, Abbr`smallset`, Abbr`bigset`]) >>
-      irule IBC_SUBSET >>
-      qexists_tac
-      `IMAGE CHOICE {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})}` >>
-      qmatch_abbrev_tac `IBC (CHOICE A) _ /\ _` >>
-      rw[] >>
-      `CHOICE A IN A` suffices_by fs[Abbr`A`] >>
-      `A <> {}` suffices_by metis_tac[CHOICE_DEF] >>
-      `x IN A` suffices_by metis_tac[NOT_IN_EMPTY] >> fs[Abbr`A`])
-   >- (qabbrev_tac `A =
-                   (IMAGE CHOICE
-                   {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})})` >>
-      simp[EXTENSION] >> rw[] >>
-      `IBC x' fs ==>
-       ((∀f. IBC f A ∧ equiv0 (:β) x f ⇒ equiv0 (:β) x' f) <=>
-        equiv0 (:β) (CHOICE {y | IBC y A ∧ equiv0 (:β) x y}) x')`
-        suffices_by metis_tac[] >>
-      rw[] >>
-      `(CHOICE {y | IBC y A ∧ equiv0 (:β) x y}) IN
-      {y | IBC y A ∧ equiv0 (:β) x y}`
-       by
-        (`x IN {y | IBC y A ∧ equiv0 (:β) x y}`
-           suffices_by metis_tac[NOT_IN_EMPTY,CHOICE_DEF] >> fs[]) >>
-      rw[EQ_IMP_THM] (* 2 *)
-      >- (fs[] >> `IBC x A ∧ equiv0 (:β) x x` by fs[] >>
-         `equiv0 (:β) x' x` by metis_tac[] >>
-         metis_tac[equiv0_SYM,equiv0_TRANS])
-      >- (fs[] >> metis_tac[equiv0_SYM,equiv0_TRANS])))
->- (fs[partition_def] >>
-   qabbrev_tac `A = {t | ∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y}}` >>
-   simp[PULL_EXISTS] >>
-   FREEZE_THEN drule IBC_CHOICE_equiv0 >> rw[] >>
-   qexists_tac `p` >> rw[] (* 2 *)
-   >- fs[partition_def,Abbr`A`]
-   >- (rw[EXTENSION,EQ_IMP_THM] (* 2 *)
-      >- (fs[partition_def,Abbr`A`] >>
-          `equiv0 (:β) x p` by fs[] >>
-          metis_tac[equiv0_SYM,equiv0_TRANS])
-      >- metis_tac[equiv0_SYM,equiv0_TRANS]))
+  rw[] >>
+  ‘FINITE (IMAGE CHOICE (partition (equiv0 (:β)) fs))’
+    by metis_tac[IMAGE_FINITE] >>
+  drule IBC_FINITE_equiv0 >> rw[] >>
+  ‘SURJ (\s. {phi | IBC phi fs /\ !f. f IN s ==> equiv0 (:β) phi f})
+   (partition (equiv0 (:β))
+    {phi | IBC phi (IMAGE CHOICE (partition (equiv0 (:β)) fs))})
+   (partition (equiv0 (:β)) {phi | IBC phi fs})’
+    suffices_by metis_tac[FINITE_SURJ] >>
+  rw[SURJ_DEF] (* 2 *) >~
+  [‘s ∈ partition _ {phi | IBC phi (IMAGE CHOICE _)}’]
+  >- (rw[partition_def] >> qexists_tac ‘CHOICE s’ >>
+      fs[partition_def] >> rw[] (* 2 *) >>
+      rename [‘IBC x (IMAGE CHOICE _)’]
+      >- (‘IMAGE CHOICE {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})}
+           ⊆ fs’
+            by
+            (rw[IMAGE_DEF,SUBSET_DEF] >>
+             qmatch_abbrev_tac ‘CHOICE smallset ∈ bigset’ >>
+             ‘smallset <> {}’
+               by (simp[Abbr‘smallset’, EXTENSION] >> metis_tac[equiv0_REFL]) >>
+             ‘smallset ⊆ bigset’
+               suffices_by metis_tac[SUBSET_DEF, CHOICE_DEF] >>
+             simp[SUBSET_DEF, Abbr‘smallset’, Abbr‘bigset’]) >>
+          irule IBC_SUBSET >>
+          qexists_tac
+            ‘IMAGE CHOICE {t | (∃x. x ∈ fs ∧
+                                    t = {y | y ∈ fs ∧ equiv0 (:β) x y})}’ >>
+          qmatch_abbrev_tac ‘IBC (CHOICE A) _ /\ _’ >>
+          rw[] >>
+          ‘CHOICE A IN A’ suffices_by fs[Abbr‘A’] >>
+          ‘A <> {}’ suffices_by metis_tac[CHOICE_DEF] >>
+          ‘x IN A’ suffices_by metis_tac[NOT_IN_EMPTY] >> fs[Abbr‘A’])
+      >- (qabbrev_tac
+            ‘A = IMAGE CHOICE
+                    {t | (∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y})}’ >>
+          simp[EXTENSION] >> rw[] >>
+          ‘IBC x' fs ==>
+           ((∀f. IBC f A ∧ equiv0 (:β) x f ⇒ equiv0 (:β) x' f) <=>
+            equiv0 (:β) (CHOICE {y | IBC y A ∧ equiv0 (:β) x y}) x')’
+            suffices_by metis_tac[] >>
+          rw[] >>
+          ‘(CHOICE {y | IBC y A ∧ equiv0 (:β) x y}) IN
+           {y | IBC y A ∧ equiv0 (:β) x y}’
+            by
+            (‘x IN {y | IBC y A ∧ equiv0 (:β) x y}’
+               suffices_by metis_tac[NOT_IN_EMPTY,CHOICE_DEF] >> fs[]) >>
+          rw[EQ_IMP_THM] (* 2 *)
+          >- (fs[] >> ‘IBC x A ∧ equiv0 (:β) x x’ by fs[] >>
+              ‘equiv0 (:β) x' x’ by metis_tac[] >>
+              metis_tac[equiv0_SYM,equiv0_TRANS])
+          >- (fs[] >> metis_tac[equiv0_SYM,equiv0_TRANS])))
+  >- (fs[partition_def] >>
+      qabbrev_tac ‘A = {t | ∃x. x ∈ fs ∧ t = {y | y ∈ fs ∧ equiv0 (:β) x y}}’ >>
+      simp[PULL_EXISTS] >>
+      FREEZE_THEN drule IBC_CHOICE_equiv0 >> rw[] >>
+      qexists_tac ‘p’ >> rw[] (* 2 *)
+      >- fs[partition_def,Abbr‘A’]
+      >- (rw[EXTENSION,EQ_IMP_THM] (* 2 *)
+          >- (fs[partition_def,Abbr‘A’] >>
+              ‘equiv0 (:β) x p’ by fs[] >>
+              metis_tac[equiv0_SYM,equiv0_TRANS])
+          >- metis_tac[equiv0_SYM,equiv0_TRANS]))
 QED
 
-val equiv_on_disjoint_partition = store_thm(
-"equiv_on_disjoint_partition",
-``R equiv_on s ==> !A B. s = A UNION B /\ (!x. x IN A ==> !y. y IN B ==> ¬R x y) ==> partition R s = (partition R A) UNION (partition R B)``,
-rw[partition_def] >> rw[Once EXTENSION,EQ_IMP_THM]
->- (`(∃x. x ∈ A ∧ {y | (y ∈ A ∨ y ∈ B) ∧ R x' y} = {y | y ∈ A ∧ R x y})` suffices_by metis_tac[] >>
-   qexists_tac `x'` >> rw[EXTENSION,EQ_IMP_THM] >> metis_tac[])
->- (`∃x. x ∈ B ∧ {y | (y ∈ A ∨ y ∈ B) ∧ R x' y} = {y | y ∈ B ∧ R x y}` suffices_by metis_tac[] >>
-   qexists_tac `x'` >> rw[EXTENSION,EQ_IMP_THM] >> fs[equiv_on_def,UNION_DEF] >> metis_tac[])
->- (qexists_tac `x'` >> rw[EXTENSION,EQ_IMP_THM] >> metis_tac[equiv_on_def,UNION_DEF])
->- (qexists_tac `x'` >> rw[EXTENSION,EQ_IMP_THM] >> fs[equiv_on_def,UNION_DEF] >> metis_tac[]));
+
 
 val NOT_equiv0_VAR_DIAM = store_thm(
     "NOT_equiv0_VAR_DIAM",
@@ -740,59 +733,57 @@ rw[EQ_IMP_THM]
 QED
 
 
-
-
 Theorem prop_2_29_prop_letters:
   !s. FINITE s /\ INFINITE univ(:'b) ==>
       !n. FINITE
              (partition (equiv0 (:β))
                         { f| DEG f <= n /\ prop_letters f ⊆ s})
 Proof
-gen_tac >> strip_tac >> Induct_on `n` (* 2 *)
->- (`{f | DEG f ≤ 0 ∧ prop_letters f ⊆ s} =
-    {f | propform f ∧ prop_letters f ⊆ s}`
-     by (rw[EXTENSION] >> metis_tac[DEG_0_propform]) >>
-    metis_tac[FINITE_propform_equiv0]) >>
-rw[ADD1] >>
-`{f | DEG f ≤ n + 1 ∧ prop_letters f ⊆ s} =
- {phi| IBC phi ({VAR v | v ∈ s} ∪
-                {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})}`
-  by
-   (rw[EXTENSION] >> metis_tac[DEG_IBC_prop_letters]) >>
-rw[] >>
-irule FINITE_FINITE_IBC >> rw[] >>
-qmatch_abbrev_tac `FINITE (partition _ (A ∪ B))` >>
-`(partition (equiv0 (:β)) (A ∪ B)) =
- (partition (equiv0 (:β)) A) ∪ (partition (equiv0 (:β)) B)`
-  by
-   (irule equiv_on_disjoint_partition >> rw[] (* 2 *)
-    >- (fs[Abbr`A`,Abbr`B`] >> metis_tac[NOT_equiv0_VAR_DIAM])
-    >- metis_tac[equiv0_equiv_on]) >>
-rw[] (* 2 *)
->- (`FINITE {VAR v | v IN s}`
-      suffices_by metis_tac[FINITE_partition] >>
-    `SURJ VAR s {VAR v | v IN s}`
-      suffices_by metis_tac[FINITE_SURJ] >>
-    rw[SURJ_DEF])
->- (qabbrev_tac
-    `A0 =
-      partition (equiv0 (:β)) {psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}` >>
-   qabbrev_tac
-    `B0 =
-      partition (equiv0 (:β)) {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}` >>
-   `?f. SURJ f A0 B0` suffices_by metis_tac[FINITE_SURJ] >>
-   qexists_tac `\s. {DIAM t | t IN s}` >> rw[SURJ_DEF] (* 2 *)
-   >- (fs[Abbr`B0`] >> rw[Once EXTENSION,partition_def] >>
-       fs[PULL_EXISTS] >> fs[Abbr`A0`,partition_def] >>
-       qexists_tac `DIAM x` >> rw[] (* 2 *)
-       >- fs[Abbr`B`]
-       >- (rw[EQ_IMP_THM] (* 3 *)
-          >- fs[Abbr`B`]
-          >- metis_tac[equiv0_DIAM]
-          >- (fs[Abbr`B`] >> rw[] >> metis_tac[equiv0_DIAM])))
-   >- (fs[Abbr`A0`,Abbr`B0`,partition_def,PULL_EXISTS] >> qexists_tac `psi` >>
-      rw[EXTENSION,EQ_IMP_THM] (* 2 same *)
-      >> metis_tac[equiv0_DIAM]))
+  gen_tac >> strip_tac >> Induct_on ‘n’ (* 2 *)
+  >- (‘{f | DEG f ≤ 0 ∧ prop_letters f ⊆ s} =
+      {f | propform f ∧ prop_letters f ⊆ s}’
+        by (rw[EXTENSION] >> metis_tac[DEG_0_propform]) >>
+      metis_tac[FINITE_propform_equiv0]) >>
+  rw[ADD1] >>
+  ‘{f | DEG f ≤ n + 1 ∧ prop_letters f ⊆ s} =
+   {phi| IBC phi ({VAR v | v ∈ s} ∪
+                  {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})}’
+    by (rw[EXTENSION] >> metis_tac[DEG_IBC_prop_letters]) >>
+  rw[] >>
+  irule FINITE_FINITE_IBC >> rw[] >>
+  qmatch_abbrev_tac ‘FINITE (partition _ (A ∪ B))’ >>
+  ‘(partition (equiv0 (:β)) (A ∪ B)) =
+   (partition (equiv0 (:β)) A) ∪ (partition (equiv0 (:β)) B)’
+    by
+    (irule equiv_on_disjoint_partition >> rw[] (* 2 *)
+     >- (fs[Abbr‘A’,Abbr‘B’] >> metis_tac[NOT_equiv0_VAR_DIAM])
+     >- metis_tac[equiv0_equiv_on]) >>
+  rw[] (* 2 *)
+  >- (‘FINITE {VAR v | v IN s}’
+        suffices_by metis_tac[FINITE_partition] >>
+      ‘SURJ VAR s {VAR v | v IN s}’
+        suffices_by metis_tac[FINITE_SURJ] >>
+      rw[SURJ_DEF])
+  >- (qabbrev_tac
+      ‘A0 =
+      partition (equiv0 (:β)) {psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}’ >>
+      qabbrev_tac
+      ‘B0 =
+      partition (equiv0 (:β)) {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s}’ >>
+      ‘?f. SURJ f A0 B0’ suffices_by metis_tac[FINITE_SURJ] >>
+      qexists_tac ‘\s. {DIAM t | t IN s}’ >> rw[SURJ_DEF] (* 2 *)
+      >- (fs[Abbr‘B0’] >> rw[Once EXTENSION,partition_def] >>
+          fs[PULL_EXISTS] >> fs[Abbr‘A0’,partition_def] >>
+          rename [‘DEG x ≤ n’, ‘prop_letters x ⊆ s’] >>
+          qexists_tac ‘DIAM x’ >> rw[] (* 2 *)
+          >- fs[Abbr‘B’]
+          >- (rw[EQ_IMP_THM] (* 3 *)
+              >- fs[Abbr‘B’]
+              >- metis_tac[equiv0_DIAM]
+              >- (fs[Abbr‘B’] >> rw[] >> metis_tac[equiv0_DIAM])))
+      >- (fs[Abbr‘A0’,Abbr‘B0’,partition_def,PULL_EXISTS] >>
+          qexists_tac ‘psi’ >> rw[EXTENSION,EQ_IMP_THM] (* 2 same *) >>
+          metis_tac[equiv0_DIAM]))
 QED
 (*
 (*move to chap2_3 later*)

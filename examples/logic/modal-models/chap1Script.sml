@@ -470,24 +470,21 @@ val KGproof_APPEND = store_thm(
 
 
 
-val exercise_1_6_6_d2 = store_thm(
-    "exercise_1_6_6_d2",
-    ``!f. f ∈ NMLG Γ ⇒ f ∈ { phi | KG_provable Γ phi }``,
-    ho_match_mp_tac NMLG_ind >> simp[] >> rpt strip_tac >> simp[KG_provable_def] >- metis_tac[KGproof_rules]
- >- metis_tac[KGproof_rules]
- >- metis_tac[KGproof_rules]
- >- metis_tac[KGproof_rules]
- >- metis_tac[MEM,MEM_APPEND,KGproof_rules,KG_provable_def]
- >- metis_tac[MEM,MEM_APPEND,KGproof_rules,KG_provable_def]
- >- (fs[KG_provable_def] >> qexists_tac `p ++ [A -> B] ++ p' ++ [A]`
-    >> rpt strip_tac >- metis_tac[APPEND_ASSOC,KGproof_APPEND]
-                     >- (`KGproof Γ (p ⧺ [A -> B] ⧺ p' ⧺ [A])` by
-                     metis_tac[APPEND_ASSOC,KGproof_APPEND]
-                        >> metis_tac[MEM,MEM_APPEND,KGproof_rules]))
- >- (rw[SUBSET_DEF] >> qexists_tac `[]` >> metis_tac[KGproof_rules])
-);
-
-
+Theorem exercise_1_6_6_d2:
+  !f. f ∈ NMLG Γ ⇒ f ∈ { phi | KG_provable Γ phi }
+Proof
+  ho_match_mp_tac NMLG_ind >> simp[] >> rpt strip_tac >>
+  simp[KG_provable_def] >~
+  [‘KG_provable Γ (A -> B)’, ‘KG_provable Γ A’]
+  >- (fs[KG_provable_def] >>
+      rename [‘KGproof Γ (p1 ++ [A -> B])’, ‘KGproof Γ (p2 ++ [A])’] >>
+      qexists_tac `p1 ++ [A -> B] ++ p2 ++ [A]` >>
+      conj_asm1_tac >- metis_tac[APPEND_ASSOC,KGproof_APPEND]
+      >- metis_tac[MEM,MEM_APPEND,KGproof_rules]) >~
+  [‘Γ ⊆ _’]
+  >- (rw[SUBSET_DEF] >> qexists_tac `[]` >> metis_tac[KGproof_rules]) >>
+  metis_tac[MEM,MEM_APPEND,KGproof_rules,KG_provable_def]
+QED
 
 val NML_NMLG = store_thm(
     "NML_NMLG",
