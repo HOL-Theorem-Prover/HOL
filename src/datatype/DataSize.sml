@@ -40,49 +40,28 @@ fun mk_tyvar_size vty (V,away) =
   end
 end;
 
-fun tysize_env db =
-     Option.map fst o
-     Option.composePartial (TypeBasePure.size_of, TypeBasePure.prim_get db)
-
-(*---------------------------------------------------------------------------*
- * Term size, as a function of types. The function gamma maps type           *
- * operator "ty" to term "ty_size". Types not registered in gamma are        *
- * translated into the constant function that returns 0. The function theta  *
- * maps a type variable (say 'a) to a term variable "f" of type 'a -> num.   *
- *                                                                           *
- * When actually building a measure function, the behaviour of theta is      *
- * changed to be such that it maps type variables to the constant function   *
- * that returns 0.                                                           *
- *---------------------------------------------------------------------------*)
-
-local fun drop [] ty = fst(dom_rng ty)
-        | drop (_::t) ty = drop t (snd(dom_rng ty));
-      fun OK f ty M =
+(* Setting up the "theta" parameter to TypeBasePure.type_size_pre,
+   which provides pre-set sizes for some types, given the various
+   cases here (type parameters, sizes of the new types, and auxiliary
+   sizes needed for intermediate types). *)
+local
+  fun OK f ty M =
          let val (Rator,Rand) = dest_comb M
          in aconv Rator f andalso is_var Rand andalso (type_of Rand = ty)
          end
-in
-fun tysize (theta,omega,gamma) clause ty =
- case theta ty
-  of SOME fvar => fvar
+  fun theta2 (theta,omega) clause ty = case theta ty
+  of SOME fvar => SOME fvar
    | NONE =>
       case omega ty
-       of SOME (_,[]) => raise ERR "tysize" "bug: no assoc for nested"
-        | SOME (_,[(f,szfn)]) => szfn
-        | SOME (_,alist) => snd
+       of SOME (_,[]) => raise ERR "tysize theta2" "bug: no assoc for nested"
+        | SOME (_,[(f,szfn)]) => SOME szfn
+        | SOME (_,alist) => SOME (snd
              (first (fn (f,sz) => Lib.can (find_term(OK f ty)) (rhs clause))
-                  alist)
-        | NONE =>
-           let val {Tyop,Thy,Args} = dest_thy_type ty
-           in case gamma (Thy,Tyop)
-               of SOME f =>
-                   let val vty = drop Args (type_of f)
-                       val sigma = Type.match_type vty ty
-                    in list_mk_comb(inst sigma f,
-                                map (tysize (theta,omega,gamma) clause) Args)
-                    end
-                | NONE => Kzero ty
-           end
+                  alist))
+        | NONE => NONE
+in
+fun tysize (theta,omega) db clause ty = TypeBasePure.type_size_pre
+    (theta2 (theta,omega) clause) db ty
 end;
 
 fun dupls [] (C,D) = (rev C, rev D)
@@ -111,23 +90,18 @@ fun define_size_rec ax db =
      val fparams = rev(fst(rev_itlist mk_tyvar_size tyvars
                              ([],free_varsl capplist)))
      val fparams_tyl = map type_of fparams
+     val tyvar_map = zip tyvars fparams
+     val tyvar_map2 = map (fn (ty, sz) => (ty --> num, sz)) tyvar_map
+     fun app_tyvar_szs tm = case assoc1 (fst (dom_rng (type_of tm))) tyvar_map2 of
+         NONE => tm
+       | SOME (_, sz) => app_tyvar_szs (mk_comb (tm, sz))
      fun proto_const n ty =
          mk_var(n, itlist (curry op-->) fparams_tyl (ty --> num))
-     fun tyop_binding ty =
+     fun mk_ty_size ty =
        let val {Tyop=root_tyop,Thy=root_thy,...} = dest_thy_type ty
-       in ((root_thy,root_tyop), (ty, proto_const(root_tyop^"_size") ty))
-       end
-     val tyvar_map = zip tyvars fparams
-     val tyop_map = map tyop_binding dtys
-     fun theta tyv =
-          case assoc1 tyv tyvar_map
-           of SOME(_,f) => SOME f
-            | NONE => NONE
-     val type_size_env = tysize_env db
-     fun gamma str =
-          case assoc1 str tyop_map
-           of NONE  => type_size_env str
-            | SOME(_,(_, v)) => SOME v
+       in (ty, app_tyvar_szs (proto_const(root_tyop^"_size") ty)) end
+     val ty_sz_map = tyvar_map @ map mk_ty_size dtys
+     fun theta tyv = Option.map snd (assoc1 tyv ty_sz_map)
      (* now the ugly nested map *)
      val head_of_clause = head o lhs o snd o strip_forall
      fun is_dty M = mem(#1(dom_rng(type_of(head_of_clause M)))) dtys
@@ -148,7 +122,7 @@ fun define_size_rec ax db =
      val nested_map0 = map nested_binding (enumerate 1 non_dty_fns)
      val nested_map1 = crunch nested_map0
      fun omega ty = assoc1 ty nested_map1
-     val sizer = tysize(theta,omega,gamma)
+     val sizer = tysize (theta,omega) db
      fun mk_app cl v = mk_comb(sizer cl (type_of v), v)
      val fn_i_map = dty_map @ nested_map0
      fun clause cl =
