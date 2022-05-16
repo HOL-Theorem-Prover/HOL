@@ -20,13 +20,15 @@ val _ = new_theory "permutation";
 (* ========================================================================= *)
 
 (* |- CARD {} = 0 /\
-      !x s. FINITE s ==> CARD (x INSERT s) = if x IN s then CARD s else SUC (CARD s)
+      !x s. FINITE s ==>
+            CARD (x INSERT s) = if x IN s then CARD s else SUC (CARD s)
  *)
 val CARD_CLAUSES = CONJ CARD_EMPTY (PROVE [CARD_INSERT]
   ``!x s. FINITE s ==>
            (CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s)))``);
 
-(* |- (!f. IMAGE f {} = {}) /\ !f x s. IMAGE f (x INSERT s) = f x INSERT IMAGE f s *)
+(* |- (!f. IMAGE f {} = {}) /\
+      !f x s. IMAGE f (x INSERT s) = f x INSERT IMAGE f s *)
 val IMAGE_CLAUSES = CONJ IMAGE_EMPTY IMAGE_INSERT;
 
 (* |- FINITE {} /\ !x s. FINITE (x INSERT s) <=> FINITE s *)
@@ -368,11 +370,13 @@ Proof
 QED
 
 Theorem HAS_SIZE_PERMUTATIONS :
-    !s:'a ->bool n: num. (s HAS_SIZE n) ==> ({p | p permutes s} HAS_SIZE (FACT n))
+  !s:'a ->bool n: num.
+    (s HAS_SIZE n) ==> ({p | p permutes s} HAS_SIZE (FACT n))
 Proof
     SIMP_TAC std_ss [HAS_SIZE, GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM]
  >> SET_INDUCT_TAC (* 2 sub-goals here *)
- >> SIMP_TAC std_ss [PERMUTES_EMPTY, CARD_CLAUSES, GSPEC_EQ, FINITE_SING, CARD_SING, FACT]
+ >> SIMP_TAC std_ss [PERMUTES_EMPTY, CARD_CLAUSES, GSPEC_EQ, FINITE_SING,
+                     CARD_SING, FACT]
  >> REWRITE_TAC [GSYM HAS_SIZE, PERMUTES_INSERT]
  >> MATCH_MP_TAC HAS_SIZE_IMAGE_INJ
  >> CONJ_TAC (* still 2 sub-goals here *)
@@ -387,7 +391,7 @@ Proof
         FIRST_X_ASSUM (MP_TAC o C Q.AP_THM `e: 'a`) \\
         REWRITE_TAC [o_THM, swap_def] \\
         Q.SUBGOAL_THEN `((q: 'a -> 'a) e = e) /\ ((r: 'a -> 'a) e = e)`
-		(fn th => SIMP_TAC std_ss[th]) \\
+                (fn th => SIMP_TAC std_ss[th]) \\
         PROVE_TAC [permutes],
         (* goal 1.2 (of 2) *)
         FIRST_X_ASSUM (MP_TAC o Q.AP_TERM `(\q:'a -> 'a. swap(e:'a,b) o q)`) \\
@@ -405,7 +409,7 @@ Proof
             Q.EXISTS_TAC `(FST x, SND x)` >> FULL_SIMP_TAC std_ss [] ] ) \\
       DISCH_TAC >> ASM_REWRITE_TAC [] \\
       ASM_SIMP_TAC std_ss [HAS_SIZE, FINITE_INSERT, CARD_CLAUSES, FINITE_CROSS,
-			   CARD_CROSS,FACT] ]
+                           CARD_CROSS,FACT] ]
 QED
 
 Theorem FINITE_PERMUTATIONS :
@@ -442,17 +446,21 @@ Theorem SURJECTIVE_IFF_INJECTIVE_GEN :
 Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL
    [Q.ASM_CASES_TAC `x:'a = y` THEN ASM_REWRITE_TAC[] THEN
-    Q.SUBGOAL_THEN `CARD t <= CARD (IMAGE (f:'a -> 'b) (s DELETE y))` MP_TAC THENL
-     [MATCH_MP_TAC (SIMP_RULE std_ss[GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO] CARD_SUBSET) THEN
-      ASM_SIMP_TAC std_ss[IMAGE_FINITE, FINITE_DELETE] THEN
-      REWRITE_TAC[SUBSET_DEF, IN_IMAGE, IN_DELETE] THEN PROVE_TAC[],
-      REWRITE_TAC[GSYM NOT_LESS] THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
-      Q.EXISTS_TAC `CARD(s DELETE (y:'a))` THEN
-      ASM_SIMP_TAC std_ss[FINITE_IMAGE_CARD, FINITE_DELETE, CARD_DELETE] THEN
-      PROVE_TAC[NOT_ZERO_LT_ZERO,CARD_EQ_0, MEMBER_NOT_EMPTY]],
-    Q.SUBGOAL_THEN `IMAGE (f:'a -> 'b) s = t` MP_TAC THENL
-     [PROVE_TAC [IMAGE_FINITE, CARD_IMAGE_INJ, SUBSET_EQ_CARD],
-      PROVE_TAC[EXTENSION, IN_IMAGE]]]
+    Q.SUBGOAL_THEN `CARD t <= CARD (IMAGE (f:'a -> 'b) (s DELETE y))` MP_TAC
+    THENL [
+       MATCH_MP_TAC (SIMP_RULE std_ss[GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO]
+                     CARD_SUBSET) THEN
+       ASM_SIMP_TAC std_ss[IMAGE_FINITE, FINITE_DELETE] THEN
+       REWRITE_TAC[SUBSET_DEF, IN_IMAGE, IN_DELETE] THEN PROVE_TAC[],
+       REWRITE_TAC[GSYM NOT_LESS] THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+       Q.EXISTS_TAC `CARD(s DELETE (y:'a))` THEN
+       ASM_SIMP_TAC std_ss[FINITE_IMAGE_CARD, FINITE_DELETE, CARD_DELETE] THEN
+       PROVE_TAC[NOT_ZERO_LT_ZERO,CARD_EQ_0, MEMBER_NOT_EMPTY]
+     ],
+    Q.SUBGOAL_THEN `IMAGE (f:'a -> 'b) s = t` MP_TAC THENL [
+        PROVE_TAC [IMAGE_FINITE, CARD_IMAGE_INJ, SUBSET_EQ_CARD],
+        PROVE_TAC[EXTENSION, IN_IMAGE]]
+   ]
 QED
 
 Theorem SURJECTIVE_IFF_INJECTIVE :
@@ -509,8 +517,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem ITERATE_PERMUTE :
-   !op. monoidal op ==>
-       !(f:'a -> 'b) p s. p permutes s ==> (iterate op s f = iterate op s (f o p))
+  !op. monoidal op ==>
+       !(f:'a -> 'b) p s. p permutes s ==>
+                          (iterate op s f = iterate op s (f o p))
 Proof
   REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP ITERATE_BIJECTION) THEN
@@ -574,9 +583,9 @@ Proof
 QED
 
 Theorem PRODUCT_PERMUTE_NUMSEG :
-   !f p m n.
-     p permutes (count n DIFF count m) ==>
-       (product (count n DIFF count m) f = product (count n DIFF count m) (f o p))
+  !f p m n.
+    p permutes (count n DIFF count m) ==>
+    (product (count n DIFF count m) f = product (count n DIFF count m) (f o p))
 Proof
   PROVE_TAC[PRODUCT_PERMUTE, FINITE_COUNT, FINITE_DIFF]
 QED
@@ -586,8 +595,8 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem SWAP_COMMON :
-   !a b c: 'a. ~(a = c) /\ ~(b = c)
-             ==> (swap(a,b) o swap(a,c) = swap(b,c) o swap(a,b))
+  !a b c: 'a. ~(a = c) /\ ~(b = c) ==>
+              (swap(a,b) o swap(a,c) = swap(b,c) o swap(a,b))
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM, swap_def, o_THM] THEN
   DISCH_TAC THEN GEN_TAC THEN
@@ -646,7 +655,7 @@ QED
 Theorem SWAPSEQ_SWAP :
    !a b. swapseq (if a = b then 0 else 1) (swap(a,b))
 Proof
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[num_CONV ``1:num``] THEN
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[ONE] THEN
   PROVE_TAC[swapseq_rules, I_o_ID, SWAPSEQ_I, SWAP_REFL]
 QED
 
@@ -689,7 +698,8 @@ Proof
   ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
   Q.EXISTS_TAC `(q:'a->'a) o swap(a,b)` THEN
   ASM_REWRITE_TAC[GSYM o_ASSOC] THEN
-  GEN_REWRITE_TAC (BINOP_CONV o LAND_CONV o RAND_CONV) empty_rewrites [o_ASSOC] THEN
+  GEN_REWRITE_TAC (BINOP_CONV o LAND_CONV o RAND_CONV)
+                  empty_rewrites [o_ASSOC] THEN
   ASM_REWRITE_TAC[SWAP_IDEMPOTENT, I_o_ID]
 QED
 
@@ -710,12 +720,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem SYMMETRY_LEMMA[local] :
-   (!a b c d:'a. P a b c d ==> P a b d c) /\
-   (!a b c d. ~(a = b) /\ ~(c = d) /\
-             ((a = c) /\ (b = d) \/ (a = c) /\ ~(b = d) \/ ~(a = c) /\ (b = d) \/
-               ~(a = c) /\ ~(a = d) /\ ~(b = c) /\ ~(b = d))
-              ==> P a b c d)
-   ==> (!a b c d. ~(a = b) /\ ~(c = d) ==> P a b c d)
+  (!a b c d:'a. P a b c d ==> P a b d c) /\
+  (!a b c d.
+     ~(a = b) /\ ~(c = d) /\
+     ((a = c) /\ (b = d) \/ (a = c) /\ ~(b = d) \/ ~(a = c) /\ (b = d) \/
+      ~(a = c) /\ ~(a = d) /\ ~(b = c) /\ ~(b = d))
+     ==> P a b c d)
+  ==> (!a b c d. ~(a = b) /\ ~(c = d) ==> P a b c d)
 Proof
   REPEAT STRIP_TAC THEN MAP_EVERY Q.ASM_CASES_TAC
    [`a:'a = c`, `a:'a = d`, `b:'a = c`, `b:'a = d`] THEN
@@ -784,7 +795,8 @@ QED
 Theorem SWAPSEQ_IDENTITY_EVEN :
    !n. swapseq n (I:'a->'a) ==> EVEN n
 Proof
-  HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN Q.X_GEN_TAC `n:num` THEN DISCH_TAC THEN
+  HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN Q.X_GEN_TAC `n:num` THEN
+  DISCH_TAC THEN
   GEN_REWRITE_TAC LAND_CONV empty_rewrites [swapseq_cases] THEN
   DISCH_THEN(DISJ_CASES_THEN2 (SUBST_ALL_TAC o CONJUNCT1) MP_TAC) THEN
   REWRITE_TAC[EVEN] THEN SIMP_TAC bool_ss[GSYM LEFT_FORALL_IMP_THM] THEN
@@ -792,7 +804,8 @@ Proof
   DISCH_THEN(STRIP_ASSUME_TAC o GSYM) THEN
   MP_TAC(Q.SPECL [`m:num`, `p:'a->'a`, `a:'a`, `b:'a`]
     FIXING_SWAPSEQ_DECREASE) THEN
-  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV o RAND_CONV o LAND_CONV o ONCE_DEPTH_CONV)
+  GEN_REWRITE_TAC
+    (LAND_CONV o LAND_CONV o RAND_CONV o LAND_CONV o ONCE_DEPTH_CONV)
     empty_rewrites [EQ_SYM_EQ] THEN ASM_REWRITE_TAC[I_THM] THEN STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC o SPEC ``(m - 1):num``) THEN
   Q.UNDISCH_THEN `SUC m = n` (SUBST_ALL_TAC o SYM) THEN
@@ -920,7 +933,8 @@ Proof
     Q.ASM_CASES_TAC `(p:'a->'a) a = a` THEN ASM_REWRITE_TAC[] THENL
      [PROVE_TAC[], ALL_TAC] THEN
     REWRITE_TAC[Q.prove(
-     `((if p then x else y) = a) <=> if p then x = a else y = a`,PROVE_TAC[])] THEN
+     ‘((if p then x else y) = a) <=> if p then x = a else y = a’,
+     PROVE_TAC[])] THEN
     REWRITE_TAC[TAUT `(if p then x else y) <=> p /\ x \/ ~p /\ y`] THEN
     PROVE_TAC[],
     REWRITE_TAC[swap_def, o_THM] THEN
@@ -1088,7 +1102,8 @@ Theorem PERMUTES_NUMSET_LE :
    !p s:num->bool. p permutes s /\ (!i. i IN s ==> p(i) <= i) ==> (p = I)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM, I_THM] THEN STRIP_TAC THEN
-  HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN Q.X_GEN_TAC `n:num` THEN DISCH_TAC THEN
+  HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN Q.X_GEN_TAC `n:num` THEN
+  DISCH_TAC THEN
   Q.ASM_CASES_TAC `(n:num) IN s` THENL [ALL_TAC, PROVE_TAC[permutes]] THEN
   ASM_SIMP_TAC bool_ss[EQ_LESS_EQ] THEN REWRITE_TAC[GSYM NOT_LESS] THEN
   PROVE_TAC[PERMUTES_INJECTIVE, LESS_EQ_REFL,NOT_LESS]
@@ -1159,7 +1174,8 @@ Proof
    [Once (Q.prove(`{f x | p x} = IMAGE f {x | p x}`,
      REWRITE_TAC[EXTENSION, IN_IMAGE] THEN
      CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN REWRITE_TAC[]))] THEN
-  GEN_REWRITE_TAC (RAND_CONV o RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM o_DEF] THEN
+  GEN_REWRITE_TAC (RAND_CONV o RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites
+                  [GSYM o_DEF] THEN
   MATCH_MP_TAC SUM_IMAGE THEN
   CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
   PROVE_TAC[PERMUTES_INVERSE_INVERSE]
@@ -1212,7 +1228,7 @@ Proof
   MATCH_MP_TAC SUM_IMAGE THEN
   CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
   REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o AP_TERM ``\p:num-> num. inverse(q:num-> num) o p``) THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM “\p:num-> num. inverse(q:num-> num) o p”) THEN
   BETA_TAC THEN REWRITE_TAC[o_ASSOC] THEN
   EVERY_ASSUM(CONJUNCTS_THEN SUBST1_TAC o MATCH_MP PERMUTES_INVERSES_o) THEN
   REWRITE_TAC[I_o_ID]
@@ -1267,7 +1283,7 @@ Proof
   MATCH_MP_TAC SUM_IMAGE THEN
   CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
   REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o AP_TERM ``\p:num-> num. p o inverse(q:num-> num)``) THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM “\p:num-> num. p o inverse(q:num-> num)”) THEN
   BETA_TAC THEN REWRITE_TAC[GSYM o_ASSOC] THEN
   EVERY_ASSUM(CONJUNCTS_THEN SUBST1_TAC o MATCH_MP PERMUTES_INVERSES_o) THEN
   REWRITE_TAC[I_o_ID]
