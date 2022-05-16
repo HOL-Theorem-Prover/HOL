@@ -72,8 +72,6 @@ val LEFT_IMP_EXISTS_THM = prove (
 val NOT_LE = arithmeticTheory.NOT_LESS_EQUAL;
 val SUC_INJ = prim_recTheory.INV_SUC_EQ
 
-val LT_SUC_LE = prove (Term`!m n. m < SUC n = m <= n`, ARITH_TAC);
-
 val LE_EXISTS = arithmeticTheory.LESS_EQ_EXISTS;
 
 val LE_SUC_LT = prove (

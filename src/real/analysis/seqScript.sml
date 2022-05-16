@@ -169,12 +169,10 @@ val mono = new_definition("mono",
                \/
                (!m n. m <= n ==> f(m) >= f(n))”);
 
-val MONO_SUC = store_thm("MONO_SUC",
- “!f:num->real.
-         mono f
-           =
-         (!n. f(SUC n) >= f n) \/ (!n. f(SUC n) <= f(n))”,
-GEN_TAC THEN REWRITE_TAC[mono, real_ge] THEN
+Theorem MONO_SUC :
+  !f:num->real. mono f <=> (!n. f(SUC n) >= f n) \/ (!n. f(SUC n) <= f(n))
+Proof
+ GEN_TAC THEN REWRITE_TAC[mono, real_ge] THEN
  MATCH_MP_TAC(TAUT_CONV “(a = c) /\ (b = d) ==> (a \/ b = c \/ d)”)
   THEN CONJ_TAC THEN (EQ_TAC THENL
     [DISCH_THEN(MP_TAC o GEN “n:num” o
@@ -186,7 +184,8 @@ GEN_TAC THEN REWRITE_TAC[mono, real_ge] THEN
      SPEC_TAC(“p:num”,“p:num”) THEN INDUCT_TAC THEN
      ASM_REWRITE_TAC[ADD_CLAUSES, REAL_LE_REFL] THEN
      MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “f(m + p:num):real” THEN
-     ASM_REWRITE_TAC[]]));
+     ASM_REWRITE_TAC[]])
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Simpler characterization of bounded sequence                              *)

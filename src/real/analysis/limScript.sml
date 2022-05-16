@@ -6,7 +6,7 @@ open HolKernel Parse bossLib boolLib;
 
 open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory jrhUtils
      prim_recTheory realTheory realLib metricTheory netsTheory combinTheory;
-open pred_setTheory;
+open pred_setTheory mesonLib;
 
 open topologyTheory real_topologyTheory derivativeTheory seqTheory;
 
@@ -408,6 +408,10 @@ val CONT_DIV = store_thm("CONT_DIV",
              $contl (\x. f(x) / g(x)) x”,
   REPEAT GEN_TAC THEN REWRITE_TAC[CONTL_LIM] THEN BETA_TAC THEN
   MATCH_ACCEPT_TAC LIM_DIV);
+
+(* ------------------------------------------------------------------------- *)
+(* Composition of continuous functions is continuous.                        *)
+(* ------------------------------------------------------------------------- *)
 
 val CONT_COMPOSE = store_thm("CONT_COMPOSE",
   “!f g x. f contl x /\ g contl (f x) ==> (\x. g(f x)) contl x”,
@@ -1172,29 +1176,44 @@ val DIFF_LCONST = store_thm("DIFF_LCONST",
 (* Lemma about introducing open ball in open interval                        *)
 (*---------------------------------------------------------------------------*)
 
-val INTERVAL_LEMMA = store_thm("INTERVAL_LEMMA",
-  “!a b x. a < x /\ x < b ==>
-        ?d. &0 < d /\ !y. abs(x - y) < d ==> a <= y /\ y <= b”,
-  REPEAT GEN_TAC THEN DISCH_THEN (fn th =>
-    STRIP_ASSUME_TAC th THEN
-    MP_TAC (ONCE_REWRITE_RULE[GSYM REAL_SUB_LT] th)) THEN
-  DISCH_THEN(X_CHOOSE_THEN “d:real” MP_TAC o MATCH_MP REAL_DOWN2) THEN
-  REWRITE_TAC[REAL_LT_SUB_LADD] THEN DISCH_THEN STRIP_ASSUME_TAC THEN
-  EXISTS_TAC “d:real” THEN ASM_REWRITE_TAC[] THEN X_GEN_TAC “y:real” THEN
-  REWRITE_TAC[abs, REAL_SUB_LE] THEN COND_CASES_TAC THEN
-  REWRITE_TAC[REAL_NEG_SUB, REAL_LT_SUB_RADD] THEN DISCH_TAC THEN CONJ_TAC
-  THENL
-   [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “x - d” THEN
-    CONJ_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THENL
-     [REWRITE_TAC[REAL_LT_SUB_LADD], REWRITE_TAC[REAL_LT_SUB_RADD]] THEN
-    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN ASM_REWRITE_TAC[],
-    MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “x:real” THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[],
-    MATCH_MP_TAC REAL_LT_IMP_LE THEN MATCH_MP_TAC REAL_LT_TRANS THEN
-    EXISTS_TAC “x:real” THEN ASM_REWRITE_TAC[] THEN
-    ASM_REWRITE_TAC[GSYM REAL_NOT_LE],
-    MATCH_MP_TAC REAL_LT_IMP_LE THEN MATCH_MP_TAC REAL_LT_TRANS THEN
-    EXISTS_TAC “d + x” THEN ASM_REWRITE_TAC[]]);
+Theorem INTERVAL_LEMMA_LT :
+   !a b x. a < x /\ x < b ==>
+        ?d. &0 < d /\ !y. abs(x - y) < d ==> a < y /\ y < b
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM ABS_BETWEEN] THEN
+  DISJ_CASES_TAC(Q.SPECL [`x - a`, `b - x`] REAL_LE_TOTAL) THENL
+  [ Q.EXISTS_TAC `x - a`, Q.EXISTS_TAC `b - x` ] THEN
+  ASM_REWRITE_TAC[REAL_SUB_LT] THEN GEN_TAC THEN
+  REWRITE_TAC[REAL_LT_SUB_LADD, REAL_LT_SUB_RADD] THEN
+  REWRITE_TAC[real_sub, REAL_ADD_ASSOC] THEN
+  REWRITE_TAC[GSYM real_sub, REAL_LT_SUB_LADD, REAL_LT_SUB_RADD] THEN
+  FREEZE_THEN(fn th => ONCE_REWRITE_TAC[th]) (Q.SPEC `x` REAL_ADD_SYM) THEN
+  REWRITE_TAC[REAL_LT_RADD] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+  (MATCH_MP_TAC o GEN_ALL o fst o EQ_IMP_RULE o SPEC_ALL) REAL_LT_RADD THENL
+  [ (* goal 1 (of 2) *)
+    Q.EXISTS_TAC `a:real` THEN MATCH_MP_TAC REAL_LTE_TRANS THEN
+    Q.EXISTS_TAC `x + x` THEN ASM_REWRITE_TAC[] THEN
+    Q.UNDISCH_TAC `(x - a) <= (b - x)`,
+    (* goal 2 (of 2) *)
+    Q.EXISTS_TAC `b:real` THEN MATCH_MP_TAC REAL_LET_TRANS THEN
+    Q.EXISTS_TAC `x + x` THEN ASM_REWRITE_TAC[] THEN
+    Q.UNDISCH_TAC `(b - x) <= (x - a)`] THEN
+  REWRITE_TAC[REAL_LE_SUB_LADD, GSYM REAL_LE_SUB_RADD] THEN
+  MATCH_MP_TAC(TAUT_CONV ``(a = b) ==> a ==> b``) THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN REWRITE_TAC[real_sub] THEN
+  REAL_ARITH_TAC
+QED
+
+Theorem INTERVAL_LEMMA :
+   !a b x. a < x /\ x < b ==>
+        ?d. &0 < d /\ !y. abs(x - y) < d ==> a <= y /\ y <= b
+Proof
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(Q.X_CHOOSE_TAC `d` o MATCH_MP INTERVAL_LEMMA_LT) THEN
+  Q.EXISTS_TAC `d` THEN ASM_REWRITE_TAC[] THEN GEN_TAC THEN
+  DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th o CONJUNCT2)) THEN
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now Rolle's theorem                                                       *)
@@ -1547,8 +1566,7 @@ val CONT_INJ_LEMMA2 = store_thm("CONT_INJ_LEMMA2",
   FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
 (*---------------------------------------------------------------------------*)
-(* Show there's an interval surrounding f(x) in                              *)
-(*  f[[x - d, x + d]]                                          *)
+(* Show there's an interval surrounding f(x) in f[[x - d, x + d]]            *)
 (*---------------------------------------------------------------------------*)
 
 val CONT_INJ_RANGE = store_thm("CONT_INJ_RANGE",
@@ -1824,5 +1842,102 @@ val DIFF_INVERSE_OPEN = store_thm("DIFF_INVERSE_OPEN",
   DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th)) THEN
   DISCH_THEN(fn th => FIRST_ASSUM(fn t => REWRITE_TAC[MATCH_MP t th])));
 
+(* ------------------------------------------------------------------------- *)
+(* Every derivative is Darboux continuous.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem IVT_DERIVATIVE_0 :
+    !f f' a b.
+        a <= b /\
+        (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
+        f'(a) > &0 /\ f'(b) < &0
+        ==> ?z. a < z /\ z < b /\ (f'(z) = &0)
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[real_gt] THEN
+  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) empty_rewrites [REAL_LE_LT] THEN
+  STRIP_TAC THENL [ALL_TAC, ASM_MESON_TAC[REAL_LT_ANTISYM]] THEN
+  Q.SUBGOAL_THEN `?w. (!x. a <= x /\ x <= b ==> f x <= w) /\
+                      (?x. a <= x /\ x <= b /\ (f x = w))`
+  MP_TAC THENL
+  [ MATCH_MP_TAC CONT_ATTAINS THEN
+    ASM_MESON_TAC[REAL_LT_IMP_LE, DIFF_CONT], ALL_TAC] THEN
+  DISCH_THEN(CHOOSE_THEN (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
+  DISCH_THEN(Q.X_CHOOSE_THEN `z:real` STRIP_ASSUME_TAC) THEN
+
+  Q.EXISTS_TAC `z:real` >> Cases_on `z:real = a` >-
+  ( Q.UNDISCH_THEN `z:real = a` SUBST_ALL_TAC THEN
+    MP_TAC(Q.SPECL[`f:real->real`, `a:real`, `(f':real->real) a`] DIFF_LINC) THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_REFL, REAL_LT_IMP_LE] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `d:real` STRIP_ASSUME_TAC) THEN
+    MP_TAC(Q.SPECL [`d:real`, `b - a`] REAL_DOWN2) THEN
+    ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_ADD_LID] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
+    Q.UNDISCH_TAC `!h. &0 < h /\ h < d ==> w < f (a + h)` THEN
+    DISCH_THEN(MP_TAC o Q.SPEC `e:real`) THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
+    REWRITE_TAC[REAL_NOT_LT] THEN FIRST_ASSUM MATCH_MP_TAC THEN
+    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_ADDL, REAL_LT_IMP_LE] ) \\
+
+  Cases_on `z:real = b` >-
+  ( Q.UNDISCH_THEN `z:real = b` SUBST_ALL_TAC THEN
+    MP_TAC(Q.SPECL[`f:real->real`, `b:real`, `(f':real->real) b`] DIFF_LDEC) THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_REFL, REAL_LT_IMP_LE] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `d:real` STRIP_ASSUME_TAC) THEN
+    MP_TAC(Q.SPECL [`d:real`, `b - a`] REAL_DOWN2) THEN
+    ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_ADD_LID] THEN
+    DISCH_THEN(Q.X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
+    Q.UNDISCH_TAC `!h. &0 < h /\ h < d ==> w < f (b - h)` THEN
+    DISCH_THEN(MP_TAC o Q.SPEC `e:real`) THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
+    REWRITE_TAC[REAL_NOT_LT] THEN FIRST_ASSUM MATCH_MP_TAC THEN
+    REWRITE_TAC[REAL_LE_SUB_LADD, REAL_LE_SUB_RADD] THEN
+    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
+    ASM_SIMP_TAC std_ss [REAL_LE_ADDL, REAL_LT_IMP_LE] ) \\
+  Q.SUBGOAL_THEN `a < z /\ z < b` STRIP_ASSUME_TAC THENL
+  [ ASM_SIMP_TAC std_ss [REAL_LT_LE], ALL_TAC ] THEN
+  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC DIFF_LMAX THEN
+  MP_TAC(Q.SPECL [`z - a`, `b - z`] REAL_DOWN2) THEN
+  ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_ADD_LID] THEN
+  DISCH_THEN(Q.X_CHOOSE_THEN `e:real` STRIP_ASSUME_TAC) THEN
+  qexistsl_tac [`f:real->real`, `z:real`] THEN
+  ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN
+  Q.EXISTS_TAC `e:real` THEN ASM_REWRITE_TAC[] THEN GEN_TAC THEN
+  DISCH_THEN(fn th => FIRST_ASSUM MATCH_MP_TAC THEN MP_TAC th) THEN
+  MAP_EVERY Q.UNDISCH_TAC [`e + z < b`, `e + a < z`] THEN
+  REAL_ARITH_TAC
+QED
+
+Theorem IVT_DERIVATIVE_POS :
+   !f f' a b y.
+        a <= b /\
+        (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
+        f'(a) > y /\ f'(b) < y
+        ==> ?z. a < z /\ z < b /\ (f'(z) = y)
+Proof
+  REWRITE_TAC[real_gt] THEN REPEAT STRIP_TAC THEN
+  MP_TAC(Q.SPECL [`\x. f(x) - y * x`, `\x:real. f'(x) - y`,
+                  `a:real`, `b:real`] IVT_DERIVATIVE_0) THEN
+  ASM_SIMP_TAC std_ss [real_gt] THEN
+  ASM_REWRITE_TAC[REAL_LT_SUB_LADD, REAL_LT_SUB_RADD] THEN
+  ASM_REWRITE_TAC[REAL_EQ_SUB_RADD, REAL_ADD_LID] THEN
+  GEN_REWRITE_TAC (funpow 2 LAND_CONV o BINDER_CONV o RAND_CONV o
+                   LAND_CONV o RAND_CONV) empty_rewrites [GSYM REAL_MUL_RID] THEN
+  ASM_SIMP_TAC std_ss [DIFF_SUB, DIFF_X, DIFF_CMUL]
+QED
+
+Theorem IVT_DERIVATIVE_NEG :
+   !f f' a b y.
+        a <= b /\
+        (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
+        f'(a) < y /\ f'(b) > y
+        ==> ?z. a < z /\ z < b /\ (f'(z) = y)
+Proof
+  REWRITE_TAC[real_gt] THEN REPEAT STRIP_TAC THEN
+  MP_TAC(Q.SPECL [`\x:real. ~(f x)`, `\x:real. ~(f' x)`,
+                  `a:real`, `b:real`, `~y`] IVT_DERIVATIVE_POS) THEN
+  ASM_SIMP_TAC std_ss [real_gt, REAL_LT_NEG, REAL_EQ_NEG] THEN
+  ASM_SIMP_TAC std_ss [DIFF_NEG]
+QED
 
 val _ = export_theory();
