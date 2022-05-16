@@ -183,9 +183,8 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
         val eq = mk_eq (mk_comb (lhs_m, x), mk_comb (rhs_m, x))
       in (mk_forall (x, eq), mk_eq (lhs_m, rhs_m)) end
     val eqs = map (fst o eq) ind_tys |> list_mk_conj
-    fun size_rule ty = TypeBasePure.fetch db ty |> valOf |> TypeBasePure.size_of
-            |> valOf |> snd
-    val aux_size_rules = aux_ms |> map (size_rule o arg_ty)
+    fun size_of_rcd ty = TypeBasePure.fetch db ty |> valOf |> TypeBasePure.size_of
+    val aux_size_rules = aux_ms |> map (size_of_rcd o arg_ty) |> mapfilter (snd o valOf)
     val aux_size_eqs = aux_size_rules |> HOLset.fromList thm_compare |> HOLset.listItems
         |> mapfilter (valOf o size_def_to_comb db NONE)
     val size_def' = REWRITE_RULE [boolTheory.ITSELF_EQN_RWT] size_def
