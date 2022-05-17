@@ -166,8 +166,10 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
         | (_, SOME x) => (TypeBasePure.induction_of x, TypeBasePure.axiom_of x)
         | _ => raise (ERR "size_def_to_comb" "unknown type")
     val dtys = Prim_rec.doms_of_tyaxiom rec_ax
-    val size_rators = size_def |> concl |> strip_conj |> map eq_rator
-        |> HOLset.fromList Term.compare |> HOLset.listItems
+    fun remdups (x :: y :: zs) = if term_eq x y then remdups (y :: zs)
+                                 else x :: remdups (y :: zs)
+      | remdups xs = xs
+    val size_rators = size_def |> concl |> strip_conj |> map eq_rator |> remdups
     val tyvar_ms = map (snd o strip_comb) size_rators |> List.concat
     fun arg_ty f = fst (dom_rng (type_of f))
     val (main_ms, aux_ms) = partition (fn f => mem (arg_ty f) dtys) size_rators
@@ -176,19 +178,19 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
     val ind_tys =
         concl ind |> strip_forall |> snd |> strip_imp |> snd |> strip_conj
               |> map (type_of o fst o dest_forall)
-    fun eq ty = let
+    fun eq sz = let
+        val ty = arg_ty sz
         val x = mk_var ("x", ty)
-        val lhs_m = valOf (List.find (fn t => arg_ty t = ty) size_rators)
         val rhs_m = get_measure ty
-        val eq = mk_eq (mk_comb (lhs_m, x), mk_comb (rhs_m, x))
-      in (mk_forall (x, eq), mk_eq (lhs_m, rhs_m)) end
-    val eqs = map (fst o eq) ind_tys |> list_mk_conj
+        val eq = mk_eq (mk_comb (sz, x), mk_comb (rhs_m, x))
+      in (mk_forall (x, eq), mk_eq (sz, rhs_m)) end
+    val eqs = map (fst o eq) size_rators |> list_mk_conj
     fun size_of_rcd ty = TypeBasePure.fetch db ty |> valOf |> TypeBasePure.size_of
     val aux_size_rules = aux_ms |> map (size_of_rcd o arg_ty) |> mapfilter (snd o valOf)
     val aux_size_eqs = aux_size_rules |> HOLset.fromList thm_compare |> HOLset.listItems
         |> mapfilter (valOf o size_def_to_comb db NONE)
     val size_def' = REWRITE_RULE [boolTheory.ITSELF_EQN_RWT] size_def
-    val aux_eqs = map (snd o eq o arg_ty) aux_ms
+    val aux_eqs = map (snd o eq) aux_ms
     fun ty_no_size ty = Option.map TypeBasePure.size_of (TypeBasePure.fetch db ty)
         |> Option.join |> Option.isSome |> not
   in
