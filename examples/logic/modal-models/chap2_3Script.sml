@@ -620,18 +620,18 @@ Proof
     by metis_tac[FINITE_BIJ,CHOICE_BIJ_partition,equiv0_equiv_on] >>
   qabbrev_tac
   ‘ss = PRIM_REC {w2}
-                 (\s0:β list set n.
-                    {CHOICE uset |
-                     ?phi v. satis M3' v (DIAM phi) /\
-                             ((DIAM phi) IN
-                              (IMAGE CHOICE
-                               ((IMAGE
-                                 (\s. s INTER {d | ?d0. d = DIAM d0})
-                                 distfp)
-                                DELETE {})) /\
-                              v IN s0 /\
-                              uset = { u | M3'.frame.rel v u /\ u IN M3'.frame.world /\
-                                           satis M3' u phi})})’ >>
+          (\s0:β list set n.
+             {CHOICE uset |
+              ?phi v. satis M3' v (DIAM phi) /\
+                      (DIAM phi ∈
+                       (IMAGE CHOICE
+                        ((IMAGE
+                          (\s. s INTER {d | ?d0. d = DIAM d0})
+                          distfp)
+                         DELETE {})) /\
+                       v IN s0 /\
+                       uset = { u | M3'.frame.rel v u /\ u IN M3'.frame.world /\
+                                    satis M3' u phi})})’ >>
   qabbrev_tac ‘W4 = BIGUNION {ss i| i <= k}’ >>
   qabbrev_tac ‘M4 = <| frame:= <| world := W4;
                                   rel := M3.frame.rel |>;
@@ -642,10 +642,11 @@ Proof
     by (rw[Abbr‘W4’,Abbr‘ss’,SUBSET_DEF] >> Cases_on ‘i’ (* 2 *)
         >- fs[PRIM_REC_THM,Abbr‘M3'’]
         >- (fs[PRIM_REC_THM] >>
-            ‘?u. M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧ satis M3' u phi'’            by metis_tac[satis_def] >>
+            ‘?u. M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧ satis M3' u phi'’
+              by metis_tac[satis_def] >>
             ‘u IN {u | M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧
                        satis M3' u phi'}’ by fs[] >>
-            ‘{u | M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧ satis M3' u phi'}          <> {}’
+            ‘{u|M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧ satis M3' u phi'} ≠ ∅’
               by metis_tac[MEMBER_NOT_EMPTY] >>
             ‘(CHOICE
               {u | M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧
@@ -667,11 +668,9 @@ Proof
          metis_tac[root_height_0])
      >- (fs[Abbr‘ss’,PRIM_REC_THM] >>
          ‘height M3' w2 M3' v = i’ by metis_tac[] >>
-         ‘{u | M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧ satis M3' u phi'}          <> {}’
-           by
-           (fs[satis_def] >>
-            rw[GSYM MEMBER_NOT_EMPTY] >>
-            qexists_tac ‘v'’ >> rw[]) >>
+         ‘{u | M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧ satis M3' u phi'} ≠ ∅’
+           by (fs[satis_def] >> rw[GSYM MEMBER_NOT_EMPTY] >>
+               qexists_tac ‘v'’ >> rw[]) >>
          ‘(CHOICE
            {u | M3'.frame.rel v u ∧ u ∈ M3'.frame.world ∧
                 satis M3' u phi'}) IN
@@ -708,9 +707,10 @@ Proof
                               u ∈ M3'.frame.world ∧ satis M3' u phi'}’ >>
     qmatch_abbrev_tac ‘FINITE bigset’ >>
     ‘bigset SUBSET
-           IMAGE ff
-                 ((PRIM_REC {w2} sf i) CROSS
-                  (IMAGE CHOICE ((IMAGE (\s. s INTER {d | ?d0. d = DIAM d0}) distfp) DELETE {})))’
+     IMAGE ff
+     ((PRIM_REC {w2} sf i) CROSS
+      (IMAGE CHOICE ((IMAGE (\s. s INTER {d | ?d0. d = DIAM d0}) distfp)
+                     DELETE {})))’
       by (rw[IMAGE_DEF,SUBSET_DEF] >> fs[Abbr‘bigset’] >>
           simp[PULL_EXISTS] >>
           map_every qexists_tac [‘(v,DIAM phi')’,‘s'’] >>
@@ -805,7 +805,8 @@ Proof
                  ‘height M3' w2 M3' a1' = height M3' w2 M3' a1 + 1’
                    by metis_tac[tree_height_rel_lemma] >>
                  fs[])
-             >- (‘height M3' w2 M3' a2' = height M3' w2 M3' a2 + 1’ by metis_tac[tree_height_rel_lemma] >>
+             >- (‘height M3' w2 M3' a2' = height M3' w2 M3' a2 + 1’
+                   by metis_tac[tree_height_rel_lemma] >>
                  fs[])) >>
         ‘∀a2'.
           a2' ∈ M3'.frame.world ⇒
@@ -910,7 +911,8 @@ Proof
             ‘DEG phi' <= k’ by fs[] >>
             ‘phi' IN {f | DEG f ≤ k /\ prop_letters f ⊆ s}’ by fs[] >>
             ‘phi' IN
-              {x | ∃s'. s' ∈ {f | DEG f ≤ k /\ prop_letters f ⊆ s}//E (:β list) ∧                    x ∈ s'}’
+              {x | ∃s'. s' ∈ {f | DEG f ≤ k ∧ prop_letters f ⊆ s}//E (:β list) ∧
+                        x ∈ s'}’
                by metis_tac[] >> fs[] >>
             qexists_tac ‘CHOICE (s' INTER phis)’ >> rw[] (* 2 *)
             >- (rw[Abbr‘rs’,IMAGE_DEF] >> simp[PULL_EXISTS] >>
@@ -1025,15 +1027,18 @@ Proof
               by metis_tac[BIGUNION_partition] >>
             fs[BIGUNION] >>
             ‘DEG (DIAM ff) <= k’ by fs[DEG_def] >>
-            (*`∀a. VAR a ∈ subforms (DIAM ff) ⇒ a ∈ s` by fs[subforms_def] >> *repeat?*)
+            (*`∀a. VAR a ∈ subforms (DIAM ff) ⇒ a ∈ s`
+                 by fs[subforms_def] >> *repeat?*)
             ‘(DIAM ff) IN {f | DEG f ≤ k ∧ prop_letters f ⊆ s}’ by fs[] >>
-            ‘(DIAM ff) IN {x | ∃s'. s' ∈ {f | DEG f ≤ k ∧ prop_letters f ⊆ s}//E (:β list) ∧
-                               x ∈ s'}’ by metis_tac[] >> fs[] >>
+            ‘(DIAM ff) IN
+             {x | ∃s'. s' ∈ {f | DEG f ≤ k ∧ prop_letters f ⊆ s}//E (:β list) ∧
+                       x ∈ s'}’ by metis_tac[] >> fs[] >>
             qexists_tac ‘s''’ >> rw[] >>
             ‘s'' ∩ {d | ∃d0. d = ◇ d0} <> {}’
-               by (‘(DIAM ff) IN (s'' ∩ {d | ∃d0. d = ◇ d0})’ by fs[IN_INTER,IN_DEF] >>
+               by (‘(DIAM ff) IN (s'' ∩ {d | ∃d0. d = ◇ d0})’
+                     by fs[IN_INTER,IN_DEF] >>
                     metis_tac[MEMBER_NOT_EMPTY]) >>
-            ‘(CHOICE (s'' ∩ {d | ∃d0. d = ◇ d0})) IN (s'' ∩ {d | ∃d0. d = ◇ d0})’
+            ‘CHOICE (s'' ∩ {d | ∃d0. d = ◇ d0}) ∈ (s'' ∩ {d | ∃d0. d = ◇ d0})’
                by metis_tac[CHOICE_DEF] >>
             fs[] >> rw[] (* 4 *)
             >- (fs[equiv0_def,partition_def] >>
@@ -1052,7 +1057,8 @@ Proof
                 ‘(DIAM d0) IN s''’ by metis_tac[IN_INTER] >>
                 fs[partition_def] >> rw[] >>
                 fs[] >>
-                ‘equiv0 (:β list) (DIAM ff) (DIAM d0)’ by metis_tac[equiv0_def] >>
+                ‘equiv0 (:β list) (DIAM ff) (DIAM d0)’
+                  by metis_tac[equiv0_def] >>
                 ‘INFINITE univ(:'b list)’
                   by metis_tac[INFINITE_LIST_UNIV] >>
                 ‘equiv0 (:β list) ff d0’ by metis_tac[equiv0_DIAM] >>

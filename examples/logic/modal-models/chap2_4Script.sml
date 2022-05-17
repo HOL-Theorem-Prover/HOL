@@ -15,16 +15,18 @@ open folLangTheory;
 val _ = new_theory "chap2_4";
 val _ = temp_delsimps ["satis_def"]
 
-val mm2folm_def = Define`
-  mm2folm M = <| Dom := M.frame.world ;
-                 Fun := \n args. CHOICE (M.frame.world);
-                 Pred := \p zs.
-                            case zs of
-                              | [w] => w IN M.frame.world /\ M.valt p w
-                              | [w1;w2] => p = 0 ∧ M.frame.rel w1 w2 ∧
-                                           w1 IN M.frame.world /\ w2 IN M.frame.world
-                              |  _ => F
-              |>`;
+Definition mm2folm_def:
+  mm2folm M = <|
+    Dom := M.frame.world ;
+    Fun := \n args. CHOICE (M.frame.world);
+    Pred := \p zs.
+              case zs of
+              | [w] => w IN M.frame.world /\ M.valt p w
+              | [w1;w2] => p = 0 ∧ M.frame.rel w1 w2 ∧
+                           w1 IN M.frame.world /\ w2 IN M.frame.world
+              |  _ => F
+  |>
+End
 
 val _ = overload_on ("fEXISTS", “folLang$Exists”);
 val _ = overload_on ("fDISJ", “folLang$Or”);
@@ -58,10 +60,10 @@ End
 
 
 
-val prop_2_47_i = store_thm(
-  "prop_2_47_i",
-  ``!M w:'b phi σ x. (IMAGE σ univ(:num)) SUBSET M.frame.world
-                       ==> (satis M (σ x) phi <=> fsatis (mm2folm M) σ (ST x phi))``,
+Theorem prop_2_47_i:
+  !M w:'b phi σ x. (IMAGE σ univ(:num)) SUBSET M.frame.world ==>
+                   (satis M (σ x) phi <=> fsatis (mm2folm M) σ (ST x phi))
+Proof
   Induct_on `phi` >> rw[] (* 5 *)
   >- (rw[feval_def,ST_def,fsatis_def] >> eq_tac >> rw[] (* 3 *)
      >- (fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
@@ -83,23 +85,27 @@ val prop_2_47_i = store_thm(
         >- (fs[termval_def,APPLY_UPDATE_THM] >> rw[mm2folm_def])
         >- (`((x + 1 =+ v) σ) (x + 1) = v` by rw[APPLY_UPDATE_THM] >>
            `IMAGE ((x + 1 =+ v) σ) 𝕌(:num) ⊆ M.frame.world`
-           by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x'' = x + 1` (* 2 *)
-              >> rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >> metis_tac[]) >>
+           by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x'' = x + 1` (* 2 *) >>
+               rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >>
+               metis_tac[]) >>
            `() = u` by fs[] >>
            metis_tac[fsatis_def]))
      >- (fs[SUBSET_DEF,IMAGE_DEF,mm2folm_def] >> metis_tac[])
      >- (qexists_tac `a` >> rw[] (* 3 *)
-        >- fs[feval_def,fAND_def,fsatis_def,termval_def,APPLY_UPDATE_THM,mm2folm_def]
+        >- fs[feval_def,fAND_def,fsatis_def,termval_def,APPLY_UPDATE_THM,
+              mm2folm_def]
         >- fs[mm2folm_def]
         >- (fs[feval_def,fAND_def,fsatis_def] >>
            `IMAGE ((x + 1 =+ a) σ) 𝕌(:num) ⊆ M.frame.world`
            by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x'' = x + 1` (* 2 *)
               >- (rw[APPLY_UPDATE_THM] >> fs[mm2folm_def])
-              >- (rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >> metis_tac[])) >>
+              >- (rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >>
+                  metis_tac[])) >>
            `((x + 1 =+ a) σ) (x + 1) = a` by fs[APPLY_UPDATE_THM] >>
            `(mm2folm M).Dom = M.frame.world` by fs[mm2folm_def] >>
            first_x_assum (qspecl_then [`M`,`σ(|x+1|->a|)`,`x+1`] mp_tac) >>
-           rw[APPLY_UPDATE_THM]))));
+           rw[APPLY_UPDATE_THM])))
+QED
 
 
 
@@ -107,17 +113,25 @@ val fFORALL_def = Define`
   fFORALL n ff = fNOT (fEXISTS n (fNOT ff))`;
 
 
-val prop_2_47_ii = store_thm(
-  "prop_2_47_ii",
-  ``!phi M. universal_true M phi <=> (!σ. IMAGE σ univ(:num) SUBSET M.frame.world ==> (fsatis (mm2folm M) σ (fFORALL x (ST x phi))))``,
-  rw[universal_true_def,fFORALL_def,fsatis_def,feval_def] >> rw[EQ_IMP_THM] (* 3 *)
+Theorem prop_2_47_ii:
+  !phi M.
+    universal_true M phi <=>
+    !σ. IMAGE σ univ(:num) SUBSET M.frame.world ==>
+        fsatis (mm2folm M) σ (fFORALL x (ST x phi))
+Proof
+  rw[universal_true_def,fFORALL_def,fsatis_def,feval_def] >>
+  rw[EQ_IMP_THM] (* 3 *)
   >- (fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
-  >- (`!x'. x' IN (mm2folm M).Dom ==> feval (mm2folm M) ((x =+ x') σ) (ST x phi)` suffices_by metis_tac[] >> rw[] >>
-     `fsatis (mm2folm M) ((x =+ x') σ) (ST x phi)` suffices_by metis_tac[fsatis_def] >>
+  >- (`!x'. x' IN (mm2folm M).Dom ==>
+            feval (mm2folm M) ((x =+ x') σ) (ST x phi)`
+        suffices_by metis_tac[] >> rw[] >>
+     `fsatis (mm2folm M) ((x =+ x') σ) (ST x phi)`
+        suffices_by metis_tac[fsatis_def] >>
      `x' IN M.frame.world` by fs[mm2folm_def] >>
      `satis M x' phi` by metis_tac[] >>
      `IMAGE ((x =+ x') σ) 𝕌(:num) ⊆ M.frame.world`
-         by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x''' = x` >> rw[APPLY_UPDATE_THM] >> fs[SUBSET_DEF,IMAGE_DEF] >> metis_tac[]) >>
+         by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x''' = x` >>
+             rw[APPLY_UPDATE_THM] >> fs[SUBSET_DEF,IMAGE_DEF] >> metis_tac[]) >>
      `((x =+ x') σ) x = x'` by fs[APPLY_UPDATE_THM] >> metis_tac[prop_2_47_i])
   >- (`IMAGE (\n.w) 𝕌(:num) ⊆ M.frame.world`
          by (rw[IMAGE_DEF,SUBSET_DEF] >> metis_tac[]) >>
@@ -127,46 +141,54 @@ val prop_2_47_ii = store_thm(
      `w IN (mm2folm M).Dom` by fs[mm2folm_def] >>
      `feval (mm2folm M) ((x =+ w) (λn. w)) (ST x phi)` by metis_tac[] >>
      `IMAGE ((x =+ w) (λn. w)) 𝕌(:num) ⊆ M.frame.world`
-         by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x'' = x` >> rw[APPLY_UPDATE_THM]) >>
-     `fsatis (mm2folm M) ((x =+ w) (λn. w)) (ST x phi)` by metis_tac[fsatis_def] >>
+         by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x'' = x` >>
+             rw[APPLY_UPDATE_THM]) >>
+     `fsatis (mm2folm M) ((x =+ w) (λn. w)) (ST x phi)`
+         by metis_tac[fsatis_def] >>
      `((x =+ w) (λn. w)) x = w` by fs[APPLY_UPDATE_THM] >>
-     imp_res_tac prop_2_47_i >> metis_tac[]));
+     imp_res_tac prop_2_47_i >> metis_tac[])
+QED
 
-
-
-
-val ST_alt_def = Define`
+Definition ST_alt_def:
   (ST_alt x (VAR p) = fP p (fV x)) /\
   (ST_alt x (FALSE) = fFALSE) /\
   (ST_alt x (NOT phi) = fNOT (ST_alt x phi)) /\
   (ST_alt x (DISJ phi psi) = fDISJ (ST_alt x phi) (ST_alt x psi)) /\
-  (ST_alt x (DIAM phi) = fEXISTS (1 - x) (fAND (fR (fV x) (fV (1 - x))) (ST_alt (1 - x) phi)))`;
+  (ST_alt x (DIAM phi) =
+     fEXISTS (1 - x) (fAND (fR (fV x) (fV (1 - x))) (ST_alt (1 - x) phi)))
+End
 
 
-val prop_2_47_i_alt = store_thm(
-  "prop_2_47_i_alt",
-  ``!M w:'b phi σ. (IMAGE σ univ(:num)) SUBSET M.frame.world
-                       ==> (satis M (σ 1) phi <=> fsatis (mm2folm M) σ (ST_alt 1 phi)) /\
-                           (satis M (σ 0) phi <=> fsatis (mm2folm M) σ (ST_alt 0 phi))``,
+Theorem prop_2_47_i_alt:
+  !M w:'b phi σ.
+    (IMAGE σ univ(:num)) SUBSET M.frame.world ==>
+    (satis M (σ 1) phi <=> fsatis (mm2folm M) σ (ST_alt 1 phi)) /\
+    (satis M (σ 0) phi <=> fsatis (mm2folm M) σ (ST_alt 0 phi))
+Proof
   Induct_on `phi` >> rw[] (* 10 *)
   >- (rw[feval_def,ST_alt_def,fsatis_def] >> eq_tac >> rw[] (* 3 *)
      >- (fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
      >- (rw[mm2folm_def,termval_def] (* 2 *)
         >> metis_tac[satis_def,IN_DEF])
      >- (fs[mm2folm_def,termval_def] >> rw[satis_def] >> metis_tac[IN_DEF]))
-  >- (rw[feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def] >> eq_tac >> rw[] (* 4 *)
-     >- (fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
-     >- metis_tac[satis_def,IN_DEF]
-     >- metis_tac[satis_def,IN_DEF]
-     >- (rw[satis_def] >> metis_tac[IN_DEF]))
-  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
-  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
-  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
-  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
+  >- (rw[feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def] >> eq_tac >>
+      rw[] (* 4 *)
+      >- (fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
+      >- metis_tac[satis_def,IN_DEF]
+      >- metis_tac[satis_def,IN_DEF]
+      >- (rw[satis_def] >> metis_tac[IN_DEF]))
+  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,
+         valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
+  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,
+         valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
+  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,
+         valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
+  >- (fs[satis_def,feval_def,ST_alt_def,fsatis_def,mm2folm_def,termval_def,
+         valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
   >- (rw[satis_def,feval_def,ST_alt_def,fsatis_def] >> eq_tac >> rw[] (* 5 *) >>
-     fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
+      fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
   >- (rw[satis_def,feval_def,ST_alt_def,fsatis_def] >> eq_tac >> rw[] (* 5 *) >>
-     fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
+      fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
   >- (rw[satis_def,feval_def,ST_alt_def,fsatis_def] >> eq_tac >> rw[] (* 4 *)
      >- (fs[mm2folm_def,valuation_def,IMAGE_DEF,SUBSET_DEF] >> metis_tac[])
      >- (qexists_tac `v` >> rw[fAND_def,feval_def,APPLY_UPDATE_THM] (* 3 *)
@@ -176,16 +198,19 @@ val prop_2_47_i_alt = store_thm(
            `((0 =+ v) σ) 0 = v` by rw[APPLY_UPDATE_THM] >>
            `IMAGE ((0 =+ v) σ) 𝕌(:num) ⊆ M.frame.world`
                by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x' = 0` (* 2 *)
-                   >> rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >> metis_tac[]) >>
+                   >> rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >>
+                   metis_tac[]) >>
            metis_tac[]))
      >- (fs[SUBSET_DEF,IMAGE_DEF] >> metis_tac[])
      >- (qexists_tac `a` >> rw[] (* 3 *)
-        >- fs[feval_def,fAND_def,fsatis_def,mm2folm_def,termval_def,APPLY_UPDATE_THM]
+        >- fs[feval_def,fAND_def,fsatis_def,mm2folm_def,termval_def,
+              APPLY_UPDATE_THM]
         >- fs[mm2folm_def]
         >- (fs[feval_def,fAND_def,fsatis_def] >>
            `IMAGE ((0 =+ a) σ) 𝕌(:num) ⊆ M.frame.world`
-           by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x' = 0` (* 2 *)
-              >> rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF,mm2folm_def] >> metis_tac[]) >>
+           by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x' = 0` (* 2 *) >>
+               rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF,mm2folm_def] >>
+               metis_tac[]) >>
            `((0 =+ a) σ) 0 = a` by fs[APPLY_UPDATE_THM] >>
            `IMAGE ((0 =+ a) σ) 𝕌(:num) ⊆ (mm2folm M).Dom` by fs[mm2folm_def] >>
            first_x_assum (qspecl_then [`M`,`σ(|0|->a|)`] mp_tac) >>
@@ -199,47 +224,57 @@ val prop_2_47_i_alt = store_thm(
            `((1 =+ v) σ) 1= v` by rw[APPLY_UPDATE_THM] >>
            `IMAGE ((1 =+ v) σ) 𝕌(:num) ⊆ M.frame.world`
                by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x' = 1` (* 2 *)
-                  >> rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >> metis_tac[]) >>
+                  >> rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF] >>
+                   metis_tac[]) >>
            metis_tac[]))
      >- (fs[SUBSET_DEF,IMAGE_DEF] >> metis_tac[])
      >- (qexists_tac `a` >> rw[] (* 3 *)
-        >- fs[feval_def,fAND_def,fsatis_def,mm2folm_def,termval_def,APPLY_UPDATE_THM]
+        >- fs[feval_def,fAND_def,fsatis_def,mm2folm_def,termval_def,
+              APPLY_UPDATE_THM]
         >- fs[mm2folm_def]
         >- (fs[feval_def,fAND_def,fsatis_def] >>
            `IMAGE ((1 =+ a) σ) 𝕌(:num) ⊆ M.frame.world`
-           by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x'' = 0` (* 2 *)
-              >> rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF,mm2folm_def] >> metis_tac[]) >>
+           by (rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x'' = 0` (* 2 *) >>
+               rw[APPLY_UPDATE_THM] >> fs[IMAGE_DEF,SUBSET_DEF,mm2folm_def] >>
+               metis_tac[]) >>
            `((1 =+ a) σ) 1 = a` by fs[APPLY_UPDATE_THM] >>
            `IMAGE ((1 =+ a) σ) 𝕌(:num) ⊆ (mm2folm M).Dom` by fs[mm2folm_def] >>
            first_x_assum (qspecl_then [`M`,`σ(|1|->a|)`] mp_tac) >>
            rw[APPLY_UPDATE_THM]))));
 
 
-val ST_alt_two_var = store_thm(
-  "ST_alt_two_var",
-  ``!phi. (FV (ST_alt 0 phi) ∪ BV (ST_alt 0 phi)) SUBSET {0;1} /\ (FV (ST_alt 1 phi) ∪ BV (ST_alt 1 phi)) SUBSET {0;1}``,
-  Induct_on `phi` >> rw[] >> fs[ST_alt_def,FV_def,SUBSET_DEF,FVT_def,fDISJ_def,fNOT_def,fAND_def,BV_def,Exists_def] >> rw[] >> metis_tac[]);
+Theorem ST_alt_two_var:
+  !phi. (FV (ST_alt 0 phi) ∪ BV (ST_alt 0 phi)) SUBSET {0;1} /\
+        (FV (ST_alt 1 phi) ∪ BV (ST_alt 1 phi)) SUBSET {0;1}
+Proof
+  Induct_on `phi` >> rw[] >>
+  fs[ST_alt_def,FV_def,SUBSET_DEF,FVT_def,fDISJ_def, fNOT_def,fAND_def,
+     BV_def,Exists_def] >> rw[] >> metis_tac[]
+QED
 
 
 
 
 
-val fequiv_def = Define`
+Definition fequiv_def:
   fequiv (μ:'b itself) ff1 ff2 <=>
-  (!M (σ:num -> 'b). (IMAGE σ univ(:num)) SUBSET M.frame.world
-                                                        ==> (fsatis (mm2folm M) σ ff1 <=> fsatis (mm2folm M) σ ff2))`;
+    !M (σ:num -> 'b). (IMAGE σ univ(:num)) SUBSET M.frame.world ==>
+                      (fsatis (mm2folm M) σ ff1 <=> fsatis (mm2folm M) σ ff2)
+End
 
 
 
-val ST_ST_alt_fequiv = store_thm(
-  "ST_ST_alt_fequiv",
-  ``!phi. fequiv μ (ST 0 phi) (ST_alt 0 phi) /\ fequiv μ (ST 1 phi) (ST_alt 1 phi)``,
+Theorem ST_ST_alt_fequiv:
+  !phi. fequiv μ (ST 0 phi) (ST_alt 0 phi) /\
+        fequiv μ (ST 1 phi) (ST_alt 1 phi)
+Proof
   rw[ST_alt_def,ST_def,fequiv_def] (* 2 *)
   >- (eq_tac >> rw[] (* 2 *)
      >- (`satis M (σ 0) phi` by metis_tac[prop_2_47_i] >>
         metis_tac[prop_2_47_i_alt])
      >- metis_tac[prop_2_47_i_alt,prop_2_47_i])
-  >- metis_tac[prop_2_47_i,prop_2_47_i_alt]);
+  >- metis_tac[prop_2_47_i,prop_2_47_i_alt]
+QED
 
 
 
@@ -312,9 +347,9 @@ Theorem non_ST_exists_lemma:
     (feval M σ (ST x phi) <=/=> feval M σ (Exists n (fR (fV n) (fV x))))
 Proof
 rw[] >> SPOSE_NOT_THEN ASSUME_TAC >>
-qabbrev_tac `M = <| frame := <| world := {1;2};
-                                  rel := \a b. if a = 1 /\ b = 2 then T else F|>;
-                     valt := \p:num v. F |>` >>
+qabbrev_tac ‘M = <| frame := <| world := {1;2};
+                                rel := \a b. if a = 1 /\ b = 2 then T else F|>;
+                    valt := \p:num v. F |>’ >>
 qabbrev_tac `N = <| frame := <| world := {2};
                                   rel := \a b. F|>;
                      valt := \p:num v. F |>` >>

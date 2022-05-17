@@ -137,11 +137,11 @@ QED
 
 
 
-val peval_satis = store_thm(
-"peval_satis",
-``!M w f. propform f /\ w IN M.frame.world ==> (satis M w f <=> peval (λa. w IN M.valt a) f)``,
-Induct_on `f` >> rw[]
->> metis_tac[satis_def]);
+Theorem peval_satis:
+  !M w f. propform f /\ w IN M.frame.world ==>
+          (satis M w f <=> peval (λa. w IN M.valt a) f)
+Proof Induct_on `f` >> rw[] >> metis_tac[satis_def]
+QED
 
 val equiv0_def = Define`
      equiv0 (:β) f1 f2 <=> !M w:β. satis M w f1 <=> satis M w f2`;
@@ -188,11 +188,15 @@ val equiv0_equiv_on = store_thm(
   ``!s. (equiv0 (:β)) equiv_on s``,
   rw[equiv_on_def] >> metis_tac[equiv0_def]);
 
-val equiv_on_same_partition = store_thm(
-"equiv_on_same_partition",
-``R equiv_on s ==> !x y. R x y ==> (!t1 t2. t1 IN partition R s /\ t2 IN partition R s /\ x IN t1 /\ y IN t2 ==> t1 = t2)``,
-rw[partition_def,equiv_on_def] >> rw[EXTENSION,EQ_IMP_THM] >> fs[]
->> metis_tac[]);
+Theorem equiv_on_same_partition:
+  R equiv_on s ==>
+  !x y. R x y ==>
+        !t1 t2. t1 ∈ partition R s ∧ t2 ∈ partition R s ∧ x ∈ t1 ∧ y ∈ t2 ==>
+                t1 = t2
+Proof
+  rw[partition_def,equiv_on_def] >> rw[EXTENSION,EQ_IMP_THM] >> fs[] >>
+  metis_tac[]
+QED
 
 
 
@@ -486,10 +490,10 @@ val IBC_EMPTY = store_thm(
   ``∀f s. IBC f s ==> s = {} ==> equiv0 (:β) f TRUE \/ equiv0 (:β) f FALSE``,
   Induct_on `IBC` >> rw[] >> fs[equiv0_def,satis_def,TRUE_def]);
 
-val equiv0_TRANS = store_thm(
-  "equiv0_TRANS",
-  ``!f1 f2 f3. equiv0 (:β) f1 f2 /\ (equiv0 (:β)) f2 f3 ==>(equiv0 (:β)) f1 f3``,
-  metis_tac[equiv0_def]);
+Theorem equiv0_TRANS:
+  !f1 f2 f3. equiv0 (:β) f1 f2 /\ (equiv0 (:β)) f2 f3 ==> equiv0 (:β) f1 f3
+Proof metis_tac[equiv0_def]
+QED
 
 val equiv0_SYM = store_thm(
   "equiv0_SYM",
@@ -713,7 +717,8 @@ rw[EQ_equiv0_def] >>
             `bounded_mor f' M M'`
               by (rw[bounded_mor_def] (* 4 *)
                   >- fs[Abbr`M'`]
-                  >- (fs[Abbr`M'`] >> rw[satis_def] >> fs[IN_DEF] >> rw[EQ_IMP_THM] >> metis_tac[])
+                  >- (fs[Abbr`M'`] >> rw[satis_def] >> fs[IN_DEF] >>
+                      rw[EQ_IMP_THM] >> metis_tac[])
                   >- (fs[Abbr`M'`] >> metis_tac[])
                   >- (fs[Abbr`M'`] (* 4 *) >> metis_tac[])) >>
             `satis M w g <=> satis M' (f' w) g` by fs[prop_2_14] >>
