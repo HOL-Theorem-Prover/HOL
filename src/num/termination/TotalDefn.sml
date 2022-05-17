@@ -475,8 +475,12 @@ fun WF_TAC g = PRIM_WF_TAC (WF_thms()) g;
 fun size_eq_conv tm = let
     val tys = tm |> find_terms is_const |> map type_of
       |> map (fst o strip_fun) |> List.concat
-      |> HOLset.fromList Type.compare |> HOLset.listItems
-    val size_eqs = mapfilter TypeBase.size_of tys
+    fun ty_rec ty_s [] = HOLset.listItems ty_s
+      | ty_rec ty_s (ty :: tys) = if is_type ty
+          then ty_rec (HOLset.add (ty_s, ty)) (snd (dest_type ty) @ tys)
+          else ty_rec ty_s tys
+    val all_tys = ty_rec (HOLset.empty Type.compare) tys
+    val size_eqs = mapfilter TypeBase.size_of all_tys
       |> map fst |> mapfilter dest_thy_const
       |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
   in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
