@@ -464,6 +464,9 @@ val _ = tprint "Testing indirect recursion size eqs with basic types";
 val _ = quiet_warnings (fn () =>
            (Datatype `v_rec = V (v_rec + num) | W`)
            ) () handle _ => die "FAILED!"
+(* it's awkward to load this at this point. however, some of the previous tests
+   are interesting precisely because it isn't loaded. FIXME later *)
+val _ = load "basicSize"
 val _ = quiet_warnings (fn () =>
            (Datatype`a_rec = A ((a_rec # unit # num option # (unit + num)) list) | B unit`)
            ) () handle _ => die "FAILED!"
