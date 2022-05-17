@@ -58,7 +58,7 @@ val libdirDef = normPath[HOLpath,"sigobj"]
 val helpfileDef = normPath[HOLpath, "help","HOL.Help"]
 
 (* Default filename for the HOL reference page: *)
-val HOLpageDef = normPath[HOLpath, "help","HOLindex.html"]
+val HOLpageDef = normPath[HOLpath, "help","index.html"] (* was: HOLindex.html *)
 
 (* Default filename for the ASCII format database: *)
 val txtIndexDef = "index.txt"
