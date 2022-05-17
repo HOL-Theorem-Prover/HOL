@@ -71,5 +71,5 @@ val _ = Datatype`a_rec = A ((a_rec # unit # num option # (unit + num)) list) | B
 
 val _ = check_size_eq ``: a_rec`` ["option_size", "list_size", "one_size"];
 
-val _ = save_theory ();
+val _ = export_theory ();
 
