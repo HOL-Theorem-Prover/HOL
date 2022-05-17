@@ -480,7 +480,9 @@ fun size_eq_conv tm = let
           then ty_rec (HOLset.add (ty_s, ty)) (snd (dest_type ty) @ tys)
           else ty_rec ty_s tys
     val all_tys = ty_rec (HOLset.empty Type.compare) tys
-    val size_eqs = mapfilter TypeBase.size_of all_tys
+    val size_eqs = mapfilter TypeBase.axiom_of all_tys
+      |> map Prim_rec.doms_of_tyaxiom |> List.concat
+      |> mapfilter TypeBase.size_of
       |> map fst |> mapfilter dest_thy_const
       |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
   in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
