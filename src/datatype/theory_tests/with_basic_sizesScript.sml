@@ -2,12 +2,12 @@
    types. Some of these were moved here from selftest to ensure that
    basicSize is loaded and the tests make sense. *)
 
-open HolKernel Parse Datatype
+open HolKernel Parse Datatype boolSyntax
 local open testutils basicSize in end
 
-val _ = new_theory "datatypes_basic_test" ;
+val _ = new_theory "with_basic_sizes" ;
 
-val ERR = mk_HOL_ERR "datatype_basic_test"
+val ERR = mk_HOL_ERR "with_basic_sizes"
 
 
 (* these are a subset of the tests in datatype selftest.sml, which
@@ -16,8 +16,8 @@ val ERR = mk_HOL_ERR "datatype_basic_test"
 
 fun check_size_eq ty nms = let
     val _ = testutils.tprint ("Checking size_eq in " ^ type_to_string ty)
-    val szs_etc = TypeBase.size_of ty |> snd |> CONJUNCTS
-      |> map (lhs o snd o strip_forall o concl)
+    val szs_etc = TypeBase.size_of ty |> snd |> concl |> strip_conj
+      |> map (lhs o snd o strip_forall)
       |> map (find_terms is_const) |> List.concat
     val eq_rhss = mapfilter (Conv.TOP_SWEEP_CONV TotalDefn.size_eq_conv) szs_etc
       |> map (rhs o concl)
@@ -49,16 +49,17 @@ val _ = Hol_datatype `
 
 val _ = check_size_eq ``: tr20090423`` ["pair_size", "bool_size"]
 
-(* Ramana Kumar's examples from 2010/08/25 *)
-val _ = Hol_datatype `t1 = c1 of 'a => t1 itself `;
-val _ = Hol_datatype `t2 = c2 of t2 t1 itself ` ;
+(* Ramana Kumar's examples from 2010/08/25
+   with itself replaced by option to avoid a particular silly issue *)
+val _ = Hol_datatype `t1 = c1 of 'a => t1 option `;
+val _ = Hol_datatype `t2 = c2 of t2 t1 option ` ;
 
-val _ = Hol_datatype `u1 = d1 of 'a itself`;
+val _ = Hol_datatype `u1 = d1 of 'a option`;
 val _ = Hol_datatype `u2 = d2 of 'a u1 `;
 val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
                       u4 = d4 of u3 u1 `;
 
-val _ = check_size_eq ``: u3`` ["u1_size", "u2_size"];
+val _ = check_size_eq ``: u3`` ["u1_size", "u2_size", "option_size"];
 
 val _ = Hol_datatype `list = NIL | :: of 'a => list`;
 
