@@ -189,8 +189,13 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
         |> mapfilter (valOf o size_def_to_comb db NONE)
     val size_def' = REWRITE_RULE [boolTheory.ITSELF_EQN_RWT] size_def
     val aux_eqs = map (snd o eq o arg_ty) aux_ms
+    fun ty_no_size ty = Option.map TypeBasePure.size_of (TypeBasePure.fetch db ty)
+        |> Option.join |> Option.isSome |> not
   in
     if null aux_eqs then NONE
+    else if List.exists (ty_no_size o arg_ty) aux_ms
+    then (Feedback.HOL_MESG ("DataSize: skipping size eqs: no size for " ^
+        type_to_string (hd (List.filter ty_no_size (List.map arg_ty aux_ms)))); NONE)
     else let
         val th1 = prove (eqs,
                 ho_match_mp_tac ind
@@ -211,7 +216,7 @@ fun define_size {induction, recursion} db = case define_size_rec recursion db of
     val comb_eqs = size_def_to_comb db (SOME (induction, recursion)) (#def r)
       handle HOL_ERR err =>
         let in
-        print "Error proving size_eqs, consider DataSize.prove_size_eqs := false\n\n";
+        Feedback.HOL_MESG ("error in size_eqs, consider DataSize.prove_size_eqs := false; ");
         raise (HOL_ERR err) end
     val def_name = fst(dest_type(hd dtys))
     val _ = case comb_eqs of NONE => TRUTH
