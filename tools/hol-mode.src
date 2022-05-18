@@ -1040,7 +1040,8 @@ argument N, sets the trace to that value in particular."
       (progn
         (message (concat "Toggling " s))
         (send-raw-string-to-hol
-         (format "val _ = let val nm = \"%s\"
+         (format "local open Int in
+                  val _ = let val nm = \"%s\"
                       fun findfn r = #name r = nm
                       val old =
                             #trace_level (valOf (List.find findfn (traces())))
@@ -1049,8 +1050,8 @@ argument N, sets the trace to that value in particular."
                       if 0 < old then (set_trace nm 0; print \"off\\n\")
                       else (set_trace nm 1; print \"on\\n\")
                   end handle Option =>
-                        print \"** No such trace var: \\\"%s\\\"\\n\""
-                 s s)
+                        print \"** No such trace var: \\\"%s\\\"\\n\"
+                  end" s s)
          nil))
     (let ((n (prefix-numeric-value arg)))
       (message (format "Setting %s to %d" s n))
@@ -1065,7 +1066,6 @@ argument N, sets the trace to that value in particular."
   "Toggles the \"Unicode\" trace."
   (interactive)
   (hol-toggle-trace "Unicode"))
-
 
 (defun hol-toggle-emacs-tooltips ()
   "Toggles whether HOL produces tooltip information while pretty-printing."
