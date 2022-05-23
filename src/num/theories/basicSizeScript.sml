@@ -16,6 +16,9 @@ val pair_size_def = new_definition
 val one_size_def = new_definition
   ("one_size_def", ``one_size (x:one) = 0``);
 
+val itself_size_def = new_definition
+  ("itself_size_def", ``itself_size (x : 'a itself) = 0``);
+
 val sum_size_def =
  new_recursive_definition
    {def = ``(sum_size (f:'a->num) g (INL x) = f x) /\
