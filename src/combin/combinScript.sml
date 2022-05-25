@@ -76,6 +76,7 @@ local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function","Combinator"],"s")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="W"},name=(["Function","Combinator"],"w")}
 end
+
 (*---------------------------------------------------------------------------*
  * In I_DEF, the type constraint is necessary in order to meet one of        *
  * the criteria for a definition : the tyvars of the lhs must be a           *
@@ -405,17 +406,40 @@ val MONOID_DISJ_F = store_thm ("MONOID_DISJ_F",
               LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]);
 
 (*---------------------------------------------------------------------------*)
+(* Congruence rule for composition. Grist for the termination condition      *)
+(* extractor.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+Theorem o_CONG:
+  !a1 a2 g1 g2 f1 f2.
+     a1 = a2 /\
+     (!x. x = a2 ==> g1 x = g2 x) /\
+     (!y. y = g2 a2 ==> f1 y = f2 y)
+     ==>
+     (f1 o g1) a1 = (f2 o g2) a2
+Proof
+ REPEAT STRIP_TAC THEN
+ Q.PAT_X_ASSUM `a1 = a2` (SUBST_ALL_TAC o SYM) THEN
+ POP_ASSUM (MP_TAC o Q.SPEC `g1 a1`) THEN
+ POP_ASSUM (MP_TAC o Q.SPEC `a1`) THEN
+ REWRITE_TAC[o_DEF] THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
+QED
+
+(*---------------------------------------------------------------------------*)
 (*  Tag combinator equal to K. Used in generating ML from HOL                *)
 (*---------------------------------------------------------------------------*)
 
 val FAIL_DEF = Q.new_definition("FAIL_DEF", `FAIL = \x y. x`);
+
 val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
     REPEAT GEN_TAC
     THEN PURE_REWRITE_TAC [ FAIL_DEF ]
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
 
+
 Overload flip = “C”
+
 val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
 
 val _ = adjoin_to_theory
