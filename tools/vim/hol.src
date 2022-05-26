@@ -263,7 +263,7 @@ else
 endif
 
 function! HOLREPLnew()
-  let l:cmd = getenv('HOLDIR') . '/bin/hol'
+  let l:cmd = $HOLDIR . '/bin/hol'
   if ! executable(l:cmd)
     echoerr 'hol command not found: ' . l:cmd
     return 0
