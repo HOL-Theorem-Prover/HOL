@@ -52,7 +52,7 @@ are using a custom fifo path).
 ## HOL interactive session inside the vim editor
 
 Neovim and some versions of vim can run the interactive HOL session (HOL repl) in a terminal buffer within the editor, right next to a file buffer.
-Vim supports this feature if `:echo has('terminal')` prints `1`.
+Vim supports this feature if `:echo has('terminal')` prints `1`, neovim if `:echo exists(':terminal')` prints a non-zero value.
 For the supported versions, this plugin offers additional keyboard mappings to open and close a HOL session, as documented below in the section *key mappings for the HOL repl buffer*.
 Whenever a HOL session is started, a new unique fifo is created.
 
