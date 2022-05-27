@@ -250,6 +250,7 @@ nn <buffer><silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set
 no <buffer><LocalLeader>h h
 
 if ! exists('$HOLDIR') || (!has('terminal') && ! has('nvim'))
+      \ || (has('nvim') && !exists(':terminal'))
   let b:did_hol = 1
   " skip terminal feature
   finish
