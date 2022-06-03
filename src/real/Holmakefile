@@ -17,6 +17,8 @@ endif
 selftest.exe: selftest.uo realSimps.uo
 	$(HOLMOSMLC) -o $@ $<
 
+EXTRA_CLEANS = selftest.exe real-selftest.log
+
 ifeq ($(KERNELID),otknl)
 BARE_THYS = real intreal real_sigma metric nets iterate
 
@@ -31,8 +33,6 @@ hol4-real-assums.art: hol4-real-assums.thy hol4-real-unsat.art
 	touch hol4-real-assums.ui
 	touch hol4-real-assums.uo
 
-real.art: real.otd
-
 prove_real_assums.art: hol4-real-assums.art
 
 hol4-real.art: hol4-real.thy hol4-real-unsat.art prove_real_assums.ot.art ../opentheory/hol4.int
@@ -43,8 +43,6 @@ install: hol4-real.thy hol4-real.art
 
 all: hol4-real.art
 endif
-
-EXTRA_CLEANS = selftest.exe real-selftest.log
 
 ifdef HOLSELFTESTLEVEL
 all: real-selftest.log

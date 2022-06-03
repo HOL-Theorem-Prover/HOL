@@ -32,28 +32,28 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["Data","Bool"],"T") = {Thy="bool",Name="T"}
   | const_name (["Data","Bool"],"F") = {Thy="bool",Name="F"}
   | const_name (["Data","Bool"],"cond") = {Thy="bool",Name="COND"}
-  | const_name (["Number","Real"],"fromNatural") = {Thy="real",Name="real_of_num"}
+  | const_name (["Number","Real"],"fromNatural") = {Thy="realax",Name="real_of_num"}
   | const_name (["Number","Real"],"inv") = {Thy=Thy,Name="inv"}
   | const_name (["Number","Real"],"<") = {Thy="realax",Name="real_lt"}
-  | const_name (["Number","Real"],">") = {Thy="real",Name="real_gt"}
-  | const_name (["Number","Real"],">=") = {Thy="real",Name="real_ge"}
-  | const_name (["Number","Real"],"<=") = {Thy="real",Name="real_lte"}
+  | const_name (["Number","Real"],">") = {Thy="realax",Name="real_gt"}
+  | const_name (["Number","Real"],">=") = {Thy="realax",Name="real_ge"}
+  | const_name (["Number","Real"],"<=") = {Thy="realax",Name="real_lte"}
   | const_name (["Number","Real"],"*") = {Thy="realax",Name="real_mul"}
   | const_name (["Number","Real"],"+") = {Thy="realax",Name="real_add"}
-  | const_name (["Number","Real"],"-") = {Thy="real",Name="real_sub"}
+  | const_name (["Number","Real"],"-") = {Thy="realax",Name="real_sub"}
   | const_name (["Number","Real"],"~") = {Thy="realax",Name="real_neg"}
   | const_name (["Number","Real"],"/") = {Thy=Thy,Name="/"}
-  | const_name (["Number","Real"],"max") = {Thy="real",Name="max"}
-  | const_name (["Number","Real"],"min") = {Thy="real",Name="min"}
-  | const_name (["Number","Real"],"abs") = {Thy="real",Name="abs"}
-  | const_name (["Number","Real"],"^") = {Thy="real",Name="pow"}
+  | const_name (["Number","Real"],"max") = {Thy="realax",Name="max"}
+  | const_name (["Number","Real"],"min") = {Thy="realax",Name="min"}
+  | const_name (["Number","Real"],"abs") = {Thy="realax",Name="abs"}
+  | const_name (["Number","Real"],"^") = {Thy="realax",Name="pow"}
   | const_name (["Number","Natural"],"zero") = {Thy="num",Name="0"}
   | const_name (["Number","Natural"],"suc") = {Thy="num",Name="SUC"}
   | const_name (["Number","Natural"],"bit1") = {Thy="arithmetic",Name="BIT1"}
   | const_name (["HOL4","realax"],"real_0") = {Thy=Thy,Name="real_0"}
   | const_name (["HOL4","realax"],"real_1") = {Thy=Thy,Name="real_1"}
   | const_name (["HOL4","realax"],"inv") = {Thy=Thy,Name="inv0"}
-  | const_name (["HOL4","real"],"/") = {Thy=Thy,Name="real_div"}
+  | const_name (["HOL4","realax"],"/") = {Thy=Thy,Name="real_div"}
   | const_name (ns,n) = {Thy=Thy,Name=String.concatWith "_"(ns@[n])};
 
 fun tyop_name ([],"bool") = {Thy="min",Tyop="bool"}

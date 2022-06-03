@@ -13,7 +13,7 @@ structure realLib :> realLib =
 struct
   type conv = Abbrev.conv
 
-  open HolKernel RealArith realSimps isqrtLib;
+  open HolKernel realSimps RealArith isqrtLib;
 
   val operators = [("+", realSyntax.plus_tm),
                    ("-", realSyntax.minus_tm),
@@ -45,5 +45,12 @@ struct
   in
     List.app doit operators
   end
+
+  (* The default REAL_ARITH, etc. can be switched here.
+     NOTE: PURE_REAL_ARITH_TAC is always the old one (in RealArith.sml)
+   *)
+  val REAL_ARITH_TAC     = RealArith.OLD_REAL_ARITH_TAC;
+  val REAL_ARITH         = RealArith.OLD_REAL_ARITH;
+  val REAL_ASM_ARITH_TAC = RealArith.OLD_REAL_ASM_ARITH_TAC;
 
 end

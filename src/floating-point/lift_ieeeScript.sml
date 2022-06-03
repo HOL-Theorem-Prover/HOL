@@ -3,9 +3,11 @@
    ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib
-open binary_ieeeTheory realTheory wordsLib RealArith
+open binary_ieeeTheory realTheory wordsLib realLib
 open realSimps
-val () = new_theory "lift_ieee"
+
+val _ = new_theory "lift_ieee";
+
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss"]
 
@@ -1656,7 +1658,7 @@ val finite_float_within_threshold = Q.store_thm (
   \\ fs[realTheory.abs]
   \\ BasicProvers.every_case_tac
   \\ res_tac
-  \\ RealArith.REAL_ASM_ARITH_TAC);
+  \\ REAL_ASM_ARITH_TAC);
 
 val round_finite_normal_float_id = Q.store_thm(
 "round_finite_normal_float_id",
@@ -1681,7 +1683,7 @@ val round_finite_normal_float_id = Q.store_thm(
       \\ fs[realTheory.REAL_SUB_REFL]
       \\ strip_tac
       \\ `float_to_real b - float_to_real f = 0`
-           by (RealArith.REAL_ASM_ARITH_TAC)
+           by (REAL_ASM_ARITH_TAC)
       \\ fs[float_to_real_eq]
       \\ rfs[])
   \\ CCONTR_TAC
@@ -1691,7 +1693,7 @@ val round_finite_normal_float_id = Q.store_thm(
   \\ fs[realTheory.REAL_SUB_REFL]
   \\ rpt strip_tac
   \\ `float_to_real x - float_to_real f = 0`
-        by (RealArith.REAL_ASM_ARITH_TAC)
+        by (REAL_ASM_ARITH_TAC)
   \\ fs[float_to_real_eq]
   \\ rfs[]);
 

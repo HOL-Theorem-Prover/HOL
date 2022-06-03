@@ -36,6 +36,7 @@ sig
    val REPEATC               : conv -> conv
    val CHANGED_CONV          : conv -> conv
    val QCHANGED_CONV         : conv -> conv
+   val UNCHANGED_CONV        : conv -> conv
    val TRY_CONV              : conv -> conv
    val SUB_CONV              : conv -> conv
    val DEPTH_CONV            : conv -> conv
@@ -116,6 +117,7 @@ sig
    val PRINT_CONV            : conv
    val MAP_THM               : conv -> thm -> thm
    val PATH_CONV             : string -> conv -> conv
+   val MP_CONV               : conv -> thm -> thm
 
    val memoize : (term -> 'a option) -> ('a, thm) Redblackmap.dict ->
                  (term -> bool) -> exn -> conv -> conv

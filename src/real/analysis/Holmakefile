@@ -5,8 +5,27 @@ EXTRA_CLEANS = selftest.exe real-selftest2.log
 
 all: $(DEFAULT_TARGETS) selftest.exe
 
-selftest.exe: selftest.uo $(HOLDIR)/src/real/realSimps.uo
+selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+# Build a realheap
+ifdef POLY
+HOLHEAP = realheap
+EXTRA_CLEANS += $(HOLHEAP)
+
+REAL_DEPS = realLib iterateTheory real_sigmaTheory metricTheory netsTheory \
+            RealArith RealField realSimps
+
+BARE_DEPS = $(patsubst %,../%,$(REAL_DEPS))
+
+DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
+
+all: $(HOLHEAP) selftest.exe
+
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/src/num/termination/numheap)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
+		-b $(protect $(HOLDIR)/src/num/termination/numheap) $(BARE_DEPS)
+endif
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))

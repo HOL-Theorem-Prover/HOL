@@ -1,12 +1,10 @@
 structure jrhUtils :> jrhUtils=
 struct
 
-(* Standard libs *)
 open HolKernel boolLib liteLib numLib reduceLib
      pairTheory prim_recTheory numTheory arithmeticTheory;
 
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-
+infix THEN_TCL ORELSE_TCL;
 
 val ERR = mk_HOL_ERR "jrhUtils";
 
@@ -174,5 +172,11 @@ fun EXPAND_TAC s = FIRST_ASSUM(SUBST1_TAC o SYM o
  *---------------------------------------------------------------------------*)
 
 val GEN_REWR_TAC = Lib.C Rewrite.GEN_REWRITE_TAC Rewrite.empty_rewrites;
+
+(*---------------------------------------------------------------------------*)
+(* more for HOL-Light compatibility                                          *)
+(*---------------------------------------------------------------------------*)
+
+val NUM_EQ_CONV = NEQ_CONV;
 
 end

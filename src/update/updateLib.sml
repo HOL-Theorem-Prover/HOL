@@ -186,21 +186,6 @@ fun is_c_expr tm =
 fun is_update_expr tm = is_o_expr tm orelse is_c_expr tm
 
 (* -----------------------------------------------------------------------
-   UNCHANGED_CONV cnv
-
-   Raise Conv.UNCHANGED if conversion "cnv" produces result |- t = t' where
-   t and t' are alpha-equivalent, or if an exception is raised.
-   ----------------------------------------------------------------------- *)
-
-fun UNCHANGED_CONV (conv: conv) tm =
-   let
-      val th = Lib.with_exn conv tm Conv.UNCHANGED
-      val (l, r) = boolSyntax.dest_eq (Thm.concl th)
-   in
-      if Term.aconv l r then raise Conv.UNCHANGED else th
-   end
-
-(* -----------------------------------------------------------------------
    FILTER_CONV cnv
 
    Evaluation for ``FILTER P l``. Faster than version in listLib.

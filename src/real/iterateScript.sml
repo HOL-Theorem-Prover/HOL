@@ -21,7 +21,7 @@ open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
      arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory hurdUtils
      optionTheory relationTheory;
 
-open realTheory RealArith realSimps wellorderTheory cardinalTheory;
+open realTheory RealField realSimps wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
 
@@ -38,7 +38,7 @@ val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC;
-val ASM_REAL_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> REAL_ARITH_TAC;
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
 val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
@@ -53,7 +53,8 @@ val REAL_LT_BETWEEN = store_thm ("REAL_LT_BETWEEN",
  ``!a b:real. a < b <=> ?x. a < x /\ x < b``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[REAL_LT_TRANS]] THEN
   DISCH_TAC THEN EXISTS_TAC ``(a + b) / &2:real`` THEN
-  SIMP_TAC arith_ss [REAL_LT_RDIV_EQ, REAL_LT_LDIV_EQ, REAL_ARITH ``0 < 2:real``, REAL_LT] THEN
+  SIMP_TAC arith_ss [REAL_LT_RDIV_EQ, REAL_LT_LDIV_EQ,
+                     REAL_ARITH ``0 < 2:real``, REAL_LT] THEN
   POP_ASSUM MP_TAC THEN REAL_ARITH_TAC);
 
 val LOWER_BOUND_FINITE_SET_REAL = store_thm ("LOWER_BOUND_FINITE_SET_REAL",
@@ -578,7 +579,8 @@ val FINITE_REAL_INTERVAL = store_thm ("FINITE_REAL_INTERVAL",
    (!a b. FINITE {x:real | a <= x /\ x <= b} <=> b <= a)``,
   SUBGOAL_THEN ``!a b. FINITE {x:real | a < x /\ x < b} <=> b <= a``
   ASSUME_TAC THENL
-   [REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_NOT_LT] THEN
+  [ (* goal 1 (of 2) *)
+    REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_NOT_LT] THEN
     ASM_CASES_TAC ``a:real < b`` THEN
     ASM_SIMP_TAC std_ss [REAL_ARITH ``~(a:real < b) ==> ~(a < x /\ x < b)``] THEN
     REWRITE_TAC[GSPEC_F, FINITE_EMPTY] THEN
@@ -604,6 +606,7 @@ val FINITE_REAL_INTERVAL = store_thm ("FINITE_REAL_INTERVAL",
     SIMP_TAC std_ss [REAL_INV_INJ, REAL_EQ_RADD] THEN
     METIS_TAC [REAL_SUB_0, REAL_LT_IMP_NE], ALL_TAC] THEN DISCH_TAC THEN
     ASM_SIMP_TAC std_ss [REAL_OF_NUM_EQ],
+    (* goal 2 (of 2) *)
     ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL
    [DISCH_THEN(MP_TAC o SPEC ``{x:real | a < x /\ x < a + &1}`` o
         MATCH_MP(REWRITE_RULE[GSYM AND_IMP_INTRO] SUBSET_FINITE)) THEN
@@ -647,7 +650,7 @@ val FINITE_REAL_INTERVAL = store_thm ("FINITE_REAL_INTERVAL",
                   {x | a < x /\ x < b} UNION {x | (x = a) \/ (x = b)}`` THENL
     [SET_TAC [], ALL_TAC] THEN DISCH_TAC THEN CCONTR_TAC THEN
      UNDISCH_TAC ``~(b <= a:real)`` THEN FULL_SIMP_TAC std_ss [] THEN
-     POP_ASSUM MP_TAC THEN ASM_REWRITE_TAC [] THEN METIS_TAC [FINITE_UNION]]]);
+     POP_ASSUM MP_TAC THEN ASM_REWRITE_TAC [] THEN METIS_TAC [FINITE_UNION] ] ]);
 
 val real_INFINITE = store_thm ("real_INFINITE",
  ``INFINITE univ(:real)``,
@@ -4003,26 +4006,6 @@ val POLYNOMIAL_FUNCTION_FINITE_ROOTS = store_thm ("POLYNOMIAL_FUNCTION_FINITE_RO
 (*     Products of natural numbers and real numbers (productScript.sml)      *)
 (* ========================================================================= *)
 
-Theorem REAL_ADD_AC :
-    (m + n = n + m:real) /\
-    ((m + n) + p = m + (n + p):real) /\
-    (m + (n + p) = n + (m + p):real)
-Proof
-    METIS_TAC [REAL_ADD_ASSOC, REAL_ADD_SYM]
-QED
-
-Theorem REAL_MULT_AC :
-    (m * n = n * m:num) /\
-    ((m * n) * p = m * (n * p:num)) /\
-    (m * (n * p) = n * (m * p:num))
-Proof
-    MESON_TAC [MULT_ASSOC, MULT_SYM]
-QED
-
-(* ------------------------------------------------------------------------- *)
-(* Products over natural numbers.                                            *)
-(* ------------------------------------------------------------------------- *)
-
 Definition nproduct :
    nproduct = iterate(( * ):num->num->num)
 End
@@ -4091,7 +4074,7 @@ val NPRODUCT_CLAUSES_NUMSEG = store_thm ("NPRODUCT_CLAUSES_NUMSEG",
   REWRITE_TAC[NUMSEG_CLAUSES] THEN REPEAT STRIP_TAC THEN
   COND_CASES_TAC THEN
   ASM_SIMP_TAC std_ss [NPRODUCT_SING, NPRODUCT_CLAUSES, FINITE_NUMSEG, IN_NUMSEG] THEN
-  SIMP_TAC arith_ss [ARITH_PROVE ``~(SUC n <= n)``, REAL_MULT_AC]);
+  SIMP_TAC arith_ss [ARITH_PROVE ``~(SUC n <= n)``]);
 
 val NPRODUCT_EQ = store_thm ("NPRODUCT_EQ",
  ``!f g s. (!x. x IN s ==> (f x = g x)) ==> (nproduct s f = nproduct s g)``,
@@ -4159,7 +4142,7 @@ val NPRODUCT_MUL = store_thm ("NPRODUCT_MUL",
     ``(nproduct s (\x. f x * g x) = nproduct s f * nproduct s g) =
  (\s. (nproduct s (\x. f x * g x) = nproduct s f * nproduct s g)) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [NPRODUCT_CLAUSES, REAL_MULT_AC, MULT_CLAUSES]);
+  SIMP_TAC arith_ss [NPRODUCT_CLAUSES, MULT_CLAUSES]);
 
 val NPRODUCT_MUL_NUMSEG = store_thm ("NPRODUCT_MUL_NUMSEG",
  ``!f g m n.

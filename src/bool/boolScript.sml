@@ -1786,7 +1786,7 @@ val LEFT_FORALL_OR_THM = save_thm("LEFT_FORALL_OR_THM",
       val imp2 = DISCH_ALL (GEN x (DISJ_CASES_UNION
                   (ASSUME(mk_disj(mk_forall(x,P), Q))) thm5 thm6))
   in
-      GENL [Q,f] (IMP_ANTISYM_RULE imp1 imp2)
+      GENL [f,Q] (IMP_ANTISYM_RULE imp1 imp2)
   end);
 
 (* ------------------------------------------------------------------------- *)
@@ -4375,6 +4375,7 @@ val _ = add_user_printer ("bool.COND", “COND gd tr fl”)
 val _ = add_user_printer ("bool.LET", “LET f x”)
 val _ = add_absyn_postprocessor "bool.LET"
 
+(* |- |- !A B. A \/ B <=> ~A ==> B *)
 val DISJ_EQ_IMP = save_thm("DISJ_EQ_IMP",
   let
     val lemma = NOT_CLAUSES |> CONJUNCT1 |> SPEC ``A:bool``
@@ -4387,5 +4388,15 @@ val DISJ_EQ_IMP = save_thm("DISJ_EQ_IMP",
          (fn tm => lemma))
     |> GENL [``A:bool``,``B:bool``]
   end);
+
+(* ------------------------------------------------------------------------- *)
+(* CONTRAPOS_THM |- !t1 t2. (~t1 ==> ~t2) <=> (t2 ==> t1)                    *)
+(* (HOL-Light compatible)                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+val CONTRAPOS_THM = save_thm ("CONTRAPOS_THM",
+    MONO_NOT_EQ |> SYM
+                |> INST [“x:bool” |-> “t1:bool”, “y:bool” |-> “t2:bool”]
+                |> GENL [“t1:bool”, “t2:bool”]);
 
 val _ = export_theory();
