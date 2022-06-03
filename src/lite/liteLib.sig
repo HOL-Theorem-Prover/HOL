@@ -1,3 +1,7 @@
+(* ========================================================================= *)
+(*    HOL-Light compatibility library                                        *)
+(* ========================================================================= *)
+
 signature liteLib =
 sig
    include Abbrev
@@ -150,4 +154,13 @@ sig
     val SIMPLE_DISJ_CASES : thm -> thm -> thm
     val SIMPLE_CHOOSE : term -> thm -> thm
 
+(*--------------------------------------------------------------------*
+ *  HOL-Light compatible type operators                               *
+ *--------------------------------------------------------------------*)
+
+    val bool_ty     : hol_type
+    val dest_fun_ty : hol_type -> hol_type * hol_type
+    val mk_fun_ty   : hol_type -> hol_type -> hol_type
+
+    val setify_term : term list -> term list
 end

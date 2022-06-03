@@ -6,6 +6,9 @@ open realSyntax
 
 val ERR = mk_HOL_ERR "isqrtLib"
 
+(* moved here from realSyntax.sml *)
+val (sqrt_tm,mk_sqrt,dest_sqrt,is_sqrt) = syntax_fns1 "real" "sqrt";
+
 local
    fun isqrt_square i =
       let

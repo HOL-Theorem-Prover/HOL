@@ -7,34 +7,16 @@ open HolKernel Parse boolLib bossLib;
 open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory prim_recTheory
      jrhUtils realTheory realSimps metricTheory netsTheory BasicProvers;
 
-open combinTheory pred_setTheory res_quanTools realSimps RealArith;
+open combinTheory pred_setTheory res_quanTools realSimps realLib;
 
-open iterateTheory real_sigmaTheory real_topologyTheory;
+open hurdUtils iterateTheory real_sigmaTheory real_topologyTheory;
 
 val _ = new_theory "seq";
 val _ = ParseExtras.temp_loose_equality()
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
-
-val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
-val Strip = S_TAC;
-
-fun K_TAC _ = ALL_TAC;
-val KILL_TAC = POP_ASSUM_LIST K_TAC;
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-local
-  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
-in
-  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
-end;
-
-fun wrap a = [a];
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val std_ss' = std_ss ++ boolSimps.ETA_ss
+val EXACT_CONV = jrhUtils.EXACT_CONV; (* conflict with hurdUtils.EXACT_CONV *)
+val assert = Lib.assert;              (* conflict with hurdUtils.assert *)
 
 val _ = add_implicit_rewrites pairTheory.pair_rws;
 

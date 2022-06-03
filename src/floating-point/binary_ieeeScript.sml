@@ -3,7 +3,7 @@
    ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib
-open realTheory intrealTheory wordsLib RealArith
+open realTheory intrealTheory wordsLib realLib
 
 open pred_setTheory set_relationTheory
 
@@ -274,7 +274,7 @@ Proof
       Cases_on ‘f.Sign’ using wordsTheory.ranged_word_nchotomy >>
       gs[wordsTheory.word_eq_n2w, bitTheory.MOD_2EXP_MAX_def,
          bitTheory.MOD_2EXP_def, bitTheory.MOD_2EXP_EQ_def]) >>
-  gs[RealArith.REAL_ARITH “(1r + x = 0) <=> (x = -1)”,
+  gs[REAL_ARITH “(1r + x = 0) <=> (x = -1)”,
      SF realSimps.RMULRELNORM_ss, real_div] >>
   Cases_on ‘f.Significand’ using wordsTheory.ranged_word_nchotomy >>
   gs[REAL_OF_NUM_POW]

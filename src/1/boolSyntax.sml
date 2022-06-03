@@ -188,6 +188,8 @@ fun is_bool_atom tm =
   is_var tm andalso (type_of tm = bool)
   orelse is_neg tm andalso is_var (dest_neg tm);
 
+fun is_iff tm = is_eq tm andalso type_of(fst(dest_eq tm)) = bool;
+
 (*---------------------------------------------------------------------------*
  * Construction and destruction functions that deal with SML lists           *
  *---------------------------------------------------------------------------*)

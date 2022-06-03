@@ -17,7 +17,7 @@ sig
   val div_tm         : term
   val exp_tm         : term (* not the e of e^l, but rather real$pow *)
   val geq_tm         : term
-  val greater_tm       : term
+  val greater_tm     : term
   val leq_tm         : term
   val less_tm        : term
   val max_tm         : term
@@ -26,7 +26,6 @@ sig
   val mult_tm        : term
   val plus_tm        : term
   val real_eq_tm     : term
-  val sqrt_tm        : term
 
   (* discriminators, constructors, etc *)
 
@@ -97,9 +96,4 @@ sig
   val is_inv         : term -> bool
   val dest_inv       : term -> term
   val mk_inv         : term -> term
-
-  val is_sqrt        : term -> bool
-  val dest_sqrt      : term -> term
-  val mk_sqrt        : term -> term
-
 end

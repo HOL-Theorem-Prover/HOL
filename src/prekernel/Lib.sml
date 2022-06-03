@@ -79,6 +79,9 @@ fun el n l =
            elem (n, l)
         end
 
+(* this generates [0, ..., n - 1] just like `pred_set$count` *)
+fun count n = List.tabulate(n, I);
+
 fun index P l =
    let
       fun idx (i, []) = raise ERR "index" "no such element"
@@ -203,6 +206,43 @@ fun mapshape [] _ _ =  []
         f fargs :: mapshape nums funcs rst
      end
   | mapshape _ _ _ = raise ERR "mapshape" "irregular lists"
+
+(*---------------------------------------------------------------------------*
+ * More list operations (from HOL-Light's lib.sml)                           *
+ *---------------------------------------------------------------------------*)
+
+fun forall p [] = true
+  | forall p (h::t) = p(h) andalso forall p t
+
+fun forall2 p [] [] = true
+  | forall2 p (h1::t1) (h2::t2) = p h1 h2 andalso forall2 p t1 t2
+  | forall2 _ _ _ = false
+
+(* removing adjacent equal elements from list *)
+fun uniq (x::y::xs) = if x = y then uniq (y::xs) else x::uniq (y::xs)
+  | uniq xs = xs
+
+(* convert list into set by eliminating duplicates *)
+fun setify lte s = uniq (sort lte s)
+
+(* ------------------------------------------------------------------------- *)
+(* All pairs arising from applying a function over two lists.                *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: the returned list of "pairs" has no duplications but must be eqtype *)
+fun allpairs (f :'a -> 'b -> ''c) (l1 :'a list) (l2 :'b list) :''c list =
+    itlist (union o C map l2 o f) l1 [];
+
+(* NOTE: eqtype is not required, while the returned list of "pairs" may have
+   duplications. *)
+fun allpairs' (f :'a -> 'b -> 'c) (h1::t1) l2 =
+    itlist (fn x => fn a => f h1 x :: a) l2 (allpairs' f t1 l2)
+  | allpairs' f [] l2 = []
+
+(* NOTE: eqtype is not required, no duplications, but an explicit equal test
+   function is required *)
+fun op_allpairs eq f l1 l2 =
+    itlist ((op_union eq) o C map l2 o f) l1 [];
 
 (*---------------------------------------------------------------------------*
  * Assoc lists.                                                              *

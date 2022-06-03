@@ -24,7 +24,8 @@ val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val POP_ORW = POP_ASSUM (ONCE_REWRITE_TAC o wrap);
 val art = ASM_REWRITE_TAC;
 
-val tendsto = netsTheory.tendsto; (* conflict with real_topologyTheory *)
+val tendsto = netsTheory.tendsto;   (* conflict with real_topologyTheory.tendsto *)
+val GEN_ALL = hol88Lib.GEN_ALL;     (* this gives old (reverted) variable orders *)
 
 (*---------------------------------------------------------------------------*)
 (* Specialize nets theorems to the pointwise limit of real->real functions   *)

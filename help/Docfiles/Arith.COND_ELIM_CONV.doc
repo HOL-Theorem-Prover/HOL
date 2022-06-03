@@ -16,16 +16,28 @@ Never fails.
 
 \EXAMPLE
 {
-#COND_ELIM_CONV "!f n. f ((SUC n = 0) => 0 | (SUC n - 1)) < (f n) + 1";;
-|- (!f n. (f((SUC n = 0) => 0 | (SUC n) - 1)) < ((f n) + 1)) =
+> COND_ELIM_CONV ``!f n. f (if (SUC n = 0) then 0 else (SUC n - 1)) < (f n) + 1``;
+(new)
+|- (!f n. f (if SUC n = 0 then 0 else SUC n - 1) < f n + 1) <=>
+    !f n. (SUC n = 0 ==> f 0 < f n + 1) /\
+          (SUC n <> 0 ==> f (SUC n - 1) < f n + 1)
+
+(old)
+|- (!f n. (f(if (SUC n = 0) then 0 else (SUC n) - 1)) < ((f n) + 1)) =
    (!f n.
      (~(SUC n = 0) \/ (f 0) < ((f n) + 1)) /\
      ((SUC n = 0) \/ (f((SUC n) - 1)) < ((f n) + 1)))
+     
+> COND_ELIM_CONV ``!f n. (\m. f (if (m = 0) then 0 else (m - 1))) (SUC n) < (f n) + 1``;
+(new)
+|- (!f n. (\m. f (if m = 0 then 0 else m - 1)) (SUC n) < f n + 1) <=>
+    !f n. (\m. if m = 0 then f 0 else f (m - 1)) (SUC n) < f n + 1: thm
 
-#COND_ELIM_CONV "!f n. (\m. f ((m = 0) => 0 | (m - 1))) (SUC n) < (f n) + 1";;
-|- (!f n. ((\m. f((m = 0) => 0 | m - 1))(SUC n)) < ((f n) + 1)) =
-   (!f n. ((\m. ((m = 0) => f 0 | f(m - 1)))(SUC n)) < ((f n) + 1))
+(old)
+|- (!f n. ((\m. f(if (m = 0) then 0 else m - 1))(SUC n)) < ((f n) + 1)) =
+   (!f n. ((\m. (if (m = 0) then f 0 else f(m - 1)))(SUC n)) < ((f n) + 1))
 }
+
 \USES
 Useful as a preprocessor to decision procedures which do not allow conditional
 statements in their argument formula.

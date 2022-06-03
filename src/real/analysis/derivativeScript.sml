@@ -21,7 +21,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      combinTheory quotientTheory arithmeticTheory pred_setTheory
      jrhUtils listTheory mesonLib optionTheory pred_setLib;
 
-open realTheory realLib topologyTheory RealArith cardinalTheory;
+open realTheory realLib topologyTheory cardinalTheory;
 
 open hurdUtils iterateTheory seqTheory real_topologyTheory;
 
@@ -37,7 +37,7 @@ fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* realLib *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)

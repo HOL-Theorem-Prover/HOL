@@ -18,7 +18,7 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
+open numTheory numLib unwindLib tautLib Arith prim_recTheory
      combinTheory quotientTheory arithmeticTheory realTheory real_sigmaTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
@@ -40,7 +40,7 @@ fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* realLib *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
@@ -7136,7 +7136,6 @@ val SUBSET_BALLS = store_thm ("SUBSET_BALLS",
    [tac, tac, ALL_TAC, ALL_TAC] THEN REWRITE_TAC[lemma] THEN
   REPEAT(POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC);
 
-(* NOTE: this proof needs 10s to finish *)
 Theorem INTER_BALLS_EQ_EMPTY :
    (!a b:real r s. (ball(a,r) INTER ball(b,s) = {}) <=>
                      r <= &0 \/ s <= &0 \/ r + s <= dist(a,b)) /\
@@ -7238,8 +7237,15 @@ Proof
   SIMP_TAC std_ss [GSYM real_div] THEN
   FULL_SIMP_TAC std_ss [REAL_LT_RDIV_EQ, REAL_LE_RDIV_EQ,
                         REAL_LT_LDIV_EQ, REAL_LE_LDIV_EQ, REAL_ARITH ``0 < 2:real``] THEN
-  RW_TAC real_ss [abs, max_def, min_def] THEN (* 1024 subgoals (for each goals) *)
-  ASM_REAL_ARITH_TAC
+
+  (* NOTE: previously, when porting this proof from HOL-Light to HOL4, I had
+     to rewrite max/min/abs before calling REAL_ASM_ARITH_TAC, and this have
+     caused 1024 subgoals here (1024 calls to REAL_ARITH), which take about 10
+     10 seconds to finish. Now we forcely use the new one from RealArith, and
+     this means this last step does not participate the performance comparisons
+     when we globally switch REAL_ARITH, etc from realLib. -- Chun Tian
+   *)
+  RealArith.REAL_ASM_ARITH_TAC
 QED
 
 (* ------------------------------------------------------------------------- *)

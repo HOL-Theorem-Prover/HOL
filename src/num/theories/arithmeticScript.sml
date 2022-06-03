@@ -11,8 +11,10 @@
 (* ADDITIONS     : December 22, 1992                                     *)
 (* ===================================================================== *)
 
-open HolKernel boolLib Parse
-     simpLib boolSimps metisLib BasicProvers;
+open HolKernel boolLib Parse BasicProvers;
+
+open simpLib boolSimps mesonLib metisLib;
+
 local open numTheory prim_recTheory SatisfySimps DefnBase in end
 
 local
@@ -1162,6 +1164,13 @@ val ADD_SUB = store_thm ("ADD_SUB",
    GEN_TAC THEN INDUCT_TAC THEN
    ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ]) ;
 
+(* ported from HOL-Light *)
+Theorem ADD_SUB2 :
+   !m n. (m + n) - m = n
+Proof
+  ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_ACCEPT_TAC ADD_SUB
+QED
+
 val LESS_EQ_ADD_SUB = store_thm ("LESS_EQ_ADD_SUB",
  “!c b. (c <= b) ==> !a. (((a + b) - c) = (a + (b - c)))”,
    REPEAT INDUCT_TAC THEN
@@ -2017,6 +2026,17 @@ val MOD_UNIQUE = store_thm ("MOD_UNIQUE",
    DISCH_THEN (STRIP_THM_THEN (fn th => fn g => ACCEPT_TAC (SYM th) g))
    end);
 
+(* A combined version of DIV_UNIQUE and MOD_UNIQUE from HOL-Light *)
+Theorem DIVMOD_UNIQ :
+   !m n q r. (m = q * n + r) /\ r < n ==> (m DIV n = q) /\ (m MOD n = r)
+Proof
+    rpt STRIP_TAC
+ >| [ MATCH_MP_TAC DIV_UNIQUE \\
+      Q.EXISTS_TAC ‘r’ >> ASM_REWRITE_TAC [],
+      MATCH_MP_TAC MOD_UNIQUE \\
+      Q.EXISTS_TAC ‘q’ >> ASM_REWRITE_TAC [] ]
+QED
+
 val DIV2_DOUBLE = store_thm (* from probabilityTheory *)
   ("DIV2_DOUBLE", “!n. DIV2 (2 * n) = n”,
     GEN_TAC >> REWRITE_TAC [DIV2_def]
@@ -2761,6 +2781,32 @@ Proof
   PROVE_TAC[DIV_0_IMP_LT, LESS_DIV_EQ_ZERO]
 QED
 
+(* NOTE: in HOL-Light the original statement was:
+
+  |- P (m DIV n) (m MOD n) <=>
+       (!q r. n = 0 /\ q = 0 /\ r = m \/ m = q * n + r /\ r < n ==> P q r)
+
+  where ‘m DIV 0 = 0’ by definition. In HOL4, ‘m DIV 0’ is unspecified, thus
+  only the following alternative statements is possible:
+ *)
+Theorem DIVMOD_ELIM_THM :
+    !P m n. 0 < n ==>
+           (P (m DIV n) (m MOD n) <=> !q r. m = q * n + r /\ r < n ==> P q r)
+Proof
+    rpt STRIP_TAC
+ >> FIRST_ASSUM(MP_TAC o MATCH_MP DIVISION)
+ >> PROVE_TAC[DIVMOD_UNIQ]
+QED
+
+Theorem DIVMOD_ELIM_THM' :
+    !P m n. 0 < n ==>
+           (P (m DIV n) (m MOD n) <=> ?q r. m = q * n + r /\ r < n /\ P q r)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘\x y. ~P x y’,‘m’,‘n’] DIVMOD_ELIM_THM)
+ >> PROVE_TAC []
+QED
+
 (* ------------------------------------------------------------------------ *)
 (* Some miscellaneous lemmas (from transc.ml)                               *)
 (* ------------------------------------------------------------------------ *)
@@ -2851,6 +2897,32 @@ Theorem SUB_ELIM_THM_EXISTS =
                |> Q.INST [‘P’ |-> ‘\n. ~P n’]
                |> SIMP_RULE bool_ss []
 
+(* some HOL-Light compatible theorem names *)
+val LTE_CASES = LESS_CASES;
+val NOT_LT    = NOT_LESS;
+val NOT_LE    = NOT_LESS_EQUAL;
+val LT_IMP_LE = LESS_IMP_LESS_OR_EQ;
+val LE_ADD    = LESS_EQ_ADD;
+val LE_EXISTS = LESS_EQ_EXISTS;
+
+(* This is HOL-Light's SUB_ELIM_THM, with a single ‘P d’ in conclusion. *)
+Theorem SUB_ELIM_THM_ALT :
+   P (a - b) <=> (!d. a = b + d \/ a < b /\ d = 0 ==> P d)
+Proof
+  DISJ_CASES_TAC(Q.SPECL [‘a’, ‘b’] LTE_CASES)
+  >- (ASM_MESON_TAC[NOT_LT, SUB_EQ_0, LT_IMP_LE, LE_ADD]) \\
+  FIRST_ASSUM(X_CHOOSE_THEN “e:num” SUBST1_TAC o REWRITE_RULE[LE_EXISTS]) \\
+  SIMP_TAC bool_ss [ADD_SUB2, GSYM NOT_LE, LE_ADD, EQ_ADD_LCANCEL]
+QED
+
+(* HOL-Light compatible *)
+Theorem SUB_ELIM_THM' :
+   P (a - b) <=> ?d. (a = b + d \/ a < b /\ d = 0) /\ P d
+Proof
+    MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] SUB_ELIM_THM_ALT)
+ >> MESON_TAC[]
+QED
+
 val PRE_ELIM_THM = store_thm ("PRE_ELIM_THM",
   “P (PRE n) = !m. ((n = 0) ==> P 0) /\ ((n = SUC m) ==> P m)”,
   SPEC_TAC(“n:num”,“n:num”) THEN INDUCT_TAC THEN
@@ -2858,6 +2930,14 @@ val PRE_ELIM_THM = store_thm ("PRE_ELIM_THM",
   EQ_TAC THEN REPEAT STRIP_TAC THENL
    [FIRST_ASSUM(SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
     FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]);
+
+(* HOL-Light compatible *)
+Theorem PRE_ELIM_THM' :
+   P (PRE n) <=> (?m. (n = SUC m \/ m = 0 /\ n = 0) /\ P m)
+Proof
+    MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] PRE_ELIM_THM)
+ >> MESON_TAC []
+QED
 
 val _ = print "Additional properties of EXP\n"
 

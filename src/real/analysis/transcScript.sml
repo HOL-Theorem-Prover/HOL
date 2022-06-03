@@ -25,7 +25,7 @@ open reduceLib
      numTheory
      prim_recTheory
      arithmeticTheory
-     realTheory realSimps
+     realTheory realSimps realLib
      metricTheory
      netsTheory
      real_sigmaTheory
@@ -33,8 +33,7 @@ open reduceLib
      jrhUtils
      Diff
      pred_setTheory
-     mesonLib
-     RealArith;
+     mesonLib;
 
 open seqTheory limTheory powserTheory;
 open iterateTheory real_topologyTheory derivativeTheory;

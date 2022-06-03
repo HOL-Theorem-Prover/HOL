@@ -1,5 +1,11 @@
 signature Sub_and_cond =
 sig
-   val SUB_AND_COND_ELIM_CONV : Abbrev.conv
-   val COND_ELIM_CONV : Abbrev.conv
+   include Abbrev
+
+   val SUB_AND_COND_ELIM_CONV : conv
+   val COND_ELIM_CONV         : conv
+
+   (* from HOL-Light's canon.ml *)
+   val CONDS_ELIM_CONV        : conv
+   val CONDS_CELIM_CONV       : conv
 end

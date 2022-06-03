@@ -2,28 +2,11 @@
 (* Properties of real polynomials (not canonically represented).             *)
 (* ========================================================================= *)
 
-(*
-app load ["numLib",
-          "mesonLib",
-          "tautLib",
-          "numLib",
-          "simpLib",
-          "boolSimps",
-          "arithSimps",
-          "pairSimps",
-          "Ho_Rewrite",
-          "jrhUtils",
-          "limTheory",
-          "listTheory",
-          "pred_setTheory",
-          "realSimps", "RealArith"];
-*)
-
 open HolKernel Parse boolLib hol88Lib reduceLib pairLib numLib
      mesonLib tautLib simpLib boolSimps numSimps realSimps
      pairTheory numTheory prim_recTheory arithmeticTheory listTheory
      Ho_Rewrite jrhUtils Canon_Port AC realTheory limTheory listTheory
-     pred_setTheory RealArith;
+     pred_setTheory realLib;
 
 infix THEN THENL ORELSE ORELSEC ## THENC ORELSE_TCL;
 

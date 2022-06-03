@@ -6,7 +6,6 @@ struct
 
 open HolKernel Parse boolLib realTheory simpLib realSyntax
 
-
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
@@ -534,13 +533,13 @@ fun dpvars t = let
         recurse bnds (recurse bnds (recurse bnds acc t1) t2) t3
       end
     | SOME ("realax", "real_add") => go2()
-    | SOME ("real", "real_sub") => go2()
-    | SOME ("real", "real_gt") => go2()
+    | SOME ("realax", "real_sub") => go2()
+    | SOME ("realax", "real_gt") => go2()
     | SOME ("realax", "real_lt") => go2()
-    | SOME ("real", "real_lte") => go2()
-    | SOME ("real", "real_ge") => go2()
+    | SOME ("realax", "real_lte") => go2()
+    | SOME ("realax", "real_ge") => go2()
     | SOME ("realax", "real_neg") => go1()
-    | SOME ("real", "abs") => go1()
+    | SOME ("realax", "abs") => go1()
     | SOME ("realax", "real_mul") => let
         val args = realSyntax.strip_mult t
         val arg_vs = map (HOLset.listItems o recurse bnds empty_tmset) args
