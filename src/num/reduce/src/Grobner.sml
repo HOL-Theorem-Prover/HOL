@@ -17,10 +17,10 @@ struct
 
 open HolKernel Parse boolLib liteLib;
 
-open boolSimps simpLib arithmeticTheory numLib numSyntax mesonLib metisLib
+open boolSimps simpLib arithmeticTheory Num_conv numSyntax mesonLib metisLib
      tautLib Arithconv Canon_Port normalForms reduceLib;
 
-open Sub_and_cond Normalizer;
+open Normalizer;
 
 fun failwith s = raise mk_HOL_ERR "Grobner" "?" s
 

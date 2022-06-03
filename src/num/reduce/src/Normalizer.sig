@@ -8,6 +8,10 @@ signature Normalizer =
 sig
    include Abbrev
 
+   (* from HOL-Light's canon.ml *)
+   val CONDS_ELIM_CONV  : conv
+   val CONDS_CELIM_CONV : conv
+
    (* Usage: SEMIRING_NORMALIZERS_CONV sth rth
               (is_semiring_constant,
                SEMIRING_ADD_CONV,SEMIRING_MUL_CONV,SEMIRING_POW_CONV)
