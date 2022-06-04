@@ -588,24 +588,21 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 (* NOTE: since it's not going to be exported, no need to have the same name. *)
-fun GEN_REAL_ARITH' prover =
-    GEN_REAL_ARITH
+fun GEN_REAL_ARITH prover =
+    RealArith.GEN_REAL_ARITH
    (term_of_rat,
     REAL_RAT_EQ_CONV,REAL_RAT_GE_CONV,REAL_RAT_GT_CONV,
     REAL_POLY_CONV,REAL_POLY_NEG_CONV,REAL_POLY_ADD_CONV,REAL_POLY_MUL_CONV,
     prover);
 
-val REAL_ARITH' = let
+val REAL_ARITH = let
   val init = GEN_REWRITE_CONV ONCE_DEPTH_CONV empty_rewrites [DECIMAL]
-  and pure = GEN_REAL_ARITH' REAL_LINEAR_PROVER
+  and pure = GEN_REAL_ARITH REAL_LINEAR_PROVER
 in
   fn tm => let val th = init tm handle UNCHANGED => REFL tm in
                EQ_MP (SYM th) (pure(rand(concl th)))
            end
 end;
-
-(* NOTE: this is for debugging above code which can be evaluated manually. *)
-val REAL_ARITH = REAL_ARITH';
 
 (* tactic versions *)
 val (REAL_ARITH_TAC,REAL_ASM_ARITH_TAC) = mk_real_arith_tac REAL_ARITH;

@@ -1991,13 +1991,6 @@ end;
 (* “&n” is alien, while “&1” (and others) is not *)
 fun is_alien tm = is_injected tm andalso not(is_real_literal tm);
 
-(* “&SUC n” is a "SUC" alien, this is the new feature added by Chun Tian
-
-   NOTE: if n is a numeral literal, ‘SUC n’ should have been already simplified
-         by the user, before the term enters REAL_ARITH.
- *)
-fun is_suc_alien tm = is_injected tm andalso numSyntax.is_suc (dest_injected tm);
-
 (* This takes out “n” (may be more than just a variable) from “&SUC n” *)
 fun dest_suc_alien tm = numSyntax.dest_suc (dest_injected tm);
 
@@ -2031,19 +2024,19 @@ fun REAL_LINEAR_PROVER translator (eq,le,lt) = let
     and le_pols = map (linear_of_term o lhand o concl) le
     and lt_pols = map (linear_of_term o lhand o concl) lt;
 
-    val all_vars = (itlist (fn e => fn s => HOLset.union (dom_set e,s))
-                           (eq_pols @ le_pols @ lt_pols) empty_varset);
-    val aliens = HOLset.listItems
-                   (HOLset.filter (fn x => is_alien x andalso not(is_suc_alien x))
-                                  all_vars);
-    (* NOTE: this is new feature only provided in HOL4, by Chun Tian *)
-    val aliens' = HOLset.listItems (HOLset.filter is_suc_alien all_vars);
+    val all_vars = itlist (fn e => fn s => HOLset.addList(s, dom e))
+                          (eq_pols @ le_pols @ lt_pols) empty_tmset;
+    val all_aliens = HOLset.listItems
+                         (HOLset.filter (fn x => is_alien x) all_vars);
+
+    val (suc_aliens,aliens) =
+        partition (fn x => numSyntax.is_suc (dest_injected x)) all_aliens;
 
     (* for all (normal) alien terms like “&n”, adding “1 * &n >= 0” into le_pols *)
     val le_pols' = le_pols @ map (fn v => (v |=> Arbrat.one)) aliens;
 
     (* for all "SUC" alien terms like “&SUC n”, adding “1 * &SUC n > 0” into lt_pols *)
-    val lt_pols' = lt_pols @ map (fn v => (v |=> Arbrat.one)) aliens';
+    val lt_pols' = lt_pols @ map (fn v => (v |=> Arbrat.one)) suc_aliens;
 
     (* call linear prover to get the proof, droping the contradiction *)
     val (_,proof) = linear_prover(eq_pols,le_pols',lt_pols');
@@ -2053,7 +2046,7 @@ fun REAL_LINEAR_PROVER translator (eq,le,lt) = let
 
     (* adding “&SUC n > 0” theorems for alien terms before translating proof *)
     val lt' = lt @ map (fn a => INST [n_tm |-> dest_suc_alien a] pth')
-                       aliens'
+                       suc_aliens
 in
     translator (eq,le',lt') proof
 end;
