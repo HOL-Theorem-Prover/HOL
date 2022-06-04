@@ -277,7 +277,9 @@ val condify_ss : simpset      (* pure + condify *)
 
 val MIN_CNF : thm list -> term list * thm list
 
-(* Order canonically, right-associate and remove duplicates. *)
-val CONJ_CANON_CONV : conv
+(* from HOL-Light's canon.ml *)
+val CONJ_CANON_CONV  : conv
+val CONDS_ELIM_CONV  : conv
+val CONDS_CELIM_CONV : conv
 
 end

@@ -4,7 +4,7 @@
 (*                                                                           *)
 (*              (c) Copyright, John Harrison 1998-2007                       *)
 (*                                                                           *)
-(*               Ported to HOL4 by Chun Tian, May 2022                       *)
+(*               Ported to HOL4 by Chun Tian, June 2022                      *)
 (* ========================================================================= *)
 
 structure Normalizer :> Normalizer =
@@ -12,7 +12,8 @@ struct
 
 open HolKernel Parse boolLib boolSimps liteLib;
 
-open arithmeticTheory numSyntax Num_conv mesonLib tautLib Arithconv simpLib;
+open arithmeticTheory numSyntax Num_conv mesonLib tautLib Arithconv simpLib
+     normalForms;
 
 val ERR = mk_HOL_ERR "Normalizer";
 fun failwith s = raise ERR "?" s
@@ -30,94 +31,6 @@ val num_1         = Arbnum.one;
 fun INDUCT_TAC g =
   INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g
   handle HOL_ERR _ => raise ERR "INDUCT_TAC" "";
-
-val COMB2_CONV = Conv.COMB2_CONV; (* conflict with liteLib *)
-
-(* ------------------------------------------------------------------------- *)
-(* Eliminate conditionals; CONDS_ELIM_CONV aims for disjunctive splitting,   *)
-(* for refutation procedures, and CONDS_CELIM_CONV for conjunctive.          *)
-(* Both switch modes "sensibly" when going through a quantifier.             *)
-(*                                                                           *)
-(*       (Ported from HOL-Light's canon.ml by Chun Tian, June 2022)          *)
-(*                                                                           *)
-(* TODO: what's the difference between COND_ELIM_CONV and them?              *)
-(* ------------------------------------------------------------------------- *)
-
-val (CONDS_ELIM_CONV,CONDS_CELIM_CONV) = let
-  val th_cond = prove
-   (“((b <=> F) ==> x = x0) /\ ((b <=> T) ==> x = x1)
-     ==> x = (b /\ x1 \/ ~b /\ x0)”,
-    BOOL_CASES_TAC “b:bool” THEN ASM_REWRITE_TAC[])
-  and th_cond' = prove
-   (“((b <=> F) ==> x = x0) /\ ((b <=> T) ==> x = x1)
-     ==> x = ((~b \/ x1) /\ (b \/ x0))”,
-    BOOL_CASES_TAC “b:bool” THEN ASM_REWRITE_TAC[])
-  and propsimps = implicit_rewrites() (* was basic_net() *)
-  and false_tm = F and true_tm = T;
-  val match_th  = MATCH_MP th_cond
-  and match_th' = MATCH_MP th_cond'
-  and propsimp_conv = DEPTH_CONV(REWRITES_CONV propsimps)
-  and proptsimp_conv =
-    let val cnv = TRY_CONV(REWRITES_CONV propsimps) in
-      BINOP_CONV cnv THENC cnv
-    end;
-
-  (* The original HOL-Light code has been migrated to more efficient HOLset. *)
-  val find_conditional = let
-    fun find_cond (fvs :term set) (tm :term) :term =
-      if is_comb tm then
-         let val (s,t) = dest_comb tm in
-           if is_cond tm andalso
-             HOLset.isEmpty (HOLset.intersection (FVL [lhand s] empty_varset, fvs))
-          then tm
-          else ((find_cond fvs s)
-                handle HOL_ERR _ => find_cond fvs t)
-         end
-      else if is_abs tm then
-        let val (x,t) = dest_abs tm in
-          find_cond (HOLset.add (fvs, x)) t
-        end
-      else failwith "find_conditional"
-  in
-      find_cond empty_varset
-  end;
-
-  fun CONDS_ELIM_CONV dfl tm =
-    let val t = find_conditional tm;
-        val p = lhand(rator t);
-        val th_new =
-          if p ~~ false_tm orelse p ~~ true_tm then propsimp_conv tm else
-          let val asm_0 = mk_eq(p,false_tm)
-              and asm_1 = mk_eq(p,true_tm);
-              val simp_0 = add_rewrites propsimps [ASSUME asm_0]
-              and simp_1 = add_rewrites propsimps [ASSUME asm_1];
-              val th_0 = DISCH asm_0 (DEPTH_CONV(REWRITES_CONV simp_0) tm)
-              and th_1 = DISCH asm_1 (DEPTH_CONV(REWRITES_CONV simp_1) tm);
-              val th_2 = CONJ th_0 th_1;
-              val th_3 = if dfl then match_th th_2 else match_th' th_2
-          in
-              TRANS th_3 (proptsimp_conv(rand(concl th_3)))
-              handle UNCHANGED => th_3
-          end;
-    in
-        CONV_RULE (RAND_CONV (CONDS_ELIM_CONV dfl)) th_new
-    end
-    handle HOL_ERR _ =>
-    if is_neg tm then
-       RAND_CONV (CONDS_ELIM_CONV (not dfl)) tm
-    else if is_conj tm orelse is_disj tm then
-       BINOP_CONV (CONDS_ELIM_CONV dfl) tm
-    else if is_imp tm orelse is_eq tm then
-       COMB2_CONV (RAND_CONV (CONDS_ELIM_CONV (not dfl)),
-                   CONDS_ELIM_CONV dfl) tm
-    else if is_forall tm then
-         BINDER_CONV (CONDS_ELIM_CONV false) tm
-    else if is_exists tm orelse is_exists1 tm then
-         BINDER_CONV (CONDS_ELIM_CONV true) tm
-    else raise UNCHANGED;
-in
-  (CONDS_ELIM_CONV true,CONDS_ELIM_CONV false)
-end
 
 (* This fixes loading issues when sometimes ‘add’, ‘mul’ and ‘pwr’ are defined
    already in the user theory. *)
