@@ -1742,7 +1742,7 @@ fun linear_add (m1 :linear_type) m2 :linear_type =
                                   else Redblackmap.insert (m,k,s)
                               end)
                  undefined
-                 (HOLset.union (dom_set m1,dom_set m2));
+                 (HOLset.addList (dom_set m1,dom m2));
 
 (* val m' = linear_cmul (rat_of_term “&2”) m1;
    Redblackmap.listItems m'; [(“x”, 2i/1), (“y”, 1i/1)]
@@ -1930,8 +1930,8 @@ fun linear_eqs (eqs :(linear_type * positivstellensatz) list,
     case eqs of
       [] => let val vars = HOLset.difference
                              (itlist (fn ep => fn s =>
-                                         HOLset.union (dom_set (fst ep),s))
-                                     (les @ lts) empty_varset,
+                                         HOLset.addList (s,dom (fst ep)))
+                                     (les @ lts) empty_tmset,
                               one_set) in
                 linear_ineqs vars (les,lts)
             end
