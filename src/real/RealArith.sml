@@ -23,8 +23,7 @@ open HolKernel Parse boolLib liteLib;
 open pairTheory pairLib reduceLib tautLib simpLib mesonLib Ho_Rewrite jrhUtils
      Canon_Port AC prim_recTheory numTheory numLib numSyntax arithmeticTheory;
 
-open Sub_and_cond; (* for HOL-Light's CONDS_ELIM_CONV *)
-open normalForms;  (* for HOL-Light's GEN_NNF_CONV, NNFC_CONV, & NNF(D)_CONV *)
+open normalForms;  (* for HOL-Light's GEN_NNF_CONV, etc. *)
 open Normalizer;   (* for HOL-Light's SEMIRING_NORMALIZERS_CONV *)
 
 open realaxTheory; (* NOTE: cannot open realTheory here *)
@@ -128,6 +127,7 @@ fun list_mk_binop op_alt = end_itlist (mk_binop op_alt);
 
 val TAUT = TAUT_PROVE;
 
+val NUM_EQ_CONV = NEQ_CONV;
 val NUM_LE_CONV = LE_CONV;
 val NUM_LT_CONV = LT_CONV;
 val NUM_ADD_CONV = ADD_CONV;
@@ -1617,14 +1617,7 @@ type dconv = term -> thm * thm; (* for GEN_NNF_CONV *)
 (* Data structure for Positivstellensatz refutations.                        *)
 (* ------------------------------------------------------------------------- *)
 
-(* NOTE: "positivstellensatz" is German for "positive-locus-theorem". Here it
-   will hold a structural proof (returned by linear_prover()), which can then
-   be translated into HOL proof steps (in LCF style).
-
-  "Positivstellensatz" is even called that way internationally. (You might
-   find some online-available lecture notes.) As a mathematician I would be
-   surprised by reading English wording here. -- Arve Gengelback (on Slack)
- *)
+(* NOTE: see [1] for a related theorem named "positivstellensatz". *)
 datatype positivstellensatz =
    Axiom_eq of int
  | Axiom_le of int
@@ -2557,3 +2550,9 @@ val (REAL_ARITH_TAC,REAL_ASM_ARITH_TAC) = mk_real_arith_tac REAL_ARITH;
 val _ = verbose_level := 1;
 
 end; (* structure *)
+
+(* References:
+
+   [1] Bochnak, J., Coste, M., Roy, M.-F.: Real Algebraic Geometry. Springer
+       Science & Business Media (2013). DOI: 10.1007/978-3-662-03718-8
+ *)
