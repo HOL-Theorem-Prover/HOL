@@ -1602,11 +1602,12 @@ open Int realSyntax Rewrite
 (* This overrides normalForms.NNF_CONV with the HOL-Light compatible version *)
 val NNF_CONV = normalForms.NNFD_CONV;
 
+val chatting = ref (if !Globals.interactive then true else false);
 val verbose_level = ref 0; (* set to nothing for internal loading *)
 
 fun print_verbose (message,default) =
-    if !verbose_level > 1 then print message
-    else if !verbose_level = 1 then say default
+    if !chatting andalso !verbose_level > 1 then print message
+    else if !chatting andalso !verbose_level = 1 then say default
     else ();
 
 type aint = Arbint.int
