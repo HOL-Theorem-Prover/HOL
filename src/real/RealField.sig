@@ -10,6 +10,7 @@
 signature RealField =
 sig
    include Abbrev
+   type positivstellensatz = RealArith.positivstellensatz
 
    (* One-step conversions for real operator with rational literals *)
   val REAL_RAT_LE_CONV     : conv
@@ -39,6 +40,10 @@ sig
   val REAL_POLY_MUL_CONV   : conv
   val REAL_POLY_POW_CONV   : conv
   val REAL_POLY_CONV       : conv
+
+  val GEN_REAL_ARITH       :
+     ((thm list * thm list * thm list -> positivstellensatz -> thm) ->
+       thm list * thm list * thm list -> thm) -> term -> thm
 
    (* Final version of REAL_ARITH, etc. *)
   val REAL_ARITH           : term -> thm
