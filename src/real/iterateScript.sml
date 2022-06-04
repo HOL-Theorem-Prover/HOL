@@ -21,7 +21,7 @@ open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
      arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory hurdUtils
      optionTheory relationTheory;
 
-open realTheory RealField realSimps wellorderTheory cardinalTheory;
+open realTheory RealArith realSimps wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
 
