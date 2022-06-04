@@ -20408,7 +20408,7 @@ Proof
      (MP_TAC o SPEC ``a + s * 1:real``)) THEN
     REWRITE_TAC[dist, REAL_ARITH ``abs(a:real - (a + x)) = abs x``] THEN
     SIMP_TAC real_ss [ABS_MUL, LESS_EQ_REFL] \\
-    RealArith.ASM_REAL_ARITH_TAC,
+    RealArith.REAL_ASM_ARITH_TAC,
     (* goal 2 (of 2) *)
     DISCH_THEN(CONJUNCTS_THEN2
      (MP_TAC o SPEC ``a - r / dist(a,b) * (b - a):real``)
@@ -20426,7 +20426,7 @@ Proof
     ONCE_REWRITE_TAC [METIS [ABS_SUB] ``r / abs (a - b) * abs (b - a) =
                                    r / abs (a - b) * abs (a - b:real)``] THEN
     ASM_SIMP_TAC real_ss [REAL_DIV_RMUL, ABS_ZERO, REAL_SUB_0] THEN
-    RealArith.ASM_REAL_ARITH_TAC ]
+    RealArith.REAL_ASM_ARITH_TAC ]
 QED
 
 val HAUSDIST_ALT = store_thm ("HAUSDIST_ALT",
