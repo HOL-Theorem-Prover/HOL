@@ -12,8 +12,9 @@ open realaxTheory RealArith;
 
 val _ = new_theory "real";
 
-val TAUT_CONV = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
-val GEN_ALL = hol88Lib.GEN_ALL;     (* it has old (reverted) variable orders *)
+val TAUT_CONV   = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
+val GEN_ALL     = hol88Lib.GEN_ALL;   (* it has old (reverted) variable orders *)
+val NUM_EQ_CONV = NEQ_CONV;
 
 (*---------------------------------------------------------------------------*)
 (* Now define the inclusion homomorphism &:num->real. (moved to realax)      *)
