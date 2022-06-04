@@ -1722,8 +1722,8 @@ end; (* local *)
 fun dom_set (m :linear_type) :term set =
     HOLset.fromList Term.compare (dom m);
 
-(* A special set frequently used in linear_eqs() *)
-val one_set :term set = HOLset.fromList Term.compare [one_tm];
+fun delete (s :term set, i :term) =
+    HOLset.delete(s,i) handle NotFound => s;
 
 (* Test code for linear_add (after linear_of_term):
 
@@ -1928,11 +1928,11 @@ fun linear_eqs (eqs :(linear_type * positivstellensatz) list,
     end handle HOL_ERR _ =>
  (* recursion cases *)
     case eqs of
-      [] => let val vars = HOLset.difference
+      [] => let val vars = delete
                              (itlist (fn ep => fn s =>
                                          HOLset.addList (s,dom (fst ep)))
                                      (les @ lts) empty_tmset,
-                              one_set) in
+                              one_tm) in
                 linear_ineqs vars (les,lts)
             end
     | ((e,p)::es) =>
