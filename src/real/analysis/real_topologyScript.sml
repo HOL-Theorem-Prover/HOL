@@ -10916,22 +10916,7 @@ val UNBOUNDED_HALFSPACE_COMPONENT_LE = store_thm
  >> ASM_SIMP_TAC std_ss [bounded_def, FORALL_IN_GSPEC]
  >> X_GEN_TAC ``B:real``
  >> EXISTS_TAC ``-((&1:real) + max (abs B) (abs a))``
- >> REWRITE_TAC [ABS_NEG, REAL_NOT_LE, REAL_NEG_ADD]
- >> RW_TAC bool_ss [abs, max_def]
- >> FULL_SIMP_TAC real_ss [REAL_NOT_LE]
- >| (* 12 goals *)
-  [ ASM_REAL_ARITH_TAC, (* 1 *)
-    ASM_REAL_ARITH_TAC, (* 2 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 3 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 4 *)
-    Cases_on `0 <= B` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 5 *)
-    Cases_on `0 <= B` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 6 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 7 *)
-    ASM_REAL_ARITH_TAC, (* 8 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 9 *)
-    Cases_on `0 <= B` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 10 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 11 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC ]);
+ >> RealArith.REAL_ARITH_TAC);
 
 val UNBOUNDED_HALFSPACE_COMPONENT_GE = store_thm
   ("UNBOUNDED_HALFSPACE_COMPONENT_GE",
@@ -20414,9 +20399,7 @@ Proof
   ASM_REWRITE_TAC[SETDIST_BALLS, REAL_LT_REFL] THEN
   X_GEN_TAC ``c:real`` THEN REWRITE_TAC[IN_CBALL] THEN
   reverse EQ_TAC
-  >- (RW_TAC real_ss [dist, max_def] \\
-     `~(r < 0)` by PROVE_TAC [real_lte] >> rw [] \\
-      REAL_ASM_ARITH_TAC) THEN
+  >- (RW_TAC real_ss [dist] >> RealArith.REAL_ASM_ARITH_TAC) THEN
   ASM_CASES_TAC ``b:real = a`` THENL
   [ (* goal 1 (of 2) *)
     ONCE_ASM_REWRITE_TAC [DIST_SYM] THEN ASM_REWRITE_TAC[DIST_REFL, REAL_MAX_LE] THEN
@@ -20424,9 +20407,8 @@ Proof
      (MP_TAC o SPEC ``a + r * 1:real``)
      (MP_TAC o SPEC ``a + s * 1:real``)) THEN
     REWRITE_TAC[dist, REAL_ARITH ``abs(a:real - (a + x)) = abs x``] THEN
-    SIMP_TAC real_ss [ABS_MUL, LESS_EQ_REFL, max_def] \\
-   `~(r < 0)` by PROVE_TAC [real_lte] >> rw [] \\
-    ASM_REAL_ARITH_TAC,
+    SIMP_TAC real_ss [ABS_MUL, LESS_EQ_REFL] \\
+    RealArith.ASM_REAL_ARITH_TAC,
     (* goal 2 (of 2) *)
     DISCH_THEN(CONJUNCTS_THEN2
      (MP_TAC o SPEC ``a - r / dist(a,b) * (b - a):real``)
@@ -20443,9 +20425,8 @@ Proof
     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [REAL_ARITH ``(b <> a) = (abs (a - b) <> 0:real)``]) THEN
     ONCE_REWRITE_TAC [METIS [ABS_SUB] ``r / abs (a - b) * abs (b - a) =
                                    r / abs (a - b) * abs (a - b:real)``] THEN
-    ASM_SIMP_TAC real_ss [REAL_DIV_RMUL, ABS_ZERO, REAL_SUB_0, max_def] THEN
-   `~(r < 0)` by PROVE_TAC [real_lte] >> rw [] \\
-    ASM_REAL_ARITH_TAC ]
+    ASM_SIMP_TAC real_ss [REAL_DIV_RMUL, ABS_ZERO, REAL_SUB_0] THEN
+    RealArith.ASM_REAL_ARITH_TAC ]
 QED
 
 val HAUSDIST_ALT = store_thm ("HAUSDIST_ALT",
