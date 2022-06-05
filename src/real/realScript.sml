@@ -13,7 +13,7 @@ open realaxTheory RealArith;
 val _ = new_theory "real";
 
 val TAUT_CONV   = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
-val GEN_ALL     = hol88Lib.GEN_ALL;   (* it has old (reverted) variable orders *)
+val GEN_ALL     = hol88Lib.GEN_ALL;   (* it has old reverted variable order *)
 val NUM_EQ_CONV = NEQ_CONV;
 
 (*---------------------------------------------------------------------------*)
@@ -36,7 +36,7 @@ val REAL_LDISTRIB   = save_thm("REAL_LDISTRIB",  REAL_LDISTRIB);
 val REAL_LT_TOTAL   = save_thm("REAL_LT_TOTAL",  REAL_LT_TOTAL);
 val REAL_LT_REFL    = save_thm("REAL_LT_REFL",   REAL_LT_REFL);
 val REAL_LT_TRANS   = save_thm("REAL_LT_TRANS",  REAL_LT_TRANS);
-val REAL_LT_IADD    = save_thm("REAL_LT_IADD",   REAL_LT_IADD');
+val REAL_LT_IADD    = save_thm("REAL_LT_IADD",   REAL_LT_IADD);
 val REAL_SUP_ALLPOS = save_thm("REAL_SUP_ALLPOS",REAL_SUP_ALLPOS');
 val REAL_MUL_SYM    = save_thm("REAL_MUL_SYM",   REAL_MUL_SYM);
 val REAL_MUL_COMM   = save_thm("REAL_MUL_COMM",  REAL_MUL_SYM);

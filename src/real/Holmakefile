@@ -22,6 +22,10 @@ EXTRA_CLEANS = selftest.exe real-selftest.log
 ifeq ($(KERNELID),otknl)
 BARE_THYS = real intreal real_sigma metric nets iterate
 
+base-theorems.art:
+	opentheory info --theorems -o $@ real-1.61
+	touch base-theorems.ui base-theorems.uo
+
 hol4-real-unint.art: hol4-real-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 	opentheory info --article -o $@ $<
 
@@ -33,7 +37,7 @@ hol4-real-assums.art: hol4-real-assums.thy hol4-real-unsat.art
 	touch hol4-real-assums.ui
 	touch hol4-real-assums.uo
 
-prove_real_assums.art: hol4-real-assums.art
+prove_real_assums.art: hol4-real-assums.art base-theorems.art
 
 hol4-real.art: hol4-real.thy hol4-real-unsat.art prove_real_assums.ot.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<

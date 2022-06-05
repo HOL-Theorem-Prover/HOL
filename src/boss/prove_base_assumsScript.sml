@@ -149,18 +149,21 @@ val TYPE_DEFINITION = add_def(concl TYPE_DEFINITION)
 val ARB_DEF = add_def(concl (REFL``ARB``))
 
 val goalsNet = read_article "hol4-assums.art" reader;
-
 val goals = Net.listItems goalsNet;
 
 val _ = Parse.hide "_";
 
-val bool_cases = hd(amatch ``t \/ ~t``);
+(* val bool_cases = hd(amatch ``t \/ ~t``); *)
+val bool_cases = hd(amatch``(x = T) \/ _``);
+val BOOL_CASES_AX = bool_cases;
+
 val or_def = hd(amatch``$\/ = _``);
 
 val imp_T = hd(amatch``t ==> T``);
 val T_imp = hd(amatch``T ==> t``);
 val F_imp = hd(amatch``F ==> t``);
 val imp_F = hd(amatch``t ==> F <=> _``);
+val IMP_F = imp_F;
 val imp_i = hd(amatch``t ==> t``);
 
 val T_iff = hd(amatch``(T <=> t) <=> _``);
@@ -186,9 +189,8 @@ val or_F = hd(amatch``t \/ F``);
 val or_i = hd(amatch``t \/ t``);
 
 val truth = hd(amatch``T``);
+val TRUTH = truth;
 val not_F = hd(amatch``~F``);
-
-val bool_cases = hd(amatch``(x = T) \/ _``);
 
 (* |- ~(t /\ ~t) *)
 val th1 = store_thm("th1", el 1 goals |> concl,
@@ -545,6 +547,7 @@ val th29 = store_thm
   \\ conj_tac >- MATCH_ACCEPT_TAC F_imp
   \\ conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL imp_i))
   \\ MATCH_ACCEPT_TAC imp_F);
+val IMP_CLAUSES = th29;
 
 (* |- !t. (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\
           (t \/ F <=> t) /\ (t \/ t <=> t)
@@ -557,6 +560,7 @@ val th30 = store_thm
   \\ conj_tac >- MATCH_ACCEPT_TAC F_or
   \\ conj_tac >- MATCH_ACCEPT_TAC or_F
   \\ MATCH_ACCEPT_TAC or_i);
+val OR_CLAUSES = th30;
 
 (* |- !t. (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\
           (t /\ F <=> F) /\ (t /\ t <=> t)
@@ -569,9 +573,10 @@ val th31 = store_thm
   \\ conj_tac >- MATCH_ACCEPT_TAC F_and
   \\ conj_tac >- MATCH_ACCEPT_TAC and_F
   \\ MATCH_ACCEPT_TAC and_i);
+val AND_CLAUSES = th31;
 
 (* |- !t. ((T <=> t) <=> t) /\ ((t <=> T) <=> t) /\ ((F <=> t) <=> ~t) /\
-          ((t <=> F) <=> ~t)
+          ((t <=> F) <=> ~t)   (EQ_CLAUSES)
  *)
 val th32 = store_thm
   ("th32", el 32 goals |> concl,
@@ -580,6 +585,7 @@ val th32 = store_thm
   \\ conj_tac >- MATCH_ACCEPT_TAC iff_T
   \\ conj_tac >- MATCH_ACCEPT_TAC F_iff
   \\ MATCH_ACCEPT_TAC iff_F);
+val EQ_CLAUSES = th32;
 
 val select_eq = hd(amatch``@y. y = x``)
 
@@ -1680,5 +1686,40 @@ val _ = List.app (Theory.delete_binding o #1) (definitions "-");
  *)
 val RES_ABSTRACT_DEF = new_specification
   ("RES_ABSTRACT_DEF", ["RES_ABSTRACT"], RES_ABSTRACT_EXISTS);
+
+(* |- !t1 t2. (t1 <=> t2) <=> t1 /\ t2 \/ ~t1 /\ ~t2 (EQ_EXPAND)
+
+   reported by src/real/prove_real_assumsScript.sml
+
+   input theorems: NOT_CLAUSES, EQ_CLAUSES, OR_CLAUSES, AND_CLAUSES,
+                   BOOL_CASES_AX
+ *)
+val EQ_EXPAND = save_thm("EQ_EXPAND",
+let val t1 = “t1:bool” and t2 = “t2:bool”
+    val conj = “$/\”   and disj = “$\/”
+    val [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
+    and [EQ1,EQ2,EQ3,EQ4] = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES))
+    and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+    and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
+    val thTl = SPEC t2 EQ1
+    and thFl = SPEC t2 EQ3
+    val thTr = TRANS (MK_COMB (AP_TERM disj (SPEC t2 AND1),
+                               TRANS (AP_THM (AP_TERM conj NOT1) (mk_neg t2))
+                                     (SPEC (mk_neg t2) AND3)))
+                     (SPEC t2 OR4)
+    and thFr = TRANS (MK_COMB (AP_TERM disj (SPEC t2 AND3),
+                               TRANS (AP_THM (AP_TERM conj NOT2) (mk_neg t2))
+                                     (SPEC (mk_neg t2) AND1)))
+                     (SPEC (mk_neg t2) OR3)
+    val thT1 = TRANS thTl (SYM thTr)
+    and thF1 = TRANS thFl (SYM thFr)
+    val tm = “(t1 = t2) <=> (t1 /\ t2) \/ (~t1 /\ ~t2)”
+    val thT2 = SUBST_CONV [t1 |-> ASSUME “t1 = T”] tm tm
+    and thF2 = SUBST_CONV [t1 |-> ASSUME “t1 = F”] tm tm
+    val thT3 = EQ_MP (SYM thT2) thT1
+    and thF3 = EQ_MP (SYM thF2) thF1
+ in
+   GENL [t1,t2] (DISJ_CASES (SPEC t1 BOOL_CASES_AX) thT3 thF3)
+ end);
 
 val _ = export_theory ();
