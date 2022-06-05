@@ -25,28 +25,26 @@ val real_of_num = save_thm("real_of_num", real_of_num);
 val REAL_0 = save_thm("REAL_0", REAL_0);
 val REAL_1 = save_thm("REAL_1", REAL_1);
 
-local val reeducate = I;
-in
-  val REAL_10 = save_thm("REAL_10",reeducate(REAL_10))
-  val REAL_ADD_SYM = save_thm("REAL_ADD_SYM",reeducate(REAL_ADD_SYM))
-  val REAL_ADD_COMM = save_thm("REAL_ADD_COMM", REAL_ADD_SYM)
-  val REAL_ADD_ASSOC = save_thm("REAL_ADD_ASSOC",reeducate(REAL_ADD_ASSOC))
-  val REAL_ADD_LID = save_thm("REAL_ADD_LID",reeducate(REAL_ADD_LID))
-  val REAL_ADD_LINV = save_thm("REAL_ADD_LINV",reeducate(REAL_ADD_LINV))
-  val REAL_LDISTRIB = save_thm("REAL_LDISTRIB",reeducate(REAL_LDISTRIB))
-  val REAL_LT_TOTAL = save_thm("REAL_LT_TOTAL",reeducate(REAL_LT_TOTAL))
-  val REAL_LT_REFL = save_thm("REAL_LT_REFL",reeducate(REAL_LT_REFL))
-  val REAL_LT_TRANS = save_thm("REAL_LT_TRANS",reeducate(REAL_LT_TRANS))
-  val REAL_LT_IADD = save_thm("REAL_LT_IADD",reeducate(REAL_LT_IADD))
-  val REAL_SUP_ALLPOS = save_thm("REAL_SUP_ALLPOS",reeducate(REAL_SUP_ALLPOS))
-  val REAL_MUL_SYM = save_thm("REAL_MUL_SYM",reeducate(REAL_MUL_SYM))
-  val REAL_MUL_COMM = save_thm("REAL_MUL_COMM", REAL_MUL_SYM)
-  val REAL_MUL_ASSOC = save_thm("REAL_MUL_ASSOC",reeducate(REAL_MUL_ASSOC))
-  val REAL_MUL_LID = save_thm("REAL_MUL_LID",reeducate(REAL_MUL_LID))
-  val REAL_MUL_LINV = save_thm("REAL_MUL_LINV",reeducate(REAL_MUL_LINV))
-  val REAL_LT_MUL = save_thm("REAL_LT_MUL",reeducate(REAL_LT_MUL))
-  val REAL_INV_0 = save_thm("REAL_INV_0",reeducate REAL_INV_0)
-end;
+(* These are primitive real theorems being re-exported here *)
+val REAL_10         = save_thm("REAL_10",        REAL_10');
+val REAL_ADD_SYM    = save_thm("REAL_ADD_SYM",   REAL_ADD_SYM);
+val REAL_ADD_COMM   = save_thm("REAL_ADD_COMM",  REAL_ADD_SYM);
+val REAL_ADD_ASSOC  = save_thm("REAL_ADD_ASSOC", REAL_ADD_ASSOC);
+val REAL_ADD_LID    = save_thm("REAL_ADD_LID",   REAL_ADD_LID');
+val REAL_ADD_LINV   = save_thm("REAL_ADD_LINV",  REAL_ADD_LINV');
+val REAL_LDISTRIB   = save_thm("REAL_LDISTRIB",  REAL_LDISTRIB);
+val REAL_LT_TOTAL   = save_thm("REAL_LT_TOTAL",  REAL_LT_TOTAL);
+val REAL_LT_REFL    = save_thm("REAL_LT_REFL",   REAL_LT_REFL);
+val REAL_LT_TRANS   = save_thm("REAL_LT_TRANS",  REAL_LT_TRANS);
+val REAL_LT_IADD    = save_thm("REAL_LT_IADD",   REAL_LT_IADD');
+val REAL_SUP_ALLPOS = save_thm("REAL_SUP_ALLPOS",REAL_SUP_ALLPOS');
+val REAL_MUL_SYM    = save_thm("REAL_MUL_SYM",   REAL_MUL_SYM);
+val REAL_MUL_COMM   = save_thm("REAL_MUL_COMM",  REAL_MUL_SYM);
+val REAL_MUL_ASSOC  = save_thm("REAL_MUL_ASSOC", REAL_MUL_ASSOC);
+val REAL_MUL_LID    = save_thm("REAL_MUL_LID",   REAL_MUL_LID');
+val REAL_MUL_LINV   = save_thm("REAL_MUL_LINV",  REAL_MUL_LINV');
+val REAL_LT_MUL     = save_thm("REAL_LT_MUL",    REAL_LT_MUL');
+val REAL_INV_0      = save_thm("REAL_INV_0",     REAL_INV_0');
 
 val _ = export_rewrites
         ["REAL_ADD_LID", "REAL_ADD_LINV", "REAL_LT_REFL", "REAL_MUL_LID",
@@ -4673,10 +4671,7 @@ Proof
   REWRITE_TAC[REAL_INV_0, REAL_INV_1, REAL_INV_NEG]
 QED
 
-(* NOTE: REAL_ARITH_TAC takes quite long steps to prove this theorem.
-   Furthermore, this sample shows that REAL_ARITH_TAC0 is the same powerful
-   as REAL_ARITH_TAC1 but needs many many more proof steps to complete.
- *)
+(* NOTE: REAL_ARITH_TAC takes quite long steps to prove this theorem *)
 Theorem REAL_SGN_EQ_INEQ :
    !x y. real_sgn x = real_sgn y <=>
          x = y \/ abs(x - y) < max (abs x) (abs y)
@@ -5072,31 +5067,6 @@ Proof
     dxrule_all_then assume_tac $ REAL_LT_MUL >>
     fs[REAL_MUL_LNEG,REAL_MUL_RNEG,REAL_MUL_COMM]
 QED
-
-(*---------------------------------------------------------------------------*)
-(* For OT builds: theorems added in realaxTheory must be exported again      *)
-(*---------------------------------------------------------------------------*)
-
-(* |- m + n = n + m /\ m + n + p = m + (n + p) /\ m + (n + p) = n + (m + p) *)
-Theorem REAL_ADD_AC = REAL_ADD_AC
-
-(* |- m * n = n * m /\ m * n * p = m * (n * p) /\ m * (n * p) = n * (m * p) *)
-Theorem REAL_MUL_AC = REAL_MUL_AC
-
-(* |- (!x y z. x + (y + z) = x + y + z) /\
-      (!x y. x + y = y + x) /\
-      (!x. 0 + x = x) /\
-      (!x y z. x * (y * z) = x * y * z) /\
-      (!x y. x * y = y * x) /\
-      (!x. 1 * x = x) /\ (!x. 0 * x = 0) /\
-      (!x y z. x * (y + z) = x * y + x * z) /\
-      (!x. x pow 0 = 1) /\
-       !x n. x pow SUC n = x * x pow n
- *)
-Theorem REAL_POLY_CLAUSES = REAL_POLY_CLAUSES
-
-(* |- (!x. -x = -1 * x) /\ !x y. x - y = x + -1 * y *)
-Theorem REAL_POLY_NEG_CLAUSES = REAL_POLY_NEG_CLAUSES
 
 (* ------------------------------------------------------------------------- *)
 (* Various handy lemmas (for REAL_ARITH2_TAC).                               *)

@@ -693,25 +693,39 @@ val REAL_1 = store_thm("REAL_1",
   “real_1 = &1”,
   REWRITE_TAC[num_CONV “1:num”, real_of_num, REAL_ADD_LID]);
 
+(* NOTE: Only theorems involving ‘real_0’ and ‘real_1’ need to be re-educated.
+   A "prime" is added into some exported names to make sure that the original
+   theorems are still accessible from "prove_real_assumsScript.sml" for OT
+   builds. Note that the variable names have no primes!           -- Chun Tian
+ *)
 local val reeducate = REWRITE_RULE[REAL_0, REAL_1]
 in
-  val REAL_10         = save_thm("REAL_10",        reeducate(REAL_10))
-  val REAL_ADD_SYM    = save_thm("REAL_ADD_SYM",   reeducate(REAL_ADD_SYM))
-  val REAL_ADD_ASSOC  = save_thm("REAL_ADD_ASSOC", reeducate(REAL_ADD_ASSOC))
-  val REAL_ADD_LID    = save_thm("REAL_ADD_LID",   reeducate(REAL_ADD_LID))
-  val REAL_ADD_LINV   = save_thm("REAL_ADD_LINV",  reeducate(REAL_ADD_LINV))
-  val REAL_INV_0      = save_thm("REAL_INV_0",     reeducate REAL_INV_0)
-  val REAL_LDISTRIB   = save_thm("REAL_LDISTRIB",  reeducate(REAL_LDISTRIB))
-  val REAL_LT_IADD    = save_thm("REAL_LT_IADD",   reeducate(REAL_LT_IADD))
-  val REAL_LT_MUL     = save_thm("REAL_LT_MUL",    reeducate(REAL_LT_MUL))
-  val REAL_LT_REFL    = save_thm("REAL_LT_REFL",   reeducate(REAL_LT_REFL))
-  val REAL_LT_TOTAL   = save_thm("REAL_LT_TOTAL",  reeducate(REAL_LT_TOTAL))
-  val REAL_LT_TRANS   = save_thm("REAL_LT_TRANS",  reeducate(REAL_LT_TRANS))
-  val REAL_MUL_SYM    = save_thm("REAL_MUL_SYM",   reeducate(REAL_MUL_SYM))
-  val REAL_MUL_ASSOC  = save_thm("REAL_MUL_ASSOC", reeducate(REAL_MUL_ASSOC))
-  val REAL_MUL_LID    = save_thm("REAL_MUL_LID",   reeducate(REAL_MUL_LID))
-  val REAL_MUL_LINV   = save_thm("REAL_MUL_LINV",  reeducate(REAL_MUL_LINV))
-  val REAL_SUP_ALLPOS = save_thm("REAL_SUP_ALLPOS",reeducate(REAL_SUP_ALLPOS))
+  val _               = save_thm("REAL_10",         REAL_10);
+  val REAL_10         = save_thm("REAL_10'",        reeducate(REAL_10));
+  val REAL_ADD_SYM    = save_thm("REAL_ADD_SYM",    REAL_ADD_SYM);
+  val REAL_ADD_ASSOC  = save_thm("REAL_ADD_ASSOC",  REAL_ADD_ASSOC);
+  val _               = save_thm("REAL_ADD_LID",    REAL_ADD_LID);
+  val REAL_ADD_LID    = save_thm("REAL_ADD_LID'",   reeducate(REAL_ADD_LID));
+  val _               = save_thm("REAL_ADD_LINV",  REAL_ADD_LINV);
+  val REAL_ADD_LINV   = save_thm("REAL_ADD_LINV'",  reeducate(REAL_ADD_LINV));
+  val _               = save_thm("REAL_INV_0",      REAL_INV_0);
+  val REAL_INV_0      = save_thm("REAL_INV_0'",     reeducate(REAL_INV_0));
+  val REAL_LDISTRIB   = save_thm("REAL_LDISTRIB",   REAL_LDISTRIB);
+  val _               = save_thm("REAL_LT_IADD",    REAL_LT_IADD);
+  val REAL_LT_IADD    = save_thm("REAL_LT_IADD'",   reeducate(REAL_LT_IADD));
+  val _               = save_thm("REAL_LT_MUL",     REAL_LT_MUL);
+  val REAL_LT_MUL     = save_thm("REAL_LT_MUL'",    reeducate(REAL_LT_MUL));
+  val REAL_LT_REFL    = save_thm("REAL_LT_REFL",    REAL_LT_REFL);
+  val REAL_LT_TOTAL   = save_thm("REAL_LT_TOTAL",   REAL_LT_TOTAL);
+  val REAL_LT_TRANS   = save_thm("REAL_LT_TRANS",   REAL_LT_TRANS);
+  val REAL_MUL_SYM    = save_thm("REAL_MUL_SYM",    REAL_MUL_SYM);
+  val REAL_MUL_ASSOC  = save_thm("REAL_MUL_ASSOC",  REAL_MUL_ASSOC);
+  val _               = save_thm("REAL_MUL_LID",    REAL_MUL_LID);
+  val REAL_MUL_LID    = save_thm("REAL_MUL_LID'",   reeducate(REAL_MUL_LID));
+  val _               = save_thm("REAL_MUL_LINV",   REAL_MUL_LINV);
+  val REAL_MUL_LINV   = save_thm("REAL_MUL_LINV'",  reeducate(REAL_MUL_LINV));
+  val _               = save_thm("REAL_SUP_ALLPOS", REAL_SUP_ALLPOS);
+  val REAL_SUP_ALLPOS = save_thm("REAL_SUP_ALLPOS'",reeducate(REAL_SUP_ALLPOS));
 end;
 
 (*---------------------------------------------------------------------------*)
