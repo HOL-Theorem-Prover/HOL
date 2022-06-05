@@ -27,12 +27,10 @@ end
 
 open Parse;
 
-(* clarify some conflicting functions *)
+(* clarify some conflicting library functions *)
 val assert      = Lib.assert;
 val is_binop    = liteLib.is_binop;
 val SKOLEM_CONV = Canon_Port.SKOLEM_CONV;
-
-fun failwith s = raise mk_HOL_ERR "RealField" "?" s
 
 (* for HOL-Light compatibilities  *)
 val REAL_INV_MUL = REAL_INV_MUL';
@@ -40,6 +38,19 @@ val REAL_INV_DIV = REAL_INV_DIV';
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 val NNF_CONV = normalForms.NNFD_CONV;
 val NUM_REDUCE_CONV = reduceLib.REDUCE_CONV;
+
+(* clarify some primitive real theorem names involving real_0 and real_1 *)
+val REAL_10         = realTheory.REAL_10;
+val REAL_ADD_LID    = realTheory.REAL_ADD_LID;
+val REAL_ADD_LINV   = realTheory.REAL_ADD_LINV;
+val REAL_INV_0      = realTheory.REAL_INV_0;
+val REAL_LT_IADD    = realTheory.REAL_LT_IADD;
+val REAL_LT_MUL     = realTheory.REAL_LT_MUL;
+val REAL_MUL_LID    = realTheory.REAL_MUL_LID;
+val REAL_MUL_LINV   = realTheory.REAL_MUL_LINV;
+val REAL_SUP_ALLPOS = realTheory.REAL_SUP_ALLPOS;
+
+fun failwith s = raise mk_HOL_ERR "RealField" "?" s
 
 (* set verbose level (of REAL_LINEAR_PROVER) to nothing for internal loading *)
 val _ = RealArith.verbose_level := 0;
