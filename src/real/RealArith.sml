@@ -12,7 +12,7 @@
 (*            (c) Copyright, University of Cambridge 1998                    *)
 (*              (c) Copyright, John Harrison 1998-2007                       *)
 (*                                                                           *)
-(*      Ported to HOL4 (with minor improvements) by Chun Tian, May 2022      *)
+(*       Ported to HOL4 by Chun Tian, 5 June 2022                            *)
 (* ========================================================================= *)
 
 structure RealArith :> RealArith =
@@ -52,7 +52,6 @@ val REAL_10         = REAL_10';
 val REAL_ADD_LID    = REAL_ADD_LID';
 val REAL_ADD_LINV   = REAL_ADD_LINV';
 val REAL_INV_0      = REAL_INV_0';
-val REAL_LT_IADD    = REAL_LT_IADD';
 val REAL_LT_MUL     = REAL_LT_MUL';
 val REAL_MUL_LID    = REAL_MUL_LID';
 val REAL_MUL_LINV   = REAL_MUL_LINV';

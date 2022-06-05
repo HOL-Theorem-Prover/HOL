@@ -695,8 +695,7 @@ val REAL_1 = store_thm("REAL_1",
 
 (* NOTE: Only theorems involving ‘real_0’ and ‘real_1’ need to be re-educated.
    A "prime" is added into some exported names to make sure that the original
-   theorems are still accessible from "prove_real_assumsScript.sml" for OT
-   builds. Note that the variable names have no primes!           -- Chun Tian
+   theorems are still accessible.
  *)
 local val reeducate = REWRITE_RULE[REAL_0, REAL_1]
 in
@@ -706,13 +705,12 @@ in
   val REAL_ADD_ASSOC  = save_thm("REAL_ADD_ASSOC",  REAL_ADD_ASSOC);
   val _               = save_thm("REAL_ADD_LID",    REAL_ADD_LID);
   val REAL_ADD_LID    = save_thm("REAL_ADD_LID'",   reeducate(REAL_ADD_LID));
-  val _               = save_thm("REAL_ADD_LINV",  REAL_ADD_LINV);
+  val _               = save_thm("REAL_ADD_LINV",   REAL_ADD_LINV);
   val REAL_ADD_LINV   = save_thm("REAL_ADD_LINV'",  reeducate(REAL_ADD_LINV));
   val _               = save_thm("REAL_INV_0",      REAL_INV_0);
   val REAL_INV_0      = save_thm("REAL_INV_0'",     reeducate(REAL_INV_0));
   val REAL_LDISTRIB   = save_thm("REAL_LDISTRIB",   REAL_LDISTRIB);
-  val _               = save_thm("REAL_LT_IADD",    REAL_LT_IADD);
-  val REAL_LT_IADD    = save_thm("REAL_LT_IADD'",   reeducate(REAL_LT_IADD));
+  val REAL_LT_IADD    = save_thm("REAL_LT_IADD",    REAL_LT_IADD);
   val _               = save_thm("REAL_LT_MUL",     REAL_LT_MUL);
   val REAL_LT_MUL     = save_thm("REAL_LT_MUL'",    reeducate(REAL_LT_MUL));
   val REAL_LT_REFL    = save_thm("REAL_LT_REFL",    REAL_LT_REFL);
@@ -734,8 +732,8 @@ end;
 
 val real_sub = new_definition("real_sub", “real_sub x y = x + ~y”);
 val real_lte = new_definition("real_lte", “real_lte x y = ~(y < x)”);
-val real_gt = new_definition("real_gt", “real_gt x y = y < x”);
-val real_ge = new_definition("real_ge", “real_ge x y = (real_lte y x)”);
+val real_gt  = new_definition("real_gt",  “real_gt x y = y < x”);
+val real_ge  = new_definition("real_ge",  “real_ge x y = (real_lte y x)”);
 
 val real_div = new_definition("real_div", “$/ x y = x * inv y”);
 val _ = set_fixity "/" (Infixl 600);
@@ -792,9 +790,7 @@ val real_lt = store_thm ("real_lt",
 (* a result, some of their proofs are directly ported from HOL-Light, which  *)
 (* uses a lot of MESON_TAC instead of manual proof steps.      -- Chun Tian  *)
 (*                                                                           *)
-(* NOTE2: all theorems below must be exported again in other theories, for:  *)
-(* 1) realaxTheory is not included in OpenTheory package hol4-real.thy       *)
-(* 2) User scripts may not open realaxTheory (and usually they shouldn't).   *)
+(* NOTE2: any updates here must be also put in "prove_real_assumsScript.sml" *)
 (* ------------------------------------------------------------------------- *)
 
 (* HOL-Light compatible (Don't add quantifiers!), was in iterateTheory
@@ -808,6 +804,12 @@ val real_lt = store_thm ("real_lt",
 
       jrhUtils.AC (REAL_ADD_ASSOC,REAL_ADD_SYM)
          “(a + b) + (c + d) = (a + c) + (b + d):real”
+
+   NOTE2: in the follow scripts (until the end of this file), all terms “&n”
+          must be written as “real_of_num n”, while literals “&0” and “&1”
+          must be written as “0r” and “1r”. This is because these code has
+          a copy in "prove_real_assumsScript.sml" where “real_of_num” is
+          interpreted differently.
  *)
 Theorem REAL_ADD_AC :
    (m + n = n + m) /\
@@ -826,7 +828,7 @@ Proof
 QED
 
 val REAL_ADD_RINV = store_thm("REAL_ADD_RINV",
-  “!x:real. x + ~x = 0”,
+  “!x:real. x + ~x = 0r”,
   MESON_TAC[REAL_ADD_SYM, REAL_ADD_LINV]);
 
 (* HOL-Light compatible *)
@@ -857,11 +859,11 @@ val REAL_RDISTRIB = store_thm("REAL_RDISTRIB",
 Theorem REAL_ADD_RDISTRIB = REAL_RDISTRIB
 
 val REAL_MUL_RZERO = store_thm("REAL_MUL_RZERO",
-  “!x. x * 0 = 0”,
+  “!x. x * 0r = 0r”,
   MESON_TAC[REAL_EQ_ADD_RCANCEL, REAL_ADD_LDISTRIB, REAL_ADD_LID]);
 
 val REAL_MUL_LZERO = store_thm("REAL_MUL_LZERO",
-  “!x. 0 * x = 0”,
+  “!x. 0r * x = 0r”,
   MESON_TAC[REAL_MUL_SYM, REAL_MUL_RZERO]);
 
 val REAL_NEG_NEG = store_thm("REAL_NEG_NEG",
@@ -888,10 +890,10 @@ val REAL_NEG_ADD = store_thm("REAL_NEG_ADD",
   REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]);
 
 val REAL_ADD_RID = store_thm("REAL_ADD_RID",
-  “!x. x + 0 = x”, MESON_TAC[REAL_ADD_SYM, REAL_ADD_LID]);
+  “!x. x + 0r = x”, MESON_TAC[REAL_ADD_SYM, REAL_ADD_LID]);
 
 val REAL_NEG_0 = store_thm("REAL_NEG_0",
-  “~0 = 0”, MESON_TAC[REAL_ADD_LINV, REAL_ADD_RID]);
+  “~0r = 0r”, MESON_TAC[REAL_ADD_LINV, REAL_ADD_RID]);
 
 (* NOTE: REAL_LE_LADD_IMP (and many others below) is primative in HOL Light, i.e.
    directly come from the quotient process, but in HOL4 it must be derived from
@@ -922,7 +924,7 @@ val REAL_LE_LADD_IMP = save_thm("REAL_LE_LADD_IMP",
   end);
 
 Theorem REAL_LE_LNEG:
-  !x y. ~x <= y <=> 0 <= x + y
+  !x y. ~x <= y <=> 0r <= x + y
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP REAL_LE_LADD_IMP) THENL
@@ -941,7 +943,7 @@ val REAL_LE_NEG2 = store_thm("REAL_LE_NEG2",
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_ADD_SYM);
 
 val REAL_LE_RNEG = store_thm("REAL_LE_RNEG",
-  ``!x y. x <= ~y = x + y <= 0``,
+  ``!x y. x <= ~y <=> x + y <= 0r``,
   REPEAT GEN_TAC THEN
   GEN_REWR_TAC (LAND_CONV o LAND_CONV) [GSYM REAL_NEG_NEG] THEN
   REWRITE_TAC[REAL_LE_LNEG, GSYM REAL_NEG_ADD] THEN
@@ -952,18 +954,18 @@ val REAL_LE_RNEG = store_thm("REAL_LE_RNEG",
   MATCH_ACCEPT_TAC REAL_ADD_SYM);
 
 val REAL = store_thm("REAL",
-  “!n. &(SUC n) = &n + &1”,
+  “!n. real_of_num (SUC n) = real_of_num n + 1r”,
   GEN_TAC THEN REWRITE_TAC[real_of_num] THEN
   REWRITE_TAC[REAL_1]);
 
 val REAL_ADD = store_thm("REAL_ADD",
-  “!m n. &m + &n = &(m + n)”,
+  “!m n. real_of_num m + real_of_num n = real_of_num(m + n)”,
   INDUCT_TAC THEN REWRITE_TAC[REAL, ADD, REAL_ADD_LID] THEN
   RULE_ASSUM_TAC GSYM THEN GEN_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM)));
 
 val REAL_MUL = store_thm("REAL_MUL",
-  “!m n. &m * &n = &(m * n)”,
+  “!m n. real_of_num m * real_of_num n = real_of_num(m * n)”,
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, MULT_CLAUSES, REAL,
     GSYM REAL_ADD, REAL_RDISTRIB] THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[GSYM th]) THEN
@@ -972,10 +974,12 @@ val REAL_MUL = store_thm("REAL_MUL",
 (* HOL-Light compatible name of the above theorem *)
 Theorem REAL_OF_NUM_MUL = REAL_MUL;
 
-val REAL_OF_NUM_POW = Q.store_thm
-  ("REAL_OF_NUM_POW", `!x n. (&x) pow n = &(x EXP n)`,
+Theorem REAL_OF_NUM_POW :
+    !x n. (real_of_num x) pow n = real_of_num(x EXP n)
+Proof
   GEN_TAC THEN INDUCT_TAC THEN
-  ASM_REWRITE_TAC[real_pow, EXP, REAL_OF_NUM_MUL]);
+  ASM_REWRITE_TAC[real_pow, EXP, REAL_OF_NUM_MUL]
+QED
 
 (* NOTE: realTheory.REAL_POW_NEG has different statements! *)
 Theorem REAL_POW_NEG :
@@ -992,10 +996,10 @@ val REAL_NOT_LE = store_thm("REAL_NOT_LE",
   REPEAT GEN_TAC THEN REWRITE_TAC[real_lte]);
 
 Theorem REAL_LT_ADDR:
-  !x y. x < x + y <=> 0 < y
+  !x y. x < x + y <=> 0r < y
 Proof
   REPEAT GEN_TAC THEN
-  SUBST1_TAC(SYM(SPECL [“x:real”, “0”, “y:real”] REAL_LT_LADD)) THEN
+  SUBST1_TAC(SYM(SPECL [“x:real”, “0r”, “y:real”] REAL_LT_LADD)) THEN
   REWRITE_TAC[REAL_ADD_RID]
 QED
 
@@ -1011,7 +1015,7 @@ val REAL_LT_GT = store_thm("REAL_LT_GT",
   REWRITE_TAC[REAL_LT_ANTISYM]);
 
 val REAL_LE_LT = store_thm("REAL_LE_LT",
-  “!x y. x <= y = x < y \/ (x = y)”,
+  “!x y. x <= y <=> x < y \/ (x = y)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[real_lte] THEN EQ_TAC THENL
    [REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
      (SPECL [“x:real”, “y:real”] REAL_LT_TOTAL) THEN ASM_REWRITE_TAC[],
@@ -1020,7 +1024,7 @@ val REAL_LE_LT = store_thm("REAL_LE_LT",
     MATCH_ACCEPT_TAC REAL_LT_REFL]);
 
 val REAL_LT_LE = store_thm("REAL_LT_LE",
-  “!x y. x < y = x <= y /\ ~(x = y)”,
+  “!x y. x < y <=> x <= y /\ ~(x = y)”,
   let val lemma = TAUT_CONV “~(a /\ ~a)” in
   REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT, RIGHT_AND_OVER_OR, lemma]
   THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -1047,9 +1051,9 @@ val REAL_LE_TRANS = store_thm("REAL_LE_TRANS",
   DISCH_THEN(ACCEPT_TAC o MATCH_MP REAL_LT_IMP_LE o MATCH_MP REAL_LET_TRANS));
 
 val REAL_LE_MUL = store_thm("REAL_LE_MUL",
-  “!x y. 0 <= x /\ 0 <= y ==> 0 <= (x * y)”,
+  “!x y. 0r <= x /\ 0r <= y ==> 0r <= (x * y)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
-  MAP_EVERY ASM_CASES_TAC [“0 = x”, “0 = y”] THEN
+  MAP_EVERY ASM_CASES_TAC [“0r = x”, “0r = y”] THEN
   ASM_REWRITE_TAC[] THEN TRY(FIRST_ASSUM(SUBST1_TAC o SYM)) THEN
   REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO] THEN
   DISCH_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_MUL THEN
@@ -1061,28 +1065,28 @@ val REAL_LT_RADD = store_thm("REAL_LT_RADD",
   MATCH_ACCEPT_TAC REAL_LT_LADD);
 
 val REAL_LE_RADD = store_thm("REAL_LE_RADD",
-  “!x y z. (x + z) <= (y + z) = x <= y”,
+  “!x y z. (x + z) <= (y + z) <=> x <= y”,
   REPEAT GEN_TAC THEN REWRITE_TAC[real_lte] THEN
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_LT_RADD);
 
 Theorem REAL_NEG_LT0 :
-  !x. ~x < 0 <=> 0 < x
+  !x. ~x < 0r <=> 0r < x
 Proof
   GEN_TAC THEN
-  SUBST1_TAC(SYM(Q.SPECL [‘~x’, ‘0’, ‘x’] REAL_LT_RADD))
+  SUBST1_TAC(SYM(Q.SPECL [‘~x’, ‘0r’, ‘x’] REAL_LT_RADD))
   THEN REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]
 QED
 
 Theorem REAL_LT_NEGTOTAL:
-  !x. (x = 0) \/ 0 < x \/ 0 < -x
+  !x. (x = 0r) \/ 0r < x \/ 0r < -x
 Proof
   GEN_TAC THEN REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
-   (Q.SPECL [‘x’, ‘0’] REAL_LT_TOTAL) THEN
+   (Q.SPECL [‘x’, ‘0r’] REAL_LT_TOTAL) THEN
   ASM_REWRITE_TAC[SYM(REWRITE_RULE[REAL_NEG_NEG] (Q.SPEC ‘~x’ REAL_NEG_LT0))]
 QED
 
 Theorem REAL_LE_NEGTOTAL :
-  !x. 0 <= x \/ 0 <= ~x
+  !x. 0r <= x \/ 0r <= ~x
 Proof
   GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
   REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
@@ -1091,12 +1095,12 @@ Proof
 QED
 
 val REAL_LNEG_UNIQ = store_thm("REAL_LNEG_UNIQ",
-  “!x y. (x + y = 0) <=> (x = ~y)”,
+  “!x y. (x + y = 0r) <=> (x = ~y)”,
   REPEAT GEN_TAC THEN SUBST1_TAC (SYM(SPEC “y:real” REAL_ADD_LINV)) THEN
   MATCH_ACCEPT_TAC REAL_EQ_ADD_RCANCEL);
 
 val REAL_RNEG_UNIQ = store_thm("REAL_RNEG_UNIQ",
-  “!x y. (x + y = 0) <=> (y = ~x)”,
+  “!x y. (x + y = 0r) <=> (y = ~x)”,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
   MATCH_ACCEPT_TAC REAL_LNEG_UNIQ);
 
@@ -1112,27 +1116,27 @@ val REAL_NEG_RMUL = store_thm("REAL_NEG_RMUL",
   MATCH_ACCEPT_TAC REAL_NEG_LMUL);
 
 val REAL_LE_SQUARE = store_thm("REAL_LE_SQUARE",
-  “!x. 0 <= x * x”,
+  “!x. 0r <= x * x”,
   GEN_TAC THEN DISJ_CASES_TAC (SPEC “x:real” REAL_LE_NEGTOTAL) THEN
   POP_ASSUM(MP_TAC o MATCH_MP REAL_LE_MUL o W CONJ) THEN
   REWRITE_TAC[GSYM REAL_NEG_RMUL, GSYM REAL_NEG_LMUL, REAL_NEG_NEG]);
 
 val REAL_LE_01 = store_thm("REAL_LE_01",
-  “0 <= &1”,
-  SUBST1_TAC(SYM(SPEC “&1” REAL_MUL_LID)) THEN
+   “0r <= 1r”,
+  SUBST1_TAC(SYM(SPEC “1r” REAL_MUL_LID)) THEN
   MATCH_ACCEPT_TAC REAL_LE_SQUARE);
 
 val REAL_LT_01 = store_thm("REAL_LT_01",
-  “0 < &1”,
+   “0r < 1r”,
   REWRITE_TAC[REAL_LT_LE, REAL_LE_01] THEN
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   REWRITE_TAC[REAL_10]);
 
 Theorem REAL_LE_ADDR :
-  !x y. x <= x + y <=> 0 <= y
+  !x y. x <= x + y <=> 0r <= y
 Proof
   REPEAT GEN_TAC THEN
-  SUBST1_TAC(SYM(SPECL [“x:real”, “0”, “y:real”] REAL_LE_LADD)) THEN
+  SUBST1_TAC(SYM(SPECL [“x:real”, “0r”, “y:real”] REAL_LE_LADD)) THEN
   REWRITE_TAC[REAL_ADD_RID]
 QED
 
@@ -1142,18 +1146,18 @@ val REAL_LE_REFL = store_thm("REAL_LE_REFL",
 
 (* NOTE: previous the other REAL_POS above was exported in realaxTheory *)
 val REAL_POS = store_thm("REAL_POS",
-  “!n. 0 <= &n”,
+  “!n. 0r <= real_of_num n”,
   INDUCT_TAC THEN REWRITE_TAC[REAL_LE_REFL] THEN
   MATCH_MP_TAC REAL_LE_TRANS THEN
-  EXISTS_TAC “&n” THEN ASM_REWRITE_TAC[REAL] THEN
+  EXISTS_TAC “real_of_num n” THEN ASM_REWRITE_TAC[REAL] THEN
   REWRITE_TAC[REAL_LE_ADDR, REAL_LE_01]);
 
 val REAL_LE = store_thm("REAL_LE",
-  “!m n. &m <= &n <=> m <= n”,
+  “!m n. real_of_num m <= real_of_num n <=> m <= n”,
   REPEAT INDUCT_TAC THEN ASM_REWRITE_TAC
    [REAL, REAL_LE_RADD, ZERO_LESS_EQ, LESS_EQ_MONO, REAL_LE_REFL] THEN
   REWRITE_TAC[GSYM NOT_LESS, LESS_0] THENL
-   [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “&n” THEN
+   [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “real_of_num n” THEN
     ASM_REWRITE_TAC[ZERO_LESS_EQ, REAL_LE_ADDR, REAL_LE_01],
     DISCH_THEN(MP_TAC o C CONJ (SPEC “m:num” REAL_POS)) THEN
     DISCH_THEN(MP_TAC o MATCH_MP REAL_LE_TRANS) THEN
@@ -1166,7 +1170,7 @@ Theorem REAL_OF_NUM_LE = REAL_LE;
 val LE_0 = ZERO_LESS_EQ; (* arithmeticTheory *)
 
 Theorem REAL_ABS_NUM :
-   !n. abs(&n) = &n
+   !n. abs(real_of_num n) = real_of_num n
 Proof
   REWRITE_TAC[real_abs, REAL_OF_NUM_LE, LE_0]
 QED
@@ -1184,7 +1188,7 @@ val REAL_LTE_TRANS = store_thm("REAL_LTE_TRANS",
   MESON_TAC[real_lt, REAL_LE_TRANS]);
 
 val REAL_LE_ADD = store_thm("REAL_LE_ADD",
-  “!x y. 0 <= x /\ 0 <= y ==> 0 <= (x + y)”,
+  “!x y. 0r <= x /\ 0r <= y ==> 0r <= (x + y)”,
   MESON_TAC[REAL_LE_LADD_IMP, REAL_ADD_RID, REAL_LE_TRANS]);
 
 val REAL_LTE_ANTISYM = store_thm("REAL_LTE_ANTISYM",
@@ -1192,7 +1196,7 @@ val REAL_LTE_ANTISYM = store_thm("REAL_LTE_ANTISYM",
   MESON_TAC[real_lt]);
 
 val REAL_SUB_LE = store_thm("REAL_SUB_LE",
-  “!x y. 0 <= (x - y) <=> y <= x”,
+  “!x y. 0r <= (x - y) <=> y <= x”,
   REWRITE_TAC[real_sub, GSYM REAL_LE_LNEG, REAL_LE_NEG2]);
 
 val REAL_NEG_SUB = store_thm("REAL_NEG_SUB",
@@ -1201,7 +1205,7 @@ val REAL_NEG_SUB = store_thm("REAL_NEG_SUB",
   REWRITE_TAC[Once REAL_ADD_AC]);
 
 val REAL_SUB_LT = store_thm("REAL_SUB_LT",
-  “!x y. 0 < x - y <=> y < x”,
+  “!x y. 0r < x - y <=> y < x”,
   REWRITE_TAC[real_lt] THEN ONCE_REWRITE_TAC[GSYM REAL_NEG_SUB] THEN
   REWRITE_TAC[REAL_LE_LNEG, REAL_ADD_RID, REAL_SUB_LE]);
 
@@ -1218,27 +1222,28 @@ val REAL_NOT_LT = store_thm("REAL_NOT_LT",
   REWRITE_TAC[real_lte]);
 
 val REAL_SUB_0 = store_thm("REAL_SUB_0",
-  “!x y. (x - y = 0) <=> (x = y)”,
+  “!x y. (x - y = 0r) <=> (x = y)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
-  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) empty_rewrites [GSYM REAL_NOT_LT] THEN
+  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) empty_rewrites
+                  [GSYM REAL_NOT_LT] THEN
   REWRITE_TAC[REAL_SUB_LE, REAL_SUB_LT] THEN REWRITE_TAC[REAL_NOT_LT]);
 
 val REAL_LTE_ADD = store_thm("REAL_LTE_ADD",
-  “!x y. 0 < x /\ 0 <= y ==> 0 < (x + y)”,
+  “!x y. 0r < x /\ 0r <= y ==> 0r < (x + y)”,
   MESON_TAC[REAL_LE_LADD_IMP, REAL_ADD_RID, REAL_LTE_TRANS]);
 
 val REAL_LET_ADD = store_thm("REAL_LET_ADD",
-  “!x y. 0 <= x /\ 0 < y ==> 0 < (x + y)”,
+  “!x y. 0r <= x /\ 0r < y ==> 0r < (x + y)”,
   MESON_TAC[REAL_LTE_ADD, REAL_ADD_SYM]);
 
 val REAL_LT_ADD = store_thm("REAL_LT_ADD",
-  “!x y. 0 < x /\ 0 < y ==> 0 < (x + y)”,
+  “!x y. 0r < x /\ 0r < y ==> 0r < (x + y)”,
   MESON_TAC[REAL_LT_IMP_LE, REAL_LTE_ADD]);
 
 val REAL_ENTIRE = store_thm("REAL_ENTIRE",
-  “!x y. (x * y = 0) <=> (x = 0) \/ (y = 0)”,
+  “!x y. (x * y = 0r) <=> (x = 0r) \/ (y = 0r)”,
   REPEAT GEN_TAC THEN EQ_TAC THENL
-   [ASM_CASES_TAC “x = 0” THEN ASM_REWRITE_TAC[] THEN
+   [ASM_CASES_TAC “x = 0r” THEN ASM_REWRITE_TAC[] THEN
     RULE_ASSUM_TAC(MATCH_MP REAL_MUL_LINV) THEN
     DISCH_THEN(MP_TAC o AP_TERM “$* (inv x)”) THEN
     ASM_REWRITE_TAC[REAL_MUL_ASSOC, REAL_MUL_LID, REAL_MUL_RZERO],
@@ -1246,7 +1251,7 @@ val REAL_ENTIRE = store_thm("REAL_ENTIRE",
     REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO]]);
 
 val REAL_MUL_RID = store_thm("REAL_MUL_RID",
-  “!x. x * 1 = x”,
+  “!x. x * 1r = x”,
   MESON_TAC[REAL_MUL_LID, REAL_MUL_SYM]);
 
 val REAL_POW_2 = store_thm("REAL_POW_2",
@@ -1258,13 +1263,13 @@ val REAL_POW_2 = store_thm("REAL_POW_2",
 Theorem REAL_POLY_CLAUSES :
    (!x y z. x + (y + z) = (x + y) + z) /\
    (!x y. x + y = y + x) /\
-   (!x. &0 + x = x) /\
+   (!x. 0r + x = x) /\
    (!x y z. x * (y * z) = (x * y) * z) /\
    (!x y. x * y = y * x) /\
-   (!x. &1 * x = x) /\
-   (!x. &0 * x = &0) /\
+   (!x. 1r * x = x) /\
+   (!x. 0r * x = 0r) /\
    (!x y z. x * (y + z) = x * y + x * z) /\
-   (!x. x pow 0 = &1) /\
+   (!x. x pow 0 = 1r) /\
    (!x n. x pow (SUC n) = x * x pow n)
 Proof
   REWRITE_TAC[real_pow, REAL_ADD_LDISTRIB, REAL_MUL_LZERO] THEN
@@ -1273,8 +1278,8 @@ Proof
 QED
 
 Theorem REAL_POLY_NEG_CLAUSES :
-   (!x. ~x = ~(&1) * x) /\
-   (!x y. x - y = x + ~(&1) * y)
+   (!x. ~x = ~(1r) * x) /\
+   (!x y. x - y = x + ~(1r) * y)
 Proof
   REWRITE_TAC[REAL_MUL_LNEG, real_sub, REAL_MUL_LID]
 QED
@@ -1294,25 +1299,27 @@ Proof
 QED
 
 val REAL_LT_NZ = store_thm("REAL_LT_NZ",
-  “!n. ~(&n = 0) <=> (0 < &n)”,
+  “!n. ~(real_of_num n = 0r) <=> (0r < real_of_num n)”,
   GEN_TAC THEN REWRITE_TAC[REAL_LT_LE] THEN
   CONV_TAC(RAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
-  ASM_CASES_TAC “&n = 0” THEN ASM_REWRITE_TAC[REAL_LE_REFL, REAL_POS]);
+  ASM_CASES_TAC “real_of_num n = 0r” THEN
+  ASM_REWRITE_TAC[REAL_LE_REFL, REAL_POS]);
 
 val REAL_INJ = store_thm("REAL_INJ",
-  “!m n. (&m = &n) <=> (m = n)”,
+  “!m n. (real_of_num m = real_of_num n) <=> (m = n)”,
   let val th = prove(“(m:num = n) <=> m <= n /\ n <= m”,
                  EQ_TAC THENL
                   [DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[LESS_EQ_REFL],
                    MATCH_ACCEPT_TAC LESS_EQUAL_ANTISYM]) in
-  REPEAT GEN_TAC THEN REWRITE_TAC[th, GSYM REAL_LE_ANTISYM, REAL_LE] end);
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[th, GSYM REAL_LE_ANTISYM, REAL_LE] end);
 
 (* HOL-Light compatible name *)
 Theorem REAL_OF_NUM_EQ = REAL_INJ;
 
 (* This theorem is mainly for RealArith.REAL_LINEAR_PROVER *)
 Theorem REAL_POS_LT :
-    !n. 0 < &SUC n
+    !n. 0r < real_of_num (SUC n)
 Proof
     GEN_TAC
  >> REWRITE_TAC [Q.SPEC ‘SUC n’ (GSYM REAL_LT_NZ), REAL_INJ]
