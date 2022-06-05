@@ -1625,6 +1625,28 @@ type rat  = Arbrat.rat
 type dconv = term -> thm * thm; (* for GEN_NNF_CONV *)
 
 (* ------------------------------------------------------------------------- *)
+(* A cacher for conversions (from HOL-Light's equal.ml)                      *)
+(* ------------------------------------------------------------------------- *)
+
+val CACHE_CONV = let
+  fun ALPHA_HACK th = let
+    val tm' = lhand(concl th) in
+      fn tm => if tm' ~~ tm then th else TRANS (ALPHA tm tm') th
+  end
+in
+  fn conv => let
+    val net = ref Net.empty
+  in
+    fn tm => (tryfind (fn f => f tm) (Net.match tm (!net)))
+             handle HOL_ERR _ => let
+                 val th = conv tm
+             in
+                 (net := Net.insert (tm,ALPHA_HACK th) (!net); th)
+             end
+  end
+end;
+
+(* ------------------------------------------------------------------------- *)
 (* Data structure for Positivstellensatz refutations.                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -2351,9 +2373,7 @@ let
       end;
   val NNF_NORM_CONV' =
       GEN_NNF_CONV false
-        (* NOTE: there was a CACHE_CONV (not exists in HOL4) before
-           REAL_INEQ_NORM_CONV *)
-        (REAL_INEQ_NORM_CONV,fn t => failwith "");
+        (CACHE_CONV REAL_INEQ_NORM_CONV,fn t => failwith "");
   fun absremover (t :term) :thm =
      (TOP_DEPTH_CONV(absconv1 THENC BINOP_CONV (LAND_CONV POLY_CONV')) THENC
       TRY_CONV(absconv2 THENC NNF_NORM_CONV' THENC BINOP_CONV absremover)) t;
