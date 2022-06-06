@@ -536,7 +536,7 @@ val (CONDS_ELIM_CONV,CONDS_CELIM_CONV) = let
       if is_comb tm then
          let val (s,t) = dest_comb tm in
            if is_cond tm andalso
-             HOLset.isEmpty (HOLset.intersection (FVL [lhand s] empty_varset, fvs))
+             HOLset.isEmpty (HOLset.intersection (FVL [lhand s] empty_tmset, fvs))
           then tm
           else ((find_cond fvs s)
                 handle HOL_ERR _ => find_cond fvs t)
@@ -547,7 +547,7 @@ val (CONDS_ELIM_CONV,CONDS_CELIM_CONV) = let
         end
       else failwith "find_conditional"
   in
-      find_cond empty_varset
+      find_cond empty_tmset
   end;
 
   fun CONDS_ELIM_CONV dfl tm =
