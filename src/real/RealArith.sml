@@ -2338,15 +2338,14 @@ let
     (* NOTE: this step of POLY_CONV helps by cutting off real arith terms
        hidding in propositional terms, e.g. ‘closed {x | 1 * x = a}’ will
        be simplified to ‘closed {x | x = a}’ before going to NNF_CONV.
-       Some HOL4 proofs rely on this.
-     *)
+       Some HOL4 proofs rely on this. *)
     TOP_DEPTH_CONV POLY_CONV THENC
 
     NNF_CONV THENC DEPTH_BINOP_CONV or_tm CONDS_ELIM_CONV THENC
     NNF_NORM_CONV THENC
     SKOLEM_CONV THENC
     PRENEX_CONV THENC
-    DNF_CONV; (* was: WEAK_DNF_CONV here *)
+    DNF_CONV; (* was: WEAK_DNF_CONV in HOL-Light *)
 
   fun overall dun ths =
     case ths of

@@ -409,7 +409,7 @@ val NNF_CONV = NNF_CONV' NO_CONV;
 (* ------------------------------------------------------------------------- *)
 
 local
-    open Redblackmap
+    open Redblackmap tautLib
     type func = (term,thm)dict;
     val undefined :func = mkDict Term.compare;
 in
@@ -422,9 +422,11 @@ val CONJ_ACI_RULE = let
             end
         else insert (f,tm,th)
     end
-  and use_fun (f :func) (tm :term) :thm =
+  and use_fun (f :func) tm :thm =
     if is_conj tm then
-      let val (l,r) = dest_conj tm in CONJ (use_fun f l) (use_fun f r) end
+        let val (l,r) = dest_conj tm in
+            CONJ (use_fun f l) (use_fun f r)
+        end
     else find (f,tm)
 in
   fn tm => let val (p,p') = dest_eq tm in
@@ -436,6 +438,51 @@ in
                end
            end
 end; (* CONJ_ACI_RULE *)
+
+val DISJ_ACI_RULE = let
+  val pth_left = UNDISCH(TAUT `~(a \/ b) ==> ~a`)
+  and pth_right = UNDISCH(TAUT `~(a \/ b) ==> ~b`)
+  and pth = repeat UNDISCH (TAUT `~a ==> ~b ==> ~(a \/ b)`)
+  and pth_neg = UNDISCH(TAUT `(~a <=> ~b) ==> (a <=> b)`)
+  and a_tm = “a:bool” and b_tm = “b:bool”;
+  fun NOT_DISJ_PAIR th = let
+      val (p,q) = dest_disj(rand(concl th));
+      val ilist = [a_tm |-> p, b_tm |-> q]
+  in
+      (PROVE_HYP th (INST ilist pth_left),
+       PROVE_HYP th (INST ilist pth_right))
+  end
+  and NOT_DISJ th1 th2 = let
+      val th3 = INST [a_tm |-> rand(concl th1),
+                      b_tm |-> rand(concl th2)] pth
+  in
+      PROVE_HYP th1 (PROVE_HYP th2 th3)
+  end;
+  fun mk_fun th (f :func) :func =
+    let val tm = rand(concl th) in
+        if is_disj tm then
+            let val (th1,th2) = NOT_DISJ_PAIR th in
+                mk_fun th1 (mk_fun th2 f)
+            end
+        else insert (f,tm,th)
+    end
+  and use_fun (f :func) tm :thm =
+    if is_disj tm then
+        let val (l,r) = dest_disj tm in
+            NOT_DISJ (use_fun f l) (use_fun f r)
+        end
+    else find (f,tm)
+in
+  fn fm => let val (p,p') = dest_eq fm in
+               if p ~~ p' then REFL p else
+               let val th = use_fun (mk_fun (ASSUME(mk_neg p)) undefined) p'
+                   and th' = use_fun (mk_fun (ASSUME(mk_neg p')) undefined) p;
+                   val th1 = IMP_ANTISYM_RULE (DISCH_ALL th) (DISCH_ALL th')
+               in
+                   PROVE_HYP th1 (INST [a_tm |-> p, b_tm |-> p'] pth_neg)
+               end
+           end
+end; (* DISJ_ACI_RULE *)
 end; (* local open Redblackmap *)
 
 (* ------------------------------------------------------------------------- *)
@@ -447,7 +494,12 @@ fun CONJ_CANON_CONV tm =
   let val tm' = list_mk_conj(setify_term(strip_conj tm)) in
       CONJ_ACI_RULE(mk_eq(tm,tm'))
   end;
-end
+
+fun DISJ_CANON_CONV tm =
+  let val tm' = list_mk_disj(setify_term(strip_disj tm)) in
+      DISJ_ACI_RULE(mk_eq(tm,tm'))
+  end;
+end; (* local *)
 
 (* ------------------------------------------------------------------------- *)
 (* Eliminate conditionals; CONDS_ELIM_CONV aims for disjunctive splitting,   *)
@@ -1132,6 +1184,148 @@ fun find_nnf find_f =
   end;
 
 fun ATOM_CONV c tm = (if is_neg tm then RAND_CONV c else c) tm;
+
+(* ------------------------------------------------------------------------- *)
+(* Weak and normal DNF conversion. The "weak" form gives a disjunction of    *)
+(* conjunctions, but has no particular associativity at either level and     *)
+(* may contain duplicates. The regular forms give canonical right-associate  *)
+(* lists without duplicates, but do not remove subsumed disjuncts.           *)
+(*                                                                           *)
+(* In both cases the input term is supposed to be in NNF already. We do go   *)
+(* inside quantifiers and transform their body, but don't move them.         *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: DNF_CONV (HOL-Light compatible) has been renamed to STRONG_DNF_CONV *)
+local
+    open tautLib liteLib
+in
+val (WEAK_DNF_CONV,STRONG_DNF_CONV) = let
+  val pth1 = TAUT `a /\ (b \/ c) <=> a /\ b \/ a /\ c`
+  and pth2 = TAUT `(a \/ b) /\ c <=> a /\ c \/ b /\ c`
+  and a_tm = “a:bool” and b_tm = “b:bool” and c_tm = “c:bool”;
+
+  fun distribute tm =
+    if is_conj tm then
+       let val (l,r) = dest_conj tm in
+           if is_disj r then
+               let val a = l and (b,c) = dest_disj r;
+                   val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth1
+               in
+                   TRANS th (BINOP_CONV distribute (rand(concl th)))
+               end
+           else if is_disj l then
+               let val (a,b) = dest_disj l and c = r;
+                   val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth2
+               in
+                   TRANS th (BINOP_CONV distribute (rand(concl th)))
+               end
+           else REFL tm
+       end
+    else REFL tm;
+
+  val strengthen =
+      DEPTH_BINOP_CONV disjunction CONJ_CANON_CONV THENC DISJ_CANON_CONV;
+
+  fun weakdnf tm =
+      if is_forall tm andalso is_exists tm then
+          BINDER_CONV weakdnf tm
+      else if is_disj tm then
+          BINOP_CONV weakdnf tm
+      else if is_conj tm then
+          let val (l,r) = dest_conj tm;
+              val th = MK_CONJ (weakdnf l) (weakdnf r)
+          in
+              TRANS th (distribute(rand(concl th)))
+          end
+      else REFL tm
+
+  and substrongdnf tm =
+      if is_forall tm andalso is_exists tm then
+          BINDER_CONV strongdnf tm
+      else if is_disj tm then
+          BINOP_CONV substrongdnf tm
+      else if is_conj tm then
+          let val (l,r) = dest_conj tm;
+              val th = MK_CONJ (substrongdnf l) (substrongdnf r)
+          in
+              TRANS th (distribute(rand(concl th)))
+          end
+      else REFL tm
+
+  and strongdnf tm =
+    let val th = substrongdnf tm in
+        TRANS th (strengthen(rand(concl th)))
+    end
+in
+    (UNCHANGED_CONV weakdnf, UNCHANGED_CONV strongdnf)
+end;
+
+(* ------------------------------------------------------------------------- *)
+(* Likewise for CNF.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: CNF_CONV (HOL-Light compatible) has been renamed to STRONG_CNF_CONV *)
+val (WEAK_CNF_CONV,STRONG_CNF_CONV) = let
+  val pth1 = TAUT `a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`
+  and pth2 = TAUT `(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`
+  and a_tm = “a:bool” and b_tm = “b:bool” and c_tm = “c:bool”;
+
+  fun distribute tm =
+    if is_disj tm then
+       let val (l,r) = dest_disj tm in
+            if is_conj r then
+                let val a = l and (b,c) = dest_conj r;
+                    val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth1
+                in
+                    TRANS th (BINOP_CONV distribute (rand(concl th)))
+                end
+            else if is_conj l then
+                let val (a,b) = dest_conj l and c = r;
+                    val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth2
+                in
+                    TRANS th (BINOP_CONV distribute (rand(concl th)))
+                end
+            else REFL tm
+       end
+    else REFL tm;
+
+  val strengthen =
+      DEPTH_BINOP_CONV conjunction DISJ_CANON_CONV THENC CONJ_CANON_CONV;
+
+  fun weakcnf tm =
+    if is_forall tm andalso is_exists tm then
+        BINDER_CONV weakcnf tm
+    else if is_conj tm then
+        BINOP_CONV weakcnf tm
+    else if is_disj tm then
+        let val (l,r) = dest_disj tm;
+            val th = MK_DISJ (weakcnf l) (weakcnf r)
+        in
+            TRANS th (distribute(rand(concl th)))
+        end
+    else REFL tm
+
+  and substrongcnf tm =
+    if is_forall tm andalso is_exists tm then
+        BINDER_CONV strongcnf tm
+    else if is_conj tm then
+        BINOP_CONV substrongcnf tm
+    else if is_disj tm then
+        let val (l,r) = dest_disj tm;
+            val th = MK_DISJ (substrongcnf l) (substrongcnf r)
+        in
+            TRANS th (distribute(rand(concl th)))
+        end
+    else REFL tm
+
+  and strongcnf tm =
+    let val th = substrongcnf tm in
+        TRANS th (strengthen(rand(concl th)))
+    end
+in
+  (UNCHANGED_CONV weakcnf, UNCHANGED_CONV strongcnf)
+end
+end; (* local *)
 
 (* ------------------------------------------------------------------------- *)
 (* Definitional Conjunctive Normal Form                                      *)

@@ -277,9 +277,16 @@ val condify_ss : simpset      (* pure + condify *)
 
 val MIN_CNF : thm list -> term list * thm list
 
-(* from HOL-Light's canon.ml *)
+(* ------------------------------------------------------------------------- *)
+(* Some conversions ported from HOL-Light's canon.ml                         *)
+(* ------------------------------------------------------------------------- *)
+
 val CONJ_CANON_CONV  : conv
 val CONDS_ELIM_CONV  : conv
 val CONDS_CELIM_CONV : conv
+val WEAK_DNF_CONV    : conv
+val STRONG_DNF_CONV  : conv
+val WEAK_CNF_CONV    : conv
+val STRONG_CNF_CONV  : conv
 
 end

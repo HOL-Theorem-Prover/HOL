@@ -700,7 +700,7 @@ fun SEMIRING_NORMALIZERS_CONV
           either side is 0. *)
        val th3 = QCONV POLYNOMIAL_ADD_CONV (rand(concl th2))
     in
-        
+
        TRANS th1 (TRANS th2 th3)
     end;
 

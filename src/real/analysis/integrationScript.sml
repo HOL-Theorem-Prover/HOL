@@ -17172,7 +17172,7 @@ val SECOND_MEAN_VALUE_THEOREM_FULL = store_thm ("SECOND_MEAN_VALUE_THEOREM_FULL"
        the new ASM_REAL_ARITH_TAC can resolve 4 of them, leaving only one.
      *)
     TRY (RealArith.REAL_ASM_ARITH_TAC) THEN
-    (* old tactics for the now disappeared 2 subgoals:     
+    (* old tactics for the now disappeared 2 subgoals:
      POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN REAL_ARITH_TAC,
      REWRITE_TAC [REAL_ARITH ``a - b <= 0 <=> a <= b:real``] THEN
      FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[IN_INTERVAL] THEN

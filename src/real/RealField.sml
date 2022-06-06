@@ -656,8 +656,7 @@ val REAL_FIELD = let
     PRENEX_CONV THENC
     ONCE_REWRITE_CONV[REAL_ARITH “(x :real) < y <=> x < y /\ ~(x = y)”];
 
-  val setup_conv = NNF_CONV THENC CNF_CONV (* was: WEAK_CNF_CONV *)
-                            THENC CONJ_CANON_CONV;
+  val setup_conv = NNF_CONV THENC WEAK_CNF_CONV THENC CONJ_CANON_CONV;
 
   (* REAL_RING and REAL_ARITH are called here! *)
   fun core_rule t = (REAL_RING t) handle HOL_ERR _ => REAL_ARITH t;

@@ -37,7 +37,7 @@ val num_1 = Arbnum.one;
 val NNF_CONV = normalForms.NNFD_CONV;
 
 (* NOTE: somehow normalForms.PRENEX_CONV doesn't work *)
-val PRENEX_CONV = Canon_Port.PRENEX_CONV; 
+val PRENEX_CONV = Canon_Port.PRENEX_CONV;
 
 (*---------------------------------------------------------------------------*
  * Lexcographic orders (from Oscar Abrahamsson's hol-light-sml project)      *
