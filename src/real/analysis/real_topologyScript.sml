@@ -10697,19 +10697,19 @@ val CLOSED_STANDARD_HYPERPLANE = store_thm ("CLOSED_STANDARD_HYPERPLANE",
  ``!a. closed {x:real | x = a}``,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [``1:real``, ``a:real``] CLOSED_HYPERPLANE) THEN
-  REAL_ARITH_TAC);
+  RealArith.OLD_REAL_ARITH_TAC);
 
 val CLOSED_HALFSPACE_COMPONENT_LE = store_thm ("CLOSED_HALFSPACE_COMPONENT_LE",
  ``!a. closed {x:real | x <= a}``,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [``1:real``, ``a:real``] CLOSED_HALFSPACE_LE) THEN
-  REAL_ARITH_TAC);
+  RealArith.OLD_REAL_ARITH_TAC);
 
 val CLOSED_HALFSPACE_COMPONENT_GE = store_thm ("CLOSED_HALFSPACE_COMPONENT_GE",
  ``!a. closed {x:real | x >= a}``,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [``1:real``, ``a:real``] CLOSED_HALFSPACE_GE) THEN
-  REAL_ARITH_TAC);
+  RealArith.OLD_REAL_ARITH_TAC);
 
 (* ------------------------------------------------------------------------- *)
 (* Openness of halfspaces.                                                   *)
