@@ -1,9 +1,9 @@
 signature Holmake_tools =
 sig
 
-  datatype CodeType = datatype Holmake_tools_dtype.CodeType
-  datatype ArticleType = datatype Holmake_tools_dtype.ArticleType
-  datatype File = datatype Holmake_tools_dtype.File
+  datatype CodeType = datatype HOLFS_dtype.CodeType
+  datatype ArticleType = datatype HOLFS_dtype.ArticleType
+  datatype File = datatype HOLFS_dtype.File
   datatype buildcmds = datatype Holmake_tools_dtype.buildcmds
 
   val |> : 'a * ('a -> 'b) -> 'b
