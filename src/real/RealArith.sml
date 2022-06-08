@@ -1725,24 +1725,70 @@ end
 (* to be OK on integers provided the input contains only integers.           *)
 (* ------------------------------------------------------------------------- *)
 
-local open Redblackmap Arbrat in
-
 (* A "linear expression" as a summation of constant-multiplied variables of
    the form “a * x + b * y + c”, represented by a finite map from terms to
    rationals such as [x |=> a, y |=> b, 1 |=> c].
  *)
+
+(* Solution 1 (Termtab): *)
+local open Termtab Arbrat in
+type linear_type = rat table;
+
+val is_undefined :linear_type -> bool = is_empty;
+val undefined :linear_type = empty;
+val is_single :linear_type -> bool = is_single;
+val defined :linear_type -> key -> bool = defined;
+val dom :linear_type -> term list = keys;
+
+fun tryapply (m :linear_type) (k :term) (d :rat) :rat =
+    case (lookup m k) of SOME x => x | NONE => d;
+
+fun apply (m :linear_type) k = tryapply m k zero;
+
+infix |=>
+fun (k :term) |=> (v :rat) :linear_type = update_new (k,v) empty;
+
+val undefine = delete_safe;
+
+fun choose (m :linear_type) :term * rat =
+    case get_first SOME m of
+        SOME k => k
+      | NONE => failwith "empty table";
+
+val listItems = dest;
+fun mapWith f (m :linear_type) :linear_type = Termtab.map (fn _ => f) m;
+
+fun mergeWithoutZero f (m1 :linear_type) (m2 :linear_type) :linear_type = let
+    fun add (key,y) tab =
+        case lookup tab key of
+           NONE   => update_new (key,y) tab
+         | SOME x => let val sum = f (x,y) in
+                         if sum = Arbrat.zero then
+                             delete key tab
+                         else
+                             update (key,sum) tab
+                     end;
+in
+    if is_empty m1 then m2
+    else fold add m2 m1
+end; (* mergeWithoutZero *)
+end; (* local *)
+
+(* Solution 2 (Redblackmap):
+local open Redblackmap Arbrat in
 type linear_type = (term,rat)dict;
 
 val is_undefined :linear_type -> bool = isEmpty;
 val undefined :linear_type = mkDict Term.compare;
-
-fun dom (m :linear_type) :term list = (List.map fst (listItems m));
+fun is_single (m :linear_type) = (numItems m = 1);
+fun defined (m :linear_type) (k :term) = peek (m,k) <> NONE;
+fun dom (m :linear_type) :term list = List.map fst (listItems m);
 
 fun tryapply (m :linear_type) k d = find (m,k) handle NotFound => d;
 fun apply (m :linear_type) k = tryapply m k zero;
 
-infix |=>;
-fun (k :term) |=> (v :rat) :linear_type = fromList Term.compare [(k,v)];
+infix |=>
+fun (k :term) |=> (v :rat) :linear_type = insert (undefined,k,v);
 
 fun undefine (k :term) (m :linear_type) :linear_type =
     (fst(remove(m,k))) handle NotFound => m;
@@ -1750,45 +1796,60 @@ fun undefine (k :term) (m :linear_type) :linear_type =
 fun choose (m :linear_type) =
     if isEmpty m then failwith "empty dict"
     else hd(listItems m);
-end; (* local *)
 
+val listItems = listItems;
+val mapWith = transform;
+
+fun mergeWithoutZero f (m1 :linear_type) (m2 :linear_type) :linear_type = let
+    fun add (key,y,tab) =
+        case peek (tab,key) of
+            NONE   => insert(tab,key,y)
+          | SOME x => let val sum = f (x,y) in
+                          if sum = Arbrat.zero then
+                              fst(remove (tab,key))
+                          else
+                              insert (tab,key,sum)
+                      end;
+in
+    if isEmpty m1 then m2
+    else foldl add m2 m1
+end
+end; (* local *)
+ *)
+
+(* NOTE: this function is only used in verbose mode *)
 fun dom_set (m :linear_type) :term set =
     HOLset.fromList Term.compare (dom m);
 
-fun delete (s :term set, i :term) =
+fun safe_delete (s :term set, i :term) =
     HOLset.delete(s,i) handle NotFound => s;
 
 (* Test code for linear_add (after linear_of_term):
 
    val m1 = linear_of_term “x + 1 / 2 * y”;
-   Redblackmap.listItems m1; [(“x”, 1i/1), (“y”, 1i/2)]
+   listItems m1; [(“x”, 1i/1), (“y”, 1i/2)]
 
    val m2 = linear_of_term “2 * z + ~1 / 2 * y”;
-   Redblackmap.listItems m2; [(“y”, -1i/2), (“z”, 2i/1)]
+   listItems m2; [(“y”, -1i/2), (“z”, 2i/1)]
 
    val m = linear_add m1 m2;
-   Redblackmap.listItems m; [(“x”, 1i/1), (“z”, 2i/1)]
+   listItems m; [(“x”, 1i/1), (“z”, 2i/1)]
  *)
-fun linear_add (m1 :linear_type) m2 :linear_type =
-    HOLset.foldl (fn (k,m) => let val s = Arbrat.+ (apply m1 k,apply m2 k) in
-                                  if s = Arbrat.zero then m
-                                  else Redblackmap.insert (m,k,s)
-                              end)
-                 undefined
-                 (HOLset.addList (dom_set m1,dom m2));
+fun linear_add (m1 :linear_type) (m2 :linear_type) :linear_type =
+    mergeWithoutZero Arbrat.+ m1 m2;
 
 (* val m' = linear_cmul (rat_of_term “&2”) m1;
-   Redblackmap.listItems m'; [(“x”, 2i/1), (“y”, 1i/1)]
+   listItems m'; [(“x”, 2i/1), (“y”, 1i/1)]
  *)
 fun linear_cmul c (m :linear_type) :linear_type =
     if c = Arbrat.zero then undefined
     else if c = Arbrat.one then m
-    else Redblackmap.transform (fn v => Arbrat.* (c,v)) m;
+    else mapWith (curry Arbrat.* c) m;
 
 (* Test code for linear_of_term (was called "lin_of_hol"):
 
    val m = linear_of_term “&2 * x + &3 * y + &1 / &4”;
-   Redblackmap.listItems m; [(“x”, 2i/1), (“y”, 3i/1), (“1”, 1i/4)]
+   listItems m; [(“x”, 2i/1), (“y”, 3i/1), (“1”, 1i/4)]
  *)
 fun linear_of_term (tm :term) :linear_type =
     if tm ~~ zero_tm then undefined
@@ -1810,7 +1871,7 @@ fun linear_of_term (tm :term) :linear_type =
  *)
 fun term_of_linear (e :linear_type)  = let
     val vars = dom_set e;
-    val vars' = HOLset.delete (vars,one_tm) handle NotFound => vars
+    val vars' = safe_delete (vars,one_tm)
     and base = term_of_rat(apply e one_tm);
     val sum = HOLset.foldl
                 (fn (x,tm) => mk_plus(tm,mk_mult(term_of_rat(apply e x),x)))
@@ -1833,8 +1894,7 @@ end
 fun contradictory (p :rat -> bool)
                   ((e,_) :linear_type * positivstellensatz) :bool =
     (is_undefined e andalso not(p Arbrat.zero)) orelse
-    (let val d = dom e in List.length d = 1 andalso hd d ~~ one_tm end)
-    andalso not(p(apply e one_tm));
+    (is_single e andalso defined e one_tm andalso not(p(apply e one_tm)));
 
 (* linear prover (actually a refuter) for le and lt ineqs *)
 fun linear_ineqs (vars :term set) (les :(linear_type * positivstellensatz) list,
@@ -1961,7 +2021,7 @@ fun linear_eqs (eqs :(linear_type * positivstellensatz) list,
     end handle HOL_ERR _ =>
  (* recursion cases *)
     case eqs of
-      [] => let val vars = delete
+      [] => let val vars = safe_delete
                              (itlist (fn ep => fn s =>
                                          HOLset.addList (s,dom (fst ep)))
                                      (les @ lts) empty_tmset,

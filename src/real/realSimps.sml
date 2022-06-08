@@ -478,7 +478,8 @@ fun is_arith_thm thm =
 
 val is_arith_asm = is_arith_thm o ASSUME
 
-val ARITH = RealArith.REAL_ARITH
+(* The old d.p. is faster *)
+val ARITH = RealArith.OLD_REAL_ARITH
 
 open Trace Cache Traverse
 fun CTXT_ARITH thms tm = let
