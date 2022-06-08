@@ -111,4 +111,22 @@ fun primary_dependent f =
 
 fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
+val closeIn = TextIO.closeIn
+val closeOut = TextIO.closeOut
+val flushOut = TextIO.flushOut
+val input = TextIO.input
+val inputAll = TextIO.inputAll
+val inputLine = TextIO.inputLine
+val openIn = TextIO.openIn
+val openOut = TextIO.openOut
+val output = TextIO.output
+val stdErr = TextIO.stdErr
+val stdOut = TextIO.stdOut
+
+fun stdErr_out s = (TextIO.output (TextIO.stdErr, s);
+                    TextIO.flushOut TextIO.stdErr)
+
+fun print s = TextIO.print s
+fun println s = print (s ^ "\n")
+
 end (* struct *)

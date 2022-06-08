@@ -1,7 +1,7 @@
 structure Holmake_types :> Holmake_types =
 struct
 
-open internal_functions
+open internal_functions HOLFileSys
 
 datatype pretoken =
          DEFN of string | DEFN_EXTEND of string | RULE of string | EOF
@@ -412,14 +412,14 @@ end
 fun base_environment () = let
   val kernelid =
       let
-        val strm = TextIO.openIn Holmake_tools.kernelid_fname
+        val strm = openIn Holmake_tools.kernelid_fname
         val s =
-            case TextIO.inputLine strm of
+            case inputLine strm of
                 NONE => ""
               | SOME s => hd (String.tokens Char.isSpace s) handle Empty => ""
 
       in
-        s before TextIO.closeIn strm
+        s before closeIn strm
       end handle IO.Io _ => ""
 in
   Binarymap.insert(base_environment0, "KERNELID", [LIT kernelid])

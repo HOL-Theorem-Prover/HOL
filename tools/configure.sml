@@ -314,14 +314,14 @@ val _ =
     compile [] "parse_glob.sml";
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
+    compile [] "HOLFS_dtype.sml";
+    compile [] "HOLFileSys.sig";
+    compile [] "HOLFileSys.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
     compile [] "QuoteFilter.sml";
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";
-    compile [] "HOLFS_dtype.sml";
-    compile [] "HOLFileSys.sig";
-    compile [] "HOLFileSys.sml";
     compile [] "Holmake_tools_dtype.sml";
     compile [] "QFRead.sig";
     compile [] "QFRead.sml";

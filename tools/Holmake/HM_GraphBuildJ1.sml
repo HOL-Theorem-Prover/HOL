@@ -1,7 +1,7 @@
 structure HM_GraphBuildJ1 :> HM_GraphBuildJ1 =
 struct
 
-open Holmake_tools
+open Holmake_tools HOLFileSys
 
 type 'a build_command =
      'a HM_DepGraph.t -> include_info -> (dep,'a) buildcmds -> File -> bool
@@ -106,8 +106,7 @@ fun 'a graphbuildj1 static_info =
                             let
                               val () =
                                   if not noecho andalso not quiet then
-                                    (TextIO.output(TextIO.stdOut, c ^ "\n");
-                                     TextIO.flushOut TextIO.stdOut)
+                                    println c
                                   else ()
                               val others = find_nodes_by_command g (#dir nI,cmd)
                               val result = system c

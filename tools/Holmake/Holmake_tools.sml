@@ -133,10 +133,10 @@ fun run s =
     val res = OS.Process.system (String.concatWith " " [s,"1>",outfile,"2>&1"])
     val output =
         let
-          val istrm = TextIO.openIn outfile
+          val istrm = openIn outfile
         in
-          TextIO.inputAll istrm before
-          TextIO.closeIn istrm before
+          inputAll istrm before
+          closeIn istrm before
           OS.FileSys.remove outfile
         end handle IO.Io _ => ""
   in
@@ -200,10 +200,8 @@ type output_functions = {warn : string -> unit,
                          diag : string -> (unit -> string) -> unit}
 
 fun die_with message = let
-  open TextIO
 in
-  output(stdErr, message ^ "\n");
-  flushOut stdErr;
+  stdErr_out (message ^ "\n");
   OS.Process.exit OS.Process.failure
 end
 
@@ -212,7 +210,7 @@ fun shorten_name name =
 
 fun output_functions {usepfx,chattiness=n,debug} = let
   val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
-  open TextIO
+  open HOLFileSys
   fun msg inlinep strm s =
     if s = "" then ()
     else
@@ -228,7 +226,7 @@ fun output_functions {usepfx,chattiness=n,debug} = let
   fun donothing _ = ()
   val warn = if n >= 1 then msg false stdErr else donothing
   val info = if n >= 1 then msg false stdOut else donothing
-  val fancyp = strmIsTTY TextIO.stdOut andalso TERM_isANSI()
+  val fancyp = strmIsTTY stdOut andalso TERM_isANSI()
   val (info_inline, info_inline_end) =
       if n >= 1 then
         if fancyp then
@@ -281,10 +279,10 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val mypath = find_my_path()
   val _ = diag (K ("running "^mypath))
   fun write_lastmaker_file () = let
-    val outstr = TextIO.openOut ".HOLMK/lastmaker"
+    val outstr = openOut ".HOLMK/lastmaker"
   in
-    TextIO.output(outstr, mypath ^ "\n");
-    TextIO.closeOut outstr
+    output(outstr, mypath ^ "\n");
+    closeOut outstr
   end handle IO.Io _ => ()
 
   fun lmfile() =
@@ -292,16 +290,16 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
          FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
       then let
           val _ = diag (K "Found a lastmaker file to look at.")
-          val istrm = TextIO.openIn ".HOLMK/lastmaker"
+          val istrm = openIn ".HOLMK/lastmaker"
         in
-          case TextIO.inputLine istrm of
+          case inputLine istrm of
             NONE => (warn "Empty Last Maker file";
-                     TextIO.closeIn istrm;
+                     closeIn istrm;
                      write_lastmaker_file())
           | SOME s => let
               open Substring
               val path = string (dropr Char.isSpace (full s))
-              val _ = TextIO.closeIn istrm
+              val _ = closeIn istrm
             in
               if FileSys.access (path, [FileSys.A_READ, FileSys.A_EXEC])
               then
@@ -661,15 +659,14 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
                  raise HolDepFailed)
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
-      if FileSys.isDir DEPDIR then TextIO.openOut s
+      if FileSys.isDir DEPDIR then openOut s
       else die_with ("Want to put dependency information in directory "^
                      DEPDIR^", but it already exists as a file")
     else
      (chatty ("Trying to create directory "^DEPDIR^" for dependency files");
       FileSys.mkDir DEPDIR;
-      TextIO.openOut s
+      openOut s
      )
-  open TextIO
   val outstr = myopen (normPath destination)
 in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
@@ -705,7 +702,6 @@ fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 fun get_dependencies_from_file depfile = let
   open hm_target
   fun get_whole_file s = let
-    open TextIO
     val instr = openIn (normPath s)
   in
     inputAll instr before closeIn instr

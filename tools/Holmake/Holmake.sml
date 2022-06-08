@@ -7,7 +7,7 @@
 structure Holmake =
 struct
 
-open Systeml Holmake_tools Holmake_types
+open Systeml Holmake_tools Holmake_types HOLFileSys
 infix forces_update_of depforces_update_of |>
 
 structure FileSys = OS.FileSys
@@ -32,8 +32,6 @@ in
   map dequote (tokenize (perform_substitution env [VREF id]))
 end
 
-fun println s = TextIO.print(s ^ "\n")
-
 fun chattiness_level (switches : HM_Core_Cline.t) =
   case (#debug switches, #verbose switches, #quiet switches) of
       (SOME _, _, _) => 3
@@ -44,8 +42,7 @@ fun chattiness_level (switches : HM_Core_Cline.t) =
 fun main() = let
 
 val execname = Path.file (CommandLine.name())
-fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-              TextIO.flushOut TextIO.stdErr)
+fun warn s = stdErr_out (execname^": "^s^"\n")
 fun die s = (warn s; Process.exit Process.failure)
 val original_dir = hmdir.curdir()
 
@@ -542,9 +539,9 @@ val () = if do_logging_flag then
              warn "Make log exists; new logging will concatenate on this file"
            else let
                (* touch the file *)
-               val outs = TextIO.openOut logfilename
+               val outs = openOut logfilename
              in
-               TextIO.closeOut outs
+               closeOut outs
              end handle IO.Io _ => warn "Couldn't set up make log"
          else ()
 

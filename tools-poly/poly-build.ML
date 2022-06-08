@@ -10,13 +10,13 @@ fun useC f =
 
 val _ = use "Holmake/Systeml.sml";
 val _ = useC "GetOpt";
+val _ = use "../tools/Holmake/HOLFS_dtype.sml";
+val _ = useC "HOLFileSys";
 val _ = useC "Holdep_tokens";
 val _ = useC "HM_SimpleBuffer";
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = useC "QFRead";
 val _ = useC "Holdep";
-val _ = use "../tools/Holmake/HOLFS_dtype.sml";
-val _ = useC "HOLFileSys";
 val _ = use "../tools/Holmake/Holmake_tools_dtype.sml";
 val _ = use "../tools/Holmake/terminal_primitives.sig";
 val _ = use "../tools/Holmake/poly-terminal-prims.ML";
