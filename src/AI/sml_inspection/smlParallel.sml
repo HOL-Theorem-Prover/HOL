@@ -285,6 +285,17 @@ fun boss_end pd threadl completedl =
    Boss sends workers jobs and collects the results
    ------------------------------------------------------------------------- *)
 
+
+fun writel s sl = aiLib.writel s sl 
+  handle Interrupt => raise Interrupt | _ => 
+    (print_endline ("smlParallel: writel: " ^ s); 
+     raise ERR "writel" s)
+ 
+fun writel_atomic s sl = aiLib.writel_atomic s sl 
+  handle Interrupt => raise Interrupt | _ => 
+    (print_endline ("smlParallel: writel_atomic: " ^ s); 
+     raise ERR "writel" s)  
+
 fun stat_jobs (pendingl,freewidl,runningl,completedl) =
   print_endline
     ("target: " ^ its (length pendingl) ^ " "  ^
