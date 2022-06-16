@@ -872,7 +872,7 @@ val NUM_SIMPLIFY_CONV = let
   val contains_quantifier =
     can (find_term (fn t => is_forall t orelse is_exists t orelse is_uexists t));
   val BETA2_CONV = RATOR_CONV BETA_CONV THENC BETA_CONV
-  and PRE_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV) PRE_ELIM_THM
+  and PRE_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV) PRE_ELIM_THM_EXISTS
   and SUB_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV) SUB_ELIM_THM'
   and DIVMOD_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV)
                                     (SPEC_ALL DIVMOD_ELIM_THM);
@@ -899,7 +899,7 @@ val NUM_SIMPLIFY_CONV = let
            val ty = type_of t;
            val v = genvar ty;
            val p = mk_abs(v,subst [t |-> v] tm);
-           val th0 = if pos then PRE_ELIM_THM'' else PRE_ELIM_THM';
+           val th0 = if pos then PRE_ELIM_THM'' else PRE_ELIM_THM_EXISTS;
            val th1 = INST [p_tm |-> p, n_tm |-> rand t] th0;
            val th2 = CONV_RULE(COMB2_CONV (RAND_CONV BETA_CONV)
                       (BINDER_CONV(RAND_CONV BETA_CONV))) th1
