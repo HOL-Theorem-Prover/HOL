@@ -2931,11 +2931,20 @@ val PRE_ELIM_THM = store_thm ("PRE_ELIM_THM",
    [FIRST_ASSUM(SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
     FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]);
 
+val SUC_INJ = INV_SUC_EQ;
+
+Theorem PRE_ELIM_THM' :
+   P (PRE n) <=> !m. n = SUC m \/ m = 0 /\ n = 0 ==> P m
+Proof
+  Q.SPEC_TAC(`n:num`,`n:num`) THEN INDUCT_TAC THEN
+  SIMP_TAC bool_ss [NOT_SUC, SUC_INJ, PRE]
+QED
+
 (* HOL-Light compatible *)
 Theorem PRE_ELIM_THM_EXISTS :
    P (PRE n) <=> (?m. (n = SUC m \/ m = 0 /\ n = 0) /\ P m)
 Proof
-    MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] PRE_ELIM_THM)
+    MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] PRE_ELIM_THM')
  >> MESON_TAC []
 QED
 
