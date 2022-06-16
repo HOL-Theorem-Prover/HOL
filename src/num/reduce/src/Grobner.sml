@@ -872,8 +872,8 @@ val NUM_SIMPLIFY_CONV = let
   val contains_quantifier =
     can (find_term (fn t => is_forall t orelse is_exists t orelse is_uexists t));
   val BETA2_CONV = RATOR_CONV BETA_CONV THENC BETA_CONV
-  and PRE_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV) PRE_ELIM_THM_EXISTS
-  and SUB_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV) SUB_ELIM_THM'
+  and PRE_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV) PRE_ELIM_THM' (* forall *)
+  and SUB_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV) SUB_ELIM_THM' (* forall *)
   and DIVMOD_ELIM_THM'' = CONV_RULE (RAND_CONV NNF_CONV)
                                     (SPEC_ALL DIVMOD_ELIM_THM);
   val pth_evenodd = prove
