@@ -2905,7 +2905,7 @@ val LT_IMP_LE = LESS_IMP_LESS_OR_EQ;
 val LE_ADD    = LESS_EQ_ADD;
 val LE_EXISTS = LESS_EQ_EXISTS;
 
-(* This is HOL-Light's SUB_ELIM_THM, with a single ‘P d’ in conclusion. *)
+(* This is HOL-Light's SUB_ELIM_THM, with a single ‘P d’ at rhs. *)
 Theorem SUB_ELIM_THM' :
    P (a - b) <=> (!d. a = b + d \/ a < b /\ d = 0 ==> P d)
 Proof
@@ -2932,7 +2932,7 @@ val PRE_ELIM_THM = store_thm ("PRE_ELIM_THM",
     FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]);
 
 (* HOL-Light compatible *)
-Theorem PRE_ELIM_THM' :
+Theorem PRE_ELIM_THM_EXISTS :
    P (PRE n) <=> (?m. (n = SUC m \/ m = 0 /\ n = 0) /\ P m)
 Proof
     MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] PRE_ELIM_THM)
