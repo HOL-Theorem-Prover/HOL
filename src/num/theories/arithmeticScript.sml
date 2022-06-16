@@ -2906,7 +2906,7 @@ val LE_ADD    = LESS_EQ_ADD;
 val LE_EXISTS = LESS_EQ_EXISTS;
 
 (* This is HOL-Light's SUB_ELIM_THM, with a single ‘P d’ in conclusion. *)
-Theorem SUB_ELIM_THM_ALT :
+Theorem SUB_ELIM_THM' :
    P (a - b) <=> (!d. a = b + d \/ a < b /\ d = 0 ==> P d)
 Proof
   DISJ_CASES_TAC(Q.SPECL [‘a’, ‘b’] LTE_CASES)
@@ -2916,10 +2916,10 @@ Proof
 QED
 
 (* HOL-Light compatible *)
-Theorem SUB_ELIM_THM' :
+Theorem SUB_ELIM_THM_EXISTS' :
    P (a - b) <=> ?d. (a = b + d \/ a < b /\ d = 0) /\ P d
 Proof
-    MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] SUB_ELIM_THM_ALT)
+    MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] SUB_ELIM_THM')
  >> MESON_TAC[]
 QED
 
