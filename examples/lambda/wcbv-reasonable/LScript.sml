@@ -8,9 +8,13 @@ open arithmeticTheory;
 open listTheory;
 open PrelimsTheory;
 open pure_dBTheory;
+open combinTheory;
 
 val _ = new_theory "L";
 
+
+(* TODO:
+    rename the file to weak_CBV *)
 (* ------------------
 	      CBV LC
    ------------------ *)
@@ -27,6 +31,9 @@ End
 	  Substitution and Closedness
    -------------------------------- *)
 
+Overload subst = “\s k u. sub u k s”
+
+(*
 Definition subst:
 	subst s k u =
 		case s of
@@ -34,6 +41,7 @@ Definition subst:
 			| dAPP s t => dAPP (subst s k u) (subst t k u)
 			| dABS s => dABS (subst s (SUC k) u)
 End
+*)
 
 Theorem size_eqs:
   size (dV x) = 1 + x ∧
@@ -83,15 +91,11 @@ Theorem bound_closed_k:
 	∀s k u. bound k s ⇒ subst s k u = s
 Proof
 	Induct_on `s` >> rw[]
-	>- (Cases_on `n = k` >> rw[Once subst] >>
-		fs[Once bound_cases])
-	>- (pop_assum mp_tac >> rw[Once bound_cases] >>
-		first_x_assum drule >> rw[] >>
-		first_x_assum drule >> rw[] >>
-		rw[Once subst])
-	>> pop_assum mp_tac >> rw[Once bound_cases] >>
-	first_x_assum drule >> rw[] >>
-	rw[Once subst]
+  >- fs[Once bound_cases]
+  >- (pop_assum mp_tac >> rw[Once bound_cases])
+  >- (pop_assum mp_tac >> rw[Once bound_cases])
+  >> pop_assum mp_tac >> rw[Once bound_cases] >>
+  fs[ADD1]
 QED
 
 Theorem bound_ge:
@@ -117,12 +121,30 @@ Proof
   metis_tac[bound_closed_k]
 QED
 
+(* TODO: add assumption *)
+(* Add assumptions for closed terms here
+    (up to thm ``bound_subst`` in this section)
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
+(*
 Theorem closed_k_bound:
 	∀k s.
 		(∀n u. k ≤ n ⇒ subst s n u = s) ⇒ bound k s
 Proof
 	Induct_on `s` >> rw[]
-	>- (rw[Once bound_cases] >>
+  >- (Cases_on `k ≤ n` >> rw[]
+      >- (first_x_assum drule  >> rw[] >>
+          `dABS (dV 0) = dV n` by metis_tac[] >>
+          fs[])
+      >> fs[NOT_LEQ] >> rw[Once bound_cases])
+  >- rw[Once bound_cases]
+	>- (rw[Once bound_cases, ADD1] >>
+      fs[lift_def]
+
+      `k ≤ k + 1` by simp[] >>
+      first_x_assum drule >> rw[] >>
+
       CCONTR_TAC >> fs[NOT_LESS] >>
       first_x_assum drule  >> strip_tac >>
       fs[Once subst] >> pop_assum mp_tac >> rw[] >>
@@ -143,12 +165,14 @@ Proof
   >- metis_tac[bound_closed]
   >> metis_tac[closed_k_bound]
 QED
-
+*)
+(*
 Theorem closed_subst:
   ∀s. closed s ⇒ (∀k t. subst s k t = s)
 Proof
   metis_tac[closed_subst_iff]
 QED
+*)
 
 Theorem closed_app:
   ∀s t. closed (dAPP s t) ⇒ closed s ∧ closed t
@@ -162,6 +186,7 @@ Proof
   rw[closed] >> rw[Once bound_cases]
 QED
 
+(*
 Theorem bound_subst_eq_sub:
   ∀k s u n. bound n s ∧ closed u ∧ n ≤ k ⇒ sub u k s = subst s k u
 Proof
@@ -180,34 +205,45 @@ Theorem closed_subst_eq_sub:
 Proof
   metis_tac[closed, bound_subst_eq_sub, ZERO_LESS_EQ]
 QED
+*)
 
 Theorem bound_subst:
-  ∀s t k. bound (SUC k) s ⇒ bound k t ⇒ bound k (subst s k t)
+  ∀s t k.
+    closed t ⇒
+    bound (SUC k) s ⇒
+    bound k t ⇒
+    bound k (subst s k t)
 Proof
   Induct_on `s` >> rw[]
-  >- (rw[Once subst] >> fs[Once bound_cases])
-  >- (rw[Once subst] >> rw[Once bound_cases] >>
+  >- fs[Once bound_cases]
+  >- (rw[Once bound_cases] >>
       qpat_x_assum `bound (SUC _) _` mp_tac >>
       rw[Once bound_cases])
-  >> rw[Once subst] >> rw[Once bound_cases] >>
+  >> rw[Once bound_cases] >>
   qpat_x_assum `bound (SUC _) _` mp_tac >>
   rw[Once bound_cases] >>
+  drule lift_closed >> rw[] >>
+  first_x_assum drule >> rw[] >>
   first_x_assum drule >> rw[] >>
   `bound (SUC k) t` by (irule bound_ge >> qexists_tac `k` >> rw[]) >>
-  metis_tac[]
+  metis_tac[ADD1]
 QED
 
+(* `` closed (dABS s) ⇒ closed t `` here is part of Forster etc.'s proofs *)
 Theorem closed_subst2:
   ∀s t. closed (dABS s) ⇒ closed t ⇒ closed (subst s 0 t)
 Proof
   rw[closed] >>
-  qpat_x_assum `bound _ (dABS _)` mp_tac >> rw[Once bound_cases] >>
-  metis_tac[bound_subst, numeralTheory.numeral_distrib]
+  irule bound_subst >> rw[closed] >>
+  qpat_x_assum `bound _ (dABS _)` mp_tac >> rw[Once bound_cases]
 QED
 
 (* ----------------------------
 	  Deterministic Reduction
    ---------------------------- *)
+
+(* Reserved Notation "s '>>' t" (at level 50). *)
+(* "s '>>' t" := (step s t) *)
 
 Inductive step:
 [~App:]
@@ -218,6 +254,7 @@ Inductive step:
 	(∀s s' t. step s s' ⇒ step (dAPP s t) (dAPP s' t))
 End
 
+(*
 Theorem example_step_app1 = EVAL ``step (dAPP (dABS (dV 0)) (dABS (dV 1)))``;
 
 Theorem example_step_app2 =
@@ -257,43 +294,36 @@ Theorem example_step_app7 =
    REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
     THENC
     SIMP_CONV (srw_ss()) [Once subst]))
-
+*)
 
 (* -----------------------
 	   Resource Measures
    ----------------------- *)
 
 (* -- Small-Step Time Measure -- *)
+(* TODO *)
+(* W = combinTheory.W_DEF *)
 
-Theorem pow_step_congL:
-  Proper (respectful (pow step k) (respectful eq (pow step k))) dAPP
+Theorem NRC_step_congL:
+  W (respectful (NRC step k) (respectful ($=) (NRC step k))) dAPP
 Proof
   Induct_on `k` >> rw[]
-  >- (rw[Proper, respectful, pow, it_def] >>
-      fs[Once eq_cases])
-  >> fs[Proper, respectful, pow] >> rw[Once it_def, rcomp] >>
-  rw[Once it_def] >> rw[rcomp] >>
-  pop_assum mp_tac >> rw[Once eq_cases] >>
-  first_x_assum drule >> rw[] >>
-  `eq x' x'` by rw[Once eq_cases] >>
-  first_x_assum drule >> rw[] >>
-  qexists_tac `(dAPP y' x')` >> rw[] >>
+  >- rw[respectful, NRC]
+  >> fs[respectful, NRC] >> rw[] >>
+  qexists_tac `dAPP z y'` >> rw[] >>
   rw[Once step_cases]
 QED
 
-Theorem pow_step_congR:
-  Proper (respectful eq (respectful (pow step k) (pow step k))) (λs t. dAPP (dABS s) t)
+Theorem NRC_step_congR:
+  W (respectful ($=) (respectful (NRC step k) (NRC step k))) (λs t. dAPP (dABS s) t)
 Proof
   Induct_on `k` >> rw[]
-  >- (rw[Proper, respectful, pow, it_def] >>
-      fs[Once eq_cases])
-  >> fs[Proper, respectful, pow] >> rw[Once it_def, rcomp] >>
-  rw[Once it_def] >> rw[rcomp] >>
-  pop_assum mp_tac >> rw[Once eq_cases] >>
+  >- rw[respectful]
+  >> fs[respectful] >> rw[] >>
+  fs[Once NRC] >>
   first_x_assum drule >> rw[] >>
-  `eq x' x'` by rw[Once eq_cases] >>
-  first_x_assum drule >> rw[] >>
-  qexists_tac `(dAPP (dABS x) y'')` >> rw[] >>
+  first_x_assum (qspecl_then [`y`] ASSUME_TAC) >>
+  qexists_tac `(dAPP (dABS y) z)` >> rw[] >>
   rw[Once step_cases]
 QED
 
@@ -374,6 +404,20 @@ Inductive timeBS:
     timeBS l (dAPP s t) u)
 End
 
+Theorem closed_timeBS:
+  ∀k s t.
+    closed s ⇒
+    timeBS k s t ⇒
+    closed t
+Proof
+  Induct_on `timeBS` >> rw[] >>
+  first_x_assum irule >>
+  drule closed_app >> rw[] >>
+  first_x_assum drule >> rw[] >>
+  first_x_assum drule >> rw[] >>
+  metis_tac[closed_subst2]
+QED
+
 Theorem step_evaluatesIn:
   ∀s s' t k.
     step s s' ⇒
@@ -402,50 +446,33 @@ Proof
 QED
 
 Theorem timeBS_correct:
-  ∀s t k. timeBS k s t ⇔ pow step k s t ∧ lambda t
+  ∀s t k. timeBS k s t ⇔ NRC step k s t ∧ lambda t
 Proof
   rw[lambda] >> EQ_TAC
-  >- (Induct_on `timeBS` >> rw[]
-      >- rw[pow, it_def, eq_refl]
-      (* k *)
-      >> irule pow_add_R >> rw[rcomp] >>
-      `Proper (respectful (pow step k) (respectful eq (pow step k))) dAPP`
-          by metis_tac[pow_step_congL] >>
-      fs[Proper, respectful] >>
-      first_x_assum drule >> rw[] >>
-      `eq s'' s''` by rw[eq_cases] >>
-      first_x_assum drule >> rw[] >>
-      qexists_tac `(dAPP (dABS s') s'')`  >> rw[] >>
-      (* k' *)
-      irule pow_add_R >> rw[rcomp] >>
-      `Proper (respectful eq (respectful (pow step k') (pow step k')))
-              (λs t. dAPP (dABS s) t)`
-          by metis_tac[pow_step_congR] >>
-      fs[Proper, respectful] >>
-      `eq s' s'` by rw[eq_cases] >>
-      first_x_assum drule_all >> rw[] >>
-      qexists_tac `(dAPP (dABS s') (dABS t'))` >> rw[] >>
-      (* k' *)
-      `pow step (SUC k'') (dAPP (dABS s') (dABS t')) (dABS t'')`
+  >- (Induct_on `timeBS` >> rw[] >>
+      (* s s'' ---<k>---> (\s') s'' *)
+      irule NRC_ADD_EQN_R >>
+      qexists_tac `dAPP (dABS s') s''` >> rw[]
+      >- (`W (respectful (NRC step k) (respectful ($=) (NRC step k))) dAPP`
+            by metis_tac[NRC_step_congL] >> fs[respectful]) >>
+      (* (\s') s'' ---<k'>---> (\s') (\t') *)
+      irule NRC_ADD_EQN_R >>
+      qexists_tac `(dAPP (dABS s') (dABS t'))` >> rw[]
+      >- (`W (respectful ($=) (respectful (NRC step k') (NRC step k')))
+           (λs t. dAPP (dABS s) t)`
+            by metis_tac[NRC_step_congR] >>
+          fs[respectful]) >>
+      (* (\s') (\t') ---<1>---> subst ... *)
+      `NRC step (SUC k'') (dAPP (dABS s') (dABS t')) (dABS t'')`
         suffices_by simp[ADD1] >>
-      rw[pow, Once it_def] >> rw[rcomp] >>
-      qpat_x_assum `pow step k'' _ _` mp_tac  >>
-      rw[pow] >>
-      qexists_tac `subst s' 0 (dABS t')` >> rw[] >>
-      rw[Once step_cases])
+      rw[NRC] >> qexists_tac `subst s' 0 (dABS t')` >>
+      rw[] >> rw[Once step_cases])
   >> MAP_EVERY qid_spec_tac [`k`, `s`, `t`] >>
   Induct_on `k` >> rw[]
-  >- fs[Once timeBS_cases, pow, it_def,
-        Once step_cases, Once eq_cases]
+  >- fs[Once timeBS_cases, NRC, Once step_cases]
   >> irule step_evaluatesIn >>
-  `pow step (1 + k) s (dABS t')` by fs[ADD1] >>
-  (* first_x_assum (qspecl_then [] (K all_tac)) >>*)
-  `rcomp (pow step 1) (pow step k) s (dABS t')`
-    by metis_tac[pow_add] >>
-  fs[rcomp] >> qexists_tac `y` >> rw[] >>
-  qpat_x_assum `pow step 1 s y` mp_tac >>
-  simp[pow, Once it_def, rcomp] >>
-  simp[Once it_def, rcomp] >> rw[Once eq_cases]
+  pop_assum mp_tac >> rw[Once NRC] >>
+  qexists_tac `z` >> rw[]
 QED
 
 (* -- Big-Step Space Measure -- *)
