@@ -487,6 +487,20 @@ Inductive spaceBS:
     spaceBS m (dAPP s t) u)
 End
 
+Theorem closed_spaceBS:
+  ∀k s t.
+    closed s ⇒
+    spaceBS k s t ⇒
+    closed t
+Proof
+  Induct_on `spaceBS` >> rw[] >>
+  first_x_assum irule >>
+  drule closed_app >> rw[] >>
+  first_x_assum drule >> rw[] >>
+  first_x_assum drule >> rw[] >>
+  metis_tac[closed_subst2]
+QED
+
 Theorem spaceBS_ge:
   ∀s t m.
     spaceBS m s t ⇒ size s ≤ m ∧ size t ≤ m
