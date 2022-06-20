@@ -331,11 +331,14 @@ QED
 (* ------------------
           Time
    ------------------ *)
-(* TODO: fix time cost model *)
-(*
+
+(* Add assumption `` closed s `` here
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
 Theorem correctTime':
   ∀s t k s0 P a T V H.
-  (*  closed ? ⇒*)
+    closed s ⇒
     timeBS k s t ⇒
     unfolds H a 0 s0 s ⇒
     ∃g l H'.
@@ -372,7 +375,8 @@ Proof
   >- (fs[reprP_cases] >> rw[] >> fs[Once unfolds_cases])
   >> rename [`unfolds H a 0 t1 t`] >> rw[Once compile] >>
   last_x_assum (qspecl_then [`s''`, `compile t1 ++ appT::P`, `a`, `T'`, `V`, `H`] ASSUME_TAC) >>
-  first_x_assum drule >> rw[] >>
+  drule closed_app >> rw[] >>
+  first_x_assum drule_all >> rw[] >>
   qpat_x_assum `reprC H' g (dABS s')` mp_tac >>
   rw[reprC_cases, reprP_cases] >> rw[] >>
   qpat_x_assum `unfolds H' a' 0 (dABS s'⁴') (dABS s')` mp_tac >>
@@ -389,52 +393,55 @@ Proof
   drule_all reprC_extend >> rw[] >>
   `unfolds Heap2' a2 1 s2 s'`
     by metis_tac[unfolds_extend] >>
+  `closed (dABS t')` by metis_tac[closed_timeBS] >>
   `unfolds Heap2' a2' 0 s2 (subst s' 0 (dABS t'))`
     by metis_tac[unfolds_subst, get_current] >>
   last_x_assum (qspecl_then [`s2`, `[]`, `a2'`, `closC P a::T'`, `V`, `Heap2'`] ASSUME_TAC) >>
-  first_x_assum drule >> rw[] >>
+  `closed (dABS s')` by metis_tac[closed_timeBS] >>
+  `closed (subst s' 0 (dABS t'))` by metis_tac[closed_subst2] >>
+  first_x_assum drule_all >> rw[] >>
   rename [`reprC Heap3 g' u`] >>
   qexistsl_tac [`g'`, `Heap3`] >> rw[]
   >- (fs[reprC_cases, reprP_cases] >> metis_tac[])
-  >- (`4 * k + 1 + ((4 * k' + 1) + ((4 * k'' + 1) + 1 + 1)) =
+  >- (`(((4 * k' + 1) + ((4 * k'' + 1) + 1 + 1)) + (4 * k + 1)) =
        4 * (k + (k' + (k'' + 1))) + 1`
         by rw[] >>
-      `NRC step (4 * k + 1 + ((4 * k' + 1) + ((4 * k'' + 1) + 1 + 1)))
+      `NRC step (((4 * k' + 1) + ((4 * k'' + 1) + 1 + 1)) + (4 * k + 1))
           (closC (compile s'' ⧺ compile t1 ⧺ [appT] ⧺ P) a::T',V,H)
           (closC P a::T',g'::V,Heap3)`
         suffices_by rw[] >>
       pop_assum (K all_tac) >>
-      irule (iffRL NRC_add) >> rw[Once rcomp] >>
+      irule (iffRL NRC_add) >> rw[O_DEF] >>
       qexists_tac `(closC (compile t1 ⧺ appT::P) a::T',closC (compile s2) a2::V,Heap1)` >>
       rw[]
       >- (`compile s'' ⧺ compile t1 ⧺ appT::P = compile s'' ⧺ compile t1 ⧺ [appT] ⧺ P`
-          suffices_by metis_tac[] >>
-        rw[rich_listTheory.CONS_APPEND])
-      >> `NRC step ((4 * k' + 1) + ((4 * k'' + 1) + 1 + 1))
+            suffices_by metis_tac[] >>
+          rw[rich_listTheory.CONS_APPEND])
+      >> `NRC step (((4 * k'' + 1) + 1 + 1) + (4 * k' + 1))
           (closC (compile t1 ⧺ appT::P) a::T',closC (compile s2) a2::V,Heap1)
           (closC P a::T',g'::V,Heap3)`
           suffices_by rw[] >>
-      irule (iffRL NRC_add) >> rw[Once rcomp] >>
+      irule (iffRL NRC_add) >> rw[O_DEF] >>
       qexists_tac `(closC (appT::P) a::T',g::closC (compile s2) a2::V,Heap2)` >>
       rw[] >>
-      `NRC step (1 + ((4 * k'' + 1) + 1))
+      `NRC step (((4 * k'' + 1) + 1) + 1)
           (closC (appT::P) a::T',g::closC (compile s2) a2::V,Heap2)
           (closC P a::T',g'::V,Heap3)`
         suffices_by rw[] >>
-      irule (iffRL NRC_add) >> rw[Once rcomp] >>
+      irule (iffRL NRC_add) >> rw[O_DEF] >>
       `step (closC (appT::P) a::T',g::closC (compile s2) a2::V,Heap2)
           (closC (compile s2) a2'::closC P a::T',V,Heap2')`
         by metis_tac[step_cases] >>
       qexists_tac `closC (compile s2) a2'::closC P a::T',V,Heap2'` >>
-      rw[rcomp_1] >>
-      `NRC step ((4 * k'' + 1) + 1)
+      rw[NRC_1] >>
+      `NRC step (1 + (4 * k'' + 1))
         (closC (compile s2) a2'::closC P a::T',V,Heap2')
         (closC P a::T',g'::V,Heap3)`
         suffices_by rw[] >>
-      irule (iffRL NRC_add) >> rw[Once rcomp] >>
+      irule (iffRL NRC_add) >> rw[O_DEF] >>
       qexists_tac `(closC [] a2'::closC P a::T',g'::V,Heap3)` >>
       rw[] >>
-      metis_tac[step_cases, rcomp_1])
+      metis_tac[step_cases, NRC_1])
   >> metis_tac[extended]
 QED
 
@@ -446,6 +453,7 @@ Definition init_def:
     ([closC (compile s) 0], [], [])
 End
 
+(* closed s assumption here exists in the Coq proof originally *)
 Theorem correctTime:
 ∀k s t.
   timeBS k s t ⇒
@@ -458,6 +466,7 @@ Proof
   rw[] >>
   `∀s t k s0 P a T V H.
     timeBS k s t ⇒
+    closed s ⇒
     unfolds H a 0 s0 s ⇒
     ∃g l H'.
       reprC H' g t ∧
@@ -473,13 +482,13 @@ Proof
   first_x_assum drule >> rw[] >>
   qexistsl_tac [`g`, `H'`] >> rw[] >>
   rw[init_def] >>
-  `NRC step (4 * k + 1 + 1) ([closC (compile s) 0],[],[]) ([],[g],H')`
+  `NRC step (1 + (4 * k + 1)) ([closC (compile s) 0],[],[]) ([],[g],H')`
     suffices_by rw[] >>
-  irule (iffRL NRC_add) >> rw[Once rcomp] >>
+  irule (iffRL NRC_add) >> rw[O_DEF] >>
   qexists_tac `([closC [] 0],[g],H')` >> rw[] >>
-  metis_tac[step_cases, rcomp_1]
+  metis_tac[step_cases, NRC_1]
 QED
-*)
+
 (*
 
 Notation "a ! alpha" := (closC a alpha) (at level 40).
