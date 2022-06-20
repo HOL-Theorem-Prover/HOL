@@ -5,8 +5,7 @@
 *)
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
-open listTheory;
-open relationTheory;
+open listTheory relationTheory;
 
 val _ = new_theory "Prelims";
 
@@ -324,7 +323,7 @@ Theorem NRC_ADD_EQN_R:
 Proof
   metis_tac[NRC_ADD_EQN]
 QED
-(*
+
 Theorem NRC_add:
   ∀R n m s t.
     NRC R (n + m) s t <=> ((NRC R n) ∘ᵣ (NRC R m)) s t
@@ -346,7 +345,6 @@ Proof
   metis_tac[NRC_add]
 QED
 
-*)
 (*
 Notation "p '<=1' q" := (forall x, p x -> q x) (at level 70).
 Notation "p '=1' q" := (p <=1 q /\ q <=1 p) (at level 70).

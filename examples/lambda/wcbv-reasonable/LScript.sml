@@ -5,16 +5,14 @@
 *)
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
-open listTheory;
+open listTheory combinTheory;
+
 open PrelimsTheory;
 open pure_dBTheory;
-open combinTheory;
+
 
 val _ = new_theory "L";
 
-
-(* TODO:
-    rename the file to weak_CBV *)
 (* ------------------
 	      CBV LC
    ------------------ *)
@@ -301,7 +299,6 @@ Theorem example_step_app7 =
    ----------------------- *)
 
 (* -- Small-Step Time Measure -- *)
-(* TODO *)
 (* W = combinTheory.W_DEF *)
 
 Theorem NRC_step_congL:
