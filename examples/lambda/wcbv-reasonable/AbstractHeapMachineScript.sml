@@ -355,7 +355,7 @@ Proof
           >- (rw[Once compile] >>
               `step (closC (varT n::P) a::T',V,H)
                     (closC P a::T',closC P' b::V,H)`
-                  suffices_by metis_tac[rcomp_1] >>
+                  suffices_by metis_tac[NRC_1] >>
               rw[Once step_cases])
           >> rw[extended])
       >> qexistsl_tac [`closC (compile s') a`, `H`] >> rw[]
@@ -364,7 +364,7 @@ Proof
       >- (rw[Once compile] >>
           `step (closC (lamT::(compile s' ⧺ [retT] ⧺ P)) a::T',V,H)
                 (closC P a::T',closC (compile s') a::V,H)`
-              suffices_by metis_tac[rcomp_1] >>
+              suffices_by metis_tac[NRC_1] >>
           rw[Once step_cases] >>
           `compile s' ⧺ [retT] ⧺ P = compile s' ++ retT :: P`
             suffices_by metis_tac[jumpTarget_correct] >>
@@ -587,34 +587,25 @@ Theorem size_clos:
       sizeP P ≤ 2*size s ∧ a ≤ LENGTH H ∧ beta ≤ LENGTH H)
 Proof
   simp[sizeP] >>
-  Induct_on `i` >> rw[]
+  Induct_on `i`
   (* base cases *)
-  (* 7 *)
-  >- (fs[NRC, it_def, rcomp, Once step_cases, eq_cases, init_def] >>
-      gs[] >> rw[] >> metis_tac[sizeP_size])
-  >- (fs[NRC, it_def, rcomp, Once step_cases, eq_cases, init_def] >>
-      gs[])
-  >- (fs[NRC, it_def, rcomp, Once step_cases, eq_cases, init_def] >>
-      gs[])
-  >- (fs[NRC, it_def, rcomp, Once step_cases, eq_cases, init_def] >>
-      gs[])
-  >- (fs[NRC, it_def, rcomp, Once step_cases, eq_cases, init_def] >>
-      gs[])
-  >- (fs[NRC, it_def, rcomp, Once step_cases, eq_cases, init_def] >>
-      gs[])
-  >- (fs[NRC, it_def, rcomp, Once step_cases, eq_cases, init_def] >>
-      gs[])
+  >- (rw[] >> fs[init_def] >>
+      `T' = [closC (compile s) 0]` by fs[] >>
+      gs[] >> metis_tac[sizeP_size, EQ_SYM_EQ])
   (* Inductive cases *)
+  >> ntac 7 strip_tac >> fs[ADD1] >>
+  `NRC step (i + 1) (init s) (T',V,H) ⇒
+   NRC step (1 + i) (init s) (T',V,H)` by fs[] >>
+  first_x_assum drule >> strip_tac >>
+  drule (iffLR NRC_add) >> rw[O_DEF] >>
+  rename [`step y (T',V,H)`] >>
+  PairCases_on `y` >> gs[] >>
+  first_x_assum drule >> rw[] >>
+  qpat_x_assum `step _ _` mp_tac
   (* 7 *)
   (* MEM (closC P a) T' *)
     (* ==> SUM (MAP sizeT P) + 1 ≤ 2 * size s *)
-  >- (fs[ADD1] >> drule (iffLR NRC_add) >> rw[] >>
-      pop_assum mp_tac >> rw[Once rcomp] >>
-      rename [`NRC step 1 y (T',V,H)`] >>
-      `step y (T', V, H)` by metis_tac[rcomp_1] >>
-      PairCases_on `y` >> gs[] >>
-      first_x_assum drule >> rw[] >>
-      qpat_x_assum `step _ _` mp_tac >> rw[Once step_cases]
+  >- (rw[Once step_cases]
       >- (drule jumpTarget_eq >> rw[] >> gs[] >>
           fs[MEM] >> rw[]
           >- (`SUM (MAP sizeT (lamT::(Q ⧺ [retT] ⧺ P))) + 1 ≤ 2 * size s`
@@ -637,13 +628,7 @@ Proof
           >> metis_tac[])
       >> fs[] >> metis_tac[])
     (* a ≤ LENGTH H *)
-  >- (fs[ADD1] >> drule (iffLR NRC_add) >> rw[] >>
-      pop_assum mp_tac >> rw[Once rcomp] >>
-      rename [`NRC step 1 y (T',V,H)`] >>
-      `step y (T', V, H)` by metis_tac[rcomp_1] >>
-      PairCases_on `y` >> gs[] >>
-      first_x_assum drule >> rw[] >>
-      qpat_x_assum `step _ _` mp_tac >> rw[Once step_cases]
+  >- (rw[Once step_cases]
       >- (drule jumpTarget_eq >> rw[] >> gs[] >>
           fs[MEM] >> rw[] >>
           metis_tac[])
@@ -654,13 +639,7 @@ Proof
       >> fs[] >> rw[] >> metis_tac[])
   (* MEM (closC P a) V *)
     (* SUM (MAP sizeT P) + 1 ≤ 2 * size s *)
-  >- (fs[ADD1] >> drule (iffLR NRC_add) >> rw[] >>
-      pop_assum mp_tac >> rw[Once rcomp] >>
-      rename [`NRC step 1 y (T',V,H)`] >>
-      `step y (T', V, H)` by metis_tac[rcomp_1] >>
-      PairCases_on `y` >> gs[] >>
-      first_x_assum drule >> rw[] >>
-      qpat_x_assum `step _ _` mp_tac >> rw[Once step_cases]
+  >- (rw[Once step_cases]
       >- (drule jumpTarget_eq >> rw[] >> gs[] >>
           fs[MEM] >> rw[]
           >- (`SUM (MAP sizeT (lamT::(P ⧺ [retT] ⧺ P''))) + 1 ≤ 2 * size s`
@@ -676,13 +655,7 @@ Proof
           fs[] >> rw[] >> metis_tac[])
       >> fs[] >> metis_tac[])
     (* a ≤ LENGTH H *)
-  >- (fs[ADD1] >> drule (iffLR NRC_add) >> rw[] >>
-      pop_assum mp_tac >> rw[Once rcomp] >>
-      rename [`NRC step 1 y (T',V,H)`] >>
-      `step y (T', V, H)` by metis_tac[rcomp_1] >>
-      PairCases_on `y` >> gs[] >>
-      first_x_assum drule >> rw[] >>
-      qpat_x_assum `step _ _` mp_tac >> rw[Once step_cases]
+  >- (rw[Once step_cases]
       >- (drule jumpTarget_eq >> rw[] >> gs[] >>
           fs[MEM] >> rw[] >> metis_tac[])
       >- (fs[put] >> rw[] >>
@@ -692,26 +665,14 @@ Proof
       >> fs[] >> metis_tac[])
   (* MEM (heapEntryC (closC P a) beta) H *)
     (* SUM (MAP sizeT P) + 1 ≤ 2 * size s *)
-  >- (fs[ADD1] >> drule (iffLR NRC_add) >> rw[] >>
-      pop_assum mp_tac >> rw[Once rcomp] >>
-      rename [`NRC step 1 y (T',V,H)`] >>
-      `step y (T', V, H)` by metis_tac[rcomp_1] >>
-      PairCases_on `y` >> gs[] >>
-      first_x_assum drule >> rw[] >>
-      qpat_x_assum `step _ _` mp_tac >> rw[Once step_cases]
+  >- (rw[Once step_cases]
       >- metis_tac[]
       >- (fs[put] >> rw[] >> fs[] >> metis_tac[])
       >- (drule lookup_el >> rw[] >>
           fs[] >> rw[] >> metis_tac[])
       >> fs[] >> metis_tac[])
     (* a ≤ LENGTH H *)
-  >- (fs[ADD1] >> drule (iffLR NRC_add) >> rw[] >>
-      pop_assum mp_tac >> rw[Once rcomp] >>
-      rename [`NRC step 1 y (T',V,H)`] >>
-      `step y (T', V, H)` by metis_tac[rcomp_1] >>
-      PairCases_on `y` >> gs[] >>
-      first_x_assum drule >> rw[] >>
-      qpat_x_assum `step _ _` mp_tac >> rw[Once step_cases]
+  >- (rw[Once step_cases]
       >- metis_tac[]
       >- (fs[put] >> rw[] >> fs[] >> rw[]
           >- (`a ≤ LENGTH y2` by metis_tac[] >> rw[])
@@ -720,13 +681,7 @@ Proof
           fs[] >> rw[] >> metis_tac[])
       >> fs[] >> metis_tac[])
     (* beta ≤ LENGTH H *)
-  >- (fs[ADD1] >> drule (iffLR NRC_add) >> rw[] >>
-      pop_assum mp_tac >> rw[Once rcomp] >>
-      rename [`NRC step 1 y (T',V,H)`] >>
-      `step y (T', V, H)` by metis_tac[rcomp_1] >>
-      PairCases_on `y` >> gs[] >>
-      first_x_assum drule >> rw[] >>
-      qpat_x_assum `step _ _` mp_tac >> rw[Once step_cases]
+  >- (rw[Once step_cases]
       >- metis_tac[]
       >- (fs[put] >> rw[] >> fs[] >> rw[]
           >- (`beta' ≤ LENGTH y2` by metis_tac[] >> rw[])
@@ -744,10 +699,8 @@ Proof
   Induct_on `i` >> rw[ADD1]
   >- (fs[NRC, it_def, rcomp, init_def] >>
       drule (iffLR eq_cases) >> rw[])
-  >> drule (iffLR NRC_add) >> rw[] >>
-  pop_assum mp_tac >> rw[Once rcomp] >>
-  rename [`NRC step 1 y (T',V,H)`] >>
-  `step y (T', V, H)` by metis_tac[rcomp_1] >>
+  >> drule (iffLR NRC_add) >> rw[O_DEF] >>
+  pop_assum mp_tac >> rw[] >>
   PairCases_on `y` >> gs[] >>
   first_x_assum drule >> rw[] >>
   qpat_x_assum `step _ _` mp_tac >>
@@ -761,12 +714,12 @@ Theorem length_TV:
     LENGTH T + LENGTH V <= 1+i
 Proof
   Induct_on `i` >> rw[ADD1]
-  >- (fs[NRC, it_def, rcomp, init_def] >>
-      drule (iffLR eq_cases) >> rw[])
-  >> drule (iffLR NRC_add) >> rw[] >>
-  pop_assum mp_tac >> rw[Once rcomp] >>
-  rename [`NRC step 1 y (T',V,H)`] >>
-  `step y (T', V, H)` by metis_tac[rcomp_1] >>
+  >- (fs[init_def] >>
+      `T' = [closC (compile s) 0]` by fs[] >> gs[])
+  >> `NRC step (i + 1) (init s) (T',V,H) ⇒
+      NRC step (1 + i) (init s) (T',V,H)` by fs[] >>
+  first_x_assum drule >> strip_tac >>
+  drule (iffLR NRC_add) >> rw[O_DEF] >>
   PairCases_on `y` >> gs[] >>
   first_x_assum drule >> rw[] >>
   qpat_x_assum `step _ _` mp_tac >>
