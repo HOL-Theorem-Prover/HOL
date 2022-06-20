@@ -145,7 +145,6 @@ Proof
 QED
 
 (* ------ Time ------ *)
-(* TODO: change _R _L to use iffRL and iffLR *)
 (* Add assumption `` closed s `` here
     due to the difference between
       how substitutions are defined
@@ -286,6 +285,10 @@ Definition redWithMaxSizeS:
     redWithMaxSize (λ(T',V'). (SUM (MAP sizeP T') + SUM (MAP sizeP V'))) step
 End
 
+(* Add assumption `` closed s `` here
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
 Theorem correctSpace':
   ∀s t k P T V.
     closed s ⇒
@@ -835,6 +838,10 @@ Proof
   rw[Once tc]
 QED
 
+(* Add assumption `` closed s `` here
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
 Theorem correctSpace:
   ∀s t m.
     closed s ⇒
