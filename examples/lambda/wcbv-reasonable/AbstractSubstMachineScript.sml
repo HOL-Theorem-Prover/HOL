@@ -5,7 +5,8 @@
 *)
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
-open listTheory;
+open listTheory relationTheory combinTheory;
+
 open PrelimsTheory;
 open LTheory;
 open ProgramsTheory;
@@ -78,13 +79,14 @@ Proof
   rw[] >> rw[Once jumpTarget]
 QED
 
+(*
 Theorem example_subst_step_app0 =
   ``RTC step (init (dABS (dV 0))) x`` |>
    (EVAL THENC ( (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
     (PURE_ONCE_REWRITE_CONV [step_cases]
     THENC
     SIMP_CONV (srw_ss()) [Once substP, jumpTarget_simps, Once tc]))))
-
+*)
 (*
 Theorem example_subst_step_app0 =
   ``RTC step (init (dABS (dV 0))) x`` |>
@@ -143,7 +145,7 @@ Proof
 QED
 
 (* ------ Time ------ *)
-
+(* TODO: change _R _L to use iffRL and iffLR *)
 (* Add assumption `` closed s `` here
     due to the difference between
       how substitutions are defined

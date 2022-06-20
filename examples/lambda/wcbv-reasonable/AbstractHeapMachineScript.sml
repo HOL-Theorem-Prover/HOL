@@ -5,10 +5,12 @@
 *)
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
-open listTheory;
+open listTheory relationTheory combinTheory;
+
 open PrelimsTheory;
 open LTheory;
 open ProgramsTheory;
+
 
 val _ = new_theory "AbstractHeapMachine";
 
