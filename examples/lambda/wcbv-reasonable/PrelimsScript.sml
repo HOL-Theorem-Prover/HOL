@@ -6,6 +6,7 @@
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
 open listTheory;
+open relationTheory;
 
 val _ = new_theory "Prelims";
 
@@ -26,10 +27,11 @@ QED
 	   	 Lists
    ------------------ *)
 
+(* A .[ n ] := (nth_error n A) *)
 Definition nth_error:
 	nth_error 0 (h::_) = SOME h ∧
 	nth_error (SUC n) (_::t) = nth_error n t ∧
-    nth_error _ _ = NONE
+  nth_error _ _ = NONE
 End
 
 Theorem nth_error_lt_Some:
@@ -117,56 +119,20 @@ Proof
     first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
 QED
 
-Inductive Forall:
-	Forall P [] ∧
-	∀x l. P x ∧ Forall P l ⇒ Forall P (x::l)
-End
-
-Theorem Forall_map:
-	∀p f x A. Forall (λx. p (f x)) A ⇒ Forall p (MAP f A)
-Proof
-	ntac 4 strip_tac >> Induct_on `Forall` >> rw[Forall_rules]
-QED
-
-Theorem Forall_f1_imp_f2:
-	∀f1 f2 A.
-		Forall (λx. f1 x) A ⇒
-		(∀x. f1 x ⇒ f2 x) ⇒
-		Forall (λx. f2 x) A
-Proof
-	ntac 3 strip_tac >> Induct_on `Forall` >> rw[Forall_rules]
-QED
-
-Theorem Forall_forall:
-    ∀P l. Forall P l ⇔ (∀x. MEM x l ⇒ P x)
-Proof
-	Induct_on `l` >> rw[] >>
-	rw[Once Forall_cases] >> metis_tac[]
-QED
-
-Theorem Forall_MEM:
-  ∀x H P. Forall P H ∧ MEM x H ⇒ P x
-Proof
-  Induct_on `H` >> rw[]
-  >- fs[Once Forall_cases]
-  >> qpat_x_assum `Forall P (h::H)` mp_tac >>
-  rw[Once Forall_cases]
-QED
-
-Theorem in_app_or:
-  ∀l m a.
-    MEM a (l ++ m) ⇒ MEM a l ∨ MEM a m
-Proof
-  Induct_on `l` >> rw[]
-QED
-
 (* ------------------
 	   Relations
    ------------------ *)
 
-Definition rcomp:
-	rcomp R S = (λx z. ∃y. R x y ∧ S y z)
-End
+(*
+Structure ARS :=
+  {
+    ARS_X :> Type ;
+    ARS_R : ARS_X -> ARS_X -> Prop
+  }.
+Notation "(≻)" := (@ARS_R _) (at level 0).
+Notation "(≻ X )" := (@ARS_R X) (at level 0).
+Notation "x  ≻  x'" := (ARS_R x x') (at level 40).
+*)
 
 Definition reducible:
 	reducible R x = ∃x'. R x x'
@@ -187,29 +153,10 @@ Definition computable:
 	computable R = ∃f. stepFunction R f
 End
 
-Definition classical:
-	classical R = ∀s. reducible R s ∨ ¬(reducible R s)
-End
-
-Theorem computable_classical:
-	computable R ⇒ classical R
-Proof
-	rw[computable, classical, computable]
-QED
-
-Inductive Forall2:
-[~nil:]
-	(∀R. Forall2 R [] []) ∧
-[~cons:]
-	(∀x y l l' R. R x y ∧ Forall2 R l l' ⇒ Forall2 R (x::l) (y::l'))
-End
-
-Theorem Forall2_impl:
-	∀A B P1 P2. (∀x y. P1 x y ⇒ P2 x y) ⇒ Forall2 P1 A B ⇒ Forall2 P2 A B
-Proof
-	Induct_on `Forall2` >> rw[Forall2_rules]
-QED
-
+(*
+Inductive terminatesOn (X : Type) (R : X -> X -> Prop) x: Prop :=
+  terminatesC (wf: forall x', R x x' -> terminatesOn R x').
+*)
 Inductive terminatesOn:
 	∀(R: 'a -> 'a -> bool) (x: 'a).
 		(∀x'. R x x' ⇒ terminatesOn R x') ⇒ terminatesOn R x
@@ -220,6 +167,13 @@ Inductive evaluates:
 	(∀x. ¬reducible R x ⇒ evaluates R x x) ∧
 	∀x y z. R x y ∧ evaluates R y z ⇒ evaluates R x z
 End
+
+(*
+Notation "(▷)" := (@evaluates _) (at level 0).
+Notation "(▷ X )" := (@evaluates X) (at level 0).*)
+(* workaround to prefere "x ≻ y" over "(≻) x y"*) (*Notation "x ▷ x'" := 0. *)
+
+(*Notation "x ▷ x'" := (@evaluates _ x x').*)
 
 Definition normalizes:
 	normalizes R x = ∃y. evaluates R x y
@@ -297,22 +251,16 @@ Definition exactlyOneHolds:
 			| P::Ps => (P ∧ noneHolds Ps) ∨ (¬P ∧ exactlyOneHolds Ps)
 End
 
-(* ------------------
-     Coq.Init.Logic
-   ------------------ *)
-
-Inductive eq:
-[~refl:]
-  (∀x. eq x x)
-End
-
 (* -----------------------
     Coq.Classes.Morphisms
    ----------------------- *)
 
-Definition Proper:
+(* TODO *)
+(* Proper = combinTheory.W_DEF *)
+(* Definition Proper:
   Proper R m = R m m
 End
+*)
 
 Definition respectful:
   respectful R R' = (λf g. ∀x y. R x y ⇒ R' (f x) (g y))
@@ -326,12 +274,14 @@ End
 f applied to x for n times
   f(f(....f(x))
 *)
+(* TODO: it = FUNNRC *)
+(*
 Definition it_def:
 	it f n x =
 		case n of
 		  | 0 => x
 		  | SUC n' => f (it f n' x)
-End
+End *)
 
 (* ------------------
 	      ARS
@@ -342,9 +292,18 @@ Takes in two arguments x z,
   exists an intermidate y such that
   R x y /\ S y z
 *)
-Definition rcomp:
+
+(* TODO: O_DEF
+⊢ ∀R1 R2 x z. (R1 ∘ᵣ R2) x z ⇔ ∃y. R2 x y ∧ R1 y z: thm *)
+
+
+(* Definition rcomp:
 	rcomp R S = (λx z. ∃y. R x y ∧ S y z)
 End
+*)
+(*
+rcomp R = (λS. S ∘ᵣ R)
+*)
 
 (*
 (rcomp R) applied to eq for n times
@@ -352,75 +311,63 @@ End
 
 In english:
   given two arguments x and z,
-    pow R n x z means
+    NRC R n x z means
       there are 'n' intermediate values 'y' such that
         x R y1, y1 R y2, ..., y(n-1) R yn, yn eq z
 *)
-Definition pow:
-	pow R n = it (rcomp R) n eq
-End
 
-val it = EVAL ``pow (<) 3``;
+(* val it = EVAL ``NRC (<) 3``; *)
 
-Theorem pow_add:
+Theorem NRC_ADD_EQN_R:
+  ∀R m n x z.
+    (∃y. NRC R m x y ∧ NRC R n y z) ⇒ NRC R (m + n) x z
+Proof
+  metis_tac[NRC_ADD_EQN]
+QED
+(*
+Theorem NRC_add:
   ∀R n m s t.
-    pow R (n + m) s t ⇔ rcomp (pow R n) (pow R m) s t
+    NRC R (n + m) s t <=> ((NRC R n) ∘ᵣ (NRC R m)) s t
 Proof
-  Induct_on `n` >> rw[] >> EQ_TAC
-  >- (rw[pow, rcomp] >> rw[Once it_def] >>
-      irule_at (Pos hd) eq_refl >> rw[])
-  >- (rw[rcomp, pow] >>
-      qpat_x_assum `it _ 0 _ _ _` mp_tac >>
-      rw[Once it_def] >> fs[Once eq_cases])
-  >- (fs[rcomp, pow] >> rw[] >>
-      rw[Once it_def, rcomp] >>
-      fs[ADD_CLAUSES] >>
-      pop_assum mp_tac >>
-      rw[Once it_def, rcomp] >> metis_tac[])
-  >> fs[rcomp, pow] >> rw[] >>
-   fs[ADD_CLAUSES] >>  rw[Once it_def, rcomp] >>
-   qpat_x_assum `it _ (SUC n) _ _ _` mp_tac >>
-   rw[Once it_def, rcomp] >>
-   metis_tac[]
+  simp[O_DEF] >> metis_tac[NRC_ADD_EQN]
 QED
 
-Theorem pow_add_L:
+Theorem NRC_add_L:
   ∀R n m s t.
-    pow R (n + m) s t ⇒ rcomp (pow R n) (pow R m) s t
+    NRC R (n + m) s t ⇒ ((NRC R n) ∘ᵣ (NRC R m)) s t
 Proof
-  metis_tac[pow_add]
+  metis_tac[NRC_add]
 QED
 
-Theorem pow_add_R:
+Theorem NRC_add_R:
   ∀R n m s t.
-    rcomp (pow R n) (pow R m) s t ⇒ pow R (n + m) s t
+    ((NRC R n) ∘ᵣ (NRC R m)) s t ⇒ NRC R (n + m) s t
 Proof
-  metis_tac[pow_add]
+  metis_tac[NRC_add]
 QED
 
-Theorem rcomp_1:
+*)
+(*
+Notation "p '<=1' q" := (forall x, p x -> q x) (at level 70).
+Notation "p '=1' q" := (p <=1 q /\ q <=1 p) (at level 70).
+Notation "R '<=2' S" := (forall x y, R x y -> S x y) (at level 70).
+Notation "R '=2' S"  := (R <=2 S /\ S <=2 R) (at level 70).
+*)
+
+(* rcomp_1 = NRC_1 *)
+
+Theorem NRC_1_L:
   ∀R.
-   ((∀x y. R x y ⇒ (pow R 1) x y) ∧ (∀x y. (pow R 1) x y ⇒ R x y))
+   (∀x y. R x y ⇒ (NRC R 1) x y)
 Proof
-  rw[pow]
-  >- (rw[Once it_def, rcomp] >> rw[Once it_def, rcomp] >>
-      qexists_tac `y` >> rw[Once eq_refl])
-  >> fs[Once it_def, rcomp] >> fs[Once it_def, rcomp] >>
-  fs[Once eq_cases]
+  metis_tac[NRC_1]
 QED
 
-Theorem rcomp_1_L:
+Theorem NRC_1_R:
   ∀R.
-   (∀x y. R x y ⇒ (pow R 1) x y)
+   (∀x y. (NRC R 1) x y ⇒ R x y)
 Proof
-  metis_tac[rcomp_1]
-QED
-
-Theorem rcomp_1_R:
-  ∀R.
-   (∀x y. (pow R 1) x y ⇒ R x y)
-Proof
-  metis_tac[rcomp_1]
+  metis_tac[NRC_1]
 QED
 
 (* reduce while keeping track of the maximum size of terms *)

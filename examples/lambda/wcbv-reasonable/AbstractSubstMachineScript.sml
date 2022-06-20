@@ -12,19 +12,21 @@ open ProgramsTheory;
 
 val _ = new_theory "AbstractSubstMachine";
 
+(*
 Theorem rcomp_1_L:
   ∀R.
-   (∀x y. R x y ⇒ (pow R 1) x y)
+   (∀x y. R x y ⇒ (NRC R 1) x y)
 Proof
   metis_tac[rcomp_1]
 QED
 
 Theorem rcomp_1_R:
   ∀R.
-   (∀x y. (pow R 1) x y ⇒ R x y)
+   (∀x y. (NRC R 1) x y ⇒ R x y)
 Proof
   metis_tac[rcomp_1]
 QED
+*)
 
 Theorem jumpTarget_correct_conc:
   ∀s c. jumpTarget 0 [] (compile s ++ [retT] ++ c) = SOME (compile s, c)
@@ -46,6 +48,11 @@ Definition tc:
       [] => C
     | _  => c::C
 End
+
+(*
+Abstract Substitution Machine
+Local Notation state := (list Pro*list Pro)%type.
+*)
 
 Inductive step:
 [~pushVal:]
@@ -78,6 +85,56 @@ Theorem example_subst_step_app0 =
     THENC
     SIMP_CONV (srw_ss()) [Once substP, jumpTarget_simps, Once tc]))))
 
+(*
+Theorem example_subst_step_app0 =
+  ``RTC step (init (dABS (dV 0))) x`` |>
+   (EVAL THENC (REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
+   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
+    THENC
+    SIMP_CONV (srw_ss()) [Once substP]))))
+*)
+
+(*
+Theorem example_subst_step_app0 =
+  ``RTC step (init (dAPP (dABS (dV 0)) (dABS (dV 1)))) x`` |>
+   EVAL THENC (REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
+   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
+    THENC
+    SIMP_CONV (srw_ss()) [Once subst])))
+*)
+
+(*
+Theorem example_subst_step_app1 =
+  ``RTC step (init (dAPP (dAPP (dABS (dV 0)) (dABS (dV 0))) (dABS (dV 0)))) x`` |>
+   EVAL THENC (REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
+   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
+    THENC
+    SIMP_CONV (srw_ss()) [Once subst])))
+*)
+
+(*
+Theorem t1 = EVAL ``(app (dABS (var 0)) (dABS (dABS (app (var 1) (var 0)))))``;
+Theorem p1 = EVAL ``compile (app (dABS (var 0)) (dABS (dABS (app (var 1) (var 0)))))``;
+Theorem t1_init = EVAL ``init (app (dABS (var 0)) (dABS (dABS (app (var 1) (var 0)))))``;
+
+Theorem example_step_app0 =
+   (t1 |> concl |> lhs |>
+    PURE_ONCE_REWRITE_CONV [step_cases]
+    THENC
+    SIMP_CONV (srw_ss()) [])
+*)
+
+(*
+Inductive step : state -> state -> Prop :=
+  step_pushVal P P' Q T V:
+    jumpTarget 0 [] P = Some (Q,P')
+    -> step ((lamT::P)::T,V) (tc P' T,Q::V)
+| step_beta P Q R T V:
+    step ((appT::P)::T,Q::R::V) (substP R 0 (lamT::Q++[retT])::tc P T,V).
+Hint Constructors step.
+
+*)
+
 Theorem tc_compile:
   ∀s c C. tc (compile s++c) C = (compile s++c)::C
 Proof
@@ -85,20 +142,25 @@ Proof
   Cases_on `compile s ⧺ compile s' ⧺ [appT] ⧺ c` >> rw[] >> gs[]
 QED
 
-(* Time *)
+(* ------ Time ------ *)
 
+(* Add assumption `` closed s `` here
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
 Theorem correctTime':
   ∀s t k c0 C V.
+    closed s ⇒
     timeBS k s t ⇒
     ∃p l.
       reprP p t ∧
-      pow step l ((compile s++c0)::C,V) (tc c0 C,p::V) ∧
+      NRC step l ((compile s++c0)::C,V) (tc c0 C,p::V) ∧
       l = 3*k+1
 Proof
   Induct_on `timeBS` >> rw[]
   >- (qexists_tac `compile s` >> rw[reprP_cases] >>
       `step ((compile (dABS s) ⧺ c0)::C',V) (tc c0 C',compile s::V)`
-        suffices_by metis_tac[rcomp_1] >>
+        suffices_by metis_tac[] >>
       rw[Once step_cases] >> rw[Once compile] >>
       qexists_tac `c0`  >>
       rw[jumpTarget_correct_conc])
@@ -107,36 +169,43 @@ Proof
           `timeBS i s (dABS s')`,
           `timeBS j t (dABS t')`,
           `timeBS k (subst s' 0 (dABS t')) u`] >>
+  drule closed_app >> rw[] >>
+  last_x_assum drule >> rw[] >>
+  first_x_assum drule >> rw[] >>
+  `closed (dABS s')` by metis_tac[closed_timeBS] >>
+  `closed (dABS t')` by metis_tac[closed_timeBS] >>
+  `closed (subst s' 0 (dABS t'))` by metis_tac[closed_subst2] >>
+  first_x_assum drule >> rw[] >>
   last_x_assum (qspecl_then [`compile t ++ appT :: c0`, `C'`, `V`] ASSUME_TAC) >>
   last_x_assum (qspecl_then [`appT :: c0`, `C'`, `compile s'::V`] ASSUME_TAC) >>
   last_x_assum (qspecl_then [`[]`, `tc c0 C'`, `V`] ASSUME_TAC) >>
   rw[reprP_cases] >>
-  `pow step (3 * i + 1 + ((3 * j + 1) + ((3 * k + 1) + 1)))
+  `NRC step (((3 * j + 1) + ((3 * k + 1) + 1)) + (3 * i + 1))
           ((compile s ⧺ compile t ⧺ [appT] ⧺ c0)::C',V)
           (tc c0 C',compile s''::V)`
       suffices_by (`3 * (i + (j + (k + 1))) + 1 =
                    (3 * i + 1 + ((3 * j + 1) + ((3 * k + 1) + 1)))`
                       by rw[] >> rw[]) >>
-  irule (iffRL pow_add) >> rw[Once rcomp] >>
+  irule (iffRL NRC_add) >> rw[O_DEF] >>
   qexists_tac `(tc (compile t ⧺ appT::c0) C',compile s'::V)` >> rw[]
   >- (`compile s ⧺ compile t ++ [appT] ⧺ c0 =
        compile s ⧺ compile t ++ appT::c0`
          suffices_by metis_tac[] >>
       rw[rich_listTheory.CONS_APPEND]) >>
-  `pow step (3 * j + 1 + (3 * k + 2))
+  `NRC step ((3 * k + 2) + (3 * j + 1 ))
           (tc (compile t ⧺ appT::c0) C',compile s'::V)
           (tc c0 C',compile s''::V)`
       suffices_by rw[] >>
-  irule (iffRL pow_add) >> rw[Once rcomp] >>
+  irule (iffRL NRC_add) >> rw[O_DEF] >>
   qexists_tac `(tc (appT::c0) C',compile t'::compile s'::V)` >> rw[]
   >- rw[tc_compile]
-  >> `pow step (1 + (3 * k + 1))
+  >> `NRC step ((3 * k + 1) + 1)
           (tc (appT::c0) C',compile t'::compile s'::V)
           (tc c0 C',compile s''::V)`
         suffices_by rw[] >>
-  irule (iffRL pow_add) >> rw[Once rcomp] >>
+  irule (iffRL NRC_add) >> rw[O_DEF] >>
   qexists_tac `(compile (subst s' 0 (dABS t'))::tc c0 C',V)` >> rw[]
-  >- (rw[Once tc] >> irule rcomp_1_L >>
+  >- (rw[Once tc] >>
       rw[Once step_cases] >>
       `compile (subst s' 0 (dABS t')) =
        substP (compile s') 0 (compile (dABS t'))`
@@ -147,22 +216,28 @@ Proof
   >> fs[tc]
 QED
 
+(* Add assumption `` closed s `` here
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
 Theorem correctTime:
   ∀s t k.
+    closed s ⇒
     timeBS k s t ⇒
     ∃p.
       reprP p t ∧
-      pow step (3*k+1) (init s) ([],[p])
+      NRC step (3*k+1) (init s) ([],[p])
 Proof
   rw[init] >>
   `∃p l.
       reprP p t ∧
-      pow step l ((compile s ⧺ [])::[],[]) (tc [] [],p::[]) ∧
+      NRC step l ((compile s ⧺ [])::[],[]) (tc [] [],p::[]) ∧
       l = 3 * k + 1`
     by metis_tac[correctTime'] >>
   qexists_tac `p` >> rw[] >>
   fs[tc]
 QED
+
 
 (* Space *)
 
@@ -209,6 +284,8 @@ Definition redWithMaxSizeS:
     redWithMaxSize (λ(T',V'). (SUM (MAP sizeP T') + SUM (MAP sizeP V'))) step
 End
 
+(* TODO *)
+(*
 Theorem correctSpace':
   ∀s t k P T V.
     spaceBS k s t ⇒
@@ -763,5 +840,5 @@ Proof
   rw[init] >> first_x_assum (qspecl_then [`[]`, `[]`, `[]`] ASSUME_TAC) >>
   fs[tc] >> metis_tac[]
 QED
-
+*)
 val _ = export_theory ()

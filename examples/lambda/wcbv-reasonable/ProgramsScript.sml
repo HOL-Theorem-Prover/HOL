@@ -140,6 +140,7 @@ QED
    ------------------------------ *)
 
 
+(* change 42 to undefined *)
 Definition substP:
   substP P k Q =
     case P of
@@ -152,30 +153,52 @@ Definition substP:
     | appT::P => appT::substP P k Q
 End
 
+(* Add assumption `` closed t `` here
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
 Theorem substP_correct':
   ∀s k c' t.
-    substP (compile s++c') k (compile t)
-    = compile (subst s k t)++substP c' k (compile t)
+    closed t ⇒
+      substP (compile s++c') k (compile t)
+        = compile (subst s k t)++substP c' k (compile t)
 Proof
   Induct_on `s` >> rw[]
-  >- (rw[Once compile, Once substP, Once subst] >>
+  >- (rw[Once compile, Once substP] >>
       rw[Once compile])
-  >- (rw[Once compile, Once subst] >>
+  >- (rw[Once compile] >>
       simp[SimpR ``$=``, Once compile] >>
       FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC] >>
       rw[Once substP])
-  >> rw[Once compile, Once subst] >>
+  >- (rw[Once compile] >> simp[SimpR ``$=``, Once compile] >>
+      `substP (compile s ⧺ compile s' ⧺ [appT] ⧺ c') k (compile t)
+        = substP (compile s ⧺ (compile s' ⧺ [appT] ⧺ c')) k (compile t) `
+          by simp[] >> rw[] >>
+      `substP (compile s' ⧺ [appT] ⧺ c') k (compile t)
+        = substP (compile s' ⧺ ([appT] ⧺ c')) k (compile t)`
+          by simp[] >> rw[] >>
+      rw[Once substP])
+  >> rw[Once compile] >>
   simp[SimpR ``$=``, Once compile] >>
   rw[Once substP] >>
-  FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC] >>
-  rw[Once substP]
+  `substP (compile s ⧺ [retT] ⧺ c') (SUC k) (compile t)
+    =  substP (compile s ⧺ ([retT] ⧺ c')) (SUC k) (compile t)`
+      by simp[] >> rw[] >>
+  (* FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC] >> *)
+  rw[Once substP] >>
+  metis_tac[lift_closed, ADD1]
 QED
 
+(* Add assumption `` closed t `` here
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
 Theorem substP_correct:
   ∀s k t.
-    substP (compile s) k (compile t) = compile (subst s k t)
+    closed t ⇒
+      substP (compile s) k (compile t) = compile (subst s k t)
 Proof
-  `∀s k t. substP (compile s++[]) k (compile t) = compile (subst s k t)++substP [] k (compile t)`
+  `∀s k t. closed t ⇒ substP (compile s++[]) k (compile t) = compile (subst s k t)++substP [] k (compile t)`
     suffices_by (rw[] >> simp[Once substP]) >>
   metis_tac[substP_correct']
 QED
