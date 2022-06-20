@@ -286,10 +286,9 @@ Definition redWithMaxSizeS:
     redWithMaxSize (λ(T',V'). (SUM (MAP sizeP T') + SUM (MAP sizeP V'))) step
 End
 
-(* TODO *)
-(*
 Theorem correctSpace':
   ∀s t k P T V.
+    closed s ⇒
     spaceBS k s t ⇒
     ∃m Q.
       reprP Q t ∧
@@ -349,6 +348,13 @@ Proof
       first_x_assum drule >> rw[] >>
       rw[SUM_APPEND])
   >> rw[Once compile] >>
+  drule closed_app >> rw[] >>
+  last_x_assum drule >> rw[] >>
+  last_x_assum drule >> rw[] >>
+  drule_all closed_spaceBS >> rw[] >>
+  `closed (dABS s')` by metis_tac[closed_spaceBS] >>
+  `closed (subst s' 0 (dABS t'))` by metis_tac[closed_subst2] >>
+  first_x_assum drule >> rw[] >>
   last_x_assum (qspecl_then [`compile s'' ⧺ [appT] ⧺ P`,
                              `T'`, `V`] ASSUME_TAC) >>
   fs[] >>
@@ -831,6 +837,7 @@ QED
 
 Theorem correctSpace:
   ∀s t m.
+    closed s ⇒
     spaceBS m s t ⇒
     ∃m' P.
       reprP P t ∧
@@ -839,8 +846,9 @@ Theorem correctSpace:
       m' ≤ 2 * m
 Proof
   rw[] >> drule correctSpace' >>
-  rw[init] >> first_x_assum (qspecl_then [`[]`, `[]`, `[]`] ASSUME_TAC) >>
+  rw[init] >> first_x_assum drule >> rw[] >>
+  first_x_assum (qspecl_then [`[]`, `[]`, `[]`] ASSUME_TAC) >>
   fs[tc] >> metis_tac[]
 QED
-*)
+
 val _ = export_theory ()
