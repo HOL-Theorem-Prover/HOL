@@ -20,9 +20,28 @@ open realaxTheory realTheory realSyntax RealArith jrhUtils normalForms;
 open Sub_and_cond Normalizer Grobner;
 
 (* Fix the grammar used by this file *)
+local
+val x = mk_var("x", numSyntax.num)
+val y = mk_var("y", numSyntax.num)
+in
+(* In HOL-Light this was a definition but in HOL4 we use markerTheory
+     DECIMAL maps to \x y. unint(&x / &y)
+*)
+val decimal_tm =
+list_mk_abs([x, y],
+            mk_comb (mk_thy_const{Thy = "marker", Name = "unint",
+                                  Ty = real_ty --> real_ty},
+                     mk_div (mk_injected x, mk_injected y)))
+end
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars realTheory.real_grammars
+  local val (rtyg, rtmg0) = realTheory.real_grammars
+        val rtmg = term_grammar.fupdate_overload_info
+                     (Overload.add_overloading("DECIMAL", decimal_tm))
+                     rtmg0
+  in
+  val (Type,Term) = parse_from_grammars (rtyg, rtmg)
+  end
 end
 
 open Parse;
@@ -71,11 +90,6 @@ type aint = Arbint.int
 (* Create trivial rational from integer or decimal, and postconvert back.    *)
 (* ------------------------------------------------------------------------- *)
 
-local open markerTheory in end; (* for unint *)
-
-(* In HOL-Light this was a definition but in HOL4 we use markerTheory *)
-val _ = overload_on("DECIMAL", “\x y. unint (&x / &y)”);
-
 (* |- !x. unint x = x *)
 val DECIMAL = markerTheory.unint_def;
 
@@ -83,11 +97,11 @@ val DECIMAL = markerTheory.unint_def;
 val REAL_DIV_1 = REAL_OVER1;
 
 val REAL_INT_RAT_CONV = let
-  val pth = Q.prove
-   (‘(&x = &x / (&1 :real)) /\
+  val pth = prove
+   (“(&x = &x / (&1 :real)) /\
      (~(&x) = ~(&x) / &1) /\
      (DECIMAL x y = &x / &y) /\
-     (~DECIMAL x y = ~(&x) / &y)’,
+     (~DECIMAL x y = ~(&x) / &y)”,
     REWRITE_TAC[REAL_DIV_1, DECIMAL] THEN
     REWRITE_TAC[real_div, REAL_MUL_LNEG])
   in
@@ -129,7 +143,7 @@ val REAL_RAT_LT_CONV = let
    (“&0 < y1 ==> &0 < y2 ==> (x1 / y1 < x2 / y2 <=> x1 * y2 < x2 * y1)”,
     REWRITE_TAC[IMP_IMP] THEN
     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM REAL_NOT_LE] THEN
-    SIMP_TAC bool_ss [TAUT `(~a <=> ~b) <=> (a <=> b)`, RAT_LEMMA4])
+    SIMP_TAC bool_ss [TAUT ‘(~a <=> ~b) <=> (a <=> b)’, RAT_LEMMA4])
   and x1 = “x1:real” and x2 = “x2:real”
   and y1 = “y1:real” and y2 = “y2:real”
   and dest_lt = dest_binop realSyntax.less_tm
@@ -196,12 +210,12 @@ val REAL_RAT_SGN_CONV =
 
 local open Arbint in
 val REAL_RAT_NEG_CONV = let
-  val pth = Q.prove
-   (`(~(&0) = &0) /\
+  val pth = prove
+   (“(~(&0) = &0) /\
      (~(~(&n)) = &n) /\
      (~(&m / &n) = ~(&m) / &n) /\
      (~(~(&m) / &n) = &m / &n) /\
-     (~(DECIMAL m n) = ~(&m) / &n)`,
+     (~(DECIMAL m n) = ~(&m) / &n)”,
     REWRITE_TAC[real_div, REAL_INV_NEG, REAL_MUL_LNEG, REAL_NEG_NEG,
      REAL_NEG_0, DECIMAL])
   and ptm = realSyntax.negate_tm;
@@ -221,36 +235,36 @@ end;
 end (* local *)
 
 val REAL_RAT_ABS_CONV = let
-  val pth = Q.prove
-   (`(abs(&n) = &n) /\
+  val pth = prove
+   (“(abs(&n) = &n) /\
      (abs(~(&n)) = &n) /\
      (abs(&m / &n) = &m / &n) /\
      (abs(~(&m) / &n) = &m / &n) /\
      (abs(DECIMAL m n) = &m / &n) /\
-     (abs(~(DECIMAL m n)) = &m / &n)`,
+     (abs(~(DECIMAL m n)) = &m / &n)”,
     REWRITE_TAC[DECIMAL, REAL_ABS_DIV, REAL_ABS_NEG, REAL_ABS_NUM])
 in
    GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth]
 end;
 
 val REAL_RAT_INV_CONV = let
-  val pth1 = Q.prove
-   (`(inv(&0) = &0) /\
+  val pth1 = prove
+   (“(inv(&0) = &0) /\
      (inv(&1) = &1) /\
      (inv(~&1) = ~(&1)) /\
      (inv(&1 / &n) = &n) /\
-     (inv(~&1 / &n) = ~&n)`,
+     (inv(~&1 / &n) = ~&n)”,
     REWRITE_TAC[REAL_INV_0, REAL_INV_1, REAL_INV_NEG,
                 REAL_INV_DIV, REAL_DIV_1] THEN
     REWRITE_TAC[real_div, REAL_INV_NEG, REAL_MUL_RNEG, REAL_INV_1,
                 REAL_MUL_RID])
-  and pth2 = Q.prove
-   (`(inv(&n) = &1 / &n) /\
+  and pth2 = prove
+   (“(inv(&n) = &1 / &n) /\
      (inv(~(&n)) = ~(&1) / &n) /\
      (inv(&m / &n) = &n / &m) /\
      (inv(~(&m) / &n) = ~(&n) / &m) /\
      (inv(DECIMAL m n) = &n / &m) /\
-     (inv(~(DECIMAL m n)) = ~(&n) / &m)`,
+     (inv(~(DECIMAL m n)) = ~(&n) / &m)”,
     REWRITE_TAC[DECIMAL, REAL_INV_DIV] THEN
     REWRITE_TAC[REAL_INV_NEG, real_div, REAL_MUL_RNEG,
      REAL_MUL_LID, REAL_MUL_LNEG, REAL_INV_MUL, REAL_INV_INV] THEN
@@ -276,7 +290,7 @@ val REAL_RAT_ADD_CONV = let
     DISCH_THEN SUBST1_TAC THEN
     ONCE_REWRITE_TAC [GSYM REAL_MUL_ASSOC] THEN
     REWRITE_TAC[GSYM REAL_INV_MUL, GSYM real_div] THEN
-    Q.SUBGOAL_THEN `&0 < y1 * y2 /\ &0 < y3` MP_TAC THENL
+    Q.SUBGOAL_THEN ‘&0 < y1 * y2 /\ &0 < y3’ MP_TAC THENL
     [ ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_MUL THEN
       ASM_REWRITE_TAC[],
       DISCH_THEN(fn th => ASM_REWRITE_TAC[MATCH_MP RAT_LEMMA5 th]) ])
@@ -319,9 +333,7 @@ end (* local *)
 (* ------------------------------------------------------------------------- *)
 
 val REAL_RAT_SUB_CONV = let
-  val pth = Q.prove
-   (`x - y = x + ~y`,
-    REWRITE_TAC[real_sub])
+  val pth = prove (“x - y = x + ~y”, REWRITE_TAC[real_sub])
 in
    GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth] THENC
    RAND_CONV REAL_RAT_NEG_CONV THENC REAL_RAT_ADD_CONV
@@ -403,9 +415,7 @@ end (* local *)
 (* ------------------------------------------------------------------------- *)
 
 val REAL_RAT_DIV_CONV = let
-  val pth = Q.prove
-   (`x / y = x * inv(y)`,
-    REWRITE_TAC[real_div])
+  val pth = prove (“x / y = x * inv(y)”, REWRITE_TAC[real_div])
 in
    GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth] THENC
    RAND_CONV REAL_RAT_INV_CONV THENC REAL_RAT_MUL_CONV
@@ -416,8 +426,8 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 val REAL_RAT_POW_CONV = let
-  val pth = Q.prove
-   (`(x / y) pow n = (x pow n) / (y pow n)`,
+  val pth = prove
+   (“(x / y) pow n = (x pow n) / (y pow n)”,
     REWRITE_TAC[REAL_POW_DIV])
 in
   REAL_INT_POW_CONV ORELSEC
@@ -645,7 +655,7 @@ val REAL_FIELD = let
   val easy_nz_conv = QCONV
      (LAND_CONV (GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth]) THENC
       TRY_CONV(LAND_CONV REAL_RAT_REDUCE_CONV THENC
-               GEN_REWRITE_CONV I empty_rewrites [TAUT `(T ==> p) <=> p`]));
+               GEN_REWRITE_CONV I empty_rewrites [TAUT ‘(T ==> p) <=> p’]));
 
   val and_tm = boolSyntax.conjunction;
   val prenex_conv =
