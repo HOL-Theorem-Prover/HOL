@@ -36,16 +36,6 @@ End
 
 Overload subst = “\s k u. sub u k s”
 
-(*
-Definition subst:
-	subst s k u =
-		case s of
-			| dV n => if (n = k) then u else (dV n)
-			| dAPP s t => dAPP (subst s k u) (subst t k u)
-			| dABS s => dABS (subst s (SUC k) u)
-End
-*)
-
 Theorem size_eqs:
   size (dV x) = 1 + x ∧
   size (dABS s) = 1 + size s ∧
@@ -213,9 +203,6 @@ QED
 	  Deterministic Reduction
    ---------------------------- *)
 
-(* Reserved Notation "s '>>' t" (at level 50). *)
-(* "s '>>' t" := (step s t) *)
-
 Inductive step:
 [~App:]
 	(∀s t. step (dAPP (dABS s) (dABS t)) (subst s 0 (dABS t))) ∧
@@ -225,54 +212,11 @@ Inductive step:
 	(∀s s' t. step s s' ⇒ step (dAPP s t) (dAPP s' t))
 End
 
-(*
-Theorem example_step_app1 = EVAL ``step (dAPP (dABS (dV 0)) (dABS (dV 1)))``;
-
-Theorem example_step_app2 =
-  ``step (dAPP (dABS (dV 0)) (dABS (dV 1))) x`` |>
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once subst])
-
-Theorem example_step_app3 =
-  ``step (dABS (dV 0)) x`` |>
-   (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [])
-
-Theorem example_step_app4 =
-  ``step (dAPP (dABS (dV 0)) (dABS (dABS (dAPP (dV 1) (dV 0))))) x`` |>
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once subst])
-
-Theorem example_step_app5 =
-  ``step (dAPP (dAPP (dABS (dV 0)) (dABS (dV 1))) (dABS (dV 0))) x`` |>
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once subst])
-
-Theorem example_step_app6 =
-  ``RTC step (dAPP (dAPP (dABS (dV 0)) (dABS (dV 1))) (dABS (dV 0))) x`` |>
-   REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once subst]))
-
-Theorem example_step_app7 =
-  ``RTC step (dAPP (dAPP (dABS (dV 0)) (dABS (dV 0))) (dABS (dV 0))) x`` |>
-   REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once subst]))
-*)
-
 (* -----------------------
 	   Resource Measures
    ----------------------- *)
 
 (* -- Small-Step Time Measure -- *)
-(* W = combinTheory.W_DEF *)
 
 Theorem NRC_step_congL:
   W (respectful (NRC step k) (respectful ($=) (NRC step k))) dAPP
@@ -361,7 +305,6 @@ QED
 
 (* -- Big-Step Time Measure -- *)
 
-(* nat -> term -> term -> Prop *)
 Inductive timeBS:
 [~Val:]
   (∀s. timeBS (0:num) (dABS s) (dABS s)) ∧

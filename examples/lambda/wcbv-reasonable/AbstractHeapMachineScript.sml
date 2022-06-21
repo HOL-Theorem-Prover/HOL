@@ -30,12 +30,6 @@ Datatype:
   clos = closC Pro HA
 End
 
-(*
-  Inductive clos :=
-    closC (P:Pro) (a:HA).
-  Notation "P ! a" := (closC P a) (at level 40).
-*)
-
 Datatype:
   heapEntry = heapEntryC clos HA
 End
@@ -54,18 +48,6 @@ Definition extended:
   extended H H' =
     (∀alpha m. (get H alpha = SOME m) ⇒ (get H' alpha = SOME m))
 End
-
-(*
-  Inductive heapEntry := heapEntryC (g:clos) (alpha:HA).
-
-Heaps
-  Let Heap := list heapEntry.
-  Implicit Type H : Heap.
-  Definition put H e := (H++[e],|H|).
-  Definition get H alpha:= nth_error H alpha.
-  Definition extended H H' :=
-    forall alpha m, get H alpha = Some m -> get H' alpha = Some m.
-*)
 
 Theorem get_current:
   ∀H m H' alpha.
@@ -136,22 +118,6 @@ Inductive step:
     step (closC [] a::T, V, H) (T, V, H))
 End
 
-(*
-  Inductive step : state -> state -> Prop :=
-    step_pushVal P P' Q a T V H:
-      jumpTarget 0 [] P = Some (Q,P')
-      ->step ((lamT::P)!a::T,V,H) (P'!a::T,Q!a::V,H)
-  | step_beta a b g P Q H H' c T V:
-      put H (heapEntryC g b) = (H',c)
-      -> step ((appT::P)!a::T,g::Q!b::V,H) (Q!c ::P!a::T,V,H')
-  | step_load P a x g T V H:
-      lookup H a x = Some g
-      -> step ((varT x::P)!a::T,V,H) (P!a::T,g::V,H)
-  | step_nil a T V H: step ([]!a::T,V,H) (T,V,H).
-
-  Hint Constructors step.
-*)
-
 (* ------------------
         Unfolding
    ------------------ *)
@@ -202,13 +168,6 @@ Inductive reprC:
     unfolds H a 0 s s' ⇒
     reprC H (closC P a) s')
 End
-(*
-  Inductive reprC : Heap -> clos -> term -> Prop :=
-    reprCC H P s a s' :
-      reprP P s ->
-      unfolds H a 0 s s' ->
-      reprC H (P!a) s'.
-*)
 
 (* Added assumptions ``closed t'`` here *)
 Theorem unfolds_subst':
@@ -269,23 +228,6 @@ Proof
   rw[Once unfolds_cases, Once bound_cases]
 QED
 
-(*-------
-A PreOrder is both Reflexive and Transitive.
-
-  Class PreOrder (R : relation A) : Prop := {
-    PreOrder_Reflexive :> Reflexive R | 2 ;
-    PreOrder_Transitive :> Transitive R | 2 }.
- --------*)
-
-(*
-  Instance extended_PO :
-    PreOrder extended.
-  Proof.
-    unfold extended;split;repeat intro. all:eauto.
-  Qed.
-  Typeclasses Opaque extended.
-*)
-
 Theorem lookup_extend:
   ∀H H' a x g.
     extended H H' ⇒
@@ -330,9 +272,9 @@ Proof
   metis_tac[unfolds_extend]
 QED
 
-(* ------------------
-          Time
-   ------------------ *)
+(* --------------------------
+         Time Cost Model
+   -------------------------- *)
 
 (* Added assumption `` closed s `` here *)
 Theorem correctTime':
@@ -444,9 +386,6 @@ Proof
   >> metis_tac[extended]
 QED
 
-(*
-  Definition init s :state := ([compile s!0],[],[]).
-*)
 Definition init_def:
   init s =
     ([closC (compile s) 0], [], [])
@@ -487,12 +426,6 @@ Proof
   metis_tac[step_cases, NRC_1]
 QED
 
-(*
-
-Notation "a ! alpha" := (closC a alpha) (at level 40).
-
-*)
-
 Theorem lookup_el:
   ∀H alpha x e.
     lookup H alpha x = SOME e ⇒
@@ -511,24 +444,6 @@ Proof
   Cases_on `x'` >> gs[] >>
   first_x_assum drule >> rw[]
 QED
-(*
-
-Section Analysis.
-
-  Variable s : term.*)
- (* Hypothesis cs : closed s.*)
- (*
-  Variable T V : list clos.
-  Variable H: list heapEntry.
-  Variable i : nat.
-
-  Hypothesis R: NRC step i (init s) (T,V,H).
-*)
-
-(*
-i s T V H
-NRC step i (init s) (T,V,H) ∧
-*)
 
 Theorem jumpTarget_eq':
   ∀k c c0 c1 c2.
@@ -554,9 +469,10 @@ Proof
   metis_tac[jumpTarget_eq']
 QED
 
-(* ------------------
-        Space
-   ------------------ *)
+
+(* --------------------------
+        Space Cost Model
+   -------------------------- *)
 
 (*
 If we can reach (T, V, H) by taking i steps from initial state (init s),
