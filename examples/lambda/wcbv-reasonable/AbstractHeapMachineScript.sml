@@ -3,6 +3,12 @@
      "The Weak Call-by-Value 𝜆-Calculus Is Reasonable for Both Time and Space", POPL 2020
    for inspiration
 *)
+
+(* Added assumptions for closed terms for some theorems (commented)
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
+
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
 open listTheory relationTheory combinTheory;
@@ -204,10 +210,7 @@ End
       reprC H (P!a) s'.
 *)
 
-(* Add assumptions ``closed t'`` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Added assumptions ``closed t'`` here *)
 Theorem unfolds_subst':
   ∀H s s' t' a a' k g.
     closed t' ⇒
@@ -242,10 +245,7 @@ Proof
     >> rw[Once unfolds_cases] >> rw[]
 QED
 
-(* Add assumptions ``closed t'`` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Added assumptions ``closed t'`` here *)
 Theorem unfolds_subst:
   ∀H s s' t' a a' g.
     closed t' ⇒
@@ -334,10 +334,7 @@ QED
           Time
    ------------------ *)
 
-(* Add assumption `` closed s `` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Added assumption `` closed s `` here *)
 Theorem correctTime':
   ∀s t k s0 P a T V H.
     closed s ⇒
@@ -455,7 +452,6 @@ Definition init_def:
     ([closC (compile s) 0], [], [])
 End
 
-(* closed s assumption here exists in the Coq proof originally *)
 Theorem correctTime:
 ∀k s t.
   timeBS k s t ⇒

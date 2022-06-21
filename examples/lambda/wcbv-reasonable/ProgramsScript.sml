@@ -3,6 +3,12 @@
      "The Weak Call-by-Value 𝜆-Calculus Is Reasonable for Both Time and Space", POPL 2020
    for inspiration
 *)
+
+(* Added assumptions for closed terms for some theorems (commented)
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
+
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
 open listTheory;
@@ -152,10 +158,7 @@ Definition substP:
     | appT::P => appT::substP P k Q
 End
 
-(* Add assumption `` closed t `` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Add assumption `` closed t `` here *)
 Theorem substP_correct':
   ∀s k c' t.
     closed t ⇒
@@ -183,15 +186,11 @@ Proof
   `substP (compile s ⧺ [retT] ⧺ c') (SUC k) (compile t)
     =  substP (compile s ⧺ ([retT] ⧺ c')) (SUC k) (compile t)`
       by simp[] >> rw[] >>
-  (* FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC] >> *)
   rw[Once substP] >>
   metis_tac[lift_closed, ADD1]
 QED
 
-(* Add assumption `` closed t `` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Add assumption `` closed t `` here *)
 Theorem substP_correct:
   ∀s k t.
     closed t ⇒

@@ -3,6 +3,12 @@
      "The Weak Call-by-Value 𝜆-Calculus Is Reasonable for Both Time and Space", POPL 2020
    for inspiration
 *)
+
+(* Added assumptions for closed terms for some theorems (commented)
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
+
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
 open listTheory combinTheory;
@@ -118,58 +124,47 @@ Proof
   metis_tac[bound_closed_k]
 QED
 
-(* TODO: add assumption *)
-(* Add assumptions for closed terms here
-    (up to thm ``bound_subst`` in this section)
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
-(*
+(* Took ``Forall u`` out of the parenthesis and moved it up to the outter most level.
+   Added ``closed u`` as an extra assumption *)
 Theorem closed_k_bound:
-	∀k s.
-		(∀n u. k ≤ n ⇒ subst s n u = s) ⇒ bound k s
+	∀k s u.
+    closed u ⇒
+    (∀n. k ≤ n ⇒ subst s n u = s) ⇒
+    bound k s
 Proof
 	Induct_on `s` >> rw[]
   >- (Cases_on `k ≤ n` >> rw[]
       >- (first_x_assum drule  >> rw[] >>
-          `dABS (dV 0) = dV n` by metis_tac[] >>
-          fs[])
+          fs[closed, Once bound_cases])
       >> fs[NOT_LEQ] >> rw[Once bound_cases])
-  >- rw[Once bound_cases]
-	>- (rw[Once bound_cases, ADD1] >>
-      fs[lift_def]
-
-      `k ≤ k + 1` by simp[] >>
-      first_x_assum drule >> rw[] >>
-
-      CCONTR_TAC >> fs[NOT_LESS] >>
-      first_x_assum drule  >> strip_tac >>
-      fs[Once subst] >> pop_assum mp_tac >> rw[] >>
-      qexists_tac `dABS (dV n)` >> rw[])
-	>- (rw[Once bound_cases] >>first_x_assum irule >> rw[] >>
-      first_x_assum drule >> rw[] >>
-      fs[Once subst])
-	>> rw[Once bound_cases] >>first_x_assum irule >> rw[] >>
-  qpat_x_assum `∀n u. _` mp_tac >> rw[Once subst] >>
-  `k ≤ n - 1` by fs[ADD1] >>
-  first_x_assum drule  >> rw[] >> fs[ADD1] >> gs[]
+  >- (last_x_assum drule >> rw[] >>
+      last_x_assum drule >> rw[] >>
+      rw[Once bound_cases])
+	>> rw[Once bound_cases, ADD1] >>
+  first_x_assum irule >> rw[] >>
+  qexists_tac `u` >> rw[] >>
+  drule lift_closed >> rw[] >>
+  fs[] >>
+  first_x_assum (qspec_then `n - 1` mp_tac) >> rw[]
 QED
 
+(* Took ``Forall t`` out of the parenthesis and moved it up to the outter most level.
+   Added ``closed t`` on both sides of the theorem *)
 Theorem closed_subst_iff:
-  ∀s. closed s ⇔ (∀k t. subst s k t = s)
+  ∀s t. closed s ∧ closed t ⇔ closed t ∧ (∀k. subst s k t = s)
 Proof
   rw[EQ_IMP_THM, closed]
   >- metis_tac[bound_closed]
-  >> metis_tac[closed_k_bound]
+  >> metis_tac[closed_k_bound, closed]
 QED
-*)
-(*
+
+(* Took ``Forall t`` out of the parenthesis and moved it up to the outter most level.
+   Added ``closed t`` on the LHS of the theorem *)
 Theorem closed_subst:
-  ∀s. closed s ⇒ (∀k t. subst s k t = s)
+  ∀s t. closed s ∧ closed t ⇒ (∀k. subst s k t = s)
 Proof
   metis_tac[closed_subst_iff]
 QED
-*)
 
 Theorem closed_app:
   ∀s t. closed (dAPP s t) ⇒ closed s ∧ closed t
@@ -183,27 +178,7 @@ Proof
   rw[closed] >> rw[Once bound_cases]
 QED
 
-(*
-Theorem bound_subst_eq_sub:
-  ∀k s u n. bound n s ∧ closed u ∧ n ≤ k ⇒ sub u k s = subst s k u
-Proof
-  Induct_on `s` >> rw[Once subst]
-  >- (qpat_x_assum `bound _ _` mp_tac >> rw[Once bound_cases] >>
-      metis_tac[])
-  >- (qpat_x_assum `bound _ _` mp_tac >> rw[Once bound_cases] >>
-      metis_tac[])
-  >> qpat_x_assum `bound _ _` mp_tac >> rw[Once bound_cases] >>
-  drule lift_closed >> rw[] >> fs[ADD1] >>
-  metis_tac[LESS_EQ_LESS_EQ_MONO, LESS_EQ_REFL]
-QED
-
-Theorem closed_subst_eq_sub:
-  ∀k s u. closed s ∧ closed u ⇒ sub u k s = subst s k u
-Proof
-  metis_tac[closed, bound_subst_eq_sub, ZERO_LESS_EQ]
-QED
-*)
-
+(* Added ``closed t`` *)
 Theorem bound_subst:
   ∀s t k.
     closed t ⇒
@@ -226,7 +201,6 @@ Proof
   metis_tac[ADD1]
 QED
 
-(* `` closed (dABS s) ⇒ closed t `` here is part of Forster etc.'s proofs *)
 Theorem closed_subst2:
   ∀s t. closed (dABS s) ⇒ closed t ⇒ closed (subst s 0 t)
 Proof
