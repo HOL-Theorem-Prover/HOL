@@ -50,9 +50,6 @@ End
       Program Size
    -------------------- *)
 
-(* sum := SUM *)
-(* sum_app := SUM_APPEND *)
-
 Definition sizeT:
   sizeT t =
     case t of
@@ -158,7 +155,7 @@ Definition substP:
     | appT::P => appT::substP P k Q
 End
 
-(* Add assumption `` closed t `` here *)
+(* Added assumption `` closed t `` here *)
 Theorem substP_correct':
   ∀s k c' t.
     closed t ⇒
@@ -190,7 +187,7 @@ Proof
   metis_tac[lift_closed, ADD1]
 QED
 
-(* Add assumption `` closed t `` here *)
+(* Added assumption `` closed t `` here *)
 Theorem substP_correct:
   ∀s k t.
     closed t ⇒

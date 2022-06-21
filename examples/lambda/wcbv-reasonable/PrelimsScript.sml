@@ -26,7 +26,6 @@ QED
 	   	 Lists
    ------------------ *)
 
-(* A .[ n ] := (nth_error n A) *)
 Definition nth_error:
 	nth_error 0 (h::_) = SOME h ∧
 	nth_error (SUC n) (_::t) = nth_error n t ∧
@@ -122,17 +121,6 @@ QED
 	   Relations
    ------------------ *)
 
-(*
-Structure ARS :=
-  {
-    ARS_X :> Type ;
-    ARS_R : ARS_X -> ARS_X -> Prop
-  }.
-Notation "(≻)" := (@ARS_R _) (at level 0).
-Notation "(≻ X )" := (@ARS_R X) (at level 0).
-Notation "x  ≻  x'" := (ARS_R x x') (at level 40).
-*)
-
 Definition reducible:
 	reducible R x = ∃x'. R x x'
 End
@@ -152,10 +140,6 @@ Definition computable:
 	computable R = ∃f. stepFunction R f
 End
 
-(*
-Inductive terminatesOn (X : Type) (R : X -> X -> Prop) x: Prop :=
-  terminatesC (wf: forall x', R x x' -> terminatesOn R x').
-*)
 Inductive terminatesOn:
 	∀(R: 'a -> 'a -> bool) (x: 'a).
 		(∀x'. R x x' ⇒ terminatesOn R x') ⇒ terminatesOn R x
@@ -166,13 +150,6 @@ Inductive evaluates:
 	(∀x. ¬reducible R x ⇒ evaluates R x x) ∧
 	∀x y z. R x y ∧ evaluates R y z ⇒ evaluates R x z
 End
-
-(*
-Notation "(▷)" := (@evaluates _) (at level 0).
-Notation "(▷ X )" := (@evaluates X) (at level 0).*)
-(* workaround to prefere "x ≻ y" over "(≻) x y"*) (*Notation "x ▷ x'" := 0. *)
-
-(*Notation "x ▷ x'" := (@evaluates _ x x').*)
 
 Definition normalizes:
 	normalizes R x = ∃y. evaluates R x y
@@ -254,68 +231,13 @@ End
     Coq.Classes.Morphisms
    ----------------------- *)
 
-(* TODO *)
-(* Proper = combinTheory.W_DEF *)
-(* Definition Proper:
-  Proper R m = R m m
-End
-*)
-
 Definition respectful:
   respectful R R' = (λf g. ∀x y. R x y ⇒ R' (f x) (g y))
 End
 
 (* ------------------
-	      Numbers
+	      Relations
    ------------------ *)
-
-(*
-f applied to x for n times
-  f(f(....f(x))
-*)
-(* TODO: it = FUNNRC *)
-(*
-Definition it_def:
-	it f n x =
-		case n of
-		  | 0 => x
-		  | SUC n' => f (it f n' x)
-End *)
-
-(* ------------------
-	      ARS
-   ------------------ *)
-
-(*
-Takes in two arguments x z,
-  exists an intermidate y such that
-  R x y /\ S y z
-*)
-
-(* TODO: O_DEF
-⊢ ∀R1 R2 x z. (R1 ∘ᵣ R2) x z ⇔ ∃y. R2 x y ∧ R1 y z: thm *)
-
-
-(* Definition rcomp:
-	rcomp R S = (λx z. ∃y. R x y ∧ S y z)
-End
-*)
-(*
-rcomp R = (λS. S ∘ᵣ R)
-*)
-
-(*
-(rcomp R) applied to eq for n times
-  rcomp R(rcomp R(...rcomp R eq))
-
-In english:
-  given two arguments x and z,
-    NRC R n x z means
-      there are 'n' intermediate values 'y' such that
-        x R y1, y1 R y2, ..., y(n-1) R yn, yn eq z
-*)
-
-(* val it = EVAL ``NRC (<) 3``; *)
 
 Theorem NRC_ADD_EQN_R:
   ∀R m n x z.
@@ -344,15 +266,6 @@ Theorem NRC_add_R:
 Proof
   metis_tac[NRC_add]
 QED
-
-(*
-Notation "p '<=1' q" := (forall x, p x -> q x) (at level 70).
-Notation "p '=1' q" := (p <=1 q /\ q <=1 p) (at level 70).
-Notation "R '<=2' S" := (forall x y, R x y -> S x y) (at level 70).
-Notation "R '=2' S"  := (R <=2 S /\ S <=2 R) (at level 70).
-*)
-
-(* rcomp_1 = NRC_1 *)
 
 Theorem NRC_1_L:
   ∀R.

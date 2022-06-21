@@ -19,22 +19,6 @@ open ProgramsTheory;
 
 val _ = new_theory "AbstractSubstMachine";
 
-(*
-Theorem rcomp_1_L:
-  ∀R.
-   (∀x y. R x y ⇒ (NRC R 1) x y)
-Proof
-  metis_tac[rcomp_1]
-QED
-
-Theorem rcomp_1_R:
-  ∀R.
-   (∀x y. (NRC R 1) x y ⇒ R x y)
-Proof
-  metis_tac[rcomp_1]
-QED
-*)
-
 Theorem jumpTarget_correct_conc:
   ∀s c. jumpTarget 0 [] (compile s ++ [retT] ++ c) = SOME (compile s, c)
 Proof
@@ -55,11 +39,6 @@ Definition tc:
       [] => C
     | _  => c::C
 End
-
-(*
-Abstract Substitution Machine
-Local Notation state := (list Pro*list Pro)%type.
-*)
 
 Inductive step:
 [~pushVal:]
@@ -85,64 +64,6 @@ Proof
   rw[] >> rw[Once jumpTarget]
 QED
 
-(*
-Theorem example_subst_step_app0 =
-  ``RTC step (init (dABS (dV 0))) x`` |>
-   (EVAL THENC ( (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
-    (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once substP, jumpTarget_simps, Once tc]))))
-*)
-(*
-Theorem example_subst_step_app0 =
-  ``RTC step (init (dABS (dV 0))) x`` |>
-   (EVAL THENC (REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once substP]))))
-*)
-
-(*
-Theorem example_subst_step_app0 =
-  ``RTC step (init (dAPP (dABS (dV 0)) (dABS (dV 1)))) x`` |>
-   EVAL THENC (REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once subst])))
-*)
-
-(*
-Theorem example_subst_step_app1 =
-  ``RTC step (init (dAPP (dAPP (dABS (dV 0)) (dABS (dV 0))) (dABS (dV 0)))) x`` |>
-   EVAL THENC (REPEATC (PURE_ONCE_REWRITE_CONV[relationTheory.RTC_CASES1] THENC
-   REPEATC (PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [Once subst])))
-*)
-
-(*
-Theorem t1 = EVAL ``(app (dABS (var 0)) (dABS (dABS (app (var 1) (var 0)))))``;
-Theorem p1 = EVAL ``compile (app (dABS (var 0)) (dABS (dABS (app (var 1) (var 0)))))``;
-Theorem t1_init = EVAL ``init (app (dABS (var 0)) (dABS (dABS (app (var 1) (var 0)))))``;
-
-Theorem example_step_app0 =
-   (t1 |> concl |> lhs |>
-    PURE_ONCE_REWRITE_CONV [step_cases]
-    THENC
-    SIMP_CONV (srw_ss()) [])
-*)
-
-(*
-Inductive step : state -> state -> Prop :=
-  step_pushVal P P' Q T V:
-    jumpTarget 0 [] P = Some (Q,P')
-    -> step ((lamT::P)::T,V) (tc P' T,Q::V)
-| step_beta P Q R T V:
-    step ((appT::P)::T,Q::R::V) (substP R 0 (lamT::Q++[retT])::tc P T,V).
-Hint Constructors step.
-
-*)
-
 Theorem tc_compile:
   ∀s c C. tc (compile s++c) C = (compile s++c)::C
 Proof
@@ -150,7 +71,9 @@ Proof
   Cases_on `compile s ⧺ compile s' ⧺ [appT] ⧺ c` >> rw[] >> gs[]
 QED
 
-(* ------ Time ------ *)
+(* --------------------------
+         Time Cost Model
+   -------------------------- *)
 
 (* Added assumption `` closed s `` here *)
 Theorem correctTime':
@@ -240,8 +163,9 @@ Proof
   fs[tc]
 QED
 
-
-(* Space *)
+(* --------------------------
+        Space Cost Model
+   -------------------------- *)
 
 Theorem helperF:
   ∀P T.
