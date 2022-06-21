@@ -10,8 +10,7 @@ open listTheory combinTheory;
 open PrelimsTheory;
 open pure_dBTheory;
 
-
-val _ = new_theory "L";
+val _ = new_theory "weak_CBV";
 
 (* ------------------
 	      CBV LC

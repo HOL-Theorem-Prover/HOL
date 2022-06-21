@@ -8,7 +8,7 @@ open arithmeticTheory;
 open listTheory;
 
 open PrelimsTheory;
-open LTheory;
+open weak_CBVTheory;
 
 val _ = new_theory "Programs";
 
@@ -140,8 +140,6 @@ QED
        Programm Substitution
    ------------------------------ *)
 
-
-(* change 42 to undefined *)
 Definition substP:
   substP P k Q =
     case P of
@@ -149,7 +147,7 @@ Definition substP:
     | lamT::P => lamT::substP P (SUC k) Q
     | retT::P => (retT::(case k of
                           | SUC k => substP P k Q
-                          | 0 => [varT 42 (* doesnt matter *)]))
+                          | 0 => [ARB]))
     | varT k'::P => ((if (k'=k) then Q else [varT k'])++substP P k Q)
     | appT::P => appT::substP P k Q
 End

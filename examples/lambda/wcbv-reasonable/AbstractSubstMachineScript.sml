@@ -8,7 +8,7 @@ open arithmeticTheory;
 open listTheory relationTheory combinTheory;
 
 open PrelimsTheory;
-open LTheory;
+open weak_CBVTheory;
 open ProgramsTheory;
 
 val _ = new_theory "AbstractSubstMachine";
