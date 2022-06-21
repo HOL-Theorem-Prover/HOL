@@ -3,6 +3,12 @@
      "The Weak Call-by-Value 𝜆-Calculus Is Reasonable for Both Time and Space", POPL 2020
    for inspiration
 *)
+
+(* Added assumptions for closed terms for some theorems (commented)
+    due to the difference between
+      how substitutions are defined
+        in HOL library and in Forster etc.'s Coq proof *)
+
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
 open listTheory relationTheory combinTheory;
@@ -145,10 +151,8 @@ Proof
 QED
 
 (* ------ Time ------ *)
-(* Add assumption `` closed s `` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+
+(* Added assumption `` closed s `` here *)
 Theorem correctTime':
   ∀s t k c0 C V.
     closed s ⇒
@@ -217,10 +221,7 @@ Proof
   >> fs[tc]
 QED
 
-(* Add assumption `` closed s `` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Added assumption `` closed s `` here *)
 Theorem correctTime:
   ∀s t k.
     closed s ⇒
@@ -285,10 +286,7 @@ Definition redWithMaxSizeS:
     redWithMaxSize (λ(T',V'). (SUM (MAP sizeP T') + SUM (MAP sizeP V'))) step
 End
 
-(* Add assumption `` closed s `` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Added assumption `` closed s `` here *)
 Theorem correctSpace':
   ∀s t k P T V.
     closed s ⇒
@@ -838,10 +836,7 @@ Proof
   rw[Once tc]
 QED
 
-(* Add assumption `` closed s `` here
-    due to the difference between
-      how substitutions are defined
-        in HOL library and in Forster etc.'s Coq proof *)
+(* Added assumption `` closed s `` here *)
 Theorem correctSpace:
   ∀s t m.
     closed s ⇒
