@@ -2,7 +2,7 @@
      Forster, Kunze and Roth,
      "The Weak Call-by-Value 𝜆-Calculus Is Reasonable for Both Time and Space", POPL 2020
    for inspiration
-*)
+ *)
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory;
 open listTheory relationTheory;
@@ -14,80 +14,70 @@ val _ = new_theory "Prelims";
    ------------------ *)
 
 Theorem size_induction:
-        ∀f p. (∀x. ((∀y. f y < f x ⇒ p y) ⇒ p x)) ⇒ (∀x. p x)
+  ∀f p. (∀x. ((∀y. f y < f x ⇒ p y) ⇒ p x)) ⇒ (∀x. p x)
 Proof
-        ntac 4 strip_tac >>
-        `(∀y. f y < f x ⇒ p y)` suffices_by gs[] >>
-        `∀n y. f y < n ⇒ p y` suffices_by metis_tac[] >>
-        Induct_on `n` >> rw[]
+  ntac 4 strip_tac >>
+  `(∀y. f y < f x ⇒ p y)` suffices_by gs[] >>
+  `∀n y. f y < n ⇒ p y` suffices_by metis_tac[] >>
+    Induct_on `n` >> rw[]
 QED
 
-(* ------------------
-                 Lists
-   ------------------ *)
+(* ----------------------------------------------------------------------
+    Lists
+   ---------------------------------------------------------------------- *)
 
-Definition nth_error:
-        nth_error 0 (h::_) = SOME h ∧
-        nth_error (SUC n) (_::t) = nth_error n t ∧
-  nth_error _ _ = NONE
-End
+Overload nth_error[inferior] = “oEL”
 
 Theorem nth_error_lt_Some:
-        ∀n H. n < LENGTH H ⇒ ∃x. nth_error n H = SOME x
+  ∀n H. n < LENGTH H ⇒ ∃x. nth_error n H = SOME x
 Proof
-        Induct_on `n` >> rw[nth_error, EL, ADD1]
-        >- (qexists_tac `EL 0 H` >> Induct_on `H` >> rw[nth_error])
-    >> Induct_on `H` >> rw[nth_error, EL, ADD1] >>
-    first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
+  metis_tac[oEL_EQ_EL]
 QED
 
 Theorem nth_error_Some_lt:
-        ∀n H x. nth_error n H = SOME x ⇒ n < LENGTH H
+  ∀n H x. nth_error n H = SOME x ⇒ n < LENGTH H
 Proof
-        Induct_on `n` >> Induct_on `H` >> rw[nth_error, EL, ADD1]
+  metis_tac[oEL_EQ_EL]
 QED
 
 Theorem nth_error_map:
-        ∀n H a f. nth_error n (MAP f H) = SOME a ⇒ ∃b. nth_error n H = SOME b ∧ a = f b
+  ∀n H a f. nth_error n (MAP f H) = SOME a ⇒
+            ∃b. nth_error n H = SOME b ∧ a = f b
 Proof
-        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+  simp[oEL_EQ_EL, EL_MAP]
 QED
 
 Theorem map_nth_error:
-        ∀n H x f. nth_error n H = SOME x ⇒ nth_error n (MAP f H) = SOME (f x)
+  ∀n H x f. nth_error n H = SOME x ⇒ nth_error n (MAP f H) = SOME (f x)
 Proof
-        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+  simp[oEL_EQ_EL, EL_MAP]
 QED
 
 Theorem nth_error_NONE_lt:
-        ∀n H. nth_error n H = NONE ⇒ LENGTH H ≤ n
+  ∀n H. nth_error n H = NONE ⇒ LENGTH H ≤ n
 Proof
-        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+  metis_tac[oEL_EQ_EL, NOT_LESS_EQUAL, TypeBase.distinct_of “:'a option” ]
 QED
 
 Theorem nth_error_lt_NONE:
-        ∀n H. LENGTH H ≤ n ⇒ nth_error n H = NONE
+  ∀n H. LENGTH H ≤ n ⇒ nth_error n H = NONE
 Proof
-        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
-    Induct_on `H` >> rw[nth_error, EL, ADD1] >>
-    first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
+  metis_tac[oEL_EQ_EL, NOT_LESS_EQUAL, TypeBase.nchotomy_of “:'a option” ]
 QED
 
 Theorem nth_error_SOME_lemma:
-        ∀n H h t x.
-                nth_error n (h::t) = SOME x ⇒
-                1 <= n ⇒
-                nth_error (n-1) t = SOME x
+  ∀n H h t x.
+    nth_error n (h::t) = SOME x ⇒
+    1 <= n ⇒
+    nth_error (n-1) t = SOME x
 Proof
-        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
-    Induct_on `H` >> rw[nth_error, EL, ADD1] >>
-    first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
+  simp[oEL_EQ_EL, rich_listTheory.EL_CONS, arithmeticTheory.PRE_SUB1]
 QED
 
 Theorem nth_error_SOME_in_H:
-        ∀n H x. nth_error n H = SOME x ⇒ MEM x H
+  ∀n H x. nth_error n H = SOME x ⇒ MEM x H
 Proof
-        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+  simp[MEM_EL, oEL_EQ_EL] >> metis_tac[]
 QED
 
 Theorem nth_error_In:
@@ -98,23 +88,18 @@ Proof
 QED
 
 Theorem nth_error_app1:
-        ∀l l' n.
-                n < LENGTH l ⇒
-        nth_error n (l++l') = nth_error n l
+  ∀l l' n. n < LENGTH l ⇒
+           nth_error n (l++l') = nth_error n l
 Proof
-        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
-    Induct_on `l` >> rw[nth_error, EL, ADD1] >>
-    first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
+  simp[oEL_THM, EL_APPEND_EQN]
 QED
 
 Theorem nth_error_app2:
-        ∀l l' n.
-                LENGTH l ≤ n ⇒
-        nth_error n (l++l') = nth_error (n-LENGTH l) l'
+  ∀l l' n.
+    LENGTH l ≤ n ⇒
+    nth_error n (l++l') = nth_error (n-LENGTH l) l'
 Proof
-        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
-    Induct_on `l` >> rw[nth_error, EL, ADD1] >>
-    first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
+  simp[oEL_THM, EL_APPEND_EQN, AllCaseEqs(), SF CONJ_ss]
 QED
 
 (* ------------------
@@ -139,6 +124,15 @@ End
 Definition computable:
         computable R = ∃f. stepFunction R f
 End
+
+(* HOL4 addition: uses Hilbert choice *)
+Theorem everything_computable:
+  ∀R. computable R
+Proof
+  rw[computable] >>
+  qexists ‘λx. some y. R x y’ >> rw[stepFunction] >>
+  DEEP_INTRO_TAC optionTheory.some_intro >> simp[]
+QED
 
 Inductive terminatesOn:
         ∀(R: 'a -> 'a -> bool) (x: 'a).

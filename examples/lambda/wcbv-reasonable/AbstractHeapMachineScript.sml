@@ -56,7 +56,7 @@ Proof
   rw[put, get] >>
   `LENGTH H ≤ LENGTH H` by simp[] >>
   drule nth_error_app2 >> rw[] >>
-  rw[Once nth_error]
+  rw[oEL_THM]
 QED
 
 Theorem put_extends:
