@@ -19,19 +19,19 @@ open pure_dBTheory;
 val _ = new_theory "weak_CBV";
 
 (* ------------------
-	      CBV LC
+              CBV LC
    ------------------ *)
 
 Definition size:
-	size s =
-		case s of
-			| dV x => 1 + x
-			| dABS s => 1 + (size s)
-			| dAPP s t => 1 + size s + size t
+        size s =
+                case s of
+                        | dV x => 1 + x
+                        | dABS s => 1 + (size s)
+                        | dAPP s t => 1 + size s + size t
 End
 
 (* --------------------------------
-	  Substitution and Closedness
+          Substitution and Closedness
    -------------------------------- *)
 
 Overload subst = “\s k u. sub u k s”
@@ -45,13 +45,13 @@ Proof
 QED
 
 Inductive bound:
-	(∀k n. n < k ⇒ bound k (dV n)) ∧
-	(∀k s t. bound k s ∧ bound k t ⇒ bound k (dAPP s t)) ∧
-	(∀k s. bound (SUC k) s ⇒ bound k (dABS s))
+        (∀k n. n < k ⇒ bound k (dV n)) ∧
+        (∀k s t. bound k s ∧ bound k t ⇒ bound k (dAPP s t)) ∧
+        (∀k s. bound (SUC k) s ⇒ bound k (dABS s))
 End
 
 Definition closed:
-	closed s = bound 0 s
+        closed s = bound 0 s
 End
 
 Theorem lift_bound:
@@ -71,19 +71,19 @@ Proof
 QED
 
 Definition lambda:
-	lambda s = ∃t. s = dABS t
+        lambda s = ∃t. s = dABS t
 End
 
 Theorem lambda_lam:
-	lambda (dABS s)
+        lambda (dABS s)
 Proof
-	rw[lambda]
+        rw[lambda]
 QED
 
 Theorem bound_closed_k:
-	∀s k u. bound k s ⇒ subst s k u = s
+        ∀s k u. bound k s ⇒ subst s k u = s
 Proof
-	Induct_on `s` >> rw[]
+        Induct_on `s` >> rw[]
   >- fs[Once bound_cases]
   >- (pop_assum mp_tac >> rw[Once bound_cases])
   >- (pop_assum mp_tac >> rw[Once bound_cases])
@@ -92,23 +92,23 @@ Proof
 QED
 
 Theorem bound_ge:
-	∀k s. bound k s ⇒ ∀m. k ≤ m ⇒ bound m s
+        ∀k s. bound k s ⇒ ∀m. k ≤ m ⇒ bound m s
 Proof
-	Induct_on `s` >> rw[]
-	>- fs[Once bound_cases]
-	>- (qpat_x_assum (`bound _ _`) mp_tac >>
-		rw[Once bound_cases] >>
-		first_x_assum drule_all >> rw[] >>
-		first_x_assum drule_all >> rw[] >>
-		rw[Once bound_cases])
-	>> qpat_x_assum (`bound _ _`) mp_tac >>
-	rw[Once bound_cases] >>
-	first_x_assum drule >> rw[] >>
-	rw[Once bound_cases]
+        Induct_on `s` >> rw[]
+        >- fs[Once bound_cases]
+        >- (qpat_x_assum (`bound _ _`) mp_tac >>
+                rw[Once bound_cases] >>
+                first_x_assum drule_all >> rw[] >>
+                first_x_assum drule_all >> rw[] >>
+                rw[Once bound_cases])
+        >> qpat_x_assum (`bound _ _`) mp_tac >>
+        rw[Once bound_cases] >>
+        first_x_assum drule >> rw[] >>
+        rw[Once bound_cases]
 QED
 
 Theorem bound_closed:
-	∀s k u. bound 0 s ⇒ subst s k u = s
+        ∀s k u. bound 0 s ⇒ subst s k u = s
 Proof
   rw[] >> drule bound_ge >> rw[] >>
   metis_tac[bound_closed_k]
@@ -117,12 +117,12 @@ QED
 (* Took ``Forall u`` out of the parenthesis and moved it up to the outter most level.
    Added ``closed u`` as an extra assumption *)
 Theorem closed_k_bound:
-	∀k s u.
+        ∀k s u.
     closed u ⇒
     (∀n. k ≤ n ⇒ subst s n u = s) ⇒
     bound k s
 Proof
-	Induct_on `s` >> rw[]
+        Induct_on `s` >> rw[]
   >- (Cases_on `k ≤ n` >> rw[]
       >- (first_x_assum drule  >> rw[] >>
           fs[closed, Once bound_cases])
@@ -130,7 +130,7 @@ Proof
   >- (last_x_assum drule >> rw[] >>
       last_x_assum drule >> rw[] >>
       rw[Once bound_cases])
-	>> rw[Once bound_cases, ADD1] >>
+        >> rw[Once bound_cases, ADD1] >>
   first_x_assum irule >> rw[] >>
   qexists_tac `u` >> rw[] >>
   drule lift_closed >> rw[] >>
@@ -200,20 +200,20 @@ Proof
 QED
 
 (* ----------------------------
-	  Deterministic Reduction
+          Deterministic Reduction
    ---------------------------- *)
 
 Inductive step:
 [~App:]
-	(∀s t. step (dAPP (dABS s) (dABS t)) (subst s 0 (dABS t))) ∧
+        (∀s t. step (dAPP (dABS s) (dABS t)) (subst s 0 (dABS t))) ∧
 [~AppR:]
-	(∀s t t'. step t t' ⇒ step (dAPP (dABS s) t) (dAPP (dABS s) t')) ∧
+        (∀s t t'. step t t' ⇒ step (dAPP (dABS s) t) (dAPP (dABS s) t')) ∧
 [~AppL:]
-	(∀s s' t. step s s' ⇒ step (dAPP s t) (dAPP s' t))
+        (∀s s' t. step s s' ⇒ step (dAPP s t) (dAPP s' t))
 End
 
 (* -----------------------
-	   Resource Measures
+           Resource Measures
    ----------------------- *)
 
 (* -- Small-Step Time Measure -- *)
@@ -244,7 +244,7 @@ QED
 (* -- Small-Step Space Measure -- *)
 
 Definition redWithMaxSizeL:
-	redWithMaxSizeL = redWithMaxSize size step
+        redWithMaxSizeL = redWithMaxSize size step
 End
 
 Theorem redWithMaxSizeL_congL:

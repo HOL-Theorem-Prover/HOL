@@ -10,84 +10,84 @@ open listTheory relationTheory;
 val _ = new_theory "Prelims";
 
 (* ------------------
-	 Natural numbers
+         Natural numbers
    ------------------ *)
 
 Theorem size_induction:
-	∀f p. (∀x. ((∀y. f y < f x ⇒ p y) ⇒ p x)) ⇒ (∀x. p x)
+        ∀f p. (∀x. ((∀y. f y < f x ⇒ p y) ⇒ p x)) ⇒ (∀x. p x)
 Proof
-	ntac 4 strip_tac >>
-	`(∀y. f y < f x ⇒ p y)` suffices_by gs[] >>
-	`∀n y. f y < n ⇒ p y` suffices_by metis_tac[] >>
-	Induct_on `n` >> rw[]
+        ntac 4 strip_tac >>
+        `(∀y. f y < f x ⇒ p y)` suffices_by gs[] >>
+        `∀n y. f y < n ⇒ p y` suffices_by metis_tac[] >>
+        Induct_on `n` >> rw[]
 QED
 
 (* ------------------
-	   	 Lists
+                 Lists
    ------------------ *)
 
 Definition nth_error:
-	nth_error 0 (h::_) = SOME h ∧
-	nth_error (SUC n) (_::t) = nth_error n t ∧
+        nth_error 0 (h::_) = SOME h ∧
+        nth_error (SUC n) (_::t) = nth_error n t ∧
   nth_error _ _ = NONE
 End
 
 Theorem nth_error_lt_Some:
-	∀n H. n < LENGTH H ⇒ ∃x. nth_error n H = SOME x
+        ∀n H. n < LENGTH H ⇒ ∃x. nth_error n H = SOME x
 Proof
-	Induct_on `n` >> rw[nth_error, EL, ADD1]
-	>- (qexists_tac `EL 0 H` >> Induct_on `H` >> rw[nth_error])
+        Induct_on `n` >> rw[nth_error, EL, ADD1]
+        >- (qexists_tac `EL 0 H` >> Induct_on `H` >> rw[nth_error])
     >> Induct_on `H` >> rw[nth_error, EL, ADD1] >>
     first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
 QED
 
 Theorem nth_error_Some_lt:
-	∀n H x. nth_error n H = SOME x ⇒ n < LENGTH H
+        ∀n H x. nth_error n H = SOME x ⇒ n < LENGTH H
 Proof
-	Induct_on `n` >> Induct_on `H` >> rw[nth_error, EL, ADD1]
+        Induct_on `n` >> Induct_on `H` >> rw[nth_error, EL, ADD1]
 QED
 
 Theorem nth_error_map:
-	∀n H a f. nth_error n (MAP f H) = SOME a ⇒ ∃b. nth_error n H = SOME b ∧ a = f b
+        ∀n H a f. nth_error n (MAP f H) = SOME a ⇒ ∃b. nth_error n H = SOME b ∧ a = f b
 Proof
-	Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
 QED
 
 Theorem map_nth_error:
-	∀n H x f. nth_error n H = SOME x ⇒ nth_error n (MAP f H) = SOME (f x)
+        ∀n H x f. nth_error n H = SOME x ⇒ nth_error n (MAP f H) = SOME (f x)
 Proof
-	Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
 QED
 
 Theorem nth_error_NONE_lt:
-	∀n H. nth_error n H = NONE ⇒ LENGTH H ≤ n
+        ∀n H. nth_error n H = NONE ⇒ LENGTH H ≤ n
 Proof
-	Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
 QED
 
 Theorem nth_error_lt_NONE:
-	∀n H. LENGTH H ≤ n ⇒ nth_error n H = NONE
+        ∀n H. LENGTH H ≤ n ⇒ nth_error n H = NONE
 Proof
-	Induct_on `n` >> rw[nth_error, EL, ADD1] >>
+        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
     Induct_on `H` >> rw[nth_error, EL, ADD1] >>
     first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
 QED
 
 Theorem nth_error_SOME_lemma:
-	∀n H h t x.
-		nth_error n (h::t) = SOME x ⇒
-		1 <= n ⇒
-		nth_error (n-1) t = SOME x
+        ∀n H h t x.
+                nth_error n (h::t) = SOME x ⇒
+                1 <= n ⇒
+                nth_error (n-1) t = SOME x
 Proof
-	Induct_on `n` >> rw[nth_error, EL, ADD1] >>
+        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
     Induct_on `H` >> rw[nth_error, EL, ADD1] >>
     first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
 QED
 
 Theorem nth_error_SOME_in_H:
-	∀n H x. nth_error n H = SOME x ⇒ MEM x H
+        ∀n H x. nth_error n H = SOME x ⇒ MEM x H
 Proof
-	Induct_on `n` >> Induct_on `H` >> rw[nth_error]
+        Induct_on `n` >> Induct_on `H` >> rw[nth_error]
 QED
 
 Theorem nth_error_In:
@@ -98,133 +98,133 @@ Proof
 QED
 
 Theorem nth_error_app1:
-	∀l l' n.
-		n < LENGTH l ⇒
-    	nth_error n (l++l') = nth_error n l
+        ∀l l' n.
+                n < LENGTH l ⇒
+        nth_error n (l++l') = nth_error n l
 Proof
-	Induct_on `n` >> rw[nth_error, EL, ADD1] >>
+        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
     Induct_on `l` >> rw[nth_error, EL, ADD1] >>
     first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
 QED
 
 Theorem nth_error_app2:
-	∀l l' n.
-		LENGTH l ≤ n ⇒
-    	nth_error n (l++l') = nth_error (n-LENGTH l) l'
+        ∀l l' n.
+                LENGTH l ≤ n ⇒
+        nth_error n (l++l') = nth_error (n-LENGTH l) l'
 Proof
-	Induct_on `n` >> rw[nth_error, EL, ADD1] >>
+        Induct_on `n` >> rw[nth_error, EL, ADD1] >>
     Induct_on `l` >> rw[nth_error, EL, ADD1] >>
     first_x_assum drule >> rw[] >> metis_tac[nth_error, EL, ADD1]
 QED
 
 (* ------------------
-	   Relations
+           Relations
    ------------------ *)
 
 Definition reducible:
-	reducible R x = ∃x'. R x x'
+        reducible R x = ∃x'. R x x'
 End
 
 Definition functional:
-	functional R = ∀x y y'. R x y ⇒ R x y' ⇒ y = y'
+        functional R = ∀x y y'. R x y ⇒ R x y' ⇒ y = y'
 End
 
 Definition stepFunction:
-	stepFunction R f =
-		∀x. case (f x) of
-				SOME y => R x y
-			  | NONE   => ∀y. ¬(R x y)
+        stepFunction R f =
+                ∀x. case (f x) of
+                                SOME y => R x y
+                          | NONE   => ∀y. ¬(R x y)
 End
 
 Definition computable:
-	computable R = ∃f. stepFunction R f
+        computable R = ∃f. stepFunction R f
 End
 
 Inductive terminatesOn:
-	∀(R: 'a -> 'a -> bool) (x: 'a).
-		(∀x'. R x x' ⇒ terminatesOn R x') ⇒ terminatesOn R x
+        ∀(R: 'a -> 'a -> bool) (x: 'a).
+                (∀x'. R x x' ⇒ terminatesOn R x') ⇒ terminatesOn R x
 End
 
 (* R: stepping/reducing function *)
 Inductive evaluates:
-	(∀x. ¬reducible R x ⇒ evaluates R x x) ∧
-	∀x y z. R x y ∧ evaluates R y z ⇒ evaluates R x z
+        (∀x. ¬reducible R x ⇒ evaluates R x x) ∧
+        ∀x y z. R x y ∧ evaluates R y z ⇒ evaluates R x z
 End
 
 Definition normalizes:
-	normalizes R x = ∃y. evaluates R x y
+        normalizes R x = ∃y. evaluates R x y
 End
 
 (* Fact 1.1 *)
 Theorem evaluates_fun:
-	∀R. functional R ⇒ functional (evaluates R)
+        ∀R. functional R ⇒ functional (evaluates R)
 Proof
-	rw[functional] >> pop_assum mp_tac >> qid_spec_tac `y'` >> pop_assum mp_tac >>
-	MAP_EVERY qid_spec_tac [`y`, `x`] >> ho_match_mp_tac evaluates_strongind >> rw[]
-	>- (gvs[Once evaluates_cases] >> gvs[reducible])
-	>> pop_assum (strip_assume_tac o PURE_ONCE_REWRITE_RULE[evaluates_cases])
-	>- gvs[reducible]
-	>> `x' = y''` by metis_tac[] >> gvs[]
+        rw[functional] >> pop_assum mp_tac >> qid_spec_tac `y'` >> pop_assum mp_tac >>
+        MAP_EVERY qid_spec_tac [`y`, `x`] >> ho_match_mp_tac evaluates_strongind >> rw[]
+        >- (gvs[Once evaluates_cases] >> gvs[reducible])
+        >> pop_assum (strip_assume_tac o PURE_ONCE_REWRITE_RULE[evaluates_cases])
+        >- gvs[reducible]
+        >> `x' = y''` by metis_tac[] >> gvs[]
 QED
 
 (* Fact 1.2 *)
 Theorem normalizes_terminates:
-	functional R ⇒ (∀x. normalizes R x ⇒ terminatesOn R x)
+        functional R ⇒ (∀x. normalizes R x ⇒ terminatesOn R x)
 Proof
-	rw[normalizes] >> qpat_x_assum (`functional R`) mp_tac >>
-	pop_assum mp_tac >> MAP_EVERY qid_spec_tac [`y`, `x`] >>
-	Induct_on ‘evaluates’ >> rw[] (* 2 *)
-	>- (simp[Once terminatesOn_cases] >> metis_tac[reducible]) >>
-	first_x_assum drule >> rw[] >> simp[Once terminatesOn_cases] >>
-	metis_tac[functional]
+        rw[normalizes] >> qpat_x_assum (`functional R`) mp_tac >>
+        pop_assum mp_tac >> MAP_EVERY qid_spec_tac [`y`, `x`] >>
+        Induct_on ‘evaluates’ >> rw[] (* 2 *)
+        >- (simp[Once terminatesOn_cases] >> metis_tac[reducible]) >>
+        first_x_assum drule >> rw[] >> simp[Once terminatesOn_cases] >>
+        metis_tac[functional]
 QED
 
 Theorem irred_evaluates_refl:
-	∀ x. (∀y. ¬ R x y) ⇒ evaluates R x x
+        ∀ x. (∀y. ¬ R x y) ⇒ evaluates R x x
 Proof
-	metis_tac[evaluates_rules,reducible]
+        metis_tac[evaluates_rules,reducible]
 QED
 
 (* Fact 1.3 *)
 Theorem terminates_normalizes:
-	computable R ⇒ ∀x. terminatesOn R x ⇒ normalizes R x
+        computable R ⇒ ∀x. terminatesOn R x ⇒ normalizes R x
 Proof
-	rw[] >> qpat_x_assum (`computable R`) mp_tac >>
-	pop_assum mp_tac >> qid_spec_tac `x` >>
-	Induct_on `terminatesOn` >> rw[normalizes] >>
-	‘computable R ⇒ ∀x'.R x x' ⇒ terminatesOn R x' ∧ ∃y. evaluates R x' y’
-    	by metis_tac[] >>
-	first_x_assum drule >> strip_tac >>
-	qpat_x_assum ‘computable _’ mp_tac >> rw[computable,stepFunction] >>
-	Cases_on ‘f x’ (* 2 *)
-	>- (first_x_assum $ qspec_then ‘x’ assume_tac >> rfs[] >>
-	    metis_tac[irred_evaluates_refl]) >>
-	first_x_assum $ qspec_then ‘x’ assume_tac >> rfs[] >>
-	first_x_assum drule >> strip_tac >> metis_tac[evaluates_rules]
+        rw[] >> qpat_x_assum (`computable R`) mp_tac >>
+        pop_assum mp_tac >> qid_spec_tac `x` >>
+        Induct_on `terminatesOn` >> rw[normalizes] >>
+        ‘computable R ⇒ ∀x'.R x x' ⇒ terminatesOn R x' ∧ ∃y. evaluates R x' y’
+        by metis_tac[] >>
+        first_x_assum drule >> strip_tac >>
+        qpat_x_assum ‘computable _’ mp_tac >> rw[computable,stepFunction] >>
+        Cases_on ‘f x’ (* 2 *)
+        >- (first_x_assum $ qspec_then ‘x’ assume_tac >> rfs[] >>
+            metis_tac[irred_evaluates_refl]) >>
+        first_x_assum $ qspec_then ‘x’ assume_tac >> rfs[] >>
+        first_x_assum drule >> strip_tac >> metis_tac[evaluates_rules]
 QED
 
 Theorem evaluates_irred:
-	∀x y. evaluates R x y ⇒ ¬reducible R y
+        ∀x y. evaluates R x y ⇒ ¬reducible R y
 Proof
-	Induct_on ‘evaluates’ >> rw[]
+        Induct_on ‘evaluates’ >> rw[]
 QED
 
 (* ------------------
-	      Misc
+              Misc
    ------------------ *)
 
 Definition noneHolds:
-	noneHolds Ps =
-		case Ps of
-			| [] => T
-			| P::Ps => ¬P ∧ noneHolds Ps
+        noneHolds Ps =
+                case Ps of
+                        | [] => T
+                        | P::Ps => ¬P ∧ noneHolds Ps
 End
 
 Definition exactlyOneHolds:
-	exactlyOneHolds Ps =
-		case Ps of
-			| [] => F
-			| P::Ps => (P ∧ noneHolds Ps) ∨ (¬P ∧ exactlyOneHolds Ps)
+        exactlyOneHolds Ps =
+                case Ps of
+                        | [] => F
+                        | P::Ps => (P ∧ noneHolds Ps) ∨ (¬P ∧ exactlyOneHolds Ps)
 End
 
 (* -----------------------
@@ -236,7 +236,7 @@ Definition respectful:
 End
 
 (* ------------------
-	      Relations
+              Relations
    ------------------ *)
 
 Theorem NRC_ADD_EQN_R:
@@ -284,13 +284,13 @@ QED
 (* reduce while keeping track of the maximum size of terms *)
 Inductive redWithMaxSize:
 [~R:]
-	(∀size step (m: num) s. m = size s ⇒ redWithMaxSize size step m s s) ∧
+        (∀size step (m: num) s. m = size s ⇒ redWithMaxSize size step m s s) ∧
 [~C:]
-	(∀size step (s: 'a) (s': 'a) (t: 'a) (m: num) (m':num).
-		step s s' ∧
-		redWithMaxSize size step m' s' t ∧
-		m = MAX (size s) m' ⇒
-		redWithMaxSize size step m s t)
+        (∀size step (s: 'a) (s': 'a) (t: 'a) (m: num) (m':num).
+                step s s' ∧
+                redWithMaxSize size step m' s' t ∧
+                m = MAX (size s) m' ⇒
+                redWithMaxSize size step m s t)
 End
 
 Theorem redWithMaxSize_ge:
