@@ -140,6 +140,7 @@ Proof
   \\ Cases_on ‘h’ \\ fs [] \\ rw []
   \\ qpat_x_assum ‘~(path_ok _ _)’ mp_tac \\ fs []
   \\ simp [path_ok_def] \\ rw []
+  \\ rename [‘NONE :: t = path ++ [y] ++ ys’]
   \\ Cases_on ‘path’ \\ fs [] \\ rw []
   \\ rename [‘xs ++ [y] ++ ys’]
   \\ first_x_assum (qspec_then ‘xs ++ [y] ++ ys’ mp_tac)
@@ -155,6 +156,7 @@ Proof
   \\ Cases_on ‘h’ \\ fs [] \\ rw []
   \\ qpat_x_assum ‘~(path_ok _ _)’ mp_tac \\ fs []
   \\ simp [path_ok_def] \\ rw []
+  \\ rename [‘SOME _ :: _ = path ++ [y] ++ ys’]
   \\ Cases_on ‘path’ \\ fs [] \\ rw []
   \\ rename [‘xs ++ [y] ++ ys’]
   \\ first_x_assum (qspecl_then [‘x’,‘xs ++ [y] ++ ys’] mp_tac)
