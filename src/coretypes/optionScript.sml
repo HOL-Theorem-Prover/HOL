@@ -693,6 +693,16 @@ Proof
   SRW_TAC[][OPTREL_def]
 QED
 
+Theorem OPTREL_CONG[defncong]:
+  !(opt1:'a option) (opt2:'b option) opt1' opt2' R R'.
+    opt1 = opt1' /\ opt2 = opt2' /\
+    (!x y. opt1' = SOME x /\ opt2' = SOME y ==> R x y = R' x y) ==>
+    (OPTREL R opt1 opt2 <=> OPTREL R' opt1' opt2')
+Proof
+  SRW_TAC[][] >> pop_assum mp_tac >> OPTION_CASES_TAC “opt1 : 'a option” >>
+  OPTION_CASES_TAC “opt2 : 'b option” >> SRW_TAC[][OPTREL_def]
+QED
+
 (* ----------------------------------------------------------------------
     some (Hilbert choice "lifted" to the option type)
 
