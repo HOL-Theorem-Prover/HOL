@@ -1042,6 +1042,24 @@ val error_bound_norm_strong = Q.prove(
         ]
   );
 
+Theorem absolute_error_denormal:
+  !x. abs x < threshold (:'t # 'w) /\ abs x < 2 * 1 / 2 pow (bias (:'w) − 1) /\
+      1 < bias (:'w) ==>
+      ? e. abs (float_to_real ((round roundTiesToEven x):('t,'w) float) − x) <= e ∧
+           e <= 1 / 2 pow (bias (:'w) + dimindex (:'t))
+Proof
+  rw[] \\ qspecl_then [‘x’,‘0’] mp_tac error_bound_norm_strong
+  \\ impl_tac >- gs[]
+  \\ once_rewrite_tac[realaxTheory.real_abs]
+  \\ gs[error_def] \\ COND_CASES_TAC
+  \\ rpt strip_tac
+  >- (
+    qexists_tac ‘float_to_real ((round roundTiesToEven x):('t,'w) float) - x’
+    \\ gs[])
+  \\ qexists_tac ‘- (float_to_real ((round roundTiesToEven x):('t,'w) float) - x)’
+  \\ gs[]
+QED
+
 (* -------------------------------------------------------------------------
    "1 + Epsilon" property (relative error bounding).
    ------------------------------------------------------------------------- *)
