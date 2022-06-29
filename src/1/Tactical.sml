@@ -546,8 +546,11 @@ fun CONJ_VALIDATE tac (g as (asl,_)) =
       else
         case sgs of
             [] => ([(asl, list_mk_conj newgoals)], sing nullvfn)
-          | [(asl,sg)] =>
-              ([(asl,mk_conj(list_mk_conj newgoals, sg))], sing singvfn)
+          | [(asl',sg)] =>
+            if List.all (C tmem asl) asl' then
+              ([(asl',mk_conj(list_mk_conj newgoals, sg))], sing singvfn)
+            else
+              ((asl, list_mk_conj newgoals) :: sgs, vfn')
           | _ => ((asl, list_mk_conj newgoals) :: sgs, vfn')
     end
 
