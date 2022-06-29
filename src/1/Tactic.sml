@@ -382,13 +382,56 @@ fun SUBST_OCCS_TAC nlths =
 
 fun SUBST1_TAC rthm = SUBST_TAC [rthm]
 
+val ignore_fullresult as
+    {record_delta = export_ignore, get_global_value = get_ignores,
+     update_global_value = upd_ignores, ...} =
+    let open ThyDataSexp AncestryData KernelSig
+        fun ignore_delta (kn : KernelSig.kernelname) kset = HOLset.add(kset, kn)
+        val ignore_adata_info =
+            { tag = "tactic_ignores",
+              initial_values = [("min", HOLset.empty name_compare)],
+              apply_delta = ignore_delta }
+    in
+      fullmake { adinfo = ignore_adata_info,
+                 uptodate_delta = can prim_mk_const,
+                 sexps = { dec = kname_decode, enc = KName },
+                 globinfo = {apply_to_global = ignore_delta,
+                             thy_finaliser = NONE,
+                             initial_value = HOLset.empty name_compare}
+               }
+    end
+
+fun ignorable th =
+    let val (f, _) = strip_comb (concl th)
+        val {Thy,Name,...} = dest_thy_const f
+    in
+      HOLset.member(get_ignores(), {Thy=Thy,Name=Name})
+    end handle HOL_ERR _ => false
+
+fun unignoring kname f x =
+    let val ks0 = get_ignores()
+        val ks = HOLset.delete(ks0, kname) handle HOLset.NotFound => ks0
+    in
+      AncestryData.with_temp_value ignore_fullresult ks f x
+    end
+
+fun unignoringc t =
+    let val {Name, Thy, ...} = dest_thy_const t
+    in
+      unignoring {Name = Name, Thy = Thy}
+    end
+
 (*---------------------------------------------------------------------------*
  * Map an inference rule over the assumptions, replacing them.               *
  *---------------------------------------------------------------------------*)
 
 fun RULE_ASSUM_TAC rule : tactic =
-   POP_ASSUM_LIST
-      (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule) asl []))
+    let
+      fun rule' th = if ignorable th then th else rule th
+    in
+      POP_ASSUM_LIST
+        (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule') asl []))
+    end
 val rule_assum_tac = RULE_ASSUM_TAC
 
 fun RULE_L_ASSUM_TAC rule : tactic =

@@ -145,4 +145,9 @@ sig
   val mp_then      : match_position -> thm_tactic -> thm -> thm -> tactic
   val resolve_then : match_position -> thm_tactic -> thm -> thm -> tactic
 
+  val export_ignore : KernelSig.kernelname -> unit
+  val get_ignores : unit -> KernelSig.kernelname HOLset.set
+  val unignoringc : term -> ('a -> 'b) -> ('a -> 'b)
+  val unignoring : KernelSig.kernelname -> ('a -> 'b) -> ('a -> 'b)
+
 end
