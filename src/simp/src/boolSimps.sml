@@ -389,8 +389,9 @@ val LABEL_CONG_ss = SSFRAG {
       filter = NONE,
       name = SOME "LABEL_CONG_ss", rewrs = []}
 
-
-
+val HIDE_ss = SSFRAG {ac = [], congs = [markerTheory.hideCONG],
+                      convs = [], dprocs = [], filter = NONE,
+                      name = SOME "hide", rewrs = []}
 
 (* ----------------------------------------------------------------------
     Congruence rules for rewriting on one side or the other of a goal's

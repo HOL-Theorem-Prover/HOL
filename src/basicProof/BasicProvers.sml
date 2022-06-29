@@ -1066,6 +1066,7 @@ val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
                               ++ boolSimps.NORMEQ_ss
                               ++ boolSimps.ABBREV_ss
                               ++ boolSimps.LABEL_CONG_ss
+                              ++ boolSimps.HIDE_ss
 
 fun ssf1 nth = simpLib.empty_ssfrag |> simpLib.add_named_rwt nth
 

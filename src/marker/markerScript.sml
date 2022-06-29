@@ -169,4 +169,21 @@ val elim_Case = store_thm (
   REWRITE_TAC [Case_def]
   );
 
+(* ----------------------------------------------------------------------
+    hide
+
+    for hiding assumptions from both the user and many tools
+   ---------------------------------------------------------------------- *)
+
+val hide_def = new_definition(
+  "hide_def",
+  “hide (nm:bool) (x:bool) = x”);
+
+val hideCONG = store_thm(
+  "hideCONG",
+  “hide nm x = hide nm x”,
+  REWRITE_TAC[]);
+
+val _ = Tactic.export_ignore {Name = "hide", Thy = "marker"}
+
 val _ = export_theory();
