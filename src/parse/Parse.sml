@@ -884,6 +884,12 @@ val remove_ovl_mapping = curry (mk_perm remove_ovl_mapping0)
 val temp_gen_remove_ovl_mapping = curry (mk_temp (fn p => [GRMOVMAP p]))
 val gen_remove_ovl_mapping = curry (mk_perm (fn p => [GRMOVMAP p]))
 
+fun permahide t =
+    let val {Name,Thy,...} = dest_thy_const t
+    in
+      remove_ovl_mapping Name {Name = Name, Thy = Thy}
+    end
+
 fun primadd_rcdfld f ovopn (fldname, t) = let
   val (d,r) = dom_rng (type_of t)
               handle HOL_ERR _ =>

@@ -218,6 +218,7 @@ signature Parse = sig
 
   val hide   : string -> ({Name : string, Thy : string} list *
                           {Name : string, Thy : string} list)
+  val permahide : term -> unit
   val update_overload_maps :
     string -> ({Name : string, Thy : string} list *
                {Name : string, Thy : string} list) -> unit
