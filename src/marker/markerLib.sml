@@ -525,7 +525,7 @@ fun MK_HIDE s th =
     EQ_MP (SYM (SPECL [mk_var(s,bool), concl th] hide_def)) th
 val UNHIDE = CONV_RULE (REWR_CONV hide_def)
 
-fun hide s th (asl,w) =
+fun hide_tac s th (asl,w) =
     ([(asl @ [mk_hide s (concl th)], w)],
      fn ths => PROVE_HYP (MK_HIDE s th) (hd ths))
 
@@ -543,18 +543,20 @@ fun dest_hide t =
 
 val is_hide = can dest_hide
 
-fun unhide s =
+fun unignoring_hide f x = unignoringc hidec f x
+
+fun unhide_tac s =
     let fun do1 th =
             case total dest_hide (concl th) of
                 NONE => th
               | SOME (s',_) => if s' = s then CONV_RULE (REWR_CONV hide_def) th
                                else th
     in
-      Tactic.unignoring {Name="hide", Thy = "marker"} (RULE_ASSUM_TAC do1)
+      unignoring_hide (RULE_ASSUM_TAC do1)
     end
 
 fun hide_assum s ttac =
-    first_x_assum (fn th => ttac th THEN hide s th)
+    first_x_assum (fn th => ttac th THEN hide_tac s th)
 
 fun unhide_assum0 extractor k s ttac =
     let
@@ -575,6 +577,5 @@ val unhide_assum = unhide_assum0 first_x_assum assume_tac
 val unhide_x_assum = unhide_assum0 first_x_assum (K all_tac)
 val use_hidden_assum = unhide_assum0 first_assum (K all_tac)
 
-fun unignoring_hide f x = unignoringc hidec f x
 
 end

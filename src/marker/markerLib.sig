@@ -87,8 +87,8 @@ sig
 
   val MK_HIDE : string -> thm -> thm
   val UNHIDE : thm -> thm
-  val hide : string -> thm -> tactic
-  val unhide : string -> tactic
+  val hide_tac : string -> thm -> tactic
+  val unhide_tac : string -> tactic
   val hide_assum : string -> thm_tactic -> tactic
   val unhide_assum : string -> thm_tactic -> tactic
   val unhide_x_assum : string -> thm_tactic -> tactic
