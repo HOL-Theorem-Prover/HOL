@@ -516,6 +516,9 @@ fun hide_pp (tyg,tmg) backend printer ppfns gravs depth t =
 fun install_hidepp() =
     Parse.temp_add_user_printer ("hide-printer", list_mk_comb(hidec, [sv,tv]),
                                  hide_pp)
+val _ = install_hidepp()
+fun remove_hidepp() =
+    ignore (Parse.temp_remove_user_printer "hide-printer")
 
 fun mk_hide s t = list_mk_comb(hidec, [mk_var(s,bool), t])
 fun MK_HIDE s th =
@@ -572,6 +575,6 @@ val unhide_assum = unhide_assum0 first_x_assum assume_tac
 val unhide_x_assum = unhide_assum0 first_x_assum (K all_tac)
 val use_hidden_assum = unhide_assum0 first_assum (K all_tac)
 
-
+fun unignoring_hide f x = unignoringc hidec f x
 
 end

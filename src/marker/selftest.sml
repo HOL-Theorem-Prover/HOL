@@ -55,6 +55,7 @@ val _ = require_msg
 val _ = new_type ("tyop", 0);
 val _ = new_constant("c1", “:tyop”)
 val _ = new_constant("c2", “:tyop”)
+val _ = overload_on ("hide", “marker$hide”);
 val asl0 = [“hide foo (P c1 /\ T /\ P x)”,
             “R c1 /\ T /\ R x”]
 val _ = tprint "RULE_ASSUM_TAC doesn't hit hide"
@@ -92,7 +93,7 @@ val _ = require_msg
                                      “R c1 /\ R x”],
                                     “Q c1 c2:bool”)]))
           (trace ("types", 1) goalprint)
-          (testtac (unignoringc “hide” (RULE_ASSUM_TAC (REWRITE_RULE[]))))
+          (testtac $ unignoring_hide $ RULE_ASSUM_TAC $ REWRITE_RULE[])
           (asl0, “Q c1 c2:bool”)
 
 val _ = new_constant("TEST", “:tyop -> bool”)

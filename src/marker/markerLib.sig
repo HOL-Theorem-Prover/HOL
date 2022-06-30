@@ -81,7 +81,9 @@ sig
   val mk_hide : string -> term -> term
   val is_hide : term -> bool
   val dest_hide : term -> string * term
-  val install_hidepp : unit -> unit
+  val install_hidepp : unit -> unit (* it starts installed *)
+  val remove_hidepp : unit -> unit
+  val unignoring_hide : ('a -> 'b) -> ('a -> 'b)
 
   val MK_HIDE : string -> thm -> thm
   val UNHIDE : thm -> thm

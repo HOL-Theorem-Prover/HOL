@@ -185,5 +185,6 @@ val hideCONG = store_thm(
   REWRITE_TAC[]);
 
 val _ = Tactic.export_ignore {Name = "hide", Thy = "marker"}
+val _ = permahide “hide”
 
 val _ = export_theory();
