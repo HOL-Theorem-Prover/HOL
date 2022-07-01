@@ -89,18 +89,28 @@ val strip_sxcons_def = Define`
       | _ => NONE
 `;
 
+Theorem strip_sxcons_thm[simp]:
+  strip_sxcons (SX_NUM n) = NONE ∧
+  strip_sxcons (SX_SYM s) = (if s = "nil" then SOME [] else NONE) ∧
+  strip_sxcons (SX_STR s) = NONE ∧
+  strip_sxcons (SX_CONS h t) = OPTION_MAP (CONS h) (strip_sxcons t)
+Proof
+  rpt strip_tac >> simp[SimpLHS, Once strip_sxcons_def]
+QED
+
 val sxMEM_def = Define`
   sxMEM e s ⇔ ∃l. strip_sxcons s = SOME l ∧ MEM e l
 `;
 
 val sexp_size_def = definition"sexp_size_def";
 
-val sxMEM_sizelt = store_thm(
-  "sxMEM_sizelt",
-  ``∀s1 s2. sxMEM s1 s2 ⇒ sexp_size s1 < sexp_size s2``,
+Theorem sxMEM_sizelt:
+  ∀s1 s2. sxMEM s1 s2 ⇒ sexp_size s1 < sexp_size s2
+Proof
   dsimp[sxMEM_def] >> Induct_on `s2` >>
-  dsimp[Once strip_sxcons_def, sexp_size_def] >> rpt strip_tac >>
-  res_tac >> simp[]);
+  dsimp[sexp_size_def] >> rpt strip_tac >>
+  res_tac >> simp[]
+QED
 
 val dstrip_sexp_def = Define`
   (dstrip_sexp (SX_CONS sym args) =
