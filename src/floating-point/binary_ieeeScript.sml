@@ -737,6 +737,10 @@ val float_equal_def = Define`
    float_equal (x: ('t, 'w) float) y =
       (float_compare x y = EQ)`
 
+val float_unordered_def = Define`
+   float_unordered (x: ('t, 'w) float) y =
+      (float_compare x y = UN)`
+
 val exponent_boundary_def = Define`
    exponent_boundary (y: ('t, 'w) float) (x: ('t, 'w) float) =
       (x.Sign = y.Sign) /\ (w2n x.Exponent = w2n y.Exponent + 1) /\
