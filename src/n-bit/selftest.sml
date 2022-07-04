@@ -30,6 +30,8 @@ fun parse_n_eval s expected =
 val _ = parse_n_eval "~2w : word4" “13w : word4”
 val _ = parse_n_eval "¬2w : word4" “13w : word4”
 val _ = parse_n_eval "(2w : word4) + 11w" “13w : word4”
+val _ = parse_n_eval "LOG 2 x" “LOG 2 x”
+val _ = parse_n_eval "LOG 2 1023" “9n”
 
 val prs = StringCvt.padRight #" "
 fun trunc w t = let

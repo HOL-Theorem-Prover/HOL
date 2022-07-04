@@ -41,7 +41,8 @@ local
        nrule [NUMERAL_DIV_2EXP, numeral_bitTheory.MOD_2EXP] BITS_def,
        nrule [NUMERAL_DIV_2EXP, numeral_bitTheory.MOD_2EXP] SLICE_def,
        BIT, numLib.SUC_RULE MOD_2EXP_EQ, numLib.SUC_RULE MOD_2EXP_MAX_def,
-       numeral_log2, numeral_ilog2, LOG_compute, LOWEST_SET_BIT_compute]
+       numeral_log2, numeral_ilog2, logrootTheory.LOG_NUMERAL,
+       LOWEST_SET_BIT_compute]
    fun mrw th = map (REWRITE_RULE [th])
    val thms =
       (mrw TIMES_2EXP1 o mrw (GSYM bitTheory.TIMES_2EXP_def) o

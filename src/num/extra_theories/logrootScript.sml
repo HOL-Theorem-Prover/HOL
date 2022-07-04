@@ -430,6 +430,21 @@ val LOG_MOD = Q.store_thm("LOG_MOD",
   THEN Q.EXISTS_TAC `SUC c`
   THEN RW_TAC arith_ss [EXP]);
 
+local
+val numtac = REWRITE_TAC[NUMERAL_DEF, BIT1, BIT2, ALT_ZERO, ADD_CLAUSES,
+                         prim_recTheory.LESS_0, prim_recTheory.LESS_MONO_EQ]
+fun numpr t = prove(t,numtac)
+val one_lt_ths = map numpr [“1 < NUMERAL (BIT1 (BIT1 b))”,
+                            “1 < NUMERAL (BIT2 b)”]
+val zero_lt_ths = map numpr [“0 < NUMERAL (BIT1 n)”,
+                             “0 < NUMERAL (BIT2 n)”]
+val allths = List.concat $ map (fn lt1 => map (CONJ lt1) zero_lt_ths) one_lt_ths
+in
+Theorem LOG_NUMERAL[compute] =
+        map (MATCH_MP LOG_RWT) allths |> LIST_CONJ |> REWRITE_RULE [ADD1];
+end (* local *)
+
+
 val lem = prove(``0 < r ==> (0 ** r = 0)``, RW_TAC arith_ss [EXP_EQ_0])
 
 val ROOT_COMPUTE = Q.store_thm("ROOT_COMPUTE",
