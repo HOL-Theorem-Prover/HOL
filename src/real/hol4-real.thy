@@ -9,7 +9,6 @@ requires: hol-set
 requires: hol-integer
 show: "HOL4"
 show: "Data.Bool"
-show: "Data.List"
 show: "Data.Pair"
 show: "Function"
 show: "Number.Natural"
@@ -31,5 +30,5 @@ proofs {
   interpret: const "HOL4.prove_real_assums.inv" as "Number.Real.inv"
   interpret: const "HOL4.prove_real_assums.inv0" as "HOL4.realax.inv"
   interpret: const "HOL4.prove_real_assums./" as "Number.Real./"
-  interpret: const "HOL4.prove_real_assums.real_div" as "HOL4.real./"
+  interpret: const "HOL4.prove_real_assums.real_div" as "HOL4.realax./"
 }

@@ -9,7 +9,6 @@ requires: hol-set
 requires: hol-integer
 show: "HOL4"
 show: "Data.Bool"
-show: "Data.List"
 show: "Data.Pair"
 show: "Function"
 show: "Number.Natural"
