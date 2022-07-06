@@ -258,37 +258,23 @@ val axioms = List.rev (Net.listItems base_thms);
     |- !x y z. x + (y + z) = x + y + z
 *)
 
-(* not needed any more
-val real_lt = save_thm
-  ("real_lt", CONV_RULE SWAP_FORALL_CONV realTheory.real_lt);
-val _ = Thm.delete_proof real_lt;
- *)
+(* NOTE: OT's native real_lt definition has different quantifier order (x y) *)
+val real_lt = CONV_RULE SWAP_FORALL_CONV realTheory.real_lt;
+val () = Thm.delete_proof real_lt;
 
 (* |- !x. x <> 0r ==> inv x * x = 1 *)
 val REAL_MUL_LINV = hd(amatch(
   subst[prim_mk_const{Thy="realax",Name="inv"} |-> prim_mk_const{Thy=Thy,Name="inv"}]
-  (trans (concl realTheory.REAL_MUL_LINV))));
+  (concl realTheory.REAL_MUL_LINV)));
 
 val real_div0 = hd(amatch(
   ``!x y. ~(y = 0r) ==> (prove_real_assums$/ x y = x * prove_real_assums$inv y)``));
-
-val REAL_ADD_LID = realTheory.REAL_ADD_LID |> concl |> trans |> amatch |> hd;
-val REAL_ADD_LINV = realTheory.REAL_ADD_LINV |> concl |> trans |> amatch |> hd;
-val REAL_LE_MUL = realTheory.REAL_LE_MUL |> concl |> trans |> amatch |> hd;
-val REAL_MUL_LID = realTheory.REAL_MUL_LID |> concl |> trans |> amatch |> hd;
-
-val REAL_0 = store_thm("REAL_0",
-   “real_0 = real_of_num 0”,
-  REWRITE_TAC[real_of_num]);
-
-val REAL_1 = store_thm("REAL_1",
-   “real_1 = real_of_num 1”,
-  REWRITE_TAC[num_CONV “1:num”, real_of_num, REAL_ADD_LID]);
 
 (* These are goals to prove *)
 val goalsNet = read_article "hol4-real-assums.art" reader;
 val goals = Net.listItems goalsNet;
 
+(*
 val REAL_ADD_LID_UNIQ = prove(
   ``!x y. (x + y = y) <=> (x = 0r)``,
   metis_tac[REAL_ADD_LID,REAL_ADD_SYM,REAL_ADD_LINV,REAL_ADD_ASSOC]);
@@ -1013,5 +999,6 @@ val _ = confirm_goal(76, REAL_0);
 val _ = if List.length goals = 76 then ()
         else raise ERR "" ("unexpected number of assumptions: " ^
                            Int.toString(List.length goals) ^ "\n");
+*)
 
 val _ = export_theory();
