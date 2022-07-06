@@ -465,6 +465,9 @@ val REAL_ADD = store_thm("REAL_ADD",
   RULE_ASSUM_TAC GSYM THEN GEN_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM)));
 
+(* HOL-Light compatible name of the above theorem *)
+Theorem REAL_OF_NUM_ADD = REAL_ADD;
+
 val REAL_MUL = store_thm("REAL_MUL",
   “!m n. real_of_num m * real_of_num n = real_of_num(m * n)”,
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, MULT_CLAUSES, REAL,
