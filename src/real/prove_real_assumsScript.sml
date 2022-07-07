@@ -199,12 +199,6 @@ in
     tyop_name = tyop_name}
 end
 
-(* NOTE: here we read all theorems from real-1.61, but they are not used in the
-   next "fake" proofs, because these theorems basically coincide (with very few
-   exceptions, and they are corrected below) with the primitive real theorems
-   provided in realaxTheory, and this allows us to directly copy proof scripts
-   from realaxScript.sml.   -- Chun Tian, 5 June 2022.
- *)
 val base_thms = read_article "base-theorems.art" reader;
 val _ = Net.itnet (fn th => (Thm.delete_proof th; K ())) base_thms ();
 
