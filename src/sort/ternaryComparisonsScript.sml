@@ -90,6 +90,19 @@ val invert_eq_EQUAL = store_thm("invert_eq_EQUAL[simp]",
   ``!x. (invert_comparison x = EQUAL) <=> (x = EQUAL)``,
   Cases >> simp[])
 
+val ordering_distinct = DB.fetch "-" "ordering_distinct";
 
+(* below are 2 leaking assumptions when installing hol-ring *)
+Theorem ordering_distinct1 :
+  ~(EQUAL = LESS)
+Proof
+  PROVE_TAC [ordering_distinct]
+QED
+
+Theorem ordering_distinct2 :
+  ~(GREATER = EQUAL)
+Proof
+  PROVE_TAC [ordering_distinct]
+QED
 
 val _ = export_theory();
