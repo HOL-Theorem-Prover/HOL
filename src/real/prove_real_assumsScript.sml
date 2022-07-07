@@ -69,9 +69,9 @@ val _ = new_constant("hol-real-assums-1.0",alpha);
  *)
 val _ = new_constant("real-1.61",alpha);
 val _ = new_type ("set", 1);
-val _ = new_constant("Set_empty", “:'a set”);
-val _ = new_constant("Set_member", “:'a -> 'a set -> bool”);
-val _ = new_constant("Real_sup", “:real set -> real”);
+val _ = new_constant("empty", “:'a set”);
+val _ = new_constant("member", “:'a -> 'a set -> bool”);
+val _ = new_constant("sup", “:real set -> real”);
 
 (* According to hol4-real.thy, this fake constant "inv" without definition is
    actually OT's Number.Real.inv, which has already a definition.
@@ -154,7 +154,7 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["Number","Real"],"min") = {Thy="realax",Name="min"}
   | const_name (["Number","Real"],"abs") = {Thy="realax",Name="abs"}
   | const_name (["Number","Real"],"^") = {Thy="realax",Name="pow"}
-  | const_name (["Number","Real"],"sup") = {Thy=Thy,Name="Real_sup"}
+  | const_name (["Number","Real"],"sup") = {Thy=Thy,Name="sup"}
   | const_name (["Number","Natural"],"^") = {Thy="arithmetic",Name="EXP"}
   | const_name (["Number","Natural"],"<=") = {Thy="arithmetic",Name="<="}
   | const_name (["Number","Natural"],"*") = {Thy="arithmetic",Name="*"}
@@ -168,8 +168,8 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["HOL4","realax"],"real_1") = {Thy=Thy,Name="real_1"}
   | const_name (["HOL4","realax"],"inv") = {Thy=Thy,Name="inv0"}
   | const_name (["HOL4","realax"],"/") = {Thy=Thy,Name="real_div"}
-  | const_name (["Set"],"{}") = {Thy=Thy,Name="Set_empty"}
-  | const_name (["Set"],"member") = {Thy=Thy,Name="Set_member"}
+  | const_name (["Set"],"{}") = {Thy=Thy,Name="empty"}
+  | const_name (["Set"],"member") = {Thy=Thy,Name="member"}
   | const_name (ns,n) = {Thy=Thy,Name=String.concatWith "_"(ns@[n])};
 
 fun tyop_name ([],"bool") = {Thy="min",Tyop="bool"}
@@ -241,13 +241,10 @@ val axioms = List.rev (Net.listItems base_thms);
  23 |- !x y. x <= y \/ y <= x,
  24 |- !x y. y <> 0 ==> x / y = x * inv y,
  25 |- !x y. 0 <= x /\ 0 <= y ==> 0 <= x * y,
- 26 |- !s x.
-         s <> Set_empty /\ (?m. !x. Set_member x s ==> x <= m) /\ Set_member x s ==>
-         x <= Real_sup s,
- 27 |- !s m.
-         s <> Set_empty /\ (?m. !x. Set_member x s ==> x <= m) /\
-         (!x. Set_member x s ==> x <= m) ==>
-         Real_sup s <= m,
+ 26 |- !s x. s <> empty /\ (?m. !x. member x s ==> x <= m) /\ member x s ==>
+             x <= sup s,
+ 27 |- !s m. s <> empty /\ (?m. !x. member x s ==> x <= m) /\
+             (!x. member x s ==> x <= m) ==> sup s <= m,
  28 |- !x y z. y <= z ==> x + y <= x + z,
  29 |- !x y z. x <= y /\ y <= z ==> x <= z,
  30 |- !x y z. x * (y * z) = x * y * z,
