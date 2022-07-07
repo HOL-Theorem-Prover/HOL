@@ -4,11 +4,16 @@
 
 open HolKernel boolLib bossLib BasicProvers;
 
-open OpenTheoryReader realaxTheory mesonLib metisLib tautLib jrhUtils numLib
-     prim_recTheory arithmeticTheory;
+open OpenTheoryReader;
+
+(* NOTE: when proving real assumptions, we should not directly use theorems in
+   realaxTheory, because we don't know which of them coincide with theorems
+   provided by OT real-1.61. Instead, we retrieve all needed theorems from OT
+   article, just like in prove_base_assumsScript.sml. -- Chun Tian, 7/7/2022
+ *)
+local open realaxTheory in end
 
 val Thy = "prove_real_assums";
-
 val _ = new_theory Thy;
 
 (* NOTE: the purpose of the following two definitions is to replace HOL4's
@@ -53,9 +58,6 @@ val REAL_0 = new_definition("REAL_0",concl realaxTheory.REAL_0);
 val REAL_1 = new_definition("REAL_1",concl realaxTheory.REAL_1);
 
 val ERR = mk_HOL_ERR Thy;
-val TAUT_CONV = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
-val TAUT      = tautLib.TAUT_CONV;  (* conflict with tautLib.TAUT *)
-val GEN_ALL   = hol88Lib.GEN_ALL;   (* it has old reverted variable order *)
 
 (* "fake" constant for reading hol4-real-assums.art *)
 val _ = new_constant("hol-real-assums-1.0",alpha);
@@ -70,9 +72,6 @@ val _ = new_type ("set", 1);
 val _ = new_constant("Set_empty", “:'a set”);
 val _ = new_constant("Set_member", “:'a -> 'a set -> bool”);
 val _ = new_constant("Real_sup", “:real set -> real”);
-
-(* The existing “inv” must be hidden since it's moved into realaxTheory *)
-val _ = Parse.hide "inv";
 
 (* According to hol4-real.thy, this fake constant "inv" without definition is
    actually OT's Number.Real.inv, which has already a definition.
@@ -90,9 +89,6 @@ val _ = new_constant("inv", “:real -> real”);
 Definition inv0_def :
    inv0 x = if x = 0r then 0r else prove_real_assums$inv x
 End
-
-(* The existing “/” must be hidden since it's moved into realaxTheory *)
-val _ = Parse.hide "/";
 
 (* According to hol4-real.thy, this fake constant "/" without definition is
    actually OT's Number.Real./, which has already a definition.
@@ -217,96 +213,87 @@ fun amatch tm = Net.itnet (itpred (DB.matches tm)) base_thms [];
 val axioms = List.rev (Net.listItems base_thms);
 
 (*
-  32 theorems in OpenTheory real-1.61 package, stored in the above "axioms":
+ 32 theorems in OpenTheory real-1.61 package, stored in the above "axioms":
 
-    |- !x. x <= x,
-    |- !x. 0r + x = x,
-    |- !x. -x + x = 0r,
-    |- !x. x pow 0 = 1r,
-    |- !x. 1r * x = x,
-    |- !x. abs x = if 0r <= x then x else -x,
-    |- !x. x <> 0r ==> inv x * x = 1r,
-    |- !p. (?x. p x) /\ (?m. !x. p x ==> x <= m) ==>
+ 01 |- !x. x <= x,
+ 02 |- !x. 0 + x = x,
+ 03 |- !x. -x + x = 0,
+ 04 |- !x. x pow 0 = 1,
+ 05 |- !x. 1 * x = x,
+ 06 |- !x. abs x = if 0 <= x then x else -x,
+ 07 |- !x. x <> 0 ==> inv x * x = 1,
+ 08 |- !p. (?x. p x) /\ (?m. !x. p x ==> x <= m) ==>
            ?s. (!x. p x ==> x <= s) /\ !m. (!x. p x ==> x <= m) ==> s <= m,
-    |- !x y. x > y <=> y < x,
-    |- !x y. x >= y <=> y <= x,
-    |- !x y. x * y = y * x,
-    |- !m n. real_of_num m * real_of_num n = real_of_num (m * n),
-    |- !x y. x + y = y + x,
-    |- !m n. real_of_num m + real_of_num n = real_of_num (m + n),
-    |- !x y. x < y <=> ~(y <= x),
-    |- !x y. x - y = x + -y,
-    |- !m n. real_of_num m = real_of_num n <=> m = n,
-    |- !m n. real_of_num m <= real_of_num n <=> m <= n,
-    |- !x n. x pow SUC n = x * x pow n,
-    |- !m n. max m n = if m <= n then n else m,
-    |- !m n. min m n = if m <= n then m else n,
-    |- !x y. x <= y /\ y <= x <=> x = y,
-    |- !x y. x <= y \/ y <= x,
-    |- !x y. y <> 0r ==> x / y = x * inv y,
-    |- !x y. 0r <= x /\ 0r <= y ==> 0r <= x * y,
-    |- !s x.
+ 09 |- !x y. x > y <=> y < x,
+ 10 |- !x y. x >= y <=> y <= x,
+ 11 |- !x y. x * y = y * x,
+ 12 |- !m n. &m * &n = &(m * n),
+ 13 |- !x y. x + y = y + x,
+ 14 |- !m n. &m + &n = &(m + n),
+ 15 |- !x y. x < y <=> ~(y <= x),
+ 16 |- !x y. x - y = x + -y,
+ 17 |- !m n. &m = &n <=> m = n,
+ 18 |- !m n. &m <= &n <=> m <= n,
+ 19 |- !x n. x pow SUC n = x * x pow n,
+ 20 |- !m n. max m n = if m <= n then n else m,
+ 21 |- !m n. min m n = if m <= n then m else n,
+ 22 |- !x y. x <= y /\ y <= x <=> x = y,
+ 23 |- !x y. x <= y \/ y <= x,
+ 24 |- !x y. y <> 0 ==> x / y = x * inv y,
+ 25 |- !x y. 0 <= x /\ 0 <= y ==> 0 <= x * y,
+ 26 |- !s x.
          s <> Set_empty /\ (?m. !x. Set_member x s ==> x <= m) /\ Set_member x s ==>
          x <= Real_sup s,
-    |- !s m.
+ 27 |- !s m.
          s <> Set_empty /\ (?m. !x. Set_member x s ==> x <= m) /\
          (!x. Set_member x s ==> x <= m) ==>
-         Real_sup s <= m, |- !x y z. y <= z ==> x + y <= x + z,
-    |- !x y z. x <= y /\ y <= z ==> x <= z,
-    |- !x y z. x * (y * z) = x * y * z,
-    |- !x y z. x * (y + z) = x * y + x * z,
-    |- !x y z. x + (y + z) = x + y + z
+         Real_sup s <= m,
+ 28 |- !x y z. y <= z ==> x + y <= x + z,
+ 29 |- !x y z. x <= y /\ y <= z ==> x <= z,
+ 30 |- !x y z. x * (y * z) = x * y * z,
+ 31 |- !x y z. x * (y + z) = x * y + x * z,
+ 32 |- !x y z. x + (y + z) = x + y + z
 *)
 
 (* These are goals to prove *)
 val goalsNet = read_article "hol4-real-assums.art" reader;
-val goals = map concl (Net.listItems goalsNet);
+val goals = Net.listItems goalsNet;
 
-fun match_goal n = DB.match ["realax", "-"] (el n goals);
-
-fun confirm_goal (n, thm) =
-    if concl thm ~~ (el n goals) then
-        say ("assumption " ^ Int.toString(n) ^ " is proved.\n")
-    else
-        raise ERR ("th" ^ Int.toString(n)) "assumptions changed";
-
-(* print leaking assumptions *)
-val _ = itlist (fn goal => fn _ =>
-                   let val data = DB.match ["realax", "-"] goal in
-                       if null(data)
-                       then say ("leaking assumption: " ^
-                                 (term_to_string goal) ^ "\n")
-                       else ()
-                   end)
-               goals ();
-
-val _ = say ("number of assumptions: " ^
+val _ = say ("number of real assumptions: " ^
              Int.toString(List.length goals) ^ "\n");
 
 (* |- !x y. x < y <=> ~(y <= x)
    NOTE: OT's real_lt has different (correct) quantifier order with HOL's.
  *)
-val real_lt = hd(amatch (concl (SPEC_ALL realaxTheory.real_lt)));
+val real_lt = hd(amatch(concl(SPEC_ALL realaxTheory.real_lt)));
 
-(* recover the primitive theorem names involving real_0 and real_1 *)
-val REAL_10         = REAL_10';
-val REAL_ADD_LID    = REAL_ADD_LID';
-val REAL_ADD_LINV   = REAL_ADD_LINV';
-val REAL_INV_0      = REAL_INV_0';
-val REAL_LT_MUL     = REAL_LT_MUL';
-val REAL_MUL_LID    = REAL_MUL_LID';
+val REAL_ADD_LID     = hd(amatch(concl realaxTheory.REAL_ADD_LID'));
+val REAL_ADD_LINV    = hd(amatch(concl realaxTheory.REAL_ADD_LINV'));
+val REAL_MUL_LID     = hd(amatch(concl realaxTheory.REAL_MUL_LID'));
+val REAL_LE_TOTAL    = hd(amatch(concl realaxTheory.REAL_LE_TOTAL));
+val REAL_LE_TRANS    = hd(amatch(concl realaxTheory.REAL_LE_TRANS));
+val REAL_LE_LADD_IMP = hd(amatch(concl realaxTheory.REAL_LE_LADD_IMP));
+val REAL_LE_ANTISYM  = hd(amatch(concl realaxTheory.REAL_LE_ANTISYM));
+val REAL_ADD_ASSOC   = hd(amatch(concl realaxTheory.REAL_ADD_ASSOC));
+val REAL_ADD_SYM     = hd(amatch(concl realaxTheory.REAL_ADD_SYM));
+val REAL_MUL_SYM     = hd(amatch(concl realaxTheory.REAL_MUL_SYM));
+val REAL_LDISTRIB    = hd(amatch(concl realaxTheory.REAL_LDISTRIB));
+val REAL_MUL_ASSOC   = hd(amatch(concl realaxTheory.REAL_MUL_ASSOC));
+val REAL_LE_MUL      = hd(amatch(concl realaxTheory.REAL_LE_MUL));
+val REAL_LE_REFL     = hd(amatch(concl realaxTheory.REAL_LE_REFL));
 
 (* |- !x. x <> 0r ==> inv x * x = 1 *)
 val REAL_MUL_LINV = hd(amatch(
   subst[prim_mk_const{Thy="realax",Name="inv"} |-> prim_mk_const{Thy=Thy,Name="inv"}]
-  (concl REAL_MUL_LINV')));
+  (concl realaxTheory.REAL_MUL_LINV')));
 
+(* |- |- !x y. y <> 0 ==> x / y = x * inv y *)
 val real_div0 = hd(amatch(
-  ``!x y. ~(y = 0r) ==> (prove_real_assums$/ x y = x * prove_real_assums$inv y)``));
+   “!x y. ~(y = 0r) ==> (prove_real_assums$/ x y = x * prove_real_assums$inv y)”));
 
 (* |- !x y z. x < y /\ y < z ==> x < z *)
 val th1 = store_thm
-  ("th1", el 1 goals,
+  ("th1", el 1 goals |> concl,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt]
   \\ reverse(qspecl_then[`x`,`y`]strip_assume_tac REAL_LE_TOTAL)
@@ -320,7 +307,7 @@ val REAL_LT_TRANS = th1;
 
 (* |- !x y z. y < z ==> x + y < x + z *)
 val th2 = store_thm
-  ("th2", el 2 goals,
+  ("th2", el 2 goals |> concl,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt]
   \\ reverse(qspecl_then[`y`,`z`]strip_assume_tac REAL_LE_TOTAL)
@@ -338,7 +325,7 @@ val REAL_ADD_LID_UNIQ = prove(
 
 val REAL_MUL_LZERO = prove(
   ``!x. 0 * x = 0``,
-  metis_tac[REAL_ADD_LID_UNIQ,REAL_ADD_LID,REAL_LDISTRIB,REAL_MUL_SYM])
+  metis_tac[REAL_ADD_LID_UNIQ,REAL_ADD_LID,REAL_LDISTRIB,REAL_MUL_SYM]);
 
 val REAL_ENTIRE = prove(
   ``!x y. (x * y = 0) = (x = 0) \/ (y = 0)``,
@@ -346,7 +333,7 @@ val REAL_ENTIRE = prove(
 
 (* |- !x y. real_0 < x /\ real_0 < y ==> real_0 < x * y *)
 val th3 = store_thm
-  ("th3", el 3 goals,
+  ("th3", el 3 goals |> concl,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt,REAL_0]
   \\ qspecl_then[`x`,`0`]strip_assume_tac REAL_LE_TOTAL >- asm_simp_tac bool_ss []
@@ -354,22 +341,22 @@ val th3 = store_thm
   \\ `0 <= x * y` by imp_res_tac REAL_LE_MUL
   \\ rpt strip_tac
   \\ `x * y = 0` by metis_tac[REAL_LE_ANTISYM]
-  \\ metis_tac[REAL_ENTIRE,REAL_LE_REFL]);
+  \\ metis_tac[REAL_ENTIRE]);
 
 (* |- !x y. x = y \/ x < y \/ y < x *)
 val th4 = store_thm
-  ("th4", el 4 goals,
+  ("th4", el 4 goals |> concl,
   metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM])
 
 (* |- !x y. real_div x y = x * inv0 y *)
 val th5 = store_thm
-  ("th5", el 5 goals,
+  ("th5", el 5 goals |> concl,
   SIMP_TAC bool_ss [FUN_EQ_THM,real_div_def,inv0_def]
   \\ metis_tac[real_div0,REAL_MUL_LZERO,REAL_MUL_SYM]);
 
 (* |- !x y. x <= y <=> ~(y < x) *)
 val th6 = store_thm
-  ("th6", el 6 goals,
+  ("th6", el 6 goals |> concl,
     metis_tac[real_lt]);
 
 val otax = hd(amatch
@@ -384,7 +371,7 @@ val REAL_LE_LT = prove(
           ?s. !y. (?x. P x /\ y < x) <=> y < s
  *)
 val th7 = store_thm
-  ("th7", el 7 goals,
+  ("th7", el 7 goals |> concl,
   rpt strip_tac
   \\ qspec_then`P`mp_tac otax
   \\ impl_tac >- metis_tac[REAL_LE_LT]
@@ -397,77 +384,93 @@ val th7 = store_thm
 
 (* |- !x. x <> real_0 ==> inv0 x * x = real_1 *)
 val th8 = store_thm
-  ("th8", el 8 goals,
+  ("th8", el 8 goals |> concl,
   metis_tac[REAL_MUL_LINV,REAL_0,REAL_1,inv0_def]);
 
 (* |- !x. -x + x = real_0 *)
 val th9 = store_thm
-  ("th9", el 9 goals,
+  ("th9", el 9 goals |> concl,
   metis_tac[REAL_ADD_LINV,REAL_0]);
 
 (* |- !x. real_0 + x = x *)
 val th10 = store_thm
-  ("th10", el 10 goals,
+  ("th10", el 10 goals |> concl,
   metis_tac[REAL_ADD_LID,REAL_0]);
 
 (* |- !x. real_1 * x = x *)
 val th11 = store_thm
-  ("th11", el 11 goals,
+  ("th11", el 11 goals |> concl,
   metis_tac[REAL_MUL_LID,REAL_1]);
 
 (* |- !x. ~(x < x) *)
 val th12 = store_thm
-  ("th12", el 12 goals,
+  ("th12", el 12 goals |> concl,
   simp_tac bool_ss [real_lt,REAL_LE_REFL]);
 
-val (pow0,powsuc) = CONJ_PAIR real_pow;
+(*
+val (pow0,powsuc) = CONJ_PAIR realaxTheory.real_pow;
 val () = Thm.delete_proof pow0
 val () = Thm.delete_proof powsuc
+ *)
+val pow0   = hd(amatch “x pow 0 = 1”);
+val powsuc = hd(amatch “x pow SUC n = x * x pow n”);
 
 (* |- (!x. x pow 0 = 1) /\ !x n. x pow SUC n = x * x pow n *)
 val th13 = store_thm
-  ("th13", el 13 goals,
+  ("th13", el 13 goals |> concl,
   MATCH_ACCEPT_TAC(CONJ pow0 powsuc));
+
+(* |- !m n. &m + &n = &(m + n) *)
+val REAL_OF_NUM_ADD = hd(amatch(concl realaxTheory.REAL_OF_NUM_ADD));
 
 (* |- 0 = real_0 /\ !n. &SUC n = &n + real_1 *)
 val th14 = store_thm
-  ("th14", el 14 goals,
+  ("th14", el 14 goals |> concl,
   REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_ADD,arithmeticTheory.ADD1]);
+
+(* |- !x. abs x = if 0 <= x then x else -x *)
+val real_abs = hd(amatch(concl realaxTheory.real_abs));
+
+(* |- |- !x y. x - y = x + -y *)
+val real_sub = hd(amatch(concl realaxTheory.real_sub));
 
 (* |- abs = (\x. if 0 <= x then x else -x) *)
 val th15 = store_thm
-  ("th15", el 15 goals,
+  ("th15", el 15 goals |> concl,
   SIMP_TAC bool_ss [FUN_EQ_THM,real_abs]);
 
 (* |- $- = (\x y. x + -y) *)
 val th16 = store_thm
-  ("th16", el 16 goals,
+  ("th16", el 16 goals |> concl,
   SIMP_TAC bool_ss [FUN_EQ_THM,real_sub]);
 
 (* |- $<= = (\x y. ~(y < x)) *)
 val th17 = store_thm
-  ("th17", el 17 goals,
+  ("th17", el 17 goals |> concl,
   SIMP_TAC bool_ss [FUN_EQ_THM]
   \\ metis_tac[real_lt]);
 
 (* |- real_1 = 1 *)
 val th18 = store_thm
-  ("th18", el 18 goals,
+  ("th18", el 18 goals |> concl,
   ACCEPT_TAC REAL_1);
 
 (* |- inv0 real_0 = real_0 *)
 val th19 = store_thm
-  ("th19", el 19 goals,
+  ("th19", el 19 goals |> concl,
   metis_tac[inv0_def,REAL_0]);
 
 (* |- real_0 = 0 *)
 val th20 = store_thm
-  ("th20", el 20 goals,
+  ("th20", el 20 goals |> concl,
   ACCEPT_TAC REAL_0);
+
+(* |- !m n. &m = &n <=> m = n *)
+val REAL_OF_NUM_EQ = hd(amatch(concl realaxTheory.REAL_OF_NUM_EQ));
 
 (* |- real_1 <> real_0 *)
 val th21 = store_thm
-  ("th21", el 21 goals,
+  ("th21", el 21 goals |> concl,
   PURE_REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_EQ,
     arithmeticTheory.ONE,prim_recTheory.SUC_ID]
   \\ strip_tac);
