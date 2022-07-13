@@ -37,6 +37,17 @@ Bugs fixed:
 New theories:
 -------------
 
+- Theory of "contiguity types", as discussed in the paper
+
+   "Specifying Message Formats with Contiguity Types", ITP 2021
+
+  Contiguity types express formal languages where later parts of a
+  string may depend on information held earlier in the string. Thus
+  contig types capture a class of context-sensitive languages. They
+  are helpful for expressing serialized data containing, for example,
+  variable length arrays. The soundness of a parameterized matcher is
+  proved.
+
 New tools:
 ----------
 
