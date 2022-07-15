@@ -225,9 +225,12 @@ val op >- = op THEN1
 fun op>>-(tac1, n) tac2 g =
   op>- (tac1, tac2) g
   handle e as HOL_ERR {message,origin_structure,origin_function} =>
-    raise HOL_ERR {message = message ^ " (THEN1 on line "^Int.toString n^")",
-                   origin_function = origin_function,
-                   origin_structure = origin_structure}
+         if is_substring "THEN1" message then raise e
+         else
+           raise HOL_ERR {message = message ^
+                                    " (THEN1 on line "^Int.toString n^")",
+                          origin_function = origin_function,
+                          origin_structure = origin_structure}
 fun (f ?? x) = f x
 
 
