@@ -137,17 +137,6 @@ val REAL_BOUNDS_LT = store_thm ("REAL_BOUNDS_LT",
  ``!x k:real. -k < x /\ x < k <=> abs(x) < k``,
   REAL_ARITH_TAC);
 
-Theorem BIGUNION_IMAGE:
-  !f s. BIGUNION (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}
-Proof
-  simp[Once EXTENSION, PULL_EXISTS] >> metis_tac[]
-QED
-
-val BIGINTER_IMAGE = store_thm ("BIGINTER_IMAGE",
- ``!f s. BIGINTER (IMAGE f s) = {y | !x. x IN s ==> y IN f x}``,
-  REPEAT GEN_TAC THEN  GEN_REWR_TAC I [EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, GSPECIFICATION] THEN MESON_TAC[]);
-
 Theorem LE_EXISTS: !m n:num. (m <= n) <=> (?d. n = m + d)
 Proof
   simp[EQ_IMP_THM, PULL_EXISTS] >> rw[] >> qexists ‘n - m’ >> simp[]
@@ -740,54 +729,54 @@ val SUP_EQ = store_thm ("SUP_EQ",
          ==> (sup s = sup t)``,
   SIMP_TAC std_ss [sup_alt]);
 
-val SUP = store_thm ("SUP",
- ``!s:real->bool. ~(s = {}) /\ (?b. !x. x IN s ==> x <= b)
-       ==> (!x. x IN s ==> x <= sup s) /\
-           !b. (!x. x IN s ==> x <= b) ==> sup s <= b``,
-  REWRITE_TAC[sup_alt] THEN CONV_TAC(ONCE_DEPTH_CONV SELECT_CONV) THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC [SPECIFICATION] THEN
-  MATCH_MP_TAC REAL_COMPLETE THEN
-  FULL_SIMP_TAC std_ss [SPECIFICATION, GSYM MEMBER_NOT_EMPTY] THEN
-  METIS_TAC[]);
+Theorem SUP:
+  !s:real->bool. s <> {} /\ (?b. !x. x IN s ==> x <= b) ==>
+                 (!x. x IN s ==> x <= sup s) /\
+                 !b. (!x. x IN s ==> x <= b) ==> sup s <= b
+Proof
+  rw[sup_alt, IN_DEF] >> SELECT_ELIM_TAC >> rw[] >>
+  MATCH_MP_TAC REAL_COMPLETE >> metis_tac[MEMBER_NOT_EMPTY, IN_DEF]
+QED
 
-val SUP_FINITE_LEMMA = store_thm ("SUP_FINITE_LEMMA",
- ``!s:real->bool. FINITE s /\ ~(s = {}) ==>
-         ?b:real. b IN s /\ !x. x IN s ==> x <= b``,
-  REWRITE_TAC[CONJ_EQ_IMP] THEN
-  ONCE_REWRITE_TAC [METIS [] ``!s:real->bool. (s <> {} ==> ?b. b IN s /\ !x. x IN s ==> x <= b) =
-                               (\s. s <> {} ==> ?b. b IN s /\ !x. x IN s ==> x <= b) s``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[NOT_INSERT_EMPTY, IN_INSERT] THEN
-  REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN
-  METIS_TAC[REAL_LE_TOTAL, REAL_LE_TRANS]);
+Theorem SUP_FINITE_LEMMA:
+ !s:real->bool. FINITE s /\ ~(s = {}) ==>
+                ?b:real. b IN s /\ !x. x IN s ==> x <= b
+Proof
+  Induct_on ‘FINITE’ >> dsimp[] >>
+  METIS_TAC[REAL_LE_TOTAL, REAL_LE_TRANS, MEMBER_NOT_EMPTY]
+QED
 
-val SUP_FINITE = store_thm ("SUP_FINITE",
- ``!s. FINITE s /\ ~(s = {}) ==> (sup s) IN s /\ !x. x IN s ==> x <= sup s``,
-  GEN_TAC THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC o MATCH_MP SUP_FINITE_LEMMA) THEN
-  METIS_TAC [REAL_LE_ANTISYM, REAL_LE_TOTAL, SUP]);
+Theorem SUP_FINITE:
+  !s. FINITE s /\ ~(s = {}) ==> (sup s) IN s /\ !x. x IN s ==> x <= sup s
+Proof METIS_TAC [REAL_LE_ANTISYM, REAL_LE_TOTAL, SUP, SUP_FINITE_LEMMA]
+QED
 
-val REAL_LE_SUP_FINITE = store_thm ("REAL_LE_SUP_FINITE",
- ``!s a:real. FINITE s /\ ~(s = {}) ==> (a <= sup s <=> ?x. x IN s /\ a <= x)``,
-  METIS_TAC[SUP_FINITE, REAL_LE_TRANS]);
+Theorem REAL_LE_SUP_FINITE:
+  !s a:real. FINITE s /\ ~(s = {}) ==> (a <= sup s <=> ?x. x IN s /\ a <= x)
+Proof METIS_TAC[SUP_FINITE, REAL_LE_TRANS]
+QED
 
-val REAL_SUP_LE_FINITE = store_thm ("REAL_SUP_LE_FINITE",
- ``!s a:real. FINITE s /\ ~(s = {}) ==> (sup s <= a <=> !x. x IN s ==> x <= a)``,
-  MESON_TAC[SUP_FINITE, REAL_LE_TRANS]);
+Theorem REAL_SUP_LE_FINITE:
+  !s a:real. FINITE s /\ ~(s = {}) ==> (sup s <= a <=> !x. x IN s ==> x <= a)
+Proof MESON_TAC[SUP_FINITE, REAL_LE_TRANS]
+QED
 
-val REAL_LT_SUP_FINITE = store_thm ("REAL_LT_SUP_FINITE",
- ``!s a:real. FINITE s /\ ~(s = {}) ==> (a < sup s <=> ?x. x IN s /\ a < x)``,
-  MESON_TAC[SUP_FINITE, REAL_LTE_TRANS]);
+Theorem REAL_LT_SUP_FINITE:
+  !s a:real. FINITE s /\ ~(s = {}) ==> (a < sup s <=> ?x. x IN s /\ a < x)
+Proof MESON_TAC[SUP_FINITE, REAL_LTE_TRANS]
+QED
 
-val REAL_SUP_LT_FINITE = store_thm ("REAL_SUP_LT_FINITE",
- ``!s a:real. FINITE s /\ ~(s = {}) ==> (sup s < a <=> !x. x IN s ==> x < a)``,
-  MESON_TAC[SUP_FINITE, REAL_LET_TRANS]);
+Theorem REAL_SUP_LT_FINITE:
+  !s a:real. FINITE s /\ ~(s = {}) ==> (sup s < a <=> !x. x IN s ==> x < a)
+Proof MESON_TAC[SUP_FINITE, REAL_LET_TRANS]
+QED
 
-val SUP_UNIQUE_FINITE = store_thm ("SUP_UNIQUE_FINITE",
- ``!s. FINITE s /\ ~(s = {}) ==> ((sup s = a) <=> a IN s /\ !y. y IN s ==> y <= a)``,
-  ASM_SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, REAL_LE_SUP_FINITE, REAL_SUP_LE_FINITE,
-                       NOT_INSERT_EMPTY, FINITE_INSERT, FINITE_EMPTY] THEN
-  MESON_TAC[REAL_LE_REFL, REAL_LE_TRANS, REAL_LE_ANTISYM]);
+Theorem SUP_UNIQUE_FINITE:
+  !s. FINITE s /\ s <> {} ==> (sup s = a <=> a IN s /\ !y. y IN s ==> y <= a)
+Proof
+  simp[GSYM REAL_LE_ANTISYM, REAL_LE_SUP_FINITE, REAL_SUP_LE_FINITE] THEN
+  MESON_TAC[REAL_LE_REFL, REAL_LE_TRANS, REAL_LE_ANTISYM]
+QED
 
 val REAL_SUP_LE_EQ = store_thm ("REAL_SUP_LE_EQ",
  ``!s y:real. ~(s = {}) /\ (?b. !x. x IN s ==> x <= b) ==>

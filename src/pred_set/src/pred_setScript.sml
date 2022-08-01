@@ -3987,6 +3987,12 @@ val IN_BIGUNION_IMAGE = store_thm (* from util_prob *)
    RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE]
    >> PROVE_TAC []);
 
+Theorem BIGUNION_IMAGE:
+  !f s. BIGUNION (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}
+Proof
+  simp[Once EXTENSION, PULL_EXISTS] >> METIS_TAC[]
+QED
+
 val BIGUNION_EMPTY = Q.store_thm
 ("BIGUNION_EMPTY",
  `BIGUNION EMPTY = EMPTY`,
@@ -4201,11 +4207,15 @@ Proof
   SIMP_TAC bool_ss [BIGINTER, GSPECIFICATION, pairTheory.PAIR_EQ]
 QED
 
-val IN_BIGINTER_IMAGE = store_thm (* from util_prob *)
-  ("IN_BIGINTER_IMAGE",
-   ``!x f s. (x IN BIGINTER (IMAGE f s)) = (!y. y IN s ==> x IN f y)``,
-   RW_TAC std_ss [IN_BIGINTER, IN_IMAGE]
-   >> PROVE_TAC []);
+Theorem IN_BIGINTER_IMAGE:
+  !x f s. (x IN BIGINTER (IMAGE f s)) = (!y. y IN s ==> x IN f y)
+Proof RW_TAC std_ss [IN_BIGINTER, IN_IMAGE] >> PROVE_TAC []
+QED
+
+Theorem BIGINTER_IMAGE:
+  !f s. BIGINTER (IMAGE f s) = {y | !x. x IN s ==> y IN f x}
+Proof simp[Once EXTENSION, PULL_EXISTS] >> METIS_TAC[]
+QED
 
 val BIGINTER_INSERT = Q.store_thm
 ("BIGINTER_INSERT[simp]",
