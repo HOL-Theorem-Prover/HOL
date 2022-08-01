@@ -49,31 +49,24 @@ val LE_0          = ZERO_LESS_EQ;    (* arithmeticTheory *)
 (* misc.                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_LT_BETWEEN = store_thm ("REAL_LT_BETWEEN",
- ``!a b:real. a < b <=> ?x. a < x /\ x < b``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[REAL_LT_TRANS]] THEN
-  DISCH_TAC THEN EXISTS_TAC ``(a + b) / &2:real`` THEN
-  SIMP_TAC arith_ss [REAL_LT_RDIV_EQ, REAL_LT_LDIV_EQ,
-                     REAL_ARITH ``0 < 2:real``, REAL_LT] THEN
-  POP_ASSUM MP_TAC THEN REAL_ARITH_TAC);
+Theorem REAL_LT_BETWEEN: !a b:real. a < b <=> ?x. a < x /\ x < b
+Proof metis_tac[REAL_MEAN, REAL_LT_TRANS]
+QED
 
-val LOWER_BOUND_FINITE_SET_REAL = store_thm ("LOWER_BOUND_FINITE_SET_REAL",
- ``!f:('a->real) s. FINITE(s) ==> ?a. !x. x IN s ==> a <= f(x)``,
-  GEN_TAC THEN ONCE_REWRITE_TAC [METIS []
-    ``!s. (?a. !(x :'a). x IN s ==> a <= (f :'a->real) x) =
-                       (\s. ?a. !x. x IN s ==> a <= f(x)) s``] THEN
-   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-   REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
-   METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+Theorem LOWER_BOUND_FINITE_SET_REAL:
+  !f:('a->real) s. FINITE(s) ==> ?a. !x. x IN s ==> a <= f(x)
+Proof
+  gen_tac >> Induct_on ‘FINITE’ >> rw[DISJ_IMP_THM, FORALL_AND_THM] >>
+  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
-val UPPER_BOUND_FINITE_SET_REAL = store_thm ("UPPER_BOUND_FINITE_SET_REAL",
- ``!f:('a->real) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a``,
-  GEN_TAC THEN ONCE_REWRITE_TAC [METIS []
-    ``!s. (?a. !(x :'a). x IN s ==> (f :'a->real) x <= a) =
-                       (\s. ?a. !x. x IN s ==> f(x) <= a) s``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
-  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+
+Theorem UPPER_BOUND_FINITE_SET_REAL:
+  !f:('a->real) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a
+Proof
+  gen_tac >> Induct_on ‘FINITE’ >> rw[DISJ_IMP_THM, FORALL_AND_THM] >>
+  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
 val REAL_LE_SQUARE_ABS = store_thm ("REAL_LE_SQUARE_ABS",
  ``!x y:real. abs(x) <= abs(y) <=> x pow 2 <= y pow 2``,
@@ -133,57 +126,38 @@ val EMPTY_BIGUNION = store_thm ("EMPTY_BIGUNION",
  ``!s. (BIGUNION s = {}) <=> !t. t IN s ==> (t = {})``,
   SET_TAC[]);
 
-val UPPER_BOUND_FINITE_SET = store_thm ("UPPER_BOUND_FINITE_SET",
- ``!f:('a->num) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a``,
-  GEN_TAC THEN
-  KNOW_TAC ``!s. (?a. !x. x IN s ==> (f:('a->num))(x) <= a) =
-             (\s. ?a. !x. x IN s ==> f(x) <= a) s`` THENL
-  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
-  MESON_TAC[LESS_EQ_CASES, LESS_EQ_REFL, LESS_EQ_TRANS]);
+Theorem UPPER_BOUND_FINITE_SET:
+  !f:('a->num) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a
+Proof
+  rpt strip_tac >> qexists ‘MAX_SET (IMAGE f s)’ >>
+  rpt strip_tac >> irule X_LE_MAX_SET >> simp[]
+QED
 
 val REAL_BOUNDS_LT = store_thm ("REAL_BOUNDS_LT",
  ``!x k:real. -k < x /\ x < k <=> abs(x) < k``,
   REAL_ARITH_TAC);
 
-val BIGUNION_IMAGE = store_thm ("BIGUNION_IMAGE",
- ``!f s. BIGUNION (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}``,
-  REPEAT GEN_TAC THEN  GEN_REWR_TAC I [EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSPECIFICATION] THEN MESON_TAC[]);
+Theorem BIGUNION_IMAGE:
+  !f s. BIGUNION (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}
+Proof
+  simp[Once EXTENSION, PULL_EXISTS] >> metis_tac[]
+QED
 
 val BIGINTER_IMAGE = store_thm ("BIGINTER_IMAGE",
  ``!f s. BIGINTER (IMAGE f s) = {y | !x. x IN s ==> y IN f x}``,
   REPEAT GEN_TAC THEN  GEN_REWR_TAC I [EXTENSION] THEN
   SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, GSPECIFICATION] THEN MESON_TAC[]);
 
-val LE_EXISTS = store_thm ("LE_EXISTS",
- ``!m n:num. (m <= n) <=> (?d. n = m + d)``,
-  GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[LE] THENL
-   [REWRITE_TAC[CONV_RULE(LAND_CONV SYM_CONV) (SPEC_ALL ADD_EQ_0)] THEN
-    SIMP_TAC std_ss [RIGHT_EXISTS_AND_THM, EXISTS_REFL],
-    EQ_TAC THENL
-     [DISCH_THEN(DISJ_CASES_THEN2 SUBST1_TAC MP_TAC) THENL
-       [EXISTS_TAC ``0:num`` THEN REWRITE_TAC[ADD_CLAUSES],
-        DISCH_THEN(X_CHOOSE_THEN ``d:num`` SUBST1_TAC) THEN
-        EXISTS_TAC ``SUC d`` THEN REWRITE_TAC[ADD_CLAUSES]],
-      SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM] THEN
-      INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES, INV_SUC_EQ] THEN
-      DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[] THEN DISJ2_TAC THEN
-      EXISTS_TAC ``d:num`` THEN SIMP_TAC std_ss []]]);
+Theorem LE_EXISTS: !m n:num. (m <= n) <=> (?d. n = m + d)
+Proof
+  simp[EQ_IMP_THM, PULL_EXISTS] >> rw[] >> qexists ‘n - m’ >> simp[]
+QED
 
-val LT_EXISTS = store_thm ("LT_EXISTS",
- ``!m n. (m < n) <=> (?d. n = m + SUC d)``,
-  GEN_TAC THEN INDUCT_TAC THEN REWRITE_TAC[LT, ADD_CLAUSES, SUC_NOT] THEN
-  ASM_REWRITE_TAC[INV_SUC_EQ] THEN EQ_TAC THENL
-   [DISCH_THEN(DISJ_CASES_THEN2 SUBST1_TAC MP_TAC) THENL
-     [EXISTS_TAC ``0:num`` THEN REWRITE_TAC[ADD_CLAUSES],
-      DISCH_THEN(X_CHOOSE_THEN ``d:num`` SUBST1_TAC) THEN
-      EXISTS_TAC ``SUC d`` THEN REWRITE_TAC[ADD_CLAUSES]],
-    SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM] THEN
-    INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES, INV_SUC_EQ] THEN
-    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[] THEN DISJ2_TAC THEN
-    EXISTS_TAC ``d:num`` THEN SIMP_TAC std_ss []]);
+Theorem LT_EXISTS:
+  !m n. (m < n) <=> (?d. n = m + SUC d)
+Proof
+  simp[EQ_IMP_THM] >> rw[] >> qexists ‘n - (m + 1)’ >> simp[]
+QED
 
 val BOUNDS_LINEAR = store_thm ("BOUNDS_LINEAR",
  ``!A B C. (!n:num. A * n <= B * n + C) <=> A <= B``,
