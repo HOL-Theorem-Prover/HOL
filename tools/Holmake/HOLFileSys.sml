@@ -129,4 +129,25 @@ fun stdErr_out s = (TextIO.output (TextIO.stdErr, s);
 fun print s = TextIO.print s
 fun println s = print (s ^ "\n")
 
+val modTime = OS.FileSys.modTime
+val setTime = OS.FileSys.setTime
+val access = OS.FileSys.access
+val remove = OS.FileSys.remove
+val rename = OS.FileSys.rename
+val A_READ = OS.FileSys.A_READ
+val A_WRITE = OS.FileSys.A_WRITE
+val A_EXEC = OS.FileSys.A_EXEC
+
+val isLink = OS.FileSys.isLink
+type dirstream = OS.FileSys.dirstream
+val isDir = OS.FileSys.isDir
+val getDir = OS.FileSys.getDir
+val chDir = OS.FileSys.chDir
+val mkDir = OS.FileSys.mkDir
+val rmDir = OS.FileSys.rmDir
+val openDir = OS.FileSys.openDir
+val readDir = OS.FileSys.readDir
+val closeDir = OS.FileSys.closeDir
+
+
 end (* struct *)

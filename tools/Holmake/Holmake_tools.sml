@@ -7,6 +7,7 @@ open terminal_primitives
 open Holmake_tools_dtype
 open HOLFileSys
 
+structure FileSys = HOLFileSys
 fun K x y = x
 
 fun |>(x,f) = f x
@@ -22,7 +23,6 @@ end
 
 
 structure Path = OS.Path
-structure FileSys = OS.FileSys
 
 val DEFAULT_OVERLAY = "Overlay.ui"
 fun member m [] = false
@@ -334,18 +334,18 @@ in
 end
 
 fun read_files ds P action =
-    case OS.FileSys.readDir ds of
-      NONE => OS.FileSys.closeDir ds
+    case FileSys.readDir ds of
+      NONE => FileSys.closeDir ds
     | SOME nextfile =>
       (if P nextfile then action nextfile else ();
        read_files ds P action)
 
 fun dir_files dnm A =
     let
-      val ds = OS.FileSys.openDir dnm
+      val ds = FileSys.openDir dnm
       fun recurse A =
-          case OS.FileSys.readDir ds of
-              NONE => (OS.FileSys.closeDir ds; A)
+          case FileSys.readDir ds of
+              NONE => (FileSys.closeDir ds; A)
             | SOME nm => recurse (OS.Path.concat (dnm, nm) :: A)
     in
       recurse A
@@ -357,16 +357,16 @@ fun recursive_act file_act dir_act name =
           case nms of
               [] => List.app dir_act rmds
             | n::ns =>
-              if OS.FileSys.isLink n then
+              if FileSys.isLink n then
                 (file_act n ; worklist ns rmds)
-              else if OS.FileSys.isDir n then
+              else if FileSys.isDir n then
                 worklist (dir_files n ns) (n :: rmds)
               else (file_act n ; worklist ns rmds)
     in
       worklist [name] []
     end
 
-fun quiet_remove s = OS.FileSys.remove s handle e => ()
+fun quiet_remove s = FileSys.remove s handle e => ()
 fun chatty_remove act (ofns : output_functions) s =
     act s handle e =>
                  (#warn ofns ("Attempt to remove: " ^ s ^
@@ -376,22 +376,22 @@ fun chatty_remove act (ofns : output_functions) s =
 fun clean1 (ofns : output_functions) s =
     let val _ = #diag ofns "tools" (fn () => "clean1 " ^ s)
     in
-      if OS.FileSys.access (s, []) then
-        if OS.FileSys.isDir s then
+      if FileSys.access (s, []) then
+        if FileSys.isDir s then
           if String.isSuffix "/" s then
-            recursive_act (chatty_remove OS.FileSys.remove ofns)
-                          (chatty_remove OS.FileSys.rmDir ofns)
+            recursive_act (chatty_remove FileSys.remove ofns)
+                          (chatty_remove FileSys.rmDir ofns)
                           s
           else
             (#warn ofns ("Not removing directory " ^ s ^ " from EXTRA_CLEANS.");
              #warn ofns ("  Use trailing / on name to force this."))
-        else chatty_remove OS.FileSys.remove ofns s
+        else chatty_remove FileSys.remove ofns s
       else (* doesn't exist, do nothing *) ()
     end
 
 
 fun clean_dir ofns {extra_cleans} = let
-  val cdstream = OS.FileSys.openDir "."
+  val cdstream = FileSys.openDir "."
   fun to_delete f =
       case (toFile f) of
         UO _ => true
@@ -404,7 +404,7 @@ fun clean_dir ofns {extra_cleans} = let
       | ART _ => true
       | _ => false
 in
-  read_files cdstream to_delete (chatty_remove OS.FileSys.remove ofns);
+  read_files cdstream to_delete (chatty_remove FileSys.remove ofns);
   app (clean1 ofns) extra_cleans
 end
 
@@ -415,13 +415,13 @@ fun clean_forReloc {holheap} =
 
 exception DirNotFound
 fun clean_depdir {depdirname} = let
-  val depds = OS.FileSys.openDir depdirname handle
+  val depds = FileSys.openDir depdirname handle
       OS.SysErr _ => raise DirNotFound
 in
   read_files depds
              (fn _ => true)
-             (fn s => OS.FileSys.remove (fullPath [depdirname, s]));
-  OS.FileSys.rmDir depdirname;
+             (fn s => FileSys.remove (fullPath [depdirname, s]));
+  FileSys.rmDir depdirname;
   true
 end handle OS.SysErr (mesg, _) => let
            in
@@ -439,10 +439,10 @@ val nice_dir =
 
 fun pushdir d f x =
     let
-      val d0 = OS.FileSys.getDir()
-      val res = Exception.capture (fn () => (OS.FileSys.chDir d; f x)) ()
+      val d0 = FileSys.getDir()
+      val res = Exception.capture (fn () => (FileSys.chDir d; f x)) ()
     in
-      OS.FileSys.chDir d0; Exception.release res
+      FileSys.chDir d0; Exception.release res
     end
 
 
@@ -457,8 +457,8 @@ type t = {absdir : string, relpath : string option}
 fun op+ (d, e) = Path.mkCanonical (Path.concat(d, e))
 
 fun curdir () = {relpath = SOME (OS.Path.currentArc),
-                 absdir = OS.FileSys.getDir()}
-fun chdir ({absdir,...}: t) = OS.FileSys.chDir absdir
+                 absdir = FileSys.getDir()}
+fun chdir ({absdir,...}: t) = FileSys.chDir absdir
 
 fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
     String.compare (d1, d2)
@@ -580,8 +580,8 @@ type holmake_result = holmake_dirinfo option
 fun find_files ds P =
   let
     fun recurse acc =
-      case OS.FileSys.readDir ds of
-          NONE => (OS.FileSys.closeDir ds; List.rev acc)
+      case readDir ds of
+          NONE => (closeDir ds; List.rev acc)
         | SOME fname => if P fname then recurse (fname::acc)
                         else recurse acc
   in
@@ -731,8 +731,8 @@ infix forces_update_of
 fun (f1 forces_update_of f2) = let
   open Time
 in
-  FileSys.access(f1, []) andalso
-  (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
+  access(f1, []) andalso
+  (not (access(f2, [])) orelse HOLFileSys.modTime f1 > HOLFileSys.modTime f2)
 end
 infix depforces_update_of
 fun (d1 depforces_update_of d2) =
@@ -769,7 +769,7 @@ in
     case f of
         UO (Theory s) => localFile (UI (Theory s)) :: localFile(DAT s) :: phase1
       | UO x =>
-        if FileSys.access(fromFile (SIG x), []) andalso
+        if access(fromFile (SIG x), []) andalso
            List.all (fn f => f <> localFile (SIG x)) phase1
         then
           localFile (UI x) :: phase1
@@ -822,7 +822,7 @@ fun generate_all_plausible_targets warn first_target =
       | NONE =>
         let
           open hm_target
-          val cds = OS.FileSys.openDir "."
+          val cds = openDir "."
           fun not_a_dot f = not (String.isPrefix "." f)
           fun ok_file f =
               case (toFile f) of

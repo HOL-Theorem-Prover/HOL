@@ -1,6 +1,7 @@
 structure internal_functions :> internal_functions =
 struct
 
+structure FileSys = HOLFileSys
 fun member e [] = false
   | member e (h::t) = e = h orelse member e t
 
@@ -170,17 +171,17 @@ in
 end
 
 fun dirfiles dirname = let
-  val dirstrm = OS.FileSys.openDir dirname
+  val dirstrm = FileSys.openDir dirname
   fun recurse acc =
-      case OS.FileSys.readDir dirstrm of
+      case FileSys.readDir dirstrm of
           NONE => "." :: ".." :: acc
         | SOME fname => recurse (fname :: acc)
 in
-  recurse [] before OS.FileSys.closeDir dirstrm
+  recurse [] before FileSys.closeDir dirstrm
 end
 
 fun safeIsDir s =
-    OS.FileSys.isDir s handle OS.SysErr _ => false
+    FileSys.isDir s handle OS.SysErr _ => false
 
 fun diag s = TextIO.output(TextIO.stdErr, s)
 
@@ -197,7 +198,7 @@ fun wildcard s =
                       else k (d,"", l)
             | [] => k (d,"", l)
       val (starting_dir,pfx, rest) =
-          initial_split (OS.FileSys.getDir()) split_comps (fn x => x)
+          initial_split (FileSys.getDir()) split_comps (fn x => x)
       fun recurse curpfx curdir complist : string list =
           case complist of
               c::cs => (* c must be non-null *)
@@ -246,7 +247,7 @@ fun get_first f [] = NONE
 
 fun which arg =
   let
-    open OS.FileSys Systeml
+    open FileSys Systeml
     val sepc = if isUnix then #":" else #";"
     fun check p =
       let

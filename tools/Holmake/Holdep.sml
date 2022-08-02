@@ -13,9 +13,9 @@ struct
 
 structure Process = OS.Process
 structure Path = OS.Path
-structure FileSys = OS.FileSys
 exception Holdep_Error of string
 open HOLFileSys
+structure FileSys = HOLFileSys
 
 fun normPath s = Path.toString(Path.fromString s)
 fun manglefilename s = normPath s

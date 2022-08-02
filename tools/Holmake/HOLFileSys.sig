@@ -4,6 +4,7 @@ sig
   datatype CodeType = datatype HOLFS_dtype.CodeType
   datatype ArticleType = datatype HOLFS_dtype.ArticleType
   datatype File = datatype HOLFS_dtype.File
+  type dirstream
 
   val string_part : File -> string
   val toCodeType : string -> CodeType
@@ -34,5 +35,24 @@ sig
   val stdErr_out : string -> unit (* includes a flush *)
   val print : string -> unit (* to stdOut *)
   val println : string -> unit (* adds \n *)
+
+  val access : string * OS.FileSys.access_mode list -> bool
+  val remove : string -> unit
+  val rmDir : string -> unit
+  val A_READ : OS.FileSys.access_mode
+  val A_WRITE : OS.FileSys.access_mode
+  val A_EXEC : OS.FileSys.access_mode
+  val modTime : string -> Time.time
+  val setTime : string * Time.time option -> unit
+
+  val isLink : string -> bool
+  val isDir : string -> bool
+  val getDir : unit -> string
+  val chDir : string -> unit
+  val mkDir : string -> unit
+  val rename : {old : string, new : string} -> unit
+  val openDir : string -> dirstream
+  val readDir : dirstream -> string option
+  val closeDir : dirstream -> unit
 
 end

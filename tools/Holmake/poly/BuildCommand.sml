@@ -2,7 +2,7 @@ structure BuildCommand :> BuildCommand =
 struct
 
 open Systeml Holmake_tools Holmake_types
-structure FileSys = OS.FileSys
+structure FileSys = HOLFileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
@@ -88,7 +88,7 @@ end
 
 fun addPath incs (file : string) : dep =
     let
-      val dir = OS.FileSys.getDir()
+      val dir = FileSys.getDir()
       open hm_target
     in
       if OS.Path.dir file <> "" then filestr_to_tgt file
@@ -113,7 +113,7 @@ fun finish_compilation warn depMods0 filename tgt =
         val filename_base = OS.Path.base filename
         val depMods = List.filter (fn s => s <> filename_base) depMods0
         fun getFTime fname =
-          SOME (OS.FileSys.modTime fname) handle OS.SysErr _ => NONE
+          SOME (FileSys.modTime fname) handle OS.SysErr _ => NONE
         fun combine fname t =
           case getFTime fname of NONE => t | SOME t0 => time_max(t0,t)
         fun foldthis (modn, t) =
@@ -125,7 +125,7 @@ fun finish_compilation warn depMods0 filename tgt =
                          Time.zeroTime)
               | SOME t => t
       in
-        OS.FileSys.setTime (tgt, SOME (List.foldl foldthis startTime depMods));
+        FileSys.setTime (tgt, SOME (List.foldl foldthis startTime depMods));
         OS.Process.success
       end
     | SOME s =>
@@ -188,7 +188,7 @@ case file of
        TextIO.output (outUo, "\n");
        TextIO.output (outUo, usePathVars filename ^ "\n");
        TextIO.closeOut outUo;
-       (if OS.FileSys.access (modName ^ ".sig", []) then
+       (if FileSys.access (modName ^ ".sig", []) then
           ()
         else
           let val outUi = TextIO.openOut (modName ^ ".ui")

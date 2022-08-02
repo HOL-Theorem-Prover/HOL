@@ -1,7 +1,7 @@
 structure genscriptdep :> sig val main : unit -> unit end =
 struct
 
-structure FileSys = OS.FileSys
+structure FileSys = HOLFileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
