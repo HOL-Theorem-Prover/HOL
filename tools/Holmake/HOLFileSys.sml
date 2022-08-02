@@ -2,6 +2,7 @@ structure HOLFileSys :> HOLFileSys =
 struct
 
 open HOLFS_dtype
+open HFS_NameMunge
 
 fun string_part0 (Theory s) = s
   | string_part0 (Script s) = s
@@ -109,7 +110,13 @@ fun primary_dependent f =
     | ART (ProcessedArticle s) => SOME (ART (RawArticle s))
     | _ => NONE
 
-fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
+fun readfn f = toFSfn false f (* eta-expanded for value restriction *)
+fun readfn1 f (x,y) = toFSfn false (fn s => f(s,y)) x
+
+fun writefn f = toFSfn true f (* eta-expanded for value restriction *)
+fun writefn1 f (x,y) = toFSfn true (fn s => f(s,y)) x
+
+fun toFS s = case HOLtoFS s of NONE => s | SOME {fullfile = s', ...} => s'
 
 val closeIn = TextIO.closeIn
 val closeOut = TextIO.closeOut
@@ -117,37 +124,68 @@ val flushOut = TextIO.flushOut
 val input = TextIO.input
 val inputAll = TextIO.inputAll
 val inputLine = TextIO.inputLine
-val openIn = TextIO.openIn
-val openOut = TextIO.openOut
+val openIn = readfn TextIO.openIn
+val openOut = writefn TextIO.openOut
 val output = TextIO.output
 val stdErr = TextIO.stdErr
 val stdOut = TextIO.stdOut
 
-fun stdErr_out s = (TextIO.output (TextIO.stdErr, s);
-                    TextIO.flushOut TextIO.stdErr)
+fun stdErr_out s = (output (stdErr, s); flushOut stdErr)
 
 fun print s = TextIO.print s
 fun println s = print (s ^ "\n")
 
-val modTime = OS.FileSys.modTime
-val setTime = OS.FileSys.setTime
-val access = OS.FileSys.access
-val remove = OS.FileSys.remove
-val rename = OS.FileSys.rename
+val modTime = readfn OS.FileSys.modTime
+val setTime = writefn1 OS.FileSys.setTime
+val access = readfn1 OS.FileSys.access
 val A_READ = OS.FileSys.A_READ
 val A_WRITE = OS.FileSys.A_WRITE
 val A_EXEC = OS.FileSys.A_EXEC
+fun exists_readable s = access(s, [A_READ])
+val remove = writefn OS.FileSys.remove
+fun rename{old,new} =
+    writefn (fn s => OS.FileSys.rename {old = toFS old, new = s}) new
 
-val isLink = OS.FileSys.isLink
-type dirstream = OS.FileSys.dirstream
+val isLink = readfn OS.FileSys.isLink
 val isDir = OS.FileSys.isDir
 val getDir = OS.FileSys.getDir
 val chDir = OS.FileSys.chDir
 val mkDir = OS.FileSys.mkDir
 val rmDir = OS.FileSys.rmDir
-val openDir = OS.FileSys.openDir
-val readDir = OS.FileSys.readDir
-val closeDir = OS.FileSys.closeDir
+type dirstream = HFS_NameMunge.dirstream
+exception DirNotFound
+val openDir = HFS_NameMunge.openDir
+val readDir = HFS_NameMunge.readDir
+val closeDir = HFS_NameMunge.closeDir
+
+
+fun read_files {dirname} P action =
+    let
+      val ds = openDir dirname handle OS.SysErr _ => raise DirNotFound
+      fun loop () =
+          case readDir ds of
+              NONE => closeDir ds
+            | SOME nextfile =>
+              (if P nextfile then action nextfile else (); loop())
+    in
+      loop() handle e => (closeDir ds; raise e);
+      closeDir ds
+    end
+
+fun read_files_with_objs {dirname} P action =
+    let
+      open OS.FileSys
+      val ds = openDir dirname handle OS.SysErr _ => raise DirNotFound
+      fun loop () =
+          case readDir ds of
+              NONE => closeDir ds
+            | SOME nextfile =>
+              (if P nextfile then action nextfile else (); loop())
+    in
+      loop() handle e => (closeDir ds; raise e);
+      closeDir ds
+    end
+
 
 
 end (* struct *)

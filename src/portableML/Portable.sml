@@ -621,10 +621,10 @@ type instream      = TextIO.instream
 type outstream     = TextIO.outstream
 val std_out        = TextIO.stdOut
 val stdin          = TextIO.stdIn
-fun open_in file   = TextIO.openIn file
+fun open_in file   = HOLFileSys.openIn file
                      handle IO.Io{cause=SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
-fun open_out file  = TextIO.openOut file
+fun open_out file  = HOLFileSys.openOut file
                      handle IO.Io{cause=SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
 val output         = TextIO.output

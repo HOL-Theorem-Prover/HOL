@@ -32,9 +32,9 @@ struct
   end
 
   fun raw_read_file fname = let
-    val strm = TextIO.openIn fname
+    val strm = HOLFileSys.openIn fname
   in
-    raw_read_stream strm before TextIO.closeIn strm
+    raw_read_stream strm before HOLFileSys.closeIn strm
   end
 
   fun scan creader cs =

@@ -17,7 +17,8 @@ val _ = let
     myuse hmakedir (s ^ ".sml")
   end
 in
-  myuse hmakedir "HOLFS_dtype.sml";
+  app (myuse hmakedir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
+  myuse (OS.Path.concat(hmakedir, "poly")) "HFS_NameMunge.sml";
   app appthis ["HOLFileSys", "regexpMatch", "parse_glob", "internal_functions",
                "Holdep_tokens"] ;
   app (myuse hmakedir) ["QuoteFilter.sml", "Holmake_tools_dtype.sml",

@@ -5,6 +5,7 @@ sig
   datatype ArticleType = datatype HOLFS_dtype.ArticleType
   datatype File = datatype HOLFS_dtype.File
   type dirstream
+  exception DirNotFound
 
   val string_part : File -> string
   val toCodeType : string -> CodeType
@@ -54,5 +55,11 @@ sig
   val openDir : string -> dirstream
   val readDir : dirstream -> string option
   val closeDir : dirstream -> unit
+
+  val read_files : {dirname: string} -> (string -> bool) -> (string -> unit) ->
+                   unit
+  val read_files_with_objs :
+      {dirname: string} -> (string -> bool) -> (string -> unit) ->
+      unit
 
 end

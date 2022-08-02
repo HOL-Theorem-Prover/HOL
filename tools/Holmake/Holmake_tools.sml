@@ -333,13 +333,11 @@ in
        Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
-fun read_files ds P action =
-    case FileSys.readDir ds of
-      NONE => FileSys.closeDir ds
-    | SOME nextfile =>
-      (if P nextfile then action nextfile else ();
-       read_files ds P action)
-
+local
+(* these next two are used just for recursive removal of directories;
+   appropriate to use "real" OS.FileSys *)
+structure FileSys = OS.FileSys
+in
 fun dir_files dnm A =
     let
       val ds = FileSys.openDir dnm
@@ -365,6 +363,7 @@ fun recursive_act file_act dir_act name =
     in
       worklist [name] []
     end
+end (* local *)
 
 fun quiet_remove s = FileSys.remove s handle e => ()
 fun chatty_remove act (ofns : output_functions) s =
@@ -379,8 +378,8 @@ fun clean1 (ofns : output_functions) s =
       if FileSys.access (s, []) then
         if FileSys.isDir s then
           if String.isSuffix "/" s then
-            recursive_act (chatty_remove FileSys.remove ofns)
-                          (chatty_remove FileSys.rmDir ofns)
+            recursive_act (chatty_remove OS.FileSys.remove ofns)
+                          (chatty_remove OS.FileSys.rmDir ofns)
                           s
           else
             (#warn ofns ("Not removing directory " ^ s ^ " from EXTRA_CLEANS.");
@@ -391,7 +390,6 @@ fun clean1 (ofns : output_functions) s =
 
 
 fun clean_dir ofns {extra_cleans} = let
-  val cdstream = FileSys.openDir "."
   fun to_delete f =
       case (toFile f) of
         UO _ => true
@@ -404,7 +402,8 @@ fun clean_dir ofns {extra_cleans} = let
       | ART _ => true
       | _ => false
 in
-  read_files cdstream to_delete (chatty_remove FileSys.remove ofns);
+  read_files_with_objs
+    {dirname = "."} to_delete (chatty_remove OS.FileSys.remove ofns);
   app (clean1 ofns) extra_cleans
 end
 
@@ -413,12 +412,9 @@ fun clean_forReloc {holheap} =
     case holheap of SOME s => quiet_remove s | _ => ()
   else ()
 
-exception DirNotFound
 fun clean_depdir {depdirname} = let
-  val depds = FileSys.openDir depdirname handle
-      OS.SysErr _ => raise DirNotFound
 in
-  read_files depds
+  read_files {dirname = depdirname}
              (fn _ => true)
              (fn s => FileSys.remove (fullPath [depdirname, s]));
   FileSys.rmDir depdirname;
@@ -428,7 +424,7 @@ end handle OS.SysErr (mesg, _) => let
              print ("make cleanDeps failed with message: "^mesg^"\n");
              false
            end
-         | DirNotFound => true
+         | FileSys.DirNotFound => true
 
 val nice_dir =
     case OS.Process.getEnv "HOME" of
