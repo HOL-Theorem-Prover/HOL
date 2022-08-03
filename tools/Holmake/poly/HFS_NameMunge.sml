@@ -1,7 +1,24 @@
 structure HFS_NameMunge :> HFS_NameMunge =
 struct
 
+
+exception DirNotFound
 val HOLOBJDIR = ".holobjs"
+
+fun base_app {dirname} P action =
+    let
+      open OS.FileSys
+      val ds = openDir dirname handle OS.SysErr _ => raise DirNotFound
+      fun loop () =
+          case readDir ds of
+              NONE => closeDir ds
+            | SOME nextfile =>
+              (if P nextfile then action nextfile else (); loop())
+    in
+      loop() handle e => (closeDir ds; raise e);
+      closeDir ds
+    end
+
 
 
 fun insert_before_last A e [] = raise Fail "HFS_NameMunge: insert_before_last"
@@ -96,5 +113,23 @@ fun closeDir (_, ds, r as ref subdsopt) =
      case subdsopt of
          NONE => ()
        | SOME ds' => (OS.FileSys.closeDir ds'; r := NONE))
+
+fun pushdir d f =
+    let val d0 = OS.FileSys.getDir()
+        val _ = OS.FileSys.chDir d
+        val res = f () handle e => (OS.FileSys.chDir d0; raise e)
+    in
+      OS.FileSys.chDir d0;
+      res
+    end
+
+fun read_files_with_objs {dirname} P action =
+    base_app
+      {dirname=dirname}
+      (fn s => s = HOLOBJDIR orelse P s)
+      (fn s => if s = HOLOBJDIR then
+                 pushdir (OS.Path.concat(dirname, HOLOBJDIR))
+                         (fn () => base_app {dirname="."} P action)
+               else action s)
 
 end (* struct *)

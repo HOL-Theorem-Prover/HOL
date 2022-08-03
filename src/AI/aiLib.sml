@@ -64,10 +64,10 @@ fun inter_increasing l1 l2 = case (l1,l2) of
    Commands
    ------------------------------------------------------------------------ *)
 
-fun exists_file file = OS.FileSys.access (file, []);
+fun exists_file file = HOLFileSys.access (file, []);
 
 fun mkDir_err dir =
-  if exists_file dir then () else OS.FileSys.mkDir dir
+  if exists_file dir then () else HOLFileSys.mkDir dir
 
 fun remove_file file =
   if exists_file file then ignore (OS.FileSys.remove file) else ()
@@ -805,8 +805,8 @@ fun export_terml file tml =
             else ()
     val ostrm = Portable.open_out file
   in
-    (PP.prettyPrint (curry TextIO.output ostrm, 75) (pp_tml tml');
-     TextIO.closeOut ostrm)
+    (PP.prettyPrint (curry HOLFileSys.output ostrm, 75) (pp_tml tml');
+     HOLFileSys.closeOut ostrm)
   end
 
 fun export_goal file (goal as (asl,w)) =
@@ -872,8 +872,8 @@ fun write_tmdata (encf,tmlf) file tmdata =
     val ostrm = Portable.open_out file
     val sexp = enc_tmdata (encf,tmlf) tmdata
   in
-    PP.prettyPrint (curry TextIO.output ostrm, 75) (HOLsexp.printer sexp);
-    TextIO.closeOut ostrm
+    PP.prettyPrint (curry HOLFileSys.output ostrm, 75) (HOLsexp.printer sexp);
+    HOLFileSys.closeOut ostrm
   end
 
 fun read_tmdata decf file =
@@ -885,8 +885,8 @@ fun write_data encf file tmdata =
     val ostrm = Portable.open_out file
     val sexp = encf tmdata
   in
-    PP.prettyPrint (curry TextIO.output ostrm, 75) (HOLsexp.printer sexp);
-    TextIO.closeOut ostrm
+    PP.prettyPrint (curry HOLFileSys.output ostrm, 75) (HOLsexp.printer sexp);
+    HOLFileSys.closeOut ostrm
   end
 
 fun read_data decf file = valOf (decf (HOLsexp.fromFile file))
@@ -928,19 +928,19 @@ fun string_to_realll s =
 
 fun bare_readl path =
   let
-    val file = TextIO.openIn path
-    fun loop file = case TextIO.inputLine file of
+    val file = HOLFileSys.openIn path
+    fun loop file = case HOLFileSys.inputLine file of
         SOME line => line :: loop file
       | NONE => []
     val l = loop file
   in
-    (TextIO.closeIn file; l)
+    (HOLFileSys.closeIn file; l)
   end
 
 fun readl path =
   let
-    val file = TextIO.openIn path
-    fun loop file = case TextIO.inputLine file of
+    val file = HOLFileSys.openIn path
+    fun loop file = case HOLFileSys.inputLine file of
         SOME line => line :: loop file
       | NONE => []
     val l1 = loop file
@@ -949,38 +949,38 @@ fun readl path =
     val l2 = map rm_last_char l1 (* removing end line *)
     val l3 = filter (not o is_empty) l2
   in
-    (TextIO.closeIn file; l3)
+    (HOLFileSys.closeIn file; l3)
   end
 
 fun readl_empty path =
   let
-    val file = TextIO.openIn path
-    fun loop file = case TextIO.inputLine file of
+    val file = HOLFileSys.openIn path
+    fun loop file = case HOLFileSys.inputLine file of
         SOME line => line :: loop file
       | NONE => []
     val l1 = loop file
     fun rm_last_char s = String.substring (s,0,String.size s - 1)
     val l2 = map rm_last_char l1 (* removing end line *)
   in
-    (TextIO.closeIn file; l2)
+    (HOLFileSys.closeIn file; l2)
   end
 
 fun write_file file s =
-  let val oc = TextIO.openOut file in
-    TextIO.output (oc,s); TextIO.closeOut oc
+  let val oc = HOLFileSys.openOut file in
+    HOLFileSys.output (oc,s); HOLFileSys.closeOut oc
   end
 
 fun stream_to_string path f =
-  let val oc = TextIO.openOut path in
-    f oc; TextIO.closeOut oc; readl path
+  let val oc = HOLFileSys.openOut path in
+    f oc; HOLFileSys.closeOut oc; readl path
   end
 
 fun erase_file file = write_file file "" handle _ => ()
 
 fun writel file sl =
-  let val oc = TextIO.openOut file in
-    app (fn s => TextIO.output (oc, s ^ "\n")) sl;
-    TextIO.closeOut oc
+  let val oc = HOLFileSys.openOut file in
+    app (fn s => HOLFileSys.output (oc, s ^ "\n")) sl;
+    HOLFileSys.closeOut oc
   end
 
 fun ancestors_path path =
@@ -1005,8 +1005,8 @@ fun writel_path dir path sl =
   )
 
 fun append_file file s =
-  let val oc = TextIO.openAppend file in
-    TextIO.output (oc,s); TextIO.closeOut oc
+  let val oc = HOLFileSys.openAppend file in
+    HOLFileSys.output (oc,s); HOLFileSys.closeOut oc
   end
 
 fun append_endline file s = append_file file (s ^ "\n")
@@ -1027,13 +1027,13 @@ fun readl_rm file =
 
 fun listDir_all dirName =
   let
-    val dir = OS.FileSys.openDir dirName
-    fun read files = case OS.FileSys.readDir dir of
+    val dir = HOLFileSys.openDir dirName
+    fun read files = case HOLFileSys.readDir dir of
         NONE => rev files
       | SOME file => read (file :: files)
     val r = read []
   in
-    OS.FileSys.closeDir dir; r
+    HOLFileSys.closeDir dir; r
   end
 
 fun listDir dirName =

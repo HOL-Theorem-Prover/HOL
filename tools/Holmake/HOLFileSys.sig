@@ -27,6 +27,7 @@ sig
   val input : TextIO.instream -> string
 
   val openOut : string -> TextIO.outstream
+  val openAppend : string -> TextIO.outstream
   val output : TextIO.outstream * string -> unit
   val flushOut : TextIO.outstream -> unit
   val closeOut : TextIO.outstream -> unit

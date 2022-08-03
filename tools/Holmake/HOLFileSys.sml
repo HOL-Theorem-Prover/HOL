@@ -126,6 +126,7 @@ val inputAll = TextIO.inputAll
 val inputLine = TextIO.inputLine
 val openIn = readfn TextIO.openIn
 val openOut = writefn TextIO.openOut
+val openAppend = writefn TextIO.openAppend
 val output = TextIO.output
 val stdErr = TextIO.stdErr
 val stdOut = TextIO.stdOut
@@ -153,7 +154,6 @@ val chDir = OS.FileSys.chDir
 val mkDir = OS.FileSys.mkDir
 val rmDir = OS.FileSys.rmDir
 type dirstream = HFS_NameMunge.dirstream
-exception DirNotFound
 val openDir = HFS_NameMunge.openDir
 val readDir = HFS_NameMunge.readDir
 val closeDir = HFS_NameMunge.closeDir
@@ -172,19 +172,7 @@ fun read_files {dirname} P action =
       closeDir ds
     end
 
-fun read_files_with_objs {dirname} P action =
-    let
-      open OS.FileSys
-      val ds = openDir dirname handle OS.SysErr _ => raise DirNotFound
-      fun loop () =
-          case readDir ds of
-              NONE => closeDir ds
-            | SOME nextfile =>
-              (if P nextfile then action nextfile else (); loop())
-    in
-      loop() handle e => (closeDir ds; raise e);
-      closeDir ds
-    end
+val read_files_with_objs = HFS_NameMunge.read_files_with_objs
 
 
 
