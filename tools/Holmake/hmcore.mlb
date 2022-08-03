@@ -7,6 +7,8 @@ holpathdb.sml
 mlton/PolyML.sml
 ../../tools-poly/Holmake/Systeml.sml
 HOLFS_dtype.sml
+HFS_NameMunge.sig
+poly/HFS_NameMunge.sml
 HOLFileSys.sig
 HOLFileSys.sml
 Holdep_tokens.sig
