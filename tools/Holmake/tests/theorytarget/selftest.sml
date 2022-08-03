@@ -2,7 +2,7 @@ open testutils
 
 val _ = tprint "Checking 'Holmake fooTheory' in subdir"
 
-val _ = OS.FileSys.chDir "subdir"
+val _ = HOLFileSys.chDir "subdir"
 
 val op++ = OS.Path.concat
 val result =
@@ -13,7 +13,7 @@ val result =
                      ["fooTheory"])
 
 val _ = if OS.Process.isSuccess result then
-          if OS.FileSys.access ("fooTheory.dat", [OS.FileSys.A_READ]) then
+          if HOLFileSys.access ("fooTheory.dat", [OS.FileSys.A_READ]) then
             OK()
           else die "fooTheory.dat doesn't exist"
         else die "Holmake failed"
