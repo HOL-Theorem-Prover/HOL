@@ -312,11 +312,15 @@ val _ =
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";
     compile [] "parse_glob.sml";
-    compile [] "internal_functions.sig";
-    compile [] "internal_functions.sml";
     compile [] "HOLFS_dtype.sml";
+    compile [] "HFS_NameMunge.sig";
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "HFS_NameMunge.sml";
+    FileSys.chDir "..";
     compile [] "HOLFileSys.sig";
     compile [] "HOLFileSys.sml";
+    compile [] "internal_functions.sig";
+    compile [] "internal_functions.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
     compile [] "QuoteFilter.sml";
@@ -340,7 +344,7 @@ val _ =
     compile [] "HM_Core_Cline.sml";
     compile [] "holdeptool.sml";
     compile [] "mosml_holdeptool.sml";
-    link{extras = [], srcobj = "mosml_holdeptool.uo",
+    link{extras = ["-I", "mosml"], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     compile [] "HM_DepGraph.sig";
     compile [] "HM_DepGraph.sml";

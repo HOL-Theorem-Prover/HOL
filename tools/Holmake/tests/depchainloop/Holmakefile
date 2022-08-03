@@ -1,5 +1,7 @@
 OPTIONS = NO_OVERLAY
+ifdef POLY
 CLINE_OPTIONS = --poly_not_hol
+endif
 
 depchainloop-selftest.log: selftest.exe
 	@$(tee ./$<, $@)

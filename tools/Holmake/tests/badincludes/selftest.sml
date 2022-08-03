@@ -48,4 +48,7 @@ val _ = inDir "onesteploopdir"
 val _ = inDir "nestedloopdir"
               (t (fail_and ["INCLUDES chain"]) "More complex INCLUDES loop") []
 val _ = inDir "loopish_but_ok"
-              (t (succeed_and ["Finished"]) "INCLUDES DAG OK") ["-r"]
+              (t (succeed_and [if Systeml.ML_SYSNAME = "poly" then "Finished"
+                               else "Yay"])
+                 "INCLUDES DAG OK")
+              ["-r"]
