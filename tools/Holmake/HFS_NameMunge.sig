@@ -1,6 +1,7 @@
 signature HFS_NameMunge =
 sig
 
+  val HOLOBJDIR : string (* for use in Holmakefiles' HOL_LNSIGOBJ *)
   val HOLtoFS : string -> {fullfile : string, dir : string} option
   val toFSfn : bool -> (string -> 'a) -> (string -> 'a)
 

@@ -1,7 +1,8 @@
 structure HFS_NameMunge :> HFS_NameMunge =
 struct
 
-val hiddenHOLdir = ".holobjs"
+val HOLOBJDIR = ".holobjs"
+
 
 fun insert_before_last A e [] = raise Fail "HFS_NameMunge: insert_before_last"
   | insert_before_last A e [last] = (List.rev (e::A), last)
@@ -34,7 +35,7 @@ fun HOLtoFS nm =
     in
       if changep then
         let
-          val (arcs', last) = insert_before_last [] hiddenHOLdir arcs
+          val (arcs', last) = insert_before_last [] HOLOBJDIR arcs
           val dir = OS.Path.toString {isAbs = isAbs, vol = vol, arcs = arcs'}
         in
           SOME {fullfile = OS.Path.concat(dir, last), dir = dir}
@@ -73,7 +74,7 @@ fun readDir (dirname, ds, r as ref subdsopt) =
     case subdsopt of
         NONE => (case OS.FileSys.readDir ds of
                      NONE => NONE
-                   | SOME s => if s = hiddenHOLdir then
+                   | SOME s => if s = HOLOBJDIR then
                                  let val p = OS.Path.concat(dirname, s)
                                  in
                                    if OS.FileSys.isDir p then

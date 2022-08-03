@@ -299,6 +299,11 @@ fun shell arg =
 fun tee (cmd, fname) =
     "{ { { { " ^ cmd ^ " ; echo $? >&3; } | tee " ^ fname ^ " >&4; } 3>&1; } | { read xs; exit $xs; } } 4>&1"
 
+fun hol2fs s =
+    case HFS_NameMunge.HOLtoFS s of
+        NONE => s
+      | SOME {fullfile,...} => fullfile
+
 fun function_call (fnname, args, eval) = let
   open Substring
 in
@@ -383,6 +388,13 @@ in
                let val args_evalled = map eval args
                in tee (hd args_evalled, hd (tl args_evalled))
                end
+  | "hol2fs" => if length args <> 1 then
+                  raise Fail "Bad number of arguments to 'hol2fs' function"
+                else
+                  let val args_evalled = map eval args
+                  in
+                    hol2fs (hd args_evalled)
+                  end
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 
