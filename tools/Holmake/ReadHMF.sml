@@ -406,6 +406,9 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
               holpathdb.search_for_extensions find_includes
                 {starter_dirs = [dir], skip = Binaryset.empty String.compare}
           val _ = List.app holpathdb.extend_db extensions
+          val _ = if verbosity > 1 then
+                    print ("Completed holpathdb analysis in " ^ dir ^ "\n")
+                  else ()
           val base_env = let
             fun foldthis ({vname,path}, env) =
                 env_extend (vname, [LIT path]) env
