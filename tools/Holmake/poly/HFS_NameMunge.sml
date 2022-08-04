@@ -91,21 +91,26 @@ fun readDir (dirname, ds, r as ref subdsopt) =
     case subdsopt of
         NONE => (case OS.FileSys.readDir ds of
                      NONE => NONE
-                   | SOME s => if s = HOLOBJDIR then
-                                 let val p = OS.Path.concat(dirname, s)
-                                 in
-                                   if OS.FileSys.isDir p then
-                                     let val ds' = OS.FileSys.openDir p
-                                     in
-                                       case OS.FileSys.readDir ds' of
-                                           NONE => OS.FileSys.readDir ds
-                                         | SOME s' => (r := SOME ds'; SOME s')
-                                     end
-                                   else SOME s
-                                 end
-                               else SOME s)
+                   | SOME s =>
+                     if s = HOLOBJDIR then
+                       let val p = OS.Path.concat(dirname, s)
+                       in
+                         if OS.FileSys.isDir p then
+                           let val ds' = OS.FileSys.openDir p
+                               val _ = print "opening a .holobjs dir\n"
+                           in
+                             case OS.FileSys.readDir ds' of
+                                 NONE => (OS.FileSys.closeDir ds';
+                                          OS.FileSys.readDir ds)
+                               | SOME s' => (r := SOME ds'; SOME s')
+                           end
+                         else SOME s
+                       end
+                     else SOME s)
       | SOME ds' => (case OS.FileSys.readDir ds' of
-                         NONE => (r := NONE; OS.FileSys.readDir ds)
+                         NONE => (r := NONE;
+                                  OS.FileSys.closeDir ds';
+                                  OS.FileSys.readDir ds)
                        | SOME s => SOME s)
 
 fun closeDir (_, ds, r as ref subdsopt) =
