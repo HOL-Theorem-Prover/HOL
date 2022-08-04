@@ -97,7 +97,6 @@ fun readDir (dirname, ds, r as ref subdsopt) =
                        in
                          if OS.FileSys.isDir p then
                            let val ds' = OS.FileSys.openDir p
-                               val _ = print "opening a .holobjs dir\n"
                            in
                              case OS.FileSys.readDir ds' of
                                  NONE => (OS.FileSys.closeDir ds';
