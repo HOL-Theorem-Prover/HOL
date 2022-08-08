@@ -995,9 +995,7 @@ val R = “$< : real -> real -> bool”
 val Rthms = [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)]
 
 *)
-fun giveexp t =
-    if is_pow t then ALL_CONV t
-    else REWR_CONV POW_1' t
+val giveexp = REWR_CONV POW_1'
 fun mulrelnorm0 R Rthms solver0 stk t =
     let
       val mkERR = mk_HOL_ERR "realSimps" "mulrelnorm"
@@ -1115,14 +1113,18 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                         (REWR_CONV REAL_MUL_COMM THENC stage2 THENC
                          RAND_CONV NUM_REDUCE ) mul_t |> SYM
                       end
+                val lge = if Arbint.abs el = Arbint.one then giveexp
+                          else ALL_CONV
+                val rge = if Arbint.abs er = Arbint.one then giveexp
+                          else ALL_CONV
             in
               FORK_CONV (mul_extract (chk (l_t,el)) THENC
-                         ifMULT (LAND_CONV (giveexp THENC common false ld))
-                                (giveexp THENC common true ld) THENC
+                         ifMULT (LAND_CONV (lge THENC common false ld))
+                                (lge THENC common true ld) THENC
                          TRY_CONV (REWR_CONV REAL_MUL_ASSOC'),
                          mul_extract (chk (r_t,er)) THENC
-                         ifMULT (LAND_CONV (giveexp THENC common false rd))
-                                (giveexp THENC common true rd) THENC
+                         ifMULT (LAND_CONV (rge THENC common false rd))
+                                (rge THENC common true rd) THENC
                          TRY_CONV (REWR_CONV REAL_MUL_ASSOC')) THENC
               apply_thms
             end t
@@ -1169,6 +1171,8 @@ fun elim_bare_negations t =
       | SOME a => if is_literalish a then raise UNCHANGED
                   else REWR_CONV REAL_NEG_MINUS1 t
 
+(* if t is of form -c * x = y, then ensure that the r.h.s. has a constant
+   coefficient at the front, adding a multiplication by one if necessary *)
 fun negatedL_eq t =
     let
       val (l,r) = dest_eq t handle HOL_ERR _ => raise UNCHANGED

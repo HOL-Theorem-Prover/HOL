@@ -198,6 +198,9 @@ val _ = List.app nftest [
       ("MULRELNORM28", simp, “x * -2 * y = z”, “2 * (x * y) = -z”),
       ("MULRELNORM29", simp, “x * -2 * y = -a * z * -b”, “2 * (x * y) = -a * b * z”),
       ("MULRELNORM30", simp, “4r * B <= 4 * (A * B)”, “B:real <= A * B”),
+      ("MULRELNORM31", simp,
+       “X * 2 pow e1 * 2 pow e2 < 2 pow e3 * (2 pow e2) pow 2”,
+       “X * 2 pow e1 < 2 pow e2 * 2 pow e3”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
