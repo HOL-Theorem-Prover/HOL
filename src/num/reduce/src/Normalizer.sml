@@ -12,8 +12,16 @@ struct
 
 open HolKernel Parse boolLib boolSimps liteLib;
 
-open arithmeticTheory numSyntax Num_conv mesonLib tautLib Arithconv simpLib
+open arithmeticTheory numSyntax Num_conv tautLib Arithconv simpLib
      normalForms;
+
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars arithmetic_grammars
+end
+
+open Parse
+
 
 val ERR = mk_HOL_ERR "Normalizer";
 fun failwith s = raise ERR "?" s
@@ -32,9 +40,15 @@ fun INDUCT_TAC g =
   INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g
   handle HOL_ERR _ => raise ERR "INDUCT_TAC" "";
 
-(* This fixes loading issues when sometimes ‘add’, ‘mul’ and ‘pwr’ are defined
-   already in the user theory. *)
-val _ = map hide ["add", "mul", "pwr"];
+fun is_comm t =
+    let val (l,r) = dest_eq $ #2 $ strip_forall t
+        val (f, xs) = strip_comb l
+        val _ = length xs = 2 orelse raise mk_HOL_ERR "" "" ""
+        val (g, ys) = strip_comb r
+        val _ = length ys = 2 orelse raise mk_HOL_ERR "" "" ""
+    in
+      f ~~ g andalso el 1 xs ~~ el 2 ys andalso el 2 xs ~~ el 1 ys
+    end handle HOL_ERR _ => false
 
 val SEMIRING_PTHS = prove
    (“(!(x:'a) y z. add x (add y z) = add (add x y) z) /\
@@ -98,7 +112,19 @@ val SEMIRING_PTHS = prove
       (!m n p. mul (add m n) p = add (mul m p) (mul n p)) /\
       (!x. mul x r1 = x) /\
       (!x. mul x r0 = r0)”
-    MP_TAC >- ASM_MESON_TAC[] \\
+    MP_TAC
+    >- (rpt strip_tac >>
+        TRY (FIRST_ASSUM MATCH_ACCEPT_TAC) >>
+        FILTER_ASM_REWRITE_TAC (not o is_comm) [] >>
+        rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+        TRY (FIRST_ASSUM MATCH_ACCEPT_TAC) >>
+        ONCE_ASM_REWRITE_TAC[] >>
+        FILTER_ASM_REWRITE_TAC(not o is_comm)[] >>
+        UNDISCH_THEN “!x:'a y. add x y :'a = add y x”
+          (fn th => CONV_TAC (LAND_CONV (REWR_CONV th))) >>
+        UNDISCH_THEN “!x:'a y. mul x y :'a = mul y x”
+          (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) >>
+        REWRITE_TAC[]) >>
     MAP_EVERY (fn t => UNDISCH_THEN t (K ALL_TAC))
     [“!(x:'a) y z. add x (add y z) = add (add x y) z”,
      “!(x:'a) y. add x y :'a = add y x”,
@@ -111,9 +137,8 @@ val SEMIRING_PTHS = prove
     SUBGOAL_THEN “!(x:'a) (y:'a) (n:num). pwr (mul x y) n = mul (pwr x n) (pwr y n)”
     ASSUME_TAC
     >- (GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN ASM_SIMP_TAC bool_ss []) \\
-    SUBGOAL_THEN “!(x:'a) (m:num) n. pwr (pwr x m) n = pwr x (m * n)”
-     (fn th => ASM_MESON_TAC[th]) THEN
-    GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [MULT_CLAUSES]);
+    FILTER_ASM_REWRITE_TAC (not o is_comm) [] >>
+    ID_SPEC_TAC “q:num” THEN INDUCT_TAC THEN ASM_SIMP_TAC bool_ss[MULT_CLAUSES])
 
 val true_tm = concl TRUTH; (* or T *)
 

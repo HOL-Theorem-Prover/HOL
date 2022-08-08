@@ -14,8 +14,9 @@ struct
 
 open HolKernel Parse boolLib bossLib;
 
-open prim_recTheory arithmeticTheory numLib mesonLib reduceLib tautLib liteLib;
+open prim_recTheory arithmeticTheory numLib reduceLib tautLib liteLib;
 open realaxTheory realTheory realSyntax RealArith jrhUtils normalForms;
+open realSimps
 
 open Sub_and_cond Normalizer Grobner;
 
@@ -54,7 +55,6 @@ val SKOLEM_CONV = Canon_Port.SKOLEM_CONV;
 (* for HOL-Light compatibilities  *)
 val REAL_INV_MUL = REAL_INV_MUL';
 val REAL_INV_DIV = REAL_INV_DIV';
-fun MESON ths tm = prove(tm,MESON_TAC ths);
 val NNF_CONV = normalForms.NNFD_CONV;
 val NUM_REDUCE_CONV = reduceLib.REDUCE_CONV;
 
@@ -343,25 +343,19 @@ end;
 (* Multiplication.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-local open Arbint in
+local open Arbint simpLib in
 val REAL_RAT_MUL_CONV = let
   val pth_nocancel = prove
    (“(x1 / y1) * (x2 / y2) = (x1 * x2) / (y1 * y2 :real)”,
-    REWRITE_TAC [real_div, REAL_INV_MUL] THEN
-    MESON_TAC [REAL_MUL_ASSOC, REAL_MUL_COMM])
+    SIMP_TAC bool_ss [real_div, REAL_INV_MUL',
+                      AC REAL_MUL_ASSOC REAL_MUL_COMM])
   and pth_cancel = prove
    (“~(d1 = (&0 :real)) /\ ~(d2 = &0) /\
      (d1 * u1 = x1) /\ (d2 * u2 = x2) /\
      (d2 * v1 = y1) /\ (d1 * v2 = y2)
      ==> ((x1 / y1) * (x2 / y2) = (u1 * u2) / (v1 * v2))”,
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN (SUBST1_TAC o SYM)) THEN
-    ASM_REWRITE_TAC[real_div, REAL_INV_MUL] THEN
-    ONCE_REWRITE_TAC[AC (REAL_MUL_ASSOC,REAL_MUL_COMM)
-     “((d1 * u1) * (id2 * iv1)) * ((d2 * u2) * (id1 * iv2 :real)) =
-      (u1 * u2) * (iv1 * iv2) * (id2 * d2) * (id1 * d1)”] THEN
-    ASM_SIMP_TAC bool_ss [REAL_MUL_LINV, REAL_MUL_RID])
+    rpt strip_tac >>
+    RW_TAC (bool_ss ++ RMULCANON_ss) [real_div, REAL_INV_MUL', nonzerop_def])
   and x1 = “x1:real” and x2 = “x2:real”
   and y1 = “y1:real” and y2 = “y2:real”
   and u1 = “u1:real” and u2 = “u2:real”
@@ -570,10 +564,9 @@ val (REAL_RING,real_ideal_cofactors) = let
     REWRITE_TAC[GSYM REAL_ENTIRE] THEN REAL_ARITH_TAC)
   and REAL_RABINOWITSCH = prove
    (“!x y:real. ~(x = y) <=> ?z. (x - y) * z = &1”,
-    REPEAT GEN_TAC THEN
-    GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) empty_rewrites
-                    [GSYM REAL_SUB_0] THEN
-    MESON_TAC[REAL_MUL_RINV, REAL_MUL_LZERO, REAL_ARITH “~(&1 = (&0 :real))”])
+    REWRITE_TAC[EQ_IMP_THM] >> rpt strip_tac >>
+    FULL_SIMP_TAC std_ss [EQ_IMP_THM, REAL_SUB_REFL, REAL_MUL_LZERO, REAL_10] >>
+    irule_at Any REAL_MUL_RINV >> ASM_REWRITE_TAC [REAL_SUB_0])
   and init = GEN_REWRITE_CONV ONCE_DEPTH_CONV empty_rewrites [DECIMAL];
   val (pure,ideal) =
     RING_AND_IDEAL_CONV
@@ -648,9 +641,11 @@ val REAL_FIELD = let
                (SOME{Thy = "real", Name = "REAL_POW_ADD"}, REAL_POW_ADD)],
       congs = [], filter = NONE, ac = [], dprocs = []};
 
-  val pth = MESON[REAL_POW_EQ_0,REAL_OF_NUM_EQ]
+  val pth = prove(
        “~(x pow n = &0) <=>
-        ~((x:real) = &0) \/ (&n = &0) \/ ~(x pow n = &0)”;
+        ~((x:real) = &0) \/ (&n = &0) \/ ~(x pow n = &0)”,
+       SIMP_TAC bool_ss [REAL_POW_EQ_0, DE_MORGAN_THM,EQ_IMP_THM,DISJ_IMP_THM,
+                         REAL_OF_NUM_EQ]);
 
   val easy_nz_conv = QCONV
      (LAND_CONV (GEN_REWRITE_CONV TRY_CONV empty_rewrites [pth]) THENC

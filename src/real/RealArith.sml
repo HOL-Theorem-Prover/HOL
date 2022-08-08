@@ -20,7 +20,8 @@ struct
 
 open HolKernel Parse boolLib liteLib;
 
-open pairTheory pairLib reduceLib tautLib simpLib mesonLib Ho_Rewrite jrhUtils
+open pairTheory pairLib reduceLib tautLib simpLib BasicProvers Ho_Rewrite
+     jrhUtils
      Canon_Port AC prim_recTheory numTheory numLib numSyntax arithmeticTheory;
 
 open normalForms;  (* for HOL-Light's GEN_NNF_CONV, etc. *)
@@ -2188,11 +2189,7 @@ val (mk_numeric,
      ABSMAXMIN_ELIM_CONV1,ABSMAXMIN_ELIM_CONV2,REAL_LINEAR_PROVER);
  *)
 
-fun GEN_REAL_ARITH0 (mk_numeric,
-                     NUMERIC_EQ_CONV,NUMERIC_GE_CONV,NUMERIC_GT_CONV,
-                     POLY_CONV,POLY_NEG_CONV,POLY_ADD_CONV,POLY_MUL_CONV,
-                     absconv1,absconv2,prover) =
-let
+local
   val pth_init = prove
    (“(x < y <=> y - x > &0) /\
      (x <= y <=> y - x >= &0) /\
@@ -2204,8 +2201,11 @@ let
      (~(x > y) <=> y - x >= &0) /\
      (~(x >= y) <=> y - x > &0) /\
      (~(x = y) <=> x - y > &0 \/ ~(x - y) > &0)”,
-    REWRITE_TAC[real_gt, real_ge, REAL_SUB_LT, REAL_SUB_LE, REAL_NEG_SUB] THEN
-    REWRITE_TAC[REAL_SUB_0, real_lt] THEN MESON_TAC[REAL_LE_ANTISYM]);
+    REWRITE_TAC[real_gt, real_ge, REAL_SUB_LT, REAL_SUB_LE, REAL_NEG_SUB] >>
+    REWRITE_TAC[REAL_SUB_0, real_lt] >>
+    EQ_TAC THEN REPEAT STRIP_TAC THEN FULL_SIMP_TAC bool_ss [REAL_LE_REFL] >>
+    CCONTR_TAC THEN FULL_SIMP_TAC bool_ss [] >>
+    drule_all $ iffLR REAL_LE_ANTISYM >> ASM_SIMP_TAC bool_ss [])
 
   val pth_final = tautLib.TAUT `(~p ==> F) ==> p`;
 
@@ -2221,7 +2221,8 @@ let
      (x > &0 /\ y > &0 ==> x + y > &0)”,
     SIMP_TAC arith_ss [REAL_ADD_LID, REAL_ADD_RID, real_ge, real_gt] THEN
     REWRITE_TAC[REAL_LE_LT] THEN
-    MESON_TAC[REAL_ADD_LID, REAL_ADD_RID, REAL_LT_ADD]);
+    REPEAT STRIP_TAC >>
+    RW_TAC bool_ss [REAL_LT_ADD, REAL_ADD_RID, REAL_ADD_LID]);
 
   val pth_mul = prove
    (“((x = &0) /\ (y = &0) ==> (x * y = &0 :real)) /\
@@ -2234,7 +2235,7 @@ let
      (x > &0 /\ y >= &0 ==> x * y >= &0) /\
      (x > &0 /\ y > &0 ==> x * y > &0)”,
     SIMP_TAC arith_ss [REAL_MUL_LZERO, REAL_MUL_RZERO, real_ge, real_gt] THEN
-    SIMP_TAC arith_ss [REAL_LT_LE, REAL_LE_MUL] THEN MESON_TAC[REAL_ENTIRE]);
+    SIMP_TAC arith_ss [REAL_LT_LE, REAL_LE_MUL, REAL_ENTIRE]);
 
   val pth_emul = prove
    (“(y = &0) ==> !x. x * y = &0 :real”,
@@ -2266,6 +2267,12 @@ let
   val is_ge = realSyntax.is_geq
   and is_gt = realSyntax.is_greater
   and is_req = is_binop eq_tm;
+in
+fun GEN_REAL_ARITH0 (mk_numeric,
+                     NUMERIC_EQ_CONV,NUMERIC_GE_CONV,NUMERIC_GT_CONV,
+                     POLY_CONV,POLY_NEG_CONV,POLY_ADD_CONV,POLY_MUL_CONV,
+                     absconv1,absconv2,prover) =
+let
 
   (* NOTE: sometimes the real arith expression is hidding in deeper level, e.g.
      in {x | x + 0 < 1}. Some proofs require their reducitions. -- Chun Tian *)
@@ -2457,7 +2464,7 @@ in
     MP (INST [p_tm |-> tm] pth_final) th
   end
 end;
-
+end (* local *)
 (* ------------------------------------------------------------------------- *)
 (* Bootstrapping REAL_ARITH: trivial abs-elim and only integer constants.    *)
 (* ------------------------------------------------------------------------- *)
