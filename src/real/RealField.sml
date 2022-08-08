@@ -642,8 +642,7 @@ val REAL_FIELD = let
       congs = [], filter = NONE, ac = [], dprocs = []};
 
   val pth = prove(
-       “~(x pow n = &0) <=>
-        ~((x:real) = &0) \/ (&n = &0) \/ ~(x pow n = &0)”,
+       “x pow n <> 0 <=> x <> 0 \/ &n = 0r \/ x pow n <> 0”,
        SIMP_TAC bool_ss [REAL_POW_EQ_0, DE_MORGAN_THM,EQ_IMP_THM,DISJ_IMP_THM,
                          REAL_OF_NUM_EQ]);
 
