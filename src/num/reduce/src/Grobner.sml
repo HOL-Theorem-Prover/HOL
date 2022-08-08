@@ -20,6 +20,12 @@ open HolKernel Parse boolLib liteLib;
 open boolSimps simpLib arithmeticTheory Num_conv numSyntax mesonLib metisLib
      tautLib Arithconv Canon_Port normalForms reduceLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars arithmetic_grammars
+end
+
+open Parse
 open Normalizer;
 
 fun failwith s = raise mk_HOL_ERR "Grobner" "?" s
@@ -881,7 +887,12 @@ val NUM_SIMPLIFY_CONV = let
      (ODD(x) <=> (!y. ~(x = 2 * y))) /\
      (~EVEN(x) <=> (!y. ~(x = 2 * y))) /\
      (~ODD(x) <=> (!y. ~(x = SUC(2 * y))))”,
-    METIS_TAC [NOT_EXISTS_THM, EVEN_EXISTS, ODD_EXISTS, ODD_EVEN, EVEN_ODD]);
+    rpt strip_tac >| [
+      REWRITE_TAC[EVEN_ODD, ODD_EXISTS],
+      REWRITE_TAC[ODD_EVEN, EVEN_EXISTS],
+      REWRITE_TAC[EVEN_EXISTS],
+      REWRITE_TAC[ODD_EXISTS]
+    ] >> CONV_TAC (LAND_CONV NOT_EXISTS_CONV) >> REWRITE_TAC[])
 
   fun NUM_MULTIPLY_CONV pos tm =
     if is_forall tm orelse is_exists tm orelse is_uexists tm then
@@ -975,7 +986,8 @@ val NUM_RING = let
     DISJ_CASES_TAC (SPECL [“y:num”, “z:num”] LE_CASES) THEN
     REPEAT(FIRST_X_ASSUM
      (CHOOSE_THEN SUBST1_TAC o REWRITE_RULE[LE_EXISTS])) THEN
-    ASM_MESON_TAC[NUM_INTEGRAL_LEMMA, ADD_SYM, MULT_SYM]);
+    Lib.with_flag (mesonLib.chatting, 0)
+      (ASM_MESON_TAC[NUM_INTEGRAL_LEMMA, ADD_SYM, MULT_SYM]));
   val rawring =
     RING(Arbrat.fromNat o dest_numeral,mk_numeral o Arbrat.toNat,
          NUM_EQ_CONV,
