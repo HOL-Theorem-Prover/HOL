@@ -8,7 +8,6 @@ open realTheory intrealTheory wordsLib realLib
 open pred_setTheory set_relationTheory
 
 val () = new_theory "binary_ieee"
-val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss","NORMEQ_ss"]
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
@@ -88,7 +87,7 @@ val float_is_nan_def = Define`
        | _ => F`
 
 val float_is_signalling_def = Define`
-   float_is_signalling (x: ('t, 'w) float) =
+   float_is_signalling (x: ('t, 'w) float) <=>
       float_is_nan x /\ ~word_msb x.Significand`
 
 val float_is_infinite_def = Define`
@@ -98,11 +97,11 @@ val float_is_infinite_def = Define`
        | _ => F`
 
 val float_is_normal_def = Define`
-   float_is_normal (x: ('t, 'w) float) =
+   float_is_normal (x: ('t, 'w) float) <=>
       x.Exponent <> 0w /\ x.Exponent <> UINT_MAXw`
 
 val float_is_subnormal_def = Define`
-   float_is_subnormal (x: ('t, 'w) float) =
+   float_is_subnormal (x: ('t, 'w) float) <=>
       (x.Exponent = 0w) /\ x.Significand <> 0w`
 
 val float_is_zero_def = Define`
@@ -216,7 +215,7 @@ val () = Datatype`
             | roundTowardZero`
 
 Definition is_closest_def:
-   is_closest s x a =
+   is_closest s x a <=>
       a IN s /\
       !b. b IN s ==> abs (float_to_real a - x) <= abs (float_to_real b - x)
 End
@@ -471,7 +470,7 @@ val float_round_def = Define`
 val float_round_with_flags_def = Define`
   float_round_with_flags mode to_neg r =
   let x = float_round mode to_neg r : ('t, 'w) float and a = abs r in
-  let inexact = float_value x <> Float r in
+  let inexact = (float_value x <> Float r) in
     ((clear_flags with
         <| Overflow := (float_is_infinite x \/ 2 pow (INT_MIN (:'w)) <= a)
          (* IEEE-754 permits a number of ways to detect underflow. Below
@@ -637,7 +636,7 @@ val float_mul_add_def = Define`
    float_mul_add mode
       (x: ('t, 'w) float) (y: ('t, 'w) float) (z: ('t, 'w) float) =
       let signP = x.Sign ?? y.Sign in
-      let infP = float_is_infinite x  \/ float_is_infinite y
+      let infP = (float_is_infinite x \/ float_is_infinite y)
       in
          if float_is_nan x \/ float_is_nan y \/ float_is_nan z then
             (check_for_signalling [x; y; z],
@@ -669,7 +668,7 @@ val float_mul_sub_def = Define`
    float_mul_sub mode
       (x: ('t, 'w) float) (y: ('t, 'w) float) (z: ('t, 'w) float) =
       let signP = x.Sign ?? y.Sign in
-      let infP = float_is_infinite x  \/ float_is_infinite y
+      let infP = (float_is_infinite x \/ float_is_infinite y)
       in
          if float_is_nan x \/ float_is_nan y \/ float_is_nan z then
             (check_for_signalling [x; y; z],
@@ -748,7 +747,7 @@ val float_unordered_def = Define`
       (float_compare x y = UN)`
 
 val exponent_boundary_def = Define`
-   exponent_boundary (y: ('t, 'w) float) (x: ('t, 'w) float) =
+   exponent_boundary (y: ('t, 'w) float) (x: ('t, 'w) float) <=>
       (x.Sign = y.Sign) /\ (w2n x.Exponent = w2n y.Exponent + 1) /\
       (x.Exponent <> 1w) /\ (y.Significand = -1w) /\ (x.Significand = 0w)`
 
@@ -813,7 +812,7 @@ val div_twopow =
    |> Q.GENL [`n`, `x`, `u`]
 
 val div_le = Q.prove(
-   `!a b c. 0r < a ==> (b / a <= c / a = b <= c)`,
+   `!a b c. 0r < a ==> (b / a <= c / a <=> b <= c)`,
    metis_tac [REAL_LE_LMUL, REAL_DIV_RMUL,
               REAL_POS_NZ, REAL_MUL_COMM]
    )
@@ -829,7 +828,7 @@ val two_mod_not_one = Q.prove(
    `!n. 0 < n ==> 2 MOD n <> 1`, tac)
 
 val two_mod_eq_zero = Q.prove(
-   `!n. 0 < n ==> ((2 MOD n = 0) = (n = 1) \/ (n = 2))`,
+   `!n. 0 < n ==> (2 MOD n = 0 <=> n = 1 \/ n = 2)`,
    tac
    )
 
@@ -939,7 +938,7 @@ val not_max_suc_lt_dimword = Q.prove(
 val pow_ge2 =
    ge1_pow
    |> Q.SPECL [`2`, `w2n (a:'w word)`]
-   |> SIMP_RULE (srw_ss()) [DECIDE ``1n <= n = 0 < n``, word_lt0]
+   |> SIMP_RULE (srw_ss()) [DECIDE ``1n <= n <=> 0 < n``, word_lt0]
    |> GEN_ALL
 
 val mult_id = Q.prove(
@@ -1276,7 +1275,7 @@ QED
 Theorem min_properties[simp]:
     ~float_is_zero (float_plus_min (:'t # 'w)) /\
     float_is_finite (float_plus_min (:'t # 'w)) /\
-    (float_is_integral (float_plus_min (:'t # 'w)) =
+    (float_is_integral (float_plus_min (:'t # 'w)) <=>
      (precision(:'w) = 1) /\ (precision(:'t) = 1)) /\
     ~float_is_nan (float_plus_min (:'t # 'w)) /\
     ~float_is_normal (float_plus_min (:'t # 'w)) /\
@@ -1284,7 +1283,7 @@ Theorem min_properties[simp]:
     ~float_is_infinite (float_plus_min (:'t # 'w)) /\
     ~float_is_zero (float_minus_min (:'t # 'w)) /\
     float_is_finite (float_minus_min (:'t # 'w)) /\
-    (float_is_integral (float_minus_min (:'t # 'w)) =
+    (float_is_integral (float_minus_min (:'t # 'w)) <=>
      (precision(:'w) = 1) /\ (precision(:'t) = 1)) /\
     ~float_is_nan (float_minus_min (:'t # 'w)) /\
     ~float_is_normal (float_minus_min (:'t # 'w)) /\
@@ -1300,7 +1299,7 @@ Proof
 QED
 
 val lem1 = Q.prove(
-   `0w <+ (-2w:'a word) = (dimindex(:'a) <> 1)`,
+   `0w <+ (-2w:'a word) <=> (dimindex(:'a) <> 1)`,
    once_rewrite_tac [wordsTheory.WORD_LESS_NEG_RIGHT]
    \\ simp [two_mod_eq_zero, wordsTheory.dimword_def, exp_id,
             DECIDE ``0 < n ==> n <> 0n``]
@@ -1351,13 +1350,13 @@ Proof tac
 QED
 
 val float_is_zero = Q.store_thm("float_is_zero",
-   `!x. float_is_zero x = (x.Exponent = 0w) /\ (x.Significand = 0w)`,
+   `!x. float_is_zero x <=> (x.Exponent = 0w) /\ (x.Significand = 0w)`,
    rw [float_is_zero_def, float_value_def, float_to_real_def, sign_not_zero,
        REAL_ARITH ``0 <= x ==> 1 + x <> 0r``,
        REAL_LE_DIV, REAL_LT_IMP_LE])
 
 val float_is_finite = Q.store_thm("float_is_finite",
-  `!x. float_is_finite x =
+  `!x. float_is_finite x <=>
        float_is_normal x \/ float_is_subnormal x \/ float_is_zero x`,
   rw [float_is_finite_def, float_is_normal_def, float_is_subnormal_def,
       float_is_zero, float_value_def]
@@ -1409,7 +1408,7 @@ val float_is_distinct = Q.store_thm("float_is_distinct",
   )
 
 val float_infinities = Q.store_thm("float_infinities",
-  `!x. float_is_infinite x =
+  `!x. float_is_infinite x <=>
        (x = float_plus_infinity (:'t # 'w)) \/
        (x = float_minus_infinity (:'t # 'w))`,
   strip_tac
@@ -1518,7 +1517,7 @@ val ULP_gt0 = Q.prove(
 val ulp_gt0 = (REWRITE_RULE [GSYM ulp_def] o Q.SPEC `0w`) ULP_gt0
 
 val ULP_le_mono = Q.store_thm("ULP_le_mono",
-   `!e1 e2. e2 <> 0w ==> (ULP (e1, (:'t)) <= ULP (e2, (:'t)) = e1 <=+ e2)`,
+   `!e1 e2. e2 <> 0w ==> (ULP (e1, (:'t)) <= ULP (e2, (:'t)) <=> e1 <=+ e2)`,
    Cases
    \\ Cases
    \\ lrw [ULP_def, wordsTheory.word_ls_n2w, div_le]
@@ -1602,7 +1601,7 @@ val abs_significand =
 
 val less_than_ulp = Q.store_thm("less_than_ulp",
    `!a: ('t, 'w) float.
-       abs (float_to_real a) < ulp (:'t # 'w) =
+       abs (float_to_real a) < ulp (:'t # 'w) <=>
        (a.Exponent = 0w) /\ (a.Significand = 0w)`,
    strip_tac
    \\ eq_tac
@@ -1718,7 +1717,7 @@ Proof
            pos_subnormal, pos_normal2, word_lt0, cancel_rwts, word_lt0,
            prod_ge2, pow_ge2, le_mult,
            DECIDE ``0n < a /\ 0 < b ==> 2 < 2 * a + 2 * b``,
-           DECIDE ``1n <= n = 0 < n``,
+           DECIDE ``1n <= n <=> 0 < n``,
            DECIDE ``0n < x ==> 0 < 2 * x``,
            REAL_ARITH ``a <= b /\ 0r <= c /\ 1 <= d ==> a < b + c + d``,
            REAL_ARITH
@@ -1755,7 +1754,7 @@ QED
 Theorem nobias_denormal_lt_2[local]:
   !w:'t word. 2 * (&w2n w / 2 pow precision (:'t)) < 2
 Proof
-  rw [REAL_ARITH ``2r * n < 2 = n < 1``, nobias_denormal_lt_1]
+  rw [REAL_ARITH ``2r * n < 2 <=> n < 1``, nobias_denormal_lt_1]
 QED
 
 Theorem subnormal_lt_normal[local]:
@@ -1911,7 +1910,7 @@ Proof
    >- (match_mp_tac abs_diff2e
        \\ simp [REAL_LT_RDIV_EQ, REAL_LT_LMUL,
                 REAL_ARITH ``2 * a = a * 2r``,
-                REAL_ARITH ``1 + n < 2 = n < 1r``, cancel_rwts,
+                REAL_ARITH ``1 + n < 2 <=> n < 1r``, cancel_rwts,
                 REWRITE_RULE [arithmeticTheory.ADD1] pow]
        \\ simp [REAL_LT_LDIV_EQ, REAL_OF_NUM_POW,
                 w2n_lt_pow]
@@ -2343,7 +2342,7 @@ val diff_significand_ULP_mul = Q.prove(
    )
 
 val diff_ge1 = Q.prove(
-   `!a b. 1 <= abs (&a - &b) = &a <> (&b: real)`,
+   `!a b. 1 <= abs (&a - &b) <=> &a <> (&b: real)`,
    lrw [REAL_SUB, ABS_NEG, ABS_N]
    )
 
@@ -2385,7 +2384,7 @@ val diff_exponent_neq = Q.prove(
 
 val float_to_real_eq = Q.store_thm("float_to_real_eq",
    `!x: ('t, 'w) float y: ('t, 'w) float.
-       (float_to_real x = float_to_real y) =
+       (float_to_real x = float_to_real y) <=>
        (x = y) \/ (float_is_zero x /\ float_is_zero y)`,
    NTAC 2 strip_tac
    \\ Cases_on `x = y`
@@ -2477,7 +2476,7 @@ QED
 Theorem diff_ulp_next_float[local]:
    !x y: ('t, 'w) float.
        ~float_is_zero x /\ y.Significand NOTIN {0w; -1w} ==>
-       ((abs (float_to_real y - float_to_real x) = ULP (y.Exponent,(:'t))) =
+       ((abs (float_to_real y - float_to_real x) = ULP (y.Exponent,(:'t))) <=>
         (x = y with Significand := y.Significand - 1w) \/
         (x = y with Significand := y.Significand + 1w))
 Proof
@@ -2494,7 +2493,7 @@ Proof
       \\ Cases_on `x.Significand = y.Significand + -1w`
       \\ simp []
       \\ Cases_on `x.Significand = y.Significand + 1w`
-      \\ rsimp [REAL_ARITH ``(abs x = 1) = (x = 1) \/ (x = -1)``,
+      \\ rsimp [REAL_ARITH ``(abs x = 1) <=> (x = 1) \/ (x = -1)``,
                 REAL_ARITH ``(a = -1 + c) = (c = a + 1r)``,
                 REAL_EQ_SUB_RADD, w2n_add1]
       \\ Cases_on `x.Significand = -1w`
@@ -2692,7 +2691,7 @@ val exponent_boundary_lt = Q.prove(
    >- (match_mp_tac lt_mult
        \\ rsimp [nobias_denormal_lt_1, REAL_LT_DIV])
    \\ simp [REAL_LT_LMUL, REAL_LT_RDIV_EQ, cancel_rwts,
-            POW_ADD, REAL_ARITH ``1 + x < 2 = x < 1r``,
+            POW_ADD, REAL_ARITH ``1 + x < 2 <=> x < 1r``,
             nobias_denormal_lt_1]
    )
 
@@ -2722,10 +2721,10 @@ val ulp_lt_float_to_real =
          [ABS_NEG, float_components, zero_to_real, zero_properties,
           exponent_boundary_def, GSYM ulp_def, GSYM float_is_zero_to_real]
 
-val abs_limits = REAL_ARITH ``!x l. abs x <= l = ~(x < -l) /\ ~(x > l)``
+val abs_limits = REAL_ARITH ``!x l. abs x <= l <=> ~(x < -l) /\ ~(x > l)``
 
 val abs_limits2 =
-   REAL_ARITH ``!x l. abs x < l = ~(x <= -l) /\ ~(x >= l)``
+   REAL_ARITH ``!x l. abs x < l <=> ~(x <= -l) /\ ~(x >= l)``
 
 (* ------------------------------------------------------------------------
    Rounding to regular value
@@ -2929,7 +2928,7 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
       \\ Cases_on `2 * abs (float_to_real y - x) < ULP (y.Exponent,(:'t))`
       >- (`2 * abs (float_to_real x' - x) <= 2 * abs (float_to_real y - x)`
           by metis_tac [Float_is_finite,
-               REAL_ARITH ``2 * abs a <= 2 * abs b = abs a <= abs b``]
+               REAL_ARITH ``2 * abs a <= 2 * abs b <=> abs a <= abs b``]
           \\ metis_tac [REAL_LET_TRANS, diff_lt_ulp_even])
       \\ `2 * abs (float_to_real y - x) = ULP (y.Exponent,(:'t))` by rsimp []
       \\ fs []
@@ -3044,7 +3043,7 @@ val round_roundTiesToEven0 = Q.store_thm("round_roundTiesToEven0",
       \\ simp []
       \\ spose_not_then assume_tac
       \\ imp_res_tac exponent_boundary_ULPs
-      \\ fs [REAL_ARITH ``4r * a <= 2 * b = 2 * a <= b``]
+      \\ fs [REAL_ARITH ``4r * a <= 2 * b <=> 2 * a <= b``]
       \\ imp_res_tac diff_exponent_boundary
       \\ `abs (float_to_real x' - x) = abs (float_to_real y - x)`
       by metis_tac
@@ -3202,7 +3201,7 @@ QED
 
 val float_to_real_min_pos = Q.prove(
    `!r: ('t, 'w) float.
-       (abs (float_to_real r) = ulp (:'t # 'w)) =
+       (abs (float_to_real r) = ulp (:'t # 'w)) <=>
        r IN {float_plus_min (:'t # 'w);
              float_negate (float_plus_min (:'t # 'w))}`,
    rw [float_plus_min_def, float_negate_def, ulp_def, ULP_def,
@@ -3633,7 +3632,7 @@ Theorem largest_lt_threshold:
   largest (:'t # 'w) < threshold (:'t # 'w)
 Proof
   rw [largest, threshold, REAL_LT_RDIV, REAL_LT_LMUL,
-      REAL_ARITH ``a - b < a - c = c < b : real``,
+      REAL_ARITH ``a - b < a - c <=> c < b : real``,
       REAL_LT_RDIV_EQ, REAL_LT_LDIV_EQ,
       mult_ratl] >>
   fs[wordsTheory.dimword_def]
@@ -3641,25 +3640,25 @@ QED
 
 val float_tests = Q.store_thm("float_tests",
    `(!s e f.
-       float_is_nan <| Sign := s; Exponent := e; Significand := f |> =
+       float_is_nan <| Sign := s; Exponent := e; Significand := f |> <=>
        (e = -1w) /\ (f <> 0w)) /\
     (!s e f.
-       float_is_signalling <| Sign := s; Exponent := e; Significand := f |> =
+       float_is_signalling <| Sign := s; Exponent := e; Significand := f |> <=>
        (e = -1w) /\ ~word_msb f /\ (f <> 0w)) /\
     (!s e f.
-       float_is_infinite <| Sign := s; Exponent := e; Significand := f |> =
+       float_is_infinite <| Sign := s; Exponent := e; Significand := f |> <=>
        (e = -1w) /\ (f = 0w)) /\
     (!s e f.
-       float_is_normal <| Sign := s; Exponent := e; Significand := f |> =
+       float_is_normal <| Sign := s; Exponent := e; Significand := f |> <=>
        (e <> 0w) /\ (e <> -1w)) /\
     (!s e f.
-       float_is_subnormal <| Sign := s; Exponent := e; Significand := f |> =
+       float_is_subnormal <| Sign := s; Exponent := e; Significand := f |> <=>
        (e = 0w) /\ (f <> 0w)) /\
     (!s e f.
-       float_is_zero <| Sign := s; Exponent := e; Significand := f |> =
+       float_is_zero <| Sign := s; Exponent := e; Significand := f |> <=>
        (e = 0w) /\ (f = 0w)) /\
     (!s e f.
-       float_is_finite <| Sign := s; Exponent := e; Significand := f |> =
+       float_is_finite <| Sign := s; Exponent := e; Significand := f |> <=>
        (e <> -1w))`,
    rw [float_is_nan_def, float_is_signalling_def, float_is_infinite_def,
        float_is_finite_def, float_is_normal_def, float_is_subnormal_def,
