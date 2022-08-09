@@ -895,10 +895,9 @@ val le1 = Q.prove(
    \\ ASM_SIMP_TAC bool_ss [REAL_LE_LDIV_EQ, REAL_MUL_LID]
    )
 
-val le2 = Q.store_thm("le2",
-   `!n m. 2r <= n /\ 2 <= m ==> 2 <= n * m`,
-   rrw [prod_ge2]
-   )
+Theorem le2: !n m. 2r <= n /\ 2 <= m ==> 2 <= n * m
+Proof rrw [prod_ge2]
+QED
 
 val ge4 = Q.prove(
    `!n. n <> 0 ==> 4n <= 2 EXP n * 2`,
@@ -1172,15 +1171,16 @@ Proof
        float_negate_def, float_to_real_def]
 QED
 
-val sign_not_zero = Q.store_thm("sign_not_zero",
-   `!s: word1. -1 pow w2n s <> 0`,
-   wordsLib.Cases_word_value \\ EVAL_TAC)
+Theorem sign_not_zero: !s: word1. -1 pow w2n s <> 0
+Proof wordsLib.Cases_word_value \\ EVAL_TAC
+QED
 
-val float_sets = Q.store_thm("float_sets",
-   `(float_is_zero = {float_minus_zero (:'t # 'w);
-                      float_plus_zero (:'t # 'w)}) /\
-    (float_is_infinite = {float_minus_infinity (:'t # 'w);
-                          float_plus_infinity (:'t # 'w)})`,
+Theorem float_sets:
+  (float_is_zero = {float_minus_zero (:'t # 'w);
+                    float_plus_zero (:'t # 'w)}) /\
+  (float_is_infinite = {float_minus_infinity (:'t # 'w);
+                        float_plus_infinity (:'t # 'w)})
+Proof
    rw [FUN_EQ_THM, float_is_infinite_def, float_is_zero_def, float_value_def,
        float_plus_infinity_def, float_minus_infinity_def,
        float_plus_zero_def, float_minus_zero_def, float_to_real_def,
@@ -1188,7 +1188,7 @@ val float_sets = Q.store_thm("float_sets",
    \\ rw [sign_not_zero, REAL_ARITH ``0r <= n ==> 1 + n <> 0``]
    \\ wordsLib.Cases_on_word_value `x.Sign`
    \\ simp []
-   )
+QED
 
 val tac =
    rw [float_is_nan_def, float_is_normal_def, float_is_subnormal_def,
@@ -1239,8 +1239,8 @@ QED
 
 
 
-val some_nan_properties = Q.store_thm("some_nan_properties",
-   `!fp_op.
+Theorem some_nan_properties:
+  !fp_op.
       ~float_is_zero (float_some_qnan fp_op) /\
       ~float_is_finite (float_some_qnan fp_op) /\
       ~float_is_integral (float_some_qnan fp_op) /\
@@ -1248,7 +1248,8 @@ val some_nan_properties = Q.store_thm("some_nan_properties",
       ~float_is_signalling (float_some_qnan fp_op) /\
       ~float_is_normal (float_some_qnan fp_op) /\
       ~float_is_subnormal (float_some_qnan fp_op) /\
-      ~float_is_infinite (float_some_qnan fp_op)`,
+      ~float_is_infinite (float_some_qnan fp_op)
+Proof
    tac
    \\ SELECT_ELIM_TAC
    \\ simp []
@@ -1259,7 +1260,7 @@ val some_nan_properties = Q.store_thm("some_nan_properties",
    \\ simp [float_is_signalling_def]
    \\ tac
    \\ fs [lem]
-   )
+QED
 
 Theorem NMUL_EQ_2:
   ((m:num) * n = 2) <=> (m = 1) /\ (n = 2) \/ (m = 2) /\ (n = 1)
@@ -1349,55 +1350,61 @@ Theorem bottom_properties[simp]:
 Proof tac
 QED
 
-val float_is_zero = Q.store_thm("float_is_zero",
-   `!x. float_is_zero x <=> (x.Exponent = 0w) /\ (x.Significand = 0w)`,
+Theorem float_is_zero:
+  !x. float_is_zero x <=> (x.Exponent = 0w) /\ (x.Significand = 0w)
+Proof
    rw [float_is_zero_def, float_value_def, float_to_real_def, sign_not_zero,
        REAL_ARITH ``0 <= x ==> 1 + x <> 0r``,
-       REAL_LE_DIV, REAL_LT_IMP_LE])
+       REAL_LE_DIV, REAL_LT_IMP_LE]
+QED
 
-val float_is_finite = Q.store_thm("float_is_finite",
-  `!x. float_is_finite x <=>
-       float_is_normal x \/ float_is_subnormal x \/ float_is_zero x`,
+Theorem float_is_finite:
+  !x. float_is_finite x <=>
+      float_is_normal x \/ float_is_subnormal x \/ float_is_zero x
+Proof
   rw [float_is_finite_def, float_is_normal_def, float_is_subnormal_def,
       float_is_zero, float_value_def]
   \\ Cases_on `x.Exponent = 0w`
   \\ Cases_on `x.Significand = 0w`
   \\ fs []
-  )
+QED
 
-val float_cases_finite = Q.store_thm("float_cases_finite",
-  `!x. float_is_nan x \/ float_is_infinite x \/ float_is_finite x`,
+Theorem float_cases_finite:
+  !x. float_is_nan x \/ float_is_infinite x \/ float_is_finite x
+Proof
   rw [float_is_nan_def, float_is_infinite_def, float_is_finite_def]
   \\ Cases_on `float_value x`
   \\ fs []
-  )
+QED
 
-val float_distinct_finite = Q.store_thm("float_distinct_finite",
-  `!x. ~(float_is_nan x /\ float_is_infinite x) /\
-       ~(float_is_nan x /\ float_is_finite x) /\
-       ~(float_is_infinite x /\ float_is_finite x)`,
+Theorem float_distinct_finite:
+  !x. ~(float_is_nan x /\ float_is_infinite x) /\
+      ~(float_is_nan x /\ float_is_finite x) /\
+      ~(float_is_infinite x /\ float_is_finite x)
+Proof
   rw [float_is_nan_def, float_is_infinite_def, float_is_finite_def]
   \\ Cases_on `float_value x`
   \\ fs []
-  )
+QED
 
-val float_cases = Q.store_thm("float_cases",
-  `!x. float_is_nan x \/ float_is_infinite x \/ float_is_normal x \/
-       float_is_subnormal x \/ float_is_zero x`,
-  metis_tac [float_cases_finite, float_is_finite]
-  )
+Theorem float_cases:
+  !x. float_is_nan x \/ float_is_infinite x \/ float_is_normal x \/
+      float_is_subnormal x \/ float_is_zero x
+Proof metis_tac [float_cases_finite, float_is_finite]
+QED
 
-val float_is_distinct = Q.store_thm("float_is_distinct",
-  `!x. ~(float_is_nan x /\ float_is_infinite x) /\
-       ~(float_is_nan x /\ float_is_normal x) /\
-       ~(float_is_nan x /\ float_is_subnormal x) /\
-       ~(float_is_nan x /\ float_is_zero x) /\
-       ~(float_is_infinite x /\ float_is_normal x) /\
-       ~(float_is_infinite x /\ float_is_subnormal x) /\
-       ~(float_is_infinite x /\ float_is_zero x) /\
-       ~(float_is_normal x /\ float_is_subnormal x) /\
-       ~(float_is_normal x /\ float_is_zero x) /\
-       ~(float_is_subnormal x /\ float_is_zero x)`,
+Theorem float_is_distinct:
+  !x. ~(float_is_nan x /\ float_is_infinite x) /\
+      ~(float_is_nan x /\ float_is_normal x) /\
+      ~(float_is_nan x /\ float_is_subnormal x) /\
+      ~(float_is_nan x /\ float_is_zero x) /\
+      ~(float_is_infinite x /\ float_is_normal x) /\
+      ~(float_is_infinite x /\ float_is_subnormal x) /\
+      ~(float_is_infinite x /\ float_is_zero x) /\
+      ~(float_is_normal x /\ float_is_subnormal x) /\
+      ~(float_is_normal x /\ float_is_zero x) /\
+      ~(float_is_subnormal x /\ float_is_zero x)
+Proof
   rw []
   \\ TRY (metis_tac [float_is_finite, float_distinct_finite])
   \\ fs [float_is_normal_def, float_is_subnormal_def, float_is_zero]
@@ -1405,12 +1412,13 @@ val float_is_distinct = Q.store_thm("float_is_distinct",
   \\ Cases_on `x.Exponent = -1w`
   \\ Cases_on `x.Significand = 0w`
   \\ fs []
-  )
+QED
 
-val float_infinities = Q.store_thm("float_infinities",
-  `!x. float_is_infinite x <=>
+Theorem float_infinities:
+  !x. float_is_infinite x <=>
        (x = float_plus_infinity (:'t # 'w)) \/
-       (x = float_minus_infinity (:'t # 'w))`,
+       (x = float_minus_infinity (:'t # 'w))
+Proof
   strip_tac
   \\ Q.ISPEC_THEN `x : ('t, 'w) float` strip_assume_tac float_cases_finite
   \\ TRY (metis_tac [float_distinct_finite, infinity_properties])
@@ -1422,22 +1430,24 @@ val float_infinities = Q.store_thm("float_infinities",
          float_negate_def, float_component_equality]
   \\ wordsLib.Cases_on_word_value `x.Sign`
   \\ simp []
-  )
+QED
 
-val float_infinities_distinct = Q.store_thm("float_infinities_distinct",
-  `!x. ~((x = float_plus_infinity (:'t # 'w)) /\
-         (x = float_minus_infinity (:'t # 'w)))`,
+Theorem float_infinities_distinct:
+  !x. ~((x = float_plus_infinity (:'t # 'w)) /\
+        (x = float_minus_infinity (:'t # 'w)))
+Proof
   simp [float_plus_infinity_def, float_minus_infinity_def,
         float_negate_def, float_component_equality]
-  )
+QED
 (* ------------------------------------------------------------------------ *)
 
-val float_to_real_negate = Q.store_thm("float_to_real_negate",
-   `!x. float_to_real (float_negate x) = -float_to_real x`,
+Theorem float_to_real_negate:
+   !x. float_to_real (float_negate x) = -float_to_real x
+Proof
    rw [float_to_real_def, float_negate_def]
    \\ wordsLib.Cases_on_word_value `x.Sign`
    \\ rsimp []
-   )
+QED
 
 Theorem float_negate_negate[simp]:
    !x. float_negate (float_negate x) = x
@@ -1476,7 +1486,7 @@ in
       end
 end
 
-val cancel_rwts = Q.prove(
+Theorem cancel_rwts[local] = Q.prove(
    `(!a b. (2 pow a * b) / 2 pow a = b) /\
     (!a b c. 2 pow a * (b / 2 pow a * c) = b * c) /\
     (!a b c. a * (b / 2 pow c) * 2 pow c = a * b) /\
@@ -1498,17 +1508,16 @@ val cancel_rwt =
    CANCEL_PROVE
      ``(!a b c d. a * (b + c / 2 pow d) * 2 pow d = a * b * 2 pow d + a * c)``
 
-val ulp = Q.store_thm("ulp",
-   `ulp (:'t # 'w) = float_to_real (float_plus_min (:'t # 'w))`,
+Theorem ulp: ulp (:'t # 'w) = float_to_real (float_plus_min (:'t # 'w))
+Proof
    simp [ulp_def, ULP_def, float_to_real_def, float_plus_min_def,
          mult_rat, GSYM POW_ADD]
-   )
+QED
 
-val neg_ulp = Q.store_thm("neg_ulp",
-   `-ulp (:'t # 'w) =
-    float_to_real (float_negate (float_plus_min (:'t # 'w)))`,
-   simp [float_to_real_negate, ulp]
-   )
+Theorem neg_ulp:
+   -ulp (:'t # 'w) = float_to_real (float_negate (float_plus_min (:'t # 'w)))
+Proof simp [float_to_real_negate, ulp]
+QED
 
 val ULP_gt0 = Q.prove(
    `!e. 0 < ULP (e:'w word, (:'t))`,
@@ -1516,32 +1525,31 @@ val ULP_gt0 = Q.prove(
 
 val ulp_gt0 = (REWRITE_RULE [GSYM ulp_def] o Q.SPEC `0w`) ULP_gt0
 
-val ULP_le_mono = Q.store_thm("ULP_le_mono",
-   `!e1 e2. e2 <> 0w ==> (ULP (e1, (:'t)) <= ULP (e2, (:'t)) <=> e1 <=+ e2)`,
+Theorem ULP_le_mono:
+   !e1 e2. e2 <> 0w ==> (ULP (e1, (:'t)) <= ULP (e2, (:'t)) <=> e1 <=+ e2)
+Proof
    Cases
    \\ Cases
    \\ lrw [ULP_def, wordsTheory.word_ls_n2w, div_le]
    \\ simp [REAL_OF_NUM_POW]
-   )
+QED
 
-val ulp_lt_ULP = Q.store_thm("ulp_lt_ULP",
-   `!e: 'w word. ulp (:'t # 'w) <= ULP (e,(:'t))`,
-   rw [ulp_def]
-   \\ Cases_on `e = 0w`
-   \\ simp [ULP_le_mono]
-   )
+Theorem ulp_lt_ULP: !e: 'w word. ulp (:'t # 'w) <= ULP (e,(:'t))
+Proof rw [ulp_def] \\ Cases_on `e = 0w` \\ simp [ULP_le_mono]
+QED
 
-val lem = Q.prove(
-   `!n. 0 < n ==> 3 < 2 pow SUC n`,
+Theorem lem[local]:
+   !n. 0 < n ==> 3 < 2 pow SUC n
+Proof
    Induct
    \\ rw [Once pow]
    \\ Cases_on `0 < n`
    \\ simp [DECIDE ``~(0n < n) ==> (n = 0)``,
             REAL_ARITH ``3r < n ==> 3 < 2 * n``]
-   )
+QED
 
-val ulp_lt_largest = Q.store_thm("ulp_lt_largest",
-   `ulp (:'t # 'w) < largest (:'t # 'w)`,
+Theorem ulp_lt_largest: ulp (:'t # 'w) < largest (:'t # 'w)
+Proof
    simp [ulp_def, ULP_def, largest_def, REAL_LT_RMUL_0, cancel_rwts,
          REAL_LT_LDIV_EQ, POW_ADD]
    \\ simp [REAL_SUB_RDISTRIB, REAL_SUB_LDISTRIB,
@@ -1550,10 +1558,11 @@ val ulp_lt_largest = Q.store_thm("ulp_lt_largest",
    \\ simp [REAL_ARITH ``(a * b) - a = a * (b - 1): real``]
    \\ match_mp_tac ge2c
    \\ rw [GSYM REAL_LT_ADD_SUB, POW_2_LE1, lem]
-   )
+QED
 
-val ulp_lt_threshold = Q.store_thm("ulp_lt_threshold",
-   `ulp (:'t # 'w) < threshold (:'t # 'w)`,
+Theorem ulp_lt_threshold:
+   ulp (:'t # 'w) < threshold (:'t # 'w)
+Proof
    simp [ulp_def, ULP_def, threshold_def, REAL_LT_RMUL_0,
          cancel_rwts, REAL_LT_LDIV_EQ, POW_ADD,
          pow]
@@ -1566,30 +1575,32 @@ val ulp_lt_threshold = Q.store_thm("ulp_lt_threshold",
           REAL_INV_1OVER, GSYM (CONJUNCT2 pow),
           REAL_LT_LDIV_EQ, lem,
           REAL_ARITH ``3r < n ==> 5 < n * 2``]
-   )
+QED
 
-val lt_ulp_not_infinity0 =
+Theorem lt_ulp_not_infinity0[local] =
    MATCH_MP
       (REAL_ARITH ``u < l ==> abs x < u ==> ~(x < -l) /\ ~(x > l)``)
       ulp_lt_largest
    |> Drule.GEN_ALL
 
-val lt_ulp_not_infinity1 =
+Theorem lt_ulp_not_infinity1[local] =
    MATCH_MP
       (REAL_ARITH
          ``u < l ==> 2 * abs x <= u ==> ~(x <= -l) /\ ~(x >= l)``)
       ulp_lt_threshold
    |> Drule.GEN_ALL
 
-val abs_float_value = Q.store_thm("abs_float_value",
-   `(!b: word1 c d. abs (-1 pow w2n b * c * d) = abs (c * d)) /\
-    (!b: word1 c. abs (-1 pow w2n b * c) = abs c)`,
+Theorem abs_float_value:
+    (!b: word1 c d. abs (-1 pow w2n b * c * d) = abs (c * d)) /\
+    (!b: word1 c. abs (-1 pow w2n b * c) = abs c)
+Proof
    conj_tac
    \\ wordsLib.Cases_word_value
-   \\ simp [ABS_MUL])
+   \\ simp [ABS_MUL]
+QED
 
 (* |- !x n. abs (1 + &n / 2 pow x) = 1 + &n / 2 pow x *)
-val abs_significand =
+Theorem abs_significand[local] =
    REAL_ARITH ``!a b. 0 <= a /\ 0 <= b ==> (abs (a + b) = a + b)``
    |> Q.SPECL [`1`, `&n / 2 pow x`]
    |> Conv.CONV_RULE
@@ -1599,10 +1610,11 @@ val abs_significand =
    |> REWRITE_RULE []
    |> GEN_ALL
 
-val less_than_ulp = Q.store_thm("less_than_ulp",
-   `!a: ('t, 'w) float.
+Theorem less_than_ulp:
+    !a: ('t, 'w) float.
        abs (float_to_real a) < ulp (:'t # 'w) <=>
-       (a.Exponent = 0w) /\ (a.Significand = 0w)`,
+       (a.Exponent = 0w) /\ (a.Significand = 0w)
+Proof
    strip_tac
    \\ eq_tac
    \\ rw [ulp_def, ULP_def, float_to_real_def, abs_float_value, abs_significand,
@@ -1628,19 +1640,23 @@ val less_than_ulp = Q.store_thm("less_than_ulp",
       \\ match_mp_tac
            (REAL_ARITH ``2r <= a /\ 0 <= x ==> 2 <= a + x``)
       \\ simp [ge1_pow, DECIDE ``0n < a ==> 1 <= a``]
-   ])
+   ]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val Float_is_finite = Q.prove(
-   `!y: ('t, 'w) float r.
-      (float_value y = Float r) ==> float_is_finite y`,
-   rw [float_is_finite_def])
+Theorem Float_is_finite[local]:
+    !y: ('t, 'w) float r.
+      (float_value y = Float r) ==> float_is_finite y
+Proof
+   rw [float_is_finite_def]
+QED
 
-val Float_float_to_real = Q.prove(
-   `!y: ('t, 'w) float r.
-      (float_value y = Float r) ==> (float_to_real y = r)`,
-   rw [float_value_def])
+Theorem Float_float_to_real[local]:
+    !y: ('t, 'w) float r.
+      (float_value y = Float r) ==> (float_to_real y = r)
+Proof rw [float_value_def]
+QED
 
 Theorem float_is_zero_to_real:
    !x. float_is_zero x = (float_to_real x = 0)
@@ -1652,10 +1668,10 @@ QED
 (* !x. float_is_zero x ==> (float_to_real x = 0) *)
 val float_is_zero_to_real_imp = iffLR float_is_zero_to_real
 
-val pos_subnormal = Q.prove(
-   `!a b n. 0 <= 2 / 2 pow a * (&n / 2 pow b)`,
-   rrw [REAL_LE_MUL]
-   )
+Theorem pos_subnormal[local]:
+    !a b n. 0 <= 2 / 2 pow a * (&n / 2 pow b)
+Proof rrw [REAL_LE_MUL]
+QED
 
 val pos_normal = Q.prove(
    `!a b c n. 0 <= 2 pow a / 2 pow b * (1 + &n / 2 pow c)`,
@@ -1782,20 +1798,22 @@ fun tac thm =
    \\ rsimp [REAL_LE_SUB_CANCEL2, GSYM REAL_LE_LDIV_EQ,
              REAL_DIV_REFL, REAL_SUB_ADD]
 
-val weaken_leq = Q.prove(
-    `!x a b c. 1r <= x /\ a <= b - c /\ 0 < b ==> a <= x * b - c`,
-    tac REAL_LE_TRANS
-    )
+Theorem weaken_leq[local]:
+  !x a b c. 1r <= x /\ a <= b - c /\ 0 < b ==> a <= x * b - c
+Proof tac REAL_LE_TRANS
+QED
 
-val weaken_lt = Q.prove(
-    `!x a b c. 1r <= x /\ a < b - c /\ 0 < b ==> a < x * b - c`,
-    tac REAL_LTE_TRANS
-    )
+Theorem weaken_lt[local]:
+  !x a b c. 1r <= x /\ a < b - c /\ 0 < b ==> a < x * b - c
+Proof tac REAL_LTE_TRANS
+QED
 
-val abs_diff1 = Q.prove(
-   `!s:word1 a b.
-       a < b ==> (abs (-1 pow w2n s * a - -1 pow w2n s * b) = (b - a))`,
-   wordsLib.Cases_word_value \\ rrw [])
+Theorem abs_diff1[local]:
+    !s:word1 a b.
+       a < b ==> (abs (-1 pow w2n s * a - -1 pow w2n s * b) = (b - a))
+Proof
+   wordsLib.Cases_word_value \\ rrw []
+QED
 
 val abs_diff2 = Q.prove(
    `!s:word1 a b.
@@ -2323,12 +2341,13 @@ fun tac2 thm =
    \\ simp [POW_ADD, mult_rat]
    \\ simp_tac (srw_ss()++realSimps.real_ac_SS) [mult_ratr]
 
-val diff_significand_ULP_mul = Q.prove(
-   `!x: ('t, 'w) float y: ('t, 'w) float.
+Theorem diff_significand_ULP_mul[local]:
+    !x: ('t, 'w) float y: ('t, 'w) float.
         (x.Sign = y.Sign) /\ (x.Exponent = y.Exponent) ==>
         (abs (float_to_real x - float_to_real y) =
          abs (&w2n x.Significand - &w2n y.Significand) *
-         ULP (x.Exponent, (:'t)))`,
+         ULP (x.Exponent, (:'t)))
+Proof
    rw [ULP_def, float_to_real_def]
    \\ (Cases_on `x.Significand = y.Significand`
        >- rsimp [])
@@ -2339,21 +2358,22 @@ val diff_significand_ULP_mul = Q.prove(
    >- tac abs_diff2c
    >- tac2 abs_diff1d
    \\ tac2 abs_diff2d
-   )
+QED
 
 val diff_ge1 = Q.prove(
    `!a b. 1 <= abs (&a - &b) <=> &a <> (&b: real)`,
    lrw [REAL_SUB, ABS_NEG, ABS_N]
    )
 
-val diff_significand_ULP = Q.prove(
-   `!x: ('t, 'w) float y: ('t, 'w) float.
+Theorem diff_significand_ULP[local]:
+    !x: ('t, 'w) float y: ('t, 'w) float.
         (x.Sign = y.Sign) /\ (x.Exponent = y.Exponent) /\
         x.Significand <> y.Significand ==>
-        ULP (x.Exponent, (:'t)) <= abs (float_to_real x - float_to_real y)`,
+        ULP (x.Exponent, (:'t)) <= abs (float_to_real x - float_to_real y)
+Proof
    rw [diff_significand_ULP_mul, ULP_gt0, diff_ge1,
        ONCE_REWRITE_RULE [REAL_MUL_COMM] le_mult]
-   )
+QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
@@ -2382,10 +2402,11 @@ val diff_exponent_neq = Q.prove(
    \\metis_tac [diff_exponent_ULP, ULP_same]
    )
 
-val float_to_real_eq = Q.store_thm("float_to_real_eq",
-   `!x: ('t, 'w) float y: ('t, 'w) float.
+Theorem float_to_real_eq:
+    !x: ('t, 'w) float y: ('t, 'w) float.
        (float_to_real x = float_to_real y) <=>
-       (x = y) \/ (float_is_zero x /\ float_is_zero y)`,
+       (x = y) \/ (float_is_zero x /\ float_is_zero y)
+Proof
    NTAC 2 strip_tac
    \\ Cases_on `x = y`
    \\ simp []
@@ -2398,7 +2419,7 @@ val float_to_real_eq = Q.store_thm("float_to_real_eq",
    \\ qpat_x_assum `~(p /\ q)` kall_tac
    \\ fs [float_component_equality]
    \\ rw [float_to_real_def, sign_not_zero, div_twopow]
-   )
+QED
 
 val diff_float_ULP = Q.store_thm("diff_float_ULP",
    `!x: ('t, 'w) float y: ('t, 'w) float.
@@ -2620,15 +2641,16 @@ val tac =
    \\ imp_res_tac diff_float_ULP
    \\ rlfs []
 
-val diff_lt_ulp_eq0 = Q.store_thm("diff_lt_ulp_eq0",
-   `!a: ('t, 'w) float b: ('t, 'w) float x.
+Theorem diff_lt_ulp_eq0:
+    !a: ('t, 'w) float b: ('t, 'w) float x.
        ~exponent_boundary b a /\
        abs (x - float_to_real a) < ULP (a.Exponent, (:'t)) /\
        abs (x - float_to_real b) < ULP (a.Exponent, (:'t)) /\
        abs (float_to_real a) <= abs x /\ abs (float_to_real b) <= abs x /\
        ~float_is_zero a ==>
-       (b = a)`,
-   tac)
+       (b = a)
+Proof tac
+QED
 
 val diff_lt_ulp_even = Q.store_thm("diff_lt_ulp_even",
    `!a: ('t, 'w) float b: ('t, 'w) float x.
@@ -2682,9 +2704,10 @@ val diff_lt_ulp_eq_neg = Q.store_thm("diff_lt_ulp_eq_neg",
    tac)
 *)
 
-val exponent_boundary_lt = Q.prove(
-   `!a b.
-      exponent_boundary a b ==> abs (float_to_real a) < abs (float_to_real b)`,
+Theorem exponent_boundary_lt[local]:
+    !a b.
+      exponent_boundary a b ==> abs (float_to_real a) < abs (float_to_real b)
+Proof
    rrw [float_to_real_def, exponent_boundary_def, abs_float_value,
         abs_significand, ABS_MUL, ABS_DIV,
         ABS_N, gt0_abs]
@@ -2693,7 +2716,7 @@ val exponent_boundary_lt = Q.prove(
    \\ simp [REAL_LT_LMUL, REAL_LT_RDIV_EQ, cancel_rwts,
             POW_ADD, REAL_ARITH ``1 + x < 2 <=> x < 1r``,
             nobias_denormal_lt_1]
-   )
+QED
 
 val exponent_boundary_not_float_zero = Q.prove(
    `!x y. exponent_boundary x y ==> ~float_is_zero y`,
@@ -3638,8 +3661,8 @@ Proof
   fs[wordsTheory.dimword_def]
 QED
 
-val float_tests = Q.store_thm("float_tests",
-   `(!s e f.
+Theorem float_tests:
+    (!s e f.
        float_is_nan <| Sign := s; Exponent := e; Significand := f |> <=>
        (e = -1w) /\ (f <> 0w)) /\
     (!s e f.
@@ -3659,7 +3682,8 @@ val float_tests = Q.store_thm("float_tests",
        (e = 0w) /\ (f = 0w)) /\
     (!s e f.
        float_is_finite <| Sign := s; Exponent := e; Significand := f |> <=>
-       (e <> -1w))`,
+       (e <> -1w))
+Proof
    rw [float_is_nan_def, float_is_signalling_def, float_is_infinite_def,
        float_is_finite_def, float_is_normal_def, float_is_subnormal_def,
        float_value_def]
@@ -3667,7 +3691,7 @@ val float_tests = Q.store_thm("float_tests",
           float_is_finite_def, float_negate_def]
    \\ wordsLib.Cases_on_word_value `s`
    \\ simp []
-   )
+QED
 
 val float_infinity_negate_abs = Q.store_thm("float_infinity_negate_abs",
    `(float_negate (float_plus_infinity (:'t # 'w)) =
