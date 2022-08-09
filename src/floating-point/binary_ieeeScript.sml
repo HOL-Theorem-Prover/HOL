@@ -651,13 +651,19 @@ val float_mul_add_def = Define`
          else if float_is_infinite z /\ (z.Sign = 1w) \/ infP /\ (signP = 1w)
             then (clear_flags, float_minus_infinity (:'t # 'w))
          else
-            let r1 = float_to_real x * float_to_real y
-            and r2 = float_to_real z
-            in
-              float_round_with_flags mode
+           let r1 = float_to_real x * float_to_real y ;
+               r2 = float_to_real z ;
+               r = r1 + r2 ;
+           in
+             float_round_with_flags
+               mode
+               ((r = 0) /\
                 (if (r1 = 0) /\ (r2 = 0) /\ (signP = z.Sign) then
                    signP = 1w
-                 else mode = roundTowardNegative) (r1 + r2)`
+                 else mode = roundTowardNegative) \/
+                r < 0)
+               r
+`
 
 val float_mul_sub_def = Define`
    float_mul_sub mode
