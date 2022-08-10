@@ -4,25 +4,6 @@
 (* Created Wed Mar 19 19:01:20 GMT 2003                                      *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* START BOILERPLATE                                                         *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Parent theories (comment out "load"s and "quietdec"s for compilation)
-******************************************************************************)
-
-(*
-*)
-quietdec := true;
-loadPath := ["../../path","../../regexp","../official-semantics"] @ !loadPath;
-app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
-          "rich_listTheory", "regexpLib",
-          "FinitePSLPathTheory","PSLPathTheory","SyntaxTheory",
-          "UnclockedSemanticsTheory","ClockedSemanticsTheory",
-          "SyntacticSugarTheory"
-          (*, "PropertiesTheory"*)
-         ];
 
 open HolKernel Parse boolLib;
 open bossLib metisLib listTheory rich_listTheory pred_setLib intLib
@@ -32,18 +13,12 @@ open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory
      (* PropertiesTheory*);
 
-(*
-*)
-quietdec := false;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
 (******************************************************************************
 * Start a new theory called "ExecuteSemantics"
 ******************************************************************************)
 val _ = new_theory "ExecuteSemantics";
+
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers
@@ -85,8 +60,7 @@ val arith_suc_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 (******************************************************************************
 * Structural induction rule for SEREs (used to be in PropertiesTheory)
 ******************************************************************************)
-val sere_induct = save_thm
-  ("sere_induct",
+Theorem sere_induct =
    Q.GEN
     `P`
     (MATCH_MP
@@ -97,8 +71,8 @@ val sere_induct = save_thm
         PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
-         [`P`,`\(r1,r2). P r1 /\ P r2`,`\(r,b). P r`]
-         (TypeBase.induction_of "sere")))));
+         [`P`,`λ(r,b). P r`, `λ(r1,r2). P r1 /\ P r2`]
+         (TypeBase.induction_of “:α sere”))));
 
 (******************************************************************************
 * S_CLOCK_FREE r means r contains no clocking statements
@@ -106,19 +80,19 @@ val sere_induct = save_thm
 ******************************************************************************)
 val S_CLOCK_FREE_def =
  Define
-  `(S_CLOCK_FREE (S_BOOL b)          = T)
+  `(S_CLOCK_FREE (S_BOOL b)          ⇔ T)
    /\
-   (S_CLOCK_FREE (S_CAT(r1,r2))      =  S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
+   (S_CLOCK_FREE (S_CAT(r1,r2))      ⇔  S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_FUSION(r1,r2))   = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
+   (S_CLOCK_FREE (S_FUSION(r1,r2))   ⇔ S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_OR(r1,r2))       = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
+   (S_CLOCK_FREE (S_OR(r1,r2))       ⇔ S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_AND(r1,r2))      = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
+   (S_CLOCK_FREE (S_AND(r1,r2))      ⇔ S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_REPEAT r)        = S_CLOCK_FREE r)
+   (S_CLOCK_FREE (S_REPEAT r)        ⇔ S_CLOCK_FREE r)
    /\
-   (S_CLOCK_FREE (S_CLOCK v)         = F)`;
+   (S_CLOCK_FREE (S_CLOCK v)         ⇔ F)`;
 
 (******************************************************************************
 * Neutrality
@@ -210,7 +184,7 @@ val EVAL_B_SEM = store_thm
   ("EVAL_B_SEM",
    ``!l b.
        B_SEM l b =
-       case l of TOP -> T || BOTTOM -> F || STATE s -> B_SEMS s b``,
+       case l of TOP => T | BOTTOM => F | STATE s => B_SEMS s b``,
    Cases
    ++ RW_TAC std_ss [B_SEM_def, B_SEMS_def]);
 
@@ -231,7 +205,7 @@ val S_EMPTY_CAT = store_thm
    RW_TAC std_ss [US_SEM_def, S_EMPTY, APPEND]);
 
 (* Any matches any bottom-free string *)
-
+(*
 val S_ANY = store_thm
   ("S_ANY",
    ``!p. US_SEM p S_ANY = BOTTOM_FREE_LIST p``,
@@ -269,6 +243,9 @@ val S_ANY = store_thm
    ++ Induct_on `w`
    ++ RW_TAC std_ss [CONCAT_def, MAP, APPEND]
    ++ PROVE_TAC []);
+*)
+
+(*
 
 val US_SEM_REPEAT_TRUE = store_thm
   ("US_SEM_REPEAT_TRUE",
@@ -281,7 +258,7 @@ val US_SEM_REPEAT_TRUE = store_thm
    ++ RW_TAC std_ss [CONCAT_def, MAP, APPEND]
    ++ PROVE_TAC []);
 
-
+*)
 (******************************************************************************
 * Executable semantics of [f1 U f2]
 *   w |= [f1 U f2]
@@ -464,6 +441,7 @@ val UF_SEM_F_SUFFIX_IMP_REC_def =
    (UF_SEM_F_SUFFIX_IMP_REC w (r,f) INFINITY =
      !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)`;
 
+(*
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)  (for finite and infinite paths w)
 ******************************************************************************)
@@ -604,6 +582,7 @@ val FINITE_UF_SEM_F_STRONG_SERE = store_thm
    ++ RW_TAC arith_ss [xnum_to_def, RESTN_FINITE, LENGTH_def]
    ++ RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]);
 
+(*
 val INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
   ("INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
    ``!p r1 r2.
@@ -618,7 +597,7 @@ val INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THENL[Q.EXISTS_TAC `k-j`, Q.EXISTS_TAC `j+j'`]
-    THEN RW_TAC arith_ss []);
+    THEN RW_TAC arith_ss []); *)
 
 val UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
   ("UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
@@ -2311,6 +2290,6 @@ val UF_ABORT_REC =
 (******************************************************************************
 * End of useless stuff.
 ******************************************************************************)
-
+*)
 
 val _ = export_theory();

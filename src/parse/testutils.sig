@@ -12,6 +12,7 @@ val OK : unit -> unit
 val exit_count0 : int ref -> unit
 val die : string -> unit
 val tprint : string -> unit
+val timed_tprint : string -> unit
 val tadd : string -> unit
 val tpp : string -> unit
 val tpp_expected : {testf:string->string,input:string,output:string} -> unit
@@ -34,7 +35,9 @@ val check_result : ('a -> bool) -> ('a testresult -> bool)
 val require : ('b testresult -> bool) -> ('a -> 'b) -> 'a -> unit
 val require_msg : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
                   'a -> unit
-val require_msgk : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
+val require_pretty_msg : ('b testresult -> bool) -> 'b HOLPP.pprinter ->
+                         ('a -> 'b) -> 'a -> unit
+val require_msgk : ('b testresult -> bool) -> 'b HOLPP.pprinter -> ('a -> 'b) ->
                    ('b testresult -> unit) -> 'a -> unit
 
 val bold : string -> string

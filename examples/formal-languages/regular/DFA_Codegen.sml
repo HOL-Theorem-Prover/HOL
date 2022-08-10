@@ -57,7 +57,7 @@ fun twoDarrayString nstates intLists =
   end;
 in
 fun Ada {name,src_regexp,finals,table} ostrm =
- let val _ = stdErr_print "Generating code.\n"
+ let val _ = stdErr_print "Generating Ada code.\n"
      val nstates = List.length finals
      val Uname = Upper name handle e => raise wrap_exn "Ada" "" e
  val string = String.concat
@@ -115,7 +115,7 @@ fun array256String intList =
  end
 
 fun twoDarrayString intLists =
-  let val _ = stdErr_print "Generating code.\n"
+  let val _ = stdErr_print "Generating C code.\n"
       val arrays = map array256String intLists
   in String.concat
       (("{"::spread ",\n " arrays) @ ["};"])
@@ -183,7 +183,7 @@ fun twoDarrayString intLists =
   end;
 in
 fun SML {name, src_regexp,finals,table} ostrm =
- let val _ = stdErr_print "Generating code.\n"
+ let val _ = stdErr_print "Generating SML code.\n"
      val nstates = List.length finals
  val string = String.concat
  ["(*---------------------------------------------------------------------------\n",
@@ -243,7 +243,7 @@ fun twoDarrayString intLists =
   end;
 in
 fun Java {name, src_regexp,finals,table} ostrm =
- let val _ = stdErr_print "Generating code.\n"
+ let val _ = stdErr_print "Generating Java code.\n"
      val nstates = List.length finals
      val Uname = Upper name handle e => raise wrap_exn "Java" "" e
  val string = String.concat

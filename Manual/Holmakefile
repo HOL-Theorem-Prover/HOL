@@ -1,0 +1,18 @@
+# =====================================================================
+# Makefile for the HOL manual
+# =====================================================================
+
+INCLUDES = Description Logic Tutorial Reference Interaction-emacs Quick Cheatsheet
+
+all: description tutorial logic reference interaction quick cheatsheet
+	@echo "=======> MANUAL made"
+.PHONY: all
+
+description: Description/description.pdf
+logic: Logic/logic.pdf
+tutorial: Tutorial/tutorial.pdf
+reference: Reference/reference.pdf
+interaction: Interaction-emacs/interaction-emacs.pdf
+quick: Quick/quick.pdf
+cheatsheet: Cheatsheet/cheatsheet.html
+

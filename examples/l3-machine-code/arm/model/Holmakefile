@@ -1,6 +1,6 @@
 INCLUDES = ../../common ../../lib
 
-all: $(DEFAULT_TARGETS) arm.ui
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)
@@ -9,5 +9,5 @@ arm-model.art: arm-model.thy arm.ot.art
 arm.art: arm.otd
 endif
 
-arm.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo arm.sml
+arm.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo arm.sml arm.ui
 	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui arm.sml

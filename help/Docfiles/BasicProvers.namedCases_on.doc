@@ -1,0 +1,14 @@
+\DOC namedCases_on
+
+\TYPE namedCases_on : term quotation -> string list -> tactic
+
+\SYNOPSIS
+Case split on type of supplied term, using given names for introduced
+constructor arguments.
+
+\DESCRIBE
+{bossLib.namedCases_on} is identical to {BasicProvers.namedCases_on}.
+
+\SEEALSO
+bossLib.namedCases, bossLib.Cases_on, bossLib.Cases.
+\ENDDOC

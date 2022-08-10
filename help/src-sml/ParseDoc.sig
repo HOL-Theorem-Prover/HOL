@@ -16,8 +16,11 @@ sig
   val parse_file : string -> section list
   exception ParseError of string
 
-  val find_docfiles : string -> string Binaryset.set
+  val find_docfiles : string -> (string*string,string) Binarymap.dict
   val core_dname : string -> string
+
+  val encode_stem : string -> string  (* stem is e.g., Type.--> *)
+  val decode_stem : string -> string
 
 end;
 

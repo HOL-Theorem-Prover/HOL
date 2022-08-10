@@ -1,0 +1,2 @@
+INCDIRS = bag string
+INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/src/%),$(INCDIRS))

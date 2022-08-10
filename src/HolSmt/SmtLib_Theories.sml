@@ -267,7 +267,7 @@ in
       ("<=", chainable intSyntax.mk_leq),
       ("<", chainable intSyntax.mk_less),
       (">=", chainable intSyntax.mk_geq),
-      (">", chainable intSyntax.mk_great)
+      (">", chainable intSyntax.mk_greater)
     ]
 
   end
@@ -298,7 +298,7 @@ in
       ("<=", chainable realSyntax.mk_leq),
       ("<", chainable realSyntax.mk_less),
       (">=", chainable realSyntax.mk_geq),
-      (">", chainable realSyntax.mk_great)
+      (">", chainable realSyntax.mk_greater)
     ]
 
   end
@@ -329,7 +329,7 @@ in
       ("<=", chainable intSyntax.mk_leq),
       ("<", chainable intSyntax.mk_less),
       (">=", chainable intSyntax.mk_geq),
-      (">", chainable intSyntax.mk_great),
+      (">", chainable intSyntax.mk_greater),
       (* decimals *)
       ("_", zero_zero real_of_decimal),
       ("-", K_zero_one realSyntax.mk_negated),
@@ -340,7 +340,7 @@ in
       ("<=", chainable realSyntax.mk_leq),
       ("<", chainable realSyntax.mk_less),
       (">=", chainable realSyntax.mk_geq),
-      (">", chainable realSyntax.mk_great),
+      (">", chainable realSyntax.mk_greater),
       ("to_real", K_zero_one intrealSyntax.mk_real_of_int),
       ("to_int", K_zero_one intrealSyntax.mk_INT_FLOOR),
       ("is_int", K_zero_one intrealSyntax.mk_is_int)

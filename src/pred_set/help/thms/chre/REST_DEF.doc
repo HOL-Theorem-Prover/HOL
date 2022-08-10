@@ -1,3 +1,0 @@
-\THEOREM REST_DEF pred_sets
-|- !s. REST s = s DELETE (CHOICE s)
-\ENDTHEOREM

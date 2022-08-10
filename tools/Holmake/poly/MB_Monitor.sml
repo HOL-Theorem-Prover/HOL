@@ -1,7 +1,7 @@
 structure MB_Monitor :> MB_Monitor =
 struct
 
-open ProcessMultiplexor Holmake_tools
+open terminal_primitives ProcessMultiplexor Holmake_tools
 
 val five_sec = Time.fromSeconds 5
 val W_EXITED = Posix.Process.W_EXITED
@@ -17,19 +17,6 @@ fun Pstatus_to_string st =
       | W_STOPPED s => "Stopped "^SysWord.toString (Posix.Signal.toWord s)
   end
 
-(* thanks to Rob Arthan for this function *)
-fun strmIsTTY (outstream : TextIO.outstream) =
-  let
-    val (wr as TextPrimIO.WR{ioDesc,...},buf) =
-	TextIO.StreamIO.getWriter(TextIO.getOutstream outstream);
-    val _ =
-        TextIO.setOutstream (outstream, TextIO.StreamIO.mkOutstream(wr, buf))
-  in
-    case ioDesc of
-	NONE => false
-      | SOME desc => (OS.IO.kind desc = OS.IO.Kind.tty)
-  end
-
 val green = boldgreen
 val red = boldred
 
@@ -39,6 +26,32 @@ fun nextchar #"|" = #"/"
   | nextchar #"\\" = #"|"
   | nextchar c = c
 
+val time_units = [("m", 60), ("h", 60), ("d", 24)]
+
+fun compact_time sz0 withsecs ld rd t =
+    let
+      val sz = sz0 - (size ld + size rd)
+      val numSecs = Time.toSeconds t
+      val n_s = LargeInt.toString numSecs
+      val (su,sn) = if withsecs then ("s", 1) else ("", 0)
+      fun helper i n =
+          if i > 2 then ld ^ CharVector.tabulate(sz-1, fn _ => #"9") ^ "d" ^ rd
+          else let
+            val (u, f) = List.nth(time_units, i)
+            val n' = LargeInt.div(n,f)
+            val n'_s = LargeInt.toString n'
+          in
+            if size n'_s + 1 > sz then helper (i + 1) n'
+            else StringCvt.padLeft #" " sz0 (ld ^ n'_s ^ u ^ rd)
+          end
+    in
+      if size n_s + sn > sz then helper 0 numSecs
+      else StringCvt.padLeft #" " sz0 (ld ^ n_s ^ su ^ rd)
+    end
+
+val yellow_timelimit = Time.fromSeconds 10
+val red_timelimit = Time.fromSeconds 30
+
 datatype monitor_status = MRunning of char
                         | Stalling of Time.time
 (* statusString is always 3 characters; with a nonspace rightmost, except
@@ -46,19 +59,12 @@ datatype monitor_status = MRunning of char
 fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c)
   | statusString (Stalling t) =
     let
-      val numSecs = Time.toSeconds t
-      open LargeInt
-      val n_s = toString numSecs
+      val colourf = if Time.<(t, yellow_timelimit) then (fn x => x)
+                    else if Time.<(t,red_timelimit) then boldyellow
+                    else red
     in
-      if numSecs < 5 then "   "
-      else if numSecs < 10 then "  " ^ n_s
-      else if numSecs < 30 then " " ^ boldyellow n_s
-      else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s)
-      else if numSecs < 100 * 60 then
-        red (StringCvt.padLeft #" " 2 (toString (numSecs div 60) ^ "m"))
-      else if numSecs <= 4 * 24 * 60 * 60 then
-        red (StringCvt.padLeft #" " 2 (toString (numSecs div 3600) ^ "h"))
-      else red ">4d"
+      if Time.<(t, Time.fromSeconds 5) then "   "
+      else colourf (compact_time 3 false "" "" t)
     end
 
 fun rtrunc n s =
@@ -108,11 +114,57 @@ fun delsml_sfx s =
 
 val width_check_delay = Time.fromMilliseconds 1000
 
-fun new {info,warn,genLogFile,time_limit} =
+type procinfo = {os : TextIO.outstream, tb : tailbuffer.t,
+                 status : monitor_status, start_time : Time.time}
+
+fun pinfo_upd (tb', stat) ({os,tb,status,start_time}:procinfo) =
+    {os = os, tb = tb', status = stat, start_time = start_time}
+
+
+fun prettydir dir =
+    let
+      (* input dir is already absolute *)
+      val hmdir = Holmake_tools.hmdir.fromPath {origin = "/", path = dir}
+      val dir = Holmake_tools.hmdir.pretty_dir hmdir
+      val dir = Holmake_tools.nice_dir dir
+      val {arcs,...} = OS.Path.fromString dir
+      val arcs = if hd arcs = "~" orelse String.sub(hd arcs, 0) = #"$" then
+                   tl arcs
+                 else arcs
+    in
+      String.concatWith "/" arcs
+    end
+
+(* right align, and put dots on left *)
+fun rlsquash_to wdth s =
+    if wdth <= 0 then ""
+    else if size s < wdth then
+      StringCvt.padLeft #" " wdth s
+    else if wdth <= 6 then
+      (*   1 <= wdth <= 6 /\ wdth <= size s ==>
+           size s + 1 - wdth IN [1..size s]
+         and String.extract(s, size s, NONE) returns empty string
+      *)
+      " " ^ String.extract(s, size s + 1 - wdth, NONE)
+    else
+      (*   6 < wdth <= size s ==>
+           size s + 4 - wdth IN [4..size s - 3]
+         4 is fine as size s > 6, and size s - 3 < size s
+      *)
+      " ..." ^ String.extract(s, size s + 4 - wdth, NONE)
+
+fun new {info,warn,genLogFile,time_limit,multidir} =
   let
-    val monitor_map = ref (Binarymap.mkDict String.compare)
+    val monitor_map =
+        ref (Binarymap.mkDict jobkey_compare : (jobkey,procinfo)Binarymap.dict)
     val last_width_check = ref (Time.now())
     val width = ref (getWidth())
+    val last_child_cputime = let
+      val {cutime,...} = Posix.ProcEnv.times()
+    in
+      ref cutime
+    end
+
     fun Width () =
       let
         val t = Time.now()
@@ -136,65 +188,83 @@ fun new {info,warn,genLogFile,time_limit} =
           let
             val tgtw = width div job_count - 4
           in
-            Binarymap.app (fn (k,(_,v)) =>
-                              print (polish tgtw k ^ statusString v ^ " "))
-                          (!monitor_map);
+            Binarymap.app (
+              fn (jk as (_, {tag,dir}),{status,...}) =>
+                 print (polish tgtw tag ^ statusString status ^ " ")
+            ) (!monitor_map);
             print CLR_EOL
           end
         else
           case Binarymap.listItems (!monitor_map) of
               [] => ()
-            | (k,((strm,tb),stat)) :: _ =>
+            | (jk as (_, {tag,dir}),{tb,status,...}) :: _ =>
               let
                 val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
                 val tgtw = width div 4
               in
-                print (polish tgtw k ^
+                print (polish tgtw tag ^
                        rtrunc (width - tgtw - 5) (": " ^ s) ^ " " ^
-                       (case stat of
-                            Stalling _ => statusString stat
+                       (case status of
+                            Stalling _ => statusString status
                           | _ => "   "));
                 print CLR_EOL
               end
       end
     fun id (s:string) = s
-    val (startmsg, infopfx, display_map, green, red, boldyellow, dim, CLR_EOL) =
+    val (startmsg, infopfx, display_map, green, red, boldyellow, dim, bold,
+         CLR_EOL) =
         if strmIsTTY TextIO.stdOut then
           ((fn s => ()), "\r", ttydisplay_map, green, red, boldyellow, dim,
-           CLR_EOL)
+           bold, CLR_EOL)
         else
           ((fn s => info ("Starting work on " ^ delsml_sfx s)), "",
            (fn () => ()),
-           id, id, id, id, "")
-    fun stdhandle tag f =
-      case Binarymap.peek (!monitor_map, tag) of
-          NONE => (warn ("Lost monitor info for "^tag); NONE)
+           id, id, id, id, id, "")
+    fun stdhandle jkey f =
+      case Binarymap.peek (!monitor_map, jkey) of
+          NONE => (warn ("Lost monitor info for "^jobkey_toString jkey); NONE)
         | SOME info => f info
-    fun taginfo tag colour s =
-      info (infopfx ^
-            StringCvt.padRight #" "
-                               (Width() - String.size s - 1)
-                               (delsml_sfx tag) ^
-            colour s ^ CLR_EOL)
+    fun taginfo {tag,dir} dirstr timestr (colour,verdict) =
+        let
+          val sfxsz = size timestr + 7
+          val sfxstr = timestr ^ colour (StringCvt.padLeft #" " 7 verdict)
+          val remspace = Width() - (sfxsz + 1)
+          val tagstr = delsml_sfx tag
+          val tagsz = size tagstr
+          fun maybe_dim s = if size s <> 0 then dim s else s
+        in
+          info (infopfx ^ tagstr ^
+                maybe_dim (rlsquash_to (remspace - tagsz) dirstr) ^
+                sfxstr ^ CLR_EOL)
+        end
+    fun lrpad (s1,s2) =
+        let val w = Width () and sz1 = noesc_size s1 and sz2 = noesc_size s2
+        in
+          if sz1 + sz2 < w then
+            s1 ^ CharVector.tabulate(w - (sz1 + sz2), fn _ => #" ") ^ s2
+          else s1 ^ " " ^ s2
+        end
     fun monitor msg =
       case msg of
-          StartJob (_, tag) =>
+          StartJob (jk as (_, {tag,...}), {dir}) =>
           let
-            val strm = TextIO.openOut (genLogFile{tag = tag})
+            val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
                   numlines = 10,
                   patterns = [cheat_string, oracle_string, used_cheat_string]
                 }
           in
             monitor_map :=
-              Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
+              Binarymap.insert(!monitor_map, jk,
+                               {os = strm, tb = tb, status = MRunning #"|",
+                                start_time = Time.now()});
             startmsg tag;
             display_map();
             NONE
           end
-        | Output((_, tag), t, chan, msg) =>
-          stdhandle tag
-            (fn ((strm,tb),stat) =>
+        | Output(jk as (_, tag), t, chan, msg) =>
+          stdhandle jk
+            (fn (pinfo as {os = strm,tb,status=stat,...}) =>
                 let
                   val stat' = case stat of MRunning c => MRunning (nextchar c)
                                          | Stalling _ => MRunning #"|"
@@ -203,14 +273,14 @@ fun new {info,warn,genLogFile,time_limit} =
                   TextIO.output(strm,msg);
                   TextIO.flushOut strm;
                   monitor_map :=
-                    Binarymap.insert(!monitor_map, tag,
-                                     (((strm,append msg tb), stat')));
+                    Binarymap.insert(!monitor_map, jk,
+                                     pinfo_upd (append msg tb, stat') pinfo);
                   display_map();
                   NONE
                 end)
         | NothingSeen(jkey as (_, tag), {delay,...}) =>
           let
-            fun after_check strm stat =
+            fun after_check (pi as {os = strm, status = stat, tb, start_time}) =
               let
                 val stat' =
                     case stat of
@@ -220,52 +290,70 @@ fun new {info,warn,genLogFile,time_limit} =
                       | Stalling _ => Stalling delay
               in
                 monitor_map :=
-                  Binarymap.insert(!monitor_map, tag, (strm, stat'));
+                  Binarymap.insert(!monitor_map, jkey,
+                                   pinfo_upd (tb, stat') pi);
                 display_map();
                 NONE
               end
           in
             stdhandle
-              tag
-              (fn (strm,stat) =>
-                  check_time (delay, jkey, (fn () => after_check strm stat)))
+              jkey
+              (fn pinfo =>
+                  check_time (delay, jkey, (fn () => after_check pinfo)))
           end
-        | Terminated((_, tag), st, _) =>
-          stdhandle tag
-            (fn ((strm,tb),stat) =>
+        | Terminated(jk as (_, td as {tag,dir}), st, _) =>
+          stdhandle jk
+            (fn {os = strm,tb,status=stat,start_time} =>
                 let
                   val {fulllines,lastpartial,patterns_seen} =
                     tailbuffer.output tb
                   fun seen s = Holmake_tools.member s patterns_seen
-                  val taginfo = taginfo tag
                   val status_string = Pstatus_to_string st
+                  val {cutime,...} = Posix.ProcEnv.times()
+                  val this_childs_time = Time.-(cutime, !last_child_cputime)
+                  val _ = last_child_cputime := cutime
+                  val utstr = compact_time 6 true "(" ")" this_childs_time
+                  val dirstr = if multidir then prettydir dir else ""
+                  val tinfo = taginfo td dirstr utstr
                 in
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then
-                      taginfo boldyellow "CHEATED"
+                      tinfo (boldyellow, "CHEATED")
                     else
-                      taginfo
-                        (if seen oracle_string then boldyellow else green) "OK"
-                  else (taginfo red ("FAILED! <" ^ status_string ^ ">");
-                        List.app (fn s => info (" " ^ dim s)) fulllines;
-                        if lastpartial <> "" then info (" " ^ dim lastpartial)
-                        else ());
+                      tinfo ((if seen oracle_string then boldyellow else green),
+                             "OK")
+                  else
+                    (tinfo (red, "FAIL<" ^ status_string ^ ">");
+                     List.app (fn s => info (" " ^ dim s)) fulllines;
+                     if lastpartial <> "" then info (" " ^ dim lastpartial)
+                     else ());
                   TextIO.closeOut strm;
-                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
+                  monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                   display_map();
                   NONE
                 end)
-        | MonitorKilled((_, tag), _) =>
-          stdhandle tag
-            (fn ((strm,tb), stat) =>
-                (taginfo tag red "M-KILLED";
-                 TextIO.closeOut strm;
-                 monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
-                 display_map();
-                 NONE))
+        | MonitorKilled(jk as (_, td as {tag,dir}), _) =>
+          let
+            val {cutime,...} = Posix.ProcEnv.times()
+            val this_childs_time = Time.-(cutime,!last_child_cputime)
+            val _ = last_child_cputime := cutime
+            val utstr = compact_time 6 true "(" ")" this_childs_time
+            val dirstr = if multidir then prettydir dir else ""
+          in
+            stdhandle jk
+               (fn {os = strm,tb, status = stat,...} =>
+                   (taginfo td dirstr utstr (red, "MKILLED");
+                    TextIO.closeOut strm;
+                    monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
+                    display_map();
+                    NONE))
+          end
         | _ => NONE
   in
-    monitor
+    (monitor,
+     {coloured_info =
+      (fn (s1,s2) => info (lrpad (infopfx ^ s1, s2 ^ " " ^ CLR_EOL))),
+      red = red, green = green, bold = bold})
   end
 
 

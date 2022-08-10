@@ -278,6 +278,23 @@ fun IFC (conv1:conv) conv2 conv3 tm =
   | SOME NONE => conv2 tm
   | NONE => conv3 tm
 
+(* -----------------------------------------------------------------------
+   UNCHANGED_CONV cnv (was in updateLib.sml, unexported)
+
+   Raise Conv.UNCHANGED if conversion "cnv" produces result |- t = t' where
+   t and t' are alpha-equivalent, or if an exception is raised.
+
+   cf. CHANGED_CONV
+   ----------------------------------------------------------------------- *)
+
+fun UNCHANGED_CONV (conv: conv) tm =
+   let
+      val th = Lib.with_exn conv tm UNCHANGED
+      val {lhs,rhs} = dest_eq (concl th)
+   in
+      if aconv lhs rhs then raise UNCHANGED else th
+   end
+
 (*----------------------------------------------------------------------*
  * Apply a conversion zero or more times.                               *
  *----------------------------------------------------------------------*)
@@ -2555,5 +2572,18 @@ fun memoize dst tree accept err (cnv: conv) =
                  end)
        | NONE => raise err
   end
+
+(* ------------------------------------------------------------------------- *)
+(* Eliminate the antecedent of a theorem using a conversion/proof rule.      *)
+(*  (Ported from HOL-Light's drule.ml)                                       *)
+(* ------------------------------------------------------------------------- *)
+
+fun MP_CONV (cnv:conv) th = let
+  val {ant, conseq} = dest_imp (concl th);
+  val ath = cnv ant
+in
+  MP th (EQT_ELIM ath)
+  handle HOL_ERR _ => MP th ath
+end
 
 end (* Conv *)

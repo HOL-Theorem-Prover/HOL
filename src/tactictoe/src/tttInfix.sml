@@ -1,9 +1,9 @@
-(* =========================================================================  *)
-(* FILE          : tttInfix.sml                                               *)
-(* DESCRIPTION   : Transforming a prefix operator into an infix one           *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(* ========================================================================  *)
+(* FILE          : tttInfix.sml                                              *)
+(* DESCRIPTION   : Transforming a prefix operator into an infix one          *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
+(* DATE          : 2017                                                      *)
+(* ========================================================================= *)
 
 structure tttInfix :> tttInfix =
 struct
@@ -86,9 +86,9 @@ fun infix_pair infixity = case infixity of
     ("ttt_infixr" ^ Int.toString n ^ "_open",
      "ttt_infixr" ^ Int.toString n ^ "_close")
 
-(*----------------------------------------------------------------------------
+(*---------------------------------------------------------------------------
   Infixity from src/thm/Overlay.sml.
-  ----------------------------------------------------------------------------*)
+  ---------------------------------------------------------------------------*)
 
 val l0 = String.tokens Char.isSpace
   (
@@ -97,10 +97,10 @@ val l0 = String.tokens Char.isSpace
    "++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
    "THEN_TCL ORELSE_TCL ?> |> |>> ||> ||->",
    ">> >- >| \\\\ >>> >>- ??",
-   "~~ !~ Un Isct -- IN"
+   "~~ !~ Un Isct -- IN -*"
   ]
   )
-val l1 = String.tokens Char.isSpace "## $"
+val l1 = String.tokens Char.isSpace "## $ ?"
 val l2 = String.tokens Char.isSpace "via by suffices_by"
 
 val overlay_infixity =

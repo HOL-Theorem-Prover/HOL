@@ -12,11 +12,11 @@ open HolKernel Abbrev boolLib aiLib
   smlExecute smlLexer smlTimeout smlPrettify
 
 val ERR = mk_HOL_ERR "psMinimize"
-val debugdir = HOLDIR ^ "/src/AI/proof_search/debug"
-fun debug s = debug_in_dir debugdir "psMinimize" s
 
-val search_time = 60.0
-val tactic_time = 1.0
+val mini_proof_time = ref 20.0
+val mini_tactic_time = ref 0.2
+val sthen = ">>"
+val sthenl = ">|"
 
 (* -------------------------------------------------------------------------
    Tests
@@ -33,8 +33,8 @@ fun same_effect tim stac1 stac2 g =
     glopt_eq gl1o gl2o
   end
 
-fun is_proof tim stac g = glopt_eq (app_stac stac tim g) (SOME [])
-fun is_effect tim stac g gl = glopt_eq (app_stac tim stac g) (SOME gl)
+fun is_proof stac tim g = glopt_eq (app_stac tim stac g) (SOME [])
+fun has_effect tim stac g gl = glopt_eq (app_stac tim stac g) (SOME gl)
 
 (* -------------------------------------------------------------------------
    Pretty tactic string
@@ -51,10 +51,10 @@ fun safe_prettify_stac stac = (smart_space o partial_sml_lexer) stac
    Pretty proof steps
    ------------------------------------------------------------------------- *)
 
-datatype Proof =
+datatype proof =
     Tactic of (string * goal)
-  | Then   of (Proof * Proof)
-  | Thenl  of (Proof * Proof list)
+  | Then   of (proof * proof)
+  | Thenl  of (proof * proof list)
 
 fun pretty_allstac tim proof = case proof of
     Tactic (s,g) =>
@@ -92,15 +92,16 @@ fun unsafe_prettify_proof proof =
           decll_ref := decll @ (!decll_ref);
           smart_space news
         end
-    | Then (p1,p2) => loop p1 ^ " THEN\n  " ^ loop p2
+    | Then (p1,p2) => loop p1 ^ " " ^ sthen ^ " " ^ loop p2
     | Thenl (p,pl) =>
       let
         val sl = map loop pl
         val set = mk_fast_set String.compare sl
       in
         if length set = 1
-        then loop p ^ " THEN\n  " ^ hd set
-        else loop p ^ " THENL\n  [" ^ String.concatWith ",\n  " sl ^ "]"
+        then loop p ^ " " ^ sthen ^ " " ^ hd set
+        else loop p ^ " " ^ sthenl ^ " " ^
+             "[" ^ String.concatWith ",  " sl ^ "]"
       end
     val body = loop proof
     val decll = mk_fast_set (list_compare String.compare) (!decll_ref)
@@ -108,27 +109,22 @@ fun unsafe_prettify_proof proof =
   in
     if null decls
     then body
-    else "let\n  " ^
-         String.concatWith "\n  " decls ^ "\nin\n  " ^ body ^ "\nend"
+    else "let " ^ String.concatWith "  " decls ^ " in " ^ body ^ "end"
   end
 
 fun safe_prettify_proof proof = case proof of
     Tactic (s,_) => "(" ^ s ^ ")"
-  | Then (p1,p2) => safe_prettify_proof p1 ^ " THEN " ^ safe_prettify_proof p2
+  | Then (p1,p2) => safe_prettify_proof p1 ^ " " ^
+    sthen ^ " " ^ safe_prettify_proof p2
   | Thenl (p,pl) =>
-    let
-      val sl = map safe_prettify_proof pl
-      val set = mk_fast_set String.compare sl
-    in
-      if length set = 1
-      then safe_prettify_proof p ^ " THEN " ^ "(" ^ hd set ^ ")"
-      else safe_prettify_proof p ^ " THENL " ^
-        "[" ^ String.concatWith ", " sl ^ "]"
+    let val sl = map safe_prettify_proof pl in
+      safe_prettify_proof p ^ " " ^ sthenl ^ " " ^
+      "[" ^ String.concatWith ", " sl ^ "]"
     end
 
-(*----------------------------------------------------------------------------
-  Minimizing lists
-  ----------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+  Minimizing lists in one tactic
+  ---------------------------------------------------------------------------*)
 
 fun decompose sl = case sl of
     [] => []
@@ -150,88 +146,92 @@ fun group_to_string l =
     String.concatWith " " (map to_string l)
   end
 
-fun mini_stac tim g gl pl l = case l of
+fun mini_stac_aux tim g gl pl l = case l of
     [] => group_to_string pl
-  | (false,a) :: m => mini_stac tim g gl (pl @ [(false,a)]) m
+  | (false,a) :: m => mini_stac_aux tim g gl (pl @ [(false,a)]) m
   | (true,(l1,l2)) :: m =>
     if null l2
-    then mini_stac tim g gl (pl @ [(true,(l1,l2))]) m
+    then mini_stac_aux tim g gl (pl @ [(true,(l1,l2))]) m
     else
       let val new_stac = group_to_string  (pl @ [(true, (l1, tl l2))] @ m) in
-        if is_effect tim new_stac g gl
-        then mini_stac tim g gl pl ((true, (l1, tl l2)) :: m)
-        else mini_stac tim g gl pl ((true, (l1 @ [hd l2], tl l2)) :: m)
+        if has_effect tim new_stac g gl
+        then mini_stac_aux tim g gl pl ((true, (l1, tl l2)) :: m)
+        else mini_stac_aux tim g gl pl ((true, (l1 @ [hd l2], tl l2)) :: m)
       end
 
-fun mini_stac_g_gl tim stac g gl =
-  mini_stac tim g gl [] (decompose (partial_sml_lexer stac))
-
-(*----------------------------------------------------------------------------
-  Minimizing lists in all tactics of a proof
-  ----------------------------------------------------------------------------*)
-
-fun mini_proofstac stac g =
+fun mini_stac stac g =
   let
-    val gl = fst (tactic_of_sml stac g)
-      handle _ => (debug "Error: minimize"; raise ERR "minimize" stac)
+    val glo = app_stac (!mini_tactic_time) stac g
+    val l = decompose (partial_sml_lexer stac)
   in
-    mini_stac tactic_time g gl [] (decompose (partial_sml_lexer stac))
+    if isSome glo
+    then mini_stac_aux (!mini_tactic_time) g (valOf glo) [] l
+    else stac
   end
 
+(*---------------------------------------------------------------------------
+  Minimizing lists in all tactics of a proof
+  ---------------------------------------------------------------------------*)
+
 fun mini_allstac proof = case proof of
-    Tactic (s,g) => Tactic (mini_proofstac s g,g)
+    Tactic (s,g) => Tactic (mini_stac s g,g)
   | Then (p1,p2) => Then (mini_allstac p1, mini_allstac p2)
   | Thenl (p,pl) => Thenl (mini_allstac p, map mini_allstac pl)
 
-(*----------------------------------------------------------------------------
+(*---------------------------------------------------------------------------
   Trivial proof minimization
-  ----------------------------------------------------------------------------*)
-(* could be replaced by minimization search,
-   favorising breadth first, with a high exploration coefficient *)
+  ---------------------------------------------------------------------------*)
+
 fun mini_proof proof = case proof of
     Tactic _ => proof
   | Then (Tactic (_,g),p2) =>
     let val s = safe_prettify_proof p2 in
-      if is_proof s search_time g then p2 else proof
+      if is_proof s (!mini_proof_time) g then p2 else proof
     end
   | Then (p1,p2) => Then (mini_proof p1, mini_proof p2)
   | Thenl (p,pl) => Thenl (mini_proof p, map mini_proof pl)
 
-(*----------------------------------------------------------------------------
+(*---------------------------------------------------------------------------
   Combining minimization and prettification.
-  ----------------------------------------------------------------------------*)
+  ---------------------------------------------------------------------------*)
 
-(* tactic *)
+(* tactic (used by holyhammer) *)
 fun minimize_stac tim stac g gl =
-  unsafe_prettify_stac (mini_stac_g_gl tim stac g gl)
+  let val newstac =
+    mini_stac_aux tim g gl [] (decompose (partial_sml_lexer stac))
+  in
+    unsafe_prettify_stac newstac
+  end
 
 (* proof *)
 fun minimize_proof p =
-  (pretty_allstac tactic_time o mini_proof o mini_allstac) p
-  handle _ =>
-    (debug "Error: prettification or minimization failed"; p)
+  (pretty_allstac (!mini_tactic_time) o mini_proof o mini_allstac) p
+  handle Interrupt => raise Interrupt
+   | _ => (debug "Error: prettification or minimization failed"; p)
 
-(*----------------------------------------------------------------------------
+fun minimize_proof_alt p =
+  (pretty_allstac (!mini_tactic_time) o mini_allstac) p
+  handle Interrupt => raise Interrupt
+   | _ => (debug "Error: prettification or minimization failed"; p)
+
+(*---------------------------------------------------------------------------
   Reconstructing the proof.
-  ----------------------------------------------------------------------------*)
+  ---------------------------------------------------------------------------*)
 
 fun proof_length proof = case proof of
-  Tactic (s,g) => 1
-| Then (p1,p2) => proof_length p1 + proof_length p2
-| Thenl (p,pl) => proof_length p + sum_int (map proof_length pl)
+    Tactic (s,g) => 1
+  | Then (p1,p2) => proof_length p1 + proof_length p2
+  | Thenl (p,pl) => proof_length p + sum_int (map proof_length pl)
 
 fun reconstruct_aux g proof sproof =
   let
-    val tac = tactic_of_sml sproof
+    val tac = tactic_of_sml (!mini_proof_time) sproof
       handle Interrupt => raise Interrupt | _ => NO_TAC
     val new_tim =
-      snd (add_time (timeout search_time Tactical.TAC_PROOF) (g,tac))
-      handle
-        Interrupt => raise Interrupt
-      | _ => (debug ("Warning: reconstruct: " ^ sproof); search_time)
+      snd (add_time (timeout (!mini_proof_time) Tactical.TAC_PROOF) (g,tac))
   in
-    debug ("proof length: " ^ int_to_string (proof_length proof));
-    debug ("proof time: " ^ Real.toString new_tim);
+    debugf "proof length: " int_to_string (proof_length proof);
+    debugf "proof time: " Real.toString new_tim;
     sproof
   end
 
@@ -250,6 +250,11 @@ fun reconstruct g proof =
   )
   handle Interrupt => raise Interrupt | _ => safe_prettify_proof proof
 
+(*---------------------------------------------------------------------------
+  Printing partial proofs
+  ---------------------------------------------------------------------------*)
 
+fun unsafe_sproof proof =
+  unsafe_prettify_stac (requote_sproof (unsafe_prettify_proof proof))
 
 end (* struct *)

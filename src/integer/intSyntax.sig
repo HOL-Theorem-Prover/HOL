@@ -19,7 +19,7 @@ sig
   val int_eq_tm      : term
   val less_tm        : term
   val leq_tm         : term
-  val great_tm       : term
+  val greater_tm       : term
   val geq_tm         : term
   val divides_tm     : term
   val min_tm         : term
@@ -94,9 +94,9 @@ sig
   val dest_leq       : term -> (term * term)
   val mk_leq         : (term * term) -> term
 
-  val is_great       : term -> bool
-  val dest_great     : term -> (term * term)
-  val mk_great       : (term * term) -> term
+  val is_greater       : term -> bool
+  val dest_greater     : term -> (term * term)
+  val mk_greater       : (term * term) -> term
 
   val is_geq         : term -> bool
   val dest_geq       : term -> (term * term)

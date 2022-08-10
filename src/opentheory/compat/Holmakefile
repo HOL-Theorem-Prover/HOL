@@ -1,13 +1,13 @@
 boolpkg=bool-1.37
 functionpkg=function-1.55
-relationpkg=relation-1.61
-setpkg=set-1.72
+relationpkg=relation-1.63
+setpkg=set-1.85
 
-all: HOL4bool.ot.art\
-	HOL4combin.ot.art\
-	$(HOLDIR)/src/HolSat/sat.ot.art\
-	$(HOLDIR)/src/combin/combin.ot.art\
+all: HOL4bool.ot.art HOL4combin.ot.art \
+	$(HOLDIR)/src/HolSat/sat.ot.art \
+	$(HOLDIR)/src/combin/combin.ot.art \
 	$(HOLDIR)/src/relation/relation.ot.art
+
 .PHONY: all
 
 OpenTheoryBoolScript.sml: $(boolpkg).art

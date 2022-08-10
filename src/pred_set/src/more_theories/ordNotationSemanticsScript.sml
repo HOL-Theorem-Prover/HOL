@@ -2,7 +2,6 @@ open HolKernel Parse boolLib bossLib
 
 open ordinalTheory cardinalTheory ordinalNotationTheory
 
-open lcsymtacs
 
 val _ = new_theory "ordNotationSemantics"
 

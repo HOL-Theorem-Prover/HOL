@@ -5,12 +5,7 @@
 .travis.yml
 Manual
 developers
-examples/PSL
 examples/dev/sw
-examples/diningcryptos
-examples/elliptic
-examples/fsub
 examples/muddy/muddyC/buddy/doc/bddnotes.ps
 examples/muddy/muddyC/buddy/doc/buddy.ps
 examples/pgcl
-examples/temporal_deep

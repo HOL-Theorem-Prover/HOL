@@ -150,25 +150,52 @@ val SUB_LESS_I = prove
 (``!m n. 0n < n /\ n <= m ==> I(m - n) < I(m)``,
  REWRITE_TAC[SUB_LESS,combinTheory.I_THM]);
 
-val termination_simps =
-     ref [combinTheory.o_DEF,
-          combinTheory.I_THM,
-          prim_recTheory.measure_def,
-          relationTheory.inv_image_def,
-          pairTheory.LEX_DEF,
-          pairTheory.RPROD_DEF,
-          SUB_LESS_I,DIV_LESS_I,MOD_LESS_I];
+local open combinTheory prim_recTheory relationTheory basicSizeTheory pairTheory
+in end
+val initial_termination_simps = [("SUB_LESS_I", SUB_LESS_I),
+                                 ("DIV_LESS_I", DIV_LESS_I),
+                                 ("MOD_LESS_I", MOD_LESS_I)]
+
+val {exclude = exclude_termsimp, temp_exclude = temp_exclude_termsimp,
+     export = export_termsimp,   temp_export = temp_export_termsimp,
+     getDB = termination_simpdb, temp_setDB = termination_tempsetDB,
+     get_thms = termination_simps, ...} =
+    ThmSetData.export_simple_dictionary {settype = "tfl_termsimp",
+                                         initial = initial_termination_simps}
+val _ =
+    List.app temp_export_termsimp ["combin.o_DEF",
+                                   "combin.I_THM",
+                                   "prim_rec.measure_def",
+                                   "relation.inv_image_def",
+                                   "basicSize.sum_size_def",
+                                   "basicSize.min_pair_size_def",
+                                   "pair.LEX_DEF",
+                                   "pair.RPROD_DEF"]
+
+fun with_termsimps ths =
+    ThmSetData.sdict_withflag_thms
+      ({getDB = termination_simpdb, temp_setDB = termination_tempsetDB}, ths)
+
+(*---------------------------------------------------------------------------*)
+(* Extra rewrites, used only if they would solve a termination conjunct.     *)
+(*---------------------------------------------------------------------------*)
+
+val termination_solve_simps = ref ([] : thm list);
 
 (*---------------------------------------------------------------------------*)
 (* Adjustable set of WF theorems for doing WF proofs.                        *)
 (*---------------------------------------------------------------------------*)
 
-val WF_thms =
- let open relationTheory prim_recTheory pairTheory
- in
-   ref [WF_inv_image, WF_measure, WF_LESS,
-        WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
- end;
+val {getDB = WF_thms, export = export_WF_thm, ...} =
+    ThmSetData.export_list {
+      settype = "tfl_WF",
+      initial = let
+        open relationTheory prim_recTheory pairTheory
+      in
+        [WF_inv_image, WF_measure, WF_LESS,
+         WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
+      end
+    }
 
 
 (*---------------------------------------------------------------------------*)
@@ -339,6 +366,18 @@ val simplifyR =
  end;
 
 (*---------------------------------------------------------------------------*)
+(* Build a type size, not counting outer sum or pair constructors,           *)
+(* which are likely to be created by mutual recursion.                       *)
+(*---------------------------------------------------------------------------*)
+fun flat_type_size ty = case
+        (total sumSyntax.dest_sum ty, total pairSyntax.dest_prod ty) of
+    (SOME (lty, rty), _) => list_mk_icomb (basicSizeSyntax.sum_size_tm,
+        map flat_type_size [lty, rty])
+  | (NONE, SOME (lty, rty)) => list_mk_icomb (basicSizeSyntax.min_pair_size_tm,
+        map flat_type_size [lty, rty])
+  | _ => TypeBasePure.type_size (TypeBase.theTypeBase()) ty
+
+(*---------------------------------------------------------------------------*)
 (* "guessR" guesses a list of termination measures. Quite ad hoc.            *)
 (* First guess covers recursions on proper subterms, e.g. prim. recs. Next   *)
 (* guess measure sum of sizes of all arguments. Next guess generates         *)
@@ -355,7 +394,7 @@ fun known_fun tm =
      fun get_lhs th =
             rand (fst(dest_order(snd(strip_imp
                   (snd(strip_forall(concl th)))))))
-     val pats = mapfilter get_lhs (!termination_simps)
+     val pats = mapfilter get_lhs (termination_simps())
  in
     0 < length (mapfilter (C match_term tm) pats)
  end;
@@ -401,7 +440,8 @@ fun guessR defn =
                         in (v::alist, if b then size_app v::slist else slist)
                         end) indices domtyl_2 ([],[])
            val lex_combs = mk_sized_subsets argvars subset
-           val allrels = [mk_cmeasure domty0, mk_cmeasure (tysize domty)]
+           val allrels = [mk_cmeasure domty0, mk_cmeasure (tysize domty),
+                             mk_cmeasure (flat_type_size domty)]
                          @ it_prim_rec @ lex_combs
            val allrels' = mk_term_set (map simplifyR allrels)
        in
@@ -426,7 +466,26 @@ fun BC_TAC th =
     else MATCH_ACCEPT_TAC th;
 
 fun PRIM_WF_TAC thl = REPEAT (MAP_FIRST BC_TAC thl ORELSE CONJ_TAC);
-fun WF_TAC g = PRIM_WF_TAC (!WF_thms) g;
+fun WF_TAC g = PRIM_WF_TAC (WF_thms()) g;
+
+(*---------------------------------------------------------------------------*)
+(* Apply _size_eq theorems.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+fun size_eq_conv tm = let
+    val tys = tm |> find_terms is_const |> map type_of
+      |> map (fst o strip_fun) |> List.concat
+    fun ty_rec ty_s [] = HOLset.listItems ty_s
+      | ty_rec ty_s (ty :: tys) = if is_type ty
+          then ty_rec (HOLset.add (ty_s, ty)) (snd (dest_type ty) @ tys)
+          else ty_rec ty_s tys
+    val all_tys = ty_rec (HOLset.empty Type.compare) tys
+    val size_eqs = mapfilter TypeBase.axiom_of all_tys
+      |> map Prim_rec.doms_of_tyaxiom |> List.concat
+      |> mapfilter TypeBase.size_of
+      |> map fst |> mapfilter dest_thy_const
+      |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
+  in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
 
 (*--------------------------------------------------------------------------*)
 (* Basic simplification and proof for remaining termination conditions.     *)
@@ -444,7 +503,7 @@ fun PRIM_TC_SIMP_CONV simps =
   simpLib.SIMP_CONV term_ss (simps@size_defs@case_defs)
  end;
 
-fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!termination_simps) tm;
+fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (termination_simps()) tm;
 
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
@@ -453,10 +512,24 @@ val ASM_ARITH_TAC =
                    then MP_TAC th else ALL_TAC))
     THEN CONV_TAC Arith.ARITH_CONV;
 
-fun PRIM_TC_SIMP_TAC thl =
-  CONV_TAC (PRIM_TC_SIMP_CONV thl) THEN TRY ASM_ARITH_TAC;
+fun EX_ARITH_TAC exthl =
+ CHANGED_TAC (CONV_TAC size_eq_conv THEN simpLib.SIMP_TAC term_ss exthl)
+    THEN REPEAT STRIP_TAC THEN simpLib.ASM_SIMP_TAC term_ss []
+    THEN CONV_TAC (PRIM_TC_SIMP_CONV exthl)
+    THEN ASM_ARITH_TAC
 
-fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC (!termination_simps) g;
+fun solve_conv tac tm =
+    TAC_PROOF (([], tm), REWRITE_TAC [] THEN tac) |> EQT_INTRO
+
+fun solve_conjs tac = EVERY_CONJ_CONV (TRY_CONV (solve_conv tac))
+
+fun PRIM_TC_SIMP_TAC thl exthl =
+  CONV_TAC (PRIM_TC_SIMP_CONV thl)
+    THEN CONV_TAC (solve_conjs (TRY ASM_ARITH_TAC THEN TRY (EX_ARITH_TAC (exthl @ thl))))
+    THEN REWRITE_TAC []
+
+fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC
+    (termination_simps()) (!termination_solve_simps) g;
 
 fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
 
@@ -471,7 +544,7 @@ local
 in
 fun PROVE_TERM_TAC g =
  let open combinTheory simpLib
-     val simps = map (PURE_REWRITE_RULE [I_THM]) (!termination_simps)
+     val simps = map (PURE_REWRITE_RULE [I_THM]) (termination_simps())
      val ss = term_dp_ss ++ rewrites simps
  in
    PRIM_TERM_TAC WF_TAC
@@ -485,9 +558,9 @@ end;
 (* wellfoundedness and remaining termination conditions.                     *)
 (*---------------------------------------------------------------------------*)
 
-fun PRIM_WF_REL_TAC q WFthms simps g =
+fun PRIM_WF_REL_TAC q WFthms simps exsimps g =
   (Q.EXISTS_TAC q THEN CONJ_TAC THENL
-   [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps]) g;
+   [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps exsimps]) g;
 
 fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
 
@@ -577,10 +650,13 @@ val primDefine = defnDefine PROVE_TERM_TAC;
 (* fails in the process, remove any constants introduced by the definition.  *)
 (*---------------------------------------------------------------------------*)
 
+fun def_n_ind (def, indopt, NONE) = (def, NONE)
+  | def_n_ind (def,indopt, SOME _) = (def, indopt)
+
 fun xDefine stem q =
  Parse.try_grammar_extension
    (Theory.try_theory_extension
-       (#1 o primDefine o Defn.Hol_defn stem)) q
+       (def_n_ind o primDefine o Defn.Hol_defn stem)) q
   handle e => Raise (wrap_exn "TotalDefn" "xDefine" e);
 
 (*---------------------------------------------------------------------------
@@ -598,27 +674,15 @@ local
       Lib.first Lexis.ok_identifier alist
       handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
-   fun define q =
-      let
-         val absyn0 = Parse.Absyn q
-         val locn = Absyn.locn_of_absyn absyn0
-         val (tm,names) = Defn.parse_absyn absyn0
-         val bindstem =
-            mk_bindstem (ERRloc "Define" locn "") "Define <quotation>" names
-      in
-         #1 (primDefine (Defn.mk_defn bindstem tm))
-         handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
-      end
+fun quotation_to_stem q =
+    let
+      val absyn0 = Parse.Absyn q
+      val locn = Absyn.locn_of_absyn absyn0
+      val (_,names) = Defn.parse_absyn absyn0
+    in
+      mk_bindstem (ERRloc "Define" locn "") "Define <quotation>" names
+    end
 
-   (* Use of Raise means that typecheck error exceptions will get printed
-      anyway; no need to also have the code in Preterm etc print them out
-      as well. *)
-
-   fun Define q =
-      trace ("show_typecheck_errors", 0)
-            (Parse.try_grammar_extension (Theory.try_theory_extension define))
-            q
-      handle e => Raise e
 end
 
 (*---------------------------------------------------------------------------*)
@@ -630,15 +694,17 @@ fun tDefine stem q tac =
      fun thunk() =
        let val defn = Hol_defn stem q
        in
-        if triv_defn defn
-        then let val def = fetch_eqns defn
-                 val bind = stem ^ !Defn.def_suffix
-             in been_stored (bind,def); def
-             end
+        if triv_defn defn then
+          let val def = fetch_eqns defn
+              val bind = stem ^ !Defn.def_suffix
+          in been_stored (bind,def);
+             (def, NONE)
+          end
         else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
-                                         Defn.tprove0(defn,tac)
+                                           Defn.tprove0(defn,tac)
                  val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-             in Defn.store(stem,def,ind) ; def
+             in Defn.store(stem,def,ind) ;
+                (def, SOME ind)
              end
        end
  in
@@ -667,6 +733,7 @@ fun qDefine stem q tacopt =
       val (corename, attrs) = ThmAttribute.extract_attributes stem
       val (nocomp, attrs) = test_remove "nocompute" attrs
       val (svarsok, attrs) = test_remove "schematic" attrs
+      val (notuserdef, attrs) = test_remove "notuserdef" attrs
       val (indopt,attrs) = find_indoption attrs
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
@@ -676,16 +743,33 @@ fun qDefine stem q tacopt =
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
-      val thm =
+      val (thm,indopt) =
           case tacopt of
               NONE => fmod (xDefine corename) q
             | SOME tac => fmod (tDefine corename q) tac
       fun proc_attr a =
           ThmAttribute.store_at_attribute{name = corename, attrname = a,
                                           thm = thm}
+      val attrs = if notuserdef then attrs else "userdef" :: attrs
+      val gen_ind = Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
     in
       List.app proc_attr attrs;
+      if notuserdef then ()
+      else
+        case indopt of
+            NONE => (case total gen_ind thm of
+                         NONE => ()
+                       | SOME p => DefnBase.register_indn p)
+          | SOME ith =>
+            DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
+    end
+
+fun Define q =
+    let
+      val stem = quotation_to_stem q
+    in
+      qDefine (stem ^ !Defn.def_suffix) q NONE
     end
 
 (*---------------------------------------------------------------------------*)

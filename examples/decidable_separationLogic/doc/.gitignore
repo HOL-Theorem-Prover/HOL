@@ -1,0 +1,9 @@
+*.aux
+*.out
+*.snm
+*.toc
+*.vrb
+*.nav
+presentation.pdf
+ds.pdf
+

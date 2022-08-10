@@ -9,19 +9,18 @@ open arithmeticTheory listTheory combinTheory pairTheory
      numTheory stringTheory stringLib rich_listTheory listSimps numposrepTheory
      logrootTheory bitTheory
 
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
 val _ = new_theory "ASCIInumbers";
 val _ = set_grammar_ancestry ["string", "numposrep"]
 
 (* ------------------------------------------------------------------------- *)
 
-val s2n_def = zDefine `s2n b f (s:string) = l2n b (MAP f (REVERSE s))`;
-val n2s_def = zDefine `n2s b f n : string = REVERSE (MAP f (n2l b n))`;
+Definition s2n_def:
+  s2n b f (s:string) = l2n b (MAP f (REVERSE s))
+End
+
+Definition n2s_def[nocompute]:
+  n2s b f n : string = REVERSE (MAP f (n2l b n))
+End
 
 val HEX_def = Define`
   (HEX 0 = #"0") /\
@@ -70,10 +69,36 @@ val num_from_oct_string_def = Define `num_from_oct_string = s2n 8 UNHEX`;
 val num_from_dec_string_def = Define `num_from_dec_string = s2n 10 UNHEX`;
 val num_from_hex_string_def = Define `num_from_hex_string = s2n 16 UNHEX`;
 
-val num_to_bin_string_def = Define `num_to_bin_string = n2s 2 HEX`;
-val num_to_oct_string_def = Define `num_to_oct_string = n2s 8 HEX`;
-val num_to_dec_string_def = Define `num_to_dec_string = n2s 10 HEX`;
-val num_to_hex_string_def = Define `num_to_hex_string = n2s 16 HEX`;
+Definition num_to_bin_string_def[nocompute]: num_to_bin_string = n2s 2 HEX
+End
+Definition num_to_oct_string_def[nocompute]: num_to_oct_string = n2s 8 HEX
+End
+Definition num_to_dec_string_def[nocompute]: num_to_dec_string = n2s 10 HEX
+End
+Definition num_to_hex_string_def[nocompute]: num_to_hex_string = n2s 16 HEX
+End
+
+Theorem s2n_leading_zeroes:
+  0 < b ==> s2n b UNHEX (#"0" :: t) = s2n b UNHEX t
+Proof
+  simp[s2n_def, UNHEX_def, l2n_APPEND, l2n_def]
+QED
+
+Theorem num_from_X_string_leading_zeroes[simp]:
+  num_from_bin_string (#"0" :: t) = num_from_bin_string t /\
+  num_from_oct_string (#"0" :: t) = num_from_oct_string t /\
+  num_from_dec_string (#"0" :: t) = num_from_dec_string t /\
+  num_from_hex_string (#"0" :: t) = num_from_hex_string t
+Proof
+  simp[num_from_bin_string_def, num_from_oct_string_def,
+       num_from_dec_string_def, num_from_hex_string_def, s2n_leading_zeroes]
+QED
+
+Theorem num_to_dec_string_compute[compute]:
+  num_to_dec_string = n2lA [] HEX 10
+Proof
+  simp[num_to_dec_string_def, n2lA_n2l, n2s_def, FUN_EQ_THM, MAP_REVERSE]
+QED
 
 val fromBinString_def = Define`
    fromBinString s =
@@ -112,7 +137,7 @@ val HEX_UNHEX = store_thm("HEX_UNHEX",
   Cases
   \\ SRW_TAC [] [isHexDigit_def]
   \\ Q.PAT_ASSUM `n < 256` (K ALL_TAC)
-  << [`n < 58` by DECIDE_TAC, `n < 103` by DECIDE_TAC,
+  >| [`n < 58` by DECIDE_TAC, `n < 103` by DECIDE_TAC,
       `n < 71` by DECIDE_TAC]
   \\ FULL_SIMP_TAC std_ss [LESS_THM]
   \\ FULL_SIMP_TAC arith_ss []
@@ -157,7 +182,7 @@ val n2s_s2n = Q.store_thm("n2s_s2n",
        if s2n b c2n s = 0 then STRING (n2c 0) ""
        else MAP (n2c o c2n) (LASTN (SUC (LOG b (s2n b c2n s))) s))`,
   SRW_TAC [] [s2n_def, n2s_def]
-    >> SRW_TAC [ARITH_ss] [l2n_def, Once n2l_def]
+    >- SRW_TAC [ARITH_ss] [l2n_def, Once n2l_def]
     \\ Q.ABBREV_TAC `l = MAP c2n (REVERSE s)`
     \\ `~(l = [])` by (STRIP_TAC \\ FULL_SIMP_TAC std_ss [l2n_def])
     \\ `EVERY ($> b) l` by (Q.UNABBREV_TAC `l`
@@ -178,23 +203,24 @@ val n2s_s2n = Q.store_thm("n2s_s2n",
 val _ = overload_on ("toString", ``num_to_dec_string``)
 val _ = overload_on ("toNum", ``num_from_dec_string``)
 
-val toNum_toString = store_thm("toNum_toString",
-  ``!n. toNum (toString n) = n``,
+Theorem toNum_toString[simp]:
+  !n. toNum (toString n) = n
+Proof
   STRIP_TAC THEN
   SRW_TAC [][num_to_dec_string_def, num_from_dec_string_def] THEN
   MATCH_MP_TAC s2n_n2s THEN SIMP_TAC (srw_ss()) [] THEN
   Q.X_GEN_TAC `n` THEN STRIP_TAC THEN
   `(n = 0) \/ (n = 1) \/ (n = 2) \/ (n = 3) \/ (n = 4) \/
    (n = 5) \/ (n = 6) \/ (n = 7) \/ (n = 8) \/ (n = 9)` by DECIDE_TAC THEN
-  SRW_TAC [][HEX_def, UNHEX_def]);
+  SRW_TAC [][HEX_def, UNHEX_def]
+QED
 
 val toString_toNum_cancel = save_thm("toString_toNum_cancel", toNum_toString)
 
-val toString_inj = store_thm("toString_inj",
-   ``!n m. (toString n = toString m) = (n = m)``,
-   METIS_TAC [toNum_toString])
-val toString_11 = save_thm("toString_11", toString_inj)
-val _ = export_rewrites ["toString_inj"]
+Theorem toString_inj[simp]: !n m. toString n = toString m <=> n = m
+Proof METIS_TAC [toNum_toString]
+QED
+Theorem toString_11 = toString_inj
 
 val STRCAT_toString_inj = store_thm("STRCAT_toString_inj",
    ``!n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)``,
@@ -325,5 +351,30 @@ Proof
   \\ res_tac
   \\ decide_tac
 QED
+
+Theorem LENGTH_num_to_dec_string:
+  LENGTH (num_to_dec_string n) = if n = 0 then 1 else LOG 10 n + 1
+Proof
+  simp[num_to_dec_string_def, n2s_def, LENGTH_n2l]
+QED
+
+Theorem LENGTH_num_to_hex_string:
+  LENGTH (num_to_hex_string n) = if n = 0 then 1 else LOG 16 n + 1
+Proof
+  simp[num_to_hex_string_def, n2s_def, LENGTH_n2l]
+QED
+
+Theorem LENGTH_num_to_bin_string:
+  LENGTH (num_to_bin_string n) = if n = 0 then 1 else LOG 2 n + 1
+Proof
+  simp[num_to_bin_string_def, n2s_def, LENGTH_n2l]
+QED
+
+Theorem LENGTH_num_to_oct_string:
+  LENGTH (num_to_oct_string n) = if n = 0 then 1 else LOG 8 n + 1
+Proof
+  simp[num_to_oct_string_def, n2s_def, LENGTH_n2l]
+QED
+
 
 val _ = export_theory ();

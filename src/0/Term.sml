@@ -633,46 +633,60 @@ fun dest_comb (Comb r) = r
 (*---------------------------------------------------------------------------
        Making abstractions. list_mk_binder is a relatively
        efficient version for making terms with many consecutive
-       abstractions.
+       abstractions. Works by replacing all free vars to be bound by
+       raw Bvs, then adding the binding prefix without going back into
+       the body.
   ---------------------------------------------------------------------------*)
-
-local val FORMAT = ERR "list_mk_binder"
-   "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
-   fun check_opt NONE = Lib.I
-     | check_opt (SOME c) =
-        if not(is_const c) then raise FORMAT
-        else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c
-              of NONE => raise FORMAT
-               | SOME ty => (fn abs =>
-                   let val dom = fst(Type.dom_rng(type_of abs))
-                   in mk_comb (inst[ty |-> dom] c, abs)
-                   end)
+local
+  fun binder_check binder = (* expect type to be (ty1 -> ty2) -> ty3 *)
+     let val (fnty,rty) = Type.dom_rng(type_of binder)
+         val _ = Type.dom_rng fnty
+         val fntyV = Type.type_vars fnty
+         val rtyV = Type.type_vars rty
+     in
+       if Lib.all (C mem fntyV) rtyV then (fnty,rty) else raise ERR "" ""
+     end
+     handle _ => raise ERR "list_mk_binder"
+       "expected binder to have type ((ty1 -> ty2) -> ty3) where\
+       \ tyvars of ty3 are all in (ty1->ty2)"
+  fun binderFn NONE = (fn v => fn (M,_) => (Abs(v,M),Type.ind))
+    | binderFn (SOME binder) =
+       let val (dty,rty) = binder_check binder
+       in fn v => fn (M,Mty) =>
+             let val theta = Type.match_type dty (type_of v --> Mty)
+             in (Comb (inst theta binder, Abs(v,M)),
+                 Type.type_subst theta rty)
+             end
+       end
+  open Redblackmap
+  fun enum [] _ A = A
+    | enum (h::t) i (vmap,rvs) = enum t (i-1) (insert (vmap,h,i),h::rvs)
+  fun lookup v vmap = case peek (vmap,v) of NONE => v | SOME i => Bv i
+  fun increment vmap = transform (fn x => x+1) vmap
+  fun bind (v as Fv _) vmap k = k (lookup v vmap)
+    | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
+                                bind N vmap (fn n => k (Comb(m,n))))
+    | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
+                                       (fn q => k (Abs(v,q)))
+    | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
+    | bind tm vmap k = k tm
 in
 fun list_mk_binder opt =
- let val f = check_opt opt
- in fn (vlist,tm)
- => if not (all is_var vlist) then raise ERR "list_mk_binder" ""
+ let val mk_binder = binderFn opt
+ in fn (vlist,tm) =>
+    if null vlist then
+       tm
     else
-  let open Redblackmap
-     val varmap0 = mkDict compare
-     fun enum [] _ A = A
-       | enum (h::t) i (vmap,rvs) = let val vmap' = insert (vmap,h,i)
-                                    in enum t (i-1) (vmap',h::rvs)
-                                    end
-     val (varmap, rvlist) = enum vlist (length vlist - 1) (varmap0, [])
-     fun lookup v vmap = case peek (vmap,v) of NONE => v | SOME i => Bv i
-     fun increment vmap = transform (fn x => x+1) vmap
-     fun bind (v as Fv _) vmap k = k (lookup v vmap)
-       | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
-                                   bind N vmap (fn n => k (Comb(m,n))))
-       | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
-                                          (fn q => k (Abs(v,q)))
-       | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
-       | bind tm vmap k = k tm
-  in
-     rev_itlist (fn v => fn M => f(Abs(v,M))) rvlist (bind tm varmap I)
-  end
-  handle e => raise wrap_exn "Term" "list_mk_binder" e
+    if not (all is_var vlist) then
+       raise ERR "list_mk_binder" "expected list of variables"
+    else
+     (let val (vMap, rvlist) = enum vlist (length vlist-1) (mkDict compare, [])
+          val raw_tm = bind tm vMap I
+          val (final,_) = rev_itlist mk_binder rvlist (raw_tm,type_of tm)
+      in
+         final
+      end
+      handle e => raise wrap_exn "Term" "list_mk_binder" e)
  end
 end;
 
@@ -1009,7 +1023,17 @@ val app     = "@"
 val lam     = "|"
 val dollar  = "$"
 val percent = "%"
-datatype pptask = ppTM of term | ppLAM | ppAPP of int
+
+fun strip_comb t =
+    let fun recurse t A =
+            case t of
+                Comb(f,x) => recurse f (x::A)
+              | _ => (t, A)
+    in
+      recurse t []
+    end
+
+datatype pptask = ppTM of term | ppLAM | ppAPP of int | ppS of string
 fun pp_raw_term index tm = let
   fun mkAPP [] = [ppAPP 1]
     | mkAPP (ppAPP n :: rest) = ppAPP (n + 1) :: rest
@@ -1019,8 +1043,26 @@ fun pp_raw_term index tm = let
           [] => String.concat (List.rev acc)
         | ppTM (Abs(Bvar, Body)) :: rest =>
             pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
-        | ppTM (Comb(Rator, Rand)) :: rest =>
-            pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
+        | ppTM (t as Comb(Rator, Rand)) :: rest =>
+          let
+            val (f, args) = strip_comb t
+          in
+            if is_abs f then
+              pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
+            else
+              let
+                val (letter1,letter2,i) = case f of Bv i => ("u", "b", i)
+                                                  | _ => ("U", "B", index f)
+              in
+                case args of
+                    [x] => pp acc (ppTM x :: ppS (letter1 ^ Int.toString i) ::
+                                   rest)
+                  | [x,y] =>
+                    pp acc (ppTM x::ppTM y::
+                            ppS (letter2 ^ Int.toString i)::rest)
+                  | _ => pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
+              end
+          end
         | ppTM (Bv i) :: rest =>
             pp (dollar ^ Int.toString i :: acc) rest
         | ppTM a :: rest =>
@@ -1028,6 +1070,7 @@ fun pp_raw_term index tm = let
         | ppLAM :: rest => pp (lam :: acc) rest
         | ppAPP n :: rest =>
             pp (app ^ (if n = 1 then "" else Int.toString n) :: acc) rest
+        | ppS s :: rest =>  pp (s :: acc) rest
 in
   pp [] [ppTM tm]
 end
@@ -1044,7 +1087,11 @@ datatype lexeme
    = app of int
    | lamb
    | ident of int
-   | bvar  of int;
+   | bvar  of int
+   | BV1 of int
+   | BV2 of int
+   | I1 of int
+   | I2 of int
 
 local val numeric = Char.contains "0123456789"
 in
@@ -1066,6 +1113,10 @@ fun lexer ss1 =
         #"|" => SOME(lamb,  ss2)
       | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
       | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
+      | #"U"  => let val (n,ss3) = take_numb ss2 in SOME(I1 n,  ss3) end
+      | #"u"  => let val (n,ss3) = take_numb ss2 in SOME(BV1 n,  ss3) end
+      | #"B"  => let val (n,ss3) = take_numb ss2 in SOME(I2 n,  ss3) end
+      | #"b"  => let val (n,ss3) = take_numb ss2 in SOME(BV2 n,  ss3) end
       | #"@" =>
         (let val (n,ss3) = take_numb ss2 in SOME(app n, ss3) end
          handle HOL_ERR _ => SOME (app 1, ss2))
@@ -1079,6 +1130,12 @@ fun read_raw tmv = let
         (_, SOME (bvar n,  rst)) => parse (Bv n::stk,rst)
       | (_, SOME (ident n, rst)) => parse (index n::stk,rst)
       | (stk, SOME (app n, rst)) => doapps n stk rst
+      | (t::stk, SOME (I1 n, rst)) => parse (Comb(index n, t) :: stk, rst)
+      | (t::stk, SOME (BV1 n, rst)) => parse (Comb(Bv n, t) :: stk, rst)
+      | (t2::t1::stk, SOME (I2 n, rst)) =>
+          parse (Comb(Comb(index n, t1), t2) :: stk, rst)
+      | (t2::t1::stk, SOME (BV2 n, rst)) =>
+          parse (Comb(Comb(Bv n, t1), t2) :: stk, rst)
       | (bd::bv::stk, SOME(lam,rst)) => parse (Abs(bv,bd)::stk, rst)
       | (_, SOME(lam, _)) => raise ERR "read_raw" "lam: small stack"
       | ([tm], NONE) => tm

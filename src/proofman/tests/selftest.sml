@@ -167,7 +167,7 @@ val _ = List.app testf [
  \------------------------------------\n\
  \ 0.  P a b ==>\n\
  \     !x y z.\n\
- \         Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
+ \       Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
  \ 1.  P (f a) (hhhh b)\n"),
 ("Stack printing; more than 10 assumptions",
  ``p1 /\ p2 /\ p3 /\ p4 /\ p5 /\ p6 /\ p7 /\ p8 /\ p9 /\ p10 /\ p11 ==> q``,
@@ -211,8 +211,8 @@ val _ = app (fn (w,s) => Portable.with_flag(testutils.linewidth,w) tpp s)
                   \  v /\\ y"),
              (80, "f\n\
                   \  (let\n\
-                  \     x = long expression ;\n\
-                  \     y = long expression ;\n\
+                  \     x = long expression;\n\
+                  \     y = long expression;\n\
                   \     z = long expression\n\
                   \   in\n\
                   \     x /\\ y /\\ z)"),
@@ -239,3 +239,160 @@ in
                  [mk_var("  ", alpha), mk_var("x", beta)])
   ]
 end
+
+
+val goalprint =
+    HOLPP.pp_to_string 75(
+      HOLPP.block HOLPP.CONSISTENT 0 o
+      HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+    )
+
+val _ = let
+  open boolLib
+  val _= tprint "term_tactic.fv_term"
+  val b = mk_var("b", bool) and c = mk_var("c", bool)
+  fun D p = ([] : term list, mk_disj p)
+  val goal = D(b,c)
+  val expected = [D(T,T), D(F,T), D(T,F), D(F,F)]
+  fun Cases t = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX)
+in
+  require_msg (check_result (list_eq goal_eq expected)) goalprint
+              (fst o REPEAT (fv_term Cases)) goal
+end
+
+val _ = let
+  open boolLib
+  val longty = “:('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool”
+  val f = mk_var("f", longty)
+  val P = mk_var("P", longty --> bool)
+  val _ = new_constant("I", “:'a -> 'a”)
+  val Itm = mk_const("I", longty --> longty)
+  val _ = new_constant ("EMPTY", “:'a -> bool”)
+  val _ = new_constant ("INSERT", “:'a -> ('a -> bool) -> 'a -> bool”)
+  val _ = add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
+                        separator = [TOK ";", BreakSpace(1,0)],
+                        cons = "INSERT", nilstr = "EMPTY",
+                        block_info = (PP.INCONSISTENT, 1)};
+  fun test (wdth, s, t) =
+      with_flag(linewidth,wdth)
+               (trace ("types", 1) tpp_expected)
+               {input = trace ("types", 1) term_to_string t,
+                output = s,
+                testf = fn s =>
+                           "Width=" ^ Int.toString wdth ^
+                           " type-annotation of “" ^ s ^ "”"}
+in
+  List.app test [
+    (75,
+     "(P :(('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool) -> bool)\n\
+     \  (f :('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(P,f)),
+    (75, "I (f :('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(Itm,f)),
+    (55, "I\n\
+         \  (f :('a -> 'b) ->\n\
+         \      ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(Itm,f)),
+    (55, "({} :(('a -> 'b) ->\n\
+         \      ('c itself -> 'a -> bool) -> 'a -> bool) -> bool)",
+     mk_const("EMPTY", longty --> bool))
+  ]
+end
+
+val _ = let
+  open boolLib
+  val _= tprint "term_tactic.first_fv_term"
+  fun G t = ([] : term list, t)
+  val f = mk_var("f", bool --> alpha)
+  val goal = G “^f x = y”
+  val expected = [G “^f T = y”, G “^f F = y”]
+  fun Cases t g = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX) g
+in
+  require_msg (check_result (list_eq goal_eq expected)) goalprint
+              (fst o first_fv_term Cases) goal
+end
+
+val _ = let
+  open boolLib
+  val _ = tprint "Trivial resolve_then"
+  val ith = AND_CLAUSES |> SPEC_ALL |> CONJUNCTS |> hd |> GEN “t:bool”
+  val G = ([] : term list, “T /\ p <=> p”)
+  val tac = VALID (goal_assum (resolve_then Any mp_tac ith))
+in
+  require_msg (check_result null) goalprint (fst o tac) G
+end
+
+val _ = let
+  open boolLib
+  val a = “P (c:'a) (d:'b) : bool”
+  val tac = resolve_then (Pos hd) mp_tac boolTheory.EQ_REFL (ASSUME a)
+in
+  shouldfail {checkexn = is_struct_HOL_ERR "Tactic",
+              printarg = K "resolve_then fails with HOL_ERR",
+              printresult = goalprint,
+              testfn = #1 o VALID tac} ([a], “p \/ q”)
+end
+
+val _ = let
+  open boolLib
+  val _ = tprint "PAT_ASSUM with type variables"
+  val asl = [“x:'a = y”, “u:'b = v”]
+  val p = mk_var("p", bool)
+  val G = (asl, p)
+  val tac = Tactical.PAT_ASSUM “_ = v:'b” MP_TAC
+  fun verdict [(asl',sg)] = tml_eq asl' asl andalso sg ~~ “(u:'b = v) ==> p”
+    | verdict _ = false
+in
+  require_msg (check_result verdict) goalprint (fst o tac) G
+end
+
+val _ = let
+  open boolLib
+  val _ = tprint "POP_LAST_ASSUM succeeds"
+  val asl = [“x:'a = y”, “x:'a = z”]
+  val g = “(P:'a -> bool) x”
+  fun verdict [(asl',sg)] = tml_eq asl' [“x:'a = y”] andalso
+                            sg ~~ “(P:'a -> bool) z”
+    | verdict _ = false
+in
+  require_msg (check_result verdict) goalprint
+              (fst o POP_LAST_ASSUM (REWRITE_TAC o single)) (asl,g)
+end
+
+val _ = let
+  open boolLib
+in
+  shouldfail {checkexn = is_struct_HOL_ERR "Tactical",
+              testfn = fst o POP_LAST_ASSUM (REWRITE_TAC o single),
+              printresult = goalprint,
+              printarg = fn _ => "POP_LAST_ASSUM fails (no assums)"}
+             ([], “(P:'a -> bool) x”)
+end
+
+
+val _ = new_constant ("foo", bool --> bool --> bool);
+val foo1y = "p /\\ (q ~~ r)"
+val foo1n = "p /\\ q ~~ r"
+val foo2n = "q ~~ r"
+val foo2y = "(q ~~ r)"
+val foo3y = "if (q ~~ r) then a else b"
+val foo3n = "if q ~~ r then a else b"
+fun dotests nm psty tests =
+    let
+      val _ = print (nm ^ "\n")
+      val _ = remove_termtok {term_name = "foo", tok = "~~"}
+      val _ = temp_add_rule {term_name = "foo",
+                             paren_style = psty,
+                       block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
+                       pp_elements = [HardSpace 1, TOK "~~", BreakSpace(1,0)],
+                       fixity = Infixl 500}
+    in
+      app tpp tests
+    end
+
+val _ = dotests "With IfNotTop{realonly=true}" (IfNotTop{realonly=true})
+                [foo1y, foo2n, foo3y]
+val _ = dotests "With IfNotTop{realonly=false}" (IfNotTop{realonly=false})
+                [foo1y, foo2n, foo3n]
+val _ = dotests "With Always" Always [foo1y, foo2y, foo3y]
+val _ = dotests "With OnlyIfNecessary" OnlyIfNecessary [foo1n, foo2n, foo3n]

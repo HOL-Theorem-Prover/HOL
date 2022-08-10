@@ -1,14 +1,5 @@
-
-(* Interactive:
-quietdec := true;
-load "EmitML";
-open numTheory prim_recTheory arithmeticTheory IndDefLib EmitML
-     basis_emitTheory;
-quietdec := false;
-*)
-
-open HolKernel Parse boolLib bossLib IndDefLib EmitML
-     numTheory prim_recTheory arithmeticTheory basis_emitTheory;
+open HolKernel Parse boolLib bossLib IndDefLib
+     numTheory prim_recTheory arithmeticTheory
 
 val _ = numLib.prefer_num();
 
@@ -824,29 +815,3 @@ val pmult_def = tDefine "pmult" `
 ` (WF_REL_TAC `measure (osyntax_size o FST o SND)`)
 
 val _ = export_theory();
-
-(*---------------------------------------------------------------------------*)
-(* Generate an ML file for the executable functions of the theory.           *)
-(*---------------------------------------------------------------------------*)
-
-val tail_End = Q.prove
-(`tail (End n) = FAIL tail ^(mk_var("(End n)",bool)) (End n)`,
-  REWRITE_TAC [combinTheory.FAIL_THM]);
-
-val _ =
- emitML ""    (* Write to current directory, not !Globals.emitMLDir *)
-    ("ordinal",
-     [MLSIG "type num = numML.num",
-      OPEN ["num"],
-      DATATYPE `osyntax = End num | Plus osyntax num osyntax`,
-      DEFN expt_def,
-      DEFN coeff_def,
-      DEFN finp_def,
-      DEFN (CONJ tail_End tail_def),
-      DEFN rank_def,
-      DEFN oless_equations,
-      DEFN is_ord_equations,
-      DEFN ord_less_def,
-      DEFN ord_add_def,
-      DEFN ord_sub_def,
-      DEFN ord_mult_def]);

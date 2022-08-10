@@ -24,7 +24,7 @@ val () = app load
 val () = show_assums := true;
 *)
 
-open HurdUseful ho_basicTools;
+open hurdUtils ho_basicTools;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER;
 infix 1 >>;

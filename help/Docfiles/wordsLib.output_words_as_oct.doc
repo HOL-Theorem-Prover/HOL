@@ -30,7 +30,7 @@ value to true.
 
 \SEEALSO
 
-wordsLib.output_words_as, wordsLib.remove_word_printer,
+wordsLib.remove_word_printer,
 wordsLib.output_words_as_dec, wordsLib.output_words_as_bin,
 wordsLib.output_words_as_hex
 

@@ -244,4 +244,15 @@ in
   ]
 end
 
+val _ = let
+  open BasicProvers
+  val _ = quietly srw_ss()
+  val _ = tprint "srw_ss() on num_CASE (NUMERAL ...)"
+in
+  require_msg (check_result (aconv “20” o rhs o concl))
+              thm_to_string
+              (SIMP_CONV (srw_ss()) [])
+              “case 11 of 0 => 3 | SUC n => n * 2”
+end
+
 val _ = Process.exit Process.success

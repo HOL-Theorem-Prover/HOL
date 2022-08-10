@@ -4,9 +4,12 @@
 
 open HolKernel boolLib bossLib
 open binary_ieeeTheory realTheory wordsLib realLib
+open realSimps
 
-val () = new_theory "lift_ieee"
+val _ = new_theory "lift_ieee";
+
 val _ = ParseExtras.temp_loose_equality()
+val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss"]
 
 val () =  Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 
@@ -39,7 +42,7 @@ val float_le = Q.store_thm ("float_le",
   rw [float_less_equal_def, float_compare_def, float_is_finite_def,
       float_value_def]
   \\ rw [realTheory.REAL_LT_IMP_LE,
-         realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> ~(a <= b)``]
+         REAL_ARITH ``~(a < b : real) /\ a <> b ==> ~(a <= b)``]
   );
 
 val float_gt = Q.store_thm ("float_gt",
@@ -47,9 +50,9 @@ val float_gt = Q.store_thm ("float_gt",
          (float_greater_than x y = float_to_real x > float_to_real y)`,
   rw [float_greater_than_def, float_compare_def, float_is_finite_def,
       float_value_def]
-  \\ rw [realLib.REAL_ARITH ``a < b : real ==> ~(a > b)``,
-         realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> a > b``,
-         realLib.REAL_ARITH ``~(a > a : real)``]
+  \\ rw [REAL_ARITH ``a < b : real ==> ~(a > b)``,
+         REAL_ARITH ``~(a < b : real) /\ a <> b ==> a > b``,
+         REAL_ARITH ``~(a > a : real)``]
   );
 
 val float_ge = Q.store_thm ("float_ge",
@@ -57,9 +60,9 @@ val float_ge = Q.store_thm ("float_ge",
          (float_greater_equal x y = float_to_real x >= float_to_real y)`,
   rw [float_greater_equal_def, float_compare_def, float_is_finite_def,
       float_value_def]
-  \\ rw [realLib.REAL_ARITH ``a < b : real ==> ~(a >= b)``,
-         realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> a >= b``,
-         realLib.REAL_ARITH ``a >= a : real``]
+  \\ rw [REAL_ARITH ``a < b : real ==> ~(a >= b)``,
+         REAL_ARITH ``~(a < b : real) /\ a <> b ==> a >= b``,
+         REAL_ARITH ``a >= a : real``]
   );
 
 val float_eq = Q.store_thm ("float_eq",
@@ -67,7 +70,7 @@ val float_eq = Q.store_thm ("float_eq",
          (float_equal x y = (float_to_real x = float_to_real y))`,
   rw [float_equal_def, float_compare_def, float_is_finite_def,
       float_value_def]
-  \\ rw [realLib.REAL_ARITH ``a < b : real ==> a <> b``]
+  \\ rw [REAL_ARITH ``a < b : real ==> a <> b``]
   );
 
 val float_eq_refl = Q.store_thm ("float_eq_refl",
@@ -81,45 +84,23 @@ val float_eq_refl = Q.store_thm ("float_eq_refl",
      Closest
    ------------------------------------------------------------------------ *)
 
-val is_closest_exits = Q.store_thm("is_closest_exits",
-  `!x s. FINITE s ==> s <> EMPTY ==> ?a. is_closest s x a`,
-  strip_tac
-  \\ HO_MATCH_MP_TAC pred_setTheory.FINITE_INDUCT
-  \\ simp [pred_setTheory.NOT_INSERT_EMPTY]
-  \\ strip_tac
-  \\ Cases_on `s = EMPTY`
-  >- simp [is_closest_def]
-  \\ Cases_on `FINITE s`
-  \\ rw []
-  \\ Cases_on `abs (float_to_real a - x) <= abs (float_to_real e - x)`
-  \\ fs [is_closest_def]
-  >- (qexists_tac `a` \\ rw [] \\ simp [])
-  \\ qexists_tac `e`
-  \\ rw []
-  >- simp []
-  \\ qpat_x_assum `!b. P` (qspec_then `b` mp_tac)
-  \\ qpat_x_assum `~(abs (float_to_real a - x) <=
-                     abs (float_to_real e - x))` mp_tac
-  \\ simp []
-  \\ REAL_ARITH_TAC
-  );
-
-val closest_is_everything = Q.store_thm("closest_is_everything",
-  `!p s x. FINITE s ==> s <> EMPTY ==>
+Theorem closest_is_everything:
+  !p s x. s <> EMPTY ==>
            is_closest s x (closest_such p s x) /\
-           ((?b. is_closest s x b /\ p b) ==> p (closest_such p s x))`,
+           ((?b. is_closest s x b /\ p b) ==> p (closest_such p s x))
+Proof
   rw [closest_such_def]
   \\ SELECT_ELIM_TAC
-  \\ metis_tac [is_closest_exits]
-  );
+  \\ metis_tac [is_closest_exists]
+QED
 
 val closest_in_set = Q.store_thm("closest_in_set",
-  `!p s x. FINITE s ==> s <> EMPTY ==> closest_such p s x IN s`,
+  `!p s x. s <> EMPTY ==> closest_such p s x IN s`,
   metis_tac [closest_is_everything, is_closest_def]
   );
 
 val closest_is_closest = Q.store_thm("closest_is_closest",
-  `!p s x. FINITE s ==> s <> EMPTY ==> is_closest s x (closest_such p s x)`,
+  `!p s x. s <> EMPTY ==> is_closest s x (closest_such p s x)`,
   metis_tac [closest_is_everything]
   );
 
@@ -127,22 +108,11 @@ val closest_is_closest = Q.store_thm("closest_is_closest",
 
    ------------------------------------------------------------------------ *)
 
-val finite_word_cross = Q.prove(
-   `FINITE (univ (:word1) CROSS univ (:'t word) CROSS univ (:'w word))`,
-   metis_tac [pred_setTheory.FINITE_CROSS, wordsTheory.WORD_FINITE]
-   );
-
-val inj_float_to_tuple = Q.prove(
-  `INJ (\x. ((x.Sign, x.Significand), x.Exponent))
-     (univ (:('t, 'w) float))
-     (univ (:word1) CROSS univ (:'t word) CROSS univ (:'w word))`,
-   rw [pred_setTheory.INJ_DEF, float_component_equality]
-   );
-
-val float_finite = Q.store_thm("float_finite",
-  `FINITE (univ (:('t, 'w) float))`,
-  metis_tac [pred_setTheory.FINITE_INJ, inj_float_to_tuple, finite_word_cross]
-  );
+Theorem float_finite:
+  FINITE (univ (:('t, 'w) float))
+Proof
+   simp[]
+QED
 
 val is_finite_finite = Q.store_thm("is_finite_finite",
   `FINITE {a | float_is_finite a}`,
@@ -211,68 +181,43 @@ val exponent_le = Q.prove(
   \\ simp []
   );
 
-val float_to_real_finite = Q.store_thm("float_to_real_finite",
-  `!x : ('t, 'w) float.
-     float_is_finite x ==> (abs (float_to_real x) <= largest (:'t # 'w))`,
-  Cases
-  \\ rename [`float s e f`]
-  \\ `float s e f = <| Sign := s; Exponent := e; Significand := f |>`
-  by simp [float_component_equality]
-  \\ `0 <= 1 + &w2n f / 2 pow dimindex (:'t)`
-  by (Cases_on `w2n f = 0`
-      \\ simp [REAL_ARITH ``0r < x ==> 0 <= 1 + x``, REAL_LT_RDIV_0])
-  \\ `abs (1 + &w2n f / 2 pow dimindex (:'t)) =
-           1 + &w2n f / 2 pow dimindex (:'t)`
-  by simp [ABS_REFL]
-  \\ rw [float_tests, largest, float_to_real_def, GSYM POW_ABS,
-         REAL_ABS_MUL, REAL_ABS_DIV, ABS_NEG, ABS_N, POW_ONE, mult_rat,
-         GSYM REAL_OF_NUM_POW, REAL_LE_LDIV2, wordsTheory.dimword_def,
-         ONCE_REWRITE_RULE [REAL_MUL_COMM] mult_ratr]
-  >- (
-      simp [largest_def, REAL_LE_RDIV_EQ, mult_ratl]
-      \\ CONV_TAC (PATH_CONV "lrr" (ONCE_REWRITE_CONV [REAL_MUL_COMM]))
-      \\ simp [REAL_DIV_RMUL_CANCEL, REAL_LE_LDIV_EQ,
-               REAL_ARITH ``a * (b - c) * d = a * (b * d - c * d) : real``,
-               GSYM REAL_OF_NUM_POW, REAL_DIV_RMUL]
-      \\ simp [REAL_SUB_LDISTRIB, REAL_LE_SUB_LADD]
-      \\ qabbrev_tac `u = UINT_MAX (:'w) - 1`
-      \\ `2 pow u * (2 * 2 pow dimindex (:'t)) =
-          2 pow u * (2 pow dimindex (:'t) - 1) +
-          2 pow u * (2 pow dimindex (:'t) - 1) +
-          2 * 2 pow u`
-      by (simp [REAL_SUB_LDISTRIB,
-                realLib.REAL_ARITH ``a * (2r * b) = a * b + a * b``,
-                realLib.REAL_ARITH ``2 * 2 pow x = 2 pow x + 2 pow x``]
-          \\ REAL_ARITH_TAC)
-      \\ pop_assum SUBST1_TAC
-      \\ once_rewrite_tac [GSYM REAL_MUL]
-      \\ simp_tac std_ss [realLib.REAL_ARITH ``2r * a = a + a``]
-      \\ match_mp_tac realTheory.REAL_LE_ADD2
-      \\ conj_tac
-      >- (
-          match_mp_tac realTheory.REAL_LE_ADD2
-          \\ simp []
-          \\ match_mp_tac
-               (realTheory.REAL_LE_MUL2
-                |> Q.SPEC `1`
-                |> SIMP_RULE (srw_ss()) [])
-          \\ simp
-               [REAL_OF_NUM_POW, REAL_SUB, GSYM wordsTheory.dimword_def,
-                DECIDE ``a <= 1n = ~(1 < a)``, wordsTheory.w2n_lt,
-                DECIDE ``a < n /\ 1n < n ==> a <= n - 1``,
-                REAL_POW_LE_1
-                |> Q.SPECL [`n`, `2`]
-                |> SIMP_RULE (srw_ss()) []]
-         )
-      \\ simp [REAL_ARITH ``0r < a ==> a <= a + a``]
-     )
-  \\ match_mp_tac REAL_LE_MUL2
-  \\ simp [REAL_POW_MONO, exponent_le, REAL_LE_SUB_LADD]
-  \\ simp_tac std_ss [GSYM REAL_ADD_ASSOC, REAL_DIV_ADD]
-  \\ match_mp_tac (realLib.REAL_ARITH ``(x:real) <= 1 ==> (1 + x <= 2)``)
-  \\ simp [REAL_LE_LDIV_EQ, REAL_OF_NUM_POW, GSYM wordsTheory.dimword_def,
-           wordsTheory.w2n_lt, DECIDE ``a < n ==> a + 1n <= n``]
-  );
+Theorem float_to_real_finite:
+  !x : ('t, 'w) float.
+     float_is_finite x ==> (abs (float_to_real x) <= largest (:'t # 'w))
+Proof
+  rw[float_to_real_def, largest_def, ABS_MUL, ABS_INV, GSYM POW_ABS, real_div,
+     wordsTheory.UINT_MAX_def, wordsTheory.dimword_def,
+     SF RMULRELNORM_ss, SF RMULCANON_ss] >>
+  simp[REAL_SUB_LDISTRIB] >>
+  Cases_on ‘x.Significand’ using wordsTheory.ranged_word_nchotomy >>
+  gs[wordsTheory.dimword_def, SF RMULCANON_ss] >>
+  qabbrev_tac ‘X = 2 pow (2 ** dimindex(:'w) - 2)’
+  >- (REWRITE_TAC[GSYM REAL_MUL,
+                  REAL_ARITH “2r * (x * y) - y = (2 * x - 1) * y”] >>
+      irule REAL_LE_TRANS >>
+      qexists_tac ‘2 * 2 pow dimindex(:'t) - 1’ >> conj_tac
+      >- simp[REAL_SUB, REAL_OF_NUM_POW] >>
+      simp[REAL_OF_NUM_POW, REAL_SUB, SF RMULRELNORM_ss] >>
+      simp[REAL_OF_NUM_POW, Abbr‘X’]) >>
+  irule (iffLR REAL_LE_LMUL) >> qexists_tac ‘2 pow dimindex (:'t)’ >>
+  REWRITE_TAC [REAL_SUB_LDISTRIB] >>
+  simp[iffRL ABS_REFL, REAL_LE_ADD, REAL_LE_INV_EQ, REAL_LE_MUL] >>
+  simp[REAL_LDISTRIB, REAL_RDISTRIB, SF RMULCANON_ss] >>
+  Cases_on‘x.Exponent’ using wordsTheory.ranged_word_nchotomy >>
+  rename [‘x.Significand = n2w s’, ‘x.Exponent = n2w e’] >> simp[] >>
+  simp[REAL_ARITH “2r * (x * y) - x = x * (2 * y - 1)”] >>
+  gs[wordsTheory.dimword_def]>>
+  simp[REAL_ARITH “x * 2 pow e + y * 2 pow e = 2 pow e * (x + y)”] >>
+  irule REAL_LE_MUL2 >> simp[] >> rpt conj_tac
+  >- (simp[Abbr‘X’, REAL_OF_NUM_POW] >>
+      ‘e <> 2 ** dimindex(:'w) - 1’ suffices_by simp[] >>
+      strip_tac  >>
+      gs[float_is_finite_def, float_value_def, wordsTheory.word_2comp_def,
+         wordsTheory.dimword_def] >>
+      Cases_on ‘s = 0’ >> gs[])
+  >- simp[REAL_OF_NUM_POW, REAL_SUB] >>
+  simp[REAL_OF_NUM_POW]
+QED
 
 val float_to_real_threshold = Q.store_thm("float_to_real_threshold",
   `!x : ('t, 'w) float.
@@ -291,8 +236,7 @@ val bound_at_worst_lemma = Q.prove(
       abs (float_to_real a - x)`,
   rw [round_def, REAL_ARITH ``abs x < y = ~(x <= ~y) /\ ~(x >= y)``]
   \\ match_mp_tac
-       (is_finite_finite
-        |> MATCH_MP closest_is_closest
+       (MATCH_MP closest_is_closest is_finite_nonempty
         |> Q.SPECL [`\a. ~word_lsb a.Significand`, `x`]
         |> REWRITE_RULE [is_finite_nonempty, is_closest_def,
                          pred_setTheory.GSPEC_ETA]
@@ -335,38 +279,38 @@ val lem2 = Q.prove(
          realTheory.REAL_DIV_REFL, realTheory.REAL_POS_NZ]
   );
 
-val error_bound_lemma1 = Q.prove(
-  `!fracw x.
+Theorem error_bound_lemma1:
+  !fracw x.
        0r <= x /\ x < 1 /\ 0 < fracw ==>
        ?n. n < 2n EXP fracw /\ &n / 2 pow fracw <= x /\
-           x < &(SUC n) / 2 pow fracw`,
+           x < &(SUC n) / 2 pow fracw
+Proof
   rpt strip_tac
   \\ qspec_then `\n. &n / 2 pow fracw <= x` mp_tac
        arithmeticTheory.EXISTS_GREATEST
   \\ simp []
   \\ Lib.W (Lib.C SUBGOAL_THEN (fn th => rewrite_tac [th]) o lhs o lhand o snd)
   >- (conj_tac
-      >- (qexists_tac `0n` \\ simp [])
+      >- (qexists_tac `0n` \\ simp [REAL_LE_MUL])
+      \\ simp[REAL_NOT_LE, arithmeticTheory.GREATER_DEF, real_div,
+              SF RMULRELNORM_ss]
       \\ qexists_tac `2 ** fracw`
-      \\ rw [REAL_LE_LDIV_EQ]
-      \\ fs [realTheory.REAL_NOT_LE, realTheory.real_gt,
-             GSYM realTheory.REAL_LT_RDIV_EQ]
-      \\ `1 < &y / 2 pow fracw`
-      by (match_mp_tac lem \\ simp [realTheory.REAL_OF_NUM_POW])
-      \\ metis_tac [realTheory.REAL_LT_TRANS]
-     )
+      \\ rw []
+      \\ irule REAL_LT_TRANS
+      \\ qexists_tac ‘2 pow fracw’
+      \\ simp[SF RMULRELNORM_ss, REAL_OF_NUM_POW])
   \\ disch_then (Q.X_CHOOSE_THEN `n` strip_assume_tac)
   \\ pop_assum (qspec_then `SUC n` assume_tac)
   \\ qexists_tac `n`
   \\ fs [REAL_NOT_LE]
-  \\ fs [REAL_LE_LDIV_EQ]
   \\ spose_not_then assume_tac
+  \\ gs[arithmeticTheory.NOT_LESS, SF RMULRELNORM_ss]
   \\ `2 pow fracw <= &n` by simp [realTheory.REAL_OF_NUM_POW]
   \\ `2 pow fracw <= x * 2 pow fracw`
-  by imp_res_tac realTheory.REAL_LE_TRANS
+    by imp_res_tac realTheory.REAL_LE_TRANS
   \\ metis_tac [binary_ieeeTheory.zero_lt_twopow, REAL_MUL_COMM, lem2,
                 realTheory.real_lt]
-  );
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -692,12 +636,13 @@ val lem2 = Q.prove(
   \\ simp [REAL_ARITH ``0 <= c /\ a < b ==> a < b + c : real``]
   );
 
-val error_bound_big1 = Q.prove(
-  `!x k. 2 pow k <= abs x /\ abs x < 2 pow SUC k /\
+Theorem error_bound_big1[local]:
+  !x k. 2 pow k <= abs x /\ abs x < 2 pow SUC k /\
          abs x < threshold (:'t # 'w) /\ 1 < dimindex (:'w) ==>
          ?a : ('t, 'w) float.
              float_is_finite a /\
-             abs (float_to_real a - x) <= 2 pow k / 2 pow (dimindex (:'t) + 1)`,
+             abs (float_to_real a - x) <= 2 pow k / 2 pow (dimindex (:'t) + 1)
+Proof
   rpt strip_tac
   \\ qspec_then `x / 2 pow k` mp_tac error_bound_lemma5
   \\ Lib.W (Lib.C SUBGOAL_THEN mp_tac o lhand o lhand o snd)
@@ -794,7 +739,7 @@ val error_bound_big1 = Q.prove(
                wordsTheory.INT_MAX_LT_DIMWORD, prim_recTheory.LESS_NOT_EQ
                ]
      )
-  );
+QED
 
 val error_bound_big = Q.prove(
   `!k x.
@@ -1097,6 +1042,24 @@ val error_bound_norm_strong = Q.prove(
         ]
   );
 
+Theorem absolute_error_denormal:
+  !x. abs x < threshold (:'t # 'w) /\ abs x < 2 * 1 / 2 pow (bias (:'w) - 1) /\
+      1 < bias (:'w) ==>
+      ?e. abs (float_to_real(round roundTiesToEven x:('t,'w) float) - x) <= e /\
+          e <= 1 / 2 pow (bias (:'w) + dimindex (:'t))
+Proof
+  rw[] \\ qspecl_then [‘x’,‘0’] mp_tac error_bound_norm_strong
+  \\ impl_tac >- gs[]
+  \\ once_rewrite_tac[realaxTheory.real_abs]
+  \\ gs[error_def] \\ COND_CASES_TAC
+  \\ rpt strip_tac
+  >- (
+    qexists_tac ‘float_to_real ((round roundTiesToEven x):('t,'w) float) - x’
+    \\ gs[])
+  \\ qexists_tac ‘- (float_to_real ((round roundTiesToEven x):('t,'w) float) - x)’
+  \\ gs[]
+QED
+
 (* -------------------------------------------------------------------------
    "1 + Epsilon" property (relative error bounding).
    ------------------------------------------------------------------------- *)
@@ -1368,7 +1331,7 @@ val round_zero =
 val lift_tac =
   rpt gen_tac
   \\ strip_tac
-  \\ full_simp_tac (srw_ss()++realSimps.real_SS++boolSimps.LET_ss)
+  \\ full_simp_tac (srw_ss()++real_SS++boolSimps.LET_ss)
        [float_value_finite, error_def, float_round_finite, normalizes_def,
         float_add_def, float_sub_def, float_mul_def, float_div_def,
         float_sqrt_def, float_mul_add_def, float_mul_sub_def,
@@ -1421,14 +1384,20 @@ val float_div = Q.store_thm ("float_div",
      error (:'t # 'w) (float_to_real a / float_to_real b))`,
   lift_tac)
 
-val float_sqrt = Q.store_thm ("float_sqrt",
-  `!a : ('t, 'w) float.
-    float_is_finite a /\ (a.Sign = 0w) /\
+Definition sqrtable_def:
+  sqrtable f <=> (f.Sign = 0w) \/ (f = NEG0)
+End
+
+Theorem float_sqrt:
+  !a : ('t, 'w) float.
+    float_is_finite a /\ sqrtable a /\
     abs (sqrt (float_to_real a)) < threshold (:'t # 'w) ==>
     float_is_finite (SND (float_sqrt roundTiesToEven a)) /\
     (float_to_real (SND (float_sqrt roundTiesToEven a)) =
-     sqrt (float_to_real a) + error (:'t # 'w) (sqrt (float_to_real a)))`,
-  lift_tac)
+     sqrt (float_to_real a) + error (:'t # 'w) (sqrt (float_to_real a)))
+Proof
+  lift_tac >> gvs[sqrtable_def, SQRT_0]
+QED
 
 val float_mul_add = Q.store_thm ("float_mul_add",
   `!a b c : ('t, 'w) float.
@@ -1485,7 +1454,7 @@ val relative_tac =
          float_mul_sub_finite]
   \\ imp_res_tac relative_error
   \\ qexists_tac `e`
-  \\ full_simp_tac (srw_ss()++realSimps.real_SS++boolSimps.LET_ss)
+  \\ full_simp_tac (srw_ss()++real_SS++boolSimps.LET_ss)
        [float_value_finite, error_def, float_round_finite, normalizes_def,
         float_add_def, float_sub_def, float_mul_def, float_div_def,
         float_sqrt_def, float_mul_add_def, float_mul_sub_def,
@@ -1497,6 +1466,29 @@ val relative_tac =
          binary_ieeeTheory.float_is_zero_to_real,
          binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
 
+val denorm_relative_tac =
+  rpt gen_tac
+  \\ strip_tac
+  \\ conj_tac
+  >- fs [float_add_finite, float_sub_finite, float_mul_finite,
+         float_div_finite, float_sqrt_finite, float_mul_add_finite,
+         float_mul_sub_finite]
+  \\ last_assum (mp_then Any mp_tac error_bound_norm_strong)
+  \\ disch_then (qspec_then `0` mp_tac)
+  \\ impl_tac >- fs[]
+  \\ qmatch_goalsub_abbrev_tac `abs (err_op) <= _ ==> _`
+  \\ strip_tac
+  \\ qexists_tac `err_op`
+  \\ unabbrev_all_tac \\ fs[error_def]
+  \\ full_simp_tac (srw_ss()++real_SS++boolSimps.LET_ss)
+       [float_value_finite, error_def, float_round_finite, normalizes_def,
+        float_add_def, float_sub_def, float_mul_def, float_div_def,
+        float_sqrt_def, float_mul_add_def, float_mul_sub_def,
+        binary_ieeeTheory.float_is_zero_to_real,
+        float_round_with_flags_def]
+  \\ rw [float_round_def, binary_ieeeTheory.float_is_zero_to_real, finite_not,
+         binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties];
+
 val float_add_relative = Q.store_thm ("float_add_relative",
   `!a b : ('t, 'w) float.
       float_is_finite a /\ float_is_finite b /\
@@ -1506,6 +1498,19 @@ val float_add_relative = Q.store_thm ("float_add_relative",
           (float_to_real (SND (float_add roundTiesToEven a b)) =
            (float_to_real a + float_to_real b) * (1 + e))`,
   relative_tac
+  );
+
+val float_add_relative_denorm = Q.store_thm ("float_add_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\
+      abs (float_to_real a + float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a + float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_add roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_add roundTiesToEven a b)) =
+           (float_to_real a + float_to_real b) + e)`,
+  denorm_relative_tac
   );
 
 val float_sub_relative = Q.store_thm ("float_sub_relative",
@@ -1519,6 +1524,19 @@ val float_sub_relative = Q.store_thm ("float_sub_relative",
   relative_tac
   );
 
+val float_sub_relative_denorm = Q.store_thm ("float_sub_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\
+      abs (float_to_real a - float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a - float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_sub roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_sub roundTiesToEven a b)) =
+           (float_to_real a - float_to_real b) + e)`,
+  denorm_relative_tac
+  );
+
 val float_mul_relative = Q.store_thm ("float_mul_relative",
   `!a b : ('t, 'w) float.
       float_is_finite a /\ float_is_finite b /\
@@ -1528,6 +1546,19 @@ val float_mul_relative = Q.store_thm ("float_mul_relative",
           (float_to_real (SND (float_mul roundTiesToEven a b)) =
            (float_to_real a * float_to_real b) * (1 + e))`,
   relative_tac
+  );
+
+val float_mul_relative_denorm = Q.store_thm ("float_mul_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\
+      abs (float_to_real a * float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a * float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_mul roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_mul roundTiesToEven a b)) =
+           (float_to_real a * float_to_real b) + e)`,
+  denorm_relative_tac
   );
 
 val float_div_relative = Q.store_thm ("float_div_relative",
@@ -1541,15 +1572,41 @@ val float_div_relative = Q.store_thm ("float_div_relative",
   relative_tac
   );
 
+val float_div_relative_denorm = Q.store_thm ("float_div_relative_denorm",
+  `!a b : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ ~float_is_zero b /\
+      abs (float_to_real a / float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a / float_to_real b) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_div roundTiesToEven a b)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_div roundTiesToEven a b)) =
+           (float_to_real a / float_to_real b) + e)`,
+  denorm_relative_tac
+  );
+
 val float_sqrt_relative = Q.store_thm ("float_sqrt_relative",
   `!a : ('t, 'w) float.
-      float_is_finite a /\ (a.Sign = 0w) /\
+      float_is_finite a /\ sqrtable a /\
       normalizes (:'t # 'w) (sqrt (float_to_real a)) ==>
       float_is_finite (SND (float_sqrt roundTiesToEven a)) /\
       ?e. abs e <= 1 / 2 pow (dimindex (:'t) + 1) /\
           (float_to_real (SND (float_sqrt roundTiesToEven a)) =
            (sqrt (float_to_real a) * (1 + e)))`,
-  relative_tac
+  relative_tac >> gvs[SQRT_0, sqrtable_def]
+  );
+
+val float_sqrt_relative_denorm = Q.store_thm ("float_sqrt_relative_denorm",
+  `!a : ('t, 'w) float.
+      float_is_finite a /\ sqrtable a /\
+      abs (sqrt (float_to_real a)) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (sqrt (float_to_real a)) < threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_sqrt roundTiesToEven a)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_sqrt roundTiesToEven a)) =
+           (sqrt (float_to_real a) + e))`,
+  denorm_relative_tac >> gs[sqrtable_def, SQRT_0, float_to_real_round0]
   );
 
 val float_mul_add_relative = Q.store_thm ("float_mul_add_relative",
@@ -1564,6 +1621,21 @@ val float_mul_add_relative = Q.store_thm ("float_mul_add_relative",
   relative_tac
   );
 
+val float_mul_add_relative_denorm = Q.store_thm ("float_mul_add_relative_denorm",
+  `!a b c: ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+      abs (float_to_real a * float_to_real b + float_to_real c) <
+        2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a * float_to_real b + float_to_real c) <
+        threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_mul_add roundTiesToEven a b c)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_mul_add roundTiesToEven a b c)) =
+           (float_to_real a * float_to_real b + float_to_real c) + e)`,
+  denorm_relative_tac
+  );
+
 val float_mul_sub_relative = Q.store_thm ("float_mul_sub_relative",
   `!a b c : ('t, 'w) float.
       float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
@@ -1574,6 +1646,21 @@ val float_mul_sub_relative = Q.store_thm ("float_mul_sub_relative",
           (float_to_real (SND (float_mul_sub roundTiesToEven a b c)) =
            (float_to_real a * float_to_real b - float_to_real c) * (1 + e))`,
   relative_tac
+  );
+
+val float_mul_sub_relative_denorm = Q.store_thm ("float_mul_sub_relative_denorm",
+  `!a b c: ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+      abs (float_to_real a * float_to_real b - float_to_real c) <
+        2 pow 1 / 2 pow (bias (:'w) - 1) /\
+      abs (float_to_real a * float_to_real b - float_to_real c) <
+        threshold (:'t # 'w) /\
+      1 < bias (:'w) ==>
+      float_is_finite (SND (float_mul_sub roundTiesToEven a b c)) /\
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+          (float_to_real (SND (float_mul_sub roundTiesToEven a b c)) =
+           (float_to_real a * float_to_real b - float_to_real c) + e)`,
+  denorm_relative_tac
   );
 
 (* ------------------------------------------------------------------------- *)
@@ -1589,7 +1676,7 @@ val finite_float_within_threshold = Q.store_thm (
   \\ fs[realTheory.abs]
   \\ BasicProvers.every_case_tac
   \\ res_tac
-  \\ RealArith.REAL_ASM_ARITH_TAC);
+  \\ REAL_ASM_ARITH_TAC);
 
 val round_finite_normal_float_id = Q.store_thm(
 "round_finite_normal_float_id",
@@ -1614,7 +1701,7 @@ val round_finite_normal_float_id = Q.store_thm(
       \\ fs[realTheory.REAL_SUB_REFL]
       \\ strip_tac
       \\ `float_to_real b - float_to_real f = 0`
-           by (RealArith.REAL_ASM_ARITH_TAC)
+           by (REAL_ASM_ARITH_TAC)
       \\ fs[float_to_real_eq]
       \\ rfs[])
   \\ CCONTR_TAC
@@ -1624,7 +1711,7 @@ val round_finite_normal_float_id = Q.store_thm(
   \\ fs[realTheory.REAL_SUB_REFL]
   \\ rpt strip_tac
   \\ `float_to_real x - float_to_real f = 0`
-        by (RealArith.REAL_ASM_ARITH_TAC)
+        by (REAL_ASM_ARITH_TAC)
   \\ fs[float_to_real_eq]
   \\ rfs[]);
 

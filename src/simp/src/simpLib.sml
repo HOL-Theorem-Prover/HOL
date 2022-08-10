@@ -17,6 +17,8 @@ open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net
 
 structure Set = Binaryset
 
+type thname = KernelSig.kernelname
+
 local open markerTheory in end;
 
 fun ERR x      = STRUCT_ERR "simpLib" x ;
@@ -30,6 +32,7 @@ fun f oo g = fn x => flatten (map f (g x));
 (*---------------------------------------------------------------------------*)
 (* Representation of conversions manipulated by the simplifier.              *)
 (*---------------------------------------------------------------------------*)
+
 
 type convdata = {name  : string,
                  key   : (term list * term) option,
@@ -52,13 +55,7 @@ fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
                                           else c true solver stk tm before
                                             Portable.dec r
 
-fun split_name s =
-    case String.fields (equal #".") s of
-        [s1,s2] => if CharVector.all Char.isDigit s2 then (NONE, s)
-                   else (SOME s1, s2) (* somewhat unusual *)
-      | [thypart,bname,digits] => (SOME thypart, bname ^ "." ^ digits)
-      | _ => (NONE, s)
-
+fun split_name {Thy,Name} = (SOME Thy, Name)
 fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
   val th = SPEC_ALL thm
   val (thypart,nm) =
@@ -91,7 +88,7 @@ type relsimpdata = {refl: thm, trans:thm, weakenings:thm list,
 datatype ssfrag = SSFRAG_CON of {
     name     : string option,
     convs    : tagged_convdata list,
-    rewrs    : (string option * thm) list,
+    rewrs    : (thname option * thm) list,
     ac       : (thm * thm) list,
     filter   : (controlled_thm -> controlled_thm list) option,
     dprocs   : Traverse.reducer list,
@@ -101,11 +98,42 @@ datatype ssfrag = SSFRAG_CON of {
 
 fun frag_name (SSFRAG_CON {name,...}) = name
 
+fun normCong cong_th = PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] cong_th
+
 fun SSFRAG {name,convs,rewrs,ac,filter,dprocs,congs} =
   SSFRAG_CON {name = name, rewrs = rewrs, ac = ac,
               convs = map (fn c => {thypart=NONE, cd = c}) convs,
-              filter = filter, dprocs = dprocs, congs = congs,
+              filter = filter, dprocs = dprocs, congs = map normCong congs,
               relsimps = []}
+
+val empty_ssfrag = SSFRAG{name = NONE, rewrs = [], convs = [], ac = [],
+                          filter = NONE, dprocs = [], congs = []}
+fun ssf_upd_rewrs f (SSFRAG_CON s) =
+    let
+      val {name,rewrs,convs,ac,filter,dprocs,congs, relsimps} = s
+    in
+      SSFRAG_CON {name = name, rewrs = f rewrs, convs = convs, ac = ac,
+                  filter = filter, dprocs = dprocs, congs = congs,
+                  relsimps = relsimps}
+    end
+
+(* ----------------------------------------------------------------------
+    maintain a global database of (named) ssfrags
+   ---------------------------------------------------------------------- *)
+
+val ssfragDB = Sref.new (Symtab.empty : ssfrag Symtab.table)
+fun register_frag ssf =
+    case frag_name ssf of
+        NONE => raise ERR ("register_frag", "Can only register named ssfrags")
+      | SOME n =>
+        (case Symtab.lookup (Sref.value ssfragDB) n of
+             NONE => (Sref.update ssfragDB (Symtab.update(n,ssf)); ssf)
+           | SOME _ => (HOL_WARNING "simpLib" "register_frag"
+                                    ("Discarding existing entry for "^n);
+                        Sref.update ssfragDB $ Symtab.update(n,ssf);
+                        ssf))
+fun lookup_named_frag n = Symtab.lookup (Sref.value ssfragDB) n
+fun all_named_frags() = Symtab.keys (Sref.value ssfragDB)
 
 (*---------------------------------------------------------------------------*)
 (* Operation on ssfrag values                                                *)
@@ -144,6 +172,7 @@ fun relsimp_ss rsdata =
 fun D (SSFRAG_CON s) = s;
 fun frag_rewrites ssf = map #2 (#rewrs (D ssf))
 
+fun add_named_rwt nth ssfrag = ssf_upd_rewrs (cons (apfst SOME nth)) ssfrag
 
 fun merge_names list =
   itlist (fn (SOME x) =>
@@ -269,13 +298,17 @@ fun filter_net_by_names nms net =
       Ho_Net.vfilter (fn nd => not (name_match nd munged_pats)) net
     end
 
+fun dphas_name_from nms (REDUCER {name = SOME n,...}) = Lib.mem n nms
+  | dphas_name_from _ _ = false
+fun filter_dprocs_by_names nms = List.filter (not o dphas_name_from nms)
+
 fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
     if null nms then ss
     else
       SS{initial_net = filter_net_by_names nms initial_net,
          history = DELETE_EVENT nms :: history, (* stored in reverse order *)
          mk_rewrs = mk_rewrs,
-         dprocs = dprocs,
+         dprocs = filter_dprocs_by_names nms dprocs,
          travrules = travrules,
          limit = limit}
 
@@ -323,10 +356,9 @@ fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
        val opn = a |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #1
        val nm = let val {Name,Thy,...} = dest_thy_const opn
                 in
-                  "AC " ^ Thy ^ "$" ^ Name
-                end handle HOL_ERR _ => "AC <some-term>"
-   in (SOME nm, (a, UNBOUNDED))::(SOME nm, (b, UNBOUNDED))::
-      (SOME nm, (c,UNBOUNDED))::A
+                  SOME {Thy = Thy, Name = "AC " ^ Name}
+                end handle HOL_ERR _ => NONE
+   in (nm, (a, UNBOUNDED))::(nm, (b, UNBOUNDED))::(nm, (c, UNBOUNDED))::A
    end handle HOL_ERR _ => A;
 
  fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
@@ -565,8 +597,8 @@ fun getlimit (SS ss) = #limit ss
  fun mk_named_rewrs mk_rewrs (nmopt, th) =
      let
        val ths = mk_rewrs th
-       fun reduce s th (i,A) =
-           (i + 1, (SOME (s ^ "." ^ Int.toString i), th) :: A)
+       fun reduce {Thy,Name=s} th (i,A) =
+           (i + 1, (SOME {Thy = Thy, Name = s ^ "." ^ Int.toString i}, th) :: A)
      in
        case nmopt of
            NONE => map (fn th => (NONE, th)) ths
@@ -582,7 +614,7 @@ fun getlimit (SS ss) = #limit ss
                     SOME f => f oo mk_rewrs'
                   | _ => mk_rewrs'
    val crewrs = map (fn (nmopt,th) => (nmopt, dest_tagged_rewrite th)) rewrs
-   val rewrs' =
+   val rewrs' : (thname option * controlled_thm) list =
        flatten (map (mk_named_rewrs mk_rewrs') (ac_rewrites ac @ crewrs))
    val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
    val net = net_add_convs initial_net newconvdata
@@ -623,7 +655,7 @@ fun build_from_history h0 =
       List.foldl foldthis empty_ss (List.rev h0)
     end
 
-fun remove_ssfrags (ss as SS{history,limit,...}) names =
+fun remove_ssfrags names (ss as SS{history,limit,...}) =
     let
       val s = Set.addList (Binaryset.empty String.compare, names)
       val nil_included = Set.member(s, "")
@@ -647,7 +679,9 @@ fun remove_ssfrags (ss as SS{history,limit,...}) names =
      val net = (raise context) handle CONVNET net => net
      val cthms = map dest_tagged_rewrite thms
      val new_rwts0 = flatten (map mk_rewrs cthms)
-     val new_rwts = map (fn th => (SOME "rewrite: from context", th)) new_rwts0
+     val new_rwts =
+         map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
+             new_rwts0
    in
      CONVNET
        (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
@@ -679,31 +713,61 @@ val Req0 = markerLib.mk_Req0
 val ReqD = markerLib.mk_ReqD
 
 local open markerSyntax markerLib
-  fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
-  fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
+in
+fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
+fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
-  fun extract_excls (excls, rest) l =
-      case l of
-          [] => (List.rev excls, List.rev rest)
-        | th::ths => case markerLib.destExcl th of
-                         NONE => extract_excls (excls, th::rest) ths
-                       | SOME nm => extract_excls (nm::excls, rest) ths
+fun extract_excls (excls, rest) l =
+    case l of
+        [] => (List.rev excls, List.rev rest)
+      | th::ths => case markerLib.destExcl th of
+                       NONE => extract_excls (excls, th::rest) ths
+                     | SOME nm => extract_excls (nm::excls, rest) ths
 
-  fun process_tags ss thl =
+fun extract_frags (frags, rest) l =
+    case l of
+        [] => (List.rev frags, List.rev rest)
+      | th :: ths => case markerLib.destFRAG th of
+                         NONE => extract_frags (frags, th :: rest) ths
+                       | SOME fragnm => (
+                         case lookup_named_frag fragnm of
+                             NONE => raise ERR ("extract_frags",
+                                                "No frag called " ^ fragnm)
+                           | SOME sf => extract_frags (sf::frags, rest) ths
+                       )
+
+fun SF ssfrag =
+    case frag_name ssfrag of
+        NONE => raise ERR ("SF",
+                           "Can't use anonymous ssfrags in thm list arguments")
+      | SOME nm => ((case lookup_named_frag nm of
+                         NONE => (ignore (register_frag ssfrag);
+                                  HOL_WARNING "simpLib" "SF"
+                                              ("Registering ssfrag " ^ nm ^
+                                               "; this doesn't persist after "^
+                                               "theory export!"))
+                       | _ => ());
+                    markerLib.FRAG nm)
+
+fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst) = Lib.partition is_AC rst
         val (excludes, rst) = extract_excls ([],[]) rst
+        val (frags, rst) = extract_frags ([],[]) rst
     in
-     if null Congs andalso null ACs andalso null excludes then (ss,thl)
-     else (
-       ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                             ac=map unAC ACs, congs=map unCong Congs,
-                             convs=[],rewrs=[],filter=NONE,dprocs=[]}
-          -* excludes,
-       rst
-     )
+      if null Congs andalso null ACs andalso null excludes andalso null frags
+      then (ss,thl)
+      else (
+        List.foldl (flip op++) ss (
+          SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+                     ac=map unAC ACs, congs=map (normCong o unCong) Congs,
+                     convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
+          frags
+        ) -* excludes,
+        rst
+      )
     end
-in
+
 fun SIMP_CONV ss l tm =
   let val (ss', l') = process_tags ss l
   in TRY_CONV (SIMP_QCONV ss' l') tm
@@ -749,9 +813,40 @@ fun ASM_SIMP_TAC0 ss =
 fun ASM_SIMP_TAC ss = markerLib.mk_require_tac (ASM_SIMP_TAC0 ss)
 val asm_simp_tac = ASM_SIMP_TAC
 
+(* differs from default strip_assume_tac base in that it doesn't call
+   OPPOSITE_TAC or DISCARD_TAC.
+
+   Both are reasonable omissions: OPPOSITE_TAC detects mutually
+   contradictory assumptions; we'd hope that simplification will turn
+   one or the other into F, which is then caught by CONTR_TAC.
+   DISCARD_TAC drops duplicates. This should turn into T, which we can
+   discard if droptrues is true.
+*)
+
+type simptac_config =
+     {strip : bool, elimvars : bool, droptrues : bool, oldestfirst : bool}
+
+(* back/front assume_tac; backp is true if the new assumption should go at the
+   back of the list *)
+fun BF_ASSUME_TAC backp th (g as (asl,w)) =
+    if backp then ([(asl @ [concl th], w)],
+                   fn resths => PROVE_HYP th (hd resths))
+    else ASSUME_TAC th g
+
+(* contr/accept/assume *)
+fun caa_tac0 backp (c : simptac_config) th =
+    let
+      val base = FIRST [CONTR_TAC th, ACCEPT_TAC th,
+                        BF_ASSUME_TAC backp th]
+    in
+      if #droptrues c andalso concl th ~~ boolSyntax.T then ALL_TAC
+      else base
+    end
+
 local
-   (* differs only in that it doesn't call OPPOSITE_TAC or DISCARD_TAC *)
-   fun caa_tac th = FIRST [CONTR_TAC th, ACCEPT_TAC th, ASSUME_TAC th]
+   val caa_tac =
+       caa_tac0 false {elimvars = false, droptrues = false, strip = false,
+                       oldestfirst = true}
    val STRIP_ASSUME_TAC' = REPEAT_TCL STRIP_THM_THEN caa_tac
    fun drop r =
       fn n =>
@@ -783,6 +878,42 @@ in
        markerLib.mk_require_tac o rev_full_tac caa_tac
 end
 
+fun stdcon (c : simptac_config) th =
+    if #elimvars c andalso eliminable (concl th) then VSUBST_TAC th
+    else
+      (if #strip c then REPEAT_TCL STRIP_THM_THEN else I)
+        (caa_tac0 (not (#oldestfirst c)) c)
+        th
+
+fun psr (cfg : simptac_config) ss =
+    let val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
+    in
+      popper (fn th =>
+                 ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+    end
+
+fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
+
+fun global_simp_tac cfg ss0 =
+    markerLib.mk_require_tac (
+      markerLib.ABBRS_THEN (
+        markerLib.LLABEL_RES_THEN (
+          fn thl =>
+             let
+               val (ss1,thl') = process_tags ss0 thl
+               val ss = ss1 ++ rewrites thl'
+             in
+               rpt (CHANGED_TAC (allasms cfg ss)) THEN
+               ASM_SIMP_TAC ss []
+             end
+        )
+      )
+    )
+
+
+
+
+
 fun track f x =
  let val _ = (used_rewrites := [])
      val res = Lib.with_flag(track_rewrites,true) f x
@@ -800,7 +931,9 @@ fun tyi_to_ssdata tyinfo =
       val tyname = thy ^ "$" ^ tyop
       val {rewrs = rws0, convs} = TypeBasePure.simpls_of tyinfo;
       fun reduce (th, (i,A)) =
-          (i + 1, (SOME (tyname ^ " simpl. " ^ Int.toString i), th) :: A)
+          (i + 1,
+           (SOME {Thy = "", Name = tyname ^ " simpl. " ^ Int.toString i}, th) ::
+           A)
       val (_, rewrs) = foldl reduce (1,[]) rws0
     in
       SSFRAG_CON {name = SOME("Datatype "^tyname),
@@ -851,7 +984,10 @@ fun pp_ssfrag (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
      val pp_thm = lift pp_thm
      fun pp_named_thm (nmopt, th) =
          let
-           val nmstr = case nmopt of NONE => "<anon>" | SOME s => s
+           val nmstr = case nmopt of
+                           NONE => "<anon>"
+                         | SOME {Thy,Name} => if Thy = "" then Name
+                                              else Thy ^ "$" ^ Name
          in
            block CONSISTENT 0 (
              add_string ("[" ^ nmstr ^ "]") >> add_break(2,2) >> pp_thm th

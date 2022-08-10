@@ -1,0 +1,111 @@
+CLINE_OPTIONS = -r
+
+# directories to build under src/
+SRCRELNAMES = \
+  bag Boolify/src \
+  coalgebras \
+  datatype/inftree \
+  emit \
+  finite_maps float floating-point \
+  hol88 HolQbf HolSmt \
+  integer \
+  monad/more_monads \
+  n-bit \
+  pred_set/src/more_theories probability \
+  quotient/src \
+  rational real real/analysis res_quan/src ring/src \
+  search sort string \
+  temporal/src TeX transfer \
+  update
+
+INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
+
+ifdef POLY
+INCLUDES += ../../floating-point/native
+endif
+
+ifdef HOLSELFTESTLEVEL
+# example directories to build at selftest level 1
+EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
+         PSL/1.01/executable-semantics PSL/1.1/official-semantics \
+         RL_Environment \
+	 STE algorithms computability dependability dev \
+         developers/ThmSetData \
+	 formal-languages formal-languages/context-free \
+         formal-languages/contig \
+	 formal-languages/lambek formal-languages/regular/regular-play \
+	 fun-op-sem/lprefix_lub fun-op-sem/for \
+         hardware hfs \
+         imperative ind_def \
+         l3-machine-code/common \
+         lambda/barendregt lambda/wcbv-reasonable \
+         lassie \
+         logic logic/folcompactness logic/modal-models logic/modal-tableaux \
+         logic/ncfolproofs logic/propositional_logic \
+         misc parity rings set-theory/zfset set-theory/vbg zipper
+
+# selftest directories under src/quotient
+QUOTDIRS = examples examples/lambda examples/sigma
+
+SRCTESTDIRS = \
+  integer/testing \
+  string/theorytesting \
+  TeX/theory_tests TeX/theory_tests/proj1paper \
+  tfl/examples transfer/examples
+
+ifdef POLY
+SRCTESTDIRS += n-bit/interactive_tests
+endif
+
+INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
+            $(patsubst %,../../../examples/%,$(EXDIRS)) \
+            $(patsubst %,../../%,$(SRCTESTDIRS)) \
+            $(HOLDIR)/tools/Holmake/tests/Iflag
+
+ifneq($(HOLSELFTESTLEVEL),1)
+EX2DIRS = AKS algebra algorithms/boyer_moore \
+            algorithms/unification/triangular/nominal \
+            algorithms/unification/triangular/first-order \
+            ARM/arm6-verification/correctness \
+            ARM/v4 ARM/v7 \
+          balanced_bst \
+          category computability/kolmog computability/lambda \
+            computability/recdegrees \
+            computability/register computability/turing \
+            Crypto \
+          decidable_separationLogic/src \
+          formal-languages/regular fun-op-sem \
+          lambda/other-models lambda/typing \
+            logic/ltl logic/ltl-transformations \
+            l3-machine-code/decompilers \
+          miller \
+	  probability vector \
+          separationLogic/src separationLogic/src/holfoot simple_complexity \
+          temporal_deep
+
+ifdef POLY
+EX2DIRS += separationLogic/src/holfoot/poly temporal_deep/src/examples
+endif
+
+INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
+
+ifeq ($(KERNELID),stdknl)
+INCLUDES += ../../../examples/bootstrap
+endif
+
+endif
+
+ifeq($(HOLSELFTESTLEVEL),3)
+EX3DIRS = ARM_security_properties \
+          diningcryptos \
+          l3-machine-code/cheri/step
+
+
+ifdef POLY
+EX3DIRS += machine-code theorem-prover
+endif
+
+INCLUDES += $(patsubst %,../../../examples/%,$(EX3DIRS))
+endif
+
+endif

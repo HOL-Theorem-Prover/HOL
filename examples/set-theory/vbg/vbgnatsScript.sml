@@ -1,6 +1,5 @@
 open HolKernel Parse boolLib bossLib
 open vbgsetTheory
-open lcsymtacs
 open boolSimps
 
 val _ = new_theory "vbgnats"

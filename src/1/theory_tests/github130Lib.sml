@@ -10,7 +10,7 @@ fun add_ghdata (_, th) = (ghdata := th :: !ghdata)
 
 val {export = export_gh130, ...} = ThmSetData.new_exporter {
       settype = "gh130",
-      efns = {add = fn {thy,named_thms} => List.app add_ghdata named_thms,
+      efns = {add = fn {thy,named_thm} => add_ghdata named_thm,
               remove = fn _ => ()}
     }
 

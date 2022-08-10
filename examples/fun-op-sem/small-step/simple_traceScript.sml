@@ -1,25 +1,16 @@
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse;
 open integerTheory stringTheory alistTheory listTheory llistTheory pred_setTheory relationTheory;
 open pairTheory optionTheory finite_mapTheory arithmeticTheory;
-
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
-val _ = ParseExtras.temp_tight_equality();
 
 val _ = new_theory "simple_trace";
 
 val hd_drop_last_take = Q.store_thm ("hd_drop_last_take",
-`!l n. 0 < n ∧ n ≤ LENGTH l ⇒ HD (DROP (n - 1) l) = LAST (TAKE n l)`,
- Induct_on `l` >>
- rw [] >>
- fs []
- >- (
-   `n = 1` by decide_tac >>
-   fs []) >>
- first_x_assum (qspec_then `n - 1` mp_tac) >>
- simp [] >>
- rw [] >>
- Cases_on `l` >>
- fs []);
+`!n l . 0 < n ∧ n ≤ LENGTH l ⇒ HD (DROP (n - 1) l) = LAST (TAKE n l)`,
+ Induct >> rw[] >>
+ Cases_on `l` >> fs[] >>
+ Cases_on `n` >> fs[] >>
+ Cases_on `t` >> fs[]
+);
 
 val some_no_choice = Q.store_thm ("some_no_choice",
 `!f. (some x. f x) = NONE ⇔ ¬?x. f x`,

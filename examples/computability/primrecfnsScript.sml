@@ -147,24 +147,24 @@ val GENLIST_CONS = prove(
   ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
   Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
 
-val primrec_nil = store_thm(
-  "primrec_nil",
-  ``∀f n. primrec f n ⇒ (f [] = f (GENLIST (K 0) n))``,
+Theorem primrec_nil:
+  ∀f n. primrec f n ⇒ (f [] = f (GENLIST (K 0) n))
+Proof
   HO_MATCH_MP_TAC primrec_ind THEN SIMP_TAC (srw_ss()) [GENLIST1] THEN
   REPEAT CONJ_TAC THENL [
-    SIMP_TAC bool_ss [Once EQ_SYM_EQ] THEN
     Induct_on `n` THEN SRW_TAC [][GENLIST_CONS] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC,
 
-    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][Cn_def] THEN
-    AP_TERM_TAC THEN Q.PAT_X_ASSUM `f X = f []` (K ALL_TAC) THEN
+    SRW_TAC [][Cn_def] THEN
+    AP_TERM_TAC THEN Q.PAT_X_ASSUM `f _ = f _` (K ALL_TAC) THEN
     Induct_on `gs` THEN SRW_TAC [][],
 
     ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][] THEN
     SRW_TAC [][Once Pr_def, SimpRHS] THEN
     Cases_on `n` THEN SRW_TAC [][GENLIST1, ADD_CLAUSES, GENLIST_CONS] THEN
     SRW_TAC [][GSYM ADD1]
-  ]);
+  ]
+QED
 
 val primrec_short = store_thm(
   "primrec_short",

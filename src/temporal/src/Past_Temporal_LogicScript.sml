@@ -7,10 +7,6 @@ open HolKernel Parse boolLib Rsyntax
      numLib numTheory prim_recTheory arithmeticTheory pairTheory
      schneiderUtils Temporal_LogicTheory;
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
-
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 val ZERO_LEMMA = ARITH_PROVE“~(x<x) /\ (0<SUC x) /\ ~(SUC x=0)”;
 
@@ -78,15 +74,6 @@ val PBEFORE = new_infixr_definition("PBEFORE",
                         delta<=t0 /\
                         a delta /\
                         !t. delta<=t /\ t<=t0 ==> ~b t”,200);
-
-(*---------------------------------------------------------------------------
-       Some aliases of Past Temporal Operators (borrowed from NuSMV)
- ---------------------------------------------------------------------------*)
-
-val _ = overload_on ("PREV",    ``PNEXT``);
-val _ = overload_on ("ONCE",    ``PEVENTUAL``);
-val _ = overload_on ("SINCE",   ``$PUNTIL``);
-val _ = set_fixity   "SINCE"     (Infixr 200);
 
 (*---------------------------------------------------------------------------
        Initialization

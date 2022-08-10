@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib pairTheory pairSyntax combinTheory
+open HolKernel Parse boolLib bossLib pairTheory pairSyntax combinTheory
      optionTheory listTheory;
 
 val _ = new_theory "errorStateMonad"
@@ -72,81 +72,164 @@ val mapM_def = TotalDefn.Define`
 
 open simpLib BasicProvers boolSimps metisLib
 
-(*
-val mwhile_exists = prove(
-  ``!g b. ?f.
-      f = BIND g (\gv. if gv then IGNORE_BIND b f else UNIT ())``,
-  MAP_EVERY Q.X_GEN_TAC [`g`, `b`] THEN
-  Q.EXISTS_TAC
-    `\s0. if ?n. ~FST (g (FUNPOW (SND o b o SND o g) n s0)) then
-            let n = LEAST n. ~FST (g (FUNPOW (SND o b o SND o g) n s0))
-            in
-              ((), SND (g (FUNPOW (SND o b o SND o g) n s0)))
-          else ARB` THEN
-  SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `s` THEN
-  COND_CASES_TAC THENL [
-    POP_ASSUM (Q.X_CHOOSE_THEN `n0` ASSUME_TAC) THEN
-    SIMP_TAC (srw_ss()) [SimpLHS, LET_THM] THEN
-    numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC[] THEN
-    Q.X_GEN_TAC `n` THEN SIMP_TAC (srw_ss()) [] THEN STRIP_TAC THEN
-    SIMP_TAC (srw_ss()) [BIND_DEF] THEN
-    Q.ISPEC_THEN `g s` (Q.X_CHOOSE_THEN `gv1`
-                                       (Q.X_CHOOSE_THEN `s1` ASSUME_TAC))
-                pairTheory.pair_CASES THEN
-    ASM_SIMP_TAC (srw_ss()) [] THEN REVERSE (Cases_on `gv1`)
-    THEN1 (`n = 0`
-             by (SPOSE_NOT_THEN ASSUME_TAC THEN
-                 `0 < n` by SRW_TAC [numSimps.ARITH_ss][] THEN
-                 FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
-                 SRW_TAC [][]) THEN
-           SRW_TAC [][UNIT_DEF]) THEN
-    ASM_SIMP_TAC (srw_ss()) [IGNORE_BIND_DEF, BIND_DEF] THEN
-    Q.ISPEC_THEN `b s1` (Q.X_CHOOSE_THEN `bv1`
-                                       (Q.X_CHOOSE_THEN `s2` ASSUME_TAC))
-                pairTheory.pair_CASES THEN
-    ASM_SIMP_TAC (srw_ss()) [] THEN
-    `?m. n = SUC m`
-      by (Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-    Q.SUBGOAL_THEN `?n. ~FST (g (FUNPOW (SND o b o SND o g) n s2))`
-      ASSUME_TAC
-    THEN1 (Q.EXISTS_TAC `m` THEN
-           FULL_SIMP_TAC (srw_ss()) [arithmeticTheory.FUNPOW]) THEN
-    ASM_SIMP_TAC (srw_ss()) [arithmeticTheory.FUNPOW] THEN
-    Q_TAC SUFF_TAC
-       `(LEAST n. ~FST (g (FUNPOW (SND o b o SND o g) n s2))) = m`
-       THEN1 SRW_TAC [][] THEN
-    numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 SRW_TAC [][] THEN
-    Q.X_GEN_TAC `p` THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `~(m < p) /\ ~(p < m)` THEN1 numLib.ARITH_TAC THEN
-    REPEAT STRIP_TAC THENL [
-      `FST (g (FUNPOW (SND o b o SND o g) m s2))` by METIS_TAC[] THEN
-      `FST (g (FUNPOW (SND o b o SND o g) (SUC m) s))`
-         by (SIMP_TAC (srw_ss())[arithmeticTheory.FUNPOW] THEN
-             SRW_TAC [][]),
-      `SUC p < SUC m` by SRW_TAC [numSimps.ARITH_ss][] THEN
-      RES_THEN MP_TAC THEN
-      SIMP_TAC (srw_ss()) [arithmeticTheory.FUNPOW] THEN
-      SRW_TAC [][]
-    ],
-    FULL_SIMP_TAC (srw_ss()) [BIND_DEF] THEN
-    Q.ISPEC_THEN `g s` (Q.X_CHOOSE_THEN `gv1`
-                                       (Q.X_CHOOSE_THEN `s1` ASSUME_TAC))
-                pairTheory.pair_CASES THEN
-    REVERSE (SRW_TAC [][])
-      THEN1(FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN SRW_TAC [][]) THEN
-    SRW_TAC [][IGNORE_BIND_DEF, BIND_DEF] THEN
-    Q.ISPEC_THEN `b s1` (Q.X_CHOOSE_THEN `bv1`
-                                       (Q.X_CHOOSE_THEN `s2` ASSUME_TAC))
-                pairTheory.pair_CASES THEN
-    SRW_TAC [][] THEN
-    FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` (MP_TAC o Q.GEN `m`)) THEN
-    SRW_TAC [][arithmeticTheory.FUNPOW]
-  ])
+Definition mwhile_step_def:
+  mwhile_step P g x 0 s = BIND (P x) (\b. UNIT (b,x)) s /\
+  mwhile_step P g x (SUC n) s = BIND (P x)
+    (\b. if b then BIND (g x) (\gx. mwhile_step P g gx n) else UNIT (b,x)) s
+End
+
+Theorem mwhile_exists[local]:
+  !P g. ?f .
+    !x s. f x s = BIND (P x) (\b. if b then BIND (g x) f else UNIT x) s
+Proof
+  qx_gen_tac `P` >> qx_gen_tac `g` >>
+  qexists_tac `\x s.
+    if ?n. !y t. mwhile_step P g x n s <> SOME ((T,y), t) then
+      let n = @n. !y t. mwhile_step P g x n s <> SOME ((T,y), t) /\
+        !m. m < n ==> ?y t. mwhile_step P g x m s = SOME ((T,y), t) in
+      case mwhile_step P g x n s of NONE => NONE | SOME ((_,y),t) => SOME (y,t)
+    else ARB` >>
+  qx_gen_tac `x` >> qx_gen_tac `s` >> BETA_TAC >>
+  reverse (IF_CASES_TAC)
+  >- (
+    fs[BIND_DEF, UNIT_DEF, COND_RATOR] >>
+    first_assum (qspec_then `0` assume_tac) >>
+    fs[mwhile_step_def, BIND_DEF, UNIT_DEF] >>
+    full_case_tac >> fs[] >> full_case_tac >> fs[] >>
+    rpt (var_eq_tac) >>
+    first_assum (qspec_then `SUC 0` assume_tac) >>
+    fs[mwhile_step_def, BIND_DEF, UNIT_DEF] >> rfs[BIND_DEF] >>
+    full_case_tac >> fs[] >> full_case_tac >> fs[] >>
+    IF_CASES_TAC >> simp[LET_DEF] >>
+    pop_assum (qx_choose_then `n` assume_tac) >>
+    first_x_assum (qspec_then `SUC n` assume_tac) >>
+    fs[mwhile_step_def, BIND_DEF, UNIT_DEF] >> rfs[BIND_DEF]
+    ) >>
+  pop_assum (qx_choose_then `n` assume_tac) >>
+  SELECT_ELIM_TAC >> conj_tac
+  >- (
+    completeInduct_on `n` >> strip_tac >>
+    Cases_on `!m. m < n ==> ?y t. mwhile_step P g x m s = SOME ((T,y), t)` >>
+    fs[BIND_DEF, mwhile_step_def] >- (qexists_tac `n` >> fs[]) >>
+    first_x_assum irule >> goal_assum drule >>
+    asm_rewrite_tac []
+    ) >>
+  fs[BIND_DEF, UNIT_DEF, COND_RATOR, LET_DEF] >>
+  pop_assum kall_tac >> qx_gen_tac `n` >> rpt strip_tac >>
+  fs[GSYM PULL_FORALL] >> Cases_on `n`
+  >- (
+    fs[mwhile_step_def, BIND_DEF, UNIT_DEF] >>
+    Cases_on `P x s` >> simp[] >> rename1 `P x s = SOME y` >>
+    PairCases_on `y` >> fs[]
+    ) >>
+  rename1 `SUC n` >> fs[mwhile_step_def, BIND_DEF, UNIT_DEF, COND_RATOR] >>
+  Cases_on `P x s` >> simp[] >>
+  rename1 `P x s = SOME y` >> PairCases_on `y` >> Cases_on `y0` >> fs[] >>
+  Cases_on `g x y1` >> fs[] >> rename1 `g x y1 = SOME z` >>
+  PairCases_on `z` >> fs[] >>
+  reverse (IF_CASES_TAC)
+  >- (fs[] >> pop_assum (qspec_then `n` assume_tac) >> rfs[]) >>
+  SELECT_ELIM_TAC >> conj_tac
+  >- (
+    ntac 4 (last_x_assum kall_tac) >>
+    pop_assum (qx_choose_then `n` assume_tac) >>
+    completeInduct_on `n` >> strip_tac >>
+    Cases_on `!m. m < n ==> ?y t. mwhile_step P g z0 m z1 = SOME ((T,y),t)`
+    >- (goal_assum drule >> fs[]) >>
+    pop_assum mp_tac >> simp[]
+    ) >>
+  qx_gen_tac `m` >> strip_tac >>
+  qsuff_tac `m = n` >> fs[] >>
+  fs[arithmeticTheory.EQ_LESS_EQ, GSYM arithmeticTheory.NOT_LESS] >>
+  conj_tac >> CCONTR_TAC >> fs[]
+  >- (first_x_assum drule >> strip_tac >> rfs[]) >>
+  last_x_assum (qspec_then `SUC m` assume_tac) >>
+  rfs[mwhile_step_def, BIND_DEF, UNIT_DEF]
+QED
 
 val MWHILE_DEF = new_specification(
   "MWHILE_DEF", ["MWHILE"],
   mwhile_exists |> SIMP_RULE bool_ss [SKOLEM_THM]);
-*)
+
+Definition mwhile_unit_step_def:
+  mwhile_unit_step P g 0 s = P s /\
+  mwhile_unit_step P g (SUC n) s = BIND P
+    (\b. if b then IGNORE_BIND g (mwhile_unit_step P g n) else UNIT b) s
+End
+
+Theorem mwhile_unit_exists[local]:
+  !P g. ?f. !s.
+    f s = BIND P (\b. if b then IGNORE_BIND g f else UNIT ()) s
+Proof
+  qx_gen_tac `P` >> qx_gen_tac `g` >>
+  qexists_tac `\s.
+    if ?n. !t. mwhile_unit_step P g n s <> SOME (T, t) then
+      let n = @n. !t. mwhile_unit_step P g n s <> SOME (T, t) /\
+        !m. m < n ==> ?t. mwhile_unit_step P g m s = SOME (T, t) in
+      case mwhile_unit_step P g n s of NONE => NONE | SOME (_,t) => SOME ((),t)
+    else ARB` >>
+  qx_gen_tac `s` >> BETA_TAC >>
+  reverse (IF_CASES_TAC)
+  >- (
+    fs[BIND_DEF, UNIT_DEF, COND_RATOR] >>
+    first_assum (qspec_then `0` assume_tac) >>
+    fs[mwhile_unit_step_def, BIND_DEF, IGNORE_BIND_DEF, UNIT_DEF] >>
+    first_assum (qspec_then `SUC 0` assume_tac) >>
+    fs[mwhile_unit_step_def, BIND_DEF, UNIT_DEF, COND_RATOR, IGNORE_BIND_DEF] >>
+    rfs[] >> full_case_tac >> fs[] >> full_case_tac >> fs[] >>
+    IF_CASES_TAC >> simp[] >>
+    pop_assum (qx_choose_then `n` assume_tac) >>
+    first_x_assum (qspec_then `SUC n` assume_tac) >>
+    fs[mwhile_unit_step_def, BIND_DEF, IGNORE_BIND_DEF, UNIT_DEF, COND_RATOR] >>
+    rfs[]
+    ) >>
+  pop_assum (qx_choose_then `n` assume_tac) >>
+  SELECT_ELIM_TAC >> conj_tac
+  >- (
+    completeInduct_on `n` >> strip_tac >>
+    Cases_on `!m. m < n ==> ?t. mwhile_unit_step P g m s = SOME (T, t)` >>
+    fs[BIND_DEF, mwhile_unit_step_def] >- (qexists_tac `n` >> fs[]) >>
+    first_x_assum irule >> goal_assum drule >>
+    asm_rewrite_tac []
+    ) >>
+  fs[BIND_DEF, UNIT_DEF, COND_RATOR, IGNORE_BIND_DEF] >>
+  pop_assum kall_tac >> qx_gen_tac `n` >> rpt strip_tac >>
+  fs[GSYM PULL_FORALL] >> Cases_on `n`
+  >- (
+    fs[mwhile_unit_step_def, BIND_DEF, UNIT_DEF] >>
+    Cases_on `P s` >> simp[] >> rename1 `P s = SOME y` >>
+    PairCases_on `y` >> fs[]
+    ) >>
+  rename1 `SUC n` >>
+  fs[mwhile_unit_step_def, BIND_DEF, UNIT_DEF, COND_RATOR, IGNORE_BIND_DEF] >>
+  Cases_on `P s` >> simp[] >>
+  rename1 `P s = SOME y` >> PairCases_on `y` >> Cases_on `y0` >> fs[] >>
+  Cases_on `g y1` >> fs[] >> rename1 `g y1 = SOME z` >>
+  PairCases_on `z` >> fs[] >>
+  reverse (IF_CASES_TAC)
+  >- (fs[] >> pop_assum (qspec_then `n` assume_tac) >> rfs[]) >>
+  SELECT_ELIM_TAC >> conj_tac
+  >- (
+    ntac 4 (last_x_assum kall_tac) >>
+    pop_assum (qx_choose_then `n` assume_tac) >>
+    completeInduct_on `n` >> strip_tac >>
+    Cases_on `!m. m < n ==> ?t. mwhile_unit_step P g m z1 = SOME (T,t)`
+    >- (goal_assum drule >> fs[]) >>
+    pop_assum mp_tac >> simp[]
+    ) >>
+  qx_gen_tac `m` >> strip_tac >>
+  qsuff_tac `m = n` >> fs[] >>
+  fs[arithmeticTheory.EQ_LESS_EQ, GSYM arithmeticTheory.NOT_LESS] >>
+  conj_tac >> CCONTR_TAC >> fs[]
+  >- (first_x_assum drule >> strip_tac >> rfs[]) >>
+  last_x_assum (qspec_then `SUC m` assume_tac) >>
+  rfs[mwhile_unit_step_def, BIND_DEF, UNIT_DEF, IGNORE_BIND_DEF]
+QED
+
+val MWHILE_UNIT_DEF = new_specification(
+  "MWHILE_UNIT_DEF", ["MWHILE_UNIT"],
+  mwhile_unit_exists |> SIMP_RULE bool_ss [SKOLEM_THM]);
+
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)

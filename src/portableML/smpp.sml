@@ -7,11 +7,12 @@ type ('a,'b) t =
      'a * HOLPP.pretty list -> ('b * ('a * HOLPP.pretty list)) option
 
 open HOLPP
+val fint = FixedInt.fromInt
 
 fun consP p (st,ps) = SOME ((), (st, p::ps))
-fun add_string s = consP (HOLPP.PrettyStringWithWidth(s, UTF8.size s))
+fun add_string s = consP (HOLPP.PrettyStringWithWidth(s, fint (UTF8.size s)))
 fun add_break b = consP (HOLPP.add_break b)
-fun add_stringsz p = consP (HOLPP.PrettyStringWithWidth p)
+fun add_stringsz (s,i) = consP (HOLPP.PrettyStringWithWidth (s, fint i))
 fun add_newline x = consP HOLPP.NL x
 fun nothing stps = SOME ((),stps)
 fun fail aps = NONE
@@ -44,7 +45,7 @@ fun block bs i p (a,ps) =
   case p (a,[]) of
       NONE => NONE
     | SOME(res, (a1,ps1)) =>
-        SOME(res, (a1, PrettyBlock(i, bs2b bs, [], List.rev ps1) :: ps))
+        SOME(res, (a1, PrettyBlock(fint i, bs2b bs, [], List.rev ps1) :: ps))
 
 fun fupdate f (a,pps) = SOME (a, (f a, pps))
 

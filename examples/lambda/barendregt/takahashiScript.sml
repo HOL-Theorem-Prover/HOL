@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib lcsymtacs
+open HolKernel Parse boolLib bossLib
 open binderLib
 
 open termTheory chap3Theory

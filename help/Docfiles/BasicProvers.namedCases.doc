@@ -1,0 +1,14 @@
+\DOC namedCases
+
+\TYPE namedCases : string list -> tactic
+
+\SYNOPSIS
+Case split on type of leading universally quantified variable in
+the goal, using given names for introduced constructor arguments.
+
+\DESCRIBE
+{bossLib.namedCases} is identical to {BasicProvers.namedCases}.
+
+\SEEALSO
+bossLib.namedCases_on, bossLib.Cases_on, bossLib.Cases.
+\ENDDOC

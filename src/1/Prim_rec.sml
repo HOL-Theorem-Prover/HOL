@@ -656,10 +656,10 @@ fun INDUCT_THEN th =
      val bconv = BETAS Bvar hy
      val tacsf = TACS hy
      val v = genvar (type_of Bvar)
-     val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH(SPEC v th))
-     val (asm,con) = case dest_thm eta_th
-                     of ([asm],con) => (asm,con)
-                      | _ => raise Match
+     val spec_th = SPEC v th
+     val (asm,_) = dest_imp (concl spec_th)
+     val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH spec_th)
+     val con = concl eta_th
      val ind = GEN v (SUBST [boolvar |-> GALPHA ty asm]
                             (mk_imp(boolvar, con))
                             (DISCH asm eta_th))
@@ -2003,6 +2003,192 @@ in
   rand_thm' |> CONV_RULE (RAND_CONV (REWR_CONV elim))
             |> BETA_RULE
 end
+
+(* prove a higher-order variant of the case elim thm
+     !f. f (ty_CASE x f1 .. fn) :bool <=>
+       (?a1 .. ai. x = ctor1 a1 .. ai /\ f (f1 a1 .. ai)) \/
+       (?b1 .. bj. x = ctor2 b1 .. bj /\ f (f2 b1 .. bj)) \/
+       ...
+*)
+fun prove_case_ho_elim_thm ty_def = let
+    val thm1 = prove_case_rand_thm ty_def
+    val elim_thm = prove_case_elim_thm ty_def
+    fun get_f thm = concl thm |> lhs |> rator
+    val (_, eq_ty) = dom_rng (type_of (get_f thm1))
+    val thm2 = INST_TYPE [eq_ty |-> bool] thm1
+      |> CONV_RULE (RAND_CONV (REWR_CONV elim_thm))
+  in GEN (get_f thm2) thm2 |> BETA_RULE end
+
+(* the forall/implies variant of the case subdivision,
+        more useful for conclusions and forward reasoning
+     !f. f (ty_CASE x f1 .. fn) :bool <=>
+       (!a1 .. ai. x = ctor1 a1 .. ai ==> f (f1 a1 .. ai)) /\
+       (!b1 .. bj. x = ctor2 b1 .. bj ==> f (f2 b1 .. bj)) /\
+       ...
+*)
+fun prove_case_ho_imp_thm ty_def = let
+    val thm1 = prove_case_ho_elim_thm ty_def
+    val (f, _) = concl thm1 |> dest_forall
+    val (nm, f_ty) = dest_var f
+    val (x_ty, _) = dom_rng f_ty
+    val x = mk_var ("x", x_ty)
+    val f2 = mk_abs (x, mk_neg (mk_comb (f, x)))
+    val rews1 = [CONV_RULE (DEPTH_CONV ETA_CONV) NOT_EXISTS_THM]
+        @ BODY_CONJUNCTS DE_MORGAN_THM
+  in
+    SPEC f2 thm1 |> AP_TERM negation
+      |> CONV_RULE (REDEPTH_CONV (FIRST_CONV
+        (BETA_CONV :: map REWR_CONV rews1)))
+      |> REWRITE_RULE [DISJ_EQ_IMP, NOT_CLAUSES]
+      |> GEN f
+  end
+
+(* ----------------------------------------------------------------------
+    gen_indthm : given definition theorem that is output of
+                 new_recursive_definition, outputs a custom induction
+                 theorem that has as many parameters to its induction
+                 variables as the constants do in the definition.
+   ---------------------------------------------------------------------- *)
+
+fun insert_at_n n extra rest =
+    let
+      val (p,s) = split_after n rest
+    in
+      p @ [extra] @ s
+    end
+
+fun hdPs t =
+    case Lib.total dest_forall t of
+        SOME (_, t) => hdPs t
+      | NONE => (case Lib.total dest_conj t of
+                     SOME (c1,c2) => hdPs c1 @ hdPs c2
+                   | NONE =>
+                     (case Lib.total dest_imp t of
+                          SOME (h,c) => hdPs h @ hdPs c
+                        | NONE => [#1 (strip_comb t)]))
+
+fun top_assoc x y = Lib.op_assoc (option_eq aconv) x y
+
+fun nicestr ty =
+    if is_vartype ty then String.extract(dest_vartype ty, 1, NONE)
+    else let val {Tyop, Thy, Args} = dest_thy_type ty
+         in
+           if Tyop = "list" andalso Thy = "list" then
+             nicestr (hd Args) ^ "s"
+           else if Tyop = "prod" andalso Thy = "pair" then
+             nicestr (hd Args) ^ "_" ^ nicestr (hd (tl Args))
+           else String.substring(Tyop, 0, 1)
+         end
+fun gen_nicevar ty = mk_var(nicestr ty, ty)
+
+fun liftALLs t = TRY_CONV (RIGHT_IMP_FORALL_CONV THENC BINDER_CONV liftALLs) t
+
+fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
+val prim_dest_const = to_kid o dest_thy_const
+fun conj_genll tyalist indth =
+    let
+      val tmDom = #1 o dom_rng o type_of
+      val (indPvs, _) = strip_forall $ concl indth
+      fun mkP P n vs =
+          mk_var(#1 $ dest_var P,
+                 list_mk_fun(insert_at_n n (tmDom P) (map type_of vs), bool))
+      fun mapthis P =
+          let val dty = #1 $ dom_rng $ type_of P
+              fun test patty i (concty,info) =
+                  case total (match_type patty) concty of
+                      SOME sigma => SOME (concty, info, sigma)
+                    | NONE => NONE
+          in
+            case first_opt (test dty) tyalist of
+                NONE => (NONE, ([], mk_abs(genvar dty, boolSyntax.T),
+                                {Thy = "min", Name = "fake"}))
+              | SOME (cty, (n, vs, f), sigma) =>
+                let
+                  val gv = variant vs $ gen_nicevar cty
+                  val vs' = insert_at_n n gv vs
+                  val P' = mkP (inst sigma P) n vs
+                in
+                  (SOME P',
+                   (vs,
+                    mk_abs (gv, list_mk_forall(vs, list_mk_comb(P',vs'))),
+                    f))
+                end
+          end
+      val Pinfo = map mapthis indPvs
+      val newPvs = List.mapPartial #1 Pinfo
+      fun reorder_var_order th0 =
+          let fun mapthis th =
+                  let
+                    val th' = SPEC_ALL th
+                    val (_, fvs) = strip_comb $ concl th'
+                        (* works because there won't even be tuple structure in
+                           the conclusion *)
+                  in
+                    th' |> GENL fvs
+                  end
+          in
+            LIST_CONJ (map mapthis $ CONJUNCTS $ UNDISCH_ALL $ th0) |> DISCH_ALL
+          end
+      val indth' =
+          ISPECL (map (#2 o #2) Pinfo) indth |> BETA_RULE
+                |> PURE_REWRITE_RULE [IMP_CLAUSES, FORALL_SIMP,
+                                      AND_CLAUSES]
+                |> CONV_RULE $ LAND_CONV $ EVERY_CONJ_CONV $
+                     STRIP_QUANT_CONV liftALLs
+                |> reorder_var_order
+      val remaining_Pvs = filter (fn v => free_in v (concl indth')) newPvs
+      fun gen_P2const (SOME new, (_, _, f)) = SOME(new,f)
+        | gen_P2const (NONE, _) = NONE
+    in
+      (GENL remaining_Pvs indth', List.mapPartial gen_P2const Pinfo)
+    end
+
+
+open Portable
+fun variantl (avoids, vs) =
+    foldl' (fn v => fn (avs, vs0) =>
+               let val v' = variant avs v
+               in (v'::avs, v'::vs0)
+               end)
+           vs
+           (avoids, []) |> apsnd List.rev
+
+(* trickinesses stem from fact that the definition may not involve all of
+   the underlying types belonging to a mutual recursion, and those that it
+   does use may not be present in the definition in the same order. *)
+fun gen_indthm {lookup_ind} defth =
+    let
+      fun conj_fold cj (A as (indopt, avds, seen_consts, alist)) =
+          let val (_, eqn) = cj |> strip_forall
+              val (f, args) = strip_comb (lhs eqn)
+          in
+            if HOLset.member(seen_consts, f) then A
+            else
+              case plucki (not o is_var) args of
+                  NONE => raise ERR "gen_indthm"
+                                "Doesn't look like a recursive definition"
+                | SOME (a,i,others) =>
+                  let val (avds',vs) = variantl (avds, others)
+                      val aty = type_of a
+                      val indopt = case indopt of
+                                       NONE => SOME(lookup_ind aty)
+                                     | _ => indopt
+                  in
+                    (indopt, avds', HOLset.add(seen_consts, f),
+                     (aty, (i, vs, prim_dest_const f)) :: alist)
+                  end
+          end
+      val (indth_opt, _, _, tyalist) =
+          foldl' conj_fold (strip_conj (concl defth)) (NONE, [], empty_tmset,[])
+      val indth =
+          case indth_opt of
+              SOME th => th
+            | NONE => raise ERR "gen_indthm" "Didn't get an induction theorem"
+      val (thm, P2const_alist) = conj_genll tyalist indth
+      val (gvs, _) = thm |> concl |> strip_forall
+    in
+      (thm, map (C (op_assoc aconv) P2const_alist) gvs)
+    end
 
 
 

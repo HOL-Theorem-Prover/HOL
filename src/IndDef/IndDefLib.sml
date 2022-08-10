@@ -58,15 +58,12 @@ end;
     Store all rule inductions
    ---------------------------------------------------------------------- *)
 
-val term_rule_map : ({Name:string,Thy:string},thm list)Binarymap.dict ref =
-    ref (Binarymap.mkDict KernelSig.name_compare)
+type rule_induction_map = ({Thy:string,Name:string},thm list) Binarymap.dict
 
 fun listdict_add (d, k, e) =
     case Binarymap.peek(d, k) of
       NONE => Binarymap.insert(d,k,[e])
     | SOME l => Binarymap.insert(d,k,e::l)
-
-fun rule_induction_map() = !term_rule_map
 
 fun ind_thm_to_consts thm = let
   open boolSyntax
@@ -81,29 +78,43 @@ in
       cons
 end
 
-fun add_rule_induction th = let
-  val nm = current_theory()
+fun add_rule_induction0 th tmap = let
   val ts = ind_thm_to_consts th
 in
-  term_rule_map := List.foldl (fn (t,d) => listdict_add(d,t,th))
-                              (!term_rule_map)
-                              ts
+  List.foldl (fn (t,d) => listdict_add(d,t,th)) tmap ts
 end
 
+fun apply_delta (ThmSetData.ADD(_, th)) tmap = add_rule_induction0 th tmap
+  | apply_delta _ tmap = tmap
+
 (* making it exportable *)
-val {export = export_rule_induction, ...} =
-    ThmSetData.new_exporter {
+val {update_global_value = rule_ind_apply_global_update,
+     record_delta = rule_ind_record_delta,
+     get_deltas = rule_ind_get_deltas,
+     get_global_value = rule_induction_map,
+     DB = rule_induction_map_by_theory,...} =
+    ThmSetData.export_with_ancestry {
       settype = "rule_induction",
-      efns = {
-        add = fn {named_thms,...} => app (add_rule_induction o #2) named_thms,
-        remove = fn _ => ()
-      }
+      delta_ops = {apply_to_global = apply_delta,
+                   uptodate_delta = K true,
+                   thy_finaliser = NONE,
+                   initial_value = Binarymap.mkDict KernelSig.name_compare,
+                   apply_delta = apply_delta}
     }
+
+fun add_rule_induction th =
+    rule_ind_apply_global_update (add_rule_induction0 th)
+fun export_rule_induction s =
+    let val d = ThmSetData.mk_add s
+    in
+      rule_ind_record_delta d;
+      rule_ind_apply_global_update (apply_delta d)
+    end
 
 fun thy_rule_inductions thyname = let
   open ThmSetData
 in
-  theory_data {settype = "rule_induction", thy = thyname} |> added_thms
+  rule_ind_get_deltas {thyname = thyname} |> added_thms
 end
 
 (* ----------------------------------------------------------------------
@@ -127,7 +138,7 @@ val {export = export_mono, ...} =
     ThmSetData.new_exporter {
       settype = "mono",
       efns = {
-        add = fn {named_thms,...} => app (add_mono_thm o #2) named_thms,
+        add = fn {named_thm,...} => add_mono_thm (#2 named_thm),
         remove = fn _ => ()
       }
     }
@@ -373,7 +384,7 @@ fun introduce_vars ns t =
           else
             let val newvar =
                     case free_vars a of
-                        [] => mk_var("x", type_of a)
+                        [] => variant avoids (mk_var("x", type_of a))
                       | v::_ => variant avoids
                                         (mk_var(#1 (dest_var v), type_of a))
             in
@@ -415,13 +426,15 @@ fun push_old_vars t =
     end
 
 
-
+val NEG_EQ_IMP = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS |> last |> SYM
 fun weight pat t =
     if pat ~~ t then 2 else if can (match_term pat) t then 1 else 0
 fun isolate_to_front numSchematics Rt (G as (_, gt)) =
     let
       val (_, c, vs, _) = find_best (weight Rt) gt
-      val conv1 = c THENC introduce_vars numSchematics THENC push_old_vars THENC
+      val fix_neg = TRY_CONV (REWR_CONV NOT_EQ_IMPF)
+      val conv1 = c THENC fix_neg THENC introduce_vars numSchematics THENC
+                  push_old_vars THENC
                   TRY_CONV (STRIP_QUANT_CONV (REWR_CONV NOT_EQ_IMPF))
       fun pull_to_front v t =
           let

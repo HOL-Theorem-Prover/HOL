@@ -1,4 +1,34 @@
-INCLUDES=../tools ../deep_embeddings ../translations ../model_check ${HOLDIR}/examples/PSL/path ${HOLDIR}/examples/PSL/1.1/official-semantics/
+INCLUDES = ../tools ../deep_embeddings ../translations ../model_check \
+	${HOLDIR}/examples/PSL/path \
+	${HOLDIR}/examples/PSL/1.1/official-semantics \
+        $(HOLDIR)/src/res_quan/src
+#	${HOLDIR}/examples/logic/ltl-transformations
 
+EXTRA_CLEANS = heap selftest.exe
 
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = pred_setTheory
+LOCAL_OBJNAMES = ../translations/translationsLib
+OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES)) \
+	../translations/translationsLib.uo
 
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES) $(LOCAL_OBJNAMES)
+endif
+
+all: $(DEFAULT_TARGETS) selftest.exe
+
+selftest.exe: selftest.uo ltl2omega.uo
+	$(HOLMOSMLC) -o $@ $<
+
+.PHOHY: all
+
+ifdef HOLSELFTESTLEVEL
+all: temporal_deep-selftest.log
+
+temporal_deep-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
+endif

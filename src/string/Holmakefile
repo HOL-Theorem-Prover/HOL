@@ -1,19 +1,43 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+INCLUDES = ../sort  # for ternaryComparisons
 
-all: $(TARGETS) selftest.exe
+all: selftest.exe $(DEFAULT_TARGETS)
+
+.PHONY: all link-to-sigobj
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
 
 selftest.exe: selftest.uo stringSyntax.uo stringLib.uo stringTheory.uo $(dprot $(SIGOBJ)/term_pp.uo)
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
-all: string.ot.art string_num.ot.art ASCIInumbers.ot.art
-endif
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
-hol4-string-unint.art: hol4-string-unint.thy string.ot.art string_num.ot.art ASCIInumbers.ot.art
+all: $(ARTFILES) hol4-string.art
+
+hol4-string-unint.art: hol4-string-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 
 hol4-string.art: hol4-string.thy hol4-string-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
 
-string.ot: string.otd
+install: hol4-string.thy hol4-string.art
+	opentheory install --reinstall $<
+
+string.art: string.otd
+
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: string-selftest.log
+
+string-selftest.log: ./selftest.exe
+	./selftest.exe > $@ 2>&1
+
+endif
+
+EXTRA_CLEANS += string-selftest.log

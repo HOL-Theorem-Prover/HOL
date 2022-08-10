@@ -61,8 +61,6 @@ val simpset : context -> simpLib.simpset
 
 val to_string : context -> string
 
-val pp : ppstream -> context -> unit
-
 (* ------------------------------------------------------------------------- *)
 (* Subtype context pairs: one for simplification, the other for              *)
 (* normalization.                                                            *)
@@ -94,7 +92,5 @@ val simpset2 :
     context2 -> {simplify : simpLib.simpset, normalize : simpLib.simpset}
 
 val to_string2 : context2 -> string
-
-val pp2 : ppstream -> context2 -> unit
 
 end

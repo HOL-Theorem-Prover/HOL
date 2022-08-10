@@ -1,1 +1,1 @@
-local open tacticToe tttLearn tttRecord tttSearch tttSetup tttUnfold in end
+open HolKernel boolLib tacticToe tttEval;

@@ -1,0 +1,58 @@
+"foo \
+	  \bar"
+(Parse.Term [QUOTE " (*#loc 3 3*)\"foo\""])
+[QUOTE " (*#loc 4 2*)foo = #\"^`\""]
+[QUOTE " (*#loc 5 2*)\"\\\"\""]
+(Parse.Term [QUOTE " (*#loc 6 3*)\t"])
+(Parse.Term [QUOTE " (*#loc 7 3*)(* foo"])
+[QUOTE " (*#loc 8 2*)^"]
+"\"" (Parse.Term [QUOTE " (*#loc 9 8*)foo"])
+"\\" [QUOTE " (*#loc 10 7*)foo"]
+[QUOTE " (*#loc 11 2*)putting unescaped backticks into ", ANTIQUOTE ((antiquotes #"`")),QUOTE " (*#loc 11 53*) is fine"]
+(Parse.Term [QUOTE " (*#loc 12 3*)foo\n\
+\bar"])
+(Parse.Term [QUOTE " (*#loc 14 3*)\"an embedded string with \\\n\
+\\\protected newlines\""])
+[QUOTE " (*#loc 16 2*)\"more embedding \\\n\
+\ \\ho hum\""]
+(Parse.Term [QUOTE " (*#loc 18 4*)\"embedded string without\n\
+\   protected newlines\""])
+[QUOTE " (*#loc 20 2*)s1 ^ s2"]
+[QUOTE " (*#loc 21 2*)s1 ^^\n\
+\s2"]
+(* ` *)
+[QUOTE " (*#loc 24 2*)", ANTIQUOTE ((fromMLnum nm)),QUOTE " (*#loc 24 17*) (* *) "];
+(* (*  *) `;*)
+
+val (even_rules,even_ind,even_cases) = (fn q => fn _ => IndDefLib.xHol_reln "even" q) [QUOTE " (*#loc 27 16*)\n\
+\ even 0 /\\\n\
+\(!n. even n ==> odd (n + 1)) /\\\n\
+\\n\
+\  (!m. odd m ==> even (m + 1))"
+] NONE; val even_strongind = DB.fetch "-" "even_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val even_0 = boolLib.save_thm("even_0[simp]", Drule.cj 1 even_rules);val even_suc = boolLib.save_thm("even_suc", Drule.cj 3 even_rules);
+
+val foo = TotalDefn.qDefine "foo" [QUOTE " (*#loc 34 16*)\n\
+\  foo x = if x < 2 then 1 else x * foo (x - 1)"
+] NONE; val foo_ind = DB.fetch "-" "foo_ind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;
+
+val (compile_rel_rules,compile_rel_ind,compile_rel_cases) = (fn q => fn _ => IndDefLib.xHol_reln "compile_rel" q) [QUOTE " (*#loc 38 23*)\n\
+\  (* (*  *) *)\n\
+\\n\
+\  compile_rel foo bar /\\\n\
+\\n\
+\  compile_rel foo bar"
+] NONE; val compile_rel_strongind = DB.fetch "-" "compile_rel_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val compile_rel_Var = boolLib.save_thm("compile_rel_Var", Drule.cj 1 compile_rel_rules);val compile_rel_Ret = boolLib.save_thm("compile_rel_Ret", Drule.cj 2 compile_rel_rules);
+
+(* next_sym reads the next symbol from a string, returning NONE if at eof *)
+val next_sym_def = TotalDefn.qDefine "next_sym_def" [QUOTE " (*#loc 47 25*)\n\
+\     foo = isPREFIX \"(*\" (c::str) "] (SOME (
+  WF_REL_TAC [QUOTE " (*#loc 50 15*)measure (LENGTH o FST) "] THEN REPEAT STRIP_TAC
+));val next_sym_ind = DB.fetch "-" "next_sym_ind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;
+
+(Parse.Term [QUOTE " (*#loc 52 4*)f \226\128\185foo\"\226\128\186"])
+
+val sexpPEG_def = TotalDefn.qDefine "sexpPEG_def" [QUOTE " (*#loc 54 24*)\n\
+\  #\"\\\\\";"
+] NONE; val sexpPEG_ind = DB.fetch "-" "sexpPEG_ind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;
+
+val sexpPEG_start = (fn rule => boolLib.save_thm("sexpPEG_start[simp]",rule)) ( SIMP_CONV(srw_ss())[sexpPEG_def](Parse.Term [QUOTE " (*#loc 58 66*)sexpPEG.start"]));;

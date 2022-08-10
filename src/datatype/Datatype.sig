@@ -9,8 +9,6 @@ sig
  type constructor  = string * hol_type list
  type tyspec       = hol_type * constructor list
 
- val big_record_size : int ref
-
  val tyspecs_of    : type_grammar.grammar -> hol_type quotation -> tyspec list
  val to_tyspecs    : AST list -> tyspec list
 

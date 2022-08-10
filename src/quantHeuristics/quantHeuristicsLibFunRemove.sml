@@ -80,8 +80,9 @@ let
         let val thm = (CHANGED_CONV c) t;
         val _ = if (all_removed_check (rhs (concl thm))) then () else fail();
         in thm end) convs
-   val qb_thm1 = check_removed_conv (check_convs rws) qb handle HOL_ERR _ => REFL qb
-                                                              | UNCHANGED => REFL qb
+   val qb_thm1 = check_removed_conv (check_convs rws) qb
+       handle HOL_ERR _ => REFL qb
+            | UNCHANGED => REFL qb
 
    val qb' = rhs (concl qb_thm1)
    val _ = if all_removed_check qb' then () else (print_term qb';fail())
@@ -107,7 +108,7 @@ val remove_funL = [QUANT_FUN_REMOVE_apply_thm nf rws thm];
 fun QUANT_FUN_REMOVE_CONV_base remove_funL t =
 let
    val is_ex = is_exists t
-   val _ = if (not is_ex) andalso (not (is_forall t)) then raise UNCHANGED else ();
+   val _ = if not is_ex andalso not (is_forall t) then raise UNCHANGED else ()
 
    val (vs,qb) = (if is_ex then strip_exists else strip_forall) t;
    val v = hd vs
@@ -117,7 +118,8 @@ let
    val f = rand (concl thm')
 
    val P = rator (lhs (concl qb_thm))
-   val inst_thm = if is_ex then IS_REMOVABLE_QUANT_FUN___EXISTS_THM else IS_REMOVABLE_QUANT_FUN___FORALL_THM
+   val inst_thm = if is_ex then IS_REMOVABLE_QUANT_FUN___EXISTS_THM
+                  else IS_REMOVABLE_QUANT_FUN___FORALL_THM
    val inst_thm1 = MP (ISPEC P (ISPEC f inst_thm)) thm'
    val inst_thm2 = CONV_RULE
                      (LHS_CONV (
@@ -151,7 +153,8 @@ type quant_fun_remove_arg = thm * (string -> string) * conv list
 
 fun QUANT_FUN_REMOVE_CONV (args:quant_fun_remove_arg list) =
   let
-     fun process_arg (thm, rn, convs) = QUANT_FUN_REMOVE_apply_thm rn  convs thm
+     fun process_arg (thm, rn, convs) =
+         QUANT_FUN_REMOVE_apply_thm rn  convs thm
   in
      (QUANT_FUN_REMOVE_CONV_base (map process_arg args)):conv
   end;
@@ -162,6 +165,7 @@ fun QUANT_FUN_REMOVE_ss args =
                 conv = QUANT_FUN_REMOVE_CONV args}
 
 fun remove_thm_arg thm post rewr =
-  (thm, postfix_name_fun post, map REWR_CONV (flatten (map BODY_CONJUNCTS rewr))):quant_fun_remove_arg
+  (thm, postfix_name_fun post,
+   map REWR_CONV (flatten (map BODY_CONJUNCTS rewr))):quant_fun_remove_arg
 
 end

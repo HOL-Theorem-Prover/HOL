@@ -10,19 +10,39 @@ SUB-DIRECTORY    DESCRIPTION
 Description	 : LaTeX source files for the manual volume containing
 		   a systematic description of the HOL system
 
-Tutorial	 : LaTeX sources for the HOL tutorial and case studies  
+Developers       : notes on how HOL is built and written for developers
+
+Guide		 : style manual for writing HOL documentation.
+
+Interaction-emacs: LaTeX sources for a guide to HOL interaction and
+                   basic proofs (intended for complete beginners using
+                   emacs).
+
+LaTeX	 	 : layout files and LaTeX macros for the manuals
+
+Logic            : LaTeX source for the Logic manual (once the first part
+                   of the Description manual).
+
+Logo             : contains image files for the lantern logo
+
+Makefile	 : makefile that attempts to build all manuals
+
+Proofstyle       : preliminary document describing recommended proof
+                   habits.
+
+Quick    	 : LaTeX source for a HOL quick reference sheet.
 
 Reference	 : LaTeX sources for the HOL reference manual.
 
-Interaction      : LaTeX sources for a guide to HOL interaction and 
-                   basic proofs (intended for complete beginners).
+Tools            : SML sources for the Poly/ML polyscripter tool that
+                   allows interpreter/hol output to be inserted through a
+                   Unix filter
 
-LaTeX	 	 : layout files and LaTeX macros for the manual.
+Translations     : for translations into non-English languages. (Not
+                   updated sadly.)
 
-Makefile	 : makefile for the manual
+Tutorial	 : LaTeX sources for the HOL tutorial and case studies
 
-bin		 : sed and shell scripts needed to build the manual
-
-Guide		 : style manual for writing HOL documentation.  
-
-Quick    	 : LaTeX source for a HOL quick reference sheet.
+Lassie-Tutorial  : LaTex sources for a HOL tutorial using the Lassie tool from `examples/lassie`.
+                   The tutorial focuses on complete beginners by simplifying the
+                   HOL learning process.

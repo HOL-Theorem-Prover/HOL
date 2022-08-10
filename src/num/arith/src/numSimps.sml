@@ -55,9 +55,10 @@ local
  fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
  fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
 in
+val SSFRAG = simpLib.register_frag o simpLib.SSFRAG
 val REDUCE_ss =
  let open numSyntax
- in simpLib.SSFRAG
+ in SSFRAG
      {name = SOME"REDUCE",
       convs = mk_unary_rconv even_tm ::
               mk_unary_rconv odd_tm  ::
@@ -84,14 +85,14 @@ local open arithmeticTheory
       val add_sym = Rewrite.ONCE_REWRITE_RULE [ADD_SYM]
 in
 val arithmetic_rewrites =
-    map (fn s => (SOME s, DB.fetch "arithmetic" s)) [
+    map (fn s => (SOME{Thy= "arithmetic", Name= s}, DB.fetch "arithmetic" s)) [
       "ADD_0", "ADD_EQ_0", "ADD_INV_0_EQ", "MULT_EQ_0", "MULT_EQ_1", "MULT_0",
       "MULT_RIGHT_1", "MULT_LEFT_1", "SUB_EQUAL_0", "SUC_SUB1", "SUB_0",
       "ADD_SUB", "SUB_EQ_0", "SUB_LESS_EQ", "SUB_MONO_EQ", "SUB_RIGHT_GREATER",
       "SUB_RIGHT_LESS", "SUB_RIGHT_GREATER_EQ", "SUB_RIGHT_LESS_EQ",
 
       (* exponentiation *)
-      "EXP_EQ_0", "EXP_1", "EXP_EQ_1", "ZERO_LT_EXP",
+      "ZERO_LT_EXP",
       "EXP_EXP_INJECTIVE", "EXP_BASE_INJECTIVE", "EXP_BASE_LT_MONO",
       "EXP_BASE_LE_MONO", "EXP_EXP_LT_MONO", "EXP_EXP_LE_MONO",
 
@@ -116,44 +117,46 @@ val arithmetic_rewrites =
       (* falsities *)
       "NOT_EXP_0", "NOT_ODD_EQ_EVEN", "NOT_SUC_ADD_LESS_EQ",
       "NOT_SUC_LESS_EQ_0"
-    ] @ [
+    ] @
+    map (fn (nm,th) => (SOME {Thy = "", Name = nm}, th)) [
       (* suc *)
-      (SOME "SUC_EQ_1",
+      ("SUC_EQ_1",
        ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`)),
-      (SOME "SUC_EQ_2",
+      ("SUC_EQ_2",
        ARITH(Term`!x. ((SUC x = 2) = (x=1)) /\ ((2 = SUC x) = (x=1))`)),
       (* addition *)
-      (SOME "ADD_0'", add_sym ADD_0),
-      (SOME "ADD_INV_0_EQ'", add_sym ADD_INV_0_EQ),
+      ("ADD_0'", add_sym ADD_0),
+      ("ADD_INV_0_EQ'", add_sym ADD_INV_0_EQ),
       (* multiplication *)
-      (SOME "MULT_0'", ONCE_REWRITE_RULE [MULT_COMM] MULT_0),
-      (SOME "MULT_EQ_SUC0", one_suc MULT_EQ_1),
+      ("MULT_0'", ONCE_REWRITE_RULE [MULT_COMM] MULT_0),
+      ("MULT_EQ_SUC0", one_suc MULT_EQ_1),
       (* subtraction *)
-      (SOME "PRE", prim_recTheory.PRE), (SOME "ADD_SUB'", add_sym ADD_SUB),
+      ("PRE", prim_recTheory.PRE), ("ADD_SUB'", add_sym ADD_SUB),
       (* order relations and arith. ops *)
-      (SOME "LESS_0", prim_recTheory.LESS_0),
-      (SOME "SUC_GT0", ARITH ``SUC x > 0``), (SOME "GEQ0", ARITH ``x >= 0``),
-      (SOME "X_LT_SUC", ARITH ``x < SUC x``),
-      (SOME "X_LE_SUC", ARITH ``x <= SUC x``),
-      (SOME "X_LT_X_PLUS", ARITH ``x < x + c <=> 0 < c``),
-      (SOME "X_LT_PLUS_X", ARITH ``x < c + x <=> 0 < c``),
-      (SOME "X_LE_X_PLUS", ARITH ``x <= x + c <=> 0 <= c``),
-      (SOME "X_LE_PLUS_X", ARITH ``x <= c + x <=> 0 <= c``),
-      (SOME "GEQ_REFL", ARITH ``x >= x``),
-      (SOME "LESS_MONO_ADD_EQ'", add_sym LESS_MONO_ADD_EQ),
-      (SOME "ADD_MONO_LESS_EQ", add_sym ADD_MONO_LESS_EQ),
-      (SOME "EQ_MONO_ADD_EQ", add_sym EQ_MONO_ADD_EQ),
-      (SOME "X_PLUS_LT_PLUS_X", ARITH ``x + y < w + x <=> y < w``),
-      (SOME "PLUS_X_LT_X_PLUS", ARITH ``y + x < x + w <=> y < w``),
-      (SOME "INV_SUC_EQ", prim_recTheory.INV_SUC_EQ),
-      (SOME "GT_REFL", ARITH ``~(x > x)``),
-      (SOME "LESS_REFL", prim_recTheory.LESS_REFL),
-      (SOME "NOT_LESS_0", prim_recTheory.NOT_LESS_0)
+      ("LESS_0", prim_recTheory.LESS_0),
+      ("SUC_GT0", ARITH ``SUC x > 0``),
+      ("GEQ0", ARITH ``x >= 0``),
+      ("X_LT_SUC", ARITH ``x < SUC x``),
+      ("X_LE_SUC", ARITH ``x <= SUC x``),
+      ("X_LT_X_PLUS", ARITH ``x < x + c <=> 0 < c``),
+      ("X_LT_PLUS_X", ARITH ``x < c + x <=> 0 < c``),
+      ("X_LE_X_PLUS", ARITH ``x <= x + c <=> 0 <= c``),
+      ("X_LE_PLUS_X", ARITH ``x <= c + x <=> 0 <= c``),
+      ("GEQ_REFL", ARITH ``x >= x``),
+      ("LESS_MONO_ADD_EQ'", add_sym LESS_MONO_ADD_EQ),
+      ("ADD_MONO_LESS_EQ", add_sym ADD_MONO_LESS_EQ),
+      ("EQ_MONO_ADD_EQ", add_sym EQ_MONO_ADD_EQ),
+      ("X_PLUS_LT_PLUS_X", ARITH ``x + y < w + x <=> y < w``),
+      ("PLUS_X_LT_X_PLUS", ARITH ``y + x < x + w <=> y < w``),
+      ("INV_SUC_EQ", prim_recTheory.INV_SUC_EQ),
+      ("GT_REFL", ARITH ``~(x > x)``),
+      ("LESS_REFL", prim_recTheory.LESS_REFL),
+      ("NOT_LESS_0", prim_recTheory.NOT_LESS_0)
    ]
 end;
 
 val ARITH_RWTS_ss =
-    simpLib.SSFRAG
+    SSFRAG
     {name=SOME"ARITH_RWTS",
      convs = [], rewrs = arithmetic_rewrites, congs = [],
      filter = NONE, ac = [], dprocs = []};
@@ -164,7 +167,8 @@ val ARITH_RWTS_ss =
 (* first argument list of SRW_TAC                                            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
+val add_frags = BasicProvers.logged_addfrags {thyname = "numeral"}
+val _ = add_frags [REDUCE_ss, ARITH_RWTS_ss]
 
 
 (* ---------------------------------------------------------------------*
@@ -297,7 +301,7 @@ and
         (type_of (bvar (rand tm)) = num_ty andalso is_arith (body (rand tm)))
    else if (is_abs tm) then false
    else if (is_geq tm) orelse (is_less tm) orelse
-           (is_leq tm) orelse (is_great tm) then  true
+           (is_leq tm) orelse (is_greater tm) then  true
    else if (is_conj tm) orelse (is_disj tm) orelse (is_imp tm)
      orelse (is_eq tm andalso type_of (rhs tm) = Type.bool) then
      is_arith (lhand tm) andalso is_arith (rand tm)
@@ -480,7 +484,7 @@ fun ARITH_REDUCER fil = let
     CTXT (addthese @ get_ctxt ctxt)
   end
 in
-  REDUCER {name=SOME"ARITH_REDUCER",
+  REDUCER {name=SOME"NUM_ARITH_DP",
            addcontext = add_ctxt,
            apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
            initial = CTXT []}
@@ -491,14 +495,15 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun ARITH_DP_FILTER_ss fil =
-    SSFRAG {name=SOME"ARITH_DP",
-            convs = [{conv = K (K MUL_CANON_CONV),
-                      key = SOME([], ``x * y``),
-                      name = "MUL_CANON_CONV", trace = 2}],
-            rewrs = [], congs = [],
-            filter = NONE, ac = [], dprocs = [ARITH_REDUCER fil]};
+    simpLib.SSFRAG {
+      name=SOME"ARITH_DP",
+      convs = [{conv = K (K MUL_CANON_CONV),
+                key = SOME([], ``x * y``),
+                name = "MUL_CANON_CONV", trace = 2}],
+      rewrs = [], congs = [],
+      filter = NONE, ac = [], dprocs = [ARITH_REDUCER fil]};
 
-val ARITH_DP_ss = ARITH_DP_FILTER_ss (K true);
+val ARITH_DP_ss = register_frag (ARITH_DP_FILTER_ss (K true));
 
 val old_dp_ss =
     SSFRAG {name=SOME"OLD_ARITH_DP",
@@ -601,7 +606,7 @@ val SUC_FILTER_ss = let
     else [(th,bnd), (newth,bnd)]
   end
 in
-  simpLib.SSFRAG
+  SSFRAG
       {name=SOME"SUC_FILTER",
        convs = [], rewrs = [], congs = [],
        filter = SOME numfilter, ac = [], dprocs = []}
@@ -622,7 +627,7 @@ in
   merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
 end
 
-val _ = BasicProvers.augment_srw_ss [MOD_ss]
+val _ = add_frags [MOD_ss]
 
 (* ----------------------------------------------------------------------
     ARITH_NORM_ss
@@ -653,18 +658,22 @@ in
                    conv (``x <= y:num``,
                          BINOP_CONV ADDR_CANON_CONV THENC sum_leq_norm,
                          "LEQ_CANON_CONV")],
-          rewrs = [(SOME "GREATER_DEF", arithmeticTheory.GREATER_DEF),
-                   (SOME "GREATER_EQ", arithmeticTheory.GREATER_EQ),
-                   (SOME "LT_SUB", DECIDE ``x < y - z <=> x + z < y``),
-                   (SOME "SUB_LE", DECIDE ``x - y <= z <=> x <= y + z``),
-                   (SOME "LE_SUB",
-                    DECIDE ``x <= y - z <=> (x = 0) \/ x + z <= y``),
-                   (SOME "SUB_LT", DECIDE ``x - y < z <=> 0 < z /\ x < z + y``),
-                   (SOME "SUB_EQ",
-                    DECIDE ``(x - y = z) <=> x < y /\ (z = 0) \/ (x = y + z)``),
-                   (SOME "NEQ0_LT", DECIDE ``(x <> 0) <=> 0 < x``),
-                   (SOME "NEQ0_LT'", DECIDE ``(0 <> x) <=> 0 < x``),
-                   (SOME "N0LT", DECIDE ``~(0 < x) <=> (x = 0)``)],
+          rewrs = [(SOME {Thy = "arithmetic", Name = "GREATER_DEF"},
+                    arithmeticTheory.GREATER_DEF),
+                   (SOME {Thy = "arithmeticTheory", Name = "GREATER_EQ"},
+                    arithmeticTheory.GREATER_EQ)] @
+                  map (fn (s, th) => (SOME {Name = s, Thy = ""}, th)) [
+                    ("LT_SUB", DECIDE “x < y - z <=> x + z < y”),
+                    ("SUB_LE", DECIDE “x - y <= z <=> x <= y + z”),
+                    ("LE_SUB",
+                     DECIDE “x <= y - z <=> (x = 0) \/ x + z <= y”),
+                    ("SUB_LT", DECIDE “x - y < z <=> 0 < z /\ x < z + y”),
+                    ("SUB_EQ",
+                     DECIDE “(x - y = z) <=> x < y /\ (z = 0) \/ (x = y + z)”),
+                    ("NEQ0_LT", DECIDE “(x <> 0) <=> 0 < x”),
+                    ("NEQ0_LT'", DECIDE “(0 <> x) <=> 0 < x”),
+                    ("N0LT", DECIDE “~(0 < x) <=> (x = 0)”)
+                  ],
           dprocs = [], filter = NONE}
 end
 

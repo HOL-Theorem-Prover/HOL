@@ -1,0 +1,31 @@
+\DOC
+
+\TYPE {gen_tyvar_sigma : hol_type list -> (hol_type,hol_type) Lib.subst}
+
+\SYNOPSIS
+Generates an instantiation mapping each type to a fresh type variable
+
+\DESCRIBE
+A call to {gen_tyvar_sigma tys} generates an instantiation (a list of
+{{redex,residue}} pairs) mapping the types in {tys} to fresh type
+variables (generated in turn with {gen_tyvar}). Standard practice
+would be to have {tys} be a list of distinct type variables, but this
+is not checked.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+> gen_tyvar_sigma [“:'c”, “:'a”, “:'bob”];
+val it =
+   [{redex = “:γ”, residue = “:%%gen_tyvar%%30”},
+    {redex = “:α”, residue = “:%%gen_tyvar%%31”},
+    {redex = “:'bob”, residue = “:%%gen_tyvar%%32”}]:
+   (hol_type, hol_type) Lib.subst
+}
+
+\SEEALSO
+Type.gen_tyvar, Drule.GEN_TYVARIFY.
+
+\ENDDOC

@@ -14,7 +14,7 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 all: $(TARGETS) $(HOLHEAP)
 .PHONY: all
 
-$(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../../l3-heap -o $(HOLHEAP) $(BARE_THYS)
+$(HOLHEAP): ../../l3-heap $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b $< -o $(HOLHEAP) $(BARE_THYS)
 
 endif

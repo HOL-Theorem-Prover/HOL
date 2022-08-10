@@ -1,12 +1,11 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS)
+all: $(DEFAULT_TARGETS)
 .PHONY: all
+
+EXTRA_CLEANS = numterm-selftest.log selftest.exe
 
 ifdef POLY
 HOLHEAP = numheap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe
+EXTRA_CLEANS += $(HOLHEAP)
 
 # many of these names (Solve, Theorems) are far too generic;
 # there is a name-space pollution issue here I think.
@@ -26,9 +25,14 @@ all: $(HOLHEAP) selftest.exe
 # dependency analysis will always find them.
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
 	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -F -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
-else
-EXTRA_CLEANS = selftest.exe
 endif
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: numterm-selftest.log
+
+numterm-selftest.log: selftest.exe
+	$(tee ./$<,$@)
+endif

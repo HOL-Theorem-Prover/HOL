@@ -3,14 +3,15 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate21 z
+  fun makeUpdateT z = makeUpdate23 z
 in
 fun updateT z = let
   fun from debug do_logging fast help hmakefile holdir includes
            interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
            no_overlay
-           no_prereqs opentheory quiet
-           quit_on_failure rebuild_deps recursive verbose =
+           no_preexecs no_prereqs opentheory quiet
+           quit_on_failure rebuild_deps recursive_build recursive_clean
+           verbose =
     {
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
@@ -18,12 +19,15 @@ fun updateT z = let
       keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
-      no_prereqs = no_prereqs, opentheory = opentheory,
+      no_preexecs = no_preexecs, no_prereqs = no_prereqs,
+      opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
-      rebuild_deps = rebuild_deps, recursive = recursive, verbose = verbose
+      rebuild_deps = rebuild_deps, recursive_build = recursive_build,
+      recursive_clean = recursive_clean, verbose = verbose
     }
-  fun from' verbose recursive rebuild_deps quit_on_failure quiet opentheory
-            no_prereqs
+  fun from' verbose recursive_clean recursive_build rebuild_deps quit_on_failure
+            quiet opentheory
+            no_prereqs no_preexecs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             jobs interactive
             includes holdir
@@ -35,20 +39,23 @@ fun updateT z = let
       keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
-      no_prereqs = no_prereqs, opentheory = opentheory,
+      no_preexecs = no_preexecs, no_prereqs = no_prereqs,
+      opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
-      rebuild_deps = rebuild_deps, recursive = recursive, verbose = verbose
+      rebuild_deps = rebuild_deps, recursive_build = recursive_build,
+      recursive_clean = recursive_clean, verbose = verbose
     }
   fun to f {debug, do_logging, fast, help, hmakefile, holdir,
             includes, interactive, jobs, keep_going, no_action, no_hmakefile,
             no_lastmaker_check,
-            no_overlay, no_prereqs, opentheory,
-            quiet, quit_on_failure, rebuild_deps, recursive, verbose} =
+            no_overlay, no_preexecs, no_prereqs, opentheory,
+            quiet, quit_on_failure, rebuild_deps, recursive_build,
+            recursive_clean, verbose} =
     f debug do_logging fast help hmakefile holdir includes
       interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
-      no_overlay
+      no_overlay no_preexecs
       no_prereqs opentheory quiet
-      quit_on_failure rebuild_deps recursive verbose
+      quit_on_failure rebuild_deps recursive_build recursive_clean verbose
 in
   makeUpdateT (from, from', to)
 end z
@@ -60,7 +67,7 @@ fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
 fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
-  debug : bool,
+  debug : {ins : string list, outs : string list} option,
   do_logging : bool,
   fast : bool,
   help : bool,
@@ -74,18 +81,20 @@ type t = {
   no_hmakefile : bool,
   no_lastmaker_check : bool,
   no_overlay : bool,
+  no_preexecs : bool,
   no_prereqs : bool,
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
   rebuild_deps : bool,
-  recursive : bool,
+  recursive_build : bool,
+  recursive_clean : bool,
   verbose : bool
 }
 
 val default_core_options : t =
 {
-  debug = false,
+  debug = NONE,
   do_logging = false,
   fast = false,
   help = false,
@@ -99,12 +108,14 @@ val default_core_options : t =
   no_hmakefile = false,
   no_lastmaker_check = false,
   no_overlay = false,
+  no_preexecs = false,
   no_prereqs = false,
   opentheory = NONE,
   quiet = false,
   quit_on_failure = true,
   rebuild_deps = false,
-  recursive = false,
+  recursive_build = false,
+  recursive_clean = false,
   verbose = false
 }
 
@@ -153,9 +164,31 @@ fun set_openthy s =
                wn "Multiple opentheory specs; ignoring earlier spec"
              else ();
              updateT t (U #opentheory (SOME s)) $$))
+fun addDbg sopt =
+    resfn (fn (wn, t) =>
+              let
+                fun process (x as {ins,outs}) sopt =
+                    case sopt of
+                        NONE => SOME x
+                      | SOME s =>
+                        if String.sub(s,0) = #"-" then
+                          if size s > 1 then
+                            SOME{ins=ins,
+                                 outs = String.extract(s,1,NONE) :: outs}
+                          else (wn "Ignoring bogus -d- option"; SOME x)
+                        else
+                          SOME{ins = s::ins, outs = outs}
+                val newvalue =
+                    case #debug t of
+                        NONE => process {ins=[],outs=[]} sopt
+                      | SOME x => process x sopt
+              in
+                updateT t (U #debug newvalue) $$
+              end)
+
 val core_option_descriptions = [
-  { help = "turn on diagnostic messages", long = ["dbg", "d"], short = "",
-    desc = mkBoolT #debug},
+  { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
+    desc = OptArg (addDbg, "diag-cat")},
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
   { help = "show this message", long = ["help"], short = "h",
@@ -182,6 +215,8 @@ val core_option_descriptions = [
     short = "", desc = mkBoolT #no_lastmaker_check },
   { help = "don't use Overlay.sml file", long = ["no_overlay"],
     short = "", desc = mkBoolT #no_overlay },
+  { help = "don't find/use .holpre_exec files", long = ["no_preexecs"],
+    short = "", desc = mkBoolT #no_preexecs },
   { help = "don't build recursively in INCLUDES",
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
   { help = "don't quit on failure", long = ["noqof"], short = "",
@@ -201,8 +236,18 @@ val core_option_descriptions = [
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
-  { help = "clean recursively", short = "r", long = [],
-    desc = mkBoolT #recursive },
+  { help = "both --recursive-{build,clean}", short = "r", long = [],
+    desc = NoArg (
+      fn () => resfn (
+                fn (wn,t) => updateT t
+                                     (U #recursive_build true)
+                                     (U #recursive_clean true) $$
+              )
+    )},
+  { help = "build all targets recursively", short = "",
+    long = ["recursive-build"], desc = mkBoolT #recursive_build},
+  { help = "clean recursively", short = "",
+    long = ["recursive-clean"], desc = mkBoolT #recursive_clean},
   { help = "verbose output", short = "v", long = ["verbose"],
     desc = NoArg
              (fn () =>
@@ -222,5 +267,9 @@ fun descr_compare (d1, d2) = String.compare(descr_key d1, descr_key d2)
 
 fun sort_descriptions dl = Listsort.sort descr_compare dl
 
-
+fun extend_env (t:t) =
+    let open Holmake_types
+    in
+      env_extend ("HOL_NUMJOBS", [LIT (Int.toString (#jobs t))])
+    end
 end

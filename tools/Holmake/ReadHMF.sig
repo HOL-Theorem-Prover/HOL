@@ -5,6 +5,10 @@ sig
   type ruledb = Holmake_types.ruledb
   val read : string -> env -> env * ruledb * string option
 
+  val diagread: {warn : string -> unit, info : string -> unit,
+                 die : string -> unit } ->
+                string -> env -> env * ruledb * string option
+
   val find_includes : string -> string list
   val extend_path_with_includes :
       {verbosity : int, lpref : string list ref} -> unit

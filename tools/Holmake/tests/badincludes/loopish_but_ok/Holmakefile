@@ -1,0 +1,11 @@
+CLINE_OPTIONS = --no_overlay
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
+
+INCLUDES = dir1 dir2
+
+# graph is thisdir --> dir1 -----,
+#            |           |       |
+#            |           v       v
+#            `-------> dir2 --> dir3

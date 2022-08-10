@@ -12,20 +12,14 @@ open HolKernel Abbrev boolLib Tactical aiLib smlTimeout smlLexer
 
 val ERR = mk_HOL_ERR "smlExec"
 
-val sml_dir = HOLDIR ^ "/src/AI/sml_inspection"
-val sml_code_dir = sml_dir ^ "/code"
-
 (* -------------------------------------------------------------------------
-   Global references
+   Globals
    ------------------------------------------------------------------------- *)
 
 val sml_bool_glob = ref false
 val sml_tactic_glob = ref (FAIL_TAC "smlExecute")
-val sml_tacticl_glob = ref []
 val sml_string_glob = ref ""
 val sml_goal_glob = ref ([],F)
-val sml_term_glob = ref T
-val sml_termlist_glob = ref [T]
 val sml_thm_glob = ref TRUTH
 val sml_thml_glob = ref []
 
@@ -33,76 +27,60 @@ val sml_thml_glob = ref []
    Execute strings as sml code
    ------------------------------------------------------------------------- *)
 
-fun exec_sml file s =
+fun quse_string s =
   let
-    val _    = mkDir_err sml_code_dir
-    val path = sml_code_dir ^ "/" ^ current_theory () ^ "_" ^ file
-    val oc   = TextIO.openOut path
-    fun os s = TextIO.output (oc,s)
+    val stream = TextIO.openString (QFRead.fromString false s)
+    fun infn () = TextIO.input1 stream
   in
-    os s; TextIO.closeOut oc; can QUse.use path
+    (
+    while not (TextIO.endOfStream stream) do PolyML.compiler (infn, []) ();
+    TextIO.closeIn stream;
+    true
+    )
+    handle Interrupt => (TextIO.closeIn stream; raise Interrupt)
+        | _ => (TextIO.closeIn stream; false)
   end
 
 (* -------------------------------------------------------------------------
    Tests
    ------------------------------------------------------------------------- *)
 
-fun is_thm s = exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
-
-fun thm_of_sml s =
-  let val b = exec_sml "thm_of_sml" ("smlExecute.sml_thm_glob := " ^ s) in
-    if b then SOME (s, !sml_thm_glob) else NONE
-  end
-
-fun thml_of_sml sl =
+fun string_of_pretty p =
   let
-    val s = "[" ^ String.concatWith ", " sl ^ "]"
-    val b = exec_sml "thml_of_sml" ("smlExecute.sml_thml_glob := " ^ s)
+    val acc = ref []
+    fun f s = acc := s :: !acc
   in
-    if b then SOME (combine (sl, !sml_thml_glob)) else NONE
+    PolyML.prettyPrint (f,80) p;
+    String.concatWith " " (rev (!acc))
   end
 
-fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
-
-fun is_string s = exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")
-
-fun is_pointer_eq s1 s2 =
+fun smltype_of_value l s =
   let
-    val b = exec_sml "is_pointer_eq"
-      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^ s1 ^ "," ^
-       s2 ^ ")")
+    val v = assoc s l handle HOL_ERR _ => raise ERR "type_of_value" s
+    val t = PolyML.NameSpace.Values.typeof v
+    val p = PolyML.NameSpace.Values.printType (t,0,NONE)
   in
-    b andalso (!sml_bool_glob)
+    string_of_pretty p
   end
 
-(* -------------------------------------------------------------------------
-   Read tactics
-   ------------------------------------------------------------------------- *)
+fun is_local_value s =
+  mem s (map fst (#allVal (PolyML.globalNameSpace) ()))
 
-fun mk_valid s = "Tactical.VALID (" ^ s ^ ")"
-
-fun tactic_of_sml s =
+fun is_thm_value l s =
   let
-    val tactic = mk_valid s
-    val program =
-      "let fun f () = smlExecute.sml_tactic_glob := (" ^ tactic ^ ") in " ^
-      "smlTimeout.timeout 1.0 f () end"
-    val b = exec_sml "tactic_of_sml" program
+    val s1 = smltype_of_value l s
+    val s2 = smlLexer.partial_sml_lexer s1
   in
-    if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s
+    case s2 of
+      [a] => (drop_sig a = "thm" handle HOL_ERR _ => false)
+    | _   => false
   end
 
-(* -------------------------------------------------------------------------
-   Read string
-   ------------------------------------------------------------------------- *)
-
-fun string_of_sml s =
-  let
-    val b = exec_sml "string_of_sml"
-      ("val _ = smlExecute.sml_string_glob := (" ^ s ^ " )")
-  in
-    if b then !sml_string_glob else raise ERR "string_of_sml" s
-  end
+fun is_thm s = quse_string ("val _ : Thm.thm = (" ^ s ^ ")")
+fun is_tactic s = quse_string ("val _ : Tactic.tactic = (" ^ s ^ ")")
+fun is_string s = quse_string ("val _ : String.string = (" ^ s ^ ")")
+fun is_simpset s = quse_string ("val _ : simpLib.simpset = (" ^ s ^ ")")
+fun is_thml s = quse_string ("val _ : Thm.thm List.list = (" ^ s ^ ")")
 
 fun is_stype s =
   let
@@ -112,30 +90,57 @@ fun is_stype s =
     List.find test (explode (rm_comment (rm_squote s))) = SOME #":"
   end
 
-(* -------------------------------------------------------------------------
-   Import metis from the future
-   ------------------------------------------------------------------------- *)
-
-val metistac_glob: (thm list -> tactic) option ref = ref NONE
-
-fun metistac_of_sml () =
+fun is_pointer_eq s1 s2 =
   let
-    val b = exec_sml "update_metis_tac"
-      (String.concatWith "\n"
-      ["load \"metisTools\";",
-       "val _ = smlExecute.metis_tac_glob := SOME metisTools.METIS_TAC;"])
+    val b = quse_string
+      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^
+         s1 ^ "," ^ s2 ^ ")")
   in
-    if b then () else raise ERR "metistac_of_sml" ""
+    b andalso (!sml_bool_glob)
   end
 
-(* ------------------------------------------------------------------------
-   Read goal
-   ------------------------------------------------------------------------ *)
+(* -------------------------------------------------------------------------
+   Readers
+   ------------------------------------------------------------------------- *)
+
+fun thm_of_sml s =
+  if is_thm s then
+    let val b = quse_string ("smlExecute.sml_thm_glob := " ^ s) in
+      if b then SOME (s, !sml_thm_glob) else NONE
+    end
+  else NONE
+
+fun thml_of_sml sl =
+  let
+    val s = "[" ^ String.concatWith " , " sl ^ "]"
+    val b = quse_string ("smlExecute.sml_thml_glob := " ^ s)
+  in
+    if b then SOME (!sml_thml_glob) else NONE
+  end
+
+fun mk_valid s = "Tactical.VALID (" ^ s ^ ")"
+
+fun tactic_of_sml tim s =
+  let
+    val tactic = mk_valid s
+    val program =
+      "let fun f () = smlExecute.sml_tactic_glob := (" ^ tactic ^ ") in " ^
+      "smlTimeout.timeout " ^ rts tim ^ " f () end"
+    val b = quse_string program
+  in
+    if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s
+  end
+
+fun string_of_sml s =
+  let
+    val b = quse_string ("val _ = smlExecute.sml_string_glob := (" ^ s ^ " )")
+  in
+    if b then !sml_string_glob else raise ERR "string_of_sml" s
+  end
 
 fun goal_of_sml s =
   let
-    val b = exec_sml "goal_of_sml"
-      ("val _ = smlExecute.sml_goal_glob := (" ^ s ^ " )")
+    val b = quse_string ("val _ = smlExecute.sml_goal_glob := (" ^ s ^ " )")
   in
     if b then !sml_goal_glob else raise ERR "goal_of_sml" s
   end
@@ -147,7 +152,7 @@ fun goal_of_sml s =
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun app_stac tim stac g =
-  let val tac = tactic_of_sml stac in
+  let val tac = tactic_of_sml tim stac in
     SOME (fst (timeout tim (TC_OFF tac) g))
   end
   handle Interrupt => raise Interrupt | _ => NONE

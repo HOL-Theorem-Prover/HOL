@@ -13,7 +13,7 @@ structure miller_rabinTools :> miller_rabinTools =
 struct
 
 open HolKernel Parse boolLib bossLib computeLib combinTheory prob_pseudoTheory
-     miller_rabin_mlTheory miller_rabinTheory HurdUseful reduceLib;
+     miller_rabin_mlTheory miller_rabinTheory hurdUtils reduceLib;
 
 local
   val compset = num_compset ();

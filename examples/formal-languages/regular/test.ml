@@ -6,7 +6,7 @@ app load ["regexpLib"];
 
 open regexpLib Regexp_Numerics;
 
-fun matcher q = #matchfn(regexpLib.matcher SML (Regexp_Type.fromQuote q));
+fun matcher q = #matchfn(regexpLib.gen_dfa SML (Regexp_Type.fromQuote q));
 fun dom q = Regexp_Match.domBrz (Regexp_Type.fromQuote q);
 
 val test = matcher `foobar`;
@@ -240,6 +240,10 @@ val utf8_matcher =
 (* Test ranges over natural numbers                                          *)
 (*---------------------------------------------------------------------------*)
 
+open List;
+
+fun int2string w = iint2string Twos_comp LSB w o IntInf.fromInt;
+
 val test = matcher `\i{0,17999}`;
 val nlist = map (int2string 2) (upto 0 17999);
 Lib.all (equal true) (map test nlist);
@@ -321,31 +325,16 @@ Lib.exists (equal false) (map (test o int2string 3) (upto ~122 1000));
 
 (* Tests showing that "full intervals" get mapped to "dot" *)
 
-fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
+fun check p =
+  twos_comp_interval LSB
+    (interval_width Twos_comp p)
+    p;
 
-val lo = ~(twoE 15)
-val hi = twoE 15 -1;
+val twoE = regexpMisc.twoE;
 
-Regexp_Numerics.twos_comp_interval
-   Regexp_Numerics.LSB
-   (twos_comp_interval_width (lo,hi))
-   lo hi;
-
-val lo = ~(twoE 31)
-val hi = twoE 31 -1;
-
-Regexp_Numerics.twos_comp_interval
-   Regexp_Numerics.LSB
-   (twos_comp_interval_width (lo,hi))
-   lo hi;
-
-val lo = ~(twoE 63)
-val hi = twoE 63 -1;
-
-Regexp_Numerics.twos_comp_interval
-   Regexp_Numerics.LSB
-   (twos_comp_interval_width (lo,hi))
-   lo hi;
+check (~(twoE 15), twoE 15 -1);
+check ( ~(twoE 31), twoE 31 -1);
+check (~(twoE 63), twoE 63 -1);
 
 (* 64 bit signed 2scomp *)
 
@@ -396,11 +385,15 @@ Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 (* An MSB example                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val default_intervalFn = get_intervalFn()
-val () = set_intervalFn (fn (i,j) =>
-          twos_comp_interval MSB (twos_comp_interval_width(i,j)) i j);
+val default_intervalFn = Regexp_Type.get_intervalFn()
+
+val () = Regexp_Type.set_intervalFn (fn (i,j) =>
+          twos_comp_interval MSB (interval_width Twos_comp (i,j)) (i,j));
 
 val test = matcher `\k{~116535}`;
+
+fun int2string_msb w = iint2string Twos_comp MSB w o IntInf.fromInt;
+
 equal true (test (int2string_msb 3 ~116535));
 equal false (test (int2string_msb 3 ~22));
 equal false (test (int2string_msb 3 22));;
@@ -410,7 +403,7 @@ equal false (test (int2string 3 ~116538));
 Lib.all (equal false) (map (test o int2string 3) (upto ~22 127));
 Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 
-val () = set_intervalFn default_intervalFn;
+val () = Regexp_Type.set_intervalFn default_intervalFn;
 
 (*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
@@ -456,8 +449,6 @@ val () = set_intervalFn default_intervalFn;
 
 val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
 val match_1801        = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val match_1801_packed =
- matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
 val match_1802    = matcher `\i{0,9999}\i{0,3599}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
@@ -506,7 +497,7 @@ dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`
 (* 119 states *)
 
 (*---------------------------------------------------------------------------*)
-(* packed intervals                                                          *)
+(* packed intervals  (obsolete)                                              *)
 (*---------------------------------------------------------------------------*)
 (*
 matcher `\p{(~180,180)(0,59).{1}}`;

@@ -1,9 +1,3 @@
-structure chap2Script =
-struct
-(* This structure bracketting is necessary for Moscow ML because of rebinding of
-   structure Q below
-*)
-
 open HolKernel Parse boolLib
 
 open bossLib binderLib
@@ -107,6 +101,8 @@ val lameq_weaken_cong = store_thm(
   "lameq_weaken_cong",
   ``(M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)``,
   METIS_TAC [lameq_rules]);
+
+Theorem lameq_SYM = List.nth(CONJUNCTS lameq_rules, 2)
 
 val fixed_point_thm = store_thm(  (* p. 14 *)
   "fixed_point_thm",
@@ -633,4 +629,3 @@ val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
 
 val _ = export_theory()
-end; (* struct *)

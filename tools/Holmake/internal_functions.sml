@@ -1,6 +1,7 @@
 structure internal_functions :> internal_functions =
 struct
 
+structure FileSys = HOLFileSys
 fun member e [] = false
   | member e (h::t) = e = h orelse member e t
 
@@ -170,17 +171,17 @@ in
 end
 
 fun dirfiles dirname = let
-  val dirstrm = OS.FileSys.openDir dirname
+  val dirstrm = FileSys.openDir dirname
   fun recurse acc =
-      case OS.FileSys.readDir dirstrm of
+      case FileSys.readDir dirstrm of
           NONE => "." :: ".." :: acc
         | SOME fname => recurse (fname :: acc)
 in
-  recurse [] before OS.FileSys.closeDir dirstrm
+  recurse [] before FileSys.closeDir dirstrm
 end
 
 fun safeIsDir s =
-    OS.FileSys.isDir s handle OS.SysErr _ => false
+    FileSys.isDir s handle OS.SysErr _ => false
 
 fun diag s = TextIO.output(TextIO.stdErr, s)
 
@@ -197,7 +198,7 @@ fun wildcard s =
                       else k (d,"", l)
             | [] => k (d,"", l)
       val (starting_dir,pfx, rest) =
-          initial_split (OS.FileSys.getDir()) split_comps (fn x => x)
+          initial_split (FileSys.getDir()) split_comps (fn x => x)
       fun recurse curpfx curdir complist : string list =
           case complist of
               c::cs => (* c must be non-null *)
@@ -246,7 +247,7 @@ fun get_first f [] = NONE
 
 fun which arg =
   let
-    open OS.FileSys Systeml
+    open FileSys Systeml
     val sepc = if isUnix then #":" else #";"
     fun check p =
       let
@@ -290,6 +291,18 @@ fun shell arg =
     if OS.Process.isSuccess (reap proc) then str else ""
   end
   handle OS.SysErr _ => ""
+
+(* taken from
+     https://unix.stackexchange.com/a/70675/287940
+   by user lesmana
+*)
+fun tee (cmd, fname) =
+    "{ { { { " ^ cmd ^ " ; echo $? >&3; } | tee " ^ fname ^ " >&4; } 3>&1; } | { read xs; exit $xs; } } 4>&1"
+
+fun hol2fs s =
+    case HFS_NameMunge.HOLtoFS s of
+        NONE => s
+      | SOME {fullfile,...} => fullfile
 
 fun function_call (fnname, args, eval) = let
   open Substring
@@ -369,6 +382,19 @@ in
                in
                   shell arg_evalled
                end
+  | "tee" => if length args <> 2 then
+               raise Fail "Bad number of arguments to 'tee' function"
+             else
+               let val args_evalled = map eval args
+               in tee (hd args_evalled, hd (tl args_evalled))
+               end
+  | "hol2fs" => if length args <> 1 then
+                  raise Fail "Bad number of arguments to 'hol2fs' function"
+                else
+                  let val args_evalled = map eval args
+                  in
+                    hol2fs (hd args_evalled)
+                  end
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 

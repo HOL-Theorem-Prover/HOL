@@ -1,32 +1,88 @@
 (*===========================================================================*)
 (* Metric spaces, including metric on real line                              *)
-(*===========================================================================*)
+(* ========================================================================= *)
+(* Formalization of general topological and metric spaces in HOL Light       *)
+(*                                                                           *)
+(*              (c) Copyright, John Harrison 1998-2017                       *)
+(*                (c) Copyright, Marco Maggesi 2014-2017                     *)
+(*             (c) Copyright, Andrea Gabrielli  2016-2017                    *)
+(* ========================================================================= *)
 
-open HolKernel Parse bossLib boolLib BasicProvers boolSimps simpLib mesonLib
-     metisLib jrhUtils pairTheory pairLib pred_setTheory quotientTheory
-     realTheory topologyTheory;
+open HolKernel Parse bossLib boolLib;
+
+open arithmeticTheory numTheory boolSimps simpLib mesonLib metisLib jrhUtils
+     pairTheory pairLib quotientTheory pred_setTheory pred_setLib RealArith;
+
+open realTheory cardinalTheory topologyTheory;
 
 val _ = new_theory "metric";
-val _ = ParseExtras.temp_loose_equality()
 
+fun MESON ths tm = prove(tm,MESON_TAC ths);
+fun METIS ths tm = prove(tm,METIS_TAC ths);
+fun wrap a = [a];
+val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
 
-(*---------------------------------------------------------------------------*)
-(* Minimal amount of set notation is convenient                              *)
-(*---------------------------------------------------------------------------*)
+(* ------------------------------------------------------------------------- *)
+(* Handy lemmas switching between versions of limit arguments.               *)
+(* (originally from hol-light's misc.ml, line 747-772)                       *)
+(* ------------------------------------------------------------------------- *)
 
-val re_intersect = prove(
-   “!P Q. P INTER Q = \x:'a. P x /\ Q x”,
-    PROVE_TAC [INTER_applied, IN_DEF]);
+Theorem FORALL_POS_MONO :
+   !P. (!d e:real. d < e /\ P d ==> P e) /\ (!n. ~(n = 0) ==> P(inv(&n)))
+       ==> !e. &0 < e ==> P e
+Proof
+  MESON_TAC[REAL_ARCH_INV, REAL_LT_TRANS]
+QED
+
+Theorem FORALL_SUC :
+   (!n. n <> 0 ==> P n) <=> !n. P (SUC n)
+Proof
+   MESON_TAC[num_CASES, NOT_SUC]
+QED
+
+Theorem FORALL_POS_MONO_1 :
+   !P. (!d e. d < e /\ P d ==> P e) /\ (!n. P(inv(&n + &1)))
+       ==> !e. &0 < e ==> P e
+Proof
+    GEN_TAC >> REWRITE_TAC [REAL_OF_NUM_SUC]
+ >> STRIP_TAC
+ >> MATCH_MP_TAC FORALL_POS_MONO
+ >> ASM_REWRITE_TAC []
+ >> ASM_SIMP_TAC std_ss [FORALL_SUC]
+QED
+
+Theorem FORALL_POS_MONO_EQ :
+   !P. (!d e. d < e /\ P d ==> P e)
+       ==> ((!e. &0 < e ==> P e) <=> (!n. ~(n = 0) ==> P(inv(&n))))
+Proof
+  MESON_TAC[REAL_ARCH_INV, REAL_LT_INV_EQ, REAL_LT_TRANS, LE_1,
+            REAL_OF_NUM_LT]
+QED
+
+Theorem FORALL_POS_MONO_1_EQ :
+   !P. (!d e. d < e /\ P d ==> P e)
+       ==> ((!e. &0 < e ==> P e) <=> (!n. P(inv(&n + &1))))
+Proof
+  GEN_TAC THEN
+  DISCH_THEN(SUBST1_TAC o MATCH_MP FORALL_POS_MONO_EQ) THEN
+  SIMP_TAC std_ss [REAL_OF_NUM_SUC, GSYM FORALL_SUC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Characterize an (alpha)metric                                             *)
 (*---------------------------------------------------------------------------*)
 
-val ismet = new_definition("ismet",
-  “ismet (m:'a#'a->real)
-        =
-      (!x y. (m(x,y) = &0) = (x = y)) /\
-      (!x y z. m(y,z) <= m(x,y) + m(x,z))”);
+Definition ismet :
+   ismet (m :'a # 'a -> real) =
+     ((!x y. (m(x,y) = &0) <=> (x = y)) /\
+      (!x y z. m(y,z) <= m(x,y) + m(x,z)))
+End
 
 val metric_tydef = new_type_definition
  ("metric",
@@ -97,26 +153,152 @@ val METRIC_NZ = store_thm("METRIC_NZ",
   “!m:('a)metric. !x y. ~(x = y) ==> &0 < (dist m)(x,y)”,
   REPEAT GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [“m:('a)metric”, “x:'a”, “y:'a”] METRIC_ZERO)) THEN
-  ONCE_REWRITE_TAC[TAUT_CONV “~a ==> b = b \/ a”] THEN
+  ONCE_REWRITE_TAC[TAUT_CONV “~a ==> b <=> b \/ a”] THEN
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   REWRITE_TAC[GSYM REAL_LE_LT, METRIC_POS]);
+
+(*---------------------------------------------------------------------------*)
+(* Get a bounded metric (<1) from any metric                                 *)
+(*---------------------------------------------------------------------------*)
+
+val bmetric_tm = “(dist m)(x,y) / (1 + (dist m)(x,y))”;
+
+Definition bounded_metric_def :
+    bounded_metric (m :'a metric) = metric (\(x,y). ^bmetric_tm)
+End
+
+Theorem bounded_metric_alt[local] :
+    !m x y. ^bmetric_tm = 1 - inv (1 + dist m (x,y))
+Proof
+    rw [FUN_EQ_THM]
+ >> Q.ABBREV_TAC ‘z = 1 + dist m (x,y)’
+ >> Know ‘0 < z’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [Abbr ‘z’, METRIC_POS])
+ >> DISCH_TAC
+ >> ‘z <> 0’ by PROVE_TAC [REAL_LT_IMP_NE]
+ >> Know ‘dist m (x,y) = z - 1’
+ >- (Q.UNABBREV_TAC ‘z’ >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> rw [real_div, REAL_SUB_RDISTRIB, REAL_MUL_RINV]
+QED
+
+Theorem bounded_metric_ismet :
+    !m. ismet (\(x,y). ^bmetric_tm)
+Proof
+    rw [ismet]
+ >- (fs [REAL_DIV_ZERO] \\
+     EQ_TAC >> rw [METRIC_ZERO] \\
+     Suff ‘0 < 1 + dist m (x,y)’ >- PROVE_TAC [REAL_LT_IMP_NE] \\
+     MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])
+ >> Know ‘!a b. 0 < 1 + dist m (a,b)’
+ >- (rpt GEN_TAC \\
+     MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> REWRITE_TAC [bounded_metric_alt]
+ >> ‘1 - inv (1 + dist m (x,y)) + (1 - inv (1 + dist m (x,z))) =
+     1 - (inv (1 + dist m (x,y)) + inv (1 + dist m (x,z)) - 1)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> RW_TAC std_ss [REAL_LE_SUB_CANCEL1, REAL_LE_SUB_RADD]
+ (* applying METRIC_TRIANGLE *)
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘inv (1 + dist m (x,y) + dist m (x,z)) + 1’
+ >> reverse CONJ_TAC
+ >- (REWRITE_TAC [REAL_LE_RADD] \\
+     MATCH_MP_TAC REAL_LE_INV2 \\
+     rw [REAL_LE_LADD, GSYM REAL_ADD_ASSOC] \\
+     METIS_TAC [METRIC_SYM, METRIC_TRIANGLE])
+ >> Q.ABBREV_TAC ‘a = dist m (x,y)’
+ >> Q.ABBREV_TAC ‘b = dist m (x,z)’
+ >> ‘1 + a <> 0 /\ 1 + b <> 0’ by METIS_TAC [REAL_LT_IMP_NE]
+ (* LHS simplification *)
+ >> Know ‘inv (1 + a) = (1 + b) * inv ((1 + a) * (1 + b))’
+ >- (rw [REAL_INV_MUL, REAL_MUL_ASSOC] \\
+    ‘(1 + b) * inv (1 + a) * inv (1 + b) =
+     (1 + b) * inv (1 + b) * inv (1 + a)’ by REAL_ARITH_TAC >> POP_ORW \\
+     rw [REAL_MUL_RINV]) >> Rewr'
+ >> Know ‘inv (1 + b) = (1 + a) * inv ((1 + a) * (1 + b))’
+ >- (rw [REAL_INV_MUL, REAL_MUL_ASSOC, REAL_MUL_RINV])
+ >> Rewr'
+ >> rw [GSYM REAL_ADD_RDISTRIB, REAL_ARITH “1 + b + (1 + a) = 2 + a + (b :real)”]
+ >> Know ‘0 < 1 + a + b’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [Abbr ‘a’, Abbr ‘b’, GSYM REAL_ADD_ASSOC] \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> Know ‘inv (1 + a + b) + 1 = (1 + (1 + a + b)) * inv (1 + a + b)’
+ >- (REWRITE_TAC [Once REAL_ADD_RDISTRIB, REAL_MUL_LID] \\
+    ‘1 + a + b <> 0’ by PROVE_TAC [REAL_LT_IMP_NE] \\
+     rw [REAL_MUL_RINV])
+ >> Rewr'
+ >> REWRITE_TAC [REAL_ARITH “1 + (1 + a + b) = 2 + a + (b :real)”]
+ >> Know ‘0 < 2 + a + b’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘2’ >> rw [Abbr ‘a’, Abbr ‘b’, GSYM REAL_ADD_ASSOC] \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> ASM_SIMP_TAC std_ss [REAL_LE_LMUL]
+ >> MATCH_MP_TAC REAL_LE_INV2
+ >> rw [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC]
+ >> REWRITE_TAC [REAL_ARITH “1 + b + a + a * b = 1 + a + b + a * (b :real)”]
+ >> rw [REAL_LE_ADDR, Abbr ‘a’, Abbr ‘b’]
+ >> MATCH_MP_TAC REAL_LE_MUL >> rw [METRIC_POS]
+QED
+
+Theorem bounded_metric_thm :
+    !m x y. dist (bounded_metric m) (x,y) = ^bmetric_tm
+Proof
+    rw [bounded_metric_def]
+ >> ‘dist (metric (\(x,y). ^bmetric_tm)) = (\(x,y). ^bmetric_tm)’
+       by (rw [GSYM metric_tybij, bounded_metric_ismet])
+ >> rw []
+QED
+
+Theorem bounded_metric_lt_1 :
+    !(m :'a metric) x y. dist (bounded_metric m) (x,y) < 1
+Proof
+    rw [bounded_metric_thm]
+ >> Know ‘0 < 1 + dist m (q,r)’
+ >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+     Q.EXISTS_TAC ‘1’ >> rw [METRIC_POS])
+ >> DISCH_TAC
+ >> ‘1 + dist m (q,r) <> 0’ by rw [REAL_LT_IMP_NE]
+ >> MATCH_MP_TAC REAL_LT_1
+ >> rw [METRIC_POS]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now define metric topology and prove equivalent definition of "open"      *)
 (*---------------------------------------------------------------------------*)
 
-val mtop = new_definition("mtop",
-  “!m:('a)metric. mtop m =
-    topology(\S'. !x. S' x ==> ?e. &0 < e /\ (!y. (dist m)(x,y) < e ==> S' y))”);
+Definition mtop :
+    mtop (m :'a metric) =
+    topology (\S'. !x. S' x ==> ?e. &0 < e /\ !y. (dist m)(x,y) < e ==> S' y)
+End
 
-val mtop_istopology = store_thm("mtop_istopology",
-  ``!m:('a)metric.
+(* for HOL Light compatibility *)
+Overload mtopology[inferior] = “mtop”
+Overload mdist[inferior] = “dist”
+
+(* NOTE: HOL4's ‘mspace’ definition is different with HOL-Light *)
+Definition mspace :
+    mspace m = topspace (mtop m)
+End
+
+(* |- !m. topspace (mtop m) = mspace m *)
+Theorem TOPSPACE_MTOPOLOGY = GEN_ALL (GSYM mspace)
+
+Theorem mtop_istopology :
+    !m:('a)metric.
       istopology (\S'. !x. S' x ==>
                            ?e. &0 < e /\
-                               (!y. (dist m)(x,y) < e ==> S' y))``,
+                               (!y. (dist m)(x,y) < e ==> S' y))
+Proof
   GEN_TAC THEN
   SIMP_TAC bool_ss [istopology, EMPTY_DEF, UNIV_DEF, BIGUNION_applied,
-                    re_intersect, SUBSET_applied, IN_DEF] THEN
+                    INTER_applied, SUBSET_applied, IN_DEF] THEN
   REVERSE (REPEAT STRIP_TAC) THENL (* 2 subgoals *)
   [ (* goal 1 (of 2) *)
     RES_TAC >> Q.EXISTS_TAC `e` >> ASM_REWRITE_TAC [] \\
@@ -141,7 +323,8 @@ val mtop_istopology = store_thm("mtop_istopology",
       ASM_REWRITE_TAC [] THEN
       DISCH_THEN (fn th2 => GEN_TAC THEN DISCH_THEN(fn th1 =>
                   ASSUME_TAC th1 THEN ASSUME_TAC (MATCH_MP REAL_LT_TRANS (CONJ th1 th2))))
-      >> PROVE_TAC [] ] ]);
+      >> PROVE_TAC [] ] ]
+QED
 
 val MTOP_OPEN = store_thm("MTOP_OPEN",
   “!S' (m:('a)metric). open_in(mtop m) S' =
@@ -154,11 +337,16 @@ val MTOP_OPEN = store_thm("MTOP_OPEN",
 (* Define open ball in metric space + prove basic properties                 *)
 (*---------------------------------------------------------------------------*)
 
-val ball = new_definition("ball",
-  “!m:('a)metric. !x e. B(m)(x,e) = \y. (dist m)(x,y) < e”);
+Definition ball :
+    B(m)(x,e) = \y. (dist m)(x,y) < e
+End
 
-val BALL_OPEN = store_thm("BALL_OPEN",
-  “!m:('a)metric. !x e. &0 < e ==> open_in(mtop(m))(B(m)(x,e))”,
+(* for HOL Light compatibility *)
+Overload mball[inferior] = “B”;
+
+Theorem BALL_OPEN:
+  !m:('a)metric. !x e. &0 < e ==> open_in(mtop(m))(B(m)(x,e))
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[MTOP_OPEN] THEN
   X_GEN_TAC “z:'a” THEN REWRITE_TAC[ball] THEN BETA_TAC THEN
   DISCH_THEN(ASSUME_TAC o ONCE_REWRITE_RULE[GSYM REAL_SUB_LT]) THEN
@@ -167,29 +355,102 @@ val BALL_OPEN = store_thm("BALL_OPEN",
   ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN DISCH_TAC THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN
   EXISTS_TAC “dist(m)(x:'a,z) + dist(m)(z,y)” THEN
-  ASM_REWRITE_TAC[METRIC_TRIANGLE]);
+  ASM_REWRITE_TAC[METRIC_TRIANGLE]
+QED
+
+(* This is not good ... *)
+Theorem TOPSPACE_MTOP[simp]:
+  topspace (mtop m) = UNIV
+Proof
+  simp[topspace, EXTENSION] >> csimp[IN_DEF] >> qx_gen_tac ‘x’ >>
+  qexists_tac ‘B(m)(x,1)’ >> simp[BALL_OPEN] >>
+  simp[ball, METRIC_SAME]
+QED
 
 val BALL_NEIGH = store_thm("BALL_NEIGH",
   “!m:('a)metric. !x e. &0 < e ==> neigh(mtop(m))(B(m)(x,e),x)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[neigh] THEN EXISTS_TAC “B(m)(x:'a,e)” THEN
-  REWRITE_TAC[SUBSET_REFL] THEN CONJ_TAC THENL
+  REWRITE_TAC[SUBSET_REFL, TOPSPACE_MTOP, SUBSET_UNIV] THEN CONJ_TAC THENL
    [MATCH_MP_TAC BALL_OPEN,
     REWRITE_TAC[ball] THEN BETA_TAC THEN REWRITE_TAC[METRIC_SAME]] THEN
   POP_ASSUM ACCEPT_TAC);
 
 (*---------------------------------------------------------------------------*)
+(* HOL-Light compatibile theorems                                            *)
+(*---------------------------------------------------------------------------*)
+
+Theorem MDIST_REFL :
+   !m x:'a. x IN mspace m ==> mdist m (x,x) = &0
+Proof
+   rw [mspace, METRIC_SAME]
+QED
+
+Theorem mtopology :
+   !m. mtopology (m:'a metric) =
+       topology {u | u SUBSET mspace m /\
+                     !x:'a. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u}
+Proof
+    rw [mtop, mspace, ball]
+ >> AP_TERM_TAC
+ >> rw [Once EXTENSION, IN_APP, SUBSET_DEF]
+QED
+
+Theorem mball :
+   !m x r. mball m (x:'a,r) =
+          {y | x IN mspace m /\ y IN mspace m /\ mdist m (x,y) < r}
+Proof
+   rw [mspace, ball, Once EXTENSION]
+QED
+
+Theorem IS_TOPOLOGY_METRIC_TOPOLOGY :
+    !m. istopology {u | u SUBSET mspace m /\
+                        !x:'a. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u}
+Proof
+    GEN_TAC
+ >> Q_TAC SUFF_TAC
+     ‘{u | u SUBSET mspace m /\
+           !x:'a. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u} =
+     (\S'. !x. S' x ==> ?e. 0 < e /\ !y. dist m (x,y) < e ==> S' y)’
+ >- (DISCH_THEN (ONCE_REWRITE_TAC o wrap) \\
+     REWRITE_TAC [mtop_istopology])
+ >> rw [mspace, ball, SUBSET_DEF, IN_APP, Once EXTENSION]
+QED
+
+Theorem OPEN_IN_MTOPOLOGY :
+   !(m:'a metric) u.
+     open_in (mtopology m) u <=>
+     u SUBSET mspace m /\
+     (!x. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u)
+Proof
+    rw [MTOP_OPEN, mspace, ball, SUBSET_DEF, IN_APP]
+QED
+
+Theorem IN_MBALL :
+   !m x y:'a r.
+     y IN mball m (x,r) <=>
+     x IN mspace m /\ y IN mspace m /\ mdist m (x,y) < r
+Proof
+    rw [mball]
+QED
+
+(*---------------------------------------------------------------------------*)
 (* Characterize limit point in a metric topology                             *)
 (*---------------------------------------------------------------------------*)
 
-val MTOP_LIMPT = store_thm("MTOP_LIMPT",
-  “!m:('a)metric. !x S'. limpt(mtop m) x S' =
-      !e. &0 < e ==> ?y. ~(x = y) /\ S' y /\ (dist m)(x,y) < e”,
+Theorem MTOP_LIMPT:
+  !m:('a)metric x S'.
+    limpt(mtop m) x S' <=>
+    !e. &0 < e ==> ?y. ~(x = y) /\ S' y /\ (dist m)(x,y) < e
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[limpt] THEN EQ_TAC THENL
-   [DISCH_THEN(curry op THEN (GEN_TAC THEN DISCH_TAC) o MP_TAC o SPEC “B(m)(x:'a,e)”)
-    THEN FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP BALL_NEIGH th]) THEN
+   [STRIP_TAC THEN
+    Q.X_GEN_TAC ‘e’ THEN STRIP_TAC THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘B(m)(x,e)’ MP_TAC) THEN
+    FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP BALL_NEIGH th]) THEN
     REWRITE_TAC[ball] THEN BETA_TAC THEN DISCH_THEN ACCEPT_TAC,
-    DISCH_TAC THEN GEN_TAC THEN REWRITE_TAC[neigh] THEN
+    STRIP_TAC THEN CONJ_TAC THEN1 ASM_REWRITE_TAC[TOPSPACE_MTOP,IN_UNIV] THEN
+    GEN_TAC THEN REWRITE_TAC[neigh] THEN
     DISCH_THEN(X_CHOOSE_THEN “P:'a->bool”
       (CONJUNCTS_THEN2 MP_TAC STRIP_ASSUME_TAC)) THEN
     REWRITE_TAC[MTOP_OPEN] THEN
@@ -202,7 +463,9 @@ val MTOP_LIMPT = store_thm("MTOP_LIMPT",
     DISCH_TAC THEN EXISTS_TAC “y:'a” THEN ASM_REWRITE_TAC[] THEN
     UNDISCH_TAC “(P:'a->bool) SUBSET N” THEN
     REWRITE_TAC[SUBSET_applied] THEN DISCH_THEN MATCH_MP_TAC THEN
-    FIRST_ASSUM ACCEPT_TAC]);
+    FIRST_ASSUM ACCEPT_TAC
+   ]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define the usual metric on the real line                                  *)
@@ -223,8 +486,9 @@ val ISMET_R1 = store_thm("ISMET_R1",
       “(a + b) + (c + d) = (d + a) + (c + b):real”] THEN
     REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]);
 
-val mr1 = new_definition("mr1",
-  “mr1 = metric(\(x,y). abs(y - x))”);
+Definition mr1 :
+    mr1 = metric(\(x,y). abs(y - x))
+End
 
 val MR1_DEF = store_thm("MR1_DEF",
   “!x y. (dist mr1)(x,y) = abs(y - x)”,
@@ -265,8 +529,9 @@ val MR1_BETWEEN1 = store_thm("MR1_BETWEEN1",
 (* Every real is a limit point of the real line                              *)
 (*---------------------------------------------------------------------------*)
 
-val MR1_LIMPT = store_thm("MR1_LIMPT",
-  ``!x. limpt(mtop mr1) x univ(:real)``,
+Theorem MR1_LIMPT:
+  !x. limpt(mtop mr1) x univ(:real)
+Proof
   GEN_TAC THEN REWRITE_TAC[MTOP_LIMPT, UNIV_DEF] THEN
   X_GEN_TAC “e:real” THEN DISCH_TAC THEN
   EXISTS_TAC “x + (e / &2)” THEN
@@ -280,6 +545,573 @@ val MR1_LIMPT = store_thm("MR1_LIMPT",
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   MATCH_MP_TAC REAL_LT_IMP_NE THEN
   ASM_REWRITE_TAC[REAL_LT_HALF1]);
+
+(* ------------------------------------------------------------------------- *)
+(* F_sigma and G_delta sets in a topological space (ported from HOL Light)   *)
+(* ------------------------------------------------------------------------- *)
+
+(* The countable intersection class (general version)
+
+   The leading letter G is from the German word "Gebiet" meaning "region".
+   The greek letter "delta" stands for a countable intersection (in German,
+   "Durchschnitt"). See [1, p.310] (bibitem is at the bottom of this file.)
+
+   NOTE: the part ‘relative_to topspace top’ is necessary when ‘topspace top’
+   is not UNIV, because "a countable intersection of something" includes "a
+   countable intersection of nothing", and ‘BIGINTER {} = UNIV’, which may
+   go beyond the scope of ‘topspace top’. -- Chun Tian, 28 nov 2021
+ *)
+Definition gdelta_in :
+    gdelta_in (top:'a topology) =
+        (COUNTABLE INTERSECTION_OF open_in top) relative_to topspace top
+End
+
+(* The countable union class (general version)
+
+   The leading letter F is from the French word "ferme" meaning "closed".
+   The greek letter "sigma" stands for a countable union or sum (in German,
+   "Summe").
+ *)
+Definition fsigma_in :
+    fsigma_in (top:'a topology) = COUNTABLE UNION_OF closed_in top
+End
+
+Theorem FSIGMA_IN_ASCENDING :
+   !top s:'a->bool.
+        fsigma_in top s <=>
+        ?c. (!n. closed_in top (c n)) /\
+            (!n. c n SUBSET c(n + 1)) /\
+            UNIONS {c n | n IN univ(:num)} = s
+Proof
+  REWRITE_TAC[fsigma_in] THEN
+  SIMP_TAC std_ss [COUNTABLE_UNION_OF_ASCENDING, CLOSED_IN_EMPTY, CLOSED_IN_UNION] THEN
+  REWRITE_TAC[ADD1]
+QED
+
+Theorem GDELTA_IN_ALT :
+   !top s:'a->bool.
+        gdelta_in top s <=>
+        s SUBSET topspace top /\ (COUNTABLE INTERSECTION_OF open_in top) s
+Proof
+  SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_RELATIVE_TO_ALT, gdelta_in,
+                   OPEN_IN_TOPSPACE] THEN
+  REWRITE_TAC[Once CONJ_ACI]
+QED
+
+Theorem FSIGMA_IN_SUBSET :
+   !top s:'a->bool. fsigma_in top s ==> s SUBSET topspace top
+Proof
+  GEN_TAC THEN SIMP_TAC std_ss [fsigma_in, FORALL_UNION_OF, UNIONS_SUBSET] THEN
+  SIMP_TAC std_ss [CLOSED_IN_SUBSET]
+QED
+
+Theorem GDELTA_IN_SUBSET :
+   !top s:'a->bool. gdelta_in top s ==> s SUBSET topspace top
+Proof
+  SIMP_TAC std_ss [GDELTA_IN_ALT]
+QED
+
+Theorem CLOSED_IMP_FSIGMA_IN :
+   !top s:'a->bool. closed_in top s ==> fsigma_in top s
+Proof
+  SIMP_TAC std_ss [fsigma_in, COUNTABLE_UNION_OF_INC]
+QED
+
+Theorem OPEN_IMP_GDELTA_IN :
+   !top s:'a->bool. open_in top s ==> gdelta_in top s
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[gdelta_in] THEN
+  FIRST_ASSUM(SUBST1_TAC o MATCH_MP (SET_RULE ``s SUBSET u ==> s = u INTER s``) o
+    MATCH_MP OPEN_IN_SUBSET) THEN
+  MATCH_MP_TAC RELATIVE_TO_INC THEN
+  ASM_SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_INC]
+QED
+
+Theorem FSIGMA_IN_EMPTY :
+   !top:'a topology. fsigma_in top {}
+Proof
+  SIMP_TAC std_ss [CLOSED_IMP_FSIGMA_IN, CLOSED_IN_EMPTY]
+QED
+
+Theorem GDELTA_IN_EMPTY :
+   !top:'a topology. gdelta_in top {}
+Proof
+  SIMP_TAC std_ss [OPEN_IMP_GDELTA_IN, OPEN_IN_EMPTY]
+QED
+
+Theorem FSIGMA_IN_TOPSPACE :
+   !top:'a topology. fsigma_in top (topspace top)
+Proof
+  SIMP_TAC std_ss [CLOSED_IMP_FSIGMA_IN, CLOSED_IN_TOPSPACE]
+QED
+
+Theorem GDELTA_IN_TOPSPACE :
+   !top:'a topology. gdelta_in top (topspace top)
+Proof
+  SIMP_TAC std_ss [OPEN_IMP_GDELTA_IN, OPEN_IN_TOPSPACE]
+QED
+
+Theorem FSIGMA_IN_UNIONS :
+   !top t:('a->bool)->bool.
+        COUNTABLE t /\ (!s. s IN t ==> fsigma_in top s)
+        ==> fsigma_in top (UNIONS t)
+Proof
+  REWRITE_TAC[fsigma_in, COUNTABLE_UNION_OF_UNIONS]
+QED
+
+Theorem FSIGMA_IN_UNION :
+   !top s t:'a->bool.
+        fsigma_in top s /\ fsigma_in top t ==> fsigma_in top (s UNION t)
+Proof
+  REWRITE_TAC[fsigma_in, COUNTABLE_UNION_OF_UNION]
+QED
+
+Theorem FSIGMA_IN_INTER :
+   !top s t:'a->bool.
+        fsigma_in top s /\ fsigma_in top t ==> fsigma_in top (s INTER t)
+Proof
+  GEN_TAC THEN REWRITE_TAC[fsigma_in] THEN
+  MATCH_MP_TAC COUNTABLE_UNION_OF_INTER THEN
+  REWRITE_TAC[CLOSED_IN_INTER]
+QED
+
+Theorem GDELTA_IN_INTERS :
+   !top t:('a->bool)->bool.
+        COUNTABLE t /\ ~(t = {}) /\ (!s. s IN t ==> gdelta_in top s)
+        ==> gdelta_in top (INTERS t)
+Proof
+  REWRITE_TAC[GDELTA_IN_ALT] THEN REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC std_ss [INTERS_SUBSET] THEN
+  ASM_SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_INTERS]
+QED
+
+Theorem GDELTA_IN_INTER :
+   !top s t:'a->bool.
+        gdelta_in top s /\ gdelta_in top t ==> gdelta_in top (s INTER t)
+Proof
+  SIMP_TAC std_ss [GSYM INTERS_2, GDELTA_IN_INTERS, COUNTABLE_INSERT, COUNTABLE_EMPTY,
+           NOT_INSERT_EMPTY, FORALL_IN_INSERT, NOT_IN_EMPTY]
+QED
+
+Theorem GDELTA_IN_UNION :
+   !top s t:'a->bool.
+        gdelta_in top s /\ gdelta_in top t ==> gdelta_in top (s UNION t)
+Proof
+  SIMP_TAC std_ss [GDELTA_IN_ALT, UNION_SUBSET] THEN
+  MESON_TAC[COUNTABLE_INTERSECTION_OF_UNION, OPEN_IN_UNION]
+QED
+
+Theorem FSIGMA_IN_DIFF :
+   !top s t:'a->bool.
+        fsigma_in top s /\ gdelta_in top t ==> fsigma_in top (s DIFF t)
+Proof
+  GEN_TAC THEN SUBGOAL_THEN
+   ``!s:'a->bool. gdelta_in top s ==> fsigma_in top (topspace top DIFF s)``
+  ASSUME_TAC THENL
+  [ (* goal 1 (of 2) *)
+    SIMP_TAC std_ss [fsigma_in, gdelta_in, FORALL_RELATIVE_TO] THEN
+    SIMP_TAC std_ss [FORALL_INTERSECTION_OF, DIFF_INTERS, SET_RULE
+     ``s DIFF (s INTER t) = s DIFF t``] THEN
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC COUNTABLE_UNION_OF_UNIONS THEN
+    ASM_SIMP_TAC std_ss [SIMPLE_IMAGE, COUNTABLE_IMAGE, FORALL_IN_IMAGE] THEN
+    ASM_SIMP_TAC std_ss [COUNTABLE_UNION_OF_INC, CLOSED_IN_DIFF,
+                 CLOSED_IN_TOPSPACE],
+    (* goal 2 (of 2) *)
+    REPEAT STRIP_TAC THEN
+    SUBGOAL_THEN ``s DIFF t:'a->bool = s INTER (topspace top DIFF t)``
+     (fn th => SUBST1_TAC th THEN ASM_SIMP_TAC std_ss [FSIGMA_IN_INTER]) THEN
+    FIRST_ASSUM(MP_TAC o MATCH_MP FSIGMA_IN_SUBSET) THEN ASM_SET_TAC[] ]
+QED
+
+Theorem GDELTA_IN_DIFF :
+   !top s t:'a->bool.
+        gdelta_in top s /\ fsigma_in top t ==> gdelta_in top (s DIFF t)
+Proof
+  GEN_TAC THEN SUBGOAL_THEN
+   ``!s:'a->bool. fsigma_in top s ==> gdelta_in top (topspace top DIFF s)``
+  ASSUME_TAC THENL
+  [ (* goal 1 (of 2) *)
+    SIMP_TAC std_ss [fsigma_in, gdelta_in, FORALL_UNION_OF, DIFF_UNIONS] THEN
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC RELATIVE_TO_INC THEN
+    MATCH_MP_TAC COUNTABLE_INTERSECTION_OF_INTERS THEN
+    ASM_SIMP_TAC std_ss [SIMPLE_IMAGE, COUNTABLE_IMAGE, FORALL_IN_IMAGE] THEN
+    ASM_SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_INC, OPEN_IN_DIFF,
+                 OPEN_IN_TOPSPACE],
+    (* goal 2 (of 2) *)
+    REPEAT STRIP_TAC THEN
+    SUBGOAL_THEN ``s DIFF t:'a->bool = s INTER (topspace top DIFF t)``
+     (fn th => SUBST1_TAC th THEN ASM_SIMP_TAC std_ss [GDELTA_IN_INTER]) THEN
+    FIRST_ASSUM(MP_TAC o MATCH_MP GDELTA_IN_SUBSET) THEN ASM_SET_TAC[] ]
+QED
+
+Theorem GDELTA_IN_FSIGMA_IN :
+   !top s:'a->bool.
+       gdelta_in top s <=>
+       s SUBSET topspace top /\ fsigma_in top (topspace top DIFF s)
+Proof
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  SIMP_TAC std_ss [GDELTA_IN_SUBSET, FSIGMA_IN_DIFF, FSIGMA_IN_TOPSPACE] THEN
+  STRIP_TAC THEN FIRST_ASSUM(SUBST1_TAC o MATCH_MP (SET_RULE
+   ``s SUBSET u ==> s = u DIFF (u DIFF s)``)) THEN
+  ASM_SIMP_TAC std_ss [GDELTA_IN_DIFF, GDELTA_IN_TOPSPACE]
+QED
+
+Theorem FSIGMA_IN_GDELTA_IN :
+   !top s:'a->bool.
+        fsigma_in top s <=>
+        s SUBSET topspace top /\ gdelta_in top (topspace top DIFF s)
+Proof
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  SIMP_TAC std_ss [FSIGMA_IN_SUBSET, GDELTA_IN_DIFF, GDELTA_IN_TOPSPACE] THEN
+  STRIP_TAC THEN FIRST_ASSUM(SUBST1_TAC o MATCH_MP (SET_RULE
+   ``s SUBSET u ==> s = u DIFF (u DIFF s)``)) THEN
+  ASM_SIMP_TAC std_ss [FSIGMA_IN_DIFF, FSIGMA_IN_TOPSPACE]
+QED
+
+Theorem GDELTA_IN_DESCENDING :
+   !top s:'a->bool.
+        gdelta_in top s <=>
+        ?c. (!n. open_in top (c n)) /\
+            (!n. c(n + 1) SUBSET c n) /\
+            INTERS {c n | n IN univ(:num)} = s
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[GDELTA_IN_FSIGMA_IN] THEN
+  REWRITE_TAC[FSIGMA_IN_ASCENDING] THEN EQ_TAC THENL
+  [ (* goal 1 (of 2) *)
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
+     (Q.X_CHOOSE_THEN `c:num->'a->bool` STRIP_ASSUME_TAC)),
+    (* goal 2 (of 2) *)
+    DISCH_THEN(Q.X_CHOOSE_THEN `c:num->'a->bool` STRIP_ASSUME_TAC) THEN
+    CONJ_TAC THENL
+    [ FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN MATCH_MP_TAC INTERS_SUBSET THEN
+      ASM_SIMP_TAC std_ss [OPEN_IN_SUBSET, FORALL_IN_GSPEC] THEN SET_TAC[],
+      ALL_TAC ] ] THEN
+  Q.EXISTS_TAC `\n. topspace top DIFF (c:num->'a->bool) n` THEN
+  ASM_SIMP_TAC std_ss [OPEN_IN_DIFF, CLOSED_IN_DIFF, OPEN_IN_TOPSPACE,
+    CLOSED_IN_TOPSPACE, SET_RULE ``s SUBSET t ==> u DIFF t SUBSET u DIFF s``]
+  THENL
+  [ (* goal 1 (of 2) *)
+    FIRST_X_ASSUM(MP_TAC o MATCH_MP (SET_RULE
+     ``u = t DIFF s ==> s SUBSET t ==> s = t DIFF u``)) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC[DIFF_UNIONS],
+    (* goal 2 (of 2) *)
+    FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[DIFF_INTERS] ] THEN
+  SIMP_TAC std_ss [SET_RULE ``{g y | y IN {f x | x IN s}} = {g(f x) | x IN s}``] THEN
+  SIMP_TAC std_ss [SET_RULE ``s = t INTER s <=> s SUBSET t``] THEN
+  MATCH_MP_TAC INTERS_SUBSET THEN
+  ASM_SIMP_TAC std_ss [OPEN_IN_SUBSET, FORALL_IN_GSPEC] THEN SET_TAC[]
+QED
+
+Theorem FSIGMA_IN_RELATIVE_TO :
+   !top s:'a->bool.
+        (fsigma_in top relative_to s) = fsigma_in (subtopology top s)
+Proof
+  REWRITE_TAC[fsigma_in, COUNTABLE_UNION_OF_RELATIVE_TO] THEN
+  REWRITE_TAC[CLOSED_IN_RELATIVE_TO]
+QED
+
+Theorem FSIGMA_IN_RELATIVE_TO_TOPSPACE :
+   !top:'a topology. fsigma_in top relative_to (topspace top) = fsigma_in top
+Proof
+   rw [FSIGMA_IN_RELATIVE_TO, SUBTOPOLOGY_TOPSPACE]
+QED
+
+Theorem FSIGMA_IN_SUBTOPOLOGY :
+   !top u s:'a->bool.
+         fsigma_in (subtopology top u) s <=>
+         ?t. fsigma_in top t /\ s = t INTER u
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM FSIGMA_IN_RELATIVE_TO] THEN
+  REWRITE_TAC[relative_to] THEN MESON_TAC[INTER_COMM]
+QED
+
+Theorem GDELTA_IN_RELATIVE_TO :
+   !top s:'a->bool.
+        (gdelta_in top relative_to s) = gdelta_in (subtopology top s)
+Proof
+  REWRITE_TAC[gdelta_in, RELATIVE_TO_RELATIVE_TO] THEN
+  ONCE_REWRITE_TAC[COUNTABLE_INTERSECTION_OF_RELATIVE_TO] THEN
+  REWRITE_TAC[OPEN_IN_RELATIVE_TO] THEN
+  REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY, TOPSPACE_SUBTOPOLOGY] THEN
+  SIMP_TAC std_ss [SET_RULE ``s INTER (u INTER s) = u INTER s``]
+QED
+
+Theorem GDELTA_IN_SUBTOPOLOGY :
+   !top u s:'a->bool.
+         gdelta_in (subtopology top u) s <=>
+         ?t. gdelta_in top t /\ s = t INTER u
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM GDELTA_IN_RELATIVE_TO] THEN
+  REWRITE_TAC[relative_to] THEN MESON_TAC[INTER_COMM]
+QED
+
+Theorem FSIGMA_IN_FSIGMA_SUBTOPOLOGY :
+   !top s t:'a->bool.
+        fsigma_in top s
+        ==> (fsigma_in (subtopology top s) t <=>
+             fsigma_in top t /\ t SUBSET s)
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[FSIGMA_IN_SUBTOPOLOGY] THEN
+  EQ_TAC THEN STRIP_TAC THEN ASM_SIMP_TAC std_ss [INTER_SUBSET, FSIGMA_IN_INTER] THEN
+  Q.EXISTS_TAC `t:'a->bool` THEN ASM_REWRITE_TAC[] THEN ASM_SET_TAC[]
+QED
+
+Theorem GDELTA_IN_GDELTA_SUBTOPOLOGY :
+   !top s t:'a->bool.
+        gdelta_in top s
+        ==> (gdelta_in (subtopology top s) t <=>
+             gdelta_in top t /\ t SUBSET s)
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GDELTA_IN_SUBTOPOLOGY] THEN
+  EQ_TAC THEN STRIP_TAC THEN ASM_SIMP_TAC std_ss [INTER_SUBSET, GDELTA_IN_INTER] THEN
+  Q.EXISTS_TAC `t:'a->bool` THEN ASM_REWRITE_TAC[] THEN ASM_SET_TAC[]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Metrizable spaces (ported from HOL Light)                                 *)
+(* ------------------------------------------------------------------------- *)
+
+Definition metrizable_space :
+    metrizable_space top = ?m. top = mtopology m
+End
+
+Theorem METRIZABLE_SPACE_MTOPOLOGY :
+   !m. metrizable_space (mtopology m)
+Proof
+  REWRITE_TAC[metrizable_space] THEN MESON_TAC[]
+QED
+
+Theorem FORALL_METRIC_TOPOLOGY :
+   !P. (!m:'a metric. P (mtopology m) (mspace m)) <=>
+       !top. metrizable_space top ==> P top (topspace top)
+Proof
+  SIMP_TAC std_ss [metrizable_space, LEFT_IMP_EXISTS_THM, Once TOPSPACE_MTOPOLOGY]
+QED
+
+Theorem FORALL_METRIZABLE_SPACE :
+   !P. (!top. metrizable_space top ==> P top (topspace top)) <=>
+       (!m:'a metric. P (mtopology m) (mspace m))
+Proof
+  REWRITE_TAC[FORALL_METRIC_TOPOLOGY]
+QED
+
+Theorem EXISTS_METRIZABLE_SPACE :
+   !P. (?top. metrizable_space top /\ P top (topspace top)) <=>
+       (?m:'a metric. P (mtopology m) (mspace m))
+Proof
+  SIMP_TAC pure_ss [MESON[] ``(?(x :'a metric). P x) <=> ~(!x. ~P x)``] THEN
+  SIMP_TAC pure_ss [FORALL_METRIC_TOPOLOGY] THEN MESON_TAC[]
+QED
+
+(* key result *)
+Theorem CLOSED_IMP_GDELTA_IN :
+   !top s:'a->bool.
+        metrizable_space top /\ closed_in top s ==> gdelta_in top s
+Proof
+  SIMP_TAC std_ss [IMP_CONJ, RIGHT_FORALL_IMP_THM, FORALL_METRIZABLE_SPACE] THEN
+  REPEAT STRIP_TAC THEN
+  ASM_CASES_TAC ``s:'a->bool = {}`` THEN ASM_REWRITE_TAC[GDELTA_IN_EMPTY] THEN
+  SUBGOAL_THEN
+   ``s:'a->bool =
+    INTERS
+     {{x | x IN mspace m /\
+           ?y. y IN s /\ mdist m (x,y) < inv(&n + &1)} | n IN univ(:num)}``
+  SUBST1_TAC THENL
+  [ (* goal 1 (of 2) *)
+    GEN_REWRITE_TAC I empty_rewrites [EXTENSION] THEN Q.X_GEN_TAC `x:'a` THEN
+    RW_TAC std_ss [INTERS_GSPEC, IN_UNIV, GSPECIFICATION] THEN EQ_TAC THENL
+    [ (* goal 1.1 (of 2) *)
+      DISCH_TAC THEN Q.X_GEN_TAC `n:num` THEN
+      SUBGOAL_THEN ``(x:'a) IN mspace m`` ASSUME_TAC THENL
+      [ ASM_MESON_TAC[CLOSED_IN_SUBSET, SUBSET_DEF, TOPSPACE_MTOPOLOGY],
+        ASM_REWRITE_TAC[] THEN Q.EXISTS_TAC `x:'a` THEN
+        ASM_SIMP_TAC std_ss [MDIST_REFL, REAL_LT_INV_EQ] THEN rw [] ],
+      (* goal 1.2 (of 2) *)
+      ASM_CASES_TAC ``(x:'a) IN mspace m`` THEN ASM_REWRITE_TAC[] THEN
+      Q.ABBREV_TAC ‘P = \e. ?y. y IN s /\ dist m (x,y) < e’ \\
+      ASM_SIMP_TAC std_ss [] \\
+      Q_TAC KNOW_TAC ‘(!n. P (inv (&n + 1))) <=> (!e. 0 < e ==> P e)’
+      >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+          MATCH_MP_TAC FORALL_POS_MONO_1_EQ \\
+          rw [Abbr ‘P’] >> Q.EXISTS_TAC ‘y’ >> METIS_TAC [REAL_LT_TRANS]) \\
+      DISCH_THEN (ONCE_REWRITE_TAC o wrap) \\
+      rw [Abbr ‘P’] \\
+      FIRST_ASSUM(MP_TAC o GEN_REWRITE_RULE I empty_rewrites [closed_in]) THEN
+      REWRITE_TAC[OPEN_IN_MTOPOLOGY, NOT_FORALL_THM, NOT_IMP] THEN
+      DISCH_THEN(MP_TAC o SPEC ``x:'a`` o CONJUNCT2 o CONJUNCT2) THEN
+      ASM_REWRITE_TAC[IN_DIFF, TOPSPACE_MTOPOLOGY, SUBSET_DEF, IN_MBALL] THEN
+      ASM_MESON_TAC[CLOSED_IN_SUBSET, SUBSET_DEF, TOPSPACE_MTOPOLOGY] ],
+    (* goal 2 (of 2) *)
+    MATCH_MP_TAC GDELTA_IN_INTERS THEN
+    SIMP_TAC std_ss [SIMPLE_IMAGE, COUNTABLE_IMAGE, NUM_COUNTABLE] THEN
+    REWRITE_TAC[IMAGE_EQ_EMPTY, FORALL_IN_IMAGE, UNIV_NOT_EMPTY, IN_UNIV] THEN
+    Q.X_GEN_TAC `n:num` THEN MATCH_MP_TAC OPEN_IMP_GDELTA_IN THEN
+    SIMP_TAC std_ss [OPEN_IN_MTOPOLOGY, SUBSET_RESTRICT] THEN
+    Q.X_GEN_TAC `x:'a` \\
+    RW_TAC std_ss [GSPECIFICATION] \\
+    Q.EXISTS_TAC `inv(&n + &1) - mdist m (x:'a,y)` THEN
+    ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_MBALL, REAL_SUB_LT, GSPECIFICATION] THEN
+    Q.X_GEN_TAC `z:'a` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    Q.EXISTS_TAC `y:'a` THEN ASM_REWRITE_TAC[] THEN
+    ONCE_REWRITE_TAC [METRIC_SYM] \\
+    MATCH_MP_TAC REAL_LET_TRANS \\
+    Q.EXISTS_TAC ‘dist m (y,x) + dist m (x,z)’ >> REWRITE_TAC [METRIC_TRIANGLE] \\
+    ‘y IN mspace m’ (* not really used (in HOL4) *)
+       by ASM_MESON_TAC[CLOSED_IN_SUBSET, SUBSET_DEF, TOPSPACE_MTOPOLOGY] \\
+    METIS_TAC [REAL_LT_SUB_LADD, METRIC_SYM, REAL_ADD_COMM] ]
+QED
+
+Theorem OPEN_IMP_FSIGMA_IN :
+   !top s:'a->bool.
+        metrizable_space top /\ open_in top s ==> fsigma_in top s
+Proof
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC std_ss [FSIGMA_IN_GDELTA_IN, OPEN_IN_SUBSET] THEN
+  MATCH_MP_TAC CLOSED_IMP_GDELTA_IN THEN
+  ASM_SIMP_TAC std_ss [CLOSED_IN_DIFF, CLOSED_IN_TOPSPACE]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Euclidean metric on 2-D real plane (univ(:real) CROSS univ(:real))        *)
+(*---------------------------------------------------------------------------*)
+
+val mr2_tm =
+   “(\((x1,x2),(y1,y2)). sqrt ((x1 - y1) pow 2 + (x2 - y2) pow 2) :real)”;
+
+Theorem MR2_lemma1[local] :
+    !x1 x2 z1 z2. ^mr2_tm ((x1,x2),(z1,z2)) = ^mr2_tm ((x1-z1,x2-z2),(0,0))
+Proof
+    rw []
+QED
+
+Theorem MR2_lemma2[local] :
+    !x1 x2 y1 y2. ^mr2_tm ((x1+y1,x2+y2),(0,0)) <=
+                  ^mr2_tm ((x1,x2),(0,0)) + ^mr2_tm ((y1,y2),(0,0))
+Proof
+    rw []
+ >> CCONTR_TAC >> fs [real_lte]
+ >> Know ‘(sqrt (x1 pow 2 + x2 pow 2) + sqrt (y1 pow 2 + y2 pow 2)) pow 2 <
+          (sqrt ((x1 + y1) pow 2 + (x2 + y2) pow 2)) pow 2’
+ >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [] \\
+     MATCH_MP_TAC REAL_LE_ADD \\
+     CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC SQRT_POS_LE >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> KILL_TAC
+ >> REWRITE_TAC [GSYM real_lte]
+ >> Know ‘sqrt ((x1 + y1) pow 2 + (x2 + y2) pow 2) pow 2 =
+          (x1 + y1) pow 2 + (x2 + y2) pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [ADD_POW_2]
+ >> Know ‘sqrt (x1 pow 2 + x2 pow 2) pow 2 = x1 pow 2 + x2 pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> Know ‘sqrt (y1 pow 2 + y2 pow 2) pow 2 = y1 pow 2 + y2 pow 2’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> REWRITE_TAC [ADD_POW_2]
+ >> Suff ‘x1 * y1 + x2 * y2 <= sqrt (x1 pow 2 + x2 pow 2) * sqrt (y1 pow 2 + y2 pow 2)’
+ >- REAL_ARITH_TAC
+ >> Know ‘sqrt (x1 pow 2 + x2 pow 2) * sqrt (y1 pow 2 + y2 pow 2) =
+          sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2))’
+ >- (MATCH_MP_TAC EQ_SYM \\
+     MATCH_MP_TAC SQRT_MUL \\
+     CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> CCONTR_TAC >> fs [real_lte]
+ >> Know ‘(sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2))) pow 2 <
+          (x1 * y1 + x2 * y2) pow 2’
+ >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [] \\
+     MATCH_MP_TAC SQRT_POS_LE \\
+     MATCH_MP_TAC REAL_LE_MUL \\
+     CONJ_TAC >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> KILL_TAC
+ >> REWRITE_TAC [GSYM real_lte]
+ >> Know ‘sqrt ((x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2)) pow 2 =
+          (x1 pow 2 + x2 pow 2) * (y1 pow 2 + y2 pow 2)’
+ >- (MATCH_MP_TAC SQRT_POW_2 \\
+     MATCH_MP_TAC REAL_LE_MUL \\
+     CONJ_TAC >> MATCH_MP_TAC REAL_LE_ADD >> rw [REAL_LE_POW2])
+ >> Rewr'
+ >> rw [ADD_POW_2, POW_MUL, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB]
+ >> Suff ‘2 * (x1 * x2 * y1 * y2) <= x1 pow 2 * y2 pow 2 + x2 pow 2 * y1 pow 2’
+ >- REAL_ARITH_TAC
+ >> Know ‘0 <= (x1 * y2 - x2 * y1) pow 2’ >- rw [REAL_LE_POW2]
+ >> ONCE_REWRITE_TAC [POW_2]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem MR2_lemma3[local] :
+    !x1 x2 y1 y2. ^mr2_tm ((x1,x2),(y1,y2)) = ^mr2_tm ((y1,y2),(x1,x2))
+Proof
+    rw []
+ >> Know ‘(x1 - y1) pow 2 = (y1 - x1) pow 2’
+ >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
+ >> Rewr'
+ >> Know ‘(x2 - y2) pow 2 = (y2 - x2) pow 2’
+ >- (REWRITE_TAC [POW_2] >> REAL_ARITH_TAC)
+ >> Rewr
+QED
+
+Theorem ISMET_R2 :
+    ismet ^mr2_tm
+Proof
+    Q.ABBREV_TAC ‘d = ^mr2_tm’
+ >> RW_TAC std_ss [ismet] (* 2 subgoals *)
+ >- (Q.UNABBREV_TAC ‘d’ \\
+     Cases_on ‘x’ >> Cases_on ‘y’ >> simp [] \\
+     reverse EQ_TAC >- rw [SQRT_0, pow_rat] \\
+     STRIP_TAC >> rename1 ‘x1 = x2 /\ y1 = y2’ >>
+     Cases_on ‘x1 = x2’ >> gvs[pow_rat] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       CCONTR_TAC >>
+       Suff ‘0 < (y1 - y2) pow 2’
+       >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
+       simp[],
+       (* goal 2 (of 2) *)
+       Suff ‘0 < (x1 - x2) pow 2 + (y1 - y2) pow 2’
+       >- (METIS_TAC [SQRT_POS_LT, REAL_LT_IMP_NE]) \\
+       irule REAL_LTE_TRANS >> qexists_tac ‘(x1 - x2) pow 2’ >> simp[]
+     ])
+ >> Cases_on ‘x’  >> Cases_on ‘y’ >> Cases_on ‘z’
+ >> rename1 ‘d ((x1,x2),(z1,z2)) <= d ((y1,y2),(x1,x2)) + d ((y1,y2),(z1,z2))’
+ >> Know ‘d ((x1,x2),z1,z2) = d ((x1-z1,x2-z2),(0,0))’
+ >- METIS_TAC [MR2_lemma1]
+ >> Rewr'
+ >> ‘x1 - z1 = x1 - y1 + (y1 - z1)’ by REAL_ARITH_TAC >> POP_ORW
+ >> ‘x2 - z2 = x2 - y2 + (y2 - z2)’ by REAL_ARITH_TAC >> POP_ORW
+ >> Know ‘d ((y1,y2),(x1,x2)) = d ((x1,x2),(y1,y2))’
+ >- METIS_TAC [MR2_lemma3]
+ >> Rewr'
+ >> Know ‘d ((x1 - y1 + (y1 - z1),x2 - y2 + (y2 - z2)),(0,0)) <=
+          d ((x1 - y1,x2 - y2),(0,0)) + d ((y1 - z1,y2 - z2),(0,0))’
+ >- METIS_TAC [MR2_lemma2]
+ >> Suff ‘d ((x1 - y1,x2 - y2),0,0) + d ((y1 - z1,y2 - z2),0,0) =
+          d ((x1,x2),y1,y2) + d ((y1,y2),z1,z2)’ >- rw []
+ >> METIS_TAC [MR2_lemma1]
+QED
+
+Definition mr2 :
+    mr2 = metric ^mr2_tm
+End
+
+Theorem MR2_DEF :
+    !x1 x2 y1 y2. (dist mr2) ((x1,x2),(y1,y2)) =
+                  sqrt ((x1 - y1) pow 2 + (x2 - y2) pow 2)
+Proof
+    rw [mr2, REWRITE_RULE [metric_tybij] ISMET_R2]
+QED
+
+Theorem MR2_MIRROR :
+    !x1 x2 y1 y2. (dist mr2) ((-x1,-x2),(-y1,-y2)) = (dist mr2) ((x1,x2),(y1,y2))
+Proof
+    rw [MR2_DEF, REAL_ARITH “-x - -y = -(x - y)”]
+QED
 
 val _ = remove_ovl_mapping "B" {Name = "B", Thy = "metric"};
 

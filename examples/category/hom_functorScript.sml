@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib boolSimps bossLib pred_setTheory categoryTheory functorTheory ens_catTheory lcsymtacs;
+open HolKernel Parse boolLib boolSimps bossLib pred_setTheory categoryTheory functorTheory ens_catTheory;
 
 val _ = new_theory "hom_functor";
 

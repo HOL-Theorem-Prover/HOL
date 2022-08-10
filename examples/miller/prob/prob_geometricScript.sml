@@ -1,19 +1,11 @@
-(* interactive mode
-loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
-app load
-  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
-   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
-     HurdUseful extra_numTheory combinTheory
+     hurdUtils extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
      extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
      simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
 
-open util_probTheory measureTheory probabilityTheory;
+open util_probTheory real_measureTheory real_probabilityTheory;
 open prob_algebraTheory probTheory;
 
 (* interactive mode

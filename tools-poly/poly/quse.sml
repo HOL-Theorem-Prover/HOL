@@ -1,9 +1,8 @@
 structure QUse :> QUse =
 struct
 
-fun use fname =
+fun use_reader fname (reader as {read = infn0, eof, reset}) =
   let
-    val {read = infn0, eof, reset} = QFRead.fileToReader fname
     val lineNo = ref 1
     fun infn () =
       case infn0 () of
@@ -17,5 +16,17 @@ fun use fname =
           compiler (infn, [Compiler.CPFileName fname,
                            Compiler.CPLineNo (fn () => !lineNo)]) ()
   end
+
+fun use fname = use_reader fname (QFRead.fileToReader fname)
+
+fun useScript fname =
+    let
+      val istream = TextIO.openIn fname
+      val reader = QFRead.streamToReader true istream
+      val _ = use_reader fname reader
+              handle e => (TextIO.closeIn istream; raise e)
+    in
+      TextIO.closeIn istream
+    end
 
 end

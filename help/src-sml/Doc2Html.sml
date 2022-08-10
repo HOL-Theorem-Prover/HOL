@@ -108,8 +108,8 @@ fun html (name,sectionl) ostrm =
            = (out "<DT><SPAN class = \"FIELD-NAME\">STRUCTURE</SPAN></DT>\n";
               out "<DD><DIV class = \"FIELD-BODY\">";
               out "<A HREF = \"../../src-sml/htmlsigs/";
-              out (Symbolic.unsymb(string s)); out ".html\">";
-              out (Symbolic.unsymb(string s));
+              out (string s); out ".html\">";
+              out (string s);
               out "</A></DIV></DD>\n")
        | markout_section (FIELD (tag, ss))
            = (out "<DT><SPAN class = \"FIELD-NAME\">";
@@ -126,7 +126,7 @@ fun html (name,sectionl) ostrm =
                    | other => raise Fail (string ss)
                  fun link s =
                     (out "<A HREF = \"";
-                     out (Symbolic.unsymb(string s)); out ".html\">";
+                     out (encode_stem(string s)); out ".html\">";
                      out (drop_qual s); out "</A>")
                  fun outlinks [] = ()
                    | outlinks [s] = link s
@@ -172,14 +172,14 @@ fun html (name,sectionl) ostrm =
                   Systeml.release ^ "-" ^ Int.toString Systeml.version)
   end;
 
-fun trans htmldir docdir docname = let
-  val docfile = OS.Path.joinBaseExt{base = OS.Path.concat(docdir, docname),
-                                 ext = SOME "doc"}
-  val outfile = OS.Path.joinBaseExt{base = OS.Path.concat(htmldir, docname),
-                                 ext = SOME "html"}
+fun trans htmldir docdir ((str,nm), docfile) = let
+  val docbase = OS.Path.base docfile
+  val docpath = OS.Path.concat (docdir, docfile)
+  val outfile = OS.Path.joinBaseExt{base = OS.Path.concat(htmldir, docbase),
+                                    ext = SOME "html"}
   val ostrm = TextIO.openOut outfile
 in
-    html (docname, parse_file docfile) ostrm
+    html ((if str <> "" then str ^ "." else "")^nm, parse_file docpath) ostrm
   ; TextIO.closeOut ostrm
 end handle e => die ("Exception raised: " ^ General.exnMessage e)
 
@@ -187,9 +187,9 @@ fun docdir_to_htmldir docdir htmldir =
  let open OS.FileSys
      val docfiles = ParseDoc.find_docfiles docdir
      val (tick, finish) = Flash.initialise ("Directory "^docdir^": ",
-                                            Binaryset.numItems docfiles)
+                                            Binarymap.numItems docfiles)
  in
-   Binaryset.app (fn d => (trans htmldir docdir d; tick())) docfiles;
+   Binarymap.app (fn d => (trans htmldir docdir d; tick())) docfiles;
    finish();
    OS.Process.exit OS.Process.success
  end

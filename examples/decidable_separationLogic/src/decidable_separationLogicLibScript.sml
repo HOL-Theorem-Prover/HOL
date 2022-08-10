@@ -137,10 +137,11 @@ val LENGTH_DELETE_ELEMENT = store_thm ("LENGTH_DELETE_ELEMENT",
    ]);
 
 
-val EL_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
-   ``(!n1 n2 l. ((n1 < n2) ==> (EL n1 (DELETE_ELEMENT n2 l) = EL n1 l))) /\
-     (!n1 n2 l. (~(n1 < n2) /\ (n1 < LENGTH l)) ==> (EL n1 (DELETE_ELEMENT n2 l) = EL (SUC n1) l))``,
-
+Theorem EL_DELETE_ELEMENT:
+  (!n1 n2 l. n1 < n2 ==> (EL n1 (DELETE_ELEMENT n2 l) = EL n1 l)) /\
+  (!n1 n2 l. ~(n1 < n2) /\ n1 < LENGTH l ==>
+             (EL n1 (DELETE_ELEMENT n2 l) = EL (SUC n1) l))
+Proof
    CONJ_TAC THENL [
       Induct_on `l` THENL [
          SIMP_TAC list_ss [DELETE_ELEMENT_THM],
@@ -154,14 +155,12 @@ val EL_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
          ]
       ],
 
-
       Induct_on `l` THENL [
          SIMP_TAC list_ss [DELETE_ELEMENT_THM],
 
          Cases_on `n1` THENL [
             SIMP_TAC list_ss [] THEN
             REPEAT STRIP_TAC THEN
-            `n2 = 0` by DECIDE_TAC THEN
             ASM_SIMP_TAC std_ss [DELETE_ELEMENT_THM],
 
 
@@ -173,7 +172,7 @@ val EL_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
          ]
       ]
    ]
-);
+QED
 
 
 

@@ -1,0 +1,7 @@
+This example is a verification of the dining cryptographers (DC) protocol.
+
+by Aaron R. Coble, July 2010 [1]
+maintained by Chun Tian, October 2019
+
+[1] Coble, A.R.: Anonymity, information, and machine-assisted proof,
+    University of Cambridge (2010). https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-785.pdf

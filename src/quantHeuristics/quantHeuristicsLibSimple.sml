@@ -212,13 +212,14 @@ fun sgsfwc_eq_fun l (sys : simple_guess_search_fun) avoid sgty_forall v tm =
     end;
 
 val default_eq_funs = [
-  (``FST``, pairSyntax.is_pair, pairTheory.FST),
-  (``SND``, pairSyntax.is_pair, pairTheory.SND),
-  (``HD``, listSyntax.is_cons, listTheory.HD),
-  (``TL``, listSyntax.is_cons, listTheory.TL),
-  (``THE``, optionSyntax.is_some, optionTheory.THE_DEF),
-  (``OUTL``, sumSyntax.is_inl, sumTheory.OUTL),
-  (``OUTR``, sumSyntax.is_inr, sumTheory.OUTR)]
+  (pairSyntax.fst_tm, pairSyntax.is_pair, pairTheory.FST),
+  (pairSyntax.snd_tm, pairSyntax.is_pair, pairTheory.SND),
+  (listSyntax.hd_tm, listSyntax.is_cons, listTheory.HD),
+  (listSyntax.tl_tm, listSyntax.is_cons, listTheory.TL),
+  (optionSyntax.the_tm, optionSyntax.is_some, optionTheory.THE_DEF),
+  (sumSyntax.outl_tm, sumSyntax.is_inl, sumTheory.OUTL),
+  (sumSyntax.outr_tm, sumSyntax.is_inr, sumTheory.OUTR)
+]
 
 
 fun combine_sgsfwcs (wc_l : simple_guess_search_fun_with_callback list)
@@ -357,13 +358,13 @@ fun SIMPLE_QUANT_INST_GEN_ss wcl = simpLib.SSFRAG
            trace=1,
            key=SOME ([],``@x:'a. P``),
            conv=K (K (SIMPLE_SELECT_INSTANTIATE_CONV_GEN wcl))}],
-   rewrs=[(SOME "HD_TL_EQ_THMS", HD_TL_EQ_THMS),
-          (SOME "SOME_THE_EQ", SOME_THE_EQ),
-          (SOME "FST_PAIR_EQ", FST_PAIR_EQ), (SOME "SND_PAIR_EQ", SND_PAIR_EQ),
-          (SOME "SOME_THE_EQ_SYM", SOME_THE_EQ_SYM),
-          (SOME "FST_PAIR_EQ_SYM", FST_PAIR_EQ_SYM),
-          (SOME "SND_PAIR_EQ_SYM", SND_PAIR_EQ_SYM)
-         ],filter=NONE,ac=[],dprocs=[],congs=[]};
+   rewrs=map (fn s => let val knm = {Thy = "quantHeuristics", Name = s}
+                      in
+                        (SOME knm, DB.fetch_knm knm)
+                      end)
+             ["HD_TL_EQ_THMS", "SOME_THE_EQ", "FST_PAIR_EQ", "SND_PAIR_EQ",
+              "SOME_THE_EQ_SYM", "FST_PAIR_EQ_SYM", "SND_PAIR_EQ_SYM"],
+   filter=NONE,ac=[],dprocs=[],congs=[]};
 
 val SIMPLE_QUANT_INST_ss = SIMPLE_QUANT_INST_GEN_ss default_sgsfwcs;
 

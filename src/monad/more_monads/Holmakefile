@@ -2,7 +2,7 @@ ifdef POLY
 HOLHEAP = ../../num/termination/numheap
 endif
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe selftest.log
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
@@ -15,7 +15,33 @@ selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo) state_transformerTheory.
 
 ifeq($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+all: $(ARTFILES) hol4-monad.art
+
 hol4-monad-unint.art: hol4-monad-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
+
+hol4-monad.art: hol4-monad.thy hol4-monad-unint.art ../../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-monad.thy hol4-monad.art
+	opentheory install --reinstall $<
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: selftest.log
+
+selftest.log: ./selftest.exe
+	./selftest.exe > $@ 2>&1
+
+endif
+
+EXTRA_CLEANS += selftest.log
+
+ifdef HOLBUILD
+all: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+
+.PHONY: link-to-sigobj
 endif

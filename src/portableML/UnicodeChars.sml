@@ -81,6 +81,10 @@ val double_langle = U 0x27EA
 val double_rangle = U 0x27EB
 val lensel = U 0x2987
 val lenser = U 0x2988
+val clgl = U 0x2308
+val clgr = U 0x2309
+val flrl = U 0x230A
+val flrr = U 0x230B
 
 
 (*stars*)

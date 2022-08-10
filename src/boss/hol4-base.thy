@@ -1,5 +1,5 @@
 name: hol-base
-version: 1.2
+version: 1.3
 description: HOL basic theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
@@ -152,7 +152,6 @@ proofs {
   interpret: const "HOL4.prove_base_assums.Data_List_map" as "Data.List.map"
   interpret: const "HOL4.prove_base_assums.Data_List_reverse" as "Data.List.reverse"
   interpret: const "HOL4.prove_base_assums.Data_List_head" as "Data.List.head"
-  interpret: const "HOL4.prove_base_assums.Data_List_tail" as "Data.List.tail"
   interpret: const "HOL4.prove_base_assums.Data_List_all" as "Data.List.all"
   interpret: const "HOL4.prove_base_assums.Data_List_any" as "Data.List.any"
   interpret: const "HOL4.prove_base_assums.Data_List_concat" as "Data.List.concat"

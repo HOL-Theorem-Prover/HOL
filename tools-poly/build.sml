@@ -25,7 +25,7 @@ datatype phase = Initial | Bare | Full
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,...} = cline_record
 val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
-val {multithread,...} = cline_record
+val {multithread,keepgoing,...} = cline_record
 
 open Systeml;
 
@@ -67,19 +67,25 @@ val Holmake = let
   end
 in
   buildutils.Holmake aug_systeml isSuccess
-                     (fn () => ("-j"^Int.toString jobcount) ::
-                               ((if relocbuild then ["--relocbuild"] else []) @
-                                (if debug then ["--dbg"] else []) @
-                                (case multithread of
-                                     NONE => []
-                                   | SOME i => ["--mt="^Int.toString i]) @
-                                phase_extras()))
-                     analysis selftest_level
+    (fn () => (case jobcount of NONE => [] | SOME j => ["-j"^Int.toString j]) @
+              (if relocbuild then ["--relocbuild"] else []) @
+              (if debug then ["--dbg"] else []) @
+              (if keepgoing then ["-k"] else []) @
+              (case multithread of
+                   NONE => []
+                 | SOME i => ["--mt="^Int.toString i]) @
+              phase_extras())
+    analysis selftest_level
 end
 
 (* create a symbolic link - Unix only *)
 fun link b s1 s2 =
-    Posix.FileSys.symlink {new = s2, old = s1}
+    let val actual_old = case HFS_NameMunge.HOLtoFS s1 of
+                             NONE => s1
+                           | SOME {fullfile, ...} => fullfile
+    in
+      Posix.FileSys.symlink {new = s2, old = actual_old}
+    end
     handle OS.SysErr (s, _) =>
            die ("Unable to link old file "^quote s1^" to new file "
                 ^quote s2^": "^s)
@@ -123,8 +129,10 @@ fun buildDir symlink s =
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
+
 fun build_hol symlink = let
 in
+  remove_all_holmkdirs();
   clean_sigobj();
   setup_logfile();
   build_src symlink
@@ -148,7 +156,7 @@ val _ = check_againstB "tools/Holmake/Systeml.sig"
 
 val _ = let
   val fP = fullPath
-  open OS.FileSys
+  open HOLFileSys
   val hmake = fP [HOLDIR,"bin",xable_string "Holmake"]
 in
   if access(hmake, [A_READ, A_EXEC]) then

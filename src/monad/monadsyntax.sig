@@ -19,6 +19,8 @@ sig
   val disable_monadsyntax : unit -> unit
   val temp_disable_monadsyntax : unit -> unit
 
+  val print_explicit_monadic_lets : bool -> unit
+
   type monadinfo =
        { bind : term,
          ignorebind : term option,

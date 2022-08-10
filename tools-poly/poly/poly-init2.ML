@@ -7,6 +7,12 @@ val _ = use "Holmake/Systeml.sml"
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sig";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sml";
+val _ = use "../tools/Holmake/HOLFS_dtype.sml";
+val _ = use "../tools/Holmake/HFS_NameMunge.sig";
+val _ = use "../tools/Holmake/poly/HFS_NameMunge.sml";
+val _ = use "../tools/Holmake/HOLFS_dtype.sml";
+val _ = use "../tools/Holmake/HOLFileSys.sig";
+val _ = use "../tools/Holmake/HOLFileSys.sml";
 val _ = use "../tools/Holmake/QFRead.sig";
 val _ = use "../tools/Holmake/QFRead.sml";
 val _ = use "poly/quse.sig";
@@ -21,31 +27,27 @@ local
   fun warn s = (TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n");
                 TextIO.flushOut TextIO.stdErr)
 
-  val redirected_files = ["mlibOmegaint.sml"];
   val meta_debug = ref false
 
   fun MDBG s = if !meta_debug then
                  TextIO.output(TextIO.stdOut, "META_DEBUG: " ^ s() ^ "\n")
                else ()
 
-  fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ());
   infix ++
   fun p1 ++ p2 = OS.Path.concat (p1, p2)
   open Systeml
-  fun unquote_to file1 file2 =
-      systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
 
-structure FS = OS.FileSys
+structure HFS = HOLFileSys
 
 val loadpathdb =
     ref (Binarymap.mkDict String.compare : (string,string) Binarymap.dict)
 
 fun quse s = let
-  val _ = if FS.access (s, [FS.A_READ]) then ()
+  val _ = if HFS.access (s, [HFS.A_READ]) then ()
           else die ("Use: non-existent file "^s)
   val _ = MDBG (fn _ => "Call quse " ^ s)
   val full = OS.Path.mkCanonical
-               (OS.Path.mkAbsolute{path = s, relativeTo = OS.FileSys.getDir()})
+               (OS.Path.mkAbsolute{path = s, relativeTo = HFS.getDir()})
 in
   QUse.use s ;
   loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
@@ -62,11 +64,7 @@ fun myuse f =
       val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
-    ((if List.exists (fn f => f = file) redirected_files then
-        quse (Systeml.HOLDIR ++ "tools-poly" ++ "poly" ++ "redirects" ++ file)
-      else
-        quse f)
-     handle e => (PolyML.print_depth pd; raise e));
+    (quse f handle e => (PolyML.print_depth pd; raise e));
     PolyML.print_depth pd
   end handle OS.Path.Path => die ("Path exception in myuse "^f)
 
@@ -82,11 +80,11 @@ fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
       let val path =
          OS.Path.mkAbsolute
-           {path = modPath, relativeTo = OS.Path.mkAbsolute
-                                           {path=search,
-                                            relativeTo = OS.FileSys.getDir ()}};
+           {path = modPath,
+            relativeTo = OS.Path.mkAbsolute
+                           {path=search, relativeTo = HFS.getDir ()}};
       in
-        if OS.FileSys.access (path, []) then
+        if HFS.access (path, []) then
           SOME path
         else
           findUo modPath rest
@@ -96,10 +94,10 @@ val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
 fun loadUo ps uo =
   let
-    val i = TextIO.openIn uo
+    val i = HFS.openIn uo
     val files =
-      String.tokens (fn c => c = #"\n") (TextIO.inputAll i)
-    val _ = TextIO.closeIn i
+      String.tokens (fn c => c = #"\n") (HFS.inputAll i)
+    val _ = HFS.closeIn i
     fun str f = ">" ^ f ^ "< -- " ^ String.concatWith " -- " ps
     fun loadOne f =
       (case OS.Path.ext f of
@@ -169,7 +167,7 @@ end;
 
 structure Path = OS.Path;
 structure Process = OS.Process;
-structure FileSys = OS.FileSys;
+structure FileSys = HOLFileSys;
 
 exception Interrupt = SML90.Interrupt;
 exception Io = IO.Io;

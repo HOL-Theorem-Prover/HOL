@@ -62,7 +62,7 @@ local
   val riscv_instr_tm =
      Term.prim_mk_const {Thy = "riscv_prog", Name = "riscv_instr"}
   val strip_concat =
-    HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_concat)
+    HolKernel.strip_binop wordsSyntax.dest_word_concat
   val pc_tm = ``^st.c_PC ^id_tm``
   val pc_var = stateLib.gvar "pc" dword
   fun is_mem_access tm =
@@ -176,7 +176,7 @@ local
        | (NONE, SOME _) => General.LESS
        | (NONE, NONE) => Term.compare (w1, w2)
    val register = #2 o dest_riscv_gpr
-   val address = HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_add) o
+   val address = HolKernel.strip_binop wordsSyntax.dest_word_add o
                  fst o dest_riscv_MEM
 in
    fun psort p =
@@ -219,17 +219,19 @@ local
     in
       (np @ p, nq @ q)
     end
+  fun mkfup f =
+      "riscv$" ^
+      TypeBasePure.mk_recordtype_fieldfupd{tyname = "riscv_state",fieldname = f}
 in
   val riscv_write_footprint =
     fix_id o
     stateLib.write_footprint riscv_1 riscv_2
-     [("riscv$riscv_state_MEM8_fupd", "riscv_MEM8", ``^st.MEM8``),
-      ("riscv$riscv_state_c_PC_fupd", "riscv_c_PC", ``^st.c_PC``),
-      ("riscv$riscv_state_c_NextFetch_fupd", "riscv_c_NextFetch",
-       ``^st.c_NextFetch``),
-      ("riscv$riscv_state_c_Skip_fupd", "riscv_c_Skip", ``^st.c_Skip``)
+     [(mkfup "MEM8",        "riscv_MEM8",        ``^st.MEM8``),
+      (mkfup "c_PC",        "riscv_c_PC",        ``^st.c_PC``),
+      (mkfup "c_NextFetch", "riscv_c_NextFetch", ``^st.c_NextFetch``),
+      (mkfup "c_Skip",      "riscv_c_Skip",      ``^st.c_Skip``)
      ] [] []
-     [("riscv$riscv_state_c_gpr_fupd", c_gpr_write)
+     [(mkfup "c_gpr", c_gpr_write)
      ]
      (K false)
 end
@@ -277,13 +279,16 @@ in
 end
 
 local
+  fun mkselnm ty f = TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
   val id0 = wordsSyntax.mk_wordii (0, 8)
   val rv64 = wordsSyntax.mk_wordii (2, 2)
   val rv64_rule =
     PURE_REWRITE_RULE
       [GSYM riscv_progTheory.riscv_REG_def, GSYM riscv_progTheory.riscv_PC_def]
-  val (_, mk_mcpuid, _, _) = HolKernel.syntax_fns1 "riscv" "MachineCSR_mcpuid"
-  val (_, mk_ArchBase, _, _) = HolKernel.syntax_fns1 "riscv" "mcpuid_ArchBase"
+  val (_, mk_mcpuid, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "MachineCSR" "mcpuid")
+  val (_, mk_ArchBase, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "mcpuid" "ArchBase")
   val pre = progSyntax.strip_star o temporal_stateSyntax.dest_pre' o Thm.concl
 
 

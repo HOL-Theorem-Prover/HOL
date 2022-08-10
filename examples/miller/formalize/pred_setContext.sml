@@ -15,7 +15,7 @@ if !show_assums then () else
 *)
 
 open pairTheory pred_setTheory extra_pred_setTheory
-     res_quanTheory HurdUseful ho_proverTools res_quanTools subtypeTools
+     res_quanTheory hurdUtils ho_proverTools res_quanTools subtypeTools
      boolContext;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL;
@@ -60,7 +60,7 @@ val pred_set_pc = precontext_add
     INTER_EMPTY, UNION_EMPTY, NOT_INSERT_EMPTY, NOT_EMPTY_INSERT,
     EMPTY_UNION, EMPTY_UNION_ALT, FINITE_DELETE, FINITE_SUBTYPE_REWRITE,
     IMAGE_EMPTY, IMAGE_EQ_EMPTY, NONEMPTY_SUBTYPE_REWRITE,
-    LIST_ELTS, FINITE_BIJ, DELETE_THEN_INSERT])
+    listTheory.MEM_SET_TO_LIST, FINITE_BIJ, DELETE_THEN_INSERT])
   bool_pc;
 
 (* The context *)

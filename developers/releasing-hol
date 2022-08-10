@@ -17,6 +17,12 @@ case `uname` in
                 die "Need GNU tar on MacOS"
              else
                  TAR=gtar
+             fi
+             if [ -x "/usr/local/opt/gnu-getopt/bin/getopt" ]
+             then
+                 PATH="/usr/local/opt/gnu-getopt/bin":$PATH
+             else
+                 die "Need GNU getopt in /usr/local/opt/gnu-getopt/bin (use brew)"
              fi ;;
     * ) TAR=tar
 esac
@@ -32,14 +38,6 @@ usage () {
   echo "  Use --reuse-checkout to reuse local checkout of <ref>" >&2
   exit 1
 }
-
-if [ $(uname) = "Darwin" ]
-then
-    if [ -d "/usr/local/opt/gnu-getopt/bin" ]
-    then
-        PATH="/usr/local/opt/gnu-getopt/bin":$PATH
-    fi
-fi
 
 reusecommit=0
 TEMP=$(getopt -n releasing-hol -o '' -lrelname: -lreuse-checkout -- "$@")
@@ -179,7 +177,7 @@ else
 fi
 
 echo ; echo Building documentation
-for man_name in Reference Description Tutorial Quick Logic Developers
+for man_name in Description Developers Interaction-emacs Lassie-Tutorial Logic Quick Reference Tutorial
 do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo -n "  $man_name"
@@ -200,13 +198,15 @@ done
 
 echo ; echo Cleaning up
 cd $archive
-(while read line ; do
-  case $line in
+while read line 
+do
+  case "$line" in
       \#* ) : ;;
       * ) (/bin/rm -r $line 2> /dev/null && echo "  Removed $line") ||
         warn "  *** Couldn't delete $line ***"
   esac
- done) < $localholdir/developers/deleted-in-release.txt
+done < $localholdir/developers/deleted-in-release.txt
+echo "Removed files listed for deletion; now removing .gitignore files"
 find . -name '.gitignore' -delete
 
 echo
@@ -222,10 +222,10 @@ then
     (cd sigobj ; /bin/rm Systeml.{uo,ui})
     (cd tools/mllex ; ../../bin/Holmake cleanAll)
     (cd help/src-sml ; ../../bin/Holmake cleanAll)
+    cd bin
+    echo "Cleaning bin/"
+    /bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs /bin/rm
 fi
-
-cd bin
-/bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs /bin/rm
 
 cd /tmp
 

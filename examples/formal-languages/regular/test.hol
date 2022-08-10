@@ -4,7 +4,7 @@ load "regexpLib";
 (* Matchers                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun matcher q = #matchfn(regexpLib.matcher regexpLib.HOL (Regexp_Type.fromQuote q));
+fun matcher q = #matchfn(regexpLib.gen_dfa regexpLib.HOL (Regexp_Type.fromQuote q));
 
 val test = matcher `foobar`;
  not (test "fo2b")
@@ -160,6 +160,25 @@ val utf8_matcher =
   `([\000-\127]|[\192-\223][\128-\191]|[\224-\239][\128-\191][\128-\191]|[\240-\244][\128-\191][\128-\191][\128-\191])*`;
 
 (*---------------------------------------------------------------------------*)
+(* Time-stamped data in JSON format                                          *)
+(*---------------------------------------------------------------------------*)
+(* Expensive, so commented out
+
+val time_matcher = time matcher
+  `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
+
+time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
+  andalso
+not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
+*)
+
+(* message formats via intervals *)
+
+(*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
 (*                                                                           *)
 (* http://www.caemax.de/Downloads/QIC/QIC_GPS_DE.pdf                         *)
@@ -201,69 +220,23 @@ val utf8_matcher =
 
 val test_1800 = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
 val test_1801 = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val test_1801_packed = matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
 val test_1802 = matcher `\i{0,9999}\i{0,3599}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val test_1803 = matcher `\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
 val test_18xx = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999}\i{0,3599}\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
-(*---------------------------------------------------------------------------*)
-(* Time-stamped data in JSON format                                          *)
-(*---------------------------------------------------------------------------*)
-(* Expensive, so commented out
 
-val time_matcher = time matcher
-  `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
+matcher `\i{1,31}`;
+matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}`;
+matcher `\i{~90,90}`;
+matcher `\i{~180,180}`;
+matcher `\i{0,17999}`;
+matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
+matcher `.{8}\i{0,1}\i{~90,90}\i{0,360}`;
+matcher `.{8}(t|f)\i{~90,90}\i{0,360}`;
 
-time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
-  andalso
-not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
-  andalso
-time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
-  andalso
-time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
-*)
-
-(*---------------------------------------------------------------------------*)
-(* Timing tests for search-only                                              *)
-(*---------------------------------------------------------------------------*)
-(*
-
-val dom =
- let open regexpSyntax Regexp_Type regexpLib
-     val regexpEval = Count.apply (computeLib.CBV_CONV (regexp_compset()))
- in fn quote => ignore
-                (regexpEval ``dom_Brz_alt empty
-                                [normalize ^(mk_regexp(fromQuote quote))]``)
-end;
-
-val _ =
- List.app dom
-  [`1`,
-   `.*1`,
-   `[0-9]`,
-   `[0-9]*`,
-   `(.*1)(12)*`,
-   `b*|b*(a|ab*a)b*`,
-   `b*ab*ab*`,
-   `[]*|.|..|...`,
-   `.?|..|...`,
-   `.|(ab)*|(ba)*`,
-   `~(.*(aa|bb).*)`,
-   `(.*00.*)&~(.*01)`,
-   `(.*111.*)&~(.*01|11*)`
-  ];
-
-print "\nDONE.\n"
-
-dom `\w{1,2}`;
-dom `\w{1,3}`;
-dom `\w{1,4}`;
-dom `\w{1,5}`;
-dom `\w{1,6}`;
-dom `\w{1,10}`;
-dom `\w{1,15}`;
-dom `\w{1,20}`;
-
-*)
+(* gps *)
+matcher `\i{~90,90}\i{~180,180}\{0,17999}`;
+matcher `(\i{~90,90}\i{~180,180}\{0,17999}){4}`;  (* slow *)
+matcher `.{8}(t|f)(\i{~90,90}\i{~180,180}\{0,17999}){4}`; (* slow *)

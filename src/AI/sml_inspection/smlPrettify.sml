@@ -12,21 +12,29 @@ open HolKernel Abbrev boolLib Tactical aiLib smlTimeout smlLexer smlExecute
 
 val ERR = mk_HOL_ERR "smlPrettify"
 
-(*---------------------------------------------------------------------------
-  Removing unnecessary parentheses
-  ----------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+   Removing unnecessary parentheses
+   --------------------------------------------------------------------------*)
+
+fun is_par s = mem s ["(",")"]
 
 fun elim_par sl = case sl of
     [] => []
-  | ["(",a,")"] => [a]
-  | ["(","(",a,")",")"] => [a]
-  | "(" :: a :: ")" :: m => a :: elim_par m
-  | "(" :: "(" :: a :: ")" :: ")" :: m => a :: elim_par m
+  | ["(",a,")"] => if is_par a then sl else [a]
+  | ["(","(",a,")",")"] => if is_par a then sl else [a]
+  | "(" :: a :: ")" :: m =>
+    if is_par a
+    then "(" :: a :: ")" :: elim_par m
+    else a :: elim_par m
+  | "(" :: "(" :: a :: ")" :: ")" :: m =>
+    if is_par a
+    then "(" :: "(" :: a :: ")" :: ")" :: elim_par m
+    else a :: elim_par m
   | a :: m => a :: elim_par m
 
-(*----------------------------------------------------------------------------
-  Remove infix guards
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Remove infix guards
+   ------------------------------------------------------------------------- *)
 
 fun is_infix_open s =
   String.isPrefix "sml_infix" s andalso
@@ -44,16 +52,22 @@ fun elim_infix sl = case sl of
     else a :: elim_infix (b :: c :: m)
   | a :: m => a :: elim_infix m
 
-(*----------------------------------------------------------------------------
-  Removing structure prefixes
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Removing structure prefixes. Also prefers lower case if available.
+   ------------------------------------------------------------------------- *)
 
 fun drop_struct long =
   let
-    val l = String.tokens (fn x => x = #".") long
-    val short = last l
+    val sl = String.tokens (fn x => x = #".") long
+    val short = last sl
+    val lower = String.translate (Char.toString o Char.toLower) short
   in
-    if length l = 1 orelse not (is_pointer_eq long short) then long else short
+    if length sl = 1 then long
+    else if is_local_value lower andalso is_pointer_eq long lower
+      then lower
+    else if is_local_value short andalso is_pointer_eq long short
+      then short
+    else long
   end
 
 fun elim_struct sl = map drop_struct sl

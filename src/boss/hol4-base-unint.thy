@@ -5,32 +5,34 @@ author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
   import: bool
+  import: normal-forms
   import: marker
+  import: num
   import: combin
+  import: sat
   import: relation
   import: one
   import: pair
-  import: poset
-  import: option
-  import: sat
-  import: sum
-  import: num
   import: prim-rec
   import: arithmetic
+  import: sum
+  import: poset
   import: numeral
+  import: option
   import: basic-size
   import: while
-  import: numpair
   import: divides
-  import: logroot
-  import: gcd
-  import: bit
-  import: numeral-bit
-  import: pred-set
+  import: numpair
   import: ind-type
+  import: gcd
+  import: pred-set
   import: list
   import: rich-list
+  import: logroot
+  import: set-relation
   import: indexed-lists
+  import: bit
+  import: numeral-bit
   import: numposrep
 }
 bool {
@@ -40,6 +42,10 @@ bool {
   interpret: const "HOL4.bool_defs.IN" as "HOL4.bool.IN"
   interpret: const "HOL4.bool_defs.TYPE_DEFINITION" as "HOL4.bool.TYPE_DEFINITION"
   interpret: const "HOL4.bool_defs.ARB" as "HOL4.bool.ARB"
+}
+normal-forms {
+  import: bool
+  article: "../metis/normalForms.ot.art"
 }
 marker {
   import: bool
@@ -53,30 +59,34 @@ combin {
 relation {
   import: bool
   import: combin
+  import: sat
   article: "../relation/relation.ot.art"
 }
 one {
   import: bool
-  article: "../one/one.ot.art"
+  article: "../coretypes/one.ot.art"
 }
 pair {
   import: bool
+  import: combin
   import: relation
-  article: "../pair/src/pair.ot.art"
+  article: "../coretypes/pair.ot.art"
 }
 poset {
   import: bool
   import: pair
-  article: "../pair/src/poset.ot.art"
+  article: "../coretypes/poset.ot.art"
 }
 sum {
   import: bool
   import: combin
-  article: "../sum/sum.ot.art"
+  article: "../coretypes/sum.ot.art"
 }
 option {
   import: bool
-  article: "../option/option.ot.art"
+  import: combin
+  import: relation
+  article: "../coretypes/option.ot.art"
 }
 num {
   import: bool
@@ -106,10 +116,13 @@ numeral {
 basic-size {
   import: bool
   import: pair
+  import: sum
+  import: option
   article: "../num/theories/basicSize.ot.art"
 }
 while {
   import: bool
+  import: combin
   import: arithmetic
   article: "../num/theories/while.ot.art"
 }
@@ -118,7 +131,6 @@ numpair {
   import: pair
   import: numeral
   import: relation
-  import: marker
   import: prim-rec
   import: relation
   article: "../num/extra_theories/numpair.ot.art"
@@ -143,6 +155,7 @@ logroot {
 }
 gcd {
   import: bool
+  import: marker
   import: combin
   import: num
   import: arithmetic
@@ -150,6 +163,7 @@ gcd {
   import: divides
   import: pair
   import: relation
+  import: basic-size
   article: "../num/extra_theories/gcd.ot.art"
 }
 bit {
@@ -176,16 +190,29 @@ numeral-bit {
 }
 pred-set {
   import: bool
+  import: combin
   import: pair
   import: relation
   import: option
   import: arithmetic
   import: while
   import: prim-rec
+  import: normal-forms
   import: numeral
   import: numpair
   import: marker
+  import: divides
   article: "../pred_set/src/pred_set.ot.art"
+}
+set-relation {
+  import: bool
+  import: marker
+  import: pred-set
+  import: pair
+  import: arithmetic
+  import: option
+  import: relation
+  article: "../pred_set/src/set_relation.ot.art"
 }
 ind-type {
   import: bool
@@ -207,15 +234,18 @@ list {
 }
 rich-list {
   import: bool
+  import: marker
+  import: combin
   import: list
   import: arithmetic
-  import: combin
+  import: pred-set
   article: "../list/src/rich_list.ot.art"
 }
 indexed-lists {
   import: bool
   import: list
   import: relation
+  import: pred-set
   article: "../list/src/indexedLists.ot.art"
 }
 numposrep {
@@ -227,6 +257,7 @@ numposrep {
   import: numeral
   import: marker
   import: relation
+  import: basic-size
   article: "../list/src/numposrep.ot.art"
 }
 sat {

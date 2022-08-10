@@ -1,2 +1,3 @@
-INCLUDES=${HOLDIR}/examples/PSL/path ${HOLDIR}/examples/PSL/1.1/official-semantics/
-
+INCLUDES = ${HOLDIR}/examples/PSL/path \
+           ${HOLDIR}/examples/PSL/1.1/official-semantics/ \
+           $(HOLDIR)/src/rational # for schneiderUtils

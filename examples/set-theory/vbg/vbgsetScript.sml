@@ -1,7 +1,6 @@
 (* Playing around with what is really Morse-Kelley set theory *)
 
 open HolKernel boolLib bossLib Parse
-open lcsymtacs
 open boolSimps
 
 val _ = new_theory "vbgset"

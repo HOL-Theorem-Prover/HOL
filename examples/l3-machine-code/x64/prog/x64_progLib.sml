@@ -91,11 +91,13 @@ local
        | NONE => (case Lib.total combinSyntax.dest_I tm of
                      SOME i => is_imm_var i
                    | NONE => wordsSyntax.is_n2w tm)
+   val memaccnm =
+       "x64$" ^ TypeBasePure.mk_recordtype_fieldsel
+                  {tyname="x64_state", fieldname="MEM"}
    fun is_mem_access v tm =
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
-            stateLib.is_code_access ("x64$x64_state_MEM", v) l andalso
-            is_opc_byte r
+            stateLib.is_code_access (memaccnm, v) l andalso is_opc_byte r
        | NONE => false
 in
    fun mk_x64_code_pool thm =
@@ -131,16 +133,19 @@ local
    val st = Term.mk_var ("s", ``:x64_state``)
    val MEM_tm = ``^st.MEM``
    fun err () = raise ERR "x64_write_footprint" "mem"
+   fun fup f =
+       "x64$" ^ TypeBasePure.mk_recordtype_fieldfupd
+                  {tyname="x64_state",fieldname=f}
 in
    val x64_write_footprint =
       stateLib.write_footprint x64_1 x64_2
-         [("x64$x64_state_REG_fupd", "x64_REG", ``^st.REG``),
-          ("x64$x64_state_XMM_REG_fupd", "x64_XMM_REG", ``^st.XMM_REG``),
-          ("x64$x64_state_EFLAGS_fupd", "x64_EFLAGS", ``^st.EFLAGS``)]
+         [(fup "REG", "x64_REG", ``^st.REG``),
+          (fup "XMM_REG", "x64_XMM_REG", ``^st.XMM_REG``),
+          (fup "EFLAGS", "x64_EFLAGS", ``^st.EFLAGS``)]
          []
-         [("x64$x64_state_RIP_fupd", "x64_RIP"),
-          ("x64$x64_state_MXCSR_fupd", "x64_MXCSR")]
-         [("x64$x64_state_MEM_fupd",
+         [(fup "RIP", "x64_RIP"),
+          (fup "MXCSR", "x64_MXCSR")]
+         [(fup "MEM",
              fn (p, q, m) =>
                 let
                    val l =

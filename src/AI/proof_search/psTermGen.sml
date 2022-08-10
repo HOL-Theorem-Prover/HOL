@@ -12,9 +12,13 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "psTermGen"
 
-fun int_product nl = case nl of
-    [] => 1
-  | a :: m => a * int_product m
+fun product_real rl = case rl of
+    [] => 1.0
+  | a :: m => a * product_real m
+
+fun sum_real rl = case rl of
+    [] => 0.0
+  | a :: m => a + sum_real m
 
 fun im_ty oper = snd (strip_type (type_of oper))
 
@@ -23,22 +27,22 @@ fun im_ty oper = snd (strip_type (type_of oper))
    ------------------------------------------------------------------------- *)
 
 fun ntermc cache operl (size,ty) =
-  if size <= 0 then 0 else
+  if size <= 0 then 0.0 else
   dfind (size,ty) (!cache) handle NotFound =>
-  let val n = sum_int (map (ntermc_oper cache operl (size,ty)) operl) in
+  let val n = sum_real (map (ntermc_oper cache operl (size,ty)) operl) in
     cache := dadd (size,ty) n (!cache); n
   end
 and ntermc_oper cache operl (size,ty) oper =
   let val (tyargl,im) = strip_type (type_of oper) in
-    if ty <> im orelse size <= 0 then 0 else
-    if null tyargl andalso size <> 1 then 0 else (* first-order *)
-    if null tyargl andalso size = 1 then 1 else
+    if ty <> im orelse size <= 0 then 0.0 else
+    if null tyargl andalso size <> 1 then 0.0 else (* first-order *)
+    if null tyargl andalso size = 1 then 1.0 else
     let
       val nll = number_partition (length tyargl) (size - 1)
                 handle HOL_ERR _ => []
-      fun f nl = int_product (map (ntermc cache operl) (combine (nl,tyargl)))
+      fun f nl = product_real (map (ntermc cache operl) (combine (nl,tyargl)))
     in
-      sum_int (map f nll)
+      sum_real (map f nll)
     end
   end
 
@@ -48,28 +52,27 @@ and ntermc_oper cache operl (size,ty) oper =
    ------------------------------------------------------------------------- *)
 
 fun random_termc cache operl (size,ty) =
-  if ntermc cache operl (size,ty) <= 0 then raise ERR "random_term" "" else
+  if ntermc cache operl (size,ty) < epsilon
+    then raise ERR "random_term" "" else
   let
     val freql1 = map_assoc (ntermc_oper cache operl (size,ty)) operl
-    val freql2 = filter (fn x => snd x > 0) freql1
-    val freql3 = map_snd Real.fromInt freql2
+    val freql2 = filter (fn x => snd x > epsilon) freql1
   in
-    random_termc_oper cache operl (size,ty) (select_in_distrib freql3)
+    random_termc_oper cache operl (size,ty) (select_in_distrib freql2)
   end
 and random_termc_oper cache operl (size,ty) oper =
   let val (tyargl,im) = strip_type (type_of oper) in
-    if ntermc_oper cache operl (size,ty) oper <= 0
+    if ntermc_oper cache operl (size,ty) oper <= epsilon
       then raise ERR "random_term_oper" "" else
     if null tyargl then oper else
     let
       val nll = number_partition (length tyargl) (size - 1)
                 handle HOL_ERR _ => raise ERR "random_term_oper" ""
       fun f nl =
-        (int_product (map (ntermc cache operl) (combine (nl,tyargl))))
+        (product_real (map (ntermc cache operl) (combine (nl,tyargl))))
       val freql1 = map_assoc f nll
-      val freql2 = filter (fn x => snd x > 0) freql1
-      val freql3 = map_snd Real.fromInt freql2
-      val nl_chosen = select_in_distrib freql3
+      val freql2 = filter (fn x => snd x > epsilon) freql1
+      val nl_chosen = select_in_distrib freql2
       val argl = map (random_termc cache operl) (combine (nl_chosen,tyargl))
     in
       list_mk_comb (oper,argl)
@@ -133,7 +136,7 @@ fun gen_term operl (size,ty) =
     val tycset = map (fn x => (type_of x, x)) operl
     val d = dregroup Type.compare tycset
     val cache = ref (dnew Int.compare [(1,d)])
-    fun g n = dfind ty (gen_size cache n) handle NotFound => []
+    fun g n = dfind ty (gen_size cache (n+1)) handle NotFound => []
   in
     List.concat (List.tabulate (size, g))
   end

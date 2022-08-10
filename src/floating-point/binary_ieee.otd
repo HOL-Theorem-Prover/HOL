@@ -1,8 +1,12 @@
+skipthm datatype_flags
+skipthm flags_TY_DEF
 skipthm datatype_float
 skipthm float_TY_DEF
 skipthm datatype_float_compare
 skipthm float_compare_TY_DEF
 skipthm datatype_float_value
 skipthm float_value_TY_DEF
+skipthm datatype_fp_op
+skipthm fp_op_TY_DEF
 skipthm datatype_rounding
 skipthm rounding_TY_DEF

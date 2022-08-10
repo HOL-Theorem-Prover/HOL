@@ -269,6 +269,7 @@ val list_no_len_qp = combine_qps [
 val list_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
                      LIST_LENGTH_1]) list_no_len_qp;
 
+val LIST_LENGTH_20 = DB.fetch "quantHeuristics" "LIST_LENGTH_20"
 val list_len_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
                      LIST_LENGTH_20]) list_no_len_qp;
 
@@ -331,15 +332,16 @@ val t = ``r1.field1``
 fun QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P sys v t =
 let
    (*check whether something should be done*)
-   val v_info = case TypeBase.fetch (type_of v) of NONE   => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
-                                                 | SOME x => x
+   val v_info = case TypeBase.fetch (type_of v) of
+                    NONE   => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+                  | SOME x => x
    val _ = if null (TypeBasePure.fields_of v_info) orelse not (P v t) then
               raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else ()
    val (thyname,typename) = TypeBasePure.ty_name_of v_info
 
    val vars = let
       val (v_name,_) = dest_var v
-      fun mk_new_var (s, ty) = mk_var (s, ty);
+      fun mk_new_var (s, {ty,...}) = mk_var (s, ty);
       in
          map mk_new_var (TypeBasePure.fields_of v_info)
       end;

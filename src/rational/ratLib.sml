@@ -3,20 +3,11 @@ struct
 
 open HolKernel boolLib Parse bossLib;
 
-(* interactive mode
-app load ["simpLib", "pairLib", "intExtensionTheory",
-        "jbUtils", "schneiderUtils", "intLib",
-        "fracTheory", "fracLib", "fracUtils",
-        "ratTheory", "ratUtils", "integerRingLib"];
-*)
+open simpLib pairLib integerTheory intLib intExtensionTheory jbUtils
+     schneiderUtils fracTheory fracLib fracUtils ratTheory ratUtils
+     integerRingLib ratSyntax;
 
-open
-        simpLib pairLib integerTheory intLib intExtensionTheory
-        jbUtils schneiderUtils
-        fracTheory fracLib fracUtils
-        ratTheory ratUtils integerRingLib ratSyntax;
-
-val ERR = mk_HOL_ERR "ratLib"
+val ERR = mk_HOL_ERR "ratLib";
 
 (*--------------------------------------------------------------------------
  *  imported from fracLib
@@ -59,7 +50,7 @@ handle HOL_ERR _ => raise ERR "RAT_EQ_CONV" "";
  *--------------------------------------------------------------------------*)
 
 fun RAT_EQ_TAC (asm_list,goal) =
-        (SUBST_TAC[RAT_EQ_CONV goal]) (asm_list,goal)
+   (SUBST_TAC[RAT_EQ_CONV goal]) (asm_list,goal)
 handle HOL_ERR _ => raise ERR "RAT_EQ_TAC" "";
 
 
@@ -441,19 +432,41 @@ val RAT_ELIMINATE_MINV_TAC = CONV_TAC RAT_ELIMINATE_MINV_CONV;
  * rewrite rules to calculate rational expressions
  *--------------------------------------------------------------------------*)
 
-(* rewrites to calculate operations on integers - (TODO) remove dependencies: numRingTheory and integerRingTheory *)
+(* rewrites to calculate operations on integers
+   (TODO) remove dependencies: numRingTheory and integerRingTheory
+ *)
 local open numeralTheory numRingTheory integerRingTheory in
-        val num_rewrites = [numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc, numeral_add, numeral_mult, iDUB_removal, ISPEC(``arithmetic$ZERO``) REFL_CLAUSE, ISPEC(``0:num``) REFL_CLAUSE ];
-        val int_rewrites = [int_calculate, INT_0, INT_1, numeral_lt, numeral_lte, numeral_sub, iSUB_THM, AND_CLAUSES, SGN_def] @ num_rewrites
-end;
+
+val num_rewrites =
+   [numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc, numeral_add,
+    numeral_mult, iDUB_removal,
+    ISPEC (``arithmetic$ZERO``) REFL_CLAUSE,
+    ISPEC (``0:num``) REFL_CLAUSE ];
+
+val int_rewrites =
+   [int_calculate, INT_0, INT_1, numeral_lt, numeral_lte, numeral_sub,
+    iSUB_THM, AND_CLAUSES, SGN_def] @ num_rewrites
+
+end; (* local *)
+
 (* rewrites to calculate operations on fractions *)
-val frac_rewrites = [FRAC_0_SAVE, FRAC_1_SAVE, FRAC_AINV_SAVE, FRAC_ADD_SAVE, FRAC_MUL_SAVE];
+val frac_rewrites =
+   [FRAC_0_SAVE, FRAC_1_SAVE, FRAC_AINV_SAVE, FRAC_ADD_SAVE, FRAC_MUL_SAVE];
+
 (* rewrites to calculate operations on rational numbers *)
-val rat_basic_rewrites = [rat_0, rat_1, rat_0_def, rat_1_def, RAT_AINV_CALCULATE, RAT_ADD_CALCULATE, RAT_MUL_CALCULATE] @ frac_rewrites;
+val rat_basic_rewrites =
+   [rat_0, rat_1, rat_0_def, rat_1_def, RAT_AINV_CALCULATE, RAT_ADD_CALCULATE,
+    RAT_MUL_CALCULATE] @ frac_rewrites;
+
 (* rewrites to additionally decide equalities and inequalities on rational numbers *)
-val rat_rewrites = [RAT_EQ_CALCULATE, RAT_LES_CALCULATE, rat_gre_def, rat_leq_def, rat_geq_def, FRAC_NMR_SAVE, FRAC_DNM_SAVE] @ rat_basic_rewrites;
+val rat_rewrites =
+   [RAT_EQ_CALCULATE, RAT_LES_CALCULATE, rat_gre_def, rat_leq_def, rat_geq_def,
+    FRAC_NMR_SAVE, FRAC_DNM_SAVE] @ rat_basic_rewrites;
+
 (* rewrites to decide equalities on rationals in numeral form *)
-val rat_num_rewrites = [RAT_ADD_NUM_CALCULATE, RAT_MUL_NUM_CALCULATE, RAT_EQ_NUM_CALCULATE, RAT_AINV_AINV, RAT_AINV_0] @ num_rewrites;
+val rat_num_rewrites =
+   [RAT_ADD_NUM_CALCULATE, RAT_MUL_NUM_CALCULATE, RAT_EQ_NUM_CALCULATE,
+    RAT_AINV_AINV, RAT_AINV_0] @ num_rewrites;
 
 (*--------------------------------------------------------------------------
  * RAT_PRECALC_CONV
@@ -461,28 +474,31 @@ val rat_num_rewrites = [RAT_ADD_NUM_CALCULATE, RAT_MUL_NUM_CALCULATE, RAT_EQ_NUM
  *--------------------------------------------------------------------------*)
 
 val RAT_PRECALC_CONV =
-        SIMP_CONV int_ss [rat_cons_def, RAT_SAVE_NUM, SGN_def] THENC REWRITE_CONV[RAT_SUB_ADDAINV, RAT_DIV_MULMINV] THENC FRAC_SAVE_CONV;
+    SIMP_CONV int_ss [rat_cons_def, RAT_SAVE_NUM, SGN_def] THENC
+    REWRITE_CONV[RAT_SUB_ADDAINV, RAT_DIV_MULMINV] THENC
+    FRAC_SAVE_CONV;
 
 val RAT_POSTCALC_CONV =
-        REWRITE_CONV[GSYM RAT_SUB_ADDAINV, GSYM RAT_DIV_MULMINV] THENC SIMP_CONV int_ss [RAT_SAVE_TO_CONS, RAT_CONS_TO_NUM];
+    REWRITE_CONV[GSYM RAT_SUB_ADDAINV, GSYM RAT_DIV_MULMINV] THENC
+    SIMP_CONV int_ss [RAT_SAVE_TO_CONS, RAT_CONS_TO_NUM];
 
 (*--------------------------------------------------------------------------
  * RAT_BASIC_ARITH_CONV
  *--------------------------------------------------------------------------*)
 
 val RAT_BASIC_ARITH_CONV =
-        RAT_PRECALC_CONV THENC REWRITE_CONV ([GSYM INT_ADD, GSYM INT_MUL] @ rat_rewrites) THENC ARITH_CONV;
+    RAT_PRECALC_CONV THENC
+    REWRITE_CONV ([GSYM INT_ADD, GSYM INT_MUL] @ rat_rewrites) THENC
+    ARITH_CONV;
 
 (*--------------------------------------------------------------------------
  * RAT_BASIC_ARITH_TAC
  *--------------------------------------------------------------------------*)
 
-val RAT_BASIC_ARITH_TAC =
-        CONV_TAC RAT_BASIC_ARITH_CONV;
+val RAT_BASIC_ARITH_TAC = CONV_TAC RAT_BASIC_ARITH_CONV;
 
 (* generic normalisation *)
-open ratSyntax
-fun mk_rvar s = mk_var(s, rat)
+fun mk_rvar s = mk_var(s, rat_ty);
 val x = mk_rvar "x"
 val y = mk_rvar "y"
 val z = mk_rvar "z"
@@ -531,6 +547,42 @@ val RAT_SUM_CANON = GenPolyCanon.gencanon {
   non_coeff = non_coeff,
   merge = merge,
 *)
+
+(*--------------------------------------------------------------------------*
+ * term syntax
+ *--------------------------------------------------------------------------*)
+
+  val operators = [("+", ratSyntax.rat_add_tm),
+                   ("-", ratSyntax.rat_sub_tm),
+                   ("~", ratSyntax.rat_ainv_tm),
+                   ("numeric_negate", ratSyntax.rat_ainv_tm),
+                   ("*", ratSyntax.rat_mul_tm),
+                   ("/", ratSyntax.rat_div_tm),
+                   ("<", ratSyntax.rat_les_tm),
+                   ("<=", ratSyntax.rat_leq_tm),
+                   (">", ratSyntax.rat_gre_tm),
+                   (">=", ratSyntax.rat_geq_tm),
+                   (GrammarSpecials.fromNum_str, ratSyntax.rat_of_num_tm),
+                   (GrammarSpecials.num_injection, ratSyntax.rat_of_num_tm)];
+
+  fun deprecate_rat () = let
+    fun doit (s, t) =
+       let val {Name,Thy,...} = dest_thy_const t in
+          Parse.temp_send_to_back_overload s {Name = Name, Thy = Thy}
+       end
+  in
+    List.app doit operators
+  end
+
+  fun prefer_rat () = let
+    fun doit (s, t) =
+       let val {Name,Thy,...} = dest_thy_const t in
+          Parse.temp_bring_to_front_overload s {Name = Name, Thy = Thy}
+       end
+  in
+    List.app doit operators
+  end
+
 
 (*==========================================================================
  * end of structure

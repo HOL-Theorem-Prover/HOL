@@ -2,12 +2,6 @@
 (* A conversion to evaluate trichotomy.                                      *)
 (* ------------------------------------------------------------------------- *)
 
-(*
-app load ["computeLib", "prob_pseudoTheory", "prob_trichotomyTheory"];
-*)
-
-(*
-*)
 structure prob_trichotomyTools :> prob_trichotomyTools =
 struct
 

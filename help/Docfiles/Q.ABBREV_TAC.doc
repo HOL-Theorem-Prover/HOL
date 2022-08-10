@@ -29,6 +29,11 @@ as part of its context, the simplifier treats terms of the form
 can use abbreviations to create further sharing, after an
 abbreviation's creation.
 
+Abbreviation assumptions of this form “protect” their variable
+argument; simplification tactics (e.g., {fs}) will not replace the
+variable {v}, even though they may have been passed rewrites to use
+such as {v = e'}.
+
 \FAILURE
 Fails if the quotation is ill-typed.  This may happen because
 variables in the quotation that also appear in the goal are given the
@@ -62,9 +67,12 @@ and both
 \COMMENTS
 The {bossLib} library provides {qabbrev_tac} as a synonym for {Q.ABBREV_TAC}.
 
-It is possible to abbreviate functions, using quotations such
-as {`f = \n. n + 3`}. When this is done {ABBREV_TAC} will not itself do anything
-more than replace exact copies of the abstraction, but the simplifier will subsequently see occurrences of the pattern and replace them.
+It is possible to abbreviate functions, using quotations such as
+{`f = \n. n + 3`}. When this is done {ABBREV_TAC} will not itself do
+anything more than replace exact copies of the abstraction, but the
+simplifier will subsequently see occurrences of the pattern and
+replace them.
+
 Thus:
 {
    > (qabbrev_tac `f = \x. x + 1` >> asm_simp_tac bool_ss [])
@@ -73,7 +81,8 @@ Thus:
       ([([``Abbrev (f = (\x. x + 1))``], ``f 3 = f 4``)], fn):
       goal list * (thm list -> thm)
 }
-where the simplifier has seen occurrences of the ``{x+1}'' pattern and replaced it with calls to the {f}-abbreviation.
+where the simplifier has seen occurrences of the ``{x+1}'' pattern and
+replaced it with calls to the {f}-abbreviation.
 
 \SEEALSO
 BasicProvers.Abbr, Q.HO_MATCH_ABBREV_TAC, Q.MATCH_ABBREV_TAC, Q.UNABBREV_TAC.

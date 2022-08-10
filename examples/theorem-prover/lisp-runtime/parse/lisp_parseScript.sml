@@ -11,6 +11,10 @@ open lisp_sexpTheory;
      2. we define a function which parses printed s-expressions.
 *)
 
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 infix \\
 val op \\ = op THEN;
 val RW = REWRITE_RULE;

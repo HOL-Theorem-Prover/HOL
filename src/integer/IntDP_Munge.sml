@@ -58,7 +58,7 @@ fun non_presburger_subterms0 ctxt tm =
     non_presburger_subterms0 ctxt b Un non_presburger_subterms0 ctxt t1 Un
     non_presburger_subterms0 ctxt t2
   end
-  else if (is_great tm orelse is_geq tm orelse is_eq tm orelse
+  else if (is_greater tm orelse is_geq tm orelse is_eq tm orelse
            is_less tm orelse is_leq tm orelse is_conj tm orelse
            is_disj tm orelse is_imp tm orelse is_plus tm orelse
            is_minus tm orelse is_linear_mult tm) then
@@ -92,7 +92,7 @@ fun nat_nonpresburgers tm =
       nat_nonpresburgers (body (rand tm))
     else if is_conj tm orelse is_disj tm orelse
             (is_imp tm andalso not (is_neg tm)) orelse
-            is_great tm orelse is_leq tm orelse is_eq tm orelse
+            is_greater tm orelse is_leq tm orelse is_eq tm orelse
             is_minus tm orelse is_less tm orelse is_geq tm orelse
             is_linear_mult tm
     then

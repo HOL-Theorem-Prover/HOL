@@ -15,30 +15,29 @@ val _ = use "execompile.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate13 z
+  fun makeUpdateT z = makeUpdate14 z
 in
 fun updateT z = let
-  fun from all_forced base_state checkfors debug defaultout exe extra_data
-           forced_objs
-           help multithread output quietp repl =
-    {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
-     debug = debug,
+  fun from all_forced base_state checkerr checkfors debug defaultout exe
+           extra_data forced_objs help multithread output quietp repl =
+    {all_forced = all_forced, base_state = base_state,
+     checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, repl = repl}
   fun from' repl quietp output multithread help forced_objs extra_data exe
-            defaultout debug checkfors base_state all_forced =
+            defaultout debug checkfors checkerr base_state all_forced =
     {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
-     debug = debug,
+     checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, repl = repl}
-  fun to f {all_forced, base_state, checkfors, debug, defaultout, exe,
+  fun to f {all_forced, base_state, checkerr, checkfors, debug, defaultout, exe,
             extra_data,
             forced_objs, help, multithread, output, quietp, repl} =
-    f all_forced base_state checkfors debug defaultout exe extra_data
+    f all_forced base_state checkerr checkfors debug defaultout exe extra_data
       forced_objs help multithread
       output quietp repl
 in
@@ -57,6 +56,7 @@ datatype option_record = OR of {
   all_forced : bool,
   base_state : string option,
   checkfors : string list,
+  checkerr : string option,
   debug : bool,
   defaultout : string option,
   exe : string option,
@@ -107,6 +107,8 @@ local
             (fn (OR r) => OR (updateT r (U #multithread (SOME i)) $$)))
 in
 val cline_opts = [
+  {help = "error if checked for file is absent", long = ["checkerr"],
+   short = "e", desc = setStringOpt "message" #checkerr},
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
    short = "c", desc = addString "filename"},
   {help = "provide debug output & preserve temp files",
@@ -138,6 +140,7 @@ val cline_opts = [
 ]
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
+                        checkerr = NONE,
                         checkfors = [],
                         debug = false,
                         defaultout = NONE,
@@ -168,7 +171,7 @@ fun findUo [] _ = NONE
                                            {path=search,
                                             relativeTo = OS.FileSys.getDir ()}};
       in
-        if OS.FileSys.access (path, []) then
+        if HOLFileSys.access (path, []) then
           SOME path
         else
           findUo rest modPath
@@ -212,13 +215,13 @@ in
       NONE => ()
     | SOME "1" =>
       let
-        val getTime = OS.FileSys.modTime o findMod
+        val getTime = HOLFileSys.modTime o findMod
         fun foldthis (modname, t0) = time_max(t0, getTime modname)
         val mtime = foldl foldthis Time.zeroTime objs
       in
         diag ("Setting mod-time of heap to "^
               Date.toString (Date.fromTimeLocal mtime));
-        OS.FileSys.setTime (outputheap, SOME mtime)
+        HOLFileSys.setTime (outputheap, SOME mtime)
       end
     | SOME s =>
       warn ("Ignoring strange value (" ^ s ^ ") for " ^
@@ -308,6 +311,9 @@ fun main() = let
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val allincs = ReadHMF.find_includes (OS.FileSys.getDir())
+  val _ = ReadHMF.extend_path_with_includes
+            {verbosity = 1 + (if debug then 1 else 0),
+             lpref = Meta.loadPath}
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
@@ -329,7 +335,8 @@ fun main() = let
                      NONE => "NONE"
                    | SOME s => "SOME(\"" ^ s ^"\")"))
   val exts = holpathdb.search_for_extensions ReadHMF.find_includes
-                                             [OS.FileSys.getDir()]
+               {skip = Binaryset.empty String.compare,
+                starter_dirs = [OS.FileSys.getDir()]}
   fun print_ext{vname,path} = vname ^ " |-> " ^ path
   val _ = diag ("holpathdb extensions: "^
                 String.concatWith ", " (map print_ext exts))
@@ -380,8 +387,11 @@ in
                           {fnname = f, output_exe = valOf output,
                            keep_temp_files = debug}
             | _ => ();
-        List.app (fn s => if OS.FileSys.access(s, [OS.FileSys.A_READ]) then ()
-                          else die ("Couldn't find required output file: "^s))
+        List.app (fn s => if HOLFileSys.access(s, [HOLFileSys.A_READ]) then ()
+                          else die ("Couldn't find required output file: "^s ^
+                                    (case #checkerr options of
+                                         NONE => ""
+                                       | SOME s => "\n" ^ s)))
                  (#checkfors options);
         diag "Buildheap done; about to exit successfully";
         OS.Process.exit OS.Process.success

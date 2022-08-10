@@ -28,7 +28,8 @@ sig
 
      Example:
 
-     PERM_TAKE_DROP_CONV ``PERM (DROP n l1++l2++TAKE n l1) (l1++TAKE n l2++DROP n l2)``
+     PERM_TAKE_DROP_CONV
+        “PERM (DROP n l1++l2++TAKE n l1) (l1++TAKE n l2++DROP n l2)”
 
      |- PERM (DROP n l1 ++ l2 ++ TAKE n l1) (l1 ++ TAKE n l2 ++ DROP n l2) <=>
         PERM (l1 ++ l2) (l2 ++ l1)
@@ -43,8 +44,8 @@ sig
 
      |- PERM (x::l1++y::l2++l3) (y::l3++z::l2++l4) <=>
         PERM (x::y::(l1 ++ l2 ++ l3)) (y::z::(l2 ++ l3 ++ l4))
-  )*
-  val PERM_NO_ELIM_NORMALISE_CONV = fn : term -> thm
+  *)
+  val PERM_NO_ELIM_NORMALISE_CONV : term -> thm
 
 
   (* Turns ``PERM l1 l2`` into ``PERM l2 l1`` iff l1 is in some sence
@@ -61,7 +62,7 @@ sig
 
 
   (* Combines PERM_ELIM_DUPLICATES_CONV, PERM_NO_ELIM_NORMALISE_CONV and
-     PERM_TURN_CONV *)
+     PERM_TURN_CONV
 
 
      Example:
@@ -91,7 +92,9 @@ sig
      Afterwards PERM_NORMALISE_CONV is used.
 
      Example:
-     PERM_REWR_CONV (ASSUME ``PERM l1 [x;y;z]``) ``PERM (z::y::x'::l2) (l3++x'::l1)``
+     PERM_REWR_CONV
+       (ASSUME “PERM l1 [x;y;z]”)
+       “PERM (z::y::x'::l2) (l3++x'::l1)”
 
      [PERM l1 [x; y; z]]
        |- PERM (z::y::x'::l2) (l3 ++ x'::l1) <=> PERM (x::l3) l2 : thm

@@ -25,7 +25,7 @@ val () = show_assums := true;
 
 *)
 
-open HurdUseful;
+open hurdUtils;
 
 infixr 0 ##
 

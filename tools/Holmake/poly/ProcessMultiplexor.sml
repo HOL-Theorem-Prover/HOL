@@ -13,15 +13,17 @@ struct
   type exit_status = Posix.Process.exit_status
 
   type command = {executable: string, nm_args : string list, env : string list}
-  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a}
+  type 'a job = {tag : string, command : command, dir : string,
+                 update : 'a * bool * Time.time -> 'a}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
   type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
 
   type 'a working_job = {
     tag : string,
+    dir : string,
     command : command,
-    update : 'a * bool -> 'a,
+    update : 'a * bool * Time.time -> 'a,
     starttime : Time.time,
     lastevent : Time.time,
     out : TextIO.instream,
@@ -30,7 +32,7 @@ struct
     erreof : bool,
     pid : pid
   }
-  type jobkey = pid * string
+  type jobkey = pid * {dir:string, tag : string}
   datatype strmtype = OUT | ERR
   datatype monitor_message =
            Output of jobkey * Time.time * strmtype * string
@@ -38,42 +40,42 @@ struct
          | Terminated of jobkey * exit_status * Time.time
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
-         | StartJob of jobkey
+         | StartJob of jobkey * {dir:string}
   datatype client_cmd = Kill of jobkey | KillAll
   type monitor = monitor_message -> client_cmd option
 
   local
     open FunctionalRecordUpdate
-    fun makeUpdateWJ z = makeUpdate10 z (* 10 fields *)
-    fun makeUpdateWL z = makeUpdate4 z (* 4 fields *)
+    fun makeUpdateWJ z = makeUpdate11 z (* 10 fields *)
+    fun makeUpdateWL z = makeUpdate5 z (* 5 fields *)
   in
     fun updateWJ z = let
-      fun from tag command update starttime lastevent out err
+      fun from dir tag command update starttime lastevent out err
                outeof erreof pid =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid}
+           erreof = erreof, pid = pid, dir = dir}
       fun from' pid erreof outeof err out lastevent starttime update command
-                tag =
+                tag dir =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid}
+           erreof = erreof, pid = pid, dir = dir}
       fun to f {tag, command, update, starttime, lastevent, out,
-                err, outeof, erreof, pid} =
-        f  tag command update starttime lastevent out err
+                err, outeof, erreof, pid, dir} =
+        f  dir tag command update starttime lastevent out err
            outeof erreof pid
     in
       makeUpdateWJ (from, from', to)
     end z
     fun updateWL z = let
-      fun from current_jobs current_state worklimit genjob =
+      fun from current_jobs current_state genjob last_cutime worklimit =
         {current_state = current_state, current_jobs = current_jobs,
-         worklimit = worklimit, genjob = genjob}
-      fun from' genjob worklimit current_state current_jobs =
+         worklimit = worklimit, genjob = genjob, last_cutime = last_cutime}
+      fun from' worklimit last_cutime genjob current_state current_jobs =
         {current_state = current_state, current_jobs = current_jobs,
-         worklimit = worklimit, genjob = genjob}
-      fun to f {current_state, current_jobs, worklimit, genjob} =
-        f current_jobs current_state worklimit genjob
+         worklimit = worklimit, genjob = genjob, last_cutime = last_cutime}
+      fun to f {current_jobs, current_state, genjob, last_cutime, worklimit} =
+        f current_jobs current_state genjob last_cutime worklimit
     in
       makeUpdateWL (from, from', to)
     end z
@@ -94,11 +96,14 @@ struct
     TextIO.mkInstream (TextIO.StreamIO.mkInstream (rdr, ""))
   end
 
-  fun jobkey_compare((p1,s1), (p2,s2)) =
+  fun jobkey_compare((p1,{tag=t1,dir=d1}), (p2,{tag=t2,dir=d2})) =
     case SysWord.compare(pidToWord p1, pidToWord p2) of
-        EQUAL => String.compare(s1,s2)
+        EQUAL => (case String.compare(t1,t2) of EQUAL => String.compare(d1,d2)
+                                              | x => x)
       | x => x
-  fun wjkey ({tag,pid,...} : 'a working_job) = (pid,tag)
+  fun jobkey_toString (p,{tag,dir}) =
+      dir ^ "/" ^ tag ^ "(" ^ SysWord.toString (pidToWord p) ^ ")"
+  fun wjkey ({tag,pid,dir,...} : 'a working_job) = (pid,{tag=tag,dir=dir})
   fun wjk_member x [] = false
     | wjk_member x (h::t) = jobkey_compare(x,h) = EQUAL orelse wjk_member x t
 
@@ -106,6 +111,7 @@ struct
     current_jobs : (jobkey, 'a working_job) Binarymap.dict,
     current_state : 'a,
     worklimit : int,
+    last_cutime : Time.time,
     genjob : 'a -> 'a genjob_result
   }
 
@@ -122,6 +128,14 @@ struct
                     handle Option => raise Fail "Can't poll instream"
     end
 
+  fun cutime_delta wl (com : unit -> unit) =
+      let
+        val _ = com()
+        val {cutime = t,...} = Posix.ProcEnv.times()
+      in
+        (Time.-(t,#last_cutime wl), updateWL wl (U #last_cutime t) $$)
+      end
+
   fun workjob_polls (wj : 'a working_job) =
     [(inStreamInPoll (#out wj), (OUT, wj)),
      (inStreamInPoll (#err wj), (ERR, wj))]
@@ -134,6 +148,7 @@ struct
     {current_jobs = Binarymap.mkDict jobkey_compare,
      genjob = #genjob provider,
      current_state = #initial provider,
+     last_cutime = #cutime (Posix.ProcEnv.times()),
      worklimit = worklimit}
 
   fun fupdjob k f (wl : 'a worklist) : 'a worklist =
@@ -152,7 +167,9 @@ struct
   fun start_job (j : 'a job) : 'a working_job =
     let
       open Posix.Process Posix.IO
-      val {tag, command, update} = j
+      val {tag, command, update, dir} = j
+      val _ = OS.Path.isAbsolute dir orelse
+              raise Fail "Relative path in job directory"
       val {executable,env,nm_args} = command
       val {infd=outinfd, outfd = outoutfd} = pipe()
       val {infd=errinfd, outfd = erroutfd} = pipe()
@@ -167,6 +184,7 @@ struct
             val () =
                 List.app close [errinfd, erroutfd, outinfd, outoutfd,
                                 ininfd, inoutfd]
+            val _ = OS.FileSys.chDir dir
           in
             exece(executable,nm_args,env)
           end
@@ -177,6 +195,7 @@ struct
             val () = List.app close [outoutfd, erroutfd, ininfd, inoutfd]
           in
             {
+              dir = dir,
               tag = tag,
               command = command,
               update = update,
@@ -196,7 +215,8 @@ struct
   fun shellcommand s =
     let
       open Posix.Process
-      val j :int job = {tag = s, command = simple_shell s, update = K 0}
+      val j :int job = {tag = s, command = simple_shell s, update = K 0,
+                        dir = "."}
       val wj = start_job j
       fun read pfx acc strm k =
         case TextIO.inputLine strm of
@@ -228,9 +248,10 @@ struct
           | NewJob (job, state') =>
             let
               val wj = start_job job
-              val cmds' = case monitorfn (StartJob (wjkey wj)) of
-                              NONE => cmds
-                            | SOME c => c::cmds
+              val cmds' =
+                  case monitorfn (StartJob (wjkey wj, {dir= #dir job})) of
+                      NONE => cmds
+                    | SOME c => c::cmds
             in
               fill_workq monitorfn
                          (cmds', wl |> addjob wj |> updstate state')
@@ -247,17 +268,17 @@ struct
       fun p tag t msg = p0 tag t msg NONE
     in
       case m of
-          Output((pid,tag), t, chan, s) =>
+          Output((pid,{tag,...}), t, chan, s) =>
             p tag t ("["^chan_name chan^"]: " ^ s)
-        | NothingSeen ((pid,tag), {delay,total_elapsed}) =>
+        | NothingSeen ((pid,{tag,...}), {delay,total_elapsed}) =>
             p tag total_elapsed ("delayed " ^ Time.toString delay)
-        | Terminated((pid,tag), st, t) =>
+        | Terminated((pid,{tag,...}), st, t) =>
           p0 tag t ("exited " ^ (if st = W_EXITED then "OK" else "FAILED"))
              (if st = W_EXITED then NONE else SOME KillAll)
-        | MonitorKilled((pid,tag), t) => p tag t "monitor-killed"
-        | EOF ((pid,tag), chan, t) =>
+        | MonitorKilled((pid,{tag,...}), t) => p tag t "monitor-killed"
+        | EOF ((pid,{tag,...}), chan, t) =>
             p tag t ("EOF on " ^ chan_name chan)
-        | StartJob (pid,tag) => p tag (Time.fromSeconds 0) "beginning"
+        | StartJob ((pid,{tag,...}), _) =>p tag (Time.fromSeconds 0) "beginning"
     end
 
   fun wjstrm ERR (wj:'a working_job) = #err wj
@@ -269,11 +290,15 @@ struct
       val cjs = #current_jobs wl
       val job = Binarymap.find (cjs, jk)
       val pid = #pid job
-      val state = #update job (#current_state wl, false)
+      val (ct,wl) = cutime_delta wl
+                                 (fn () =>
+                                     (kill (K_PROC pid, Posix.Signal.kill);
+                                      ignore (waitpid(W_CHILD pid, []))))
+      val state = #update job (#current_state wl, false, ct)
     in
-      kill (K_PROC pid, Posix.Signal.kill);
-      waitpid(W_CHILD pid, []);
-      ignore (mfn (MonitorKilled(jk,Time.-(Time.now(),#starttime job))));
+      TextIO.closeIn (#out job);
+      TextIO.closeIn (#err job);
+      ignore (mfn (MonitorKilled(jk,ct)));
       updateWL wl
                (U #current_state state)
                (U #current_jobs (#1 (Binarymap.remove(cjs, jk)))) $$
@@ -300,28 +325,37 @@ struct
     let
       open Posix.Process
       val (cmds, wl1) = fill_workq monitorfn ([], wl0)
-      fun monitor msg (acc as (cmds, wl)) =
+      fun monitor msg cmds =
         case monitorfn msg of
-            NONE => acc
-          | SOME c => (c::cmds, wl)
+            NONE => cmds
+          | SOME c => c::cmds
       fun nothing wj (cmds, wl) =
         let
           val msg =
               NothingSeen (wjkey wj, {delay = Time.-(Time.now(), #lastevent wj),
                                       total_elapsed = elapsed wj})
         in
-          monitor msg (cmds, addjob wj wl)
+          (monitor msg cmds, addjob wj wl)
         end
       fun exitstatus wj status (cs, wl) =
         let
-          val msg = Terminated (wjkey wj, status, elapsed wj)
-          val newstate = #update wj (#current_state wl, status = W_EXITED)
+          val {cutime,...} = Posix.ProcEnv.times()
+          val elapsed = Time.-(cutime, #last_cutime wl)
+          val msg = Terminated (wjkey wj, status, elapsed)
+          val cs' = monitor msg cs
+          val newstate =
+              #update wj (#current_state wl, status = W_EXITED, elapsed)
+          val _ = TextIO.closeIn (#out wj)
+          val _ = TextIO.closeIn (#err wj)
+          val wl' = updateWL wl
+                             (U #current_state newstate)
+                             (U #last_cutime cutime) $$
         in
-          monitor msg (cs, updateWL wl (U #current_state newstate) $$)
+          (cs', wl')
         end
       fun eof wj chan (cmds, wl) =
-        monitor (EOF (wjkey wj, chan, elapsed wj))
-                (cmds, addjob (markeof chan wj) wl)
+        (monitor (EOF (wjkey wj, chan, elapsed wj)) cmds,
+         addjob (markeof chan wj) wl)
       fun is_neweof wj chan =
         case chan of
             ERR => not (#erreof wj)
@@ -368,7 +402,7 @@ struct
                         let
                           val msg = Output(wjkey wj, elapsed wj, chan, s)
                         in
-                          (monitor msg (cmds, addjob (touch wj) wl), didio')
+                          ((monitor msg cmds, addjob (touch wj) wl), didio')
                         end
                     end
               end
@@ -413,9 +447,11 @@ struct
               NONE => NoMoreJobs clist
             | SOME (t, (c, _)) =>
               let
-                fun upd(clist, b) = fupdAlist t (fn (c,_) => (c,Done b)) clist
+                fun upd(clist, b, _) =
+                    fupdAlist t (fn (c,_) => (c,Done b)) clist
               in
-                NewJob ({tag = t, command = simple_shell c, update = upd}, l)
+                NewJob ({tag = t, command = simple_shell c, update = upd,
+                         dir = "."}, l)
               end
         end
       val wl =

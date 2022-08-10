@@ -1,3 +1,0 @@
-\THEOREM IN_INTER pred_sets
-|- !s t x. x IN (s INTER t) = x IN s /\ x IN t
-\ENDTHEOREM

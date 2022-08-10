@@ -257,25 +257,16 @@ val wf_encode_list = store_thm
 
 (* A congruence rule *)
 
-val encode_list_cong = store_thm
- ("encode_list_cong",
-  ``!l1 l2 f1 f2.
+Theorem encode_list_cong[defncong]:
+  !l1 l2 f1 f2.
       (l1=l2) /\ (!x. MEM x l2 ==> (f1 x = f2 x))
               ==>
-      (encode_list f1 l1 = encode_list f2 l2)``,
+      (encode_list f1 l1 = encode_list f2 l2)
+Proof
   Induct >>
   SIMP_TAC list_ss [MEM,encode_list_def] >>
-  RW_TAC list_ss []);
-
-val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn _ =>
-   let val S = PP.add_string
-   in
-     S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());"
-   end)};
+  RW_TAC list_ss []
+QED
 
 (*---------------------------------------------------------------------------
         Bounded lists
@@ -433,22 +424,20 @@ val encode_bnum_length = store_thm
    Induct
    >> RW_TAC std_ss [LENGTH, encode_bnum_def]);
 
-val encode_bnum_inj = store_thm
-  ("encode_bnum_inj",
-   ``!m x y.
-       x < 2 ** m /\ y < 2 ** m /\ (encode_bnum m x = encode_bnum m y) ==>
-       (x = y)``,
-   Induct
-   >> RW_TAC std_ss
-      [encode_bnum_def, DECIDE “!n. n < 1 <=> (n = 0)”, GSYM EXP2_LT]
-   >> RES_TAC
-   >> Know `x DIV 2 = y DIV 2` >- RES_TAC
-   >> Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
+Theorem encode_bnum_inj:
+  !m x y.
+    x < 2 ** m /\ y < 2 ** m /\ encode_bnum m x = encode_bnum m y ==>
+    x = y
+Proof
+   Induct >> rw[encode_bnum_def] >>
+   first_x_assum $ drule_at Any >> simp[] >>
+   Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
    >> POP_ASSUM_LIST (K ALL_TAC)
    >> RW_TAC std_ss []
    >> MP_TAC (MP (Q.SPEC `2` DIVISION) (DECIDE ``0 < 2``))
    >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   >> RW_TAC std_ss [MOD_2]);
+   >> RW_TAC std_ss [MOD_2]
+QED
 
 val wf_encode_bnum_collision_free = store_thm
   ("wf_encode_bnum_collision_free",
@@ -541,19 +530,14 @@ val tree_ind = store_thm
    >> HO_MATCH_MP_TAC tree_induction
    >> RW_TAC std_ss [EVERY_DEF]
    >> Q.PAT_X_ASSUM `!x. Q x` MATCH_MP_TAC
-   >> Induct_on `l`
-   >> RW_TAC std_ss [EVERY_DEF, MEM]
-   >> METIS_TAC []);
+   >> FULL_SIMP_TAC std_ss [EVERY_MEM]);
 
 val (encode_tree_def, _) =
   Defn.tprove
   (Defn.Hol_defn "encode_tree"
    `encode_tree e (Node a ts) = APPEND (e a) (encode_list (encode_tree e) ts)`,
    TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` >>
-   (Induct_on `ts` >>
-    RW_TAC list_ss [tree_size_def, K_THM]) >- DECIDE_TAC >>
-   RES_THEN (MP_TAC o SPEC_ALL) >>
-   SIMP_TAC arith_ss [K_THM]);
+   rw [] >> size_comb_tac >> simp []);
 
 val encode_tree_def =
   save_thm ("encode_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) encode_tree_def);
@@ -563,11 +547,7 @@ val (lift_tree_def, _) =
   (Defn.Hol_defn "lift_tree"
    `lift_tree p (Node a ts) <=> p a /\ EVERY (lift_tree p) ts`,
    TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` >>
-   RW_TAC list_ss [tree_size_def, K_THM] >>
-   (Induct_on `ts` >>
-    RW_TAC list_ss [tree_size_def, K_THM]) >- DECIDE_TAC >>
-   RES_THEN (MP_TAC o SPEC_ALL) >>
-   SIMP_TAC arith_ss [K_THM]);
+   rw_tac bool_ss [] >> size_comb_tac >> simp []);
 
 val lift_tree_def =
   save_thm ("lift_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) lift_tree_def);

@@ -1,10 +1,18 @@
-OPTIONS=QUIT_ON_FAILURE
+INCLUDES = ../real ../integer ../n-bit
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+WORDS_SYNTAX = $(HOLDIR)/src/n-bit/wordsSyntax.uo
 
-all: $(TARGETS)
+all: $(DEFAULT_TARGETS)
 .PHONY: all
+
+ifdef HOLBUILD
+all: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ) && echo `pwd`/fp >> $(protect $(SIGOBJ)/SRCFILES)
+
+.PHONY: link-to-sigobj
+endif
 
 fp-sig.uo: fp-sig.sml
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.sml
@@ -12,21 +20,39 @@ fp-sig.uo: fp-sig.sml
 fp-functor.uo: fp-functor.sml fp-sig.uo machine_ieeeTheory.uo
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.ui machine_ieeeTheory.ui fp-functor.sml
 
-fp16Syntax.uo: fp-functor.uo fp16Syntax.sml
+fp16Syntax.uo: fp-functor.uo fp16Syntax.sml $(WORDS_SYNTAX)
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.ui fp-functor.ui fp16Syntax.sml
 
-fp32Syntax.uo: fp-functor.uo fp32Syntax.sml
+fp32Syntax.uo: fp-functor.uo fp32Syntax.sml $(WORDS_SYNTAX)
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.ui fp-functor.ui fp32Syntax.sml
 
-fp64Syntax.uo: fp-functor.uo fp64Syntax.sml
+fp64Syntax.uo: fp-functor.uo fp64Syntax.sml $(WORDS_SYNTAX)
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.ui fp-functor.ui fp64Syntax.sml
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: floating-point-selftest.log
+
+floating-point-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+
+endif
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+
+all: $(ARTFILES) hol4-floating-point.art
 
 hol4-floating-point-unint.art: hol4-floating-point-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
+
+hol4-floating-point.art: hol4-floating-point.thy hol4-floating-point-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-floating-point.thy hol4-floating-point.art
+	opentheory install --reinstall $<
 
 binary_ieee.art: binary_ieee.otd
 endif

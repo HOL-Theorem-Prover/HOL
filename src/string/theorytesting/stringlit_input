@@ -1,3 +1,9 @@
 \HOLtm{s = "foo"}
 
 \HOLtm{c = #"a"}
+
+\HOLtm{SINJ1 "foo"}
+
+\HOLtm{SINJ2 "bar"}
+
+\HOLtm{SINJ2 "foo\n bar"}

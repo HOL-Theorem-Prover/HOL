@@ -17,7 +17,7 @@ The compiler consists of three phasees:
 *)
 
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open lcsymtacs for_ndTheory for_nd_semTheory listTheory arithmeticTheory;
+open for_ndTheory for_nd_semTheory listTheory arithmeticTheory;
 
 val _ = temp_tight_equality ();
 
@@ -540,7 +540,7 @@ do_jump s n =
 val inc_pc_def = Define `
 inc_pc s = s with pc := s.pc + 1`;
 
-val sem_a_def = tDefine "sem_a" `
+Definition sem_a_def:
 sem_a s =
   if s.pc < LENGTH s.instrs then
     case EL s.pc s.instrs of
@@ -593,8 +593,9 @@ sem_a s =
   else if s.pc = LENGTH s.instrs then
     (Rval 0, s)
   else
-    (Rfail, s)`
-  (WF_REL_TAC `inv_image (measure I LEX measure I)
+    (Rfail, s)
+Termination
+   WF_REL_TAC `inv_image (measure I LEX measure I)
        (\s. (s.state.clock,LENGTH s.instrs - s.pc))`
    \\ fs [inc_pc_def,do_jump_def,LET_DEF]
    \\ REPEAT STRIP_TAC
@@ -602,7 +603,8 @@ sem_a s =
    \\ SRW_TAC [] [] \\ fs []
    \\ IMP_RES_TAC sem_e_clock
    \\ IMP_RES_TAC (GSYM sem_e_clock)
-   \\ TRY DECIDE_TAC);
+   \\ TRY DECIDE_TAC
+End
 
 val a_state_def = Define `
   a_state code clock input =
@@ -1069,14 +1071,17 @@ val compile_pres = store_thm("compile_pres",
    that the source program cannot Crash. This leads to a cleaner
    top-level correctness theorem for compile. *)
 
-val syntax_ok_def = Define `
-  syntax_ok t = type_t F {} t`;
+Definition syntax_ok_def: syntax_ok t = type_t F {} t
+End
 
-val compile_correct = store_thm("compile_correct",
-  ``!t inp. syntax_ok t ==>
-            asm_semantics (compile t) inp SUBSET semantics t inp``,
+Theorem compile_correct:
+  !t inp. syntax_ok t ==>
+          asm_semantics (compile t) inp SUBSET semantics t inp
+Proof
   rpt strip_tac \\ match_mp_tac compile_pres \\ fs [syntax_ok_def]
   \\ imp_res_tac type_soundness
-  \\ fs [semantics_def,IN_DEF,for_nd_semTheory.semantics_with_nd_def]);
+  \\ fs [semantics_def,IN_DEF,for_nd_semTheory.semantics_with_nd_def]
+  \\ metis_tac[]
+QED
 
 val _ = export_theory ();

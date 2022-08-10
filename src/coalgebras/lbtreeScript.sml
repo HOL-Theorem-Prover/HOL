@@ -498,45 +498,50 @@ val EXISTS_FIRST = store_thm(
     ]
   ]);
 
-val exists_bf_flatten = store_thm(
-  "exists_bf_flatten",
-  ``exists ((=)x) (bf_flatten tlist) ==> EXISTS (mem x) tlist``,
-  Q_TAC SUFF_TAC `!l. exists ((=)x) l ==>
-                      !tlist. (l = bf_flatten tlist) ==>
-                              EXISTS (mem x) tlist`
-        THEN1 METIS_TAC [] THEN
+Theorem exists_bf_flatten:
+  exists ((=)x) (bf_flatten tlist) ==> EXISTS (mem x) tlist
+Proof
+  ‘!l. exists ((=)x) l ==>
+       !tlist. (l = bf_flatten tlist) ==>
+               EXISTS (mem x) tlist’ suffices_by metis_tac[] >>
   HO_MATCH_MP_TAC exists_ind THEN SRW_TAC [][] THENL [
-    `~EVERY ($= Lf) tlist`
+    ‘~EVERY ($= Lf) tlist’
        by METIS_TAC [LCONS_NOT_NIL, bf_flatten_eq_lnil] THEN
-    `EXISTS ($~ o $= Lf) tlist`
+    ‘EXISTS ($~ o $= Lf) tlist’
        by FULL_SIMP_TAC (srw_ss()) [listTheory.NOT_EVERY] THEN
-    `?l1 x l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) x /\
-               (tlist = l1 ++ (x :: l2))`
+    ‘?l1 x l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) x /\
+               (tlist = l1 ++ (x :: l2))’
        by METIS_TAC [EXISTS_FIRST] THEN
-    `EVERY ((=) Lf) l1`
-       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [combinTheory.o_DEF] THEN
-    `~(Lf = x)` by FULL_SIMP_TAC (srw_ss()) [] THEN
-    `?a t1 t2. x = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
+    ‘EVERY ((=) Lf) l1’
+       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss)
+                        [combinTheory.o_DEF, Excl "NORMEQ_CONV"] THEN
+    ‘Lf <> x’ by FULL_SIMP_TAC (srw_ss()) [] THEN
+    ‘?a t1 t2. x = Nd a t1 t2’ by METIS_TAC [lbtree_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
-    (bf_flatten_append |> Q.SPEC `l1` |> Q.INST [`l2`|->`[Nd a t1 t2] ++ l2`] |> MP_TAC) THEN
-    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [],
-    `~EVERY ($= Lf) tlist`
+    MP_TAC $ Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] $
+       Q.SPEC ‘l1’ bf_flatten_append >>
+    SRW_TAC[][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [],
+    ‘~EVERY ($= Lf) tlist’
        by METIS_TAC [LCONS_NOT_NIL, bf_flatten_eq_lnil] THEN
-    `EXISTS ($~ o $= Lf) tlist`
+    ‘EXISTS ($~ o $= Lf) tlist’
        by FULL_SIMP_TAC (srw_ss()) [listTheory.NOT_EVERY] THEN
-    `?l1 y l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) y /\
-               (tlist = l1 ++ (y :: l2))`
+    ‘?l1 y l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) y /\
+               (tlist = l1 ++ (y :: l2))’
        by METIS_TAC [EXISTS_FIRST] THEN
-    `EVERY ((=) Lf) l1`
-       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [combinTheory.o_DEF] THEN
-    `~(Lf = y)` by FULL_SIMP_TAC (srw_ss()) [] THEN
-    `?a t1 t2. y = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
+    ‘EVERY ((=) Lf) l1’
+       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss)
+                        [combinTheory.o_DEF, Excl "NORMEQ_CONV"] THEN
+    ‘~(Lf = y)’ by FULL_SIMP_TAC (srw_ss()) [] THEN
+    ‘?a t1 t2. y = Nd a t1 t2’ by METIS_TAC [lbtree_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [bf_flatten_def, bf_flatten_append] THEN
-    FIRST_X_ASSUM (Q.SPEC_THEN `l2 ++ [t1;t2]` MP_TAC) THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘l2 ++ [t1;t2]’ MP_TAC) THEN
     SRW_TAC [][] THEN SRW_TAC [][] THEN
-    (bf_flatten_append |> Q.SPEC `l1` |> Q.INST [`l2`|->`[Nd a t1 t2] ++ l2`] |> MP_TAC) THEN
-    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
-  ]);
+    MP_TAC $ Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] $
+       Q.SPEC ‘l1’ bf_flatten_append >>
+    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    METIS_TAC []
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     Now it starts to get HIDEOUS.
@@ -609,7 +614,7 @@ open numLib
 val lelim = REWRITE_RULE [GSYM AND_IMP_INTRO] whileTheory.LEAST_ELIM
 val min_tac =
     SRW_TAC [ETA_ss][] THEN
-    IMP_RES_THEN (fn th => th |> MATCH_MP lelim |> DEEP_INTRO_TAC) mem_depth THEN
+    IMP_RES_THEN (fn th => th |> MATCH_MP lelim |> DEEP_INTRO_TAC) mem_depth >>
     Q.X_GEN_TAC `t1d` THEN NTAC 2 STRIP_TAC THEN
     Q.X_GEN_TAC `t2d` THEN NTAC 2 STRIP_TAC THEN
     LEAST_ELIM_TAC THEN
@@ -662,7 +667,7 @@ val mindepth_thm = store_thm(
     min_tac,
 
     SRW_TAC [ETA_ss][] THEN
-    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth THEN SRW_TAC [][] THEN
+    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth >> SRW_TAC [][] >>
     LEAST_ELIM_TAC THEN SRW_TAC [][]
        THEN1 METIS_TAC [mem_depth, depth_rules] THEN
     POP_ASSUM MP_TAC THEN
@@ -673,7 +678,7 @@ val mindepth_thm = store_thm(
                                      depth_rules],
 
     SRW_TAC [ETA_ss][] THEN
-    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth THEN SRW_TAC [][] THEN
+    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth >> SRW_TAC [][] >>
     LEAST_ELIM_TAC THEN SRW_TAC [][]
        THEN1 METIS_TAC [mem_depth, depth_rules] THEN
     POP_ASSUM MP_TAC THEN

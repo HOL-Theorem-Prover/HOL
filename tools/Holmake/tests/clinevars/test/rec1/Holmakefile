@@ -1,0 +1,6 @@
+.PHONY: all test
+
+all: test
+
+test:
+	[ "$(RECURSIVE)" = "also_YES.321" ]

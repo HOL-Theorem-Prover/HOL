@@ -1,0 +1,9 @@
+CHAPTERS = syntax preface semantics title
+OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
+
+logic.pdf: logic.tex $(patsubst %,%.tex,$(CHAPTERS)) $(OTHER)
+	latexmk -pdf logic
+
+EXTRA_CLEANS = $(patsubst %,%.aux,logic $(CHAPTERS)) logic.bbl logic.blg \
+               logic.fdb_latexmk logic.fls logic.log logic.out logic.pdf \
+               logic.toc

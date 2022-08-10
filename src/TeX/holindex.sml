@@ -112,7 +112,8 @@ in
    | ["Linewidth", length_arg] =>
          let
             val n_opt = Int.fromString length_arg
-            val _ = if isSome n_opt then (default_linewidth_ref := valOf n_opt) else ();
+            val _ = if isSome n_opt then (default_linewidth_ref := valOf n_opt)
+                    else ();
          in
             ds
          end
@@ -125,7 +126,8 @@ in
             foldl (fn (de, ds) => parse_entry___add_to_data_store ds de) ds
             entryL
          end handle Interrupt => raise Interrupt
-                  | _ => (report_error ("Error while parsing '"^filename^"' in '"^basedir^"'");ds))
+                  | _ => (report_error ("Error while parsing '"^filename^
+                                        "' in '"^basedir^"'");ds))
    | _ => (report_error ("Error line: "^l); ds)
 end;
 
@@ -203,10 +205,14 @@ let
       {argpos = empty_posn, command=command, commpos = empty_posn,
        options = opts, argument=(valOf content)};
    val width_opt = mungeTools.optset_width opts;
-   val width = if isSome width_opt then valOf width_opt else (!default_linewidth_ref);
+   val width = if isSome width_opt then valOf width_opt
+               else (!default_linewidth_ref);
    val fs = PP.pp_to_string width mungeTools.replacement replacement_args
-   val _ = if fs = "" then (report_error
-           ("Error while formating "^(command2string command)^" '"^id^"'!");Feedback.fail()) else ();
+   val _ = if fs = "" then (
+             report_error
+               ("Error while formating "^(command2string command)^" '"^id^"'!");
+             Feedback.fail()
+           ) else ();
 in
    UTF8.translate (fn " " => "\\ "
                     | "\n" => "\\par "
@@ -237,9 +243,12 @@ fun output_holtex_def command definetype os (id,
     latex    = latex_opt,
     ...}:data_entry)) =
 let
-   val cs = if isSome latex_opt then
-      (report_error ("Notice: using user defined latex for "^(command2string command)^" '"^id^"'!");valOf latex_opt) else
-      holmunge_format command id options content_opt;
+   val cs = if isSome latex_opt then (
+              report_error ("Notice: using user defined latex for " ^
+                            command2string command ^ " '" ^ id ^ "'!");
+              valOf latex_opt
+            ) else
+            holmunge_format command id options content_opt
    val _ = if (cs = "") then Feedback.fail() else ();
    val _ = if printed then
               output_holtex_def_internal (definetype,id,cs) os
@@ -338,7 +347,9 @@ fun entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry),
        val (theory1,thm1) = destruct_theory_thm c1;
        val (theory2,thm2) = destruct_theory_thm c2;
        val r = Lib.list_compare string_compare ([theory1,thm1], [theory2,thm2])
-    in if r = EQUAL then entry_list_label_compare ((id1,de1),(id2,de2)) else r end
+    in if r = EQUAL then entry_list_label_compare ((id1,de1),(id2,de2))
+       else r
+    end
 
 
 (* -------------------------------------------------------------------------- *)
@@ -354,8 +365,8 @@ let
    val pnL = List.map (fn s => (s, Int.fromString s)) pL
    fun get_int (_, NONE) = 0
      | get_int (_, (SOME n)) = n
-   val pnL' = Listsort.sort (fn (a,b) => Int.compare (get_int a, get_int b)) pnL;
-   val intL = List.map (fn p => (p,p)) pnL';
+   val pnL' = Listsort.sort (fn (a,b) => Int.compare (get_int a, get_int b)) pnL
+   val intL = List.map (fn p => (p,p)) pnL'
 
    fun make_intervals [] = []
      | make_intervals [pnp] = [pnp]
@@ -413,7 +424,8 @@ let
    val _ = Portable.output (os, "}{");
    val _ = Portable.output (os, bool2latex (not (Redblackset.isEmpty pages)));
    val _ = Portable.output (os, "}{");
-   val _ = Portable.output (os, if isSome comment_opt then valOf comment_opt else "");
+   val _ = Portable.output (os, if isSome comment_opt then valOf comment_opt
+                                else "")
    val _ = Portable.output (os, "}{");
    val _ = Portable.output (os, Redblackmap.find (d,id));
    val _ = Portable.output (os, "}\n");
@@ -431,8 +443,11 @@ let
     val type_entryL' = Listsort.sort entry_list_pos_compare type_entryL;
 
     val _ = Portable.output(os, "   \\begin{HOLTypeIndex}\n");
-    val _ = List.map (output_holtex_index d ("      \\HOLTypeIndexEntry{","holIndexLongTypeFlag") os) type_entryL'
-    val _ = Portable.output(os, "   \\end{HOLTypeIndex}\n");
+    val _ = List.map
+              (output_holtex_index d ("      \\HOLTypeIndexEntry{",
+                                      "holIndexLongTypeFlag") os)
+              type_entryL'
+    val _ = Portable.output(os, "   \\end{HOLTypeIndex}\n")
 in
    ()
 end handle nothing_to_do => ();
@@ -445,8 +460,11 @@ let
     val term_entryL' = Listsort.sort entry_list_pos_compare term_entryL;
 
     val _ = Portable.output(os, "   \\begin{HOLTermIndex}\n");
-    val _ = List.map (output_holtex_index d ("      \\HOLTermIndexEntry{","holIndexLongTermFlag") os) term_entryL'
-    val _ = Portable.output(os, "   \\end{HOLTermIndex}\n");
+    val _ = List.map
+              (output_holtex_index d ("      \\HOLTermIndexEntry{",
+                                      "holIndexLongTermFlag") os)
+              term_entryL'
+    val _ = Portable.output(os, "   \\end{HOLTermIndex}\n")
 in
    ()
 end handle nothing_to_do => ();
@@ -480,9 +498,12 @@ let
 
     fun foldfun ((id, thy, de), old_thy) =
         let
-            val _ = if ((!use_occ_sort_ref) orelse (thy = old_thy)) then () else
-                (Portable.output(os, "   \\HOLThmIndexTheory{"^thy^"}\n"))
-            val _ = output_holtex_index d ("      \\HOLThmIndexEntry{","holIndexLongThmFlag") os (id, de);
+            val _ = if ((!use_occ_sort_ref) orelse (thy = old_thy)) then ()
+                    else
+                      (Portable.output(os, "   \\HOLThmIndexTheory{"^thy^"}\n"))
+            val _ = output_holtex_index d
+                       ("      \\HOLThmIndexEntry{","holIndexLongThmFlag") os
+                       (id, de)
         in
             thy
         end;

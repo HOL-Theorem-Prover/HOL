@@ -25,7 +25,14 @@ fun main() = let
   val heap =
       if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
           open Holmake_types
-          val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
+          val holpathdb_extensions =
+              holpathdb.search_for_extensions ReadHMF.find_includes
+                {starter_dirs = [OS.FileSys.getDir()],
+                 skip = holpathdb.db_dirs()}
+          val _ = List.app holpathdb.extend_db holpathdb_extensions
+          fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
+          val env0 = holpathdb.fold foldthis (base_environment())
+          val (env, _, _) = ReadHMF.read "Holmakefile" env0
           fun envlist id =
               map dequote (tokenize (perform_substitution env [VREF id]))
           val heap_v = envlist "HOLHEAP"
@@ -33,9 +40,11 @@ fun main() = let
           case heap_v of
             [] => default
           | [x] => x
-          | _ => (warn "Malformed HOLHEAP definition in Holmakefile - ignoring it";
+          | _ => (warn "Malformed HOLHEAP definition in Holmakefile - \
+                       \ignoring it";
                   default)
-        end handle e => (warn "Bogus Holmakefile in current directory - ignoring it]";
+        end handle e => (warn "Bogus Holmakefile in current directory - \
+                              \ignoring it]";
                          default)
       else default
   val heap = if Path.isRelative heap then Path.concat(FileSys.getDir(), heap)

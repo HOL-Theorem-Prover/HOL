@@ -25,8 +25,8 @@ sig
   val get_first: (key * ('a * (Keys.T * Keys.T)) -> 'b option) -> 'a T ->
                  'b option
   val fold: (key * ('a * (Keys.T * Keys.T)) -> 'b -> 'b) -> 'a T -> 'b -> 'b
-  val get_entry: 'a T -> key -> key * ('a * (Keys.T * Keys.T))        (*exception UNDEF*)
-  val get_node: 'a T -> key -> 'a                                     (*exception UNDEF*)
+  val get_entry: 'a T -> key -> key * ('a * (Keys.T*Keys.T)) (*exception UNDEF*)
+  val get_node: 'a T -> key -> 'a                            (*exception UNDEF*)
   val map_node: key -> ('a -> 'a) -> 'a T -> 'a T
   val map: (key -> 'a -> 'b) -> 'a T -> 'b T
   val imm_preds: 'a T -> key -> Keys.T
@@ -132,7 +132,8 @@ fun get_entry (Graph tab) x =
     SOME entry => entry
   | NONE => raise UNDEF x);
 
-fun map_entry x f (G as Graph tab) = Graph (Table.update (x, f (#2 (get_entry G x))) tab);
+fun map_entry x f (G as Graph tab) =
+    Graph (Table.update (x, f (#2 (get_entry G x))) tab);
 
 
 (* nodes *)
@@ -187,8 +188,10 @@ fun map_strong_conn f G =
 
 (* minimal and maximal elements *)
 
-fun minimals G = fold_graph (fn (m, (_, (preds, _))) => Keys.is_empty preds ? cons m) G [];
-fun maximals G = fold_graph (fn (m, (_, (_, succs))) => Keys.is_empty succs ? cons m) G [];
+fun minimals G =
+    fold_graph (fn (m, (_, (preds, _))) => Keys.is_empty preds ? cons m) G [];
+fun maximals G =
+    fold_graph (fn (m, (_, (_, succs))) => Keys.is_empty succs ? cons m) G [];
 fun is_minimal G x = Keys.is_empty (imm_preds G x);
 fun is_maximal G x = Keys.is_empty (imm_succs G x);
 
@@ -226,13 +229,13 @@ fun is_edge G (x, y) = Keys.member (imm_succs G x) y handle UNDEF _ => false;
 fun add_edge (x, y) G =
   if is_edge G (x, y) then G
   else
-    G |> map_entry y (fn (i, (preds, succs)) => (i, (Keys.insert x preds, succs)))
-      |> map_entry x (fn (i, (preds, succs)) => (i, (preds, Keys.insert y succs)));
+    G |> map_entry y (fn (i, (preds,succs)) => (i,(Keys.insert x preds, succs)))
+      |> map_entry x (fn (i, (preds,succs)) => (i,(preds, Keys.insert y succs)))
 
 fun del_edge (x, y) G =
   if is_edge G (x, y) then
-    G |> map_entry y (fn (i, (preds, succs)) => (i, (Keys.remove x preds, succs)))
-      |> map_entry x (fn (i, (preds, succs)) => (i, (preds, Keys.remove y succs)))
+    G |> map_entry y (fn (i,(preds,succs)) => (i, (Keys.remove x preds, succs)))
+      |> map_entry x (fn (i,(preds,succs)) => (i, (preds, Keys.remove y succs)))
   else G;
 
 fun diff_edges G1 G2 =
@@ -244,7 +247,8 @@ fun edges G = diff_edges G empty;
 
 (* dest and make *)
 
-fun dest G = fold_graph (fn (x, (i, (_, succs))) => cons ((x, i), Keys.dest succs)) G [];
+fun dest G =
+    fold_graph (fn (x, (i, (_, succs))) => cons ((x, i), Keys.dest succs)) G [];
 
 fun make entries =
   empty
@@ -362,9 +366,3 @@ val map = map_nodes;
 val fold = fold_graph;
 
 end;
-
-structure Graph = Graph(
-  type key = string
-  val ord = String.compare
-  val pp = HOLPP.add_string o Portable.mlquote
-);

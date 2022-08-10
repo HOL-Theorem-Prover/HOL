@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : tttSearch.sml                                             *)
-(* DESCRIPTION   : Search algorithm for TacticToe.                           *)
+(* DESCRIPTION   : Proof search algorithm for TacticToe.                     *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
 (* DATE          : 2017                                                      *)
 (* ========================================================================= *)
@@ -10,727 +10,811 @@ struct
 
 open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
-  mlFeature mlThmData mlTacticData mlNearestNeighbor
-  psMinimize
-  tttSetup tttLearn
+  mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
+  psMinimize tttSetup tttToken tttLearn tttTrain
 
 val ERR = mk_HOL_ERR "tttSearch"
-fun debug s = debug_in_dir ttt_debugdir "tttSearch" s
-fun debug_err s = (debug ("Error: " ^ s); raise ERR s "")
+fun hderr x = hd x handle Empty => raise ERR "hderr" ""
+fun tlerr x = tl x handle Empty => raise ERR "tlerr" ""
 
 (* -------------------------------------------------------------------------
-   Exceptions
+   Global parameters
    ------------------------------------------------------------------------- *)
 
-exception SearchTimeout
-exception SearchSaturated
+val default_reward = ref 0.0
+val conttop_flag = ref false
+val contmid_flag = ref false
+val nocut_flag = ref false
+val avoid_decided_flag = ref true
+val shift_policy_flag = ref true
+val looplimit = ref NONE
 
 (* -------------------------------------------------------------------------
-   Tell if a node is active or not
+   Timers
    ------------------------------------------------------------------------- *)
 
-val notactivedict = ref (dempty Int.compare)
-fun is_notactive x = dmem x (!notactivedict)
-fun is_active x = not (is_notactive x)
+val select_time = ref 0.0
+val exparg_time = ref 0.0
+val apply_time = ref 0.0
+val create_time = ref 0.0
+val backup_time = ref 0.0
+val recons_time = ref 0.0
+val metis_time = ref 0.0
+val other_time = ref 0.0
 
-fun deactivate x =
-  (
-  debug ("deactivate " ^ int_to_string x);
-  notactivedict := dadd x () (!notactivedict)
-  )
+fun reset_timer x = x := 0.0
+fun clean_timers () = app reset_timer
+  [select_time, exparg_time, apply_time, create_time,
+   backup_time, recons_time, metis_time, other_time]
+
+fun print_timers () =
+  app print_endline
+  ["select: " ^ rts_round 6 (!select_time),
+   "exparg: " ^ rts_round 6 (!exparg_time),
+   "apply: " ^ rts_round 6 (!apply_time),
+   "backup: " ^ rts_round 6 (!backup_time),
+   "recons: " ^ rts_round 6 (!recons_time),
+   "metis: " ^ rts_round 6 (!metis_time),
+   "other: " ^ rts_round 6 (!other_time)]
 
 (* -------------------------------------------------------------------------
-   Search references
+   Status
    ------------------------------------------------------------------------- *)
 
-val glob_timer = ref NONE
-val proofdict = ref (dempty Int.compare)
+datatype status = Proved | Saturated | Undecided
+fun is_proved x = (x = Proved)
+fun is_saturated x = (x = Saturated)
 
-(* global values to prevent many arguments in functions *)
-val thmpredictor_glob = ref (fn _ => (fn _ => []))
-val tacpredictor_glob = ref (fn _ => [])
+datatype searchstatus =
+  SearchProved | SearchSaturated | SearchTimeout
+datatype proofstatus =
+  Proof of string | ProofSaturated | ProofTimeout
 
 (* -------------------------------------------------------------------------
-   Caching tactic applications on goals
+   Search tree
    ------------------------------------------------------------------------- *)
 
-val stacgoal_cache = ref (dempty (cpl_compare String.compare goal_compare))
+datatype gtoken =
+  Token of token | Goal of (goal * (goal list, unit) Redblackmap.dict)
+fun is_token gtoken = case gtoken of Token _ => true | _ => false
+fun is_goal gtoken = case gtoken of Goal _ => true | _ => false
+fun dest_token gtoken =
+  case gtoken of Token x => x | _ => raise ERR "dest_token" ""
+fun dest_goal gtoken =
+  case gtoken of Goal (x,_) => x | _ => raise ERR "dest_goal" ""
+
+type searchrecord =
+  {nvis : real, nsum : real, nstatus : status,
+   parentd : (goal, unit) Redblackmap.dict}
+
+type stacrecord =
+  {gtoken : gtoken, atyl : aty list,
+   svis : real, ssum : real, spol : real, sstatus : status}
+
+datatype searchtree = SearchNode of searchrecord * stactree vector
+
+and stactree =
+   StacLeaf of stacrecord * searchtree option
+ | StacNode of stacrecord * (stactree vector * token list) option
+
+fun dest_searchtree tree = case tree of SearchNode x => x
+
+fun get_stacrecord stactree = case stactree of
+   StacLeaf (r,_) => r
+ | StacNode (r,_) => r
+
+(* -------------------------------------------------------------------------
+   Search parameters
+   ------------------------------------------------------------------------- *)
+
+type searchobj =
+  {predtac : goal -> token list,
+   predarg : string -> aty -> goal -> token list,
+   atyd : (string, aty list) Redblackmap.dict,
+   parsetoken : parsetoken,
+   vnno: tnn option, pnno: tnn option, anno: tnn option}
+
+(* -------------------------------------------------------------------------
+   Re-evaluation of nearest neighbor choices
+   by tree neural networks
+   ------------------------------------------------------------------------- *)
+
+(* value *)
+fun eval_goal vnn g =
+  let
+    val tm1 = nntm_of_stateval g
+    val tm2 = mask_unknown_val vnn tm1
+  in
+    infer_tnn_basic vnn tm2
+  end
+
+fun reward_of_goal vnno g =
+  if not (isSome vnno) then !default_reward else eval_goal (valOf vnno) g
+
+(*
+(* policy *)
+fun eval_stac pnn g stac =
+  let
+    val tm1 = nntm_of_statepol (g,stac)
+    val tm2 = mask_unknown_pol pnn tm1
+  in
+    infer_tnn_basic pnn tm2
+  end
+
+fun reorder_stacl g pnn stacl =
+  let
+    val (stacl1,stacl2) = part_n 16 stacl
+    fun f x = eval_stac pnn g (fst x)
+    val stacl1e = map_assoc f stacl1
+    val stacl1o = map fst (dict_sort compare_rmax stacl1e)
+  in
+    stacl1o @ stacl2
+  end
+
+fun reorder_pol g pnno stacl =
+  if not (isSome pnno) then stacl else reorder_stacl g (valOf pnno) stacl
+
+(* argument *)
+fun eval_argl ann g stac argl =
+  let fun f x = mask_unknown_arg ann (nntm_of_statearg ((g,stac),x)) in
+    map (singleton_of_list o snd) (infer_tnn ann (map f argl))
+  end
+
+fun reorder_arg anno g stac argl =
+  if not (isSome anno) then argl else
+  let
+    val rl = eval_argl (valOf anno) g stac argl
+    val argle = combine (argl,rl)
+  in
+    map fst (dict_sort compare_rmax argle)
+  end
+*)
+
+(* -------------------------------------------------------------------------
+   Node expansion
+   ------------------------------------------------------------------------- *)
+
+fun status_of_stac parentd (goal,siblingd) glo = case glo of
+    NONE => Saturated
+  | SOME [] => Proved
+  | SOME gl =>
+   (if op_mem goal_eq goal gl orelse
+       exists (fn x => dmem x parentd) gl orelse
+       dmem gl siblingd orelse
+       exists (fn x => term_eq (snd x) F) gl orelse
+       (!nocut_flag andalso
+        exists (fn x => term_eq (snd x) (snd goal)) gl)
+    then Saturated
+    else Undecided)
+
+fun is_metis_stac token = case token of
+    Stac s => s = "metisTools.METIS_TAC " ^ thmlarg_placeholder
+  | _ => false
+
+val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+
+val stac_cache = ref (
+  dempty (cpl_compare goal_compare (list_compare compare_token)))
+fun clean_stac_cache () = stac_cache :=
+  dempty (cpl_compare goal_compare (list_compare compare_token))
+
+fun apply_tac parsetoken tokenl goal =
+  dfind (goal,tokenl) (!stac_cache) handle NotFound =>
+  let
+    val tim = if is_metis_stac (hd tokenl) andalso !ttt_metis_flag
+              then !ttt_metis_time
+              else !ttt_tactic_time
+    fun f g =
+      let val tac = build_tac parsetoken tokenl in
+        SOME (fst (TC_OFF tac g))
+      end
+    val timer =
+      if is_metis_stac (hd tokenl)
+      then total_time metis_time
+      else total_time other_time
+    val glo = timer (timeout tim f) goal
+      handle Interrupt => raise Interrupt | _ => NONE
+  in
+    stac_cache := dadd (goal,tokenl) glo (!stac_cache); glo
+  end
+
+fun apply_stac obj noderec gtokenl = case gtokenl of
+    Goal (goal,siblingd) :: tokenl =>
+  let
+    val glo = apply_tac (#parsetoken obj) (map dest_token tokenl) goal
+    val sstatus = status_of_stac (#parentd noderec) (goal,siblingd) glo
+    val glo' = if sstatus = Undecided then glo else NONE
+  in
+    (glo',sstatus)
+  end
+  | _ => raise ERR "apply_stac" ""
+
+(* -------------------------------------------------------------------------
+   Node creation
+   ------------------------------------------------------------------------- *)
+
+(* predictions *)
+fun create_predtac obj svo goal = case svo of
+    NONE => SOME (Vector.fromList [], #predtac obj goal)
+  | SOME _ => svo
+
+fun create_predarg obj tokenl aty svo = case svo of
+    NONE => (case tokenl of
+      Goal (goal,_) :: Token (Stac stac) :: m =>
+        SOME (Vector.fromList [], #predarg obj stac aty goal)
+      | _ => raise ERR "create_predarg" "")
+  | SOME _ => svo
+
+(* stactree *)
+fun wrap_stacrecord x =
+   if is_token (#gtoken x) andalso null (#atyl x)
+   then StacLeaf (x,NONE)
+   else StacNode (x,NONE)
+
+fun atyl_of obj pr token = case token of
+    Stac stac => dfind stac (#atyd obj)
+  | _ => tlerr (#atyl pr)
+
+fun create_stactree obj pr token spol = wrap_stacrecord
+  {gtoken = Token token, atyl = atyl_of obj pr token,
+   svis = 1.0, ssum = 0.0, spol = spol, sstatus = Undecided}
+
+(* searchtree *)
+fun createreward_searchtree gtreev =
+  let fun f gtree = case gtree of
+      StacNode (r,_) => #ssum r / #svis r
+    | _ => raise ERR "createreward_searchtree" ""
+  in
+    Vector.foldl (op *) 1.0 (Vector.map f gtreev)
+  end
+
+val empty_siblingd = dempty (list_compare goal_compare)
+
+fun create_searchtree obj parentd gl =
+  let
+    val vnno = #vnno obj
+    fun create_gtree g = StacNode (
+      {gtoken = Goal (g, empty_siblingd), atyl = [],
+       svis = 1.0, ssum = reward_of_goal vnno g,
+       spol = 0.0, sstatus = Undecided}
+      , NONE)
+    val gtreev = Vector.fromList (map create_gtree gl)
+    val reward = createreward_searchtree gtreev
+  in
+    (SearchNode ({nvis = 1.0, nsum = reward,
+       nstatus = Undecided, parentd = parentd} , gtreev), reward)
+  end
+
+(* -------------------------------------------------------------------------
+   Node backup
+   ------------------------------------------------------------------------- *)
+
+fun reward_of_status status = case status of
+    Saturated => 0.0
+  | Proved => 1.0
+  | _ => raise ERR "reward_of_sstatus" "unexpected"
+
+(* stactree *)
+fun backstatus_stactree (sv,sl) =
+  let val v = Vector.map (fn x => #sstatus (get_stacrecord x)) sv in
+    if Vector.exists is_proved v then Proved
+    else if null sl andalso Vector.all is_saturated v then Saturated
+    else Undecided
+  end
+
+fun back_stactree stree si (su,reward) = case stree of
+     StacNode ({gtoken,atyl,svis,ssum,spol,sstatus}, SOME (sv,sl)) =>
+     let
+       val newsv = Vector.update (sv,si,su)
+       val newstatus = backstatus_stactree (newsv,sl)
+     in
+       (StacNode
+         ({gtoken = gtoken, atyl = atyl,
+          svis = svis + 1.0, ssum = ssum + reward,
+          spol = spol, sstatus = newstatus}, SOME (newsv,sl)),
+        reward)
+     end
+   | _ => raise ERR "back_stactree" ""
+
+(* searchtree root *)
+fun backstatus_root gtreev =
+  let val v = Vector.map (#sstatus o get_stacrecord) gtreev in
+    if Vector.all is_proved v then Proved
+    else if Vector.exists is_saturated v then Saturated
+    else Undecided
+  end
+
+fun backreward_root (gi,reward) gtreev =
+  let fun f (i,gtree) =
+    let
+      val r = get_stacrecord gtree
+      val status = #sstatus r
+    in
+      if status = Proved then 1.0
+      else if status = Saturated then 0.0
+      else if gi = i then reward
+      else #ssum r / #svis r
+    end
+  in
+    Vector.foldl (op *) 1.0 (Vector.mapi f gtreev)
+  end
+
+fun back_root tree gi (gu,reward) =
+  let
+    val ({nvis,nsum,nstatus,parentd},gtreev) = dest_searchtree tree
+    val newgtreev = Vector.update (gtreev,gi,gu)
+    val newstatus = backstatus_root newgtreev
+    val newreward = backreward_root (gi,reward) newgtreev
+  in
+    (SOME (SearchNode
+      ({nvis = nvis + 1.0, nsum = nsum + newreward, nstatus = newstatus,
+        parentd = parentd}, newgtreev)), newreward)
+  end
+
+fun update_stacrec (status,reward)
+  {gtoken,atyl,svis,ssum,spol,sstatus} =
+    {gtoken = gtoken, atyl = atyl,
+     svis = svis + 1.0, ssum = ssum + reward,
+     spol = spol, sstatus = status}
+
+(* stactree leaf *)
+fun backleaf_wstatus stacleaf status (cuo,reward) =
+  let
+    val newstacleaf = case stacleaf of
+        StacNode (r,svo) => StacNode (update_stacrec (status,reward) r,svo)
+      | StacLeaf (r,_) => StacLeaf (update_stacrec (status,reward) r,cuo)
+  in
+    (newstacleaf,reward)
+  end
+
+fun backleaf stacleaf (cuo,reward) =
+  let
+    val cu = valOf cuo handle Option => raise ERR "backleaf" ""
+    val status = (#nstatus o fst o dest_searchtree) cu
+  in
+    backleaf_wstatus stacleaf status (cuo,reward)
+  end
+
+(* -------------------------------------------------------------------------
+   Node selection
+   ------------------------------------------------------------------------- *)
+
+fun policy_coeff n =
+  (1.0 - !ttt_policy_coeff) * Math.pow (!ttt_policy_coeff, Real.fromInt n)
+
+fun puct pvis rankn {ssum,svis,spol,sstatus,...} =
+  if !avoid_decided_flag andalso sstatus <> Undecided then ~1.0 else
+  let
+    val newspol =
+      if !shift_policy_flag then policy_coeff (!rankn) else spol
+    val _ = incr rankn
+  in
+    ssum / svis + (!ttt_explo_coeff) * (newspol * Math.sqrt pvis) / svis
+  end
+
+
+(* stactree *)
+datatype selectres =
+  Sel of int | SelNone | SelFresh of (token * real)
+
+fun select_stactree pvis (sv,sl) =
+  if Vector.length sv = 0 then
+    (if null sl then SelNone else SelFresh (hd sl, policy_coeff 0))
+  else
+  let
+    val rankn = ref 0
+    fun score x = puct pvis rankn (get_stacrecord x)
+    val (i,sc) = vector_max score sv
+  in
+    if null sl then
+      (if !rankn = 0 andalso !avoid_decided_flag then SelNone else Sel i)
+    else
+    let
+      val freshpol = policy_coeff
+        (if !shift_policy_flag then !rankn else Vector.length sv)
+      val freshsc = !ttt_explo_coeff * (freshpol * Math.sqrt pvis)
+    in
+      if freshsc > sc then SelFresh (hd sl, freshpol) else Sel i
+    end
+  end
+
+fun select_stacleaf obj backl gtokenl stree = case stree of
+    StacNode (r,svo) =>
+    let
+      val newsvo = case #gtoken r of
+          Goal (goal,_) => create_predtac obj svo goal
+        | Token _ => create_predarg obj (rev (#gtoken r :: gtokenl))
+            (hderr (#atyl r)) svo
+      val newstree = StacNode (r,newsvo)
+      val newgtokenl = #gtoken r :: gtokenl
+    in
+      case select_stactree (#svis r) (valOf newsvo) of
+        SelNone => (stree, rev newgtokenl, backl)
+      | Sel si =>
+        let
+          val cstree = Vector.sub (fst (valOf newsvo), si)
+          val backf = back_stactree newstree si
+          val newbackl = backf :: backl
+        in
+          select_stacleaf obj newbackl newgtokenl cstree
+        end
+      | SelFresh (token,spol) =>
+        let
+          val cstree = create_stactree obj r token spol
+          val (sv,sl) = valOf newsvo
+            handle Option => raise ERR "select_stacleaf" ""
+          val newnewsvo =
+            SOME (Vector.concat [sv,Vector.fromList [cstree]], tl sl)
+          val newnewstree = StacNode (r,newnewsvo)
+          val backf = back_stactree newnewstree (Vector.length sv)
+          val newbackl = backf :: backl
+        in
+          select_stacleaf obj newbackl newgtokenl cstree
+        end
+    end
+  | StacLeaf (r,_) => (stree, rev (#gtoken r :: gtokenl), backl)
+
+(* search tree *)
+fun select_goaltree gtreev =
+  let
+    val _ = if Vector.length gtreev = 0
+      then raise ERR "select_goaltree" "" else ()
+    fun score x =
+      let val r = get_stacrecord x in
+        if !avoid_decided_flag andalso #sstatus r <> Undecided
+        then Real.posInf
+        else #svis r
+      end
+    val i = vector_mini score gtreev
+  in
+    (i, Vector.sub (gtreev, i))
+  end
+
+fun endselect status (backl,bfroot,bfl) sleaf =
+  let
+    val ctreeo = case sleaf of StacNode _ => NONE | StacLeaf (_,co) => co
+    val reward = reward_of_status status
+    val be = (backleaf_wstatus sleaf status, bfl, bfroot)
+  in
+    ((ctreeo,reward), be :: backl, NONE)
+  end
+
+fun select_searchleaf obj backl tree =
+  let
+    val (nr,gtreev) = dest_searchtree tree
+    val (gi,gtree) = select_goaltree gtreev
+    val bfroot = back_root tree gi
+    val (sleaf,gtokenl,bfl) = select_stacleaf obj [] [] gtree
+    val bbb = (backl,bfroot,bfl)
+  in
+    case sleaf of
+      StacNode _ => endselect Saturated bbb sleaf
+    | StacLeaf (sr,SOME ctree) =>
+      if #sstatus sr <> Undecided andalso not (!contmid_flag) then
+        endselect (#sstatus sr) bbb sleaf
+      else
+      let val be = (backleaf sleaf, bfl, bfroot) in
+        select_searchleaf obj (be :: backl) ctree
+      end
+    | StacLeaf (sr,NONE) =>
+      if #sstatus sr <> Undecided then
+        endselect (#sstatus sr) bbb sleaf
+      else
+      let val (glo,status) = total_time apply_time
+        (apply_stac obj nr) gtokenl
+      in
+        case glo of
+           NONE => endselect status bbb sleaf
+         | SOME gl =>
+        let
+          fun goal_of_gtokenl gtokenl = case gtokenl of
+            Goal (g,_) :: m => g
+          | _ => raise ERR "goal_of_tokenl" ""
+          val newparentd = dadd (goal_of_gtokenl gtokenl) () (#parentd nr)
+          val _ = debug "creation"
+          val (newctree,reward) = total_time create_time
+            (create_searchtree obj newparentd) gl
+          val be = (backleaf sleaf, bfl, bfroot)
+        in
+          ((SOME newctree, reward), be :: backl, glo)
+        end
+     end
+  end
+
+(* -------------------------------------------------------------------------
+   Rebuild the tree using the stored back functions
+   ------------------------------------------------------------------------- *)
+
+fun update_siblingd_gtoken gl gtoken = case gtoken  of
+   Goal (g,siblingd) => Goal (g, dadd gl () siblingd)
+ | _ => raise ERR "update_siblingd_gtoken" ""
+
+fun update_siblingd_rec gl {gtoken,atyl,svis,ssum,spol,sstatus} =
+  {gtoken = update_siblingd_gtoken gl gtoken,
+   atyl=atyl,svis=svis,ssum=ssum,spol=spol,sstatus=sstatus}
+
+fun update_siblingd gl gtree = case gtree of
+    StacNode (r,svo) => StacNode (update_siblingd_rec gl r, svo)
+  | _ => raise ERR "update_siblingd" ""
+
+fun backloop_stactree glo (bleaf,bnodel,broot) x =
+  let
+    fun f glo (x,reward) = case glo of NONE => (x,reward) |
+      SOME gl => (update_siblingd gl x, reward)
+    fun loop l x = case l of
+      [] =>  x
+    | backf :: m => loop m (backf x)
+  in
+    broot (f glo (loop bnodel (bleaf x)))
+  end
+
+fun backloop_searchtree glo backl x =
+  case backl of
+    [] => x
+  | a :: m => backloop_searchtree NONE m (backloop_stactree glo a x)
+
+fun backfull glo backl x =
+  let val (ctreeo,reward) = backloop_searchtree glo backl x in
+    valOf ctreeo
+  end
+
+(* -------------------------------------------------------------------------
+   Search loop: selection, expansion and back
+   ------------------------------------------------------------------------- *)
+
+fun get_searchstatus tree =
+  let val nstatus = (#nstatus o fst o dest_searchtree) tree in
+    if nstatus = Saturated then SearchSaturated
+    else if nstatus = Proved then SearchProved
+    else SearchTimeout
+  end
+
+fun stop_search (timer,nlimito) n tree =
+  let val nstatus = (#nstatus o fst o dest_searchtree) tree in
+    (isSome nlimito andalso n >= valOf nlimito) orelse
+    (not (isSome nlimito) andalso
+       Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)) orelse
+    (not (!conttop_flag) andalso nstatus <> Undecided)
+  end
+
+fun search_loop (obj : searchobj) nlimito starttree =
+  let
+    val timer = Timer.startRealTimer ()
+    fun loop n tree =
+      if stop_search (timer,nlimito) n tree
+      then (print_endline ("loops: " ^ its n); (get_searchstatus tree,tree))
+      else
+        let
+          val _ = debug "selection"
+          val ((ctreeo,reward),backl,glo) = total_time select_time
+            (select_searchleaf obj []) tree
+          val _ = debug "backup"
+          val backtree = total_time backup_time
+            (backfull glo backl) (ctreeo,reward)
+        in
+          loop (n+1) backtree
+        end
+  in
+    loop 0 starttree
+  end
+
+(* -------------------------------------------------------------------------
+   Proof reconstruction
+   ------------------------------------------------------------------------- *)
+
+fun proof_stactree gtokenl stactree = case stactree of
+    StacLeaf (r,ctreeo) => (rev (#gtoken r :: gtokenl), ctreeo)
+  | StacNode (r,svo) =>
+    let
+      val (sv,_) = valOf svo
+        handle Option => raise ERR "proof_stactree" ""
+      fun f x = is_proved (#sstatus (get_stacrecord x))
+      val cstree = valOf (Vector.find f sv)
+        handle Option => raise ERR "proof_stactree" ""
+    in
+      proof_stactree (#gtoken r :: gtokenl) cstree
+    end
+
+fun proofl_searchtree tree =
+  let
+    val (_,gtreev) = dest_searchtree tree
+    fun f gtree =
+      let
+        val (gtokenl,ctreeo) = proof_stactree [] gtree
+        val tokenl = map dest_token (tl gtokenl)
+          handle Empty => raise ERR "proof_searchtree" ""
+        val istac = build_stac tokenl
+        val goal = dest_goal (hd gtokenl)
+        val ptac = Tactic (istac, goal)
+        val _ = debugf "goal: " string_of_goal goal
+        val _ = debug ("stac: " ^ istac);
+      in
+        case ctreeo of
+          NONE => ptac
+        | SOME ctree => Thenl (ptac, proofl_searchtree ctree)
+      end
+  in
+    vector_to_list (Vector.map f gtreev)
+  end
+
+
+fun reconstruct_proofstatus (searchstatus,tree) goal =
+   case searchstatus of
+    SearchSaturated => ProofSaturated
+  | SearchTimeout => ProofTimeout
+  | SearchProved =>
+    let
+      val _ = debug "extraction"
+      fun f tree = singleton_of_list (proofl_searchtree tree)
+      val (proof1,t1) = add_time f tree
+      val _ = debug ("extraction time: " ^ rts_round 6 t1)
+      val _ = debug "minimization"
+      val (proof2,t2) = add_time minimize_proof proof1
+      val _ = print_endline ("minimization time: " ^ rts_round 6 t2)
+      val _ = debug "reconstruction"
+      val (sproof,t3) = add_time (reconstruct goal) proof2
+      val _ = print_endline ("reconstruction time: " ^ rts_round 6 t3)
+    in
+      Proof sproof
+    end
+
+
+(* -------------------------------------------------------------------------
+   Proof suggestion
+   ------------------------------------------------------------------------- *)
+
+val suggest_depth = ref NONE
+
+fun suggest_stactree gtokenl stactree = case stactree of
+    StacLeaf (r,ctreeo) => SOME (rev (#gtoken r :: gtokenl), ctreeo)
+  | StacNode (r,svo) =>
+    (case svo of SOME (sv,_) =>
+     if Vector.all (is_saturated o #sstatus o get_stacrecord) sv then NONE else
+     let val cstree =
+       case Vector.find (is_proved o #sstatus o get_stacrecord) sv of
+         SOME cst => cst
+       | NONE =>
+           let
+             fun score x = let val rloc = get_stacrecord x in
+               if #sstatus rloc = Saturated then ~1.0 else #svis rloc end
+           in
+             Vector.sub (sv, vector_maxi score sv)
+           end
+      in
+        suggest_stactree (#gtoken r :: gtokenl) cstree
+      end
+    | NONE => NONE)
+
+fun suggestl_searchtree d tree =
+  let
+    val (_,gtreev) = dest_searchtree tree
+    fun f gtree =
+      if isSome (!suggest_depth) andalso d >= valOf (!suggest_depth) then
+      let val goal = (dest_goal o #gtoken o get_stacrecord) gtree in
+        Tactic ("Tactical.ALL_TAC", goal)
+      end
+      else
+      case suggest_stactree [] gtree of
+      NONE =>
+      let val goal = (dest_goal o #gtoken o get_stacrecord) gtree in
+        Tactic ("Tactical.ALL_TAC", goal)
+      end
+    | SOME (gtokenl,ctreeo) =>
+      let
+        val tokenl = map dest_token (tl gtokenl)
+          handle Empty => raise ERR "suggestl_searchtree" ""
+        val istac = build_stac tokenl
+        val goal = dest_goal (hd gtokenl)
+        val ptac = Tactic (istac, goal)
+      in
+        case ctreeo of
+          NONE => ptac
+        | SOME ctree => Thenl (ptac, suggestl_searchtree (d+1) ctree)
+      end
+  in
+    vector_to_list (Vector.map f gtreev)
+  end
+
+fun suggest_proof tree =
+  let
+    val gtree = Vector.sub (snd (dest_searchtree tree),0)
+    val goal = (dest_goal o #gtoken o get_stacrecord) gtree
+    fun f tree = singleton_of_list (suggestl_searchtree 0 tree)
+  in
+    unsafe_prettify_proof (minimize_proof_alt (f tree))
+  end
 
 (* -------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------- *)
 
-val stac_counter = ref 0
-fun string_of_pred pred = "[" ^ String.concatWith "," pred ^ "]"
+datatype vistoken = VisGoal of goal | VisTac of string | VisArg of token
+datatype vistree =
+  VisNode of vistoken * int * real * status * vistree list
 
-val tactime = ref 0.0
-val thmtime = ref 0.0
+fun allnode_searchtree tree = case tree of SearchNode (r,gtreev) =>
+  r :: List.concat (vector_to_list (Vector.map allnode_stactree gtreev))
+and allnode_stactree stactree = case stactree of
+    StacNode (_,NONE) => []
+  | StacNode (_,SOME (sv,sl)) =>
+    List.concat (vector_to_list (Vector.map allnode_stactree sv))
+  | StacLeaf (_,NONE) => []
+  | StacLeaf (_,SOME ctree) => allnode_searchtree ctree
 
-val tactimer = total_time tactime
-val thmtimer = total_time thmtime
+fun vistoken_of_gtoken gtoken = case gtoken of
+    Goal (g,_) => VisGoal g
+  | Token (Stac s) => VisTac s
+  | Token x => VisArg x
 
-val inst_time = ref 0.0
-val terminst_time = ref 0.0
-val infstep_time = ref 0.0
-val node_create_time = ref 0.0
-val node_find_time = ref 0.0
+fun vistree_of_stacrecord pvis {gtoken,svis,ssum,sstatus,...} vistreel =
+  VisNode (vistoken_of_gtoken gtoken,
+    Real.round svis, ssum / svis,
+    sstatus, vistreel)
 
-val inst_timer = total_time inst_time
-val infstep_timer = total_time infstep_time
-fun node_create_timer f x = total_time node_create_time f x
-val node_find_timer = total_time node_find_time
+fun vistreel_of_searchtree tree = case tree of SearchNode (r,gtreev) =>
+  vector_to_list (Vector.map (vistree_of_stactree (#nvis r)) gtreev)
+and vistree_of_stactree pvis stactree = case stactree of
+    StacNode (r,NONE) => vistree_of_stacrecord pvis r []
+  | StacNode (r,SOME (sv,_)) =>
+     let
+       val sl1 = vector_to_list sv
+       val sl2 = filter (not o is_saturated o #sstatus o get_stacrecord) sl1
+       val sl3 = map (vistree_of_stactree (#svis r)) sl2
+     in
+       vistree_of_stacrecord pvis r sl3
+     end
+  | StacLeaf (r,NONE) => vistree_of_stacrecord pvis r []
+  | StacLeaf (r,SOME ctree) => vistree_of_stacrecord pvis r
+      (vistreel_of_searchtree ctree)
 
-val tot_time = ref 0.0
-fun total_timer f x = total_time tot_time f x
+fun length_vistree vistree = case vistree of
+    VisNode (vtoken,svis,sval,sstatus,treel) =>
+      (case vtoken of VisGoal _ => 1 | _ => 0) +
+      sum_int (map length_vistree treel);
 
-fun reset_timers () =
-  (
-  tactime := 0.0;
-  thmtime := 0.0;
-  inst_time := 0.0;
-  infstep_time := 0.0;
-  node_create_time := 0.0;
-  node_find_time := 0.0;
-  tot_time := 0.0
-  )
+fun indent n = String.concat (List.tabulate (n, fn _ => " "))
 
-(* -------------------------------------------------------------------------
-   Special tactics
-   ------------------------------------------------------------------------- *)
+fun string_of_vtoken vtoken = case vtoken of
+    VisGoal g => string_of_goal g
+  | VisTac s => s
+  | VisArg (Sthml x) => String.concatWith " " x
+  | VisArg (Sterm x) => x
+  | VisArg (Stac x) =>  x
 
-val metis_spec = "tactictoe_metis"
-fun add_metis pred = metis_spec :: pred
 
-(* -------------------------------------------------------------------------
-   MCTS: Priors
-   ------------------------------------------------------------------------- *)
+fun print_vistree_aux offset vistree = case vistree of
+    VisNode (vtoken,svis,sval,sstatus,treel) =>
+      (
+      print_endline
+        (indent offset ^
+         String.concatWith " " [string_of_vtoken vtoken, its svis,
+           rts sval,
+           if sstatus = Proved then "Proved" else ""]);
+      app (print_vistree_aux (offset + 2)) treel
+      )
 
-fun array_to_list a =
-  let fun f (a,l) = a :: l in rev (Array.foldl f [] a) end
-
-fun init_eval pripol pid =
-  let
-    val _ = debug "mcts evaluation"
-    val prec = dfind pid (!proofdict)
-    val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
-    val eval = 1.0
-  in
-    priorpolicy := pripol;
-    visit := 1.0;
-    prioreval := eval;
-    cureval := [eval]
-  end
-
-(* -------------------------------------------------------------------------
-   MCTS: Backup (works marginally).
-   Prior eval is constant equal to 1.0
-   ------------------------------------------------------------------------- *)
-
-fun backup_loop eval cid =
-  let
-    val crec = dfind cid (!proofdict)
-    val {parid,visit,cureval,...} = crec
-  in
-    cureval := eval :: !cureval;
-    visit := !visit + 1.0;
-    if parid = NONE then () else backup_loop eval (valOf parid)
-  end
-
-fun backup cid =
-  let
-    val _ = debug "mcts backpropagation"
-    val crec = dfind cid (!proofdict)
-    val {parid,prioreval,...} = crec
-  in
-    if parid = NONE then () else backup_loop (!prioreval) (valOf parid)
-  end
-
-fun backup_fail cid =
-  let
-    val _ = debug "backup fail"
-    val crec = dfind cid (!proofdict)
-    val {parid,...} = crec
-  in
-    if parid = NONE then () else backup_loop 0.0 (valOf parid)
-  end
-
-fun backup_success cid =
-  let
-    val _ = debug "backup success"
-    val crec = dfind cid (!proofdict)
-    val {parid,...} = crec
-  in
-    if parid = NONE then () else backup_loop 1.0 (valOf parid)
-  end
-
-(* --------------------------------------------------------------------------
-   Node creation and deletion
-   -------------------------------------------------------------------------- *)
-
-val max_depth_mem = ref 0
-val pid_counter = ref 0
-
-fun next_pid () =
-  let
-    val r = !pid_counter
-    val _ = pid_counter := !pid_counter + 1
-  in
-    r
-  end
-
-fun root_create goal pred =
-  let
-    fun init_empty _ = ref []
-    val selfid = next_pid ()
-    val selfrec =
-      {
-      selfid   = selfid,
-      parid    = NONE,
-      parstac  = NONE,
-      pargn    = NONE,
-      parg     = NONE,
-      goalarr  = Array.fromList [goal],
-      predarr  = Array.fromList [pred],
-      depth = 0,
-      (* *)
-      pending  = ref [0],
-      children = ref [],
-      (* proof saved for reconstruction + children *)
-      proofl   = ref [],
-      childrena = Array.fromList (map init_empty [goal]),
-      (* preventing loop and parallel steps *)
-      pardict  = dempty goal_compare,
-      trydict  = ref (dempty (list_compare goal_compare)),
-      (* monte carlo *)
-      priorpolicy = ref 0.0,
-      visit = ref 0.0,
-      prioreval = ref 0.0,
-      cureval = ref []
-      }
-  in
-    debug "Root";
-    debug ("  goal: " ^
-      String.concatWith "," (map string_of_goal [goal]));
-    debug ("  pred: \n  " ^
-      String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) [pred]));
-    proofdict := dadd selfid selfrec (!proofdict);
-    init_eval 0.0 selfid
-  end
-
-fun root_create_wrap g =
-  root_create g ((add_metis o !tacpredictor_glob) g)
-
-fun node_create pripol tactime parid parstac pargn parg goallist
-    predlist pending pardict =
-  let
-    val selfid = next_pid ()
-    fun init_empty _ = ref []
-    val selfrec =
-    {
-      selfid   = selfid,
-      parid    = SOME parid,
-      parstac  = SOME parstac,
-      pargn    = SOME pargn,
-      parg     = SOME parg,
-      goalarr  = Array.fromList goallist,
-      predarr  = Array.fromList predlist,
-      depth    = #depth (dfind parid (!proofdict)) + 1,
-      (* goal considered *)
-      pending  = ref pending,
-      children = ref [],
-      (* proof saved for reconstruction + children *)
-      proofl = ref [],
-      childrena = Array.fromList (map init_empty goallist),
-      (* preventing loop and parallel steps *)
-      pardict  = pardict,
-      trydict  = ref (dempty (list_compare goal_compare)),
-      (* monte carlo: dummy values changed by init_eval *)
-      priorpolicy = ref 0.0,
-      visit = ref 0.0,
-      prioreval = ref 0.0,
-      cureval = ref []
-    }
-    val cdepth = #depth selfrec
-  in
-    if cdepth > !max_depth_mem then max_depth_mem := cdepth else ();
-    debug
-       ("Node " ^ int_to_string selfid ^ " " ^ int_to_string parid ^ " " ^
-        Real.toString (! (#priorpolicy selfrec)));
-    debug
-       ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
-    debug ("  predictions: " ^
-       String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) predlist));
-    proofdict := dadd selfid selfrec (!proofdict);
-    init_eval pripol selfid;
-    selfid
-  end
-
-fun node_delete pid =
-  (debug ("node_delete " ^ int_to_string pid); deactivate pid)
+fun print_vistree vistree = print_vistree_aux 0 vistree
 
 (* -------------------------------------------------------------------------
-   Change the name of the tactic that has been applied
+   Proof search top-level function
    ------------------------------------------------------------------------- *)
 
-fun update_curstac newstac pid =
+fun search (obj : searchobj) goal =
   let
-    val prec = dfind pid (!proofdict)
-    val gn = hd (!(#pending prec))
-    val pred = Array.sub (#predarr prec, gn)
-    val newpred = newstac :: tl pred
+    val _ = (clean_stac_cache (); clean_timers ())
+    val (starttree,_) = create_searchtree obj (dempty goal_compare) [goal]
+    val ((searchstatus,endtree),t) = add_time
+      (search_loop obj (!looplimit)) starttree
+    val _ = clean_stac_cache ()
+    val _ = print_endline
+      ("nodes: " ^ its (length (allnode_searchtree endtree)));
+    val _ = print_endline ("search: " ^ rts_round 6 t)
+    val r = total_time recons_time
+      (reconstruct_proofstatus (searchstatus,endtree)) goal
+    val _ = print_timers ()
   in
-    Array.update (#predarr prec, gn, newpred)
-  end
-  handle Interrupt => raise Interrupt | _ =>
-    debug_err ("update_curstac :" ^ newstac)
-
-
-(* -------------------------------------------------------------------------
-   Caches
-   ------------------------------------------------------------------------- *)
-
-val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
-val inst_dict = ref (dempty (cpl_compare String.compare goal_compare))
-val tac_dict = ref (dempty String.compare)
-
-fun cache_thmpred n g =
-  dfind (g,n) (!thml_dict) handle NotFound =>
-  let val sl = (!thmpredictor_glob) n g in
-    thml_dict := dadd (g,n) sl (!thml_dict);
-    sl
+    (r,endtree)
   end
 
-fun cache_thminst stac g =
-  dfind (stac,g) (!inst_dict) handle NotFound =>
-  let
-    val _ = debug ("instantiating: " ^ stac)
-    val thmidl = cache_thmpred (!ttt_thmlarg_radius) g
-    val newstac = inst_stac thmidl stac
-    val newtac = tactic_of_sml newstac
-      handle Interrupt => raise Interrupt | _ =>
-        debug_err ("stac_to_tac: " ^ newstac)
-    val r = (newstac, newtac, !ttt_tactic_time)
-  in
-    debug ("to: " ^ newstac);
-    inst_dict := dadd (stac,g) r (!inst_dict);
-    r
-  end
-
-fun cache_metisinst stac g =
-  dfind (stac,g) (!inst_dict) handle NotFound =>
-  let
-    val thmidl = cache_thmpred (!ttt_metis_radius) g
-    val newstac = mk_metis_call thmidl
-    val newtac = tactic_of_sml newstac
-      handle Interrupt => raise Interrupt | _ =>
-        debug_err ("stac_to_tac: " ^ newstac)
-  in
-    inst_dict := dadd (stac,g) (newstac,newtac,!ttt_metis_time) (!inst_dict);
-    debug ("to: " ^ newstac);
-    (newstac,newtac,!ttt_metis_time)
-  end
-
-fun cache_stac stac =
-  dfind stac (!tac_dict) handle NotFound =>
-  let val tac = tactic_of_sml stac in
-    tac_dict := dadd stac tac (!tac_dict);
-    tac
-  end
-
-(* -------------------------------------------------------------------------
-   Transforming code into a tactic. Doing necessary predictions.
-   ------------------------------------------------------------------------- *)
-
-fun stac_to_tac stac g =
-  (
-  if is_thmlarg_stac stac
-    then cache_thminst stac g
-  else if stac = metis_spec
-    then cache_metisinst stac g
-  else (stac, cache_stac stac, !ttt_tactic_time)
-  )
-  handle Interrupt => raise Interrupt | _ =>
-    (debug ("stac_to_tac: " ^ stac);
-     ("Tactical.NO_TAC", NO_TAC, !ttt_tactic_time))
-
-(* -------------------------------------------------------------------------
-   Application of a tactic.
-   ------------------------------------------------------------------------- *)
-
-fun glob_productive pardict trydict g glo =
-  case glo of
-    NONE => NONE
-  | SOME gl =>
-    (
-    if op_mem goal_eq g gl orelse exists (fn x => dmem x pardict) gl orelse
-       dmem gl trydict
-    then NONE
-    else SOME gl
-    )
-
-fun apply_stac pid pardict trydict stac g =
-  let
-    val _ = stac_counter := !stac_counter + 1
-    (* instantiation of theorems and reading *)
-    val (newstac,newtac,tim) = stac_to_tac stac g
-    val _ = update_curstac newstac pid
-    (* execution *)
-    val glo = dfind (newstac,g) (!stacgoal_cache)
-       handle NotFound => timeout_tactic tim newtac g
-    (* testing for loops *)
-    val newglo = glob_productive pardict trydict g glo
-  in
-    stacgoal_cache := dadd (newstac,g) glo (!stacgoal_cache);
-    newglo
-  end
-
-fun apply_next_stac pid =
-  let
-    val _ = debug "apply_next_stac"
-    val prec = dfind pid (!proofdict)
-    val gn = hd (! (#pending prec))
-      handle Interrupt => raise Interrupt | _ =>
-      debug_err "apply_next_stac: empty pending"
-    val g = Array.sub (#goalarr prec, gn)
-    val pred = Array.sub (#predarr prec, gn)
-    val trydict = !(#trydict prec)
-    val pardict = (#pardict prec)
-    val stac = hd pred
-      handle Interrupt => raise Interrupt | _ =>
-      debug_err "apply_next_stac: empty pred"
-  in
-    infstep_timer (apply_stac pid pardict trydict stac) g
-  end
-
-(* ----------------------------------------------------------------------
-   Searching for a node (goal list) to explore.
-   ---------------------------------------------------------------------- *)
-
-fun has_empty_pred pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val gn = hd (!(#pending prec))
-    val pred = Array.sub (#predarr prec, gn)
-      handle Interrupt => raise Interrupt | _ =>
-      debug_err ("find_next_tac: " ^ int_to_string pid)
-  in
-    if null pred then (deactivate pid; true) else false
-  end
-
-fun mc_node_find pid =
-  if Timer.checkRealTimer (valOf (!glob_timer)) >
-     Time.fromReal (!ttt_search_time)
-  then (debug "Warning: mc_node_find: loop"; raise SearchTimeout)
-  else
-    let
-      val prec = dfind pid (!proofdict)
-      val {children,visit,...} = prec
-      val pvisit = !(#visit prec)
-      val pdenom = Math.sqrt pvisit
-      (* try new tactic on the node itself *)
-      val n = length (!children)
-      val self_pripol =
-        Math.pow (1.0 - !ttt_policy_coeff, Real.fromInt n) * !ttt_policy_coeff
-      val self_curpol = 1.0 / pdenom
-      val self_selsc = (pid, 2.0 * self_pripol / self_curpol)
-      (* or explore deeper existing partial proofs *)
-      fun f cid =
-        let
-          val crec = dfind cid (!proofdict)
-          val pripol = !(#priorpolicy crec)
-          val meaneval = average_real (!(#cureval crec))
-          val visit = !(#visit crec)
-          val curpol = (visit + 1.0) / pdenom
-        in
-          (cid, meaneval + 2.0 * (pripol / curpol))
-        end
-      (* sort and select node with best selection score *)
-      val l0 = self_selsc :: List.map f (!children)
-      val l1 = dict_sort compare_rmax l0
-      val (selid,_) = hd l1
-    in
-      if pid = selid then (pid,self_pripol) else mc_node_find selid
-    end
-
-fun try_mc_find () =
-  if Timer.checkRealTimer (valOf (!glob_timer)) >
-     Time.fromReal (!ttt_search_time)
-  then (debug "Warning: try_mc_find"; raise SearchTimeout)
-  else
-    let
-      val _ = debug "mc_node_find"
-      val (pid,pripol) = mc_node_find 0
-    in
-      if is_notactive pid
-      then (backup_fail pid; try_mc_find ())
-      else (debug ("Find " ^ int_to_string pid); (pid,pripol))
-    end
-
-(* ---------------------------------------------------------------------------
-   Closing proofs (should not need that with a proper search mechanism)
-   -------------------------------------------------------------------------- *)
-
-fun children_of pid =
-  let val prec = dfind pid (!proofdict) in !(#children prec) end
-
-fun descendant_of pid =
-  let val cidl = children_of pid in
-    cidl @ List.concat (map descendant_of cidl)
-  end
-
-fun close_descendant pid = app node_delete (descendant_of pid)
-
-exception ProofFound
-
-fun close_proof cid pid =
-  let
-    val crec = dfind cid (!proofdict)
-    val prec = dfind pid (!proofdict)
-    val {pargn = gn, parstac = stac,...} = crec
-    val {proofl,pending,parid,children,visit,trydict,priorpolicy,...} = prec
-  in
-    (* checking some assertions *)
-    if !pending <> [] then () else debug_err "close_proof: pending";
-    if valOf gn = hd (!pending) then () else debug_err "close_proof";
-    (* remember which child gave the proof of which goal *)
-    proofl := (valOf gn, valOf stac, cid) :: !proofl;
-    (* close all current  children *)
-    close_descendant pid;
-    (* switching to next pending goal, erasing previous statistics *)
-    children := [];
-    trydict := dempty (list_compare goal_compare);
-    pending := tl (!pending);
-    (* check if the goal was solved and recursively close *)
-    if null (!pending)
-    then
-      if parid = NONE (* root *)
-      then (debug "proof found"; node_delete pid; raise ProofFound)
-      else close_proof pid (valOf parid)
-    else ()
-  end
-
-(* --------------------------------------------------------------------------
-   Creating new nodes
-   -------------------------------------------------------------------------- *)
-
-fun node_create_gl pripol tactime gl pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val gn = hd (! (#pending prec))
-    val goal = Array.sub (#goalarr prec, gn)
-    val prev_predl = Array.sub (#predarr prec, gn)
-    val stac = hd prev_predl
-    val parchildren = #children prec
-    val parchildrensave = Array.sub (#childrena prec,gn)
-    val depth = #depth prec + 1
-    val predlist = map (add_metis o !tacpredictor_glob) gl
-    val pending = rev (map fst (number_list 0 predlist))
-    (* Updating list of parents *)
-    val new_pardict = dadd goal () (#pardict prec)
-    (* New node *)
-    val selfid =
-      node_create pripol
-        tactime pid stac gn goal gl predlist pending new_pardict
-  in
-    parchildren := selfid :: (!parchildren);
-    parchildrensave := selfid :: (!parchildrensave);
-    selfid
-  end
-
-(* fake a node when a proof is found but no search is performed on this node *)
-fun node_create_empty staco tactime pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val gn   = hd (! (#pending prec))
-    val goal = Array.sub (#goalarr prec, gn)
-    val pred = Array.sub (#predarr prec, gn)
-    val stac =
-      case staco of
-        NONE => hd pred
-      | SOME s => s
-    val parchildren = #children prec
-    val parchildrensave = Array.sub (#childrena prec,gn)
-    val selfid = node_create 0.0 tactime pid stac gn goal [] [] []
-                   (dempty goal_compare)
-  in
-    parchildren := selfid :: (!parchildren);
-    parchildrensave := selfid :: (!parchildrensave);
-    selfid
-  end
-
-(* pid should be active and the goal should match *)
-fun close_proof_wrap staco tactime pid =
-  let val cid = node_create_timer (node_create_empty staco tactime) pid in
-    backup cid;
-    close_proof cid pid
-  end
-
-(* ---------------------------------------------------------------------------
-   Search function. Modifies the proof state.
-   -------------------------------------------------------------------------- *)
-
-fun init_search thmpred tacpred g =
-  (
-  (* global time-out *)
-  glob_timer := SOME (Timer.startRealTimer ());
-  (* caching *)
-  stacgoal_cache := dempty (cpl_compare String.compare goal_compare);
-  thml_dict := dempty (cpl_compare goal_compare Int.compare);
-  inst_dict := dempty (cpl_compare String.compare goal_compare);
-  tac_dict := dempty String.compare;
-  (* proof states *)
-  pid_counter := 0;
-  notactivedict := dempty Int.compare;
-  proofdict := dempty Int.compare;
-  (* easier access to values *)
-  tacpredictor_glob := tactimer tacpred;
-  thmpredictor_glob := thmtimer thmpred;
-  (* statistics *)
-  reset_timers ();
-  stac_counter := 0;
-  max_depth_mem := 0
-  )
-
-fun get_next_pred pid =
-  let
-    val _ = debug "get_next_pred"
-    val prec = dfind pid (!proofdict)
-  in
-    if null (!(#pending prec)) then () else
-      let
-        val gn   = hd (!(#pending prec))
-        val pred = Array.sub (#predarr prec, gn)
-      in
-        if null pred orelse null (tl pred)
-          then deactivate pid
-          else Array.update (#predarr prec, gn, tl pred)
-      end
-  end
-
-fun node_find () =
-  let
-    val _ = debug "node_find"
-    val l0 = filter (fn x => is_active (fst x)) (dlist (!proofdict))
-    (* deactivate node with empty predictions (no possible actions) *)
-    val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
-    val _ =
-      if null l1 then
-      (debug "SearchSaturated"; raise SearchSaturated)
-      else ()
-  in
-    try_mc_find ()
-  end
-
-
-fun search_step () =
-  let
-    val (pid,pripol) = node_find_timer node_find ()
-    val prec = dfind pid (!proofdict)
-    val trydict = #trydict prec
-    val (glo,tactime) = add_time apply_next_stac pid
-    fun f0 () = (backup_fail pid; get_next_pred pid)
-    fun f1 gl =
-      if null gl
-      then
-        (backup_success pid;
-         close_proof_wrap NONE tactime pid)
-      else
-        (
-        trydict := dadd gl () (!trydict);
-        let val cid =
-          node_create_timer (node_create_gl pripol tactime gl) pid
-        in
-          backup cid; get_next_pred pid
-        end
-        )
-  in
-    case glo of
-      NONE    => f0 ()
-    | SOME gl => f1 gl
-  end
-
-datatype proof_status =
-  ProofError | ProofSaturated | ProofTimeOut | Proof of string
-
-fun search_loop () =
-  (
-  if Timer.checkRealTimer (valOf (!glob_timer)) >
-     Time.fromReal (!ttt_search_time)
-  then ProofTimeOut
-  else (search_step (); debug "search step"; search_loop ())
-  )
-  handle SearchSaturated => (debug "proof: saturated"; ProofSaturated)
-       | SearchTimeout => (debug "proof: timeout"; ProofTimeOut)
-       | ProofFound => (debug "proof: found"; Proof "")
-       | e => raise e
-
-fun proofl_of pid =
-  let
-    val prec = dfind pid (!proofdict)
-      handle NotFound => debug_err "proofl_of"
-    fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
-    val proofl = !(#proofl prec)
-    val new_proofl = dict_sort compare_gn proofl
-    fun f (gn,stac,cid) =
-      let
-        val g = Array.sub (#goalarr prec, gn)
-        val contl = proofl_of cid
-        val tac = Tactic (stac,g)
-      in
-        if null contl then tac
-        else if List.length contl = 1 then Then (tac, hd contl)
-        else Thenl (tac, contl)
-      end
-  in
-    map f new_proofl
-  end
-
-fun end_search () =
-  (
-  debug ("Statistics");
-  debug ("  infstep : " ^ int_to_string (!stac_counter));
-  debug ("  nodes   : " ^ int_to_string (!pid_counter));
-  debug ("  maxdepth: " ^ int_to_string (!max_depth_mem));
-  debug ("Time: " ^ Real.toString (!tot_time));
-  debug ("  inferstep: " ^ Real.toString (!infstep_time));
-  debug ("  node_find: " ^ Real.toString (!node_find_time));
-  debug ("  node_crea: " ^ Real.toString (!node_create_time));
-  debug ("  thminst  : " ^ Real.toString (!inst_time));
-  debug ("  tacpred  : " ^ Real.toString (!tactime));
-  debug ("  thmpred  : " ^ Real.toString (!thmtime));
-  proofdict      := dempty Int.compare;
-  tac_dict       := dempty String.compare;
-  inst_dict      := dempty (cpl_compare String.compare goal_compare);
-  stacgoal_cache := dempty (cpl_compare String.compare goal_compare)
-  )
-
-(* -------------------------------------------------------------------------
-   Main
-   ------------------------------------------------------------------------- *)
-
-fun search thmpred tacpred goal =
-  (
-  init_search thmpred tacpred goal;
-  total_timer (node_create_timer root_create_wrap) goal;
-  let
-    val r = total_timer search_loop ()
-    val _ = debug "End search loop"
-    val proof_status = case r of
-      Proof _  =>
-      let
-        val proofl = proofl_of 0
-          handle Interrupt => raise Interrupt | _ => debug_err "SNH0"
-        val proof0 = hd proofl handle Empty => debug_err "SNH1"
-        val proof1 = minimize_proof proof0
-        val sproof = reconstruct goal proof1
-      in
-        Proof sproof
-      end
-    | _ => r
-  in
-    end_search ();
-    proof_status
-  end
-  )
 
 end (* struct *)

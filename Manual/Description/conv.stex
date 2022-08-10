@@ -24,7 +24,7 @@ type conv = term -> thm
 \end{hol}
 
 \noindent For example, \ml{BETA\_CONV}\index{BETA_CONV@\ml{BETA\_CONV}}
-is an \ML\ function of type \ml{conv} (\ie\ a conversion) that
+is an \ML\ function of type \ml{conv} (\ie, a conversion) that
 expresses $\beta$-conversion in \HOL.  It produces the appropriate
 equational theorem on $\beta$-redexes and fails elsewhere.
 
@@ -57,46 +57,36 @@ The notion of conversions is inherited from Cambridge
 \LCF;\index{LCF@\LCF!Cambridge} the underlying principles are
 described in \cite{lcp-rewrite,new-LCF-man}.
 
-Conversions such as \ml{BETA\_CONV}%
+Conversions such as \ml{BETA\_CONV}
 \index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!not expressible as a theorem}%
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!rules inexpressible as}%
 \index{conversions!as families of equations}%
 represent infinite families of equations\footnote{This was also
-  mentioned in Section~\ref{rules}.}. They are particularly
-useful in cases in which it is impossible to state, within the logic,
-a single axiom or theorem instantiable to every equation in a
-family\index{families of inferences, in HOL logic@families of
-  inferences, in \HOL\ logic}.\footnote{In the case of
-  $\beta$-conversion specifically, it is the substitution of one term
-  for another in a context that is inexpressible; but in general,
-  there is a variety of reasons that arise.} Instead, an \ML\
-procedure returns the instance of the desired theorem for any given
-term. This is also the reason that quite a few of the other rules in
-\HOL\ are not stated instead as axioms or theorems. As rules,
-conversions are distinguished with an \ML\ type abbreviation simply
-because there are relatively many of them with the same type, and
-because they return equational %
+  mentioned in Section~\ref{rules}.}.
+They are particularly useful in cases in which it is impossible to state, within the logic, a single axiom or theorem instantiable to every equation in a family\index{families of inferences, in HOL logic@families of
+  inferences, in \HOL\ logic}.\footnote{%
+In the case of $\beta$-conversion specifically, it is the substitution of one term for another in a context that is inexpressible; but in general, there is a variety of reasons that arise.}
+Instead, an \ML\ procedure returns the instance of the desired theorem for any given term.
+This is also the reason that quite a few of the other rules in \HOL\ are not stated instead as axioms or theorems.
+As rules, conversions are distinguished with an \ML\ type abbreviation simply because there are relatively many of them with the same type, and because they return equational %
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!equational}%
 \index{equational theorems, in HOL logic@equational theorems, in \HOL{} logic!produced by conversions}%
-theorems that lend themselves directly to term rewriting.\footnote{In
-  fact, some ML functions have names with the suffix `{\tt \_CONV}'
-  but do not have the type {\tt conv}; {\tt SUBST\_CONV}, for example,
-  has type {\tt (thm \# term) list -> term -> conv}. Those that
-  eventually produce conversion are thought of as `conversion
-  schemas'.} In many \HOL\ applications, the main use of conversions
-is to produce these equational theorems.  A few examples of
-conversions are illustrated below.
+theorems that lend themselves directly to term rewriting.\footnote{%
+In fact, some ML functions have names with the suffix `{\tt \_CONV}' but do not have the type {\tt conv}; {\tt SUBST\_CONV}, for example, has type {\tt (thm * term) list -> term -> conv}.
+Those that eventually produce a conversion are thought of as `conversion schemas'.}
+In many \HOL\ applications, the main use of conversions is to produce these equational theorems.
+A few examples of conversions are illustrated below.
 
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{alltt}
->> NOT_FORALL_CONV ``~!x. (f:'a->'a) x = g x``;
+>> NOT_FORALL_CONV “~!x. (f:'a->'a) x = g x”;
 
 >> CONTRAPOS_CONV ``(!x. f x = g x) ==> ((f:'a->'a) = g)``;
 
 >> SELECT_CONV ``(@f:'a->'a. f x = g x)x = g x``;
 
->> EXISTS_UNIQUE_CONV ``?!z. (f:'a->'a) z = g z``;
+>> EXISTS_UNIQUE_CONV “∃!z. (f:'a->'a) z = g z”;
 \end{alltt}
 \end{session}
 
@@ -106,11 +96,11 @@ conversions are illustrated below.
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{alltt}
->> numLib.num_CONV ``2``;
+>> numLib.num_CONV “2”;
 
->> numLib.num_CONV ``1``;
+>> numLib.num_CONV “1”;
 
->>+ numLib.num_CONV ``0`` handle e => Raise e;
+>>+ numLib.num_CONV “0” handle e => Raise e;
 \end{alltt}
 \end{session}
 
@@ -411,7 +401,7 @@ converts the conclusion of a goal using $c$. \ml{CONV\_RULE} is defined by:
 \end{hol}
 
 \noindent (The validation of \ml{CONV\_TAC} also
-uses \ml{EQ\_MP}\footnote{For \ml{EQ\_MP}, see ~\ref{sec:eqmp}.}.)
+uses \ml{EQ\_MP}.\footnote{For \ml{EQ\_MP}, see ~\ref{sec:eqmp}.})
 For example, the built-in rule \ml{BETA\_RULE} reduces some
 of the $\beta$-redex subterms of a term.
 
@@ -625,11 +615,11 @@ of a term.
 \noindent In particular:
 
 \begin{itemize}
-\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{"}$x$\ml{"} $\;=\;$\ \ml{|- }$x$\ml{=}$x$;
-\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{"}$u\;v$\ml{"} $\;=\;$ \ml{|- }$u\;v$\ml{=}$u'\;v'$,\ \  if
-$c\;\;u$\ $=$\ \ml{|- }$u$\ml{=}$u'$ and
-$c\;\;v$\ $=$\ \ml{|- }$v$\ml{=}$v'$;
-\item\ml{SUB\_CONV}$\;\;c\;\;$\ml{"}{\small\verb%\%}$x$\ml{.}$u$\ml{"} $\;=\;$
+\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{\fldq}$x$\ml{\frdq} $\;=\;$\ \ml{|- }$x$\ml{=}$x\;$;
+\item \ml{SUB\_CONV}$\;\;c\;\;$\ml{\fldq}$u\;v$\ml{\frdq} $\;=\;$ \ml{|- }$u\;v$\ml{=}$u'\;v'$,\ \  if
+$c\;u$\ $=$\ \ml{|- }$u$\ml{=}$u'$ and
+$c\;v$\ $=$\ \ml{|- }$v$\ml{=}$v'$;
+\item\ml{SUB\_CONV}$\;\;c\;\;$\ml{\fldq}{\small\verb%\%}$x$\ml{.}$u$\ml{\frdq} $\;=\;$
 \ml{|- (}{\small\verb%\%}$x$\ml{.}$u$\ml{) = (}{\small\verb%\%}$x$\ml{.}$u'$\ml{)}, \ \ if
 $c\;\;u$\ $=$\ \ml{|- }$u$\ml{=}$u'$.
 \end{itemize}
@@ -755,16 +745,17 @@ tuples.
 Given the term:
 
 \begin{hol}
-\begin{verbatim}
-   ``(\(x1, ... ,xn).t) (t1, ... ,tn)``
-\end{verbatim}\end{hol}
+\begin{alltt}
+   \fldq(\(\lambda\)(x1, ... ,xn).t) (t1, ... ,tn)\frdq
+\end{alltt}\end{hol}
 
 \noindent \ml{PAIRED\_BETA\_CONV} proves that:
 
 \begin{hol}
-\begin{verbatim}
-   |- (\(x1, ... ,xn). t[x1,...,xn]) (t1, ... ,tn)  =  t[t1, ... ,tn]
-\end{verbatim}\end{hol}
+\begin{alltt}
+   |- (\(\lambda\)x1, ... ,xn). t[x1,...,xn]) (t1, ... ,tn)  =  t[t1, ... ,tn]
+\end{alltt}
+\end{hol}
 
 \noindent The conversion works for arbitrarily nested tuples.  For example:
 
@@ -773,7 +764,7 @@ Given the term:
 \begin{alltt}
 >>__ load "pairLib";
 >>__ open pairLib;
->> PAIRED_BETA_CONV ``(\((a,b),(c,d)). [a;b;c;d]) ((1,2),(3,4))``;
+>> PAIRED_BETA_CONV “(\((a,b),(c,d)). [a;b;c;d]) ((1,2),(3,4))”;
 \end{alltt}\end{session}
 
 \subsection{Arithmetical conversions}
@@ -1091,7 +1082,7 @@ The conversions, rules and tactics for rewriting all take a list of
 theorems\index{theorems, in HOL logic@theorems, in \HOL{} logic!as rewrite rules}
 to be used as rewrites.
 The theorems in the list need not be in simple equational form
-(\eg\ a conjunction of equations is permissible); but are
+(\eg, a conjunction of equations is permissible); but are
 converted to equational form
 automatically (and internally).
 (For example, a conjunction of equations is split into
@@ -1107,7 +1098,7 @@ described in \REFERENCE.)
 
 The prefix `\ml{PURE\_}' indicates
 that the built-in equations in \ml{basic\_rewrites} are not used,
-(\ie\ only those
+(\ie, only those
 given explicitly are used).  The prefix `\ml{ONCE\_}' indicates that the
 tool
 makes only one rewriting pass through the expression

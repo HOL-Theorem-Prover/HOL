@@ -21,7 +21,12 @@ struct
 end
 open Parse
 
-val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
+val oldmeson = !mesonLib.chatting;
+val _ = mesonLib.chatting := 0
+
+val std_ss   = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss  =
+    numLib.arith_ss ++ listSimps.LIST_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (***********************************************)
 (* Auxiliary stuff                             *)
@@ -187,7 +192,11 @@ val static_ss = simpLib.merge_ss
 (* We add the stateful rewrite set (to simplify
    e.g. case-constants or constructors) and a
    custum component as well. *)
-fun rc_ss gl = simpLib.remove_ssfrags (srw_ss() ++ simpLib.merge_ss (static_ss :: gl)) ["patternMatchesSimp"]
+fun rc_ss gl =
+    simpLib.remove_ssfrags
+      ["patternMatchesSimp"]
+      (srw_ss() ++ simpLib.merge_ss (static_ss :: gl) -*
+       ["lift_disj_eq", "lift_imp_disj"])
 
 (* finally we add a call-back component. This is an
    external conversion that is used at the end if
@@ -493,7 +502,7 @@ end
    define some conversions then. *)
 
 val COND_CONG_STOP = prove (``
-  (c = c') ==> ((if c then x else y) = (if c' then x else y))``,
+  (c = c') ==> ((if c then x else y:'a) = (if c' then x else y))``,
 SIMP_TAC std_ss [])
 
 fun case_pmatch_eq_prove t t' = let
@@ -1688,7 +1697,7 @@ fun PMATCH_SIMP_GEN_ss ssl =
   make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
 
 val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GEN_ss [])
-val _ = BasicProvers.augment_srw_ss [PMATCH_SIMP_ss];
+val _ = logged_addfrags {thyname="patternMatches"} [PMATCH_SIMP_ss];
 
 
 fun PMATCH_FAST_SIMP_CONV_GENCALL_AUX rc_arg =
@@ -3966,5 +3975,6 @@ end handle HOL_ERR _ => init_pmatch_info
 
 end
 
+val _ = mesonLib.chatting := oldmeson;
 
 end

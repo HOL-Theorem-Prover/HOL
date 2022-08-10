@@ -24,6 +24,9 @@ open Sanity
 
 val _ = new_theory "vars_as_resource";
 val _ = ParseExtras.temp_loose_equality()
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val REAL_ARITH_TAC = RealArith.REAL_ARITH_TAC
 
 val IS_PERMISSION_STRUCTURE_def = Define `
    IS_PERMISSION_STRUCTURE (f:'a option -> 'a option -> 'a option, total_perm:'a) =
@@ -105,12 +108,12 @@ val IS_SPLIT_PERMISSION_STRUCTURE_THM2 = store_thm ("IS_SPLIT_PERMISSION_STRUCTU
 
 (*Define one concrete permission structure*)
 local
-   open realLib;
+   open realSimps
 
 val var_res_permission_TY_DEF = new_type_definition("var_res_permission", prove
 (``?x:real. (\x. (0:real < x) /\ (x <= 1:real)) x``,
 EXISTS_TAC ``1:real`` THEN
-SIMP_TAC realLib.real_ss []));
+SIMP_TAC real_ss []));
 
 val var_res_permission_ISO_DEF =
 define_new_type_bijections
@@ -165,7 +168,7 @@ val var_res_permission_THM_exists =
          PROVE_TAC[rep_fn_onto_IMP_THM] THEN
       `(0 < (r1 + r2)) /\ (0 < (r2 + r3))` by (
          REPEAT (POP_ASSUM MP_TAC) THEN
-         realLib.REAL_ARITH_TAC
+         REAL_ARITH_TAC
       ) THEN
       Cases_on `r1 + r2 <= 1` THENL [
          ASM_SIMP_TAC std_ss [var_res_permission_ISO_IMP] THEN
@@ -173,7 +176,7 @@ val var_res_permission_THM_exists =
             `(r2 + r3) <= 1` by (
                POP_ASSUM MP_TAC THEN
                Q.PAT_X_ASSUM `0 < r1` MP_TAC THEN
-               realLib.REAL_ARITH_TAC
+               REAL_ARITH_TAC
             ) THEN
             ASM_SIMP_TAC std_ss [var_res_permission_ISO_IMP,
                realTheory.REAL_ADD_ASSOC],
@@ -194,7 +197,7 @@ val var_res_permission_THM_exists =
          ) THEN
          Q.PAT_X_ASSUM `~(r1 + r2 <= 1)` MP_TAC THEN
          Q.PAT_X_ASSUM `0 < r3` MP_TAC THEN
-         realLib.REAL_ARITH_TAC
+         REAL_ARITH_TAC
       ],
 
 
@@ -227,7 +230,7 @@ val var_res_permission_THM_exists =
          PROVE_TAC[rep_fn_onto_IMP_THM] THEN
       `(0 < (r1 + r2)) /\ (0 < (r1 + r3))` by (
          REPEAT (POP_ASSUM MP_TAC) THEN
-         realLib.REAL_ARITH_TAC
+         REAL_ARITH_TAC
       ) THEN
       ASM_SIMP_TAC std_ss [abs_fn_one_one_thm, realTheory.REAL_EQ_LADD] THEN
       UNABBREV_ALL_TAC THEN
@@ -242,7 +245,7 @@ val var_res_permission_THM_exists =
          ASM_REWRITE_TAC [realTheory.REAL_LT_HALF1] THEN
          `(r / 2) < r` by PROVE_TAC [realTheory.REAL_LT_HALF2] THEN
          NTAC 2 (POP_ASSUM MP_TAC) THEN
-         realLib.REAL_ARITH_TAC
+         REAL_ARITH_TAC
       ) THEN
       ASM_SIMP_TAC std_ss [var_res_permission_ISO_IMP,
          realTheory.REAL_HALF_DOUBLE] THEN
@@ -252,11 +255,11 @@ val var_res_permission_THM_exists =
 
 
       SIMP_TAC std_ss [LET_THM, COND_RAND, COND_RATOR] THEN
-      `(0 < 1) /\ (1 <= 1)` by realLib.REAL_ARITH_TAC THEN
+      `(0 < 1) /\ (1 <= 1)` by REAL_ARITH_TAC THEN
       ASM_SIMP_TAC std_ss [var_res_permission_ISO_IMP] THEN
       `(0 < var_res_permission_REP c)` by PROVE_TAC[rep_fn_onto_IMP_THM] THEN
       POP_ASSUM MP_TAC THEN
-      realLib.REAL_ARITH_TAC,
+      REAL_ARITH_TAC,
 
 
 
@@ -272,11 +275,11 @@ val var_res_permission_THM_exists =
          PROVE_TAC[rep_fn_onto_IMP_THM] THEN
       `0 < (r1 + r2)` by (
          REPEAT (POP_ASSUM MP_TAC) THEN
-         realLib.REAL_ARITH_TAC
+         REAL_ARITH_TAC
       ) THEN
       ASM_SIMP_TAC std_ss [var_res_permission_ISO_IMP] THEN
       Q.PAT_X_ASSUM `0 < r2` MP_TAC THEN
-      realLib.REAL_ARITH_TAC
+      REAL_ARITH_TAC
    ]);
 
 in
@@ -12619,8 +12622,8 @@ CONJ_TAC THEN1 (
 ) THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 GEN_TAC THEN STRIP_TAC THEN
-lcsymtacs.rename1 `asla_report _ n x = SOME s1` THEN
-lcsymtacs.rename1 `yy IN s1` THEN
+rename1 `asla_report _ n x = SOME s1` THEN
+rename1 `yy IN s1` THEN
 `yy IN P /\ VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST yy)`
   by METIS_TAC[] THEN
 Q.PAT_X_ASSUM `!x. x IN P ==> X x` (MP_TAC o Q.SPEC `yy`) THEN
@@ -13211,7 +13214,7 @@ EQ_TAC THENL [
 
 
    REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
-   lcsymtacs.rename1
+   rename1
      `VAR_RES_COMBINATOR f (SOME ss1) (SOME ss2) = SOME xx` THEN
    `MAP (\e. e (FST xx)) el =
                       MAP (\e. e (FST ss1)) el` suffices_by (STRIP_TAC THEN

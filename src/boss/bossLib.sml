@@ -45,8 +45,8 @@ val Datatype = Datatype.Datatype
             Function definition
  ---------------------------------------------------------------------------*)
 
-val xDefine    = TotalDefn.xDefine
-val tDefine    = TotalDefn.tDefine
+fun xDefine s q = TotalDefn.qDefine (s ^ !Defn.def_suffix) q NONE
+fun tDefine s q tac = TotalDefn.qDefine (s ^ !Defn.def_suffix) q (SOME tac)
 val Define     = TotalDefn.Define
 val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 val Hol_defn   = Defn.Hol_defn
@@ -78,6 +78,7 @@ val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
 val export_rewrites = BasicProvers.export_rewrites
 val delsimps        = BasicProvers.delsimps
+val temp_delsimps   = BasicProvers.temp_delsimps
 
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
@@ -101,22 +102,28 @@ val op && = simpLib.&&;
      simplification is quick.
  ---------------------------------------------------------------------------*)
 
-local open sumTheory pred_setTheory
-      infix ++
-in
-
-val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
-val SQI_ss = quantHeuristicsLib.SIMPLE_QUANT_INST_ss
-val pure_ss = pureSimps.pure_ss
-val bool_ss = boolSimps.bool_ss
-val std_ss = numLib.std_ss ++ PMATCH_SIMP_ss
+(* simpsets *)
 val arith_ss = numLib.arith_ss ++ PMATCH_SIMP_ss
-val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss ++ PMATCH_SIMP_ss
+val bool_ss = boolSimps.bool_ss
+val list_ss = let open pred_setTheory
+              in
+                arith_ss ++ listSimps.LIST_ss
+                         ++ rewrites [IN_INSERT, NOT_IN_EMPTY, IN_UNION]
+              end
+val pure_ss = pureSimps.pure_ss
+val old_arith_ss = numLib.std_ss ++ numSimps.old_ARITH_ss ++ PMATCH_SIMP_ss
+val std_ss = numLib.std_ss ++ PMATCH_SIMP_ss
+
+(* fragments *)
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
-val list_ss  = arith_ss ++ listSimps.LIST_ss
-                        ++ rewrites [IN_INSERT, NOT_IN_EMPTY, IN_UNION]
-end
+val CONJ_ss = boolSimps.CONJ_ss
+val DISJ_ss = boolSimps.DISJ_ss
+val DNF_ss = boolSimps.DNF_ss
+val ETA_ss = boolSimps.ETA_ss
+val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
+val SFY_ss = SatisfySimps.SATISFY_ss
+val SQI_ss = quantHeuristicsLib.SIMPLE_QUANT_INST_ss
 
 val DECIDE = numLib.DECIDE;
 val DECIDE_TAC = numLib.DECIDE_TAC;
@@ -137,10 +144,13 @@ val cheat:tactic = fn g => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 
 val Cases     = BasicProvers.Cases
+val namedCases = BasicProvers.namedCases
 val Induct    = BasicProvers.Induct
 val recInduct = Induction.recInduct
 
 val Cases_on          = BasicProvers.Cases_on
+val tmCases_on        = BasicProvers.tmCases_on
+val namedCases_on     = BasicProvers.namedCases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
 val pairarg_tac       = pairLib.pairarg_tac
@@ -151,6 +161,8 @@ val AllCaseEqs        = TypeBase.AllCaseEqs
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
+val op using          = markerLib.using
+val usingA            = markerLib.usingA
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
@@ -159,6 +171,9 @@ val op by             = BasicProvers.by; (* infix 8 by *)
 val op suffices_by    = BasicProvers.suffices_by
 val sg                = BasicProvers.sg
 val subgoal           = BasicProvers.subgoal
+val op >~             = Q.>~
+val op >>~            = Q.>>~
+val op >>~-           = Q.>>~-
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
@@ -171,43 +186,113 @@ val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
 val REABBREV_TAC = markerLib.REABBREV_TAC
 val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
 
+local
+fun add_Case_conv x = REWR_CONV (ISPEC x markerTheory.add_Case)
+
+fun mk_tuple [] = oneSyntax.one_tm
+  | mk_tuple xs = pairSyntax.list_mk_pair xs
+in
+
+(*---------------------------------------------------------------------------*)
+(* Adjust an induction theorem, adding a Case marker to help identify        *)
+(* each generated subgoal. Try for example:                                  *)
+(*   name_ind_cases [] listTheory.list_induction;                            *)
+(* A list of additional naming elements can be provided to disambiguate      *)
+(* cases of simultaneous induction theorems.                                 *)
+(*---------------------------------------------------------------------------*)
+fun name_ind_cases nm_tms thm = let
+    val (vs, _) = strip_forall (concl thm)
+    val spec_thm = SPECL vs thm
+    fun concl_conv tm = if is_imp tm
+      then RAND_CONV concl_conv tm
+      else if is_forall tm
+      then STRIP_QUANT_CONV concl_conv tm
+      else if is_conj tm
+      then EVERY_CONJ_CONV concl_conv tm
+      else let
+        val (f, xs) = strip_comb tm
+        val nm = case total (index (term_eq f)) vs of
+            NONE => []
+          | SOME n => if n < length nm_tms then [List.nth (nm_tms, n)] else []
+        val vs = nm @ filter (not o is_var) xs
+      in add_Case_conv (mk_tuple vs) tm end
+  in CONV_RULE (RATOR_CONV (RAND_CONV concl_conv)) spec_thm
+    |> GENL vs
+  end
+
+end
+
+(* ----------------------------------------------------------------------
+    useful for proving termination in fold and rose-tree settings
+   ---------------------------------------------------------------------- *)
+
+val size_comb_tac =
+  full_simp_tac boolSimps.bool_ss [listTheory.MEM_SPLIT]
+  THEN CONV_TAC TotalDefn.size_eq_conv
+  THEN simp_tac boolSimps.bool_ss
+    [listTheory.list_size_append, listTheory.list_size_def]
+
+val _ = let
+  val sref = TotalDefn.termination_solve_simps
+in sref := ([listTheory.MEM_SPLIT, listTheory.list_size_append] @ ! sref) end
+
 (* ----------------------------------------------------------------------
     convenient simplification aliases
    ---------------------------------------------------------------------- *)
 
 open simpLib
-fun stateful f ssfl thm : tactic =
-  let
-    val ss = List.foldl (simpLib.++ o Lib.swap) (srw_ss()) ssfl
-  in
-    f ss thm
-  end
+fun addfrags frags ss = List.foldl (fn (frag,ss) => ss ++ frag) ss frags
+fun fraglistify f base_ss fragl thms : tactic = f (addfrags fragl base_ss) thms
 
-val ARITH_ss = numSimps.ARITH_ss
-val fsrw_tac = stateful full_simp_tac
-val rfsrw_tac = stateful rev_full_simp_tac
+val let_arith_frags = [boolSimps.LET_ss, ARITH_ss]
+fun boss_augment ss old = addfrags let_arith_frags ss
+val {get = boss_ss, set = set_boss_ss} =
+    Feedback.quiet_messages
+      (BasicProvers.make_simpset_derived_value boss_augment)
+      bool_ss
 
-val let_arith_list = [boolSimps.LET_ss, ARITH_ss]
-val simp = stateful asm_simp_tac let_arith_list
-val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
-val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
+fun stateful f ssfl thms : tactic =
+    fn g => fraglistify f (boss_ss()) ssfl thms g
 
-val lrw = srw_tac let_arith_list
-val lfs = fsrw_tac let_arith_list
-val lrfs = rfsrw_tac let_arith_list
+val simp = stateful asm_simp_tac []
+val dsimp = stateful asm_simp_tac [boolSimps.DNF_ss]
+val csimp = stateful asm_simp_tac [boolSimps.CONJ_ss]
 
-val rw = srw_tac let_arith_list
-val fs = fsrw_tac let_arith_list
-val rfs = rfsrw_tac let_arith_list
+val rw = stateful (fn ss => BasicProvers.PRIM_SRW_TAC ss []) []
+fun fsrw_tac frags thms = fraglistify full_simp_tac (srw_ss()) frags thms
+val fs = stateful full_simp_tac []
+val rfs = stateful rev_full_simp_tac []
 
-(* Witout loss of generality tactics *)
+val lrw = rw
+val lfs = fs
+val lrfs = rfs
+
+
+fun cfg ev s ofirst =
+    global_simp_tac {elimvars = ev, strip = s, droptrues = true,
+                     oldestfirst = ofirst}
+val gns = stateful (cfg false false true) []
+val gs = stateful (cfg false true true) []
+val gnvs = stateful (cfg true false true) []
+val gvs = stateful (cfg true true true) []
+val rgs = stateful (cfg false true false) []
+
+fun SRULE ths th = SIMP_RULE (srw_ss()) ths th (* don't eta-reduce *)
+fun SCONV ths tm = SIMP_CONV (srw_ss()) ths tm (* don't eta-reduce *)
+
+(* Without loss of generality tactics *)
 val wlog_tac = wlog_tac
 val wlog_then = wlog_then
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
+  val qx_genl_tac = map_every qx_gen_tac
   val qx_choose_then = Q.X_CHOOSE_THEN
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
+  val qexistsl_tac = map_every qexists_tac
+  val qexists = qexists_tac
+  val qexistsl = qexistsl_tac
+  val qrefine = Q.REFINE_EXISTS_TAC
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
   val qspec_tac = Q.SPEC_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
@@ -236,21 +321,11 @@ val wlog_then = wlog_then
 
   val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
   val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
+  val qunabbrevl_tac = map_every qunabbrev_tac
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
-  val qx_genl_tac = map_every qx_gen_tac
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
-
-(* Derived search functions *)
-fun find_consts_thy thl t =
-  let
-    val theConsts = List.concat (List.map constants thl)
-  in
-    List.filter (can (match_type t) o type_of) theConsts
-end
-
-val find_consts = find_consts_thy ("-" :: ancestry "-")
 
 (*---------------------------------------------------------------------------*)
 (* Tactic to automate some routine set theory by reduction to FOL            *)

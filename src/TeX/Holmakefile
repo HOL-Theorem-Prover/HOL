@@ -6,7 +6,7 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = munger.lex.sml $(EXE) mkmunge.o munger.o $(TARGET) \
                holindex.grm-sig.sml holindex.grm.sml holindex.lex.sig \
-               holindex.lex.sml holindex.grm.sig
+               holindex.lex.sml holindex.grm.sig selftest.exe tex-selftest.log
 
 mosml_MKMUNGE_DEP = mkmkmunge.uo mungeTools.uo warning_stream.uo
 poly_MKMUNGE_DEP = poly-mkmkmunge.ML mkmkcline.sml \
@@ -59,3 +59,18 @@ AssembleHolindexParser.uo: AssembleHolindexParser.sml AssembleHolindexParser.ui 
 
 selftest.exe: selftest.uo EmitTeX.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: tex-selftest.log
+
+tex-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

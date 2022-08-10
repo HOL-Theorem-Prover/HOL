@@ -8,9 +8,10 @@
 structure hhExportLib :> hhExportLib =
 struct
 
-open HolKernel boolLib aiLib mlThmData hhTranslate
+open HolKernel boolLib aiLib mlThmData hhTranslate (* combinTheory *)
 
 val ERR = mk_HOL_ERR "hhExportLib"
+type thmid = string * string
 
 (* -------------------------------------------------------------------------
    Directory
@@ -204,26 +205,27 @@ fun name_arityeq (cv,a) =
    Definitions of boolean operators
    ------------------------------------------------------------------------- *)
 
-val logic_l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
-  ``$= : 'a -> 'a -> bool``]
-val quant_l2 = map cid_of [``$! : ('a -> bool) -> bool``,
-  ``$? : ('a -> bool) -> bool``]
+local open boolSyntax in
+
+val logic_l1 = map cid_of
+  [conjunction, disjunction, negation, implication, equality]
+val quant_l2 = map cid_of [universal, existential]
 
 val boolop_cval =
-  [
-   (``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
-   (``$= : 'a -> 'a -> bool``,2),
-   (``$! : ('a -> bool) -> bool``,1),(``$? : ('a -> bool) -> bool``,1)
-  ]
+  [(conjunction,2),(disjunction,2),(negation,1),(implication,2),
+   (equality,2),(universal,1),(existential,1)]
+
+end (* local *)
 
 (* -------------------------------------------------------------------------
    Higher-order theorems in a first-order embedding
    ------------------------------------------------------------------------- *)
 
-fun mk_combin_thm thm fvname =
+(*
+fun mk_combin_thm thmname fvname =
   let
-    val (tm0,defl) = translate_thm thm
-    val _ = if null defl then () else raise ERR "mk_combin_thm" ""
+    val thm = DB.fetch "combin" thmname
+    val tm0 = translate_thm thm
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
     val lhs_combin_conv = STRIP_QUANT_CONV (LHS_CONV APP_CONV_STRIPCOMB)
     val tm1 = (rhs o concl o lhs_combin_conv) tm0
@@ -232,12 +234,14 @@ fun mk_combin_thm thm fvname =
     subst sub tm1
   end
 
-val i_thm = mk_combin_thm combinTheory.I_THM "combin_i"
-val k_thm = mk_combin_thm combinTheory.K_THM "combin_k"
-val s_thm = mk_combin_thm combinTheory.S_THM "combin_s"
+val i_thm = mk_combin_thm "I_THM" "combin_i"
+val k_thm = mk_combin_thm "K_THM" "combin_k"
+val s_thm = mk_combin_thm "S_THM" "combin_s"
+*)
 
 (* combin_axioml are already translated *)
-val combin_axioml = [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)]
+(* val combin_axioml = [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)] *)
+val combin_axioml = []
 
 val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
 val p_axioml =
@@ -267,7 +271,6 @@ fun all_tyop topty =
 
 fun tyop_set topty = mk_fast_set ida_compare (all_tyop topty)
 
-
 fun tyopset_of_tyl tyl =
   mk_fast_set ida_compare (List.concat (map tyop_set tyl))
 
@@ -290,14 +293,21 @@ type formula_info =
   tyopl : ((string * string) * int) list
   }
 
-fun mgc_of (tm,a) =
+fun mgc_of tm =
+  if is_const tm then
+    let val {Thy,Name,Ty} = dest_thy_const tm in
+      prim_mk_const {Thy = Thy, Name = Name}
+    end
+  else raise ERR "not a constant" ""
+
+fun mgca_of (tm,a) =
   if is_const tm then
     let val {Thy,Name,Ty} = dest_thy_const tm in
       (prim_mk_const {Thy = Thy, Name = Name},a)
     end
   else (tm,a)
 
-fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgc_of cval)
+fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgca_of cval)
 
 fun uniq_cvdef_arity cval = mk_term_set (map fst cval)
 
@@ -315,8 +325,15 @@ fun older_than th1 (name,th2) =
   depnumber_of_thm th2 < depnumber_of_thm th1
 
 fun add_ancestry thy = thy :: ancestry thy
+
+(* avoid basis_emit as it contains inconsistent theorems *)
 fun sorted_ancestry thyl =
-  sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
+  let
+    fun test x = x <> "basis_emit" andalso not (mem "basis_emit" (ancestry x))
+    val l = sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
+  in
+    filter test l
+  end
 
 fun depo_of_thm thm =
   let
@@ -333,11 +350,11 @@ fun compare_namethm ((_,th1),(_,th2)) =
    Bushy
    ------------------------------------------------------------------------- *)
 
-fun add_bushy_dep thy namethml =
+fun bushy_dep thy namethml =
   let
      fun f (name,thm) = case depo_of_thm thm of
         NONE => NONE
-      | SOME depl => SOME ((thy,name), depl)
+      | SOME depl => SOME ((thy,name),([],depl))
   in
     List.mapPartial f namethml
   end
@@ -348,26 +365,20 @@ fun depo_of_thmid thmid = depo_of_thm (uncurry DB.fetch thmid)
    Chainy dependencies
    ------------------------------------------------------------------------- *)
 
-fun thmidl_in_thyl thyl =
-  let fun f thy = map (fn (name,_) => (thy,name)) (DB.thms thy) in
-    List.concat (map f thyl)
-  end
+fun thmidl_in_thy thy = map (fn (name,_) => (thy,name)) (DB.thms thy)
 
-fun add_chainy_dep thyorder thy namethml =
+fun chainy_dep thyorder thy namethml =
   let
     val thyl = before_elem thy thyorder
-    val thmidl1 = thmidl_in_thyl thyl
     fun f (name,thm) =
       let
-        val namethml1 = filter (older_than thm) namethml
+        val namethml1 = filter (older_than thm) (DB.thms thy)
         val thmidl2 = map (fn (name,_) => (thy,name)) namethml1
       in
-        ((thy,name), thmidl1 @ thmidl2)
+        ((thy,name), (thyl,thmidl2))
       end
   in
-    map f namethml
+    map f (DB.theorems thy)
   end
-
-
 
 end (* struct *)

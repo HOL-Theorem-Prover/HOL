@@ -1,15 +1,12 @@
-INCLUDES = $(HOLDIR)/examples/balanced_bst $(HOLDIR)/examples/formal-languages \
+INCLUDES = $(HOLDIR)/examples/balanced_bst \
+           $(HOLDIR)/examples/formal-languages \
            $(HOLDIR)/examples/formal-languages/context-free
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+all: $(DEFAULT_TARGETS) regexp2dfa
 
-all: $(TARGETS) mustbuild
-
-mustbuild: regexp2dfa regexpLib.uo
-.PHONY: mustbuild all
+.PHONY: all
 
 EXTRA_CLEANS = regexp2dfa.o regexp2dfa
 
-regexp2dfa : regexp2dfa.sml Regexp_Match.uo regexpSyntax.uo regexp_compilerTheory.uo regexpLib.uo 
-	$(protect $(HOLDIR)/bin/buildheap) DFA_Codegen regexpLib regexp2dfa.sml -o $@ --exe main
+regexp2dfa : regexp2dfa.uo
+	$(protect $(HOLDIR)/bin/buildheap) regexp2dfa.uo -o $@ --exe main

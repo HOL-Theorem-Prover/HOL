@@ -1,19 +1,23 @@
 structure GrammarAncestry :> GrammarAncestry =
 struct
 
-open HolKernel
+open HolKernel HOLsexp
 
 fun ERR f s = HOL_ERR {origin_structure = "GrammarAncestry",
                        origin_function = f, message = s}
 val tag = "GrammarAncestry"
 
+infix >~ >>
+fun f >~ g = Option.mapPartial g o f
+fun f >> g = Option.map g o f
+
 val (write, read) =
     Theory.LoadableThyData.new {
       thydataty = tag, merge = op @,
-      read = Lib.K Coding.StringData.decodel,
-      terms = Lib.K [],
+      read = fn {strings,...} => list_decode (int_decode >> strings),
+      terms = Lib.K [], strings = (fn l => l),
       pp = fn sl => "[" ^ String.concatWith ", " sl ^ "]",
-      write = Lib.K Coding.StringData.encodel
+      write = fn {strings,...} => list_encode (Integer o strings)
     }
 
 fun ancestry {thy} =

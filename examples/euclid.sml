@@ -18,20 +18,20 @@ open arithmeticTheory;
 (* Divisibility.                                                             *)
 (*---------------------------------------------------------------------------*)
 
+
+Definition divides_def:
+  divides a b = ?x. b = a * x
+End;
+
 set_fixity "divides" (Infix(NONASSOC, 450));
-
-val divides_def =
- Define
-  `a divides b = ?x. b = a * x`;
-
 
 (*---------------------------------------------------------------------------*)
 (* Primality.                                                                *)
 (*---------------------------------------------------------------------------*)
 
-val prime_def =
- Define
-   `prime p = p<>1 /\ !x. x divides p ==> (x=1) \/ (x=p)`;
+Definition prime_def:
+  prime p <=> p<>1 /\ !x. x divides p ==> (x=1) \/ (x=p)
+End
 
 (*---------------------------------------------------------------------------*)
 (* A sequence of basic theorems about the "divides" relation.                *)
@@ -44,12 +44,12 @@ val DIVIDES_0 = store_thm
 
 val DIVIDES_ZERO = store_thm
  ("DIVIDES_ZERO",
-  ``!x. 0 divides x = (x = 0)``,
+  ``!x. 0 divides x <=> x = 0``,
   metis_tac [divides_def,MULT_CLAUSES]);
 
 val DIVIDES_ONE = store_thm
  ("DIVIDES_ONE",
-  ``!x. x divides 1 = (x = 1)``,
+  ``!x. x divides 1 <=> x = 1``,
   metis_tac [divides_def,MULT_CLAUSES,MULT_EQ_1]);
 
 val DIVIDES_REFL = store_thm
@@ -154,7 +154,7 @@ val PRIME_2 = store_thm
   ``prime 2``,
   rw  [prime_def] >>
   metis_tac [DIVIDES_LE, DIVIDES_ZERO,
-             DECIDE``~(2=1) /\ ~(2=0) /\ (x<=2 = (x=0) \/ (x=1) \/ (x=2))``]);
+             DECIDE``~(2=1) /\ ~(2=0) /\ (x<=2 <=> (x=0) \/ (x=1) \/ (x=2))``]);
 
 val PRIME_POS = store_thm
  ("PRIME_POS",
@@ -210,7 +210,7 @@ val EUCLID = store_thm
   ``!n. ?p. n < p /\ prime p``,
   spose_not_then strip_assume_tac
    >> mp_tac (SPEC ``FACT n + 1`` PRIME_FACTOR)
-   >> rw  [FACT_LESS, DECIDE ``~(x=0) = 0<x``]
+   >> rw  [FACT_LESS, DECIDE ``x <> 0 <=> 0 < x``]
    >> metis_tac [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
                  NOT_PRIME_1, NOT_LESS, PRIME_POS]);
 
@@ -225,7 +225,7 @@ val EUCLID_AGAIN = prove (``!n. ?p. n < p /\ prime p``,
    CCONTR_TAC >>
    `?n. !p. n < p ==> ~prime p`  by metis_tac[]              >>
    `~(FACT n + 1 = 1)`           by rw [FACT_LESS,
-                                    DECIDE ``~(x=0) = 0<x``] >>
+                                    DECIDE ``x<>0 <=> 0<x``] >>
    `?p. prime p /\
         p divides (FACT n + 1)`  by metis_tac [PRIME_FACTOR] >>
    `0 < p`                       by metis_tac [PRIME_POS]    >>

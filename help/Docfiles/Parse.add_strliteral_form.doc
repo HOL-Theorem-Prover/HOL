@@ -72,6 +72,10 @@ inhabit types other than just {:num}. As with other parsing facilities
 there is a temporary form {temp_add_strliteral_form}, which does not
 cause the change to the grammar to persist to descendant theories.
 
+The effect of adding a new string literal form can be reversed by
+parallel {remove_string_literal_form} and
+{temp_remove_string_literal_form} functions.
+
 \SEEALSO
 Parse.add_numeral_form.
 

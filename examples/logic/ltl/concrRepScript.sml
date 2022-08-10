@@ -6,6 +6,7 @@ val _ = new_theory "concrRep";
 
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val _ = Datatype`
   edgeLabelAA = <| edge_grp : num ;
@@ -1944,6 +1945,8 @@ val ADDEDGE_FINAL_LEMM = store_thm
       )
   );
 
+val _ = set_trace "BasicProvers.var_eq_old" 1
+val _ = diminish_srw_ss ["ABBREV"]
 Theorem ADDEDGE_LEMM:
    !g f e aP. wfg g ∧ MEM f (graphStates g)
             ∧ unique_node_formula g

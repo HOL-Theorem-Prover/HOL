@@ -40,8 +40,9 @@ val _ = set_fixity "^|^" (Infixl 650);
 ^|, |^, ^|^ respectively. "RESTRICT" has been taken for mysterious purposes
 by the original relationTheory, and "DRESTRICT" by finite_mapTheory.  *)
 
-val DRESTR = xDefine "DRESTR"
-`((R:'a reln) ^| (s:'a set)) a b = a IN s /\ R a b`;
+Definition DRESTR:
+  ((R:'a reln) ^| (s:'a set)) a b = a IN s /\ R a b
+End
 
 val DRESTR_IN = store_thm ("DRESTR_IN",
 ``!R:'a reln s a. (R ^| s) a = if a IN s then R a else {}``,
@@ -49,12 +50,14 @@ REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN REWRITE_TAC [DRESTR] THEN
 GEN_TAC THEN Cases_on `a IN s` THEN AR THEN
 REWRITE_TAC [rrs NOT_IN_EMPTY]);
 
-val RRESTR = xDefine "RRESTR"
-`((R:'a reln) |^ (s:'a set)) a b = b IN s /\ R a b`;
+Definition RRESTR:
+  ((R:'a reln) |^ (s:'a set)) a b = b IN s /\ R a b
+End
 
 (* restriction Both fore and aft *)
 
-val BRESTR = xDefine "BRESTR" `(R:'a reln) ^|^ s = R ^| s |^ s`;
+Definition BRESTR: (R:'a reln) ^|^ s = R ^| s |^ s
+End
 
 val DRESTR_EMPTY = store_thm ("DRESTR_EMPTY",
 ``!R:'a reln. R ^| {} = REMPTY``,

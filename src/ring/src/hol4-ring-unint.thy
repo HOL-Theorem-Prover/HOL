@@ -1,5 +1,5 @@
 name: hol-ring-unint
-version: 1.0
+version: 1.1
 description: HOL ring theories (before re-interpretation)
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
@@ -7,7 +7,6 @@ main {
   import: ring
   import: canonical
   import: num-ring
-  import: prelim
   import: quote
   import: ring-norm
   import: semi-ring
@@ -23,16 +22,11 @@ ring-norm {
   article: "ringNorm.ot.art"
 }
 canonical {
-  import: prelim
   import: quote
   import: semi-ring
   article: "canonical.ot.art"
 }
-prelim {
-  article: "prelim.ot.art"
-}
 quote {
-  import: prelim
   article: "quote.ot.art"
 }
 semi-ring {

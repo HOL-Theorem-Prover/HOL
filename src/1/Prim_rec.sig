@@ -45,11 +45,27 @@ sig
    val case_cong_thm               : thm -> thm -> thm
    val prove_constructors_distinct : thm -> thm option list
    val prove_constructors_one_one  : thm -> thm option list
+
+   (*-------------------------------------------------------------------------
+      Prove various equalities on case distinction terms.
+    -------------------------------------------------------------------------*)
+
    val prove_case_rand_thm         : {case_def : thm, nchotomy : thm} -> thm
    val prove_case_elim_thm         : {case_def : thm, nchotomy : thm} -> thm
    val prove_case_eq_thm           : {case_def : thm, nchotomy : thm} -> thm
+   val prove_case_ho_elim_thm      : {case_def : thm, nchotomy : thm} -> thm
+   val prove_case_ho_imp_thm       : {case_def : thm, nchotomy : thm} -> thm
 
    (* A utility function *)
    val EXISTS_EQUATION             : term -> thm -> thm
+
+   (* ----------------------------------------------------------------------
+       Generate custom induction principles given recursive definitions.
+       The list of knames corresponds to the constants of the definition but
+       given in the order that corresponds to the generalised "P" variables
+       in the theorem result.
+      ---------------------------------------------------------------------- *)
+   val gen_indthm : {lookup_ind : hol_type -> thm} -> thm ->
+                    (thm * KernelSig.kernelname list)
 
 end

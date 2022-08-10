@@ -1,0 +1,29 @@
+INCLUDES = sibling
+
+ifdef POLY
+HMOPTS = --poly_not_hol
+else
+HMOPTS =
+endif
+
+.PHONY: all
+
+all: test2
+
+
+test1:
+	cd child && $(HOLDIR)/bin/Holmake cleanAll && echo Clean Done && \
+          $(HOLDIR)/bin/Holmake $(HMOPTS) && \
+          [ -r tgt ] && echo tgt present && \
+          [ -r ../sibling/sibling-tgt ] && echo sibling/sibling-tgt present && \
+          echo done > ../$@
+
+test2: test1
+	/bin/rm -f sibling/sibling-tgt && cd child && \
+          $(HOLDIR)/bin/Holmake cleanAll && \
+          $(HOLDIR)/bin/Holmake $(HMOPTS) --no_preexecs && \
+          [ ! -r tgt ] && echo tgt absent && \
+          [ ! -r ../sibling/sibling-tgt ] && echo sibling-tgt absent && \
+          echo done > ../$@
+
+EXTRA_CLEANS = child/Holmakefile child/tgt test1 test2 sibling/sibling-tgt

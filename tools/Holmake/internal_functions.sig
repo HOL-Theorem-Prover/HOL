@@ -7,10 +7,13 @@ sig
   val pattern_match : string -> string -> string option
   val tokenize : string -> string list
   val find_unescaped : char list -> Substring.substring -> int option
+  val tee : string * string -> string
   val wildcard : string -> string list
+  val which : string -> string
   val function_call : (string *
                        Substring.substring list *
                        (Substring.substring -> string)) -> string
+  val hol2fs : string -> string
 
 end
 
@@ -68,6 +71,7 @@ end
    necessarily look at all of their arguments.  Evaluation is provided
    by the eval function.
 
-
+   [hol2fs s] converts "HOL filename" s to a filename that will actually
+   work on the machine.
 
 *)

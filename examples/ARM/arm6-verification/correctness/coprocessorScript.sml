@@ -179,6 +179,7 @@ val EXISTS_AREGN = SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) []
 
 val FINISH_OFF3 =
    Cases_on `CPB` \\ ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) []
+     \\ RM_ABBREV_TAC‘t’
      \\ RW_TAC (std_ss++SIZES_ss) [Abbr`ointstart'`,n2w_11]
      \\ NTAC 2 (FULL_SIMP_TAC std_ss []) \\ POP_ASSUM_LIST (K ALL_TAC)
      \\ PROVE_TAC [EXISTS_AREGN];

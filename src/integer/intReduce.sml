@@ -50,7 +50,7 @@ local
   val n = mk_var("n",num_ty)
   val basic_op_terms =
      [plus_tm, minus_tm, mult_tm, div_tm, mod_tm, int_eq_tm,
-      less_tm, leq_tm, great_tm, geq_tm, divides_tm, rem_tm, quot_tm,
+      less_tm, leq_tm, greater_tm, geq_tm, divides_tm, rem_tm, quot_tm,
       min_tm, max_tm]
   val basic_op_patterns = map (fn t => list_mk_comb(t, [x,y])) basic_op_terms
   val exp_pattern = list_mk_comb(exp_tm, [x,n])
@@ -87,7 +87,7 @@ end (* local *) ;
 (* Add reducer to srw_ss                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val _ = BasicProvers.augment_srw_ss [INT_REDUCE_ss];
+val _ = BasicProvers.logged_addfrags {thyname="integer"} [INT_REDUCE_ss];
 
 (* Accumulate literal additions in integer expressions
     (doesn't do coefficient gathering - just adds up literals, and

@@ -8,9 +8,9 @@ fun hm testname tgts test =
    Systeml.systeml (hmstr::"-q"::tgts);
    if test() then OK() else die "FAILED!")
 
-fun present n = OS.FileSys.access(n, [OS.FileSys.A_READ])
+fun present n = HOLFileSys.access(n, [OS.FileSys.A_READ])
 
-fun delete n = OS.FileSys.remove n handle SysErr _ => ()
+fun delete n = HOLFileSys.remove n handle SysErr _ => ()
 
 fun testscenario hm =
   let

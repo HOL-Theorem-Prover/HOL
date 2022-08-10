@@ -1,9 +1,10 @@
 structure QFRead :> QFRead =
 struct
 
+open HOLFileSys
 type reader =
      {read : unit -> char option, reset : unit -> unit, eof : unit -> bool}
-fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+fun die s = (output(stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun exndie e = die ("Exception raised " ^ General.exnMessage e)
 
@@ -19,19 +20,22 @@ fun exhaust_lexer (read, close, _) =
 
 fun reset st = fn () => QuoteFilter.UserDeclarations.resetstate st
 
+fun mkstate b = {inscriptp = b, quotefixp = false}
+
 fun file_to_lexer fname =
   let
-    val instrm = TextIO.openIn fname handle e => exndie e
+
+    val instrm = openIn fname handle e => exndie e
     val isscript = String.isSuffix "Script.sml" fname
-    val qstate = QuoteFilter.UserDeclarations.newstate isscript
-    val read = QuoteFilter.makeLexer (fn n => TextIO.input instrm) qstate
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscript)
+    val read = QuoteFilter.makeLexer (fn n => input instrm) qstate
   in
-    (#2 o read, (fn () => TextIO.closeIn instrm), reset qstate)
+    (#2 o read, (fn () => closeIn instrm), reset qstate)
   end
 
 fun string_to_lexer isscriptp s =
   let
-    val qstate = QuoteFilter.UserDeclarations.newstate isscriptp
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
     val sr = ref s
     fun str_read _ = (!sr before sr := "")
     val read = QuoteFilter.makeLexer str_read qstate
@@ -41,8 +45,8 @@ fun string_to_lexer isscriptp s =
 
 fun stream_to_lexer isscriptp strm =
   let
-    val qstate = QuoteFilter.UserDeclarations.newstate isscriptp
-    val read = QuoteFilter.makeLexer (fn n => TextIO.input strm) qstate
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
+    val read = QuoteFilter.makeLexer (fn n => input strm) qstate
   in
     (#2 o read, (fn () => ()), reset qstate)
   end

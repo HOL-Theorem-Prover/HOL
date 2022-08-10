@@ -13,6 +13,7 @@ sig
   val ||-> : ('a * 'b) * ('a -> 'b -> 'c) -> 'c
   val B2 : ('c -> 'd) -> ('a -> 'b -> 'c) -> 'a -> 'b -> 'd
   val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+  val flip : ('a * 'b -> 'c) -> ('b * 'a -> 'c)
   val I : 'a -> 'a
   val K : 'a -> 'b -> 'a
   val S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
@@ -65,7 +66,10 @@ sig
   val foldr2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
                                               (* exn ListPair.UnequalLengths *)
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
+  val zip3 : 'a list * 'b list * 'c list -> ('a * 'b * 'c) list
+                                              (* exn ListPair.UnequalLengths *)
   val separate : 'a -> 'a list -> 'a list
+  val front_last : 'a list -> 'a list * 'a
   val filter : ('a -> bool) -> 'a list -> 'a list
   val filter_out : ('a -> bool) -> 'a list -> 'a list
   val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
@@ -74,6 +78,7 @@ sig
   val mapfilter : ('a -> 'b) -> 'a list -> 'b list
   val flatten : 'a list list -> 'a list
   val trypluck': ('a -> 'b option) -> 'a list -> ('b option * 'a list)
+  val plucki : ('a -> bool) -> 'a list -> ('a * int * 'a list) option
   val funpow : int -> ('a -> 'a) -> 'a -> 'a
   val repeat : ('a -> 'a) -> 'a -> 'a
   val enumerate : int -> 'a list -> (int * 'a) list
@@ -122,6 +127,8 @@ sig
 
   type 'a eqf = 'a -> 'a -> bool
   val pair_eq : 'a eqf -> 'b eqf -> ('a * 'b) eqf
+  val fst_eq : 'a eqf -> ('a * 'b) eqf
+  val inv_img_eq : ('a -> 'b) -> 'b eqf -> 'a eqf
   val option_eq : 'a eqf -> 'a option eqf
   val list_eq : 'a eqf -> 'a list eqf
   val redres_eq : 'a eqf -> 'b eqf -> {redex:'a,residue:'b} eqf
@@ -150,6 +157,8 @@ sig
   val hash : int -> string -> int * int -> int
 
   val with_flag : 'a ref * 'a -> ('b -> 'c) -> 'b -> 'c
+  val genwith_flag : {get: unit -> 'a, set : 'a -> unit} * 'a -> ('b -> 'c) ->
+                     ('b -> 'c)
 
   type ('a, 'b) istream
   val mk_istream : ('a -> 'a) -> 'a -> ('a -> 'b) -> ('a, 'b) istream

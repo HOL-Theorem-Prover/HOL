@@ -1,0 +1,4 @@
+PRE_INCLUDES = ../../algebra/ring
+
+ALGEBRA_INCLUDES = lib monoid group field polynomial finitefield
+INCLUDES = $(patsubst %,../../algebra/%,$(ALGEBRA_INCLUDES)) 

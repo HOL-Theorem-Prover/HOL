@@ -8,19 +8,11 @@ struct
 
 open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
-     BoundedRewrites TexTokenMap
+     BoundedRewrites TexTokenMap term_tactic
 
-local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
+local open TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
-
-(* ----------------------------------------------------------------------
-    Update DefnBase with some extra congruence rules
-   ---------------------------------------------------------------------- *)
-
-val _ = DefnBase.write_congs (DefnBase.read_congs() @
-                              map (REWRITE_RULE [AND_IMP_INTRO])
-                                  [RES_FORALL_CONG, RES_EXISTS_CONG])
 
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet
@@ -119,20 +111,26 @@ val def_suffix = ref "_def"
 
 local
 open Feedback Theory
-fun prove_local (n,th) =
-    if not (!Globals.interactive) then
-      (print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n"); th)
-    else th
+fun prove_local privp (n,th) =
+   (if not (!Globals.interactive) then
+      print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n")
+    else ();
+    DB.store_local {private=privp} n th;
+    th)
+fun extract_localpriv (loc,priv,acc) attrs =
+    case attrs of
+        [] => (loc,priv,List.rev acc)
+      | "unlisted" :: rest => extract_localpriv (loc,true,acc) rest
+      | "local" :: rest => extract_localpriv (true,priv,acc) rest
+      | a :: rest => extract_localpriv (loc,priv,a::acc) rest
 in
 fun save_thm_attrs fname (n, attrs, th) = let
-  val (save, attrf, attrs) = let
-    val nonlocal = List.filter (not o Lib.equal "local") attrs
-  in
-    if length nonlocal = length attrs then
-      (Theory.save_thm, ThmAttribute.store_at_attribute, attrs)
-    else
-      (prove_local, ThmAttribute.local_attribute, nonlocal)
-  end
+  val (localp,privp,attrs) = extract_localpriv (false,false,[]) attrs
+  val save = if localp then prove_local privp
+             else if privp then Theory.save_private_thm
+             else Theory.save_thm
+  val attrf = if localp then ThmAttribute.local_attribute
+              else ThmAttribute.store_at_attribute
   fun do_attr a = attrf {thm = th, name = n, attrname = a}
 in
   save(n,th) before app do_attr attrs
@@ -151,6 +149,13 @@ in
   save_thm_attrs "save_thm" (n,attrs,th)
 end
 
+fun new_recursive_definition rcd =
+    let val thm = Prim_rec.new_recursive_definition rcd
+        val genind = gen_indthm {lookup_ind = TypeBase.induction_of}
+    in
+      DefnBaseCore.register_indn (genind thm);
+      thm
+    end
 
 (* ----------------------------------------------------------------------
     Gets a variant of an arbitrary term instead of a single variable.
@@ -206,23 +211,5 @@ fun term_diff t1 t2 =
     recurse [] t1 t2
   end
 
-local
-open Portable
-val aconv = Term.aconv
-in
-fun Teq tm = Term.same_const boolSyntax.T tm
-fun Feq tm = Term.same_const boolSyntax.F tm
-val tml_eq = list_eq aconv
-val tmp_eq = pair_eq aconv aconv
-val goal_eq = pair_eq tml_eq aconv
-val goals_eq = list_eq goal_eq
-val tmem = Lib.op_mem Term.aconv
-fun memt tlist t = Lib.op_mem Term.aconv t tlist
-val tunion = Lib.op_union Term.aconv
-fun tassoc t l = Lib.op_assoc Term.aconv t l
-
-fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
-fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
-end
 
 end;

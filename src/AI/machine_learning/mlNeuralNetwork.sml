@@ -13,23 +13,13 @@ open HolKernel Abbrev boolLib aiLib mlMatrix smlParallel
 val ERR = mk_HOL_ERR "mlNeuralNetwork"
 
 (* -------------------------------------------------------------------------
-   Parameters
+   Activation and derivatives (with an optimization)
    ------------------------------------------------------------------------- *)
 
-val learningrate_glob = ref 0.01
-
-(* -------------------------------------------------------------------------
-   Activation and derivatives (with a smart trick)
-   ------------------------------------------------------------------------- *)
-
+fun idactiv (x:real) = x:real
+fun didactiv (x:real) = 1.0
 fun tanh x = Math.tanh x
-fun dtanh x = 1.0 - (x:real) * x (* 1 - (tanh x) * (tanh x) *)
-fun relu x  = if x > 0.0 then x else 0.0
-fun drelu x = if x < 0.000000000001 then 0.0 else 1.0
-fun leakyrelu x  = if x > 0.0 then x else 0.01 * x
-fun dleakyrelu x = if x <= 0.0 then 0.01 else 1.0
-fun id (x:real) = x:real
-fun did (x:real) = 1.0
+fun dtanh fx = 1.0 - fx * fx
 
 (* -------------------------------------------------------------------------
    Types
@@ -37,14 +27,35 @@ fun did (x:real) = 1.0
 
 type layer = {a : real -> real, da : real -> real, w : real vector vector}
 type nn = layer list
+type trainparam =
+  {ncore: int, verbose: bool,
+   learning_rate: real, batch_size: int, nepoch: int}
+
+fun string_of_trainparam {ncore,verbose,learning_rate,batch_size,nepoch} =
+  its ncore ^ " " ^ bts verbose ^ " " ^ rts learning_rate ^ " " ^
+  its batch_size ^ " " ^ its nepoch
+
+fun trainparam_of_string s =
+  let val (a,b,c,d,e) = quintuple_of_list (String.tokens Char.isSpace s) in
+    {
+    ncore = string_to_int a,
+    verbose = string_to_bool b,
+    learning_rate = (valOf o Real.fromString) c,
+    batch_size = string_to_int d,
+    nepoch = string_to_int e
+    }
+  end
+
+type schedule = trainparam list
+
+fun write_schedule file schedule =
+  writel file (map string_of_trainparam schedule)
+fun read_schedule file =
+  map trainparam_of_string (readl file)
 
 (* inv includes biais *)
-type fpdata =
-  {layer : layer, inv : real vector, outv : real vector, outnv : real vector}
-
-type bpdata =
-  {doutnv: real vector, doutv: real vector, dinv: real vector,
-   dw: real vector vector}
+type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
+type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}
 
 (*---------------------------------------------------------------------------
   Initialization
@@ -58,6 +69,9 @@ fun diml_of sizel = case sizel of
     [] => []
   | a :: m => diml_aux a m
 
+fun dimin_nn nn = ((snd o mat_dim o #w o hd) nn) - 1
+fun dimout_nn nn = (fst o mat_dim o #w o last) nn
+
 fun random_nn (a,da) sizel =
   let
     val l = diml_of sizel
@@ -68,90 +82,49 @@ fun random_nn (a,da) sizel =
   end
 
 (* -------------------------------------------------------------------------
-   input/output
+   I/O (assumes tanh activation functions)
    ------------------------------------------------------------------------- *)
 
-fun reall_to_string rl = String.concatWith " " (map rts rl)
-
-fun string_to_reall rls =
-  map (valOf o Real.fromString) (String.tokens Char.isSpace rls)
-
-fun string_of_wl wl =
+local open HOLsexp in
+fun enc_nn nn = list_encode enc_mat (map #w nn)
+fun dec_nn sexp =
   let
-    val diml = map (mat_dim) wl
-    fun f (a,b) = its a ^ "," ^ its b
-  in
-    String.concatWith " " (map f diml) ^ "\n" ^
-    String.concatWith "\n\n" (map string_of_mat wl)
-  end
-
-fun string_of_nn nn =
-  let
-    val diml = map (mat_dim o #w) nn
-    fun f (a,b) = its a ^ "," ^ its b
-  in
-    String.concatWith " " (map f diml) ^ "\n" ^
-    String.concatWith "\n\n" (map (string_of_mat o #w) nn)
-  end
-
-fun write_nn file nn = writel file [string_of_nn nn]
-
-fun split_nl nl l = case nl of
-    [] => raise ERR "split_nl" ""
-  | [a] => if length l = a then [l] else raise ERR "split_nl" ""
-  | a :: m =>
-    let val (l1,l2) = part_n a l in
-      l1 :: split_nl m l2
-    end
-
-fun read_wl_sl sl =
-  let
-    val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl)
-  in
-    map read_mat_sl matsl
-  end
-
-fun read_nn_sl sl =
-  let
-    val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl)
-    val matl =  map read_mat_sl matsl
+    val matl = valOf (list_decode dec_mat sexp)
+      handle Option => raise ERR "dec_nn" ""
     fun f m = {a = tanh, da = dtanh, w = m}
   in
-    map f matl
+    SOME (map f matl)
   end
-  handle Empty => raise ERR "read_nn_sl" ""
+end
 
-fun read_nn file = read_nn_sl (readl file)
+fun write_nn file nn = write_data enc_nn file nn
+fun read_nn file = read_data dec_nn file
 
-
-fun string_of_ex (v1,v2) =
-  let fun f v = reall_to_string (vector_to_list v) in
-    f v1 ^ "," ^ f v2
+fun string_of_ex (l1,l2) = reall_to_string l1 ^ "," ^ reall_to_string l2
+fun ex_of_string s =
+  let val (a,b) = pair_of_list (String.tokens (fn x => x = #",") s) in
+    (string_to_reall a, string_to_reall b)
   end
 
 fun write_exl file exl = writel file (map string_of_ex exl)
-
-fun ex_of_string s =
-  let val (a,b) = pair_of_list (String.tokens (fn x => x = #",") s) in
-    (Vector.fromList (string_to_reall a),
-     Vector.fromList (string_to_reall b))
-  end
-
 fun read_exl file = map ex_of_string (readl file)
 
-(*---------------------------------------------------------------------------
-  Biais
-  ---------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Biais
+   ------------------------------------------------------------------------- *)
 
 val biais = Vector.fromList [1.0]
 fun add_biais v = Vector.concat [biais,v]
-fun rm_biais v = Vector.fromList (tl (vector_to_list v))
+fun rm_biais v =
+  Vector.tabulate (Vector.length v - 1, fn i => Vector.sub (v,i+1))
 
-(*---------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
   Forward propagation (fp) with memory of the steps
-  ---------------------------------------------------------------------------*)
+  -------------------------------------------------------------------------- *)
+
+fun mat_dims m =
+  let val (a,b) = mat_dim m in "(" ^ its a ^ "," ^ its b ^ ")" end
+fun vect_dims v = its (Vector.length v + 1)
 
 fun fp_layer (layer : layer) inv =
   let
@@ -161,36 +134,38 @@ fun fp_layer (layer : layer) inv =
   in
     {layer = layer, inv = new_inv, outv = outv, outnv = outnv}
   end
+  handle Subscript =>
+    raise ERR "fp_layer" ("dimension: mat-" ^
+                          mat_dims (#w layer) ^ " vect-" ^ vect_dims inv)
 
 fun fp_nn nn v = case nn of
     [] => []
   | layer :: m =>
     let val fpdata = fp_layer layer v in fpdata :: fp_nn m (#outnv fpdata) end
 
-fun infer_nn nn v = #outnv (last (fp_nn nn v))
+(* -------------------------------------------------------------------------
+   Backward propagation (bp)
+   Takes the data from the forward pass, computes the loss and weight updates
+   by gradient descent.
+   Input has size j. Output has size i. Matrix has i lines and j columns.
+   ------------------------------------------------------------------------- *)
 
-(*--------------------------------------------------------------------------
-  Backward propagation (bp)
-  Takes the data from the forward pass, computes the loss and weight updates
-  by gradient descent. Input is j. Output is i. Matrix is Mij.
-  -------------------------------------------------------------------------- *)
+fun mult_rvect_da da v1 v2 =
+  let fun f i =  da (Vector.sub (v1,i)) * Vector.sub (v2,i) in
+    Vector.tabulate (Vector.length v1, f)
+  end
+
 
 fun bp_layer (fpdata:fpdata) doutnv =
   let
-    val doutv =
-      (* should use (#outv fpdata) to use the derivative *)
-      let val dav = Vector.map (#da (#layer fpdata)) (#outnv fpdata) in
-        mult_rvect dav doutnv
-      end
+    (* optimization trick *)
+    val doutv = mult_rvect_da (#da (#layer fpdata)) (#outnv fpdata) doutnv
     val w        = #w (#layer fpdata)
     fun dw_f i j = Vector.sub (#inv fpdata,j) * Vector.sub (doutv,i)
     val dw       = mat_tabulate dw_f (mat_dim w)
     val dinv     = rm_biais (mat_mult (mat_transpose w) doutv)
   in
-   {doutnv = doutnv,
-    doutv = doutv,
-    dinv = dinv,
-    dw = dw}
+   {doutnv = doutnv, doutv = doutv, dinv = dinv, dw = dw}
   end
 
 fun bp_nn_aux rev_fpdatal doutnv =
@@ -201,7 +176,7 @@ fun bp_nn_aux rev_fpdatal doutnv =
       bpdata :: bp_nn_aux m (#dinv bpdata)
     end
 
-fun bp_nn_wocost fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
+fun bp_nn_doutnv fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
 
 fun bp_nn fpdatal expectv =
   let
@@ -237,61 +212,97 @@ fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 
-fun clip (a,b) m =
-  let fun f x = if x < a then a else (if x > b then b else x) in
-    mat_map f m
-  end
+fun clip_float (a,b) x =
+  if x < a then a else (if x > b then b else x)
 
-fun update_layer (layer, layerwu) =
+fun mat_add_weight lr m w =
   let
-    val w0 = mat_smult (!learningrate_glob) layerwu
-    val w1 = mat_add (#w layer) w0
-    val w2 = clip (~4.0,4.0) w1
+    fun f i j = clip_float (~4.0,4.0) (mat_sub m i j + lr * mat_sub w i j)
   in
-    {a = #a layer, da = #da layer, w = w2}
+    mat_tabulate f (mat_dim m)
   end
 
-fun update_nn nn wu = map update_layer (combine (nn,wu))
+fun update_layer param (layer, layerwu) =
+  let
+    val lr = #learning_rate param / Real.fromInt (#batch_size param)
+  in
+    {a = #a layer, da = #da layer,
+     w = mat_add_weight lr (#w layer) layerwu}
+  end
+
+fun update_nn param nn wu = map (update_layer param) (combine (nn,wu))
+
+(* -------------------------------------------------------------------------
+   Statistics
+   ------------------------------------------------------------------------- *)
+
+fun sr r = pad 7 "0" (rts_round 5 r)
+
+fun stats_exl exl =
+  let
+    val ll = list_combine (map snd exl)
+    fun f l =
+      print_endline (sr (average_real l ) ^ " " ^ sr (absolute_deviation l))
+  in
+    print_endline "mean deviation"; app f ll; print_endline ""
+  end
 
 (* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
 
-fun train_nn_subbatch nn (subbatch : (vect * vect) list) =
+fun train_nn_batch param pf nn batch =
   let
-    val bpdatall = map (train_nn_one nn) subbatch
+    val bpdatall = pf (train_nn_one nn) batch
     val dwll = map (map #dw) bpdatall
     val dwl = sum_dwll dwll
+    val newnn = update_nn param nn dwl
   in
-    (dwl, average_loss bpdatall)
+    (newnn, average_loss bpdatall)
   end
 
-fun train_nn_batch ncore nn batch =
-  let
-    val (dwll,lossl) =
-      split (parmap_exact ncore (train_nn_subbatch nn) (cut_n ncore batch))
-    val dwl = sum_dwll dwll
-    val newnn = update_nn nn dwl
-  in
-    (newnn, average_real lossl)
-  end
-
-fun train_nn_epoch ncore lossl nn batchl  = case batchl of
+fun train_nn_epoch param pf lossl nn batchl  = case batchl of
     [] => (nn, average_real lossl)
   | batch :: m =>
-    let val (newnn,loss) = train_nn_batch ncore nn batch in
-      train_nn_epoch ncore (loss :: lossl) newnn m
+    let val (newnn,loss) = train_nn_batch param pf nn batch in
+      train_nn_epoch param pf (loss :: lossl) newnn m
     end
 
-fun train_nn ncore n nn bsize exl =
-  if n <= 0 then nn else
+fun train_nn_nepoch param pf i nn exl =
+  if i >= #nepoch param then nn else
   let
-    val batchl = mk_batch bsize (shuffle exl)
-    val (new_nn,loss) = train_nn_epoch ncore [] nn batchl
-    val _ = print_endline (its n ^ " " ^ Real.toString loss)
+    val batchl = mk_batch (#batch_size param) (shuffle exl)
+    val (new_nn,loss) = train_nn_epoch param pf [] nn batchl
+    val _ =
+      if #verbose param then print_endline (its i ^ " " ^ sr loss) else ()
   in
-    train_nn ncore (n - 1) new_nn bsize exl
+    train_nn_nepoch param pf (i+1) new_nn exl
   end
+
+(* -------------------------------------------------------------------------
+   Interface:
+   - Scaling from [0,1] to [-1,1] to match activation functions range.
+   - Converting lists to vectors
+   ------------------------------------------------------------------------- *)
+
+fun scale_real x = x * 2.0 - 1.0
+fun descale_real x = (x + 1.0) * 0.5
+fun scale_in l = Vector.fromList (map scale_real l)
+fun scale_out l = Vector.fromList (map scale_real l)
+fun descale_out v = map descale_real (vector_to_list v)
+fun scale_ex (l1,l2) = (scale_in l1, scale_out l2)
+
+fun train_nn param nn exl =
+  let
+    val (pf,close_threadl) = parmap_gen (#ncore param)
+    val _ = if #verbose param then stats_exl exl else ()
+    val newexl = map scale_ex exl
+    val r = train_nn_nepoch param pf 0 nn newexl
+  in
+    close_threadl (); r
+  end
+
+fun infer_nn nn l = (descale_out o #outnv o last o (fp_nn nn) o scale_in) l
 
 
 end (* struct *)
@@ -303,21 +314,25 @@ end (* struct *)
 (*
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-load "smlParallel"; open smlParallel;
 
+(* examples *)
 fun gen_idex dim =
-  let
-    fun f dim = List.tabulate (dim, fn _ => random_real () - 0.5)
-    val x = Vector.fromList (f dim) in (x,x)
+  let fun f () = List.tabulate (dim, fn _ => random_real ()) in
+    let val x = f () in (x,x) end
   end
-
+;
 val dim = 10;
-val bsize = 16;
-val nepoch = 100;
-val ncore = 1;
 val exl = List.tabulate (1000, fn _ => gen_idex dim);
-val nn = random_nn (tanh,dtanh) [10,20,10];
-val (newnn,t) = add_time (train_nn ncore nepoch nn bsize) exl;
+
+(* training *)
+val nn = random_nn (tanh,dtanh) [dim,4*dim,4*dim,dim];
+val param : trainparam =
+  {ncore = 1, verbose = true,
+   learning_rate = 0.02, batch_size = 16, nepoch = 100}
+;
+val (newnn,t) = add_time (train_nn param nn) exl;
+
+(* testing *)
 val inv = fst (gen_idex dim);
 val outv = infer_nn newnn inv;
 *)

@@ -7,6 +7,8 @@ struct
 
 open HolKernel Parse boolLib bossLib groupTheory;
 
+val ERR = mk_HOL_ERR "groupTools"
+
 (* ------------------------------------------------------------------------- *)
 (* Syntax operations.                                                        *)
 (* ------------------------------------------------------------------------- *)

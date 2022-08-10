@@ -122,7 +122,7 @@ val x86_2set''_11 = prove(
   \\ `?rs2 st2 ep2 m2. y2 = (rs2,st2,ep2,m2)` by METIS_TAC [PAIR]
   \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ `?r2 e2 t2 m2 i2. s2 = (r2,e2,t2,m2,i2)` by METIS_TAC [PAIR]
-  \\ FULL_SIMP_TAC bool_ss [PAIR_EQ,EXTENSION]
+  \\ FULL_SIMP_TAC bool_ss [PAIR_EQ,EXTENSION,Excl "lift_disj_eq"]
   THEN1
    (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.SPEC `xReg xi yi`)
     \\ FULL_SIMP_TAC std_ss [IN_x86_2set] \\ METIS_TAC [])
@@ -788,15 +788,20 @@ val xCODE_IMP_BYTE_MEMORY = store_thm("xCODE_IMP_BYTE_MEMORY",
   \\ ASM_SIMP_TAC std_ss [X86_INSTR_def,IN_INSERT,X86_INSTR_PERM_def]
   \\ ASM_SIMP_TAC std_ss [GSPECIFICATION]);
 
-val x86_2set_ICACHE_EMPTY = prove(
-  ``(x86_2set' (rs,st,ei,ms) (r,e2,t,m,(\a. if a IN ms then NONE else i a)) =
-     x86_2set' (rs,st,ei,ms) (r,e2,t,m,X86_ICACHE_EMPTY)) /\
-    (x86_2set'' (rs,st,ei,ms) (r,e2,t,m,(\a. if a IN ms then NONE else i a)) =
-     x86_2set'' (rs,st,ei,ms) (r,e2,t,m,i))``,
+Theorem x86_2set_ICACHE_EMPTY[local]:
+  (x86_2set' (rs,st,ei,ms) (r,e2,t,m,(\a. if a IN ms then NONE else i a)) =
+   x86_2set' (rs,st,ei,ms) (r,e2,t,m,X86_ICACHE_EMPTY)) /\
+  (x86_2set'' (rs,st,ei,ms) (r,e2,t,m,(\a. if a IN ms then NONE else i a)) =
+   x86_2set'' (rs,st,ei,ms) (r,e2,t,m,i))
+Proof
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [EXTENSION] \\ Cases
-  \\ SIMP_TAC std_ss [IN_x86_2set,XREAD_REG_def,XREAD_EFLAG_def,
-         XREAD_EIP_def,X86_GET_MEMORY_def,X86_ACCURATE_def,X86_ICACHE_EMPTY_def]
-  \\ SRW_TAC [][]);
+  \\ SIMP_TAC std_ss [
+      IN_x86_2set,XREAD_REG_def,XREAD_EFLAG_def,Excl "lift_disj_eq",
+      Excl "lift_imp_disj",
+      XREAD_EIP_def,X86_GET_MEMORY_def,X86_ACCURATE_def,X86_ICACHE_EMPTY_def
+    ]
+  \\ SRW_TAC [][Excl "lift_disj_eq", Excl "lift_imp_disj"]
+QED
 
 val IMP_X86_SPEC_LEMMA3 = prove(
   ``!p q.

@@ -1,3 +1,0 @@
-\THEOREM CARD_SUBSET pred_sets
-|- !s. FINITE s ==> (!t. t SUBSET s ==> (CARD t) <= (CARD s))
-\ENDTHEOREM

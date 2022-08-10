@@ -7,9 +7,13 @@ sig
                                            beta conversion *)
      val CONG_ss : simpLib.ssfrag       (* congruence rules for ==> and
                                            if-then-else *)
+     val ABBREV_ss : simpLib.ssfrag     (* congruence rule for Abbrev,
+                                           preventing rewrites in var pos'n,
+                                           and Abbrev tidying conversion *)
      val CONJ_ss : simpLib.ssfrag       (* congruence rules for /\; not
                                            included in bool_ss, but
                                            occasionally useful *)
+     val DISJ_ss : simpLib.ssfrag       (* analogous congruence rules for \/ *)
      val NOT_ss : simpLib.ssfrag        (* rewrites that move negations
                                            inwards, included in bool_ss *)
      val COND_elim_ss : simpLib.ssfrag  (* eliminates if-then-else's;
@@ -63,6 +67,12 @@ sig
      val NORMEQ_ss : simpLib.ssfrag
        (* flips equalities that have a ground term on the left and a
           non-ground term on the right *)
+
+     val LABEL_CONG_ss : simpLib.ssfrag
+       (* stops the simplifier from changing labelled terms *)
+
+     val HIDE_ss : simpLib.ssfrag
+       (* stops simplifier from changing hidden terms *)
 
      val SimpLHS : thm
      val SimpRHS : thm

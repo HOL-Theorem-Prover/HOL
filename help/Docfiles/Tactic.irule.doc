@@ -62,5 +62,5 @@ the proof step {e (irule trans)} gives new goal
 }
 
 \SEEALSO
-Tactic.MATCH_MP_TAC, Tactic.prim_irule, Drule.IRULE_CANON.
+Tactic.irule_at, Tactic.MATCH_MP_TAC, Tactic.prim_irule, Drule.IRULE_CANON.
 \ENDDOC

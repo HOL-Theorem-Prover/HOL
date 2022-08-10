@@ -129,7 +129,7 @@ val _ = TeX_notation {hol = UChar.exists ^ "!", TeX = ("\\HOLTokenUnique{}",2)}
 
 val LET_DEF =
  Definition.new_definition
-   ("LET_DEF",        “LET = \(f:'a->'b) x. f x”);
+   ("LET_DEF",        “LET = λ(f:'a->'b) x. f x”);
 
 val COND_DEF =
  Definition.new_definition
@@ -160,12 +160,18 @@ val TYPE_DEFINITION =
  *---------------------------------------------------------------------------*)
 
 open Portable;
+Overload "~" = “~”
+Overload "¬" = “~”                                                     (* UOK *)
 val _ = add_rule {term_name   = "~",
                   fixity      = Prefix 900,
                   pp_elements = [TOK "~"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
-val _ = unicode_version { u = UChar.neg, tmnm = "~"};
+val _ = add_rule {term_name   = UChar.neg,
+                  fixity      = Prefix 900,
+                  pp_elements = [TOK UChar.neg],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 val _ = TeX_notation {hol = "~", TeX = ("\\HOLTokenNeg{}",1)}
 val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg{}",1)}
 
@@ -234,7 +240,7 @@ val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
 
 val literal_case_DEF =
  Definition.new_definition
-   ("literal_case_DEF",  “literal_case = \(f:'a->'b) x. f x”);
+   ("literal_case_DEF",  “literal_case = λ(f:'a->'b) x. f x”);
 
 val _ = overload_on ("case", “bool$literal_case”);
 
@@ -282,7 +288,7 @@ val _ = associate_restriction ("@",  "RES_SELECT")
 val BOUNDED_DEF =
   Definition.new_definition
     ("BOUNDED_DEF",
-     “BOUNDED = \(v:bool). T”);
+     “BOUNDED = λ(v:bool). T”);
 
 (*---------------------------------------------------------------------------*)
 (* Support for detecting datatypes in theory files                           *)
@@ -1105,6 +1111,22 @@ val IMP_CLAUSES = save_thm("IMP_CLAUSES",
                   SPEC t IMP_CLAUSE5])
    end);
 
+(* ----------------------------------------------------------------------
+    |- !t1 t2. (t1 <=> t2) ==> (t1 ==> t2)
+   ---------------------------------------------------------------------- *)
+
+val EQ_IMPLIES =
+  let
+    val impt1 = REFL $ mk_comb(implication, t1b)
+    val eqt = mk_eq(t1b,t2b)
+    val t1_eq_t2 = ASSUME eqt
+    val th0 = MK_COMB(impt1,t1_eq_t2)
+    val imp_refl = IMP_CLAUSES |> SPEC t1b |> CONJUNCTS |> el 4 |> EQT_ELIM
+  in
+    save_thm("EQ_IMPLIES", EQ_MP th0 imp_refl |> DISCH eqt |> GENL [t1b,t2b])
+  end
+
+
 (*----------------------------------------------------------------------------
  *    |- (~~t = t) /\ (~T = F) /\ (~F = T)
  *---------------------------------------------------------------------------*)
@@ -1764,7 +1786,7 @@ val LEFT_FORALL_OR_THM = save_thm("LEFT_FORALL_OR_THM",
       val imp2 = DISCH_ALL (GEN x (DISJ_CASES_UNION
                   (ASSUME(mk_disj(mk_forall(x,P), Q))) thm5 thm6))
   in
-      GENL [Q,f] (IMP_ANTISYM_RULE imp1 imp2)
+      GENL [f,Q] (IMP_ANTISYM_RULE imp1 imp2)
   end);
 
 (* ------------------------------------------------------------------------- *)
@@ -3336,6 +3358,26 @@ val EXISTS_UNIQUE_REFL = save_thm("EXISTS_UNIQUE_REFL",
      GEN a (EQ_MP th15 th14)
  end);
 
+(* ----------------------------------------------------------------------
+    EXISTS_UNIQUE_FALSE |- (?!x. F) <=> F
+   ---------------------------------------------------------------------- *)
+
+val EXISTS_UNIQUE_FALSE = save_thm("EXISTS_UNIQUE_FALSE",
+  let
+    val BINDER_CONV = RAND_CONV o ABS_CONV
+    val LAND_CONV = RATOR_CONV o RAND_CONV
+    val P = mk_var("P", alpha --> bool)
+    val x = mk_var("x", alpha)
+    val th1 = INST [P |-> mk_abs(x, F)] EXISTS_UNIQUE_THM
+    val th2 = CONV_RULE(RAND_CONV (LAND_CONV (BINDER_CONV BETA_CONV))) th1
+    val th3 = CONV_RULE(LAND_CONV (BINDER_CONV BETA_CONV)) th2
+    val uniqueness_t = th3 |> concl |> rhs |> rand
+    val simp1 = AP_THM (AP_TERM conjunction (SPEC F EXISTS_SIMP)) uniqueness_t
+    val th4 = TRANS th3 simp1
+    val simp2 = AND_CLAUSES |> SPEC uniqueness_t |> CONJUNCTS |> el 3
+  in
+    TRANS th4 simp2
+  end);
 
 (* ------------------------------------------------------------------------- *)
 (* Unwinding.                                                                *)
@@ -4172,6 +4214,23 @@ in
            CHOOSE (“rep:'a itself -> 'a”, ITSELF_TYPE_DEF) all_eq_thevalue)
 end
 
+(* ITSELF_EQN_RWT = |- f (:'a) = e <=> !x. f x = e *)
+val ITSELF_EQN_RWT = let
+  fun mk_itty ty = mk_thy_type{Args = [ty], Thy = "bool", Tyop = "itself"}
+  val aitty = mk_itty alpha
+  val f = mk_var("f", aitty --> beta)
+  val e = mk_var("e", beta)
+  val x = mk_var("x", aitty)
+  val r = mk_forall(x, mk_eq(mk_comb(f,x), e))
+  val itv = mk_thy_const{Name = "the_value", Thy = "bool", Ty = aitty}
+  val l = mk_eq(mk_comb(f,itv), e)
+  val r2l = SPEC itv (ASSUME r) |> DISCH r
+  val l2r = SPEC x ITSELF_UNIQUE |> AP_TERM f |> C TRANS (ASSUME l) |> GEN x
+                 |> DISCH l
+in
+  save_thm("ITSELF_EQN_RWT", GENL [f,e] $ IMP_ANTISYM_RULE l2r r2l)
+end
+
 (* prove a datatype axiom for the type, allowing definitions of the form
     f (:'a) = ...
 *)
@@ -4196,7 +4255,7 @@ end
 
 (* define case operator *)
 val itself_case_thm = let
-  val witness = “\(i:'a itself) (b:'b). b”
+  val witness = “λ(i:'a itself) (b:'b). b”
   val witness_applied1 = BETA_CONV (mk_comb(witness, “(:'a)”))
   val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 “b:'b”)
 in
@@ -4316,6 +4375,7 @@ val _ = add_user_printer ("bool.COND", “COND gd tr fl”)
 val _ = add_user_printer ("bool.LET", “LET f x”)
 val _ = add_absyn_postprocessor "bool.LET"
 
+(* |- |- !A B. A \/ B <=> ~A ==> B *)
 val DISJ_EQ_IMP = save_thm("DISJ_EQ_IMP",
   let
     val lemma = NOT_CLAUSES |> CONJUNCT1 |> SPEC ``A:bool``
@@ -4328,5 +4388,15 @@ val DISJ_EQ_IMP = save_thm("DISJ_EQ_IMP",
          (fn tm => lemma))
     |> GENL [``A:bool``,``B:bool``]
   end);
+
+(* ------------------------------------------------------------------------- *)
+(* CONTRAPOS_THM |- !t1 t2. (~t1 ==> ~t2) <=> (t2 ==> t1)                    *)
+(* (HOL-Light compatible)                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+val CONTRAPOS_THM = save_thm ("CONTRAPOS_THM",
+    MONO_NOT_EQ |> SYM
+                |> INST [“x:bool” |-> “t1:bool”, “y:bool” |-> “t2:bool”]
+                |> GENL [“t1:bool”, “t2:bool”]);
 
 val _ = export_theory();

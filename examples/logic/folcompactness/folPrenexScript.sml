@@ -77,7 +77,7 @@ Theorem Exists_eqns[simp]:
   ((Exists x p = IMP q r) ⇔ (q = FALL x (IMP p False)) ∧ (r = False)) ∧
   ((Exists x p = Exists y q) ⇔ (x = y) ∧ (p = q))
 Proof
-  simp[And_def, Or_def, Iff_def, Exists_def, Not_def] >> simp[EQ_SYM_EQ]
+  simp[And_def, Or_def, Iff_def, Exists_def, Not_def] >> metis_tac[]
 QED
 
 Theorem PRENEX[simp]:
@@ -108,7 +108,7 @@ Theorem formsubst_EQ[simp]:
                      (r = formsubst i r0)) ∧
   (∀i p q. (formsubst i p = Not q) ⇔ ∃q0. (p = Not q0) ∧ (q = formsubst i q0))
 Proof
-  csimp[Not_def] >> rw[] >> Cases_on ‘p’ >> simp[EQ_SYM_EQ]
+  csimp[Not_def] >> rw[] >> Cases_on ‘p’ >> simp[] >> metis_tac[]
 QED
 
 Theorem formsubst_Not[simp]:

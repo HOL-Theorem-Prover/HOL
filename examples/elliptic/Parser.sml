@@ -169,8 +169,8 @@ local
       end;
 
   fun lrspaces (l, r) =
-      (if l = 0 then K () else C PP.add_string (nspaces l),
-       if r = 0 then K () else C PP.add_break (r, 0));
+      (if l = 0 then PP.add_string "" else PP.add_string (nspaces l),
+       if r = 0 then PP.add_string "" else PP.add_break (r, 0));
 in
   val op_spaces = (lrspaces ## I) o spacify;
 
@@ -223,18 +223,20 @@ fun pp_gen_infix left toks =
 
         open PP
 
-        fun pp_go pp (tmr as (tm,r)) =
+        fun pp_go (tmr as (tm,r)) =
             case dest' tm of
-              NONE => pp_sub pp tmr
+              NONE => pp_sub tmr
             | SOME ((a,b),((lspc,rspc),tok)) =>
-              ((if left then pp_go else pp_sub) pp (a,true);
-               lspc pp; add_string pp tok; rspc pp;
-               (if left then pp_sub else pp_go) pp (b,r))
+              block INCONSISTENT 0 [
+                (if left then pp_go else pp_sub) (a,true),
+                lspc, add_string tok, rspc,
+                (if left then pp_sub else pp_go) (b,r)
+              ]
       in
-        fn pp => fn tmr as (tm,_) =>
+        fn tmr as (tm,_) =>
         case dest' tm of
-          NONE => pp_sub pp tmr
-        | SOME _ => (begin_block pp INCONSISTENT 0; pp_go pp tmr; end_block pp)
+          NONE => pp_sub tmr
+        | SOME _ => PP.block INCONSISTENT 0 [pp_go tmr]
       end
     end;
 
@@ -260,14 +262,15 @@ fun pp_infixes ops =
 
         open PP
 
-        fun subpr pp (tmr as (tm,_)) =
+        fun subpr (tmr as (tm,_)) =
             if is_op tm then
-              (begin_block pp INCONSISTENT 1; add_string pp "(";
-               printer subpr pp (tm, false); add_string pp ")"; end_block pp)
-            else pp_sub pp tmr
+              PP.block INCONSISTENT 1 [ add_string "(",
+                                        printer subpr (tm, false),
+                                        add_string ")" ]
+            else pp_sub tmr
       in
-        fn pp => fn tmr =>
-        (begin_block pp INCONSISTENT 0; printer subpr pp tmr; end_block pp)
+        fn tmr =>
+           PP.block PP.INCONSISTENT 0 [ printer subpr tmr ]
       end
     end;
 

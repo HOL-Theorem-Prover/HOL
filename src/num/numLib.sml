@@ -284,7 +284,7 @@ in
 val std_ss =
      (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
       numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ combinSimps.COMBIN_ss ++
-      numSimps.ARITH_RWTS_ss)
+      numSimps.ARITH_RWTS_ss ++ BasicProvers.thy_ssfrag "arithmetic")
 
 val arith_ss = std_ss ++ numSimps.ARITH_DP_ss
 end;

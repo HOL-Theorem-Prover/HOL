@@ -1510,11 +1510,7 @@ Proof
   Q.SPEC_THEN ‘2’ mp_tac arithmeticTheory.ADD_DIV_RWT >>
   simp[] >>
   disch_then(Q.SPECL_THEN[‘2 * SUC n’,‘1’]mp_tac) >>
-  simp_tac std_ss [] >> impl_tac
-  >- METIS_TAC[MULT_COMM, DECIDE “0<2”, MOD_EQ_0] >>
-  simp[]
+  simp_tac std_ss []
 QED
-
-
 
 val _ = export_theory()

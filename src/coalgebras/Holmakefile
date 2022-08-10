@@ -1,17 +1,44 @@
+INCLUDES = ../pred_set/src/more_theories $(HOLDIR)/src/finite_maps
+
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-ifdef OTKNL
-all: llist.ot.art
+ifeq ($(KERNELID),otknl)
+BARE_THYS = llist lbtree path itree # ltree has problems
 
-llist.ot.art: llist.art
+all: hol4-coalgebras.art
+
+hol4-coalgebras-unint.art: hol4-coalgebras-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 	opentheory info --article -o $@ $<
 
-llist.art: llistScript.sml
-	Holmake --ot llistTheory.uo
+hol4-coalgebras.art: hol4-coalgebras.thy hol4-coalgebras-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+install: hol4-coalgebras.thy hol4-coalgebras.art
+	opentheory install --reinstall $<
+
+ltree.art: ltree.otd
+itree.art: itree.otd
+lbtree.art: lbtree.otd
+llist.art: llist.otd
+path.art: path.otd
 endif
 
 selftest.exe: selftest.uo llistTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe coalgebra-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: coalgebra-selftest.log
+
+coalgebra-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

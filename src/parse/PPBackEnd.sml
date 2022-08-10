@@ -299,7 +299,7 @@ val emacs_terminal = let
   fun const {Thy,Name,Ty=(_, tyf)} s = let
     val thy' = if Thy = "" then "overloaded" else Thy
   in
-    "(*(*(*CO\000" ^ thy' ^ "$" ^ Name ^ " : " ^ lazy_string tyf ^
+    "(*(*(*CO\000" ^ thy' ^ "$" ^ Name ^ lazy_string (fn () => " : " ^ tyf()) ^
     "\000" ^ s ^ "*)*)*)"
   end
   fun add_xstring {s, sz, ann} =

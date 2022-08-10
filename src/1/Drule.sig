@@ -56,7 +56,6 @@ sig
   val PROVE_HYP        : thm -> thm -> thm
   val REORDER_ANTS_MOD : (term list -> term list) -> (thm -> thm) -> thm -> thm
   val REORDER_ANTS     : (term list -> term list) -> thm -> thm
-  val MODIFY_CONS      : (thm -> thm) -> thm -> thm
   val CONJ_PAIR        : thm -> thm * thm
   val LIST_CONJ        : thm list -> thm
   val CONJ_LIST        : int -> thm -> thm list
@@ -81,9 +80,12 @@ sig
                           -> thm -> thm
   val INST_TT_HYPS     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm * term list
+  val GEN_TYVARIFY     : thm -> thm
+  val FULL_GEN_TYVARIFY: thm -> thm
   val GSPEC            : thm -> thm
 
   val PART_MATCH       : (term -> term) -> thm -> term -> thm
+  val PART_MATCH'      : (term -> term) -> thm -> term -> thm
   val PART_MATCH_A     : (term -> term) -> thm -> term -> thm
   val MATCH_MP         : thm -> thm -> thm
   val BETA_VAR         : term -> term -> term -> thm
@@ -101,4 +103,12 @@ sig
     : {name:string, ABS:string, REP:string, tyax:thm} -> thm
 
   val MK_AC_LCOMM    : thm * thm -> thm * thm * thm
+
+  val underAIs : (thm -> thm) -> thm -> thm
+  val iffLR : thm -> thm
+  val iffRL : thm -> thm
+  val cj    : int -> thm -> thm
+  val pp    : thmpos_dtype.match_position -> thm -> thm
+
+
 end

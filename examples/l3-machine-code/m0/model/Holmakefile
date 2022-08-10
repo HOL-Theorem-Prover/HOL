@@ -1,9 +1,6 @@
 INCLUDES = ../../common ../../lib
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) m0.ui
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)
@@ -12,5 +9,5 @@ m0-model.art: m0-model.thy m0.ot.art
 m0.art: m0.otd
 endif
 
-m0.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo m0.sml
+m0.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo m0.sml m0.ui
 	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui m0.sml

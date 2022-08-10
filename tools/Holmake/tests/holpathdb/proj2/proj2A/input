@@ -1,0 +1,5 @@
+local val ostrm = TextIO.openOut "output"
+in
+val _ = TextIO.output (ostrm, "[" ^ String.concatWith "," (!loadPath)^"]\n");
+val _ = TextIO.closeOut ostrm
+end;

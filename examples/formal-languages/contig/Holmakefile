@@ -1,0 +1,2 @@
+INCLUDES = $(HOLDIR)/examples/formal-languages $(HOLDIR)/src/string \
+           $(HOLDIR)/src/bag $(HOLDIR)/src/finite_maps

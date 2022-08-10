@@ -24,20 +24,12 @@ val _ = List.app parsetest [
 datatype 'a exnsum = Some of 'a | Exn of exn
 fun total f x = Some (f x) handle Interrupt => raise Interrupt | e => Exn e
 
-fun test0 nm cmp pr f (x, expected_opt) = let
-  val _ = tprint (StringCvt.padRight #" " 20 nm ^ pr x)
-in
-  case (total f x, expected_opt) of
-      (Some result, SOME expected) =>
-        if cmp(rhs (concl result),expected) <> EQUAL then die "FAILED - BAD RHS"
-        else if not (null (hyp result)) then die "FAILED - HYPS"
-        else if cmp(lhs (concl result),x) <> EQUAL then die "FAILED - BAD LHS"
-        else OK()
-    | (Some _, NONE) => die "FAILED - didn't raise EXN"
-    | (Exn e, SOME _) => die ("FAILED\n  EXN: "^General.exnMessage e)
-    | (Exn _, NONE) => OK()
-end
-
+fun test0 nm cmp pr f (x, expected_opt) =
+    case expected_opt of
+        SOME t => convtest(nm ^ " " ^ term_to_string x,f,x,t)
+      | NONE => shouldfail {checkexn = (fn HOL_ERR _ => true | _ => false),
+                            printarg = K nm, printresult = thm_to_string,
+                            testfn = f} x
 fun test nm cmp pr f (x, e) = test0 nm cmp pr f (x, SOME e)
 
 val _ = set_trace "Unicode" 0
@@ -67,6 +59,11 @@ val _ = app(test "BUTFIRSTN_CONV" Term.compare term_to_string BUTFIRSTN_CONV)
             (``BUTFIRSTN 0 [1;2]``, ``[1;2]``),
             (``BUTFIRSTN 3 [1;2;3]``, ``[] : num list``),
             (``BUTFIRSTN 0 [] : num list``, ``[] : num list``)]
+val _ = app(test "LASTN_CONV" Term.compare term_to_string LASTN_CONV)
+           [(``LASTN 3 [1;2;3;4]``, ``[2;3;4]``),
+            (``LASTN 0 [1;2]``, ``[]: num list``),
+            (``LASTN 3 [1;2;3]``, ``[1;2;3]``),
+            (``LASTN 0 [] : num list``, ``[] : num list``)]
 val _ = app(test "LIST_EQ_SIMP_CONV" Term.compare term_to_string
                  listSimps.LIST_EQ_SIMP_CONV)
            [(``(l1:'a list ++ [])::t = p ++ q``, ``(l1:'a list)::t = p ++ q``)]
@@ -136,3 +133,87 @@ val _ = List.app ct [
   ("SHORTLEX(3)", “SHORTLEX (<) [1;1;4] [1;1]”, “F”),
   ("LLEX(1)", “LLEX (<) [1;1;1] [1;2]”, “T”)
 ]
+
+val _ = let
+  open BasicProvers listTheory
+  val op using = markerLib.using
+  val usingA = markerLib.usingA
+  val g = “0 < LENGTH (l:num list)”
+  val expected = [“0 < LENGTH ([]:num list)”, “0 < LENGTH (SNOC (x:num) l')”]
+  val expected2 =
+      [“0 < LENGTH ([]:num list)”, “∀x. 0 < LENGTH (SNOC (x:num) l)”]
+  val expected2a = [[], [“0 < LENGTH (l:num list)”]]
+  infix AND
+  fun (f AND g) x = f x andalso g x
+  fun check1 sgs = list_eq aconv expected (map snd sgs)
+  fun check1a sgs = List.all null (map fst sgs : term list list)
+  fun check2 sgs = list_eq (list_eq aconv) expected2a (map fst sgs)
+  val ppgs = trace ("types", 1) (
+        HOLPP.block HOLPP.CONSISTENT 4 o
+        HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+      )
+  val rtcg = “!y:num x:num. RTC R x (f y) ==> Q x y”
+  val rtc_expected = [“(!m:num n:num. f n = m ==> Q m n) /\
+                       !a b c. (!d. f d = b ==> Q a d) /\ R b c ==>
+                               !d. f d = c ==> Q a d”]
+  val bit_cases = hd (Prim_rec.prove_cases_thm numeralTheory.bit_induction)
+  val bitind_goal = “0 < n”
+  val bitind_expected = [([], “0 < ZERO”), ([“0 < n”], “0 < BIT1 n”),
+                         ([“0 < n”], “0 < BIT2 n”)]
+  fun TAC t g = fst (VALID t g)
+in
+  tprint "Cases_on ‘m’ using bit_cases";
+  require_msg (check_result (
+                  (list_eq aconv [“0 < ZERO”, “0 < BIT1 n”, “0 < BIT2 n”] o
+                   map snd) AND
+                  (List.all null o map fst)
+              ))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Cases_on ‘m’ using bit_cases) ([], “0 < m”);
+  tprint "Cases_on ‘m’ using EVEN_OR_ODD";
+  require_msg (check_result ((list_eq aconv [“0 < m”, “0 < m”] o map snd) AND
+                             (list_eq (list_eq aconv) [[“EVEN m”], [“ODD m”]] o
+                              map fst)))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Cases_on ‘m’ using arithmeticTheory.EVEN_OR_ODD)
+              ([], “0 < m”);
+  tprint "Cases_on ‘m’ using assumption";
+  require_msg (check_result ((list_eq aconv [“0 < 2”, “0 < 4”] o map snd) AND
+                             (List.all null o map fst)))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ pop_assum $ usingA $ Cases_on ‘m’)
+              ([“!a. a = 2 \/ a = 4”], “0 < m”);
+  tprint "Cases_on ‘l’ using SNOC_CASES";
+  require_msg (check_result (check1 AND check1a))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Cases_on ‘l’ using SNOC_CASES) ([], g);
+  tprint "Induct_on ‘l’ using SNOC_INDUCT";
+  require_msg (check_result ((list_eq aconv expected2 o map snd) AND check2))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC (Induct_on ‘l’ using SNOC_INDUCT)) ([], g);
+  tprint "Induct_on ‘RTC’ using RTC_INDUCT_RIGHT1";
+  require_msg (check_result ((list_eq aconv rtc_expected o map snd)))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Induct_on ‘RTC’ using relationTheory.RTC_INDUCT_RIGHT1)
+              ([], rtcg);
+  tprint "Induct_on ‘n’ using numeralTheory.bit_induction";
+  require_msg (check_result
+                 (list_eq (pair_eq (list_eq aconv) aconv) bitind_expected))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Induct_on ‘n’ using numeralTheory.bit_induction)
+              ([], bitind_goal)
+end
+
+
+val _ = let
+  open BasicProvers simpLib listTheory
+  val _ = tprint
+  val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
+
+  val t = “(!x:'a. MEM x l ==> g x = c:'b option) ==> P (MAP THE (MAP g l))”
+  val expected =
+      “(!x:'a. MEM x l ==> g x = c:'b option) ==> P (MAP THE (MAP (\x. c) l))”
+in
+  convtest("simplify with MAP_CONG; get eta-redex?",
+           SIMP_CONV (quietly srw_ss()) [Cong MAP_CONG'], t, expected)
+end

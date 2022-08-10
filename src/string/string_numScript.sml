@@ -3,15 +3,15 @@ open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory markerLib;
 val _ = new_theory "string_num"
 val _ = set_grammar_ancestry ["string"]
 
-val n2s_def = tDefine
- "n2s" `
+Definition n2s_def:
   n2s n = if n = 0 then ""
           else let r0 = n MOD 256 in
                let r = if r0 = 0 then 256 else r0 in
                let s0 = n2s ((n - r) DIV 256)
                in
-                 STRING (CHR (r - 1)) s0`
- (WF_REL_TAC `(<)` THEN REPEAT STRIP_TAC THEN
+                 STRING (CHR (r - 1)) s0
+Termination
+  WF_REL_TAC `(<)` THEN REPEAT STRIP_TAC THEN
   Q.MATCH_ABBREV_TAC `M DIV 256 < n` THEN
   Q_TAC SUFF_TAC `M < n` THEN1
         (STRIP_TAC THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
@@ -19,7 +19,8 @@ val n2s_def = tDefine
          SRW_TAC [ARITH_ss][DIV_LESS] THEN
          MATCH_MP_TAC DIV_LE_MONOTONE THEN
          SRW_TAC [ARITH_ss][Abbr`M`]) THEN
-  SRW_TAC [ARITH_ss][Abbr`M`]);
+  SRW_TAC [ARITH_ss][Abbr`M`]
+End
 
 val s2n_def = Define`
   (s2n "" = 0) /\

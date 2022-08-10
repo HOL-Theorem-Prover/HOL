@@ -293,12 +293,13 @@ fun export_theory_as_docfiles dirname =
 
 
 
-fun data_to_string (((th,name),(thm,cl)):data) =
+fun data_to_string (((th,name),(thm,cl)):DB_dtype.public_data) =
 let
    open PPBackEnd Parse
    val cl_s = if cl = Thm then "THEOREM" else
            if cl = Axm then "AXIOM" else
-           "DEFINITION";
+           "DEFINITION"
+   val th_s = ppstring pp_thm thm
    val name_style = add_style_to_string [Bold] name
 
    val s = th^"Theory."^name^" ("^cl_s^")\n";
@@ -306,7 +307,7 @@ let
    val size = String.size s
    fun line 0 l = l
      | line n l = line (n-1) ("-"^l)
-   val s = s_style^(line (size-1) "\n")^ppstring pp_thm thm^"\n";
+   val s = s_style^(line (size-1) "\n")^th_s^"\n";
 in
    s
 end;

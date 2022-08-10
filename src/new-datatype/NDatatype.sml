@@ -2,7 +2,6 @@ structure NDatatype :> NDatatype =
 struct
 
 open NDDB Witness;
-open lcsymtacs;
 open combinSyntax;
 open ParseDatatype;
 open oneSyntax;

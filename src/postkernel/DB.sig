@@ -5,11 +5,17 @@ sig
  type thm = Thm.thm
  datatype theory = datatype DB_dtype.theory
  datatype class = datatype DB_dtype.class
+ datatype selector = datatype DB_dtype.selector
  type data = DB_dtype.data
-
+ type public_data = DB_dtype.public_data
+ type data_value = DB_dtype.data_value
+ type 'a named = 'a DB_dtype.named
+ datatype location = datatype DB_dtype.location
+ type hol_type = Type.hol_type
 
   val thy         : string -> data list
   val fetch       : string -> string -> thm
+  val fetch_knm   : KernelSig.kernelname -> thm
   val thms        : string -> (string * thm) list
 
   val theorem     : string -> thm
@@ -19,18 +25,28 @@ sig
   val axioms      : string -> (string * thm) list
   val theorems    : string -> (string * thm) list
   val definitions : string -> (string * thm) list
-  val find        : string -> data list
-  val find_in     : string -> data list -> data list
-  val matchp      : (thm -> bool) -> string list -> data list
-  val matcher     : (term -> term -> 'a) -> string list -> term -> data list
-  val match       : string list -> term -> data list
+  val find_all    : string -> data list (* includes private theorems *)
+  val find        : string -> public_data list
+  val find_in     : string -> 'a named list -> 'a named list
+  val matchp      : (thm -> bool) -> string list -> public_data list
+  val matcher     : (term -> term -> 'a) -> string list -> term ->
+                    public_data list
+  val match       : string list -> term -> public_data list
   val matches     : term -> thm -> bool
-  val apropos     : term -> data list
-  val apropos_in  : term -> data list -> data list
+  val apropos     : term -> public_data list
+  val apropos_in  : term -> public_data list -> public_data list
+  val selectDB    : selector list -> public_data list
   val listDB      : unit -> data list
+  val revlookup   : thm -> location list
 
+  val store_local : {private:bool} -> string -> thm -> unit
+  val local_thm   : string -> thm option
 
   val dest_theory  : string -> theory
-  val bindl : string -> (string * thm * class) list -> unit
+  val bindl : string -> (string * thm * class * {private:bool}) list -> unit
+
+  (* Derived search functions *)
+  val find_consts_thy : string list -> hol_type -> term list
+  val find_consts : hol_type -> term list
 
 end

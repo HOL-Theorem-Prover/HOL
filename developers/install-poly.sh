@@ -18,6 +18,7 @@ POLY_BASE="https://github.com/polyml/polyml"
 POLY_VERSION=${POLY_VERSION:-v5.7.1}
 POLY_GIT=${POLY_GIT:-F}
 POLY_ROOT=${POLY_ROOT:-F}
+POLY_INTINF=${POLY_INTINF:-}
 
 PREFIX=$HOME
 if [ "$POLY_ROOT" == "T" ]
@@ -35,8 +36,9 @@ else
 fi
 
 cd polyml
-echo "*** Configuring PolyML for prefix: ${PREFIX}"
-./configure --prefix=$PREFIX
+echo "*** Configuring PolyML for prefix: ${PREFIX};"
+echo "*** Poly/ML intinf-option = ${POLY_INTINF}"
+./configure --prefix=$PREFIX ${POLY_INTINF}
 make
 
 if [ "$POLY_GIT" == "T" ]

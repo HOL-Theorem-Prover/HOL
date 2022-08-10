@@ -16,9 +16,6 @@ val smv_tmp_dir = ref "/tmp/";
 
 open HolKernel Parse boolLib Rsyntax;
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
 local open Omega_AutomataTheory in end;
 
 val ERR = Feedback.mk_HOL_ERR "temporalLib"

@@ -4,6 +4,7 @@ struct
 type t = {kernelspec : string option,
           debug : bool,
           help : bool,
+          keepgoing : bool,
           jobcount : int option,
           seqname : string option,
           multithread : int option,
@@ -14,7 +15,7 @@ type t = {kernelspec : string option,
 val initial : t =
     { kernelspec = NONE, jobcount = NONE, seqname = NONE, help = false,
       build_theory_graph = NONE, selftest = NONE, debug = false,
-      relocbuild = false, multithread = NONE
+      relocbuild = false, multithread = NONE, keepgoing = false
     }
 
 type 'a final_options =
@@ -23,8 +24,9 @@ type 'a final_options =
       debug : bool,
       selftest_level : int,
       extra : 'a,
-      jobcount : int,
+      jobcount : int option,
       multithread : int option,
+      keepgoing : bool,
       relocbuild : bool}
 
 

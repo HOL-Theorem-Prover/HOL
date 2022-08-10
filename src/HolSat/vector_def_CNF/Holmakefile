@@ -8,4 +8,12 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo defCNF.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe vectorcnf-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: vectorcnf-selftest.log
+
+vectorcnf-selftest.log: selftest.exe
+	$(tee ./$< 2>&1, $@)
+
+endif

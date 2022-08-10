@@ -9,595 +9,547 @@ structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
 open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
+smlParser mlTacticData
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
+fun msg param s = if #verbose param then print_endline s else ()
+fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
 (* -------------------------------------------------------------------------
-   Type
+   Tools for computing the dimensions of neural network operators
    ------------------------------------------------------------------------- *)
 
-type vect = real vector
-type mat = real vector vector
-type opdict = ((term * int),nn) Redblackmap.dict
-type tnnex = (term * real list) list
-type tnn =
-  {opdict: opdict, headnn: nn, dimin: int, dimout: int}
-type dhex = (term * real list * real list) list
-type dhtnn =
-  {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
+type tnndim = (term * int list) list
+
+fun operl_of_term tm =
+  let
+    val (oper,argl) = strip_comb tm
+    val arity = length argl
+  in
+    (oper,arity) :: List.concat (map operl_of_term argl)
+  end
+
+val oper_compare = cpl_compare Term.compare Int.compare;
+
+fun dim_std_arity (nlayer,dim) (oper,a) =
+  let
+    val dim_alt =
+      if is_var oper andalso String.isPrefix "head_" (fst (dest_var oper))
+      then 1
+      else dim
+  in
+    (if a = 0 then [0] else List.tabulate (nlayer, fn _ => a * dim)) @
+    [dim_alt]
+  end
+
+fun dim_std (nlayer,dim) oper =
+  dim_std_arity (nlayer,dim) (oper,arity_of oper)
 
 (* -------------------------------------------------------------------------
-   Random tree neural network
+   Initializiation of a random TNN
    ------------------------------------------------------------------------- *)
 
-val nlayer_glob = ref 2
+type tnn = (term,nn) Redblackmap.dict
+type tnne = (term,int) Redblackmap.dict * nn vector
 
-fun id (x:real) = x:real
-fun did (x:real) = 1.0
+fun oper_nn diml = case diml of
+    [] => raise ERR "oper_nn" ""
+  | a :: m =>
+    if a = 0
+    then random_nn (idactiv,didactiv) [0,last m]
+    else random_nn (tanh,dtanh) diml
 
-fun const_nn dim arity =
-  if arity = 0
-  then random_nn (id,did) [0,dim]
-  else random_nn (tanh,dtanh)
-    (List.tabulate (!nlayer_glob, fn _ => arity * dim) @ [dim])
+fun random_tnn tnndim = dnew Term.compare (map_snd oper_nn tnndim)
 
-fun random_opdict dimin cal =
-  let val l = map_assoc (fn (_,a) => const_nn dimin a) cal in
-    dnew oper_compare l
+fun random_tnn_std (nlayer,dim) operl =
+  random_tnn (map_assoc (dim_std (nlayer,dim)) operl)
+
+fun prepare_tnn tnn =
+  let
+    val termnnl = dlist tnn
+    val operd = dnew Term.compare (number_snd 0 (map fst termnnl))
+    val nnv = Vector.fromList (map snd termnnl)
+  in
+    (nnv,operd)
   end
 
-fun random_headnn (dimin,dimout) =
-  random_nn (tanh,dtanh)
-    (List.tabulate (!nlayer_glob, fn _ => dimin) @ [dimout])
-
-fun random_tnn (dimin,dimout) operl =
-  {
-  opdict = random_opdict dimin operl,
-  headnn = random_headnn (dimin,dimout),
-  dimin = dimin,
-  dimout = dimout
-  }
-
-fun random_dhtnn (dimin,dimout) operl =
-  {
-  opdict = random_opdict dimin operl,
-  headeval = random_headnn (dimin,1),
-  headpoli = random_headnn (dimin,dimout),
-  dimin = dimin,
-  dimout = dimout
-  }
+fun unprepare_tnn (nnv,operd) =
+  dnew Term.compare (combine (dkeys operd, vector_to_list nnv))
 
 (* -------------------------------------------------------------------------
-   Input/output
+   TNN I/O
    ------------------------------------------------------------------------- *)
 
-fun string_of_oper (f,n) = (tts f ^ "," ^ its n)
+local open SharingTables HOLsexp in
+fun enc_opernn enc_tm = pair_encode (enc_tm, enc_nn)
+fun enc_tnn enc_tm = list_encode (enc_opernn enc_tm)
+fun dec_opernn dec_tm = pair_decode (dec_tm, dec_nn)
+fun dec_tnn dec_tm = list_decode (dec_opernn dec_tm)
+end
 
-fun string_of_opdict_one d ((oper,a),nn) =
-  its (dfind oper d) ^ " " ^ its a ^ "\n" ^ string_of_nn nn ^ "\nnnstop\n"
+fun write_tnn file tnn = write_tmdata (enc_tnn, map fst) file (dlist tnn)
+fun read_tnn file = dnew Term.compare (read_tmdata dec_tnn file)
 
-fun string_of_opdict opdict =
-  let
-    val tml = mk_sameorder_set Term.compare (map fst (dkeys opdict))
-    val d = dnew Term.compare (number_snd 0 tml)
-  in
-    String.concatWith "\n" (map (string_of_opdict_one d) (dlist opdict))
-  end
+local open SharingTables HOLsexp in
+fun enc_tnndime enc_tm = pair_encode (enc_tm, list_encode Integer)
+fun enc_tnndim enc_tm = list_encode (enc_tnndime enc_tm)
+fun dec_tnndime dec_tm = pair_decode (dec_tm, list_decode int_decode)
+fun dec_tnndim dec_tm = list_decode (dec_tnndime dec_tm)
+end
 
-fun string_of_tnn {opdict,headnn,dimin,dimout} =
-  string_of_nn headnn ^ "\nheadstop\n\n" ^
-  string_of_opdict opdict ^ "\nopdictstop"
+fun write_tnndim file tnndim = write_tmdata (enc_tnndim, map fst) file tnndim
+fun read_tnndim file = read_tmdata dec_tnndim file
 
-fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimout} =
-  string_of_nn headeval ^ "\nheadevalstop\n\n" ^
-  string_of_nn headpoli ^ "\nheadpolistop\n\n" ^
-  string_of_opdict opdict ^ "\nopdictstop"
+(* -------------------------------------------------------------------------
+   TNN Examples: I/O
+   ------------------------------------------------------------------------- *)
 
-fun write_tnn file tnn =
-  let
-    val file_operl = file ^ "_operl"
-    val file_dhtnn = file ^ "_tnn"
-    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict tnn)))
-  in
-    writel file_dhtnn [string_of_tnn tnn];
-    mlTacticData.export_terml file_operl operl
-  end
+type tnnex = ((term * real list) list) list
+type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
-fun write_dhtnn file dhtnn =
-  let
-    val file_operl = file ^ "_operl"
-    val file_dhtnn = file ^ "_dhtnn"
-    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
-  in
-    writel file_dhtnn [string_of_dhtnn dhtnn];
-    mlTacticData.export_terml file_operl operl
-  end
+fun basicex_to_tnnex ex = map (fn (tm,r) => [(tm,[r])]) ex
 
-fun read_opdict_one tos sl =
-  let
-    val (opers,ns) = pair_of_list (String.tokens Char.isSpace (hd sl))
-    val (oper,n) = (tos (string_to_int opers), string_to_int ns)
-  in
-    ((oper,n),read_nn_sl (tl sl))
-  end
-
-fun read_opdict operl sl =
-  let
-    val d = dnew Int.compare (number_fst 0 operl)
-    fun tos i = dfind i d
-    val sll = rpt_split_sl "nnstop" sl
-  in
-    dnew oper_compare (map (read_opdict_one tos) sll)
-  end
-
-fun read_tnn_sl operl sl =
-  let
-    val (l1,contl1) = split_sl "headstop" sl
-    val headnn = read_nn_sl l1
-    val (l2,_) = split_sl "opdictstop" contl1
-    val opdict = read_opdict operl l2
-    val dimin = ((snd o mat_dim o #w o hd) headnn) - 1
-    val dimout = (fst o mat_dim o #w o last) headnn
-  in
-    {opdict=opdict,headnn=headnn,dimin=dimin,dimout=dimout}
-  end
-
-fun read_tnn file =
-  let
-    val file_operl = file ^ "_operl"
-    val file_tnn = file ^ "_tnn"
-    val operl = mlTacticData.import_terml file_operl
-    val sl = readl file_tnn
-  in
-    read_tnn_sl operl sl
-  end
-
-fun read_dhtnn_sl operl sl =
-  let
-    val (l1,contl1) = split_sl "headevalstop" sl
-    val headeval = read_nn_sl l1
-    val (l2,contl2) = split_sl "headpolistop" contl1
-    val headpoli = read_nn_sl l2
-    val (l3,_) = split_sl "opdictstop" contl2
-    val opdict = read_opdict operl l3
-    val dimin = ((snd o mat_dim o #w o hd) headpoli) - 1
-    val dimout = (fst o mat_dim o #w o last) headpoli
-  in
-    {opdict=opdict,headeval=headeval,headpoli=headpoli,
-     dimin=dimin,dimout=dimout}
-  end
-
-fun read_dhtnn file =
-  let
-    val file_operl = file ^ "_operl"
-    val file_dhtnn = file ^ "_dhtnn"
-    val operl = mlTacticData.import_terml file_operl
-    val sl = readl file_dhtnn
-  in
-    read_dhtnn_sl operl sl
-  end
-
-fun write_operl file operl =
-  let
-    val file1 = file ^ "_operl_term"
-    val file2 = file ^ "_operl_arity"
-    val (l1,l2) = split operl
-  in
-    mlTacticData.export_terml file1 l1;
-    writel file2 (map its l2)
-  end
-
-fun read_operl file =
-  let
-    val l1 = mlTacticData.import_terml (file ^ "_operl_term")
-    val l2 = map string_to_int (readl (file ^ "_operl_arity"))
-  in
-    combine (l1,l2)
-  end
-
-fun write_dhex file epex =
-  let
-    val file_term = file ^ "_term"
-    val file_eval = file ^ "_eval"
-    val file_poli = file ^ "_poli"
-    val (terml,rll1,rll2) = split_triple epex
-  in
-    mlTacticData.export_terml file_term terml;
-    writel file_eval (map reall_to_string rll1);
-    writel file_poli (map reall_to_string rll2)
-  end
-
-fun read_dhex file =
-  let
-    val file_term = file ^ "_term"
-    val file_eval = file ^ "_eval"
-    val file_poli = file ^ "_poli"
-    val terml = mlTacticData.import_terml file_term
-    val rll1 = map string_to_reall (readl file_eval)
-    val rll2 = map string_to_reall (readl file_poli)
-  in
-    combine_triple (terml,rll1,rll2)
-  end
+local open SharingTables HOLsexp in
+val enc_real = String o Real.toString
+val dec_real = Option.mapPartial Real.fromString o string_decode
+fun enc_sample enc_tm = pair_encode (enc_tm, list_encode enc_real)
+fun dec_sample dec_tm = pair_decode (dec_tm, list_decode dec_real)
+fun enc_tnnex enc_tm = list_encode (list_encode (enc_sample enc_tm))
+fun dec_tnnex dec_tm = list_decode (list_decode (dec_sample dec_tm))
+fun tml_of_tnnex l = map fst (List.concat l)
+end
 
 fun write_tnnex file ex =
-  let
-    val file_term = file ^ "_term"
-    val file_eval = file ^ "_eval"
-    val (terml,rll) = split ex
-  in
-    mlTacticData.export_terml file_term terml;
-    writel file_eval (map reall_to_string rll)
-  end
-
+  write_tmdata (enc_tnnex, tml_of_tnnex) file ex
 fun read_tnnex file =
-  let
-    val file_term = file ^ "_term"
-    val file_eval = file ^ "_eval"
-    val terml = mlTacticData.import_terml file_term
-    val rll = map string_to_reall (readl file_eval)
-  in
-    combine (terml,rll)
-  end
+  read_tmdata dec_tnnex file
 
 (* -------------------------------------------------------------------------
-   Normalization/denormalization
+   TNN Examples: ordering subterms and scaling output values
    ------------------------------------------------------------------------- *)
 
-fun order_subtm tm =
+fun order_subtm tml =
   let
-    fun f x =
-      let val (_,argl) = strip_comb x in
-        (x, mk_fast_set Term.compare argl) :: List.concat (map f argl)
+    val d = ref (dempty (cpl_compare Int.compare Term.compare))
+    fun traverse tm =
+      let
+        val (oper,argl) = strip_comb tm
+        val nl = map traverse argl
+        val n = 1 + sum_int nl
+      in
+        d := dadd (n, tm) () (!d); n
       end
-    fun cmp (a,b) = Term.compare (fst a, fst b)
-    fun g x = mk_fast_set cmp (f x)
+    val subtml = (app (ignore o traverse) tml; dkeys (!d))
   in
-    topo_sort Term.compare (g tm)
+    map snd subtml
   end
 
-fun norm_vect v = Vector.map (fn x => 2.0 * (x - 0.5)) v
-fun denorm_vect v = Vector.map (fn x => 0.5 * x + 0.5) v
+fun index_graph operd subtml =
+  let
+    val subtmil = number_snd 0 subtml
+    val subtmd = dnew Term.compare subtmil
+    fun f (subtm,i) =
+      let val (oper,argl) = strip_comb subtm in
+        (i, (dfind oper operd, map (fn x => dfind x subtmd) argl))
+      end
+  in
+    (map f subtmil, subtmd)
+  end
 
-fun prepare_tnnex tnnex =
-  let fun f (tm,rl) = (order_subtm tm, norm_vect (Vector.fromList rl)) in
+fun prepare_tnnex operd tnnex =
+  let fun f x =
+    let
+      val tml = map fst x
+      val (graph, subtmd) = index_graph operd (order_subtm tml)
+      val ievl =
+        let fun g (tm,rl) = (dfind tm subtmd, scale_out rl) in
+          map g x
+        end
+    in
+      (graph,ievl)
+    end
+  in
     map f tnnex
-  end
-
-fun prepare_dhex dhex =
-  let fun f (tm,rl1,rl2) =
-    (order_subtm tm, norm_vect (Vector.fromList rl1),
-     norm_vect (Vector.fromList rl2))
-  in
-    map f dhex
   end
 
 (* -------------------------------------------------------------------------
    Forward propagation
    ------------------------------------------------------------------------- *)
 
-fun fp_op opdict fpdict tm =
+fun empty_fpv n = Vector.tabulate (n, fn _ => [])
+
+fun fp_oper tnn fpv (oper,argl) =
   let
-    val (f,argl) = strip_comb tm
-    val nn = dfind (f,length argl) opdict
-      handle NotFound => raise ERR "fp_op" (string_of_oper (f,length argl))
-    val invl = map (fn x => #outnv (last (dfind x fpdict))) argl
+    val nn = Vector.sub (tnn,oper)
+    fun nn_out x = #outnv (last (Vector.sub (fpv,x)))
+    val invl = map nn_out argl
     val inv = Vector.concat invl
   in
     fp_nn nn inv
   end
+  handle Subscript => msg_err "fp_oper" (its oper)
 
-fun fp_opdict opdict fpdict tml = case tml of
-    []      => fpdict
-  | tm :: m =>
-    let val fpdatal = fp_op opdict fpdict tm in
-      fp_opdict opdict (dadd tm fpdatal fpdict) m
+fun fp_tnn_loop tnn fpv graph = case graph of
+    []      => fpv
+  | (subtm,(oper,argl)) :: m =>
+    let
+      val fpdatal = fp_oper tnn fpv (oper,argl)
+      val newfpv = Vector.update (fpv,subtm,fpdatal)
+    in
+      fp_tnn_loop tnn newfpv m
     end
 
-fun fp_head headnn fpdict tml =
-  let val inv = #outnv (last (dfind (last tml) fpdict)) in
-    fp_nn headnn inv
-  end
-
-fun fp_tnn tnn tml =
-  let
-    val fpdict = fp_opdict (#opdict tnn) (dempty Term.compare) tml
-    val fpdatal = fp_head (#headnn tnn) fpdict tml
-  in
-    (fpdict,fpdatal)
-  end
-
-fun fp_tnn_nohead tnn tml =
-  let val fpdict = fp_opdict (#opdict tnn) (dempty Term.compare) tml in
-    #outnv (last (dfind (last tml) fpdict))
-  end
-
-fun fp_dhtnn dhtnn tml =
-  let
-    val fpdict = fp_opdict (#opdict dhtnn) (dempty Term.compare) tml
-    val fpdataleval = fp_head (#headeval dhtnn) fpdict tml
-    val fpdatalpoli = fp_head (#headpoli dhtnn) fpdict tml
-  in
-    (fpdict,fpdataleval,fpdatalpoli)
-  end
-
-fun infer_dhtnn dhtnn tm =
-  let val (_,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn (order_subtm tm) in
-    (
-    only_hd (vector_to_list (denorm_vect (#outnv (last fpdataleval)))),
-    vector_to_list (denorm_vect (#outnv (last fpdatalpoli)))
-    )
-  end
+fun fp_tnn tnn graph =
+  fp_tnn_loop tnn (empty_fpv (length graph)) graph
 
 (* -------------------------------------------------------------------------
    Backward propagation
    ------------------------------------------------------------------------- *)
 
-fun sum_operdwll (oper,dwll) = [sum_dwll dwll]
+fun mat_add_cpl (m1,m2) = mat_add m1 m2
 
-fun bp_tnn_opdict_aux dim doutnvdict fpdict bpdict revtml = case revtml of
-    []      => dmap sum_operdwll bpdict
-  | tm :: m =>
+fun update_wud ((oper,operdwl), wud) =
+  dadd oper (map mat_add_cpl (combine (operdwl, dfind oper wud))) wud
+  handle NotFound =>
+  dadd oper operdwl wud
+
+fun update_gradv ((subtm,doutnv),gradv) =
+  Vector.update (gradv, subtm, vect_add (Vector.sub (gradv,subtm)) doutnv)
+
+fun dimout_fpdatal fpdatal = Vector.length (#outnv (last fpdatal))
+fun dimout_subtm fpv subtm = dimout_fpdatal (Vector.sub (fpv,subtm))
+
+fun bp_tnn_loop fpv gradv wud revgraph = case revgraph of
+    [] => wud
+  | (subtm,(oper,argl)) :: m =>
     let
-      val (oper,argl) = strip_comb tm
-      val opern = (oper,length argl)
-      val doutnvl = dfind tm doutnvdict
-      fun f doutnv =
-        let
-          val fpdatal = dfind tm fpdict
-          val bpdatal = bp_nn_wocost fpdatal doutnv
-          val dinv    = vector_to_list (#dinv (hd bpdatal))
-          val dinvl   = map Vector.fromList (mk_batch dim dinv)
-        in
-          (map #dw bpdatal, combine (argl,dinvl))
-        end
-      val rl            = map f doutnvl
-      val operdwll      = map fst rl
-      val operdwl       = sum_dwll operdwll
-      val tmdinvl       = List.concat (map snd rl)
-      val newdoutnvdict = dappendl tmdinvl doutnvdict
-      val newbpdict     = dappend (opern,operdwl) bpdict
+      val diml = map (dimout_subtm fpv) argl
+      val grad = Vector.sub (gradv,subtm)
+      val fpdatal = Vector.sub (fpv,subtm)
+      val bpdatal = bp_nn_doutnv fpdatal grad
+      val dinv = vector_to_list (#dinv (hd bpdatal))
+      val dinvl = map Vector.fromList (part_group diml dinv)
+      val operdwl = map #dw bpdatal
+      val newgradv = foldl update_gradv gradv (combine (argl,dinvl))
+      val newwud = update_wud ((oper,operdwl), wud)
     in
-      bp_tnn_opdict_aux dim newdoutnvdict fpdict newbpdict m
+      bp_tnn_loop fpv newgradv newwud m
     end
 
-fun bp_tnn_opdict dim doutnvdict fpdict bpdict tml =
-  bp_tnn_opdict_aux dim doutnvdict fpdict bpdict (rev tml)
+fun zero_vect n = Vector.tabulate (n, fn _ => 0.0)
 
-fun bp_tnn_head fpdatal (tml,expectv) =
+fun bp_tnn fpv (graph,ievl) =
   let
-    val outnv      = #outnv (last fpdatal)
-    val doutnv     = diff_rvect expectv outnv
-    val bpdatal    = bp_nn_wocost fpdatal doutnv
-    val newdoutnv  = #dinv (hd bpdatal)
+    val gradv0 =
+      Vector.tabulate (Vector.length fpv,
+        fn subtm => zero_vect (dimout_subtm fpv subtm))
+    fun f (subtm,ev) =
+      let
+        val fpdatal = Vector.sub (fpv,subtm)
+        val doutnv = diff_rvect ev (#outnv (last fpdatal))
+      in
+        (subtm,doutnv)
+      end
+    val gradv = foldl update_gradv gradv0 (map f ievl)
   in
-    ((last tml,newdoutnv), bpdatal)
-  end
-
-fun bp_tnn dim (fpdict,fpdatal) (tml,expectv) =
-  let
-    val (tmgrad,bpdatal) = bp_tnn_head fpdatal (tml,expectv)
-    val doutnvdict = dappend tmgrad (dempty Term.compare)
-    val bpdict = bp_tnn_opdict dim doutnvdict fpdict (dempty oper_compare) tml
-  in
-    (bpdict, bpdatal)
-  end
-
-fun bp_dhtnn dim (fpdict,fpdataleval,fpdatalpoli)
-  (tml,expecteval,expectpoli) =
-  let
-    val (tmgrad1,bpdataleval) = bp_tnn_head fpdataleval (tml,expecteval)
-    val (tmgrad2,bpdatalpoli) = bp_tnn_head fpdatalpoli (tml,expectpoli)
-    val doutnvdict = dappendl [tmgrad1,tmgrad2] (dempty Term.compare)
-    val bpdict = bp_tnn_opdict dim doutnvdict fpdict (dempty oper_compare) tml
-  in
-    (bpdict,bpdataleval,bpdatalpoli)
+    bp_tnn_loop fpv gradv (dempty Int.compare) (rev graph)
   end
 
 (* -------------------------------------------------------------------------
    Inference
    ------------------------------------------------------------------------- *)
 
-fun infer_tnn tnn tm =
-  let val (_,fpdatal) = fp_tnn tnn (order_subtm tm) in
-    vector_to_list (denorm_vect (#outnv (last fpdatal)))
+fun infer_tnn tnn tml =
+  let
+    val (ptnn,operd) = prepare_tnn tnn
+    val (graph,subtmd) = index_graph operd (order_subtm tml)
+    val fpv = fp_tnn ptnn graph
+    fun f x = descale_out (#outnv (last (Vector.sub (fpv,x))))
+  in
+    map_assoc (f o (fn x => dfind x subtmd)) tml
   end
 
-fun infer_tnn_nohead tnn tm =
-  vector_to_list (fp_tnn_nohead tnn (order_subtm tm))
+fun infer_tnn_basic tnn tm =
+  singleton_of_list (snd (singleton_of_list (infer_tnn tnn [tm])))
 
-fun out_tnn tnn tml =
-  let val (_,fpdatal) = fp_tnn tnn tml in (#outnv (last fpdatal)) end
+fun fp_emb tnn oper embl =
+  let
+    val inv = Vector.concat embl
+    val nn = dfind oper tnn
+  in
+    #outnv (last (fp_nn nn inv))
+  end
 
-fun infer_mse tnn (tml,ev) =
-  mean_square_error (diff_rvect ev (out_tnn tnn tml))
+fun infer_emb tnn tm =
+  let
+    val (oper,argl) = strip_comb tm
+    val embl = map (infer_emb tnn) argl
+  in
+    fp_emb tnn oper embl
+  end
 
 (* -------------------------------------------------------------------------
-   Training a tree neural network
+   Updating weights
    ------------------------------------------------------------------------- *)
 
-fun train_tnn_one tnn (tml,expectv) =
-  let val (fpdict,fpdatal) = fp_tnn tnn tml in
-    bp_tnn (#dimin tnn) (fpdict,fpdatal) (tml,expectv)
-  end
+fun sum_operdwll (oper,dwll) = sum_dwll dwll
+fun regroup_wud wudl =
+  foldl update_wud (hd wudl) (List.concat (map dlist (tl wudl)))
 
-fun update_head headnn bpdatall =
+
+fun update_oper param ((oper,dwl),tnn) =
   let
-    val dwll = map (map #dw) bpdatall
-    val dwl = sum_dwll dwll
-    val newheadnn = update_nn headnn dwl
-    val loss = average_loss bpdatall
+    val nn = Vector.sub (tnn,oper)
+    val newnn = update_nn param nn dwl
   in
-    (newheadnn, loss)
+    Vector.update (tnn,oper,newnn)
   end
 
-fun update_opernn opdict (oper,dwll) =
+fun update_tnn param wud tnn =
+  foldl (update_oper param) tnn (dlist wud)
+
+(* -------------------------------------------------------------------------
+   Compute of the loss on the test set
+   ------------------------------------------------------------------------- *)
+
+fun se_of fpv (i,ev) =
   let
-    val nn    = dfind oper opdict
-    val dwl   = sum_dwll dwll
-    val newnn = update_nn nn dwl
+    val fpdatal = Vector.sub (fpv,i)
+    val grad = diff_rvect ev (#outnv (last fpdatal))
+    val r1 = vector_to_list grad
+    val r2 = map (fn x => x * x) r1
   in
-    (oper,newnn)
+    Math.sqrt (average_real r2)
   end
 
-fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
+fun mse_of fpv ievl = average_real (map (se_of fpv) ievl)
+
+fun fp_loss tnn (graph,ievl) = mse_of (fp_tnn tnn graph) ievl
+
+(* -------------------------------------------------------------------------
+   Training
+   ------------------------------------------------------------------------- *)
+
+fun train_tnn_one tnn (graph,ievl) =
   let
-    val (bpdictl,bpdatall) =
-      split (parmap_batch ncore (train_tnn_one tnn) batch)
-    val (newheadnn,loss) = update_head headnn bpdatall
-    val bpdict = dconcat oper_compare bpdictl
-    val newnnl = map (update_opernn opdict) (dlist bpdict)
-    val newopdict = daddl newnnl opdict
+    val fpv = fp_tnn tnn graph
+    val wud = bp_tnn fpv (graph,ievl)
   in
-    ({opdict = newopdict, headnn = newheadnn, dimin = dimin, dimout = dimout},
-      loss)
+    (wud, mse_of fpv ievl)
   end
 
-fun train_tnn_epoch ncore lossl tnn batchl = case batchl of
+fun train_tnn_subbatch tnn subbatch =
+  let val (wudl,lossl) = split (map (train_tnn_one tnn) subbatch) in
+    (regroup_wud wudl, lossl)
+  end
+
+fun train_tnn_batch param pf tnn batch =
+  let
+    val subbatchl = cut_modulo (#ncore param) batch
+    val (wudl,lossll) = split (pf (train_tnn_subbatch tnn) subbatchl)
+    val wud = regroup_wud wudl
+  in
+    (update_tnn param wud tnn, average_real (List.concat lossll))
+  end
+
+fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
     [] => (tnn, average_real lossl)
   | batch :: m =>
-    let val (newtnn,loss) = train_tnn_batch ncore tnn batch in
-      train_tnn_epoch ncore (loss :: lossl) newtnn m
+    let val (newtnn,loss) = train_tnn_batch param pf tnn batch in
+      train_tnn_epoch param pf (loss :: lossl) newtnn m
     end
 
-fun train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest) =
-  if nepoch <= 0 then tnn else
+fun train_tnn_epoch_nopar param lossl tnn batchl = case batchl of
+    [] => (tnn, average_real lossl)
+  | batch :: m =>
+    let val (newtnn,loss) = train_tnn_batch param map tnn batch in
+      train_tnn_epoch_nopar param (loss :: lossl) newtnn m
+    end
+
+fun train_tnn_nepoch param pf i tnn (train,test) =
+  if i >= #nepoch param then tnn else
   let
-    val batchl = (mk_batch bsize o shuffle) ptrain
-    val (newtnn,r1) = train_tnn_epoch ncore [] tnn batchl
-    val r2 = if null ptest then 0.0 else
-      average_real (map (infer_mse tnn) ptest)
-    val _ = print_endline
-      (its nepoch ^ " train: " ^ pretty_real r1 ^ " test: " ^ pretty_real r2)
+    val batchl = mk_batch (#batch_size param) (shuffle train)
+    val _ = if null batchl then msg_err "train_tnn_nepoch" "empty" else ()
+    val (newtnn,loss) = train_tnn_epoch param pf [] tnn batchl
+    val testloss = if null test then "" else
+      (" test: " ^ pretty_real (average_real (map (fp_loss newtnn) test)))
+     val _ = msg param (its i ^ " train: " ^ pretty_real loss ^ testloss)
   in
-    train_tnn_nepoch (ncore,bsize) (nepoch - 1) newtnn (ptrain,ptest)
+    train_tnn_nepoch param pf (i+1) newtnn (train,test)
   end
 
-fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
+fun train_tnn_schedule schedule tnn (train,test) =
   case schedule of
     [] => tnn
-  | (nepoch, lrate) :: m =>
+  | param :: m =>
     let
-      val _ = learningrate_glob := lrate
-      val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newtnn = train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest)
+      val _ = msg param ("learning rate: " ^ rts (#learning_rate param))
+      val _ = msg param ("ncore: " ^ its (#ncore param))
+      val (pf,close_threadl) = parmap_gen (#ncore param)
+      val newtnn = train_tnn_nepoch param pf 0 tnn (train,test)
+      val _ = close_threadl ()
     in
-      train_tnn_schedule (ncore,bsize) newtnn (ptrain,ptest) m
+      train_tnn_schedule m newtnn (train,test)
     end
 
-fun output_info exl =
-  if null exl then "empty" else
+fun stats_head (oper,rll) =
   let
-    val l = list_combine exl
-    val meanl = map (rts o approx 6 o average_real) l
-    val devl = map (rts o approx 6 o standard_deviation) l
+    val s0 = "  objective: " ^ tts oper
+    val s1 = "length: " ^ its (length rll)
+    val rll' = list_combine rll
+    val s2 = "means: " ^
+      String.concatWith " " (map (pretty_real o average_real) rll')
+    val s3 = "standard deviations: " ^
+      String.concatWith " " (map (pretty_real o standard_deviation) rll')
   in
-    "  length: " ^ int_to_string (length exl) ^ "\n" ^
-    "  mean: " ^ String.concatWith " " meanl ^ "\n" ^
-    "  deviation: " ^ String.concatWith " " devl
+    String.concatWith "\n  " [s0,s1,s2,s3]
   end
 
-fun train_tnn (ncore,bsize) randtnn (trainex,testex) schedule =
+fun stats_tnnex ex =
+  if null ex then " empty" else
   let
-    val _ = print_endline ("trainset " ^ output_info (map snd trainex))
-    val _ = print_endline ("testset  " ^ output_info (map snd testex))
-    val _ = if length trainex < bsize
-            then raise ERR "prepare_train_tnn" "too few examples"
-            else ()
-    val pset = (prepare_tnnex trainex, prepare_tnnex testex)
-    val (tnn,t) =
-      add_time (train_tnn_schedule (ncore,bsize) randtnn pset) schedule
+    fun head_of tm = fst (strip_comb tm)
+    val d = dregroup Term.compare (map_fst head_of (List.concat ex))
   in
-    print_endline ("Tree neural network training time: " ^ rts t); tnn
+    its (length ex) ^ " examples\n" ^
+    String.concatWith "\n" (map stats_head (dlist d))
+  end
+
+fun train_tnn schedule randtnn (trainex,testex) =
+  let
+    val _ = print_endline ("\ntraining set: " ^ stats_tnnex trainex)
+    val _ = print_endline ("testing set: " ^ stats_tnnex testex)
+    val _ = print_endline ""
+    val (ptnn,operd) = prepare_tnn randtnn
+    val (ptrainex,ptestex) =
+      (prepare_tnnex operd trainex, prepare_tnnex operd testex)
+   val (tnn,t) = add_time (train_tnn_schedule schedule ptnn)
+     (ptrainex, ptestex)
+  in
+    print_endline ("Tree neural network training time: " ^ rts t);
+    unprepare_tnn (tnn,operd)
   end
 
 (* -------------------------------------------------------------------------
-   Training a double-headed tree neural network
+   Accuracy
    ------------------------------------------------------------------------- *)
 
-fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
-  let val (fpdict,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn tml in
-    bp_dhtnn (#dimin dhtnn) (fpdict,fpdataleval,fpdatalpoli)
-    (tml,expecteval,expectpoli)
-  end
-
-fun train_dhtnn_batch ncore dhtnn batch =
+fun is_accurate_one (rl1,rl2) =
   let
-    val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
-    val (bpdictl,bpdatall1,bpdatall2) =
-      split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
-    val (newheadeval,loss1) = update_head headeval bpdatall1
-    val (newheadpoli,loss2) = update_head headpoli bpdatall2
-    val bpdict = dconcat oper_compare bpdictl
-    val newopdict =
-      daddl (map (update_opernn opdict) (dlist bpdict)) opdict
-  in
-    ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
-     dimin = dimin, dimout = dimout},(loss1,loss2))
-  end
-
-fun train_dhtnn_epoch ncore (lossl1,lossl2) dhtnn batchl =
-  case batchl of
-    [] => (dhtnn, (average_real lossl1, average_real lossl2))
-  | batch :: m =>
-    let val (newdhtnn,(loss1,loss2)) =
-      train_dhtnn_batch ncore dhtnn batch
-    in
-      train_dhtnn_epoch ncore (loss1 :: lossl1, loss2 :: lossl2)
-      newdhtnn m
-    end
-
-fun train_dhtnn_nepoch (ncore,bsize) nepoch dhtnn dhex =
-  if nepoch <= 0 then dhtnn else
-  let
-    val batchl = mk_batch bsize (shuffle dhex)
-    val (newdhtnn,(r1,r2)) = train_dhtnn_epoch ncore ([],[]) dhtnn batchl
-    val _ = print_endline
-      (its nepoch ^ ": eval " ^ pretty_real r1 ^ " poli " ^ pretty_real r2)
-  in
-    train_dhtnn_nepoch (ncore,bsize) (nepoch - 1) newdhtnn dhex
-  end
-
-fun train_dhtnn_schedule (ncore,bsize) dhtnn dhex schedule =
-  case schedule of
-    [] => dhtnn
-  | (nepoch, lrate) :: m =>
-    let
-      val _ = learningrate_glob := lrate
-      val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newdhtnn = train_dhtnn_nepoch (ncore,bsize) nepoch dhtnn dhex
-    in
-      train_dhtnn_schedule (ncore,bsize) newdhtnn dhex m
-    end
-
-fun train_dhtnn (ncore,bsize) dhtnn dhex schedule =
-  let
-    val _ = print_endline ("eval " ^ output_info (map #2 dhex))
-    val _ = print_endline ("poli " ^ output_info (map #3 dhex))
-    val newdhex = prepare_dhex dhex
-    val (newdhtnn,t) =
-      add_time (train_dhtnn_schedule (ncore,bsize) dhtnn newdhex) schedule
-  in
-    print_endline
-      ("Double-headed tree neural network training time: " ^ rts t);
-    newdhtnn
-  end
-
-(* -------------------------------------------------------------------------
-   Measuring the accuracy of a tree neural network
-   ------------------------------------------------------------------------- *)
-
-fun is_accurate_tnn tnn (tm,rl) =
-  let
-    val rl1 = infer_tnn tnn tm
-    val rl2 = combine (rl,rl1)
+    val rl3 = combine (rl1,rl2)
     fun test (x,y) = Real.abs (x - y) < 0.5
   in
-    if all test rl2 then true else false
+    if all test rl3 then true else false
+  end
+
+fun is_accurate tnn e =
+  let
+    val rll1 = map snd (infer_tnn tnn (map fst e))
+    val rll2 = map snd e
+  in
+    all is_accurate_one (combine (rll1,rll2))
   end
 
 fun tnn_accuracy tnn set =
-  let val correct = filter (is_accurate_tnn tnn) set in
+  let val correct = filter (is_accurate tnn) set in
     Real.fromInt (length correct) / Real.fromInt (length set)
   end
+
+(* -------------------------------------------------------------------------
+   Train different TNN in parallel
+   ------------------------------------------------------------------------- *)
+
+fun train_tnn_fun () (ex,schedule,tnndim) =
+  let
+    val randtnn = random_tnn tnndim
+    val (tnn,t) = add_time (train_tnn schedule randtnn) (ex,[])
+  in
+    print_endline ("Training time : " ^ rts t); tnn
+  end
+
+fun write_noparam file (_:unit) = ()
+fun read_noparam file = ()
+
+fun write_tnnarg file (ex,schedule,tnndim) =
+  (
+  write_tnnex (file ^ "_tnnex") ex;
+  write_schedule (file ^ "_schedule") schedule;
+  write_tnndim (file ^ "_tnndim") tnndim
+  )
+fun read_tnnarg file =
+  let
+    val ex = read_tnnex (file ^ "_tnnex")
+    val schedule = read_schedule (file ^ "_schedule")
+    val tnndim = read_tnndim (file ^ "_tnndim")
+  in
+    (ex,schedule,tnndim)
+  end
+
+val traintnn_extspec =
+  {
+  self_dir = HOLDIR ^ "/src/AI/machine_learning",
+  self = "mlTreeNeuralNetwork.traintnn_extspec",
+  parallel_dir = default_parallel_dir ^ "_train",
+  reflect_globals = "()",
+  function = train_tnn_fun,
+  write_param = write_noparam,
+  read_param = read_noparam,
+  write_arg = write_tnnarg,
+  read_arg = read_tnnarg,
+  write_result = write_tnn,
+  read_result = read_tnn
+  }
+
+
+(* -------------------------------------------------------------------------
+   Toy example: learning to guess if a term contains the variable "x"
+   ------------------------------------------------------------------------- *)
+
+(*
+load "aiLib"; open aiLib;
+load "psTermGen"; open psTermGen;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+
+(* terms *)
+val vx = mk_var ("x",alpha);
+val vy = mk_var ("y",alpha);
+val vz = mk_var ("z",alpha);
+val vf = ``f:'a->'a->'a``;
+val vg = ``g:'a -> 'a``;
+val vhead = mk_var ("head_", ``:'a -> 'a``);
+val varl = [vx,vy,vz,vf,vg];
+
+(* examples *)
+fun contain_x tm = can (find_term (fn x => term_eq x vx)) tm;
+fun mk_dataset n =
+  let
+    val pxl = mk_term_set (random_terml varl (n,alpha) 1000);
+    val (px,pnotx) = partition contain_x pxl
+  in
+    (first_n 100 (shuffle px), first_n 100 (shuffle pnotx))
+  end
+val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
+val (l1',l2') = (List.concat l1, List.concat l2);
+val (pos,neg) = (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
+val ex0 = shuffle (pos @ neg);
+val ex1 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) ex0;
+val (trainex,testex) = part_pct 0.9 ex1;
+
+(* TNN *)
+val nlayer = 1;
+val dim = 16;
+val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
+
+(* training *)
+val trainparam =
+  {ncore = 1, verbose = true,
+   learning_rate = 0.02, batch_size = 16, nepoch = 10};
+val schedule = [trainparam];
+val tnn = train_tnn schedule randtnn (trainex,testex);
+
+(* testing *)
+val acc = tnn_accuracy tnn testex;
+*)
 
 end (* struct *)

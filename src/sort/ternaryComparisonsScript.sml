@@ -1,10 +1,9 @@
 open HolKernel Parse boolLib bossLib;
 
-open stringTheory
-
 val _ = new_theory "ternaryComparisons";
 
-val _ = Datatype `ordering = LESS | EQUAL | GREATER`;
+Datatype: ordering = LESS | EQUAL | GREATER
+End
 
 fun type_rws ty = #rewrs (TypeBase.simpls_of ty)
 
@@ -50,10 +49,6 @@ val num_compare_def = Define `
       GREATER
 `;
 
-val char_compare_def = Define `
-  char_compare c1 c2 = num_compare (ORD c1) (ORD c2)
-`;
-
 
 
 
@@ -67,10 +62,6 @@ val list_compare_def = Define `
        LESS => LESS
      | EQUAL => list_compare cmp l1 l2
      | GREATER => GREATER) `;
-
-val string_compare_def = Define `
-  string_compare = list_compare char_compare
-`;
 
 val compare_equal = store_thm("compare_equal",
   “(!x y. (cmp x y = EQUAL) = (x = y)) ==>

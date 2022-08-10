@@ -1,3 +1,0 @@
-\THEOREM CHOICE_DEF pred_sets
-|- !s. ~(s = {{}}) ==> (CHOICE s) IN s
-\ENDTHEOREM

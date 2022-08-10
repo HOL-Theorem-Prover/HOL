@@ -23,11 +23,16 @@ fun munger eatfirstNL () = let
                           fixity = Infix(NONASSOC, 100),
                           term_name = "defeq",
                           pp_elements = [HardSpace 1, TOK "(HOLDefEquality)",
+                                         TOK "(empty)",
                                          BreakSpace(1,2)]}
       | SOME _ => ();
     TexTokenMap.temp_TeX_notation{
       TeX = ("\\HOLTokenDefEquality{}", 1), hol = "(HOLDefEquality)"
+    };
+    TexTokenMap.temp_TeX_notation{
+      TeX = ("", 0), hol = "(empty)"
     }
+
   end
   val lexer = mungeLex.makeLexer (fn n => TextIO.input stdIn)
   fun parseWidth s =

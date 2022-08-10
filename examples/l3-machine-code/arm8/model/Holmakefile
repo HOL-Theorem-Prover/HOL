@@ -1,7 +1,7 @@
 INCLUDES = ../../common ../../lib
 
-all: $(DEFAULT_TARGETS) arm8.ui
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-arm8.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo arm8.sml
+arm8.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo arm8.sml arm8.ui
 	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui arm8.sml

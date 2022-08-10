@@ -4,11 +4,12 @@
 
 \documentclass[12pt,fleqn]{book}
 \usepackage[notindex]{tocbibind}
-\usepackage{latexsym}
+
 %\usepackage{amsmath}
 \usepackage{amssymb}
 %\usepackage{amsbsy}
-%\usepackage{amsthm}
+\usepackage{amsthm}
+\usepackage{bbm} % for \mathbbm{1}
 \usepackage{makeidx}
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
@@ -40,6 +41,9 @@
 
 \usepackage{centernot}
 \newcommand{\notiff}{\nLeftrightarrow}
+
+\theoremstyle{definition}
+\newtheorem{definition}[equation]{Definition}
 
 \makeindex
 
@@ -88,6 +92,7 @@
    \include{conv}                        % conversions
    \include{tactics}                     % tactics
    \include{theories}
+   \include{math}                        % math theories
    \include{definitions}
    \include{libraries}
 %   \include{map}

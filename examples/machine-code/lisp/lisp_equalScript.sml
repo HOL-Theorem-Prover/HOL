@@ -15,6 +15,10 @@ val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10",
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+
+
 val _ = codegen_x86Lib.set_x86_regs
   [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi"),(9,"ebp")]
 

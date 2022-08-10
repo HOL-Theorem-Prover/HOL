@@ -82,34 +82,7 @@ fun try_eta' (t as (thm,_)) = ((Eta thm),true) handle HOL_ERR _ => t;
 *)
 (* End of alt. thm impl. *)
 
-
 fun try_eta thm = (RIGHT_ETA thm) handle HOL_ERR _ => thm;
-
-(*---------------------------------------------------------------------------
- * Precondition: f(arg) is a closure corresponding to b.
- * Given   (arg,(|- M = (a b), Stk)),
- * returns (|- a = a, (<fun>,(|- b = b, f(arg)))::Stk)
- * where   <fun> =  (|- a = a' , |- b = b') |-> |- M = (a' b')
- *---------------------------------------------------------------------------*)
-
-fun push_in_stk f (arg,(th,stk)) =
-      let val (tha,thb,mka) = Mk_comb th in
-      (tha, Zrator{Rand=(mka,(thb,f arg)), Ctx=stk})
-      end
-;
-
-fun push_skip_stk f (arg,(th,stk)) =
-      let val (tha,thb,mka) = Mk_comb th in
-      (tha, Zrand{Rator=(Lib.C mka,true,(thb,f arg)), Ctx=stk})
-      end
-;
-
-fun push_lam_in_stk (th, stk) =
-      let val (_,thb,mkl) = Mk_abs th in
-      (thb, Zabs{Bvar=try_eta o mkl, Ctx=stk})
-      end
-;
-
 
 (*---------------------------------------------------------------------------
   Does conversions between

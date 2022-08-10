@@ -7,6 +7,7 @@ struct
 
 open HolKernel boolSyntax Drule Conv Prim_rec;
 type simpfrag = simpfrag.simpfrag
+type rcd_fieldinfo = {ty: hol_type, accessor: term, fupd : term}
 
 val ERR = mk_HOL_ERR "TypeBasePure";
 val WARN = HOL_WARNING "TypeBasePure";
@@ -15,6 +16,11 @@ fun type_names ty =
   let val {Thy,Tyop,Args} = Type.dest_thy_type ty
   in (Thy,Tyop)
   end;
+
+fun mk_recordtype_constructor s = "recordtype." ^ s
+fun mk_recordtype_fieldsel {tyname=ty,fieldname=s} =
+    String.concatWith "." ["recordtype",ty,"seldef",s]
+fun mk_recordtype_fieldfupd r = mk_recordtype_fieldsel r ^ "_fupd"
 
 datatype shared_thm
     = ORIG of thm
@@ -32,7 +38,7 @@ datatype shared_thm
          lift      : term option,
          one_one   : thm option,
          distinct  : thm option,
-         fields    : (string * hol_type) list,
+         fields    : (string * rcd_fieldinfo) list,
          accessors : thm list,
          updates   : thm list,
          destructors : thm list,
@@ -62,7 +68,7 @@ type dtyinfo =
             lift         : term option,
             distinct     : thm option,
             one_one      : thm option,
-            fields       : (string * hol_type) list,
+            fields       : (string * rcd_fieldinfo) list,
             accessors    : thm list,
             updates      : thm list,
             simpls       : simpfrag,
@@ -783,14 +789,19 @@ fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
              handle HOL_ERR _ =>
              raise ERR "type_size.Zero()" "Numbers not declared"
 
-fun type_size db ty =
+fun type_size_pre theta db ty =
  let fun K0 ty = mk_abs(mk_var("v",ty),Zero())
-     fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
+     fun theta2 ty = case theta ty of
+         NONE => if is_vartype ty then SOME (K0 ty) else NONE
+       | SOME sz => if type_of sz = (ty --> num()) then SOME sz
+         else raise (ERR "type_size_pre" "pre-supplied size has wrong type")
      val gamma = Option.map fst o
                  Option.composePartial (size_of,fetch db)
   in
     typeValue (theta,gamma,K0) ty
   end
+
+val type_size = type_size_pre (fn _ => NONE)
 
 (*---------------------------------------------------------------------------
     Encoding: map a HOL type (ty) into a term having type :ty -> bool list
@@ -974,15 +985,16 @@ fun dest_K_1 tm =
   end;
 
 fun get_field_name s1 s2 =
-  let val prefix = String.extract(s2,0,SOME(String.size s1))
-      val rest = String.extract(s2,String.size s1 + 1, NONE)
-      val middle = String.extract(rest,0,SOME(String.size rest - 5))
-      val suffix = String.extract(rest,String.size middle, NONE)
-  in
-    if prefix = s1 andalso suffix = "_fupd"
-      then middle
-      else raise ERR "get_field" ("unable to parse "^Lib.quote s2)
-  end;
+    let
+      val err = ERR "get_field_name" ("unable to parse "^Lib.quote s2)
+    in
+      case String.fields (equal #".") s2 of
+          ["recordtype", ty, "seldef", fld] =>
+          if ty = s1 andalso String.isSuffix "_fupd" fld then
+            String.extract (fld, 0, SOME(String.size fld - 5))
+          else raise err
+        | _ => raise err
+    end;
 
 (*---------------------------------------------------------------------------*)
 (* A record looks like `fupd arg_1 (fupd arg_2 ... (fupd arg_n ARB) ...)`    *)
@@ -1018,21 +1030,23 @@ fun dest_record tybase tm =
 fun is_record tybase = can (dest_record tybase);
 
 fun mk_record tybase (ty,fields) =
- if is_record_type tybase ty
- then let val (Thy,Tyop) = type_names ty
-        val fupds = map (fn p => String.concat[Tyop,"_",fst p,"_fupd"]) fields
-        val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) fupds
-        fun ifn c = let val (_,ty') = dom_rng (type_of c)
-                        val theta = match_type ty' (ty --> ty)
-                    in inst theta c
-                    end
-        val updfns' = map ifn updfns
-        fun mk_field (updfn,v) tm =
-              mk_comb(mk_comb(updfn, mk_K_1(v,type_of v)),tm)
-       in
-         itlist mk_field (zip updfns' (map snd fields)) (mk_arb ty)
-       end
-  else raise ERR "mk_record" "first arg. not a record type";
+ if is_record_type tybase ty then
+   let
+     val (Thy,Tyop) = type_names ty
+     fun mkrtfup f = mk_recordtype_fieldfupd {tyname=Tyop, fieldname = f}
+     val fupds = map (mkrtfup o #1) fields
+     val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) fupds
+     fun ifn c = let val (_,ty') = dom_rng (type_of c)
+                     val theta = match_type ty' (ty --> ty)
+                 in inst theta c
+                 end
+     val updfns' = map ifn updfns
+     fun mk_field (updfn,v) tm =
+         mk_comb(mk_comb(updfn, mk_K_1(v,type_of v)),tm)
+   in
+     itlist mk_field (zip updfns' (map snd fields)) (mk_arb ty)
+   end
+ else raise ERR "mk_record" "first arg. not a record type";
 
 exception OptionExn = Option
 open ThyDataSexp
@@ -1048,6 +1062,9 @@ fun option f v =
   case v of
       NONE => Sym "NONE"
     | SOME v0 => List [Sym "SOME", f v0]
+fun rcdfinfo_to_sexp {ty,accessor,fupd} =
+    List [Type ty, Term accessor, Term fupd]
+
 fun dtyiToSEXPs (dtyi : dtyinfo) =
     field "ty" (Type (#ty dtyi)) @
     field "axiom" (Thm (thm_of (#axiom dtyi))) @
@@ -1067,8 +1084,9 @@ fun dtyiToSEXPs (dtyi : dtyinfo) =
     field "distinct" (option Thm (#distinct dtyi)) @
     field "nchotomy" (Thm (#nchotomy dtyi)) @
     field "one_one" (option Thm (#one_one dtyi)) @
-    field "fields" (List (map (fn (s,ty) => List[String s, Type ty])
-                              (#fields dtyi))) @
+    field "fields"
+          (List (map (fn (s,rfi) => List[String s, rcdfinfo_to_sexp rfi])
+                     (#fields dtyi))) @
     field "accessors" (List (map Thm (#accessors dtyi))) @
     field "updates" (List (map Thm (#updates dtyi))) @
     field "simpls" (List (map Thm (#rewrs (#simpls dtyi)))) @
@@ -1104,6 +1122,10 @@ fun fromSEXP0 s =
       | dest_option _ _ = raise OptionExn
     fun dest_pair df1 df2 (List [s1, s2]) = (df1 s1, df2 s2)
       | dest_pair _ _ _ = raise OptionExn
+    fun dest_rfi (List [typ, acc, fupd]) = {ty = ty typ, accessor = tm acc,
+                                            fupd = tm fupd}
+      | dest_rfi _ = raise OptionExn
+
     fun H nm f x = f x
        handle OptionExn => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
   in
@@ -1146,7 +1168,8 @@ fun fromSEXP0 s =
                     distinct = H "distinct" (dest_option thm) distinct_option,
                     nchotomy = nchotomy,
                     one_one = H "one_one" (dest_option thm) one_one_option,
-                    fields = H "fields" (map (dest_pair string ty)) field_list,
+                    fields = H "fields"
+                               (map (dest_pair string dest_rfi)) field_list,
                     accessors = H "accessors" (map thm) accessor_list,
                     updates = H "updates" (map thm) update_list,
                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag

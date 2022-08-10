@@ -42,17 +42,9 @@ val kripke_structure_def =
        P:  'label set;                     (*set of used labels *)
        L:  'state -> ('label set)          (*label function*) |>`;
 
-
-
-val kripke_structure_S = DB.fetch "-" "kripke_structure_S";
-val kripke_structure_P = DB.fetch "-" "kripke_structure_P";
-val kripke_structure_S0 = DB.fetch "-" "kripke_structure_S0";
-val kripke_structure_R = DB.fetch "-" "kripke_structure_R";
-val kripke_structure_L = DB.fetch "-" "kripke_structure_L";
-val kripke_structure_11 = DB.fetch "-" "kripke_structure_11";
-
-val kripke_structure_REWRITES = save_thm("kripke_structure_REWRITES", LIST_CONJ [kripke_structure_S, kripke_structure_P, kripke_structure_S0, kripke_structure_R,
-kripke_structure_L, kripke_structure_11]);
+Theorem kripke_structure_REWRITES =
+        LIST_CONJ (TypeBase.one_one_of “:(α,β)kripke_structure” ::
+                   TypeBase.accessors_of “:(α,β)kripke_structure”)
 
 
 val IS_WELL_FORMED_KRIPKE_STRUCTURE_def =

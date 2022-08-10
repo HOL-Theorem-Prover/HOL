@@ -210,6 +210,9 @@ local
      | "{"  => token_string "Leftbrace"
      | "}"  => token_string "Rightbrace"
      | "\"" => token_string "DoubleQuote"
+     | "&" => "\\&"
+     | "%" => "\\%"
+     | "#" => "\\#"
      | "$"  => "\\$"
      | "α" => greek "alpha"
      | "β" => greek "beta"
@@ -261,23 +264,37 @@ local
 
   fun string_map (s,sz) =
       case Binarymap.peek(TexTokenMap.the_map(), s) of
-        SOME result => result
-      | NONE => (UTF8.translate char_map s,case sz of NONE => String.size s | SOME sz => sz)
+        SOME {info = result, ...} => result
+      | NONE => (UTF8.translate char_map s,
+                 case sz of NONE => String.size s | SOME sz => sz)
 
   fun smap overrides (s,sz) =
       case overrides s of
         NONE => string_map (s,sz)
       | SOME r => r
+  fun translate_prime s =
+      if s = "'" then "\\prime{}" else
+      if s = UnicodeChars.sup_0 then "0" else
+      if s = UnicodeChars.sup_1 then "1" else
+      if s = UnicodeChars.sup_2 then "2" else
+      if s = UnicodeChars.sup_3 then "3" else
+      if s = UnicodeChars.sup_4 then "4" else
+      if s = UnicodeChars.sup_5 then "5" else
+      if s = UnicodeChars.sup_6 then "6" else
+      if s = UnicodeChars.sup_7 then "7" else
+      if s = UnicodeChars.sup_8 then "8" else
+      if s = UnicodeChars.sup_9 then "9" else s
   fun varmunge s =
       if String.sub(s,0) = #"_" andalso
          CharVector.all (fn c => Char.isDigit c) (String.extract(s,1,NONE))
       then
-        "\\HOLTokenUnderscore{}"
+        ("\\HOLTokenUnderscore{}", "")
       else let
           open Substring
           val ss = full s
-          val (pfx,primes) = splitr (equal #"'") ss
-          val prime_str_interior = translate (fn _ => "\\prime") primes
+          val (pfx,primes) = splitl (not o equal #"'") ss
+          val prime_str_interior =
+            UTF8.translate translate_prime (string primes)
           val prime_str = if prime_str_interior = "" then ""
                           else "\\sp{" ^ prime_str_interior ^ "}"
           val (core,digits) = splitr Char.isDigit pfx
@@ -289,7 +306,7 @@ local
                                         | s => s)
                                       (string core)
         in
-          core_s ^ digitstr ^ prime_str
+          (core_s, digitstr ^ prime_str)
         end
 
   val stringmunge =
@@ -304,21 +321,43 @@ local
           if !dollar_parens then ("(", ")", String.extract(s,1,NONE),2)
           else ("", "", String.extract(s,1,NONE),0)
         else ("", "", s,0)
-    fun addann ty s =
-      "\\" ^ !texPrefix ^ ty ^ "{" ^ s ^ "}"
+    fun addann2 ty (s1,s2) =
+        let val base = "\\" ^ !texPrefix ^ ty ^ "{" ^ s1 ^ "}"
+        in
+          if size s2 = 0 then base
+          else
+            "\\ensuremath{" ^ base ^ s2 ^ "}"
+        end
+    fun addann ty s = addann2 ty (s,"")
     fun smapper s = smap overrides (s, sz_opt)
     val unmapped_sz = case sz_opt of NONE => size s | SOME i => i
     val (string_to_print, sz) =
         case ann of
-            BV _ => apfst (addann "BoundVar" o varmunge) (smapper s)
-          | FV _ => apfst (addann "FreeVar" o varmunge) (smapper s)
+            BV _ => apfst (addann2 "BoundVar" o varmunge) (smapper s)
+          | FV _ => apfst (addann2 "FreeVar" o varmunge) (smapper s)
           | Const _ => apfst (addann "Const") (smapper s)
           | SymConst _ => apfst (addann "SymConst") (smapper s)
           | TyOp _ => apfst (addann "TyOp") (smapper s)
-          | Literal StringLit => (addann "StringLit"
-                                         (stringmunge
-                                           (String.substring(s, 1, size s - 2))),
-                                  unmapped_sz)
+          | Literal StringLit =>
+            let
+              val c1i = case UTF8.getChar s of
+                            SOME ((_, i), _) => i
+                          | NONE => failwith "String literal with no content"
+              val ann =
+                  case c1i of
+                    34 => (* " *) "StringLit"
+                   | 0xAB => (* double guillemet *) "StringLitDG"
+                   | 0x2039 => (* single guillemet *) "StringLitSG"
+                   | _ => failwith
+                            ("Don't understand string literal delimiter: "^s)
+              (* contents of strings are 8-bit chars, but delimiters are
+                 potentially Unicode *)
+            in
+              (addann ann
+                      (stringmunge
+                         (UTF8.substring(s, 1, UTF8.size s - 2))),
+               unmapped_sz)
+            end
           | Literal FldName => apfst (addann "FieldName") (smapper s)
           | Literal NumLit => (addann "NumLit" s, unmapped_sz)
           | Literal CharList => (addann "CharLit"

@@ -6,148 +6,32 @@
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
-open pred_setTheory listTheory
+
+open arithmeticTheory pred_setTheory listTheory;
 
 val () = new_theory "fcp";
 val _ = set_grammar_ancestry ["list"]
 
 (* ------------------------------------------------------------------------- *)
-
-val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
-
-val CARD_CLAUSES =
-   CONJ CARD_EMPTY
-     (PROVE [CARD_INSERT]
-        ``!x s.
-             FINITE s ==>
-             (CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s)))``)
-
-val IMAGE_CLAUSES = CONJ IMAGE_EMPTY IMAGE_INSERT
-val FINITE_RULES = CONJ FINITE_EMPTY FINITE_INSERT
-val NOT_SUC = numTheory.NOT_SUC
-val SUC_INJ = prim_recTheory.INV_SUC_EQ
-val LT = CONJ (DECIDE ``!m. ~(m < 0)``) prim_recTheory.LESS_THM
-val LT_REFL = prim_recTheory.LESS_REFL
-
+(*  NOTES for HOL-Light users (or HOL4 porters of HOL-Light theories)        *)
+(*                                                                           *)
+(*  FCP indexes in HOL-Light are ranged from 1 to ‘dimindex(:'N)’, while in  *)
+(*  HOL4 they are ranged from ‘0’ to ‘dimindex(:'N) - 1’. Thus, whenever in  *)
+(*  HOL-Light it says ‘1 <= i /\ i <= dimindex(:'N)’, here in HOL4 one says  *)
+(*  ‘i < dimindex(:'N)’ instead. (as ‘0 <= i’ is always true for naturals.)  *)
+(*                                                                           *)
+(*  In particular, the frequently needed DIMINDEX_GE_1 in many FCP-related   *)
+(*  proofs in HOL-Light, is not very useful here in HOL4. Porters may need   *)
+(*  to use the new DIMINDEX_GT_0 instead, in some ported proofs.             *)
+(*                                                                           *)
+(*  The other difference is that, in HOL-Light the ' ($) operator is total:  *)
+(*  ‘f ' i := 0’ if ‘1 <= i /\ i <= dimindex(:N)’ does not hold, while here  *)
+(*  ‘f ' i’ is unspecified if ‘i >= dimindex(:'N)’. Thus for some theorems,  *)
+(*  porters may need to add extra antecedents like ‘i < dimindex(:'N) ==> ’  *)
+(*  to some FCP-related theorems.       -- Chun Tian (binghe), May 12, 2022  *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Parse.set_fixity "HAS_SIZE" (Infix (NONASSOC, 450))
-
-val HAS_SIZE = Define `(s HAS_SIZE n) <=> FINITE s /\ (CARD s = n)`
-
-val CARD_IMAGE_INJ = Q.prove(
-   `!(f:'a->'b) s.
-       (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
-       FINITE s ==> (CARD (IMAGE f s) = CARD s)`,
-   GEN_TAC
-   THEN REWRITE_TAC [DECIDE ``a /\ b ==> c <=> b ==> a ==> c``]
-   THEN Q.SPEC_THEN
-           `\s. (!x y. (f x = f y) ==> y IN s ==> x IN s ==> (x = y)) ==>
-                (CARD (IMAGE f s) = CARD s)`
-           (MATCH_MP_TAC o BETA_RULE) FINITE_INDUCT
-   THEN REWRITE_TAC [NOT_IN_EMPTY, IMAGE_CLAUSES]
-   THEN REPEAT STRIP_TAC
-   THEN ASM_SIMP_TAC std_ss [CARD_CLAUSES, IMAGE_FINITE, IN_IMAGE]
-   THEN COND_CASES_TAC
-   THEN PROVE_TAC [IN_INSERT]
-   )
-
-val HAS_SIZE_IMAGE_INJ = Q.prove(
-   `!(f:'a->'b) s n.
-        (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
-        (s HAS_SIZE n) ==> ((IMAGE f s) HAS_SIZE n)`,
-   SIMP_TAC std_ss [HAS_SIZE, IMAGE_FINITE] THEN PROVE_TAC[CARD_IMAGE_INJ])
-
-val HAS_SIZE_0 = Q.prove(
-   `!(s:'a->bool) n. (s HAS_SIZE 0) = (s = {})`,
-   REPEAT GEN_TAC
-   THEN REWRITE_TAC [HAS_SIZE]
-   THEN EQ_TAC
-   THEN DISCH_TAC
-   THEN ASM_REWRITE_TAC [FINITE_RULES, CARD_CLAUSES]
-   THEN FIRST_ASSUM (MP_TAC o CONJUNCT2)
-   THEN FIRST_ASSUM (MP_TAC o CONJUNCT1)
-   THEN Q.SPEC_TAC (`s:'a->bool`,`s:'a->bool`)
-   THEN Q.SPEC_THEN `\s. (CARD s = 0) ==> (s = {})`
-                    (MATCH_MP_TAC o BETA_RULE) FINITE_INDUCT
-   THEN REWRITE_TAC [NOT_INSERT_EMPTY]
-   THEN REPEAT GEN_TAC
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC arith_ss [CARD_INSERT]
-   )
-
-val HAS_SIZE_SUC = Q.prove(
-   `!(s:'a->bool) n.
-        (s HAS_SIZE (SUC n)) <=>
-        ~(s = {}) /\ !a. a IN s ==> ((s DELETE a) HAS_SIZE n)`,
-   REPEAT GEN_TAC
-   THEN REWRITE_TAC [HAS_SIZE]
-   THEN Q.ASM_CASES_TAC `s:'a->bool = {}`
-   THEN ASM_REWRITE_TAC [CARD_CLAUSES, FINITE_RULES, NOT_IN_EMPTY, GSYM NOT_SUC]
-   THEN REWRITE_TAC [FINITE_DELETE]
-   THEN Q.ASM_CASES_TAC `FINITE(s:'a->bool)`
-   THEN ASM_SIMP_TAC std_ss [NOT_FORALL_THM, MEMBER_NOT_EMPTY]
-   THEN EQ_TAC
-   THEN REPEAT STRIP_TAC
-   THENL [
-      MP_TAC (Q.ISPECL [`a:'a`, `s DELETE a:'a`] (CONJUNCT2 CARD_CLAUSES))
-      THEN ASM_REWRITE_TAC [FINITE_DELETE, IN_DELETE]
-      THEN Q.SUBGOAL_THEN `a INSERT (s DELETE a:'a) = s` SUBST1_TAC
-      THENL [
-         Q.UNDISCH_TAC `a:'a IN s`
-         THEN PROVE_TAC [INSERT_DELETE],
-         ASM_REWRITE_TAC [SUC_INJ]
-         THEN PROVE_TAC []
-      ],
-      FIRST_ASSUM
-         (MP_TAC o GEN_REWRITE_RULE I empty_rewrites [GSYM MEMBER_NOT_EMPTY])
-      THEN DISCH_THEN (Q.X_CHOOSE_TAC `a:'a`)
-      THEN MP_TAC (Q.ISPECL [`a:'a`, `s DELETE a:'a`] (CONJUNCT2 CARD_CLAUSES))
-      THEN ASM_REWRITE_TAC [FINITE_DELETE, IN_DELETE]
-      THEN Q.SUBGOAL_THEN `a INSERT (s DELETE a:'a) = s` SUBST1_TAC
-      THENL [
-         Q.UNDISCH_TAC `a:'a IN s` THEN PROVE_TAC[INSERT_DELETE],
-         PROVE_TAC[]
-      ]
-   ])
-
-val HAS_SIZE_INDEX = Q.prove(
-   `!s n.
-      (s HAS_SIZE n) ==>
-      ?f:num->'a. (!m. m < n ==> f(m) IN s) /\
-                  (!x. x IN s ==> ?!m. m < n /\ (f m = x))`,
-   CONV_TAC SWAP_VARS_CONV
-   THEN numLib.INDUCT_TAC
-   THEN SIMP_TAC std_ss [HAS_SIZE_0, HAS_SIZE_SUC, LT, NOT_IN_EMPTY]
-   THEN Q.X_GEN_TAC `s:'a->bool`
-   THEN REWRITE_TAC [EXTENSION, NOT_IN_EMPTY]
-   THEN SIMP_TAC std_ss [NOT_FORALL_THM]
-   THEN DISCH_THEN
-           (CONJUNCTS_THEN2 (Q.X_CHOOSE_TAC `a:'a`) (MP_TAC o Q.SPEC `a:'a`))
-   THEN ASM_REWRITE_TAC[]
-   THEN DISCH_TAC
-   THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `s DELETE (a:'a)`)
-   THEN ASM_REWRITE_TAC []
-   THEN DISCH_THEN (Q.X_CHOOSE_THEN `f:num->'a` STRIP_ASSUME_TAC)
-   THEN Q.EXISTS_TAC `\m:num. if m < n then f(m) else a:'a`
-   THEN CONJ_TAC
-   THENL [
-      GEN_TAC
-      THEN REWRITE_TAC []
-      THEN BETA_TAC
-      THEN COND_CASES_TAC
-      THEN PROVE_TAC [IN_DELETE],
-      ALL_TAC
-   ]
-   THEN Q.X_GEN_TAC `x:'a`
-   THEN DISCH_TAC
-   THEN ASM_REWRITE_TAC []
-   THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `x:'a`)
-   THEN ASM_SIMP_TAC (std_ss++boolSimps.COND_elim_ss) [IN_DELETE]
-   THEN Q.ASM_CASES_TAC `a:'a = x`
-   THEN ASM_SIMP_TAC std_ss []
-   THEN PROVE_TAC [LT_REFL, IN_DELETE]
-   )
+val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
 
 (* ------------------------------------------------------------------------- *
  * An isomorphic image of any finite type, 1-element for infinite ones.      *
@@ -183,8 +67,7 @@ val dimindex_def = zDefine`
 
 val NOT_FINITE_IMP_dimindex_1 = Q.store_thm("NOT_FINITE_IMP_dimindex_1",
    `~FINITE univ(:'a) ==> (dimindex(:'a) = 1)`,
-   METIS_TAC [dimindex_def]
-   )
+   METIS_TAC [dimindex_def])
 
 val HAS_SIZE_FINITE_IMAGE = Q.prove(
    `(UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)`,
@@ -197,8 +80,7 @@ val HAS_SIZE_FINITE_IMAGE = Q.prove(
    THEN ASM_REWRITE_TAC [HAS_SIZE, IN_UNIV, IN_SING]
    THEN SIMP_TAC arith_ss [CARD_EMPTY, CARD_SING, CARD_INSERT, FINITE_SING,
                            FINITE_INSERT, NOT_IN_EMPTY]
-   THEN PROVE_TAC[]
-   )
+   THEN PROVE_TAC[])
 
 val CARD_FINITE_IMAGE =
    PROVE [HAS_SIZE_FINITE_IMAGE, HAS_SIZE]
@@ -208,16 +90,18 @@ val FINITE_FINITE_IMAGE =
    PROVE [HAS_SIZE_FINITE_IMAGE, HAS_SIZE]
       ``FINITE (UNIV:'a finite_image->bool)``
 
-val DIMINDEX_NONZERO =
+Theorem DIMINDEX_NONZERO[simp] =
    METIS_PROVE [HAS_SIZE_0, UNIV_NOT_EMPTY, HAS_SIZE_FINITE_IMAGE]
       ``~(dimindex(:'a) = 0)``
 
-val DIMINDEX_GE_1 = Q.store_thm("DIMINDEX_GE_1",
-   `1 <= dimindex(:'a)`,
-   REWRITE_TAC [DECIDE ``1 <= x <=> ~(x = 0)``, DIMINDEX_NONZERO]
-   )
+Theorem DIMINDEX_GE_1[simp]:
+   1 <= dimindex(:'a)
+Proof
+  REWRITE_TAC [DECIDE ``1 <= x <=> ~(x = 0)``, DIMINDEX_NONZERO]
+QED
 
-val DIMINDEX_GT_0 =
+(* |- 0 < dimindex(:'a) *)
+Theorem DIMINDEX_GT_0[simp] =
    REWRITE_RULE [arithmeticTheory.NOT_ZERO_LT_ZERO] DIMINDEX_NONZERO
 
 val DIMINDEX_FINITE_IMAGE = Q.prove(
@@ -373,20 +257,22 @@ val CART_EQ = Q.store_thm("CART_EQ",
 val FCP = new_binder_definition("FCP",
    ``($FCP) = \g.  @(f:'a ** 'b). (!i. i < dimindex(:'b) ==> (f ' i = g i))``)
 
-val FCP_BETA = Q.store_thm("FCP_BETA",
-   `!i. i < dimindex(:'b) ==> (((FCP) g:'a ** 'b) ' i = g i)`,
-   SIMP_TAC std_ss [FCP]
-   THEN CONV_TAC SELECT_CONV
-   THEN Q.EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
-                                  (finite_index i = k))):'a ** 'b`
-   THEN SIMP_TAC std_ss [fcp_index_def, cart_tybij]
-   THEN REPEAT STRIP_TAC
-   THEN AP_TERM_TAC
-   THEN MATCH_MP_TAC SELECT_UNIQUE
-   THEN GEN_TAC
-   THEN REWRITE_TAC []
-   THEN PROVE_TAC [FINITE_INDEX_INJ, DIMINDEX_FINITE_IMAGE]
-   )
+(* NOTE: generalizing ‘g’ will break blastLib.sml *)
+Theorem FCP_BETA :
+    !i. i < dimindex(:'b) ==> (((FCP) g:'a ** 'b) ' i = g i)
+Proof
+    SIMP_TAC std_ss [FCP]
+ >> CONV_TAC SELECT_CONV
+ >> Q.EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
+                                   (finite_index i = k))):'a ** 'b`
+ >> SIMP_TAC std_ss [fcp_index_def, cart_tybij]
+ >> REPEAT STRIP_TAC
+ >> AP_TERM_TAC
+ >> MATCH_MP_TAC SELECT_UNIQUE
+ >> GEN_TAC
+ >> REWRITE_TAC []
+ >> PROVE_TAC [FINITE_INDEX_INJ, DIMINDEX_FINITE_IMAGE]
+QED
 
 val FCP_UNIQUE = Q.store_thm("FCP_UNIQUE",
    `!(f:'a ** 'b) g. (!i. i < dimindex(:'b) ==> (f ' i = g i)) = ((FCP) g = f)`,
@@ -396,9 +282,11 @@ val FCP_ETA = Q.store_thm("FCP_ETA",
    `!g. (FCP i. g ' i) = g`,
    SIMP_TAC std_ss [CART_EQ, FCP_BETA])
 
-val card_dimindex = save_thm("card_dimindex",
-   METIS_PROVE [dimindex_def]
-      ``FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))``)
+Theorem card_dimindex :
+    FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))
+Proof
+    METIS_TAC [dimindex_def]
+QED
 
 (* ------------------------------------------------------------------------- *
  * Support for introducing finite index types                                *
@@ -769,10 +657,9 @@ val FCP_ss = rewrites [FCP_BETA, FCP_ETA, CART_EQ]
 
 val () = set_fixity ":+" (Infixl 325)
 
-val FCP_UPDATE_def =
-   Lib.with_flag (computeLib.auto_import_definitions, false)
-      (xDefine "FCP_UPDATE")
-      `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b`
+Definition FCP_UPDATE_def[nocompute]:
+  $:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b
+End
 
 val FCP_UPDATE_COMMUTES = Q.store_thm ("FCP_UPDATE_COMMUTES",
    `!m a b c d. ~(a = b) ==> ((a :+ c) ((b :+ d) m) = (b :+ d) ((a :+ c) m))`,
@@ -833,6 +720,16 @@ val FCP_CONCAT_def = Define`
               b ' i
            else
               a ' (i - dimindex(:'c))): 'a ** ('b + 'c)`
+
+(* FCP_FST returns the "higher" dimensional part (:'a['b]) of ‘v :'a['b + 'c]’ *)
+Definition FCP_FST_def :
+   FCP_FST (v :'a ** ('b + 'c)) = (FCP i. v ' (i + dimindex (:'c))) :'a ** 'b
+End
+
+(* FCP_SND returns the "lower" dimensional part (:'a['c]) of ‘v :'a['b + 'c]’ *)
+Definition FCP_SND_def :
+   FCP_SND (v :'a ** ('b + 'c)) = (FCP i. v ' i) :'a ** 'c
+End
 
 val FCP_ZIP_def = Define`
    FCP_ZIP (a:'a ** 'b) (b:'c ** 'b) = (FCP i. (a ' i, b ' i)): ('a # 'c) ** 'b`
@@ -922,6 +819,42 @@ val fcp_subst_comp = Q.store_thm("fcp_subst_comp",
   srw_tac [FCP_ss] [FCP_UPDATE_def])
 
 val () = computeLib.add_persistent_funs ["FCP_EXISTS", "FCP_EVERY"]
+
+(* Connections between FCP_CONCAT, FCP_FST and FCP_SND *)
+Theorem FCP_CONCAT_THM :
+    !(a :'a['b]) (b :'a['c]).
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+       (FCP_FST (FCP_CONCAT a b) = a) /\ (FCP_SND (FCP_CONCAT a b) = b)
+Proof
+    RW_TAC std_ss [FCP_FST_def, FCP_SND_def]
+ >| [ (* goal 1 (of 2) *)
+      RW_TAC std_ss [CART_EQ, FCP_BETA] \\
+      REWRITE_TAC [FCP_CONCAT_def, index_comp] >> simp [index_sum],
+      (* goal 2 (of 2) *)
+      RW_TAC std_ss [CART_EQ, FCP_BETA] \\
+      REWRITE_TAC [FCP_CONCAT_def, index_comp] >> simp [index_sum] ]
+QED
+
+Theorem FCP_CONCAT_11 :
+    !(a :'a['b]) (b :'a['c]) c d.
+        FINITE univ(:'b) /\ FINITE univ(:'c) /\
+       (FCP_CONCAT a b = FCP_CONCAT c d) ==> (a = c) /\ (b = d)
+Proof
+    METIS_TAC [FCP_CONCAT_THM]
+QED
+
+Theorem FCP_CONCAT_REDUCE :
+    !(x :'a['b + 'c]). FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+                       FCP_CONCAT (FCP_FST x) (FCP_SND x) = x
+Proof
+    rw [FCP_CONCAT_def, FCP_FST_def, FCP_SND_def, CART_EQ]
+ >> SRW_TAC [FCP_ss] []
+ >> rfs [NOT_LESS, index_sum]
+ >> ‘i - dimindex(:'c) < dimindex(:'b)’ by rw []
+ >> SRW_TAC [FCP_ss] []
+ >> ‘0 < dimindex(:'c)’ by PROVE_TAC [DIMINDEX_GT_0]
+ >> rw []
+QED
 
 (* ------------------------------------------------------------------------- *)
 

@@ -55,11 +55,13 @@ struct
   in List.foldl f (" "^s2) l1 end
   val tyname = "OpenTheoryMap"
   val (mk,dest) =
-      Theory.LoadableThyData.new {thydataty = tyname, terms = Lib.K [],
-                                  pp = fn l => "[OpenTheory stuff...]",
-                                  merge = fn((a,b),(c,d))=>(c@a,d@b),
-                                  read = Lib.K (Coding.lift read_deltas),
-                                  write = Lib.K write_deltas}
+      Theory.LoadableThyData.new {
+        thydataty = tyname, terms = Lib.K [], strings = Lib.K [],
+        pp = fn l => "[OpenTheory stuff...]",
+        merge = fn((a,b),(c,d))=>(c@a,d@b),
+        read = Lib.K (Option.mapPartial (Coding.lift read_deltas) o
+                                        HOLsexp.string_decode),
+        write = Lib.K (HOLsexp.String o write_deltas)}
   fun tyopToString  {Thy,Tyop} = "(Thy="^Thy^",Tyop="^Tyop^")"
   fun constToString {Thy,Name} = "(Thy="^Thy^",Name="^Name^")"
   fun temp_OpenTheory_tyop_name0 src {tyop,name} = ()

@@ -165,7 +165,7 @@ fun is_emptystring tm =
 fun dest_string_lit tm =
     if is_emptystring tm then ""
     else let
-        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+        val (front,e) = Lib.front_last (strip_binop dest_string tm)
       in
         if is_emptystring e then
           String.implode (itlist (cons o fromHOLchar) front [])
@@ -188,7 +188,7 @@ fun string_literalpp {ldelim,rdelim} s =
         val toString = String.toString
         fun recurse A lastc start i =
             if i >= limit then
-              concat (List.rev(rdelim :: extract(start,NONE)::A))
+              concat (List.rev(rdelim :: toString (extract(start,NONE))::A))
             else
               case (lastc, sub i) of
                 (#"(", #"*") => let
@@ -226,7 +226,7 @@ in
 fun relaxed_dest_string_lit tm =
     if is_emptystring tm then ""
     else let
-        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+        val (front,e) = Lib.front_last (strip_binop dest_string tm)
       in
         if is_emptystring e then
           String.implode (itlist (cons o fromHOLchar) front [])

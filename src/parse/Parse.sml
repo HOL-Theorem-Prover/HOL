@@ -79,7 +79,8 @@ fun interactive_ppbackend () = let
 in
   (* assumes interactive *)
   case getEnv "TERM" of
-    SOME s => if String.isPrefix "xterm" s then vt100_terminal
+    SOME s => if String.isPrefix "xterm" s orelse
+                 String.isPrefix "tmux" s then vt100_terminal
               else raw_terminal
   | _ => raw_terminal
 end
@@ -207,14 +208,6 @@ end
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 
 type grammarDB_info = type_grammar.grammar * term_grammar.grammar
-val grammarDB_value =
-    ref (Binarymap.mkDict String.compare :(string,grammarDB_info)Binarymap.dict)
-fun grammarDB s = Binarymap.peek (!grammarDB_value, s)
-fun grammarDB_fold f acc = Binarymap.foldl f acc (!grammarDB_value)
-fun grammarDB_insert (s, i) =
-  grammarDB_value := Binarymap.insert(!grammarDB_value, s, i)
-
-val _ = grammarDB_insert("min", min_grammars)
 
 fun minprint t = let
   fun default t = let
@@ -641,23 +634,6 @@ fun temp_set_associativity (i,a) = let in
    term_grammar_changed := true
  end
 
-fun block_infoToString (Portable.CONSISTENT, n) =
-        "(Portable.CONSISTENT, "^Int.toString n^")"
-  | block_infoToString (Portable.INCONSISTENT, n) =
-    "(Portable.INCONSISTENT, "^Int.toString n^")"
-
-fun ParenStyleToString Always = "Always"
-  | ParenStyleToString OnlyIfNecessary = "OnlyIfNecessary"
-  | ParenStyleToString ParoundName = "ParoundName"
-  | ParenStyleToString ParoundPrec = "ParoundPrec"
-  | ParenStyleToString NotEvenIfRand = "NotEvenIfRand"
-
-fun BlockStyleToString AroundSameName = "AroundSameName"
-  | BlockStyleToString AroundSamePrec = "AroundSamePrec"
-  | BlockStyleToString AroundEachPhrase = "AroundEachPhrase"
-  | BlockStyleToString NoPhrasing = "NoPhrasing"
-
-
 (*---------------------------------------------------------------------------*)
 (* Apply a function to its argument. If it fails, revert the grammars        *)
 (*---------------------------------------------------------------------------*)
@@ -748,6 +724,8 @@ val add_bare_numeral_form = mk_perm add_bare_numeral_form0
 fun add_strliteral_form0 {ldelim,inj} =
     let
       val (nm, _) = dest_const inj
+                    handle HOL_ERR _ => raise ERROR "add_strliteral_form"
+                                              "Injector must be constant"
       val _ = Literal.delim_pair{ldelim=ldelim} (* checks it's legit *)
               handle Fail s => raise ERROR "add_strliteral_form" s
       val injname = GrammarSpecials.mk_stringinjn_name ldelim
@@ -757,6 +735,31 @@ fun add_strliteral_form0 {ldelim,inj} =
     end
 val temp_add_strliteral_form = mk_temp add_strliteral_form0
 val add_strliteral_form = mk_perm add_strliteral_form0
+
+fun remove_strliteral_form0 (r as {tmnm : string}) =
+    case strlit_map (term_grammar()) r of
+        NONE => raise ERROR "remove_strliteral_form"
+                      "No such term as string literal injector"
+      | SOME ldelim =>
+        let
+          open Overload
+          val injname = GrammarSpecials.mk_stringinjn_name ldelim
+          val oinfo = overload_info (term_grammar())
+          fun find_term ({actual_ops,...} : overloaded_op_info) =
+              List.find (fn t => #1 (dest_const t) = tmnm
+                                 handle HOL_ERR _ => false)
+                        actual_ops
+        in
+          case Option.mapPartial find_term (info_for_name oinfo injname) of
+              NONE => raise ERROR "remove_strliteral_form"
+                            "No constant with that name in overloading info"
+            | SOME t => [
+                RM_STRLIT r,
+                RMOVMAP(injname, {Name = tmnm, Thy = #Thy (dest_thy_const t)})
+              ]
+        end
+val temp_remove_strliteral_form = mk_temp remove_strliteral_form0
+val remove_strliteral_form = mk_perm remove_strliteral_form0
 
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
@@ -880,6 +883,12 @@ val remove_ovl_mapping = curry (mk_perm remove_ovl_mapping0)
 
 val temp_gen_remove_ovl_mapping = curry (mk_temp (fn p => [GRMOVMAP p]))
 val gen_remove_ovl_mapping = curry (mk_perm (fn p => [GRMOVMAP p]))
+
+fun permahide t =
+    let val {Name,Thy,...} = dest_thy_const t
+    in
+      remove_ovl_mapping Name {Name = Name, Thy = Thy}
+    end
 
 fun primadd_rcdfld f ovopn (fldname, t) = let
   val (d,r) = dom_rng (type_of t)
@@ -1052,114 +1061,62 @@ in
 end;
 
 
-(*---------------------------------------------------------------------------
+(* ----------------------------------------------------------------------
      Updating the global and local grammars when a theory file is
      loaded.
+   ---------------------------------------------------------------------- *)
 
-     The function "update_grms" updates both the local and global
-     grammars by pointer swapping. Ugh! Relies on fact that no
-     other state than that of the current global grammars changes
-     in a call to f.
-
-     TODO: handle exceptions coming from application of "f" to "x"
-           and print out informative messages.
- ---------------------------------------------------------------------------*)
-
-fun update_grms f x = let
-  val _ = f x                          (* update global grammars *)
-    handle HOL_ERR {origin_structure, origin_function, message} =>
-      (WARN "update_grms"
-       ("Update to global grammar failed in "^origin_function^
-        " with message: "^message^"\nproceeding anyway."))
-
-  val (tyG, tmG) = current_grammars()  (* save global grm. values *)
-  val (tyL0,tmL0) = current_lgrms()    (* read local grm. values *)
-  val _ = the_type_grammar := tyL0     (* mv locals into globals *)
-  val _ = the_term_grammar := tmL0
-  val _ = f x                          (* update global (really local) grms *)
-    handle HOL_ERR {origin_structure, origin_function, message} =>
-      (WARN "update_grms"
-       ("Update to local grammar failed in "^origin_function^
-        " with message: "^message^"\nproceeding anyway."))
-  val (tyL1, tmL1) = current_grammars()
-  val _ = the_lty_grm := tyL1          (* mv updates into locals *)
-  val _ = the_ltm_grm := tmL1
-in
-  the_type_grammar := tyG;             (* restore global grm. values *)
-  the_term_grammar := tmG
-end
-
-fun gparents thyname =
+fun gparents {thyname} =
   case GrammarAncestry.ancestry {thy = thyname} of
       [] => parents thyname
     | thys => thys
 
-fun gancestry thynm =
-  let
-    fun recurse acc seen worklist =
-      case worklist of
-          [] => acc
-        | thynm :: rest =>
+val {merge = merge_grammars0, set_parents = set_grammar_ancestry0,
+     DB = grammarDB0, parents = gparents} =
+    let
+      open GrammarDeltas
+      fun apply (TYD tyd) (tyG, tmG) = (type_grammar.apply_delta tyd tyG, tmG)
+        | apply (TMD tmd) (tyG, tmG) = (tyG, term_grammar.add_delta tmd tmG)
+      fun side_effect delta =
           let
-            val unseen_ps =
-                List.filter (fn thy => not (HOLset.member(seen,thy)))
-                            (gparents thynm)
+            val (tyG, tmG) = apply delta (!the_type_grammar, !the_term_grammar)
           in
-            recurse (HOLset.add(acc,thynm))
-                    (HOLset.addList(seen, unseen_ps))
-                    (unseen_ps @ rest)
+            the_type_grammar := tyG;
+            the_term_grammar := tmG;
+            type_grammar_changed := true;
+            term_grammar_changed := true
           end
-    val empty_strset = HOLset.empty String.compare
-  in
-    recurse empty_strset empty_strset (gparents thynm)
-  end
+    in
+      AncestryData.make {
+        info = {tag = "grammar",
+                initial_values = [("min", min_grammars)],
+                apply_delta = apply},
+        get_deltas = GrammarDeltas.thy_deltas,
+        delta_side_effects = side_effect
+      }
+    end
 
-fun merge_into (gname, (G, gset)) =
-  let
-    fun apply (tyuds, tmuds) (tyG, tmG) =
-      (type_grammar.apply_deltas tyuds tyG, term_grammar.add_deltas tmuds tmG)
-    datatype action =
-             Visit of string
-           | Apply of type_grammar.delta list * term_grammar.user_delta list
-    fun recurse (G, gset) worklist =
-      case worklist of
-          [] => (G, gset)
-        | Visit thy :: rest =>
-          let
-            val parents0 = gparents thy
-            val parents =
-                List.filter (fn thy => not (HOLset.member(gset,thy))) parents0
-            val uds = GrammarDeltas.thy_deltas {thyname = thy}
-          in
-            recurse (G, HOLset.add(gset, thy))
-                    (map Visit parents @ (Apply uds :: rest))
-          end
-        | Apply uds :: rest => recurse (apply uds G, gset) rest
-  in
-    recurse (G, gset) [Visit gname]
-  end
+fun merge_grammars sl =
+    case merge_grammars0 sl of
+        NONE => raise ERROR "merge_grammars"
+                      ("None of " ^ String.concatWith ", " sl ^
+                       " have defined grammars")
+      | SOME gv => gv
 
-fun merge_grammars slist =
-  case slist of
-      [] => raise ERROR "merge_grammars" "Empty grammar list"
-    | h::t =>
-      let
-        val g = valOf (grammarDB h)
-          handle Option => raise ERROR "merge_grammars" ("No such theory: "^h)
-      in
-        List.foldl merge_into (g, gancestry h) t |> #1
-      end
+fun grammarDB thyname = grammarDB0 thyname
+
 
 fun set_grammar_ancestry slist =
-  let
-    val (tyg,tmg) = merge_grammars slist
-  in
-    GrammarAncestry.set_ancestry slist;
-    the_type_grammar := tyg;
-    the_term_grammar := tmg;
-    type_grammar_changed := true;
-    term_grammar_changed := true
-  end
+    let
+      val _ = GrammarDeltas.clear_deltas()
+      val (tyg,tmg) = valOf (set_grammar_ancestry0 slist)
+                      handle Option => raise Fail "No merge for grammars!"
+    in
+      the_type_grammar := tyg;
+      the_term_grammar := tmg;
+      type_grammar_changed := true;
+      term_grammar_changed := true
+    end
 
 local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
@@ -1175,70 +1132,18 @@ in
                                     (!grm_updates)))
   else ();
   grm_updates := [];
-  adjoin_to_theory
-  {sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
-   struct_ps = SOME (fn _ =>
-     let val B  = PP.block CONSISTENT
-         val IB = PP.block INCONSISTENT
-         open PP
-         fun pr_sml_list pfun L =
-           B 0 [add_string "[",
-                IB 1 (PP.pr_list pfun [add_string ",", add_break(0,0)]  L),
-                add_string "]"]
-         fun pp_update(f,x,topt) =
-             if isSome topt andalso not (Theory.uptodate_term (valOf topt))
-             then B 0 []
-             else
-               B 5 [
-                 add_string "val _ = update_grms", add_break(1,0),
-                 add_string f, add_break(1,0),
-                 B 0 [add_string x]
-               ]
-     in
-       B 0 [
-         add_string "local open GrammarSpecials Parse",
-         NL,
-         add_string "  fun UTOFF f = Feedback.trace(\"Parse.unicode_trace_\
-                    \off_complaints\",0)f",
-         NL,
-         add_string "in", NL,
-         add_string ("val " ^thyname ^ "_grammars = merge_grammars ["),
-         IB 0
-            (pr_list (add_string o quote)
-                     [add_string ",", add_break(1,0)]
-                     (gparents (current_theory()))),
-         add_string "]", NL,
-         add_string ("local"),
-         NL,
-         add_string ("val (tyUDs, tmUDs) = "^
-                     "GrammarDeltas.thy_deltas{thyname="^ quote thyname^"}"),
-         NL,
-         add_string ("val addtmUDs = term_grammar.add_deltas tmUDs"),
-         NL,
-         add_string ("val addtyUDs = type_grammar.apply_deltas tyUDs"),
-         NL, add_string ("in"), NL,
-
-         add_string ("val " ^ thyname ^ "_grammars = "), add_break(1,2),
-         add_string ("Portable.## (addtyUDs,addtmUDs) " ^
-                     thyname ^ "_grammars"),
-         NL,
-
-         add_string (String.concat
-             ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
-              thyname, "_grammars)"]),
-         NL,
-
-         add_string (String.concat
-             ["val _ = Parse.temp_set_grammars ("^
-              "addtyUDs (Parse.type_grammar()), ",
-              "addtmUDs (Parse.term_grammar()))"]), NL,
-         add_string "end (* addUDs local *)", NL,
-
-         add_string "end", NL
-       ]
-     end)}
- end
+  adjoin_to_theory {
+    sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
+    struct_ps = NONE
+  };
+  adjoin_after_completion (
+    fn () =>
+       PP.add_string ("val " ^ thyname ^
+                      "_grammars = valOf (Parse.grammarDB {thyname = " ^
+                      quote thyname ^ "})\n")
+  )
 end
+end (* local *)
 
 val _ = let
   val rawpp_thm =

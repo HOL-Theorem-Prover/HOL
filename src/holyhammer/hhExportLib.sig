@@ -3,6 +3,7 @@ sig
 
 include Abbrev
 
+  type thmid = string * string
   val hh_dir : string
 
   type formula_info = {
@@ -72,8 +73,8 @@ include Abbrev
 
   (* thm *)
   val older_than : thm -> 'a * thm -> bool
-  val depo_of_thm : thm -> (string * string) list option
-  val depo_of_thmid : (string * string) -> (string * string) list option
+  val depo_of_thm : thm -> thmid list option
+  val depo_of_thmid : thmid -> thmid list option
 
   val fetch_thm : (string * string) -> thm
 
@@ -85,18 +86,18 @@ include Abbrev
   val logic_l1 : (string * string) list
   val quant_l2 : (string * string) list
   val boolop_cval : (term * int) list
+  val mgc_of : term -> term
   val uniq_cvdef_mgc : (term * int) list -> (term * int) list
   val uniq_cvdef_arity : (term * int) list -> term list
 
   (* dependencies *)
-  val add_chainy_dep :
-    string list -> string ->
-    (string * thm) list ->
-    ((string * string) * (string * string) list) list
-
-  val add_bushy_dep :
+  val thmidl_in_thy : string -> thmid list
+  val chainy_dep :
+    string list -> string -> (string * thm) list ->
+    (thmid * (string list * thmid list)) list
+  val bushy_dep :
     string -> (string * thm) list ->
-    ((string * string) * (string * string) list) list
+    (thmid * (string list * thmid list)) list
 
   (* theory order *)
   val before_elem: ''a -> ''a list -> ''a list

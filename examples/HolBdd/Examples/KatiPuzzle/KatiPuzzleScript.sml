@@ -85,7 +85,7 @@ val basic_varmap =
 val Init_def =
  Define
   `Init(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
-    ~v0 /\ v1 /\ ~v2 /\ v3 /\ ~v4 /\ v5 /\ ~v6 /\ v7 /\ ~v8`;
+    (~v0 /\ v1 /\ ~v2 /\ v3 /\ ~v4 /\ v5 /\ ~v6 /\ v7 /\ ~v8)`;
 
 (*****************************************************************************)
 (* Transition relation                                                       *)
@@ -95,7 +95,7 @@ val Trans_def =
  Define
   `Trans((v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool),
          (v0',v1',v2',v3',v4',v5',v6',v7',v8',c0',c1',c2',c3')) =
-    ((v0'=~v0)/\(v1'=~v1)/\(v2'=v2)/\(v3'=~v3)/\(v4'=v4)/\    (* toggle 0 *)
+    (((v0'=~v0)/\(v1'=~v1)/\(v2'=v2)/\(v3'=~v3)/\(v4'=v4)/\    (* toggle 0 *)
      (v5'=v5)/\(v6'=v6)/\(v7'=v7)/\(v8'=v8) /\ ~c3' /\ ~c2' /\ ~c1' /\~c0')
     \/
     ((v0'=~v0)/\(v1'=~v1)/\(v2'=~v2)/\(v3'=v3)/\(v4'=~v4)/\   (* toggle 1 *)
@@ -120,7 +120,7 @@ val Trans_def =
      (v5'=v5)/\(v6'=~v6)/\(v7'=~v7)/\(v8'=~v8) /\ ~c3' /\ c2' /\ c1' /\ c0')
     \/
     ((v0'=v0)/\(v1'=v1)/\(v2'=v2)/\(v3'=v3)/\(v4'=v4)/\       (* toggle 8 *)
-     (v5'=~v5)/\(v6'=v6)/\(v7'=~v7)/\(v8'=~v8) /\ c3' /\ ~c2' /\ ~c1' /\ ~c0')`;
+     (v5'=~v5)/\(v6'=v6)/\(v7'=~v7)/\(v8'=~v8) /\ c3' /\ ~c2' /\ ~c1' /\ ~c0'))`;
 
 (*****************************************************************************)
 (* Final state                                                               *)
@@ -129,7 +129,7 @@ val Trans_def =
 val Final_def =
  Define
   `Final(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
-    ~v0 /\ ~v1 /\ ~v2 /\ ~v3 /\ ~v4 /\ ~v5 /\ ~v6 /\ ~v7 /\ ~v8`;
+    (~v0 /\ ~v1 /\ ~v2 /\ ~v3 /\ ~v4 /\ ~v5 /\ ~v6 /\ ~v7 /\ ~v8)`;
 
 val (_,thl,thfin) = findTrace basic_varmap Trans_def Init_def Final_def;
 
@@ -203,7 +203,7 @@ fun PrintState flag tm =
      fun p n   = print_term(s n)
      fun sp () = print " --- "
      fun nl () = print"\n"
-     fun bv b = if b=T then 1 else 0
+     fun bv b = if b ~~ T then 1 else 0
      fun pb(c3,c2,c1,c0) = print_term(intToTerm(8*(bv c3) + 4*(bv c2) + 2*(bv c1) + (bv c0)))
  in
   (nl();

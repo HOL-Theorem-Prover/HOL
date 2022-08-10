@@ -1,2 +1,3 @@
 INCLUDES = milawa-prover/soundness-thm
-OPTIONS=QUIT_ON_FAILURE
+
+CLINE_OPTIONS = -r

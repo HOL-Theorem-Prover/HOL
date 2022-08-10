@@ -1,7 +1,5 @@
-all: $(DEFAULT_TARGETS) TheoryDatTokens.uo
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-TheoryDatTokens.sml: TheoryDatTokens
-	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
-
-EXTRA_CLEANS = TheoryDatTokens.sml
+Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<

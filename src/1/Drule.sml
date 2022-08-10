@@ -803,7 +803,6 @@ fun REORDER_ANTS_MOD f g th =
   in Lib.itlist DISCH (f ants) (g (SPEC_ALL uth)) end ;
 
 fun REORDER_ANTS f th = REORDER_ANTS_MOD f (fn c => c) th ;
-fun MODIFY_CONS g th = REORDER_ANTS_MOD (fn hs => hs) g th ;
 
 (*---------------------------------------------------------------------------*
  * Use the conclusion of the first theorem to delete a hypothesis of         *
@@ -1288,6 +1287,44 @@ fun PART_MATCH_A partfn th =
    in
       fn tm => INST_TY_TERM (match_term pat tm) th
    end
+
+(* ----------------------------------------------------------------------
+    version of PART_MATCH that only specialises universally quantified
+    variables that are necessary to make the match go through.
+    Others are left as quantifiers
+   ---------------------------------------------------------------------- *)
+
+fun avSPEC_ALL avds th =
+  let
+    fun recurse avds acc th =
+      case Lib.total dest_forall (concl th) of
+          SOME (v,bod) =>
+          let
+            val v' = variant avds v
+          in
+            recurse (v'::avds) (v'::acc) (SPEC v' th)
+          end
+        | NONE => (List.rev acc, th)
+  in
+    recurse avds [] th
+  end
+
+fun PART_MATCH' f th t =
+  let
+    val (vs, _) = strip_forall (concl th)
+    val hypfvs_set = hyp_frees th
+    val hypfvs = HOLset.listItems hypfvs_set
+    val hyptyvs = HOLset.listItems (hyp_tyvars th)
+    val tfvs = free_vars t
+    val dontspec = op_union aconv tfvs hypfvs
+    val (vs, speccedth) = avSPEC_ALL dontspec th
+    val s as (tmsig,tysig) =
+        match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
+    val dontgen = op_union aconv (map #redex tmsig) dontspec
+  in
+    GENL (op_set_diff aconv (map (Term.inst tysig) vs) dontgen)
+         (INST_TY_TERM s speccedth)
+  end
 
 (* --------------------------------------------------------------------------*
     EXISTS_LEFT, EXISTS_LEFT1
@@ -2071,7 +2108,7 @@ local
   fun norm th =
     if is_forall (concl th) then norm (SPEC_ALL th)
     else
-      case Lib.total dest_imp (concl th) of
+      case Lib.total dest_imp_only (concl th) of
           NONE => th
         | SOME (l,r) =>
           if is_conj l then norm (AIMP_RULE th)
@@ -2205,7 +2242,7 @@ fun define_new_type_bijections {name, ABS, REP, tyax} =
           val (a, r) = Type.dom_rng (type_of rep)
       in
          Rsyntax.new_specification
-          {name = name,
+          {name = ThmAttribute.insert_attribute {attr = "notuserdef"} name,
            sat_thm =
              MP (SPEC P (INST_TYPE [beta |-> a, alpha |-> r] ABS_REP_THM)) tyax,
            consts = [{const_name = REP, fixity = NONE},
@@ -2456,6 +2493,167 @@ in
          (regen (SYM (SPEC_ALL a)), c, lcomm)
       end
 end
+
+
+fun GEN_TYVARIFY th =
+    let
+      val concl_tyvs = HOLset.addList (
+            HOLset.empty Type.compare,
+            type_vars_in_term (concl th)
+          )
+      val tyvs = HOLset.difference(concl_tyvs, hyp_tyvars th)
+    in
+      INST_TYPE (gen_tyvar_sigma (HOLset.listItems tyvs)) th
+    end
+
+fun FULL_GEN_TYVARIFY th =
+    let
+      val tyvs = HOLset.addList(hyp_tyvars th, type_vars_in_term (concl th))
+    in
+      INST_TYPE (gen_tyvar_sigma (HOLset.listItems tyvs)) th
+    end
+
+datatype AI = IMP of term | FA of {orig:term, new:term}
+fun CONV_RULE c th = EQ_MP (c (concl th)) th
+fun restore hs (acs, th) =
+    case acs of
+        [] => rev_itlist ADD_ASSUM hs th
+      | IMP t :: rest => restore hs (rest, DISCH t th)
+      | FA{orig,new} :: rest =>
+        if orig ~~ new then
+          restore hs (rest, GEN orig th)
+        else
+          restore hs (rest, th |> GEN new |> CONV_RULE (GEN_ALPHA_CONV orig))
+fun AIdestAll th =
+    case total dest_forall (concl th) of
+        NONE => NONE
+      | SOME (v,b) =>
+        let
+          val hfvs = hyp_frees th
+        in
+          if HOLset.member(hfvs, v) then
+            let val new = variant (HOLset.listItems hfvs) v
+            in
+              SOME (FA{orig=v,new=new}, SPEC new th)
+            end
+          else
+            SOME (FA{orig=v,new=v}, SPEC v th)
+        end
+
+fun underALLs f th =
+    let
+      fun getbase A th =
+          case AIdestAll th of
+              NONE => (A, f th)
+            | SOME (act, th') => getbase (act::A) th'
+    in
+      restore [] (getbase [] th)
+    end
+fun underAIs f th =
+    let
+      fun getbase A th =
+          case AIdestAll th of
+              NONE => (case total dest_imp_only (concl th) of
+                           NONE => (A, f th)
+                         | SOME (l,r) => getbase (IMP l :: A) (UNDISCH th))
+            | SOME (act,th') => getbase (act::A) th'
+    in
+      restore (hyp th) (getbase [] th)
+    end
+
+fun cj i = underAIs (el i o CONJUNCTS)
+val iffLR = underAIs (#1 o EQ_IMP_RULE)
+val iffRL = underAIs (#2 o EQ_IMP_RULE)
+
+fun promote f th =
+    let
+      val (H, _) = dest_imp (concl th)
+      val hs = strip_conj H
+      val th' = UNDISCH th
+      val t = f hs
+      val (_, rest) = pluck (aconv t) hs
+    in
+      if null rest then th
+      else
+        let
+          val Cs = ASSUME_CONJS H
+          val R = list_mk_conj rest
+          val Cs' = CONJUNCTS (ASSUME R)
+          val elim = rev_itlist PROVE_HYP (ASSUME t :: Cs') Cs
+        in
+          th' |> PROVE_HYP elim |> DISCH R |> DISCH t
+        end
+    end
+
+fun findq fvs patq ts =
+    let
+      open TermParse
+      val pat_t = prim_ctxt_termS Parse.Absyn (term_grammar()) fvs patq|>seq.hd
+    in
+      case List.find (can (match_term pat_t)) ts of
+          NONE => raise ERR "pp" "No hypothesis matching pattern"
+        | SOME t => t
+    end
+
+val notnot = NOT_CLAUSES |> CONJUNCTS |> hd |> SPEC_ALL |> EQ_IMP_RULE |> #2
+val impf_intro = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS |> last |> SYM |> GEN_ALL
+fun IMPF_INTRO th = EQ_MP (PART_MATCH lhs impf_intro (concl th)) th
+val t_b = mk_var("t", bool)
+fun notnotremove th =
+    let val (l,r) = dest_imp (concl th)
+        val l0 = dest_neg l
+        val l00 = dest_neg l0
+    in
+      PROVE_HYP (notnot |> INST [t_b |-> l00] |> UNDISCH) (UNDISCH th)
+                |> DISCH l00
+    end handle HOL_ERR _ => th
+val cpos = notnotremove o underAIs IMPF_INTRO o CONTRAPOS
+
+fun FORALL1 f th =
+    let val (v,_) = dest_forall (concl th)
+    in
+      th |> SPEC v |> f |> GEN v
+    end
+
+fun pushdown th =
+    let val (v1,b0) = dest_forall (concl th)
+    in
+      let val (v2,b) = dest_forall b0
+      in
+        th |> SPEC v1 |> SPEC v2 |> GEN v1 |> pushdown |> GEN v2
+      end handle HOL_ERR _ =>
+                 let val (l,r) = dest_imp b0
+                 in
+                   th |> SPEC v1 |> UNDISCH |> GEN v1 |> DISCH l
+                 end
+    end
+
+fun pushFAs fvs th =
+    let val (v,b) = dest_forall (concl th)
+        val finish = if tmem v fvs then (fn th => th) else pushdown
+    in
+      th |> FORALL1 (pushFAs fvs) |> finish
+    end handle HOL_ERR _ => th
+
+fun pp pos th0 =
+    let
+      open thmpos_dtype
+      val th = MP_CANON th0
+      fun transform th =
+          case pos of
+              Any => promote hd th
+            | Pos f => promote f th
+            | Pat q => promote (findq (thm_frees th) q) th
+            | Concl => cpos th
+      fun clean_foralls th =
+          let val (_,bod) = strip_forall (concl th)
+              val (l,_) = dest_imp bod
+          in
+            pushFAs (free_vars l) th
+          end
+    in
+      th |> underALLs transform |> clean_foralls
+    end
 
 end (* Drule *)
 

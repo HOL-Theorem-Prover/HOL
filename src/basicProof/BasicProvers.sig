@@ -25,18 +25,36 @@ sig
   val RW_TAC          : simpset -> thm list -> tactic
   val rw_tac          : simpset -> thm list -> tactic
   val NORM_TAC        : simpset -> thm list -> tactic
+  val PRIM_SRW_TAC    : simpset -> simpLib.ssfrag list -> thm list -> tactic
   val SRW_TAC         : simpLib.ssfrag list -> thm list -> tactic
   val srw_tac         : simpLib.ssfrag list -> thm list -> tactic
   val augment_srw_ss  : simpLib.ssfrag list -> unit
-  val diminish_srw_ss : string list -> simpLib.ssfrag list
+  val diminish_srw_ss : string list -> unit
   val export_rewrites : string list -> unit
   val delsimps        : string list -> unit
   val temp_delsimps   : string list -> unit
   val thy_ssfrag      : string -> simpLib.ssfrag
+  val thy_simpset     : string -> simpset option
+  val temp_setsimpset : simpset -> unit
+  val merge_simpsets  : string list -> simpset
+  datatype srw_update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
+  val simpset_state   : unit -> simpset * bool * srw_update list
+  val logged_update   : {thyname : string} -> (simpset -> simpset) -> unit
+  val logged_addfrags : {thyname : string} -> simpLib.ssfrag list -> unit
+  val do_logged_updates : {theories : string list} -> unit
+  val apply_logged_updates : {theories : string list} -> (simpset -> simpset)
+  val augment_with_typebase : TypeBasePure.typeBase -> simpset -> simpset
+  val temp_set_simpset_ancestry : string list -> unit
+  val set_simpset_ancestry : string list -> unit
+  val recreate_sset_at_parentage : string list -> unit
 
-  (* LET manoeuvres *)
+  val make_simpset_derived_value :
+      (simpset -> 'a -> 'a) -> 'a -> {get : unit -> 'a, set : 'a -> unit}
+
+  (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic
   val new_let_thms    : thm list -> unit
+  val TIDY_ABBREVS    : tactic
 
   (* Compound automated reasoners. *)
 
@@ -66,8 +84,12 @@ sig
   val primInduct        : tmkind -> tactic -> tactic
   val Cases             : tactic
   val Induct            : tactic
+  val namedCases        : string list -> tactic
+
+  val tmCases_on        : term -> string list -> tactic
   val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
+  val namedCases_on     : term quotation -> string list -> tactic
 
   val PURE_TOP_CASE_TAC : tactic  (* top-most case-split *)
   val PURE_CASE_TAC     : tactic  (* smallest case-split (concl) *)

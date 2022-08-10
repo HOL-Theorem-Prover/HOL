@@ -1,6 +1,16 @@
 CLINE_OPTIONS = --no_overlay
 
+all: selftest.exe
+.PHONY: all
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe badincludes-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: badincludes-selftest.log
+
+badincludes-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

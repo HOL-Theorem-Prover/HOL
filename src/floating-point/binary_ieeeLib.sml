@@ -8,7 +8,7 @@ structure binary_ieeeLib :> binary_ieeeLib =
 struct
 
 open HolKernel Parse boolLib bossLib
-open realLib wordsLib binary_ieeeSyntax
+open realSyntax realSimps RealArith wordsLib binary_ieeeSyntax
 
 structure Parse =
 struct
@@ -398,9 +398,9 @@ local
                  (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
       end
    val lt_thm =
-      Drule.MATCH_MP (realLib.REAL_ARITH ``(a <= b <=> F) ==> b < a: real``)
+      Drule.MATCH_MP (REAL_ARITH ``(a <= b <=> F) ==> b < a: real``)
    val le_thm =
-      Drule.MATCH_MP (realLib.REAL_ARITH ``(a < b <=> F) ==> b <= a: real``)
+      Drule.MATCH_MP (REAL_ARITH ``(a < b <=> F) ==> b <= a: real``)
    fun mk_w (n, ty) = wordsSyntax.mk_n2w (numLib.mk_numeral n, ty)
    fun float_of_triple ((t, w), (s, e, f)) =
      binary_ieeeSyntax.mk_floating_point
@@ -941,7 +941,8 @@ val float_Sign_fupd_tm =
    Term.mk_thy_const
       {Ty = ``:(word1 -> word1) -> ('t, 'w) float -> ('t, 'w) float``,
        Thy = "binary_ieee",
-       Name = "float_Sign_fupd"}
+       Name = TypeBasePure.mk_recordtype_fieldfupd {tyname = "float",
+                                                    fieldname = "Sign"}}
 
 fun add_ieee_to_compset cmp =
    let

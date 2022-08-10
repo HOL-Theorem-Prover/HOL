@@ -41,16 +41,38 @@ fun findvc3 avoids ss =
     (c1,c2,c3)
   end
 
-fun mktheta (com,argl,argr) = [
-  (UnicodeChars.ldquo, com ^ "ldquo" ^ argl ^ argr),
-  (UnicodeChars.rdquo, com ^ "rdquo" ^ argl ^ argr),
-  (UnicodeChars.sup_minus ^ UnicodeChars.sup_1,
-   com ^ "(" ^ com ^ "sp" ^ argl ^ "-1" ^ argr ^ com ^ ")"),
-  ("\194\171", com ^ "guillemotleft" ^ argl ^ argr),
-  ("\194\187", com ^ "guillemotright" ^ argl ^ argr),
-  ("\226\128\185", com ^ "guilsinglleft" ^ argl ^ argr),
-  ("\226\128\186", com ^ "guilsinglright" ^ argl ^ argr)
-]
+fun mktheta (com,argl,argr) =
+    let
+      fun math s = com ^ "ensuremath" ^ argl ^ com ^ s ^ argr
+      fun norm s = com ^ s ^ argl ^ argr
+    in
+      [
+        (UnicodeChars.ldquo, norm "ldquo"),
+        (UnicodeChars.rdquo, norm "rdquo"),
+        (UnicodeChars.sup_minus ^ UnicodeChars.sup_1,
+         com ^ "(" ^ com ^ "sp" ^ argl ^ "-1" ^ argr ^ com ^ ")"),
+        ("\194\171", norm "guillemotleft"),
+        ("\194\172", math "neg"),
+        ("\194\187", norm "guillemotright"),
+        ("\206\177", math "alpha"),
+        ("\206\178", math "beta"),
+        ("\206\179", math "gamma"),
+        ("\206\187", math "lambda"),
+        ("\226\128\185", norm "guilsinglleft"),
+        ("\226\128\186", norm "guilsinglright"),
+        ("\226\135\146", math "Rightarrow"),
+        ("\226\135\148", math "Leftrightarrow"),
+        ("\226\136\128", math "forall"),
+        ("\226\136\131", math "exists"),
+        ("\226\136\146", "-"),
+        ("\226\136\167", math "land" ),
+        ("\226\136\168", math "lor"),
+        ("\226\137\160", math "ne"),
+        ("\226\137\164", math "le"),
+        ("\226\138\162", math "vdash"),
+        ("\226\167\186", "++")
+      ]
+    end
 
 fun print_verb1(ss, ostr) = let
   val vd = find_verbchar [] ss
@@ -71,7 +93,7 @@ fun print_verbblock (ss, ostr) =
       map (fn (a,b) => {redex = a, residue = b}) (mktheta(com,argl,argr))
   in
     out(ostr,"\\begin{Verbatim}[commandchars=" ^ String.concat[com,argl,argr] ^
-             "]\n");
+             "]");
     out(ostr, stringfindreplace.subst verbtheta (Substring.string ss));
     out(ostr, "\\end{Verbatim}\n")
   end
@@ -80,6 +102,7 @@ val lastminute_fixes =
     String.translate (fn #"#" => "\\#"
                        | #"&" => "\\&"
                        | #"_" => "\\_"
+                       | #"$" => "\\$"
                        | c => str c)
 
 fun print_markup(m, ostr) =
@@ -153,26 +176,45 @@ end
 
 val verbose = ref false
 
-fun do_the_work dir dset outstr = let
-  fun appthis dnm = let
-    val _ = if !verbose then warn ("Processing "^dnm) else ()
-    val cname = core_dname dnm
-    val file = parse_file (OS.Path.concat(dir,dnm ^ ".doc"))
-               handle ParseError msg => die ("Parse error in "^dnm^": "^msg)
+(* break all docs into \section{}s by initial letters: A B C ... Z,
+   MUST: make sure all involved sections (except the last) exist.
+ *)
+val sections = [#"a", #"b", #"c", #"d", #"e", #"f", #"g", #"h",
+                #"i",       #"k", #"l", #"m", #"n", #"o", #"p",
+                #"q", #"r", #"s", #"t", #"u", #"v", #"w", #"x",
+                      #"z", #"a"]; (* the last letter is a loopback *)
+
+val current_section = ref 0; (* starting from A *)
+
+fun do_the_work dir dmap outstr = let
+  fun appthis ((str,cname),dfile) = let
+    val _ = if !verbose then warn ("Processing "^dfile) else ()
+    val file = parse_file (OS.Path.concat(dir,dfile))
+               handle ParseError msg => die ("Parse error in "^dfile^": "^msg)
+
+    val current_char = String.sub (cname,0)
+    val section_char = List.nth (sections,!current_section)
   in
+    (* wait for the first occurrence of section_char, then print it
+       as a LaTeX \section{} and search for the next one. *)
+    if Char.toLower current_char = section_char then
+        (out(outstr, "\\section{"
+                     ^ String.str (Char.toUpper section_char) ^ "}\n\n");
+         current_section := !current_section + 1)
+    else {};
+
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
-  end handle e => die ("Exception raised (" ^ dnm ^ ".doc): " ^
+  end handle e => die ("Exception raised (" ^ dfile ^"): " ^
                        General.exnMessage e)
 in
-  Binaryset.app appthis dset
+  Binarymap.app appthis dmap
 end
-
 
 fun main () = let
   fun handle_args (docdir, texfile) = let
-    val texfstr = TextIO.openAppend texfile
+    val texfstr = TextIO.openOut texfile
     val docfiles = find_docfiles docdir
   in
     do_the_work docdir docfiles texfstr;

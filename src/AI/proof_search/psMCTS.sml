@@ -13,339 +13,270 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "psMCTS"
 
 (* -------------------------------------------------------------------------
-   Global fixed parameters
-   ------------------------------------------------------------------------- *)
-
-val exploration_coeff = ref 2.0
-val temperature_flag = ref false
-val alpha_glob = ref 0.2
-val stopatwin_flag = ref false
-
-(* -------------------------------------------------------------------------
-   Node
+   Status of the nodes and of the full search
    ------------------------------------------------------------------------- *)
 
 datatype status = Undecided | Win | Lose
-
-type id = int list (* node identifier *)
-val id_compare = list_compare Int.compare
-type 'b pol = (('b * real) * id) list
-type 'b dis = ((('b * real) * id) * real) list
-
-type ('a,'b) node =
-{
-  pol    : 'b pol,
-  sit    : 'a,
-  sum    : real,
-  vis    : real,
-  status : status
-}
-
-type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
-
-(* -------------------------------------------------------------------------
-   Backup
-   ------------------------------------------------------------------------- *)
-
-fun quant_status quant status tree pol =
-  let
-    val cidl = map snd pol
-    fun is_status cid = #status (dfind cid tree) = status
-                        handle NotFound => false
-  in
-    quant is_status cidl
-  end
-
-fun exists_win tree pol  = quant_status exists Win tree pol
-fun all_lose tree pol = quant_status all Lose tree pol
-
-fun update_node decay tree eval {pol,sit,sum,vis,status} =
-  let val newstatus =
-    if status <> Undecided then status
-    else if exists_win tree pol then Win
-    else if all_lose tree pol then Lose
-    else Undecided
-  in
-    {pol=pol, sit=sit, sum=sum+eval, vis=vis+1.0, status=newstatus}
-  end
-
-fun backup decay tree (id,eval) =
-  let
-    val node1 = dfind id tree
-    val node2 = update_node decay tree eval node1
-    val newtree = dadd id node2 tree
-  in
-    if null id then newtree else backup decay newtree (tl id, decay * eval)
-  end
-
-(* --------------------------------------------------------------------------
-   Dirichlet noise
-   ------------------------------------------------------------------------- *)
-
-val gammatable =
- [(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),(4, 24.46095502),
-  (5, 19.47008531),(6, 16.14572749),(7, 13.77360061),(8, 11.99656638),
-  (9, 10.61621654),(10, 9.513507699),(20, 4.590843712),(30, 2.991568988),
-  (40, 2.218159544),(50, 1.772453851),(60, 1.489192249),(70, 1.298055333),
-  (80, 1.164229714),(90, 1.068628702)]
-
-fun gamma_of alpha =
-  assoc (Real.round (alpha * 100.0)) gammatable
-  handle HOL_ERR _ => raise ERR "gamma_of" (rts alpha)
-
-fun gamma_density alpha x =
-  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of alpha
-
-fun interval (step:real) (a,b) =
-  if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
-
-fun gamma_distrib alpha =
-  map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
-
-fun proba_norm l =
-  let val sum = sum_real l in
-    if sum <= 0.0001 then raise ERR "proba_norm" "" else
-    map (fn x => x / sum) l
-  end
-
-fun dirichlet_noise alpha n =
-  if n = 0 then [] else
-  let val l =
-    List.tabulate (n, fn _ => select_in_distrib (gamma_distrib alpha)) in
-    proba_norm l
-  end
-
-fun add_root_noise tree =
-  let
-    val {pol,sit,sum,vis,status} = dfind [] tree
-    val noisel = dirichlet_noise (!alpha_glob) (length pol)
-    fun f (((move,polv),cid),noise) = ((move, 0.75 * polv + 0.25 * noise), cid)
-    val newpol = map f (combine (pol,noisel))
-  in
-    dadd [] {pol=newpol,sit=sit,sum=sum,vis=vis,status=status} tree
-  end
-
-(* -------------------------------------------------------------------------
-   Node creation
-   ------------------------------------------------------------------------- *)
-
-fun rescale_pol pol =
-  let
-    val tot = sum_real (map (snd o fst) pol)
-    fun norm ((move,polv),cid) = ((move,polv / tot),cid)
-  in
-    if tot > 0.01 then map norm pol else pol
-  end
-
-fun node_create_backup param tree (id,sit) =
-  let
-    fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
-    val status = #status_of param sit
-    val (eval,poli) = case status of
-        Win       => (1.0,[])
-      | Lose      => (0.0,[])
-      | Undecided => #fevalpoli param sit
-    val node = {pol=rescale_pol (wrap_poli poli),
-                sit=sit, sum=0.0, vis=0.0, status=status}
-    val tree1 = dadd id node tree
-    val tree2 = backup (#decay param) tree1 (id,eval)
-  in
-    tree2
-  end
-
-(* -------------------------------------------------------------------------
-   Value of a choice in a policy according to PCUT formula.
-   ------------------------------------------------------------------------- *)
-
-fun value_choice tree vtot ((move,polv),cid) =
-  let
-    val (sum,vis) =
-      let val child = dfind cid tree in ((#sum child),(#vis child)) end
-      handle NotFound => (0.0,0.0)
-    val exploitation = sum / (vis + 1.0)
-    val exploration  = (polv * Math.sqrt vtot) / (vis + 1.0)
-  in
-    exploitation + (!exploration_coeff) * exploration
-  end
-
-(* -------------------------------------------------------------------------
-   Selection of a node to extend by traversing the tree.
-   Assumption: every move proposed by the fevalpoli is applicable.
-   ------------------------------------------------------------------------- *)
-
-datatype ('a,'b) select = Backup of (id * real) | NodeExtension of (id * id)
-
+fun is_win x = case x of Win => true | _ => false
+fun is_lose x = case x of Lose => true | _ => false
+fun is_undecided x = case x of Undecided => true | _ => false
 fun score_status status = case status of
     Undecided => raise ERR "score_status" ""
   | Win => 1.0
   | Lose => 0.0
+fun string_of_status status = case status of
+    Win => "win"
+  | Lose => "lose"
+  | Undecided => "undecided"
+datatype search_status = Success | Saturated | Timeout
 
-fun select_child param tree id =
+(* -------------------------------------------------------------------------
+   Search tree
+   ------------------------------------------------------------------------- *)
+
+type 'a node =
+  {board : 'a, stati : status, sum : real, vis : real}
+datatype ('a,'b) tree =
+   Leaf | Node of 'a node * ('b * real * ('a,'b) tree) vector
+fun dest_node x = case x of Node y => y | _ => raise ERR "dest_node" ""
+fun is_node x = case x of Node y => true | _ => false
+fun is_leaf x = case x of Leaf => true | _ => false
+
+(* -------------------------------------------------------------------------
+   MCTS specification
+   ------------------------------------------------------------------------- *)
+
+type ('a,'b) game =
+  {
+  status_of : 'a -> status,
+  apply_move : 'b -> 'a -> 'a,
+  available_movel : 'a -> 'b list,
+  string_of_board : 'a -> string,
+  string_of_move : 'b -> string,
+  board_compare : 'a * 'a -> order,
+  move_compare : 'b * 'b -> order,
+  movel : 'b list
+  }
+
+fun uniform_player game board =
+  (0.0, map (fn x => (x,1.0)) (#available_movel game board))
+
+fun random_player game board =
+  (random_real (), map (fn x => (x,1.0)) (#available_movel game board))
+
+type ('a,'b) player = 'a -> real * ('b * real) list
+
+type mctsparam =
+  {
+  time : real option, nsim : int option,
+  explo_coeff : real,
+  noise : bool, noise_coeff : real, noise_gen : unit -> real
+  }
+
+type ('a,'b) mctsobj =
+  {mctsparam : mctsparam, game : ('a,'b) game, player : ('a,'b) player}
+
+(* --------------------------------------------------------------------------
+   Policy noise
+   ------------------------------------------------------------------------- *)
+
+fun normalize_prepol prepol =
+  let val (l1,l2) = split prepol in combine (l1, normalize_proba l2) end
+
+fun add_noise param prepol =
   let
-    val node = dfind id tree
-    val status = #status_of param (#sit (dfind id tree))
-  in
-    if status <> Undecided then Backup (id,score_status status) else
+    val noisel1 = List.tabulate (length prepol, fn _ => (#noise_gen param) ())
+    val noisel2 = normalize_proba noisel1
+    fun f ((move,polv),noise) =
       let
-        val l1 = map_assoc (value_choice tree (#vis node)) (#pol node)
-        val _ = if null l1 then raise ERR "select_child" "" else ()
-        val l2 = dict_sort compare_rmax l1
-        val cid  = snd (fst (hd l2))
+        val coeff = #noise_coeff param
+        val newpolv = (1.0 - coeff) * polv + coeff * noise
       in
-        if not (dmem cid tree)
-        then NodeExtension (id,cid)
-        else select_child param tree cid
+        (move,newpolv)
       end
+  in
+    map f (combine (prepol,noisel2))
   end
 
 (* -------------------------------------------------------------------------
-   Expansion + creation + backup
+   Creation of a node
    ------------------------------------------------------------------------- *)
 
-fun find_move pol cid =
-  let val r = valOf (List.find (fn (_,x) => x = cid) pol) in
-    fst (fst r)
-  end
-  handle Option => raise ERR "find_move" ""
-
-fun expand param tree (id,cid) =
+fun create_node obj board =
   let
-    val node = dfind id tree
-    val sit1 = #sit node
-    val move = find_move (#pol node) cid
-    val sit2 = (#apply_move param) move sit1
+    val game = #game obj
+    val param = #mctsparam obj
+    val stati = (#status_of game) board
+    val (value,pol1) = case stati of
+        Win => (1.0,[])
+      | Lose => (0.0,[])
+      | Undecided => (#player obj) board
+    val pol2 = normalize_prepol pol1
+    val pol3 = if #noise param then add_noise param pol2 else pol2
   in
-    node_create_backup param tree (cid,sit2)
+    (Node ({stati=stati,board=board,sum=value,vis=1.0},
+            Vector.fromList (map (fn (a,b) => (a,b,Leaf)) pol3)),
+     value)
+  end
+
+fun starting_tree obj board = fst (create_node obj board)
+
+(* -------------------------------------------------------------------------
+   Score of a choice in a policy according to pUCT formula.
+   ------------------------------------------------------------------------- *)
+
+fun score_puct param sqvtot (move,polv,ctree) =
+  let
+    val (sum,vis) = case ctree of
+      Leaf => (0.0,0.0)
+    | Node (cnode,_) => (#sum cnode, #vis cnode)
+  in
+    (sum + (#explo_coeff param) * polv * sqvtot) / (vis + 1.0)
+  end
+
+(* -------------------------------------------------------------------------
+   Selection of a node to extend by traversing the tree.
+   ------------------------------------------------------------------------- *)
+
+fun rebuild_tree reward buildl tree = case buildl of
+    [] => tree
+  | build :: m => rebuild_tree reward m (build reward tree)
+
+fun select_child obj buildl (node,cv) =
+  let
+    val (stati,param) = (#stati node, #mctsparam obj)
+    fun update_node reward {stati,board,sum,vis} =
+        {stati=stati, board=board, sum=sum+reward, vis=vis+1.0}
+  in
+    if not (is_undecided stati)
+    then
+      let val reward = score_status stati in
+        rebuild_tree reward buildl (Node (update_node reward node,cv))
+      end
+    else
+    let
+      val _ = if Vector.length cv = 0
+        then raise ERR "no move available" "" else ()
+      val sqrttot = Math.sqrt (#vis node)
+      val ci = vector_maxi (score_puct param sqrttot) cv
+      val (cmove,cpol,ctree) = Vector.sub (cv,ci)
+      fun build reward cfuture =
+        Node (update_node reward node,
+              Vector.update (cv,ci,(cmove,cpol,cfuture)))
+      val newbuildl = build :: buildl
+    in
+      case ctree of
+        Leaf =>
+        let
+          val newboard = (#apply_move (#game obj)) cmove (#board node)
+          val (newctree,reward) = create_node obj newboard
+        in
+          rebuild_tree reward newbuildl newctree
+        end
+      | Node x => select_child obj newbuildl x
+    end
   end
 
 (* -------------------------------------------------------------------------
    MCTS
    ------------------------------------------------------------------------- *)
 
-type ('a,'b) mctsparam =
-  {
-  nsim : int, decay : real, noise : bool,
-  status_of : 'a -> status,
-  apply_move : 'b -> 'a -> 'a,
-  fevalpoli : 'a -> real * ('b * real) list
-  }
+fun mk_timer param =
+  if isSome (#nsim param) then
+    let val threshold = valOf (#nsim param) in
+      fn n => (Real.round n) >= threshold
+    end
+  else if isSome (#time param) then
+    let
+      val timer = Timer.startRealTimer ()
+      val limit = Time.fromReal (valOf (#time param))
+    in
+      fn _ => Timer.checkRealTimer timer > limit
+    end
+  else (fn _ => false)
 
-fun starttree_of param startsit =
-  node_create_backup param (dempty id_compare) ([],startsit)
-
-fun mcts param starttree =
+fun mcts obj starttree =
   let
-    val starttree_noise =
-      if #noise param then add_root_noise starttree else starttree
-    fun loop tree =
-      if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse
-         (!stopatwin_flag andalso #status (dfind [] tree) = Win)
-      then tree else
-        let val newtree = case select_child param tree [] of
-            Backup (id,sc) => backup (#decay param) tree (id,sc)
-          | NodeExtension (id,cid) => expand param tree (id,cid)
-        in
-          loop newtree
-        end
+    val timerf = mk_timer (#mctsparam obj)
+    fun loop n tree =
+      if timerf (#vis (fst (dest_node tree))) then tree else
+      loop (n+1) (select_child obj [] (dest_node tree))
   in
-    loop starttree_noise
+    loop 0 starttree
   end
 
 (* -------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------- *)
 
-fun best_child tree id =
-  let
-    val node  = dfind id tree
-    val cidl0 = map snd (#pol node)
-    fun visit_of_child cid =
-      SOME (cid, #vis (dfind cid tree))
-      handle NotFound => NONE
-    val cidl1 = List.mapPartial visit_of_child cidl0
-  in
-    if null cidl1
-    then NONE
-    else SOME (fst (hd (dict_sort compare_rmax cidl1)))
-  end
+fun score_visit (move,polv,ctree) = case ctree of
+      Leaf => 0.0
+    | Node (cnode,_) => (#vis cnode)
 
-fun node_variation tree id =
-  if not (dmem id tree) then [] else
-  (
-  case best_child tree id of
-    NONE => []
-  | SOME cid => cid :: node_variation tree cid
-  )
-
-fun root_variation tree = node_variation tree []
-
-fun max_depth tree id =
-  if not (dmem id tree) then 0 else
-  let
-    val node = dfind id tree
-    val cidl = map snd (#pol node)
-    val l = map (max_depth tree) cidl
-  in
-    1 + (if null l then 0 else list_imax l)
-  end
-
-fun is_win tree id = #status (dfind id tree) = Win handle NotFound => false
-
-fun trace_win status_of tree id =
-  if not (dmem id tree) then raise ERR "trace_win" "" else
-  let
-    val node = dfind id tree
-    val cidl = map snd (#pol node)
-    val l = filter (is_win tree) cidl
-  in
-    if status_of (#sit node) = Win then [node] else
-    if null l then raise ERR "trace_win" "" else
-    node :: trace_win status_of tree (hd l)
-  end
+fun most_visited_path tree = case tree of
+    Leaf => []
+  | Node (node,cv) =>
+    if Vector.length cv = 0 then [(node,NONE)] else
+    let
+      val ci = vector_maxi score_visit cv
+      val (cmove,_,ctree) = Vector.sub (cv,ci)
+    in
+      (node, SOME cmove) :: most_visited_path ctree
+    end
 
 (* -------------------------------------------------------------------------
-   Big steps and example extraction
+   Toy example: the goal of this task is to reach a positive number starting
+   from zero by incrementing or decrementing.
    ------------------------------------------------------------------------- *)
 
-fun make_distrib tree =
-  let
-    val pol = #pol (dfind [] tree)
-    val _ = if null pol then raise ERR "make_distrib" "pol" else ()
-    fun f (_,cid) = #vis (dfind cid tree) handle NotFound => 0.0
-    val dis = map_assoc f pol
-    val tot = sum_real (map snd dis)
-    val _ = if tot < 0.5 then raise ERR "make_distrib" "tot" else ()
-  in
-    (dis,tot)
-  end
+type toy_board = (int * int * int)
+datatype toy_move = Incr | Decr
 
-fun evalpoli_example tree =
-  let
-    val root = dfind [] tree
-    val (dis,tot) = make_distrib tree
-    val eval = #sum root / #vis root
-    val poli = map (fn (((move,_),_),r) => (move,r / tot)) dis
-  in
-    (eval,poli)
-  end
+fun toy_status_of (start,finish,timer) =
+  if start >= finish then Win
+  else if start < 0 orelse timer <= 0 then Lose
+  else Undecided
 
-fun print_distrib g l =
-  let
-    fun f1 (((move,r),_),_) = g move ^ " " ^ (rts (approx 4 r))
-    fun f2 (((move,_),_),r) = g move ^ " " ^ (rts (approx 4 r))
-  in
-    print_endline ("  " ^ String.concatWith ", " (map f1 l));
-    print_endline ("  " ^ String.concatWith ", " (map f2 l))
-  end
+val toy_movel = [Incr,Decr]
+fun toy_available_movel board = [Incr,Decr]
+fun toy_string_of_move x = case x of Incr => "Incr" | Decr => "Decr"
 
-fun select_bigstep tree =
-  let
-    val (d,_) = make_distrib tree
-    val choice =
-      if !temperature_flag then select_in_distrib d else best_in_distrib d
-  in
-    (snd choice, d)
-  end
+fun toy_apply_move move (start,finish,timer) = case move of
+   Incr => (start+1,finish,timer-1)
+ | Decr => (start-1,finish,timer-1)
+
+val toy_game =
+  {
+  status_of = toy_status_of,
+  apply_move = toy_apply_move,
+  available_movel = toy_available_movel,
+  string_of_board = (fn (a,b,c) => (its a ^ " " ^ its b ^ " " ^ its c)),
+  string_of_move = toy_string_of_move,
+  board_compare = (fn ((a,b,c),(d,e,f)) =>
+    cpl_compare Int.compare Int.compare ((a,b),(d,e))),
+  move_compare = (fn (a,b) =>
+    String.compare (toy_string_of_move a, toy_string_of_move b)),
+  movel = toy_movel
+  }
+
+(*
+load "aiLib"; open aiLib;
+load "psMCTS"; open psMCTS;
+
+val mctsparam =
+  {time = (NONE : real option), nsim = (SOME 1000000 : int option),
+   explo_coeff = 2.0,
+   noise = false, noise_coeff = 0.25, noise_gen = gamma_noise_gen 0.2};
+
+val mctsobj : (toy_board,toy_move) mctsobj =
+  {mctsparam = mctsparam, game = toy_game, player = random_player toy_game};
+
+val tree = starting_tree mctsobj (500,1000,1000);
+val (_,t) = add_time (mcts mctsobj) tree;
+dlength tree;
+Profile.results ();
+val l = most_visited_path tree;
+*)
 
 
 end (* struct *)

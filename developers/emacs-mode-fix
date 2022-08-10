@@ -1,0 +1,24 @@
+#!/bin/bash
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+if [ $# -gt 1 ]
+then
+        echo -e "Usage:\n  $0 [holdir]" >&2
+        exit 1
+fi
+
+holdir=`dirname $SCRIPT_DIR`
+if [ $# -eq 1 ]
+then
+        if [ $1 = "-h" ] || [ $1 = "-?" ]
+        then
+                echo -e "Usage:\n  $0 [holdir]"
+                exit 0
+        fi
+        holdir=$1
+fi
+
+
+sed -e "s|HOL-EXECUTABLE|\"$holdir/bin/hol\"|" -e "s|HOLMAKE-EXECUTABLE|\"$holdir/bin/Holmake\"|" < $holdir/tools/hol-mode.src > $holdir/tools/hol-mode.el && \
+  echo "Successfully wrote 'munged' source into $holdir/tools/hol-mode.el"

@@ -742,8 +742,8 @@ val IN_LST_TO_BAG = store_thm
    >- (rpt strip_tac >> simp[list_to_bag_def] >> metis_tac[])
  );
 
-val expandGraph_def = tDefine "expandGraph"
- `(expandGraph g [] = SOME g)
+Definition expandGraph_def:
+   (expandGraph g [] = SOME g)
  ∧ (expandGraph g1 (f::fs)  =
      let trans = trans_concr f
      in let allSucs = nub (FOLDR (\e pr. e.sucs ++ pr) [] trans)
@@ -758,8 +758,9 @@ val expandGraph_def = tDefine "expandGraph"
                        ∧ ~(MEM s fs)) allSucs
      in case g3 of
          | NONE => NONE
-         | SOME g => expandGraph g (restNodes++fs))`
-  (WF_REL_TAC `inv_image
+         | SOME g => expandGraph g (restNodes++fs))
+Termination
+  WF_REL_TAC `inv_image
                (mlt1 (\f1 f2. f1 ∈ tempSubForms f2 ∧ ~(f1 = f2)))
                (list_to_bag o SND)`
    >- metis_tac[STRICT_TSF_WF,WF_mlt1]
@@ -791,7 +792,7 @@ val expandGraph_def = tDefine "expandGraph"
           >> `f1 ∈ r` by (Cases_on `e` >> fs[concr2AbstractEdge_def])
           >> metis_tac[TRANS_REACHES_SUBFORMS,TSF_def,IN_DEF])
       )
-  );
+End
 
 Theorem EXP_GRAPH_AP:
    !aP g fs g2.

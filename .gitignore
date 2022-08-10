@@ -69,6 +69,7 @@ tools/build-logs
 help/Docfiles/*.txt
 help/Docfiles/HTML/*
 help/HOLindex.html
+help/index.html
 help/HOL.Help
 help/src-sml/htmlsigs
 help/src-sml/index.tex
@@ -129,3 +130,5 @@ local-hol-heap
 examples/l3-machine-code/**/*-heap
 
 *Script_ttt.sml
+*.tttsave
+/TAGS

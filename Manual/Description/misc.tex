@@ -274,17 +274,18 @@ This flow is demonstrated in the Euclid example of \TUTORIAL.
 
 Alternatively, and probably with the help of one of the editor modes,\footnote{There are editor modes for \texttt{emacs} and \texttt{vim}.} one can develop a theory with a script file that is always separately compilable.
 
-\subsection{What \holmake{} doesn't do}
+\subsection{\holmake{} Limitations}
 
-\holmake{} only works properly on the current directory.
-\holmake{} will rebuild files in the current directory if something it depends on from another directory is fresher than it is, but it will not do any analysis on files in other directories.
+Without information to the contrary, \holmake{} assumes that all files of interest are in the current directory or in \HOL{}'s master \texttt{sigobj} directory.
+Using a \texttt{Holmakefile} (see Section~\ref{sec:using-Holmakefiles}), it is possible to mention files in other directories, both as dependencies and as explicit targets with rules on how those targets should be built.
+However, it is probably impossible (or at least, painfully difficult) to describe how theories are built from script files using the \texttt{Holmakefile} language.
+Nor will \holmake{} perform its automatic dependency analysis on such ``remote'' files.
 
 \index{Holmake@\holmake!recursive invocation}%
-However, one can indicate that there is a dependency on other directories by using the \texttt{-I} flag, or the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
-Such a specification will cause \holmake{} to look in the specified directories for other theory files that the current directory may depend on.
-Moreover, by default \holmake{} will recursively call itself on all those ``include'' directories before doing anything in the current directory.
-In this way, one can get a staged application of \holmake{} across multiple directories.\footnote{See \emph{Recursive Make Considered
-    Harmful} by Peter Miller for why this is not ideal.}
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}%
+The right approach when a development spans multiple directories is to indicate that there is a dependency on other directories by using the \texttt{-I} flag, or (better) the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
+\holmake{} requires that, just as files must have an acyclic dependency graph, the directories containing those files must have a compatible, and acyclic, \texttt{INCLUDES} graph.
+With \texttt{INCLUDES} information to hand, \holmake{} will process the entire \texttt{INCLUDES} graph, looking throughout the graph for theory files that the current directory may depend on, and rebuilding those remote targets as necessary.
 
 \subsection{\holmake{}'s command-line arguments}
 \index{Holmake@\holmake!command-line arguments}
@@ -335,6 +336,10 @@ with the following command-line options:
   runs when a theory building file is executed to have the flag
   \texttt{Globals.interactive} set to true.  This will alter the diagnostic
   output of a number of functions within the system.
+\item[\texttt{-j<n>} or \texttt{--jobs=<n>}] Specify the maximum number of parallel jobs \holmake{} should use when building targets.
+  Each job is a separate process, and so can only interfere with other jobs \emph{via} their interactions with the file system.
+  Under Moscow~ML this option is ignored; its \holmake{} can only run jobs sequentially.
+  If not set, the default value for this option is 4.
 \item[\texttt{-k} or \texttt{--keep-going}] Causes \holmake{} to try
   to build all specified targets, rather than stopping as soon as one
   fails to build.
@@ -355,9 +360,13 @@ with the following command-line options:
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
+\item[\texttt{--no\_preexecs}] Do not search for or execute any \texttt{.hol\_preexec} files in the file-system.
+See Section~\ref{sec:holmake-preexec} below for more on this facility.
 \item[\texttt{--no\_prereqs}]%
 \index{Holmake@\holmake!recursive invocation}%
 Do not recursively attempt to build ``include'' directories before working in the current directory.
+If a target in the current directory depends on something in another directory that does not exist, \holmake{} will fail to build it.
+If the remote target exists, but is stale, it will be used in its stale state, come what may.
 \item[\texttt{--no\_sigobj}]
   Do not link against \HOL{} system's directory of \HOL{} system files.
   Use of this option goes some way towards turning \holmake{} into a general \ML{} \textsf{make} system.
@@ -376,7 +385,10 @@ Do not recursively attempt to build ``include'' directories before working in th
   be affected.
 \item[\texttt{-r}]%
 \index{Holmake@\holmake!recursive invocation}%
-Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} option, and also causing \holmake{} to clean recursively in the ``includes'' directories (which is not done otherwise).
+Forces \holmake{} to behave more recursively than it would otherwise.
+This overrides the \texttt{--no\_prereqs} option.
+When performing a ``clean'' action (prompted by \texttt{clean}, \texttt{cleanAll} or \texttt{cleanDeps} arguments), this cleaning is done recursively through all ``includes'' directories (which is not done otherwise).
+When building normally, all targets in ``includes'' directories are built; normally only dependencies of targets in the current directory are built.
 \item[{\tt --rebuild\_deps}] Forces \holmake{} to always
   rebuild the dependency information for files it examines, whether or
   not it thinks it needs to.  This option is implemented by having
@@ -409,9 +421,10 @@ present at all.
 
 A variable definition is of the form
 \[
-\textsl{Ident} \texttt{ = } \textsl{text}  \texttt{ <NEWLINE> }
+\textsl{Ident} \;\;\textsl{op}\;\; \textsl{text}\;\;  \texttt{<NEWLINE>}
 \]
-and a rule is of the form
+where $\textsl{op}$ is either \texttt{=} or \texttt{+=}.
+A rule is of the form
 \[
 \textsl{text } \texttt{:} \textsl{ text} \texttt{ <NEWLINE>}
 (\texttt{<TAB>}\textsl{text}\texttt{ <NEWLINE>})^*
@@ -429,16 +442,19 @@ include white-space itself, those white-space characters should be
 escaped with back-slashes.
 
 \newcommand{\varref}[1]{\texttt{\$(#1)}}
-\paragraph{Variable definitions} The text on the RHS of a variable
+\paragraph{Variable definitions and references} The text on the RHS of a variable
 definition can be substituted into any other context by using a
-\emph{variable reference}, of the form \varref{VARNAME}.  References
-are evaluated \emph{late}, not at time of definition, so it is quite
-permissible to have forward references.  On the other hand, this makes
-it impossible to write things like \[ \texttt{VAR = \varref{VAR}
-something\_new}
-\] because the evaluation of \varref{VAR} would lead to an infinite
-loop. GNU \textsf{make}'s facility for immediate
-definition of variables with \texttt{:=} is not supported.
+\emph{variable reference}, of the form \varref{VARNAME}.
+References on right-hand sides are evaluated \emph{late}, at time of use, not at time of definition.
+This means it is permissible to have forward references.
+This makes it impossible to write things like
+\[
+  \texttt{VAR = \varref{VAR} something\_new}
+\]
+because the eventual evaluation of \varref{VAR} would lead to an infinite loop.
+GNU \textsf{make}'s facility for immediate definition of variables with \texttt{:=} is not supported, but the \texttt{+=} definition form does allow variables to be ``extended''.
+In particular, this form ``acts essentially as if you had included the extra text in the initial definition of the variable'' (as \emph{per} GNU \textsf{make}'s documentation).
+Extending a variable \texttt{VAR} in this way does not constitute a \emph{use} of this variable, so any variable references in its original definition will remain unexpanded until \texttt{VAR} is used in a rule.
 
 Note also that white-space around the equals-sign in a variable
 definition is stripped.  This means that
@@ -580,6 +596,7 @@ whose value are commas instead), but can otherwise be arbitrary text.
   so that the above will be read as one unit by the underlying shell.
 \item[\texttt{\$(subst arg1,arg2,text)}] replaces every occurrence
   of \texttt{arg1} in \texttt{text} with \texttt{arg2}.
+\item[\texttt{\$(tee arg1,arg2)}]\index{tee@\texttt{tee}!Holmake function@\texttt{Holmake} function} produces a (moderately complicated) shell command line that behaves like \texttt{arg1~|~tee~arg2}, but whose exit code is \texttt{arg1}'s rather than \texttt{tee}'s.
 \item[\texttt{\$(which arg)}] is replaced by the full path to an executable and readable occurrence of a file called \texttt{arg} within a directory in the list of directories in the \texttt{PATH} environment variable.
 For example \texttt{\$(which cat)} will usually expand to \texttt{/bin/cat} on Unix-like systems.
 If there is no occurrence of \texttt{arg} in any directory in \texttt{PATH}, this function call expands to the empty string.
@@ -590,10 +607,11 @@ If the pattern doesn't match any files, then the function returns \texttt{patter
 \paragraph{Special and pre-defined variables}
 
 \index{Holmake@\holmake!variables in makefiles}
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}
 If defined, the \texttt{INCLUDES} variable is used to add directories to the list of directories consulted when files are compiled and linked.
 The effect is as if the directories specified had all been included on the command-line with \texttt{-I} options.
-The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before the \mbox{\texttt{-I <sigobj>}} option that is used in invocations of compiler.
-This option gives the user a way of over-riding code in the core distribution as the compiler will find their code before the distribution's.
+The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before any \texttt{INCLUDES} directories when dependency analysis is done.
+Both \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directories are consulted before the distribution's \texttt{sigobj} directory (containing all core material).
 
 \index{Holmake@\holmake!recursive invocation}
 By default, directories specified in the \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directory are also built by \holmake{} before it attempts to build in the current directory.
@@ -655,6 +673,7 @@ See Section~\ref{sec:polyml-heaps} below for more on using custom heaps with Pol
   system's overlay file.  This is needed for compilation of HOL source
   files, but not for linking of HOL object code, which can be done
   with \texttt{HOLMOSMLC}.
+\item[\texttt{HOL\_NUMJOBS}] The value of the \texttt{-j} option (4 by default under Poly/ML, 1 under Moscow~ML) controlling the number of parallel jobs that \holmake{} will use.
 \item[\texttt{KERNELID}]
   The kernel option that was passed to \HOL's \texttt{build} command, stripped of its leading hyphens.
   This will typically be \texttt{stdknl} (the standard kernel) but may take on other values if other custom kernels are being used.
@@ -768,6 +787,26 @@ VAR = $(NULL)
 \end{verbatim}
 \end{hol}
 Note that environment variables with non-empty values are also considered to be defined.
+
+\subsection{Execution of Commands before \holmake{} Begins}
+\label{sec:holmake-preexec}
+
+When building complicated projects, it may be useful to have programs executed before any invocation of \holmake{} properly begins.
+This can be done through the use of \texttt{.hol\_preexec} files.
+\index{Holmake@\holmake!hol_preexec files@\texttt{.hol\_preexec} files}
+\index{pre-execution files (Holmake)@pre-execution files (\holmake{})}
+When \holmake{} begins, and before it has even begun to examine \texttt{Holmakefile}s, it scans upwards in the directory hierarchy looking for files of this name.
+This scanning will also follow \texttt{INCLUDES} directives, possibly causing a jump sideways in the hierarchy.
+
+When this scanning is complete, the contents of all these files will be executed as shell commands (using the \ml{OS.Process.system} command, which is in turn a wrapper for the standard C library \texttt{system} function).
+Each command will be interpreted in the directory containing it, and (under Unix at least), in an environment where the \texttt{HOLORIG} variable is set to the path of the directory where \holmake{} was originally invoked.
+The commands are executed sequentially in a pre-order depth-first traversal of the directory hierarchy (relying on the behaviour of \ml{String.compare} on paths).
+If any command fails (returns a non-zero exit code), \holmake{} will abort; in this way pre-execution commands can be used as checks as well as commands that are supposed to bring about useful changes to the state of the file-system.
+
+\textbf{Warning:} This facility allows for code at a higher-level (in terms of the parent-child relationship between paths) in the file-system hierarchy to execute.
+\holmake{} will log all such executions by default, printing out the commands as it executes them.
+This execution does not happen with ``clean'' targets, or if the \texttt{-h} or \texttt{--no\_preexecs} command-line options are used.
+It is not possible to stop this behaviour by putting the \texttt{--no\_preexecs} option into a \texttt{CLINE\_OPTIONS} variable with a \texttt{Holmakefile}; all such execution will have occurred before any such are really consulted.
 
 \index{Holmake@\holmake|)}
 
@@ -1103,6 +1142,19 @@ into
 \end{alltt}
 If the special equality is not desired, the option \texttt{nodefsym} can be used to turn this off.
 The special equality symbol can also be redefined by changing the \LaTeX{} definition of the macro \ml{\bs{}HOLTokenDefEquality}.
+
+There are two variations on the \texttt{def} option:
+\begin{description}
+\item[\texttt{spaceddef}:]%
+\index{spaceddef, HOL in LaTeX option@\ml{spaceddef}, \HOL{} in \LaTeX{} option}%
+This option adds extra blank lines between successive conjuncts of a definition.
+\item[\ml{aligneddef}:]%
+\index{aligneddef, HOL in LaTeX option@\ml{aligneddef}, \HOL{} in \LaTeX{} option}%
+This option puts ampersands around the \ml{\bs{}HOLTokenDefEquality} macro call in the emitted \LaTeX{}.
+If the \LaTeX{} environment is an \texttt{array} or similar, this can ensure a nice column-based layout for one's definitions.
+\end{description}
+Both options can be used together, but \ml{aligneddef} will not work if \ml{nodefsym} is also used; if this combination is really required, it would be better to temporarily redefine (use \ml{\bs{}renewcommand}) \ml{\bs{}HOLTokenDefEquality}.
+
 
 \item[\texttt{depth}=$n$]
 Causes printing to be done with a maximum print depth of $n$; see Section~\ref{sec:pretty-print-depth}.
@@ -1453,7 +1505,7 @@ Section~\ref{sec:holtheories-tex-ready} below).
 
 By overriding the special token \texttt{\$Turnstile\$}, one can control the printing of the turnstile produced by \holthm{}.
 The default setup is roughly equivalent to overriding \texttt{\$Turnstile\$} to \texttt{\textbackslash{}HOLTokenTurnstile\{\}} followed by a space, giving a total width of \texttt{3}.
-Overriding the turnstile in this way may will probably be necessary in math-mode printing, where the turnstile character is typically of the same width as 5 \texttt{\bs;} invocations.
+Overriding the turnstile in this way will probably be necessary in math-mode printing, where the turnstile character is typically of the same width as 5 \texttt{\bs;} invocations.
 Providing the correct width is important in order to get lines past the first to line up with the left edge of the mathematical text rather than the turnstile.
 
 \paragraph{Default width}

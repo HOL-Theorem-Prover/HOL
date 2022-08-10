@@ -1,3 +1,0 @@
-\THEOREM SUBSET_TRANS pred_sets
-|- !s t u. s SUBSET t /\ t SUBSET u ==> s SUBSET u
-\ENDTHEOREM

@@ -7,6 +7,11 @@ sig
    type tyinfo
    type typeBase
    type simpfrag = simpfrag.simpfrag
+   type rcd_fieldinfo = {ty: hol_type, accessor: term, fupd : term}
+
+   val mk_recordtype_constructor : string -> string
+   val mk_recordtype_fieldsel : {tyname:string,fieldname:string} -> string
+   val mk_recordtype_fieldfupd : {tyname:string,fieldname:string} -> string
 
    datatype shared_thm = ORIG of thm
                        | COPY of (string * string) * thm
@@ -22,7 +27,7 @@ sig
          lift      : term option,
          one_one   : thm option,
          distinct  : thm option,
-         fields    : (string * hol_type) list,
+         fields    : (string * rcd_fieldinfo) list,
          accessors : thm list,
          updates   : thm list,
          destructors : thm list,
@@ -59,7 +64,7 @@ sig
    val nchotomy_of     : tyinfo -> thm
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option
-   val fields_of       : tyinfo -> (string * hol_type) list
+   val fields_of       : tyinfo -> (string * rcd_fieldinfo) list
    val accessors_of    : tyinfo -> thm list
    val updates_of      : tyinfo -> thm list
    val simpls_of       : tyinfo -> simpfrag
@@ -82,7 +87,7 @@ sig
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
    val put_encode      : term * shared_thm -> tyinfo -> tyinfo
    val put_lift        : term -> tyinfo -> tyinfo
-   val put_fields      : (string * hol_type) list -> tyinfo -> tyinfo
+   val put_fields      : (string * rcd_fieldinfo) list -> tyinfo -> tyinfo
    val put_accessors   : thm list -> tyinfo -> tyinfo
    val put_updates     : thm list -> tyinfo -> tyinfo
    val put_destructors : thm list -> tyinfo -> tyinfo
@@ -116,6 +121,7 @@ sig
                          (hol_type -> term option) *
                          (hol_type -> term) -> hol_type -> term
 
+   val type_size_pre   : (hol_type -> term option) -> typeBase -> hol_type -> term
    val type_size       : typeBase -> hol_type -> term
    val type_encode     : typeBase -> hol_type -> term
    val type_lift       : typeBase -> hol_type -> term
@@ -133,7 +139,7 @@ sig
    val dest_record     : typeBase -> term -> hol_type * (string * term) list
    val is_record       : typeBase -> term -> bool
 
-   val dest_record_type : typeBase -> hol_type -> (string * hol_type) list
+   val dest_record_type : typeBase -> hol_type -> (string * rcd_fieldinfo) list
    val is_record_type   : typeBase -> hol_type -> bool
 
    val toSEXP          : tyinfo -> ThyDataSexp.t

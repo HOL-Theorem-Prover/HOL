@@ -73,7 +73,7 @@ val MATCH_GOAL_TAC : thm_tactic = fn impthm => fn (asl,tm):goal =>
         end handle HOL_ERR _ => failwith "MATCH_GOAL_TAC";
 
 fun sum_CONV tm =
-        if not ((rator (rator tm)) = ``$+``) then failwith "sum_CONV" else
+        if not ((rator (rator tm)) ~~ ``$+``) then failwith "sum_CONV" else
         let val [n,m] = map numSyntax.int_of_term [rand (rator tm),rand tm] in
         TAC_PROOF (([],``^tm = ^(numSyntax.term_of_int (n+m))``),
           CONV_TAC (REDEPTH_CONV numLib.num_CONV) THEN

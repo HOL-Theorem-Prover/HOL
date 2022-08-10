@@ -3,6 +3,7 @@ src/HolSat/sat_solvers/minisat
 src/HolSat/sat_solvers/zc2hs
 src/HolSat
 src/taut
+!tools/Holmake/tests/incs_vs_sigobj/dir2
 src/marker
 src/q
 src/combin
@@ -13,6 +14,7 @@ src/metis
 src/meson/src
 src/IndDef
 src/basicProof
+!src/basicProof/theory_tests
 src/relation
 src/coretypes
 [poly]!!src/meson/test
@@ -22,14 +24,6 @@ src/num/reduce/src
 src/num/arith/src
 src/num
 src/num/termination
-
-[poly]src/AI
-[poly]src/AI/sml_inspection
-[poly]src/AI/proof_search
-[poly]src/AI/machine_learning
-[poly]src/AI/experiments
-[poly]src/tactictoe/src
-[poly]src/holyhammer
 
 # A Poly/ML heap, numheap, is deposited in src/num/termination to
 # speed up the last few theories (sets, extra numbers, and lists) before
@@ -47,8 +41,17 @@ src/pattern_matches
 !src/pattern_matches/interactive_tests
 src/HolSat/vector_def_CNF
 src/boss/ml_evaluation
+src/opentheory/reader
 src/boss
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
-!tools/Holmake/tests/Iflag
+
+[poly]src/AI
+[poly]src/AI/sml_inspection
+[poly]src/AI/proof_search
+[poly]src/AI/machine_learning
+[poly]src/tactictoe/src
+# next line relies on previous files being uploaded to sigobj
+[poly]src/tactictoe/selftest
+[poly]src/holyhammer

@@ -1,3 +1,0 @@
-\THEOREM DIFF_EQ_EMPTY pred_sets
-|- !s. s DIFF s = {{}}
-\ENDTHEOREM

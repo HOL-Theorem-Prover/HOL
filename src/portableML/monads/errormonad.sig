@@ -9,6 +9,7 @@ val error : 'c -> ('a,'b,'c) t
 val return : 'b -> ('a, 'b, 'c) t
 val ok : ('a, unit, 'c) t
 
+val bind : ('a, 'b, 'c) t * ('b -> ('a, 'd, 'c) t) -> ('a, 'd, 'c) t
 val >- : ('a, 'b, 'c) t * ('b -> ('a, 'd, 'c) t) -> ('a, 'd, 'c) t
 val ++ : ('a, 'b, 'c) t * ('a, 'b, 'd) t -> ('a, 'b, 'd) t
 val ++? : ('a,'b,'c) t * ('c -> ('a,'b,'d) t) -> ('a,'b,'d) t

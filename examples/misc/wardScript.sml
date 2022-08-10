@@ -24,7 +24,7 @@ val (thm_rules, thm_ind, thm_cases) = Hol_reln`
   (∀x y. thm (x ++ [a;b;a;b] ++ y) ⇒ thm (x ++ [b;b;a;a] ++ y)) ∧
   (∀x y. thm (x ++ [b;b;a;a] ++ y) ⇒ thm (x ++ [a;b;a;b] ++ y))
 `
-open lcsymtacs
+
 val div3_lemma = prove(
   ``divides 3 (x + 3 + y) ⇔ divides 3 (x + y)``,
   `x + 3 + y = x + y + 3` by DECIDE_TAC THEN

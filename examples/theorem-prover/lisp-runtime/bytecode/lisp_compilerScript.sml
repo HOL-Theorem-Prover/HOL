@@ -12,6 +12,10 @@ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 
 (* relation defines translation of programs into bytecode *)
 
@@ -2864,20 +2868,7 @@ val term2sexp_def = tDefine "term2sexp" `
   (term2sexp (Fourth x) = list2sexp [Sym "FOURTH"; term2sexp x]) /\
   (term2sexp (Fifth x) = list2sexp [Sym "FIFTH"; term2sexp x]) /\
   (term2sexp (Defun fname ps s) = list2sexp [Sym "DEFUN"; Sym fname; list2sexp (MAP Sym ps); s])`
- (WF_REL_TAC `measure (term_size)` \\ SRW_TAC [] []
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 DECIDE_TAC
-  THEN1 DECIDE_TAC
-  THEN1 (Induct_on `qs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `qs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 DECIDE_TAC
-  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ys` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `zs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `zs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  \\ DECIDE_TAC);
+ (WF_REL_TAC `measure (term_size)`);
 
 val fun_name_ok_def = Define `
   (fun_name_ok (Fun f) = ~MEM f reserved_names) /\
@@ -2901,20 +2892,7 @@ val no_bad_names_def = tDefine "no_bad_names" `
   (no_bad_names (Fourth x) = no_bad_names x) /\
   (no_bad_names (Fifth x) = no_bad_names x) /\
   (no_bad_names (Defun fname ps s) = T)`
- (WF_REL_TAC `measure (term_size)` \\ SRW_TAC [] []
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 DECIDE_TAC
-  THEN1 DECIDE_TAC
-  THEN1 (Induct_on `qs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `qs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 DECIDE_TAC
-  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `ys` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `zs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `zs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
-  \\ DECIDE_TAC);
+ (WF_REL_TAC `measure (term_size)`);
 
 val sexp2list_list2sexp = prove(
   ``!x. sexp2list (list2sexp x) = x``,

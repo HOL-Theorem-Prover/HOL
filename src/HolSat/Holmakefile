@@ -1,0 +1,6 @@
+.PHONY: all
+all: $(DEFAULT_TARGETS)
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+endif

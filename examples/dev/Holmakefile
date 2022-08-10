@@ -1,2 +1,1 @@
-INCLUDES=dff
-
+INCLUDES = dff $(dprot $(HOLDIR)/src/n-bit)

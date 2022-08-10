@@ -10,19 +10,14 @@ modifies the conclusion, and reorders the antecedents
 universal, existential, quantifier, assumption, hypothesis
 
 \DESCRIBE
-{REORDER_ANTS_MOD f g} combines the effects of 
-{REORDER_ANTS_MOD f} and {MODIFY_CONS g}
+{REORDER_ANTS_MOD f g} combines the effects of {REORDER_ANTS_MOD f}
+and applies the function {g} to the ultimate consequent of the
+theorem, as does {underAIs}.
 
 \FAILURE
 Fails if {g} fails when applied to the consequent
 
 \SEEALSO
-Drule.REORDER_ANTS, Drule.MODIFY_CONS,
-Drule.SPEC_ALL, Drule.GEN_ALL, Thm.UNDISCH, Drule.DISCH
+Drule.DISCH, Drule.GEN_ALL, Drule.REORDER_ANTS, Drule.SPEC_ALL, Drule.underAIs, Thm.UNDISCH.
 
 \ENDDOC
-
-
-
-
-

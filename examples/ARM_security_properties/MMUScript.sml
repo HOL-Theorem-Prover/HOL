@@ -60,6 +60,7 @@ val _ =  new_theory("MMU");
 val _ = overload_on("UNKNOWN", ``ARB:bool``);
 val _ = overload_on("UNKNOWN", ``ARB:word32``);
 
+val _ = temp_delsimps ["NORMEQ_CONV"]
 
 val read_mem32_def  = Define ` read_mem32 add mem =
     word32 ([mem (add);mem (add+1w);mem (add+2w);mem (add+3w)])`;

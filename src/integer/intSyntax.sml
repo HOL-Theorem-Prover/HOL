@@ -21,7 +21,7 @@ val quot_tm =  Const "int_quot"
 val rem_tm =   Const "int_rem"
 val less_tm =  Const "int_lt"
 val leq_tm =   Const "int_le"
-val great_tm = Const "int_gt"
+val greater_tm = Const "int_gt"
 val geq_tm =   Const "int_ge"
 val min_tm =   Const "int_min"
 val max_tm =   Const "int_max";
@@ -138,9 +138,9 @@ val dest_leq = dest_binop leq_tm ("dest_leq", "Term not a less-than-or-equal")
 val is_leq = can dest_leq
 fun mk_leq (tm1, tm2) = list_mk_comb(leq_tm, [tm1, tm2])
 
-val dest_great = dest_binop great_tm ("dest_great", "Term not a greater-than")
-val is_great = can dest_great
-fun mk_great (tm1, tm2) = list_mk_comb(great_tm, [tm1, tm2])
+val dest_greater = dest_binop greater_tm ("dest_greater", "Term not a greater-than")
+val is_greater = can dest_greater
+fun mk_greater (tm1, tm2) = list_mk_comb(greater_tm, [tm1, tm2])
 
 val dest_geq = dest_binop geq_tm ("dest_geq",
                                   "Term not a greater-than-or-equal")

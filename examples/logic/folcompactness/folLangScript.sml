@@ -4,9 +4,6 @@ open pred_setTheory listTheory nlistTheory
 
 val _ = new_theory "folLang";
 
-Theorem MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
-
-
 Definition LIST_UNION_def[simp]:
   (LIST_UNION [] = ∅) ∧
   (LIST_UNION (h::t) = h ∪ LIST_UNION t)
@@ -57,12 +54,13 @@ Termination
   WF_REL_TAC ‘measure (term_size o SND o SND)’ >> simp[]
 End
 
-Definition FVT_def[simp]:
+Definition FVT_def:
   (FVT (V v) = {v}) ∧
   (FVT (Fn s ts) = LIST_UNION (MAP FVT ts))
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
+Theorem FVT_def[simp] = SIMP_RULE bool_ss [SF ETA_ss] FVT_def
 
 Theorem FVT_FINITE[simp]:
   ∀t. FINITE (FVT t)
@@ -73,13 +71,13 @@ QED
 Theorem tswap_inv[simp]:
   ∀t. tswap x y (tswap x y t) = t
 Proof
-  ho_match_mp_tac term_induct >> rw[] >> simp[MAP_MAP_o, Cong MAP_CONG']
+  ho_match_mp_tac term_induct >> rw[] >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Theorem tswap_id[simp]:
   ∀t. tswap x x t = t
 Proof
-  ho_match_mp_tac term_induct >> rw[] >> simp[MAP_MAP_o, Cong MAP_CONG']
+  ho_match_mp_tac term_induct >> rw[] >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Theorem tswap_supp_id[simp]:
@@ -90,31 +88,34 @@ Proof
   metis_tac[MEM_EL]
 QED
 
-Definition termsubst_def[simp]:
+Definition termsubst_def:
   (termsubst v (V x) = v x) ∧
   (termsubst v (Fn f l) = Fn f (MAP (termsubst v) l))
 Termination
   WF_REL_TAC ‘measure (term_size o SND)’ >> simp[]
 End
 
+Theorem termsubst_def[simp] =
+        SIMP_RULE bool_ss [SF ETA_ss] termsubst_def
+
 Theorem termsubst_termsubst:
   ∀t i j. termsubst j (termsubst i t) = termsubst (termsubst j o i) t
 Proof
   ho_match_mp_tac term_induct >>
-  simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
+  simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG]
 QED
 
 Theorem termsubst_triv[simp]:
   ∀t. termsubst V t = t
 Proof
-  ho_match_mp_tac term_induct >> simp[Cong MAP_CONG']
+  ho_match_mp_tac term_induct >> simp[Cong MAP_CONG]
 QED
 
 Theorem termsubst_valuation:
   ∀t v1 v2. (∀x. x ∈ FVT t ⇒ (v1 x = v2 x)) ⇒ (termsubst v1 t = termsubst v2 t)
 Proof
   ho_match_mp_tac term_induct >> simp[MEM_MAP, PULL_EXISTS] >> rpt strip_tac >>
-  irule MAP_CONG' >> simp[] >> rpt strip_tac >> first_x_assum irule >>
+  irule MAP_CONG >> simp[] >> rpt strip_tac >> first_x_assum irule >>
   metis_tac[]
 QED
 
@@ -131,7 +132,7 @@ Theorem freshsubst_tswap:
 Proof
   ho_match_mp_tac term_induct >> simp[MEM_MAP,combinTheory.APPLY_UPDATE_THM] >>
   rpt strip_tac >- (COND_CASES_TAC >> fs[]) >>
-  irule MAP_CONG' >> simp[] >> metis_tac[]
+  irule MAP_CONG >> simp[] >> metis_tac[]
 QED
 
 Datatype:
@@ -305,14 +306,14 @@ End
 Theorem formsubst_triv[simp]:
   formsubst V p = p
 Proof
-  Induct_on ‘p’ >> simp[Cong MAP_CONG', combinTheory.APPLY_UPDATE_ID]
+  Induct_on ‘p’ >> simp[Cong MAP_CONG, combinTheory.APPLY_UPDATE_ID]
 QED
 
 Theorem formsubst_valuation:
   ∀v1 v2. (∀x. x ∈ FV p ⇒ (v1 x = v2 x)) ⇒ (formsubst v1 p = formsubst v2 p)
 Proof
-  Induct_on ‘p’ >> simp[MEM_MAP, PULL_EXISTS, Cong MAP_CONG']
-  >- (rw[] >> irule MAP_CONG' >> simp[] >> metis_tac[termsubst_valuation]) >>
+  Induct_on ‘p’ >> simp[MEM_MAP, PULL_EXISTS, Cong MAP_CONG]
+  >- (rw[] >> irule MAP_CONG >> simp[] >> metis_tac[termsubst_valuation]) >>
   csimp[combinTheory.UPDATE_APPLY] >> rpt gen_tac >> strip_tac >>
   reverse COND_CASES_TAC >> simp[]
   >- (first_x_assum irule >> simp[combinTheory.APPLY_UPDATE_THM]) >>
@@ -327,7 +328,7 @@ Theorem formsubst_FV :
   ∀i. FV (formsubst i p) = { x | ∃y. y ∈ FV p ∧ x ∈ FVT (i y) }
 Proof
   Induct_on ‘p’ >>
-  simp[MEM_MAP, PULL_EXISTS, MAP_MAP_o, Cong MAP_CONG', termsubst_fvt]
+  simp[MEM_MAP, PULL_EXISTS, MAP_MAP_o, Cong MAP_CONG, termsubst_fvt]
   >- (simp[Once EXTENSION, MEM_MAP, PULL_EXISTS] >> metis_tac[])
   >- (simp[Once EXTENSION] >> metis_tac[]) >>
   csimp[combinTheory.UPDATE_APPLY] >> rpt gen_tac >>
@@ -371,7 +372,7 @@ Theorem term_functions_termsubst:
         term_functions t ∪ { x | ∃y. y ∈ FVT t ∧ x ∈ term_functions (i y) }
 Proof
   ho_match_mp_tac term_induct >>
-  simp[MAP_MAP_o, combinTheory.o_ABS_R, MEM_MAP, PULL_EXISTS, Cong MAP_CONG'] >>
+  simp[MAP_MAP_o, combinTheory.o_ABS_R, MEM_MAP, PULL_EXISTS, Cong MAP_CONG] >>
   rpt strip_tac >> simp[Once EXTENSION] >> simp[MEM_MAP, PULL_EXISTS] >>
   metis_tac[]
 QED
@@ -381,7 +382,7 @@ Theorem form_functions_formsubst:
       form_functions p ∪ { x | ∃y. y ∈ FV p ∧ x ∈ term_functions (i y) }
 Proof
   Induct_on ‘p’ >>
-  simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG',
+  simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG,
        term_functions_termsubst, MEM_MAP, PULL_EXISTS]
   >- (simp[Once EXTENSION,MEM_MAP, PULL_EXISTS] >> metis_tac[])
   >- (simp[Once EXTENSION] >> metis_tac[])
@@ -423,12 +424,13 @@ Proof
 QED
 
 (* show countability via Gödelization *)
-Definition num_of_term_def[simp]:
+Definition num_of_term_def:
   num_of_term (V x) = 0 ⊗ x ∧
   num_of_term (Fn f l) = 1 ⊗ (f ⊗ nlist_of (MAP num_of_term l))
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
+Theorem num_of_term_def[simp] = SIMP_RULE bool_ss [SF ETA_ss] num_of_term_def
 
 Theorem num_of_term_11[simp]:
   ∀t1 t2. num_of_term t1 = num_of_term t2 ⇔ t1 = t2

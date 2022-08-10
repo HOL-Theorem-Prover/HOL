@@ -3,6 +3,7 @@ sig
   type thm      = Thm.thm
   type term     = Term.term
   type hol_type = Type.hol_type
+  type goal     = term list * term
 
 
   (* Constants *)
@@ -93,6 +94,7 @@ sig
   (* Query routines *)
 
   val is_eq                  : term -> bool
+  val is_iff                 : term -> bool
   val is_imp                 : term -> bool
   val is_imp_only            : term -> bool
   val is_select              : term -> bool
@@ -114,6 +116,7 @@ sig
   val is_res_select          : term -> bool
   val is_res_abstract        : term -> bool
   val is_IN                  : term -> bool
+  val is_bool_atom           : term -> bool
 
   (* Construction of a term from a list of terms *)
 
@@ -159,6 +162,11 @@ sig
   val new_binder            : string * hol_type -> unit
   val delete_const          : string -> unit
   val new_type_definition   : string * thm -> thm
+  val new_thm_with_attributes : {call_str:string, call_f:string} ->
+                                (string * 'a -> thm) ->
+                                (string * 'a) -> thm
+  val new_specification     : string * string list * thm -> thm
+  val new_definition        : string * term -> thm
   val new_infixl_definition : string * term * int -> thm
   val new_infixr_definition : string * term * int -> thm
   val new_binder_definition : string * term -> thm
@@ -184,10 +192,26 @@ sig
   val FVs : term -> term HOLset.set
   val FVLset : term list -> term HOLset.set
   val ES : term HOLset.set
+  val Teq : term -> bool  (* equals the T constant *)
+  val Feq : term -> bool  (* equals the F constant *)
+  val tml_eq : term list -> term list -> bool
+  val tmp_eq : term * term -> term * term -> bool
+  val goal_eq : goal -> goal -> bool
+  val goals_eq : goal list -> goal list -> bool
+  val tmem : term -> term list -> bool
+  val memt : term list -> term -> bool  (* flip of above *)
+  val tunion : term list -> term list -> term list
+  val tassoc : term -> (term * 'a) list -> 'a
+  val tmx_eq : term * ''a -> term * ''a -> bool
+  val xtm_eq : ''a * term -> ''a * term -> bool
 
-  (* Type unification *)
+  (* (Type) unification *)
+  val gen_tyvar_sigma : hol_type list -> (hol_type,hol_type) Lib.subst
+  val gen_tyvarify : term -> term
   val type_unify : hol_type -> hol_type -> (hol_type, hol_type) Lib.subst
   val sep_type_unify : hol_type -> hol_type ->
               (hol_type, hol_type) Lib.subst * (hol_type, hol_type) Lib.subst
+
+
 
 end

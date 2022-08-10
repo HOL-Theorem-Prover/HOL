@@ -6,9 +6,6 @@ open HolKernel Parse boolLib Rsyntax schneiderUtils
      numLib numTheory prim_recTheory arithmeticTheory pairTheory
      Temporal_LogicTheory Past_Temporal_LogicTheory;
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
 val ZERO_LEMMA = ARITH_PROVE“~(x<x) /\ (0<SUC x) /\ ~(SUC x=0)”;

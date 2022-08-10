@@ -5,6 +5,6 @@ structure Keepers = struct
 
 val exclude =
   [ "MLY_base.sig", "DiskFiles.grm.sig", "holindex.grm.sig",
-    "holindex.sig" ]
+    "holindex.sig", "HOLsexp.grm.sig" ]
 
 end

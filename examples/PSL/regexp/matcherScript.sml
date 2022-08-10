@@ -259,133 +259,130 @@ val (dijkstra_def, dijkstra_ind) = Defn.tprove
 
 val _ = save_thm ("dijkstra_def", dijkstra_def);
 
-val dijkstra = store_thm
-  ("dijkstra",
-   ``!t a u v.
-       EXISTS a u \/ dijkstra t a u v =
-       ?k l.
-         MEM k u /\ EVERY (\x. MEM x (u <> v)) l /\
-         accepting_path t a k l``,
+Theorem dijkstra:
+  !t a u v.
+    EXISTS a u \/ dijkstra t a u v ⇔
+    ?k l.
+      MEM k u /\ EVERY (\x. MEM x (u <> v)) l /\
+      accepting_path t a k l
+Proof
    SIMP_TAC std_ss [EXISTS_MEM]
    >> recInduct dijkstra_ind
    >> RW_TAC list_ss [dijkstra_def]
 (* >> Introduce `partition (t s) w = (x,y)` *)
-   >> Q.PAT_X_ASSUM `!x y. P x y` (MP_TAC o Q.SPECL [`x`, `y`])
+   >> Q.PAT_X_ASSUM ‘!x y. P x y’ (MP_TAC o Q.SPECL [`x`, `y`])
    >> RW_TAC std_ss []
    >> RW_TAC std_ss [RIGHT_AND_OVER_OR, EXISTS_OR_THM, GSYM DISJ_ASSOC]
    >> RW_TAC std_ss [DISJ_ASSOC]
    >> Know
-      `(a s \/ (?k. IS_EL k l /\ a k)) \/ SOME_EL a x =
-       a s \/ ?k. (IS_EL k x \/ IS_EL k l) /\ a k`
+      ‘(a s \/ (?k. IS_EL k l /\ a k)) \/ SOME_EL a x =
+       a s \/ ?k. (IS_EL k x \/ IS_EL k l) /\ a k’
    >- METIS_TAC [EXISTS_MEM]
    >> DISCH_THEN (fn th => REWRITE_TAC [th])
    >> RW_TAC std_ss [GSYM DISJ_ASSOC]
-   >> Q.PAT_X_ASSUM `X = Y` (K ALL_TAC)
+   >> Q.PAT_X_ASSUM ‘X = Y’ (K ALL_TAC)
    >> Cases_on
-      `?q.
+      ‘?q.
          ALL_EL (\k. (k = s) \/ IS_EL k l \/ IS_EL k w) q /\
-         accepting_path t a s q`
+         accepting_path t a s q’
    >- (ASM_SIMP_TAC std_ss []
        >> Know
-          `?q. ALL_EL (\x. IS_EL x l \/ IS_EL x w) q /\ accepting_path t a s q`
+          ‘?q. ALL_EL (\x. IS_EL x l \/ IS_EL x w) q /\ accepting_path t a s q’
        >- (POP_ASSUM STRIP_ASSUME_TAC
-           >> MP_TAC (Q.SPECL [`\k. ~(k = s)`, `t`, `a`, `s`, `q`]
+           >> MP_TAC (Q.SPECL [‘\k. ~(k = s)’, ‘t’, ‘a’, ‘s’, ‘q’]
                       accepting_path_tail)
            >> RW_TAC std_ss []
-           >> Q.EXISTS_TAC `js`
+           >> Q.EXISTS_TAC ‘js’
            >> RW_TAC std_ss []
-           >> Suff `ALL_EL (\k. ~(k = s)) js /\
-                    ALL_EL (\k. (k = s) \/ IS_EL k l \/ IS_EL k w) js`
+           >> Suff ‘ALL_EL (\k. ~(k = s)) js /\
+                    ALL_EL (\k. (k = s) \/ IS_EL k l \/ IS_EL k w) js’
            >- (SIMP_TAC std_ss [GSYM EVERY_CONJ]
-               >> Q.SPEC_TAC (`js`, `js`)
+               >> Q.SPEC_TAC (‘js’, ‘js’)
                >> MATCH_MP_TAC EVERY_MONOTONIC
                >> RW_TAC std_ss [FUN_EQ_THM]
                >> METIS_TAC [])
            >> RW_TAC std_ss []
-           >> Q.PAT_X_ASSUM `X = BUTFIRSTN N L` MP_TAC
-           >> Cases_on `n`
+           >> Q.PAT_X_ASSUM ‘X = BUTFIRSTN N L’ MP_TAC
+           >> Cases_on ‘n’
            >> RW_TAC std_ss [BUTFIRSTN]
-           >> Know `js = TL (BUTFIRSTN n' q)` >- METIS_TAC [TL]
+           >> Know ‘js = TL (BUTFIRSTN n' q)’ >- METIS_TAC [TL]
            >> RW_TAC arith_ss [BUTFIRSTN_TL]
            >> METIS_TAC [ALL_EL_BUTFIRSTN])
        >> POP_ASSUM (K ALL_TAC)
        >> RW_TAC std_ss []
        >> POP_ASSUM MP_TAC
-       >> Cases_on `q`
+       >> Cases_on ‘q’
        >> RW_TAC std_ss [accepting_path_def]
        >> DISJ2_TAC
-       >> Q.EXISTS_TAC `h`
-       >> Q.EXISTS_TAC `t'`
+       >> Q.EXISTS_TAC ‘h’
+       >> Q.EXISTS_TAC ‘t'’
        >> RW_TAC std_ss []
        >- (FULL_SIMP_TAC std_ss [EVERY_DEF] >> METIS_TAC [MEM_partition])
        >> MATCH_MP_TAC EVERY_MONO
-       >> Q.EXISTS_TAC `\k. MEM k l \/ MEM k w`
+       >> Q.EXISTS_TAC ‘\k. MEM k l \/ MEM k w’
        >> (RW_TAC std_ss [] >> FULL_SIMP_TAC std_ss [EVERY_DEF])
        >> METIS_TAC [MEM_partition])
    >> ASM_SIMP_TAC std_ss []
    >> POP_ASSUM MP_TAC
    >> SIMP_TAC std_ss []
-   >> DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [PROVE [] ``a \/ b = ~a ==> b``])
+   >> DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [PROVE [] “a \/ b = ~a ==> b”])
    >> SIMP_TAC std_ss []
    >> STRIP_TAC
-   >> Cases_on `a s`
-   >- (Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `[]`)
+   >> Cases_on ‘a s’
+   >- (Q.PAT_X_ASSUM ‘!x. P x’ (MP_TAC o Q.SPEC ‘[]’)
        >> RW_TAC std_ss [EVERY_DEF, accepting_path_def])
    >> RW_TAC std_ss []
    >> RW_TAC std_ss [RIGHT_AND_OVER_OR, EXISTS_OR_THM]
-   >> MATCH_MP_TAC (PROVE [] ``~a /\ (b = c) ==> (a \/ b = c)``)
+   >> MATCH_MP_TAC (PROVE [] “~a /\ (b = c) ==> (a \/ b = c)”)
    >> CONJ_TAC
    >- (SIMP_TAC std_ss []
-       >> ONCE_REWRITE_TAC [PROVE [] ``a \/ b = ~a ==> b``]
-       >> ONCE_REWRITE_TAC [PROVE [] ``a \/ b = ~a ==> b``]
+       >> ONCE_REWRITE_TAC [PROVE [] “a \/ b = ~a ==> b”]
+       >> ONCE_REWRITE_TAC [PROVE [] “a \/ b = ~a ==> b”]
        >> RW_TAC std_ss []
        >> STRIP_TAC
-       >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `k :: l'`)
+       >> Q.PAT_X_ASSUM ‘!x. P x’ (MP_TAC o Q.SPEC ‘k :: l'’)
        >> RW_TAC std_ss [EVERY_DEF, accepting_path_def]
        >| [METIS_TAC [MEM_partition],
            MATCH_MP_TAC EVERY_MONO
-           >> Q.EXISTS_TAC `\k. IS_EL k x \/ IS_EL k l \/ IS_EL k y`
+           >> Q.EXISTS_TAC ‘\k. IS_EL k x \/ IS_EL k l \/ IS_EL k y’
            >> RW_TAC std_ss []
            >> METIS_TAC [MEM_partition],
            METIS_TAC [MEM_partition]])
    >> HO_MATCH_MP_TAC
       (METIS_PROVE []
-       ``(!x y. A x y /\ C x y ==> (B x y = D x y)) ==>
-         ((?x y. A x y /\ B x y /\ C x y) = (?x y. A x y /\ D x y /\ C x y))``)
+       “(!x y. A x y /\ C x y ==> (B x y = D x y)) ==>
+         ((?x y. A x y /\ B x y /\ C x y) = (?x y. A x y /\ D x y /\ C x y))”)
    >> RW_TAC std_ss []
    >> EQ_TAC
-   >- (Q.SPEC_TAC (`l'`, `l'`)
+   >- (Q.SPEC_TAC (‘l'’, ‘l'’)
        >> MATCH_MP_TAC EVERY_MONOTONIC
        >> METIS_TAC [MEM_partition])
    >> STRIP_TAC
-   >> Suff `EVERY (\k. ~(k = s)) l'`
+   >> Suff ‘EVERY (\k. ~(k = s)) l'’
    >- (POP_ASSUM MP_TAC
        >> SIMP_TAC std_ss [AND_IMP_INTRO, GSYM EVERY_CONJ]
-       >> Q.SPEC_TAC (`l'`, `l'`)
+       >> Q.SPEC_TAC (‘l'’, ‘l'’)
        >> MATCH_MP_TAC EVERY_MONOTONIC
        >> METIS_TAC [MEM_partition])
    >> RW_TAC std_ss [EVERY_MEM, MEM_EL]
    >> CCONTR_TAC
    >> FULL_SIMP_TAC std_ss []
-   >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `BUTFIRSTN (SUC n) l'`)
+   >> Q.PAT_X_ASSUM ‘!x. P x’ (MP_TAC o Q.SPEC ‘BUTFIRSTN (SUC n) l'’)
    >> RW_TAC std_ss []
-   >- (Q.PAT_X_ASSUM `EVERY P L` MP_TAC
-       >> Q.SPEC_TAC (`EL n l'`, `s`)
-       >> RW_TAC std_ss []
-       >> Know `SUC n <= LENGTH l'` >- DECIDE_TAC
-       >> Q.SPEC_TAC (`n`, `n`)
-       >> MATCH_MP_TAC ALL_EL_BUTFIRSTN
-       >> RW_TAC std_ss [])
+   >- (Q.PAT_X_ASSUM ‘EVERY P L’ MP_TAC
+       >> Q.SPEC_TAC (‘EL n l'’, ‘s’)
+       >> RW_TAC std_ss [ALL_EL_BUTFIRSTN])
    >> POP_ASSUM MP_TAC
-   >> Q.PAT_X_ASSUM `accepting_path t a k l'` MP_TAC
+   >> Q.PAT_X_ASSUM ‘accepting_path t a k l'’ MP_TAC
    >> POP_ASSUM_LIST (K ALL_TAC)
    >> SIMP_TAC std_ss [AND_IMP_INTRO]
-   >> Q.SPEC_TAC (`k`, `k`)
-   >> Q.SPEC_TAC (`l'`, `l`)
-   >> Induct_on `n`
+   >> Q.SPEC_TAC (‘k’, ‘k’)
+   >> Q.SPEC_TAC (‘l'’, ‘l’)
+   >> Induct_on ‘n’
    >> Cases
    >> RW_TAC arith_ss [LENGTH, BUTFIRSTN, EL, HD, TL, accepting_path_def]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
 val dijkstra_partition = store_thm
   ("dijkstra_partition",

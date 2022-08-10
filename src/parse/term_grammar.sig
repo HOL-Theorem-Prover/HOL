@@ -135,7 +135,6 @@ sig
   val add_listform : grammar -> listspec -> grammar
   val listform_to_rule : listspec -> grule
 
-  val fixityToString : fixity -> string
   val add_rule : grule -> grammar -> grammar
   val add_delta : user_delta -> grammar -> grammar
   val add_deltas : user_delta list -> grammar -> grammar
@@ -145,6 +144,7 @@ sig
   val remove_numeral_form : grammar -> char -> grammar
 
   val add_strlit_injector: {ldelim: string, tmnm: string} -> grammar -> grammar
+  val remove_strlit_injector : {tmnm:string} -> grammar -> grammar
   val strlit_map : grammar -> {tmnm:string} -> string option
 
   (*------------------------------------------------------------------------*
@@ -197,15 +197,6 @@ sig
                             ruleset -> term_pp_types.uprinter
   val prettyprint_grammar : (grammar -> term -> term_pp_types.uprinter) ->
                             grammar -> term_pp_types.uprinter
-
-  val grammar_rule_reader : grammar_rule Coding.reader
-  val grammar_rule_encode : grammar_rule -> string
-  val user_delta_reader : (string -> term) -> user_delta Coding.reader
-  val user_delta_encode : (term -> string) -> user_delta -> string
-  val fixity_encode : fixity -> string
-  val fixity_reader : fixity Coding.reader
-  val grule_encode : grule -> string
-  val grule_reader : grule Coding.reader
 
   val debugprint : grammar -> term -> string
 

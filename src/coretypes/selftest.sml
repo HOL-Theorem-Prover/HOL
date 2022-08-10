@@ -1,5 +1,6 @@
 open HolKernel Parse boolLib testutils
 open pairTheory sumTheory optionTheory optionSyntax
+open simpLib BasicProvers boolSimps
 
 val _ = set_trace "Unicode" 0
 
@@ -38,7 +39,13 @@ val _ = app tpp ["\\(x,y). x /\\ y",
                  "\\(x,y,z). x /\\ y /\\ z",
                  "\\((x,y),z). x /\\ y /\\ z",
                  "(\\(x,y,z). x /\\ y /\\ z) p",
-                 "case x of (y,z) => y /\\ z"]
+                 "case x of (y,z) => y /\\ z",
+                 "f000000000 arg000000000\n\
+                 \  (case x of\n\
+                 \     INL u => u inl00000000000 inl111111111\n\
+                 \   | INR v => v inr00000000000 inr111111111)\n\
+                 \  (arg222222222222 arg333333333 arg444444444)"
+                ]
 
 (* check LET_INTRO *)
 
@@ -192,12 +199,131 @@ val _ = Feedback.emit_WARNING := false
 val _ = delete_const "v"
 
 val _ = tprint "simp (srw_ss()) on one_CASE"
-local open BasicProvers simpLib
+local
 in
 val _ = require_msg (check_result (aconv ``v:'a``)) term_to_string
                     (rhs o concl o SIMP_CONV (srw_ss()) [])
                     ``one_CASE () (v:'a)``
 end
 
+(* github issue #765; induction principle for pairs is wrong *)
+val _ = hide "p"
+val _ = tprint "Induction principle for pairs"
+val res = Exn.capture (BasicProvers.Induct_on ‘p’) ([], “FST p ≠ SND p”)
+val _ = case res of
+            Exn.Res _ => OK()
+          | Exn.Exn e => sdie ("Exception : " ^ General.exnMessage e)
+
+(* removing thy-named fragments *)
+local
+
+in
+val _ = convtest("srw_ss has x = () rewrite", SIMP_CONV (srw_ss()) [],
+                 “x:unit”, “() : unit”)
+val _ = diminish_srw_ss ["one"]
+val _ = shouldfail {checkexn = fn UNCHANGED => true | _ => false,
+                    printarg = K "after diminish\"one\", that no longer works",
+                    printresult = thm_to_string,
+                    testfn = SIMP_CONV (srw_ss()) []}
+                   “x:unit”
+end (* local *)
+
+(* one_line_ify *)
+val fsumdef = new_recursive_definition {
+  name = "fsumdef",
+  rec_axiom = sumTheory.sum_Axiom,
+  def = “fsum f (INR x) = (T,INL T) /\ fsum f (INL y) = (F,INR (f y))”
+};
+
+fun good_oneline th =
+    null (hyp th) andalso
+    (let val cs = strip_conj (concl th)
+     in
+       length cs = 1 andalso is_eq (hd cs)
+     end)
+
+fun test msg th =
+    (tprint ("one_line_ify on " ^ msg);
+     require_msg (check_result good_oneline)
+                 (trace("assumptions", 1) thm_to_string)
+                 (DefnBase.one_line_ify NONE) th)
+val _ = test "function over sum" fsumdef
+
+val pairdef = new_definition("pairdef", “pairdef (f,x) g = f (g x)”)
+val _ = test "function over pair" pairdef
+
+val upairdef0 = new_definition("upairdef0", “upairdef (v:unit) (x,y) = x”)
+val upairdef = upairdef0 |> SIMP_RULE bool_ss [oneTheory.one]
+val _ = test "pair function with unit pat" upairdef
+
+val onedef0 = new_definition ("one_def0",
+                              “onedef (f : bool -> 'a) (v:unit) = f T”)
+val onedef = onedef0 |> SIMP_RULE bool_ss [oneTheory.one]
+val _ = test "function over unit" onedef
+
+val spcross_def0 = new_recursive_definition{
+  name = "spcross_def",
+  rec_axiom = sumTheory.sum_Axiom,
+  def = “spcross f (INL x) p = (x /\ FST p) /\
+         spcross f (INR y) p = f y ”};
+val spcross_def = CONV_RULE (LAND_CONV (SIMP_CONV bool_ss [FORALL_PROD, FST]))
+                            spcross_def0
+
+val _ = test "sum+pair, inconsistent patterns" spcross_def
+
+
+val _ = app (ignore o hide) ["a", "q"]
+val c1pairdef0 =
+    new_definition("c1pairdef", “c1pair (p:'a#'b) q = (FST q /\ SND q)”)
+val c1pairdef =
+    c1pairdef0
+      |> SIMP_RULE bool_ss [FORALL_PROD, FST, SND]
+val _ = test "function over pairs (one pair ignored)" c1pairdef
+
+val spvcross1_def0 = new_recursive_definition{
+  name = "spvcross1_def",
+  rec_axiom = sumTheory.sum_Axiom,
+  def = “spvcross1 f (INL x) (p:'a # 'b) = x /\
+         spvcross1 f (INR y) p = f y”};
+val spvcross1_def =
+    spvcross1_def0
+      |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [FORALL_PROD]))
+val _ = test "sum+pair, pair pattern unused" spvcross1_def
+
+val spvcross2_def0 = new_recursive_definition{
+  name = "spvcross2_def",
+  rec_axiom = sumTheory.sum_Axiom,
+  def = “spvcross2 f (INL x) (p:'a # 'b) = f x p /\
+         spvcross2 f (INR y) p = y f”};
+val spvcross2_def =
+    spvcross2_def0
+      |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [FORALL_PROD]))
+val _ = test "sum+pair, pair components unused" spvcross2_def
+
+
+
+val cpairdef = new_definition("cpairdef", “cpair (f,x) = T”)
+val _ = test "constant function over pair" cpairdef
+
+val multiv_def0 = new_definition ("multiv_def", “multiv f (p1:'a # 'b) (p2:'b # 'd) = f T”)
+val multiv_def = multiv_def0 |> SIMP_RULE bool_ss [FORALL_PROD]
+val _ = test "multiple vacuous patterns" multiv_def
+
+val nestedv_def0 = new_recursive_definition{
+  rec_axiom = sumTheory.sum_Axiom,
+  name = "nestedv_def",
+  def = “nestedv f a (INL (p:'a # bool)) = f p /\
+         nestedv f a (INR (x:'a # bool # bool)) = f (a,F)”}
+val nestedv_def = nestedv_def0
+                    |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [FORALL_PROD]))
+val _ = test "nested vacuous pattern" nestedv_def
+
+val already_good1_def = new_definition("already_good1_def",
+  “already_good1 p q = (p,q)”);
+val _ = test "already good, simple RHS" already_good1_def
+
+val already_good2_def = new_definition("already_good2_def",
+  “already_good2 p q = case (p,q) of (T,_) => T | (F, q) => q”);
+val _ = test "already good, case on RHS" already_good2_def
 
 val _ = Process.exit Process.success

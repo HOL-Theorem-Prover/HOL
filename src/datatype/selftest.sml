@@ -137,7 +137,6 @@ val _ =
 
 val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
-val _ = Datatype.big_record_size := 10;
 val _ = Hol_datatype`
   big_record = <| fld3 : num ; fld4: bool ; fld5 : num -> num;
                   fld6 : bool -> bool ; fld7 : 'a -> num ;
@@ -247,17 +246,37 @@ val _ = set_trace "Unicode" 0
 fun pptest (nm, t, expected) = let
   val _ = tprint ("Pretty-printing of "^nm)
   val s = Parse.term_to_string t
+  fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
 in
   if s = expected then OK()
-  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^s^"\"")
+  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^f s^"\"")
 end
 
 fun s t = let open HolKernel boolLib
           in
-            rhs (concl (simpLib.SIMP_CONV (BasicProvers.srw_ss()) [] t))
+            rhs (concl (QCONV (simpLib.SIMP_CONV (BasicProvers.srw_ss()) []) t))
           end
 
 val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
+val _ = tprint "dest_record on simple literal"
+val _ = let
+  fun checkid (n,t) = n = "id" andalso aconv t “0”
+  fun checkopn (n,t) = n = "opn" andalso aconv t “SUC”
+  fun checknops nops =
+      case nops of
+          [f1, f2] => (checkid f1 andalso checkopn f2) orelse
+                      (checkopn f1 andalso checkid f2)
+        | _ => false
+  fun check (ty,nops) = ty = “:ovlrcd” andalso checknops nops
+  fun prnop (n,t) = "(" ^ n ^ ", " ^ term_to_string t ^ ")"
+  fun pr (ty,nops) = "(" ^ type_to_string ty ^",[" ^
+                     String.concatWith "," (map prnop nops) ^ ")"
+in
+  require_msg (check_result check) pr TypeBase.dest_record
+              “<| id := 0; opn := SUC|>”
+end
+
+
 val _ = overload_on ("ID", ``f.id``)
 val _ = overload_on ("inv", ``f.opn``)
 val _ = overload_on ("ovlfoo", ``\n r:ovlrcd. opn_fupd (K (K n)) r``)
@@ -297,7 +316,8 @@ val _ = List.app pptest
             "r with pfld1 := K 1"),
          ("poly simple seln", ``(r : ('c,'d)polyrcd).pfld1``, "r.pfld1"),
          ("bare ('a,'b) polyrcd_pfld1",
-             ``polyrcd_pfld1 : ('a,'b) polyrcd -> 'a ms``, "polyrcd_pfld1"),
+             “polyrcd_pfld1 : ('a,'b) polyrcd -> 'a ms”,
+             "polyrcd_pfld1"),
          ("bare ('a,'b) polyrcd_pfld1_fupd",
             ``polyrcd_pfld1_fupd :
                 ('a ms -> 'a ms) -> ('a,'b) polyrcd -> ('a,'b) polyrcd``,
@@ -317,6 +337,10 @@ val _ = List.app pptest
             "pfld1_fupd f")
          ]
 
+val _ = tprint "bare accessor name parses to constant"
+val _ = require_msg (check_result is_const) term_to_string Parse.Term
+                    ‘polyrcd_pfld1’
+
 val _ = with_flag (Globals.linewidth, 40) pptest
                   ("multiline record 1",
                    ``<|fld1 := a very long expression indeed ;
@@ -330,6 +354,36 @@ val _ = with_flag (Globals.linewidth, 40) pptest
                        fld4 := also a long expression|>``,
                   "<|fld3 := a very long expression indeed;\n\
                   \  fld4 := also a long expression|>")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 3",
+                   “f x =  <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|>”,
+                   "f x =\n\
+                   \<|fld3 := a very long expression indeed;\n\
+                   \  fld4 := also a long expression|>")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 4",
+                   “let x = <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|> in f x”,
+                   "let\n\
+                   \  x =\n\
+                   \    <|fld3 :=\n\
+                   \        a very long expression indeed;\n\
+                   \      fld4 := also a long expression|>\n\
+                   \in\n\
+                   \  f x")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 5",
+                   “R P (f x)
+                      <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|>”,
+                   "R P (f x)\n\
+                   \  <|fld3 :=\n\
+                   \      a very long expression indeed;\n\
+                   \    fld4 := also a long expression|>")
 
 val _ = app convtest [
       ("EVAL field K-composition", computeLib.CBV_CONV computeLib.the_compset,
@@ -405,5 +459,14 @@ val _ = quiet_warnings (fn () =>
           Datatype `pcet20171201 = C20171201 num | D20171201 (num -> bool)`) ()
           handle _ => die "FAILED!"
 val _ = OK()
+
+val _ = tprint "Initial test of indirect datatype recursion with basic types";
+(* there are more thorough tests of this in the datatypes_basic_test theory *)
+val _ = quiet_warnings (fn () =>
+           (Datatype `v_rec = V (v_rec + num) | W`)
+           ) () handle _ => die "FAILED!"
+val _ = quiet_warnings (fn () =>
+           (Datatype`a_rec = A ((a_rec # unit # num option # (unit + num)) list) | B unit`)
+           ) () handle _ => die "FAILED!"
 
 val _ = Process.exit Process.success;

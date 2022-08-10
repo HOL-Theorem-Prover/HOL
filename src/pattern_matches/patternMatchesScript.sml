@@ -672,32 +672,29 @@ val PMATCH_ROW_REDUNDANT_0 = store_thm ("PMATCH_ROW_REDUNDANT_0",
   ``PMATCH_ROW_REDUNDANT v (r::rs) 0 <=> (r v = NONE)``,
 SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def]);
 
-val PMATCH_ROW_REDUNDANT_SUC = store_thm ("PMATCH_ROW_REDUNDANT_SUC",
-  ``!v r rs i.
-    PMATCH_ROW_REDUNDANT v (r::rs) (SUC i) <=>
-    (((~(r v = NONE)) /\ i < LENGTH rs) \/ PMATCH_ROW_REDUNDANT v rs i)``,
+Theorem PMATCH_ROW_REDUNDANT_SUC:
+  !v r rs i.
+     PMATCH_ROW_REDUNDANT v (r::rs) (SUC i) <=>
+     (r v <> NONE /\ i < LENGTH rs) \/ PMATCH_ROW_REDUNDANT v rs i
+Proof
+  SIMP_TAC (list_ss++boolSimps.EQUIV_EXTRACT_ss) [PMATCH_ROW_REDUNDANT_def] THEN
+  REPEAT STRIP_TAC THEN
+  EQ_TAC THENL [
+    STRIP_TAC THEN
+    Cases_on `j` THENL [
+      Cases_on `r v` THEN FULL_SIMP_TAC list_ss [],
 
-SIMP_TAC (list_ss++boolSimps.EQUIV_EXTRACT_ss) [PMATCH_ROW_REDUNDANT_def] THEN
-REPEAT STRIP_TAC THEN
-EQ_TAC THENL [
-  STRIP_TAC THEN
-  Cases_on `j` THENL [
-    Cases_on `r v` THEN FULL_SIMP_TAC list_ss [],
+      Q.RENAME1_TAC `SUC j' < SUC i` THEN STRIP_TAC THEN
+      Q.EXISTS_TAC `j'` THEN
+      FULL_SIMP_TAC list_ss []
+    ],
 
-    Q.RENAME1_TAC `SUC j' < SUC i` THEN
-    DISJ2_TAC THEN
-    Q.EXISTS_TAC `j'` THEN
-    FULL_SIMP_TAC list_ss []
-  ],
-
-  REPEAT STRIP_TAC THENL [
-    Q.EXISTS_TAC `0` THEN
-    Cases_on `r v` THEN FULL_SIMP_TAC list_ss [],
-
-    Q.EXISTS_TAC `SUC j` THEN
-    FULL_SIMP_TAC list_ss []
+    REPEAT STRIP_TAC THEN Cases_on ‘r v’ >> FULL_SIMP_TAC list_ss [] >| [
+      Q.EXISTS_TAC `SUC j` THEN SRW_TAC[][],
+      Q.EXISTS_TAC ‘0’ >> SRW_TAC[][]
+    ]
   ]
-]);
+QED
 
 
 val PMATCH_ROW_REDUNDANT_APPEND_LT = store_thm ("PMATCH_ROW_REDUNDANT_APPEND_LT",

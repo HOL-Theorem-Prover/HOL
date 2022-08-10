@@ -35,7 +35,7 @@ struct
   val minus_tm     = prim_mk_const {Name="-",       Thy="arithmetic"}
   val mod_tm       = prim_mk_const {Name="MOD",     Thy="arithmetic"}
   val mult_tm      = prim_mk_const {Name="*",       Thy="arithmetic"}
-  val num_case_tm  = prim_mk_const {Name="num_CASE",Thy="arithmetic"}
+  val num_case_tm  = prim_mk_const {Name="num_CASE",Thy="prim_rec"}
   val numeral_tm   = prim_mk_const {Name="NUMERAL", Thy="arithmetic"}
   val odd_tm       = prim_mk_const {Name="ODD",     Thy="arithmetic"}
   val plus_tm      = prim_mk_const {Name="+",       Thy="arithmetic"}
@@ -231,8 +231,8 @@ struct
   fun list_mk_mult (h::t) = rev_itlist (C (curry mk_mult)) t h
     | list_mk_mult [] = raise ERR "list_mk_mult" "empty list";
 
-  val strip_plus = strip_binop (total dest_plus)
-  val strip_mult = strip_binop (total dest_mult)
+  val strip_plus = strip_binop dest_plus
+  val strip_mult = strip_binop dest_mult
 
 (*---------------------------------------------------------------------------
      Lifting ML Arbnums to HOL nums

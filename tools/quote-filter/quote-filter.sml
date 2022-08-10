@@ -1,4 +1,4 @@
-open OS.Process
+open OS.Process qfilter_util
 
 (* magic to ensure that interruptions (SIGINTs) are actually seen by the
    linked executable as Interrupt exceptions *)
@@ -7,40 +7,11 @@ val _ = catch_interrupt true;
 
 fun read_from_stream is n = TextIO.input is
 
-fun open_files b infn outfn =
-    let
-      open TextIO
-      val is = TextIO.openIn infn
-               handle OS.SysErr _ =>
-                      (output(stdErr, "Error opening "^infn^"\n");
-                       exit failure)
-      val os = TextIO.openOut outfn
-               handle Io {cause = OS.SysErr (_, eo), ...} =>
-                      (case eo of
-                           SOME e => output(stdErr, OS.errorMsg e)
-                         | NONE => ();
-                       exit failure)
-      in
-        (is, os, b)
-    end
-
-fun usage status =
-    (TextIO.output(TextIO.stdErr,
-                   "Usage:\n  " ^ CommandLine.name() ^
-                   " [[-i] <inputfile> <outputfile>] | -h | -n\n");
-     exit status)
-
-val (instream, outstream, intp) =
-    case CommandLine.arguments() of
-        [] => (TextIO.stdIn, TextIO.stdOut, true)
-      | ["-h"] => usage success
-      | ["-n"] => (TextIO.stdIn, TextIO.stdOut, false)
-      | [ifile, ofile] => open_files false ifile ofile
-      | ["-i", ifile, ofile] => open_files true ifile ofile
-      | _ => usage failure
+val (instream, outstream, intp, qfixp, callback) =
+    processArgs (false,false,false) (CommandLine.arguments())
 
 open QuoteFilter.UserDeclarations
-val state as QFS args = newstate intp
+val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp}
 
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
@@ -58,5 +29,5 @@ fun loop() =
   end
 
 val _ = loop()
-val _ = TextIO.closeOut outstream
+val _ = callback()
 val _ = exit success

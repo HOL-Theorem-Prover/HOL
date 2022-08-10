@@ -1,0 +1,2 @@
+INCLUDES = ../miller/subtypes ../miller/formalize $(HOLDIR)/src/probability \
+	$(HOLDIR)/src/real/analysis

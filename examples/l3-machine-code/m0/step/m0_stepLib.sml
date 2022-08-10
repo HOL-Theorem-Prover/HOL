@@ -1925,7 +1925,10 @@ local
    val u4 = wordsSyntax.mk_wordii (4, 32)
    val get_val = fst o pairSyntax.dest_pair o rhsc
    val get_state = rhsc
-   val state_exception_tm = mk_arm_const "m0_state_exception"
+   val state_exception_tm =
+       mk_arm_const $
+         TypeBasePure.mk_recordtype_fieldsel
+           {tyname = "m0_state", fieldname = "exception"}
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
    val MP_Next1 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb
    val MP_Next2 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb2

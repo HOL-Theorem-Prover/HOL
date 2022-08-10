@@ -1,13 +1,11 @@
 open HolKernel Parse boolLib bossLib;
 
-open listTheory HurdUseful subtypeTools res_quanTools
+open listTheory hurdUtils subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext
      relationTheory ho_proverTools extra_listTheory listContext
      arithmeticTheory groupTheory pred_setContext groupContext
      subtypeTheory extra_numTheory gcdTheory dividesTheory
      extra_arithTheory;
-
-open util_probTheory; (* needs only the minimal_def *)
 
 val _ = new_theory "finite_group";
 val _ = ParseExtras.temp_loose_equality()
@@ -38,14 +36,16 @@ val finite_group_def = Define
 val add_group_def = Define
   `add_group (n : num) = ((\x. x < n), (\x y. (x + y) MOD n))`;
 
-val gord_def = Define `gord G g
-  = minimal (\n. 0 < n /\ (gpow G g n = gid G))`;
+Definition gord_def:
+  gord G g = LEAST n. 0 < n /\ (gpow G g n = gid G)
+End
 
 val elt_subgroup_def = Define
   `elt_subgroup G g = ((\x. ?i. x = gpow G g i), gop G)`;
 
-val lcoset_list_def = Define `lcoset_list G H
-  = kill_dups (MAP (\g. lcoset G g H) (list_elts (gset G)))`;
+Definition lcoset_list_def:
+  lcoset_list G H = nub (MAP (\g. lcoset G g H) (SET_TO_LIST (gset G)))
+End
 
 val cyclic_def = Define
   `cyclic G = ?g :: gset G. elt_subgroup G g = G`;
@@ -197,15 +197,15 @@ val GORD_EXISTS = store_thm
    >> Suff `gpow G g ((j - i) + i) = gpow G g i` >- G_TAC []
    >> R_TAC []);
 
-val GORD = store_thm
-  ("GORD",
-   ``!G :: finite_group. !g :: gset G.
+Theorem GORD:
+   !G :: finite_group. !g :: gset G.
        (0 < gord G g /\ (gpow G g (gord G g) = gid G)) /\
-       !n. 0 < n /\ n < gord G g ==> ~(gpow G g n = gid G)``,
+       !n. 0 < n /\ n < gord G g ==> ~(gpow G g n = gid G)
+Proof
    NTAC 2 RESQ_STRIP_TAC
-   >> MP_TAC (Q_RESQ_SPECL [`G`, `g`] GORD_EXISTS)
-   >> R_TAC [MINIMAL_EXISTS, GSYM gord_def]
-   >> ho_PROVE_TAC []);
+   >> simp[gord_def] >> numLib.LEAST_ELIM_TAC >> simp[]
+   >> metis_tac[GORD_EXISTS, prim_recTheory.LESS_REFL]
+QED
 
 val GORD_SUBTYPE = store_thm
   ("GORD_SUBTYPE",
@@ -339,6 +339,7 @@ val CARD_LCOSET = store_thm
    >> CONJ_TAC >- PROVE_TAC [IN_FINITE_GROUP, SUBGROUP_FINITE_GROUP]
    >> G_TAC' [INJ_DEF, IN_FINITE_GROUP]);
 
+Theorem MAP_MEM[local] = ONCE_REWRITE_RULE [CONJ_COMM] MEM_MAP
 val UNIONL_LCOSET_LIST = store_thm
   ("UNIONL_LCOSET_LIST",
    ``!G :: finite_group. !H :: subgroup G. UNIONL (lcoset_list G H) = gset G``,
@@ -348,25 +349,25 @@ val UNIONL_LCOSET_LIST = store_thm
    [R_TAC [IN_UNIONL]
     >> S_TAC
     >> Q.PAT_X_ASSUM `MEM s t` MP_TAC
-    >> R_TAC [lcoset_list_def, MEM_KILL_DUPS, MAP_MEM]
+    >> R_TAC [lcoset_list_def, MEM_nub, MAP_MEM]
     >> S_TAC
     >> AR_TAC []
     >> POP_ASSUM K_TAC
-    >> AR_TAC [LIST_ELTS, IN_FINITE_GROUP]
+    >> AR_TAC [MEM_SET_TO_LIST, IN_FINITE_GROUP]
     >> Q.PAT_X_ASSUM `v IN lcoset G y H` MP_TAC
     >> R_TAC [lcoset_def, IN_IMAGE]
     >> S_TAC
     >> G_TAC [],
-    RW_TAC std_ss [lcoset_list_def, IN_UNIONL, MEM_KILL_DUPS, MAP_MEM]
+    RW_TAC std_ss [lcoset_list_def, IN_UNIONL, MEM_nub, MEM_MAP]
     >> Q.EXISTS_TAC `lcoset G x H`
-    >> G_TAC [LIST_ELTS, LCOSET_REFL]
+    >> G_TAC [MEM_SET_TO_LIST, LCOSET_REFL]
     >> ho_PROVE_TAC []]);
 
 val DISJOINTL_LCOSET_LIST = store_thm
   ("DISJOINTL_LCOSET_LIST",
    ``!G :: finite_group. !H :: subgroup G. DISJOINTL (lcoset_list G H)``,
    S_TAC
-   >> G_TAC [lcoset_list_def, DISJOINTL_KILL_DUPS, MAP_MEM, LIST_ELTS]
+   >> G_TAC [lcoset_list_def, DISJOINTL_KILL_DUPS, MEM_MAP, MEM_SET_TO_LIST]
    >> S_TAC
    >> G_TAC [LCOSETS_EQUAL_OR_DISJOINT]);
 
@@ -374,10 +375,10 @@ val CARD_LCOSET_LIST = store_thm
   ("CARD_LCOSET_LIST",
    ``!G :: finite_group. !H :: subgroup G. !c.
        MEM c (lcoset_list G H) ==> (CARD c = CARD (gset H))``,
-   G_TAC [lcoset_list_def, MEM_KILL_DUPS, MAP_MEM]
+   G_TAC [lcoset_list_def, MEM_nub, MAP_MEM]
    >> S_TAC
    >> Q.PAT_X_ASSUM `MEM y x` MP_TAC
-   >> G_TAC [LIST_ELTS, CARD_LCOSET]);
+   >> G_TAC [MEM_SET_TO_LIST, CARD_LCOSET]);
 
 val LAGRANGE = store_thm
   ("LAGRANGE",

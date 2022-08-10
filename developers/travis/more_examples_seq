@@ -10,7 +10,6 @@ src/quotient/src
 src/finite_maps
 src/ring/src
 src/integer
-src/coalgebras
 src/emit
 !examples/parity
 !examples/MLsyntax

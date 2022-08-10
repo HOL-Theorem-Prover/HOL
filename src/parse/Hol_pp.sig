@@ -23,7 +23,7 @@ sig
 
   val print_theory : string -> unit
 
-  val data_list_to_string : data list -> string
+  val data_list_to_string : DB_dtype.public_data list -> string
   val print_apropos       : term -> unit
   val print_find          : string -> unit
   val print_match         : string list -> term -> unit

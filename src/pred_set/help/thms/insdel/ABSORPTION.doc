@@ -1,3 +1,0 @@
-\THEOREM ABSORPTION pred_sets
-|- !x s. x IN s = (x INSERT s = s)
-\ENDTHEOREM

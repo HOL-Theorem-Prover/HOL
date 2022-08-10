@@ -294,7 +294,7 @@ val log2 : real -> real  (* Domain *)
 (* Pretty-printing                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a pp = ppstream -> 'a -> unit
+type 'a pp = 'a -> PP.pretty
 
 val LINE_LENGTH : int ref
 

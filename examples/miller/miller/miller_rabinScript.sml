@@ -1,39 +1,17 @@
-(* interactive mode
-show_assums := true;
-loadPath := ["../ho_prover","../subtypes","../RSA","../formalize",
-             "../prob","../groups"] @ !loadPath;
-app load
-  ["bossLib", "listTheory", "subtypeTools", "res_quanTools",
-   "pred_setTheory", "extra_pred_setTheory", "arithContext",
-   "ho_proverTools", "extra_listTheory", "subtypeTheory",
-   "listContext", "arithmeticTheory", "groupTheory", "groupContext",
-   "extra_numTheory", "gcdTheory", "dividesTheory",
-   "extra_arithTheory", "finite_groupTheory", "finite_groupContext",
-   "abelian_groupTheory", "num_polyTheory", "extra_binomialTheory",
-   "binomialTheory", "summationTheory",
-   "pred_setContext","mult_groupTheory","probTheory","prob_uniformTheory",
-   "extra_realTheory","realLib","probabilityTheory"];
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib bossLib;
 
 open listTheory subtypeTools
      res_quanTools res_quanTheory pred_setTheory extra_pred_setTheory
      arithContext ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory HurdUseful
+     listContext arithmeticTheory groupTheory hurdUtils
      groupContext extra_numTheory gcdTheory dividesTheory
      extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
      binomialTheory summationTheory pred_setContext mult_groupTheory
-     extra_realTheory realTheory realLib
+     extra_realTheory realTheory realLib seqTheory
      state_transformerTheory combinTheory;
 
-open util_probTheory probabilityTheory probTheory prob_uniformTheory;
-
-(* interactive mode
-quietdec := false;
-*)
+open util_probTheory real_probabilityTheory probTheory prob_uniformTheory;
 
 val _ = new_theory "miller_rabin";
 val _ = ParseExtras.temp_loose_equality()
@@ -56,17 +34,6 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
@@ -382,11 +349,11 @@ val NONWITNESS_MULT_GROUP = store_thm
    >> Q.EXISTS_TAC `n - 1`
    >> RW_TAC arith_ss [NONWITNESS_1]);
 
-val CARD_WITNESS = store_thm
-  ("CARD_WITNESS",
-   ``!n.
+Theorem CARD_WITNESS:
+   !n.
        1 < n /\ ODD n /\ ~prime n ==>
-       (n - 1) <= 2 * CARD {a | 0 < a /\ a < n /\ witness n a}``,
+       (n - 1) <= 2 * CARD {a | 0 < a /\ a < n /\ witness n a}
+Proof
    RW_TAC std_ss [GSPEC_DEST]
    >> Suff `2 * CARD (\a. 0 < a /\ a < n /\ ~witness n a) <= (n - 1)`
    >- (Suff `CARD (\a. 0 < a /\ a < n /\ witness n a) +
@@ -565,7 +532,7 @@ val CARD_WITNESS = store_thm
        >> Suff `gpow (mult_group n) (n - 1) 2 = gid (mult_group n)`
        >- G_TAC []
        >> G_TAC [GPOW_GID_GORD, MULT_GROUP_GORD_MINUS_1])
-   >> DISCH_THEN (MP_TAC o HO_MATCH_MP MINIMAL_EXISTS_IMP)
+   >> DISCH_THEN (MP_TAC o HO_MATCH_MP WOP)
    >> Strip
    >> Know `!j x. t - m < j /\ j <= t /\ x IN gset (mult_group n) ==>
               ~(gpow (mult_group n) x (2 EXP j * u) = n - 1)`
@@ -740,7 +707,8 @@ val CARD_WITNESS = store_thm
    >> ONCE_REWRITE_TAC [MULT_COMM]
    >> Simplify [MOD_MULT_MOD, MINUS_1_MULT_MOD]
    >> Suff `2 < p` >- (KILL_TAC >> DECIDE_TAC)
-   >> PROVE_TAC [ODD_GT_1]);
+   >> PROVE_TAC [ODD_GT_1]
+QED
 
 val MILLER_RABIN_1_PRIME = store_thm
   ("MILLER_RABIN_1_PRIME",

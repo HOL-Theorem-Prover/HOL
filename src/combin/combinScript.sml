@@ -76,6 +76,7 @@ local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function","Combinator"],"s")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="W"},name=(["Function","Combinator"],"w")}
 end
+
 (*---------------------------------------------------------------------------*
  * In I_DEF, the type constraint is necessary in order to meet one of        *
  * the criteria for a definition : the tyvars of the lhs must be a           *
@@ -96,6 +97,8 @@ val o_ASSOC = store_thm("o_ASSOC",
    THEN REWRITE_TAC [ o_DEF ]
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
+
+Theorem o_ASSOC' = GSYM o_ASSOC
 
 val o_ABS_L = store_thm(
   "o_ABS_L",
@@ -157,6 +160,12 @@ val I_THM = store_thm("I_THM",
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
+Theorem I_EQ_IDABS:
+  I = \x. x
+Proof
+  REWRITE_TAC[FUN_EQ_THM] >> BETA_TAC >> REWRITE_TAC[I_THM]
+QED
+
 val I_o_ID = store_thm("I_o_ID",
    “!f. (I o f = f) /\ (f o I = f)”,
    REWRITE_TAC [I_THM, o_THM, FUN_EQ_THM]);
@@ -213,6 +222,13 @@ val UPDATE_APPLY_ID = Q.store_thm("UPDATE_APPLY_ID",
     THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
     THEN RULE_ASSUM_TAC (REWRITE_RULE [])
     THEN ASM_REWRITE_TAC []]);
+
+val UPDATE_APPLY_ID' = GSYM UPDATE_APPLY_ID
+Theorem UPDATE_APPLY_ID_RWT =
+  CONJ UPDATE_APPLY_ID'
+       (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV EQ_SYM_EQ)))
+                  UPDATE_APPLY_ID')
+
 
 val UPDATE_APPLY_IMP_ID = save_thm("UPDATE_APPLY_IMP_ID",
   GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL UPDATE_APPLY_ID))));
@@ -390,15 +406,39 @@ val MONOID_DISJ_F = store_thm ("MONOID_DISJ_F",
               LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]);
 
 (*---------------------------------------------------------------------------*)
+(* Congruence rule for composition. Grist for the termination condition      *)
+(* extractor.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+Theorem o_CONG:
+  !a1 a2 g1 g2 f1 f2.
+     a1 = a2 /\
+     (!x. x = a2 ==> g1 x = g2 x) /\
+     (!y. y = g2 a2 ==> f1 y = f2 y)
+     ==>
+     (f1 o g1) a1 = (f2 o g2) a2
+Proof
+ REPEAT STRIP_TAC THEN
+ Q.PAT_X_ASSUM `a1 = a2` (SUBST_ALL_TAC o SYM) THEN
+ POP_ASSUM (MP_TAC o Q.SPEC `g1 a1`) THEN
+ POP_ASSUM (MP_TAC o Q.SPEC `a1`) THEN
+ REWRITE_TAC[o_DEF] THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
+QED
+
+(*---------------------------------------------------------------------------*)
 (*  Tag combinator equal to K. Used in generating ML from HOL                *)
 (*---------------------------------------------------------------------------*)
 
 val FAIL_DEF = Q.new_definition("FAIL_DEF", `FAIL = \x y. x`);
+
 val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
     REPEAT GEN_TAC
     THEN PURE_REWRITE_TAC [ FAIL_DEF ]
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
+
+
+Overload flip = “C”
 
 val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
 

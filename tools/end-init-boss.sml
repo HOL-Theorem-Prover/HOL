@@ -2,7 +2,7 @@ let
   val s = "[loading theories and proof tools "
   val l = ["optionTheory", "pairLib", "sumTheory", "numTheory",
            "arithmeticTheory", "Arith", "numLib", "mesonLib", "BasicProvers",
-           "Datatype", "listTheory", "bossLib", "EmitTeX", "pred_setLib"
+           "Datatype", "listTheory", "bossLib", "pred_setLib"
            ]
   val terminfo = case Process.getEnv "TERM" of
                    SOME s => s
@@ -26,6 +26,7 @@ end;
 
 val _ = installPP (mosmlpp simpLib.pp_ssfrag);
 val _ = installPP (mosmlpp simpLib.pp_simpset)
+val _ = installPP (mosmlpp DefnBase.pp_defn)
 
 open bossLib;  (* Any others? *)
 

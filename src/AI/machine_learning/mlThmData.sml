@@ -12,8 +12,9 @@ open HolKernel boolLib aiLib smlLexer smlExecute smlRedirect mlFeature
 
 val ERR = mk_HOL_ERR "mlThmData"
 
-type thmdata =
-  (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict
+type thmid = string
+type thmdata = (int, real) Redblackmap.dict * (thmid * fea) list
+val empty_thmdata = (dempty Int.compare,[])
 
 (* -------------------------------------------------------------------------
    Artificial theory name for theorems from the namespace.
@@ -26,48 +27,20 @@ val namespace_tag = "namespace_tag"
    Namespace theorems
    ------------------------------------------------------------------------- *)
 
-fun string_of_pretty p =
-  let
-    val acc = ref []
-    fun f s = acc := s :: !acc
-  in
-    PolyML.prettyPrint (f,80) p;
-    String.concatWith " " (rev (!acc))
-  end
-
-fun smltype_of_value l s =
-  let
-    val v = assoc s l handle _ => raise ERR "type_of_value" s
-    val t = PolyML.NameSpace.Values.typeof v;
-    val p = PolyML.NameSpace.Values.printType (t,0,NONE)
-  in
-    string_of_pretty p
-  end
-
-fun is_thm_value l s =
-  let
-    val s1 = smltype_of_value l s
-    val s2 = smlLexer.partial_sml_lexer s1
-  in
-    case s2 of
-      [a] => (drop_sig a = "thm" handle _ => false)
-    | _   => false
-  end
-
 fun unsafe_namespace_thms () =
   let
     val l0 = #allVal (PolyML.globalNameSpace) ()
-    val l1 = filter (is_thm_value l0) (map fst l0)
+    val l1 = filter (fn x => is_thm_value l0 x andalso x <> "it") (map fst l0)
   in
     case thml_of_sml l1 of
-      SOME l2 => l2
+      SOME l2 => combine (l1,l2)
     | NONE => List.mapPartial thm_of_sml l1
   end
 
 fun safe_namespace_thms () =
   let
     val l0 = #allVal (PolyML.globalNameSpace) ()
-    val l1 = (map fst l0)
+    val l1 = filter (fn x => x <> "it") (map fst l0)
   in
     List.mapPartial thm_of_sml l1
   end
@@ -79,9 +52,9 @@ fun safe_namespace_thms () =
 fun dbfetch_of_thmid s =
   let val (a,b) = split_string "Theory." s in
     if a = current_theory ()
-      then String.concatWith " " ["DB.fetch",mlquote a,mlquote b]
+      then String.concatWith " " ["DB.fetch", mlquote a, mlquote b]
     else
-      if a = namespace_tag then b else s
+      if mem a [namespace_tag] then b else s
   end
 
 fun mk_metis_call sl =
@@ -122,10 +95,9 @@ fun intactdep_of_thm thm =
     (length l0 = length l1, l1)
   end
 
-
 fun validdep_of_thmid thmid =
   let val (a,b) = split_string "Theory." thmid in
-    if a = namespace_tag
+    if mem a [namespace_tag]
     then []
     else List.mapPartial thmid_of_depid (depidl_of_thm (DB.fetch a b))
   end
@@ -134,48 +106,67 @@ fun validdep_of_thmid thmid =
    Theorem features
    ------------------------------------------------------------------------- *)
 
-val goalfea_cache = ref (dempty goal_compare)
-
-fun clean_goalfea_cache () = goalfea_cache := dempty goal_compare
-
-fun fea_of_goal_cached g =
-  dfind g (!goalfea_cache) handle NotFound =>
-  let val fea = feahash_of_goal g in
-    goalfea_cache := dadd g fea (!goalfea_cache); fea
-  end
-
-fun add_thmfea thy ((name,thm),(thmfeadict,nodupl)) =
-  let val g = dest_thm thm in
+fun add_thmfea thy ((name,thm),(thmfea,symfreq,nodupl)) =
+  let
+    val g = dest_thm thm
+    val thmid = thy ^ "Theory." ^ name
+    val newnodupl = dadd g () nodupl
+  in
     if not (dmem g nodupl) andalso uptodate_thm thm
-    then (dadd (thy ^ "Theory." ^ name) (fea_of_goal_cached g) thmfeadict,
-          dadd g () nodupl)
-    else (thmfeadict,nodupl)
+    then
+      let
+        val fea = fea_of_goal_cached true g
+        val newthmfea = (thmid,fea) :: thmfea
+        val newsymfreq = count_dict symfreq fea
+      in
+        (newthmfea,newsymfreq,newnodupl)
+      end
+    else (thmfea,symfreq,newnodupl)
   end
 
-fun add_thmfea_from_thy (thy,(thmfeadict,nodupl)) =
-  foldl (add_thmfea thy) (thmfeadict,nodupl) (DB.thms thy)
+fun add_thmfea_from_thy (thy,acc) =
+  foldl (add_thmfea thy) acc (DB.thms thy)
 
 fun thmfea_from_thyl thyl =
-  foldl add_thmfea_from_thy (dempty String.compare, dempty goal_compare) thyl
+  foldl add_thmfea_from_thy ([], dempty Int.compare, dempty goal_compare) thyl
 
-fun add_namespacethm (thmfeadict,nodupl) =
-  let val l = hide_out unsafe_namespace_thms () in
-    foldl (add_thmfea namespace_tag) (thmfeadict,nodupl) l
+fun add_namespacethm acc =
+  let val l = unsafe_namespace_thms () in
+    foldl (add_thmfea namespace_tag) acc l
   end
+
+val create_thmdata_time = ref 0.0
+
+val create_thmdata_cache = ref (dempty (list_compare String.compare))
+
+fun clean_create_thmdata_cache () =
+  create_thmdata_cache := dempty (list_compare String.compare)
+
+val add_cthy_time = ref 0.0
+val add_namespace_time = ref 0.0
+val thmdata_tfidf_time = ref 0.0
 
 fun create_thmdata () =
   let
-    val thyl = current_theory () :: ancestry (current_theory ())
-    val (d,nodupl) = thmfea_from_thyl thyl
-    val (thmfeadict,_) = add_namespacethm (d,nodupl)
-    val is = int_to_string (dlength thmfeadict)
+    val thy = current_theory ()
+    val thyl = ancestry thy
+    val acc1 =
+      dfind thyl (!create_thmdata_cache) handle NotFound =>
+      let val r = thmfea_from_thyl thyl in
+        create_thmdata_cache := dadd thyl r (!create_thmdata_cache); r
+      end
+    val acc2 = total_time add_cthy_time add_thmfea_from_thy (thy,acc1)
+    val (thmfea3,symfreq3,_) = total_time add_namespace_time
+      add_namespacethm acc2
+    val n = int_to_string (length thmfea3)
   in
-    print_endline ("Loading " ^ is ^ " theorems ");
-    (learn_tfidf (dlist thmfeadict), thmfeadict)
+    print_endline ("Loading " ^ n ^ " theorems");
+    (total_time thmdata_tfidf_time
+     (learn_tfidf_symfreq_nofilter (length thmfea3)) symfreq3, thmfea3)
   end
 
 (* -------------------------------------------------------------------------
-   Named
+   Convert theorem identifier to a theorem value (used by holyhammer)
    ------------------------------------------------------------------------- *)
 
 fun in_namespace s = fst (split_string "Theory." s) = namespace_tag
@@ -190,10 +181,10 @@ fun thm_of_name s =
       SOME (s, DB.fetch a b)
     end
 
-fun thml_of_namel sl = hide_out (List.mapPartial thm_of_name) sl
+fun thml_of_namel sl = List.mapPartial thm_of_name sl
 
 (* -------------------------------------------------------------------------
-   Find a theorem name thanks to their depid and their goal representation.
+   Convert a theorem value to sml code.
    ------------------------------------------------------------------------- *)
 
 fun dbfetch_of_depid thm =
@@ -208,7 +199,7 @@ fun dbfetch_of_depid thm =
       then
         let val name = dfind goal thmdict in
           SOME (String.concatWith " "
-            ["(","DB.fetch",mlquote thy,mlquote name,")"])
+            ["(","DB.fetch", mlquote thy, mlquote name,")"])
         end
       else NONE
     end

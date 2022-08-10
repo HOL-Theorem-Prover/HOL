@@ -49,7 +49,6 @@ val pkgconfig_info =
 
 
 val CC:string       = "cc";       (* C compiler                       *)
-val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 
@@ -68,7 +67,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 13
+val version_number = 14
 val release_string = "Kananaskis"
 
 (*
@@ -176,8 +175,9 @@ fun systeml x = (print "Systeml not correctly loaded.\n";
 val mk_xable = systeml;
 val xable_string = systeml;
 
-fun optquote NONE = "NONE"
-  | optquote (SOME p) = "SOME " ^ quote p
+fun opt_to_string p NONE = "NONE"
+  | opt_to_string p (SOME x) = "SOME " ^ p x
+val optquote = opt_to_string quote
 
 val OSkind = if OS="linux" orelse OS="solaris" orelse OS="macosx" then "unix"
              else OS
@@ -194,6 +194,9 @@ local
    val intOf = Option.valOf o Int.fromString
    val number = PolyML.Compiler.compilerVersionNumber
    val _ = number >= 570 orelse die "PolyML version must be at least 5.7.0"
+   val default =
+       ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
+        "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
 in
    val machine_flags =
        if sysname = "Darwin" (* Mac OS X *) then
@@ -209,9 +212,11 @@ in
        else if sysname = "Linux" then
          case pkgconfig_info of
              SOME list => list
-           | _ => ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
-                   "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
-       else []
+           | _ => default
+       else if String.isPrefix "CYGWIN_NT" sysname (* Cygwin! *) then
+         default
+       else
+         default
 end;
 
 
@@ -228,15 +233,22 @@ in
    "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
    "val POLY =" --> ("val POLY = "^quote poly^"\n"),
    "val POLYC =" --> ("val POLYC = "^quote polyc^"\n"),
-   "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
-                             (String.concatWith
-                                  ", "
-                                  (map quote machine_flags)) ^ "]\n"),
-   "val POLY_LDFLAGS_STATIC =" --> ("val POLY_LDFLAGS_STATIC = ["^
-                             (String.concatWith
-                                  ", "
-                                  (quote "-static" ::
-                                   map quote machine_flags)) ^ "]\n"),
+   "val POLY_LDFLAGS =" -->
+      ("val POLY_LDFLAGS = [" ^
+       String.concatWith ", "
+                         (map quote
+                              (if null POLY_LDFLAGS then machine_flags
+                               else POLY_LDFLAGS)) ^
+       "]\n"),
+   "val POLY_LDFLAGS_STATIC =" -->
+      ("val POLY_LDFLAGS_STATIC = [" ^
+       String.concatWith ", "
+                         (map quote
+                              (if null POLY_LDFLAGS_STATIC then
+                                 ("-static" :: machine_flags)
+                               else
+                                 POLY_LDFLAGS_STATIC)) ^
+       "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
@@ -245,8 +257,10 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"poly\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
-];
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
+   "val MV =" -->       ("val MV = "^quote MV^"\n"),
+   "val CP =" -->       ("val CP = "^quote CP^"\n")
+  ];
   use destfile
 end;
 
@@ -258,6 +272,9 @@ open Systeml;
 
 fun canread s = OS.FileSys.access(s, [FileSys.A_READ])
 val modTime = OS.FileSys.modTime;
+
+val _ = print ("Note: Int.maxInt = " ^ opt_to_string Int.toString Int.maxInt ^
+               "\n");
 
 let
   val _ = print "Compiling system specific functions ("
@@ -499,9 +516,13 @@ val _ =
     output(tar3, "use "^(qstr tar2));
     closeOut tar3;
     output(tar4,"augroup filetypedetect\n");
-    output(tar4,"  au BufRead,BufNewFile *?Script.sml let maplocalleader = \"h\" | source "^tar1^"\n");
+    output(tar4,"  au BufRead,BufNewFile *.sml let maplocalleader = \"h\" | source "^tar1^"\n");
+    output(tar4,"  \" recognise pre-munger files as latex source\n");
+    output(tar4,"  au BufRead,BufNewFile *.htex setlocal filetype=htex syntax=tex\n");
     output(tar4,"  \"Uncomment the line below to automatically load Unicode\n");
     output(tar4,"  \"au BufRead,BufNewFile *?Script.sml source "^fullPath [pref, "holabs.vim"]^"\n");
+    output(tar4,"  \"Uncomment the line below to fold proofs\n");
+    output(tar4,"  \"au BufRead,BufNewFile *?Script.sml setlocal foldmethod=marker foldmarker=Proof,QED foldnestmax=1\n");
     output(tar4,"augroup END\n");
     closeOut tar4
   end;
@@ -521,7 +542,7 @@ val _ =
       val target_boss = fullPath [holdir, "bin", "hol"]
       val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-            "\"$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")\""
+            "`" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ "`"
       fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
       val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
       val prelude2 = prelude @ [TP "prelude2.ML"]

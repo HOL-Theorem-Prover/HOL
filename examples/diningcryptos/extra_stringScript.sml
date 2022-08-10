@@ -9,7 +9,7 @@
 (*
 
 app load ["bossLib", "metisLib", "arithmeticTheory",
-          "listTheory", "formalizeUseful", "combinTheory", "pairTheory",
+          "listTheory", "hurdUtils", "combinTheory", "pairTheory",
           "extra_boolTheory", "jrhUtils", "numTheory", "simpLib",
           "stringTheory", "rich_listTheory",
           "stringSimps", "listSimps", "extra_numTheory"];
@@ -17,7 +17,7 @@ app load ["bossLib", "metisLib", "arithmeticTheory",
 *)
 
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory
-     listTheory formalizeUseful extra_numTheory combinTheory pairTheory
+     listTheory hurdUtils extra_numTheory combinTheory pairTheory
      extra_boolTheory jrhUtils numTheory simpLib
      stringTheory rich_listTheory stringSimps
      listSimps;

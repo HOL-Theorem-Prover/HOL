@@ -126,7 +126,9 @@ fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
     open HOLPP smpp PPBackEnd
     val {add_string, add_break, ublock, add_xstring,...} = backend
     fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
-    fun paren b p = if b then add_string "(" >> p >> add_string ")" else p
+    fun paren b p =
+        if b then add_string "(" >> ublock INCONSISTENT 1 p >> add_string ")"
+        else p
     fun uniconvert s =
         if not (!avoid_unicode) andalso get_tracefn "Greek tyvars" () = 1
            andalso size s = 2

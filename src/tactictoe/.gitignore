@@ -1,6 +1,5 @@
-debug/*
-code/*
-info/*
 eval/*
-scripts/*
 ttt_tacdata/*
+savestate/*
+log/*
+tnn_for_tactictoe

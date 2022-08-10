@@ -7,7 +7,7 @@ structure extra_pred_setTools :> extra_pred_setTools =
 struct
 
 open HolKernel Parse boolLib;
-open bossLib pred_setTheory HurdUseful subtypeTheory extra_pred_setTheory;
+open bossLib pred_setTheory hurdUtils subtypeTheory extra_pred_setTheory;
 
 infixr 0 ++ || ORELSEC ## THENC -->;
 infix 1 >> |->;

@@ -112,3 +112,6 @@ AND_CLAUSES
   \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)t.
          (T \(\land\) t \({\iff}\) t) \(\land\) (t \(\land\) T \({\iff}\) t) \(\land\) (F \(\land\) t \({\iff}\) F) \(\land\)
          (t \(\land\) F \({\iff}\) F) \(\land\) (t \(\land\) t \({\iff}\) t)
+
+<<HOL message: Initialising SRW simpset ... done>>
+val foo = \(\!\!\!{\turn}\!\!\!\!\) x < x + 1: thm

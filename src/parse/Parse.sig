@@ -12,12 +12,9 @@ signature Parse = sig
   type 'a pprinter = 'a -> HOLPP.pretty
 
   datatype fixity = datatype term_grammar_dtype.fixity
-  val fixityToString : fixity -> string
 
   type grammarDB_info = type_grammar.grammar * term_grammar.grammar
-  val grammarDB_insert : string * grammarDB_info -> unit
-  val grammarDB_fold : (string * grammarDB_info * 'a -> 'a) -> 'a -> 'a
-  val grammarDB : string -> grammarDB_info option
+  val grammarDB : {thyname:string} -> grammarDB_info option
   val set_grammar_ancestry : string list -> unit
 
   (* Parsing Types *)
@@ -100,6 +97,7 @@ signature Parse = sig
                       nilstr : string, block_info : block_info} -> unit
   val add_numeral_form : (char * string option) -> unit
   val add_strliteral_form : {ldelim:string,inj:term} -> unit
+  val remove_strliteral_form : {tmnm : string} -> unit
   val add_bare_numeral_form : (char * string option) -> unit
   val give_num_priority : char -> unit
   val remove_numeral_form : char -> unit
@@ -157,6 +155,7 @@ signature Parse = sig
   val temp_add_bare_numeral_form : (char * string option) -> unit
   val temp_give_num_priority : char -> unit
   val temp_add_strliteral_form : {ldelim:string,inj:term} -> unit
+  val temp_remove_strliteral_form : {tmnm : string} -> unit
   val temp_remove_numeral_form : char -> unit
   val temp_associate_restriction : (string * string) -> unit
   val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit
@@ -219,6 +218,7 @@ signature Parse = sig
 
   val hide   : string -> ({Name : string, Thy : string} list *
                           {Name : string, Thy : string} list)
+  val permahide : term -> unit
   val update_overload_maps :
     string -> ({Name : string, Thy : string} list *
                {Name : string, Thy : string} list) -> unit
@@ -255,6 +255,7 @@ signature Parse = sig
   val ParoundPrec      : ParenStyle
   val Always           : ParenStyle
   val NotEvenIfRand    : ParenStyle
+  val IfNotTop         : {realonly:bool} -> ParenStyle
 
   val AroundEachPhrase : PhraseBlockStyle
   val AroundSamePrec   : PhraseBlockStyle

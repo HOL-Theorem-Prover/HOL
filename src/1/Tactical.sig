@@ -62,10 +62,14 @@ sig
   val VALIDATE_LT    : list_tactic -> list_tactic
   val GEN_VALIDATE   : bool -> tactic -> tactic
   val GEN_VALIDATE_LT: bool -> list_tactic -> list_tactic
+  val CONJ_VALIDATE  : tactic -> tactic
   val ADD_SGS_TAC    : term list -> tactic -> tactic
   val EVERY          : tactic list -> tactic
   val EVERY_LT       : list_tactic list -> list_tactic
   val FIRST          : tactic list -> tactic
+  val FIRST_LT       : tactic -> list_tactic
+  val SELECT_LT_THEN : tactic -> tactic -> list_tactic
+  val SELECT_LT      : tactic -> list_tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic
   val map_every      : ('a -> tactic) -> 'a list -> tactic
   val MAP_FIRST      : ('a -> tactic) -> 'a list -> tactic
@@ -86,6 +90,8 @@ sig
   val ASSUM_LIST     : (thm list -> tactic) -> tactic
   val POP_ASSUM      : thm_tactic -> tactic
   val pop_assum      : thm_tactic -> tactic
+  val POP_LAST_ASSUM : thm_tactic -> tactic
+  val pop_last_assum : thm_tactic -> tactic
   val PRED_ASSUM     : (term -> bool) -> thm_tactic -> tactic
   val PAT_ASSUM      : term -> thm_tactic -> tactic
   val PAT_X_ASSUM    : term -> thm_tactic -> tactic

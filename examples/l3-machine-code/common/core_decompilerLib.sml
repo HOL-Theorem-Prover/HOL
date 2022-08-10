@@ -139,7 +139,7 @@ local
       THENC PURE_REWRITE_CONV [boolTheory.IMP_CLAUSES]
    val list_mk_union =
       HolKernel.list_mk_lbinop (Lib.curry pred_setSyntax.mk_union)
-   val strip_union = HolKernel.strip_binop (Lib.total pred_setSyntax.dest_union)
+   val strip_union = HolKernel.strip_binop pred_setSyntax.dest_union
    val get_model_name =
       helperLib.to_lower o fst o Term.dest_const o tripleSyntax.dest_model o
       Thm.concl
@@ -629,7 +629,8 @@ fun round (input, get_assert, triple_refl) =
       val () = echo 1 "."
       val ff = th |> concl |> rand |> rand |> rator
       val def =
-         new_definition (name ^ "_def", mk_eq (mk_var (name, type_of ff), ff))
+         Definition.new_definition (name ^ "_def",
+                                    mk_eq (mk_var (name, type_of ff), ff))
       val th = th |> CONV_RULE
                        ((RAND_CONV o RAND_CONV o RATOR_CONV) (fn _ => GSYM def))
       (* clean up result *)

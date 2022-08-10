@@ -21,7 +21,7 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib lcsymtacs;
+open HolKernel Parse boolLib bossLib;
 open zfset_axiomsTheory pred_setLib pred_setTheory pairLib
      pairTheory combinTheory;
 

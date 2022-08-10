@@ -9,6 +9,12 @@ open pairTheory;
 
 infix \\
 val op \\ = op THEN;
+val _ = temp_delsimps ["NORMEQ_CONV"]
+val _ = diminish_srw_ss ["ABBREV"]
+val _ = set_trace "BasicProvers.var_eq_old" 1
+val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj", "NOT_LT_ZERO_EQ_ZERO"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 
 val rw = ref (tl [TRUTH]);
@@ -274,10 +280,7 @@ val term_syntax_ok_def = tDefine "term_syntax_ok" `
      (LIST_TO_SET (free_vars y) SUBSET LIST_TO_SET xs) /\ ALL_DISTINCT xs /\
      EVERY var_ok xs /\
      EVERY (term_syntax_ok) zs /\ term_syntax_ok y /\ (LENGTH xs = LENGTH zs))`
- (WF_REL_TAC `measure (logic_term_size)` \\ SRW_TAC [] [] THEN1 DECIDE_TAC
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `zs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  \\ DECIDE_TAC);
+ (WF_REL_TAC `measure (logic_term_size)`);
 
 val formula_syntax_ok_def = Define `
   (formula_syntax_ok (Not x) = formula_syntax_ok x) /\
@@ -307,10 +310,7 @@ val term_vars_ok_def = tDefine "term_vars_ok" `
   (term_vars_ok (mApp fc vs) = ~(fc = mFun "QUOTE") /\ EVERY (term_vars_ok) vs) /\
   (term_vars_ok (mLamApp xs y zs) =
      EVERY (term_vars_ok) zs /\ term_vars_ok y)`
- (WF_REL_TAC `measure (logic_term_size)` \\ SRW_TAC [] [] THEN1 DECIDE_TAC
-  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  THEN1 (Induct_on `zs` \\ SRW_TAC [] [MEM,logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC)
-  \\ DECIDE_TAC);
+ (WF_REL_TAC `measure (logic_term_size)`);
 
 val logic_flag_term_vars_TERM = prove(
   ``logic_flag_term_vars (Sym "LIST") (Dot (t2sexp l) (Sym "NIL")) acc =

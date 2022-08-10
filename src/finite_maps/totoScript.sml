@@ -27,6 +27,8 @@ val _ = new_theory "toto";
 val _ = ParseExtras.temp_loose_equality()
 (* My habitual abbreviations: *)
 
+Type reln = “:'a -> 'a -> bool”
+
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
@@ -50,9 +52,11 @@ fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
 (* StrongLinearOrder part, which might be supplied from elsewhere.  *)
 (* **************************************************************** *)
 
-val StrongLinearOrderExists = maybe_thm ("StrongLinearOrderExists",
-``?R:'a reln. StrongLinearOrder R``,
-METIS_TAC [wotTheory.StrongWellOrderExists]);
+Theorem StrongLinearOrderExists:
+  ?R:'a reln. StrongLinearOrder R
+Proof
+  METIS_TAC [wellorderTheory.StrongWellOrderExists]
+QED
 
 (* Define cpn: *)
 
@@ -720,8 +724,9 @@ ASM_REWRITE_TAC [num_dtOrd, all_cpn_distinct, all_dt_distinct, num_dt_11] THEN
 GEN_TAC THEN Cases_on `z` THEN
 ASM_REWRITE_TAC [num_dtOrd, all_cpn_distinct, all_dt_distinct, num_dt_11]);
 
-val qk_numOrd_def = xDefine "qk_numOrd_def"
-`qk_numOrd m n = num_dtOrd (num_to_dt m) (num_to_dt n)`;
+Definition qk_numOrd_def:
+  qk_numOrd m n = num_dtOrd (num_to_dt m) (num_to_dt n)
+End
 
 (* Most of the work to prove TO_qk_numOrd (below) comes in showing that
    num_to_dt is a bijection, which we do first, with help of some lemmas. *)

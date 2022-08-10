@@ -16,7 +16,7 @@ sig
   val xDefine      : string -> term quotation -> thm
   val tDefine      : string -> term quotation -> tactic -> thm
   val WF_REL_TAC   : term quotation -> tactic
-  val Hol_defn     : string -> term quotation -> defn
+  val Hol_defn     : string -> term quotation -> DefnBase.defn
 
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
@@ -32,16 +32,25 @@ sig
   (* Case-splitting and induction operations *)
 
   val Cases             : tactic
-  val Induct            : tactic
-  val recInduct         : thm -> tactic
   val Cases_on          : term quotation -> tactic
-  val Induct_on         : term quotation -> tactic
+  val tmCases_on        : term -> string list -> tactic
+  val PairCases         : tactic
   val PairCases_on      : term quotation -> tactic
+  val Induct            : tactic
+  val Induct_on         : term quotation -> tactic
+  val recInduct         : thm -> tactic
+  val namedCases        : string list -> tactic
+  val namedCases_on     : term quotation -> string list -> tactic
+
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
-  val CASE_TAC          : tactic
+  val using             : tactic * thm -> tactic (* infix *)
+  val usingA            : tactic -> thm -> tactic (* curry of above *)
+
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic
+
+  val CASE_TAC          : tactic
   val CaseEq            : string -> thm
   val CaseEqs           : string list -> thm
   val AllCaseEqs        : unit -> thm
@@ -70,15 +79,23 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
-  val QI_ss           : ssfrag
-  val SQI_ss          : ssfrag
+  val boss_ss         : unit -> simpset (* srw_ss() + LET_ss + ARITH_ss *)
+
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
+  val CONJ_ss         : ssfrag
+  val DISJ_ss         : ssfrag
+  val DNF_ss          : ssfrag
+  val ETA_ss          : ssfrag
+  val QI_ss           : ssfrag
+  val SFY_ss          : ssfrag
+  val SQI_ss          : ssfrag
   val type_rws        : hol_type -> thm list
   val rewrites        : thm list -> ssfrag
   val augment_srw_ss  : ssfrag list -> unit
-  val diminish_srw_ss : string list -> ssfrag list
+  val diminish_srw_ss : string list -> unit
   val export_rewrites : string list -> unit
+  val temp_delsimps   : string list -> unit
   val delsimps        : string list -> unit
   val limit           : int -> simpset -> simpset
 
@@ -91,11 +108,14 @@ sig
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
   val Excl           : string -> thm
+  val SF             : ssfrag -> thm
   val Req0           : thm -> thm
   val ReqD           : thm -> thm
 
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
+  val SRULE             : thm list -> thm -> thm (* uses srw_ss() *)
+  val SCONV             : thm list -> conv (* uses srw_ss() *)
   val SIMP_TAC          : simpset -> thm list -> tactic
   val simp_tac          : simpset -> thm list -> tactic
   val ASM_SIMP_TAC      : simpset -> thm list -> tactic
@@ -135,6 +155,12 @@ sig
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val sg             : term quotation -> tactic
   val subgoal        : term quotation -> tactic
+  val >~             : ('a,'b)gentactic * term quotation list ->
+                       ('a,'b)gentactic
+  val >>~            : ('a,'b)gentactic * term quotation list ->
+                       ('a,'b)gentactic
+  val >>~-           : ('a,'b)gentactic * (term quotation list * tactic) ->
+                       ('a,'b)gentactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 
@@ -144,6 +170,12 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+
+  (* name cases of an induction theorem *)
+  val name_ind_cases : term list -> thm -> thm
+
+  (* convert aux size operators to combinators and use append rules *)
+  val size_comb_tac : tactic
 
   (* more simplification variants *)
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
@@ -156,6 +188,11 @@ sig
   val rw : thm list -> tactic
   val fs : thm list -> tactic
   val rfs : thm list -> tactic
+  val gs : thm list -> tactic
+  val gvs : thm list -> tactic
+  val gns : thm list -> tactic
+  val gnvs : thm list -> tactic
+  val rgs : thm list -> tactic
 
   (* without loss of generality (from wlogLib) *)
   val wlog_then : term quotation ->
@@ -164,8 +201,14 @@ sig
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic
+  val qx_genl_tac : term quotation list -> tactic
   val qx_choose_then : term quotation -> thm_tactic -> thm_tactic
+  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
   val qexists_tac : term quotation -> tactic
+  val qexistsl_tac : term quotation list -> tactic
+  val qexists : term quotation -> tactic
+  val qexistsl : term quotation list -> tactic
+  val qrefine : term quotation -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
   val qspec_tac : term quotation * term quotation -> tactic
@@ -189,11 +232,6 @@ sig
   val rename : term quotation list -> tactic
   val qabbrev_tac : term quotation -> tactic
   val qunabbrev_tac : term quotation -> tactic
+  val qunabbrevl_tac : term quotation list -> tactic
   val unabbrev_all_tac : tactic
-  val qx_genl_tac : term quotation list -> tactic
-  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
-
-  (* Derived search functions *)
-  val find_consts_thy : string list -> hol_type -> term list
-  val find_consts : hol_type -> term list
 end

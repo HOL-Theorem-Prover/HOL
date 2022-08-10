@@ -77,7 +77,7 @@ val ss = rewrites [OK_nextinstr_def, PWRITE_M_LIST_def,
   parT_def, parT_unit_def, failureT_def, PREAD_CLAUSES,
   ppc_clear_CR0_def, ppc_reg_distinct, ppc_bit_distinct, w2w_def,
   w2n_n2w, WORD_ADD_0, n2w_w2n, w2bytes1, w2bytes2, w2bytes4, n2w_11,
-  address_aligned_def, rich_listTheory.REVERSE,
+  address_aligned_def, listTheory.REVERSE_SNOC_DEF,
   WORD_EQ_ADD_LCANCEL,ppc_branch_condition_def,
   rich_listTheory.SNOC_APPEND, APPEND, lemma1, lemma2, address_lemma]
 

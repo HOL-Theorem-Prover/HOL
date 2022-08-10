@@ -226,24 +226,40 @@ Proof
   imp_res_tac IN_LIST_TO_BAG >> fs[]
 QED
 
+Theorem LIST_TO_BAG_SET_TO_LIST:
+  !s. FINITE s ==>
+      LIST_TO_BAG (SET_TO_LIST s) = BAG_OF_SET s
+Proof
+  ho_match_mp_tac FINITE_INDUCT
+  \\ rw[BAG_OF_SET_INSERT_NON_ELEMENT]
+  \\ irule EQ_TRANS
+  \\ qexists_tac`LIST_TO_BAG (e :: SET_TO_LIST s)`
+  \\ conj_tac
+  >- (
+    simp[PERM_LIST_TO_BAG]
+    \\ drule PERM_SET_TO_LIST_INSERT
+    \\ disch_then(qspec_then`e`mp_tac) \\ simp[] )
+  \\ simp[]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Following packaging of multiset order applied to lists is easier to use   *)
 (* in some termination proofs, typically those of worklist algorithms, where *)
 (* the head of the list is replaced by a list of smaller elements.           *)
 (*---------------------------------------------------------------------------*)
 
-val mlt_list_def =
- Define
-   `mlt_list R =
+Definition mlt_list_def[tfl_termsimp]:
+  mlt_list R =
      \l1 l2.
        ?h t list.
          (l1 = list ++ t) /\
          (l2 = h::t) /\
-         (!e. MEM e list ==> R e h)`;
+         (!e. MEM e list ==> R e h)
+End
 
-val WF_mlt_list = Q.store_thm
-("WF_mlt_list",
- `!R. WF(R) ==> WF (mlt_list R)`,
+Theorem WF_mlt_list[tfl_WF]:
+  !R. WF(R) ==> WF (mlt_list R)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET THEN
   Q.EXISTS_TAC `inv_image (mlt1 R) LIST_TO_BAG` THEN
   CONJ_TAC THENL
@@ -255,26 +271,8 @@ val WF_mlt_list = Q.store_thm
     MAP_EVERY Q.EXISTS_TAC [`h`, `LIST_TO_BAG list`, `LIST_TO_BAG t`]
      THEN RW_TAC std_ss [BAG_INSERT_UNION,LIST_TO_BAG_APPEND,LIST_TO_BAG_def]
       THENL [METIS_TAC [COMM_BAG_UNION,ASSOC_BAG_UNION,BAG_UNION_EMPTY],
-             METIS_TAC [IN_LIST_TO_BAG]]]]);
-
-
-(*---------------------------------------------------------------------------*)
-(* Tell the termination proof infrastructure about mlt_list                  *)
-(*---------------------------------------------------------------------------*)
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn _ => let
-   fun S s = [PP.add_string s, PP.add_newline]
- in
-   PP.block PP.CONSISTENT 0 (
-     S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);" @
-     S "val _ = TotalDefn.termination_simps := \
-         \(!TotalDefn.termination_simps @ [mlt_list_def]);"
-   )
-  end)};
-
+             METIS_TAC [IN_LIST_TO_BAG]]]]
+QED
 
 (*---------------------------------------------------------------------------
     finite maps and bags.
@@ -334,25 +332,26 @@ Cases_on `x = f k v` THENL [
    )
 ]);
 
-val BAG_IN_BAG_OF_FMAP = store_thm ("BAG_IN_BAG_OF_FMAP",
-``!x f b. BAG_IN x (BAG_OF_FMAP f b) =
-          ?k. k IN FDOM b /\ (x = f k (b ' k))``,
-SIMP_TAC std_ss [BAG_OF_FMAP, BAG_IN, BAG_INN] THEN
-`!X. (X >= (1:num)) = ~(X = 0)` by bossLib.DECIDE_TAC THEN
-ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
-REPEAT GEN_TAC THEN
-`FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by (
-   `(\k. k IN FDOM b /\ (x = f k (b ' k))) =
-    (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by (
-      SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
-      METIS_TAC[]
-   ) THEN
-   ONCE_ASM_REWRITE_TAC[] THEN
-   MATCH_MP_TAC FINITE_INTER THEN
-   REWRITE_TAC[FDOM_FINITE]
-) THEN
-ASM_SIMP_TAC std_ss [CARD_EQ_0] THEN
-SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_ABS]);
+Theorem BAG_IN_BAG_OF_FMAP:
+  !x f b. BAG_IN x (BAG_OF_FMAP f b) <=>
+           ?k. k IN FDOM b /\ (x = f k (b ' k))
+Proof
+  SIMP_TAC std_ss [BAG_OF_FMAP, BAG_IN, BAG_INN] THEN
+  `!X. (X >= (1:num)) = ~(X = 0)` by bossLib.DECIDE_TAC THEN
+  ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
+  REPEAT GEN_TAC THEN
+  `FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by (
+     `(\k. k IN FDOM b /\ (x = f k (b ' k))) =
+      (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by (
+        SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
+        METIS_TAC[]
+     ) THEN
+     ONCE_ASM_REWRITE_TAC[] THEN
+     MATCH_MP_TAC FINITE_INTER THEN
+     REWRITE_TAC[FDOM_FINITE]
+  ) THEN
+  SRW_TAC[][CARD_EQ_0, EXTENSION] THEN METIS_TAC[]
+QED
 
 val FINITE_BAG_OF_FMAP = store_thm ("FINITE_BAG_OF_FMAP",
 ``!f b. FINITE_BAG (BAG_OF_FMAP f b)``,

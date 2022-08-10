@@ -11,7 +11,8 @@ struct
                        | SOME s => s
       val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
       val alist = [
-        ("DEBUG_FLAG", if #debug (#core optv) then [LIT "--dbg"] else []),
+        ("DEBUG_FLAG",
+         if isSome (#debug (#core optv)) then [LIT "--dbg"] else []),
         ("MOSML_INCLUDES",
          [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,-I \
                                    \$(protect $(SIGOBJ))", LIT " "] @

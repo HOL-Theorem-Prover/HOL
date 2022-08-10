@@ -22,6 +22,24 @@ val xfun = mk_var("x", Type.alpha --> Type.alpha)
 val y = mk_var("y", Type.alpha)
 val Id = mk_abs(x,x)
 val Idy = mk_abs(y,y)
+val P = mk_var("P", Type.alpha --> Type.bool)
+
+val _ = tprint "TG list_mk_forall bug (0)"
+val _ = require_msg
+          (check_result (aconv (List.foldr mk_abs (mk_comb(P,x)) [x,P])))
+          term_to_string
+          list_mk_abs ([x,P],mk_comb(P,x))
+val _ = tprint "TG list_mk_forall bug (1)"
+val _ = require_msg
+          (check_result (aconv (List.foldr mk_forall (mk_comb(P,x)) [x,P])))
+          term_to_string
+          list_mk_forall ([x,P],mk_comb(P,x))
+val _ = tprint "TG list_mk_forall bug (2)"
+val _ = require_msg
+          (check_result (aconv (List.foldr mk_forall (mk_comb(P,x)) [P,x])))
+          term_to_string
+          list_mk_forall ([P,x],mk_comb(P,x))
+
 
 (* tests that substitutions work, deferred until this point so that we get
    access to the parser (which is implicitly a test of the parser too) *)
@@ -108,16 +126,16 @@ in
   if aconv (concl Falsity) F then die "" else die "Huh???"
 end handle ExitOK => OK();
 
-val _ = Process.atExit (fn () => let
-                             fun rm s = FileSys.remove ("scratchTheory." ^ s)
-                                        handle _ => ()
-                           in
-                             app rm ["sml", "sig", "dat"]
-                           end)
+fun cleanup() = let
+  fun rm s = FileSys.remove ("scratchTheory." ^ s)
+      handle _ => ()
+in
+  app rm ["sml", "sig", "dat"]
+end
 
 exception InternalDie
 fun test f x = f x orelse raise InternalDie
-val oldconstants_test = let
+fun oldconstants_test() = let
   val _ = tprint "Identity of old constants test"
   val defn1_t = mk_eq(mk_var("foo", bool), boolSyntax.T)
   val defn2_t = mk_eq(mk_var("foo", bool), boolSyntax.F)
@@ -133,8 +151,6 @@ val oldconstants_test = let
   val _ = test (not o uncurry aconv) (c2, c3)
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c1
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c2
-  val _ = Feedback.emit_MESG := false
-  val _ = Feedback.emit_WARNING := false
   val _ = new_theory "foo"
   val defn1 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
   val _ = new_theory "foo"
@@ -144,17 +160,22 @@ val oldconstants_test = let
   val _ = test (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
   val _ = test (not o uncurry aconv) (c1, c2)
 in
-  OK()
-end handle InternalDie => die "Internal test failed";
+  OK();
+  cleanup()
+end handle e => (cleanup(); raise e)
+
+val _ = testutils.quietly oldconstants_test ()
+    handle InternalDie => die "Internal test failed";
 
 val _ = tprint "Testing functional-pretype 1 (pattern)"
 val _ = require (check_result (fn _ => true)) Parse.Term `x <> y ==> x <> y`
 
 val _ = tprint "Testing functional-pretype 2 (simple case)"
-val _ = require (check_result (fn _ => true)) Parse.Term `case x of T => F`
+val _ = require (check_result (fn _ => true)) (quietly Parse.Term)
+                `case x of T => F`
 
 val _ = tprint "Testing functional-pretype 3 (ignored constraint)"
-val quiet_parse = trace ("show_typecheck_errors", 0) Parse.Term
+val quiet_parse = quietly (trace ("show_typecheck_errors", 0) Parse.Term)
 val _ = shouldfail {testfn = quiet_parse, printresult = term_to_string,
                     printarg = (fn _ => ""),
                     checkexn = is_struct_HOL_ERR "Preterm"}
@@ -285,9 +306,13 @@ val _ = checkparse ()
 val _ = tprint "Testing stale type abbreviations bug"
 val _ = new_type ("foo", 1)
 val _ = type_abbrev("bar", ``:bool foo``)
-val _ = new_type ("foo", 0)
+val _ = quietly new_type ("foo", 0)
 val _ = type_abbrev("baz", ``:foo``) handle _ => die ""
 val _ = OK()
+
+val _ = tprint "Testing ability to p/print current type grammar"
+val _ = require (check_result (fn _ => true)) type_grammar.prettyprint_grammar
+                (type_grammar ())
 
 
 (* pretty-printing tests - turn Unicode off *)
@@ -315,8 +340,7 @@ local
   val ty = mk_thy_type{Thy = ct(), Tyop = "option", Args = [alpha --> beta]}
   val _ = tprint ("Testing p/printing of (min_grammar) (('a -> 'b) "^ct()^"$option)")
   val pfn =
-    PP.pp_to_string 70 (#1 (print_from_grammars min_grammars))
-                    |> raw_backend
+    PP.pp_to_string 70 (#1 (raw_backend print_from_grammars min_grammars))
                     |> unicode_off
   val s = pfn ty
 in
@@ -332,8 +356,8 @@ val _ = app tpp ["(if P then q else r) s",
                  "let x = (let y = T in y /\\ F) in x \\/ z",
                  "(let x = T in \\y. x /\\ y) p",
                  "let x = p and y = x in x /\\ y",
-                 "let x = T ; y = F in x /\\ y",
-                 "let x = T ; y = F and z = T in x /\\ y \\/ z",
+                 "let x = T; y = F in x /\\ y",
+                 "let x = T; y = F and z = T in x /\\ y \\/ z",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
                  "!x. P (x /\\ y)",
@@ -368,7 +392,8 @@ val _ = Lib.with_flag (testutils.linewidth, 30) tpp
 val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
 val _ = let
   open testutils
-  fun md f = trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f)
+  fun md f =
+      raw_backend (trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f))
   fun texp (i,out) = md tpp_expected
                         {testf = standard_tpp_message, input = i, output = out}
   val _ = temp_overload_on ("⊤", ``T``)
@@ -383,7 +408,7 @@ end
 val _ = print "** Tests with Unicode on\n"
 val _ = let
   open testutils
-  fun md f = trace ("Unicode", 1) f
+  fun md f = raw_backend $ trace ("Unicode", 1) f
 in
   app (md tpp) ["¬¬p", "¬p"]
 end
@@ -394,7 +419,7 @@ val _ = set_trace "pp_dollar_escapes" 0
 val _ = app tpp ["(/\\)", "(if)"]
 val _ = set_trace "pp_dollar_escapes" 1
 
-val _ = new_type ("foo", 2)
+val _ = quietly new_type ("foo", 2)
 val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
 val _ = set_trace "types" 1
 val _ = print "** Tests with 'types' trace on.\n"
@@ -479,7 +504,7 @@ val condprinter_tests =
        testf = K "Large then-branch",
        output = "if really quite a long guard when looked at closely then\n\
                 \  (let\n\
-                \     quite_a_long_variable_name = (another_long_name \\/ x) ;\
+                \     quite_a_long_variable_name = (another_long_name \\/ x);\
               \\n     another_longish_name = (y \\/ z)\n\
                 \   in\n\
                 \     f x)\n\
@@ -704,7 +729,7 @@ end handle _ => die ""
 
 val _ = let
   val _ = tprint "Removing type abbreviation"
-  val _ = temp_type_abbrev_pp ("foo", ``:'a -> bool``)
+  val _ = quietly temp_type_abbrev_pp ("foo", ``:'a -> bool``)
   val s1 = type_to_string ``:bool -> bool``
   val _ = s1 = ":bool foo" orelse raise InternalDie
   val _ = temp_remove_type_abbrev "foo"
@@ -714,7 +739,7 @@ in
 end handle InternalDie => die ""
 
 fun nc (s,ty) =
-  (new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
+  (quietly new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
 
 val _ = let
   val _ = tprint "irule 1 (basic match-mp)"
@@ -816,8 +841,65 @@ in
   if aconv (concl r_thm) g then OK() else die ""
 end
 
+fun checktactic sgsP rP tac_result =
+    case tac_result of
+        Exn.Res (sgs, vf) => sgsP sgs andalso
+                             (case total vf (map mk_thm sgs) of
+                                  NONE => false
+                                | SOME th => rP th)
+      | Exn.Exn e => false
+
+fun pp_goal (asl,w) =
+    let open HOLPP
+    in
+      HOLPP.block CONSISTENT 2 [
+        HOLPP.block INCONSISTENT 0 (
+          pr_list pp_term [add_string ",", add_break(1,0)] asl
+        ),
+        add_string " ?-",
+        add_break(1,0),
+        pp_term w
+      ]
+    end
+
+fun pp_sgs gl =
+    let open HOLPP in block CONSISTENT 0 (pr_list pp_goal [NL, NL] gl)
+    end
+
+
+fun print_tacresult (sgs, _) =
+    PP.pp_to_string 70 pp_sgs sgs
+
+val _ = let
+  val _ = tprint "irule - negated conclusion"
+  val tm = “!x:bool y:bool. P x /\ ~R x y ==> ~Q x”
+  val thm = ASSUME tm
+  val g = “~Q (z:bool): bool”
+in
+  require_msg (checktactic (fn _ => true) (fn th => concl th ~~ g))
+              print_tacresult
+              (irule thm)
+              ([], g)
+end
+
 val _ = hide "Q"
 val _ = hide "P"
+
+fun pp_goal (asl,g) =
+    PP.block PP.CONSISTENT 1 [
+      PP.add_string "([",
+      PP.block PP.INCONSISTENT 1 (
+        PP.pr_list pp_term [PP.add_string ",", PP.add_break(1,0)] asl
+      ),
+      PP.add_string "],", PP.add_break (1,0),
+      pp_term g, PP.add_string ")"
+    ]
+
+fun pp_goals gs = PP.block PP.INCONSISTENT 1 (
+      PP.add_string "[" ::
+      PP.pr_list pp_goal [PP.add_string ",", PP.add_break (1,0)] gs @
+      [PP.add_string "]"]
+    )
 
 val _ = let
   open mp_then
@@ -910,7 +992,7 @@ val _ = let
   val asl = [``p ==> q``, ``~q``]
   val g = (asl, ``r:bool``)
   val (res, _) = pop_assum (first_assum o mp_then Concl mp_tac) g
-  val expectedg = ``~p ==> r``
+  val expectedg = ``(p ==> F) ==> r``
 in
   case res of
       [(asl', g')] =>
@@ -929,19 +1011,20 @@ val _ = let
   val _ = tprint "mp_then (concl) 2"
   val asl = [``p ==> ~q``, ``q:bool``]
   val g = (asl, ``r:bool``)
-  val (res, _) = pop_assum (first_assum o mp_then Concl mp_tac) g
-  val expectedg = ``~p ==> r``
+  val eres = Exn.capture (#1 o pop_assum (first_assum o mp_then Concl mp_tac)) g
+  val expectedg = ``(p ==> F) ==> r``
 in
-  case res of
-      [(asl', g')] =>
+  case eres of
+      Exn.Res [(asl', g')] =>
       (case Lib.list_compare Term.compare ([``q:bool``], asl') of
            EQUAL => if aconv g' expectedg then OK()
                     else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
          | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("Tactic returned wrong number of sub-goals (" ^
-                Int.toString (length res))
+    | Exn.Res res => die ("Tactic returned wrong number of sub-goals (" ^
+                          Int.toString (length res))
+    | Exn.Exn e => die ("Unexpected exception: " ^ General.exnMessage e)
 end;
 
 
@@ -990,10 +1073,10 @@ end;
 val _ = let
   open mp_then
   val _ = tprint "mp_then (pat) 3"
-  val _ = new_type("list", 1)
-  val _ = new_type("ti", 0)
+  val _ = quietly new_type("list", 1)
+  val _ = quietly new_type("ti", 0)
   val _ = hide "foo"
-  val _ = new_constant("EVERY", ``:('a -> bool) -> 'a list -> bool``)
+  val _ = nc("EVERY", ``:('a -> bool) -> 'a list -> bool``)
   val asl = [``EVERY (x:'a -> bool) ls``,
              ``!x:ti y. foo x y /\ EVERY y (ls:'a list) ==> gg x``,
              ``foo (a:ti) (x:'a -> bool):bool``, ``bar (x:'a -> bool):bool``]
@@ -1058,6 +1141,27 @@ in
     | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
+
+val _ = let
+  val _ = tprint "drule_all 2 (ith implies F)"
+  val asl = [“Q (a:ind) (b:'b):bool”,  “P (a:ind):bool”, “R T : bool”,
+             “!x:ind. P x ==> !c:'b. Q x c ==> F”]
+  val g = (asl, “p /\ q”)
+  val eres = Exn.capture (#1 o VALID (first_x_assum drule_all)) g
+  val (asl', _) = front_last asl
+  val expected = (asl', “F ==> p /\ q”)
+in
+  case eres of
+      Exn.Res res =>
+      if ListPair.allEq goal_equal ([expected], res) then OK()
+      else die ("Unexpected result:\n  " ^
+                PP.pp_to_string 70
+                                (fn r => PP.block PP.CONSISTENT 2 [pp_goals r])
+                                res
+               )
+    | Exn.Exn e => die ("Unexpected exception: " ^ General.exnMessage e)
+end
+
 
 val _ = let
   val _ = tprint "dxrule_all 1"
@@ -1139,9 +1243,10 @@ val _ = tprint "Checking error message on x + y < T parse (w/ints around)"
 val ptie = TermParse.preterm (term_grammar()) (type_grammar()) `x + y < T`
 val res = let
   open errormonad Preterm
-  infix >- >>
+  infix >~ >>
+  val op >~ = errormonad.bind
   val checked =
-      ptie >- (fn pt => typecheck_phase1 NONE pt >> overloading_resolution pt)
+      ptie >~ (fn pt => typecheck_phase1 NONE pt >> overloading_resolution pt)
 in
   case checked Pretype.Env.empty of
       Error (OvlNoType(s,_), _) => if s = "<" orelse s = "+" then OK()
@@ -1176,3 +1281,18 @@ val _ = let
 in
   ()
 end
+
+val _ = let
+  val _ = tprint "test of apropos_in, find_in"
+  val str = "THM"
+  val tm = prim_mk_const{Thy = "bool", Name = "/\\"}
+  val find1 = find str
+  val list1 = apropos_in tm find1
+  val apropos2 = apropos tm
+  val list2 = find_in str apropos2
+  val true = length list1 = length list2
+  (* next test may be implementation dependent *)
+  val true = map #1 list1 = map #1 list2
+in
+  OK()
+end handle _ => die "FAILED"

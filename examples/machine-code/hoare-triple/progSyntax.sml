@@ -17,7 +17,7 @@ val (star_tm, mk_star, dest_star, is_star) =
       "STAR"
 
 val list_mk_star = HolKernel.list_mk_lbinop (Lib.curry mk_star)
-val strip_star = HolKernel.strip_binop (Lib.total dest_star)
+val strip_star = HolKernel.strip_binop dest_star
 
 val (spec_tm, mk_spec, dest_spec, is_spec) =
    HolKernel.syntax_fns4 "prog" "SPEC"

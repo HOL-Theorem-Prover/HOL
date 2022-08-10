@@ -11,6 +11,8 @@ open numposrepTheory
 
 val _ = new_theory "bitstring"
 
+val _ = diminish_srw_ss ["NORMEQ_ss"]
+
 (* ------------------------------------------------------------------------- *)
 
 (* MSB is head of list, e.g. [T, F] represents 2 *)
@@ -184,11 +186,11 @@ val length_pad_right = Q.store_thm("length_pad_right",
    lrw [listTheory.PAD_RIGHT])
 
 val length_zero_extend = Q.store_thm("length_zero_extend",
-  `!n v. LENGTH v < n ==> (LENGTH (zero_extend n v) = n)`,
+  `!n v. LENGTH v <= n ==> (LENGTH (zero_extend n v) = n)`,
   lrw [zero_extend_def, length_pad_left])
 
 val length_sign_extend = Q.store_thm("length_sign_extend",
-  `!n v. LENGTH v < n ==> (LENGTH (sign_extend n v) = n)`,
+  `!n v. LENGTH v <= n ==> (LENGTH (sign_extend n v) = n)`,
   lrw [sign_extend_def, length_pad_left])
 
 val length_fixwidth = Q.store_thm("length_fixwidth",

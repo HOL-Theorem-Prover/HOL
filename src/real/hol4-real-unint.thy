@@ -6,14 +6,9 @@ license: MIT
 main {
   import: real
   import: intreal
-  import: transc
-  import: powser
-  import: integral
-  import: poly
+  import: iterate
   import: real-sigma
-  import: seq
   import: metric
-  import: lim
   import: nets
 }
 real {
@@ -23,51 +18,18 @@ intreal {
   import: real
   article: "intreal.ot.art"
 }
-transc {
+iterate {
   import: real
-  import: powser
-  import: lim
-  article: "transc.ot.art"
-}
-powser {
-  import: real
-  import: lim
-  import: seq
-  article: "powser.ot.art"
-}
-integral {
-  import: real
-  import: transc
-  import: seq
-  import: lim
-  article: "integral.ot.art"
-}
-poly {
-  import: real
-  import: lim
-  article: "poly.ot.art"
+  article: "iterate.ot.art"
 }
 real-sigma {
   import: real
-  import: seq
+  import: iterate
   article: "real_sigma.ot.art"
-}
-seq {
-  import: real
-  import: metric
-  import: nets
-  article: "seq.ot.art"
 }
 metric {
   import: real
   article: "metric.ot.art"
-}
-lim {
-  import: real
-  import: metric
-  import: nets
-  import: seq
-  article: "lim.ot.art"
 }
 nets {
   import: real

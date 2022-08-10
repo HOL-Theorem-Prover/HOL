@@ -35,7 +35,7 @@ local
   (* Sums                                                                 *)
   (*----------------------------------------------------------------------*)
 
-  val sum_size_info = (sum_size_tm,TypeBasePure.ORIG sum_size_def)
+  val sum_size_info = (full_sum_size_tm,TypeBasePure.ORIG full_sum_size_thm)
   val sum_info' = TypeBasePure.put_size sum_size_info
                     (Option.valOf(TypeBase.read {Tyop="sum", Thy="sum"}));
 
@@ -52,6 +52,14 @@ local
                      (TypeBasePure.put_size one_size_info one_info)
 
   (*----------------------------------------------------------------------*)
+  (* "Itself" type                                                        *)
+  (*----------------------------------------------------------------------*)
+
+  val itself_info = Option.valOf (TypeBase.read {Tyop="itself",Thy="bool"})
+  val itself_size_info = (itself_size_tm,TypeBasePure.ORIG itself_size_def)
+  val itself_info' = TypeBasePure.put_size itself_size_info itself_info
+
+  (*----------------------------------------------------------------------*)
   (* Options                                                              *)
   (*----------------------------------------------------------------------*)
 
@@ -64,6 +72,7 @@ in
    val _ = TypeBase.write [prod_info']
    val _ = TypeBase.write [sum_info']
    val _ = TypeBase.write [one_info']
+   val _ = TypeBase.write [itself_info']
    val _ = TypeBase.write [option_info']
 end
 

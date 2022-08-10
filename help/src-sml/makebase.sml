@@ -58,7 +58,7 @@ val libdirDef = normPath[HOLpath,"sigobj"]
 val helpfileDef = normPath[HOLpath, "help","HOL.Help"]
 
 (* Default filename for the HOL reference page: *)
-val HOLpageDef = normPath[HOLpath, "help","HOLindex.html"]
+val HOLpageDef = normPath[HOLpath, "help","index.html"] (* was: HOLindex.html *)
 
 (* Default filename for the ASCII format database: *)
 val txtIndexDef = "index.txt"
@@ -151,7 +151,7 @@ fun mkbase (entries : Database.entry list) =
 fun mk_HOLdocfile_entry (dir,s) =
  let val content =String.substring(s,0,size s - 4)
  in
-    {comp=Database.Term(Symbolic.tosymb content, SOME"HOL"),
+    {comp=Database.Term(ParseDoc.decode_stem content, SOME"HOL"),
      file=normPath[dir,s], line=0}
  end
 

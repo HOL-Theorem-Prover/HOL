@@ -3,20 +3,27 @@ if exists("b:did_hol")
 endif
 
 let s:defaultholpipe =
-if empty($VIMHOL_FIFO)
-  let s:holpipe = s:defaultholpipe
-else
-  let s:holpipe = $VIMHOL_FIFO
+" initialise pipe if yet unset
+if ! has_key(s:,'holpipe')
+  if empty($VIMHOL_FIFO)
+    let s:holpipe = s:defaultholpipe
+  else
+    let s:holpipe = $VIMHOL_FIFO
+  endif
 endif
 let s:holtogglequiet = "val _ = HOL_Interactive.toggle_quietdec();"
 
-new
-setlocal buftype=nofile
-setlocal bufhidden=hide
-setlocal nobuflisted
-setlocal noswapfile
-let s:holnr = bufnr("")
-hide
+" create the hidden buffer once
+if ! has_key(s:,'holnr') || ! bufexists(s:holnr)
+  new
+  setlocal buftype=nofile
+  setlocal bufhidden=hide
+  setlocal nobuflisted
+  setlocal noswapfile
+  let s:holnr = bufnr("")
+  hide
+endif
+
 
 let s:tmpprefix =
 fu! TempName()
@@ -111,7 +118,7 @@ endf
 let s:stripStart     = ')\|\]\|\['
 let s:stripEnd       = '(\|\['
 let s:stripBothWords = 'THEN[1L]\?\|by'
-let s:stripBoth      = ',\|<<\|>>\|++\|\\\\\|>-\|>|'
+let s:stripBoth      = ',\|<<\|>>\|++\|\\\\\|>-\|>|\|>\~'
 let s:delim          = '\_[[:space:]()]'
 
 fu! HOLExpand()
@@ -192,40 +199,150 @@ fu! HOLSelect(l,r)
   call search(a:r,"ce")
 endf
 
+fu! HOLPattern()
+  silent keepjumps normal pgg0
+  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\|\%('.s:stripBothWords.'\)\)\ze'.s:delim,'cWe')
+    silent keepjumps normal vgg0"_d
+  endw
+  while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*\%$','cW')
+    silent keepjumps normal vG$"_dgg0
+  endw
+  keepjumps normal iproofManagerLib.expand_list(Q.SELECT_GOAL_LT(
+  keepjumps normal G$a))
+endf
+
 if !(exists("maplocalleader"))
   let maplocalleader = "\\"
 endif
-vn <silent> <LocalLeader>l :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
-vn <silent> <LocalLeader>L :call YankThenHOLCall(function("HOLLoad"),[])<CR>
-vn <silent> <LocalLeader>s :call YankThenHOLCall(function("HOLSend"),[])<CR>
-vn <silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
-vn <silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
-vn <silent> <LocalLeader>G :call YankThenHOLCall(function("HOLUQGoal"),[])<CR>
-vn <silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
-vn <silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
-vn <silent> <LocalLeader>F :call YankThenHOLCall(function("HOLSuffices"),[])<CR>
-nm <silent><expr> <LocalLeader>l "V".maplocalleader."l"
-nm <silent><expr> <LocalLeader>L "V".maplocalleader."L"
-nm <silent><expr> <LocalLeader>s "V".maplocalleader."s"
-nm <silent><expr> <LocalLeader>u "V".maplocalleader."u"
-nm <silent><expr> <LocalLeader>g "V".maplocalleader."g"
-nm <silent><expr> <LocalLeader>G "V".maplocalleader."G"
-nm <silent><expr> <LocalLeader>e "V".maplocalleader."e"
-nm <silent><expr> <LocalLeader>S "V".maplocalleader."S"
-nm <silent><expr> <LocalLeader>F "V".maplocalleader."F"
-nn <silent> <LocalLeader>R :<C-U>call HOLRotate()<CR>
-nn <silent> <LocalLeader>b :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
-nn <silent> <LocalLeader>B :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
-nn <silent> <LocalLeader>v :call HOLCall(function("HOLF"),["proofManagerLib.save()"])<CR>
-nn <silent> <LocalLeader>d :<C-U>call HOLRepeat("proofManagerLib.drop();")<CR>
-nn <silent> <LocalLeader>p :call HOLCall(function("HOLF"),["proofManagerLib.p()"])<CR>
-nn <silent> <LocalLeader>r :call HOLCall(function("HOLF"),["proofManagerLib.restart()"])<CR>
-nn <silent> <LocalLeader>c :call HOLINT()<CR>
-nn <silent> <LocalLeader>t :call HOLSelect('`\\|‘','`\\|’')<CR>
-nn <silent> <LocalLeader>T :call HOLSelect('``\\|“','``\\|”')<CR>
-nn <silent> <LocalLeader>y :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
-nn <silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
-no <LocalLeader>h h
+vn <buffer><silent> <LocalLeader>l :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
+vn <buffer><silent> <LocalLeader>L :call YankThenHOLCall(function("HOLLoad"),[])<CR>
+vn <buffer><silent> <LocalLeader>s :call YankThenHOLCall(function("HOLSend"),[])<CR>
+vn <buffer><silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
+vn <buffer><silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
+vn <buffer><silent> <LocalLeader>G :call YankThenHOLCall(function("HOLUQGoal"),[])<CR>
+vn <buffer><silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
+vn <buffer><silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
+vn <buffer><silent> <LocalLeader>F :call YankThenHOLCall(function("HOLSuffices"),[])<CR>
+vn <buffer><silent> <LocalLeader>P :call YankThenHOLCall(function("HOLPattern"),[])<CR>
+nm <buffer><silent><expr> <LocalLeader>l "V".maplocalleader."l"
+nm <buffer><silent><expr> <LocalLeader>L "V".maplocalleader."L"
+nm <buffer><silent><expr> <LocalLeader>s "V".maplocalleader."s"
+nm <buffer><silent><expr> <LocalLeader>u "V".maplocalleader."u"
+nm <buffer><silent><expr> <LocalLeader>g "V".maplocalleader."g"
+nm <buffer><silent><expr> <LocalLeader>G "V".maplocalleader."G"
+nm <buffer><silent><expr> <LocalLeader>e "V".maplocalleader."e"
+nm <buffer><silent><expr> <LocalLeader>S "V".maplocalleader."S"
+nm <buffer><silent><expr> <LocalLeader>F "V".maplocalleader."F"
+nm <buffer><silent><expr> <LocalLeader>P "V".maplocalleader."P"
+nn <buffer><silent> <LocalLeader>R :<C-U>call HOLRotate()<CR>
+nn <buffer><silent> <LocalLeader>b :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
+nn <buffer><silent> <LocalLeader>B :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
+nn <buffer><silent> <LocalLeader>v :call HOLCall(function("HOLF"),["proofManagerLib.save()"])<CR>
+nn <buffer><silent> <LocalLeader>d :<C-U>call HOLRepeat("proofManagerLib.drop();")<CR>
+nn <buffer><silent> <LocalLeader>p :call HOLCall(function("HOLF"),["proofManagerLib.p()"])<CR>
+nn <buffer><silent> <LocalLeader>r :call HOLCall(function("HOLF"),["proofManagerLib.restart()"])<CR>
+nn <buffer><silent> <LocalLeader>c :call HOLINT()<CR>
+nn <buffer><silent> <LocalLeader>t :call HOLSelect('`\\|‘','`\\|’')<CR>
+nn <buffer><silent> <LocalLeader>T :call HOLSelect('``\\|“','``\\|”')<CR>
+nn <buffer><silent> <LocalLeader>a :call HOLSelect('^Triviality\\|^Theorem','^Proof')<CR>-Vo+
+nn <buffer><silent> <LocalLeader>y :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
+nn <buffer><silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
+no <buffer><LocalLeader>h h
+
+if ! exists('$HOLDIR') || (!has('terminal') && ! has('nvim'))
+      \ || (has('nvim') && !exists(':terminal'))
+  let b:did_hol = 1
+  " skip terminal feature
+  finish
+endif
+
+" if exists use readline wrapper
+if executable('rlwrap')
+  let s:rlwrap_str = 'rlwrap '
+else
+  let s:rlwrap_str = ''
+endif
+
+" initialise
+if ! has_key(g:,'hol_repl')
+  let g:hol_repl = []
+endif
+
+function! HOLREPLnew()
+  let l:cmd = $HOLDIR . '/bin/hol'
+  if ! executable(l:cmd)
+    echoerr 'hol command not found: ' . l:cmd
+    return 0
+  endif
+  let s:holpipe = tempname()
+  call system('mkfifo '. s:holpipe)
+  "echom "holrepl pipe " . s:holpipe
+  let options = {
+  \  "cwd": expand('%:p:h'),
+  \  "vertical": 1,
+  \  "env": {
+  \    "VIMHOL_FIFO": s:holpipe
+  \  }}
+  let altname = expand("%:r:t") " alternate name for terminal buffer
+  echom 'holrepl cmd: ' . s:rlwrap_str . l:cmd
+  if has('nvim') " neovim terminal
+    let options.stdin = "null"
+    vsplit | enew
+    let l:terminal_job_id = termopen(s:rlwrap_str . l:cmd, options)
+    call add(g:hol_repl, {'buf': bufnr(''), 'job': l:terminal_job_id, 'pipe': s:holpipe})
+    " scroll to end of terminal buffer
+    silent! normal G
+  else " vim terminal
+    rightbelow let s:replbuf = term_start(s:rlwrap_str . l:cmd, options)
+    call add(g:hol_repl, {'buf': s:replbuf, 'pipe': s:holpipe})
+    call term_setkill(g:hol_repl[-1].buf, 'term')
+  endif
+  " set (unique) buffer name containing the origin
+  let g:hol_repl[-1].altname = 'hol ('. g:hol_repl[-1].buf . '): ' . altname
+  exec 'file ' . g:hol_repl[-1].altname
+  wincmd p
+endfunction
+
+if has('nvim')
+  function! HOLREPLsend(text)
+    " only send commands if a terminal buffer exists
+    if has_key(g:,'hol_repl') && len(g:hol_repl) > 0
+      call chansend(g:hol_repl[-1].job, a:text)
+    else
+      echoerr "vimhol: no active hol repl found"
+    endif
+  endfunction
+else
+  function! HOLREPLsend(text)
+    " only send commands if a terminal buffer exists
+    if has_key(g:,'hol_repl') && len(g:hol_repl) > 0
+      call term_sendkeys(g:hol_repl[-1].buf, a:text)
+    else
+      echoerr "vimhol: no active hol repl found"
+    endif
+  endfunction
+endif
+
+" close terminal
+function! HOLREPLclose()
+  if has_key(g:,'hol_repl') && len(g:hol_repl) > 0
+    call HOLREPLsend("\<C-D>")
+    call remove(g:hol_repl, -1)
+    " (re)set the current holpipe
+    if len(g:hol_repl) > 0
+      let s:holpipe = g:hol_repl[-1].pipe
+    else
+      unlet s:holpipe
+    endif
+  endif
+endfunction
+" open a new hol terminal
+nn <buffer><silent> <LocalLeader>x :call HOLREPLnew()<CR>
+" close a hol_repl buffer
+nn <buffer><silent> <LocalLeader>X :call HOLREPLclose()<CR>
+" send current line (or highlighted section) to terminal
+vn <buffer><silent> <LocalLeader>w "0y:call HOLREPLsend(getreg('0',1) . ";\n")<CR>
+nm <buffer><silent><expr> <LocalLeader>w "V".maplocalleader."w"
 
 let b:did_hol = 1
 " vim: ft=vim

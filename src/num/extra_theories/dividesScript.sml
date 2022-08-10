@@ -138,6 +138,16 @@ val LEQ_DIVIDES_FACT = store_thm
    THEN METIS_TAC [FACT, LESS_REFL, num_CASES, DIVIDES_MULT,
                    MULT_COMM, DIVIDES_REFL, ADD_CLAUSES]);
 
+(* Idea: a convenient form of divides_def. *)
+
+(* Theorem: n divides (m * n) /\ n divides (n * m) *)
+(* Proof: by divides_def. *)
+Theorem factor_divides[simp]:
+  !m n. divides n (m * n) /\ divides n (n * m)
+Proof
+  METIS_TAC[divides_def, MULT_COMM]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Definition and trivial facts about primality.                             *)
 (*---------------------------------------------------------------------------*)
@@ -194,14 +204,40 @@ val ONE_LT_PRIME = Q.store_thm
  METIS_TAC [NOT_PRIME_0, NOT_PRIME_1,
             DECIDE ``(p=0) \/ (p=1) \/ 1 < p``]);
 
-val prime_divides_only_self = Q.store_thm
-("prime_divides_only_self",
- `!m n. prime m /\ prime n /\ divides m n ==> (m=n)`,
- RW_TAC arith_ss [divides_def] THEN
- `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN
- Q.PAT_X_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN
- METIS_TAC [divides_def,MULT_SYM]);
+Theorem prime_divides_only_self:
+  !m n. prime m /\ prime n /\ divides m n ==> m=n
+Proof
+  RW_TAC arith_ss [divides_def] THEN
+  `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN
+  SIMP_TAC (srw_ss()) [] THEN
+  Q.PAT_X_ASSUM `prime (m*q)` MP_TAC THEN
+  RW_TAC arith_ss [prime_def, divides_def, PULL_EXISTS] THEN
+  METIS_TAC []
+QED
 
+Theorem prime_MULT:
+  !n m. prime (n * m) <=>
+        ((n <= m ==> (n = 1 /\ prime m)) /\
+         (m <= n ==> (m = 1 /\ prime n)))
+Proof
+  `!m n. m <= n ==> (prime (m * n) <=> m = 1 /\ prime n)`
+  suffices_by METIS_TAC[LESS_EQ_CASES, MULT_COMM]
+  \\ gen_tac
+  \\ Cases_on`m = 0` \\ ASM_SIMP_TAC arith_ss [NOT_PRIME_0]
+  \\ RW_TAC arith_ss [EQ_IMP_THM]
+  \\ FULL_SIMP_TAC arith_ss [prime_def]
+  >- (
+    `divides m (m * n)` by METIS_TAC[factor_divides]
+    \\ CCONTR_TAC
+    \\ `m = m * n` by METIS_TAC[]
+    \\ `~(m < m * n)` by DECIDE_TAC
+    \\ FULL_SIMP_TAC arith_ss [])
+  \\ rpt strip_tac \\ FULL_SIMP_TAC arith_ss []
+  \\ Cases_on`b=1` \\ ASM_SIMP_TAC arith_ss []
+  \\ `divides b (m * n)` by METIS_TAC[DIVIDES_MULT, MULT_COMM]
+  \\ `b = m * n` by METIS_TAC[]
+  \\ FULL_SIMP_TAC arith_ss [DIVIDES_MULT_LEFT]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every number has a prime factor, except for 1. The proof proceeds by a    *)
@@ -339,29 +375,27 @@ val ZERO_LT_PRIMES = Q.store_thm
 (* Directly computable version of divides                                    *)
 (*---------------------------------------------------------------------------*)
 
-val compute_divides = Q.store_thm
-("compute_divides",
- `!a b. divides a b =
-        if a=0 then (b=0) else
-        if a=1 then T else
-        if b=0 then T else
-        (b MOD a = 0)`,
+Theorem compute_divides[compute]:
+  !a b. divides a b =
+        if a=0 then (b=0)
+        else if a=1 then T
+        else if b=0 then T
+        else b MOD a = 0
+Proof
   RW_TAC arith_ss [divides_def]
-   THEN EQ_TAC
-   THEN RW_TAC arith_ss [] THENL
-   [Cases_on `q` THENL
-     [RW_TAC arith_ss [],
-      `0<a` by RW_TAC arith_ss [] THEN
-      METIS_TAC [MOD_MULT, MULT_SYM, ADD_CLAUSES]],
-    Q.EXISTS_TAC `b` THEN RW_TAC arith_ss [],
-    Q.EXISTS_TAC `0` THEN RW_TAC arith_ss [],
-    `0<a` by RW_TAC arith_ss [] THEN
-     let val MOD_P_inst = BETA_RULE (Q.SPECL[`\x. (x = 0)`,`b`,`a`] MOD_P)
-     in METIS_TAC [MOD_P_inst,MULT_SYM, ADD_CLAUSES]
-     end]);
-
-val _ =
- computeLib.add_persistent_funs
-     ["compute_divides"];
+  THEN EQ_TAC
+  THEN RW_TAC arith_ss [] THENL [
+    Cases_on ‘q’ THENL [
+      RW_TAC arith_ss [],
+      ‘0<a’ by RW_TAC arith_ss [] THEN
+      METIS_TAC [MOD_MULT, MULT_SYM, ADD_CLAUSES]
+    ],
+    Q.EXISTS_TAC ‘b’ THEN RW_TAC arith_ss [],
+    Q.EXISTS_TAC ‘0’ THEN RW_TAC arith_ss [],
+    ‘0<a’ by RW_TAC arith_ss [] THEN
+    METIS_TAC [BETA_RULE (Q.SPECL[‘\x. (x = 0)’,‘b’,‘a’] MOD_P),MULT_COMM,
+               ADD_CLAUSES]
+  ]
+QED
 
 val _ = export_theory();

@@ -2,10 +2,8 @@
 (* Non-logical definitional CNF, due to John Harrison.            *)
 (* Ported from HOL Light by Hasan Amjad, with HOL4 specific mods. *)
 
-structure def_cnf =
+structure def_cnf :> def_cnf =
 struct
-
-local
 
 open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
      boolSyntax
@@ -13,8 +11,6 @@ open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
 open satCommonTools satTheory
 
 val dpfx = "dcnf_"
-
-in
 
 val presimp_conv =
     QCONV (GEN_REWRITE_CONV REDEPTH_CONV empty_rewrites
@@ -282,5 +278,4 @@ List.app (fn eq =>
 
 
 
-end
 end

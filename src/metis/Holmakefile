@@ -3,3 +3,16 @@ all: selftest.exe $(DEFAULT_TARGETS)
 
 selftest.exe: selftest.uo normalForms.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+endif
+
+EXTRA_CLEANS = metis-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: metis-selftest.log
+
+metis-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

@@ -6,6 +6,11 @@ holpathdb.sig
 holpathdb.sml
 mlton/PolyML.sml
 ../../tools-poly/Holmake/Systeml.sml
+HOLFS_dtype.sml
+HFS_NameMunge.sig
+poly/HFS_NameMunge.sml
+HOLFileSys.sig
+HOLFileSys.sml
 Holdep_tokens.sig
 Holdep_tokens.sml
 QuoteFilter.sml
@@ -22,6 +27,8 @@ internal_functions.sml
 tailbuffer.sig
 tailbuffer.sml
 Holmake_tools_dtype.sml
+terminal_primitives.sig
+poly-terminal-prims.ML
 Holmake_tools.sig
 Holmake_tools.sml
 Holmake_types.sig

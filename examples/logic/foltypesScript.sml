@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse bossLib
 
-open binderLib nomdatatype nomsetTheory lcsymtacs boolSimps
+open binderLib nomdatatype nomsetTheory boolSimps
      pred_setTheory listTheory quotientLib
 
 val _ = new_theory "foltypes"
@@ -37,6 +37,8 @@ Termination
   WF_REL_TAC ‘measure (foterm_size o SND)’ >> simp[]
 End
 
+Theorem raw_tpm_def = SIMP_RULE (srw_ss() ++ ETA_ss) [] raw_tpm_def
+
 val _ = overload_on ("tpm", “pmact (mk_pmact raw_tpm)”)
 val _ = overload_on ("tlpm", “listpm (mk_pmact raw_tpm)”)
 val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] listTheory.MAP_CONG
@@ -52,7 +54,7 @@ val tpm_raw = Q.prove(
 
 Theorem tpm_thm[simp] =
   raw_tpm_def |> ONCE_REWRITE_RULE [tpm_raw]
-              |> SIMP_RULE (bool_ss ++ boolSimps.ETA_ss) [GSYM listpm_MAP]
+              |> SIMP_RULE bool_ss [GSYM listpm_MAP]
 
 Definition LIST_UNION_def[simp]:
   (LIST_UNION [] = ∅) ∧
@@ -214,7 +216,7 @@ Proof
   simp[raw_atoms_def, MEM_MAP, PULL_EXISTS, OR_LEFT_FORALL_THM, listpm_MAP]
   >- metis_tac[]
   >- (rw[] >> simp[LIST_EQ_REWRITE, EL_MAP] >> metis_tac[MEM_EL, tfv_apart])
-  >- (rw[] >> simp[])
+  >- (rw[] >> simp[] >> fs[basic_swapTheory.swapstr_thm])
 QED
 
 Theorem raw_atoms_rawfpm:

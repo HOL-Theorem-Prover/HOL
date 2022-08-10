@@ -28,36 +28,41 @@ struct
   fun pr_delta {hol,TeX = (t,i)} =
       "{hol = " ^ hol ^ ", TeX = (" ^ t ^ ", " ^ Int.toString i ^ "}"
 
-  val (mk,dest) = Theory.LoadableThyData.new
-                    {thydataty = tyname, merge = op@, terms = K [],
-                     read = K (Coding.lift read_deltas),
-                     pp = fn dl => "[" ^
-                                   String.concatWith ", " (map pr_delta dl) ^
-                                   "]",
-                     write = K write_deltas}
+  infix oo
+  fun (f oo g) = Option.mapPartial f o g
+
+  val (mk,dest) = Theory.LoadableThyData.new {
+        thydataty = tyname, merge = op@, terms = K [], strings = K [],
+        read = K (Coding.lift read_deltas oo HOLsexp.string_decode),
+        pp = fn dl => "[" ^
+                      String.concatWith ", " (map pr_delta dl) ^
+                      "]",
+        write = K (HOLsexp.String o write_deltas)
+      }
 
 
   val tokmap = ref (Binarymap.mkDict String.compare)
   fun the_map() = !tokmap
 
-  fun temp_TeX_notation0 src {hol,TeX} =
+  fun temp_TeX_notation0 src thy {hol,TeX} =
       case Binarymap.peek (!tokmap, hol) of
-        NONE => tokmap := Binarymap.insert(!tokmap,hol,TeX)
-      | SOME oldt => let
+        NONE => tokmap := Binarymap.insert(!tokmap,hol,{thy = thy,info = TeX})
+      | SOME {thy = oldthy, info = oldt} => let
           fun ttoString (t,i) = "(\"" ^ String.toString t ^ "\", "^
                                 Int.toString i ^ ")"
         in
           if oldt <> TeX then
             HOL_WARNING "TexTokenMap" "TeX_notation"
                         (src^" overrides \""^
-                         String.toString hol^"\" (was \""^
-                         ttoString oldt^"\"); now \""^
+                         String.toString hol^"\" (was "^
+                         ttoString oldt^", from "^oldthy^"); now \""^
                          ttoString TeX^"\"")
           else ();
-          tokmap := Binarymap.insert(!tokmap,hol,TeX)
+          tokmap := Binarymap.insert(!tokmap,hol,{thy = thy,info = TeX})
         end
 
-  val temp_TeX_notation = temp_TeX_notation0 "TeX_notation call"
+  val temp_TeX_notation =
+      temp_TeX_notation0 "TeX_notation call" (current_theory())
 
   fun TeX_notation record = let
   in
@@ -80,7 +85,7 @@ struct
                                            " appears corrupted.");
                               [])
       in
-        List.app (temp_TeX_notation0 ("Theory "^thyname)) deltas
+        List.app (temp_TeX_notation0 ("Theory "^thyname) thyname) deltas
       end
   end
 

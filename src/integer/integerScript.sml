@@ -32,6 +32,8 @@ open jrhUtils quotient liteLib
 
 open bossLib
 
+val _ = temp_delsimps ["NORMEQ_CONV"]
+
 val int_ss = boolSimps.bool_ss ++ numSimps.old_ARITH_ss ++ pairSimps.PAIR_ss;
 
 (*---------------------------------------------------------------------------*)
@@ -518,12 +520,18 @@ val _ = overload_on ("*", Term`int_mul`);
 
 (* this is a slightly tricky case; we don't have to call overload_on
    on the boolean negation, but we're doing so to put it back at the
-   top of the list of possible resolutions. *)
+   top of the list of possible resolutions.
 
-val bool_not = Term`$~`
-val _ = overload_on ("~", Term`int_neg`);
-val _ = overload_on ("~", bool_not);
-val _ = overload_on ("numeric_negate", ``int_neg``);
+   Also need to overload from the Unicode negation in order to make that
+   preferred over the tilde.
+
+*)
+
+val bool_not = “$~ : bool -> bool”
+Overload "~" = “int_neg”
+Overload "~" = bool_not
+Overload numeric_negate = “int_neg”
+Overload "¬" = bool_not                                              (* UOK *)
 
 
 (*--------------------------------------------------------------------------*)
@@ -1858,7 +1866,7 @@ val int_mod_exists =
 val int_mod = new_specification ("int_mod",["int_mod"],int_mod_exists);
 
 val _ = set_fixity "%" (Infixl 650)
-val _ = overload_on("%", Term`int_mod`);
+Overload "%" = “int_mod”
 
 val little_lemma = prove(
   ``!x y z. ~x < y + ~z <=> z < y + x``,

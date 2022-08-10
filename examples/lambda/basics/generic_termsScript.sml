@@ -8,8 +8,6 @@ open BasicProvers
 open quotientLib
 open boolSimps
 
-open lcsymtacs
-
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
 fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 
@@ -145,7 +143,7 @@ val allatoms_apart = store_thm(
     (∀l:(α,β)pregterm list a b.
        a ∉ allatomsl l ∧ b ∈ allatomsl l ⇒ listpm pt_pmact [(a,b)] l ≠ l)``,
   ho_match_mp_tac oldind >> srw_tac [][allatoms_def] >>
-  srw_tac [][swapstr_def]);
+  metis_tac[swapstr_def]);
 
 val allatoms_supp = store_thm(
   "allatoms_supp",
@@ -494,13 +492,15 @@ val fvl_eqrespects = prove(
 
 val pregterm_size_def = definition "pregterm_size_def";
 
-val psize_def = tDefine "psize"`
+Definition psize_def:
   (psize (var s vv) = 1) ∧
-  (psize (lam s bv ts us) = SUM (MAP psize ts) + SUM (MAP psize us) + 1)`
-(WF_REL_TAC `measure (pregterm_size (K 0) (K 0))` >>
+  (psize (lam s bv ts us) = SUM (MAP psize ts) + SUM (MAP psize us) + 1)
+Termination
+ WF_REL_TAC `measure (pregterm_size (K 0) (K 0))` >>
  conj_tac >> (ntac 3 gen_tac) >> Induct >>
  srw_tac [ARITH_ss][pregterm_size_def] >>
- fsrw_tac [][] >> res_tac >> DECIDE_TAC )
+ fsrw_tac [][] >> res_tac >> DECIDE_TAC
+End
 
 val psize_thm = SIMP_RULE (srw_ss()++ETA_ss) [] psize_def
 
@@ -601,14 +601,7 @@ val GFV_apart = prove(
   ho_match_mp_tac simple_induction >>
   srw_tac [][GFV_thm0, gtpm_thm, gterm_11, listTheory.MEM_MAP,
              MAP_EQ1, GLAM_eq_thm0, IN_gfvl] >>
-  srw_tac [][]
-  >- metis_tac []
-  >- (Cases_on `y = v` >> srw_tac [][] >> metis_tac [])
-  >- metis_tac []
-  >- metis_tac []
-  >- (Cases_on `y = v` >> srw_tac [][] >> metis_tac [])
-  >- metis_tac []
-  >- metis_tac [])
+  srw_tac [][] >> metis_tac[swapstr_def]);
 
 (* tempting to delete GFV and just use supp gtpm.... *)
 val GFV_supp = prove(
@@ -1013,6 +1006,8 @@ val listpm_tMAP = prove(
   ``(listpm apm pi (MAP f l) =
      MAP ((gt_pmact → apm) pi f) (gtpml pi l))``,
   srw_tac [][] >> Induct_on `l` >> srw_tac [][fnpm_def]);
+
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val tmrec_equivariant = store_thm( (* correct name? *)
 "tmrec_equivariant",

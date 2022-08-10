@@ -226,7 +226,7 @@ val (tb1,tb1') = time (computeFixedpoint report solitaire_varmap) (in_th0,in_ths
 
 fun PrintState tm =
  let val cl    = strip_pair tm
-     fun p n   = if el n cl = ``T`` then print "1" else print "0"
+     fun p n   = if el n cl ~~ T then print "1" else print "0"
      fun sp () = print "   "
      fun nl () = print"\n"
  in

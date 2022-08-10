@@ -200,7 +200,9 @@ val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",
 fun loops th = let
   val (l,r) = dest_eq (concl th)
 in
-  can (find_term (aconv l)) r
+  if is_var l then free_in l r
+  else
+    can (find_term (aconv l)) r
 end handle HOL_ERR _ => failwith "loops"
 
 

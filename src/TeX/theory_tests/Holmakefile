@@ -2,6 +2,8 @@ CMPDIR = $(protect $(HOLDIR)/tools/cmp)
 
 INCLUDES = $(CMPDIR) ../
 
+PARENT_DEPS = ../EmitTeX.uo ../mungeTools.uo ../mkmunger.sml
+
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
@@ -25,7 +27,7 @@ tyabb_output: tyabb_input tymunge.exe
 utyabb_output: tyabb_input utymunge.exe
 	./utymunge.exe < $< > $@
 
-munge.exe: mdtTheory.uo $(dprot $(HOLDIR)/bin/mkmunge.exe) ../EmitTeX.uo
+munge.exe: mdtTheory.uo $(dprot $(HOLDIR)/bin/mkmunge.exe) $(PARENT_DEPS)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) mdtTheory
 
 tymunge.exe: tyabbrevTheory.uo ../EmitTeX.uo

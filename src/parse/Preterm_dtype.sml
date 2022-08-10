@@ -21,4 +21,18 @@ struct
      with the built-in equality, but should use Preterm.eq.
      To check this has been done everywhere, uncomment this constructor. *)
 
+  fun contains_overload pt =
+      case pt of
+          Overloaded _ => true
+        | Comb {Rator, Rand, ...} => contains_overload Rator orelse
+                                     contains_overload Rand
+        | Abs {Body, ...} => contains_overload Body
+        | Constrained {Ptm, ...} => contains_overload Ptm
+        | _ => false
+  (* Pattern constructor looks like it wraps an arbitrary preterm, but
+     patterns are generated from terms (derived from overload info) so can't
+     contain Overloaded sub-trees.
+     (Not clear why Parse_support couldn't just Antiquote in the term.)
+  *)
+
 end

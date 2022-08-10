@@ -2,7 +2,7 @@ structure nomdatatype :> nomdatatype =
 struct
 
 
-open binderLib HolKernel Parse boolLib generic_termsTheory
+open binderLib HolKernel Parse boolLib bossLib generic_termsTheory
 open nomsetTheory
 
 type coninfo = {con_termP : thm, con_def : thm}
@@ -231,7 +231,7 @@ in
 end t
 
 fun prove_alpha_fcbhyp {ppm, alphas, rwts} th = let
-  open lcsymtacs nomsetTheory
+  open nomsetTheory
   val th = rpt_hyp_dest_conj (UNDISCH th)
   fun foldthis (h,th) = let
     val h_th =

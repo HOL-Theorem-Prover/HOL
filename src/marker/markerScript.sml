@@ -77,6 +77,7 @@ val move_right_disj = store_thm(
 val unint_def = new_definition(
   "unint_def",
   ``unint (x:'a) = x``);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="unint"},name=(["Unwanted"],"id")}
 
 (* ----------------------------------------------------------------------
     Abbrev
@@ -89,6 +90,11 @@ val unint_def = new_definition(
 val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Abbrev"},name=(["Unwanted"],"id")}
 
+val Abbrev_CONG = store_thm(
+  "Abbrev_CONG",
+  “r1 = r2 ==> Abbrev(v = r1) = Abbrev (v = r2)”,
+  STRIP_TAC THEN ASM_REWRITE_TAC[]);
+
 
 (* ----------------------------------------------------------------------
    For telling the simplifier to case-split on if-then-else terms in
@@ -96,7 +102,7 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Abbrev"},n
    ---------------------------------------------------------------------- *)
 
 val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
-
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="IfCases"},name=(["Data","Bool"],"T")}
 
 (*---------------------------------------------------------------------------*)
 (* Support for the simplifier                                                *)
@@ -107,6 +113,7 @@ val Req0_def = new_definition("Req0_def", “Req0 = T”);
 val ReqD_def = new_definition("ReqD_def", “ReqD = T”);
 val Cong_def = new_definition("Cong_def", ``Cong (x:bool) = x``);
 val Exclude_def = new_definition("Exclude_def", “Exclude (x:'a) = T”);
+val FRAG_def = new_definition("FRAG_def", “FRAG (x:'a) = T”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="AC"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="bool",Name="/\\"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Cong"},name=(["Unwanted"],"id")}
@@ -127,5 +134,57 @@ Type label[local] = “:ind”
 val label_def = new_definition(
   "label_def",
   ``((lab:label) :- (argument:bool)) = argument``);
+
+(* ----------------------------------------------------------------------
+    The 'using' label
+   ---------------------------------------------------------------------- *)
+
+val using_def = new_definition("using_def", “using (x:label) = T”);
+val usingThm_def = new_definition("usingThm_def", “usingThm (b:bool) = b”);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="usingThm"},name=(["Unwanted"],"id")}
+
+val _ = remove_ovl_mapping  "using" {Name = "using", Thy = "marker"}
+val _ = remove_ovl_mapping  "usingThm" {Name = "usingThm", Thy = "marker"}
+
+(*---------------------------------------------------------------------------*)
+(* Case                                                                      *)
+(*                                                                           *)
+(* For marking the current case in case divisions and inductive proofs       *)
+(*---------------------------------------------------------------------------*)
+
+val Case_def = new_definition(
+  "Case_def",
+  ``Case X = T``);
+
+val add_Case = store_thm (
+  "add_Case",
+  ``!X. P <=> (Case X ==> P)``,
+  REWRITE_TAC [Case_def]);
+
+val elim_Case = store_thm (
+  "elim_Case",
+  ``(Case X /\ Y) = Y /\
+    (Y /\ Case X) = Y /\
+    (Case X ==> Y) = Y``,
+  REWRITE_TAC [Case_def]
+  );
+
+(* ----------------------------------------------------------------------
+    hide
+
+    for hiding assumptions from both the user and many tools
+   ---------------------------------------------------------------------- *)
+
+val hide_def = new_definition(
+  "hide_def",
+  “hide (nm:bool) (x:bool) = x”);
+
+val hideCONG = store_thm(
+  "hideCONG",
+  “hide nm x = hide nm x”,
+  REWRITE_TAC[]);
+
+val _ = Tactic.export_ignore {Name = "hide", Thy = "marker"}
+val _ = permahide “hide”
 
 val _ = export_theory();

@@ -73,6 +73,12 @@ Proof
   simp[Skolem1_def]
 QED
 
+Theorem termval_o_V[simp]:
+  termval M v o V = v
+Proof
+  simp[FUN_EQ_THM]
+QED
+
 Theorem holds_Skolem1_I:
   (f,CARD (FV (Exists x p))) ∉ form_functions (Exists x p)
  ⇒
@@ -101,7 +107,6 @@ Proof
                                          p
                           else M.Fun f args ⦈
   |>’ >> simp[] >> rw[]
-  >- simp[combinTheory.APPLY_UPDATE_THM]
   >- rw[combinTheory.APPLY_UPDATE_THM]
   >- (fs[interpretation_def, language_def] >>
       rw[combinTheory.APPLY_UPDATE_THM]
@@ -136,11 +141,10 @@ Proof
   simp[Abbr‘CF’, SET_TO_LIST_CARD, combinTheory.APPLY_UPDATE_THM] >>
   SELECT_ELIM_TAC >> conj_tac
   >- (first_x_assum irule >> fs[valuation_def] >>
-      ‘∀l. (∀n. v n ∈ M.Dom) ⇒
-           ∀n. FOLDR (λ(k,v) f. f ⦇ k ↦ v ⦈) (λz. @c. c ∈ M.Dom)
-                     (ZIP (l,MAP (λa. v a) l)) n ∈ M.Dom’
+      ‘∀l n. FOLDR (λ(k,v) f. f ⦇k ↦ v⦈) (λz. @c. c ∈ M.Dom)
+                   (ZIP (l,MAP v l)) n ∈ M.Dom’
         suffices_by metis_tac[] >> Induct >> simp[]
-      >- (SELECT_ELIM_TAC >> fs[EXTENSION] >>metis_tac[]) >>
+      >- (SELECT_ELIM_TAC >> fs[EXTENSION] >> metis_tac[]) >>
       rfs[combinTheory.APPLY_UPDATE_THM] >> rw[]) >>
   qx_gen_tac ‘a’ >>
   qmatch_abbrev_tac ‘a ∈ M.Dom ∧ holds M vv⦇ x ↦ a ⦈ p ⇒ holds M v⦇ x ↦ a ⦈ p’>>
@@ -151,7 +155,7 @@ Proof
   ‘∀vars (var:num).
      MEM var vars ∧ ALL_DISTINCT vars ⇒
      FOLDR (λ(k,v) f. f ⦇ k ↦ v ⦈) (λz. @c. c ∈ M.Dom)
-           (ZIP (vars,MAP (λa. v a) vars)) var = v var’
+           (ZIP (vars,MAP v vars)) var = v var’
     suffices_by (disch_then irule >> simp[] >> simp[Abbr‘FF’]) >>
   Induct >> simp[] >> rw[combinTheory.APPLY_UPDATE_THM]
 QED
@@ -464,23 +468,26 @@ Proof
   simp[valuation_def]
 QED
 
-Definition bumpterm_def[simp]:
+Definition bumpterm_def:
   bumpterm (V x) = V x ∧
   bumpterm (Fn k l) = Fn (0 ⊗ k) (MAP bumpterm l)
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
 
+Theorem bumpterm_def[simp] =
+        SIMP_RULE bool_ss [SF ETA_ss] bumpterm_def
+
 Theorem termval_bump[simp]:
   ∀M v t. termval (bumpmod M) v (bumpterm t) = termval M v t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
+  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG]
 QED
 
 Theorem TFV_bumpterm[simp]:
   FVT (bumpterm t) = FVT t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Definition bumpform_def[simp]:
@@ -500,13 +507,13 @@ QED
 Theorem holds_bump[simp]:
   ∀M v p. holds (bumpmod M) v (bumpform p) ⇔ holds M v p
 Proof
-  Induct_on ‘p’ >> simp[MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG']
+  Induct_on ‘p’ >> simp[MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG]
 QED
 
 Theorem term_functions_bumpterm[simp]:
   term_functions (bumpterm t) = { (0 ⊗ k, m) | (k,m) ∈ term_functions t }
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG', MEM_MAP, PULL_EXISTS] >>
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG, MEM_MAP, PULL_EXISTS] >>
   simp[Once EXTENSION, MEM_MAP, PULL_EXISTS] >> metis_tac[]
 QED
 
@@ -549,13 +556,13 @@ End
 Theorem bumpterm_inv[simp]:
   unbumpterm (bumpterm t) = t
 Proof
-  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG']
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Theorem bumpform_inv[simp]:
   unbumpform (bumpform p) = p
 Proof
-  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG']
+  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG]
 QED
 
 Definition unbumpmod_def:
@@ -573,13 +580,13 @@ QED
 Theorem termval_unbumpmod:
   termval (unbumpmod M) v t = termval M v (bumpterm t)
 Proof
-  Induct_on ‘t’ >> simp[Cong MAP_CONG', MAP_MAP_o] >> simp[unbumpmod_def]
+  Induct_on ‘t’ >> simp[Cong MAP_CONG, MAP_MAP_o] >> simp[unbumpmod_def]
 QED
 
 Theorem holds_unbumpmod:
   ∀M v p. holds (unbumpmod M) v p ⇔ holds M v (bumpform p)
 Proof
-  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG', termval_unbumpmod] >>
+  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG, termval_unbumpmod] >>
   simp[unbumpmod_def]
 QED
 

@@ -438,7 +438,7 @@ SRW_TAC [][updn_def,primrec_rules,prim_pr_rec_updn] >> SRW_TAC [][pr_cond_def] >
          );
 
 
-val tmstepf_def = tDefine "tmstepf" `
+Definition tmstepf_def:
   tmstepf p tmn =
      case OLEAST n. (nfst n, CELL_NUM (nsnd n)) ∈ FDOM p ∧ nfst n<>0 of
          NONE => 0 *, nsnd tmn
@@ -451,9 +451,10 @@ val tmstepf_def = tDefine "tmstepf" `
                              ((nsnd (nsnd tmn)) MOD 2 = NUM_CELL sym)
                      then updn [s'; ACT_TO_NUM actn; tmn]
                      else tmstepf (p \\ (s,sym)) tmn
-`
-  (WF_REL_TAC `measure (CARD o FDOM o FST)` >> simp[OLEAST_EQ_SOME] >>
-   metis_tac[MEMBER_CARD]);
+Termination
+  WF_REL_TAC `measure (CARD o FDOM o FST)` >> simp[OLEAST_EQ_SOME] >>
+  metis_tac[MEMBER_CARD]
+End
 
 val HEAD_DECODE_ENCDOE_EQ = Q.store_thm("HEAD_DECODE_ENCDOE_EQ[simp]",
 `(HD (DECODE (ENCODE t)) = Z) ==> (HD t = Z)`,
@@ -768,15 +769,16 @@ val primrec_tmstepf = Q.store_thm ("primrec_tmstepf",
             (Cn (pr1 (tmstepf q)) [proj 0]  )
        ]` >> fs[primrec_of_tmstepf,primrec_tmstepf_form]));
 
-val tm_return_def = tDefine"tm_return"`
+Definition tm_return_def:
   tm_return tm =
     if tm.tape_h = Z then 0
     else
       case tm.tape_r of
           [] => 0
         | h::t  => 1 + tm_return (tm with <| tape_h := h;tape_r:=t|>)
-`
-  (WF_REL_TAC`measure (LENGTH o (λtm. tm.tape_r))` >> simp[]);
+Termination
+  WF_REL_TAC`measure (LENGTH o (λtm. tm.tape_r))` >> simp[]
+End
 
 val tm_fn_def = Define`
   tm_fn p args =
@@ -1308,13 +1310,15 @@ val num_cell_encode_hd_concat = Q.store_thm("num_cell_encode_hd_concat",
 `(concatWith [Z] (MAP (GENLIST (K O)) args) <> []) ==> (NUM_CELL (HD (concatWith [Z] (MAP (GENLIST (K O)) args))) = 1 - pr_eq [ nhd  (nlist_of args);0])`,
 rw[odd_encode_hd_concat] >> Cases_on `args` >> simp[nhd_thm]  )
 
-val encode_concat_def = tDefine "encode_concat" `
+Definition encode_concat_def:
     (encode_concat 0 = 0) ∧
-    (encode_concat args = ((2** (nhd args)) - 1) +
-                          (2* ((2** (nhd args))) * (encode_concat (ntl args))))`
-(qexists_tac `$<` >> conj_tac >- simp[prim_recTheory.WF_LESS] >> strip_tac >>
-`ntl (SUC v) <= v` by simp[ntl_suc_less] >> `v < SUC v` by simp[prim_recTheory.LESS_SUC_REFL]>>
-rw[])
+    (encode_concat args = (2 ** (nhd args) - 1) +
+                          (2* (2** (nhd args)) * encode_concat (ntl args)))
+Termination
+ qexists_tac `$<` >> conj_tac >- simp[prim_recTheory.WF_LESS] >> strip_tac >>
+ `ntl (SUC v) <= v` by simp[ntl_suc_less] >>
+ `v < SUC v` by simp[prim_recTheory.LESS_SUC_REFL]>> rw[]
+End
 
 val encode_tl_concat_def = Define`encode_tl_concat args = DIV2 (encode_concat args)`
 

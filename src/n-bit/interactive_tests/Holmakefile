@@ -1,6 +1,8 @@
+INCLUDES = ..
+
 .PHONY: all
 
-all: test1
+all: test1 $(DEFAULT_TARGETS)
 
 test1: script1.ML
 	$(protect $(HOLDIR)/bin/hol) $<

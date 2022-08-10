@@ -26,14 +26,15 @@ fun indef_class2string Thm = "a theorem"
   | indef_class2string Axm = "an axiom"
   | indef_class2string Def = "a definition"
 
+fun pdv_thm (pdv : public_data_value) = #1 pdv
+fun dv_thm (dv : data_value) : thm = #1 dv
+fun dv_class (dv : data_value) : class = #2 dv
+fun dv_isprivate (dv : data_value) = #private (#3 dv)
 
-(*---------------------------------------------------------------------------
-    The pair of strings is theory * bindname
- ---------------------------------------------------------------------------*)
-
-type data    = (string * string) * (thm * class)
-
-fun dataNameEq s ((_, nm), _) = nm = s
+fun dataName (((_, nm), _) : 'a named) = nm
+fun dataThy (((thy, _), _) : 'a named) = thy
+fun data_isprivate (nms, dv) = dv_isprivate dv
+fun dataNameEq s d = dataName d = s
 
 
 (*---------------------------------------------------------------------------
@@ -66,12 +67,23 @@ val empty_sdata_map = Map.mkDict String.compare
 (* the dbmap contains:
     - a map from theory-name to a submap (as above)
 *)
-datatype dbmap = DB of { namemap : (string, submap) Map.dict }
+datatype dbmap = DB of { namemap : (string, submap) Map.dict,
+                         revmap : location list Termtab.table,
+                         localmap : (thm * {private:bool}) Symtab.table
+                       }
 
 fun namemap (DB{namemap,...}) = namemap
-fun updnamemap f (DB{namemap}) = DB {namemap = f namemap}
+fun revmap (DB{revmap,...}) = revmap
+fun localmap (DB{localmap,...}) = localmap
+fun updnamemap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = f namemap, revmap = revmap, localmap = localmap}
+fun updrevmap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = namemap, revmap = f revmap, localmap=localmap}
+fun updlocalmap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = namemap, revmap = revmap, localmap = f localmap}
 
-val empty_dbmap = DB {namemap = Map.mkDict String.compare}
+val empty_dbmap = DB {namemap = Map.mkDict String.compare,
+                      localmap = Symtab.empty, revmap = Termtab.empty}
 
 local val DBref = ref empty_dbmap
       fun lemmas() = !DBref
@@ -84,33 +96,52 @@ local val DBref = ref empty_dbmap
             Map.insert(m, s2key,
                        newdata :: List.filter (not o dataNameEq s2) oldvalue)
           end
-      fun functional_bindl (DB {namemap,...}) thy blist =
+      fun functional_bindl_names thy blist namemap =
           (* used when a theory is loaded from disk *)
           let val submap =
                   case Map.peek(namemap, thy) of
                     NONE => empty_sdata_map
                   | SOME m => m
-              fun foldthis ((n,th,cl), m) = add_to_submap m ((thy,n), (th,cl))
+              fun foldthis ((n,th,cl,vis), m) =
+                  add_to_submap m ((thy,n), (th,cl,vis))
               val submap' = List.foldl foldthis submap blist
           in
-            DB {namemap = Map.insert(namemap, thy, submap')}
+            Map.insert(namemap, thy, submap')
           end
+      fun functional_bindl_revmap thy blist revmap =
+          List.foldl
+            (fn ((n,th,cl,vis), A) =>
+                Termtab.cons_list(concl th,Stored {Thy = thy,Name = n}) A)
+            revmap
+            blist
+      fun functional_bindl db thy blist =
+          db |> updnamemap (functional_bindl_names thy blist)
+             |> updrevmap (functional_bindl_revmap thy blist)
 
       fun purge_stale_bindings() =
           let
             open Map
             fun foldthis (n, datas : data list, m) =
                 let
-                  val data' = List.filter (fn (_, (th, _)) => uptodate_thm th)
+                  val data' = List.filter(fn (_, (th, _, _)) => uptodate_thm th)
                                           datas
                 in
                   insert(m,n,data')
                 end
+            fun purge_stale ttab =
+                let open Termtab
+                in
+                  fold (fn (t,d) => fn A =>
+                           if uptodate_term t then update (t,d) A else A)
+                       ttab
+                       empty
+                end
             val ct = current_theory()
           in
-            DBref := updnamemap
-                       (updexisting ct (foldl foldthis empty_sdata_map))
-                       (!DBref)
+            DBref := ((!DBref)
+                       |> updnamemap
+                            (updexisting ct (foldl foldthis empty_sdata_map))
+                       |> updrevmap purge_stale)
           end
 
       fun delete_binding bnm =
@@ -131,9 +162,11 @@ local val DBref = ref empty_dbmap
       fun hook thydelta =
           let
             open TheoryDelta
-            fun toThmClass (s, ThmKind_dtype.Thm th) = (s, th, Thm)
-              | toThmClass (s, ThmKind_dtype.Axiom(sn,th)) = (s, th, Axm)
-              | toThmClass (s, ThmKind_dtype.Defn th) = (s, th, Def)
+            fun dest_thk (ThmKind_dtype.Thm th) = (th, Thm)
+              | dest_thk (ThmKind_dtype.Axiom(_, th)) = (th, Axm)
+              | dest_thk (ThmKind_dtype.Defn th) = (th, Def)
+            fun toThmClass (s, (thk, v)) =
+                let val (th,k) = dest_thk thk in (s,th,k,v) end
           in
             case thydelta of
                 DelConstant _ => purge_stale_bindings()
@@ -151,14 +184,22 @@ local val DBref = ref empty_dbmap
       val _ = Theory.register_hook("DB", hook)
 in
 fun bindl thy blist = DBref := functional_bindl (lemmas()) thy blist
-
+fun revlookup th = Termtab.lookup_list (revmap (!DBref)) (concl th)
 (*---------------------------------------------------------------------------
     To the database representing all ancestor theories, add the
     entries in the current theory segment.
  ---------------------------------------------------------------------------*)
-
 fun CT() = !DBref
+
+fun store_local private s th =
+    DBref := (!DBref |> updlocalmap (Symtab.update(s,(th,private)))
+                     |> updrevmap (Termtab.cons_list(concl th, Local s)))
+fun local_thm s = case Symtab.lookup (localmap (!DBref)) s of
+                      NONE => NONE
+                    | SOME (th,{private}) => if private then NONE else SOME th
+
 end (* local *)
+
 
 
 (*---------------------------------------------------------------------------
@@ -185,23 +226,40 @@ fun thy s =
         | SOME m => Map.foldl (fn (lcnm, datas, A) => datas @ A) [] m
     end
 
-fun find s =
+fun findpred pat s =
+    let
+      val pat = toLower pat and s = toLower s
+      val orparts = String.tokens (equal #"|") pat
+      val subparts = map (String.tokens (equal #"~")) orparts
+      val subpred = List.all (C occurs s)
+    in
+      List.exists subpred subparts
+    end
+
+fun find0 incprivatep s =
     let
       val DB{namemap,...} = CT()
-      val s = toLower s
-      fun subfold (k, v, acc) = if occurs s k then v @ acc else acc
+      fun subfold (k, vs, acc) =
+          if findpred s k then
+            (if incprivatep then vs
+             else List.filter (fn (_, (_, _, {private=p})) => not p) vs) @
+            acc
+          else acc
       fun fold (thy, m, acc) = Map.foldr subfold acc m
     in
       Map.foldr fold [] namemap
     end
 
+fun find s = List.map (fn (n, (th,c,_)) => (n, (th,c))) (find0 false s)
+val find_all = find0 true
 
 (*---------------------------------------------------------------------------
       Look up something by matching. Parameterized by the matcher.
  ---------------------------------------------------------------------------*)
 
-fun matchp P thylist =
-    let fun data_P (_, (th, _)) = P th
+fun matchp0 incprivate P thylist =
+    let fun data_P (_, (th, _, {private})) =
+            (incprivate orelse not private) andalso P th
         fun subfold (k, v, acc) = List.filter data_P v @ acc
     in
       case thylist of
@@ -219,26 +277,24 @@ fun matchp P thylist =
              end
     end
 
+val match_primitive = ho_match_term [] empty_tmset
 
+fun matchp P thys = map drop_private $ matchp0 false P thys
 fun matcher f thyl pat =
   matchp (fn th => can (find_term (can (f pat))) (concl th)) thyl;
 
-val match = matcher (ho_match_term [] empty_tmset);
+fun match thys pat = matcher match_primitive thys pat
 val apropos = match [];
 
 (* matches : term -> thm -> bool
   tests whether theorem matches pattern *)
 fun matches pat th =
-  can (find_term (can (ho_match_term [] empty_tmset pat))) (concl th) ;
+  can (find_term (can (match_primitive pat))) (concl th) ;
 
 fun apropos_in pat dbdata =
-  List.filter (fn (_, (th, _)) => matches pat th) dbdata ;
+  List.filter (fn (_, pdv) => matches pat $ pdv_thm pdv) dbdata
 
-fun find_in s =
-  let val lows = toLower s ;
-    fun finds dbdata =
-      List.filter (fn ((_, name), _) => occurs lows (toLower name)) dbdata ;
-  in finds end ;
+fun find_in s = List.filter (findpred s o dataName)
 
 fun listDB () =
     let fun subfold (k,v,acc) = v @ acc
@@ -246,6 +302,36 @@ fun listDB () =
     in
       Map.foldr fold [] (namemap (CT()))
     end
+
+fun listPublicDB() =
+    let
+      fun subfold (_,dvs,acc) =
+          let
+            val dvs' =
+                List.mapPartial (fn d => if data_isprivate d then NONE
+                                         else SOME (drop_private d))
+                                dvs
+          in
+            dvs' :: acc
+          end
+      fun fold (_, m, acc) = Map.foldr subfold acc m
+    in
+      List.concat (Map.foldr fold [] (namemap (CT())))
+    end
+
+fun selectDB sels =
+    let
+      fun selfn (SelTM pat) = apropos_in pat
+        | selfn (SelNM s) = find_in s
+        | selfn (SelTHY s) = List.filter (equal (norm_thyname s) o dataThy)
+      fun recurse sels d =
+          case sels of
+              [] => d
+            | s::rest => recurse rest (selfn s d)
+    in
+      recurse sels (listPublicDB())
+    end
+
 
 (*---------------------------------------------------------------------------
       Some other lookup functions
@@ -267,10 +353,11 @@ in
                        ("multiple things in theory "^thy^" with name "^name)
 end
 
-fun fetch s1 s2 = fst (thm_class "fetch" s1 s2);
+fun fetch s1 s2 = #1 (thm_class "fetch" s1 s2);
+fun fetch_knm{Thy,Name} = fetch Thy Name
 
-fun thm_of ((_,n),(th,_)) = (n,th);
-fun is x (_,(_,cl)) = (cl=x)
+fun thm_of ((_,n),dv) = (n,dv_thm dv);
+fun is x (_,dv) = (dv_class dv=x)
 
 val thms        = List.map thm_of o thy
 val theorems    = List.map thm_of o Lib.filter (is Thm) o thy
@@ -278,25 +365,28 @@ val definitions = List.map thm_of o Lib.filter (is Def) o thy
 val axioms      = List.map thm_of o Lib.filter (is Axm) o thy
 
 fun theorem s = let
-  val (thm,c) = thm_class "theorem" "-" s
+  val dv = thm_class "theorem" "-" s
+  val c = dv_class dv
 in
-  if c = Thm then thm
+  if c = Thm then dv_thm dv
   else raise ERR "theorem" ("No theorem in current theory of name "^s^
                             " (but there is "^indef_class2string c^")")
 end
 
 fun definition s = let
-  val (thm,c) = thm_class "definition" "-" s
+  val dv = thm_class "definition" "-" s
+  val c = dv_class dv
 in
-  if c = Def then thm
+  if c = Def then dv_thm dv
   else raise ERR "theorem" ("No definition in current theory of name "^s^
                             " (but there is "^indef_class2string c^")")
 end
 
 fun axiom s = let
-  val (thm,c) = thm_class "axiom" "-" s
+  val dv = thm_class "axiom" "-" s
+  val c = dv_class dv
 in
-  if c = Axm then thm
+  if c = Axm then dv_thm dv
   else raise ERR "axiom" ("No axiom in current theory of name "^s^
                           " (but there is "^indef_class2string c^")")
 end
@@ -313,5 +403,17 @@ fun dest_theory s =
      theorems = theorems thyname})
  end
  handle e => raise ERR "dest_theory" (Lib.quote s^" is not a known theory");
+
+(* Derived search functions *)
+fun find_consts_thy thl t =
+  let
+    val theConsts = List.concat (List.map constants thl)
+  in
+    List.filter (can (match_type t) o type_of) theConsts
+end
+
+(* The call to find_consts_thy is hidden under a fun binding to make sure that
+  the theory list is constructed properly and not captured in a closure *)
+fun find_consts t = find_consts_thy ("-" :: ancestry "-") t;
 
 end

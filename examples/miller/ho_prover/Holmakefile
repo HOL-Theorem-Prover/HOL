@@ -1,2 +1,2 @@
-OPTIONS = QUIT_ON_FAILURE
-INCLUDES = ../useful
+INCLUDES = \
+  $(HOLDIR)/src/res_quan/src   # for hurdUtils

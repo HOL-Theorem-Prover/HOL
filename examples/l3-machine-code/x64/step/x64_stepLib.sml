@@ -1102,8 +1102,9 @@ local
       THENC utilsLib.WGROUND_CONV
    val get_strm1 = Term.rand o Term.rand o Term.rand o Term.rand o utilsLib.rhsc
    val get_ast = Term.rand o Term.rator o Term.rand o Term.rand o utilsLib.rhsc
+   fun sel ty f = TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
    val state_exception_tm =
-      Term.prim_mk_const {Thy = "x64", Name = "x64_state_exception"}
+      Term.prim_mk_const {Thy = "x64", Name = sel "x64_state" "exception"}
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
    val twenty = numSyntax.term_of_int 20
    fun mk_len_thm thm1 =

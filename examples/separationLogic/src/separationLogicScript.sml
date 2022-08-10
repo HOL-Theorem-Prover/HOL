@@ -26,6 +26,9 @@ quietdec := false;
 val _ = new_theory "separationLogic"
 val _ = ParseExtras.temp_loose_equality()
 
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
+
 (******************************************************************************)
 (* Define separation combinators and algebras                                 *)
 (******************************************************************************)
@@ -2269,7 +2272,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
 
 
    REPEAT STRIP_TAC THEN
-   lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
+   rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
    Cases_on `R (SOME s1) NONE` THEN
    ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM] THEN
    `~(R (SOME y) NONE)` by METIS_TAC[] THEN
@@ -2441,17 +2444,17 @@ SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM, ASL_IS_LOCAL_ACTION_def,
    ASL_IS_SEPARATE_def, IS_SOME_EXISTS, GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [asl_star_def, IN_ABS, SUBSET_DEF] THEN
-   lcsymtacs.rename1 `SOME s = f (SOME p) (SOME q)` THEN
+   rename1 `SOME s = f (SOME p) (SOME q)` THEN
    `fasl_order (a s) (fasl_star f (a p) (SOME {q}))` by METIS_TAC[] THEN
    `?p'. (a p = SOME p') /\ !x. x IN p' ==> x IN Q` by METIS_TAC[] THEN
    FULL_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM,
       asl_star_def, IN_SING, IN_ABS, SUBSET_DEF] THEN
    METIS_TAC[],
 
-   lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
+   rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
    Cases_on `a s1` THEN
    ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM] THEN
-   lcsymtacs.rename1 `a s1 = SOME xx` THEN
+   rename1 `a s1 = SOME xx` THEN
    Q.PAT_X_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s1}`, `xx`]) THEN
    ASM_SIMP_TAC std_ss [IN_SING, SUBSET_REFL, asl_star_def,
       IN_ABS, SUBSET_DEF] THEN
@@ -2884,7 +2887,7 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION_def, ASL_IS_SEPARATE_def,
    fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM,
    INF_fasl_order_def] THEN
 REPEAT STRIP_TAC THEN
-lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
+rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
 Cases_on `!s0 s1'. ~(SOME y = f (SOME s0) (SOME s1')) \/ ~(s1' IN P1)` THENL [
    ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR, fasl_order_THM,
       BIN_OPTION_MAP_ALL_DEF_THM] THEN
@@ -4885,8 +4888,8 @@ METIS_TAC[SUBSET_DEF, COMM_DEF]);
 
 
 
-val ASL_TRACE_ZIP_def = tDefine "ASL_TRACE_ZIP"
-   `(ASL_TRACE_ZIP [] t = {t}) /\
+Definition ASL_TRACE_ZIP_def:
+   (ASL_TRACE_ZIP [] t = {t}) /\
    (ASL_TRACE_ZIP t [] = {t}) /\
    (ASL_TRACE_ZIP (aa1::t1) (aa2::t2) =
       (let z1 = IMAGE (\x. aa1::x) (ASL_TRACE_ZIP t1 (aa2::t2)) in
@@ -4895,10 +4898,11 @@ val ASL_TRACE_ZIP_def = tDefine "ASL_TRACE_ZIP"
        if (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION aa1 /\
            ASL_IS_PRIM_COMMAND_ATOMIC_ACTION aa2) then
       IMAGE (\x. (asl_aa_check (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION aa1) (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION aa2))::x) z3 else
-      z3))`
-
-   (WF_REL_TAC `measure (\(l1, l2). LENGTH l1 + LENGTH l2)` THEN
-   SIMP_TAC list_ss [])
+      z3))
+Termination
+   WF_REL_TAC `measure (λ(l1, l2). LENGTH l1 + LENGTH l2)` THEN
+   SIMP_TAC list_ss []
+End
 
 
 val ASL_TRACE_ZIP_PRIME_def = Define
@@ -5269,8 +5273,8 @@ SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM, asl_star_def,
    `f (SOME s2) (SOME s1) = f (SOME s1) (SOME s2)` by METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF] THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
-   lcsymtacs.rename1 `la1 s = SOME y` THEN
-   lcsymtacs.rename1 `x IN y` THEN
+   rename1 `la1 s = SOME y` THEN
+   rename1 `x IN y` THEN
    Q.PAT_X_ASSUM  `!s1 s2 s3 y. P s1 s2 s3 y` (
       MP_TAC o Q.SPECL [`s2`, `s1`, `s`, `vq3`, `y`, `x`]) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
@@ -5761,8 +5765,7 @@ val _ = export_rewrites ["asl_comments_TF_ELIM"]
 (* Program traces                       *)
 (* ------------------------------------ *)
 
-val ASL_PROTO_TRACES_EVAL_PROC_def_term_frag =
-`
+Definition ASL_PROTO_TRACES_EVAL_PROC_def:
    (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_prim_command pc) = {[asl_aa_pc pc]}) /\
    (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_seq p1 p2) =
       {t1 ++ t2 | t1 IN ASL_PROTO_TRACES_EVAL_PROC n penv p1 /\ t2 IN ASL_PROTO_TRACES_EVAL_PROC n penv p2}) /\
@@ -5781,30 +5784,18 @@ val ASL_PROTO_TRACES_EVAL_PROC_def_term_frag =
 
    (ASL_PROTO_TRACES_EVAL_PROC (SUC n) penv (asl_pt_procedure_call name arg) =
     if ~(name IN (FDOM penv)) then {[asl_aa_fail]} else (
-    BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL_PROC n penv) ((penv ' name) arg))))`;
-
-
-
-(*
-val ASL_PROTO_TRACES_EVAL_PROC_defn = Defn.Hol_defn "ASL_PROTO_TRACES_EVAL_PROC" ASL_PROTO_TRACES_EVAL_PROC_def_term_frag;
-
-Defn.tgoal ASL_PROTO_TRACES_EVAL_PROC_defn
-*)
-
-
-
-val ASL_PROTO_TRACES_EVAL_PROC_def = tDefine "ASL_PROTO_TRACES_EVAL_PROC"
-ASL_PROTO_TRACES_EVAL_PROC_def_term_frag
-
-(Q.EXISTS_TAC `(measure (\n. n))  LEX
-     (measure (\(X, p). asl_proto_trace_size (K 0) (K 0) (K 0) (K 0) p))` THEN
+    BIGUNION (IMAGE (ASL_PROTO_TRACES_EVAL_PROC n penv) ((penv ' name) arg))))
+Termination
+ Q.EXISTS_TAC `(measure (\n. n))  LEX
+     (measure (λ(X, p). asl_proto_trace_size (K 0) (K 0) (K 0) (K 0) p))` THEN
 CONJ_TAC THENL [
    MATCH_MP_TAC pairTheory.WF_LEX THEN
    REWRITE_TAC[prim_recTheory.WF_measure],
 
    SIMP_TAC arith_ss [pairTheory.LEX_DEF_THM, prim_recTheory.measure_thm,
       asl_proto_trace_size_def]
-]);
+]
+End
 
 
 val ASL_PROTO_TRACES_EVAL_def = Define `

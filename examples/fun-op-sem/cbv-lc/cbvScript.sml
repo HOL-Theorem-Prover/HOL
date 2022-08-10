@@ -3,7 +3,7 @@
  * use closures rather than substitution in the semantics, and use
  * De Bruijn indices for variables. *)
 
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse;
 open integerTheory stringTheory alistTheory listTheory pred_setTheory;
 open pairTheory optionTheory finite_mapTheory arithmeticTheory;
 
@@ -88,7 +88,7 @@ val _ = Datatype`
 
 (* big-step semantics as a function *)
 
-val sem_def = tDefine "sem" `
+Definition sem_def:
 (sem env s (Lit i) = (Rval (Litv i), s)) ∧
 (sem env s (Var n) =
   if n < LENGTH env then
@@ -114,14 +114,14 @@ val sem_def = tDefine "sem" `
   if s.clock ≠ 0 then
     sem env (dec_clock s) e
   else
-    (Rtimeout, s))`
-(WF_REL_TAC`inv_image (measure I LEX measure exp_size)
+    (Rtimeout, s))
+Termination
+ WF_REL_TAC`inv_image (measure I LEX measure exp_size)
                       (λ(env,s,e). (s.clock,e))` >>
  rpt strip_tac >> TRY DECIDE_TAC >>
  fs[check_clock_def,dec_clock_def] >>
- rw[] >> fsrw_tac[ARITH_ss][]);
-
-val sem_ind = theorem "sem_ind";
+ rw[] >> fsrw_tac[ARITH_ss][]
+End
 
 val sem_clock = store_thm("sem_clock",
   ``∀env s e r s'. sem env s e = (r, s') ⇒ s'.clock ≤ s.clock``,

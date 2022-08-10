@@ -37,6 +37,7 @@ in
     ; Feedback.set_trace "metis" 1
     ; Feedback.set_trace "meson" 1
     ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_ssfrag)
+    ; PolyML.addPrettyPrinter (pp2polypp DefnBase.pp_defn)
     ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_simpset)
     ; PolyML.addPrettyPrinter (pp2polypp computeLib.pp_compset)
     ; PolyML.addPrettyPrinter pp_transform

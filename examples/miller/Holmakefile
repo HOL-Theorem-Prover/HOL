@@ -1,1 +1,2 @@
-INCLUDES=miller
+CLINE_OPTIONS = -r
+INCLUDES = miller

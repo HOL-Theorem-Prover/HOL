@@ -18,7 +18,7 @@ open HolKernel Parse boolLib metisLib;
      Make sure that sumTheory and oneTheory is loaded.
  ---------------------------------------------------------------------------*)
 
-local open sumTheory oneTheory relationTheory in end;
+local open sumTheory oneTheory relationTheory DefnBase in end;
 open simpLib BasicProvers
 
 (* ---------------------------------------------------------------------*)
@@ -74,8 +74,13 @@ val option_ABS_ONTO    = reduce(prove_abs_fn_onto option_REP_ABS_DEF);
 val option_REP_ONE_ONE = prove_rep_fn_one_one option_REP_ABS_DEF;
 val option_REP_ONTO    = reduce(prove_rep_fn_onto option_REP_ABS_DEF);
 
-val SOME_DEF = new_definition("SOME_DEF",Term`!x. SOME x = option_ABS(INL x)`);
-val NONE_DEF = new_definition("NONE_DEF",Term`NONE = option_ABS(INR one)`);
+val SOME_DEF = new_definition(
+  "SOME_DEF[notuserdef]",“!x. SOME x = option_ABS(INL x)”
+);
+val NONE_DEF = new_definition(
+  "NONE_DEF[notuserdef]",
+  “NONE = option_ABS(INR one)”
+);
 val _ = ot0 "SOME" "some"
 val _ = ot0 "NONE" "none"
 
@@ -102,16 +107,27 @@ val option_induction = store_thm (
   HO_MATCH_MP_TAC sumTheory.sum_INDUCT THEN
   ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
 
-val option_nchotomy = save_thm(
-  "option_nchotomy",
+Theorem option_nchotomy =
   prove_cases_thm option_induction
     |> hd
     |> CONV_RULE (RENAME_VARS_CONV ["opt"] THENC
-                  BINDER_CONV (RAND_CONV (RENAME_VARS_CONV ["x"]))))
+                  BINDER_CONV (RAND_CONV (RENAME_VARS_CONV ["x"])));
 
 val [option_case_def] = Prim_rec.define_case_constant option_Axiom
 val _ = ot0 "option_case" "case"
 val _ = overload_on("case", ``option_CASE``)
+val _ = export_rewrites ["option_case_def"]
+
+(* get the names right for Cases_on ‘option’ for proofs that depend on the
+   SOME variable being an x
+*)
+val _ = TypeBase.export (
+  TypeBasePure.gen_datatype_info
+    {ax=option_Axiom, case_defs=[option_case_def], ind=option_induction}
+    |> (fn l => [TypeBasePure.put_nchotomy option_nchotomy (hd l)])
+);
+
+Theorem option_case_lazily[compute] = computeLib.lazyfy_thm option_case_def
 
 Theorem FORALL_OPTION:
   (!opt. P opt) <=> P NONE /\ !x. P (SOME x)
@@ -119,7 +135,7 @@ Proof METIS_TAC [option_induction]
 QED
 
 Theorem EXISTS_OPTION:
-  (?opt. P opt) = P NONE \/ ?x. P (SOME x)
+  (?opt. P opt) <=> P NONE \/ ?x. P (SOME x)
 Proof METIS_TAC [option_nchotomy]
 QED
 
@@ -127,6 +143,7 @@ val SOME_11 = store_thm("SOME_11",
   Term`!x y :'a. (SOME x = SOME y) <=> (x=y)`,
   REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);
 val _ = export_rewrites ["SOME_11"]
+val _ = computeLib.add_persistent_funs ["SOME_11"]
 
 val (NOT_NONE_SOME,NOT_SOME_NONE) =
  let val thm = TAC_PROOF(([], Term`!x:'a. ~(NONE = SOME x)`),
@@ -139,31 +156,31 @@ val (NOT_NONE_SOME,NOT_SOME_NONE) =
 val _ = export_rewrites ["NOT_NONE_SOME"]
         (* only need one because simplifier automatically flips the equality
            for us *)
+val _ = computeLib.add_persistent_funs ["NOT_NONE_SOME", "NOT_SOME_NONE"]
 
 
-val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
+val OPTION_MAP_DEF = new_recursive_definition
  {name="OPTION_MAP_DEF",
   rec_axiom=option_Axiom,
-  def =
-  Term`(OPTION_MAP (f:'a->'b) (SOME x) = SOME (f x)) /\
-       (OPTION_MAP f NONE = NONE)`};
+  def = “(OPTION_MAP (f:'a->'b) (SOME x) = SOME (f x)) /\
+         (OPTION_MAP f NONE = NONE)”};
 val _ = export_rewrites ["OPTION_MAP_DEF"]
 val _ = computeLib.add_persistent_funs ["OPTION_MAP_DEF"]
 val _ = ot0 "OPTION_MAP" "map"
 
-val IS_SOME_DEF = Prim_rec.new_recursive_definition
+Theorem IS_SOME_DEF[compute,simp] = new_recursive_definition
   {name="IS_SOME_DEF",
    rec_axiom=option_Axiom,
-   def = Term`(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)`};
+   def = “(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)”};
 val _ = ot0 "IS_SOME" "isSome"
 
-val IS_NONE_DEF = Prim_rec.new_recursive_definition {
+Theorem IS_NONE_DEF[compute,simp] = new_recursive_definition {
   name = "IS_NONE_DEF",
   rec_axiom = option_Axiom,
   def = Term`(IS_NONE (SOME x) = F) /\ (IS_NONE NONE = T)`};
 val _ = ot0 "IS_NONE" "isNone"
 
-val THE_DEF = Prim_rec.new_recursive_definition
+Theorem THE_DEF[compute,simp] = new_recursive_definition
   {name="THE_DEF",
    rec_axiom=option_Axiom,
    def = Term `THE (SOME x) = x`};
@@ -176,7 +193,7 @@ val OPTION_MAP2_DEF = Q.new_definition(
      then SOME (f (THE x) (THE y))
      else NONE`);
 
-val OPTION_JOIN_DEF = Prim_rec.new_recursive_definition
+Theorem OPTION_JOIN_DEF[compute,simp] = new_recursive_definition
   {name = "OPTION_JOIN_DEF",
    rec_axiom = option_Axiom,
    def = Term`(OPTION_JOIN NONE = NONE) /\
@@ -211,21 +228,19 @@ val IS_SOME_EXISTS = store_thm("IS_SOME_EXISTS",
   GEN_TAC THEN (Q_TAC OPTION_CASES_TAC`opt`) THEN
   SRW_TAC[][IS_SOME_DEF])
 
-val IS_NONE_EQ_NONE = Q.store_thm(
-  "IS_NONE_EQ_NONE",
-  `!x. IS_NONE x = (x = NONE)`,
-    GEN_TAC
-    THEN OPTION_CASES_TAC “(x :'a option)”
-    THEN ASM_REWRITE_TAC option_rws
-);
+Theorem IS_NONE_EQ_NONE[simp]:
+  !x. IS_NONE x = (x = NONE)
+Proof
+  GEN_TAC THEN OPTION_CASES_TAC “(x :'a option)” THEN
+  ASM_REWRITE_TAC option_rws
+QED
 
-val NOT_IS_SOME_EQ_NONE = Q.store_thm(
-  "NOT_IS_SOME_EQ_NONE",
-  `!x. ~(IS_SOME x) = (x = NONE)`,
-    GEN_TAC
-    THEN OPTION_CASES_TAC “(x :'a option)”
-    THEN ASM_REWRITE_TAC option_rws
-);
+Theorem NOT_IS_SOME_EQ_NONE[simp]:
+  !x. ~(IS_SOME x) = (x = NONE)
+Proof
+  GEN_TAC THEN OPTION_CASES_TAC “(x :'a option)”
+  THEN ASM_REWRITE_TAC option_rws
+QED
 
 val IS_SOME_EQ_EXISTS = Q.prove(
  `!x. IS_SOME x = (?v. x = SOME v)`,
@@ -242,13 +257,11 @@ val IS_SOME_IMP_SOME_THE_CANCEL = Q.prove(
     THEN ASM_REWRITE_TAC option_rws
 );
 
-val option_case_ID = Q.store_thm(
-  "option_case_ID",
-  `!x:'a option. option_CASE x NONE SOME = x`,
-    GEN_TAC
-    THEN OPTION_CASES_TAC “(x :'a option)”
-    THEN ASM_REWRITE_TAC option_rws
-);
+Theorem option_case_ID[simp]:
+  !x:'a option. option_CASE x NONE SOME = x
+Proof
+  GEN_TAC THEN OPTION_CASES_TAC “x :'a option” THEN ASM_REWRITE_TAC option_rws
+QED
 
 val IS_SOME_option_case_SOME = Q.prove(
 `!x:'a option. IS_SOME x ==> (option_CASE x e SOME = x)`,
@@ -257,13 +270,11 @@ val IS_SOME_option_case_SOME = Q.prove(
     THEN ASM_REWRITE_TAC option_rws
 );
 
-val option_case_SOME_ID = Q.store_thm(
-  "option_case_SOME_ID",
-  `!x:'a option. (option_CASE x x SOME = x)`,
-    GEN_TAC
-    THEN OPTION_CASES_TAC “(x :'a option)”
-    THEN ASM_REWRITE_TAC option_rws
-);
+Theorem option_case_SOME_ID[simp]:
+  !x:'a option. (option_CASE x x SOME = x)
+Proof
+  GEN_TAC THEN OPTION_CASES_TAC “x :'a option” THEN ASM_REWRITE_TAC option_rws
+QED
 
 val IS_SOME_option_case = Q.prove(
 `!x:'a option. IS_SOME x ==> (option_CASE x e (f:'a->'b) = f (THE x))`,
@@ -355,21 +366,27 @@ val OPTION_MAP_COMPOSE = store_thm(
   ``OPTION_MAP f (OPTION_MAP g (x:'a option)) = OPTION_MAP (f o g) x``,
   OPTION_CASES_TAC ``x:'a option`` THEN SRW_TAC [][]);
 
-val OPTION_MAP_CONG = store_thm(
-  "OPTION_MAP_CONG",
-  ``!opt1 opt2 f1 f2.
+Theorem OPTION_MAP_CONG[defncong]:
+  !opt1 opt2 f1 f2.
       (opt1 = opt2) /\ (!x. (opt2 = SOME x) ==> (f1 x = f2 x)) ==>
-      (OPTION_MAP f1 opt1 = OPTION_MAP f2 opt2)``,
+      (OPTION_MAP f1 opt1 = OPTION_MAP f2 opt2)
+Proof
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
   Q.SPEC_THEN `opt2` FULL_STRUCT_CASES_TAC option_nchotomy THEN
   REWRITE_TAC [OPTION_MAP_DEF, SOME_11] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11])
-val _ = DefnBase.export_cong "OPTION_MAP_CONG"
+  FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11]
+QED
 
 val IS_SOME_MAP = Q.store_thm ("IS_SOME_MAP",
   `IS_SOME (OPTION_MAP f x) = IS_SOME (x : 'a option)`,
   OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [IS_SOME_DEF, OPTION_MAP_DEF]) ;
+
+Theorem OPTION_MAP_id[simp]:
+  OPTION_MAP I (x:'a option) = x /\ OPTION_MAP (\x. x) x = x
+Proof
+  OPTION_CASES_TAC “x:'a option” THEN SRW_TAC[][]
+QED
 
 (* and one about OPTION_JOIN *)
 
@@ -404,16 +421,17 @@ val OPTION_MAP2_NONE = Q.store_thm(
   SRW_TAC [][]);
 val _ = export_rewrites["OPTION_MAP2_NONE"];
 
-val OPTION_MAP2_cong = store_thm("OPTION_MAP2_cong",
-  ``!x1 x2 y1 y2 f1 f2.
+Theorem OPTION_MAP2_cong[defncong]:
+  !x1 x2 y1 y2 f1 f2.
        (x1 = x2) /\ (y1 = y2) /\
        (!x y. (x2 = SOME x) /\ (y2 = SOME y) ==> (f1 x y = f2 x y)) ==>
-       (OPTION_MAP2 f1 x1 y1 = OPTION_MAP2 f2 x2 y2)``,
+       (OPTION_MAP2 f1 x1 y1 = OPTION_MAP2 f2 x2 y2)
+Proof
   SRW_TAC [][] THEN
   Q.SPEC_THEN `x1` FULL_STRUCT_CASES_TAC option_nchotomy THEN
   Q.ISPEC_THEN `y1` FULL_STRUCT_CASES_TAC option_nchotomy THEN
-  SRW_TAC [][]);
-val _ = DefnBase.export_cong "OPTION_MAP2_cong";
+  SRW_TAC [][]
+QED
 
 val OPTION_MAP_CASE = store_thm("OPTION_MAP_CASE",
   ``OPTION_MAP f (x:'a option) = option_CASE x NONE (SOME o f)``,
@@ -455,29 +473,26 @@ val OPTION_MAP_CASE = store_thm("OPTION_MAP_CASE",
 
    ---------------------------------------------------------------------- *)
 
-val OPTION_BIND_def = Prim_rec.new_recursive_definition
+val OPTION_BIND_def = new_recursive_definition
   {name="OPTION_BIND_def",
    rec_axiom=option_Axiom,
-   def = Term`(OPTION_BIND NONE f = NONE) /\
-              (OPTION_BIND (SOME x) f = f x)`}
+   def = “(OPTION_BIND NONE f = NONE) /\ (OPTION_BIND (SOME x) f = f x)”}
 val _= export_rewrites ["OPTION_BIND_def"]
-val _ = computeLib.add_persistent_funs["OPTION_BIND_def"];
+val _ = computeLib.add_persistent_funs ["OPTION_BIND_def"];
 
-val OPTION_BIND_cong = Q.store_thm(
-  "OPTION_BIND_cong",
-  `!o1 o2 f1 f2.
+Theorem OPTION_BIND_cong[defncong]:
+  !o1 o2 f1 f2.
      (o1:'a option = o2) /\ (!x. (o2 = SOME x) ==> (f1 x = f2 x)) ==>
-     (OPTION_BIND o1 f1 = OPTION_BIND o2 f2)`,
-  simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]);
-val _ = DefnBase.export_cong "OPTION_BIND_cong"
+     (OPTION_BIND o1 f1 = OPTION_BIND o2 f2)
+Proof simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]
+QED
 
-val OPTION_BIND_EQUALS_OPTION = Q.store_thm(
-  "OPTION_BIND_EQUALS_OPTION",
-  `((OPTION_BIND (p:'a option) f = NONE) <=>
-       (p = NONE) \/ ?x. (p = SOME x) /\ (f x = NONE)) /\
-   ((OPTION_BIND p f = SOME y) <=> ?x. (p = SOME x) /\ (f x = SOME y))`,
-  OPTION_CASES_TAC ``p:'a option`` THEN SRW_TAC [][]);
-val _ = export_rewrites ["OPTION_BIND_EQUALS_OPTION"]
+Theorem OPTION_BIND_EQUALS_OPTION[simp]:
+  (OPTION_BIND (p:'a option) f = NONE <=>
+   p = NONE \/ ?x. p = SOME x /\ f x = NONE) /\
+  (OPTION_BIND p f = SOME y <=> ?x. p = SOME x /\ f x = SOME y)
+Proof OPTION_CASES_TAC ``p:'a option`` THEN SRW_TAC [][]
+QED
 
 val IS_SOME_BIND = Q.store_thm ("IS_SOME_BIND",
   `IS_SOME (OPTION_BIND x g) ==> IS_SOME (x : 'a option)`,
@@ -510,7 +525,7 @@ val OPTION_IGNORE_BIND_EQUALS_OPTION = store_thm(
        ?x. (m1 = SOME x) /\ (m2 = SOME y))``,
   OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC [][]);
 
-val OPTION_GUARD_def = Prim_rec.new_recursive_definition {
+val OPTION_GUARD_def = new_recursive_definition {
   name = "OPTION_GUARD_def",
   rec_axiom = boolTheory.boolAxiom,
   def = ``(OPTION_GUARD T = SOME ()) /\
@@ -531,7 +546,7 @@ val OPTION_GUARD_EQ_THM = store_thm(
   Cases_on `b` THEN SRW_TAC[][]);
 val _ = export_rewrites ["OPTION_GUARD_EQ_THM"]
 
-val OPTION_CHOICE_def = Prim_rec.new_recursive_definition
+val OPTION_CHOICE_def = new_recursive_definition
   {name = "OPTION_CHOICE_def",
    rec_axiom = option_Axiom,
    def = ``(OPTION_CHOICE NONE m2 = m2) /\
@@ -578,7 +593,7 @@ val OPTION_MCOMP_ID = store_thm
     OPTION_APPLY
    ---------------------------------------------------------------------- *)
 
-val OPTION_APPLY_def = Prim_rec.new_recursive_definition
+val OPTION_APPLY_def = new_recursive_definition
   {name = "OPTION_APPLY_def",
    rec_axiom = option_Axiom,
    def = ``(OPTION_APPLY NONE x = NONE) /\
@@ -669,6 +684,25 @@ Proof
   SRW_TAC[][FUN_EQ_THM,OPTREL_O_lemma,relationTheory.O_DEF]
 QED
 
+Theorem OPTREL_THM[simp]:
+  (OPTREL R (SOME x) NONE = F) /\
+  (OPTREL R NONE (SOME y) = F) /\
+  (OPTREL R NONE NONE     = T) /\
+  (OPTREL R (SOME x) (SOME y) = R x y)
+Proof
+  SRW_TAC[][OPTREL_def]
+QED
+
+Theorem OPTREL_CONG[defncong]:
+  !(opt1:'a option) (opt2:'b option) opt1' opt2' R R'.
+    opt1 = opt1' /\ opt2 = opt2' /\
+    (!x y. opt1' = SOME x /\ opt2' = SOME y ==> R x y = R' x y) ==>
+    (OPTREL R opt1 opt2 <=> OPTREL R' opt1' opt2')
+Proof
+  SRW_TAC[][] >> pop_assum mp_tac >> OPTION_CASES_TAC “opt1 : 'a option” >>
+  OPTION_CASES_TAC “opt2 : 'b option” >> SRW_TAC[][OPTREL_def]
+QED
+
 (* ----------------------------------------------------------------------
     some (Hilbert choice "lifted" to the option type)
 
@@ -712,16 +746,27 @@ val some_EQ = store_thm(
   CONJ_TAC THEN DEEP_INTRO_TAC some_intro THEN SRW_TAC [][]);
 val _ = export_rewrites ["some_EQ"]
 
+(* |- !M M' v f.
+        M = M' /\ (M' = NONE ==> v = v') /\ (!x. M' = SOME x ==> f x = f' x) ==>
+        option_CASE M v f = option_CASE M' v' f'
+ *)
 val option_case_cong =
   save_thm("option_case_cong",
       Prim_rec.case_cong_thm option_nchotomy option_case_def);
 
-val OPTION_ALL_def = Prim_rec.new_recursive_definition {
+(* another similar theorem, moved here from cardinalTheory:
+   |- option_CASE x v f <=> (x = NONE ==> v) /\ !x'. x = SOME x' ==> f x'
+ *)
+Theorem option_imp_elim =
+        TypeBase.case_pred_imp_of “:'a option”
+     |> INST_TYPE [beta |-> bool]
+     |> Q.SPEC ‘I’
+     |> REWRITE_RULE [combinTheory.I_THM]
+
+val OPTION_ALL_def = new_recursive_definition {
   def = ``(OPTION_ALL P NONE <=> T) /\ (OPTION_ALL P (SOME (x:'a)) <=> P x)``,
-  name = "OPTION_ALL_def",
+  name = "OPTION_ALL_def[simp,compute]",
   rec_axiom = option_Axiom };
-val _ = export_rewrites ["OPTION_ALL_def"]
-val _ = computeLib.add_persistent_funs ["OPTION_ALL_def"]
 
 val OPTION_ALL_MONO = store_thm(
   "OPTION_ALL_MONO",
@@ -743,6 +788,14 @@ val option_case_eq = Q.store_thm(
    ((opt = NONE) /\ (nc = v) \/ ?x. (opt = SOME x) /\ (sc x = v))’,
   OPTION_CASES_TAC “opt:'a option” THEN SRW_TAC[][EQ_SYM_EQ, option_case_def]);
 
+(* OpenTheory fix: hol-set reports the following 1 unsatisfied assumption *)
+Theorem option_case_eq' :
+   (option_CASE (x:'a option) v f = v') <=>
+   ((x = NONE) /\ (v = v') \/ ?a. (x = SOME a) /\ (f a = v'))
+Proof
+   REWRITE_TAC [option_case_eq]
+QED
+
 val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
 
 val option_Induct = save_thm("option_Induct",
@@ -750,46 +803,18 @@ val option_Induct = save_thm("option_Induct",
 val option_CASES = save_thm("option_CASES",
   ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy);
 
-val _ = TypeBase.export
-  [TypeBasePure.mk_datatype_info_no_simpls
-     {ax=TypeBasePure.ORIG option_Axiom,
-      case_def=option_case_def,
-      case_cong=option_case_cong,
-      case_eq = option_case_eq,
-      induction=TypeBasePure.ORIG option_induction,
-      nchotomy=option_nchotomy,
-      size=NONE,
-      encode=NONE,
-      fields=[],
-      accessors=[],
-      updates=[],
-      destructors=[THE_DEF],
-      recognizers=[IS_NONE_DEF,IS_SOME_DEF],
-      lift=SOME(mk_var("optionSyntax.lift_option",
-                       “:'type -> ('a -> 'term) -> 'a option -> 'term”)),
-      one_one=SOME SOME_11,
-      distinct=SOME NOT_NONE_SOME}];
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn _ => B[
-    S "val _ = let open computeLib",                            NL,
-    S "        in add_funs (map lazyfy_thm",                    NL,
-    S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,",   NL,
-    S "                option_case_def, ",                      NL,
-    S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,",       NL,
-    S "                OPTION_JOIN_DEF])",                      NL,
-    S "        end;"])};
+val _ = TypeBase.general_update “:'a option” (
+          TypeBasePure.put_recognizers [IS_NONE_DEF, IS_SOME_DEF] o
+          TypeBasePure.put_lift (
+            mk_var("optionSyntax.lift_option",
+                   “:'type -> ('a -> 'term) -> 'a option -> 'term”)
+          ) o
+          TypeBasePure.put_destructors [THE_DEF]
+        )
 
 val datatype_option = store_thm(
   "datatype_option",
   ``DATATYPE (option (NONE:'a option) (SOME:'a -> 'a option))``,
   REWRITE_TAC [DATATYPE_TAG_THM])
-
-val _ = BasicProvers.export_rewrites
-          ["THE_DEF",
-           "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
-           "option_case_ID", "option_case_SOME_ID", "option_case_def",
-           "OPTION_JOIN_DEF"];
 
 val _ = export_theory();

@@ -190,5 +190,22 @@ val whead_tests = store_thm(
   Cases_on `b` THEN ASM_SIMP_TAC (srw_ss()) [lemma14b] THEN
   METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE]);
 
-val _ = export_theory()
+val wh_S = store_thm(
+  "wh_S",
+  ``S @@ f @@ g @@ x -w->* f @@ x @@ (g @@ x)``,
+  REWRITE_TAC [chap2Theory.S_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) []);
 
+val wh_K = store_thm(
+  "wh_K",
+  ``K @@ x @@ y -w->* x``,
+  REWRITE_TAC [chap2Theory.K_def] THEN unvarify_tac whstar_substitutive THEN
+  ASM_SIMP_TAC (whfy (srw_ss())) []);
+
+val wh_B = store_thm(
+  "wh_B",
+  ``B @@ f @@ g @@ x -w->* f @@ (g @@ x)``,
+  unvarify_tac whstar_substitutive THEN
+  SIMP_TAC (whfy(srw_ss())) [chap2Theory.B_def, wh_S, wh_K]);
+
+val _ = export_theory()

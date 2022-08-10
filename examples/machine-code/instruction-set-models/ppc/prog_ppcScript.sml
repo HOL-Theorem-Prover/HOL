@@ -102,7 +102,7 @@ val ppc2set''_11 = prove(
   REPEAT STRIP_TAC \\ CCONTR_TAC
   \\ `?r m st. y = (r,m,st)` by METIS_TAC [PAIR]
   \\ `?r' m' st'. y' = (r',m',st')` by METIS_TAC [PAIR]
-  \\ FULL_SIMP_TAC bool_ss [PAIR_EQ] THENL [
+  \\ FULL_SIMP_TAC bool_ss [PAIR_EQ, Excl "lift_disj_eq"] THENL [
     `?a. ~(a IN r = a IN r')` by METIS_TAC [EXTENSION]
     \\ sg `~((?x. pReg a x IN ppc2set'' y s) = (?x. pReg a x IN ppc2set'' y' s'))`,
     `?a. ~(a IN m = a IN m')` by METIS_TAC [EXTENSION]

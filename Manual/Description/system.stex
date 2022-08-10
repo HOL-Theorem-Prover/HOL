@@ -65,7 +65,7 @@ The function \ml{mk\_vartype} constructs a type variable
 \index{type variables, in HOL logic@type variables, in \HOL{} logic!constructor for}
 %
 with a given name; it gives a warning if the name is not an allowable
-type variable name (\ie\ not a \ml{'} followed by an alphanumeric).
+type variable name (\ie, not a \ml{'} followed by an alphanumeric).
 The function \ml{mk\_thy\_type} constructs a compound type
 %
 \index{compound types, in HOL logic@compound types, in \HOL{} logic!constructors for}
@@ -283,7 +283,7 @@ of a term. The function
 \noindent implements the $\alpha$-convertibility test for
 $\lambda$-calculus terms.
 %
-\index{$\alpha$-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL{} logic!determination of}
+\index{alpha-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL{} logic!determination of}
 %
 From the point of view of the \HOL{} logic, $\alpha$-convertible terms
 are identical. A variety of other functions are available for
@@ -452,7 +452,26 @@ a \HOL{} identifier can be of two forms:
   \index{tokens!Unicode characters}
   \index{Unicode}
   Unicode code characters that are not letters or digits are regarded
-  as symbolic.  None of these are non-aggregating.
+  as symbolic.
+  The non-aggregating Unicode characters are listed in Table~\ref{table:non-aggregating-unicode}.
+\begin{table}
+\begin{center}
+\newcommand{\tstrut}{\rule{0pt}{2.6ex}}
+\newcommand{\bstrut}{\rule[-0.9ex]{0pt}{0pt}}
+\begin{tabular}{cc@{\qquad}cc}
+Character        & Codepoint & Character        & Codepoint \bstrut\\ \hline
+$\neg$           & U+00AC    & $\langle$        & U+27E8    \tstrut \\
+$\lceil$         & U+2308    & $\rangle$        & U+27E9 \\
+$\rceil$         & U+2309    & $\llbrace$       & U+2983 \\
+$\lfloor$        & U+230A    & $\rrbrace$       & U+2984 \\
+$\rfloor$        & U+230B    & $\llparenthesis$ & U+2987 \\
+$\llbracket$     & U+27E6    & $\rrparenthesis$ & U+2988 \\
+$\rrbracket$     & U+27E7    \\
+\end{tabular}
+\end{center}
+\caption{Non-aggregating Unicode characters}
+\label{table:non-aggregating-unicode}
+\end{table}
 
 \item A \emph{number} is a string of one or more digits. If not the
   initial digit, an underscore can be used within the sequence to
@@ -569,7 +588,9 @@ illustrated in the following session.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+##linelen_limit 75
 >>+ ``x = (x = 1)``;
+##nolinelen_limit
 \end{alltt}
 \end{session}
 
@@ -1000,7 +1021,7 @@ from the arbitrary and unrecorded construction
 of theorems, which would compromise
 the consistency
 \index{consistency, of HOL logic@consistency, of \HOL{} logic} of the logic.
-(Functions which return theorems as values, \eg\ functions representing primitive inferences,
+(Functions which return theorems as values, \eg, functions representing primitive inferences,
 are discussed in Section~\ref{rules}.)
 %% derived-rules reference is dead for the moment (until we
 %% resuscitate drules.tex)
@@ -1056,7 +1077,7 @@ The session below illustrates the use of the destructor functions:
 \noindent In addition to the print conventions mentioned above, the
 printing of theorems prints hypotheses
 \index{printing, in HOL logic@printing, in \HOL{} logic!of hypotheses of theorems}
-as periods (\ie\ full stops or dots).  The flag \ml{show\_assums}
+as periods (\ie, full stops or dots).  The flag \ml{show\_assums}
 \index{show_assums@\ml{show\_assums}} allows theorems
 to be printed with hypotheses shown in full. These points are illustrated with a
 theorem inferred, for example purposes, from another axiom mentioned
@@ -1188,7 +1209,7 @@ in $t_2$ becoming bound after substitution. The substitution
 \noindent \ml{BETA\_CONV ``(\bs$x$.$t_1$)$t_2$``} %''
 evaluates to the theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
 Failure occurs if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
-(\ie\ is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
+(\ie, is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
 
 \bigskip
 
@@ -1535,7 +1556,7 @@ Thus each theory segment provides a separate namespace of ML bindings of
 \HOL{} items.
 
 Various additional pieces of information are stored in a theory
-segment, including the parsing status of the constants (\eg\ whether
+segment, including the parsing status of the constants (\eg, whether
 they are infixes or binders).
 
 \paragraph {Determining the context}
@@ -1729,6 +1750,7 @@ Once a theorem has been proved, it can be saved with the function
 
 \noindent
 Evaluating \ml{save\_thm("}\mname\ml{",}\mth\ml{)} will save the theorem \mth{} with name \mname{} in the current theory segment.
+\index{attributes, for theorems|see{theorem attributes}}
 \index{theorem attributes|(}
 In addition, various tools can be primed to pay particular attention to saved theorems through the use of special attributes.
 Such attributes are indicated by appending the list of the attribute names to the \mname.
@@ -1738,15 +1760,23 @@ Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stat
 \end{alltt}
 Multiple attributes can be listed between the square brackets, separated by commas.
 
+There are also attributes controlling the way in which a theorem is saved, rather than affecting possible consumers of that theorem.
 \index{local@\ml{local}!as theorem attribute}
 \index{theorem attributes!local@\ml{local}}
-Another attribute, \ml{local}, can be used to create theorems that will \emph{not} be exported to disk, but which are important locally.
+The first, \ml{local}, is used to create theorems that will \emph{not} be exported to disk, but which are important locally.
 Such local theorems can have other attributes attached to them, which will have their effect within the given session/script-file.
+\index{unlisted@\ml{unlisted}!as theorem attribute}
+\index{theorem attributes!unlisted@\ml{unlisted}}
+The second, \ml{unlisted}, makes the theorem more difficult to access.
+This is appropriate when the theorem is being saved for the consumption of particular tools (which fact might be indicated by the use of other attributes), but the theorem is otherwise uninteresting, and unlikely to be something that a user is going to want to stumble across when searching or surveying theories.
+Concretely: unlisted theorems do not appear in theory signature files (so: cannot be accessed with the \ml{xTheory.thm\_name} syntax); and unlisted theorems will not be returned as the results of searches made for theorems using the functions in the \ml{DB} module.
+\index{theorem database (DB)@theorem database (\ml{DB})}
+\index{DB, database of theorem values@\ml{DB}, database of theorem values}
+
 
 \index{Theorem (special syntactic form)@\ml{Theorem} (special syntactic form)|(}
 \index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
-\smallskip\noindent
-Equivalently, a special \ml{Theorem} syntax is available for use in script files.
+Instead of using the \ML{} function \ml{save\_thm}, a special \ml{Theorem} syntax is available for use in script files.
 One can write
 \begin{alltt}
    Theorem \mname = \mth
@@ -1931,7 +1961,7 @@ In \LOGIC{} a constant definition
 \index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}%
 \index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for}%
 %
-over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie\
+over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie,
 a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
 \begin{myenumerate}
 \item $c$ is not the name of any constant in $\Sigma_{\Omega}$;
@@ -1945,7 +1975,7 @@ an equation:
 \[ c\ v_1\ \cdots\ v_n\ =\ t \]
 
 \noindent is  allowed  to  be a  definition where  $v_1$, $\dots$, $v_n$ are
-variable structures (\ie\ tuples of distinct variables).   Such  an equation is
+variable structures (\ie, tuples of distinct variables).   Such  an equation is
 logically equivalent to:
 
 \[ c\ =\ \lambda v_1\ \cdots\ v_n.\  t \]

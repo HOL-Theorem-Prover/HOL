@@ -35,8 +35,6 @@ val power : expression * int -> expression
 
 val toString : expression -> string
 
-val pp : ppstream -> expression -> unit
-
 (* ------------------------------------------------------------------------- *)
 (* Normalization with a set of equations.                                    *)
 (* ------------------------------------------------------------------------- *)

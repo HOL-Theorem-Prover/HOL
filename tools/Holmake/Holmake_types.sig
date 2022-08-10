@@ -1,7 +1,9 @@
 signature Holmake_types =
 sig
 
-datatype pretoken = DEFN of string | RULE of string | EOF
+datatype pretoken = DEFN of string
+                  | DEFN_EXTEND of string
+                  | RULE of string | EOF
 
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
@@ -9,17 +11,18 @@ type quotation = frag list
 type raw_rule_info = { targets : quotation, dependencies : quotation,
                        commands : quotation list }
 
-datatype token = HM_defn of string * quotation
+datatype token = HM_defn of {vname : string, rhs : quotation, extendp : bool}
                | HM_rule of raw_rule_info
 
 type env
 
 val base_environment : unit -> env
 val lookup : env -> string -> quotation
-
+val env_keys : env -> string list
 val env_extend : string * quotation -> env -> env
+val env_fold : (string -> quotation -> 'b -> 'b) -> env -> 'b -> 'b
 
-val to_token : pretoken -> token
+val to_token : env -> pretoken -> token
 
 val perform_substitution : env -> quotation -> string
 

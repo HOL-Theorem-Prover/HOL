@@ -6,7 +6,7 @@ open NDDB
 
 val fun_all_rule = prove(``!P x.
     fun_all P (\_. x) = P x
-``, lcsymtacs.simp[fun_all_def]);
+``, bossLib.simp[fun_all_def]);
 
 (* GEN_TAC THEN GEN_TAC THEN DISCH_TAC THEN PURE_ONCE_REWRITE_TAC [fun_all_def] THEN GEN_TAC THEN BETA_TAC THEN (W (ACCEPT_TAC o mk_thm)));*)
 

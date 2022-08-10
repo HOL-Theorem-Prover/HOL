@@ -53,7 +53,7 @@ assumption:
 \USES
 Building cases tactics. For example, {DISJ_CASES_TAC} could be defined by:
 {
-   let DISJ_CASES_TAC = DISJ_CASES_THEN ASSUME_TAC
+   val DISJ_CASES_TAC = DISJ_CASES_THEN ASSUME_TAC
 }
 
 
@@ -62,5 +62,5 @@ Use {DISJ_CASES_THEN2} to apply different tactic generating functions
 to each case.
 
 \SEEALSO
-Thm_cont.STRIP_THM_THEN, Thm_cont.CHOOSE_THEN, Thm_cont.CONJUNCTS_THEN, Thm_cont.CONJUNCTS_THEN2, Tactic.DISJ_CASES_TAC, Thm_cont.DISJ_CASES_THEN2, Thm_cont.DISJ_CASES_THENL.
+Thm_cont.CHOOSE_THEN, Thm_cont.CONJUNCTS_THEN, Thm_cont.CONJUNCTS_THEN2, Thm.DISJ_CASES, Tactic.DISJ_CASES_TAC, Thm_cont.DISJ_CASES_THEN2, Thm_cont.DISJ_CASES_THENL, Thm_cont.STRIP_THM_THEN.
 \ENDDOC

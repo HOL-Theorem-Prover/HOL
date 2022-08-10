@@ -143,7 +143,7 @@ val myDatatype =
        Datatype.astHol_datatype
    end
 
-val l3_big_record_size = 28 (* HOL default is 20 *)
+val l3_big_record_size = 28
 
 (* Record type *)
 fun Record (n, l) =
@@ -151,12 +151,10 @@ fun Record (n, l) =
        then Feedback.HOL_WARNING "Import" "Record"
               ("Defining big record type; size " ^ Int.toString (List.length l))
      else ()
-   ; Lib.with_flag (Datatype.big_record_size, l3_big_record_size)
-       myDatatype [(n, ParseDatatype.Record l)]
+   ; myDatatype [(n, ParseDatatype.Record l)]
    )
 
 fun NoBigRecord (n, l) =
-  Lib.with_flag (Datatype.big_record_size, List.length l + 1)
     myDatatype [(n, ParseDatatype.Record l)]
 
 (* Algebraic type *)
@@ -379,7 +377,10 @@ end
 
 (* Record destructor *)
 
-fun flag s tm = Term.mk_comb (mk_ieee_const ("flags_" ^ s), tm)
+fun flag s tm =
+    Term.mk_comb (mk_ieee_const (TypeBasePure.mk_recordtype_fieldsel
+                                   {tyname = "flags", fieldname =  s}),
+                  tm)
 val ieee_underflow_before = ref false
 fun underflow () =
   "Underflow_" ^ (if !ieee_underflow_before then "Before" else "After") ^
@@ -392,7 +393,10 @@ fun Dest (f, ty, tm) =
    | "Overflow" => flag "Overflow" tm
    | "Precision" => flag "Precision" tm
    | "Underflow" => flag (underflow()) tm
-   | _ => Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
+   | _ => Call (TypeBasePure.mk_recordtype_fieldsel
+                  {tyname = typeName (Term.type_of tm),
+                   fieldname = f},
+                ty, tm)
 
 (* Record update *)
 
@@ -405,14 +409,17 @@ fun Rupd (f, tm) =
    let
       val (rty, fty) = pairSyntax.dest_prod (Term.type_of tm)
       val typ = Type.--> (Type.--> (fty, fty), Type.--> (rty, rty))
-      val name = typeName rty ^ "_" ^ f ^ "_fupd"
+      val name = TypeBasePure.mk_recordtype_fieldfupd
+                   {tyname = typeName rty, fieldname = f}
       val fupd = case f of
                     "DivideByZero" => mk_ieee_const name
                   | "InvalidOp" => mk_ieee_const name
                   | "Overflow" => mk_ieee_const name
                   | "Precision" => mk_ieee_const name
                   | "Underflow" =>
-                      mk_ieee_const ("flags_" ^ underflow() ^ "_fupd")
+                      mk_ieee_const $
+                        TypeBasePure.mk_recordtype_fieldfupd
+                          {tyname = "flags", fieldname = underflow()}
                   | _ => mk_local_const (name, typ)
       val (x, d) = smart_dest_pair tm
    in
@@ -1163,7 +1170,7 @@ in
       | Lt   => pick (SOME wordsSyntax.mk_word_lt, NONE,
                       SOME numSyntax.mk_less, SOME intSyntax.mk_less)
       | Gt   => pick (SOME wordsSyntax.mk_word_gt, NONE,
-                      SOME numSyntax.mk_greater, SOME intSyntax.mk_great)
+                      SOME numSyntax.mk_greater, SOME intSyntax.mk_greater)
       | Le   => pick (SOME wordsSyntax.mk_word_le, NONE,
                       SOME numSyntax.mk_leq, SOME intSyntax.mk_leq)
       | Ge   => pick (SOME wordsSyntax.mk_word_ge, NONE,
@@ -1220,8 +1227,9 @@ fun z_def def =
 
 fun t_def s def m tac =
    Feedback.trace ("Define.storage_message", 0)
-   (bossLib.tDefine s [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
-     (MEASURE_TAC m THEN tac)
+   (TotalDefn.qDefine (s ^ !Defn.def_suffix)
+                      [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
+   (SOME (MEASURE_TAC m THEN tac))
 
 val mesg =
    Lib.with_flag

@@ -316,7 +316,6 @@ val has_whnf_def = Define`
   has_whnf M = ∃N. M -w->* N ∧ whnf N
 `;
 
-open lcsymtacs
 val has_whnf_APP_E = store_thm(
   "has_whnf_APP_E",
   ``has_whnf (M @@ N) ⇒ has_whnf M``,

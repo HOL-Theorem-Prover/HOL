@@ -63,7 +63,7 @@ protected:
     VarOrder            order;            // Keeps track of the decision variable order.
 
     vec<vec<Clause*> >  watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    vec<char>           assigns;          // The current assignments (lbool:s stored as char:s).
+    vec<int8_t>         assigns;          // The current assignments (lbool:s stored as int8_t:s).
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail[]'.
     vec<Clause*>        reason;           // 'reason[var]' is the clause that implied the variables current value, or 'NULL' if none.
@@ -77,7 +77,7 @@ protected:
 
     // Temporaries (to reduce allocation overhead). Each variable is prefixed by the method in which is used:
     //
-    vec<char>           analyze_seen;
+    vec<int8_t>         analyze_seen;
     vec<Lit>            analyze_stack;
     vec<Lit>            analyze_toclear;
     Clause*             propagate_tmpbin;

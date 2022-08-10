@@ -13,9 +13,47 @@
 bar``
 ``"an embedded string with \
 \protected newlines"``
+`"more embedding \
+ \ho hum"`
+“"embedded string without
+   protected newlines"”
 `s1 ^ s2`
 `s1 ^^
 s2`
 (* ` *)
 `^(fromMLnum nm) (* *) `;
 (* (*  *) `;*)
+
+Inductive even:
+[~0[simp]:] even 0 /\
+(!n. even n ==> odd (n + 1)) /\
+[even_suc:]
+  (!m. odd m ==> even (m + 1))
+End
+
+Definition foo:
+  foo x = if x < 2 then 1 else x * foo (x - 1)
+End
+
+Inductive compile_rel:
+  (* (*  *) *)
+[~Var:]
+  compile_rel foo bar /\
+[~Ret:]
+  compile_rel foo bar
+End
+
+(* next_sym reads the next symbol from a string, returning NONE if at eof *)
+Definition next_sym_def:
+     foo = isPREFIX "(*" (c::str) 
+Termination
+  WF_REL_TAC `measure (LENGTH o FST) ` THEN REPEAT STRIP_TAC
+End
+
+“f ‹foo"›”
+
+Definition sexpPEG_def:
+  #"\\";
+End
+
+Theorem sexpPEG_start[simp] = SIMP_CONV(srw_ss())[sexpPEG_def]“sexpPEG.start”;

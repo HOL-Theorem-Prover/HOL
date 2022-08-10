@@ -4,15 +4,7 @@ open HolKernel Parse boolLib;
 val _ = new_theory "subtype";
 val _ = ParseExtras.temp_loose_equality()
 
-(* interactive mode
-show_assums := true;
-loadPath := union ["../ho_prover"] (!loadPath);
-app load
-  ["bossLib", "combinTheory", "pred_setTheory", "seqTheory", "HurdUseful",
-   "res_quanTheory", "ho_proverTools", "pairTheory"];
-*)
-
-open bossLib combinTheory pred_setTheory seqTheory HurdUseful
+open bossLib combinTheory pred_setTheory hurdUtils
      res_quanTheory ho_proverTools pairTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
@@ -52,8 +44,9 @@ val _ = add_infix("->", 250, HOLgrammars.RIGHT);
 
 val _ = overload_on
   ("->", ``FUNSET:('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
-val _ = overload_on
-  ("-->", ``DFUNSET : ('a->bool) -> ('a->'b->bool) -> (('a->'b)->bool)``);
+Overload "-->" = ``DFUNSET : ('a->bool) -> ('a->'b->bool) -> (('a->'b)->bool)``;
+val _ = set_fixity "-->" (Infixr 750);
+
 
 val pair_def = Define
   `pair (X : 'a -> bool) (Y : 'b -> bool) = \ (x, y). x IN X /\ y IN Y`;

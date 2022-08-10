@@ -44,14 +44,13 @@ val _ = new_theory "algebra";
 (* abbreviation for :string.                                             *)
 (* --------------------------------------------------------------------- *)
 
-val _ = type_abbrev ("label",``:string``);
+Type label = “:string”
 
-val _ =
- Hol_datatype
-    `agent = Nil
-           | Pre of  label => agent
-           | Sum of  agent => agent
-           | Prod of agent => agent`;
+Datatype: agent = Nil
+                | Pre label agent
+                | Sum agent agent
+                | Prod agent agent
+End
 
 
 (* ===================================================================== *)
@@ -158,15 +157,19 @@ val Lsind = derive_strong_induction (Lrules,Lind);
 (* the tactic MTRACE_TAC.                                                *)
 (* --------------------------------------------------------------------- *)
 
-val Lemma1 = Q.prove
-(`!P a Q. TRANS P a Q ==> !A. MTRACE Q A ==> MTRACE P (a::A)`,
- HO_MATCH_MP_TAC lind THEN RW_TAC std_ss [] THENL
- [METIS_TAC trulel,
-  METIS_TAC trulel,
-  METIS_TAC trulel,
-  RULE_ASSUM_TAC (REWRITE_RULE [Once tcases]) THEN
-   FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss [] THEN
-   METIS_TAC [trules]]);
+Theorem Lemma1[local]:
+  !P a Q. TRANS P a Q ==> !A. MTRACE Q A ==> MTRACE P (a::A)
+Proof
+  Induct_on ‘TRANS’ >> RW_TAC std_ss [] >| [
+    METIS_TAC trulel,
+    METIS_TAC trulel,
+    METIS_TAC trulel,
+    qpat_x_assum ‘MTRACE (PROD _ _) _’
+                 (strip_assume_tac o REWRITE_RULE [Once tcases]) >>
+    FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss [] THEN
+    METIS_TAC [trules]
+  ]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Theorem 1:  |- !P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A    *)
@@ -178,11 +181,12 @@ val Lemma1 = Q.prove
 (* through a maximal trace of P.                                         *)
 (* --------------------------------------------------------------------- *)
 
-val Theorem1 = Q.store_thm
-("Theorem1",
- `!P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A`,
+Theorem Theorem1:
+   !P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A
+Proof
  REWRITE_TAC [TERMINAL_def] THEN
- HO_MATCH_MP_TAC Lind THEN METIS_TAC [Lemma1]);
+ Induct_on ‘TRANSIT’ THEN METIS_TAC [Lemma1]
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -191,10 +195,9 @@ val Theorem1 = Q.store_thm
 (* Note that the converse does not hold.                                 *)
 (* --------------------------------------------------------------------- *)
 
-val Corollary1 = Q.store_thm
-("Corollary1",
- `!P A. TRANSIT P A Nil ==> MTRACE P A`,
- METIS_TAC (TERMINAL_def::Theorem1::trulel));
+Theorem Corollary1:   !P A. TRANSIT P A Nil ==> MTRACE P A
+Proof METIS_TAC (TERMINAL_def::Theorem1::trulel)
+QED
 
 
 (* ===================================================================== *)
@@ -227,19 +230,22 @@ val Lemma2 = Q.prove
 (* witnesses required for the two TRANSIT rules.                         *)
 (* --------------------------------------------------------------------- *)
 
-val Theorem2 = Q.store_thm
-("Theorem2",
- `!P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q`,
- HO_MATCH_MP_TAC tind THEN RW_TAC std_ss [] THENL
- [METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
-  METIS_TAC (Lrulel@trulel@lrulel),
-  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases])
+Theorem Theorem2:
+  !P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q
+Proof
+  Induct_on ‘MTRACE’ >> RW_TAC std_ss [] >| [
+    METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
+    METIS_TAC (Lrulel@trulel@lrulel),
+    RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases])
     THEN RW_TAC list_ss []
     THEN METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
-  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases])
+    RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases])
     THEN RW_TAC list_ss []
     THEN METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
-  METIS_TAC (Lemma2::TERMINAL_def::Lrulel@trulel@lrulel)]);
+    METIS_TAC (Lemma2::TERMINAL_def::Lrulel@trulel@lrulel)
+  ]
+QED
+
 
 
 (* ===================================================================== *)

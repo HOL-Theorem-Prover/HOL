@@ -285,9 +285,10 @@ end
    ------------------------------------------------------------------------- *)
 
 local
+  fun mkselnm ty f = TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
   fun mk_proj s =
     Lib.curry Term.mk_comb
-      (Term.prim_mk_const {Thy = "riscv", Name = "riscv_state_" ^ s})
+      (Term.prim_mk_const {Thy = "riscv", Name = mkselnm "riscv_state" s})
   fun proj f = STATE_CONV o f o utilsLib.rhsc
   val proj_exception = proj (mk_proj "exception")
   val proj_NextFetch = mk_proj "c_NextFetch"

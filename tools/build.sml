@@ -25,7 +25,7 @@ val _ = startup_check()
    ---------------------------------------------------------------------- *)
 
 val cline_record = process_cline ()
-val {cmdline,build_theory_graph,selftest_level,...} = cline_record
+val {cmdline,build_theory_graph,selftest_level,keepgoing,...} = cline_record
 val {extra={SRCDIRS},jobcount,relocbuild,debug,...} = cline_record
 
 
@@ -36,8 +36,11 @@ val Holmake = let
   val isSuccess = OS.Process.isSuccess
 in
   buildutils.Holmake sysl isSuccess
-                     (fn () => ["-j"^Int.toString jobcount] @
-                               (if debug then ["--dbg"] else []))
+                     (fn () => (case jobcount of
+                                    NONE => []
+                                  | SOME j => ["-j"^Int.toString j]) @
+                               (if debug then ["--dbg"] else []) @
+                               (if keepgoing then ["-k"] else []))
                      (fn _ => "")
                      selftest_level
 end
@@ -96,15 +99,28 @@ fun buildDir symlink s =
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
 fun upload_holmake_files symlink =
-  upload ((fullPath[HOLDIR, "tools", "Holmake"], 0), SIGOBJ, symlink)
+  (upload ((fullPath[HOLDIR, "tools", "Holmake"], 0), SIGOBJ, symlink);
+   transfer_file symlink SIGOBJ
+       (fullPath[HOLDIR, "tools", "Holmake", "mosml"], "HFS_NameMunge.uo"));
 
 val holmake_exns = [
   "Systeml.sig", "Systeml.ui", "Systeml.uo"
 ]
 
+fun remove_holmkdir (dirname,_) =
+    let
+      open OS.FileSys
+      val holmkdir = OS.Path.concat (dirname, ".HOLMK")
+    in
+      if access (holmkdir, [A_READ, A_EXEC]) andalso isDir holmkdir then
+        (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) holmkdir;
+         OS.FileSys.rmDir holmkdir)
+      else ()
+    end
 
 fun build_hol symlink = let
 in
+  remove_all_holmkdirs();
   clean_sigobj();
   setup_logfile();
   upload_holmake_files (exns_link holmake_exns);

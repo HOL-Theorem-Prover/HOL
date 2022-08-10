@@ -1,7 +1,6 @@
 open HolKernel Parse boolLib bossLib
 
 open ordinalTheory
-open lcsymtacs
 
 open pred_setTheory cardinalTheory
 (* Material from Brian Huffman's AFP entry on Ordinal arithmetic *)

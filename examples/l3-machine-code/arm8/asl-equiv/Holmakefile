@@ -1,0 +1,15 @@
+INCLUDES = armv8.6-asl-snapshot/A64_ISA_v86A ../model ../step
+
+ifdef POLY
+
+HOLHEAP=armv8.6-asl-snapshot/A64_ISA_v86A/armv86a-heap
+HEAP = l3-equivalence-heap
+
+.PHONY: all
+all: $(DEFAULT_TARGETS) $(HEAP)
+EXTRA_CLEANS = $(HEAP) $(HEAP).o
+
+$(HEAP): $(DEFAULT_TARGETS) $(HOLHEAP)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(HEAP) -b $(HOLHEAP) $(DEFAULT_TARGETS)
+
+endif

@@ -1,5 +1,63 @@
 \chapter{Advanced Definition Principles}\label{HOLdefinitions}
 
+\section{General-Purpose Definition}
+\label{sec:definition}
+
+\ml{Definition} takes a high-level specification of a \HOL{} function, and attempts to define the
+function in the logic. If this attempt is successful, the specification is derived from the
+definition. The derived specification is returned to the user, and also stored in the current
+theory. \ml{Definition} may be used to define \emph{abbreviations}, \emph{recursive functions},
+and \emph{mutually recursive functions}.
+
+\index{Definition@\ml{Definition}}
+The basic form of a \ml{Definition} is
+\begin{alltt}
+  Definition defname[\textit{attrs}]:
+    \textit{fn-spec}
+  End
+\end{alltt}
+Or
+\begin{alltt}
+  Definition defname[\textit{attrs}]:
+    \textit{fn-spec}
+  Termination
+    \textit{tactic}  
+  End
+\end{alltt}
+\index{Define@\ml{Define}}
+\index{tDefine@\ml{tDefine}}
+\index{xDefine@\ml{xDefine}}
+The latter form maps to a call to \ml{tDefine}; the former to \ml{xDefine} (or \ml{Define}).
+(See their entries of in \REFERENCE{} for more details.)
+The termination argument is only needed when
+defining certain recursive functions. (See Section~\ref{TFL} for more details on the support of
+recursive functions, and mutually recursive functions and the full syntax of the \textit{fn-spec} above.)
+
+\index{special syntactic forms for scripts!Definition@\ml{Definition}}
+Note that this is \emph{not} valid \ML{} syntax.
+Instead, \HOL{} is using lexical pre-processing to transform the above into something more complicated underneath.
+To make this reasonable, there are constraints introduced on the syntax above: all keywords (\ml{Definition},
+\ml{Termination} and \ml{End}) must appear in column $1$ of the input (hard against the left margin in one's input source file).
+
+In both cases, the \ml{defname} is taken to be the name of the theorem stored to disk
+(it does \emph{not} have a suffix such as \ml{_def} appended to it), and is also the name of the local SML binding.
+The attributes given by \textit{attrs} can be any standard attribute (such as \ml{simp}), and/or drawn from \ml{Definition}-specific options:
+
+\begin{itemize}
+\item The attribute \ml{schematic} alllows the definition to be \emph{schematic}.
+  (See Section~\ref{ss:recursionSchemas} for more details.)
+\item The attribute \ml{nocompute} stops the definition from being added to the global compset used by \ml{EVAL}.
+  This is equivalent to \ml{zDefine}.  \index{xDefine@\ml{xDefine}} (See Section~\ref{sec:computeLib} and
+  also the corresponding entry in \REFERENCE{} for more details.)
+\item The attribute \ml{induction=iname} makes the induction theorem that is automatically derived for definitions with interesting termination be called \ml{iname}.
+  If this is omitted, the name chosen will be derived from the \ml{defname} of the definition:
+  if \ml{defname} ends with \ml{_def} or \ml{_DEF}, the induction name will replace this suffix with \ml{_ind} or \ml{_IND} respectively; otherwise the induction name will simply be \ml{defname} with \ml{_ind} appended.
+\end{itemize}
+
+Note that, whether or not the \ml{induction=} attribute is used, the induction theorem is always
+made available as an SML binding under the appropriate name. This means that one does not need to follow one's definition with a call to something like \ml{DB.fetch} or \ml{theorem}
+just to make the induction theorem available at the SML level.
+
 \section{Datatypes}\label{sec:datatype}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
 \index{Datatype@\ml{Datatype}|(}
@@ -576,28 +634,11 @@ order to generate the final name of the theorem.
  \rewruse
 \end{description}
 
-\paragraph{Big records} The size of certain theorems proved in the
-record type package increases as the square of the number of fields in
-the record.  (In particular, the update canonicalisation and
-\texttt{acc\_fupd} theorems have this property.) To avoid inefficiency
-with big records, the implementation of record types uses a more
-efficient underlying representation when the number of fields grows
-too large.  The exact point at which this optimisation is applied is
-controlled by the reference variable
-\texttt{Datatype.big\_record\_size}.  This value is initialised to
->>__ print (Int.toString (!Datatype.big_record_size) ^ ",\n");
-but users can change it as they choose.
+\paragraph{Big records}
+The size of certain theorems proved in the record type package increases as the square of the number of fields in the record.
+(In particular, the update canonicalisation and \texttt{acc\_fupd} theorems have this property.)
+To avoid this problem, users should define a system of hierarchically nested sub-records if their records are getting too large.
 
-Unfortunately, the big record representation has the drawback that every update and accessor function has two forms: different terms that are printed the same.
-One form is a simple constant, and is the form produced when a term is parsed.
-The other is more complicated, but allows for the use of smaller theorems when record values are simplified.
-Therefore, it is recommended that new, user-proved theorems that mention big records' fields or field updates be passed through a phase of simplification (\texttt{SIMP\_RULE}), applying the \texttt{TypeBase}'s rewrites, before they are saved.
-
-Better yet, users should define their own system of hierarchically nested sub-records if their records are getting too large.
-
-\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!pretty-printing big records}
-The pretty-printing of big records can be controlled with the
-\texttt{pp\_bigrecs} trace-flag.
 \index{Datatype@\ml{Datatype}|)}
 
 
@@ -707,7 +748,7 @@ for type operators (see [HOQ] \S 5.2).
 These are used for lifting both constants and theorems.
 
 {\it tyop\_simps\/} is a list of theorems used to simplify type operator
-relations and map functions, e.g.,
+relations and map functions, \eg,
 for pairs,
 {\tt |- (\$= \#\#\# \$=) = \$=} and
 {\tt |- (I \#\# I) = I}.
@@ -827,7 +868,7 @@ Therefore, code generated from \pmatch{} case expressions tends to be better. Ho
 
 \subsection{Decision-tree case expressions}
 By default, \HOL{} uses decision-tree case expressions.
-Let the non-terminal $\mathit{term}$ stand for any \HOL{} term and the non-terminal $\mathit{cpat}$ represent any constructor pattern, i.e. any \HOL{} term containing only literals, datatype constructors and variables.
+Let the non-terminal $\mathit{term}$ stand for any \HOL{} term and the non-terminal $\mathit{cpat}$ represent any constructor pattern, \ie, any \HOL{} term containing only literals, datatype constructors and variables.
 Then, the syntax of decision-tree case expressions is given by
 \[
 \mathit{term} ::= \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{|}^?\; \mathit{cpat}\;\texttt{=>}\;\mathit{term}\; (\texttt{|}\;\mathit{cpat}\;\texttt{=>}\;\mathit{term})^*
@@ -1113,24 +1154,11 @@ This induction theorem follows the recursion structure of the function, and may 
 The definition technology is not always successful in attempting
 to make the specified definition, usually because an automatic
 termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
-which defers the termination proof to the user, can be used. %
-\index{special syntactic forms for scripts!Definition@\ml{Definition}}%
-Once a termination argument is found, it can be provided as part of the final \ml{Definition} syntax.
+which defers the termination proof to the user, can be used.
+Once a termination argument is found, it can be provided as part of the final \ml{Definition} syntax
+(See Section~\ref{sec:definition} for more details.)
 The technology underlying \ml{Definition} and \ml{Hol\_defn} is explained
-in detail in Slind~\cite{slind-thesis}.
-
-\index{Define@\ml{Define}}
-\index{Definition@\ml{Definition}}
-The basic form of a \ml{Definition} (without a termination argument) is
-\begin{alltt}
-  Definition defname:
-    \textit{fn-spec}
-  End
-\end{alltt}
-Note that this is \emph{not} valid \ML{} syntax.
-Instead, \HOL{} is using lexical pre-processing to transform the above into something more complicated underneath.
-To make this reasonable, there are constraints introduced on the syntax above: both keywords (\ml{Definition} and \ml{End}) must appear in column $1$ of the input (hard against the left margin in one's input source file).
-For example
+in detail in Slind~\cite{slind-thesis}. For example,
 \begin{session}
 \begin{alltt}
 >> Definition last0_def:
@@ -1140,7 +1168,8 @@ For example
    End
 \end{alltt}
 \end{session}
-The \textit{fn-spec} above is quoted syntax representing a
+
+The \textit{fn-spec} in the syntax of \ml{Definition} and \ml{Hol\_defn} is quoted syntax representing a
 conjunction of equations.
 The specified function(s) may be phrased using ML-style pattern-matching.
 The \textit{fn-spec} should conform with the grammar in Table
@@ -1179,12 +1208,12 @@ However, the rich syntax of patterns allows some ambiguity.
 For example, the input
 %
 \begin{hol}
-\begin{verbatim}
-Definition f_def:
-  (f 0 _ = 1) /\
-  (f _ 0 = 2)
-End
-\end{verbatim}
+\begin{alltt}
+##eval Definition f_def:
+         (f 0 _ = 1) /\
+         (f _ 0 = 2)
+       End
+\end{alltt}
 \end{hol}
 %
 is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
@@ -1196,7 +1225,7 @@ value of \holtxt{f 0 0} is \holtxt{1}. In the implementation,
 ambiguities arising from such overlapping patterns are systematically
 translated away in a pre-processing step.
 
-Another case of ambiguity in patterns is shown above: the specification is incomplete since it does not tell how \holtxt{f} should behave when applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}.
+Another case of ambiguity in patterns is shown above: the specification is incomplete since it does not tell how \holtxt{f} should behave when applied to two non-zero arguments: \eg, \holtxt{f (SUC m) (SUC n)}.
 In the implementation, such missing clauses are filled in, and have the value \holtxt{ARB}.
 This `pattern-completion' step is a way of turning descriptions of partial functions into total functions suitable for \HOL.
 However, since the user has not completely specified the function, the system takes that as a hint that the user is not interested in using the function at the missing-but-filled-in clauses, and so such clauses are dropped from the final theorem.
@@ -1205,46 +1234,48 @@ In summary, \ml{Definition} will derive the unambiguous and complete
 equations
 %
 \begin{hol}
-\begin{verbatim}
-  |- (f 0 (SUC v4) = 1) /\
-     (f 0 0 = 1) /\
-     (f (SUC v2) 0 = 2)
-     (f (SUC v2) (SUC v4) = ARB)
-\end{verbatim}
+\begin{alltt}
+##parsetm f 0 v0 = 1 /\ f (SUC v3) 0 = 2 /\ f (SUC v1) (SUC v2) = ARB
+\end{alltt}
 \end{hol}
 %
-from the above ambiguous and incomplete equations. The odd-looking
-variable names are due to the pre-processing steps described above. The
-above result is only an intermediate value: in the final result returned
-by \ml{Define}, the last equation is droppped since it was not
-specified by the original input.
+from the above ambiguous and incomplete equations.
+The odd-looking variable names are due to the pre-processing steps described above.
+Depending on the analysis of the pattern-matching (see Section~\ref{CaseExp} for how this is done, and how it can be tweaked), the theorem returned from a definition may look rather unlike the original input.
+In this particular case, the post-processing needs only drop the last conjunct, which was not part of the original user-specification, yielding:
 \begin{hol}
-\begin{verbatim}
-  |- (f 0 (SUC v4) = 1) /\
-     (f 0 0 = 1) /\
-     (f (SUC v2) 0 = 2)
-\end{verbatim}
+\begin{alltt}
+>>- val f_def = f_def
+\end{alltt}
 \end{hol}
 
 \paragraph{Termination}
+\index{termination!of recursively defined functions}
 
 When processing the specification of a recursive function, \ml{Definition}
-must perform a termination proof. It automatically constructs
-termination conditions for the function, and invokes a termination
-prover in an attempt to prove the termination conditions.  If the
-function is primitive recursive, in the sense that it exactly follows
-the recursion pattern of a previously declared \HOL{} datatype, then this
-proof always succeeds, and \ml{Definition} stores the derived equations in
-the current theory segment.
-Otherwise, the function is not an
-instance of primitive recursion, and the termination prover may
-succeed or fail. If the termination proof fails, then \ml{Definition} fails.
+must perform a termination proof.
+It automatically constructs termination conditions for the function, and invokes a termination prover in an attempt to prove the termination conditions.
+If the function is primitive recursive, in the sense that it exactly follows the recursion pattern of a previously declared \HOL{} datatype, then this proof always succeeds, and \ml{Definition} stores the derived equations in the current theory segment.
+Otherwise, the function is not an instance of primitive recursion, and the termination prover may succeed or fail.
+If the automatic termination proof fails, the user-provided termination argument (if any) after the \ml{Termination} keyword is attempted.
+If this also fails, then the \ml{Definition} fails.
 If it succeeds, then \ml{Definition} stores the specified equations in the
-current theory segment. An induction theorem customized for the defined
-function is also stored in the current segment. Note, however, that an
-induction theorem is not stored for primitive recursive functions, since
-that theorem would be identical to the induction theorem resulting from
-the declaration of the datatype.
+current theory segment.
+An induction theorem customized for the defined function is also stored in the current segment.
+Note, however, that an induction theorem is not stored for primitive recursive functions, since that theorem would be identical to the induction theorem resulting from the declaration of the datatype.
+
+Part of the process of the automatic termination proof involves the use of ``termination simplification'' theorems.
+These encode facts about the way in which arguments to desired functions may be smaller than originals.
+For example, with the theory of fixed-width words (see Section~\ref{sec:bit-vectors}) in the context, the theorem \ml{WORD\_PRED\_THM} is included in this set:
+\begin{hol}
+\begin{alltt}
+>>__ load "wordsTheory";
+##thm wordsTheory.WORD_PRED_THM
+\end{alltt}
+\end{hol}
+If a function is defined recursively with a word argument being decremented with every call, including this theorem will let the automatic procedure prove termination.
+\index{theorem attributes!tfl_termsimp@\ml{tfl\_termsimp}}
+The set of theorems used in this way can be augmented by using the \ml{tfl\_termsimp} theorem attribute when a theorem is proved.
 
 
 \paragraph{Storing definitions in the theory segment}
@@ -1254,14 +1285,14 @@ If there is an associated induction theorem, its name is derived as follows:
 \begin{itemize}
 \item
 If the principal name ends with \ml{\_def} or with \ml{\_DEF}, then the induction theorem is the same as the principal name with the suffix replaced by \ml{\_ind} or \ml{\_IND} respectively.
-\item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.
-\index{theorem attributes!induction_thm@\ml{induction\_thm}}
-\item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} ``attribute'' to the principal name.
+\item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.%
+\index{theorem attributes!induction_thm@\ml{induction\_thm}}%
+\item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} attribute to the principal name.
 \end{itemize}
 
 \subsection{Function definition examples}
  We will give a number of examples that display the range of functions
-that may be defined with \ml{Define}. First, we have a recursive function
+that may be defined with \ml{Definition}. First, we have a recursive function
 that uses ``destructors'' in the recursive call.
 
 \begin{hol}
@@ -1362,11 +1393,12 @@ are defined:
 \end{hol}
 
 Finally, \ml{Definition} may also be used to define non-recursive functions with complex pattern-matching.
-The pattern-matching pre-processing of {Define} can be convenient for this purpose, but can also generate a large number of equations.
+The pattern-matching pre-processing of \ml{Definition} can be convenient for this purpose, but can also generate a large number of equations.
 It may also return theorems that do not look quite like what was originally input.
 For more on this, see the discussion of case expressions (into which the clauses in a \ml{Definition} are converted internally) in Section~\ref{CaseExp}.
 
 \subsection{When termination is not automatically proved}
+\index{termination!of recursively defined functions}
 
 If the termination proof for a prospective definition fails, the invocation of the definitional machinery fails.
 In such situations, the user must supply a termination argument explicitly.
@@ -1428,8 +1460,10 @@ type \ml{defn}, it is more convenient to invoke
 \end{alltt}
 \end{session}
 %
+\index{wellfounded relations!as part of a termination argument}
 The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
 and show that the arguments to \holtxt{qsort} are in the relation.
+\index{WF_REL_TAC@\ml{WF\_REL\_TAC}}
 The function \ml{WF\_REL\_TAC} is almost invariably used at this point to
 initiate the termination proof. Clearly, \ml{qsort} terminates because the list
 argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate
@@ -1682,6 +1716,7 @@ The first conjunct needs a case-split on \holtxt{s} before it is proved by
 rewriting, and the second is also easy to prove by rewriting.
 
 \subsubsection{How termination conditions are synthesized}
+\label{sec:tfl-congruence}
 
 \index{congruence rules!in termination analysis|(}
 It is occasionally important to understand, at least in part, how
@@ -1865,6 +1900,7 @@ the termination conditions extracted for the definition are now provable, since 
 \end{session}
 
 \subsection{Recursion schemas}
+\label{ss:recursionSchemas}
 
 In higher order logic, very general patterns of recursion, known as
 \emph{recursion schemas} or sometimes \emph{program schemas}, can be
@@ -2121,6 +2157,37 @@ Thus, one can write invocations such as
 \end{verbatim}
 \index{inductive relations|)}
 
+\subsection{Coinductive Relations}
+\label{sec:coinductive}
+\index{coinductive relations|(}
+
+\index{Hol_coreln, defining coinductive relations@\ml{Hol\_coreln}, defining coinductive relations}
+\index{coinductive relations!Hol_coreln (ML function)@\ml{Hol\_coreln} (ML function)}
+
+\HOL{} supports coinductive relational definitions by the function
+\ml{Hol\_coreln} in the \ml{bossLib} structure (or the new \ml{CoInductive} syntax).
+\ml{Hol\_coreln} shares the same input syntax with \ml{Hol\_reln}.
+A successful invocation of this definitional principle returns three important theorems $\mathit{rules}$, $\mathit{coind}$ and $\mathit{cases})$.
+Each is also stored in the current theory segment.
+\begin{itemize}
+\item $\mathit{rules}$ is a conjunction of implications
+that will be the same as the input term quotation; the theorem is
+saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
+first relation defined by the function (if using \ml{Hol\_coreln}), or
+as provided by the user, when using the \ml{CoInductive} syntax.
+\item $\mathit{coind}$ is the coinduction principle for the relations,
+saved under the name \ml{<stem>\_coind}.
+\item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
+  for the relations, saved under the name \ml{<stem>\_cases},
+  and is used to decompose an element in the relation into the
+possible ways of obtaining it by the rules.
+\end{itemize}
+Note that, ``schematic variables'' are also supported by \ml{Hol\_coreln},
+while there is no concept of ``strong coinduction principles''
+here. \HOL{}'s core coalgebra types (\theoryimp{llist}, \theoryimp{path}
+and  \theoryimp{lbtree}) are all based on coinductive relations. See
+Section~\ref{bisimulation} for a sample usage of coinductive relations
+on bisimulation.
 
 %%% Local Variables:
 %%% mode: latex

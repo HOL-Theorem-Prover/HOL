@@ -1,19 +1,23 @@
 structure Holmake_types :> Holmake_types =
 struct
 
-open internal_functions
+open internal_functions HOLFileSys
 
-datatype pretoken = DEFN of string | RULE of string | EOF
+datatype pretoken =
+         DEFN of string | DEFN_EXTEND of string | RULE of string | EOF
 
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
 type env = (string, quotation)Binarymap.dict
+fun env_keys e = Binarymap.foldr (fn (k,v,A) => k::A) [] e
+fun env_fold f e A = Binarymap.foldl (fn (k,v,A) => f k v A) A e
+
 type rule_info = {dependencies : string list, commands : string list}
 type raw_rule_info = { targets : quotation, dependencies : quotation,
                        commands : quotation list }
 type ruledb =
      (string, {dependencies: string list, commands: quotation list}) Binarymap.dict
-datatype token = HM_defn of string * quotation
+datatype token = HM_defn of {vname : string, rhs : quotation, extendp : bool}
                | HM_rule of raw_rule_info
 
 fun normquote acc [] = List.rev acc
@@ -152,7 +156,7 @@ in
   Substring.full (recurse [] ss0)
 end
 
-fun to_token pt =
+fun to_token env pt =
     case pt of
       DEFN s => let
         open Substring
@@ -163,8 +167,24 @@ fun to_token pt =
         val rest = #2 (valOf (getc rest)) (* drops = sign *)
         val rest = dropl Char.isSpace rest
       in
-        HM_defn(string varname, extract_normal_quotation rest)
+        HM_defn{vname = string varname, rhs = extract_normal_quotation rest,
+                extendp = false}
       end
+    | DEFN_EXTEND s => let
+        open Substring
+        val ss = convert_newlines (full s)
+        fun endp c = c <> #"+" andalso not (Char.isSpace c)
+        val (varname, rest) = splitl endp ss
+        val rest = dropl Char.isSpace rest
+        val rest = triml 2 rest (* drop += *)
+        val rest = dropl Char.isSpace rest
+        val key = string varname
+        val old = case Binarymap.peek(env,key) of NONE => []
+                                                | SOME s => s @ [LIT " "]
+     in
+       HM_defn{vname = key, rhs = old @ extract_normal_quotation rest,
+               extendp = true}
+     end
     | RULE s => let
         open Substring
         val ss = convert_newlines (full s)
@@ -317,7 +337,8 @@ fun extend_ruledb warn env {targets,dependencies,commands} (rdb,ddb) = let
   val deps = map dequote (tokenize (perform_substitution env dependencies))
 in
   if null commands then
-    (rdb, List.foldl (fn (tgt, ddb) => app_insert(ddb, tgt, deps)) ddb tgts, tgts)
+    (rdb,
+     List.foldl (fn (tgt, ddb) => app_insert(ddb, tgt, deps)) ddb tgts, tgts)
   else let
       val info = {dependencies = deps, commands = commands}
       fun foldthis (t, dict) =
@@ -356,15 +377,27 @@ val base_environment0 = let
   fun p1 ++ p2 = OS.Path.concat(p1,p2)
   val alist =
       [("CC", [LIT CC]),
-       ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
+       ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT Systeml.CP]),
        ("DEFAULT_TARGETS",
         [VREF ("patsubst %.sml,%.uo,$(patsubst %Theory.sml,,"^
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
        ("HOLDIR", [LIT HOLDIR]),
+       ("HOL_LNSIGOBJ",
+        [LIT "for i in *.uo *.ui ; do ln -fs `pwd`/",
+         VREF "HOLOBJDIR",
+         LIT "/$i ",
+         VREF "SIGOBJ",
+         LIT " ; done && for i in *.sig ; do ln -fs `pwd`/$i ",
+         VREF "SIGOBJ",
+         LIT " ; echo `pwd`/`basename $i .sig` >> ",
+         VREF "SIGOBJ",
+         LIT "/SRCFILES ; done"]),
+       ("HOLOBJDIR", [LIT HFS_NameMunge.HOLOBJDIR]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),
        ("ML_SYSNAME", [LIT ML_SYSNAME]),
-       ("MV", if OS = "winNT" then [LIT "move", LIT "/y"] else [LIT "/bin/mv"]),
+       ("MV", if OS = "winNT" then [LIT "move", LIT "/y"]
+              else [LIT Systeml.MV]),
        ("OS", [LIT OS]),
        ("SIGOBJ", [VREF "HOLDIR", LIT "/sigobj"]),
        ("UNQUOTE", [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")])] @
@@ -383,14 +416,14 @@ end
 fun base_environment () = let
   val kernelid =
       let
-        val strm = TextIO.openIn Holmake_tools.kernelid_fname
+        val strm = openIn Holmake_tools.kernelid_fname
         val s =
-            case TextIO.inputLine strm of
+            case inputLine strm of
                 NONE => ""
               | SOME s => hd (String.tokens Char.isSpace s) handle Empty => ""
 
       in
-        s before TextIO.closeIn strm
+        s before closeIn strm
       end handle IO.Io _ => ""
 in
   Binarymap.insert(base_environment0, "KERNELID", [LIT kernelid])

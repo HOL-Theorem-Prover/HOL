@@ -56,7 +56,7 @@ val mk_type_rsubst = map (fn {redex,residue} => (pty redex |-> pty residue));
 
 fun store_thm(s,q,t) = boolLib.store_thm(s,btm q,t);
 fun prove (q, t) = Tactical.prove(btm q,t);
-fun new_definition(s,q) = Definition.new_definition(s,btm q);
+fun new_definition(s,q) = boolLib.new_definition(s,btm q);
 fun new_infixl_definition(s,q,f) = boolLib.new_infixl_definition(s,btm q,f);
 fun new_infixr_definition(s,q,f) = boolLib.new_infixr_definition(s,btm q,f);
 
@@ -116,11 +116,12 @@ fun SPEC_THEN q ttac thm (g as (asl,w)) = let
       let
           val ptmm = TermParse.absyn_to_preterm (Parse.term_grammar()) a
           open Preterm seqmonad
+          val printers = SOME (term_to_string, type_to_string)
       in
         fromErr pbty >>~ (fn pty =>
         fromErr ptmm >>~ (fn ptm =>
         fromErr
-          (TermParse.ctxt_preterm_to_term NONE NONE ctxt
+          (TermParse.ctxt_preterm_to_term printers NONE ctxt
                 (Constrained{Locn = locn.Loc_None,Ptm = ptm, Ty = pty}))))
       end
   fun Ecompose theta0 E =
@@ -589,5 +590,20 @@ fun kRENAME_TAC qs k g =
   end g
 
 fun RENAME_TAC qs = kRENAME_TAC qs ALL_TAC
+
+fun SELECT_GOAL_LT pats = FIRST_LT (RENAME_TAC pats)
+
+fun (tac >~ pats) = tac THEN_LT SELECT_GOAL_LT pats
+
+fun SELECT_GOALS_LT pats = SELECT_LT (RENAME_TAC pats)
+
+fun SELECT_GOALS_LT_THEN pats tac = SELECT_LT (RENAME_TAC pats THEN tac)
+
+fun (tac >>~ pats) = tac THEN_LT SELECT_GOALS_LT pats
+
+fun SELECT_GOALS_LT_THEN1 pats tac =
+  SELECT_LT_THEN (RENAME_TAC pats) (tac THEN NO_TAC)
+
+fun (tac1 >>~- (pats, tac2)) = tac1 THEN_LT SELECT_GOALS_LT_THEN1 pats tac2
 
 end (* Q *)

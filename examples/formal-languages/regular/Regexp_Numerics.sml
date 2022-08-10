@@ -169,12 +169,14 @@ fun ii2s LSB w i = String.implode (map byte2char (bytes_of w i))
 (*---------------------------------------------------------------------------*)
 
 fun iint2string enc d w i =
-    ii2s d (Int.max(w,width_of enc i))
+ let val width = Int.max(w,width_of enc i)
+ in ii2s d width
       (case enc
         of Unsigned  => i
-         | Twos_comp => twos_comp w i
+         | Twos_comp => twos_comp width i
          | Zigzag    => zigzag i
          | Sign_mag  => sign_mag i)
+ end
 
 val int2string = iint2string Twos_comp LSB 1 o IntInf.fromInt;
 

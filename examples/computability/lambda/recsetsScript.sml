@@ -2,6 +2,7 @@ open HolKernel Parse bossLib boolLib
 
 val _ = new_theory "recsets"
 
+open listTheory
 open recfunsTheory reductionEval
 open binderLib
 open stepsTheory
@@ -133,20 +134,6 @@ val re_def = Define`
    this list, see if one of them is equal to e.  If so, terminate.
 *)
 open rich_listTheory
-val MEM_GENLIST = prove(
-  ``MEM e (GENLIST f n) = ∃i. i < n ∧ (e = f i)``,
-  Q.ID_SPEC_TAC `f` THEN
-  Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
-  SRW_TAC [][GENLIST_CONS, EQ_IMP_THM] THENL [
-    Cases_on `e = f 0` THENL [
-      Q.EXISTS_TAC `0` THEN SRW_TAC [][],
-      FULL_SIMP_TAC (srw_ss()) [] THEN Q.EXISTS_TAC `SUC i` THEN
-      SRW_TAC [][]
-    ],
-    `∃m. i = SUC m` by METIS_TAC [TypeBase.nchotomy_of ``:num``] THEN
-    Q.EXISTS_TAC `m` THEN SRW_TAC [ARITH_ss][]
-  ]);
-
 val EXISTS_FILTER = store_thm(
   "EXISTS_FILTER",
   ``EXISTS P (FILTER Q l) = EXISTS (λe. Q e ∧ P e) l``,
@@ -275,11 +262,11 @@ val re_semidp = store_thm(
   ``re s ⇔ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
   METIS_TAC [re_semirecursive1, re_semirecursive2]);
 
-val recursive_re = store_thm(
-  "recursive_re",
-  ``recursive s ⇒ re s``,
+Theorem recursive_re:
+  recursive s ⇒ re s
+Proof
   SRW_TAC [][recursive_def, re_semidp] THEN
-  Q.EXISTS_TAC `
+  Q.EXISTS_TAC ‘
     dBnum (fromTerm (
       LAM "e" (cbnf_ofk @@ (LAM "n" (ceqnat @@ church 0
                                             @@ (cforce_num @@ VAR "n")
@@ -287,35 +274,33 @@ val recursive_re = store_thm(
                                             @@ VAR "n"))
                         @@ (cdAPP @@ cDB (numdB M)
                                   @@ (cchurch @@ VAR "e")))))
-  ` THEN
+  ’ THEN
   FULL_SIMP_TAC (srw_ss()) [Phi_def] THEN
   SIMP_TAC (bsrw_ss()) [cdAPP_behaviour, cchurch_behaviour] THEN
   SRW_TAC [][EQ_IMP_THM] THENL [
-    FIRST_X_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘e’ MP_TAC) THEN
     SRW_TAC [][] THEN
     Q.HO_MATCH_ABBREV_TAC
-      `∃z. bnf_of (cbnf_ofk @@ KK @@ cDB TT) = SOME z` THEN
-    `cbnf_ofk @@ KK @@ cDB TT == KK @@ cDB (fromTerm z)`
+      ‘∃z. bnf_of (cbnf_ofk @@ KK @@ cDB TT) = SOME z’ THEN
+    ‘cbnf_ofk @@ KK @@ cDB TT == KK @@ cDB (fromTerm z)’
        by (MATCH_MP_TAC cbnf_of_works1' THEN
-           SRW_TAC [][Abbr`TT`]) THEN
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`KK`, cforce_num_behaviour] THEN
-    Q.PAT_X_ASSUM `1 = force_num z` (SUBST_ALL_TAC o SYM) THEN
+           SRW_TAC [][Abbr‘TT’]) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr‘KK’, cforce_num_behaviour] THEN
     SIMP_TAC (bsrw_ss()) [bnf_bnf_of, ceqnat_behaviour,
                           cB_behaviour],
 
-    IMP_RES_TAC bnf_of_SOME THEN
-    IMP_RES_THEN MP_TAC
-                 (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
+    drule_then strip_assume_tac bnf_of_SOME THEN
+    drule_all cbnf_ofk_works2 THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
-    FIRST_X_ASSUM (Q.SPEC_THEN `e` (Q.X_CHOOSE_THEN `zz` MP_TAC)) THEN
-    Cases_on `e ∈ s` THEN SRW_TAC [][] THEN
-    SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, ceqnat_behaviour,
-                          cB_behaviour] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘e’ (Q.X_CHOOSE_THEN ‘zz’ MP_TAC)) THEN
+    Cases_on ‘e ∈ s’ THEN SRW_TAC [][] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, DISJ_IMP_EQ] THEN
     STRIP_TAC THEN
-    `Ω -β->* z` by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
-    `z = Ω` by METIS_TAC [chap3Theory.Omega_starloops] THEN
-    METIS_TAC [chap2Theory.bnf_Omega]
-  ]);
+    ‘Ω -β->* z’ by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
+    ‘z = Ω’ by METIS_TAC [chap3Theory.Omega_starloops] THEN
+    fs[]
+  ]
+QED
 
 (* yet another K - this one is the set of machines that terminate when
    given their own index as input *)

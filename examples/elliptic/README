@@ -1,3 +1,6 @@
-This directory is intended to implement proof-based 
+This directory is intended to implement proof-based
 translation of Elliptic Curve Cryptography to ARM assembly.
 
+- -
+
+Known to not entirely build, January 2021.

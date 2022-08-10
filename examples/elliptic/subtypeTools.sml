@@ -53,8 +53,8 @@ fun flexible_solver solver cond =
       val cond_th = solver cond
       val cond_tm = concl cond_th
     in
-      if cond_tm = cond then cond_th
-      else if cond_tm = mk_eq (cond,T) then EQT_ELIM cond_th
+      if cond_tm ~~ cond then cond_th
+      else if cond_tm ~~ mk_eq (cond,T) then EQT_ELIM cond_th
       else raise Bug "flexible_solver: solver didn't prove condition"
     end;
 
@@ -93,7 +93,7 @@ local
       case Binarymap.peek (cache,g) of
         NONE => NONE
       | SOME th =>
-        if List.all (fn h => mem h asl) (hyp th) then SOME th else NONE;
+        if List.all (fn h => tmem h asl) (hyp th) then SOME th else NONE;
 in
   fun cache_new () = ref (Binarymap.mkDict compare);
 
@@ -277,7 +277,7 @@ datatype context =
                 judgements : thm list,
                 dproc_cache : (term,thm) Binarymap.dict ref};
 
-fun pp p context =
+fun pp context =
     let
       val Context {rewrites,conversions,reductions,judgements,...} = context
       val rewrites = length rewrites
@@ -285,15 +285,15 @@ fun pp p context =
       and reductions = length reductions
       and judgements = length judgements
     in
-      PP.begin_block p PP.INCONSISTENT 1;
-      PP.add_string p ("<" ^ int_to_string rewrites ^ "r" ^ ",");
-      PP.add_break p (1,0);
-      PP.add_string p (int_to_string conversions ^ "c" ^ ",");
-      PP.add_break p (1,0);
-      PP.add_string p (int_to_string reductions ^ "r" ^ ",");
-      PP.add_break p (1,0);
-      PP.add_string p (int_to_string judgements ^ "j>");
-      PP.end_block p
+      PP.block PP.INCONSISTENT 1 [
+        PP.add_string ("<" ^ int_to_string rewrites ^ "r" ^ ","),
+        PP.add_break (1,0),
+        PP.add_string (int_to_string conversions ^ "c" ^ ","),
+        PP.add_break (1,0),
+        PP.add_string (int_to_string reductions ^ "r" ^ ","),
+        PP.add_break(1,0),
+        PP.add_string (int_to_string judgements ^ "j>")
+      ]
     end;
 
 fun to_string context = PP.pp_to_string (!Globals.linewidth) pp context;
@@ -436,7 +436,8 @@ in
         val dproc = algebra_dproc reductions judgements dproc_cache
       in
         simpLib.SSFRAG
-          {name = NONE, ac = [], congs = [], convs = convs, rewrs = rewrites,
+          {name = NONE, ac = [], congs = [], convs = convs,
+           rewrs = map (fn th => (NONE, th)) rewrites,
            dprocs = [dproc], filter = NONE}
       end;
 
@@ -453,15 +454,15 @@ end;
 
 datatype context2 = Context2 of {simplify : context, normalize : context};
 
-fun pp2 pp alg =
+fun pp2 alg =
     let
       val Context2 {simplify,normalize} = alg
     in
-      PP.begin_block pp PP.INCONSISTENT 1;
-      PP.add_string pp ("{simplify = " ^ to_string simplify ^ ",");
-      PP.add_break pp (1,0);
-      PP.add_string pp ("normalize = " ^ to_string normalize ^ "}");
-      PP.end_block pp
+      PP.block PP.INCONSISTENT 1 [
+        PP.add_string ("{simplify = " ^ to_string simplify ^ ","),
+        PP.add_break (1,0),
+        PP.add_string ("normalize = " ^ to_string normalize ^ "}")
+      ]
     end;
 
 fun to_string2 context2 = PP.pp_to_string (!Globals.linewidth) pp2 context2;

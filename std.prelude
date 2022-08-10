@@ -75,7 +75,6 @@ in
   val _ = installPP (mosmlpp proofManagerLib.pp_proofs)
   val _ = installPP (mosmlpp Rewrite.pp_rewrites)
   val _ = installPP (mosmlpp TypeBasePure.pp_tyinfo)
-  val _ = installPP (mosmlpp DefnBase.pp_defn)
   val _ = installPP (mosmlpp Arbnum.pp_num)
   val _ = installPP (mosmlpp Arbint.pp_int)
   val _ = installPP (mosmlpp Arbrat.pp_rat)

@@ -19,10 +19,16 @@ sig
 
   val AC     : thm -> thm -> thm
   val unAC   : thm -> thm * thm
+
   val Cong   : thm -> thm
   val unCong : thm -> thm
+
   val Excl   : string -> thm
   val destExcl : thm -> string option
+
+  val FRAG   : string -> thm
+  val destFRAG : thm -> string option
+
   val mk_Req0 : thm -> thm
   val mk_ReqD : thm -> thm
   val dest_Req0 : thm -> thm option
@@ -44,11 +50,15 @@ sig
   val RM_ABBREV_TAC       : string -> tactic
   val RM_ALL_ABBREVS_TAC  : tactic
   val ABBRS_THEN          : (thm list -> tactic) -> thm list -> tactic
+  val TIDY_ABBREV_CONV    : conv
+  val TIDY_ABBREV_RULE    : thm -> thm
+  val TIDY_ABBREVS        : tactic
   val MK_ABBREVS_OLDSTYLE : tactic
   val Abbr                : term quotation -> thm
   val safe_inst_cmp       : {redex:term,residue:term} Lib.cmp
   val safe_inst_sort      : (term,term) subst -> (term,term) subst
 
+  val L                : string -> thm
   val MK_LABEL         : string * thm -> thm
   val DEST_LABEL       : thm -> thm
   val DEST_LABELS      : thm -> thm
@@ -62,6 +72,27 @@ sig
   val LABEL_ASSUM      : string -> thm_tactic -> tactic
   val LABEL_X_ASSUM    : string -> thm_tactic -> tactic
   val LLABEL_RESOLVE   : thm list -> term list -> thm list
+  val LLABEL_RES_THEN  : (thm list -> tactic) -> thm list -> tactic
+
+  val using            : tactic * thm -> tactic
+  val usingA           : tactic -> thm_tactic  (* curry of above *)
+  val maybe_using      : (unit -> thm list) -> thm_tactic -> tactic
+
+  val mk_hide : string -> term -> term
+  val is_hide : term -> bool
+  val dest_hide : term -> string * term
+  val install_hidepp : unit -> unit (* it starts installed *)
+  val remove_hidepp : unit -> unit
+  val unignoring_hide : ('a -> 'b) -> ('a -> 'b)
+
+  val MK_HIDE : string -> thm -> thm
+  val UNHIDE : thm -> thm
+  val hide_tac : string -> thm -> tactic
+  val unhide_tac : string -> tactic
+  val hide_assum : string -> thm_tactic -> tactic
+  val unhide_assum : string -> thm_tactic -> tactic
+  val unhide_x_assum : string -> thm_tactic -> tactic
+  val use_hidden_assum : string -> thm_tactic -> tactic
 
 end
 

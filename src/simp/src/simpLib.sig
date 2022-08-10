@@ -42,10 +42,11 @@ sig
     * its key.
     * ---------------------------------------------------------------------*)
 
-  type convdata = { name: string,
-                     key: (term list * term) option,
-                   trace: int,
-                    conv: (term list -> term -> thm) -> term list -> conv}
+ type thname = KernelSig.kernelname
+ type convdata = { name: string,
+                    key: (term list * term) option,
+                  trace: int,
+                   conv: (term list -> term -> thm) -> term list -> conv}
 
   type stdconvdata = { name: string,
                        pats: term list,
@@ -64,14 +65,22 @@ sig
   val SSFRAG :
     {name : string option,
      convs: convdata list,
-     rewrs: (string option * thm) list,
+     rewrs: (thname option * thm) list,
         ac: (thm * thm) list,
     filter: (controlled_thm -> controlled_thm list) option,
     dprocs: Traverse.reducer list,
      congs: thm list} -> ssfrag
 
+  val empty_ssfrag : ssfrag
+  val ssf_upd_rewrs : ((thname option * thm) list -> (thname option * thm) list)
+                      ->
+                      ssfrag -> ssfrag
   val frag_rewrites : ssfrag -> thm list
   val frag_name : ssfrag -> string option
+
+  val register_frag : ssfrag -> ssfrag
+  val lookup_named_frag : string -> ssfrag option
+  val all_named_frags : unit -> string list
 
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssfrag objects                        *)
@@ -82,9 +91,10 @@ sig
   val Excl        : string -> thm
   val Req0        : thm -> thm
   val ReqD        : thm -> thm
+  val SF          : ssfrag -> thm
 
   val rewrites       : thm list -> ssfrag
-  val rewrites_with_names : (string * thm) list -> ssfrag
+  val rewrites_with_names : (thname * thm) list -> ssfrag
   val dproc_ss       : Traverse.reducer -> ssfrag
   val ac_ss          : (thm * thm) list -> ssfrag
   val conv_ss        : convdata -> ssfrag
@@ -93,7 +103,7 @@ sig
   val merge_ss       : ssfrag list -> ssfrag
   val name_ss        : string -> ssfrag -> ssfrag
   val named_rewrites : string -> thm list -> ssfrag
-  val named_rewrites_with_names : string -> (string * thm) list -> ssfrag
+  val named_rewrites_with_names : string -> (thname * thm) list -> ssfrag
   val named_merge_ss : string -> ssfrag list -> ssfrag
   val type_ssfrag    : hol_type -> ssfrag
   val tyi_to_ssdata  : TypeBasePure.tyinfo -> ssfrag
@@ -119,13 +129,14 @@ sig
   val empty_ss        : simpset
   val ssfrags_of      : simpset -> ssfrag list
   val mk_simpset      : ssfrag list -> simpset
-  val remove_ssfrags  : simpset -> string list -> simpset
+  val remove_ssfrags  : string list -> simpset -> simpset
   val ssfrag_names_of : simpset -> string list
   val ++              : simpset * ssfrag -> simpset  (* infix *)
   val -*              : simpset * string list -> simpset (* infix *)
   val &&              : simpset * thm list -> simpset  (* infix *)
   val limit           : int -> simpset -> simpset
   val unlimit         : simpset -> simpset
+  val add_named_rwt   : (thname * thm) -> ssfrag -> ssfrag
 
   val add_weakener : weakener_data -> simpset -> simpset
 
@@ -185,6 +196,15 @@ sig
    val rev_full_simp_tac          : simpset -> thm list -> tactic
    val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
    val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+
+   type simptac_config =
+        {strip : bool, elimvars : bool, droptrues : bool, oldestfirst : bool}
+   val psr : simptac_config -> simpset -> tactic
+     (* Pop, Simp, Rotate to back *)
+   val allasms : simptac_config -> simpset -> tactic
+     (* do the above to all the assumptions in turn *)
+   val global_simp_tac : simptac_config -> simpset -> thm list -> tactic
+     (* do allasms until quiescence, then simp in the goal as well *)
 
    (* ---------------------------------------------------------------------
     * SIMP_RULE : simpset -> tactic

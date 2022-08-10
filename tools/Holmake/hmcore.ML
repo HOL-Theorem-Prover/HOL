@@ -17,8 +17,14 @@ val _ = let
     myuse hmakedir (s ^ ".sml")
   end
 in
-  app appthis ["regexpMatch", "parse_glob", "internal_functions",
-               "Holdep_tokens", "HM_SimpleBuffer"] ;
-  app (myuse hmakedir) ["QuoteFilter.sml", "Holmake_tools_dtype"];
-  app appthis ["QFRead", "Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
+  app (myuse hmakedir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
+  myuse (OS.Path.concat(hmakedir, "poly")) "HFS_NameMunge.sml";
+  app appthis ["HOLFileSys", "regexpMatch", "parse_glob", "internal_functions",
+               "Holdep_tokens"] ;
+  app (myuse hmakedir) ["QuoteFilter.sml", "Holmake_tools_dtype.sml",
+                        "terminal_primitives.sig",
+                        "poly-terminal-prims.ML"];
+  app appthis ["QFRead", "Holdep", "Holmake_tools",
+               "Holmake_types",
+               "ReadHMF"]
 end;

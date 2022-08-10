@@ -5,13 +5,13 @@ val _ = new_theory "addMLdep2";
 
 fun grep s fname =
   let
-    val instr = TextIO.openIn fname
+    val instr = HOLFileSys.openIn fname
     fun recurse () =
-      case TextIO.inputLine instr of
+      case HOLFileSys.inputLine instr of
           NONE => false
         | SOME line => String.isSubstring s line orelse recurse ()
   in
-    recurse() before TextIO.closeIn instr
+    recurse() before HOLFileSys.closeIn instr
   end
 
 val _ = if grep "MLdepLib" "addMLdep1Theory.sml" then ()

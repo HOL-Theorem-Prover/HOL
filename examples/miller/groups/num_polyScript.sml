@@ -18,7 +18,7 @@ app load
 "finite_groupTheory", "finite_groupContext"];
 *)
 
-open bossLib listTheory HurdUseful subtypeTools res_quanTools
+open bossLib listTheory hurdUtils subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext
      relationTheory ho_proverTools extra_listTheory orderTheory
      subtypeTheory listContext arithmeticTheory extra_numTheory

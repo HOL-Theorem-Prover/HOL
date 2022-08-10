@@ -1,0 +1,50 @@
+This file describes how to use the evaluation framework and how
+to replicate the experiments accompanying the paper
+"Learned Provability Likelihood for Tactical Search"
+
+1) Install PolyML. (see HOL/INSTALL)
+
+2) Record (or download) the supervised learning data as described in the
+   README file in the same directory.
+
+3) Change the number of open files allowed per process to 20000.
+   The following bash command changes the soft limit.
+   You might need to change the hard limit as well.
+
+   ulimit -Sn 20000
+
+4) Create the savestates by running the following commands in an interactive
+   session (takes an hour and requires 33 GB):
+
+  load "tttUnfold"; open tttUnfold;
+  aiLib.load_sigobj ();
+  tttSetup.record_flag := false;
+  tttSetup.record_savestate_flag := true;
+  ttt_record_savestate (); (* starts by cleaning the savestate directory *)
+
+5) Restart hol (recommended)
+
+6) Setup the parameters
+
+  load "tttEval"; open tttEval;
+  (* timeout *)
+  tttSetup.ttt_search_time := 30.0;
+  (* theories to be evaluated *)
+  aiLib.load_sigob (); (* for the full standard library *)
+  val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+  (* number of cores used *)
+  val ncore = 30;
+  (* directory src/tactictoe/eval/foo will contain the results *)
+  val expname = "foo";
+  (* default_reward *)
+  tttSearch.default_reward = 1.0;
+
+7) Then calling the following command will
+   evaluate TacticToe, train the TNN, and evaluate TacticToe + TNN:
+
+  rlval ncore expname thyl 1;
+
+8) To only evaluate TacticToe, run:
+
+    run_evalscript_thyl "tttEval.ttt_eval" expname
+      (true,ncore) (NONE,NONE,NONE) thyl;

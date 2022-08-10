@@ -330,7 +330,7 @@ For example, two existing tactics can be sequenced
 \index{sequencing!of tactics}%
 \index{tactics!sequencing of}%
  by use of the
-tactical \ml{>>}\footnote{The \ml{>>} function can also be written as \ml{THEN}.}:\index{THEN@\ml{THEN}}
+tactical \ml{>>}\footnote{The \ml{>>} function can also be written as \ml{THEN} or as \ml{\bs\bs}.}:\index{THEN@\ml{THEN}}\index{ THEN@\ml{\bs\bs} (\ml{THEN} tactical)|see{\ml{THEN}}}
 if $T_1$ and
 $T_2$ are  tactics,  then the  \ML{} expression  $T_1${\small\verb% >> %}$T_2$
 evaluates to a  tactic that first applies  $T_1$ to  a goal  and then applies
@@ -650,7 +650,7 @@ tactics can use these new results.
 \index{REPEAT@\ml{REPEAT}}
 \item Writing tacticals (see description of \ml{rpt} in Section~\ref{tacticals}).
 \index{THENL@\ml{THENL}}
-\index{>{"|}@\ml{\gt\pipe}|see{\ml{THENL}}}
+\index{ THENL tactical@\ml{\gt\pipe} (\ml{THENL} tactical)|see{\ml{THENL}}}
 \item
 With \ml{THENL} (see Section~\ref{sec:thenl}); for example, if tactic $T$ produces two subgoals and $T_1$ is to be applied to the first while nothing is to be done to the second, then $T\;\ml{THENL}\;[T_1,\,\ml{all\_tac}]$ is the
 tactic required.
@@ -683,7 +683,7 @@ $u\ \Rightarrow\ v \qquad v\ \Rightarrow\ u$
 \end{center}
 
 \item[Use:]
-Proving logical equivalences, \ie\ goals of the form ``$u\iff v$'' where $u$ and $v$ are boolean terms.
+Proving logical equivalences, \ie, goals of the form ``$u\iff v$'' where $u$ and $v$ are boolean terms.
 Note that the same end can often be achieved by rewriting with the theorem \ml{EQ\_IMP\_THM}, which states
 \[
 \vdash (u \iff v) \iff (u \Rightarrow v) \land (v \Rightarrow u)
@@ -800,7 +800,7 @@ It is defined by the following, where
 \begin{verbatim}
   set_eq: 'a list -> 'a list -> bool
 \end{verbatim}
-tests whether two lists denote the same set (\ie\ contain the same elements).
+tests whether two lists denote the same set (\ie, contain the same elements).
 
 
 \begin{hol}
@@ -822,17 +822,18 @@ tests whether two lists denote the same set (\ie\ contain the same elements).
 \index{tacticals!for sequencing|(}
 \index{tactics!sequencing of|(}
 \index{THEN@\ml{THEN}}
-\index{>>@\ml{\gt\gt}|see{\ml{THEN}}}
+\index{ THEN tactical@\ml{\gt\gt} (\ml{THEN} tactical)|see{\ml{THEN}}}
 
-\begin{holboxed}
+\begin{holboxed}%triple > is to escape in presence of polyscripter
 \begin{verbatim}
    THEN : tactic -> tactic -> tactic
    >>>   : tactic -> tactic -> tactic
+   \\   : tactic -> tactic -> tactic
 \end{verbatim}
 \end{holboxed}
 
 The tactical \ml{\gt\gt} is an \ML{} infix.
-Its alias \ml{THEN} is also an infix.
+Its aliases \ml{THEN} and \ml{\bs\bs} are also infixes.
 If $T_1$ and $T_2$ are tactics, then the \ML{} expression $T_1\;\ml{\gt\gt}\;T_2$ evaluates to a tactic which first applies $T_1$ and then applies $T_2$ to each subgoal produced by $T_1$.
 
 Both \ml{\gt\gt} and \ml{THEN} associate to the left, which can lead to some counter-intuitive behaviours when they combine with other sequencing operators.
@@ -935,7 +936,7 @@ the theorem achieving the subgoal. All of this is explicit, and can be
 examined by a user moving about the subgoal-proof tree.\footnote{The current
 subgoal package makes this difficult, but the point still holds.}
 Using these tactics in the most straightforward way, the assumptions at any
-point in a goal-directed proof, \ie\ at any node in the subgoal tree,
+point in a goal-directed proof, \ie, at any node in the subgoal tree,
 \index{subgoal tree!in proof construction}
 \index{tree of subgoals, in proof construction} form
 an unordered record of every assumption made, but not yet dismissed, up to that
@@ -1021,7 +1022,7 @@ is illustrated using its main tool: the tactical \ml{POP\_ASSUM}.
 
 \noindent Given a function $f$\ml{:thm -> tactic}, the tactic
 \ml{pop\_assum}\ $f$ applies $f$ to the (assumed) first
-assumption of a goal (\ie\ to the top element of the assumption stack)
+assumption of a goal (\ie, to the top element of the assumption stack)
 and then applies the tactic created thereby to the original goal
 minus its top assumption:
 
@@ -1241,7 +1242,7 @@ While \ml{first\_assum} (and \ml{first\_x\_assum}) try to apply their theorem-ta
 
 The idea of the second approach is suggested by the way the array-style tacticals\index{tacticals!purpose of} supply a list of theorems (the assumed assumptions) to a function.
 These tacticals use the function to infer new results from the list of theorems, and then to do something with the results.
-In some cases, \eg\ the last example, the assumptions need never have been made in the first place, which suggests a different use of tacticals.
+In some cases, \eg, the last example, the assumptions need never have been made in the first place, which suggests a different use of tacticals.
 The original example for \ml{pop\_assum} illustrates this: namely, to show that $(n = 0) \imp (n\times n = n)$.
 Here, instead of discharging the antecedent by applying \ml{DISCH\_TAC} to the goal, which adds the antecedent as an assumption and returns the consequent as the conclusion, and {\it then\/} supplying the (assumed) added assumption to the theorem continuation \ml{SUBST1\_TAC} and discarding it at the same time, a tactical called \ml{disch\_then} is applied to \ml{SUBST1\_TAC} directly.
 \ml{disch\_then} transforms \ml{SUBST1\_TAC} into a new tactic: one that applies \ml{SUBST1\_TAC} directly to the (assumed) antecedent, and the resulting tactic to a subgoal with no new assumptions and the consequent as its conclusion:
@@ -1407,7 +1408,7 @@ can be defined by:
 \end{verbatim}
 \end{hol}
 
-\noindent Similarly, the method is useful for modifying existing tactics (\eg\ resolution tactics) without having to re-program them in \ML.
+\noindent Similarly, the method is useful for modifying existing tactics (\eg, resolution tactics) without having to re-program them in \ML.
 This avoids the danger of introducing tactics whose justifications may fail, \index{failure, of tactics} a particularly difficult problem to track down; it is also much easier than starting from scratch.
 
 The main theorem continuation functions in the system are:

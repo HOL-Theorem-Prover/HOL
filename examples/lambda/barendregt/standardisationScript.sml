@@ -1,12 +1,3 @@
-structure standardisationScript =
-struct
-
-  (* explicit structure above is necessary if MoscowML is to compile the
-     script file in its standard (not "toplevel") mode, and not be put off
-     by the structure Q = ... line below.
-
-     Poly/ML doesn't have this problem. *)
-
 open HolKernel Parse boolLib bossLib BasicProvers metisLib
 
 open boolSimps
@@ -25,6 +16,8 @@ open head_reductionTheory
 local open containerTheory in end
 
 val _ = new_theory "standardisation"
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 
 structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end
@@ -2445,5 +2438,3 @@ val has_bnf_whnf = store_thm(
   METIS_TAC [has_bnf_hnf, has_hnf_whnf]);
 
 val _ = export_theory()
-
-end (* struct *)

@@ -2,7 +2,6 @@ structure buildutils :> buildutils =
 struct
 
 structure Path = OS.Path
-structure FileSys = OS.FileSys
 structure Process = OS.Process
 
 
@@ -19,22 +18,23 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
-fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+fun safedelete s = HOLFileSys.remove s handle OS.SysErr _ => ()
 
 (* message emission *)
 fun die s =
     let open TextIO
     in
-      output(stdErr, s ^ "\n");
+      output(stdErr, "*** FATAL: " ^ s ^ "\n");
       flushOut stdErr;
       Process.exit Process.failure
     end
 fun warn s =
   let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
+fun WARN s = (warn s; OS.Process.sleep (Time.fromSeconds 2))
 fun I x = x
 
 
-fun startup_check () =
+fun right_distrib_check () =
   let
     val me = Systeml.find_my_path()
   in
@@ -44,6 +44,34 @@ fun startup_check () =
         if whereami = me then ()
         else die "*** Don't run this instance of build in a foreign HOL directory"
   end
+
+fun cpp_present() =
+    let val which = internal_functions.which
+        open HOLFileSys
+    in
+      case OS.Process.getEnv "MINISAT_CXX" of
+         SOME p => if OS.Path.isAbsolute p then
+                     if access (p, [A_READ, A_EXEC]) then ()
+                     else
+                       WARN ("MINISAT_CXX environment variable doesn't point "^
+                             "at executable; minisat will fail to build")
+                   else if OS.Path.isAbsolute (which p) then ()
+                   else (
+                     WARN ("MINISAT_CXX environment variable " ^
+                           "points to " ^ p ^
+                           ", which is not in PATH;");
+                     WARN ("minisat will fail to build")
+                   )
+       | NONE => if OS.Path.isAbsolute (which "c++") then ()
+                 else
+                     WARN ("No c++ in PATH; set MINISAT_CXX env. " ^
+                           "variable or minisat will fail to build")
+    end
+
+fun startup_check() = (
+  right_distrib_check();
+  cpp_present()
+)
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -171,7 +199,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
                   if dirname0 = "**KERNEL**" then kernelpath
                   else if Path.isAbsolute dirname0 then dirname0
                   else fullPath [HOLDIR, dirname0]
-              open FileSys
+              open HOLFileSys
             in
               if (mlsys = "" orelse mlsys = Systeml.ML_SYSNAME) andalso
                  (knl = "" orelse knl = kernelname) then
@@ -273,17 +301,20 @@ fun write_kernelid s =
     TextIO.closeOut strm
   end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
 
+fun cline_die s = die ("Command line option error: " ^ s)
 fun apply_updates l t =
   case l of
       [] => t
-    | {update} :: rest => apply_updates rest (update (warn, t))
+    | {update} :: rest => apply_updates
+                            rest
+                            (update {warn = warn, die = cline_die, arg = t})
 
 fun get_cline () = let
   open GetOpt
   val oldopts = read_earlier_options TextIO.inputLine
   val (opts, rest) = getOpt { argOrder = RequireOrder,
                               options = buildcline.cline_opt_descrs,
-                              errFn = die } (CommandLine.arguments())
+                              errFn = cline_die } (CommandLine.arguments())
   val option_record = apply_updates opts buildcline.initial
   val _ = if #help option_record then exit_with_help() else ()
   val _ =
@@ -334,27 +365,12 @@ fun get_cline () = let
              | SOME _ => raise Fail "Really can't happen")
         | SOME b => b
   val bgoption = if buildgraph then [] else ["--nograph"]
-  val jcount =
-      case #jobcount option_record of
-          NONE =>
-            (case List.find (fn s => String.isPrefix "-j" s) oldopts of
-                NONE => dfltjobnum
-              | SOME jns =>
-                (case Int.fromString (String.extract(jns, 2, NONE)) of
-                     NONE => (warn "Bogus -j spec in old build options file";
-                              dfltjobnum)
-                   | SOME jn => if jn = dfltjobnum then jn
-                                else (warn ("Using -j "^Int.toString jn^
-                                            " from earlier build command; \
-                                            \use -j to override");
-                                      jn)))
-        | SOME jn => jn
-  val joption = "-j" ^ Int.toString jcount
+  val jcount = #jobcount option_record
   val _ =
       if seqspec = dfltbuildseq then
-        write_options ("--"^knlspec::joption::bgoption)
+        write_options ("--"^knlspec::bgoption)
       else
-        write_options ("--"^knlspec::"--seq"::seqspec::joption::bgoption)
+        write_options ("--"^knlspec::"--seq"::seqspec::bgoption)
 in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
@@ -364,6 +380,7 @@ in
                              | SOME i => i,
           extra = {seqname = seqspec, kernelspec = knlspec},
           jobcount = jcount,
+          keepgoing = #keepgoing option_record,
           multithread = #multithread option_record,
           relocbuild = #relocbuild option_record}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
@@ -374,13 +391,13 @@ end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* map a function over the files in a directory *)
 fun map_dir f dir =
-  let val dstrm = OS.FileSys.openDir dir
+  let val dstrm = HOLFileSys.openDir dir
       fun loop () =
-        case OS.FileSys.readDir dstrm
+        case HOLFileSys.readDir dstrm
          of NONE => []
           | SOME file => (dir,file)::loop()
       val files = loop()
-      val _ = OS.FileSys.closeDir dstrm
+      val _ = HOLFileSys.closeDir dstrm
   in List.app f files
      handle OS.SysErr(s, erropt)
        => die ("OS error: "^s^" - "^
@@ -389,7 +406,7 @@ fun map_dir f dir =
   end;
 
 fun rem_file f =
-  OS.FileSys.remove f
+  HOLFileSys.remove f
    handle _ => (warn ("Couldn't remove file "^f); ());
 
 fun copy file path =  (* Dead simple file copy *)
@@ -414,10 +431,10 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
 
 (* f is either bincopy or copy *)
 fun update_copy f src dest = let
-  val t0 = OS.FileSys.modTime src
+  val t0 = HOLFileSys.modTime src
 in
   f src dest;
-  OS.FileSys.setTime(dest, SOME t0)
+  HOLFileSys.setTime(dest, SOME t0)
 end
 
 fun cp b = if b then update_copy bincopy else update_copy copy
@@ -426,25 +443,34 @@ fun mv0 s1 s2 = let
   val s1' = normPath s1
   val s2' = normPath s2
 in
-  FileSys.rename{old=s1', new=s2'}
+  HOLFileSys.rename{old=s1', new=s2'}
 end
 
 fun mv b = if b then mv0 else cp b
 
 fun moveTo dir action = let
-  val here = OS.FileSys.getDir()
-  val b = (OS.FileSys.chDir dir; true) handle _ => false
+  val here = HOLFileSys.getDir()
+  val b = (HOLFileSys.chDir dir; true) handle _ => false
   fun normalise s = OS.Path.mkAbsolute {path = s, relativeTo = dir}
 in
-  if b then (map normalise (action ()) before OS.FileSys.chDir here)
-            handle e => (OS.FileSys.chDir here; raise e)
+  if b then (map normalise (action ()) before HOLFileSys.chDir here)
+            handle e => (HOLFileSys.chDir here; raise e)
   else []
 end
 
+(* this function only used for finding information used by clean-ing actions;
+   we want cleaning to follow all links, even those hidden by conditionals
+   that look at HOLSEFLTESTLEVEL.  On the assumption that the INCLUDES
+   set grows monotonically, we set to 3 to get all extra INCLUDES.
+*)
 fun hmakefile_data HOLDIR =
-    if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
+    if HOLFileSys.access ("Holmakefile", [HOLFileSys.A_READ]) then let
         open Holmake_types
-        val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
+        fun quietly s = ()
+        val qdiags = {info = quietly, die = quietly, warn = quietly}
+        val env0 =
+            base_environment() |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
+        val (env, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in
@@ -458,35 +484,53 @@ fun hmakefile_data HOLDIR =
 
 fun clean0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans} ;
+  clean_dir default_ofns {extra_cleans = extra_cleans} ;
   includes
 end
 
 fun cleanAll0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
+  open Holmake_tools
 in
-  Holmake_tools.clean_dir {extra_cleans = extra_cleans};
-  Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-  Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+  clean_dir default_ofns {extra_cleans = extra_cleans};
+  clean_depdir {depdirname = ".HOLMK"};
+  clean_depdir {depdirname = ".hollogs"};
   includes
 end
 
 fun cleanForReloc0 HOLDIR =
   let
     val {includes,holheap,...} = hmakefile_data HOLDIR
+    open Holmake_tools
   in
-    Holmake_tools.clean_forReloc {holheap = holheap};
-    Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
-    Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+    clean_forReloc {holheap = holheap};
+    clean_depdir {depdirname = ".HOLMK"};
+    clean_depdir {depdirname = ".hollogs"};
     includes
   end
 
+fun maybe_gmakeclean dirname owise () =
+    if OS <> "winNT" then
+      let
+        val gnumake = 
+            case List.rev (#arcs (OS.Path.fromString dirname)) of
+              "minisat" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | "zc2hs" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
+            | _ => false
+      in
+        if gnumake then (Systeml.systeml [Systeml.GNUMAKE, "clean"]; [])
+        else owise()
+      end
+    else owise()
 
-fun clean HOLDIR dirname = moveTo dirname (fn () => clean0 HOLDIR)
-fun cleanAll HOLDIR dirname = moveTo dirname (fn () => cleanAll0 HOLDIR)
+fun clean HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => clean0 HOLDIR))
+fun cleanAll HOLDIR dirname =
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanAll0 HOLDIR))
 fun cleanForReloc HOLDIR dirname =
-  moveTo dirname (fn () => cleanForReloc0 HOLDIR)
+    moveTo dirname (maybe_gmakeclean dirname (fn () => cleanForReloc0 HOLDIR))
 
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
@@ -556,7 +600,7 @@ fun full_clean (SRCDIRS:(string*int) list)  f =
 
 fun app_sml_files f {dirname} =
   let
-    open OS.FileSys OS.Path
+    open HOLFileSys OS.Path
     val dstrm = openDir dirname
     fun recurse () =
       case readDir dstrm of
@@ -574,9 +618,9 @@ fun check_against executable s = let
   open Time
   val p = if OS.Path.isRelative s then fullPath [HOLDIR, s]
           else s
-  val cfgtime = FileSys.modTime p
+  val cfgtime = HOLFileSys.modTime p
 in
-  if FileSys.modTime executable < cfgtime then
+  if HOLFileSys.modTime executable < cfgtime then
     (warn ("WARNING! WARNING!");
      warn ("  The executable "^executable^" is older than " ^ s ^ ";");
      warn ("  this suggests you should reconfigure the system.");
@@ -635,14 +679,14 @@ end;
 
 fun Gnumake dir =
   if SYSTEML [GNUMAKE] then true
-  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
+  else (WARN ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
 exception BuildExit
 fun build_dir Holmake selftest_level (dir, regulardir) = let
   val _ = if selftest_level >= regulardir then ()
           else raise BuildExit
-  val _ = OS.FileSys.chDir dir
+  val _ = HOLFileSys.chDir dir
   val truncdir = if String.isPrefix HOLDIR dir then
                    String.extract(dir, size HOLDIR + 1, NONE)
                    (* +1 to drop directory slash after holdir *)
@@ -673,9 +717,9 @@ in
                               (fullPath [HOLDIR, "src","HolSat","sat_solvers",
                                          "minisat", "DELTHISminisat.exe"])
 	 | other => if not (Gnumake dir) then
-			print(String.concat
-				  ["\nMiniSat has NOT been built!! ",
-				   "(continuing anyway).\n\n"])
+			WARN (String.concat
+				["\nMiniSat has NOT been built!! ",
+				 "(continuing anyway).\n\n"])
                     else ()
     end
   | "zc2hs" => let
@@ -699,7 +743,7 @@ handle OS.SysErr(s, erropt) =>
 fun write_theory_graph () =
   case Systeml.DOT_PATH of
       SOME dotexec =>
-      if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
+      if not (HOLFileSys.access (dotexec, [HOLFileSys.A_EXEC])) then
         (* of course, this will likely be the case on Windows *)
         warn ("Can't see dot executable at "^dotexec^"; not generating \
               \theory-graph\n\
@@ -769,7 +813,7 @@ end
 
 fun build_help graph =
  let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")
-     val _ = OS.FileSys.chDir dir
+     val _ = HOLFileSys.chDir dir
 
      (* builds the documentation tools called below *)
      val _ = if ML_SYSNAME = "poly" then ignore (Poly_compilehelp())
@@ -779,9 +823,9 @@ fun build_help graph =
      val doc2html = fullPath [dir,"Doc2Html.exe"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
      val htmlpath = fullPath [docpath, "HTML"]
-     val _        = if (OS.FileSys.isDir htmlpath handle _ => false) then ()
+     val _        = if (HOLFileSys.isDir htmlpath handle _ => false) then ()
                     else (print ("Creating directory "^htmlpath^"\n");
-                          OS.FileSys.mkDir htmlpath)
+                          HOLFileSys.mkDir htmlpath)
      val cmd1     = [doc2html, docpath, htmlpath]
      val cmd2     = [fullPath [dir,"makebase.exe"]]
      val _ = print "Generating ASCII versions of Docfiles...\n"
@@ -802,10 +846,10 @@ fun build_help graph =
 
 fun cleanDirP P d =
   let
-    val dstrm = OS.FileSys.openDir d
+    val dstrm = HOLFileSys.openDir d
     fun getPs acc =
-      case OS.FileSys.readDir dstrm of
-          NONE => (OS.FileSys.closeDir dstrm; acc)
+      case HOLFileSys.readDir dstrm of
+          NONE => (HOLFileSys.closeDir dstrm; acc)
         | SOME f => if P f then getPs (f::acc)
                     else getPs acc
     val Ps = getPs []
@@ -830,8 +874,8 @@ fun delete_heaps() = let
   (* Holmake --relocbuild has already happened in all directories, so can
      skip the implicit need to recurse into all directories and remove the
      .HOLMK and .hollogs directories. *)
-  val cd = OS.FileSys.getDir()
-  val _ = OS.FileSys.chDir HOLDIR
+  val cd = HOLFileSys.getDir()
+  val _ = HOLFileSys.chDir HOLDIR
   fun process_dline s =
     let
       val fs = internal_functions.wildcard s
@@ -840,7 +884,7 @@ fun delete_heaps() = let
     end
 in
   List.app process_dline deletes ;
-  OS.FileSys.chDir cd
+  HOLFileSys.chDir cd
 end
 
 fun process_cline () =
@@ -868,11 +912,12 @@ fun process_cline () =
             end
       in
         full_clean SRCDIRS per_dir_action;
+        safedelete Systeml.build_log_file;
         post_action();
         Process.exit Process.success
       end
     | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
-              build_theory_graph, jobcount, relocbuild, debug,
+              build_theory_graph, jobcount, relocbuild, debug, keepgoing,
               selftest_level} =>
       let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
@@ -886,6 +931,7 @@ fun process_cline () =
            debug = debug,
            extra = {SRCDIRS = SRCDIRS},
            jobcount = jobcount,
+           keepgoing = keepgoing,
            multithread = multithread,
            relocbuild = relocbuild,
            selftest_level = selftest_level
@@ -902,6 +948,64 @@ fun make_buildstamp () =
     closeOut stamp_stream
 end
 
+local open OS.FileSys
+in
+fun dirchildren d =
+    let val dstrm = openDir d
+        fun recurse A =
+            case readDir dstrm of
+                NONE => A
+              | SOME f =>
+                let val p = OS.Path.concat(d,f)
+                in
+                  if not (isLink p) andalso isDir p andalso
+                     access(p, [A_READ, A_EXEC])
+                  then
+                    recurse (p::A)
+                  else recurse A
+                end
+                handle e =>
+                       die ("build.dirchildren(" ^ d ^ ", " ^ f ^ "): "^
+                            General.exnMessage e)
+    in
+      recurse [] before closeDir dstrm
+    end
+    handle e => die ("build.dirchildren(" ^ d ^ "): " ^ General.exnMessage e)
+end
+
+fun preorder_directory_recurse f d =
+    let
+      fun recurse worklist =
+          case worklist of
+              [] => ()
+            | []::ds => recurse ds
+            | (d::ds)::ds' => (
+                f d;
+                recurse (dirchildren d :: ds :: ds')
+              )
+    in
+      recurse [[d]]
+    end handle e => die ("build.preorder_directory_recurse: " ^
+                         General.exnMessage e)
+
+fun remove_holmkdir parent =
+    let
+      open OS.FileSys
+      val dir = OS.Path.concat(parent, ".HOLMK")
+    in
+      if access (dir, [A_READ, A_EXEC]) andalso not (isLink dir) andalso
+         isDir dir
+      then
+        (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) dir;
+         HOLFileSys.rmDir dir)
+      else ()
+    end handle e => die ("build.remove_holmkdir(" ^ parent ^ "): " ^
+                         General.exnMessage e)
+
+fun remove_all_holmkdirs () =
+    preorder_directory_recurse remove_holmkdir HOLDIR
+
+
 val logdir = Systeml.build_log_dir
 val logfilename = Systeml.build_log_file
 val hostname = if Systeml.isUnix then
@@ -912,7 +1016,7 @@ val hostname = if Systeml.isUnix then
                else "" (* what to do under windows? *)
 
 fun setup_logfile () = let
-  open OS.FileSys
+  open HOLFileSys
   fun ensure_dir () =
       if access (logdir, []) then
         isDir logdir
@@ -932,39 +1036,34 @@ end handle IO.Io _ => warn "Couldn't set up build-logs"
 
 fun finish_logging buildok = let
 in
-  if OS.FileSys.access(logfilename, []) then let
+  if HOLFileSys.access(logfilename, []) then let
       open Date
       val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
       val newname0 = hostname^timestamp
       val newname = (if buildok then "" else "bad-") ^ newname0
     in
-      OS.FileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
+      HOLFileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
     end
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
-fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir = let
-  val hmstatus = sysl HOLMAKE ("--qof" :: extra_args())
-in
-  if isSuccess hmstatus then
-    if selftest_level > 0 andalso
-       OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
-    then
-      (print "Performing self-test...\n";
-       if SYSTEML [dir ^ "/selftest.exe", Int.toString selftest_level]
-       then
-         print "Self-test was successful\n"
-       else
-         die ("Selftest failed in directory "^dir))
-    else
-      ()
-  else let
-      val info = analyse_failstatus hmstatus
+fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir =
+    let
+      fun cons h t = h::t
+      val args = (if selftest_level > 0 then
+                    cons ("HOLSELFTESTLEVEL=" ^ Int.toString selftest_level)
+                  else (fn x => x))
+                 ("HOLBUILD=1" :: "--qof" :: extra_args())
+      val hmstatus = sysl HOLMAKE args
     in
-      die ("Build failed in directory "^dir^
-           (if info <> "" then " ("^info^")" else ""))
+      if isSuccess hmstatus then ()
+      else let
+        val info = analyse_failstatus hmstatus
+      in
+        die ("Build failed in directory "^dir^
+             (if info <> "" then " ("^info^")" else ""))
+      end
     end
-end
 
 val () = OS.Process.atExit (fn () => finish_logging false)
         (* this will do nothing if finish_logging happened normally first;

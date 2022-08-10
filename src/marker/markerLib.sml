@@ -78,21 +78,27 @@ fun Cong th = EQ_MP (SYM(SPEC (concl th) markerTheory.Cong_def)) th;
 
 fun unCong th = PURE_REWRITE_RULE [Cong_def] th;
 
-fun Excl nm =
+fun genmktagged th nm =
     let val v = mk_var(nm, alpha)
     in
-      EQT_ELIM (SPEC v markerTheory.Exclude_def)
+      EQT_ELIM (SPEC v th)
     end
+val Excl = genmktagged markerTheory.Exclude_def
+val FRAG = genmktagged markerTheory.FRAG_def
+
 
 fun mk_marker_const nm = prim_mk_const{Thy = "marker", Name = nm}
 val Excl_t = mk_marker_const "Exclude"
-fun destExcl th =
+val FRAG_t = mk_marker_const "FRAG"
+fun gendest_tagged t th =
     let val c = concl th
         val f = rator c
     in
-      if same_const Excl_t f then SOME (#1 (dest_var (rand c)))
+      if same_const t f then SOME (#1 (dest_var (rand c)))
       else NONE
     end handle HOL_ERR _ => NONE
+val destExcl = gendest_tagged Excl_t
+val destFRAG = gendest_tagged FRAG_t
 
 val Req0_t = mk_marker_const "Req0"
 val Req0_th = EQT_ELIM markerTheory.Req0_def
@@ -313,6 +319,27 @@ fun ABBRS_THEN thl_tac thl =
 val MK_ABBREVS_OLDSTYLE =
     RULE_ASSUM_TAC (fn th => (th |> DeAbbrev |> SYM) handle HOL_ERR _ => th)
 
+(* ----------------------------------------------------------------------
+    Abbreviation Tidying
+
+    Abbreviations should be of the form
+
+       Abbrev(v = e)
+
+    with v a variable. The tidying process eliminates assumptions that
+    have Abbrev present at the top with an argument that is not of the
+    right shape. As simplification sees abbreviation equations as
+    rewrites of the form e = v (replacing occurrences of e with the
+    abbreviation), the tidying process will flip equations to keep
+    this "orientation".
+   ---------------------------------------------------------------------- *)
+
+fun TIDY_ABBREV_CONV t =
+    if is_malformed_abbrev t then
+      (REWR_CONV markerTheory.Abbrev_def THENC TRY_CONV (REWR_CONV EQ_SYM_EQ)) t
+    else ALL_CONV t
+val TIDY_ABBREV_RULE = CONV_RULE TIDY_ABBREV_CONV
+val TIDY_ABBREVS = RULE_ASSUM_TAC TIDY_ABBREV_RULE
 
 
 (*---------------------------------------------------------------------------*)
@@ -328,10 +355,8 @@ val DEST_LABELS = CONV_RULE DEST_LABELS_CONV
 
 val DEST_LABELS_TAC = CONV_TAC DEST_LABELS_CONV THEN RULE_ASSUM_TAC DEST_LABELS
 
-fun lb s = mk_var(s, label_ty);
-fun LB s = REFL (lb s)
 
-fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [lb s, concl th] label_def)) th
+fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [mk_label_var s, concl th] label_def)) th
 
 fun ASSUME_NAMED_TAC s bth : tactic = ASSUME_TAC (MK_LABEL(s, bth))
 
@@ -352,7 +377,7 @@ in
 end;
 
 fun LABEL_ASSUM s ttac (asl, w) =
-   ttac (find_labelled_assumption (LB s) asl) (asl, w)
+   ttac (find_labelled_assumption (L s) asl) (asl, w)
 
 (*---------------------------------------------------------------------------*)
 (* LABEL_X_ASSUM is almost identical to LABEL_ASSUM. But it is not applied   *)
@@ -393,6 +418,164 @@ in
   map ASSUME other_asms @ wanted_lab_assums @ realths
 end
 
+fun matching_asm th t =
+    let
+      val labname = dest_label_ref th
+    in
+      #1 (dest_label t) = labname
+    end handle HOL_ERR _ => false
+
+fun has_label_from lrefs t =
+    List.exists (C matching_asm t) lrefs
+
+fun LLABEL_RES_THEN thltac thl (g as (asl,w)) =
+    let
+      val (labelrefs, realths) = List.partition is_label_ref thl
+      val (wanted_labelled_asms, rest) =
+           List.partition (has_label_from labelrefs) asl
+    in
+      thltac (map (DEST_LABEL o ASSUME) wanted_labelled_asms @ realths) g
+    end
+
+
 fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
+
+(* ----------------------------------------------------------------------
+    using : tactic * thm -> tactic
+
+    using th tac stashes theorem th in the goal so that tactic tac can
+    use it if desired. If the tactic terminates, the stashed theorem
+    is removed.
+
+    Stashing is done by adding an assumption encoding the name of the
+    theorem to the assumption list. This will cause mess-ups if you
+    attempt something like
+
+       pop_assum foo using bar
+
+    so, don't do that.
+
+    This can be nested, with multiple theorems stashed at once; the
+    cleanup looks for the exact using theorem that it stashed when it
+    removes it and does so with UNDISCH_THEN. So, if there are
+    multiples of the same name, the most recent will be taken.
+
+   ---------------------------------------------------------------------- *)
+
+fun tac using th =
+    let
+      val uth = MK_USING th
+    in
+      ASSUME_TAC uth >>
+      tac >>
+      UNDISCH_THEN (concl uth) (K ALL_TAC)
+    end
+
+fun usingA tac th = tac using th
+
+fun loc2thm loc =
+    case loc of
+        DB.Local s => (valOf (DB.local_thm s)
+                       handle Option => raise ERR "loc2thm" "No such theorem")
+      | DB.Stored {Name,Thy} =>
+        DB.fetch Thy Name
+        handle HOL_ERR _ => raise ERR "loc2thm" "No such theorem"
+
+
+fun maybe_using gen ttac (g as (asl,w)) =
+    case asl of
+        h::_ => if is_using h then ttac (DEST_USING (ASSUME h)) g
+                else MAP_FIRST ttac (gen()) g
+      | _ => MAP_FIRST ttac (gen()) g
+
+(* ----------------------------------------------------------------------
+    hiding assumptions
+   ---------------------------------------------------------------------- *)
+
+val hidec = prim_mk_const{Thy = "marker", Name = "hide"}
+val sv = mk_var("s", bool)
+val tv = mk_var("t", bool)
+
+fun hide_pp (tyg,tmg) backend printer ppfns gravs depth t =
+    let
+      open term_pp_types term_pp_utils smpp
+      val (f,xs) = strip_comb t
+      val _ = same_const f hidec andalso length xs = 2 orelse
+              raise UserPP_Failed
+      val (vname,_) = dest_var (hd xs) handle HOL_ERR _ => raise UserPP_Failed
+      val {add_string, ublock, add_break, ...} = ppfns:ppstream_funs
+      fun syspr t =
+          printer { gravs = gravs, depth = decdepth depth, binderp = false } t
+    in
+      ublock PP.CONSISTENT 2 (
+        add_string "HIDDEN:" >> add_break(1, 0) >>
+        add_string vname
+      )
+    end
+
+fun install_hidepp() =
+    Parse.temp_add_user_printer ("hide-printer", list_mk_comb(hidec, [sv,tv]),
+                                 hide_pp)
+val _ = install_hidepp()
+fun remove_hidepp() =
+    ignore (Parse.temp_remove_user_printer "hide-printer")
+
+fun mk_hide s t = list_mk_comb(hidec, [mk_var(s,bool), t])
+fun MK_HIDE s th =
+    EQ_MP (SYM (SPECL [mk_var(s,bool), concl th] hide_def)) th
+val UNHIDE = CONV_RULE (REWR_CONV hide_def)
+
+fun hide_tac s th (asl,w) =
+    ([(asl @ [mk_hide s (concl th)], w)],
+     fn ths => PROVE_HYP (MK_HIDE s th) (hd ths))
+
+fun dest_hide t =
+    let val (f,xs) = strip_comb t
+        val _ = same_const f hidec andalso length xs = 2 orelse
+                raise mk_HOL_ERR "hide" "dest_hide" "Not a hide term"
+        val (s,_) = dest_var (hd xs)
+                    handle HOL_ERR _ => raise mk_HOL_ERR "hide"
+                                              "dest_hide"
+                                              "First argument not a variable"
+    in
+      (s,hd (tl xs))
+    end
+
+val is_hide = can dest_hide
+
+fun unignoring_hide f x = unignoringc hidec f x
+
+fun unhide_tac s =
+    let fun do1 th =
+            case total dest_hide (concl th) of
+                NONE => th
+              | SOME (s',_) => if s' = s then CONV_RULE (REWR_CONV hide_def) th
+                               else th
+    in
+      unignoring_hide (RULE_ASSUM_TAC do1)
+    end
+
+fun hide_assum s ttac =
+    first_x_assum (fn th => ttac th THEN hide_tac s th)
+
+fun unhide_assum0 extractor k s ttac =
+    let
+      fun find th0 =
+          case total dest_hide (concl th0) of
+              NONE => NO_TAC
+            | SOME (s', _) => if s = s' then
+                                let val th = UNHIDE th0
+                                in
+                                  ttac th THEN k th
+                                end
+                              else NO_TAC
+    in
+      extractor find
+    end
+
+val unhide_assum = unhide_assum0 first_x_assum assume_tac
+val unhide_x_assum = unhide_assum0 first_x_assum (K all_tac)
+val use_hidden_assum = unhide_assum0 first_assum (K all_tac)
+
 
 end

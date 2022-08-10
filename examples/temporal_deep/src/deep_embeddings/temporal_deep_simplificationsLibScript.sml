@@ -1,64 +1,34 @@
 open HolKernel Parse boolLib bossLib;
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
-  "infinite_pathTheory", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "rich_listTheory", "pairTheory",
-  "numLib", "listLib", "rltlTheory", "computeLib", "relationTheory",
-  "tuerk_tacticsLib", "congLib", "Travrules", "congToolsLibTheory"];
-*)
-
-open HolKernel boolLib bossLib
-     full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory symbolic_semi_automatonTheory listTheory pred_setTheory
      rich_listTheory pairTheory numLib listLib rltlTheory computeLib relationTheory
      tuerk_tacticsLib congLib Travrules congToolsLibTheory
-open Sanity;
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
+open Sanity;
 
 val _ = new_theory "temporal_deep_simplificationsLib";
 val _ = ParseExtras.temp_loose_equality()
 
-val PROP_LOGIC_EQUIVALENT_LIST_AS_SET_def =
-  Define `PROP_LOGIC_EQUIVALENT_LIST_AS_SET =
-          LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT`
+val PROP_LOGIC_EQUIVALENT_LIST_AS_SET_def = Define
+   `PROP_LOGIC_EQUIVALENT_LIST_AS_SET =
+         LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT`;
 
-val PROP_LOGIC_EQUIVALENT_REFL =
-  store_thm (
-    "PROP_LOGIC_EQUIVALENT_REFL",
+Theorem PROP_LOGIC_EQUIVALENT_REFL :
+    !x. PROP_LOGIC_EQUIVALENT x x
+Proof
+    SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def]
+QED
 
-    ``!x. PROP_LOGIC_EQUIVALENT x x``,
+Theorem PROP_LOGIC_EQUIVALENT_TRANS :
+    !x y z. PROP_LOGIC_EQUIVALENT x y /\ PROP_LOGIC_EQUIVALENT y z ==>
+            PROP_LOGIC_EQUIVALENT x z
+Proof
+    SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def]
+QED
 
-    SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def]);
-
-val PROP_LOGIC_EQUIVALENT_TRANS =
-  store_thm (
-    "PROP_LOGIC_EQUIVALENT_TRANS",
-
-    ``!x y z. (PROP_LOGIC_EQUIVALENT x y /\ PROP_LOGIC_EQUIVALENT y z) ==>
-              PROP_LOGIC_EQUIVALENT x z``,
-
-    SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def]);
-
-
-val PROP_LOGIC_EQUIVALENT_STATE =
-  Define `
-    PROP_LOGIC_EQUIVALENT_STATE s p1 p2 =
-    (P_SEM s p1 = P_SEM s p2)`
-
+val PROP_LOGIC_EQUIVALENT_STATE = Define
+   `PROP_LOGIC_EQUIVALENT_STATE s p1 p2 = (P_SEM s p1 = P_SEM s p2)`;
 
 val PROP_LOGIC_EQUIVALENT_congs =
   store_thm (
@@ -276,26 +246,10 @@ val PROP_LOGIC_EQUIVALENT_dnf_rewrites =
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def, P_SEM_THM] THEN
     METIS_TAC[]);
 
-
 val LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT_def =
     Define
      `LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT =
       LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT`;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 val XPROP_LOGIC_EQUIVALENT_LIST_AS_SET_def =
   Define `XPROP_LOGIC_EQUIVALENT_LIST_AS_SET =
@@ -581,36 +535,6 @@ val XPROP_LOGIC_EQUIVALENT_dnf_rewrites =
 
     SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def, XP_SEM_THM] THEN
     METIS_TAC[]);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 val LTL_EQUIVALENT_REFL =
   store_thm (
@@ -955,16 +879,6 @@ val LTL_EQUIVALENT_true_false_rewrites =
     ASM_SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_THM, FORALL_AND_THM, GREATER_EQ, LTL_UNTIL_def, LTL_PUNTIL_def, LTL_BEFORE_def, LTL_PBEFORE_def] THEN
     METIS_TAC[]);
 
-
-
-
-
-
-
-
-
-
-
 val LTL_EQUIVALENT_simple_homogeneous_conj_disj_rewrites =
   prove (
     ``(*LTL_NEXT*)
@@ -1046,17 +960,12 @@ val LTL_EQUIVALENT_simple_homogeneous_conj_disj_rewrites =
       LTL_BEFORE_def] THEN
     METIS_TAC[]);
 
-
-
-val LTL_SEM_TIME_and_or_not =
-  prove (
-    ``!t v l1 l2. ((LTL_SEM_TIME t v (LTL_NOT l1)) = ~(LTL_SEM_TIME t v l1)) /\
-                  ((LTL_SEM_TIME t v (LTL_AND (l1, l2))) = ((LTL_SEM_TIME t v l1) /\ (LTL_SEM_TIME t v l2))) /\
-                  ((LTL_SEM_TIME t v (LTL_OR (l1, l2))) = ((LTL_SEM_TIME t v l1) \/ (LTL_SEM_TIME t v l2)))``,
-
-        SIMP_TAC std_ss [LTL_SEM_THM]);
-
-
+val LTL_SEM_TIME_and_or_not = prove (
+  ``!t v l1 l2.
+      (LTL_SEM_TIME t v (LTL_NOT l1) <=> ~(LTL_SEM_TIME t v l1)) /\
+      (LTL_SEM_TIME t v (LTL_AND (l1, l2)) <=> LTL_SEM_TIME t v l1 /\ LTL_SEM_TIME t v l2) /\
+      (LTL_SEM_TIME t v (LTL_OR (l1, l2)) <=> LTL_SEM_TIME t v l1 \/ LTL_SEM_TIME t v l2)``,
+    SIMP_TAC std_ss [LTL_SEM_THM]);
 
 val LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites =
   prove (

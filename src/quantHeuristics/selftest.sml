@@ -13,50 +13,18 @@ val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
-fun test_conv s conv do_stop quiet (t, r_opt) =
-let
-    open PPBackEnd Parse
-    val lq = UnicodeChars.ldquo
-    val _ = print (if quiet then lq else "Testing "^s^" "^lq);
-    val _ = print_term t;
-    val _ = print (UnicodeChars.rdquo ^ "\n   ");
-    val ct = Timer.startCPUTimer();
-    val thm_opt = SOME (conv t) handle Interrupt => raise Interrupt
-                                     | _ => NONE;
-
-    val ok = if not (isSome r_opt) then not (isSome thm_opt) else
-             isSome thm_opt andalso
-             let
-                val thm_t = concl (valOf thm_opt);
-             in
-                is_eq thm_t andalso (Term.term_eq (lhs thm_t) t) andalso (aconv (rhs thm_t) (valOf r_opt))
-             end
-    val quiet = quiet andalso ok
-    val _ = if ok then
-               print_with_style [FG Green] "OK "
-            else
-               (print_with_style [FG OrangeRed] "FAILED ")
-
-    val d_time = #usr (Timer.checkCPUTimer ct);
-    val _ = print ((Time.toString d_time)^ " s");
-    val _ = if quiet then () else print ("\n   ");
-
-    val _ = if quiet then () else
-       let
-          val _ = print "---> ";
-          val _ = if isSome thm_opt then (print_thm (valOf thm_opt);print "\n")
-                  else print "-\n"
-          val _ = if (not ok) then
-                     (print "   EXPECTED ";
-                      if isSome r_opt then (print "``";print_term (valOf r_opt);print "``\n")
-                      else print "-\n")
-                  else ()
-       in () end
-    val _ = print "\n";
-    val _ = if (not ok andalso do_stop) then Process.exit Process.failure else ();
-in
-    ()
-end;
+fun test_conv s conv (t, r_opt) =
+    let
+      fun msg t = s ^ " " ^ UnicodeChars.ldquo ^ term_to_string t ^
+                  UnicodeChars.rdquo
+    in
+      case r_opt of
+          SOME result => testutils.convtest (msg t, conv, t, result)
+        | NONE => testutils.shouldfail {
+                   checkexn = fn Interrupt => false | _ => true,
+                   printarg = msg, printresult = thm_to_string, testfn = conv
+                 } t
+    end
 
 val hard_fail = false;
 val hard_fail = true;
@@ -125,20 +93,20 @@ val qh_testCases =
    (mk_eq_disj_ex 40, SOME T)];
 
 val qh_test = test_conv "QUANT_INSTANTIATE_CONV []" (QUANT_INSTANTIATE_CONV [])
-val _ = map (qh_test hard_fail quiet) qh_testCases;
+val _ = map qh_test qh_testCases;
 
 
 (******************************************************************************)
 (* QUANT_CONV tests                                                           *)
 (******************************************************************************)
 
-val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])])
    (``!z. !x. (x = 2:num) ==> P(x, z)``, SOME ``!z. P(2, z)``)
 
-val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])])
    (``!z. ?x. (x = 2:num) /\ P(x, z)``, SOME ``!z. P(2, z)``)
 
-val _ = test_conv "INST_QUANT_CONV [(\"x\", `3:num`, [])]" (INST_QUANT_CONV [("x", `3:num`, [])]) hard_fail quiet
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `3:num`, [])]" (INST_QUANT_CONV [("x", `3:num`, [])])
    (``!z. ?x. (x = 2:num) /\ P(x, z)``, NONE)
 
 (*
@@ -199,7 +167,7 @@ val qh_testCases_pair =
     SOME ``!a1:'a t3:'b a2:'c. a /\ (\ (a1:'a, t3:'b, a2:'c). P a1 a2 t3) (a1,t3,a2) /\ b (a1,t3,a2)``),
    (``?v:'a. (v,X:'b) = (a,b)``, SOME ``X:'b = b``)];
 
-val _ = map (qh_test_pair hard_fail quiet) qh_testCases_pair;
+val _ = map qh_test_pair qh_testCases_pair;
 
 
 
@@ -218,7 +186,7 @@ val qh_testCases_option =
    (``?x. IS_NONE x``, SOME T),
    (``!x. IS_NONE x``, SOME F)];
 
-val _ = map (qh_test_option hard_fail quiet) qh_testCases_option;
+val _ = map qh_test_option qh_testCases_option;
 
 
 (******************************************************************************)
@@ -233,31 +201,35 @@ val qh_testCases_num =
    (``!x:num. x = y``, SOME F),
    (``!x:num. y = x``, SOME F)];
 
-val _ = map (qh_test_num hard_fail quiet) qh_testCases_num;
+val _ = map qh_test_num qh_testCases_num;
 
 
 (******************************************************************************)
 (* LIST tests                                                                 *)
 (******************************************************************************)
 
-val qh_test_list = test_conv "QUANT_INSTANTIATE_CONV [list_qp]" (QUANT_INSTANTIATE_CONV [list_qp])
+val qh_test_list =
+    test_conv "QUANT_INSTANTIATE_CONV [list_qp]"
+              (QUANT_INSTANTIATE_CONV [list_qp])
 
 val qh_testCases_list =
   [(``!l:'a list. ~(NULL l) ==> P l``, SOME ``!l_h l_t. P (l_h::l_t)``),
    (``!x. x = y::ys``, SOME F),
    (``!x. x = []``, SOME F),
    (``?l. ~(NULL l)``, SOME T),
-   (``?x:'a xs. QQ /\ (x::xs = y::ys) /\ P /\ Q xs``, SOME ``QQ /\ P /\ Q (ys:'a list)``),
+   (``?x:'a xs. QQ /\ (x::xs = y::ys) /\ P /\ Q xs``,
+    SOME ``QQ /\ P /\ Q (ys:'a list)``),
    (``?x. PP ==> ~(x = []) /\ P x``,
     SOME ``?x_h x_t:'a list. PP ==> P (x_h::x_t)``)];
-val _ = map (qh_test_list hard_fail quiet) qh_testCases_list;
+val _ = map qh_test_list qh_testCases_list;
 
 
 (******************************************************************************)
 (* Option tests                                                               *)
 (******************************************************************************)
 
-val qh_test_option = test_conv "QUANT_INSTANTIATE_CONV [option_qp]" (QUANT_INSTANTIATE_CONV [option_qp])
+val qh_test_option = test_conv "QUANT_INSTANTIATE_CONV [option_qp]"
+                               (QUANT_INSTANTIATE_CONV [option_qp])
 
 val qh_testCases_option =
   [(``!x:'a option. IS_SOME x ==> P x``, SOME ``!x_x':'a. P (SOME x_x')``),
@@ -268,13 +240,14 @@ val qh_testCases_option =
    (``?x. IS_NONE x``, SOME T),
    (``!x. IS_NONE x``, SOME F)];
 
-val _ = map (qh_test_option hard_fail quiet) qh_testCases_option;
+val _ = map qh_test_option qh_testCases_option;
 
 (******************************************************************************)
 (* SUM tests                                                                  *)
 (******************************************************************************)
 
-val qh_test_sum = test_conv "QUANT_INSTANTIATE_CONV [sum_qp]" (QUANT_INSTANTIATE_CONV [sum_qp])
+val qh_test_sum = test_conv "QUANT_INSTANTIATE_CONV [sum_qp]"
+                            (QUANT_INSTANTIATE_CONV [sum_qp])
 
 val qh_testCases_sum =
   [(``!x:'a + 'b. ISL x ==> P x``, SOME ``!l. P ((INL l):('a + 'b))``),
@@ -289,49 +262,64 @@ val qh_testCases_sum =
    (``?x. ISR x``, SOME T),
    (``!x. ISR x``, SOME F)];
 
-val _ = map (qh_test_sum hard_fail quiet) qh_testCases_sum;
+val _ = map qh_test_sum qh_testCases_sum;
 
 (******************************************************************************)
 (* Context tests                                                              *)
 (******************************************************************************)
 
-val qh_test_direct_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[direct_context_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[direct_context_qp]) [])
+val qh_test_direct_context =
+    test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[direct_context_qp]) []"
+              (SIMP_CONV (bool_ss++QUANT_INST_ss[direct_context_qp]) [])
 
 val qh_testCases_direct_context =
   [(``(P x) ==> !x. ~(P x) /\ Q x``, SOME ``~(P x)``),
    (``~(P x) ==> !x. P x /\ Q x``, SOME ``(P (x:'a)):bool``),
    (``P x ==> ?x. Q x \/ P x``, SOME ``T``)
-]
+] (* Untested!? *)
 
 
-val qh_test_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) [])
+val qh_test_context =
+    test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) []"
+              (SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) [])
 val qh_testCases_context =
-  [(``(!x. P x ==> (x = 2)) ==> (!x. P x ==> Q x)``, SOME ``(!x. P x ==> (x = 2)) ==> P 2 ==> Q 2``),
+  [(``(!x. P x ==> (x = 2)) ==> (!x. P x ==> Q x)``,
+    SOME ``(!x. P x ==> (x = 2)) ==> P 2 ==> Q 2``),
    (``(!x. Q x ==> P x) /\ Q 2 ==> (?x. P x)``, SOME T)
 ]
 
-val _ = map (qh_test_context hard_fail quiet) qh_testCases_context;
+val _ = map qh_test_context qh_testCases_context;
 
 
-val qh_test_context2 = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) [])
+val qh_test_context2 =
+    test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) []"
+              (SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) [])
 
 val qh_testCases_context2 =
-  [(``(~(P [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_h x_t. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
-   (``(!x. P x ==> ~(x = [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_h x_t. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
-   (``(!x. P x ==> ISR x) ==> (!x. P x ==> Q x)``, SOME ``(!l. ~((P:('a + 'b)-> bool) (INL l))) ==> (!r. P (INR r) ==> (Q:('a + 'b)-> bool) (INR r))``),
-   (``(!x. P x ==> ISL x) ==> (!x. P x ==> Q x)``, SOME ``(!r. ~((P:('a + 'b)-> bool) (INR r))) ==> (!l. P (INL l) ==> (Q:('a + 'b)-> bool) (INL l))``)]
+  [(``(~(P [])) ==> (!x. P x ==> Q x)``,
+    SOME ``¬P [] ⇒ ∀x_h x_t. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
+   (``(!x. P x ==> ~(x = [])) ==> (!x. P x ==> Q x)``,
+    SOME ``¬P [] ⇒ ∀x_h x_t. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
+   (``(!x. P x ==> ISR x) ==> (!x. P x ==> Q x)``,
+    SOME ``(!l. ~((P:('a + 'b)-> bool) (INL l))) ==>
+           (!r. P (INR r) ==> (Q:('a + 'b)-> bool) (INR r))``),
+   (``(!x. P x ==> ISL x) ==> (!x. P x ==> Q x)``,
+    SOME ``(!r. ~((P:('a + 'b)-> bool) (INR r))) ==>
+           (!l. P (INL l) ==> (Q:('a + 'b)-> bool) (INL l))``)]
 
-val _ = map (qh_test_context2 hard_fail quiet) qh_testCases_context2;
+val _ = map qh_test_context2 qh_testCases_context2;
 
 
 (******************************************************************************)
 (* simple tests                                                               *)
 (******************************************************************************)
 
-val qh_test_simple = test_conv "SIMPLE_QUANT_INSTANTIATE_CONV" SIMPLE_QUANT_INSTANTIATE_CONV
+val qh_test_simple =
+    test_conv "SIMPLE_QUANT_INSTANTIATE_CONV" SIMPLE_QUANT_INSTANTIATE_CONV
 
 val qh_testCases_simple =
-  [(``!x. (P x /\ (x = 5) /\ Q x) ==> Z x``, SOME ``(P 5 /\ (5 = 5) /\ Q 5) ==> Z 5``),
+  [(``!x. (P x /\ (x = 5) /\ Q x) ==> Z x``,
+    SOME ``(P 5 /\ (5 = 5) /\ Q 5) ==> Z 5``),
 
    (``?x. (P x /\ (x = 5) /\ Q x)``, SOME ``(P 5 /\ (5 = 5) /\ Q 5)``),
 
@@ -345,25 +333,33 @@ val qh_testCases_simple =
 
    (``?!x. (P x /\ (x = 5) /\ Q x)``, SOME ``(P 5 /\ (5 = 5) /\ Q 5)``),
 
-   (``some x. (P x /\ (x = 5) /\ Q x)``, SOME ``if (P 5 /\ (5 = 5) /\ Q 5) then SOME 5 else NONE``),
+   (``some x. (P x /\ (x = 5) /\ Q x)``,
+    SOME ``if (P 5 /\ (5 = 5) /\ Q 5) then SOME 5 else NONE``),
 
-   (``@x. (P x /\ (x = 5) /\ Q x)``, SOME ``if (P 5 /\ (5 = 5) /\ Q 5) then 5 else @x. F``),
+   (``@x. (P x /\ (x = 5) /\ Q x)``,
+    SOME ``if (P 5 /\ (5 = 5) /\ Q 5) then 5 else @x. F``),
 
 
-   (``!x y z. (P x \/ ~(x = f y z) \/ Q x)``, SOME ``!y:'b z:'c. (P (f y z) \/ ~(f y z = f y z) \/ Q (f y z))``),
+   (``!x y z. (P x \/ ~(x = f y z) \/ Q x)``,
+    SOME ``!y:'b z:'c. (P (f y z) \/ ~(f y z = f y z) \/ Q (f y z))``),
 
 
    (``?x. (P x /\ (5 = x) /\ Q x)``, SOME ``(P 5 /\ (5 = 5) /\ Q 5)``),
-   (``?x. (P x /\ (!z:'a. (5 = x) /\ Q x z))``, SOME ``(P 5 /\ (!z:'a. (5 = 5) /\ Q 5 z))``),
-   (``?x. (P x /\ (?z:'a. (5 = x) /\ Q x z))``, SOME ``(P 5 /\ (?z:'a. (5 = 5) /\ Q 5 z))``),
+   (``?x. (P x /\ (!z:'a. (5 = x) /\ Q x z))``,
+    SOME ``(P 5 /\ (!z:'a. (5 = 5) /\ Q 5 z))``),
+   (``?x. (P x /\ (?z:'a. (5 = x) /\ Q x z))``,
+    SOME ``(P 5 /\ (?z:'a. (5 = 5) /\ Q 5 z))``),
 
    (``!x. ~(P x /\ (5 = x) /\ Q x)``, SOME ``~(P 5 /\ (5 = 5) /\ Q 5)``),
-   (``!x. ~(P x /\ (!z:'a. (5 = x) /\ Q x z))``, SOME ``~(P 5 /\ (!z:'a. (5 = 5) /\ Q 5 z))``),
-   (``!x. ~(P x /\ (?z:'a. (5 = x) /\ Q x z))``, SOME ``~(P 5 /\ (?z:'a. (5 = 5) /\ Q 5 z))``),
+   (``!x. ~(P x /\ (!z:'a. (5 = x) /\ Q x z))``,
+    SOME ``~(P 5 /\ (!z:'a. (5 = 5) /\ Q 5 z))``),
+   (``!x. ~(P x /\ (?z:'a. (5 = x) /\ Q x z))``,
+    SOME ``~(P 5 /\ (?z:'a. (5 = 5) /\ Q 5 z))``),
 
    (``?x. (x, y) = (X:('a # 'b))``, SOME ``(FST X, y) = (X:('a # 'b))``),
    (``?x. ((y, x) = (X:('a # 'b)))``, SOME ``(y, SND X) = (X:('a # 'b))``),
-   (``?x. ((3, (y:'a, x:'b), z:'c)) = X``, SOME ``((3,(y:'a,SND (FST (SND X))),z:'c) = X)``),
+   (``?x. ((3, (y:'a, x:'b), z:'c)) = X``,
+    SOME ``((3,(y:'a,SND (FST (SND X))),z:'c) = X)``),
    (``?x. (3::4::l = y::x::l')``, SOME ``(3::4::l = y::4::l')``),
    (``?l'. (3::4::l = y::x::l')``, SOME ``(3::4::l = y::x::l)``),
    (``?y. (3::4::l = y::x::l')``, SOME ``(3::4::l = 3::x::l')``),
@@ -371,7 +367,7 @@ val qh_testCases_simple =
 ]
 
 
-val _ = map (qh_test_simple hard_fail quiet) qh_testCases_simple;
+val _ = map qh_test_simple qh_testCases_simple;
 
 
 val _ = Process.exit Process.success;

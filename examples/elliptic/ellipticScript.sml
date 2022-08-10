@@ -33,6 +33,7 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "elliptic";
+val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "elliptic";
 val Bug = mlibUseful.Bug;
@@ -253,13 +254,13 @@ val EL_ETA = store_thm
        ++ Q.EXISTS_TAC `0`
        ++ RW_TAC arith_ss [EL, HD])
    ++ RW_TAC arith_ss []
-   ++ Q.PAT_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th])
+   ++ Q.PAT_X_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th])
    ++ EQ_TAC
    >> (RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `SUC n`)
+       ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `SUC n`)
        ++ RW_TAC arith_ss [EL, TL])
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `n < SUC X` MP_TAC
+   ++ Q.PAT_X_ASSUM `n < SUC X` MP_TAC
    ++ Cases_on `n`
    ++ RW_TAC arith_ss [EL, HD, TL]);
 
@@ -389,11 +390,11 @@ val project_sym = store_thm
    >> (RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]
        ++ STRIP_TAC
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `~(p2 = X)` MP_TAC
+       ++ Q.PAT_X_ASSUM `~(p2 = X)` MP_TAC
        ++ RW_TAC resq_ss
             [origin_eq, EVERY_EL, dimension_def, coords_def,
              coord_def, GSPECIFICATION]
-       ++ Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `i`)
+       ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `i`)
        ++ RW_TAC std_ss [field_mult_lzero])
    ++ RW_TAC std_ss []
    ++ Q.EXISTS_TAC `field_inv f c`
@@ -402,7 +403,7 @@ val project_sym = store_thm
    ++ Q.EXISTS_TAC `f`
    ++ Q.EXISTS_TAC `c`
    ++ RW_TAC alg_ss []
-   ++ Q.PAT_ASSUM `!i. i < LENGTH p2 ==> X` (MP_TAC o Q.SPEC `i`)
+   ++ Q.PAT_X_ASSUM `!i. i < LENGTH p2 ==> X` (MP_TAC o Q.SPEC `i`)
    ++ RW_TAC alg_ss []);
 
 val project_trans = store_thm
@@ -443,19 +444,19 @@ val affine_eq = store_thm
    ++ REVERSE EQ_TAC >> RW_TAC std_ss []
    ++ RW_TAC resq_ss
         [dimension_def, coords_def, GSPECIFICATION, nonorigin_alt, coord_def]
-   ++ REPEAT (Q.PAT_ASSUM `~(EVERY P L)` (K ALL_TAC))
+   ++ REPEAT (Q.PAT_X_ASSUM `~(EVERY P L)` (K ALL_TAC))
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ RW_TAC std_ss [EVERY_APPEND, LENGTH_APPEND, LENGTH, GSYM ADD1, EVERY_DEF]
    ++ RW_TAC std_ss [GSYM EL_ETA]
    ++ Suff `c = field_one f`
-   >> (Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `n`)
+   >> (Q.PAT_X_ASSUM `!i. P i` (MP_TAC o Q.SPEC `n`)
        ++ RW_TAC arith_ss [el_append]
        ++ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
        ++ MATCH_MP_TAC EQ_SYM
        ++ match_tac field_mult_lone
-       ++ Q.PAT_ASSUM `EVERY P v1` MP_TAC
+       ++ Q.PAT_X_ASSUM `EVERY P v1` MP_TAC
        ++ RW_TAC std_ss [EVERY_EL])
-   ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `LENGTH v1`)
+   ++ Q.PAT_X_ASSUM `!i. P i` (MP_TAC o Q.SPEC `LENGTH v1`)
    ++ RW_TAC arith_ss [el_append, LENGTH, EL, HD]
    ++ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
    ++ MATCH_MP_TAC EQ_SYM
@@ -726,16 +727,16 @@ val curve_cases = store_thm
    >> METIS_TAC [pairTheory.ABS_PAIR_THM]
    ++ STRIP_TAC
    ++ RW_TAC alg_ss [project_eq]
-   ++ Q.PAT_ASSUM `X IN Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X IN Y` MP_TAC
    ++ RW_TAC resq_ss
         [nonorigin_def, GSPECIFICATION, coords_def, dimension_def,
          vector_space_def, coord_def, GSYM EVERY_EL, EVERY_DEF]
    ++ Cases_on `z1 = field_zero e.field`
    << [RW_TAC std_ss []
        ++ DISJ1_TAC
-       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ RW_TAC alg_ss []
-       ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
+       ++ Q.PAT_X_ASSUM `~(X = Y)` MP_TAC
        ++ RW_TAC resq_ss
             [origin_eq, dimension_def, coords_def, GSPECIFICATION,
              coord_def, GSYM EVERY_EL, EVERY_DEF]
@@ -754,7 +755,7 @@ val curve_cases = store_thm
        ++ STRIP_TAC
        ++ RW_TAC bool_ss [EL, HD, TL, coord_def]
        ++ RW_TAC alg_ss [],
-       Q.PAT_ASSUM `X = Y` (K ALL_TAC)
+       Q.PAT_X_ASSUM `X = Y` (K ALL_TAC)
        ++ DISJ2_TAC
        ++ Q.EXISTS_TAC `field_mult e.field (field_inv e.field z1) x1`
        ++ Know `z1 IN field_nonzero e.field`
@@ -810,7 +811,7 @@ val curve_distinct = store_thm
          dimension_def, coord_def, LENGTH]
    >> (POP_ASSUM MP_TAC
        ++ RW_TAC std_ss [field_zero_one])
-   ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
+   ++ Q.PAT_X_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
    ++ RW_TAC arith_ss [EL, HD, TL, field_mult_rzero, field_zero_one]);
 
 val affine_case = store_thm
@@ -859,13 +860,13 @@ val curve_zero_eq = store_thm
        ++ STRIP_TAC
        ++ Know `~(c = field_zero e.field)`
        >> (STRIP_TAC
-           ++ Q.PAT_ASSUM `~X` MP_TAC
+           ++ Q.PAT_X_ASSUM `~X` MP_TAC
            ++ RW_TAC std_ss []
            ++ Q.EXISTS_TAC `SUC 0`
            ++ RW_TAC std_ss [EL, HD, TL]
            ++ RW_TAC alg_ss [])
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `~?x. P x` MP_TAC
+       ++ Q.PAT_X_ASSUM `~?x. P x` MP_TAC
        ++ RW_TAC std_ss []
        ++ Q.EXISTS_TAC `0`
        ++ RW_TAC alg_ss [EL, HD, TL])
@@ -877,13 +878,13 @@ val curve_zero_eq = store_thm
        ++ STRIP_TAC
        ++ Know `~(c = field_zero e.field)`
        >> (STRIP_TAC
-           ++ Q.PAT_ASSUM `~X` MP_TAC
+           ++ Q.PAT_X_ASSUM `~X` MP_TAC
            ++ RW_TAC std_ss []
            ++ Q.EXISTS_TAC `SUC 0`
            ++ RW_TAC std_ss [EL, HD, TL]
            ++ RW_TAC alg_ss [])
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `~?x. P x` MP_TAC
+       ++ Q.PAT_X_ASSUM `~?x. P x` MP_TAC
        ++ RW_TAC std_ss []
        ++ Q.EXISTS_TAC `SUC (SUC 0)`
        ++ RW_TAC alg_ss [EL, HD, TL])
@@ -947,8 +948,8 @@ val curve_neg_optimized = store_thm
        ++ RW_TAC alg_ss' [])
    ++ Know `~(c = field_zero e.field)`
    >> (STRIP_TAC
-       ++ Q.PAT_ASSUM `X IN nonorigin Y` MP_TAC
-       ++ Q.PAT_ASSUM `!i. P i`
+       ++ Q.PAT_X_ASSUM `X IN nonorigin Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `!i. P i`
             (fn th => MP_TAC (Q.SPEC `0` th)
                       ++ MP_TAC (Q.SPEC `SUC 0` th)
                       ++ MP_TAC (Q.SPEC `SUC (SUC 0)` th))
@@ -958,7 +959,7 @@ val curve_neg_optimized = store_thm
    ++ STRIP_TAC
    ++ Know `~(z1 = field_zero e.field)`
    >> (STRIP_TAC
-       ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
+       ++ Q.PAT_X_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
        ++ RW_TAC std_ss
             [EL, HD, TL, field_entire, field_one_carrier, field_one_zero])
    ++ STRIP_TAC
@@ -970,7 +971,7 @@ val curve_neg_optimized = store_thm
    ++ CONJ_TAC >> RW_TAC alg_ss []
    ++ Q.EXISTS_TAC `z1`
    ++ RW_TAC std_ss [field_mult_carrier]
-   ++ Q.PAT_ASSUM `!i. P i` (fn th => MP_TAC (Q.SPEC `0` th)
+   ++ Q.PAT_X_ASSUM `!i. P i` (fn th => MP_TAC (Q.SPEC `0` th)
                                       ++ MP_TAC (Q.SPEC `SUC 0` th)
                                       ++ MP_TAC (Q.SPEC `SUC (SUC 0)` th))
    ++ RW_TAC std_ss [EL, HD, TL]
@@ -1007,30 +1008,30 @@ val curve_affine = store_thm
    >> METIS_TAC [pairTheory.ABS_PAIR_THM]
    ++ STRIP_TAC
    ++ RW_TAC alg_ss []
-   ++ Q.PAT_ASSUM `X IN Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X IN Y` MP_TAC
    ++ RW_TAC std_ss [nonorigin_alt]
-   ++ Q.PAT_ASSUM `EVERY P L` MP_TAC
+   ++ Q.PAT_X_ASSUM `EVERY P L` MP_TAC
    ++ RW_TAC std_ss [EVERY_DEF]
-   ++ Q.PAT_ASSUM `project X Y = Z` (MP_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ])
+   ++ Q.PAT_X_ASSUM `project X Y = Z` (MP_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ])
    ++ RW_TAC alg_ss [project_eq, project_def]
-   >> (Q.PAT_ASSUM `X = Y` MP_TAC
+   >> (Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ RW_TAC alg_ss' [])
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ RW_TAC resq_ss
         [dimension_def, coords_def, coord_def, LENGTH, GSPECIFICATION]
-   ++ Q.PAT_ASSUM `!i. P i` (fn th => MP_TAC (Q.SPEC `0` th)
+   ++ Q.PAT_X_ASSUM `!i. P i` (fn th => MP_TAC (Q.SPEC `0` th)
                                       ++ MP_TAC (Q.SPEC `SUC 0` th)
                                       ++ MP_TAC (Q.SPEC `SUC (SUC 0)` th))
    ++ RW_TAC std_ss [EL, HD, TL]
    ++ Know `c IN field_nonzero e.field`
    >> (RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `X = field_one Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = field_one Y` MP_TAC
        ++ RW_TAC alg_ss [])
    ++ Know `z1 IN field_nonzero e.field`
    >> (RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `X = field_one Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = field_one Y` MP_TAC
        ++ RW_TAC alg_ss [])
    ++ RW_TAC std_ss []
    ++ Know `c = field_inv e.field z1`
@@ -1043,7 +1044,7 @@ val curve_affine = store_thm
    ++ match_tac field_mult_lcancel_imp
    ++ Q.EXISTS_TAC `e.field`
    ++ Q.EXISTS_TAC `field_exp e.field z1 3`
-   ++ REPEAT (Q.PAT_ASSUM `X = Y` MP_TAC)
+   ++ REPEAT (Q.PAT_X_ASSUM `X = Y` MP_TAC)
    ++ RW_TAC alg_ss' [field_distrib]);
 
 val curve_affine_reduce_3 = store_thm
@@ -1144,7 +1145,7 @@ val curve_neg_carrier = Count.apply store_thm
    ++ ec_cases_on `e` `p`
    ++ RW_TAC resq_ss [curve_neg_def, LET_DEF]
    ++ RW_TAC alg_ss [affine_case]
-   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
+   ++ Q.PAT_X_ASSUM `affine X Y IN Z` MP_TAC
    ++ ASM_SIMP_TAC alg_ss [curve_affine, LET_DEF]
    ++ RW_TAC alg_ss' [field_distrib, field_binomial_2]);
 
@@ -1173,7 +1174,7 @@ val curve_double_carrier = Count.apply store_thm
    ++ Count.apply (RW_TAC (field_div_elim_ss context) [])
    ++ Q.UNABBREV_TAC `d`
    ++ POP_ASSUM (K ALL_TAC)
-   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
+   ++ Q.PAT_X_ASSUM `affine X Y IN Z` MP_TAC
    ++ ASM_SIMP_TAC alg_ss [curve_affine_reduce]
    ++ with_flag (ORACLE_field_poly,true)
       (with_flag (subtypeTools.ORACLE,true)
@@ -1206,8 +1207,8 @@ val curve_add_carrier = Count.apply store_thm
    ++ Count.apply (RW_TAC (field_div_elim_ss context) [])
    ++ Q.UNABBREV_TAC `d`
    ++ POP_ASSUM (K ALL_TAC)
-   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
-   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
+   ++ Q.PAT_X_ASSUM `affine X Y IN Z` MP_TAC
+   ++ Q.PAT_X_ASSUM `affine X Y IN Z` MP_TAC
    ++ ASM_SIMP_TAC alg_ss [curve_affine_reduce]
    ++ SIMP_TAC bool_ss [AND_IMP_INTRO, GSYM CONJ_ASSOC]
    ++ with_flag (ORACLE_field_poly,true)
@@ -1251,12 +1252,12 @@ val curve_add_lneg = store_thm
    ++ RW_TAC alg_ss []
    ++ UNABBREV_ALL_TAC
    ++ RW_TAC alg_ss [affine_case]
-   ++ Q.PAT_ASSUM `X = Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
    ++ RW_TAC alg_ss [affine_case, affine_eq]
    ++ RW_TAC alg_ss [curve_double_def, LET_DEF, affine_case, curve_distinct]
-   ++ Q.PAT_ASSUM `X = Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
    ++ PURE_ONCE_REWRITE_TAC [EQ_SYM_EQ]
-   ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
+   ++ Q.PAT_X_ASSUM `~(X = Y)` MP_TAC
    ++ RW_TAC alg_ss' []);
 
 val context = subtypeTools.add_rewrite2 curve_add_lneg context;

@@ -37,6 +37,24 @@ fun fetch_contents docfile =
 
 fun fetch str = Substring.string (fetch_contents str);
 
+fun safechar c = Char.isAlphaNum c orelse c = #"_"
+
+fun encode_stem s =
+    case String.fields (equal #".") s of
+        [x] => if CharVector.all safechar x then x
+               else "." ^ UC_ASCII_Encode.encode x
+      | [str,id] => if CharVector.all safechar id then s
+                    else str ^ ".." ^ UC_ASCII_Encode.encode id
+      | _ => raise Fail ("Badly formed stem: " ^ s)
+
+fun decode_stem s =
+    case String.fields (equal #".") s of
+        [x] => s
+      | ["", x] => UC_ASCII_Encode.decode x
+      | [str,x] => s
+      | [str, "", x] => str ^ "." ^ UC_ASCII_Encode.decode x
+      | _ => raise Fail ("Badly encoded stem: " ^ s)
+
 (*---------------------------------------------------------------------------
        A HOL ".doc" file has the format
 
@@ -246,10 +264,14 @@ fun name_from_fname fname = let
   val ss0 = full (OS.Path.file fname)
   val (ss1,_) = position ".doc" ss0
 in
-  case tokens (equal #".") (full (Symbolic.tosymb (string ss1))) of
-    [] => raise Fail "Can't happen"
-  | [x] => x
-  | (_::y::_) => y
+  case fields (equal #".") ss1 of
+      [x] => x
+    | [strname, name] => name
+    | [strname, e, encodedname] =>
+      if size e = 0 then
+        full (UC_ASCII_Encode.decode (string encodedname))
+      else raise Fail ("Badly formatted filename: "^fname)
+    | _ => raise Fail ("Badly formatted filename: "^fname)
 end
 
 fun install_doc_part fname sections =
@@ -374,29 +396,40 @@ end
 
 fun structpart dnm =  hd (String.tokens (equal #".") dnm)
 
-(* returns a set of file-names from the given directory that are .doc
-   files *)
+fun decode fname0 =
+    let
+      val fname = stripdoc_suff fname0
+    in
+      case String.fields (equal #".") fname of
+          [x] => ("", x)
+        | [x,y] => (x,y)
+        | [x,"",y] => (x,UC_ASCII_Encode.decode y)
+        | _ => raise Fail "Bad .doc filename: fname0"
+    end
+
+(* returns a map from identifiers (struct.id) to file-names from the
+   given directory that are .doc files *)
 fun find_docfiles dirname = let
   val dirstr = OS.FileSys.openDir dirname
-  fun name_compare(s1,s2) = let
+  fun name_compare((str1, s1),(str2, s2)) = let
     (* names already less .doc suffix *)
     val lower = String.map Char.toLower
-    val s1tok = lower (core_dname (Symbolic.tosymb s1))
-    val s2tok = lower (core_dname (Symbolic.tosymb s2))
+    val s1tok = lower s1
+    val s2tok = lower s2
   in
     case String.compare (s1tok, s2tok) of
-      EQUAL => String.compare(lower (structpart s1), lower (structpart s2))
+      EQUAL => String.compare(lower str1, lower str2)
     | x => x
   end
-  fun insert s t =
-      if valid_doc_name s then Binaryset.add(t, stripdoc_suff s)
-      else t
+  fun insert fname M =
+      if valid_doc_name fname then Binarymap.insert(M, decode fname, fname)
+      else M
   fun loop acc =
       case OS.FileSys.readDir dirstr of
         SOME s => loop (insert s acc)
       | NONE => (OS.FileSys.closeDir dirstr; acc)
 in
-  loop (Binaryset.empty name_compare)
+  loop (Binarymap.mkDict name_compare)
 end
 
 

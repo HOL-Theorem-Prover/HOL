@@ -241,10 +241,16 @@ fun coreTHEN1 info tac1 tac2 g =
 fun op THEN1 (tac1: tactic, tac2: tactic) : tactic = coreTHEN1 "" tac1 tac2
 
 val op >- = op THEN1
-fun op>>-(tac1, n) tac2 =
+fun op>>-(tac1, n) tac2 g =
   coreTHEN1 (" (THEN1 on line " ^ Int.toString n ^ ")") tac1 tac2
+  handle e as HOL_ERR {message,origin_structure,origin_function} =>
+         if is_substring "THEN1" message then raise e
+         else
+           raise HOL_ERR {message = message ^
+                                    " (THEN1 on line "^Int.toString n^")",
+                          origin_function = origin_function,
+                          origin_structure = origin_structure}
 
-fun (f ?? x) = f x
 
 
 (*---------------------------------------------------------------------------
@@ -474,11 +480,11 @@ local val validity_tag = "ValidityCheck"
       fun masquerade goal = Thm.mk_oracle_thm validity_tag goal ;
       fun achieves_concl th (asl, w) = Term.aconv (concl th) w ;
       fun hyps_not_in_goal th (asl, w) =
-        Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
-      fun extra_goals_tbp flag th (asl, w) =
-        List.map (fn eg => (asl, eg))
-          (case flag of true => hyps_not_in_goal th (asl, w)
-            | false => hyp th) ;
+        Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th)
+      fun extra_goals flag th g =
+          if flag then hyps_not_in_goal th g else hyp th
+      fun extra_goals_tbp flag th (g as (asl, w)) =
+        List.map (fn eg => (asl, eg)) (extra_goals flag th g)
 in
 (* GEN_VALIDATE : bool -> tactic -> tactic *)
 fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =
@@ -520,11 +526,57 @@ fun GEN_VALIDATE_LT (flag : bool) (ltac : list_tactic) (gl : goal list) =
       in Lib.map2 (itlist PROVE_HYP) extra_thm_lists (prf thlist) end ;
   in (List.concat extra_goal_lists @ glist, eprf) end ;
 
-end;
 
 val VALIDATE = GEN_VALIDATE true ;
 val VALIDATE_LT = GEN_VALIDATE_LT true ;
 
+(* ----------------------------------------------------------------------
+    CONJ_VALIDATE : tactic -> tactic
+
+    Applies tactic argument to goal and guarantees validity by adding
+    required extra hypotheses to head of new subgoal if only one is
+    generated, or as one extra goal as a big conjunction if there are
+    already multiple goals, or if there are no goals at all.
+   ---------------------------------------------------------------------- *)
+fun sing f [x] = f x
+  | sing f _ = raise ERR "sing" "Bind Error"
+fun CONJ_VALIDATE tac (g as (asl,_)) =
+    let val tacresult as (sgs, vfn) = tac g
+        val thprf = vfn (map masquerade sgs)
+        val _ = if achieves_concl thprf g then ()
+                else raise ERR "CONJ_VALIDATE"
+                           "Invalid tactic - wrong conclusion"
+        val newgoals = extra_goals true thprf g
+        val nextra = length newgoals
+        fun nullvfn th =
+            let val ths = CONJ_LIST nextra th
+            in
+              itlist PROVE_HYP ths thprf
+            end
+        fun singvfn th =
+            let val (th1, th2) = CONJ_PAIR th
+            in
+              itlist PROVE_HYP (CONJ_LIST nextra th1) (vfn [th2])
+            end
+        fun vfn' ths =
+            case ths of
+                [] => raise ERR "CONJ_VALIDATE" "Can't happen"
+              | th1 :: rest =>
+                itlist PROVE_HYP (CONJ_LIST nextra th1) (vfn rest)
+    in
+      if nextra = 0 then tacresult
+      else
+        case sgs of
+            [] => ([(asl, list_mk_conj newgoals)], sing nullvfn)
+          | [(asl',sg)] =>
+            if List.all (C tmem asl) asl' then
+              ([(asl',mk_conj(list_mk_conj newgoals, sg))], sing singvfn)
+            else
+              ((asl, list_mk_conj newgoals) :: sgs, vfn')
+          | _ => ((asl, list_mk_conj newgoals) :: sgs, vfn')
+    end
+
+end (* local *)
 (* could avoid duplication of code in the above by the following
 fun GEN_VALIDATE flag tac =
   ALL_TAC THEN_LT GEN_VALIDATE_LT flag (TACS_TO_LT [tac]) ;
@@ -543,6 +595,18 @@ fun ASSUM_LIST aslfun (g as (asl, _)) = aslfun (map ASSUME asl) g
 fun POP_ASSUM thfun (a :: asl, w) = thfun (ASSUME a) (asl, w)
   | POP_ASSUM   _   ([], _) = raise ERR "POP_ASSUM" "no assum"
 val pop_assum = POP_ASSUM
+
+(* ----------------------------------------------------------------------
+    pop the last assumption and give it to a function
+   ---------------------------------------------------------------------- *)
+
+fun POP_LAST_ASSUM thfun (asl, w) =
+    let
+      val (front, last) = front_last asl
+    in
+      thfun (ASSUME last) (front, w)
+    end handle Empty => raise ERR "POP_LAST_ASSUM" "no assum"
+val pop_last_assum = POP_LAST_ASSUM
 
 (*---------------------------------------------------------------------------
  * Pop off the entire assumption list and give it to a function (tactic)
@@ -582,6 +646,88 @@ fun FIRST [] g = NO_TAC g
 fun MAP_EVERY tacf lst = EVERY (map tacf lst)
 val map_every = MAP_EVERY
 fun MAP_FIRST tacf lst = FIRST (map tacf lst)
+
+(* ----------------------------------------------------------------------
+    FIRST_LT : tactic -> list_tactic
+
+    Given a list of goals, tries to apply tactic argument to all of
+    them in turn until it succeeds. This generates a new list of goals
+    consisting of the output of the successful tactic concatenated
+    with the remaining original goals.
+   ---------------------------------------------------------------------- *)
+
+fun FIRST_LT tac gs =
+    let
+      fun recurse pfx gs =
+          case gs of
+              [] => raise ERR "FIRST_LT" "No goal on which tactic succeeds"
+            | g::rest =>
+              case Lib.total tac g of
+                  NONE => recurse (g::pfx) rest
+                | SOME (sgs, vf) =>
+                  let
+                    fun V ths =
+                        let val (ms, rest) = Lib.split_after (length sgs) ths
+                            val (p,s) = Lib.split_after (length pfx) rest
+                        in
+                          p @ [vf ms] @ s
+                        end
+                  in
+                    (sgs @ List.revAppend(pfx,rest), V)
+                  end
+    in
+      recurse [] gs
+    end
+
+(* ----------------------------------------------------------------------
+    SELECT_LT_THEN : tactic -> tactic -> list_tactic
+
+    Given a list of goals, tries to apply the first tactic argument to all of
+    them in turn. This generates a new list of goals consisting of the output
+    of the successful tactic applications concatenated with the remaining
+    original goals. The second tactic is then applied to goals resulting from
+    the successful tactic applications.
+    This is similar to FIRST_LT, but:
+      - if there are multiple goals for which the first tactic succeeds,
+        SELECT_LT_THEN will apply the tactic to all these goals;
+      - if there is no goal for which the first tactic succeeds, SELECT_LT_THEN
+        will not give an error - instead the goal state will simply remain
+        unchanged;
+      - SELECT_LT allows a second tactic to be applied *only* to the selected
+        goals.
+
+    SELECT_LT : tactic -> list_tactic
+    Like SELECT_LT_THEN, but does not apply a second tactic.
+   ---------------------------------------------------------------------- *)
+
+fun SELECT_LT_THEN select_tac cont_tac goals =
+  let fun recurse failed goals =
+    case goals of
+      [] => ([], List.rev failed, fn v => v)
+    | g::gs =>
+      (case Lib.total select_tac g of
+        NONE => recurse (g::failed) gs
+      | SOME (sgoals, valid) =>
+          let val (success, failed', vld) = recurse [] gs
+              fun validation thms =
+                let val (sgs, rest) = Lib.split_after (length sgoals) thms
+                    val (succ, rest) = Lib.split_after (length success) rest
+                    val (fail, rest) = Lib.split_after (length failed) rest
+                    val (fail', _) = Lib.split_after (length failed') rest
+                in fail @ [valid sgs] @ (vld (succ @ fail')) end
+          in
+            (sgoals @ success, List.revAppend(failed, failed'), validation)
+          end)
+      val (selected, failed, select_validation) = recurse [] goals
+      val (successful, cont_validation) = ALLGOALS cont_tac selected
+        handle e => raise ERR "SELECT_LT_THEN"
+                              "Could not apply second tactic"
+      fun validation thms =
+        let val (succ,fail) = Lib.split_after (length successful) thms
+        in select_validation (cont_validation succ @ fail) end
+  in (successful @ failed, validation) end
+
+fun SELECT_LT tac goals = SELECT_LT_THEN tac all_tac goals
 
 (*---------------------------------------------------------------------------
  * Uses first tactic that proves the goal.
@@ -648,9 +794,9 @@ end
  *---------------------------------------------------------------------------*)
 
 local
-  fun can_match_with_constants constants pat ob =
+  fun can_match_with_constants fixedtys constants pat ob =
     let
-      val (tm_inst, _) = ho_match_term [] empty_tmset pat ob
+      val (tm_inst, _) = ho_match_term fixedtys empty_tmset pat ob
       val bound_vars = map #redex tm_inst
     in
       null (op_intersect aconv constants bound_vars)
@@ -673,8 +819,11 @@ local
    fun gen tcl pat thfun (g as (asl,w)) =
      let
        val fvs = free_varsl (w::asl)
+       val patvars = free_vars pat
+       val in_both = op_intersect aconv fvs patvars
+       val fixedtys = itlist (union o type_vars_in_term) in_both []
      in
-       tcl (thfun o assert (can_match_with_constants fvs pat o concl))
+       tcl (thfun o assert (can_match_with_constants fixedtys fvs pat o concl))
      end g
 in
    val PAT_X_ASSUM = gen FIRST_X_ASSUM
@@ -722,7 +871,8 @@ local
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
-   handle HOL_ERR _ => raise ERR "DISCH_THEN" ""
+   handle HOL_ERR {message,origin_function, ...} =>
+          raise ERR "DISCH_THEN" (origin_function ^ ":" ^ message)
   val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
   val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)

@@ -1,9 +1,9 @@
 val _ = HOL_Interactive.toggle_quietdec();
 
 val _ = loadPath :=
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) ::
-            !loadPath;
+            concat [Globals.HOLDIR, "/examples/separationLogic/src"] ::
+            concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"] ::
+            !loadPath
 
 val _ = map load ["holfootParser", "holfoot_pp_print", "holfootLib"];
 open holfootParser;

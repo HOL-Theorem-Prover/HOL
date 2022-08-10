@@ -6,7 +6,7 @@ structure sequenceTools :> sequenceTools =
 struct
 
 open HolKernel Parse boolLib;
-open bossLib sequenceTheory HurdUseful;
+open bossLib sequenceTheory hurdUtils;
 
 infixr 0 ++ || ORELSEC ## THENC;
 infix 1 >>;

@@ -1,4 +1,6 @@
-open HolKernel boolSyntax Opentheory
+open HolKernel boolSyntax
+open OpenTheoryReader
+
 val Thy = "OpenTheoryFunction"
 val pkg = "function-1.55"
 val _ = new_theory Thy

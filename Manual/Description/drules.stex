@@ -42,9 +42,9 @@ these themselves have to be derived.
 
 As an illustration of a proof in \HOL{}, the following chain of
 theorems forms a proof (from the empty set, in the \HOL{} deductive
-system), for the particular terms \ml{``}$t_1$\ml{``}
-and \ml{``}$t_2$\ml{``},
-both of \HOL\ type \ml{``:bool``}:
+system), for the particular terms \ml{\ldquo}$t_1$\ml{\rdquo}
+and \ml{\ldquo}$t_2$\ml{\rdquo},
+both of \HOL\ type \ml{\ldquo:bool\rdquo}:
 
 \begin{enumerate}
 \item $t_1$\ml{ ==> }$t_2$\ml{ |- }$t_1$\ml{ ==> }$t_2$
@@ -65,9 +65,9 @@ using the \ML\ functions \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} and
 \begin{alltt}
 >> show_assums := true;
 
->> val th1 = ASSUME ``t1 ==> t2``;
+>> val th1 = ASSUME “t1 ==> t2”;
 
->> val th2 = ASSUME ``t1:bool``
+>> val th2 = ASSUME “t1:bool”
 
 >> MP th1 th2;
 \end{alltt}
@@ -254,7 +254,7 @@ in proofs, because it takes over a very large number of inferences
 which may happen in a complex and unpredictable order. It is unlike
 any other primitive or pre-defined rule, first because of the number
 of inferences it generates\footnote{The number of inferences performed
-  by this rule is generally `inflated'; \ie\ is generally greater than
+  by this rule is generally `inflated'; \ie, is generally greater than
   the length of the proof itself, if the proof could be `seen'.  This
   is because, in the current implementation, some inference is done
   during the search phase that is not necessarily in support of
@@ -269,12 +269,12 @@ The application of \ml{REWRITE\_RULE}, in the session below,
 illustrates that replacements are made at all levels of the
 structure of a term.
 The example is numerical;
-the infixes {\small\verb%"$>"%} and {\small\verb%"$<"%} are
+the infixes {\small\verb%>%} and {\small\verb%<%} are
 the usual `greater than'  and `less than' relations, respectively,
 and \ml{"SUC"}, the
 usual successor function.
-Use is made of the pre-existing definition of {\small\verb%"$>"%}:
-\ml{GREATER} (see \REFERENCE).
+Use is made of the pre-existing definition of {\small\verb%>%}:
+\ml{GREATER\_DEF} (see \REFERENCE).
 The timing\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs} facility is used again, for interest, and the printing
 of theorems is adjusted as above.
 
@@ -282,10 +282,9 @@ of theorems is adjusted as above.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->>__ Globals.linewidth := 60;
 >> Count.apply (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
-     (ASSUME ``SUC 4 > 0 <=> (SUC 3 > 0 <=> (SUC 2 > 0 <=>
-                 (SUC 1 > 0 <=> SUC 0 > 0)))``);
+     (ASSUME “SUC 4 > 0 /\ SUC 3 > 0 /\ SUC 2 > 0 /\ SUC 1 > 0 /\
+              SUC 0 > 0”);
 >>__ Globals.linewidth := 72;
 \end{alltt}
 \end{session}
@@ -1007,7 +1006,9 @@ bound after substitution.
 \end{proof}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!inference rules for|)}
 
-\subsection{Use of a definition}
+\subsection{Applying a definition to one argument}
+
+Given an equation where the right-hand side is a lambda-abstraction, one can derive an equation characterising the application of the function to a specified argument.
 
 \begin{holboxed}
 \index{RIGHT_BETA@\ml{RIGHT\_BETA}|pin}
@@ -1038,7 +1039,7 @@ t'[t]$\hfill [\rul{BETA\_CONV}]
 \end{proof}
 
 
-\subsection{Use of a definition}
+\subsection{Applying a definition to multiple arguments}
 
 \begin{holboxed}
 \index{RIGHT_LIST_BETA@\ml{RIGHT\_LIST\_BETA}|pin}
@@ -1061,9 +1062,9 @@ $$\Gamma\turn t = \lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n]
 [Suitably type-instantiated hypothesis]
 \item $\Gamma\turn t\ t_1\cdots t_n =
 (\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n$\hfill
-[\rul{AP\_THM} 1 (n times)]
+[\rul{AP\_THM} 1 ($n$ times)]
 \item $\turn(\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n =
-t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} (n times)]
+t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} ($n$ times)]
 \item $\Gamma\turn t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$\hfill
 [\rul{TRANS} 2,3]
 \end{proof}

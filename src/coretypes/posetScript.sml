@@ -3,20 +3,7 @@
 (* Originally created by Joe Hurd to support the pGCL formalization.         *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* Load and open relevant theories                                           *)
-(* (Comment out "load" and "quietdec"s for compilation)                      *)
-(* ------------------------------------------------------------------------- *)
-(*
-val () = app load ["BasicProvers","metisLib","simpLib","pairTheory","Q"];
-val () = quietdec := true;
-*)
-
-open HolKernel Parse boolLib BasicProvers metisLib simpLib;
-
-(*
-val () = quietdec := false;
-*)
+open HolKernel Parse boolLib BasicProvers metisLib simpLib pairTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "poset"                                         *)
@@ -29,11 +16,9 @@ val _ = new_theory "poset";
 (* ------------------------------------------------------------------------- *)
 
 val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-val REVERSE = Tactical.REVERSE;
 
 val bool_ss = boolSimps.bool_ss;
-val pair_cases_tac = MATCH_ACCEPT_TAC pairTheory.ABS_PAIR_THM;
+val pair_cases_tac = MATCH_ACCEPT_TAC ABS_PAIR_THM;
 
 fun UNPRIME_CONV tmp =
   let
@@ -47,6 +32,7 @@ fun UNPRIME_CONV tmp =
 
 (* ------------------------------------------------------------------------- *)
 (* Functions from one predicate to another                                   *)
+(* NOTE: this is actually pred_setTheory.FUNSET                              *)
 (* ------------------------------------------------------------------------- *)
 
 val function_def = new_definition
@@ -57,7 +43,7 @@ val function_def = new_definition
 (* A HOL type of partial orders                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val () = type_abbrev ("poset", ``:('a -> bool) # ('a -> 'a -> bool)``);
+Type poset[pp] = “:('a -> bool) # ('a -> 'a -> bool)”
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of partially-ordered sets                                      *)
@@ -78,6 +64,8 @@ val carrier_def = new_definition
 val relation_def = new_definition
   ("relation_def",
    ``relation ((s,r) : 'a poset) = r``);
+
+val _ = export_rewrites ["carrier_def", "relation_def"];
 
 val top_def = new_definition
   ("top_def",

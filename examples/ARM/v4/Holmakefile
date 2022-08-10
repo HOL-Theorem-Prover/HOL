@@ -1,3 +1,5 @@
+INCLUDES = $(HOLDIR)/src/n-bit $(HOLDIR)/src/emit
+
 EXTRA_CLEANS = armParser.lex.sig armParser.lex.sml\
         armParser.grm.sig armParser.grm.sml armParser.grm.desc\
 	armParser.grm-sig.sml
@@ -7,10 +9,7 @@ MLYACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe)
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS)
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
 armParser.grm.sml armParser.grm-sig.sml: armParser.grm

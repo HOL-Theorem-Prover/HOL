@@ -1,19 +1,38 @@
-all: $(DEFAULT_TARGETS) selftest.exe
+all: selftest.exe $(DEFAULT_TARGETS)
 .PHONY: all
+
+EXTRA_CLEANS = selftest.exe sort-selftest.log
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+all: $(ARTFILES) hol4-sort.art
 
 ternaryComparisons.art: ternaryComparisons.otd
-
 
 hol4-sort-unint.art: hol4-sort-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 
 hol4-sort.art: hol4-sort.thy hol4-sort-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
+
+install: hol4-sort.thy hol4-sort.art
+	opentheory install --reinstall $<
 endif
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: sort-selftest.log
+
+sort-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

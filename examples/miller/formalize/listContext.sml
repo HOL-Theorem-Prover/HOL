@@ -16,7 +16,7 @@ if !show_assums then () else
 
 open bossLib pairTheory pred_setTheory
      res_quanTheory extra_listTheory listTheory
-     HurdUseful ho_basicTools ho_proverTools res_quanTools
+     hurdUtils ho_basicTools ho_proverTools res_quanTools
      subtypeTools numContext;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL;
@@ -63,7 +63,7 @@ val list_pc = precontext_add
     NOT_CONS_NIL,
     NOT_NIL_CONS,
     CONS_11,
-    MEM_KILL_DUPS,
+    MEM_nub,
     HD,
     TL])
   num_pc;
@@ -73,6 +73,3 @@ val list_c = precontext_compile list_pc;
 (* non-interactive mode
 *)
 end;
-
-
-

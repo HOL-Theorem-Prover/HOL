@@ -1,6 +1,5 @@
 open HolKernel Parse boolLib bossLib BasicProvers;
 open optionTheory pairTheory stringTheory listTheory arithmeticTheory totoTheory;
-open lcsymtacs;
 
 val _ = new_theory "comparison";
 
@@ -68,15 +67,11 @@ val num_cmp_def = save_thm(
   "num_cmp_def",
   ternaryComparisonsTheory.num_compare_def)
 
-val _ = overload_on ("char_cmp", ``char_compare``);
-val char_cmp_def = save_thm(
-  "char_cmp_def",
-  ternaryComparisonsTheory.char_compare_def);
+Overload char_cmp = “char_compare”
+Theorem char_cmp_def = stringTheory.char_compare_def
 
-val _ = overload_on ("string_cmp", ``string_compare``);
-val string_cmp_def = save_thm(
-  "string_cmp_def",
-  ternaryComparisonsTheory.string_compare_def)
+Overload string_cmp = “string_compare”
+Theorem string_cmp_def = stringTheory.string_compare_def
 (* relationship to toto *)
 
 val TotOrder_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
@@ -220,55 +215,53 @@ val string_cmp_good = Q.store_thm ("string_cmp_good[simp]",
 `good_cmp string_cmp`,
  metis_tac [string_cmp_def, char_cmp_good, list_cmp_good]);
 
-val list_cmp_cong = Q.store_thm ("list_cmp_cong",
-`!cmp l1 l2 cmp' l1' l2'.
-  (l1 = l1') /\
-  (l2 = l2') /\
-  (!x x'. MEM x l1' /\ MEM x' l2' ==> cmp x x' = cmp' x x')
-  ==>
-  list_cmp cmp l1 l2 = list_cmp cmp' l1' l2'`,
+Theorem list_cmp_cong[defncong]:
+  !cmp l1 l2 cmp' l1' l2'.
+    l1 = l1' /\ l2 = l2' /\
+    (!x x'. MEM x l1' /\ MEM x' l2' ==> cmp x x' = cmp' x x')
+    ==>
+    list_cmp cmp l1 l2 = list_cmp cmp' l1' l2'
+Proof
  ho_match_mp_tac list_cmp_ind >>
  rw [list_cmp_def] >>
  rw [list_cmp_def] >>
  every_case_tac >>
- rw []);
+ rw []
+QED
 
-val option_cmp_cong = Q.store_thm ("option_cmp_cong",
-`!cmp v1 v2 cmp' v1' v2'.
-  (v1 = v1') /\
-  (v2 = v2') /\
-  (!x x'. v1' = SOME x /\ v2' = SOME x' ==> cmp x x' = cmp' x x')
-  ==>
-  option_cmp cmp v1 v2 = option_cmp cmp' v1' v2'`,
+Theorem option_cmp_cong[defncong]:
+  !cmp v1 v2 cmp' v1' v2'.
+    v1 = v1' /\ v2 = v2' /\
+    (!x x'. v1' = SOME x /\ v2' = SOME x' ==> cmp x x' = cmp' x x') ==>
+    option_cmp cmp v1 v2 = option_cmp cmp' v1' v2'
+Proof
  ho_match_mp_tac ternaryComparisonsTheory.option_compare_ind >>
  rw [option_cmp_def] >>
- rw [option_cmp_def]);
+ rw [option_cmp_def]
+QED
 
-val option_cmp2_cong = Q.store_thm ("option_cmp2_cong",
-`!cmp v1 v2 cmp' v1' v2'.
-  (v1 = v1') /\
-  (v2 = v2') /\
-  (!x x'. v1' = SOME x /\ v2' = SOME x' ==> cmp x x' = cmp' x x')
+Theorem option_cmp2_cong[defncong]:
+  !cmp v1 v2 cmp' v1' v2'.
+    v1 = v1' /\ v2 = v2' /\
+    (!x x'. v1' = SOME x /\ v2' = SOME x' ==> cmp x x' = cmp' x x')
+    ==>
+    option_cmp2 cmp v1 v2 = option_cmp2 cmp' v1' v2'
+Proof
+  ho_match_mp_tac (fetch "-" "option_cmp2_ind") >>
+  rw [option_cmp2_def] >>
+  rw [option_cmp2_def]
+QED
+
+Theorem pair_cmp_cong[defncong]:
+  !cmp1 cmp2 v1 v2 cmp1' cmp2' v1' v2'.
+    v1 = v1' /\
+    v2 = v2' /\
+    (!a b c d. v1' = (a,b) /\ v2' = (c,d) ==> cmp1 a c = cmp1' a c) /\
+    (!a b c d. v1' = (a,b) /\ v2' = (c,d) ==> cmp2 b d = cmp2' b d)
   ==>
-  option_cmp2 cmp v1 v2 = option_cmp2 cmp' v1' v2'`,
- ho_match_mp_tac (fetch "-" "option_cmp2_ind") >>
- rw [option_cmp2_def] >>
- rw [option_cmp2_def]);
-
-val pair_cmp_cong = Q.store_thm ("pair_cmp_cong",
-`!cmp1 cmp2 v1 v2 cmp1' cmp2' v1' v2'.
-  (v1 = v1') /\
-  (v2 = v2') /\
-  (!a b c d. v1' = (a,b) /\ v2' = (c,d) ==> cmp1 a c = cmp1' a c) /\
-  (!a b c d. v1' = (a,b) /\ v2' = (c,d) ==> cmp2 b d = cmp2' b d)
-  ==>
-  pair_cmp cmp1 cmp2 v1 v2 = pair_cmp cmp1' cmp2' v1' v2'`,
- simp [pair_cmp_def, pairTheory.FORALL_PROD]);
-
-val _ = DefnBase.export_cong "list_cmp_cong";
-val _ = DefnBase.export_cong "option_cmp_cong";
-val _ = DefnBase.export_cong "option_cmp2_cong";
-val _ = DefnBase.export_cong "pair_cmp_cong";
+    pair_cmp cmp1 cmp2 v1 v2 = pair_cmp cmp1' cmp2' v1' v2'
+Proof simp [pair_cmp_def, pairTheory.FORALL_PROD]
+QED
 
 val good_cmp_trans = Q.store_thm ("good_cmp_trans",
 `!cmp. good_cmp cmp ==> transitive (\ (k,v) (k',v'). cmp k k' = Less)`,

@@ -1,0 +1,4 @@
+quick.pdf: quick.tex
+	latexmk -pdf quick
+
+EXTRA_CLEANS = $(patsubst %,quick.%,aux fdb_latexmk fls log out pdf)

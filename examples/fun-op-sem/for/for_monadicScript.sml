@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib lcsymtacs;
+open HolKernel Parse boolLib bossLib;
 open forTheory state_transformerTheory
 
 val _ = new_theory "for_monadic";

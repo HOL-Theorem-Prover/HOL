@@ -82,6 +82,32 @@ val NNF_CONV'      : conv -> conv       (* takes a 'leaf conversion' *)
 val NNF_CONV       : conv
 
 (* ------------------------------------------------------------------------- *)
+(* General NNF conversion. The user supplies some conversion to be applied   *)
+(* to atomic formulas.                                                       *)
+(*                                                                           *)
+(* "Iff"s are split conjunctively or disjunctively according to the flag     *)
+(* argument (conjuctively = true) until a universal quantifier (modulo       *)
+(* current parity) is passed; after that they are split conjunctively. This  *)
+(* is appropriate when the result is passed to a disjunctive splitter        *)
+(* followed by a clausal form inner core, such as MESON.                     *)
+(*                                                                           *)
+(* To avoid some duplicate computation, this function will in general        *)
+(* enter a recursion where it simultaneously computes NNF representations    *)
+(* for "p" and "~p", so the user needs to supply an atomic "conversion"      *)
+(* that does the same.                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+val GEN_NNF_CONV   : bool -> conv * (term -> thm * thm) -> conv
+
+(* A trivial application of GEN_NNF_CONV which splits "Iff"s conjuctively.
+   NOTE: The above NNF_CONV has the same behavior with NNF_CONV on "Iff"s. *)
+val NNFC_CONV      : conv
+
+(* A trivial application of GEN_NNF_CONV which splits "Iff"s disjuctively.
+   NOTE: this is the HOL-Light's "NNF_CONV" (canon.ml). *)
+val NNFD_CONV      : conv
+
+(* ------------------------------------------------------------------------- *)
 (* Skolemization.                                                            *)
 (*                                                                           *)
 (* Example:                                                                  *)
@@ -250,5 +276,17 @@ val condify_ss : simpset      (* pure + condify *)
 (* ------------------------------------------------------------------------- *)
 
 val MIN_CNF : thm list -> term list * thm list
+
+(* ------------------------------------------------------------------------- *)
+(* Some conversions ported from HOL-Light's canon.ml                         *)
+(* ------------------------------------------------------------------------- *)
+
+val CONJ_CANON_CONV  : conv
+val CONDS_ELIM_CONV  : conv
+val CONDS_CELIM_CONV : conv
+val WEAK_DNF_CONV    : conv
+val STRONG_DNF_CONV  : conv
+val WEAK_CNF_CONV    : conv
+val STRONG_CNF_CONV  : conv
 
 end

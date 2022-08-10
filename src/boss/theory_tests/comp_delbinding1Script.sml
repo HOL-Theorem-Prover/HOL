@@ -6,7 +6,7 @@ val _ = new_theory "comp_delbinding1";
 val foo_def = Define‘foo x = x + 1’;
 
 val _ = case ThmSetData.current_data{settype="compute"} of
-            [ThmSetData.ADD("comp_delbinding1.foo_def", _)] =>
+            [ThmSetData.ADD({Thy = "comp_delbinding1", Name = "foo_def"}, _)] =>
               print "Compute data OK\n"
           | _ => raise Fail "Compute data Bad!"
 

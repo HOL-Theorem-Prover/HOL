@@ -18,8 +18,11 @@
 *)
 
 open HolKernel Parse boolLib relationTheory mesonLib metisLib
+open simpLib boolSimps
 
 val _ = new_theory "pair";
+
+fun simp ths = ASM_SIMP_TAC (BasicProvers.srw_ss()) ths (* don't eta-reduce *)
 
 (*---------------------------------------------------------------------------*)
 (* Define the type of pairs and tell the grammar about it.                   *)
@@ -72,7 +75,7 @@ val REP_ABS_PAIR = Q.prove
 
 val COMMA_DEF =
  Q.new_definition
-  ("COMMA_DEF",
+  ("COMMA_DEF[notuserdef]",
    `$, x y = ABS_prod ^pairfn`);
 val _ = ot","
 
@@ -98,8 +101,7 @@ val PAIR_EQ = Q.store_thm
    THEN REWRITE_TAC[],
   STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
-val CLOSED_PAIR_EQ =
-  save_thm("CLOSED_PAIR_EQ", itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ);
+Theorem CLOSED_PAIR_EQ[simp] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
 
 
 (*---------------------------------------------------------------------------
@@ -131,15 +133,15 @@ val pair_CASES = save_thm("pair_CASES", ABS_PAIR_THM)
  *---------------------------------------------------------------------------*)
 
 val PAIR =
- Definition.new_specification
-  ("PAIR", ["FST","SND"],
+ boolLib.new_specification
+  ("PAIR[simp]", ["FST","SND"],
    Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM));
 
 local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
       val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)
 in
-val FST = save_thm("FST", itlist Q.GEN [`x`,`y`] th2);
-val SND = save_thm("SND", itlist Q.GEN [`x`,`y`] th3);
+Theorem FST[simp] = itlist Q.GEN [`x`,`y`] th2;
+Theorem SND[simp] = itlist Q.GEN [`x`,`y`] th3;
 end;
 val _ = ot0 "FST" "fst"
 val _ = ot0 "SND" "snd"
@@ -156,13 +158,19 @@ val PAIR_FST_SND_EQ = store_thm(
 
 val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
 
+(* Theorem the SWAP inverts itself *)
+Theorem SWAP_SWAP[simp]:
+    !x. SWAP (SWAP x) = x
+Proof
+    simp[SWAP_def]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-val CURRY_DEF = Q.new_definition
-  ("CURRY_DEF",
-   `CURRY f x y :'c = f (x,y)`);
+val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
+val _ = BasicProvers.export_rewrites ["CURRY_DEF"]
 
 val UNCURRY = Q.new_definition
   ("UNCURRY",
@@ -179,11 +187,16 @@ val ELIM_UNCURRY = Q.store_thm(
   REFL_TAC);
 
 
-val UNCURRY_DEF = Q.store_thm
- ("UNCURRY_DEF",
-  `!f x y. UNCURRY f (x,y) :'c = f x y`,
-  REWRITE_TAC [UNCURRY,FST,SND])
+Theorem UNCURRY_DEF[simp]:    !f x y. UNCURRY f (x,y) :'c = f x y
+Proof
+  REWRITE_TAC [UNCURRY,FST,SND]
+QED
 
+Theorem IN_UNCURRY_R[simp]:
+  (x,y) IN UNCURRY R <=> R x y
+Proof
+  simp[IN_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_UNCURRY_THM = |- !f. CURRY(UNCURRY f) = f                           *)
@@ -200,9 +213,7 @@ val CURRY_UNCURRY_THM =
     in
         GEN “f:'a->'b->'c” th4
     end;
-
-val _ = save_thm("CURRY_UNCURRY_THM",CURRY_UNCURRY_THM);
-
+Theorem CURRY_UNCURRY_THM[simp] = CURRY_UNCURRY_THM
 
 (* ------------------------------------------------------------------------- *)
 (* UNCURRY_CURRY_THM = |- !f. UNCURRY(CURRY f) = f                           *)
@@ -224,7 +235,7 @@ val UNCURRY_CURRY_THM =
         GEN “f:('a#'b)->'c” th6
   end;
 
-  val _ = save_thm("UNCURRY_CURRY_THM",UNCURRY_CURRY_THM);
+Theorem UNCURRY_CURRY_THM[simp] = UNCURRY_CURRY_THM;
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_ONE_ONE_THM = |- (CURRY f = CURRY g) = (f = g)                      *)
@@ -242,7 +253,7 @@ val CURRY_ONE_ONE_THM =
         IMP_ANTISYM_RULE thD th3
     end;
 
-val _ = save_thm("CURRY_ONE_ONE_THM",CURRY_ONE_ONE_THM);
+Theorem CURRY_ONE_ONE_THM[simp] = CURRY_ONE_ONE_THM;
 
 (* ------------------------------------------------------------------------- *)
 (* UNCURRY_ONE_ONE_THM = |- (UNCURRY f = UNCURRY g) = (f = g)                *)
@@ -260,7 +271,7 @@ val UNCURRY_ONE_ONE_THM =
         IMP_ANTISYM_RULE thD th3
     end;
 
-val _ = save_thm("UNCURRY_ONE_ONE_THM",UNCURRY_ONE_ONE_THM);
+Theorem UNCURRY_ONE_ONE_THM[simp] = UNCURRY_ONE_ONE_THM;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -280,7 +291,6 @@ val pair_Axiom = Q.store_thm("pair_Axiom",
 (*                (UNCURRY f M = UNCURRY f' M')                             *)
 (* -------------------------------------------------------------------------*)
 
-open simpLib boolSimps
 val UNCURRY_CONG = store_thm(
   "UNCURRY_CONG",
   ``!f' f M' M.
@@ -326,7 +336,7 @@ val FORALL_PROD = Q.store_thm("FORALL_PROD",
  THEN ASM_REWRITE_TAC[]);
 
 
-val pair_induction = save_thm("pair_induction", #2(EQ_IMP_RULE FORALL_PROD));
+Theorem pair_induction = #2(EQ_IMP_RULE FORALL_PROD) |> GEN_ALL
 
 (* ----------------------------------------------------------------------
     PROD_ALL
@@ -352,7 +362,7 @@ val PROD_ALL_MONO = store_thm(
 val _ = IndDefLib.export_mono "PROD_ALL_MONO"
 
 val PROD_ALL_CONG = store_thm(
-  "PROD_ALL_CONG[defncong]",
+  "PROD_ALL_CONG",
   ``!p p' P P' Q Q'.
       (p = p') /\ (!x:'a y:'b. (p' = (x,y)) ==> (P x <=> P' x)) /\
       (!x:'a y:'b. (p' = (x,y)) ==> (Q y <=> Q' y)) ==>
@@ -426,20 +436,20 @@ val PAIR_MAP = Q.new_infixr_definition
  ("PAIR_MAP",
   `$## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 490);
 
-val PAIR_MAP_THM = Q.store_thm
-("PAIR_MAP_THM",
- `!f g x y. (f##g) (x,y) = (f x, g y)`,
- REWRITE_TAC [PAIR_MAP,FST,SND]);
+Theorem PAIR_MAP_THM[simp]:
+  !f g x y. (f##g) (x,y) = (f x, g y)
+Proof REWRITE_TAC [PAIR_MAP,FST,SND]
+QED
 
-val FST_PAIR_MAP = store_thm(
-  "FST_PAIR_MAP",
-  ``!p f g. FST ((f ## g) p) = f (FST p)``,
-  REWRITE_TAC [PAIR_MAP, FST]);
+Theorem FST_PAIR_MAP[simp]:
+  !p f g. FST ((f ## g) p) = f (FST p)
+Proof REWRITE_TAC [PAIR_MAP, FST]
+QED
 
-val SND_PAIR_MAP = store_thm(
-  "SND_PAIR_MAP",
-  ``!p f g. SND ((f ## g) p) = g (SND p)``,
-  REWRITE_TAC [PAIR_MAP, SND]);
+Theorem SND_PAIR_MAP[simp]:
+  !p f g. SND ((f ## g) p) = g (SND p)
+Proof REWRITE_TAC [PAIR_MAP, SND]
+QED
 
 (*---------------------------------------------------------------------------
         Distribution laws for paired lets. Only will work for the
@@ -680,8 +690,8 @@ REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
 val RPROD_DEF =
 Q.new_definition
 ("RPROD_DEF",
-   `RPROD (R1:'a->'a->bool)
-          (R2:'b->'b->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
+   `RPROD (R1:'a->'b->bool)
+          (R2:'c->'d->bool) = \(s,t) (u,v). R1 s u /\ R2 t v`);
 
 
 val WF_RPROD =
@@ -739,7 +749,91 @@ val LEX_CONG = Q.store_thm
    THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
    THEN METIS_TAC[]);
 
-val _ = DefnBase.export_cong "LEX_CONG";
+(* ----------------------------------------------------------------------
+    PAIR_REL : ('a -> 'c -> bool) -> ('b -> 'd -> bool) ->
+               ('a # 'b -> 'c # 'd -> bool)
+   ---------------------------------------------------------------------- *)
+
+Overload PAIR_REL = “RPROD”
+val _ = set_mapped_fixity{fixity = Infixr 490, term_name = "PAIR_REL",
+                          tok = "###"}
+
+Theorem PAIR_REL = RPROD_DEF
+Theorem PAIR_REL_THM[simp,compute]:
+  (R1 ### R2) (a,b) (c,d) <=> R1 a c /\ R2 b d
+Proof
+  SIMP_TAC (srw_ss()) [PAIR_REL]
+QED
+
+Theorem PAIR_REL_EQ[simp]:
+  ($= ### $=) = $=
+Proof
+  SIMP_TAC (srw_ss()) [FUN_EQ_THM, FORALL_PROD]
+QED
+
+Theorem PAIR_REL_REFL:
+  (!x:'a. R1 x x) /\ (!y:'b. R2 y y) ==>
+  !xy. (R1 ### R2) xy xy
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
+
+Theorem PAIR_REL_SYM:
+  (!x y:'a. R1 x y <=> R1 y x) /\ (!a b:'b. R2 a b <=> R2 b a) ==>
+  !xy ab. (R1 ### R2) xy ab <=> (R1 ### R2) ab xy
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
+
+Theorem PAIR_REL_TRANS:
+  (!x y z:'a. R1 x y /\ R1 y z ==> R1 x z) /\
+  (!a b c:'b. R2 a b /\ R2 b c ==> R2 a c) ==>
+  !xy ab uv. (R1 ### R2) xy ab /\ (R1 ### R2) ab uv ==>
+             (R1 ### R2) xy uv
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_PROD] >> METIS_TAC[]
+QED
+
+(* ----------------------------------------------------------------------
+    PAIR_SET : ('a -> 'c set) -> ('b -> 'c set) -> 'a # 'b -> 'c set
+   ---------------------------------------------------------------------- *)
+
+val PAIR_SET_def = new_definition(
+  "PAIR_SET_def",
+  “PAIR_SET f g = \(a:'a, b:'b) c:'c. c IN f a \/ c IN g b”);
+
+Theorem IN_PAIR_SET:
+  c IN PAIR_SET f g (a,b) <=> c IN f a \/ c IN g b
+Proof
+  SIMP_TAC (srw_ss()) [PAIR_SET_def, IN_DEF]
+QED
+
+Overload setFST = “PAIR_SET $= (K (\x. F))”
+Overload setSND = “PAIR_SET (K (\x. F)) $=”
+
+Theorem IN_setFSTSND[simp]:
+  (a IN setFST ab <=> FST ab = a) /\
+  (b IN setSND ab <=> SND ab = b)
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD, IN_PAIR_SET] >>
+  SIMP_TAC (srw_ss()) [IN_DEF]
+QED
+
+Theorem PAIR_MAP_CONG:
+  (!a:'a. a IN setFST ab ==> f1 a = f2 a :'c) /\
+  (!b:'b. b IN setSND ab ==> g1 b = g2 b :'d) ==>
+  (f1 ## g1) ab = (f2 ## g2) ab
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
+
+Theorem PAIR_MAP_SET:
+  (c IN setFST ((f ## g) ab) <=> ?a:'a. c:'c = f a /\ a IN setFST ab) /\
+  (d IN setSND ((f ## g) ab) <=> ?b:'b. d:'d = g b /\ b IN setSND ab)
+Proof
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD] >>
+  METIS_TAC[]
+QED
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
@@ -789,7 +883,7 @@ S "val comma_tm = prim_mk_const {Name=\",\", Thy=\"pair\"};", NL,
 S "val uncurry_tm = prim_mk_const {Name=\"UNCURRY\", Thy=\"pair\"};", NL,
 NL,
 S "val dest_pair = dest_binop comma_tm (ERR1 \"dest_pair\" \"not a pair\")", NL,
-S "val strip_pair = strip_binop (total dest_pair);", NL,
+S "val strip_pair = strip_binop dest_pair;", NL,
 S "val spine_pair = spine_binop (total dest_pair);", NL,
 NL,
 S "local fun check [] = true", NL,
@@ -884,12 +978,6 @@ S "    itlist GEN vars (rev_itlist add_varstruct V th)", NL,
 S "  end;", NL,
 S "  ", NL,
 S "val _ = Definition.new_definition_hook := (dest, post)", NL])};
-
-val _ = BasicProvers.export_rewrites
-        ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
-         "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
-         "UNCURRY_DEF", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
-         "SND_PAIR_MAP"]
 
 val FST_EQ_EQUIV = Q.store_thm("FST_EQ_EQUIV",
   `(FST p = x) <=> ?y. p = (x,y)`,

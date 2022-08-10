@@ -52,21 +52,13 @@ Theorem is_insert_l:
   !n. is_insert fl T R k x l l' ==>
     is_insert fl T R k x (count_append n l r) (count_append ARB l' r)
 Proof
-  fs [is_insert_def, count_append_def, sortingTheory.SORTED_APPEND_IFF,
+  fs [is_insert_def, count_append_def, sortingTheory.SORTED_APPEND_GEN,
     alistTheory.ALOOKUP_APPEND, FUN_EQ_THM, HD_APPEND, LAST_APPEND,
     listTheory.LAST_MAP]
   \\ (Cases_on `l'` \\ fs [] >- metis_tac [optionTheory.option_CLAUSES])
   \\ (Cases_on `l = []` \\ fs [])
   \\ fs [listTheory.LAST_MAP]
   \\ (rpt strip_tac \\ fs [] \\ CASE_TAC)
-QED
-
-Theorem SORTED_APPEND_trans_IFF:
-  transitive R ==>
-   (SORTED R (xs ++ ys) <=> SORTED R xs /\ SORTED R ys /\
-                            (!x y. MEM x xs ==> MEM y ys ==> R x y))
-Proof
-  Induct_on `xs` \\ fs [sortingTheory.SORTED_EQ] \\ metis_tac []
 QED
 
 Theorem insert_fl_R:
@@ -96,7 +88,7 @@ Proof
   \\ FIRST_ASSUM (MP_TAC o MATCH_MP insert_fl_R)
   \\ fs [METIS_PROVE [] ``b \/ c <=> ~b ==> c``]
   \\ rpt strip_tac
-  \\ fs [SORTED_APPEND_trans_IFF, is_insert_def]
+  \\ fs [sortingTheory.SORTED_APPEND, is_insert_def]
   \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `k`)
   \\ fs []
   \\ (Cases_on `HD r` \\ Cases_on `r` \\ fs [])
@@ -109,7 +101,7 @@ Theorem is_insert_r:
 Proof
   rpt strip_tac
   \\ MP_TAC insert_fl_R_append
-  \\ fs [is_insert_def, count_append_def, sortingTheory.SORTED_APPEND_IFF,
+  \\ fs [is_insert_def, count_append_def, sortingTheory.SORTED_APPEND_GEN,
     alistTheory.ALOOKUP_APPEND, FUN_EQ_THM, HD_APPEND, LAST_APPEND, HD_MAP]
   \\ ((Cases_on `r'` \\ fs []) >- metis_tac [optionTheory.option_CLAUSES])
   \\ (rpt strip_tac \\ rpt (CHANGED_TAC (rfs [HD_MAP] \\ fs [])))
@@ -136,7 +128,7 @@ Theorem sorted_fst_insert_centre:
     SORTED R (MAP FST l ++ (k :: MAP FST r))
 Proof
   Cases_on `r` \\ Cases_on `l` \\
-  fs [sortingTheory.SORTED_APPEND_IFF, sortingTheory.SORTED_DEF,
+  fs [sortingTheory.SORTED_APPEND_GEN, sortingTheory.SORTED_DEF,
       listTheory.LAST_MAP, HD_MAP]
 QED
 
@@ -150,7 +142,7 @@ Proof
       listTheory.LAST_CONS_cond]
   \\ rpt disch_tac
   \\ FIRST_X_ASSUM (MP_TAC o MATCH_MP (Q.SPEC `k` sorted_fst_insert_centre))
-  \\ fs [SORTED_APPEND_trans_IFF]
+  \\ fs [sortingTheory.SORTED_APPEND]
   \\ fs [FUN_EQ_THM, alistTheory.ALOOKUP_APPEND]
   \\ rpt (strip_tac \\ fs [])
   \\ rpt (CASE_TAC \\ fs [])
@@ -325,7 +317,7 @@ QED
 Theorem is_lookup_far_right:
   !R k k' v. R k' k ==> is_lookup T F R [(k', v)] k NONE
 Proof
-  fs [is_lookup_def, SORTED_APPEND_trans_IFF, listTheory.MEM_MAP,
+  fs [is_lookup_def, sortingTheory.SORTED_APPEND, listTheory.MEM_MAP,
       pairTheory.EXISTS_PROD, alistTheory.ALOOKUP_APPEND]
   \\ rpt strip_tac
   \\ Cases_on `ALOOKUP xs k` \\ CASE_TAC \\ fs []
@@ -336,7 +328,7 @@ QED
 Theorem is_lookup_hit:
   !R k k' v. (k' = k) ==> is_lookup T T R [(k', v)] k (SOME v)
 Proof
-  fs [is_lookup_def, SORTED_APPEND_trans_IFF, listTheory.MEM_MAP,
+  fs [is_lookup_def, sortingTheory.SORTED_APPEND, listTheory.MEM_MAP,
       pairTheory.EXISTS_PROD, alistTheory.ALOOKUP_APPEND]
   \\ rpt strip_tac
   \\ rpt (CASE_TAC \\ fs [])
@@ -362,7 +354,7 @@ Proof
   \\ rpt strip_tac
   \\ FIRST_X_ASSUM (MP_TAC o MATCH_MP (Q.SPEC `k` sorted_fst_insert_centre2))
   \\ fs [LAST_APPEND, HD_APPEND]
-  \\ fs [SORTED_APPEND_trans_IFF, sortingTheory.SORTED_EQ,
+  \\ fs [sortingTheory.SORTED_APPEND, sortingTheory.SORTED_EQ,
     listTheory.MEM_MAP, pairTheory.EXISTS_PROD]
   \\ rpt strip_tac
   \\ (Cases_on `ALOOKUP ys k` \\ rpt (CASE_TAC \\ fs [])

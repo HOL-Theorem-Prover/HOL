@@ -6,6 +6,7 @@ sig
   type proofs = Manager.proofs
   type absyn  = Absyn.absyn
   type pattern = Pmatch.pattern
+  type defn = DefnBase.defn
 
   val monitoring : bool ref
 
