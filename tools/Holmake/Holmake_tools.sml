@@ -333,12 +333,18 @@ in
        Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
+fun chatty_remove act (ofns : output_functions) s =
+    act s handle e =>
+                 (#warn ofns ("Attempt to remove: " ^ s ^
+                              " failed with exception " ^ General.exnMessage e);
+                  raise e)
+
 local
 (* these next two are used just for recursive removal of directories;
    appropriate to use "real" OS.FileSys *)
 structure FileSys = OS.FileSys
 in
-fun dir_files dnm A =
+fun dir_files ofns dnm A =
     let
       val ds = FileSys.openDir dnm
       fun recurse A =
@@ -347,9 +353,11 @@ fun dir_files dnm A =
             | SOME nm => recurse (OS.Path.concat (dnm, nm) :: A)
     in
       recurse A
-    end
+    end handle OS.SysErr _ =>
+               (#warn ofns ("Failed to list contents of directory "^dnm);
+                A)
 
-fun recursive_act file_act dir_act name =
+fun recursive_act ofns file_act dir_act name =
     let
       fun worklist nms rmds =
           case nms of
@@ -358,27 +366,21 @@ fun recursive_act file_act dir_act name =
               if FileSys.isLink n then
                 (file_act n ; worklist ns rmds)
               else if FileSys.isDir n then
-                worklist (dir_files n ns) (n :: rmds)
+                worklist (dir_files ofns n ns) (n :: rmds)
               else (file_act n ; worklist ns rmds)
     in
       worklist [name] []
     end
-end (* local *)
-
-fun quiet_remove s = FileSys.remove s handle e => ()
-fun chatty_remove act (ofns : output_functions) s =
-    act s handle e =>
-                 (#warn ofns ("Attempt to remove: " ^ s ^
-                              " failed with exception " ^ General.exnMessage e);
-                  raise e)
-
 fun clean1 (ofns : output_functions) s =
-    let val _ = #diag ofns "tools" (fn () => "clean1 " ^ s)
+    let val _ = #diag ofns "tools"
+                      (fn () => "clean1 " ^ s ^
+                                " [In: " ^ OS.FileSys.getDir() ^ "]")
     in
-      if FileSys.access (s, []) then
-        if FileSys.isDir s then
+      if OS.FileSys.access (s, []) then
+        if OS.FileSys.isDir s then
           if String.isSuffix "/" s then
-            recursive_act (chatty_remove OS.FileSys.remove ofns)
+            recursive_act ofns
+                          (chatty_remove OS.FileSys.remove ofns)
                           (chatty_remove OS.FileSys.rmDir ofns)
                           s
           else
@@ -387,8 +389,9 @@ fun clean1 (ofns : output_functions) s =
         else chatty_remove FileSys.remove ofns s
       else (* doesn't exist, do nothing *) ()
     end
+end (* local *)
 
-
+fun quiet_remove s = FileSys.remove s handle e => ()
 fun clean_dir ofns {extra_cleans} = let
   fun to_delete f =
       case (toFile f) of
