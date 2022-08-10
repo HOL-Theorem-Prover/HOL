@@ -4,6 +4,9 @@ sig
   val HOLOBJDIR : string (* for use in Holmakefiles' HOL_LNSIGOBJ *)
   val HOLtoFS : string -> {fullfile : string, dir : string} option
   val toFSfn : bool -> (string -> 'a) -> (string -> 'a)
+  val clean_last : unit -> unit
+  (* applies HFS-specific "cleaning" to the current directory, assuming
+     all normal cleaning has been done *)
 
   type dirstream
   exception DirNotFound

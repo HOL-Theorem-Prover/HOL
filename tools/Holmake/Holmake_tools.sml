@@ -404,6 +404,7 @@ fun clean_dir ofns {extra_cleans} = let
 in
   read_files_with_objs
     {dirname = "."} to_delete (chatty_remove OS.FileSys.remove ofns);
+  HFS_NameMunge.clean_last();
   app (clean1 ofns) extra_cleans
 end
 

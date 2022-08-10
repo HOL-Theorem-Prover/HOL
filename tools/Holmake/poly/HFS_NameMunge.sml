@@ -136,4 +136,7 @@ fun read_files_with_objs {dirname} P action =
                          (fn () => base_app {dirname="."} P action)
                else action s)
 
+fun clean_last () =
+    OS.FileSys.rmDir HOLOBJDIR handle OS.SysErr _ => ()
+
 end (* struct *)

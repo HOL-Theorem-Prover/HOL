@@ -30,4 +30,6 @@ fun read_files_with_objs {dirname} P action =
       closeDir ds
     end
 
+fun clean_last () = ()
+
 end (* struct *)
