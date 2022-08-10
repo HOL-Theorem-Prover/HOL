@@ -486,7 +486,10 @@ fun clean0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
   open Holmake_tools
 in
-  clean_dir default_ofns {extra_cleans = extra_cleans} ;
+  clean_dir default_ofns {extra_cleans = extra_cleans}
+    handle Interrupt => raise Interrupt
+         | e => warn ("Couldn't clean in directory " ^ OS.FileSys.getDir() ^
+                      ": " ^ General.exnMessage e);
   includes
 end
 
