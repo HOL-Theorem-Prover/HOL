@@ -22,8 +22,6 @@ regexpMatch.sig
 regexpMatch.sml
 parse_glob.sig
 parse_glob.sml
-internal_functions.sig
-internal_functions.sml
 tailbuffer.sig
 tailbuffer.sml
 Holmake_tools_dtype.sml
@@ -31,6 +29,8 @@ terminal_primitives.sig
 poly-terminal-prims.ML
 Holmake_tools.sig
 Holmake_tools.sml
+internal_functions.sig
+internal_functions.sml
 Holmake_types.sig
 Holmake_types.sml
 ReadHMF.sig

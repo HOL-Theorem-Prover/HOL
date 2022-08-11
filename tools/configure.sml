@@ -319,8 +319,6 @@ val _ =
     FileSys.chDir "..";
     compile [] "HOLFileSys.sig";
     compile [] "HOLFileSys.sml";
-    compile [] "internal_functions.sig";
-    compile [] "internal_functions.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
     compile [] "QuoteFilter.sml";
@@ -333,6 +331,8 @@ val _ =
     compile ["-I", "mosml"] "Holdep.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
+    compile [] "internal_functions.sig";
+    compile [] "internal_functions.sml";
     compile [] "Holmake_types.sig";
     compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
