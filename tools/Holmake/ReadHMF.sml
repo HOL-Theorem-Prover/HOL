@@ -1,7 +1,7 @@
 structure ReadHMF :> ReadHMF =
 struct
 
-open Holmake_types
+open Holmake_types Holmake_tools
 
 datatype cond_position = GrabbingText | NoTrueCondYet | SkippingElses
 val empty_condstate = [] : cond_position list
@@ -346,24 +346,6 @@ val read =
 fun readlist e vref =
   map dequote (tokenize (perform_substitution e [VREF vref]))
 
-fun memoise f =
-    let
-      val stash = ref (Binarymap.mkDict String.compare)
-      fun lookup s =
-          case Binarymap.peek(!stash, s) of
-              NONE =>
-              let
-                val (actual, ignorablep) = f s
-              in
-                if ignorablep then
-                  stash := Binarymap.insert(!stash, s, actual)
-                else ();
-                actual
-              end
-            | SOME r => r
-    in
-      lookup
-    end
 
 fun find_includes0 dirname =
   let
@@ -375,17 +357,17 @@ fun find_includes0 dirname =
         val (e, _, _) = read hm_fname (base_environment())
         val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
       in
-        (map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
-             raw_incs,
-         false)
+        map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
+            raw_incs
       end handle e => (warn ("Bogus Holmakefile in " ^ dirname ^
-                             " - ignoring it");
-                       ([], false))
-
-    else ([], true)
+                             " - ignoring it"); [])
+    else []
   end
 
-val find_includes = memoise find_includes0
+fun normPath p =
+    OS.Path.mkCanonical
+      (OS.Path.mkAbsolute{path = p, relativeTo = OS.FileSys.getDir()})
+val find_includes = memoise String.compare find_includes0 o normPath
 
 infix ++
 val op ++ = OS.Path.concat

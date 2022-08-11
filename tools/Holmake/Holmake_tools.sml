@@ -13,6 +13,24 @@ fun K x y = x
 fun |>(x,f) = f x
 infix |>
 
+fun memoise cmp f =
+    let
+      val stash = ref (Binarymap.mkDict cmp)
+      fun lookup s =
+          case Binarymap.peek(!stash, s) of
+              NONE =>
+              let
+                val result = f s
+              in
+                stash := Binarymap.insert(!stash, s, result);
+                result
+              end
+            | SOME r => r
+    in
+      lookup
+    end
+
+
 structure Exception = struct
   datatype 'a result = Res of 'a | Exn of exn
   fun get_res (Res r) = SOME r | get_res _ = NONE

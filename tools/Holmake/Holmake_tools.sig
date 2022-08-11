@@ -7,6 +7,7 @@ sig
   datatype buildcmds = datatype Holmake_tools_dtype.buildcmds
 
   val |> : 'a * ('a -> 'b) -> 'b
+  val memoise : ('a * 'a -> order) -> ('a -> 'b) -> ('a -> 'b)
 
   (* simple list things *)
   val member : ''a -> ''a list -> bool
