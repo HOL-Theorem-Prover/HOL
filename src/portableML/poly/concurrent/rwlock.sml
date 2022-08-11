@@ -30,12 +30,12 @@ in
   Exn.release result
 end
 
-fun write (rwl : 'a t) (f : 'a -> unit) = let
+fun write (rwl : 'a t) (f : 'a -> 'b) = let
   val _ = Mutex.lock (#writer_mutex rwl)
-  val u_or_exn = Exn.capture f (#state rwl)
+  val b_or_exn = Exn.capture f (#state rwl)
 in
   Mutex.unlock (#writer_mutex rwl);
-  Exn.release u_or_exn
+  Exn.release b_or_exn
 end
 
 end
