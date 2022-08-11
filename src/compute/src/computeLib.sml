@@ -18,7 +18,7 @@ val _ = Feedback.register_btrace
 
 (* re-exporting types from clauses *)
 
-type compset = comp_rws rwlock.t;
+type compset = clauses.compset rwlock.t;
 type transform = clauses.transform
 
 val new_compset = rwlock.new o from_list;
@@ -245,7 +245,7 @@ and strong_up (th, Cbv_top) = th
 fun CBV_CONV0 rws = evaluate o strong o cbv_wk o initial_state rws;
 
 fun CBV_CONV cs t =
-    rwlock.read cs (fn rws => CBV_CONV0 rws t)
+    rwlock.write cs (fn rws => CBV_CONV0 rws t)
 
 (*---------------------------------------------------------------------------
  * WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
@@ -260,7 +260,7 @@ fun WEAK_CBV_CONV0 rws =
     o initial_state rws;
 
 fun WEAK_CBV_CONV cs t =
-    rwlock.read cs (fn rws => WEAK_CBV_CONV0 rws t)
+    rwlock.write cs (fn rws => WEAK_CBV_CONV0 rws t)
 
 (*---------------------------------------------------------------------------
  * Adding an arbitrary conv
