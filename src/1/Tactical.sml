@@ -242,7 +242,7 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic = coreTHEN1 "" tac1 tac2
 
 val op >- = op THEN1
 fun op>>-(tac1, n) tac2 g =
-  coreTHEN1 (" (THEN1 on line " ^ Int.toString n ^ ")") tac1 tac2
+  coreTHEN1 (" (THEN1 on line " ^ Int.toString n ^ ")") tac1 tac2 g
   handle e as HOL_ERR {message,origin_structure,origin_function} =>
          if is_substring "THEN1" message then raise e
          else
@@ -251,6 +251,7 @@ fun op>>-(tac1, n) tac2 g =
                           origin_function = origin_function,
                           origin_structure = origin_structure}
 
+fun (f ?? x) = f x
 
 
 (*---------------------------------------------------------------------------
