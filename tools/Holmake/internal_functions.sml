@@ -185,7 +185,7 @@ fun safeIsDir s =
 
 fun diag s = TextIO.output(TextIO.stdErr, s)
 
-fun wildcard s =
+fun wildcard0 (dirname,s) =
     if s = "" then [""]
     else let
       open parse_glob
@@ -198,7 +198,7 @@ fun wildcard s =
                       else k (d,"", l)
             | [] => k (d,"", l)
       val (starting_dir,pfx, rest) =
-          initial_split (FileSys.getDir()) split_comps (fn x => x)
+          initial_split dirname split_comps (fn x => x)
       fun recurse curpfx curdir complist : string list =
           case complist of
               c::cs => (* c must be non-null *)
@@ -241,6 +241,13 @@ fun wildcard s =
           [] => (* happens if input was a series of forward slashes *) [s]
         | _ => case recurse pfx starting_dir rest of [] => [] | x => x
     end
+
+local open Holmake_tools
+val wildcard_withdir =
+    memoise (pair_compare(String.compare, String.compare)) wildcard0
+in
+fun wildcard s = wildcard_withdir (OS.FileSys.getDir(), s)
+end
 
 fun get_first f [] = NONE
   | get_first f (h::t) = (case f h of NONE => get_first f t | x => x)
