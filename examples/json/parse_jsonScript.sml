@@ -3,7 +3,7 @@ open BasicProvers boolSimps markerLib optionTheory ;
 open listTheory rich_listTheory ;
 open stringTheory ASCIInumbersTheory arithmeticTheory ;
 
-val _ = new_theory "json";
+val _ = new_theory "parse_json";
 
 Datatype:
   json =
