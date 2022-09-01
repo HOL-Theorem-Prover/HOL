@@ -7854,13 +7854,14 @@ Proof
      ‘&b <> (0 :real)’ by rw [] \\
      ‘&b <> (0 :extreal)’ by METIS_TAC [extreal_11, extreal_of_num_def] \\
       rw [extreal_div_eq] \\
-      qexistsl_tac [‘a’, ‘b’] >> art [],
+      qexistsl_tac [‘a’, ‘b’] >> art [] >> simp[],
       (* goal 4 (of 4) *)
       DISJ2_TAC >> Q.EXISTS_TAC ‘-(&a / &b)’ \\
      ‘&b <> (0 :real)’ by rw [] \\
      ‘&b <> (0 :extreal)’ by METIS_TAC [extreal_11, extreal_of_num_def] \\
       rw [extreal_div_eq, GSYM extreal_ainv_def] \\
-      qexistsl_tac [‘a’, ‘b’] >> art [] ]
+      qexistsl_tac [‘a’, ‘b’] >> art [] >> simp[]
+    ]
 QED
 
 Theorem Q_not_infty :

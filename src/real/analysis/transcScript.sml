@@ -3414,7 +3414,7 @@ Proof
  >> STRIP_TAC
  >> ‘x <> 0 /\ y <> 0’ by PROVE_TAC [REAL_POS_NZ]
  >> Know ‘t * inv x + inv y * (1 - t) = (y * t + x * (1 - t)) / (x * y)’
- >- (rw [real_div, REAL_ADD_RDISTRIB])
+ >- (rw [real_div, REAL_ADD_RDISTRIB, REAL_ADD_LDISTRIB])
  >> Rewr'
  >> Know ‘(y * t + x * (1 - t)) / (x * y) = inv (x * y / (y * t + x * (1 - t)))’
  >- (rw [real_div, REAL_INV_MUL'])

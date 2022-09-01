@@ -1208,7 +1208,7 @@ val ex4 = lenorm “x pow 3 * 10 <= x pow 5 * y”
 val ex5 = lenorm “z pow 3 * 10 <= z pow 5 * y”
 *)
 fun V s = mk_var(s, real_ty)
-val x = V "x" and y = V "y" and z = V "z"
+val x = V "x" and y = V "y" and z = V "z" and n = mk_var("n", numSyntax.num)
 val RMULRELNORM_ss = SSFRAG {
   ac = [], congs = [], dprocs = [], filter = NONE, name = SOME "RMULRELNORM_ss",
   rewrs = [],
@@ -1224,6 +1224,22 @@ val RMULRELNORM_ss = SSFRAG {
     {key = SOME ([], mk_eq(mk_mult(x,y),z)),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM2", trace = 2
+    },
+    {key = SOME ([], mk_eq(mk_div(x,y), z)),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM3", trace = 2
+    },
+    {key = SOME ([], mk_eq(z, mk_div(x,y))),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM4", trace = 2
+    },
+    {key = SOME ([], mk_eq(mk_pow(x,n), z)),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM5", trace = 2
+    },
+    {key = SOME ([], mk_eq(z, mk_pow(x,n))),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM6", trace = 2
     },
     {key = SOME ([], mk_less(x,y)),
      conv = mulrelnorm less_tm [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)],
