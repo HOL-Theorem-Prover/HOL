@@ -64,11 +64,11 @@ hol4-base-unint.art: hol4-base-unint.thy $(ARTS)
 
 base-theorems.art:
 	opentheory info --theorems -o $@ base
-	touch base-theorems.ui base-theorems.uo
+	touch $(HOLOBJDIR)/base-theorems.ui $(HOLOBJDIR)/base-theorems.uo
 
 hol4-assums.art: hol4-base-unsat.thy hol4-base-unint.art ../opentheory/hol4.int
 	opentheory info --skip-definitions --assumptions -o $@ $<
-	touch hol4-assums.ui hol4-assums.uo
+	touch $(HOLOBJDIR)/hol4-assums.ui $(HOLOBJDIR)/hol4-assums.uo
 
 prove_base_assums.art: prove_base_assums.otd base-theorems.art hol4-assums.art
 
@@ -86,6 +86,7 @@ endif
 ifdef HOLSELFTESTLEVEL
 all: boss-selftest.log
 
-boss-selftest.log: ./selftest.exe
-	$(tee ./selftest.exe,$@)
+boss-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
 endif
