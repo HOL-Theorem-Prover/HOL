@@ -386,20 +386,21 @@ End
 Definition json_to_tok_def:
   (json_to_tok obj =
     case obj of
-        | Object mems => [OBJOPEN] ++
-                concat_with (MAP mem_to_tok mems) ([COMMA]) ++
-                [OBJCLOSE]
-        | Array obs => [ARROPEN] ++
-                concat_with (MAP json_to_tok obs) ([COMMA]) ++
-                [ARRCLOSE]
+        | Object mems =>
+               [OBJCLOSE] ++
+               (REVERSE $ concat_with (MAP mem_to_tok mems) [COMMA]) ++
+               [OBJOPEN]
+        | Array obs =>
+                [ARRCLOSE] ++
+                (REVERSE $ concat_with (MAP json_to_tok obs) [COMMA]) ++
+                [ARROPEN]
        | String s => [Str s]
        | Number i => [NUM i]
        | Bool b => [BOOL b]
        | Null => [NULL])
   /\
   (mem_to_tok n_obj = let (n, obj) = n_obj in
-       [Str n]
-       ++ [COLON] ++ json_to_tok obj)
+        json_to_tok obj ++ [COLON;Str n])
 Termination
    WF_REL_TAC `measure (\x. case x of
        | INL obj => json_size obj
