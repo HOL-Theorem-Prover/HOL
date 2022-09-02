@@ -454,8 +454,11 @@ QED
 (*
 Examples:
 EVAL ``lex "{}" []``
+EVAL ``lex "\"\"\"" []``
+EVAL ``lex "\"\"" []``
 EVAL ``parse [OBJCLOSE; OBJOPEN] [] T``
 EVAL ``parse [OBJCLOSE; OBJCLOSE; OBJOPEN] [] T``
+EVAL ``parse (OUTL $ lex "{\"1\": {\"2\": {\"3\": [{\"4\": {}}]}}}" []) [] T``
 EVAL ``CONCAT $ json_to_string $ Object [("a",Array [])]``
 EVAL ``CONCAT $ json_to_string $ String "\u0022"``
 *)
