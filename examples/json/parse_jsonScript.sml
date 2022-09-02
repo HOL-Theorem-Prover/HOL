@@ -106,10 +106,10 @@ Definition json_to_string_def:
   (json_to_string obj =
     case obj of
         | Object mems => ["{"] ++
-                concat_with (MAP mem_to_string mems) ([","]) ++
+                concat_with (MAP mem_to_string mems) [","] ++
                 ["}"]
         | Array obs => ["["] ++
-                concat_with (MAP json_to_string obs) ([","]) ++
+                concat_with (MAP json_to_string obs) [","] ++
                 ["]"]
        | String s => [CONCAT ["\""; encode_str T s; "\""]]
        | Number i => [toString i]
@@ -412,8 +412,6 @@ End
 
 (* TODO prove equality between json_to_tok and json_to_string *)
 
-val json_size_def = fetch "-" "json_size_def";
-val json_size_eq = fetch "-" "json_size_eq";
 
 (*
 Examples:
