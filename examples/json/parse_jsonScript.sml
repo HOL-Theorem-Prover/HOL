@@ -411,8 +411,35 @@ Termination
   >> fs[]
 End
 
-(* TODO prove equality between json_to_tok and json_to_string *)
+Theorem lex_json_to_string_eq_json_to_tok:
+  !obj. lex (FLAT $ json_to_string obj) [] = INL $ json_to_tok obj
+Proof
+  cheat
+QED
 
+(* Correctness: serialise then parse *)
+
+Theorem parse_json_to_tok_eq_ID:
+  !obj. parse (json_to_tok obj) [] T = INR (obj,[],[])
+Proof
+  cheat
+QED
+
+Theorem parse_json_to_string_eq_ID:
+  !obj ts. lex (FLAT $ json_to_string obj) [] = INL ts
+  ==> parse ts [] T = INR (obj,[],[])
+Proof
+  fs[lex_json_to_string_eq_json_to_tok,parse_json_to_tok_eq_ID]
+QED
+
+(* Correctness: parse then serialise *)
+
+Theorem json_to_tok_parse_eq_ID:
+  !obj ts. parse ts [] T = INR (obj, [], [])
+  ==> json_to_tok obj = ts
+Proof
+  cheat
+QED
 
 (*
 Examples:
