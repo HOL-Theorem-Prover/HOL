@@ -15,6 +15,25 @@ Datatype:
    | Null
 End
 
+val json_size_def = fetch "-" "json_size_def";
+
+Theorem json_size_MEM1:
+  !l a. MEM a l ==> json_size a < json3_size l
+Proof
+  Induct >> rw[json_size_def]
+  >> res_tac
+  >> fs[]
+QED
+
+Theorem json_size_MEM2:
+  !l a. MEM a l ==> json_size (SND a) + list_size char_size (FST a) < json1_size l
+Proof
+  Induct >> fs[json_size_def]
+  >> gen_tac >> PairCases
+  >> rw[]
+  >> res_tac >> fs[json_size_def]
+QED
+
 Definition concat_with_def:
   (concat_with [] c = []) /\
   (concat_with [s] c = s) /\
@@ -103,7 +122,11 @@ Definition json_to_string_def:
 Termination
    WF_REL_TAC `measure (\x. case x of
        | INL obj => json_size obj
-       | INR p => json2_size p)` \\ rw []
+       | INR p => json2_size p)`
+  >> rw[]
+  >> imp_res_tac json_size_MEM1
+  >> imp_res_tac json_size_MEM2
+  >> fs[]
 End
 
 (* lexing *)
@@ -377,7 +400,11 @@ Definition json_to_tok_def:
 Termination
    WF_REL_TAC `measure (\x. case x of
        | INL obj => json_size obj
-       | INR p => json2_size p)` \\ rw []
+       | INR p => json2_size p)`
+  >> rw[]
+  >> imp_res_tac json_size_MEM1
+  >> imp_res_tac json_size_MEM2
+  >> fs[]
 End
 
 (* TODO prove equality between json_to_tok and json_to_string *)
