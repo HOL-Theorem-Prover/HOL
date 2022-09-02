@@ -362,11 +362,13 @@ Definition parse_def:
     = parse ts ((ARR $ (Array [])::acc)::ns) F
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((OBJ acc)::ns) T
     = parse ts ((OBJV (Object []) acc)::ns) F
+  /\ parse (OBJCLOSE::ts) ns T = parse ts ((OBJ [])::ns) T
   /\ parse (ARRCLOSE::ARROPEN::ts) ((OBJ acc)::ns) T
     = parse ts ((OBJV (Array []) acc)::ns) F
   /\ parse (OBJCLOSE::OBJOPEN::ts) ns T = INR (Object [], ts, ns)
   /\ parse (ARRCLOSE::ARROPEN::ts) ns T = INR (Array [], ts, ns)
   /\ parse (COMMA::ts) ((ARR acc)::ns) F = parse ts ((ARR acc)::ns) T
+  /\ parse (ARRCLOSE::ts) ns T = parse ts ((ARR [])::ns) T
   /\ parse (ARROPEN::ts) ((ARR aacc)::(OBJ oacc)::ns) F
     = parse ts ((OBJV (Array aacc) oacc)::ns) F
   /\ parse (ARROPEN::ts) ((ARR acc)::(ARR acc')::ns) F
