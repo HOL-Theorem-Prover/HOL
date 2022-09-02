@@ -239,18 +239,21 @@ Proof
   >- (
     first_x_assum $ drule_at Any
     >> rw[IS_SUFFIX_APPEND]
+    >> qmatch_goalsub_rename_tac `STRING h (STRCAT l _)`
     >> qexists_tac `h::l`
     >> fs[]
   )
   >- (
     first_x_assum $ drule_at Any
     >> rw[IS_SUFFIX_APPEND]
+    >> qmatch_goalsub_rename_tac `STRING h (STRCAT l _)`
     >> qexists_tac `h::l`
     >> fs[]
   )
   >> first_x_assum $ drule_at Any
   >> fs[IS_SUFFIX_APPEND]
   >> rw[]
+  >> qmatch_goalsub_rename_tac `STRCAT l (STRCAT l' _)`
   >> qexists_tac `STRCAT (#"\\"::l) l'`
   >> fs[]
 QED
