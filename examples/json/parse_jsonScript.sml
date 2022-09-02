@@ -344,36 +344,44 @@ End
 
 Definition parse_def:
      parse [] _ T = INL "unexpected EOF"
-  /\ parse (NULL::ts) ((ARR acc)::ns) T     = parse ts ((ARR $ Null::acc)::ns) F
-  /\ parse ((BOOL b)::ts) ((ARR acc)::ns) T = parse ts ((ARR $ (Bool b)::acc)::ns) F
-  /\ parse ((Str s)::ts) ((ARR acc)::ns) T  = parse ts ((ARR $ (String s)::acc)::ns) F
-  /\ parse ((NUM n)::ts) ((ARR acc)::ns) T  = parse ts ((ARR $ (Number n)::acc)::ns) F
-  /\ parse (NULL::ts) ((OBJ acc)::ns) T     = parse ts ((OBJV Null acc)::ns) F
-  /\ parse ((BOOL b)::ts) ((OBJ acc)::ns) T = parse ts ((OBJV (Bool b) acc)::ns) F
-  /\ parse ((Str s)::ts) ((OBJ acc)::ns) T  = parse ts ((OBJV (String s) acc)::ns) F
-  /\ parse ((NUM n)::ts) ((OBJ acc)::ns) T  = parse ts ((OBJV (Number n) acc)::ns) F
-  /\ parse (NULL::ts) ns T     = INR (Null, ts, ns)
-  /\ parse ((BOOL b)::ts) ns T = INR (Bool b, ts, ns)
-  /\ parse ((Str s)::ts) ns T  = INR (String s, ts, ns)
-  /\ parse ((NUM n)::ts) ns T  = INR (Number n, ts, ns)
+  /\ parse (NULL::ts) ns T =
+    (case ns of
+    | (OBJ acc)::ns => parse ts ((OBJV Null acc)::ns) F
+    | (ARR acc)::ns => parse ts ((ARR $ Null::acc)::ns) F
+    | ns => INR (Null, ts, ns))
+  /\ parse ((BOOL b)::ts) ns T =
+    (case ns of
+    | (OBJ acc)::ns => parse ts ((OBJV (Bool b) acc)::ns) F
+    | (ARR acc)::ns => parse ts ((ARR $ (Bool b)::acc)::ns) F
+    | ns => INR (Bool b, ts, ns))
+  /\ parse ((Str s)::ts) ns T =
+    (case ns of
+    | (OBJ acc)::ns => parse ts ((OBJV (String s) acc)::ns) F
+    | (ARR acc)::ns => parse ts ((ARR $ (String s)::acc)::ns) F
+    | ns => INR (String s, ts, ns))
+  /\ parse ((NUM n)::ts) ns T =
+    (case ns of
+    | (OBJ acc)::ns => parse ts ((OBJV (Number n) acc)::ns) F
+    | (ARR acc)::ns => parse ts ((ARR $ (Number n)::acc)::ns) F
+    | ns => INR (Number n, ts, ns))
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((ARR acc)::ns) T
     = parse ts ((ARR $ (Object [])::acc)::ns) F
-  /\ parse (ARRCLOSE::ARROPEN::ts) ((ARR acc)::ns) T
-    = parse ts ((ARR $ (Array [])::acc)::ns) F
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((OBJ acc)::ns) T
     = parse ts ((OBJV (Object []) acc)::ns) F
+  /\ parse (OBJCLOSE::OBJOPEN::ts) ns T = INR (Object [], ts, ns)
   /\ parse (OBJCLOSE::ts) ns T = parse ts ((OBJ [])::ns) T
+  /\ parse (ARRCLOSE::ARROPEN::ts) ((ARR acc)::ns) T
+    = parse ts ((ARR $ (Array [])::acc)::ns) F
   /\ parse (ARRCLOSE::ARROPEN::ts) ((OBJ acc)::ns) T
     = parse ts ((OBJV (Array []) acc)::ns) F
-  /\ parse (OBJCLOSE::OBJOPEN::ts) ns T = INR (Object [], ts, ns)
   /\ parse (ARRCLOSE::ARROPEN::ts) ns T = INR (Array [], ts, ns)
-  /\ parse (COMMA::ts) ((ARR acc)::ns) F = parse ts ((ARR acc)::ns) T
   /\ parse (ARRCLOSE::ts) ns T = parse ts ((ARR [])::ns) T
   /\ parse (ARROPEN::ts) ((ARR aacc)::(OBJ oacc)::ns) F
     = parse ts ((OBJV (Array aacc) oacc)::ns) F
   /\ parse (ARROPEN::ts) ((ARR acc)::(ARR acc')::ns) F
     = parse ts ((ARR $ (Array acc)::acc')::ns) F
   /\ parse (ARROPEN::ts) ((ARR acc)::ns) F = INR (Array acc, ts, ns)
+  /\ parse (COMMA::ts) ((ARR acc)::ns) F = parse ts ((ARR acc)::ns) T
   /\ parse (COLON::(Str s)::OBJOPEN::ts) ((OBJV v oacc)::(ARR aacc)::ns) F
     = parse ts ((ARR $ (Object $ (s,v)::oacc)::aacc)::ns) F
   /\ parse (COLON::(Str s)::OBJOPEN::ts) ((OBJV v acc)::(OBJ acc')::ns) F
