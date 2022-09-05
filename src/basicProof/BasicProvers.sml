@@ -1060,7 +1060,7 @@ val bool_ss = boolSimps.bool_ss;
 
 datatype srw_update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
 type srw_state = simpset * bool * srw_update list
-  (* simpset, initialised-flag, update list (most recent first), ssfrag *)
+  (* simpset, initialised-flag, update list (most recent first) *)
 
 val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
                               ++ boolSimps.NORMEQ_ss
@@ -1104,6 +1104,9 @@ fun opt_partition f g ls =
       recurse [] [] ls
     end
 
+(* stale-ness is important for derived values. Derived values will get
+   re-calculated if their flag is true when the value is requested.
+*)
 val stale_flags = Sref.new ([] : bool Sref.t list)
 fun notify () =
     List.app (fn br => Sref.update br (K true)) (Sref.value stale_flags)
