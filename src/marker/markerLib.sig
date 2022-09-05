@@ -25,6 +25,8 @@ sig
 
   val Excl   : string -> thm
   val destExcl : thm -> string option
+  val ExclSF : string -> thm
+  val destExclSF : thm -> string option
 
   val FRAG   : string -> thm
   val destFRAG : thm -> string option

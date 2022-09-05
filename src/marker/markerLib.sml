@@ -85,10 +85,12 @@ fun genmktagged th nm =
     end
 val Excl = genmktagged markerTheory.Exclude_def
 val FRAG = genmktagged markerTheory.FRAG_def
+val ExclSF = genmktagged markerTheory.ExcludeFrag_def
 
 
 fun mk_marker_const nm = prim_mk_const{Thy = "marker", Name = nm}
 val Excl_t = mk_marker_const "Exclude"
+val ExclSF_t = mk_marker_const "ExcludeFrag"
 val FRAG_t = mk_marker_const "FRAG"
 fun gendest_tagged t th =
     let val c = concl th
@@ -99,6 +101,7 @@ fun gendest_tagged t th =
     end handle HOL_ERR _ => NONE
 val destExcl = gendest_tagged Excl_t
 val destFRAG = gendest_tagged FRAG_t
+val destExclSF = gendest_tagged ExclSF_t
 
 val Req0_t = mk_marker_const "Req0"
 val Req0_th = EQT_ELIM markerTheory.Req0_def

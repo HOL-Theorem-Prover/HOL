@@ -706,23 +706,27 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
 
  fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);
 
-val Cong = markerLib.Cong
-val AC   = markerLib.AC;
-val Excl = markerLib.Excl
-val Req0 = markerLib.mk_Req0
-val ReqD = markerLib.mk_ReqD
+val Cong   = markerLib.Cong
+val AC     = markerLib.AC;
+val Excl   = markerLib.Excl
+val ExclSF = markerLib.ExclSF
+val Req0   = markerLib.mk_Req0
+val ReqD   = markerLib.mk_ReqD
 
 local open markerSyntax markerLib
 in
 fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
 fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
-fun extract_excls (excls, rest) l =
+fun extract_excls (excls, exfrags, rest) l =
     case l of
-        [] => (List.rev excls, List.rev rest)
-      | th::ths => case markerLib.destExcl th of
-                       NONE => extract_excls (excls, th::rest) ths
-                     | SOME nm => extract_excls (nm::excls, rest) ths
+        [] => (List.rev excls, List.rev exfrags, List.rev rest)
+      | th::ths =>
+        case markerLib.destExcl th of
+            SOME nm => extract_excls (nm::excls, exfrags, rest) ths
+          | NONE => case markerLib.destExclSF th of
+                        NONE => extract_excls (excls, exfrags, th::rest) ths
+                      | SOME nm => extract_excls (excls, nm::exfrags, rest) ths
 
 fun extract_frags (frags, rest) l =
     case l of
@@ -752,13 +756,14 @@ fun SF ssfrag =
 fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst) = Lib.partition is_AC rst
-        val (excludes, rst) = extract_excls ([],[]) rst
+        val (excludes, exclfrags, rst) = extract_excls ([],[],[]) rst
         val (frags, rst) = extract_frags ([],[]) rst
     in
-      if null Congs andalso null ACs andalso null excludes andalso null frags
+      if null Congs andalso null ACs andalso null excludes andalso
+         null frags andalso null exclfrags
       then (ss,thl)
       else (
-        List.foldl (flip op++) ss (
+        List.foldl (flip op++) (remove_ssfrags exclfrags ss) (
           SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
                      ac=map unAC ACs, congs=map (normCong o unCong) Congs,
                      convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
