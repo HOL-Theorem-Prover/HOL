@@ -72,31 +72,84 @@ put the simpler term on the left, and sorted the multiplication's
 arguments.
 
 
-\subsection{Simplification tactics}
+\subsection{High-Level Simplification Tactics}
 \label{sec:simplification-tactics}
 \index{simplification!tactics}
 
-The simplifier is implemented around the conversion \ml{SIMP\_CONV},
-which is a function for `converting' terms into theorems.  To apply
-the simplifier to goals (alternatively, to perform tactic-based proofs
-with the simplifier), \HOL{} provides five tactics, all of which are
-available in \ml{bossLib}.
+The simplifier is implemented around the conversion \ml{SIMP\_CONV} introduced above.
+This is a function for `converting' terms into theorems.
+To apply the simplifier to goals (alternatively, to perform tactic-based proofs with the simplifier), \HOL{} provides a number of tactics, all of which are available in \ml{bossLib}.
+These tactics divide into two classes.
+
+The first and more commonly used class is of high-level tactics used in the form
+\[
+\ml{tactic\_name}[\mathit{th}_1,\dots,\mathit{th}_n]
+\]
+where the various $\mathit{th}_i$ are theorems that are passed to the simplifier and used as additional rewrites.
+There is a \simpset{} used here, but it is implicit: the global, ``stateful'' \simpset, embodying all of a theory and a theory's ancestors' useful simplification technology.
+For more on the stateful \simpset, see Section~\ref{sec:srw-ss} below.
+
+The commonly used tactics of this sort are \ml{simp}, \ml{rw}, \ml{fs} and \ml{gs}.
+\index{gs (simplification tactic)@\ml{gs} (simplification tactic)}
+\index{fs (simplification tactic)@\ml{fs} (simplification tactic)}
+\index{rw (simplification tactic)@\ml{rw} (simplification tactic)}
+\index{simp (simplification tactic)@\ml{simp} (simplification tactic)}
+All of these tactics use the stateful simpset, and (by default), add the arithmetic decision procedure for $\mathbb{N}$, as well as a handling of \ml{let}-terms that turns \holtxt{let~x~=~v~in~M} into \holtxt{M} with free occurrences of \holtxt{x} replaced by \holtxt{v}.
+
+The exact behaviour of these tactics can be further adjusted with the use of special theorem forms, described below in Section~\ref{sec:simp-special-rewrite-forms}.
+
+\subsubsection{\ml{simp : thm list -> tactic}}
+\index{simp (simplification tactic)@\ml{simp} (simplification tactic)}
+
+A call to \ml{simp[$\mathit{th}_1\dots,\mathit{th}_n$]} simplifies the current goal, using the augmented stateful simpset described above, as well as the theorems passed in the argument list.
+Finally, all of the goal's assumptions are also used as a source of rewrites.
+When an assumption is used by \ml{simp}, it is converted into rewrite rules in the same way as theorems passed in the list given as the tactic's argument.  For example, an
+assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{$\vdash$ P = F}.
+
+\begin{session}
+\begin{alltt}
+>>_ g `x < 3 /\ P x ==> x < 20 DIV 2`;
+>> e (simp[]);
+\end{alltt}
+\end{session}
+
+The \ml{simp} tactic is implemented with the low-level tactic \ml{ASM\_SIMP\_TAC} (described below).
+
+\subsubsection{\ml{rw : thm list -> tactic}}
+\index{rw (simplification tactic)@\ml{rw} (simplification tactic)}
+
+A call to \ml{rw[$\mathit{th}_1\dots,\mathit{th}_n$]} is similar in behaviour to \ml{simp} with the same arguments but does its simplification while interspersing phases of aggressive ``goal-stripping''.
+In particular, \ml{rw} begins by stripping all outermost universal quantifiers and conjunctions.
+It follows this with elimination of variables \holtxt{v} that appear in assumptions of the form \holtxt{v~=~e} or \holtxt{e~=~v} (where \holtxt{v} cannot be free in \holtxt{e}).
+After a phase of simplification (as \emph{per} \ml{simp}), the \ml{rw} tactic then does a case-split on all free \holtxt{if}-\holtxt{then}-\holtxt{else} subterms within the goal,%
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic!case-splitting on}%
+strips away universal quantifiers, implications and conjunctions (\emph{\`a la} \ml{STRIP\_TAC}), and then simplifies equalities involving data type constructors in the assumptions and goal.
+(Such equalities will simplify to falsity if the constructors are different, or will simplify with an injectivity result.)
+
+This last phase of stripping may result in a goal that could simplify yet further but there is no final simplification to catch this possibility.
+Despite peculiarities such as this, \ml{rw} is often a useful way to simplify and remove unnecessary propositional structure.
+
+The \ml{rw} tactic performs the same mixture of simplification and goal-splitting as the low-level tactic \ml{RW\_TAC}.
+
+\subsection{Low-Level Simplification Tactics}
+\label{sec:low-level-simplification-tactics}
+\index{simplification!tactics}
+
+The second class of simplification tactics are more primitive and explicitly take a \simpset{} as an argument.
+This ability to specify a \simpset{} to use allows for finer-grained control of just what the tactic will do.
+In particular, the \ml{bool\_ss} \simpset{} is relatively common as an argument to these tactics is relatively common.
 
 \subsubsection{\ml{SIMP\_TAC : simpset -> thm list -> tactic}}
 \index{SIMP_TAC@\ml{SIMP\_TAC}}
 
-\ml{SIMP\_TAC} is the simplest simplification tactic: it attempts to
-simplify the current goal (ignoring the assumptions) using the given
-\simpset{} and the additional theorems.  It is no more than the
-lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic
-level through the use of the standard function \ml{CONV\_TAC}.
+\ml{SIMP\_TAC} is the simplest simplification tactic: it attempts to simplify the current goal (ignoring the assumptions) using the given \simpset{} and the additional theorems.
+It is no more than the lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic level through the use of the standard function \ml{CONV\_TAC}.
 
 \subsubsection{\ml{ASM\_SIMP\_TAC : simpset -> thm list -> tactic}}
 \index{ASM_SIMP_TAC@\ml{ASM\_SIMP\_TAC}}
 
-Like \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} simplifies the current goal
-(leaving the assumptions untouched), but includes the goal's
-assumptions as extra rewrite rules.  Thus:
+Like \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} simplifies the current goal (leaving the assumptions untouched), but includes the goal's assumptions as extra rewrite rules.
+Thus:
 \begin{session}
 \begin{alltt}
 >>__ g `(x = 3) ==> P x`;
@@ -192,40 +245,6 @@ in two ways:
   phases of simplification in a way that is difficult to describe.
 \end{itemize}
 
-\subsubsection{\ml{SRW\_TAC : ssfrag list -> thm list -> tactic}}
-\index{SRW_TAC@\ml{SRW\_TAC}}
-
-The tactic \ml{SRW\_TAC} has a different type from the other
-simplification tactics.  It does not take a \simpset{} as an argument.
-Instead its operation always builds on the built-in \simpset{}
-\ml{srw\_ss()} (further described in Section~\ref{sec:srw-ss}).  The
-theorems provided as \ml{SRW\_TAC}'s second argument are treated in
-the same way as by the other simplification tactics.  Finally, the
-list of \simpset{} fragments are merged into the underlying
-\simpset{}, allowing the user to merge in additional simplification
-capabilities if desired.
-
-For example, to include the Presburger decision procedure, one could
-write
-\begin{hol}
-\begin{verbatim}
-   SRW_TAC [ARITH_ss][]
-\end{verbatim}
-\end{hol}
-\Simpset{} fragments are described below in
-Section~\ref{sec:simpset-fragments}.
-
-The \ml{SRW\_TAC} tactic performs the same mixture of simplification and
-goal-splitting as does \ml{RW\_TAC}.  The main differences between the
-two tactics lie in the fact that the latter can be inefficient when
-working with a large \ml{TypeBase}, and in the fact that working with
-\ml{SRW\_TAC} saves one from having to explicitly construct
-\simpset{}s that include all of the current context's ``appropriate''
-rewrites.  The latter ``advantage'' is based on the assumption that
-\ml{(srw\_ss())} never includes inappropriate rewrites.  The presence
-of unused rewrites is never a concern: the presence of rewrites that
-do the wrong thing can be a major irritation.
-
 \subsubsection{Abbreviated ``Power'' tactics}
 \HOL{}'s \ml{bossLib} module (part of the standard interactive environment) comes with a number of powerful simplification tactics with short lower-case names.
 These do not require or allow for the specification of a particular \simpset{} because they use \ml{srw_ss()} combined with the arithmetic decision procedure for the natural numbers, as well as a \simpset{} fragment that eliminates \holtxt{let}-terms.
@@ -245,12 +264,6 @@ These tactics are:
 \end{tabular}
 \end{center}
 Thus, the following is possible:
-\begin{session}
-\begin{alltt}
->>_ g `x < 3 /\ P x ==> x < 20 DIV 2`;
->> e (simp[]);
-\end{alltt}
-\end{session}
 In addition, two similar tactics allow special-purpose simplification of propositional structure:
 \begin{itemize}
 \item%
