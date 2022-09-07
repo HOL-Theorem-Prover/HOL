@@ -131,6 +131,10 @@ fun prim_find_subterm FVs tm (asl,w) =
                       val v = Lib.first (name_eq name) BV
                   in ([v], v)
                   end)
+            handle HOL_ERR _ =>
+                   raise ERR "find_subterm"
+                         ("No var with name \"" ^ name ^
+                          "\" free in goal, or in outer universal quantifiers")
       end
  else if List.exists (free_in tm) (w::asl) then Free tm
  else let val (V,body) = strip_forall w
