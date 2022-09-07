@@ -11,6 +11,10 @@ struct
   (** A simple karatsuba conversion **)
   val karatsuba_lim = ref $ Arbnum.fromInt 200
 
+  val mk_frac_thm = DB.find_all "mk_frac_thm" |> hd |> snd |> #1
+  val id_thm = DB.find_all "id_thm" |> hd |> snd |> #1
+  val mul_frac_thm = DB.find_all "mul_frac_thm" |> hd |> snd |> #1
+
   local
     val subst_let_conv = (REWR_CONV LET_THM THENC BETA_CONV)
     fun eval_let_conv c = RAND_CONV c THENC subst_let_conv
@@ -57,22 +61,22 @@ struct
         th4 |> rhs_fun_conv EVAL
       end end;
   in
-    fun karatsuba_conv tm =
-        let val (arg1, arg2) = numSyntax.dest_mult tm
-          val arg1_bval = ONCE_REWRITE_CONV [GSYM tobl_correct] arg1 |> RIGHT_CONV_RULE $ RAND_CONV EVAL
-          val arg2_bval = ONCE_REWRITE_CONV [GSYM tobl_correct] arg2 |> RIGHT_CONV_RULE $ RAND_CONV EVAL
-          val th = REWRITE_CONV [arg1_bval, arg2_bval] tm |> REWRITE_RULE [GSYM mul_thm]
-          val karat = th |> RIGHT_CONV_RULE $ karatsuba_rec_conv
-        in
-          karat |> REWRITE_RULE [GSYM fromBL_correct] |> RIGHT_CONV_RULE EVAL
+    fun karatsuba_conv tm = let
+      val (arg1, arg2) = numSyntax.dest_mult tm
+      in if is_var arg1 orelse is_var arg2 then raise UNCHANGED
+      else let
+        val arg1_bval = ONCE_REWRITE_CONV [GSYM tobl_correct] arg1 |> RIGHT_CONV_RULE $ RAND_CONV EVAL
+        val arg2_bval = ONCE_REWRITE_CONV [GSYM tobl_correct] arg2 |> RIGHT_CONV_RULE $ RAND_CONV EVAL
+        val th = REWRITE_CONV [arg1_bval, arg2_bval] tm |> REWRITE_RULE [GSYM mul_thm]
+        val karat = th |> RIGHT_CONV_RULE $ karatsuba_rec_conv
+      in
+        karat |> REWRITE_RULE [GSYM fromBL_correct] |> RIGHT_CONV_RULE EVAL
       end
+    end
   end;
 
   (** Now turn this into a conversion on reals **)
   local
-    val mk_frac_thm = DB.find_all "mk_frac_thm" |> hd |> snd |> #1
-    val id_thm = DB.find_all "id_thm" |> hd |> snd |> #1
-    val mul_frac_thm = DB.find_all "mul_frac_thm" |> hd |> snd |> #1
     (* Apply conversion c to term tm if tm is not a negation,
        otherwise use its rand with RAND_CONV **)
     fun real_neg_app_conv c tm =
@@ -84,25 +88,25 @@ struct
   fun real_mul_conv tm =
     if not $ realSyntax.is_mult tm then raise UNCHANGED else
     let
-      val _ = print "rmc ";
       val (lhsTm, rhsTm) = realSyntax.dest_mult tm
       val ((lnom, lden), rw_lhs_thm) =
         if realSyntax.is_div lhsTm
         then (realSyntax.dest_div lhsTm, SPEC lhsTm id_thm)
-        else ((lhsTm, “1”), SPEC lhsTm mk_frac_thm)
+        else ((lhsTm, “1:real”), SPEC lhsTm mk_frac_thm)
       val ((rnom, rden), rw_rhs_thm) =
         if realSyntax.is_div rhsTm
         then (realSyntax.dest_div rhsTm, SPEC rhsTm id_thm)
-        else ((rhsTm, “1”), SPEC rhsTm mk_frac_thm)
+        else ((rhsTm, “1:real”), SPEC rhsTm mk_frac_thm)
       val th = tm |> ONCE_REWRITE_CONV [rw_lhs_thm, rw_rhs_thm]
                 |> RIGHT_CONV_RULE $ ONCE_REWRITE_CONV [mul_frac_thm]
       (* Before multiplying, simplify *)
-      val th = th |> RIGHT_CONV_RULE $ REWRITE_CONV [mult_ints, MULT_CLAUSES]
+      val th = th |> RIGHT_CONV_RULE $ REWRITE_CONV [mult_ints]
       val thKaratsuba_nom = th
         |> RIGHT_CONV_RULE $ RATOR_CONV $ RAND_CONV $ real_neg_app_conv $
               RAND_CONV app_karatsuba_conv
       val thKaratsuba_denom = thKaratsuba_nom
         |> RIGHT_CONV_RULE $ RAND_CONV $ real_neg_app_conv $ RAND_CONV app_karatsuba_conv
+        |> CONV_RULE $ TRY_CONV $ RHS_CONV $ REWR_CONV REAL_OVER1
     in
       thKaratsuba_denom
     end
@@ -111,13 +115,13 @@ struct
   val _ =
     (* record the library as a dependency for future theories *)
     (Theory.add_ML_dependency "bitArithLib";
-      (* Remove old definitions of multiplication for reals and nums *)
-      (computeLib.del_consts [“($*):num->num->num”]
+    (* Remove old definitions of multiplication for reals and nums *)
+    (computeLib.del_consts [“($*):num->num->num”]
         handle NotFound => ());
-      (computeLib.del_consts [“($*):real->real->real”]
+    (computeLib.del_consts [“($*):real->real->real”]
         handle NotFound => ());
-      (* Add karatsuba multiplication as conversion for reals and nums *)
-      computeLib.add_convs [(“($*):real->real->real”,2, real_mul_conv),
-                            (“($*):num->num->num”, 2, karatsuba_conv)])
+    (* Add karatsuba multiplication as conversion for reals and nums *)
+    computeLib.add_convs [(“($*):real->real->real”,2, real_mul_conv),
+                          (“($*):num->num->num”, 2, karatsuba_conv)])
 
 end
