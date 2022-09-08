@@ -144,4 +144,23 @@ Proof
   csimp[DECIDE ``(x:num) < y ==> ~(y <= x)``] >> csimp[] >> metis_tac[]
 QED
 
+
+Theorem appstar_APPEND:
+  x ·· (Ms1 ++ Ms2) = (x ·· Ms1) ·· Ms2
+Proof
+  qid_spec_tac ‘x’ >> Induct_on ‘Ms1’ >> simp[]
+QED
+
+Theorem appstar_SNOC:
+  x ·· Ms @@ M = x ·· (Ms ++ [M])
+Proof
+  simp[appstar_APPEND]
+QED
+
+Theorem appstar_EQ_LAM[simp]:
+  x ·· Ms = LAM v M ⇔ Ms = [] ∧ x = LAM v M
+Proof
+  qid_spec_tac ‘x’ >> Induct_on ‘Ms’ >> simp[]
+QED
+
 val _ = export_theory ()
