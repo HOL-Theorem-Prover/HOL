@@ -38,6 +38,7 @@ sig
   val PairCases_on      : term quotation -> tactic
   val Induct            : tactic
   val Induct_on         : term quotation -> tactic
+  val update_induction  : thm -> unit
   val recInduct         : thm -> tactic
   val namedCases        : string list -> tactic
   val namedCases_on     : term quotation -> string list -> tactic

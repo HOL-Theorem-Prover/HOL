@@ -512,6 +512,23 @@ fun Induct (g as (_,w)) =
  handle e => raise wrap_exn "BasicProvers" "Induct" e
 
 
+(* deliberately masking what is in TypeBase as we may instead update
+   something stored for an inductive relation *)
+fun update_induction th =
+    let
+      val (_, body) = strip_forall $ concl $ th
+      val (_, c) = strip_imp body
+      val cs = strip_conj c (* possibility of mutual recursion *)
+      fun looks_typeish c =
+          let val (cvs, cbody) = strip_forall c
+          in
+            length cvs = 1 andalso is_var (rator cbody)
+          end handle HOL_ERR _ => false
+    in
+      if List.all looks_typeish cs then TypeBase.update_induction th
+      else IndDefLib.add_rule_induction th
+    end
+
 (*---------------------------------------------------------------------------
      Assertional style reasoning
  ---------------------------------------------------------------------------*)

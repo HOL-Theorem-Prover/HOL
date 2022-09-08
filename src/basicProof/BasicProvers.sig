@@ -85,6 +85,7 @@ sig
   val Cases             : tactic
   val Induct            : tactic
   val namedCases        : string list -> tactic
+  val update_induction  : thm -> unit
 
   val tmCases_on        : term -> string list -> tactic
   val Cases_on          : term quotation -> tactic

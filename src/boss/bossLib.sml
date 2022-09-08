@@ -161,6 +161,7 @@ val AllCaseEqs        = TypeBase.AllCaseEqs
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
+val update_induction  = BasicProvers.update_induction
 val op using          = markerLib.using
 val usingA            = markerLib.usingA
 
