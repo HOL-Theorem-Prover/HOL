@@ -270,7 +270,7 @@ val bool_eq_imp_ss = simpLib.conv_ss {name = "bool_eq_imp_CONV",
             key = SOME ([],``(a:bool) = (b:bool)``),
             conv = K (K bool_eq_imp_CONV)};
 
-val bool_imp_extract_ss = simpLib.conv_ss {name = "bool_imp_extract_ss",
+val bool_imp_extract_ss = simpLib.conv_ss {name = "bool_imp_extract",
             trace = 2,
             key = SOME ([],``a:bool``),
             conv = K (K bool_imp_extract_CONV)};

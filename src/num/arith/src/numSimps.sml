@@ -624,7 +624,7 @@ val MOD_ss = let
                                MODEQ_EXP_CONG],
                       filter = NONE, convs = [], name = NONE}
 in
-  merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
+  merge_ss [RSD_ss, congs] |> name_ss "MOD"
 end
 
 val _ = add_frags [MOD_ss]

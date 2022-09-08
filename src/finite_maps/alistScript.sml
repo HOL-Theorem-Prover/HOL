@@ -3,7 +3,7 @@ open pairTheory boolSimps relationTheory
 
 val _ = new_theory "alist";
 
-val _ = diminish_srw_ss ["NORMEQ_ss"]
+val _ = diminish_srw_ss ["NORMEQ"]
 
 val _ = type_abbrev("alist",``:(('a # 'b) list)``);
 

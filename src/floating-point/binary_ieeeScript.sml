@@ -8,7 +8,7 @@ open realTheory intrealTheory wordsLib realLib
 open pred_setTheory set_relationTheory
 
 val () = new_theory "binary_ieee"
-val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss","NORMEQ_ss"]
+val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM","NORMEQ"]
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 

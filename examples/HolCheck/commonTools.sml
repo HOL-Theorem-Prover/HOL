@@ -44,7 +44,7 @@ fun LIST_ACCEPT_TAC l (asl,w) =
 
 (* simpset that is just beta reduction *)
 val BETA_ss = SSFRAG
-  {name = SOME "BETA_ss",
+  {name = SOME "BETA",
    convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],(--`(\x:'a. y:'b) z`--)),
@@ -52,7 +52,7 @@ val BETA_ss = SSFRAG
    rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val REDUCE_ss = SSFRAG
-  {name = SOME "REDUCE_ss",
+  {name = SOME "REDUCE",
    convs=[{name="REDUCE_CONV (num reduction)",
            trace=2,
            key=SOME ([],(--`(x:num)-1`--)),
@@ -60,7 +60,7 @@ val REDUCE_ss = SSFRAG
    rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val EL_ss = SSFRAG
-  {name = SOME "EL_ss",
+  {name = SOME "EL",
    convs=[{name="num_CONV (num to suc conversion)",
            trace=2,
            key=SOME ([],(--`EL (x:num)`--)),

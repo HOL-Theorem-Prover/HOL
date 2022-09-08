@@ -209,7 +209,7 @@ val BITS_DIVISION =
             |> SIMP_RULE std_ss [ZERO_LT_TWOEXP, GSYM BITS_ZERO3]
             |> GEN_ALL
 
-val _ = diminish_srw_ss ["MOD_ss"]
+val _ = diminish_srw_ss ["MOD"]
 val ADD_BITS_SUC_CIN = Q.prove(
   `!n a b.
      BITS (SUC n) (SUC n) (a + b + 1) =

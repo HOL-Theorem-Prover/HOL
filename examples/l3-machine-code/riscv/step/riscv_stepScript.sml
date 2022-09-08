@@ -584,7 +584,7 @@ end
 local
   val word_eq_ss =
     simpLib.std_conv_ss
-      {name = "word_eq_ss", conv = wordsLib.word_EQ_CONV,
+      {name = "word_eq", conv = wordsLib.word_EQ_CONV,
        pats = [``n2w a = n2w b: word64``]}
 in
   val store_tac =

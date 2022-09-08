@@ -676,13 +676,13 @@ val PERM_REDUCER_SIMPLE =
 in
 
 val PERM_ss = simpLib.SSFRAG
-    {name=SOME"PERM_ss",
+    {name=SOME"PERM",
      convs = [], rewrs = [], filter = NONE, dprocs = [PERM_REDUCER], congs = [],
      ac = []
      }
 
 val PERM_SIMPLE_ss = simpLib.SSFRAG
-    {name=SOME"PERM_SIMPLE_ss",
+    {name=SOME"PERM_SIMPLE",
      convs = [], rewrs = [], filter = NONE, dprocs = [PERM_REDUCER_SIMPLE],
      congs = [], ac = []
      }

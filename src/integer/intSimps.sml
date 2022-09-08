@@ -273,7 +273,7 @@ fun mkSS DPname DP = let
              initial = CTXT []}
   end
 in
-  (SSFRAG {name=SOME (DPname ^ "_ss"),
+  (SSFRAG {name=SOME DPname,
            convs = [], rewrs = [], congs = [],
            filter = NONE, ac = [], dprocs = [ARITH_REDUCER]},
     cache)

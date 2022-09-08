@@ -870,7 +870,7 @@ end (* local *)
 
 val RMULCANON_ss = SSFRAG {
       ac = [], congs = [], dprocs = [], filter = NONE,
-      name = SOME "RMULCANON_ss",
+      name = SOME "RMULCANON",
       rewrs = [],
       convs = [
         {conv = K (K REALMULCANON), trace = 2,
@@ -938,7 +938,7 @@ end (* local *)
 
 val RADDCANON_ss = SSFRAG {
       ac = [], congs = [], dprocs = [], filter = NONE,
-      name = SOME "RADDCANON_ss",
+      name = SOME "RADDCANON",
       rewrs = [],
       convs = [
         {conv = K (K REALADDCANON), trace = 2,
@@ -1210,7 +1210,7 @@ val ex5 = lenorm “z pow 3 * 10 <= z pow 5 * y”
 fun V s = mk_var(s, real_ty)
 val x = V "x" and y = V "y" and z = V "z" and n = mk_var("n", numSyntax.num)
 val RMULRELNORM_ss = SSFRAG {
-  ac = [], congs = [], dprocs = [], filter = NONE, name = SOME "RMULRELNORM_ss",
+  ac = [], congs = [], dprocs = [], filter = NONE, name = SOME "RMULRELNORM",
   rewrs = [],
   convs = [
     {key = SOME ([], mk_leq(x,y)),

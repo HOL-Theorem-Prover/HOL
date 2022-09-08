@@ -406,7 +406,7 @@ fun RESQ_REWRITE1_TAC th' =
 (* Restricted quantifier elimination using the simplifier.               *)
 (* --------------------------------------------------------------------- *)
 
-val ELIM_RESQ_ss = named_rewrites "ELIM_RESQ_ss" [
+val ELIM_RESQ_ss = named_rewrites "ELIM_RESQ" [
   RES_FORALL, RES_EXISTS, RES_EXISTS_UNIQUE, RES_SELECT];
 
 val resq_SS =
@@ -451,7 +451,7 @@ val RICH_RESQ_ss = named_rewrites "RICH_RESQ" [
   (* Conditional rewriting rules and facts. *)
   RES_FORALL_SUBSET, RES_EXISTS_SUBSET];
 
-val RESQ_PRED_SET_ss = named_rewrites "RESQ_PRED_SET_ss" [
+val RESQ_PRED_SET_ss = named_rewrites "RESQ_PRED_SET" [
   RES_FORALL_UNION, RES_EXISTS_UNION,
   RES_FORALL_DIFF, RES_EXISTS_DIFF,
   IN_BIGINTER_RES_FORALL, IN_BIGUNION_RES_EXISTS,

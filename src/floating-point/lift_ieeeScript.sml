@@ -9,7 +9,7 @@ open realSimps
 val _ = new_theory "lift_ieee";
 
 val _ = ParseExtras.temp_loose_equality()
-val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss"]
+val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM"]
 
 val () =  Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 
