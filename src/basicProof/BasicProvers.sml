@@ -131,6 +131,10 @@ fun prim_find_subterm FVs tm (asl,w) =
                       val v = Lib.first (name_eq name) BV
                   in ([v], v)
                   end)
+            handle HOL_ERR _ =>
+                   raise ERR "find_subterm"
+                         ("No var with name \"" ^ name ^
+                          "\" free in goal, or in outer universal quantifiers")
       end
  else if List.exists (free_in tm) (w::asl) then Free tm
  else let val (V,body) = strip_forall w
@@ -507,6 +511,23 @@ fun Induct (g as (_,w)) =
  end
  handle e => raise wrap_exn "BasicProvers" "Induct" e
 
+
+(* deliberately masking what is in TypeBase as we may instead update
+   something stored for an inductive relation *)
+fun update_induction th =
+    let
+      val (_, body) = strip_forall $ concl $ th
+      val (_, c) = strip_imp body
+      val cs = strip_conj c (* possibility of mutual recursion *)
+      fun looks_typeish c =
+          let val (cvs, cbody) = strip_forall c
+          in
+            length cvs = 1 andalso is_var (rator cbody)
+          end handle HOL_ERR _ => false
+    in
+      if List.all looks_typeish cs then TypeBase.update_induction th
+      else IndDefLib.add_rule_induction th
+    end
 
 (*---------------------------------------------------------------------------
      Assertional style reasoning
