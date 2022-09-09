@@ -63,6 +63,15 @@ New theories:
 New tools:
 ----------
 
+- **improvements of multiplications of large numbers**:
+
+    In `src/real` there is a new library `bitArithLib.sml` which improves the
+    performance of large multiplications for the types `:num` and `:real`.
+    The library uses arithmetic of bitstrings in combination with the Karatsuba
+    multiplication algorithm.
+    To use the library, it has to be loaded before the functions that should be
+    evaluated are **defined**.
+
 New examples:
 -------------
 
