@@ -96,7 +96,7 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
 
 val (hastype2_rules, hastype2_ind, hastype2_cases) = Hol_reln`
   (!Gamma s A. valid_ctxt Gamma /\ MEM (s,A) Gamma ==>
-               Gamma ||- VAR s -: A) /\
+               Gamma ||- (VAR s : term) -: A) /\
   (!Gamma m n A B. Gamma ||- m -: A --> B /\ Gamma ||- n -: A ==>
                    Gamma ||- m @@ n -: B) /\
   (!Gamma m x A B. (!v. ~(v IN ctxtFV Gamma) ==>
