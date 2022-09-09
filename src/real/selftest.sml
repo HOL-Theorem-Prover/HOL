@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib;
 
-open simpLib realSimps isqrtLib RealArith RealField;
+open simpLib realSimps isqrtLib RealArith RealField bitArithLib;
 
 open testutils;
 
@@ -379,5 +379,27 @@ val expected2 = numSyntax.mk_less(numSyntax.zero_tm,
 val _ = require_msg (check_result (aconv expected2)) term_to_string
                     (quietly Parse.Term) ‘0 < x’
 val _ = temp_set_grammars grammars
+
+(* tests for bitArithLib *)
+val _ = convtest("Testing karatsuba_conv on ``1 * 2``",
+                  karatsuba_conv,
+                 ``1 * (2:num)``,
+                 ``2:num``)
+
+val _ = convtest("Testing karatsuba_conv on ``64 * 128``",
+                  karatsuba_conv,
+                 ``64 * (128:num)``,
+                 ``8192:num``)
+
+val _ = convtest("Testing karatsuba_conv on ``1 * 2``",
+                  real_mul_conv,
+                 ``1 * (2:real)``,
+                 ``2:real``)
+
+val _ = convtest("Testing real_mul_conv on ``64 * 128``",
+                  real_mul_conv,
+                 ``64 * (128:real)``,
+                 ``8192:real``)
+
 
 val _ = Process.exit Process.success
