@@ -1216,6 +1216,7 @@ bookkeeping. The implementation of goalstacks reported here is a
 re-design of Larry Paulson's original conception.
 
 The goalstack library is automatically loaded when \HOL{} starts up.
+Editor modes can support the process of using the proof manager; here we describe the underlying \ML{} interface.
 
 The abstract types \ml{goalstack} and \ml{proofs} are the
 focus of backwards proof operations. The type \ml{proofs} can be
@@ -1253,13 +1254,11 @@ Calling \ml{set\_goal}, or \ml{g}, adds a new proof attempt to the existing ones
 \end{verbatim}
 \end{hol}
 
-How does one actually do a goalstack proof then? In most cases, the
-application of tactics to the current goal is done with the function
-\verb+expand+. In the rare case that one wants to apply an
-{\it invalid\/} tactic, then \verb+expandf+ is used. (For an
-explanation of invalid tactics, see Chapter 24 of Gordon \& Melham.) The
-abbreviation \verb+e+ may also be used to expand a tactic.
-
+How does one actually do a goalstack proof then?
+In most cases, the application of tactics to the current goal is done with the function \ml{expand}.
+In the rare case that one wants to apply an \emph{invalid} tactic, then \ml{expandf} is used.
+(For an explanation of invalid tactics, see Section~\ref{tactics}.)
+The abbreviation \ml{e} may also be used to expand a tactic.
 
 \subsection{Undo}
 
