@@ -101,7 +101,7 @@ The exact behaviour of these tactics can be further adjusted with the use of spe
 \subsubsection{\ml{simp : thm list -> tactic}}
 \index{simp (simplification tactic)@\ml{simp} (simplification tactic)}
 
-A call to \ml{simp[$\mathit{th}_1\dots,\mathit{th}_n$]} simplifies the current goal, using the augmented stateful simpset described above, as well as the theorems passed in the argument list.
+A call to \ml{simp[$\mathit{th}_1,\dots,\mathit{th}_n$]} simplifies the current goal, using the augmented stateful simpset described above, as well as the theorems passed in the argument list.
 Finally, all of the goal's assumptions are also used as a source of rewrites.
 When an assumption is used by \ml{simp}, it is converted into rewrite rules in the same way as theorems passed in the list given as the tactic's argument.  For example, an
 assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{$\vdash$ P = F}.
@@ -130,6 +130,31 @@ This last phase of stripping may result in a goal that could simplify yet furthe
 Despite peculiarities such as this, \ml{rw} is often a useful way to simplify and remove unnecessary propositional structure.
 
 The \ml{rw} tactic performs the same mixture of simplification and goal-splitting as the low-level tactic \ml{RW\_TAC}.
+
+\subsubsection{\ml{gs : thm list -> tactic}}
+\index{gs (simplification tactic)@\ml{gs} (simplification tactic)}
+
+The \ml{gs} tactic (where ``gs'' should be read as ``global simplification'') simplifies both the assumptions of a goal as well as its conclusion.
+The assumptions are repeatedly simplified with respect to each other, meaning that the process begins by simplifying the oldest assumption with all the other (newer) assumptions available as possible rewrites.
+Then, the next oldest assumption is simplified, using all the other assumptions (including the just-simplified oldest assumption).
+This process passes through the list of all assumptions and then repeats if any of the assumptions changed.
+When no further change occurs among the assumptions, all of the assumptions are used to simplify the goal's conclusion.
+
+When an assumption $A_i$ is simplified, a theorem of the form $\vdash A_i \Leftrightarrow A_i'$ is produced.
+Then $A_i'$ is added to the goal as a new assumption, using the theorem-tactical \ml{strip\_assume\_tac}.
+This latter will (recursively) split conjunctions into multiple assumptions (\emph{i.e.}, an assumption $p \land q$ will turn into two assumptions, $p$ and $q$), will cause a case-split if the assumption is a disjunction, and will choose fresh variable names to eliminate existential quantifiers.
+
+\index{gns (simplification tactic)@\ml{gs} (simplification tactic)}
+If this ``stripping'' is not desired, the \ml{gns} variant of \ml{gs} can be used (`n' for ``no strip'').
+
+\index{gvs (simplification tactic)@\ml{gvs} (simplification tactic)}
+\index{gnvs (simplification tactic)@\ml{gvs} (simplification tactic)}
+It can often be useful to eliminate variable equalities among assumptions (as is done by \ml{rw} above).
+If this behaviour is also desired, the \ml{gvs} variant can be used.
+The \ml{gnvs} tactic, which combines both options, is also available.
+
+\index{rgs (simplification tactic)@\ml{rgs} (simplification tactic)}
+Finally, the \ml{rgs} variant sweeps through the assumption list in the opposite order, simplifying the newest assumption first.
 
 \subsection{Low-Level Simplification Tactics}
 \label{sec:low-level-simplification-tactics}
@@ -175,7 +200,7 @@ conclusion but its assumptions as well.  It proceeds by simplifying
 each assumption in turn, additionally using earlier assumptions in the
 simplification of later assumptions.  After being simplified, each
 assumption is added back into the goal's assumption list with the
-\ml{STRIP\_ASSUME\_TAC} tactic.  This means that assumptions that
+\ml{strip\_assume\_tac} theorem-tactical.  This means that assumptions that
 become conjunctions will have each conjunct assumed separately.
 Assumptions that become disjunctions will cause one new sub-goal to be
 created for each disjunct.  If an assumption is simplified to false,
