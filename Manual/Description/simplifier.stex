@@ -113,7 +113,7 @@ assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{$\vdash$ P = F}
 \end{alltt}
 \end{session}
 
-The \ml{simp} tactic is implemented with the low-level tactic \ml{ASM\_SIMP\_TAC} (described below).
+The \ml{simp} tactic is implemented with the low-level tactic \ml{asm\_simp\_tac} (described below).
 
 \subsubsection{\ml{rw : thm list -> tactic}}
 \index{rw (simplification tactic)@\ml{rw} (simplification tactic)}
@@ -129,7 +129,7 @@ strips away universal quantifiers, implications and conjunctions (\emph{\`a la} 
 This last phase of stripping may result in a goal that could simplify yet further but there is no final simplification to catch this possibility.
 Despite peculiarities such as this, \ml{rw} is often a useful way to simplify and remove unnecessary propositional structure.
 
-The \ml{rw} tactic performs the same mixture of simplification and goal-splitting as the low-level tactic \ml{RW\_TAC}.
+The \ml{rw} tactic performs the same mixture of simplification and goal-splitting as the low-level tactic \ml{rw\_tac}.
 
 \subsubsection{\ml{gs : thm list -> tactic}}
 \index{gs (simplification tactic)@\ml{gs} (simplification tactic)}
@@ -156,46 +156,70 @@ The \ml{gnvs} tactic, which combines both options, is also available.
 \index{rgs (simplification tactic)@\ml{rgs} (simplification tactic)}
 Finally, the \ml{rgs} variant sweeps through the assumption list in the opposite order, simplifying the newest assumption first.
 
+\subsubsection{\ml{fs : thm list -> tactic}}
+\index{fs (simplification tactic)@\ml{fs} (simplification tactic)}
+
+The \ml{fs} tactic is similar to \ml{gs} in that it simplifies not only a goal's
+conclusion but its assumptions as well.
+
+It simplifies each assumption in turn, additionally using earlier assumptions in the simplification of later assumptions.
+After being simplified, each assumption is added back into the goal's assumption list with the \ml{strip\_assume\_tac} theorem-tactical.
+
+\ml{fs} attacks the assumptions in the order in which they appear in the list of terms that represent the goal's assumptions.
+Typically then, the first assumption to be simplified
+will be the assumption most recently added.
+Viewed in the light of \ml{goalstackLib}'s printing of goals, \ml{FULL\_SIMP\_TAC} works its way up the list of assumptions, from bottom to top.
+
+Unlike \ml{gs}, the \ml{fs} tactic makes exactly one pass over the assumptions before proceeding to simplify the goal.
+Though this is in principle more efficient, this comes at the cost of frequently being annoying to use.
+\index{rfs (simplification tactic)@\ml{rfs} (simplification tactic)}
+As with \ml{gs}, there is an \ml{rfs} variant to this tactic, which simplifies the goal's assumptions in reverse order (but again, only once).
+
+The \ml{fs} tactic is based on the low-level tactic \ml{full\_simp\_tac}.
+
 \subsection{Low-Level Simplification Tactics}
 \label{sec:low-level-simplification-tactics}
 \index{simplification!tactics}
 
 The second class of simplification tactics are more primitive and explicitly take a \simpset{} as an argument.
 This ability to specify a \simpset{} to use allows for finer-grained control of just what the tactic will do.
-In particular, the \ml{bool\_ss} \simpset{} is relatively common as an argument to these tactics is relatively common.
+In particular, the \ml{bool\_ss} \simpset{} is relatively common as an argument to these tactics precisely because it does so little.
 
-\subsubsection{\ml{SIMP\_TAC : simpset -> thm list -> tactic}}
-\index{SIMP_TAC@\ml{SIMP\_TAC}}
+All these tactics have upper-case aliases (\emph{e.g.}, \ml{SIMP\_TAC} and \ml{simp\_tac} are the same function).
+It is up to the user to decide which they prefer to see in their proof scripts.
 
-\ml{SIMP\_TAC} is the simplest simplification tactic: it attempts to simplify the current goal (ignoring the assumptions) using the given \simpset{} and the additional theorems.
+\subsubsection{\ml{simp\_tac : simpset -> thm list -> tactic}}
+\index{simp_tac@\ml{simp\_tac}}
+
+The tactic \ml{simp\_tac} is the simplest simplification function: it attempts to simplify the current goal (ignoring the assumptions) using the given \simpset{} and the additional theorems.
 It is no more than the lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic level through the use of the standard function \ml{CONV\_TAC}.
 
-\subsubsection{\ml{ASM\_SIMP\_TAC : simpset -> thm list -> tactic}}
-\index{ASM_SIMP_TAC@\ml{ASM\_SIMP\_TAC}}
+\subsubsection{\ml{asm\_simp\_tac : simpset -> thm list -> tactic}}
+\index{asm_simp_tac@\ml{asm\_simp\_tac}}
 
-Like \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} simplifies the current goal (leaving the assumptions untouched), but includes the goal's assumptions as extra rewrite rules.
+Like \ml{simp\_tac}, \ml{asm\_simp\_tac} simplifies the current goal (leaving the assumptions untouched), but includes the goal's assumptions as extra rewrite rules.
 Thus:
 \begin{session}
 \begin{alltt}
 >>__ g `(x = 3) ==> P x`;
 >>- e strip_tac;
 
->> e (ASM_SIMP_TAC bool_ss []);
+>> e (asm_simp_tac bool_ss []);
 \end{alltt}
 \end{session}
 \noindent
-In this example, \ml{ASM\_SIMP\_TAC} used \holtxt{x = 3} as an
+In this example, \ml{asm\_simp\_tac} used \holtxt{x = 3} as an
 additional rewrite rule, and replaced the \holtxt{x} of \holtxt{P x}
-with \holtxt{3}.  When an assumption is used by \ml{ASM\_SIMP\_TAC} it
+with \holtxt{3}.  When an assumption is used by \ml{asm\_simp\_tac} it
 is converted into rewrite rules in the same way as theorems passed in
 the list given as the tactic's second argument.  For example, an
 assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{|- P = F}.
 
-\subsubsection{\ml{FULL\_SIMP\_TAC : simpset -> thm list -> tactic}}
-\index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
+\subsubsection{\ml{full\_simp\_tac : simpset -> thm list -> tactic}}
+\index{full_simp_tac@\ml{full\_simp\_tac}}
 
 \noindent
-The tactic \ml{FULL\_SIMP\_TAC} simplifies not only a goal's
+The tactic \ml{full\_simp\_tac} simplifies not only a goal's
 conclusion but its assumptions as well.  It proceeds by simplifying
 each assumption in turn, additionally using earlier assumptions in the
 simplification of later assumptions.  After being simplified, each
@@ -206,21 +230,18 @@ Assumptions that become disjunctions will cause one new sub-goal to be
 created for each disjunct.  If an assumption is simplified to false,
 this will solve the goal.
 
-\ml{FULL\_SIMP\_TAC} attacks the assumptions in the order in which
-they appear in the list of terms that represent the goal's
-assumptions.  Typically then, the first assumption to be simplified
-will be the assumption most recently added.  Viewed in the light of
-\ml{goalstackLib}'s printing of goals, \ml{FULL\_SIMP\_TAC} works its
-way up the list of assumptions, from bottom to top.
+The \ml{full\_simp\_tac} tactic attacks the assumptions in the order in which they appear in the list of terms that represent the goal's assumptions.
+Typically then, the first assumption to be simplified will be the assumption most recently added.
+Viewed in the light of \ml{goalstackLib}'s printing of goals, \ml{full\_simp\_tac} works its way up the list of assumptions, from bottom to top.
 
-The following demonstrates a simple use of \ml{FULL\_SIMP\_TAC}:
+The following demonstrates a simple use of \ml{full\_simp\_tac}:
 \begin{session}
 \begin{alltt}
 >>__ drop();
 >>__ g `f (x:num) < 10  /\ (x = 4) ==> 4 + x < 10`;
 >>- e strip_tac;
 
->> e (FULL_SIMP_TAC bool_ss []);
+>> e (full_simp_tac bool_ss []);
 \end{alltt}
 \end{session}
 In this example, the assumption \holtxt{x = 4} caused the \holtxt{x}
@@ -235,7 +256,7 @@ The next session demonstrates more interesting behaviour:
 >>__ drop(); g`x <= 4n ==> f x + 1 < 10`;
 >>- e strip_tac;
 
->> e (FULL_SIMP_TAC bool_ss [arithmeticTheory.LESS_OR_EQ]);
+>> e (full_simp_tac bool_ss [arithmeticTheory.LESS_OR_EQ]);
 \end{alltt}
 \end{session}
 In this example, the goal was rewritten with the theorem stating
@@ -246,61 +267,20 @@ Turning the assumption into a disjunction resulted in two sub-goals.
 In the second of these, the assumption \holtxt{x = 4} further
 simplified the rest of the goal.
 
-\subsubsection{\ml{RW\_TAC : simpset -> thm list -> tactic}}
-\index{RW_TAC@\ml{RW\_TAC}}
+\subsubsection{\ml{rw\_tac : simpset -> thm list -> tactic}}
+\index{rw_tac@\ml{rw\_tac}}
 
 Though its type is the same as the simplification tactics already
-described, \ml{RW\_TAC} is an ``augmented'' tactic.  It is augmented
-in two ways:
+described, \ml{rw\_tac} is ``augmented'' in two ways:
 \begin{itemize}
-\item When simplifying the goal, the provided \simpset{} is augmented
-  not only with the theorems explicitly passed in the second argument,
-  but also with all of the rewrite rules from the \ml{TypeBase}, and
-  also with the goal's assumptions.
+\item
+When simplifying the goal, the provided \simpset{} is augmented not only with the theorems explicitly passed in the second argument, but also with all of the rewrite rules from the \ml{TypeBase}, as well as  with the goal's assumptions.
 %
   \index{TypeBase@\ml{TypeBase}}
-\item \ml{RW\_TAC} also does more than just perform simplification.
-  It also repeatedly ``strips'' the goal.  For example, it moves the
-  antecedents of implications into the assumptions, splits
-  conjunctions, and case-splits on conditional expressions.  This
-  behaviour can rapidly remove a lot of syntactic complexity from
-  goals, revealing the kernel of the problem.  On the other hand, this
-  aggressive splitting can also result in a large number of
-  sub-goals.  \ml{RW\_TAC}'s augmented behaviours are intertwined with
-  phases of simplification in a way that is difficult to describe.
+These rewrites include results about record field selectors and updators, as well as distinctness and injectivity theorems for data type constructors.
+\item \ml{rw\_tac} also repeatedly ``strips'' the goal in the same way as the high-level \ml{rw} tactic (see above).
 \end{itemize}
-
-\subsubsection{Abbreviated ``Power'' tactics}
-\HOL{}'s \ml{bossLib} module (part of the standard interactive environment) comes with a number of powerful simplification tactics with short lower-case names.
-These do not require or allow for the specification of a particular \simpset{} because they use \ml{srw_ss()} combined with the arithmetic decision procedure for the natural numbers, as well as a \simpset{} fragment that eliminates \holtxt{let}-terms.
-All of the tactics take a list of rewrite theorems as their one argument.
-These tactics are:
-
-\begin{center}
-\index{simp (simplification tactic)@\ml{simp} (simplification tactic)}%
-\index{rw (simplification tactic)@\ml{rw} (simplification tactic)}%
-\index{fs (simplification tactic)@ \ml{fs} (simplification tactic)}%
-\index{rfs (simplification tactic)@\ml{rfs} (simplification tactic)}%
-\begin{tabular}{ll}
-\ml{simp} & Corresponds to \ml{ASM\_SIMP\_TAC}\\
-\ml{rw} & Corresponds to \ml{SRW\_TAC[]}\\
-\ml{fs} & Corresponds to \ml{FULL\_SIMP\_TAC}\\
-\ml{rfs} & Corresponds to \ml{REV\_FULL\_SIMP\_TAC}
-\end{tabular}
-\end{center}
-Thus, the following is possible:
-In addition, two similar tactics allow special-purpose simplification of propositional structure:
-\begin{itemize}
-\item%
-\index{csimp@\ml{csimp}}%
-\ml{csimp} simplifies with \ml{srw\_ss()} and the \ml{CONJ\_ss} \simpset{} fragment.
-The latter allows for conjuncts to be used as assumptions when rewriting other conjuncts.
-Thus, if simplifying $c_1\land c_2$, $c_2$ will be assumed as a possible source of rewrites while $c_1$ is simplified to $c_1'$.
-Then $c_1'$ will be assumed while $c_2$ is simplified.
-\item \index{dsimp@\ml{dsimp}}\ml{dsimp} simplifies with \ml{srw\_ss()} and the \ml{DNF\_ss} \simpset{} fragment.
-The latter normalises to disjunctive normal form and also moves quantifiers so as to maximise the chance that they can be eliminated over equalities.
-When this tactic works well, it can provide a ``pure'' simplification analogue of the repeated stripping and variable elimination done by \ml{rw}.
-\end{itemize}
+The augmentation of the provided \simpset{} that occurs before \ml{rw\_tac} does any simplification work can be slow when the \ml{TypeBase} is large.
 
 \subsection{The standard \simpset{}s}
 \label{sec:standard-simpsets}
@@ -581,21 +561,32 @@ are described in more detail in the \REFERENCE.
 \begin{table}[htbp]
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{lp{0.65\textwidth}}
+\begin{tabular}{lp{0.7\textwidth}}
+\ml{ARITH\_ss} &
+Embodies decision
+procedure for universal Presburger arithmetic over $\mathbb{N}$.
+(Defined in \ml{numSimps}; used in high-level simplification tactics.)
+\\
 \ml{BOOL\_ss} &
 Standard rewrites for the boolean operators
-(conjunction, negation \&c), as well as a conversion for performing
-$\beta$-reduction.  (In \ml{boolSimps}.)
+(conjunction, negation \emph{etc.}), and conversion for performing
+$\beta$-reduction.  (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
 \\
 \ml{CONG\_ss} & Congruence rules for implication and conditional
-expressions. (In \ml{boolSimps}.)
+expressions. (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
 \\
-\ml{ARITH\_ss} &
-The natural number decision
-procedure for universal Presburger arithmetic. (In \ml{numSimps}.)
+\ml{CONJ\_ss} &
+Lets conjuncts be used as assumptions when rewriting other conjuncts.
+If simplifying $c_1\land c_2$, $c_2$ is assumed while $c_1$ is simplified to $c_1'$.
+Then $c_1'$ is assumed while $c_2$ is simplified.
+(Defined in \ml{boolSimps}.)
 \\
-\ml{PRED\_SET\_AC\_ss} & AC-normalisation for unions and intersections
-over sets. (In \ml{pred\_setSimps}.)
+\ml{DNF_ss} &
+Normalises to disjunctive normal form; quantifiers moved for elimination over equalities.
+(Defined in \ml{boolSimps}.)\\
+\ml{ETA_ss} &
+Eliminates eta-redexes, \emph{i.e.}, terms of form $(\lambda x. M x)$ with $x$ not free in $M$.
+(Defined in \ml{boolSimps}.)\\
 \end{tabular}
 \end{center}
 \caption{Some of \HOL's standard \simpset{} fragments}
@@ -666,8 +657,9 @@ Specific sub-rewrites can be removed from a \simpset{} without affecting  others
 \end{alltt}
 \end{session}
 
-If using a ``power tactic'' such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
+If using a high-level tactic such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
 \index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Excl@\ml{Excl}}
 Instead, one must use a special theorem form (see Section~\ref{sec:simp-special-rewrite-forms} below), \ml{Excl} to exclude a rewrite.
 For example, sometimes the associativity of list-append can be annoying (here it masks the rewrite defining list-append):
 \begin{session}
@@ -683,6 +675,20 @@ We can prevent the application of this normalising rewrite with the \ml{Excl} fo
 \begin{alltt}
 >>_ b();
 >> e (simp[Excl "APPEND_ASSOC"]);
+\end{alltt}
+\end{session}
+
+\index{ExclSF (simplification theorem modifier)@\ml{ExclSF} (simplification theorem modifier)}
+\index{simplification theorem modifiers!ExclSF@\ml{ExclSF}}
+One can exclude whole \simpset{} fragments from the high-level tactics with the special \ml{ExclSF} form, which also takes a string argument.
+This string is the name of the fragment to be removed, where by convention fragments have the same name as their \ML{} identifier with the \ml{\_ss} suffix removed.
+Thus, one can use high-level tactics with the arithmetic decision procedure removed:
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.drop_all();
+>>_ g ‘x < 5*2 ==> x < 13’;
+>> e (simp[ExclSF "ARITH"]);
+##assert aconv (#2 (top_goal())) ``x < 10 ==> x < 13``
 \end{alltt}
 \end{session}
 \index{simplification!removing rewrites|)}
@@ -1277,6 +1283,10 @@ simple way by using \ML{} functions to construct special theorem
 forms.  These special theorems can then be passed in the
 simplification tactics' theorem-list arguments.
 
+\index{simplification theorem modifiers!AC@\ml{AC}}
+\index{AC (simplification theorem modifier)@\ml{AC} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Cong@\ml{Cong}}
+\index{Cong (simplification theorem modifier)@\ml{Cong} (simplification theorem modifier)}
 Two of the simplifier's advanced features, AC-normalisation and
 congruence rules can be accessed in this way.  Rather than construct a
 custom \simpset{} fragment including the required AC or congruence
@@ -1299,8 +1309,10 @@ the simplifier will perform AC-normalisation of disjunctions.  The
 new congruence rules.
 
 \index{simplification!guaranteeing termination}
-\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)|pin}
-\index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)|pin}
+\index{Once (simplification theorem modifier)@\ml{Once} (simplifier theorem modifier)|pin}%
+\index{simplification theorem modifiers!Once@\ml{Once}|pin}%
+\index{Ntimes (simplification theorem modifier)@\ml{Ntimes} (simplifier theorem modifier)|pin}%
+\index{simplification theorem modifiers!Ntimes@\ml{Ntimes}|pin}%
 Two other functions provide a crude mechanism for controlling the
 number of times an individual rewrite will be applied.
 \begin{hol}
@@ -1320,6 +1332,7 @@ Both forms check the count of instances of rewrite-redexes appearing in the goal
 If the requirement is not satisfied, the relevant tactic fails.
 In this context, a rewrite redex is the LHS of a theorem being used as a rewrite, so that, for example, the redex of the theorem $\vdash x + 0 = x$ is $x + 0$.
 \index{Req0 (simplification theorem modifier)@\ml{Req0} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Req0@\ml{Req0}}
 The \ml{Req0} form checks that the number of redexes of the corresponding rewrite is zero in the resulting goal.
 For unconditional rewrites, such a requirement is usually redundant, but this form can be useful when rewrites are conditional and the simplifier may have failed to discharge side-conditions.
 For example:
@@ -1334,6 +1347,7 @@ For example:
 \end{session}
 
 \index{ReqD (simplification theorem modifier)@\ml{ReqD} (simplification theorem modifier)}
+\index{simplification theorem modifiers!ReqD@\ml{ReqD}}
 The \ml{ReqD} modifier requires that the redex count should have decreased.
 This is implicitly a check on the original goal as well: it must have a non-zero count of redexes itself.
 
@@ -1341,6 +1355,7 @@ Both \ml{Req0} and \ml{ReqD} can be combined with \ml{Once} and \ml{Ntimes}.
 
 \paragraph{Excluding rewrites}
 \index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Excl@\ml{Excl}}
 \index{simplification!removing rewrites}
 As also described above in Section~\ref{sec:removing-rewrites-from-simpsets}, various built-in (named) components can be removed from invocations of the simplifier through the use of the \ml{Excl} form.
 This function is of type \ml{string~->~thm}, so takes a string naming the rewrite or other component that is to be removed.
@@ -1356,11 +1371,20 @@ In addition to rewrites, conversions and decision procedures can also be tempora
 \begin{session}
 \begin{alltt}
 >> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
+\end{alltt}
+\end{session}
 
->> simp[] ([], “1 < x ==> 1 < 2 * x”);
->>__ null (#1 it) orelse raise Fail "Bad Excl. behaviour"
->> simp[Excl "NUM_ARITH_DP"] ([], “1 < x ==> 1 < 2 * x”);
->>__ length (#1 it) = 1 orelse raise Fail "Bad Excl. behaviour"
+\paragraph{Including \simpset{} fragments}
+\index{SF (simplification theorem modifier)@\ml{SF} (simplification theorem modifier)}
+\index{simplification theorem modifiers!SF@\ml{SF}}
+The \ml{SF} theorem form provides a way to augment a simplification with a \simpset{} fragment.
+For example, one can rewrite with conjunctions as assumptions using the \ml{CONJ\_ss} fragment:
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.drop_all();
+>>_ g ‘x = 10 ∧ x < 16’;
+>> e (simp[SF CONJ_ss]);
+##assert aconv (#2 (top_goal())) ``x = 10``
 \end{alltt}
 \end{session}
 
@@ -1418,7 +1442,10 @@ particular terms.  For example, if \holtxt{opn} is a binary operator,
    |- (x = x') ==> (opn x y = opn x' y)
 \end{verbatim}
 \end{hol}
-\index{SimpLHS@\ml{SimpLHS}|pin}\index{SimpRHS@\ml{SimpRHS}|pin}
+\index{SimpLHS (simplification theorem modifier)@\ml{SimpLHS} (simplification theorem modifier)|pin}
+\index{simplification theorem modifiers!SimpLHS@\ml{SimpLHS}}
+\index{SimpRHS (simplification theorem modifier)@\ml{SimpRHS} (simplification theorem modifier)|pin}
+\index{simplification theorem modifiers!SimpRHS@\ml{SimpRHS}}
 Because the equality case is so common, the special values
 \ml{SimpLHS} and \ml{SimpRHS} are provided to force
 simplification on the left or right of an equality respectively.
