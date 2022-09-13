@@ -515,8 +515,8 @@ val old_dp_ss =
 (* not REDUCE_ss (since that is a component of std_ss already).              *)
 (*---------------------------------------------------------------------------*)
 
-val ARITH_ss = merge_ss [ARITH_RWTS_ss, ARITH_DP_ss];
-val old_ARITH_ss = merge_ss [ARITH_RWTS_ss, old_dp_ss];
+val ARITH_ss = named_merge_ss "ARITH" [ARITH_RWTS_ss, ARITH_DP_ss];
+val old_ARITH_ss = named_merge_ss "old_ARITH" [ARITH_RWTS_ss, old_dp_ss];
 
 fun clear_arith_caches() = clear_cache arith_cache;
 
