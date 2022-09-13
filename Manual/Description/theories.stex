@@ -4619,7 +4619,7 @@ Furthermore, the bisimulation relation (or bisimilarity, usually
 denoted by $\sim$),
 \holtxt{BISIM_REL ts}, is the \emph{union} (in the sense of
 \holtxt{RUNION}) of all bisimulations in this LTS, and it can be proven
-to be equivalence relation: (the \emph{original}
+to be an equivalence relation: (the \emph{original}
 definition hereafter)
 \begin{hol}
 \begin{alltt}
@@ -4630,9 +4630,8 @@ definition hereafter)
 
 Bisimulation is a special case of coinduction, by far the most studied
 coinductive concept~\cite{Sangiorgi2012}. In practice it is hard to
-directly work with the above definition of \holtxt{BISIM_REL}. In fact, \holtxt{BISIM_REL}
-is defined by the coinductive relational package (see
-Section~\ref{sec:coinductive}):
+directly work with the above definition of \holtxt{BISIM_REL}.
+Partly for this reason, \holtxt{BISIM_REL} is defined by the coinductive relation package (see Section~\ref{sec:coinductive}):
 \begin{hol}
 \begin{verbatim}
 CoInductive BISIM_REL :
@@ -4650,9 +4649,9 @@ which automatically generates the following coinduction principle:
 \end{alltt}
 \end{hol}
 A simple rewrite by \holtxt{BISIM_def} shows that \holtxt{BISIM_REL}
-defined in this way is actually equivalent with the original
-definition (which now becomes a theorem):\footnote{On the other hand, starting from the
-original definition it is not that easy to derive out the coinduction
+defined in this way is actually equivalent to the original
+definition (which now becomes a theorem):\footnote{Starting with the
+\emph{original definition} it is not that easy to derive the coinduction
 principle, which is very useful in practice.}
 \begin{session}
 \begin{alltt}
@@ -4701,7 +4700,7 @@ A binary relation $R$ is a weak bisimulation if, whenever $p\ R\ q$,
 \end{itemize}
  $p$ and $p$ are \emph{weakly bisimilar}, written as $p \approx q$, if $p\ R\ q$ for some bisimulation $R$.
 
-Following the same manner as the strong case (including the use of \ml{CoInductive} command),
+Following the example of the strong case (including the use of the \ml{CoInductive} command),
 below are the definition of weak
 bisimulation (\holtxt{WBISIM}),
 the equivalent definition of weak bisimulation relation
@@ -4716,10 +4715,7 @@ the equivalent definition of weak bisimulation relation
 \end{alltt}
 \end{hol}
 
-In \ml{\$(HOLDIR)/examples/CCS} there is a comprehensive
-formalization of Milner's Calculus of Communicating Systems (CCS)~\cite{Mil89},
-where the definitions of strong and weak bisimulations are based on
-the present \theoryimp{bisimulation} theory.
+In \ml{examples/CCS}, the \HOL{} distribution includes a comprehensive formalization of Milner's Calculus of Communicating Systems (CCS)~\cite{Mil89}, where the definitions of strong and weak bisimulations are based on the present \theoryimp{bisimulation} theory.
 
 \subsection{Finite maps (\theoryimp{finite\_map})}
 \label{sec:finite-map}
