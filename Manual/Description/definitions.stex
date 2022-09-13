@@ -1077,7 +1077,7 @@ Variables whose names start with an underscore are always bound, no matter wheth
 This is convenient for using wildcard notations.
 
 These extensions of the basic case expression syntax allow the expression of some interesting concepts using case expressions.
-One can for example express division with reminder using \pmatch{} case expressions:
+One can for example express division with remainder using \pmatch{} case expressions:
 
 \begin{hol}
 \begin{alltt}
@@ -1960,6 +1960,7 @@ proving the other constraints.
 \index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
 \index{inductive relations!Inductive syntax@\ml{Inductive} syntax}
 \index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
+\index{special syntactic forms for scripts!Inductive@\ml{Inductive}}
 Inductive definitions are made with the special \ml{Inductive} syntax form, which wraps the underlying function \ml{Hol\_reln}, which is in turn found
 in the \ml{bossLib} structure.
 The resulting definitions and theorems are handled with functions defined in the library \ml{IndDefLib}.
@@ -2167,9 +2168,9 @@ Thus, one can write invocations such as
 
 \index{Hol_coreln, defining coinductive relations@\ml{Hol\_coreln}, defining coinductive relations}
 \index{coinductive relations!Hol_coreln (ML function)@\ml{Hol\_coreln} (ML function)}
-
+\index{special syntactic forms for scripts!CoInductive@\ml{CoInductive}}
 \HOL{} supports coinductive relational definitions by the function
-\ml{Hol\_coreln} in the \ml{bossLib} structure (or the new \ml{CoInductive} syntax).
+\ml{Hol\_coreln} in the \ml{bossLib} structure (or with the special \ml{CoInductive} syntax).
 \ml{Hol\_coreln} shares the same input syntax with \ml{Hol\_reln}.
 A successful invocation of this definitional principle returns three important theorems $\mathit{rules}$, $\mathit{coind}$ and $\mathit{cases})$.
 Each is also stored in the current theory segment.
