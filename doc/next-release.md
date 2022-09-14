@@ -30,6 +30,11 @@ New features:
   The contents of such files will be executed by the shell before `Holmake` begins its work.
   See the DESCRIPTION manual for more.
 
+- `Holmake` (at least under Poly/ML) now stores most of the products of theory-building in a “dot”-directory `.holobjs`.
+  For example, if `fooScript.sml` is compiled, the result in the current directory is the addition of `fooTheory.sig` only.
+  The files `fooTheory.sml`, `fooTheory.dat`, `fooTheory.uo` and `fooTheory.ui` are all deposited in the `.holobjs` directory.
+  This reduces clutter.
+
 
 Bugs fixed:
 -----------
