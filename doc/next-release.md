@@ -35,6 +35,13 @@ New features:
   The files `fooTheory.sml`, `fooTheory.dat`, `fooTheory.uo` and `fooTheory.ui` are all deposited in the `.holobjs` directory.
   This reduces clutter.
 
+- Paralleling the existing `Excl` form for removing specific theorems from a simplifier invocation, there is now a `ExclSF` form (also taking a string argument) that removes a simpset fragment from the simplifier.
+  For example
+
+           > simp[ExclSF "BOOL"] ([], “(λx. x + 1) (6 + 1)”);
+           val it = ([([], “(λx. x + 1) 7”)], fn)
+
+  where the `BOOL` fragment includes the treatment of β-reduction.
 
 Bugs fixed:
 -----------
