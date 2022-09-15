@@ -661,9 +661,11 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
       val nil_included = Set.member(s, "")
       fun member (SSFRAG_CON{name = SOME n,...}) = Binaryset.member(s,n)
         | member (SSFRAG_CON{name = NONE,...}) = nil_included
-      fun mapthis (hi as ADDFRAG f) = if member f then NONE else SOME hi
-        | mapthis hi = SOME hi
-      val history' = List.mapPartial mapthis history
+      fun filterthis (hi as ADDFRAG f) = not(member f)
+        | filterthis hi = true
+      val history' = List.filter filterthis history
+      val _ = length history' < length history orelse
+              raise Conv.UNCHANGED
     in
       build_from_history history' |> fupdlimit (fn _ => limit)
     end
@@ -762,15 +764,17 @@ fun process_tags ss thl =
       if null Congs andalso null ACs andalso null excludes andalso
          null frags andalso null exclfrags
       then (ss,thl)
-      else (
-        List.foldl (flip op++) (remove_ssfrags exclfrags ss) (
-          SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                     ac=map unAC ACs, congs=map (normCong o unCong) Congs,
-                     convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
-          frags
-        ) -* excludes,
-        rst
-      )
+      else
+        let val base = remove_ssfrags exclfrags ss handle Conv.UNCHANGED => ss
+        in
+          (List.foldl (flip op++) base (
+            SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+                       ac=map unAC ACs, congs=map (normCong o unCong) Congs,
+                       convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
+            frags
+           ) -* excludes,
+           rst)
+        end
     end
 
 fun SIMP_CONV ss l tm =

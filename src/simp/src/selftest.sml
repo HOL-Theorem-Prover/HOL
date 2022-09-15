@@ -169,6 +169,10 @@ in
   infloop_protect "SimpL on operator returning non-boolean" check doit t
 end
 
+val _ = shouldfail {testfn = (fn () => remove_ssfrags ["FOOBAR"] bool_ss),
+                    printresult = PP.pp_to_string 65 simpLib.pp_simpset,
+                    printarg = fn () => "remove_ssfrags throws UNCHANGED",
+                    checkexn = fn Conv.UNCHANGED => true | _ => false} ()
 
 val _ = let
   open boolSimps

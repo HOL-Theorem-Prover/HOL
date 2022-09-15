@@ -11,12 +11,13 @@ simplification
 \DESCRIBE
 A call to {remove_ssfrags simpset fragnames} returns a simpset that is
 the same as {simpset} except that the simpset fragments with names in
-the list {fragnames} are no longer included.
+the list {fragnames} are no longer included. As a special case, the
+empty name {""} matches all unnamed fragments within {simpset} and
+causes them to be removed.
 
 \FAILURE
-Never fails.  If a name in the list of fragment names does not occur
-as a name amongst the simpset fragments in the input simpset, no error
-is reported.
+If no member of {fragnames} names a fragments in {simpset}, the
+{Conv.UNCHANGED} exception is raised.
 
 \EXAMPLE
 {
