@@ -119,7 +119,12 @@ Incompatibilities:
 
 *   Due to internal dependency changes, `Diff.DIFF_CONV` (a conversion for proving
     differentiate expressions) is not included in `realLib` any more. Users of `DIFF_CONV`
-    should explicitly open `Diff` in the proof scripts.
+    should explicitly open `Diff` in proof scripts.
+
+*   The internally-stored names (`string` values) for various simpset fragments have been changed to lose `_ss` suffixes.
+    For example, though the `BETA_ss` fragment still appears under that name in the SML namespace, the name it has stored internally is now just `"BETA"`.
+    This change makes the naming consistent across all of HOL’s fragments.
+    These names are used when referring to fragments in calls to `diminish_srw_ss`, when using `ExclSF` (see above), and in printing the values in the REPL.
 
 * * * * *
 
