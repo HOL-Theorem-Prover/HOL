@@ -3452,7 +3452,7 @@ QED
 
 Theorem LDROP_WHILE[local]:
   ?f.
-    (! P. f P LNIL = LNIL) /\
+    (!P. f P LNIL = LNIL) /\
     (!P x xs. f P (LCONS x xs) = if P x then f P xs else LCONS x xs) /\
     (!P l. every P l ==> f P l = LNIL)
 Proof
@@ -3484,7 +3484,7 @@ val LDROP_WHILE = new_specification("LDROP_WHILE",["LDROP_WHILE"],LDROP_WHILE);
 
 Theorem LTAKE_WHILE[local]:
   ?f.
-    (! P. f P LNIL = LNIL) /\
+    (!P. f P LNIL = LNIL) /\
     (!P x xs. f P (LCONS x xs) = if P x then x ::: f P xs else LNIL) /\
     (!P l. every P l ==> f P l = l)
 Proof
