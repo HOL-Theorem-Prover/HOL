@@ -3429,4 +3429,106 @@ Proof
       >> metis_tac[llist_upto_rules])
 QED
 
+Theorem LDROP_LCONS_LNTH:
+  !n xs a t. LDROP n xs = SOME (a:::t) ==> LNTH n xs = SOME a
+Proof
+  Induct \\ fs [] \\ Cases \\ fs []
+QED
+
+Triviality LDROP_WHILE_LEMMA:
+  !n k xs ys zs y z.
+    LTAKE n xs = SOME ys /\
+    LTAKE k xs = SOME zs /\
+    LNTH n xs = SOME y /\
+    LNTH k xs = SOME z /\
+    ~P y /\ ~P z /\ EVERY P ys /\ EVERY P zs ==>
+    n = k
+Proof
+  Induct \\ Cases_on ‘k’ \\ fs []
+  \\ Cases_on ‘xs’ \\ fs [] \\ rw []
+  \\ CCONTR_TAC \\ fs [] \\ fs []
+  \\ res_tac
+QED
+
+Theorem LDROP_WHILE[local]:
+  ?f.
+    (! P. f P LNIL = LNIL) /\
+    (!P x xs. f P (LCONS x xs) = if P x then f P xs else LCONS x xs) /\
+    (!P l. every P l ==> f P l = LNIL)
+Proof
+  qabbrev_tac ‘foo = λP l n. ?x ls. LNTH n l = SOME x /\ ~P x /\
+                                    LTAKE n l = SOME ls /\ EVERY P ls’
+  \\ qexists_tac ‘λP l. if every P l then LNIL else
+                        THE (LDROP (@n. foo P l n) l)’
+  \\ rpt strip_tac \\ fs []
+  \\ reverse (Cases_on ‘P x’) \\ fs []
+  >-
+   (qsuff_tac ‘!n. foo P (x:::xs) n <=> n = 0’ >- fs []
+    \\ unabbrev_all_tac \\ fs []
+    \\ rw [] \\ eq_tac \\ rw []
+    \\ Cases_on ‘n’ \\ gvs [])
+  \\ Cases_on ‘every P xs’ \\ fs []
+  \\ fs [every_def,exists_thm_strong]
+  \\ fs [listTheory.EVERY_MEM] \\ fs [GSYM listTheory.EVERY_MEM]
+  \\ drule_then assume_tac LDROP_LCONS_LNTH
+  \\ qsuff_tac ‘(!k. foo P xs k <=> k = n) /\
+                (!k. foo P (x:::xs) k <=> k = SUC n)’ >- fs []
+  \\ rw [Abbr‘foo’]
+  \\ rw [] \\ eq_tac \\ rw []
+  >- (imp_res_tac LDROP_WHILE_LEMMA \\ fs [])
+  \\ Cases_on ‘k’ \\ gvs []
+  \\ imp_res_tac LDROP_WHILE_LEMMA \\ fs []
+QED
+
+val LDROP_WHILE = new_specification("LDROP_WHILE",["LDROP_WHILE"],LDROP_WHILE);
+
+Theorem LTAKE_WHILE[local]:
+  ?f.
+    (! P. f P LNIL = LNIL) /\
+    (!P x xs. f P (LCONS x xs) = if P x then x ::: f P xs else LNIL) /\
+    (!P l. every P l ==> f P l = l)
+Proof
+  qabbrev_tac ‘foo = λP l n. ?x ls. LNTH n l = SOME x /\ ~P x /\
+                                    LTAKE n l = SOME ls /\ EVERY P ls’
+  \\ qexists_tac ‘λP l. if every P l then l else
+                        fromList (THE (LTAKE (@n. foo P l n) l))’
+  \\ rpt strip_tac \\ fs []
+  \\ reverse (Cases_on ‘P x’) \\ fs []
+  >-
+   (qsuff_tac ‘!n. foo P (x:::xs) n <=> n = 0’ >- fs []
+    \\ unabbrev_all_tac \\ fs []
+    \\ rw [] \\ eq_tac \\ rw []
+    \\ Cases_on ‘n’ \\ gvs [])
+  \\ Cases_on ‘every P xs’ \\ fs []
+  \\ fs [every_def,exists_thm_strong]
+  \\ fs [listTheory.EVERY_MEM] \\ fs [GSYM listTheory.EVERY_MEM]
+  \\ drule_then assume_tac LDROP_LCONS_LNTH
+  \\ qsuff_tac ‘(!k. foo P xs k <=> k = n) /\
+                (!k. foo P (x:::xs) k <=> k = SUC n)’ >- fs []
+  \\ rw [Abbr‘foo’]
+  \\ rw [] \\ eq_tac \\ rw []
+  >- (imp_res_tac LDROP_WHILE_LEMMA \\ fs [])
+  \\ Cases_on ‘k’ \\ gvs []
+  \\ imp_res_tac LDROP_WHILE_LEMMA \\ fs []
+QED
+
+val LTAKE_WHILE = new_specification("LTAKE_WHILE",["LTAKE_WHILE"],LTAKE_WHILE);
+
+Theorem LTAKE_WHILE_LDROP_WHILE:
+  !P l. LAPPEND (LTAKE_WHILE P l) (LDROP_WHILE P l) = l
+Proof
+  rw [] \\ Cases_on ‘every P l’
+  >- fs [LTAKE_WHILE,LDROP_WHILE,LAPPEND_NIL_2ND]
+  \\ fs [every_def,exists_thm_strong]
+  \\ fs [listTheory.EVERY_MEM] \\ fs [GSYM listTheory.EVERY_MEM]
+  \\ rpt $ pop_assum mp_tac
+  \\ qid_spec_tac ‘l'’
+  \\ qid_spec_tac ‘l’
+  \\ qid_spec_tac ‘n’
+  \\ Induct
+  >- fs [LTAKE_WHILE,LDROP_WHILE]
+  \\ Cases
+  \\ fs [LTAKE_WHILE,LDROP_WHILE,PULL_EXISTS]
+QED
+
 val _ = export_theory();
