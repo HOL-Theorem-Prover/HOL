@@ -76,10 +76,10 @@ New examples:
 -------------
 
 -  **Dependability Analysis**:
-   Dependability is an umbrella term encompassing Reliability, Availability and Maintainabiity.
+   Dependability is an umbrella term encompassing Reliability, Availability and Maintainability.
    Two widely used dependability modeling techniques have been formalized namely, Reliability Block Diagrams (RBD) and Fault Trees (FT).
    Both these techniques graphically analyze the causes and factors contributing the functioning and failure of the system under study.
-   Moreover, these dependability techniques have been highly recommended by several safety standards, such as IEC 61508, ISO 26262 and EN50128,
+   Moreover, these dependability techniques have been highly recommended by several safety standards, such as IEC61508, ISO26262 and EN50128,
 for developing safe hardware and software systems.
 
    The new recursive datatypes are defined to model RBD and FT providing compositional features in order to analyze complex systems with arbitrary
