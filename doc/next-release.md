@@ -103,6 +103,9 @@ number of components.
     Some LLN theorems (`WLLN_uncorrelated` and `SLLN_uncorrelated`) previously in `probabilityTheory`
     are now moved to `large_numberTheory` with unified statements.
 
+-   __Relevant Logic__ (in `examples/logic/relevant-logic`): material contributed by James Taylor, mechanising a number of foundational results for propositional relevant logic.
+    Three proof systems (two Hilbert, one natural deduction) are shown equivalent, and two model theories (the Routley-Meyer ternary-relation Kripke semantics, and Goldblatt’s “cover” semantics) are shown sound and complete with respect to the proof systems.
+
 Incompatibilities:
 ------------------
 
