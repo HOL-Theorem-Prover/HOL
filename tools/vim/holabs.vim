@@ -33,6 +33,12 @@ iab <buffer> SUBSET ⊆
 "dig (_
 iab <buffer> PSUBSET ⊂
 "dig (C
+iab <buffer> RING ∘
+"dig Ob
+iab <buffer> PROVES ⊢
+dig T- 8866
+iab <buffer> DPLUS ⧺
+dig 2+ 10746
 set iskeyword+=>,/,\
 fu! HOLUnab ()
   s/∧/\/\\/eg
@@ -52,4 +58,7 @@ fu! HOLUnab ()
   s/∩/INTER/eg
   s/⊆/SUBSET/eg
   s/⊂/PSUBSET/eg
+  s/∘/RING/eg
+  s/⊢/PROVES/eg
+  s/⧺/DPLUS/eg
 endf
