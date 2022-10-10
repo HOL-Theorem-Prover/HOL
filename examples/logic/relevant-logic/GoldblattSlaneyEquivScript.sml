@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib stringTheory;
 
 open SlaneyRLTheory GoldblattRLTheory;
-     
+
 val _ = new_theory "GoldblattSlaneyEquiv";
 
 Definition sg_translation_def:
@@ -33,25 +33,25 @@ Proof
   >- gs[gs_translation_def, sg_translation_def, s_double_dimp_equiv]
   >- gs[gs_translation_def, sg_translation_def, s_double_dimp_equiv]
   >- (gs[gs_translation_def, sg_translation_def, g_OR_def] >>
-      rename[‘slaney_provable ((A Vₛ B) <->ₛ _)’] >> 
+      rename[‘slaney_provable ((A Vₛ B) <->ₛ _)’] >>
       assume_tac s_OR_definable >>
-      last_x_assum $ qspecl_then [‘gs $ sg A’, ‘gs $ sg B’] strip_assume_tac >> 
+      last_x_assum $ qspecl_then [‘gs $ sg A’, ‘gs $ sg B’] strip_assume_tac >>
       ‘slaney_provable ((A Vₛ B) <->ₛ (gs $ sg A) Vₛ (gs $ sg B))’ suffices_by
         metis_tac[s_equiv_symmetry, s_equiv_transitivity] >>
       gs[s_double_dimp_equiv])
-  >- (gs[gs_translation_def, sg_translation_def, g_ICONJ_def] >> 
-      rename[‘slaney_provable ((A ioₛ B) <->ₛ _)’] >> 
+  >- (gs[gs_translation_def, sg_translation_def, g_ICONJ_def] >>
+      rename[‘slaney_provable ((A ioₛ B) <->ₛ _)’] >>
       assume_tac s_IO_definable >>
-      last_x_assum $ qspecl_then [‘gs $ sg A’, ‘gs $ sg B’] strip_assume_tac >> 
+      last_x_assum $ qspecl_then [‘gs $ sg A’, ‘gs $ sg B’] strip_assume_tac >>
       ‘slaney_provable ((A ioₛ B) <->ₛ (gs $ sg A) ioₛ (gs $ sg B))’ suffices_by
-        metis_tac[s_equiv_symmetry, s_equiv_transitivity] >> 
+        metis_tac[s_equiv_symmetry, s_equiv_transitivity] >>
       gs[s_double_dimp_equiv])
   >- (gs[gs_translation_def, sg_translation_def] >> metis_tac[s_equiv_replacement, s_DIMP_def, slaney_provable_rules])
   >- simp[s_equiv_identity, gs_translation_def, sg_translation_def]
 QED
 
 Theorem sg_gs_EQ:
-  ∀A. sg $ gs A = A  
+  ∀A. sg $ gs A = A
 Proof
   Induct_on ‘A’ >> simp[gs_translation_def, sg_translation_def]
 QED
@@ -68,7 +68,7 @@ Theorem s_trans_invarient:
 Proof
   metis_tac[s_equiv_replacement, gs_sg_equiv]
 QED
-        
+
 Theorem goldblatt_implies_slaney:
   ∀A. goldblatt_provable A ⇒ slaney_provable $ gs A
 Proof
@@ -78,7 +78,7 @@ Proof
   >- metis_tac[s_equiv_replacement, s_OR_definable, s_disjunction_elim]
   >- metis_tac[slaney_provable_rules]
 QED
-        
+
 Theorem slaney_implies_goldblatt:
   ∀A. slaney_provable A ⇒ goldblatt_provable $ sg A
 Proof
@@ -89,7 +89,7 @@ QED
 Theorem goldblatt_slaney_equiv:
   ∃ s g. ∀A B. (goldblatt_provable A ⇒ slaney_provable $ s A) ∧
                (slaney_provable B ⇒ goldblatt_provable $ g B) ∧
-               (goldblatt_provable $ g $ s A ⇔ goldblatt_provable A) ∧ 
+               (goldblatt_provable $ g $ s A ⇔ goldblatt_provable A) ∧
                (slaney_provable $ s $ g B ⇔ slaney_provable B)
 Proof
   qexistsl_tac [‘gs’, ‘sg’] >>
@@ -98,5 +98,5 @@ Proof
             s_trans_invarient,
             g_trans_invarient]
 QED
-                
+
 val _ = export_theory();
