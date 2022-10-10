@@ -1622,6 +1622,108 @@ METIS_TAC [SUBSET_DEF, lemma9, MEMBER_NOT_EMPTY, CHOICE_DEF, lemma4]);
 
 end
 
+Theorem link_lemma[local]:
+  !x y. (x,y) IN tc ((a,b) INSERT R) ==>
+        transitive R ==>
+        (x = a /\ (y = b \/ (b,y) IN R)) \/
+        (y = b /\ (x,a) IN R) \/
+        (x,a) IN R /\ (b,y) IN R \/
+        (x,y) IN R
+Proof
+  ho_match_mp_tac tc_ind >> rpt strip_tac >>
+  FULL_SIMP_TAC (srw_ss()) [tc_rules] >> rpt var_eq_tac>>
+  METIS_TAC[transitive_def]
+QED
+
+fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
+
+Theorem StrongOrder_extends_to_StrongLinearOrder:
+  !R1: 'a -> 'a -> bool.
+    StrongOrder R1 ==> ?R2. R1 RSUBSET R2 /\ StrongLinearOrder R2
+Proof
+  gen_tac >> strip_tac >>
+  Q.ABBREV_TAC ‘r1 = rel_to_reln R1’ >>
+  ‘transitive r1 /\ irreflexive r1 UNIV’
+    by METIS_TAC[reln_rel_conv_thms, StrongOrder] >>
+  Q.ABBREV_TAC‘s = { r | transitive r /\ irreflexive r UNIV /\ r1 SUBSET r }’ >>
+  ‘r1 IN s’ by simp[Abbr‘s’] >>
+  ‘s <> {}’ by METIS_TAC[MEMBER_NOT_EMPTY] >>
+  Q.ABBREV_TAC ‘order = { (r1,r2) | r1 SUBSET r2 /\ r1 IN s /\ r2 IN s } ’ >>
+  ‘partial_order order s’
+    by (simp[partial_order_def, range_def, domain_def] >>
+        ‘transitive order’
+          by (simp[transitive_def, Abbr‘order’] >> METIS_TAC[SUBSET_TRANS]) >>
+        ‘antisym order’
+          by (simp[antisym_def, Abbr‘order’] >> METIS_TAC[SUBSET_ANTISYM]) >>
+        ‘reflexive order s’ by simp[reflexive_def, Abbr‘order’] >>
+        simp[SUBSET_DEF, PULL_EXISTS] >> simp[Abbr‘order’]) >>
+  dxrule_then dxrule zorns_lemma >> impl_tac
+  >- (simp[chain_def, upper_bounds_def, range_def, Abbr‘order’] >>
+      Q.X_GEN_TAC ‘t’ >> strip_tac >>
+      simp[EXTENSION, PULL_EXISTS] >> irule_at Any SUBSET_REFL >>
+      Cases_on ‘t = {}’ >- (simp[] >> METIS_TAC[]) >>
+      Q.EXISTS_TAC ‘BIGUNION t’ >> simp[] >>
+      ‘BIGUNION t IN s’
+        by (‘transitive (BIGUNION t) /\ irreflexive (BIGUNION t) UNIV /\
+             r1 SUBSET BIGUNION t’ suffices_by simp[Abbr‘s’] >>
+            ‘transitive (BIGUNION t)’
+              by (simp[transitive_def] >> rpt strip_tac >>
+                  Q.RENAME_TAC[‘(x,y) IN A’, ‘(y,z) IN B’, ‘A IN t’, ‘B IN t’]>>
+                  ‘A IN s /\ B IN s’ by METIS_TAC[] >>
+                  ‘transitive A /\ transitive B’
+                    by FULL_SIMP_TAC (srw_ss())[Abbr‘s’] >>
+                  wlogLib.wlog_tac ‘A SUBSET B’ [‘A’, ‘B’, ‘x’, ‘y’, ‘z’]
+                  >- (‘B SUBSET A’ by METIS_TAC[] >> Q.EXISTS_TAC ‘A’ >>
+                      METIS_TAC[transitive_def, SUBSET_DEF]) >>
+                  METIS_TAC[transitive_def, SUBSET_DEF]) >> simp[] >>
+            ‘irreflexive (BIGUNION t) UNIV’
+              by (simp[irreflexive_def] >> rpt gen_tac >>
+                  Q.RENAME_TAC [‘(x,x) IN A’, ‘A IN t’] >>
+                  Cases_on ‘A IN t’ >> simp[] >>
+                  ‘A IN s’ by METIS_TAC[] >>
+                  pop_assum mp_tac >> simp[Abbr‘s’, irreflexive_def]) >>
+            simp[] >>
+            irule SUBSET_BIGUNION_SUBSET_I >>
+            full_simp_tac (srw_ss())[GSYM MEMBER_NOT_EMPTY] >>
+            first_assum $ irule_at Any >> first_x_assum $ drule_then drule >>
+            simp[Abbr‘s’]) >>
+      simp[] >> Q.X_GEN_TAC ‘A’ >> Cases_on ‘A IN t’ >> simp[] >>
+      METIS_TAC[SUBSET_BIGUNION_I]) >>
+  disch_then $ Q.X_CHOOSE_THEN ‘rmax’ mp_tac >>
+  simp[maximal_elements_def, SF boolSimps.CONJ_ss] >> strip_tac >>
+  Q.EXISTS_TAC ‘reln_to_rel rmax’ >> simp[GSYM reln_rel_conv_thms] >>
+  ‘R1 RSUBSET reln_to_rel rmax’
+    by (‘r1 SUBSET rmax’ by full_simp_tac (srw_ss())[Abbr‘s’] >>
+        pop_assum mp_tac >>
+        simp[reln_to_rel_def, RSUBSET, SUBSET_DEF, FORALL_PROD] >>
+        rpt strip_tac >> first_x_assum irule >>
+        simp[Abbr‘r1’, rel_to_reln_def])>>
+  simp[strict_linear_order_def] >>
+  ‘transitive rmax /\ irreflexive rmax UNIV’
+    by full_simp_tac (srw_ss())[Abbr‘s’] >>
+  full_simp_tac (srw_ss()) [irreflexive_def] >>
+  MAP_EVERY Q.X_GEN_TAC [‘a’, ‘b’] >> strip_tac >> CCONTR_TAC >>
+  full_simp_tac (srw_ss()) [] >>
+  Q.ABBREV_TAC ‘rmax' = tc ((a,b) INSERT rmax)’ >>
+  ‘rmax <> rmax' /\ rmax SUBSET rmax'’
+    by (simp[EXTENSION, Abbr‘rmax'’] >> conj_tac
+        >- (Q.EXISTS_TAC ‘(a,b)’ >> simp[tc_rules]) >>
+        simp[SUBSET_DEF, tc_rules, FORALL_PROD]) >>
+  full_simp_tac (srw_ss()) [Abbr‘order’] >>
+  rev_full_simp_tac (srw_ss()) [SF boolSimps.CONJ_ss] >>
+  ‘rmax' NOTIN s’ by METIS_TAC[] >>
+  ‘transitive rmax'’ by simp[Abbr‘rmax'’, tc_transitive] >>
+  ‘r1 SUBSET rmax’ by full_simp_tac (srw_ss())[Abbr‘s’] >>
+  ‘r1 SUBSET rmax'’
+    by (simp[Abbr‘rmax'’] >> METIS_TAC[tc_rules, SUBSET_DEF]) >>
+  Q.UNDISCH_THEN ‘rmax' NOTIN s’ mp_tac >> simp[Abbr‘s’] >>
+  simp[Abbr‘rmax'’] >> rpt strip_tac >>
+  drule link_lemma >> simp[SF boolSimps.CONJ_ss] >> CCONTR_TAC >>
+  full_simp_tac (srw_ss()) [] >>
+  METIS_TAC[transitive_def]
+QED
+
+
 (* ------------------------------------------------------------------------ *)
 (*  Equivalences                                                            *)
 (* ------------------------------------------------------------------------ *)
