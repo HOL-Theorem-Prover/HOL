@@ -6975,8 +6975,9 @@ val compl_insert = Q.store_thm ("compl_insert",
 (* PREIMAGE lemmas from util_probTheory                                      *)
 (*---------------------------------------------------------------------------*)
 
-val PREIMAGE_def = new_definition (
-   "PREIMAGE_def", ``PREIMAGE f s = {x | f x IN s}``);
+Definition PREIMAGE_def:
+  PREIMAGE f s = {x | f x IN s}
+End
 
 Theorem PREIMAGE_ALT:
   !f s. PREIMAGE f s = s o f
@@ -7002,20 +7003,21 @@ Theorem PREIMAGE_UNIV[simp]:
 Proof RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNIV]
 QED
 
-val PREIMAGE_COMPL = store_thm
-  ("PREIMAGE_COMPL",
-   ``!f s. PREIMAGE f (COMPL s) = COMPL (PREIMAGE f s)``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_COMPL]);
+Theorem PREIMAGE_COMPL:
+  !f s. PREIMAGE f (COMPL s) = COMPL (PREIMAGE f s)
+Proof
+  RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_COMPL]
+QED
 
-val PREIMAGE_UNION = store_thm
-  ("PREIMAGE_UNION",
-   ``!f s t. PREIMAGE f (s UNION t) = PREIMAGE f s UNION PREIMAGE f t``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNION]);
+Theorem PREIMAGE_UNION:
+  !f s t. PREIMAGE f (s UNION t) = PREIMAGE f s UNION PREIMAGE f t
+Proof RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNION]
+QED
 
-val PREIMAGE_INTER = store_thm
-  ("PREIMAGE_INTER",
-   ``!f s t. PREIMAGE f (s INTER t) = PREIMAGE f s INTER PREIMAGE f t``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_INTER]);
+Theorem PREIMAGE_INTER:
+  !f s t. PREIMAGE f (s INTER t) = PREIMAGE f s INTER PREIMAGE f t
+Proof RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_INTER]
+QED
 
 val PREIMAGE_BIGUNION = store_thm
   ("PREIMAGE_BIGUNION",
@@ -7034,10 +7036,11 @@ val PREIMAGE_DIFF = store_thm
    ``!f s t. PREIMAGE f (s DIFF t) = PREIMAGE f s DIFF PREIMAGE f t``,
    RW_TAC std_ss [Once EXTENSION, IN_PREIMAGE, IN_DIFF]);
 
-val PREIMAGE_I = store_thm
-  ("PREIMAGE_I",
-   ``PREIMAGE I = I``,
-  METIS_TAC [EXTENSION, IN_PREIMAGE, combinTheory.I_THM]);
+Theorem PREIMAGE_I[simp]:
+  PREIMAGE I = I ∧ PREIMAGE (λx. x) = (λx. x)
+Proof
+  METIS_TAC [EXTENSION, IN_PREIMAGE, combinTheory.I_THM]
+QED
 
 val PREIMAGE_K = store_thm
   ("PREIMAGE_K",
