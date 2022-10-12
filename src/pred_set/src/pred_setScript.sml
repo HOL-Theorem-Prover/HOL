@@ -7037,7 +7037,7 @@ val PREIMAGE_DIFF = store_thm
    RW_TAC std_ss [Once EXTENSION, IN_PREIMAGE, IN_DIFF]);
 
 Theorem PREIMAGE_I[simp]:
-  PREIMAGE I = I ∧ PREIMAGE (λx. x) = (λx. x)
+  PREIMAGE I = I /\ PREIMAGE (λx. x) = (λx. x)
 Proof
   METIS_TAC [EXTENSION, IN_PREIMAGE, combinTheory.I_THM]
 QED
