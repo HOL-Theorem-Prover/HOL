@@ -224,8 +224,7 @@ Theorem lemma6_4_1_2:
 Proof
   reverse $ rw[Is_Prop_def, Localized_def, Perp_def]
   >- (rw[Upset_def, SUBSET_DEF, to_CS_def] >> irule RCS_REFINEMENT_ORTHOGONAL >>
-      simp[] >> qexistsl_tac [‘d’, ‘x’] >> simp[] >>
-      metis_tac[PREORDER_def, RCS_PREORDER, SUBSET_DEF]
+      simp[] >> metis_tac[PREORDER_def, RCS_PREORDER, SUBSET_DEF]
      )
   >- (rw[j_def, Once SUBSET_DEF, to_CS_def] >> rename[‘x ⊥ₐ y’] >>
       irule (iffRL lemma6_4_1_1) >> rw[]
@@ -491,9 +490,11 @@ Proof
       metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM, M_SUBSET_RCS_W, SUBSET_DEF, Model_Function_def]
      )
   >- (drule Model_Function_imp >> rw[SUBSET_DEF, IMP_def]
-      >- metis_tac[RCS_IDENTITY, R_MODEL_SYSTEM_R_COVER_SYSTEM]
-      >- (‘(RCS.E ⬝ x') = x'’ suffices_by metis_tac[SUBSET_DEF] >>
-          metis_tac[RCS_FUSION_LEFT_IDENTITY, R_MODEL_SYSTEM_R_COVER_SYSTEM, M_SUBSET_RCS_W, SUBSET_DEF])
+      >- metis_tac[RCS_IDENTITY, R_MODEL_SYSTEM_R_COVER_SYSTEM] >~
+      [‘RCS.E ⬝ y ∈ M B’, ‘y ∈ M A’, ‘M A ⊆ M B’]
+      >- (‘(RCS.E ⬝ y) = y’ suffices_by metis_tac[SUBSET_DEF] >>
+          metis_tac[RCS_FUSION_LEFT_IDENTITY, R_MODEL_SYSTEM_R_COVER_SYSTEM,
+                    M_SUBSET_RCS_W, SUBSET_DEF])
      )
 QED
 
@@ -512,7 +513,8 @@ Proof
 QED
 
 Theorem soundness:
-  ∀p RCS Ps M. |- p ∧ R_MODEL_SYSTEM RCS Ps ∧ Model_Function RCS Ps M ⇒ C_Holds RCS Ps M RCS.E p
+  ∀p RCS Ps M. |- p ∧ R_MODEL_SYSTEM RCS Ps ∧ Model_Function RCS Ps M ⇒
+               C_Holds RCS Ps M RCS.E p
 Proof
   Induct_on ‘goldblatt_provable’ >>
   rw[] >> irule (iffRL C_Holds_at_E) >> simp[]
@@ -748,15 +750,23 @@ Proof
       gs[C_Holds_def, IMP_def, SUBSET_DEF] >> rw[]
       >- metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM, RCS_IDENTITY]
       >- (‘Upset (M p)’ by metis_tac[M_IN_Ps_W, R_MODEL_SYSTEM_PS_UPSET] >>
-          gs[Upset_def] >> last_x_assum irule >> rw[]
-          >- (‘RCS.E ⬝ x' ∈ RCS.W’ suffices_by rw[to_CS_def] >> gs[Up_def, to_CS_def] >>
-              metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM, RCS_FUSION_LEFT_IDENTITY])
+          gs[Upset_def] >> last_x_assum irule >> rw[] >~
+          [‘RCS.E ⬝ y ∈ (to_CS RCS).W’]
+          >- (‘RCS.E ⬝ y ∈ RCS.W’ suffices_by rw[to_CS_def] >>
+              gs[Up_def, to_CS_def] >>
+              metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM,
+                        RCS_FUSION_LEFT_IDENTITY]) >~
+          [‘y ∈ Up (to_CS RCS) {RCS.E}’]
           >- (qexists_tac ‘RCS.E’ >> simp[] >>
-              ‘RCS.E ≼ (RCS.E ⬝ x')’ suffices_by rw[to_CS_def] >>
-              ‘(RCS.E ⬝ RCS.E) ≼ (RCS.E ⬝ x')’ suffices_by (gs[Up_def, to_CS_def] >>
-                metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM, RCS_FUSION_LEFT_IDENTITY]) >>
-              irule RCS_FUSION_MONO_REFINEMENT >> simp[] >> gs[Up_def, to_CS_def] >>
-              metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM, RCS_PREORDER, PREORDER_def, SUBSET_DEF, RCS_IDENTITY])
+              ‘RCS.E ≼ (RCS.E ⬝ y)’ suffices_by rw[to_CS_def] >>
+              ‘(RCS.E ⬝ RCS.E) ≼ (RCS.E ⬝ y)’
+                suffices_by (gs[Up_def, to_CS_def] >>
+                             metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM,
+                                       RCS_FUSION_LEFT_IDENTITY]) >>
+              irule RCS_FUSION_MONO_REFINEMENT >> simp[] >>
+              gs[Up_def, to_CS_def] >>
+              metis_tac[R_MODEL_SYSTEM_R_COVER_SYSTEM, RCS_PREORDER,
+                        PREORDER_def, SUBSET_DEF, RCS_IDENTITY])
          )
      )
   >- (‘C_Holds RCS Ps M RCS.E (τ --> p)’ by gs[] >>
