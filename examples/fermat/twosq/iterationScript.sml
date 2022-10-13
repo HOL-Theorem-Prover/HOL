@@ -384,7 +384,7 @@ Proof
   simp[iterate_period_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
-  metis_tac[]
+  metis_tac[DECIDE``~(0 < 0)``]
 QED
 
 (* Theorem: 0 < n ==> (iterate_period f x = n <=>
@@ -413,8 +413,7 @@ Proof
   simp[iterate_period_minimal] >>
   simp[iterate_period_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  rw_tac std_ss[] >-
-  metis_tac[] >>
+  rw[] >>
   `~(n' < n) /\ ~(n < n')` by metis_tac[] >>
   decide_tac
 QED
