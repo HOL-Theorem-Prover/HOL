@@ -1591,9 +1591,9 @@ val poly_X_expM_weak = store_thm(
    If n = 0,
         LENGTH (valueOf (poly_X_expM n k m))
       = LENGTH (if k = 0 then [] else PAD_RIGHT 0 k (PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0]))
-                                                        by poly_X_expM_zero
+                                                         by poly_X_expM_zero
       = if k = 0 then 0 else LENGTH (PAD_RIGHT 0 k ls)  where ls = PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0]
-      = if k = 0 then 0 else MAX k (LENGTH ls)          by PAD_RIGHT_LENGTH
+      = if k = 0 then 0 else MAX k (LENGTH ls)           by PAD_RIGHT_LENGTH
       = if k = 0 then 0 else MAX k (MAX (m MOD k + 1) 1) by PAD_LEFT_LENGTH
       = if k = 0 then 0 else MAX (MAX k (m MOD k)) 1     by MAX_ASSOC
       = if k = 0 then 0 else MAX k 1                     by MOD_LESS, k <> 0
@@ -1601,8 +1601,8 @@ val poly_X_expM_weak = store_thm(
       = k
    If n <> 0,
         LENGTH (valueOf (poly_X_expM n k m))
-      = LENGTH (unity_mod_X_exp (ZN n) k m)             by poly_X_expM_value, 0 < n
-      = k                                               by unity_mod_X_exp_length
+      = LENGTH (unity_mod_X_exp (ZN n) k m)              by poly_X_expM_value, 0 < n
+      = k                                                by unity_mod_X_exp_length
 *)
 val poly_X_expM_length = store_thm(
   "poly_X_expM_length[simp]",
@@ -1896,7 +1896,7 @@ and also for: loop2_list_tail_head_upper_count_exit_le
    Given (LENGTH p = k) and LENGTH q = k,
    Thus loop p q
      <= quit [] [] +
-        SUM (GENLIST (\j. f (EL j p) (EL j q)) k)    by loop2_list_tail_head_count_exit_sum_le
+        SUM (GENLIST (\j. f (EL j p) (EL j q)) k)          by loop2_list_tail_head_count_exit_sum_le
       = 2 + SUM (GENLIST (\j. f (EL j p) (EL j q)) k)
 *)
 val poly_eqM_steps_by_sum_le = store_thm(
@@ -2162,7 +2162,7 @@ and also for: loop_list_head_upper_count_le
        body = (\p. f (HD p)),
        loop = (\p. stepsOf (poly_cmultM n c p))
    Then loop p = if (p = []) then 1 else body p + loop (TL p)    by poly_cmultM_steps_thm
-   Thus loop p = 1 + SUM (GENLIST (\j. f (EL j p)) (LENGTH p)) by loop_list_head_count_eqn
+   Thus loop p = 1 + SUM (GENLIST (\j. f (EL j p)) (LENGTH p))   by loop_list_head_count_eqn
 *)
 val poly_cmultM_steps_eqn = store_thm(
   "poly_cmultM_steps_eqn",
@@ -2187,7 +2187,7 @@ val poly_cmultM_steps_eqn = store_thm(
        body = (\p. f (HD p)),
        loop = (stepsOf o poly_cmultM n c)
    Then loop p = if (p = []) then 1 else body p + loop (TL p)    by poly_cmultM_steps_thm
-    Now Weak (ZN n) p <=> EVERY (\j.j < n) p                   by ZN_weak
+    Now Weak (ZN n) p <=> EVERY (\j.j < n) p                     by ZN_weak
     and MONO f                         by size_monotone_le
    Thus loop p
      <= 1 + k * f n                    by loop_list_head_upper_count_le
@@ -2436,7 +2436,7 @@ and also for: loop2_list_tail_head_upper_count_le
        body = (\p q. f (HD p) (HD q)),
        loop = (\p q. stepsOf (poly_addM n p q)).
    Then loop p q = if (p = []) \/ (q = []) then quit p q else body p q + loop (TL p) (TL q)
-                                                     by poly_addM_steps_thm
+                                                              by poly_addM_steps_thm
    Thus loop p q
       = quit [][] + SUM (GENLIST (\j. f (EL j p) (EL j q)) k) by loop2_list_tail_head_count_eqn
       = 2 + SUM (GENLIST (\j. f (EL j p) (EL j q)) k)
@@ -2960,18 +2960,18 @@ val poly_lastM_steps_eqn = store_thm(
            stepsOf (poly_frontM (h::p))
          = 4 + (if TL (h::p) = [] then 0 else 1) +
                 if TL (h::p) = [] then 0 else stepsOf (poly_frontM (TL (h::p)))
-                                             by poly_frontM_steps_thm
+                                               by poly_frontM_steps_thm
          = 4 + (if (p = []) then 0 else 1) +
                 if (p = []) then 0 else stepsOf (poly_frontM p)
          = 4 + (if (p = []) then 0 else 1) +
                 if (p = []) then 0 else (5 * LENGTH p - 1)
-                                             by induction hypothesis
+                                               by induction hypothesis
          = 4 + (if (p = []) then 5 * LENGTH p else 1) +
                 if (p = []) then 5 * LENGTH p else (5 * LENGTH p - 1)
-                                             by LENGTH_NIL
+                                               by LENGTH_NIL
          = 4 + if (p = []) then 5 * LENGTH p else 5 * LENGTH p
          = 4 + 5 * LENGTH p
-         = 5 * LENGTH (h::p) - 1             by LENGTH
+         = 5 * LENGTH (h::p) - 1               by LENGTH
 *)
 val poly_frontM_steps_eqn = store_thm(
   "poly_frontM_steps_eqn",
@@ -2986,7 +2986,7 @@ val poly_frontM_steps_eqn = store_thm(
 (* Proof:
      stepsOf (poly_turnM p)
    = if (p = []) then 1 else 2 + stepsOf (poly_lastM p) + stepsOf (poly_frontM p)
-                                                by poly_turnM_steps_thm
+                                                  by poly_turnM_steps_thm
    = if (p = []) then 1 else 2 +
      (if (p = []) then 1 else 4 * LENGTH p) +     by poly_lastM_steps_eqn
      (if (p = []) then 1 else 5 * LENGTH p - 1)   by poly_frontM_steps_eqn
@@ -3590,7 +3590,7 @@ val poly_sqM_length = store_thm(
    By induction on k.
    Let f = (\p. valueOf (poly_sqM n p)).
    Base: Weak (ZN n) (FUNPOW f 0 p)
-       = Weak (ZN n) p                by FUNPOW_0
+       = Weak (ZN n) p                     by FUNPOW_0
        = T
    Step: Weak (ZN n) (FUNPOW f (SUC k) p)
        = Weak (ZN n) (f (FUNPOW f k p))    by FUNPOW_SUC
@@ -3774,7 +3774,7 @@ End
    By induction from poly_expM_def.
    Base: valueOf (if n = 1 then unit [] else consM 1 []) = unity_mod_exp (ZN n) p 0
        unity_mod_exp (ZN n) p 0
-     = poly_one (ZN n)                        by unity_mod_exp_0
+     = poly_one (ZN n)                               by unity_mod_exp_0
      = if (ZN n).prod.id = (ZN n).sum.id then [] else [(ZN n).prod.id]   by poly_one
      and (ZN n).sum.id = 0                           by ZN_property
      and (ZN n).prod.id = if n = 1 then 0 else 1     by ZN_property
@@ -3990,14 +3990,14 @@ Actually a conditional cover, so needs to fall back to: loop2_div_count_eqn
                                            where q = valueOf (poly_expM n (valueOf (poly_sqM n p)) (HALF j))
    <= 1 + 5 * size j + stepsOf (poly_sqM n p) + stepsOf (poly_multM n p q)
    Note  stepsOf (poly_sqM n p)
-      <= 37 * (MAX 1 k) ** 2 * size n ** 2         by poly_sqM_steps_bound
+      <= 37 * (MAX 1 k) ** 2 * size n ** 2           by poly_sqM_steps_bound
    For   stepsOf (poly_multM n p q),
-   Note Weak (ZN n) q                              by poly_sqM_weak
+   Note Weak (ZN n) q                                by poly_sqM_weak
    If n = 1,
-      Then q = []                                  by poly_expM_trivial
-       and stepsOf (poly_multM n p []) = 1         by poly_multM_steps_nil
+      Then q = []                                    by poly_expM_trivial
+       and stepsOf (poly_multM n p []) = 1           by poly_multM_steps_nil
    If HALF j = 0,
-      Then q = [1]                                 by poly_expM_0, n <> 1
+      Then q = [1]                                   by poly_expM_0, n <> 1
        and stepsOf (poly_multM n p [1])
         <= 27 * (MAX 1 k) * size (MAX 1 n) * size n  by poly_multM_steps_sing_bound
          = 27 * (MAX 1 k) * size n * size n          by MAX_DEF, 0 < n
@@ -4005,7 +4005,7 @@ Actually a conditional cover, so needs to fall back to: loop2_div_count_eqn
    Otherwise,
       (LENGTH q = k)                                 by poly_expM_length, poly_sqM_length
       so stepsOf (poly_multM n p q)
-      <= 37 * (MAX 1 k) ** 2 * size n ** 2         by poly_multM_steps_bound, LENGTHs match
+      <= 37 * (MAX 1 k) ** 2 * size n ** 2           by poly_multM_steps_bound, LENGTHs match
    Overall,
          body p j
       <= 1 + 5 * size j + 2 * 37 * MAX 1 k ** 2 * size n ** 2
@@ -4096,10 +4096,10 @@ val poly_expM_body_bound = store_thm(
         f = (\p. valueOf (poly_sqM n p)),
         loop = (\p j. stepsOf (poly_expM n p j)).
    Then !p j. loop p j = if j = 0 then quit p else body p j + loop (f p) (HALF j)
-                                               by poly_expM_steps_by_div_loop
-    Now !x y. body x y <= cover x y            by poly_expM_body_bound
-    and MONO2 cover                     by
-    and RISING f                        by
+                                        by poly_expM_steps_by_div_loop
+    Now !x y. body x y <= cover x y     by poly_expM_body_bound
+    and MONO2 cover                     by subgoal
+    and RISING f                        by subgoal
    Let m = pop 2 j <= size n            by pop_size
        q = FUNPOW f m p,
        g = (\t. body (FUNPOW f t p) (j DIV 2 ** t)),

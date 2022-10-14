@@ -3087,7 +3087,7 @@ val lcm_fun_def = Define`
                   | NONE   => lcm_fun (n - 1))
 `;
 
-` (* use a measure that is decreasing *)
+(* use a measure that is decreasing *)
 e (WF_REL_TAC `measure (\n k. k * n)`);
 e (rpt strip_tac);
 *)

@@ -1096,7 +1096,7 @@ val finite_field_existence_iff = store_thm(
               (CARD R = p ** d)         by finite_field_existence, 0 < p
    Note prime (char r)                  by finite_field_char
     and CARD R = (char r) ** (fdim r)   by finite_field_card_alt
-    ==> (p = char r) /\ (d = fdim r)`   by metis_tac[prime_powers_eq]);
+    ==> (p = char r) /\ (d = fdim r)    by metis_tac[prime_powers_eq]);
 
    Let s = PF r.
    Then s <<= r /\ (CARD B = p)                by prime_field_subfield_property

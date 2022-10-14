@@ -696,8 +696,8 @@ QED
 
 (* Theorem: Ring r ==> (RingHomo f r r_ <=> RingHomo (f on R) r r_) *)
 (* Proof:
-   Note Group r.sum            by ring_add_group
-    and Monoid r.prod          by ring_mult_monoid
+   Note Group r.sum                            by ring_add_group
+    and Monoid r.prod                          by ring_mult_monoid
        RingHomo f r r_
    <=> over f R R_ /\ GroupHomo f r.sum r_.sum /\ MonoidHomo f r.prod r_.prod
                                                by RingHomo_def
@@ -843,7 +843,7 @@ QED
 (* Theorem: Field r ==> Group (group_auto_group f* )  *)
 (* Proof:
    Note Group f*                         by field_mult_group
-   Thus Group (group_auto_group f* )   by group_auto_group_group
+   Thus Group (group_auto_group f* )     by group_auto_group_group
 *)
 Theorem field_group_auto_group_group:
   !r:'a field. Field r ==> Group (group_auto_group f* )

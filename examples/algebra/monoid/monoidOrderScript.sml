@@ -247,7 +247,7 @@ val order_thm = store_thm(
 (* Theorem: Monoid g ==> (ord #e = 1) *)
 (* Proof:
    Since #e IN G        by monoid_id_element
-   and   #e ** 1 = #e  by monoid_exp_1
+   and   #e ** 1 = #e   by monoid_exp_1
    Obviously, 0 < 1 and there is no m such that 0 < m < 1
    hence true by order_thm
 *)

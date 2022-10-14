@@ -851,7 +851,7 @@ val aks_param_good_for_prime = store_thm(
 (* Theorem: (aks_param n = good k) ==>
             (poly_intro_checks n k (SQRT (phi k) * ulog n) = (1 < n /\ k < n /\ aks_checks n k)) *)
 (* Proof:
-   Note 1 < n /\ 1 < k /\ k < n               by aks_param_good_range
+   Note 1 < n /\ 1 < k /\ k < n                  by aks_param_good_range
      so !m. poly_intro_checks n k m
           = poly_intro_range (ZN n) k n m        by ZN_intro_range_eqn, 1 < k /\ k < n
    Also !j. 1 < j /\ j <= k ==> ~(j divides n)   by aks_param_good
@@ -1138,9 +1138,9 @@ val unity_mod_intro_eqn = store_thm(
          unity_mod_intro_range r k n (SUC m) <=> 0 < k /\ !c. 0 < c /\ c <= SUC m ==> n intro X + |c|
           unity_mod_intro_range r k n (SUC m)
       <=> unity_mod_intro r k n (SUC m) /\
-          unity_mod_intro_range r k n m                   by unity_mod_intro_range_def
+          unity_mod_intro_range r k n m                 by unity_mod_intro_range_def
       <=> n intro (X + (poly_num r (SUC m))) /\
-          unity_mod_intro_range r k n m                   by unity_mod_intro_eqn
+          unity_mod_intro_range r k n m                 by unity_mod_intro_eqn
       <=> n intro (X + (poly_num r (SUC m))) /\
           !c. 0 < c /\ c <= m ==> n intro X + |c|       by induction hypothesis
       <=> !c. 0 < c /\ c <= SUC m ==> n intro X + |c|   by merging indexes
@@ -1270,7 +1270,7 @@ val ZN_poly_intro_range_eqn = store_thm(
        prime n
      = !c. 0 < c /\ c <= SQRT (phi k) * ulog n ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
                                    by aks_param_good_for_prime
-     = !c. 0 < c /\ c <= SQRT (phi k) * ulog n ==> ZN_poly_intro n k c  by ZN_poly_intro_thm, 1 < n, 1 < k
+     = !c. 0 < c /\ c <= SQRT (phi k) * ulog n ==> ZN_poly_intro n k c    by ZN_poly_intro_thm, 1 < n, 1 < k
      = ZN_poly_intro_range n k (SQRT (phi k) * ulog n)                    by ZN_poly_intro_range_thm
      = ZN_poly_intro_range n k (sqrt_compute (phi_compute k) * ulog n)    by sqrt_compute_eqn, phi_compute_eqn
 *)
@@ -1334,10 +1334,10 @@ val poly_intro_rangeM_value_alt = store_thm(
         | good k => !c. 0 < c /\ c <= SQRT (phi k) * (ulog n) ==>
                              (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
         | bad => F               by 1 < k implied
-      = aks n          by aks_def
+      = aks n                    by aks_def
    If ~(power_free n),
       Then aks_compute n = F     by aks_compute_def, power_free_check_eqn
-       and aks n = F   by aks_def
+       and aks n = F             by aks_def
 *)
 val aks_compute_alt = store_thm(
   "aks_compute_alt",
@@ -1364,7 +1364,7 @@ val aks_compute_thm = store_thm(
 (* Theorem: prime n = aks_compute n *)
 (* Proof:
        prime n
-   <=> aks n     by aks_thm
+   <=> aks n               by aks_thm
    <=> aks_compute n       by aks_compute_alt
 *)
 val aks_compute_eqn = store_thm(
@@ -1435,10 +1435,10 @@ val it = |- aks_compute 31 <=> T: thm
         | good k => !c. 0 < c /\ c <= SQRT (phi k) * (ulog n) ==>
                              (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
         | bad => F               by 1 < k implied
-      = aks n          by aks_def
+      = aks n                    by aks_def
    If ~(power_free n),
-      Then aks_algo n = F     by aks_algo_def, power_free_check_eqn
-       and aks n = F   by aks_def
+      Then aks_algo n = F        by aks_algo_def, power_free_check_eqn
+       and aks n = F             by aks_def
 *)
 val aks_algo_alt = store_thm(
   "aks_algo_alt",
@@ -1460,7 +1460,7 @@ val aks_algo_alt = store_thm(
 (* Theorem: prime n = aks_algo n *)
 (* Proof:
        prime n
-   <=> aks n     by aks_thm
+   <=> aks n            by aks_thm
    <=> aks_algo n       by aks_algo_alt
 *)
 val aks_algo_eqn = store_thm(

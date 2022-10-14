@@ -282,8 +282,8 @@ QED
 (* Theorem: l1 == l2 ==> l2 == l1 *)
 (* Proof:
    If l1 = [],
-      Then l2 = []              by similar_nil
-      so l2 == []               by similar_nil
+      Then l2 = []                   by similar_nil
+      so l2 == []                    by similar_nil
    If l1 <> [],
       Let k = LENGTH l1.
       Then k <> 0                    by LENGTH_NIL, l1 <> []
@@ -531,7 +531,7 @@ QED
 
 (* Theorem: 0 < n /\ period ls k ==> period ls (n * k) *)
 (* Proof:
-   Note 0 < k /\ cycle k ls = ls     by period_def
+   Note 0 < k /\ cycle k ls = ls       by period_def
    By period_def, this is to show:
    (1) 0 < n * k, true                 by LESS_MULT2
    (2) cycle (n * k) ls = ls, true     by cycle_multiple_back

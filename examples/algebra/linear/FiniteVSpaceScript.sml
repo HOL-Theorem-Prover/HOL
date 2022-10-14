@@ -13,7 +13,6 @@ val _ = new_theory "FiniteVSpace";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -218,7 +217,7 @@ val finite_vspace_dim_eq_0 = store_thm(
 (* Proof:
    By LinearIndepBasis_def, this is to show:
    (1) k < dim r g op ==> EL k n = #0
-       Let u = EL k b`
+       Let u = EL k b
            b' = DROP (SUC k) b ++ TAKE k b
        By contradiction, suppose EL k n = u <> #0.
        (1) Show: LENGTH b' < LENGTH b
@@ -297,8 +296,8 @@ val finite_vspace_dim_map_inj = store_thm(
          (SpanSpace r g op b = g)                               by finite_vspace_dim_basis
       so  V = (SpanSpace r g op b).carrier                      by monoid_component_equality
             = IMAGE (\n. n |o| b) (sticks r (LENGTH b))         by vspace_span_property
-     Now INJ (\n. VSUM (MAP2 op n b)) (sticks r (LENGTH b)) V`  by rw[finite_vspace_dim_map_inj]);
-     and SURJ (\n. VSUM (MAP2 op n b)) (sticks r (LENGTH b)) V` by rw[IMAGE_SURJ]);
+     Now INJ (\n. VSUM (MAP2 op n b)) (sticks r (LENGTH b)) V   by finite_vspace_dim_map_inj
+     and SURJ (\n. VSUM (MAP2 op n b)) (sticks r (LENGTH b)) V  by IMAGE_SURJ
      and FINITE (sticks r (LENGTH b)),
    Hence CARD V
        = CARD (sticks r (LENGTH b))     by FINITE_BIJ_CARD_EQ, BIJ_DEF

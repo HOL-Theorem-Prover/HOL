@@ -688,7 +688,7 @@ val it = |- sub_count 3 3 = {{2; 1; 0}}: thm
 (* Theorem: n choose 0 = 1 *)
 (* Proof:
      n choose 0
-   = CARD (sub_count n 0)     by choose_def
+   = CARD (sub_count n 0)      by choose_def
    = CARD {{}}                 by sub_count_n_0
    = 1                         by CARD_SING
 *)
@@ -2572,7 +2572,7 @@ QED
        t = sub_count n k.
    By SURJ_DEF, this is to show:
    (1) x IN partition R s ==> (set o CHOICE) x IN t
-       This is true                      by list_count_set_map_element
+       This is true                            by list_count_set_map_element
    (2) x IN t ==> ?y. y IN partition R s /\ (set o CHOICE) y = x
        Note x SUBSET count n /\ CARD x = k     by sub_count_element
        Thus FINITE x                           by SUBSET_FINITE, FINITE_COUNT

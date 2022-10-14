@@ -232,9 +232,9 @@ QED
          The case n = 0 is the base case. For n <> 0,
            FUNPOW g n [f u]
          = g (FUNPOW g (n-1) [f u])       by FUNPOW_SUC
-         = g (MAP h (n downto 1))   by induction hypothesis
+         = g (MAP h (n downto 1))         by induction hypothesis
          = f (HD (MAP h (n downto 1))) ::
-             MAP h (n downto 1)     by definition of g
+             MAP h (n downto 1)           by definition of g
          Now f (HD (MAP h (n downto 1)))
            = f (HD (MAP h (MAP (\x. n + 1 - x) [1 .. n])))  by listRangeINC_REVERSE
            = f (HD (MAP h o (\x. n + 1 - x) [1 .. n]))      by MAP_COMPOSE
@@ -339,10 +339,10 @@ QED
           0 < k /\ j + k <= c /\ (!i. i < k ==> ~g (FUNPOW f i x)) ==>
           iterate_search f g x c b j = iterate_search f g (FUNPOW f k x) c b (j + k)
      The case k = 1  has been covered.
-     For k <> 1, 1 < k, so k = k - 1 + 1       by arithmetic
+     For k <> 1, 1 < k, so k = k - 1 + 1                by arithmetic
      Putting !k for the specific (k-1),
      Thus 0 < k - 1, j + (k-1 +1) <= c, and note
-             !i. i < k ==> ~g (FUNPOW f i x)   by given
+             !i. i < k ==> ~g (FUNPOW f i x)            by given
          <=> !i. i - 1 < k - 1 ==> ~g (FUNPOW f (i - 1 + 1) x)
          <=> !j. j < k - 1 ==> ~g (FUNPOW f (j + 1) x)
          <=> !j. j < k - 1 ==> ~g (FUNPOW f j (f x))    by FUNPOW

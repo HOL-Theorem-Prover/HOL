@@ -769,7 +769,7 @@ val poly_every_mem = store_thm(
               !h. poly (h::p) ==> (chop (h::p) = h::p)
       poly (h::p) ==> ~ zero (h::p) by poly_cons_poly
       chop (h::p) = h::chop p   by poly_chop_cons
-               = h::p     by induction hypothesis
+                  = h::p        by induction hypothesis
 *)
 val poly_chop_poly = store_thm(
   "poly_chop_poly",
@@ -852,7 +852,7 @@ val poly_ring_element = store_thm(
      |0| + |0|
    = chop ( |0| || |0|)   by poly_add_def
    = chop ( |0|)          by weak_add_zero_zero
-   = |0|                 by poly_chop_zero
+   = |0|                  by poly_chop_zero
 *)
 val poly_add_zero_zero = store_thm(
   "poly_add_zero_zero",
@@ -862,7 +862,7 @@ val poly_add_zero_zero = store_thm(
 (* Theorem: |0| + p = p. *)
 (* Proof: by weak_add_lzero.
      |0| + p
-   = chop ( |0| || p)    by poly_add_def
+   = chop ( |0| || p)   by poly_add_def
    = chop (p)           by weak_add_lzero
    = p                  by poly_chop_poly
 *)
@@ -2002,7 +2002,7 @@ val poly_sub_eq_add = store_thm(
    <=>    p + t + (-t + -q) = q + s + (-t + -q)
    <=>  p + (t + (-t + -q)) = q + (s + (-t + -q))    by poly_add_assoc
    <=>    p + (t + -t + -q) = q + (s + -t + -q)      by poly_add_assoc
-   <=>       p + ( |0| + -q) = q + (-q + (s + -t))    by poly_add_rneg, poly_add_comm
+   <=>       p + ( |0| + -q) = q + (-q + (s + -t))   by poly_add_rneg, poly_add_comm
    <=>               p + -q = q + -q + (s + -t)      by poly_add_lzero, poly_add_assoc
    <=>               p + -q = |0| + (s + -t)         by poly_add_rneg
    <=>               p + -q = s + -t                 by poly_add_lzero
@@ -3620,8 +3620,8 @@ val poly_mult_cons_over = store_thm(
 (* Theorem: poly p ==> [k] * p = k * p *)
 (* Proof:
      [k] * p
-   = k * p + ( |0| * p) >> 1    by poly_mult_cons, weak_of_zero
-   = k * p + ( |0|) >> 1        by poly_mult_lzero
+   = k * p + ( |0| * p) >> 1   by poly_mult_cons, weak_of_zero
+   = k * p + ( |0|) >> 1       by poly_mult_lzero
    = k * p + |0|               by poly_shift_of_zero
    = k * p                     by poly_add_rzero
 *)
@@ -3828,7 +3828,7 @@ val poly_cmult_one_exp = store_thm(
    = ((c * |1|) * p) ** n           by poly_cmult_alt
    = (c * |1|) ** n * p ** n        by poly_mult_exp
    = (c ** n * |1|) * p ** n        by poly_cmult_one_exp
-   = c ** n * ( |1| * p ** n)        by poly_cmult_mult
+   = c ** n * ( |1| * p ** n)       by poly_cmult_mult
    = c ** n * p ** n                by poly_mult_lone
    Or by induction on n.
    Base case: (c * p) ** 0 = c ** 0 * p ** 0
@@ -3929,7 +3929,7 @@ val poly_exp_odd = store_thm(
 (* Theorem: ( |0| + p = chop p) /\ (p + |0| = chop p) *)
 (* Proof:
       |0| + p
-    = chop ( |0| || p)     by poly_add_def
+    = chop ( |0| || p)    by poly_add_def
     = chop p              by weak_add_lzero
        p + |0|
     = chop (p || |0|)     by poly_add_def

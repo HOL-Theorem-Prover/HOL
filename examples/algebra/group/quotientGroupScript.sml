@@ -1137,7 +1137,7 @@ val homo_image_group = store_thm(
    True by homo_image_group.
    (2) (homo_image f g h).carrier SUBSET h.carrier
    (homo_image f g h).carrier = IMAGE f G    by homo_image_def
-   For all x IN IMAGE f G, ?a. a IN G /\ (f a = x)` by IN_IMAGE
+   For all x IN IMAGE f G, ?a. a IN G /\ (f a = x)   by IN_IMAGE
    Hence x IN h.carrier by GroupHomo_def, hence true by SUBSET_DEF.
    (3) x IN (homo_image f g h).carrier /\ y IN (homo_image f g h).carrier ==> (homo_image f g h).op x y = h.op x y
    True by homo_image_def.

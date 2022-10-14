@@ -13,7 +13,6 @@ val _ = new_theory "SpanSpace";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -495,7 +494,7 @@ val vsum_basis_stick_cmult = store_thm(
         = (#0 :: GENLIST ((\j. #0) o SUC) (LENGTH b)) |o| (h::b)    by GENLIST_CONS
         = (#0 :: GENLIST (\j. #0) (LENGTH b)) |o| (h::b)            by FUN_EQ_THM
         = VSUM (#0 o h :: MAP2 op (GENLIST (\j. #0) (LENGTH b)) b)  by MAP2
-        = VSUM ( |0| :: MAP2 op (GENLIST (\j. #0) (LENGTH b)) b)     by vspace_cmult_lzero
+        = VSUM ( |0| :: MAP2 op (GENLIST (\j. #0) (LENGTH b)) b)    by vspace_cmult_lzero
         = |0| || (GENLIST (\j. #0) (LENGTH b) |o| b)                by vsum_cons
         = |0| || |0|                                                by induction hypothesis
         = |0|                                                       by vspace_vadd_lzero
@@ -878,7 +877,7 @@ val vspace_stick_zero = store_thm(
            n |o| (h::b)
          = (#0::t) |o| (h::b)                                by n = #0::t
          = VSUM (#0 o h :: (MAP2 op t b))                    by MAP2
-         = VSUM ( |0| :: (MAP2 op t b))                       by vspace_cmult_lzero
+         = VSUM ( |0| :: (MAP2 op t b))                      by vspace_cmult_lzero
          = |0| || (t |o| b)                                  by vsum_cons
          = |0| || x                                          by induction hypothesis
          = x                                                 by vspace_vadd_lzero

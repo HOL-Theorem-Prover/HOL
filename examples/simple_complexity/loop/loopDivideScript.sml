@@ -13,7 +13,6 @@ val _ = new_theory "loopDivide";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -560,8 +559,7 @@ val pop_eqn = store_thm(
   `1 < b` by decide_tac >>
   rw[Once pop_def] >| [
     `n < b` by rw[GSYM DIV_EQ_0] >>
-    `LOG b n = 0` by rw[LOG_EQ_0] >>
-    decide_tac,
+    rw[LOG_EQ_0],
     simp[GSYM ADD1] >>
     `~(n < b)` by rw[GSYM DIV_EQ_0] >>
     rw[LOG_RWT]

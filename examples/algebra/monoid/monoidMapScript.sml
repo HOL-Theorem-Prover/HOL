@@ -572,7 +572,7 @@ val monoid_iso_eq_id = store_thm(
     rw[monoid_homo_id]
   ]);
 
-(* Theorem: Monoid g /\ Monoid h /\ MonoidIso f g h ==> !x. x IN G ==> (order h (f x) = ord x)` *)
+(* Theorem: Monoid g /\ Monoid h /\ MonoidIso f g h ==> !x. x IN G ==> (order h (f x) = ord x) *)
 (* Proof:
    Let n = ord x, y = f x.
    If n = 0, to show: order h y = 0.

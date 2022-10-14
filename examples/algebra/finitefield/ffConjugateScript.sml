@@ -13,7 +13,6 @@ val _ = new_theory "ffConjugate";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -932,7 +931,7 @@ val finite_field_conjugates_order = store_thm(
    By SUBSET_DEF, this is to show:
       !x. x IN orders f* n /\ x' IN Conj x ==> x' IN orders f* n
    Note x IN (orders f* n)
-    ==> x IN R                 by field_orders_element
+    ==> x IN R                  by field_orders_element
    Also x' IN Conj x
     ==> forder x' = forder x    by finite_field_conjugates_order, x IN R
     Now x IN R+                 by field_orders_nonzero_element

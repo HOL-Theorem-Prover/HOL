@@ -501,10 +501,10 @@ QED
 (* Proof:
    If part: INJ f s t /\ x IN t ==> CARD (preimage f s x) = 1
       Note BIJ f s t                     by BIJ_DEF
-       and over f s t       by BIJ_DEF, INJ_DEF
+       and over f s t                    by BIJ_DEF, INJ_DEF
         so CARD (preimage f s x) = 1     by bij_iff_preimage_card_eq_1
    Only-if part: !e. (?x. e = preimage f s x /\ x IN t) ==> CARD e = 1 ==> INJ f s t
-      Note over f s t                     by SURJ_DEF
+      Note over f s t                                  by SURJ_DEF
        and !x. x IN t ==> ?y. y IN s /\ f y = x        by SURJ_DEF
       Thus !y. y IN t ==> CARD (preimage f s y) = 1    by IN_IMAGE
         so INJ f s t                                   by inj_iff_preimage_card_le_1
