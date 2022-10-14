@@ -446,6 +446,7 @@ open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
    field_units_def       |- !r. field_units r = <|carrier := R; sum := r.sum; prod := r* including #0|>
    field_units_is_field  |- !r. Ring r /\ (R* = R+ ) /\ #0 <> #1 ==> Field (field_units r)
    field_units_nonzero   |- !r. Field r ==> (R* = R+)
+   field_units_eq        |- !r. Field r ==> (R* = F* )
    field_unit_has_inv    |- !r. Field r ==> !x. unit x ==> unit ( |/ x)
    field_uroots_is_group |- !r. Field r ==> !n. Group (roots_of_unity f* n)
 
@@ -2855,6 +2856,19 @@ val field_units_nonzero = store_thm(
   "field_units_nonzero",
   ``!r:'a field. Field r ==> (R* = R+)``,
   rw[field_nonzero_unit, EXTENSION]);
+
+(* Theore m: Field r ==> (R* = F* ) *)
+(* Proof:
+   By EXTENSION,
+       x IN R*         by notation, unit x
+   <=> x IN R+         by field_nonzero_unit
+   <=> x IN F*         by field_mult_carrier
+*)
+Theorem field_units_eq:
+  !r:'a field. Field r ==> (R* = F* )
+Proof
+  metis_tac[EXTENSION, field_nonzero_unit, field_mult_carrier]
+QED
 
 (* Theorem: Field r ==> !x. unit x ==> unit ( |/ x) *)
 (* Proof: by ring_unit_has_inv, field_is_ring. *)
