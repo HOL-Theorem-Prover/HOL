@@ -214,9 +214,9 @@ QED
          = x                         by FUNPOW_0
    Step: FUNPOW (LINV f s) n (FUNPOW f n x) = x ==>
          FUNPOW (LINV f s) (SUC n) (FUNPOW f (SUC n) x) = x
-         Note (FUNPOW f n x) IN s        by FUNPOW_closure
+         Note (FUNPOW f n x) IN s                 by FUNPOW_closure
            FUNPOW (LINV f s) (SUC n) (FUNPOW f (SUC n) x)
-         = FUNPOW (LINV f s) (SUC n) (f (FUNPOW f n x))  by FUNPOW_SUC
+         = FUNPOW (LINV f s) (SUC n) (f (FUNPOW f n x))           by FUNPOW_SUC
          = FUNPOW (LINV f s) n ((LINV f s) (f (FUNPOW f n x)))    by FUNPOW
          = FUNPOW (LINV f s) n (FUNPOW f n x)                     by BIJ_LINV_THM
          = x                                      by induction hypothesis
@@ -573,7 +573,7 @@ QED
 (* Proof:
    Since 0 < 1,
        iterate_period f x = 1
-   <=> (FUNPOW f 1 x = x) /\         by iterate_period_thm
+   <=> (FUNPOW f 1 x = x) /\       by iterate_period_thm
        !m. 0 < m /\ m < 1 ==> FUNPOW f m x <> x)
    <=> f x = x /\ T                by FUNPOW_1
    <=> f x = x                     by simplification

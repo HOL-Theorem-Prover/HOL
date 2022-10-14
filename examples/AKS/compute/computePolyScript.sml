@@ -805,7 +805,7 @@ val unity_mod_monomial_length = store_thm(
 (* Proof:
    By induction on q.
    Base: weak p1 /\ weak p2 weak [] ==> weak (poly_slide r p1 p2 [])
-      Note poly_slide r p1 p2 [] = p1      by poly_slide_def
+      Note poly_slide r p1 p2 [] = p1       by poly_slide_def
        and weak p1                          by given
    Step: !p1 p2. weak p1 /\ weak p2 /\ weak q ==> weak (poly_slide r p1 p2 q) ==>
          !h. weak (h::q) ==> weak (poly_slide r p1 p2 (h::q))
@@ -1206,7 +1206,7 @@ val poly_slide_eqn = store_thm(
      unity_mod_mult r p q
    = poly_slide r |0| p q              by unity_mod_mult_def
    = poly_slide r b (turn_exp p n) []  by poly_slide_eqn
-   = b                                  by poly_slide_def
+   = b                                 by poly_slide_def
    = psum (GENLIST (\k. (q ' k) o (turn_exp p k)) (SUC (deg q))  by notation, above
 *)
 val unity_mod_mult_alt = store_thm(
@@ -1265,7 +1265,7 @@ val unity_mod_mult_cons = store_thm(
 (* Proof:
    Note unity_mod_mult r p q
       = poly_slide r |0| p q         by unity_mod_mult_def
-    and weak |0|                      by weak_zero
+    and weak |0|                     by weak_zero
     ==> weak (poly_slide r |0| p q)  by poly_slide_weak
 *)
 val unity_mod_mult_weak = store_thm(
@@ -1377,7 +1377,7 @@ val unity_mod_exp_weak = store_thm(
    Note weak (q ' k' o turn_exp p k')     by weak_cmult_weak
     and LENGTH (q ' k' o turn_exp p k')
       = LENGTH (turn_exp_2 p k')          by weak_cmult_length
-      = k`                                by turn_exp_length
+      = k                                 by turn_exp_length
 
      chop (q ' k' o turn_exp p k')
    = (chop (q ' k' o turn_exp p k')) % z            by poly_mod_less_weak, 0 < k
@@ -2258,7 +2258,7 @@ val unity_mod_X_exp_length = store_thm(
 (* Theorem: Ring r ==> weak (unity_mod_X_exp r k n) *)
 (* Proof:
      weak (unity_mod_X_exp r k n)
-   = weak (unity_mod_special r k n 0)      by unity_mod_X_exp_def
+   = weak (unity_mod_special r k n 0)       by unity_mod_X_exp_def
    = T                                      by unity_mod_special_weak
 *)
 val unity_mod_X_exp_weak = store_thm(

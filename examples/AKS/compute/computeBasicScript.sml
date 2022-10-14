@@ -458,19 +458,19 @@ val exp_binary_odd = store_thm(
    If EVEN n,
       Then ODD (SUC n)                           by EVEN_ODD_SUC
         exp_binary m (SUC n)
-      = m * exp_binary (m * m) (HALF (SUC n))   by exp_binary_odd
-      = m * exp_binary (m * m) (HALF n)         by EVEN_SUC_HALF
-      = m * exp_binary m n                      by exp_binary_even
+      = m * exp_binary (m * m) (HALF (SUC n))    by exp_binary_odd
+      = m * exp_binary (m * m) (HALF n)          by EVEN_SUC_HALF
+      = m * exp_binary m n                       by exp_binary_even
 
    If ~(EVEN n), then ODD n                      by EVEN_ODD
       Then EVEN (SUC n)                          by EVEN_ODD_SUC
       Note n <> 0                                by ODD, ODD 0 = F.
       Thus HALF n < n                            by DIV_LESS, 0 < n, 1 < 2.
         m * exp_binary m n
-      = m * m * exp_binary (m * m) (HALF n)     by exp_binary_odd
-      = exp_binary (m * m) (SUC (HALF n))       by induction hypothesis, HALF n < n.
-      = exp_binary (m * m) (HALF (SUC n))       by ODD_SUC_HALF
-      = exp_binary m (SUC n)                    by exp_binary_even
+      = m * m * exp_binary (m * m) (HALF n)      by exp_binary_odd
+      = exp_binary (m * m) (SUC (HALF n))        by induction hypothesis, HALF n < n.
+      = exp_binary (m * m) (HALF (SUC n))        by ODD_SUC_HALF
+      = exp_binary m (SUC n)                     by exp_binary_even
 *)
 val exp_binary_suc = store_thm(
   "exp_binary_suc",
@@ -503,7 +503,7 @@ val exp_binary_suc = store_thm(
      = m ** 0                 by EXP
    Step: exp_binary m n = m ** n ==> exp_binary m (SUC n) = m ** SUC n
        exp_binary m (SUC n)
-     = m * exp_binary m n    by exp_binary_suc
+     = m * exp_binary m n     by exp_binary_suc
      = m * m ** n             by induction hypothesis
      = m ** SUC n             by EXP
 *)
@@ -673,7 +673,7 @@ val exp_compute_2 = store_thm(
      exp_compute m n
    = exp_step m n 1               by exp_compute_def
    = exp_step (SQ m) (HALF n) 1   by exp_step_even, EVEN n
-   = exp_compute (SQ m) (HALF n)     by exp_compute_def
+   = exp_compute (SQ m) (HALF n)  by exp_compute_def
 *)
 val exp_compute_even = store_thm(
   "exp_compute_even",
@@ -1200,7 +1200,7 @@ val exp_mod_compute_2 = store_thm(
      exp_mod_compute m n k
    = exp_mod_step m n k 1                       by exp_mod_compute_def
    = exp_mod_step ((SQ m) MOD k) (HALF n) k 1   by exp_mod_step_even, EVEN n
-   = exp_mod_compute ((SQ m) MOD k) (HALF n) k     by exp_mod_compute_def
+   = exp_mod_compute ((SQ m) MOD k) (HALF n) k  by exp_mod_compute_def
 *)
 val exp_mod_compute_even = store_thm(
   "exp_mod_compute_even",
@@ -1656,7 +1656,7 @@ val BINARY_GCD = store_thm("BINARY_GCD",
       Proof: Let d = gcd 2 c.
              Then d divides 2 /\ d divides c  by GCD_IS_GREATEST_COMMON_DIVISOR
                so d <= 2                      by DIVIDES_LE, 0 < 2
-              and d <> 0`                     by ZERO_DIVIDES, 2 <> 0
+              and d <> 0                      by ZERO_DIVIDES, 2 <> 0
              Note ODD n ==> ODD c             by DIVIDES_ODD, c divides n
              Thus d <> 2                      by DIVIDES_MOD_0, ODD_MOD2
                or d = 1                       by arithmetic

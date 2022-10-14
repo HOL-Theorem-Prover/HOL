@@ -820,7 +820,7 @@ val generated_group_finite = store_thm(
 (* Proof:
    FiniteGroup g ==> FINITE (Gen a)   by generated_group_finite
    FiniteGroup g ==> Group (gen a)    by generated_group
-   and FiniteGroup (gen a)            by FiniteGroup_def`
+   and FiniteGroup (gen a)            by FiniteGroup_def
 *)
 val generated_finite_group = store_thm(
   "generated_finite_group",

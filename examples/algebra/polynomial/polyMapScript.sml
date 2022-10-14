@@ -3010,7 +3010,7 @@ val ring_iso_inverse_poly = store_thm(
 (* Proof:
    Note RingIso (MAP f) (PolyRing r) (PolyRing r_)                by ring_iso_poly_ring_iso
      so INJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier    by RingIso_def, BIJ_DEF
-    Now p IN (PolyRing r).carrier /\ p_ IN (PolyRing r_).carrier` by ring_iso_poly, poly_ring_element
+    Now p IN (PolyRing r).carrier /\ p_ IN (PolyRing r_).carrier  by ring_iso_poly, poly_ring_element
     and q IN (PolyRing r).carrier /\ q_ IN (PolyRing r_).carrier  by ring_iso_poly, poly_ring_element
     ==> p = q                                                     by INJ_DEF
 *)

@@ -1360,8 +1360,7 @@ val loop2_mul_count_rmono_cover_le = store_thm(
 
 (* Theorem: 1 < b /\ (body = \x y. g y) /\ RMONO g /\
     (!x y. loop x y = if y = 0 \/ m <= y then quit x y else body x y + loop (f x) (b * y)) ==>
-     !x y. loop x y <= quit (FUNPOW f (mop b m y) x) (y * b ** (mop b m y)) + (mop b m y) * g y`;
-e (rpt strip_tac); *)
+     !x y. loop x y <= quit (FUNPOW f (mop b m y) x) (y * b ** (mop b m y)) + (mop b m y) * g y *)
 (* Proof: by loop2_mul_count_rmono_cover_le with cover = body. *)
 val loop2_mul_count_rmono_le = store_thm(
   "loop2_mul_count_rmono_le",

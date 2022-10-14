@@ -227,8 +227,8 @@ QED
    By induction on n:
    Base: (cycle 0 ls = []) ==> ls = []
             ls
-          = cycle 0 ls     by cycle_0
-          = []             by given
+          = cycle 0 ls                         by cycle_0
+          = []                                 by given
    Step: cycle n ls = [] ==> ls = []
          ==> (cycle (SUC n) ls = []) ==> ls = []
            cycle (SUC n) ls
@@ -366,12 +366,12 @@ QED
 (* Proof:
    If ls = [],
       to show: n <= LENGTH [] ==> cycle n [] = DROP n [] ++ TAKE n []
-      Note LENGTH [] = 0      by LENGTH_NIL
-        so n = 0              by arithmetic
+      Note LENGTH [] = 0                    by LENGTH_NIL
+        so n = 0                            by arithmetic
            cycle n []
-         = []                        by cycle_nil
-         = [] ++ []                  by APPEND_EQ_NIL
-         = DROP n [] ++ TAKE n []    by DROP_nil, TAKE_nil
+         = []                               by cycle_nil
+         = [] ++ []                         by APPEND_EQ_NIL
+         = DROP n [] ++ TAKE n []           by DROP_nil, TAKE_nil
    If ls <> [].
      to show: n <= LENGTH ls /\ ls <> [] ==> cycle n ls = DROP n ls ++ TAKE n ls
      By induction on n.

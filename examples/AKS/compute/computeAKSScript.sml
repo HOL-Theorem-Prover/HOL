@@ -13,7 +13,6 @@ val _ = new_theory "computeAKS";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -354,7 +353,7 @@ val ZN_poly_intro_range_alt = store_thm(
          ZN_poly_intro_range n k (SUC m) <=> !c. 0 < c /\ c <= SUC m ==> ZN_poly_intro n k c
          If ZN_poly_intro_range n k (SUC m),
             Then ZN_poly_intro n k (SUC m) /\
-                     ZN_poly_intro_range n k m                       by ZN_poly_intro_range_def
+                     ZN_poly_intro_range n k m                     by ZN_poly_intro_range_def
               or ZN_poly_intro n k (SUC m) /\
                  !c. 0 < c /\ c <= m ==> ZN_poly_intro n k c       by induction hypothesis
               or !c. 0 < c /\ c <= SUC m ==> ZN_poly_intro n k c   by combining indexes
@@ -365,7 +364,7 @@ val ZN_poly_intro_range_alt = store_thm(
                      and (c = SUC m) ==> ZN_poly_intro n k c       by induction hypothesis
               or ZN_poly_intro_range n k m,
                      and ZN_poly_intro n k (SUC m)                 by substitution
-              or ZN_poly_intro_range n k (SUC m)                     by ZN_poly_intro_range_def
+              or ZN_poly_intro_range n k (SUC m)                   by ZN_poly_intro_range_def
 *)
 val ZN_poly_intro_range_thm = store_thm(
   "ZN_poly_intro_range_thm",
@@ -419,7 +418,7 @@ g `!n. aks_compute n = power_free n /\
          nice j => (j = n)
        | good k => (n intro (X + |c|) in MOD (ZN n, (unity k)) for c = 1 to (SQRT (phi k)) * (ulog n)
        | bad => F`;
--- the strong version is: aks_compute_alt.
+-- the strong version is: aks_compute_alt, see AKSclean,
 *)
 
 (* Theorem: aks_compute n <=> power_free n /\

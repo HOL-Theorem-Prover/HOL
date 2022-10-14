@@ -1577,8 +1577,6 @@ val gcd_matches_and_coprimes_by_same_size = store_thm(
     rw[]
   ]);
 
-(* HERE; to fix! *)
-
 (* Theorem: 0 < n ==> (CARD o (coprimes_by n) = \d. phi (if d IN (divisors n) then n DIV d else 0)) *)
 (* Proof:
    By FUN_EQ_THM,

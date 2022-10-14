@@ -562,18 +562,18 @@ QED
    By INJ_DEF, fun_count_element, necklace_def, this is to show:
    (1) !j. j < m ==> f j < n ==> set (MAP (f on count m) [0 ..< m]) SUBSET count n
        Since f is restricted to (count m) for [0 ..< m],
-       on count m can be discarded          by on_def
+       on count m can be discarded             by on_def
        By SUBSET_DEF, this is to show:
        MEM x (MAP f [0 ..< m]) ==> x < n
            MEM x (MAP f [0 ..< m])
-       <=> ?y. x = f y /\ MEM y [0 ..< m]   by MEM_MAP
-       <=> ?y. x = f y /\ y < m             by listRangeLHI_MEM
-       <=> x < n                            by implication
-       <=> x IN (count n)                   by IN_COUNT
+       <=> ?y. x = f y /\ MEM y [0 ..< m]      by MEM_MAP
+       <=> ?y. x = f y /\ y < m                by listRangeLHI_MEM
+       <=> x < n                               by implication
+       <=> x IN (count n)                      by IN_COUNT
    (2) MAP (f' on count m) [0 ..< m] = MAP (f on count m) [0 ..< m] ==>
        f' on (count m) = f on (count m)
        Since f is restricted to (count m) for [0 ..< m],
-       on count m can be discarded          by on_def
+       on count m can be discarded             by on_def
            MAP f' [0 ..< m] = MAP f [0 ..< m]
        <=> GENLIST f' m = GENLIST f m          by listRangeLHI_MAP
        <=> !x. x < m ==> f' x = f x            by GENLIST_FUN_EQ
@@ -1039,7 +1039,7 @@ QED
 (* Proof:
    By SURJ_DEF, this is to show:
    (1) f IN inj_count m n ==> MAP f [0 ..< m] IN list_count n m
-       This is true                by inj_count_map_element
+       This is true                            by inj_count_map_element
    (2) x IN list_count n m ==>
        ?f. f IN inj_count m n /\ MAP f [0 ..< m] = x
        Take (f on count m), where f = (\j. EL j x).
@@ -1160,10 +1160,10 @@ QED
    Let m = CARD s, n = CARD t.
    By SCHROEDER_BERNSTEIN, this is to show:
    (1) ?f. INJ f (inj_set s t) (inj_count m n)
-       Note ?ele. BIJ ele (count m) s          by FINITE_BIJ_COUNT_CARD
-        and ?idx. BIJ idx t (count n)          by bij_eq_count
-        Now !x. x < m ==> ele x IN s           by BIJ_ELEMENT, IN_COUNT
-        and !y. y IN t ==> idx y < n           by BIJ_ELEMENT, IN_COUNT
+       Note ?ele. BIJ ele (count m) s              by FINITE_BIJ_COUNT_CARD
+        and ?idx. BIJ idx t (count n)              by bij_eq_count
+        Now !x. x < m ==> ele x IN s               by BIJ_ELEMENT, IN_COUNT
+        and !y. y IN t ==> idx y < n               by BIJ_ELEMENT, IN_COUNT
 
        Let g = \f j. if j < m then idx (f (ele j)) else ARB.
        Take this g, to show: INJ g (inj_set s t) (inj_count m n)
@@ -1173,7 +1173,7 @@ QED
            (1) ?h. g f on s = (h on count m) /\ !x. x < m ==> h x < n
                Let h = \j. idx (x (ele j)).
                Take this h.
-               Then g f on s = (h on count m)    by on_def, FUN_EQ_THM
+               Then g f on s = (h on count m)      by on_def, FUN_EQ_THM
                 and !x. x < m ==> h x < n          by definition and implication
            (2) INJ (f on s) s t ==> INJ (g f on s) (count m) (count n)
                By INJ_DEF, on_def, this is to show:

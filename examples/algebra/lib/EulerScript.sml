@@ -671,7 +671,7 @@ val natural_by_upto = store_thm(
 val Euler_def = zDefine`
   Euler n = { i | 0 < i /\ i < n /\ (gcd n i = 1) }
 `;
-(* that is, Euler n = { i | i in (residue n) /\ (gcd n i = 1) }`; *)
+(* that is, Euler n = { i | i in (residue n) /\ (gcd n i = 1) }; *)
 (* use zDefine as this is not computationally effective. *)
 
 val totient_def = Define`

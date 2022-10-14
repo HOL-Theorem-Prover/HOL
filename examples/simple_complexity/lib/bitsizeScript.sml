@@ -13,7 +13,6 @@ val _ = new_theory "bitsize";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -1612,9 +1611,9 @@ val to_bits_element = store_thm(
    By complete induction on n.
    Base: n = 0 ==> decode (to_bits n m) = n MOD 2 ** m
            decode (to_bits 0 m)
-         = decode (GENLIST (K 0) m)            by to_bits_0_m
-         = 0                     by decode_genlist_zero
-         = 0 MOD 2 ** m          by ZERO_MOD
+         = decode (GENLIST (K 0) m)  by to_bits_0_m
+         = 0                         by decode_genlist_zero
+         = 0 MOD 2 ** m              by ZERO_MOD
    Step: !m. m < n ==> !m'. decode (to_bits m m') = m MOD 2 ** m' ==>
          n <> 0 ==> decode (to_bits n m) = n MOD 2 ** m
       If m = 0,
@@ -1628,11 +1627,11 @@ val to_bits_element = store_thm(
       Otherwise, m <> 0,
       Note ?k. m = SUC k        by num_CASES
       Let h = 2 ** k.
-      Note HALF n < n`          by HALF_LESS, 0 < n
+      Note HALF n < n           by HALF_LESS, 0 < n
        and 0 < h                by EXP_POS, 0 < 2
            decode (to_bits n m)
-         = decode (to_bits n (SUC k))                by m = SUC k
-         = decode (n MOD 2 :: to_bits (HALF n) k)    by to_bits_def
+         = decode (to_bits n (SUC k))                    by m = SUC k
+         = decode (n MOD 2 :: to_bits (HALF n) k)        by to_bits_def
          = n MOD 2 + 2 * (decode (to_bits (HALF n) k))   by decode_def
          = n MOD 2 + 2 * ((HALF n) MOD 2 ** k)           by induction hypothesis, HALF n < n
          = n MOD 2 + 2 * (HALF (n MOD (2 * h)))          by DIV_MOD_MOD_DIV

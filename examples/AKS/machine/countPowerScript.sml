@@ -60,8 +60,6 @@ val _ = monadsyntax.enable_monad "Count";
 (* Data type:
 *)
 (* Overloading:
-   exp_    = app2 old_expM
-   EXP_    = app2 EXPm
 *)
 (* Definitions and Theorems (# are exported):
 

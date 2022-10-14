@@ -13,7 +13,6 @@ val _ = new_theory "polyDivides";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -373,7 +372,7 @@ val poly_unit_one = store_thm(
    If part: upoly p /\ monic p ==> (p = |1|)
       Since upoly p
         ==> ?q. upoly q /\ (p * q = |1|)  by poly_unit_property
-        Now monic |1|`                    by poly_monic_one
+        Now monic |1|                     by poly_monic_one
          so monic q                       by poly_monic_monic_mult, poly_unit_poly
        Thus deg p + deg q = deg |1| = 0   by poly_monic_deg_mult, poly_deg_one
      Giving deg p = 0, hence p = |1|      by poly_monic_deg_0
@@ -1288,7 +1287,7 @@ val poly_divides_exp = store_thm(
 (* Theorem: Ring r ==> !p. poly p ==> !m n. m <= n ==> p ** m pdivides p ** n *)
 (* Proof:
    Note n = (n - m) + m                 by SUB_ADD
-     so p ** n = p ** (n - m) * p ** m` by poly_exp_add
+     so p ** n = p ** (n - m) * p ** m  by poly_exp_add
    Thus p ** m pdivides p ** n          by poly_divides_def
 *)
 val poly_divides_exp_le = store_thm(

@@ -207,7 +207,7 @@ QED
    = {ls | LENGTH ls = n /\ (set ls) SUBSET {}           by COUNT_0
    = {ls | LENGTH ls = n /\ (set ls = {}) }              by SUBSET_EMPTY
    = {ls | LENGTH ls = n /\ (ls = []) }                  by LIST_TO_SET_EQ_EMPTY
-   = {}                                                    by LENGTH_NIL, 0 < n
+   = {}                                                  by LENGTH_NIL, 0 < n
 *)
 Theorem necklace_empty:
   !n. 0 < n ==> (necklace n 0 = {})
@@ -243,11 +243,11 @@ QED
    By necklace_def, EXTENSION, this is to show:
    (1) LENGTH x = SUC n /\ set x SUBSET count a ==>
        ?h t. (x = h::t) /\ h < a /\ (LENGTH t = n) /\ set t SUBSET count a
-       Note SUC n <> 0          by SUC_NOT_ZERO
-         so ?h t. x = h::t      by list_CASES
-       Take these h, t, true    by LENGTH, MEM
+       Note SUC n <> 0                   by SUC_NOT_ZERO
+         so ?h t. x = h::t               by list_CASES
+       Take these h, t, true             by LENGTH, MEM
    (2) h < a /\ set t SUBSET count a ==> x < a ==> LENGTH (h::t) = SUC (LENGTH t)
-       This is true             by LENGTH
+       This is true                      by LENGTH
    (3) h < a /\ set t SUBSET count a ==> set (h::t) SUBSET count a
        Note set (h::t) c <=>
             (c = h) \/ set t c           by LIST_TO_SET_DEF
@@ -301,7 +301,7 @@ QED
 (* Proof:
    Let f = (\(c,ls). c::ls).
      necklace 1 a
-   = necklace (SUC 0) a       by ONE
+   = necklace (SUC 0) a                       by ONE
    = IMAGE f ((count a) CROSS (necklace 0 a)) by necklace_suc
    = IMAGE f ((count a) CROSS {[]})           by necklace_0
    = {[e] | e IN count a}                     by EXTENSION
@@ -319,15 +319,15 @@ QED
 (* Proof:
    By induction on n.
    Base: FINITE (necklace 0 a)
-      Note necklace 0 a = {[]}   by necklace_0
-       and FINITE {[]}           by FINITE_SING
+      Note necklace 0 a = {[]}           by necklace_0
+       and FINITE {[]}                   by FINITE_SING
    Step: FINITE (necklace n a) ==> FINITE (necklace (SUC n) a)
       Let f = (\(c, ls). c :: ls), b = count a, c = necklace n a.
       Note necklace (SUC n) a
-         = IMAGE f (b CROSS c)   by necklace_suc
-       and FINITE b              by FINITE_COUNT
-       and FINITE c              by induction hypothesis
-        so FINITE (b CROSS c)    by FINITE_CROSS
+         = IMAGE f (b CROSS c)           by necklace_suc
+       and FINITE b                      by FINITE_COUNT
+       and FINITE c                      by induction hypothesis
+        so FINITE (b CROSS c)            by FINITE_CROSS
       Thus FINITE (necklace (SUC n) a)   by IMAGE_FINITE
 *)
 Theorem necklace_finite:
@@ -350,9 +350,9 @@ QED
    By induction on n.
    Base: CARD (necklace 0 a) = a ** 0
         CARD (necklace 0 a)
-      = CARD {[]}              by necklace_0
-      = 1                      by CARD_SING
-      = a ** 0                 by EXP_0
+      = CARD {[]}                            by necklace_0
+      = 1                                    by CARD_SING
+      = a ** 0                               by EXP_0
    Step: CARD (necklace n a) = a ** n ==>
          CARD (necklace (SUC n) a) = a ** SUC n
       Let f = (\(c, ls). c :: ls), b = count a, c = necklace n a.
@@ -537,36 +537,36 @@ QED
    (1) 0 < n /\ LENGTH x = SUC n /\ set x SUBSET count a /\ x <> [] ==> SING (set x) ==>
        ?ls. (x = HD ls::ls) /\ (LENGTH ls = n /\ set ls SUBSET count a) /\
             (ls <> [] ==> SING (set ls))
-       Note SUC n <> 0               by SUC_NOT_ZERO
-         so x <> []                  by LENGTH_NIL
-        ==> ?h t. x = h::t           by list_CASES
-        and LENGTH t = n             by LENGTH
-        but t <> []                  by LENGTH_NON_NIL, 0 < n
-         so ?k p. t = k::p           by list_CASES
-       Thus x = h::k::p              by above
-        Now h IN set x               by MEM
-        and k IN set x               by MEM, SUBSET_DEF
-         so h = k                    by IN_SING, SING (set x)
+       Note SUC n <> 0                   by SUC_NOT_ZERO
+         so x <> []                      by LENGTH_NIL
+        ==> ?h t. x = h::t               by list_CASES
+        and LENGTH t = n                 by LENGTH
+        but t <> []                      by LENGTH_NON_NIL, 0 < n
+         so ?k p. t = k::p               by list_CASES
+       Thus x = h::k::p                  by above
+        Now h IN set x                   by MEM
+        and k IN set x                   by MEM, SUBSET_DEF
+         so h = k                        by IN_SING, SING (set x)
        Let ls = t,
-       then set ls SUBSET count a    by MEM, SUBSET_DEF
-        and SING (set ls)            by LIST_TO_SET_DEF
+       then set ls SUBSET count a        by MEM, SUBSET_DEF
+        and SING (set ls)                by LIST_TO_SET_DEF
    (2) 0 < LENGTH ls /\ set ls SUBSET count a /\ ls <> [] ==> SING (set ls) ==>
        LENGTH (HD ls::ls) = SUC (LENGTH ls)
-       This is true                  by LENGTH
+       This is true                      by LENGTH
    (3) 0 < LENGTH ls /\ set ls SUBSET count a /\ ls <> [] ==> SING (set ls) ==>
        set (HD ls::ls) SUBSET count a
-       Note ls <> []                 by LENGTH_NON_NIL
-         so ?h t. ls = h::t          by list_CASES
+       Note ls <> []                     by LENGTH_NON_NIL
+         so ?h t. ls = h::t              by list_CASES
        Also set (h::ls) x <=>
-            (x = h) \/ set t x       by LIST_TO_SET_DEF
-       Thus set (h::ls) SUBSET count a  by SUBSET_DEF
+            (x = h) \/ set t x           by LIST_TO_SET_DEF
+       Thus set (h::ls) SUBSET count a   by SUBSET_DEF
    (4) 0 < LENGTH ls /\ set ls SUBSET count a /\ ls <> [] ==> SING (set ls) ==>
        SING (set (HD ls::ls))
-       Note ls <> []                 by LENGTH_NON_NIL
-         so ?h t. ls = h::t          by list_CASES
+       Note ls <> []                     by LENGTH_NON_NIL
+         so ?h t. ls = h::t              by list_CASES
        Also set (h::ls) x <=>
-            (x = h) \/ set t x       by LIST_TO_SET_DEF
-       Thus SING (set (h::ls))       by SUBSET_DEF
+            (x = h) \/ set t x           by LIST_TO_SET_DEF
+       Thus SING (set (h::ls))           by SUBSET_DEF
 *)
 Theorem monocoloured_suc:
   !n a. 0 < n ==> (monocoloured (SUC n) a =
@@ -650,17 +650,17 @@ QED
 (* Theorem: monocoloured n a =
             if n = 0 then {[]} else IMAGE (\c. GENLIST (K c) n) (count a) *)
 (* Proof:
-   If n = 0, true                           by monocoloured_0
+   If n = 0, true                            by monocoloured_0
    If n <> 0, then 0 < n.
    By monocoloured_def, necklace_def, EXTENSION, this is to show:
    (1) 0 < LENGTH x /\ set x SUBSET count a /\ x <> [] ==> SING (set x) ==>
        ?c. (x = GENLIST (K c) (LENGTH x)) /\ c < a
-       Note x <> []                         by LENGTH_NON_NIL
-         so ?c. set x = {c}                 by SING_DEF
-       Then c < a                           by SUBSET_DEF, IN_COUNT
-        and x = GENLIST (K c) (LENGTH x)    by LIST_TO_SET_SING_IFF
+       Note x <> []                          by LENGTH_NON_NIL
+         so ?c. set x = {c}                  by SING_DEF
+       Then c < a                            by SUBSET_DEF, IN_COUNT
+        and x = GENLIST (K c) (LENGTH x)     by LIST_TO_SET_SING_IFF
    (2) c < a ==> LENGTH (GENLIST (K c) n) = n,
-       This is true                         by LENGTH_GENLIST
+       This is true                          by LENGTH_GENLIST
    (3) c < a ==> set (GENLIST (K c) n) SUBSET count a
        Note set (GENLIST (K c) n) = {c}      by GENLIST_K_SET
          so c < a ==> {c} SUBSET (count a)   by SUBSET_DEF
