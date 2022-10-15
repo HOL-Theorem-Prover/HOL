@@ -14,6 +14,12 @@
 * ringDivides
 * integralDomain
 
+1 fieldUnit -- units in a field, all nonzero elements of its multiplicative monoid.
+* ring
+* ringUnit
+* ringDivides
+* 0 field
+
 1 fieldOrder -- multiplicative order of elements in a field. Sets of field elements of the same order.
 * Gauss
 * groupOrder
