@@ -44,6 +44,7 @@ open helperNumTheory helperSetTheory;
    R*       = r*.carrier
    unit x   = x IN R*
    |/       = r*.inv
+   x =~ y   = unit_eq r x y
 *)
 (* Definitions and Theorems (# are exported):
 

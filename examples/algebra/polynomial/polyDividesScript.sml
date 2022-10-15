@@ -68,7 +68,6 @@ open dividesTheory;
 (* Overloading:
    upoly p      = p IN (Invertibles (PolyRing r).prod).carrier
    pdivides     = poly_divides r
-   x =~ y       = unit_eq r x y
    p ~~ q       = unit_eq (PolyRing r) p q
 *)
 (* Definitions and Theorems (# are exported):
