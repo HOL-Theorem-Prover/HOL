@@ -2,7 +2,7 @@
   Library implementing Karatsuba multiplication for the HOL4 evaluator
   based on the theorems in bitArithScript.sml
 **)
-structure bitArithLib =
+structure bitArithLib :> bitArithLib =
 struct
   open HolKernel Parse Theory arithmeticTheory realTheory
         boolLib bossLib; (* HOL4 dependencies *)
