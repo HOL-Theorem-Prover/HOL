@@ -1,6 +1,12 @@
+(**
+  Library implementing Karatsuba multiplication for the HOL4 evaluator
+  based on the theorems in bitArithScript.sml
+**)
 signature bitArithLib =
 sig
-  include Abbrev Arbnum
+  include Abbrev
+  type num = Arbnum.num
+
   (* Make definitions *)
   val karatsuba_lim : num ref
 

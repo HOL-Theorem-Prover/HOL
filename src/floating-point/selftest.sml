@@ -6,7 +6,7 @@ open fp16Syntax
 val _ = tprint "mk_fp_isZero(16) has correct rator"
 val _ = require_msg (check_result (same_const “machine_ieee$fp16_isZero”))
                     term_to_string
-                    (rator o mk_fp_isZero) (mk_var("x", “:word16”))
+                    (rator o fp16Syntax.mk_fp_isZero) (mk_var("x", “:word16”))
 
 val f14 =
   “<| Sign := 0w; Exponent := 130w; Significand := 0x600000w |> : (23,8)float”
