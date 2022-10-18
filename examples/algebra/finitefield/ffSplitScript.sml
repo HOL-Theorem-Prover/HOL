@@ -326,7 +326,7 @@ open GaussTheory; (* for divisors *)
    poly_mini_root_order            |- !r s. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==>
                                       !x. x IN R /\ root (mini n) x ==> (forder x = n)
 
-   Cyclotomic Factorisation of Unity Polynomial (old):
+   Another Cyclotomic Factorisation of Unity Polynomial:
    poly_unity_splitting_field_exists
                                    |- !r n. FiniteField r /\ coprime n (CARD R) ==>
                                       ?t st. FiniteField t /\ st <<= t /\ FieldIso (\e. up e) r st /\
@@ -2685,8 +2685,10 @@ val poly_mini_root_order = store_thm(
   metis_tac[poly_minimal_root_order, poly_mini_def]);
 
 (* ------------------------------------------------------------------------- *)
-(* Cyclotomic Factorisation of Unity Polynomial (old)                        *)
+(* Another Cyclotomic Factorisation of Unity Polynomial                      *)
 (* ------------------------------------------------------------------------- *)
+
+(* Note: this is the original approach. *)
 
 (*
 poly_unity_eq_poly_cyclo_product;
