@@ -767,13 +767,13 @@ val field_iso_with_subfield_ring_inj_image_subfield = store_thm(
 
    Note INJ (LINV f R) v.carrier univ(:'a)                     by Claim
     ==> INJ g v.carrier univ(:'a)                              by INJ_SUBSET, subfield_carrier_subset, SUBSET_REFL
-    and Field (ring_inj_image v g)                             by ring_inj_image_field, INJ g v.carrier univ(:'a)
-    and Field (ring_inj_image u g)                             by ring_inj_image_field, INJ g u.carrier univ(:'a)
+    and Field (ring_inj_image v g)                             by field_inj_image_field, INJ g v.carrier univ(:'a)
+    and Field (ring_inj_image u g)                             by field_inj_image_field, INJ g u.carrier univ(:'a)
 
    Step 3: Copy back as extension field (ring_inj_image u g).
    Take t = ring_inj_image u g, this is to show:
-   (1) FiniteField (ring_inj_image u g), true                  by ring_inj_image_finite_field
-   (2) Field (ring_inj_image u g), true                        by ring_inj_image_finite_field, finite_field_is_field
+   (1) FiniteField (ring_inj_image u g), true                  by field_inj_image_finite_field
+   (2) Field (ring_inj_image u g), true                        by field_inj_image_finite_field, finite_field_is_field
    (3) Field r                                                 by given
    (4) subfield r (ring_inj_image u g)
        Note subfield v u
@@ -800,12 +800,12 @@ val finite_field_extension_exists = store_thm(
   metis_tac[FieldIso_def, BIJ_DEF, INJ_UNIV]
   ) >>
   `INJ g v.carrier univ(:'a)` by metis_tac[INJ_SUBSET, subfield_carrier_subset, SUBSET_REFL] >>
-  `Field (ring_inj_image v g)` by rw[ring_inj_image_field] >>
-  `Field (ring_inj_image u g)` by rw[ring_inj_image_field] >>
+  `Field (ring_inj_image v g)` by rw[field_inj_image_field] >>
+  `Field (ring_inj_image u g)` by rw[field_inj_image_field] >>
   qexists_tac `ring_inj_image u g` >>
   rpt strip_tac >-
-  rw[ring_inj_image_finite_field] >-
-  rw[ring_inj_image_finite_field, finite_field_is_field] >-
+  rw[field_inj_image_finite_field] >-
+  rw[field_inj_image_finite_field, finite_field_is_field] >-
   rw[] >-
   metis_tac[subfield_ring_inj_image_subfield, field_iso_with_subfield_ring_inj_image_subfield] >>
   metis_tac[ring_inj_image_carrier, INJ_CARD_IMAGE]);

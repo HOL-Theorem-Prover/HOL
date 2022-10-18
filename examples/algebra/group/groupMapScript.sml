@@ -129,6 +129,16 @@ open helperNumTheory helperSetTheory;
                                       AbelianGroup (homo_group g f)
    homo_group_by_inj         |- !g f. Group g /\ INJ f G univ(:'b) ==> GroupHomo f g (homo_group g f)
 
+   Injective Image of Group:
+   group_inj_image_group           |- !g f. Group g /\ INJ f G univ(:'b) ==> Group (monoid_inj_image g f)
+   group_inj_image_abelian_group   |- !g f. AbelianGroup g /\ INJ f G univ(:'b) ==> AbelianGroup (monoid_inj_image g f)
+   group_inj_image_excluding_group
+                               |- !g f e. Group (g excluding e) /\ INJ f G univ(:'b) /\ e IN G ==>
+                                          Group (monoid_inj_image g f excluding f e)
+   group_inj_image_excluding_abelian_group
+                               |- !g f e. AbelianGroup (g excluding e) /\ INJ f G univ(:'b) /\ e IN G ==>
+                                          AbelianGroup (monoid_inj_image g f excluding f e)
+   group_inj_image_group_homo  |- !g f. INJ f G univ(:'b) ==> GroupHomo f g (monoid_inj_image g f)
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -969,6 +979,235 @@ val homo_group_by_inj = store_thm(
   rw_tac std_ss[GroupHomo_def, homo_monoid_property] >-
   rw[] >>
   rw[homo_monoid_op_inj]);
+
+(* ------------------------------------------------------------------------- *)
+(* Injective Image of Group.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: Given a Group g, and an injective function f,
+   then the image (f G) is a Group, with an induced binary operator:
+        op := (\x y. f (f^-1 x * f^-1 y))  *)
+
+(* Define a group injective image for an injective f, with LINV f G. *)
+(* Since a group is a monoid, group injective image = monoid injective image *)
+
+(* Theorem: Group g /\ INJ f G univ(:'b) ==> Group (monoid_inj_image g f) *)
+(* Proof:
+   By Group_def, this is to show:
+   (1) Group g ==> Monoid (monoid_inj_image g f)
+       Group g ==> Monoid g                            by group_is_monoid
+               ==> Monoid (monoid_inj_image g f)       by monoid_inj_image_monoid
+   (2) monoid_invertibles (monoid_inj_image g f) = (monoid_inj_image g f).carrier
+       By monoid_invertibles_def, monoid_inj_image_def, this is to show:
+       z IN G ==> ?y. (?x. (y = f x) /\ x IN G) /\
+                  (f (t (f z) * t y) = f #e) /\ (f (t y * t (f z)) = f #e)
+                                                       where t = LINV f G
+      Note INJ f G univ(:'b) ==> BIJ f G (IMAGE f G)   by INJ_IMAGE_BIJ_ALT
+        so !x. x IN G ==> t (f x) = x
+       and !x. x IN (IMAGE f G) ==> f (t x) = x        by BIJ_LINV_THM
+      Also z IN G ==> |/ z IN G                        by group_inv_element
+       Put x = |/ z, and y = f x
+      Then  f (t (f z) * t y)
+          = f (t (f z) * t (f ( |/ z)))                by y = f ( |/ z)
+          = f (z * |/ z)                               by !y. t (f y) = y
+          = f #e                                       by group_inv_thm
+        and f (t y * t (f z))
+          = f (t (f ( |/ z)) * t (f z))                by y = f ( |/ z)
+          = f ( |/ z * z)                              by !y. t (f y) = y
+          = f #e                                       by group_inv_thm
+*)
+Theorem group_inj_image_group:
+  !(g:'a group) (f:'a -> 'b). Group g /\ INJ f G univ(:'b) ==> Group (monoid_inj_image g f)
+Proof
+  rpt strip_tac >>
+  rw_tac std_ss[Group_def] >-
+  rw[monoid_inj_image_monoid] >>
+  rw[monoid_invertibles_def, monoid_inj_image_def, EXTENSION, EQ_IMP_THM] >>
+  `g.inv x' IN G` by rw[] >>
+  qexists_tac `f (g.inv x')` >>
+  `BIJ f G (IMAGE f G)` by rw[INJ_IMAGE_BIJ_ALT] >>
+  imp_res_tac BIJ_LINV_THM >>
+  metis_tac[group_inv_thm]
+QED
+
+(* Theorem: AbelianGroup g /\ INJ f G univ(:'b) ==> AbelianGroup (monoid_inj_image g f) *)
+(* Proof:
+   By AbelianGroup_def, this is to show:
+   (1) Group g ==> Group (monoid_inj_image g f)
+       True by group_inj_image_group.
+   (2) (monoid_inj_image g f).op x y = (monoid_inj_image g f).op y x
+       By monoid_inj_image_def, this is to show:
+       x' IN G /\ x'' IN G /\ !x y. x IN G /\ y IN G ==> (x * y = y * x)
+       ==> f (t (f x') * t (f x'')) = f (t (f x'') * t (f x'))  where t = LINV f G
+       Note INJ f G univ(:'b) ==> BIJ f G (IMAGE f G)  by INJ_IMAGE_BIJ_ALT
+         so !x. x IN G ==> t (f x) = x
+        and !x. x IN (IMAGE f G) ==> f (t x) = x       by BIJ_LINV_THM
+         f (t (f x') * t (f x''))
+       = f (x' * x'')                                  by !y. t (f y) = y
+       = f (x'' * x')                                  by commutativity condition
+       = f (t (f x'') * t (f x'))                      by !y. t (f y) = y
+*)
+Theorem group_inj_image_abelian_group:
+  !(g:'a group) (f:'a -> 'b). AbelianGroup g /\ INJ f G univ(:'b) ==>
+       AbelianGroup (monoid_inj_image g f)
+Proof
+  rw[AbelianGroup_def] >-
+  rw[group_inj_image_group] >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  rw[monoid_inj_image_def] >>
+  metis_tac[INJ_IMAGE_BIJ_ALT, BIJ_LINV_THM]
+QED
+
+(* Theorem: Group (g excluding e) /\ INJ f G univ(:'b) /\ e IN G
+            ==> Group (monoid_inj_image g f excluding f e) *)
+(* Proof:
+   Let h = g excluding e.
+   Then H = h.carrier = G DIFF {e}             by excluding_def
+    and h.op = g.op /\ h.id = g.id             by excluding_def
+    and IMAGE f H = IMAGE f G DIFF {f e}       by IMAGE_DIFF
+    and H SUBSET G                             by DIFF_SUBSET
+   Let t = LINV f G.
+   Then !x. x IN H ==> t (f x) = x             by LINV_SUBSET
+
+   By group_def_alt, monoid_inj_image_def, excluding_def, this is to show:
+   (1) x IN IMAGE f H /\ y IN IMAGE f H ==> f (t x * t y) IN IMAGE f H
+       Note ?a. (x = f a) /\ a IN H            by IN_IMAGE
+            ?b. (y = f b) /\ b IN H            by IN_IMAGE
+       Hence  f (t x * t y)
+            = f (t (f a) * t (f b))            by x = f a, y = f b
+            = f (a * b)                        by !y. t (f y) = y
+       Since a * b IN H                        by group_op_element
+       hence f (a * b) IN IMAGE f H            by IN_IMAGE
+   (2) x IN IMAGE f H /\ y IN IMAGE f H /\ z IN IMAGE f H ==> f (t x * t y * t z) = f (t x * (t y * t z))
+       Note ?a. (x = f a) /\ a IN G            by IN_IMAGE
+            ?b. (y = f b) /\ b IN G            by IN_IMAGE
+            ?c. (z = f c) /\ c IN G            by IN_IMAGE
+       Hence  (t x * t y) * t z
+            = (t (f a) * t (f b)) * t (f c)    by x = f a, y = f b, z = f c
+            = (a * b) * c                      by !y. t (f y) = y
+            = a * (b * c)                      by group_assoc
+            = t (f a) * (t (f b) * t (f c))    by !y. t (f y) = y
+            = t x * (t y * t z)                by x = f a, y = f b, z = f c
+       or   f ((t x * t y) * t z) = f (t x * (t y * t z))
+   (3) f #e IN IMAGE f H
+       Since #e IN H                           by group_id_element
+       f #e IN IMAGE f H                       by IN_IMAGE
+   (4) x IN IMAGE f H ==> f (t (f #e) * t x) = x
+       Note #e IN H                            by group_id_element
+        and ?a. (x = f a) /\ a IN H            by IN_IMAGE
+       Hence f (t (f #e) * t x)
+           = f (#e * t x)                      by !y. t (f y) = y
+           = f (#e * t (f a))                  by x = f a
+           = f (#e * a)                        by !y. t (f y) = y
+           = f a                               by group_id
+           = x                                 by x = f a
+   (5) x IN IMAGE f H ==> ?y. y IN IMAGE f H /\ f (t y * t x) = f #e
+       Note ?a. (x = f a) /\ a IN H            by IN_IMAGE
+        and b = (h.inv a) IN H                 by group_inv_element
+       Let y = f b.
+       Then y IN IMAGE f H                     by IN_IMAGE
+        and f (t y * t x)
+          = f (t y * t (f a))                  by x = f a
+          = f (t (f b)) * t (f a))             by y = f b
+          = f (b * a)                          by !y. t (f y) = y
+          = f #e                               by group_linv
+*)
+Theorem group_inj_image_excluding_group:
+  !(g:'a group) (f:'a -> 'b) e.
+      Group (g excluding e) /\ INJ f G univ(:'b) /\ e IN G ==>
+      Group (monoid_inj_image g f excluding f e)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `h = g excluding e` >>
+  `h.carrier = G DIFF {e} /\ h.op = g.op /\ h.id = g.id` by rw[excluding_def, Abbr`h`] >>
+  qabbrev_tac `Q = IMAGE f G DIFF {f e}` >>
+  `H SUBSET G` by fs[] >>
+  imp_res_tac LINV_SUBSET >>
+  rw_tac std_ss[group_def_alt, monoid_inj_image_def, excluding_def] >| [
+    `Q = IMAGE f H` by fs[IMAGE_DIFF, Abbr`Q`] >>
+    metis_tac[group_op_element, IN_IMAGE],
+    `Q = IMAGE f H` by fs[IMAGE_DIFF, Abbr`Q`] >>
+    `?a. (x = f a) /\ a IN H` by rw[GSYM IN_IMAGE] >>
+    `?b. (y = f b) /\ b IN H` by rw[GSYM IN_IMAGE] >>
+    `?c. (z = f c) /\ c IN H` by rw[GSYM IN_IMAGE] >>
+    metis_tac[group_assoc, group_op_element],
+    `Q = IMAGE f H` by fs[IMAGE_DIFF, Abbr`Q`] >>
+    metis_tac[group_id_element, IN_IMAGE],
+    `Q = IMAGE f H` by fs[IMAGE_DIFF, Abbr`Q`] >>
+    metis_tac[group_id_element, group_id, IN_IMAGE],
+    `Q = IMAGE f H` by fs[IMAGE_DIFF, Abbr`Q`] >>
+    `?a. (x = f a) /\ a IN H` by rw[GSYM IN_IMAGE] >>
+    `h.inv a IN H` by rw[group_inv_element] >>
+    `f (h.inv a) IN Q` by rw[] >>
+    metis_tac[group_linv]
+  ]
+QED
+
+(* Theorem: AbelianGroup (g excluding e) /\ INJ f G univ(:'b) /\ e IN G ==>
+            AbelianGroup (monoid_inj_image g f excluding f e) *)
+(* Proof:
+   By AbelianMonoid_def, this is to show:
+   (1) Group (monoid_inj_image g f excluding f e)
+       True by group_inj_image_excluding_group.
+   (2) x IN IMAGE f H /\ y IN IMAGE f H ==> (monoid_inj_image g f).op x y = (monoid_inj_image g f).op y x
+       where H = G DIFF {e}
+       Note H SUBSET G                                     by DIFF_SUBSET
+         so !x. x IN H ==> LINV f G (f x) = x              by LINV_SUBSET
+        and (monoid_inj_image g f excluding f e).carrier
+          = (IMAGE f G) DIFF {f e}                         by monoid_inj_image_def, excluding_def
+          = IMAGE f (G DIFF {e})                           by IMAGE_DIFF
+          = IMAGE f H                                      by notation
+       By monoid_inj_image_def, excluding_def, this is to show:
+          f (t x * t y) = f (t y * t x)                    where t = LINV f G
+       Note ?a. x = f a /\ a IN H                          by IN_IMAGE
+            ?b. y = f b /\ b IN H                          by IN_IMAGE
+         f (t x * t y)
+       = f (t (f a) * t (f b))                             by x = f a, y = f b
+       = f (a * b)                                         by !y. t (f y) = y
+       = f (b * a)                                         by commutativity condition
+       = f (t (f b) * t (f a))                             by !y. t (f y) = y
+       = f (t y * t x)                                     by y = f b, x = f a
+*)
+Theorem group_inj_image_excluding_abelian_group:
+  !(g:'a group) (f:'a -> 'b) e.
+      AbelianGroup (g excluding e) /\ INJ f G univ(:'b) /\ e IN G ==>
+      AbelianGroup (monoid_inj_image g f excluding f e)
+Proof
+  rw[AbelianGroup_def] >-
+  rw[group_inj_image_excluding_group] >>
+  qabbrev_tac `h = g excluding e` >>
+  `h.carrier = G DIFF {e} /\ h.op = g.op /\ h.id = g.id` by rw[excluding_def, Abbr`h`] >>
+  `H SUBSET G` by fs[] >>
+  imp_res_tac LINV_SUBSET >>
+  `(monoid_inj_image g f excluding f e).carrier = IMAGE f G DIFF {f e}` by rw[monoid_inj_image_def, excluding_def] >>
+  `_ = IMAGE f H` by rw[IMAGE_DIFF] >>
+  simp[monoid_inj_image_def, excluding_def] >>
+  metis_tac[IN_IMAGE]
+QED
+
+(* Theorem: INJ f G univ(:'b) ==> GroupHomo f g (monoid_inj_image g f) *)
+(* Proof:
+   Let s = IMAGE f G.
+   Then BIJ f G s                              by INJ_IMAGE_BIJ_ALT
+     so INJ f G s                              by BIJ_DEF
+
+   By GroupHomo_def, monoid_inj_image_def, this is to show:
+   (1) x IN G ==> f x IN IMAGE f G, true       by IN_IMAGE
+   (2) x IN R /\ y IN R ==> f (x * y) = f (LINV f R (f x) * LINV f R (f y))
+       Since LINV f R (f x) = x                by BIJ_LINV_THM
+         and LINV f R (f y) = y                by BIJ_LINV_THM
+       The result is true.
+*)
+Theorem group_inj_image_group_homo:
+  !(g:'a group) f. INJ f G univ(:'b) ==> GroupHomo f g (monoid_inj_image g f)
+Proof
+  rw[GroupHomo_def, monoid_inj_image_def] >>
+  qabbrev_tac `s = IMAGE f G` >>
+  `BIJ f G s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f G s` by metis_tac[BIJ_DEF] >>
+  metis_tac[BIJ_LINV_THM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
