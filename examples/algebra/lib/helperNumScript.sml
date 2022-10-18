@@ -198,7 +198,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    SUC_X_LT_2_EXP_X  |- !n. 1 < n ==> SUC n < 2 ** n
 
    DIVIDES Theorems:
-   DIV_EQ_0          |- !m n. 0 < n ==> ((m DIV n = 0) <=> m < n)
+   DIV_EQUAL_0       |- !m n. 0 < n ==> ((m DIV n = 0) <=> m < n)
    DIV_POS           |- !m n. 0 < n /\ m divides n ==> 0 < n DIV m
    DIV_LE            |- !x y z. 0 < y /\ x <= y * z ==> x DIV y <= z
    DIV_SOLVE         |- !n. 0 < n ==> !x y. (x * n = y) ==> (x = y DIV n)
@@ -2037,12 +2037,14 @@ val SUC_X_LT_2_EXP_X = store_thm(
    Only-if part: 0 < n /\ m < n ==> m DIV n = 0
       True by LESS_DIV_EQ_ZERO.
 *)
-val DIV_EQ_0 = store_thm(
-  "DIV_EQ_0",
+val DIV_EQUAL_0 = store_thm(
+  "DIV_EQUAL_0",
   ``!m n. 0 < n ==> ((m DIV n = 0) <=> m < n)``,
   rw[EQ_IMP_THM] >-
   metis_tac[DIVISION, MULT, ADD] >>
   rw[LESS_DIV_EQ_ZERO]);
+(* This is an improvement of
+   arithmeticTheory.DIV_EQ_0 = |- 1 < b ==> (n DIV b = 0 <=> n < b) *)
 
 (* Theorem: 0 < n /\ m divides n ==> 0 < (n DIV m) *)
 (* Proof:
@@ -2051,7 +2053,7 @@ val DIV_EQ_0 = store_thm(
      and m <= n             by DIVIDES_LE
    By contradiction, suppose ~(0 < n DIV m).
    That means n DIV m = 0   by arithmetic
-   Thus n < m               by DIV_EQ_0
+   Thus n < m               by DIV_EQUAL_0
    This contradicts m <= n.
 *)
 val DIV_POS = store_thm(
@@ -2061,7 +2063,7 @@ val DIV_POS = store_thm(
   `0 < m /\ m <= n` by metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO, DIVIDES_LE] >>
   spose_not_then strip_assume_tac >>
   `n DIV m = 0` by decide_tac >>
-  `n < m` by rw[GSYM DIV_EQ_0] >>
+  `n < m` by rw[GSYM DIV_EQUAL_0] >>
   decide_tac);
 
 (*
@@ -2372,7 +2374,7 @@ val LE_MULT_LE_DIV = store_thm(
 (* Theorem: 0 < m ==> ((n DIV m = 0) /\ (n MOD m = 0) <=> (n = 0)) *)
 (* Proof:
    If part: (n DIV m = 0) /\ (n MOD m = 0) ==> (n = 0)
-      Note n DIV m = 0 ==> n < m        by DIV_EQ_0
+      Note n DIV m = 0 ==> n < m        by DIV_EQUAL_0
       Thus n MOD m = n                  by LESS_MOD
         or n = 0
    Only-if part: 0 DIV m = 0            by ZERO_DIV
@@ -2383,7 +2385,7 @@ val DIV_MOD_EQ_0 = store_thm(
   ``!m n. 0 < m ==> ((n DIV m = 0) /\ (n MOD m = 0) <=> (n = 0))``,
   rpt strip_tac >>
   rw[EQ_IMP_THM] >-
-  metis_tac[DIV_EQ_0, LESS_MOD] >>
+  metis_tac[DIV_EQUAL_0, LESS_MOD] >>
   rw[ZERO_DIV]);
 
 (* Theorem: 0 < m /\ 0 < n /\ (n MOD m = 0) ==> n DIV (SUC m) < n DIV m *)

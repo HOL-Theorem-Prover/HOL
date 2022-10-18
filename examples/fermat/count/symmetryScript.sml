@@ -1130,12 +1130,13 @@ QED
 (* Proof:
    By fixes_def, this is to show:
        !x. x IN s ==> LINV f t (f x) = x
-   This is true        by LINV_SUBSET, s SUBSET t /\ INJ f t t
+   Note INJ f t univ(:'a)          by metis_tac[INJ_UNIV
+     so LINV f t (f x) = x         by LINV_SUBSET, s SUBSET t
 *)
 Theorem fixes_subset_linv:
   !f s t. f fixes s /\ s SUBSET t /\ INJ f t t ==> LINV f t fixes s
 Proof
-  metis_tac[fixes_def, LINV_SUBSET]
+  metis_tac[fixes_def, INJ_UNIV, LINV_SUBSET]
 QED
 
 (* ------------------------------------------------------------------------- *)
