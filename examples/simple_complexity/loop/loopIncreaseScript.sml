@@ -23,7 +23,7 @@ open loopTheory;
 
 (* open dependent theories *)
 open arithmeticTheory dividesTheory;
-open helperNumTheory helperListTheory helperFunctionTheory; (* replace DIV_EQ_0 *)
+open helperNumTheory helperListTheory helperFunctionTheory; (* for DIV_EQUAL_0 *)
 open listTheory rich_listTheory;
 open listRangeTheory;
 
@@ -503,7 +503,7 @@ val foo_def = Define`
                                       by induction hypothesis
        But (m - (x + b)) DIV b = (m - x) DIV b - 1       by SUB_DIV
        and (m - (x + b)) MOD b = (m - x) MOD b           by SUB_MOD
-       and (m - x) DIV b <> 0                            by DIV_EQ_0
+       and (m - x) DIV b <> 0                            by DIV_EQUAL_0
        LHS = 1 + ((m - x) DIV b - 1  + if ((m - x) MOD b) then 0 else 1)    by ADD1
            = (m - x) DIV b + (if ((m - x) MOD b = 0) then 0 else 1)         by (m - x) DIV b <> 0
            = RHS
@@ -521,10 +521,10 @@ val bop_eqn = store_thm(
     `m - x <= b` by decide_tac >>
     `m - x <> b` by metis_tac[DIVMOD_ID, NOT_ZERO] >>
     `m - x < b` by decide_tac >>
-    metis_tac[DIV_EQ_0, NOT_ZERO, ADD],
+    metis_tac[DIV_EQUAL_0, NOT_ZERO, ADD],
     `(m - x - b) DIV b = (m - x) DIV b - 1` by rw[SUB_DIV] >>
     `~(m - x <= b)` by decide_tac >>
-    `(m - x) DIV b <> 0` by rw[DIV_EQ_0] >>
+    `(m - x) DIV b <> 0` by rw[DIV_EQUAL_0] >>
     fs[],
     `m - (b + x) = m - x - b` by decide_tac >>
     `b <= m - x` by decide_tac >>
@@ -536,7 +536,7 @@ val bop_eqn = store_thm(
     fs[],
     `(m - x - b) DIV b = (m - x) DIV b - 1` by rw[SUB_DIV] >>
     `~(m - x <= b)` by decide_tac >>
-    `(m - x) DIV b <> 0` by rw[DIV_EQ_0] >>
+    `(m - x) DIV b <> 0` by rw[DIV_EQUAL_0] >>
     fs[]
   ]);
 

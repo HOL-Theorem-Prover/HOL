@@ -2896,7 +2896,7 @@ val park_on_off_total_image_partition = store_thm(
                                                      prime_power_index_pos, prime_powers_eq
                    x DIFF u
                  = (IMAGE f pm) DIFF (IMAGE f pk) by notation
-                 = IMAGE f (pm DIFF pk)           by IMAGE_INJ_SUBSET_DIFF
+                 = IMAGE f (pm DIFF pk)           by IMAGE_DIFF
                  = h                              by notation
           Note FINITE x                           by prime_divisors_finite, IMAGE_FINITE
            and u SUBSET x                         by SUBSET_DEF, IMAGE_SUBSET
@@ -2916,7 +2916,7 @@ val park_on_off_total_image_partition = store_thm(
                                                      prime_power_index_pos, prime_powers_eq
                    y DIFF v
                  = (IMAGE f pn) DIFF (IMAGE f pk) by notation
-                 = IMAGE f (pn DIFF pk)           by IMAGE_INJ_SUBSET_DIFF
+                 = IMAGE f (pn DIFF pk)           by IMAGE_DIFF
                  = k                              by notation
           Note FINITE y                           by prime_divisors_finite, IMAGE_FINITE
            and v SUBSET y                         by SUBSET_DEF, IMAGE_SUBSET
@@ -3002,7 +3002,7 @@ Proof
                by (rw[INJ_DEF] >>
                    metis_tac[prime_divisors_element, prime_power_index_pos,
                              prime_powers_eq]) >>
-             metis_tac[IMAGE_INJ_SUBSET_DIFF]) >>
+             metis_tac[IMAGE_DIFF]) >>
         ‘FINITE x’ by rw[prime_divisors_finite, Abbr‘x’] >>
         ‘u SUBSET x’ by rw[SUBSET_DEF, Abbr‘u’, Abbr‘x’] >>
         ‘x =|= u # h’ by metis_tac[partition_by_subset] >>

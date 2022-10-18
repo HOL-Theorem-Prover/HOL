@@ -25,7 +25,7 @@ open bitsizeTheory;
 
 (* open dependent theories *)
 open arithmeticTheory dividesTheory;
-open helperNumTheory helperListTheory helperFunctionTheory; (* replace DIV_EQ_0 *)
+open helperNumTheory helperListTheory helperFunctionTheory; (* for DIV_EQUAL_0 *)
 open listTheory rich_listTheory;
 open listRangeTheory;
 
@@ -785,16 +785,17 @@ val iterating_div_pop = store_thm(
 
 (* Theorem: 1 < b ==> x < b ** (pop b x) *)
 (* Proof:
+   Note 0 < b, so 0 < b ** (pop b x)             by EXP_POS
    Note FUNPOW (\x. x DIV b) (pop b x) x = 0     by iterating_div_pop, 1 < b
      or             x DIV b ** (pop b x) = 0     by iterating_div_eqn, 0 < b
-     or                   x < b ** (pop b x)     by DIV_EQ_0, 0 < b
+     or                   x < b ** (pop b x)     by DIV_EQUAL_0, 0 <  b ** (pop b x)
 *)
 val iterating_div_pop_alt = store_thm(
   "iterating_div_pop_alt",
   ``!b x. 1 < b ==> x < b ** (pop b x)``,
   rpt strip_tac >>
   `0 < b` by decide_tac >>
-  rw[iterating_div_pop, GSYM iterating_div_eqn, GSYM DIV_EQ_0]);
+  rw[iterating_div_pop, GSYM iterating_div_eqn, GSYM DIV_EQUAL_0]);
 
 (* This is the same as pop_exceeds: |- !b n. 1 < b ==> n < b ** pop b n *)
 

@@ -23,7 +23,7 @@ open loopTheory;
 
 (* open dependent theories *)
 open arithmeticTheory dividesTheory;
-open helperNumTheory helperListTheory helperFunctionTheory; (* replace DIV_EQ_0 *)
+open helperNumTheory helperListTheory helperFunctionTheory; (* for DIV_EQUAL_0 *)
 open listTheory rich_listTheory;
 open listRangeTheory;
 
@@ -551,7 +551,7 @@ val foo_def = Define`
          Thus RHS = 1 + 0 = 1 = LHS.
       If m < b * x,
          Then m DIV x < b             by DIV_LT_X, m < b * x
-          Now m DIV x <> 0            by DIV_EQ_0, x < m
+          Now m DIV x <> 0            by DIV_EQUAL_0, 0 < x, x < m
           ==> LOG b (m DIV x) = 0     by LOG_RWT, 0 < m DIV x, m DIV x < b
           and x * b ** (LOG b (m DIV x))
             = x * b ** 0 = x <> m     by EXP_0, x < m
@@ -590,7 +590,7 @@ val mop_eqn = store_thm(
       `m DIV x = b` by rw[MULT_DIV] >>
       `LOG b (m DIV x) = 1` by rw[LOG_BASE] >>
       fs[EXP_1],
-      `m DIV x <> 0` by rw[DIV_EQ_0] >>
+      `m DIV x <> 0` by rw[DIV_EQUAL_0] >>
       `m DIV x < b` by rw[DIV_LT_X] >>
       `LOG b (m DIV x) = 0` by rw[LOG_RWT] >>
       rw[]
