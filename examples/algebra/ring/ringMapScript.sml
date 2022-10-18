@@ -230,6 +230,33 @@ open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
    ring_iso_ring_homo_subring   |- !r r_ f. (r =r= r_) f ==> subring (ring_homo_image f r r_) r_
    subring_ring_iso_ring_homo_subring
                                 |- !r s r_ f. s <= r /\ (r =r= r_) f ==> ring_homo_image f s r_ <= r_
+
+   Injective Image of Ring:
+   ring_inj_image_def           |- !r f. Ring r ==> ring_inj_image r f =
+      <|carrier := IMAGE f R;
+            sum := <|carrier := IMAGE f R; op := (\x y. f (LINV f R x + LINV f R y)); id := f #0|>;
+           prod := <|carrier := IMAGE f R; op := (\x y. f (LINV f R x * LINV f R y)); id := f #1|>
+       |>
+   ring_inj_image_carrier       |- !r f. (ring_inj_image r f).carrier = IMAGE f R
+   ring_inj_image_alt           |- !f r. Ring r ==> ring_inj_image r f =
+                                         <|carrier := IMAGE f R;
+                                               sum := monoid_inj_image r.sum f;
+                                              prod := monoid_inj_image r.prod f
+                                          |>
+   ring_inj_image_ring          |- !r f. Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f)
+   ring_inj_image_sum_monoid    |- !r f. Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).sum
+   ring_inj_image_sum_group     |- !r f. Ring r /\ INJ f R univ(:'b) ==> Group (ring_inj_image r f).sum
+   ring_inj_image_sum_abelian_group
+                                |- !r f. Ring r /\ INJ f R univ(:'b) ==> AbelianGroup (ring_inj_image r f).sum
+   ring_inj_image_prod_monoid   |- !r f. Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).prod
+   ring_inj_image_prod_abelian_monoid
+                                |- !r f. Ring r /\ INJ f R univ(:'b) ==> AbelianMonoid (ring_inj_image r f).prod
+   ring_inj_image_sum_group_homo
+                      |- !r f. Ring r /\ INJ f R univ(:'b) ==> GroupHomo f r.sum (ring_inj_image r f).sum
+   ring_inj_image_prod_monoid_homo
+                      |- !r f. Ring r /\ INJ f R univ(:'b) ==> MonoidHomo f r.prod (ring_inj_image r f).prod
+   ring_inj_image_ring_homo
+                      |- !r f. Ring r /\ INJ f R univ(:'b) ==> RingHomo f r (ring_inj_image r f)
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -2020,6 +2047,441 @@ val subring_ring_iso_ring_homo_subring = store_thm(
   "subring_ring_iso_ring_homo_subring",
   ``!(r:'a ring) (s:'a ring) (r_:'b ring) f. s <= r /\ (r =r= r_) f ==> (ring_homo_image f s r_) <= r_``,
   metis_tac[ring_homo_image_subring, subring_ring_iso_compose]);
+
+(* ------------------------------------------------------------------------- *)
+(* Injective Image of Ring.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: Given a Ring r, and an injective function f,
+   then the image (f R) is a Ring, with an induced binary operator:
+        op := (\x y. f (f^-1 x * f^-1 y))  *)
+
+(* Define a ring injective image for an injective f, with LINV f R. *)
+Definition ring_inj_image_def:
+   ring_inj_image (r:'a ring) (f:'a -> 'b) =
+       <| carrier := IMAGE f R;
+              sum := <| carrier := IMAGE f R; op := (\x y. f ((LINV f R x) + LINV f R y)); id := f #0 |>;
+             prod := <| carrier := IMAGE f R; op := (\x y. f ((LINV f R x) * LINV f R y)); id := f #1 |>
+        |>
+End
+
+(* Theorem: (ring_inj_image r f).carrier = IMAGE f R *)
+(* Proof: by ring_inj_image_def *)
+Theorem ring_inj_image_carrier:
+  !(r:'a ring) f. (ring_inj_image r f).carrier = IMAGE f R
+Proof
+  simp[ring_inj_image_def]
+QED
+
+(* Alternative definitaion the image of ring injection, so that LINV f R makes sense. *)
+
+(* Theorem: equivalent definition of ring_inj_image r f. *)
+(* Proof:
+   By ring_inj_image_def, monoid_inj_image_def, and component_equality of types,
+   this is to show:
+   (1) IMAGE f R = IMAGE f r.sum.carrier, true         by ring_carriers
+   (2) (\x y. f (LINV f r.sum.carrier x + LINV f r.sum.carrier y)) =
+       (\x y. f (LINV f R x + LINV f R y)), true       by ring_carriers
+   (3) IMAGE f R = IMAGE f r.prod.carrier, true        by ring_carriers
+   (4) (\x y. f (LINV f r.prod.carrier x * LINV f r.prod.carrier y)) =
+       (\x y. f (LINV f R x * LINV f R y)), true       by ring_carriers
+*)
+Theorem ring_inj_image_alt:
+  !(r:'a ring) (f:'a -> 'b).  Ring r ==>
+     ring_inj_image r f = <| carrier := IMAGE f R;
+                                 sum := monoid_inj_image r.sum f;
+                                prod := monoid_inj_image r.prod f
+                           |>
+Proof
+  simp[ring_inj_image_def, monoid_inj_image_def, ring_component_equality, monoid_component_equality]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f) *)
+(* Proof:
+   By Ring_def and ring_inj_image_alt, this is to show:
+   (1) AbelianGroup (monoid_inj_image r.sum f)
+           Ring r
+       ==> AbelianGroup (r.sum)                        by ring_add_abelian_group
+       ==> AbelianGroup (monoid_inj_image r.sum f)     by group_inj_image_abelian_group
+   (2) AbelianMonoid (monoid_inj_image r.prod f)
+           Ring r
+       ==> AbelianMonoid (r.prod)                      by ring_mult_abelian_monoid
+       ==> AbelianMonoid (monoid_inj_image r.prod f)   by monoid_inj_image_abelian_monoid
+   (3) (monoid_inj_image r.sum f).carrier = IMAGE f R
+         (monoid_inj_image r.sum f).carrier
+       = IMAGE f r.sum.carrier                         by monoid_inj_image_def
+       = IMAGE f R                                     by ring_carriers
+   (4) (monoid_inj_image r.prod f).carrier = IMAGE f R
+         (monoid_inj_image r.prod f).carrier
+       = IMAGE f r.prod.carrier                        by monoid_inj_image_def
+       = IMAGE f R                                     by ring_carriers
+   (5) x IN IMAGE f R /\ y IN IMAGE f R /\ z IN IMAGE f R ==>
+       f (t x * t (f (t y + t z))) = f (t (f (t x * t y)) + t (f (t x * t z)))
+       by monoid_inj_image_def, ring_carriers, where t = LINV f R.
+       Note INJ f R univ(:'b) ==> BIJ f R (IMAGE f R)  by INJ_IMAGE_BIJ_ALT
+         so !x. x IN R ==> t (f x) = x
+        and !x. x IN (IMAGE f R) ==> f (t x) = x       by BIJ_LINV_THM
+       Note ?a. (x = f a) /\ a IN R                    by IN_IMAGE
+            ?b. (y = f b) /\ b IN R                    by IN_IMAGE
+            ?c. (z = f c) /\ c IN R                    by IN_IMAGE
+       LHS = f (t x * t (f (t y + t z)))
+           = f (t (f a) * t (f (t (f b) + t (f c))))   by x = f a, y = f b, z = f c
+           = f (a * t (f (b + c)))                     by !y. t (f y) = y
+           = f (a * (b + c))                           by !y. t (f y) = y, ring_add_element
+       RHS = f (t (f (t x * t y)) + t (f (t x * t z)))
+           = f (t (f (t (f a) * t (f b))) + t (f (t (f a) * t (f b))))   by x = f a, y = f b, z = f c
+           = f (t (f (a * b)) + t (f (a * b)))         by !y. t (f y) = y
+           = f (a * b + a * c)                         by !y. t (f y) = y, ring_mult_element
+           = f (a * (b + c))                           by ring_mult_ladd
+           = LHS
+*)
+Theorem ring_inj_image_ring:
+  !(r:'a ring) (f:'a -> 'b). Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f)
+Proof
+  rpt strip_tac >>
+  rw_tac std_ss[Ring_def, ring_inj_image_alt] >-
+  rw[ring_add_abelian_group, group_inj_image_abelian_group] >-
+  rw[ring_mult_abelian_monoid, monoid_inj_image_abelian_monoid] >-
+  rw[monoid_inj_image_def] >-
+  rw[monoid_inj_image_def] >>
+  rw_tac std_ss[monoid_inj_image_def, ring_carriers] >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  `BIJ f R (IMAGE f R)` by rw[INJ_IMAGE_BIJ_ALT] >>
+  imp_res_tac BIJ_LINV_THM >>
+  rpt strip_tac >>
+  `?a. (x = f a) /\ a IN R` by rw[GSYM IN_IMAGE] >>
+  `?b. (y = f b) /\ b IN R` by rw[GSYM IN_IMAGE] >>
+  `?c. (z = f c) /\ c IN R` by rw[GSYM IN_IMAGE] >>
+  rw[ring_mult_ladd, Abbr`t`]
+QED
+
+(* The following will be applied to finite fields, for existence and extension. *)
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).sum *)
+(* Proof:
+   Let s = IMAGE f R.
+   Then BIJ f R s                              by INJ_IMAGE_BIJ_ALT
+     so INJ f R s                              by BIJ_DEF
+   Note !x. x IN R ==> f x IN s                by INJ_DEF
+    and !x. x IN s ==> LINV f R x IN R         by BIJ_LINV_ELEMENT
+   also !x. x IN R ==> (LINV f R (f x) = x)    by BIJ_LINV_THM
+    and !x. x IN s ==> (f (LINV f R x) = x)    by BIJ_LINV_THM
+
+   Let xx = LINV f R x, yy = LINV f R y, zz = LINV f R z.
+   By Monoid_def, ring_inj_image_def, this is to show:
+   (1) x IN s /\ y IN s ==> f (xx + yy) IN s, true by ring_add_element
+   (2) x IN s /\ y IN s /\ z IN s ==> f (LINV f R (f (xx + yy)) + zz) = f (xx + LINV f R (f (yy + zz)))
+       Since LINV f R (f (xx + yy)) = xx + yy  by ring_add_element
+         and LINV f R (f (yy + zz)) = yy + zz  by ring_add_element
+       The result follows                      by ring_add_assoc
+   (3) f #0 IN s, true                         by ring_zero_element
+   (4) x IN s ==> f (LINV f R (f #0) + xx) = x
+       Since LINV f R (f #0) = #0              by ring_zero_element
+       f (#0 + xx) = f xx = x                  by ring_add_lzero
+   (5) x IN s ==> f (xx + LINV f R (f #0)) = x
+       Since LINV f R (f #0) = #0              by ring_zero_element
+       f (xx + #0) = f xx = x                  by ring_add_rzero
+*)
+Theorem ring_inj_image_sum_monoid:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).sum
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  rw_tac std_ss[Monoid_def, ring_inj_image_def] >-
+  rw[] >-
+ (qabbrev_tac `xx = LINV f R x` >>
+  qabbrev_tac `yy = LINV f R y` >>
+  qabbrev_tac `zz = LINV f R z` >>
+  `LINV f R (f (xx + yy)) = xx + yy` by metis_tac[ring_add_element] >>
+  `LINV f R (f (yy + zz)) = yy + zz` by metis_tac[ring_add_element] >>
+  rw[ring_add_assoc, Abbr`xx`, Abbr`yy`, Abbr`zz`]) >-
+  rw[] >-
+  rw[] >>
+  rw[]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> Group (ring_inj_image r f).sum *)
+(* Proof:
+   By Group_def, this is to show:
+   (1) Monoid (ring_inj_image r f).sum, true     by ring_inj_image_sum_monoid
+   (2) monoid_invertibles (ring_inj_image r f).sum = (ring_inj_image r f).sum.carrier
+      Let xx = LINV f R x.
+       By ring_inj_image_def, monoid_invertibles_def, this is to show:
+       x IN IMAGE f R ==> ?y. y IN IMAGE f R /\ (f (xx + LINV f R y) = f #0) /\ (f (LINV f R y + xx) = f #0)
+       Let s = IMAGE f R.
+       Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
+         so INJ f R s                            by BIJ_DEF
+       Note !x. x IN R ==> f x IN s              by INJ_DEF
+        and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
+       also !x. x IN R ==> (LINV f R (f x) = x)  by BIJ_LINV_THM
+        and !x. x IN s ==> (f (LINV f R x) = x)  by BIJ_LINV_THM
+      Since -xx IN R                             by ring_neg_element
+       Take y = f (-xx).
+       Then y = f (-xx) IN s                     by above
+        and LINV f R y = LINV f R (-xx) = -xx    by above
+       Also f (xx + -xx) = f #0                  by ring_add_rneg
+        and f (-xx + xx) = f #0                  by ring_add_lneg
+*)
+Theorem ring_inj_image_sum_group:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> Group (ring_inj_image r f).sum
+Proof
+  rw[Group_def] >-
+  rw[ring_inj_image_sum_monoid] >>
+  rw_tac std_ss[ring_inj_image_def, monoid_invertibles_def, GSPECIFICATION, EXTENSION, EQ_IMP_THM] >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  qabbrev_tac `xx = LINV f R x` >>
+  `-xx IN R` by rw[Abbr`xx`] >>
+  metis_tac[ring_add_lneg, ring_add_rneg, ring_zero_element]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> AbelianGroup (ring_inj_image r f).sum *)
+(* Proof:
+   By AbelianGroup_def, this is to show:
+   (1) Group (ring_inj_image r f).sum, true      by ring_inj_image_sum_group
+   (2) x' IN R /\ x'' IN R ==>
+       f (LINV f R (f x') + LINV f R (f x'')) = f (LINV f R (f x'') + LINV f R (f x'))
+       Let s = IMAGE f R.
+       Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
+         so INJ f R s                            by BIJ_DEF
+       Note !x. x IN R ==> f x IN s              by INJ_DEF
+        and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
+       also !x. x IN R ==> (LINV f R (f x) = x)  by BIJ_LINV_THM
+        and !x. x IN s ==> (f (LINV f R x) = x)  by BIJ_LINV_THM
+       The result follows                        by ring_add_comm
+*)
+Theorem ring_inj_image_sum_abelian_group:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> AbelianGroup (ring_inj_image r f).sum
+Proof
+  rw[AbelianGroup_def] >-
+  rw[ring_inj_image_sum_group] >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  rw[ring_inj_image_def] >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  rw[ring_add_comm]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).prod *)
+(* Proof:
+   Let s = IMAGE f R.
+   Then BIJ f R s                              by INJ_IMAGE_BIJ_ALT
+     so INJ f R s                              by BIJ_DEF
+   Note !x. x IN R ==> f x IN s                by INJ_DEF
+    and !x. x IN s ==> LINV f R x IN R         by BIJ_LINV_ELEMENT
+   also !x. x IN R ==> (LINV f R (f x) = x)    by BIJ_LINV_THM
+    and !x. x IN s ==> (f (LINV f R x) = x)    by BIJ_LINV_THM
+
+   Let xx = LINV f R x, yy = LINV f R y, zz = LINV f R z.
+   By Monoid_def, ring_inj_image_def, this is to show:
+   (1) x IN s /\ y IN s ==> f (xx * yy) IN s, true by ring_mult_element
+   (2) x IN s /\ y IN s /\ z IN s ==> f (LINV f R (f (xx * yy)) * zz) = f (xx * LINV f R (f (yy * zz)))
+       Since LINV f R (f (xx * yy)) = xx * yy  by ring_mult_element
+         and LINV f R (f (yy * zz)) = yy * zz  by ring_mult_element
+       The result follows                      by ring_mult_assoc
+   (3) f #1 IN s, true                         by ring_one_element
+   (4) x IN s ==> f (LINV f R (f #1) * xx) = x
+       Since LINV f R (f #1) = #1              by ring_one_element
+       f (#1 * xx) = f xx = x                  by ring_mult_lone
+   (5) x IN s ==> f (xx * LINV f R (f #1)) = x
+       Since LINV f R (f #1) = #1              by ring_one_element
+       f (xx * #1) = f xx = x                  by ring_mult_rone
+*)
+Theorem ring_inj_image_prod_monoid:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> Monoid (ring_inj_image r f).prod
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  rw_tac std_ss[Monoid_def, ring_inj_image_def] >-
+  rw[] >-
+ (qabbrev_tac `xx = LINV f R x` >>
+  qabbrev_tac `yy = LINV f R y` >>
+  qabbrev_tac `zz = LINV f R z` >>
+  `LINV f R (f (xx * yy)) = xx * yy` by metis_tac[ring_mult_element] >>
+  `LINV f R (f (yy * zz)) = yy * zz` by metis_tac[ring_mult_element] >>
+  rw[ring_mult_assoc, Abbr`xx`, Abbr`yy`, Abbr`zz`]) >-
+  rw[] >-
+  rw[] >>
+  rw[]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> AbelianMonoid (ring_inj_image r f).prod *)
+(* Proof:
+   By AbelianMonoid_def, this is to show:
+   (1) Monoid (ring_inj_image r f).prod, true    by ring_inj_image_prod_monoid
+   (2) x' IN R /\ x'' IN R ==>
+       f (LINV f R (f x') * LINV f R (f x'')) = f (LINV f R (f x'') * LINV f R (f x'))
+       Let s = IMAGE f R.
+       Then BIJ f R s                            by INJ_IMAGE_BIJ_ALT
+         so INJ f R s                            by BIJ_DEF
+       Note !x. x IN R ==> f x IN s              by INJ_DEF
+        and !x. x IN s ==> LINV f R x IN R       by BIJ_LINV_ELEMENT
+       also !x. x IN R ==> (LINV f R (f x) = x)  by BIJ_LINV_THM
+        and !x. x IN s ==> (f (LINV f R x) = x)  by BIJ_LINV_THM
+       The result follows                        by ring_mult_comm
+*)
+Theorem ring_inj_image_prod_abelian_monoid:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> AbelianMonoid (ring_inj_image r f).prod
+Proof
+  rw[AbelianMonoid_def] >-
+  rw[ring_inj_image_prod_monoid] >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  rw[ring_inj_image_def] >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  rw[ring_mult_comm]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f) *)
+(* Proof:
+   Let s = IMAGE f R.
+   Then BIJ f R s                              by INJ_IMAGE_BIJ_ALT
+     so INJ f R s                              by BIJ_DEF
+   Note !x. x IN R ==> f x IN s                by INJ_DEF
+    and !x. x IN s ==> LINV f R x IN R         by BIJ_LINV_ELEMENT
+   also !x. x IN R ==> (LINV f R (f x) = x)    by BIJ_LINV_THM
+    and !x. x IN s ==> (f (LINV f R x) = x)    by BIJ_LINV_THM
+
+   Let xx = LINV f R x, yy = LINV f R y, zz = LINV f R z.
+   By Ring_def, this is to show:
+   (1) AbelianGroup (ring_inj_image r f).sum, true by ring_inj_image_sum_abelian_group
+   (2) AbelianMonoid (ring_inj_image r f).prod, true by ring_inj_image_prod_abelian_monoid
+   (3) (ring_inj_image r f).sum.carrier = (ring_inj_image r f).carrier, true by ring_inj_image_def
+   (4) (ring_inj_image r f).prod.carrier = (ring_inj_image r f).carrier, true by ring_inj_image_def
+   (5) x IN s /\ y IN s /\ z IN s ==>
+       f (xx * LINV f R (f (yy + zz))) = f (LINV f R (f (xx * yy)) + LINV f R (f (xx * zz)))
+       Note LINV f R (f (yy + zz)) = yy + zz   by ring_add_element
+        and LINV f R (f (xx * yy)) = xx * yy   by ring_mult_element
+        and LINV f R (f (xx * zz)) = xx * zz   by ring_mult_element
+       The result follows                      by ring_mult_radd
+*)
+Theorem ring_inj_image_ring:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f)
+Proof
+  rpt strip_tac >>
+  rw_tac std_ss[Ring_def] >-
+  rw[ring_inj_image_sum_abelian_group] >-
+  rw[ring_inj_image_prod_abelian_monoid] >-
+  rw[ring_inj_image_def] >-
+  rw[ring_inj_image_def] >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  rw_tac std_ss[ring_inj_image_def, GSPECIFICATION] >>
+  qabbrev_tac `s = IMAGE f R` >>
+  qabbrev_tac `xx = LINV f R x` >>
+  qabbrev_tac `yy = LINV f R y` >>
+  qabbrev_tac `zz = LINV f R z` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `LINV f R (f (yy + zz)) = yy + zz` by metis_tac[ring_add_element] >>
+  `LINV f R (f (xx * yy)) = xx * yy` by metis_tac[ring_mult_element] >>
+  `LINV f R (f (xx * zz)) = xx * zz` by metis_tac[ring_mult_element] >>
+  metis_tac[ring_mult_radd]
+QED
+(* Another proof of a previous theorem. *)
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> GroupHomo f r.sum (ring_inj_image r f).sum *)
+(* Proof:
+   Note R = r.prod.carrier                     by ring_carriers
+   Let s = IMAGE f R.
+   Then BIJ f R s                              by INJ_IMAGE_BIJ_ALT
+     so INJ f R s                              by BIJ_DEF
+
+   By GroupHomo_def, ring_inj_image_def, this is to show:
+   (1) x IN R ==> f x IN IMAGE f R, true       by IN_IMAGE
+   (2) x IN R /\ y IN R ==> f (x + y) = f (LINV f R (f x) + LINV f R (f y))
+       Since LINV f R (f x) = x                by BIJ_LINV_THM
+         and LINV f R (f y) = y                by BIJ_LINV_THM
+       The result is true.
+*)
+Theorem ring_inj_image_sum_group_homo:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> GroupHomo f r.sum (ring_inj_image r f).sum
+Proof
+  rw[GroupHomo_def, ring_inj_image_def] >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  metis_tac[BIJ_LINV_THM]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> MonoidHomo f r.prod (ring_inj_image r f).prod *)
+(* Proof:
+   Note R = r.prod.carrier                     by ring_carriers
+   Let s = IMAGE f R.
+   Then BIJ f R s                              by INJ_IMAGE_BIJ_ALT
+     so INJ f R s                              by BIJ_DEF
+
+   By MonoidHomo_def, ring_inj_image_def, this is to show:
+   (1) x IN R ==> f x IN IMAGE f R, true       by IN_IMAGE
+   (2) x IN R /\ y IN R ==> f (x * y) = f (LINV f R (f x) * LINV f R (f y))
+       Since LINV f R (f x) = x                by BIJ_LINV_THM
+         and LINV f R (f y) = y                by BIJ_LINV_THM
+       The result is true.
+*)
+Theorem ring_inj_image_prod_monoid_homo:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> MonoidHomo f r.prod (ring_inj_image r f).prod
+Proof
+  rw[MonoidHomo_def, ring_inj_image_def] >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  metis_tac[BIJ_LINV_THM]
+QED
+
+(* Theorem: Ring r /\ INJ f R univ(:'b) ==> RingHomo f r (ring_inj_image r f) *)
+(* Proof:
+   By RingHomo_def, this is to show:
+   (1) x IN R ==> f x IN (ring_inj_image r f).carrier
+       Note (ring_inj_image r f).carrier = IMAGE f R       by ring_inj_image_carrier
+       Thus f x IN IMAGE f R                               by INJ_DEF, IN_IMAGE
+   (2) GroupHomo f r.sum (ring_inj_image r f).sum, true    by ring_inj_image_sum_group_homo
+   (3) MonoidHomo f r.prod (ring_inj_image r f).prod, true by ring_inj_image_prod_monoid_homo
+*)
+Theorem ring_inj_image_ring_homo:
+  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> RingHomo f r (ring_inj_image r f)
+Proof
+  rw_tac std_ss[RingHomo_def] >-
+  rw[ring_inj_image_carrier, INJ_DEF] >-
+  rw[ring_inj_image_sum_group_homo] >>
+  rw[ring_inj_image_prod_monoid_homo]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
