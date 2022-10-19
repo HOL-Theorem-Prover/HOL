@@ -31,6 +31,7 @@ EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          RL_Environment \
 	 STE algorithms computability dependability dev \
          developers/ThmSetData \
+	 fermat \
 	 formal-languages formal-languages/context-free \
          formal-languages/contig \
 	 formal-languages/lambek formal-languages/regular/regular-play \
