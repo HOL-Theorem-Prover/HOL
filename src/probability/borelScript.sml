@@ -8876,7 +8876,6 @@ Proof
 QED
 
 (*
-
 Theorem IN_MEASURABLE_BOREL_INV:
     !a f g. sigma_algebra a /\ f IN Borel_measurable a /\
         (!x. x IN space a ==> g x = extreal_inv (f x) * indicator_fn {y | f y <> 0} x) ==>
@@ -9003,6 +9002,7 @@ Proof
     rw[] >> irule IN_MEASURABLE_BOREL_IMP_BOREL' >> irule_at Any in_borel_measurable_from_Borel >>
     simp[] >> fs[IN_MEASURABLE]
 QED
+*)
 
 (*** AE Theorems ***)
 
@@ -9074,13 +9074,12 @@ Theorem AE_eq_sum:
     !m f fae s. FINITE s /\ measure_space m /\ (!n. n IN s ==> AE x::m. (f n x):extreal = fae n x) ==>
         AE x::m. SIGMA (C f x) s = SIGMA (C fae x) s
 Proof
-    rw[] >> qspecl_then [‘m’,‘λn x. f n x = fae n x’,‘s’] assume_tac AE_BIGINTER >> rfs[finite_countable] >>
-    qspecl_then [‘m’,‘λx. !n. n IN s ==> f n x = fae n x’,‘λx. SIGMA (C f x) s = SIGMA (C fae x) s’]
-        (irule o SIMP_RULE (srw_ss ()) []) AE_subset >>
-    rw[] >> irule EXTREAL_SUM_IMAGE_EQ' >> rw[combinTheory.C_DEF]
+    rw[] >> qspecl_then [‘m’,‘λn x. f n x = fae n x’,‘s’] assume_tac AE_BIGINTER
+ >> rfs[finite_countable]
+ >> qspecl_then [‘m’,‘λx. !n. n IN s ==> f n x = fae n x’,‘λx. SIGMA (C f x) s = SIGMA (C fae x) s’]
+        (irule o SIMP_RULE (srw_ss ()) []) AE_subset
+ >> rw[] >> irule EXTREAL_SUM_IMAGE_EQ' >> rw[combinTheory.C_DEF]
 QED
-
-*)
 
 val _ = export_theory ();
 

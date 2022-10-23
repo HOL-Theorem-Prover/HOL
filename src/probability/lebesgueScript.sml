@@ -5580,13 +5580,12 @@ Proof
  >> METIS_TAC []
 QED
 
-
-(* TODO *)
-
-val integrable_cmul = store_thm
-  ("integrable_cmul",
-  ``!m f c. measure_space m /\ integrable m f ==> integrable m (\x. Normal c * f x)``,
-    RW_TAC std_ss []
+Theorem integrable_cmul :
+    !m f c. measure_space m /\ integrable m f ==> integrable m (\x. Normal c * f x)
+Proof
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Cases_on `c = 0`
  >- RW_TAC std_ss [integrable_zero, mul_lzero, GSYM extreal_of_num_def]
  >> `(\x. Normal c * f x) IN measurable (m_space m,measurable_sets m) Borel`
@@ -5623,7 +5622,8 @@ val integrable_cmul = store_thm
  >> RW_TAC std_ss [extreal_ainv_def]
  >> `0 <= -c` by METIS_TAC [REAL_LT_IMP_LE, REAL_LE_NEG, REAL_NEG_0]
  >> RW_TAC std_ss [pos_fn_integral_cmul, FN_PLUS_POS]
- >> METIS_TAC [mul_not_infty, integrable_def]);
+ >> METIS_TAC [mul_not_infty, integrable_def]
+QED
 
 (* NOTE: added `!x. x IN m_space m ==> f x <> NegInf /\ g x <> PosInf`, one way
    to make sure that `f - g` is defined (i.e. f/g cannot be the same infinites *)
@@ -5701,14 +5701,15 @@ Theorem integrable_not_infty_lemma[local] :
              (integral m f = integral m g)
 Proof
     RW_TAC std_ss [integral_pos_fn, integrable_def]
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Q.ABBREV_TAC `g = (\x. if f x = PosInf then 0 else f x)`
  >> Q.EXISTS_TAC `g`
  >> `!x. x IN m_space m ==> 0 <= g x` by METIS_TAC [le_refl]
  >> `!x. x IN m_space m ==> g x <= f x` by METIS_TAC [le_refl,le_infty]
  >> `!x. x IN m_space m ==> g x <> PosInf` by METIS_TAC [num_not_infty]
  >> Know `g IN measurable (m_space m,measurable_sets m) Borel`
- >- (RW_TAC std_ss [IN_MEASURABLE_BOREL, space_def, subsets_def, IN_FUNSET, IN_UNIV]
-     >- METIS_TAC [measure_space_def] \\
+ >- (RW_TAC std_ss [IN_MEASURABLE_BOREL, space_def, subsets_def, IN_FUNSET, IN_UNIV] \\
      Cases_on `Normal c <= 0`
      >- (`{x | g x < Normal c} INTER m_space m = {}`
             by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, NOT_IN_EMPTY, IN_INTER] \\
@@ -5724,7 +5725,8 @@ Proof
      RW_TAC std_ss [] \\ (* 2 subgoals *)
      METIS_TAC [(REWRITE_RULE [space_def, subsets_def] o
                  Q.SPECL [`f`,`(m_space m, measurable_sets m)`])
-                    IN_MEASURABLE_BOREL_ALL, integrable_def, INTER_COMM]) >> DISCH_TAC
+                    IN_MEASURABLE_BOREL_ALL, integrable_def, INTER_COMM])
+ >> DISCH_TAC
  >> CONJ_TAC
  >- (RW_TAC std_ss []
      >- (FULL_SIMP_TAC std_ss [lt_infty] \\
@@ -5855,6 +5857,8 @@ Theorem integrable_not_infty_alt :
          (integral m f = integral m (\x. if f x = PosInf then 0 else f x))
 Proof
     rpt GEN_TAC >> STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Q.ABBREV_TAC `g = (\x. if f x = PosInf then 0 else f x)`
  >> `!x. x IN m_space m ==> 0 <= g x` by METIS_TAC [le_refl]
  >> `!x. x IN m_space m ==> g x <= f x` by METIS_TAC [le_refl, le_infty]
@@ -5862,8 +5866,7 @@ Proof
  >> `!x. x IN m_space m ==> g x <> NegInf` by METIS_TAC [lt_infty, lte_trans, num_not_infty]
  >> `!x. x IN m_space m ==> f x <> NegInf` by METIS_TAC [lt_infty, lte_trans, num_not_infty]
  >> Know `g IN measurable (m_space m,measurable_sets m) Borel`
- >- (RW_TAC std_ss [IN_MEASURABLE_BOREL, space_def, subsets_def, IN_FUNSET, IN_UNIV]
-     >- METIS_TAC [measure_space_def] \\
+ >- (RW_TAC std_ss [IN_MEASURABLE_BOREL, space_def, subsets_def, IN_FUNSET, IN_UNIV] \\
      Cases_on `Normal c <= 0`
      >- (`{x | g x < Normal c} INTER m_space m = {}`
             by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, NOT_IN_EMPTY, IN_INTER] \\
@@ -6037,6 +6040,8 @@ Theorem integral_add_lemma :
       (integral m f = pos_fn_integral m f1 - pos_fn_integral m f2)
 Proof
     rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> REWRITE_TAC [integral_def]
  >> `!x. x IN m_space m ==> f1 x <> NegInf` by METIS_TAC [pos_not_neginf]
  >> `!x. x IN m_space m ==> f2 x <> NegInf` by METIS_TAC [pos_not_neginf]
@@ -6156,6 +6161,8 @@ Theorem integral_add :
            (integral m (\x. f x + g x) = integral m f + integral m g)
 Proof
     RW_TAC std_ss []
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Know `integral m (\x. f x + g x) =
           pos_fn_integral m (\x. fn_plus f x + fn_plus g x) -
           pos_fn_integral m (\x. fn_minus f x + fn_minus g x)`
@@ -6641,14 +6648,16 @@ QED
    added `integrable m f` into antecedents, otherwise `integral m f` is not defined;
    added `measure m (m_space m) < PosInf` into antecedents
  *)
-val finite_support_integral_reduce = store_thm
-  ("finite_support_integral_reduce",
-  ``!m f. measure_space m /\ f IN measurable (m_space m,measurable_sets m) Borel /\
+Theorem finite_support_integral_reduce :
+    !m f. measure_space m /\ f IN measurable (m_space m,measurable_sets m) Borel /\
          (!x. x IN m_space m ==> f x <> NegInf /\ f x <> PosInf) /\
           FINITE (IMAGE f (m_space m)) /\
           integrable m f /\ measure m (m_space m) < PosInf ==>
-         (integral m f = finite_space_integral m f)``,
+         (integral m f = finite_space_integral m f)
+Proof
     rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> `?c1 n. BIJ c1 (count n) (IMAGE f (m_space m))`
        by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ]
  >> `?c. !i. (i IN count n ==> (c1 i = Normal (c i)))`
@@ -6914,7 +6923,8 @@ val finite_support_integral_reduce = store_thm
  >- METIS_TAC [mul_not_infty]
  >> MATCH_MP_TAC pos_not_neginf
  >> IMP_RES_TAC MEASURE_SPACE_POSITIVE
- >> METIS_TAC [positive_def]);
+ >> METIS_TAC [positive_def]
+QED
 
 (* special case of "finite_support_integral_reduce": (m_space m) is finite.
 
@@ -6944,9 +6954,10 @@ Theorem finite_space_POW_integral_reduce :
          (integral m f = SIGMA (\x. f x * (measure m {x})) (m_space m))
 Proof
     RW_TAC std_ss []
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> `f IN measurable (m_space m, measurable_sets m) Borel`
         by (RW_TAC std_ss [IN_MEASURABLE_BOREL,IN_FUNSET,IN_UNIV,space_def,subsets_def]
-            >- FULL_SIMP_TAC std_ss [measure_space_def]
             >> METIS_TAC [INTER_SUBSET,IN_POW])
  >> `?c n. BIJ c (count n) (m_space m)` by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ]
  >> `FINITE (count n)` by RW_TAC std_ss [FINITE_COUNT]
@@ -7259,6 +7270,8 @@ Theorem measure_space_density :
          (!x. x IN m_space m ==> 0 <= f x) ==> measure_space (density m f)
 Proof
     Q.X_GEN_TAC ‘M’ >> rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space M)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> SIMP_TAC std_ss [measure_space_def, density_measure_def, density_def,
                      m_space_def, measurable_sets_def]
  >> Q.PAT_ASSUM `measure_space M`
@@ -7318,7 +7331,8 @@ Theorem measure_space_density' :
 Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC measure_space_density >> art [FN_PLUS_POS]
- >> MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS >> art []
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS
+ >> rw [MEASURE_SPACE_SIGMA_ALGEBRA]
 QED
 
 val suminf_measure = prove (
@@ -7708,6 +7722,8 @@ Theorem integral_abs_eq_0 :
         ((AE x::m. (abs o f) x = 0) <=> (measure m {x | x IN m_space m /\ f x <> 0} = 0))
 Proof
     rpt GEN_TAC >> STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Know `{x | x IN m_space m /\ f x <> 0} IN measurable_sets m`
  >- (`{x | x IN m_space m /\ f x <> 0} = {x | f x <> 0} INTER m_space m` by SET_TAC [] \\
      POP_ORW >> METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC
@@ -7727,7 +7743,6 @@ Proof
          ((GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites) o wrap o SYM) \\
        IMP_RES_TAC MEASURE_SPACE_INCREASING \\
        MATCH_MP_TAC INCREASING >> fs [abs_eq_0] ]) >> DISCH_TAC
- >> `sigma_algebra (m_space m,measurable_sets m)` by PROVE_TAC [measure_space_def]
  (* RHS ==> LHS, by AE and integral_null_set *)
  >> reverse EQ_TAC
  >- (SIMP_TAC bool_ss [AE_ALT, GSYM IN_NULL_SET] >> STRIP_TAC \\
@@ -8395,12 +8410,15 @@ val RADON_F_def = Define
 val RADON_F_integrals_def = Define
    `RADON_F_integrals m v = {r | ?f. (r = pos_fn_integral m f) /\ f IN RADON_F m v}`;
 
-val lemma_radon_max_in_F = Q.prove (
-   `!f g m v. measure_space m /\ measure_space v /\
+Theorem lemma_radon_max_in_F[local] :
+    !f g m v. measure_space m /\ measure_space v /\
               (m_space v = m_space m) /\ (measurable_sets v = measurable_sets m) /\
               f IN RADON_F m v /\ g IN RADON_F m v
-          ==> (\x. max (f x) (g x)) IN RADON_F m v`,
+          ==> (\x. max (f x) (g x)) IN RADON_F m v
+Proof
     RW_TAC real_ss [RADON_F_def, GSPECIFICATION, max_le, le_max]
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >- FULL_SIMP_TAC std_ss [IN_MEASURABLE_BOREL_MAX, measure_space_def]
  >> Q.ABBREV_TAC `A1 = {x | x IN A /\ g x < f x}`
  >> Q.ABBREV_TAC `A2 = {x | x IN A /\ f x <= g x}`
@@ -10028,11 +10046,14 @@ Proof
    FIRST_X_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [SPECIFICATION]) THEN
    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
    ONCE_REWRITE_TAC [METIS [] ``PosInf = (\x. PosInf) x``] THEN
-   MATCH_MP_TAC MEASURABLE_IF THEN REPEAT CONJ_TAC THENL
-   [SIMP_TAC std_ss [SPACE, m_space_def, measurable_sets_def] THEN
+   MATCH_MP_TAC MEASURABLE_IF >> rpt STRIP_TAC >| (* 5 subgoals *)
+   [(* goal 1 (of 5) *)
+    SIMP_TAC std_ss [SPACE, m_space_def, measurable_sets_def] THEN
     MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN Q.EXISTS_TAC `PosInf` THEN
     METIS_TAC [measure_space_def],
+    (* goal 2 (of 5) *)
     ALL_TAC,
+    (* goal 3 (of 5) *)
     ONCE_REWRITE_TAC [prove (``{x | x IN m_space M /\ Q0 x} = {x | x IN m_space M /\ x IN Q0}``,
      SIMP_TAC std_ss [SPECIFICATION])] THEN SIMP_TAC std_ss [GSYM INTER_DEF] THEN
     ONCE_REWRITE_TAC [METIS [subsets_def]
@@ -10040,7 +10061,10 @@ Proof
     MATCH_MP_TAC ALGEBRA_INTER THEN SIMP_TAC std_ss [subsets_def] THEN
     CONJ_TAC THENL [METIS_TAC [measure_space_def, sigma_algebra_def], ALL_TAC] THEN
     METIS_TAC [MEASURE_SPACE_MSPACE_MEASURABLE],
-    ASM_REWRITE_TAC []] THEN
+    (* goal 4 (of 5) *)
+    ASM_REWRITE_TAC [],
+    (* goal 5 (of 5) *)
+    rw [SIGMA_ALGEBRA_BOREL] ] THEN
    Know `!x. suminf (\i. f i x * indicator_fn (Q i) x) =
              sup (IMAGE (\n. SIGMA (\i. f i x * indicator_fn (Q i) x)
                              (count n)) univ(:num))`
@@ -10621,6 +10645,8 @@ Theorem Radon_Nikodym_sigma_finite : (* was: RADON_NIKODYM *)
              (pos_fn_integral M (\x. f x * indicator_fn A x) = measure N A)
 Proof
     rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space M) /\ sigma_algebra (measurable_space N)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Q.PAT_X_ASSUM `m_space M = m_space N` (ASSUME_TAC o SYM)
  >> Q.PAT_X_ASSUM `measurable_sets M = measurable_sets N` (ASSUME_TAC o SYM)
  >> ASM_REWRITE_TAC []
@@ -10697,10 +10723,9 @@ Proof
      reverse CONJ_TAC
      >- (MATCH_MP_TAC pos_fn_integral_zero \\
          METIS_TAC [measure_space_def, positive_def]) \\
-     SIMP_TAC std_ss [IN_MEASURABLE_BOREL] THEN ASM_SIMP_TAC std_ss [] \\
+     ASM_SIMP_TAC std_ss [IN_MEASURABLE_BOREL] \\
      ASM_SIMP_TAC std_ss [space_def, INTER_EMPTY, subsets_def] \\
-     CONJ_TAC >- (EVAL_TAC >> SRW_TAC [] [IN_DEF, IN_FUNSET]) \\
-     METIS_TAC [IN_SING])
+     SRW_TAC [] [IN_DEF, IN_FUNSET])
  >> Suff `measure_absolutely_continuous (measure N) mt`
  >- (STRIP_TAC \\
      MP_TAC (Q.SPECL [`mt`, `N`] Radon_Nikodym_finite_arbitrary) \\
@@ -10956,6 +10981,7 @@ Proof
     >- (irule lte_trans >> qexists_tac ‘f x’ >> simp[])
 QED
 
+(*
 Theorem integral_add':
     !m f g. measure_space m /\ integrable m f /\ integrable m g ==>
         integral m (λx. f x + g x) = integral m f + integral m g
@@ -11082,6 +11108,7 @@ Proof
  >> Suff ‘integral m (\x. f x + g x) = integral m f + integral m g’ >- rw []
  >> MATCH_MP_TAC integral_add' >> rw []
 QED
+ *)
 
 val _ = export_theory ();
 
