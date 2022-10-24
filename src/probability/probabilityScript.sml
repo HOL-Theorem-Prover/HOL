@@ -5211,10 +5211,6 @@ Theorem converge_LP_alt_pow =
         SIMP_RULE std_ss [absolute_moment_def, sub_rzero]
                   converge_LP_alt_absolute_moment;
 
-
-(* TODO *)
-
-
 (* Theorem 4.1.1 [1, p.69] (2) *)
 Theorem converge_AE_alt_sup :
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
@@ -5239,6 +5235,8 @@ Proof
      EQ_TAC >> RW_TAC std_ss [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o
                  (REWRITE_RULE [LESS_EQ_REFL]) o (Q.SPEC `m`))) >> Rewr'
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know `!e n. {x | x IN p_space p /\ abs (X n x - Y x) <= e} IN events p`
  >- (RW_TAC std_ss [abs_bounds] \\
      Q.ABBREV_TAC `f = \x. X n x - Y x` \\
@@ -5456,6 +5454,8 @@ Proof
      EQ_TAC >> RW_TAC std_ss [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o
                  (REWRITE_RULE [LESS_EQ_REFL]) o (Q.SPEC `m`))) >> Rewr'
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> fs [real_random_variable_def]
  >> Know `!e n. {x | x IN p_space p /\ abs (X n x - Y x) <= e} IN events p`
  >- (RW_TAC std_ss [abs_bounds] \\
@@ -5567,6 +5567,8 @@ Proof
  >> Know `!n. D n SUBSET B n`
  >- (RW_TAC set_ss [Abbr `D`, Abbr `B`, SUBSET_DEF] \\
      Q.EXISTS_TAC `n` >> art [LESS_EQ_REFL]) >> DISCH_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Q.ABBREV_TAC `f = \n x. X n x - Y x`
  >> Know `!n. (f n) IN measurable (m_space p,measurable_sets p) Borel`
  >- (GEN_TAC >> Q.UNABBREV_TAC `f` >> BETA_TAC \\
@@ -5675,6 +5677,8 @@ Proof
  >> rpt STRIP_TAC
  >> fs [real_random_variable_def]
  >> Q.ABBREV_TAC `f = \n x. X n x - Y x`
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know `!n. (f n) IN measurable (m_space p,measurable_sets p) Borel`
  >- (GEN_TAC >> Q.UNABBREV_TAC `f` >> BETA_TAC \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
@@ -5725,6 +5729,8 @@ Proof
              (prob p (limsup (\n. {x | x IN p_space p /\ e < abs (X n x - Y x)})) = 0))`
  >- METIS_TAC []
  >> rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> fs [real_random_variable_def]
  >> Q.ABBREV_TAC `f = \n x. X n x - Y x`
  >> Know `!n. (f n) IN measurable (m_space p,measurable_sets p) Borel`
@@ -5824,6 +5830,8 @@ Proof
  >> `real_random_variable (\x. 0) p` by PROVE_TAC [real_random_variable_zero]
  >> RW_TAC real_ss [converge_LP_alt_pow, converge_PR_def, LIM_SEQUENTIALLY,
                     dist, expectation_def, sub_rzero, REAL_SUB_RZERO]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> fs [real_random_variable_def]
  >> rename1 `0 < d` (* the last assumption *)
  >> Know `!n. {x | x IN p_space p /\ e < abs (X n x)} IN events p`
@@ -5935,8 +5943,7 @@ Proof
      {x | Normal (E pow k) <= (\x. abs (X n x) pow k) x} INTER m_space p`
         by SET_TAC [] >> POP_ORW \\
      Suff `(\x. abs (X n x) pow k) IN measurable (m_space p,measurable_sets p) Borel`
-     >- (DISCH_THEN (REWRITE_TAC o wrap o
-                     (MATCH_MP IN_MEASURABLE_BOREL_ALL_MEASURE))) \\
+     >- rw [IN_MEASURABLE_BOREL_ALL_MEASURE] \\
     `!x. abs (X n x) = (\x. abs (X n x)) x` by METIS_TAC [] >> POP_ORW \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS >> Q.EXISTS_TAC `X n` \\
@@ -6248,6 +6255,8 @@ Proof
  >> rw [MAX_LE]
  >> NTAC 2 (Q.PAT_X_ASSUM ‘!n. _ <= n ==> P’ (MP_TAC o (Q.SPEC ‘n’)))
  >> RW_TAC std_ss []
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  (* stage work *)
  >> Know `!Z b. real_random_variable Z p ==>
                 {x | x IN p_space p /\ b < abs (Z x)} IN events p`
@@ -6839,6 +6848,8 @@ Theorem expectation_bounds :
           suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)})
 Proof
     rpt GEN_TAC >> STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Q.ABBREV_TAC ‘A = \n. {x | x IN p_space p /\ &n <= abs (X x) /\ abs (X x) < &SUC n}’
  >> Know ‘!n. A n IN events p’
  >- (RW_TAC std_ss [Abbr ‘A’] \\
@@ -7400,6 +7411,8 @@ Proof
  >> MATCH_MP_TAC let_trans
  >> Q.EXISTS_TAC ‘1 + suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)})’
  >> FULL_SIMP_TAC std_ss [GSYM lt_infty]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know ‘suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)}) <> NegInf’
  >- (MATCH_MP_TAC pos_not_neginf \\
      MATCH_MP_TAC ext_suminf_pos >> rw [] \\
@@ -7588,7 +7601,7 @@ Proof
  (* applying integral_cong_measure *)
  >> ‘prob_space (space Borel,subsets Borel,distribution p (X i)) /\
      prob_space (space Borel,subsets Borel,distribution p (X n))’
-       by METIS_TAC [distribution_prob_space]
+       by METIS_TAC [distribution_prob_space, SIGMA_ALGEBRA_BOREL]
  >> MATCH_MP_TAC integrable_cong_measure
  >> fs [prob_space_def]
 QED
@@ -7642,7 +7655,7 @@ Proof
  (* applying integral_cong_measure *)
  >> ‘prob_space (space Borel,subsets Borel,distribution p (X i)) /\
      prob_space (space Borel,subsets Borel,distribution p (X n))’
-       by METIS_TAC [distribution_prob_space]
+       by METIS_TAC [distribution_prob_space, SIGMA_ALGEBRA_BOREL]
  >> MATCH_MP_TAC integral_cong_measure
  >> fs [prob_space_def]
 QED
@@ -7771,11 +7784,13 @@ Proof
  >> Q.ABBREV_TAC ‘f = \x. (X x,Y x)’
  >> Q.ABBREV_TAC ‘u = \(x,y). x * (y :extreal)’
  >> ‘(\x. X x * Y x) = u o f’ by rw [Abbr ‘u’, Abbr ‘f’, o_DEF] >> POP_ORW
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  (* applying MEASURABLE_PROD_SIGMA' *)
  >> Know ‘f IN measurable (m_space p,measurable_sets p) (Borel CROSS Borel)’
  >- (MATCH_MP_TAC MEASURABLE_PROD_SIGMA' \\
-     STRONG_CONJ_TAC >- fs [measure_space_def] >> DISCH_TAC \\
-     rw [Abbr ‘f’, o_DEF, ETA_AX])
+     simp [Abbr ‘f’, o_DEF, ETA_AX] \\
+     MP_TAC SIGMA_ALGEBRA_BOREL >> rw [sigma_algebra_def, algebra_def])
  >> DISCH_TAC
  >> Know ‘u IN measurable (Borel CROSS Borel) Borel’
  >- (Q.UNABBREV_TAC ‘u’ \\
@@ -7892,8 +7907,7 @@ Proof
  >> Q.PAT_X_ASSUM ‘f IN measurable (m_space p,measurable_sets p) (Borel CROSS Borel)’ K_TAC
  >> Q.UNABBREV_TAC ‘f’
  (* applying Fubini; finiteness / integrability is needed here. *)
- >> Know ‘integral (m1 CROSS m2) u =
-          integral m2 (\y. integral m1 (\x. u (x,y)))’
+ >> Know ‘integral (m1 CROSS m2) u = integral m2 (\y. integral m1 (\x. u (x,y)))’
  >- (MP_TAC (ISPECL [“m1 :extreal m_space”, “m2 :extreal m_space”,
                      “u :extreal # extreal -> extreal”] Fubini) \\
      Know ‘((m_space m1,measurable_sets m1) CROSS
@@ -7986,7 +8000,7 @@ Proof
        >- (MATCH_MP_TAC pos_fn_integral_distr \\
            rw [FN_PLUS_POS, SIGMA_ALGEBRA_BOREL] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS \\
-           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I]) >> Rewr' \\
+           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I, SIGMA_ALGEBRA_BOREL]) >> Rewr' \\
       ‘(fn_plus (\x. x) o X) = fn_plus X’ by rw [fn_plus_def, o_DEF] >> POP_ORW \\
        fs [integrable_def],
        (* goal 2 (of 2) *)
@@ -7995,7 +8009,7 @@ Proof
        >- (MATCH_MP_TAC pos_fn_integral_distr \\
            rw [FN_MINUS_POS, SIGMA_ALGEBRA_BOREL] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS \\
-           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I]) >> Rewr' \\
+           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I, SIGMA_ALGEBRA_BOREL]) >> Rewr' \\
       ‘(fn_minus (\x. x) o X) = fn_minus X’ by rw [fn_minus_def, o_DEF] >> POP_ORW \\
        fs [integrable_def] ])
  >> Rewr'
@@ -8597,7 +8611,7 @@ Theorem pdf_le_pos :
 Proof
     rpt STRIP_TAC
  >> `measure_space (space Borel, subsets Borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space, prob_space_def]
+       by PROVE_TAC [distribution_prob_space, prob_space_def, SIGMA_ALGEBRA_BOREL]
  >> ASSUME_TAC SIGMA_FINITE_LBOREL
  >> ASSUME_TAC MEASURE_SPACE_LBOREL
  >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
@@ -8616,7 +8630,7 @@ Theorem expectation_pdf_1 :
 Proof
     rpt STRIP_TAC
  >> `prob_space (space Borel, subsets Borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space]
+       by PROVE_TAC [distribution_prob_space, SIGMA_ALGEBRA_BOREL]
  >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
  >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
                    expectation_def]
