@@ -10981,7 +10981,6 @@ Proof
     >- (irule lte_trans >> qexists_tac ‘f x’ >> simp[])
 QED
 
-(*
 Theorem integral_add':
     !m f g. measure_space m /\ integrable m f /\ integrable m g ==>
         integral m (λx. f x + g x) = integral m f + integral m g
@@ -11108,7 +11107,6 @@ Proof
  >> Suff ‘integral m (\x. f x + g x) = integral m f + integral m g’ >- rw []
  >> MATCH_MP_TAC integral_add' >> rw []
 QED
- *)
 
 val _ = export_theory ();
 
