@@ -651,6 +651,8 @@ Theorem SLLN_uncorrelated :
 Proof
     PRINT_TAC "proving SLLN_uncorrelated (Strong Law of Large Numbers for uncorrelated r.v.'s) ..."
  >> RW_TAC std_ss [LLN_def]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  (* without loss of generality *)
  >> MP_TAC (Q.SPECL [`p`, `X`, `Z`, `\n. expectation p (Z n)`, `c`]
                     SLLN_uncorrelated_wlog)
@@ -1789,6 +1791,8 @@ Theorem equivalent_events :
             !n. {x | x IN p_space p /\ X n x <> Y n x} IN events p
 Proof
     RW_TAC std_ss [events_def, p_space_def, prob_space_def]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> `{x | x IN m_space p /\ X n x <> Y n x} =
      {x | X n x <> Y n x} INTER m_space p` by SET_TAC []
  >> POP_ORW
@@ -3079,6 +3083,8 @@ Theorem WLLN_IID :
 Proof
     PRINT_TAC "proving WLLN_IID (Weak Law of Large Numbers for I.I.D. r.v.'s) ..."
  >> RW_TAC std_ss [LLN_alt_converge_PR_IID]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  (* define Y = truncated X, Z = SIGMA Y and prove their properties *)
  >> LLN_IID_shared_tactics
  (* stage work *)
@@ -4388,6 +4394,8 @@ Theorem SLLN_IID_lemma :
 Proof
     PRINT_TAC "proving SLLN_IID (Strong Law of Large Numbers for I.I.D. r.v.'s) ..."
  >> rpt GEN_TAC >> STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  (* define Y = truncated X, Z = SIGMA Y and prove their properties *)
  >> LLN_IID_shared_tactics
  (* additional properties of Z (n = 0 is included as a trivial case) *)
@@ -5151,6 +5159,8 @@ Theorem SLLN_IID_zero[local] :
       ==> LLN p X almost_everywhere
 Proof
     rw [LLN_alt_converge_AE_IID, converge_AE_def, AE_DEF]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know ‘!n. expectation p (X n) = 0’
  >- (Q.PAT_X_ASSUM ‘expectation p (X 0) = 0’ (ONCE_REWRITE_TAC o wrap o SYM) \\
      MATCH_MP_TAC identical_distribution_expectation >> rw [] \\
@@ -5984,6 +5994,8 @@ Theorem SLLN_IID_diverge :
       ==> AE x::p. limsup (\n. abs (SIGMA (\i. X i x) (count (SUC n))) / &SUC n) = PosInf
 Proof
     rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know ‘!a. 0 < a ==> expectation p (\x. abs (X 0 x) / Normal a) = PosInf’
  >- (rpt STRIP_TAC >> CCONTR_TAC \\
      Q.ABBREV_TAC ‘Y = \x. abs (X 0 x) / Normal a’ \\

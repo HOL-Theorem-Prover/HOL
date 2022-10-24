@@ -37,7 +37,8 @@ Theorem PDF_LE_POS :
 Proof
     rpt STRIP_TAC
  >> `measure_space (space borel, subsets borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space, prob_space_def]
+       by PROVE_TAC [distribution_prob_space, prob_space_def,
+                     sigma_algebra_borel]
  >> ASSUME_TAC sigma_finite_lborel
  >> ASSUME_TAC measure_space_lborel
  >> MP_TAC (ISPECL [(* m *) ``lborel``,
@@ -56,7 +57,7 @@ Theorem EXPECTATION_PDF_1 : (* was: INTEGRAL_PDF_1 *)
 Proof
     rpt STRIP_TAC
  >> `prob_space (space borel, subsets borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space]
+       by PROVE_TAC [distribution_prob_space, sigma_algebra_borel]
  >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
  >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
                    expectation_def]
