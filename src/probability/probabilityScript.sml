@@ -1128,20 +1128,20 @@ val distribution_le_1 = store_thm
  >> MATCH_MP_TAC PROB_LE_1
  >> RW_TAC std_ss [IN_POW, INTER_SUBSET]);
 
-(* Theorem 3.1.3 [2, p.36], cf. measure_space_distr *)
-val distribution_prob_space = store_thm (* was: prob_space_distr *)
-  ("distribution_prob_space",
-  ``!p X s. prob_space p /\ random_variable X p s ==>
-            prob_space (space s, subsets s, distribution p X)``,
+(* Theorem 3.1.3 [2, p.36], cf. measure_space_distr
+
+   NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’
+ *)
+Theorem distribution_prob_space : (* was: prob_space_distr *)
+    !p X s. prob_space p /\ sigma_algebra s /\ random_variable X p s ==>
+            prob_space (space s, subsets s, distribution p X)
+Proof
     RW_TAC std_ss [random_variable_def, distribution_def, prob_space_def, measure_def, PSPACE,
                    measure_space_def, m_space_def, measurable_sets_def, IN_MEASURABLE,
                    SPACE, positive_def, PREIMAGE_EMPTY, INTER_EMPTY, PROB_EMPTY,
                    PROB_POSITIVE, space_def, subsets_def, countably_additive_def]
  >- (Q.PAT_X_ASSUM
-       `!f. f IN (UNIV -> measurable_sets p) /\
-            (!m n. m <> n ==> DISJOINT (f m) (f n)) /\
-            BIGUNION (IMAGE f UNIV) IN measurable_sets p ==>
-            (measure p (BIGUNION (IMAGE f univ(:num))) = suminf (measure p o f))`
+       `!f. _ ==> measure p (BIGUNION (IMAGE f univ(:num))) = suminf (measure p o f)`
        (MP_TAC o Q.SPEC `(\x. PREIMAGE X x INTER p_space p) o f`) \\
      RW_TAC std_ss [prob_def, o_DEF, PREIMAGE_BIGUNION, IMAGE_IMAGE] \\
     `(BIGUNION (IMAGE (\x. PREIMAGE X (f x)) UNIV) INTER p_space p) =
@@ -1165,12 +1165,16 @@ val distribution_prob_space = store_thm (* was: prob_space_distr *)
  >> Suff `PREIMAGE X (space s) INTER p_space p = p_space p`
  >- RW_TAC std_ss [prob_def, p_space_def]
  >> FULL_SIMP_TAC std_ss [IN_FUNSET, EXTENSION, IN_PREIMAGE, IN_INTER]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
-(* `prob_space p` is added since it's not provided by random_variable_def *)
+(* `prob_space p` is added since it's not provided by random_variable_def
+
+   NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’
+ *)
 Theorem uniform_distribution_prob_space :
     !X p s. prob_space p /\ FINITE (p_space p) /\
-            FINITE (space s) /\ random_variable X p s ==>
+            FINITE (space s) /\ sigma_algebra s /\ random_variable X p s ==>
             prob_space (space s, subsets s, uniform_distribution s)
 Proof
     RW_TAC std_ss []
@@ -1213,23 +1217,23 @@ Proof
  >> ASM_SIMP_TAC real_ss [extreal_div_eq, extreal_add_def]
 QED
 
-val distribution_partition = store_thm
-  ("distribution_partition",
-  ``!p X. prob_space p /\ (!x. x IN p_space p ==> {x} IN events p) /\
+Theorem distribution_partition :
+    !p X. prob_space p /\ (!x. x IN p_space p ==> {x} IN events p) /\
           FINITE (p_space p) /\ random_variable X p Borel ==>
-         (SIGMA (\x. distribution p X {x}) (IMAGE X (p_space p)) = 1)``,
+         (SIGMA (\x. distribution p X {x}) (IMAGE X (p_space p)) = 1)
+Proof
     RW_TAC std_ss []
  >> `random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p)))`
-      by (RW_TAC std_ss [random_variable_def]
-          >> RW_TAC std_ss [IN_MEASURABLE, IN_FUNSET, space_def, subsets_def,
-                            IN_IMAGE,POW_SIGMA_ALGEBRA]
-          >| [METIS_TAC [IN_MEASURABLE, random_variable_def],
-              METIS_TAC [],
-              METIS_TAC [PROB_DISCRETE_EVENTS, INTER_SUBSET]])
+      by (RW_TAC std_ss [random_variable_def] \\
+          RW_TAC std_ss [IN_MEASURABLE, IN_FUNSET, space_def, subsets_def,
+                         IN_IMAGE,POW_SIGMA_ALGEBRA]
+          >- METIS_TAC [] \\
+          METIS_TAC [PROB_DISCRETE_EVENTS, INTER_SUBSET])
  >> `prob_space (space (IMAGE X (p_space p), POW (IMAGE X (p_space p))),
                  subsets (IMAGE X (p_space p), POW (IMAGE X (p_space p))),
                  distribution p X)`
-     by METIS_TAC [distribution_prob_space]
+     by (MATCH_MP_TAC distribution_prob_space >> art [] \\
+         REWRITE_TAC [POW_SIGMA_ALGEBRA])
  >> (MP_TAC o Q.ISPEC `(space (IMAGE (X :'a->extreal) (p_space p), POW (IMAGE X (p_space p))),
                         subsets (IMAGE X (p_space p),POW (IMAGE X (p_space p))),
                         distribution p X)`) PROB_EXTREAL_SUM_IMAGE_SPACE
@@ -1239,7 +1243,8 @@ val distribution_partition = store_thm
  >> `FINITE (IMAGE X (m_space p))` by METIS_TAC [IMAGE_FINITE]
  >> `(!x. x IN IMAGE X (m_space p) ==> {x} IN POW (IMAGE X (m_space p)))`
      by RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_IMAGE, IN_SING]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 Theorem distribution_space_eq_1 : (* was: lemma1 (normal_rvScript.sml) *)
     !p X. prob_space p ==> (distribution p X (IMAGE X (p_space p)) = 1)
@@ -1252,18 +1257,23 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-val distribution_lebesgue_thm1 = store_thm
-  ("distribution_lebesgue_thm1",
- ``!X p s A. prob_space p /\ random_variable X p s /\ A IN subsets s ==>
-      (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))``,
+(* NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’ (‘random_variable’) *)
+Theorem distribution_lebesgue_thm1 :
+   !X p s A. prob_space p /\ sigma_algebra s /\
+             random_variable X p s /\ A IN subsets s ==>
+      (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))
+Proof
    RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def,
                   IN_MEASURABLE, p_space_def, prob_def, subsets_def, space_def,
-                  GSYM integral_indicator]);
+                  GSYM integral_indicator]
+QED
 
-val distribution_lebesgue_thm2 = store_thm
-  ("distribution_lebesgue_thm2",
-  ``!X p s A. prob_space p /\ random_variable X p s /\ A IN subsets s ==>
-      (distribution p X A = integral (space s, subsets s, distribution p X) (indicator_fn A))``,
+(* NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’ (‘random_variable’) *)
+Theorem distribution_lebesgue_thm2 :
+    !X p s A. prob_space p /\ sigma_algebra s /\
+              random_variable X p s /\ A IN subsets s ==>
+      (distribution p X A = integral (space s, subsets s, distribution p X) (indicator_fn A))
+Proof
     rpt STRIP_TAC
  >> `prob_space (space s,subsets s,distribution p X)`
      by RW_TAC std_ss [distribution_prob_space]
@@ -1277,7 +1287,8 @@ val distribution_lebesgue_thm2 = store_thm
  >> (MP_TAC o Q.SPECL [`(space s,subsets s,\A. measure p (PREIMAGE X A INTER m_space p))`,`A`]
      o INST_TYPE [``:'a``|->``:'b``]) integral_indicator
  >> FULL_SIMP_TAC std_ss [measurable_sets_def, prob_space_def, distribution_def,
-                          prob_def, p_space_def]);
+                          prob_def, p_space_def]
+QED
 
 (* ************************************************************************* *)
 
@@ -1398,20 +1409,34 @@ Proof
       RW_TAC std_ss [] ]
 QED
 
+(* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
 Theorem real_random_variable_fn_plus :
-    !p X. real_random_variable X p ==> real_random_variable (fn_plus X) p
+    !p X. prob_space p /\ real_random_variable X p ==>
+          real_random_variable (fn_plus X) p
 Proof
-    rw [real_random_variable, p_space_def, events_def]
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
+ >> fs [real_random_variable, p_space_def, events_def]
+ >> CONJ_TAC
  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS >> art [])
+ >> NTAC 3 STRIP_TAC
  >- (MATCH_MP_TAC pos_not_neginf >> rw [FN_PLUS_POS])
  >> MATCH_MP_TAC FN_PLUS_NOT_INFTY >> rw []
 QED
 
+(* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
 Theorem real_random_variable_fn_minus :
-    !p X. real_random_variable X p ==> real_random_variable (fn_minus X) p
+    !p X. prob_space p /\ real_random_variable X p ==>
+          real_random_variable (fn_minus X) p
 Proof
-    rw [real_random_variable, p_space_def, events_def]
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
+ >> fs [real_random_variable, p_space_def, events_def]
+ >> CONJ_TAC
  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS >> art [])
+ >> NTAC 3 STRIP_TAC
  >- (MATCH_MP_TAC pos_not_neginf >> rw [FN_MINUS_POS])
  >> MATCH_MP_TAC FN_MINUS_NOT_INFTY >> rw []
 QED
@@ -1566,17 +1591,17 @@ val prob_x_eq_1_imp_prob_y_eq_0 = store_thm
  >- RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_SING]
  >> METIS_TAC [PROB_EMPTY]);
 
-(* this is the last theorem in HVG's "probability_hvgScript.sml" *)
-val distribution_x_eq_1_imp_distribution_y_eq_0 = store_thm
-  ("distribution_x_eq_1_imp_distribution_y_eq_0",
-  ``!X p x. prob_space p /\
+(* NOTE: this is the last theorem in HVG's "probability_hvgScript.sml" *)
+Theorem distribution_x_eq_1_imp_distribution_y_eq_0 :
+    !X p x. prob_space p /\
             random_variable X p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
            (distribution p X {x} = 1)
-        ==> !y. y <> x ==> (distribution p X {y} = 0)``,
+        ==> !y. y <> x ==> (distribution p X {y} = 0)
+Proof
     rpt STRIP_TAC
  >> (MP_TAC o Q.SPECL [`p`, `X`, `(IMAGE X (p_space p),POW (IMAGE X (p_space p)))`])
         distribution_prob_space
- >> RW_TAC std_ss [space_def, subsets_def]
+ >> RW_TAC std_ss [space_def, subsets_def, POW_SIGMA_ALGEBRA]
  >> (MP_TAC o Q.ISPECL [`(IMAGE (X :'a -> 'b) (p_space (p :'a p_space)),
                                 POW (IMAGE X (p_space p)),distribution p X)`, `x:'b`])
         prob_x_eq_1_imp_prob_y_eq_0
@@ -1597,7 +1622,8 @@ val distribution_x_eq_1_imp_distribution_y_eq_0 = store_thm
          >> METIS_TAC [])
  >> POP_ORW
  >> MATCH_MP_TAC PROB_EMPTY
- >> FULL_SIMP_TAC std_ss [random_variable_def]);
+ >> FULL_SIMP_TAC std_ss [random_variable_def]
+QED
 
 val joint_distribution_sym = store_thm
   ("joint_distribution_sym",
@@ -1845,7 +1871,8 @@ Proof
      Q.ABBREV_TAC ‘s = (IMAGE X (p_space p),POW (IMAGE X (p_space p)))’ \\
     ‘(IMAGE X (p_space p),POW (IMAGE X (p_space p)),distribution p X) =
      (space s,subsets s,distribution p X)’ by rw [Abbr ‘s’] >> POP_ORW \\
-     MATCH_MP_TAC distribution_prob_space >> art [])
+     MATCH_MP_TAC distribution_prob_space \\
+     rw [POW_SIGMA_ALGEBRA, Abbr ‘s’])
  >> DISCH_TAC
  >> (MP_TAC o Q.SPEC `p1` o INST_TYPE [``:'a`` |-> ``:'b``]) PROB_EXTREAL_SUM_IMAGE_SPACE
  >> `FINITE (p_space p1)` by METIS_TAC [PSPACE, IMAGE_FINITE]
@@ -1859,7 +1886,7 @@ QED
 Theorem joint_distribution_sum_mul1 :
     !p X Y f. prob_space p /\ FINITE (p_space p) /\
               (events p = POW (p_space p)) /\
-              (!x. f x <> PosInf /\ f x <> NegInf)  ==>
+              (!x. f x <> PosInf /\ f x <> NegInf) ==>
         (SIGMA (\(x,y). joint_distribution p X Y {(x,y)} * (f x))
                (IMAGE X (p_space p) CROSS IMAGE Y (p_space p)) =
          SIGMA (\x. distribution p X {x} * (f x)) (IMAGE X (p_space p)))
@@ -1876,12 +1903,10 @@ Proof
  >> (MP_TAC o GSYM o Q.SPECL [`s1`,`s2`,`(\a b. joint_distribution p X Y {(a,b)} * (f a))`] o
      INST_TYPE [``:'a`` |-> ``:'b``, ``:'b`` |-> ``:'c``]) EXTREAL_SUM_IMAGE_SUM_IMAGE
  >> RW_TAC std_ss []
- >> Know `(!x.
-             x IN s1 CROSS s2 ==>
-             NegInf <> joint_distribution p X Y {x} * f (FST x)) \/
-          (!x.
-             x IN s1 CROSS s2 ==>
-             PosInf <> joint_distribution p X Y {x} * f (FST x))`
+ >> Know `(!x. x IN s1 CROSS s2 ==>
+               NegInf <> joint_distribution p X Y {x} * f (FST x)) \/
+          (!x. x IN s1 CROSS s2 ==>
+               PosInf <> joint_distribution p X Y {x} * f (FST x))`
  >- (DISJ2_TAC >> RW_TAC std_ss [] \\
      Suff `joint_distribution p X Y {x} * f (FST x) <> PosInf` >- rw [] \\
     `joint_distribution p X Y {x} <> NegInf /\
@@ -2946,6 +2971,8 @@ Proof
      MATCH_MP_TAC lt_imp_le >> art [])
  >> fs [real_random_variable, prob_space_def, p_space_def, events_def]
  >> Q.ABBREV_TAC ‘Y = \x. X x - expectation p X’ >> simp []
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Know ‘Y IN measurable (m_space p,measurable_sets p) Borel’
  >- (rw [Abbr ‘Y’] \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB' \\
@@ -3205,14 +3232,21 @@ Proof
  >> POP_ASSUM MATCH_MP_TAC >> art []
 QED
 
-(* total ==> pairwise independence (of random variables) *)
+(* total ==> pairwise independence (of random variables)
+
+   NOTE: added ‘prob_space p /\ !i. i IN J ==> sigma_algebra (A i)’ due to
+         changes of ‘measurable’
+ *)
 Theorem total_imp_pairwise_indep_vars :
-    !p X A (J :'index set).
-       (!i. i IN J ==> random_variable (X i) p (A i)) /\ indep_vars p X A J ==>
-       pairwise_indep_vars p X A J
+    !p X A (J :'index set). prob_space p /\ 
+        (!i. i IN J ==> random_variable (X i) p (A i)) /\
+        (!i. i IN J ==> sigma_algebra (A i)) /\
+        indep_vars p X A J ==> pairwise_indep_vars p X A J
 Proof
     RW_TAC std_ss [indep_vars_def, pairwise_indep_vars_def, indep_rv_def,
                    indep_events_def, random_variable_def]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> REWRITE_TAC [indep_def]
  >> STRONG_CONJ_TAC
  >- (`X i IN measurable (p_space p,events p) (A i)` by PROVE_TAC [] \\
@@ -3226,11 +3260,11 @@ Proof
  >> Q.PAT_X_ASSUM `!E. E IN (J --> subsets o A) => P` (MP_TAC o (Q.SPEC `E`))
  >> SIMP_TAC std_ss [IN_DFUNSET, o_DEF]
  >> Know `!x. x IN J ==> E x IN subsets (A x)`
- >- (Q.UNABBREV_TAC `E` >> RW_TAC std_ss [] \\
+ >- (RW_TAC std_ss [Abbr ‘E’] \\
      `X x IN measurable (p_space p,events p) (A x)` by PROVE_TAC [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_MEASURABLE, space_def, subsets_def])) \\
-     MATCH_MP_TAC ALGEBRA_EMPTY \\
-     fs [sigma_algebra_def])
+     MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
  >> RW_TAC std_ss []
  >> Q.PAT_X_ASSUM `!N. N SUBSET J /\ N <> {} /\ FINITE N ==> P`
       (MP_TAC o (Q.SPEC `{i; j}`))
@@ -5176,6 +5210,10 @@ QED
 Theorem converge_LP_alt_pow =
         SIMP_RULE std_ss [absolute_moment_def, sub_rzero]
                   converge_LP_alt_absolute_moment;
+
+
+(* TODO *)
+
 
 (* Theorem 4.1.1 [1, p.69] (2) *)
 Theorem converge_AE_alt_sup :
