@@ -138,6 +138,14 @@ Incompatibilities:
     This change makes the naming consistent across all of HOL’s fragments.
     These names are used when referring to fragments in calls to `diminish_srw_ss`, when using `ExclSF` (see above), and in printing the values in the REPL.
 
+*   In `sigma_algebraTheory`, the definition of `measurable` has been generalized without
+    requiring that the involved systems of sets must be σ-algebras. This change allows the user to
+    express measurable mappings over generators of σ-algebras. (cf. `MEASURABLE_LIFT` for a related
+    important lemma.)  Existing proofs may break in two ways (both are easy to fix): 1. The need of
+    extra antecedents (usually easily available) when applying some existing measure and probability
+    theorems. 2. When proving `f IN measurable a b`, some proof branches regarding σ-algebras no
+    longer exists (thus the related proof scripts must be eliminated).
+
 * * * * *
 
 <div class="footer">
