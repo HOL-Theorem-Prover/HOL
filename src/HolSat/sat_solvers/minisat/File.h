@@ -15,6 +15,9 @@
 #endif
 
 
+
+
+
 //=================================================================================================
 // A buffered file abstraction with only 'putChar()' and 'getChar()'.
 
@@ -131,7 +134,11 @@ public:
 
 
 void                 putUInt (File& out, uint64 val);
+#if __cplusplus >= 201703L
+uint64               getUInt (File& in) noexcept(false);
+#else
 uint64               getUInt (File& in) throw(Exception_EOF);
+#endif
 static inline uint64 encode64(int64  val)           { return (val >= 0) ? (uint64)val << 1 : (((uint64)(~val) << 1) | 1); }
 static inline int64  decode64(uint64 val)           { return ((val & 1) == 0) ? (int64)(val >> 1) : ~(int64)(val >> 1); }
 static inline void   putInt  (File& out, int64 val) { putUInt(out, encode64(val)); }

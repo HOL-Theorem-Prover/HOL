@@ -72,11 +72,11 @@ void printStats(SolverStats& stats, double& cpu_time, int64& mem_used)
 {
     cpu_time = cpuTime();
     mem_used = memUsed();
-    reportf("restarts              : %"I64_fmt"\n", stats.starts);
-    reportf("conflicts             : %-12"I64_fmt"   (%.0f /sec)\n", stats.conflicts   , stats.conflicts   /cpu_time);
-    reportf("decisions             : %-12"I64_fmt"   (%.0f /sec)\n", stats.decisions   , stats.decisions   /cpu_time);
-    reportf("propagations          : %-12"I64_fmt"   (%.0f /sec)\n", stats.propagations, stats.propagations/cpu_time);
-    reportf("conflict literals     : %-12"I64_fmt"   (%4.2f %% deleted)\n", stats.tot_literals, (stats.max_literals - stats.tot_literals)*100 / (double)stats.max_literals);
+    reportf("restarts              : %" I64_fmt "\n", stats.starts);
+    reportf("conflicts             : %-12" I64_fmt "   (%.0f /sec)\n", stats.conflicts   , stats.conflicts   /cpu_time);
+    reportf("decisions             : %-12" I64_fmt "   (%.0f /sec)\n", stats.decisions   , stats.decisions   /cpu_time);
+    reportf("propagations          : %-12" I64_fmt "   (%.0f /sec)\n", stats.propagations, stats.propagations/cpu_time);
+    reportf("conflict literals     : %-12" I64_fmt "   (%4.2f %% deleted)\n", stats.tot_literals, (stats.max_literals - stats.tot_literals)*100 / (double)stats.max_literals);
     if (mem_used != 0) reportf("Memory used           : %.2f MB\n", mem_used / 1048576.0);
     reportf("CPU time              : %g s\n", cpu_time);
 }

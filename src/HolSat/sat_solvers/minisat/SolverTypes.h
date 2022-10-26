@@ -107,7 +107,7 @@ inline Clause* Clause_new(bool learnt, const vec<Lit>& ps, ClauseId id = ClauseI
     assert(sizeof(Lit)      == sizeof(uint));
     assert(sizeof(float)    == sizeof(uint));
     assert(sizeof(ClauseId) == sizeof(uint));
-    void*   mem = xmalloc<char>(sizeof(Clause) + sizeof(uint)*(ps.size() + (int)learnt + (int)(id != ClauseId_NULL)));
+    void*   mem = xmalloc<int8_t>(sizeof(Clause) + sizeof(uint)*(ps.size() + (int)learnt + (int)(id != ClauseId_NULL)));
     return new (mem) Clause(learnt, ps, id); }
 
 
