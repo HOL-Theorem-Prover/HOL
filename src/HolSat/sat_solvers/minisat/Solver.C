@@ -253,7 +253,7 @@ public:
 
 void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
 {
-    vec<char>&     seen  = analyze_seen;
+    vec<int8_t>&   seen  = analyze_seen;
     int            pathC = 0;
     Lit            p     = lit_Undef;
     bool           sconfl;
@@ -418,7 +418,7 @@ void Solver::analyzeFinal(Clause* confl, bool skip_first)
         if (proof != NULL) conflict_id = proof->last();
         return; }
 
-    vec<char>&     seen  = analyze_seen;
+    vec<int8_t>& seen = analyze_seen;
     if (proof != NULL) proof->beginChain(confl->id());
     for (int i = skip_first ? 1 : 0; i < confl->size(); i++){
         Var     x = var((*confl)[i]);
@@ -832,7 +832,7 @@ bool Solver::solve(const vec<Lit>& assumps)
         if (var(conflict[i]) >= 100){
             Lit p = conflict[i];
             Var x = var(p);
-            printf("confl[%d] = "L_LIT"\n", i, L_lit(p));
+            printf("confl[%d] = " L_LIT "\n", i, L_lit(p));
             printf("level     = %d\n", level[x]);
             printf("reason    = %p\n", reason[x]);
             printf("unit_id   = %d\n", unit_id[x]);
