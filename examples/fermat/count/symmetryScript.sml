@@ -983,16 +983,26 @@ Theorem field_auto_group_group:
   !r:'a field. Field r ==> Group (field_auto_group r)
 Proof
   rpt strip_tac >>
-  rw_tac std_ss[group_def_alt, field_auto_group_def, field_auto_maps_def, GSPECIFICATION] >| [
-    qexists_tac `f o f' on R` >>
+  rw_tac std_ss[group_def_alt, field_auto_group_def, field_auto_maps_def,
+                GSPECIFICATION] >|
+  [
+    rename [‘(f1 on R) o (f2 on R)’] >>
+    qexists_tac `f1 o f2 on R` >>
     rpt strip_tac >-
     metis_tac[bij_on_compose, on_on, field_auto_bij] >>
     metis_tac[field_auto_compose, field_auto_on_auto],
-    `f PERMUTES R /\ f' PERMUTES R /\ f'' PERMUTES R` by rw[field_auto_bij] >>
+
+    rename [‘((f1 on R) o (f2 on R) on R) o (f3 on R) on R’] >>
+    `f1 PERMUTES R /\ f2 PERMUTES R /\ f3 PERMUTES R` by rw[field_auto_bij] >>
     metis_tac[bij_on_bij, bij_on_compose_assoc],
+
     metis_tac[field_auto_I],
+
+    rename [‘f on R’, ‘FieldAuto f r’] >>
     `over f R R` by metis_tac[field_auto_bij, over_bij] >>
     rw[on_on_compose],
+
+    rename [‘FieldAuto f r’] >>
     qexists_tac `(LINV f R) on R` >>
     rpt strip_tac >-
     metis_tac[field_auto_linv_auto] >>
@@ -1441,13 +1451,17 @@ Theorem subfield_auto_group_op =
 Theorem subfield_auto_group_group:
   !(r s):'a field. Field r /\ B SUBSET R ==> Group (subfield_auto_group r s)
 Proof
-  rw_tac std_ss[group_def_alt, subfield_auto_group_def, subfield_auto_maps_def, GSPECIFICATION] >| [
-    qexists_tac `f o f' on R` >>
+  rw_tac std_ss[group_def_alt, subfield_auto_group_def, subfield_auto_maps_def,
+                GSPECIFICATION] >|
+  [
+    rename [‘(f1 on R) o (f2 on R) on R’] >>
+    qexists_tac `f1 o f2 on R` >>
     rpt strip_tac >-
     metis_tac[bij_on_compose, on_on, subfield_auto_bij] >>
     rw_tac std_ss[subfield_auto_on_compose],
     prove_tac[subfield_auto_bij, bij_on_bij, bij_on_compose_assoc],
     metis_tac[subfield_auto_I],
+    rename [‘subfield_auto f r s’] >>
     `over f R R` by metis_tac[subfield_auto_bij, over_bij] >>
     rw[on_on_compose],
     metis_tac[subfield_auto_on_linv, subfield_auto_bij, bij_on_compose]
