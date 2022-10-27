@@ -992,7 +992,7 @@ val distribution_lebesgue_thm1 = store_thm
               random_variable X p s /\ A IN subsets s ==>
              (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))``,
    RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def,
-		  IN_MEASURABLE, p_space_def, prob_def,
+                  IN_MEASURABLE, p_space_def, prob_def,
                   subsets_def, space_def, GSYM integral_indicator_fn]);
 
 (* NOTE: added ‘prob_space p /\ sigma_algebra s’ due to changes of ‘measurable’ *)
@@ -1006,8 +1006,8 @@ val distribution_lebesgue_thm2 = store_thm
         by RW_TAC std_ss [distribution_prob_space]
    >> Q.PAT_X_ASSUM `random_variable X p s` MP_TAC
    >> RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def,
-		     IN_MEASURABLE, p_space_def, prob_def,
-                  subsets_def, space_def]
+                     IN_MEASURABLE, p_space_def, prob_def,
+                     subsets_def, space_def]
    >> `measure p (PREIMAGE X A INTER m_space p) =
        measure (space s,subsets s,(\A. measure p (PREIMAGE X A INTER m_space p))) A`
         by RW_TAC std_ss [measure_def]
@@ -1334,7 +1334,7 @@ Proof
           >> METIS_TAC [IN_IMAGE])
  >> Q.ABBREV_TAC `p1 = (IMAGE X (p_space p), POW (IMAGE X (p_space p)), distribution p X)`
  >> `prob_space p1` by METIS_TAC [distribution_prob_space, space_def, subsets_def,
-				  POW_SIGMA_ALGEBRA]
+                                  POW_SIGMA_ALGEBRA]
  >> (MP_TAC o Q.SPEC `p1` o INST_TYPE [``:'a`` |-> ``:'b``]) PROB_REAL_SUM_IMAGE_SPACE
  >> `FINITE (p_space p1)` by METIS_TAC [PSPACE, IMAGE_FINITE]
  >> `!x. x IN p_space p1 ==> {x} IN events p1`
