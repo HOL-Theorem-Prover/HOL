@@ -3238,7 +3238,7 @@ QED
          changes of ‘measurable’
  *)
 Theorem total_imp_pairwise_indep_vars :
-    !p X A (J :'index set). prob_space p /\ 
+    !p X A (J :'index set). prob_space p /\
         (!i. i IN J ==> random_variable (X i) p (A i)) /\
         (!i. i IN J ==> sigma_algebra (A i)) /\
         indep_vars p X A J ==> pairwise_indep_vars p X A J

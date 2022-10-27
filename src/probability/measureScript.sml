@@ -1257,7 +1257,7 @@ val MEASURE_PRESERVING_UP_SUBSET = store_thm
    >> PROVE_TAC [SUBSET_DEF]);
 
 (* NOTE: added ‘subset_class (m_space m1) a’ due to changes in ‘measurable’.
-   
+
    This requirement is very basic, just to make ‘sigma (m_space m1) a’ meaningful.
  *)
 Theorem MEASURE_PRESERVING_UP_SIGMA :
