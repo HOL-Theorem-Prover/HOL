@@ -48,10 +48,7 @@ Proof
 QED
 
 Definition finite_cst_def:
-  finite_cst cs A ⇔ if FINITE cs then
-                      (CARD cs = 1 ⇒ FINITE A)
-                    else
-                      INFINITE A
+  finite_cst cs A ⇔ (FINITE cs ⇒ FINITE A)
 End
 
 (* constraining edge set sizes between any given pair of nodes.
@@ -97,9 +94,9 @@ QED
 
 (* generic graphs*)
 Datatype:
-  graphrep = <| nodes : ('a + num) set ;
-                edges : ('a + num,'el) edge set ;
-                nlab : 'a + num -> 'nl ;
+  graphrep = <| nodes : 'a set ;
+                edges : ('a,'el) edge set ;
+                nlab : 'a -> 'nl ;
                 nfincst : 'nf itself ;
                 dircst : 'd itself ;  (* true implies directed graph *)
                 slcst : 'slc itself ; (* true implies self-loops allowed *)
@@ -147,7 +144,6 @@ Proof
 QED
 
 
-
 Theorem graphs_exist[local]:
   ∃g. wfgraph g
 Proof
@@ -159,11 +155,7 @@ Proof
                           slcst := ARB;
                           edgecst := ARB; |>’ >>
   simp[wfgraph_def, finite_cst_def, itself2set_def] >>
-  rename [‘COND g’]>> Cases_on ‘g’ >> simp[]
-  >- (qexists ‘{}’ >> simp[]) >>
-  qexists ‘UNIV’ >>
-  ‘INJ (INR:num->'a + num) UNIV UNIV’ by simp[INJ_DEF] >>
-  drule INFINITE_INJ >> simp[]
+  qexists ‘{}’ >> simp[]
 QED
 
 val tydefrec = newtypeTools.rich_new_type("graph", graphs_exist)
@@ -189,10 +181,21 @@ Definition nodes_def:
   nodes G = (graph_REP G).nodes
 End
 
+Definition edges_def:
+  edges G = (graph_REP G).edges
+End
+
 Theorem nodes_empty[simp]:
   nodes emptyG = ∅
 Proof
   simp[nodes_def, emptyG_def, #repabs_pseudo_id tydefrec] >>
+  simp[emptyG0_def]
+QED
+
+Theorem edges_empty[simp]:
+  edges emptyG = ∅
+Proof
+  simp[edges_def, emptyG_def, #repabs_pseudo_id tydefrec] >>
   simp[emptyG0_def]
 QED
 
@@ -225,8 +228,6 @@ Proof
   gs[wfgraph_def, ITSELF_UNIQUE, itself2bool_def, itself2set_def] >>
   rpt strip_tac >> first_x_assum drule >> simp[selfloop_def]
 QED
-
-Type fsgraph[pp] = “:('a,num,unit,unit,unit,unit,num) graph”
 
 Definition udedges_def:
   udedges (G:('a,num,unit,unit,unit,unit,'sl) graph) =
@@ -310,6 +311,18 @@ Definition addUDEdge0_def:
          |>
 End
 
+(* any undirected graph *)
+Type udgraph[pp] = “:('a,num,'ec,'el,'nf,'nl,'sl)graph”
+
+(* finite simple graph *)
+Type fsgraph[pp] = “:('a,num,unit,unit,unit,unit,num) graph”
+
+(* a relation graph; stripped such are in bijection with binary relations.
+   (The stripping makes a canonical, minimal choice of node set in the graph.)
+ *)
+Type relgraph = “:(α,unit,num,unit,num,unit,unit)graph”
+
+
 Definition addUDEdge_def:
   addUDEdge m n lab G = graph_ABS (addUDEdge0 m n lab (graph_REP G))
 End
@@ -372,7 +385,7 @@ Proof
   dsimp[GSPEC_OR] >> simp[GSPEC_AND]
 QED
 
-Theorem addEdge_COMM:
+Theorem addUDEdge_COMM:
   addUDEdge m n lab G = addUDEdge n m lab G
 Proof
   Cases_on ‘m = n’ >> simp[] >>
@@ -502,6 +515,14 @@ Proof
   simp[udedges_thm]
 QED
 
+Theorem edges_nrelabel[simp]:
+  edges (nrelabel n l G) = edges G
+Proof
+  simp[edges_def, nrelabel_def, #termP_term_REP tydefrec, wfgraph_nrelabel,
+       #repabs_pseudo_id tydefrec] >>
+  simp[nrelabel0_def] >> rw[]
+QED
+
 Theorem addNode_idem:
   n ∈ nodes G ⇒ addNode n l G = nrelabel n l G
 Proof
@@ -550,7 +571,114 @@ Proof
   drule adjacent_members >> simp[]
 QED
 
+Theorem relation_graph_injn:
+  INJ (λR. graph_ABS <|
+             nodes := UNIV;
+             edges := {(a, b, ()) | R a b};
+             nlab := K ();
+             nfincst := ARB;
+             dircst := ARB ;  (* true implies directed graph *)
+             slcst := ARB ; (* true implies self-loops allowed *)
+             edgecst := ARB |>)
+      (UNIV : (α -> α -> bool) set)
+      (UNIV: α relgraph set)
+Proof
+  simp[INJ_IFF] >> qx_genl_tac [‘R1’, ‘R2’] >>
+  qmatch_abbrev_tac ‘graph_ABS rec1 = graph_ABS rec2 ⇔ _’ >>
+  ‘wfgraph rec1 ∧ wfgraph rec2’
+    by simp[Abbr‘rec1’, Abbr‘rec2’, wfgraph_def, ITSELF_UNIQUE,
+            SUBSET_DEF, PULL_EXISTS, DISJ_IMP_THM, finite_cst_def,
+            edge_cst_def, itself2set_def, itself2bool_def] >>
+  simp[#term_ABS_pseudo11 tydefrec] >>
+  simp[Abbr‘rec1’, Abbr‘rec2’, EQ_IMP_THM] >>
+  simp[EXTENSION, EQ_IMP_THM, PULL_EXISTS, FORALL_AND_THM] >>
+  simp[FUN_EQ_THM, EQ_IMP_THM]
+QED
 
+Theorem graph_relation_inj:
+  INJ (λg. (adjacent g, nodes g))
+      (UNIV: α relgraph set)
+      (UNIV: (('a -> 'a -> bool) # 'a set) set)
+Proof
+  simp[INJ_IFF, EQ_IMP_THM] >>
+  simp[SYM $ #term_REP_11 tydefrec] >>
+  simp[theorem "graphrep_component_equality", ITSELF_UNIQUE] >>
+  qx_genl_tac [‘g1’, ‘g2’] >> rw[]
+  >- (gs[nodes_def])
+  >- (simp[EXTENSION] >> gs[adjacent_def, FUN_EQ_THM] >>
+      simp[FORALL_PROD]) >>
+  simp[FUN_EQ_THM]
+QED
 
+Definition stripped_def:
+  stripped g ⇔ nodes g = { a | ∃e. e ∈ edges g ∧ a ∈ incident e }
+End
+
+Theorem stripped_graph_relation_bij:
+  BIJ adjacent { g : α relgraph | stripped g } UNIV
+Proof
+  simp[BIJ_DEF, INJ_IFF, SURJ_DEF] >> conj_tac
+  >- (qx_genl_tac [‘g1’, ‘g2’] >> simp[EQ_IMP_THM] >>
+      rpt strip_tac >>
+      simp[SYM $ #term_REP_11 tydefrec] >>
+      simp[theorem "graphrep_component_equality", ITSELF_UNIQUE] >>
+      reverse (rpt conj_tac)
+      >- simp[FUN_EQ_THM] >>
+      pop_assum mp_tac >>
+      simp[SimpL “$==>”, FUN_EQ_THM, adjacent_def]
+      >- simp[EXTENSION, FORALL_PROD] >>
+      gs[stripped_def, nodes_def, edges_def, EXISTS_PROD]) >>
+  qx_gen_tac ‘R’ >> simp[FUN_EQ_THM, adjacent_def] >>
+  qexists‘graph_ABS <| nodes := { a | ∃b. R a b ∨ R b a };
+                       edges := { (a,b,()) | R a b } ;
+                       nlab := K ();
+                       nfincst := ARB;
+                       dircst := ARB ;  (* true implies directed graph *)
+                       slcst := ARB ; (* true implies self-loops allowed *)
+                       edgecst := ARB |>’ >>
+  qmatch_abbrev_tac ‘stripped (graph_ABS grec) ∧ _’ >>
+  ‘wfgraph grec’
+    by (simp[Abbr‘grec’, wfgraph_def, ITSELF_UNIQUE, itself2bool_def,
+             itself2set_def, PULL_EXISTS, finite_cst_def, edge_cst_def] >>
+        metis_tac[]) >>
+  simp[stripped_def, nodes_def, edges_def, #repabs_pseudo_id tydefrec] >>
+  simp[Abbr‘grec’, PULL_EXISTS] >> simp[EXTENSION] >> metis_tac[]
+QED
+
+Definition univnodes_def:
+  univnodes g ⇔ nodes g = UNIV
+End
+
+Theorem univnodes_graph_relation_bij:
+  BIJ adjacent { g:'a relgraph | univnodes g } UNIV
+Proof
+  simp[BIJ_DEF, INJ_IFF, SURJ_DEF] >> conj_tac
+  >- (qx_genl_tac [‘g1’, ‘g2’] >>
+      simp[EQ_IMP_THM] >>
+      rpt strip_tac >>
+      simp[SYM $ #term_REP_11 tydefrec] >>
+      simp[theorem "graphrep_component_equality", ITSELF_UNIQUE] >>
+      reverse (rpt conj_tac)
+      >- simp[FUN_EQ_THM]
+      >- (pop_assum mp_tac >>
+          simp[SimpL “$==>”, FUN_EQ_THM, adjacent_def] >>
+          simp[EXTENSION, FORALL_PROD]) >>
+      gs[univnodes_def, nodes_def]) >>
+  qx_gen_tac ‘R’ >> simp[FUN_EQ_THM, adjacent_def] >>
+  qexists‘graph_ABS <| nodes := UNIV;
+                       edges := { (a,b,()) | R a b } ;
+                       nlab := K ();
+                       nfincst := ARB;
+                       dircst := ARB ;  (* true implies directed graph *)
+                       slcst := ARB ; (* true implies self-loops allowed *)
+                       edgecst := ARB |>’ >>
+  qmatch_abbrev_tac ‘univnodes (graph_ABS grec) ∧ _’ >>
+  ‘wfgraph grec’
+    by (simp[Abbr‘grec’, wfgraph_def, ITSELF_UNIQUE, itself2bool_def,
+             itself2set_def, PULL_EXISTS, finite_cst_def, edge_cst_def] >>
+        metis_tac[]) >>
+  simp[univnodes_def, nodes_def, edges_def, #repabs_pseudo_id tydefrec] >>
+  simp[Abbr‘grec’, PULL_EXISTS]
+QED
 
 val  _ = export_theory();
