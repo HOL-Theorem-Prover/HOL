@@ -65,9 +65,9 @@ val conditional_mutual_information_def = Define
 (* Reductions                                                                *)
 (* ************************************************************************* *)
 
-val finite_mutual_information_reduce = store_thm
-  ("finite_mutual_information_reduce",
-   ``!b p s1 s2 X Y. (POW (p_space p) = events p) /\
+(* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
+Theorem finite_mutual_information_reduce :
+    !b p s1 s2 X Y. prob_space p /\ (POW (p_space p) = events p) /\
              random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
              random_variable Y p (IMAGE Y (p_space p), POW (IMAGE Y (p_space p))) /\
                     FINITE (p_space p) ==>
@@ -76,7 +76,8 @@ val finite_mutual_information_reduce = store_thm
          SIGMA (\(x,y). (joint_distribution p X Y {(x,y)}) *
                          logr b ((joint_distribution p X Y {(x,y)})/
                                  ((distribution p X {x})*(distribution p Y {y}))))
-               ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p))))``,
+               ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p))))
+Proof
    RW_TAC std_ss [mutual_information_def, KL_divergence_def, space_def, subsets_def]
    >> `FINITE (IMAGE X (p_space p)) /\ FINITE (IMAGE Y (p_space p))`
         by RW_TAC std_ss [IMAGE_FINITE]
@@ -214,8 +215,10 @@ val finite_mutual_information_reduce = store_thm
                    prod_measure
                      (s1,POW s1,distribution p X)
                      (s2,POW s2,distribution p Y))`
-        by METIS_TAC [measurable_sets_def, distribution_prob_space, space_def, subsets_def, m_space_def,
-                      prob_space_def, measure_space_finite_prod_measure_POW2]
+        by (METIS_TAC [measurable_sets_def, distribution_prob_space,
+                       space_def, subsets_def, m_space_def, prob_space_def,
+                       measure_space_finite_prod_measure_POW2,
+                       POW_SIGMA_ALGEBRA])
    >> RW_TAC std_ss [measurable_sets_def, m_space_def]
    >- (Q.EXISTS_TAC `\x'. joint_distribution p X Y {x'} /
                          ((distribution p X {FST x'})*(distribution p Y {SND x'}))`
@@ -280,12 +283,14 @@ val finite_mutual_information_reduce = store_thm
                 measure (s2,POW s2,distribution p Y) {SND x'}`
                 by (`measure_space (s1,POW s1,distribution p X) /\
                      measure_space (s2,POW s2,distribution p Y)`
-                        by METIS_TAC [distribution_prob_space, prob_space_def, space_def, subsets_def]
+                        by METIS_TAC [distribution_prob_space, POW_SIGMA_ALGEBRA,
+                                      prob_space_def, space_def, subsets_def]
                     >> `{FST x'} IN measurable_sets (s1,POW s1,distribution p X) /\
                         {SND x'} IN measurable_sets (s2,POW s2,distribution p Y)`
                         by (RW_TAC std_ss [measurable_sets_def, IN_POW, SUBSET_DEF, IN_SING]
                             >> FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_CROSS])
-                    >> METIS_TAC [finite_POW_prod_measure_reduce, m_space_def, measurable_sets_def])
+                    >> METIS_TAC [finite_POW_prod_measure_reduce, m_space_def,
+                                  measurable_sets_def])
             >> POP_ORW
             >> RW_TAC std_ss [measure_def]
             >> Cases_on `(distribution p X {FST x'} * distribution p Y {SND x'}) = 0`
@@ -413,7 +418,8 @@ val finite_mutual_information_reduce = store_thm
                         measure (s2,POW s2,distribution p Y) {SND x}`
                         by (`measure_space (s1,POW s1,distribution p X) /\
                              measure_space (s2,POW s2,distribution p Y)`
-                                by METIS_TAC [distribution_prob_space, prob_space_def, space_def, subsets_def]
+                                by METIS_TAC [distribution_prob_space, prob_space_def,
+                                              space_def, subsets_def, POW_SIGMA_ALGEBRA]
                             >> `{FST x} IN measurable_sets (s1,POW s1,distribution p X) /\
                                 {SND x} IN measurable_sets (s2,POW s2,distribution p Y)`
                                 by (RW_TAC std_ss [measurable_sets_def, IN_POW, SUBSET_DEF, IN_SING]
@@ -472,16 +478,18 @@ val finite_mutual_information_reduce = store_thm
                       prob p (PREIMAGE Y {SND x} INTER p_space p)`
     >- METIS_TAC [REAL_LE_ANTISYM]
     >> MATCH_MP_TAC PROB_INCREASING
-    >> FULL_SIMP_TAC std_ss [random_variable_def, SUBSET_DEF, IN_INTER]);
+    >> FULL_SIMP_TAC std_ss [random_variable_def, SUBSET_DEF, IN_INTER]
+QED
 
-val finite_entropy_reduce = store_thm
-  ("finite_entropy_reduce",
-   ``!b p X. (POW (p_space p) = events p) /\
+(* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
+Theorem finite_entropy_reduce :
+    !b p X. prob_space p /\ (POW (p_space p) = events p) /\
              random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
                     FINITE (p_space p) ==>
         (entropy b p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) X =
          ~ SIGMA (\x. distribution p X {x} * logr b (distribution p X {x}))
-               (IMAGE X (p_space p)))``,
+               (IMAGE X (p_space p)))
+Proof
    RW_TAC std_ss [entropy_def, finite_mutual_information_reduce]
    >> `(IMAGE X (p_space p) CROSS IMAGE X (p_space p)) =
         (IMAGE (\x. (x,x)) (IMAGE X (p_space p))) UNION
@@ -562,11 +570,12 @@ val finite_entropy_reduce = store_thm
         inv (prob p (PREIMAGE X {x} INTER p_space p))`
    >- RW_TAC std_ss [REAL_NEG_RMUL, logr_inv]
    >> RW_TAC std_ss [real_div, REAL_INV_MUL]
-   >> RW_TAC real_ss [REAL_MUL_RINV, REAL_MUL_ASSOC]);
+   >> RW_TAC real_ss [REAL_MUL_RINV, REAL_MUL_ASSOC]
+QED
 
-val finite_mutual_information_reduce2 = store_thm
-  ("finite_mutual_information_reduce2",
-   ``!b p s1 s2 X Y Z. (POW (p_space p) = events p) /\
+(* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
+Theorem finite_mutual_information_reduce2 :
+    !b p s1 s2 X Y Z. prob_space p /\ (POW (p_space p) = events p) /\
              random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
              random_variable Y p (IMAGE Y (p_space p), POW (IMAGE Y (p_space p))) /\
              random_variable Z p (IMAGE Z (p_space p), POW (IMAGE Z (p_space p))) /\
@@ -578,7 +587,8 @@ val finite_mutual_information_reduce2 = store_thm
          SIGMA (\(x,(y,z)). (joint_distribution p X (\x. (Y x,Z x)) {(x,(y,z))}) *
                          logr b ((joint_distribution p X (\x. (Y x,Z x)) {(x,(y,z))})/
                                  ((distribution p X {x})*(distribution p (\x. (Y x,Z x)) {(y,z)}))))
-               ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p) CROSS IMAGE Z (p_space p))))``,
+               ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p) CROSS IMAGE Z (p_space p))))
+Proof
    RW_TAC std_ss [mutual_information_def, KL_divergence_def, space_def, subsets_def]
    >> `FINITE (IMAGE X (p_space p)) /\ FINITE (IMAGE Y (p_space p)) /\ FINITE (IMAGE Z (p_space p)) /\
        FINITE (IMAGE (\x. (Y x,Z x)) (p_space p))`
@@ -627,7 +637,6 @@ val finite_mutual_information_reduce2 = store_thm
    >> RW_TAC std_ss [PSPACE, EVENTS]
    >> `random_variable (\x. (Y x, Z x)) p (s2, POW(s2))`
         by (RW_TAC std_ss [random_variable_def]
-            >- FULL_SIMP_TAC std_ss [random_variable_def]
             >> FULL_SIMP_TAC std_ss [IN_MEASURABLE, random_variable_def, POW_SIGMA_ALGEBRA, IN_FUNSET,
                                      space_def, subsets_def, IN_POW]
             >> CONJ_TAC >- (Q.UNABBREV_TAC `s2` >> RW_TAC std_ss [IN_IMAGE, IN_CROSS] >> METIS_TAC [])
@@ -733,7 +742,8 @@ val finite_mutual_information_reduce2 = store_thm
                    prod_measure (s1,POW s1,distribution p X)
           (s2,POW s2,distribution p (\x. (Y x,Z x))))`
         by METIS_TAC [measurable_sets_def, distribution_prob_space, space_def, subsets_def, m_space_def,
-                      prob_space_def, measure_space_finite_prod_measure_POW2]
+                      prob_space_def, measure_space_finite_prod_measure_POW2,
+                      POW_SIGMA_ALGEBRA]
    >> RW_TAC std_ss [measurable_sets_def, m_space_def]
    >- (Q.EXISTS_TAC `\x'. joint_distribution p X (\x. (Y x,Z x)) {x'} /
                         ((distribution p X {FST x'})*(distribution p (\x. (Y x,Z x)) {SND x'}))`
@@ -798,7 +808,9 @@ val finite_mutual_information_reduce2 = store_thm
                         measure (s2,POW s2,distribution p (\x. (Y x,Z x))) {SND x'}`
                         by (`measure_space (s1,POW s1,distribution p X) /\
                              measure_space (s2,POW s2,distribution p (\x. (Y x,Z x)))`
-                                by METIS_TAC [distribution_prob_space, prob_space_def, space_def, subsets_def]
+                                by METIS_TAC [distribution_prob_space,
+                                              prob_space_def, space_def, subsets_def,
+                                              POW_SIGMA_ALGEBRA]
                             >> `{FST x'} IN measurable_sets (s1,POW s1,distribution p X) /\
                                 {SND x'} IN measurable_sets (s2,POW s2,distribution p (\x. (Y x,Z x)))`
                                 by (RW_TAC std_ss [measurable_sets_def, IN_POW, SUBSET_DEF, IN_SING]
@@ -929,7 +941,8 @@ val finite_mutual_information_reduce2 = store_thm
                         measure (s2,POW s2,distribution p (\x. (Y x,Z x))) {SND x}`
                         by (`measure_space (s1,POW s1,distribution p X) /\
                              measure_space (s2,POW s2,distribution p (\x. (Y x,Z x)))`
-                                by METIS_TAC [distribution_prob_space, prob_space_def, space_def, subsets_def]
+                                by METIS_TAC [distribution_prob_space, POW_SIGMA_ALGEBRA,
+                                              prob_space_def, space_def, subsets_def]
                             >> `{FST x} IN measurable_sets (s1,POW s1,distribution p X) /\
                                 {SND x} IN measurable_sets (s2,POW s2,distribution p (\x. (Y x,Z x)))`
                                 by (RW_TAC std_ss [measurable_sets_def, IN_POW, SUBSET_DEF, IN_SING]
@@ -988,11 +1001,12 @@ val finite_mutual_information_reduce2 = store_thm
                       prob p (PREIMAGE (\x. (Y x,Z x)) {SND x} INTER p_space p)`
     >- METIS_TAC [REAL_LE_ANTISYM]
     >> MATCH_MP_TAC PROB_INCREASING
-    >> FULL_SIMP_TAC std_ss [random_variable_def, SUBSET_DEF, IN_INTER]);
+    >> FULL_SIMP_TAC std_ss [random_variable_def, SUBSET_DEF, IN_INTER]
+QED
 
-val finite_conditional_mutual_information_reduce = store_thm
-  ("finite_conditional_mutual_information_reduce",
-   ``!b p X Y Z. (POW (p_space p) = events p) /\
+(* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
+Theorem finite_conditional_mutual_information_reduce :
+    !b p X Y Z. prob_space p /\ (POW (p_space p) = events p) /\
                random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
                random_variable Y p (IMAGE Y (p_space p), POW (IMAGE Y (p_space p))) /\
                random_variable Z p (IMAGE Z (p_space p), POW (IMAGE Z (p_space p))) /\
@@ -1008,11 +1022,11 @@ val finite_conditional_mutual_information_reduce = store_thm
         ~ SIGMA (\(x,(y,z)). joint_distribution p X (\x. (Y x, Z x)) {(x,(y,z))} *
                            logr b (joint_distribution p X (\x. (Y x, Z x)) {(x,(y,z))}/
                                    distribution p (\x. (Y x, Z x)) {(y,z)}))
-                ((IMAGE X (p_space p)) CROSS (IMAGE (\x. (Y x, Z x)) (p_space p))))``,
+                ((IMAGE X (p_space p)) CROSS (IMAGE (\x. (Y x, Z x)) (p_space p))))
+Proof
    REPEAT STRIP_TAC
    >> `random_variable (\x. (Y x, Z x)) p (IMAGE (\x. (Y x, Z x)) (p_space p), POW (IMAGE (\x. (Y x, Z x)) (p_space p)))`
         by (RW_TAC std_ss [random_variable_def]
-            >- FULL_SIMP_TAC std_ss [random_variable_def]
             >> FULL_SIMP_TAC std_ss [IN_MEASURABLE, random_variable_def, POW_SIGMA_ALGEBRA, IN_FUNSET, space_def,
                                      subsets_def, IN_POW]
             >> CONJ_TAC >- (RW_TAC std_ss [IN_IMAGE] >> METIS_TAC [])
@@ -1501,23 +1515,22 @@ SIGMA
     inv (distribution p (\x. (Y x,Z x)) {(q',r')})) *
         (inv (distribution p X {q}) * distribution p X {q})` by REAL_ARITH_TAC
    >> POP_ORW
-   >> RW_TAC real_ss [REAL_MUL_LINV]);
-
+   >> RW_TAC real_ss [REAL_MUL_LINV]
+QED
 
 (* ************************************************************************* *)
 
 (* -------------Entropy of a RV with a certain event is zero---------------- *)
 
-
-val finite_entropy_certainty_eq_0 = store_thm
-  ("finite_entropy_certainty_eq_0",
-   ``!b p X.
-         (POW (p_space p) = events p) /\
+(* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
+Theorem finite_entropy_certainty_eq_0 :
+    !b p X. prob_space p /\ (POW (p_space p) = events p) /\
          random_variable X p
            (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
          FINITE (p_space p) /\
          (?x. x IN IMAGE X (p_space p) /\ (distribution p X {x} = 1)) ==>
-         (entropy b p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) X = 0)``,
+         (entropy b p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) X = 0)
+Proof
    RW_TAC std_ss [finite_entropy_reduce]
    >> `FINITE (IMAGE X (p_space p))` by RW_TAC std_ss [IMAGE_FINITE]
    >> ONCE_REWRITE_TAC [(UNDISCH o Q.ISPEC `IMAGE (X :'a -> 'b) (p_space p)`) REAL_SUM_IMAGE_IN_IF]
@@ -1527,27 +1540,24 @@ val finite_entropy_certainty_eq_0 = store_thm
            else
              0)) = (\x. 0)`
    >- RW_TAC real_ss [REAL_SUM_IMAGE_0, IMAGE_FINITE]
-
    >> RW_TAC std_ss [FUN_EQ_THM]
    >> RW_TAC std_ss []
    >> Cases_on `x' = x`
    >- RW_TAC real_ss [logr_1]
    >> (MP_TAC o Q.SPECL [`X`,`p`,`x`]) distribution_x_eq_1_imp_distribution_y_eq_0
-   >> ASM_SIMP_TAC real_ss [GSPECIFICATION]);
-
+   >> ASM_SIMP_TAC real_ss [GSPECIFICATION]
+QED
 
 (* --------------- upper bound on entropy for a rv ------------------------- *)
 
-
-val finite_entropy_le_card = store_thm
-  ("finite_entropy_le_card",
-   ``!b p X. 1 <= b /\
-         (POW (p_space p) = events p) /\
+Theorem finite_entropy_le_card :
+    !b p X. 1 <= b /\ prob_space p /\ (POW (p_space p) = events p) /\
          random_variable X p
            (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
          FINITE (p_space p) ==>
         entropy b p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) X <=
-        logr b (& (CARD ((IMAGE X (p_space p)) INTER {x| ~(distribution p X {x} = 0)})))``,
+        logr b (& (CARD ((IMAGE X (p_space p)) INTER {x| ~(distribution p X {x} = 0)})))
+Proof
    RW_TAC std_ss [finite_entropy_reduce]
    >> `!x. ~x = ~1*x` by REAL_ARITH_TAC >> POP_ORW
    >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_CMUL, IMAGE_FINITE]
@@ -1588,7 +1598,8 @@ val finite_entropy_le_card = store_thm
                 jensen_pos_concave_SIGMA
        >> Q.UNABBREV_TAC `g` >> Q.UNABBREV_TAC `P`
        >> `prob_space (IMAGE X (p_space p), POW (IMAGE X (p_space p)), distribution p X)`
-                        by METIS_TAC [distribution_prob_space, space_def, subsets_def]
+                        by METIS_TAC [distribution_prob_space, space_def, subsets_def,
+                                      POW_SIGMA_ALGEBRA]
        >> CONJ_TAC
        >- ((MP_TAC o GSYM o Q.ISPECL [`(IMAGE (X :'a -> 'b)
                (p_space
@@ -1636,41 +1647,41 @@ val finite_entropy_le_card = store_thm
             >> MATCH_MP_TAC REAL_MUL_RINV
             >> ASM_REWRITE_TAC [])
    >> POP_ORW
-   >> ASM_SIMP_TAC std_ss [REAL_SUM_IMAGE_EQ_CARD, REAL_LE_REFL]);
-
+   >> ASM_SIMP_TAC std_ss [REAL_SUM_IMAGE_EQ_CARD, REAL_LE_REFL]
+QED
 
 (* --------------- entropy is maximal for a uniform rv --------------------- *)
 
-
-val finite_entropy_uniform_max = store_thm
-  ("finite_entropy_uniform_max",
-   ``!b p X.
-        (POW (p_space p) = events p) /\
+Theorem finite_entropy_uniform_max :
+    !b p X. prob_space p /\ (POW (p_space p) = events p) /\
          random_variable X p
            (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
          FINITE (p_space p) /\
         (!x y. x IN IMAGE X (p_space p) /\ y IN IMAGE X (p_space p) ==>
                 (distribution p X {x} = distribution p X {y})) ==>
-        (entropy b p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) X = logr b (& (CARD ((IMAGE X (p_space p))))))``,
+        (entropy b p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) X =
+         logr b (& (CARD ((IMAGE X (p_space p))))))
+Proof
    RW_TAC std_ss [finite_entropy_reduce]
    >> `!x. ~x = ~1*x` by REAL_ARITH_TAC >> POP_ORW
    >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_CMUL, IMAGE_FINITE]
    >> RW_TAC real_ss []
    >> ONCE_REWRITE_TAC [GSYM REAL_MUL_RNEG]
    >> `FINITE (IMAGE X (p_space p))` by RW_TAC std_ss [IMAGE_FINITE]
-
    >> (MP_TAC o Q.SPEC `(\x. distribution p X {x})` o UNDISCH o
         Q.ISPEC `IMAGE (X :'a -> 'b) (p_space p)`)
         REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD
    >> `prob_space (IMAGE X (p_space p), POW (IMAGE X (p_space p)), distribution p X)`
-                        by METIS_TAC [distribution_prob_space, space_def, subsets_def]
+                        by METIS_TAC [distribution_prob_space, space_def, subsets_def,
+                                      POW_SIGMA_ALGEBRA]
    >> `(SIGMA (\x. distribution p X {x}) (IMAGE X (p_space p)) = 1)`
         by ((MP_TAC o GSYM o Q.ISPECL [`(IMAGE (X :'a -> 'b)
                (p_space
                   (p :
                     ('a -> bool) #
                     (('a -> bool) -> bool) # (('a -> bool) -> real))),
-                POW (IMAGE X (p_space p)),distribution p X)`,`IMAGE (X :'a -> 'b) (p_space p)`]) PROB_REAL_SUM_IMAGE
+                POW (IMAGE X (p_space p)),distribution p X)`,
+              `IMAGE (X :'a -> 'b) (p_space p)`]) PROB_REAL_SUM_IMAGE
            >> RW_TAC std_ss [EVENTS, IN_POW, SUBSET_REFL, PROB, SUBSET_DEF, IN_SING]
            >> METIS_TAC [PROB_UNIV, PROB, PSPACE])
    >> ASM_SIMP_TAC std_ss []
@@ -1701,6 +1712,7 @@ val finite_entropy_uniform_max = store_thm
    >> `~logr b (inv foo) = logr b (inv (inv foo))`
         by (MATCH_MP_TAC neg_logr >> RW_TAC std_ss [REAL_LT_INV_EQ])
    >> POP_ORW
-   >> RW_TAC real_ss [REAL_INVINV, REAL_LT_IMP_NE, REAL_MUL_ASSOC, REAL_MUL_RINV]);
+   >> RW_TAC real_ss [REAL_INVINV, REAL_LT_IMP_NE, REAL_MUL_ASSOC, REAL_MUL_RINV]
+QED
 
 val _ = export_theory ();

@@ -1351,10 +1351,9 @@ val PREFIX_COVER_APPEND = store_thm
                      image_countable, o_THM]
    >> RW_TAC std_ss [EVENTS_BERN_PREFIX_SET]);
 
-val INDEP_FN_BIND = store_thm
-  ("INDEP_FN_BIND",
-   ``!f g.
-       f IN indep_fn /\ (!x. g x IN indep_fn) ==> BIND f g IN indep_fn``,
+Theorem INDEP_FN_BIND :
+    !f g. f IN indep_fn /\ (!x. g x IN indep_fn) ==> BIND f g IN indep_fn
+Proof
   RW_TAC std_ss [indep_fn_def, GSPECIFICATION] >| (* 4 goals here *)
   [ (* goal 1 (of 4) *)
     MATCH_MP_TAC COUNTABLE_SUBSET
@@ -1379,7 +1378,7 @@ val INDEP_FN_BIND = store_thm
                             MEASURABLE_PROD_SIGMA) \\
          POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [space_def, subsets_def])) \\
          POP_ASSUM MATCH_MP_TAC \\
-         RW_TAC std_ss [SIGMA_ALGEBRA_BERN] )
+         rw [SIGMA_ALGEBRA_BERN, subset_class_def, SPACE_BERN_UNIV] )
     >> REWRITE_TAC [UNIV_SIGMA_ALGEBRA]
     >> CONJ_TAC
     >- RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_UNIV, range_def, IN_IMAGE, o_THM,
@@ -1430,7 +1429,7 @@ val INDEP_FN_BIND = store_thm
                             MEASURABLE_PROD_SIGMA) \\
          POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [space_def, subsets_def])) \\
          POP_ASSUM MATCH_MP_TAC \\
-         RW_TAC std_ss [SIGMA_ALGEBRA_BERN] )
+         rw [SIGMA_ALGEBRA_BERN, subset_class_def, SPACE_BERN_UNIV] )
     >> REWRITE_TAC [SIGMA_ALGEBRA_BERN]
     >> CONJ_TAC
     >- ( RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_UNIV, range_def, IN_IMAGE, o_THM,
@@ -1519,7 +1518,8 @@ val INDEP_FN_BIND = store_thm
     >> RW_TAC std_ss [sdrop_def, LENGTH, APPEND, I_THM, o_THM]
     >> SEQ_CASES_TAC `s`
     >> POP_ASSUM MP_TAC
-    >> RW_TAC std_ss [PREFIX_SET_SCONS, STL_SCONS] ]);
+    >> RW_TAC std_ss [PREFIX_SET_SCONS, STL_SCONS] ]
+QED
 
 val INDEP_FN_PROB = store_thm
   ("INDEP_FN_PROB",

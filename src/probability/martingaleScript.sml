@@ -5540,6 +5540,7 @@ Proof
        subsets ((X,A) CROSS (Y,B))’ by rw [prod_measure_space_alt]
  >> ‘(X CROSS Y,subsets ((X,A) CROSS (Y,B))) = (X,A) CROSS (Y,B)’
        by METIS_TAC [SPACE]
+ (* integrable ((X,A,u) CROSS (Y,B,v)) f *)
  >> STRONG_CONJ_TAC
  >- (MATCH_MP_TAC integrable_from_abs >> simp [integrable_def] \\
      ASM_SIMP_TAC bool_ss [FN_PLUS_ABS_SELF, FN_MINUS_ABS_ZERO, pos_fn_integral_zero] \\
@@ -5670,6 +5671,7 @@ Proof
      [ (* goal 1 (of 3) *)
       ‘!x. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
           by METIS_TAC [FN_DECOMP] >> POP_ORW \\
+      ‘sigma_algebra (X,A)’ by fs [measure_space_def] \\
        simp [Once IN_MEASURABLE_BOREL_PLUS_MINUS],
        (* goal 2 (of 3) *)
        CCONTR_TAC >> FULL_SIMP_TAC std_ss [],
@@ -5699,6 +5701,7 @@ Proof
      [ (* goal 1 (of 3) *)
       ‘!y. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
           by METIS_TAC [FN_DECOMP] >> POP_ORW \\
+      ‘sigma_algebra (Y,B)’ by fs [measure_space_def] \\
        simp [Once IN_MEASURABLE_BOREL_PLUS_MINUS],
        (* goal 2 (of 3) *)
        CCONTR_TAC >> FULL_SIMP_TAC std_ss [],
@@ -5975,6 +5978,9 @@ Proof
  >> ‘sigma_finite_measure_space (X,A,\s. 0) /\
      sigma_finite_measure_space (Y,B,\s. 0)’
       by METIS_TAC [measure_space_trivial, space_def, subsets_def]
+ >> Know ‘sigma_algebra ((X,A) CROSS (Y,B))’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_PROD_SIGMA' \\
+     fs [sigma_algebra_def, algebra_def]) >> DISCH_TAC
  >> ‘(fn_plus f) IN measurable ((X,A) CROSS (Y,B)) Borel’
       by PROVE_TAC [IN_MEASURABLE_BOREL_FN_PLUS]
  >> ‘!s. s IN X CROSS Y ==> 0 <= (fn_plus f) s’ by rw [FN_PLUS_POS]
@@ -5994,8 +6000,14 @@ Proof
  >> ‘!y. fn_minus (\x. f (x,y)) = (\x. (fn_minus f) (x,y))’ by rw [FUN_EQ_THM, FN_MINUS_ALT]
  >> ‘!x. fn_plus (\y. f (x,y)) = (\y. (fn_plus f) (x,y))’   by rw [FUN_EQ_THM, FN_PLUS_ALT]
  >> ‘!x. fn_minus (\y. f (x,y)) = (\y. (fn_minus f) (x,y))’ by rw [FUN_EQ_THM, FN_MINUS_ALT]
- >> ONCE_REWRITE_TAC [IN_MEASURABLE_BOREL_PLUS_MINUS]
- >> RW_TAC std_ss []
+ (* final goals *)
+ >> CONJ_TAC >> rpt STRIP_TAC
+ >| [ ASM_SIMP_TAC std_ss
+        [Once (MATCH_MP IN_MEASURABLE_BOREL_PLUS_MINUS
+                        (ASSUME “sigma_algebra (X :'a set,A :'a set set)”))],
+      ASM_SIMP_TAC std_ss
+        [Once (MATCH_MP IN_MEASURABLE_BOREL_PLUS_MINUS
+                        (ASSUME “sigma_algebra (Y :'b set,B :'b set set)”))] ]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -6312,11 +6324,11 @@ val martingale_alt_generator_shared_tactics_2 =
            (* goal 3 (of 4) *)
            MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw [] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS \\
-           FULL_SIMP_TAC std_ss [integrable_def],
+           FULL_SIMP_TAC std_ss [integrable_def, measure_space_def],
            (* goal 4 (of 4) *)
            MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw [] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS \\
-           FULL_SIMP_TAC std_ss [integrable_def] ]) >> Rewr' \\
+           FULL_SIMP_TAC std_ss [integrable_def, measure_space_def] ]) >> Rewr' \\
      MATCH_MP_TAC pos_fn_integral_cong >> rw [] >| (* 3 subgoals *)
      [ (* goal 1 (of 3) *)
        MATCH_MP_TAC le_add >> CONJ_TAC >> MATCH_MP_TAC le_mul \\
@@ -6338,7 +6350,7 @@ val martingale_alt_generator_shared_tactics_3 =
      [ (* goal 1 (of 2) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD' \\
        qexistsl_tac [‘fn_plus (u M)’, ‘fn_minus (u N)’] >> simp [] \\
-       FULL_SIMP_TAC std_ss [integrable_def] \\
+       FULL_SIMP_TAC std_ss [integrable_def, measure_space_def] \\
        PROVE_TAC [IN_MEASURABLE_BOREL_FN_PLUS, IN_MEASURABLE_BOREL_FN_MINUS],
        (* goal 2 (of 2) *)
        MATCH_MP_TAC le_add >> rw [FN_PLUS_POS, FN_MINUS_POS] ])
@@ -6372,6 +6384,7 @@ Theorem martingale_alt_generator :
              (integral m (\x. u i x * indicator_fn s x) =
               integral m (\x. u j x * indicator_fn s x)))
 Proof
+ (* expectations: ‘A i s - B i s = A j s - B j s’ *)
     martingale_alt_generator_shared_tactics_1
  (* stage work on transforming the goal into equivalence of two measures *)
  >> Know ‘!i j s. (A i s - B i s = A j s - B j s <=>
@@ -6652,6 +6665,8 @@ Theorem seminorm_eq_0 :
            (seminorm p m f = 0 <=> AE x::m. f x = 0)
 Proof
     rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space m)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> rw [seminorm_normal]
  >> ‘0 < p’ by PROVE_TAC [lte_trans, lt_01]
  >> ‘0 <= p’ by PROVE_TAC [lt_imp_le]

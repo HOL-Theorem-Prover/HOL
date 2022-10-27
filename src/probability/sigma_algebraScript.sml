@@ -59,10 +59,14 @@ Definition sigma_algebra_def :
      !c. countable c /\ c SUBSET (subsets a) ==> BIGUNION c IN (subsets a))
 End
 
-(* The set of measurable mappings, each (f :'a -> 'b) is called A/B-measurable *)
+(* The set of measurable mappings, each (f :'a -> 'b) is called A/B-measurable
+
+   NOTE: The requirement ‘sigma_algebra a /\ sigma_algebra b’ has been removed
+         so that ‘measurable’ can be used in other system of sets.
+        (cf. MEASURABLE_LIFT for a major related results.)
+ *)
 val measurable_def = Define
-   `measurable a b = {f | sigma_algebra a /\ sigma_algebra b /\
-                          f IN (space a -> space b) /\
+   `measurable a b = {f | f IN (space a -> space b) /\
                           !s. s IN subsets b ==>
                               ((PREIMAGE f s) INTER space a) IN subsets a}`;
 
@@ -2796,14 +2800,16 @@ Proof
   SIMP_TAC std_ss [SUBSET_DEF, sigma_sets_basic]
 QED
 
-(* below are shared theorems moved from (real_)measureTheory *)
-
-val IN_MEASURABLE = store_thm
-  ("IN_MEASURABLE",
-  ``!a b f. f IN measurable a b <=>
-            sigma_algebra a /\ sigma_algebra b /\ f IN (space a -> space b) /\
-            (!s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a)``,
-    RW_TAC std_ss [measurable_def, GSPECIFICATION]);
+(* NOTE: ‘sigma_algebra a /\ sigma_algebra b’ has been removed due to changes
+         in measurable_def.
+ *)
+Theorem IN_MEASURABLE :
+    !a b f. f IN measurable a b <=>
+            f IN (space a -> space b) /\
+            (!s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a)
+Proof
+    RW_TAC std_ss [measurable_def, GSPECIFICATION]
+QED
 
 val MEASURABLE_DIFF_PROPERTY = store_thm
   ("MEASURABLE_DIFF_PROPERTY",
@@ -2949,18 +2955,23 @@ val MEASURABLE_SIGMA = store_thm
            PROVE_TAC []])
    >> RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]);
 
-val MEASURABLE_SUBSET = store_thm
-  ("MEASURABLE_SUBSET",
-   ``!a b. measurable a b SUBSET measurable a (sigma (space b) (subsets b))``,
+(* NOTE: more antecedents are added due to changes of ‘measurable’ *)
+Theorem MEASURABLE_SUBSET :
+    !a b. sigma_algebra a /\ subset_class (space b) (subsets b) ==>
+          measurable a b SUBSET measurable a (sigma (space b) (subsets b))
+Proof
    RW_TAC std_ss [SUBSET_DEF]
    >> MATCH_MP_TAC MEASURABLE_SIGMA
-   >> FULL_SIMP_TAC std_ss [IN_MEASURABLE, SIGMA_ALGEBRA, space_def, subsets_def]);
+   >> FULL_SIMP_TAC std_ss [IN_MEASURABLE, SIGMA_ALGEBRA, space_def, subsets_def]
+QED
 
-val MEASURABLE_LIFT = store_thm
-  ("MEASURABLE_LIFT",
-   ``!f a b.
-       f IN measurable a b ==> f IN measurable a (sigma (space b) (subsets b))``,
-   PROVE_TAC [MEASURABLE_SUBSET, SUBSET_DEF]);
+(* NOTE: more antecedents are added due to changes of ‘measurable’ *)
+Theorem MEASURABLE_LIFT :
+    !f a b. sigma_algebra a /\ subset_class (space b) (subsets b) /\
+            f IN measurable a b ==> f IN measurable a (sigma (space b) (subsets b))
+Proof
+   PROVE_TAC [MEASURABLE_SUBSET, SUBSET_DEF]
+QED
 
 val MEASURABLE_I = store_thm
   ("MEASURABLE_I",
@@ -3053,7 +3064,8 @@ val MEASURABLE_UP_LIFT = store_thm
   ("MEASURABLE_UP_LIFT",
    ``!sp a b c f. f IN measurable (sp, a) c /\
                sigma_algebra (sp, b) /\ a SUBSET b ==> f IN measurable (sp,b) c``,
-   RW_TAC std_ss [IN_MEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET, space_def, subsets_def]);
+   RW_TAC std_ss [IN_MEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET,
+                  space_def, subsets_def]);
 
 val MEASURABLE_UP_SUBSET = store_thm
   ("MEASURABLE_UP_SUBSET",
@@ -3064,12 +3076,14 @@ val MEASURABLE_UP_SUBSET = store_thm
    >> Q.EXISTS_TAC `a`
    >> ASM_REWRITE_TAC [SUBSET_DEF]);
 
-val MEASURABLE_UP_SIGMA = store_thm
-  ("MEASURABLE_UP_SIGMA",
-   ``!a b. measurable a b SUBSET measurable (sigma (space a) (subsets a)) b``,
-   RW_TAC std_ss [SUBSET_DEF, IN_MEASURABLE, space_def, subsets_def, SPACE_SIGMA]
-   >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA])
-   >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]);
+(* NOTE: more antecedents are added due to changes of ‘measurable’ *)
+Theorem MEASURABLE_UP_SIGMA :
+    !a b. subset_class (space a) (subsets a) /\ sigma_algebra b ==>
+          measurable a b SUBSET measurable (sigma (space a) (subsets a)) b
+Proof
+    RW_TAC std_ss [SUBSET_DEF, IN_MEASURABLE, space_def, subsets_def, SPACE_SIGMA]
+ >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]
+QED
 
 (* Definition 14.2 of [1, p.137] *)
 val prod_sigma_def = Define
@@ -3078,18 +3092,27 @@ val prod_sigma_def = Define
 
 val _ = overload_on ("CROSS", “prod_sigma”);
 
+(* NOTE: the following easy satifsiable antecedents are added, due to changes
+         in ‘measurable’ which previously requires that a1 and a2 are
+         sigma-algebras:
+
+   subset_class (space a1) (subsets a1)
+   subset_class (space a2) (subsets a2)
+ *)
 Theorem MEASURABLE_PROD_SIGMA' :
     !a a1 a2 f. sigma_algebra a /\
-      (FST o f) IN measurable a a1 /\ (SND o f) IN measurable a a2 ==>
-       f IN measurable a (a1 CROSS a2)
+                subset_class (space a1) (subsets a1) /\
+                subset_class (space a2) (subsets a2) /\
+               (FST o f) IN measurable a a1 /\
+               (SND o f) IN measurable a a2 ==> f IN measurable a (a1 CROSS a2)
 Proof
     RW_TAC std_ss [prod_sigma_def]
  >> MATCH_MP_TAC MEASURABLE_SIGMA
  >> FULL_SIMP_TAC std_ss [IN_MEASURABLE]
  >> CONJ_TAC
  >- (RW_TAC std_ss [subset_class_def, subsets_def, space_def, IN_PROD_SETS] \\
-     PROVE_TAC [SIGMA_ALGEBRA, CROSS_SUBSET, SUBSET_DEF, subset_class_def,
-                subsets_def, space_def])
+     rw [CROSS_SUBSET] \\
+     fs [subset_class_def])
  >> CONJ_TAC
  >- (RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, IN_CROSS] \\
      FULL_SIMP_TAC std_ss [IN_FUNSET, o_DEF])
@@ -3103,17 +3126,14 @@ Proof
 QED
 
 (* |- !a a1 a2 f.
-        sigma_algebra a /\ FST o f IN measurable a a1 /\
+        sigma_algebra a /\ subset_class (space a1) (subsets a1) /\
+        subset_class (space a2) (subsets a2) /\ FST o f IN measurable a a1 /\
         SND o f IN measurable a a2 ==>
         f IN
-        measurable a
-          (sigma (space a1 CROSS space a2)
-             (prod_sets (subsets a1) (subsets a2)))
-
-   NOTE: this theorem is used by the "miller" example.
+        measurable a (sigma (space a1 CROSS space a2) (prod_sets (subsets a1) (subsets a2)))
  *)
 Theorem MEASURABLE_PROD_SIGMA =
-    REWRITE_RULE [prod_sigma_def] MEASURABLE_PROD_SIGMA';
+    REWRITE_RULE [prod_sigma_def] MEASURABLE_PROD_SIGMA'
 
 (* prod_sigma is indeed a sigma-algebra *)
 Theorem SIGMA_ALGEBRA_PROD_SIGMA :
@@ -3159,7 +3179,6 @@ Theorem SIGMA_MEASURABLE :
 Proof
     RW_TAC std_ss [sigma_function_def, space_def, subsets_def,
                    IN_FUNSET, IN_MEASURABLE, IN_IMAGE]
- >- (MATCH_MP_TAC PREIMAGE_SIGMA_ALGEBRA >> art [IN_FUNSET])
  >> Q.EXISTS_TAC `s` >> art []
 QED
 
@@ -3180,10 +3199,6 @@ Theorem SIGMA_SIMULTANEOUSLY_MEASURABLE :
              !i. i IN J ==> f i IN measurable (sigma sp A f J) (A i)
 Proof
     RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, sigma_functions_def, IN_MEASURABLE]
- >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
-     RW_TAC std_ss [subset_class_def, IN_BIGUNION_IMAGE, IN_IMAGE, IN_PREIMAGE,
-                    IN_INTER] \\
-     REWRITE_TAC [INTER_SUBSET])
  >> Know `PREIMAGE (f i) s INTER sp IN
             (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp)
                                         (subsets (A i))) J))`
@@ -3701,8 +3716,13 @@ Proof
     rw[] >> irule IN_MEASURABLE_EQ >> qexists_tac `g o f` >> simp[MEASURABLE_COMP,SF SFY_ss]
 QED
 
+(* NOTE: more antecendents are added due to changes in ‘measurable’ *)
 Theorem IN_MEASURABLE_PROD_SIGMA:
-    !a bx by fx fy f. sigma_algebra a /\ fx IN measurable a bx /\ fy IN measurable a by /\
+    !a bx by fx fy f.
+        sigma_algebra a /\
+        subset_class (space bx) (subsets bx) /\
+        subset_class (space by) (subsets by) /\
+        fx IN measurable a bx /\ fy IN measurable a by /\
         (!z. z IN space a ==> f z = (fx z,fy z)) ==> f IN measurable a (bx CROSS by)
 Proof
     rw[] >> irule IN_MEASURABLE_EQ >> qexists_tac `λz. (fx z,fy z)` >> simp[] >>

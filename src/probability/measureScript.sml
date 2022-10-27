@@ -1105,11 +1105,11 @@ Theorem MEASURE_PRESERVING_LIFT :
 Proof
     RW_TAC std_ss []
  >> reverse (Cases_on `algebra (m_space m2,a)`)
- >- FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def,
-                          measurable_sets_def, sigma_algebra_def]
+ >- fs [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def,
+        measurable_sets_def, sigma_algebra_def, measure_space_def]
  >> Suff `f IN measure_preserving m1 (m_space m2,measurable_sets m2,measure m2)`
  >- RW_TAC std_ss [MEASURE_SPACE_REDUCE]
- >> ASM_REWRITE_TAC []
+ >> ASM_REWRITE_TAC [] (* for ‘measurable_sets m2’ *)
  >> Q.PAT_X_ASSUM `f IN X` MP_TAC
  >> REWRITE_TAC [IN_MEASURE_PRESERVING, measurable_sets_def, measure_def, m_space_def]
  >> STRIP_TAC
@@ -1122,17 +1122,16 @@ Proof
          >> STRIP_TAC >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
          >> Q.UNABBREV_TAC `Q`
          >> RW_TAC std_ss [PAIR_EQ, sigma_def, space_def])
-     >> RW_TAC std_ss []
-     >> POP_ASSUM (K ALL_TAC)
+     >> Rewr'
      >> Know `(sigma (m_space m2) a) = sigma (space (m_space m2, a)) (subsets (m_space m2, a))`
-     >- RW_TAC std_ss [space_def, subsets_def]
-     >> STRIP_TAC >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
-     >> MATCH_MP_TAC MEASURABLE_LIFT
-     >> ASM_REWRITE_TAC [])
+     >- RW_TAC std_ss [space_def, subsets_def] >> Rewr'
+     >> MATCH_MP_TAC MEASURABLE_LIFT >> art []
+     >> Q.PAT_X_ASSUM ‘measure_space m1’ MP_TAC
+     >> Q.PAT_X_ASSUM ‘algebra (mpace m2,a)’ MP_TAC
+     >> rw [measure_space_def, algebra_def, subset_class_def])
  >> Q.PAT_X_ASSUM `f IN X` K_TAC
  >> REWRITE_TAC [IN_MEASURABLE, space_def, subsets_def]
  >> STRIP_TAC
- >> ASM_REWRITE_TAC []
  (* stage work *)
  >> Suff `subsets (sigma (m_space m2) a) SUBSET
                  {s | measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s}`
@@ -1257,18 +1256,21 @@ val MEASURE_PRESERVING_UP_SUBSET = store_thm
    >> MATCH_MP_TAC MEASURE_PRESERVING_UP_LIFT
    >> PROVE_TAC [SUBSET_DEF]);
 
-val MEASURE_PRESERVING_UP_SIGMA = store_thm
-  ("MEASURE_PRESERVING_UP_SIGMA",
-   ``!m1 m2 a.
+(* NOTE: added ‘subset_class (m_space m1) a’ due to changes in ‘measurable’.
+   
+   This requirement is very basic, just to make ‘sigma (m_space m1) a’ meaningful.
+ *)
+Theorem MEASURE_PRESERVING_UP_SIGMA :
+    !m1 m2 a. subset_class (m_space m1) a /\
        (measurable_sets m1 = subsets (sigma (m_space m1) a)) ==>
-       measure_preserving (m_space m1, a, measure m1) m2 SUBSET measure_preserving m1 m2``,
+       measure_preserving (m_space m1, a, measure m1) m2 SUBSET measure_preserving m1 m2
+Proof
    RW_TAC std_ss [MEASURE_PRESERVING_UP_LIFT, SUBSET_DEF]
    >> MATCH_MP_TAC MEASURE_PRESERVING_UP_LIFT
    >> Q.EXISTS_TAC `a`
    >> ASM_REWRITE_TAC [SIGMA_SUBSET_SUBSETS, SIGMA_REDUCE]
-   >> FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def, measurable_sets_def]
-   >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
-   >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, space_def, subsets_def]);
+   >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> art []
+QED
 
 (* ****************** *)
 
@@ -5104,29 +5106,34 @@ Proof
       METIS_TAC [disjoint_family_disjoint, ETA_THM] ]
 QED
 
+(* NOTE: added ‘sigma_algebra (m_space N, measurable_sets N)’ into antecedents
+         due to changes in ‘measurable’.
+ *)
 Theorem MEASURABLE_IF : (* was: measurable_If *)
     !f g M N P. f IN measurable (m_space M, measurable_sets M)
                                 (m_space N, measurable_sets N) /\
                 g IN measurable (m_space M, measurable_sets M)
                                 (m_space N, measurable_sets N) /\
              {x | x IN m_space M /\ P x} IN measurable_sets M /\
-              measure_space M ==>
-             (\x. if P x then f x else g x) IN
+              measure_space M /\
+              sigma_algebra (m_space N, measurable_sets N)
+       ==> (\x. if P x then f x else g x) IN
             measurable (m_space M, measurable_sets M)
                        (m_space N, measurable_sets N)
 Proof
-  RW_TAC std_ss [measurable_def, IN_MEASURABLE, space_def, subsets_def] THENL
-  [FULL_SIMP_TAC std_ss [IN_FUNSET] THEN METIS_TAC [], ALL_TAC] THEN
-  KNOW_TAC ``PREIMAGE (\x. if P x then f x else g x) s INTER m_space M =
+    RW_TAC std_ss [measurable_def, IN_MEASURABLE, space_def, subsets_def]
+ >- (FULL_SIMP_TAC std_ss [IN_FUNSET] THEN METIS_TAC [])
+ >> KNOW_TAC ``PREIMAGE (\x. if P x then f x else g x) s INTER m_space M =
    (((PREIMAGE f s) INTER m_space M) INTER {x | x IN m_space M /\ P x}) UNION
    (((PREIMAGE g s) INTER m_space M) INTER
-     (m_space M DIFF {x | x IN m_space M /\ P x}))`` THENL
-  [SIMP_TAC std_ss [PREIMAGE_def] THEN
-   SET_TAC [], ALL_TAC] THEN
-  ONCE_REWRITE_TAC [METIS  [subsets_def] ``measurable_sets M =
+     (m_space M DIFF {x | x IN m_space M /\ P x}))``
+ >- (SIMP_TAC std_ss [PREIMAGE_def] THEN SET_TAC [])
+ >> ‘sigma_algebra (measurable_space M)’ by PROVE_TAC [measure_space_def]
+ >> ONCE_REWRITE_TAC [METIS [subsets_def] ``measurable_sets M =
                        subsets (m_space M, measurable_sets M)``] THEN
   SIMP_TAC std_ss [] THEN DISC_RW_KILL THEN
-  MATCH_MP_TAC ALGEBRA_UNION THEN FULL_SIMP_TAC std_ss [sigma_algebra_def] THEN
+  MATCH_MP_TAC ALGEBRA_UNION THEN
+  FULL_SIMP_TAC std_ss [sigma_algebra_def] THEN
   CONJ_TAC THEN MATCH_MP_TAC ALGEBRA_INTER THEN
   FULL_SIMP_TAC std_ss [] THENL
   [METIS_TAC [subsets_def], ALL_TAC] THEN
@@ -5135,13 +5142,18 @@ Proof
   MATCH_MP_TAC MEASURE_SPACE_MSPACE_MEASURABLE THEN ASM_REWRITE_TAC []
 QED
 
+(* NOTE: added ‘sigma_algebra (m_space N, measurable_sets N)’ into antecedents
+         due to changes in ‘measurable’.
+ *)
 Theorem MEASURABLE_IF_SET : (* was: measurable_If_set *)
     !f g M N A. f IN measurable (m_space M, measurable_sets M)
                                 (m_space N, measurable_sets N) /\
                 g IN measurable (m_space M, measurable_sets M)
                                 (m_space N, measurable_sets N) /\
                 A INTER m_space M IN measurable_sets M /\
-                measure_space M ==> (\x. if x IN A then f x else g x) IN
+                measure_space M /\
+                sigma_algebra (m_space N, measurable_sets N)
+       ==> (\x. if x IN A then f x else g x) IN
            measurable (m_space M, measurable_sets M)
                       (m_space N, measurable_sets N)
 Proof
