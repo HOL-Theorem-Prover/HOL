@@ -147,18 +147,31 @@ fun mk_const(s, ty) =
          else raise ERR "mk_const" ("Not a type instance: "^ c2string id)
 
 fun prim_mk_const (k as {Thy, Name}) =
-    case KernelSig.peek(const_table, k) of
-      NONE => raise ERR "prim_mk_const" ("No such constant: "^id2string k)
-    | SOME x => Const x
+    let
+      open KernelSig
+    in
+      case peek(const_table, k) of
+          Failure (NoSuchThy _) =>
+          raise ERR "prim_mk_const"
+                ("Theory segment " ^ Lib.quote Thy ^ " not in ancestry")
+        | Failure _ =>
+          raise ERR "prim_mk_const"
+                (Lib.quote Name^" not found in theory "^Lib.quote Thy)
+        | Success x => Const x
+    end
 
 fun mk_thy_const {Thy,Name,Ty} = let
+  open KernelSig
   val k = {Thy = Thy, Name = Name}
 in
-  case KernelSig.peek(const_table, k) of
-    NONE => raise ERR "mk_thy_const" ("No such constant: "^id2string k)
-  | SOME (id,basety) => if can (match_type basety) Ty then
-                          Const(id, Ty)
-                        else raise ERR "mk_thy_const"
+  case peek(const_table, k) of
+    Failure(NoSuchThy _) =>
+      raise ERR "mk_thy_const" ("No such theory: " ^ Thy)
+   | Failure _ =>
+       raise ERR "mk_thy_const" (KernelSig.name_toString k ^ " not found")
+   | Success (id,basety) => if can (match_type basety) Ty then
+                              Const(id, Ty)
+                            else raise ERR "mk_thy_const"
                                        ("Not a type instance: "^id2string k)
 end
 

@@ -42,7 +42,8 @@ val _ = prim_new_type (minseg "ind") 0
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
 
-fun uptodate_kname knm = isSome (KernelSig.peek(operator_table, knm))
+fun uptodate_kname knm =
+    KernelSig.isSuccess(KernelSig.peek(operator_table, knm))
 fun uptodate_type (Tyv s) = true
   | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso
                                         List.all uptodate_type args
@@ -95,12 +96,21 @@ fun dest_type (Tyv _) = raise ERR "dest_type" "Type a variable"
 fun is_type (Tyapp _) = true | is_type _ = false
 
 fun mk_thy_type {Thy, Tyop, Args} =
-    case KernelSig.peek(operator_table, {Thy = Thy, Name = Tyop}) of
-      NONE => raise ERR "mk_thy_type" ("No such type: "^Thy ^ "$" ^ Tyop)
-    | SOME (i,arity) =>
-      if arity = length Args then Tyapp(i, Args)
-      else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
-                                    " arguments for "^Tyop)
+    let
+      open KernelSig
+    in
+      case peek(operator_table, {Thy = Thy, Name = Tyop}) of
+          Failure (NoSuchThy _) =>
+          raise ERR "mk_thy_type" ("theory " ^ Thy ^ " is not in ancestry")
+        | Failure _ =>
+          raise ERR "mk_thy_type"
+                ("the type operator "^quote Tyop^
+                 " has not been declared in theory "^quote Thy^".")
+        | Success (i,arity) =>
+          if arity = length Args then Tyapp(i, Args)
+          else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
+                                        " arguments for "^Tyop)
+    end
 
 fun dest_thy_type (Tyv _) = raise ERR "dest_thy_type" "Type a variable"
   | dest_thy_type (Tyapp(id, args)) =
@@ -114,7 +124,9 @@ in
 end
 
 fun op_arity {Thy,Tyop} =
-    Option.map (#2) (KernelSig.peek(operator_table, {Thy=Thy,Name=Tyop}))
+    case KernelSig.peek(operator_table, {Thy=Thy,Name=Tyop}) of
+        KernelSig.Success(_,i) => SOME i
+      | _ => NONE
 
 fun type_vars_set acc [] = acc
   | type_vars_set acc ((t as Tyv s) :: rest) =
