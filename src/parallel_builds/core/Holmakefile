@@ -26,7 +26,8 @@ endif
 
 ifdef HOLSELFTESTLEVEL
 # example directories to build at selftest level 1
-EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
+EXDIRS = arm/arm6-verification arm/armv8-memory-model \
+         CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
          RL_Environment \
 	 STE algorithms computability dependability dev \
@@ -67,8 +68,8 @@ ifneq($(HOLSELFTESTLEVEL),1)
 EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/nominal \
             algorithms/unification/triangular/first-order \
-            ARM/arm6-verification/correctness \
-            ARM/v4 ARM/v7 \
+            arm/arm6-verification/correctness \
+            arm/v4 arm/v7 \
           balanced_bst \
           category computability/kolmog computability/lambda \
             computability/recdegrees \
@@ -97,7 +98,7 @@ endif
 endif
 
 ifeq($(HOLSELFTESTLEVEL),3)
-EX3DIRS = ARM_security_properties \
+EX3DIRS = arm/ARM_security_properties \
           diningcryptos \
           l3-machine-code/cheri/step
 
