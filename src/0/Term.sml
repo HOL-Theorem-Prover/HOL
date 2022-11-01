@@ -396,9 +396,13 @@ fun decls nm =
     end
 
 fun prim_mk_const (knm as {Name,Thy}) =
- case KernelSig.peek(termsig, knm)
-  of SOME c => Const c
-   | NONE => raise ERR "prim_mk_const"
+ case KernelSig.peek(termsig, knm) of
+     KernelSig.Success c => Const c
+   | KernelSig.Failure (KernelSig.NoSuchThy _) =>
+     raise ERR "prim_mk_const"
+           ("Theory segment "^Lib.quote Thy^" not in ancestry")
+   | _ =>
+     raise ERR "prim_mk_const"
                (Lib.quote Name^" not found in theory "^Lib.quote Thy)
 
 fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
@@ -417,10 +421,12 @@ fun create_const errstr (const as (_,GRND pat)) Ty =
 
 fun mk_thy_const {Thy,Name,Ty} = let
   val knm = {Thy=Thy,Name=Name}
+  open KernelSig
 in
-  case KernelSig.peek(termsig, knm) of
-    NONE => raise ERR "mk_thy_const" (KernelSig.name_toString knm^" not found")
-  | SOME c => create_const "mk_thy_const" c Ty
+  case peek(termsig, knm) of
+      Failure(NoSuchThy _) =>raise ERR "mk_thy_const" ("No such theory: " ^ Thy)
+    | Success c => create_const "mk_thy_const" c Ty
+    | _ => raise ERR "mk_thy_const" (KernelSig.name_toString knm^" not found")
 end
 
 fun first_decl fname Name =
