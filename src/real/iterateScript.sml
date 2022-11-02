@@ -2786,6 +2786,14 @@ Proof
 QED
 val SUM_ADD = SUM_ADD';
 
+Theorem SUM_ADD_COUNT :
+    !f g n. sum (count n) (\x. f(x) + g(x)) = sum (count n) f + sum (count n) g
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC SUM_ADD'
+ >> REWRITE_TAC [FINITE_COUNT]
+QED
+
 val SUM_ADD_GEN = store_thm ("SUM_ADD_GEN",
  ``!f g s.
        FINITE {x | x IN s /\ ~(f x = &0)} /\ FINITE {x | x IN s /\ ~(g x = &0)}
@@ -3034,6 +3042,15 @@ val SUM_SWAP = store_thm ("SUM_SWAP",
   [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN ONCE_ASM_REWRITE_TAC []
   THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   FULL_SIMP_TAC std_ss [SUM_CLAUSES, SUM_0] THEN METIS_TAC [SUM_ADD, ETA_AX]);
+
+Theorem SUM_SWAP_COUNT :
+   !(f:num->num->real) m n.
+      sum (count m) (\i. sum (count n) (f i)) = sum (count n) (\j. sum (count m) (\i. f i j))
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC SUM_SWAP
+ >> REWRITE_TAC [FINITE_COUNT]
+QED
 
 val SUM_IMAGE = store_thm ("SUM_IMAGE",
  ``!f g s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y))
