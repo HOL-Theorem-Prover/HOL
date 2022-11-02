@@ -584,6 +584,16 @@ fun proveTotal tac defn =
     (Defn.elim_tcs defn (CONJUNCTS thm), SOME thm)
   end;
 
+fun complain_about_rhsfvs srcfn V =
+    let
+      val Vstr =
+          String.concat (Lib.commafy (map (Lib.quote o #1 o dest_var) V))
+    in
+      raise ERR srcfn
+            ("The following variables are free in the \nright hand side of\
+             \ the proposed definition: " ^ Vstr)
+    end
+
 local open Defn
   val auto_tgoal = ref true
   val () = Feedback.register_btrace("auto Defn.tgoal", auto_tgoal)
@@ -596,16 +606,8 @@ local open Defn
         null (op_intersect aconv (free_varsl tcs) rhs_frees)
      end
   fun fvs_on_rhs V =
-     let
-        val Vstr =
-           String.concat (Lib.commafy (map (Lib.quote o #1 o dest_var) V))
-     in
-        if !allow_schema_definition
-           then ()
-        else raise ERR "defnDefine"
-         ("  The following variables are free in the \n right hand side of\
-          \ the proposed definition: " ^ Vstr)
-     end
+      if !allow_schema_definition then ()
+      else complain_about_rhsfvs "defnDefine" V
   val msg1 = "\nUnable to prove termination!\n\n\
               \Try using \"TotalDefn.tDefine <name> <quotation> <tac>\".\n"
   val msg2 = "\nThe termination goal has been set up using Defn.tgoal <defn>.\n\
@@ -693,6 +695,9 @@ fun tDefine stem q tac =
  let open Defn
      fun thunk() =
        let val defn = Hol_defn stem q
+           val ps = params_of defn
+           val _ = null ps orelse !allow_schema_definition orelse
+                   complain_about_rhsfvs "tDefine" ps
        in
         if triv_defn defn then
           let val def = fetch_eqns defn

@@ -65,5 +65,3 @@ val f4_def = require (check_result (K true)) (quietly Define)`
   f5 (SUC n) (x, y) = f4 n x
 `;
 
-
-
