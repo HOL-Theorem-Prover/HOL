@@ -12,7 +12,8 @@
 
 open HolKernel Parse boolLib Prim_rec pairLib numLib numpairTheory
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
-     BasicProvers metisLib mesonLib simpLib boolSimps dividesTheory;
+     BasicProvers metisLib mesonLib simpLib boolSimps dividesTheory
+     combinTheory relationTheory optionTheory;
 
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
@@ -242,19 +243,19 @@ val IN_GSPEC = store_thm ("IN_GSPEC",
 val PAIR_IN_GSPEC_1 = Q.store_thm ("PAIR_IN_GSPEC_1",
   `(a,b) IN {(y,x) | y | P y} <=> P a /\ (b = x)`,
   SIMP_TAC bool_ss [GSPECIFICATION,
-    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    o_THM, FST, SND, PAIR_EQ] THEN
     MATCH_ACCEPT_TAC CONJ_COMM) ;
 
 val PAIR_IN_GSPEC_2 = Q.store_thm ("PAIR_IN_GSPEC_2",
   `(a,b) IN {(x,y) | y | P y} <=> P b /\ (a = x)`,
   SIMP_TAC bool_ss [GSPECIFICATION,
-    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    o_THM, FST, SND, PAIR_EQ] THEN
     MATCH_ACCEPT_TAC CONJ_COMM) ;
 
 val PAIR_IN_GSPEC_same = Q.store_thm ("PAIR_IN_GSPEC_same",
   `(a,b) IN {(x,x) | P x} <=> P a /\ (a = b)`,
   SIMP_TAC bool_ss [GSPECIFICATION,
-    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    o_THM, FST, SND, PAIR_EQ] THEN
     EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ;
 
 (* the phrase "gspec special" is dealt with in the translation from
@@ -419,7 +420,7 @@ QED
 Theorem SUBSET_transitive[simp]:
   transitive (SUBSET)
 Proof
-  METIS_TAC[relationTheory.transitive_def, SUBSET_TRANS]
+  METIS_TAC[transitive_def, SUBSET_TRANS]
 QED
 
 Theorem SUBSET_REFL[simp]:
@@ -429,7 +430,7 @@ QED
 
 Theorem SUBSET_reflexive[simp]:
   reflexive (SUBSET)
-Proof SRW_TAC[][relationTheory.reflexive_def]
+Proof SRW_TAC[][reflexive_def]
 QED
 
 (* would prefer to avoid the _THM suffix but the names without are already
@@ -437,19 +438,19 @@ QED
 Theorem RC_SUBSET_THM[simp]:
   RC(SUBSET) = (SUBSET)
 Proof
-  simp[relationTheory.reflexive_RC_identity]
+  simp[reflexive_RC_identity]
 QED
 
 Theorem TC_SUBSET_THM[simp]:
   TC(SUBSET) = (SUBSET)
 Proof
-  SRW_TAC[][relationTheory.transitive_TC_identity]
+  SRW_TAC[][transitive_TC_identity]
 QED
 
 Theorem RTC_SUBSET_THM[simp]:
   RTC (SUBSET) = (SUBSET)
 Proof
-  simp[GSYM relationTheory.TC_RC_EQNS]
+  simp[GSYM TC_RC_EQNS]
 QED
 
 Theorem SUBSET_ANTISYM:
@@ -512,8 +513,6 @@ val SUBSET_ADD = store_thm (* from util_prob *)
    >> Q.EXISTS_TAC `f (n + d)`
    >> RW_TAC std_ss []);
 
-val K_DEF = combinTheory.K_DEF;
-
 val K_SUBSET = store_thm (* from util_prob *)
   ("K_SUBSET",
    ``!x y. K x SUBSET y <=> ~x \/ (UNIV SUBSET y)``,
@@ -556,7 +555,7 @@ QED
 Theorem transitive_PSUBSET[simp]:
   transitive (PSUBSET)
 Proof
-  METIS_TAC[relationTheory.transitive_def, PSUBSET_TRANS]
+  METIS_TAC[transitive_def, PSUBSET_TRANS]
 QED
 
 Theorem PSUBSET_IRREFL[simp]:
@@ -568,20 +567,20 @@ QED
 Theorem RC_PSUBSET[simp]:
   RC (PSUBSET) = (SUBSET)
 Proof
-  simp[PSUBSET_DEF, Ntimes FUN_EQ_THM 2, relationTheory.RC_DEF, EQ_IMP_THM,
+  simp[PSUBSET_DEF, Ntimes FUN_EQ_THM 2, RC_DEF, EQ_IMP_THM,
        DISJ_IMP_THM]
 QED
 
 Theorem TC_PSUBSET[simp]:
   TC (PSUBSET) = (PSUBSET)
 Proof
-  simp[relationTheory.transitive_TC_identity]
+  simp[transitive_TC_identity]
 QED
 
 Theorem RTC_PSUBSET[simp]:
   RTC (PSUBSET) = (SUBSET)
 Proof
-  simp[GSYM relationTheory.TC_RC_EQNS]
+  simp[GSYM TC_RC_EQNS]
 QED
 
 Theorem NOT_PSUBSET_EMPTY[simp]:
@@ -1711,9 +1710,7 @@ val IMAGE_II = store_thm (* from util_prob *)
   ("IMAGE_II",
    ``IMAGE I = I``,
   RW_TAC std_ss [FUN_EQ_THM]
-  >> METIS_TAC [SPECIFICATION, IN_IMAGE, combinTheory.I_THM]);
-
-val o_THM = combinTheory.o_THM;
+  >> METIS_TAC [SPECIFICATION, IN_IMAGE, I_THM]);
 
 val IMAGE_COMPOSE =
     store_thm
@@ -1736,6 +1733,13 @@ val IMAGE_INSERT =
       EXISTS_TAC (“x:'a”),EXISTS_TAC (“x'':'a”)] THEN
      ASM_REWRITE_TAC[]);
 val _ = export_rewrites ["IMAGE_INSERT"]
+
+(* |- (!f. IMAGE f {} = {}) /\
+       !f x s. IMAGE f (x INSERT s) = f x INSERT IMAGE f s
+
+   This is for HOL-Light compatibility.
+ *)
+Theorem IMAGE_CLAUSES = CONJ IMAGE_EMPTY IMAGE_INSERT
 
 Theorem IMAGE_EQ_EMPTY[simp]:
   !s (f:'a->'b). (IMAGE f s = {} <=> s = {}) /\ ({} = IMAGE f s <=> s = {})
@@ -1802,7 +1806,7 @@ val GSPEC_IMAGE = Q.store_thm ("GSPEC_IMAGE",
   GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN
   Q.EXISTS_TAC `x'` THEN Cases_on `f x'` THEN
   FULL_SIMP_TAC bool_ss [EXTENSION, SPECIFICATION,
-    combinTheory.o_THM, FST, SND, PAIR_EQ]) ;
+    o_THM, FST, SND, PAIR_EQ]) ;
 
 val IMAGE_IMAGE = store_thm
   ("IMAGE_IMAGE",
@@ -1902,7 +1906,7 @@ val INJ_EXTEND = Q.store_thm(
     INJ b s t /\ x NOTIN s /\ y NOTIN t ==>
     INJ ((x =+ y) b) (x INSERT s) (y INSERT t)`,
   rpt GEN_TAC \\
-  fs[INJ_DEF,combinTheory.APPLY_UPDATE_THM] >> METIS_TAC []);
+  fs[INJ_DEF,APPLY_UPDATE_THM] >> METIS_TAC []);
 
 val INJ_SUBSET = store_thm(
 "INJ_SUBSET",
@@ -1988,7 +1992,7 @@ val SURJ_IMP_INJ = store_thm (* from util_prob *)
    >- PROVE_TAC []
    >> Q.EXISTS_TAC `\y. @x. x IN s /\ (f x = y)`
    >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [boolTheory.EXISTS_DEF]);
+   >> RW_TAC std_ss [EXISTS_DEF]);
 
 (* ===================================================================== *)
 (* Bijective functions on a set.                                         *)
@@ -2057,7 +2061,7 @@ val BIJ_SYM_IMP = store_thm (* from util_prob *)
        >> Q.EXISTS_TAC `g`
        >> RW_TAC std_ss []
        >> PROVE_TAC [])
-   >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [boolTheory.EXISTS_DEF])
+   >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [EXISTS_DEF])
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `\x. @y. y IN s /\ (f y = x)`
    >> RW_TAC std_ss []);
@@ -2082,7 +2086,7 @@ val BIJ_INV = store_thm
          (!x. x IN s ==> ((g o f) x = x)) /\
          (!x. x IN t ==> ((f o g) x = x))``,
    RW_TAC std_ss []
-   >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, combinTheory.o_THM]
+   >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, o_THM]
    >> POP_ASSUM
       (MP_TAC o
        CONV_RULE
@@ -2232,7 +2236,7 @@ val SCHROEDER_BERNSTEIN = store_thm
         PROVE_TAC [],
         (* goal 1.2 (of 2) *)
         Q.EXISTS_TAC `g o f` >> rpt (POP_ASSUM MP_TAC) \\
-        RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE, combinTheory.o_DEF] \\
+        RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE, o_DEF] \\
         PROVE_TAC [] ],
       (* goal 2 (of 2) *)
       MATCH_MP_TAC BIJ_SYM_IMP \\
@@ -2311,7 +2315,7 @@ val IN_IMAGE' = Q.prove (`y IN IMAGE f s <=> ?x. x IN s /\ (f x = y)`,
 val LINV_OPT_THM = Q.store_thm ("LINV_OPT_THM",
   `(LINV_OPT f s y = SOME x) ==> x IN s /\ (f x = y)`,
   REWRITE_TAC [LINV_OPT_def, IN_IMAGE'] THEN COND_CASES_TAC THEN
-  REWRITE_TAC [optionTheory.SOME_11, optionTheory.NOT_NONE_SOME] THEN
+  REWRITE_TAC [SOME_11, NOT_NONE_SOME] THEN
   RULE_ASSUM_TAC (BETA_RULE o
     Ho_Rewrite.ONCE_REWRITE_RULE [GSYM SELECT_THM]) THEN
   DISCH_TAC THEN BasicProvers.VAR_EQ_TAC THEN FIRST_ASSUM ACCEPT_TAC) ;
@@ -2320,7 +2324,7 @@ val INJ_LINV_OPT_IMAGE = Q.store_thm ("INJ_LINV_OPT_IMAGE",
   `INJ (LINV_OPT f s) (IMAGE f s) (IMAGE SOME s)`,
   REWRITE_TAC [INJ_DEF, LINV_OPT_def] THEN
   CONJ_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
-  ASM_REWRITE_TAC [optionTheory.SOME_11] THEN
+  ASM_REWRITE_TAC [SOME_11] THEN
   RULE_L_ASSUM_TAC (CONJUNCTS o Ho_Rewrite.REWRITE_RULE [IN_IMAGE',
     GSYM SELECT_THM, BETA_THM])
   THENL [
@@ -2437,8 +2441,7 @@ val RINV_DEF = Q.store_thm ("RINV_DEF",
   DISCH_THEN (fn th => ASSUME_TAC th THEN
     ASSUME_TAC (REWRITE_RULE [IMAGE_SURJ] th)) THEN
   REPEAT STRIP_TAC THEN
-  FULL_SIMP_TAC std_ss [RINV_LO, SURJ_DEF, LINV_OPT_def,
-    optionTheory.THE_DEF] THEN
+  FULL_SIMP_TAC std_ss [RINV_LO, SURJ_DEF, LINV_OPT_def, THE_DEF] THEN
   RES_TAC THEN
   irule (BETA_RULE (Q.SPECL [`P`, `\y. f y = x`] SELECT_ELIM_THM)) THEN
   CONJ_TAC THEN1 SIMP_TAC std_ss [] THEN
@@ -2454,8 +2457,8 @@ val SURJ_INJ_INV = store_thm(
   irule INJ_COMPOSE THEN Q.EXISTS_TAC `IMAGE SOME s` THEN
     REWRITE_TAC [INJ_LINV_OPT_IMAGE] THEN REWRITE_TAC [INJ_DEF, IN_IMAGE] THEN
     REPEAT STRIP_TAC THEN REPEAT BasicProvers.VAR_EQ_TAC THEN
-    FULL_SIMP_TAC std_ss [optionTheory.THE_DEF],
-  ASM_REWRITE_TAC [LINV_OPT_def, combinTheory.o_THM, optionTheory.THE_DEF] THEN
+    FULL_SIMP_TAC std_ss [THE_DEF],
+  ASM_REWRITE_TAC [LINV_OPT_def, o_THM, THE_DEF] THEN
     RULE_ASSUM_TAC (Ho_Rewrite.REWRITE_RULE
       [IN_IMAGE', GSYM SELECT_THM, BETA_THM]) THEN ASM_REWRITE_TAC [] ]) ;
 
@@ -2484,6 +2487,9 @@ val FINITE_INSERT =
      REPEAT STRIP_TAC THEN SPEC_TAC ((“x:'a”),(“x:'a”)) THEN
      REPEAT (FIRST_ASSUM MATCH_MP_TAC) THEN
      CONJ_TAC THEN FIRST_ASSUM MATCH_ACCEPT_TAC);
+
+(* |- FINITE {} /\ !x s. FINITE (x INSERT s) <=> FINITE s *)
+Theorem FINITE_RULES = CONJ FINITE_EMPTY FINITE_INSERT
 
 val SIMPLE_FINITE_INDUCT =
     TAC_PROOF
@@ -2780,7 +2786,7 @@ val _ = export_rewrites ["REL_RESTRICT_EMPTY"]
 val REL_RESTRICT_SUBSET = store_thm(
   "REL_RESTRICT_SUBSET",
   ``s1 SUBSET s2 ==> REL_RESTRICT R s1 RSUBSET REL_RESTRICT R s2``,
-  SRW_TAC [][relationTheory.RSUBSET, REL_RESTRICT_DEF, SUBSET_DEF]);
+  SRW_TAC [][RSUBSET, REL_RESTRICT_DEF, SUBSET_DEF]);
 
 (* =====================================================================*)
 (* Cardinality                                                          *)
@@ -2932,6 +2938,12 @@ val _ = export_rewrites ["CARD_EMPTY"]
 
 val CARD_INSERT = save_thm("CARD_INSERT",CONJUNCT2 CARD_DEF);
 val _ = export_rewrites ["CARD_INSERT"]
+
+(* |- CARD {} = 0 /\
+      !s. FINITE s ==> !x. CARD (x INSERT s) =
+                           if x IN s then CARD s else SUC (CARD s)
+ *)
+Theorem CARD_CLAUSES = CONJ CARD_EMPTY CARD_INSERT
 
 val CARD_EQ_0 =
     store_thm
@@ -3266,6 +3278,9 @@ val CARD_IMAGE = store_thm("CARD_IMAGE",
     IMAGE_EMPTY, ZERO_LESS_EQ] THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC arith_ss []) ;
 
+(* |- !f s. FINITE s ==> CARD (IMAGE f s) <= CARD s *)
+Theorem CARD_IMAGE_LE = GEN_ALL CARD_IMAGE
+
 val SURJ_CARD = Q.store_thm ("SURJ_CARD",
   `!s. FINITE s ==> !t. SURJ f s t ==> FINITE t /\ CARD t <= CARD s`,
   REWRITE_TAC [IMAGE_SURJ] THEN REPEAT STRIP_TAC THEN
@@ -3295,17 +3310,17 @@ val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ((BETA_RULE o
                  Q.ISPEC `\x. FINITE x ==> P x` o
-                 REWRITE_RULE [prim_recTheory.WF_measure] o
+                 REWRITE_RULE [WF_measure] o
                  Q.ISPEC `measure CARD`)
-                relationTheory.WF_INDUCTION_THM) THEN
+                WF_INDUCTION_THM) THEN
   REPEAT STRIP_TAC THEN
   RULE_ASSUM_TAC (REWRITE_RULE [AND_IMP_INTRO]) THEN
   Q.PAT_X_ASSUM `!x. (!y. y PSUBSET x ==> P y) /\ FINITE x ==>
                    P x` MATCH_MP_TAC THEN
   ASM_REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  ASM_REWRITE_TAC [prim_recTheory.measure_def,
-                   relationTheory.inv_image_def] THEN
+  ASM_REWRITE_TAC [measure_def,
+                   inv_image_def] THEN
   BETA_TAC THEN mesonLib.ASM_MESON_TAC [PSUBSET_FINITE, CARD_PSUBSET]);
 
 val CARD_INSERT' = SPEC_ALL (UNDISCH (SPEC_ALL CARD_INSERT)) ;
@@ -3408,8 +3423,8 @@ val CARD_CLAUSES =
              (CARD (x INSERT s) = (if x IN s then CARD s else SUC (CARD s)))``);
 
 val IMAGE_CLAUSES = CONJ IMAGE_EMPTY IMAGE_INSERT;
-val LT = CONJ (DECIDE ``!m. ~(m < 0)``) prim_recTheory.LESS_THM;
-val LT_REFL = prim_recTheory.LESS_REFL;
+val LT = CONJ (DECIDE ``!m. ~(m < 0)``) LESS_THM;
+val LT_REFL = LESS_REFL;
 
 Theorem CARD_IMAGE_INJ:
    !(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
@@ -3650,9 +3665,9 @@ val gdef = map Term
 (* Lemma: g n is finite for all n.                                      *)
 (* ---------------------------------------------------------------------*)
 
-val optcases = optionTheory.option_CASES
-val optinfo = {case_def= optionTheory.option_case_def, nchotomy = optcases}
-val rand_case = prove_case_rand_thm optinfo
+val rand_case =
+    prove_case_rand_thm {case_def = option_case_def, nchotomy = option_CASES};
+
 val optcase_elim = Q.prove(
   ‘option_CASE optv n fv:bool <=>
      (optv = NONE) /\ n \/ ?x. (optv = SOME x) /\ fv x’,
@@ -3661,7 +3676,7 @@ val optcase_elim = Q.prove(
 val g_finite =
     TAC_PROOF
     ((gdef, ``!n:num. FINITE (g n:'a set)``),
-     INDUCT_TAC >> simp[rand_case, optcase_elim] >> METIS_TAC[optcases]);
+     INDUCT_TAC >> simp[rand_case, optcase_elim] >> METIS_TAC[option_CASES]);
 
 (* ---------------------------------------------------------------------*)
 (* Lemma: g n is contained in g (n+i) for all i.                        *)
@@ -3672,7 +3687,7 @@ val g_subset =
     ((gdef, ``!n. !x:'a. x IN (g n) ==> !i. x IN (g (n+i))``),
      REPEAT GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THEN
      ASM_REWRITE_TAC [ADD_CLAUSES,IN_INSERT] >>
-     simp[optcase_elim, rand_case] >> METIS_TAC[optcases]);
+     simp[optcase_elim, rand_case] >> METIS_TAC[option_CASES]);
 
 (* ---------------------------------------------------------------------*)
 (* Lemma: if x is in g(n) then {x} = g(n+1)-g(n) for some n.            *)
@@ -3695,7 +3710,7 @@ val g_cases =
 
 val g_in_s = TAC_PROOF(
   (gdef, “!n:num. g n SUBSET (s:'a set)”),
-  Induct >> simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  Induct >> simp[] >> DEEP_INTRO_TAC some_intro >> simp[] >>
   SRW_TAC[][INSERT_SUBSET]);
 
 val inf = “INFINITE (s:'a set)”
@@ -3704,7 +3719,7 @@ val infinite_g_grows = TAC_PROOF(
   rpt strip_tac >> simp[] >> ONCE_REWRITE_TAC [rand_case] >>
   simp_tac (srw_ss() ++ boolSimps.DNF_ss) [optcase_elim] >>
   simp_tac (srw_ss() ++ boolSimps.CONJ_ss) [] >>
-  DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  DEEP_INTRO_TAC some_intro >> simp[] >>
   METIS_TAC [IN_INFINITE_NOT_FINITE, g_finite])
 
 val enum_exists = infinite_g_grows |> CONV_RULE SKOLEM_CONV
@@ -3733,12 +3748,12 @@ val inj_def =
 val result_part1_0 = TAC_PROOF(
   (inj_def::enum_def::inf::gdef, “INJ inj (s:'a set) s /\ ~SURJ inj s s”),
   simp_tac (srw_ss()) [INJ_DEF, SURJ_DEF] >> rpt strip_tac
-  >- (simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[enum_in_s])
-  >- (pop_assum mp_tac >> simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >>
-      DEEP_INTRO_TAC optionTheory.some_intro >> simp[enum_11])
+  >- (simp[] >> DEEP_INTRO_TAC some_intro >> simp[enum_in_s])
+  >- (pop_assum mp_tac >> simp[] >> DEEP_INTRO_TAC some_intro >>
+      DEEP_INTRO_TAC some_intro >> simp[enum_11])
   >- (disj2_tac >> Q.EXISTS_TAC ‘enum 0’ >> conj_tac >- simp[enum_in_s] >>
       Q.X_GEN_TAC ‘y’ >> Cases_on ‘y IN s’ >> simp[] >>
-      DEEP_INTRO_TAC optionTheory.some_intro >> simp[enum_11]))
+      DEEP_INTRO_TAC some_intro >> simp[enum_11]))
 
 val gexists =
     num_Axiom
@@ -3918,8 +3933,8 @@ val lem = prove(
       `m < n` by DECIDE_TAC
     ] THEN
     Q.ISPECL_THEN [`inv R^+`, `f`] MP_TAC transitive_monotone THEN
-    SRW_TAC [][relationTheory.inv_DEF, relationTheory.transitive_inv] THEN
-    METIS_TAC [relationTheory.TC_SUBSET],
+    SRW_TAC [][inv_DEF, transitive_inv] THEN
+    METIS_TAC [TC_SUBSET],
 
     `!n m. (f n = f m) = (n = m)` by METIS_TAC [] THEN
     `IMAGE f univ(:num) SUBSET s`
@@ -3935,17 +3950,15 @@ val FINITE_WF_noloops = store_thm(
   Q_TAC SUFF_TAC
     `!s. FINITE s ==>
          irreflexive (TC (REL_RESTRICT R s)) ==> WF (REL_RESTRICT R s)`
-    THEN1 METIS_TAC [relationTheory.irreflexive_def,
-                     relationTheory.WF_noloops] THEN
-  REWRITE_TAC [prim_recTheory.WF_IFF_WELLFOUNDED,
-               prim_recTheory.wellfounded_def] THEN
+    THEN1 METIS_TAC [irreflexive_def, WF_noloops] THEN
+  REWRITE_TAC [WF_IFF_WELLFOUNDED, wellfounded_def] THEN
   REPEAT STRIP_TAC THEN
   Q.SPECL_THEN [`f`,
                 `{x | x IN s /\ ((?y. R x y /\ y IN s) \/
                                  (?x'. R x' x /\ x' IN s))}`,
                 `REL_RESTRICT R s`] MP_TAC (GEN_ALL lem) THEN
   ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [REL_RESTRICT_DEF] THEN
-  FULL_SIMP_TAC (srw_ss()) [relationTheory.irreflexive_def] THEN
+  FULL_SIMP_TAC (srw_ss()) [irreflexive_def] THEN
   CONJ_TAC THENL [
     MATCH_MP_TAC SUBSET_FINITE_I THEN Q.EXISTS_TAC `s` THEN
     SRW_TAC [][SUBSET_DEF],
@@ -3956,8 +3969,8 @@ val FINITE_StrongOrder_WF = store_thm(
   "FINITE_StrongOrder_WF",
   ``!R s. FINITE s /\ StrongOrder (REL_RESTRICT R s) ==>
           WF (REL_RESTRICT R s)``,
-  SRW_TAC [][FINITE_WF_noloops, relationTheory.StrongOrder,
-             relationTheory.transitive_TC_identity]);
+  SRW_TAC [][FINITE_WF_noloops, StrongOrder,
+             transitive_TC_identity]);
 
 (* ===================================================================== *)
 (* Big union (union of set of sets)                                      *)
@@ -5081,7 +5094,7 @@ val SUM_SET_IN_LE = store_thm(
   "SUM_SET_IN_LE",
   ``!x s. FINITE s /\ x IN s ==> x <= SUM_SET s``,
   SRW_TAC [][SUM_SET_DEF] THEN
-  PROVE_TAC [combinTheory.I_THM, SUM_IMAGE_IN_LE]);
+  PROVE_TAC [I_THM, SUM_IMAGE_IN_LE]);
 
 val SUM_SET_DELETE = store_thm(
   "SUM_SET_DELETE",
@@ -6118,7 +6131,7 @@ QED
 Theorem equivalence_same_part:
   equivalence (\x y. part v x = part v y)
 Proof
-  rw[relationTheory.ALT_equivalence]
+  rw[ALT_equivalence]
   \\ rw[Once FUN_EQ_THM, SimpRHS]
   \\ rw[EQ_IMP_THM]
 QED
@@ -6241,7 +6254,7 @@ val KL_lemma1 = prove(
       by (REWRITE_TAC [EXTENSION] THEN
           SRW_TAC [][GSYM RIGHT_EXISTS_AND_THM, IN_BIGUNION, IN_IMAGE,
                      GSPECIFICATION] THEN
-          PROVE_TAC [relationTheory.RTC_CASES1]) THEN
+          PROVE_TAC [RTC_CASES1]) THEN
   POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][IN_IMAGE] THENL [
     SRW_TAC [][IMAGE_FINITE, IN_IMAGE, GSPECIFICATION],
     RES_TAC
@@ -6289,9 +6302,7 @@ val KoenigsLemma = store_thm(
 val KoenigsLemma_WF = store_thm(
   "KoenigsLemma_WF",
   ``!R. (!x. FINITE {y | R x y}) /\ WF (inv R) ==> !x. FINITE {y | RTC R x y}``,
-  SRW_TAC [][prim_recTheory.WF_IFF_WELLFOUNDED,
-             prim_recTheory.wellfounded_def,
-             relationTheory.inv_DEF] THEN
+  SRW_TAC [][WF_IFF_WELLFOUNDED, wellfounded_def, inv_DEF] THEN
   METIS_TAC [KoenigsLemma]);
 
 Theorem PSUBSET_EQN:
@@ -6527,7 +6538,7 @@ Theorem COUNTABLE_NUM[simp]:
 Proof
    RW_TAC std_ss [COUNTABLE_ALT]
    >> Q.EXISTS_TAC `I`
-   >> RW_TAC std_ss [combinTheory.I_THM]
+   >> RW_TAC std_ss [I_THM]
 QED
 
 Theorem COUNTABLE_IMAGE_NUM[simp]:
@@ -6785,7 +6796,7 @@ val enumerate_def = new_definition ("enumerate_def",
 val ENUMERATE = store_thm (* from util_prob *)
   ("ENUMERATE",
    ``!s. (?f :num -> 'a. BIJ f UNIV s) = BIJ (enumerate s) UNIV s``,
-   RW_TAC std_ss [boolTheory.EXISTS_DEF, enumerate_def]);
+   RW_TAC std_ss [EXISTS_DEF, enumerate_def]);
 
 Theorem COUNTABLE_ALT_BIJ:
   !s. countable s <=> FINITE s \/ BIJ (enumerate s) UNIV s
@@ -6829,7 +6840,7 @@ Proof
    >> RW_TAC std_ss []
    >- (DISJ2_TAC
        >> Q.EXISTS_TAC `K e`
-       >> RW_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE, IN_UNIV, combinTheory.K_THM])
+       >> RW_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE, IN_UNIV, K_THM])
    >> DISJ2_TAC
    >> Q.EXISTS_TAC `\n. num_CASE n e f`
    >> RW_TAC std_ss [IN_INSERT, IN_IMAGE, EXTENSION, IN_UNIV]
@@ -6962,7 +6973,7 @@ val IMAGE_EQ_SING = store_thm("IMAGE_EQ_SING",
 
 val count_add1 = Q.store_thm ("count_add1",
 `!n. count (n + 1) = n INSERT count n`,
-METIS_TAC [COUNT_SUC, arithmeticTheory.ADD1]);
+METIS_TAC [COUNT_SUC, ADD1]);
 
 val compl_insert = Q.store_thm ("compl_insert",
 `!s x. COMPL (x INSERT s) = COMPL s DELETE x`,
@@ -6983,8 +6994,14 @@ Theorem PREIMAGE_ALT:
   !f s. PREIMAGE f s = s o f
 Proof
     Know `!x f s. x IN (s o f) <=> f x IN s`
- >- RW_TAC std_ss [SPECIFICATION, combinTheory.o_THM]
+ >- RW_TAC std_ss [SPECIFICATION, o_THM]
  >> RW_TAC std_ss [PREIMAGE_def, EXTENSION, GSPECIFICATION]
+QED
+
+Theorem PREIMAGE_o:
+  !f g s. PREIMAGE (f o g) s = PREIMAGE g (s o f)
+Proof
+   REWRITE_TAC [PREIMAGE_ALT, GSYM o_ASSOC]
 QED
 
 Theorem IN_PREIMAGE[simp]:
@@ -7039,13 +7056,13 @@ val PREIMAGE_DIFF = store_thm
 Theorem PREIMAGE_I[simp]:
   PREIMAGE I = I /\ PREIMAGE (λx. x) = (λx. x)
 Proof
-  METIS_TAC [EXTENSION, IN_PREIMAGE, combinTheory.I_THM]
+  METIS_TAC [EXTENSION, IN_PREIMAGE, I_THM]
 QED
 
 val PREIMAGE_K = store_thm
   ("PREIMAGE_K",
    ``!x s. PREIMAGE (K x) s = if x IN s then UNIV else {}``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, combinTheory.K_THM, IN_UNIV, NOT_IN_EMPTY]);
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, K_THM, IN_UNIV, NOT_IN_EMPTY]);
 
 val PREIMAGE_DISJOINT = store_thm
   ("PREIMAGE_DISJOINT",
@@ -7145,7 +7162,7 @@ val FINITE_is_measure_maximal = Q.store_thm(
   fs[is_measure_maximal_def] >> Q.RENAME_TAC [‘m _ <= m e0’, ‘e NOTIN s’] >>
   Cases_on ‘m e0 <= m e’
   >- (Q.EXISTS_TAC ‘e’ >> SRW_TAC[][] >> simp[] >>
-      METIS_TAC[arithmeticTheory.LESS_EQ_TRANS]) >>
+      METIS_TAC[LESS_EQ_TRANS]) >>
   Q.EXISTS_TAC ‘e0’ >> simp[DISJ_IMP_THM]);
 
 val is_measure_maximal_SING = Q.store_thm(
