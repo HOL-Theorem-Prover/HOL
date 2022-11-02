@@ -9,15 +9,19 @@ val _ = new_theory "lpc_devices";
 
 (* We define the type of a generic device *)
 
-val _ = type_abbrev ("device",``:
-   (* memory addresses that belong to this device, dependent on internal state of type 'a *)
-   ('a -> word32 set) #
-   (* if core executes a memory read, it sees the following data *)
-   ('a -> word32 -> word8) #
-   (* the next state relation for the devive  *)
-   (num -> memory_access list -> 'a -> 'a -> bool) #
-   (* an invariant that mst be true for this devie to make sense *)
-   (num # 'a -> bool)``);
+Type device[pp] =
+  “:(* memory addresses that belong to this device, dependent on internal
+       state of type 'a *)
+    ('a -> word32 set) #
+
+    (* if core executes a memory read, it sees the following data *)
+    ('a -> word32 -> word8) #
+
+    (* the next state relation for the devive  *)
+    (num -> memory_access list -> 'a -> 'a -> bool) #
+
+    (* an invariant that mst be true for this devie to make sense *)
+    (num # 'a -> bool)”
 
 
 (* Devices can be composed *)
@@ -73,8 +77,9 @@ val IS_WRITE_def = Define `
   (IS_WRITE (MEM_READ w) = F) /\
   (IS_WRITE (MEM_WRITE w v) = T)`;
 
-val ROM_NEXT_def = Define `
-  ROM_NEXT (t:num) l r1 r2 = (r2 = r1) /\ (FILTER IS_WRITE l = [])`;
+Definition ROM_NEXT_def:
+  ROM_NEXT (t:num) l r1 r2 <=> (r2 = r1) /\ (FILTER IS_WRITE l = [])
+End
 
 val ROM_DEVICE_def = Define `
   (ROM_DEVICE:(word32 -> word8 option) device) =
@@ -131,11 +136,12 @@ val PER_READ_UART_def = Define `PER_READ_UART ((t,x,y,u,z):peripherals) a = u`;
 val LOAD_IMAGE_def = Define `
   LOAD_IMAGE (s:arm_state) m = s with <|memory := m; accesses := []|>`;
 
-val LPC_NEXT_def = Define `
-  LPC_NEXT (s1,p1) (s2,p2) =
+Definition LPC_NEXT_def:
+  LPC_NEXT (s1,p1) (s2,p2) <=>
     (ARM_NEXT (PENDING_INTERRUPT p1)
               (LOAD_IMAGE s1 (MEMORY_IMAGE p1)) = SOME s2) /\
-    PERIPHERALS_NEXT s2.accesses p1 p2`;
+    PERIPHERALS_NEXT s2.accesses p1 p2
+End
 
 
 (* Theorems *)
