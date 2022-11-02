@@ -22,6 +22,13 @@ val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
 
+fun render_exn srcfn e =
+    if !Globals.interactive then
+      (Feedback.output_ERR (Feedback.exn_to_string e);
+       raise ERR srcfn "Exception raised")
+    else
+      raise e
+
 (*---------------------------------------------------------------------------*)
 (* Misc. stuff that should be in Lib probably                                *)
 (*---------------------------------------------------------------------------*)
@@ -325,7 +332,7 @@ fun list_mk_prod_tyl L =
  let val (front,(b,last)) = front_last L
      val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
      val last' = (if b then tysize else K0) last
-                 handle e => Raise (wrap_exn "TotalDefn" "last'" e)
+                 handle e => render_exn "last'" e
   in
   itlist (fn (b,ty1) => fn M =>
      let val x = mk_var("x",ty1)
@@ -659,7 +666,7 @@ fun xDefine stem q =
  Parse.try_grammar_extension
    (Theory.try_theory_extension
        (def_n_ind o primDefine o Defn.Hol_defn stem)) q
-  handle e => Raise (wrap_exn "TotalDefn" "xDefine" e);
+  handle e => render_exn "xDefine" e;
 
 (*---------------------------------------------------------------------------
      Define
@@ -702,6 +709,8 @@ fun tDefine stem q tac =
         if triv_defn defn then
           let val def = fetch_eqns defn
               val bind = stem ^ !Defn.def_suffix
+              val _ = HOL_MESG "Termination argument ignored (term. proved \
+                               \automatically)"
           in been_stored (bind,def);
              (def, NONE)
           end
@@ -715,7 +724,7 @@ fun tDefine stem q tac =
  in
   Parse.try_grammar_extension
     (Theory.try_theory_extension thunk) ()
-  handle e => Raise (wrap_exn "TotalDefn" "tDefine" e)
+  handle e => render_exn "tDefine" e
  end;
 
 (* ----------------------------------------------------------------------
@@ -785,7 +794,7 @@ fun multidefine q = List.map (#1 o primDefine) (Defn.Hol_multi_defns q)
 
 fun multiDefine q =
   Parse.try_grammar_extension (Theory.try_theory_extension multidefine) q
-  handle e => Raise e;
+  handle e => render_exn "multiDefine" e;
 
 (*---------------------------------------------------------------------------*)
 (* API for Define                                                            *)
