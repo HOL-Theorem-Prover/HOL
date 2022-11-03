@@ -148,6 +148,10 @@ Incompatibilities:
     theorems. 2. When proving `f IN measurable a b`, some proof branches regarding σ-algebras no
     longer exists (thus the related proof scripts must be eliminated).
 
+*   The `Definition` syntax when a `Termination` argument has been provided, and the underlying `TotalDefn.tDefine` function now won’t make schematic definitions unless they have been explicitly allowed.
+    (With the `Definition` syntax, this is done by using the `schematic` attribute.)
+    This brings this flavour of definition into line with the others, where the presence of extra free variables on the RHS of a definition’s equation is usually flagged as an error.
+
 * * * * *
 
 <div class="footer">
