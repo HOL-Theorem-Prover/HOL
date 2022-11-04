@@ -5,12 +5,20 @@ open stringTheory ASCIInumbersTheory arithmeticTheory ;
 
 val _ = new_theory "parse_json";
 
+(*
+HOL4 integer operations are not evaluatable:
+EVAL ``int_lt (-1:int) 0``
+(Some kind of of zero comparison would be critical to the json_to_string_def function)
+
+Therefore, integers are stored using a bool flag for sign (T means negative) and a regular num,
+with a separate converter function to HOL4 integers.
+*)
 Datatype:
   json =
-     Object ((string # json ) list)
+     Object ((string # json) list)
    | Array (json list)
    | String string
-   | Number num
+   | Integer bool num
    | Bool bool
    | Null
 End
@@ -105,14 +113,14 @@ EVAL ``json_to_string $ Object [("a", String "\t")]``
 Definition json_to_string_def:
   (json_to_string obj =
     case obj of
-        | Object mems => ["{"] ++
+       | Object mems => ["{"] ++
                 concat_with (MAP mem_to_string mems) [","] ++
                 ["}"]
-        | Array obs => ["["] ++
+       | Array obs => ["["] ++
                 concat_with (MAP json_to_string obs) [","] ++
                 ["]"]
        | String s => [CONCAT ["\""; encode_str T s; "\""]]
-       | Number i => [toString i]
+       | Integer sign n => [if sign then CONCAT ["-"; toString n] else toString n]
        | Bool b => if b then ["true"] else ["false"]
        | Null => ["null"])
   /\
@@ -138,7 +146,7 @@ Datatype:
   | NULL
   | BOOL bool
   | Str string
-  | NUM num
+  | INT bool num
 End
 
 Definition is_whitespace_def:
@@ -259,16 +267,28 @@ Proof
 QED
 
 (*
-Examle:
+Example:
 EVAL ``lex_num "21149a" 0``
 *)
 
 Definition lex_num_def:
-  lex_num [] acc = (acc,[])
-  /\ (lex_num (c::cs) acc =
+  lex_num [] acc = (acc,[]) /\
+  (lex_num (c::cs) acc =
     if isDigit c then
       lex_num cs (acc * 10 + (ORD c - ORD #"0"))
     else (acc, c::cs))
+End
+
+Definition lex_int_def:
+  lex_int [] = NONE /\
+  (lex_int (c::cs) =
+    let
+      sign = if c = #"-" then T else F
+    in
+      let
+        (num, cs') = if sign then lex_num cs 0 else lex_num (c::cs) 0
+      in
+        SOME ((sign, num), cs'))
 End
 
 Theorem lex_num_SUFFIX:
@@ -293,6 +313,24 @@ Proof
   >> fs[NOT_LESS]
 QED
 
+Theorem lex_int_LENGTH:
+  !cs n v. lex_int cs = SOME v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+Proof
+  rpt strip_tac
+  >> Cases_on `cs`
+  >> (fs[lex_int_def])
+  >> Cases_on `h = #"-"`
+  >- (Cases_on `lex_num t 0`
+      >> rw[]
+      >> drule_then assume_tac lex_num_SUFFIX
+      >> fs[IS_SUFFIX_APPEND])
+  >> Cases_on `lex_num (STRING h t) 0`
+  >> fs[]
+  >> rw[]
+  >> drule_then assume_tac lex_num_LENGTH
+  >> fs[IS_SUFFIX_APPEND]
+QED
+
 Definition lex_def:
   (lex [] acc = INL acc)
   /\ (lex (c::cs) acc =
@@ -310,24 +348,25 @@ Definition lex_def:
     else if c = #"t" \/ c = #"f" then
       case lex_bool (c::cs) of
       | SOME (tok, cs) => lex cs (tok::acc)
-      | NONE => INR $ "unexpected characters" ++ TAKE 10 (c::cs)
+      | NONE => INR $ "unexpected characters: " ++ TAKE 10 (c::cs)
     else if c = #"n" then
       case lex_null (c::cs) of
       | SOME (tok, cs) => lex cs (tok::acc)
-      | NONE => INR ("unexpected characters" ++ TAKE 10 (c::cs))
-    else let (num, cs') = lex_num cs 0 in
-      if cs' = cs then
-        INR $ "unexpected characters" ++ TAKE 10 (c::cs)
-      else lex cs' ((NUM num)::acc)
+      | NONE => INR ("unexpected characters: " ++ TAKE 10 (c::cs))
+    else
+      case lex_int (c::cs) of
+      | SOME ((sign, num), cs') =>
+       if cs' = c::cs then
+         INR $ "unexpected characters: " ++ TAKE 10 (c::cs)
+       else lex cs' ((INT sign num)::acc)
+      | NONE => INR $ "unexpected characters: " ++ TAKE 10 (c::cs)
   )
 Termination
   WF_REL_TAC `measure $ LENGTH o FST`
-  >> rw[]
-  >> gvs[lex_null_thm,lex_bool_thm]
-  >> imp_res_tac lex_str_LENGTH
-  >> gs[]
-  >> drule $ GSYM lex_num_LENGTH
-  >> fs[]
+  >> (rw[]
+      >> gs[lex_null_thm,lex_bool_thm])
+  >- (imp_res_tac lex_int_LENGTH >> gs[])
+  >> (imp_res_tac lex_str_LENGTH >> gs[])
 End
 
 (*
@@ -359,11 +398,11 @@ Definition parse_def:
     | (OBJ acc)::ns => parse ts ((OBJV (String s) acc)::ns) F
     | (ARR acc)::ns => parse ts ((ARR $ (String s)::acc)::ns) F
     | ns => INR (String s, ts, ns))
-  /\ parse ((NUM n)::ts) ns T =
+  /\ parse ((INT s i)::ts) ns T =
     (case ns of
-    | (OBJ acc)::ns => parse ts ((OBJV (Number n) acc)::ns) F
-    | (ARR acc)::ns => parse ts ((ARR $ (Number n)::acc)::ns) F
-    | ns => INR (Number n, ts, ns))
+    | (OBJ acc)::ns => parse ts ((OBJV (Integer s i) acc)::ns) F
+    | (ARR acc)::ns => parse ts ((ARR $ (Integer s i)::acc)::ns) F
+    | ns => INR (Integer s i, ts, ns))
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((ARR acc)::ns) T
     = parse ts ((ARR $ (Object [])::acc)::ns) F
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((OBJ acc)::ns) T
@@ -405,7 +444,7 @@ Definition json_to_tok_def:
                 (REVERSE $ concat_with (MAP json_to_tok obs) [COMMA]) ++
                 [ARROPEN]
        | String s => [Str s]
-       | Number i => [NUM i]
+       | Integer s n => [INT s n]
        | Bool b => [BOOL b]
        | Null => [NULL])
   /\
@@ -456,6 +495,7 @@ Examples:
 EVAL ``lex "{}" []``
 EVAL ``lex "\"\"\"" []``
 EVAL ``lex "\"\"" []``
+EVAL ``lex "{ \"a\" : -1 }" []``
 EVAL ``parse [OBJCLOSE; OBJOPEN] [] T``
 EVAL ``parse [OBJCLOSE; OBJCLOSE; OBJOPEN] [] T``
 EVAL ``parse (OUTL $ lex "{\"1\": {\"2\": {\"3\": [{\"4\": {}}]}}}" []) [] T``
