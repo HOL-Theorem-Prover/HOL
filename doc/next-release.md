@@ -20,8 +20,9 @@ Contents
 New features:
 -------------
 
-- A `HOL_CONFIG` environment variable is considered to allow for a custom `hol-config` configuration at a non-standard location or potentially ignoring any present hol-config.
-  If the variable is set, any other hol-config file will be ignored. If the value of `HOL_CONFIG` is a readable file, it will be used.
+- The `HOL_CONFIG` environment variable is now consulted when HOL sessions begin, allowing for a custom `hol-config` configuration at a non-standard location, or potentially ignoring any present hol-config.
+  If the variable is set, any other hol-config file will be ignored.
+  If the value of `HOL_CONFIG` is a readable file, it will be used.
 
 - There is a new theorem attribute, `unlisted`, which causes theorems to be saved/stored in the usual fashion but kept somewhat hidden from user-view.
   Such theorems can be accessed with `DB.fetch`, and may be passed to other tools though the action of other attributes, but will not appear in the results of `DB.find` and `DB.match`, and will not occur as SML bindings in theory files.
@@ -49,9 +50,7 @@ Bugs fixed:
 New theories:
 -------------
 
-- Theory of "contiguity types", as discussed in the paper
-
-   "Specifying Message Formats with Contiguity Types", ITP 2021
+- A theory of "contiguity types", as discussed in the paper _Specifying Message Formats with Contiguity Types_, ITP 2021. (DOI: [10.4230/LIPIcs.ITP.2021.30](https://doi.org/10.4230/LIPIcs.ITP.2021.30))
 
   Contiguity types express formal languages where later parts of a
   string may depend on information held earlier in the string. Thus
@@ -63,7 +62,7 @@ New theories:
 New tools:
 ----------
 
-- **improvements of multiplications of large numbers**:
+-   **Multiplying large numbers more efficiently**:
 
     In `src/real` there is a new library `bitArithLib.sml` which improves the
     performance of large multiplications for the types `:num` and `:real`.
@@ -111,14 +110,13 @@ number of components.
 Incompatibilities:
 ------------------
 
-*   The small `productTheory` (Products of natural numbers and real numbers, ported from HOL-Light)
-    has been merged into `iterateTheory` (on which `extrealTheory` now depends).
+*   The small `productTheory` (products of natural numbers and real numbers, ported from HOL-Light) has been merged into `iterateTheory` (on which `extrealTheory` now depends).
 
 *   Changes in the `formal-languages/context-free` example:
 
     -   The location type (defined in `locationTheory`) has been simplified
     -   The PEG machinery now has a simple error-reporting facility that attempts to report the end of the longest prefix of the input that might still be in the PEG’s language.
-        This means that instead of returning either `SOME result` or `NONE`, PEG’s now return a custom `Success`/`Failure` data type with values attached to both constructors.
+        This means that instead of returning either `SOME result` or `NONE`, PEGs now return a custom `Success`/`Failure` data type with values attached to both constructors.
 
 *   The `MEMBER_NOT_EMPTY` theorem in `bagTheory` has been renamed to `BAG_MEMBER_NOT_EMPTY` to avoid a name-clash with a theorem of the same name in `pred_setTheory`.
 
@@ -140,13 +138,15 @@ Incompatibilities:
     This change makes the naming consistent across all of HOL’s fragments.
     These names are used when referring to fragments in calls to `diminish_srw_ss`, when using `ExclSF` (see above), and in printing the values in the REPL.
 
-*   In `sigma_algebraTheory`, the definition of `measurable` has been generalized without
-    requiring that the involved systems of sets must be σ-algebras. This change allows the user to
-    express measurable mappings over generators of σ-algebras. (cf. `MEASURABLE_LIFT` for a related
-    important lemma.)  Existing proofs may break in two ways (both are easy to fix): 1. The need of
-    extra antecedents (usually easily available) when applying some existing measure and probability
-    theorems. 2. When proving `f IN measurable a b`, some proof branches regarding σ-algebras no
-    longer exists (thus the related proof scripts must be eliminated).
+*   In `sigma_algebraTheory`, the definition of `measurable` has been generalized without requiring that the involved systems of sets must be σ-algebras.
+    This change allows the user to express measurable mappings over generators of σ-algebras (cf. `MEASURABLE_LIFT` for a related important lemma).
+    Existing proofs may break in two ways (both are easy to fix):
+        1. The need for extra antecedents (usually easily available) when applying some existing measure and probability theorems.
+        2. When proving `f IN measurable a b`, some proof branches regarding σ-algebras no longer exists (thus the related proof scripts must be eliminated).
+
+*   Both the `Definition` syntax when a `Termination` argument has been provided, and the underlying `TotalDefn.tDefine` function, won’t now make schematic definitions unless they have been explicitly allowed.
+    (With the `Definition` syntax, this is done by using the `schematic` attribute.)
+    This brings this flavour of definition into line with the others, where the presence of extra free variables on the RHS of a definition’s equation is usually flagged as an error.
 
 * * * * *
 

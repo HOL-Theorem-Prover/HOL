@@ -35,7 +35,7 @@ struct
   fun isSuccess (Success _) = true | isSuccess _ = false
 
   fun new_table() = ref (Binarymap.mkDict String.compare, 0)
-  fun peek(tab,knm as {Thy,Name}) =
+  fun peek(tab : 'a symboltable, knm as {Thy,Name}) =
       case Binarymap.peek(#1 (!tab),Thy) of
           NONE => Failure (NoSuchThy Thy)
         | SOME m => case Binarymap.peek(m, Name) of

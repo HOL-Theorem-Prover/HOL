@@ -4642,7 +4642,7 @@ val DIFF_INTER_COMPL = store_thm
     A "fold"-like operation for sets.
  ---------------------------------------------------------------------------*)
 
-Definition ITSET_def[induction=ITSET_IND]:
+Definition ITSET_def[induction=ITSET_IND,schematic]:
   ITSET (s:'a->bool) (b:'b) =
        if FINITE s then
           if s={} then b
