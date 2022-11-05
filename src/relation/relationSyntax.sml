@@ -1,7 +1,7 @@
 structure relationSyntax :> relationSyntax =
 struct
 
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib
 open relationTheory
 
 val ERR = mk_HOL_ERR "relationSyntax"
