@@ -11,14 +11,19 @@ EVAL ``int_lt (-1:int) 0``
 (Some kind of of zero comparison would be critical to the json_to_string_def function)
 
 Therefore, integers are stored using a bool flag for sign (T means negative) and a regular num,
-with a separate converter function to HOL4 integers.
+with a separate converter function to HOL4 integers, reals et.c. as future work.
 *)
+Datatype:
+  sign =
+     Positive
+   | Negative
+End
 Datatype:
   json =
      Object ((string # json) list)
    | Array (json list)
    | String string
-   | Integer bool num
+   | Number (sign # num) (num option) ((sign # num) option)
    | Bool bool
    | Null
 End
@@ -110,19 +115,28 @@ Example:
 EVAL ``json_to_string $ Object [("a", String "\t")]``
 *)
 
+(* Note: this exclusively uses "big-E" exponential notation *)
 Definition json_to_string_def:
   (json_to_string obj =
     case obj of
-       | Object mems => ["{"] ++
-                concat_with (MAP mem_to_string mems) [","] ++
-                ["}"]
-       | Array obs => ["["] ++
-                concat_with (MAP json_to_string obs) [","] ++
-                ["]"]
-       | String s => [CONCAT ["\""; encode_str T s; "\""]]
-       | Integer sign n => [if sign then CONCAT ["-"; toString n] else toString n]
-       | Bool b => if b then ["true"] else ["false"]
-       | Null => ["null"])
+    | Object mems => ["{"] ++
+             concat_with (MAP mem_to_string mems) [","] ++
+             ["}"]
+    | Array obs => ["["] ++
+             concat_with (MAP json_to_string obs) [","] ++
+             ["]"]
+    | String s => [CONCAT ["\""; encode_str T s; "\""]]
+    | Number (sign, integer) frac_opt exp_opt =>
+      [if sign = Negative then CONCAT ["-"; toString integer] else toString integer] ++
+      (case frac_opt of
+       | SOME fraction => [CONCAT ["."; toString fraction]]
+       | NONE => []) ++
+      (case exp_opt of
+       | SOME (exp_sign, exp) =>
+         [if exp_sign = Negative then CONCAT ["-"; toString exp] else toString exp]
+       | NONE => [])
+    | Bool b => if b then ["true"] else ["false"]
+    | Null => ["null"])
   /\
   (mem_to_string n_obj = let (n, obj) = n_obj in
        [CONCAT ["\""; n; "\""]]
@@ -146,7 +160,7 @@ Datatype:
   | NULL
   | BOOL bool
   | Str string
-  | INT bool num
+  | NUM (sign # num) (num option) ((sign # num) option)
 End
 
 Definition is_whitespace_def:
@@ -282,13 +296,39 @@ End
 Definition lex_int_def:
   lex_int [] = NONE /\
   (lex_int (c::cs) =
-    let
-      sign = if c = #"-" then T else F
-    in
-      let
-        (num, cs') = if sign then lex_num cs 0 else lex_num (c::cs) 0
-      in
-        SOME ((sign, num), cs'))
+    let sign = if c = #"-" then Negative else Positive in
+    let (nat_num, cs') = if sign = Negative then lex_num cs 0 else lex_num (c::cs) 0 in
+    SOME ((sign, nat_num), cs'))
+End
+
+Definition lex_frac_def:
+  lex_frac [] = (NONE, []) /\
+  (lex_frac (c::cs) =
+    if c = #"." then
+      (( \ (a, b). (SOME a, b)) (lex_num cs 0))
+    else (NONE, c::cs))
+End
+
+Definition lex_exp_def:
+  lex_exp [] = (NONE, []) /\
+  (lex_exp (c::cs) =
+    if (c = #"e" \/ c = #"E") then
+      (case lex_int cs of
+        | SOME (int, cs') => (SOME int, cs')
+        | NONE => (NONE, c::cs))
+    else (NONE, c::cs))
+End
+
+(* Note: this function could do with more explicit errors *)
+Definition lex_sci_def:
+  lex_sci [] = NONE /\
+  (lex_sci (c::cs) =
+    case lex_int (c::cs) of
+    | SOME (integer, cs') =>
+      let (frac_opt, cs'') = lex_frac cs' in
+      let (exp_opt, cs''') = lex_exp cs'' in
+        SOME ((integer, frac_opt, exp_opt), cs''')
+    | NONE => NONE)
 End
 
 Theorem lex_num_SUFFIX:
@@ -313,22 +353,96 @@ Proof
   >> fs[NOT_LESS]
 QED
 
-Theorem lex_int_LENGTH:
-  !cs n v. lex_int cs = SOME v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+Theorem lex_int_SUFFIX:
+  !cs n v. lex_int cs = SOME v ==> IS_SUFFIX cs $ SND v
 Proof
   rpt strip_tac
   >> Cases_on `cs`
   >> (fs[lex_int_def])
   >> Cases_on `h = #"-"`
+  >> (fs[])
   >- (Cases_on `lex_num t 0`
-      >> rw[]
-      >> drule_then assume_tac lex_num_SUFFIX
-      >> fs[IS_SUFFIX_APPEND])
+      >> imp_res_tac lex_num_SUFFIX
+      >> gvs[IS_SUFFIX_APPEND])
   >> Cases_on `lex_num (STRING h t) 0`
+  >> imp_res_tac lex_num_SUFFIX
+  >> gvs[IS_SUFFIX_APPEND]
+QED
+
+Theorem lex_int_LENGTH:
+  !cs v. lex_int cs = SOME v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+Proof
+  rpt strip_tac
+  >> Cases_on `cs`
+  >> (fs[lex_int_def])
+  >> Cases_on `h = #"-"`
+  >> (fs[])
+  >- (Cases_on `lex_num t 0`
+      >> drule_then assume_tac lex_num_SUFFIX
+      >> gvs[IS_SUFFIX_APPEND])
+  >> Cases_on `lex_num (STRING h t) 0`
+  >> imp_res_tac lex_num_LENGTH
+  >> gvs[]
+QED
+
+Theorem lex_frac_LENGTH:
+  !cs v. lex_frac cs = v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+Proof
+  rpt strip_tac
+  >> Cases_on `cs`
+  >> (gs[lex_frac_def])
+  >> Cases_on `h = #"."`
+  >> (fs[])
+  >- (Cases_on `lex_num t 0`
+      >> drule_then assume_tac lex_num_SUFFIX
+      >> gvs[IS_SUFFIX_APPEND])
+  >> gvs[]
+QED
+
+Theorem lex_exp_LENGTH:
+  !cs v. lex_exp cs = v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+Proof
+  rpt strip_tac
+  >> Cases_on `cs`
+  >> (gs[lex_exp_def])
+  >> Cases_on `h = #"e" \/ h = #"E"`
+  >> (gs[])
+  >- (Cases_on `lex_int t`
+      >> (gs[])
+      >- gvs[]
+      >> Cases_on `x`
+      >> imp_res_tac lex_int_SUFFIX
+      >> gvs[IS_SUFFIX_APPEND])
+  >- (Cases_on `lex_int t`
+      >> (gs[])
+      >- gvs[]
+      >> Cases_on `x`
+      >> imp_res_tac lex_int_SUFFIX
+      >> gvs[IS_SUFFIX_APPEND])
+  >> gvs[]
+QED
+
+Theorem lex_sci_LENGTH:
+  !cs n v. lex_sci cs = SOME v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+Proof
+  rpt strip_tac
+  >> Cases_on `cs`
+  >> (fs[lex_sci_def])
+  >> Cases_on `lex_int (STRING h t)`
+  >> (fs[])
+  >> Cases_on `x`
   >> fs[]
-  >> rw[]
-  >> drule_then assume_tac lex_num_LENGTH
-  >> fs[IS_SUFFIX_APPEND]
+  >> Cases_on `lex_frac r`
+  >> fs []
+  >> Cases_on `lex_exp r'`
+  >> gvs[]
+  >> Cases_on `STRING h t <> r`
+  >> (Cases_on `r <> r'`)
+  >> (Cases_on `r' <> r''`)
+  >> (imp_res_tac lex_int_LENGTH
+      >> imp_res_tac lex_frac_LENGTH
+      >> imp_res_tac lex_exp_LENGTH
+      >> gvs[])
 QED
 
 Definition lex_def:
@@ -354,18 +468,18 @@ Definition lex_def:
       | SOME (tok, cs) => lex cs (tok::acc)
       | NONE => INR ("unexpected characters: " ++ TAKE 10 (c::cs))
     else
-      case lex_int (c::cs) of
-      | SOME ((sign, num), cs') =>
+      case lex_sci (c::cs) of
+      | SOME ((integer,frac_opt,exp_opt), cs') =>
        if cs' = c::cs then
          INR $ "unexpected characters: " ++ TAKE 10 (c::cs)
-       else lex cs' ((INT sign num)::acc)
+       else lex cs' ((NUM integer frac_opt exp_opt)::acc)
       | NONE => INR $ "unexpected characters: " ++ TAKE 10 (c::cs)
   )
 Termination
   WF_REL_TAC `measure $ LENGTH o FST`
   >> (rw[]
       >> gs[lex_null_thm,lex_bool_thm])
-  >- (imp_res_tac lex_int_LENGTH >> gs[])
+  >- (imp_res_tac lex_sci_LENGTH >> gs[])
   >> (imp_res_tac lex_str_LENGTH >> gs[])
 End
 
@@ -398,11 +512,11 @@ Definition parse_def:
     | (OBJ acc)::ns => parse ts ((OBJV (String s) acc)::ns) F
     | (ARR acc)::ns => parse ts ((ARR $ (String s)::acc)::ns) F
     | ns => INR (String s, ts, ns))
-  /\ parse ((INT s i)::ts) ns T =
+  /\ parse ((NUM i frac_opt exp_opt)::ts) ns T =
     (case ns of
-    | (OBJ acc)::ns => parse ts ((OBJV (Integer s i) acc)::ns) F
-    | (ARR acc)::ns => parse ts ((ARR $ (Integer s i)::acc)::ns) F
-    | ns => INR (Integer s i, ts, ns))
+    | (OBJ acc)::ns => parse ts ((OBJV (Number i frac_opt exp_opt) acc)::ns) F
+    | (ARR acc)::ns => parse ts ((ARR $ (Number i frac_opt exp_opt)::acc)::ns) F
+    | ns => INR (Number i frac_opt exp_opt, ts, ns))
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((ARR acc)::ns) T
     = parse ts ((ARR $ (Object [])::acc)::ns) F
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((OBJ acc)::ns) T
@@ -444,7 +558,7 @@ Definition json_to_tok_def:
                 (REVERSE $ concat_with (MAP json_to_tok obs) [COMMA]) ++
                 [ARROPEN]
        | String s => [Str s]
-       | Integer s n => [INT s n]
+       | Number i frac_opt exp_opt => [NUM i frac_opt exp_opt]
        | Bool b => [BOOL b]
        | Null => [NULL])
   /\
@@ -496,6 +610,8 @@ EVAL ``lex "{}" []``
 EVAL ``lex "\"\"\"" []``
 EVAL ``lex "\"\"" []``
 EVAL ``lex "{ \"a\" : -1 }" []``
+EVAL ``lex "{ \"a\" : -1.3333 }" []``
+EVAL ``lex "{ \"a\" : -1.3333e-10 }" []``
 EVAL ``parse [OBJCLOSE; OBJOPEN] [] T``
 EVAL ``parse [OBJCLOSE; OBJCLOSE; OBJOPEN] [] T``
 EVAL ``parse (OUTL $ lex "{\"1\": {\"2\": {\"3\": [{\"4\": {}}]}}}" []) [] T``
