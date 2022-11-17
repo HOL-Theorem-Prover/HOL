@@ -92,7 +92,10 @@ Proof
   simp[itself2bool_def, itself2set_def]
 QED
 
-(* generic graphs*)
+(* generic graphs; because edges are a set, can't have multiple edges between
+   same two nodes with the same label.  Could imagine making the set a bag
+   if you really wanted that.
+*)
 Datatype:
   graphrep = <| nodes : 'a set ;
                 edges : ('a,'el) edge set ;
@@ -442,6 +445,13 @@ Theorem connected_empty[simp]:
   connected emptyG
 Proof
   simp[connected_def]
+QED
+
+Theorem connected_RTC:
+  connected G ⇔ ∀n1 n2. n1 ∈ nodes G ∧ n2 ∈ nodes G ⇒ (adjacent G)꙳ n1 n2
+Proof
+  simp[connected_def, GSYM $ cj 1 $ relationTheory.TC_RC_EQNS] >>
+  simp[relationTheory.RC_DEF] >> metis_tac[]
 QED
 
 Theorem fsgraph_component_equality:
