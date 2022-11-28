@@ -252,8 +252,6 @@ val tydefrec = newtypeTools.rich_new_type("graph", graphs_exist)
 (* any undirected graph *)
 Type udgraph[pp] = “:('a,undirectedG,'ec,'el,'nf,'nl,'sl)graph”
 
-(* finite simple graph *)
-Type fsgraph[pp] = “:('a,undirectedG,unit,unit,finiteG,unit,noSL) graph”
 
 (* finite directed graph with labels on nodes and edges, possibility of
    multiple, but finitely many edges, and with self-loops allowed *)
@@ -278,6 +276,10 @@ Type ulabgraph[pp] = “:(α,
 (* undirected version of the same *)
 Type udulgraph[pp] = “:(α, undirectedG, ν, σ)ulabgraph”
 
+(* finite simple graph *)
+Type fsgraph[pp] = “:(α,finiteG,noSL) udulgraph”
+
+
 (* a relation graph; stripped such are in bijection with binary relations.
    (The stripping makes a canonical, minimal choice of node set in the graph.)
  *)
@@ -285,9 +287,9 @@ Type relgraph[pp] = “:(α, directedG, INF_OK, SL_OK) ulabgraph”
 
 
 Definition emptyG0_def:
-    emptyG0 : ('a,'dir,'ec,'el,unit,'nl,'sl) graphrep =
+    emptyG0 : (α,δ,'ec,'el,ν,'nl,σ) graphrep =
      <| nodes := {} ; edges := {}; nlab := K ARB;
-        nfincst := (:unit); dircst := (:'dir); slcst := (:'sl);
+        nfincst := (:ν); dircst := (:δ); slcst := (:σ);
         edgecst := (:'ec) |>
 End
 
@@ -298,7 +300,7 @@ End
 Theorem wfgraph_emptyG0[simp]:
   wfgraph emptyG0
 Proof
-  simp[wfgraph_def, emptyG0_def]
+  simp[wfgraph_def, emptyG0_def, finite_cst_def]
 QED
 
 Definition nodes_def:
@@ -375,7 +377,7 @@ Proof
 QED
 
 Theorem FINITE_nodes[simp]:
-  FINITE (nodes (G:('a,'dir,'ec,'el,unit,'nl,'sl)graph))
+  FINITE (nodes (G:('a,'dir,'ec,'el,finiteG,'nl,'sl)graph))
 Proof
   simp[nodes_def] >>
   ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
