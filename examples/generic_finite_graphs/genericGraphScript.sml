@@ -1130,4 +1130,18 @@ Proof
   simp[FUN_EQ_THM, edges_def, adjacent_def, #repabs_pseudo_id tydefrec]
 QED
 
+(* ----------------------------------------------------------------------
+    graph measurements
+   ---------------------------------------------------------------------- *)
+
+Definition gsize_def:
+  gsize (g : (α,δ,'ec,'ei,finiteG,'nl,σ)graph) = CARD $ nodes g
+End
+
+Theorem gsize_addNode:
+  n ∉ nodes g ⇒ gsize (addNode n l g) = gsize g + 1
+Proof
+  simp[gsize_def]
+QED
+
 val  _ = export_theory();
