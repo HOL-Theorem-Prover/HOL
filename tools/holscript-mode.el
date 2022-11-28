@@ -456,7 +456,7 @@ a store_thm equivalent.")
 
 (defun hol-template-new-datatype ()
    (interactive)
-   (insert "val _ = Datatype `TREE = LEAF ('a -> num) | BRANCH TREE TREE`;\n"))
+   (insert "Datatype:\n  TREE = LEAF ('a -> num) | BRANCH TREE TREE\nEnd\n"))
 
 ;;checking for trouble with names in store_thm, save_thm, Define
 (setq store-thm-regexp
