@@ -28,6 +28,6 @@ in the specification of the fresh sub-goal that arises from applying
 modus ponens backwards.
 
 \SEEALSO
-bossLib.by.doc, Tactical.Q_TAC, Tactic.SUBGOAL_THEN, Tactic.SUFF_TAC, bossLib.suffices_by.doc. 
+bossLib.by, Tactical.Q_TAC, Tactic.SUBGOAL_THEN, Tactic.SUFF_TAC, bossLib.suffices_by. 
 
 \ENDDOC
