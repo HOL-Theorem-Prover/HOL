@@ -19,6 +19,6 @@ show {t}.
 Will fail if {t} is not of type {:bool}.
 
 \SEEALSO
-bossLib.suffices_by.
+Tactic.SUBGOAL_THEN, bossLib.suffices_by.
 
 \ENDDOC

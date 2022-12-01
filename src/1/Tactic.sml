@@ -998,17 +998,13 @@ fun HO_MATCH_MP_TAC th =
 
 val ho_match_mp_tac = HO_MATCH_MP_TAC
 
-(*----------------------------------------------------------------------*
- *   Tactics explicitly declaring subgoals.                             *
- *----------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Tactics explicitly declaring subgoals; instances of SUBGOAL_THEN
+   ---------------------------------------------------------------------- *)
 
-fun SUFF_TAC tm (al, c) =
-   ([(al, mk_imp (tm, c)), (al, tm)],
-    fn [th1, th2] => MP th1 th2
-     | _ => raise ERR "SUFF_TAC" "panic")
+fun KNOW_TAC tm = SUBGOAL_THEN tm MP_TAC
+val SUFF_TAC = REVERSE o KNOW_TAC
 val suff_tac = SUFF_TAC
-
-fun KNOW_TAC tm = REVERSE (SUFF_TAC tm)
 
 (* ----------------------------------------------------------------------
     Eliminate an equation on a variable (as well as t = t instances)
