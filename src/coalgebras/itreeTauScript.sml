@@ -441,7 +441,7 @@ QED
 
 (* proving equivalences *)
 
-Definition itree_el_def:
+Definition itree_el_def[nocompute]:
   itree_el t [] =
     itree_CASE t (\r. Return r) (\t. Silence) (\e g. Event e) /\
   itree_el t (NONE::ns) =
@@ -450,7 +450,7 @@ Definition itree_el_def:
     itree_CASE t (\r. Silence) (\t. Silence) (\e g. itree_el (g a) ns)
 End
 
-Theorem itree_el_def:
+Theorem itree_el_thm[simp,compute]:
   itree_el (Ret r) [] = Return r /\
   itree_el (Tau t) [] = Silence /\
   itree_el (Vis e g) [] = Event e /\
@@ -478,9 +478,9 @@ Proof
   \\ qspec_then ‘t2’ strip_assume_tac itree_cases
   \\ rpt BasicProvers.var_eq_tac
   \\ TRY (first_x_assum (qspec_then ‘[]’ mp_tac)
-          \\ fs [itree_el_def] \\ NO_TAC)
+          \\ fs [] \\ NO_TAC)
   \\ first_assum (qspec_then ‘[]’ mp_tac)
-  \\ rewrite_tac [itree_el_def] \\ rw []
+  \\ rewrite_tac [itree_el_thm] \\ rw []
   \\ fs [Tau_def,Vis_def]
   \\ qmatch_abbrev_tac
       ‘itree_rep (itree_abs t1) _ = itree_rep (itree_abs t2) _’
@@ -494,14 +494,14 @@ Proof
    (unabbrev_all_tac \\ fs [GSYM Tau_def]
     \\ first_x_assum (qspecl_then [‘u’,‘u'’] mp_tac)
     \\ impl_tac THEN1
-     (rw [] \\ first_x_assum (qspec_then ‘NONE::path’ mp_tac) \\ fs [itree_el_def])
+     (rw [] \\ first_x_assum (qspec_then ‘NONE::path’ mp_tac) \\ fs [])
     \\ fs [Tau_rep_def])
   \\ unabbrev_all_tac \\ fs [GSYM Vis_def]
   \\ fs [Vis_rep_def]
   \\ Cases_on ‘h’ \\ fs []
   \\ first_x_assum (qspecl_then [‘g x'’,‘g' x'’] mp_tac)
   \\ impl_tac THEN1
-   (rw [] \\ first_x_assum (qspec_then ‘SOME x'::path’ mp_tac) \\ fs [itree_el_def])
+   (rw [] \\ first_x_assum (qspec_then ‘SOME x'::path’ mp_tac) \\ fs [])
   \\ fs [Vis_rep_def]
 QED
 
@@ -520,9 +520,9 @@ Proof
   \\ Induct_on ‘path’ \\ rw []
   \\ qspec_then ‘t1’ strip_assume_tac itree_cases
   \\ qspec_then ‘t2’ strip_assume_tac itree_cases
-  \\ fs [itree_el_def]
+  \\ fs []
   \\ res_tac \\ fs [itree_11,itree_distinct] \\ rw []
-  \\ Cases_on ‘h’ \\ fs [itree_el_def]
+  \\ Cases_on ‘h’ \\ fs []
 QED
 
 
