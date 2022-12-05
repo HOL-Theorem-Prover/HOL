@@ -1073,4 +1073,79 @@ Proof
   xfer_back_tac
 *)
 
+Definition fromSet_def:
+  fromSet s = ITSET fINSERT s fEMPTY
+End
+
+Theorem fromSet_EMPTY[simp]:
+  fromSet {} = fEMPTY
+Proof
+  simp[fromSet_def]
+QED
+
+Theorem IN_fromSet:
+  FINITE s ==> (fIN e (fromSet s) <=> e IN s)
+Proof
+  Induct_on ‘FINITE’ >>
+  simp[pred_setTheory.COMMUTING_ITSET_RECURSES, fINSERT_commutes, fromSet_def,
+       pred_setTheory.DELETE_NON_ELEMENT]
+QED
+
+Theorem fromSet_INSERT:
+  FINITE s ==> fromSet (e INSERT s) = fINSERT e (fromSet s)
+Proof
+  simp[EXTENSION, IN_fromSet]
+QED
+
+Theorem fromSet_toSet[simp]:
+  fromSet (toSet s) = s
+Proof
+  simp[EXTENSION, IN_fromSet, GSYM fIN_IN]
+QED
+
+Theorem toSet_fromSet:
+  FINITE s ==> toSet (fromSet s) = s
+Proof
+  simp[pred_setTheory.EXTENSION, GSYM fIN_IN, IN_fromSet]
+QED
+
+Theorem toSet_Qt:
+  Qt (λx y. FINITE x /\ x = y) fromSet toSet (λs fs. s = toSet fs)
+Proof
+  simp[Qt_def] >> ntac 2 (ONCE_REWRITE_TAC [FUN_EQ_THM]) >>
+  simp[relationTheory.O_DEF] >> rw[EQ_IMP_THM] >~
+  [‘s = toSet _’]
+  >- (irule_at Any (GSYM toSet_fromSet) >> simp[]) >>
+  simp[]
+QED
+
+Definition sfSETREL_def:
+  sfSETREL AB s fs <=>
+  (!a. a IN s ==> ?b. fIN b fs /\ AB a b) /\
+  (!b. fIN b fs ==> ?a. a IN s /\ AB a b)
+End
+
+Theorem fIN_sfSETREL:
+  bi_unique AB ⇒
+  (AB |==> sfSETREL AB |==> (=)) (IN) fIN
+Proof
+  simp[FUN_REL_def, sfSETREL_def, bi_unique_def, left_unique_def,
+       right_unique_def] >>
+  metis_tac[]
+QED
+
+Theorem fINSERT_sfSETREL:
+  (AB |==> sfSETREL AB |==> sfSETREL AB) (INSERT) fINSERT
+Proof
+  simp[FUN_REL_def, sfSETREL_def, DISJ_IMP_THM, FORALL_AND_THM] >>
+  rw[] >> metis_tac[]
+QED
+
+Theorem fUNION_sfSETREL:
+  (sfSETREL AB |==> sfSETREL AB |==> sfSETREL AB) (UNION) fUNION
+Proof
+  simp[FUN_REL_def, sfSETREL_def] >> metis_tac[]
+QED
+
+
 val _ = export_theory();
