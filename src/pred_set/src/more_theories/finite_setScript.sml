@@ -1126,7 +1126,7 @@ Definition sfSETREL_def:
 End
 
 Theorem fIN_sfSETREL:
-  bi_unique AB ⇒
+  bi_unique AB ==>
   (AB |==> sfSETREL AB |==> (=)) (IN) fIN
 Proof
   simp[FUN_REL_def, sfSETREL_def, bi_unique_def, left_unique_def,
