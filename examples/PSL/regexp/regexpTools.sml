@@ -34,6 +34,8 @@ val () = register_trace ("regexpTools", trace_level, 4);
 fun chatting n = n <= !trace_level;
 fun chat n s = if chatting n then Lib.say s else ();
 
+fun ERR f s = mk_HOL_ERR "regexpTools" f s
+
 (*---------------------------------------------------------------------------*)
 (* Terms.                                                                    *)
 (*---------------------------------------------------------------------------*)
@@ -258,7 +260,7 @@ fun mk_alph s =
     val t = map (rhs o concl o EVAL) s
     val ts = zip t s
   in
-    fn x => assoc x ts
+    fn x => tassoc x ts
   end;
 
 datatype 'a condition =
@@ -313,10 +315,10 @@ local
       val th = EVAL t
       val res = rhs (concl th)
       val _ =
-        res = T orelse res = F orelse
+        res ~~ T orelse res ~~ F orelse
         raise ERR "export_nfa.accept" "couldn't reduce eval_accepts"
     in
-      (res = T, th)
+      (res ~~ T, th)
     end;
 
   fun simp tm =
@@ -357,7 +359,7 @@ local
       fun mvar t = pred_setSyntax.mk_in (t,x)
       fun dvar t =
         let val (a,b) = dest_in t
-        in if b = x then alph a else raise ERR "term_to_bexp.var" "not a var"
+        in if b ~~ x then alph a else raise ERR "term_to_bexp.var" "not a var"
         end
       val gen = GEN x
       val e = inst [alpha |-> ty] eval_transitions_tm
@@ -420,108 +422,112 @@ local
 
   fun width l = "[" ^ log2 (length l) ^ ":0]";
 
-  open PP;
+  open HOLPP smpp;
 
-  fun pp_alphs _ _ [] = raise ERR "verilog_dfa" "empty alphabet"
-    | pp_alphs s pp (h :: t) =
-    (add_string pp h;
-     app (fn a => (add_string pp s; add_break pp (1,0); add_string pp a)) t);
+  fun pp_alphs s = pr_list add_string (add_string s >> add_break(1,0))
 
-  fun pp_condition pp (Leaf (i,_)) =
-    add_string pp ("state = " ^ Int.toString i ^ ";")
-    | pp_condition pp (Branch (c,a,b)) =
-    (begin_block pp CONSISTENT 0;
-     begin_block pp CONSISTENT 2;
-     add_string pp ("if (" ^ c ^ ")");
-     add_break pp (1,0);
-     pp_condition pp a;
-     end_block pp;
-     add_newline pp;
-     begin_block pp CONSISTENT 2;
-     add_string pp "else";
-     add_break pp (1,0);
-     pp_condition pp b;
-     end_block pp;
-     end_block pp);
+  fun pp_condition (Leaf (i,_)) =
+        add_string ("state = " ^ Int.toString i ^ ";")
+    | pp_condition (Branch (c,a,b)) =
+      block CONSISTENT 0 (
+        block CONSISTENT 2 (
+          add_string ("if (" ^ c ^ ")") >>
+          add_break (1,0) >>
+          pp_condition a
+        ) >>
+        add_newline >>
+        block CONSISTENT 2 (
+          add_string "else" >>
+          add_break (1,0) >>
+          pp_condition b
+        )
+      )
 
-  fun pp_case pp name (i,_,(a,_),t) =
-    (begin_block pp CONSISTENT 2;
-     add_string pp (Int.toString i ^ ":");
-     add_break pp (1,0);
-     if a then
-       add_string pp
+  fun pp_case name (i,_,(a,_),t) =
+     block CONSISTENT 2 (
+       add_string (Int.toString i ^ ":") >>
+       add_break (1,0) >>
+       (if a then
+        add_string
          ("begin $display (\"" ^ name ^
           ": property violated!\"); $finish; end")
-     else pp_condition pp t;
-     end_block pp;
-     add_newline pp;
-     add_newline pp)
+        else pp_condition t)
+     ) >>
+     add_newline >> add_newline
 
-  fun pp_module pp (name,alph,table) =
-    (begin_block pp CONSISTENT 0;
-
-     begin_block pp INCONSISTENT (size ("module " ^ name ^ " ("));
-     add_string pp ("module " ^ name ^ " (");
-     pp_alphs "," pp (alph (*@ ["state"]*));
-     add_string pp ");";
-     end_block pp;
-     add_newline pp;
-     add_newline pp;
-
-     begin_block pp INCONSISTENT (size "output" + size (width table) + 2);
-     add_string pp ("input" ^ chs #" " (size (width table) + 3));
-     pp_alphs "," pp alph;
-     add_string pp ";";
-     end_block pp;
-     add_newline pp;
+  fun pp_module (name,alph,table) =
+    block CONSISTENT 0 (
+       block INCONSISTENT (size ("module " ^ name ^ " (")) (
+         add_string ("module " ^ name ^ " (") >>
+         pp_alphs "," (alph (*@ ["state"]*)) >>
+         add_string ");"
+       ) >>
+     add_newline >> add_newline
+    ) >>
+    block INCONSISTENT (size "output" + size (width table) + 2) (
+     add_string ("input" ^ chs #" " (size (width table) + 3)) >>
+     pp_alphs "," alph >>
+     add_string ";"
+    ) >>
+    add_newline >>
 
 (*
      add_string pp ("output " ^ width table ^ " state;");
      add_newline pp;
 *)
-     add_string pp ("reg    " ^ width table ^ " state;");
-     add_newline pp;
-     add_newline pp;
+    add_string ("reg    " ^ width table ^ " state;") >>
+    add_newline >>
+    add_newline >>
 
-     add_string pp "initial state = 0;";
-     add_newline pp;
-     add_newline pp;
+    add_string "initial state = 0;" >>
+    add_newline >>
+    add_newline >>
 
-     begin_block pp INCONSISTENT (size "always @ (");
-     add_string pp "always @ (";
-     pp_alphs " or" pp alph;
-     add_string pp ")";
-     end_block pp;
-     add_newline pp;
-     begin_block pp INCONSISTENT 2;
-     add_string pp "begin";
-     add_newline pp;
-     add_string pp ("$display (\"" ^ name ^ ": state = %0d\", state);");
-     add_newline pp;
-     begin_block pp INCONSISTENT 2;
-     add_string pp "case (state)";
-     add_newline pp;
-     app (pp_case pp name) table;
-     add_string pp
-       ("default: begin $display (\"" ^ name ^
-        ": unknown state\"); $finish; end");
-     end_block pp;
-     add_newline pp;
-     add_string pp "endcase";
-     end_block pp;
-     add_newline pp;
-     add_string pp "end";
-     add_newline pp;
-     add_newline pp;
+    block INCONSISTENT (size "always @ (") (
+     add_string "always @ (" >>
+     pp_alphs " or" alph >>
+     add_string ")"
+    ) >>
+    add_newline >>
+    block INCONSISTENT 2 (
+     add_string "begin" >>
+     add_newline >>
+     add_string ("$display (\"" ^ name ^ ": state = %0d\", state);") >>
+     add_newline >>
+     block INCONSISTENT 2 (
+       add_string "case (state)" >>
+       add_newline >>
+       pr_list (pp_case name) nothing table >>
+       add_string
+         ("default: begin $display (\"" ^ name ^
+          ": unknown state\"); $finish; end")
+     ) >>
+     add_newline >>
+     add_string "endcase"
+    ) >>
+    add_newline >>
+    add_string "end" >>
+    add_newline >>
+    add_newline >>
 
-     add_string pp "endmodule";
-     add_newline pp;
-
-     end_block pp);
+    add_string "endmodule" >>
+    add_newline
 in
   fun module n a r =
-    pp_to_string (!LINE_LENGTH) pp_module
-      (n, map (#Name o dest_thy_const) a, extract_dfa a r);
+      let
+        fun doit (n,a,r) =
+            let
+              val smpp =
+                  pp_module (n, map (#Name o dest_thy_const) a, extract_dfa a r)
+            in
+              case lower smpp () of
+                  NONE => raise ERR "module" "pp-failure!"
+                | SOME (pp, _, _) => pp
+            end
+      in
+        HOLPP.pp_to_string (!LINE_LENGTH) doit (n,a,r)
+      end
+
 end;
 
 fun verilog_dfa {name = n, alphabet = a, regexp = r} =
