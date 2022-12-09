@@ -438,7 +438,6 @@ Proof
   \\ fs [itree_unfold,itree_rep_abs_itree_unfold_path]
 QED
 
-
 (* proving equivalences *)
 
 Definition itree_el_def[nocompute]:
@@ -561,13 +560,150 @@ val _ = TypeBase.export
       encode = NONE,
       lift = NONE,
       one_one = SOME itree_11,
-      distinct = NONE,
+      distinct = SOME itree_distinct,
       fields = [],
       accessors = [],
       updates = [],
       destructors = [],
       recognizers = [] } ]
 
+(* itree combinators *)
+
+Definition itree_bind_def:
+  itree_bind t k =
+  itree_unfold
+        (λx.
+           case x of
+             INL(Ret r) =>
+               (case k r of
+                  Ret s =>
+                    Ret' s
+                | Tau t =>
+                    Tau'(INR t)
+                | Vis e g =>
+                     Vis' e (INR o g))
+           | INL(Vis e g) => Vis' e (INL o g)
+           | INL(Tau t) => Tau' (INL t)
+           | INR(Ret r) => Ret' r
+           | INR(Vis e g) => Vis' e (INR o g)
+           | INR(Tau t) => Tau' (INR t)
+        )
+        (INL t)
+End
+
+Triviality itree_unfold_bind_INR:
+  itree_unfold
+  (λx.
+     case x of
+       INL (Ret r) =>
+         itree_CASE (k r) (λs. Ret' s) (λt. Tau' (INR t))
+                    (λe g. Vis' e (INR ∘ g))
+     | INL (Tau t) => Tau' (INL t)
+     | INL (Vis e g) => Vis' e (INL ∘ g)
+     | INR (Ret r') => Ret' r'
+     | INR (Tau t') => Tau' (INR t')
+     | INR (Vis e' g') => Vis' e' (INR ∘ g')) (INR u) =
+  u
+Proof
+  rw[Once itree_bisimulation] >>
+  qexists_tac ‘λx y. (x =
+                      itree_unfold (λx.
+                         case x of
+                           INL (Ret r) =>
+                             itree_CASE (k r) (λs. Ret' s) (λt. Tau' (INR t))
+                                        (λe g. Vis' e (INR ∘ g))
+                         | INL (Tau t) => Tau' (INL t)
+                         | INL (Vis e g) => Vis' e (INL ∘ g)
+                         | INR (Ret r') => Ret' r'
+                         | INR (Tau t') => Tau' (INR t')
+                         | INR (Vis e' g') => Vis' e' (INR ∘ g')) (INR y))’ >>
+  rw[] >>
+  Cases_on ‘t’ >>
+  first_x_assum (strip_assume_tac o ONCE_REWRITE_RULE[itree_unfold]) >>
+  gvs[] >>
+  rw[Once itree_unfold] >>
+  gvs[]
+QED
+
+Theorem itree_bind_thm:
+  itree_bind (Ret r) k = k r ∧
+  itree_bind (Tau t) k = Tau (itree_bind t k) ∧
+  itree_bind (Vis e k') k = Vis e (λx. itree_bind (k' x) k)
+Proof
+  rw[itree_bind_def]
+  >- (rw[Once itree_unfold] >>
+      Cases_on ‘k r’ >> rw[] >>
+      rw[itree_unfold_bind_INR,FUN_EQ_THM]) >>
+  rw[Once itree_unfold,FUN_EQ_THM]
+QED
+
+Theorem itree_bind_right_identity:
+  itree_bind t Ret = t
+Proof
+  rw[Once itree_bisimulation] >>
+  qexists_tac ‘λx y. (x = itree_bind y Ret)’ >>
+  rw[] >>
+  Cases_on ‘t’ >>
+  gvs[itree_bind_thm]
+QED
+
+Theorem itree_bind_assoc:
+  itree_bind (itree_bind t k) k' =
+  itree_bind t (λx. itree_bind (k x) k')
+Proof
+  rw[Once itree_bisimulation] >>
+  qexists_tac ‘λx y. (∃t. ((x = itree_bind (itree_bind t k) k') ∧ (y = itree_bind t (λx. itree_bind (k x) k')))) ∨ x = y’ >>
+  rw[]
+  >- metis_tac[] >>
+  rename1 ‘itree_bind (itree_bind t _)’ >> Cases_on ‘t’ >> gvs[itree_bind_thm] >> metis_tac[]
+QED
+
+Definition itree_iter_def:
+  itree_iter body seed =
+    itree_unfold
+        (λx.
+           case x of
+             Ret(INL seed') => Tau'(body seed')
+           | Ret(INR v) => Ret' v
+           | Tau u => Tau' u
+           | Vis e g => Vis' e g)
+     (body seed)
+End
+
+Theorem itree_iter_thm:
+  itree_iter body seed =
+    itree_bind (body seed)
+               (λx. case x of INL a => Tau(itree_iter body a)
+                           |  INR b => Ret b)
+Proof
+  rw[Once itree_bisimulation] >>
+  (* TODO: bisimulation up-to context would probably help here *)
+  qexists_tac ‘λx y.
+                  (∃t. x = itree_unfold (λx.
+                                           case x of
+                                             Ret(INL seed') => Tau'(body seed')
+                                           | Ret(INR v) => Ret' v
+                                           | Tau u => Tau' u
+                                           | Vis e g => Vis' e g)
+                                        t ∧
+                       y = itree_bind t ((λx. case x of INL a => Tau (itree_iter body a)
+                                               | INR b => Ret b))) ∨ x = y
+              ’ >>
+  rw[itree_iter_def]
+  >- metis_tac[] >>
+  first_x_assum (strip_assume_tac o ONCE_REWRITE_RULE[itree_unfold]) >>
+  gvs[AllCaseEqs(),itree_bind_thm] >>
+  metis_tac[]
+QED
+
+Definition itree_loop_def:
+  itree_loop body seed =
+  itree_iter (λx.
+          itree_bind (body x)
+                     (λcb. case cb of INL c => Ret (INL(INL c))
+                                   |  INR b => Ret (INR b)))
+                     (INR seed)
+End
 
 (* misc *)
 
