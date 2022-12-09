@@ -18,6 +18,7 @@ sig
   val EXISTS_TAC             : tmquote -> tactic
   val LIST_EXISTS_TAC        : tmquote list -> tactic
   val REFINE_EXISTS_TAC      : tmquote -> tactic
+  val LIST_REFINE_EXISTS_TAC : tmquote list -> tactic
   val GEN                    : tmquote -> thm -> thm
   val GENL                   : tmquote list -> thm -> thm
   val SPEC                   : tmquote -> thm -> thm
