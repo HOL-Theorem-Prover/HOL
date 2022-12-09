@@ -51,5 +51,5 @@ able to exploit the additional structure that has appeared in the
 place of the existential variable.
 
 \SEEALSO
-Tactic.EXISTS_TAC.
+Q.LIST_REFINE_EXISTS_TAC, Tactic.EXISTS_TAC.
 \ENDDOC

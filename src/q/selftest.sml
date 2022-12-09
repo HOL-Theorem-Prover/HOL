@@ -28,6 +28,83 @@ in
   else die "FAILED!"
 end handle InternalDie s => die s
 
+val _ = tprint "Testing Q.LIST_REFINE_EXISTS_TAC"
+val _ = let
+    val tests = [ (* triples of: (goal, quotations, expected (single) subgoal) *)
+      (* Simple test *)
+      (
+        ([], ``∃n m. n + m = 0``),
+        [`_`, `SUC l`] : term frag list list,
+        ``∃l n. n + SUC l = 0``
+      ),
+      (* Use variable in assumption *)
+      (
+        ([``l = 0``], ``∃n m. n + m = 0``),
+        [`_`, `SUC l`],
+        ``∃n. n + SUC l = 0``
+      ),
+      (* Witness var shadowing boundvar *)
+      (
+        ([], ``∃(a:'a) (b:'b). f a b``),
+        [`b`,`_`],
+        ``∃(b:'a) (b':'b). f b b'``
+      ),
+      (* Boundvar `c` shadowing freevar *)
+      (
+        ([``c = 5``], ``∃n m c. n + m = c``),
+        [`_`,`SUC c`],
+        ``∃n c'. n + SUC c = c'``
+      ),
+      (* Shadowed boundvars *)
+      (
+        ([], ``∃(c:'a) (c:'b). P c``),
+        [`_`,`new`],
+        ``∃(new:'b) (c':'a). P new``
+      ),
+      (* Re-use term across quotations *)
+      (
+        ([], ``∃n m l. n + m + l = 0``),
+        [`_`,`k`,`SUC k`],
+        ``∃k n. n + k + SUC k = 0``
+      ),
+      (* Slightly more involved tests *)
+      (
+        ([``n = 2``,``c = 5``], ``∃a b c d. a + b = c + d``),
+        [`_`,`SUC c`, `_`, `n + m`],
+        ``∃m a c'. a + SUC c = c' + (n + m)``
+      ),
+      (
+        ([``h x = x:'b``],
+         ``∃(a:'a) (b:'b) (c:'c) (d:'d) (e:'e). f a b = g c d e :num``),
+        [`_`, `h x`, `foo x`, `bar (foo : 'b -> 'c) : 'd`],
+        ``∃(foo:'b -> 'c) (bar: ('b -> 'c) -> 'd) (a:'a) (e:'e).
+            f a (h x : 'b) = g (foo x) (bar foo) e :num``
+      ),
+      (
+        ([``P1 (x:'a) :bool``,``P2 (x':'b) :bool``,``P3 (x'':'c) :bool``],
+         ``∃(x:'a) (x':'b) (y:'c) (x:'d). P x x' y``),
+        [`_`,`Q x x' (x''':'d)`,`x''''`,`_`],
+        ``∃(x'³':'d) (Q:'a -> 'b -> 'd -> 'b) (x'⁴':'c) (x'':'a) (x'':'d).
+            P x'' (Q x x' x'³') x'⁴'``
+      )
+    ]
+    fun checkSubgoals (sgs, vld:validation) (expected_asms, expected_goal) =
+      case sgs of
+        [(asms,sg)] =>
+          if (ListPair.allEq (uncurry aconv) (asms, expected_asms)) andalso
+             aconv sg expected_goal
+          then vld (map mk_thm sgs)
+               handle _ => raise InternalDie "FAILED! Bad validation"
+          else raise InternalDie "FAILED! Does not match expected result"
+      | _ => raise InternalDie "FAILED! Too many subgoals produced"
+    fun test_single (input, qs, expected) = let
+        val result = Q.LIST_REFINE_EXISTS_TAC qs input
+                     handle _ => raise InternalDie "FAILED! Tactic failed"
+        in checkSubgoals result (fst input, expected) end
+    val _ = List.map test_single tests
+  in OK () end
+  handle InternalDie s => die s
+
 (* combinator *)
 val _ = new_definition("I_DEF", ``I = \x:'a. x``);
 

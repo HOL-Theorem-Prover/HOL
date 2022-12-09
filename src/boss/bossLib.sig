@@ -211,6 +211,7 @@ sig
   val qexists : term quotation -> tactic
   val qexistsl : term quotation list -> tactic
   val qrefine : term quotation -> tactic
+  val qrefinel : term quotation list -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
   val qspec_tac : term quotation * term quotation -> tactic

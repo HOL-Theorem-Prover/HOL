@@ -242,6 +242,47 @@ in
     (asl, w)
 end
 
+fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
+    val (exists_vars, body) = strip_exists g
+    fun zipLeft [] rs = ([], rs)
+      | zipLeft (l::ls) (r::rs) =
+          let val (zipped, rest) = zipLeft ls rs in ((l,r)::zipped, rest) end
+      | zipLeft _ [] =
+          raise ERR "LIST_REFINE_EXISTS_TAC" "too many quotations provided"
+    val (qs_bvs, extra_vars) = zipLeft qs exists_vars
+    val body = list_mk_exists (extra_vars, body)
+    val ctxt = free_varsl (g::asl)
+    fun is_underscore q =
+      let val tm = trace ("notify type variable guesses", 0) ptm q in
+      if not (is_var tm) then false else String.isPrefix "_" (fst (dest_var tm)) end
+    fun process [] = ([], [], [], [])
+      | process ((q,bv)::rest) =
+        let val (wits, new_vars, renames, subs) = process rest in
+        if is_underscore q then
+          let val bv' = variant (map #redex subs) bv
+          in (NONE::wits, new_vars, (bv |-> bv')::renames, subs) end
+        else let
+          val wit = ptm_with_ctxtty' (new_vars @ ctxt) (type_of bv) q
+          val new_vars' = op_set_diff aconv (free_vars wit) (new_vars @ ctxt)
+          in (SOME wit::wits, new_vars' @ new_vars, renames, (bv |-> wit)::subs) end
+        end
+    val (wits, new_vars, renames, subs) = process qs_bvs
+    val body = list_mk_exists (map #residue renames, subst renames body)
+    val body = subst subs body
+    val old_vars = List.take (fst (strip_exists body), length renames)
+    fun choose_vars [] ttac = ttac
+      | choose_vars (h::t) ttac = X_CHOOSE_THEN h (choose_vars t ttac)
+    fun exists [] _ th = ACCEPT_TAC th
+      | exists (SOME tm::tm_opts) bvs th = Tactic.EXISTS_TAC tm THEN exists tm_opts bvs th
+      | exists (NONE::tm_opts) (bv::bvs) th = Tactic.EXISTS_TAC bv THEN exists tm_opts bvs th
+      | exists _ _ _ = raise ERR "LIST_REFINE_EXISTS_TAC" "internal error"
+  in
+    SUBGOAL_THEN
+      (list_mk_exists (new_vars, body))
+      (choose_vars (new_vars @ old_vars) (exists wits old_vars))
+      (asl, g)
+  end
+
 fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
  let val ty = type_of (fst (dest_exists (concl thm)))
        handle HOL_ERR _ =>
