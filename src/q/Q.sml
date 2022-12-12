@@ -243,14 +243,12 @@ in
 end
 
 fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
-    val (exists_vars, body) = strip_exists g
-    fun zipLeft [] rs = ([], rs)
-      | zipLeft (l::ls) (r::rs) =
-          let val (zipped, rest) = zipLeft ls rs in ((l,r)::zipped, rest) end
-      | zipLeft _ [] =
-          raise ERR "LIST_REFINE_EXISTS_TAC" "too many quotations provided"
-    val (qs_bvs, extra_vars) = zipLeft qs exists_vars
-    val body = list_mk_exists (extra_vars, body)
+    fun strip_n_exists 0 acc tm = (rev acc, tm)
+      | strip_n_exists n acc tm =
+          let val (bv, tm) = dest_exists tm in strip_n_exists (n - 1) (bv::acc) tm end
+    val (exists_vars, body) = strip_n_exists (length qs) [] g
+      handle _ => raise ERR "LIST_REFINE_EXISTS_TAC" "too many quotations provided"
+    val qs_bvs = zip qs exists_vars
     val ctxt = free_varsl (g::asl)
     fun is_underscore q =
       let val tm = trace ("notify type variable guesses", 0) ptm q in
@@ -267,20 +265,26 @@ fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
           in (SOME wit::wits, new_vars' @ new_vars, renames, (bv |-> wit)::subs) end
         end
     val (wits, new_vars, renames, subs) = process qs_bvs
-    val body = list_mk_exists (map #residue renames, subst renames body)
-    val body = subst subs body
-    val old_vars = List.take (fst (strip_exists body), length renames)
-    fun choose_vars [] ttac = ttac
-      | choose_vars (h::t) ttac = X_CHOOSE_THEN h (choose_vars t ttac)
-    fun exists [] _ th = ACCEPT_TAC th
-      | exists (SOME tm::tm_opts) bvs th = Tactic.EXISTS_TAC tm THEN exists tm_opts bvs th
-      | exists (NONE::tm_opts) (bv::bvs) th = Tactic.EXISTS_TAC bv THEN exists tm_opts bvs th
+    val (old_vars, body) =
+      let val body = list_mk_exists (map #residue renames, subst renames body)
+          val body = subst subs body
+      in strip_n_exists (length renames) [] body end
+    fun exists [] _ th = th
+      | exists (SOME tm::tm_opts) bvs th =
+          let val rest = exists tm_opts bvs th
+              val fresh = genvar (type_of tm)
+              val desired = mk_exists (fresh, subst [tm |-> fresh] (concl rest))
+          in Thm.EXISTS (desired, tm) rest end
+      | exists (NONE::tm_opts) (bv::bvs) th = SIMPLE_EXISTS bv (exists tm_opts bvs th)
       | exists _ _ _ = raise ERR "LIST_REFINE_EXISTS_TAC" "internal error"
+    fun chooser [] th = th
+      | chooser (v::vs) th =
+          let val th = chooser vs th
+              val exists_tm = mk_exists (v, hd (hyp th))
+          in CHOOSE (v, ASSUME exists_tm) th end
+    val th = ASSUME body |> exists wits old_vars |> chooser (new_vars @ old_vars)
   in
-    SUBGOAL_THEN
-      (list_mk_exists (new_vars, body))
-      (choose_vars (new_vars @ old_vars) (exists wits old_vars))
-      (asl, g)
+    MATCH_MP_TAC (DISCH_ALL th) (asl, g)
   end
 
 fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
