@@ -58,6 +58,15 @@ Definition lookup_def[nocompute]:
 Termination WF_REL_TAC `measure FST` >> simp[DIV_LT_X]
 End
 
+Theorem lookup_rwts[simp]:
+  lookup k LN = NONE /\
+  lookup 0 (LS a) = SOME a /\
+  lookup 0 (BN t1 t2) = NONE /\
+  lookup 0 (BS t1 a t2) = SOME a
+Proof
+  simp[lookup_def]
+QED
+
 Definition insert_def[nocompute]:
   (insert k a LN = if k = 0 then LS a
                      else if EVEN k then BN (insert ((k-1) DIV 2) a LN) LN
@@ -109,18 +118,17 @@ val fromList_def = Define`
   fromList l = SND (FOLDL (\(i,t) a. (i + 1, insert i a t)) (0,LN) l)
 `;
 
-val size_def = Define`
+Definition size_def[simp]:
   (size LN = 0) /\
   (size (LS a) = 1) /\
   (size (BN t1 t2) = size t1 + size t2) /\
   (size (BS t1 a t2) = size t1 + size t2 + 1)
-`;
-val _ = export_rewrites ["size_def"]
+End
 
-val insert_notEmpty = store_thm(
-  "insert_notEmpty",
-  ``~isEmpty (insert k a t)``,
-  Cases_on `t` >> rw[Once insert_def]);
+Theorem insert_notEmpty[simp]: ~isEmpty (insert k a t)
+Proof
+  Cases_on `t` >> rw[Once insert_def]
+QED
 
 val wf_insert = store_thm(
   "wf_insert",
@@ -145,11 +153,11 @@ val wf_delete = store_thm(
   Induct >> rw[wf_def, delete_def, mk_BN_thm, mk_BS_thm] >>
   rw[wf_def] >> rw[] >> fs[] >> metis_tac[]);
 
-val lookup_insert1 = store_thm(
-  "lookup_insert1[simp]",
-  ``!k a t. lookup k (insert k a t) = SOME a``,
+Theorem lookup_insert1[simp]: !k a t. lookup k (insert k a t) = SOME a
+Proof
   ho_match_mp_tac (theorem "insert_ind") >> rpt strip_tac >>
-  simp[Once insert_def] >> rw[lookup_def]);
+  simp[Once insert_def] >> rw[lookup_def]
+QED
 
 val DIV2_EQ_DIV2 = prove(
   ``(m DIV 2 = n DIV 2) <=>
@@ -220,10 +228,11 @@ val union_def = Define`
        | BS t1' a' t2' => BS (union t1 t1') a (union t2 t2'))
 `;
 
-val isEmpty_union = store_thm(
-  "isEmpty_union",
-  ``isEmpty (union m1 m2) <=> isEmpty m1 /\ isEmpty m2``,
-  map_every Cases_on [`m1`, `m2`] >> simp[union_def]);
+Theorem isEmpty_union[simp]:
+  isEmpty (union m1 m2) <=> isEmpty m1 /\ isEmpty m2
+Proof
+  map_every Cases_on [`m1`, `m2`] >> simp[union_def]
+QED
 
 val wf_union = store_thm(
   "wf_union",
@@ -416,22 +425,20 @@ Proof
   THEN1 simp[NUMERAL_DEF]
 QED
 
-val domain_def = zDefine`
-  (domain LN = {}) /\
-  (domain (LS _) = {0}) /\
-  (domain (BN t1 t2) =
+Definition domain_def[simp,nocompute]:
+  domain LN = {} /\
+  domain (LS _) = {0} /\
+  domain (BN t1 t2) =
      IMAGE (\n. 2 * n + 2) (domain t1) UNION
-     IMAGE (\n. 2 * n + 1) (domain t2)) /\
-  (domain (BS t1 _ t2) =
+     IMAGE (\n. 2 * n + 1) (domain t2) /\
+  domain (BS t1 _ t2) =
      {0} UNION IMAGE (\n. 2 * n + 2) (domain t1) UNION
-     IMAGE (\n. 2 * n + 1) (domain t2))
-`;
-val _ = export_rewrites ["domain_def"]
+     IMAGE (\n. 2 * n + 1) (domain t2)
+End
 
-val FINITE_domain = store_thm(
-  "FINITE_domain[simp]",
-  ``FINITE (domain t)``,
-  Induct_on `t` >> simp[]);
+Theorem FINITE_domain[simp]: FINITE (domain t)
+Proof Induct_on `t` >> simp[]
+QED
 
 val DIV2 = DIVISION |> Q.SPEC `2` |> REWRITE_RULE [DECIDE ``0 < 2``]
 
@@ -568,31 +575,34 @@ val lookup_NONE_domain = store_thm(
   ``(lookup k t = NONE) <=> k NOTIN domain t``,
   simp[domain_lookup] >> Cases_on `lookup k t` >> simp[]);
 
-val domain_union = store_thm(
-  "domain_union",
-  ``domain (union t1 t2) = domain t1 UNION domain t2``,
+Theorem domain_union[simp]:
+  domain (union t1 t2) = domain t1 UNION domain t2
+Proof
   simp[EXTENSION, domain_lookup, lookup_union] >>
-  qx_gen_tac `k` >> Cases_on `lookup k t1` >> simp[]);
+  qx_gen_tac `k` >> Cases_on `lookup k t1` >> simp[]
+QED
 
-val domain_inter = store_thm(
-  "domain_inter",
-  ``domain (inter t1 t2) = domain t1 INTER domain t2``,
+Theorem domain_inter[simp]:
+  domain (inter t1 t2) = domain t1 INTER domain t2
+Proof
   simp[EXTENSION, domain_lookup, lookup_inter] >>
   rw [] >> Cases_on `lookup x t1` >> fs[] >>
-  BasicProvers.CASE_TAC);
+  BasicProvers.CASE_TAC
+QED
 
-val domain_insert = store_thm(
-  "domain_insert[simp]",
-  ``domain (insert k v t) = k INSERT domain t``,
+Theorem domain_insert[simp]:
+  domain (insert k v t) = k INSERT domain t
+Proof
   simp[domain_lookup, EXTENSION, lookup_insert] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val domain_difference = Q.store_thm(
-  "domain_difference",
-  `!t1 t2 . domain (difference t1 t2) = (domain t1) DIFF (domain t2)`,
+Theorem domain_difference[simp]:
+  !t1 t2 . domain (difference t1 t2) = (domain t1) DIFF (domain t2)
+Proof
   simp[EXTENSION, domain_lookup, lookup_difference] >>
-  rw [] >> Cases_on `lookup x t1`
-  >> fs[] >> Cases_on `lookup x t2` >> rw[]);
+  rw [] >> Cases_on `lookup x t1` >> fs[] >> Cases_on `lookup x t2` >> rw[]
+QED
 
 val domain_sing = save_thm(
   "domain_sing",
@@ -745,7 +755,7 @@ val domain_foldi = save_thm(
                  |> SYM);
 val _ = computeLib.add_persistent_funs ["domain_foldi"]
 
-val mapi0_def = Define`
+Definition mapi0_def[simp]:
   (mapi0 f i LN = LN) /\
   (mapi0 f i (LS a) = LS (f i a)) /\
   (mapi0 f i (BN t1 t2) =
@@ -754,9 +764,10 @@ val mapi0_def = Define`
   (mapi0 f i (BS t1 a t2) =
    let inc = lrnext i in
      mk_BS (mapi0 f (i + 2 * inc) t1) (f i a) (mapi0 f (i + inc) t2))
-`;
-val _ = export_rewrites ["mapi0_def"]
-val mapi_def = Define`mapi f pt = mapi0 f 0 pt`;
+End
+
+Definition mapi_def: mapi f pt = mapi0 f 0 pt
+End
 
 val lookup_mapi0 = Q.store_thm("lookup_mapi0",
   `!pt i k.
@@ -1121,26 +1132,31 @@ val mk_wf_def = Define `
   (mk_wf (BN t1 t2) = mk_BN (mk_wf t1) (mk_wf t2)) /\
   (mk_wf (BS t1 x t2) = mk_BS (mk_wf t1) x (mk_wf t2))`;
 
-val wf_mk_wf = store_thm("wf_mk_wf[simp]",
-  ``!t. wf (mk_wf t)``,
-  Induct \\ fs [wf_def,mk_wf_def,wf_mk_BS,wf_mk_BN]);
+Theorem wf_mk_wf[simp]: !t. wf (mk_wf t)
+Proof Induct \\ fs [wf_def,mk_wf_def,wf_mk_BS,wf_mk_BN]
+QED
 
-val wf_mk_id = store_thm("wf_mk_id[simp]",
-  ``!t. wf t ==> (mk_wf t = t)``,
-  Induct \\ srw_tac [] [wf_def,mk_wf_def,mk_BS_thm,mk_BN_thm]);
+Theorem wf_mk_id[simp]: !t. wf t ==> (mk_wf t = t)
+Proof
+  Induct \\ srw_tac [] [wf_def,mk_wf_def,mk_BS_thm,mk_BN_thm]
+QED
 
-val lookup_mk_wf = store_thm("lookup_mk_wf[simp]",
-  ``!x t. lookup x (mk_wf t) = lookup x t``,
+Theorem lookup_mk_wf[simp]:
+  !x t. lookup x (mk_wf t) = lookup x t
+Proof
   Induct_on `t` \\ fs [mk_wf_def,lookup_mk_BS,lookup_mk_BN]
-  \\ srw_tac [] [lookup_def]);
+  \\ srw_tac [] [lookup_def]
+QED
 
-val domain_mk_wf = store_thm("domain_mk_wf[simp]",
-  ``!t. domain (mk_wf t) = domain t``,
-  fs [EXTENSION,domain_lookup]);
+Theorem domain_mk_wf[simp]: !t. domain (mk_wf t) = domain t
+Proof fs [EXTENSION,domain_lookup]
+QED
 
-val mk_wf_eq = store_thm("mk_wf_eq[simp]",
-  ``!t1 t2. (mk_wf t1 = mk_wf t2) <=> !x. lookup x t1 = lookup x t2``,
-  metis_tac [spt_eq_thm,wf_mk_wf,lookup_mk_wf]);
+Theorem mk_wf_eq[simp]:
+  !t1 t2. (mk_wf t1 = mk_wf t2) <=> !x. lookup x t1 = lookup x t2
+Proof
+  metis_tac [spt_eq_thm,wf_mk_wf,lookup_mk_wf]
+QED
 
 val inter_eq = store_thm("inter_eq[simp]",
   ``!t1 t2 t3 t4.
@@ -1148,45 +1164,54 @@ val inter_eq = store_thm("inter_eq[simp]",
        !x. lookup x (inter t1 t2) = lookup x (inter t3 t4)``,
   metis_tac [spt_eq_thm,wf_inter]);
 
-val union_mk_wf = store_thm("union_mk_wf[simp]",
-  ``!t1 t2. union (mk_wf t1) (mk_wf t2) = mk_wf (union t1 t2)``,
+Theorem union_mk_wf[simp]:
+  !t1 t2. union (mk_wf t1) (mk_wf t2) = mk_wf (union t1 t2)
+Proof
   REPEAT STRIP_TAC
   \\ `union (mk_wf t1) (mk_wf t2) = mk_wf (union (mk_wf t1) (mk_wf t2))` by
         metis_tac [wf_union,wf_mk_wf,wf_mk_id]
   \\ POP_ASSUM (fn th => once_rewrite_tac [th])
-  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_union]);
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_union]
+QED
 
-val inter_mk_wf = store_thm("inter_mk_wf[simp]",
-  ``!t1 t2. inter (mk_wf t1) (mk_wf t2) = mk_wf (inter t1 t2)``,
+Theorem inter_mk_wf[simp]:
+  !t1 t2. inter (mk_wf t1) (mk_wf t2) = mk_wf (inter t1 t2)
+Proof
   REPEAT STRIP_TAC
   \\ `inter (mk_wf t1) (mk_wf t2) = mk_wf (inter (mk_wf t1) (mk_wf t2))` by
         metis_tac [wf_inter,wf_mk_wf,wf_mk_id]
   \\ POP_ASSUM (fn th => once_rewrite_tac [th])
-  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_inter]);
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_inter]
+QED
 
-val insert_mk_wf = store_thm("insert_mk_wf[simp]",
-  ``!x v t. insert x v (mk_wf t) = mk_wf (insert x v t)``,
+Theorem insert_mk_wf[simp]:
+  !x v t. insert x v (mk_wf t) = mk_wf (insert x v t)
+Proof
   REPEAT STRIP_TAC
   \\ `insert x v (mk_wf t) = mk_wf (insert x v (mk_wf t))` by
         metis_tac [wf_insert,wf_mk_wf,wf_mk_id]
   \\ POP_ASSUM (fn th => once_rewrite_tac [th])
-  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_insert]);
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_insert]
+QED
 
-val delete_mk_wf = store_thm("delete_mk_wf[simp]",
-  ``!x t. delete x (mk_wf t) = mk_wf (delete x t)``,
+Theorem delete_mk_wf[simp]:
+  !x t. delete x (mk_wf t) = mk_wf (delete x t)
+Proof
   REPEAT STRIP_TAC
   \\ `delete x (mk_wf t) = mk_wf (delete x (mk_wf t))` by
         metis_tac [wf_delete,wf_mk_wf,wf_mk_id]
   \\ POP_ASSUM (fn th => once_rewrite_tac [th])
-  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_delete]);
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_delete]
+QED
 
-val union_LN = store_thm("union_LN[simp]",
-  ``!t. (union t LN = t) /\ (union LN t = t)``,
-  Cases \\ fs [union_def]);
+Theorem union_LN[simp]:
+  !t. (union t LN = t) /\ (union LN t = t)
+Proof Cases \\ fs [union_def]
+QED
 
-val inter_LN = store_thm("inter_LN[simp]",
-  ``!t. (inter t LN = LN) /\ (inter LN t = LN)``,
-  Cases \\ fs [inter_def]);
+Theorem inter_LN[simp]: !t. (inter t LN = LN) /\ (inter LN t = LN)
+Proof Cases \\ fs [inter_def]
+QED
 
 val union_assoc = store_thm("union_assoc",
   ``!t1 t2 t3. union t1 (union t2 t3) = union (union t1 t2) t3``,
@@ -1275,11 +1300,10 @@ val delete_compute = save_thm(
       computerule delete_def `BIT2 n`))
 val _ = computeLib.add_persistent_funs ["delete_compute"]
 
-val fromAList_def = Define `
+Definition fromAList_def[simp]:
   (fromAList [] = LN) /\
-  (fromAList ((x,y)::xs) = insert x y (fromAList xs))`;
-
-val fromAList_ind = theorem "fromAList_ind"
+  (fromAList ((x,y)::xs) = insert x y (fromAList xs))
+End
 
 val lookup_fromAList = store_thm("lookup_fromAList",
   ``!ls x.lookup x (fromAList ls) = ALOOKUP ls x``,
@@ -1333,11 +1357,12 @@ Proof
   \\ rw[union_insert_LN]
 QED
 
-val map_def = Define`
+Definition map_def[simp]:
   (map f LN = LN) /\
   (map f (LS a) = (LS (f a))) /\
   (map f (BN t1 t2) = BN (map f t1) (map f t2)) /\
-  (map f (BS t1 a t2) = BS (map f t1) (f a) (map f t2))`
+  (map f (BS t1 a t2) = BS (map f t1) (f a) (map f t2))
+End
 
 val toList_map = store_thm("toList_map",
   ``!s. toList (map f s) = MAP f (toList s)``,
@@ -1346,21 +1371,22 @@ val toList_map = store_thm("toList_map",
   simp[Once toListA_append] >>
   simp[Once toListA_append,SimpRHS])
 
-val domain_map = store_thm("domain_map",
-  ``!s. domain (map f s) = domain s``,
-  Induct >> simp[map_def])
+Theorem domain_map[simp]: !s. domain (map f s) = domain s
+Proof Induct >> simp[map_def]
+QED
 
 val lookup_map = store_thm("lookup_map",
   ``!s x. lookup x (map f s) = OPTION_MAP f (lookup x s)``,
   Induct >> simp[map_def,lookup_def] >> rw[])
 
-val map_LN = store_thm("map_LN[simp]",
-  ``!t. (map f t = LN) <=> (t = LN)``,
-  Cases \\ EVAL_TAC);
+Theorem map_LN[simp]: !t. (map f t = LN) <=> (t = LN)
+Proof Cases \\ EVAL_TAC
+QED
 
-val wf_map = store_thm("wf_map[simp]",
-  ``!t f. wf (map f t) = wf t``,
-  Induct \\ fs [wf_def,map_def]);
+Theorem wf_map[simp]: !t f. wf (map f t) = wf t
+Proof
+  Induct \\ fs [wf_def,map_def]
+QED
 
 val map_map_o = store_thm("map_map_o",
   ``!t f g. map f (map g t) = map (f o g) t``,
@@ -1510,22 +1536,22 @@ val subspt_def = Q.store_thm("subspt_def",
   fs [subspt_lookup,domain_lookup]
   \\ metis_tac [optionTheory.SOME_11]);
 
-val subspt_refl = Q.store_thm(
-  "subspt_refl[simp]",
-  `subspt sp sp`,
-  simp[subspt_def])
+Theorem subspt_refl[simp]: subspt sp sp
+Proof simp[subspt_def]
+QED
 
 val subspt_trans = Q.store_thm(
   "subspt_trans",
   `subspt sp1 sp2 /\ subspt sp2 sp3 ==> subspt sp1 sp3`,
   simp [subspt_lookup]);
 
-val subspt_LN = Q.store_thm(
-  "subspt_LN[simp]",
-  `(subspt LN sp <=> T) /\ (subspt sp LN <=> (domain sp = {}))`,
-  simp[subspt_def, EXTENSION]);
+Theorem subspt_LN[simp]:
+  (subspt LN sp <=> T) /\ (subspt sp LN <=> (domain sp = {}))
+Proof
+  simp[subspt_def, EXTENSION]
+QED
 
-Theorem subspt_union: subspt s (union s t)
+Theorem subspt_union[simp]: subspt s (union s t)
 Proof fs[subspt_lookup,lookup_union]
 QED
 
@@ -1570,13 +1596,14 @@ QED
 
 (* filter values stored in sptree *)
 
-val filter_v_def = Define `
+Definition filter_v_def:
   (filter_v f LN = LN) /\
   (filter_v f (LS x) = if f x then LS x else LN) /\
   (filter_v f (BN l r) = mk_BN (filter_v f l) (filter_v f r)) /\
   (filter_v f (BS l x r) =
     if f x then mk_BS (filter_v f l) x (filter_v f r)
-           else mk_BN (filter_v f l) (filter_v f r))`;
+           else mk_BN (filter_v f l) (filter_v f r))
+End
 
 val lookup_filter_v = store_thm("lookup_filter_v",
   ``!k t f. lookup k (filter_v f t) = case lookup k t of
@@ -1665,12 +1692,12 @@ val union_num_set_sym = Q.store_thm ("union_num_set_sym",
   `!(t1:unit spt) t2. union t1 t2 = union t2 t1`,
   Induct >> fs[union_def] >> rw[] >> CASE_TAC >> fs[union_def]);
 
-val difference_sub = Q.store_thm("difference_sub",
-  `(difference a b = LN) ==> (domain a SUBSET domain b)`,
-  rw[] >>
-  `(domain (difference a b) = {})` by rw[domain_def] >>
-  fs[EXTENSION, domain_difference, SUBSET_DEF] >>
-  metis_tac[]);
+Theorem difference_sub:
+  (difference a b = LN) ==> (domain a SUBSET domain b)
+Proof
+  disch_then (assume_tac o Q.AP_TERM ‘domain’) >>
+  gs[EXTENSION, SUBSET_DEF] >> metis_tac[]
+QED
 
 val wf_difference = Q.store_thm("wf_difference",
   `!t1 t2. wf t1 /\ wf t2 ==> wf (difference t1 t2)`,
@@ -1730,10 +1757,6 @@ val IN_domain = Q.store_thm("IN_domain",
   \\ Cases_on `m` \\ full_simp_tac(srw_ss())[MULT_CLAUSES]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ full_simp_tac(srw_ss())[lemmas])
-
-val map_map_K = Q.store_thm("map_map_K",
-  `!t. map (K a) (map f t) = map (K a) t`,
-  Induct \\ full_simp_tac(srw_ss())[map_def]);
 
 val lookup_map_K = Q.store_thm("lookup_map_K",
   `!t n. lookup n (map (K x) t) = if n IN domain t then SOME x else NONE`,
@@ -1843,12 +1866,11 @@ Proof
    Cases_on `EVEN n` >> fs[]
 QED
 
-val alist_insert_def = Define `
-  (alist_insert [] xs t = t) /\
-  (alist_insert vs [] t = t) /\
-  (alist_insert (v::vs) (x::xs) t = insert v x (alist_insert vs xs t))`
-
-val alist_insert_ind = theorem "alist_insert_ind";
+Definition alist_insert_def:
+  alist_insert [] xs t = t /\
+  alist_insert vs [] t = t /\
+  alist_insert (v::vs) (x::xs) t = insert v x (alist_insert vs xs t)
+End
 
 Theorem lookup_alist_insert:
   !x y t z.
