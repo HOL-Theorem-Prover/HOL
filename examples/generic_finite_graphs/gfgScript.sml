@@ -37,30 +37,93 @@ val addEdge_def = Define`
        od
      else NONE`;
 
-val findNode_def = Define`
-  findNode P g =
-    FIND P (toAList g.nodeInfo)`;
+Definition findNode_def:
+  findNode P g = FIND P (toAList g.nodeInfo)
+End
 
-val updateNode_def = Define`
+Definition updateNode_def:
   updateNode nId node g =
     if nId ∈ domain g.nodeInfo
     then SOME (g with  <| nodeInfo updated_by (insert nId node) ;
                          next := g.next ;
                          followers := g.followers ;
                          preds := g.preds ; |>)
-    else NONE`;
+    else NONE
+End
 
-val wfAdjacency_def = Define‘
+Definition wfAdjacency_def:
   wfAdjacency adjmap ⇔
      ∀k nl e n. lookup k adjmap = SOME nl ∧ MEM (e,n) nl ⇒
-                n ∈ domain adjmap’;
+                n ∈ domain adjmap
+End
+
+Definition wfAdjPair_def:
+  wfAdjPair map1 map2 ⇔
+    ∀m ei n eins. lookup m map1 = SOME eins ∧ MEM (ei,n) eins ⇒
+                  ∃eins'. lookup n map2 = SOME eins' ∧ MEM (ei,m) eins'
+End
+val _ = set_mapped_fixity {fixity = Infix(NONASSOC, 450),
+                           term_name = "wfAdjPair",
+                           tok = "≤ₐ"}
+
+Theorem wfAdjPair_LN[simp]:
+  LN ≤ₐ m
+Proof
+  simp[wfAdjPair_def, lookup_def]
+QED
+
+Theorem wfAdjPair_insertNIL[simp]:
+  n ∉ domain map1 ⇒
+  (insert n [] map1 ≤ₐ map2 ⇔ map1 ≤ₐ map2)
+Proof
+  simp[wfAdjPair_def, lookup_insert, AllCaseEqs(), RIGHT_AND_OVER_OR,
+       SF CONJ_ss] >> rw[EQ_IMP_THM] >>
+  metis_tac[domain_lookup]
+QED
+
+Theorem wfAdjPair_insertR:
+  k ∉ domain map2 ∧ map1 ≤ₐ map2 ⇒ map1 ≤ₐ insert k v map2
+Proof
+  simp[wfAdjPair_def, lookup_insert, AllCaseEqs(), RIGHT_AND_OVER_OR] >>
+  metis_tac[domain_lookup]
+QED
+
+Theorem wfAdjPair_matching_inserts:
+  map1 ≤ₐ map2 ∧ lookup k1 map1 = SOME v1 ∧ lookup k2 map2 = SOME v2 ⇒
+  insert k1 ((e,k2)::v1) map1 ≤ₐ insert k2 ((e,k1)::v2) map2
+Proof
+  simp[wfAdjPair_def] >> rw[lookup_insert] >>
+  gvs[AllCaseEqs(), EXISTS_OR_THM, RIGHT_AND_OVER_OR] >>
+  metis_tac[optionTheory.SOME_11]
+QED
+
+Theorem wfAdjPair_matching_insertNIL:
+  map1 ≤ₐ map2 ⇒
+  insert n [] (map (FILTER (λei. SND ei ≠ n)) map1) ≤ₐ
+  insert n [] (map (FILTER (λei. SND ei ≠ n)) map2)
+Proof
+  simp[wfAdjPair_def, lookup_insert, AllCaseEqs(), lookup_map,
+       RIGHT_AND_OVER_OR, SF CONJ_ss] >>
+  simp[PULL_EXISTS, MEM_FILTER]
+QED
+
+Theorem wfAdjPair_matching_deletes:
+  map1 ≤ₐ map2 ⇒
+  delete n (map (FILTER (λei. SND ei ≠ n)) map1) ≤ₐ
+  delete n (map (FILTER (λei. SND ei ≠ n)) map2)
+Proof
+  simp[wfAdjPair_def, lookup_delete, AllCaseEqs(), lookup_map, PULL_EXISTS,
+       MEM_FILTER]
+QED
+
 
 Definition wfg_def:
   wfg g ⇔ (∀n. g.next ≤ n ⇒ n ∉ domain g.nodeInfo) ∧
            (domain g.followers = domain g.nodeInfo) ∧
            (domain g.preds = domain g.nodeInfo) ∧
            wf g.nodeInfo ∧ wf g.followers ∧ wf g.preds ∧
-           wfAdjacency g.followers ∧ wfAdjacency g.preds
+           wfAdjacency g.followers ∧ wfAdjacency g.preds ∧
+           g.preds ≤ₐ g.followers ∧ g.followers ≤ₐ g.preds
 End
 
 Theorem empty_is_wfg[simp]:
@@ -72,7 +135,7 @@ QED
 Theorem addNode_preserves_wfg[simp]:
   wfg g ⇒ wfg (addNode i g)
 Proof
-  simp[wfg_def, addNode_def, sptreeTheory.wf_insert] >>
+  simp[wfg_def, addNode_def, sptreeTheory.wf_insert, wfAdjPair_insertR] >>
   dsimp[wfAdjacency_def, lookup_insert, AllCaseEqs()] >> metis_tac[]
 QED
 
@@ -83,24 +146,19 @@ Proof
   dsimp[wfAdjacency_def, lookup_insert] >> rpt strip_tac >> rw[] >>
   fs[sptreeTheory.wf_insert] >>
   drule_then strip_assume_tac (SRULE [PULL_EXISTS] $ iffRL domain_lookup) >>
-  simp[ABSORPTION_RWT]
-  >- metis_tac[]
-  >- (rename[`lookup k (insert i _ _) = SOME nl`, `MEM (e',n) nl`,
-             ‘i ∈ domain _’] >>
-      fs[lookup_insert] >> Cases_on `k=i` >> fs[] >>
-      Cases_on `MEM (e',n) followers_old` >> rw[] >> fs[MEM] >> metis_tac[])
-  >- (rename[`lookup k1 (insert k2 _ _) = SOME nl`, `MEM (e',n) nl`,
-             ‘k2 ∈ domain _’] >>
-      fs[lookup_insert] >> Cases_on `k1=k2` >> fs[] >>
-      Cases_on `MEM (e',n) preds_old` >> rw[] >> fs[MEM] >>
-      metis_tac[])
+  simp[ABSORPTION_RWT] >>~-
+  ([`lookup k (insert i _ _) = SOME nl`, `MEM (e',n) nl`, ‘i ∈ domain _’],
+   fs[lookup_insert] >> Cases_on `k=i` >> fs[] >>
+   Cases_on `MEM (e',n) followers_old` >> rw[] >> fs[MEM] >> metis_tac[]) >~
+  [‘g.next ≤ n’] >- metis_tac[] >>
+  irule wfAdjPair_matching_inserts >> simp[]
 QED
 
-val addEdge_preserves_nodeInfo = Q.store_thm(
-   "addEdge_preserves_nodeInfo",
-   `(addEdge i (e,s) g) = SOME g2 ==> (g.nodeInfo = g2.nodeInfo)`,
+Theorem addEdge_preserves_nodeInfo:
+   addEdge i (e,s) g = SOME g2 ==> g.nodeInfo = g2.nodeInfo
+Proof
    rpt strip_tac >> fs[addEdge_def,theorem "gfg_component_equality"]
-    );
+QED
 
 Theorem updateNode_preserves_wfg[simp]:
   wfg g ∧ (updateNode id n g = SOME g2) ==> wfg g2
@@ -151,7 +209,9 @@ Proof
      pred_setTheory.ABSORPTION_RWT, wf_insert] >>
   gs[wfAdjacency_def, sptreeTheory.domain_map] >>
   rw[sptreeTheory.lookup_insert] >>
-  gs[sptreeTheory.lookup_map, listTheory.MEM_FILTER] >> metis_tac[]
+  gs[sptreeTheory.lookup_map, listTheory.MEM_FILTER] >>~-
+  ([‘node ∈ domain _’, ‘MEM (e,node) _’], metis_tac[]) >>
+  irule wfAdjPair_matching_insertNIL >> simp[]
 QED
 
 Theorem removeEdges_on_next[simp]:
@@ -178,6 +238,14 @@ Definition deleteNode_def:
                                   |>
 End
 
+Theorem delete_insert:
+  wf m ⇒
+  delete k (insert k v m) = delete k m
+Proof
+  simp[spt_eq_thm, wf_delete, wf_insert] >>
+  rw[lookup_delete, lookup_insert]
+QED
+
 Theorem deleteNode_preserves_wfg:
   wfg g ⇒ wfg (deleteNode n g)
 Proof
@@ -186,7 +254,11 @@ Proof
   gvs[wfg_def, wfAdjacency_def, sptreeTheory.lookup_delete,
       removeEdges_on_def, wf_delete] >>
   rw[] >>
-  gs[lookup_insert, lookup_map, wf_delete, wf_insert, domain_map, MEM_FILTER] >>
+  gs[lookup_insert, lookup_map, wf_delete, wf_insert, domain_map,
+     MEM_FILTER] >>~-
+  ([‘delete k _ ≤ₐ delete k _’],
+   simp[delete_insert, iffLR delete_fail] >>
+   irule wfAdjPair_matching_deletes >> simp[]) >>
   metis_tac[]
 QED
 
@@ -204,7 +276,9 @@ Theorem addNodeN_preserves_wfg:
 Proof
   rw[wfg_def, addNodeN_def, ABSORPTION_RWT, wf_insert] >>
   gs[wfAdjacency_def, sptreeTheory.lookup_insert, AllCaseEqs(),
-     ABSORPTION_RWT, SF DNF_ss] >> metis_tac[]
+     ABSORPTION_RWT, SF DNF_ss] >>~-
+  ([‘_ ≤ₐ insert k [] _’], irule wfAdjPair_insertR >> simp[]) >>
+  metis_tac[]
 QED
 
 Theorem nodes_addNodeN[simp]:
