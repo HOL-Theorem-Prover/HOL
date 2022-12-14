@@ -265,24 +265,31 @@ fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
           in (SOME wit::wits, new_vars' @ new_vars, renames, (bv |-> wit)::subs) end
         end
     val (wits, new_vars, renames, subs) = process qs_bvs
+    val g' =
+      let val freshen = map (fn v => v |-> genvar (type_of v)) exists_vars
+          val bvs = map (subst freshen) exists_vars
+          val body = subst freshen body
+      in list_mk_exists (bvs, body) end
     val (old_vars, body) =
       let val body = list_mk_exists (map #residue renames, subst renames body)
           val body = subst subs body
       in strip_n_exists (length renames) [] body end
-    fun exists [] _ th = th
-      | exists (SOME tm::tm_opts) bvs th =
-          let val rest = exists tm_opts bvs th
-              val fresh = genvar (type_of tm)
-              val desired = mk_exists (fresh, subst [tm |-> fresh] (concl rest))
+    fun exists desired [] _ th = th
+      | exists desired (SOME tm::tm_opts) bvs th =
+          let val (var, body) = dest_exists desired
+              val rest = exists (subst [var |-> tm] body) tm_opts bvs th
           in Thm.EXISTS (desired, tm) rest end
-      | exists (NONE::tm_opts) (bv::bvs) th = SIMPLE_EXISTS bv (exists tm_opts bvs th)
-      | exists _ _ _ = raise ERR "LIST_REFINE_EXISTS_TAC" "internal error"
+      | exists desired (NONE::tm_opts) (bv::bvs) th =
+          let val (var, body) = dest_exists desired
+              val rest = exists (subst [var |-> bv] body) tm_opts bvs th
+          in Thm.EXISTS (desired, bv) rest end
+      | exists _ _ _ _ = raise ERR "LIST_REFINE_EXISTS_TAC" "internal error"
     fun chooser [] th = th
       | chooser (v::vs) th =
           let val th = chooser vs th
               val exists_tm = mk_exists (v, hd (hyp th))
           in CHOOSE (v, ASSUME exists_tm) th end
-    val th = ASSUME body |> exists wits old_vars |> chooser (new_vars @ old_vars)
+    val th = ASSUME body |> exists g' wits old_vars |> chooser (new_vars @ old_vars)
   in
     MATCH_MP_TAC (DISCH_ALL th) (asl, g)
   end

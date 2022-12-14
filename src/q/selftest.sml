@@ -49,6 +49,12 @@ val _ = let
         [`_`, `SUC l`] : term frag list list,
         ``∃l n. n + SUC l = zero``
       ),
+      (* Concrete test *)
+      (
+        ([], ``∃n m. n + m = SUC zero``),
+        [`_`, `SUC zero`] : term frag list list,
+        ``∃n. n + SUC zero = SUC zero``
+      ),
       (* Use variable in assumption *)
       (
         ([``l = zero``], ``∃n m. n + m = zero``),
