@@ -1441,6 +1441,19 @@ Proof
  >> MATCH_MP_TAC FN_MINUS_NOT_INFTY >> rw []
 QED
 
+Theorem real_random_variable_mul_indicator :
+    !p E X. prob_space p /\ E IN events p /\ real_random_variable X p ==>
+            real_random_variable (\x. X x * indicator_fn E x) p
+Proof
+    RW_TAC std_ss [real_random_variable]
+ >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR \\
+     fs [prob_space_def, measure_space_def, p_space_def, events_def])
+ >> ‘?r. 0 <= r /\ r <= 1 /\ indicator_fn E x = Normal r’
+        by METIS_TAC [indicator_fn_normal] >> POP_ORW
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> METIS_TAC [mul_not_infty]
+QED
+
 (* added `integrable p X`, otherwise `expectation p X` is not defined *)
 val finite_expectation1 = store_thm
   ("finite_expectation1",
@@ -2255,6 +2268,17 @@ Proof
  >> rw [extreal_pow_def, expectation_zero]
 QED
 
+Theorem expectation_sum :
+    !p X J.
+        FINITE J /\ prob_space p /\ (!i. i IN J ==> integrable p (X i)) /\
+       (!i. i IN J ==> real_random_variable (X i) p) ==>
+        expectation p (\x. SIGMA (\i. X i x) J) = SIGMA (\i. expectation p (X i)) J
+Proof
+    RW_TAC std_ss [expectation_def, real_random_variable_def, prob_space_def,
+                   p_space_def]
+ >> MATCH_MP_TAC integral_sum >> rw []
+QED
+
 (* |- !p. prob_space p ==> variance p (\x. 0) = 0 *)
 Theorem variance_zero =
         variance_const |> Q.SPECL [‘p’, ‘0’]
@@ -2727,7 +2751,7 @@ Theorem finite_second_moments_sum :
 Proof
     rpt STRIP_TAC
  >> NTAC 3 (POP_ASSUM MP_TAC)
- >> Q.SPEC_TAC (‘J’,‘J’)
+ >> qid_spec_tac ‘J’
  >> Induct_on ‘J’
  >> rw [EXTREAL_SUM_IMAGE_EMPTY]
  >- (IMP_RES_TAC real_random_variable_zero \\
@@ -3100,12 +3124,18 @@ Proof
  >> METIS_TAC [SUBSET_DEF]
 QED
 
-(* 9. extension of `indep-rv`: total independent random variables. *)
-val indep_vars_def = Define
-   `indep_vars p X A (J :'index set) <=>
-      !E. E IN (J --> (subsets o A)) ==>
-          indep_events p (\n. (PREIMAGE (X n) (E n)) INTER p_space p) J`;
+(* 9. extension of `indep-rv`: totally/mutually independent r.v.'s
 
+  cf. indep_vars_alt_generator for a weaker equivalent condition for testing
+      independence.
+ *)
+Definition indep_vars_def :
+    indep_vars p X A (J :'index set) =
+      !E. E IN (J --> (subsets o A)) ==>
+          indep_events p (\n. (PREIMAGE (X n) (E n)) INTER p_space p) J
+End
+
+(* not used *)
 val indep_function_def = Define
    `indep_function p =
    {f | indep_families p (IMAGE (PREIMAGE (FST o f)) UNIV)
@@ -3115,6 +3145,13 @@ val PROB_INDEP = store_thm
   ("PROB_INDEP",
   ``!p s t u. indep p s t /\ (u = s INTER t) ==> (prob p u = prob p s * prob p t)``,
     RW_TAC std_ss [indep_def]);
+
+Theorem INDEP :
+  !p a b. a IN events p /\ b IN events p /\
+          prob p (a INTER b) = prob p a * prob p b ==> indep p a b
+Proof
+  rw [indep_def]
+QED
 
 val INDEP_EMPTY = store_thm
   ("INDEP_EMPTY", ``!p s. prob_space p /\ s IN events p ==> indep p {} s``,
@@ -7691,7 +7728,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-(* Theorem 3.3.1 [2, p.54], slightly generalized *)
+(* Theorem 3.3.1 [2, p.54], slightly generalized to arbitrary index set *)
 Theorem indep_vars_cong :
     !p X B (J :'index set) f.
          indep_vars p (X :'index -> 'a -> 'b) B (J :'index set) /\
@@ -7731,6 +7768,7 @@ Proof
  >> fs [Abbr ‘E'’, PREIMAGE_def, IN_DFUNSET, IN_MEASURABLE]
 QED
 
+(* A specialized version of previous theorem for only two r.v.'s *)
 Theorem indep_rv_cong :
     !p X Y A B f g. indep_rv p X Y A B /\
                     random_variable X p A /\ random_variable Y p B /\
@@ -7755,6 +7793,7 @@ Proof
  >> Cases_on ‘n = 0’ >> rw []
 QED
 
+(* Another version of "indep_vars_cong" for pairwise independent r.v.'s *)
 Theorem pairwise_indep_vars_cong :
     !p X B (J :'index set) f.
          pairwise_indep_vars p (X :'index -> 'a -> 'b) B (J :'index set) /\
@@ -8060,6 +8099,18 @@ Proof
  >> MATCH_MP_TAC indep_vars_expectation >> art []
  >> CONJ_TAC (* 2 subgoals, same tactics *)
  >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
+QED
+
+Theorem pairwise_indep_vars_imp_uncorrelated :
+    !p X A (J :'index set). prob_space p /\
+           (!i. i IN J ==> real_random_variable (X i) p) /\
+           (!i. i IN J ==> finite_second_moments p (X i)) /\
+            pairwise_indep_vars p X (\n. Borel) J ==>
+            uncorrelated_vars p X J
+Proof
+    RW_TAC std_ss [pairwise_indep_vars_def, uncorrelated_vars_def]
+ >> MATCH_MP_TAC indep_vars_imp_uncorrelated
+ >> ASM_SIMP_TAC std_ss []
 QED
 
 (* another version of variance_sum for pairwise independent r.v.'s *)
@@ -8589,6 +8640,21 @@ Proof
  >> `!(x:real) y z w. x * y * (z * w) = x * (y * z) * w`
         by METIS_TAC [REAL_MUL_ASSOC, REAL_MUL_COMM]
  >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_RID]
+QED
+
+(* ========================================================================= *)
+(*  Additional theorems of conditional probabilities on independent events   *)
+(* ========================================================================= *)
+
+Theorem indep_alt_cond_prob :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\ prob p B <> 0 ==>
+           (indep p A B <=> cond_prob p A B = prob p A)
+Proof
+    rw [indep_def]
+ >> rw [COND_PROB_MUL_RULE, Once mul_comm]
+ >> Suff ‘cond_prob p A B * prob p B = prob p A * prob p B <=>
+          prob p B = 0 \/ cond_prob p A B = prob p A’ >- rw []
+ >> MATCH_MP_TAC mul_rcancel >> rw [PROB_FINITE]
 QED
 
 (* ========================================================================= *)
