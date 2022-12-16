@@ -2159,6 +2159,16 @@ val inv_le_antimono = store_thm
       DISJ1_TAC >> PROVE_TAC [inv_lt_antimono],
       DISJ2_TAC >> PROVE_TAC [inv_inj] ]);
 
+Theorem inv_le_antimono_imp :
+    !x y :extreal. 0 < y /\ y <= x ==> inv x <= inv y
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘inv x <= inv y <=> y <= x’ >- rw []
+ >> MATCH_MP_TAC inv_le_antimono >> art []
+ >> MATCH_MP_TAC lte_trans
+ >> Q.EXISTS_TAC ‘y’ >> art []
+QED
+
 Theorem inv_not_infty :
     !x :extreal. x <> 0 ==> inv x <> PosInf /\ inv x <> NegInf
 Proof
@@ -2240,6 +2250,9 @@ Proof
                    REAL_MUL_LZERO, REAL_MUL_RZERO]
  >> REWRITE_TAC [REAL_EQ_MUL_LCANCEL]
 QED
+
+(* |- !x y z. x <> PosInf /\ x <> NegInf ==> (y * x = z * x <=> x = 0 \/ y = z) *)
+Theorem mul_rcancel = ONCE_REWRITE_RULE [mul_comm] mul_lcancel
 
 Theorem inv_mul :
     !x y. x <> 0 /\ y <> 0 ==> (inv (x * y) = inv x * inv y)
@@ -2555,6 +2568,24 @@ Proof
  >> Suff `inv (y pow n) = (inv y) pow n` >- RW_TAC std_ss []
  >> MATCH_MP_TAC pow_inv
  >> FULL_SIMP_TAC std_ss [lt_le]
+QED
+
+Theorem pow_pow : (* cf. REAL_POW_POW *)
+    !(x :extreal) m n. (x pow m) pow n = x pow (m * n)
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘x’
+ >| [ (* goal 1 (of 3) *)
+      Cases_on ‘m = 0’ >- rw [extreal_pow_def] \\
+      Cases_on ‘EVEN m’
+      >- (rw [extreal_pow_def] >> fs [EVEN_MULT]) \\
+      rw [extreal_pow_def] >> gs [EVEN_MULT],
+      (* goal 2 (of 3) *)
+      Cases_on ‘m = 0’ >- rw [extreal_pow_def] \\
+      Cases_on ‘EVEN m’ >- rw [extreal_pow_def] \\
+      rw [extreal_pow_def],
+      (* goal 3 (of 3) *)
+      rw [extreal_pow_def, REAL_POW_POW] ]
 QED
 
 val abs_le_square_plus1 = store_thm
@@ -4630,50 +4661,59 @@ val EXTREAL_SUM_IMAGE_EQ = store_thm
                            DISJ_IMP_THM, FORALL_AND_THM]
   >> METIS_TAC []);
 
+(* ‘!n. 0 <= f n’ can be weakened but enough for now *)
+Theorem EXTREAL_SUM_IMAGE_OFFSET :
+    !f m n. m <= n /\ (!n. 0 <= f n) ==>
+            EXTREAL_SUM_IMAGE f (count n) =
+            EXTREAL_SUM_IMAGE f (count m) +
+            EXTREAL_SUM_IMAGE (\i. f (i + m)) (count (n - m))
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘h = \(i :num). i + m’
+ >> ‘(\i. f (i + m)) = f o h’ by METIS_TAC [o_DEF] >> POP_ORW
+ (* applying EXTREAL_SUM_IMAGE_IMAGE *)
+ >> Know ‘EXTREAL_SUM_IMAGE (f o h) (count (n - m)) =
+          EXTREAL_SUM_IMAGE f (IMAGE h (count (n - m)))’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     irule EXTREAL_SUM_IMAGE_IMAGE >> rw []
+     >- (DISJ1_TAC >> Q.X_GEN_TAC ‘i’ >> rw [] \\
+         METIS_TAC [pos_not_neginf]) \\
+     rw [INJ_DEF, Abbr ‘h’]) >> Rewr'
+ (* preparing for EXTREAL_SUM_IMAGE_DISJOINT_UNION *)
+ >> Know ‘count n = count m UNION (IMAGE h (count (n - m)))’
+ >- (rw [Once EXTENSION] >> EQ_TAC >> rw [Abbr ‘h’] \\
+    ‘x < m \/ m <= x’ by rw [] >- art [] \\
+     DISJ2_TAC >> Q.EXISTS_TAC ‘x - m’ >> rw [])
+ >> Rewr'
+ (* applying EXTREAL_SUM_IMAGE_DISJOINT_UNION *)
+ >> irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> simp []
+ >> reverse CONJ_TAC
+ >- (DISJ1_TAC >> rw [] >> METIS_TAC [pos_not_neginf])
+ >> rw [DISJOINT_ALT, Abbr ‘h’]
+QED
+
 (* if the first N items of (g n) are all zero, we can ignore them in SIGMA *)
 Theorem EXTREAL_SUM_IMAGE_EQ_SHIFT :
     !f g N. (!n. n < N ==> g n = 0) /\ (!n. 0 <= f n /\ f n = g (n + N)) ==>
             !n. EXTREAL_SUM_IMAGE f (count n) = EXTREAL_SUM_IMAGE g (count (n + N))
 Proof
     rpt STRIP_TAC
- >> Know ‘!n. 0 <= g n’
- >- (Q.X_GEN_TAC ‘n’ \\
-     Cases_on ‘n < N’ >- rw [] \\
-    ‘n = n - N + N’ by rw [] >> POP_ORW \\
-    ‘g (n - N + N) = f (n - N)’ by rw [] >> POP_ORW >> rw [])
- >> DISCH_TAC
- >> Know ‘count (n + N) = {i | N <= i /\ i < n + N} UNION (count N)’
- >- (rw [Once EXTENSION])
- >> Rewr'
- >> Know ‘DISJOINT {i | N <= i /\ i < n + N} (count N)’
- >- (rw [DISJOINT_ALT])
- >> DISCH_TAC
- >> Know ‘EXTREAL_SUM_IMAGE g ({i | N <= i /\ i < n + N} UNION count N) =
-          EXTREAL_SUM_IMAGE g {i | N <= i /\ i < n + N} + EXTREAL_SUM_IMAGE g (count N)’
- >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> rw []
-     >- (irule SUBSET_FINITE \\
-         Q.EXISTS_TAC ‘count (N + n)’ >> rw [SUBSET_DEF]) \\
-     DISJ1_TAC >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC \\
-     MATCH_MP_TAC pos_not_neginf >> art [])
+ >> Know ‘EXTREAL_SUM_IMAGE g (count (n + N)) =
+          EXTREAL_SUM_IMAGE g (count N) +
+          EXTREAL_SUM_IMAGE (\i. g (i + N)) (count (n + N - N))’
+ >- (MATCH_MP_TAC EXTREAL_SUM_IMAGE_OFFSET >> rw [] \\
+    ‘n < N \/ N <= n’ by rw [] >- rw [] \\
+    ‘n = n - N + N’ by rw [] >> POP_ORW >> METIS_TAC [])
  >> Rewr'
  >> Know ‘EXTREAL_SUM_IMAGE g (count N) = 0’
- >- (MATCH_MP_TAC EXTREAL_SUM_IMAGE_0 >> rw [])
+ >- (irule EXTREAL_SUM_IMAGE_0 >> rw [])
  >> Rewr'
- >> REWRITE_TAC [add_rzero]
- >> Q.ABBREV_TAC ‘h = \(i :num). i + N’
- >> Know ‘{i | N <= i /\ i < n + N} = IMAGE h (count n)’
- >- (rw [Once EXTENSION, Abbr ‘h’] \\
-     EQ_TAC >> rw [] \\
-     Q.EXISTS_TAC ‘x - N’ >> rw [])
- >> Rewr'
- >> Know ‘EXTREAL_SUM_IMAGE g (IMAGE h (count n)) = EXTREAL_SUM_IMAGE (g o h) (count n)’
- >- (irule EXTREAL_SUM_IMAGE_IMAGE \\
-     rw [INJ_DEF, Abbr ‘h’] \\
-     DISJ1_TAC >> Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-     MATCH_MP_TAC pos_not_neginf >> art [])
- >> Rewr'
- >> Suff ‘g o h = f’ >- Rewr
- >> rw [o_DEF, Abbr ‘h’, FUN_EQ_THM]
+ >> rw []
+ >> irule EXTREAL_SUM_IMAGE_EQ >> rw []
+ >> DISJ1_TAC >> rw []
+ >> MATCH_MP_TAC pos_not_neginf
+ >> Suff ‘g (N + x) = f x’ >- (Rewr' >> rw [])
+ >> METIS_TAC [ADD_SYM]
 QED
 
 val EXTREAL_SUM_IMAGE_POS_MEM_LE = store_thm
@@ -6458,6 +6498,15 @@ Proof
  >> METIS_TAC [le_sub_eq2, add_comm]
 QED
 
+Theorem ext_suminf_add' :
+    !f g h. (!n. 0 <= f n) /\ (!n. 0 <= g n) /\ (!n. h n = f n + g n) ==>
+            (ext_suminf h = ext_suminf f + ext_suminf g)
+Proof
+    rpt STRIP_TAC
+ >> ‘h = \n. f n + g n’ by METIS_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC ext_suminf_add >> rw []
+QED
+
 Theorem ext_suminf_cmul :
     !f c. 0 <= c /\ (!n. 0 <= f n) ==>
           (ext_suminf (\n. c * f n) = c * ext_suminf f)
@@ -7635,6 +7684,32 @@ Proof
                  PROVE_TAC [half_between])
  >> GEN_TAC
  >> METIS_TAC [half_not_infty, pow_not_infty, lt_infty]
+QED
+
+Theorem ext_suminf_offset :
+    !f m. (!n. 0 <= f n) ==>
+           suminf f = SIGMA f (count m) + suminf (\i. f (i + m))
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘f1 = \n. if n < m then f n else 0’
+ >> Q.ABBREV_TAC ‘f2 = \n. if m <= n then f n else 0’
+ >> Know ‘SIGMA f (count m) = SIGMA f1 (count m)’
+ >- (irule EXTREAL_SUM_IMAGE_EQ >> rw [Abbr ‘f1’] \\
+     DISJ1_TAC >> rw [pos_not_neginf])
+ >> Rewr'
+ (* applying ext_suminf_sum *)
+ >> Know ‘SIGMA f1 (count m) = suminf f1’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC ext_suminf_sum >> rw [Abbr ‘f1’])
+ >> Rewr'
+ (* applying ext_suminf_eq_shift *)
+ >> Know ‘suminf (\i. f (i + m)) = suminf f2’
+ >- (MATCH_MP_TAC ext_suminf_eq_shift \\
+     Q.EXISTS_TAC ‘m’ >> rw [Abbr ‘f2’])
+ >> Rewr'
+ >> MATCH_MP_TAC ext_suminf_add'
+ >> rw [Abbr ‘f1’, Abbr ‘f2’]
+ >> fs []
 QED
 
 (* ------------------------------------------------------------------------- *)
