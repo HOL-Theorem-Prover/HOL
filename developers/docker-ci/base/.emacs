@@ -4,4 +4,4 @@
 
 (setq hol-executable     "/ML/HOL/bin/hol")
 (setq holmake-executable "/ML/HOL/bin/Holmake")
-(setq indent-tabs-mode   nil)
+(setq indent-tabs-mode nil)

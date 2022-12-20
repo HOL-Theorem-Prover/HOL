@@ -7,7 +7,8 @@
 FROM binghelisp/hol-dev:latest
 
 # Hardware specification for Windows and Linux virtual machines: 2-core CPU (x86_64)
-ARG BUILD_OPT="--expk -j2"
+ARG BUILD_OPT="--expk -j4"
+ARG ML_PROG=poly
 
 WORKDIR /ML/HOL
 
@@ -15,7 +16,7 @@ WORKDIR /ML/HOL
 COPY --link . .
 
 # build HOL
-RUN poly < tools/smart-configure.sml 
+RUN ${ML_PROG} < tools/smart-configure.sml 
 RUN bin/build ${BUILD_OPT}
 
 ENV PATH=/ML/HOL/bin:$PATH
