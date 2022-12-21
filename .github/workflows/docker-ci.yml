@@ -41,3 +41,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SML=poly
+            # NOTE: the arg-value cannot be quoted here:
+            BUILDOPTS=--expk -j2
