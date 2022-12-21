@@ -57,3 +57,6 @@ COPY .emacs /root
 RUN rm -rf polyml*
 RUN rm -rf mosml*
 RUN rm -rf opentheory*
+
+# for developments using this base image with attached /ML volumes
+ENV PATH=/ML/HOL/bin:$PATH
