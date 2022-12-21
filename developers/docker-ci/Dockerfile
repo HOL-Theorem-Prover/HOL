@@ -7,19 +7,18 @@
 FROM binghelisp/hol-dev:latest
 
 # GitHub Actions' hardware specification for Linux virtual machines: 2-core CPU (x86_64)
+# By default we use 4 cores in other building environments (e.g. Docker Hub autobuilds)
+ARG BUILDOPTS="--expk -j4"
 ARG SML=poly
-ARG BUILDOPTS="--expk -j2"
 
 WORKDIR /ML/HOL
 
 # fast copy all files to the docker image
 COPY --link . .
 
-# build HOL
+# building HOL
 RUN ${SML} < tools/smart-configure.sml 
 RUN bin/build ${BUILDOPTS}
-
-ENV PATH=/ML/HOL/bin:$PATH
 
 # default entrypoint
 ENTRYPOINT /ML/HOL/bin/hol
