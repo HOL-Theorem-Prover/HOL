@@ -6,18 +6,18 @@
 # This "base" image is described in "base/Dockerfile"
 FROM binghelisp/hol-dev:latest
 
-# Hardware specification for Windows and Linux virtual machines: 2-core CPU (x86_64)
-ARG BUILD_OPT="--expk -j4"
-ARG ML_PROG=poly
+# GitHub Actions' hardware specification for Linux virtual machines: 2-core CPU (x86_64)
+ARG SML=poly
+ARG BUILDOPTS="--expk -j2"
 
 WORKDIR /ML/HOL
 
-# copy all files to the docker image
+# fast copy all files to the docker image
 COPY --link . .
 
 # build HOL
-RUN ${ML_PROG} < tools/smart-configure.sml 
-RUN bin/build ${BUILD_OPT}
+RUN ${SML} < tools/smart-configure.sml 
+RUN bin/build ${BUILDOPTS}
 
 ENV PATH=/ML/HOL/bin:$PATH
 
