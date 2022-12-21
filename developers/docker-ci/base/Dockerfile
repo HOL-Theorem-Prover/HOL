@@ -4,7 +4,7 @@
 #
 # e.g. docker build --push -t binghelisp/hol-dev .
 
-# GitHub Action recommends Debian-based systems as base images
+# GitHub Actions recommends Debian-based systems as base images
 FROM debian:stable
 
 WORKDIR /ML
@@ -18,8 +18,8 @@ ENV LD_LIBRARY_PATH=/usr/local/lib
 RUN apt-get update -qy
 RUN apt-get install -qy build-essential graphviz git libgmp-dev curl wget
 
-# optional packages (IDE)
-RUN apt-get install -qy emacs-nox vim automake
+# optional packages (IDE and others)
+RUN apt-get install -qy emacs-nox vim automake procps
 RUN apt-get clean
 
 # install MLton (https://github.com/MLton/mlton.git)
@@ -33,6 +33,7 @@ RUN wget -q -O polyml-5.9.tar.gz https://github.com/polyml/polyml/archive/refs/t
 RUN tar xzf polyml-5.9.tar.gz
 RUN cd polyml-5.9 && ./configure --enable-intinf-as-int
 RUN make -C polyml-5.9 -j4
+RUN make -C polyml-5.9 compiler
 RUN make -C polyml-5.9 install
 
 # install mosml (https://github.com/kfl/mosml.git)
@@ -53,6 +54,6 @@ RUN cp opentheory-1.5/bin/mlton/opentheory /usr/local/bin
 COPY .emacs /root
 
 # [optional] delete building directories for smaller image sizes
-RUN rm -rf polyml-5.9*
-RUN rm -rf mosml-ver-2.10.1*
-RUN rm -rf opentheory-1.5*
+RUN rm -rf polyml*
+RUN rm -rf mosml*
+RUN rm -rf opentheory*
