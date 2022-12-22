@@ -20,5 +20,5 @@ COPY --link . .
 RUN ${SML} < tools/smart-configure.sml 
 RUN bin/build ${BUILDOPTS}
 
-# default entrypoint
-ENTRYPOINT /ML/HOL/bin/hol
+# This can be overrided by "docker run <command>"
+CMD ["/ML/HOL/bin/hol"]
