@@ -156,14 +156,15 @@ fun load_thydata thyname path =
           dec_sdata {with_strings = with_strings, with_stridty = with_stridty}
         ) core_data
     val {theorems = named_thms,...} = export_from_sharing_data share_data
-    val thmdict = Redblackmap.fromList String.compare named_thms
+
+    val thmdict = HOLdict.fromList String.compare named_thms
     val _ =
         let
           fun mapthis (nm_i,c,private) =
               let val nm = read_string share_data nm_i
                   val th =
-                      Redblackmap.find (thmdict,nm)
-                      handle Redblackmap.NotFound =>
+                      HOLdict.find (thmdict,nm)
+                      handle HOLdict.NotFound =>
                              raise TheoryReader ("Couldn't lookup "^nm)
               in (nm,th,c,{private=private})
               end

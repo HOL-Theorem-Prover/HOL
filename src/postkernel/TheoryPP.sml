@@ -309,7 +309,7 @@ fun pp_struct (info_record : struct_info_record) = let
                 add_string (mlquote name) >> add_break (1,2) >>
                 add_string ("(holpathdb.subst_pathvars "^datfile^")")
               ) >> add_break(1,2) >>
-              add_string ("fun find s = Redblackmap.find (thydata,s)") >>
+              add_string ("fun find s = HOLdict.find (thydata,s)") >>
               add_break(1,0) >> add_string "end"
             ) >> jump >>
             bind_theorems >>
