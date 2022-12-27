@@ -2,7 +2,7 @@ signature TheoryReader =
 sig
 
   exception TheoryReader of string
-  val load_thydata : string -> string -> (string, Thm.thm) Redblackmap.dict
+  val load_thydata : string -> string -> (string, Thm.thm) HOLdict.dict
 
 end
 

@@ -94,4 +94,7 @@ end
    [find p s] returns SOME i, where i is an item in s which satisfies
    p, if one exists; otherwise returns NONE.  Traverses the entries of
    the set in increasing order.
+
+   [filter p s] filters out those elements of s that do not satisfy the
+    predicate p.
 *)

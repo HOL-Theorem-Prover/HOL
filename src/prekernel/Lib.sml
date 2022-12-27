@@ -309,9 +309,11 @@ fun topsort R =
 (* O(n*log(n)) time version
    deps = map from nodes to adjacency lists *)
 
+local open HOLdict in
+type ('a, 'b) dict = ('a, 'b) dict
+
 fun dict_topsort deps =
    let
-      open Redblackmap
       val deps = transform (fn ls => ref (SOME ls)) deps
       fun visit (n, ls) =
          let
@@ -330,6 +332,7 @@ fun dict_topsort deps =
    in
       foldl v [] deps
    end
+end (* local *)
 
 (*---------------------------------------------------------------------------*
  * Strings.                                                                  *

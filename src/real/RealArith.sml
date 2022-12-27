@@ -1731,7 +1731,7 @@ end
    rationals such as [x |=> a, y |=> b, 1 |=> c].
  *)
 
-(* Solution 1 (Termtab): *)
+(* Solution 1 (Termtab):
 local open Termtab Arbrat in
 type linear_type = rat table;
 
@@ -1774,6 +1774,7 @@ in
     else fold add m2 m1
 end; (* mergeWithoutZero *)
 end; (* local *)
+ *)
 
 (* Solution 2 (Redblackmap):
 local open Redblackmap Arbrat in
@@ -1817,6 +1818,47 @@ in
 end
 end; (* local *)
  *)
+
+(* Solution 3 (HOLdict aka Redblackmap2) *)
+local open HOLdict Arbrat in
+type linear_type = (term,rat)dict;
+
+val is_undefined :linear_type -> bool = isEmpty;
+val undefined :linear_type = mkDict Term.compare;
+fun is_single (m :linear_type) = (numItems m = 1);
+fun defined (m :linear_type) (k :term) = inDomain (m,k);
+fun dom (m :linear_type) :term list = listKeys m;
+
+fun tryapply (m :linear_type) k d = find (m,k) handle NotFound => d;
+fun apply (m :linear_type) k = tryapply m k zero;
+
+infix |=>
+fun (k :term) |=> (v :rat) :linear_type = singleton Term.compare (k,v);
+
+fun undefine (k :term) (m :linear_type) :linear_type =
+    (fst(remove(m,k))) handle NotFound => m;
+
+fun choose (m :linear_type) =
+    case firsti m of
+       SOME kx => kx
+     | NONE    => failwith "empty dict";
+
+val listItems = listItems;
+val mapWith = transform;
+
+fun mergeWithoutZero f (m1 :linear_type) (m2 :linear_type) :linear_type =
+let
+    fun add (SOME x, SOME y) = let val z = Arbrat.+ (x,y) in
+                                   if z = Arbrat.zero then NONE
+                                   else SOME z
+                               end
+      | add (SOME x, NONE  ) = SOME x
+      | add (NONE,   SOME y) = SOME y
+      | add (NONE,   NONE  ) = NONE
+in
+    mergeWith add (m1,m2)
+end
+end; (* local *)
 
 (* NOTE: this function is only used in verbose mode *)
 fun dom_set (m :linear_type) :term set =
