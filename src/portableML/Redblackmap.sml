@@ -209,9 +209,6 @@ struct
               let val a = loop a
               in  BLACK(k, f x, a, loop b) end
       in  (compare, loop tree, n) end
-
-  val fromOrderedList = fromList
-
 end
 (*
 val t1 = Redblackset.addList(Redblackset.empty Int.compare, [43,25,13,14]);
