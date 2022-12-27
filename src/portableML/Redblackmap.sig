@@ -23,9 +23,6 @@ sig
   val foldl      : ('key * 'a * 'b -> 'b) -> 'b -> ('key,'a) dict -> 'b
   val map        : ('key * 'a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
   val transform  : ('a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
-
-  val fromOrderedList    : ('key * 'key -> order) -> ('key * 'a) list ->
-                           ('key, 'a) dict
 end
 
 (*
@@ -89,7 +86,4 @@ end
 
    [transform f m] returns a new map whose entries have form (k, f v),
    where (k, v) is an entry in m.
-
-   [fromOrderedList ordr xs] behaves the same as fromList.
-
 *)
