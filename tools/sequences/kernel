@@ -13,7 +13,7 @@ src/portableML
 src/portableML/monads
 [poly]src/portableML/poly/concurrent
 [mosml]src/portableML/mosml/concurrent
-!src/portableML/testsrc
+src/portableML/testsrc
 src/prekernel
 **KERNEL**
 src/thm

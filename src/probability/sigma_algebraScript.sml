@@ -1055,7 +1055,7 @@ Proof
     `?f n. (!x. x < n  ==> f x IN c) /\ (c = IMAGE f (count n))`
          by PROVE_TAC [finite_decomposition] \\
      ASM_REWRITE_TAC [DISJOINT_DEF] \\
-     REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_R] \\
+     REWRITE_TAC [BIGUNION_OVER_INTER_R] \\
      REWRITE_TAC [BIGUNION_EQ_EMPTY] \\
      Cases_on `n = 0` >- (DISJ1_TAC >> PROVE_TAC [COUNT_ZERO, IMAGE_EMPTY]) \\
      DISJ2_TAC >> REWRITE_TAC [EXTENSION] \\
@@ -1083,8 +1083,8 @@ Proof
      ASM_REWRITE_TAC [] \\
      Q.PAT_X_ASSUM `FINITE A` (STRIP_ASSUME_TAC o (MATCH_MP finite_decomposition)) \\
      Q.PAT_X_ASSUM `FINITE B` (STRIP_ASSUME_TAC o (MATCH_MP finite_decomposition)) \\
-     ASM_REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_L] \\
-     REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_R] \\
+     ASM_REWRITE_TAC [BIGUNION_OVER_INTER_L] \\
+     REWRITE_TAC [BIGUNION_OVER_INTER_R] \\
      FIRST_ASSUM MATCH_MP_TAC \\
      reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
@@ -1202,8 +1202,9 @@ Proof
                            (CONJ (ASSUME ``BIGUNION (IMAGE f (count n)) SUBSET sp``)
                                  (ASSUME ``BIGUNION (IMAGE f' (count n')) SUBSET sp``))] \\
      REWRITE_TAC [MATCH_MP GEN_COMPL_FINITE_UNION (ASSUME ``0:num < n'``)] \\
-     REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_L] \\
-     REWRITE_TAC [MATCH_MP BIGINTER_IMAGE_OVER_INTER_R (ASSUME ``0:num < n'``)] \\
+     REWRITE_TAC [BIGUNION_OVER_INTER_L] \\
+    ‘count n' <> {}’ by PROVE_TAC [COUNT_NOT_EMPTY] \\
+     REWRITE_TAC [MATCH_MP BIGINTER_OVER_INTER_R (ASSUME ``count n' <> {}``)] \\
      BETA_TAC >> FIRST_ASSUM MATCH_MP_TAC \\
      reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
@@ -2409,26 +2410,43 @@ QED
 (* Retricted Algebras                                                        *)
 (* ------------------------------------------------------------------------- *)
 
+(* NOTE: ‘a IN sts’ is weakened to ‘a SUBSET sp’ *)
+Theorem ALGEBRA_RESTRICT' : (* was: restricted_algebra *)
+    !sp sts a. algebra (sp,sts) /\ a SUBSET sp ==>
+               algebra (a,IMAGE (\s. s INTER a) sts)
+Proof
+    rw [algebra_alt, ring_def, space_def, subsets_def, subset_class_def]
+ >| [ (* goal 1 (of 5) *)
+      REWRITE_TAC [INTER_SUBSET],
+      (* goal 2 (of 5) *)
+      Q.EXISTS_TAC ‘{}’ >> ASM_SIMP_TAC std_ss [INTER_EMPTY],
+      (* goal 3 (of 5) *)
+      rename1 ‘?s. s1 INTER a UNION s2 INTER a = s INTER a /\ s IN sts’ \\
+      Q.EXISTS_TAC ‘s1 UNION s2’ \\
+      CONJ_TAC >- SET_TAC [] \\
+      FULL_SIMP_TAC std_ss [],
+      (* goal 4 (of 5) *)
+      rename1 ‘?s. s1 INTER a DIFF s2 INTER a = s INTER a /\ s IN sts’ \\
+      Q.EXISTS_TAC ‘s1 DIFF s2’ \\
+      CONJ_TAC >- SET_TAC [] \\
+      FULL_SIMP_TAC std_ss [],
+      (* goal 5 (of 5) *)
+      Q.EXISTS_TAC ‘sp’ >> ASM_SET_TAC [] ]
+QED
+
 Theorem ALGEBRA_RESTRICT : (* was: restricted_algebra *)
     !sp sts a. algebra (sp,sts) /\ a IN sts ==>
                algebra (a,IMAGE (\s. s INTER a) sts)
 Proof
-  REWRITE_TAC [algebra_alt, ring_def, space_def, subsets_def, subset_class_def] THEN
-  rpt STRIP_TAC THEN
-  FULL_SIMP_TAC std_ss [IMAGE_DEF, GSPECIFICATION] THENL
-  [REWRITE_TAC [INTER_SUBSET],
-   EXISTS_TAC ``{}`` THEN ASM_SIMP_TAC std_ss [INTER_EMPTY],
-   EXISTS_TAC ``(s' UNION s'')`` THEN
-   CONJ_TAC THENL [SET_TAC [], ALL_TAC] THEN
-   FULL_SIMP_TAC std_ss [],
-   EXISTS_TAC ``s' DIFF s''`` THEN CONJ_TAC THENL [SET_TAC [], ALL_TAC] THEN
-   MATCH_MP_TAC RING_DIFF_ALT THEN EXISTS_TAC ``sp:'a->bool`` THEN
-   FULL_SIMP_TAC std_ss [ring_def, subsets_def, space_def, subset_class_def],
-   EXISTS_TAC ``a:'a->bool`` THEN ASM_SET_TAC []]
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ALGEBRA_RESTRICT'
+ >> Q.EXISTS_TAC ‘sp’ >> art []
+ >> fs [algebra_def, subset_class_def]
 QED
 
-Theorem SIGMA_ALGEBRA_RESTRICT :
-    !sp sts a. sigma_algebra (sp,sts) /\ a IN sts ==>
+(* NOTE: ‘a IN sts’ is weakened to ‘a SUBSET sp’ *)
+Theorem SIGMA_ALGEBRA_RESTRICT' :
+    !sp sts a. sigma_algebra (sp,sts) /\ a SUBSET sp ==>
                sigma_algebra (a,IMAGE (\s. s INTER a) sts)
 Proof
     rpt STRIP_TAC
@@ -2440,24 +2458,37 @@ Proof
       MATCH_MP_TAC (REWRITE_RULE [subsets_def]
                                  (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_EMPTY)) >> art [],
       (* goal 3 (of 5) *)
-      Q.EXISTS_TAC ‘sp DIFF s'’ \\
+      rename1 ‘s IN sts’ >> Q.EXISTS_TAC ‘sp DIFF s’ \\
       CONJ_TAC
       >- (fs [SIGMA_ALGEBRA_ALT, algebra_def, subset_class_def] \\
           ASM_SET_TAC []) \\
       MATCH_MP_TAC (REWRITE_RULE [space_def, subsets_def]
                                  (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_COMPL)) >> art [],
       (* goal 4 (of 5) *)
-      Q.EXISTS_TAC ‘s' UNION s''’ \\
+      rename1 ‘?s. s1 INTER a UNION s2 INTER a = s INTER a /\ s IN sts’ \\
+      Q.EXISTS_TAC ‘s1 UNION s2’ \\
       CONJ_TAC >- SET_TAC [] \\
       MATCH_MP_TAC (REWRITE_RULE [subsets_def]
                                  (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_UNION)) >> art [],
       (* goal 5 (of 5) *)
       fs [SKOLEM_THM] \\
-      Q.EXISTS_TAC ‘BIGUNION (IMAGE f' UNIV)’ \\
+      rename1 ‘!x. f x = g x INTER a /\ g x IN sts’ \\
+      Q.EXISTS_TAC ‘BIGUNION (IMAGE g UNIV)’ \\
       CONJ_TAC >- ASM_SET_TAC [] \\
       fs [SIGMA_ALGEBRA_FN, IN_FUNSET] ]
 QED
 
+Theorem SIGMA_ALGEBRA_RESTRICT :
+    !sp sts a. sigma_algebra (sp,sts) /\ a IN sts ==>
+               sigma_algebra (a,IMAGE (\s. s INTER a) sts)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT'
+ >> Q.EXISTS_TAC ‘sp’ >> art []
+ >> fs [sigma_algebra_def, algebra_def, subset_class_def]
+QED
+
+(* NOTE: this theorem doesn't hold if ‘a IN sts’ is weakened to ‘a SUBSET sp’ *)
 Theorem SIGMA_ALGEBRA_RESTRICT_SUBSET :
     !sp sts a. sigma_algebra (sp,sts) /\ a IN sts ==>
               (IMAGE (\s. s INTER a) sts) SUBSET sts
@@ -2954,6 +2985,30 @@ val MEASURABLE_SIGMA = store_thm
            >> PROVE_TAC [],
            PROVE_TAC []])
    >> RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]);
+
+(* This is Lemma 2.4.1 of [9, p.207], re-expressing the above MEASURABLE_SIGMA as a
+   necessary ad sufficient condition.
+ *)
+Theorem MEASURABLE_LEMMA :
+    !f a b sp sts.
+       sigma_algebra a /\ subset_class sp sts /\
+       f IN (space a -> sp) /\ b = (sigma sp sts)
+     ==>
+      ((!s. s IN subsets b ==> ((PREIMAGE f s) INTER (space a)) IN subsets a)
+       <=>
+       (!s. s IN sts       ==> ((PREIMAGE f s) INTER (space a)) IN subsets a))
+Proof
+    RW_TAC std_ss []
+ >> EQ_TAC
+ >- (rpt STRIP_TAC \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Suff ‘sts SUBSET subsets (sigma sp sts)’ >- METIS_TAC [SUBSET_DEF] \\
+     REWRITE_TAC [SIGMA_SUBSET_SUBSETS])
+ >> DISCH_TAC
+ >> Know ‘f IN measurable a (sigma sp sts)’
+ >- (MATCH_MP_TAC MEASURABLE_SIGMA >> art [])
+ >> rw [measurable_def]
+QED
 
 (* NOTE: more antecedents are added due to changes of ‘measurable’ *)
 Theorem MEASURABLE_SUBSET :
@@ -3458,30 +3513,34 @@ Proof
       rw [Once EXTENSION, IN_PREIMAGE, IN_BIGUNION_IMAGE] >> METIS_TAC [] ]
 QED
 
-(* Example 3.3 (vi) [7,p.17] *)
+(* Lemma 2.2.5 of [9, p.177] (moving INTER outside of the sigma generator) *)
+Theorem SIGMA_RESTRICT :
+    !sp sts B. subset_class sp sts /\ B SUBSET sp ==>
+               sigma_algebra (B,IMAGE (\s. s INTER B) (subsets (sigma sp sts))) /\
+               subsets (sigma B (IMAGE (\s. s INTER B) sts)) =
+               IMAGE (\s. s INTER B) (subsets (sigma sp sts))
+Proof
+    rpt STRIP_TAC
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT' \\
+     Q.EXISTS_TAC ‘sp’ \\
+     rw [SIGMA_REDUCE, SIGMA_ALGEBRA_SIGMA])
+ >> MP_TAC (Q.SPECL [‘B’, ‘sp’, ‘sts’, ‘I’]
+                    (INST_TYPE [“:'b” |-> “:'a”] PREIMAGE_SIGMA))
+ >> FULL_SIMP_TAC std_ss [SUBSET_DEF]
+ >> rw [IN_FUNSET]
+QED
+
+(* Example 3.3 (vi) [7, p.17] (another form of SIGMA_ALGEBRA_RESTRICT') *)
 Theorem TRACE_SIGMA_ALGEBRA :
     !a E. sigma_algebra a /\ E SUBSET (space a) ==>
           sigma_algebra (E,{A INTER E | A IN subsets a})
 Proof
     rpt STRIP_TAC
- >> rw [SIGMA_ALGEBRA_ALT_SPACE]
- >| [ (* goal 1 (of 4) *)
-      rw [subset_class_def] >> REWRITE_TAC [INTER_SUBSET],
-      (* goal 2 (of 4) *)
-      Q.EXISTS_TAC ‘space a’ \\
-      CONJ_TAC >- ASM_SET_TAC [] \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art [],
-      (* goal 3 (of 4) *)
-      Q.EXISTS_TAC ‘space a DIFF A’ \\
-      CONJ_TAC >- ASM_SET_TAC [] \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [],
-      (* goal 4 (of 4) *)
-      fs [IN_FUNSET, SKOLEM_THM] \\
-      Q.EXISTS_TAC ‘BIGUNION (IMAGE f' UNIV)’ \\
-      CONJ_TAC >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] >> METIS_TAC []) \\
-      fs [SIGMA_ALGEBRA_ALT_SPACE] \\
-      FIRST_X_ASSUM MATCH_MP_TAC \\
-      rw [IN_FUNSET] ]
+ >> Know ‘{A INTER E | A IN subsets a} = IMAGE (\s. s INTER E) (subsets a)’
+ >- rw [Once EXTENSION, IN_IMAGE]
+ >> Rewr'
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT'
+ >> Q.EXISTS_TAC ‘space a’ >> rw [SPACE]
 QED
 
 (* Lemma 14.1 of [7, p.137] (not used anywhere) *)
@@ -3743,4 +3802,5 @@ val _ = export_theory ();
   [7] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
       Cambridge University Press (2017).
   [8] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
+  [9] Shiryaev, A.N.: Probability-1. Springer-Verlag New York (2016).
  *)

@@ -3600,7 +3600,7 @@ Proof
          MATCH_MP_TAC INJ_IMAGE \\
          Q.EXISTS_TAC `c'` >> REWRITE_TAC [INJ_DEF, IN_COUNT] >> BETA_TAC \\
          METIS_TAC []) >> Rewr' \\
-     SIMP_TAC std_ss [BIGUNION_IMAGE_OVER_INTER_R, o_DEF] \\
+     SIMP_TAC std_ss [BIGUNION_OVER_INTER_R, o_DEF] \\
   (* applying FINITE_ADDITIVE and EXTREAL_SUM_IMAGE_EQ *)
      Know `SIGMA (\i. mu (BIGUNION (IMAGE (\i'. f i INTER f' i') (count n')))) (count n) =
            SIGMA (\i. SIGMA (mu o (\i'. f i INTER f' i')) (count n')) (count n)`
@@ -3613,7 +3613,7 @@ Proof
              >- (MATCH_MP_TAC pos_not_neginf \\
                  fs [positive_def, measure_def, measurable_sets_def] \\
                  Q.PAT_ASSUM `!s. s IN sts ==> 0 <= mu s` MATCH_MP_TAC \\
-                 REWRITE_TAC [GSYM BIGUNION_IMAGE_OVER_INTER_R] \\
+                 REWRITE_TAC [GSYM BIGUNION_OVER_INTER_R] \\
                 `f x INTER BIGUNION (IMAGE f' (count n')) = f x` by PROVE_TAC [] \\
                  POP_ORW >> METIS_TAC [SUBSET_DEF, IN_IMAGE, IN_COUNT]) \\
              (* SIGMA (\i'. mu (f x' INTER f' i')) (count n') <> NegInf *)
@@ -3638,7 +3638,7 @@ Proof
          CONJ_TAC >- (rpt STRIP_TAC \\
                       MATCH_MP_TAC DISJOINT_RESTRICT_R >> PROVE_TAC []) \\
          (* `BIGUNION (IMAGE (\i'. f x' INTER f' i') (count n')) IN sts` *)
-         REWRITE_TAC [GSYM BIGUNION_IMAGE_OVER_INTER_R] \\
+         REWRITE_TAC [GSYM BIGUNION_OVER_INTER_R] \\
         `f x INTER BIGUNION (IMAGE f' (count n')) = f x` by PROVE_TAC [] \\
          POP_ORW >> METIS_TAC [SUBSET_DEF, IN_IMAGE, IN_COUNT]) >> Rewr' \\
      (* symmetric with previous known *)
@@ -3654,7 +3654,7 @@ Proof
                  fs [positive_def, measure_def, measurable_sets_def] \\
                  Q.PAT_ASSUM `!s. s IN sts ==> 0 <= mu s` MATCH_MP_TAC \\
                  (* BIGUNION (IMAGE (\i'. f' x' INTER f i') (count n)) IN sts *)
-                 REWRITE_TAC [GSYM BIGUNION_IMAGE_OVER_INTER_R] \\
+                 REWRITE_TAC [GSYM BIGUNION_OVER_INTER_R] \\
                 `f' x INTER BIGUNION (IMAGE f (count n)) = f' x` by PROVE_TAC [] \\
                  POP_ORW >> METIS_TAC [SUBSET_DEF, IN_IMAGE, IN_COUNT]) \\
              (* SIGMA (\i'. mu (f' x' INTER f i')) (count n) <> NegInf *)
@@ -3679,7 +3679,7 @@ Proof
          CONJ_TAC >- (rpt STRIP_TAC \\
                       MATCH_MP_TAC DISJOINT_RESTRICT_R >> PROVE_TAC []) \\
       (* `BIGUNION (IMAGE (\i'. f' x' INTER f i') (count n)) IN sts` *)
-         REWRITE_TAC [GSYM BIGUNION_IMAGE_OVER_INTER_R] \\
+         REWRITE_TAC [GSYM BIGUNION_OVER_INTER_R] \\
         `f' x INTER BIGUNION (IMAGE f (count n)) = f' x` by PROVE_TAC [] \\
          POP_ORW >> METIS_TAC [SUBSET_DEF, IN_IMAGE, IN_COUNT]) >> Rewr' \\
      SIMP_TAC std_ss [o_DEF] \\
@@ -4149,7 +4149,7 @@ Proof
      RW_TAC std_ss [disjoint_def, IN_IMAGE, IN_COUNT] \\
      Cases_on `i = i'` >- METIS_TAC [] \\
      MATCH_MP_TAC DISJOINT_RESTRICT_L >> PROVE_TAC []) >> Rewr'
- >> REWRITE_TAC [GSYM BIGUNION_IMAGE_OVER_INTER_L]
+ >> REWRITE_TAC [GSYM BIGUNION_OVER_INTER_L]
  >> `BIGUNION (IMAGE f' (count n)) = BIGUNION (IMAGE z univ(:num))` by PROVE_TAC []
  >> POP_ORW
  >> Know `!x. BIGUNION (IMAGE z univ(:num)) INTER z x = z x`
