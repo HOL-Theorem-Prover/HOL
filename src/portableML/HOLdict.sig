@@ -1,4 +1,4 @@
 signature HOLdict =
 sig
-  include Redblackmap2
+  include Redblackmap
 end
