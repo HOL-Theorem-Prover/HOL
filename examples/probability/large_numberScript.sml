@@ -44,9 +44,6 @@ val _ = hide "W";
 (*  Definitions                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-(* NOTE: ‘count1’ is an inclusive variant of ‘count’, only used locally *)
-Overload count1[local] = “\n. count (SUC n)”
-
 (* Law of Large Numbers: the universal conclusion for all LLN theorems
 
    NOTE: changed ‘Z’ such that Z(0) = X(0), Z(1) = X(0) + X(1), ...

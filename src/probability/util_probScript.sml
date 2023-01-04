@@ -2328,10 +2328,21 @@ QED
 
 Theorem REAL_RAT_DENSE = Q_DENSE_IN_REAL
 
+(* ‘count1 n’ (inclusive ‘count’) returns the set of integers from 0 to n *)
+Overload count1 = “\n. count (SUC n)”;
+
+(* A fake definition in case a user wants to check its definition by guess *)
+Theorem count1_def :
+    !n. count1 n = {m | m <= n}
+Proof
+    rw [Once EXTENSION, LT_SUC_LE]
+QED
+
 val _ = export_theory ();
 
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales. Cambridge University Press (2005).
   [2] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
+
  *)
