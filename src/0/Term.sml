@@ -683,7 +683,7 @@ fun list_mk_binder opt =
     if null vlist then
        tm
     else
-    if not (all is_var vlist) then
+    if not (List.all is_var vlist) then
        raise ERR "list_mk_binder" "expected list of variables"
     else
      (let val (vMap, rvlist) = enum vlist (length vlist-1) (mkDict compare, [])
