@@ -51,7 +51,7 @@ fun toLower s =
 
 structure Map = HOLdict
 (* the keys are lower-cased, but the data also stores the keys, and there
-   the key infomration is kept in its original case *)
+   the key information is kept in its original case *)
 
 fun updexisting key f m =
     case Map.peek(m,key) of
