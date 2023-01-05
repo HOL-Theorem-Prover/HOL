@@ -24,7 +24,7 @@ val addNode_def = Define‘
                           followers updated_by (insert g.next []) ;
                           preds updated_by (insert g.next []) ; |>’;
 
-val addEdge_def = Define`
+Definition addEdge_def:
   addEdge src (e,tgt) g =
      if src ∈ domain g.nodeInfo ∧ tgt ∈ domain g.nodeInfo then
        do
@@ -35,7 +35,9 @@ val addEdge_def = Define`
                   preds updated_by (insert tgt ((e,src)::preds_old))
                |>)
        od
-     else NONE`;
+     else NONE
+End
+
 
 Definition findNode_def:
   findNode P g = FIND P (toAList g.nodeInfo)
