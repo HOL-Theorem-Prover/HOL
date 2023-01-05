@@ -38,6 +38,18 @@ Definition addEdge_def:
      else NONE
 End
 
+Theorem addEdge_EQ_NONE:
+  addEdge src (e,tgt) g = NONE ⇔
+    src ∉ domain g.nodeInfo ∨
+    tgt ∉ domain g.nodeInfo ∨
+    src ∉ domain g.followers ∨
+    tgt ∉ domain g.preds
+Proof
+  simp[addEdge_def, AllCaseEqs()] >>
+  Cases_on ‘src ∈ domain g.nodeInfo’ >> simp[] >>
+  Cases_on ‘tgt ∈ domain g.nodeInfo’ >> simp[] >>
+  simp[lookup_NONE_domain] >> metis_tac[domain_lookup]
+QED
 
 Definition findNode_def:
   findNode P g = FIND P (toAList g.nodeInfo)
