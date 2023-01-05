@@ -1359,8 +1359,8 @@ of booleans, pairs, sums, the option type, arithmetic, and lists.
 The following functions use information in the database to ease the
 application of \HOL's underlying functionality:
 
-\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
-\index{Cases_on (ML case-split tactic)@\ml{Cases\_on} (\ML{} case-split tactic)}
+\index{Induct_on@\ml{Induct\_on}}
+\index{Cases_on@\ml{Cases\_on}}
 \begin{verbatim}
    type_rws     : hol_type -> thm list
    Induct       : tactic
