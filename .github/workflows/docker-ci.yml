@@ -9,6 +9,9 @@ on:
     branches:
       - "master"
       - "develop"
+env:
+  USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+  PASSWORD: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
 jobs:
   build-stdknl:
@@ -28,8 +31,8 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          username: ${{ env.USERNAME }}
+          password: ${{ env.PASSWORD }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
