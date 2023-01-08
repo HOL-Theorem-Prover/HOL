@@ -396,6 +396,13 @@ Proof
   simp[emptyG0_def]
 QED
 
+Theorem nlabelfun_empty[simp]:
+  nlabelfun emptyG = (λn. ARB)
+Proof
+  simp[nlabelfun_def, emptyG_def, #repabs_pseudo_id tydefrec] >>
+  simp[emptyG0_def, FUN_EQ_THM]
+QED
+
 Definition adjacent_def:
   adjacent G n1 n2 ⇔ ∃l. (n1, n2, l) ∈ edges G
 End
@@ -678,6 +685,12 @@ End
 
 Theorem oneEdge_max_graph[simp]:
   oneEdge_max (g : ('a,'d,unit,'el,'nf,'nl,'sl) graph)
+Proof
+  simp[oneEdge_max_def, itself2set_def]
+QED
+
+Theorem oneEdge_max_fdirgraph[simp]:
+  ¬oneEdge_max (g : (α,β,γ)fdirgraph)
 Proof
   simp[oneEdge_max_def, itself2set_def]
 QED
