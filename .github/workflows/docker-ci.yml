@@ -1,10 +1,6 @@
 name: docker-ci
 
 on:
-  pull_request:
-    branches:
-      - "develop"
-
   push:
     branches:
       - "master"
