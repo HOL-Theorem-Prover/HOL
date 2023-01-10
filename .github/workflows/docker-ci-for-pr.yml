@@ -1,5 +1,5 @@
 # A dedicated workflow for building pull requests
-name: docker-ci-pull_request
+name: docker-ci-for-pr
 
 on:
   pull_request:
