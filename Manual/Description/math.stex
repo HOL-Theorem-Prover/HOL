@@ -615,9 +615,8 @@ by the subtraction of integrations of its positive and negative parts:
 ##thm fn_minus_def
 \end{alltt}
 \end{hol}
-Note that it is possible that the two integrations in the above
-definition both results to \holtxt{PosInf}, the entire integration is not
-specified (see Section~{sec:extreal} for more details on extreal arithmetics).
+Note that it is possible that the two integrations above
+both result in the \holtxt{PosInf} value, giving the entire integration an unspecified value (see Section~\ref{sec:extreal} for more details on extreal arithmetics).
 A function $f$ is \emph{(Lebesgue) integrable} if it is
 Borel-measurable and the integrations of its positive and negative
 parts are both finite (\ie,~not $+\infty$):
