@@ -1,14 +1,11 @@
 name: docker-ci
 
 on:
-  pull_request:
-    branches:
-      - "develop"
-
   push:
     branches:
       - "master"
       - "develop"
+
 env:
   USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   PASSWORD: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
@@ -26,7 +23,7 @@ jobs:
         with:
           images: ${{ env.USERNAME }}/hol-dev
           tags: |
-            type=sha,suffix=-stdknl
+            type=sha,prefix=ci-,suffix=-stdknl
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -62,7 +59,7 @@ jobs:
         with:
           images: ${{ env.USERNAME }}/hol-dev
           tags: |
-            type=sha,suffix=-expk
+            type=sha,prefix=ci-,suffix=-expk
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
