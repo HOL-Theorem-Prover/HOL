@@ -645,7 +645,7 @@ measure space) if its measure is zero:
 \end{hol}
 
 A property $P(x)$ holds \emph{almost everywhere} (AE) in a measure
-space $m$, denoted by ``\holtxt{AE x::m. P x}'' in
+space $m$, denoted by ``\holtxt{AE~x::m.~P~x}'' in
 \HOL{}\footnote{\holtxt{AE} is defined as a \emph{restricted quantifier (binder)}. See
 \ml{associate_restriction} in \REFERENCE.}, if $P(x)$ holds
 for every $x$ excluding a null set:
