@@ -4166,16 +4166,14 @@ val float_div_minus_infinity_finite = Q.store_thm(
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
-val float_is_nan_impl = Q.store_thm(
-   "float_is_nan_impl",
-   `!x. float_is_nan x <=> ~float_equal x x`,
+Theorem float_is_nan_impl:
+  !x. float_is_nan x <=> ~float_equal x x
+Proof
    simp[float_is_nan_def, float_equal_def, float_compare_def]
-   \\ STRIP_TAC
+   \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp[]
-   \\ simp[]
-   \\ simp[]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
