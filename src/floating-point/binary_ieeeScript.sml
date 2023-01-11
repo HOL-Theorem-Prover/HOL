@@ -4164,6 +4164,19 @@ val float_div_minus_infinity_finite = Q.store_thm(
    \\ metis_tac [sign_inconsistent]
    )
 
+(* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
+
+val float_is_nan_impl = Q.store_thm(
+   "float_is_nan_impl",
+   `!x. float_is_nan x <=> ~float_equal x x`,
+   simp[float_is_nan_def, float_equal_def, float_compare_def]
+   \\ STRIP_TAC
+   \\ Cases_on `float_value x`
+   \\ simp[]
+   \\ simp[]
+   \\ simp[]
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val () = export_theory ()
