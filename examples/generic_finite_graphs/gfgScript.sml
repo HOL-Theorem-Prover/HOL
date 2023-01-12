@@ -174,6 +174,13 @@ Proof
    rpt strip_tac >> fs[addEdge_def,theorem "gfg_component_equality"]
 QED
 
+Theorem addEdge_extends_followers:
+  addEdge s (l,t) g0 = SOME g ⇒
+  g.followers = insert s ((l,t)::THE (lookup s g0.followers)) g0.followers
+Proof
+  simp[addEdge_def, AllCaseEqs()] >> rw[] >> simp[]
+QED
+
 Theorem updateNode_preserves_wfg[simp]:
   wfg g ∧ (updateNode id n g = SOME g2) ==> wfg g2
 Proof
