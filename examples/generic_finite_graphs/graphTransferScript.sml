@@ -246,17 +246,26 @@ QED
 
 Theorem edges_fromConcrete:
   wfg cg ⇒
-  edges (fromConcrete cg) =
-  {(src,tgt,ei) | ∃eil. lookup src cg.followers = SOME eil ∧ MEM (ei,tgt) eil}
+  edges (fromConcrete cg) = emap_edges cg.followers
 Proof
-  strip_tac >> simp[fromConcrete_def] >>
+  strip_tac >> simp[fromConcrete_def, emap_edges_toAList] >>
   qmatch_abbrev_tac ‘edges (foldi _ _ G0 _) = _’ >>
-  simp[foldi_FOLDR_toAList, GSYM ALOOKUP_toAList, domain_toAList, MEM_MAP,
-       EXISTS_PROD] >>
+  simp[foldi_FOLDR_toAList, MEM_MAP, EXISTS_PROD] >>
   qspec_then ‘cg.followers’ mp_tac ALL_DISTINCT_MAP_FST_toAList >>
   qspec_tac (‘toAList cg.followers’, ‘al’) >>
   simp[edges_FOLDR_alist] >>
   simp[Abbr‘G0’, edges_foldi_addNode]
+QED
+
+Theorem emap_edges_insert_cons:
+  lookup src m = SOME eis ⇒
+  emap_edges (insert src ((l,tgt) :: eis) m) =
+  (src,tgt,l) INSERT emap_edges m
+Proof
+  simp[emap_edges_def, lookup_insert, EXTENSION, AllCaseEqs(), FORALL_PROD,
+       RIGHT_AND_OVER_OR, EXISTS_OR_THM] >> rw[] >>
+  rename [‘s ≠ src’, ‘MEM (lab,t) _’] >> Cases_on ‘src = s’ >> simp[] >>
+  Cases_on ‘t = tgt’ >> rw[] >> metis_tac[optionTheory.SOME_11]
 QED
 
 Theorem addEdge_fromConcrete:
@@ -278,8 +287,7 @@ Proof
   simp[edges_fromConcrete] >>
   qpat_x_assum ‘addEdge src _ _ = SOME G’ mp_tac >>
   REWRITE_TAC[gfgTheory.addEdge_def] >> simp[AllCaseEqs()] >> rw[] >>
-  simp[] >> simp[EXTENSION, lookup_insert, FORALL_PROD] >> rpt gen_tac >>
-  rw[] >> metis_tac[]
+  simp[emap_edges_insert_cons, EXTENSION] >> metis_tac[]
 QED
 
 Theorem addEdgeN'_transfer:
@@ -307,6 +315,7 @@ Proof
   simp[gfgTheory.addEdge_def, AllCaseEqs(), PULL_EXISTS]
 QED
 
+
 Theorem FOLDR_addEdge:
   ∀G el.
     wfg G0 ∧ (∀e m. MEM e el ∧ m ∈ incident e ⇒ m ∈ nodes (fromConcrete G0)) ∧
@@ -332,12 +341,7 @@ Proof
   >- (drule_then assume_tac addEdge_extends_followers >>
       drule_then strip_assume_tac addEdge_has_src_in_followers >>
       qabbrev_tac ‘OLDEDGES = edges (fromConcrete G0)’ >>
-      qpat_x_assum ‘edges (fromConcrete G') = _’ mp_tac >>
-      simp[edges_fromConcrete] >>
-      simp[EXTENSION, lookup_insert, AllCaseEqs(), PULL_EXISTS, FORALL_PROD] >>
-      rw[] >> simp[EXISTS_OR_THM, RIGHT_AND_OVER_OR] >>
-      rename [‘_ ⇔ _ ∨ (s,t,lab) ∈ OLDEDGES’] >> Cases_on ‘src = s’ >> simp[] >>
-      Cases_on ‘t = tgt’ >> rw[] >> metis_tac[optionTheory.SOME_11]) >>
+      gs[edges_fromConcrete, emap_edges_insert_cons, INSERT_UNION_EQ]) >>
   gs[nlabelfun_fromConcrete]
 QED
 
