@@ -596,7 +596,7 @@ val pop_last_assum = POP_LAST_ASSUM
 fun POP_ASSUM_LIST asltac (asl, w) = asltac (map ASSUME asl) ([], w)
 
 (*---------------------------------------------------------------------------
- * Pop the first assumption satisying the given predictae and give it to
+ * Pop the first assumption satisying the given predicate and give it to
  * a function (tactic).
  *---------------------------------------------------------------------------*)
 
