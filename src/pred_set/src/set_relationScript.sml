@@ -833,7 +833,7 @@ Proof
   Cases_on `xy` THEN SRW_TAC [] [rel_to_reln_def]
 QED
 
-Theorem reln_to_rel_app:
+Theorem reln_to_rel_app[simp]:
   (reln_to_rel r) x y <=> (x, y) IN r
 Proof
   SRW_TAC [] [reln_to_rel_def]
@@ -851,25 +851,25 @@ Proof
   REWRITE_TAC [FUN_EQ_THM, CURRY_DEF, reln_to_rel_app, IN_APP]
 QED
 
-Theorem rel_to_reln_inv:
+Theorem rel_to_reln_inv[simp]:
   reln_to_rel (rel_to_reln R) = R
 Proof
   SRW_TAC [] [reln_to_rel_def, rel_to_reln_def, FUN_EQ_THM]
 QED
 
-Theorem reln_to_rel_inv:
+Theorem reln_to_rel_inv[simp]:
   rel_to_reln (reln_to_rel r) = r
 Proof
   SRW_TAC [] [reln_to_rel_app, EXTENSION, in_rel_to_reln]
 QED
 
-Theorem reln_to_rel_11:
+Theorem reln_to_rel_11[simp]:
   (reln_to_rel r1 = reln_to_rel r2) <=> (r1 = r2)
 Proof
   SRW_TAC [] [reln_to_rel_app, FUN_EQ_THM, FORALL_PROD, IN_DEF]
 QED
 
-Theorem rel_to_reln_11:
+Theorem rel_to_reln_11[simp]:
   (rel_to_reln R1 = rel_to_reln R2) <=> (R1 = R2)
 Proof
   SRW_TAC [] [in_rel_to_reln, EXTENSION, FORALL_PROD]
