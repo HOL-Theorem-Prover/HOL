@@ -638,21 +638,21 @@ Proof
   REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
 QED
 
-Theorem OPEN_IN_SUBTOPOLOGY_EMPTY :
+Theorem OPEN_IN_SUBTOPOLOGY_EMPTY[simp]:
     !top s. open_in (subtopology top {}) s <=> (s = {})
 Proof
   REWRITE_TAC[OPEN_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
   MESON_TAC[OPEN_IN_EMPTY]
 QED
 
-Theorem CLOSED_IN_SUBTOPOLOGY_EMPTY :
+Theorem CLOSED_IN_SUBTOPOLOGY_EMPTY[simp]:
     !top s. closed_in (subtopology top {}) s <=> (s = {})
 Proof
   REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
   MESON_TAC[CLOSED_IN_EMPTY]
 QED
 
-Theorem OPEN_IN_SUBTOPOLOGY_REFL :
+Theorem OPEN_IN_SUBTOPOLOGY_REFL[simp]:
     !top u:'a->bool. open_in (subtopology top u) u <=> u SUBSET topspace top
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
@@ -663,7 +663,7 @@ Proof
     REWRITE_TAC[OPEN_IN_TOPSPACE] THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]
 QED
 
-Theorem CLOSED_IN_SUBTOPOLOGY_REFL :
+Theorem CLOSED_IN_SUBTOPOLOGY_REFL[simp]:
     !top u:'a->bool. closed_in (subtopology top u) u <=> u SUBSET topspace top
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
@@ -690,13 +690,13 @@ Proof
     REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]
 QED
 
-Theorem SUBTOPOLOGY_TOPSPACE :
+Theorem SUBTOPOLOGY_TOPSPACE[simp]:
     !top. subtopology top (topspace top) = top
 Proof
   SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_REFL]
 QED
 
-Theorem SUBTOPOLOGY_UNIV :
+Theorem SUBTOPOLOGY_UNIV[simp]:
     !top. subtopology top UNIV = top
 Proof
   SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_UNIV]
@@ -740,7 +740,7 @@ Proof
   REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
 QED
 
-Theorem SUBTOPOLOGY_SUBTOPOLOGY :
+Theorem SUBTOPOLOGY_SUBTOPOLOGY[simp] :
    !top s t:'a->bool.
         subtopology (subtopology top s) t = subtopology top (s INTER t)
 Proof
