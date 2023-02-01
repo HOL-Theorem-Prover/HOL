@@ -550,7 +550,7 @@ fun derive_individual_specs code = let
         val asm = String.translate (fn c =>
                       if c = #"\r" then "" else
                       if c = #"\t" then " " else implode [c]) asm
-        val _ = write_line ("Skipping " ^ instruction ^ " " ^ asm)
+        val _ = write_line ("\n\nWarning: deriving placeholder spec for skipped " ^ instruction ^ " " ^ asm)
         val len = if size instruction (* in hex *) < 8 then 2 else 4 (* bytes *)
         val (thi,x1,x2) = (placeholder_spec asm len)
         in (pos,(inst_pc pos thi,x1,x2),NONE) :: get_specs code end
