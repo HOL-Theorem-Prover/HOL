@@ -29,7 +29,7 @@ ifdef HOLSELFTESTLEVEL
 EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-	 STE algorithms computability dependability dev \
+	 STE algorithms computability countchars dependability dev \
          developers/ThmSetData \
 	 fermat \
 	 formal-languages formal-languages/context-free \
