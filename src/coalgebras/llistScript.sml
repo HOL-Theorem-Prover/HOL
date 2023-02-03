@@ -744,10 +744,10 @@ val _ = computeLib.add_persistent_funs ["LAPPEND"]
 
 (* properties of map and append *)
 
-val LMAP_APPEND = store_thm(
-  "LMAP_APPEND",
-  ``!f ll1 ll2. LMAP f (LAPPEND ll1 ll2) =
-                LAPPEND (LMAP f ll1) (LMAP f ll2)``,
+Theorem LMAP_APPEND:
+  !f ll1 ll2.
+    LMAP f (LAPPEND ll1 ll2) = LAPPEND (LMAP f ll1) (LMAP f ll2)
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION0] THEN
   Q.EXISTS_TAC `\ll1 ll2. ?x y. (ll1 = LMAP f (LAPPEND x y)) /\
                                 (ll2 = LAPPEND (LMAP f x) (LMAP f y))` THEN
