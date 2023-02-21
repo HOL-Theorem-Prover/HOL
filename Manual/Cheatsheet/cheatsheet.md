@@ -268,6 +268,9 @@ It is often useful to perform case splits over the course of a proof.
 : Splits every possible `case` expression.
   This can be slow and explode the number of subgoals!
 
+`IF_CASES_TAC`
+: Case splits on an `if ... then ... else ...` expression in the goal.
+
 <code>CaseEq "<i>string</i>"</code>
 : Returns a theorem of the form `(case x of ...) = v <=> ...`, where the type of `x` is given by the supplied string.
   This is intended for use with simplification, where it can help remove tautologies/absurdities in `case` expressions.
