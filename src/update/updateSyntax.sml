@@ -10,7 +10,8 @@ val monop3 =
    HolKernel.syntax_fns {n = 3, dest = HolKernel.dest_monop,
       make = Lib.curry boolSyntax.mk_icomb} "update"
 
-val (find_tm, mk_find, dest_find, is_find) = binop "FIND"
+val (find_tm, mk_find, dest_find, is_find) =
+    HolKernel.syntax_fns2 "list" "FIND"
 
 val (override_tm, mk_override, dest_override, is_override) = monop "OVERRIDE"
 
