@@ -214,8 +214,9 @@ val EQ_TAC: tactic =
          ([(asl, mk_imp (lhs, rhs)), (asl, mk_imp (rhs, lhs))],
           fn [th1, th2] => IMP_ANTISYM_RULE th1 th2 | _ => raise Match)
       end
-      handle HOL_ERR _ => raise ERR "EQ_TAC" ""
+      handle HOL_ERR _ => raise ERR "EQ_TAC" "Goal is not a boolean equality"
 val eq_tac = EQ_TAC
+val iff_tac = EQ_TAC
 
 (*---------------------------------------------------------------------------*
  * Universal quantifier                                                      *
