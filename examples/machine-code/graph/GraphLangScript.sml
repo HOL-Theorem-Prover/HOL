@@ -2342,6 +2342,20 @@ val SKIP_TAG_IMP_CALL_ARM8 = store_thm("SKIP_TAG_IMP_CALL_ARM8",
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm8_STATE_def,m0_STATE_def,
       arm8_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
 
+val SKIP_TAG_IMP_CALL_ARM8 = store_thm("SKIP_TAG_IMP_CALL_ARM8",
+  ``IMPL_INST (ARM8 code) locs
+     (Inst entry (K T)
+        (ASM (SOME (\s. SKIP_TAG str)) []
+           (Jump exit))) ==>
+    !old. (old = str) ==>
+    !name:string.
+      T ==>
+      IMPL_INST (ARM8 code) locs
+       (Inst entry (K T)
+         (ASM (SOME (K F)) [] Return))``,
+  fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
+      check_jump_def,get_assert_def,LET_THM,jump_ok_def]);
+
 val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
   ``IMPL_INST (M0 code) locs
      (Inst entry (K T)
