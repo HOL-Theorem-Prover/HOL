@@ -19,8 +19,8 @@ val VAR_EQ_TAC = BasicProvers.VAR_EQ_TAC ;
    ---------------------------------------------------------------------- *)
 
 CoInductive lrep_ok:
-   (lrep_ok (\n. NONE))
-/\ (lrep_ok t ==> lrep_ok (\n. if n = 0 then SOME h else t(n - 1)))
+   (lrep_ok (λn. NONE))
+/\ (lrep_ok t ==> lrep_ok (λn. if n = 0 then SOME h else t(n - 1)))
 End
 
 val lrep_ok_alt' = Q.prove (
@@ -36,7 +36,7 @@ val lrep_ok_alt = Q.store_thm ("lrep_ok_alt",
   EQ_TAC THEN REPEAT STRIP_TAC
   THEN1 (irule lrep_ok_alt' >> rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) THEN
   irule lrep_ok_coind THEN
-  Q.EXISTS_TAC `\f. !n. IS_SOME (f (SUC n)) ==> IS_SOME (f n)` THEN
+  Q.EXISTS_TAC `λf. !n. IS_SOME (f (SUC n)) ==> IS_SOME (f n)` THEN
   ASM_SIMP_TAC bool_ss [] THEN
   REPEAT STRIP_TAC THEN
   Cases_on `a0 0`
@@ -53,7 +53,7 @@ val lrep_ok_alt = Q.store_thm ("lrep_ok_alt",
 
 val type_inhabited = prove(
   ``?f. lrep_ok f``,
-  Q.EXISTS_TAC `\n. NONE` THEN ACCEPT_TAC(CONJUNCT1 lrep_ok_rules)
+  Q.EXISTS_TAC `λn. NONE` THEN ACCEPT_TAC(CONJUNCT1 lrep_ok_rules)
 );
 
 val llist_tydef = new_type_definition ("llist", type_inhabited);
@@ -88,33 +88,32 @@ val llist_if_rep_abs = Q.prove (
   DISCH_TAC THEN ASM_REWRITE_TAC [repabs_fns]) ;
 
 val FUNPOW_BIND_NONE = Q.prove (
-  `!n. FUNPOW (\m. OPTION_BIND m g) n NONE = NONE`,
+  `!n. FUNPOW (λm. OPTION_BIND m g) n NONE = NONE`,
   Induct THEN ASM_SIMP_TAC bool_ss [FUNPOW, OPTION_BIND_def]) ;
 
 val lrep_ok_MAP = Q.store_thm ("lrep_ok_MAP",
-  `lrep_ok (\n. OPTION_MAP f (g n)) = lrep_ok g`,
+  `lrep_ok (λn. OPTION_MAP f (g n)) = lrep_ok g`,
   SIMP_TAC bool_ss [lrep_ok_alt, IS_SOME_MAP]) ;
 
 val lrep_ok_FUNPOW_BIND = Q.store_thm ("lrep_ok_FUNPOW_BIND",
-  `lrep_ok (\n. FUNPOW (\m. OPTION_BIND m g) n fz)`,
+  `lrep_ok (λn. FUNPOW (λm. OPTION_BIND m g) n fz)`,
   SIMP_TAC bool_ss [lrep_ok_alt, arithmeticTheory.FUNPOW_SUC] THEN
   GEN_TAC THEN MATCH_ACCEPT_TAC IS_SOME_BIND) ;
 
 val lrep_ok_MAP_FUNPOW_BIND = Q.prove (
-  `lrep_ok (\n. OPTION_MAP f (FUNPOW (\m. OPTION_BIND m g) n fz))`,
+  `lrep_ok (λn. OPTION_MAP f (FUNPOW (λm. OPTION_BIND m g) n fz))`,
   SIMP_TAC bool_ss [lrep_ok_MAP] THEN irule lrep_ok_FUNPOW_BIND) ;
 
-val LNIL = new_definition("LNIL", ``LNIL = llist_abs (\n. NONE)``);
+val LNIL = new_definition("LNIL", ``LNIL = llist_abs (λn. NONE)``);
 val LCONS = new_definition(
   "LCONS",
-  ``LCONS h t = llist_abs (\n. if n = 0 then SOME h
-                               else llist_rep t (n - 1))``
+  ``LCONS h t = llist_abs (λn. if n = 0 then SOME h else llist_rep t (n - 1))``
 );
 
 val llist_rep_LCONS = store_thm(
   "llist_rep_LCONS",
   ``llist_rep (LCONS h t) =
-        \n. if n = 0 then SOME h else llist_rep t (n - 1)``,
+        λn. if n = 0 then SOME h else llist_rep t (n - 1)``,
   SRW_TAC [][LCONS, GSYM llist_repabs] THEN
   MATCH_MP_TAC (CONJUNCT2 lrep_ok_rules) THEN SRW_TAC [][]);
 
@@ -787,7 +786,7 @@ val LMAP_MAP = store_thm(
   ``!(f:'a -> 'b) (g:'c -> 'a) (ll:'c llist).
         LMAP f (LMAP g ll) = LMAP (f o g) ll``,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
-  Q.EXISTS_TAC `\ll1 ll2. ?ll0. (ll1 = LMAP f (LMAP g ll0)) /\
+  Q.EXISTS_TAC `λll1 ll2. ?ll0. (ll1 = LMAP f (LMAP g ll0)) /\
                                 (ll2 = LMAP (f o g) ll0)` THEN
   SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THENL [
     PROVE_TAC [],
@@ -1913,7 +1912,7 @@ val LZIP_THM = new_specification
     (!h1 h2 t1 t2. LZIP (h1:::t1, h2:::t2) = (h1,h2) ::: LZIP (t1,t2))`,
     let val ax =
        ISPEC
-        ``\(l1,l2).
+        ``λ(l1,l2).
              if (l1:'a llist = LNIL) \/ (l2:'b llist = LNIL)
               then NONE
               else SOME ((THE(LTL l1),THE(LTL l2)),
@@ -1946,13 +1945,13 @@ Theorem LUNZIP_exists[local]:
            (!x y t. LUNZIP ((x:'a, y:'b):::t) =
                     let (ll1, ll2) = LUNZIP t in (x:::ll1, y:::ll2))
 Proof
-  qspec_then ‘\ll. if (LHD ll = NONE) then NONE
+  qspec_then ‘λll. if (LHD ll = NONE) then NONE
                    else SOME (THE (LTL ll), SND (THE (LHD ll)))’
              strip_assume_tac llist_Axiom_1 >>
-  qspec_then ‘\ll. if (LHD ll = NONE) then NONE
+  qspec_then ‘λll. if (LHD ll = NONE) then NONE
                    else SOME (THE (LTL ll), FST (THE (LHD ll)))’
              strip_assume_tac llist_Axiom_1 >>
-  Q.EXISTS_TAC ‘\ll. (g' ll, g ll)’ THEN SIMP_TAC list_ss [] THEN
+  Q.EXISTS_TAC ‘λll. (g' ll, g ll)’ THEN SIMP_TAC list_ss [] THEN
   REPEAT STRIP_TAC THENL [
     POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
     FULL_SIMP_TAC list_ss [LHD_THM],
@@ -1970,7 +1969,7 @@ val LZIP_LUNZIP = Q.store_thm
  `!ll: ('a # 'b) llist. LZIP(LUNZIP ll) = ll`,
  REWRITE_TAC [Once LLIST_STRONG_BISIMULATION] THEN
  GEN_TAC THEN
- Q.EXISTS_TAC `\l1 l2. l1 = LZIP (LUNZIP l2)` THEN
+ Q.EXISTS_TAC `λl1 l2. l1 = LZIP (LUNZIP l2)` THEN
  SRW_TAC [][] THEN
  Q.ISPEC_THEN `ll4` STRUCT_CASES_TAC llist_CASES THEN
  SRW_TAC [][] THEN
@@ -1995,7 +1994,7 @@ val LLIST_EQ = Q.store_thm
    (!x. f x = g x)`,
  SRW_TAC [] [] THEN
  SRW_TAC [] [Once LLIST_BISIMULATION0] THEN
- Q.EXISTS_TAC `\ll1 ll2. ?x. (ll1 = f x) /\ (ll2 = g x)` THEN
+ Q.EXISTS_TAC `λll1 ll2. ?x. (ll1 = f x) /\ (ll2 = g x)` THEN
  SRW_TAC [] [] THEN
  METIS_TAC []);
 
@@ -2014,7 +2013,7 @@ val LUNFOLD_EQ = Q.store_thm
     (LUNFOLD f s = ll)`,
  SRW_TAC [] [] THEN
  SRW_TAC [] [Once LLIST_BISIMULATION] THEN
- Q.EXISTS_TAC `\ll1 ll2. ?s. (ll1 = LUNFOLD f s) /\ R s ll2` THEN
+ Q.EXISTS_TAC `λll1 ll2. ?s. (ll1 = LUNFOLD f s) /\ R s ll2` THEN
  SRW_TAC [] [] THEN1
  METIS_TAC [] THEN
  RES_TAC THEN
@@ -2026,7 +2025,7 @@ val LUNFOLD_EQ = Q.store_thm
 val LMAP_LUNFOLD = Q.store_thm
 ("LMAP_LUNFOLD",
  `!f g s.
-   LMAP f (LUNFOLD g s) = LUNFOLD (\s. OPTION_MAP (\(x, y). (x, f y)) (g s)) s`,
+   LMAP f (LUNFOLD g s) = LUNFOLD (λs. OPTION_MAP (λ(x, y). (x, f y)) (g s)) s`,
  SRW_TAC [] [] THEN
  MATCH_MP_TAC (GSYM LUNFOLD_EQ) THEN
  SRW_TAC [] [] THEN
@@ -2708,7 +2707,7 @@ val LFINITE_LGENLIST = Q.store_thm(
 
 val LTL_HD_LTL_LHD = Q.store_thm(
   "LTL_HD_LTL_LHD",
-  `LTL_HD l = OPTION_BIND (LHD l) (\h. OPTION_BIND (LTL l) (\t. SOME (t, h)))`,
+  `LTL_HD l = OPTION_BIND (LHD l) (\h. OPTION_BIND (LTL l) (λt. SOME (t, h)))`,
   simp[LTL_HD_HD, LTL_HD_TL] >>
   Cases_on `LTL_HD l` >> simp[]);
 
