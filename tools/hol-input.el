@@ -53,8 +53,6 @@ removing all space and newline characters."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Functions used to tweak translation pairs
 
-;; let is used since Elisp lacks lexical scoping.
-
 (defun hol-input-compose (f g)
   "fn x -> concatMap F (G x)"
   (let ((f1 f) (g1 g))
