@@ -1,4 +1,4 @@
-;;; hol-input.el --- The Hol input method (based/copied from Lean)
+;;; hol-input.el --- The Hol input method (based/copied from Lean) -*- lexical-binding:t -*-
 ;;;
 ;;; DISCLAIMER: This file is based on lean-input.el provided with the Lean theorem prover.
 ;;; We did minor modifications
@@ -23,8 +23,6 @@
 
 (require 'quail)
 
-(eval-when-compile
-  (require 'cl))
 ;; Quail is quite stateful, so be careful when editing this code.  Note
 ;; that with-temp-buffer is used below whenever buffer-local state is
 ;; modified.
@@ -55,16 +53,16 @@ removing all space and newline characters."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Functions used to tweak translation pairs
 
-;; lexical-let is used since Elisp lacks lexical scoping.
+;; let is used since Elisp lacks lexical scoping.
 
 (defun hol-input-compose (f g)
   "fn x -> concatMap F (G x)"
-  (lexical-let ((f1 f) (g1 g))
+  (let ((f1 f) (g1 g))
     (lambda (x) (hol-input-concat-map f1 (funcall g1 x)))))
 
 (defun hol-input-or (f g)
   "fn x -> F x ++ G x"
-  (lexical-let ((f1 f) (g1 g))
+  (let ((f1 f) (g1 g))
     (lambda (x) (append (funcall f1 x) (funcall g1 x)))))
 
 (defun hol-input-nonempty ()
@@ -73,19 +71,19 @@ removing all space and newline characters."
 
 (defun hol-input-prepend (prefix)
   "Prepend PREFIX to all key sequences."
-  (lexical-let ((prefix1 prefix))
+  (let ((prefix1 prefix))
     (lambda (x) `((,(concat prefix1 (car x)) . ,(cdr x))))))
 
 (defun hol-input-prefix (prefix)
   "Only keep pairs whose key sequence starts with PREFIX."
-  (lexical-let ((prefix1 prefix))
+  (let ((prefix1 prefix))
     (lambda (x)
       (if (equal (substring (car x) 0 (length prefix1)) prefix1)
           (list x)))))
 
 (defun hol-input-suffix (suffix)
   "Only keep pairs whose key sequence ends with SUFFIX."
-  (lexical-let ((suffix1 suffix))
+  (let ((suffix1 suffix))
     (lambda (x)
       (if (equal (substring (car x)
                             (- (length (car x)) (length suffix1)))
@@ -95,17 +93,17 @@ removing all space and newline characters."
 (defun hol-input-drop (ss)
   "Drop pairs matching one of the given key sequences.
 SS should be a list of strings."
-  (lexical-let ((ss1 ss))
+  (let ((ss1 ss))
     (lambda (x) (unless (member (car x) ss1) (list x)))))
 
 (defun hol-input-drop-beginning (n)
   "Drop N characters from the beginning of each key sequence."
-  (lexical-let ((n1 n))
+  (let ((n1 n))
     (lambda (x) `((,(substring (car x) n1) . ,(cdr x))))))
 
 (defun hol-input-drop-end (n)
   "Drop N characters from the end of each key sequence."
-  (lexical-let ((n1 n))
+  (let ((n1 n))
     (lambda (x)
       `((,(substring (car x) 0 (- (length (car x)) n1)) .
          ,(cdr x))))))
@@ -120,7 +118,7 @@ This prefix is dropped."
 (defun hol-input-drop-suffix (suffix)
   "Only keep pairs whose key sequence ends with SUFFIX.
 This suffix is dropped."
-  (lexical-let ((suffix1 suffix))
+  (let ((suffix1 suffix))
     (hol-input-compose
      (hol-input-drop-end (length suffix1))
      (hol-input-suffix suffix1))))
