@@ -23,38 +23,42 @@ CoInductive lrep_ok:
 /\ (lrep_ok t ==> lrep_ok (λn. if n = 0 then SOME h else t(n - 1)))
 End
 
-val lrep_ok_alt' = Q.prove (
-  `!n f. lrep_ok f ==> IS_SOME (f (SUC n)) ==> IS_SOME (f n)`,
+Theorem lrep_ok_alt'[local]:
+  !n f. lrep_ok f ==> IS_SOME (f (SUC n)) ==> IS_SOME (f n)
+Proof
   let open arithmeticTheory in
   Induct THEN REPEAT STRIP_TAC THEN
   IMP_RES_TAC lrep_ok_cases THEN
   FULL_SIMP_TAC bool_ss [NOT_SUC, optionTheory.IS_SOME_DEF,
-    ONE, SUB_EQUAL_0, SUB_MONO_EQ, SUB_0] end) ;
+    ONE, SUB_EQUAL_0, SUB_MONO_EQ, SUB_0] end
+QED
 
-val lrep_ok_alt = Q.store_thm ("lrep_ok_alt",
-  `lrep_ok f = (!n. IS_SOME (f (SUC n)) ==> IS_SOME (f n))`,
+Theorem lrep_ok_alt:
+  lrep_ok f = (!n. IS_SOME (f (SUC n)) ==> IS_SOME (f n))
+Proof
   EQ_TAC THEN REPEAT STRIP_TAC
-  THEN1 (irule lrep_ok_alt' >> rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) THEN
+  >- (irule lrep_ok_alt' >> rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) THEN
   irule lrep_ok_coind THEN
-  Q.EXISTS_TAC `λf. !n. IS_SOME (f (SUC n)) ==> IS_SOME (f n)` THEN
+  Q.EXISTS_TAC ‘λf. !n. IS_SOME (f (SUC n)) ==> IS_SOME (f n)’ THEN
   ASM_SIMP_TAC bool_ss [] THEN
   REPEAT STRIP_TAC THEN
-  Cases_on `a0 0`
-  THENL [ DISJ1_TAC THEN
+  Cases_on ‘a0 0’
+  >- (DISJ1_TAC THEN
       SIMP_TAC bool_ss [FUN_EQ_THM] THEN
       Induct THEN1 POP_ASSUM ACCEPT_TAC THEN
       FULL_SIMP_TAC bool_ss [GSYM optionTheory.NOT_IS_SOME_EQ_NONE] THEN
-      PROVE_TAC [],
-    DISJ2_TAC THEN
-      Q.EXISTS_TAC `x` THEN Q.EXISTS_TAC `a0 o SUC` THEN
-      ASM_SIMP_TAC std_ss [FUN_EQ_THM] THEN
-      GEN_TAC THEN Cases_on `n` THEN
-      ASM_SIMP_TAC bool_ss [NOT_SUC, SUC_SUB1]]) ;
+      PROVE_TAC []) >>
+  DISJ2_TAC THEN
+  Q.EXISTS_TAC ‘x’ THEN Q.EXISTS_TAC ‘a0 o SUC’ THEN
+  ASM_SIMP_TAC std_ss [FUN_EQ_THM] THEN
+  GEN_TAC THEN Cases_on ‘n’ THEN
+  ASM_SIMP_TAC bool_ss [NOT_SUC, SUC_SUB1]
+QED
 
-val type_inhabited = prove(
-  ``?f. lrep_ok f``,
-  Q.EXISTS_TAC `λn. NONE` THEN ACCEPT_TAC(CONJUNCT1 lrep_ok_rules)
-);
+Theorem type_inhabited[local]:
+  ?f. lrep_ok f
+Proof Q.EXISTS_TAC `λn. NONE` THEN ACCEPT_TAC(CONJUNCT1 lrep_ok_rules)
+QED
 
 val llist_tydef = new_type_definition ("llist", type_inhabited);
 
@@ -67,42 +71,51 @@ val repabs_fns = define_new_type_bijections {
 val llist_absrep = CONJUNCT1 repabs_fns
 val llist_repabs = CONJUNCT2 repabs_fns
 
-val lrep_ok_llist_rep = prove(
-  ``lrep_ok (llist_rep f)``,
-  SRW_TAC [][llist_repabs, llist_absrep]);
-val _ = BasicProvers.augment_srw_ss [rewrites [lrep_ok_llist_rep]]
+Theorem lrep_ok_llist_rep[local,simp]:
+  lrep_ok (llist_rep f)
+Proof
+  SRW_TAC [][llist_repabs, llist_absrep]
+QED
 
-val llist_abs_11 = prove(
-  ``lrep_ok r1 /\ lrep_ok r2 ==> ((llist_abs r1 = llist_abs r2) = (r1 = r2))``,
-  SRW_TAC [][llist_repabs, EQ_IMP_THM] THEN METIS_TAC []);
+Theorem llist_abs_11[local]:
+  lrep_ok r1 /\ lrep_ok r2 ==> ((llist_abs r1 = llist_abs r2) = (r1 = r2))
+Proof SRW_TAC [][llist_repabs, EQ_IMP_THM] THEN METIS_TAC []
+QED
 
-val llist_rep_11 = prove(
-  ``(llist_rep t1 = llist_rep t2) = (t1 = t2)``,
+Theorem llist_rep_11[local]:
+  (llist_rep t1 = llist_rep t2) = (t1 = t2)
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
-  POP_ASSUM (MP_TAC o AP_TERM ``llist_abs``) THEN SRW_TAC [][llist_absrep]);
+  POP_ASSUM (MP_TAC o AP_TERM ``llist_abs``) THEN SRW_TAC [][llist_absrep]
+QED
 
 val llist_repabs' = #1 (EQ_IMP_RULE (SPEC_ALL llist_repabs))
 
-val llist_if_rep_abs = Q.prove (
-  `(f = llist_rep a) ==> (a = llist_abs f)`,
-  DISCH_TAC THEN ASM_REWRITE_TAC [repabs_fns]) ;
+Theorem llist_if_rep_abs[local]: (f = llist_rep a) ==> (a = llist_abs f)
+Proof DISCH_TAC THEN ASM_REWRITE_TAC [repabs_fns]
+QED
 
-val FUNPOW_BIND_NONE = Q.prove (
-  `!n. FUNPOW (λm. OPTION_BIND m g) n NONE = NONE`,
-  Induct THEN ASM_SIMP_TAC bool_ss [FUNPOW, OPTION_BIND_def]) ;
+Theorem FUNPOW_BIND_NONE[local]:
+  !n. FUNPOW (λm. OPTION_BIND m g) n NONE = NONE
+Proof Induct THEN ASM_SIMP_TAC bool_ss [FUNPOW, OPTION_BIND_def]
+QED
 
-val lrep_ok_MAP = Q.store_thm ("lrep_ok_MAP",
-  `lrep_ok (λn. OPTION_MAP f (g n)) = lrep_ok g`,
-  SIMP_TAC bool_ss [lrep_ok_alt, IS_SOME_MAP]) ;
+Theorem lrep_ok_MAP:
+  lrep_ok (λn. OPTION_MAP f (g n)) = lrep_ok g
+Proof SIMP_TAC bool_ss [lrep_ok_alt, IS_SOME_MAP]
+QED
 
-val lrep_ok_FUNPOW_BIND = Q.store_thm ("lrep_ok_FUNPOW_BIND",
-  `lrep_ok (λn. FUNPOW (λm. OPTION_BIND m g) n fz)`,
+Theorem lrep_ok_FUNPOW_BIND:
+  lrep_ok (λn. FUNPOW (λm. OPTION_BIND m g) n fz)
+Proof
   SIMP_TAC bool_ss [lrep_ok_alt, arithmeticTheory.FUNPOW_SUC] THEN
-  GEN_TAC THEN MATCH_ACCEPT_TAC IS_SOME_BIND) ;
+  GEN_TAC THEN MATCH_ACCEPT_TAC IS_SOME_BIND
+QED
 
-val lrep_ok_MAP_FUNPOW_BIND = Q.prove (
-  `lrep_ok (λn. OPTION_MAP f (FUNPOW (λm. OPTION_BIND m g) n fz))`,
-  SIMP_TAC bool_ss [lrep_ok_MAP] THEN irule lrep_ok_FUNPOW_BIND) ;
+Theorem lrep_ok_MAP_FUNPOW_BIND[local]:
+  lrep_ok (λn. OPTION_MAP f (FUNPOW (λm. OPTION_BIND m g) n fz))
+Proof SIMP_TAC bool_ss [lrep_ok_MAP] THEN irule lrep_ok_FUNPOW_BIND
+QED
 
 val LNIL = new_definition("LNIL", ``LNIL = llist_abs (λn. NONE)``);
 val LCONS = new_definition(
@@ -110,30 +123,39 @@ val LCONS = new_definition(
   ``LCONS h t = llist_abs (λn. if n = 0 then SOME h else llist_rep t (n - 1))``
 );
 
-val llist_rep_LCONS = store_thm(
-  "llist_rep_LCONS",
-  ``llist_rep (LCONS h t) =
-        λn. if n = 0 then SOME h else llist_rep t (n - 1)``,
+Theorem llist_rep_LCONS:
+  llist_rep (LCONS h t) =
+  λn. if n = 0 then SOME h else llist_rep t (n - 1)
+Proof
   SRW_TAC [][LCONS, GSYM llist_repabs] THEN
-  MATCH_MP_TAC (CONJUNCT2 lrep_ok_rules) THEN SRW_TAC [][]);
+  MATCH_MP_TAC (CONJUNCT2 lrep_ok_rules) THEN SRW_TAC [][]
+QED
 
-val llist_rep_LNIL = Q.store_thm ("llist_rep_LNIL",
-  `llist_rep LNIL = \n. NONE`,
-  SIMP_TAC std_ss [LNIL, lrep_ok_rules, llist_repabs']) ;
+Theorem llist_rep_LNIL: llist_rep LNIL = \n. NONE
+Proof SIMP_TAC std_ss [LNIL, lrep_ok_rules, llist_repabs']
+QED
 
-val LTL_HD_def = zDefine `LTL_HD ll = case llist_rep ll 0 of NONE => NONE
-  | SOME h => SOME (llist_abs (llist_rep ll o SUC), h)` ;
+Definition LTL_HD_def[nocompute]:
+  LTL_HD ll = case llist_rep ll 0 of
+                NONE => NONE
+              | SOME h => SOME (llist_abs (llist_rep ll o SUC), h)
+End
 
-val LTL_HD_LNIL = Q.store_thm ("LTL_HD_LNIL[compute,simp]",
-  `LTL_HD LNIL = NONE`,
-  SIMP_TAC std_ss [LTL_HD_def, llist_rep_LNIL]) ;
+Theorem LTL_HD_LNIL[compute,simp]:
+  LTL_HD LNIL = NONE
+Proof
+  SIMP_TAC std_ss [LTL_HD_def, llist_rep_LNIL]
+QED
 
-val lr_eta = Q.prove (`(\n. llist_rep t n) = llist_rep t`, irule ETA_AX) ;
+Theorem lr_eta[local]: (\n. llist_rep t n) = llist_rep t
+Proof irule ETA_AX
+QED
 
-val LTL_HD_LCONS = Q.store_thm ("LTL_HD_LCONS[compute,simp]",
-  `LTL_HD (LCONS h t) = SOME (t, h)`,
+Theorem LTL_HD_LCONS[compute,simp]: LTL_HD (LCONS h t) = SOME (t, h)
+Proof
   SIMP_TAC std_ss [LTL_HD_def, llist_rep_LCONS, combinTheory.o_ABS_L,
-    NOT_SUC, lr_eta, llist_absrep]) ;
+                   NOT_SUC, lr_eta, llist_absrep]
+QED
 
 val LHD = new_definition("LHD", ``LHD ll = llist_rep ll 0``);
 val LTL = new_definition(
@@ -143,25 +165,25 @@ val LTL = new_definition(
              | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))``
 );
 
-val LTL_HD_HD = Q.store_thm ("LTL_HD_HD",
-  `LHD ll = OPTION_MAP SND (LTL_HD ll)`,
-  Cases_on `llist_rep ll 0` THEN
-  ASM_SIMP_TAC std_ss [LTL_HD_def, LHD]) ;
+Theorem LTL_HD_HD: LHD ll = OPTION_MAP SND (LTL_HD ll)
+Proof
+  Cases_on `llist_rep ll 0` THEN ASM_SIMP_TAC std_ss [LTL_HD_def, LHD]
+QED
 
-val LTL_HD_TL = Q.store_thm ("LTL_HD_TL",
-  `LTL ll = OPTION_MAP FST (LTL_HD ll)`,
+Theorem LTL_HD_TL: LTL ll = OPTION_MAP FST (LTL_HD ll)
+Proof
   Cases_on `llist_rep ll 0` THEN
   ASM_SIMP_TAC std_ss [LTL_HD_def, LTL, LHD] THEN
-  AP_TERM_TAC THEN SIMP_TAC std_ss [FUN_EQ_THM, arithmeticTheory.ADD1]) ;
+  AP_TERM_TAC THEN SIMP_TAC std_ss [FUN_EQ_THM, arithmeticTheory.ADD1]
+QED
 
-val LHD_LCONS = store_thm(
-  "LHD_LCONS",
-  ``LHD (LCONS h t) = SOME h``,
-  SRW_TAC [][LHD, llist_rep_LCONS]);
-val LTL_LCONS = store_thm(
-  "LTL_LCONS",
-  ``LTL (LCONS h t) = SOME t``,
-  SRW_TAC [ETA_ss][LTL, LHD_LCONS, llist_rep_LCONS, llist_absrep]);
+Theorem LHD_LCONS: LHD (LCONS h t) = SOME h
+Proof SRW_TAC [][LHD, llist_rep_LCONS]
+QED
+
+Theorem LTL_LCONS: LTL (LCONS h t) = SOME t
+Proof SRW_TAC [ETA_ss][LTL, llist_rep_LCONS, llist_absrep, LHD_LCONS]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Syntax for lazy lists, similar to lists                                   *)
@@ -179,68 +201,51 @@ val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
 val _ = TeX_notation {hol = "[|", TeX = ("\\HOLTokenLeftDenote{}", 1)}
 val _ = TeX_notation {hol = "|]", TeX = ("\\HOLTokenRightDenote{}", 1)}
 
-val LHDTL_CONS_THM = store_thm(
-  "LHDTL_CONS_THM",
-  ``!h t. (LHD (LCONS h t) = SOME h) /\ (LTL (LCONS h t) = SOME t)``,
-  SRW_TAC [][LHD_LCONS, LTL_LCONS]);
+Theorem LHDTL_CONS_THM = Q.GENL [‘h’, ‘t’] $ CONJ LHD_LCONS LTL_LCONS
 
-val lrep_inversion = prove(
-  ``lrep_ok f ==> (f = \n. NONE) \/
-            (?h t. (f = \n. if n = 0 then SOME h else t (n - 1))
-                /\ lrep_ok t)``,
-   MATCH_ACCEPT_TAC (fst (EQ_IMP_RULE (SPEC_ALL lrep_ok_cases)))
-);
+Theorem lrep_inversion[local]:
+  lrep_ok f ==> (f = \n. NONE) \/
+                (?h t. (f = \n. if n = 0 then SOME h else t (n - 1)) /\
+                       lrep_ok t)
+Proof
+  MATCH_ACCEPT_TAC (fst (EQ_IMP_RULE (SPEC_ALL lrep_ok_cases)))
+QED
 
-val forall_llist = prove(
-  ``(!l. P l) = (!r. lrep_ok r ==> P (llist_abs r))``,
+Theorem forall_llist[local]:
+  (!l. P l) = (!r. lrep_ok r ==> P (llist_abs r))
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
   ONCE_REWRITE_TAC [GSYM llist_absrep] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val llist_CASES = store_thm(
-  "llist_CASES",
-  ``!l. (l = LNIL) \/ (?h t. l = LCONS h t)``,
+Theorem llist_CASES:
+  !l. (l = LNIL) \/ (?h t. l = LCONS h t)
+Proof
   SIMP_TAC (srw_ss() ++ ETA_ss) [LNIL,LCONS,forall_llist,llist_abs_11,
                                  lrep_ok_rules] THEN
   REPEAT STRIP_TAC THEN IMP_RES_TAC lrep_inversion THENL [
     SRW_TAC [][],
     DISJ2_TAC THEN MAP_EVERY Q.EXISTS_TAC [`h`, `llist_abs t`] THEN
     SRW_TAC [][llist_repabs']
-  ]);
+  ]
+QED
 
 fun llist_CASE_TAC tm = STRUCT_CASES_TAC (ISPEC tm llist_CASES) ;
 
-val LTL_HD_11 = Q.store_thm ("LTL_HD_11",
-  `(LTL_HD ll1 = LTL_HD ll2) ==> (ll1 = ll2)`,
-  llist_CASE_TAC ``ll1 : 'a llist`` THEN
-  llist_CASE_TAC ``ll2 : 'a llist`` THEN
-  ASM_SIMP_TAC std_ss [LTL_HD_LNIL, LTL_HD_LCONS]) ;
-
-val LHD_THM = store_thm(
-  "LHD_THM[simp,compute]",
-  ``(LHD LNIL = NONE) /\ (!h t. LHD (LCONS h t) = SOME h)``,
-  SRW_TAC [][LHDTL_CONS_THM] THEN
-  SRW_TAC [][LHD, LNIL, llist_repabs', lrep_ok_rules]);
-
-val LTL_THM = store_thm(
-  "LTL_THM[simp,compute]",
-  ``(LTL LNIL = NONE) /\ (!h t. LTL (LCONS h t) = SOME t)``,
-  SRW_TAC [][LHDTL_CONS_THM] THEN
-  SRW_TAC [][LTL, LNIL, llist_repabs', lrep_ok_rules, LHD]);
-
-val LCONS_NOT_NIL = store_thm(
-  "LCONS_NOT_NIL",
-  ``!h t. ~(LCONS h t = LNIL) /\ ~(LNIL = LCONS h t)``,
+Theorem LCONS_NOT_NIL[simp]:
+  !h t. ~(LCONS h t = LNIL) /\ ~(LNIL = LCONS h t)
+Proof
   SRW_TAC [][LCONS, LNIL, FUN_EQ_THM] THEN STRIP_TAC THEN
   POP_ASSUM (ASSUME_TAC o Q.AP_TERM `llist_rep`) THEN
   FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [llist_repabs', lrep_ok_rules] THEN
   POP_ASSUM (ASSUME_TAC o C AP_THM ``0``) THEN
-  FULL_SIMP_TAC (srw_ss()) []);
-val _ = export_rewrites ["LCONS_NOT_NIL"]
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val LCONS_11 = store_thm(
-  "LCONS_11",
-  ``!h1 t1 h2 t2. (LCONS h1 t1 = LCONS h2 t2) <=> (h1 = h2) /\ (t1 = t2)``,
+Theorem LCONS_11[simp]:
+  !h1 t1 h2 t2. (LCONS h1 t1 = LCONS h2 t2) <=> (h1 = h2) /\ (t1 = t2)
+Proof
   SRW_TAC [][EQ_IMP_THM, LCONS] THEN
   POP_ASSUM (ASSUME_TAC o Q.AP_TERM `llist_rep`) THEN
   FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [llist_repabs', lrep_ok_rules] THENL [
@@ -249,8 +254,30 @@ val LCONS_11 = store_thm(
   ] THEN
   POP_ASSUM (MP_TAC o GEN ``n:num`` o SIMP_RULE (srw_ss()) [] o
              C AP_THM ``SUC n:num``) THEN
-  SRW_TAC [ETA_ss][GSYM FUN_EQ_THM, llist_rep_11]);
-val _ = export_rewrites ["LCONS_11"]
+  SRW_TAC [ETA_ss][GSYM FUN_EQ_THM, llist_rep_11]
+QED
+
+Theorem LTL_HD_11[simp]:
+  LTL_HD ll1 = LTL_HD ll2 <=> ll1 = ll2
+Proof
+  llist_CASE_TAC ``ll1 : 'a llist`` THEN
+  llist_CASE_TAC ``ll2 : 'a llist`` THEN
+  simp[EQ_IMP_THM]
+QED
+
+Theorem LHD_THM[simp,compute]:
+  (LHD LNIL = NONE) /\ (!h t. LHD (LCONS h t) = SOME h)
+Proof
+  SRW_TAC [][LHDTL_CONS_THM] THEN
+  SRW_TAC [][LHD, LNIL, llist_repabs', lrep_ok_rules]
+QED
+
+Theorem LTL_THM[simp,compute]:
+  (LTL LNIL = NONE) /\ (!h t. LTL (LCONS h t) = SOME t)
+Proof
+  SRW_TAC [][LHDTL_CONS_THM] THEN
+  SRW_TAC [][LTL, LNIL, llist_repabs', lrep_ok_rules, LHD]
+QED
 
 val LTL_HD_iff = Q.store_thm ("LTL_HD_iff",
   `((LTL_HD x = SOME (t, h)) = (x = LCONS h t)) /\
@@ -354,59 +381,67 @@ val LUNFOLD = Q.store_thm (
     SUC_SUB1, OPTION_BIND_def, llist_repabs', lrep_ok_MAP_FUNPOW_BIND]) ;
 
 (* this is the uniqueness in the definition of llist as final coalgebra *)
-val LUNFOLD_UNIQUE = Q.store_thm ("LUNFOLD_UNIQUE",
-   `!f g. (!x. g x = case f x of NONE => [||]
-                       | SOME (v1,v2) => v2:::g v1) ==>
-           (!y. g y = LUNFOLD f y)`,
+Theorem LUNFOLD_UNIQUE:
+   !f g. (!x. g x = case f x of NONE => [||]
+                             | SOME (v1,v2) => v2:::g v1) ==>
+         (!y. g y = LUNFOLD f y)
+Proof
   REWRITE_TAC [LNTH_EQ] THEN
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   Induct_on `n` THEN GEN_TAC THEN
   ONCE_ASM_REWRITE_TAC [LUNFOLD] THEN
   Cases_on `f y` THEN SIMP_TAC std_ss [pair_CASE_def, LNTH_THM] THEN
-  FIRST_ASSUM MATCH_ACCEPT_TAC) ;
+  FIRST_ASSUM MATCH_ACCEPT_TAC
+QED
 
 (* LUNFOLD is a sort of inverse to LTL_HD *)
 val lu1 = BETA_RULE
   (ISPECL [``LTL_HD``, ``(\x. x) : 'a llist -> 'a llist``] LUNFOLD_UNIQUE) ;
 
-val LUNFOLD_LTL_HD = Q.store_thm ("LUNFOLD_LTL_HD",
-  `LUNFOLD LTL_HD ll = ll`,
+Theorem LUNFOLD_LTL_HD: LUNFOLD LTL_HD ll = ll:'a llist
+Proof
   irule EQ_SYM THEN irule lu1 THEN
-  GEN_TAC THEN irule LTL_HD_11 THEN
-  Cases_on `LTL_HD x` THEN
-  SIMP_TAC std_ss [LTL_HD_LNIL, pair_CASE_def, LTL_HD_LCONS]) ;
+  qx_gen_tac ‘x’ >> llist_CASE_TAC “x:'a llist” >> simp[]
+QED
 
-val LTL_HD_LUNFOLD = Q.store_thm ("LTL_HD_LUNFOLD[simp,compute]",
-  `LTL_HD (LUNFOLD f x) = OPTION_MAP (LUNFOLD f ## I) (f x)`,
+Theorem LTL_HD_LUNFOLD[simp,compute]:
+  LTL_HD (LUNFOLD f x) = OPTION_MAP (LUNFOLD f ## I) (f x)
+Proof
   ONCE_REWRITE_TAC [LUNFOLD] THEN CASE_TAC THEN
   SIMP_TAC std_ss [OPTION_MAP_DEF, pair_CASE_def, LTL_HD_LNIL,
-    LTL_HD_LCONS, pairTheory.PAIR_MAP]) ;
+    LTL_HD_LCONS, pairTheory.PAIR_MAP]
+QED
 
-val LNTH_LUNFOLD = Q.store_thm ("LNTH_LUNFOLD[simp]",
-  `(LNTH 0 (LUNFOLD f x) = OPTION_MAP SND (f x)) /\
-    (LNTH (SUC n) (LUNFOLD f x) =
+Theorem LNTH_LUNFOLD[simp]:
+  (LNTH 0 (LUNFOLD f x) = OPTION_MAP SND (f x)) /\
+  (LNTH (SUC n) (LUNFOLD f x) =
     case f x of NONE => NONE
-      | SOME (tx, hx) => LNTH n (LUNFOLD f tx))`,
+      | SOME (tx, hx) => LNTH n (LUNFOLD f tx))
+Proof
   CONV_TAC (ONCE_DEPTH_CONV (LHS_CONV (ONCE_DEPTH_CONV (REWR_CONV LUNFOLD))))
   THEN Cases_on `f x` THEN
   REWRITE_TAC [LNTH, option_case_def, pair_CASE_def] THEN BETA_TAC THEN
-  REWRITE_TAC [LHD_THM, LTL_THM, OPTION_MAP_DEF, OPTION_JOIN_DEF]) ;
+  REWRITE_TAC [LHD_THM, LTL_THM, OPTION_MAP_DEF, OPTION_JOIN_DEF]
+QED
 
-val LNTH_LUNFOLD_compute = save_thm(
-  "LNTH_LUNFOLD_compute[compute]",
+Theorem LNTH_LUNFOLD_compute[compute] =
   CONJ (CONJUNCT1 LNTH_LUNFOLD)
        (CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
-                  (LNTH_LUNFOLD |> CONJUNCT2 |> Q.GEN `n`)))
+                  (LNTH_LUNFOLD |> CONJUNCT2 |> Q.GEN `n`))
 
-val LHD_LUNFOLD = Q.store_thm ("LHD_LUNFOLD[compute,simp]",
-  `LHD (LUNFOLD f x) = OPTION_MAP SND (f x)`,
-  REWRITE_TAC [GSYM LNTH, LNTH_LUNFOLD]) ;
+Theorem LHD_LUNFOLD[compute,simp]:
+  LHD (LUNFOLD f x) = OPTION_MAP SND (f x)
+Proof
+  REWRITE_TAC [GSYM LNTH, LNTH_LUNFOLD]
+QED
 
-val LTL_LUNFOLD = Q.store_thm ("LTL_LUNFOLD[compute,simp]",
-  `LTL (LUNFOLD f x) = OPTION_MAP (LUNFOLD f o FST) (f x)`,
+Theorem LTL_LUNFOLD[compute,simp]:
+  LTL (LUNFOLD f x) = OPTION_MAP (LUNFOLD f o FST) (f x)
+Proof
   REWRITE_TAC [LTL_HD_TL, LTL_HD_LUNFOLD, OPTION_MAP_COMPOSE] THEN
   REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC) THEN
-  SIMP_TAC std_ss [FUN_EQ_THM, pairTheory.FST_PAIR_MAP]) ;
+  SIMP_TAC std_ss [FUN_EQ_THM, pairTheory.FST_PAIR_MAP]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Co-recursion theorem for lazy lists                                       *)
@@ -416,26 +451,28 @@ val LTL_LUNFOLD = Q.store_thm ("LTL_LUNFOLD[compute,simp]",
 (* Alternative version of llist_Axiom (more understandable)                  *)
 (*---------------------------------------------------------------------------*)
 
-val llist_Axiom_1 = Q.store_thm
-("llist_Axiom_1",
- `!f :'a -> ('a#'b)option.
-     ?g:'a -> 'b llist.
-       !x. g x =
-            case f x
-             of NONE => LNIL
-              | SOME (a,b) => LCONS b (g a)`,
+Theorem llist_Axiom_1:
+  !f :'a -> ('a#'b)option.
+    ?g:'a -> 'b llist.
+      !x. g x =
+          case f x of
+            NONE => LNIL
+          | SOME (a,b) => LCONS b (g a)
+Proof
   GEN_TAC THEN Q.EXISTS_TAC `LUNFOLD f` THEN
-  GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD) ;
+  GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD
+QED
 
-val llist_Axiom_1ue = store_thm(
-  "llist_Axiom_1ue",
-  ``!f. ?!g. !x. g x = case f x
-                       of NONE => LNIL
-                        | SOME (a,b) => b ::: g a``,
+Theorem llist_Axiom_1ue:
+  !f. ?!g. !x. g x = case f x of NONE => LNIL
+                              | SOME (a,b) => b ::: g a
+Proof
   SIMP_TAC bool_ss [EXISTS_UNIQUE_THM] THEN REPEAT STRIP_TAC
   THENL [
     Q.EXISTS_TAC `LUNFOLD f` THEN GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD,
-    IMP_RES_TAC LUNFOLD_UNIQUE THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM] ]) ;
+    IMP_RES_TAC LUNFOLD_UNIQUE THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM]
+  ]
+QED
 
 val eq_imp_lem = Q.prove (`(p = q) ==> p ==> q`, DECIDE_TAC)  ;
 
@@ -2715,11 +2752,13 @@ val LTL_HD_LTL_LHD = Q.store_thm(
   simp[LTL_HD_HD, LTL_HD_TL] >>
   Cases_on `LTL_HD l` >> simp[]);
 
-val LGENLIST_SOME = Q.store_thm(
-  "LGENLIST_SOME[simp]",
-  `(LGENLIST f (SOME 0) = [||]) /\
-   (!n. LGENLIST f (SOME (SUC n)) = f 0 ::: LGENLIST (f o SUC) (SOME n))`,
-  rpt strip_tac >> irule LTL_HD_11 >> simp[LTL_HD_LTL_LHD]);
+Theorem LGENLIST_SOME[simp]:
+  (LGENLIST f (SOME 0) = [||]) /\
+  (!n. LGENLIST f (SOME (SUC n)) = f 0 ::: LGENLIST (f o SUC) (SOME n))
+Proof
+  rpt strip_tac >> irule (iffLR LTL_HD_11) >>
+  simp[LTL_HD_LTL_LHD, Excl "LTL_HD_11"]
+QED
 
 val LGENLIST_SOME_compute = save_thm(
   "LGENLIST_SOME_compute[compute]",
@@ -3540,7 +3579,7 @@ End
 
 Theorem lbind_EQ_NIL:
   lbind ll f = [||] <=>
-  !e. e IN LSET ll ⇒ f e = [||]
+  !e. e IN LSET ll ==> f e = [||]
 Proof
   REWRITE_TAC [Once $ DECIDE “(p = q:bool) = (~p = ~q)”] >>
   simp_tac pure_ss [NOT_FORALL_THM] >>
@@ -3610,7 +3649,7 @@ Proof
 QED
 
 Theorem LFLATTEN_EQ_CONS:
-  LFLATTEN ll = h:::t ⇔
+  LFLATTEN ll = h:::t <=>
   ?p e t1 t2.
     ll = LAPPEND p ((h:::t1) ::: t2) /\
     LFINITE p /\ every ($= LNIL) p /\
@@ -3634,7 +3673,7 @@ Proof
 QED
 
 Theorem lbind_APPEND:
-  LFINITE l1 ⇒
+  LFINITE l1 ==>
   lbind (LAPPEND l1 l2) f = LAPPEND (lbind l1 f) (lbind l2 f)
 Proof
   simp[lbind_def, LMAP_APPEND, LFLATTEN_APPEND_FINITE1]
@@ -3673,7 +3712,7 @@ Theorem lbind_EQ_CONS:
   lbind ll f = h:::t <=>
   ?p e s t1 t2.
     ll = LAPPEND p (e ::: s) /\ LFINITE p /\
-    (!e0. e0 IN LSET p ⇒ f e0 = [||]) /\
+    (!e0. e0 IN LSET p ==> f e0 = [||]) /\
     t = LAPPEND t1 t2 /\
     f e = h:::t1 /\
     lbind s f = t2
