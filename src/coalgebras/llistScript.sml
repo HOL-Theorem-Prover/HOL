@@ -741,6 +741,9 @@ val LAPPEND = new_specification
 val _ = export_rewrites ["LAPPEND"]
 val _ = computeLib.add_persistent_funs ["LAPPEND"]
 
+val _ = set_mapped_fixity{fixity = Infixl 480, term_name = "LAPPEND",
+                          tok = "++ₗ"};                               (* UOK *)
+
 (* properties of map and append *)
 
 Theorem LMAP_APPEND:
@@ -936,9 +939,9 @@ val LFINITE_STRONG_INDUCTION = save_thm(
   SIMP_RULE (srw_ss()) [LFINITE_THM]
   (Q.SPEC `\ll. LFINITE ll /\ P ll` LFINITE_INDUCTION))
 
-val LFINITE_MAP = store_thm(
-  "LFINITE_MAP",
-  ``!f (ll:'a llist). LFINITE (LMAP f ll) = LFINITE ll``,
+Theorem LFINITE_MAP[simp]:
+  !f (ll:'a llist). LFINITE (LMAP f ll) = LFINITE ll
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     Q_TAC SUFF_TAC `!ll1. LFINITE ll1 ==>
                           !ll. (ll1 = LMAP f ll) ==> LFINITE ll`
@@ -948,9 +951,10 @@ val LFINITE_MAP = store_thm(
     FULL_SIMP_TAC (srw_ss()) [LMAP, LFINITE_THM],
     Q.ID_SPEC_TAC `ll` THEN HO_MATCH_MP_TAC LFINITE_INDUCTION THEN
     SIMP_TAC (srw_ss()) [LFINITE_THM, LMAP]
-  ]);
+  ]
+QED
 
-Theorem LFINITE_APPEND:
+Theorem LFINITE_APPEND[simp]:
   !ll1 ll2. LFINITE (LAPPEND ll1 ll2) <=> LFINITE ll1 /\ LFINITE ll2
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
@@ -1028,7 +1032,7 @@ val LLENGTH_APPEND = store_thm(
     ASM_SIMP_TAC (srw_ss()) [arithmeticTheory.ADD_CLAUSES],
     `LLENGTH (LAPPEND ll1 ll2) = NONE`
       by PROVE_TAC [NOT_LFINITE_NO_LENGTH] THEN
-    FULL_SIMP_TAC (srw_ss()) [LFINITE_APPEND]
+    FULL_SIMP_TAC (srw_ss()) []
   ]);
 
 (* ----------------------------------------------------------------------
@@ -1350,10 +1354,10 @@ val lnth_some_down_closed = Q.store_thm ("lnth_some_down_closed",
     defined inductively
    ---------------------------------------------------------------------- *)
 
-val (exists_rules,exists_ind,exists_cases) = Hol_reln`
+Inductive exists:
   (!h t. P h ==> exists P (h ::: t)) /\
   (!h t. exists P t ==> exists P (h ::: t))
-`;
+End
 
 Theorem exists_thm[simp]:
     (exists P [||] = F) /\
@@ -1872,7 +1876,7 @@ Proof
   ‘!lll.
      LFINITE lll ==> llist$every (\ll. LFINITE ll /\ ll <> LNIL) lll ==>
      LFINITE (LFLATTEN lll)’
-    by (ho_match_mp_tac LFINITE_ind \\ fs [LFINITE_APPEND])
+    by (ho_match_mp_tac LFINITE_ind \\ fs [])
   \\ qsuff_tac ‘!x.
       LFINITE x ==>
       !lll.
@@ -2102,7 +2106,7 @@ val toList_LAPPEND_APPEND = Q.store_thm("toList_LAPPEND_APPEND",
   `(toList (LAPPEND l1 l2) = SOME x) ==>
     (x = (THE(toList l1)++THE(toList l2)))`,
   Cases_on`l2=[||]`>>simp[toList_THM,LAPPEND_NIL_2ND] >>
-  strip_tac >> fs[toList,LFINITE_APPEND] >>
+  strip_tac >> fs[toList] >>
   rfs[LLENGTH_APPEND] >>
   qmatch_assum_abbrev_tac`LTAKE n (LAPPEND l1 l2) = SOME x` >>
   `LTAKE n l1 = NONE` by (
@@ -2786,10 +2790,10 @@ val LGENLIST_EQ_CONS = Q.store_thm(
     [||]
    ---------------------------------------------------------------------- *)
 
-val LREPEAT_def = zDefine`
+Definition LREPEAT_def[nocompute]:
   LREPEAT l = if NULL l then [||]
               else LGENLIST (\n. EL (n MOD LENGTH l) l) NONE
-`;
+End
 
 val LGENLIST_CHUNK_GENLIST = Q.store_thm(
   "LGENLIST_CHUNK_GENLIST",
@@ -3529,5 +3533,373 @@ Proof
   \\ Cases
   \\ fs [LTAKE_WHILE,LDROP_WHILE,PULL_EXISTS]
 QED
+
+Definition lbind_def:
+  lbind ll f = LFLATTEN (LMAP f ll)
+End
+
+Theorem lbind_EQ_NIL:
+  lbind ll f = [||] <=>
+  !e. e IN LSET ll ⇒ f e = [||]
+Proof
+  REWRITE_TAC [Once $ DECIDE “(p = q:bool) = (~p = ~q)”] >>
+  simp_tac pure_ss [NOT_FORALL_THM] >>
+  simp[lbind_def, LFLATTEN_EQ_NIL, every_def,
+       exists_LNTH, LSET_def, PULL_EXISTS, IN_DEF] >>
+  metis_tac[]
+QED
+
+Theorem LFLATTEN_APPEND_FINITE1:
+  !l1 l2.
+    LFINITE l1 ==>
+    LFLATTEN (LAPPEND l1 l2) = LAPPEND (LFLATTEN l1) (LFLATTEN l2)
+Proof
+  Induct_on ‘LFINITE’ using LFINITE_INDUCTION >> simp[LAPPEND_ASSOC]
+QED
+
+Theorem LFINITE_LFILTER:
+  !ll. LFINITE ll ==> LFINITE (LFILTER P ll)
+Proof
+  Induct_on ‘LFINITE’ >> rw[]
+QED
+
+Theorem not_compose:
+  $~ o ($~ o f) = f /\ $~ o $~ = I
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem LFLATTEN_fromList:
+  EVERY ($= LNIL) l ==> LFLATTEN (fromList l) = LNIL
+Proof
+  Induct_on ‘l’ >> simp[]
+QED
+
+Theorem LFINITE_LFLATTEN:
+  LFINITE (LFLATTEN ll) <=>
+    LFINITE $ LFILTER ($~ o $= LNIL) ll /\ every LFINITE ll
+Proof
+  reverse eq_tac >> rw[] >> simp[every_def] >~
+  [‘~exists _ ll’]
+  >- (strip_tac >> qpat_x_assum ‘LFINITE _’ mp_tac >>
+      pop_assum mp_tac >> Induct_on ‘exists’ >> simp[]) >~
+  [‘every LFINITE ll’]
+  >- (rpt $ pop_assum mp_tac >> qid_spec_tac ‘ll’ >> Induct_on ‘LFINITE’ >>
+      rpt strip_tac >> gs[LFILTER_EQ_NIL, not_compose, iffRL LFLATTEN_EQ_NIL]>>
+      drule_then strip_assume_tac LFILTER_EQ_CONS >>
+      gvs[LFLATTEN_APPEND_FINITE1, LFINITE_fromList,
+          not_compose, LFLATTEN_fromList] >>
+      drule_at (Pos last) every_LAPPEND2_LFINITE >>
+      simp[LFINITE_fromList]) >>
+  rpt $ pop_assum mp_tac >> qid_spec_tac ‘ll’ >> Induct_on ‘LFINITE’ >>
+  rw[]
+  >- gs[LFLATTEN_EQ_NIL, iffRL LFILTER_EQ_NIL, not_compose] >>
+  Cases_on ‘LFILTER ($~ o $= LNIL) ll’ >> simp[] >>
+  drule_then strip_assume_tac LFILTER_EQ_CONS >>
+  gvs[not_compose, LFLATTEN_APPEND_FINITE1, LFINITE_fromList,
+      LFILTER_APPEND] >>
+  rename [‘LNIL <> hl’,
+          ‘LAPPEND (LFLATTEN $ fromList l) (LAPPEND hl $ LFLATTEN ll2) =
+           h:::ll1’] >>
+  ‘FILTER ($~ o $= LNIL) l = []’
+    by simp[listTheory.FILTER_EQ_NIL, SF ETA_ss] >>
+  gs[LFLATTEN_fromList] >>
+  Cases_on ‘hl’ >> gvs[] >> rename [‘LFLATTEN _ = LAPPEND t _’] >>
+  first_x_assum $ qspec_then ‘t:::ll2’ mp_tac >> simp[LFLATTEN_APPEND] >>
+  rw[] >> rw[]
+QED
+
+Theorem LFLATTEN_EQ_CONS:
+  LFLATTEN ll = h:::t ⇔
+  ?p e t1 t2.
+    ll = LAPPEND p ((h:::t1) ::: t2) /\
+    LFINITE p /\ every ($= LNIL) p /\
+    t = LAPPEND t1 (LFLATTEN t2)
+Proof
+  reverse eq_tac >> rpt strip_tac
+  >- (simp[LFLATTEN_APPEND_FINITE1] >>
+      ‘LFLATTEN p = LNIL’ suffices_by simp[] >>
+      simp[LFLATTEN_EQ_NIL]) >>
+  ‘exists ($~ o $= LNIL) ll’
+    by (CCONTR_TAC >> gs[GSYM every_def, GSYM LFLATTEN_EQ_NIL]) >>
+  rpt (pop_assum mp_tac) >> map_every qid_spec_tac [‘h’, ‘t’, ‘ll’] >>
+  Induct_on ‘exists’ >> rw[] >~
+  [‘LNIL <> hl’, ‘LAPPEND hl $ LFLATTEN t1 = h:::t2’]
+  >- (Cases_on ‘hl’ >> gvs[] >> irule_at Any EQ_REFL >> qexists ‘LNIL’ >>
+      simp[]) >~
+  [‘LAPPEND hl $ LFLATTEN t1 = h:::t2’] >>
+  Cases_on ‘hl’ >> gvs[]
+  >- (qexists ‘LNIL ::: p’ >> simp[] >> metis_tac[]) >>
+  qexists ‘LNIL’ >> simp[]
+QED
+
+Theorem lbind_APPEND:
+  LFINITE l1 ⇒
+  lbind (LAPPEND l1 l2) f = LAPPEND (lbind l1 f) (lbind l2 f)
+Proof
+  simp[lbind_def, LMAP_APPEND, LFLATTEN_APPEND_FINITE1]
+QED
+
+Theorem lbind_CONS[simp]:
+  lbind (h:::t) f = LAPPEND (f h) (lbind t f)
+Proof
+  simp[lbind_def]
+QED
+
+Theorem LMAP_EQ_NIL[simp]:
+  (LMAP f l = LNIL <=> l = LNIL) /\
+  (LNIL = LMAP f l <=> l = LNIL)
+Proof
+  Cases_on ‘l’ >> simp[]
+QED
+
+Theorem LMAP_EQ_CONS:
+  LMAP f l = h:::t <=> ?h0 t0. l = h0:::t0 /\ h = f h0 /\ t = LMAP f t0
+Proof
+  Cases_on ‘l’ >> simp[] >> metis_tac[]
+QED
+
+Theorem LMAP_EQ_APPEND_FINITE1:
+  !ll ll1 ll2.
+    LFINITE ll1 ==>
+    (LMAP f ll = LAPPEND ll1 ll2 <=>
+     ?ll10 ll20. ll = LAPPEND ll10 ll20 /\ LMAP f ll10 = ll1 /\
+                 LMAP f ll20 = ll2)
+Proof
+  Induct_on ‘LFINITE’ >> simp[LMAP_EQ_CONS, PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem lbind_EQ_CONS:
+  lbind ll f = h:::t <=>
+  ?p e s t1 t2.
+    ll = LAPPEND p (e ::: s) /\ LFINITE p /\
+    (!e0. e0 IN LSET p ⇒ f e0 = [||]) /\
+    t = LAPPEND t1 t2 /\
+    f e = h:::t1 /\
+    lbind s f = t2
+Proof
+  reverse eq_tac >> rpt strip_tac
+  >- (simp[lbind_APPEND] >> ‘lbind p f = LNIL’ by simp[lbind_EQ_NIL] >>
+      simp[]) >>
+  gvs[lbind_def, LFLATTEN_EQ_CONS, LMAP_EQ_APPEND_FINITE1, LMAP_EQ_CONS] >>
+  rpt $ irule_at Any EQ_REFL >> simp[] >>
+  gs[every_LNTH, PULL_EXISTS, LSET_def, IN_DEF]
+QED
+
+Theorem LSET_exists:
+  x IN LSET ll <=> exists ($= x) ll
+Proof
+  simp[IN_DEF, LSET_def, exists_LNTH] >> metis_tac[]
+QED
+
+Theorem exists_APPEND:
+  !l1 l2. exists P (LAPPEND l1 l2) <=> exists P l1 \/ LFINITE l1 /\ exists P l2
+Proof
+  simp[EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM] >> rpt conj_tac >~
+  [‘exists _ (LAPPEND _ _) ==> _’]
+  >- (Induct_on‘exists’ >> rw[] >> rename [‘LAPPEND l1 l2 = h:::t’] >>
+      Cases_on ‘l1’ >> gvs[] >> metis_tac[]) >~
+  [‘exists _ _ ==> _’]
+  >- (Induct_on ‘exists’ >> simp[]) >>
+  Induct_on ‘LFINITE’ >> simp[]
+QED
+
+Theorem LAPPEND11_FINITE1:
+  !l1 l2 l3. LFINITE l1 ==> (LAPPEND l1 l2 = LAPPEND l1 l3 <=> l2 = l3)
+Proof
+  Induct_on ‘LFINITE’ >> simp[]
+QED
+
+Theorem every_APPEND_EQN:
+  every P (LAPPEND l1 l2) <=> every P l1 /\ (LFINITE l1 ==> every P l2)
+Proof
+  reverse $ Cases_on ‘LFINITE l1’ >> simp[NOT_LFINITE_APPEND] >>
+  pop_assum mp_tac >> Induct_on ‘LFINITE’ >> simp[] >> metis_tac[]
+QED
+
+Theorem exists_FLATTEN:
+  exists P (LFLATTEN ll) <=>
+  ?p e0 s.
+    LFINITE p /\ every LFINITE p /\ ll = LAPPEND p (e0:::s) /\ exists P e0
+Proof
+  eq_tac
+  >- (qid_spec_tac ‘ll’ >> Induct_on ‘exists’ >> rw[] >>
+      gvs[LFLATTEN_EQ_CONS, exists_APPEND] >> dsimp[] >~
+      [‘exists P (LFLATTEN t2)’, ‘LFLATTEN _ = LAPPEND t1 (LFLATTEN t2)’]
+      >- (first_x_assum $ qspec_then ‘t1:::t2’ mp_tac >> simp[] >> rw[] >>
+          rename [‘t1:::t2 = LAPPEND p0 (e0:::s)’,
+                  ‘LAPPEND p ((h:::t1):::t2)’] >>
+          Cases_on ‘p0’ >> gvs[]
+          >- (irule_at Any EQ_REFL >> simp[] >> irule MONO_every >>
+              first_assum $ irule_at Any >> simp[]) >>
+          rename [‘LAPPEND p ((h:::hl) ::: LAPPEND t (e0:::s))’] >>
+          qexists ‘LAPPEND p ((h:::hl) ::: t)’ >>
+          simp[LAPPEND11_FINITE1, LAPPEND_ASSOC,
+               every_APPEND_EQN] >> irule MONO_every >>
+          first_assum $ irule_at Any >> simp[]) >>
+      irule_at Any EQ_REFL >> simp[] >> irule MONO_every >>
+      first_assum $ irule_at Any >> simp[]) >>
+  simp[PULL_EXISTS, LFLATTEN_APPEND_FINITE1, exists_APPEND, LFINITE_LFLATTEN,
+       LFINITE_LFILTER]
+QED
+
+Theorem LSET_FLATTEN:
+  LSET $ LFLATTEN ll = { e | ?p e0 s. ll = LAPPEND p (e0:::s) /\ e IN LSET e0 /\
+                                      LFINITE p /\ every LFINITE p }
+Proof
+  simp[LSET_exists, EXTENSION, exists_FLATTEN] >> metis_tac[]
+QED
+
+Theorem every_LMAP:
+  every P (LMAP f l) <=> every (P o f) l
+Proof
+  eq_tac
+  >- (qid_spec_tac ‘l’ >> ho_match_mp_tac every_coind >> simp[]) >>
+  ‘!l. (?l0. l = LMAP f l0 /\ every (P o f) l0) ==> every P l’
+    suffices_by simp[PULL_EXISTS] >>
+  ho_match_mp_tac every_coind >> simp[LMAP_EQ_CONS, PULL_EXISTS] >>
+  metis_tac[]
+QED
+
+Theorem LSET_lbind:
+  LSET (lbind ll f) = { e | ?p e0 s. ll = LAPPEND p (e0:::s) /\
+                                     LFINITE p /\ every (LFINITE o f) p /\
+                                     e IN LSET $ f e0 }
+Proof
+  simp[EXTENSION,lbind_def, LSET_FLATTEN, SF CONJ_ss, LMAP_EQ_APPEND_FINITE1,
+       PULL_EXISTS, LMAP_EQ_CONS, every_LMAP] >>
+  metis_tac[]
+QED
+
+Theorem LSET_APPEND:
+  LSET (LAPPEND l1 l2) = LSET l1 UNION (if LFINITE l1 then LSET l2 else {})
+Proof
+  reverse $ Cases_on ‘LFINITE l1’ >> simp[NOT_LFINITE_APPEND] >>
+  pop_assum mp_tac >> Induct_on ‘LFINITE’ >>
+  simp[INSERT_UNION_EQ]
+QED
+
+Theorem LSET_FINITE_pfx:
+  x IN LSET ll <=> ?p s. ll = LAPPEND p (x:::s) /\ LFINITE p
+Proof
+  simp[EQ_IMP_THM, PULL_EXISTS, LSET_APPEND] >>
+  simp[IN_DEF, LSET_def, PULL_EXISTS] >> qid_spec_tac ‘ll’ >> Induct_on ‘n’ >>
+  Cases_on ‘ll’ >> simp[] >> strip_tac >- (qexists ‘LNIL’ >> simp[]) >>
+  first_x_assum $ drule_then strip_assume_tac >> gvs[] >>
+  rename [‘h:::(LAPPEND p _)’] >> qexists ‘h:::p’ >> simp[] >>
+  metis_tac[]
+QED
+
+Overload rpt_el = “λe. LGENLIST (K e) NONE”
+
+Theorem fromList_EQ_CONS:
+  fromList l = h:::t <=> ?t0. l = h::t0 /\ t = fromList t0
+Proof
+  Cases_on ‘l’ >> simp[] >> metis_tac[]
+QED
+
+Theorem GENLIST_EQ_CONS:
+  GENLIST f n = h::t <=> 0 < n /\ f 0 = h /\ t = GENLIST (f o SUC) (n - 1)
+Proof
+  Cases_on ‘n’ >> simp[listTheory.GENLIST_CONS] >> metis_tac[]
+QED
+
+Theorem LGENLIST_SOME_EQ_CONS:
+  LGENLIST f (SOME n) = h:::t <=>
+  0 < n /\ f 0 = h /\ t = LGENLIST (f o SUC) (SOME (n - 1))
+Proof
+  simp[LGENLIST_EQ_fromList, fromList_EQ_CONS, GENLIST_EQ_CONS]
+QED
+
+Theorem every_LGENLIST:
+  (every P (LGENLIST f (SOME n)) <=> (!m. m < n ==> P (f m))) /\
+  (every P (LGENLIST f NONE) <=> !m. P (f m))
+Proof
+  conj_tac >> eq_tac >~
+  [‘_ ==> every P (LGENLIST f NONE)’]
+  >- (‘!ll. (?f. ll = LGENLIST f NONE /\ !m. P (f m)) ==> every P ll’
+        suffices_by metis_tac[]>>
+      ho_match_mp_tac every_coind >>
+      simp[LGENLIST_EQ_CONS, PULL_EXISTS] >> rw[] >>
+      irule_at Any EQ_REFL >> simp[]) >~
+  [‘_ ==> every _ _ ’]
+  >- (‘!ll. (?f n. ll = LGENLIST f (SOME n) /\ !m. m < n ==> P (f m)) ==>
+            every P ll’
+        suffices_by metis_tac[] >>
+      ho_match_mp_tac every_coind >> simp[LGENLIST_SOME_EQ_CONS, PULL_EXISTS] >>
+      rpt strip_tac >> irule_at Any EQ_REFL >> simp[]) >~
+  [‘every _ (LGENLIST f (SOME n))’]
+  >- (map_every qid_spec_tac [‘f’, ‘n’] >> Induct >>
+      simp[LT_SUC, DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS] >>
+      rpt strip_tac >> first_x_assum drule_all >> simp[]) >>
+  CONV_TAC CONTRAPOS_CONV >> qid_spec_tac ‘f’ >>
+  simp[GSYM every_def, PULL_EXISTS] >> CONV_TAC SWAP_FORALL_CONV >>
+  Induct >> rpt strip_tac >>
+  Cases_on ‘LGENLIST f NONE’ >> gvs[LGENLIST_EQ_CONS] >>
+  first_x_assum $ drule_at Concl >> gs[ADD1]
+QED
+
+Theorem rpt_el_CONS':
+  e ::: rpt_el e = rpt_el e
+Proof
+  Cases_on ‘rpt_el e’ >> gs[LGENLIST_EQ_CONS]
+QED
+
+Theorem rpt_el_EQ_APPEND:
+  rpt_el e = LAPPEND l1 l2 <=>
+  if LFINITE l1 then every ($= e) l1 /\ l2 = rpt_el e
+  else l1 = rpt_el e
+Proof
+  reverse $ rw[NOT_LFINITE_APPEND] >- metis_tac[] >>
+  pop_assum mp_tac >> Induct_on ‘LFINITE’ >> simp[] >> conj_tac
+  >- metis_tac[] >>
+  rpt strip_tac >> simp[Once $ GSYM rpt_el_CONS', SimpLHS] >> metis_tac[]
+QED
+
+(*
+Theorem LFLATTEN_rpt_el:
+  LFLATTEN (rpt_el l) = if LFINITE l then LREPEAT (THE (toList l))
+                        else l
+Proof
+  Cases_on ‘LFINITE l’ >> simp[]
+  >- (Cases_on ‘l = LNIL’ >> simp[toList_THM, LFLATTEN_EQ_NIL, every_LGENLIST]>>
+      ONCE_REWRITE_TAC [LLIST_BISIMULATION] >>
+      qexists ‘λl1 l2. ?l. LFINITE l /\ l1 = LFLATTEN (rpt_el l) /\
+                           l2 = LREPEAT (THE (toList l))’ >>
+      rw[] >- (irule_at Any EQ_REFL >> simp[]) >>
+      rename [‘LFLATTEN (rpt_el ll) = LNIL’] >>
+      Cases_on ‘LFLATTEN (rpt_el ll)’ >> simp[]
+      >- gvs[LFLATTEN_EQ_NIL, every_LGENLIST, toList_THM] >>
+      simp[] >> gvs[LFLATTEN_EQ_CONS] >>
+      Cases_on ‘ll = LNIL’
+      >- (gvs[toList_THM, rpt_el_EQ_APPEND] >>
+          gs[LGENLIST_EQ_CONS]) >>
+      gvs[rpt_el_EQ_APPEND, LGENLIST_EQ_CONS] >>
+      rename [‘every _ pfx’] >> Cases_on ‘pfx’ >> gvs[] >>
+      simp[to_fromList] >> rename [‘LAPPEND ’
+*)
+
+
+Theorem lbind_thm:
+  lbind LNIL f = LNIL /\
+  lbind (h:::t) f = LAPPEND (f h) $ lbind t f
+Proof
+  simp[lbind_def]
+QED
+
+Theorem lbind_notASSOC:
+  let f b = if b then rpt_el T else [|F|] ;
+      g b = if b then LNIL else [| 1 |] ;
+      bs = [|T; F|]
+  in
+    lbind bs (λb. lbind (f b) g) <> lbind (lbind bs f) g
+Proof
+  simp[lbind_def, NOT_LFINITE_APPEND] >>
+  ‘LFLATTEN (rpt_el LNIL : num llist llist) = LNIL’ suffices_by simp[] >>
+  simp[LFLATTEN_EQ_NIL, every_LGENLIST]
+QED
+
+
+
 
 val _ = export_theory();
