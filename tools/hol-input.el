@@ -190,7 +190,7 @@ order for the change to take effect."
                        (sexp :tag "Tweaking function"))))
 
 (defcustom hol-input-translations
-  (let ((max-lisp-eval-depth 2800)) `(
+  (eval-when-compile (setq-local max-lisp-eval-depth 2800) `(
 
   ;; Negation
 
