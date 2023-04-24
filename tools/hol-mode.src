@@ -2149,6 +2149,9 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
   '("Start HOL" . hol))
 
+(define-key global-map [menu-bar hol-menu hol-process hol-with-region]
+  '("Start HOL & run to cursor" . hol-with-region))
+
 ;; Support for snippet expansion, if yasnippet is installed.
 (when (require 'yasnippet nil 'noerror)
   (let ((HOLsnippets
