@@ -616,7 +616,7 @@ Proof
   simp[] THEN METIS_TAC []
 QED
 
-Theorem TOPSPACE_SUBTOPOLOGY :
+Theorem TOPSPACE_SUBTOPOLOGY[simp]:
   !top u. topspace(subtopology top u) = topspace top INTER u
 Proof
   REWRITE_TAC[topspace, OPEN_IN_SUBTOPOLOGY, INTER_BIGUNION] THEN
