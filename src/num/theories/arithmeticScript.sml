@@ -778,6 +778,13 @@ val LESS_EQ_TRANS = store_thm ("LESS_EQ_TRANS",
    REWRITE_TAC[LESS_OR_EQ_ALT, REWRITE_RULE
      [relationTheory.transitive_def] relationTheory.transitive_RTC]) ;
 
+Theorem transitive_LE[simp]:
+  transitive $<=
+Proof
+  REWRITE_TAC[relationTheory.transitive_def] >>
+  MATCH_ACCEPT_TAC LESS_EQ_TRANS
+QED
+
 val LESS_EQ_LESS_TRANS = store_thm ("LESS_EQ_LESS_TRANS",
   “!m n p. m <= n /\ n < p ==> m < p”,
   REPEAT GEN_TAC THEN REWRITE_TAC[LESS_OR_EQ] THEN
