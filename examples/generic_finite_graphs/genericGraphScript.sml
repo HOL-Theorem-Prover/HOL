@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory pairTheory
+open pred_setTheory pairTheory sortingTheory
 
 val _ = new_theory "genericGraph";
 
@@ -1241,8 +1241,14 @@ Proof
 QED
 
 Definition edgesize_def:
-  edgesize (g : (α,δ,finiteG,σ) ulabgraph) = CARD $ edges g
+  edgesize (g : (α,directedG,finiteG,σ) ulabgraph) = CARD $ edges g
 End
+
+Theorem edgesize_empty[simp]:
+  edgesize emptyG = 0
+Proof
+  simp[edgesize_def]
+QED
 
 (* ----------------------------------------------------------------------
     pulling a graph apart and putting it back together
@@ -1693,27 +1699,11 @@ Proof
   dsimp[PULL_EXISTS] >> metis_tac[]
 QED
 
-Definition degree_def:
-  degree (g: α fsgraph) v = CARD { e | e ∈ edges g ∧ v ∈ incident e }
-End
-
-Definition maxdegree_def:
-  maxdegree (g : α fsgraph) = MAX_SET (IMAGE (degree g) (nodes g))
-End
-
-Overload "Δ" = “maxdegree”
-
-Definition mindegree_def:
-  mindegree (g : α fsgraph) = MIN_SET (IMAGE (degree g) (nodes g))
-End
-Overload "δ" = “mindegree”
-
 (* doesn't add any nodes *)
 Definition fsgAddEdges0_def:
-  fsgAddEdges0 (es0:(α,unit)edge set) g0 =
+  fsgAddEdges0 (es0: α set set) g0 =
   let
-    es = { (m,n,()) | m ≠ n ∧ m ∈ g0.nodes ∧ n ∈ g0.nodes ∧
-                      ((m,n,()) ∈ es0 ∨ (n,m,()) ∈ es0) }
+    es = { (m,n,()) | m ≠ n ∧ m ∈ g0.nodes ∧ n ∈ g0.nodes ∧ {m;n} ∈ es0 }
   in
     g0 with edges := g0.edges ∪ es
 End
@@ -1726,29 +1716,26 @@ Proof
   simp[wfgraph_def, fsgAddEdges0_def, SF CONJ_ss, edge_cst_def,
        finite_cst_def] >> rw[] >>
   simp[incident_def] >~
+  [‘{m;n} ∈ es’] >- metis_tac[pred_setTheory.INSERT_COMM] >~
   [‘FINITE (GSPEC _)’]
   >- (irule SUBSET_FINITE >> qexists ‘g0.nodes × g0.nodes × UNIV’ >> simp[] >>
       simp[SUBSET_DEF, FORALL_PROD, INSERT2_lemma, SF DNF_ss] >>
       gs[FORALL_PROD, incident_def] >> metis_tac[])
   >- simp[SF DNF_ss, SF CONJ_ss]
   >- (simp[SF DNF_ss, SF CONJ_ss, GSPEC_OR] >> gs[PULL_EXISTS] >>
-      qmatch_abbrev_tac ‘CARD (A1 ∪ (A2 ∪ A3)) = 2’ >>
-      ‘A2 ∪ A3 ⊆ A1’
-        by (simp[SUBSET_DEF, Abbr‘A2’, Abbr‘A3’, Abbr‘A1’, PULL_EXISTS,
+      qmatch_abbrev_tac ‘CARD (A1 ∪ A2) = 2’ >>
+      ‘A2 ⊆ A1’
+        by (simp[SUBSET_DEF, Abbr‘A2’, Abbr‘A1’, PULL_EXISTS,
                  INSERT2_lemma] >>
             ‘flip_edge e ∈ g0.edges’ by simp[] >> PairCases_on ‘e’ >>
             gs[INSERT2_lemma, flip_edge_def] >> rw[] >> simp[]) >>
-      ‘A1 ∪ (A2 ∪ A3) = A1’ by (simp[EXTENSION] >> gs[SUBSET_DEF] >>
-                                metis_tac[]) >>
+      ‘A1 ∪ A2 = A1’ by (simp[EXTENSION] >> gs[SUBSET_DEF] >> metis_tac[]) >>
       simp[Abbr‘A1’] >> first_x_assum irule >> metis_tac[])
   >- (qmatch_abbrev_tac ‘CARD A = 2’ >>
       ‘A = {(m,n,()); (n,m,())}’ suffices_by simp[] >>
       simp[Abbr‘A’, Once EXTENSION] >> simp[FORALL_PROD] >>
-      rw[EQ_IMP_THM] >> gs[INSERT2_lemma]) >>
-  qmatch_abbrev_tac ‘CARD A = 2’ >>
-  ‘A = {(m,n,()); (n,m,())}’ suffices_by simp[] >>
-  simp[Abbr‘A’, Once EXTENSION] >> simp[FORALL_PROD] >>
-  rw[EQ_IMP_THM] >> gs[INSERT2_lemma]
+      rw[EQ_IMP_THM] >> gvs[INSERT2_lemma] >>
+      metis_tac[pred_setTheory.INSERT_COMM])
 QED
 
 Definition fsgAddEdges_def:
@@ -1767,7 +1754,7 @@ QED
 Theorem edges_fsgAddEdges:
   edges (fsgAddEdges es g) =
     edges g ∪
-    { e | (e ∈ es ∨ flip_edge e ∈ es) ∧ incident e ⊆ nodes g ∧ ¬selfloop e}
+    { (m,n,()) | {m;n} ∈ es ∧ m ≠ n ∧ m ∈ nodes g ∧ n ∈ nodes g }
 Proof
   simp[edges_def, fsgAddEdges_def, #repabs_pseudo_id tydefrec, nodes_def,
        #termP_term_REP tydefrec, wfgraph_fsgAddEdges0, ITSELF_UNIQUE] >>
@@ -1778,12 +1765,9 @@ QED
 Theorem adjacent_fsgEdges[simp]:
   adjacent (fsgAddEdges es g) m n ⇔
     adjacent g m n ∨
-    m ≠ n ∧ m ∈ nodes g ∧ n ∈ nodes g ∧ ∃e. e ∈ es ∧ incident e = {m;n}
+    m ≠ n ∧ m ∈ nodes g ∧ n ∈ nodes g ∧ {m;n} ∈ es
 Proof
-  simp[adjacent_def, edges_fsgAddEdges] >> iff_tac >> rw[] >> simp[] >~
-  [‘incident e = {m; n}’]
-  >- (PairCases_on ‘e’ >> gs[INSERT2_lemma]) >>
-  disj2_tac >> first_assum $ irule_at Any >> simp[INSERT2_lemma]
+  simp[adjacent_def, edges_fsgAddEdges] >> iff_tac >> rw[] >> simp[]
 QED
 
 Theorem FINITE_fsg_edges[simp]:
@@ -1802,32 +1786,78 @@ Proof
   gs[wfgraph_def, ITSELF_UNIQUE, FORALL_PROD]
 QED
 
-Theorem decomposition_fsgraph:
+Definition valid_edges_def:
+  valid_edges es s ⇔ ∀e. e ∈ es ⇒ e ⊆ s ∧ FINITE e ∧ CARD e = 2
+End
+
+Definition fsgedges_def:
+  fsgedges (g: α fsgraph) = { {a;b} | adjacent g a b }
+End
+
+Theorem fsgedges_emptyG[simp]:
+  fsgedges emptyG = ∅
+Proof
+  simp[fsgedges_def]
+QED
+
+Theorem fsgedges_addNode[simp]:
+  fsgedges (addNode n u g) = fsgedges g
+Proof
+  simp[fsgedges_def]
+QED
+
+Theorem CARDEQ2:
+  FINITE s ⇒ (CARD s = 2 ⇔ ∃a b. a ≠ b ∧ s = {a;b})
+Proof
+  strip_tac >> simp[EQ_IMP_THM, PULL_EXISTS] >>
+  Cases_on ‘s’ >> gs[] >> rename [‘a ∉ s’] >>
+  Cases_on ‘s’ >> gs[] >> metis_tac[]
+QED
+
+Theorem fsgedges_fsgAddEdges:
+  valid_edges es (nodes g) ⇒
+  fsgedges (fsgAddEdges es g) = es ∪ fsgedges g
+Proof
+  simp[fsgedges_def, valid_edges_def] >> strip_tac >>
+  simp[Once EXTENSION] >> qx_gen_tac ‘ed’ >> iff_tac >> rw[] >>
+  simp[SF SFY_ss]
+  >- metis_tac[]
+  >- (gs[CARDEQ2, SUBSET_DEF, PULL_EXISTS, SF CONJ_ss, DISJ_IMP_THM,
+         FORALL_AND_THM] >>
+      first_x_assum $ drule >> simp[PULL_EXISTS] >> rw[] >>
+      metis_tac[]) >>
+  metis_tac[]
+QED
+
+Theorem fsgraph_decomposition:
   ∀g. g = emptyG ∨
       ∃n es g0 : α fsgraph.
         n ∉ nodes g0 ∧ FINITE es ∧ g = fsgAddEdges es (addNode n () g0) ∧
-        (∀e. e ∈ es ⇒ ¬selfloop e ∧ flip_edge e ∈ es ∧ n ∈ incident e) ∧
+        valid_edges es (n INSERT nodes g0) ∧
+        (∀e. e ∈ es ⇒ n ∈ e) ∧
         order g = order g0 + 1
 Proof
   gen_tac >> Cases_on ‘g = emptyG’ >> simp[gsize_def] >>
   ‘nodes g ≠ ∅’ by (strip_tac >> gs[]) >>
   gs[GSYM MEMBER_NOT_EMPTY] >> rename [‘n ∈ nodes g’] >>
-  qexistsl [‘n’, ‘{e | e ∈ edges g ∧ n ∈ incident e}’, ‘removeNode n g’] >>
-  simp[] >> rpt strip_tac >~
+  qexistsl [‘n’, ‘{{m;n} | m | adjacent g m n }’, ‘removeNode n g’] >>
+  simp[] >> rpt strip_tac >> simp[] >~
   [‘FINITE _’]
-  >- (irule SUBSET_FINITE >> qexists‘edges g’ >> simp[SUBSET_DEF]) >~
+  >- (irule SUBSET_FINITE >> qexists‘IMAGE (λm. {m;n}) (nodes g)’ >>
+      simp[SUBSET_DEF, PULL_EXISTS] >> metis_tac[adjacent_members]) >~
   [‘g = fsgAddEdges _ _’]
   >- (simp[ulabgraph_component_equality] >>
-      simp[adjacent_def] >> simp[EXISTS_PROD, INSERT2_lemma] >> rw[EQ_IMP_THM]>>
+      simp[adjacent_def] >> simp[EXISTS_PROD, INSERT2_lemma] >>
+      rw[EQ_IMP_THM]>>
       rename [‘(m,p,()) ∈ edges g’] >>
       ‘m ≠ p’ by simp[fsg_selfloop, SF SFY_ss] >>
       ‘m ∈ nodes g ∧ p ∈ nodes g’
         by (strip_tac >> irule incident_SUBSET_nodes >> simp[EXISTS_PROD] >>
             metis_tac[edges_SYM]) >> simp[] >>
       metis_tac[edges_SYM]) >~
-  [‘selfloop e’] >- (PairCases_on ‘e’ >> gs[]) >~
-  [‘flip_edge e ∈ edges g’]
-  >- (PairCases_on ‘e’ >> gs[] >> metis_tac[edges_SYM]) >~
+  [‘valid_edges _ _’]
+  >- (simp[valid_edges_def, PULL_EXISTS] >>
+      metis_tac[adjacent_members, adjacent_irrefl]) >~
   [‘CARD _ = CARD _ - 1 + 1’]
   >- (‘0 < CARD (nodes g)’ suffices_by simp[] >>
       CCONTR_TAC >> gs[])
@@ -1836,13 +1866,195 @@ QED
 Theorem fsg_induction:
   ∀P. P emptyG ∧
       (∀n es g0.
-         P g0 ∧ FINITE es ∧ n ∉ nodes g0 ∧
-         (∀e. e ∈ es ⇒ ¬selfloop e ∧ flip_edge e ∈ es ∧ n ∈ incident e) ⇒
+         P g0 ∧ FINITE es ∧ n ∉ nodes g0 ∧ valid_edges es (n INSERT nodes g0) ∧
+         (∀e. e ∈ es ⇒ n ∈ e) ⇒
          P (fsgAddEdges es (addNode n () g0))) ⇒
       ∀g. P g
 Proof
   rpt strip_tac >> Induct_on ‘order g’ >> simp[] >> rpt strip_tac >>
-  qspec_then ‘g’ strip_assume_tac decomposition_fsgraph >> gs[]
+  qspec_then ‘g’ strip_assume_tac fsgraph_decomposition >> gs[]
+QED
+
+Theorem FINITE_least_measure_ind:
+  ∀f P. P {} ∧
+        (∀a s. a ∉ s ∧ (∀b. b ∈ s ⇒ f a ≤ f b) ∧ P s ⇒ P (a INSERT s)) ⇒
+        ∀s. FINITE s ⇒ P s
+Proof
+  rpt gen_tac >> strip_tac >> Induct_on ‘CARD s’ >> rpt strip_tac >>
+  gvs[] >> ‘s ≠ ∅’ by (strip_tac >> gvs[]) >>
+  qspecl_then [‘λa. a ∈ s’, ‘f’] mp_tac arithmeticTheory.WOP_measure >>
+  impl_tac >- gs[MEMBER_NOT_EMPTY] >>
+  rw[] >> rename [‘a ∈ s’] >>
+  drule_then (qx_choose_then ‘s0’ strip_assume_tac) (iffLR DECOMPOSITION) >>
+  gvs[]
+QED
+
+Theorem FINITE_sets_have_descending_measure_lists:
+  ∀s. FINITE s ⇒
+      ∃es. SORTED (inv $<=) (MAP f es) ∧ set es = s ∧
+           ALL_DISTINCT es
+Proof
+  Induct_on ‘FINITE’ using FINITE_least_measure_ind >> qexists ‘f’ >>
+  simp[PULL_EXISTS] >> rpt strip_tac >>
+  rename [‘¬MEM a es’] >> qexists ‘es ++ [a]’ >>
+  simp[EXTENSION, AC DISJ_ASSOC DISJ_COMM, listTheory.ALL_DISTINCT_APPEND] >>
+  simp[SORTED_APPEND, listTheory.MEM_MAP, PULL_EXISTS]
+QED
+
+Theorem descending_measure_lists_unique:
+  ∀es1 es2. SORTED (inv $<=) (MAP f es1) ∧ SORTED (inv $<=) (MAP f es2) ∧
+            set es1 = set es2 ∧ ALL_DISTINCT es1 ∧ ALL_DISTINCT es2 ⇒
+            MAP f es1 = MAP f es2
+Proof
+  Induct >> simp[SORTED_EQ, listTheory.MEM_MAP, PULL_EXISTS] >>
+  rpt strip_tac >> simp[listTheory.MAP_EQ_CONS] >>
+  Cases_on ‘es2’ >> gvs[SORTED_EQ, listTheory.MEM_MAP, PULL_EXISTS] >>
+  rename [‘h1 INSERT set es1 = h2 INSERT set es2’] >>
+  Cases_on ‘h1 = h2’
+  >- (gvs[] >> first_x_assum irule >> simp[] >>
+      qpat_x_assum ‘_ INSERT _ = _ INSERT _’ mp_tac >>
+      simp[EXTENSION] >> metis_tac[]) >>
+  ‘MEM h1 es2 ∧ MEM h2 es1’ by (gs[EXTENSION] >> metis_tac[]) >>
+  ‘f h1 = f h2’ by metis_tac[arithmeticTheory.EQ_LESS_EQ] >> simp[] >>
+  ‘∃p2 s2. es2 = p2 ++ [h1] ++ s2’
+    by metis_tac[listTheory.MEM_SPLIT_APPEND_first] >>
+  gvs[listTheory.ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
+  first_x_assum $ qspec_then ‘p2 ++ [h2] ++ s2’ mp_tac >> simp[] >>
+  disch_then irule >>
+  simp[listTheory.ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
+  qpat_x_assum ‘_ INSERT _ = _’ mp_tac >>
+  simp[EXTENSION] >> metis_tac[]
+QED
+
+Theorem FINITE_fsgedges[simp]:
+  ∀g. FINITE (fsgedges g)
+Proof
+  Induct using fsg_induction >> simp[fsgedges_fsgAddEdges]
+QED
+
+Definition fsgsize_def:
+  fsgsize (g : α fsgraph) = CARD (fsgedges g)
+End
+
+Definition degree_def:
+  degree (g: α fsgraph) v = CARD { e | e ∈ fsgedges g ∧ v ∈ e }
+End
+
+Definition maxdegree_def:
+  maxdegree (g : α fsgraph) = MAX_SET (IMAGE (degree g) (nodes g))
+End
+
+Overload "Δ" = “maxdegree”
+
+Definition mindegree_def:
+  mindegree (g : α fsgraph) = MIN_SET (IMAGE (degree g) (nodes g))
+End
+Overload "δ" = “mindegree”
+
+Theorem degree_sequence_exists:
+  ∀g : α fsgraph.
+    ∃ds. SORTED (inv $<=) ds ∧
+         ∃ns. ds = MAP (degree g) ns ∧ set ns = nodes g ∧ ALL_DISTINCT ns
+Proof
+  simp[PULL_EXISTS] >> gen_tac >>
+  irule FINITE_sets_have_descending_measure_lists >> simp[]
+QED
+
+val degree_sequence_def =
+new_specification ("degree_sequence_def", ["degree_sequence"],
+                   SRULE [Once SKOLEM_THM] degree_sequence_exists);
+
+Theorem degree_sequence_emptyG[simp]:
+  degree_sequence emptyG = []
+Proof
+  qspec_then ‘emptyG’ mp_tac degree_sequence_def >> simp[]
+QED
+
+Theorem degree_sequence_unique:
+  ∀ns g. SORTED (inv $<=) $ MAP (degree g) ns ∧ set ns = nodes g ∧
+         ALL_DISTINCT ns ⇒
+         degree_sequence g = MAP (degree g) ns
+Proof
+  rpt strip_tac >> qspec_then ‘g’ strip_assume_tac degree_sequence_def >>
+  simp[] >> irule descending_measure_lists_unique >> gvs[]
+QED
+
+val _ = temp_clear_overloads_on "equiv_class"
+Theorem degree_fsgAddEdges:
+  valid_edges es (nodes g) ⇒
+  degree (fsgAddEdges es g) =
+  λn. CARD ({ ed | ed ∈ es ∧ n ∈ ed } ∪ { ed | ed ∈ fsgedges g ∧ n ∈ ed})
+Proof
+  dsimp[degree_def, FUN_EQ_THM, fsgedges_fsgAddEdges, GSPEC_OR]
+QED
+
+Theorem valid_edges_INSERT:
+  valid_edges (e INSERT es) s ⇔ valid_edges es s ∧ e ⊆ s ∧ FINITE e ∧ CARD e = 2
+Proof
+  simp[valid_edges_def]>> metis_tac[]
+QED
+
+Theorem SUM_IMAGE_EQ1:
+  FINITE A ⇒
+  (SUM_IMAGE f A = 1 ⇔ ∃a. a ∈ A ∧ f a = 1 ∧ SUM_IMAGE f (A DELETE a) = 0)
+Proof
+  simp[SUM_IMAGE_ZERO] >> Induct_on ‘FINITE’ >> simp[SUM_IMAGE_THM] >> rw[] >>
+  simp[arithmeticTheory.ADD_EQ_1, DELETE_NON_ELEMENT_RWT] >> iff_tac >> rw[]
+  >- (dsimp[] >> gs[SUM_IMAGE_ZERO])
+  >- (dsimp[] >> metis_tac[])
+  >- (simp[SUM_IMAGE_ZERO] >> metis_tac[]) >>
+  metis_tac[]
+QED
+
+Theorem sumdegrees:
+  ∀g. SUM_IMAGE (degree g) (nodes g) = 2 * fsgsize g
+Proof
+  simp[fsgsize_def] >> Induct using fsg_induction>>
+  simp[pred_setTheory.SUM_IMAGE_THM, pred_setTheory.DELETE_NON_ELEMENT_RWT,
+       fsgedges_fsgAddEdges] >>
+  ‘degree (fsgAddEdges es (addNode n () g)) n = CARD es’
+    by (‘∀e. e ∈ fsgedges g ⇒ n ∉ e’
+          by (simp[fsgedges_def, PULL_EXISTS] >>
+              metis_tac[adjacent_members]) >>
+        dsimp[degree_def, fsgedges_fsgAddEdges, SF CONJ_ss]) >>
+  simp[degree_fsgAddEdges] >>
+  ‘(∀n. FINITE { ed | ed ∈ es ∧ n ∈ ed}) ∧
+   ∀n. FINITE {ed | ed ∈ fsgedges g ∧ n ∈ ed}’
+    by (conj_tac >> gen_tac >> irule SUBSET_FINITE
+        >- (qexists ‘es’ >> simp[SUBSET_DEF])
+        >- (qexists ‘fsgedges g’ >> simp[SUBSET_DEF])) >>
+  simp[pred_setTheory.CARD_UNION_EQN] >>
+  ‘∀n. {ed | ed ∈ es ∧ n ∈ ed} ∩ {ed | ed ∈ fsgedges g ∧ n ∈ ed} = ∅’
+    by (simp[EXTENSION] >> rpt gen_tac >> CCONTR_TAC >> gs[] >>
+        gs[fsgedges_def] >> first_x_assum drule >> strip_tac >> gvs[] >>
+        metis_tac[adjacent_members]) >>
+  simp[SUM_IMAGE_ADD] >>
+  ‘es ∩ fsgedges g = ∅’ by (simp[fsgedges_def, Once EXTENSION] >>
+                            CCONTR_TAC >> gvs[] >> first_x_assum drule >>
+                            strip_tac >> gvs[] >> metis_tac[adjacent_members])>>
+  simp[GSYM degree_def, SF ETA_ss] >>
+  ‘SUM_IMAGE (λm. CARD { ed | ed ∈ es ∧ m ∈ ed}) (nodes g) = CARD es’
+    suffices_by simp[] >>
+  map_every (C qpat_x_assum mp_tac)
+            [‘valid_edges es _’, ‘FINITE es’, ‘n ∉ nodes g’,
+             ‘∀e. e ∈ es ⇒ n ∈ e’] >>
+  qid_spec_tac ‘n’ >> rpt (pop_assum kall_tac) >> Induct_on ‘FINITE’ >>
+  simp[] >> rw[] >> gvs[DISJ_IMP_THM, FORALL_AND_THM]
+  >- simp[SUM_IMAGE_ZERO] >>
+  dsimp[GSPEC_OR] >>
+  ‘(∀n. FINITE {ed | ed = e ∧ n ∈ ed}) ∧ (∀n. FINITE {ed | ed ∈ es ∧ n ∈ ed})’
+    by (conj_tac >> gen_tac >> irule SUBSET_FINITE
+        >- (qexists ‘{e}’ >> simp[SUBSET_DEF])
+        >- (qexists ‘es’ >> simp[SUBSET_DEF])) >>
+  ‘∀n. {ed | ed = e ∧ n ∈ ed} ∩ {ed | ed ∈ es ∧ n ∈ ed} = ∅’
+    by simp[Once EXTENSION] >>
+  simp[CARD_UNION_EQN, SUM_IMAGE_ADD] >>
+  gs[valid_edges_INSERT] >> first_x_assum $ drule_all >> simp[] >> strip_tac >>
+  simp[DECIDE “x + y = SUC x ⇔ y = 1”] >>
+  simp[SUM_IMAGE_EQ1] >>
+  gvs[CARDEQ2] >> simp[SUM_IMAGE_ZERO] >>
+  first_assum $ irule_at Any >> csimp[] >>
+  simp[Once EXTENSION]
 QED
 
 val  _ = export_theory();
