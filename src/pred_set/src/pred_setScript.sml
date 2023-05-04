@@ -3325,6 +3325,22 @@ Proof
   BETA_TAC THEN mesonLib.ASM_MESON_TAC [PSUBSET_FINITE, CARD_PSUBSET]
 QED
 
+Theorem FINITE_LEAST_MEASURE_INDUCTION:
+  !f P.
+    P {} /\
+    (!a s. a NOTIN s /\ (!b. b IN s ==> f a <= f b) /\ P s ==>
+           P (a INSERT s)) ==>
+    !s. FINITE s ==> P s
+Proof
+  rpt gen_tac >> strip_tac >> Induct_on ‘CARD s’ >> rpt strip_tac >>
+  fs[CARD_EQ_0] >> ‘s <> {}’ by (strip_tac >> fs[]) >>
+  Q.SPECL_THEN [‘λa. a IN s’, ‘f’] mp_tac arithmeticTheory.WOP_measure >>
+  impl_tac >- fs[MEMBER_NOT_EMPTY] >>
+  rw[] >> Q.RENAME_TAC [‘a IN s’] >>
+  drule_then (Q.X_CHOOSE_THEN ‘s0’ strip_assume_tac) (iffLR DECOMPOSITION) >>
+  fs[]
+QED
+
 
 val CARD_INSERT' = SPEC_ALL (UNDISCH (SPEC_ALL CARD_INSERT)) ;
 

@@ -1875,26 +1875,12 @@ Proof
   qspec_then ‘g’ strip_assume_tac fsgraph_decomposition >> gs[]
 QED
 
-Theorem FINITE_least_measure_ind:
-  ∀f P. P {} ∧
-        (∀a s. a ∉ s ∧ (∀b. b ∈ s ⇒ f a ≤ f b) ∧ P s ⇒ P (a INSERT s)) ⇒
-        ∀s. FINITE s ⇒ P s
-Proof
-  rpt gen_tac >> strip_tac >> Induct_on ‘CARD s’ >> rpt strip_tac >>
-  gvs[] >> ‘s ≠ ∅’ by (strip_tac >> gvs[]) >>
-  qspecl_then [‘λa. a ∈ s’, ‘f’] mp_tac arithmeticTheory.WOP_measure >>
-  impl_tac >- gs[MEMBER_NOT_EMPTY] >>
-  rw[] >> rename [‘a ∈ s’] >>
-  drule_then (qx_choose_then ‘s0’ strip_assume_tac) (iffLR DECOMPOSITION) >>
-  gvs[]
-QED
-
 Theorem FINITE_sets_have_descending_measure_lists:
   ∀s. FINITE s ⇒
       ∃es. SORTED (inv $<=) (MAP f es) ∧ set es = s ∧
            ALL_DISTINCT es
 Proof
-  Induct_on ‘FINITE’ using FINITE_least_measure_ind >> qexists ‘f’ >>
+  Induct_on ‘FINITE’ using FINITE_LEAST_MEASURE_INDUCTION >> qexists ‘f’ >>
   simp[PULL_EXISTS] >> rpt strip_tac >>
   rename [‘¬MEM a es’] >> qexists ‘es ++ [a]’ >>
   simp[EXTENSION, AC DISJ_ASSOC DISJ_COMM, listTheory.ALL_DISTINCT_APPEND] >>
