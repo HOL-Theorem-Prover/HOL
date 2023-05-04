@@ -2491,15 +2491,16 @@ val FINITE_INSERT =
 (* |- FINITE {} /\ !x s. FINITE (x INSERT s) <=> FINITE s *)
 Theorem FINITE_RULES = CONJ FINITE_EMPTY FINITE_INSERT
 
-val SIMPLE_FINITE_INDUCT =
-    TAC_PROOF
-    (([], (“!P. P EMPTY /\ (!s. P s ==> (!e:'a. P(e INSERT s)))
-                ==>
-               !s. FINITE s ==> P s”)),
-     GEN_TAC THEN STRIP_TAC THEN
-     PURE_ONCE_REWRITE_TAC [FINITE_DEF] THEN
-     GEN_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
-     ASM_REWRITE_TAC []);
+Theorem SIMPLE_FINITE_INDUCT:
+  !P. P EMPTY /\ (!s. P s ==> (!e:'a. P(e INSERT s)))
+      ==>
+      !s. FINITE s ==> P s
+Proof
+  GEN_TAC THEN STRIP_TAC THEN
+  PURE_ONCE_REWRITE_TAC [FINITE_DEF] THEN
+  GEN_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
+  ASM_REWRITE_TAC []
+QED
 
 val lemma =
   let val tac = ASM_CASES_TAC (“P:bool”) THEN ASM_REWRITE_TAC[]
@@ -2509,9 +2510,10 @@ val lemma =
   in REWRITE_RULE [lem,FINITE_EMPTY] (BETA_RULE th1)
   end;
 
-val FINITE_INDUCT = store_thm("FINITE_INDUCT",
-  ``!P. P {} /\ (!s. FINITE s /\ P s ==> (!e. ~(e IN s) ==> P(e INSERT s))) ==>
-    !s:'a set. FINITE s ==> P s``,
+Theorem FINITE_INDUCT[rule_induction]:
+  !P. P {} /\ (!s. FINITE s /\ P s ==> (!e. ~(e IN s) ==> P(e INSERT s))) ==>
+      !s:'a set. FINITE s ==> P s
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC lemma THEN
   ASM_REWRITE_TAC [] THEN
@@ -2519,9 +2521,8 @@ val FINITE_INDUCT = store_thm("FINITE_INDUCT",
   [IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT,
    ASM_CASES_TAC (“(e:'a) IN s”) THENL
    [IMP_RES_THEN SUBST1_TAC ABSORPTION, RES_TAC] THEN
-   ASM_REWRITE_TAC []]);
-
-val _ = IndDefLib.export_rule_induction "FINITE_INDUCT";
+   ASM_REWRITE_TAC []]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Load the set induction tactic in...                                   *)
@@ -3302,11 +3303,11 @@ val FINITE_SURJ_BIJ = Q.store_thm("FINITE_SURJ_BIJ",
   \\ REV_FULL_SIMP_TAC (srw_ss()) [CARD_DELETE]
   \\ Cases_on`CARD s` \\ REV_FULL_SIMP_TAC (srw_ss())[CARD_EQ_0] >> fs[]);
 
-val FINITE_COMPLETE_INDUCTION = Q.store_thm(
-  "FINITE_COMPLETE_INDUCTION",
-  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x)
+Theorem FINITE_COMPLETE_INDUCTION:
+  !P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x)
       ==>
-       !x. FINITE x ==> P x`,
+      !x. FINITE x ==> P x
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ((BETA_RULE o
                  Q.ISPEC `\x. FINITE x ==> P x` o
@@ -3321,7 +3322,9 @@ val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   ASM_REWRITE_TAC [measure_def,
                    inv_image_def] THEN
-  BETA_TAC THEN mesonLib.ASM_MESON_TAC [PSUBSET_FINITE, CARD_PSUBSET]);
+  BETA_TAC THEN mesonLib.ASM_MESON_TAC [PSUBSET_FINITE, CARD_PSUBSET]
+QED
+
 
 val CARD_INSERT' = SPEC_ALL (UNDISCH (SPEC_ALL CARD_INSERT)) ;
 
