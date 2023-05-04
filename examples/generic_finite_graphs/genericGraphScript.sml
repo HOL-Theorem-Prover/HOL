@@ -1922,6 +1922,7 @@ Definition fsgsize_def:
   fsgsize (g : α fsgraph) = CARD (fsgedges g)
 End
 
+(* vertices not even in the graph at all have degree 0 *)
 Definition degree_def:
   degree (g: α fsgraph) v = CARD { e | e ∈ fsgedges g ∧ v ∈ e }
 End
@@ -2042,5 +2043,40 @@ Proof
   first_assum $ irule_at Any >> csimp[] >>
   simp[Once EXTENSION]
 QED
+
+Theorem ODD_SUMIMAGE:
+  FINITE A ⇒
+  (ODD (SUM_IMAGE f A) ⇔ ODD (CARD { a | a ∈ A ∧ ODD (f a) }))
+Proof
+  Induct_on ‘FINITE’ >>
+  simp[SUM_IMAGE_THM, arithmeticTheory.ODD_ADD, DELETE_NON_ELEMENT_RWT,
+       SF DNF_ss, GSPEC_OR] >>
+  rw[] >> rename [‘a ∉ A’] >>
+  ‘(∀P. FINITE { e | e = a ∧ P e }) ∧ (∀P. FINITE { e | e ∈ A ∧ P e })’
+    by (rpt strip_tac >> irule SUBSET_FINITE >>
+        simp[GSPEC_AND] >> irule_at Any $ cj 1 INTER_SUBSET >> simp[]) >>
+  simp[CARD_UNION_EQN] >>
+  ‘∀P Q. {e | e = a ∧ P e} ∩ {e | e ∈ A ∧ Q e} = ∅’
+    by simp[EXTENSION] >>
+  simp[arithmeticTheory.ODD_ADD] >>
+  ‘ODD (CARD {e | e = a ∧ ODD (f e)}) = ODD (f a)’ suffices_by simp[] >>
+  Cases_on ‘ODD (f a)’ >> simp[SF CONJ_ss]
+QED
+
+(* "number of nodes with odd degree is even" *)
+Theorem EVEN_odddegree_nodes:
+  ∀g: α fsgraph. EVEN (CARD { n | ODD (degree g n) })
+Proof
+  gen_tac >> simp[arithmeticTheory.EVEN_ODD] >>
+  ‘{n | ODD (degree g n) } = {n | n ∈ nodes g ∧ ODD (degree g n)}’
+    by (simp[EXTENSION] >> qx_gen_tac ‘n’ >> iff_tac >> simp[]>>
+        simp[degree_def] >> CCONTR_TAC >> gvs[] >>
+        ‘{ e | e ∈ fsgedges g ∧ n ∈ e} = ∅’
+          suffices_by (strip_tac >> gvs[]) >>
+        simp[EXTENSION] >> qx_gen_tac ‘e’ >> simp[fsgedges_def] >>
+        CCONTR_TAC >> gvs[] >> metis_tac[adjacent_members]) >>
+  simp[GSYM ODD_SUMIMAGE, sumdegrees, SF ETA_ss, arithmeticTheory.ODD_MULT]
+QED
+
 
 val  _ = export_theory();
