@@ -1640,6 +1640,8 @@ A full set of comparison operators is defined in terms of \verb+<+.
 \end{alltt}
 \end{hol}
 
+Note that in all of \HOL{}'s standard numeric theories, it is usual practice to avoid uses of the ``greater-than'' constants and to express everything with either \holtxt{$<$} or \holtxt{$\le$}.
+
 \paragraph{Division and modulus}
 
 A constant specification is used to introduce division ({\small\verb+DIV+}, infix) and
