@@ -3333,10 +3333,10 @@ They are characterised by the following theorems
 
 \paragraph{Concatenation}
 
-Two lazy lists may be concatenated by \ml{LAPPEND}. If the first lazy
-list is infinite, elements of the second are inaccessible in the
-result.  A lazy list of lazy lists can be flattened to a lazy list by
-\ml{LFLATTEN}.
+Two lazy lists may be concatenated by \ml{LAPPEND} (written below using its infix Unicode form \texttt{++$_l$}).
+If the first lazy list is infinite, elements of the second are inaccessible in the
+result.
+A lazy list of lazy lists can be flattened to a lazy list by \ml{LFLATTEN}.
 \begin{hol}
 \begin{alltt}
 ##thm LAPPEND
