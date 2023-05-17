@@ -2,6 +2,10 @@ open HolKernel Parse boolLib bossLib;
 
 open pred_setTheory pairTheory sortingTheory
 
+(* Material on finite simple graphs mechanised from
+     "Combinatorics and Graph Theory" by Harris, Hirst, and Mossinghoff
+ *)
+
 val _ = new_theory "genericGraph";
 
 Type edge[pp] = “:α # α # 'label”
@@ -11,6 +15,16 @@ Theorem SING_EQ2[simp]:
 Proof
   simp[EXTENSION] >> metis_tac[]
 QED
+
+Theorem CARDEQ2:
+  FINITE s ⇒ (CARD s = 2 ⇔ ∃a b. a ≠ b ∧ s = {a;b})
+Proof
+  strip_tac >> simp[EQ_IMP_THM, PULL_EXISTS] >>
+  Cases_on ‘s’ >> gs[] >> rename [‘a ∉ s’] >>
+  Cases_on ‘s’ >> gs[] >> metis_tac[]
+QED
+
+
 
 Theorem INSERT2_lemma:
   {a;b} = {m;n} ⇔ a = b ∧ m = n ∧ a = m ∨
@@ -55,6 +69,12 @@ Theorem flip_edge_idem[simp]:
   flip_edge (flip_edge e) = e
 Proof
   PairCases_on ‘e’ >> simp[flip_edge_def]
+QED
+
+Theorem flip_edge_11[simp]:
+  flip_edge e1 = flip_edge e2 ⇔ e1 = e2
+Proof
+  map_every PairCases_on [‘e1’, ‘e2’] >> simp[] >> metis_tac[]
 QED
 
 Theorem flip_edge_EQ[simp]:
@@ -273,6 +293,48 @@ Theorem edge_cst_EMPTY[simp]:
   edge_cst x y z {}
 Proof
   rw[edge_cst_def]
+QED
+
+Theorem edge_cst_DELETE:
+  edge_cst A T b es ⇒ edge_cst A T b (es DELETE e)
+Proof
+  simp[edge_cst_def] >> rw[] >> gvs[] >~
+  [‘incident _ = {m;n}’]
+  >- (first_x_assum $ qspecl_then [‘m’, ‘n’] assume_tac >>
+      irule SUBSET_FINITE >> first_assum $ irule_at Any >> simp[SUBSET_DEF]) >>
+  rename [‘(m,n,_) ≠ e’] >>
+  rpt $ first_x_assum $ qspecl_then [‘m’, ‘n’] assume_tac >>
+  irule arithmeticTheory.LESS_EQ_TRANS >> first_assum $ irule_at Any >>
+  irule_at Any CARD_SUBSET >> simp[SUBSET_DEF, PULL_EXISTS] >>
+  irule SUBSET_FINITE >> first_assum $ irule_at Any >>
+  simp[SUBSET_DEF, PULL_EXISTS]
+QED
+
+Theorem edge_cst_DIFF:
+  edge_cst A F b es ⇒ edge_cst A F b (es DIFF {e; flip_edge e})
+Proof
+  simp[edge_cst_def] >> rw[] >> gvs[] >~
+  [‘FINITE {e' | (e' ∈ es ∧ e' ≠ e ∧ e' ≠ flip_edge e) ∧ incident e' = {m;n}}’]
+  >- (irule SUBSET_FINITE >>
+      first_x_assum $ qspecl_then [‘m’, ‘n’] $ FREEZE_THEN $ irule_at Any >>
+      simp[SUBSET_DEF]) >~
+  [‘incident _ = {m}’]
+  >- (‘CARD {e | e ∈ es ∧ incident e = {m}} ≤ 1’ by simp[] >>
+      irule arithmeticTheory.LESS_EQ_TRANS >> first_assum $ irule_at Any >>
+      irule CARD_SUBSET >> simp[SUBSET_DEF] >>
+      ‘FINITE {e | e ∈ es ∧ incident e = {m;m}}’ by simp[] >>
+      RULE_ASSUM_TAC $ SRULE[] >> simp[]) >~
+  [‘incident ed = {m;n}’, ‘m ≠ n’]
+  >- (gs[PULL_EXISTS] >> first_x_assum $ drule_all_then strip_assume_tac >>
+      PairCases_on ‘ed’ >>
+      gvs[INSERT2_lemma, FORALL_PROD, SF DNF_ss] >>
+      rename [‘incident _ = {m;n}’] >>
+      qmatch_abbrev_tac ‘CARD Es = 2’ >>
+      ‘Es = { e | e ∈ es ∧ incident e = {m;n}}’ suffices_by simp[] >>
+      simp[Abbr‘Es’, Once EXTENSION, FORALL_PROD, INSERT2_lemma]>>
+      metis_tac[]) >>
+  gs[PULL_EXISTS] >> first_x_assum $ drule_all_then strip_assume_tac >>
+  metis_tac[]
 QED
 
 Theorem graphs_exist[local]:
@@ -1599,6 +1661,69 @@ Proof
   metis_tac[incident_SUBSET_nodes]
 QED
 
+Theorem removeNode_NONMEMBER:
+  n ∉ nodes g ⇒ (removeNode n g = g)
+Proof
+  simp[gengraph_component_equality, DELETE_NON_ELEMENT_RWT] >>
+  simp[EXTENSION] >> metis_tac[incident_SUBSET_nodes]
+QED
+
+Theorem removeNode_LCOMM:
+  removeNode m (removeNode n g) = removeNode n (removeNode m g)
+Proof
+  simp[gengraph_component_equality, DELETE_COMM, DIFF_COMM] >>
+  simp[FUN_EQ_THM, combinTheory.APPLY_UPDATE_THM] >> rw[]
+QED
+
+Definition removeNodes_def:
+  removeNodes G N = ITSET removeNode N G
+End
+
+Definition removeEdge0_def:
+  removeEdge0 e (grep: (α,δ,'ec,'ei,ν,'nl,σ) graphrep) =
+  if itself2bool (:δ) then
+    grep with edges := grep.edges DELETE e
+  else
+    grep with edges := grep.edges DIFF {e; flip_edge e}
+End
+
+Theorem wfgraph_removeEdge0:
+  wfgraph grep ⇒ wfgraph (removeEdge0 e grep)
+Proof
+  rw[wfgraph_def, removeEdge0_def, ITSELF_UNIQUE, edge_cst_DELETE,
+     edge_cst_DIFF] >~
+  [‘flip_edge e1 ≠ e2’] >- (strip_tac >> gvs[])
+QED
+
+Definition removeEdge_def:
+  removeEdge e g = graph_ABS $ removeEdge0 e $ graph_REP g
+End
+
+Theorem nodes_removeEdge[simp]:
+  nodes (removeEdge e g) = nodes g
+Proof
+  simp[removeEdge_def, nodes_def, #termP_term_REP tydefrec,
+       #repabs_pseudo_id tydefrec, wfgraph_removeEdge0] >>
+  rw[removeEdge0_def]
+QED
+
+Theorem diredges_removeEdge[simp]:
+  edges (removeEdge e (g:(α,directedG,'ec,'ei,ν,'nl,σ) graph)) =
+  edges g DELETE e
+Proof
+  simp[removeEdge_def, edges_def, #termP_term_REP tydefrec,
+       #repabs_pseudo_id tydefrec, wfgraph_removeEdge0] >>
+  simp[removeEdge0_def, ITSELF_UNIQUE]
+QED
+
+Theorem nlabelfun_removeEdge[simp]:
+  nlabelfun (removeEdge e g) = nlabelfun g
+Proof
+  simp[removeEdge_def, nlabelfun_def, #termP_term_REP tydefrec,
+       #repabs_pseudo_id tydefrec, wfgraph_removeEdge0] >>
+  rw[removeEdge0_def]
+QED
+
 Definition edgesTo_def:
   edgesTo g n = { (m,n,l) | m,l | (m,n,l) ∈ edges g }
 End
@@ -1790,35 +1915,25 @@ Definition valid_edges_def:
   valid_edges es s ⇔ ∀e. e ∈ es ⇒ e ⊆ s ∧ FINITE e ∧ CARD e = 2
 End
 
-Definition fsgedges_def:
-  fsgedges (g: α fsgraph) = { {a;b} | adjacent g a b }
-End
+Overload fsgedges = “udedges : α fsgraph -> α set set”
 
 Theorem fsgedges_emptyG[simp]:
   fsgedges emptyG = ∅
 Proof
-  simp[fsgedges_def]
+  simp[udedges_def]
 QED
 
 Theorem fsgedges_addNode[simp]:
   fsgedges (addNode n u g) = fsgedges g
 Proof
-  simp[fsgedges_def]
-QED
-
-Theorem CARDEQ2:
-  FINITE s ⇒ (CARD s = 2 ⇔ ∃a b. a ≠ b ∧ s = {a;b})
-Proof
-  strip_tac >> simp[EQ_IMP_THM, PULL_EXISTS] >>
-  Cases_on ‘s’ >> gs[] >> rename [‘a ∉ s’] >>
-  Cases_on ‘s’ >> gs[] >> metis_tac[]
+  simp[]
 QED
 
 Theorem fsgedges_fsgAddEdges:
   valid_edges es (nodes g) ⇒
   fsgedges (fsgAddEdges es g) = es ∪ fsgedges g
 Proof
-  simp[fsgedges_def, valid_edges_def] >> strip_tac >>
+  simp[valid_edges_def, udedges_thm] >> strip_tac >>
   simp[Once EXTENSION] >> qx_gen_tac ‘ed’ >> iff_tac >> rw[] >>
   simp[SF SFY_ss]
   >- metis_tac[]
@@ -2001,7 +2116,7 @@ Proof
        fsgedges_fsgAddEdges] >>
   ‘degree (fsgAddEdges es (addNode n () g)) n = CARD es’
     by (‘∀e. e ∈ fsgedges g ⇒ n ∉ e’
-          by (simp[fsgedges_def, PULL_EXISTS] >>
+          by (simp[udedges_thm, PULL_EXISTS] >>
               metis_tac[adjacent_members]) >>
         dsimp[degree_def, fsgedges_fsgAddEdges, SF CONJ_ss]) >>
   simp[degree_fsgAddEdges] >>
@@ -2013,10 +2128,10 @@ Proof
   simp[pred_setTheory.CARD_UNION_EQN] >>
   ‘∀n. {ed | ed ∈ es ∧ n ∈ ed} ∩ {ed | ed ∈ fsgedges g ∧ n ∈ ed} = ∅’
     by (simp[EXTENSION] >> rpt gen_tac >> CCONTR_TAC >> gs[] >>
-        gs[fsgedges_def] >> first_x_assum drule >> strip_tac >> gvs[] >>
+        gs[udedges_thm] >> first_x_assum drule >> strip_tac >> gvs[] >>
         metis_tac[adjacent_members]) >>
   simp[SUM_IMAGE_ADD] >>
-  ‘es ∩ fsgedges g = ∅’ by (simp[fsgedges_def, Once EXTENSION] >>
+  ‘es ∩ fsgedges g = ∅’ by (simp[udedges_thm, Once EXTENSION] >>
                             CCONTR_TAC >> gvs[] >> first_x_assum drule >>
                             strip_tac >> gvs[] >> metis_tac[adjacent_members])>>
   simp[GSYM degree_def, SF ETA_ss] >>
@@ -2073,10 +2188,90 @@ Proof
         simp[degree_def] >> CCONTR_TAC >> gvs[] >>
         ‘{ e | e ∈ fsgedges g ∧ n ∈ e} = ∅’
           suffices_by (strip_tac >> gvs[]) >>
-        simp[EXTENSION] >> qx_gen_tac ‘e’ >> simp[fsgedges_def] >>
+        simp[EXTENSION] >> qx_gen_tac ‘e’ >> simp[udedges_thm] >>
         CCONTR_TAC >> gvs[] >> metis_tac[adjacent_members]) >>
   simp[GSYM ODD_SUMIMAGE, sumdegrees, SF ETA_ss, arithmeticTheory.ODD_MULT]
 QED
 
+(* ----------------------------------------------------------------------
+    Perambulations
+   ---------------------------------------------------------------------- *)
+
+Definition walk_def:
+  walk g vs ⇔ vs ≠ [] ∧ ∀v1 v2. adjacent vs v1 v2 ⇒ adjacent g v1 v2
+End
+
+Definition path_def:
+  path g vs ⇔ walk g vs ∧ ALL_DISTINCT vs
+End
+
+Definition adjpairs_def[simp]:
+  adjpairs [] = [] ∧
+  adjpairs [x] = [] ∧
+  adjpairs (x::y::xs) = {x;y} :: adjpairs (y::xs)
+End
+
+Theorem LENGTH_adjpairs:
+  ∀vs. vs ≠ [] ⇒ LENGTH (adjpairs vs) = LENGTH vs - 1
+Proof
+  recInduct adjpairs_ind >> simp[]
+QED
+
+Definition trail_def:
+  trail g vs ⇔ walk g vs ∧ ALL_DISTINCT (adjpairs vs)
+End
+
+Definition cycle_def:
+  cycle g vs ⇔ walk g vs ∧ ALL_DISTINCT (TL vs) ∧ 3 ≤ LENGTH vs ∧
+               HD vs = LAST vs
+End
+
+Definition circuit_def:
+  circuit g vs ⇔ 3 ≤ LENGTH vs ∧ trail g vs ∧ HD vs = LAST vs
+End
+
+Definition walklen_def:
+  walklen vs = LENGTH (adjpairs vs)
+End
+
+Theorem adjacent_append2:
+  adjacent ys a b ⇒ adjacent (xs ++ ys) a b
+Proof
+  Induct_on ‘xs’ >> simp[] >> Cases_on ‘xs’ >>
+  gs[listTheory.adjacent_iff, listTheory.adjacent_rules]
+QED
+
+
+Theorem walks_contain_paths:
+  ∀g vs. walk g vs ⇒
+         ∃vs'. path g vs' ∧ HD vs' = HD vs ∧ LAST vs' = LAST vs ∧
+               LENGTH vs' ≤ LENGTH vs
+Proof
+  simp[walk_def, path_def] >> Induct_on ‘vs’ >> simp[] >> rpt strip_tac >>
+  rename [‘LAST (v1::vs)’] >> Cases_on ‘vs’ >> gs[]
+  >- (qexists‘[v1]’ >> simp[]) >>
+  gs[listTheory.adjacent_iff, DISJ_IMP_THM, FORALL_AND_THM] >>
+  rename [‘LAST _ = LAST (v2::vs)’] >>
+  first_x_assum $ drule_then strip_assume_tac >> rename [‘ALL_DISTINCT vs'’] >>
+  reverse $ Cases_on ‘MEM v1 vs'’
+  >- (qexists ‘v1::vs'’ >> gvs[] >> rpt strip_tac >~
+      [‘adjacent (v1::vs') a b’, ‘adjacent g a b’]
+      >- (Cases_on ‘vs'’ >> gvs[listTheory.adjacent_iff]) >>
+      rename [‘LAST (v1::vs') = LAST (HD vs'::vs)’] >>
+      ‘LAST (v1::vs') = LAST vs'’ suffices_by simp[] >>
+      qpat_x_assum ‘LAST vs' = LAST (_ :: _)’ kall_tac >>
+      Cases_on ‘vs'’ >> gs[]) >>
+  drule_then strip_assume_tac (iffLR listTheory.MEM_SPLIT_APPEND_last) >>
+  rename [‘vs' = p ++ [v1] ++ s’] >>
+  gvs[listTheory.ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
+  qexists ‘v1::s’ >> simp[] >>
+  qpat_x_assum ‘LAST (_ ++ _ ++ _) = LAST _’ (assume_tac o SYM) >>
+  simp[] >> rpt strip_tac >~
+  [‘LAST (HD _ :: _) = LAST (p ++ [v1] ++ s)’,
+   ‘LAST (v1 :: s) = LAST (p ++ [v1] ++ s)’]
+  >- (simp[Excl "APPEND_ASSOC", GSYM listTheory.APPEND_ASSOC]) >>
+  first_x_assum irule >> REWRITE_TAC[GSYM listTheory.APPEND_ASSOC] >>
+  irule adjacent_append2 >> simp[]
+QED
 
 val  _ = export_theory();
