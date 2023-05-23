@@ -104,10 +104,12 @@ Datatype theorems with these names are automatically generated when \ml{Datatype
 If the trace \texttt{EmitTeX:~print~datatypes~compactly} is set to 1 (see the \texttt{tr} option below) the description is printed in a more compact form.
 Also, if the type is a collection of nullary constants (a type consisting of only ``enumerated constants''), then it will always be printed compactly.
 When not compact, all of a type's constructors will appear on the same line, or each will be on a separate line.
+This printing machinery recognises record types (see Section~\ref{sec:records}) and prints them appropriately.
 
 By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it best suited for inclusion in an environment such as \texttt{alltt}.
 (The important characteristics of the \texttt{alltt} environment are that it respects layout in terms of newlines, while also allowing the insertion of \LaTeX{} commands.
 The \texttt{verbatim} environment does the former, but not the latter.)
+If using math-mode printing, the output should be included in a \texttt{holmath} environment or similar.
 \end{description}
 
 \paragraph{Munging command options}
@@ -843,4 +845,5 @@ Finally, all theory-bindings made with \ml{TeX\_notation} can be overridden with
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "description"
+%%% compile-command: "Holmake"
 %%% End:
