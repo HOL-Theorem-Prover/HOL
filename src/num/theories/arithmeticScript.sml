@@ -1632,17 +1632,19 @@ Theorem LT_MULT_CANCEL_LBARE =
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`, `1`, `n`] LT_MULT_LCANCEL))
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`1`,`m`, `n`] LT_MULT_RCANCEL))
 
-val lt1_eq0 = prove(
-  “x < 1 <=> (x = 0)”,
+Theorem LT1_EQ0[simp]:
+  x < 1 <=> (x = 0)
+Proof
   Q.SPEC_THEN `x`  STRUCT_CASES_TAC num_CASES THEN
-  REWRITE_TAC [ONE, LESS_0, NOT_LESS_0, LESS_MONO_EQ, NOT_SUC])
+  REWRITE_TAC [ONE, LESS_0, NOT_LESS_0, LESS_MONO_EQ, NOT_SUC]
+QED
 
 (* |- (m * n < m = 0 < m /\ (n = 0)) /\ (m * n < n = 0 < n /\ (m = 0)) *)
 Theorem LT_MULT_CANCEL_RBARE =
   CONJ
-    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0]
+    (REWRITE_RULE [MULT_CLAUSES, LT1_EQ0]
                   (Q.SPECL [`m`,`n`,`1`] LT_MULT_LCANCEL))
-    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0]
+    (REWRITE_RULE [MULT_CLAUSES, LT1_EQ0]
                   (Q.SPECL [`m`,`n`,`1`] LT_MULT_RCANCEL))
 
 val le1_lt0 = prove(“1 <= n <=> 0 < n”, REWRITE_TAC [LESS_EQ, ONE]);
@@ -3004,9 +3006,19 @@ Proof
   ]
 QED
 
-val ZERO_LT_EXP = store_thm ("ZERO_LT_EXP",
-  “0 < x EXP y <=> 0 < x \/ (y = 0)”,
-  METIS_TAC [NOT_ZERO_LT_ZERO, EXP_EQ_0]);
+Theorem EXP_LT_1[simp] =
+        REWRITE_CONV [LT1_EQ0, EXP_EQ_0] “m EXP n < 1”
+
+Theorem ZERO_LT_EXP[simp]:
+  0 < x EXP y <=> 0 < x \/ (y = 0)
+Proof METIS_TAC [NOT_ZERO_LT_ZERO, EXP_EQ_0]
+QED
+
+Theorem ONE_LE_EXP[simp]:
+  1 <= x EXP y <=> 0 < x \/ y = 0
+Proof
+  REWRITE_TAC[LESS_EQ_IFF_LESS_SUC, ONE, LESS_MONO_EQ, ZERO_LT_EXP]
+QED
 
 Theorem EXP_1[simp]:
   !n. (1 EXP n = 1) /\ (n EXP 1 = n)
@@ -3920,6 +3932,12 @@ Proof
  GEN_TAC THEN INDUCT_TAC THEN
  RW_TAC bool_ss [EXP,ONE_LT_MULT,LESS_REFL,LESS_0,ZERO_LT_EXP] THEN
  METIS_TAC [SUC_LESS, ONE]
+QED
+
+Theorem TWO_LE_EXP[simp]:
+  !x y. 2 <= x ** y <=> 1 < x /\ 0 < y
+Proof
+  REWRITE_TAC[LESS_EQ_IFF_LESS_SUC, TWO, LESS_MONO_EQ, ONE_LT_EXP]
 QED
 
 (*---------------------------------------------------------------------------*)

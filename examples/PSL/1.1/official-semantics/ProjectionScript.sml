@@ -825,67 +825,13 @@ val TOP_FREE_LAST =
     THEN Cases_on `l`
     THEN RW_TAC list_ss [TOP_FREE_def]);
 
-val TOP_FREE_LASTN =
- store_thm
-  ("TOP_FREE_LASTN",
-   ``!l n. n <= LENGTH l /\ TOP_FREE l ==> TOP_FREE(LASTN n l)``,
-   SIMP_TAC list_ss [LASTN_REVERSE_FIRSTN]
-    THEN Induct_on `l`
-    THEN RW_TAC list_ss [TOP_FREE_def,FIRSTN]
-    THEN Induct_on `n`
-    THEN RW_TAC list_ss
-          [FIRSTN,TOP_FREE_def]
-    THEN FULL_SIMP_TAC list_ss [TOP_FREE_def]
-    THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss
-          [B_SEM_def,TOP_FREE_def,EL_CONS,
-           DECIDE``PRE n = n-1``,TOP_FREE_REVERSE]
-    THEN RES_TAC
-    THEN Cases_on `n = LENGTH l`
-    THEN RW_TAC list_ss []
-    THENL
-     [`LENGTH(REVERSE l <> [BOTTOM]) = SUC(LENGTH l)`
-       by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `LENGTH l < LENGTH(REVERSE l <> [BOTTOM])` by DECIDE_TAC
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[BOTTOM]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [BOTTOM]) = BOTTOM` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN RW_TAC list_ss [FIRSTN_SUC_EL,TOP_FREE_APPEND,TOP_FREE_def],
-      `SUC n <= LENGTH l` by DECIDE_TAC
-       THEN RES_TAC
-       THEN `LENGTH l < LENGTH(REVERSE l <> [BOTTOM])`
-             by RW_TAC list_ss [LENGTH_APPEND,LENGTH_REVERSE]
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[BOTTOM]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [BOTTOM]) = BOTTOM` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN `n < LENGTH l` by DECIDE_TAC
-       THEN RW_TAC list_ss [EL_APPEND1,FIRSTN_SUC_EL,TOP_FREE_APPEND,TOP_FREE_def]
-       THEN RW_TAC list_ss [TOP_FREE_EL]
-       THEN `i = 0` by DECIDE_TAC
-       THEN RW_TAC list_ss []
-       THEN `TOP_FREE(REVERSE l)` by PROVE_TAC[TOP_FREE_REVERSE]
-       THEN FULL_SIMP_TAC list_ss [TOP_FREE_EL],
-      `LENGTH(REVERSE l <> [STATE f]) = SUC(LENGTH l)`
-       by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `LENGTH l < LENGTH(REVERSE l <> [STATE f])` by DECIDE_TAC
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[STATE f]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [STATE f]) = STATE f` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN RW_TAC list_ss [FIRSTN_SUC_EL,TOP_FREE_APPEND,TOP_FREE_def],
-      `SUC n <= LENGTH l` by DECIDE_TAC
-       THEN RES_TAC
-       THEN `LENGTH l < LENGTH(REVERSE l <> [STATE f])`
-             by RW_TAC list_ss [LENGTH_APPEND,LENGTH_REVERSE]
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[STATE f]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [STATE f]) = STATE f` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN `n < LENGTH l` by DECIDE_TAC
-       THEN RW_TAC list_ss [EL_APPEND1,FIRSTN_SUC_EL,TOP_FREE_APPEND,TOP_FREE_def]
-       THEN RW_TAC list_ss [TOP_FREE_EL]
-       THEN `i = 0` by DECIDE_TAC
-       THEN RW_TAC list_ss []
-       THEN `TOP_FREE(REVERSE l)` by PROVE_TAC[TOP_FREE_REVERSE]
-       THEN FULL_SIMP_TAC list_ss [TOP_FREE_EL]]);
+Theorem TOP_FREE_LASTN:
+  !l n. n <= LENGTH l /\ TOP_FREE l ==> TOP_FREE(LASTN n l)
+Proof
+  Induct_on ‘l’  using SNOC_INDUCT >> simp[LASTN] >>
+  Cases_on ‘n’ >> simp[LASTN, TOP_FREE_def] >>
+  simp[SNOC_APPEND, TOP_FREE_APPEND]
+QED
 
 val BOTTOM_FREE_LAST =
  store_thm
@@ -898,67 +844,13 @@ val BOTTOM_FREE_LAST =
     THEN Cases_on `l`
     THEN RW_TAC list_ss [BOTTOM_FREE_def]);
 
-val BOTTOM_FREE_LASTN =
- store_thm
-  ("BOTTOM_FREE_LASTN",
-   ``!l n. n <= LENGTH l /\ BOTTOM_FREE l ==> BOTTOM_FREE(LASTN n l)``,
-   SIMP_TAC list_ss [LASTN_REVERSE_FIRSTN]
-    THEN Induct_on `l`
-    THEN RW_TAC list_ss [BOTTOM_FREE_def,FIRSTN]
-    THEN Induct_on `n`
-    THEN RW_TAC list_ss
-          [FIRSTN,BOTTOM_FREE_def]
-    THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def]
-    THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss
-          [B_SEM_def,BOTTOM_FREE_def,EL_CONS,
-           DECIDE``PRE n = n-1``,BOTTOM_FREE_REVERSE]
-    THEN RES_TAC
-    THEN Cases_on `n = LENGTH l`
-    THEN RW_TAC list_ss []
-    THENL
-     [`LENGTH(REVERSE l <> [TOP]) = SUC(LENGTH l)`
-       by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `LENGTH l < LENGTH(REVERSE l <> [TOP])` by DECIDE_TAC
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[TOP]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [TOP]) = TOP` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN RW_TAC list_ss [FIRSTN_SUC_EL,BOTTOM_FREE_APPEND,BOTTOM_FREE_def],
-      `SUC n <= LENGTH l` by DECIDE_TAC
-       THEN RES_TAC
-       THEN `LENGTH l < LENGTH(REVERSE l <> [TOP])`
-             by RW_TAC list_ss [LENGTH_APPEND,LENGTH_REVERSE]
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[TOP]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [TOP]) = TOP` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN `n < LENGTH l` by DECIDE_TAC
-       THEN RW_TAC list_ss [EL_APPEND1,FIRSTN_SUC_EL,BOTTOM_FREE_APPEND,BOTTOM_FREE_def]
-       THEN RW_TAC list_ss [BOTTOM_FREE_EL]
-       THEN `i = 0` by DECIDE_TAC
-       THEN RW_TAC list_ss []
-       THEN `BOTTOM_FREE(REVERSE l)` by PROVE_TAC[BOTTOM_FREE_REVERSE]
-       THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_EL],
-      `LENGTH(REVERSE l <> [STATE f]) = SUC(LENGTH l)`
-       by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `LENGTH l < LENGTH(REVERSE l <> [STATE f])` by DECIDE_TAC
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[STATE f]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [STATE f]) = STATE f` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN RW_TAC list_ss [FIRSTN_SUC_EL,BOTTOM_FREE_APPEND,BOTTOM_FREE_def],
-      `SUC n <= LENGTH l` by DECIDE_TAC
-       THEN RES_TAC
-       THEN `LENGTH l < LENGTH(REVERSE l <> [STATE f])`
-             by RW_TAC list_ss [LENGTH_APPEND,LENGTH_REVERSE]
-       THEN `LENGTH(REVERSE l) = LENGTH l` by RW_TAC list_ss [LENGTH_REVERSE]
-       THEN `~NULL[STATE f]` by RW_TAC list_ss []
-       THEN `EL (LENGTH l) (REVERSE l <> [STATE f]) = STATE f` by PROVE_TAC[EL_LENGTH_APPEND,HD]
-       THEN `n < LENGTH l` by DECIDE_TAC
-       THEN RW_TAC list_ss [EL_APPEND1,FIRSTN_SUC_EL,BOTTOM_FREE_APPEND,BOTTOM_FREE_def]
-       THEN RW_TAC list_ss [BOTTOM_FREE_EL]
-       THEN `i = 0` by DECIDE_TAC
-       THEN RW_TAC list_ss []
-       THEN `BOTTOM_FREE(REVERSE l)` by PROVE_TAC[BOTTOM_FREE_REVERSE]
-       THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_EL]]);
+Theorem BOTTOM_FREE_LASTN:
+  !l n. n <= LENGTH l /\ BOTTOM_FREE l ==> BOTTOM_FREE(LASTN n l)
+Proof
+  Induct_on ‘l’ using SNOC_INDUCT >> simp[LASTN] >>
+  Cases_on ‘n’ >> simp[LASTN, BOTTOM_FREE_def] >>
+  simp[SNOC_APPEND, BOTTOM_FREE_APPEND]
+QED
 
 val LAST_TAKE_FIRST =
  store_thm

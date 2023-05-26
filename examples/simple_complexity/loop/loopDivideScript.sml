@@ -445,23 +445,22 @@ val pop_pos = store_thm(
               and  b * (n DIV b) <= n            by DIV_MULT_LE
                or         b ** j <= n
 *)
-val pop_property = store_thm(
-  "pop_property",
-  ``!b n. 1 < b /\ 0 < n ==> !j. b ** j <= n <=> j < pop b n``,
+
+Theorem pop_property:
+  !b n. 1 < b /\ 0 < n ==> !j. b ** j <= n <=> j < pop b n
+Proof
   ho_match_mp_tac (theorem "pop_ind") >>
   rw[] >>
   Cases_on `n DIV b = 0` >| [
     `n < b` by rw[GSYM DIV_EQ_0] >>
     rw[Once pop_def] >>
     rw[Once pop_def] >>
-    rw[EQ_IMP_THM] >| [
-      spose_not_then strip_assume_tac >>
-      `0 < j` by decide_tac >>
-      `b <= b ** j` by rw[X_LE_X_EXP] >>
-      decide_tac,
-      `j = 0` by decide_tac >>
-      simp[EXP_0]
-    ],
+    rw[EQ_IMP_THM] >>
+    spose_not_then strip_assume_tac >>
+    `0 < j` by decide_tac >>
+    `b <= b ** j` by rw[X_LE_X_EXP] >>
+    decide_tac,
+
     `~(n < b)` by rw[GSYM DIV_EQ_0] >>
     `b ** (j - 1) <= n DIV b <=> j - 1 < pop b (n DIV b)` by rw[] >>
     (Cases_on `j = 0` >> simp[Once pop_def, EXP_0]) >>
@@ -472,6 +471,7 @@ val pop_property = store_thm(
       `(b * b ** k) DIV b = b ** k` by rw[MULT_TO_DIV] >>
       `k < pop b (n DIV b)` by rw[] >>
       decide_tac,
+
       qabbrev_tac `k = j - 1` >>
       `j = SUC k` by rw[Abbr`k`] >>
       `k < pop b (n DIV b)` by decide_tac >>
@@ -481,7 +481,8 @@ val pop_property = store_thm(
       `(n DIV b) * b <= n` by rw[DIV_MULT_LE] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < b ==> n < b ** pop b n *)
 (* Proof:

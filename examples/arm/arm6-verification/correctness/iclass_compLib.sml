@@ -128,7 +128,12 @@ val [UNEXEC_ss,SWP_ss,MRS_MSR_ss,DATA_PROC_ss,REG_SHIFT_ss,LDR_ss,STR_ss,
      BR_ss,SWI_EX_ss,CDP_UND_ss,MRC_ss,MCR_ss,LDC_ss,STC_ss,LDM_ss,STM_ss,
      MLA_MUL_ss] = inst_simpsets;
 
-fun inst_tac ss = ASM_SIMP_TAC (std_ss++boolSimps.LET_ss++ss) [];
+local
+val deleted_rwts = ["LT1_EQ0"]
+val core_ss = std_ss++boolSimps.LET_ss -* deleted_rwts
+in
+fun inst_tac ss = ASM_SIMP_TAC (core_ss++ss) [];
+end
 
 val [UNEXEC_TAC,SWP_TAC,MRS_MSR_TAC,DATA_PROC_TAC,REG_SHIFT_TAC,LDR_TAC,
      STR_TAC,BR_TAC,SWI_EX_TAC,CDP_UND_TAC,MRC_TAC,MCR_TAC,LDC_TAC,STC_TAC,

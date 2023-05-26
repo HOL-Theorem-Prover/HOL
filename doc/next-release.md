@@ -130,6 +130,15 @@ number of components.
 Incompatibilities:
 ------------------
 
+*   Some new automatic rewrites to do with natural number arithmetic (particularly exponentiation) have been added.
+    The most potentially disruptive of these is probably `LT1_EQ0`, which states
+
+           ⊢ n < 1 ⇔ n = 0
+
+    The other new rewrites will simplify terms such as `10 < 2 ** x` (where both the base of the exponentiation and the other argument to the relation are numerals).
+    By taking a natural number logarithm, it is possible to turn the above into `3 < x` and `5 ** n < 10654` into `n ≤ 5`.
+    The theorems to exclude (using `Excl`, or `temp_delsimps`, or ...) if these new rules break proofs are: `EXP_LE_LOG_SIMP`, `EXP_LT_LOG_SIMP`, `LE_EXP_LOG_SIMP`, `LT_EXP_LOG_SIMP`, `LOG_NUMERAL`, `EXP_LT_1`, `ONE_LE_EXP`, and `TWO_LE_EXP`.
+
 *   The small `productTheory` (products of natural numbers and real numbers, ported from HOL-Light) has been merged into `iterateTheory` (on which `extrealTheory` now depends).
 
 *   Changes in the `formal-languages/context-free` example:

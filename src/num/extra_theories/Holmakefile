@@ -12,3 +12,13 @@ ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
 endif
+
+selftest.exe: selftest.uo logrootTheory.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: num-extra-theories-selftest.log
+
+num-extra-theories-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
+endif
