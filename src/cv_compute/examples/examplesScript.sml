@@ -44,15 +44,11 @@ open arithmeticTheory listTheory prim_recTheory cvTheory;
 
 val _ = new_theory "examples";
 
-val op \\ = op THEN;
-val op >- = op THEN1;
-
 (* -------------------------------------------------------------------------
  * Example 1: factorial
  *
  * Below is a definition of the factorial function in the :cv type. There is
- * also a pure HOL definition, and a proof that the two definitions compute
- * related values.
+ * also a proof that factc and FACT compute related values.
  * ------------------------------------------------------------------------- *)
 
 Definition factc_def:
@@ -65,14 +61,10 @@ Termination
   \\ Cases \\ simp [cv_size_alt_def, CaseEq "bool"]
 End
 
-Definition fact_def:
-  fact n = if n < 1 then 1 else n * fact (n - 1)
-End
-
 Theorem factc_is_fact:
-  !n. factc (Num n) = Num (fact n)
+  !n. factc (Num n) = Num (FACT n)
 Proof
-  Induct \\ once_rewrite_tac [factc_def, fact_def] \\ simp []
+  Induct \\ once_rewrite_tac [factc_def, FACT] \\ simp []
 QED
 
 (* cv_compute takes a list of compute equations, and an input term. All function
@@ -86,12 +78,12 @@ Triviality factc_test =
 (* Same computation using EVAL:
  *)
 
-Triviality fact_test = time EVAL ``fact 123``;
+Triviality fact_test = time EVAL ``FACT 123``;
 
 (* Using cv_compute as a tactic:
  *)
 
-Triviality fact_eq_factc:
+Triviality fact_12:
   factc (Num 12) = Num 479001600
 Proof
   CONV_TAC (TOP_DEPTH_CONV (UNCHANGED_CONV (cv_compute [factc_def])))
@@ -108,7 +100,7 @@ QED
 
 Definition isprimec_aux_def:
   isprimec_aux dvs n =
-    cv_if (cv_lt (cv_mul dvs (Num 2)) n)
+    cv_if (cv_lt dvs n)
           (cv_if (cv_mod n dvs)
                  (isprimec_aux (cv_add dvs (Num 2)) n)
                  (Num 0))
@@ -121,11 +113,13 @@ End
 
 Definition isprimec_def:
   isprimec n =
-    cv_if (cv_eq n (Num 2))
-          (Num 1)
-          (cv_if (cv_mod n (Num 2))
-                 (isprimec_aux (Num 3) n)
-                 (Num 0))
+    cv_if (cv_lt n (Num 2))
+          (Num 0)
+          (cv_if (cv_eq n (Num 2))
+                 (Num 1)
+                 (cv_if (cv_mod n (Num 2))
+                        (isprimec_aux (Num 3) n)
+                        (Num 0)))
 End
 
 Definition primes_uptoc_def:
@@ -148,7 +142,7 @@ End
 
 Definition isprime_aux_def:
   isprime_aux dvs n =
-    if dvs * 2 < n then
+    if dvs < n then
       if n SAFEMOD dvs <> 0 then
         isprime_aux (dvs + 2) n
       else F
@@ -159,10 +153,84 @@ End
 
 Definition isprime_def:
   isprime n =
+    if n < 2 then F else
     if n = 2 then T else
     if n MOD 2 = 0 then F
     else isprime_aux 3 n
 End
+
+Triviality EVEN_divides:
+  EVEN n /\ divides n m ==> EVEN m
+Proof
+  `divides 2 n /\ divides n m ==> divides 2 m`
+    suffices_by (rw [] \\ gs [dividesTheory.compute_divides, EVEN_MOD2])
+  \\ simp [dividesTheory.DIVIDES_TRANS, SF SFY_ss]
+QED
+
+Triviality isprime_aux_thm:
+  !dvs n.
+    1 < dvs /\ dvs < n /\
+    ~EVEN n /\
+    ~EVEN dvs /\
+    (!k. 1 < k /\ k < dvs ==> ~divides k n) ==>
+       isprime_aux dvs n = prime n
+Proof
+  ho_match_mp_tac isprime_aux_ind \\ rw []
+  \\ rw [Once isprime_aux_def] \\ gs []
+  \\ `n MOD dvs <> 0 <=> ~divides dvs n`
+    by gvs [dividesTheory.compute_divides]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ gs [EVEN_ADD]
+  \\ Cases_on `divides dvs n` \\ gs []
+  >- (
+    gs [dividesTheory.prime_def]
+    \\ first_x_assum (irule_at Any) \\ gs [])
+  \\ `~divides (dvs + 1) n`
+    by (strip_tac
+        \\ `EVEN (dvs + 1)`
+          by gs [GSYM ADD1, EVEN]
+        \\ drule_then assume_tac EVEN_divides
+        \\ gs [])
+  \\ Cases_on `n <= dvs + 2` \\ gs []
+  >- (
+    simp [Once isprime_aux_def]
+    \\ gvs [LESS_OR_EQ, NOT_LESS]
+    >- (
+      `n = dvs + 1` by decide_tac
+      \\ gvs [EVEN, GSYM ADD1])
+    \\ rw [dividesTheory.prime_def, DISJ_EQ_IMP]
+    \\ CCONTR_TAC \\ gs []
+    \\ first_x_assum (qspec_then `b` assume_tac)
+    \\ gvs [dividesTheory.compute_divides, NOT_LESS, LESS_OR_EQ]
+    \\ `(dvs + 2) MOD b = dvs + 2`
+      suffices_by (strip_tac \\ gs [])
+    \\ simp []
+    \\ CCONTR_TAC \\ gvs [NOT_LESS, LESS_OR_EQ]
+    \\ `b = dvs + 1` by decide_tac \\ gvs []
+    \\ `(SUC (dvs + 1)) MOD (dvs + 1) = 1`
+      by gs []
+    \\ rgs [ADD1])
+  \\ first_x_assum (irule_at Any)
+  \\ rw [] \\ gs []
+  \\ `k < dvs \/ k = dvs \/ k = dvs + 1` by decide_tac \\ gvs []
+QED
+
+Theorem isprime_is_prime:
+  !n. isprime n <=> prime n
+Proof
+  rw [isprime_def]
+  \\ Cases_on `n <= 2` \\ gs [DECIDE ``!n. n <= 2 <=> n = 0 \/ n = 1 \/ n = 2``]
+  \\ Cases_on `n MOD 2 = 0` \\ gs []
+  >- (
+    csimp [dividesTheory.prime_def, dividesTheory.compute_divides]
+    \\ first_x_assum (irule_at Any) \\ gs [])
+  \\ Cases_on `n = 3` \\ gs []
+  >- simp [Once isprime_aux_def]
+  \\ irule isprime_aux_thm
+  \\ dsimp [EVEN_MOD2]
+  \\ CCONTR_TAC \\ gs [DECIDE ``!k. k < 3 <=> k = 0 \/ k = 1 \/ k = 2``,
+                       dividesTheory.compute_divides, NOT_LESS, LESS_OR_EQ]
+QED
 
 Definition primes_upto_def:
   primes_upto upto =
@@ -188,7 +256,7 @@ Triviality isprimec_is_isprime:
   !n. isprimec (Num n) = b2c (isprime n)
 Proof
   rw [isprimec_def, isprime_def]
-  \\ rw [DISJ_EQ_IMP] \\ gs [isprimec_aux_isprime_aux]
+  \\ rw [DISJ_EQ_IMP] \\ gs [isprimec_aux_isprime_aux, CaseEq "bool"]
   \\ Cases_on `n = 2` \\ gs []
   \\ Cases_on `n MOD 2` \\ gvs []
 QED

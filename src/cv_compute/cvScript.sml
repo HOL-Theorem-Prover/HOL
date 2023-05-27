@@ -11,9 +11,6 @@ open HolKernel boolLib bossLib arithmeticTheory prim_recTheory;
 
 val _ = new_theory "cv";
 
-val op \\ = op THEN;
-val op >- = op THEN1;
-
 (* -------------------------------------------------------------------------
  * Definition of the cv type and its operations.
  * ------------------------------------------------------------------------- *)
