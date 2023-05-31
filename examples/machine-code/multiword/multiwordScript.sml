@@ -11,7 +11,6 @@ open ASCIInumbersTheory
 
 val _ = numLib.prefer_num();
 
-infix \\ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 val REV = Tactical.REVERSE;
@@ -1535,9 +1534,8 @@ Proof
   `w2n d = 0` by DECIDE_TAC >>
   METIS_TAC[w2n_eq_0]) >>
   Cases_on `m` THEN1 METIS_TAC[EXP,ONE_LT_dimword,prim_recTheory.LESS_NOT_EQ] >>
-  `2 < dimword(:'a)` by (srw_tac[][] >>
-  Cases_on `n'` THEN1 DECIDE_TAC >>
-  srw_tac[][EXP] >> METIS_TAC[LE_MULT_CANCEL_LBARE,ZERO_LT_EXP,DECIDE ``0 < 2 /\ 1 < 2``, LESS_LESS_EQ_TRANS] ) >>
+  `2 < dimword(:'a)`
+    by (srw_tac[][] >> DECIDE_TAC) >>
   qpat_x_assum `dimword(:'a) = xxx` (fn x => REWRITE_TAC [GSYM x] \\ (ASSUME_TAC x)) >>
   srw_tac[][LESS_MOD,DECIDE ``2 ** n * 2 = 2 * 2 ** n``,GSYM EXP] >>
   `SUC n < SUC n'`

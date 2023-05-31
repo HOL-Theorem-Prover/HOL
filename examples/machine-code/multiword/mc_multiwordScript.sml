@@ -3972,8 +3972,8 @@ val mc_full_cmp_lt = prove(
   \\ SIMP_TAC std_ss [i2mw_def,NumABS_LEMMA,EVAL ``n2mw 0``,n2mw_1]
   \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [ADD1] \\ fs[]);
 
-val mc_full_cmp_eq = prove(
-  ``((mc_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
+Theorem mc_full_cmp_eq[local]:
+  ((mc_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
     ((mc_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
     LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\
     LENGTH ys < dimword (:'a) DIV 2 /\
@@ -3985,10 +3985,12 @@ val mc_full_cmp_eq = prove(
        (l2,mc_header (mwi_op Eq (s,xs) (t,ys)),xs,ys,
         SND (mwi_op Eq (s,xs) (t,ys)) ++ zs1)) /\
       (LENGTH (SND (mwi_op Eq (s,xs) (t,ys)) ++ zs1) = LENGTH zs) /\
-      l <= l2 + LENGTH xs + 1``,
+      l <= l2 + LENGTH xs + 1
+Proof
   SIMP_TAC std_ss [mc_full_cmp_def,mc_full_cmp_pre_def,LET_DEF] \\ STRIP_TAC
   \\ MP_TAC mc_icompare_thm \\ FULL_SIMP_TAC std_ss []
-  \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def] \\ SIMP_TAC std_ss [mwi_eq_def]
+  \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
+  \\ SIMP_TAC std_ss [mwi_eq_def]
   \\ REV (Cases_on `mwi_compare (s,xs) (t,ys)`) THEN1
    (FULL_SIMP_TAC (srw_ss()) [cmp2w_def,mc_icmp_res_def,n2w_11,LET_DEF]
     \\ Q.EXISTS_TAC `zs` \\ SIMP_TAC std_ss []
@@ -3997,9 +3999,9 @@ val mc_full_cmp_eq = prove(
     >- (
       EVAL_TAC \\ rw[]
       \\ pop_assum mp_tac \\ rw[]
-      \\ Cases_on`x` \\ fs[cmp2w_def]
-      \\ rfs[] )
-    \\ `dimword(:'a) = 2` by ( fs[dimword_def,X_LT_DIV] )
+      \\ Cases_on`x` \\ gs[cmp2w_def])
+    \\ `dimword(:'a) = 2`
+      by gs[dimword_def,X_LT_DIV,DECIDE “~(1n < x) ⇔ (x = 1) ∨ (x = 0)”]
     \\ fs[])
   \\ SIMP_TAC std_ss [cmp2w_def]
   \\ FULL_SIMP_TAC (srw_ss()) [cmp2w_def,mc_icmp_res_def,n2w_11,LET_DEF]
@@ -4008,8 +4010,10 @@ val mc_full_cmp_eq = prove(
   \\ SIMP_TAC std_ss [i2mw_def,NumABS_LEMMA,EVAL ``n2mw 0``]
   \\ Cases_on`3 < dimword(:'a)` \\ fs[n2mw_1]
   >- ( EVAL_TAC \\ rw[] )
-  \\ `dimword(:'a) = 2` by ( fs[dimword_def,X_LT_DIV] )
-  \\ fs[]);
+  \\ ‘dimword(:'a) = 2’
+    suffices_by (strip_tac >> gs[])
+  \\ gs[dimword_def, DECIDE “~(1n < x) ⇔ (x = 1) ∨ (x = 0)”]
+QED
 
 val (mc_iop_def, _,
      mc_iop_pre_def, _) =
