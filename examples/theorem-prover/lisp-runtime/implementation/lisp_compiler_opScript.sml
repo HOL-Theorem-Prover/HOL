@@ -755,11 +755,12 @@ val mc_sexp2sexp_thm = prove(
 
 (* btree implementation -- allows fast lookup and adding elements *)
 
-val SPLIT_LIST_def = Define `
+Definition SPLIT_LIST_def:
   (SPLIT_LIST [] = ([],[])) /\
   (SPLIT_LIST [x] = ([x],[])) /\
   (SPLIT_LIST (x1::x2::xs) =
-     (x1::FST (SPLIT_LIST xs),x2::SND (SPLIT_LIST xs)))`;
+     (x1::FST (SPLIT_LIST xs),x2::SND (SPLIT_LIST xs)))
+End
 
 val LENGTH_SPLIT_LIST = prove(
   ``!xs. (LENGTH (FST (SPLIT_LIST xs)) <= LENGTH xs) /\
@@ -797,20 +798,21 @@ val btree_insert_def = Define `
   1000 1001 1010 1011 1100 1101 1110 1111
 *)
 
-val EL_SPLIT_LIST = prove(
-  ``!xs n.
+Theorem EL_SPLIT_LIST[local]:
+  !xs n.
       n < LENGTH xs ==>
       (EL n xs = if EVEN n then EL (n DIV 2) (FST (SPLIT_LIST xs))
-                           else EL (n DIV 2) (SND (SPLIT_LIST xs)))``,
-  HO_MATCH_MP_TAC (fetch "-" "SPLIT_LIST_ind")
+                           else EL (n DIV 2) (SND (SPLIT_LIST xs)))
+Proof
+  recInduct SPLIT_LIST_ind
   \\ SIMP_TAC std_ss [SPLIT_LIST_def,LENGTH] \\ REPEAT STRIP_TAC
-  THEN1 (Cases_on `n` \\ FULL_SIMP_TAC std_ss [EL,HD] \\ `F` by DECIDE_TAC)
   \\ Cases_on `n` \\ SIMP_TAC std_ss [EL,HD]
   \\ Cases_on `n'` \\ SIMP_TAC std_ss [EL,HD,TL,EVEN]
   \\ FULL_SIMP_TAC std_ss [ADD1,GSYM ADD_ASSOC]
   \\ SIMP_TAC std_ss [(SIMP_RULE std_ss [] (Q.SPEC `2` ADD_DIV_ADD_DIV))
        |> RW1 [ADD_COMM] |> Q.SPEC `1` |> SIMP_RULE std_ss []]
-  \\ SIMP_TAC std_ss [GSYM ADD1,EL,TL]);
+  \\ SIMP_TAC std_ss [GSYM ADD1,EL,TL]
+QED
 
 val LENGTH_SPLIT_LIST = prove(
   ``!xs. (LENGTH (SND (SPLIT_LIST xs)) = LENGTH xs DIV 2) /\
