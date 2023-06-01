@@ -338,7 +338,7 @@ fun conj3 (x,y,z) = CONJ x (CONJ y z)
 
 Theorem LE_EXP_LOG_SIMP[simp] =
         LT_EXP_LOG
-        |> Q.INST [‘x’ |-> ‘x - 1’]
+        |> Q.INST [‘x’ |-> ‘x - 1’, ‘b’ |-> ‘NUMERAL b’]
         |> SIMP_RULE bool_ss
                      [DECIDE “0 < x ==> (x - 1 < y <=> x <= y)”, ASSUME “0 < x”]
         |> DISCH_ALL
