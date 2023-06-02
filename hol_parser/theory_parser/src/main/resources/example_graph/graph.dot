@@ -1,0 +1,69 @@
+digraph null {
+compound = "true";
+subgraph cluster_20 {
+invisNodecluster_20 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_21 {
+invisNodecluster_21 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_22 {
+invisNodecluster_22 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_23 {
+invisNodecluster_23 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : model.customer" bgcolor="#ffd200ff" }
+ label="Subsystem : application" bgcolor="#66cd00ff" }
+ label="Layer : model" bgcolor="#97ffffff" }
+subgraph cluster_24 {
+invisNodecluster_24 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_25 {
+invisNodecluster_25 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_26 {
+invisNodecluster_26 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : service.address" bgcolor="#ffd200ff" }
+subgraph cluster_27 {
+invisNodecluster_27 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : service.customer" bgcolor="#ffd200ff" }
+subgraph cluster_28 {
+invisNodecluster_28 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : service.quote" bgcolor="#ffd200ff" }
+subgraph cluster_29 {
+invisNodecluster_29 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : service.stock" bgcolor="#ffd200ff" }
+ label="Subsystem : application" bgcolor="#66cd00ff" }
+ label="Layer : service" bgcolor="#97ffffff" }
+subgraph cluster_30 {
+invisNodecluster_30 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_31 {
+invisNodecluster_31 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_32 {
+invisNodecluster_32 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : tool.customer" bgcolor="#ffd200ff" }
+subgraph cluster_33 {
+invisNodecluster_33 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : tool.quote" bgcolor="#ffd200ff" }
+subgraph cluster_34 {
+invisNodecluster_34 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : tool.stock" bgcolor="#ffd200ff" }
+ label="Subsystem : application" bgcolor="#66cd00ff" }
+ label="Layer : tool" bgcolor="#97ffffff" }
+subgraph cluster_35 {
+invisNodecluster_35 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_36 {
+invisNodecluster_36 [ color="#000000ff" style="invis" shape="point" ];
+subgraph cluster_37 {
+invisNodecluster_37 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : classFileParser" bgcolor="#ffd200ff" }
+subgraph cluster_38 {
+invisNodecluster_38 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : cycle" bgcolor="#ffd200ff" }
+subgraph cluster_39 {
+invisNodecluster_39 [ color="#000000ff" style="invis" shape="point" ];
+ label="Package : cycle_caller" bgcolor="#ffd200ff" }
+ label="Subsystem : application" bgcolor="#66cd00ff" }
+ label="Layer : external" bgcolor="#97ffffff" }
+ label="System : ArchitectureExample_SA_paper_s2_2012" bgcolor="#fff8dcff" }
+invisNodecluster_22 -> invisNodecluster_36 [ lhead="cluster_36" ltail="cluster_22" penwidth="2" ];
+invisNodecluster_25 -> invisNodecluster_22 [ lhead="cluster_22" ltail="cluster_25" penwidth="2" ];
+invisNodecluster_25 -> invisNodecluster_36 [ lhead="cluster_36" ltail="cluster_25" penwidth="2" ];
+invisNodecluster_31 -> invisNodecluster_22 [ lhead="cluster_22" ltail="cluster_31" penwidth="2" ];
+invisNodecluster_31 -> invisNodecluster_25 [ lhead="cluster_25" ltail="cluster_31" penwidth="2" ];
+invisNodecluster_31 -> invisNodecluster_36 [ lhead="cluster_36" ltail="cluster_31" penwidth="2" ];
+}

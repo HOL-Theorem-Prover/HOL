@@ -1,0 +1,169 @@
+Date : 2023-05-16 21:27:29
+Directory : /home/haoyang/hol_parser
+Total : 128 files,  14612 codes, 775 comments, 1937 blanks, all 17324 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| java     |        128 |     14,612 |        775 |      1,937 |     17,324 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                     | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                        |        128 |     14,612 |        775 |      1,937 |     17,324 |
+| theory_parser                                                                                            |        128 |     14,612 |        775 |      1,937 |     17,324 |
+| theory_parser/bin                                                                                        |         78 |      2,948 |          0 |         69 |      3,017 |
+| theory_parser/bin/animator                                                                               |          4 |        202 |          0 |          1 |        203 |
+| theory_parser/bin/haoyang                                                                                |         23 |        885 |          0 |          6 |        891 |
+| theory_parser/bin/main                                                                                   |         51 |      1,861 |          0 |         62 |      1,923 |
+| theory_parser/bin/main/java                                                                              |         51 |      1,861 |          0 |         62 |      1,923 |
+| theory_parser/bin/main/java/net                                                                          |         51 |      1,861 |          0 |         62 |      1,923 |
+| theory_parser/bin/main/java/net/claribole                                                                |         51 |      1,861 |          0 |         62 |      1,923 |
+| theory_parser/bin/main/java/net/claribole/zgrviewer                                                      |         51 |      1,861 |          0 |         62 |      1,923 |
+| theory_parser/src                                                                                        |         50 |     11,664 |        775 |      1,868 |     14,307 |
+| theory_parser/src/animator                                                                               |          2 |        362 |          0 |         74 |        436 |
+| theory_parser/src/haoyang                                                                                |         11 |      1,410 |         94 |        342 |      1,846 |
+| theory_parser/src/main                                                                                   |         37 |      9,892 |        681 |      1,452 |     12,025 |
+| theory_parser/src/main/java                                                                              |         37 |      9,892 |        681 |      1,452 |     12,025 |
+| theory_parser/src/main/java/net                                                                          |         37 |      9,892 |        681 |      1,452 |     12,025 |
+| theory_parser/src/main/java/net/claribole                                                                |         37 |      9,892 |        681 |      1,452 |     12,025 |
+| theory_parser/src/main/java/net/claribole/zgrviewer                                                      |         37 |      9,892 |        681 |      1,452 |     12,025 |
++----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                                 | language | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| /home/haoyang/hol_parser/theory_parser/bin/animator/AnimatedPanel$HighlightCycler.class                  | java     |         20 |          0 |          0 |         20 |
+| /home/haoyang/hol_parser/theory_parser/bin/animator/AnimatedPanel.class                                  | java     |         61 |          0 |          0 |         61 |
+| /home/haoyang/hol_parser/theory_parser/bin/animator/InfiniteProgressPanel$Animator.class                 | java     |         25 |          0 |          1 |         26 |
+| /home/haoyang/hol_parser/theory_parser/bin/animator/InfiniteProgressPanel.class                          | java     |         96 |          0 |          0 |         96 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/Dependency_record.class                               | java     |         29 |          0 |          0 |         29 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/Edge.class                                            | java     |         11 |          0 |          0 |         11 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/FileReader$FileVistor.class                           | java     |         16 |          0 |          0 |         16 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/FileReader.class                                      | java     |        120 |          0 |          0 |        120 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/GraphUtil.class                                       | java     |         73 |          0 |          1 |         74 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/HolParser.class                                       | java     |         11 |          0 |          1 |         12 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/Theorem.class                                         | java     |         37 |          0 |          0 |         37 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/TheoremParser$1.class                                 | java     |         13 |          0 |          0 |         13 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/TheoremParser$States.class                            | java     |         14 |          0 |          0 |         14 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/TheoremParser.class                                   | java     |        130 |          0 |          1 |        131 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/Theory.class                                          | java     |         50 |          0 |          0 |         50 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/TheoryParser$States.class                             | java     |         14 |          0 |          0 |         14 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/TheoryParser.class                                    | java     |        124 |          0 |          1 |        125 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/ThreadControl$1.class                                 | java     |         14 |          0 |          0 |         14 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/ThreadControl.class                                   | java     |         35 |          0 |          0 |         35 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/UnusedSearch$1.class                                  | java     |         13 |          0 |          0 |         13 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/UnusedSearch.class                                    | java     |         33 |          0 |          0 |         33 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/Vertex.class                                          | java     |         19 |          0 |          0 |         19 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/VertexState.class                                     | java     |         15 |          0 |          0 |         15 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/messageBox$1.class                                    | java     |         11 |          0 |          1 |         12 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/messageBox.class                                      | java     |         29 |          0 |          0 |         29 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/myGraph.class                                         | java     |         62 |          0 |          0 |         62 |
+| /home/haoyang/hol_parser/theory_parser/bin/haoyang/test.class                                            | java     |         12 |          0 |          1 |         13 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/AppletUtils.class           | java     |         39 |          0 |          1 |         40 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/BaseEventHandler.class      | java     |         26 |          0 |          1 |         27 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/BookmarksList.class         | java     |         15 |          0 |          1 |         16 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/BroughtEdge.class           | java     |         13 |          0 |          1 |         14 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/BroughtElement.class        | java     |         11 |          0 |          1 |         12 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/BroughtNode.class           | java     |         14 |          0 |          1 |         15 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/CallBox.class               | java     |         18 |          0 |          1 |         19 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ColorIndicator.class        | java     |         16 |          0 |          1 |         17 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ConfigManager.class         | java     |         79 |          0 |          1 |         80 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/DOTManager.class            | java     |         40 |          0 |          1 |         41 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/DistanceComparator.class    | java     |         13 |          0 |          1 |         14 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/FrameDesign.class           | java     |         12 |          0 |          1 |         13 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/GVLoader.class              | java     |         40 |          0 |          1 |         41 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/GeometryEditor.class        | java     |         24 |          0 |          1 |         25 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/GraphicsManager.class       | java     |        224 |          0 |          1 |        225 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/LEdge.class                 | java     |         58 |          0 |          1 |         59 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/LElem.class                 | java     |         26 |          0 |          1 |         27 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/LGraph.class                | java     |         34 |          0 |          1 |         35 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/LNode.class                 | java     |         49 |          0 |          1 |         50 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/LinkSliderCalc.class        | java     |         26 |          0 |          1 |         27 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/LogicalStructure.class      | java     |         33 |          0 |          1 |         34 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/Messages.class              | java     |         70 |          0 |         12 |         82 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/NavPanel.class              | java     |         15 |          0 |          1 |         16 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/PNGExportWindow.class       | java     |         26 |          0 |          1 |         27 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/PeriodicActionManager.class | java     |         41 |          0 |          1 |         42 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/Plugin.class                | java     |          9 |          0 |          1 |         10 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/PolyLine.class              | java     |         38 |          0 |          1 |         39 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/PrefWindow.class            | java     |         37 |          0 |          1 |         38 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/PrintUtilities.class        | java     |         16 |          0 |          1 |         17 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/PrintWindow.class           | java     |         24 |          0 |          1 |         25 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ProcessOutputConsumer.class | java     |         19 |          0 |          1 |         20 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/RadarEvtHdlr.class          | java     |         79 |          0 |          1 |         80 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/Ring.class                  | java     |         13 |          0 |          1 |         14 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/RingManager.class           | java     |         17 |          0 |          1 |         18 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/SearchBox.class             | java     |         20 |          0 |          1 |         21 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/SearchPanel.class           | java     |         19 |          0 |          1 |         20 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/TextViewer.class            | java     |         31 |          0 |          1 |         32 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ToolPalette.class           | java     |         62 |          0 |          1 |         63 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/Utils.class                 | java     |         31 |          0 |          1 |         32 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/Vector2D.class              | java     |        103 |          0 |          1 |        104 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/WebBrowser.class            | java     |         11 |          0 |          1 |         12 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZGRAGlassPane.class         | java     |         15 |          0 |          1 |         16 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZGRApplet.class             | java     |         53 |          0 |          1 |         54 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZGRApplication.class        | java     |          8 |          0 |          1 |          9 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZGRGlassPane.class          | java     |         20 |          0 |          1 |         21 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZGROptions.class            | java     |         32 |          0 |          1 |         33 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZGRPanelViewer.class        | java     |         17 |          0 |          1 |         18 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZGRViewer.class             | java     |         88 |          0 |          1 |         89 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZP2LensAction.class         | java     |         12 |          0 |          1 |         13 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZgrAppletEvtHdlr.class      | java     |         62 |          0 |          1 |         63 |
+| /home/haoyang/hol_parser/theory_parser/bin/main/java/net/claribole/zgrviewer/ZgrvEvtHdlr.class           | java     |         63 |          0 |          1 |         64 |
+| /home/haoyang/hol_parser/theory_parser/src/animator/AnimatedPanel.java                                   | java     |        152 |          0 |         24 |        176 |
+| /home/haoyang/hol_parser/theory_parser/src/animator/InfiniteProgressPanel.java                           | java     |        210 |          0 |         50 |        260 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/FileReader.java                                       | java     |        214 |          0 |         71 |        285 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/GraphTools.java                                       | java     |        278 |          0 |         54 |        332 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/GraphUtil.java                                        | java     |         91 |          0 |         21 |        112 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/HolParser.java                                        | java     |         16 |          0 |          5 |         21 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/TheoremParser.java                                    | java     |        330 |         91 |         87 |        508 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/Theory.java                                           | java     |         77 |          0 |         13 |         90 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/TheoryParser.java                                     | java     |        246 |          0 |         43 |        289 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/ThreadControl.java                                    | java     |         56 |          0 |         20 |         76 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/UnusedSearch.java                                     | java     |         57 |          0 |         15 |         72 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/messageBox.java                                       | java     |         27 |          3 |          8 |         38 |
+| /home/haoyang/hol_parser/theory_parser/src/haoyang/test.java                                             | java     |         18 |          0 |          5 |         23 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/AppletUtils.java            | java     |        166 |         16 |         23 |        205 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/BaseEventHandler.java       | java     |        131 |         10 |         27 |        168 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/BroughtElement.java         | java     |        111 |          1 |         18 |        130 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/CallBox.java                | java     |        168 |          1 |         21 |        190 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ConfigManager.java          | java     |        755 |         34 |         82 |        871 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/DOTManager.java             | java     |        299 |         18 |         35 |        352 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/FrameDesign.java            | java     |         29 |          1 |          9 |         39 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/GVLoader.java               | java     |        280 |         51 |         40 |        371 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/GeometryEditor.java         | java     |        134 |          5 |         18 |        157 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/GraphicsManager.java        | java     |      1,605 |        150 |        200 |      1,955 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/LEdge.java                  | java     |        220 |         12 |         35 |        267 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/LElem.java                  | java     |         44 |          2 |         15 |         61 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/LGraph.java                 | java     |        150 |         10 |         19 |        179 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/LNode.java                  | java     |        163 |          4 |         20 |        187 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/LinkSliderCalc.java         | java     |        432 |         25 |         80 |        537 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/LogicalStructure.java       | java     |        262 |         42 |         22 |        326 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/Messages.java               | java     |        101 |          0 |         44 |        145 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/NavPanel.java               | java     |        223 |         13 |         29 |        265 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/PNGExportWindow.java        | java     |        311 |         20 |         86 |        417 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/PeriodicActionManager.java  | java     |        126 |          0 |         26 |        152 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/Plugin.java                 | java     |         87 |          0 |         23 |        110 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/PrefWindow.java             | java     |        743 |         25 |         37 |        805 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/PrintWindow.java            | java     |        324 |         21 |         88 |        433 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/RadarEvtHdlr.java           | java     |        105 |          1 |         30 |        136 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/SearchBox.java              | java     |         77 |          1 |         15 |         93 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/TextViewer.java             | java     |        228 |          2 |         22 |        252 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ToolPalette.java            | java     |        274 |         29 |         48 |        351 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/Utils.java                  | java     |        233 |          6 |         28 |        267 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/WebBrowser.java             | java     |         49 |          0 |          8 |         57 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZGRApplet.java              | java     |        377 |          8 |         51 |        436 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZGRApplication.java         | java     |         13 |          0 |          7 |         20 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZGRGlassPane.java           | java     |         68 |          0 |         15 |         83 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZGROptions.java             | java     |         39 |          0 |         23 |         62 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZGRPanelViewer.java         | java     |         26 |          0 |         10 |         36 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZGRViewer.java              | java     |        501 |         71 |         73 |        645 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZgrAppletEvtHdlr.java       | java     |        434 |         29 |         33 |        496 |
+| /home/haoyang/hol_parser/theory_parser/src/main/java/net/claribole/zgrviewer/ZgrvEvtHdlr.java            | java     |        604 |         73 |         92 |        769 |
+| Total                                                                                                    |          |     14,612 |        775 |      1,937 |     17,324 |
++----------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

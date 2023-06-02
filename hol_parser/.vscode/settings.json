@@ -1,0 +1,7 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "theory_parser/lib/zgrviewer.jar"
+    ],
+    "java.project.outputPath": "theory_parser/bin"
+}
