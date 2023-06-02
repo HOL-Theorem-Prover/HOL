@@ -16,7 +16,15 @@ linux/Mac/WIN-(WSL2 or VirtualMachine for linux), openjdk 17.0.7
 please make sure you have dot, to install dot do:
 sudo apt install graphviz (in linux).
 ==============================
+compile:
+
+go to HOL/hol_parser/theory_parser/src then do:
+
+javac -cp ../lib/zgrviewer.jar ./haoyang/*.java ./animator/*.java ./net/claribole/zgrviewer/*.java  -d ../bin -encoding utf-8
+==============================
 execute:
+
+go to your HOL folder (e.g. /home/user/HOL) then do
 
 HOL PARSER:
 java -cp /your path/hol_parser/theory_parser/lib/zgrviewer.jar:/your path/hol_parser/theory_parser/bin haoyang.HolParser
