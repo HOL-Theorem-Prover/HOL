@@ -63,7 +63,7 @@ New theories:
 New tools:
 ----------
 
-- **improvements of multiplications of large numbers**:
+- **Improvements of multiplications of large numbers**:
 
     In `src/real` there is a new library `bitArithLib.sml` which improves the
     performance of large multiplications for the types `:num` and `:real`.
@@ -72,11 +72,23 @@ New tools:
     To use the library, it has to be loaded before the functions that should be
     evaluated are **defined**.
 
+- **Fast in-logic computation primitive**:
+  A port of the Candle theorem prover's primitive rule for computation, described in the paper *"Fast, Verified Computation for Candle"* (ITP 2023), has been added to the kernel.
+  The new compute primitive works on certain operations on a lisp-like datatype of pairs of numbers:
+
+           Datatype: cv = Pair cv cv
+                        | Num num
+           End
+
+  This datatype and its operations are defined in `cvScript.sml`, and the compute primitive `cv_compute` is accessible via the library `cv_computeLib.sml` (both in `src/cv_compute`).
+  Some usage examples are located in `examples/cv_compute`.
+  See the DESCRIPTION manual for a full description of the functionality offered by `cv_compute`.
+
 New examples:
 -------------
 
 -  **Dependability Analysis**:
-   Dependability is an umbrella term encompassing Reliability, Availability and Maintainabiity.
+   Dependability is an umbrella term encompassing Reliability, Availability and Maintainability.
    Two widely used dependability modeling techniques have been formalized namely, Reliability Block Diagrams (RBD) and Fault Trees (FT).
    Both these techniques graphically analyze the causes and factors contributing the functioning and failure of the system under study.
    Moreover, these dependability techniques have been highly recommended by several safety standards, such as IEC 61508, ISO 26262 and EN50128,
