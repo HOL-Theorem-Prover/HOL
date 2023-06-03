@@ -42,19 +42,19 @@ struct
     (* "global" state references (could instead be passed as arguments to the
        following functions to obtain a purely functional implementation) *)
     val freshvar = ref 1
-    val dict = ref (Redblackmap.mkDict Term.compare)
+    val dict = ref (HOLdict.mkDict Term.compare)
     (* the following functions essentially implement the production rules of
        the QDIMACS grammar *)
     (* term -> string *)
     fun variable_to_qdimacs tm =
       if Term.is_var tm then
-        Int.toString (Redblackmap.find (!dict, tm)
-          handle Redblackmap.NotFound =>
+        Int.toString (HOLdict.find (!dict, tm)
+          handle HOLdict.NotFound =>
             let
               val fresh = !freshvar
             in
               freshvar := fresh + 1;
-              dict := Redblackmap.insert (!dict, tm, fresh);
+              dict := HOLdict.insert (!dict, tm, fresh);
               fresh
             end)
       else
@@ -148,11 +148,11 @@ struct
 
   fun dict_to_varfn dict : int -> Term.term =
   let
-    val inverted_dict = Redblackmap.foldl (fn (t, i, dict) =>
-      Redblackmap.insert (dict, i, t)) (Redblackmap.mkDict Int.compare) dict
+    val inverted_dict = HOLdict.foldl (fn (t, i, dict) =>
+      HOLdict.insert (dict, i, t)) (HOLdict.mkDict Int.compare) dict
   in
-    fn i => Redblackmap.find (inverted_dict, i)
-      handle Redblackmap.NotFound =>
+    fn i => HOLdict.find (inverted_dict, i)
+      handle HOLdict.NotFound =>
         raise Feedback.mk_HOL_ERR "QDimacs" "dict_to_varfn"
           ("unknown index " ^ Int.toString i)
   end

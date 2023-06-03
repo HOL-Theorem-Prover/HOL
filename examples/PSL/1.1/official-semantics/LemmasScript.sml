@@ -723,21 +723,19 @@ val LAMBDA_COMP =
    CONV_TAC FUN_EQ_CONV
     THEN RW_TAC std_ss []);
 
-val Lemma7 =
- store_thm
-  ("Lemma7",
-   ``!r v.
+Theorem Lemma7:
+  !r v.
        S_CLOCK_FREE r /\ US_SEM v r
        ==>
        !k :: LESS(LENGTH v).
-        US_SEM (SEL v (0,k) <> TOP_ITER(LENGTH v - k - 1)) r``,
+        US_SEM (SEL v (0,k) <> TOP_ITER(LENGTH v - k - 1)) r
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC (list_ss ++ resq_SS)
           [US_SEM_def,S_CLOCK_FREE_def,BOTTOM_FREE_def,TOP_ITER_CONS,
            LENGTH_TOP_ITER,LENGTH_APPEND,LENGTH_SEL]
     THENL
-     [`k=0` by DECIDE_TAC
-       THEN FULL_SIMP_TAC list_ss [LENGTH1,ELEM_def,HEAD_def,RESTN_def,REST_def]
+     [FULL_SIMP_TAC list_ss [LENGTH1,ELEM_def,HEAD_def,RESTN_def,REST_def]
        THEN RW_TAC list_ss [HD_SEL0,TOP_ITER_CONS,HEAD_def]
        THEN FULL_SIMP_TAC list_ss [],
       FULL_SIMP_TAC (list_ss ++ resq_SS) []
@@ -854,7 +852,9 @@ val Lemma7 =
        THEN Induct_on `vlist`
        THEN RW_TAC list_ss [SEL_CONCAT_def,CONCAT_def]
        THEN Cases_on `k < LENGTH (CONCAT vlist)`
-       THEN RW_TAC list_ss [ALL_EL_US_SEM_TOP,ALL_EL_MAP,LAMBDA_COMP]]);
+       THEN RW_TAC list_ss [ALL_EL_US_SEM_TOP,ALL_EL_MAP,LAMBDA_COMP]
+     ]
+QED
 
 val Lemmas1_7 =  [Lemma1,Lemma2,Lemma3,Lemma4,Lemma5,Lemma6,Lemma7];
 

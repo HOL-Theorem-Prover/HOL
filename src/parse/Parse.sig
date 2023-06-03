@@ -201,7 +201,6 @@ signature Parse = sig
   val get_term_printer : unit -> term pprinter
   val set_term_printer : term pprinter -> term pprinter
 
-  val minprint               : term -> string
   val rawterm_pp             : ('a -> 'b) -> 'a -> 'b
   val add_style_to_string    : PPBackEnd.pp_style list -> string -> string
   val print_with_style       : PPBackEnd.pp_style list -> string -> unit

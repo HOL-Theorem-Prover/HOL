@@ -113,8 +113,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    IMAGE_K             |- !s. s <> {} ==> !e. IMAGE (K e) s = {e}
    IMAGE_ELEMENT_CONDITION  |- !f. (!x y. (f x = f y) ==> (x = y)) ==> !s e. e IN s <=> f e IN IMAGE f s
    BIGUNION_ELEMENTS_SING   |- !s. BIGUNION (IMAGE (\x. {x}) s) = s
-   IMAGE_INJ_SUBSET_DIFF    |- !s t f. s SUBSET t /\ INJ f t univ(:'b) ==>
-                                         (IMAGE f (t DIFF s) = IMAGE f t DIFF IMAGE f s)
+   IMAGE_DIFF          |- !s t f. s SUBSET t /\ INJ f t univ(:'b) ==>
+                                  (IMAGE f (t DIFF s) = IMAGE f t DIFF IMAGE f s)
 
    More Theorems and Sets for Counting:
    COUNT_0             |- count 0 = {}
@@ -218,7 +218,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    BIJ_RINV_INV      |- !f s t. BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==>
                                              !x. x IN s ==> (RINV f s (f x) = x)
    BIJ_RINV_BIJ      |- !f s t. BIJ f s t /\ (!y. y IN t ==> RINV f s y IN s) ==> BIJ (RINV f s) t s
-   LINV_SUBSET       |- !f s t. INJ f t t /\ s SUBSET t ==> !x. x IN s ==> (LINV f t (f x) = x)
+   LINV_SUBSET       |- !f s t. INJ f t univ(:'b) /\ s SUBSET t ==> !x. x IN s ==> (LINV f t (f x) = x)
 
    Iteration, Summation and Product:
    ITSET_SING           |- !f x b. ITSET f {x} b = f x b
@@ -1083,11 +1083,12 @@ val BIGUNION_ELEMENTS_SING = store_thm(
 
 (* Theorem: s SUBSET t /\ INJ f t UNIV ==> (IMAGE f (t DIFF s) = (IMAGE f t) DIFF (IMAGE f s)) *)
 (* Proof: by SUBSET_DEF, INJ_DEF, EXTENSION, IN_IMAGE, IN_DIFF *)
-val IMAGE_INJ_SUBSET_DIFF = store_thm(
-  "IMAGE_INJ_SUBSET_DIFF",
-  ``!s t f. s SUBSET t /\ INJ f t UNIV ==> (IMAGE f (t DIFF s) = (IMAGE f t) DIFF (IMAGE f s))``,
+Theorem IMAGE_DIFF:
+  !s t f. s SUBSET t /\ INJ f t UNIV ==> (IMAGE f (t DIFF s) = (IMAGE f t) DIFF (IMAGE f s))
+Proof
   rw[SUBSET_DEF, INJ_DEF, EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More Theorems and Sets for Counting                                       *)
@@ -2257,12 +2258,13 @@ val BIJ_RINV_BIJ = store_thm(
   rw[SURJ_DEF] >>
   metis_tac[INJ_DEF, BIJ_DEF, BIJ_RINV_INV]);
 
-(* Theorem: INJ f t t /\ s SUBSET t ==> !x. x IN s ==> (LINV f t (f x) = x) *)
+(* Theorem: INJ f t univ(:'b) /\ s SUBSET t ==> !x. x IN s ==> (LINV f t (f x) = x) *)
 (* Proof: by LINV_DEF, SUBSET_DEF *)
-val LINV_SUBSET = store_thm(
-  "LINV_SUBSET",
-  ``!(f:'a -> 'a) s t. INJ f t t /\ s SUBSET t ==> !x. x IN s ==> (LINV f t (f x) = x)``,
-  metis_tac[LINV_DEF, SUBSET_DEF]);
+Theorem LINV_SUBSET:
+  !(f:'a -> 'b) s t. INJ f t univ(:'b) /\ s SUBSET t ==> !x. x IN s ==> (LINV f t (f x) = x)
+Proof
+  metis_tac[LINV_DEF, SUBSET_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Iteration, Summation and Product                                          *)

@@ -240,13 +240,12 @@ val FROM_def = Define `PI FROM n = PATH(\x. PI STATE_NO (n+x))`;
 (* Definition 5: Satisfaction of formulae.                                   *)
 (*---------------------------------------------------------------------------*)
 
-val SAT_defn =
- tDefine "SAT"
-   `(STATESAT ((M:('s,'a)STRUCTURE), s:'s) (TRUE:'a state_formula) = T)
+Definition SAT_def:
+    (STATESAT ((M:('s,'a)STRUCTURE), s:'s) (TRUE:'a state_formula) = T)
  /\ (STATESAT (M,s) FALSE      = F)
  /\ (STATESAT (M,s) (REG a)    = ?PI. (PI STATE_NO 0 = s) /\
                                       (PI IS_FAIR_PATH_IN M) /\
-                                      (a IN (valids M s)))
+                                      (a IN (M.valids s)))
  /\ (STATESAT (M,s)  ~f        = ~STATESAT (M,s) f)
  /\ (STATESAT (M,s) (f1 \/ f2) = STATESAT (M,s) f1 \/ STATESAT (M,s) f2)
  /\ (STATESAT (M,s) (f1 /\ f2) = STATESAT (M,s) f1 /\ STATESAT (M,s) f2)
@@ -266,13 +265,15 @@ val SAT_defn =
                                      !j. 0<=j/\j<k ==> PATHSAT(M,PI FROM j) g1)
  /\ (PATHSAT (M,PI) (g1 R g2)  = !j. j>=0
                                      ==> (!i. i<j ==> ~PATHSAT(M,PI FROM i) g1)
-                                     ==> PATHSAT(M,PI FROM j) g2)`
+                                     ==> PATHSAT(M,PI FROM j) g2)
+Termination
 (*---------------------------------------------------------------------------
        Trivial termination proof ... the built-in termination
        prover should really get this.
  ---------------------------------------------------------------------------*)
- (WF_REL_TAC `measure (\s. case s of
+  WF_REL_TAC `measure (\s. case s of
                                INL (x,y) => state_formula_size (\v.0) y
-                             | INR (x,y) => path_formula_size (\v.0) y)`);
+                             | INR (x,y) => path_formula_size (\v.0) y)`
+End
 
 val _ = export_theory()

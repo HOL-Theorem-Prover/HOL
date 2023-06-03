@@ -56,7 +56,6 @@ val _ = monadsyntax.enable_monad "Count";
 (* Data type:
 *)
 (* Overloading:
-   ulog_   = app1 old_ulogM
 *)
 (* Definitions and Theorems (# are exported):
 

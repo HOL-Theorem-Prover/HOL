@@ -115,7 +115,7 @@ If these are still too blunt, we can use *conversions* to carry out surgical rew
 Conversions are functions of type `term -> thm`, such that applying a conversion to a term `t` produces a theorem `⊢ t = t'`.
 These can be converted into tactics using <code>CONV_TAC <i>conversion</i></code>.
 There are many conversions and conversion combinators - an exhaustive list can be found in the HOL4 documentation, mostly listed under the `Conv` structure.
-Good starting points are `REWRITE_CONV`, `THENC`, `RAND_CONV`, `RATOR_CONV`, `LHS_CONV`, `RHS_CONV`, `QCHANGED_CONV`, `DEPTH_CONV`, `PAT_CONV`, and `PATH_CONV`.
+Good starting points are `SCONV`, `REWRITE_CONV`, `THENC`, `RAND_CONV`, `RATOR_CONV`, `LHS_CONV`, `RHS_CONV`, `QCHANGED_CONV`, `DEPTH_CONV`, `PAT_CONV`, and `PATH_CONV`.
 
 
 ### Rewrite modifiers
@@ -127,9 +127,9 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
 <code>Ntimes <i>theorem int</i></code>
 : Uses the supplied theorem at most the given number of times when rewriting.
 
-<code>Excl <i>theorem</i></code>
-: Do not use the supplied theorem when rewriting.
-  This allows temporary exclusion of a theorem from the stateful simpset.
+<code>Excl <i>"theorem_name"</i></code><br><code>Excl <i>"conversion_name"</i></code>
+: Do not use the supplied theorem/conversion when rewriting.
+  This allows temporary exclusion of theorems/conversions from the stateful simpset.
 
 <code>Simp{L,R}HS <i>theorem</i></code>
 : Uses the supplied theorem to simplify on the left-/right-hand side of equalities.
@@ -149,8 +149,23 @@ Also commonly used when rewriting are:
 <code>iff{LR,RL} <i>theorem</i></code>
 : Turns a bi-implication into an implication, going left-to-right or right-to-left respectively.
 
+<code>cj <i>n</i> <i>theorem</i></code>
+: Returns the <code><i>n</i></code>th conjunct of the theorem, handling universal quantifiers and implications.
+  For example, for `thm = ⊢ ∀ P Q R . P ==> Q /\ R`, `cj 2 thm` gives `⊢ ∀ P R . P ==> R)`.
+  **NB** indexing begins at `1`.
+
+<code>SRULE [<i>rewrites</i>] <i>theorem</i></code>
+: Uses the stateful simpset and supplied rewrites to rewrite the theorem.
+
+<code>Cong <i>theorem</i></code>
+: Uses the supplied theorem as a *congruence rule* instead of a rewrite.
+  Congruence rules tell the simplifier how to traverse terms, so they can be useful for rewriting within subterms.
+  For example,
+    using `Cong AND_CONG` allows use of each conjunct in a conjunction to rewrite the others; and
+    the goal `(∀ e. MEM e l ==> f e = g e) ==> h (MAP f l) = h (MAP g l)` is solved by `simp[Cong MAP_CONG]`.
+
 <br>
-Note that `GSYM` and `iff{LR,RL}` are termed *rules* - these transform theorems to other theorems, allowing the above to be combined (e.g. `simp[Once $ GSYM thm]`).
+Note that the above are termed *rules* - these transform theorems to other theorems, allowing the above to be combined (e.g. `simp[Once $ GSYM thm]`).
 There are many other useful rules - see the HOL4 documentation for more details.
 
 In some cases we may wish to use a set of rewrites for simplification.
@@ -206,7 +221,7 @@ Many proofs rely on induction, and there are several ways to induct in HOL4.
   This can be used similarly to `Induct` - e.g. to prove `P (n : num)` we can use <code>Induct_on &grave;n&grave;</code>.
   However, we can also induct over an inductive relation - given a relation `is_even` and a goal `is_even n`, we can use <code>Induct_on &grave;is_even&grave;</code>.
 
-<code>_ using <i>theorem</i></code>
+<code>... using <i>theorem</i></code>
 : Used as as suffix to `Induct` or <code>Induct_on &grave;<i>term</i>&grave;</code> to specify a particular induction theorem for use.
   For example, <code>Induct_on &grave;l&grave; using SNOC_INDUCT</code> begins induction over list `l` from the tail, rather than the head (`SNOC` is the reverse of `CONS`).
 
@@ -252,6 +267,9 @@ It is often useful to perform case splits over the course of a proof.
 `every_case_tac`
 : Splits every possible `case` expression.
   This can be slow and explode the number of subgoals!
+
+`IF_CASES_TAC`
+: Case splits on an `if ... then ... else ...` expression in the goal.
 
 <code>CaseEq "<i>string</i>"</code>
 : Returns a theorem of the form `(case x of ...) = v <=> ...`, where the type of `x` is given by the supplied string.
@@ -327,16 +345,27 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 `AP_THM_TAC`
 : Reduces a goal of the form `f x = g x` to `f = g`.
 
+`MK_COMB_TAC`
+: Reduces a goal of the form `f x = g y` to two subgoals, `f = g` and `x = y`.
+
 `impl_tac`
 : For a goal of the form `(A ==> B) ==> C`, splits into the two subgoals `A` and `B ==> C`.
   `impl_keep_tac` is a variant which keeps `A` as an assumption in the `B ==> C` subgoal.
 
 <code>qexists &grave;<i>term</i>&grave;</code>
-: Instantiates a top-level `∃` quantifer with the supplied term.
+: Instantiates a top-level `∃` quantifier with the supplied term.
+
+<code>qexistsl [&grave;<i>term</i>&grave;s]</code>
+: Like `qexists`, but accepts a list of terms to instantiate multiple `∃` quantifiers.
 
 <code>qrefine &grave;<i>term</i>&grave;</code>
-: Refines a top-level `∃` quantifer using the supplied term - any free variables in the term become`∃`-quantified.
+: Refines a top-level `∃` quantifier using the supplied term - any free variables in the term become`∃`-quantified.
   For example, for a goal `∃ n : num. if n = 0 then P n else Q n`, applying ``qrefine `SUC k` >> simp[]`` produces the goal `∃ k : num. Q (SUC k)` (where `SUC` is the successor function).
+
+<code>qrefinel [&grave;<i>term</i>&grave;s]</code>
+: Like `qrefine`, but accepts a list of terms to instantiate multiple `∃` quantifiers.
+  Also can be passed underscores, to avoid refining selected `∃` quantifiers.
+  For example, for a goal `n = 2 /\ c = 5 ==> ∃ a b c d. a + b = c + d`, the tactic <code>strip_tac >> qrefinel [&grave;_&grave;,&grave;SUC c&grave;,&grave;_&grave;,&grave;n + m&grave;]</code> produces the new goal `∃ a c' m. a + SUC c = c' + (n + m)` .
 
 <code>goal_assum $ drule_at Any</code>
 : For a goal of the form `∃ vars . P1 /\ ... /\ Pn` (where the `vars` may be free in the `Pi`), attempts to match the `Pi` against the assumptions.
@@ -383,6 +412,23 @@ The latter usually have a `"_x_"` in their names.
 <code>spose_not_then <i>thm_tactic</i></code>
 : Like `goal_assum`, but geared towards proof-by-contradiction: negates the goal **and** pushes the negation inwards, before applying the given theorem-tactic to the result.
   A common usage is `spose_not_then assume_tac`.
+
+<code>ASSUME_NAMED_TAC "<i>label</i>" <i>theorem</i></code>
+: Found in `markerLib`.
+  Add the theorem as an labelled assumption: `label :- theorem`.
+  E.g. `pop_assum $ ASSUME_NAMED_TAC "..."`.
+
+<code>LABEL_ASSUM "<i>label</i>" <i>thm_tactic</i></code><br><code>LABEL_X_ASSUM "<i>label</i>" <i>thm_tactic</i></code>
+: Found in `markerLib`.
+  Select the labelled assumption `label :- assumption` and apply <code><i>thm_tactic</i> assumption</code>.
+
+<code>L "<i>label</i>"</code>
+: Found in `markerLib`.
+  When used in a stateful simplifier, produces the theorem `assumption` from labelled assumption `label :- assumption`.
+
+<code>kall_tac</code>
+: Equivalent to `K ALL_TAC`, i.e. accepts any input and leaves the goal unchanged.
+  Most useful to delete assumptions, e.g. `pop_assum kall_tac` removes the most recent assumption.
 
 
 ## Instantiations and generalisations
@@ -491,7 +537,7 @@ Instead, we can rename variables appropriately, and abbreviate large terms.
 : Unabbreviates all existing abbreviations.
 
 <code>Abbr &grave;<i>var</i>&grave;</code>
-: Produces a rewrite theorem which unabbreviates the supplied variable.
+: When used in a stateful simplifier, produces a rewrite theorem which unabbreviates the supplied variable.
   For example, if `x` is an abbreviation in the goal-state, using ``simp[Abbr `x`]`` will unabbreviate `x` in the goal.
 
 <code>qx_gen_tac &grave;<i>var</i>&grave;</code>
@@ -528,7 +574,7 @@ Some patterns arise very often in proofs.
     Case splits introduce fresh variable names and equalities.
     Simplification can use the equalities, and renaming cleans up the fresh names.
     - ``TOP_CASE_TAC >> gvs[] >> rename1 `...` ``
-    - ``Cases_on _ >> simp[] >> qmatch_goalsub_abbrev_tac `...` ``
+    - ``Cases_on ... >> simp[] >> qmatch_goalsub_abbrev_tac `...` ``
     - *and so on*
   - **Simpler targeted [simplification](#rewriting).**
     Sometimes when `fs`, `gvs`, and so on do too much, it can be useful to select an assumption, move it to the goal as an implication, and then use `simp` instead.

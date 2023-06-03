@@ -20,16 +20,16 @@ Never fails.
 > val it = () : unit
 
 - mk_primed_var("x", bool);
-> val it = `x` : term
+> val it = “x” : term
 
 - new_constant("x", alpha);
 > val it = () : unit
 
 - mk_primed_var("x", bool);
-> val it = `x'` : term
+> val it = “x'” : term
 }
 
 
 \SEEALSO
-Term.genvar, Term.variant, Globals.priming.
+Term.genvar, Term.variant.
 \ENDDOC

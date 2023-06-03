@@ -1164,8 +1164,8 @@ Proof
 QED
 
 Theorem SUM_PERMUTATIONS_INVERSE :
-   !f m n. sum {p | p permutes count n } f =
-           sum {p | p permutes count n } (\p. f(inverse p))
+   !f n. sum {p | p permutes count n } f =
+         sum {p | p permutes count n } (\p. f(inverse p))
 Proof
   REPEAT GEN_TAC THEN
   GEN_REWRITE_TAC (funpow 2 LAND_CONV) empty_rewrites

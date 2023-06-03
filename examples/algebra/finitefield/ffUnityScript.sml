@@ -13,7 +13,6 @@ val _ = new_theory "ffUnity";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -260,7 +259,7 @@ val poly_unity_order_has_root = store_thm(
        = (x ** k) ** j                by field_exp_mult_comm
        = #1 ** j                      by field_order_eqn
        = #1                           by field_one_exp
-    Hence root (unity k) (x ** j)   by poly_unity_root_property
+    Hence root (unity k) (x ** j)     by poly_unity_root_property
 *)
 val poly_unity_order_has_all_roots = store_thm(
   "poly_unity_order_has_all_roots",

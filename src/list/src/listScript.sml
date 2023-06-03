@@ -339,6 +339,17 @@ Proof
   \\ simp[UNCURRY]
 QED
 
+Theorem FIND_thm:
+  (FIND P [] = NONE) /\
+  (FIND P (h::t) = if P h then SOME h else FIND P t)
+Proof
+  rw[FIND_def, INDEX_FIND_def] >> simp[Once INDEX_FIND_add, SimpLHS] >>
+  simp[optionTheory.OPTION_MAP_COMPOSE, o_UNCURRY_R, combinTheory.o_ABS_R] >>
+  rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  simp[FUN_EQ_THM, FORALL_PROD]
+QED
+
+
 Theorem INDEX_OF_eq_NONE:
   !x l. INDEX_OF x l = NONE <=> ~MEM x l
 Proof

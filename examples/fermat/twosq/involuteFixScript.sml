@@ -655,7 +655,7 @@ Proof
   metis_tac[FINITE_BIJ_CARD, BIJ_INV]
 QED
 
-(* Theorem: FINITE s ==> FINITE (equiv_fixes f s)`  *)
+(* Theorem: FINITE s ==> FINITE (equiv_fixes f s)  *)
 (* Proof:
    Let g = equiv_class (pair_by f) s.
    Note equiv_fixes f s = IMAGE g (fixes f s)    by equiv_fixes_def
@@ -668,7 +668,7 @@ Proof
   rw[equiv_fixes_def, fixes_finite, IMAGE_FINITE]
 QED
 
-(* Theorem: FINITE s ==> FINITE (equiv_pairs f s)`  *)
+(* Theorem: FINITE s ==> FINITE (equiv_pairs f s)  *)
 (* Proof:
    Let g = equiv_class (pair_by f) s.
    Note equiv_pairs f s = IMAGE g (pairs f s)    by equiv_pairs_def

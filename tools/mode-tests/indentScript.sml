@@ -306,4 +306,15 @@ Datatype :
            rules : 'b inf |-> ('a,'b,'c,'e) pegsym |>
 End
 
+Triviality read_while_P_lem:
+  ∀ls rest P x y.
+    EVERY P rest ∧ read_while P ls rest = (x,y) ⇒ EVERY P x
+Proof
+  Induct>>fs[read_while_def]>>rw[]>>
+  fs[EVERY_IMPLODE,rich_listTheory.EVERY_REVERSE]>>
+  first_assum match_mp_tac>>fs[]>>
+  qexists_tac‘STRING h rest’>>fs[]
+QED
+
+
 val _ = export_theory();

@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 open quotient
 
+open arithmeticTheory
 open listTheory liftingTheory transferTheory transferLib
 
 val _ = new_theory "finite_set";
@@ -280,6 +281,12 @@ Theorem IN_KT[local,simp]: !x. x IN K T
 Proof simp[IN_DEF]
 QED
 
+Theorem fABSORPTION:
+  !a A. fIN a A <=> fINSERT a A = A
+Proof
+  xfer_back_tac >> simp[fsequiv_def, pred_setTheory.ABSORPTION]
+QED
+
 Theorem fset_cases:
   !s:'a fset. s = fEMPTY \/ ?e s0. s = fINSERT e s0 /\ ~fIN e s0
 Proof
@@ -350,6 +357,12 @@ Proof
   xfer_back_tac >> simp[fsequiv_def]
 QED
 
+Theorem fUNION_INSERT:
+  fUNION (fINSERT a A) B = fINSERT a (fUNION A B)
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
+
 Definition fDELETE_def:
   fDELETE = (I ---> fset_REP ---> fset_ABS) (\e. FILTER ($~ o $= e))
 End
@@ -385,6 +398,18 @@ Theorem DELETE_EMPTY[simp]:
   !e. fDELETE e fEMPTY = fEMPTY
 Proof
   simp[EXTENSION]
+QED
+
+Theorem fDELETE_UNION:
+  fDELETE e (fUNION A B) = fUNION (fDELETE e A) (fDELETE e B)
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
+
+Theorem fDELETE_INSERT[simp]:
+  fDELETE a (fINSERT a A) = fDELETE a A
+Proof
+  simp[EXTENSION] >> metis_tac[]
 QED
 
 Definition fCARD_def:
@@ -485,6 +510,25 @@ Proof
   xfer_back_tac >> simp[MEM_MAP] >> metis_tac[]
 QED
 
+Theorem fIMAGE_11:
+  (!x y. f x = f y <=> x = y) ==>
+  (fIMAGE f x = fIMAGE f y <=> x = y)
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
+
+Theorem fIMAGE_COMPOSE:
+  fIMAGE (f o g) s = fIMAGE f (fIMAGE g s)
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
+
+Theorem fIMAGE_ID[simp]:
+  fIMAGE (λx. x) s = s /\ fIMAGE I s = s
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
+
 Definition fINTER_def:
   fINTER = (fset_REP ---> fset_REP ---> fset_ABS)
            (FILTER o flip (IN) o set)
@@ -521,6 +565,20 @@ Proof
   xfer_back_tac >> simp[fsequiv_def, psEXTENSION, MEM_FILTER]
 QED
 
+Theorem fINTER_COMM:
+  fINTER a b = fINTER b a
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
+
+Theorem fINTER_INSERT:
+  (fINTER (fINSERT a A) B =
+   if fIN a B then fINSERT a (fINTER A B) else fINTER A B) /\
+  (fINTER A (fINSERT b B) =
+   if fIN b A then fINSERT b (fINTER A B) else fINTER A B)
+Proof
+  rw[EXTENSION] >> metis_tac[]
+QED
 
 Definition fDIFF_def:
   fDIFF = (fset_REP ---> fset_REP ---> fset_ABS)
@@ -854,14 +912,105 @@ Theorem fITSET_INSERT_tail:
 Proof
   strip_tac >> Induct_on ‘s’ >> rpt strip_tac >- simp[fITSET_INSERT] >>
   rename [‘fITSET _ (fINSERT e1 (fINSERT e2 _))’] >>
-  Cases_on ‘e1 = e2’ >> simp[]
-  >- (rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >> simp[EXTENSION] >> metis_tac[]) >>
+  Cases_on ‘e1 = e2’ >> simp[] >>
   ‘fINSERT e1 (fINSERT e2 s) = fINSERT e2 (fINSERT e1 s)’
     by simp[fINSERT_commutes] >>
   pop_assum SUBST1_TAC >> simp[Once fITSET_INSERT] >>
   ‘fDELETE e1 (fINSERT e2 s) = fINSERT e2 (fDELETE e1 s)’
     by (simp[EXTENSION] >> metis_tac[]) >>
   pop_assum SUBST1_TAC >> simp[fITSET_INSERT]
+QED
+
+Definition fSUM_IMAGE_def:
+  fSUM_IMAGE f s = fITSET (λe a. f e + a) s 0
+End
+
+Theorem fSUM_IMAGE_THM[simp]:
+  fSUM_IMAGE f fEMPTY = 0 /\
+  fSUM_IMAGE f (fINSERT e A) = f e + fSUM_IMAGE f (fDELETE e A)
+Proof
+  simp[fSUM_IMAGE_def, fITSET_INSERT]
+QED
+
+Theorem fSUM_IMAGE_SUBSET:
+  !A B. (!a. fIN a A ==> fIN a B) ==> fSUM_IMAGE f A <= fSUM_IMAGE f B
+Proof
+  Induct_on ‘B’ >> simp[] >> rw[]
+  >- (Cases_on ‘A’ >> gs[FORALL_AND_THM]) >>
+  reverse $ Cases_on ‘fIN e A’ >> simp[]
+  >- (‘!a. fIN a A ==> fIN a B’ by metis_tac [] >> first_x_assum drule >>
+      simp[]) >>
+  pop_assum (strip_assume_tac o SRULE[Once DECOMPOSITION]) >> simp[] >>
+  first_x_assum irule >> gvs[DISJ_IMP_THM] >> metis_tac[]
+QED
+
+Theorem fSUM_IMAGE_UNION:
+  !A B.
+    fSUM_IMAGE f (fUNION A B) =
+    fSUM_IMAGE f A + fSUM_IMAGE f B - fSUM_IMAGE f (fINTER A B)
+Proof
+  Induct_on ‘A’ >> simp[fUNION_INSERT, fDELETE_UNION] >> rw[] >>
+  reverse $ Cases_on ‘fIN e B’ >> simp[]
+  >- (‘fINTER (fINSERT e A) B = fINTER A B /\
+       fSUM_IMAGE f (fINTER A B) <= fSUM_IMAGE f A’
+        suffices_by simp[] >>
+      conj_tac >- (simp[EXTENSION] >> metis_tac[]) >>
+      irule fSUM_IMAGE_SUBSET >> simp[]) >>
+  pop_assum (strip_assume_tac o SRULE[Once DECOMPOSITION]) >>
+  simp[fINTER_INSERT] >>
+  rename [‘fINTER A0 B0’] >>
+  ‘fSUM_IMAGE f (fINTER A0 B0) <= fSUM_IMAGE f A0’ suffices_by simp[] >>
+  irule fSUM_IMAGE_SUBSET >> simp[]
+QED
+
+Definition fMAX_SET_def:
+  fMAX_SET s = fITSET MAX s 0
+End
+
+Theorem fIN_fMAX_SET:
+  !A e. fIN e A ==> e <= fMAX_SET A
+Proof
+  Induct >>
+  simp[fMAX_SET_def, fITSET_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
+       AC MAX_ASSOC MAX_COMM]
+QED
+
+Theorem fMAX_SET_fIN:
+  A <> fEMPTY ==> fIN (fMAX_SET A) A
+Proof
+  Induct_on ‘A’ >> rw[fMAX_SET_def, fITSET_INSERT, AC MAX_COMM MAX_ASSOC] >>
+  rw[MAX_DEF] >> Cases_on ‘A’ >> gs[]
+QED
+
+Theorem fMAX_SET_SUBSET:
+  !A B. (!e. fIN e A ==> fIN e B) ==> fMAX_SET A <= fMAX_SET B
+Proof
+  rw[] >> Cases_on ‘A = fEMPTY’ >- simp[fMAX_SET_def] >>
+  simp[fMAX_SET_fIN, fIN_fMAX_SET]
+QED
+
+Theorem fMAX_SET_THM[simp]:
+  fMAX_SET fEMPTY = 0 /\
+  fMAX_SET (fINSERT e A) = MAX e (fMAX_SET A)
+Proof
+  simp[fMAX_SET_def, fITSET_INSERT, AC MAX_ASSOC MAX_COMM] >>
+  rw[MAX_DEF] >> gs[GSYM fMAX_SET_def] >~
+  [‘fMAX_SET (fDELETE e A) = fMAX_SET A’]
+  >- (irule LESS_EQUAL_ANTISYM >> conj_tac >> irule fIN_fMAX_SET >~
+      [‘fIN (fMAX_SET A) (fDELETE e A)’]
+      >- (simp[] >> irule fMAX_SET_fIN >> strip_tac >> gs[fMAX_SET_def]) >>
+      ‘!a. fIN a (fDELETE e A) ==> fIN a A’ by simp[] >> pop_assum irule >>
+      irule fMAX_SET_fIN >> strip_tac >> gs[fMAX_SET_def]) >~
+  [‘e < fMAX_SET A’, ‘~(e < fMAX_SET (fDELETE e A))’]
+  >- (gs[NOT_LESS] >> ‘A <> fEMPTY’ by (strip_tac >> gs[fMAX_SET_def]) >>
+      ‘fIN (fMAX_SET A) A’ by simp[fMAX_SET_fIN] >>
+      ‘fMAX_SET A <> e’ by simp[] >>
+      ‘fIN (fMAX_SET A) (fDELETE e A)’ by simp[] >>
+      ‘fMAX_SET A <= fMAX_SET (fDELETE e A)’ by simp[fIN_fMAX_SET] >> simp[]) >~
+  [‘e < fMAX_SET (fDELETE e A)’, ‘~(e < fMAX_SET A)’]
+  >- (gs[NOT_LESS] >> ‘fMAX_SET A < fMAX_SET (fDELETE e A)’ by simp[] >>
+      pop_assum mp_tac >> simp_tac (srw_ss()) [NOT_LESS] >> irule fMAX_SET_SUBSET >>
+      simp[])
 QED
 
 (*
@@ -923,5 +1072,80 @@ Proof
 
   xfer_back_tac
 *)
+
+Definition fromSet_def:
+  fromSet s = ITSET fINSERT s fEMPTY
+End
+
+Theorem fromSet_EMPTY[simp]:
+  fromSet {} = fEMPTY
+Proof
+  simp[fromSet_def]
+QED
+
+Theorem IN_fromSet:
+  FINITE s ==> (fIN e (fromSet s) <=> e IN s)
+Proof
+  Induct_on ‘FINITE’ >>
+  simp[pred_setTheory.COMMUTING_ITSET_RECURSES, fINSERT_commutes, fromSet_def,
+       pred_setTheory.DELETE_NON_ELEMENT]
+QED
+
+Theorem fromSet_INSERT:
+  FINITE s ==> fromSet (e INSERT s) = fINSERT e (fromSet s)
+Proof
+  simp[EXTENSION, IN_fromSet]
+QED
+
+Theorem fromSet_toSet[simp]:
+  fromSet (toSet s) = s
+Proof
+  simp[EXTENSION, IN_fromSet, GSYM fIN_IN]
+QED
+
+Theorem toSet_fromSet:
+  FINITE s ==> toSet (fromSet s) = s
+Proof
+  simp[pred_setTheory.EXTENSION, GSYM fIN_IN, IN_fromSet]
+QED
+
+Theorem toSet_Qt:
+  Qt (λx y. FINITE x /\ x = y) fromSet toSet (λs fs. s = toSet fs)
+Proof
+  simp[Qt_def] >> ntac 2 (ONCE_REWRITE_TAC [FUN_EQ_THM]) >>
+  simp[relationTheory.O_DEF] >> rw[EQ_IMP_THM] >~
+  [‘s = toSet _’]
+  >- (irule_at Any (GSYM toSet_fromSet) >> simp[]) >>
+  simp[]
+QED
+
+Definition sfSETREL_def:
+  sfSETREL AB s fs <=>
+  (!a. a IN s ==> ?b. fIN b fs /\ AB a b) /\
+  (!b. fIN b fs ==> ?a. a IN s /\ AB a b)
+End
+
+Theorem fIN_sfSETREL:
+  bi_unique AB ==>
+  (AB |==> sfSETREL AB |==> (=)) (IN) fIN
+Proof
+  simp[FUN_REL_def, sfSETREL_def, bi_unique_def, left_unique_def,
+       right_unique_def] >>
+  metis_tac[]
+QED
+
+Theorem fINSERT_sfSETREL:
+  (AB |==> sfSETREL AB |==> sfSETREL AB) (INSERT) fINSERT
+Proof
+  simp[FUN_REL_def, sfSETREL_def, DISJ_IMP_THM, FORALL_AND_THM] >>
+  rw[] >> metis_tac[]
+QED
+
+Theorem fUNION_sfSETREL:
+  (sfSETREL AB |==> sfSETREL AB |==> sfSETREL AB) (UNION) fUNION
+Proof
+  simp[FUN_REL_def, sfSETREL_def] >> metis_tac[]
+QED
+
 
 val _ = export_theory();

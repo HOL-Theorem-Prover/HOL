@@ -458,7 +458,7 @@ val subset_cross_finite = store_thm(
    Note Group g              by subgroup_property
     and h1.carrier SUBSET G  by subgroup_carrier_subset, h1 <= g
     and h2.carrier SUBSET G  by subgroup_carrier_subset, h2 <= g
-    and h3.carrier SUBSET G` by subgroup_carrier_subset, h3 <= g
+    and h3.carrier SUBSET G  by subgroup_carrier_subset, h3 <= g
    By subgroup_cross_property, monoid_component_equality, this is to show:
       (h1.carrier o h2.carrier) o h3.carrier = h1.carrier o (h2.carrier o h3.carrier)
    This is true by subset_cross_assoc.
@@ -924,7 +924,7 @@ val subgroup_cross_card_eqn = store_thm(
 (* Proof:
    Let s = s1 CROSS s2.
    Then s1 SUBSET G /\ s2 SUBSET G     by subgroup_carrier_subset
-    ==> FINITE s1 /\ FINITE s2`        by SUBSET_FINITE, FINITE G
+    ==> FINITE s1 /\ FINITE s2         by SUBSET_FINITE, FINITE G
    Thus FINITE s                       by FINITE_CROSS
     and FINITE (s1 o s2)               by subset_cross_finite
 

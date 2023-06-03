@@ -34,9 +34,9 @@ struct
   type resolution = literal list * cindex list
 
   datatype certificate =
-      VALID of (vindex, extension) Redblackmap.dict
-        * (vindex, literal) Redblackmap.dict
-    | INVALID of (cindex, resolution) Redblackmap.dict * cindex
+      VALID of (vindex, extension) HOLdict.dict
+        * (vindex, literal) HOLdict.dict
+    | INVALID of (cindex, resolution) HOLdict.dict * cindex
 
 (* ------------------------------------------------------------------------- *)
 (* read_certificate_file: reads a QBF certificate from a file                *)
@@ -73,10 +73,10 @@ struct
       extension_lits (int_from_string literal :: lits) xs
     (* (vindex, extension) dict -> string list -> (vindex, extension) dict *)
     fun extension ext [vindex, "I", lit1, lit2, lit3] =
-      Redblackmap.insert (ext, int_from_string vindex,
+      HOLdict.insert (ext, int_from_string vindex,
         ITE (int_from_string lit1, int_from_string lit2, int_from_string lit3))
       | extension ext (vindex :: "A" :: lits) =
-      Redblackmap.insert (ext, int_from_string vindex,
+      HOLdict.insert (ext, int_from_string vindex,
         AND (extension_lits [] lits))
       | extension _ _ =
       raise ERR "read_certificate_file" "extension: invalid format"
@@ -106,14 +106,14 @@ struct
           "resolution: missing '*' or '0' terminator"
     (* (cindex, resolution) dict -> string list -> (cindex, resolution) dict *)
     fun resolution res (cindex :: xs) =
-      Redblackmap.insert (res, int_from_string cindex, resolution_args [] xs)
+      HOLdict.insert (res, int_from_string cindex, resolution_args [] xs)
       | resolution _ _ =
       raise ERR "read_certificate_file" "resolution: clause index expected"
     (* (vindex, literal) dict -> string list -> (vindex, literal) dict *)
     fun valid_conclusion dict [] =
       dict
       | valid_conclusion dict (vindex :: literal :: xs) =
-      valid_conclusion (Redblackmap.insert
+      valid_conclusion (HOLdict.insert
         (dict, int_from_string vindex, int_from_string literal)) xs
       | valid_conclusion _ _ =
       raise ERR "read_certificate_file"
@@ -122,15 +122,15 @@ struct
          conclusion *)
     fun conclusion (ext, res) ("VALID" :: xs) =
       let
-        val _ = Redblackmap.isEmpty res orelse
+        val _ = HOLdict.isEmpty res orelse
           raise ERR "read_certificate_file"
             "conclusion is 'VALID', but there are resolutions"
       in
-        VALID (ext, valid_conclusion (Redblackmap.mkDict Int.compare) xs)
+        VALID (ext, valid_conclusion (HOLdict.mkDict Int.compare) xs)
       end
       | conclusion (ext, res) ["INVALID", cindex] =
       let
-        val _ = Redblackmap.isEmpty ext orelse
+        val _ = HOLdict.isEmpty ext orelse
           raise ERR "read_certificate_file"
             "conclusion is 'INVALID', but there are extensions"
       in
@@ -152,7 +152,7 @@ struct
         raise ERR "read_certificate_file" "missing conclusion"
   in
     (certificate
-       (Redblackmap.mkDict Int.compare, Redblackmap.mkDict Int.compare)
+       (HOLdict.mkDict Int.compare, HOLdict.mkDict Int.compare)
     o (map (String.tokens (Lib.C Lib.mem [#" ", #"\t", #"\n"])))
     o filter_header
     o List.filter (fn l => l <> "\n")
@@ -177,7 +177,7 @@ struct
 
   fun check t dict (VALID (exts,lits)) = let
     open Lib Thm Drule Term Type boolSyntax
-    open Redblackset Redblackmap
+    open HOLset HOLdict
 
     val (var_to_index, index_to_var) = let
       open String Int Option
@@ -321,7 +321,7 @@ struct
       val vars = insert(vars,i,Ext(v,tm))
       val h = mk_eq(v,tm)
       fun foldthis (n,d) = update (d,n,fn NONE => [i] | SOME ls => i::ls)
-      val deps = Redblackset.foldl foldthis deps ds
+      val deps = HOLset.foldl foldthis deps ds
     in (mk_imp(h,t),vars,deps) end
     val (mat,vars,deps) = (foldl foldthis (mat,vars,deps)) exts
 
@@ -372,10 +372,10 @@ struct
          variable's index and a Boolean that is true if the variable is
          universally quantified, and false if it is existentially quantified *)
       val var_dict = List.foldl (fn ((i, var, is_forall), var_dict) =>
-        Redblackmap.insert (var_dict, var, (i, is_forall)))
-        (Redblackmap.mkDict Term.var_compare) vars
+        HOLdict.insert (var_dict, var, (i, is_forall)))
+        (HOLdict.mkDict Term.var_compare) vars
       fun index_fn var =
-        Redblackmap.find (var_dict, var)
+        HOLdict.find (var_dict, var)
 
       val vars = List.rev vars
       fun foldthis (clause, (i, clause_dict)) =
@@ -383,7 +383,7 @@ struct
           val clause = QbfLibrary.CLAUSE_TO_SEQUENT clause
           val lits = QbfLibrary.literals_in_clause index_fn clause
         in
-          (i + 1, Redblackmap.insert (clause_dict, i,
+          (i + 1, HOLdict.insert (clause_dict, i,
             QbfLibrary.forall_reduce (clause, vars, matrix, lits)))
         end
 
@@ -394,19 +394,19 @@ struct
          this is 'matrix'), and 4. the list of literals in the clause (cf.
          'QbfLibrary.literals_in_clause' *)
       val clause_dict = Lib.snd (List.foldl foldthis
-        (1, Redblackmap.mkDict Int.compare)
+        (1, HOLdict.mkDict Int.compare)
         (Drule.CONJUNCTS (Thm.ASSUME matrix)))
 
       (* depth-first recursion over the certificate (which represents a DAG),
          using QRESOLVE_CLAUSES to derive new clauses from existing ones *)
       fun derive (c_dict, index) =
-        case Redblackmap.peek (c_dict, index) of
+        case HOLdict.peek (c_dict, index) of
           SOME clause =>
           (c_dict, clause)
         | NONE =>
           let
-            val (_, indices) = Redblackmap.find (dict, index)
-              handle Redblackmap.NotFound =>
+            val (_, indices) = HOLdict.find (dict, index)
+              handle HOLdict.NotFound =>
                 raise ERR "check"
                   ("invalid certificate: no definition for clause ID " ^
                    Int.toString index)
@@ -419,7 +419,7 @@ struct
             val clause = List.foldl (QbfLibrary.QRESOLVE_CLAUSES)
               (List.hd clauses) (List.tl clauses)
           in
-            (Redblackmap.insert (c_dict, index, clause), clause)
+            (HOLdict.insert (c_dict, index, clause), clause)
           end
 
       (* derive "t |- F", using the certificate *)

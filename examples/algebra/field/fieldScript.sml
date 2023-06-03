@@ -342,8 +342,8 @@ open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
                                    !y. y IN R /\ ((x * y = x) \/ (y * x = x)) ==> (y = #1)
    field_mult_linv_eq_one |- !r. Field r ==> !x y. x IN R+ /\ y IN R+ ==> (( |/ x * y = #1) <=> (x = y))
    field_mult_rinv_eq_one |- !r. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ((x * |/ y = #1) <=> (x = y))
-   field_mult_linv_eqn    |- !r. Field r ==> !x y z. x IN R+ /\ y IN R+ /\ z IN R+ ==> (( |/ x * y = z) <=> (y = x * z))
-   field_mult_rinv_eqn    |- !r. Field r ==> !x y z. x IN R+ /\ y IN R+ /\ z IN R+ ==> ((x * |/ y = z) <=> (x = z * y))
+   field_mult_linv_eqn    |- !r. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R ==> (( |/ x * y = z) <=> (y = x * z))
+   field_mult_rinv_eqn    |- !r. Field r ==> !x y z. x IN R /\ y IN R+ /\ z IN R ==> ((x * |/ y = z) <=> (x = z * y))
    field_inv_mult_comm    |- !r. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ( |/ (x * y) = |/ y * |/ x)
 #  field_inv_mult         |- !r. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ( |/ (x * y) = |/ x * |/ y)
 #  field_inv_one          |- !r. Field r ==> ( |/ #1 = #1)
@@ -418,6 +418,8 @@ open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
    field_inv_not_zero     |- !r. Field r ==> !x. x IN R+ ==> |/ x <> #0
    field_div_eq_zero      |- !r. Field r ==> !x y. x IN R /\ y IN R+ ==> ((x / y = #0) <=> (x = #0))
    field_zero_divides     |- !r. Field r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0))
+   field_mult_div_eqn     |- !r. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x = y * z <=> y = x / z)
+   field_mult_div_comm    |- !r. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x = z * y <=> y = x / z)
 
    Field and Integral Domain:
    field_is_integral_domain   |- !r. Field r ==> IntegralDomain r
@@ -444,6 +446,7 @@ open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
    field_units_def       |- !r. field_units r = <|carrier := R; sum := r.sum; prod := r* including #0|>
    field_units_is_field  |- !r. Ring r /\ (R* = R+ ) /\ #0 <> #1 ==> Field (field_units r)
    field_units_nonzero   |- !r. Field r ==> (R* = R+)
+   field_units_eq        |- !r. Field r ==> (R* = F* )
    field_unit_has_inv    |- !r. Field r ==> !x. unit x ==> unit ( |/ x)
    field_uroots_is_group |- !r. Field r ==> !n. Group (roots_of_unity f* n)
 
@@ -1825,29 +1828,62 @@ val field_mult_rinv_eq_one = store_thm(
   ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ((x * |/ y = #1) <=> (x = y))``,
   metis_tac[field_mult_group, group_op_rinv_eq_id, field_nonzero_mult_property, field_mult_inv]);
 
-(* Theorem: !x y z. x IN R+ /\ y IN R+ /\ z IN R+ ==> (( |/ x * y = z) <=> (y = x * z)) *)
+(* Theorem: !x y z. x IN R+ /\ y IN R /\ z IN R ==> (( |/ x * y = z) <=> (y = x * z)) *)
 (* Proof:
+   Note x IN R /\ x <> #0           by field_nonzero_eq
+     so |/ x IN R /\ |/ x <> #0     by field_inv_nonzero
+   If y = #0, to show:
+      #0 = z <=> #0 = x * z         by field_mult_rzero
+      which is true                 by field_mult_eq_zero, x <> #0
+   If z = #0, to show:
+      |/ x * y = #0 <=> y = #0      by field_mult_rzero
+      which is true                 by field_mult_eq_zero, |/ x <> #0
+
+   Otherwise, all x, y, z in R+     by field_nonzero_eq
    Note Field r ==> Group f*        by field_mult_group
    Apply group_op_linv_eqn |> ISPEC ``f*``;
    val it = |- Group f* ==> !x y z. x IN F* /\ y IN F* /\ z IN F* ==> ((f*.op (f*.inv x) y = z) <=> (y = f*.op x z)): thm
    Then use field_nonzero_mult_property and field_mult_inv.
 *)
-val field_mult_linv_eqn = store_thm(
-  "field_mult_linv_eqn",
-  ``!r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R+ /\ z IN R+ ==> (( |/ x * y = z) <=> (y = x * z))``,
-  metis_tac[field_mult_group, group_op_linv_eqn, field_nonzero_mult_property, field_mult_inv]);
+Theorem field_mult_linv_eqn:
+  !r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R ==> (( |/ x * y = z) <=> (y = x * z))
+Proof
+  rpt strip_tac >>
+  assume_tac field_nonzero_eq >>
+  Cases_on `y = #0` >-
+  metis_tac[field_mult_rzero, field_mult_eq_zero, field_inv_element] >>
+  Cases_on `z = #0` >-
+  metis_tac[field_mult_rzero, field_mult_eq_zero, field_inv_nonzero] >>
+  `Group f*` by rw[field_mult_group] >>
+  metis_tac[group_op_linv_eqn, field_nonzero_mult_property, field_mult_inv]
+QED
 
-(* Theorem: Field r ==> !x y. x IN R+ /\ y IN R+ ==> ((x * |/ y = #1) <=> (x = y)) *)
+(* Theorem: Field r ==> !x y z. x IN R /\ y IN R+ /\ z IN R ==> ((x * |/ y = z) <=> (x = z * y)) *)
 (* Proof:
+   Note y IN R /\ y <> #0           by field_nonzero_eq
+     so |/ y IN R /\ |/ y <> #0     by field_inv_nonzero
+   If x = #0, to show:
+      #0 = z <=> #0 = z * y         by field_mult_lzero
+      which is true                 by field_mult_eq_zero, y <> #0
+   If z = #0, to show:
+      x * |/ y = #0 <=> x = #0      by field_mult_lzero
+      which is true                 by field_mult_eq_zero, |/ y <> #0
+
+   Otherwise, all x, y, z in R+     by field_nonzero_eq
    Note Field r ==> Group f*        by field_mult_group
    Apply group_op_rinv_eqn |> ISPEC ``f*``;
    val it = |- Group f* ==> !x y z. x IN F* /\ y IN F* /\ z IN F* ==> ((f*.op x (f*.inv y) = z) <=> (x = f*.op z y)): thm
    Then use field_nonzero_mult_property and field_mult_inv.
+
+   Another method:
+   Note y IN R /\ |/ y IN R        by field_nonzero_element, field_inv_element
+   The result follows              by field_mult_linv_eqn, field_mult_comm
 *)
-val field_mult_rinv_eqn = store_thm(
-  "field_mult_rinv_eqn",
-  ``!r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R+ /\ z IN R+ ==> ((x * |/ y = z) <=> (x = z * y))``,
-  metis_tac[field_mult_group, group_op_rinv_eqn, field_nonzero_mult_property, field_mult_inv]);
+Theorem field_mult_rinv_eqn:
+  !r:'a field. Field r ==> !x y z. x IN R /\ y IN R+ /\ z IN R ==> ((x * |/ y = z) <=> (x = z * y))
+Proof
+  metis_tac[field_mult_linv_eqn, field_mult_comm, field_nonzero_element, field_inv_element]
+QED
 
 (* Theorem: |/ (x * y) = |/ y * |/ x *)
 (* Proof: by group_inv_op, field_mult_inv, and r.prod group. *)
@@ -2456,6 +2492,47 @@ val field_zero_divides = store_thm(
   ``!r:'a field. Field r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0))``,
   rw[ring_zero_divides]);
 
+(* Theorem: Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x = y * z <=> y = x / z) *)
+(* Proof:
+   Note z IN R /\ |/ z IN R    by field_nonzero_element, field_inv_element
+   If part: x = y * z ==> y = x / z
+      This is to show:
+           y = (y * z) * |/ z  by field_div_def
+        (y * z) * |/ z
+      = y * (z * |/ z)         by field_mult_assoc
+      = y * #1                 by field_mult_rinv
+      = y                      by field_mult_rone
+   Only-if part: y = x / z ==> x = y * z
+      This is to show:
+           x = (x * |/ z) * z  by field_div_def
+        (x * |/ z) * z
+      = x * ( |/ z * z)        by field_mult_assoc
+      = x * #1                 by field_mult_linv
+      = x                      by field_mult_rone
+
+   Another method:
+   By field_div_def, to show:
+      x IN R /\ y IN R /\ z IN R+ ==> (x = y * z <=> y = x * |/ z)
+   which is true               by field_mult_rinv_eqn, exchange y and z.
+*)
+Theorem field_mult_div_eqn:
+  !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x = y * z <=> y = x / z)
+Proof
+  metis_tac[field_mult_rinv_eqn, field_div_def]
+QED
+
+(* Theorem: Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x = z * y <=> y = x / z) *)
+(* Proof:
+   Note z IN R                 by field_nonzero_element
+     so z * y = y * z          by field_mult_comm
+   The result follows          by field_mult_div_eqn
+*)
+Theorem field_mult_div_comm:
+  !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x = z * y <=> y = x / z)
+Proof
+  metis_tac[field_mult_div_eqn, field_nonzero_element, field_mult_comm]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Field and Integral Domain.                                                *)
 (* ------------------------------------------------------------------------- *)
@@ -2779,6 +2856,19 @@ val field_units_nonzero = store_thm(
   "field_units_nonzero",
   ``!r:'a field. Field r ==> (R* = R+)``,
   rw[field_nonzero_unit, EXTENSION]);
+
+(* Theore m: Field r ==> (R* = F* ) *)
+(* Proof:
+   By EXTENSION,
+       x IN R*         by notation, unit x
+   <=> x IN R+         by field_nonzero_unit
+   <=> x IN F*         by field_mult_carrier
+*)
+Theorem field_units_eq:
+  !r:'a field. Field r ==> (R* = F* )
+Proof
+  metis_tac[EXTENSION, field_nonzero_unit, field_mult_carrier]
+QED
 
 (* Theorem: Field r ==> !x. unit x ==> unit ( |/ x) *)
 (* Proof: by ring_unit_has_inv, field_is_ring. *)

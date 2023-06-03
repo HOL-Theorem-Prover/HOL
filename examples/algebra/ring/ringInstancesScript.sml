@@ -657,15 +657,16 @@ val ZN_mult_inv_coprime_iff = store_thm(
           ((y * (n MOD m)) MOD m = 1) by GCD_MOD_MULT_INV
        The result follows             by MULT_COMM
 *)
-val ZN_coprime_invertible = store_thm(
-  "ZN_coprime_invertible",
-  ``!m n. 1 < m /\ coprime m n ==> (n MOD m) IN (Invertibles (ZN m).prod).carrier``,
+Theorem ZN_coprime_invertible:
+  !m n. 1 < m /\ coprime m n ==> (n MOD m) IN (Invertibles (ZN m).prod).carrier
+Proof
   rpt strip_tac >>
   `0 < n /\ 0 < n MOD m` by metis_tac[MOD_NONZERO_WHEN_GCD_ONE] >>
   `0 < m` by decide_tac >>
-  rw_tac std_ss[Invertibles_def, monoid_invertibles_def, ZN_def, times_mod_def, GSPECIFICATION, IN_COUNT] >-
-  metis_tac[] >>
-  metis_tac[MOD_LESS, coprime_mod, GCD_MOD_MULT_INV, MULT_COMM]);
+  rw_tac std_ss[Invertibles_def, monoid_invertibles_def, ZN_def, times_mod_def,
+                GSPECIFICATION, IN_COUNT] >>
+  metis_tac[MOD_LESS, coprime_mod, GCD_MOD_MULT_INV, MULT_COMM]
+QED
 
 (* Same result with a different proof. *)
 

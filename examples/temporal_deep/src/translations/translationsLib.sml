@@ -12,6 +12,9 @@ open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory p
 
 exception NoLTLTerm;
 
+val list_ss = list_ss -* ["LT1_EQ0"]
+val std_ss = std_ss -* ["LT1_EQ0"]
+
 (* This function is recursive thus cannot be defined as a value *)
 fun SETIFY_CONV tm =
    (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm;

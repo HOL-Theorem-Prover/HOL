@@ -2974,7 +2974,7 @@ val weak_cmult_const_comm = store_thm(
    = k o p || ([] o p) >> 1    by weak_mult_cons
    = k o p || ([]) >> 1        by weak_mult_of_lzero
    = k o p || []               by poly_shift_of_zero
-   = k o p                      by weak_add_of_rzero
+   = k o p                     by weak_add_of_rzero
 *)
 val weak_mult_const = store_thm(
   "weak_mult_const",
@@ -3411,7 +3411,7 @@ val weak_one_poly = store_thm(
 (* Theorem: c o [#1] = [c] *)
 (* Proof: by weak_cmult_cons.
       c o [#1]
-   = (c * #1::c o [])    by weak_cmult_cons
+   = (c * #1::c o [])     by weak_cmult_cons
    = [c * #1]             by weak_cmult_of_zero
    = [c]                  by ring_mult_rone
 *)
@@ -3455,7 +3455,7 @@ val weak_mult_lone = store_thm(
 (* Proof:
       p o [#1]
    = [#1] o p      by weak_mult_comm, weak_one
-   = p            by weak_mult_lone
+   = p             by weak_mult_lone
 *)
 val weak_mult_rone = store_thm(
   "weak_mult_rone",
@@ -3730,13 +3730,13 @@ val _ = export_rewrites ["poly_chop_chop"];
          then chop (h::p) = (h::%p) by poly_chop_cons,
          and weak (%p)         by induction hypothesis
          If chop p = [],
-            then zerop p        by poly_chop_is_zero
+            then zerop p       by poly_chop_is_zero
             hence h <> #0      by zero_poly_cons
             so chop (h::p) = [h],
             and weak [h]       by weak_nonzero_element_poly.
          If ~ p <> [],
          then  ~ zerop (chop p)    by weak_cons_not_zero
-         and   ~ zerop (h::%p)  by zero_poly_cons
+         and   ~ zerop (h::%p)     by zero_poly_cons
          hence true by weak_cons, since h is known to be in R.
 *)
 val poly_chop_weak = store_thm(
@@ -3750,7 +3750,7 @@ val poly_chop_weak = store_thm(
        zerop p
    <=> chop p = []          by zero_poly_chop
    <=> chop (chop p) = []   by poly_chop_chop
-   <=> zerop (chop p)        by zero_poly_chop
+   <=> zerop (chop p)       by zero_poly_chop
 *)
 val zero_poly_eq_zero_poly_chop = store_thm(
   "zero_poly_eq_zero_poly_chop",
@@ -3909,8 +3909,8 @@ val _ = export_rewrites ["poly_chop_add", "poly_chop_add_comm", "poly_chop_add_c
              !h. weak (h::p) ==> !c::(R). chop (c o (h::p)) = chop (c o chop (h::p)
       If zerop (h::p), then zerop (c o (h::p))   by zero_poly_cmult
       LHS = c o chop (h::p)
-          = c o []                 by poly_chop_cons, zerop (h::p)
-          = []                     by weak_cmult_of_zero
+          = c o []                  by poly_chop_cons, zerop (h::p)
+          = []                      by weak_cmult_of_zero
           = chop (c o (h::p))       by zero_poly_chop, zerop (c o (h::p))
           = RHS
       If ~zerop (h::p),
@@ -3958,11 +3958,11 @@ val _ = export_rewrites ["poly_chop_neg"];
 (* Theorem: chop (p >> n) = (chop p) >> n *)
 (* Proof:
    If zerop p, to show:
-      zerop (p >> n)          by zero_poly_shift
+      zerop (p >> n)         by zero_poly_shift
       LHS = []               by zero_poly_chop
           = [] >> n = RHS    by zero_poly_chop, poly_shift_of_zero
    If ~zerop p,
-      ~zerop (p >> n)         by zero_poly_shift
+      ~zerop (p >> n)        by zero_poly_shift
       p <> []                by zero_poly_of_zero
       chop <> []             by zero_poly_shift
    By induction on n.
@@ -3996,8 +3996,8 @@ val _ = export_rewrites ["poly_chop_shift"];
    Step: chop (p o q) = chop (chop p o q) ==> chop ((h::p) o q) = chop (chop (h::p) o q)
       If zerop (h::p), chop (h::p) = [].
       LHS = chop ((h::p) o q)
-          = chop (zerop o q)     by zerop (h::p)
-          = chop (zerop)         by zero_weak_lmult
+          = chop (zerop o q)    by zerop (h::p)
+          = chop (zerop)        by zero_weak_lmult
           = []                  by zero_poly_chop
       RHS = chop (chop (h::p) o q)
           = chop ([] o q)       by zero_poly_chop
@@ -4096,9 +4096,9 @@ val poly_chop_const_nonzero = store_thm(
       But chop [] = [] by poly_chop_of_zero, hence true.
    Step: chop p <> [] ==> LAST (chop p) <> #0 ==>
              !h. chop (h::p) <> [] ==> LAST (chop (h::p)) <> #0
-   #1 chop (h::p) <> [] means ~ zerop (h::p) by zero_poly_chop,
-   #2 hence chop (h::p) = h :: chop p     by poly_chop_cons.
-   #3 i.e. ~ zerop (h :: chop p)
+      chop (h::p) <> [] means ~ zerop (h::p)   by zero_poly_chop
+      hence chop (h::p) = h :: chop p          by poly_chop_cons
+      i.e. ~ zerop (h :: chop p)
       or ~((h = #0) /\ (chop p = [])) /\
            chop p <> [] ==> LAST (chop p) <> #0  ==> LAST (h:: chop p) <> #0
       If chop p = [],
@@ -5346,7 +5346,7 @@ val _ = export_rewrites ["poly_eval_zero"];
 (* Proof:
      [h](x)
    = (h::[])(x)
-   = h + [](x) * x   by poly_eval_cons
+   = h + [](x) * x    by poly_eval_cons
    = h + #0 * x       by poly_eval_of_zero
    = h + #0           by ring_mult_lzero
    = h                by ring_add_rzero
@@ -5407,8 +5407,8 @@ val _ = export_rewrites ["poly_eval_zerop"];
       true as chop [] = []   by poly_chop_of_zero.
    Step: eval (chop p) x = eval p x ==> eval (chop (h::p)) x = eval (h::p) x
      if zerop (h::p),
-        chop (h::p) = []      by poly_chop_cons,
-        LHS = [](x) = #0      by poly_eval_of_zero
+        chop (h::p) = []       by poly_chop_cons,
+        LHS = [](x) = #0       by poly_eval_of_zero
             = RHS              by poly_eval_zerop
      if ~zerop (h::p),
         chop (h::p)(x)
@@ -5470,9 +5470,9 @@ val weak_eval_cmult = store_thm(
 (* Theorem: weak p ==> (neg p)(x) = - p(x) *)
 (* Proof: by induction on p.
    Base: eval (neg []) x = -eval [] x
-      true since neg [] = []  by weak_neg_of_zero
-                   #0 = - #0    by ring_neg_zero
-           and [](x) = #0      by poly_eval_of_zero
+      true since neg [] = []      by weak_neg_of_zero
+                     #0 = - #0    by ring_neg_zero
+           and [](x) = #0         by poly_eval_of_zero
    Step: eval (neg p) x = -eval p x ==> eval (neg (h::p)) x = -eval (h::p) x
      (neg (h::p))(x)
    = (-h::neg p)(x)          by weak_neg_cons
@@ -5500,13 +5500,13 @@ val weak_eval_neg = store_thm(
      ([] || q)(x)
    = q(x)              by weak_add_of_lzero
    = #0 + q(x)         by ring_add_lzero
-   = [](x) + q(x)     by poly_eval_of_zero
+   = [](x) + q(x)      by poly_eval_of_zero
    Step: induct on q.
       Base: eval ((h::p) || []) x = eval (h::p) x + eval [] x
         ((h::p) || [])(x)
       = (h::p)(x)             by weak_add_of_rzero
       = (h::p)(x) + #0        by ring_add_rzero
-      = (h::p)(x) + [](x)    by poly_eval_of_zero
+      = (h::p)(x) + [](x)     by poly_eval_of_zero
       Step: eval (p || q) x = eval p x + eval q x ==>
                  eval ((h::p) || (h'::q)) x = eval (h::p) x + eval (h'::q) x
         ((h::p) || (h'::q))(x)
@@ -5574,8 +5574,8 @@ val weak_eval_shift = store_thm(
    Base: eval ([] o q) x = eval [] x * eval q x
      ([] o q)(x)
    = [](x)          by weak_mult_of_lzero
-   = #0              by poly_eval_of_zero
-   = #0 * q(x)       by ring_mult_lzero, weak_eval_element
+   = #0             by poly_eval_of_zero
+   = #0 * q(x)      by ring_mult_lzero, weak_eval_element
    = [](x) * q(x)   by poly_eval_of_zero
    Step: eval ((h::p) o q) x = eval (h::p) x * eval q x
      ((h::p) o q)(x)

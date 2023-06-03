@@ -24,6 +24,8 @@ val _ = attach_comment ‘
 
 # Definition of the codegen function’
 
+val _ = temp_delsimps ["LT1_EQ0"]
+
 (* codegen *)
 
 val res = to_deep APPEND;

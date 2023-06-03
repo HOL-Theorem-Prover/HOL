@@ -253,6 +253,17 @@ open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
    subfield_mult_subset_group_subgroup  |- !r s. s <<= r ==> subset_group f* (s.prod.carrier DIFF {#0}) <= f*
    field_subset_group_subgroup          |- !r. Field r ==> subset_group f* R+ <= f*
    field_subset_group_self              |- !r. Field r ==> (subset_group f* R+ = f* )
+
+   Injective Image of Field:
+   field_inj_image_field  |- !r f. Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f)
+   field_inj_image_prod_nonzero_monoid
+                          |- !r f. Field r /\ INJ f R univ(:'b) ==> Monoid ((ring_inj_image r f).prod excluding f #0)
+   field_inj_image_prod_nonzero_group
+                          |- !r f. Field r /\ INJ f R univ(:'b) ==> Group ((ring_inj_image r f).prod excluding f #0)
+   field_inj_image_field_homo    |- !r f. Field r /\ INJ f R univ(:'b) ==> FieldHomo f r (ring_inj_image r f)
+   field_inj_image_finite_field  |- !r f. FiniteField r /\ INJ f R univ(:'b) ==> FiniteField (ring_inj_image r f)
+
+
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -2094,6 +2105,206 @@ val field_subset_group_self = store_thm(
   `subset_group f* R+ <= f*` by rw[field_subset_group_subgroup] >>
   `(subset_group f* R+).carrier = R+` by rw[subset_group_property] >>
   metis_tac[subgroup_eq_carrier, field_mult_carrier]);
+
+(* ------------------------------------------------------------------------- *)
+(* Injective Image of Field.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: Given a Field r, and an injective function f,
+   then the image (f R) is a Field, with an induced binary operator:
+        op := (\x y. f (f^-1 x * f^-1 y))  *)
+
+(* Since a field is a ring, field injective image = ring injective image *)
+
+(* Theorem: Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f) *)
+(* Proof:
+   By Field_def, this is to show:
+   (1) Ring (ring_inj_image r f)
+           Field r
+       ==> Ring r                              by field_is_ring
+       ==> Ring (ring_inj_image r f)           by ring_inj_image_ring
+
+   (2) Group ((ring_inj_image r f).prod excluding (ring_inj_image r f).sum.id)
+       Note (ring_inj_image r f).prod
+          = monoid_inj_image r.prod f          by ring_inj_image_alt, [1]
+        and (ring_inj_image r f).sum.id
+         = (monoid_inj_image r.sum f).id       by ring_inj_image_alt
+         = f #0                                by monoid_inj_image_def, [2]
+       Hence goal is: Group (monoid_inj_image r.prod f excluding f #0).
+           Field r
+       ==> Group f*                            by Field_def
+         = Group (r.prod excluding #0)         by notation
+       ==> Group (monoid_inj_image r.prod f excluding f #0)
+                                               by group_inj_image_excluding_group
+
+       This is interesting:
+       Note F* = R+                            by field_mult_carrier
+        and R+ SUBSET R, thus F* SUBSET R      by field_nonzero_subset
+         so INJ f F* univ(:'b)                 by INJ_SUBSET
+           Field r
+       ==> Group f*                            by Field_def
+       ==> Group (monoid_inj_image f* f)       by group_inj_image_group
+         = Group (monoid_inj_image (r.prod excluding #0) f)
+                                               by notation
+      However, showing the following not possible with HOL4 functions:
+         monoid_inj_image (r.prod excluding #0) f
+       = (monoid_inj_image r.prod f) excluding f #0
+*)
+Theorem field_inj_image_field:
+  !(r:'a field) (f:'a -> 'b). Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f)
+Proof
+  rpt strip_tac >>
+  rw[Field_def] >-
+  rw[ring_inj_image_ring] >>
+  `(ring_inj_image r f).sum.id = f #0` by rw[ring_inj_image_alt, monoid_inj_image_def] >>
+  simp[ring_inj_image_alt] >>
+  `Group f*` by metis_tac[Field_def] >>
+  simp[group_inj_image_excluding_group]
+QED
+
+(* The following will be applied to finite fields, for existence and extension. *)
+
+(* Theorem: Field r /\ INJ f R univ(:'b) ==> Monoid ((ring_inj_image r f).prod excluding (f #0)) *)
+(* Proof:
+   Let s = IMAGE f R.
+   Then BIJ f R s                                    by INJ_IMAGE_BIJ_ALT
+     so INJ f R s                                    by BIJ_DEF
+   Note !x. x IN R ==> f x IN s                      by INJ_DEF
+    and !x. x IN s ==> LINV f R x IN R               by BIJ_LINV_ELEMENT
+   also !x. x IN R ==> (LINV f R (f x) = x)          by BIJ_LINV_THM
+    and !x. x IN s ==> (f (LINV f R x) = x)          by BIJ_LINV_THM
+    and !x. x IN R ==> ((f x = f #0) <=> (x = #0))   by INJ_DEF, field_zero_element
+
+   Let xx = LINV f R x, yy = LINV f R y, zz = LINV f R z.
+   By Monoid_def, ring_inj_image_def, excluding_def, this is to show:
+   (1) x IN s /\ y IN s ==> f (xx * yy) IN , true    by field_mult_element
+   (2) x IN s /\ y IN s /\ x <> f #0 /\ y <> f #0 ==> f (xx * yy) <> f #0
+       Since xx <> #0 /\ yy <> #0, hence true        by field_mult_eq_zero
+   (3) x IN s /\ y IN s /\ z IN s ==> f (LINV f R (f (xx * yy)) * zz) = f (xx * LINV f R (f (yy * zz)))
+       Since LINV f R (f (xx * yy)) = xx * yy        by field_mult_element
+         and LINV f R (f (yy * zz)) = yy * zz        by field_mult_element
+       The result follows                            by field_mult_assoc
+   (4) f #1 IN s, true                               by field_one_element
+   (5) f #1 <> f #0, true since #1 <> #0             by field_one_ne_zero
+   (6) x IN s ==> f (LINV f R (f #1) * xx) = x, true by field_mult_lone
+   (7) x IN s ==> f (xx * LINV f R (f #1)) = x, true by field_mult_rone
+*)
+Theorem field_inj_image_prod_nonzero_monoid:
+  !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> Monoid ((ring_inj_image r f).prod excluding (f #0))
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN R ==> ((f x = f #0) <=> (x = #0))` by metis_tac[INJ_DEF, field_zero_element] >>
+  rw_tac std_ss[Monoid_def, ring_inj_image_def, excluding_def, IN_DIFF, IN_SING] >-
+  rw[] >-
+ (`LINV f R x <> #0 /\ LINV f R y <> #0` by metis_tac[] >>
+  rw[field_mult_eq_zero]) >-
+ (qabbrev_tac `xx = LINV f R x` >>
+  qabbrev_tac `yy = LINV f R y` >>
+  qabbrev_tac `zz = LINV f R z` >>
+  `LINV f R (f (xx * yy)) = xx * yy` by metis_tac[field_mult_element] >>
+  `LINV f R (f (yy * zz)) = yy * zz` by metis_tac[field_mult_element] >>
+  metis_tac[field_mult_assoc]) >-
+  rw[] >-
+  metis_tac[field_one_element, field_one_ne_zero] >-
+  rw[] >>
+  rw[]
+QED
+
+(* Theorem: Field r /\ INJ f R univ(:'b) ==> Group ((ring_inj_image r f).prod excluding (f #0)) *)
+(* Proof:
+   Let s = IMAGE f R.
+   Then BIJ f R s                                    by INJ_IMAGE_BIJ_ALT
+     so INJ f R s                                    by BIJ_DEF
+   Note !x. x IN R ==> f x IN s                      by INJ_DEF
+    and !x. x IN s ==> LINV f R x IN R               by BIJ_LINV_ELEMENT
+   also !x. x IN R ==> (LINV f R (f x) = x)          by BIJ_LINV_THM
+    and !x. x IN s ==> (f (LINV f R x) = x)          by BIJ_LINV_THM
+    and !x. x IN R ==> ((f x = f #0) <=> (x = #0))   by INJ_DEF, field_zero_element
+
+   Let xx = LINV f R x.
+   By Group_def, this is to show:
+   (1) Monoid ((ring_inj_image r f).prod excluding f #0), true by field_inj_image_prod_nonzero_monoid
+   (2) monoid_invertibles ((ring_inj_image r f).prod excluding f #0) = ((ring_inj_image r f).prod excluding f #0).carrier
+       By monoid_invertibles_def, ring_inj_image_def, excluding_def, this is to show:
+       x IN s /\ x <> f #0 ==>
+         ?y. (y IN s /\ y <> f #0) /\ (f (xx * LINV f R y) = f #1) /\ (f (LINV f R y * xx) = f #1)
+       Since xx IN R /\ xx <> #0               by above
+          so |/ xx IN R /\ |/ xx <> #0         by field_inv_nonzero, field_nonzero_eq
+       Let y = f ( |/ xx).
+       Then y IN s /\ y <> f #0                by above
+        and LINV f R y = |/ xx                 by above, BIJ_LINV_THM
+       Note xx IN R+                           by field_nonzero_eq
+         so f (xx * |/ xx) = f #1              by field_mult_rinv
+        and f ( |/ xx * xx) = f #1             by field_mult_linv
+*)
+Theorem field_inj_image_prod_nonzero_group:
+  !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> Group ((ring_inj_image r f).prod excluding (f #0))
+Proof
+  rw[Group_def] >-
+  rw[field_inj_image_prod_nonzero_monoid] >>
+  qabbrev_tac `s = IMAGE f R` >>
+  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f R s` by metis_tac[BIJ_DEF] >>
+  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
+  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
+  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
+  `!x. x IN R ==> ((f x = f #0) <=> (x = #0))` by metis_tac[INJ_DEF, field_zero_element] >>
+  rw_tac std_ss[monoid_invertibles_def, ring_inj_image_def, excluding_def, GSPECIFICATION, EXTENSION, IN_DIFF, IN_SING, EQ_IMP_THM] >>
+  qabbrev_tac `xx = LINV f R x` >>
+  `xx IN R /\ xx <> #0` by metis_tac[] >>
+  `|/ xx IN R /\ |/ xx <> #0` by metis_tac[field_inv_nonzero, field_nonzero_eq] >>
+  qexists_tac `f ( |/ xx)` >>
+  rw[field_nonzero_eq, field_mult_rinv, field_mult_linv]
+QED
+
+(* Theorem: Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f) *)
+(* Proof:
+   By Field_def, this is to show:
+   (1) Ring (ring_inj_image r f), true             by ring_inj_image_ring
+   (2) Group ((ring_inj_image r f).prod excluding (ring_inj_image r f).sum.id)
+       Since (ring_inj_image r f).sum.id = f #0    by ring_inj_image_def
+       The result follows                          by field_inj_image_prod_nonzero_group
+*)
+Theorem field_inj_image_field:
+  !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f)
+Proof
+  rpt strip_tac >>
+  rw[Field_def] >-
+  rw[ring_inj_image_ring] >>
+  `(ring_inj_image r f).sum.id = f #0` by rw[ring_inj_image_def] >>
+  rw[field_inj_image_prod_nonzero_group]
+QED
+(* Another proof of a previous theorem. *)
+
+(* Theorem: Field r /\ INJ f R univ(:'b) ==> FieldHomo f r (ring_inj_image r f) *)
+(* Proof: by ring_inj_image_ring_homo, field_is_ring *)
+Theorem field_inj_image_field_homo:
+  !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> FieldHomo f r (ring_inj_image r f)
+Proof
+  rw[ring_inj_image_ring_homo, FieldHomo_def]
+QED
+
+(* Theorem: FiniteField r /\ INJ f R univ(:'b) ==> FiniteField (ring_inj_image r f) *)
+(* Proof:
+   Note Field r /\ FINITE R                        by FiniteField_def
+    ==> Field (ring_inj_image r f)                 by field_inj_image_field
+   Also (ring_inj_image r f).carrier = IMAGE f R   by ring_inj_image_carrier
+     so FINITE ((ring_inj_image r f).carrier)      by IMAGE_FINITE
+     or FiniteField (ring_inj_image r f)           by FiniteField_def
+*)
+Theorem field_inj_image_finite_field:
+  !(r:'a field) f. FiniteField r /\ INJ f R univ(:'b) ==> FiniteField (ring_inj_image r f)
+Proof
+  metis_tac[FiniteField_def, field_inj_image_field, ring_inj_image_carrier, IMAGE_FINITE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

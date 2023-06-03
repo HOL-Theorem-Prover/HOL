@@ -1913,11 +1913,12 @@ fun prove_case_elim_thm {case_def,nchotomy} = let
           raise mk_HOL_ERR "Prim_rec" "prove_case_elim_thm"
                 "case_def and nchotomy theorem don't match up"
   val disjs = ListPair.map mapthis (disjs0,casefs)
+  val conv = PURE_REWRITE_CONV (CONJUNCTS case_def)
   fun prove_case_from_eqn ext = let
     (* ext is of the form ``?a1 .. ai. x = ctor1 a1 .. ai /\ f1 a1 .. ai`` *)
     val (vs,body) = strip_exists ext
     val body_th = ASSUME body
-    val res0 = EQT_ELIM (PURE_REWRITE_CONV [body_th,case_def] t)
+    val res0 = EQT_ELIM (REPEATC (PURE_REWRITE_CONV [body_th] THENC conv) t)
     fun foldthis (v,(ext,th)) = let
       val ex' = mk_exists(v,ext)
     in
@@ -1948,8 +1949,7 @@ fun prove_case_elim_thm {case_def,nchotomy} = let
     val ex_thm =
         List.foldr (fn (v, th) => EXISTS(mk_exists(v,concl th),v) th)
                    body_th vs
-    val elim =
-        EQ_MP (PURE_REWRITE_CONV [ASSUME c1, case_def] t) t_thm
+    val elim = EQ_MP ((PURE_REWRITE_CONV [ASSUME c1] THENC conv) t) t_thm
   in
     PROVE_HYP elim ex_thm
   end

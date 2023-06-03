@@ -1413,7 +1413,7 @@ val poly_ring_zero_ideal = store_thm(
 
 (* Theorem: Field r ==> !i. i << (PolyRing r) /\ i <> pfppideal |0| ==> ?p. monic p /\ (i = pfppideal p) *)
 (* Proof:
-   Since Ring (PolyRing r)                by poly_ring_ring, Ring r`
+   Since Ring (PolyRing r)                by poly_ring_ring, Ring r
      and PrincipalIdealRing (PolyRing r)  by poly_ring_principal_ideal_ring, Field r
       so ?q. poly q /\ (i = pfppideal q)  by PrincipalIdealRing_def, poly_ring_property
      and q <> |0|                         by poly_ring_zero_ideal

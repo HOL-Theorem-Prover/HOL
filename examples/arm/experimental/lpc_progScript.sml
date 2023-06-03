@@ -7,8 +7,6 @@ open listTheory pairTheory combinTheory addressTheory;
 val _ = new_theory "lpc_prog";
 
 
-infix \\
-val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -58,23 +56,24 @@ val LPC_READ_RAM_def = Define `
 val LPC_READ_UART0_def = Define `
   LPC_READ_UART0 ((s,(time,rom,ram,uart0,p)):lpc_state) = UART0_READ uart0`;
 
-val ARM_OK_def = Define `
-  ARM_OK state =
+Definition ARM_OK_def:
+  ARM_OK state <=>
     (ARM_ARCH state = ARMv4) /\ (ARM_EXTENSIONS state = {}) /\
     (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
     ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR sctlrV state) /\
     (ARM_READ_SCTLR sctlrA state) /\ ~(ARM_READ_SCTLR sctlrU state) /\
     (ARM_READ_IT state = 0w) /\ ~(ARM_READ_STATUS psrJ state) /\
     ~(ARM_READ_STATUS psrT state) /\ ~(ARM_READ_STATUS psrE state) /\
-    (ARM_MODE state = 16w)`;
+    (ARM_MODE state = 16w)
+End
 
 val LPC_READ_UNDEF_def = Define `
-  LPC_READ_UNDEF ((s,p):lpc_state) = ~ARM_OK s /\ ~PERIPHERALS_OK p`;
+  LPC_READ_UNDEF ((s,p):lpc_state) <=> ~ARM_OK s /\ ~PERIPHERALS_OK p`;
 
 
-(* ----------------------------------------------------------------------------- *)
-(* Converting from lpc_state to lpc_set                                          *)
-(* ----------------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    Converting from lpc_state to lpc_set
+   ---------------------------------------------------------------------- *)
 
 val lpc2set'_def = Define `
   lpc2set' (rs,st:arm_bit set,is,ms,tt:unit set,ua:unit set,ud:unit set) (s:lpc_state) =
@@ -105,8 +104,9 @@ val SPLIT_lpc2set = prove(
   \\ SIMP_TAC bool_ss [DISJOINT_DEF,EXTENSION,IN_INTER,NOT_IN_EMPTY,IN_DIFF]
   \\ METIS_TAC [SUBSET_DEF]);
 
-val SUBSET_lpc2set = prove(
-  ``!u s. u SUBSET lpc2set s = ?y. u = lpc2set' y s``,
+Theorem SUBSET_lpc2set[local]:
+  !u s. u SUBSET lpc2set s <=> ?y. u = lpc2set' y s
+Proof
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [lpc2set'_SUBSET_lpc2set]
   \\ Q.EXISTS_TAC `(
@@ -117,57 +117,74 @@ val SUBSET_lpc2set = prove(
        { a |a| ?x. tTime x IN u },
        { a |a| ?x. tUart0 x IN u },
        { a |a| ?x. tUndef x IN u })`
-  \\ FULL_SIMP_TAC std_ss [lpc2set'_def,lpc2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
-       IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV]
-  \\ STRIP_TAC \\ ASM_REWRITE_TAC [] \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
-  \\ PAT_ASSUM ``!x:'a. b:bool`` IMP_RES_TAC \\ FULL_SIMP_TAC std_ss [lpc_el_11,lpc_el_distinct]);
+  \\ FULL_SIMP_TAC std_ss [lpc2set'_def,lpc2set_def,EXTENSION,SUBSET_DEF,
+                           IN_IMAGE, IN_UNION,GSPECIFICATION,IN_INSERT,
+                           NOT_IN_EMPTY,IN_UNIV]
+  \\ STRIP_TAC \\ ASM_REWRITE_TAC [] \\ EQ_TAC \\ REPEAT STRIP_TAC
+  THEN1 METIS_TAC []
+  \\ PAT_ASSUM ``!x:'a. b:bool`` IMP_RES_TAC
+  \\ FULL_SIMP_TAC std_ss [lpc_el_11,lpc_el_distinct]
+QED
 
-val SPLIT_lpc2set_EXISTS = prove(
-  ``!s u v. SPLIT (lpc2set s) (u,v) = ?y. (u = lpc2set' y s) /\ (v = lpc2set'' y s)``,
-  REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [SPLIT_lpc2set]
+Theorem SPLIT_lpc2set_EXISTS[local]:
+  !s u v. SPLIT (lpc2set s) (u,v) <=>
+          ?y. (u = lpc2set' y s) /\ (v = lpc2set'' y s)
+Proof
+  REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+  \\ ASM_REWRITE_TAC [SPLIT_lpc2set]
   \\ FULL_SIMP_TAC bool_ss [SPLIT_def,lpc2set'_def,lpc2set''_def]
   \\ `u SUBSET (lpc2set s)` by
        (FULL_SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_UNION] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC std_ss [SUBSET_lpc2set] \\ Q.EXISTS_TAC `y` \\ REWRITE_TAC []
-  \\ FULL_SIMP_TAC std_ss [EXTENSION,IN_DIFF,IN_UNION,DISJOINT_DEF,NOT_IN_EMPTY,IN_INTER]
-  \\ METIS_TAC []);
+  \\ gs[DISJOINT_DEF, EXTENSION]
+  \\ METIS_TAC []
+QED
 
 val IN_lpc2set = (SIMP_RULE std_ss [oneTheory.one] o prove)(``
-  (!a x s. tReg a x IN (lpc2set s) = (x = LPC_READ_REG a s)) /\
-  (!a x s. tReg a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_REG a s) /\ a IN rs) /\
-  (!a x s. tReg a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_REG a s) /\ ~(a IN rs)) /\
-  (!a x s. tStatus a x IN (lpc2set s) = (x = LPC_READ_STATUS a s)) /\
-  (!a x s. tStatus a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_STATUS a s) /\ a IN st) /\
-  (!a x s. tStatus a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_STATUS a s) /\ ~(a IN st)) /\
-  (!a x s. tRom a x IN (lpc2set s) = (x = LPC_READ_ROM a s)) /\
-  (!a x s. tRom a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_ROM a s) /\ a IN is) /\
-  (!a x s. tRom a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_ROM a s) /\ ~(a IN is)) /\
-  (!a x s. tRam a x IN (lpc2set s) = (x = LPC_READ_RAM a s)) /\
-  (!a x s. tRam a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_RAM a s) /\ a IN ms) /\
-  (!a x s. tRam a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_RAM a s) /\ ~(a IN ms)) /\
-  (!a x s. tTime x IN (lpc2set s) = (x = LPC_READ_TIME s)) /\
-  (!a x s. tTime x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_TIME s) /\ a IN tt) /\
-  (!a x s. tTime x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_TIME s) /\ ~(a IN tt)) /\
-  (!a x s. tUart0 x IN (lpc2set s) = (x = LPC_READ_UART0 s)) /\
-  (!a x s. tUart0 x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_UART0 s) /\ a IN ua) /\
-  (!a x s. tUart0 x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_UART0 s) /\ ~(a IN ua)) /\
-  (!a x s. tUndef x IN (lpc2set s) = (x = LPC_READ_UNDEF s)) /\
-  (!a x s. tUndef x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_UNDEF s) /\ a IN ud) /\
-  (!a x s. tUndef x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) = (x = LPC_READ_UNDEF s) /\ ~(a IN ud))``,
+  (!a x s. tReg a x IN (lpc2set s) <=> (x = LPC_READ_REG a s)) /\
+  (!a x s. tReg a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
+           x = LPC_READ_REG a s /\ a IN rs) /\
+  (!a x s. tReg a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) <=>
+           x = LPC_READ_REG a s /\ ~(a IN rs)) /\
+  (!a x s. tStatus a x IN (lpc2set s) <=> (x = LPC_READ_STATUS a s)) /\
+  (!a x s. tStatus a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
+           (x = LPC_READ_STATUS a s) /\ a IN st) /\
+  (!a x s. tStatus a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) <=>
+           (x = LPC_READ_STATUS a s) /\ ~(a IN st)) /\
+  (!a x s. tRom a x IN (lpc2set s) <=> (x = LPC_READ_ROM a s)) /\
+  (!a x s. tRom a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
+           (x = LPC_READ_ROM a s) /\ a IN is) /\
+  (!a x s. tRom a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) <=>
+           (x = LPC_READ_ROM a s) /\ ~(a IN is)) /\
+  (!a x s. tRam a x IN (lpc2set s) <=> (x = LPC_READ_RAM a s)) /\
+  (!a x s. tRam a x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
+           (x = LPC_READ_RAM a s) /\ a IN ms) /\
+  (!a x s. tRam a x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) <=>
+           (x = LPC_READ_RAM a s) /\ ~(a IN ms)) /\
+  (!a x s. tTime x IN (lpc2set s) <=> (x = LPC_READ_TIME s)) /\
+  (!a x s. tTime x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=> (x = LPC_READ_TIME s) /\ a IN tt) /\
+  (!a x s. tTime x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) <=> (x = LPC_READ_TIME s) /\ ~(a IN tt)) /\
+  (!a x s. tUart0 x IN (lpc2set s) <=> (x = LPC_READ_UART0 s)) /\
+  (!a x s. tUart0 x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=> (x = LPC_READ_UART0 s) /\ a IN ua) /\
+  (!a x s. tUart0 x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) <=> (x = LPC_READ_UART0 s) /\ ~(a IN ua)) /\
+  (!a x s. tUndef x IN (lpc2set s) <=> (x = LPC_READ_UNDEF s)) /\
+  (!a x s. tUndef x IN (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=> (x = LPC_READ_UNDEF s) /\ a IN ud) /\
+  (!a x s. tUndef x IN (lpc2set'' (rs,st,is,ms,tt,ua,ud) s) <=> (x = LPC_READ_UNDEF s) /\ ~(a IN ud))``,
   SRW_TAC [] [lpc2set'_def,lpc2set''_def,lpc2set_def,IN_UNION,IN_DIFF,oneTheory.one]
   \\ METIS_TAC []);
 
 val SET_NOT_EQ = prove(
-  ``!x y. ~(x = y:'a set) = ?a. ~(a IN x = a IN y)``,
+  ``!x y. ~(x = y:'a set) = ?a. ~(a IN x <=> a IN y)``,
    FULL_SIMP_TAC std_ss [EXTENSION])
 
-val lpc2set''_11 = prove(
-  ``!y y' s s'. (lpc2set'' y' s' = lpc2set'' y s) ==> (y = y')``,
+Theorem lpc2set''_11[local]:
+  !y y' s s'. (lpc2set'' y' s' = lpc2set'' y s) ==> (y = y')
+Proof
   REPEAT STRIP_TAC
   \\ `?rs st is ms tt ua ud. y = (rs,st,is,ms,tt,ua,ud)` by METIS_TAC [PAIR]
   \\ `?rs2 st2 is2 ms2 tt2 ua2 ud2. y' = (rs2,st2,is2,ms2,tt2,ua2,ud2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [] \\ CCONTR_TAC
-  \\ FULL_SIMP_TAC std_ss [EXTENSION]
+  \\ FULL_SIMP_TAC std_ss [EXTENSION, Excl "lift_disj_eq"]
   THEN1 (`~((?y. tReg x y IN lpc2set'' (rs,st,is,ms,tt,ua,ud) s) =
             (?y. tReg x y IN lpc2set'' (rs2,st2,is2,ms2,tt2,ua2,ud2) s'))` by
          FULL_SIMP_TAC std_ss [IN_lpc2set] THEN1 METIS_TAC [])
@@ -188,7 +205,8 @@ val lpc2set''_11 = prove(
          FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] THEN1 METIS_TAC [])
   THEN1 (`~((?y. tUndef y IN lpc2set'' (rs,st,is,ms,tt,ua,ud) s) =
             (?y. tUndef y IN lpc2set'' (rs2,st2,is2,ms2,tt2,ua2,ud2) s'))` by
-         FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] THEN1 METIS_TAC []));
+         FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] THEN1 METIS_TAC [])
+QED
 
 val DELETE_lpc2set = (SIMP_RULE std_ss [oneTheory.one] o prove)(``
   (!a s. (lpc2set' (rs,st,is,ms,tt,ua,ud) s) DELETE tReg a (LPC_READ_REG a s) =
@@ -210,15 +228,15 @@ val DELETE_lpc2set = (SIMP_RULE std_ss [oneTheory.one] o prove)(``
   \\ Cases_on `x` \\ SRW_TAC [] [] \\ METIS_TAC []);
 
 val EMPTY_lpc2set = prove(``
-  (lpc2set' (rs,st,is,ms,tt,ua,ud) s = {}) =
+  (lpc2set' (rs,st,is,ms,tt,ua,ud) s = {}) <=>
   (rs = {}) /\ (st = {}) /\ (is = {}) /\ (ms = {}) /\ (tt = {}) /\ (ua = {}) /\ (ud = {})``,
   SRW_TAC [] [lpc2set'_def,EXTENSION,IN_UNION,GSPECIFICATION,LEFT_AND_OVER_OR,EXISTS_OR_THM]
   \\ METIS_TAC []);
 
 
-(* ----------------------------------------------------------------------------- *)
-(* Defining the LPC_MODEL                                                        *)
-(* ----------------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    Defining the LPC_MODEL
+   ---------------------------------------------------------------------- *)
 
 val tR_def = Define `tR a x = SEP_EQ {tReg a x}`;
 val tM_def = Define `tM a x = SEP_EQ {tRam a x}`;
@@ -236,7 +254,8 @@ val LPC_ROM_def = Define `LPC_ROM (a,w:word32) =
     tRom (a+0w) (SOME (( 7 ><  0) w)) }`;
 
 val LPC_MODEL_def = Define `
-  LPC_MODEL = (lpc2set, LPC_NEXT, LPC_ROM, (\x y. (x:lpc_state) = y))`;
+  LPC_MODEL = (lpc2set, LPC_NEXT, LPC_ROM, (\x y. (x:lpc_state) = y),
+               {} : ^(ty_antiq (#1 (dom_rng (type_of “lpc2set”)))) set)`;
 
 
 (* theorems *)
@@ -245,28 +264,33 @@ val lemma =
   METIS_PROVE [SPLIT_lpc2set]
   ``p (lpc2set' y s) ==> (?u v. SPLIT (lpc2set s) (u,v) /\ p u /\ (\v. v = lpc2set'' y s) v)``;
 
-val LPC_SPEC_SEMANTICS = store_thm("LPC_SPEC_SEMANTICS",
-  ``SPEC LPC_MODEL p {} q =
+Theorem LPC_SPEC_SEMANTICS:
+  SPEC LPC_MODEL p {} q <=>
     !y s seq. p (lpc2set' y s) /\ rel_sequence LPC_NEXT seq s ==>
-              ?k. q (lpc2set' y (seq k)) /\ (lpc2set'' y s = lpc2set'' y (seq k))``,
-  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,LPC_MODEL_def,STAR_def,SEP_REFINE_def]
+              ?k. q (lpc2set' y (seq k)) /\
+                  (lpc2set'' y s = lpc2set'' y (seq k))
+Proof
+  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,LPC_MODEL_def,STAR_def,
+                    SEP_REFINE_def, EMPTY_applied]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_lpc2set_EXISTS] \\ METIS_TAC [])
-  \\ Q.PAT_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
-     (fn th => MATCH_MP th (UNDISCH lemma))  o Q.SPECL [`s`,`(\v. v = lpc2set'' y s)`])
+  \\ Q.PAT_ASSUM `!s r. b`
+      (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
+       (fn th => MATCH_MP th (UNDISCH lemma)) o
+       Q.SPECL [`s`,`(\v. v = lpc2set'' y s)`])
   \\ FULL_SIMP_TAC bool_ss [SPLIT_lpc2set_EXISTS]
-  \\ IMP_RES_TAC lpc2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []);
+  \\ IMP_RES_TAC lpc2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []
+QED
 
-
-(* ----------------------------------------------------------------------------- *)
-(* Theorems for construction of |- SPEC LPC_MODEL ...                            *)
-(* ----------------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    Theorems for construction of |- SPEC LPC_MODEL ...
+   ---------------------------------------------------------------------- *)
 
 val SEP_EQ_STAR_LEMMA = prove(
   ``!p s t. (SEP_EQ t * p) s <=> t SUBSET s /\ (t SUBSET s ==> p (s DIFF t))``,
   METIS_TAC [EQ_STAR]);
 
-val FLIP_CONJ = prove(``!b c. b /\ (b ==> c) = b /\ c``,METIS_TAC []);
+val FLIP_CONJ = prove(``!b c. b /\ (b ==> c) <=> b /\ c``,METIS_TAC []);
 
 val EXPAND_STAR =
   GEN_ALL o (SIMP_CONV std_ss [tR_def,tM_def,tS_def,tU_def,tT_def,tUART0_def,
@@ -282,13 +306,17 @@ val STAR_lpc2set = save_thm("STAR_lpc2set",LIST_CONJ (map EXPAND_STAR
    ``(tT x * p) (lpc2set' (rs,st,is,ms,tt,ua,ud) s)``,
    ``(tUART0 x * p) (lpc2set' (rs,st,is,ms,tt,ua,ud) s)``]));
 
-val CODE_POOL_lpc2set_LEMMA = prove(
-  ``!x y z. (x = z INSERT y) = (z INSERT y) SUBSET x /\ (x DIFF (z INSERT y) = {})``,
-  SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DIFF] \\ METIS_TAC []);
+Theorem CODE_POOL_lpc2set_LEMMA[local]:
+  !x y z. (x = z INSERT y) <=> (z INSERT y) SUBSET x /\
+                               (x DIFF (z INSERT y) = {})
+Proof
+  SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DIFF] \\ METIS_TAC []
+QED
 
 val CODE_POOL_lpc2set = store_thm("CODE_POOL_lpc2set",
-  ``CODE_POOL LPC_ROM {(p,c)} (lpc2set' (rs,st,is,ms,tt,ua,ud) s) =
-      ({p+3w;p+2w;p+1w;p} = is) /\ (rs = {}) /\ (st = {}) /\ (ms = {}) /\ (tt = {}) /\ (ua = {}) /\ (ud = {}) /\
+  ``CODE_POOL LPC_ROM {(p,c)} (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
+      ({p+3w;p+2w;p+1w;p} = is) /\ (rs = {}) /\ (st = {}) /\ (ms = {}) /\
+      (tt = {}) /\ (ua = {}) /\ (ud = {}) /\
       (LPC_READ_ROM (p + 0w) s = SOME (( 7 ><  0) c)) /\
       (LPC_READ_ROM (p + 1w) s = SOME ((15 ><  8) c)) /\
       (LPC_READ_ROM (p + 2w) s = SOME ((23 >< 16) c)) /\
@@ -324,15 +352,16 @@ val IMP_LPC_SPEC = save_thm("IMP_LPC_SPEC",
    SPECL [``CODE_POOL LPC_ROM {(p,c)} * p1``,
           ``CODE_POOL LPC_ROM {(p,c)} * q1``]) IMP_LPC_SPEC_LEMMA);
 
-val lpc2set''_thm = store_thm("lpc2set''_thm",
-  ``(lpc2set'' (rs,st,is,ms,tt,ua,ud) s1 = lpc2set'' (rs,st,is,ms,tt,ua,ud) s2) =
-    (!a. ~(a IN rs) ==> (LPC_READ_REG a s1 = LPC_READ_REG a s2)) /\
-    (!a. ~(a IN st) ==> (LPC_READ_STATUS a s1 = LPC_READ_STATUS a s2)) /\
-    (!a. ~(a IN is) ==> (LPC_READ_ROM a s1 = LPC_READ_ROM a s2)) /\
-    (!a. ~(a IN ms) ==> (LPC_READ_RAM a s1 = LPC_READ_RAM a s2)) /\
-    (!a. ~(a IN tt) ==> (LPC_READ_TIME s1 = LPC_READ_TIME s2)) /\
-    (!a. ~(a IN ua) ==> (LPC_READ_UART0 s1 = LPC_READ_UART0 s2)) /\
-    (!a. ~(a IN ud) ==> (LPC_READ_UNDEF s1 = LPC_READ_UNDEF s2))``,
+Theorem lpc2set''_thm:
+  (lpc2set'' (rs,st,is,ms,tt,ua,ud) s1 = lpc2set'' (rs,st,is,ms,tt,ua,ud) s2) <=>
+  (!a. ~(a IN rs) ==> (LPC_READ_REG a s1 = LPC_READ_REG a s2)) /\
+  (!a. ~(a IN st) ==> (LPC_READ_STATUS a s1 = LPC_READ_STATUS a s2)) /\
+  (!a. ~(a IN is) ==> (LPC_READ_ROM a s1 = LPC_READ_ROM a s2)) /\
+  (!a. ~(a IN ms) ==> (LPC_READ_RAM a s1 = LPC_READ_RAM a s2)) /\
+  (!a. ~(a IN tt) ==> (LPC_READ_TIME s1 = LPC_READ_TIME s2)) /\
+  (!a. ~(a IN ua) ==> (LPC_READ_UART0 s1 = LPC_READ_UART0 s2)) /\
+  (!a. ~(a IN ud) ==> (LPC_READ_UNDEF s1 = LPC_READ_UNDEF s2))
+Proof
   SIMP_TAC std_ss [oneTheory.one]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [EXTENSION]
@@ -350,7 +379,8 @@ val lpc2set''_thm = store_thm("lpc2set''_thm",
   THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.SPEC `tUart0 (LPC_READ_UART0 s1)`)
          \\ FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] \\ METIS_TAC [])
   THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.SPEC `tUndef (LPC_READ_UNDEF s1)`)
-         \\ FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] \\ METIS_TAC []));
+         \\ FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] \\ METIS_TAC [])
+QED
 
 
 val _ = export_theory();

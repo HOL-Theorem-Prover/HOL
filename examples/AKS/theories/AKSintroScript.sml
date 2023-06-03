@@ -13,7 +13,6 @@ val _ = new_theory "AKSintro";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -267,8 +266,8 @@ val poly_intro_peval_alt = store_thm(
    Let z = unity k.
        n intro p
    <=> poly p /\ ((peval p X) ** n == peval p (X ** n)) (pm z)   by poly_intro_peval_alt
-   <=> poly p /\ (p ** n == peval p (X ** n)) (pm z)   by poly_peval_by_X
-   <=> poly p /\ (peval p (X ** n) == p ** n) (pm z)   by poly_mod_symmetric
+   <=> poly p /\ (p ** n == peval p (X ** n)) (pm z)             by poly_peval_by_X
+   <=> poly p /\ (peval p (X ** n) == p ** n) (pm z)             by poly_mod_symmetric
 *)
 val poly_intro_peval_X_exp = store_thm(
   "poly_intro_peval_X_exp",
@@ -564,9 +563,9 @@ val poly_intro_X_add_c = store_thm(
     Also peval (X + |c|) |1| = |1| + |c|     by poly_peval_X_add_c_by_one
    This is to show: ( |1| == |1| + |c|) (pm z) <=> ( |c| = |0|)    by poly_exp_0
    Now,  ( |1| == |1| + |c|) (pm z)
-     <=> ( |1| + |c| == |1|) (pm z)           by poly_mod_symmetric
-     <=> ( |1| + |c| - |1| == |0|) (pm z)     by poly_pmod_sub_eq_zero
-     <=> ( |c| == |0|) (pm z)                 by poly_add_sub_comm
+     <=> ( |1| + |c| == |1|) (pm z)          by poly_mod_symmetric
+     <=> ( |1| + |c| - |1| == |0|) (pm z)    by poly_pmod_sub_eq_zero
+     <=> ( |c| == |0|) (pm z)                by poly_add_sub_comm
    This is to show:  ( |c| == |0|) (pm z) <=> ( |c| = |0|)
    which is true                             by poly_pmod_ring_sum_eq_zero
 *)

@@ -45,19 +45,6 @@ open symmetryTheory;
 *)
 (* Definitions and Theorems (# are exported):
 
-   Helper Theorems:
-   set_list_eq_count   |- !ls n. set ls = count n ==> !j. j < LENGTH ls ==> EL j ls < n
-   list_to_set_eq_el_image
-                       |- !ls. set ls = IMAGE (\j. EL j ls) (count (LENGTH ls))
-   all_distinct_list_el_inj
-                       |- !ls. ALL_DISTINCT ls ==> INJ (\j. EL j ls) (count (LENGTH ls)) univ(:'a)
-   map_on_count        |- !f n. MAP f [0 ..< n] = MAP (f on count n) [0 ..< n]
-   map_on_count_length |- !f ls. set ls = count (LENGTH ls) ==>
-                                 MAP f ls = MAP (f on count (LENGTH ls)) ls
-   group_homo_monoid_homo
-                       |- !f g h. GroupHomo f g h /\ f #e = h.id <=> MonoidHomo f g h
-   group_iso_monoid_iso|- !f g h. GroupIso f g h /\ f #e = h.id <=> MonoidIso f g h
-
    Permutation Group:
    list_to_bij_def     |- !ls. list_to_bij ls = (\j. if j < LENGTH ls then EL j ls else ARB)
    bij_to_list_def     |- !n f. bij_to_list n f = MAP f [0 ..< n]
@@ -191,117 +178,6 @@ open symmetryTheory;
 (* ------------------------------------------------------------------------- *)
 (* Helper Theorems                                                           *)
 (* ------------------------------------------------------------------------- *)
-
-(* Theorem: set ls = count n ==> !j. j < LENGTH ls ==> EL j ls < n *)
-(* Proof:
-   Note MEM (EL j ls) ls       by EL_MEM
-     so EL j ls IN (count n)   by set ls = count n
-     or EL j ls < n            by IN_COUNT
-*)
-Theorem set_list_eq_count:
-  !ls n. set ls = count n ==> !j. j < LENGTH ls ==> EL j ls < n
-Proof
-  metis_tac[EL_MEM, IN_COUNT]
-QED
-
-(* Theorem: set ls = IMAGE (\j. EL j ls) (count (LENGTH ls)) *)
-(* Proof:
-   Let f = \j. EL j ls, n = LENGTH ls.
-       x IN IMAGE f (count n)
-   <=> ?j. x = f j /\ j IN (count n)     by IN_IMAGE
-   <=> ?j. x = EL j ls /\ j < n          by notation, IN_COUNT
-   <=> MEM x ls                          by MEM_EL
-   <=> x IN set ls                       by notation
-   Thus set ls = IMAGE f (count n)       by EXTENSION
-*)
-Theorem list_to_set_eq_el_image:
-  !ls. set ls = IMAGE (\j. EL j ls) (count (LENGTH ls))
-Proof
-  rw[EXTENSION] >>
-  metis_tac[MEM_EL]
-QED
-
-(* Theorem: ALL_DISTINCT ls ==> INJ (\j. EL j ls) (count (LENGTH ls)) univ(:num) *)
-(* Proof:
-   By INJ_DEF this is to show:
-   (1) EL j ls IN univ(:'a), true  by IN_UNIV, function type
-   (2) !x y. x < LENGTH ls /\ y < LENGTH ls /\ EL x ls = EL y ls ==> x = y
-       This is true                by ALL_DISTINCT_EL_IMP, ALL_DISTINCT ls
-*)
-Theorem all_distinct_list_el_inj:
-  !ls. ALL_DISTINCT ls ==> INJ (\j. EL j ls) (count (LENGTH ls)) univ(:'a)
-Proof
-  rw[INJ_DEF, ALL_DISTINCT_EL_IMP]
-QED
-
-(* Theorem: MAP f [0 ..< n] = MAP (f on count n) [0 ..< n] *)
-(* Proof:
-   Note LENGTH [0 ..< n] = n                           by listRangeLHI_LEN
-     so LENGTH (MAP f [0 ..< n]) = n                   by LENGTH_MAP
-    and LENGTH (MAP (f on count n) [0 ..< n]) = n      by LENGTH_MAP
-   By LIST_EQ, it remains to show:
-      !x. x < n ==> EL x (MAP f [0 ..< n]) = EL x (MAP (f on count n) [0 ..< n])
-   Note x IN (count n)                   by IN_COUNT, x < n
-     EL x (MAP f [0 ..< n])
-   = f (EL x [0 ..< n])                  by EL_MAP
-   = f x                                 by listRangeLHI_EL
-   = (f on count n) x                    by on_def, x IN (count n)
-   = (f on count n) (EL x [0 ..< n])     by listRangeLHI_EL
-   = EL x (MAP (f on count n) [0 ..< n]) by EL_MAP
-*)
-Theorem map_on_count:
-  !f n. MAP f [0 ..< n] = MAP (f on count n) [0 ..< n]
-Proof
-  rpt strip_tac >>
-  irule LIST_EQ >>
-  rw[on_def, EL_MAP, listRangeLHI_EL]
-QED
-
-(* Theorem: set ls = count (LENGTH ls) ==> MAP f ls = MAP (f on count (LENGTH ls)) ls *)
-(* Proof:
-   Let n = LENGTH ls, g = f on count n.
-   Note LENGTH (MAP f ls) = n            by LENGTH_MAP
-    and LENGTH (MAP g ls) = n            by LENGTH_MAP
-   By LIST_EQ, it remains to show:
-      !x. x < n ==> EL x (MAP f ls) = EL x (MAP g ls)
-   Note EL x ls IN (count n)             by set_list_eq_count, x < n
-     EL x (MAP f ls)
-   = f (EL x ls)                         by EL_MAP
-   = (f on count n) (EL x ls)            by on_def, EL x ls IN (count n)
-   = g (EL x ls)                         by notation
-   = EL x (MAP g ls)                     by EL_MAP
-*)
-Theorem map_on_count_length:
-  !f ls. set ls = count (LENGTH ls) ==> MAP f ls = MAP (f on count (LENGTH ls)) ls
-Proof
-  rpt strip_tac >>
-  irule LIST_EQ >>
-  rw[on_def, EL_MAP] >>
-  metis_tac[set_list_eq_count]
-QED
-
-(* Theorem: (GroupHomo f g h /\ f #e = h.id) <=> MonoidHomo f g h *)
-(* Proof: by MonoidHomo_def, GroupHomo_def. *)
-Theorem group_homo_monoid_homo:
-  !f g h. (GroupHomo f g h /\ f #e = h.id) <=> MonoidHomo f g h
-Proof
-  simp[MonoidHomo_def, GroupHomo_def] >>
-  rw[EQ_IMP_THM]
-QED
-
-(* Theorem: (GroupIso f g h /\ f #e = h.id) <=> MonoidIso f g h *)
-(* Proof:
-       MonioidIso f g h
-   <=> MonoidHomo f g h /\ BIJ f G h.carrier                 by MonoidIso_def
-   <=> GroupHomo f g h /\ f #e = h.id /\ BIJ f G h.carrier   by group_homo_monoid_homo
-   <=> GroupIso f g h /\ f #e = h.id                         by GroupIso_def
-*)
-Theorem group_iso_monoid_iso:
-  !f g h. (GroupIso f g h /\ f #e = h.id) <=> MonoidIso f g h
-Proof
-  simp[MonoidIso_def, GroupIso_def] >>
-  metis_tac[group_homo_monoid_homo]
-QED
 
 (* ------------------------------------------------------------------------- *)
 (* Permutation Group                                                         *)
@@ -701,9 +577,9 @@ QED
    By MonoidHomo_def, symmetric_group_def, permutation_group_def, this is to show:
    (1) x IN bij_maps (count n) ==> bij_to_list n x IN perm_count n
        Note IMAGE (bij_to_list n) (bij_count n) SUBSET perm_count n
-                                               by bij_to_list_image_subset
-        and bij_maps (count n) = bij_count n   by bij_maps_bij_count
-       Hence true                              by SUBSET_DEF, IN_IMAGE
+                                                   by bij_to_list_image_subset
+        and bij_maps (count n) = bij_count n       by bij_maps_bij_count
+       Hence true                                  by SUBSET_DEF, IN_IMAGE
    (2) x IN bij_maps (count n) /\ y IN bij_maps (count n) ==>
        bij_to_list n (x o y on count n) = (bij_to_list n x oo bij_to_list n y) n
        Note x IN fun_count n n                     by bij_maps_element_alt

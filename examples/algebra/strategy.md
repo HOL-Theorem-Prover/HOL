@@ -114,7 +114,7 @@ All polynomials are **normalized**, *i.e.* the leading coefficient is nonzero.
 
 This is trivially true for `[]`, but `[#1]` is normalized if the coefficients are from a `Ring r` that is *non-trivial*, where `#1 ≠ #0` (*e.g.* a `Field r`).
 
-Therefore, elements of type `α poly` are generally *not* normalized, called ``weak polynomials``. The normalization operator to convert a weak one to a normalized one is `chop`, which removes all leading zero coefficients, *e.g.* `chop [#0] = |0|. Therefore `chop p` is always a normalized polynomial for any `p:α poly`.
+Therefore, elements of type `α poly` are generally *not* normalized, called ``weak polynomials``. The normalization operator to convert a weak one to a normalized one is `chop`, which removes all leading zero coefficients, *e.g.* `chop [#0] = |0|`. Therefore `chop p` is always a normalized polynomial for any `p:α poly`.
 
 Note that the *trivial* Ring has only one element: `#1 = #0`. Thus `chop [#1] = |0|`, and the only polynomial from such a ring is `|0|`.
 

@@ -1246,7 +1246,7 @@ val poly_monic_divides_irreducible = store_thm(
     Only-if part: e' pdivides e * PPROD s ==> e' IN e INSERT s
          That is: e' pdivides e * PPROD s ==> (e' = e) \/ (e' IN s)            by IN_INSERT
               or: e' pdivides e * PPROD s ==> (e' = e) \/ e' pdivides PPROD s  by induction hypothesis
-       If e' = e`, this is trivial.
+       If e' = e, this is trivial.
        If e' <> e,
           Since pmonic e'                       by poly_monic_irreducible_property
             and pprime e'                       by poly_irreducible_prime
@@ -1804,8 +1804,8 @@ val poly_mod_field_exp = store_thm(
    Step: ##z |1| n = chop [##n] ==>
          ##z |1| (SUC n) = chop [##(SUC n)]
        ##z |1| (SUC n)
-     = ( |1| + ##z |1| n) % p               by group_exp_SUC, poly_mod_ring_property
-     = ( |1| + chop [##n]) % p              by induction hypothesis
+     = ( |1| + ##z |1| n) % p              by group_exp_SUC, poly_mod_ring_property
+     = ( |1| + chop [##n]) % p             by induction hypothesis
      = ([#1] + chop [##n]) % p             by poly_one, #1 <> #0
      = (chop([#1] || [##n])) % p           by poly_chop_add_comm, poly_is_weak
      = chop([#1 + ##n]) % p                by weak_add_def
@@ -2039,7 +2039,7 @@ val up_neg = store_thm(
    = up (x + -y)             by ring_sub_def
    = chop [x + -y]           by up_alt, ring_add_element
    = chop [x] + chop [-y]    by poly_add_const_const
-   = (up x) + (up (-y))        by up_alt
+   = (up x) + (up (-y))      by up_alt
    = (up x) + - (up y)       by up_neg
    = (up x) - (up y)         by poly_sub_def
 *)
@@ -2463,7 +2463,7 @@ val poly_lift_deg = store_thm(
      poly (h::p) ==> h IN R /\ poly p             by poly_cons_poly
      If h = #0, p <> |0|
        (poly_eval (PolyRing r) (lift (h::p)) X
-     = (poly_eval (PolyRing r) ( |0|::lift p) X       by poly_lift_cons
+     = (poly_eval (PolyRing r) ( |0|::lift p) X      by poly_lift_cons
      = |0| + poly_eval (PolyRing r) (left p) X * X   by poly_eval_cons
      = |0| + p * X                                   by induction hypothesis
      = |0| + p >> 1                                  by poly_mult_X
@@ -3312,7 +3312,7 @@ val poly_mod_lift_poly_cmult = store_thm(
         lift ( |0| >> n)
       = lift |0|                by poly_shift_zero
       = ||0||                   by poly_lift_zero
-      = ( ||0||) >>z n           by poly_shift_zero
+      = ( ||0||) >>z n          by poly_shift_zero
       = (lift |0|) >>z n        by poly_lift_zero
    If p <> |0|,
    By induction on n.
@@ -3527,7 +3527,7 @@ val poly_mod_lift_poly_exp = store_thm(
    = lift (X ** n) -z (lift |1|)     by poly_mod_lift_poly_sub, pmonic z
    = lift (X ** n) -z |1|z           by poly_mod_lift_one
    = (lift X) **z n -z (lift |1|)    by poly_mod_lift_poly_exp
-   = ( |X| **z n) -z |1|z             by poly_mod_lift_X
+   = ( |X| **z n) -z |1|z            by poly_mod_lift_X
    = unityz n                        by notation
 *)
 val poly_mod_lift_unity = store_thm(
@@ -3667,7 +3667,7 @@ val poly_mod_lift_poly_mod = store_thm(
          = |0| + (poly_eval (PolyRing r) (lift p) q) * q          by poly_cmult_lzero
          = (poly_eval (PolyRing r) (lift p) q) * q                by poly_add_lzero
      RHS = poly_eval (PolyRing r) (lift (#0::p)) q
-         = poly_eval (PolyRing r) ( |0|::lift p) q                 by poly_lift_cons
+         = poly_eval (PolyRing r) ( |0|::lift p) q                by poly_lift_cons
          = |0| * |1| + (poly_eval (PolyRing r) (lift p) q) * q    by poly_eval_cons
          = |0| + (poly_eval (PolyRing r) (lift p) q) * q          by poly_mult_lzero
          = (poly_eval (PolyRing r) (lift p) q) * q = LHS          by poly_add_lzero
@@ -3710,7 +3710,7 @@ val poly_peval_alt = store_thm(
         = |0| +z ((poly_eval (PolyRing r) (lift p) q) % z) *z q
                                                        by induction hypothesis
         = ( |0| + ((poly_eval (PolyRing r) (lift p) q % z) * q) % z) % z   by poly_mod_ring_property
-        = ( |0| + ((t % z) * q) % z) % z                where t = poly_eval (PolyRing r) (lift p) q
+        = ( |0| + ((t % z) * q) % z) % z               where t = poly_eval (PolyRing r) (lift p) q
         = (((t % z) * q) % z) % z                      by poly_add_lzero
         = ((t % z) * q) % z                            by poly_mod_mod
         = (t % z) * (q % z) % z                        by poly_mod_mult, poly_mod_mod

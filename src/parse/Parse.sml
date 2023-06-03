@@ -209,36 +209,6 @@ val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 
 type grammarDB_info = type_grammar.grammar * term_grammar.grammar
 
-fun minprint t = let
-  fun default t = let
-    val (_, baseprinter) =
-        with_flag (current_backend, PPBackEnd.raw_terminal)
-                  print_from_grammars
-                  min_grammars
-    val printer =
-        baseprinter
-          |> trace ("types", 1) |> trace ("Greek tyvars", 0)
-          |> with_flag (max_print_depth, ~1)
-    val t_str =
-        String.toString (PP.pp_to_string 1000000 printer t)
-  in
-    String.concat ["(#2 (parse_from_grammars min_grammars)",
-                   "[QUOTE \"", t_str, "\"])"]
-  end
-in
-  if is_const t then let
-      val {Name,Thy,...} = dest_thy_const t
-      val t' = prim_mk_const {Name = Name, Thy = Thy}
-    in
-      if aconv t t' then
-        String.concat ["(Term.prim_mk_const { Name = ",
-                       quote Name, ", Thy = ",
-                       quote Thy, "})"]
-      else default t
-    end
-  else default t
-end
-
 (*---------------------------------------------------------------------------
               Parsing types
  ---------------------------------------------------------------------------*)

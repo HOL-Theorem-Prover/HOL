@@ -5,6 +5,7 @@ A field is a non-trivial ring with all nonzero elements invertible.
 
 ## Theory
 * __field__, definition and basic properties.
+* __fieldUnit__, units in a field, all nonzero elements of its multiplicative monoid.
 * __fieldOrder__, multiplicative order of elements in a field.
 * __fieldProduct__, product of a set of field elements, and its manipulation.
 * __fieldIdeal__, ideals in a field. Quotient ring is a field iff the ideal is maximal.

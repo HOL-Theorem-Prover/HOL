@@ -1,1 +1,11 @@
 INCLUDES = $(dprot $(HOLDIR)/src/string)
+
+all: psl-regexp-selftest.log $(DEFAULT_TARGETS)
+
+psl-regexp-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe psl-regexp-selftest.log

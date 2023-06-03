@@ -525,6 +525,15 @@ val OPTION_IGNORE_BIND_EQUALS_OPTION = store_thm(
        ?x. (m1 = SOME x) /\ (m2 = SOME y))``,
   OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC [][]);
 
+Theorem OPTION_IGNORE_BIND_cong[defncong]:
+  (o1 = o2: 'a option) /\ (!v. o2 = SOME v ==> p1 = p2:'b option) ==>
+  OPTION_IGNORE_BIND o1 p1 = OPTION_IGNORE_BIND o2 p2
+Proof
+  OPTION_CASES_TAC “o2:'a option” >> rpt strip_tac >>
+  ASM_REWRITE_TAC[OPTION_IGNORE_BIND_thm] >> first_x_assum irule >>
+  irule_at Any EQ_REFL
+QED
+
 val OPTION_GUARD_def = new_recursive_definition {
   name = "OPTION_GUARD_def",
   rec_axiom = boolTheory.boolAxiom,

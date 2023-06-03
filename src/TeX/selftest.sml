@@ -118,3 +118,16 @@ val _ = if s = "\\HOLFreeVar{bar} = \\HOLConst{ETA} \\HOLTokenBar{} \\HOLConst{E
           OK()
         else
           gotdie s
+
+val _ = tprint "Testing d/type printing of a polymorphic (2-field) record type"
+val _ = Datatype‘recdtype = <| carrier : 'a set; opn : 'a -> 'b -> 'b |>’
+val s = dtype_test 80 "recdtype"
+val _ = if s =
+           "\\HOLFreeVar{recdtype} = \\HOLTokenLeftrec{} \
+           \\\HOLFieldName{carrier} : \
+           \\\ensuremath{\\alpha} -> \\HOLTyOp{bool}; \
+           \\\HOLFieldName{opn} : \\ensuremath{\\alpha} -> \
+           \\\ensuremath{\\beta} -> \\ensuremath{\\beta} \\HOLTokenRightrec{}"
+        then
+          OK()
+        else gotdie s

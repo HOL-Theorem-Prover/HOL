@@ -294,6 +294,7 @@ val wlog_then = wlog_then
   val qexists = qexists_tac
   val qexistsl = qexistsl_tac
   val qrefine = Q.REFINE_EXISTS_TAC
+  val qrefinel = Q.LIST_REFINE_EXISTS_TAC
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
   val qspec_tac = Q.SPEC_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC

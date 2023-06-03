@@ -166,15 +166,12 @@ Proof
   ]
 QED
 
-val primrec_short = store_thm(
-  "primrec_short",
-  ``∀f n. primrec f n ⇒
-          ∀l. LENGTH l < n ⇒ (f l = f (l ++ GENLIST (K 0) (n - LENGTH l)))``,
+Theorem primrec_short:
+  ∀f n. primrec f n ⇒
+        ∀l. LENGTH l < n ⇒ (f l = f (l ++ GENLIST (K 0) (n - LENGTH l)))
+Proof
   HO_MATCH_MP_TAC strong_primrec_ind THEN SIMP_TAC (srw_ss()) [GENLIST1] THEN
   REPEAT CONJ_TAC THENL [
-    SRW_TAC [][] THEN
-    `LENGTH l = 0` by DECIDE_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [LENGTH_NIL, GENLIST1],
 
     SRW_TAC [][proj_def] THEN
     SRW_TAC [ARITH_ss][EL_GENLIST, EL_APPEND1, EL_APPEND2],
@@ -194,15 +191,17 @@ val primrec_short = store_thm(
     Induct_on `m` THEN SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `m::Pr f f' (m::ms)::ms` MP_TAC) THEN
     SRW_TAC [ARITH_ss][ADD1]
-  ]);
+  ]
+QED
 
-val alt_Pr_rule = Store_thm(
-  "alt_Pr_rule",
-  ``∀b r m. primrec b (m - 1) ∧ primrec r (m + 1) ⇒ primrec (Pr b r) m``,
+Theorem alt_Pr_rule[simp]:
+  ∀b r m. primrec b (m - 1) ∧ primrec r (m + 1) ⇒ primrec (Pr b r) m
+Proof
   SRW_TAC [][] THEN
   Cases_on `m` THEN1 (IMP_RES_TAC primrec_nzero THEN
                       FULL_SIMP_TAC (srw_ss()) []) THEN
-  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ADD1, primrec_rules]);
+  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ADD1, primrec_rules]
+QED
 
 val primrec_K = Store_thm(
   "primrec_K",

@@ -1280,17 +1280,19 @@ val poly_sum_by_weak_sum_genlist = store_thm(
      = poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) ' k        by poly_sum_by_weak_sum_genlist
      = f k                                                      by induction hypothesis
 *)
-val poly_coeff_sum_genlist = store_thm(
-  "poly_coeff_sum_genlist",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n k. rfun f /\ k < SUC n ==>
-      ((poly_sum (GENLIST (\j. (f j) * (X ** j)) (SUC n))) ' k = f k)``,
+
+Theorem poly_coeff_sum_genlist:
+  !r:'a ring.
+    Ring r /\ #1 <> #0 ==>
+    !f n k. rfun f /\ k < SUC n ==>
+            ((poly_sum (GENLIST (\j. (f j) * (X ** j)) (SUC n))) ' k = f k)
+Proof
   rpt strip_tac >>
   `!j. f j IN R` by metis_tac [ring_fun_def] >>
   `|1| <> |0| /\ ( |1| = [#1])` by metis_tac [poly_zero_eq_one, poly_one] >>
   `[#1] <> |0|` by rw[] >>
   Induct_on `n` >| [
     rw[] >>
-    `k = 0` by decide_tac >>
     Cases_on `f 0 = #0` >-
     rw[] >>
     `f 0 * [#1] = [f 0]` by metis_tac [poly_cmult_one] >>
@@ -1321,7 +1323,8 @@ val poly_coeff_sum_genlist = store_thm(
       `_ = poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) ' k` by metis_tac[poly_sum_by_weak_sum_genlist] >>
       rw[]
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Identity only for Primes                                       *)
@@ -1492,7 +1495,7 @@ val poly_coeff_factor_exp = store_thm(
    1   6  15  20  15  6  1     -->   1  0  3  2  3  0   1  mod 6
                                           j=2 3  4         factors (6) = {2, 3}
    1   7  21  35  35 21  7 1   -->   1  0  0  0  0 0 0  1  mod 7
-   1  8  28  56 70 56 28 8 `1  -->   1 0  4  0  6 0 4 0 1  mod 8
+   1  8  28  56 70 56 28 8 1   -->   1 0  4  0  6 0 4 0 1  mod 8
    1 9 36  83 126 126 83 36 9 1  -->  1 0  0 2 0 2 0  0 1  mod 9
 
    (x + 2) ^ 2   mod 2
@@ -1717,12 +1720,10 @@ val it = |- Ring (ZN n) ==>
             c))): thm
 *)
 
-(* From AKSshift.hol: *)
 val _ = temp_overload_on ("x+", ``\n c:num. ((PolyRing (ZN n)).sum.op
                                       (poly_shift (ZN n) (PolyRing (ZN n)).prod.id 1)
                                       ((PolyRing (ZN n)).sum.exp (PolyRing (ZN n)).prod.id c))``);
 
-(* From AKStheorem.hol: *)
 (* Overloading for (X + |c|) ** m in (ZN n) *)
 val _ = temp_overload_on ("x+^", ``\n c:num m. (PolyRing (ZN n)).prod.exp (x+ n c) m``);
 
@@ -2811,7 +2812,7 @@ val poly_genlist_deg_distinct = store_thm(
              Then Q (g k)                      by EVERY_GENLIST, k < n
                or deg (f k * p ** k) = 0       by apply Q and g
              By contradiction, suppose f k <> #0.
-             Now f k IN R`                     by ring_fun_def
+             Now f k IN R                      by ring_fun_def
                  deg (f k * p ** k)
                = deg (p ** k)                  by poly_field_deg_cmult, f k <> #0
                = k * deg p                     by poly_field_deg_exp

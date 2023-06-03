@@ -93,22 +93,27 @@ Proof
   metis_tac[]
 QED
 
-val paireq = prove(
-  ``(x,y) = z ⇔ x = FST z ∧ y = SND z``, Cases_on `z` >> simp[])
+Theorem paireq[local]: (x,y) = z ⇔ x = FST z ∧ y = SND z
+Proof Cases_on `z` >> simp[]
+QED
 
-val GSPEC_INTER = prove(
-  ``GSPEC f ∩ Q =
-    GSPEC (S ($, o FST o f) (S ($/\ o SND o f) (Q o FST o f)))``,
+Theorem GSPEC_INTER[local]:
+  GSPEC f ∩ Q =
+  GSPEC (S ($, o FST o f) (S ($/\ o SND o f) (Q o FST o f)))
+Proof
   simp[GSPECIFICATION, EXTENSION, SPECIFICATION] >> qx_gen_tac `e` >>
-  simp[paireq] >> metis_tac[])
+  simp[paireq] >> metis_tac[]
+QED
 
-val _ = SIMP_CONV (srw_ss())[GSPEC_INTER, combinTheory.o_ABS_R, combinTheory.S_ABS_R, combinTheory.S_ABS_L, pairTheory.o_UNCURRY_R, pairTheory.S_UNCURRY_R] ``{ n + m | n > 10 ∧ m < 3 } ∩ Q``
+val example = SCONV [GSPEC_INTER, combinTheory.o_ABS_R, combinTheory.S_ABS_R,
+                     combinTheory.S_ABS_L, pairTheory.o_UNCURRY_R,
+                     pairTheory.S_UNCURRY_R] ``{ n + m | n > 10 ∧ m < 3 } ∩ Q``
 
 (* nullableML is an "executable" version of nullable that examines the grammar
    to determine nullability. I put the "executable" in quotes because of the
    scary looking set comprehension below.  This will work fine if the
    sets of rules for non-terminals are always finite. *)
-Definition nullableML_def:
+Definition nullableML_def[schematic]:
   nullableML seen [] = T ∧
   nullableML seen (TOK t :: _) = F ∧
   nullableML seen (NT n :: rest) =
@@ -357,7 +362,7 @@ Proof
   simp[] >> metis_tac[]
 QED
 
-Definition firstSetML_def:
+Definition firstSetML_def[schematic]:
   firstSetML seen [] = {} ∧
   firstSetML seen (TOK t :: _) = {t} ∧
   firstSetML seen (NT n :: rest) =

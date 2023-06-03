@@ -29,7 +29,7 @@ fp32Syntax.uo: fp-functor.uo fp32Syntax.sml $(WORDS_SYNTAX)
 fp64Syntax.uo: fp-functor.uo fp64Syntax.sml $(WORDS_SYNTAX)
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.ui fp-functor.ui fp64Syntax.sml
 
-selftest.exe: selftest.uo
+selftest.exe: selftest.uo fp16Syntax.uo fp64Syntax.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifdef HOLSELFTESTLEVEL

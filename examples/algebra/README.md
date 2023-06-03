@@ -58,6 +58,7 @@ to support in particular the mechanisation of AKS algorithm.
     * `field/fieldInstances`, examples of fields, mainly arithmetic in prime modulus.
     * `field/fieldIdeal`, extends the ringIdeal and quotientRing to fields.
     * `field/fieldBinomial`, extends the ring binomial theorem to fields.
+    * `field/fieldUnit`, properties of nonzero elements in a field (all invertible).
     * `field/fieldOrder`, multiplicative order of elements in a field.
     * `field/fieldMap`, homomorphism and isomorphism between fields.
     * `field/fieldProduct`, product of a set of field elements.

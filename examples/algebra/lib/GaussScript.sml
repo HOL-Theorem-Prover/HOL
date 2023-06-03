@@ -614,7 +614,7 @@ val coprimes_by_by_divisor = store_thm(
            0 < d /\ d <= n                           by divides_pos, 0 < n
       Also coprimes_by n d = coprimes (n DIV d)      by coprimes_by_def
         so coprimes (n DIV d) = {} <=> n DIV d = 0   by coprimes_eq_empty
-      Thus n < d         by DIV_EQ_0
+      Thus n < d                                     by DIV_EQUAL_0
       which contradicts d <= n.
    Only-if part: 0 < n /\ ~(d divides n) ==> coprimes n d = {}
       This follows by coprimes_by_def
@@ -626,7 +626,7 @@ val coprimes_by_eq_empty = store_thm(
     spose_not_then strip_assume_tac >>
     `0 < d /\ d <= n` by metis_tac[divides_pos] >>
     `n DIV d = 0` by metis_tac[coprimes_by_def, coprimes_eq_empty] >>
-    `n < d` by rw[GSYM DIV_EQ_0] >>
+    `n < d` by rw[GSYM DIV_EQUAL_0] >>
     decide_tac,
     rw[coprimes_by_def]
   ]);
@@ -1576,8 +1576,6 @@ val gcd_matches_and_coprimes_by_same_size = store_thm(
     `coprimes_by n x = {}` by rw[coprimes_by_eq_empty] >>
     rw[]
   ]);
-
-(* HERE; to fix! *)
 
 (* Theorem: 0 < n ==> (CARD o (coprimes_by n) = \d. phi (if d IN (divisors n) then n DIV d else 0)) *)
 (* Proof:

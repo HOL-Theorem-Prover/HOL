@@ -32,13 +32,19 @@ val PRED_SET_ss = pred_setSimps.PRED_SET_ss;
 val FST_COND_RAND = ISPEC `FST` COND_RAND;
 val SND_COND_RAND = ISPEC `SND` COND_RAND;
 
-val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val deleted_rwts = ["lift_disj_eq", "lift_imp_disj", "LT1_EQ0",
+                    "EXP_LE_LOG_SIMP", "EXP_LT_LOG_SIMP",
+                    "LE_EXP_LOG_SIMP", "LT_EXP_LOG_SIMP",
+                    "LOG_NUMERAL", "EXP_LT_1", "ONE_LE_EXP", "TWO_LE_EXP"]
+
+val bool_ss = bool_ss -* deleted_rwts
 val booli_ss = bool_ss ++ ICLASS_ss ++ rewrites [iseq_distinct];
-val std_ss = std_ss ++ boolSimps.LET_ss -* ["lift_disj_eq", "lift_imp_disj"];
-val arith_ss = arith_ss ++ boolSimps.LET_ss -* ["lift_disj_eq", "lift_imp_disj"];
+val std_ss = std_ss ++ boolSimps.LET_ss -* deleted_rwts;
+val arith_ss = arith_ss ++ boolSimps.LET_ss -* deleted_rwts;
 val stdi_ss = armLib.stdi_ss++rewrites[FST_COND_RAND,SND_COND_RAND]
-                    -* ["lift_disj_eq", "lift_imp_disj"];
-val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+                    -* deleted_rwts;
+val list_ss = list_ss -* deleted_rwts;
+val _ = temp_delsimps deleted_rwts
 
 val SUC2NUM = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 

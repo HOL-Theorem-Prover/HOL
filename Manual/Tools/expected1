@@ -23,7 +23,7 @@ val it =
 > load "bagTheory";
 val it = (): unit
 > bagTheory.BAG_IN_BAG_INSERT;
-val it = \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) e1 = e2 \(\lor\) e1 <: b: thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\Leftrightarrow}\) e1 = e2 \(\lor\) e1 <: b: thm
 
 This case illustrates an interesting issue: the HOL system itself writes a message to standard out; we'd like to capture this so that it is properly sequenced with the other output.
 
@@ -106,12 +106,10 @@ x /\bs{} y
 val it = \(\!\!\!{\turn}\!\!\!\!\) \(\neg\)Rational (sqrt 2): thm
 
 AND_CLAUSES
-  \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)t. (T \(\land\) t \({\iff}\) t) \(\land\) (t \(\land\) T \({\iff}\) t) \(\land\) (F \(\land\) t \({\iff}\) F) \(\land\) (t \(\land\) F \({\iff}\) F) \(\land\) (t \(\land\) t \({\iff}\) t)
+  \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)t. (T \(\land\) t \({\Leftrightarrow}\) t) \(\land\) (t \(\land\) T \({\Leftrightarrow}\) t) \(\land\) (F \(\land\) t \({\Leftrightarrow}\) F) \(\land\) (t \(\land\) F \({\Leftrightarrow}\) F) \(\land\) (t \(\land\) t \({\Leftrightarrow}\) t)
 
 AND_CLAUSES
-  \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)t.
-         (T \(\land\) t \({\iff}\) t) \(\land\) (t \(\land\) T \({\iff}\) t) \(\land\) (F \(\land\) t \({\iff}\) F) \(\land\)
-         (t \(\land\) F \({\iff}\) F) \(\land\) (t \(\land\) t \({\iff}\) t)
+  \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)t. (T \(\land\) t \({\Leftrightarrow}\) t) \(\land\) (t \(\land\) T \({\Leftrightarrow}\) t) \(\land\) (F \(\land\) t \({\Leftrightarrow}\) F) \(\land\)
+         (t \(\land\) F \({\Leftrightarrow}\) F) \(\land\) (t \(\land\) t \({\Leftrightarrow}\) t)
 
-<<HOL message: Initialising SRW simpset ... done>>
 val foo = \(\!\!\!{\turn}\!\!\!\!\) x < x + 1: thm

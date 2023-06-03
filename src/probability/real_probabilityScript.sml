@@ -231,40 +231,44 @@ val PROB_INDEP = store_thm
   ``!p s t u. indep p s t /\ (u = s INTER t) ==> (prob p u = prob p s * prob p t)``,
     RW_TAC std_ss [indep_def]);
 
+(* removed ‘measure_space p1 /\ measure_space p2’ due to changes of ‘measure_preserving’ *)
 val PROB_PRESERVING = store_thm
   ("PROB_PRESERVING",
   ``!p1 p2.
        prob_preserving p1 p2 =
        {f | f IN measurable (p_space p1, events p1) (p_space p2, events p2) /\
-             measure_space p1 /\ measure_space p2 /\
         !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s)INTER(p_space p1)) = prob p2 s)}``,
     RW_TAC std_ss [prob_preserving_def, measure_preserving_def, events_def,
                    prob_def, p_space_def]);
 
+(* NOTE: added ‘measure_space (m_space p2,a,measure p2)’ due to changes of ‘measurable’ *)
 val PROB_PRESERVING_SUBSET = store_thm
   ("PROB_PRESERVING_SUBSET",
   ``!p1 p2 a.
        prob_space p1 /\ prob_space p2 /\
+       measure_space (m_space p2,a,measure p2) /\
        (events p2 = subsets (sigma (p_space p2) a)) ==>
        prob_preserving p1 (p_space p2, a, prob p2) SUBSET
        prob_preserving p1 p2``,
     RW_TAC std_ss [prob_space_def, prob_preserving_def, prob_def, events_def, p_space_def]
- >> PROVE_TAC [MEASURE_PRESERVING_SUBSET]);
+ >> MATCH_MP_TAC MEASURE_PRESERVING_SUBSET >> art []);
 
+(* NOTE: added ‘measure_space (m_space p2,a,measure p2)’ due to changes of ‘measurable’ *)
 val PROB_PRESERVING_LIFT = store_thm
   ("PROB_PRESERVING_LIFT",
   ``!p1 p2 a f.
        prob_space p1 /\ prob_space p2 /\
+       measure_space (m_space p2,a,measure p2) /\
        (events p2 = subsets (sigma (m_space p2) a)) /\
        f IN prob_preserving p1 (m_space p2, a, prob p2) ==>
        f IN prob_preserving p1 p2``,
     RW_TAC std_ss [prob_space_def, prob_preserving_def, prob_def, events_def, p_space_def]
  >> PROVE_TAC [MEASURE_PRESERVING_LIFT]);
 
+(* NOTE: removed unnecessary antecedent ‘prob_space p1’ *)
 val PROB_PRESERVING_UP_LIFT = store_thm
   ("PROB_PRESERVING_UP_LIFT",
   ``!p1 p2 f.
-       prob_space p1 /\
        f IN prob_preserving (p_space p1, a, prob p1) p2 /\
        sigma_algebra (p_space p1, events p1) /\
        a SUBSET events p1 ==>
@@ -272,20 +276,22 @@ val PROB_PRESERVING_UP_LIFT = store_thm
     RW_TAC std_ss [prob_preserving_def, prob_def, events_def, p_space_def, prob_space_def]
  >> PROVE_TAC [MEASURE_PRESERVING_UP_LIFT]);
 
+(* NOTE: removed unnecessary antecedent ‘prob_space p1’ *)
 val PROB_PRESERVING_UP_SUBSET = store_thm
   ("PROB_PRESERVING_UP_SUBSET",
-  ``!p1 p2.
-       prob_space p1 /\
+  ``!p1 p2 a.
        a SUBSET events p1 /\
        sigma_algebra (p_space p1, events p1) ==>
        prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2``,
     RW_TAC std_ss [prob_preserving_def, prob_def, events_def, p_space_def, prob_space_def]
  >> PROVE_TAC [MEASURE_PRESERVING_UP_SUBSET]);
 
+(* NOTE: removed unnecessary antecedent ‘prob_space p1’
+         added ‘subset_class (m_space m1) a’ into antecedents due to changes of ‘measurable’
+ *)
 val PROB_PRESERVING_UP_SIGMA = store_thm
   ("PROB_PRESERVING_UP_SIGMA",
-  ``!p1 p2 a.
-        prob_space p1 /\
+  ``!p1 p2 a. subset_class (p_space p1) a /\
        (events p1 = subsets (sigma (p_space p1) a)) ==>
        prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2``,
     RW_TAC std_ss [prob_preserving_def, prob_def, events_def, p_space_def, prob_space_def]
@@ -907,9 +913,10 @@ val marginal_joint_zero3 = store_thm
            by METIS_TAC [PROB_INCREASING,INTER_SUBSET,IN_POW]
        >> METIS_TAC [PROB_POSITIVE,INTER_SUBSET,IN_POW,REAL_LE_ANTISYM]]);
 
+(* NOTE: added ‘prob_space p /\ sigma_algebra s’ due to changes of ‘measurable’ *)
 val distribution_prob_space = store_thm
   ("distribution_prob_space",
-  ``!p X s. random_variable X p s ==>
+  ``!p X s. prob_space p /\ sigma_algebra s /\ random_variable X p s ==>
                 prob_space (space s, subsets s, distribution p X)``,
    RW_TAC std_ss [random_variable_def, distribution_def, prob_space_def, measure_def, PSPACE,
                   measure_space_def, m_space_def, measurable_sets_def, IN_MEASURABLE,
@@ -946,9 +953,11 @@ val distribution_prob_space = store_thm
    >> FULL_SIMP_TAC std_ss [IN_FUNSET, EXTENSION, IN_PREIMAGE, IN_INTER]
    >> METIS_TAC []);
 
+(* NOTE: added ‘prob_space p /\ sigma_algebra s’ due to changes of ‘measurable’ *)
 val uniform_distribution_prob_space = store_thm
   ("uniform_distribution_prob_space",
-  ``!X p s. FINITE (p_space p) /\ FINITE (space s) /\ random_variable X p s ==>
+  ``!X p s. prob_space p /\ sigma_algebra s /\
+            FINITE (p_space p) /\ FINITE (space s) /\ random_variable X p s ==>
         prob_space (space s, subsets s, uniform_distribution p X s)``,
   RW_TAC std_ss []
   >> `prob_space p` by FULL_SIMP_TAC std_ss [random_variable_def]
@@ -976,28 +985,35 @@ val uniform_distribution_prob_space = store_thm
   >> `CARD (s' UNION t) = CARD s' + CARD t`  by METIS_TAC [CARD_UNION, ADD_0, SUBSET_FINITE]
   >> RW_TAC std_ss [GSYM REAL_ADD, REAL_ADD_RDISTRIB]);
 
+(* NOTE: added ‘prob_space p /\ sigma_algebra s’ due to changes of ‘measurable’ *)
 val distribution_lebesgue_thm1 = store_thm
   ("distribution_lebesgue_thm1",
-  ``!X p s A. random_variable X p s /\ A IN subsets s ==>
+  ``!X p s A. prob_space p /\ sigma_algebra s /\
+              random_variable X p s /\ A IN subsets s ==>
              (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))``,
-   RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def, IN_MEASURABLE, p_space_def, prob_def,
+   RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def,
+                  IN_MEASURABLE, p_space_def, prob_def,
                   subsets_def, space_def, GSYM integral_indicator_fn]);
 
+(* NOTE: added ‘prob_space p /\ sigma_algebra s’ due to changes of ‘measurable’ *)
 val distribution_lebesgue_thm2 = store_thm
   ("distribution_lebesgue_thm2",
-  ``!X p s A. random_variable X p s /\ A IN subsets s ==>
+  ``!X p s A. prob_space p /\ sigma_algebra s /\
+              random_variable X p s /\ A IN subsets s ==>
              (distribution p X A = integral (space s, subsets s, distribution p X) (indicator_fn A))``,
    rpt STRIP_TAC
    >> `prob_space (space s,subsets s,distribution p X)`
         by RW_TAC std_ss [distribution_prob_space]
    >> Q.PAT_X_ASSUM `random_variable X p s` MP_TAC
-   >> RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def, IN_MEASURABLE, p_space_def, prob_def,
-                  subsets_def, space_def]
+   >> RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def,
+                     IN_MEASURABLE, p_space_def, prob_def,
+                     subsets_def, space_def]
    >> `measure p (PREIMAGE X A INTER m_space p) =
        measure (space s,subsets s,(\A. measure p (PREIMAGE X A INTER m_space p))) A`
         by RW_TAC std_ss [measure_def]
    >> POP_ORW
-   >> (MP_TAC o Q.SPECL [`(space s,subsets s,(\A. measure p (PREIMAGE X A INTER m_space p)))`,`A`] o INST_TYPE [``:'a``|->``:'b``])
+   >> (MP_TAC o Q.SPECL [`(space s,subsets s,(\A. measure p (PREIMAGE X A INTER m_space p)))`,`A`]
+              o INST_TYPE [``:'a``|->``:'b``])
         integral_indicator_fn
    >> FULL_SIMP_TAC std_ss [measurable_sets_def, prob_space_def, distribution_def, prob_def, p_space_def]);
 
@@ -1127,15 +1143,17 @@ val prob_x_eq_1_imp_prob_y_eq_0 = store_thm
    >- RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_SING]
    >> METIS_TAC [PROB_EMPTY]);
 
+(* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
 val distribution_x_eq_1_imp_distribution_y_eq_0 = store_thm
   ("distribution_x_eq_1_imp_distribution_y_eq_0",
-  ``!X p x. random_variable X p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
+  ``!X p x. prob_space p /\
+            random_variable X p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
            (distribution p X {x} = 1) ==>
            (!y. y <> x ==> (distribution p X {y} = 0))``,
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`p`, `X`, `(IMAGE X (p_space p),POW (IMAGE X (p_space p)))`])
               distribution_prob_space
-   >> RW_TAC std_ss [space_def, subsets_def]
+   >> RW_TAC std_ss [space_def, subsets_def, POW_SIGMA_ALGEBRA]
    >> (MP_TAC o Q.ISPECL [`(IMAGE (X :'a -> 'b)
            (p_space
               (p :
@@ -1199,7 +1217,6 @@ val joint_distribution_le2 = store_thm
   >> MATCH_MP_TAC PROB_INCREASING
   >> RW_TAC std_ss [IN_POW,INTER_SUBSET]
   >> RW_TAC std_ss [SUBSET_DEF,IN_PREIMAGE,IN_CROSS,IN_INTER]);
-
 
 val joint_conditional = store_thm
  ("joint_conditional",``!p X Y a b. prob_space p /\ (events p = POW (p_space p)) ==>
@@ -1316,7 +1333,8 @@ Proof
                          space_def, subsets_def, IN_POW, INTER_SUBSET, IN_IMAGE]
           >> METIS_TAC [IN_IMAGE])
  >> Q.ABBREV_TAC `p1 = (IMAGE X (p_space p), POW (IMAGE X (p_space p)), distribution p X)`
- >> `prob_space p1` by METIS_TAC [distribution_prob_space, space_def, subsets_def]
+ >> `prob_space p1` by METIS_TAC [distribution_prob_space, space_def, subsets_def,
+                                  POW_SIGMA_ALGEBRA]
  >> (MP_TAC o Q.SPEC `p1` o INST_TYPE [``:'a`` |-> ``:'b``]) PROB_REAL_SUM_IMAGE_SPACE
  >> `FINITE (p_space p1)` by METIS_TAC [PSPACE, IMAGE_FINITE]
  >> `!x. x IN p_space p1 ==> {x} IN events p1`

@@ -18,11 +18,15 @@ sig
   val seg_of : kernelid -> string
 
   type 'a symboltable
-  exception NotFound
+  datatype 'a symtab_error = Success of 'a
+                           | Failure of exn
+  val isSuccess : 'a symtab_error -> bool
+  exception NoSuchThy of string
+  exception NotPresent of kernelname
   val new_table : unit -> 'a symboltable
   val insert : 'a symboltable * kernelname * 'a -> kernelid
   val find : 'a symboltable * kernelname -> kernelid * 'a
-  val peek : 'a symboltable * kernelname -> (kernelid * 'a) option
+  val peek : 'a symboltable * kernelname -> (kernelid * 'a) symtab_error
 
   val numItems : 'a symboltable -> int
   val listItems : 'a symboltable -> (kernelname * (kernelid * 'a)) list

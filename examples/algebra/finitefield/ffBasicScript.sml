@@ -902,21 +902,23 @@ val it = |- Ring (PF (PolyRing r)) ==>
            Then n < char r        by MOD_LESS
            and ##n = ##x'         by ring_num_mod
 *)
-val scalar_ring_iso_ZN_char = store_thm(
-  "scalar_ring_iso_ZN_char",
-  ``!r:'a ring. Ring r /\ 0 < char r ==> RingIso (\n. ##n) (ZN (char r)) (PF r)``,
+
+Theorem scalar_ring_iso_ZN_char:
+  !r:'a ring. Ring r /\ 0 < char r ==> RingIso (\n. ##n) (ZN (char r)) (PF r)
+Proof
   rpt strip_tac >>
   `Ring (ZN (char r))` by rw[ZN_ring] >>
   rw_tac std_ss[RingIso_def] >| [
-    rw[RingHomo_def, GroupHomo_def, MonoidHomo_def, ZN_property, PF_property] >-
-    metis_tac[ring_char_eq_1, ring_one_eq_zero, IN_SING, ring_num_element, ring_mult_zero_zero] >-
-    metis_tac[ring_char_eq_1] >-
-    metis_tac[ring_num_add, ring_num_mod] >>
+    rw[RingHomo_def, GroupHomo_def, MonoidHomo_def, ZN_property, PF_property]
+    >- metis_tac[ring_char_eq_1, ring_one_eq_zero, IN_SING, ring_num_element,
+                 ring_mult_zero_zero]
+    >- metis_tac[ring_num_add, ring_num_mod] >>
     metis_tac[ring_num_mult, ring_num_mod],
     rw[BIJ_DEF, INJ_DEF, SURJ_DEF, ZN_property, PF_property] >-
     metis_tac[ring_num_eq] >>
     metis_tac[MOD_LESS, ring_num_mod]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ 0 < char r ==> char (PF r) = char r *)
 (* Proof:

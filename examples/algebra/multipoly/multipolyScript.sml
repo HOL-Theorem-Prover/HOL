@@ -410,8 +410,6 @@ Proof
     \\ Cases_on`t` \\ fs[]
     \\ simp[IMAGE_EQ_SING]
     \\ rw[EXTENSION, PULL_EXISTS]
-    \\ disj2_tac
-    \\ qexists_tac`0` \\ simp[]
     \\ rw[FUN_EQ_THM, EMPTY_BAG] \\ rw[] )
   \\ rw[Once EXTENSION, PULL_EXISTS]
   \\ rw[BAG_IN, BAG_INN]

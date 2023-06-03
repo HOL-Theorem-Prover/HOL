@@ -24,7 +24,7 @@ open loopTheory;
 (* open dependent theories *)
 open arithmeticTheory;
 open dividesTheory;
-open helperNumTheory helperListTheory helperFunctionTheory; (* replace DIV_EQ_0 *)
+open helperNumTheory helperListTheory helperFunctionTheory; (* for DIV_EQUAL_0 *)
 open listTheory rich_listTheory;
 open listRangeTheory;
 
@@ -479,7 +479,7 @@ val foo_def = Define`
                                       by induction hypothesis
        But (n - b) DIV b = n DIV b - 1       by SUB_DIV, 0 < b, b <= n
        and (n - m) MOD b = n MOD b           by SUB_MOD, 0 < b, b <= n
-       and n DIV b <> 0                      by DIV_EQ_0, 0 < b, ~(n < b)
+       and n DIV b <> 0                      by DIV_EQUAL_0, 0 < b, ~(n < b)
        LHS = 1 + (n DIV b - 1 + if (n MOD b = 0) then 0 else 1)    by ADD1
            = n DIV m + (if (n MOD b = 0) then 0 else 1)            by n DIV b <> 0
            = RHS
@@ -505,7 +505,7 @@ val hop_eqn = store_thm(
       `b <= n` by decide_tac >>
       `(n - b) DIV b = n DIV b - 1` by rw[SUB_DIV] >>
       `(n - b) MOD b = n MOD b` by rw[SUB_MOD] >>
-      `n DIV b <> 0` by rw[DIV_EQ_0] >>
+      `n DIV b <> 0` by rw[DIV_EQUAL_0] >>
       rw[Once hop_def]
     ]
   ]);

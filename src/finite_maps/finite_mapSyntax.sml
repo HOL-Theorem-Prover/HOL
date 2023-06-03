@@ -3,120 +3,85 @@ struct
 
 open HolKernel boolLib
 
-val ERR = mk_HOL_ERR "finite_mapSyntax"
+val ERR = Feedback.mk_HOL_ERR "finite_mapSyntax"
 
 local open finite_mapTheory in end;
 
 fun mk_fmap_ty (a, b) =
-   mk_thy_type {Args = [a, b], Thy = "finite_map", Tyop = "fmap"}
-
-fun is_fmap_ty ty =
-   let
-      val {Thy, Tyop, ...} = dest_thy_type ty
-   in
-      Thy = "finite_map" andalso Tyop = "fmap"
-   end
-   handle HOL_ERR _ => false
+   Type.mk_thy_type {Thy = "finite_map", Tyop = "fmap", Args = [a, b]}
 
 fun dest_fmap_ty ty =
-   if is_fmap_ty ty
-      then let
-              val args = #2 (dest_type ty)
-           in
-              (hd args, hd (tl args))
-           end
-   else raise ERR "dest_fmap_ty" "Type not a finite map"
+  case Lib.total Type.dest_thy_type ty of
+    SOME {Thy = "finite_map", Tyop = "fmap", Args = [a, b]} => (a, b)
+  | _ => raise ERR "dest_fmap_ty" "Type not a finite map"
 
-val sample_fmap_ty = mk_fmap_ty (alpha, beta)
+val is_fmap_ty = Lib.can dest_fmap_ty
 
-fun finite_map_const name ty =
-   mk_thy_const {Name = name, Thy = "finite_map", Ty = ty}
-
-val fapply_t = finite_map_const "FAPPLY" (sample_fmap_ty --> alpha --> beta)
-val fdom_t = finite_map_const "FDOM" (sample_fmap_ty --> alpha --> bool)
-val fempty_t = finite_map_const "FEMPTY" sample_fmap_ty
-val fevery_t = finite_map_const "FEVERY"
-                            ((pairSyntax.mk_prod (alpha, beta) --> bool) -->
-                             sample_fmap_ty --> bool)
-val fupdate_t = finite_map_const "FUPDATE"
-                            (sample_fmap_ty -->
-                             pairSyntax.mk_prod (alpha, beta) -->
-                             sample_fmap_ty)
-
-
-fun mk_fempty(a,b) = Term.inst [alpha |-> a, beta |-> b] fempty_t
-val is_fempty = same_const fempty_t
+val fempty_tm = Term.prim_mk_const {Name = "FEMPTY", Thy = "finite_map"}
+fun mk_fempty (a, b) = Term.inst [Type.alpha |-> a, Type.beta |-> b] fempty_tm
+val is_fempty = Term.same_const fempty_tm
 
 fun dest_fempty t =
     if is_fempty t
        then dest_fmap_ty (type_of t)
     else raise ERR "dest_fempty" "Term not an empty finite map"
 
-fun dest_binop opn s fm =
-   let
-      val (f, args) = strip_comb fm
-      val dest_name = "dest_" ^ s
-      val _ = same_const f opn orelse
-              raise ERR dest_name ("Term not an "^s)
-      val _ = length args = 2 orelse
-              raise ERR dest_name "Not applied to two arguments"
-   in
-      (hd args, hd (tl args))
-   end
+val s1 = HolKernel.syntax_fns
+           {n = 2, dest = HolKernel.dest_monop, make = HolKernel.mk_monop}
+           "finite_map"
 
-fun mk_binop opn s (fm, kvp) =
-   let
-      val (a_ty, b_ty) =
-         dest_fmap_ty (type_of fm)
-         handle HOL_ERR _ => raise ERR s "First argument not a finite map"
-   in
-      list_mk_comb (Term.inst [alpha |-> a_ty, beta |-> b_ty] opn, [fm, kvp])
-   end
+val (fdom_tm, mk_fdom, dest_fdom, is_fdom) = s1 "FDOM"
 
-val mk_fupdate = mk_binop fupdate_t "mk_fupdate"
-val dest_fupdate = dest_binop fupdate_t "fupdate"
-val is_fupdate = can dest_fupdate
+val (fcard_tm, mk_fcard, dest_fcard, is_fcard) =
+   HolKernel.syntax_fns1 "finite_map" "FCARD"
+
+val (fapply_tm, mk_fapply, dest_fapply, is_fapply) =
+   HolKernel.syntax_fns2 "finite_map" "FAPPLY"
+
+val (drestrict_tm, mk_drestrict, dest_drestrict, is_drestrict) =
+   HolKernel.syntax_fns2 "finite_map" "DRESTRICT"
+
+val (fdiff_tm, mk_fdiff, dest_fdiff, is_fdiff) =
+   HolKernel.syntax_fns2 "finite_map" "FDIFF"
+
+val (fevery_tm, mk_fevery, dest_fevery, is_fevery) =
+   HolKernel.syntax_fns2 "finite_map" "FEVERY"
+
+val (flookup_tm, mk_flookup, dest_flookup, is_flookup) =
+   HolKernel.syntax_fns2 "finite_map" "FLOOKUP"
+
+val (funion_tm, mk_funion, dest_funion, is_funion) =
+   HolKernel.syntax_fns2 "finite_map" "FUNION"
+
+val (fmap_map2_tm, mk_fmap_map2, dest_fmap_map2, is_fmap_map2) =
+   HolKernel.syntax_fns2 "finite_map" "FMAP_MAP2"
+
+val (fun_fmap_tm, mk_fun_fmap, dest_fun_fmap, is_fun_fmap) =
+   HolKernel.syntax_fns2 "finite_map" "FUN_FMAP"
+
+val (fupdate_tm, mk_fupdate, dest_fupdate, is_fupdate) =
+   HolKernel.syntax_fns2 "finite_map" "FUPDATE"
+
+val (fupdate_list_tm, mk_fupdate_list, dest_fupdate_list, is_fupdate_list) =
+   HolKernel.syntax_fns2 "finite_map" "FUPDATE_LIST"
+
+val (rrestrict_tm, mk_rrestrict, dest_rrestrict, is_rrestrict) =
+   HolKernel.syntax_fns2 "finite_map" "RRESTRICT"
+
+val (fmerge_tm, mk_fmerge, dest_fmerge, is_fmerge) =
+   HolKernel.syntax_fns3 "finite_map" "FMERGE"
 
 fun list_mk_fupdate (f,updl) =
-   rev_itlist (fn p => fn map => mk_fupdate (map, p)) updl f
+   Lib.rev_itlist (fn p => fn map => mk_fupdate (map, p)) updl f
 
-fun strip_fupdate tm =
+val strip_fupdate =
    let
       fun strip acc t =
-        case total dest_fupdate t of
+        case Lib.total dest_fupdate t of
            SOME (fmap, p) => strip (p :: acc) fmap
          | NONE => (t, acc)
    in
-      strip [] tm
+      strip []
    end
-
-val mk_fapply = mk_binop fapply_t "mk_fapply"
-val dest_fapply = dest_binop fapply_t "fapply"
-val is_fapply = can dest_fapply
-
-fun mk_fdom t =
-   let
-      val (k_ty, v_ty) = dest_fmap_ty (type_of t)
-   in
-      mk_comb(Term.inst [alpha |-> k_ty, beta |-> v_ty] fdom_t, t)
-   end
-
-fun dest_fdom t =
-   let
-      val (f, x) = dest_comb t
-   in
-      if same_const f fdom_t
-         then x
-      else raise ERR "dest_fdom" "Operator of term not FDOM"
-   end
-
-val is_fdom = can dest_fdom
-
-val is_fevery = same_const fevery_t
-val dest_fevery = dest_binop fevery_t "fevery"
-val is_fevery = can dest_fevery
-
-val (flookup_t, mk_flookup, dest_flookup, is_flookup) =
-   HolKernel.syntax_fns2 "finite_map" "FLOOKUP"
 
 end

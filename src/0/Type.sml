@@ -92,10 +92,12 @@ fun mk_thy_type {Thy,Tyop,Args} = let
   val knm = {Thy=Thy, Name = Tyop}
 in
   case peek(typesig,{Thy=Thy,Name=Tyop}) of
-    SOME const => make_type const Args ("mk_thy_type", name_toString knm)
-  | NONE => raise ERR "mk_thy_type"
-                      ("the type operator "^quote Tyop^
-                       " has not been declared in theory "^quote Thy^".")
+      Success const => make_type const Args ("mk_thy_type", name_toString knm)
+    | Failure (NoSuchThy _) =>
+      raise ERR "mk_thy_type" ("theory " ^ Thy ^ " is not in ancestry")
+    | _ => raise ERR "mk_thy_type"
+                 ("the type operator "^quote Tyop^
+                  " has not been declared in theory "^quote Thy^".")
 end
 
 fun decls nm = let
@@ -144,9 +146,9 @@ end;
 
 fun op_arity {Thy,Tyop} =
     case KernelSig.peek(typesig,{Thy=Thy,Name=Tyop}) of
-      SOME (id, a) => SOME a
-    | NONE => NONE
-fun uptodate_kname knm = isSome (KernelSig.peek(typesig,knm))
+      KernelSig.Success (id, a) => SOME a
+    | _ => NONE
+fun uptodate_kname knm = KernelSig.isSuccess (KernelSig.peek(typesig,knm))
 
 (*---------------------------------------------------------------------------
        Declared types in a theory segment

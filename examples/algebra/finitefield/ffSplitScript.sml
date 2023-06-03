@@ -326,7 +326,7 @@ open GaussTheory; (* for divisors *)
    poly_mini_root_order            |- !r s. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==>
                                       !x. x IN R /\ root (mini n) x ==> (forder x = n)
 
-   Cyclotomic Factorisation of Unity Polynomial (old):
+   Another Cyclotomic Factorisation of Unity Polynomial:
    poly_unity_splitting_field_exists
                                    |- !r n. FiniteField r /\ coprime n (CARD R) ==>
                                       ?t st. FiniteField t /\ st <<= t /\ FieldIso (\e. up e) r st /\
@@ -1656,7 +1656,7 @@ val field_poly_extend_ids = store_thm(
 (* Proof:
    Let t = FieldHigh n, st = FieldLow n.
    Then FiniteField t /\ st <<= t /\
-        FieldIso up r st /\ ((t <:> st) = n)    by field_poly_extend_property
+        FieldIso up r st /\ ((t <:> st) = n)  by field_poly_extend_property
    Thus CARD st.carrier = CARD R              by field_iso_card_eq
     and CARD t.carrier = (CARD R) ** n        by finite_subfield_card_eqn
 *)
@@ -1769,7 +1769,7 @@ val finite_field_card_coprime_pos = store_thm(
    Let d = ordz n (CARD R).
    Then 0 < d                                by ZN_coprime_order, 0 < n
     ==> FiniteField t /\ st <<= t /\
-        FieldIso up r st /\ ((t <:> st) = d)   by field_poly_extend_property
+        FieldIso up r st /\ ((t <:> st) = d) by field_poly_extend_property
 
    Also CARD st.carrier = CARD R             by field_iso_card_eq
    Thus n divides (CARD (ring_nonzero t))    by subfield_card_coprime_iff
@@ -1830,7 +1830,7 @@ val field_split_extend_ids = store_thm(
 (* Proof:
    Let t = SplitHigh n, st = SplitLow n.
    Then FiniteField t /\ st <<= t /\
-        FieldIso up r st /\ ((t <:> st) = ordz n (CARD R))    by field_split_extend_property
+        FieldIso up r st /\ ((t <:> st) = ordz n (CARD R))  by field_split_extend_property
    Thus CARD st.carrier = CARD R                            by field_iso_card_eq
     and CARD t.carrier = (CARD R) ** ordz n (CARD R)        by finite_subfield_card_eqn
 *)
@@ -2685,8 +2685,10 @@ val poly_mini_root_order = store_thm(
   metis_tac[poly_minimal_root_order, poly_mini_def]);
 
 (* ------------------------------------------------------------------------- *)
-(* Cyclotomic Factorisation of Unity Polynomial (old)                        *)
+(* Another Cyclotomic Factorisation of Unity Polynomial                      *)
 (* ------------------------------------------------------------------------- *)
+
+(* Note: this is the original approach. *)
 
 (*
 poly_unity_eq_poly_cyclo_product;

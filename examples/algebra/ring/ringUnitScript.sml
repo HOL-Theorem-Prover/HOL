@@ -44,6 +44,7 @@ open helperNumTheory helperSetTheory;
    R*       = r*.carrier
    unit x   = x IN R*
    |/       = r*.inv
+   x =~ y   = unit_eq r x y
 *)
 (* Definitions and Theorems (# are exported):
 
@@ -61,7 +62,7 @@ open helperNumTheory helperSetTheory;
 #  ring_unit_one             |- !r. Ring r ==> unit #1
    ring_unit_zero            |- !r. Ring r ==> (unit #0 <=> (#1 = #0))
    ring_unit_nonzero         |- !r. Ring r /\ #1 <> #0 ==> !x. unit x ==> x <> #0
-   ring_unit_inv_unit        |- !r. Ring r ==> !x. unit x ==> unit ( |/ x)
+   ring_unit_has_inv         |- !r. Ring r ==> !x. unit x ==> unit ( |/ x)
    ring_unit_linv            |- !r. Ring r ==> !x. unit x ==> ( |/ x * x = #1)
    ring_unit_rinv            |- !r. Ring r ==> !x. unit x ==> (x * |/ x = #1)
 #  ring_unit_element         |- !r. Ring r ==> !x. unit x ==> x IN R
@@ -78,6 +79,13 @@ open helperNumTheory helperSetTheory;
    ring_unit_linv_inv        |- !r. Ring r ==> !u v. unit u /\ v IN R /\ ( |/ u * v = #1) ==> (u = v)
    ring_unit_rinv_inv        |- !r. Ring r ==> !u v. u IN R /\ unit v /\ (u * |/ v = #1) ==> (u = v)
 #  ring_inv_one              |- !r. Ring r ==> ( |/ #1 = #1)
+
+   Ring Unit Equivalence:
+   unit_eq_def       |- !r x y. x =~ y <=> ?u. unit u /\ (x = u * y)
+   unit_eq_refl      |- !r. Ring r ==> !x. x IN R ==> x =~ x
+   unit_eq_sym       |- !r. Ring r ==> !x y. x IN R /\ y IN R /\ x =~ y ==> y =~ x
+   unit_eq_trans     |- !r. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R /\ x =~ y /\ y =~ z ==> x =~ z
+   ring_eq_unit_eq   |- !r. Ring r ==> !x y. x IN R /\ y IN R /\ (x = y) ==> x =~ y
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -244,8 +252,8 @@ val _ = overload_on ("|/", ``r*.inv``);
 
 (* Theorem: x IN R* ==> |/ x IN R* *)
 (* Proof: by group_inv_element, ring_units_group. *)
-val ring_unit_inv_unit = lift_group_inv_thm "inv_element" "unit_has_inv";
-(* val ring_unit_inv_unit = |- !r. Ring r ==> !x. unit x ==> unit ( |/ x) : thm *)
+val ring_unit_has_inv = lift_group_inv_thm "inv_element" "unit_has_inv";
+(* val ring_unit_has_inv = |- !r. Ring r ==> !x. unit x ==> unit ( |/ x) : thm *)
 
 (* Theorem: x IN R* ==> |/ x * x = #1 *)
 (* Proof: by group_linv, ring_units_group. *)
@@ -265,11 +273,11 @@ val ring_unit_element = save_thm("ring_unit_element", ring_units_element);
 val _ = export_rewrites ["ring_unit_element"];
 
 (* Theorem: x IN R* ==> |/ x IN R *)
-(* Proof: by ring_unit_inv_unit, ring_unit_element. *)
+(* Proof: by ring_unit_has_inv, ring_unit_element. *)
 val ring_unit_inv_element = store_thm(
   "ring_unit_inv_element",
   ``!r:'a ring. Ring r ==> !x. unit x ==> |/ x IN R``,
-  rw[ring_unit_inv_unit]);
+  rw[ring_unit_has_inv]);
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !x. unit x ==> |/ x <> #0 *)
 (* Proof:
@@ -424,7 +432,7 @@ val ring_unit_linv_unique = store_thm(
 val ring_unit_inv_inv = store_thm(
   "ring_unit_inv_inv",
   ``!r:'a ring. Ring r ==> !u. unit u ==> (u = |/ ( |/ u))``,
-  rw[ring_unit_inv_element, ring_unit_inv_unit, ring_unit_linv, ring_unit_rinv_unique]);
+  rw[ring_unit_inv_element, ring_unit_has_inv, ring_unit_linv, ring_unit_rinv_unique]);
 
 (* Theorem: Ring r ==> unit u /\ |/ u * v = #1 ==> u = v *)
 (* Proof:
@@ -467,6 +475,82 @@ val ring_inv_one = store_thm(
 
 (* export simple theorem *)
 val _ = export_rewrites ["ring_inv_one"];
+
+(* ------------------------------------------------------------------------- *)
+(* Ring Unit Equivalence                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+(* Define unit equivalence for ring *)
+Definition unit_eq_def:
+   unit_eq (r:'a ring) (x:'a) (y:'a) = ?(u:'a). unit u /\ (x = u * y)
+End
+(* overload on unit equivalence *)
+val _ = overload_on("=~", ``unit_eq r``);
+val _ = set_fixity "=~" (Infix(NONASSOC, 450)); (* same as relation *)
+(*
+> unit_eq_def;
+val it = |- !r x y. x =~ y <=> ?u. unit u /\ (x = u * y): thm
+*)
+
+(* Theorem: Ring r ==> !x. x IN R ==> x =~ x *)
+(* Proof:
+   Since unit #1      by ring_unit_one
+     and x = #1 * x   by ring_mult_lone
+   Hence x =~ x       by unit_eq_def
+*)
+Theorem unit_eq_refl:
+  !r:'a ring. Ring r ==> !x. x IN R ==> x =~ x
+Proof
+  metis_tac[unit_eq_def, ring_unit_one, ring_mult_lone]
+QED
+
+(* Theorem: Ring r ==> !x y. x IN R /\ y IN R /\ x =~ y ==> y =~ x *)
+(* Proof:
+   Since x =~ y
+     ==> ?u. unit u /\ (x = u * y)    by unit_eq_def
+     and unit ( |/ u)                 by ring_unit_has_inv
+     and |/ u * u = #1                by ring_unit_linv
+      so y = #1 * y                   by ring_mult_lone
+           = ( |/ u * u) * y          by above
+           = |/ u * (u * y)           by ring_mult_assoc, ring_unit_element
+           = |/ u * x                 by above
+   Hence y =~ x  by taking ( |/ u)    by unit_eq_def
+*)
+Theorem unit_eq_sym:
+  !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R /\ x =~ y ==> y =~ x
+Proof
+  rw[unit_eq_def] >>
+  `unit ( |/ u)` by rw[ring_unit_has_inv] >>
+  `|/ u * u = #1` by rw[ring_unit_linv] >>
+  metis_tac[ring_mult_assoc, ring_unit_element, ring_mult_lone]
+QED
+
+(* Theorem: Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R /\ x =~ y /\ y =~ z ==> x =~ z *)
+(* Proof:
+   Since x =~ y
+     ==> ?u. unit u /\ (x = u * y)    by unit_eq_def
+     and y =~ z
+     ==> ?v. unit v /\ (y = v * z)    by unit_eq_def
+   Hence x = u * (v * z)              by above
+           = (u * v) * z              by ring_mult_assoc, ring_unit_element
+     and unit (u * v)                 by ring_unit_mult_unit
+    Thus x =~ z                       by unit_eq_def
+*)
+Theorem unit_eq_trans:
+  !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R /\ x =~ y /\ y =~ z ==> x =~ z
+Proof
+  rw[unit_eq_def] >>
+  qexists_tac `u * u'` >>
+  rw[ring_unit_element, ring_unit_mult_unit, ring_mult_assoc]
+QED
+
+(* Theorem: Ring r ==> !x. x IN R /\ y IN R /\ (x = y) ==> x =~ y *)
+(* Proof: by unit_eq_refl *)
+Theorem ring_eq_unit_eq:
+  !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R /\ (x = y) ==> x =~ y
+Proof
+  rw[unit_eq_refl]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

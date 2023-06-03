@@ -456,7 +456,7 @@ a store_thm equivalent.")
 
 (defun hol-template-new-datatype ()
    (interactive)
-   (insert "val _ = Datatype `TREE = LEAF ('a -> num) | BRANCH TREE TREE`;\n"))
+   (insert "Datatype:\n  TREE = LEAF ('a -> num) | BRANCH TREE TREE\nEnd\n"))
 
 ;;checking for trouble with names in store_thm, save_thm, Define
 (setq store-thm-regexp
@@ -475,40 +475,38 @@ a store_thm equivalent.")
     (while (eq choice 0)
       (message
        (concat
-	"Different names used. Please choose one:\n(0) "
-	s1 "\n(1) " s2 "\n(i) ignore"))
+        "Different names used. Please choose one:\n(0) "
+        s1 "\n(1) " s2 "\n(i) ignore"))
       (setq choice (if (fboundp 'read-char-exclusive)
-		       (read-char-exclusive)
-		     (read-char)))
+                       (read-char-exclusive)
+                     (read-char)))
       (cond ((= choice ?0) t)
-	    ((= choice ?1) t)
-	    ((= choice ?i) t)
-	    (t (progn (setq choice 0) (ding))))
+            ((= choice ?1) t)
+            ((= choice ?i) t)
+            (t (progn (setq choice 0) (ding))))
       )
     (if (= choice ?i) t
     (let (so sr pr)
       (cond ((= choice ?0) (setq so s1 sr s2 pr p2))
-	    (t             (setq so s2 sr s1 pr p1)))
+            (t             (setq so s2 sr s1 pr p1)))
       (delete-region pr (+ pr (length sr)))
       (goto-char pr)
-      (insert so)
-      ))))
-
+      (insert so)))))
 
 (defun hol-check-statement-eq-string ()
   (interactive)
   (save-excursion
   (dolist (current-regexp statement-eq-regexp-list t)
-  (goto-char 0)
-  (let (no-error-found s1 p1 s2 p2)
-    (while (re-search-forward current-regexp nil t)
-      (progn (setq s1 (match-string-no-properties 1))
-             (setq s2 (match-string-no-properties 2))
-             (setq p1 (match-beginning 1))
-             (setq p2 (match-beginning 2))
-             (setq no-error-found (string= s1 s2))
-             (if no-error-found t (hol-correct-eqstring s1 p1 s2 p2)))))
-  (message "checking for problematic names done"))))
+    (goto-char 0)
+    (let (no-error-found s1 p1 s2 p2)
+      (while (re-search-forward current-regexp nil t)
+        (progn (setq s1 (match-string-no-properties 1))
+               (setq s2 (match-string-no-properties 2))
+               (setq p1 (match-beginning 1))
+               (setq p2 (match-beginning 2))
+               (setq no-error-found (string= s1 s2))
+               (if no-error-found t (hol-correct-eqstring s1 p1 s2 p2)))))
+    (message "checking for problematic names done"))))
 
 ;; make newline do a newline and relative indent
 (defun holscript-newline-and-relative-indent ()

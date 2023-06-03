@@ -214,8 +214,9 @@ val EQ_TAC: tactic =
          ([(asl, mk_imp (lhs, rhs)), (asl, mk_imp (rhs, lhs))],
           fn [th1, th2] => IMP_ANTISYM_RULE th1 th2 | _ => raise Match)
       end
-      handle HOL_ERR _ => raise ERR "EQ_TAC" ""
+      handle HOL_ERR _ => raise ERR "EQ_TAC" "Goal is not a boolean equality"
 val eq_tac = EQ_TAC
+val iff_tac = EQ_TAC
 
 (*---------------------------------------------------------------------------*
  * Universal quantifier                                                      *
@@ -998,17 +999,13 @@ fun HO_MATCH_MP_TAC th =
 
 val ho_match_mp_tac = HO_MATCH_MP_TAC
 
-(*----------------------------------------------------------------------*
- *   Tactics explicitly declaring subgoals.                             *
- *----------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Tactics explicitly declaring subgoals; instances of SUBGOAL_THEN
+   ---------------------------------------------------------------------- *)
 
-fun SUFF_TAC tm (al, c) =
-   ([(al, mk_imp (tm, c)), (al, tm)],
-    fn [th1, th2] => MP th1 th2
-     | _ => raise ERR "SUFF_TAC" "panic")
+fun KNOW_TAC tm = SUBGOAL_THEN tm MP_TAC
+val SUFF_TAC = REVERSE o KNOW_TAC
 val suff_tac = SUFF_TAC
-
-fun KNOW_TAC tm = REVERSE (SUFF_TAC tm)
 
 (* ----------------------------------------------------------------------
     Eliminate an equation on a variable (as well as t = t instances)

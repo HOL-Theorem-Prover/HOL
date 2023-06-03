@@ -13,7 +13,6 @@ val _ = new_theory "polyProduct";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -444,7 +443,7 @@ val poly_prod_set_insert = store_thm(
        and FINITE (s INTER t)  by FINITE_INTER
       also poly e /\ pset s    by IN_INSERT
        and pset (s UNION t)    by IN_UNION, or poly_set_union_poly_set
-       and pset (s INTER t)`   by IN_INTER, or poly_set_inter_poly_set
+       and pset (s INTER t)    by IN_INTER, or poly_set_inter_poly_set
       also poly (PPROD (s UNION t))   by poly_prod_set_poly
        and poly (PPROD (s INTER t))   by poly_prod_set_poly
        and poly (PPROD s)             by poly_prod_set_poly

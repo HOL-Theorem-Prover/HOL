@@ -28,9 +28,6 @@ in
   else die "FAILED!"
 end handle InternalDie s => die s
 
-(* combinator *)
-val _ = new_definition("I_DEF", ``I = \x:'a. x``);
-
 (* fake arithmetic *)
 val _ = new_type ("num", 0)
 val _ = new_constant ("*", ``:num -> num -> num``)
@@ -38,21 +35,118 @@ val _ = new_constant ("+", ``:num -> num -> num``)
 val _ = new_constant ("<", ``:num -> num -> bool``)
 val _ = new_constant ("SUC", ``:num -> num``)
 val _ = new_constant ("zero", ``:num``)
+val _ = new_constant ("three", ``:num``)
+val _ = new_constant ("five", ``:num``)
 val _ = set_fixity "+" (Infixl 500)
 val _ = set_fixity "*" (Infixl 600)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
+
+val _ = let
+    val tests = [ (* triples of: (goal, quotations, expected (single) subgoal) *)
+      (* Simple test *)
+      (
+        ([], ``∃n m. n + m = zero``),
+        [`_`, `SUC l`] : term frag list list,
+        ``∃l n. n + SUC l = zero``
+      ),
+      (* Concrete test *)
+      (
+        ([], ``∃n m. n + m = SUC zero``),
+        [`_`, `SUC zero`] : term frag list list,
+        ``∃n. n + SUC zero = SUC zero``
+      ),
+      (* Use variable in assumption *)
+      (
+        ([``l = zero``], ``∃n m. n + m = zero``),
+        [`_`, `SUC l`],
+        ``∃n. n + SUC l = zero``
+      ),
+      (* Witness var shadowing boundvar *)
+      (
+        ([], ``∃(a:'a) (b:'b). f a b``),
+        [`b`,`_`],
+        ``∃(b:'a) (b':'b). f b b'``
+      ),
+      (* Boundvar `c` shadowing freevar *)
+      (
+        ([``c = five``], ``∃n m c. n + m = c``),
+        [`_`,`SUC c`],
+        ``∃n c'. n + SUC c = c'``
+      ),
+      (* Shadowed boundvars *)
+      (
+        ([], ``∃(c:'a) (c:'b). P c``),
+        [`_`,`new`],
+        ``∃(new:'b) (c':'a). P new``
+      ),
+      (* Re-use term across quotations *)
+      (
+        ([], ``∃n m l. n + m + l = zero``),
+        [`_`,`k`,`SUC k`],
+        ``∃k n. n + k + SUC k = zero``
+      ),
+      (* Slightly more involved tests *)
+      (
+        ([``n = three``,``c = five``], ``∃a b c d. a + b = c + d``),
+        [`_`,`SUC c`, `_`, `n + m`],
+        ``∃m a c'. a + SUC c = c' + (n + m)``
+      ),
+      (
+        ([``h x = x:'b``],
+         ``∃(a:'a) (b:'b) (c:'c) (d:'d) (e:'e). f a b = g c d e :num``),
+        [`_`, `h x`, `foo x`, `bar (foo : 'b -> 'c) : 'd`],
+        ``∃(foo:'b -> 'c) (bar: ('b -> 'c) -> 'd) (a:'a) (e:'e).
+            f a (h x : 'b) = g (foo x) (bar foo) e :num``
+      ),
+      (
+        ([``P1 (x:'a) :bool``,``P2 (x':'b) :bool``,``P3 (x'':'c) :bool``],
+         ``∃(x:'a) (x':'b) (y:'c) (x:'d). P x x' y``),
+        [`_`,`Q x x' (x''':'d)`,`x''''`,`_`],
+        ``∃(x'³':'d) (Q:'a -> 'b -> 'd -> 'b) (x'⁴':'c) (x'':'a) (x'':'d).
+            P x'' (Q x x' x'³') x'⁴'``
+      )
+    ]
+    fun checkSubgoals (expected_asms, expected_goal) (sgs, vld:validation)  =
+      case sgs of
+        [(asms,sg)] =>
+           ListPair.allEq (uncurry aconv) (asms, expected_asms) andalso
+           aconv sg expected_goal andalso
+           (can vld (map mk_thm sgs) orelse
+            (die "FAILED! Bad validation"; false))
+      | _ => (die "FAILED! Too many subgoals produced"; false)
+    fun test_single (input, qs, expected) =
+        let
+          val _ = tprint ("Q.LIST_REFINE_EXISTS_TAC: " ^
+                          term_to_string (#2 input))
+          open HOLPP
+        in
+          require_pretty_msg (check_result $ checkSubgoals (#1 input, expected))
+                             (block CONSISTENT 0 o
+                              pr_list goalStack.pp_goal
+                                      [add_string ",", add_break(1,0)] o
+                              fst)
+                             (Q.LIST_REFINE_EXISTS_TAC qs)
+                             input
+        end
+  in
+    List.app test_single tests
+  end
+
+(* combinator *)
+val _ = new_definition("I_DEF", ``I = \x:'a. x``);
+
 
 fun aconvdie m t1 t2 =
     aconv t1 t2 orelse raise InternalDie ("FAILED! (" ^ m ^ " wrong)")
 
 val _ = tprint "Q.MATCH_RENAME_TAC 1"
-val gl0 = ([``x < y``], ``x = z:num``)
-val expected_a0 = ``a < y``
-val expected_c0 = ``a = b:num``
-val (sgs, _) = Q.MATCH_RENAME_TAC `a = b` gl0
+val glZ = ([``x < y``], ``x = z:num``)
+val expected_aZ = ``a < y``
+val expected_cZ = ``a = b:num``
+val (sgs, _) = Q.MATCH_RENAME_TAC `a = b` glZ
 val _ = (case sgs of
-            [([a], c)] => (aconvdie "assumption" a expected_a0;
-                           aconvdie "goal" c expected_c0;
+            [([a], c)] => (aconvdie "assumption" a expected_aZ;
+                           aconvdie "goal" c expected_cZ;
                            OK())
           | _ => die "FAILED!")
         handle InternalDie s => die s

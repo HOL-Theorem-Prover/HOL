@@ -591,26 +591,24 @@ val _ = export_rewrites ["INT_ADD_RID"]
 
 
 (* already defined, but using the wrong term for 0 *)
-val INT_ADD_LINV =
-    store_thm("INT_ADD_LINV",
-              Term`!x. ~x + x = 0`,
-              SIMP_TAC int_ss [GSYM INT_0, INT_ADD_LINV]);
-val INT_ADD_RINV =
-    store_thm("INT_ADD_RINV",
-              Term `!x. x + ~x = 0`,
-              ONCE_REWRITE_TAC [INT_ADD_SYM] THEN
-              REWRITE_TAC [INT_ADD_LINV])
+Theorem INT_ADD_LINV[simp]: !x. ~x + x = 0
+Proof SIMP_TAC int_ss [GSYM INT_0, INT_ADD_LINV]
+QED
+Theorem INT_ADD_RINV[simp]:
+  !x. x + ~x = 0
+Proof
+  ONCE_REWRITE_TAC [INT_ADD_SYM] THEN REWRITE_TAC [INT_ADD_LINV]
+QED
 
 (* already defined, but using the wrong term for 1 *)
-val INT_MUL_LID =
-    store_thm("INT_MUL_LID",
-              Term`!x:int. 1 * x = x`,
-              SIMP_TAC int_ss [GSYM INT_1, INT_MUL_LID])
-val INT_MUL_RID =
-    store_thm("INT_MUL_RID",
-              Term `!x:int. x * 1 = x`,
-              PROVE_TAC [INT_MUL_SYM,GSYM INT_1,INT_MUL_LID])
-val _ = export_rewrites ["INT_MUL_RID"]
+Theorem INT_MUL_LID[simp]: !x:int. 1 * x = x
+Proof
+  SIMP_TAC int_ss [GSYM INT_1, INT_MUL_LID]
+QED
+
+Theorem INT_MUL_RID[simp]: !x:int. x * 1 = x
+Proof PROVE_TAC [INT_MUL_SYM,GSYM INT_1,INT_MUL_LID]
+QED
 
 val INT_RDISTRIB =
     store_thm("INT_RDISTRIB",
@@ -698,11 +696,12 @@ val INT_NEG_RMUL =
               REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
               SIMP_TAC int_ss [INT_NEG_LMUL]);
 
-val INT_NEGNEG =
-    store_thm("INT_NEGNEG",
-              Term `!x:int. ~~x = x`,
-              GEN_TAC THEN CONV_TAC SYM_CONV THEN
-              REWRITE_TAC[GSYM INT_LNEG_UNIQ, INT_ADD_RINV]);
+Theorem INT_NEGNEG[simp]:
+  !x:int. ~~x = x
+Proof
+  GEN_TAC THEN CONV_TAC SYM_CONV THEN
+  REWRITE_TAC[GSYM INT_LNEG_UNIQ, INT_ADD_RINV]
+QED
 
 val INT_NEG_MUL2 =
     store_thm("INT_NEG_MUL2",
@@ -770,10 +769,9 @@ val INT_LTE_TOTAL =
               SIMP_TAC int_ss [])
 
 
-val INT_LE_REFL =
-    store_thm("INT_LE_REFL",
-              Term `!x:int. x <= x`,
-              GEN_TAC THEN REWRITE_TAC[int_le, INT_LT_REFL]);
+Theorem INT_LE_REFL[simp]: !x:int. x <= x
+Proof GEN_TAC THEN REWRITE_TAC[int_le, INT_LT_REFL]
+QED
 
 Theorem INT_LE_LT:
     !x y:int. x <= y <=> x < y \/ (x = y)
@@ -1073,10 +1071,9 @@ GEN_TAC THEN EQ_TAC THENL
    THEN REWRITE_TAC[INT_ADD_RINV, INT_ADD_LINV, INT_ADD_RID, INT_0]
    THEN DISCH_THEN SUBST1_TAC THEN REFL_TAC])
 
-val INT_NEG_0 =
-    store_thm("INT_NEG_0",
-              Term `~0 = 0`,
-              REWRITE_TAC[INT_NEG_EQ0]);
+Theorem INT_NEG_0[simp]:  ~0 = 0
+Proof REWRITE_TAC[INT_NEG_EQ0]
+QED
 
 val INT_NEG_SUB =
     store_thm("INT_NEG_SUB",
@@ -1371,15 +1368,13 @@ val INT_ADD2_SUB2 =
               REPEAT GEN_TAC THEN REWRITE_TAC[int_sub, INT_NEG_ADD] THEN
               CONV_TAC(AC_CONV(INT_ADD_ASSOC,INT_ADD_SYM)));
 
-val INT_SUB_LZERO =
-    store_thm("INT_SUB_LZERO",
-              Term `!x. 0 - x = ~x`,
-              GEN_TAC THEN REWRITE_TAC[int_sub, INT_ADD_LID]);
+Theorem INT_SUB_LZERO[simp]: !x. 0 - x = ~x
+Proof GEN_TAC THEN REWRITE_TAC[int_sub, INT_ADD_LID]
+QED
 
-val INT_SUB_RZERO =
-    store_thm("INT_SUB_RZERO",
-              Term `!x:int. x - 0 = x`,
-      GEN_TAC THEN REWRITE_TAC[int_sub, INT_NEG_0,INT_ADD_RID, INT_0]);
+Theorem INT_SUB_RZERO[simp]: !x:int. x - 0 = x
+Proof GEN_TAC THEN REWRITE_TAC[int_sub, INT_NEG_0,INT_ADD_RID, INT_0]
+QED
 
 val INT_LET_ADD2 =
     store_thm("INT_LET_ADD2",
@@ -1651,6 +1646,14 @@ val INT_NUM_CASES = store_thm(
     FULL_SIMP_TAC int_ss [INT_EQ_NEG, INT_INJ, INT_NEG_GE0, NOT_LESS_EQUAL,
                           INT_LE]
   ]);
+val _ = TypeBase.export [
+      TypeBasePure.mk_nondatatype_info (
+        “:int”,
+        {nchotomy = SOME INT_NUM_CASES,
+         induction = NONE, encode = NONE, size = NONE}
+      )
+    ];
+
 
 (* ----------------------------------------------------------------------
     Discreteness of <
@@ -2430,6 +2433,9 @@ val INT_ABS_EQ_ABS = Q.store_thm(
   fs[INT_NEG_LT0, INT_NOT_LT, INT_EQ_NEG, INT_NEGNEG, INT_NEG_GE0] >>
   metis_tac[INT_LET_TRANS, INT_LT_TRANS, INT_LT_REFL, INT_LE_ANTISYM, INT_NEG_0]);
 
+
+
+
 (* ----------------------------------------------------------------------
     Define integer rem(ainder) and quot(ient) functions.
       These two are analogous to int_mod and int_div respectively, but
@@ -3094,6 +3100,44 @@ val INFINITE_INT_UNIV = store_thm(
   SRW_TAC [][EXTENSION] THEN Q.EXISTS_TAC `&x` THEN SRW_TAC [][NUM_OF_INT]);
 val _ = export_rewrites ["INFINITE_INT_UNIV"]
 
+Theorem INT_ABS_SUB:
+  ABS (i - j) = ABS (j - i)
+Proof
+  Cases_on ‘i’ >> Cases_on‘j’ >> simp[INT_ABS, INT_LT_SUB_RADD, INT_LT] >>
+  rw[] >> gs[INT_NEG_SUB, INT_SUB, INT_LT, INT_LT_CALCULATE] >>
+  rename [‘~(m < n)’, ‘~(n < m)’] >> ‘m = n’ by DECIDE_TAC >> gvs[]
+QED
+
+Theorem INT_ABS_TRIANGLE:
+  ABS (i + j) <= ABS i + ABS j
+Proof
+  Cases_on ‘i’ >> Cases_on ‘j’ >> simp[INT_ADD, GSYM INT_NEG_ADD] >~
+  [‘ABS (&m + -&n)’]
+  >- (Cases_on ‘n <= m’ >> simp[GSYM int_sub, INT_SUB, INT_LE] >>
+      simp[Once INT_ABS_SUB, INT_SUB, INT_LE]) >~
+  [‘ABS (-&m + &n)’]
+  >- (ONCE_REWRITE_TAC[INT_ADD_COMM] >>
+      Cases_on ‘m <= n’ >> simp[GSYM int_sub, INT_SUB, INT_LE] >>
+      simp[Once INT_ABS_SUB, INT_SUB, INT_LE])
+QED
+
+Theorem INT_SUB_ABS_TRIANGLE:
+  ABS i - ABS j <= ABS (i - j)
+Proof
+  Cases_on ‘i’ >> Cases_on ‘j’ >> simp[] >>~-
+  ([‘-&m <= &m’], irule INT_LE_TRANS >> qexists ‘0’ >>
+                  simp[INT_NEG_LE0, INT_LE]) >>
+  simp[INT_SUB, INT_SUB_RNEG, INT_ADD] >>
+  rename [‘&m - &n <= _’] >>
+  Cases_on ‘m <= n’ >> simp[INT_SUB, INT_SUB_RNEG, INT_LE] >>~-
+  ([‘&m:int - &n’, ‘m <= n’],
+   irule INT_LE_TRANS >> qexists ‘0’ >> simp[INT_LE_SUB_RADD, INT_LE]) >~
+  [‘-&m - &n:int’] >- simp[INT_SUB_LNEG, INT_ADD, INT_LE] >~
+  [‘-&m + &n’]
+  >- (‘-&m + &n = &n - &m’ by simp[int_sub, AC INT_ADD_COMM INT_ADD_ASSOC] >>
+      simp[Once INT_ABS_SUB, INT_SUB])
+QED
+
 (*----------------------------------------------------------------------*)
 (* Prove rewrites for calculation with integers                         *)
 (*----------------------------------------------------------------------*)
@@ -3429,8 +3473,8 @@ val _ = set_fixity "LEAST_INT" Binder
 (*---------------------------------------------------------------------------*)
 
 val _ = BasicProvers.export_rewrites
-        ["INT_ADD_LID_UNIQ", "INT_ADD_LINV",
-         "INT_ADD_RID_UNIQ", "INT_ADD_RINV",
+        ["INT_ADD_LID_UNIQ",
+         "INT_ADD_RID_UNIQ",
          "INT_ADD_SUB", "INT_ADD_SUB2", "INT_DIVIDES_0",
          "INT_DIVIDES_1", "INT_DIVIDES_LADD", "INT_DIVIDES_LMUL",
          "INT_DIVIDES_LSUB", "INT_DIVIDES_MUL", "INT_DIVIDES_NEG",
@@ -3442,29 +3486,21 @@ val _ = BasicProvers.export_rewrites
          "INT_EXP", "INT_EXP_EQ0", "INT_INJ", "INT_LE", "INT_LE_ADD",
          "INT_LE_ADDL", "INT_LE_ADDR", "INT_LE_DOUBLE", "INT_LE_LADD",
          "INT_LE_MUL", "INT_LE_NEG", "INT_LE_NEGL", "INT_LE_NEGR",
-         "INT_LE_RADD", "INT_LE_REFL", "INT_LE_SQUARE", "INT_LT_ADD",
+         "INT_LE_RADD", "INT_LE_SQUARE", "INT_LT_ADD",
          "INT_LT_ADDL", "INT_LT_ADDR", "INT_LT_CALCULATE",
          "INT_LT_IMP_LE", "INT_LT_LADD",
          "INT_LT_RADD", "INT_LT_REFL", "INT_MAX_NUM", "INT_MIN_NUM",
          "INT_MOD", "INT_REM", "INT_MOD0", "INT_REM0",
          "INT_MOD_COMMON_FACTOR", "INT_REM_COMMON_FACTOR",
          "INT_MOD_ID", "INT_REM_ID", "INT_MOD_NEG", "INT_REM_NEG",
-         "INT_MUL", "INT_MUL_EQ_1", "INT_MUL_LID", "INT_MUL_LZERO",
-         "INT_MUL_RZERO", "INT_NEGNEG", "INT_NEG_0",
+         "INT_MUL", "INT_MUL_EQ_1", "INT_MUL_LZERO",
+         "INT_MUL_RZERO",
          "INT_NEG_EQ0", "INT_NEG_GE0", "INT_NEG_GT0", "INT_NEG_LE0",
          "INT_NEG_LT0", "INT_NEG_MUL2", "INT_NEG_SAME_EQ",
          "INT_NEG_SUB", "INT_SUB_0", "INT_SUB_ADD", "INT_SUB_ADD2",
-         "INT_SUB_LZERO", "INT_SUB_NEG2", "INT_SUB_REFL",
-         "INT_SUB_RNEG", "INT_SUB_RZERO", "INT_SUB_SUB",
+         "INT_SUB_NEG2", "INT_SUB_REFL",
+         "INT_SUB_RNEG", "INT_SUB_SUB",
          "INT_SUB_SUB2", "NUM_OF_INT"]
-
-val _ = TypeBase.export [
-      TypeBasePure.mk_nondatatype_info (
-        “:int”,
-        {nchotomy = SOME INT_NUM_CASES,
-         induction = NONE, encode = NONE, size = NONE}
-      )
-    ];
 
 val _ = Theory.quote_adjoin_to_theory `none`
 `val () = Literal.add_literal

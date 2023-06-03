@@ -65,5 +65,48 @@ val f4_def = require (check_result (K true)) (quietly Define)`
   f5 (SUC n) (x, y) = f4 n x
 `;
 
+fun tdefoutput_pp(th,thopt) =
+    "(" ^ thm_to_string th ^ ", " ^
+    (case thopt of NONE => "NONE"
+                 | SOME th' => "SOME " ^ thm_to_string th') ^ ")"
+fun quietDefn f x =
+    Lib.with_flag (Globals.interactive, false) f x
+val _  = shouldfail { checkexn = is_struct_HOL_ERR "TotalDefn",
+                      printarg = K "tDefine: no schematic defs when \
+                                   \termination tac is supplied",
+                      printresult = tdefoutput_pp,
+                      testfn = (fn q => quietDefn (TotalDefn.tDefine "foo" q)
+                                           (WF_REL_TAC ‘$<’))}
+       ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
+val _  = shouldfail { checkexn = is_struct_HOL_ERR "TotalDefn",
+                      printarg = K "qDefine: no schematic defs when \
+                                   \termination tac is supplied",
+                      printresult = thm_to_string,
+                      testfn = (fn q => quietDefn (TotalDefn.qDefine "foo" q)
+                                           (SOME (WF_REL_TAC ‘$<’)))}
+       ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
+fun lhs_has_two_args th =
+    th |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #2 |> length
+       |> equal 2
+
+val _ = tprint "qDefine/schematic, no termination"
+val _ = require_msg (check_result lhs_has_two_args)
+                    thm_to_string
+                    (fn q => quiet_messages
+                               (quietDefn
+                                  (TotalDefn.qDefine "foo[schematic]" q))
+                               NONE)
+                    ‘foo x = if x = 0 then y else foo(x - 1)*2’;
+
+fun allquiet f x =
+    quiet_messages (quiet_warnings (quietDefn f)) x
+
+val _ = tprint "qDefine/schematic, termination"
+val _ = require_msg (check_result lhs_has_two_args)
+                    thm_to_string
+                    (fn q => allquiet
+                               (TotalDefn.qDefine "foo[schematic]" q)
+                               (SOME (WF_REL_TAC ‘$<’)))
+                    ‘foo x = if x = 0 then y else foo(x - 1)*2’;

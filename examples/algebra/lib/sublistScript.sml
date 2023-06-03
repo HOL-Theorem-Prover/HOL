@@ -13,7 +13,6 @@ val _ = new_theory "sublist";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -461,7 +460,7 @@ val sublist_last_sing = store_thm(
   ``!ls. ls <> [] ==> [LAST ls] <= ls``,
   rw[LAST_MEM, sublist_member_sing]);
 
-(* Theorem: l <= ls ==> !P. EVERY P ls ==> EVERY P l` *)
+(* Theorem: l <= ls ==> !P. EVERY P ls ==> EVERY P l *)
 (* Proof:
    By induction on ls.
    Base: !l. l <= [] ==> !P. EVERY P [] ==> EVERY P l

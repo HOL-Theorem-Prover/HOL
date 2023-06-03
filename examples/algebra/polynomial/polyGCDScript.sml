@@ -941,14 +941,14 @@ val poly_unity_gcd_reduction = store_thm(
 
    Case: n = 0 ==> pgcd (X ** n - |1|) (X ** m - |1|) ~~ X ** gcd n m - |1|
          LHS = pgcd (X ** 0 - |1|) (X ** m - |1|)
-             = pgcd ( |1| - |1|) (X ** m - |1|)      by poly_exp_0
+             = pgcd ( |1| - |1|) (X ** m - |1|)     by poly_exp_0
              = pgcd |0| (X ** m - |1|)              by poly_sub_eq
              = X ** m - |1|                         by poly_gcd_zero
              = X ** (gcd 0 m) - |1| = RHS           by GCD_0L
          Hence they are unit-equal                  by poly_eq_unit_eq
    Case: m = 0 ==> pgcd (X ** n - |1|) (X ** m - |1|) ~~ X ** gcd n m - |1|
          LHS = pgcd (X ** n - |1|) (X ** 0 - |1|)
-             = pgcd (X ** n - |1|) ( |1| - |1|)      by poly_exp_0
+             = pgcd (X ** n - |1|) ( |1| - |1|)     by poly_exp_0
              = pgcd (X ** n - |1|) |0|              by poly_sub_eq
              = X ** n - |1|                         by poly_gcd_zero
              = X ** (gcd n 0) - |1| = RHS           by GCD_0R
@@ -2160,7 +2160,7 @@ val poly_irreducible_divides_product = store_thm(
                With s' pdivides q              by given
                 ==> s' pdivides (mpgcd p q)    by poly_monic_gcd_is_gcd
                  or s' pdivides |1|            by poly_monic_gcd_one_coprime, pcoprime p q
-         Thus mpgcd s q = |1|       by (1),(2),(3)
+         Thus mpgcd s q = |1|      by (1),(2),(3)
          From mpgcd s q = |1|
           ==> pcoprime s q         by poly_monic_gcd_one_coprime
         Hence s pdivides t         by poly_coprime_divides_product
@@ -2398,7 +2398,7 @@ val poly_coprime_lcm = store_thm(
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> p pdivides (plcm p q) /\ q pdivides (plcm p q) *)
 (* Proof:
    Let d = mpgcd p q.
-    Then poly d                     by poly_monic_gcd_poly
+    Then poly d                      by poly_monic_gcd_poly
    If deg d = 0,
       Then plcm p q = p * q          by poly_lcm_def
         so p divides (q * p)         by poly_divides_def
@@ -3216,7 +3216,7 @@ val poly_prod_factors_divides_poly_prod_factor = store_thm(
       Note FINITE (IMAGE factor s)       by IMAGE_FINITE
        and miset (IMAGE factor s)        by poly_factor_image_monic_irreducibles_set, s SUBSET R
        ==> ?tt. tt SUBSET (IMAGE factor s) /\ (p = PPROD tt)  by poly_prod_monic_irreducible_set_divisor_form
-       Let t = {x | x IN s /\ factor x IN tt}`
+       Let t = {x | x IN s /\ factor x IN tt}
       Then t SUBSET s                    by SUBSET_DEF
        and IMAGE factor t = tt           by EXTENSION, SUBSET_DEF, IN_IMAGE
       Take this t,

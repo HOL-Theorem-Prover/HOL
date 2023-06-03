@@ -1198,103 +1198,70 @@ val BIGUNION_IMAGE_COUNT_IMP_UNIV = store_thm
  >> FULL_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, PULL_EXISTS, IN_UNIV]
  >> METIS_TAC []);
 
-val BIGUNION_OVER_INTER_L = store_thm
-  ("BIGUNION_OVER_INTER_L",
-  ``!f d. BIGUNION (IMAGE f univ(:num)) INTER d =
-          BIGUNION (IMAGE (\i. f i INTER d) univ(:num))``,
-    rpt GEN_TAC
- >> REWRITE_TAC [EXTENSION]
- >> GEN_TAC >> EQ_TAC
- >| [ (* goal 1 (of 2) *)
-      RW_TAC std_ss [IN_BIGUNION, IN_INTER, IN_IMAGE] \\
-      `x IN (f x' INTER d)` by PROVE_TAC [IN_INTER] \\
-      Q.EXISTS_TAC `f x' INTER d` >> art [] \\
-      Q.EXISTS_TAC `x'` >> art [],
-      (* goal 2 (of 2) *)
-      RW_TAC std_ss [IN_BIGUNION, IN_INTER, IN_IMAGE] >|
-      [ fs [IN_INTER] >> Q.EXISTS_TAC `f i` >> ASM_REWRITE_TAC [] \\
-        Q.EXISTS_TAC `i` >> REWRITE_TAC [],
-        PROVE_TAC [IN_INTER] ] ]);
+Theorem BIGUNION_OVER_INTER_L :
+    !f s d. BIGUNION (IMAGE f s) INTER d = BIGUNION (IMAGE (\i. f i INTER d) s)
+Proof
+    rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 3) *)
+      rename1 ‘y IN s’ \\
+      Q.EXISTS_TAC ‘f y INTER d’ >> rw [] \\
+      Q.EXISTS_TAC ‘y’ >> rw [],
+      (* goal 2 (of 3) *)
+      fs [] \\
+      Q.EXISTS_TAC ‘f i’ >> rw [] \\
+      Q.EXISTS_TAC ‘i’ >> rw [],
+      (* goal 3 (of 3) *)
+      fs [] ]
+QED
 
-val BIGUNION_OVER_INTER_R = store_thm
-  ("BIGUNION_OVER_INTER_R",
-  ``!f d. d INTER BIGUNION (IMAGE f univ(:num)) =
-          BIGUNION (IMAGE (\i. d INTER f i) univ(:num))``,
-    rpt GEN_TAC
- >> REWRITE_TAC [EXTENSION]
- >> GEN_TAC >> EQ_TAC
- >| [ (* goal 1 (of 2) *)
-      RW_TAC std_ss [IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV] \\
-      `x IN (d INTER f x')` by PROVE_TAC [IN_INTER] \\
-      Q.EXISTS_TAC `d INTER f x'` >> art [] \\
-      Q.EXISTS_TAC `x'` >> art [],
-      (* goal 2 (of 2) *)
-      RW_TAC std_ss [IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV] >|
-      [ fs [IN_INTER] >> Q.EXISTS_TAC `f i` >> ASM_REWRITE_TAC [] \\
-        Q.EXISTS_TAC `i` >> REWRITE_TAC [],
-        PROVE_TAC [IN_INTER] ] ]);
+(* |- !f s d. d INTER BIGUNION (IMAGE f s) = BIGUNION (IMAGE (\i. d INTER f i) s) *)
+Theorem BIGUNION_OVER_INTER_R = ONCE_REWRITE_RULE [INTER_COMM] BIGUNION_OVER_INTER_L
 
-val BIGUNION_OVER_DIFF = store_thm
-  ("BIGUNION_OVER_DIFF",
-  ``!f d. BIGUNION (IMAGE f univ(:num)) DIFF d =
-          BIGUNION (IMAGE (\i. f i DIFF d) univ(:num))``,
-    rpt GEN_TAC
- >> REWRITE_TAC [EXTENSION]
- >> GEN_TAC >> EQ_TAC
- >| [ (* goal 1 (of 2) *)
-      RW_TAC std_ss [IN_BIGUNION, IN_DIFF, IN_IMAGE, IN_UNIV] \\
-      `x IN (f x' DIFF d)` by PROVE_TAC [IN_DIFF] \\
-      Q.EXISTS_TAC `f x' DIFF d` >> art [] \\
-      Q.EXISTS_TAC `x'` >> art [],
-      (* goal 2 (of 2) *)
-      RW_TAC std_ss [IN_BIGUNION, IN_DIFF, IN_IMAGE, IN_UNIV] >|
-      [ fs [IN_DIFF] >> Q.EXISTS_TAC `f i` >> art [] \\
-        Q.EXISTS_TAC `i` >> REWRITE_TAC [],
-        PROVE_TAC [IN_DIFF] ] ]);
+Theorem BIGUNION_OVER_DIFF :
+    !f s d. BIGUNION (IMAGE f s) DIFF d = BIGUNION (IMAGE (\i. f i DIFF d) s)
+Proof
+    rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 3) *)
+      rename1 ‘y IN s’ \\
+      Q.EXISTS_TAC ‘f y DIFF d’ >> rw [] \\
+      Q.EXISTS_TAC ‘y’ >> rw [],
+      (* goal 2 (of 3) *)
+      fs [] \\
+      Q.EXISTS_TAC ‘f i’ >> art [] \\
+      Q.EXISTS_TAC ‘i’ >> art [],
+      (* goal 3 (of 3) *)
+      fs [] ]
+QED
 
-val BIGUNION_IMAGE_OVER_INTER_L = store_thm
-  ("BIGUNION_IMAGE_OVER_INTER_L",
-  ``!f n d. BIGUNION (IMAGE f (count n)) INTER d =
-            BIGUNION (IMAGE (\i. f i INTER d) (count n))``,
-    rpt GEN_TAC
- >> REWRITE_TAC [EXTENSION]
- >> GEN_TAC >> EQ_TAC
- >| [ RW_TAC std_ss [IN_BIGUNION, IN_INTER, IN_IMAGE] \\
-      `x IN (f x' INTER d)` by PROVE_TAC [IN_INTER] \\
-      Q.EXISTS_TAC `f x' INTER d` >> art [] \\
-      Q.EXISTS_TAC `x'` >> art [],
-      RW_TAC std_ss [IN_BIGUNION, IN_INTER, IN_IMAGE] >|
-      [ fs [IN_INTER] >> Q.EXISTS_TAC `f i` >> art [] \\
-        Q.EXISTS_TAC `i` >> art [],
-        PROVE_TAC [IN_INTER] ] ]);
-
-val BIGUNION_IMAGE_OVER_INTER_R = store_thm
-  ("BIGUNION_IMAGE_OVER_INTER_R",
-  ``!f n d. d INTER BIGUNION (IMAGE f (count n)) =
-            BIGUNION (IMAGE (\i. d INTER f i) (count n))``,
-    rpt GEN_TAC
- >> ONCE_REWRITE_TAC [INTER_COMM]
- >> REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_L]);
-
-val BIGINTER_IMAGE_OVER_INTER_L = store_thm
-  ("BIGINTER_IMAGE_OVER_INTER_L",
-  ``!f n d. 0 < n ==>
-           (BIGINTER (IMAGE f (count n)) INTER d =
-            BIGINTER (IMAGE (\i. f i INTER d) (count n)))``,
+Theorem BIGINTER_OVER_INTER_L :
+    !f s d. s <> {} ==> (BIGINTER (IMAGE f s) INTER d =
+                         BIGINTER (IMAGE (\i. f i INTER d) s))
+Proof
     rpt STRIP_TAC
- >> REWRITE_TAC [EXTENSION]
- >> GEN_TAC >> EQ_TAC
- >| [ RW_TAC std_ss [IN_BIGINTER_IMAGE, IN_INTER, IN_COUNT],
-      RW_TAC std_ss [IN_BIGINTER_IMAGE, IN_INTER, IN_COUNT] >> RES_TAC ]);
+ >> rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 3) *)
+      rw [] >> FIRST_X_ASSUM MATCH_MP_TAC \\
+      Q.EXISTS_TAC ‘i’ >> rw [],
+      (* goal 2 (of 3) *)
+      rename1 ‘y IN s’ \\
+      Suff ‘x IN (f y INTER d)’ >- rw [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      Q.EXISTS_TAC ‘y’ >> rw [],
+      (* goal 3 (of 3) *)
+      fs [GSYM MEMBER_NOT_EMPTY] \\
+      rename1 ‘i IN s’ \\
+      Suff ‘x IN f i INTER d’ >- rw [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      Q.EXISTS_TAC ‘i’ >> rw [] ]
+QED
 
-val BIGINTER_IMAGE_OVER_INTER_R = store_thm
-  ("BIGINTER_IMAGE_OVER_INTER_R",
-  ``!f n d. 0 < n ==>
-           (d INTER BIGINTER (IMAGE f (count n)) =
-            BIGINTER (IMAGE (\i. d INTER f i) (count n)))``,
-    rpt STRIP_TAC
- >> ONCE_REWRITE_TAC [INTER_COMM]
- >> MATCH_MP_TAC BIGINTER_IMAGE_OVER_INTER_L >> art []);
+(* |- !f s d. s <> {} ==>
+              d INTER BIGINTER (IMAGE f s) = BIGINTER (IMAGE (\i. d INTER f i) s)
+ *)
+Theorem BIGINTER_OVER_INTER_R = ONCE_REWRITE_RULE [INTER_COMM] BIGINTER_OVER_INTER_L
 
 (* any finite set can be decomposed into a finite sequence of sets *)
 val finite_decomposition_simple = store_thm (* new *)
@@ -1740,8 +1707,24 @@ val disjoint_family_on = new_definition ("disjoint_family_on",
   ``disjoint_family_on a s =
       (!m n. m IN s /\ n IN s /\ (m <> n) ==> (a m INTER a n = {}))``);
 
+(* A new, equivalent definition based on DISJOINT *)
+Theorem disjoint_family_on_def :
+    !A J. disjoint_family_on A (J :'index set) <=>
+         (!i j. i IN J /\ j IN J /\ (i <> j) ==> DISJOINT (A i) (A j))
+Proof
+    rw [DISJOINT_DEF, disjoint_family_on]
+QED
+
 val disjoint_family = new_definition ("disjoint_family",
   ``disjoint_family A = disjoint_family_on A UNIV``);
+
+(* A new, equivalent definition based on DISJOINT *)
+Theorem disjoint_family_def :
+    !A. disjoint_family (A :'index -> 'a set) <=>
+        !i j. i <> j ==> DISJOINT (A i) (A j)
+Proof
+    rw [disjoint_family, disjoint_family_on_def]
+QED
 
 (* This is the way to convert a family of sets into a disjoint family *)
 (* of sets, cf. SETS_TO_DISJOINT_SETS -- Chun Tian *)
@@ -2345,10 +2328,21 @@ QED
 
 Theorem REAL_RAT_DENSE = Q_DENSE_IN_REAL
 
+(* ‘count1 n’ (inclusive ‘count’) returns the set of integers from 0 to n *)
+Overload count1 = “\n. count (SUC n)”;
+
+(* A fake definition in case a user wants to check its definition by guess *)
+Theorem count1_def :
+    !n. count1 n = {m | m <= n}
+Proof
+    rw [Once EXTENSION, LT_SUC_LE]
+QED
+
 val _ = export_theory ();
 
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales. Cambridge University Press (2005).
   [2] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
+
  *)

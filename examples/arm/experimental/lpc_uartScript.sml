@@ -9,7 +9,7 @@ val _ = new_theory "lpc_uart";
 
 (* We define the state of a UART interface *)
 
-val _ = Hol_datatype `
+Datatype:
   uart0_state = <|
 
     (* physical state components *)
@@ -36,21 +36,23 @@ val _ = Hol_datatype `
        assume that the UART never has to wait forever for the other
        party (device at the other end of the serial cable). *)
 
-  |>`;
+  |>
+End
 
 
 (* We define an invariant for the UART0 state *)
 
-val uart0_ok_def = Define `
-  uart0_ok current_time (uart0:uart0_state) =
+Definition uart0_ok_def:
+  uart0_ok current_time (uart0:uart0_state) <=>
     (* U0LCR must be in a usable state *)
     (uart0.U0LCR ' 7 = F) /\
     (* U0LSR bit 0 and bit 5 indicate whether U0RBR and U0THR, resp., are ready for use *)
-    (uart0.U0LSR ' 0 = (uart0.input_time <= current_time) /\ ~(uart0.input_list = [])) /\
-    (uart0.U0LSR ' 5 = (uart0.output_time <= current_time)) /\
+    (uart0.U0LSR ' 0 <=> (uart0.input_time <= current_time) /\ ~(uart0.input_list = [])) /\
+    (uart0.U0LSR ' 5 <=> (uart0.output_time <= current_time)) /\
     (* Content of U0RBR and U0THR is determined by state of U0LSR *)
     (?w. uart0.U0RBR = if uart0.U0LSR ' 0 then HD (uart0.input_list) else w) /\
-    (?w. uart0.U0THR = if uart0.U0LSR ' 5 then w else HD (uart0.output_list))`;
+    (?w. uart0.U0THR = if uart0.U0LSR ' 5 then w else HD (uart0.output_list))
+End
 
 
 (* We define what addresses are owned by UART0, and whether they can be read and written *)
@@ -99,8 +101,9 @@ val ADDR_SET_def = Define `
   (ADDR_SET ((MEM_READ a)::xs) = a INSERT ADDR_SET xs) /\
   (ADDR_SET ((MEM_WRITE a b)::xs) = a INSERT ADDR_SET xs)`;
 
-val ALL_OR_NOTHING_def = Define `
-  ALL_OR_NOTHING x a = (x INTER a = a) \/ (x INTER a = {})`;
+Definition ALL_OR_NOTHING_def:
+  ALL_OR_NOTHING x a <=> (x INTER a = a) \/ (x INTER a = {})
+End
 
 val IS_MEM_READ_def = Define `
   (IS_MEM_READ (MEM_READ a) = T) /\ (IS_MEM_READ _ = F)`;
@@ -131,11 +134,17 @@ val REG32_RO_NEXT_def = Define `
       (a INTER writes = {})`;
 
 
-val UART0_NEXT_def = Define `
-  UART0_NEXT current_time (accesses:memory_access list) (s1:uart0_state) (s2:uart0_state) =
+Definition UART0_NEXT_def:
+  UART0_NEXT
+    current_time
+    (accesses:memory_access list)
+    (s1:uart0_state)
+    (s2:uart0_state)
+  <=>
 
-    (* both before and after state must be consistent, i.e. logical components of
-       each state must agree with physical components of resp. state. *)
+    (* both before and after state must be consistent, i.e., logical
+       components of each state must agree with physical components of
+       resp. state. *)
     uart0_ok current_time s1 /\ uart0_ok (current_time+1) s2 /\
 
     (* if read happened then ... else ... *)
@@ -160,7 +169,8 @@ val UART0_NEXT_def = Define `
 
     (* the 32-bit memory-mapped registers *)
     REG32_RW_NEXT 0xE000C00Cw (s1.U0LCR) accesses (s2.U0LCR) /\
-    REG32_RO_NEXT 0xE000C014w accesses`;
+    REG32_RO_NEXT 0xE000C014w accesses
+End
 
 
 
