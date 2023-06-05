@@ -48,6 +48,10 @@ sig
   val set_simpset_ancestry : string list -> unit
   val recreate_sset_at_parentage : string list -> unit
 
+  (* update stateful simpset for duration of function call and then restore;
+     has same locking guarantees as underlying AncestryData.with_temp_value *)
+  val with_simpset_updates : (simpset -> simpset) -> ('a -> 'b) -> ('a -> 'b)
+
   val make_simpset_derived_value :
       (simpset -> 'a -> 'a) -> 'a -> {get : unit -> 'a, set : 'a -> unit}
 
