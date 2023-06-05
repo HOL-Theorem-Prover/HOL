@@ -1137,7 +1137,8 @@ QED
 val REAL_ABS_ZERO = ABS_ZERO;
 
 Theorem ABS_0[simp]:      abs(0) = 0
-Proof REWRITE_TAC[ABS_ZERO]);
+Proof REWRITE_TAC[ABS_ZERO]
+QED
 
 Theorem ABS_1[simp]:      abs(&1) = &1
 Proof REWRITE_TAC[abs, REAL_LE, ZERO_LESS_EQ]

@@ -6006,7 +6006,8 @@ Proof
                    METIS_TAC [FN_PLUS_POS, pos_not_neginf]) \\
       Cases_on `fn_minus f x = PosInf`
       >- METIS_TAC [extreal_cases, extreal_of_num_def, extreal_not_infty] \\
-      ASM_SIMP_TAC std_ss [] ]);
+      ASM_SIMP_TAC std_ss [] ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Properties of Integral                                                    *)

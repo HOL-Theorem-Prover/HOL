@@ -11,6 +11,8 @@ fun bslash_escape c =
 
 fun bslash_escape_s s = bslash_escape (String.sub(s, 0))
 
+fun mlquote s = "\"" ^ String.toString s ^ "\""
+
 fun pfx_replace oldpfx newpfx s =
     if String.isPrefix oldpfx s then
       newpfx ^ String.extract(s, size oldpfx, NONE)
@@ -80,6 +82,35 @@ fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,
 fun ECHO (QFS _) s = s
 fun print (QFS _) s = s
 
+(* if each attr from attrs is of form attr=...|...|... then return an alist
+   of type (string * string list) list
+*)
+fun key_vallist1 attr =
+    case String.fields (fn c => c = #"=") attr of
+        [] => raise Fail "String.fields can't return an empty list"
+      | [key] => (key, [])
+      | key::vals::_ => (key, String.fields (fn c => c = #"|") vals)
+val key_vallist = map key_vallist1
+
+fun mk_tacmodifier1 (k,vals) =
+    case k of
+        "exclude_simps" => "(fn ss => ss -* [" ^
+                           String.concatWith "," (map mlquote vals) ^ "])"
+      | "exclude_frags" => "(simpLib.remove_ssfrags [" ^
+                           String.concatWith "," (map mlquote vals) ^ "])"
+      | _ => k
+local
+val bpwsu = "BasicProvers.with_simpset_updates "
+in
+fun mk_tacmodifier attrs =
+    case attrs of
+        [] => ""
+      | [tm] => bpwsu ^ mk_tacmodifier1 tm
+      | _ => "(" ^ bpwsu ^
+             String.concatWith "o" (map mk_tacmodifier1 attrs) ^ ")"
+end
+val killspace =
+    String.translate (fn c => if Char.isSpace c then "" else String.str c)
 fun dest_ml_thm_binding s =
     let
       (* s matches {keyword}{ws}+{ident}[attrs]
@@ -110,6 +141,7 @@ fun dest_ml_thm_binding s =
          Substring.slice(attrs, 1, SOME (Substring.size attrs - 2))
                         |> Substring.string
                         |> String.fields (fn c => c = #",")
+                        |> map killspace
       )
     end
 
@@ -189,6 +221,13 @@ nised
 fun newline (arg as QFS q) (yypos,yytext) =
   (nextline arg (yypos + size yytext); ECHO arg "\n");
 
+fun update_position (arg as QFS {row,rowstart,...}) yytext =
+  let val lines = String.fields (fn c => c = #"\n") yytext
+  in
+    row := !row + (length lines - 1);
+    rowstart := String.size (List.last lines)
+  end
+
 fun qnewline arg (yypos,yytext) =
     (nextline arg (yypos + size yytext);
      ECHO arg "\\n\\\n\\")
@@ -229,11 +268,15 @@ alphaMLid_tailchar = ({letter} | {digit} | _ | "'");
 alphaMLid = {letter} {alphaMLid_tailchar}*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
 quotedsymbolid = "\"" [^\034]+ "\"";
-defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
-defn_attribute_list = {defn_attribute} (","{defn_attribute})*;
-MLid =  {alphaMLid} | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\013\n";
+optallws = ({ws}|{newline})*;
+attributeValue_tailchar = {alphaMLid_tailchar} | ".";
+attributeValue = {letter} {attributeValue_tailchar}*;
+attributeEqnRHS = {attributeValue}("|"{optallws}{attributeValue})*;
+defn_attribute = {alphaMLid} ("=" {attributeEqnRHS})?;
+defn_attribute_list = {defn_attribute} (","({ws}|{newline})*{defn_attribute})*;
+MLid =  {alphaMLid} | {symbol}+;
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 fullquotebegin = "``" | "\226\128\156" ;
@@ -250,6 +293,8 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";
 HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
 HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
+ProofLine =
+  {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]")?;
 %%
 
 {locpragma} => ((yypos,
@@ -347,7 +392,7 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
     yytext
 )));
 <INITIAL>^"QED" => (
-  (yypos, if inscript andalso not quotefix then ECHO yyarg ");" else yytext)
+  (yypos, if inscript andalso not quotefix then ECHO yyarg "));" else yytext)
 );
 <INITIAL,thmval>^{Definitionpfx} => (
   (yypos,
@@ -587,10 +632,20 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
     YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
     if quotefix then pfx_replace "``" rdquo yytext else ECHO yyarg "\"])"))
 );
-<qcomment>{newline}"Proof" => (
+<qcomment,quote>{ProofLine} => (
   (yypos,
-   (comdepth := 0; YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
-    if quotefix then yytext else ECHO yyarg "\"],")
+   (comdepth := 0; YYBEGIN INITIAL;
+    update_position yyarg yytext;
+    if quotefix then yytext
+    else
+      let val (_, _, attrs) = dest_ml_thm_binding ("kword " ^ yytext)
+          val attr_alist = key_vallist attrs
+      in
+        case attr_alist of
+          [] => ECHO yyarg "\"],("
+        | _ => ECHO yyarg ("\"]," ^ mk_tacmodifier attr_alist ^ "(")
+      end
+   )
   )
 );
 <qcomment>{quoteend} => (
@@ -760,12 +815,6 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
      if quotefix then yytext else ECHO yyarg "\"] (SOME ("
    ))
 );
-<quote>{newline}"Proof" => ((yypos,
-(
-  (* can't happen in a thmval *)
-  YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
-  if quotefix then yytext else ECHO yyarg "\"],\n"
-)));
 <tmquote,tyquote>{fullquoteend} => (
   (yypos,
    (YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);

@@ -799,7 +799,8 @@ Proof
     SRW_TAC [][] THEN
     PROVE_TAC [LAPPEND, LMAP],
     PROVE_TAC []
-  ]);
+  ]
+QED
 
 Theorem LAPPEND_EQ_LNIL[simp]:
   (LAPPEND l1 l2 = [||]) <=> (l1 = [||]) /\ (l2 = [||])

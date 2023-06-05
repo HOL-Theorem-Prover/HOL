@@ -4094,7 +4094,8 @@ Proof
   ‘1 < p’ by rw[ONE_LT_PRIME] >>
   ‘LOG p n <> 0’ by rw[LOG_EQ_0] >>
   metis_tac[prime_powers_eq, NOT_ZERO_LT_ZERO]) >>
-  metis_tac[PROD_SET_PRODUCT_GE_CONSTANT]);
+  metis_tac[PROD_SET_PRODUCT_GE_CONSTANT]
+QED
 
 (* Another significant result. *)
 

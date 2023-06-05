@@ -1432,7 +1432,8 @@ Proof
   irule (DECIDE “(p ==> ~p) /\ (~p ==> p) ==> Q”) >>
   qexists_tac ‘f CS IN CS’ >> conj_tac >> strip_tac >>
   qpat_x_assum ‘!s. s IN CS <=> P’ (fn th => REWRITE_TAC [th]) >>
-  csimp[] >> simp[] >> metis_tac[]);
+  csimp[] >> simp[] >> metis_tac[]
+QED
 
 val cardlt_cardle = Q.store_thm(
   "cardlt_cardle",

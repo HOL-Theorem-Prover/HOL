@@ -1307,7 +1307,7 @@ val marginal_distribution2 = store_thm
 Theorem joint_distribution_sums_1 :
     !p X Y. prob_space p /\ FINITE (p_space p) /\
            (events p = POW (p_space p)) ==>
-           (SIGMA (\(x,y). joint_distribution p X Y {(x,y)})
+           (SIGMA (λ(x,y). joint_distribution p X Y {(x,y)})
                   ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p))) = 1)
 Proof
     RW_TAC std_ss []
@@ -1346,7 +1346,7 @@ QED
 Theorem joint_distribution_sum_mul1 :
     !p X Y f. prob_space p /\ FINITE (p_space p) /\
              (events p = POW (p_space p))
-         ==> (SIGMA (\(x,y). joint_distribution p X Y {(x,y)} * (f x))
+         ==> (SIGMA (λ(x,y). joint_distribution p X Y {(x,y)} * (f x))
                     (IMAGE X (p_space p) CROSS IMAGE Y (p_space p)) =
               SIGMA (\x. distribution p X {x} * (f x)) (IMAGE X (p_space p)))
 Proof
@@ -1354,7 +1354,7 @@ Proof
  >> Q.ABBREV_TAC `s1 = IMAGE X (p_space p)`
  >> Q.ABBREV_TAC `s2 = IMAGE Y (p_space p)`
  >> `FINITE s1 /\ FINITE s2` by METIS_TAC [IMAGE_FINITE]
- >> `(\(x,y). joint_distribution p X Y {(x,y)} * (f x)) =
+ >> `(λ(x,y). joint_distribution p X Y {(x,y)} * (f x)) =
      (\x. (\a b. joint_distribution p X Y {(a,b)} * (f a) ) (FST x) (SND x))`
         by (RW_TAC std_ss [FUN_EQ_THM] \\
             Cases_on `x` >> RW_TAC std_ss [])
@@ -1372,7 +1372,8 @@ Proof
  >> RW_TAC std_ss [GSYM marginal_distribution1]
  >> Suff `(\x. (f x) * distribution p X {x}) = (\x. distribution p X {x} * (f x))`
  >- RW_TAC std_ss []
- >> RW_TAC std_ss [FUN_EQ_THM, REAL_MUL_COMM]);
+ >> RW_TAC std_ss [FUN_EQ_THM, REAL_MUL_COMM]
+QED
 
 (* ========================================================================= *)
 (*                      Condition Probability Library                        *)
@@ -1607,12 +1608,12 @@ Proof
  >> fs [IN_INSERT]
 QED
 
-val COND_PROB_FINITE_ADDITIVE = store_thm
-  ("COND_PROB_FINITE_ADDITIVE",
-  ``!p A B n s. prob_space p /\ B IN events p /\ A IN ((count n) -> events p) /\
+Theorem COND_PROB_FINITE_ADDITIVE:
+  !p A B n s. prob_space p /\ B IN events p /\ A IN ((count n) -> events p) /\
         (s = BIGUNION (IMAGE A (count n))) /\
         (!a b. a <> b ==> DISJOINT (A a) (A b)) ==>
-        (cond_prob p s B = SIGMA (\i. cond_prob p (A i) B) (count n))``,
+        (cond_prob p s B = SIGMA (\i. cond_prob p (A i) B) (count n))
+Proof
     RW_TAC std_ss [IN_FUNSET, IN_COUNT]
  >> `0 <= prob p (B:'a -> bool)` by RW_TAC std_ss [PROB_POSITIVE]
  >> `BIGUNION (IMAGE A (count n)) IN events p` by METIS_TAC [EVENTS_BIGUNION, IN_FUNSET, IN_COUNT]
