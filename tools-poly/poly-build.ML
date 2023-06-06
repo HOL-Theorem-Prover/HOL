@@ -16,6 +16,7 @@ val _ = use "../tools/Holmake/poly/HFS_NameMunge.sml";
 val _ = useC "HOLFileSys";
 val _ = useC "Holdep_tokens";
 val _ = useC "HM_SimpleBuffer";
+val _ = useC "AttributeSyntax";
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = useC "QFRead";
 val _ = useC "Holdep";

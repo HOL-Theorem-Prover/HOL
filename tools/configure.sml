@@ -321,6 +321,8 @@ val _ =
     compile [] "HOLFileSys.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
+    compile [] "AttributeSyntax.sig";
+    compile [] "AttributeSyntax.sml";
     compile [] "QuoteFilter.sml";
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";
