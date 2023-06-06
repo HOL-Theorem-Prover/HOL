@@ -1891,7 +1891,7 @@ fun tgoal_no_defn0 (def,ind) =
    if null (op_U aconv [(hyp def)])
    then raise ERR "tgoal" "no termination conditions"
    else let val (g,validation) = TC_TAC0 def ind
-        in proofManagerLib.add (Manager.new_goalstack g validation)
+        in proofManagerLib.add (Manager.new_goalstack g Manager.id_tacm validation)
         end handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tgoal_no_defn (def,ind) =
@@ -1901,7 +1901,7 @@ fun tgoal0 defn =
    if null (tcs_of defn)
    then raise ERR "tgoal" "no termination conditions"
    else let val (g,validation) = TC_TAC defn
-        in proofManagerLib.add (Manager.new_goalstack g validation)
+        in proofManagerLib.add (Manager.new_goalstack g Manager.id_tacm validation)
         end handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
