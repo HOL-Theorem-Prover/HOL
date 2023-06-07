@@ -203,10 +203,12 @@ quotedsymbolid = "\"" [^\034]+ "\"";
 ws = [\ \t];
 newline = "\n" | "\013\n";
 optallws = ({ws}|{newline})*;
+forcedallws = ({ws}|{newline})+;
 attributeValue_tailchar = {alphaMLid_tailchar} | ".";
 attributeValue = {letter} {attributeValue_tailchar}*;
-attributeEqnRHS = {attributeValue}("|"{optallws}{attributeValue})*;
-defn_attribute = {alphaMLid} ({optallws}"="{optallws}{attributeEqnRHS})?;
+attributeEqnRHS = {attributeValue}({forcedallws}{attributeValue})*;
+defn_attribute =
+  {alphaMLid}{optallws} ("="{optallws}{attributeEqnRHS}{optallws})?;
 defn_attribute_list = {defn_attribute} (","({ws}|{newline})*{defn_attribute})*;
 MLid =  {alphaMLid} | {symbol}+;
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
@@ -219,7 +221,7 @@ Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{alphaMLid_list}"]
 DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+;
 DefinitionLabel = "["{ws}*{DefinitionLabelID}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]";
 Definitionpfx =
-  "Definition"{ws}+{alphaMLid}({ws}*"["{defn_attribute_list}"]")?{ws}*":";
+  "Definition"{ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";

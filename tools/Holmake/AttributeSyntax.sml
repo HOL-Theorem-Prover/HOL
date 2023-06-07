@@ -14,20 +14,27 @@ val mk_strsafe =
     String.translate (fn c => if Char.isPrint c then str c else
                               bslash_escape c)
 
+fun kill_enveloping_space s =
+      s |> Substring.full
+        |> Substring.dropl Char.isSpace
+        |> Substring.dropr Char.isSpace
+        |> Substring.string
+
 (* if each attr from attrs is of form attr=...|...|... then return an alist
    of type (string * string list) list
 *)
 fun key_vallist1 attr =
     case String.fields (fn c => c = #"=") attr of
         [] => raise Fail "String.fields can't return an empty list"
-      | [key] => (key, [])
-      | key::vals::_ => (key, String.fields (fn c => c = #"|") vals)
+      | [key] => (kill_enveloping_space key, [])
+      | key::vals::_ => (kill_enveloping_space key,
+                         String.tokens Char.isSpace vals)
 val key_vallist = map key_vallist1
 
 fun mk_tacmodifier1 (k,vals) =
     case k of
-        "exclude_simps" => "(fn ss => simpLib.-*(ss, [" ^
-                           String.concatWith "," (map mlquote vals) ^ "]))"
+        "exclude_simps" => "(simpLib.remove_simps [" ^
+                           String.concatWith "," (map mlquote vals) ^ "])"
       | "exclude_frags" => "(simpLib.remove_ssfrags [" ^
                            String.concatWith "," (map mlquote vals) ^ "])"
       | _ => k
@@ -38,11 +45,9 @@ fun mk_tacmodifier_string attrs =
     case attrs of
         [] => ""
       | [tm] => bpwsu ^ mk_tacmodifier1 tm
-      | _ => "(" ^ bpwsu ^
+      | _ => bpwsu ^ "(" ^
              String.concatWith "o" (map mk_tacmodifier1 attrs) ^ ")"
 end
-val killspace =
-    String.translate (fn c => if Char.isSpace c then "" else String.str c)
 fun dest_name_attrs s =
     let val ss = Substring.full s
         val (nmss, attrs) =
@@ -62,7 +67,7 @@ fun dest_name_attrs s =
          Substring.slice(attrs, 1, SOME (Substring.size attrs - 2))
                         |> Substring.string
                         |> String.fields (fn c => c = #",")
-                        |> map killspace)
+                        |> map kill_enveloping_space)
     end
 
 fun dest_ml_thm_binding s =
