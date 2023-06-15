@@ -544,8 +544,36 @@ Theorem LE_LT = LESS_OR_EQ;
 Theorem LT_SUC_LE : (* was: LESS_SUC_EQ *)
     !m n. m < SUC n <=> m <= n
 Proof
-  REPEAT GEN_TAC THEN REWRITE_TAC[CONJUNCT2 LT, LE_LT] THEN
-  EQ_TAC THEN DISCH_THEN(DISJ_CASES_THEN(fn th => REWRITE_TAC[th]))
+    rpt GEN_TAC >> REWRITE_TAC[CONJUNCT2 LT, LE_LT]
+ >> EQ_TAC >> DISCH_THEN(DISJ_CASES_THEN(fn th => REWRITE_TAC[th]))
+QED
+
+Theorem LE_CASES :
+   !m n:num. m <= n \/ n <= m
+Proof
+  rpt INDUCT_TAC >> ASM_REWRITE_TAC[ZERO_LESS_EQ, LESS_EQ_MONO]
+QED
+
+Theorem LT_CASES :
+   !m n:num. (m < n) \/ (n < m) \/ (m = n)
+Proof
+  METIS_TAC [LESS_CASES, LESS_OR_EQ]
+QED
+
+(* moved here from real_topologyTheory *)
+Theorem WLOG_LT :
+   (!m:num. P m m) /\ (!m n. P m n <=> P n m) /\ (!m n. m < n ==> P m n)
+   ==> !m y. P m y
+Proof
+  METIS_TAC [LT_CASES]
+QED
+
+(* moved here from iterateTheory *)
+Theorem WLOG_LE :
+   (!m n:num. P m n <=> P n m) /\ (!m n:num. m <= n ==> P m n) ==>
+    !m n:num. P m n
+Proof
+  METIS_TAC [LE_CASES]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -1303,11 +1331,7 @@ Proof
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
 QED
 
-val LESS_EQ_CASES = store_thm ("LESS_EQ_CASES",
-  “!m n. m <= n \/ n <= m”,
-  REPEAT GEN_TAC THEN
-  DISJ_CASES_THEN2 (ASSUME_TAC o MATCH_MP LESS_IMP_LESS_OR_EQ) ASSUME_TAC
-    (SPECL [(“m:num”), (“n:num”)] LESS_CASES) THEN ASM_REWRITE_TAC[]);
+Theorem LESS_EQ_CASES = LE_CASES
 
 val LESS_EQUAL_ADD = store_thm ("LESS_EQUAL_ADD",
   “!m n. m <= n ==> ?p. n = m + p”,

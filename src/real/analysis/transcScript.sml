@@ -35,8 +35,8 @@ open reduceLib
      pred_setTheory
      mesonLib;
 
-open seqTheory limTheory powserTheory;
 open iterateTheory real_topologyTheory derivativeTheory;
+open seqTheory limTheory powserTheory;
 
 val _ = new_theory "transc";
 val _ = Parse.reveal "B";
@@ -51,27 +51,8 @@ val art = ASM_REWRITE_TAC;
 
 val MVT            = limTheory.MVT;
 val ROLLE          = limTheory.ROLLE;
-val differentiable = limTheory.differentiable;
 val summable       = seqTheory.summable;
-
-(*---------------------------------------------------------------------------*)
-(* Some miscellaneous lemmas                                                 *)
-(*---------------------------------------------------------------------------*)
-
-val MULT_DIV_2 = prove
- (“!n. (2 * n) DIV 2 = n”,
-  GEN_TAC THEN ONCE_REWRITE_TAC[MULT_SYM] THEN
-  MP_TAC(SPECL [“2:num”, “0:num”] DIV_MULT) THEN REDUCE_TAC THEN
-  REWRITE_TAC[ADD_CLAUSES] THEN DISCH_THEN MATCH_ACCEPT_TAC);
-
-val EVEN_DIV2 = prove
- (“!n. ~(EVEN n) ==> ((SUC n) DIV 2 = SUC((n - 1) DIV 2))”,
-  GEN_TAC THEN REWRITE_TAC[EVEN_ODD, ODD_EXISTS] THEN
-  DISCH_THEN(X_CHOOSE_THEN “m:num” SUBST1_TAC) THEN
-  REWRITE_TAC[SUC_SUB1] THEN REWRITE_TAC[ADD1, GSYM ADD_ASSOC] THEN
-  SUBST1_TAC(EQT_ELIM(REDUCE_CONV “1 + 1:num = 2 * 1”)) THEN
-  REWRITE_TAC[GSYM LEFT_ADD_DISTRIB, MULT_DIV_2]);
-
+val differentiable = limTheory.differentiable;
 
 (*---------------------------------------------------------------------------*)
 (* The three functions we define by series are exp, sin, cos                 *)
@@ -219,7 +200,7 @@ val COS_FDIFF = store_thm("COS_FDIFF",
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   REWRITE_TAC[real_div, REAL_NEG_LMUL] THEN
   REWRITE_TAC[GSYM REAL_MUL_ASSOC] THEN BINOP_TAC THENL
-   [POP_ASSUM(SUBST1_TAC o MATCH_MP EVEN_DIV2) THEN
+   [POP_ASSUM(SUBST1_TAC o MATCH_MP EVEN_DIV_2) THEN
     REWRITE_TAC[pow] THEN REWRITE_TAC[GSYM REAL_NEG_MINUS1],
     REWRITE_TAC[FACT, GSYM REAL_MUL] THEN
     SUBGOAL_THEN “~(&(SUC n) = &0) /\ ~(&(FACT n) = &0)” ASSUME_TAC THENL
