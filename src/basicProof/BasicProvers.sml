@@ -1214,8 +1214,10 @@ val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 fun srw_ss () =
     (update_global_value init_state;
      #1 (get_global_value()))
+
 fun with_simpset_updates f g x =
-    AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x
+    (notify();
+     AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x)
 
 val update_log =
     Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
