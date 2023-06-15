@@ -31,23 +31,42 @@ fun key_vallist1 attr =
                          String.tokens Char.isSpace vals)
 val key_vallist = map key_vallist1
 
-fun mk_tacmodifier1 (k,vals) =
-    case k of
-        "exclude_simps" => "(simpLib.remove_simps [" ^
-                           String.concatWith "," (map mlquote vals) ^ "])"
-      | "exclude_frags" => "(simpLib.remove_ssfrags [" ^
-                           String.concatWith "," (map mlquote vals) ^ "])"
-      | _ => k
+type ('a,'b) gtm =
+     {values : string list -> 'b, combine : 'a * 'a -> 'a, null: 'a,
+      perkey : string -> 'b -> 'a}
+
 local
 val bpwsu = "BasicProvers.with_simpset_updates "
 in
-fun mk_tacmodifier_string attrs =
+fun gen_mktm (r as {values,combine,null,perkey}) attrs =
     case attrs of
+        [] => null
+      | [(k,vals)] => perkey k (values vals)
+      | (k,vals)::xs => combine(perkey k (values vals), gen_mktm r xs)
+
+fun string_of_key k =
+    case k of
+        "exclude_simps" => "simpLib.remove_simps"
+      | "exclude_frags" => "simpLib.remove_ssfrags"
+      | _ => k
+fun mk_tacmodifier_string alist =
+    case alist of
         [] => ""
-      | [tm] => bpwsu ^ mk_tacmodifier1 tm
-      | _ => bpwsu ^ "(" ^
-             String.concatWith "o" (map mk_tacmodifier1 attrs) ^ ")"
+      | _ =>
+        let val base =
+                gen_mktm {
+                  values = (fn vs => "[" ^
+                                  String.concatWith "," (map mlquote vs) ^
+                                  "]"),
+                  combine = (fn(s1,s2) => s1 ^ " o " ^ s2),
+                  null = "(fn x => x)",
+                  perkey = (fn k => fn s => string_of_key k ^ s)
+                } alist
+        in
+          bpwsu ^ "(" ^ base ^ ")"
+        end
 end
+
 fun dest_name_attrs s =
     let val ss = Substring.full s
         val (nmss, attrs) =

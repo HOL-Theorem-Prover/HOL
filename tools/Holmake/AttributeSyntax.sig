@@ -10,4 +10,9 @@ sig
   val key_vallist : string list -> (string * string list) list
   val mk_tacmodifier_string : (string * string list) list -> string
 
+  type ('a,'b) gtm =
+       {values : string list -> 'b, combine : 'a * 'a -> 'a, null: 'a,
+        perkey : string -> 'b -> 'a}
+  val gen_mktm : ('a,'b) gtm -> (string * string list) list -> 'a
+
 end

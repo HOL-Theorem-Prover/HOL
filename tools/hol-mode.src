@@ -316,8 +316,14 @@ With a prefix ARG, uses `expandf' rather than `e'."
                    'send-string-to-hol)))
     (funcall sender tactic-string hol-echo-commands-p)))
 
-(defun send-string-as-hol-goal (s)
-  (let ((goal-string (format  "proofManagerLib.g `%s`" s)))
+(defun send-string-as-hol-goal (s &optional attr-string)
+  (let ((goal-string
+         (if attr-string
+             (progn
+               (message (format "Using tactic-modifier %s" attr-string))
+               (format "proofManagerLib.new_goalstack ([], “%s”) \
+                         (BasicProvers.mk_tacmod %s) I" s attr-string))
+           (format  "proofManagerLib.g `%s`" s))))
     (send-raw-string-to-hol goal-string hol-echo-commands-p)
     (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil)))
 
@@ -337,6 +343,27 @@ With a prefix ARG, uses `expandf' rather than `e'."
         s)))
 
 
+(defun hol-get-proof-attribute-string ()
+  "Get attribute string following a Proof keyword that follows point."
+  (save-mark-and-excursion
+    (let ((pos (point))
+          (proof-pos (re-search-forward "^Proof" nil t)))
+      (if proof-pos
+          (let ((prev-term (re-search-backward "[”’`]" pos t)))
+            (if prev-term nil
+              (goto-char (match-end 0))
+              (skip-chars-forward "[:space:]")
+              (if (equal (char-after) ?\[)
+                  (let ((sq-start (point)))
+                    (condition-case nil
+                        (progn
+                          (skip-chars-forward "^]")
+                          (forward-char)
+                          (buffer-substring-no-properties sq-start (point)))
+                      (error nil)))
+                nil)))
+        nil))))
+
 (defun hol-do-goal (arg)
   "Send term around point to HOL process as goal.
 If prefix ARG is true, or if in transient mark mode, region is active and
@@ -345,12 +372,21 @@ the region contains no term-delimiters, then send region instead."
   (let ((txt (condition-case nil
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
-               (error nil))))
+               (error nil)))
+        (attr-string (hol-get-proof-attribute-string)))
     (if (or (and (is-region-active)
                  (not (hol-string-contains-term-delimiters-p txt)))
             arg)
       (send-string-as-hol-goal txt)
-    (send-string-as-hol-goal (hol-term-at-point)))))
+      (let ((attr-s
+             (if attr-string
+                 (concat "\""
+                         (replace-regexp-in-string
+                          "[[:space:]\n]+" " "
+                          attr-string)
+                         "\"")
+               nil)))
+        (send-string-as-hol-goal (hol-term-at-point) attr-s)))))
 
 
 (defun send-string-as-hol-goaltree (s)
