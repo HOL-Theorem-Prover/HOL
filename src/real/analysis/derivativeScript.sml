@@ -1492,7 +1492,7 @@ val HAS_DERIVATIVE_SERIES = store_thm ("HAS_DERIVATIVE_SERIES",
         (?x l. x IN s /\ ((\n. f n x) sums l) k)
         ==> ?g. !x. x IN s ==> ((\n. f n x) sums (g x)) k /\
                                (g has_derivative g'(x)) (at x within s)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[sums, GSYM numseg] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[sums_def, GSYM numseg] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ONCE_REWRITE_TAC [METIS [] ``sum (k INTER {0 .. n}) (\n. f n x) =
                         (\n x. sum (k INTER {0 .. n}) (\n. f n x)) n x``] THEN
@@ -1898,7 +1898,7 @@ QED
 val lemma_sums_eq = prove (
   ``!l x. (seq$sums (\n. ((\n. inv(&(FACT n)))) n * (x pow n)) l) =
      ((\n. ((\n. inv(&(FACT n)))) n * (x pow n)) sums l) UNIV``,
-  RW_TAC std_ss [sums, seqTheory.sums, LIM_SEQUENTIALLY, SEQ, GE] THEN
+  RW_TAC std_ss [sums_def, sums, LIM_SEQUENTIALLY, SEQ, GE] THEN
   EQ_TAC THEN RW_TAC std_ss [INTER_UNIV] THEN
   FIRST_X_ASSUM (MP_TAC o Q.SPEC `e`) THEN
   ASM_REWRITE_TAC [] THEN STRIP_TAC THENL
@@ -1921,10 +1921,10 @@ val EXP_CONVERGES = store_thm ("EXP_CONVERGES",
   Q_TAC SUFF_TAC `!z. suminf (\n. inv (&FACT n) * z pow n) =
                  infsum UNIV (\n. inv (&FACT n) * z pow n)` THENL
   [DISC_RW_KILL,
-   SIMP_TAC std_ss [suminf, infsum] THEN
+   SIMP_TAC std_ss [suminf, suminf_def] THEN
    SIMP_TAC std_ss [FROM_0, SIMP_RULE std_ss [] (GSYM lemma_sums_eq)]] THEN
   ONCE_REWRITE_TAC [REAL_MUL_COMM] THEN REWRITE_TAC [GSYM real_div, FROM_0] THEN
-  GEN_TAC THEN SIMP_TAC std_ss [SUMS_INFSUM, summable, SERIES_CAUCHY] THEN
+  GEN_TAC THEN SIMP_TAC std_ss [SUMS_INFSUM, summable_def, SERIES_CAUCHY] THEN
   REWRITE_TAC[INTER_UNIV] THEN
   MP_TAC(Q.SPEC `abs(z) + &1` EXP_CONVERGES_UNIFORMLY_CAUCHY) THEN
   SIMP_TAC std_ss [REAL_ARITH ``&0 <= x ==> &0 < x + &1:real``, ABS_POS] THEN
@@ -1945,7 +1945,7 @@ val EXP_CONVERGES_UNIFORMLY = store_thm ("EXP_CONVERGES_UNIFORMLY",
   ASM_REWRITE_TAC[REAL_HALF] THEN STRIP_TAC THEN Q.EXISTS_TAC `N` THEN
   MAP_EVERY X_GEN_TAC [``n:num``, ``z:real``] THEN STRIP_TAC THEN
   MP_TAC(Q.SPEC `z` EXP_CONVERGES) THEN
-  SIMP_TAC std_ss [sums, LIM_SEQUENTIALLY, FROM_0, INTER_UNIV, dist] THEN
+  SIMP_TAC std_ss [sums_def, LIM_SEQUENTIALLY, FROM_0, INTER_UNIV, dist] THEN
   DISCH_THEN(MP_TAC o Q.SPEC `e / &2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
   DISCH_THEN(X_CHOOSE_THEN ``M:num`` (MP_TAC o Q.SPEC `n + M + 1`)) THEN
   FIRST_X_ASSUM(MP_TAC o Q.SPECL [`n + 1`, `n + M + 1`, `z`]) THEN

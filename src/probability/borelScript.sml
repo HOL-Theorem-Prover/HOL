@@ -5133,45 +5133,45 @@ Proof
 QED
 
 Theorem seq_le_imp_lim_le :
-    !x y f. (!n. f n <= x) /\ (f --> y) sequentially ==> y <= x
+    !x y (f :num->real). (!n. f n <= x) /\ (f --> y) sequentially ==> y <= x
 Proof
-   RW_TAC boolSimps.bool_ss [LIM_SEQUENTIALLY]
-   THEN MATCH_MP_TAC REAL_LE_EPSILON
-   THEN RW_TAC boolSimps.bool_ss []
-   THEN Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
-   THEN RW_TAC boolSimps.bool_ss []
-   THEN POP_ASSUM (MP_TAC o Q.SPEC `N`)
-   THEN Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
-   THEN REWRITE_TAC [dist]
-   THEN (RW_TAC boolSimps.bool_ss
-         [GREATER_EQ, LESS_EQ_REFL, abs, REAL_LE_SUB_LADD, REAL_ADD_LID]
-         THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
-              [REAL_NOT_LE, REAL_NEG_SUB, REAL_LT_SUB_RADD])
-   THENL [MATCH_MP_TAC REAL_LE_TRANS
-          THEN Q.EXISTS_TAC `x`
-          THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LE_TRANS])
-          THEN PROVE_TAC [REAL_LE_ADDR, REAL_LT_LE],
-          MATCH_MP_TAC REAL_LE_TRANS
-          THEN Q.EXISTS_TAC `f N + e`
-          THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LT_LE, REAL_ADD_SYM])
-          THEN PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL]]
+    RW_TAC bool_ss [LIM_SEQUENTIALLY]
+ >> MATCH_MP_TAC REAL_LE_EPSILON
+ >> RW_TAC bool_ss []
+ >> Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+ >> RW_TAC bool_ss []
+ >> POP_ASSUM (MP_TAC o Q.SPEC `N`)
+ >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+ >> REWRITE_TAC [dist]
+ >> (RW_TAC bool_ss [GREATER_EQ, LESS_EQ_REFL, abs, REAL_LE_SUB_LADD, REAL_ADD_LID] \\
+     FULL_SIMP_TAC bool_ss [REAL_NOT_LE, REAL_NEG_SUB, REAL_LT_SUB_RADD])
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC REAL_LE_TRANS \\
+      Q.EXISTS_TAC `x` \\
+      CONJ_TAC >- PROVE_TAC [REAL_LE_TRANS] \\
+      PROVE_TAC [REAL_LE_ADDR, REAL_LT_LE],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC REAL_LE_TRANS \\
+      Q.EXISTS_TAC `f N + e` \\
+      CONJ_TAC >- PROVE_TAC [REAL_LT_LE, REAL_ADD_SYM] \\
+      PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL] ]
 QED
 
 (* cf. seqTheory.SEQ_MONO_LE *)
 Theorem seq_mono_le :
-    !f x n. (!n. f n <= f (n + 1)) /\ (f --> x) sequentially ==> f n <= x
+    !(f :num->real) x n. (!n. f n <= f (n + 1)) /\ (f --> x) sequentially ==> f n <= x
 Proof
-   RW_TAC boolSimps.bool_ss [LIM_SEQUENTIALLY] THEN MATCH_MP_TAC REAL_LE_EPSILON THEN
-   RW_TAC boolSimps.bool_ss [] THEN Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`) THEN
-   RW_TAC boolSimps.bool_ss [GREATER_EQ] THEN MP_TAC (Q.SPECL [`N`, `n`] LESS_EQ_CASES) THEN
+   RW_TAC bool_ss [LIM_SEQUENTIALLY] THEN MATCH_MP_TAC REAL_LE_EPSILON THEN
+   RW_TAC bool_ss [] THEN Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`) THEN
+   RW_TAC bool_ss [GREATER_EQ] THEN MP_TAC (Q.SPECL [`N`, `n`] LESS_EQ_CASES) THEN
    STRIP_TAC THENL
    [Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`) THEN ASM_REWRITE_TAC [dist] THEN
     REAL_ARITH_TAC, ALL_TAC] THEN FULL_SIMP_TAC std_ss [dist] THEN
    (SUFF_TAC ``!i : num. f (N - i) <= x + (e : real)`` THEN1 PROVE_TAC [LESS_EQUAL_DIFF]) THEN
    INDUCT_TAC
    THENL [Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
-          THEN RW_TAC boolSimps.bool_ss [abs, LESS_EQ_REFL, SUB_0]
-          THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
+          THEN RW_TAC bool_ss [abs, LESS_EQ_REFL, SUB_0]
+          THEN simpLib.FULL_SIMP_TAC bool_ss
                [REAL_LT_SUB_RADD, REAL_NEG_SUB, REAL_NOT_LE, REAL_ADD_LID,
                 REAL_LE_SUB_LADD]
           THEN PROVE_TAC
