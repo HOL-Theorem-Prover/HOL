@@ -622,8 +622,21 @@ starts >%s%s<"
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
-                      (if hol-auto-load-p
-                          (hol-load-string (match-string 6))))))))
+                      (let ((mod-name (match-string 6)))
+                        (if hol-auto-load-p
+                            ;; need to check if we're in a Proof[...] block
+                            (let
+                                ((in-proof
+                                  (save-mark-and-excursion
+                                    (skip-chars-backward "A-Za-z0-9._, =\n")
+                                    (if(equal (char-before) ?\[)
+                                        (progn
+                                          (backward-char)
+                                          (skip-chars-backward " \n")
+                                          (looking-back "Proof"
+                                                        (- (point) 6)))))))
+                              (if (not in-proof)
+                                  (hol-load-string mod-name))))))))))
           ;; send the string
           (goto-char (point-min))
             (send-buffer-to-hol-maybe-via-file echoit)))
