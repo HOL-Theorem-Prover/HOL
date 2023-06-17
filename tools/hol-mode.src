@@ -561,7 +561,7 @@ starts >%s%s<"
                           (error "Unbalanced “ in region")))
                      ((string= ms "‘")
                       (if (not (re-search-forward "’" nil t))
-                          (error "Unbalanced “ in region")))
+                          (error "Unbalanced ‘ in region")))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
                            (char-equal (char-before) ?:))
