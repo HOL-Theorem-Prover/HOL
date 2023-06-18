@@ -124,7 +124,7 @@ Proof
     >- (
       rw[bool_list_eq, v2n_APPEND, v2n_add, LENGTH_add_MAX] >>
       `MAX (LENGTH a) 1 = LENGTH a ∧ MAX (LENGTH a + 1) 1 = LENGTH a + 1` by (
-        rw[MAX_DEF] >> Cases_on `a` >> gvs[]) >>
+        rw[MAX_DEF] >> gvs[]) >>
       rw[] >> simp[LENGTH_n2v] >>
       `LOG 2 (2 * v2n a + 2) = SUC $ LOG 2 (v2n a + 1)` by
         simp[GSYM logrootTheory.LOG_MULT] >>
@@ -134,7 +134,7 @@ Proof
       rw[bool_list_eq] >- rw[v2n_APPEND, v2n_add] >>
       simp[LENGTH_add_MAX] >>
       `MAX (LENGTH a + 1) 1 = LENGTH a + 1` by (
-        rw[MAX_DEF] >> Cases_on `a` >> gvs[]) >>
+        rw[MAX_DEF] >> gvs[]) >>
       `v2n (a ++ [F]) + 1 = v2n (a ++ [T])` by simp[v2n_APPEND] >> simp[] >>
       qspec_then `a ++ [T]` assume_tac LENGTH_n2v_v2n_LESS >> gvs[MAX_DEF]
       )
@@ -145,7 +145,7 @@ Proof
     rw[bool_list_eq] >- rw[v2n_APPEND, v2n_add] >>
     simp[LENGTH_add_MAX] >>
     `MAX (LENGTH a + 1) 1 = LENGTH a + 1` by (
-      rw[MAX_DEF] >> Cases_on `a` >> gvs[]) >>
+      rw[MAX_DEF] >> gvs[]) >>
     `v2n (a ++ [F]) + 1 = v2n (a ++ [T])` by simp[v2n_APPEND] >> simp[] >>
     qspec_then `a ++ [T]` assume_tac LENGTH_n2v_v2n_LESS >> gvs[MAX_DEF]
     )
@@ -359,7 +359,8 @@ Proof
     qmatch_goalsub_abbrev_tac `add neg` >>
     `EXISTS $¬ neg` by (unabbrev_all_tac >> gvs[EXISTS_MEM, MEM_MAP]) >>
     simp[LENGTH_add_MAX] >>
-    `MAX (LENGTH neg) 1 = LENGTH neg` by (unabbrev_all_tac >> simp[MAX_DEF]) >>
+    `MAX (LENGTH neg) 1 = LENGTH neg` by (
+      unabbrev_all_tac >> simp[MAX_DEF] >> rw[] >> gvs[]) >>
     pop_assum SUBST_ALL_TAC >> simp[MAX_DEF, LENGTH_n2v] >>
     reverse IF_CASES_TAC >> gvs[] >- (unabbrev_all_tac >> simp[]) >>
     Cases_on `v2n neg = 0` >- (unabbrev_all_tac >> gvs[]) >>
