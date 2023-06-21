@@ -754,4 +754,15 @@ Proof
   Cases_on`h` >> fs[AFUPDKEY_def] >> TRY CASE_TAC >> fs[ADELKEY_def]
 QED
 
+Theorem FLOOKUP_FUPDATE_LIST:
+  !xs k m. FLOOKUP (m |++ xs) k =
+           case ALOOKUP (REVERSE xs) k of
+           | NONE => FLOOKUP m k
+           | SOME x => SOME x
+Proof
+  Induct \\ fs [FUPDATE_LIST,pairTheory.FORALL_PROD,ALOOKUP_APPEND]
+  \\ fs [FLOOKUP_UPDATE] \\ rw [] \\ fs []
+  \\ Cases_on ‘ALOOKUP (REVERSE xs) k’ \\ fs []
+QED
+
 val _ = export_theory ();
