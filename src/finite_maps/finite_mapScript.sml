@@ -3555,7 +3555,7 @@ Theorem TO_FLOOKUP:
   (y IN FRANGE m <=> ?k. FLOOKUP m k = SOME y) /\
   (FLOOKUP m x <> NONE ==> m ' x = THE (FLOOKUP m x)) /\
   (m = m' <=> FLOOKUP m = FLOOKUP m') /\
-  (m ⊑ m' <=> !k v. FLOOKUP m k = SOME v ==> FLOOKUP m' k = SOME v) /\
+  (m SUBMAP m' <=> !k v. FLOOKUP m k = SOME v ==> FLOOKUP m' k = SOME v) /\
   (FEVERY P m <=> !k v. FLOOKUP m k = SOME v ==> P (k, v))
 Proof
   fs [SUBMAP_FLOOKUP_EQN,FLOOKUP_DEF,FRANGE_DEF,FEVERY_DEF]
