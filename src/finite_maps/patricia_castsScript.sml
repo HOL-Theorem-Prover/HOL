@@ -238,7 +238,7 @@ val s2n_STRING_STRING = prove(
   `!f b c1 c2 s.
        1 < b /\ 0 < (f c1 MOD b) ==>
        b <= s2n b f (STRING c1 (STRING c2 s))`,
-  SRW_TAC [ARITH_ss] [EXP_ADD, s2n_def, EVAL ``l2n b [c]``, Once l2n_APPEND]
+  SRW_TAC [ARITH_ss] [EXP_ADD, s2n_def, l2n_def, Once l2n_APPEND]
     \\ MATCH_MP_TAC (DECIDE ``a <= b ==> a <= b + c``)
     \\ REWRITE_TAC [GSYM MULT_ASSOC]
     \\ SRW_TAC [ARITH_ss] [ZERO_LESS_MULT, ZERO_LT_EXP]);
