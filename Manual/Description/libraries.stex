@@ -1829,6 +1829,153 @@ For example, one might write
 \end{alltt}
 \end{session}
 
+\section{Computation with First-Order Terms---\texttt{cv\_computeLib}}
+\label{sec:cv-computeLib}
+\index{cv\_computeLib@\ml{cv\_computeLib}}
+
+The library \ml{cv\_computeLib} supports fast evaluation of \HOL{} terms.
+When applicable, \ml{cv\_computeLib} will often execute several orders of magnitude faster than \ml{computeLib} (Section~\ref{sec:computeLib}) on similar inputs.
+Such performance is possible because \ml{cv\_computeLib} relies on an interpreter that is implemented inside the kernel, and that uses native ML datatypes and arbitrary precision integer arithmetic to execute quickly.
+This implementation is a Standard ML adaption of the compute facility in the Candle theorem prover, which has been proved to be sound wrt. the inference rules of higher-order logic~\cite{ITP23}.
+
+The library \ml{cv\_computeLib} exports a single conversion, \ml{cv\_compute}, which accepts terms in a simple, first-order, untyped language built from a recursive datatype of pairs and natural numbers.
+Its accompanying theory, \ml{cvTheory}, defines this type (called \ty{:cv}) and its operations.
+
+\subsection{Computing with \ml{cv\_compute}}
+\label{ssec:cv-exprs}
+
+The following example shows how to define a (very simple) function and use it in a computation with \ml{cv\_compute}:
+\begin{session}
+\begin{alltt}
+>> load "cv_computeLib";
+>> Definition square_def:
+     square x = cv_mul x x
+   End
+>> cv_computeLib.cv_compute [square_def] ``square (Num 7)``;
+\end{alltt}
+\end{session}
+To reduce a term involving the constant \holtxt{square}, \ml{cv\_compute} must be given its defining equation (\ml{square\_def}), and both the input term and this equation must be written in a special style, using a special set of operations (such as \holtxt{cv\_mul}).
+We call defining equations and terms in this style \emph{code equations} and \emph{compute expressions}, respectively.
+
+\paragraph{Compute expressions}
+A compute expression is a closed, first-order expression with type \ty{:cv}.
+The \ty{:cv} datatype is defined in \ml{cvTheory} as follows:
+\begin{holboxed}
+\begin{alltt}
+  Datatype: cv = Pair cv cv
+               | Num num
+  End
+\end{alltt}
+\end{holboxed}
+
+Aside from the \ty{:cv} datatype constructors, the following operations can be used to construct new compute expressions:
+\begin{hol}
+\begin{tabular}{ll}
+\multicolumn{2}{l}{\mbox{Arithmetic}}\\
+\hline
+\holtxt{cv\_add: cv -> cv -> cv} & Addition\\
+\holtxt{cv\_sub: cv -> cv -> cv} & Subtraction\\
+\holtxt{cv\_mul: cv -> cv -> cv} & Multiplication\\
+\holtxt{cv\_div: cv -> cv -> cv} & Division (defined for zero)\\
+\holtxt{cv\_mod: cv -> cv -> cv} & Modulus (defined for zero)\\
+\holtxt{cv\_lt: cv -> cv -> cv}  & Less-than (\holtxt{<}) comparison\\[0.5cm]
+\multicolumn{2}{l}{\mbox{Pairs}}\\
+\hline
+\holtxt{cv\_fst: cv -> cv} & First pair projection\\
+\holtxt{cv\_snd: cv -> cv} & Second pair projection\\
+\holtxt{cv\_ispair: cv -> cv} & Pair recognizer\\[0.5cm]
+\multicolumn{2}{l}{\mbox{Miscellaneous}}\\
+\hline
+\holtxt{cv\_eq: cv -> cv -> cv} & Equality\\
+\holtxt{cv\_if: cv -> cv -> cv -> cv} & \holtxt{if-then-else}\\
+\holtxt{let} \(x\;=\;y\) \holtxt{in} \(z\) & Let-binding: \(x, y, z\) must have type \ty{:cv}\\
+\(\holtxt{f}\;x_1\;\cdots\;x_n\) & Function application: all \(x_i\) are of type \ty{:cv}\\
+\(x\) & Variable: with type \ty{:cv}
+\end{tabular}
+\end{hol}
+
+The following holds for the semantics of these operations:
+\begin{itemize}
+\item Arithmetic works as on \HOL{}'s natural numbers, except:
+\begin{itemize}
+  \item \holtxt{cv\_div m (Num 0)} is defined to be \holtxt{Num 0},
+  \item \holtxt{cv\_mod m (Num 0)} is defined to be \holtxt{m}.
+\end{itemize}
+\item Boolean-like expressions (such as \holtxt{cv\_if}) treat \holtxt{Num 1} as true, and all other values as false.
+\item All ill-typed expressions (such as \holtxt{cv\_fst (Num 3)}) are defined as \holtxt{Num 0}.
+\item Function constants must have a corresponding code equation, see below.
+\end{itemize}
+
+\paragraph{Code equations}
+A theorem \(\holtxt{f}\;x_1 \cdots x_n = e\) is a code equation for \holtxt{f}, if:
+\begin{itemize}
+  \item \(x_1 \cdots x_n\) are variables of type \ty{:cv},
+  \item \(e\) has type \ty{:cv},
+  \item \(e\) is a compute expression, except that the variables \(x_i\) may be free in \(e\).
+\end{itemize}
+
+\paragraph{Example: computing factorial}
+
+The following example is taken from the \ml{cv\_computeLib} examples, available in \ml{exampleTheory} in \ml{examples/cv\_compute}, and has been modified to showcase let-bindings:
+\begin{session}
+\begin{alltt}
+>> load "cv_computeLib";
+>>__ open cvTheory;
+
+>>_ Definition fact_def:
+     fact n =
+       let one = Num 1 in
+       cv_if (cv_lt n one)
+             one
+             (cv_mul n (fact (cv_sub n one)))
+   Termination
+     WF_REL_TAC `measure cv_size_alt`
+     \\ Cases \\ simp [cv_size_alt_def, CaseEq "bool"]
+   End
+
+##linelen_limit 75
+>> time (cv_computeLib.cv_compute [fact_def]) ``fact (Num 1234)``;
+##nolinelen_limit
+\end{alltt}
+\end{session}
+On a modern machine, the call to \holtxt{cv\_compute} finishes in less than two tenths of a second.
+
+\subsection{\texttt{Thm.compute}}
+\label{ssec:thm-compute}
+
+The conversion \ml{cv\_compute} is built on top of a kernel primitive accessible through the function \ml{Thm.compute}:
+\begin{hol}
+\begin{alltt}
+  type instantiation =
+    \{ cval_terms : (string * term) list,
+      cval_type  : hol_type,
+      num_type   : hol_type,
+      char_eqns  : (string * thm) list \}
+  val compute : instantiation -> thm list -> term -> thm
+\end{alltt}
+\end{hol}
+
+Before it can be used, \ml{Thm.compute} must be instantiated with a record containing constants, types and characteristic theorems for the constants and types.
+The list of characteristic equations is rather large, and need only be passed to \ml{compute} once (the application is cached).
+Indeed, this instantiation is the sole duty performed by \ml{cv\_computeLib}.
+
+The reason for why this instantiation must occur is as follows.
+Internally, \ml{Thm.compute} takes apart the \HOL{} logic's terms and converts them into its own representation, performs computation, and converts the result back into a term.
+The soundness of this procedure depends on various constants and types having certain meanings; for example, that \holtxt{+} is natural number addition, and that the following holds:
+\begin{hol}
+\begin{alltt}
+>>__ open arithmeticTheory;
+##thm ADD
+\end{alltt}
+\end{hol}
+However, natural numbers, arithmetic, and theorems like \ml{ADD} are derived long after the kernel code is compiled.
+
+\paragraph{Alternative instantiations}
+It is possible to instantiate \ml{Thm.compute} differently, for example if one wants to use a different type of numbers (as long as it satisfies the same axioms).
+An example instantiation can be seen in the source code of \ml{cv\_computeLib} in the \HOL{} sources; the list of types, constants and symbols required is too long to include here.
+
+\paragraph{Further reading}
+For an in-depth explanation of \ml{Thm.compute}, we refer the reader to the Candle theorem prover's \ml{compute} primitive~\cite{ITP23}, on which \ml{Thm.compute} is based.
 
 \section{Arithmetic Libraries---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
 \label{sec:numLib}

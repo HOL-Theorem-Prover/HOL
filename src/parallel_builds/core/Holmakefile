@@ -29,13 +29,13 @@ ifdef HOLSELFTESTLEVEL
 EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-	 STE algorithms computability countchars dependability dev \
+	 STE algorithms computability countchars cv_compute dependability dev \
          developers/ThmSetData \
 	 fermat \
 	 formal-languages formal-languages/context-free \
          formal-languages/contig \
-	 formal-languages/lambek formal-languages/regular/regular-play \
-	 fun-op-sem/lprefix_lub fun-op-sem/for \
+         formal-languages/lambek formal-languages/regular/regular-play \
+         fun-op-sem/lprefix_lub fun-op-sem/for \
          hardware hfs \
          imperative ind_def \
          l3-machine-code/common \
@@ -81,7 +81,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             logic/ltl logic/ltl-transformations \
             l3-machine-code/decompilers \
           miller \
-	  probability vector \
+          probability vector \
           separationLogic/src separationLogic/src/holfoot simple_complexity \
           temporal_deep
 

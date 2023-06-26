@@ -62,6 +62,7 @@ New theories:
 New tools:
 ----------
 
+
 -   The linear decision procedure for the reals (`REAL_ARITH`, `REAL_ARITH_TAC`
     and `REAL_ASM_ARITH_TAC`) have been updated by porting the latest code from
     HOL-Light. There are two versions: those in the existing `RealArith` package
@@ -88,6 +89,18 @@ New tools:
     multiplication algorithm.
     To use the library, it has to be loaded before the functions that should be
     evaluated are **defined**.
+
+- **Fast in-logic computation primitive**:
+  A port of the Candle theorem prover's primitive rule for computation, described in the paper *"Fast, Verified Computation for Candle"* (ITP 2023), has been added to the kernel.
+  The new compute primitive works on certain operations on a lisp-like datatype of pairs of numbers:
+
+           Datatype: cv = Pair cv cv
+                        | Num num
+           End
+
+  This datatype and its operations are defined in `cvScript.sml`, and the compute primitive `cv_compute` is accessible via the library `cv_computeLib.sml` (both in `src/cv_compute`).
+  Some usage examples are located in `examples/cv_compute`.
+  See the DESCRIPTION manual for a full description of the functionality offered by `cv_compute`.
 
 New examples:
 -------------

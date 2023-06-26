@@ -1,0 +1,12 @@
+cv_computeLib: interface to the kernel compute primitive
+-------------------------------------------------------------------------------
+
+   Name                    Description
+
+   cv_compute.{sig,sml}    Low-level interface to the kernel compute primitive.
+   cvScript.sml            Defines the type :cv used by cv_computeLib, and
+                           operations on this type.
+   cvSyntax.sml            Syntax constructors/destructors/etc. for :cv.
+   examples/               Some usage examples.
+   selftest.sml            Tests.
+

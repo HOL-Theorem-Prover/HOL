@@ -47,6 +47,8 @@ src/boss
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
+src/cv_compute
+
 [poly]src/AI
 [poly]src/AI/sml_inspection
 [poly]src/AI/proof_search

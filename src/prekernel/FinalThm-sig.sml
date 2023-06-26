@@ -122,4 +122,17 @@ sig
 
   val save_dep : string -> thm -> thm
 
+  (* Computing with first-order lisp-style expressions *)
+
+  val compute :
+    (* initialization: *)
+    { cval_terms : (string * term) list,
+      cval_type  : hol_type,
+      num_type   : hol_type,
+      char_eqns  : (string * thm) list }
+    (* code equations: *)
+    -> thm list
+    -> term -> thm
+
 end;
+
