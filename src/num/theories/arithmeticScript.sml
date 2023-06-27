@@ -1868,37 +1868,59 @@ val DA = store_thm ("DA",
 
 (* First prove the existence of MOD.                                    *)
 val MOD_exists = prove(
-   “?MOD. !n. (0<n) ==>
-               !k.?q.(k=((q * n)+(MOD k n))) /\ ((MOD k n) < n)”,
-   EXISTS_TAC (“\k n. @r. ?q. (k = (q * n) + r) /\ r < n”) THEN
+   “?MOD. !n. ((0 = n) ==> !k. MOD k n = k) /\
+              ((0<n) ==>
+               !k.?q.(k=((q * n)+(MOD k n))) /\ ((MOD k n) < n))”,
+   EXISTS_TAC (“\k n. if 0 = n then k else
+                      @r. ?q. (k = (q * n) + r) /\ r < n”) THEN
    REPEAT STRIP_TAC THEN
+   CONV_TAC (DEPTH_CONV BETA_CONV) THEN
+   ASM_REWRITE_TAC [] THEN
    IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (“k:num”)) DA THEN
    CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
+   IMP_RES_TAC prim_recTheory.LESS_NOT_EQ THEN
+   ASM_REWRITE_TAC [] THEN
    CONV_TAC SELECT_CONV THEN
    MAP_EVERY EXISTS_TAC [“r:num”,“q:num”] THEN
-   CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
+   ASM_REWRITE_TAC []);
 
 (* Now, prove the existence of MOD and DIV.                             *)
 val MOD_DIV_exist = prove(
    “?MOD DIV.
+      (!k. DIV k 0 = 0) /\
+      (!k. MOD k 0 = k) /\
       !n. 0<n ==>
           !k. (k = ((DIV k n * n) + MOD k n)) /\ (MOD k n < n)”,
    STRIP_ASSUME_TAC MOD_exists THEN
    EXISTS_TAC (“MOD:num->num->num”) THEN
-   EXISTS_TAC (“\k n.  @q. (k = (q * n) + (MOD k n))”) THEN
-   REPEAT STRIP_TAC THENL
-   [CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
-    CONV_TAC SELECT_CONV THEN
-   RES_THEN (STRIP_ASSUME_TAC o SPEC (“k:num”)) THEN
-   EXISTS_TAC (“q:num”) THEN
-   FIRST_ASSUM ACCEPT_TAC,
-   RES_THEN (STRIP_ASSUME_TAC o SPEC (“k:num”))]);
+   EXISTS_TAC (“\k n. if 0 = n then 0 else @q. (k = (q * n) + (MOD k n))”) THEN
+   REPEAT STRIP_TAC
+   THEN1
+    (CONV_TAC (DEPTH_CONV BETA_CONV) \\ REWRITE_TAC [])
+   THEN1
+    (POP_ASSUM (STRIP_ASSUME_TAC o SPEC (“0:num”)) THEN
+     LAST_ASSUM MP_TAC THEN
+     REWRITE_TAC [] THEN
+     DISCH_THEN (fn th => REWRITE_TAC [th])) THEN
+   CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
+   IMP_RES_TAC prim_recTheory.LESS_NOT_EQ THEN
+   ASM_REWRITE_TAC []
+   THEN1
+    (CONV_TAC SELECT_CONV THEN
+     RES_THEN (STRIP_ASSUME_TAC o SPEC (“k:num”)) THEN
+     EXISTS_TAC (“q:num”) THEN
+     FIRST_ASSUM ACCEPT_TAC) THEN
+   RES_THEN (STRIP_ASSUME_TAC o SPEC (“k:num”)));
 
 (*---------------------------------------------------------------------------
             Now define MOD and DIV by a constant specification.
  ---------------------------------------------------------------------------*)
 
-val DIVISION = new_specification ("DIVISION", ["MOD", "DIV"], MOD_DIV_exist);
+val DIVISION_ALL = new_specification ("DIVISION_ALL", ["MOD", "DIV"], MOD_DIV_exist);
+
+val DIV_0 = save_thm("DIV_0",(DIVISION_ALL |> CONJUNCTS |> el 1));
+val MOD_0 = save_thm("MOD_0",(DIVISION_ALL |> CONJUNCTS |> el 2));
+val DIVISION = save_thm("DIVISION",(DIVISION_ALL |> CONJUNCTS |> last));
 
 val _ = set_fixity "MOD" (Infixl 650);
 val _ = set_fixity "DIV" (Infixl 600);
