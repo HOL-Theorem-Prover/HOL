@@ -7289,22 +7289,14 @@ Proof
             SIGMA (\n. &n * f (SUC n)) (count (PRE N)) (* d *))’
      >- (MATCH_MP_TAC EQ_SYM \\
          MATCH_MP_TAC add2_sub2 (* a - b + (c - d) = a + c - (b + d) *) \\
-         rw [extreal_of_num_def, extreal_not_infty] >| (* 6 subgoals *)
-         [ (* goal 1 (of 6) *)
+         rw [extreal_of_num_def, extreal_not_infty] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
            Suff ‘(0 :real) <= &PRE N’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 2 (of 6) *)
-           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [FINITE_COUNT] \\
-           Suff ‘(0 :real) <= &SUC x’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 3 (of 6) *)
-           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [FINITE_COUNT] \\
-           Suff ‘(0 :real) <= &x’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 4 (of 6) *)
-           Suff ‘(0 :real) <= &PRE N’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 5 (of 6) *)
+           (* goal 2 (of 3) *)
            MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [FINITE_COUNT] \\
            Suff ‘(0 :real) <= &SUC x’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 6 (of 6) *)
-           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [FINITE_COUNT] \\
+           (* goal 3 (of 3) *)
+           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [FINITE_COUNT] \\
            Suff ‘(0 :real) <= &x’ >- METIS_TAC [mul_not_infty] >> rw [] ]) >> Rewr' \\
      REWRITE_TAC [sub_lzero] \\
      Know ‘SIGMA (\x. &SUC x * f (SUC x)) (count (PRE N)) -
