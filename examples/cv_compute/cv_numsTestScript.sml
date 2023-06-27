@@ -7,7 +7,7 @@ open arithmeticTheory;
 val _ = new_theory "cv_numsTest";
 
 Theorem test1 = cv_num_conv ``3 ** 4 ** 5``;
-Theorem test2 = cv_num_conv ``2 ** 5 SAFEDIV 2``;
+Theorem test2 = cv_num_conv ``2 ** 5 DIV 2``;
 Theorem test3 = cv_num_conv ``(123 + 456) * 3``;
 
 val large =
@@ -18,4 +18,3 @@ Theorem test4 = time cv_num_conv large;
 Theorem test5 = time EVAL large;
 
 val _ = export_theory ();
-

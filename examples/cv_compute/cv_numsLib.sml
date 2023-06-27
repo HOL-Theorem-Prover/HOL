@@ -18,10 +18,10 @@ fun into_cv tm =
     into numSyntax.dest_minus n2c_sub tm
   else if numSyntax.is_mult tm then
     into numSyntax.dest_mult n2c_mul tm
-  else if is_safediv tm then
-    into dest_safediv n2c_div tm
-  else if is_safemod tm then
-    into dest_safemod n2c_mod tm
+  else if numSyntax.is_div tm then
+    into numSyntax.dest_div n2c_div tm
+  else if numSyntax.is_mod tm then
+    into numSyntax.dest_mod n2c_mod tm
   else if numSyntax.is_exp tm then
     into numSyntax.dest_exp n2c_exp tm
   else if numSyntax.is_numeral tm then
@@ -62,4 +62,3 @@ fun cv_num_conv tm =
   handle HOL_ERR {message, ...} => raise ERR "cv_num_conv" message;
 
 end (* struct *)
-

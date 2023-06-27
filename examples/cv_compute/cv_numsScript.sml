@@ -1,8 +1,7 @@
 (* An example using the in-kernel compute rule for reducing terms with numerals.
  *
  * The conversion can reduce arithmetic terms containing the operations
- * +/-/*/SAFEDIV/SAFEMOD/EXP on numerals. (SAFEDIV and SAFEMOD are * definitions
- * of DIV and MOD that are defined for 0; see cvScript.sml.)
+ * +/-/*/DIV/MOD/EXP on numerals.
  *
  * This file contains support theorems and a :cv definition of exponentiation.
  * See knumsLib for the implementation of the conversion.
@@ -54,7 +53,7 @@ QED
 Theorem n2c_div:
   n2c m = x ==>
   n2c n = y ==>
-      n2c (m SAFEDIV n) = cv_div x y
+      n2c (m DIV n) = cv_div x y
 Proof
   rw [n2c_def] \\ rw [cv_div_def]
 QED
@@ -62,7 +61,7 @@ QED
 Theorem n2c_mod:
   n2c m = x ==>
   n2c n = y ==>
-      n2c (m SAFEMOD n) = cv_mod x y
+      n2c (m MOD n) = cv_mod x y
 Proof
   rw [n2c_def] \\ rw [cv_mod_def]
 QED
@@ -129,4 +128,3 @@ Proof
 QED
 
 val _ = export_theory ();
-
