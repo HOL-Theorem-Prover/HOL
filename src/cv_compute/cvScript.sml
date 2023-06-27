@@ -41,27 +41,15 @@ Definition cv_mul_def[simp]:
   cv_mul (Pair p q) (Pair r s) = Num 0
 End
 
-Definition SAFEDIV_def:
-  SAFEDIV m n = if n = 0 then 0 else m DIV n
-End
-
-val _ = Parse.add_infix ("SAFEDIV", 600, HOLgrammars.LEFT);
-
 Definition cv_div_def[simp]:
-  cv_div (Num m) (Num n) = Num (m SAFEDIV n) /\
+  cv_div (Num m) (Num n) = Num (m DIV n) /\
   cv_div (Num m) (Pair p q) = Num 0 /\
   cv_div (Pair p q) (Num n) = Num 0 /\
   cv_div (Pair p q) (Pair r s) = Num 0
 End
 
-Definition SAFEMOD_def:
-  SAFEMOD m n = if n = 0 then m else m MOD n
-End
-
-val _ = Parse.add_infix ("SAFEMOD", 650, HOLgrammars.LEFT);
-
 Definition cv_mod_def[simp]:
-  cv_mod (Num m) (Num n) = Num (m SAFEMOD n) /\
+  cv_mod (Num m) (Num n) = Num (m MOD n) /\
   cv_mod (Num m) (Pair p q) = Num m /\
   cv_mod (Pair p q) (Num n) = Num 0 /\
   cv_mod (Pair p q) (Pair r s) = Num 0
@@ -131,20 +119,6 @@ Definition ns2c_def:
   (ns2c (y::ys) = Pair (Num y) (ns2c ys))
 End
 
-Theorem SAFEDIV[simp]:
-  (m SAFEDIV 0 = 0) /\
-  (n <> 0 ==> m SAFEDIV n = m DIV n)
-Proof
-  rw [SAFEDIV_def]
-QED
-
-Theorem SAFEMOD[simp]:
-  (m SAFEMOD 0 = m) /\
-  (n <> 0 ==> m SAFEMOD n = m MOD n)
-Proof
-  rw [SAFEMOD_def]
-QED
-
 Theorem cv_eq[simp]:
   (cv_eq (Pair x y) (Pair x' y') = b2c (x = x' /\ y = y')) /\
   (cv_eq (Num m) (Num n) = b2c (m = n)) /\
@@ -200,14 +174,14 @@ End
  * Extra characteristic theorems
  * ------------------------------------------------------------------------- *)
 
-Theorem SAFEDIV_RECURSIVE:
-  m SAFEDIV n =
+Theorem DIV_RECURSIVE:
+  m DIV n =
     if n = 0 then 0 else
     if m < n then 0 else
-    SUC ((m - n) SAFEDIV n)
+      SUC ((m - n) DIV n)
 Proof
-  rw [] \\ gs [SAFEDIV_def, NOT_ZERO_LT_ZERO, LESS_DIV_EQ_ZERO, LESS_THM,
-               NOT_LESS, LESS_OR_EQ]
+  IF_CASES_TAC >- gvs [DIV_0]
+  \\ IF_CASES_TAC >- gvs [LESS_DIV_EQ_ZERO]
   \\ irule DIV_UNIQUE
   \\ qexists_tac `(m - n) MOD n`
   \\ simp [ADD1, LEFT_ADD_DISTRIB,
@@ -215,14 +189,14 @@ Proof
   \\ once_rewrite_tac [MULT_COMM] \\ simp [DIVISION]
 QED
 
-Theorem SAFEMOD_RECURSIVE:
-  m SAFEMOD n =
-    if n = 0 then m else
+Theorem MOD_RECURSIVE:
+  m MOD n =
+  if n = 0 then m else
     if m < n then m else
-    (m - n) SAFEMOD n
+      (m - n) MOD n
 Proof
-  rw [] \\ gs [SAFEMOD_def, NOT_ZERO_LT_ZERO, LESS_MOD, LESS_THM, NOT_LESS,
-               LESS_OR_EQ, SUB_MOD]
+  rw []
+  \\ gvs [MOD_0,NOT_ZERO_LT_ZERO, LESS_MOD, LESS_THM, NOT_LESS, LESS_OR_EQ, SUB_MOD]
 QED
 
 Theorem LT_RECURSIVE:
@@ -248,4 +222,3 @@ Proof
 QED
 
 val _ = export_theory ();
-

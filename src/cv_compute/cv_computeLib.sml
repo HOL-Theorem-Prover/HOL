@@ -32,8 +32,8 @@ val cval_terms = [
     ("add", numSyntax.plus_tm),
     ("sub", numSyntax.minus_tm),
     ("mul", numSyntax.mult_tm),
-    ("div", cvSyntax.safediv_tm),
-    ("mod", cvSyntax.safemod_tm),
+    ("div", numSyntax.div_tm),
+    ("mod", numSyntax.mod_tm),
     ("lt", numSyntax.less_tm),
     ("cv_pair", cvSyntax.cv_pair_tm),
     ("cv_num", cvSyntax.cv_num_tm),
@@ -77,8 +77,8 @@ val char_eqns = [
   ("sub2", SPECL [m,n] (CONJUNCT2 SUB)),
   ("mul1", SPEC n (CONJUNCT1 MULT)),
   ("mul2", SPECL [m,n] (CONJUNCT2 MULT)),
-  ("div", SAFEDIV_RECURSIVE),
-  ("mod", SAFEMOD_RECURSIVE),
+  ("div", DIV_RECURSIVE),
+  ("mod", MOD_RECURSIVE),
   ("lt1", CONJUNCT1 LT_RECURSIVE),
   ("lt2", CONJUNCT2 LT_RECURSIVE),
   ("suc1", CONJUNCT1 SUC_EQ),
@@ -138,4 +138,3 @@ val cached = Thm.compute {
 fun cv_compute eqs = cached (map SPEC_ALL eqs);
 
 end (* struct *)
-

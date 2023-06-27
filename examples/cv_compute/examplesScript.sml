@@ -143,7 +143,7 @@ End
 Definition isprime_aux_def:
   isprime_aux dvs n =
     if dvs < n then
-      if n SAFEMOD dvs <> 0 then
+      if n MOD dvs <> 0 then
         isprime_aux (dvs + 2) n
       else F
     else T
@@ -249,7 +249,7 @@ Proof
   ho_match_mp_tac isprime_aux_ind \\ rw []
   \\ once_rewrite_tac [isprimec_aux_def, isprime_aux_def] \\ simp []
   \\ rw [] \\ gvs [CaseEq "bool"]
-  \\ Cases_on `n SAFEMOD m` \\ gs []
+  \\ Cases_on `n MOD m` \\ gs []
 QED
 
 Triviality isprimec_is_isprime:
@@ -281,4 +281,3 @@ Triviality primes_test1 =
 Triviality primes_test2 = time EVAL ``primes_upto 123``;
 
 val _ = export_theory ();
-
