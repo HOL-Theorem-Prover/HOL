@@ -102,6 +102,8 @@ New tools:
   Some usage examples are located in `examples/cv_compute`.
   See the DESCRIPTION manual for a full description of the functionality offered by `cv_compute`.
 
+  The definitions of `DIV` and `MOD` over natural numbers `num` have been given specifications for the case when the second operand is zero. We follow HOL Light and Candle in defining `n DIV 0 = 0` and `n MOD 0 = n`. These changes make `DIV` and `MOD` match the way Candle's compute primitive handles `DIV` and `MOD`.
+
 New examples:
 -------------
 
