@@ -2798,6 +2798,87 @@ Proof
  >> Q.EXISTS_TAC `f` >> RW_TAC std_ss [o_DEF]
 QED
 
+(* A few theorems enhancing the existing IN_MEASURABLE_BOREL_ALL with ‘abs’ *)
+
+Theorem IN_MEASURABLE_BOREL_ALL_ABS :
+    !f a. sigma_algebra a /\ f IN measurable a Borel ==>
+        (!c. {x | f x < c} INTER space a IN subsets a) /\
+        (!c. {x | c <= f x} INTER space a IN subsets a) /\
+        (!c. {x | f x <= c} INTER space a IN subsets a) /\
+        (!c. {x | c < f x} INTER space a IN subsets a) /\
+        (!c. {x | abs (f x) < c} INTER space a IN subsets a) /\
+        (!c. {x | c <= abs (f x)} INTER space a IN subsets a) /\
+        (!c. {x | abs (f x) <= c} INTER space a IN subsets a) /\
+        (!c. {x | c < abs (f x)} INTER space a IN subsets a) /\
+        (!c d. {x | c <= f x /\ f x < d} INTER space a IN subsets a) /\
+        (!c d. {x | c < f x /\ f x <= d} INTER space a IN subsets a) /\
+        (!c d. {x | c <= f x /\ f x <= d} INTER space a IN subsets a) /\
+        (!c d. {x | c < f x /\ f x < d} INTER space a IN subsets a) /\
+        (!c. {x | f x = c} INTER space a IN subsets a) /\
+        (!c. {x | f x <> c} INTER space a IN subsets a) /\
+        (!c. {x | abs (f x) = c} INTER space a IN subsets a) /\
+        (!c. {x | abs (f x) <> c} INTER space a IN subsets a)
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = \x. abs (f x)’ >> simp []
+ >> Know ‘g IN measurable a Borel’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
+     Q.EXISTS_TAC ‘f’ >> rw [Abbr ‘g’])
+ >> DISCH_TAC
+ >> rw [IN_MEASURABLE_BOREL_ALL]
+QED
+
+Theorem IN_MEASURABLE_BOREL_ALL_MEASURE_ABS :
+   !m f. measure_space m /\ f IN Borel_measurable (measurable_space m) ==>
+        (!c. {x | f x < c} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | c <= f x} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | f x <= c} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | c < f x} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | abs (f x) < c} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | c <= abs (f x)} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | abs (f x) <= c} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | c < abs (f x)} INTER m_space m IN measurable_sets m) /\
+        (!c d. {x | c <= f x /\ f x < d} INTER m_space m IN measurable_sets m) /\
+        (!c d. {x | c < f x /\ f x <= d} INTER m_space m IN measurable_sets m) /\
+        (!c d. {x | c <= f x /\ f x <= d} INTER m_space m IN measurable_sets m) /\
+        (!c d. {x | c < f x /\ f x < d} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | f x = c} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | f x <> c} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | abs (f x) = c} INTER m_space m IN measurable_sets m) /\
+        (!c. {x | abs (f x) <> c} INTER m_space m IN measurable_sets m)
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> MP_TAC (REWRITE_RULE [space_def, subsets_def]
+             (Q.SPECL [‘f’, ‘measurable_space m’] IN_MEASURABLE_BOREL_ALL_ABS))
+ >> FULL_SIMP_TAC std_ss [measure_space_def]
+QED
+
+Theorem IN_MEASURABLE_BOREL_ALL_MEASURE_ABS' :
+   !m f. measure_space m /\ f IN Borel_measurable (measurable_space m) ==>
+        (!c. {x | x IN m_space m /\ f x < c} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ c <= f x} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ f x <= c} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ c < f x} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ abs (f x) < c} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ c <= abs (f x)} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ abs (f x) <= c} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ c < abs (f x)} IN measurable_sets m) /\
+        (!c d. {x | x IN m_space m /\ c <= f x /\ f x < d} IN measurable_sets m) /\
+        (!c d. {x | x IN m_space m /\ c < f x /\ f x <= d} IN measurable_sets m) /\
+        (!c d. {x | x IN m_space m /\ c <= f x /\ f x <= d} IN measurable_sets m) /\
+        (!c d. {x | x IN m_space m /\ c < f x /\ f x < d} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ f x = c} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ f x <> c} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ abs (f x) = c} IN measurable_sets m) /\
+        (!c. {x | x IN m_space m /\ abs (f x) <> c} IN measurable_sets m)
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> ‘!P. {x | x IN m_space m /\ P x} = {x | P x} INTER m_space m’ by SET_TAC []
+ >> simp []
+ >> MP_TAC (Q.SPECL [‘m’, ‘f’] IN_MEASURABLE_BOREL_ALL_MEASURE_ABS)
+ >> rw []
+QED
+
 val IN_MEASURABLE_BOREL_SQR = store_thm
   ("IN_MEASURABLE_BOREL_SQR",
   ``!a f g. sigma_algebra a /\ f IN measurable a Borel /\

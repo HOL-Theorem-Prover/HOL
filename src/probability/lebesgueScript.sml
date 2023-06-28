@@ -5437,14 +5437,27 @@ Proof
  >> METIS_TAC [lt_add2, integrable_pos, lt_infty]
 QED
 
-(* Theorem 10.3 (i) => (iii) [1, p.84] *)
-val integrable_abs = store_thm (* new *)
-  ("integrable_abs", ``!m f. measure_space m /\ integrable m f ==> integrable m (abs o f)``,
+(* alternative definition of ‘integrable m (abs o f)’ w/o fn_plus, fn_minus *)
+Theorem integrable_abs_alt :
+    !m f. measure_space m /\ f IN Borel_measurable (measurable_space m) ==>
+         (integrable m (abs o f) <=> pos_fn_integral m (abs o f) <> PosInf)
+Proof
+    rw [integrable_def, fn_plus_abs, fn_minus_abs, pos_fn_integral_zero]
+ >> EQ_TAC >> rw []
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS'
+ >> rw [SIGMA_ALGEBRA_BOREL]
+QED
+
+(* Theorem 10.3 (i) => (iii) [1, p.84], cf. integrable_from_abs *)
+Theorem integrable_abs :
+    !m f. measure_space m /\ integrable m f ==> integrable m (abs o f)
+Proof
     RW_TAC std_ss [FN_ABS']
  >> MATCH_MP_TAC integrable_add_pos
  >> ASM_REWRITE_TAC [FN_PLUS_POS, FN_MINUS_POS]
  >> CONJ_TAC >- (MATCH_MP_TAC integrable_fn_plus >> art [])
- >> MATCH_MP_TAC integrable_fn_minus >> art []);
+ >> MATCH_MP_TAC integrable_fn_minus >> art []
+QED
 
 (* Theorem 10.3 (ii) => (iii) [1, p.84] *)
 Theorem integrable_abs_bound_exists :

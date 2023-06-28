@@ -3,8 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)            *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
-(* Updated and further enriched by Chun Tian (2018 - 2022)                   *)
-(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
+(* Updated and further enriched by Chun Tian (2018 - 2023)                   *)
 (* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
@@ -3455,8 +3454,11 @@ Proof
  >> RW_TAC arith_ss []
 QED
 
-(* cf. real_sigmaTheory.YOUNG_INEQUALITY, note that the extreal version supports
+(* cf. transcTheory.YOUNG_INEQUALITY, note that the extreal version supports
       ‘0 <= a /\ 0 <= b’ instead of ‘0 < a /\ 0 < b’ in the real case.
+
+   NOTE: ‘p <> PosInf /\ q <> PosInf’ (thus also ‘0 < p /\ 0 < q’) cannot be
+         removed in general, for there may be ‘PosInf / PosInf’ at RHS.
  *)
 Theorem young_inequality :
     !a b p q. 0 <= a /\ 0 <= b /\ 0 < p /\ 0 < q /\ p <> PosInf /\ q <> PosInf /\
@@ -3512,9 +3514,10 @@ Proof
  >> MATCH_MP_TAC YOUNG_INEQUALITY >> art []
 QED
 
+(* NOTE: improved ‘p = 1 ==> q = PosInf’ to ‘p = 1 <=> q = PosInf’, etc. *)
 Theorem conjugate_properties :
     !p q. 0 < p /\ 0 < q /\ inv(p) + inv(q) = 1 ==>
-          1 <= p /\ 1 <= q /\ (p = 1 ==> q = PosInf) /\ (q = 1 ==> p = PosInf)
+          1 <= p /\ 1 <= q /\ (p = 1 <=> q = PosInf) /\ (q = 1 <=> p = PosInf)
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> ‘0 <= inv p /\ 0 <= inv q’ by PROVE_TAC [le_inv]
@@ -3552,6 +3555,9 @@ Proof
       DISCH_THEN (fs o wrap) \\
       METIS_TAC [let_antisym],
       (* goal 3 (of 4) *)
+      reverse EQ_TAC >- (DISCH_THEN (fn th => fs [inv_infty, th]) \\
+                         Suff ‘inv p = inv 1’ >- PROVE_TAC [inv_inj, lt_01] \\
+                         rw [inv_one]) \\
       DISCH_THEN (fn th => fs [inv_one, th]) \\
      ‘q <> 0’ by PROVE_TAC [lt_imp_ne] \\
       Cases_on ‘q’ \\
@@ -3559,6 +3565,9 @@ Proof
           extreal_add_def] \\
       METIS_TAC [REAL_ADD_RID_UNIQ, REAL_INV_POS, REAL_LT_IMP_NE],
       (* goal 4 (of 4) *)
+      reverse EQ_TAC >- (DISCH_THEN (fn th => fs [inv_infty, th]) \\
+                         Suff ‘inv q = inv 1’ >- PROVE_TAC [inv_inj, lt_01] \\
+                         rw [inv_one]) \\
       DISCH_THEN (fn th => fs [inv_one, th]) \\
      ‘p <> 0’ by PROVE_TAC [lt_imp_ne] \\
       Cases_on ‘p’ \\
@@ -3571,16 +3580,18 @@ QED
 (*         Various         *)
 (***************************)
 
-val half_between = store_thm
-  ("half_between", ``(0 < 1/2 /\ 1/2 < 1) /\ (0 <= 1/2 /\ 1/2 <= 1)``,
+Theorem half_between[simp] :
+    (0 < 1 / 2 /\ 1 / 2 < 1) /\ (0 <= 1 / 2 /\ 1 / 2 <= 1)
+Proof
     MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
  >> CONJ_TAC >- PROVE_TAC [lt_imp_le]
  >> RW_TAC real_ss [extreal_div_def, extreal_inv_def, mul_lone, extreal_lt_def,
                     extreal_le_def, extreal_of_num_def, extreal_not_infty,
-                    GSYM real_lt, REAL_INV_1OVER, extreal_mul_def]);
+                    GSYM real_lt, REAL_INV_1OVER, extreal_mul_def]
+QED
 
-Theorem half_not_infty :
-    1/2 <> PosInf /\ 1/2 <> NegInf
+Theorem half_not_infty[simp] :
+    1 / 2 <> PosInf /\ 1 / 2 <> NegInf
 Proof
     rw [lt_infty]
  >- (MATCH_MP_TAC lt_trans \\
@@ -3591,28 +3602,34 @@ Proof
  >> rw [extreal_of_num_def, lt_infty]
 QED
 
-val thirds_between = store_thm
-  ("thirds_between", ``((0 < 1/3 /\ 1/3 < 1) /\ (0 < 2/3 /\ 2/3 < 1)) /\
-                       ((0 <= 1/3 /\ 1/3 <= 1) /\ (0 <= 2/3 /\ 2/3 <= 1))``,
+Theorem thirds_between[simp] :
+    ((0 < 1 / 3 /\ 1 / 3 < 1) /\ (0 < 2 / 3 /\ 2 / 3 < 1)) /\
+    ((0 <= 1 / 3 /\ 1 / 3 <= 1) /\ (0 <= 2 / 3 /\ 2 / 3 <= 1))
+Proof
     MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
  >> CONJ_TAC >- PROVE_TAC [lt_imp_le]
  >> RW_TAC real_ss [extreal_div_def, extreal_inv_def, mul_lone, extreal_lt_def,
                     extreal_le_def, extreal_of_num_def, extreal_not_infty,
-                    GSYM real_lt, extreal_mul_def, REAL_INV_1OVER]);
+                    GSYM real_lt, extreal_mul_def, REAL_INV_1OVER]
+QED
 
-val fourths_between = store_thm
-  ("fourths_between", ``((0 < 1/4 /\ 1/4 < 1) /\ (0 < 3/4 /\ 3/4 < 1)) /\
-                        ((0 <= 1/4 /\ 1/4 <= 1) /\ (0 <= 3/4 /\ 3/4 <= 1))``,
+Theorem fourths_between[simp] :
+    ((0 < 1 / 4 /\ 1 / 4 < 1) /\ (0 < 3 / 4 /\ 3 / 4 < 1)) /\
+    ((0 <= 1 / 4 /\ 1 / 4 <= 1) /\ (0 <= 3 / 4 /\ 3 / 4 <= 1))
+Proof
     MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
  >> CONJ_TAC >- PROVE_TAC [lt_imp_le]
  >> RW_TAC real_ss [extreal_div_def, extreal_inv_def, mul_lone, extreal_lt_def,
                     extreal_le_def, extreal_of_num_def, extreal_not_infty,
-                    GSYM real_lt, extreal_mul_def, REAL_INV_1OVER]);
+                    GSYM real_lt, extreal_mul_def, REAL_INV_1OVER]
+QED
 
-val half_cancel = store_thm
-  ("half_cancel", ``2 * (1 / 2) = 1``,
+Theorem half_cancel :
+    2 * (1 / 2) = 1
+Proof
     RW_TAC real_ss [extreal_of_num_def, extreal_mul_def, extreal_div_eq,
-                    EVAL ``2 <> 0:real``, REAL_MUL_RINV, real_div]);
+                    EVAL ``2 <> 0:real``, REAL_MUL_RINV, real_div]
+QED
 
 (* cf. realTheory.REAL_HALF_DOUBLE *)
 Theorem half_double :
@@ -3639,15 +3656,19 @@ Proof
  >> MATCH_MP_TAC (GSYM add_rdistrib) >> rw []
 QED
 
-val third_cancel = store_thm
-  ("third_cancel", ``3 * (1 / 3) = 1``,
+Theorem third_cancel :
+    3 * (1 / 3) = 1
+Proof
     RW_TAC real_ss [extreal_of_num_def, extreal_mul_def, extreal_div_eq,
-                    EVAL ``3 <> 0:real``, REAL_MUL_RINV, real_div]);
+                    EVAL ``3 <> 0:real``, REAL_MUL_RINV, real_div]
+QED
 
-val fourth_cancel = store_thm
-  ("fourth_cancel", ``4 * (1 / 4) = 1``,
+Theorem fourth_cancel :
+    4 * (1 / 4) = 1
+Proof
     RW_TAC real_ss [extreal_of_num_def, extreal_mul_def, extreal_div_eq,
-                    EVAL ``4 <> 0:real``, REAL_MUL_RINV, real_div]);
+                    EVAL ``4 <> 0:real``, REAL_MUL_RINV, real_div]
+QED
 
 (* added antecedent ``m <> 0`` *)
 val quotient_normal = store_thm
@@ -3720,6 +3741,42 @@ val SIMP_EXTREAL_ARCH_NEG = store_thm
  >> `?n. - &n <= r` by RW_TAC std_ss [SIMP_REAL_ARCH_NEG]
  >> Q.EXISTS_TAC `n`
  >> RW_TAC real_ss [extreal_of_num_def, extreal_le_eq, extreal_ainv_def]);
+
+Theorem EXTREAL_ARCH_INV :
+    !(x :extreal). 0 < x ==> ?n. inv (&SUC n) < x
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘x = PosInf’
+ >- (Q.EXISTS_TAC ‘0’ >> rw [inv_one, lt_infty])
+ >> ‘x <> 0’ by PROVE_TAC [lt_imp_ne]
+ >> Know ‘?n. inv x <= &n’
+ >- (MATCH_MP_TAC SIMP_EXTREAL_ARCH \\
+     METIS_TAC [inv_not_infty])
+ >> STRIP_TAC
+ >> ‘&n < &SUC n’ by rw [extreal_of_num_def, extreal_lt_eq]
+ >> ‘inv x < &SUC n’ by PROVE_TAC [let_trans]
+ >> Q.EXISTS_TAC ‘n’
+ >> Know ‘x = inv (inv x)’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC inv_inv >> art [] \\
+     rw [lt_infty] \\
+     MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC ‘0’ >> art [] \\
+     rw [extreal_of_num_def, lt_infty])
+ >> Rewr'
+ >> Suff ‘inv (&SUC n) < inv (inv x) <=> inv x < &SUC n’ >- rw []
+ >> MATCH_MP_TAC inv_lt_antimono
+ >> CONJ_TAC >- rw [extreal_of_num_def, extreal_lt_eq]
+ >> MATCH_MP_TAC inv_pos' >> rw []
+QED
+
+Theorem EXTREAL_ARCH_INV' :
+    !(x :extreal). 0 < x ==> ?n. inv (&SUC n) <= x
+Proof
+    rpt STRIP_TAC
+ >> ‘?n. inv (&SUC n) < x’ by METIS_TAC [EXTREAL_ARCH_INV]
+ >> Q.EXISTS_TAC ‘n’
+ >> MATCH_MP_TAC lt_imp_le >> art []
+QED
 
 Theorem EXTREAL_ARCH_POW2 : (* was: EXTREAL_ARCH_POW *)
     !x. x <> PosInf ==> ?n. x < 2 pow n
@@ -6204,6 +6261,35 @@ Proof
  >> Suff ‘y <= -&SUC n’ >- METIS_TAC [let_antisym]
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> Q.EXISTS_TAC ‘SUC n’ >> rw []
+QED
+
+(* NOTE: This theorem doesn't hold in general, when ‘r = 0’ or ‘Normal r = PosInf’ *)
+Theorem inf_cmul :
+    !P r. 0 < r ==> inf {x * Normal r | 0 < x /\ P x} = Normal r * inf {x | 0 < x /\ P x}
+Proof
+    rw [inf_eq']
+ >| [ (* goal 1 (of 2) *)
+     ‘x * Normal r = Normal r * x’ by rw [mul_comm] >> POP_ORW \\
+      MATCH_MP_TAC le_lmul_imp \\
+      CONJ_TAC >- rw [REAL_LT_IMP_LE, extreal_of_num_def, extreal_le_eq] \\
+      Cases_on ‘x = PosInf’ >- rw [le_infty] \\
+      MATCH_MP_TAC le_epsilon >> rpt STRIP_TAC \\
+      MATCH_MP_TAC lt_imp_le >> rw [GSYM inf_lt] \\
+      Q.EXISTS_TAC ‘x’ >> art [] \\
+      MATCH_MP_TAC lt_addr_imp >> art [] \\
+      MATCH_MP_TAC pos_not_neginf \\
+      MATCH_MP_TAC lt_imp_le >> art [],
+      (* goal 2 (of 2) *)
+      ONCE_REWRITE_TAC [mul_comm] \\
+      Know ‘y <= inf {x | 0 < x /\ P x} * Normal r <=>
+            y / Normal r <= inf {x | 0 < x /\ P x}’
+      >- (MATCH_MP_TAC le_ldiv >> art []) >> Rewr' \\
+      rw [le_inf] >> rename1 ‘P z’ \\
+      Know ‘y / Normal r <= z <=> y <= z * Normal r’
+      >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+          MATCH_MP_TAC le_ldiv >> art []) >> Rewr' \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      Q.EXISTS_TAC ‘z’ >> art [] ]
 QED
 
 Theorem sup_comm : (* was: SUP_commute *)
@@ -8880,6 +8966,7 @@ Proof
  >> MATCH_MP_TAC FN_PLUS_REDUCE
  >> RW_TAC std_ss [o_DEF, abs_pos]
 QED
+Theorem fn_plus_abs = FN_PLUS_ABS_SELF
 
 (* don't put it into simp sets, ‘o’ may be eliminated *)
 Theorem FN_MINUS_ABS_ZERO :
@@ -8889,21 +8976,24 @@ Proof
  >> MATCH_MP_TAC FN_MINUS_REDUCE
  >> RW_TAC std_ss [o_DEF, abs_pos]
 QED
+Theorem fn_minus_abs = FN_MINUS_ABS_ZERO
 
-val FN_PLUS_NEG_ZERO = store_thm
-  ("FN_PLUS_NEG_ZERO",
-  ``!g. (!x. g x <= 0) ==> (fn_plus g = (\x. 0))``,
+Theorem FN_PLUS_NEG_ZERO :
+    !g. (!x. g x <= 0) ==> (fn_plus g = (\x. 0))
+Proof
     RW_TAC real_ss [fn_plus_def, FUN_EQ_THM]
  >> `~(0 < g x)` by PROVE_TAC [extreal_lt_def]
- >> fs []);
+ >> fs []
+QED
 
-val FN_MINUS_POS_ZERO = store_thm
-  ("FN_MINUS_POS_ZERO",
-  ``!g. (!x. 0 <= g x) ==> (fn_minus g = (\x. 0))``,
+Theorem FN_MINUS_POS_ZERO :
+    !g. (!x. 0 <= g x) ==> (fn_minus g = (\x. 0))
+Proof
     RW_TAC real_ss [fn_minus_def, FUN_EQ_THM]
  >> Cases_on `g x = 0` >- METIS_TAC [neg_0]
  >> `0 < g x` by METIS_TAC [lt_le]
- >> METIS_TAC [extreal_lt_def]);
+ >> METIS_TAC [extreal_lt_def]
+QED
 
 Theorem FN_PLUS_ZERO[simp] :
     fn_plus (\x. 0) = (\x. 0)
@@ -8919,17 +9009,21 @@ Proof
  >> RW_TAC std_ss [le_refl]
 QED
 
-val FN_MINUS_TO_PLUS = store_thm
-  ("FN_MINUS_TO_PLUS", ``!f. fn_minus (\x. -(f x)) = fn_plus f``,
+Theorem FN_MINUS_TO_PLUS :
+    !f. fn_minus (\x. -(f x)) = fn_plus f
+Proof
     RW_TAC std_ss [fn_plus_def, fn_minus_def, neg_neg]
  >> `!x. -f x < 0 <=> 0 < f x` by PROVE_TAC [neg_0, lt_neg]
- >> POP_ORW >> REWRITE_TAC []);
+ >> POP_ORW >> REWRITE_TAC []
+QED
 
-val FN_PLUS_TO_MINUS = store_thm
-  ("FN_PLUS_TO_MINUS", ``!f. fn_plus (\x. -(f x)) = fn_minus f``,
+Theorem FN_PLUS_TO_MINUS :
+    !f. fn_plus (\x. -(f x)) = fn_minus f
+Proof
     RW_TAC std_ss [fn_plus_def, fn_minus_def, neg_neg]
  >> `!x. 0 < -f x <=> f x < 0` by PROVE_TAC [neg_0, lt_neg]
- >> POP_ORW >> REWRITE_TAC []);
+ >> POP_ORW >> REWRITE_TAC []
+QED
 
 Theorem FN_PLUS_NOT_INFTY :
     !f x. f x <> PosInf ==> fn_plus f x <> PosInf
