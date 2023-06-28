@@ -5666,7 +5666,7 @@ Proof
      rw [AE_DEF] \\
      Q.EXISTS_TAC ‘{y | y IN Y /\ pos_fn_integral (X,A,u) (\x. (fn_plus f) (x,y)) = PosInf} UNION
                    {y | y IN Y /\ pos_fn_integral (X,A,u) (\x. (fn_minus f) (x,y)) = PosInf}’ \\
-     CONJ_TAC >- (PROVE_TAC [NULL_SET_UNION, GSYM IN_NULL_SET]) \\
+     CONJ_TAC >- PROVE_TAC [NULL_SET_UNION'] \\
      Q.X_GEN_TAC ‘y’ >> rw [] >| (* 3 subgoals *)
      [ (* goal 1 (of 3) *)
       ‘!x. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
@@ -5696,7 +5696,7 @@ Proof
      rw [AE_DEF] \\
      Q.EXISTS_TAC ‘{x | x IN X /\ pos_fn_integral (Y,B,v) (\y. (fn_plus f) (x,y)) = PosInf} UNION
                    {x | x IN X /\ pos_fn_integral (Y,B,v) (\y. (fn_minus f) (x,y)) = PosInf}’ \\
-     CONJ_TAC >- (PROVE_TAC [NULL_SET_UNION, GSYM IN_NULL_SET]) \\
+     CONJ_TAC >- PROVE_TAC [NULL_SET_UNION'] \\
      Q.X_GEN_TAC ‘x’ >> rw [] >| (* 3 subgoals *)
      [ (* goal 1 (of 3) *)
       ‘!y. (fn_plus f) (x,y) - (fn_minus f) (x,y) = f (x,y)’
@@ -6750,7 +6750,6 @@ Proof
      Q.EXISTS_TAC ‘c’ >> rw [GSYM lt_infty])
  >> RW_TAC std_ss [seminorm_normal]
  >> rfs [lp_space_def]
- >> ‘0 < p’ by METIS_TAC [lte_trans, lt_01]
  >> ‘0 <= p’ by METIS_TAC [lt_imp_le]
  >> ‘p <> NegInf’ by PROVE_TAC [pos_not_neginf]
  >> Know ‘0 <= pos_fn_integral m (\x. abs (f x) powr p)’
@@ -7081,7 +7080,6 @@ QED
 
 Theorem Hoelder_inequality :
     !m u v p q. measure_space m /\ 0 < p /\ 0 < q /\ inv(p) + inv(q) = 1 /\
-                p <> PosInf /\ q <> PosInf /\
                 u IN lp_space p m /\ v IN lp_space q m
             ==> integrable m (\x. u x * v x) /\
                 integral m (\x. abs (u x * v x)) <= seminorm p m u * seminorm q m v
@@ -7106,9 +7104,6 @@ Proof
  >> ‘seminorm p m u <> PosInf /\ seminorm p m u <> NegInf /\
      seminorm q m v <> PosInf /\ seminorm q m v <> NegInf’
        by PROVE_TAC [seminorm_not_infty]
- >> ‘u IN measurable (m_space m,measurable_sets m) Borel /\
-     v IN measurable (m_space m,measurable_sets m) Borel’
-       by gs [lp_space_alt_finite]
  >> Suff ‘integral m (\x. abs (u x * v x)) <= seminorm p m u * seminorm q m v’
  >- (RW_TAC std_ss [] \\
      MATCH_MP_TAC integrable_from_abs >> ASM_SIMP_TAC std_ss [o_DEF] \\
@@ -7489,7 +7484,6 @@ QED
 (* A more convenient version (only the 2nd part) using ‘pos_fn_integral’ *)
 Theorem Hoelder_inequality' :
     !m u v p q. measure_space m /\ 0 < p /\ 0 < q /\ inv(p) + inv(q) = 1 /\
-                p <> PosInf /\ q <> PosInf /\
                 u IN lp_space p m /\ v IN lp_space q m
             ==> pos_fn_integral m (\x. abs (u x * v x)) <= seminorm p m u * seminorm q m v
 Proof
@@ -7549,7 +7543,6 @@ Theorem lp_space_add :
           ==> (\x. u x + v x) IN lp_space p m
 Proof
     rpt GEN_TAC >> STRIP_TAC
- >> ‘0 < p’ by PROVE_TAC [lte_trans, lt_01]
  >> ‘0 <= p’ by PROVE_TAC [lt_imp_le]
  >> ‘p <> NegInf’ by PROVE_TAC [pos_not_neginf]
   (* special case: p = PosInf *)
