@@ -14,6 +14,7 @@ sig
   val fdom_tm : term
   val fempty_tm : term
   val fevery_tm : term
+  val frange_tm : term
   val flookup_tm : term
   val fmap_map2_tm : term
   val fmerge_tm : term
@@ -30,6 +31,7 @@ sig
   val mk_fdom : term -> term
   val mk_fempty : hol_type * hol_type -> term
   val mk_fevery : term * term -> term
+  val mk_frange : term -> term
   val mk_flookup : term * term -> term
   val mk_fmap_map2 : term * term -> term
   val mk_fmerge : term * term * term -> term
@@ -46,6 +48,7 @@ sig
   val dest_fdom : term -> term
   val dest_fempty : term -> hol_type * hol_type
   val dest_fevery : term -> term * term
+  val dest_frange : term -> term
   val dest_flookup : term -> term * term
   val dest_fmap_map2 : term -> term * term
   val dest_fmerge : term -> term * term * term
@@ -62,6 +65,7 @@ sig
   val is_fdom : term -> bool
   val is_fempty : term -> bool
   val is_fevery : term -> bool
+  val is_frange : term -> bool
   val is_flookup : term -> bool
   val is_fmap_map2 : term -> bool
   val is_fmerge : term -> bool

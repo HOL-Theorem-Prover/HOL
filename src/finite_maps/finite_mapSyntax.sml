@@ -31,6 +31,7 @@ val s1 = HolKernel.syntax_fns
            "finite_map"
 
 val (fdom_tm, mk_fdom, dest_fdom, is_fdom) = s1 "FDOM"
+val (frange_tm, mk_frange, dest_frange, is_frange) = s1 "FRANGE"
 
 val (fcard_tm, mk_fcard, dest_fcard, is_fcard) =
    HolKernel.syntax_fns1 "finite_map" "FCARD"
