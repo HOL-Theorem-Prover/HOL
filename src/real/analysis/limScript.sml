@@ -278,6 +278,20 @@ Proof
     rw [differentiable, diffl_has_vector_derivative]
 QED
 
+(* The equivalence between ‘differentiable’ and ‘derivative$differentiable’ *)
+Theorem differentiable_alt :
+    !f x. f differentiable x <=> derivative$differentiable f (at x)
+Proof
+    rw [differentiable, diffl_has_derivative, derivativeTheory.differentiable]
+ >> EQ_TAC
+ >- (STRIP_TAC \\
+     Q.EXISTS_TAC ‘\x. l * x’ >> rw [])
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘g’ ASSUME_TAC)
+ >> ‘linear g’ by PROVE_TAC [has_derivative]
+ >> ‘?l. g = \x. l * x’ by METIS_TAC [linear_repr]
+ >> Q.EXISTS_TAC ‘l’ >> rw []
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Derivative is unique                                                      *)
 (*---------------------------------------------------------------------------*)

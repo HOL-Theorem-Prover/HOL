@@ -240,6 +240,49 @@ val linear = new_definition ("linear",
         (!x y. f(x + y) = f(x) + f(y)) /\
         (!c x. f(c * x) = c * f(x))``);
 
+(* Courtesy to Thomas Sewell for providing this proof (first) on Slack
+
+   NOTE: The explicit-form of linear functions (linear_repr and linear_alt) does
+         NOT hold in higher dimensional spaces, e.g. (f:real['M]->real['N]), cf.
+         vec_linear_def in examples/vectorScript.sml (ported from HOL-Light).
+
+         However, the theorem linear_repr is necessary in limTheory to show the
+         equivalence between the old and new definitions of "differentiable":
+
+         |- !f x. f differentiable_at x <=> f differentiable (at x)
+ *)
+Theorem linear_lemma[local]:
+  (!c x. f(c * x) = c * f(x)) ==> ?l. f = (\x. l * x)
+Proof
+  rw []
+  \\ qexists_tac `f 1`
+  \\ rw [FUN_EQ_THM]
+  \\ metis_tac [linear, REAL_MUL_RID]
+QED
+
+Theorem linear_repr :
+    !f. linear f <=> ?l. f = \x. l * x
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> EQ_TAC
+ >> rw [linear, linear_lemma]
+ >> REAL_ARITH_TAC
+QED
+
+(* In fact, only the part ‘!c x. f(c * x) = c * f(x))’ is primitive.
+
+   This theorem may simplify some theorems below, but it only holds for
+   one-dimensional linear functions (I believe). --Chun Tian, 11 nov 2022.
+ *)
+Theorem linear_alt_cmul :
+    !f. linear f <=> !c x. f(c * x) = c * f(x)
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> EQ_TAC >- rw [linear]
+ >> rw [linear_repr]
+ >> MATCH_MP_TAC linear_lemma >> art []
+QED
+
 val LINEAR_SCALING = store_thm ("LINEAR_SCALING",
  ``!c. linear(\x:real. c * x)``,
  SIMP_TAC std_ss [linear] THEN REAL_ARITH_TAC);
