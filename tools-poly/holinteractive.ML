@@ -41,7 +41,7 @@ struct
     end
     handle _ => ""
   val id_string =
-    "HOL-4 [" ^ Globals.release ^ " " ^ Lib.int_to_string Globals.version ^
+    "HOL4 [" ^ Globals.release ^ " " ^ Lib.int_to_string Globals.version ^
     " (" ^ Thm.kernelid ^ ", " ^ build_stamp ^ ")]\n\n"
   val exit_string =
     if Systeml.OS = "winNT" then
@@ -54,9 +54,9 @@ struct
   fun print_banner () =
     TextIO.output (TextIO.stdOut,
       line ^
-      "       " ^ id_string ^
-      "       For introductory HOL help, type: help \"hol\";\n" ^
-      "       " ^ exit_string ^
+      "     " ^ id_string ^
+      "     For introductory HOL help, type: help \"hol\";\n" ^
+      "     " ^ exit_string ^
       line)
 end;
 
