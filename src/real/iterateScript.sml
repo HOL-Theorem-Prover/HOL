@@ -2921,6 +2921,13 @@ Proof
 QED
 val SUM_EQ = SUM_EQ';
 
+Theorem SUM_EQ_COUNT :
+    !f g n. (!i. i < n ==> (f i = g i)) ==> (sum (count n) f = sum (count n) g)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC SUM_EQ' >> rw []
+QED
+
 (* cf. realTheory.SUM_ABS *)
 Theorem SUM_ABS' : (* was: SUM_ABS *)
    !f s. FINITE(s) ==> abs(sum s f) <= sum s (\x. abs(f x))
@@ -3622,6 +3629,25 @@ val SUM_ABS_TRIANGLE = store_thm ("SUM_ABS_TRIANGLE",
  ``!s f b. FINITE s /\ sum s (\a. abs(f a)) <= b ==> abs(sum s f) <= b``,
   METIS_TAC[SUM_ABS, REAL_LE_TRANS]);
 
+Theorem REAL_MUL_SUM :
+   !s t f g.
+        FINITE s /\ FINITE t
+        ==> sum s f * sum t g = sum s (\i. sum t (\j. f(i) * g(j)))
+Proof
+    rpt STRIP_TAC
+ >> SIMP_TAC std_ss [SUM_LMUL]
+ >> ONCE_REWRITE_TAC[REAL_MUL_SYM]
+ >> SIMP_TAC std_ss [SUM_LMUL]
+QED
+
+Theorem REAL_MUL_SUM_NUMSEG :
+   !f g m n p q. sum{m..n} f * sum{p..q} g =
+                sum{m..n} (\i. sum{p..q} (\j. f(i) * g(j)))
+Proof
+    rpt STRIP_TAC
+ >> SIMP_TAC std_ss [REAL_MUL_SUM, FINITE_NUMSEG]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Extend congruences to deal with sum. Note that we must have the eta       *)
 (* redex or we'll get a loop since f(x) will lambda-reduce recursively.      *)
@@ -4304,6 +4330,14 @@ val PRODUCT_EQ = store_thm ("PRODUCT_EQ",
   REWRITE_TAC[product] THEN MATCH_MP_TAC ITERATE_EQ THEN
   REWRITE_TAC[MONOIDAL_REAL_MUL]);
 
+Theorem PRODUCT_EQ_COUNT :
+    !f g n. (!i. i < n ==> (f i = g i)) ==>
+             product (count n) f = product (count n) g
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC PRODUCT_EQ >> rw []
+QED
+
 val PRODUCT_EQ_NUMSEG = store_thm ("PRODUCT_EQ_NUMSEG",
  ``!f g m n. (!i. m <= i /\ i <= n ==> (f(i) = g(i)))
              ==> (product{m..n} f = product{m..n} g)``,
@@ -4319,6 +4353,14 @@ val PRODUCT_EQ_0 = store_thm ("PRODUCT_EQ_0",
   SIMP_TAC arith_ss [PRODUCT_CLAUSES, REAL_ENTIRE, IN_INSERT, REAL_OF_NUM_EQ,
            NOT_IN_EMPTY] THEN
   MESON_TAC[]);
+
+Theorem PRODUCT_EQ_0_COUNT :
+    !f n. product (count n) f = &0 <=> ?i. i < n /\ (f(i) = &0)
+Proof
+    rpt GEN_TAC
+ >> Suff ‘product (count n) f = &0 <=> ?x. x IN count n /\ (f(x) = &0)’ >- rw []
+ >> MATCH_MP_TAC PRODUCT_EQ_0 >> rw []
+QED
 
 val PRODUCT_EQ_0_NUMSEG = store_thm ("PRODUCT_EQ_0_NUMSEG",
  ``!f m n. (product{m..n} f = &0) <=> ?x. m <= x /\ x <= n /\ (f(x) = &0)``,
@@ -4347,6 +4389,15 @@ val PRODUCT_EQ_1 = store_thm ("PRODUCT_EQ_1",
   REWRITE_TAC[product, GSYM NEUTRAL_REAL_MUL] THEN
   SIMP_TAC std_ss [ITERATE_EQ_NEUTRAL, MONOIDAL_REAL_MUL]);
 
+Theorem PRODUCT_EQ_1_COUNT :
+    !f n. (!i. i < n ==> f i = &1) ==> product (count n) f = &1
+Proof
+    rpt GEN_TAC
+ >> Suff ‘(!i. i IN count n ==> f i = &1) ==> product (count n) f = &1’ >- rw []
+ >> DISCH_TAC
+ >> MATCH_MP_TAC PRODUCT_EQ_1 >> art []
+QED
+
 val PRODUCT_EQ_1_NUMSEG = store_thm ("PRODUCT_EQ_1_NUMSEG",
  ``!f m n. (!i. m <= i /\ i <= n ==> (f(i) = &1)) ==> (product{m..n} f = &1)``,
   SIMP_TAC std_ss [PRODUCT_EQ_1, IN_NUMSEG]);
@@ -4367,6 +4418,14 @@ val PRODUCT_MUL = store_thm ("PRODUCT_MUL",
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   SIMP_TAC std_ss [PRODUCT_CLAUSES, REAL_MUL_ASSOC, REAL_MUL_LID] THEN
   METIS_TAC [REAL_ARITH ``a * b * c * d = a * c * b * d:real``]);
+
+Theorem PRODUCT_MUL_COUNT :
+    !f g n. product (count n) (\x. f x * g x) =
+            product (count n) f * product (count n) g
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC PRODUCT_MUL >> rw []
+QED
 
 val PRODUCT_MUL_NUMSEG = store_thm ("PRODUCT_MUL_NUMSEG",
  ``!f g m n.
