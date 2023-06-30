@@ -856,6 +856,13 @@ Proof
  >> rw []
 QED
 
+(* from HOL-Light's "Multivariate/vector.ml" *)
+Theorem COND_COMPONENT :
+    !b x y. (if b then x else y) ' i = if b then x ' i else y ' i
+Proof
+    PROVE_TAC []
+QED
+
 (* ------------------------------------------------------------------------- *)
 
 val () = export_theory()
