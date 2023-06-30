@@ -421,7 +421,7 @@ fun modify key f tab =
   let
     fun key_ord k = Key.ord (key, k);
 
-    val inc = Unsynchronized.ref 0;
+    val inc = ref 0
     fun insert () = f NONE before ignore (Unsynchronized.inc inc);
     fun update x = f (SOME x);
 

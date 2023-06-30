@@ -17,6 +17,39 @@ val WARN = HOL_WARNING "Compute";
 
 type num = Arbnum.num;
 
+type ctsyntax = {
+      truth_tm : term,
+      false_tm : term,
+      cond_tm : term,
+      let_tm : term,
+      alt_zero_tm : term,
+      zero_tm : term,
+      suc_tm : term,
+      bit1_tm : term,
+      bit2_tm : term,
+      numeral_tm  : term,
+      add_tm : term,
+      sub_tm : term,
+      mul_tm : term,
+      div_tm : term,
+      mod_tm : term,
+      lt_tm : term,
+      cv_pair_tm : term,
+      cv_num_tm : term,
+      cv_fst_tm : term,
+      cv_snd_tm : term,
+      cv_ispair_tm : term,
+      cv_add_tm : term,
+      cv_sub_tm : term,
+      cv_mul_tm : term,
+      cv_div_tm : term,
+      cv_mod_tm : term,
+      cv_lt_tm : term,
+      cv_if_tm : term,
+      cv_eq_tm : term,
+      cval_type : hol_type ,
+      num_type : hol_type }
+
 infix ##;
 
 local
@@ -132,7 +165,7 @@ end (* local *)
  * Destructors for arithmetic.
  * ------------------------------------------------------------------------- *)
 
-fun dest_zero {alt_zero_tm, zero_tm, ...} tm =
+fun dest_zero ({alt_zero_tm, zero_tm, ...}:ctsyntax) tm =
   if same_const alt_zero_tm tm orelse same_const zero_tm tm then Arbnum.zero
   else raise ERR "" ""
 
@@ -141,9 +174,9 @@ fun dest_app tm1 tm =
     SOME (true, n) => n
   | _ => raise ERR "" "";
 
-fun dest_bit1 {bit1_tm, ...} = dest_app bit1_tm;
+fun dest_bit1 ({bit1_tm, ...} : ctsyntax) = dest_app bit1_tm;
 
-fun dest_bit2 {bit2_tm, ...} = dest_app bit2_tm;
+fun dest_bit2 ({bit2_tm, ...} : ctsyntax) = dest_app bit2_tm;
 
 local
   open Arbnum
@@ -275,7 +308,7 @@ local
   open Arbnum;
   fun even n = mod2 n = zero;
 in
-  fun mk_numeral {alt_zero_tm, bit1_tm, bit2_tm, ...} =
+  fun mk_numeral ({alt_zero_tm, bit1_tm, bit2_tm, ...} : ctsyntax) =
     let
       fun mk_num n =
         if n = zero then
@@ -289,10 +322,10 @@ in
     end;
 end (* local *)
 
-fun mk_num {cv_num_tm, numeral_tm, ...} t =
+fun mk_num ({cv_num_tm, numeral_tm, ...} : ctsyntax) t =
   mk_comb (cv_num_tm, mk_comb (numeral_tm, t));
 
-fun mk_pair {cv_pair_tm, ...} s t =
+fun mk_pair ({cv_pair_tm, ...} : ctsyntax) s t =
   mk_comb (mk_comb (cv_pair_tm, s), t);
 
 fun mk_cval_term ct cv =
@@ -309,14 +342,14 @@ fun mk_cval_term ct cv =
  * - 'f' and all constants in 'rhs' have code equations
  * ------------------------------------------------------------------------- *)
 
-fun dest_eqn {cval_type, ...} tm =
+fun dest_eqn ({cval_type, ...} : ctsyntax) tm =
   case total dest_eq tm of
     SOME (l, r) =>
       if type_of r = cval_type then (l, r)
       else raise ERR "dest_code_eqn" "not a code equation"
   | _ => raise ERR "dest_code_eqn" "not a code equation";
 
-fun dest_lhs {cval_type, ...} tm =
+fun dest_lhs ({cval_type, ...} : ctsyntax) tm =
   let
     val (f,args) = strip_comb tm
   in
@@ -382,7 +415,7 @@ local
     case total (((dest_comb ## I) o dest_comb ## I) o dest_comb) tm of
       SOME (((x,y),z),w) => a x andalso b y andalso c z andalso d w
     | _ => false;
-  fun mk_recs ct =
+  fun mk_recs (ct : ctsyntax) =
     let
       fun var n t tm = total dest_var tm = SOME (n, t)
       val T = same_const (#truth_tm ct)
