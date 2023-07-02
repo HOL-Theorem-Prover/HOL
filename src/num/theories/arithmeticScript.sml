@@ -1901,15 +1901,12 @@ val MOD_DIV_exist = prove(
 val OT_DIVISION =
   new_specification ("OT_DIVISION", ["OT_MOD", "OT_DIV"], MOD_DIV_exist);
 
-val _ = set_fixity "OT_MOD" (Infixl 650);
-val _ = set_fixity "OT_DIV" (Infixl 600);
-
 (* HOL4 now switches to HOL-Light compatible version of DIV and MOD *)
 val DIV_def = new_definition
-  ("DIV_def", “DIV m n = if n = 0 then 0 else m OT_DIV n”);
+  ("DIV_def", “DIV m n = if n = 0 then 0 else OT_DIV m n”);
 
 val MOD_def = new_definition
-  ("MOD_def", “MOD m n = if n = 0 then m else m OT_MOD n”);
+  ("MOD_def", “MOD m n = if n = 0 then m else OT_MOD m n”);
 
 val _ = set_fixity "MOD" (Infixl 650);
 val _ = set_fixity "DIV" (Infixl 600);
