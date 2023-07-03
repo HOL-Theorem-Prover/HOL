@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib IndDefLib
+open HolKernel Parse boolLib IndDefLib DefnBase
 
 open arithmeticTheory BasicProvers simpLib
 
@@ -368,6 +368,17 @@ Theorem SUC_EQ:
   ((SUC m = SUC n) = (m = n))
 Proof
   simp[]
+QED
+
+Theorem cv_if_cong[defncong]:
+  (c2b P = c2b Q) /\
+  (c2b Q ==> x = x') /\
+  (~c2b Q ==> y = y') ==>
+    cv_if P x y = cv_if Q x' y'
+Proof
+  Cases_on ‘P’ >> Cases_on ‘Q’ >> simp[c2b_def, cv_if_def] >>
+  rpt (Q.RENAME_TAC [‘cv_if (Num m) _ _’] >> Cases_on ‘m’ >>
+       simp[c2b_def, cv_if_def])
 QED
 
 val _ = export_theory();
