@@ -159,7 +159,7 @@ Proof
 QED
 
 (* helpers/auxiliaries *)
-val c2b_def = new_definition ("c2b_def", “c2b x = ?k. x = Num (SUC k)”);
+val c2b_def = new_definition ("c2b_def[simp]", “c2b x = ?k. x = Num (SUC k)”);
 val cv_if_def0 = new_definition(
   "cv_if_def0",
   “cv_if p (q:cv) (r:cv) = if c2b p then q else r”);
@@ -201,11 +201,21 @@ val cv_snd_def = recdef("cv_snd_def",
 val cv_ispair_def = recdef("cv_ispair_def",
                            “cv_ispair (Pair p q) = Num (SUC 0) /\
                             cv_ispair (Num m) = Num 0”);
+val _ = export_rewrites ["cv_fst_def", "cv_snd_def", "cv_ispair_def"];
 
 val b2c_def = Prim_rec.new_recursive_definition{
   def = “b2c T = Num (SUC 0) /\ b2c F = Num 0”,
   rec_axiom = TypeBase.axiom_of “:bool”,
   name = "b2c_def"};
+val _ = BasicProvers.export_rewrites ["b2c_def"]
+
+Theorem b2c[simp]:
+  ((b2c x = Num 1) = x) /\
+  (b2c x = Num (SUC 0)) = x
+Proof
+  ASM_CASES_TAC “x:bool” \\ simp[ONE]
+QED
+
 
 Theorem b2c_if:
   b2c g = if g then Num (SUC 0) else Num 0
@@ -380,5 +390,30 @@ Proof
   rpt (Q.RENAME_TAC [‘cv_if (Num m) _ _’] >> Cases_on ‘m’ >>
        simp[c2b_def, cv_if_def])
 QED
+
+Theorem cv_if[simp]:
+  cv_if x y z = if c2b x then y else z
+Proof
+  simp[cv_if_def0]
+QED
+
+Theorem cv_extras[simp]:
+  (cv_lt v (Pair x y) = Num 0) /\
+  (cv_lt (Pair x y) v = Num 0) /\
+  (cv_add (Pair x y) v = case v of Pair a b => Num 0 | _ => v) /\
+  (cv_add v (Pair x y) = case v of Pair a b => Num 0 | _ => v) /\
+  (cv_sub (Pair x y) v = Num 0) /\
+  (cv_sub v (Pair x y) = case v of Pair a b => Num 0 | _ => v) /\
+  (cv_mul (Pair x y) v = Num 0) /\
+  (cv_mul v (Pair x y) = Num 0) /\
+  (cv_div (Pair x y) v = Num 0) /\
+  (cv_div v (Pair x y) = case v of Pair a b => Num 0 | _ => Num 0) /\
+  (cv_mod (Pair x y) v = Num 0) /\
+  (cv_mod v (Pair x y) = case v of Pair a b => Num 0 | _ => v)
+Proof
+  Cases_on `v` \\ simp [cv_lt_def, cv_add_def, cv_sub_def, cv_mul_def,
+                        cv_div_def, cv_mod_def]
+QED
+
 
 val _ = export_theory();

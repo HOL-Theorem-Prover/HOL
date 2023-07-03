@@ -261,6 +261,11 @@ Proof
   \\ Cases_on `n MOD 2` \\ gvs []
 QED
 
+Definition ns2c_def[simp]:
+  ns2c [] = Num 0 ∧
+  ns2c (h::t) = Pair (Num h) (ns2c t)
+End
+
 Theorem primes_uptoc_is_primes_upto:
   !n. primes_uptoc (Num n) = ns2c (primes_upto n)
 Proof
