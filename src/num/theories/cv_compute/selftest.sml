@@ -1,4 +1,4 @@
-open testutils HolKernel Parse boolLib bossLib cv_computeLib cvSyntax cvTheory;
+open testutils HolKernel Parse boolLib cv_computeLib cvSyntax cvTheory;
 
 val (factc_def,_) = TotalDefn.tDefine
   "factc_def"

@@ -1925,18 +1925,6 @@ Proof
   THEN ASM_REWRITE_TAC []
 QED
 
-Theorem DIV_0:
-  k DIV 0 = 0
-Proof
-  REWRITE_TAC [DIV_def]
-QED
-
-Theorem MOD_0:
-  k MOD 0 = k
-Proof
-  REWRITE_TAC [MOD_def]
-QED
-
 val DIV2_def = new_definition("DIV2_def", “DIV2 n = n DIV 2”);
 
 local
@@ -2131,6 +2119,24 @@ val ZERO_DIV = store_thm ("ZERO_DIV",
      MATCH_MP_TAC DIV_UNIQUE THEN
      EXISTS_TAC (“0”) THEN
      ASM_REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
+
+Theorem DIV_0[simp]:
+  k DIV 0 = 0 /\ 0 DIV n = 0
+Proof
+  conj_tac >- REWRITE_TAC [DIV_def] >> Cases_on ‘0 < n’ >>
+  ASM_SIMP_TAC bool_ss [ZERO_DIV] >>
+  RULE_ASSUM_TAC (REWRITE_RULE[NOT_LT_ZERO_EQ_ZERO]) >>
+  ASM_REWRITE_TAC [DIV_def]
+QED
+
+Theorem MOD_0[simp]:
+  k MOD 0 = k /\ 0 MOD n = 0
+Proof
+  conj_tac >- REWRITE_TAC [MOD_def] >> Cases_on ‘0 < n’ >>
+  ASM_SIMP_TAC bool_ss [ZERO_MOD] >>
+  RULE_ASSUM_TAC (REWRITE_RULE[NOT_LT_ZERO_EQ_ZERO]) >>
+  ASM_REWRITE_TAC [MOD_def]
+QED
 
 val MOD_MULT = store_thm ("MOD_MULT",
  “!n r. r < n ==> !q. (q * n + r) MOD n = r”,

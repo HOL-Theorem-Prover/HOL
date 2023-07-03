@@ -20,6 +20,7 @@ src/coretypes
 [poly]!!src/meson/test
 src/tfl/src
 src/num/theories
+src/num/theories/cv_compute
 src/num/reduce/src
 src/num/arith/src
 src/num
@@ -46,8 +47,6 @@ src/boss
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
-
-src/cv_compute
 
 [poly]src/AI
 [poly]src/AI/sml_inspection
