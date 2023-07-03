@@ -160,9 +160,16 @@ QED
 
 (* helpers/auxiliaries *)
 val c2b_def = new_definition ("c2b_def", “c2b x = ?k. x = Num (SUC k)”);
-val cv_if_def = new_definition(
-  "cv_if_def",
+val cv_if_def0 = new_definition(
+  "cv_if_def0",
   “cv_if p (q:cv) (r:cv) = if c2b p then q else r”);
+Theorem cv_if_def:
+  cv_if (Num (SUC m)) (p:cv) (q:cv) = p /\
+  cv_if (Num 0) p q = q /\
+  cv_if (Pair r s) p q = q
+Proof
+  simp[c2b_def, cv_if_def0, Num_11, cv_distinct]
+QED
 
 val cv_case_def = Prim_rec.new_recursive_definition {
   name = "cv_case_def",
@@ -188,12 +195,12 @@ fun recdef (n,t) =
   Prim_rec.new_recursive_definition{name = n, def = t, rec_axiom = cv_Axiom}
 
 val cv_fst_def = recdef("cv_fst_def",
-                       “cv_fst (Num n) = Num 0 /\ cv_fst (Pair c d) = c”);
+                       “cv_fst (Pair p q) = p /\ cv_fst (Num m) = Num 0”);
 val cv_snd_def = recdef("cv_snd_def",
-                       “cv_snd (Num n) = Num 0 /\ cv_snd (Pair c d) = d”);
+                       “cv_snd (Pair p q) = q /\ cv_snd (Num m) = Num 0”);
 val cv_ispair_def = recdef("cv_ispair_def",
-                           “cv_ispair (Num n) = Num 0 /\
-                            cv_ispair (Pair c d) = Num (SUC 0)”);
+                           “cv_ispair (Pair p q) = Num (SUC 0) /\
+                            cv_ispair (Num m) = Num 0”);
 
 val b2c_def = Prim_rec.new_recursive_definition{
   def = “b2c T = Num (SUC 0) /\ b2c F = Num 0”,
@@ -211,11 +218,11 @@ val cv_lt_def0 = recdef(
   “cv_lt (Num m) c = (case c of | Num n => b2c (m < n) | _ => Num 0) /\
    cv_lt (Pair c d) e = Num 0”);
 
-Theorem cv_lt_def:
+Theorem cv_lt_def[simp]:
   cv_lt (Num m) (Num n) = Num (if m < n then SUC 0 else 0) /\
-  cv_lt (Num m) (Pair c d) = Num 0 /\
-  cv_lt (Pair c d) (Num m) = Num 0 /\
-  cv_lt (Pair c1 d1) (Pair c2 d2) = Num 0
+  cv_lt (Num m) (Pair p q) = Num 0 /\
+  cv_lt (Pair p q) (Num n) = Num 0 /\
+  cv_lt (Pair p q) (Pair r s) = Num 0
 Proof
   simp[cv_lt_def0, b2c_if, SF boolSimps.COND_elim_ss]
 QED
@@ -237,9 +244,9 @@ val cvnum_map2_def = new_definition(
 val cv_add_def0 = new_definition ("cv_add_def0", “cv_add = cvnum_map2 $+”);
 Theorem cv_add_def[simp]:
   cv_add (Num m) (Num n) = Num (m + n) /\
-  cv_add (Num m) (Pair c d) = Num m /\
-  cv_add (Pair c d) (Num m) = Num m /\
-  cv_add (Pair c d) (Pair e f) = Num 0
+  cv_add (Num m) (Pair p q) = Num m /\
+  cv_add (Pair p q) (Num n) = Num n /\
+  cv_add (Pair p q) (Pair r s) = Num 0
 Proof
   simp[cv_add_def0, FUN_EQ_THM,cvnumval_def, cvnum_map2_def, ADD_CLAUSES]
 QED
@@ -284,6 +291,83 @@ Proof
   simp[cv_mod_def0, FUN_EQ_THM, cvnum_map2_def, cvnumval_def]
 QED
 
+val cv_eq_def0 = new_definition("cv_eq_def0", “cv_eq (c:cv) d = b2c (c = d)”);
+Theorem cv_eq_def:
+  cv_eq p q = Num (if p = q then SUC 0 else 0)
+Proof
+  simp[cv_eq_def0, b2c_if, SF boolSimps.COND_elim_ss]
+QED
+Theorem cv_eq[simp]:
+  (cv_eq (Pair x y) (Pair x' y') = b2c (x = x' /\ y = y')) /\
+  (cv_eq (Num m) (Num n) = b2c (m = n)) /\
+  (cv_eq (Pair x y) (Num n) = b2c F) /\
+  (cv_eq (Num n) (Pair x y) = b2c F)
+Proof
+  simp [cv_eq_def0]
+QED
 
+
+val cv_size_alt_def = recdef("cv_size_alt_def",
+  “(cv_size_alt (Num n) = n) /\
+   (cv_size_alt (Pair p q) = 1 + cv_size_alt p + cv_size_alt q)”);
+
+(* -------------------------------------------------------------------------
+ * Extra characteristic theorems
+ * ------------------------------------------------------------------------- *)
+
+Theorem lemma[local]:
+  n:num <= m ==> (m - n = k <=> m = n + k)
+Proof
+  simp[SUB_RIGHT_EQ, LESS_EQ_0, EQ_IMP_THM, DISJ_IMP_THM, ADD_CLAUSES] >>
+  metisLib.METIS_TAC[LESS_EQUAL_ANTISYM]
+QED
+
+Theorem DIV_RECURSIVE:
+  m DIV n =
+    if n = 0 then 0 else
+    if m < n then 0 else
+      SUC ((m - n) DIV n)
+Proof
+  IF_CASES_TAC >- simp[] >>
+  IF_CASES_TAC >- simp[LESS_DIV_EQ_ZERO] >>
+  irule DIV_UNIQUE >>
+  Q.SUBGOAL_THEN ‘0 < n’ ASSUME_TAC >- ASM_REWRITE_TAC[GSYM NOT_ZERO_LT_ZERO] >>
+  drule_then (Q.SPEC_THEN ‘m - n’ strip_assume_tac) DIVISION >>
+  simp [ADD1, LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, MULT_LEFT_1] >>
+  Q.EXISTS_TAC ‘(m - n) MOD n’ >> simp[] >>
+  RULE_ASSUM_TAC (SRULE [NOT_LESS]) >> Q.PAT_X_ASSUM ‘m - n = _’ mp_tac >>
+  simp[lemma] >> disch_then (CONV_TAC o LAND_CONV o K) >>
+  simp[AC ADD_COMM ADD_ASSOC]
+QED
+
+Theorem MOD_RECURSIVE:
+  m MOD n = if n = 0 then m else if m < n then m else (m - n) MOD n
+Proof
+  IF_CASES_TAC >> simp[] >> IF_CASES_TAC >> simp[LESS_MOD] >>
+  RULE_ASSUM_TAC (SRULE[NOT_LESS, NOT_ZERO_LT_ZERO]) >>
+  simp[SUB_MOD]
+QED
+
+Theorem CV_EQ:
+  ((Pair p q = Pair r s) = (if p = r then q = s else F)) /\
+  ((Pair p q = Num n) = F) /\
+  ((Num m = Num n) = (m = n))
+Proof
+  simp []
+QED
+
+Theorem LT_RECURSIVE:
+  ((m < 0) = F) /\
+  ((m < SUC n) = (if m = n then T else m < n))
+Proof
+  simp[prim_recTheory.LESS_THM, prim_recTheory.NOT_LESS_0]
+QED
+
+Theorem SUC_EQ:
+  ((SUC m = 0) = F) /\
+  ((SUC m = SUC n) = (m = n))
+Proof
+  simp[]
+QED
 
 val _ = export_theory();

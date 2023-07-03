@@ -1,13 +1,36 @@
 open testutils HolKernel Parse boolLib cv_computeLib cvSyntax cvTheory;
+open arithmeticTheory
 
-val (factc_def,_) = TotalDefn.tDefine
-  "factc_def"
-  `factc n =
-    cv_if (cv_lt n (Num 1))
-          (Num 1)
-          (cv_mul n (factc (cv_sub n (Num 1))))`
-  (WF_REL_TAC `measure cv_size_alt`
-  \\ Cases \\ simp [cv_size_alt_def, CaseEq "bool"]);
+fun simp ths = simpLib.ASM_SIMP_TAC (BasicProvers.srw_ss()) ths
+
+val M = “(λf n. cv_if (cv_lt n (Num 1)) (Num 1)
+             (cv_mul n (f (cv_sub n (Num 1)))))”
+val factc_def0 = new_definition("factc_def0",
+  “factc = WFREC (measure cv_size_alt) ^M”);
+
+val cvmul_lemma = Q.prove(
+  ‘cv_mul (Pair p q) x = Num 0’,
+  Q.SPEC_THEN ‘x’ STRUCT_CASES_TAC (TypeBase.nchotomy_of “:cv”) >>
+  simp[]);
+
+
+val restrict_lemma = Q.prove(
+  ‘^M (RESTRICT factc (measure cv_size_alt) x) x = ^M factc x’,
+  simp[] >>
+  Q.SPEC_THEN ‘x’ STRUCT_CASES_TAC (TypeBase.nchotomy_of “:cv”) >>
+  simp[cv_if_def, cvmul_lemma] >> IF_CASES_TAC >> simp[cv_if_def] >>
+  simp[relationTheory.RESTRICT_DEF, cv_size_alt_def] >>
+  Q.RENAME_TAC [‘n <> 0’] >>
+  reverse $ Q.SUBGOAL_THEN ‘n - 1 < n’ ASSUME_TAC >- simp[] >>
+  irule SUB_LESS >> pop_assum mp_tac >>
+  Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES >>
+  simp[ONE, LESS_EQ_MONO, ZERO_LESS_EQ]);
+
+val factc_def = MATCH_MP relationTheory.WFREC_THM
+                         (Q.ISPEC ‘cv_size_alt’ prim_recTheory.WF_measure)
+                         |> ISPEC M
+                         |> REWRITE_RULE[restrict_lemma, GSYM factc_def0]
+                         |> BETA_RULE
 
 fun fact n =
   if Arbnum.< (n, Arbnum.one) then Arbnum.one
@@ -24,13 +47,16 @@ fun test_factc n =
 fun test n =
   let
     val nstr = Int.toString n
+    val MLresult = fact (Arbnum.fromInt n)
+    fun check th =
+        let val x = dest_num (rhs (concl th))
+        in
+          MLresult = x
+        end
     val _ = tprint ("factc " ^ nstr ^ " ?= ML fact " ^ nstr)
     val x = dest_num (rhs (concl (test_factc n)))
-    val y = fact (Arbnum.fromInt n)
   in
-    if x = y then OK () else
-      die ("failed: " ^ Arbnum.toString x ^ " (factc), " ^
-                        Arbnum.toString y ^ " (ML fact)")
+    require_msg (check_result check) thm_to_string test_factc n
   end;
 
 (* dest_numeral runs out of stack for fact(256) *)

@@ -9,7 +9,7 @@
 structure cv_computeLib :> cv_computeLib =
 struct
 
-open HolKernel Abbrev bossLib Drule;
+open HolKernel Abbrev Drule;
 open boolTheory cvTheory arithmeticTheory;
 
 (* -------------------------------------------------------------------------
