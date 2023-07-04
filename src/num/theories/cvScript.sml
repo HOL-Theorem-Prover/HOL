@@ -159,7 +159,7 @@ Proof
 QED
 
 (* helpers/auxiliaries *)
-val c2b_def = new_definition ("c2b_def[simp]", “c2b x = ?k. x = Num (SUC k)”);
+val c2b_def = new_definition ("c2b_def", “c2b x = ?k. x = Num (SUC k)”);
 val cv_if_def0 = new_definition(
   "cv_if_def0",
   “cv_if p (q:cv) (r:cv) = if c2b p then q else r”);
@@ -415,5 +415,156 @@ Proof
                         cv_div_def, cv_mod_def]
 QED
 
+(* -------------------------------------------------------------------------
+ * Theorems used in automation
+ * ------------------------------------------------------------------------- *)
+
+Triviality c2b_if:
+  c2b (Num (if b then SUC 0 else 0)) = b
+Proof
+  Cases_on ‘b’
+  \\ rewrite_tac [c2b_def,Num_11,SUC_EQ]
+  \\ once_rewrite_tac [EQ_SYM_EQ]
+  \\ rewrite_tac [SUC_EQ,EXISTS_REFL]
+QED
+
+Theorem neq_to_cv:
+  !m n. m = n <=> c2b (cv_eq (Num m) (Num n))
+Proof
+  rewrite_tac [cv_eq_def,c2b_if,Num_11]
+QED
+
+Theorem lt_to_cv:
+  m < n <=> c2b (cv_lt (Num m) (Num n))
+Proof
+  rewrite_tac [cv_lt_def,c2b_if,Num_11]
+QED
+
+Theorem gt_to_cv:
+  m > n <=> c2b (cv_lt (Num n) (Num m))
+Proof
+  rewrite_tac [cv_lt_def,c2b_if,Num_11,GREATER_DEF]
+QED
+
+Theorem le_to_cv:
+  m <= n <=> ~c2b (cv_lt (Num n) (Num m))
+Proof
+  rewrite_tac [GSYM NOT_LESS,lt_to_cv]
+QED
+
+Theorem ge_to_cv:
+  n >= m <=> ~c2b (cv_lt (Num n) (Num m))
+Proof
+  rewrite_tac [le_to_cv,GREATER_EQ]
+QED
+
+Theorem ODD_to_cv:
+  ODD n <=> c2b (cv_mod (Num n) (Num 2))
+Proof
+  rewrite_tac [ODD_EVEN,cv_mod_def]
+  \\ rewrite_tac [c2b_def,Num_11,EVEN_MOD2]
+  \\ Cases_on ‘n MOD 2’
+  \\ rewrite_tac [numTheory.NOT_SUC]
+  \\ once_rewrite_tac [EQ_SYM_EQ]
+  \\ rewrite_tac [numTheory.NOT_SUC,SUC_EQ,EXISTS_REFL]
+QED
+
+Theorem EVEN_to_cv:
+  EVEN n <=> ~c2b (cv_mod (Num n) (Num 2))
+Proof
+  rewrite_tac [EVEN_ODD,ODD_to_cv]
+QED
+
+val c2n_def = Prim_rec.new_recursive_definition {
+  name = "c2n_def",
+  rec_axiom = cv_Axiom,
+  def = “c2n (Num n) = n /\
+         c2n (Pair c d) = 0”};
+
+val _ = save_thm("c2n_def[simp]",c2n_def);
+
+Theorem add_to_cv:
+  m + n = c2n (cv_add (Num m) (Num n))
+Proof
+  rewrite_tac [c2n_def,cv_add_def]
+QED
+
+Theorem suc_to_cv:
+  SUC m = c2n (cv_add (Num m) (Num 1))
+Proof
+  rewrite_tac [c2n_def,cv_add_def,ADD1]
+QED
+
+Theorem sub_to_cv:
+  m - n = c2n (cv_sub (Num m) (Num n))
+Proof
+  rewrite_tac [c2n_def,cv_sub_def]
+QED
+
+Theorem pre_to_cv:
+  PRE m = c2n (cv_sub (Num m) (Num 1))
+Proof
+  rewrite_tac [c2n_def,cv_sub_def,PRE_SUB1]
+QED
+
+Theorem mul_to_cv:
+  m * n = c2n (cv_mul (Num m) (Num n))
+Proof
+  rewrite_tac [c2n_def,cv_mul_def]
+QED
+
+Theorem div_to_cv:
+  m DIV n = c2n (cv_div (Num m) (Num n))
+Proof
+  rewrite_tac [c2n_def,cv_div_def]
+QED
+
+Theorem mod_to_cv:
+  m MOD n = c2n (cv_mod (Num m) (Num n))
+Proof
+  rewrite_tac [c2n_def,cv_mod_def]
+QED
+
+val cv_exp_def = new_definition("cv_exp_def",
+  “cv_exp m n = Num (c2n m ** c2n n)”);
+
+Theorem cv_exp_eq:
+  cv_exp b e =
+    cv_if e                                        (* e is a positive number *)
+          (cv_if (cv_mod e (Num 2))                (* e is odd               *)
+                 (cv_mul b (cv_exp b (cv_sub e (Num 1))))
+                 (let x = cv_exp b (cv_div e (Num 2))
+                  in cv_mul x x))
+          (Num 1)
+Proof
+  Cases_on ‘e’
+  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP]
+  \\ Cases_on ‘m’
+  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP,LET_THM]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def]
+  \\ Cases_on ‘SUC n MOD 2’
+  \\ rewrite_tac [cv_if_def,Num_11,GSYM EXP_ADD, GSYM TIMES2,cv_div_def,cv_sub_def,
+       GSYM PRE_SUB1,prim_recTheory.PRE,c2n_def]
+  \\ rewrite_tac [GSYM EXP]
+  >-
+   (AP_TERM_TAC
+    \\ ‘0 < 2’ by rewrite_tac [numeralTheory.numeral_distrib,numeralTheory.numeral_lt]
+    \\ imp_res_tac DIVISION
+    \\ pop_assum (K ALL_TAC)
+    \\ first_x_assum $ Q.SPEC_THEN ‘SUC n’ mp_tac
+    \\ asm_rewrite_tac [ADD_CLAUSES]
+    \\ strip_tac
+    \\ once_rewrite_tac [MULT_COMM]
+    \\ pop_assum $ assume_tac o GSYM \\ asm_rewrite_tac [])
+  \\ Cases_on ‘b’
+  \\ rewrite_tac [cv_mul_def,c2n_def,EXP,MULT_CLAUSES]
+QED
+
+Theorem exp_to_cv:
+  m ** n = c2n (cv_exp (Num m) (Num n))
+Proof
+  rewrite_tac [c2n_def,cv_exp_def]
+QED
 
 val _ = export_theory();
