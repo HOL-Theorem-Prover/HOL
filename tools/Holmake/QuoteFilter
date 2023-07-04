@@ -327,7 +327,7 @@ ProofLine =
     yytext
 )));
 <INITIAL>^"QED" => (
-  (yypos, if inscript andalso not quotefix then ECHO yyarg "));" else yytext)
+  (yypos, if inscript andalso not quotefix then ECHO yyarg ") HOL__GOAL__foo));" else yytext)
 );
 <INITIAL,thmval>^{Definitionpfx} => (
   (yypos,
@@ -579,11 +579,13 @@ ProofLine =
       let val (_, attrs) = dest_name_attrs yytext
           val attr_alist = key_vallist attrs
           val nls = CharVector.tabulate(countchar #"\n" yytext, (fn _ => #"\n"))
+          val goalabs = "fn HOL__GOAL__foo => ("
       in
         case attr_alist of
-          [] => ECHO yyarg ("\"],(" ^ nls)
+          [] => ECHO yyarg ("\"],(" ^ goalabs ^ nls)
         | _ => ECHO yyarg
-                  ("\"]," ^ mk_tacmodifier_string attr_alist ^ "(" ^ nls)
+                  ("\"]," ^ 
+                   mk_tacmodifier_string attr_alist ^ "(" ^ goalabs ^ nls)
       end
    )
   )

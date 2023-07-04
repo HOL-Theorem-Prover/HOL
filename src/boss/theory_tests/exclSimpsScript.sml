@@ -29,6 +29,19 @@ Proof[exclude_simps = LT_EXP_LOG_SIMP LE_EXP_LOG_SIMP]
       simp[])
 QED
 
+(* The srw_ss() invocations below do not get evaluated immediately because
+   they are sitting underneath an abstraction that allows the tactic-modifier
+   to intervene first *)
+Theorem baz:
+  2 <= n ==> 3 < 2 ** n
+Proof[exclude_simps = LT_EXP_LOG_SIMP LE_EXP_LOG_SIMP]
+  strip_tac >> asm_simp_tac (srw_ss() ++ ARITH_ss) []
+  >- (irule arithmeticTheory.LESS_LESS_EQ_TRANS >>
+      qexists ‘4’ >> asm_simp_tac (srw_ss()) [] >>
+      ‘4 = 2 ** 2’ by simp[] >>
+      pop_assum SUBST1_TAC >>
+      simp[])
+QED
 
 
 

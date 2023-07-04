@@ -296,7 +296,8 @@ With a prefix ARG, uses `expandf' rather than `e'."
                               ") before "
                               "Feedback.set_trace " ste " old end"))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-       (tactic-string (format "%s (%s)" e-string region-string))
+       (tactic-string (format "%s (fn HOL__GOAL__foo => (%s) HOL__GOAL__foo)"
+                              e-string region-string))
        (sender (if hol-emit-time-elapsed-p
                    'send-timed-string-to-hol
                  'send-string-to-hol)))
