@@ -10,7 +10,7 @@ structure cv_computeLib :> cv_computeLib =
 struct
 
 open HolKernel Abbrev Drule;
-open boolTheory cvTheory arithmeticTheory;
+open boolTheory cvTheory cvSyntax arithmeticTheory;
 
 (* -------------------------------------------------------------------------
  * These terms are used by the kernel compute primitive to construct and
@@ -136,5 +136,9 @@ val cached = Thm.compute {
   };
 
 fun cv_compute eqs = cached (map SPEC_ALL eqs);
+
+fun reveal_cv_names () =
+  List.app Parse.temp_overload_on [("Pair",cv_pair_tm),
+                                   ("Num",cv_num_tm)];
 
 end (* struct *)

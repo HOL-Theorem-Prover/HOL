@@ -583,4 +583,9 @@ Proof
   rewrite_tac [c2n_def,cv_exp_def]
 QED
 
+val _ = app Parse.permahide [“c2n”,“c2b”,“Num”,“Pair”];
+
+val _ = app delete_const ["P0", "N0", "iscv", "cvrel", "cvrelf",
+                          "cv_ABS", "cv_REP", "cvnum_map2", "cvnumval"];
+
 val _ = export_theory();
