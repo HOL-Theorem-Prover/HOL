@@ -183,7 +183,7 @@ Definition seq2cl_def[simp]:
 End
 
 Theorem seq2cl_correct:
-  (!a. AB a (mk a)) ⇒
+  (!a. AB a (mk a)) ==>
   NLC AB as (seq2cl mk as)
 Proof
   strip_tac >> Induct_on ‘as’ >> simp[NLC_rules]
@@ -221,7 +221,6 @@ Proof
   metis_tac[]
 QED
 
-
 Theorem COMMA_C[transfer_rule]:
   (AB |==> CD |==> ACPC AB CD) $, Pair
 Proof
@@ -238,6 +237,14 @@ Theorem SND_C[transfer_rule]:
   (ACPC AB CD |==> CD) SND cv_snd
 Proof
   simp[ACPC_def, FUN_REL_def, pairTheory.FORALL_PROD, PULL_EXISTS]
+QED
+
+Theorem RRANGE_ACPC[transfer_simp]:
+  RRANGE (ACPC AB CD) bd <=>
+  ?b d. bd = Pair b d /\ RRANGE AB b /\ RRANGE CD d
+Proof
+  simp[relationTheory.RRANGE, ACPC_def, pairTheory.EXISTS_PROD] >>
+  metis_tac[]
 QED
 
 val _ = export_theory();

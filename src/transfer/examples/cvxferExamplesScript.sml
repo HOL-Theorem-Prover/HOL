@@ -9,7 +9,7 @@ val _ = new_theory "cvxferExamples";
     factorial
    ---------------------------------------------------------------------- *)
 
-(* these two should be automatic when gives us term FACT to translate *)
+(* these two should be automatic when given term FACT to translate *)
 Definition factc_def:
   factc c = Num (FACT (c2n c))
 End
