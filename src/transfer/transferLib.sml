@@ -79,11 +79,14 @@ fun build_preterm ct : Preterm.preterm t =
               NONE => raise Fail ("Free variable: "^term_to_string ct)
             | SOME pt => return pt
     in
-      case dest_term ct of
-          VAR _ => getmap >>- varmap ct
-        | CONST _ => newconst
-        | COMB(t1,t2) => lift pmk_comb (build_preterm t1 >* build_preterm t2)
-        | LAMB(bv,body) => lift pmk_abs (newvar bv (build_preterm body))
+      if numSyntax.is_numeral ct then
+        newconst
+      else
+        case dest_term ct of
+            VAR _ => getmap >>- varmap ct
+          | CONST _ => newconst
+          | COMB(t1,t2) => lift pmk_comb (build_preterm t1 >* build_preterm t2)
+          | LAMB(bv,body) => lift pmk_abs (newvar bv (build_preterm body))
     end
 end (* local *)
 
@@ -130,31 +133,35 @@ fun prove_relation_thm cleftp ct skt =
       val argl = if cleftp then [ct, skt] else [skt, ct]
       val skty = type_of skt and cty = type_of ct
     in
-      case dest_term ct of
-          VAR _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-        | CONST _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-        | COMB(cf, cx) =>
-          let
-            val fthm = prove_relation_thm cleftp cf (rator skt)
-            val xthm = prove_relation_thm cleftp cx (rand skt)
-          in
-            MATCH_MP GFUN_REL_COMB (CONJ fthm xthm)
-          end
-        | LAMB (cbv, cbod) =>
-          let
-            val (skbv, skbod) = dest_abs skt
-            val brel = ty2relvar cleftp (type_of skbv) (type_of cbv)
-            val b_asm_t =
-                list_mk_comb(brel, if cleftp then [cbv, skbv] else [skbv, cbv])
-            val bod_thm = prove_relation_thm cleftp cbod skbod
-            val (lv,rv) = if cleftp then (cbv,skbv) else (skbv,cbv)
-            val hyp_thm =
-                bod_thm
-                  |> CONV_RULE (FORK_CONV (UNBETA_CONV lv, UNBETA_CONV rv))
-                  |> DISCH b_asm_t |> GENL [lv,rv]
-          in
-            EQ_MP (PART_MATCH lhs (GSYM FUN_REL_def) (concl hyp_thm)) hyp_thm
-          end
+      if numSyntax.is_numeral ct then
+        ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+      else
+        case dest_term ct of
+            VAR _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+          | CONST _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+          | COMB(cf, cx) =>
+            let
+              val fthm = prove_relation_thm cleftp cf (rator skt)
+              val xthm = prove_relation_thm cleftp cx (rand skt)
+            in
+              MATCH_MP GFUN_REL_COMB (CONJ fthm xthm)
+            end
+          | LAMB (cbv, cbod) =>
+            let
+              val (skbv, skbod) = dest_abs skt
+              val brel = ty2relvar cleftp (type_of skbv) (type_of cbv)
+              val b_asm_t =
+                  list_mk_comb(brel,
+                               if cleftp then [cbv, skbv] else [skbv, cbv])
+              val bod_thm = prove_relation_thm cleftp cbod skbod
+              val (lv,rv) = if cleftp then (cbv,skbv) else (skbv,cbv)
+              val hyp_thm =
+                  bod_thm
+                    |> CONV_RULE (FORK_CONV (UNBETA_CONV lv, UNBETA_CONV rv))
+                    |> DISCH b_asm_t |> GENL [lv,rv]
+            in
+              EQ_MP (PART_MATCH lhs (GSYM FUN_REL_def) (concl hyp_thm)) hyp_thm
+            end
     end
 
 structure ruledb =
@@ -186,13 +193,15 @@ fun fupd_bad f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
 fun fupd_DOMRNG_ss f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
   {left = left, right = right, safe = safe, bad = bad, DOMRNG_ss = f DOMRNG_ss}
 
-fun addrule th r =
+fun addrule0 (th, r) =
     let
       val th = UNDISCH th handle HOL_ERR _ => th
     in
       r |> fupd_left (Net.enter (lhand (concl th), th))
         |> fupd_right(Net.enter (rand (concl th), th))
     end
+
+fun addrule th r = List.foldl addrule0 r (CONJUNCTS th)
 
 fun addsafe th r = r |> fupd_safe (Net.enter (concl th, th))
 fun addbad t r = r |> fupd_bad (Net.enter(t,t))
@@ -428,6 +437,10 @@ val ruledb =
         |> addrule EXISTS_bitotal
         |> addrule UREL_EQ
         |> addrule PAIRU_COMMA
+        |> addrule LET_rule
+        |> addrule FST_CORRECT
+        |> addrule SND_CORRECT
+        |> addrule COMMA_CORRECT
         |> addrule cimp_imp
         |> addrule (equalityp_applied
                       |> INST_TYPE [alpha |-> (bool --> bool --> bool)]
@@ -493,8 +506,10 @@ val RRANGE_tm = prim_mk_const{Thy = "relation", Name = "RRANGE"}
 val RDOM_tm = prim_mk_const{Thy = "relation", Name = "RDOM"}
 
 fun transfer_skeleton cleftp t =
-    prove_relation_thm cleftp t (build_skeleton t)
-                       |> eliminate_booleans_and_equalities cleftp
+    let val th0 = prove_relation_thm cleftp t (build_skeleton t)
+    in
+      (* eliminate_booleans_and_equalities cleftp *) th0
+    end
 
 fun resolveN n cleftp ruledb t =
     let
@@ -517,11 +532,12 @@ fun transfer_phase1 cleftp ruledb t =
 fun base_transfer cleftp ruledb t =
     let
       open simpLib boolSimps
+      val argsel = if cleftp then RAND_CONV else LAND_CONV
     in
       transfer_phase1 cleftp ruledb t |>
       seq.map (mkrelsyms_eq cleftp) ~>
       check {cleftp=cleftp,forceprogress=false} ruledb |>
-      seq.map (SIMP_RULE transfer_ss (#DOMRNG_ss ruledb)) |>
+      seq.map (CONV_RULE (argsel $ SIMP_CONV transfer_ss (#DOMRNG_ss ruledb)))|>
       seq.filter (not o const_occurs RRANGE_tm o concl) |>
       seq.filter (not o const_occurs RDOM_tm o concl)
     end
