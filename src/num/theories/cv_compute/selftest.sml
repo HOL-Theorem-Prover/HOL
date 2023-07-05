@@ -12,7 +12,7 @@ val restrict_lemma = Q.prove(
   ‘^M (RESTRICT factc (measure cv_size_alt) x) x = ^M factc x’,
   BETA_TAC >> irule cv_if_cong >> simp[] >>
   Q.SPEC_THEN ‘x’ STRUCT_CASES_TAC (TypeBase.nchotomy_of “:cv”) >>
-  simp[] >> IF_CASES_TAC >> simp[] >>
+  simp[] >> IF_CASES_TAC >> simp[c2b_def] >>
   simp[relationTheory.RESTRICT_DEF, cv_size_alt_def] >>
   Q.RENAME_TAC [‘n <> 0’] >>
   reverse $ Q.SUBGOAL_THEN ‘n - 1 < n’ ASSUME_TAC >- simp[] >>
