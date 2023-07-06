@@ -144,6 +144,15 @@ Inductive NLC:
                NLC AB (n::ns) (Pair c cs))
 End
 
+Theorem NLC_SIMP[simp]:
+  (NLC AB [] c <=> c = Num 0) /\
+  (NLC AB xs (Num 0) <=> xs = []) /\
+  (NLC AB (x::xs) cv <=> ?c cs. cv = Pair c cs /\ AB x c /\ NLC AB xs cs) /\
+  (NLC AB xs (Pair c cs) <=> ?h t. xs = h::t /\ AB h c /\ NLC AB t cs)
+Proof
+  rpt conj_tac >> simp[SimpLHS, Once NLC_cases]
+QED
+
 Theorem CONS_C[transfer_rule]:
   (AB |==> NLC AB |==> NLC AB) CONS Pair
 Proof
@@ -245,6 +254,85 @@ Theorem RRANGE_ACPC[transfer_simp]:
 Proof
   simp[relationTheory.RRANGE, ACPC_def, pairTheory.EXISTS_PROD] >>
   metis_tac[]
+QED
+
+(* ----------------------------------------------------------------------
+    options
+   ---------------------------------------------------------------------- *)
+
+Definition OPTC_def:
+  (OPTC AC NONE c <=> c = Num 0) /\
+  (OPTC AC (SOME a) c <=> ?c0. c = Pair (Num 1) c0 /\ AC a c0)
+End
+
+Theorem total_OPTC[transfer_safe]:
+  total ACv ==> total (OPTC ACv)
+Proof
+  simp[total_def, OPTC_def, optionTheory.FORALL_OPTION]
+QED
+
+Theorem left_unique_OPTC[transfer_safe]:
+  left_unique ACv ==> left_unique (OPTC ACv)
+Proof
+  simp[left_unique_def, OPTC_def, optionTheory.FORALL_OPTION, PULL_EXISTS]
+QED
+
+Theorem right_unique_OPTC[transfer_safe]:
+  right_unique ACv ==> right_unique (OPTC ACv)
+Proof
+  simp[right_unique_def, OPTC_def, optionTheory.FORALL_OPTION, PULL_EXISTS]
+QED
+
+Theorem OPTC_NONE[transfer_rule]:
+  OPTC ACv NONE (Num 0)
+Proof
+  simp[OPTC_def]
+QED
+
+Theorem OPTC_SOME[transfer_rule]:
+  (ACv |==> OPTC ACv) SOME (Pair (Num 1))
+Proof
+  simp[FUN_REL_def, OPTC_def]
+QED
+
+Definition mkcvopt_def:
+  mkcvopt mk NONE = Num 0 /\
+  mkcvopt mk (SOME x) = Pair (Num 1) (mk x)
+End
+
+Definition destcvopt_def:
+  destcvopt d (Num 0) = NONE /\
+  destcvopt d (Pair (Num 1) c) = SOME (d c)
+End
+
+Theorem destmk_cvopt[simp]:
+  (!a. d (m a) = a) ==>
+  destcvopt d (mkcvopt m opt) = opt
+Proof
+  Cases_on ‘opt’ >> simp[mkcvopt_def, destcvopt_def]
+QED
+
+Theorem option_CASE_C[transfer_rule]:
+  (OPTC ACv |==> BCv |==> (ACv |==> BCv) |==> BCv) option_CASE
+  (λocv bcv f. cv_if (cv_ispair ocv) (f (cv_snd ocv)) bcv)
+Proof
+  rw[FUN_REL_def] >> rename [‘OPTC ACv aopt ocv’] >>
+  Cases_on ‘aopt’ >> gvs[OPTC_def, c2b_def]
+QED
+
+Theorem OHD_C[transfer_rule]:
+  (NLC ACv |==> OPTC ACv) oHD
+  (λc. cv_if (cv_ispair c) (Pair (Num 1) (cv_fst c)) (Num 0))
+Proof
+  simp[FUN_REL_def] >> Cases >>
+  simp[Once NLC_cases, PULL_EXISTS, OPTC_def, c2b_def]
+QED
+
+Theorem TL_C[transfer_rule]:
+  (NLC ACv |==> NLC ACv) TL cv_snd
+Proof
+  rw[FUN_REL_def] >> rename [‘NLC _ (TL xs) (cv_snd cv)’]>>
+  Cases_on ‘xs’ >> gvs[]
 QED
 
 val _ = export_theory();

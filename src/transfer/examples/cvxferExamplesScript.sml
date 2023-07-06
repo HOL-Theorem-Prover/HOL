@@ -148,4 +148,56 @@ QED
 Theorem cPRIMES_UPTO =
         time (transfer_thm 10 true (global_ruledb())) primes_upto_def
 
+(* ----------------------------------------------------------------------
+    pairing example, rather artificial
+   ---------------------------------------------------------------------- *)
+
+Definition addl_def:
+  addl (x,[]) = [] ∧
+  addl (x,h::t) = (h + x) :: addl (x,t)
+End
+
+Theorem addl_oneline:
+  addl xl = case oHD (SND xl) of
+              NONE => []
+            | SOME h => (FST xl + h) :: addl (FST xl, TL (SND xl))
+Proof
+  Cases_on ‘xl’ >> simp[] >> Cases_on ‘r’ >> simp[addl_def]
+QED
+
+Definition addlc_def:
+  addlc xl = seq2cl Num (addl (c2n $ cv_fst xl, cl2seq c2n $ cv_snd xl))
+End
+
+Theorem NLC_E:
+  (!a c. AB a c ==> d c = a) ==>
+  NLC AB as c ==> cl2seq d c = as
+Proof
+  strip_tac >> Induct_on ‘NLC’ >> simp[cl2seq_def]
+QED
+
+Theorem NLC_NC:
+  !c. NLC NC ns c <=> c = seq2cl Num ns
+Proof
+  simp[EQ_IMP_THM, FORALL_AND_THM] >>
+  conj_tac >- (Induct_on ‘NLC’ >> simp[NC_def]) >>
+  Induct_on ‘ns’ >> simp[NC_def]
+QED
+
+Theorem cl2seq_c2n_seq2cl[simp]:
+  cl2seq c2n (seq2cl Num ns) = ns
+Proof
+  Induct_on ‘ns’ >> simp[cl2seq_def]
+QED
+
+Theorem ADDL_C[transfer_rule]:
+  (ACPC NC (NLC NC) |==> NLC NC) addl addlc
+Proof
+  simp[FUN_REL_def, addlc_def, pairTheory.FORALL_PROD, ACPC_def, PULL_EXISTS,
+       NC_def, NLC_NC]
+QED
+
+val th = transfer_thm 10 true (global_ruledb()) (GEN_ALL addl_oneline)
+
+
 val _ = export_theory()
