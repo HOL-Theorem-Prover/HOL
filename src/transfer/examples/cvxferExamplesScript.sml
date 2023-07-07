@@ -153,7 +153,7 @@ Theorem cPRIMES_UPTO =
    ---------------------------------------------------------------------- *)
 
 Definition addl_def:
-  addl (x,[]) = [] ∧
+  addl (x,[]) = [] /\
   addl (x,h::t) = (h + x) :: addl (x,t)
 End
 
