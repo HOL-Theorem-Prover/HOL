@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------*)
-(*                                   RC6 Block Cipher                        *)
+(*             RC6 Block Cipher (RC6-w/r/b, w = 32, r = 20)                  *)
 (*                                        -- implemented in HOL              *)
 (*                                                                           *)
 (* This is a HOL implementation of the RC6 encryption algorithm due to       *)
@@ -9,13 +9,6 @@
 (* in which algorithm specification, Security and performance evaluation,    *)
 (* etc. can be found.                                                        *)
 (*---------------------------------------------------------------------------*)
-
-(* For interactive work
-  quietdec := true;
-  app load ["arithmeticTheory","wordsLib"];
-  open arithmeticTheory wordsTheory pairTheory listTheory wordsLib;
-  quietdec := false;
-*)
 
 open HolKernel Parse boolLib bossLib
      arithmeticTheory pairTheory listTheory wordsLib;
@@ -143,9 +136,9 @@ val ROTKEYS_def =
 
 val GETKEYS_def =
  Define
-   `GETKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,
+   `GETKEYS ((k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,
       k16,k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,
-      k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43)
+      k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) : keysched)
     = (k0,k1):key`;
 
 (*---------------------------------------------------------------------------*)
@@ -210,7 +203,7 @@ val InvRound_def =
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
-(* The number of rounds is 20. It is easy to change it into any value, but in*)
+(* The number of rounds is 20. It is easy to change it into any value, but   *)
 (* in this case you should redefine the type keysched                        *)
 (*---------------------------------------------------------------------------*)
 
@@ -282,7 +275,6 @@ val setKeys_def = Define `
 
 val mk_keysched_def = Define
    `mk_keysched(L) = setKeys (r*2+4) (REVERSE(init_S (2*r-3))) L 0w 0w`;
-
 
 val setKeys_length = Q.prove
  (`!i S1 L a b. i>0 ==>
