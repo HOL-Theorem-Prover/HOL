@@ -469,7 +469,7 @@ Proof
  >> WORD_DECIDE_TAC
 QED
 
-(* This extra step is needed for DES_alt in which Round (instead of RoundSwap)
+(* This extra step is needed for DES_alt in which Round (instead of Feistel)
    is used. *)
 Definition Swap_def :
    Swap ((v,u):block) :block = (u,v)
@@ -490,24 +490,27 @@ Definition RoundOp_def :
     RoundOp (w :word32) (k :word48) = P (S (E w ?? k))
 End
 
-(* ‘RoundSwap n r ks (u,v)’ returns the (u,v) pair after n rounds, each time
-   one round key from the HD of ks (thus is reversely ordered) is consumed.
-   At the last round, the pair is swapped for the final join [1, p.16].
+(* ‘Feistel f n r ks (u,v)’ returns the (u,v) pair after n rounds, using f as
+   the round function. Each time one round key (EL n ks) is consumed.
 
-   NOTE: This version is necessary for DES_0 (zero round gives the cleartext).
+   At the last round, the pair is swapped for the final join [1, p.16].
+   cf. Round_def for another version without this final swapping.
+
+   NOTE: This version is general and is necessary for DES_0 (zero rounds give
+         the cleartext).
  *)
-Definition RoundSwap_def :
-    RoundSwap      0  r ks w = (w :block) /\
-    RoundSwap (SUC n) r ks w =
-      let (u,v) = RoundSwap n r ks w; k = EL n ks in
-        if SUC n = r then (u ?? RoundOp v k, v)
-        else           (v, u ?? RoundOp v k)
+Definition Feistel_def :
+    Feistel f      0  r ks w = w /\
+    Feistel f (SUC n) r ks w =
+      let (u,v) = Feistel f n r ks w; k = EL n ks in
+        if SUC n = r then (u ?? f v k, v)
+        else           (v, u ?? f v k)
 End
 
 (* ‘Round r ks (u,v)’ returns the block after n rounds, no final swapping.
 
-   NOTE: This version is simpler for proving DES properties but requires an
-         extra Swap before Join.
+   NOTE: This version is specific to DES and is simpler when proving DES
+         properties but requires an extra Swap before Join.
  *)
 Definition Round_def :
     Round      0  ks w = (w :block) /\
@@ -515,50 +518,52 @@ Definition Round_def :
       let (u,v) = Round n ks w; k = EL n ks in (v, u ?? RoundOp v k)
 End
 
-Theorem RoundSwap_and_Round :
-    !ks w r n. n < r ==> RoundSwap n r ks w = Round n ks w
+Overload desRound = “Feistel RoundOp”;
+
+Theorem desRound_alt_Round :
+    !ks w r n. n < r ==> desRound n r ks w = Round n ks w
 Proof
     NTAC 3 GEN_TAC
- >> Induct_on ‘n’ >> rw [RoundSwap_def, Round_def]
+ >> Induct_on ‘n’ >> rw [Feistel_def, Round_def]
 QED
 
-Theorem RoundSwap_and_Round' :
-    !ks w r. 0 < r ==> RoundSwap r r ks w = Swap (Round r ks w)
+Theorem desRound_alt_Round' :
+    !ks w r. 0 < r ==> desRound r r ks w = Swap (Round r ks w)
 Proof
     NTAC 2 GEN_TAC
- >> Cases_on ‘r’ >> rw [RoundSwap_def, Round_def]
- >> Know ‘RoundSwap n (SUC n) ks w = Round n ks w’
- >- (MATCH_MP_TAC RoundSwap_and_Round >> rw [])
+ >> Cases_on ‘r’ >> rw [Feistel_def, Round_def]
+ >> Know ‘desRound n (SUC n) ks w = Round n ks w’
+ >- (MATCH_MP_TAC desRound_alt_Round >> rw [])
  >> Rewr'
  >> Q.ABBREV_TAC ‘pair = Round n ks w’
  >> Cases_on ‘pair’ >> rw [Swap_def]
 QED
 
 (* This is the core of DES (no key scheduling) possibly reduced to r rounds *)
-Definition DESCore_def :
-    DESCore r ks = IIP o Join o (RoundSwap r r ks) o Split o IP
+Definition desCore_def :
+    desCore r ks = IIP o Join o (desRound r r ks) o Split o IP
 End
 
 (* Zero-round DES doesn't change the message at all *)
-Theorem DESCore_0 :
-    !ks w. DESCore 0 ks w = w
+Theorem desCore_0 :
+    !ks w. desCore 0 ks w = w
 Proof
-    rw [o_DEF, DESCore_def, RoundSwap_def, IIP_IP_Inverse,
+    rw [o_DEF, desCore_def, Feistel_def, IIP_IP_Inverse,
         Join_Split_Inverse]
 QED
 
-Theorem DESCore_alt :
+Theorem desCore_alt :
     !ks r. 0 < r ==>
-           DESCore r ks = IIP o Join o Swap o (Round r ks) o Split o IP
+           desCore r ks = IIP o Join o Swap o (Round r ks) o Split o IP
 Proof
-    rw [o_DEF, FUN_EQ_THM, DESCore_def, RoundSwap_and_Round']
+    rw [o_DEF, FUN_EQ_THM, desCore_def, desRound_alt_Round']
 QED
 
 (* The decryption process is identical to encryption provided the round keys
    are taken in reverse order. [1, p.16]
  *)
 Definition DES_def :
-   DES r key = let keys = KS key r in (DESCore r keys, DESCore r (REVERSE keys))
+   DES r key = let keys = KS key r in (desCore r keys, desCore r (REVERSE keys))
 End
 
 (* Full DES = DES of full 16 rounds *)
@@ -626,31 +631,31 @@ Proof
 QED
 
 (* FullDES can be expressed by just M16 and M17 *)
-Theorem DESCore_alt_half_message :
+Theorem desCore_alt_half_message :
     !r ks plaintext. 0 < r ==>
-         DESCore r ks plaintext =
+         desCore r ks plaintext =
            let uv = Split (IP plaintext) in
              IIP (Join (M uv ks (SUC r), M uv ks r))
 Proof
-    rw [DESCore_alt, Round_alt_half_message', Swap_def]
+    rw [desCore_alt, Round_alt_half_message', Swap_def]
 QED
 
 (* The key idea of this proof is from [3] based on half_message_def *)
-Theorem DESCore_CORRECT :
+Theorem desCore_CORRECT :
     !keys r plaintext. LENGTH keys = r ==>
-       DESCore r (REVERSE keys) (DESCore r keys plaintext) = plaintext
+       desCore r (REVERSE keys) (desCore r keys plaintext) = plaintext
 Proof
     Q.X_GEN_TAC ‘ks’
  >> rpt STRIP_TAC
- >> Cases_on ‘r = 0’ >- rw [DESCore_0]
+ >> Cases_on ‘r = 0’ >- rw [desCore_0]
  >> ‘0 < r’ by rw []
- >> Know ‘DESCore r ks plaintext =
+ >> Know ‘desCore r ks plaintext =
           let uv = Split (IP plaintext) in
             IIP (Join (M uv ks (SUC r), M uv ks r))’
- >- rw [DESCore_alt_half_message]
+ >- rw [desCore_alt_half_message]
  >> Rewr'
- >> rw [DESCore_def, IP_IIP_Inverse, Split_Join_Inverse,
-        RoundSwap_and_Round']
+ >> rw [desCore_def, IP_IIP_Inverse, Split_Join_Inverse,
+        desRound_alt_Round']
  >> Q.ABBREV_TAC ‘uv = Split (IP plaintext)’
  >> Q.ABBREV_TAC ‘r = LENGTH ks’
  (* applying Round_def *)
@@ -684,7 +689,7 @@ Theorem FullDES_CORRECT :
     !key plaintext. ((encrypt,decrypt) = FullDES key) ==>
                     (decrypt (encrypt plaintext) = plaintext)
 Proof
-    rw [DES_def, DESCore_CORRECT, LENGTH_KS]
+    rw [DES_def, desCore_CORRECT, LENGTH_KS]
 QED
 
 val _ = export_theory();
