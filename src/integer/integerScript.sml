@@ -1730,26 +1730,42 @@ QED
 (* Theorems about mapping both ways between :num and :int                   *)
 (*--------------------------------------------------------------------------*)
 
-val Num = new_definition("Num", Term `Num (i:int) = @n. i = &n`);
+val Num = new_definition("Num",
+  Term `Num (i:int) = @n. if 0 <= i then i = &n else i = - &n`);
 
 val NUM_OF_INT =
     store_thm("NUM_OF_INT[simp]",
               Term `!n. Num(&n) = n`,
-              GEN_TAC THEN REWRITE_TAC[Num, INT_INJ] THEN
+              GEN_TAC THEN REWRITE_TAC[Num, INT_INJ, INT_POS] THEN
               CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
               REWRITE_TAC[SELECT_REFL]);
 val _ = computeLib.add_persistent_funs ["NUM_OF_INT"]
 
+val NUM_OF_NEG_INT =
+    store_thm("NUM_OF_NEG_INT[simp]",
+              Term `!n. Num(-&n) = n`,
+              GEN_TAC THEN
+              REWRITE_TAC[Num, INT_INJ, INT_POS, INT_EQ_NEG] THEN
+              Cases_on ‘0 ≤ -&n’ THEN ASM_REWRITE_TAC [] THEN
+              CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
+              REWRITE_TAC [SELECT_REFL] THEN
+              POP_ASSUM MP_TAC THEN
+              REWRITE_TAC [INT_NEG_GE0,INT_LE,LE] THEN
+              STRIP_TAC THEN ASM_REWRITE_TAC [INT_NEG_0,INT_INJ] THEN
+              REWRITE_TAC [SELECT_REFL]);
+val _ = computeLib.add_persistent_funs ["NUM_OF_NEG_INT"]
+
 val INT_OF_NUM =
     store_thm("INT_OF_NUM",
               Term `!i. (&(Num i) = i) <=> 0 <= i`,
-              GEN_TAC THEN EQ_TAC THENL
-              [DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC INT_POS,
-               DISCH_THEN(ASSUME_TAC o EXISTENCE o MATCH_MP NUM_POSINT) THEN
-               REWRITE_TAC[Num] THEN CONV_TAC SYM_CONV THEN
-               MP_TAC(ISPEC (Term `\n. i = &n`) SELECT_AX) THEN
-               BETA_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
-               POP_ASSUM ACCEPT_TAC]);
+              GEN_TAC THEN EQ_TAC THEN1
+                (DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC INT_POS) THEN
+              DISCH_THEN(ASSUME_TAC o EXISTENCE o MATCH_MP NUM_POSINT) THEN
+              REWRITE_TAC[Num] THEN CONV_TAC SYM_CONV THEN
+              POP_ASSUM STRIP_ASSUME_TAC THEN
+              ASM_REWRITE_TAC [INT_POS,INT_INJ] THEN
+              CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
+              REWRITE_TAC [SELECT_REFL]);
 
 val LE_NUM_OF_INT = store_thm
   ("LE_NUM_OF_INT",
@@ -2383,6 +2399,14 @@ val INT_ABS_LE0 = store_thm(
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_LE, INT_LE_NEG,
                        INT_INJ, INT_NEG_EQ0]);
+
+Theorem Num_EQ_ABS:
+  !i. & (Num i) = ABS i
+Proof
+  GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `i` INT_NUM_CASES) THEN
+  REWRITE_TAC [INT_ABS_NUM,INT_ABS_NEG,NUM_OF_INT,NUM_OF_NEG_INT]
+QED
 
 Theorem INT_ABS_LT:
   !p q. (ABS p < q <=> p < q /\ ~q < p) /\
