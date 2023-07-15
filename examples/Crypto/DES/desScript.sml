@@ -9,8 +9,8 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
      listTheory listLib sortingTheory pred_setTheory combinTheory hurdUtils;
 
-(*  DES with round function components; the bit expansion E, the S-boxes S,
-    and the bit permutation P [1, p.16]
+(*  Fig. 1: DES with round function components; the bit expansion E,
+            the S-boxes S, and the bit permutation P [1, p.16]
 
     +-----+                           +-----+
     | KS  | <--- KEY     MESSAGE ---> | IP  |
@@ -34,10 +34,10 @@ open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
        |   (+) <--- | P | <------- | S | <===== (+) <======= | E | <--+
        |    |       +---+          +---+                     +---+    |
        |     \                                                       /
-       |  v_2 +--------------------------+  +-----------------------+ u_2
-       |                                  \/
-       |                                  /\
-       |      +--------------------------+  +-----------------------+
+       |  v_2 +-------------------------+  +------------------------+ u_2
+       |                                 \/
+       |                                 /\
+       |      +-------------------------+  +------------------------+
        |     /                                                       \
        .    .                                                         .
        .    .                                                         .
@@ -53,6 +53,41 @@ open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
                                       +--+--+
                                       | IIP | ---> CIPHERTEXT
                                       +-----+       (64-bit)
+
+    Fig. 2: The DES round function
+                                            sk1
+                                +----+      \|/     |\
+                           +----+ S1 + <--- (+) <---+ \
+                          /     +----+              |  \
+                         /                  sk2     |   \
+                        /       +----+      \|/     |    \
+                       /   +----+ S2 | <--- (+) <---+     +
+                +-----+   /     +----+              |     |
+                |     |  /                  sk3     |     |
+                |     | /       +----+      \|/     |     |
+        .       |     |    +----+ S3 | <--- (+) <---+     |           .
+        .       |     |   /     +----+              |     |           .
+    u_i .       |     |  /                  sk4     |     |       v_i .
+        |       |     | /       +----+      \|/     |     |           |
+        |       |     |    +----+ S4 | <--- (+) <---+     |           |
+       \|/      |     | __/     +----+              |     |           |
+       (+) <----+  P  | __                  sk5     |  E  + <---------+
+        |       |     |   \     +----+      \|/     |     |           |
+        |       |     |    +----+ S5 | <--- (+) <---+     |           |
+        |       |     | \       +----+              |     |           |
+        .       |     |  \                  sk6     |     |           .
+        .       |     |   \     +----+      \|/     |     |           .
+        .       |     |    +----+ S6 | <--- (+) <---+     |           .
+                |     | \       +----+              |     |
+                |     |  \                  sk7     |     |
+                +-----+   \     +----+      \|/     |     |
+                       \   +----+ S7 | <--- (+) <---+     +
+                        \  |    +----+              |    /
+                         \ |                sk8     |   /
+                          \|    +----+      \|/     |  /
+                           +----+ S8 | <--- (+) <---+ /
+                                +----+              |/
+
  *)
 val _ = new_theory "des"; (* the lower-case name is following aesTheory *)
 
@@ -65,8 +100,9 @@ val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 (* Type abbreviations                                                        *)
 (*---------------------------------------------------------------------------*)
 
-Type block[pp] = “:word32 # word32”
-Type roundkey  = “:word28 # word28”
+Type    block[pp] = “:word32 # word32”
+Type roundkey[pp] = “:word28 # word28”
+Type     sbox[pp] = “:word6 -> word4”
 
 (*---------------------------------------------------------------------------*)
 (* Data Tables. All values are directly copied from PDF pages [1]            *)
@@ -575,7 +611,7 @@ Overload FullDES = “DES 16”
 
 (* The plaintext message halves and intermediate message halves m0 ~ m16 [3] *)
 Definition half_message_def :
-    half_message f ((u,v) :block) (ks :word48 list) n =
+    half_message f (u,v) ks n =
       if n = 0 then u
       else if n = 1 then v
       else (half_message f (u,v) ks (n - 2)) ??
@@ -610,7 +646,7 @@ Proof
 QED
 
 (* This is half_message specialized for DES *)
-Overload M = “half_message RoundOp”
+Overload M[local] = “half_message RoundOp”
 
 Theorem Round_alt_half_message :
     !u v ks n. Round n ks (u,v) = (M (u,v) ks n, M (u,v) ks (SUC n))
