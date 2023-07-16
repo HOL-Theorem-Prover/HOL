@@ -186,8 +186,8 @@ val ELIM_UNCURRY = Q.store_thm(
   REWRITE_TAC [UNCURRY] THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
   REFL_TAC);
 
-
-Theorem UNCURRY_DEF[simp]:    !f x y. UNCURRY f (x,y) :'c = f x y
+Theorem UNCURRY_DEF[simp]:
+    !f x y. UNCURRY f (x,y) :'c = f x y
 Proof
   REWRITE_TAC [UNCURRY,FST,SND]
 QED
@@ -196,6 +196,16 @@ Theorem IN_UNCURRY_R[simp]:
   (x,y) IN UNCURRY R <=> R x y
 Proof
   simp[IN_DEF]
+QED
+
+(* moved here from util_probTheory with new proof *)
+Theorem PAIRED_BETA_THM :
+    !f z. UNCURRY f z = f (FST z) (SND z)
+Proof
+    rpt STRIP_TAC
+ >> STRIP_ASSUME_TAC (Q.SPEC ‘z’ pair_CASES)
+ >> POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
+ >> REWRITE_TAC [UNCURRY_DEF, FST, SND]
 QED
 
 (* ------------------------------------------------------------------------- *)

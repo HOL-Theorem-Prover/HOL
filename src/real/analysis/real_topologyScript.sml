@@ -17404,9 +17404,10 @@ Definition infsum : (* cf. seqTheory.suminf *)
 End
 val _ = overload_on ("suminf", ``infsum``);
 
-Definition summable : (* cf. seqTheory.summable *)
+Definition summable_def : (* cf. seqTheory.summable *)
     summable s f = ?l. (f sums l) s
 End
+val summable = summable_def;
 
 val SUMS_SUMMABLE = store_thm ("SUMS_SUMMABLE",
  ``!f l s. (f sums l) s ==> summable s f``,

@@ -9,7 +9,7 @@
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
      rich_listTheory pairTheory combinTheory realLib optionTheory
-     real_sigmaTheory;
+     real_sigmaTheory iterateTheory;
 
 open hurdUtils util_probTheory sigma_algebraTheory real_borelTheory;
 
@@ -19,8 +19,8 @@ val _ = new_theory "real_measure";
 (* Basic measure theory definitions.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-Type measure[pp] = “:'a set -> real”
-Type m_space[pp] = “:'a set # 'a set set # 'a measure”
+Type measure = “:'a set -> real”
+Type m_space = “:'a set # 'a set set # 'a measure”
 
 val m_space_def = Define
    `m_space (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sp`;

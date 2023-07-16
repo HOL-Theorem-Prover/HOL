@@ -86,7 +86,11 @@ val cos_ser =
 
 val exp_ser = “\n. inv(&(FACT n))”;
 
-Theorem exp = derivativeTheory.exp
+Theorem exp :
+    !x. exp(x) = suminf (\n. (^exp_ser) n * (x pow n))
+Proof
+    REWRITE_TAC [exp_def, suminf_univ]
+QED
 
 val cos = new_definition("cos",
   “cos(x) = suminf(\n. (^cos_ser) n * (x pow n))”);
@@ -98,41 +102,13 @@ val sin = new_definition("sin",
 (* Show the series for exp converges, using the ratio test                   *)
 (*---------------------------------------------------------------------------*)
 
-(* TODO: use derivativeTheory.EXP_CONVERGES to simply this proof
-   also known as REAL_EXP_CONVERGES *)
-val EXP_CONVERGES = store_thm("EXP_CONVERGES",
-  “!x. (\n. (^exp_ser) n * (x pow n)) sums exp(x)”,
-  let fun fnz tm =
-    (GSYM o MATCH_MP REAL_LT_IMP_NE o
-     REWRITE_RULE[GSYM REAL_LT] o C SPEC FACT_LESS) tm in
-  GEN_TAC THEN REWRITE_TAC[exp] THEN MATCH_MP_TAC SUMMABLE_SUM THEN
-  MATCH_MP_TAC SER_RATIO THEN
-  MP_TAC (SPEC “&1” REAL_DOWN) THEN REWRITE_TAC[REAL_LT_01] THEN
-  DISCH_THEN(X_CHOOSE_THEN “c:real” STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC “c:real” THEN ASM_REWRITE_TAC[] THEN
-  MP_TAC(SPEC “c:real” REAL_ARCH) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MP_TAC o SPEC “abs(x)”) THEN
-  DISCH_THEN(X_CHOOSE_TAC “N:num”) THEN EXISTS_TAC “N:num” THEN
-  X_GEN_TAC “n:num” THEN REWRITE_TAC[GREATER_EQ] THEN DISCH_TAC THEN BETA_TAC THEN
-  REWRITE_TAC[ADD1, POW_ADD, ABS_MUL, REAL_MUL_ASSOC, POW_1] THEN
-  GEN_REWR_TAC LAND_CONV  [REAL_MUL_SYM] THEN
-  REWRITE_TAC[REAL_MUL_ASSOC] THEN MATCH_MP_TAC REAL_LE_RMUL_IMP THEN
-  REWRITE_TAC[ABS_POS] THEN REWRITE_TAC[GSYM ADD1, FACT] THEN
-  REWRITE_TAC[GSYM REAL_MUL, MATCH_MP REAL_INV_MUL (CONJ
-   (REWRITE_RULE[GSYM REAL_INJ] (SPEC “n:num” NOT_SUC)) (fnz “n:num”))] THEN
-  REWRITE_TAC[ABS_MUL, REAL_MUL_ASSOC] THEN
-  MATCH_MP_TAC REAL_LE_RMUL_IMP THEN REWRITE_TAC[ABS_POS] THEN
-  MP_TAC(SPEC “n:num” LESS_0) THEN REWRITE_TAC[GSYM REAL_LT] THEN
-  DISCH_THEN(ASSUME_TAC o GSYM o MATCH_MP REAL_LT_IMP_NE) THEN
-  FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP ABS_INV th]) THEN
-  REWRITE_TAC[GSYM real_div] THEN MATCH_MP_TAC REAL_LE_LDIV THEN
-  ASM_REWRITE_TAC[GSYM ABS_NZ] THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
-  REWRITE_TAC[REWRITE_RULE[GSYM ABS_REFL, GSYM REAL_LE] ZERO_LESS_EQ] THEN
-  MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “&N * c” THEN CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_ASSUM ACCEPT_TAC,
-    FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP REAL_LE_RMUL th]) THEN
-    REWRITE_TAC[REAL_LE] THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
-    EXISTS_TAC “n:num” THEN ASM_REWRITE_TAC[LESS_EQ_SUC_REFL]] end);
+Theorem EXP_CONVERGES :
+    !x. (\n. (^exp_ser) n * (x pow n)) sums exp(x)
+Proof
+    RW_TAC std_ss [Once REAL_MUL_COMM, GSYM real_div]
+ >> REWRITE_TAC [REWRITE_RULE [sums_univ, FROM_0]
+                 derivativeTheory.EXP_CONVERGES]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show by the comparison test that sin and cos converge                     *)
@@ -3683,6 +3659,182 @@ Proof
  >> ‘0 <= p /\ 0 <= q’ by PROVE_TAC [REAL_LT_IMP_LE]
  >> MP_TAC (Q.SPECL [`a rpow p`, `b rpow q`, `inv p:real`, `inv q:real`] AGM_2)
  >> rw [RPOW_RPOW, RPOW_1, RPOW_POS_LT, real_div]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Real-valued power, log, and log base 2 functions (from util_probTheory)  *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "powr" (Infixr 700);
+val _ = overload_on ("powr", ``$rpow``);
+
+Definition logr_def :
+    logr a x = ln x / ln a
+End
+
+Definition lg_def :
+    lg x = logr 2 x
+End
+
+Theorem lg_1 :
+    lg 1 = 0
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_1]
+QED
+
+Theorem logr_1 :
+    !b. logr b 1 = 0
+Proof
+    RW_TAC real_ss [logr_def, LN_1]
+QED
+
+Theorem lg_nonzero :
+    !x. x <> 0 /\ 0 <= x ==> (lg x <> 0 <=> x <> 1)
+Proof
+    RW_TAC std_ss [REAL_ARITH ``x <> 0 /\ 0 <= x <=> 0 < x``]
+ >> RW_TAC std_ss [GSYM lg_1]
+ >> RW_TAC std_ss [lg_def, logr_def, real_div, REAL_EQ_RMUL, REAL_INV_EQ_0]
+ >> (MP_TAC o Q.SPECL [`2`, `1`]) LN_INJ >> RW_TAC real_ss [LN_1]
+ >> RW_TAC std_ss [GSYM LN_1]
+ >> MATCH_MP_TAC LN_INJ
+ >> RW_TAC real_ss []
+QED
+
+Theorem lg_mul :
+    !x y. 0 < x /\ 0 < y ==> (lg (x * y) = lg x + lg y)
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_MUL]
+QED
+
+Theorem logr_mul :
+    !b x y. 0 < x /\ 0 < y ==> (logr b (x * y) = logr b x + logr b y)
+Proof
+    RW_TAC real_ss [logr_def, LN_MUL]
+QED
+
+Theorem lg_2 :
+    lg 2 = 1
+Proof
+    RW_TAC real_ss [lg_def, logr_def]
+ >> MATCH_MP_TAC REAL_DIV_REFL
+ >> (ASSUME_TAC o Q.SPECL [`1`, `2`]) LN_MONO_LT
+ >> FULL_SIMP_TAC real_ss [LN_1]
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC REAL_LT_IMP_NE >> art []
+QED
+
+Theorem lg_inv :
+    !x. 0 < x ==> (lg (inv x) = ~lg x)
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_INV, real_div]
+QED
+
+Theorem logr_inv :
+    !b x. 0 < x ==> (logr b (inv x) = ~ logr b x)
+Proof
+    RW_TAC real_ss [logr_def, LN_INV, real_div]
+QED
+
+Theorem logr_div :
+    !b x y. 0 < x /\ 0 < y ==> (logr b (x/y) = logr b x - logr b y)
+Proof
+    RW_TAC real_ss [real_div, logr_mul, logr_inv, GSYM real_sub]
+QED
+
+Theorem neg_lg :
+    !x. 0 < x ==> ((~(lg x)) = lg (inv x))
+Proof
+    RW_TAC real_ss [lg_def, logr_def, real_div]
+ >> `~(ln x * inv (ln 2)) = (~ ln x) * inv (ln 2)` by REAL_ARITH_TAC
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> RW_TAC real_ss [REAL_EQ_RMUL]
+ >> DISJ2_TAC >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC LN_INV
+ >> RW_TAC std_ss []
+QED
+
+Theorem neg_logr :
+    !b x. 0 < x ==> ((~(logr b x)) = logr b (inv x))
+Proof
+    RW_TAC real_ss [logr_def, real_div]
+ >> `~(ln x * inv (ln b)) = (~ ln x) * inv (ln b)` by REAL_ARITH_TAC
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> RW_TAC real_ss [REAL_EQ_RMUL]
+ >> DISJ2_TAC >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC LN_INV
+ >> RW_TAC std_ss []
+QED
+
+Theorem lg_pow :
+    !n. lg (2 pow n) = &n
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_POW]
+ >> `~(ln 2 = 0)`
+      by (ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC REAL_LT_IMP_NE
+          >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `ln 1`
+          >> RW_TAC real_ss [LN_POS, LN_MONO_LT])
+ >> RW_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_RINV]
+QED
+
+(* cf. LN_MONO_LT *)
+Theorem LOGR_MONO_LT :
+    !x :real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x < logr b y <=> x < y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+ >> METIS_TAC [REAL_LT_INV_EQ, REAL_LT_RMUL, LN_MONO_LT]
+QED
+
+Theorem LOGR_MONO_LE :
+    !x:real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x <= logr b y <=> x <= y)
+Proof
+  RW_TAC std_ss [logr_def,real_div]
+  >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+  >> METIS_TAC [REAL_LT_INV_EQ, REAL_LE_RMUL, LN_MONO_LE]
+QED
+
+Theorem LOGR_MONO_LE_IMP :
+    !x:real y b. 0 < x /\ x <= y /\ 1 <= b ==> (logr b x <= logr b y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 <= ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LTE_TRANS, LN_MONO_LE]
+ >> METIS_TAC [REAL_LE_INV_EQ, REAL_LE_RMUL_IMP, LN_MONO_LE, REAL_LTE_TRANS]
+QED
+
+(* from extra_realScript.sml of "miller" example *)
+Theorem pos_concave_lg :
+    lg IN pos_concave_fn
+Proof
+    RW_TAC std_ss [lg_def, logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+ >> `~(ln (t * x + (1 - t) * y) / ln 2) =
+      (inv (ln 2))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> `t * ~(ln x / ln 2) + (1 - t) * ~(ln y / ln 2) =
+     (inv (ln 2)) * (t * ~ ln x + (1-t) * ~ln y)`  by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> MATCH_MP_TAC REAL_LE_LMUL_IMP
+ >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
+ >> MP_TAC pos_concave_ln
+ >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
+(* from extra_realScript.sml of "miller" example *)
+Theorem pos_concave_logr :
+    !b. 1 <= b ==> (logr b) IN pos_concave_fn
+Proof
+    RW_TAC std_ss [logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+ >> `~(ln (t * x + (1 - t) * y) / ln b) =
+      (inv (ln b))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> `t * ~(ln x / ln b) + (1 - t) * ~(ln y / ln b) =
+     (inv (ln b)) * (t * ~ ln x + (1-t) * ~ln y)`  by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> MATCH_MP_TAC REAL_LE_LMUL_IMP
+ >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
+ >> MP_TAC pos_concave_ln
+ >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
 QED
 
 val _ = export_theory();

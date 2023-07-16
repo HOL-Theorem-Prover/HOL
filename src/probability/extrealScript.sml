@@ -7377,16 +7377,17 @@ val SUMINF_2D_summable = prove (
  >> ASM_REWRITE_TAC []);
 
 (* extreal version of SUMINF_2D, based on SUMINF_2D_suminf and SUMINF_2D_summable,
-   c.f. ext_suminf_2d_infinite (more general, proved from scratch) *)
-val ext_suminf_2d = store_thm
-  ("ext_suminf_2d",
-  ``!(f :num -> num -> extreal) (g :num -> extreal) (h :num -> num # num).
+   c.f. ext_suminf_2d_infinite (more general, proved from scratch)
+ *)
+Theorem ext_suminf_2d :
+    !(f :num -> num -> extreal) (g :num -> extreal) (h :num -> num # num).
       (!m n. 0 <= f m n) /\
       (!n. ext_suminf (f n) = g n) /\  (* f n sums g n *)
       (ext_suminf g < PosInf) /\       (* summable g *)
       BIJ h UNIV (UNIV CROSS UNIV)
      ==>
-      (ext_suminf (UNCURRY f o h) = ext_suminf g)``,
+      (ext_suminf (UNCURRY f o h) = ext_suminf g)
+Proof
  (* general properties of g and f *)
     rpt STRIP_TAC
  >> `!n. 0 <= g n` by PROVE_TAC [ext_suminf_pos]
@@ -7475,8 +7476,8 @@ val ext_suminf_2d = store_thm
  (* remove outer `Normal`s from LHS and RHS *)
  >> REWRITE_TAC [extreal_11]
  (* finally, apply SUMINF_2D_suminf, with all assumptions already proved. *)
- >> MATCH_MP_TAC SUMINF_2D_suminf
- >> ASM_REWRITE_TAC []);
+ >> MATCH_MP_TAC SUMINF_2D_suminf >> art []
+QED
 
 (* some local facts of extreals needed by CARATHEODORY_SEMIRING *)
 val lt_inf_epsilon_set = store_thm
@@ -9519,78 +9520,6 @@ Proof
  >> rw [abs_refl, INDICATOR_FN_POS]
 QED
 
-val limsup_suminf_indicator = store_thm
-  ("limsup_suminf_indicator",
-  ``!A. limsup A = {x | suminf (\n. indicator_fn (A n) x) = PosInf}``,
- (* proof *)
-    RW_TAC std_ss [EXTENSION, IN_LIMSUP, GSPECIFICATION, indicator_fn_def]
- >> `(?N. INFINITE N /\ !n. n IN N ==> x IN A n) <=> ~(?m. !n. m <= n ==> x NOTIN A n)`
-     by METIS_TAC [Q.SPEC `\n. x IN A n` infinitely_often_lemma]
- >> POP_ORW
- >> Suff `(?m. !n. m <= n ==> x NOTIN A n) <=> suminf (\n. if x IN A n then 1 else 0) <> PosInf`
- >- METIS_TAC []
- >> EQ_TAC (* 2 subgoals *)
- >| [ (* goal 1 (of 2) *)
-      STRIP_TAC \\
-      Know `suminf (\n. if x IN A n then 1 else 0) = SIGMA (\n. if x IN A n then 1 else 0) (count m)`
-      >- (MATCH_MP_TAC ext_suminf_sum \\
-          RW_TAC std_ss [le_01, le_refl]) >> Rewr' \\
-      MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
-      RW_TAC std_ss [FINITE_COUNT, IN_COUNT, extreal_of_num_def, extreal_not_infty],
-      (* goal 2 (of 2) *)
-      Suff `~(?m. !n. m <= n ==> x NOTIN A n) ==> (suminf (\n. if x IN A n then 1 else 0) = PosInf)`
-      >- METIS_TAC [] \\
-      DISCH_TAC \\
-      MATCH_MP_TAC ext_suminf_eq_infty \\
-      CONJ_TAC >- RW_TAC std_ss [le_01, le_refl] \\
-      RW_TAC std_ss [] >> fs [] \\
-      Cases_on `e <= 0`
-      >- (Q.EXISTS_TAC `0` >> ASM_SIMP_TAC std_ss [COUNT_ZERO, EXTREAL_SUM_IMAGE_EMPTY]) \\
-      fs [GSYM extreal_lt_def] \\
-     `e <> NegInf /\ e <> PosInf` by PROVE_TAC [lt_imp_le, pos_not_neginf, lt_infty] \\
-     `?r. Normal r = e` by PROVE_TAC [extreal_cases] \\
-      fs [SKOLEM_THM] \\ (* n = f m *)
-      STRIP_ASSUME_TAC (Q.SPEC `r` SIMP_REAL_ARCH) \\
-     `e <= Normal (&n)` by PROVE_TAC [extreal_le_eq] \\
-      fs [GSYM extreal_of_num_def] \\
-      Know `!N. ?n. &N <= SIGMA (\n. if x IN A n then 1 else 0) (count n)`
-      >- (Induct
-          >- (Q.EXISTS_TAC `0` >> SIMP_TAC std_ss [COUNT_ZERO, EXTREAL_SUM_IMAGE_EMPTY, le_refl]) \\
-          POP_ASSUM STRIP_ASSUME_TAC \\
-         `n' <= f n' /\ x IN A (f n')` by PROVE_TAC [] \\
-         `0 <= f n' - n'` by RW_TAC arith_ss [] \\
-          Q.EXISTS_TAC `SUC (f n')` \\
-          Know `count (SUC (f n')) = count n' UNION {x | n' <= x /\ x <= f n'}`
-          >- (RW_TAC arith_ss [EXTENSION, IN_COUNT, IN_UNION, GSPECIFICATION]) >> Rewr' \\
-          Know `DISJOINT (count n') {x | n' <= x /\ x <= f n'}`
-          >- (RW_TAC arith_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_COUNT, GSPECIFICATION,
-                               IN_INTER]) >> DISCH_TAC \\
-          Know `SIGMA (\n. if x IN A n then 1 else 0) (count n' UNION {x | n' <= x /\ x <= f n'}) =
-                SIGMA (\n. if x IN A n then 1 else 0) (count n') +
-                SIGMA (\n. if x IN A n then 1 else 0) {x | n' <= x /\ x <= f n'}`
-          >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> art [FINITE_COUNT] \\
-              CONJ_TAC >- (MATCH_MP_TAC SUBSET_FINITE_I \\
-                           Q.EXISTS_TAC `count (SUC (f n'))` >> art [FINITE_COUNT] \\
-                           RW_TAC arith_ss [SUBSET_DEF, IN_COUNT, GSPECIFICATION]) \\
-              DISJ2_TAC >> RW_TAC std_ss [extreal_of_num_def, extreal_not_infty]) >> Rewr' \\
-          Know `&SUC N = &N + &1`
-          >- (SIMP_TAC real_ss [extreal_of_num_def, extreal_add_def, extreal_11]) >> Rewr' \\
-          MATCH_MP_TAC le_add2 >> art [] \\
-          Know `{f n'} SUBSET {x | n' <= x /\ x <= f n'}`
-          >- (RW_TAC arith_ss [SUBSET_DEF, IN_SING, GSPECIFICATION]) >> DISCH_TAC \\
-          Know `SIGMA (\n. if x IN A n then 1 else 0) {f n'} = 1`
-          >- (ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING]) \\
-          DISCH_THEN
-            ((GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites) o wrap o SYM) \\
-          MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET \\
-          RW_TAC std_ss [FINITE_SING, le_01, le_refl] \\
-          MATCH_MP_TAC SUBSET_FINITE_I \\
-          Q.EXISTS_TAC `count (SUC (f n'))` >> art [FINITE_COUNT] \\
-          RW_TAC arith_ss [SUBSET_DEF, IN_COUNT, GSPECIFICATION]) \\
-      DISCH_THEN (STRIP_ASSUME_TAC o (Q.SPEC `n`)) \\
-      Q.EXISTS_TAC `n'` \\
-      MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `&n` >> art [] ]);
-
 Theorem fn_plus_mul_indicator :
     !f s. fn_plus (\x. f x * indicator_fn s x) =
           (\x. fn_plus f x * indicator_fn s x)
@@ -9611,50 +9540,6 @@ Proof
  >> MATCH_MP_TAC (Q.SPECL [‘f’, ‘indicator_fn s’] FN_MINUS_FMUL)
  >> GEN_TAC
  >> REWRITE_TAC [INDICATOR_FN_POS]
-QED
-
-(* moved here from lebesgueTheory *)
-Theorem ext_suminf_cmult_indicator :
-    !A f x i. disjoint_family A /\ x IN A i /\ (!i. 0 <= f i) ==>
-              (suminf (\n. f n * indicator_fn (A n) x) = f i)
-Proof
-  RW_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
-  Suff `!n. f n * indicator_fn (A n) x = if n = i then f n else 0` THENL
-  [DISCH_TAC,
-   RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero] THEN
-   ASM_SET_TAC []] THEN
-  Suff `f i = SIGMA (\i. f i * indicator_fn (A i) x) (count (SUC i))` THENL
-  [DISCH_THEN (fn th => ONCE_REWRITE_TAC [th]) THEN MATCH_MP_TAC ext_suminf_sum THEN
-   RW_TAC std_ss [le_refl] THEN POP_ASSUM MP_TAC THEN ASM_SIMP_TAC arith_ss [ADD1],
-   ASM_SIMP_TAC std_ss []] THEN
-  `count (SUC i) <> {}` by (SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] THEN
-     Q.EXISTS_TAC `i` THEN SIMP_TAC arith_ss [GSPECIFICATION, count_def]) THEN
-  Suff `count (SUC i) = count i UNION {i}` THENL
-  [RW_TAC std_ss [],
-   SIMP_TAC arith_ss [count_def, EXTENSION, IN_UNION, GSPECIFICATION, IN_SING]] THEN
-  Suff `SIGMA (\i'. if i' = i then f i else 0) (count i UNION {i}) =
-                  SIGMA (\i'. if i' = i then f i else 0) (count i) +
-                  SIGMA (\i'. if i' = i then f i else 0) ({i})` THENL
-  [RW_TAC std_ss [],
-   ABBREV_TAC ``g = (\i'. if i' = i then (f:num->extreal) i else 0)`` THEN
-   Suff `(!x. x IN (count i UNION {i}) ==> g x <> NegInf) \/
-                   (!x. x IN (count i UNION {i}) ==> g x <> PosInf)` THENL
-   [Q.SPEC_TAC (`g`,`g`) THEN MATCH_MP_TAC EXTREAL_SUM_IMAGE_DISJOINT_UNION THEN
-    SIMP_TAC std_ss [FINITE_COUNT, FINITE_SING, DISJOINT_DEF] THEN
-    SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_SING, NOT_IN_EMPTY, count_def] THEN
-    SIMP_TAC arith_ss [GSPECIFICATION],
-    DISJ1_TAC] THEN
-   EXPAND_TAC "g" THEN POP_ASSUM K_TAC THEN RW_TAC std_ss [lt_infty] THENL
-   [ALL_TAC, METIS_TAC [lt_infty, num_not_infty]] THEN
-   MATCH_MP_TAC lte_trans THEN Q.EXISTS_TAC `0` THEN ASM_REWRITE_TAC [] THEN
-   METIS_TAC [lt_infty, num_not_infty]] THEN
-  SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING] THEN
-  Suff `SIGMA (\i'. if i' = i then f i else 0) (count i) = 0` THENL
-  [SIMP_TAC std_ss [add_lzero],
-   MATCH_MP_TAC EXTREAL_SUM_IMAGE_0] THEN
-  RW_TAC std_ss [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
-  ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
-  SIMP_TAC arith_ss [count_def, GSPECIFICATION]
 QED
 
 (* ------------------------------------------------------------------------- *)

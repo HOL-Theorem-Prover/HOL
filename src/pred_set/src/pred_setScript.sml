@@ -62,13 +62,15 @@ structure Q = struct
     end
 end
 
-(* from util_prob *)
+(* from hurdUtils *)
 fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val Cond =
     MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``) \\
     CONJ_TAC;
+fun wrap a = [a];
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.                                               *)
@@ -7130,9 +7132,9 @@ Proof
   ‘!y. f y = e <=> y = x’ by METIS_TAC[] >> simp[]
 QED
 
-(* end PREIMAGE lemmas *)
-
-(* Miscellaneous bijections *)
+(* ------------------------------------------------------------------------- *)
+(*   Miscellaneous bijections                                                *)
+(* ------------------------------------------------------------------------- *)
 
 Theorem BIJ_NUM_TO_PAIR:
     BIJ num_to_pair UNIV (UNIV CROSS UNIV)
@@ -7150,6 +7152,162 @@ Theorem BIJ_SWAP:
     BIJ SWAP (UNIV CROSS UNIV) (UNIV CROSS UNIV)
 Proof
     simp[BIJ_IFF_INV] >> Q.EXISTS_TAC ‘SWAP’ >> simp[]
+QED
+
+Theorem X_LE_MAX[local] = cj 1 MAX_LE
+Theorem MAX_LE_X[local] = cj 2 MAX_LE
+
+(* moved here from seqTheory (originally from util_probTheory) *)
+Theorem NUM_2D_BIJ_BIG_SQUARE :
+    !(f : num -> num # num) N.
+       BIJ f UNIV (UNIV CROSS UNIV) ==>
+       ?k. IMAGE f (count N) SUBSET count k CROSS count k
+Proof
+    RW_TAC std_ss [IN_CROSS, IN_COUNT, SUBSET_DEF, IN_IMAGE, IN_COUNT]
+ >> Induct_on `N` >- RW_TAC arith_ss []
+ >> POP_ASSUM STRIP_ASSUME_TAC
+ >> Cases_on `f N`
+ >> REWRITE_TAC [prim_recTheory.LESS_THM]
+ >> Q.EXISTS_TAC `SUC (MAX k (MAX q r))`
+ >> Know `!a b. a < SUC b <=> a <= b`
+ >- (KILL_TAC >> DECIDE_TAC)
+ >> RW_TAC std_ss []
+ >> RW_TAC std_ss []
+ >> PROVE_TAC [X_LE_MAX, LESS_EQ_REFL, LESS_IMP_LESS_OR_EQ]
+QED
+
+Theorem NUM_2D_BIJ_SMALL_SQUARE :
+    !(f : num -> num # num) k.
+       BIJ f UNIV (UNIV CROSS UNIV) ==>
+       ?N. count k CROSS count k SUBSET IMAGE f (count N)
+Proof
+    rpt STRIP_TAC
+ >> (MP_TAC o
+       Q.SPECL [`f`, `UNIV CROSS UNIV`, `count k CROSS count k`] o
+       INST_TYPE [``:'a`` |-> ``:num # num``]) BIJ_FINITE_SUBSET
+ >> RW_TAC std_ss [CROSS_SUBSET, SUBSET_UNIV, FINITE_CROSS, FINITE_COUNT]
+ >> Q.EXISTS_TAC `N`
+ >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT]
+ >> Q.PAT_X_ASSUM `BIJ a b c` MP_TAC
+ >> RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
+ >> POP_ASSUM (MP_TAC o Q.SPEC `x`)
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC `y`
+ >> RW_TAC std_ss []
+ >> Suff `~(N <= y)` >- DECIDE_TAC
+ >> PROVE_TAC []
+QED
+
+(* Two concrete NUM_2D_BIJ lemmas using numpairTheory *)
+Theorem NUM_2D_BIJ_nfst_nsnd :
+    BIJ (\n. (nfst n, nsnd n)) UNIV (UNIV CROSS UNIV)
+Proof
+    REWRITE_TAC [BIJ_ALT, IN_CROSS, IN_FUNSET, IN_UNIV]
+ >> BETA_TAC >> GEN_TAC >> Cases_on `y`
+ >> SIMP_TAC std_ss [EXISTS_UNIQUE_ALT]
+ >> Q.EXISTS_TAC `npair q r`
+ >> GEN_TAC >> STRIP_ASSUME_TAC (Q.SPEC `x'` npair_cases)
+ >> POP_ASSUM (REWRITE_TAC o wrap)
+ >> REWRITE_TAC [nfst_npair, nsnd_npair, npair_11]
+QED
+
+Theorem NUM_2D_BIJ_npair :
+    BIJ (UNCURRY npair) (UNIV CROSS UNIV) UNIV
+Proof
+    REWRITE_TAC [BIJ_ALT, IN_CROSS, IN_FUNSET, IN_UNIV, UNCURRY]
+ >> GEN_TAC >> SIMP_TAC std_ss [EXISTS_UNIQUE_ALT]
+ >> Q.EXISTS_TAC `nfst y, nsnd y`
+ >> GEN_TAC >> STRIP_ASSUME_TAC (Q.SPEC `y` npair_cases)
+ >> POP_ASSUM (REWRITE_TAC o wrap)
+ >> REWRITE_TAC [nfst_npair, nsnd_npair, npair_11]
+ >> Cases_on `x'` >> SIMP_TAC std_ss []
+QED
+
+(* NOTE: The original proofs depend on “ind_type$NUMPAIR”. It has been reworked
+   by using the above concrete cases. -- Chun Tian, July 15, 2023
+ *)
+Theorem NUM_2D_BIJ :
+    ?f. BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
+              (UNIV : num -> bool)
+Proof
+    Q.EXISTS_TAC ‘UNCURRY npair’
+ >> REWRITE_TAC [NUM_2D_BIJ_npair]
+QED
+
+Theorem NUM_2D_BIJ_INV :
+    ?f. BIJ f (UNIV : num -> bool)
+              ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
+Proof
+   PROVE_TAC [NUM_2D_BIJ, BIJ_SYM]
+QED
+
+Theorem NUM_2D_BIJ_NZ :
+    ?f. BIJ f ((UNIV : num -> bool) CROSS ((UNIV : num -> bool) DIFF {0}))
+              (UNIV : num -> bool)
+Proof
+    MATCH_MP_TAC BIJ_INJ_SURJ
+ >> reverse CONJ_TAC
+ >- (Q.EXISTS_TAC `FST` \\
+     RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS, DIFF_DEF, GSPECIFICATION, IN_SING] \\
+     Q.EXISTS_TAC `(x, 1)` \\
+     RW_TAC std_ss [FST])
+ >> Q.EXISTS_TAC ‘UNCURRY npair’
+ >> RW_TAC std_ss [INJ_DEF, IN_UNIV, IN_CROSS]
+ >> Cases_on `x`
+ >> Cases_on `y`
+ >> POP_ASSUM MP_TAC
+ >> RW_TAC std_ss [UNCURRY_DEF, npair_11]
+QED
+
+Theorem NUM_2D_BIJ_NZ_INV :
+    ?f. BIJ f (UNIV : num -> bool)
+              ((UNIV : num -> bool) CROSS ((UNIV : num -> bool) DIFF {0}))
+Proof
+    PROVE_TAC [NUM_2D_BIJ_NZ, BIJ_SYM]
+QED
+
+Theorem NUM_2D_BIJ_NZ_ALT:
+    ?f. BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
+              ((UNIV : num -> bool) DIFF {0})
+Proof
+    MATCH_MP_TAC BIJ_INJ_SURJ >> reverse CONJ_TAC
+ >- (Q.EXISTS_TAC ‘(\(x,y). x + 1:num)’ \\
+     simp[SURJ_DEF, FORALL_PROD, EXISTS_PROD] \\
+     simp[Once FORALL_NUM, ADD1])
+ >> Q.EXISTS_TAC ‘\(m,n). m *, n + 1’
+ >> simp[INJ_IFF, FORALL_PROD]
+QED
+
+Theorem NUM_2D_BIJ_NZ_ALT_INV :
+    ?f. BIJ f ((UNIV : num -> bool) DIFF {0})
+              ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
+Proof
+    PROVE_TAC [NUM_2D_BIJ_NZ_ALT, BIJ_SYM]
+QED
+
+Theorem NUM_2D_BIJ_NZ_ALT2 :
+    ?f. BIJ f (((UNIV : num -> bool) DIFF {0}) CROSS ((UNIV : num -> bool) DIFF {0}))
+              (UNIV : num -> bool)
+Proof
+    MATCH_MP_TAC BIJ_INJ_SURJ
+ >> reverse CONJ_TAC
+ >- (Q.EXISTS_TAC `(\(x,y). x - 1:num)` \\
+     RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS] \\
+     Q.EXISTS_TAC `(x+1,1)` \\
+     RW_TAC std_ss [DIFF_DEF, GSPECIFICATION, IN_UNIV, IN_SING])
+ >> Q.EXISTS_TAC ‘UNCURRY npair’
+ >> RW_TAC std_ss [INJ_DEF, IN_UNIV, IN_CROSS]
+ >> Cases_on `x`
+ >> Cases_on `y`
+ >> POP_ASSUM MP_TAC
+ >> RW_TAC std_ss [UNCURRY_DEF, npair_11]
+QED
+
+Theorem NUM_2D_BIJ_NZ_ALT2_INV :
+    ?f. BIJ f (UNIV : num -> bool)
+              (((UNIV : num -> bool) DIFF {0}) CROSS ((UNIV : num -> bool) DIFF {0}))
+Proof
+    PROVE_TAC [NUM_2D_BIJ_NZ_ALT2, BIJ_SYM]
 QED
 
 (* "<<=" is overloaded in listTheory, cardinalTheory and maybe others,
@@ -7258,4 +7416,3 @@ end
 `
 
 val _ = export_theory();
-
