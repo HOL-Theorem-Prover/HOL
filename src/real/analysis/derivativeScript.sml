@@ -1493,7 +1493,7 @@ val HAS_DERIVATIVE_SERIES = store_thm ("HAS_DERIVATIVE_SERIES",
         (?x l. x IN s /\ ((\n. f n x) sums l) k)
         ==> ?g. !x. x IN s ==> ((\n. f n x) sums (g x)) k /\
                                (g has_derivative g'(x)) (at x within s)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[sums, GSYM numseg] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[sums_def, GSYM numseg] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ONCE_REWRITE_TAC [METIS [] ``sum (k INTER {0 .. n}) (\n. f n x) =
                         (\n x. sum (k INTER {0 .. n}) (\n. f n x)) n x``] THEN
@@ -1924,7 +1924,7 @@ val EXP_CONVERGES_UNIFORMLY = store_thm ("EXP_CONVERGES_UNIFORMLY",
   ASM_REWRITE_TAC[REAL_HALF] THEN STRIP_TAC THEN Q.EXISTS_TAC `N` THEN
   MAP_EVERY X_GEN_TAC [``n:num``, ``z:real``] THEN STRIP_TAC THEN
   MP_TAC(Q.SPEC `z` EXP_CONVERGES) THEN
-  SIMP_TAC std_ss [sums, LIM_SEQUENTIALLY, FROM_0, INTER_UNIV, dist] THEN
+  SIMP_TAC std_ss [sums_def, LIM_SEQUENTIALLY, FROM_0, INTER_UNIV, dist] THEN
   DISCH_THEN(MP_TAC o Q.SPEC `e / &2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
   DISCH_THEN(X_CHOOSE_THEN ``M:num`` (MP_TAC o Q.SPEC `n + M + 1`)) THEN
   FIRST_X_ASSUM(MP_TAC o Q.SPECL [`n + 1`, `n + M + 1`, `z`]) THEN

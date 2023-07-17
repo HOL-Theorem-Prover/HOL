@@ -5407,11 +5407,6 @@ val LIM_WITHIN_OPEN = store_thm ("LIM_WITHIN_OPEN",
 (* More limit point characterizations.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val WLOG_LT = store_thm ("WLOG_LT",
- ``(!m:num. P m m) /\ (!m n. P m n <=> P n m) /\ (!m n. m < n ==> P m n)
-   ==> !m y. P m y``,
-  METIS_TAC[LESS_LESS_CASES]);
-
 val TRANSITIVE_STEPWISE_LT_EQ = store_thm ("TRANSITIVE_STEPWISE_LT_EQ",
  ``!R. (!x y z. R x y /\ R y z ==> R x z)
          ==> ((!m n. m < n ==> R m n) <=> (!n. R n (SUC n)))``,
@@ -17395,14 +17390,16 @@ val _ = hide "summable";
 
 val _ = set_fixity "sums" (Infix(NONASSOC, 450));
 
-Definition sums : (* cf. seqTheory.sums *)
+Definition sums_def : (* cf. seqTheory.sums *)
    (f sums l) s = ((\n. sum (s INTER { 0n..n}) f) --> l) sequentially
 End
+val sums = sums_def;
 
-Definition infsum : (* cf. seqTheory.suminf *)
+Definition suminf_def : (* cf. seqTheory.suminf *)
     infsum s f = @l. (f sums l) s
 End
 val _ = overload_on ("suminf", ``infsum``);
+val infsum = suminf_def;
 
 Definition summable_def : (* cf. seqTheory.summable *)
     summable s f = ?l. (f sums l) s
