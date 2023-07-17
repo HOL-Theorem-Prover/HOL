@@ -15,22 +15,17 @@
 (* ========================================================================= *)
 
 
-(*
-app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", "probabilityTheory", "numTheory", "dep_rewrite",
-          "transcTheory", "rich_listTheory", "pairTheory", "extra_pred_setTools",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory","satTheory",
-          "util_probTheory", "extrealTheory", "measureTheory", "lebesgueTheory","real_sigmaTheory","RBDTheory"];*)
+open HolKernel Parse boolLib bossLib;
 
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory
+open limTheory arithmeticTheory realTheory iterateTheory
     prim_recTheory real_probabilityTheory seqTheory pred_setTheory
     res_quanTheory sortingTheory res_quanTools listTheory
     transcTheory rich_listTheory pairTheory combinTheory realLib
     optionTheory dep_rewrite util_probTheory extrealTheory real_measureTheory
     real_lebesgueTheory real_sigmaTheory satTheory numTheory RBDTheory extra_pred_setTools;
 
-open HolKernel boolLib bossLib Parse;
 val _ = new_theory "VDC";
+
 (*--------------------*)
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
