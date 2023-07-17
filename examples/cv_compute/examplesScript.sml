@@ -58,13 +58,13 @@ Definition factc_def:
           (cv_mul n (factc (cv_sub n (Num 1))))
 Termination
   WF_REL_TAC `measure cv_size_alt`
-  \\ Cases \\ simp [cv_size_alt_def, CaseEq "bool"]
+  \\ Cases \\ simp [cv_size_alt_def, CaseEq "bool", c2b_def]
 End
 
 Theorem factc_is_fact:
   !n. factc (Num n) = Num (FACT n)
 Proof
-  Induct \\ once_rewrite_tac [factc_def, FACT] \\ simp []
+  Induct \\ once_rewrite_tac [factc_def, FACT] \\ simp [c2b_def]
 QED
 
 (* cv_compute takes a list of compute equations, and an input term. All function
@@ -107,7 +107,7 @@ Definition isprimec_aux_def:
           (Num 1)
 Termination
   WF_REL_TAC `measure (\(dvs,n). cv_size_alt (cv_sub n dvs))`
-  \\ Induct \\ simp [PULL_EXISTS]
+  \\ Induct \\ simp [PULL_EXISTS, c2b_def]
   \\ Cases_on `dvs` \\ gs [cv_size_alt_def] \\ rw [] \\ gs []
 End
 
@@ -133,7 +133,7 @@ Definition primes_uptoc_def:
                  (Num 0))
 Termination
   WF_REL_TAC `measure cv_size_alt`
-  \\ conj_tac \\ Cases \\ simp [cv_size_alt_def]
+  \\ conj_tac \\ Cases \\ simp [cv_size_alt_def, c2b_def]
 End
 
 (* Here are the corresponding HOL functions, and a proof they compute values
@@ -143,12 +143,12 @@ End
 Definition isprime_aux_def:
   isprime_aux dvs n =
     if dvs < n then
-      if n SAFEMOD dvs <> 0 then
+      if n MOD dvs <> 0 then
         isprime_aux (dvs + 2) n
       else F
     else T
 Termination
-  WF_REL_TAC `measure (\(dvs,n). n - dvs)`
+  WF_REL_TAC ‘measure (λ(dvs,n). n - dvs)’
 End
 
 Definition isprime_def:
@@ -247,38 +247,49 @@ Triviality isprimec_aux_isprime_aux:
   !m n. isprimec_aux (Num m) (Num n) = b2c (isprime_aux m n)
 Proof
   ho_match_mp_tac isprime_aux_ind \\ rw []
-  \\ once_rewrite_tac [isprimec_aux_def, isprime_aux_def] \\ simp []
+  \\ once_rewrite_tac [isprimec_aux_def, isprime_aux_def] \\ simp [c2b_def]
   \\ rw [] \\ gvs [CaseEq "bool"]
-  \\ Cases_on `n SAFEMOD m` \\ gs []
+  \\ Cases_on `n MOD m` \\ gs []
 QED
 
 Triviality isprimec_is_isprime:
   !n. isprimec (Num n) = b2c (isprime n)
 Proof
-  rw [isprimec_def, isprime_def]
+  rw [isprimec_def, isprime_def, c2b_def]
   \\ rw [DISJ_EQ_IMP] \\ gs [isprimec_aux_isprime_aux, CaseEq "bool"]
   \\ Cases_on `n = 2` \\ gs []
   \\ Cases_on `n MOD 2` \\ gvs []
 QED
 
+Definition ns2c_def[simp]:
+  ns2c [] = Num 0 ∧
+  ns2c (h::t) = Pair (Num h) (ns2c t)
+End
+
 Theorem primes_uptoc_is_primes_upto:
   !n. primes_uptoc (Num n) = ns2c (primes_upto n)
 Proof
-  ho_match_mp_tac primes_upto_ind \\ rw []
+  ho_match_mp_tac primes_upto_ind \\ rw [c2b_def]
   \\ once_rewrite_tac [primes_uptoc_def, primes_upto_def]
   \\ simp [CaseEq "bool", isprimec_is_isprime]
-  \\ rw [] \\ gvs [ns2c_def]
+  \\ rw [] \\ gvs [ns2c_def, c2b_def]
 QED
 
 (* To compute with `primes_uptoc`, all function definitions must be passed to
  * cv_compute as code equations:
  *)
 
-Triviality primes_test1 =
-  time (cv_compute [primes_uptoc_def, isprimec_def, isprimec_aux_def])
-       ``primes_uptoc (Num 123)``;
+Definition c2ns_def:
+  c2ns (Num 0) = [] ∧
+  c2ns (Pair (Num n) c) = n :: c2ns c
+End
 
-Triviality primes_test2 = time EVAL ``primes_upto 123``;
+Triviality primes_test1 =
+  time (RAND_CONV $ RAND_CONV $
+          cv_compute [primes_uptoc_def, isprimec_def, isprimec_aux_def] THENC
+        EVAL)
+       “REVERSE $ c2ns $ primes_uptoc (Num 123)”;
+
+Triviality primes_test2 = time EVAL “REVERSE (primes_upto 123)”
 
 val _ = export_theory ();
-

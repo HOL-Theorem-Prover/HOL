@@ -165,12 +165,12 @@ struct
   fun print_banner() =
     TextIO.output(TextIO.stdOut,
      "\n---------------------------------------------------------------------\n"
-     ^"       HOL-4 ["
+     ^"     HOL4 ["
      ^Globals.release^" "^Lib.int_to_string(Globals.version)
      ^" ("^Thm.kernelid^", "^build_stamp
      ^")]\n\n"
-     ^"       For introductory HOL help, type: help \"hol\";\n"
-     ^"       "^exit_string
+     ^"     For introductory HOL help, type: help \"hol\";\n"
+     ^"     "^exit_string
      ^"\n---------------------------------------------------------------------\
       \\n\n")
 

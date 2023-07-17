@@ -5,7 +5,7 @@ endif
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-all: $(TARGETS)
+all: $(TARGETS) selftest.exe
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)

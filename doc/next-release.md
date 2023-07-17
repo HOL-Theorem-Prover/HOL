@@ -102,6 +102,8 @@ New tools:
   Some usage examples are located in `examples/cv_compute`.
   See the DESCRIPTION manual for a full description of the functionality offered by `cv_compute`.
 
+  The definitions of `DIV` and `MOD` over natural numbers `num` have been given specifications for the case when the second operand is zero. We follow HOL Light and Candle in defining `n DIV 0 = 0` and `n MOD 0 = n`. These changes make `DIV` and `MOD` match the way Candle's compute primitive handles `DIV` and `MOD`.
+
 New examples:
 -------------
 
@@ -189,6 +191,13 @@ Incompatibilities:
 *   Both the `Definition` syntax when a `Termination` argument has been provided, and the underlying `TotalDefn.tDefine` function, won’t now make schematic definitions unless they have been explicitly allowed.
     (With the `Definition` syntax, this is done by using the `schematic` attribute.)
     This brings this flavour of definition into line with the others, where the presence of extra free variables on the RHS of a definition’s equation is usually flagged as an error.
+
+*   In `real_topologyTheory`, some definitions (only the theorem names but the
+    underlying logical constants) have been renamed to avoid conflicts with
+    similar definitions in `seqTheory`: from `sums` to `sums_def`, from
+    `summable` to `summable_def`. Besides, `infsum` has been renamed to
+    `suminf_def` to reflect its overloading to `suminf`. (All these definitions
+    are generalized versions of those in `seqTheory`.)
 
 * * * * *
 

@@ -638,12 +638,6 @@ Proof
     simp[REAL_PROD_IMAGE_DEF]
 QED
 
-Theorem REAL_PROD_IMAGE_SING[simp]:
-    !f. REAL_PROD_IMAGE f EMPTY = 1
-Proof
-    simp[REAL_PROD_IMAGE_DEF]
-QED
-
 Theorem REAL_PROD_IMAGE_INSERT:
     !(f:'a -> real) e s. FINITE s ==>
         REAL_PROD_IMAGE f (e INSERT s) = f e * REAL_PROD_IMAGE f (s DELETE e)
@@ -659,6 +653,12 @@ Theorem REAL_PROD_IMAGE_THM:
         !e s. FINITE s ==> REAL_PROD_IMAGE f (e INSERT s) = f e * REAL_PROD_IMAGE f (s DELETE e)
 Proof
     simp[REAL_PROD_IMAGE_EMPTY,REAL_PROD_IMAGE_INSERT]
+QED
+
+Theorem REAL_PROD_IMAGE_SING[simp]:
+    !f e. REAL_PROD_IMAGE f {e} = f e
+Proof
+    SRW_TAC [][REAL_PROD_IMAGE_THM]
 QED
 
 (* ------------------------------------------------------------------------- *)

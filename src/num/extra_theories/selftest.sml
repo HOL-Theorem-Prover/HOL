@@ -1,4 +1,4 @@
-open HolKernel Parse testutils logrootTheory simpLib BasicProvers
+open HolKernel Parse testutils logrootTheory simpLib numSimps BasicProvers
 
 val LOG_t = prim_mk_const{Thy = "logroot", Name = "LOG"}
 fun test (b, n, answer) =

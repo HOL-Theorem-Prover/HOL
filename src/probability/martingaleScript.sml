@@ -1,6 +1,6 @@
 (* ------------------------------------------------------------------------- *)
 (* The Theory of Martingales for Sigma-Finite Measure Spaces                 *)
-(* (Lebesgue integration extras, product measure and Fubini-Tonelli theorem) *)
+(* (Lebesgue Integration Extras, Product Measure and Fubini-Tonelli Theorem) *)
 (*                                                                           *)
 (* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2019 - 2022)          *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
@@ -259,7 +259,7 @@ QED
    This proof uses iterateTheory (numseg), added for WLLN_IID and SLLN_IID.
  *)
 Theorem LIM_SEQUENTIALLY_CESARO :
-    !f l. ((\n. f n) --> l) sequentially ==>
+    !(f :num->real) l. ((\n. f n) --> l) sequentially ==>
           ((\n. SIGMA f (count (SUC n)) / &SUC n) --> l) sequentially
 Proof
     RW_TAC std_ss [LIM_SEQUENTIALLY, dist]
@@ -6042,6 +6042,7 @@ val SUB_SIGMA_ALGEBRA_ORDER = store_thm
  >- (MATCH_MP_TAC SUB_SIGMA_ALGEBRA_ANTISYM >> art [])
  >> IMP_RES_TAC SUB_SIGMA_ALGEBRA_TRANS);
 
+(* Another form of measureTheory.MEASURE_SPACE_RESTRICTION *)
 val SUB_SIGMA_ALGEBRA_MEASURE_SPACE = store_thm
   ("SUB_SIGMA_ALGEBRA_MEASURE_SPACE",
   ``!m a. measure_space m /\ sub_sigma_algebra a (m_space m,measurable_sets m) ==>

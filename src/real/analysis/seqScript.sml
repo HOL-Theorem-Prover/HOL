@@ -918,7 +918,7 @@ val suminf = new_definition("suminf",
 Theorem sums_univ :
     !(f :num -> real) (l :real). real_topology$sums f l univ(:num) <=> f sums l
 Proof
-    RW_TAC std_ss [sums, real_topologyTheory.sums, dist, INTER_UNIV,
+    RW_TAC std_ss [sums, sums_def, dist, INTER_UNIV,
                    SEQ, LIM_SEQUENTIALLY]
  >> EQ_TAC >> rpt STRIP_TAC
  >| [ (* goal 1 (of 2) *)
@@ -940,14 +940,14 @@ QED
 Theorem suminf_univ :
     !(f :num -> real). infsum univ(:num) f = seq$suminf f
 Proof
-    RW_TAC std_ss [infsum, suminf, sums_univ]
+    RW_TAC std_ss [suminf_def, suminf, sums_univ]
 QED
 
 (* NOTE: this indicates that ‘summable = real_topology$summable univ(:num)’ *)
 Theorem summable_univ :
     !(f :num -> real). real_topology$summable univ(:num) f <=> summable f
 Proof
-    RW_TAC std_ss [real_topologyTheory.summable, summable, sums_univ]
+    RW_TAC std_ss [summable_def, summable, sums_univ]
 QED
 
 (*---------------------------------------------------------------------------*)
