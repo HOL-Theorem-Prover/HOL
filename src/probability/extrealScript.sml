@@ -1,5 +1,6 @@
 (* ------------------------------------------------------------------------- *)
-(* Measure Theory defined on the extended reals and includes Borel spaces    *)
+(* Extended real numberss                                                    *)
+(*                                                                           *)
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)            *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -11,10 +12,9 @@ open HolKernel Parse boolLib bossLib;
 open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
      prim_recTheory arithmeticTheory tautLib pred_setLib hurdUtils;
 
-open realTheory realLib real_sigmaTheory seqTheory limTheory
-     transcTheory iterateTheory metricTheory listTheory rich_listTheory;
-
-open util_probTheory cardinalTheory real_topologyTheory;
+open realTheory realLib real_sigmaTheory iterateTheory real_topologyTheory
+     seqTheory limTheory transcTheory metricTheory listTheory rich_listTheory
+     cardinalTheory;
 
 val _ = new_theory "extreal";
 
@@ -7968,11 +7968,11 @@ Proof
       Cases_on `e <= inf p` >> fs [] ]
 QED
 
-(* ================================================================= *)
-(*   Rational Numbers as a subset of extended real numbers           *)
-(* ================================================================= *)
+(* ========================================================================= *)
+(*   Rational Numbers as a subset of extended real numbers                   *)
+(* ========================================================================= *)
 
-(* new definition based on util_probTheory.real_rat_set_def *)
+(* new definition based on real_rat_set (q_set), now in real_sigmaTheory *)
 Definition Q_set :
     Q_set = IMAGE Normal q_set
 End
