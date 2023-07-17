@@ -198,16 +198,6 @@ Proof
   simp[IN_DEF]
 QED
 
-(* moved here from util_probTheory with new proof *)
-Theorem PAIRED_BETA_THM :
-    !f z. UNCURRY f z = f (FST z) (SND z)
-Proof
-    rpt STRIP_TAC
- >> STRIP_ASSUME_TAC (Q.SPEC ‘z’ pair_CASES)
- >> POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
- >> REWRITE_TAC [UNCURRY_DEF, FST, SND]
-QED
-
 (* ------------------------------------------------------------------------- *)
 (* CURRY_UNCURRY_THM = |- !f. CURRY(UNCURRY f) = f                           *)
 (* ------------------------------------------------------------------------- *)

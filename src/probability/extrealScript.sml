@@ -7454,12 +7454,12 @@ Proof
  >> Know `summable (UNCURRY f' o h)`
  >- (MATCH_MP_TAC SUMINF_2D_summable \\
      Q.EXISTS_TAC `g'` >> ASM_REWRITE_TAC []) >> DISCH_TAC
- >> `!n. 0 <= (UNCURRY f' o h) n` by RW_TAC std_ss [o_DEF, PAIRED_BETA_THM]
+ >> `!n. 0 <= (UNCURRY f' o h) n` by RW_TAC std_ss [o_DEF, UNCURRY]
  >> Know `UNCURRY f o h = Normal o (UNCURRY f' o h)`
  >- (ASM_REWRITE_TAC [] \\
      PURE_ONCE_REWRITE_TAC [o_DEF] \\
-     PURE_ONCE_REWRITE_TAC [PAIRED_BETA_THM] \\
-     REWRITE_TAC [o_DEF, PAIRED_BETA_THM] \\
+     PURE_ONCE_REWRITE_TAC [UNCURRY] \\
+     REWRITE_TAC [o_DEF, UNCURRY] \\
      METIS_TAC []) >> DISCH_TAC
  (* using summable_ext_suminf, indirectly uses "pos_summable"! *)
  >> Know `suminf (UNCURRY f o h) < PosInf`
