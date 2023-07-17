@@ -7198,40 +7198,13 @@ Proof
  >> PROVE_TAC []
 QED
 
-(* Two concrete NUM_2D_BIJ lemmas using numpairTheory *)
-Theorem NUM_2D_BIJ_nfst_nsnd :
-    BIJ (\n. (nfst n, nsnd n)) UNIV (UNIV CROSS UNIV)
-Proof
-    REWRITE_TAC [BIJ_ALT, IN_CROSS, IN_FUNSET, IN_UNIV]
- >> BETA_TAC >> GEN_TAC >> Cases_on `y`
- >> SIMP_TAC std_ss [EXISTS_UNIQUE_ALT]
- >> Q.EXISTS_TAC `npair q r`
- >> GEN_TAC >> STRIP_ASSUME_TAC (Q.SPEC `x'` npair_cases)
- >> POP_ASSUM (REWRITE_TAC o wrap)
- >> REWRITE_TAC [nfst_npair, nsnd_npair, npair_11]
-QED
-
-Theorem NUM_2D_BIJ_npair :
-    BIJ (UNCURRY npair) (UNIV CROSS UNIV) UNIV
-Proof
-    REWRITE_TAC [BIJ_ALT, IN_CROSS, IN_FUNSET, IN_UNIV, UNCURRY]
- >> GEN_TAC >> SIMP_TAC std_ss [EXISTS_UNIQUE_ALT]
- >> Q.EXISTS_TAC `nfst y, nsnd y`
- >> GEN_TAC >> STRIP_ASSUME_TAC (Q.SPEC `y` npair_cases)
- >> POP_ASSUM (REWRITE_TAC o wrap)
- >> REWRITE_TAC [nfst_npair, nsnd_npair, npair_11]
- >> Cases_on `x'` >> SIMP_TAC std_ss []
-QED
-
-(* NOTE: The original proofs depend on “ind_type$NUMPAIR”. It has been reworked
-   by using the above concrete cases. -- Chun Tian, July 15, 2023
- *)
+(* NOTE: The original proofs by Joe Hurd depend on “ind_type$NUMPAIR” *)
 Theorem NUM_2D_BIJ :
     ?f. BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
               (UNIV : num -> bool)
 Proof
-    Q.EXISTS_TAC ‘UNCURRY npair’
- >> REWRITE_TAC [NUM_2D_BIJ_npair]
+    Q.EXISTS_TAC ‘pair_to_num’
+ >> REWRITE_TAC [BIJ_PAIR_TO_NUM]
 QED
 
 Theorem NUM_2D_BIJ_INV :
