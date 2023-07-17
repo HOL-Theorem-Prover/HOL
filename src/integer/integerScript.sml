@@ -1746,7 +1746,7 @@ val NUM_OF_NEG_INT =
               Term `!n. Num(-&n) = n`,
               GEN_TAC THEN
               REWRITE_TAC[Num, INT_INJ, INT_POS, INT_EQ_NEG] THEN
-              Cases_on ‘0 ≤ -&n’ THEN ASM_REWRITE_TAC [] THEN
+              Cases_on ‘0 <= -&n’ THEN ASM_REWRITE_TAC [] THEN
               CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
               REWRITE_TAC [SELECT_REFL] THEN
               POP_ASSUM MP_TAC THEN
@@ -1825,9 +1825,6 @@ val INT_DIV_NEG = store_thm(
                         INT_NEG_GT0, INT_LT, INT_NEG_GE0, INT_NEGNEG,
                         NUM_OF_INT, INT_LE, INT_NEG_LE0, ZERO_DIV,
                         ZERO_MOD, INT_ADD_RID]);
-
-
-
 
 val INT_DIV_1 = store_thm(
   "INT_DIV_1",
