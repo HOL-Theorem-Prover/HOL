@@ -1,4 +1,6 @@
-open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
+open HolKernel Parse boolLib bossLib;
+
+open arithmeticTheory pred_setTheory
      listTheory state_transformerTheory
      hurdUtils extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
@@ -10,25 +12,9 @@ open sequenceTheory sequenceTools subtypeTheory;
 open util_probTheory real_measureTheory real_probabilityTheory;
 open prob_algebraTheory probTheory;
 
-(* interactive mode
-quietdec := false;
-*)
-
 val _ = new_theory "prob_bernoulli";
 
-val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of the Bernoulli(p) sampling algorithm.                    *)

@@ -994,4 +994,279 @@ val jensen_pos_concave_SIGMA = store_thm
    >> Q.UNABBREV_TAC `f'`
    >> FULL_SIMP_TAC std_ss [pos_concave_fn, GSPECIFICATION]);
 
+(* ========================================================================= *)
+(* Rational numbers as a subset of real numbers (moved here from util_prob)  *)
+(* ========================================================================= *)
+
+Definition real_rat_set_def :
+    real_rat_set = {x:real | ?a b. (x = (&a/(&b))) /\ (0:real < &b)} UNION
+                   {x:real | ?a b. (x = -(&a/(&b))) /\ (0:real < &b)}
+End
+
+Overload q_set = “real_rat_set”
+
+Theorem q_set_def = real_rat_set_def
+
+Theorem QSET_COUNTABLE :
+    countable q_set
+Proof
+  RW_TAC std_ss [q_set_def] THEN
+  MATCH_MP_TAC union_countable THEN CONJ_TAC THENL
+  [RW_TAC std_ss [COUNTABLE_ALT] THEN
+   MP_TAC NUM_2D_BIJ_NZ_INV THEN RW_TAC std_ss [] THEN
+   Q.EXISTS_TAC `(\(a,b). &a/(&b)) o f` THEN RW_TAC std_ss [GSPECIFICATION] THEN
+   FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV] THEN
+   PAT_X_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`) THEN
+   RW_TAC std_ss [] THEN
+   FULL_SIMP_TAC real_ss [IN_CROSS,IN_UNIV,IN_SING,DIFF_DEF,
+                          GSPECIFICATION,GSYM REAL_LT_NZ] THEN
+   `?y. f y = (a,b)` by METIS_TAC [] THEN
+   Q.EXISTS_TAC `y` THEN RW_TAC real_ss [], ALL_TAC] THEN
+  RW_TAC std_ss [COUNTABLE_ALT] THEN
+  MP_TAC NUM_2D_BIJ_NZ_INV THEN
+  RW_TAC std_ss [] THEN Q.EXISTS_TAC `(\(a,b). -(&a/(&b))) o f` THEN
+  RW_TAC std_ss [GSPECIFICATION] THEN
+  FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV] THEN
+  PAT_X_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`) THEN
+  RW_TAC std_ss [] THEN
+  FULL_SIMP_TAC real_ss [IN_CROSS,IN_UNIV,IN_SING,
+                         DIFF_DEF,GSPECIFICATION,GSYM REAL_LT_NZ] THEN
+  `?y. f y = (a,b)` by METIS_TAC [] THEN Q.EXISTS_TAC `y` THEN
+  RW_TAC real_ss []
+QED
+
+Theorem countable_real_rat_set = QSET_COUNTABLE
+
+Theorem NUM_IN_QSET :
+    !n. &n IN q_set /\ -&n IN q_set
+Proof
+  FULL_SIMP_TAC std_ss [q_set_def, IN_UNION, GSPECIFICATION] THEN
+  RW_TAC std_ss [] THENL
+  [DISJ1_TAC THEN EXISTS_TAC ``n:num`` THEN EXISTS_TAC ``1:num`` THEN
+   SIMP_TAC real_ss [],
+   DISJ2_TAC THEN EXISTS_TAC ``n:num`` THEN EXISTS_TAC ``1:num`` THEN
+   SIMP_TAC real_ss []]
+QED
+
+Theorem OPP_IN_QSET :
+    !x. x IN q_set ==> -x IN q_set
+Proof
+  RW_TAC std_ss [q_set_def,EXTENSION,GSPECIFICATION,IN_UNION] THENL
+  [DISJ2_TAC THEN Q.EXISTS_TAC `a` THEN Q.EXISTS_TAC `b` THEN
+   RW_TAC real_ss [], ALL_TAC] THEN
+  DISJ1_TAC THEN Q.EXISTS_TAC `a` THEN Q.EXISTS_TAC `b` THEN
+  RW_TAC real_ss [REAL_NEG_NEG]
+QED
+
+Theorem INV_IN_QSET :
+    !x. (x IN q_set) /\ (x <> 0) ==> 1/x IN q_set
+Proof
+  RW_TAC std_ss [q_set_def,EXTENSION,GSPECIFICATION,IN_UNION] THENL
+  [Cases_on `0:real < &a` THENL
+   [DISJ1_TAC THEN
+    `(&a <> 0:real) /\ (&b <> 0:real)` by FULL_SIMP_TAC real_ss [REAL_POS_NZ,GSYM REAL_LT_NZ] THEN
+    Q.EXISTS_TAC `b` THEN Q.EXISTS_TAC `a` THEN FULL_SIMP_TAC std_ss [] THEN
+  `1:real / (&a / &b) = (1 / 1) / (&a / &b)` by RW_TAC real_ss [] THEN
+    ASM_SIMP_TAC std_ss [] THEN RW_TAC real_ss [div_rat], ALL_TAC] THEN
+    DISJ2_TAC THEN
+    `&b <> 0:real` by METIS_TAC [REAL_LT_IMP_NE] THEN
+    FULL_SIMP_TAC std_ss [] THEN
+    `&a <> 0:real` by METIS_TAC [real_div,REAL_ENTIRE] THEN
+    FULL_SIMP_TAC real_ss [], ALL_TAC] THEN
+  Cases_on `0:real < &a` THENL
+  [DISJ2_TAC THEN
+   `(&a <> 0:real) /\ (&b <> 0:real)` by
+    FULL_SIMP_TAC real_ss [REAL_POS_NZ,GSYM REAL_LT_NZ] THEN
+   `&a / &b <> 0:real` by FULL_SIMP_TAC real_ss [REAL_NEG_EQ0] THEN
+   Q.EXISTS_TAC `b` THEN Q.EXISTS_TAC `a` THEN FULL_SIMP_TAC std_ss [neg_rat] THEN
+   RW_TAC std_ss [real_div, REAL_INV_MUL, REAL_INV_NZ] THEN
+   `inv (&b) <> 0:real` by
+    FULL_SIMP_TAC real_ss [REAL_POS_NZ,REAL_INV_EQ_0,REAL_POS_NZ] THEN
+   RW_TAC real_ss [GSYM REAL_NEG_INV,REAL_NEG_EQ0,REAL_EQ_NEG,REAL_ENTIRE] THEN
+   RW_TAC real_ss [REAL_INV_MUL,REAL_INV_INV,REAL_MUL_COMM], ALL_TAC] THEN
+  DISJ2_TAC THEN `&b <> 0:real` by METIS_TAC [REAL_LT_IMP_NE] THEN
+  `&a <> 0:real` by METIS_TAC [real_div,REAL_ENTIRE,REAL_NEG_EQ0] THEN
+  FULL_SIMP_TAC real_ss []
+QED
+
+Theorem ADD_IN_QSET :
+    !x y. (x IN q_set) /\ (y IN q_set) ==> (x+y IN q_set)
+Proof
+  RW_TAC std_ss [q_set_def,EXTENSION,GSPECIFICATION,IN_UNION] THENL
+  [DISJ1_TAC THEN
+   `(&b <> 0:real) /\ (&b' <> 0:real)` by
+    FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE] THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   Q.EXISTS_TAC `(a*b' + a'*b)` THEN Q.EXISTS_TAC `b*b'` THEN
+   RW_TAC real_ss [REAL_ADD_RAT,REAL_MUL_COMM,REAL_LT_MUL],
+   `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE]
+   THEN Cases_on `&a*(&b')-(&a'* (&b)) = 0:real` THENL
+   [DISJ1_TAC THEN Q.EXISTS_TAC `0` THEN Q.EXISTS_TAC `1` THEN
+    RW_TAC real_ss [REAL_DIV_LZERO, GSYM real_sub] THEN
+    RW_TAC std_ss [REAL_SUB_RAT,REAL_DIV_LZERO,REAL_MUL_COMM], ALL_TAC] THEN
+   Cases_on `0:real < &a * (&b') - (&a' * (&b))` THENL
+   [DISJ1_TAC THEN Q.EXISTS_TAC `(a * b' - a' * b)` THEN
+    Q.EXISTS_TAC `b * b'` THEN `0:real < &(b * b')` by
+                               METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+    `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+    RW_TAC std_ss [REAL_SUB_RAT,REAL_MUL_COMM,REAL_LT_MUL,
+                   GSYM real_sub,GSYM mult_ints] THEN
+    `&a' * &b < &a * (&b'):real` by FULL_SIMP_TAC real_ss [REAL_SUB_LT] THEN
+    `a' * b < a * b'` by FULL_SIMP_TAC real_ss [] THEN
+    `a' * b <> a * b'` by FULL_SIMP_TAC real_ss [] THEN
+    FULL_SIMP_TAC real_ss [REAL_SUB],
+    ALL_TAC] THEN
+   DISJ2_TAC THEN Q.EXISTS_TAC `(a' * b - a * b')` THEN Q.EXISTS_TAC `b * b'` THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL, mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   `&a * &b' - &a' * &b < 0:real` by
+    (FULL_SIMP_TAC real_ss [GSYM real_lte,REAL_LE_LT] THEN
+    FULL_SIMP_TAC real_ss []) THEN
+   `&a * &b' < &a' * (&b):real` by FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD] THEN
+   `a' * b <> a * b'` by FULL_SIMP_TAC real_ss [] THEN
+   RW_TAC std_ss [REAL_SUB_RAT,REAL_MUL_COMM,REAL_LT_MUL,GSYM real_sub] THEN
+   RW_TAC std_ss [GSYM mult_ints] THEN
+   FULL_SIMP_TAC real_ss [REAL_NEG_SUB,REAL_SUB,neg_rat],
+   `&b <> 0:real /\ &b' <> 0:real` by
+    FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE] THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   Cases_on `&a * (&b')-(&a' * (&b)) = 0:real` THENL
+   [DISJ1_TAC THEN Q.EXISTS_TAC `0` THEN Q.EXISTS_TAC `1` THEN
+    RW_TAC real_ss [REAL_DIV_LZERO] THEN ONCE_REWRITE_TAC [GSYM REAL_NEG_EQ0] THEN
+    RW_TAC std_ss [REAL_NEG_ADD,REAL_NEG_NEG] THEN
+    RW_TAC std_ss [REAL_SUB_RAT,REAL_MUL_COMM,REAL_LT_MUL,
+                   GSYM real_sub,REAL_DIV_LZERO,REAL_SUB_0],
+    ALL_TAC] THEN
+   Cases_on `0:real < &a * (&b') - (&a' * (&b))` THENL
+   [DISJ2_TAC THEN Q.EXISTS_TAC `(a * b' - a' * b)` THEN Q.EXISTS_TAC `b * b'` THEN
+    RW_TAC real_ss [REAL_DIV_LZERO] THEN
+    RW_TAC std_ss [REAL_ADD_COMM,GSYM real_sub] THEN
+    RW_TAC std_ss [REAL_SUB_RAT,REAL_MUL_COMM,REAL_LT_MUL,
+                   GSYM real_sub,GSYM mult_ints] THEN
+    `&a' * &b < &a * (&b'):real` by FULL_SIMP_TAC real_ss [REAL_SUB_LT] THEN
+    `a' * b < a * b'` by FULL_SIMP_TAC real_ss [] THEN
+    `a' * b <> a * b'` by FULL_SIMP_TAC real_ss [] THEN
+    FULL_SIMP_TAC real_ss [REAL_SUB,neg_rat], ALL_TAC] THEN
+   DISJ1_TAC THEN Q.EXISTS_TAC `(a' * b - a * b')` THEN Q.EXISTS_TAC `b * b'` THEN
+   RW_TAC std_ss [REAL_ADD_COMM,GSYM real_sub] THEN
+   `&a * &b' - &a' * &b < 0:real` by
+    (FULL_SIMP_TAC real_ss [GSYM real_lte,REAL_LE_LT] THEN
+    FULL_SIMP_TAC real_ss []) THEN
+   `&a * &b' < &a' * (&b):real` by FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD] THEN
+   `a' * b <> a * b'` by FULL_SIMP_TAC real_ss [] THEN
+   RW_TAC std_ss [REAL_ADD_COMM,GSYM real_sub,REAL_SUB_RAT,
+                  REAL_MUL_COMM,REAL_LT_MUL,GSYM mult_ints] THEN
+   FULL_SIMP_TAC real_ss [REAL_NEG_SUB,REAL_SUB,neg_rat],
+   DISJ2_TAC THEN
+   `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE] THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   Q.EXISTS_TAC `(a * b' + a' * b)` THEN Q.EXISTS_TAC `b*b'` THEN
+   REWRITE_TAC [GSYM mult_ints,GSYM add_ints] THEN
+   RW_TAC std_ss [REAL_SUB_LNEG,GSYM real_sub,REAL_EQ_NEG] THEN
+   RW_TAC std_ss [REAL_ADD_RAT,REAL_MUL_COMM,REAL_LT_MUL]]
+QED
+
+Theorem SUB_IN_QSET :
+    !x y. (x IN q_set) /\ (y IN q_set) ==> (x - y IN q_set)
+Proof
+  RW_TAC std_ss [real_sub] THEN METIS_TAC [OPP_IN_QSET,ADD_IN_QSET]
+QED
+
+Theorem MUL_IN_QSET :
+    !x y. (x IN q_set) /\ (y IN q_set) ==> (x * y IN q_set)
+Proof
+  RW_TAC std_ss [q_set_def,EXTENSION,GSPECIFICATION,IN_UNION] THENL
+  [DISJ1_TAC THEN
+   `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE] THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   Q.EXISTS_TAC `a * a'` THEN Q.EXISTS_TAC `b * b'` THEN
+   FULL_SIMP_TAC real_ss [mult_rat,REAL_LT_REFL,ZERO_LESS_MULT],
+   DISJ2_TAC THEN
+   `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE] THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   Q.EXISTS_TAC `a*a'` THEN Q.EXISTS_TAC `b*b'` THEN
+   FULL_SIMP_TAC real_ss [mult_rat,REAL_LT_REFL,ZERO_LESS_MULT],
+   DISJ2_TAC THEN
+   `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE] THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   Q.EXISTS_TAC `a*a'` THEN Q.EXISTS_TAC `b*b'` THEN
+   FULL_SIMP_TAC real_ss [mult_rat,REAL_LT_REFL,ZERO_LESS_MULT],
+   DISJ1_TAC THEN
+   `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [REAL_LT_IMP_NE] THEN
+   `0:real < &(b * b')` by METIS_TAC [REAL_LT_MUL,mult_ints] THEN
+   `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE] THEN
+   Q.EXISTS_TAC `a*a'` THEN Q.EXISTS_TAC `b*b'` THEN
+   FULL_SIMP_TAC real_ss [mult_rat,REAL_LT_REFL,ZERO_LESS_MULT]]
+QED
+
+Theorem DIV_IN_QSET :
+    !x y. (x IN q_set) /\ (y IN q_set) /\ (y <> 0) ==> (x / y IN q_set)
+Proof
+  RW_TAC std_ss [] THEN
+  `(inv y) IN q_set` by METIS_TAC [INV_IN_QSET, REAL_INV_1OVER, INV_IN_QSET] THEN
+  METIS_TAC [MUL_IN_QSET, real_div]
+QED
+
+Theorem CLG_UBOUND = NUM_CEILING_UPPER_BOUND
+
+Theorem Q_DENSE_IN_REAL_LEMMA :
+    !x y. (0 <= x) /\ (x < y) ==> ?r. (r IN q_set) /\ (x < r) /\ (r < y)
+Proof
+  RW_TAC std_ss [] THEN Cases_on `1:real < y - x` THENL
+  [Q.EXISTS_TAC `&(clg y) - 1:real` THEN CONJ_TAC THENL
+   [METIS_TAC [SUB_IN_QSET,NUM_IN_QSET], ALL_TAC] THEN
+   RW_TAC std_ss [] THENL
+   [METIS_TAC [REAL_LT_SUB_LADD,REAL_LT_ADD_SUB,REAL_ADD_COMM,
+               REAL_LTE_TRANS,LE_NUM_CEILING], ALL_TAC] THEN
+    METIS_TAC [REAL_LT_SUB_RADD,CLG_UBOUND,REAL_LET_TRANS,
+               REAL_LT_IMP_LE], ALL_TAC] THEN
+  `0 < y - x:real` by RW_TAC real_ss [REAL_SUB_LT] THEN
+  (MP_TAC o Q.SPEC `1`) (((UNDISCH o Q.SPEC `y - x`) REAL_ARCH)) THEN
+  RW_TAC real_ss [] THEN
+  Q_TAC SUFF_TAC `?z. z IN q_set /\ &n * x < z /\ z < &n * y` THENL
+  [RW_TAC real_ss [] THEN
+   `0 < n` by ( RW_TAC real_ss [] THEN SPOSE_NOT_THEN ASSUME_TAC THEN
+   `n = 0` by RW_TAC real_ss [] THEN FULL_SIMP_TAC real_ss []) THEN
+   `0 < (&n):real` by RW_TAC real_ss [lt_int] THEN Q.EXISTS_TAC `z / (&n)` THEN
+   RW_TAC real_ss [DIV_IN_QSET,NUM_IN_QSET] THENL
+   [FULL_SIMP_TAC real_ss [REAL_LT_RDIV_EQ] THEN METIS_TAC [REAL_MUL_SYM],
+    ALL_TAC] THEN
+   FULL_SIMP_TAC real_ss [REAL_LT_RDIV_EQ,REAL_MUL_COMM,REAL_LT_IMP_NE] THEN
+   FULL_SIMP_TAC real_ss [REAL_LT_LDIV_EQ,REAL_MUL_COMM,REAL_LT_IMP_NE],
+   ALL_TAC] THEN
+  `1 < &n * y - &n * x` by FULL_SIMP_TAC real_ss [REAL_SUB_LDISTRIB] THEN
+  Q.EXISTS_TAC `&(clg (&n * y)) - 1` THEN CONJ_TAC THENL
+  [METIS_TAC [SUB_IN_QSET,NUM_IN_QSET], ALL_TAC] THEN RW_TAC std_ss [] THENL
+  [METIS_TAC [REAL_LT_SUB_LADD,REAL_LT_ADD_SUB,REAL_ADD_COMM,
+              REAL_LTE_TRANS,LE_NUM_CEILING], ALL_TAC] THEN
+  `0:real <= &n` by RW_TAC real_ss [] THEN
+  `0:real <= &n * y` by METIS_TAC [REAL_LE_MUL,REAL_LET_TRANS,REAL_LT_IMP_LE] THEN
+  METIS_TAC [REAL_LT_SUB_RADD,CLG_UBOUND,REAL_LET_TRANS,REAL_LT_IMP_LE]
+QED
+
+Theorem Q_DENSE_IN_REAL :
+    !x y. (x < y) ==> ?r. (r IN q_set) /\ (x < r) /\ (r < y)
+Proof
+  RW_TAC std_ss [] THEN Cases_on `0 <= x` THENL
+  [RW_TAC std_ss [Q_DENSE_IN_REAL_LEMMA], ALL_TAC] THEN
+  FULL_SIMP_TAC std_ss [REAL_NOT_LE] THEN
+  `-x <= &(clg (-x))` by RW_TAC real_ss [LE_NUM_CEILING] THEN
+  `0:real <= x + &clg (-x)` by METIS_TAC [REAL_LE_LNEG] THEN
+  `x + &(clg (-x)) < y + &(clg (-x))` by METIS_TAC [REAL_LT_RADD] THEN
+  Q_TAC SUFF_TAC `?z. (z IN q_set) /\ (x + &clg (-x) < z) /\
+                      (z < y + &clg (-x))` THENL
+  [RW_TAC std_ss [] THEN Q.EXISTS_TAC `z - &clg (-x)` THEN
+   CONJ_TAC THENL [METIS_TAC [SUB_IN_QSET,NUM_IN_QSET], ALL_TAC] THEN
+   RW_TAC std_ss [GSYM REAL_LT_ADD_SUB,REAL_LT_SUB_RADD], ALL_TAC] THEN
+  RW_TAC std_ss [Q_DENSE_IN_REAL_LEMMA]
+QED
+
+Theorem REAL_RAT_DENSE = Q_DENSE_IN_REAL
+
 val _ = export_theory ();

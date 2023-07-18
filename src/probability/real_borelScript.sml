@@ -486,7 +486,7 @@ Proof
   [RW_TAC std_ss [EXTENSION, IN_BIGINTER_IMAGE, IN_UNIV,IN_INTER] THEN EQ_TAC THENL
    [RW_TAC std_ss [GSPECIFICATION] THEN
      `0:real < (1/2) pow n` by RW_TAC real_ss [REAL_POW_LT] THEN
-     `0:real < ((1 / 2) pow n)` by METIS_TAC [util_probTheory.POW_HALF_POS] THEN
+     `0:real < ((1 / 2) pow n)` by METIS_TAC [POW_HALF_POS] THEN
      ASM_REAL_ARITH_TAC, ALL_TAC] THEN
     RW_TAC std_ss [GSPECIFICATION] THEN
     `!n. x:real < (c + (1 / 2) pow n)` by METIS_TAC [] THEN

@@ -19,7 +19,7 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory prim_recTheory seqTheory res_quanTheory res_quanTools
      listTheory rich_listTheory pairTheory combinTheory realTheory realLib
      optionTheory transcTheory real_sigmaTheory pred_setTheory pred_setLib
-     mesonLib hurdUtils;
+     mesonLib hurdUtils iterateTheory;
 
 open util_probTheory sigma_algebraTheory real_measureTheory real_lebesgueTheory;
 
