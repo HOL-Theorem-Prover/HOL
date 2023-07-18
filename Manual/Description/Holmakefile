@@ -1,4 +1,4 @@
-INCLUDES = ../Tools ../../examples/probability
+INCLUDES = ../Tools ../../examples/probability $(HOLDIR)/src/integer
 
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat PatternMatchesLib \
@@ -24,7 +24,7 @@ drules.tex: drules.stex $(PS_STUFF)
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo)
+theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) $(dprot $(HOLDIR)/src/integer/integerTheory.uo)
 	$(PS_COMMAND)
 
 math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \

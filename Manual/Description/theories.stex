@@ -1938,21 +1938,32 @@ Constant & Overloaded symbol & Strength & Associativity \\ \hline
 \end{tabular}}
 \end{center}
 
-The overloaded symbol {\small\verb+& : num -> int+} denotes the
+The overloaded symbol \holtxt{\& : num~$\rightarrow$~int} denotes the
 injection function from natural numbers to integers. The following
 session illustrates how overloading and integers literals are treated.
 
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->> Term `1i = &(1n + 0n)`;
+>> “1i = &(1n + 0n)”;
 
 >> show_numeral_types := true;
 
->> Term `&1 = &(1n + 0n)`;
+>> “&1 = &(1n + 0n)”;
 >>_ show_numeral_types := false;
 \end{alltt}
 \end{session}
+
+In addition, there is an absolute value function \holtxt{ABS}:
+\begin{alltt}
+##thm integerTheory.INT_ABS
+\end{alltt}
+with the obvious definition.
+
+This then characterises the \holtxt{Num} function which maps from integers back into natural numbers (of type \holtxt{:int~$\rightarrow$~num} therefore):
+\begin{alltt}
+##thm integerTheory.Num_EQ_ABS
+\end{alltt}
 
 \subsection{Rational numbers}\label{rationals}
 \index{rational numbers, the HOL theory of@rationals, the \HOL{} theory of|(}
