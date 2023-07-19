@@ -5,7 +5,8 @@
 
 (Released: xxxxxx)
 
-We are pleased to announce the ?????? release of HOL4.
+We are pleased to announce the Trindemossen 1 release of HOL4.
+We have changed the name (from Kananaskis) because of the kernel change reflected by the new efficient compute tool (see below).
 
 Contents
 --------
@@ -202,7 +203,7 @@ Incompatibilities:
 * * * * *
 
 <div class="footer">
-*[HOL4, ??????](http://hol-theorem-prover.org)*
+*[HOL4, Trindemossen 1](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](kananaskis-14.release.html)
 
