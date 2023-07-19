@@ -202,6 +202,10 @@ Incompatibilities:
 
 *   The constant `lg` (logarithm with base 2) has moved from the `util_prob` theory to `transc`.
 
+*   The theories under `src/ring/src` have all been prefixed with the string `EVAL_` reflecting the way they are exclusively used within the system, to provide polynomial normalisation using reflection and `computeLib`.
+    This frees up the name `ring` to be used only by the material under `examples/algebra`.
+    (In the absence of this change, theories that depended on what was in `src/ring/src` could not be used in a development alongside what is in `examples/algebra`.)
+
 * * * * *
 
 <div class="footer">

@@ -1,6 +1,6 @@
 open testutils
 
-open numRingLib
+open EVAL_numRingLib
 
 fun ntest (i,out) =
   convtest ("NUM_NORM_CONV " ^ Parse.term_to_string i, NUM_NORM_CONV, i, out)

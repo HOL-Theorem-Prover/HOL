@@ -2,9 +2,9 @@ open HolKernel Parse boolLib;
 open BasicProvers Datatype;
 open abs_tools;
 
-val _ = new_theory "canonical";
+val _ = new_theory "EVAL_canonical";
 
-open ternaryComparisonsTheory quoteTheory;
+open ternaryComparisonsTheory EVAL_quoteTheory
 
 val sr = “sr:'a semi_ring”;
 val _ = set_assums [ “is_semi_ring ^sr” ];
@@ -14,10 +14,10 @@ val { plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,
       plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
       plus_zero_left, plus_zero_right, mult_one_left, mult_one_right,
       mult_zero_left, mult_zero_right,... } =
-  semi_ringTheory.IMPORT
+  EVAL_semiringTheory.IMPORT
     { Vals = [sr],
       Inst = map ASSUME (get_assums()),
-      Rule = REWRITE_RULE[semi_ringTheory.semi_ring_accessors],
+      Rule = REWRITE_RULE[EVAL_semiringTheory.semi_ring_accessors],
       Rename = K NONE }
 ;
 

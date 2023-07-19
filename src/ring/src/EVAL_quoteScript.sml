@@ -1,9 +1,7 @@
 open HolKernel Parse boolLib
      TotalDefn Datatype BasicProvers;
 
-infix THEN THENL;
-
-val _ = new_theory "quote";
+val _ = new_theory "EVAL_quote";
 
 open ternaryComparisonsTheory;
 

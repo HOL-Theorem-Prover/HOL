@@ -1,12 +1,12 @@
-structure quote :> quote =
+structure EVAL_quote :> EVAL_quote =
 struct
 
-open HolKernel Parse boolLib quoteTheory;
+open HolKernel Parse boolLib EVAL_quoteTheory;
 
 structure Parse =
 struct
   open Parse
-  val (Type,Term) = parse_from_grammars quoteTheory.quote_grammars
+  val (Type,Term) = parse_from_grammars EVAL_quoteTheory.EVAL_quote_grammars
 end
 
 fun QUOTE_ERR function message =

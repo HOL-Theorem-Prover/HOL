@@ -1,4 +1,4 @@
-signature quote =
+signature EVAL_quote =
 sig
 
 include Abbrev

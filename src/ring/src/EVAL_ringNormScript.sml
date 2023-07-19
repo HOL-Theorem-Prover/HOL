@@ -9,16 +9,16 @@ load "ringTheory";
 open HolKernel Parse boolLib abs_tools;
 open BasicProvers Datatype;
 
-val _ = new_theory "ringNorm";
+val _ = new_theory "EVAL_ringNorm";
 
-open ringTheory canonicalTheory;
+open EVAL_ringTheory EVAL_canonicalTheory;
 
 val r = “r:'a ring”;
 val sr = “semi_ring_of r”;
 val _ = set_assums [ “is_ring ^r” ];
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 
-val rth = ringTheory.IMPORT
+val rth = EVAL_ringTheory.IMPORT
     { Vals = [r],
       Inst = map ASSUME (get_assums()),
       Rule = REWRITE_RULE[ring_accessors],
@@ -32,11 +32,11 @@ val { canonical_sum_merge_ok, canonical_sum_prod_ok,
       canonical_sum_scalar2_def, canonical_sum_scalar3_def,
       canonical_sum_prod_def, canonical_sum_simplify_def,
       spolynom_normalize_def, spolynom_simplify_def, ... } =
-  canonicalTheory.IMPORT
+  EVAL_canonicalTheory.IMPORT
     { Vals = [sr],
       Inst = [#ring_is_semi_ring rth],
       Rule = REWRITE_RULE[ semi_ring_of_def,
-                           semi_ringTheory.semi_ring_accessors ],
+                           EVAL_semiringTheory.semi_ring_accessors ],
       Rename = fn x => SOME ("r_"^x) };
 
 

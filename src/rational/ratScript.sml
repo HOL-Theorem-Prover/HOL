@@ -8,20 +8,11 @@
 
 open HolKernel boolLib Parse BasicProvers bossLib;
 
-(* interactive mode
-app load [
-        "integerTheory", "intLib",
-        "intExtensionTheory", "intExtensionLib",
-        "ringLib", "integerRingLib",
-        "fracTheory", "fracLib", "ratUtils", "jbUtils",
-        "quotient", "schneiderUtils"];
-*)
-
 open
         arithmeticTheory
         integerTheory intLib
         intExtensionTheory intExtensionLib
-        ringLib integerRingLib
+        EVAL_ringLib integerRingLib
         fracTheory fracLib ratUtils jbUtils
         quotient schneiderUtils;
 

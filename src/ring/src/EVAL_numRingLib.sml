@@ -1,18 +1,18 @@
-structure numRingLib :> numRingLib =
+structure EVAL_numRingLib :> EVAL_numRingLib =
 struct
 
-open boolLib numRingTheory; infix THENC;
+open boolLib EVAL_numRingTheory;
 
-val _ = ringLib.declare_ring
+val _ = EVAL_ringLib.declare_ring
     { RingThm = num_ring_thms,
       IsConst = numSyntax.is_numeral,
       Rewrites = [num_rewrites] };
 
 val NUM_RING_CONV = REWRITE_CONV [arithmeticTheory.ADD1]
-                        THENC ringLib.RING_CONV;
+                        THENC EVAL_ringLib.RING_CONV;
 
 val NUM_NORM_CONV = REWRITE_CONV [arithmeticTheory.ADD1]
-                      THENC ringLib.RING_NORM_CONV;
+                      THENC EVAL_ringLib.RING_NORM_CONV;
 
 val NUM_RING_TAC = CONV_TAC NUM_RING_CONV
 val NUM_NORM_TAC = CONV_TAC NUM_NORM_CONV;

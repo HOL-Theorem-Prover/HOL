@@ -11,7 +11,7 @@ open  abs_tools; (* Rebinds Term and Define *)
 fun EQ_TRANS_TAC t = MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC t THEN CONJ_TAC;
 
 
-val _ = new_theory "ring";
+val _ = new_theory "EVAL_ring";
 
 val _ = Hol_datatype `ring = <| R0 : 'a;
                                 R1 : 'a;
@@ -101,8 +101,8 @@ val semi_ring_of_def = Define `semi_ring_of = (semi_ring R0 R1 RP RM) `;
 val ring_is_semi_ring = asm_store_thm
     ("ring_is_semi_ring",
      Term` is_semi_ring semi_ring_of`,
-RW_TAC bool_ss [ semi_ring_of_def, semi_ringTheory.is_semi_ring_def,
-                 semi_ringTheory.semi_ring_accessors] THEN
+RW_TAC bool_ss [ semi_ring_of_def, EVAL_semiringTheory.is_semi_ring_def,
+                 EVAL_semiringTheory.semi_ring_accessors] THEN
 MAP_FIRST MATCH_ACCEPT_TAC
   [ plus_sym,plus_assoc,mult_sym,mult_assoc,plus_zero_left,mult_one_left,
     mult_zero_left, distr_left ]);
@@ -111,11 +111,11 @@ MAP_FIRST MATCH_ACCEPT_TAC
 (* TODO: reexport these lemmas *)
 val { plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
       mult_one_right,...} =
-  semi_ringTheory.IMPORT
+  EVAL_semiringTheory.IMPORT
     { Vals=[Term`semi_ring_of`],
       Inst=[ring_is_semi_ring],
       Rule=REWRITE_RULE[ semi_ring_of_def,
-                         semi_ringTheory.semi_ring_accessors],
+                         EVAL_semiringTheory.semi_ring_accessors],
       Rename=K NONE }
 ;
 val _ = asm_save_thm("mult_one_right",mult_one_right);

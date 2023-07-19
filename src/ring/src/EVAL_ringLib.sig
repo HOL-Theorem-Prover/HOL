@@ -1,4 +1,4 @@
-signature ringLib =
+signature EVAL_ringLib =
 sig
 
   include Abbrev

@@ -13,7 +13,7 @@ app load ["pairTheory", "pairLib", "integerTheory","intLib","intSyntax",
 open
         arithmeticTheory
         pairTheory pairLib integerTheory intLib intSyntax
-        ringLib integerRingTheory integerRingLib
+        EVAL_ringLib integerRingTheory integerRingLib
         intExtensionTheory intExtensionLib
         jbUtils fracTheory fracUtils fracSyntax;
 

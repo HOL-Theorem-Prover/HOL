@@ -4,10 +4,10 @@ load "numeralTheory";
 load "bossLib";
 *)
 open HolKernel Parse boolLib bossLib
-     arithmeticTheory semi_ringTheory;
+     arithmeticTheory EVAL_semiringTheory;
 
 
-val _ = new_theory "numRing";
+val _ = new_theory "EVAL_numRing";
 
 (* num is a semi-ring: *)
 val num_semi_ring = store_thm
@@ -19,7 +19,7 @@ MATCH_ACCEPT_TAC MULT_SYM);
 
 
 val num_ring_thms =
-  ringLib.store_ring { Name = "num", Theory = num_semi_ring };
+  EVAL_ringLib.store_ring { Name = "num", Theory = num_semi_ring };
 
 
 local open numeralTheory in
@@ -29,10 +29,5 @@ val num_rewrites = save_thm("num_rewrites", LIST_CONJ
     ISPEC ``arithmetic$ZERO`` REFL_CLAUSE, ISPEC ``num$0`` REFL_CLAUSE ]);
 end;
 
-
-(* Hack to avoid (semi_ring 0 1 $+ $* ) to be confused with an end
- * of comment.                      ^^^
- *)
-val _ = temp_overload_on("mult",“$* : num->num->num”);
 
 val _ = export_theory();

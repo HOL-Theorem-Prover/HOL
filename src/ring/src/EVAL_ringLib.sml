@@ -1,12 +1,8 @@
-structure ringLib :> ringLib =
+structure EVAL_ringLib :> EVAL_ringLib =
 struct
 
-(*
-  app load ["ringNormTheory", "quote", "computeLib"];
-*)
-
-open HolKernel Parse boolLib ternaryComparisonsTheory quoteTheory quote
-     computeLib;
+open HolKernel Parse boolLib ternaryComparisonsTheory EVAL_quoteTheory
+     EVAL_quote computeLib;
 
 fun RING_ERR function message =
     HOL_ERR{origin_structure = "ringLib",
@@ -18,14 +14,14 @@ fun RING_ERR function message =
    between the semantic level operators and the syntactic level ones. *)
 
 fun ring_field q =
-  rhs(concl(REWRITE_CONV[ringTheory.ring_accessors] (Term q)));
+  rhs(concl(REWRITE_CONV[EVAL_ringTheory.ring_accessors] (Term q)));
 
 fun sring_field q =
-  rhs(concl(REWRITE_CONV[semi_ringTheory.semi_ring_accessors] (Term q)));
+  rhs(concl(REWRITE_CONV[EVAL_semiringTheory.semi_ring_accessors] (Term q)));
 
 fun inst_ty ty = inst [alpha |-> ty];
-local fun pmc s = prim_mk_const {Name = s, Thy = "ringNorm"}
-      fun canon_pmc s = prim_mk_const {Name = s, Thy = "canonical"}
+local fun pmc s = prim_mk_const {Name = s, Thy = "EVAL_ringNorm"}
+      fun canon_pmc s = prim_mk_const {Name = s, Thy = "EVAL_canonical"}
       val pvar = pmc "Pvar"
       val pcst = pmc "Pconst"
       val pplus = pmc "Pplus"
@@ -69,8 +65,8 @@ val find_type =
 fun is_ring_thm th =
   let val (Rator,Rand) = dest_comb (concl th) in
   case dest_thy_const Rator of
-    {Name="is_ring",Thy="ring",...} => true
-  | {Name="is_semi_ring", Thy="semi_ring",...} => false
+    {Name="is_ring",Thy="EVAL_ring",...} => true
+  | {Name="is_semi_ring", Thy="EVAL_semiring",...} => false
   | _ => raise RING_ERR "" ""
   end
   handle HOL_ERR _ => raise RING_ERR "is_ring" "mal-formed thm"
@@ -87,10 +83,10 @@ fun import_ring name th =
             canonical_sum_prod_def, canonical_sum_simplify_def,
             polynom_normalize_def, polynom_simplify_def,
             polynom_simplify_ok,... } =
-        ringNormTheory.IMPORT
+        EVAL_ringNormTheory.IMPORT
           { Vals = [ring],
             Inst = [th],
-            Rule = REWRITE_RULE[ringTheory.ring_accessors ],
+            Rule = REWRITE_RULE[EVAL_ringTheory.ring_accessors ],
             Rename = fn s => SOME(name^"_"^s) }
   in LIST_CONJ
     [ th,
@@ -115,10 +111,10 @@ fun import_semi_ring name th =
             canonical_sum_prod_def, canonical_sum_simplify_def,
             spolynom_normalize_def, spolynom_simplify_def,
             spolynomial_simplify_ok, ... } =
-        canonicalTheory.IMPORT
+        EVAL_canonicalTheory.IMPORT
           { Vals = [sring],
             Inst = [th],
-            Rule = REWRITE_RULE[semi_ringTheory.semi_ring_accessors ],
+            Rule = REWRITE_RULE[EVAL_semiringTheory.semi_ring_accessors ],
             Rename = fn s => SOME(name^"_"^s) }
   in LIST_CONJ
     [ th,

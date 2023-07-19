@@ -1,4 +1,4 @@
-signature numRingLib =
+signature EVAL_numRingLib =
 sig
   include Abbrev
 
