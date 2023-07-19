@@ -200,6 +200,8 @@ Incompatibilities:
     `suminf_def` to reflect its overloading to `suminf`. (All these definitions
     are generalized versions of those in `seqTheory`.)
 
+*   The constant `lg` (logarithm with base 2) has moved from the `util_prob` theory to `transc`.
+
 * * * * *
 
 <div class="footer">
