@@ -1,4 +1,4 @@
-INCLUDES = $(HOLDIR)/src/real $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/quotient/src \
+INCLUDES = $(HOLDIR)/src/real $(HOLDIR)/src/res_quan/src \
 	$(HOLDIR)/src/rational $(HOLDIR)/src/pred_set/src/more_theories
 
 EXTRA_CLEANS = selftest.exe real-selftest2.log
