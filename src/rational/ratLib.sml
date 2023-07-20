@@ -443,8 +443,6 @@ val int_rewrites =
    [int_calculate, INT_0, INT_1, numeral_lt, numeral_lte, numeral_sub,
     iSUB_THM, AND_CLAUSES, SGN_def] @ num_rewrites
 
-end; (* local *)
-
 (* rewrites to calculate operations on fractions *)
 val frac_rewrites =
    [FRAC_0_SAVE, FRAC_1_SAVE, FRAC_AINV_SAVE, FRAC_ADD_SAVE, FRAC_MUL_SAVE];
@@ -582,3 +580,4 @@ val RAT_SUM_CANON = GenPolyCanon.gencanon {
 (*==========================================================================
  * end of structure
  *==========================================================================*)
+end
