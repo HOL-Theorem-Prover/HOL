@@ -7,6 +7,8 @@ open simpLib pairLib integerTheory intLib intExtensionTheory jbUtils
      schneiderUtils fracTheory fracLib fracUtils ratTheory ratUtils
      integerRingLib ratSyntax;
 
+open numeralTheory EVAL_numRingTheory integerRingTheory;
+
 val ERR = mk_HOL_ERR "ratLib";
 
 (*--------------------------------------------------------------------------
@@ -422,8 +424,6 @@ fun RAT_ELIMINATE_MINV_CONV (t1:term) =
 
 val RAT_ELIMINATE_MINV_TAC = CONV_TAC RAT_ELIMINATE_MINV_CONV;
 
-
-
 (*==========================================================================
  * calculation of rational expressions
  *==========================================================================*)
@@ -432,11 +432,7 @@ val RAT_ELIMINATE_MINV_TAC = CONV_TAC RAT_ELIMINATE_MINV_CONV;
  * rewrite rules to calculate rational expressions
  *--------------------------------------------------------------------------*)
 
-(* rewrites to calculate operations on integers
-   (TODO) remove dependencies: numRingTheory and integerRingTheory
- *)
-local open numeralTheory numRingTheory integerRingTheory in
-
+(* rewrites to calculate operations on integers *)
 val num_rewrites =
    [numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc, numeral_add,
     numeral_mult, iDUB_removal,
@@ -583,8 +579,6 @@ val RAT_SUM_CANON = GenPolyCanon.gencanon {
     List.app doit operators
   end
 
-
 (*==========================================================================
  * end of structure
  *==========================================================================*)
-end;
