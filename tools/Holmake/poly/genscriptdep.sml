@@ -12,6 +12,8 @@ fun p1 ++ p2 = Path.concat(p1,p2)
 fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");
               TextIO.flushOut TextIO.stdErr)
 
+fun die s = (warn s; OS.Process.exit OS.Process.failure)
+
 fun get_includes () =
   if FileSys.access ("Holmakefile", [FileSys.A_READ]) then
     let
@@ -64,6 +66,8 @@ fun main() =
           val {deps = deps0,...} =
               Holdep.main{assumes = [], includes = I,
                           diag = (fn s => ()), fname = fname}
+              handle Holdep.Holdep_Error s =>
+                     die ("Holdep failure: " ^ s)
           val deps = map toFile deps0
           fun mapthis (Unhandled _) = NONE
             | mapthis (DAT _) = NONE

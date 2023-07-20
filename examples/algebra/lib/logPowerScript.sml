@@ -629,14 +629,15 @@ val ROOT_LE_SELF = store_thm(
    Only-if part: ROOT 1 n = n /\ ROOT m 0 = 0 /\ ROOT m 1 = 1
       True by ROOT_1, ROOT_OF_0, ROOT_OF_1.
 *)
-val ROOT_EQ_SELF = store_thm(
-  "ROOT_EQ_SELF",
-  ``!m n. 0 < m ==> ((ROOT m n = n) <=> ((m = 1) \/ (n = 0) \/ (n = 1)))``,
-  (rw_tac std_ss[EQ_IMP_THM] >> rw[]) >>
+Theorem ROOT_EQ_SELF:
+  !m n. 0 < m ==> (ROOT m n = n <=> m = 1 \/ n = 0 \/ n = 1)
+Proof
+  rw_tac std_ss[EQ_IMP_THM] >> rw[] >>
   `n ** m <= n` by metis_tac[ROOT] >>
   `n <= n ** m` by rw[X_LE_X_EXP] >>
   `n ** m = n` by decide_tac >>
-  rw[GSYM EXP_EQ_SELF]);
+  gs[]
+QED
 
 (* Theorem: 0 < m ==> (n <= ROOT m n <=> ((m = 1) \/ (n = 0) \/ (n = 1))) *)
 (* Proof:
@@ -2178,17 +2179,16 @@ val power_free_gt_1 = store_thm(
         so n = n ** e           by given, m = n
        ==> e = 1                by POWER_EQ_SELF
 *)
-val power_free_alt = store_thm(
-  "power_free_alt",
-  ``!n. power_free n <=> 1 < n /\ (!m. perfect_power n m ==> (n = m))``,
-  rw[EQ_IMP_THM] >-
-  rw[power_free_gt_1] >-
-  fs[power_free_def, perfect_power_def] >>
-  fs[power_free_def, perfect_power_def] >>
-  rpt strip_tac >-
-  metis_tac[] >>
-  `n = m` by metis_tac[] >>
-  metis_tac[POWER_EQ_SELF]);
+Theorem power_free_alt:
+  power_free n <=> 1 < n /\ !m. perfect_power n m ==> n = m
+Proof
+  rw[EQ_IMP_THM]
+  >- rw[power_free_gt_1]
+  >- fs[power_free_def, perfect_power_def] >>
+  fs[power_free_def, perfect_power_def, PULL_EXISTS] >>
+  rpt strip_tac >>
+  first_x_assum $ drule_then strip_assume_tac >> gs[]
+QED
 
 (* Theorem: prime n ==> power_free n *)
 (* Proof:

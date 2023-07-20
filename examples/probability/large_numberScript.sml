@@ -18,6 +18,8 @@ open util_probTheory sigma_algebraTheory extrealTheory measureTheory
 
 val _ = new_theory "large_number";
 
+(* val _ = intLib.deprecate_int(); *)
+
 (* "In the formal construction of a course in the theory of probability, limit
     theorems appear as a kind of superstructure over elementary chapters, in
     which all problems have finite, purely arithmetical character. In reality,
@@ -2182,13 +2184,10 @@ Proof
      [ (* goal 1 (of 3) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL >> BETA_TAC \\
        qexistsl_tac [‘\x. SIGMA (\i. W i x) (count (SUC k))’, ‘inv r’] \\
-       FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def] \\
-       CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
+       FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def] >> simp [] \\
        MATCH_MP_TAC (INST_TYPE [“:'b” |-> “:num”] IN_MEASURABLE_BOREL_SUM) >> rw [] \\
-       qexistsl_tac [‘W’, ‘count (SUC k)’] >> rw [FINITE_COUNT, IN_COUNT] >|
-       [ FULL_SIMP_TAC std_ss [measure_space_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def] ],
+       qexistsl_tac [‘W’, ‘count (SUC k)’] >> rw [FINITE_COUNT, IN_COUNT] \\
+       FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
        (* goal 2 (of 3) *)
       ‘?z. SIGMA (\i. W i x) (count (SUC k)) = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
        rw [extreal_mul_def, extreal_not_infty],
@@ -2361,10 +2360,8 @@ Proof
        FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def] \\
        CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
        MATCH_MP_TAC (INST_TYPE [“:'b” |-> “:num”] IN_MEASURABLE_BOREL_SUM) >> rw [] \\
-       qexistsl_tac [‘W’, ‘count n’] >> rw [FINITE_COUNT, IN_COUNT] >|
-       [ FULL_SIMP_TAC std_ss [measure_space_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
-         FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def] ],
+       qexistsl_tac [‘W’, ‘count n’] >> rw [FINITE_COUNT, IN_COUNT] \\
+       FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def],
        (* goal 2 (of 3) *)
       ‘?z. SIGMA (\i. W i x) (count n) = Normal z’ by METIS_TAC [extreal_cases] >> POP_ORW \\
        rw [extreal_mul_def, extreal_not_infty],
@@ -2998,11 +2995,10 @@ val LLN_IID_shared_tactics =
      MATCH_MP_TAC bounded_imp_finite_second_moments >> art [] \\
      CONJ_TAC >- FULL_SIMP_TAC std_ss [real_random_variable_def] \\
      Q.EXISTS_TAC ‘&SUC n’ \\
-     NTAC 3 (POP_ASSUM K_TAC) \\
+     NTAC 3 (POP_ASSUM K_TAC) (* useless assumptions *) \\
     ‘Y = (\n. f n o X n)’
        by (rw [Abbr ‘Y’, Abbr ‘f’, truncated_def, o_DEF]) >> POP_ORW \\
-     rw [Abbr ‘f’]
-     >- (rw [abs_0, extreal_of_num_def, extreal_le_eq, extreal_abs_def]) \\
+     rw [Abbr ‘f’] \\
      MATCH_MP_TAC lt_imp_le \\
      FULL_SIMP_TAC std_ss [GSYM extreal_lt_def, extreal_of_num_def,
                            extreal_le_eq, extreal_abs_def])
@@ -3154,7 +3150,6 @@ Proof
          FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def,
                                prob_def, real_random_variable_def] \\
          HO_MATCH_MP_TAC integrable_mul_indicator >> art [] \\
-         CONJ_TAC >- METIS_TAC [abs_not_infty] \\
          MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) >> DISCH_TAC \\
      Know ‘!i. i < k ==>
                expectation p (\x. Y i x pow 2) <= a n *
@@ -3175,7 +3170,6 @@ Proof
              HO_MATCH_MP_TAC integrable_mul_indicator \\
              FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def,
                                    prob_def, real_random_variable_def] \\
-             CONJ_TAC >- METIS_TAC [abs_not_infty] \\
              MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) >> Rewr' \\
          MATCH_MP_TAC (REWRITE_RULE [GSYM expectation_def] integral_mono) >> simp [] \\
          STRONG_CONJ_TAC >- FULL_SIMP_TAC std_ss [prob_space_def] \\
@@ -3240,14 +3234,6 @@ Proof
              MATCH_MP_TAC MEASURE_SPACE_UNION >> art [] \\
              FULL_SIMP_TAC std_ss [random_variable_def, p_space_def, events_def] \\
              METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC \\
-         CONJ_TAC (* measure < PosInf *)
-         >- (MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘measure p (m_space p)’ \\
-             reverse CONJ_TAC >- rw [GSYM lt_infty, extreal_of_num_def] \\
-             MATCH_MP_TAC INCREASING >> art [] \\
-             CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []) \\
-             reverse CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_SPACE >> art []) \\
-             rw [SUBSET_DEF]) \\
-         CONJ_TAC >- METIS_TAC [abs_not_infty] \\
          MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) \\
      DISCH_TAC \\
      Know ‘!i. k <= i /\ i < n ==>
@@ -3642,14 +3628,7 @@ Proof
                  MATCH_MP_TAC MEASURE_SPACE_UNION >> art [] \\
                  FULL_SIMP_TAC std_ss [real_random_variable, p_space_def, events_def] \\
                  METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC \\
-             CONJ_TAC
-             >- (MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘measure p (m_space p)’ \\
-                 reverse CONJ_TAC >- (rw [GSYM lt_infty, extreal_of_num_def]) \\
-                 MATCH_MP_TAC INCREASING >> simp [MEASURE_SPACE_SPACE] \\
-                 CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []) \\
-                 rw [SUBSET_DEF]) \\
              FULL_SIMP_TAC std_ss [real_random_variable_def, p_space_def] \\
-             CONJ_TAC >- METIS_TAC [abs_not_infty] \\
              MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) \\
          MATCH_MP_TAC le_lmul_imp >> art [abs_pos] \\
          MATCH_MP_TAC INDICATOR_FN_MONO >> rw [SUBSET_DEF]) \\
@@ -4061,15 +4040,6 @@ Proof
                    ({x | sqrt 1 <= X 0 x} INTER m_space p)’ by SET_TAC [] >> POP_ORW \\
                  MATCH_MP_TAC MEASURE_SPACE_UNION >> art [] \\
                  METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC \\
-             CONJ_TAC (* measure < PosInf *)
-             >- (MATCH_MP_TAC let_trans \\
-                 Q.EXISTS_TAC ‘measure p (m_space p)’ \\
-                 reverse CONJ_TAC >- (rw [GSYM lt_infty, extreal_of_num_def]) \\
-                 MATCH_MP_TAC INCREASING >> rw [MEASURE_SPACE_SPACE]
-                 >- (MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []) \\
-                 rw [SUBSET_DEF]) \\
-             CONJ_TAC (* abs <> PosInf /\ abs <> NegInf *)
-             >- (NTAC 2 STRIP_TAC >> METIS_TAC [abs_not_infty]) \\
              MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) \\
          CONJ_TAC >- (MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) \\
          rpt STRIP_TAC \\
@@ -4130,15 +4100,6 @@ Proof
                ({x | sqrt (&SUC i) <= X 0 x} INTER m_space p)’ by SET_TAC [] >> POP_ORW \\
              MATCH_MP_TAC MEASURE_SPACE_UNION >> art [] \\
              METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC \\
-         CONJ_TAC (* measure < PosInf *)
-         >- (MATCH_MP_TAC let_trans \\
-             Q.EXISTS_TAC ‘measure p (m_space p)’ \\
-             reverse CONJ_TAC >- (rw [GSYM lt_infty, extreal_of_num_def]) \\
-             MATCH_MP_TAC INCREASING >> rw [MEASURE_SPACE_SPACE]
-             >- (MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []) \\
-             rw [SUBSET_DEF]) \\
-         CONJ_TAC (* abs <> PosInf /\ abs <> NegInf *)
-         >- (NTAC 2 STRIP_TAC >> METIS_TAC [abs_not_infty]) \\
          MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art []) >> Rewr \\
      RW_TAC std_ss [] \\
      MATCH_MP_TAC le_lmul_imp >> REWRITE_TAC [abs_pos] \\
@@ -4180,6 +4141,15 @@ Proof
  >> SIMP_TAC std_ss [Abbr ‘M’, Abbr ‘Z’, Abbr ‘Y’, Abbr ‘m’]
  >> MATCH_MP_TAC truncated_vars_expectation' >> art []
 QED
+
+(* |- !p X.
+        prob_space p /\ (!n. real_random_variable (X n) p) /\
+        pairwise_indep_vars p X (\n. Borel) univ(:num) /\
+        identical_distribution p X Borel univ(:num) /\ integrable p (X 0) ==>
+        ((\n x. SIGMA (\i. X i x) (count (SUC n)) / &SUC n) -->
+         (\x. expectation p (X 0))) (in_probability p)
+ *)
+Theorem WLLN_IID_applied = SIMP_RULE std_ss [LLN_alt_converge_PR_IID] WLLN_IID
 
 (* ------------------------------------------------------------------------- *)
 (*  The Strong Law of Large Numbers for IID random variables                 *)
@@ -6000,6 +5970,7 @@ Theorem SLLN_IID_applied = SIMP_RULE std_ss [LLN_alt_converge_AE_IID] SLLN_IID
 (* The 'diverge' part of SLLN_IID
 
    This is Theorem 5.4.2 (Part 2) of [2, p.133], the strongest version among others.
+   See also Theorem 4 (Converse to the strong law of large numbers) of [11, p.241].
 
    The original version requires total independence, which is, however, only used by
    Borel-Cantelli Lemma (Part 2), which also has a version for pairwise independence
@@ -6336,6 +6307,10 @@ val _ = html_theory "large_number";
       Statistics, A.N. Shiryayev (eds.), Springer Netherlands (1992).
   [9] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
       Cambridge University Press (2017).
+ [10] Feller, W.: An Introduction to Probability Theory and Its Applications, vol 1, 3rd edition.
+      John Wiley & Sons, Inc., New York, N.Y. (2004).
+ [11] Feller, W.: An Introduction to Probability Theory and Its Applications, vol 2, 2rd edition.
+      John Wiley & Sons, Inc., New York, N.Y. (1967).
  [12] Etemadi, N.: An elementary proof of the strong law of large numbers.
       Z. Wahrsch. Verw. Gebiete. 55, 119-122 (1981).
  [13] Gnedenko, B.V., Kolmogorov, A.N.: Limit distributions for sums of independent random

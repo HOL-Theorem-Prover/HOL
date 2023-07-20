@@ -1007,6 +1007,7 @@ val Cond =
 
 val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val POP_ORW = POP_ASSUM (ONCE_REWRITE_TAC o wrap);
 
 (* --------------------------------------------------------------------- *)
 (* EXACT_MP_TAC : thm -> tactic                                          *)
@@ -1037,7 +1038,21 @@ in
   val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
 end;
 
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
+(* --------------------------------------------------------------------- *)
+(* STRONG_DISJ_TAC : tactic                                              *)
+(*                                                                       *)
+(* If the goal is (asms, ~A \/ B) then the tactic returns a new goal of  *)
+(* the form (asms UNION {A}, B). (It's "stronger" than DISJ2_TAC in that *)
+(* A is not completely abandoned and thus still useful in proving B.)    *)
+(*                                                                       *)
+(* By using ONCE_REWRITE_TAC[DISJ_COMM] first, a similar stronger tactic *)
+(* than DISJ1_TAC can be obtained.                                       *)
+(*                                                                       *)
+(* cf. LEFT_DISJ_TAC & RIGHT_DISJ_TAC (schneiderUtils)                   *)
+(* --------------------------------------------------------------------- *)
+
+val STRONG_DISJ_TAC :tactic =
+    CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
 
 (* --------------------------------------------------------------------- *)
 (* FORWARD_TAC : (thm list -> thm list) -> tactic                        *)
@@ -1079,7 +1094,6 @@ fun FORWARD_TAC f (asms, g:term) =
 
 val Know = Q_TAC KNOW_TAC
 val Suff = Q_TAC SUFF_TAC
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 (* --------------------------------------------------------------------- *)
 (* A simple-minded CNF conversion.                                       *)

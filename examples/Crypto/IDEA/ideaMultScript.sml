@@ -25,15 +25,14 @@ val _ = intLib.prefer_int();
 
 val prime_axiom = new_axiom("prime_axiom", ``prime 65537n``);
 
-val minv_Lemma1 = Q.store_thm
-("minv_Lemma1",
- ` !a b. b < a ==> ~(0 < b) \/ ~divides a b`,
- ARW [] THEN `!a b. ~(a <= b) ==> ~(0 < b /\ divides a b)`
+Theorem minv_Lemma1:
+  !a b. b < a ==> ~(0 < b) \/ ~divides a b
+Proof
+ ARW [] THEN
+ ‘!a b. ~(a <= b) ==> ~(0 < b /\ divides a b)’
    by METIS_TAC [MONO_NOT,DIVIDES_LE] THEN
- `~(0 < b /\ divides a b) = ~(0 < b) \/ ~(divides a b)`
-   by METIS_TAC [DE_MORGAN_THM] THEN
- `(b < a) ==> (~(0 < b) \/ ~divides a b)`
-   by METIS_TAC [NOT_LESS_EQUAL] THEN METIS_TAC []);
+ METIS_TAC[NOT_LESS_EQUAL, NOT_LT_ZERO_EQ_ZERO]
+QED
 
 val minv_Lemma2 = Q.store_thm
 ("minv_Lemma2",

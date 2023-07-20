@@ -1,5 +1,0 @@
-\THEOREM CARD_DIFF pred_sets
-|- !t.
-    FINITE t ==>
-    (!s. FINITE s ==> (CARD(s DIFF t) = (CARD s) - (CARD(s INTER t))))
-\ENDTHEOREM

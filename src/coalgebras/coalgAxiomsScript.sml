@@ -237,31 +237,6 @@ Proof
   simp[hom_def, shom_def]
 QED
 
-
-(*
-Theorem Spushout_Fpushout_IMP:
-  hom f (A,af) (B,bf) /\ hom g (A,af) (C,cf) /\
-  Spushout A B C f g (P,i1,i2) (:'d) ==>
-  ?pf. Fpushout (A,af) (B,bf) (C,cf) f g ((P,pf),i1,i2) (:'d)
-Proof
-  rpt strip_tac >>
-  ‘Spushout A B C f g (SPO A B C f g) (:'d)’ by metis_tac[hom_shom,Spushout_quotient] >>
-  fs[SPO_def] >> pop_assum mp_tac >>
-  qmatch_abbrev_tac ‘Spushout _ _ _ _ _ (SPOq, SPOi1, SPOi2) _ ==> _’ >> strip_tac >>
-
-  simp[Fpushout_def, Spushout_def] >> rpt strip_tac >>
-  ‘shom f A B /\ shom g A C /\ shom i1 B P /\ shom i2 C P’
-    by metis_tac[hom_shom] >> simp[] >>
-  Cases_on ‘restr (i1 o f) A = restr (i2 o g) A’ >> simp[] >> reverse eq_tac
-  >- (rw[] >>
-      ‘shom j1 B Q /\ shom j2 C Q’ by metis_tac[hom_shom] >>
-      first_x_assum drule_all >>
-      CONV_TAC (LAND_CONV (SIMP_CONV (srw_ss()) [EXISTS_UNIQUE_THM])) >>
-      rw[]
-  reverse (Cases_on ‘hom f (A,af) (B,bf)’) >> simp[]
-  >- (Cases_on ‘shom f A B’ >> simp[] >>
-*)
-
 Theorem BIJ_homs_iso:
   hom f (A,af) (B,bf) /\ BIJ f A B ==> iso (A,af) (B,bf)
 Proof

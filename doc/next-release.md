@@ -94,6 +94,10 @@ Incompatibilities:
     In many contexts, expressions with this had to use parentheses as delimiters, and so fixing the incompatibility will require turning something like `(t1..t2)` into `{t1..t2}`.
     However, the old style did allow `e ∈ m..n`, which no longer works without the braces.
 
+*   Due to internal dependency changes, `Diff.DIFF_CONV` (a conversion for proving
+    differentiate expressions) is not included in `realLib` any more. Users of `DIFF_CONV`
+    should explicitly open `Diff` in the proof scripts.
+
 * * * * *
 
 <div class="footer">

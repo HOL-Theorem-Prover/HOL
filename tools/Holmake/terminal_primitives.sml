@@ -11,6 +11,7 @@ fun TERM_isANSI () =
       | SOME t =>
           String.isPrefix "xterm" t orelse
           String.isPrefix "screen" t orelse
+          String.isPrefix "tmux" t orelse
           t = "eterm-color"
 
 end

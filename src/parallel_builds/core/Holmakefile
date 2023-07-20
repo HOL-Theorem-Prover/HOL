@@ -12,7 +12,7 @@ SRCRELNAMES = \
   monad/more_monads \
   n-bit \
   pred_set/src/more_theories probability \
-  rational real res_quan/src ring/src \
+  rational real real/analysis res_quan/src ring/src \
   search sort string \
   temporal/src TeX transfer \
   update
@@ -33,8 +33,9 @@ EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
 	 formal-languages formal-languages/context-free \
 	 formal-languages/lambek formal-languages/regular/regular-play \
 	 fun-op-sem/lprefix_lub fun-op-sem/for \
-         hfs imperative ind_def l3-machine-code/common lambda/barendregt \
-         lassie \
+         hardware hfs \
+         imperative ind_def \
+         l3-machine-code/common lambda/barendregt lassie \
          logic logic/folcompactness logic/modal-tableaux logic/ncfolproofs \
 	 logic/propositional_logic \
          misc parity rings set-theory/zfset set-theory/vbg zipper

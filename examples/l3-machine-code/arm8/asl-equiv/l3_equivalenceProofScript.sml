@@ -1613,8 +1613,6 @@ Proof
     execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi
       (&w2n r1) 64 (&w2n r3) (&w2n r2) ¬b od) asl` by (
     unabbrev_all_tac >> Cases_on `b` >> gvs[] >> asl_cexecute_tac >> simp[] >>
-    simp[GSYM $ (SIMP_CONV (srw_ss()) [sail2_valuesTheory.just_list_primitive_def]
-                  THENC CEVAL) $ ``just_list``] >>
     simp[sail2_valuesTheory.just_list_def] >>
     simp[
       decode_smulh_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi_def,
@@ -1653,7 +1651,8 @@ Proof
       INST_TYPE [alpha |-> ``:128``, beta |-> ``:64``]] >> simp[] >>
     DEP_REWRITE_TAC[v2w_fixwidth_dimindex] >> simp[]
     ) >>
-  Cases_on `x2` using integer_wordTheory.ranged_int_word_nchotomy
+  rename [‘integer_subrange (w2i x2 * w2i x3) 127 64 = (127 >< 64) (sw2sw x2 * sw2sw x3)’]
+  \\ Cases_on `x2` using integer_wordTheory.ranged_int_word_nchotomy
   \\ Cases_on `x3` using integer_wordTheory.ranged_int_word_nchotomy
   \\ fs [integer_wordTheory.sw2sw_i2w,integer_wordTheory.word_i2w_mul,
          integer_wordTheory.w2i_i2w]

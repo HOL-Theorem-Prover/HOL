@@ -136,11 +136,13 @@ local
 
   fun add_defs cmp defs = computeLib.add_thms defs cmp
     handle (HOL_ERR _) => ((* PolyML.print defs;*) ())
-  fun not_contains_tydef thm = thm |> concl |> find_terms
-    (same_const (prim_mk_const {Name = "TYPE_DEFINITION", Thy = "bool"})) |>
-    null
-  fun add_all_defs cmp thy = app (add_defs cmp o single)
-    (definitions thy |> map snd |> filter not_contains_tydef)
+
+  fun unpack_defn_thm (DefnBase.STDEQNS t) = t
+    | unpack_defn_thm (DefnBase.OTHER   t) = t
+
+  fun add_all_defs cmp thy =
+    DefnBase.thy_userdefs {thyname = thy} |>
+      map (unpack_defn_thm o #thm) |> add_defs cmp
 
   val thys = [
       "lem_machine_word", "lem",

@@ -24,20 +24,12 @@ val _ = List.app parsetest [
 datatype 'a exnsum = Some of 'a | Exn of exn
 fun total f x = Some (f x) handle Interrupt => raise Interrupt | e => Exn e
 
-fun test0 nm cmp pr f (x, expected_opt) = let
-  val _ = tprint (StringCvt.padRight #" " 20 nm ^ pr x)
-in
-  case (total f x, expected_opt) of
-      (Some result, SOME expected) =>
-        if cmp(rhs (concl result),expected) <> EQUAL then die "FAILED - BAD RHS"
-        else if not (null (hyp result)) then die "FAILED - HYPS"
-        else if cmp(lhs (concl result),x) <> EQUAL then die "FAILED - BAD LHS"
-        else OK()
-    | (Some _, NONE) => die "FAILED - didn't raise EXN"
-    | (Exn e, SOME _) => die ("FAILED\n  EXN: "^General.exnMessage e)
-    | (Exn _, NONE) => OK()
-end
-
+fun test0 nm cmp pr f (x, expected_opt) =
+    case expected_opt of
+        SOME t => convtest(nm ^ " " ^ term_to_string x,f,x,t)
+      | NONE => shouldfail {checkexn = (fn HOL_ERR _ => true | _ => false),
+                            printarg = K nm, printresult = thm_to_string,
+                            testfn = f} x
 fun test nm cmp pr f (x, e) = test0 nm cmp pr f (x, SOME e)
 
 val _ = set_trace "Unicode" 0
@@ -67,6 +59,11 @@ val _ = app(test "BUTFIRSTN_CONV" Term.compare term_to_string BUTFIRSTN_CONV)
             (``BUTFIRSTN 0 [1;2]``, ``[1;2]``),
             (``BUTFIRSTN 3 [1;2;3]``, ``[] : num list``),
             (``BUTFIRSTN 0 [] : num list``, ``[] : num list``)]
+val _ = app(test "LASTN_CONV" Term.compare term_to_string LASTN_CONV)
+           [(``LASTN 3 [1;2;3;4]``, ``[2;3;4]``),
+            (``LASTN 0 [1;2]``, ``[]: num list``),
+            (``LASTN 3 [1;2;3]``, ``[1;2;3]``),
+            (``LASTN 0 [] : num list``, ``[] : num list``)]
 val _ = app(test "LIST_EQ_SIMP_CONV" Term.compare term_to_string
                  listSimps.LIST_EQ_SIMP_CONV)
            [(``(l1:'a list ++ [])::t = p ++ q``, ``(l1:'a list)::t = p ++ q``)]

@@ -1,3 +1,0 @@
-\THEOREM UNION_IDEMPOT pred_sets
-|- !s. s UNION s = s
-\ENDTHEOREM

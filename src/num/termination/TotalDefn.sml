@@ -748,11 +748,13 @@ fun qDefine stem q tacopt =
       val gen_ind = Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
     in
       List.app proc_attr attrs;
-      case indopt of
-          NONE => (case total gen_ind thm of
-                       NONE => ()
-                     | SOME p => DefnBase.register_indn p)
-         | SOME ith =>
+      if notuserdef then ()
+      else
+        case indopt of
+            NONE => (case total gen_ind thm of
+                         NONE => ()
+                       | SOME p => DefnBase.register_indn p)
+          | SOME ith =>
             DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
     end

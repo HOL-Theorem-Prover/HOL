@@ -612,25 +612,32 @@ fun FIRST_LT tac gs =
     end
 
 (* ----------------------------------------------------------------------
-    SELECT_LT : tactic -> list_tactic
+    SELECT_LT_THEN : tactic -> tactic -> list_tactic
 
-    Given a list of goals, tries to apply tactic argument to all of
+    Given a list of goals, tries to apply the first tactic argument to all of
     them in turn. This generates a new list of goals consisting of the output
     of the successful tactic applications concatenated with the remaining
-    original goals.
+    original goals. The second tactic is then applied to goals resulting from
+    the successful tactic applications.
     This is similar to FIRST_LT, but:
-      - if there are multiple goals for which the tactic succeeds, SELECT_LT
-        will apply the tactic to all these goals;
-      - if there is no goal for which the tactic succeeds, SELECT_LT will
-        not give an error - instead the goal state will simply remain unchanged.
+      - if there are multiple goals for which the first tactic succeeds,
+        SELECT_LT_THEN will apply the tactic to all these goals;
+      - if there is no goal for which the first tactic succeeds, SELECT_LT_THEN
+        will not give an error - instead the goal state will simply remain
+        unchanged;
+      - SELECT_LT allows a second tactic to be applied *only* to the selected
+        goals.
+
+    SELECT_LT : tactic -> list_tactic
+    Like SELECT_LT_THEN, but does not apply a second tactic.
    ---------------------------------------------------------------------- *)
 
-fun SELECT_LT tac goals =
+fun SELECT_LT_THEN select_tac cont_tac goals =
   let fun recurse failed goals =
     case goals of
       [] => ([], List.rev failed, fn v => v)
     | g::gs =>
-      (case Lib.total tac g of
+      (case Lib.total select_tac g of
         NONE => recurse (g::failed) gs
       | SOME (sgoals, valid) =>
           let val (success, failed', vld) = recurse [] gs
@@ -643,8 +650,16 @@ fun SELECT_LT tac goals =
           in
             (sgoals @ success, List.revAppend(failed, failed'), validation)
           end)
-      val (successful, failed, validation) = recurse [] goals
+      val (selected, failed, select_validation) = recurse [] goals
+      val (successful, cont_validation) = ALLGOALS cont_tac selected
+        handle e => raise ERR "SELECT_LT_THEN"
+                              "Could not apply second tactic"
+      fun validation thms =
+        let val (succ,fail) = Lib.split_after (length successful) thms
+        in select_validation (cont_validation succ @ fail) end
   in (successful @ failed, validation) end
+
+fun SELECT_LT tac goals = SELECT_LT_THEN tac all_tac goals
 
 (*---------------------------------------------------------------------------
  * Uses first tactic that proves the goal.

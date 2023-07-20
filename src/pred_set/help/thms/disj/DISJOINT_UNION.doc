@@ -1,3 +1,0 @@
-\THEOREM DISJOINT_UNION pred_sets
-|- !s t u. DISJOINT(s UNION t)u = DISJOINT s u /\ DISJOINT t u
-\ENDTHEOREM

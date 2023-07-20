@@ -1,7 +1,6 @@
 \documentclass[a4paper,10pt]{article}
 
 \usepackage[T1]{fontenc}
-\usepackage{stmaryrd}
 \usepackage{upquote}
 \usepackage{alltt}
 \usepackage{url}

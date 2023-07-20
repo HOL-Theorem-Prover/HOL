@@ -6,9 +6,6 @@ This directory contains HOL4's Measure, Lebesgue Integration and Probability the
 
      util_probScript.sml          * Utility lemmas needed by other scripts
      extrealScript.sml            * The theory of extended reals
-     real_topologyScript.sml      * Elementary Topology in Euclidean Space (ported from HOL Light)
-     derivativeScript.sml         * Univariate Derivative Theory in R^1 (ported from HOL Light)
-     integrationScript.sml        * Henstock-Kurzweil (gauge) Integration (ported from HOL Light)
 
 ## Measure, Integration and Probability Theory defined on extended reals
 

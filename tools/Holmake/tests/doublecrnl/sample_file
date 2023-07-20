@@ -1,0 +1,6 @@
+VAR1 = foo bar
+
+VAR2 = 3
+
+VAR3 = baz\
+ qux

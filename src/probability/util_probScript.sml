@@ -263,30 +263,18 @@ val NUM_2D_BIJ_NZ_INV = store_thm
        ((UNIV : num -> bool) CROSS ((UNIV : num -> bool) DIFF {0}))``,
    PROVE_TAC [NUM_2D_BIJ_NZ, BIJ_SYM]);
 
-val NUM_2D_BIJ_NZ_ALT = store_thm
-  ("NUM_2D_BIJ_NZ_ALT",
-   ``?f.
-       BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
-       ((UNIV : num -> bool) DIFF {0})``,
-   MATCH_MP_TAC BIJ_INJ_SURJ
-   >> reverse CONJ_TAC
-   >- (Q.EXISTS_TAC `(\(x,y). x + 1:num)`
-       >> RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS]
-                >- (Cases_on `x` >> RW_TAC std_ss [DIFF_DEF,GSPECIFICATION,IN_UNIV,IN_SING])
-       >> Q.EXISTS_TAC `(x-1,1)`
-       >> RW_TAC std_ss []
-       >> MATCH_MP_TAC SUB_ADD
-       >> FULL_SIMP_TAC real_ss [DIFF_DEF,GSPECIFICATION,IN_UNIV,IN_SING])
-   >> Q.EXISTS_TAC `UNCURRY ind_type$NUMPAIR`
-   >> RW_TAC std_ss [INJ_DEF, IN_UNIV, IN_CROSS]
-   >- ( Cases_on `x`
-        >> RW_TAC std_ss [UNCURRY_DEF, ind_typeTheory.NUMPAIR_INJ,DIFF_DEF,
-                          GSPECIFICATION,IN_UNIV,IN_SING]
-        >> RW_TAC real_ss [ind_typeTheory.NUMPAIR])
-   >> Cases_on `x`
-   >> Cases_on `y`
-   >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [UNCURRY_DEF, ind_typeTheory.NUMPAIR_INJ]);
+Theorem NUM_2D_BIJ_NZ_ALT:
+  ?f.
+    BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
+        ((UNIV : num -> bool) DIFF {0})
+Proof
+   MATCH_MP_TAC BIJ_INJ_SURJ >> reverse CONJ_TAC
+   >- (Q.EXISTS_TAC ‘(λ(x,y). x + 1:num)’ >>
+       simp[SURJ_DEF, FORALL_PROD, EXISTS_PROD] >>
+       simp[Once FORALL_NUM, ADD1])
+   >> Q.EXISTS_TAC ‘λ(m,n). m *, n + 1’
+   >> simp[INJ_IFF, FORALL_PROD]
+QED
 
 val NUM_2D_BIJ_NZ_ALT_INV = store_thm
   ("NUM_2D_BIJ_NZ_ALT_INV",

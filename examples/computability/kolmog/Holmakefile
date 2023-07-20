@@ -1,5 +1,5 @@
 INCLUDES = $(HOLDIR)/examples/computability/ \
            $(HOLDIR)/examples/computability/lambda \
-           $(HOLDIR)/src/real
+           $(HOLDIR)/src/real $(HOLDIR)/src/real/analysis
 
 HOLHEAP = ../lambda/computability-heap

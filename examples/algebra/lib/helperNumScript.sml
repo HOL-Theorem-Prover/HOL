@@ -1832,17 +1832,17 @@ val EXP_ALT_EQN = store_thm(
        = (b * (b * b) ** HALF n) MOD m      by EXP_ODD, EVEN_ODD
        = (b * (b ** 2) ** HALF n) MOD m     by EXP_2
 *)
-val EXP_MOD_EQN = store_thm(
-  "EXP_MOD_EQN",
-  ``!b n m. 1 < m ==>
+Theorem EXP_MOD_EQN:
+  !b n m. 1 < m ==>
       ((b ** n) MOD m =
        if (n = 0) then 1
        else let result = (b * b) ** (HALF n) MOD m
-             in if EVEN n then result else (b * result) MOD m)``,
-  rw[] >-
-  rw[EXP_0, ONE_MOD] >-
-  metis_tac[EXP_EVEN, EXP_2] >>
-  metis_tac[EXP_ODD, EXP_2, EVEN_ODD]);
+             in if EVEN n then result else (b * result) MOD m)
+Proof
+  rw[]
+  >- metis_tac[EXP_EVEN, EXP_2] >>
+  metis_tac[EXP_ODD, EXP_2, EVEN_ODD]
+QED
 
 (* Pretty version of EXP_MOD_EQN, same pattern as EXP_EQN_ALT. *)
 

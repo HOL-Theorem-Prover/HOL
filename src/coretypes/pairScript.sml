@@ -158,6 +158,13 @@ val PAIR_FST_SND_EQ = store_thm(
 
 val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
 
+(* Theorem the SWAP inverts itself *)
+Theorem SWAP_SWAP[simp]:
+    !x. SWAP (SWAP x) = x
+Proof
+    simp[SWAP_def]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)

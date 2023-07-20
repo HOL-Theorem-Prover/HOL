@@ -1,3 +1,0 @@
-\THEOREM INSERT_DELETE pred_sets
-|- !x s. x IN s ==> (x INSERT (s DELETE x) = s)
-\ENDTHEOREM

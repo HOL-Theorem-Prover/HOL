@@ -13,7 +13,7 @@ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
-val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj", "NOT_LT_ZERO_EQ_ZERO"]
 
 
 (* setting up the compiler *)
@@ -2898,12 +2898,13 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
       \\ SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC,GSYM word_add_n2w]
       \\ SIMP_TAC std_ss [WORD_ADD_ASSOC,WORD_SUB_ADD] \\ DECIDE_TAC,
       Q.EXISTS_TAC `8 - i`
+      \\ REVERSE CONJ_TAC THEN1 DECIDE_TAC
       \\ SIMP_TAC std_ss [LEFT_SUB_DISTRIB,MULT_ASSOC]
       \\ Cases_on `i = 0`
       \\ ASM_SIMP_TAC std_ss [word_arith_lemma3,WORD_ADD_0,WORD_SUB_RZERO]
-      THEN1 DECIDE_TAC
-      \\ `0 < 4 * i /\ (32 - (32 - 4 * i) = 4*i)` by DECIDE_TAC
-      \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC])
+      \\ ‘0 < i’ by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []
+      \\ `32 - (32 - 4 * i) = 4*i` by DECIDE_TAC
+      \\ ASM_SIMP_TAC std_ss [] ])
   \\ STRIP_TAC THEN1
    (FULL_SIMP_TAC std_ss [word_mul_n2w,Q.SPEC `16` MULT_COMM]
     \\ Q.ABBREV_TAC `a = r5 + n2w (l * 16) + 0x18w`

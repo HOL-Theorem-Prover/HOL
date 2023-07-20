@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)            *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
-(* Updated and further enriched by Chun Tian (2018 - 2021)                   *)
+(* Updated and further enriched by Chun Tian (2018 - 2022)                   *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -13,7 +13,7 @@ open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
      prim_recTheory arithmeticTheory tautLib pred_setLib hurdUtils;
 
 open realTheory realLib real_sigmaTheory RealArith seqTheory limTheory
-     transcTheory iterateTheory metricTheory;
+     transcTheory iterateTheory metricTheory listTheory rich_listTheory;
 
 open util_probTheory cardinalTheory;
 
@@ -3041,17 +3041,20 @@ Proof
                     extreal_ln_def, rpow_def]
 QED
 
-(* cf. transc.ONE_RPOW *)
-Theorem one_powr :
-    !a. 0 < a ==> 1 powr a = 1
-Proof
-    rw [extreal_powr_def, ln_1]
-QED
-
 Theorem powr_0[simp] :
     !x. x powr 0 = (1 :extreal)
 Proof
     rw [extreal_powr_def, exp_0]
+QED
+
+(* cf. transc.ONE_RPOW, changed ‘0 < a’ to ‘0 <= a’ *)
+Theorem one_powr :
+    !a. 0 <= a ==> 1 powr a = 1
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘a = 0’ >- rw []
+ >> ‘0 < a’ by rw [lt_le]
+ >> rw [extreal_powr_def, ln_1]
 QED
 
 (* only possible after the new definition of `ln` *)
@@ -3102,16 +3105,21 @@ Theorem powr_infty :
         (x = 1 ==> x powr PosInf = 1) /\
         (0 <= x /\ x < 1 ==> x powr PosInf = 0)
 Proof
-    rw [one_powr]
- >- (rw [extreal_powr_def] \\
+    RW_TAC std_ss [] (* 3 goals *)
+ >| [ (* goal 1 (of 3) *)
+      rw [extreal_powr_def] \\
      ‘0 < ln x’ by PROVE_TAC [ln_pos_lt] \\
-     rw [mul_infty, extreal_exp_def])
- >> rw [extreal_powr_def]
- >> Suff ‘ln x < 0’
- >- (DISCH_TAC \\
-    ‘PosInf * ln x = NegInf’ by PROVE_TAC [mul_infty'] \\
-     rw [extreal_exp_def])
- >> MATCH_MP_TAC ln_neg_lt >> art []
+      rw [mul_infty, extreal_exp_def],
+      (* goal 2 (of 3) *)
+      MATCH_MP_TAC one_powr \\
+      rw [extreal_of_num_def, le_infty],
+      (* goal 3 (of 3) *)
+      rw [extreal_powr_def] \\
+      Suff ‘ln x < 0’
+      >- (DISCH_TAC \\
+         ‘PosInf * ln x = NegInf’ by PROVE_TAC [mul_infty'] \\
+          rw [extreal_exp_def]) \\
+      MATCH_MP_TAC ln_neg_lt >> art [] ]
 QED
 
 (* cf. transcTheory.BASE_RPOW_LE *)
@@ -3148,6 +3156,63 @@ Proof
  >> ‘?C. 0 < C /\ c = Normal C’
        by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
  >> rw [BASE_RPOW_LE, normal_powr, extreal_le_eq]
+QED
+
+(* cf. transcTheory.RPOW_LE *)
+Theorem powr_le_eq :
+    !a b c. 1 < a /\ a <> PosInf /\ 0 <= b /\ 0 <= c ==>
+           (a powr b <= a powr c <=> b <= c)
+Proof
+    rpt STRIP_TAC
+ >> ‘0 < a’ by PROVE_TAC [lt_trans, lt_01]
+ >> ‘0 <= a’ by PROVE_TAC [lt_imp_le]
+ >> ‘a <> NegInf /\ b <> NegInf /\ c <> NegInf’ by rw [pos_not_neginf]
+ >> Cases_on ‘b = 0’
+ >- (rw [powr_0] \\
+     Cases_on ‘c = 0’ >- rw [powr_0] \\
+     Cases_on ‘c = PosInf’
+     >- (rw [powr_infty, extreal_le_def, extreal_of_num_def]) \\
+    ‘0 < c’ by rw [lt_le] \\
+    ‘1 = 1 powr c’ by PROVE_TAC [one_powr] >> POP_ORW \\
+     rw [powr_mono_eq, lt_imp_le])
+ >> ‘0 < b’ by rw [lt_le]
+ >> Cases_on ‘c = 0’
+ >- (rw [powr_0] \\
+     Cases_on ‘b = PosInf’
+     >- (rw [powr_infty, extreal_le_def, extreal_of_num_def]) \\
+    ‘1 = 1 powr b’ by PROVE_TAC [one_powr] >> POP_ORW \\
+     rw [powr_mono_eq] \\
+     METIS_TAC [extreal_lt_def])
+ >> ‘0 < c’ by rw [lt_le]
+ >> Cases_on ‘b = PosInf’
+ >- (rw [powr_infty, extreal_le_def, extreal_of_num_def, le_infty] \\
+     Cases_on ‘c = PosInf’ >- rw [powr_infty] \\
+    ‘?A. 0 < A /\ a = Normal A’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+    ‘?C. 0 < C /\ c = Normal C’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+     rw [normal_powr])
+ >> Cases_on ‘c = PosInf’
+ >- rw [powr_infty, extreal_le_def, extreal_of_num_def, le_infty]
+ >> ‘?A. 0 < A /\ a = Normal A’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?B. 0 < B /\ b = Normal B’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?C. 0 < C /\ c = Normal C’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> gs [RPOW_LE, normal_powr, extreal_of_num_def, extreal_le_eq, extreal_lt_eq]
+QED
+
+Theorem powr_ge_1 :
+    !a p. 1 <= a /\ 0 <= p ==> 1 <= a powr p
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘p = 0’ >- rw [powr_0]
+ >> Cases_on ‘a = 1’ >- rw [one_powr]
+ >> ‘0 < p /\ 1 < a’ by rw [lt_le]
+ >> Cases_on ‘a = PosInf’ >- rw [infty_powr]
+ >> ‘1 = a powr 0’ by rw [] >> POP_ORW
+ >> rw [powr_le_eq]
 QED
 
 (* cf. transcTheory.RPOW_RPOW
@@ -3198,6 +3263,31 @@ Proof
  >> MATCH_MP_TAC exp_add
  >> DISJ1_TAC
  >> METIS_TAC [mul_not_infty, ln_not_neginf, REAL_LT_IMP_LE]
+QED
+
+(* cf. transcTheory.RPOW_ADD *)
+Theorem powr_add :
+    !a b c. 0 <= a /\ 0 <= b /\ b <> PosInf /\ 0 <= c /\ c <> PosInf ==>
+            a powr (b + c) = a powr b * a powr c
+Proof
+    rpt STRIP_TAC
+ >> ‘a <> NegInf /\ b <> NegInf /\ c <> NegInf’ by rw [pos_not_neginf]
+ >> Cases_on ‘b = 0’ >- rw []
+ >> Cases_on ‘c = 0’ >- rw []
+ >> ‘0 < b /\ 0 < c’ by rw [lt_le]
+ >> ‘0 < b + c’ by rw [lt_add]
+ >> Cases_on ‘a = 0’ >- rw [zero_rpow]
+ >> ‘0 < a’ by rw [lt_le]
+ >> Cases_on ‘a = PosInf’
+ >- rw [infty_powr, extreal_mul_def]
+ >> ‘?A. 0 < A /\ a = Normal A’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?B. 0 < B /\ b = Normal B’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘?C. 0 < C /\ c = Normal C’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> ‘0 < B + C’ by rw [REAL_LT_ADD]
+ >> rw [normal_powr, extreal_add_def, extreal_mul_def, RPOW_ADD]
 QED
 
 Theorem sqrt_powr :
@@ -3898,15 +3988,20 @@ val EXTREAL_SUM_IMAGE_DEF = new_definition
   ``EXTREAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0 :extreal)``);
 
 (* Now theorems about EXTREAL_SUM_IMAGE itself *)
-val EXTREAL_SUM_IMAGE_EMPTY = store_thm
-  ("EXTREAL_SUM_IMAGE_EMPTY", ``!f. EXTREAL_SUM_IMAGE f {} = 0``,
-    SIMP_TAC (srw_ss()) [ITSET_THM, EXTREAL_SUM_IMAGE_DEF]);
+Theorem EXTREAL_SUM_IMAGE_EMPTY[simp] :
+    !f. EXTREAL_SUM_IMAGE f {} = 0
+Proof
+    SRW_TAC [][ITSET_THM, EXTREAL_SUM_IMAGE_DEF]
+QED
 
-(* this is provable by (old) EXTREAL_SUM_IMAGE_THM but using original definition is much
-   easier, because CHOICE and REST from singleton can be easily eliminated. *)
-val EXTREAL_SUM_IMAGE_SING = store_thm
-  ("EXTREAL_SUM_IMAGE_SING", ``!f e. EXTREAL_SUM_IMAGE f {e} = f e``,
-    SRW_TAC [][EXTREAL_SUM_IMAGE_DEF, ITSET_THM, add_rzero]);
+(* This is provable by (old) EXTREAL_SUM_IMAGE_THM but using original definition is much
+   easier, because CHOICE and REST from singleton can be easily eliminated.
+ *)
+Theorem EXTREAL_SUM_IMAGE_SING[simp] :
+    !f e. EXTREAL_SUM_IMAGE f {e} = f e
+Proof
+    SRW_TAC [][EXTREAL_SUM_IMAGE_DEF, ITSET_THM, add_rzero]
+QED
 
 (* This new theorem provides a "complete" picture for EXTREAL_SUM_IMAGE. *)
 val EXTREAL_SUM_IMAGE_THM = store_thm
@@ -4114,10 +4209,9 @@ Theorem EXTREAL_SUM_IMAGE_FINITE_CONST : (* was: extreal_sum_image_finite_corr *
 Proof
     rw []
  >> Cases_on ‘P = {}’ >> simp []
- >- rw [EXTREAL_SUM_IMAGE_THM, mul_lzero]
  >> ‘?m. m IN P’ by metis_tac [MEMBER_NOT_EMPTY]
  >> ‘x = f m’ by fs [] >> rw []
- >> irule EXTREAL_SUM_IMAGE_FINITE_SAME >> rw[]
+ >> irule EXTREAL_SUM_IMAGE_FINITE_SAME >> rw []
 QED
 
 val EXTREAL_SUM_IMAGE_ZERO = store_thm
@@ -8150,11 +8244,11 @@ Proof
 QED
 
 val EXTREAL_PROD_IMAGE_EMPTY = store_thm
-  ("EXTREAL_PROD_IMAGE_EMPTY", ``!f. EXTREAL_PROD_IMAGE f {} = 1``,
+  ("EXTREAL_PROD_IMAGE_EMPTY[simp]", ``!f. EXTREAL_PROD_IMAGE f {} = 1``,
     SRW_TAC [] [EXTREAL_PROD_IMAGE_THM]);
 
 val EXTREAL_PROD_IMAGE_SING = store_thm
-  ("EXTREAL_PROD_IMAGE_SING", ``!f e. EXTREAL_PROD_IMAGE f {e} = f e``,
+  ("EXTREAL_PROD_IMAGE_SING[simp]", ``!f e. EXTREAL_PROD_IMAGE f {e} = f e``,
     SRW_TAC [] [EXTREAL_PROD_IMAGE_THM, mul_rone]);
 
 val EXTREAL_PROD_IMAGE_PROPERTY = store_thm
@@ -8349,6 +8443,20 @@ Definition max_fn_seq_def :
    (max_fn_seq g 0       x = g 0 x) /\
    (max_fn_seq g (SUC n) x = max (max_fn_seq g n x) (g (SUC n) x))
 End
+
+Theorem max_fn_seq_0[simp] :
+    !g. max_fn_seq g 0 = g 0
+Proof
+    rw [FUN_EQ_THM, max_fn_seq_def]
+QED
+
+Theorem max_fn_seq_cong :
+    !f g x. (!n. f n x = g n x) ==> !n. max_fn_seq f n x = max_fn_seq g n x
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> Induct_on ‘n’
+ >> rw [max_fn_seq_def]
+QED
 
 (* cf. real_topologyTheory.SUP_INSERT. For extreal, ‘bounded‘ is not needed. *)
 Theorem sup_insert :
@@ -9404,7 +9512,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Definition extreal_dist_def :
-    extreal_dist (Normal x) (Normal y) = dist (reduced_metric mr1) (x,y) /\
+    extreal_dist (Normal x) (Normal y) = dist (bounded_metric mr1) (x,y) /\
     extreal_dist  PosInf     PosInf    = 0 /\
     extreal_dist  NegInf     NegInf    = 0 /\
     extreal_dist  _          _         = 1
@@ -9416,23 +9524,23 @@ Theorem extreal_dist_ismet :
 Proof
     rw [ismet]
  >- (Cases_on ‘x’ >> Cases_on ‘y’ \\
-     rw [extreal_dist_def, reduced_metric_thm, MR1_DEF] \\
+     rw [extreal_dist_def, bounded_metric_thm, MR1_DEF] \\
      EQ_TAC >> rw [] \\
      fs [REAL_DIV_ZERO] \\
      rename1 ‘1 + abs (a - b)’ \\
      Suff ‘0 < 1 + abs (a - b)’ >- METIS_TAC [REAL_LT_IMP_NE] \\
      MATCH_MP_TAC REAL_LTE_TRANS \\
      Q.EXISTS_TAC ‘1’ >> rw [])
- >> Know ‘!a (b :real). dist (reduced_metric mr1) (a,b) <= 2’
+ >> Know ‘!a (b :real). dist (bounded_metric mr1) (a,b) <= 2’
  >- (rpt GEN_TAC \\
      MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC ‘1’ >> rw [] \\
-     MATCH_MP_TAC REAL_LT_IMP_LE >> rw [reduced_metric_lt_1])
+     MATCH_MP_TAC REAL_LT_IMP_LE >> rw [bounded_metric_lt_1])
  >> DISCH_TAC
  >> Cases_on ‘x’ >> Cases_on ‘y’ >> Cases_on ‘z’
  >> rw [extreal_dist_def, METRIC_POS]
- >> rename1 ‘dist (reduced_metric mr1) (x,z) <=
-             dist (reduced_metric mr1) (y,x) + dist (reduced_metric mr1) (y,z)’
- >> ‘dist (reduced_metric mr1) (y,x) = dist (reduced_metric mr1) (x,y)’
+ >> rename1 ‘dist (bounded_metric mr1) (x,z) <=
+             dist (bounded_metric mr1) (y,x) + dist (bounded_metric mr1) (y,z)’
+ >> ‘dist (bounded_metric mr1) (y,x) = dist (bounded_metric mr1) (x,y)’
       by PROVE_TAC [METRIC_SYM]
  >> rw [METRIC_TRIANGLE]
 QED
@@ -9460,7 +9568,306 @@ Proof
  >> Cases_on ‘x’ >> Cases_on ‘y’
  >> rw [extreal_mr1_thm, extreal_dist_def]
  >> MATCH_MP_TAC REAL_LT_IMP_LE
- >> rw [reduced_metric_lt_1]
+ >> rw [bounded_metric_lt_1]
+QED
+
+(************************************************************************)
+(*   Miscellaneous Results (generally for use in descendent theories)   *)
+(************************************************************************)
+
+(*  I add these results at the end
+      in order to manipulate the simplifier without breaking anything
+      - Jared Yeager                                                    *)
+
+(*** Basic Theorems ***)
+
+Theorem normal_0:
+    Normal 0 = 0
+Proof
+    simp[extreal_eq_zero]
+QED
+
+Theorem normal_1:
+    Normal 1 = 1
+Proof
+    simp[extreal_of_num_def]
+QED
+
+Theorem normal_minus1:
+    Normal (-1) = -1
+Proof
+    ‘Normal (-1) = -(Normal 1)’ suffices_by simp[normal_1] >> simp[extreal_ainv_def]
+QED
+
+Theorem extreal_le_simps[simp]:
+    (!x y. Normal x <= Normal y <=> x <= y) /\ (!x. NegInf <= x <=> T) /\ (!x. x <= PosInf <=> T) /\
+    (!x. Normal x <= NegInf <=> F) /\ (!x. PosInf <= Normal x <=> F) /\ (PosInf <= NegInf <=> F)
+Proof
+    rw[extreal_le_def] >> Cases_on ‘x’ >> simp[extreal_le_def]
+QED
+
+Theorem extreal_lt_simps[simp]:
+    (!x y. Normal x < Normal y <=> x < y) /\ (!x. x < NegInf <=> F) /\ (!x. PosInf < x <=> F) /\
+    (!x. Normal x < PosInf <=> T) /\ (!x. NegInf < Normal x <=> T) /\ (NegInf < PosInf <=> T)
+Proof
+    simp[extreal_lt_eq] >> rw[extreal_lt_def]
+QED
+
+Theorem extreal_0_simps[simp]:
+    (0 <= PosInf <=> T) /\ (0 < PosInf <=> T) /\
+    (PosInf <= 0 <=> F) /\ (PosInf < 0 <=> F) /\
+    (0 = PosInf <=> F) /\ (PosInf = 0 <=> F) /\
+    (0 <= NegInf <=> F) /\ (0 < NegInf <=> F) /\
+    (NegInf <= 0 <=> T) /\ (NegInf < 0 <=> T) /\
+    (0 = NegInf <=> F) /\ (NegInf = 0 <=> F) /\
+    (!r. 0 <= Normal r <=> 0 <= r) /\ (!r. 0 < Normal r <=> 0 < r) /\ (!r. 0 = Normal r <=> r = 0) /\
+    (!r. Normal r <= 0 <=> r <= 0) /\ (!r. Normal r < 0 <=> r < 0) /\ (!r. Normal r = 0 <=> r = 0)
+Proof
+    simp[GSYM normal_0]
+QED
+
+Theorem extreal_1_simps[simp]:
+    (1 <= PosInf <=> T) /\ (1 < PosInf <=> T) /\ (PosInf <= 1 <=> F) /\
+    (PosInf < 1 <=> F) /\ (1 = PosInf <=> F) /\ (PosInf = 1 <=> F) /\
+    (1 <= NegInf <=> F) /\ (1 < NegInf <=> F) /\ (NegInf <= 1 <=> T) /\
+    (NegInf < 1 <=> T) /\ (1 = NegInf <=> F) /\ (NegInf = 1 <=> F) /\
+    (!r. 1 <= Normal r <=> 1 <= r) /\ (!r. 1 < Normal r <=> 1 < r) /\ (!r. 1 = Normal r <=> r = 1) /\
+    (!r. Normal r <= 1 <=> r <= 1) /\ (!r. Normal r < 1 <=> r < 1) /\ (!r. Normal r = 1 <=> r = 1)
+Proof
+    simp[GSYM normal_1]
+QED
+
+(* do NOT add to a simpset, way too much overhead *)
+Theorem ineq_imp:
+    (!x:extreal y. x < y ==> ~(y < x)) /\ (!x:extreal y. x < y ==> x <> y) /\
+    (!x:extreal y. x < y ==> ~(y <= x)) /\ (!x:extreal y. x < y ==> x <= y) /\
+    (!x:extreal y. x <= y ==> ~(y < x))
+Proof
+    rw[] >> Cases_on ‘x’ >> Cases_on ‘y’ >> fs[SF realSimps.REAL_ARITH_ss]
+QED
+
+Theorem fn_plus_alt:
+    !f. fn_plus f = (λx. if 0 <= f x then f x else (0: extreal))
+Proof
+    rw[fn_plus_def,FUN_EQ_THM] >> qspecl_then [‘f x’,‘0’] assume_tac lt_total >>
+    FULL_SIMP_TAC bool_ss [] >> simp[ineq_imp]
+QED
+
+Theorem extreal_pow_alt:
+    (!x:extreal. x pow 0 = 1) /\
+    (!n x:extreal. x pow (SUC n) = x pow n * x)
+Proof
+    simp[pow_0,ADD1,pow_add,pow_1]
+QED
+
+(*** EXTREAL_SUM_IMAGE Theorems ***)
+
+Theorem EXTREAL_SUM_IMAGE_ALT_FOLDR:
+    !f s. FINITE s ==>
+          EXTREAL_SUM_IMAGE f s = FOLDR (λe acc. f e + acc) 0x (REVERSE (SET_TO_LIST s))
+Proof
+    simp[EXTREAL_SUM_IMAGE_DEF,ITSET_TO_FOLDR]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_EQ':
+    !f g s. FINITE s /\ (!x. x IN s ==> f x = g x) ==> EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE g s: extreal
+Proof
+    rw[] >> simp[EXTREAL_SUM_IMAGE_ALT_FOLDR] >> irule FOLDR_CONG >> rw[]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_MONO':
+    !f g s. FINITE s /\ (!x. x IN s ==> f x <= g x) ==> EXTREAL_SUM_IMAGE f s <= EXTREAL_SUM_IMAGE g s: extreal
+Proof
+    ‘!f g l. (!e. MEM e l ==> f e <= g e) ==>
+      (FOLDR (λe acc. f e + acc) 0x l <= FOLDR (λe acc. g e + acc) 0x l)’
+        suffices_by rw[EXTREAL_SUM_IMAGE_ALT_FOLDR] >>
+    Induct_on ‘l’ >> rw[FOLDR] >> irule le_add2 >> simp[]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_COUNT_ZERO[simp]:
+    !f. EXTREAL_SUM_IMAGE f (count 0) = 0:extreal
+Proof
+    simp[COUNT_ZERO]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_COUNT_ONE[simp]:
+    !f. EXTREAL_SUM_IMAGE f (count 1) = f 0:extreal
+Proof
+    simp[COUNT_ONE]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_COUNT_SUC:
+    !f n. (!m. m <= n ==> f m <> NegInf) \/ (!m. m <= n ==> f m <> PosInf) ==>
+        EXTREAL_SUM_IMAGE f (count (SUC n)) = (EXTREAL_SUM_IMAGE f (count n)) + f n:extreal
+Proof
+    rw[] >> ‘count (SUC n) = (count n) UNION {n}’ by fs[count_def,EXTENSION] >>
+    rw[] >> pop_assum kall_tac >>
+    ‘EXTREAL_SUM_IMAGE f (count n UNION {n}) = EXTREAL_SUM_IMAGE f (count n) + EXTREAL_SUM_IMAGE f {n}’ suffices_by fs[EXTREAL_SUM_IMAGE_SING] >>
+    irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> simp[]
+QED
+
+(*** EXTREAL_PROD_IMAGE Theorems ***)
+
+Theorem EXTREAL_PROD_IMAGE_NOT_INFTY:
+    !f s. FINITE s /\ (!x. x IN s ==> f x <> NegInf /\ f x <> PosInf) ==>
+        EXTREAL_PROD_IMAGE f s <> NegInf /\ EXTREAL_PROD_IMAGE f s <> PosInf
+Proof
+    strip_tac >> simp[Once $ GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >> CONJ_TAC
+    >- simp[EXTREAL_PROD_IMAGE_EMPTY,SYM normal_1] >>
+    NTAC 5 strip_tac >> fs[EXTREAL_PROD_IMAGE_PROPERTY,DELETE_NON_ELEMENT_RWT] >>
+    Cases_on ‘f e’ >> Cases_on ‘EXTREAL_PROD_IMAGE f s’ >> rfs[extreal_mul_def]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_NORMAL:
+    !f s. FINITE s ==> EXTREAL_PROD_IMAGE (λx. Normal (f x)) s = Normal (REAL_PROD_IMAGE f s)
+Proof
+    strip_tac >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,REAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT,extreal_mul_def,normal_1]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_0:
+    !f s. FINITE s /\ (?x. x IN s /\ f x = 0) ==> EXTREAL_PROD_IMAGE f s = 0
+Proof
+    NTAC 2 strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >- fs[] >>
+    DISJ2_TAC >> first_x_assum irule >> qexists_tac ‘x’ >> simp[]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_1:
+    !f s. FINITE s /\ (!x. x IN s ==> f x = 1) ==> EXTREAL_PROD_IMAGE f s = 1
+Proof
+    NTAC 2 strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_ONE:
+    !s. FINITE s ==> EXTREAL_PROD_IMAGE (λx. 1) s = 1x
+Proof
+    Induct_on ‘s’ >> simp[EXTREAL_PROD_IMAGE_EMPTY,EXTREAL_PROD_IMAGE_PROPERTY,DELETE_NON_ELEMENT_RWT]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_POS:
+    !f s. FINITE s /\ (!x. x IN s ==> 0 <= f x) ==> 0 <= EXTREAL_PROD_IMAGE f s
+Proof
+    strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >> irule le_mul >> simp[]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_MONO:
+    !f g s. FINITE s /\ (!x. x IN s ==> 0 <= f x /\ f x <= g x) ==>
+        EXTREAL_PROD_IMAGE f s <= EXTREAL_PROD_IMAGE g s
+Proof
+    NTAC 2 strip_tac >> simp[GSYM AND_IMP_INTRO] >> Induct_on ‘s’ >>
+    rw[EXTREAL_PROD_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >> irule le_mul2 >>
+    simp[EXTREAL_PROD_IMAGE_POS]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_COUNT_ZERO[simp]:
+    !f. EXTREAL_PROD_IMAGE f (count 0) = 1x
+Proof
+    simp[COUNT_ZERO]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_COUNT_ONE[simp]:
+    !f. EXTREAL_PROD_IMAGE f (count 1) = f 0: extreal
+Proof
+    simp[COUNT_ONE]
+QED
+
+Theorem EXTREAL_PROD_IMAGE_COUNT_SUC:
+    !f n. EXTREAL_PROD_IMAGE f (count (SUC n)) = EXTREAL_PROD_IMAGE f (count n) * f n: extreal
+Proof
+    rw[] >> qspecl_then [‘f’,‘n’,‘count n’] assume_tac EXTREAL_PROD_IMAGE_PROPERTY >>
+    rfs[] >> simp[mul_comm] >> pop_assum $ SUBST1_TAC o SYM >>
+    ‘count (SUC n) = n INSERT count n’ suffices_by simp[] >> simp[EXTENSION]
+QED
+
+(*** Miscellany Within Miscellany ***)
+
+Theorem ext_suminf_sing_general:
+    !m r. 0 <= r ==> suminf (λn. if n = m then r else 0) = r
+Proof
+    rw[] >> ‘!n. 0 <= (λn. if n = m then r else 0) n’ by rw[] >> fs[ext_suminf_def] >>
+    ‘(λn. EXTREAL_SUM_IMAGE (λn. if n = m then r else 0) (count n)) =
+      (λn. if n < SUC m then 0 else r)’ by (
+        rw[FUN_EQ_THM] >> Induct_on ‘n’ >> simp[] >>
+        (qspecl_then [‘(λn. if n = m then r else 0)’,‘n’] assume_tac) EXTREAL_SUM_IMAGE_COUNT_SUC >>
+        rfs[pos_not_neginf] >> pop_assum kall_tac >>
+        map_every (fn tm => Cases_on tm >> simp[]) [‘n < m’,‘n = m’]) >>
+    simp[] >> pop_assum kall_tac >> rw[IMAGE_DEF,sup_eq] >- rw[] >>
+    pop_assum irule >> qexists_tac ‘SUC m’ >> simp[]
+QED
+
+Theorem ext_suminf_nested:
+    !f. (!m n. 0 <= f m n) ==> suminf (λn. suminf (λm. f m n)) = suminf (λm. suminf (λn. f m n))
+Proof
+    rw[] >>
+    map_every (fn tms => qspecl_then tms assume_tac ext_suminf_2d_full)
+        [[‘λm n. f m n’,‘(λm. suminf (λn. f m n))’,‘num_to_pair’],
+        [‘λn m. f m n’,‘(λn. suminf (λm. f m n))’,‘SWAP o num_to_pair’]] >>
+    rfs[BIJ_NUM_TO_PAIR,INST_TYPE [alpha |-> “:num”,beta |-> “:num”] BIJ_SWAP,BIJ_COMPOSE,SF SFY_ss] >>
+    NTAC 2 $ pop_assum $ SUBST1_TAC o SYM >> irule ext_suminf_eq >>
+    rw[o_DEF] >> Cases_on `num_to_pair n` >> simp[SWAP_def]
+QED
+
+Theorem exp_mono_le[simp]:
+    !x:extreal y. exp x <= exp y <=> x <= y
+Proof
+    rw[] >> Cases_on ‘x’ >> Cases_on ‘y’ >> simp[extreal_exp_def,EXP_MONO_LE]
+    >- (simp[EXP_POS_LE])
+    >- (simp[GSYM real_lt,EXP_POS_LT])
+QED
+
+Theorem pow_even_le:
+    !n. EVEN n ==> !x. 0 <= x pow n
+Proof
+    rw[] >> Cases_on ‘0 <= x’ >- simp[pow_pos_le] >> fs[GSYM extreal_lt_def] >> simp[le_lt,pow_pos_even]
+QED
+
+Theorem pow_ainv_odd:
+    !n. ODD n ==> !x. -x pow n = -(x pow n)
+Proof
+    rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
+    ‘-1 pow n = -1’ suffices_by simp[GSYM neg_minus1] >> completeInduct_on ‘n’ >>
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,ODD] >> rename [‘ODD n’]) >> simp[GSYM neg_minus1]
+QED
+
+Theorem pow_ainv_even:
+    !n. EVEN n ==> !x. -x pow n = x pow n
+Proof
+    rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
+    ‘-1 pow n = 1’ suffices_by simp[] >> completeInduct_on ‘n’ >>
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,EVEN] >> rename [‘EVEN n’]) >> simp[GSYM neg_minus1]
+QED
+
+Theorem sub_le_sub_imp:
+    !w x y z. w <= x /\ z <= y ==> w - y <= x - z
+Proof
+    rw[] >> irule le_trans >> qexists_tac ‘x - y’ >> simp[le_lsub_imp,le_rsub_imp]
+QED
+
+Theorem le_negl:
+    !x y. -x <= y <=> -y <= x
+Proof
+    rw[] >> ‘-x <= - -y <=> -y <= x’ suffices_by simp[] >> simp[le_neg,Excl "neg_neg"]
+QED
+
+Theorem le_negr:
+    !x y. x <= -y <=> y <= -x
+Proof
+    rw[] >> ‘- -x <= -y <=> y <= -x’ suffices_by simp[] >> simp[le_neg,Excl "neg_neg"]
+QED
+
+Theorem leeq_trans:
+    !x:extreal y z. x <= y /\ y = z ==> x <= z
+Proof
+    simp[]
+QED
+
+Theorem eqle_trans:
+    !x:extreal y z. x = y /\ y <= z ==> x <= z
+Proof
+    simp[]
 QED
 
 val _ = export_theory();

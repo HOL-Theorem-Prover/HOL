@@ -1208,12 +1208,12 @@ However, the rich syntax of patterns allows some ambiguity.
 For example, the input
 %
 \begin{hol}
-\begin{verbatim}
-Definition f_def:
-  (f 0 _ = 1) /\
-  (f _ 0 = 2)
-End
-\end{verbatim}
+\begin{alltt}
+##eval Definition f_def:
+         (f 0 _ = 1) /\
+         (f _ 0 = 2)
+       End
+\end{alltt}
 \end{hol}
 %
 is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
@@ -1234,25 +1234,19 @@ In summary, \ml{Definition} will derive the unambiguous and complete
 equations
 %
 \begin{hol}
-\begin{verbatim}
-  |- (f 0 (SUC v4) = 1) /\
-     (f 0 0 = 1) /\
-     (f (SUC v2) 0 = 2)
-     (f (SUC v2) (SUC v4) = ARB)
-\end{verbatim}
+\begin{alltt}
+##parsetm f 0 v0 = 1 /\ f (SUC v3) 0 = 2 /\ f (SUC v1) (SUC v2) = ARB
+\end{alltt}
 \end{hol}
 %
-from the above ambiguous and incomplete equations. The odd-looking
-variable names are due to the pre-processing steps described above. The
-above result is only an intermediate value: in the final result returned
-by \ml{Definition}, the last equation is droppped since it was not
-specified by the original input.
+from the above ambiguous and incomplete equations.
+The odd-looking variable names are due to the pre-processing steps described above.
+Depending on the analysis of the pattern-matching (see Section~\ref{CaseExp} for how this is done, and how it can be tweaked), the theorem returned from a definition may look rather unlike the original input.
+In this particular case, the post-processing needs only drop the last conjunct, which was not part of the original user-specification, yielding:
 \begin{hol}
-\begin{verbatim}
-  |- (f 0 (SUC v4) = 1) /\
-     (f 0 0 = 1) /\
-     (f (SUC v2) 0 = 2)
-\end{verbatim}
+\begin{alltt}
+>>- val f_def = f_def
+\end{alltt}
 \end{hol}
 
 \paragraph{Termination}
@@ -1722,6 +1716,7 @@ The first conjunct needs a case-split on \holtxt{s} before it is proved by
 rewriting, and the second is also easy to prove by rewriting.
 
 \subsubsection{How termination conditions are synthesized}
+\label{sec:tfl-congruence}
 
 \index{congruence rules!in termination analysis|(}
 It is occasionally important to understand, at least in part, how

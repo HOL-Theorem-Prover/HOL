@@ -25,7 +25,7 @@ open metisLib arithmeticTheory pred_setTheory pred_setLib numTheory numLib
      listTheory combinTheory pairTheory realTheory realLib jrhUtils RealArith
      seqTheory real_sigmaTheory transcTheory metricTheory topologyTheory;
 
-open cardinalTheory real_topologyTheory iterateTheory integrationTheory;
+open cardinalTheory real_topologyTheory iterateTheory;
 
 open hurdUtils util_probTheory sigma_algebraTheory;
 

@@ -248,36 +248,20 @@ val trivial_ring = store_thm(
    since 0 < 1, this means FUNPOW (\y. z) 1 z <> z,
    but FUNPOW (\y. z) 1 z = z by FUNPOW, hence a contradiction.
 *)
-val trivial_char = store_thm(
-  "trivial_char",
-  ``!z. char (trivial_ring z) = 1``,
+Theorem trivial_char:
+  !z. char (trivial_ring z) = 1
+Proof
   strip_tac >>
   `FiniteRing (trivial_ring z)` by rw_tac std_ss[trivial_ring] >>
   rw[char_def] >>
   rw_tac std_ss[order_def, period_def, trivial_ring_def, monoid_exp_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  rw_tac std_ss[] >| [ (* avoid srw_tac simplication *)
-    qexists_tac `1` >>
-    rw[],
-    (spose_not_then strip_assume_tac) >>
-    `1 < n /\ 0 < 1` by decide_tac >>
-    `FUNPOW (\y. z) 1 z <> z` by metis_tac[] >>
-    full_simp_tac (srw_ss()) []
-  ]);
-(* Michael's proof *)
-val trivial_char = store_thm(
-  "trivial_char",
-  ``!z. char (trivial_ring z) = 1``,
-  rw[char_def, order_def, period_def, trivial_ring_def, monoid_exp_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  rw_tac std_ss[] >| [ (* avoid srw_tac simplication *)
-    qexists_tac `1` >>
-    rw[],
-    `~(1 < n)` suffices_by decide_tac >>
-    strip_tac >>
-    res_tac >>
-    full_simp_tac (srw_ss()) []
-  ]);
+  rw_tac std_ss[] >>
+  spose_not_then strip_assume_tac >>
+  `1 < n /\ 0 < 1` by decide_tac >>
+  `FUNPOW (\y. z) 1 z <> z` by metis_tac[DECIDE “~(0 < 0)”] >>
+  full_simp_tac (srw_ss()) []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Z_n, Arithmetic in Modulo n.                                              *)
@@ -418,54 +402,29 @@ val ZN_lemma2 = prove(
    Since (FUNPOW (\j. (1 + j) MOD n) n' 0 = n MOD n' = 0  by by ZN_lemma1
    and 0 < n' /\ 0 < n ==> n MOD n' <> 0, a contradiction with n MOD n' = 0.
 *)
-val ZN_char = store_thm(
-  "ZN_char",
-  ``!n. 0 < n ==> (char (ZN n) = n)``,
+Theorem ZN_char:
+  !n. 0 < n ==> char (ZN n) = n
+Proof
   rw_tac std_ss[char_def, order_def, period_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  rw_tac std_ss[ZN_def, add_mod_def, times_mod_def, monoid_exp_def] >| [ (* avoid srw_tac simplication *)
-    qexists_tac `1` >>
-    rw[],
-    first_x_assum (qspec_then `n` mp_tac) >>
-    asm_simp_tac (srw_ss() ++ ARITH_ss) [ZN_lemma2],
-    spose_not_then strip_assume_tac >>
-    `1 < n' /\ 0 < 1` by decide_tac >>
+  simp[Excl "lift_disj_eq", ZN_def, add_mod_def, times_mod_def,
+       monoid_exp_def] >>
+  rw[Excl "lift_disj_eq"] >| [ (* avoid srw_tac simplication *)
+    qexists_tac `1` >> rw[],
+    metis_tac[ZN_lemma2, DECIDE “~(0 < 0)”],
+    rename [‘0 < m’] >> spose_not_then strip_assume_tac >>
+    `1 < m` by decide_tac >>
     `FUNPOW (\j. 0) 1 0 = 0` by rw[] >>
-    metis_tac[],
-    `~(FUNPOW (\j. (j + 1) MOD n) n 0 <> 0)` by rw_tac std_ss[ZN_lemma2] >>
-    `!j. FUNPOW (\j. (j + 1) MOD n) n 0 = FUNPOW (\j. (1 + j) MOD n) n 0` by rw_tac arith_ss [] >>
-    `~(n < n')` by metis_tac[] >>
-    `~(n' < n)` suffices_by decide_tac >>
-    rpt strip_tac >>
+    metis_tac[DECIDE “1 ≠ 0”],
+
+    rename [‘m = n’, ‘n ≠ 1’] >>
+    ‘FUNPOW (\j. (j + 1) MOD n) n 0 = 0’ by rw_tac std_ss[ZN_lemma2] >>
+    ‘~(n < m)’ by metis_tac[DECIDE “~(0 < 0)”] >>
+    ‘~(m < n)’ suffices_by decide_tac >>
+    strip_tac >>
     full_simp_tac (srw_ss() ++ ARITH_ss) [ZN_lemma1]
-  ]);
-(* Michael's proof *)
-val ZN_char = store_thm(
-  "ZN_char",
-  ``!n. 0 < n ==> (char (ZN n) = n)``,
-  simp_tac (srw_ss()) [char_def, order_def, period_def, ZN_def, add_mod_def, times_mod_def, monoid_exp_def] >>
-  rpt strip_tac >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  conj_tac >| [
-    rw_tac std_ss[] >| [ (* avoid srw_tac simplication *)
-      qexists_tac `1` >>
-      rw[],
-      first_x_assum (qspec_then `n` mp_tac) >>
-      asm_simp_tac (srw_ss() ++ ARITH_ss) [ZN_lemma1]
-    ],
-    qx_gen_tac `m` >>
-    rw_tac std_ss[] >| [ (* avoid srw_tac simplication *)
-      spose_not_then strip_assume_tac >>
-      `1 < m` by decide_tac >>
-      `FUNPOW (\j. 0) 1 0 = 0` by rw[] >>
-      metis_tac[],
-      `~(m < n) /\ ~(n < m)` suffices_by decide_tac >>
-      rpt strip_tac >-
-      full_simp_tac (srw_ss() ++ ARITH_ss) [ZN_lemma1] >>
-      first_x_assum (qspec_then `n` mp_tac) >>
-      asm_simp_tac (srw_ss() ++ ARITH_ss) [ZN_lemma1]
-    ]
-  ]);
+  ]
+QED
 
 (* Better proof *)
 
@@ -1878,63 +1837,30 @@ val symdiff_univ_univ_eq_empty = store_thm(
    but FUNPOW (symdiff univ(:'a)) 1 {} = symdiff univ(:'a) {} = univ(:'a) <> {}, a contradiction.
    If 2 < n, then FUNPOW (symdiff univ(:'a)) 2 {} <> {}, contradicting FUNPOW_2 and symdiff_def.
 *)
-val symdiff_set_inter_char = store_thm(
-  "symdiff_set_inter_char",
-  ``char symdiff_set_inter = 2``,
-  simp_tac (srw_ss()) [char_def, order_def, period_def, symdiff_set_inter_def, monoid_exp_def, symdiff_set_def, set_inter_def] >>
+Theorem symdiff_set_inter_char:
+  char symdiff_set_inter = 2
+Proof
+  simp[char_def, order_def, period_def, symdiff_set_inter_def,
+       monoid_exp_def, symdiff_set_def, set_inter_def] >>
   `FUNPOW (symdiff univ(:'a)) 2 {} = {}` by rw[FUNPOW_2, symdiff_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  rw_tac std_ss[] >| [ (* avoid srw_tac simplication *)
-    qexists_tac `2` >>
-    rw[],
-    `~(n < 2) /\ ~(2 < n)` suffices_by decide_tac >>
-    (spose_not_then strip_assume_tac) >>
-    `2 < n ==> ~(0 < 2)` by metis_tac[] >>
-    `n = 1` by decide_tac >>
-    full_simp_tac (srw_ss())[symdiff_def]
-  ]);
-(* Similar to Michael's proof *)
-val symdiff_set_inter_char = store_thm(
-  "symdiff_set_inter_char",
-  ``char symdiff_set_inter = 2``,
-  simp_tac (srw_ss()) [char_def, order_def, period_def, symdiff_set_inter_def, monoid_exp_def, symdiff_set_def, set_inter_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  rw_tac std_ss[] >| [ (* avoid srw_tac simplication *)
-    qexists_tac `2` >>
-    rw[FUNPOW_2, symdiff_def],
-    `~(n < 2) /\ ~(2 < n)` suffices_by decide_tac >>
-    rpt strip_tac >| [
-      `n = 1` by decide_tac >>
-      full_simp_tac (srw_ss())[symdiff_def],
-      (first_x_assum (qspec_then `2` mp_tac)) >>
-      rw[FUNPOW_2, symdiff_def]
-    ]
-  ]);
-(* Michael's proof *)
-val symdiff_set_inter_char = store_thm(
-  "symdiff_set_inter_char",
-  ``char symdiff_set_inter = 2``,
-  simp_tac (srw_ss()) [char_def, order_def, period_def, symdiff_set_inter_def,
-                       monoid_exp_def, symdiff_set_def, set_inter_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >> rw[] >| [
-    qexists_tac `2` >> rw[FUNPOW_2, symdiff_def],
-    `~(n < 2) /\ ~(2 < n)` suffices_by decide_tac >> rpt strip_tac >| [
-      `n = 1` by decide_tac >> full_simp_tac(srw_ss())[symdiff_def],
-      first_x_assum (qspec_then `2` mp_tac) >> rw[FUNPOW_2, symdiff_def]
-    ]
-  ]);
+  rw[] >>
+  `~(n < 2) /\ ~(2 < n)` suffices_by decide_tac >>
+  spose_not_then strip_assume_tac >>
+  ‘~(2 < n)’ by metis_tac[DECIDE “2 ≠ 0”] >> gs[] >>
+  `n = 1` by decide_tac >>
+  gs[symdiff_def]
+QED
 
 (* Theorem: evaluation for symdiff dields. *)
 (* Proof: by definitions. *)
-val symdiff_eval = store_thm(
-  "symdiff_eval",
-  ``((symdiff_set).carrier = UNIV) /\
-   (!x y. (symdiff_set).op x y = (x UNION y) DIFF (x INTER y)) /\
-   ((symdiff_set).id = EMPTY)``,
-  rw_tac std_ss[symdiff_set_def, symdiff_def]);
-
-(* val _ = export_rewrites ["symdiff_eval"]; *)
-val _ = computeLib.add_persistent_funs ["symdiff_eval"];
+Theorem symdiff_eval[compute]:
+  ((symdiff_set).carrier = UNIV) /\
+  (!x y. (symdiff_set).op x y = (x UNION y) DIFF (x INTER y)) /\
+  ((symdiff_set).id = EMPTY)
+Proof
+  rw_tac std_ss[symdiff_set_def, symdiff_def]
+QED
 (*
 EVAL ``order (symdiff_set) EMPTY``;
 > val it = |- order symdiff_set {} = 1 : thm

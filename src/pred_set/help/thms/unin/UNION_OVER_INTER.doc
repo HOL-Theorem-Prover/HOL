@@ -1,3 +1,0 @@
-\THEOREM UNION_OVER_INTER pred_sets
-|- !s t u. s INTER (t UNION u) = (s INTER t) UNION (s INTER u)
-\ENDTHEOREM

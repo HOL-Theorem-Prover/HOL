@@ -2158,7 +2158,3 @@ the surrounding text (as done by ‘hol-do-goal’ and
     (setq yas-snippet-dirs (nconc yas-snippet-dirs (cons HOLsnippets '())))
     (yas-reload-all)
     (define-key hol-map (kbd "TAB") 'yas-expand)))
-
-(when (locate-library "company-yasnippet")
-  (load-library "company")
-  (setq company-backends (cons 'company-yasnippet company-backends)))

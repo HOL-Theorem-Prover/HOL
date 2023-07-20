@@ -3,39 +3,52 @@ version: 1.0
 description: Assumptions of the HOL real theories
 author: HOL4 people
 license: BSD
+main {
+  import: base
+  import: hol-base
+  import: hol-set
+  import: hol-integer
+  article: "hol4-real-unsat.art"
+}
 base {
-  package: base-1.200
+  package: base-1.221
 }
 hol-base {
   import: base
-  package: hol-base-1.0
+  article: "../boss/hol4-base.art"
+}
+hol-set {
+  import: base
+  import: hol-base
+  import: hol-quotient
+  article: "../pred_set/src/more_theories/hol4-set.art"
 }
 hol-string {
   import: base
   import: hol-base
-  package: hol-string-1.0
+  article: "../string/hol4-string.art"
 }
 hol-words {
   import: base
   import: hol-base
   import: hol-string
-  package: hol-words-1.0
+  article: "../n-bit/hol4-words.art"
 }
 hol-ring {
   import: base
   import: hol-base
-  package: hol-ring-1.0
+  article: "../ring/src/hol4-ring.art"
 }
 hol-res-quan {
   import: base
   import: hol-base
-  package: hol-res-quan-1.0
+  article: "../res_quan/src/hol4-res-quan.art"
 }
 hol-quotient {
   import: base
   import: hol-base
   import: hol-res-quan
-  package: hol-quotient-1.0
+  article: "../quotient/src/hol4-quotient.art"
 }
 hol-integer {
   import: base
@@ -44,11 +57,5 @@ hol-integer {
   import: hol-string
   import: hol-ring
   import: hol-quotient
-  package: hol-integer-1.0
-}
-main {
-  import: base
-  import: hol-base
-  import: hol-integer
-  article: "hol4-real-unsat.art"
+  article: "../integer/hol4-integer.art"
 }

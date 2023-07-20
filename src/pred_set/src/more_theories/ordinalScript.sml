@@ -1,8 +1,8 @@
 open HolKernel Parse boolLib bossLib
-open boolSimps
 
-open set_relationTheory pred_setTheory cardinalTheory
-open wellorderTheory topologyTheory
+open boolSimps optionTheory set_relationTheory pred_setTheory;
+
+open wellorderTheory cardinalTheory topologyTheory;
 
 val _ = new_theory "ordinal"
 
@@ -567,7 +567,7 @@ val omax_def = Define`
 val omax_SOME = store_thm(
   "omax_SOME",
   ``(omax s = SOME a) <=> a IN s /\ !b. b IN s ==> b <= a``,
-  simp[omax_def] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  simp[omax_def] >> DEEP_INTRO_TAC some_intro >> simp[] >>
   conj_tac
   >- (qx_gen_tac `b` >> simp[maximal_elements_def, EXTENSION] >>
       strip_tac >> eq_tac
@@ -585,7 +585,7 @@ val omax_SOME = store_thm(
 val omax_NONE = store_thm(
   "omax_NONE",
   ``(omax s = NONE) <=> !a. a IN s ==> ?b. b IN s /\ a < b``,
-  simp[omax_def] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  simp[omax_def] >> DEEP_INTRO_TAC some_intro >>
   simp[maximal_elements_def, EXTENSION] >>
   metis_tac [ordle_lteq]);
 
@@ -648,7 +648,7 @@ val simple_ord_induction = store_thm(
   ho_match_mp_tac ord_induction >> qx_gen_tac `a` >>
   Cases_on `a = 0` >> simp[] >>
   `(omax (preds a) = NONE) \/ ?a0. omax (preds a) = SOME a0`
-    by metis_tac [optionTheory.option_CASES]
+    by metis_tac [option_CASES]
   >- (`0 < a` by metis_tac [ordlt_ZERO, ordle_lteq] >> metis_tac[]) >>
   fs[preds_omax_SOME_SUC]);
 
@@ -1081,7 +1081,7 @@ val generic_continuity = store_thm(
           s <<= univ(:'a inf) /\ s <> {} ==> f (sup s) = sup (IMAGE f s)``,
   rpt strip_tac >>
   `islimit (sup s) \/ ?a. omax (preds (sup s)) = SOME a`
-    by metis_tac [optionTheory.option_CASES]
+    by metis_tac [option_CASES]
   >| [
     Cases_on `sup s = 0` >> simp[]
     >- (pop_assum (mp_tac o Q.AP_TERM `preds`) >>
@@ -1393,9 +1393,43 @@ val ordDIVISION0 = prove(
   `!c. b * c <= a ==> c <= d` by metis_tac [ordlt_REFL] >>
   metis_tac [ordlt_SUC, ordle_EXISTS_ADD]);
 
+(* old definition:
 val ordDIVISION = new_specification(
   "ordDIVISION", ["ordDIV", "ordMOD"],
   SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION0)
+ *)
+
+(* new definition (by Chun Tian as OpenTheory workarounds) *)
+Theorem ordDIVISION1[local] :
+    !a b:'a ordinal. 0 < b ==> ?c. a = b * FST c + SND c /\ SND c < b
+Proof
+    rpt STRIP_TAC
+ >> STRIP_ASSUME_TAC
+      (SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION0)
+ >> POP_ASSUM (MP_TAC o (Q.SPECL [‘a’, ‘b’]))
+ >> RW_TAC std_ss []
+ >> rename1 ‘g a b < b’
+ >> Q.EXISTS_TAC ‘(f a b,g a b)’ >> rw []
+QED
+
+(* The next 3 theorems are skipped in ordinal.otd *)
+val ordDIVMOD = new_specification(
+   "ordDIVMOD", ["ordDIVMOD"],
+    SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION1);
+
+Definition ordDIV :
+    ordDIV a b = FST (ordDIVMOD a b)
+End
+
+Definition ordMOD :
+    ordMOD a b = SND (ordDIVMOD a b)
+End
+
+(* |- !a b. 0 < b ==> a = b * ordDIV a b + ordMOD a b /\ ordMOD a b < b *)
+Theorem ordDIVISION =
+    REWRITE_RULE [GSYM ordDIV, GSYM ordMOD] ordDIVMOD
+
+(* end of new definition of ordDIV and ordMOD *)
 
 val _ = set_fixity "/" (Infixl 600)
 val _ = overload_on ("/", ``ordDIV``)
@@ -1539,13 +1573,13 @@ val ordEXP_ZERO_limit = store_thm(
       fs[]) >>
   qx_gen_tac `z` >> strip_tac >> Cases_on `islimit z` >- metis_tac[] >>
   `?z0. z = z0^+`
-    by metis_tac [preds_omax_SOME_SUC, optionTheory.option_CASES] >>
+    by metis_tac [preds_omax_SOME_SUC, option_CASES] >>
   simp[])
 
 val ordEXP_ZERO_nonlimit = store_thm(
   "ordEXP_ZERO_nonlimit",
   ``~islimit x ==> 0 ** x = 0``,
-  metis_tac [preds_omax_SOME_SUC, optionTheory.option_CASES, ordEXP_def,
+  metis_tac [preds_omax_SOME_SUC, option_CASES, ordEXP_def,
              ordMULT_0R]);
 
 val sup_EQ_0 = store_thm(

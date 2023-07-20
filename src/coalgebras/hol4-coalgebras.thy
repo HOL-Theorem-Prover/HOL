@@ -1,10 +1,12 @@
 name: hol-coalgebras
-version: 1.0
+version: 1.1
 description: HOL coalgebras theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
-license: GPL
+license: MIT
 requires: base
 requires: hol-base
+requires: hol-set
+requires: hol-finite-maps
 show: "HOL4"
 show: "Data.Bool"
 show: "Data.List"

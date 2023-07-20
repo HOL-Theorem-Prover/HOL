@@ -2,9 +2,9 @@
 (* Develop the theory of reals                                               *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+open HolKernel Parse boolLib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory whileTheory
-     mesonLib tautLib simpLib Ho_Rewrite Arithconv
+     mesonLib tautLib simpLib Arithconv
      jrhUtils Canon_Port hratTheory hrealTheory realaxTheory
      BasicProvers TotalDefn metisLib bossLib;
 
@@ -723,7 +723,7 @@ Theorem REAL_LT_INV_EQ[simp]:
   !x. 0 < inv x <=> 0 < x
 Proof
   GEN_TAC THEN EQ_TAC THEN REWRITE_TAC[REAL_INV_POS] THEN
-  GEN_REWRITE_TAC (funpow 2 RAND_CONV) [GSYM REAL_INV_INV] THEN
+  GEN_REWRITE_TAC (funpow 2 RAND_CONV) empty_rewrites [GSYM REAL_INV_INV] THEN
   REWRITE_TAC[REAL_INV_POS]
 QED
 
@@ -1983,7 +1983,7 @@ Proof
   INDUCT_TAC THENL
    [REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[pow, REAL_LE_REFL],
     GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [pow] THEN
-    GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_LID] THEN
+    GEN_REWRITE_TAC LAND_CONV empty_rewrites [GSYM REAL_MUL_LID] THEN
     MATCH_MP_TAC REAL_LE_MUL2 THEN ASM_REWRITE_TAC[REAL_LE_01] THEN
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]
 QED
@@ -2067,7 +2067,7 @@ Proof
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   DISCH_THEN(X_CHOOSE_THEN “d:num” SUBST1_TAC) THEN
   REWRITE_TAC[REAL_POW_ADD] THEN
-  GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID] THEN
+  GEN_REWRITE_TAC LAND_CONV empty_rewrites [GSYM REAL_MUL_RID] THEN
   MATCH_MP_TAC REAL_LE_LMUL_IMP THEN CONJ_TAC THENL
    [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “&1” THEN
     RW_TAC arith_ss [REAL_LE] THEN
@@ -2082,12 +2082,12 @@ Proof
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   DISCH_THEN(CHOOSE_THEN SUBST_ALL_TAC) THEN
   REWRITE_TAC[POW_ADD] THEN
-  GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID] THEN
+  GEN_REWRITE_TAC LAND_CONV empty_rewrites [GSYM REAL_MUL_RID] THEN
   MATCH_MP_TAC REAL_LT_LMUL_IMP THEN CONJ_TAC THENL
    [SPEC_TAC(Term`d:num`,Term`d:num`) THEN
     INDUCT_TAC THEN ONCE_REWRITE_TAC[pow] THENL
      [ASM_REWRITE_TAC[pow, REAL_MUL_RID], ALL_TAC] THEN
-    GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_LID] THEN
+    GEN_REWRITE_TAC LAND_CONV empty_rewrites [GSYM REAL_MUL_LID] THEN
     MATCH_MP_TAC REAL_LT_MUL2 THEN
     ASM_REWRITE_TAC[REAL_LE, ZERO_LESS_EQ],
     MATCH_MP_TAC REAL_POW_LT THEN
@@ -2357,6 +2357,36 @@ val SUM_LE = store_thm("SUM_LE",
     GEN_REWR_TAC (RAND_CONV o RAND_CONV)  [ADD_SYM]] THEN
   ASM_REWRITE_TAC[ADD_CLAUSES, LESS_EQ_ADD, LESS_SUC_REFL]);
 
+(* moved here from seqTheory *)
+Theorem SUM_LT :
+    !f g m n.
+       (!r. m <= r /\ r < n + m ==> f r < g r) /\ 0 < n ==>
+       sum (m,n) f < sum (m,n) g
+Proof
+    RW_TAC std_ss []
+ >> POP_ASSUM MP_TAC
+ >> Cases_on `n` >- RW_TAC arith_ss []
+ >> RW_TAC arith_ss []
+ >> Induct_on `n'` >- RW_TAC arith_ss [sum, REAL_ADD_LID]
+ >> ONCE_REWRITE_TAC [sum]
+ >> RW_TAC std_ss []
+ >> MATCH_MP_TAC REAL_LT_ADD2
+ >> CONJ_TAC
+ >- (Q.PAT_X_ASSUM `a ==> b` MATCH_MP_TAC >> RW_TAC arith_ss [])
+ >> RW_TAC arith_ss []
+QED
+
+(* moved here from seqTheory *)
+Theorem SUM_PICK :
+    !n k x. sum (0, n) (\m. if m = k then x else 0) = if k < n then x else 0
+Proof
+    Induct >- RW_TAC arith_ss [sum]
+ >> RW_TAC arith_ss [sum, REAL_ADD_RID, REAL_ADD_LID]
+ >> Suff `F` >- PROVE_TAC []
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> DECIDE_TAC
+QED
+
 val SUM_EQ = store_thm("SUM_EQ",
   “!f g m n. (!r. m <= r /\ r < (n + m) ==> (f(r) = g(r)))
         ==> (sum(m,n) f = sum(m,n) g)”,
@@ -2515,6 +2545,15 @@ val SUM_0 = store_thm("SUM_0",
   GEN_TAC THEN INDUCT_TAC THEN REWRITE_TAC[sum] THEN
   BETA_TAC THEN ASM_REWRITE_TAC[REAL_ADD_LID]);
 
+(* moved here from integralTheory *)
+val SUM_EQ_0 = store_thm("SUM_EQ_0",
+  ``(!r. m <= r /\ r < m + n ==> (f(r) = &0)) ==> (sum(m,n) f = &0)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
+  EXISTS_TAC ``sum(m,n) (\r. &0)`` THEN
+  CONJ_TAC THENL [ALL_TAC, REWRITE_TAC[SUM_0]] THEN
+  MATCH_MP_TAC SUM_EQ THEN ASM_REWRITE_TAC[] THEN
+  ONCE_REWRITE_TAC[ADD_SYM] THEN ASM_REWRITE_TAC[]);
+
 val SUM_PERMUTE_0 = store_thm("SUM_PERMUTE_0",
   “!n p. (!y. y < n ==> ?!x. x < n /\ (p(x) = y))
         ==> !f. sum(0,n)(\n. f(p n)) = sum(0,n) f”,
@@ -2624,6 +2663,41 @@ val SUM_CANCEL = store_thm("SUM_CANCEL",
   AP_THM_TAC THEN AP_TERM_TAC THEN
   REWRITE_TAC[GSYM REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_RID]);
 
+(* moved here from integralTheory, added missing quantifier ‘m’ *)
+Theorem SUM_SPLIT :
+    !f m n p. sum(m,n) f + sum(m + n,p) f = sum(m,n + p) f
+Proof
+  REPEAT GEN_TAC THEN
+  GEN_REWRITE_TAC(LAND_CONV o LAND_CONV) empty_rewrites [SUM_DIFF] THEN
+  GEN_REWRITE_TAC(LAND_CONV o RAND_CONV) empty_rewrites [SUM_DIFF] THEN
+  CONV_TAC SYM_CONV THEN
+  GEN_REWRITE_TAC LAND_CONV empty_rewrites [SUM_DIFF] THEN
+  RW_TAC arith_ss[] THEN
+  SUBGOAL_THEN “!a b c. b-a + (c-b)=c-a”
+     (fn th => ONCE_REWRITE_TAC[GEN_ALL th])
+  >| [ REWRITE_TAC [Once REAL_ADD_COMM, REAL_SUB_TRIANGLE],
+       REWRITE_TAC[] ]
+QED
+
+(* moved here from integralTheory, added missing quantifier ‘d’ *)
+Theorem SUM_DIFFS :
+    !d m n. sum(m,n) (\i. d(SUC i) - d(i)) = d(m + n) - d m
+Proof
+  NTAC 2 GEN_TAC THEN INDUCT_TAC THEN
+  ASM_REWRITE_TAC[sum, ADD_CLAUSES, REAL_SUB_REFL] THEN REWRITE_TAC[sum] THEN
+  RW_TAC arith_ss[ETA_AX] THEN ASM_REWRITE_TAC[ADD_CLAUSES] THEN
+  SUBGOAL_THEN“!a b c d. a-b+(c-a) = -b+a+(c-a)”
+        (fn th => ONCE_REWRITE_TAC[GEN_ALL th]) THENL
+   [REPEAT GEN_TAC THEN REWRITE_TAC[real_sub] THEN
+    ASM_SIMP_TAC arith_ss[GSYM REAL_ADD_SYM],
+        SUBGOAL_THEN“!a b c d. a+b+(c-b) = a+c”
+          (fn th => ONCE_REWRITE_TAC[GEN_ALL th]) THENL
+         [REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_ADD_ASSOC] THEN
+          REWRITE_TAC[REAL_EQ_LADD] THEN
+          REWRITE_TAC[REAL_SUB_ADD2], REWRITE_TAC[real_sub] THEN
+          GEN_REWR_TAC LAND_CONV [REAL_ADD_COMM] THEN PROVE_TAC[]]]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Theorems to be compatible with hol-light.                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -2729,7 +2803,7 @@ val REAL_LE_RDIV_EQ = Q.store_thm
  `!x y z. &0 < z ==> (x <= y / z = x * z <= y)`,
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(fn th =>
-    Rewrite.GEN_REWRITE_TAC LAND_CONV Rewrite.empty_rewrites
+    GEN_REWRITE_TAC LAND_CONV empty_rewrites
                    [GSYM(MATCH_MP REAL_LE_RMUL th)]) THEN
   RW_TAC bool_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_LINV,
                REAL_MUL_RID, REAL_POS_NZ]);
@@ -2739,7 +2813,7 @@ val REAL_LE_LDIV_EQ = Q.store_thm
  `!x y z. &0 < z ==> (x / z <= y = x <= y * z)`,
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(fn th =>
-    Rewrite.GEN_REWRITE_TAC LAND_CONV Rewrite.empty_rewrites
+    GEN_REWRITE_TAC LAND_CONV empty_rewrites
              [GSYM(MATCH_MP REAL_LE_RMUL th)]) THEN
   RW_TAC bool_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_LINV,
                REAL_MUL_RID, REAL_POS_NZ]);
@@ -3020,7 +3094,7 @@ val REAL_IMP_MIN_LE2 = store_thm
    RW_TAC boolSimps.bool_ss [REAL_LE_MIN]
    THEN RW_TAC boolSimps.bool_ss [REAL_MIN_LE]);
 
-(* from rich_topologyTheory *)
+(* from real_topologyTheory *)
 val REAL_MIN_ACI = store_thm
   ("REAL_MIN_ACI",
   ``!x y z. (min x y = min y x) /\
@@ -3145,7 +3219,7 @@ val REAL_IMP_MAX_LE2 = store_thm
    RW_TAC boolSimps.bool_ss [REAL_MAX_LE]
    THEN RW_TAC boolSimps.bool_ss [REAL_LE_MAX]);
 
-(* from rich_topologyTheory *)
+(* from real_topologyTheory *)
 val REAL_MAX_ACI = store_thm
   ("REAL_MAX_ACI",
   ``!x y z. (max x y = max y x) /\
@@ -3175,12 +3249,68 @@ val REAL_MAX_ACI = store_thm
       FULL_SIMP_TAC bool_ss [] >> FULL_SIMP_TAC bool_ss [REAL_NOT_LE] \\
       PROVE_TAC [REAL_LT_ANTISYM, REAL_LET_TRANS] ]);
 
+(* extracted from integrationTheory *)
+Theorem REAL_MIN_LE_MAX :
+    !x:real y. min x y <= max x y
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC ‘x’
+ >> REWRITE_TAC [REAL_MIN_LE1, REAL_LE_MAX1]
+QED
+
+(* extracted from integrationTheory *)
+Theorem REAL_MAX_SUB_MIN :
+    !x:real y. max x y - min x y = abs (y - x)
+Proof
+    RW_TAC std_ss [min_def, max_def, abs, REAL_SUB_LE, REAL_NEG_SUB]
+QED
+
+(* extracted from integrationTheory *)
+Theorem ABS_BOUNDS_MIN_MAX :
+   !a b x B:real. abs(x) <= B ==> min a (-B) <= x /\ x <= max b B
+Proof
+    rpt GEN_TAC
+ >> DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [ABS_BOUNDS])
+ >> PROVE_TAC [REAL_LE_MAX, REAL_MIN_LE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More theorems about sup, and corresponding theorems about an inf operator *)
 (* ------------------------------------------------------------------------- *)
 
 val inf_def = Define `inf p = ~(sup (\r. p (~r)))`;
+
+(* dual theorem of REAL_SUP *)
+Theorem REAL_INF :
+    !P. (?x. P x) /\ (?z. !x. P x ==> z < x) ==>
+        (!y. (?x. P x /\ x < y) <=> inf P < y)
+Proof
+    RW_TAC std_ss [inf_def]
+ >> Know ‘-sup (\r. P (-r)) < --y <=> -y < sup (\r. P (-r))’
+ >- REWRITE_TAC [REAL_LT_NEG]
+ >> REWRITE_TAC [REAL_NEG_NEG]
+ >> Rewr'
+ >> MP_TAC (BETA_RULE (Q.SPEC ‘\x. P (~x)’ REAL_SUP))
+ >> Know ‘(?x. P (-x)) /\ (?z. !x. P (-x) ==> x < z)’
+ >- (CONJ_TAC >- (Q.EXISTS_TAC ‘-x’ >> rw [REAL_NEG_NEG]) \\
+     Q.EXISTS_TAC ‘-z’ >> rpt STRIP_TAC >> rename1 ‘P (-y)’ \\
+     Q.PAT_X_ASSUM ‘!x. P x ==> z < x’ (MP_TAC o (Q.SPEC ‘-y’)) \\
+     RW_TAC std_ss [] \\
+     Know ‘y < -z <=> --y < -z’ >- REWRITE_TAC [REAL_NEG_NEG] >> Rewr' \\
+     ASM_REWRITE_TAC [REAL_LT_NEG])
+ >> Rewr
+ >> DISCH_THEN (ONCE_REWRITE_TAC o wrap o (ONCE_REWRITE_RULE [EQ_SYM_EQ]))
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      rename1 ‘w < y’ >> Q.EXISTS_TAC ‘-w’ \\
+      ASM_REWRITE_TAC [REAL_NEG_NEG, REAL_LT_NEG],
+      (* goal 2 (of 2) *)
+      rename1 ‘-y < w’ >> Q.EXISTS_TAC ‘-w’ \\
+      ASM_REWRITE_TAC [] \\
+      Know ‘-w < y <=> -w < --y’ >- REWRITE_TAC [REAL_NEG_NEG] >> Rewr' \\
+      ASM_REWRITE_TAC [REAL_LT_NEG] ]
+QED
 
 val REAL_SUP_EXISTS_UNIQUE = store_thm
   ("REAL_SUP_EXISTS_UNIQUE",
@@ -4772,7 +4902,7 @@ Proof
  >> MATCH_MP_TAC REAL_POW_LT >> rw []
 QED
 
-(* Elementary proofs by Chun Tian *)
+(* Elementary proof (without using transcTheory) by Chun Tian *)
 Theorem SQRT_EXISTS[local] :
     !c. 0 < c ==> ?x. 0 < x /\ (x pow 2 = c)
 Proof
@@ -4788,7 +4918,8 @@ Proof
          MATCH_MP_TAC REAL_LT_IMP_LE >> rw []) \\
      POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [real_lt])) \\
      Q.EXISTS_TAC ‘c’ >> rw [POW_2] \\
-     GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [GSYM REAL_MUL_RID] \\
+     GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites
+                     [GSYM REAL_MUL_RID] \\
      MATCH_MP_TAC REAL_LE_LMUL_IMP >> rw [] \\
      MATCH_MP_TAC REAL_LT_IMP_LE >> rw [])
  >> DISCH_TAC
@@ -4808,7 +4939,7 @@ Proof
      ‘(n = 0) \/ 0 < n’ by RW_TAC arith_ss []
       >- (rw [] >> MATCH_MP_TAC REAL_LE_ADD >> rw [] \\
           MATCH_MP_TAC REAL_LE_MUL >> rw []) \\
-      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [REAL_MUL_COMM] \\
+      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [REAL_MUL_COMM] \\
       Know ‘(c - g pow 2) * &n <= 1 + 2 * g <=>
              c - g pow 2 <= (1 + 2 * g) / &n’
       >- (MATCH_MP_TAC (GSYM REAL_LE_RDIV_EQ) >> rw []) >> Rewr' \\
@@ -4842,7 +4973,7 @@ Proof
       Q.EXISTS_TAC ‘2 * g’ >> Q.X_GEN_TAC ‘m’ \\
      ‘(m = 0) \/ 0 < m’ by RW_TAC arith_ss []
       >- (rw [] >> MATCH_MP_TAC REAL_LE_MUL >> rw []) \\
-      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [REAL_MUL_COMM] \\
+      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [REAL_MUL_COMM] \\
       Know ‘(g pow 2 - c) * &m <= 2 * g <=>
              g pow 2 - c <= (2 * g) / &m’
       >- (MATCH_MP_TAC (GSYM REAL_LE_RDIV_EQ) >> rw []) >> Rewr' \\
@@ -5058,6 +5189,23 @@ Proof
  >> rename1 ‘y pow 2 = x pow 2’
  >> MATCH_MP_TAC POW_EQ
  >> Q.EXISTS_TAC ‘1’ >> rw [REAL_LT_IMP_LE]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Miscellaneous Results (generally for use in descendent theories)          *)
+(*---------------------------------------------------------------------------*)
+
+Theorem REAL_MUL_SIGN:
+    (!x y. 0 <= x * y <=> (0 <= x /\ 0 <= y) \/ (x <= 0 /\ y <= 0)) /\
+    (!x y. x * y <= 0 <=> (0 <= x /\ y <= 0) \/ (x <= 0 /\ 0 <= y))
+Proof
+    rw[] >> eq_tac >> rw[] >> fs[GSYM REAL_NEG_GE0,Excl "REAL_NEG_GE0"] >>
+    TRY $ dxrule_all_then assume_tac $ REAL_LE_MUL >>
+    fs[REAL_MUL_LNEG,REAL_MUL_RNEG,REAL_MUL_COMM] >>
+    pop_assum mp_tac >> CONV_TAC CONTRAPOS_CONV >> rw[] >> fs[real_lte,REAL_LT_GT] >>
+    fs[GSYM REAL_NEG_GT0,Excl "REAL_NEG_GT0"] >>
+    dxrule_all_then assume_tac $ REAL_LT_MUL >>
+    fs[REAL_MUL_LNEG,REAL_MUL_RNEG,REAL_MUL_COMM]
 QED
 
 val _ = export_theory();

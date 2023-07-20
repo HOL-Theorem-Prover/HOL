@@ -10,13 +10,17 @@ EXTRA_CLEANS = selftest.exe n-bit-selftest.log
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+
+all: $(ARTFILES) hol4-words.art
 
 hol4-words-unint.art: hol4-words-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 
 hol4-words.art: hol4-words.thy hol4-words-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
+
+install: hol4-words.thy hol4-words.art
+	opentheory install --reinstall $<
 
 fcp.art: fcp.otd
 

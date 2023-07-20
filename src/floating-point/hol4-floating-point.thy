@@ -5,6 +5,7 @@ author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 requires: base
 requires: hol-base
+requires: hol-set
 requires: hol-words
 requires: hol-integer
 requires: hol-real

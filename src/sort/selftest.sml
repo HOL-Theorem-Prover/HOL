@@ -29,3 +29,14 @@ val _ = List.app sorttest [
       Random.rangelist (0,100) (20, Random.newgen())
     ]
 end
+
+
+val _ = convtest("PERM_NO_ELIM_NORMALISE_CONV",
+                 permLib.PERM_NO_ELIM_NORMALISE_CONV,
+                 “PERM (x:'a::l1++y::l2++l3) (y::l3++z::l2++l4)”,
+                 “PERM (x:'a::y::(l1++l2++l3)) (y::z::(l2++l3++l4))”)
+
+val _ = convtest("PERM_ELIM_DUPLICATES_CONV",
+                 permLib.PERM_ELIM_DUPLICATES_CONV,
+                 “PERM (x:'a::l1++y::l2++l3) (y::l3++z::l2++l4)”,
+                 “PERM (x:'a::l1) ([z]++l4)”)

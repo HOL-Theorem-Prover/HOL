@@ -204,13 +204,16 @@ val ONE_LT_PRIME = Q.store_thm
  METIS_TAC [NOT_PRIME_0, NOT_PRIME_1,
             DECIDE ``(p=0) \/ (p=1) \/ 1 < p``]);
 
-val prime_divides_only_self = Q.store_thm
-("prime_divides_only_self",
- `!m n. prime m /\ prime n /\ divides m n ==> (m=n)`,
- RW_TAC arith_ss [divides_def] THEN
- `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN
- Q.PAT_X_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN
- METIS_TAC [divides_def,MULT_SYM]);
+Theorem prime_divides_only_self:
+  !m n. prime m /\ prime n /\ divides m n ==> m=n
+Proof
+  RW_TAC arith_ss [divides_def] THEN
+  `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN
+  SIMP_TAC (srw_ss()) [] THEN
+  Q.PAT_X_ASSUM `prime (m*q)` MP_TAC THEN
+  RW_TAC arith_ss [prime_def, divides_def, PULL_EXISTS] THEN
+  METIS_TAC []
+QED
 
 Theorem prime_MULT:
   !n m. prime (n * m) <=>
@@ -372,29 +375,27 @@ val ZERO_LT_PRIMES = Q.store_thm
 (* Directly computable version of divides                                    *)
 (*---------------------------------------------------------------------------*)
 
-val compute_divides = Q.store_thm
-("compute_divides",
- `!a b. divides a b =
-        if a=0 then (b=0) else
-        if a=1 then T else
-        if b=0 then T else
-        (b MOD a = 0)`,
+Theorem compute_divides[compute]:
+  !a b. divides a b =
+        if a=0 then (b=0)
+        else if a=1 then T
+        else if b=0 then T
+        else b MOD a = 0
+Proof
   RW_TAC arith_ss [divides_def]
-   THEN EQ_TAC
-   THEN RW_TAC arith_ss [] THENL
-   [Cases_on `q` THENL
-     [RW_TAC arith_ss [],
-      `0<a` by RW_TAC arith_ss [] THEN
-      METIS_TAC [MOD_MULT, MULT_SYM, ADD_CLAUSES]],
-    Q.EXISTS_TAC `b` THEN RW_TAC arith_ss [],
-    Q.EXISTS_TAC `0` THEN RW_TAC arith_ss [],
-    `0<a` by RW_TAC arith_ss [] THEN
-     let val MOD_P_inst = BETA_RULE (Q.SPECL[`\x. (x = 0)`,`b`,`a`] MOD_P)
-     in METIS_TAC [MOD_P_inst,MULT_SYM, ADD_CLAUSES]
-     end]);
-
-val _ =
- computeLib.add_persistent_funs
-     ["compute_divides"];
+  THEN EQ_TAC
+  THEN RW_TAC arith_ss [] THENL [
+    Cases_on ‘q’ THENL [
+      RW_TAC arith_ss [],
+      ‘0<a’ by RW_TAC arith_ss [] THEN
+      METIS_TAC [MOD_MULT, MULT_SYM, ADD_CLAUSES]
+    ],
+    Q.EXISTS_TAC ‘b’ THEN RW_TAC arith_ss [],
+    Q.EXISTS_TAC ‘0’ THEN RW_TAC arith_ss [],
+    ‘0<a’ by RW_TAC arith_ss [] THEN
+    METIS_TAC [BETA_RULE (Q.SPECL[‘\x. (x = 0)’,‘b’,‘a’] MOD_P),MULT_COMM,
+               ADD_CLAUSES]
+  ]
+QED
 
 val _ = export_theory();

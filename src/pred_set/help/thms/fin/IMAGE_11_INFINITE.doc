@@ -1,5 +1,0 @@
-\THEOREM IMAGE_11_INFINITE pred_sets
-|- !f.
-    (!x y. (f x = f y) ==> (x = y)) ==>
-    (!s. INFINITE s ==> INFINITE(IMAGE f s))
-\ENDTHEOREM

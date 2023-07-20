@@ -54,7 +54,8 @@ Proof
 QED
 
 Theorem ltree_abs_11[local]:
-  ltree_rep_ok r1 /\ ltree_rep_ok r2 ==> ((ltree_abs r1 = ltree_abs r2) = (r1 = r2))
+  ltree_rep_ok r1 /\ ltree_rep_ok r2 ==>
+  (ltree_abs r1 = ltree_abs r2 <=> r1 = r2)
 Proof
   fs [ltree_repabs, EQ_IMP_THM] \\ metis_tac []
 QED
@@ -592,9 +593,9 @@ QED
 
 Triviality ltree_lookup_map:
   ltree_lookup (ltree_map f t) path =
-    case ltree_lookup t path of
-    | NONE => NONE
-    | SOME t => ltree_CASE t (\a ts. SOME (Branch (f a) (LMAP (ltree_map f) ts)))
+  case ltree_lookup t path of
+  | NONE => NONE
+  | SOME t => ltree_CASE t (\a ts. SOME (Branch (f a) (LMAP (ltree_map f) ts)))
 Proof
   qid_spec_tac `t` \\ Induct_on `path` \\ fs [ltree_lookup_def] \\ rw []
   \\ qspec_then `t` strip_assume_tac ltree_cases

@@ -95,15 +95,15 @@ val EVENTS_BERN_RANDOM_LURCHES = store_thm
    >> RW_TAC std_ss [SPECIFICATION]
    >> PROVE_TAC []);
 
-val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
-  ("RANDOM_LURCHES_MULTIPLICATIVE",
-   ``!a.
-       prob bern
-       {s |
-        ?n. FST (prob_while_cut ($< 0) random_lurch n a s) = 0} =
-       (prob bern
-        {s |
-         ?n. FST (prob_while_cut ($< 0) random_lurch n 1 s) = 0}) pow a``,
+Theorem RANDOM_LURCHES_MULTIPLICATIVE:
+  !a.
+    prob bern
+         {s |
+          ?n. FST (prob_while_cut ($< 0) random_lurch n a s) = 0} =
+    (prob bern
+     {s |
+      ?n. FST (prob_while_cut ($< 0) random_lurch n 1 s) = 0}) pow a
+Proof
    Induct
    >- (Know `!n s. FST (prob_while_cut ($< 0) random_lurch n 0 s) = 0`
        >- (Cases
@@ -166,6 +166,7 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
           >> Know `!n : num. (n = 0) = ~(0 < n)` >- RW_TAC arith_ss []
           >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, o_THM, UNCURRY,
                             prob_while_cut_def]
+          >> REWRITE_TAC [DECIDE “(n = 0n) ⇔ ~(0 < n)”]
           >> MATCH_MP_TAC PROB_WHILE_CUT_MONO
           >> Q.EXISTS_TAC `n`
           >> FULL_SIMP_TAC arith_ss [],
@@ -191,7 +192,8 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
                             o_THM, ADD_CLAUSES]
         >> Q.PAT_X_ASSUM `!x. P x` K_TAC
         >> Know `!n : num. (n = 0) = ~(0 < n)` >- DECIDE_TAC
-        >> DISCH_THEN (fn th => FULL_SIMP_TAC std_ss [th])
+        >> DISCH_THEN
+             (fn th => FULL_SIMP_TAC std_ss [th, Excl "NOT_LT_ZERO_EQ_ZERO"])
         >> MATCH_MP_TAC PROB_WHILE_CUT_MONO
         >> Q.EXISTS_TAC `n`
         >> RW_TAC arith_ss []])
@@ -287,13 +289,11 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
                                BIND_DEF, UNCURRY, UNIT_DEF, o_THM]
     >> PROVE_TAC []]);
 
-val PROB_TERMINATES_RANDOM_WALK = store_thm
-  ("PROB_TERMINATES_RANDOM_WALK",
-   ``prob_while_terminates ($< 0) random_lurch``,
-   Know `!n : num. ~(0 < n) = (n = 0)` >- DECIDE_TAC
-   >> RW_TAC std_ss [PROB_WHILE_TERMINATES, probably_bern_def, probably_def,
-                     EVENTS_BERN_RANDOM_LURCHES]
-   >> POP_ASSUM K_TAC
+Theorem PROB_TERMINATES_RANDOM_WALK:
+  prob_while_terminates ($< 0) random_lurch
+Proof
+  RW_TAC std_ss [PROB_WHILE_TERMINATES, probably_bern_def, probably_def,
+                 EVENTS_BERN_RANDOM_LURCHES]
    >> ONCE_REWRITE_TAC [RANDOM_LURCHES_MULTIPLICATIVE]
    >> Know
       `?p.
@@ -360,7 +360,8 @@ val PROB_TERMINATES_RANDOM_WALK = store_thm
    >> SIMP_TAC std_ss [PROB_BERN_STL_HALFSPACE, EVENTS_BERN_RANDOM_LURCHES]
    >> ONCE_REWRITE_TAC [RANDOM_LURCHES_MULTIPLICATIVE]
    >> ASM_SIMP_TAC bool_ss [pow, TWO, POW_1]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
 val RANDOM_LURCHES_PARITY = store_thm
   ("RANDOM_LURCHES_PARITY",

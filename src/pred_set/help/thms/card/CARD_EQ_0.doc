@@ -1,3 +1,0 @@
-\THEOREM CARD_EQ_0 pred_sets
-|- !s. FINITE s ==> ((CARD s = 0) = (s = {{}}))
-\ENDTHEOREM

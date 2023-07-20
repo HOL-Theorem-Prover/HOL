@@ -3629,6 +3629,86 @@ Proof
  >> MATCH_MP_TAC SIGMA_ALGEBRA_ALGEBRA >> art []
 QED
 
+(***********************)
+(*   Further Results   *)
+(***********************)
+
+(*  These do not require addition simplifier manipulations. It would
+      probably be more appropriate to add these in the proper places above.
+      - Jared Yeager                                                                   *)
+
+(*** Basic Theorems ***)
+
+Theorem SIGMA_ALGEBRA_SUBSET_SPACE:
+    !a s. sigma_algebra a /\ s IN subsets a ==> s SUBSET space a
+Proof
+    rw[sigma_algebra_def,algebra_def,subset_class_def]
+QED
+
+Theorem SIGMA_ALGEBRA_PROD_SIGMA_WEAK:
+    !a b. sigma_algebra a /\ sigma_algebra b ==> sigma_algebra (a CROSS b)
+Proof
+    rw[] >> irule SIGMA_ALGEBRA_PROD_SIGMA >> fs[sigma_algebra_def,algebra_def]
+QED
+
+Theorem IN_SPACE_PROD_SIGMA:
+    !a b z. z IN space (a CROSS b) <=> FST z IN space a /\ SND z IN space b
+Proof
+    simp[prod_sigma_def,SPACE_SIGMA]
+QED
+
+(*** (IN_)MEASURABLE Theorems ***)
+
+Theorem MEASURABLE_FST:
+    !a b. sigma_algebra a /\ sigma_algebra b ==> FST IN measurable (a CROSS b) a
+Proof
+    rw[] >> simp[IN_MEASURABLE,SIGMA_ALGEBRA_PROD_SIGMA_WEAK,FUNSET,IN_SPACE_PROD_SIGMA] >> rw[] >>
+    ‘PREIMAGE FST s INTER space (a CROSS b) = s CROSS (space b)’ by (simp[EXTENSION,IN_SPACE_PROD_SIGMA] >>
+        rw[] >> eq_tac >> rw[] >> dxrule_all_then mp_tac SIGMA_ALGEBRA_SUBSET_SPACE >> simp[SUBSET_DEF]) >>
+    pop_assum SUBST1_TAC >> simp[prod_sigma_def] >> irule IN_SIGMA >>
+    simp[prod_sets_def] >> qexistsl_tac [‘s’,‘space b’] >> simp[SIGMA_ALGEBRA_SPACE]
+QED
+
+Theorem MEASURABLE_SND:
+    !a b. sigma_algebra a /\ sigma_algebra b ==> SND IN measurable (a CROSS b) b
+Proof
+    rw[] >> simp[IN_MEASURABLE,SIGMA_ALGEBRA_PROD_SIGMA_WEAK,FUNSET,IN_SPACE_PROD_SIGMA] >> rw[] >>
+    `PREIMAGE SND s INTER space (a CROSS b) = (space a) CROSS s` by (simp[EXTENSION,IN_SPACE_PROD_SIGMA] >>
+        rw[] >> eq_tac >> rw[] >> dxrule_all_then mp_tac SIGMA_ALGEBRA_SUBSET_SPACE >> simp[SUBSET_DEF]) >>
+    pop_assum SUBST1_TAC >> simp[prod_sigma_def] >> irule IN_SIGMA >>
+    simp[prod_sets_def] >> qexistsl_tac [‘space a’,‘s’] >> simp[SIGMA_ALGEBRA_SPACE]
+QED
+
+Theorem IN_MEASURABLE_EQ:
+    !a b f g. f IN measurable a b /\ (!x. x IN space a ==> g x = f x) ==> g IN measurable a b
+Proof
+    rw[measurable_def] >- fs[FUNSET] >> first_x_assum $ dxrule_then mp_tac >>
+    `PREIMAGE g s INTER space a = PREIMAGE f s INTER space a` suffices_by simp[] >>
+    rw[EXTENSION] >> Cases_on `x IN space a` >> fs[]
+QED
+
+Theorem IN_MEASURABLE_CONG:
+    !a b c d f g. a = c /\ b = d /\ (!x. x IN space c ==> f x = g x) ==> (f IN measurable a b <=> g IN measurable c d)
+Proof
+    rw[] >> eq_tac >> rw[] >> dxrule_at_then (Pos $ el 1) irule IN_MEASURABLE_EQ >> simp[]
+QED
+
+(* for use with irule, often not super useful in prectice due to need to address 'b *)
+Theorem IN_MEASURABLE_COMP:
+    !f g h a b c. f IN measurable a b /\ g IN measurable b c /\ (!x. x IN space a ==> h x = g (f x)) ==>
+        h IN measurable a c
+Proof
+    rw[] >> irule IN_MEASURABLE_EQ >> qexists_tac `g o f` >> simp[MEASURABLE_COMP,SF SFY_ss]
+QED
+
+Theorem IN_MEASURABLE_PROD_SIGMA:
+    !a bx by fx fy f. sigma_algebra a /\ fx IN measurable a bx /\ fy IN measurable a by /\
+        (!z. z IN space a ==> f z = (fx z,fy z)) ==> f IN measurable a (bx CROSS by)
+Proof
+    rw[] >> irule IN_MEASURABLE_EQ >> qexists_tac `λz. (fx z,fy z)` >> simp[] >>
+    irule MEASURABLE_PROD_SIGMA' >> simp[o_DEF,ETA_AX]
+QED
+
 val _ = export_theory ();
 
 (* References:

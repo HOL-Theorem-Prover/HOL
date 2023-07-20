@@ -493,10 +493,13 @@ non-empty set \holtxt{s} we have \holtxt{lambda s = 0}, it's not true
 that all subsets of s has also the measure 0, as some of them
 may not be Borel sets at all. The completion of \holtxt{lborel} is called
 \emph{Lebesgue measure space}, denoted by \holtxt{lebesgue}.
-In \HOL{}, it is defined directly by Henstock-Kurzweil integration
+In \theory{extreal} theory (at \ml{\$(HOLDIR)/examples/probability} directory),
+it is defined directly by Henstock-Kurzweil Integration
 (see Section~\ref{sec:integration}):
 \begin{hol}
 \begin{alltt}
+>>__ load "lebesgue_measureTheory";
+>>__ open lebesgue_measureTheory;
 ##thm lebesgue_def
 ##thm line
 \end{alltt}
@@ -787,7 +790,11 @@ the (iterated) integrals to be finite:
 \begin{hol}
 \begin{alltt}
 ##thm TONELLI
+\end{alltt}
+\end{hol}
 
+\begin{hol}
+\begin{alltt}
 ##thm FUBINI
 \end{alltt}
 \end{hol}
@@ -814,6 +821,7 @@ The general version of product space is defined on any pair operation:
 \begin{hol}
 \begin{alltt}
 ##thm general_cross_def
+
 ##thm general_prod_def
 \end{alltt}
 \end{hol}
@@ -828,6 +836,78 @@ For instance, the following theorem is the general version of \texttt{EXISTENCE_
 ##thm existence_of_prod_measure_general
 \end{alltt}
 \end{hol}
+
+\paragraph{$\mathcal{L}^p$ spaces, semi-norm and important inequalities}
+
+\HOL{} provides a minimal formalization of the function spaces $\mathcal{L}^p$,
+currently in \theoryimp{martingaleTheory}.
+
+Let $(X, \mathscr{A}, \mu)$ be some measure space. Here we discuss
+functions whose (absolute) $p$th power is integrable ($1\leqslant p <\infty$).
+More precisely, we are interested in the sets:
+\begin{equation*}
+  \mathcal{L}^p(\mu) := \left\{ u \colon X\rightarrow\overline{\mathbb{R}} \colon u\in\mathcal{M}(\mathscr{A}),
+  \int |u|^p \mathrm{d}\mu < \infty \right\},\qquad p\in[1,\infty).
+\end{equation*}
+Or formally:
+\begin{hol}
+\begin{alltt}
+##thm lp_space_alt_finite
+\end{alltt}
+\end{hol}
+
+It is convenient to have the following \emph{semi-norm} notation:
+\begin{equation*}
+  \|u\|_p := \left ( \int \left |u(x) \right |^p \mu(\mathrm{d}x) \right )^{1/p},\qquad p\in[1,\infty).
+\end{equation*}
+Or formally:
+\begin{hol}
+\begin{alltt}
+##thm seminorm_normal
+\end{alltt}
+\end{hol}
+
+Clearly, $u\in\mathcal{L}^p(\mu)$ if, and only if, $u\in\mathcal{M}(\mathscr{A})$ and $\|u\|_p <\infty$.
+Furthermore, $\|u\|_p$ implies that $u(x) = 0$ for almost every $x$.
+\begin{hol}
+\begin{alltt}
+##thm lp_space_alt_seminorm
+
+##thm seminorm_eq_0
+\end{alltt}
+\end{hol}
+
+The triangle inequality for $\|\cdot\|_p$ and deeper results on $\mathcal{L}^p$ depends on the
+following elementary inequality (Young's inequality):
+\begin{hol}
+\begin{alltt}
+##thm young_inequality
+\end{alltt}
+\end{hol}
+Then the following fundamental \emph{H\"older's inequality} is proved:
+\begin{hol}
+\begin{alltt}
+##thm Hoelder_inequality
+\end{alltt}
+\end{hol}
+
+Holder's inequality with $p = q = 2$ is usually called the \emph{Cauchy-Schwarz inequality}:
+\begin{hol}
+\begin{alltt}
+##thm Cauchy_Schwarz_inequality
+\end{alltt}
+\end{hol}
+
+Another consequence of Holder's inequality is the \emph{Minkowski} or \emph{triangle
+inequality for $\|\cdot\|_p$}:
+\begin{hol}
+\begin{alltt}
+##thm Minkowski_inequality
+\end{alltt}
+\end{hol}
+Holder's inequality is useful in Probability Theory, for example, for
+proving that the sum of random variables having finite second moments
+(i.e.~finite variance), has still finite second moments.
 
 \subsection{Probability Theory}
 \label{sec:prob}

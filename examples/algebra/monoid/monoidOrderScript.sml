@@ -186,14 +186,15 @@ val order_period = store_thm(
 
 (* Theorem: !n. 0 < n /\ n < (ord x) ==> x ** n <> #e *)
 (* Proof: by definition of OLEAST. *)
-val order_minimal = store_thm(
-  "order_minimal",
-  ``!g:'a monoid x:'a. !n. 0 < n /\ n < (ord x) ==> x ** n <> #e``,
+Theorem order_minimal:
+  !g:'a monoid x:'a. !n. 0 < n /\ n < ord x ==> x ** n <> #e
+Proof
   ntac 3 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
-  metis_tac[]);
+  metis_tac[DECIDE “~(0 < 0)”]
+QED
 
 (* Theorem: (ord x = 0) <=> !n. 0 < n ==> x ** n <> #e *)
 (* Proof:
@@ -203,14 +204,17 @@ val order_minimal = store_thm(
    (2) 0 < n /\ x ** n = #e /\ (!m. m < 0 ==> ~(0 < m) \/ x ** m <> #e) ==> (n = 0) <=> !n. 0 < n ==> x ** n <> #e
        True by assertion.
 *)
-val order_eq_0 = store_thm(
-  "order_eq_0",
-  ``!g:'a monoid x. (ord x = 0) <=> !n. 0 < n ==> x ** n <> #e``,
+Theorem order_eq_0:
+  !g:'a monoid x. ord x = 0 <=> !n. 0 < n ==> x ** n <> #e
+Proof
   ntac 2 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
-  metis_tac[]);
+  metis_tac[DECIDE “~(0 < 0)”]
+QED
+
+val std_ss = std_ss -* ["NOT_LT_ZERO_EQ_ZERO"]
 
 (* Theorem: 0 < n ==> ((ord x = n) <=> (x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e) *)
 (* Proof:

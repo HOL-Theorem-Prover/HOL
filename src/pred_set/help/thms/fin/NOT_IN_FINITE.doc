@@ -1,3 +1,0 @@
-\THEOREM NOT_IN_FINITE pred_sets
-|- INFINITE UNIV = (!s. FINITE s ==> (?x. ~x IN s))
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM INTER_EMPTY pred_sets
-|- (!s. {{}} INTER s = {{}}) /\ (!s. s INTER {{}} = {{}})
-\ENDTHEOREM

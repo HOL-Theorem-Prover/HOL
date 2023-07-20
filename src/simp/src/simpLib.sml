@@ -98,10 +98,12 @@ datatype ssfrag = SSFRAG_CON of {
 
 fun frag_name (SSFRAG_CON {name,...}) = name
 
+fun normCong cong_th = PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] cong_th
+
 fun SSFRAG {name,convs,rewrs,ac,filter,dprocs,congs} =
   SSFRAG_CON {name = name, rewrs = rewrs, ac = ac,
               convs = map (fn c => {thypart=NONE, cd = c}) convs,
-              filter = filter, dprocs = dprocs, congs = congs,
+              filter = filter, dprocs = dprocs, congs = map normCong congs,
               relsimps = []}
 
 val empty_ssfrag = SSFRAG{name = NONE, rewrs = [], convs = [], ac = [],
@@ -758,7 +760,7 @@ fun process_tags ss thl =
       else (
         List.foldl (flip op++) ss (
           SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                     ac=map unAC ACs, congs=map unCong Congs,
+                     ac=map unAC ACs, congs=map (normCong o unCong) Congs,
                      convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
           frags
         ) -* excludes,

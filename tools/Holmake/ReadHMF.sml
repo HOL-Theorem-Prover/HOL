@@ -20,7 +20,8 @@ fun readline lnum strm = let
                      String.extract(s, 0, SOME (size s - 2))
                    else String.extract(s, 0, SOME (size s - 1))
         in
-          if String.sub(s0, size s0 - 1) = #"\\" then
+          if s0 = "" then SOME(lnum + 1, String.concat (List.rev acc))
+          else if String.sub(s0, size s0 - 1) = #"\\" then
             recurse (lnum + 1,
                      " " :: String.extract(s0, 0, SOME (size s0 - 1)) :: acc)
                     (TextIO.inputLine strm)

@@ -72,23 +72,29 @@ The most frequently used options to build are those to do with “selftest” le
 The build program’s `--selftest` option can be given as is (in which case the selftest level is 1), or followed by a positive number, which gives the selftest level explicitly.
 The higher the number, the more regression tests are executed.
 Developers are expected to categorise their tests so that those at level 1 will complete quickly, those at level 2 will execute in moderate time, and those at level 3 can take as long as is necessary.[^selftestnote]
-As this document is written (late 2015), there are no regression tests that require a level greater than 3.
+As of 2022, there are no regression tests that require a level greater than 3,and we will likely keep things this way.
 
-[^selftestnote]: As of 2015, our automatic testing infrastructure runs selftest level 1 tests 6 times each day, and level 3 tests twice daily.
+[^selftestnote]: As of 2022, our automatic testing infrastructure runs one selftest at level 3 each day, and one at level 2, with the latter testing the experimental kernel. Yes, this means that things only in level 3 are not getting tested for the experimental kernel.
 
 There are two standard ways to the install a test that can be run by `build`:
 
 1.  Create a `selftest.exe` executable in an existing directory that build works on.
-    This executable will be run if `build`’s selftest level is non-zero, and will be passed the level as the executable’s one and only command-line argument.
-    (The `selftest.exe` can thus choose to do nothing if the level is too low, or to do more if the level is higher.)
+    The `Holmakefile` in this directory will need to specify how to build this executable, and then additionally include an
+
+         ifdef HOLSELFTESTLEVEL
+         endif
+
+    block to get the executable to be run.  Just checking if the variable is set, will cause execution at all non-zero levels. To fire a test only at particular levels, use the `ifeq` and related commands. It may also be a good idea to have this block produce a log-file recording the execution of the selftest; this can be done effectively with the `Holmake` function `$(tee ...)`.
 
     There are a number of examples of constructing `selftest.exe` executables in the sources.
     See for example `src/boss/selftest.sml` and `src/boss/Holmakefile`.
     Though the `Holmakefile` gives build commands in terms of `$(HOLMOSMLC)`, the `selftest.exe` executable will also be built correctly if running Poly/ML.
 
-2.  Extend the build sequence with a new directory for build to operate on.
-    As explained in the documentation at the head of `tools/build-sequence`, the name of this directory should be preceded by as many exclamation mark characters\ (`!`) as its desired selftest level.
-    Using this approach is necessary if the tests need to examine behaviours to do with theory export and loading.
+2.  Create a new directory for build to operate on.
+    This directory can be inserted into the early stages of the build sequence, as explained in the documentation at the head of `tools/build-sequence`.
+    If the testing happens after `bossLib` and (in Poly/ML) the creation of the standard `hol.state` heap, the directory should be included in the `Holmakefile` in `src/parallel_builds/core`.
+    The various tests in that file can be used to insert regression test directories into the big parallel build of all the post-`bossLib` directories.
+    Using a test-directory is necessary if the tests need to examine behaviours to do with theory export and loading.
 
 ## Kernel Selection
 
@@ -113,6 +119,51 @@ By default this sequence is that specified in the file `tools/build-sequence`, w
 It is possible to provide a different sequence by using the `--seq` commandline option to `build`.
 Such sequences can be constructed more easily by referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
 The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build-sequence` file.
+
+Past the initial prefix of this process, most directories in the build sequence are actually listed in the `Holmakefile` in `src/parallel_builds/core`.
+This arrangement allows parallel processing of lots of directories at once.
+
+# Things in `bin`
+
+The build process deposits various tools in the `bin` directory.
+Under both Moscow&nbsp;ML and Poly/ML the following are created:
+
+`build`
+: the build tool as above
+
+`hol`
+: the standard executable, which loads a `bossLib` based logical context. This is designed for use by “every user”.
+
+`hol.bare`
+: the “bare” executable, which includes `boolLib` and the goalstack infrastructure but no theories past `bool`.
+
+`Holmake`
+: the Holmake tool, again designed for every user.
+
+`mkmunge.exe`
+: This tool creates LaTeX mungers, as described in the *DESCRIPTION* manual.
+
+`unquote`
+: This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `QFRead` module) is doing when it messes with user input.
+
+Under Poly/ML, the following additional files will appear:
+
+`buildheap`
+:   this is the core execution engine of all Poly/ML HOL (but not `Holmake` or `build`). It will appear as the process name for HOL executions when working interactively, or when scripts are run to generate a theory file. It embodies the quotation handling by implementing a copy of the standard Poly/ML REPL that fiddles with the lexer.
+
+`genscriptdep`
+:   Given a filename, this utility executable will generate a list of a script files dependencies.
+
+`heapname`
+:   this little executable reads the startup directory’s `Holmakefile` (if present) to determine which heap should be used as the basis for interactive execution in this directory.  It is called by `hol`, but *not* `hol.bare`.
+
+    `Holmake` reads `Holmakefile`s for `HOLHEAP` information for every invocation, so interactive execution of HOL in directories such as `src/pred_set/src` and `src/list/src` will have to use `hol.bare` (these are before bossLib), and will not get to use the `numheap` executable created in `src/num/termination`, even though non-interactive builds do get that benefit.
+
+`hol.state`
+:   the Poly/ML heap used by `hol` by default. This embodies `bossLib` and is created in `src/boss`.
+
+`hol.state0`
+:   the Poly/ML heap used by `hol.bare`. This is built in `src/proofman`.
 
 # Sources and Their Organisation {#sources}
 

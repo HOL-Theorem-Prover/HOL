@@ -1,2 +1,2 @@
 INCLUDES = ../ho_prover ../subtypes $(dprot $(HOLDIR)/src/monad/more_monads) \
-	   $(HOLDIR)/src/real
+	   $(HOLDIR)/src/real $(HOLDIR)/src/real/analysis

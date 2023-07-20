@@ -518,8 +518,9 @@ Proof
     ‘Lf <> x’ by FULL_SIMP_TAC (srw_ss()) [] THEN
     ‘?a t1 t2. x = Nd a t1 t2’ by METIS_TAC [lbtree_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
-    (bf_flatten_append |> Q.SPEC ‘l1’ |> Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] |> MP_TAC) THEN
-    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [],
+    MP_TAC $ Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] $
+       Q.SPEC ‘l1’ bf_flatten_append >>
+    SRW_TAC[][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [],
     ‘~EVERY ($= Lf) tlist’
        by METIS_TAC [LCONS_NOT_NIL, bf_flatten_eq_lnil] THEN
     ‘EXISTS ($~ o $= Lf) tlist’
@@ -535,7 +536,8 @@ Proof
     FULL_SIMP_TAC (srw_ss()) [bf_flatten_def, bf_flatten_append] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN ‘l2 ++ [t1;t2]’ MP_TAC) THEN
     SRW_TAC [][] THEN SRW_TAC [][] THEN
-    (bf_flatten_append |> Q.SPEC ‘l1’ |> Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] |> MP_TAC) THEN
+    MP_TAC $ Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] $
+       Q.SPEC ‘l1’ bf_flatten_append >>
     SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     METIS_TAC []
   ]
@@ -612,7 +614,7 @@ open numLib
 val lelim = REWRITE_RULE [GSYM AND_IMP_INTRO] whileTheory.LEAST_ELIM
 val min_tac =
     SRW_TAC [ETA_ss][] THEN
-    IMP_RES_THEN (fn th => th |> MATCH_MP lelim |> DEEP_INTRO_TAC) mem_depth THEN
+    IMP_RES_THEN (fn th => th |> MATCH_MP lelim |> DEEP_INTRO_TAC) mem_depth >>
     Q.X_GEN_TAC `t1d` THEN NTAC 2 STRIP_TAC THEN
     Q.X_GEN_TAC `t2d` THEN NTAC 2 STRIP_TAC THEN
     LEAST_ELIM_TAC THEN
@@ -665,7 +667,7 @@ val mindepth_thm = store_thm(
     min_tac,
 
     SRW_TAC [ETA_ss][] THEN
-    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth THEN SRW_TAC [][] THEN
+    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth >> SRW_TAC [][] >>
     LEAST_ELIM_TAC THEN SRW_TAC [][]
        THEN1 METIS_TAC [mem_depth, depth_rules] THEN
     POP_ASSUM MP_TAC THEN
@@ -676,7 +678,7 @@ val mindepth_thm = store_thm(
                                      depth_rules],
 
     SRW_TAC [ETA_ss][] THEN
-    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth THEN SRW_TAC [][] THEN
+    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth >> SRW_TAC [][] >>
     LEAST_ELIM_TAC THEN SRW_TAC [][]
        THEN1 METIS_TAC [mem_depth, depth_rules] THEN
     POP_ASSUM MP_TAC THEN
