@@ -19,8 +19,8 @@ open HolKernel Parse boolLib bossLib;
 
 open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
-     realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
-     topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
+     realLib jrhUtils listTheory mesonLib
+     topologyTheory optionTheory pred_setLib cardinalTheory;
 
 open hurdUtils schneiderUtils iterateTheory real_topologyTheory derivativeTheory;
 
@@ -40,7 +40,7 @@ fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* realLib *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
@@ -13388,17 +13388,21 @@ val FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG = store_thm ("FUNDAMENTAL_THEOREM_OF_
                           ==> abs(f y - f x - (y - x) * f' x:real)
                                 <= e / &2 * abs(y - x)))``
   MP_TAC THENL
-   [X_GEN_TAC ``x:real`` THEN
+  [ (* goal 1 (of 2) *)
+    X_GEN_TAC ``x:real`` THEN
     ASM_CASES_TAC ``(x:real) IN interval[a,b]`` THENL
      [ALL_TAC, EXISTS_TAC ``&1:real`` THEN ASM_REWRITE_TAC[REAL_LT_01]] THEN
     ASM_CASES_TAC ``x IN IMAGE (r:num->real) t`` THEN ASM_REWRITE_TAC[] THENL
-     [FIRST_ASSUM(MP_TAC o MATCH_MP (REAL_ARITH
+    [ (* goal 1.1 (of 2) *)
+      FIRST_ASSUM(MP_TAC o MATCH_MP (REAL_ARITH
        ``a <= b ==> (a = b:real) \/ a < b``)) THEN
       REWRITE_TAC[] THEN STRIP_TAC THENL
-       [EXISTS_TAC ``&1:real`` THEN REWRITE_TAC[REAL_LT_01] THEN
+      [ (* goal 1.1.1 (of 2) *)
+        EXISTS_TAC ``&1:real`` THEN REWRITE_TAC[REAL_LT_01] THEN
         UNDISCH_TAC ``(x:real) IN interval[a,b]`` THEN
         ASM_SIMP_TAC std_ss [INTERVAL_SING, IN_SING, REAL_SUB_REFL, ABS_0] THEN
         REAL_ARITH_TAC,
+        (* goal 1.1.2 (of 2) *)
         UNDISCH_TAC ``f continuous_on interval [(a,b)]`` THEN DISCH_TAC THEN
         FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [continuous_on]) THEN
         DISCH_THEN(MP_TAC o SPEC ``x:real``) THEN ASM_REWRITE_TAC[dist] THEN
@@ -13406,18 +13410,20 @@ val FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG = store_thm ("FUNDAMENTAL_THEOREM_OF_
          ``e / &2 pow (4 + n(x:real)) * abs(b - a:real)``) THEN
         ASM_SIMP_TAC std_ss [REAL_LT_DIV, REAL_LT_MUL, GSYM ABS_NZ, REAL_SUB_0,
                      REAL_LT_POW2, REAL_LT_IMP_NE] THEN
-        MESON_TAC[REAL_LT_IMP_LE]],
+        MESON_TAC[REAL_LT_IMP_LE] ],
       FIRST_X_ASSUM(MP_TAC o SPEC ``x:real``) THEN
       ASM_SIMP_TAC std_ss [IN_DIFF, has_vector_derivative,
                       HAS_DERIVATIVE_WITHIN_ALT] THEN
       DISCH_THEN(MP_TAC o SPEC ``e / &2:real`` o CONJUNCT2) THEN
-      ASM_REWRITE_TAC[REAL_HALF] THEN MESON_TAC[]],
+      ASM_REWRITE_TAC[REAL_HALF] THEN MESON_TAC[] ],
+    (* goal 2 (of 2) *)
     DISCH_TAC THEN POP_ASSUM (MP_TAC o SIMP_RULE std_ss [RIGHT_IMP_EXISTS_THM]) THEN
     SIMP_TAC std_ss [SKOLEM_THM, LEFT_IMP_EXISTS_THM, FORALL_AND_THM, AND_IMP_INTRO,
                 TAUT `p ==> q /\ r <=> (p ==> q) /\ (p ==> r)`] THEN
     X_GEN_TAC ``d:real->real`` THEN
     DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC)] THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC) ] THEN
+
   EXISTS_TAC ``\x. ball(x:real,d(x))`` THEN
   ASM_SIMP_TAC std_ss [GAUGE_BALL_DEPENDENT] THEN
   X_GEN_TAC ``p:(real#(real->bool))->bool`` THEN STRIP_TAC THEN
@@ -17151,8 +17157,8 @@ val SECOND_MEAN_VALUE_THEOREM_FULL = store_thm ("SECOND_MEAN_VALUE_THEOREM_FULL"
     (if x < a then (0 :real)
      else if b < x then (1 :real)
      else (g x - g a) / (g b - g a)) <= (1 :real))`` THENL
-   [CONJ_TAC THEN
-    REPEAT GEN_TAC THEN
+   [(* goal 1 (of 2) *)
+    CONJ_TAC THEN REPEAT GEN_TAC THEN
     REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[REAL_POS, REAL_LE_REFL]) THEN
     TRY ASM_REAL_ARITH_TAC THEN
     ASM_SIMP_TAC real_ss [IN_INTERVAL, REAL_SUB_LT] THEN
@@ -17160,17 +17166,19 @@ val SECOND_MEAN_VALUE_THEOREM_FULL = store_thm ("SECOND_MEAN_VALUE_THEOREM_FULL"
     ASM_REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_LID, REAL_SUB_LE,
                     REAL_ARITH ``x - a <= y - a <=> x <= y:real``] THEN
     REPEAT STRIP_TAC THEN TRY (FIRST_X_ASSUM MATCH_MP_TAC) THEN
-    REWRITE_TAC[IN_INTERVAL] THEN TRY (ASM_REAL_ARITH_TAC) THENL
-    [POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN REAL_ARITH_TAC,
-     REWRITE_TAC [REAL_ARITH ``a - b <= 0 <=> a <= b:real``] THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[IN_INTERVAL] THEN
-     ASM_REAL_ARITH_TAC,
-     UNDISCH_TAC ``g a < (g:real->real) b`` THEN
+    REWRITE_TAC[IN_INTERVAL] THEN
+    (* NOTE: when the proof comes here, there are 5 subgoals. Previously
+       the old ASM_REAL_ARITH_TAC solved 2 out of 5 subgoals, but now
+       the new ASM_REAL_ARITH_TAC can resolve 4 of them, leaving only one.
+     *)
+    TRY (RealArith.REAL_ASM_ARITH_TAC) THEN
+    (UNDISCH_TAC ``g a < (g:real->real) b`` THEN
      GEN_REWR_TAC LAND_CONV [REAL_ARITH ``a < b <=> 0 < b - a:real``] THEN
      DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ] o MATCH_MP REAL_LT_IMP_NE) THEN
      DISCH_TAC THEN REWRITE_TAC [real_div, GSYM REAL_MUL_ASSOC] THEN
      ASM_SIMP_TAC real_ss [REAL_MUL_LINV] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-     REWRITE_TAC[IN_INTERVAL] THEN ASM_REAL_ARITH_TAC],
+     REWRITE_TAC[IN_INTERVAL] THEN ASM_REAL_ARITH_TAC),
+    (* goal 2 (of 2) *)
     DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC] THEN
   SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM] THEN
   DISCH_THEN (X_CHOOSE_TAC ``c:real``) THEN EXISTS_TAC ``c:real`` THEN

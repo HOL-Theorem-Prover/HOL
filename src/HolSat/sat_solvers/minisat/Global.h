@@ -119,7 +119,7 @@ static inline int memReadStat(int field)
 {
     char    name[256];
     pid_t pid = getpid();
-    sprintf(name, "/proc/%d/statm", pid);
+    snprintf(name, 200, "/proc/%d/statm", pid);
     FILE*   in = fopen(name, "rb");
     if (in == NULL) return 0;
     int     value;

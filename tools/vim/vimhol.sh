@@ -65,7 +65,7 @@ WD="$(echo "$@" | xargs dirname 2>/dev/null \
       | cat - <(pwd) | head -n 1)"
 
 # create new fifo pipe
-VIMHOL_FIFO="$(mktemp -u -p "${XDG_RUNTIME_DIR:-/tmp}" "hol-XXXXXXXXXX")"
+VIMHOL_FIFO="$(env TMPDIR="${XDG_RUNTIME_DIR:-/tmp}" mktemp -t "hol-XXXXXXXXXX")"
 test -p "$VIMHOL_FIFO" || mkfifo "$VIMHOL_FIFO"
 
 # For $HOLDIR/bin/hol, set $HOL_CONFIG to use $HOLDIR/tools/vim/hol-config.sml

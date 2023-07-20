@@ -1,3 +1,7 @@
+(* ========================================================================= *)
+(*    HOL-Light compatibility library                                        *)
+(* ========================================================================= *)
+
 structure liteLib :> liteLib =
 struct
 
@@ -286,6 +290,7 @@ fun COMB2_CONV lconv rconv tm =
 
 val COMB_CONV = Lib.W COMB2_CONV;;
 
+(* NOTE: this function is conflict with Type.alpha *)
 fun alpha v tm =
   let
     val (v0,bod) = Term.dest_abs tm
@@ -460,5 +465,22 @@ fun SIMPLE_DISJ_CASES th1 th2 =
     |  _ => raise ERR "SIMPLE_DISJ_CASES" "";
 
 val SIMPLE_CHOOSE = Drule.SIMPLE_CHOOSE
+
+(* ------------------------------------------------------------------------- *)
+(*   HOL-Light compatible functions for manipulating function types          *)
+(* ------------------------------------------------------------------------- *)
+
+val bool_ty = Type.bool;
+val dest_fun_ty = Type.dom_rng;
+fun mk_fun_ty ty1 ty2 = Type.--> (ty1,ty2);
+
+val setify_term = let
+    fun term_eq x y = (Term.compare (x,y) = EQUAL);
+    fun term_le x y = (Term.compare (x,y) <> GREATER);
+    fun uniq (x::y::xs) = if term_eq x y then uniq (y::xs) else x::uniq (y::xs)
+      | uniq xs = xs
+in
+    fn s => uniq (Lib.sort term_le s)
+end;
 
 end;

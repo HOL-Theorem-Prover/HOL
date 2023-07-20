@@ -122,12 +122,16 @@ end;
  ---------------------------------------------------------------------------*)
 
 
-local open boolTheory
-      val non_datatype_congs =
-        ref ([LET_CONG, COND_CONG, IMP_CONG, literal_case_CONG,
-              pairTheory.LEX_CONG, pairTheory.PROD_ALL_CONG] @
-             map (REWRITE_RULE [AND_IMP_INTRO])
-                 [RES_FORALL_CONG, RES_EXISTS_CONG])
+val init_non_datatype_congs =
+  let open boolTheory pairTheory combinTheory
+  in [LET_CONG, COND_CONG, IMP_CONG, literal_case_CONG,
+      LEX_CONG, PROD_ALL_CONG, o_CONG]
+      @
+      map (REWRITE_RULE [AND_IMP_INTRO]) [RES_FORALL_CONG, RES_EXISTS_CONG]
+  end
+
+local
+  val non_datatype_congs = ref init_non_datatype_congs
 in
   fun read_congs() = !non_datatype_congs
   fun write_congs L = (non_datatype_congs := L)

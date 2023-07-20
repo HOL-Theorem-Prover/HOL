@@ -21,10 +21,13 @@ to {augment_srw_ss}.
 The effect of this call is not exported to descendent theories.
 
 \FAILURE
-Never fails.  A name can be provided for a fragment that does not
-appear in the stateful simpset.  In this case, the name is just
-ignored, and there will be no corresponding fragment in the list that
-the function returns.
+Fails with the {Conv.UNCHANGED} exception if the call would make no
+change to the underlying simpset (i.e., if no name in {fragnames}
+corresponds to a fragment in the stateful simpset. Apart from this, a
+name can be provided for a fragment that does not appear in the
+stateful simpset. In this case, the name is just ignored, and there
+will be no corresponding fragment in the list that the function
+returns.
 
 \EXAMPLE
 {

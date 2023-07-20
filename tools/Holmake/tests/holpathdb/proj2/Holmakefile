@@ -22,5 +22,5 @@ endif
 # this test checks to see if the proj1ATheory.sml file has used the proj1
 # holpath variable in the call to load the proj1ATheory.dat file.
 test: ../proj1/proj1ATheory.sml
-	grep 'subst_pathvars.*(proj1)' $<
+	grep 'subst_pathvars.*(proj1)' $(hol2fs $<)
 	touch $@

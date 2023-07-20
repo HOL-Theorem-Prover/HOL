@@ -171,7 +171,7 @@ fun findUo [] _ = NONE
                                            {path=search,
                                             relativeTo = OS.FileSys.getDir ()}};
       in
-        if OS.FileSys.access (path, []) then
+        if HOLFileSys.access (path, []) then
           SOME path
         else
           findUo rest modPath
@@ -215,13 +215,13 @@ in
       NONE => ()
     | SOME "1" =>
       let
-        val getTime = OS.FileSys.modTime o findMod
+        val getTime = HOLFileSys.modTime o findMod
         fun foldthis (modname, t0) = time_max(t0, getTime modname)
         val mtime = foldl foldthis Time.zeroTime objs
       in
         diag ("Setting mod-time of heap to "^
               Date.toString (Date.fromTimeLocal mtime));
-        OS.FileSys.setTime (outputheap, SOME mtime)
+        HOLFileSys.setTime (outputheap, SOME mtime)
       end
     | SOME s =>
       warn ("Ignoring strange value (" ^ s ^ ") for " ^
@@ -312,7 +312,8 @@ fun main() = let
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val allincs = ReadHMF.find_includes (OS.FileSys.getDir())
   val _ = ReadHMF.extend_path_with_includes
-            {verbosity = 1, lpref = Meta.loadPath}
+            {verbosity = 1 + (if debug then 1 else 0),
+             lpref = Meta.loadPath}
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
@@ -386,7 +387,7 @@ in
                           {fnname = f, output_exe = valOf output,
                            keep_temp_files = debug}
             | _ => ();
-        List.app (fn s => if OS.FileSys.access(s, [OS.FileSys.A_READ]) then ()
+        List.app (fn s => if HOLFileSys.access(s, [HOLFileSys.A_READ]) then ()
                           else die ("Couldn't find required output file: "^s ^
                                     (case #checkerr options of
                                          NONE => ""

@@ -21,9 +21,9 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      combinTheory quotientTheory arithmeticTheory pred_setTheory
      jrhUtils listTheory mesonLib optionTheory pred_setLib;
 
-open realTheory realLib topologyTheory RealArith cardinalTheory;
+open realTheory realLib topologyTheory cardinalTheory;
 
-open hurdUtils iterateTheory seqTheory real_topologyTheory;
+open hurdUtils iterateTheory real_topologyTheory;
 
 val _ = new_theory "derivative";
 
@@ -37,7 +37,7 @@ fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* realLib *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
@@ -49,8 +49,9 @@ val LIM                = LIM_DEF;            (* real_topologyTheory *)
 
 val exp_ser = “\n. inv(&(FACT n))”;
 
-val exp = new_definition("exp", (* moved from transcTheory *)
-   “exp(x) = suminf(\n. (^exp_ser) n * (x pow n))”);
+Definition exp_def :
+    exp(x) = infsum UNIV (\n. (^exp_ser) n * (x pow n))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* convex                                                                    *)
@@ -209,7 +210,8 @@ Proof
     ASM_SIMP_TAC real_ss [REAL_MUL_ASSOC, REAL_MUL_RINV, REAL_LT_IMP_NE] THEN
     REWRITE_TAC[REAL_MUL_LID] THEN DISCH_THEN MATCH_MP_TAC THEN
     ASM_SIMP_TAC real_ss [REAL_LT_IMP_LE, SUM_LMUL] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_MESON_TAC[REAL_ADD_SYM]]);
+    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_MESON_TAC[REAL_ADD_SYM]]
+QED
 
 val CONVEX_INDEXED = store_thm ("CONVEX_INDEXED",
  ``!s:real->bool.
@@ -1491,7 +1493,7 @@ val HAS_DERIVATIVE_SERIES = store_thm ("HAS_DERIVATIVE_SERIES",
         (?x l. x IN s /\ ((\n. f n x) sums l) k)
         ==> ?g. !x. x IN s ==> ((\n. f n x) sums (g x)) k /\
                                (g has_derivative g'(x)) (at x within s)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[sums, GSYM numseg] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[sums_def, GSYM numseg] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ONCE_REWRITE_TAC [METIS [] ``sum (k INTER {0 .. n}) (\n. f n x) =
                         (\n x. sum (k INTER {0 .. n}) (\n. f n x)) n x``] THEN
@@ -1894,40 +1896,18 @@ Proof
   ASM_SIMP_TAC arith_ss [REAL_ADD_COMM]
 QED
 
-val lemma_sums_eq = prove (
-  ``!l x. (seq$sums (\n. ((\n. inv(&(FACT n)))) n * (x pow n)) l) =
-     ((\n. ((\n. inv(&(FACT n)))) n * (x pow n)) sums l) UNIV``,
-  RW_TAC std_ss [sums, seqTheory.sums, LIM_SEQUENTIALLY, SEQ, GE] THEN
-  EQ_TAC THEN RW_TAC std_ss [INTER_UNIV] THEN
-  FIRST_X_ASSUM (MP_TAC o Q.SPEC `e`) THEN
-  ASM_REWRITE_TAC [] THEN STRIP_TAC THENL
-  [Q.EXISTS_TAC `N` THEN RW_TAC std_ss [] THEN
-   FIRST_X_ASSUM (MP_TAC o Q.SPEC `SUC n`) THEN
-   ASM_SIMP_TAC arith_ss [dist] THEN
-   REWRITE_TAC [SIMP_RULE std_ss [] lemma_sum_eq],
-   ALL_TAC] THEN
-  Q.EXISTS_TAC `SUC N` THEN RW_TAC std_ss [] THEN
-  FIRST_X_ASSUM (MP_TAC o Q.SPEC `PRE n`) THEN
-  ASM_SIMP_TAC arith_ss [dist] THEN
-  `?m. PRE n = m` by ASM_SIMP_TAC arith_ss [] THEN
-  `n = SUC m` by ASM_SIMP_TAC arith_ss [] THEN
-  ASM_REWRITE_TAC [SIMP_RULE std_ss [] lemma_sum_eq]);
-
 (* cf. transcTheory.EXP_CONVERGES *)
-val EXP_CONVERGES = store_thm ("EXP_CONVERGES",
- ``!z. ((\n. z pow n / (&(FACT n))) sums exp(z)) (from 0)``,
-  SIMP_TAC std_ss [exp] THEN
-  Q_TAC SUFF_TAC `!z. suminf (\n. inv (&FACT n) * z pow n) =
-                 infsum UNIV (\n. inv (&FACT n) * z pow n)` THENL
-  [DISC_RW_KILL,
-   SIMP_TAC std_ss [suminf, infsum] THEN
-   SIMP_TAC std_ss [FROM_0, SIMP_RULE std_ss [] (GSYM lemma_sums_eq)]] THEN
-  ONCE_REWRITE_TAC [REAL_MUL_COMM] THEN REWRITE_TAC [GSYM real_div, FROM_0] THEN
-  GEN_TAC THEN SIMP_TAC std_ss [SUMS_INFSUM, summable, SERIES_CAUCHY] THEN
-  REWRITE_TAC[INTER_UNIV] THEN
-  MP_TAC(Q.SPEC `abs(z) + &1` EXP_CONVERGES_UNIFORMLY_CAUCHY) THEN
-  SIMP_TAC std_ss [REAL_ARITH ``&0 <= x ==> &0 < x + &1:real``, ABS_POS] THEN
-  METIS_TAC [REAL_ARITH ``x:real <= x + &1``]);
+Theorem EXP_CONVERGES :
+    !z. ((\n. z pow n / (&(FACT n))) sums exp(z)) (from 0)
+Proof
+    RW_TAC std_ss [exp_def, FROM_0]
+ >> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> REWRITE_TAC [GSYM real_div]
+ >> SIMP_TAC std_ss [SUMS_INFSUM, summable_def, SERIES_CAUCHY]
+ >> REWRITE_TAC[INTER_UNIV]
+ >> MP_TAC(Q.SPEC `abs(z) + &1` EXP_CONVERGES_UNIFORMLY_CAUCHY)
+ >> SIMP_TAC std_ss [REAL_ARITH ``&0 <= x ==> &0 < x + &1:real``, ABS_POS]
+ >> METIS_TAC [REAL_ARITH ``x:real <= x + &1``]
+QED
 
 val EXP_CONVERGES_UNIQUE = store_thm ("EXP_CONVERGES_UNIQUE",
  ``!w z. ((\n. z pow n / (&(FACT n))) sums w) (from 0) <=> (w = exp(z))``,
@@ -1944,7 +1924,7 @@ val EXP_CONVERGES_UNIFORMLY = store_thm ("EXP_CONVERGES_UNIFORMLY",
   ASM_REWRITE_TAC[REAL_HALF] THEN STRIP_TAC THEN Q.EXISTS_TAC `N` THEN
   MAP_EVERY X_GEN_TAC [``n:num``, ``z:real``] THEN STRIP_TAC THEN
   MP_TAC(Q.SPEC `z` EXP_CONVERGES) THEN
-  SIMP_TAC std_ss [sums, LIM_SEQUENTIALLY, FROM_0, INTER_UNIV, dist] THEN
+  SIMP_TAC std_ss [sums_def, LIM_SEQUENTIALLY, FROM_0, INTER_UNIV, dist] THEN
   DISCH_THEN(MP_TAC o Q.SPEC `e / &2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
   DISCH_THEN(X_CHOOSE_THEN ``M:num`` (MP_TAC o Q.SPEC `n + M + 1`)) THEN
   FIRST_X_ASSUM(MP_TAC o Q.SPECL [`n + 1`, `n + M + 1`, `z`]) THEN

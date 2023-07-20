@@ -186,8 +186,8 @@ val ELIM_UNCURRY = Q.store_thm(
   REWRITE_TAC [UNCURRY] THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
   REFL_TAC);
 
-
-Theorem UNCURRY_DEF[simp]:    !f x y. UNCURRY f (x,y) :'c = f x y
+Theorem UNCURRY_DEF[simp]:
+    !f x y. UNCURRY f (x,y) :'c = f x y
 Proof
   REWRITE_TAC [UNCURRY,FST,SND]
 QED

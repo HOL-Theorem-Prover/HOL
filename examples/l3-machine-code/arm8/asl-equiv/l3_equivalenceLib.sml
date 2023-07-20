@@ -257,7 +257,7 @@ val _ = computeLib.add_convs [
 
 (***** rewrites *****)
 val armv86a_ss =
-  simpLib.named_rewrites "armv86a_ss" [
+  simpLib.named_rewrites "armv86a" [
     combinTheory.I_THM,
     lemTheory.w2ui_def,
     sail2_valuesTheory.make_the_value_def,
@@ -341,7 +341,7 @@ val armv86a_ss =
 val _ = augment_srw_ss [armv86a_ss];
 
 val encode_ss =
-  simpLib.named_rewrites "encode_ss" [
+  simpLib.named_rewrites "encode" [
     Encode_def,
     e_data_def, e_branch_def, e_load_store_def, e_sf_def, e_LoadStoreImmediate_def,
     EncodeLogicalOp_def, NoOperation_def,
@@ -349,7 +349,7 @@ val encode_ss =
   ];
 
 val monad_ss =
-  simpLib.named_rewrites "monad_ss" [
+  simpLib.named_rewrites "monad" [
     sail2_state_monadTheory.seqS_def,
     sail2_state_monadTheory.returnS_def,
     sail2_state_monadTheory.bindS_def,
@@ -365,7 +365,7 @@ val monad_ss =
   ];
 
 val asl_word_ss =
-  simpLib.named_rewrites "asl_word_ss" [
+  simpLib.named_rewrites "asl_word" [
     sail2_valuesTheory.access_bv_dec_def,
     sail2_operators_mwordsTheory.vec_of_bits_def ,
     sail2_valuesTheory.of_bits_failwith_def,
@@ -385,7 +385,7 @@ val asl_word_ss =
   ];
 
 val asl_reg_ss =
-  simpLib.named_rewrites "asl_reg_ss" [
+  simpLib.named_rewrites "asl_reg" [
     sail2_state_monadTheory.read_regS_def,
     sail2_state_monadTheory.write_regS_def,
     sail2_state_monadTheory.readS_def,
@@ -398,12 +398,12 @@ val asl_reg_ss =
   ];
 
 val l3_reg_ss =
-  simpLib.named_rewrites "l3_reg_ss" [
+  simpLib.named_rewrites "l3_reg" [
     reg'TCR_EL1_def, reg'TCR_EL2_EL3_def, reg'SCTLRType_def
   ]
 
 val asl_sys_reg_ss =
-  simpLib.named_rewrites "asl_sys_reg_ss" [
+  simpLib.named_rewrites "asl_sys_reg" [
     sail2_state_monadTheory.read_regS_def,
     sail2_state_monadTheory.write_regS_def,
     sail2_state_monadTheory.readS_def,

@@ -18,6 +18,8 @@ sig
     val ERR_outstream     : (string -> unit) ref
     val MESG_outstream    : (string -> unit) ref
     val WARNING_outstream : (string -> unit) ref
+    (* heeds emit_ERR, uses ERR_outstream *)
+    val output_ERR        : string -> unit
 
     val format_ERR        : error_record -> string
     val format_MESG       : string -> string

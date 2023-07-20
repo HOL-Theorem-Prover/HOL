@@ -274,7 +274,7 @@ val SEP_cond_CONV =
   THENC REPEATC (REWRITE_CONV [cond_ELIM] THENC ONCE_REWRITE_CONV [cond_MOVE])
   THENC REWRITE_CONV [GSYM CONJ_ASSOC];
 
-val sep_cond_ss = conv2ssfrag "sep_cond_ss" SEP_cond_CONV ``x * (y:'a set -> bool)``;
+val sep_cond_ss = conv2ssfrag "sep_cond" SEP_cond_CONV ``x * (y:'a set -> bool)``;
 
 (* conversions *)
 

@@ -40,49 +40,28 @@ fun mk_tyvar_size vty (V,away) =
   end
 end;
 
-fun tysize_env db =
-     Option.map fst o
-     Option.composePartial (TypeBasePure.size_of, TypeBasePure.prim_get db)
-
-(*---------------------------------------------------------------------------*
- * Term size, as a function of types. The function gamma maps type           *
- * operator "ty" to term "ty_size". Types not registered in gamma are        *
- * translated into the constant function that returns 0. The function theta  *
- * maps a type variable (say 'a) to a term variable "f" of type 'a -> num.   *
- *                                                                           *
- * When actually building a measure function, the behaviour of theta is      *
- * changed to be such that it maps type variables to the constant function   *
- * that returns 0.                                                           *
- *---------------------------------------------------------------------------*)
-
-local fun drop [] ty = fst(dom_rng ty)
-        | drop (_::t) ty = drop t (snd(dom_rng ty));
-      fun OK f ty M =
+(* Setting up the "theta" parameter to TypeBasePure.type_size_pre,
+   which provides pre-set sizes for some types, given the various
+   cases here (type parameters, sizes of the new types, and auxiliary
+   sizes needed for intermediate types). *)
+local
+  fun OK f ty M =
          let val (Rator,Rand) = dest_comb M
          in aconv Rator f andalso is_var Rand andalso (type_of Rand = ty)
          end
-in
-fun tysize (theta,omega,gamma) clause ty =
- case theta ty
-  of SOME fvar => fvar
+  fun theta2 (theta,omega) clause ty = case theta ty
+  of SOME fvar => SOME fvar
    | NONE =>
       case omega ty
-       of SOME (_,[]) => raise ERR "tysize" "bug: no assoc for nested"
-        | SOME (_,[(f,szfn)]) => szfn
-        | SOME (_,alist) => snd
+       of SOME (_,[]) => raise ERR "tysize theta2" "bug: no assoc for nested"
+        | SOME (_,[(f,szfn)]) => SOME szfn
+        | SOME (_,alist) => SOME (snd
              (first (fn (f,sz) => Lib.can (find_term(OK f ty)) (rhs clause))
-                  alist)
-        | NONE =>
-           let val {Tyop,Thy,Args} = dest_thy_type ty
-           in case gamma (Thy,Tyop)
-               of SOME f =>
-                   let val vty = drop Args (type_of f)
-                       val sigma = Type.match_type vty ty
-                    in list_mk_comb(inst sigma f,
-                                map (tysize (theta,omega,gamma) clause) Args)
-                    end
-                | NONE => Kzero ty
-           end
+                  alist))
+        | NONE => NONE
+in
+fun tysize (theta,omega) db clause ty = TypeBasePure.type_size_pre
+    (theta2 (theta,omega) clause) db ty
 end;
 
 fun dupls [] (C,D) = (rev C, rev D)
@@ -111,23 +90,18 @@ fun define_size_rec ax db =
      val fparams = rev(fst(rev_itlist mk_tyvar_size tyvars
                              ([],free_varsl capplist)))
      val fparams_tyl = map type_of fparams
+     val tyvar_map = zip tyvars fparams
+     val tyvar_map2 = map (fn (ty, sz) => (ty --> num, sz)) tyvar_map
+     fun app_tyvar_szs tm = case assoc1 (fst (dom_rng (type_of tm))) tyvar_map2 of
+         NONE => tm
+       | SOME (_, sz) => app_tyvar_szs (mk_comb (tm, sz))
      fun proto_const n ty =
          mk_var(n, itlist (curry op-->) fparams_tyl (ty --> num))
-     fun tyop_binding ty =
+     fun mk_ty_size ty =
        let val {Tyop=root_tyop,Thy=root_thy,...} = dest_thy_type ty
-       in ((root_thy,root_tyop), (ty, proto_const(root_tyop^"_size") ty))
-       end
-     val tyvar_map = zip tyvars fparams
-     val tyop_map = map tyop_binding dtys
-     fun theta tyv =
-          case assoc1 tyv tyvar_map
-           of SOME(_,f) => SOME f
-            | NONE => NONE
-     val type_size_env = tysize_env db
-     fun gamma str =
-          case assoc1 str tyop_map
-           of NONE  => type_size_env str
-            | SOME(_,(_, v)) => SOME v
+       in (ty, app_tyvar_szs (proto_const(root_tyop^"_size") ty)) end
+     val ty_sz_map = tyvar_map @ map mk_ty_size dtys
+     fun theta tyv = Option.map snd (assoc1 tyv ty_sz_map)
      (* now the ugly nested map *)
      val head_of_clause = head o lhs o snd o strip_forall
      fun is_dty M = mem(#1(dom_rng(type_of(head_of_clause M)))) dtys
@@ -148,7 +122,7 @@ fun define_size_rec ax db =
      val nested_map0 = map nested_binding (enumerate 1 non_dty_fns)
      val nested_map1 = crunch nested_map0
      fun omega ty = assoc1 ty nested_map1
-     val sizer = tysize(theta,omega,gamma)
+     val sizer = tysize (theta,omega) db
      fun mk_app cl v = mk_comb(sizer cl (type_of v), v)
      val fn_i_map = dty_map @ nested_map0
      fun clause cl =
@@ -182,58 +156,57 @@ val thm_compare = inv_img_cmp concl Term.compare
 val useful_ths = List.take(CONJUNCTS arithmeticTheory.ADD_CLAUSES, 2)
 
 
-fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind size_def =
+fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
   let
     val eq_rator = rator o lhs o snd o strip_forall
-    val size_rators = size_def |> concl |> strip_conj |> map eq_rator
-        |> HOLset.fromList Term.compare |> HOLset.listItems
-    val aux_measures = map (snd o strip_comb) size_rators |> List.concat
-    val measures = size_rators @ aux_measures
-        |> HOLset.fromList Term.compare |> HOLset.listItems
-    fun def_measure ty =
-        hd (filter (fn m => fst (dom_rng (type_of m)) = ty) measures)
-    fun fix_measure t =
-        if is_abs t then
-          hd (filter (fn m => type_of m = type_of t) measures @ [t])
-        else if is_comb t then
-          mk_comb (fix_measure (rator t), fix_measure (rand t))
-        else t
-    fun measure sz = TypeBasePure.type_size db (fst (dom_rng (type_of sz)))
-        |> fix_measure
     val hd_ty = size_def |> concl |> strip_conj |> hd |> eq_rator
         |> type_of |> dom_rng |> fst
-    val ind = case opt_ind of SOME ind => ind
-        | _ => TypeBasePure.fetch db hd_ty |> valOf |> TypeBasePure.induction_of
-    val ind_tys =
-        concl ind |> strip_forall |> snd |> strip_imp |> snd |> strip_conj
-              |> map (type_of o fst o dest_forall)
+    val (ind, rec_ax) = case (opt_ind_rec, TypeBasePure.fetch db hd_ty) of
+          (SOME x, _) => x
+        | (_, SOME x) => (TypeBasePure.induction_of x, TypeBasePure.axiom_of x)
+        | _ => raise (ERR "size_def_to_comb" "unknown type")
+    val dtys = Prim_rec.doms_of_tyaxiom rec_ax
     fun remdups (x :: y :: zs) = if term_eq x y then remdups (y :: zs)
                                  else x :: remdups (y :: zs)
       | remdups xs = xs
-    val szs = size_def |> concl |> strip_conj |> map eq_rator |> remdups
-    fun sz_all_eq sz = let
-        val m = measure sz
-        val x = mk_var ("x", fst (dom_rng (type_of m)))
-        val eq = mk_eq (mk_comb (sz, x), mk_comb (m, x))
-      in mk_forall (x, eq) end
-    val eqs = map sz_all_eq szs |> list_mk_conj
-    val others = filter (fn sz => not (term_eq (measure sz) sz)) size_rators
-    fun size_rule ty = TypeBasePure.fetch db ty |> valOf |> TypeBasePure.size_of
-            |> valOf |> snd
-    val size_rules = others |> map (fst o dom_rng o type_of) |> map size_rule
-    val size_eqs = size_rules |> HOLset.fromList thm_compare |> HOLset.listItems
-        |> map (size_def_to_comb db NONE)
+    val size_rators = size_def |> concl |> strip_conj |> map eq_rator |> remdups
+    val tyvar_ms = map (snd o strip_comb) size_rators |> List.concat
+    fun arg_ty f = fst (dom_rng (type_of f))
+    val (main_ms, aux_ms) = partition (fn f => mem (arg_ty f) dtys) size_rators
+    fun known_measure ty = List.find (fn f => arg_ty f = ty) (main_ms @ tyvar_ms)
+    fun get_measure ty = TypeBasePure.type_size_pre known_measure db ty
+    val ind_tys =
+        concl ind |> strip_forall |> snd |> strip_imp |> snd |> strip_conj
+              |> map (type_of o fst o dest_forall)
+    fun eq sz = let
+        val ty = arg_ty sz
+        val x = mk_var ("x", ty)
+        val rhs_m = get_measure ty
+        val eq = mk_eq (mk_comb (sz, x), mk_comb (rhs_m, x))
+      in (mk_forall (x, eq), mk_eq (sz, rhs_m)) end
+    val eqs = map (fst o eq) size_rators |> list_mk_conj
+    fun size_of_rcd ty = TypeBasePure.fetch db ty |> valOf |> TypeBasePure.size_of
+    val aux_size_rules = aux_ms |> map (size_of_rcd o arg_ty) |> mapfilter (snd o valOf)
+    val aux_size_eqs = aux_size_rules |> HOLset.fromList thm_compare |> HOLset.listItems
+        |> mapfilter (valOf o size_def_to_comb db NONE)
     val size_def' = REWRITE_RULE [boolTheory.ITSELF_EQN_RWT] size_def
+    val aux_eqs = map (snd o eq) aux_ms
+    fun ty_no_size ty = Option.map TypeBasePure.size_of (TypeBasePure.fetch db ty)
+        |> Option.join |> Option.isSome |> not
   in
-    if null others then TRUTH
-    else prove (eqs,
+    if null aux_eqs then NONE
+    else if List.exists (ty_no_size o arg_ty) aux_ms
+    then (Feedback.HOL_MESG ("DataSize: skipping size eqs: no size for " ^
+        type_to_string (hd (List.filter ty_no_size (List.map arg_ty aux_ms)))); NONE)
+    else let
+        val th1 = prove (eqs,
                 ho_match_mp_tac ind
-                \\ REWRITE_TAC (size_def' :: size_eqs @ size_rules @ useful_ths)
+                \\ REWRITE_TAC (size_def' :: aux_size_eqs @ aux_size_rules @ useful_ths)
                 \\ rpt strip_tac
                 \\ BETA_TAC
                 \\ ASSUM_LIST REWRITE_TAC)
-               |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-               |> REWRITE_RULE [GSYM FUN_EQ_THM]
+        val th2 = prove (list_mk_conj aux_eqs, REWRITE_TAC [FUN_EQ_THM, th1])
+      in SOME th2 end
   end
 
 val prove_size_eqs = ref true
@@ -241,10 +214,15 @@ val prove_size_eqs = ref true
 fun define_size {induction, recursion} db = case define_size_rec recursion db of
     NONE => NONE
   | SOME r => if ! prove_size_eqs then let
-    val comb_eqs = size_def_to_comb db (SOME induction) (#def r)
     val dtys = Prim_rec.doms_of_tyaxiom recursion
+    val comb_eqs = size_def_to_comb db (SOME (induction, recursion)) (#def r)
+      handle HOL_ERR err =>
+        let in
+        Feedback.HOL_MESG ("error in size_eqs, consider DataSize.prove_size_eqs := false; ");
+        raise (HOL_ERR err) end
     val def_name = fst(dest_type(hd dtys))
-    val _ = save_thm (def_name ^ "_size_eq", comb_eqs)
+    val _ = case comb_eqs of NONE => TRUTH
+      | SOME thm => save_thm (def_name ^ "_size_eq", thm)
   in SOME r end
   else SOME r
 

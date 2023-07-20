@@ -1077,7 +1077,7 @@ Variables whose names start with an underscore are always bound, no matter wheth
 This is convenient for using wildcard notations.
 
 These extensions of the basic case expression syntax allow the expression of some interesting concepts using case expressions.
-One can for example express division with reminder using \pmatch{} case expressions:
+One can for example express division with remainder using \pmatch{} case expressions:
 
 \begin{hol}
 \begin{alltt}
@@ -1960,6 +1960,7 @@ proving the other constraints.
 \index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
 \index{inductive relations!Inductive syntax@\ml{Inductive} syntax}
 \index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
+\index{special syntactic forms for scripts!Inductive@\ml{Inductive}}
 Inductive definitions are made with the special \ml{Inductive} syntax form, which wraps the underlying function \ml{Hol\_reln}, which is in turn found
 in the \ml{bossLib} structure.
 The resulting definitions and theorems are handled with functions defined in the library \ml{IndDefLib}.
@@ -2128,8 +2129,12 @@ If confronted with a goal of the form \holtxt{R~x~y}, one might make progress by
 
 The ``cases'' theorem can be used for the same purpose because it is an equality, of the general form \holtxt{R~x~y~$\iff$\dots}.
 Because the right-hand side of this theorem will often include other occurrences of the relation, it is generally not safe to simply rewrite with it.
-\index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}%
-\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}%
+\index{SimpLHS (simplification theorem modifier)@\ml{SimpLHS} (simplification theorem modifier)}
+\index{simplification theorem modifiers!SimpLHS@\ml{SimpLHS}}
+\index{SimpRHS (simplification theorem modifier)@\ml{SimpRHS} (simplification theorem modifier)}
+\index{simplification theorem modifiers!SimpRHS@\ml{SimpRHS}}
+\index{Once (simplification theorem modifier)@\ml{Once} (simplifier theorem modifier)}%
+\index{simplification theorem modifiers!Once@\ml{Once}}%
 The rewriting-control directives \ml{Once}, \ml{SimpLHS} and \ml{SimpRHS} can be useful here.
 \index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
 In addition, the ``cases'' theorem can be used as an ``elimination'' form: if one has an assumption of the form \holtxt{R~x~y}, rewriting this (perhaps with \ml{FULL\_SIMP\_TAC} if the term occurs in the goal's assumptions) into the possible ways it may have come about is often a good approach.
@@ -2163,9 +2168,9 @@ Thus, one can write invocations such as
 
 \index{Hol_coreln, defining coinductive relations@\ml{Hol\_coreln}, defining coinductive relations}
 \index{coinductive relations!Hol_coreln (ML function)@\ml{Hol\_coreln} (ML function)}
-
+\index{special syntactic forms for scripts!CoInductive@\ml{CoInductive}}
 \HOL{} supports coinductive relational definitions by the function
-\ml{Hol\_coreln} in the \ml{bossLib} structure (or the new \ml{CoInductive} syntax).
+\ml{Hol\_coreln} in the \ml{bossLib} structure (or with the special \ml{CoInductive} syntax).
 \ml{Hol\_coreln} shares the same input syntax with \ml{Hol\_reln}.
 A successful invocation of this definitional principle returns three important theorems $\mathit{rules}$, $\mathit{coind}$ and $\mathit{cases})$.
 Each is also stored in the current theory segment.

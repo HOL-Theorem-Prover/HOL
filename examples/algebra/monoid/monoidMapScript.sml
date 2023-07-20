@@ -138,6 +138,16 @@ open helperNumTheory helperSetTheory;
                             !x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y))
    WeakIso_def         |- !f g h. WeakIso f g h <=> WeakHomo f g h /\ BIJ f G h.carrier
    monoid_weak_iso_id  |- !f g h. Monoid g /\ Monoid h /\ WeakIso f g h ==> (f #e = h.id)
+
+   Injective Image of Monoid:
+   monoid_inj_image_def             |- !g f. monoid_inj_image g f =
+                                             <|carrier := IMAGE f G;
+                                                    op := (let t = LINV f G in \x y. f (t x * t y));
+                                                    id := f #e
+                                              |>
+   monoid_inj_image_monoid          |- !g f. Monoid g /\ INJ f G univ(:'b) ==> Monoid (monoid_inj_image g f)
+   monoid_inj_image_abelian_monoid  |- !g f. AbelianMonoid g /\ INJ f G univ(:'b) ==> AbelianMonoid (monoid_inj_image g f)
+   monoid_inj_image_monoid_homo     |- !g f. INJ f G univ(:'b) ==> MonoidHomo f g (monoid_inj_image g f)
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -572,7 +582,7 @@ val monoid_iso_eq_id = store_thm(
     rw[monoid_homo_id]
   ]);
 
-(* Theorem: Monoid g /\ Monoid h /\ MonoidIso f g h ==> !x. x IN G ==> (order h (f x) = ord x)` *)
+(* Theorem: Monoid g /\ Monoid h /\ MonoidIso f g h ==> !x. x IN G ==> (order h (f x) = ord x) *)
 (* Proof:
    Let n = ord x, y = f x.
    If n = 0, to show: order h y = 0.
@@ -1180,6 +1190,145 @@ val monoid_weak_iso_id = store_thm(
     `?y. y IN G /\ (f y = x)` by metis_tac[BIJ_THM] >>
     metis_tac[WeakHomo_def, monoid_lid]
   ]);
+
+(* ------------------------------------------------------------------------- *)
+(* Injective Image of Monoid.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: Given a Monoid g, and an injective function f,
+   then the image (f G) is a Monoid, with an induced binary operator:
+        op := (\x y. f (f^-1 x * f^-1 y))  *)
+
+(* Define a monoid injective image for an injective f, with LINV f G. *)
+Definition monoid_inj_image_def:
+   monoid_inj_image (g:'a monoid) (f:'a -> 'b) =
+     <|carrier := IMAGE f G;
+            op := let t = LINV f G in (\x y. f (t x * t y));
+            id := f #e
+      |>
+End
+
+(* Theorem: Monoid g /\ INJ f G univ(:'b) ==> Monoid (monoid_inj_image g f) *)
+(* Proof:
+   Note INJ f G univ(:'b) ==> BIJ f G (IMAGE f G)      by INJ_IMAGE_BIJ_ALT
+     so !x. x IN G ==> t (f x) = x                     where t = LINV f G
+    and !x. x IN (IMAGE f G) ==> f (t x) = x           by BIJ_LINV_THM
+   By Monoid_def, monoid_inj_image_def, this is to show:
+   (1) x IN IMAGE f G /\ y IN IMAGE f G ==> f (t x * t y) IN IMAGE f G
+       Note ?a. (x = f a) /\ a IN G                    by IN_IMAGE
+            ?b. (y = f b) /\ b IN G                    by IN_IMAGE
+       Hence  f (t x * t y)
+            = f (t (f a) * t (f b))                    by x = f a, y = f b
+            = f (a * b)                                by !y. t (f y) = y
+       Since a * b IN G                                by monoid_op_element
+       f (a * b) IN IMAGE f G                          by IN_IMAGE
+   (2) x IN IMAGE f G /\ y IN IMAGE f G /\ z IN IMAGE f G ==> f (t (f (t x * t y)) * t z) = f (t x * t (f (t y * t z)))
+       Note ?a. (x = f a) /\ a IN G                    by IN_IMAGE
+            ?b. (y = f b) /\ b IN G                    by IN_IMAGE
+            ?c. (z = f c) /\ c IN G                    by IN_IMAGE
+       LHS = f (t (f (t x * t y)) * t z))
+           = f (t (f (t (f a) * t (f b))) * t (f c))   by x = f a, y = f b, z = f c
+           = f (t (f (a * b)) * c)                     by !y. t (f y) = y
+           = f ((a * b) * c)                           by !y. t (f y) = y, monoid_op_element
+       RHS = f (t x * t (f (t y * t z)))
+           = f (t (f a) * t (f (t (f b) * t (f c))))   by x = f a, y = f b, z = f c
+           = f (a * t (f (b * c)))                     by !y. t (f y) = y
+           = f (a * (b * c))                           by !y. t (f y) = y
+           = LHS                                       by monoid_assoc
+   (3) f #e IN IMAGE f G
+       Since #e IN G                                   by monoid_id_element
+          so f #e IN IMAGE f G                         by IN_IMAGE
+   (4) x IN IMAGE f G ==> f (t (f #e) * t x) = x
+       Note ?a. (x = f a) /\ a IN G                    by IN_IMAGE
+        and #e IN G                                    by monoid_id_element
+       Hence f (t (f #e) * t x)
+           = f (#e * t x)                              by !y. t (f y) = y
+           = f (#e * t (f a))                          by x = f a
+           = f (#e * a)                                by !y. t (f y) = y
+           = f a                                       by monoid_id
+           = x                                         by x = f a
+   (5) x IN IMAGE f G ==> f (t x * t (f #e)) = x
+       Note ?a. (x = f a) /\ a IN G                    by IN_IMAGE
+       and #e IN G                                     by monoid_id_element
+       Hence f (t x * t (f #e))
+           = f (t x * #e)                              by !y. t (f y) = y
+           = f (t (f a) * #e)                          by x = f a
+           = f (a * #e)                                by !y. t (f y) = y
+           = f a                                       by monoid_id
+           = x                                         by x = f a
+*)
+Theorem monoid_inj_image_monoid:
+  !(g:'a monoid) (f:'a -> 'b). Monoid g /\ INJ f G univ(:'b) ==> Monoid (monoid_inj_image g f)
+Proof
+  rpt strip_tac >>
+  `BIJ f G (IMAGE f G)` by rw[INJ_IMAGE_BIJ_ALT] >>
+  `(!x. x IN G ==> (LINV f G (f x) = x)) /\ (!x. x IN (IMAGE f G) ==> (f (LINV f G x) = x))` by metis_tac[BIJ_LINV_THM] >>
+  rw_tac std_ss[Monoid_def, monoid_inj_image_def] >| [
+    `?a. (x = f a) /\ a IN G` by rw[GSYM IN_IMAGE] >>
+    `?b. (y = f b) /\ b IN G` by rw[GSYM IN_IMAGE] >>
+    rw[],
+    `?a. (x = f a) /\ a IN G` by rw[GSYM IN_IMAGE] >>
+    `?b. (y = f b) /\ b IN G` by rw[GSYM IN_IMAGE] >>
+    `?c. (z = f c) /\ c IN G` by rw[GSYM IN_IMAGE] >>
+    rw[monoid_assoc],
+    rw[],
+    `?a. (x = f a) /\ a IN G` by rw[GSYM IN_IMAGE] >>
+    rw[],
+    `?a. (x = f a) /\ a IN G` by rw[GSYM IN_IMAGE] >>
+    rw[]
+  ]
+QED
+
+(* Theorem: AbelianMonoid g /\ INJ f G univ(:'b) ==> AbelianMonoid (monoid_inj_image g f) *)
+(* Proof:
+   By AbelianMonoid_def, this is to show:
+   (1) Monoid g ==> Monoid (monoid_inj_image g f)
+       True by monoid_inj_image_monoid.
+   (2) x IN G /\ y IN G ==> (monoid_inj_image g f).op x y = (monoid_inj_image g f).op y x
+       By monoid_inj_image_def, this is to show:
+          f (t (f x) * t (f y)) = f (t (f y) * t (f x))    where t = LINV f G
+       Note INJ f G univ(:'b) ==> BIJ f G (IMAGE f G)      by INJ_IMAGE_BIJ_ALT
+         so !x. x IN G ==> t (f x) = x
+        and !x. x IN (IMAGE f G) ==> f (t x) = x           by BIJ_LINV_THM
+         f (t (f x) * t (f y))
+       = f (x * y)                                         by !y. t (f y) = y
+       = f (y * x)                                         by commutativity condition
+       = f (t (f y) * t (f x))                             by !y. t (f y) = y
+*)
+Theorem monoid_inj_image_abelian_monoid:
+  !(g:'a monoid) (f:'a -> 'b). AbelianMonoid g /\ INJ f G univ(:'b) ==>
+       AbelianMonoid (monoid_inj_image g f)
+Proof
+  rw[AbelianMonoid_def] >-
+  rw[monoid_inj_image_monoid] >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  rw[monoid_inj_image_def] >>
+  metis_tac[INJ_IMAGE_BIJ_ALT, BIJ_LINV_THM]
+QED
+
+(* Theorem: INJ f G univ(:'b) ==> MonoidHomo f g (monoid_inj_image g f) *)
+(* Proof:
+   Let s = IMAGE f G.
+   Then BIJ f G s                              by INJ_IMAGE_BIJ_ALT
+     so INJ f G s                              by BIJ_DEF
+
+   By MonoidHomo_def, monoid_inj_image_def, this is to show:
+   (1) x IN G ==> f x IN IMAGE f G, true       by IN_IMAGE
+   (2) x IN R /\ y IN R ==> f (x * y) = f (LINV f R (f x) * LINV f R (f y))
+       Since LINV f R (f x) = x                by BIJ_LINV_THM
+         and LINV f R (f y) = y                by BIJ_LINV_THM
+       The result is true.
+*)
+Theorem monoid_inj_image_monoid_homo:
+  !(g:'a monoid) f. INJ f G univ(:'b) ==> MonoidHomo f g (monoid_inj_image g f)
+Proof
+  rw[MonoidHomo_def, monoid_inj_image_def] >>
+  qabbrev_tac `s = IMAGE f G` >>
+  `BIJ f G s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
+  `INJ f G s` by metis_tac[BIJ_DEF] >>
+  metis_tac[BIJ_LINV_THM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

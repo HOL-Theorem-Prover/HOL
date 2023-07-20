@@ -18,7 +18,7 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
+open numTheory numLib unwindLib tautLib Arith prim_recTheory
      combinTheory quotientTheory arithmeticTheory realTheory real_sigmaTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
@@ -40,7 +40,7 @@ fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 
 (* Minimal hol-light compatibility layer *)
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* realLib *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
 val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
@@ -5407,11 +5407,6 @@ val LIM_WITHIN_OPEN = store_thm ("LIM_WITHIN_OPEN",
 (* More limit point characterizations.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val WLOG_LT = store_thm ("WLOG_LT",
- ``(!m:num. P m m) /\ (!m n. P m n <=> P n m) /\ (!m n. m < n ==> P m n)
-   ==> !m y. P m y``,
-  METIS_TAC[LESS_LESS_CASES]);
-
 val TRANSITIVE_STEPWISE_LT_EQ = store_thm ("TRANSITIVE_STEPWISE_LT_EQ",
  ``!R. (!x y z. R x y /\ R y z ==> R x z)
          ==> ((!m n. m < n ==> R m n) <=> (!n. R n (SUC n)))``,
@@ -7136,7 +7131,6 @@ val SUBSET_BALLS = store_thm ("SUBSET_BALLS",
    [tac, tac, ALL_TAC, ALL_TAC] THEN REWRITE_TAC[lemma] THEN
   REPEAT(POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC);
 
-(* NOTE: this proof needs 10s to finish *)
 Theorem INTER_BALLS_EQ_EMPTY :
    (!a b:real r s. (ball(a,r) INTER ball(b,s) = {}) <=>
                      r <= &0 \/ s <= &0 \/ r + s <= dist(a,b)) /\
@@ -7238,8 +7232,15 @@ Proof
   SIMP_TAC std_ss [GSYM real_div] THEN
   FULL_SIMP_TAC std_ss [REAL_LT_RDIV_EQ, REAL_LE_RDIV_EQ,
                         REAL_LT_LDIV_EQ, REAL_LE_LDIV_EQ, REAL_ARITH ``0 < 2:real``] THEN
-  RW_TAC real_ss [abs, max_def, min_def] THEN (* 1024 subgoals (for each goals) *)
-  ASM_REAL_ARITH_TAC
+
+  (* NOTE: previously, when porting this proof from HOL-Light to HOL4, I had
+     to rewrite max/min/abs before calling REAL_ASM_ARITH_TAC, and this have
+     caused 1024 subgoals here (1024 calls to REAL_ARITH), which take about 10
+     10 seconds to finish. Now we forcely use the new one from RealArith, and
+     this means this last step does not participate the performance comparisons
+     when we globally switch REAL_ARITH, etc from realLib. -- Chun Tian
+   *)
+  REAL_ASM_ARITH_TAC
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -10910,22 +10911,7 @@ val UNBOUNDED_HALFSPACE_COMPONENT_LE = store_thm
  >> ASM_SIMP_TAC std_ss [bounded_def, FORALL_IN_GSPEC]
  >> X_GEN_TAC ``B:real``
  >> EXISTS_TAC ``-((&1:real) + max (abs B) (abs a))``
- >> REWRITE_TAC [ABS_NEG, REAL_NOT_LE, REAL_NEG_ADD]
- >> RW_TAC bool_ss [abs, max_def]
- >> FULL_SIMP_TAC real_ss [REAL_NOT_LE]
- >| (* 12 goals *)
-  [ ASM_REAL_ARITH_TAC, (* 1 *)
-    ASM_REAL_ARITH_TAC, (* 2 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 3 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 4 *)
-    Cases_on `0 <= B` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 5 *)
-    Cases_on `0 <= B` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 6 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 7 *)
-    ASM_REAL_ARITH_TAC, (* 8 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [] >> ASM_REAL_ARITH_TAC, (* 9 *)
-    Cases_on `0 <= B` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 10 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC, (* 11 *)
-    Cases_on `0 <= a` >> FULL_SIMP_TAC real_ss [GSYM REAL_NOT_LE] >> ASM_REAL_ARITH_TAC ]);
+ >> REAL_ARITH_TAC);
 
 val UNBOUNDED_HALFSPACE_COMPONENT_GE = store_thm
   ("UNBOUNDED_HALFSPACE_COMPONENT_GE",
@@ -17404,18 +17390,21 @@ val _ = hide "summable";
 
 val _ = set_fixity "sums" (Infix(NONASSOC, 450));
 
-Definition sums : (* cf. seqTheory.sums *)
+Definition sums_def : (* cf. seqTheory.sums *)
    (f sums l) s = ((\n. sum (s INTER { 0n..n}) f) --> l) sequentially
 End
+val sums = sums_def;
 
-Definition infsum : (* cf. seqTheory.suminf *)
+Definition suminf_def : (* cf. seqTheory.suminf *)
     infsum s f = @l. (f sums l) s
 End
 val _ = overload_on ("suminf", ``infsum``);
+val infsum = suminf_def;
 
-Definition summable : (* cf. seqTheory.summable *)
+Definition summable_def : (* cf. seqTheory.summable *)
     summable s f = ?l. (f sums l) s
 End
+val summable = summable_def;
 
 val SUMS_SUMMABLE = store_thm ("SUMS_SUMMABLE",
  ``!f l s. (f sums l) s ==> summable s f``,
@@ -20408,9 +20397,7 @@ Proof
   ASM_REWRITE_TAC[SETDIST_BALLS, REAL_LT_REFL] THEN
   X_GEN_TAC ``c:real`` THEN REWRITE_TAC[IN_CBALL] THEN
   reverse EQ_TAC
-  >- (RW_TAC real_ss [dist, max_def] \\
-     `~(r < 0)` by PROVE_TAC [real_lte] >> rw [] \\
-      REAL_ASM_ARITH_TAC) THEN
+  >- (RW_TAC real_ss [dist] >> REAL_ASM_ARITH_TAC) THEN
   ASM_CASES_TAC ``b:real = a`` THENL
   [ (* goal 1 (of 2) *)
     ONCE_ASM_REWRITE_TAC [DIST_SYM] THEN ASM_REWRITE_TAC[DIST_REFL, REAL_MAX_LE] THEN
@@ -20418,9 +20405,8 @@ Proof
      (MP_TAC o SPEC ``a + r * 1:real``)
      (MP_TAC o SPEC ``a + s * 1:real``)) THEN
     REWRITE_TAC[dist, REAL_ARITH ``abs(a:real - (a + x)) = abs x``] THEN
-    SIMP_TAC real_ss [ABS_MUL, LESS_EQ_REFL, max_def] \\
-   `~(r < 0)` by PROVE_TAC [real_lte] >> rw [] \\
-    ASM_REAL_ARITH_TAC,
+    SIMP_TAC real_ss [ABS_MUL, LESS_EQ_REFL] \\
+    REAL_ASM_ARITH_TAC,
     (* goal 2 (of 2) *)
     DISCH_THEN(CONJUNCTS_THEN2
      (MP_TAC o SPEC ``a - r / dist(a,b) * (b - a):real``)
@@ -20437,9 +20423,8 @@ Proof
     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [REAL_ARITH ``(b <> a) = (abs (a - b) <> 0:real)``]) THEN
     ONCE_REWRITE_TAC [METIS [ABS_SUB] ``r / abs (a - b) * abs (b - a) =
                                    r / abs (a - b) * abs (a - b:real)``] THEN
-    ASM_SIMP_TAC real_ss [REAL_DIV_RMUL, ABS_ZERO, REAL_SUB_0, max_def] THEN
-   `~(r < 0)` by PROVE_TAC [real_lte] >> rw [] \\
-    ASM_REAL_ARITH_TAC ]
+    ASM_SIMP_TAC real_ss [REAL_DIV_RMUL, ABS_ZERO, REAL_SUB_0] THEN
+    REAL_ASM_ARITH_TAC ]
 QED
 
 val HAUSDIST_ALT = store_thm ("HAUSDIST_ALT",

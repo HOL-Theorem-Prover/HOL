@@ -14,9 +14,9 @@
 (*****************************************************************************)
 
 (******************************************************************************
-* Load theories
-* (commented out for compilation)
-******************************************************************************)
+ * Load theories
+ * (commented out for compilation)
+ ******************************************************************************)
 (*
 quietdec := true;
 app load ["bossLib", "rich_listTheory", "intLib", "arithmeticTheory"];
@@ -26,18 +26,18 @@ quietdec := false;
 *)
 
 (******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
+ * Boilerplate needed for compilation
+ ******************************************************************************)
 open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
-* Open theories
-******************************************************************************)
+ * Open theories
+ ******************************************************************************)
 open listTheory rich_listTheory arithmeticTheory intLib;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
+ * Set default parsing to natural numbers rather than integers
+ ******************************************************************************)
 val _ = intLib.deprecate_int();
 
 (*****************************************************************************)
@@ -45,209 +45,207 @@ val _ = intLib.deprecate_int();
 (*****************************************************************************)
 
 (******************************************************************************
-* Versions of simpsets that deal properly with theorems containing SUC
-******************************************************************************)
+ * Versions of simpsets that deal properly with theorems containing SUC
+ ******************************************************************************)
 val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 val simp_list_ss  = simpLib.++ (list_ss,  numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
-* Simpsets to deal properly with theorems containing SUC
-******************************************************************************)
+ * Simpsets to deal properly with theorems containing SUC
+ ******************************************************************************)
 val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
+ * Set default parsing to natural numbers rather than integers
+ ******************************************************************************)
 val _ = intLib.deprecate_int();
 
 (******************************************************************************
-* Start a new theory called FinitePath
-******************************************************************************)
+ * Start a new theory called FinitePath
+ ******************************************************************************)
 val _ = new_theory "FinitePSLPath";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
-* Infix list concatenation
-******************************************************************************)
+ * Infix list concatenation
+ ******************************************************************************)
 val _ = set_fixity "<>" (Infixl 500);
 val _ = overload_on ("<>", Term`APPEND`);
 
 (******************************************************************************
-* Concatenate a list of lists
-******************************************************************************)
+ * Concatenate a list of lists
+ ******************************************************************************)
 val CONCAT_def =
- Define `(CONCAT [] = []) /\ (CONCAT(l::ll) = l <> CONCAT ll)`;
+Define `(CONCAT [] = []) /\ (CONCAT(l::ll) = l <> CONCAT ll)`;
 
 (******************************************************************************
-* HEAD (p0 p1 p2 p3 ...) = p0
-******************************************************************************)
+ * HEAD (p0 p1 p2 p3 ...) = p0
+ ******************************************************************************)
 val HEAD_def = Define `HEAD = list$HD`;
 
 (******************************************************************************
-* REST (p0 p1 p2 p3 ...) = (p1 p2 p3 ...)
-******************************************************************************)
+ * REST (p0 p1 p2 p3 ...) = (p1 p2 p3 ...)
+ ******************************************************************************)
 val REST_def = Define `REST = list$TL`;
 
 (******************************************************************************
-* RESTN (p0 p1 p2 p3 ...) n = (pn p(n+1) p(n+2) ...)
-******************************************************************************)
+ * RESTN (p0 p1 p2 p3 ...) n = (pn p(n+1) p(n+2) ...)
+ ******************************************************************************)
 val RESTN_def =
- Define `(RESTN p 0 = p) /\ (RESTN p (SUC n) = RESTN (REST p) n)`;
+Define `(RESTN p 0 = p) /\ (RESTN p (SUC n) = RESTN (REST p) n)`;
 
 (******************************************************************************
-* ELEM (p0 p1 p2 p3 ...) n = pn
-******************************************************************************)
+ * ELEM (p0 p1 p2 p3 ...) n = pn
+ ******************************************************************************)
 val ELEM_def = Define `ELEM p n = HEAD(RESTN p n)`;
 
 val LENGTH_REST =
- store_thm
-  ("LENGTH_REST",
-   ``!p. 0 < LENGTH p ==> (LENGTH(REST p) = LENGTH p - 1)``,
-    Cases
-     THEN RW_TAC list_ss [LENGTH,REST_def,LENGTH_CONS,
-                         Cooper.COOPER_PROVE``0 < n = ?m. n = SUC m``]);
+store_thm
+("LENGTH_REST",
+ ``!p. 0 < LENGTH p ==> (LENGTH(REST p) = LENGTH p - 1)``,
+                                                       Cases
+ THEN RW_TAC list_ss [LENGTH,REST_def,LENGTH_CONS,
+                      Cooper.COOPER_PROVE``0 < n = ?m. n = SUC m``]);
 
 val LENGTH_TL =
- store_thm
-  ("LENGTH_TL",
-   ``!l. 0 < LENGTH l ==> (LENGTH(TL l) = LENGTH l - 1)``,
-   Induct
-    THEN RW_TAC list_ss []);
+store_thm
+("LENGTH_TL",
+ ``!l. 0 < LENGTH l ==> (LENGTH(TL l) = LENGTH l - 1)``,
+                                                     Induct
+ THEN RW_TAC list_ss []);
 
 (******************************************************************************
-* HD(RESTN p i) = EL i p for finite paths
-******************************************************************************)
+ * HD(RESTN p i) = EL i p for finite paths
+ ******************************************************************************)
 val HD_RESTN =
- store_thm
-  ("HD_RESTN",
-   ``!p. HD(RESTN p i) = EL i p``,
-   Induct_on `i`
-    THEN ASM_SIMP_TAC list_ss [HEAD_def,REST_def,RESTN_def, EL]);
+store_thm
+("HD_RESTN",
+ ``!p. HD(RESTN p i) = EL i p``,
+                          Induct_on `i`
+ THEN ASM_SIMP_TAC list_ss [HEAD_def,REST_def,RESTN_def, EL]);
 
 (******************************************************************************
-* ELEM p i = EL i p for finite paths
-******************************************************************************)
+ * ELEM p i = EL i p for finite paths
+ ******************************************************************************)
 val ELEM_EL =
- store_thm
-  ("ELEM_EL",
-   ``!p. ELEM p i = EL i p``,
-   RW_TAC list_ss [ELEM_def,HEAD_def,REST_def,RESTN_def,HD_RESTN]);
+store_thm
+("ELEM_EL",
+ ``!p. ELEM p i = EL i p``,
+                     RW_TAC list_ss [ELEM_def,HEAD_def,REST_def,RESTN_def,HD_RESTN]);
 
 val LENGTH_RESTN =
- store_thm
-  ("LENGTH_RESTN",
-   ``!n p. n < LENGTH p ==> (LENGTH(RESTN p n) = LENGTH p - n)``,
-   Induct
-    THEN RW_TAC arith_ss [LENGTH,RESTN_def,LENGTH_REST]);
+store_thm
+("LENGTH_RESTN",
+ ``!n p. n < LENGTH p ==> (LENGTH(RESTN p n) = LENGTH p - n)``,
+                                                            Induct
+ THEN RW_TAC arith_ss [LENGTH,RESTN_def,LENGTH_REST]);
 
 val RESTN_TL =
- store_thm
-  ("RESTN_TL",
-   ``!l i. 0 < i /\ i < LENGTH l ==> (RESTN (TL l) (i-1) = RESTN l i)``,
-   Induct_on `i`
-    THEN RW_TAC list_ss [REST_def,RESTN_def]);
+store_thm
+("RESTN_TL",
+ ``!l i. 0 < i /\ i < LENGTH l ==> (RESTN (TL l) (i-1) = RESTN l i)``,
+                                                                   Induct_on `i`
+ THEN RW_TAC list_ss [REST_def,RESTN_def]);
 
 (******************************************************************************
-* Form needeed for computeLib
-******************************************************************************)
+ * Form needeed for computeLib
+ ******************************************************************************)
 val RESTN_AUX =
- store_thm
-  ("RESTN_AUX",
-   ``RESTN p n = if n=0 then p else RESTN (REST p) (n-1)``,
-   Cases_on `n` THEN RW_TAC arith_ss [RESTN_def]);
+store_thm
+("RESTN_AUX",
+ ``RESTN p n = if n=0 then p else RESTN (REST p) (n-1)``,
+                                        Cases_on `n` THEN RW_TAC arith_ss [RESTN_def]);
 
 val _ = computeLib.add_funs[RESTN_AUX];
 
 (******************************************************************************
-* SEL_REC m n p = [p(n); p(n+1); ... ; p(n+m)]
-* (Recursive form for easy definition using Define)
-*
-* SEL_REC defined here is a fully specified version of SEG from
-* rich_listTheory.  SEG is only partially specified using
-* new_specification.
-******************************************************************************)
+ * SEL_REC m n p = [p(n); p(n+1); ... ; p(n+m)]
+ * (Recursive form for easy definition using Define)
+ *
+ * SEL_REC defined here is a fully specified version of SEG from
+ * rich_listTheory.  SEG is only partially specified using
+ * new_specification.
+ ******************************************************************************)
 val SEL_REC_def =
- Define
-  `(SEL_REC 0 n p = [])
-   /\
-   (SEL_REC (SUC m) 0 p = (HEAD p)::SEL_REC m 0 (REST p))
-   /\
-   (SEL_REC (SUC m) (SUC n) p = SEL_REC (SUC m) n (REST p))`;
+Define
+`(SEL_REC 0 n p = [])
+/\
+(SEL_REC (SUC m) 0 p = (HEAD p)::SEL_REC m 0 (REST p))
+/\
+(SEL_REC (SUC m) (SUC n) p = SEL_REC (SUC m) n (REST p))`;
 
 (******************************************************************************
-* SEL_REC m n p = [p(n); p(n+1); ... ; p(n+m-1)]
-* (Version for computeLib)
-******************************************************************************)
+ * SEL_REC m n p = [p(n); p(n+1); ... ; p(n+m-1)]
+ * (Version for computeLib)
+ ******************************************************************************)
 val SEL_REC_AUX =
- store_thm
-  ("SEL_REC_AUX",
-   ``SEL_REC m n p =
-      if m = 0   then [] else
-      if (n = 0) then (HEAD p)::SEL_REC (m-1) 0 (REST p)
-                 else SEL_REC m (n-1) (REST p)``,
-    Cases_on `m` THEN Cases_on `n` THEN RW_TAC arith_ss [SEL_REC_def]);
+store_thm
+("SEL_REC_AUX",
+ ``SEL_REC m n p =
+ if m = 0   then [] else
+   if (n = 0) then (HEAD p)::SEL_REC (m-1) 0 (REST p)
+   else SEL_REC m (n-1) (REST p)``,
+                Cases_on `m` THEN Cases_on `n` THEN RW_TAC arith_ss [SEL_REC_def]);
 
 val _ = computeLib.add_funs[SEL_REC_AUX];
 
 val SEL_REC_SUC =
- store_thm
-  ("SEL_REC_SUC",
-   ``!p. SEL_REC (SUC m) n p = ELEM p n :: SEL_REC m (SUC n) p``,
-   Induct_on `n`
-    THEN RW_TAC arith_ss [SEL_REC_def,ELEM_def,RESTN_def]
-    THEN Induct_on `m`
-    THEN RW_TAC simp_arith_ss [SEL_REC_def,ELEM_def,RESTN_def]);
+store_thm
+("SEL_REC_SUC",
+ ``!p. SEL_REC (SUC m) n p = ELEM p n :: SEL_REC m (SUC n) p``,
+                                  Induct_on `n`
+ THEN RW_TAC arith_ss [SEL_REC_def,ELEM_def,RESTN_def]
+ THEN Induct_on `m`
+ THEN RW_TAC simp_arith_ss [SEL_REC_def,ELEM_def,RESTN_def]);
 
 (******************************************************************************
-* SEL p (m,n) = [p m; ... ; p n]
-******************************************************************************)
+ * SEL p (m,n) = [p m; ... ; p n]
+ ******************************************************************************)
 val SEL_def = Define `SEL p (m,n) = SEL_REC (n-m+1) m p`;
 
 (******************************************************************************
-* RESTN (RESTN p m) n = RESTN p (m+n)
-******************************************************************************)
+ * RESTN (RESTN p m) n = RESTN p (m+n)
+ ******************************************************************************)
 val RESTN_RESTN =
- store_thm
-  ("RESTN_RESTN",
-   ``!m n p. RESTN (RESTN p m) n = RESTN p (m+n)``,
-   Induct
-    THEN RW_TAC arith_ss [RESTN_def,arithmeticTheory.ADD_CLAUSES]);
+store_thm
+("RESTN_RESTN",
+ ``!m n p. RESTN (RESTN p m) n = RESTN p (m+n)``,
+                                       Induct
+ THEN RW_TAC arith_ss [RESTN_def,arithmeticTheory.ADD_CLAUSES]);
 
 (******************************************************************************
-* ELEM (RESTN p m) n = ELEM p (m+n)
-******************************************************************************)
+ * ELEM (RESTN p m) n = ELEM p (m+n)
+ ******************************************************************************)
 val ELEM_RESTN =
- store_thm
-  ("ELEM_RESTN",
-   ``!m n p.  ELEM (RESTN p m) n = ELEM p (n+m)``,
-   Induct
-    THEN RW_TAC arith_ss [RESTN_def,ELEM_def,RESTN_RESTN]);
+store_thm
+("ELEM_RESTN",
+ ``!m n p.  ELEM (RESTN p m) n = ELEM p (n+m)``,
+                                      Induct
+ THEN RW_TAC arith_ss [RESTN_def,ELEM_def,RESTN_RESTN]);
 
 (******************************************************************************
-* CAT(w,p) creates a new path by concatenating w in front of p
-******************************************************************************)
+ * CAT(w,p) creates a new path by concatenating w in front of p
+ ******************************************************************************)
 val CAT_def =
- Define
-  `(CAT([], p) = p)
-   /\
-   (CAT((x::w), p) = x :: CAT(w,p))`;
+Define
+`(CAT([], p) = p)
+/\
+(CAT((x::w), p) = x :: CAT(w,p))`;
 
 val ALL_EL_F =
- store_thm
-  ("ALL_EL_F",
-   ``ALL_EL (\x. F) l = (l = [])``,
-   Cases_on `l`
-    THEN RW_TAC list_ss []);
+store_thm
+("ALL_EL_F",
+ ``ALL_EL (\x. F) l = (l = [])``,
+                              Cases_on `l`
+ THEN RW_TAC list_ss []);
 
-val ALL_EL_CONCAT =
- store_thm
-  ("ALL_EL_CONCAT",
-   ``!P. ALL_EL (\l. (LENGTH l = 1) /\ P(EL(LENGTH l - 1)l)) ll
-          ==> ALL_EL P (CONCAT ll)``,
-   Induct_on `ll`
-    THEN RW_TAC list_ss [CONCAT_def]
-    THEN RW_TAC list_ss [EVERY_EL,DECIDE``n<1 ==> (n=0)``]
-    THEN ASSUM_LIST(fn thl => ACCEPT_TAC(SIMP_RULE arith_ss [el 4 thl,EL] (el 3 thl))));
+Theorem ALL_EL_CONCAT:
+  !P. ALL_EL (\l. (LENGTH l = 1) /\ P(EL(LENGTH l - 1)l)) ll ==>
+      ALL_EL P (CONCAT ll)
+Proof
+  Induct_on `ll` THEN RW_TAC list_ss [CONCAT_def] THEN
+  gvs[LENGTH_EQ_NUM_compute]
+QED
 
 val CONCAT_MAP_SINGLETON =
  store_thm

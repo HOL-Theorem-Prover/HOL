@@ -2,6 +2,7 @@ signature proofManagerLib =
 sig
     include Abbrev
     type proof = Manager.proof
+    type tacmodifier = Manager.tacmodifier
     type proofs = Manager.proofs
 
     val chatting : bool ref
@@ -12,8 +13,8 @@ sig
     val gt            : term quotation -> proofs
     val set_goal      : goal -> proofs
     val set_goaltree  : goal -> proofs
-    val new_goalstack : goal -> (thm -> thm) -> proofs
-    val new_goaltree  : goal -> proofs
+    val new_goalstack : goal -> tacmodifier -> (thm -> thm) -> proofs
+    val new_goaltree  : goal -> tacmodifier -> proofs
     val add           : proof -> proofs
 
     (* Undo *)

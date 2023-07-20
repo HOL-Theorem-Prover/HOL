@@ -523,8 +523,8 @@ val ZERO_LT_dimword = Q.store_thm("ZERO_LT_dimword[simp]",
   `0 < dimword(:'a)`,
   SRW_TAC [][dimword_def])
 
-val DIMINDEX_GT_0 = save_thm("DIMINDEX_GT_0[simp]",
-  PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``0 < dimindex(:'a)``)
+(* |- 0 < dimindex (:'a) *)
+Theorem DIMINDEX_GT_0 = fcpTheory.DIMINDEX_GT_0
 
 val dimword_IS_TWICE_INT_MIN = Q.store_thm("dimword_IS_TWICE_INT_MIN",
   `dimword(:'a) = 2 * INT_MIN(:'a)`,
@@ -2049,26 +2049,29 @@ val bit_field_insert = Q.store_thm("bit_field_insert",
          WORD_NEG_1_T]
   \\ SRW_TAC [ARITH_ss] [])
 
-val word_join_index = Q.store_thm("word_join_index",
-  `!i (a:'a word) (b:'b word).
+Theorem word_join_index:
+  !i (a:'a word) (b:'b word).
         FINITE univ(:'a) /\ FINITE univ(:'b) /\ i < dimindex(:'a + 'b) ==>
         ((word_join a b) ' i =
            if i < dimindex(:'b) then
               b ' i
            else
-              a ' (i - dimindex (:'b)))`,
+              a ' (i - dimindex (:'b)))
+Proof
   SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss, ARITH_ss]
       [word_join_def, word_or_def, word_lsl_def, w2w, fcpTheory.index_sum]
-  \\ `i = 0` by DECIDE_TAC
-  \\ FULL_SIMP_TAC (srw_ss()) [])
+  \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
 (* -------------------------------------------------------------------------
     Reduce operations : theorems
    ------------------------------------------------------------------------- *)
 
-val genlist_dimindex_not_null = Q.prove(
-  `!f. ~NULL (GENLIST f (dimindex(:'a)))`,
-  SRW_TAC [ARITH_ss] [listTheory.NULL_GENLIST, DECIDE ``0 < n ==> (n <> 0n)``])
+Theorem genlist_dimindex_not_null[local]:
+  !f. ~NULL (GENLIST f (dimindex(:'a)))
+Proof
+  SRW_TAC [ARITH_ss] [listTheory.NULL_GENLIST, DECIDE ``0 < n ==> (n <> 0n)``]
+QED
 
 fun mk_word_reduce_thm (name,f,thm1,thm2,g,h) =
 let
@@ -2089,7 +2092,6 @@ in
         FOLDL ^g (HD l) (TL l)`,
   SRW_TAC [boolSimps.LET_ss, fcpLib.FCP_ss]
           [fcpTheory.index_one, word_reduce_def, thm2]
-  \\ `i = 0` by DECIDE_TAC
   \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss]
        [lem, listTheory.MAP_GENLIST, listTheory.HD_GENLIST_COR,
         listTheory.MAP_TL, genlist_dimindex_not_null, word_extract_def,
@@ -4975,7 +4977,7 @@ QED
 
 val sizes =
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-   16, 20, 24, 28, 30, 32, 48, 64, 96, 128]
+   16, 20, 24, 28, 30, 32, 48, 56, 64, 96, 128]
 
 fun mk_word_size n =
   let val N = Arbnum.fromInt n

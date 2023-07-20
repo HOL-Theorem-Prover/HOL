@@ -20,6 +20,8 @@ val _ = new_theory "kraft_ineq";
 
 val _ = intLib.deprecate_int()
 
+val _ = hide "lg" (* transc$lg is now log base 2 *)
+
 Theorem bool_list_card[simp]:
   CARD {s | LENGTH (s:bool list) = n} = 2**n
 Proof
@@ -1784,7 +1786,7 @@ Proof
     (simp[] >> disch_then (K ALL_TAC) >>
      ‘∀n. SIGMA (λm. inv (2 pow m)) (count n) = (2 pow n - 1) / 2 pow (n - 1)’
        suffices_by
-       (simp[] >> REWRITE_TAC[real_div] >>
+       (disch_then (REWRITE_TAC o single) >> simp[real_div] >>
         simp[REAL_SUB_RDISTRIB, REAL_POW_ADD] >>
         Cases_on ‘mx = mn’ >> simp[] >>
         simp[GSYM pow_inv_mul_invlt, REAL_POW_ADD, REAL_SUB_LDISTRIB] >>

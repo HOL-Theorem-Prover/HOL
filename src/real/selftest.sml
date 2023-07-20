@@ -1,8 +1,15 @@
 open HolKernel Parse bossLib boolLib;
 
-open simpLib realSimps isqrtLib;
+open simpLib realSimps isqrtLib RealArith RealField bitArithLib;
 
 open testutils;
+
+(* The original version and old port by Hurd *)
+val REAL_ARITH0 = RealArith.OLD_REAL_ARITH;
+(* The new port, only suppports integral coefficients *)
+val REAL_ARITH1 = RealArith.REAL_ARITH;
+(* The new port, also suppports rational coefficients *)
+val REAL_ARITH2 = RealField.REAL_ARITH;
 
 val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) []
 
@@ -75,7 +82,7 @@ fun nftest (r as (n,c,t1,t2)) =
                                thm_to_string th
       fun pr t (r1,r2) = pr2 r2 (pr1 t r1)
     in
-      tprint (n ^ ": " ^ term_to_string t1);
+      tprint (n ^ ": " ^ term_to_string t1 ^ " TO: " ^ term_to_string t2);
       require_msg (check t2) (pr t2) test (t1,t2)
     end
 fun simpl ths = SIMP_CONV (BasicProvers.srw_ss()) ths
@@ -191,6 +198,11 @@ val _ = List.app nftest [
       ("MULRELNORM28", simp, “x * -2 * y = z”, “2 * (x * y) = -z”),
       ("MULRELNORM29", simp, “x * -2 * y = -a * z * -b”, “2 * (x * y) = -a * b * z”),
       ("MULRELNORM30", simp, “4r * B <= 4 * (A * B)”, “B:real <= A * B”),
+      ("MULRELNORM31", simp,
+       “X * 2 pow e1 * 2 pow e2 < 2 pow e3 * (2 pow e2) pow 2”,
+       “X * 2 pow e1 < 2 pow e2 * 2 pow e3”),
+      ("MULRELNORM32", simp, “x / 2r = y”, “x = 2 * y”),
+      ("MULRELNORM33", simp, “x pow 4 = (inv x) pow 3”, “x = 0 \/ x pow 7 = 1”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
@@ -235,6 +247,121 @@ val _ = List.app isqrt_test [
       ("iSQRT01", “sqrt 4”,    “(2 :real)”),
       ("iSQRT02", “sqrt 1024”, “(32 :real)”)];
 
+(* Tests of various real arithmetic conversions in RealArith.sml *)
+fun real_int_reduce_test (r as (n,f,df)) =
+    let
+      fun check res = aconv df (snd (dest_comb (concl res)));
+    in
+      tprint (n ^ ": " ^ term_to_string f ^ " = " ^ term_to_string df);
+      require_msg (check_result check) (term_to_string o concl) REAL_INT_REDUCE_CONV f
+    end;
+
+val _ = List.app real_int_reduce_test [
+      ("REAL_INT_ADD00", “&0 + &1”, “&1”),
+      ("REAL_INT_ADD01", “&1 + &99999”, “&100000”),
+      ("REAL_INT_SUB00", “&10000 - &10000”, “&0”),
+      ("REAL_INT_SUB01", “&10000 - &1”, “&9999”),
+      ("REAL_INT_NEG00", “~&0”, “&0”),
+      ("REAL_INT_NEG01", “~~&1”, “&1”),
+      ("REAL_INT_MUL00", “&0 * &1000”, “&0”),
+      ("REAL_INT_MUL01", “&877 * &27644437”, “&24244171249”),
+      ("REAL_INT_POW00", “&2 pow 0”, “&1”),
+      ("REAL_INT_POW01", “&2 pow 32”, “&4294967296”),
+      ("REAL_INT_ABS00", “abs (&1)”, “&1”),
+      ("REAL_INT_ABS01", “abs (~&1)”, “&1”),
+      ("REAL_INT_RED00", “((&1 + &2) * &3 - abs(~&5)) pow 2 + &1”, “&17”)
+      ];
+
+(* Tests of REAL_ARITH(s) *)
+fun real_arith_test prover (r as (n,tm)) =
+    let
+      fun check res = aconv tm (concl res);
+    in
+      tprint (n ^ ": " ^ term_to_string tm);
+      require_msg (check_result check) (term_to_string o concl) prover tm
+    end;
+
+(* Tests for REAL_ARITH1 *)
+val _ = List.app (real_arith_test REAL_ARITH1) [
+      ("REAL_ARITH1_00", “x + y:real = y + x”),
+      ("REAL_ARITH1_01", “&0 < x ==> &0 <= x”),
+      ("REAL_ARITH1_02", “x + ~x = &0”),
+      ("REAL_ARITH1_03", “&0 <= x ==> &0 <= y ==> &0 <= x + y”),
+      ("REAL_ARITH1_04", “&1 * x + &0 = x”),
+      ("REAL_ARITH1_05", “&3 * x + &4 * x = &7 * x”),
+      ("REAL_ARITH1_06", “&300 * x + &400 * x = &700 * x”),
+      ("REAL_ARITH1_07", “x < y:real ==> x <= y”),
+      ("REAL_ARITH1_08", “(x + z:real = y + z) ==> (x = y)”),
+      ("REAL_ARITH1_09", “(x <= y:real /\ y <= z) ==> x <= z”),
+      ("REAL_ARITH1_10", “x:real <= y ==> y < z ==> x < z”),
+      ("REAL_ARITH1_11", “&0 < x /\ &0 < y ==> x + y < &1
+                     ==> &144 * x + &100 * y < &144”),
+      ("REAL_ARITH1_12", “!x y. x <= ~y <=> x + y <= &0”),
+
+      ("REAL_ARITH1_13", “0 <= &n”),
+      ("REAL_ARITH1_14", “0 < &SUC n”), (* this is a new feature *)
+      ("REAL_ARITH1_14", “0 < b ==> a < (a :real) + b”)
+    ];
+
+(* Tests for REAL_ARITH2, some passed REAL_ARITH1 but failed here *)
+val _ = List.app (real_arith_test REAL_ARITH2) [
+      (* self test sample, cf. REAL_HALF *)
+      ("REAL_ARITH2_00", “x / 3 + x / 3 + x / 3 = x”),
+
+      (* from somewhere *)
+      ("REAL_ARITH2_01", “abs x <= abs y ==> 0 <= abs x /\ abs x <= abs y”),
+
+      (* from iterateTheory.FINITE_REAL_INTERVAL *)
+      ("REAL_ARITH2_02", “a + x / y < b <=> x / y < b - a:real”),
+
+      (* from iterateTheory.SUM_GP_BASIC *)
+      ("REAL_ARITH2_03", “1 - x * x pow n + (1 - x) * (x * x pow n) = 1 - x * (x * x pow n)”),
+
+      (* from real_topologyTheory.LINEAR_INJECTIVE_LEFT_INVERSE
+         NOTE: Hurd's REAL_ARITH can solve this but HOL-Light's original one cannot.
+       *)
+      ("REAL_ARITH2_04", “((f :real->real) (&0 * &0) = &0 * f (&0)) ==> (&0 = f (&0))”),
+
+      (* from real_topologyTheory.SEQ_HARMONIC_OFFSET *)
+      ("REAL_ARITH2_05", “0 < e ==> N <> 0 ==> 0 < &N ==> realinv (&N) < e ==>
+                          -a <= &M ==> &M + &N <= &n ==> &n + a <> 0 ==> &N <= abs (&n + a)”),
+
+      (* from real_topologyTheory.CLOSED_STANDARD_HYPERPLANE *)
+      ("REAL_ARITH2_06", “closed {x | 1 * x = (a:real)} ==> closed {x | x = (a:real)}”),
+
+      (* from integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG *)
+      ("REAL_ARITH2_07", “x = (b:real) ==> &0 < &1 ==> 0 <= e / 2 pow (4 + n b) * 0”)
+    ];
+
+fun real_poly_test (r as (n,f,df)) =
+    let
+      fun check res = aconv df (snd (dest_comb (concl res)));
+    in
+      tprint (n ^ ": " ^ term_to_string f ^ " = " ^ term_to_string df);
+      require_msg (check_result check) (term_to_string o concl) REAL_POLY_CONV f
+    end;
+
+val _ = List.app real_poly_test [
+      ("REAL_POLY_00", “1 - x * x pow n + (1 - x) * (x * x pow n)”,
+                       “-1 * x pow SUC (SUC n) + 1”),
+      ("REAL_POLY_01", “3 * (x * realinv 3)”, “x:real”),
+      ("REAL_POLY_02", “e / 2 pow (4 + n b) * 0”, “0”)
+    ];
+
+(* Tests for REAL_RING *)
+val _ = List.app (real_arith_test REAL_RING) [
+      ("REAL_RING_00", “(inv(x) * inv(y) = &1) \/ ~(y = &0) \/ ~(x = &0) \/ ~(x * y = &1)”)
+    ];
+
+(* Tests for REAL_FIELD *)
+val _ = List.app (real_arith_test REAL_FIELD) [
+      ("REAL_FIELD_00", “x * y = &1 ==> inv x * inv y = &1”),
+
+      (* This example is from HOL-Light's sets.ml *)
+      ("REAL_FIELD_01", “a < b ==> (a + (b - a) / (&n + &2) = a + (b - a) / (&m + &2) <=>
+                                   &n:real = &m)”)
+    ];
+
 (* check prefer/deprecate real *)
 val grammars = (type_grammar(),term_grammar())
 val _ = realLib.prefer_real()
@@ -252,5 +379,27 @@ val expected2 = numSyntax.mk_less(numSyntax.zero_tm,
 val _ = require_msg (check_result (aconv expected2)) term_to_string
                     (quietly Parse.Term) ‘0 < x’
 val _ = temp_set_grammars grammars
+
+(* tests for bitArithLib *)
+val _ = convtest("Testing karatsuba_conv on ``1 * 2``",
+                  karatsuba_conv,
+                 ``1 * (2:num)``,
+                 ``2:num``)
+
+val _ = convtest("Testing karatsuba_conv on ``64 * 128``",
+                  karatsuba_conv,
+                 ``64 * (128:num)``,
+                 ``8192:num``)
+
+val _ = convtest("Testing karatsuba_conv on ``1 * 2``",
+                  real_mul_conv,
+                 ``1 * (2:real)``,
+                 ``2:real``)
+
+val _ = convtest("Testing real_mul_conv on ``64 * 128``",
+                  real_mul_conv,
+                 ``64 * (128:real)``,
+                 ``8192:real``)
+
 
 val _ = Process.exit Process.success

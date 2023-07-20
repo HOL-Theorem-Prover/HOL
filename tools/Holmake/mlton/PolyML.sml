@@ -15,3 +15,5 @@ struct
   exception Interrupt
 
 end
+
+exception Interrupt = SML90.Interrupt

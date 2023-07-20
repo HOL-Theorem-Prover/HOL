@@ -5,11 +5,31 @@ struct
 open Systeml
 open terminal_primitives
 open Holmake_tools_dtype
+open HOLFileSys
 
+structure FileSys = HOLFileSys
 fun K x y = x
 
 fun |>(x,f) = f x
 infix |>
+
+fun memoise cmp f =
+    let
+      val stash = ref (Binarymap.mkDict cmp)
+      fun lookup s =
+          case Binarymap.peek(!stash, s) of
+              NONE =>
+              let
+                val result = f s
+              in
+                stash := Binarymap.insert(!stash, s, result);
+                result
+              end
+            | SOME r => r
+    in
+      lookup
+    end
+
 
 structure Exception = struct
   datatype 'a result = Res of 'a | Exn of exn
@@ -21,7 +41,6 @@ end
 
 
 structure Path = OS.Path
-structure FileSys = OS.FileSys
 
 val DEFAULT_OVERLAY = "Overlay.ui"
 fun member m [] = false
@@ -132,10 +151,10 @@ fun run s =
     val res = OS.Process.system (String.concatWith " " [s,"1>",outfile,"2>&1"])
     val output =
         let
-          val istrm = TextIO.openIn outfile
+          val istrm = openIn outfile
         in
-          TextIO.inputAll istrm before
-          TextIO.closeIn istrm before
+          inputAll istrm before
+          closeIn istrm before
           OS.FileSys.remove outfile
         end handle IO.Io _ => ""
   in
@@ -199,10 +218,8 @@ type output_functions = {warn : string -> unit,
                          diag : string -> (unit -> string) -> unit}
 
 fun die_with message = let
-  open TextIO
 in
-  output(stdErr, message ^ "\n");
-  flushOut stdErr;
+  stdErr_out (message ^ "\n");
   OS.Process.exit OS.Process.failure
 end
 
@@ -211,7 +228,7 @@ fun shorten_name name =
 
 fun output_functions {usepfx,chattiness=n,debug} = let
   val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
-  open TextIO
+  open HOLFileSys
   fun msg inlinep strm s =
     if s = "" then ()
     else
@@ -227,7 +244,7 @@ fun output_functions {usepfx,chattiness=n,debug} = let
   fun donothing _ = ()
   val warn = if n >= 1 then msg false stdErr else donothing
   val info = if n >= 1 then msg false stdOut else donothing
-  val fancyp = strmIsTTY TextIO.stdOut andalso TERM_isANSI()
+  val fancyp = strmIsTTY stdOut andalso TERM_isANSI()
   val (info_inline, info_inline_end) =
       if n >= 1 then
         if fancyp then
@@ -255,8 +272,6 @@ end
 val default_ofns =
     output_functions {usepfx = true, chattiness = 1, debug = NONE}
 
-fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
-
 fun check_distrib toolname = let
   val fpath = fullPath
   open FileSys
@@ -282,10 +297,10 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val mypath = find_my_path()
   val _ = diag (K ("running "^mypath))
   fun write_lastmaker_file () = let
-    val outstr = TextIO.openOut ".HOLMK/lastmaker"
+    val outstr = openOut ".HOLMK/lastmaker"
   in
-    TextIO.output(outstr, mypath ^ "\n");
-    TextIO.closeOut outstr
+    output(outstr, mypath ^ "\n");
+    closeOut outstr
   end handle IO.Io _ => ()
 
   fun lmfile() =
@@ -293,16 +308,16 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
          FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
       then let
           val _ = diag (K "Found a lastmaker file to look at.")
-          val istrm = TextIO.openIn ".HOLMK/lastmaker"
+          val istrm = openIn ".HOLMK/lastmaker"
         in
-          case TextIO.inputLine istrm of
+          case inputLine istrm of
             NONE => (warn "Empty Last Maker file";
-                     TextIO.closeIn istrm;
+                     closeIn istrm;
                      write_lastmaker_file())
           | SOME s => let
               open Substring
               val path = string (dropr Char.isSpace (full s))
-              val _ = TextIO.closeIn istrm
+              val _ = closeIn istrm
             in
               if FileSys.access (path, [FileSys.A_READ, FileSys.A_EXEC])
               then
@@ -336,171 +351,66 @@ in
        Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
-fun string_part0 (Theory s) = s
-  | string_part0 (Script s) = s
-  | string_part0 (Other s) = s
-fun string_part1 (RawArticle s) = s
-  | string_part1 (ProcessedArticle s) = s
-fun string_part (UO c)  = string_part0 c
-  | string_part (UI c)  = string_part0 c
-  | string_part (SML c) = string_part0 c
-  | string_part (SIG c) = string_part0 c
-  | string_part (ART c) = string_part1 c
-  | string_part (DAT s) = s
-  | string_part (Unhandled s) = s
-
-fun isProperSuffix s1 s2 =
-    if size s1 < size s2 andalso String.isSuffix s1 s2 then
-      SOME (String.substring(s2,0,size s2 - size s1))
-    else NONE
-
-fun toCodeType s = let
-  val possprefix = isProperSuffix "Theory" s
-in
-  if (isSome possprefix) then Theory (valOf possprefix)
-  else let
-    val possprefix = isProperSuffix "Script" s
-  in
-    if isSome possprefix then Script (valOf possprefix)
-    else Other s
-  end
-end
-
-fun toArticleType s = let
-  val possprefix = isProperSuffix ".ot" s
-in
-  if (isSome possprefix) then ProcessedArticle (valOf possprefix)
-  else RawArticle s
-end
-
-fun toFile s0 = let
-  val {base = s, ext} = OS.Path.splitBaseExt s0
-in
-  case ext of
-    SOME "sml" => SML (toCodeType s)
-  | SOME "sig" => SIG (toCodeType s)
-  | SOME "uo"  => UO (toCodeType s)
-  | SOME "ui"  => UI (toCodeType s)
-  | SOME "art" => ART (toArticleType s)
-  | SOME "dat" => if String.isSuffix "Theory" s then
-                    DAT (String.extract(s,0,SOME(size s - 6)))
-                  else Unhandled s0
-  |    _       => Unhandled s0
-end
-
-fun extract_theory slist =
-  case slist of
-      [] => NONE
-    | s :: rest => (case toFile s of
-                        SML (Theory thy) => SOME thy
-                      | _ => extract_theory rest)
-
-fun codeToString c =
-  case c of
-    Theory s => s ^ "Theory"
-  | Script s => s ^ "Script"
-  | Other s  => s
-
-fun articleToString c =
-  case c of
-    RawArticle s => s
-  | ProcessedArticle s => s ^ ".ot"
-
-fun fromFile f =
-  case f of
-    UO c  => codeToString c ^ ".uo"
-  | UI c  => codeToString c ^ ".ui"
-  | SIG c => codeToString c ^ ".sig"
-  | SML c => codeToString c ^ ".sml"
-  | ART c => articleToString c ^ ".art"
-  | DAT s => s ^ "Theory.dat"
-  | Unhandled s => s
-
-fun fromFileNoSuf f =
-  case f of
-    UO c  => codeToString c
-  | UI c  => codeToString c
-  | SIG c => codeToString c
-  | SML c => codeToString c
-  | ART a => articleToString a
-  | DAT s => s
-  | Unhandled s => s
-
-
-
-
-fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
-
-fun primary_dependent f =
-    case f of
-      UO c => SOME (SML c)
-    | UI c => SOME (SIG c)
-    | SML (Theory s) => SOME (SML (Script s))
-    | SIG (Theory s) => SOME (SML (Script s))
-    | DAT s => SOME (SML (Script s))
-    | ART (RawArticle s) => SOME (SML (Script s))
-    | ART (ProcessedArticle s) => SOME (ART (RawArticle s))
-    | _ => NONE
-
-fun read_files ds P action =
-    case OS.FileSys.readDir ds of
-      NONE => OS.FileSys.closeDir ds
-    | SOME nextfile =>
-      (if P nextfile then action nextfile else ();
-       read_files ds P action)
-
-fun dir_files dnm A =
-    let
-      val ds = OS.FileSys.openDir dnm
-      fun recurse A =
-          case OS.FileSys.readDir ds of
-              NONE => (OS.FileSys.closeDir ds; A)
-            | SOME nm => recurse (OS.Path.concat (dnm, nm) :: A)
-    in
-      recurse A
-    end
-
-fun recursive_act file_act dir_act name =
-    let
-      fun worklist nms rmds =
-          case nms of
-              [] => List.app dir_act rmds
-            | n::ns =>
-              if OS.FileSys.isLink n then
-                (file_act n ; worklist ns rmds)
-              else if OS.FileSys.isDir n then
-                worklist (dir_files n ns) (n :: rmds)
-              else (file_act n ; worklist ns rmds)
-    in
-      worklist [name] []
-    end
-
-fun quiet_remove s = OS.FileSys.remove s handle e => ()
 fun chatty_remove act (ofns : output_functions) s =
     act s handle e =>
                  (#warn ofns ("Attempt to remove: " ^ s ^
                               " failed with exception " ^ General.exnMessage e);
                   raise e)
 
+local
+(* these next two are used just for recursive removal of directories;
+   appropriate to use "real" OS.FileSys *)
+structure FileSys = OS.FileSys
+in
+fun dir_files ofns dnm A =
+    let
+      val ds = FileSys.openDir dnm
+      fun recurse A =
+          case FileSys.readDir ds of
+              NONE => (FileSys.closeDir ds; A)
+            | SOME nm => recurse (OS.Path.concat (dnm, nm) :: A)
+    in
+      recurse A
+    end handle OS.SysErr _ =>
+               (#warn ofns ("Failed to list contents of directory "^dnm);
+                A)
+
+fun recursive_act ofns file_act dir_act name =
+    let
+      fun worklist nms rmds =
+          case nms of
+              [] => List.app dir_act rmds
+            | n::ns =>
+              if FileSys.isLink n then
+                (file_act n ; worklist ns rmds)
+              else if FileSys.isDir n then
+                worklist (dir_files ofns n ns) (n :: rmds)
+              else (file_act n ; worklist ns rmds)
+    in
+      worklist [name] []
+    end
 fun clean1 (ofns : output_functions) s =
-    let val _ = #diag ofns "tools" (fn () => "clean1 " ^ s)
+    let val _ = #diag ofns "tools"
+                      (fn () => "clean1 " ^ s ^
+                                " [In: " ^ OS.FileSys.getDir() ^ "]")
     in
       if OS.FileSys.access (s, []) then
         if OS.FileSys.isDir s then
           if String.isSuffix "/" s then
-            recursive_act (chatty_remove OS.FileSys.remove ofns)
+            recursive_act ofns
+                          (chatty_remove OS.FileSys.remove ofns)
                           (chatty_remove OS.FileSys.rmDir ofns)
                           s
           else
             (#warn ofns ("Not removing directory " ^ s ^ " from EXTRA_CLEANS.");
              #warn ofns ("  Use trailing / on name to force this."))
-        else chatty_remove OS.FileSys.remove ofns s
+        else chatty_remove FileSys.remove ofns s
       else (* doesn't exist, do nothing *) ()
     end
+end (* local *)
 
-
+fun quiet_remove s = FileSys.remove s handle e => ()
 fun clean_dir ofns {extra_cleans} = let
-  val cdstream = OS.FileSys.openDir "."
   fun to_delete f =
       case (toFile f) of
         UO _ => true
@@ -513,7 +423,9 @@ fun clean_dir ofns {extra_cleans} = let
       | ART _ => true
       | _ => false
 in
-  read_files cdstream to_delete (chatty_remove OS.FileSys.remove ofns);
+  read_files_with_objs
+    {dirname = "."} to_delete (chatty_remove OS.FileSys.remove ofns);
+  HFS_NameMunge.clean_last();
   app (clean1 ofns) extra_cleans
 end
 
@@ -522,22 +434,19 @@ fun clean_forReloc {holheap} =
     case holheap of SOME s => quiet_remove s | _ => ()
   else ()
 
-exception DirNotFound
 fun clean_depdir {depdirname} = let
-  val depds = OS.FileSys.openDir depdirname handle
-      OS.SysErr _ => raise DirNotFound
 in
-  read_files depds
+  read_files {dirname = depdirname}
              (fn _ => true)
-             (fn s => OS.FileSys.remove (fullPath [depdirname, s]));
-  OS.FileSys.rmDir depdirname;
+             (fn s => FileSys.remove (fullPath [depdirname, s]));
+  FileSys.rmDir depdirname;
   true
 end handle OS.SysErr (mesg, _) => let
            in
              print ("make cleanDeps failed with message: "^mesg^"\n");
              false
            end
-         | DirNotFound => true
+         | FileSys.DirNotFound => true
 
 val nice_dir =
     case OS.Process.getEnv "HOME" of
@@ -548,10 +457,10 @@ val nice_dir =
 
 fun pushdir d f x =
     let
-      val d0 = OS.FileSys.getDir()
-      val res = Exception.capture (fn () => (OS.FileSys.chDir d; f x)) ()
+      val d0 = FileSys.getDir()
+      val res = Exception.capture (fn () => (FileSys.chDir d; f x)) ()
     in
-      OS.FileSys.chDir d0; Exception.release res
+      FileSys.chDir d0; Exception.release res
     end
 
 
@@ -566,8 +475,8 @@ type t = {absdir : string, relpath : string option}
 fun op+ (d, e) = Path.mkCanonical (Path.concat(d, e))
 
 fun curdir () = {relpath = SOME (OS.Path.currentArc),
-                 absdir = OS.FileSys.getDir()}
-fun chdir ({absdir,...}: t) = OS.FileSys.chDir absdir
+                 absdir = FileSys.getDir()}
+fun chdir ({absdir,...}: t) = FileSys.chDir absdir
 
 fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
     String.compare (d1, d2)
@@ -689,8 +598,8 @@ type holmake_result = holmake_dirinfo option
 fun find_files ds P =
   let
     fun recurse acc =
-      case OS.FileSys.readDir ds of
-          NONE => (OS.FileSys.closeDir ds; List.rev acc)
+      case readDir ds of
+          NONE => (closeDir ds; List.rev acc)
         | SOME fname => if P fname then recurse (fname::acc)
                         else recurse acc
   in
@@ -768,15 +677,14 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
                  raise HolDepFailed)
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
-      if FileSys.isDir DEPDIR then TextIO.openOut s
+      if FileSys.isDir DEPDIR then openOut s
       else die_with ("Want to put dependency information in directory "^
                      DEPDIR^", but it already exists as a file")
     else
      (chatty ("Trying to create directory "^DEPDIR^" for dependency files");
       FileSys.mkDir DEPDIR;
-      TextIO.openOut s
+      openOut s
      )
-  open TextIO
   val outstr = myopen (normPath destination)
 in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
@@ -812,7 +720,6 @@ fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 fun get_dependencies_from_file depfile = let
   open hm_target
   fun get_whole_file s = let
-    open TextIO
     val instr = openIn (normPath s)
   in
     inputAll instr before closeIn instr
@@ -842,8 +749,8 @@ infix forces_update_of
 fun (f1 forces_update_of f2) = let
   open Time
 in
-  FileSys.access(f1, []) andalso
-  (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
+  access(f1, []) andalso
+  (not (access(f2, [])) orelse HOLFileSys.modTime f1 > HOLFileSys.modTime f2)
 end
 infix depforces_update_of
 fun (d1 depforces_update_of d2) =
@@ -880,7 +787,7 @@ in
     case f of
         UO (Theory s) => localFile (UI (Theory s)) :: localFile(DAT s) :: phase1
       | UO x =>
-        if FileSys.access(fromFile (SIG x), []) andalso
+        if access(fromFile (SIG x), []) andalso
            List.all (fn f => f <> localFile (SIG x)) phase1
         then
           localFile (UI x) :: phase1
@@ -933,7 +840,7 @@ fun generate_all_plausible_targets warn first_target =
       | NONE =>
         let
           open hm_target
-          val cds = OS.FileSys.openDir "."
+          val cds = openDir "."
           fun not_a_dot f = not (String.isPrefix "." f)
           fun ok_file f =
               case (toFile f) of

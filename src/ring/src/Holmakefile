@@ -22,7 +22,7 @@ install: hol4-ring.thy hol4-ring.art
 	opentheory install --reinstall $<
 endif
 
-selftest.exe: selftest.uo numRingLib.uo
+selftest.exe: selftest.uo EVAL_numRingLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe ring-selftest.log

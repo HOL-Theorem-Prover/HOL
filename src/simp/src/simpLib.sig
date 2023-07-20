@@ -89,6 +89,7 @@ sig
   val Cong        : thm -> thm
   val AC          : thm -> thm -> thm
   val Excl        : string -> thm
+  val ExclSF      : string -> thm
   val Req0        : thm -> thm
   val ReqD        : thm -> thm
   val SF          : ssfrag -> thm
@@ -133,6 +134,7 @@ sig
   val ssfrag_names_of : simpset -> string list
   val ++              : simpset * ssfrag -> simpset  (* infix *)
   val -*              : simpset * string list -> simpset (* infix *)
+  val remove_simps    : string list -> simpset -> simpset (* curried version *)
   val &&              : simpset * thm list -> simpset  (* infix *)
   val limit           : int -> simpset -> simpset
   val unlimit         : simpset -> simpset

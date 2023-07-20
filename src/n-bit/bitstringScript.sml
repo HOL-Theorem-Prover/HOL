@@ -11,7 +11,7 @@ open numposrepTheory
 
 val _ = new_theory "bitstring"
 
-val _ = diminish_srw_ss ["NORMEQ_ss"]
+val _ = diminish_srw_ss ["NORMEQ"]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -899,15 +899,16 @@ val DROP_LAST = Q.prove(
    \\ `(LENGTH l = 0) \/ (LENGTH l = 1)` by decide_tac
    \\ fs[listTheory.LENGTH_EQ_NUM_compute,rich_listTheory.LASTN_1]);
 
-val word_bit_last_shiftr = Q.store_thm("word_bit_last_shiftr",
-  `!i v. i < dimindex(:'a) ==>
+Theorem word_bit_last_shiftr:
+  !i v. i < dimindex(:'a) ==>
          (word_bit i (v2w v : 'a word) =
-          let l = shiftr v i in ~NULL l /\ LAST l)`,
+          let l = shiftr v i in ~NULL l /\ LAST l)
+Proof
   lrw [bit_v2w, testbit_def, field_def, DECIDE ``SUC i - i = 1``, fixwidth_def]
-  >- (`LENGTH (shiftr v i) = 0` by decide_tac
-      \\ lfs [listTheory.LENGTH_NIL, listTheory.PAD_LEFT, zero_extend_def])
-  \\ `LENGTH (shiftr v i) <> 0` by decide_tac
-  \\ lfs [GSYM listTheory.NULL_LENGTH, DROP_LAST])
+  >- lfs [listTheory.PAD_LEFT, zero_extend_def]
+  \\ `LENGTH (shiftr v i) <> 0` by (strip_tac \\ gvs[])
+  \\ lfs [GSYM listTheory.NULL_LENGTH, DROP_LAST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

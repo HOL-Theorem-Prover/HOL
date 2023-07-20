@@ -20,7 +20,7 @@ val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory pairTheory;
 open bossLib PairRules arithmeticTheory numeralTheory Defn;
 open stringTheory listTheory;
-local open ternaryComparisonsTheory in end
+local open ternaryComparisonsTheory set_relationTheory in end
 
 val _ = new_theory "toto";
 
@@ -45,17 +45,13 @@ val BigSig = true;
 fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
                                        else prove (tm, tac);
 
-(* **************************************************************** *)
-(* Make our one appeal to wotTheory. To condense all its goodness   *)
-(* into one theorem, wotTheory proves that, at any type, some reln. *)
-(* satisfies both StrongLinearOrder and WF. Here we only need the   *)
-(* StrongLinearOrder part, which might be supplied from elsewhere.  *)
-(* **************************************************************** *)
-
 Theorem StrongLinearOrderExists:
   ?R:'a reln. StrongLinearOrder R
 Proof
-  METIS_TAC [wellorderTheory.StrongWellOrderExists]
+  ‘StrongOrder (REMPTY : 'a reln)’
+    by simp[StrongOrder, irreflexive_def, transitive_def] >>
+  drule set_relationTheory.StrongOrder_extends_to_StrongLinearOrder >>
+  simp[]
 QED
 
 (* Define cpn: *)

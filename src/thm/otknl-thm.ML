@@ -10,6 +10,7 @@
 (* Modified      : September 23, 1997, Ken Larsen                        *)
 (*               : 1999, Bruno Barras                                    *)
 (*               : July 2000, Konrad Slind                               *)
+(*               : May 2023, Oskar Abrahamsson                           *)
 (* ===================================================================== *)
 
 structure Thm =
@@ -1349,5 +1350,12 @@ fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let
   val a1' = disch (c2,a1)
   val a2' = disch (c1,a2)
 in make_thm Count.Axiom (Tag.merge o1 o2, union_hyp a1' a2', mk_eq_nocheck bool c1 c2, deductAntisym_prf(th1,th2)) end
+
+(* ----------------------------------------------------------------------
+    Disable compute primitive
+   ---------------------------------------------------------------------- *)
+
+  fun compute {cval_terms, cval_type, num_type, char_eqns}  _ _ =
+    raise ERR "compute" "disabled in opentheory kernel";
 
 end (* Thm *)

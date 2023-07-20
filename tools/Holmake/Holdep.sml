@@ -13,12 +13,13 @@ struct
 
 structure Process = OS.Process
 structure Path = OS.Path
-structure FileSys = OS.FileSys
 exception Holdep_Error of string
+open HOLFileSys
+structure FileSys = HOLFileSys
 
 fun normPath s = Path.toString(Path.fromString s)
 fun manglefilename s = normPath s
-fun errMsg str = TextIO.output(TextIO.stdErr, str ^ "\n\n")
+fun errMsg str = stdErr_out (str ^ "\n\n")
 
 fun addExt s ""  = normPath s
   | addExt s ext = normPath s^"."^ext;

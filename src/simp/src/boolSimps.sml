@@ -378,7 +378,7 @@ val NORMEQ_ss = SSFRAG {
   convs = [NORMEQ_CONV],
   dprocs = [],
   filter = NONE,
-  name = SOME "NORMEQ_ss", rewrs = []}
+  name = SOME "NORMEQ", rewrs = []}
 
 val LABEL_CONG = REFL “l1 :- t”
 val LABEL_CONG_ss = SSFRAG {
@@ -387,10 +387,11 @@ val LABEL_CONG_ss = SSFRAG {
       convs = [],
       dprocs = [],
       filter = NONE,
-      name = SOME "LABEL_CONG_ss", rewrs = []}
+      name = SOME "LABEL_CONG", rewrs = []}
 
-
-
+val HIDE_ss = SSFRAG {ac = [], congs = [markerTheory.hideCONG],
+                      convs = [], dprocs = [], filter = NONE,
+                      name = SOME "hide", rewrs = []}
 
 (* ----------------------------------------------------------------------
     Congruence rules for rewriting on one side or the other of a goal's

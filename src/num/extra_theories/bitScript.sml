@@ -72,6 +72,13 @@ val MOD_2EXP_MAX_def = Define`
 
 (* ------------------------------------------------------------------------- *)
 
+(* This is the original definition of BIT mentioned in HOL Description *)
+Theorem BIT_DEF :
+    !b n. BIT b n = ((n DIV 2 ** b) MOD 2 = 1)
+Proof
+    SRW_TAC [ARITH_ss] [BIT_def, BITS_def, MOD_2EXP_def, DIV_2EXP_def]
+QED
+
 val LESS_MULT_MONO2 = Q.store_thm("LESS_MULT_MONO2",
    `!a b x y:num. a < x /\ b < y ==> a * b < x * y`,
    REPEAT STRIP_TAC
@@ -764,7 +771,7 @@ val BITS_DIVISION =
             |> SIMP_RULE std_ss [ZERO_LT_TWOEXP, GSYM BITS_ZERO3]
             |> GEN_ALL
 
-val _ = diminish_srw_ss ["MOD_ss"]
+val _ = diminish_srw_ss ["MOD"]
 val ADD_BITS_SUC = Q.store_thm("ADD_BITS_SUC",
    `!n a b.
       BITS (SUC n) (SUC n) (a + b) =

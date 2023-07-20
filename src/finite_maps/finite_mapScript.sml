@@ -3548,6 +3548,32 @@ Theorem fmlfpR_total =
   fmlfpR_total_lemma |> Q.INST[‘kvl’ |-> ‘[]’] |> GEN_ALL
                      |> SIMP_RULE(srw_ss()) []
 
+(* collection theorems *)
+
+Theorem TO_FLOOKUP:
+  (x IN FDOM m <=> FLOOKUP (m:'a |-> 'b) x <> NONE) /\
+  (y IN FRANGE m <=> ?k. FLOOKUP m k = SOME y) /\
+  (FLOOKUP m x <> NONE ==> m ' x = THE (FLOOKUP m x)) /\
+  (m = m' <=> FLOOKUP m = FLOOKUP m') /\
+  (m SUBMAP m' <=> !k v. FLOOKUP m k = SOME v ==> FLOOKUP m' k = SOME v) /\
+  (FEVERY P m <=> !k v. FLOOKUP m k = SOME v ==> P (k, v))
+Proof
+  fs [SUBMAP_FLOOKUP_EQN,FLOOKUP_DEF,FRANGE_DEF,FEVERY_DEF]
+  \\ fs [fmap_eq_flookup] \\ fs [FUN_EQ_THM]
+QED
+
+Triviality FLOOKUP_FDIFF:
+  FLOOKUP (FDIFF m d) k = if k IN d then NONE else FLOOKUP m k
+Proof
+  fs [FDIFF_def,FLOOKUP_DRESTRICT] \\ rw [] \\ gvs []
+QED
+
+Theorem FLOOKUP_SIMP =
+  [FLOOKUP_EMPTY, FLOOKUP_UPDATE, FDIFF_def, FLOOKUP_FMAP_MAP2,
+   FLOOKUP_DRESTRICT, FLOOKUP_FDIFF, FLOOKUP_FUNION, FLOOKUP_FUN_FMAP,
+   FLOOKUP_FMAP_MAP2, FLOOKUP_FMERGE]
+  |> map SPEC_ALL |> LIST_CONJ;
+
 (*---------------------------------------------------------------------------*)
 (* Add fmap type to the TypeBase. Notice that we treat keys as being of size *)
 (* zero, and make sure to add one to the size of each mapped value. This     *)

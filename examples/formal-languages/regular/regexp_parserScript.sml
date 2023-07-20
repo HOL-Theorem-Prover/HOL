@@ -236,7 +236,8 @@ Theorem wfpeg_Star :
  wfpeg rePEG (nt (mkNT Star) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
-  \\ rw[wfpeg_Star_applied])
+  \\ rw[wfpeg_Star_applied]
+QED
 
 Theorem wfpeg_Concat_applied :
  wfpeg rePEG (rePEG.rules ' (mkNT Concat))

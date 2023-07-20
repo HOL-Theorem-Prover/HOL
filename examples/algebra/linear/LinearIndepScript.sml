@@ -13,7 +13,6 @@ val _ = new_theory "LinearIndep";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -220,13 +219,13 @@ val vsum_stick_rotate = store_thm(
    Note that LENGTH (rotate k b) = LENGTH b                        by rotate_same_length
    Expanding by SpanSpace_def, using monoid_component_equality, this is to show:
    (1) n IN sticks r (LENGTH b) ==> ?n'. (n |o| rotate k b = n' |o| b) /\ n' IN sticks r (LENGTH b)
-       Let n' = rotate (LENGTH b - k) n IN sticks r (LENGTH b)   by stick_rotate_length
+       Let n' = rotate (LENGTH b - k) n IN sticks r (LENGTH b)     by stick_rotate_length
        Then  n' |o| b
           = (rotate (LENGTH b - k) n) |o| b                        by n' = rotate (LENGTH b - k) n
           = (rotate k (rotate (LENGTH b - k) n)) |o| (rotate k b)  by vsum_stick_rotate
           = n |o| (rotate k b)                                     by rotate_rcancel
    (2) n IN sticks r (LENGTH b) ==> ?n'. (n |o| b = n' |o| rotate k b) /\ n' IN sticks r (LENGTH b)
-       Let n' = rotate k n IN sticks r (LENGTH b)                by stick_rotate_length
+       Let n' = rotate k n IN sticks r (LENGTH b)                  by stick_rotate_length
        Then n' |o| (rotate k b)
           = (rotate k n) |o| (rotate k b)                          by n' = rotate k n
           = n |o| b                                                by vsum_stick_rotate
@@ -386,7 +385,7 @@ val indep_basis_property = store_thm(
 
 (* Theorem: LinearIndepBasis r g op b ==> INJ (\n. n |o| b) (sticks r (LENGTH b)) V *)
 (* Proof:
-   Note basis g b                                     by indep_basis_is_basis
+   Note basis g b                                    by indep_basis_is_basis
    By INJ_DEF, this is to show:
    (1) n IN sticks r (LENGTH b) ==> n |o| b IN V
        True by vsum_basis_stick_vector.

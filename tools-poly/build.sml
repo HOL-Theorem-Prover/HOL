@@ -80,7 +80,12 @@ end
 
 (* create a symbolic link - Unix only *)
 fun link b s1 s2 =
-    Posix.FileSys.symlink {new = s2, old = s1}
+    let val actual_old = case HFS_NameMunge.HOLtoFS s1 of
+                             NONE => s1
+                           | SOME {fullfile, ...} => fullfile
+    in
+      Posix.FileSys.symlink {new = s2, old = actual_old}
+    end
     handle OS.SysErr (s, _) =>
            die ("Unable to link old file "^quote s1^" to new file "
                 ^quote s2^": "^s)
@@ -151,7 +156,7 @@ val _ = check_againstB "tools/Holmake/Systeml.sig"
 
 val _ = let
   val fP = fullPath
-  open OS.FileSys
+  open HOLFileSys
   val hmake = fP [HOLDIR,"bin",xable_string "Holmake"]
 in
   if access(hmake, [A_READ, A_EXEC]) then

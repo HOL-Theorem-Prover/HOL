@@ -13,7 +13,6 @@ val _ = new_theory "loopDivide";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -26,7 +25,7 @@ open bitsizeTheory;
 
 (* open dependent theories *)
 open arithmeticTheory dividesTheory;
-open helperNumTheory helperListTheory helperFunctionTheory; (* replace DIV_EQ_0 *)
+open helperNumTheory helperListTheory helperFunctionTheory; (* for DIV_EQUAL_0 *)
 open listTheory rich_listTheory;
 open listRangeTheory;
 
@@ -446,23 +445,22 @@ val pop_pos = store_thm(
               and  b * (n DIV b) <= n            by DIV_MULT_LE
                or         b ** j <= n
 *)
-val pop_property = store_thm(
-  "pop_property",
-  ``!b n. 1 < b /\ 0 < n ==> !j. b ** j <= n <=> j < pop b n``,
+
+Theorem pop_property:
+  !b n. 1 < b /\ 0 < n ==> !j. b ** j <= n <=> j < pop b n
+Proof
   ho_match_mp_tac (theorem "pop_ind") >>
   rw[] >>
   Cases_on `n DIV b = 0` >| [
     `n < b` by rw[GSYM DIV_EQ_0] >>
     rw[Once pop_def] >>
     rw[Once pop_def] >>
-    rw[EQ_IMP_THM] >| [
-      spose_not_then strip_assume_tac >>
-      `0 < j` by decide_tac >>
-      `b <= b ** j` by rw[X_LE_X_EXP] >>
-      decide_tac,
-      `j = 0` by decide_tac >>
-      simp[EXP_0]
-    ],
+    rw[EQ_IMP_THM] >>
+    spose_not_then strip_assume_tac >>
+    `0 < j` by decide_tac >>
+    `b <= b ** j` by rw[X_LE_X_EXP] >>
+    decide_tac,
+
     `~(n < b)` by rw[GSYM DIV_EQ_0] >>
     `b ** (j - 1) <= n DIV b <=> j - 1 < pop b (n DIV b)` by rw[] >>
     (Cases_on `j = 0` >> simp[Once pop_def, EXP_0]) >>
@@ -473,6 +471,7 @@ val pop_property = store_thm(
       `(b * b ** k) DIV b = b ** k` by rw[MULT_TO_DIV] >>
       `k < pop b (n DIV b)` by rw[] >>
       decide_tac,
+
       qabbrev_tac `k = j - 1` >>
       `j = SUC k` by rw[Abbr`k`] >>
       `k < pop b (n DIV b)` by decide_tac >>
@@ -482,7 +481,8 @@ val pop_property = store_thm(
       `(n DIV b) * b <= n` by rw[DIV_MULT_LE] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < b ==> n < b ** pop b n *)
 (* Proof:
@@ -560,8 +560,7 @@ val pop_eqn = store_thm(
   `1 < b` by decide_tac >>
   rw[Once pop_def] >| [
     `n < b` by rw[GSYM DIV_EQ_0] >>
-    `LOG b n = 0` by rw[LOG_EQ_0] >>
-    decide_tac,
+    rw[LOG_EQ_0],
     simp[GSYM ADD1] >>
     `~(n < b)` by rw[GSYM DIV_EQ_0] >>
     rw[LOG_RWT]
@@ -787,16 +786,17 @@ val iterating_div_pop = store_thm(
 
 (* Theorem: 1 < b ==> x < b ** (pop b x) *)
 (* Proof:
+   Note 0 < b, so 0 < b ** (pop b x)             by EXP_POS
    Note FUNPOW (\x. x DIV b) (pop b x) x = 0     by iterating_div_pop, 1 < b
      or             x DIV b ** (pop b x) = 0     by iterating_div_eqn, 0 < b
-     or                   x < b ** (pop b x)     by DIV_EQ_0, 0 < b
+     or                   x < b ** (pop b x)     by DIV_EQUAL_0, 0 <  b ** (pop b x)
 *)
 val iterating_div_pop_alt = store_thm(
   "iterating_div_pop_alt",
   ``!b x. 1 < b ==> x < b ** (pop b x)``,
   rpt strip_tac >>
   `0 < b` by decide_tac >>
-  rw[iterating_div_pop, GSYM iterating_div_eqn, GSYM DIV_EQ_0]);
+  rw[iterating_div_pop, GSYM iterating_div_eqn, GSYM DIV_EQUAL_0]);
 
 (* This is the same as pop_exceeds: |- !b n. 1 < b ==> n < b ** pop b n *)
 

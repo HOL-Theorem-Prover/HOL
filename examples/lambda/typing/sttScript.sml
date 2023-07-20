@@ -1,6 +1,8 @@
 open HolKernel boolLib Parse bossLib
 open binderLib nomsetTheory metisLib termTheory contextlistsTheory
 open chap3Theory
+open sortingTheory
+open appFOLDLTheory standardisationTheory
 
 val _ = new_theory "stt";
 
@@ -9,9 +11,10 @@ val _ = remove_ovl_mapping "B" {Name="B", Thy="chap2"}
 (* define simple types, the "funspace" constructor will get to be written
    as infix "-->".
 *)
-val _ = Hol_datatype `stype = base | funspace of stype => stype`;
+Datatype: stype = base | funspace stype stype
+End
 
-val _ = overload_on("-->", ``funspace``)
+Overload "-->" = “funspace”
 val _ = Unicode.unicode_version{u = Unicode.UChar.rightarrow, tmnm = "-->"}
 
 (* set up parsing/pretty-printing for the typing relation.
@@ -32,15 +35,26 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "⊢", BreakSpace(1, 0),
                                  BeginFinalBlock(PP.INCONSISTENT, 2),
-                                 TM, HardSpace 1, TOK "◁", BreakSpace(1,0)],
+                                 TM, HardSpace 1, TOK "⦂", BreakSpace(1,0)],
                   term_name = "hastype"}
 
 (* inductive definition of typing relation *)
-val (hastype_rules, hastype_ind, hastype_cases) = Hol_reln`
-  (∀s A Γ.     valid_ctxt Γ ∧ MEM (s,A) Γ ⇒ Γ ⊢ VAR s ◁ A) ∧
-  (∀m n A B Γ. Γ ⊢ m ◁ A → B ∧ Γ ⊢ n ◁ A ⇒ Γ ⊢ m @@ n ◁ B) ∧
-  (∀x m A B Γ. (x,A) :: Γ ⊢ m ◁ B         ⇒ Γ ⊢ LAM x m ◁ A → B)
-`;
+Inductive hastype:
+  (∀s A Γ.
+      valid_ctxt Γ ∧ MEM (s,A) Γ
+        ⇒
+      Γ ⊢ VAR s ⦂ A) ∧
+
+  (∀m n A B Γ.
+      Γ ⊢ m ⦂ A → B ∧ Γ ⊢ n ⦂ A
+        ⇒
+      Γ ⊢ m @@ n ⦂ B) ∧
+
+  (∀x m A B Γ.
+     (x,A) :: Γ ⊢ m ⦂ B
+       ⇒
+     Γ ⊢ (LAM x m:term) ⦂ A → B)
+End
 
 val _ = add_rule { term_name = "·",
                    block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
@@ -48,212 +62,365 @@ val _ = add_rule { term_name = "·",
                    fixity = Infixl 600,
                    pp_elements = [TOK "·"]}
 
-val _ = overload_on ("·", ``tpm``)
-val _ = overload_on ("·", ``lswapstr``)
-val _ = overload_on ("·", ``ctxtswap``)
+Overload "·" = “tpm”
+Overload "·" = “lswapstr”
+Overload "·" = “ctxtswap”
 
 val _ = set_fixity "#" (Infix(NONASSOC, 450))
-val _ = overload_on ("#", ``λv Γ. v ∉ ctxtFV Γ``)
-val _ = overload_on ("#", ``λv M. v ∉ FV M``)
+Overload "#" = “λv Γ. v ∉ ctxtFV Γ”
+Overload "#" = “λv M:term. v ∉ FV M”
 
 (* typing relation respects permutation *)
-val hastype_swap = store_thm(
-  "hastype_swap",
-  ``∀Γ m τ. Γ ⊢ m ◁ τ ⇒ ∀π. π·Γ ⊢ π·m ◁ τ``,
-  HO_MATCH_MP_TAC hastype_ind THEN SRW_TAC [][] THENL [
-    METIS_TAC [valid_ctxt_swap, MEM_ctxtswap, hastype_rules],
-    METIS_TAC [hastype_rules],
-    METIS_TAC [hastype_rules, MEM_ctxtswap]
-  ]);
+Theorem hastype_swap:
+  ∀Γ m τ. Γ ⊢ m ⦂ τ ⇒ ∀π. π·Γ ⊢ π·m ⦂ τ
+Proof
+  Induct_on ‘hastype’ >> rw[] >>
+  METIS_TAC [valid_ctxt_swap, MEM_ctxtswap, hastype_rules]
+QED
 
-val hastype_swap_eqn = store_thm(
-  "hastype_swap_eqn",
-  ``Γ ⊢ π·m ◁ A <=> π⁻¹ · Γ ⊢ m ◁ A``,
-  METIS_TAC [hastype_swap, pmact_inverse]);
+Theorem hastype_swap_eqn:
+  Γ ⊢ π·m ⦂ A <=> π⁻¹ · Γ ⊢ m ⦂ A
+Proof METIS_TAC [hastype_swap, pmact_inverse]
+QED
 
-val hastype_valid_ctxt = store_thm(
-  "hastype_valid_ctxt",
-  ``∀Γ m A. Γ ⊢ m ◁ A ⇒ valid_ctxt Γ``,
-  HO_MATCH_MP_TAC hastype_ind THEN SRW_TAC [][]);
+Theorem hastype_valid_ctxt:
+  ∀Γ m A. Γ ⊢ m ⦂ A ⇒ valid_ctxt Γ
+Proof
+  Induct_on ‘hastype’ >> rw[]
+QED
 
-val hastype_strongind = theorem "hastype_strongind"
+Theorem ctxtswap_fresh_cons:
+  x # (π·(G:'a ctxt)) ∧ y # (π·G) ⇒ (((x,y)::π)·G = π·G)
+Proof
+  METIS_TAC [pmact_decompose, supp_fresh, listTheory.APPEND]
+QED
 
-val ctxtswap_fresh_cons = store_thm(
-  "ctxtswap_fresh_cons",
-  ``x # (π·(G:'a ctxt)) ∧ y # (π·G) ⇒ (((x,y)::π)·G = π·G)``,
-  `(x,y)::π = [(x,y)] ++ π` by SRW_TAC [][] THEN
-  METIS_TAC [pmact_decompose, supp_fresh]);
-
-val hastype_bvc_ind = store_thm(
-  "hastype_bvc_ind",
-  ``∀P fv.
-       (∀x. FINITE (fv x)) ∧
-       (∀G s A x. valid_ctxt G ∧ MEM (s,A) G ⇒ P G (VAR s) A x) ∧
-       (∀G m n A B x.
-          (∀y. P G m (A → B) y) ∧ (∀y. P G n A y) ∧
-          G ⊢ m ◁ A → B ∧ G ⊢ n ◁ A
-        ⇒
-          P G (m @@ n) B x) ∧
-       (∀G v m A B x. (∀y. P ((v,A)::G) m B y) ∧ v ∉ fv x ∧ v # G ∧
-                      (v,A) :: G ⊢ m ◁ B
-                    ⇒
-                      P G (LAM v m) (A → B) x) ⇒
-       ∀G m A. G ⊢ m ◁ A ⇒ ∀x. P G m A x``,
+Theorem hastype_bvc_ind:
+  ∀P fv.
+    (∀x. FINITE (fv x)) ∧
+    (∀G s A x. valid_ctxt G ∧ MEM (s,A) G ⇒ P G (VAR s) A x) ∧
+    (∀G m n A B x.
+       (∀y. P G m (A → B) y) ∧ (∀y. P G n A y) ∧
+       G ⊢ m ⦂ A → B ∧ G ⊢ n ⦂ A
+       ⇒
+       P G (m @@ n) B x) ∧
+    (∀G v m A B x. (∀y. P ((v,A)::G) m B y) ∧ v ∉ fv x ∧ v # G ∧
+                   (v,A) :: G ⊢ m ⦂ B
+                   ⇒
+                   P G (LAM v m) (A → B) x) ⇒
+    ∀G m A. G ⊢ m ⦂ A ⇒ ∀x. P G m A x
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Q_TAC SUFF_TAC `∀G m A. G ⊢ m ◁ A ⇒
-                          ∀x π. P (π·G) (π·m) A x`
+  Q_TAC SUFF_TAC ‘∀G m A. G ⊢ m ⦂ A ⇒ ∀x π. P (π·G) (π·m) A x’
         THEN1 METIS_TAC [pmact_nil] THEN
-  HO_MATCH_MP_TAC hastype_strongind THEN SRW_TAC [][hastype_rules] THENL [
+  Induct_on ‘hastype’ >> SRW_TAC [][hastype_rules] THENL [
     METIS_TAC [hastype_swap],
-    Q.MATCH_ABBREV_TAC
-      `P (π·G) (LAM (π·v) (π·m)) (A → B) c` THEN
-    markerLib.RM_ALL_ABBREVS_TAC THEN
-    Q_TAC (NEW_TAC "z") `(π·v) INSERT ctxtFV (π·G) ∪
-                         FV (π·m) ∪ fv c` THEN
-    `LAM (π·v) (π·m) =
-     LAM z ([(z,π·v)]·(π·m))` by SRW_TAC [][tpm_ALPHA] THEN
+    rename [‘P (π·G) (LAM (π·v) (π·m)) (A → B) c’] THEN
+    Q_TAC (NEW_TAC "z") ‘(π·v) INSERT ctxtFV (π·G) ∪ FV (π·m) ∪ fv c’ THEN
+    ‘LAM (π·v) (π·m) = LAM z ([(z,π·v)]·(π·m))’ by SRW_TAC [][tpm_ALPHA] THEN
     POP_ASSUM SUBST1_TAC THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
-    `valid_ctxt ((v,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN
-    `v # G` by FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THENL [
+    ‘valid_ctxt ((v,A)::G)’ by METIS_TAC [hastype_valid_ctxt] THEN
+    ‘v # G’ by FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THENL [
       SRW_TAC [][GSYM pmact_decompose] THEN
       Q_TAC SUFF_TAC
-         `((z,A) :: (π·G) = (([(z,π·v)] ++ π)·v,A) :: ([(z,π·v)] ++ π)·G) ∧
-          (((z,π·v)::π) · m = ([(z,π·v)] ++ π) · m)`
-         THEN1
-           (DISCH_THEN (CONJUNCTS_THEN SUBST1_TAC) THEN
-            FIRST_X_ASSUM MATCH_ACCEPT_TAC) THEN
+         ‘((z,A) :: (π·G) = (([(z,π·v)] ++ π)·v,A) :: ([(z,π·v)] ++ π)·G) ∧
+          (((z,π·v)::π) · m = ([(z,π·v)] ++ π) · m)’
+      THEN1 (DISCH_THEN (CONJUNCTS_THEN SUBST1_TAC) THEN
+             FIRST_X_ASSUM MATCH_ACCEPT_TAC) THEN
       SRW_TAC [][GSYM pmact_decompose] THEN
       SRW_TAC [][ctxtswap_fresh_cons],
       SRW_TAC [][hastype_swap_eqn, pmact_decompose, ctxtswap_fresh]
     ]
-  ]);
+  ]
+QED
 
-val hastype_indX = save_thm(
-  "hastype_indX",
+Theorem hastype_indX =
   (Q.GEN `P` o Q.GEN `X` o SIMP_RULE bool_ss [] o
-   Q.SPECL [`λG M t x. P G M t`, `λx. X`]) hastype_bvc_ind)
+   Q.SPECL [`λG M t x. P G M t`, `λx. X`]) hastype_bvc_ind
 
-val hastype_lam_inv = store_thm(
-  "hastype_lam_inv",
-  ``v # Γ ⇒
-      (Γ ⊢ LAM v M ◁ τ ⇔
-       ∃τ₁ τ₂. ((v,τ₁)::Γ) ⊢ M ◁ τ₂  ∧  (τ = τ₁ → τ₂))``,
+val _ = update_induction hastype_indX
+
+Theorem hastype_lam_inv:
+  v # Γ ⇒
+      (Γ ⊢ LAM v M ⦂ τ ⇔ ∃τ₁ τ₂. ((v,τ₁)::Γ) ⊢ M ⦂ τ₂ ∧ τ = τ₁ → τ₂)
+Proof
   SRW_TAC [][LAM_eq_thm, Once hastype_cases] THEN SRW_TAC [][EQ_IMP_THM] THENL [
-    Q.MATCH_ABBREV_TAC `(v,τ₁)::Γ ⊢ [(v,x)] · m ◁ τ₂` THEN
-    markerLib.RM_ALL_ABBREVS_TAC THEN
-    `[(v,x)] · ((x,τ₁) :: Γ) ⊢ [(v,x)] · m ◁ τ₂`
-       by SRW_TAC [][hastype_swap] THEN
+    rename [‘(v,τ₁)::Γ ⊢ [(v,x)] · m ⦂ τ₂’] THEN
+    ‘[(v,x)] · ((x,τ₁) :: Γ) ⊢ [(v,x)] · m ⦂ τ₂’ by rw[hastype_swap] THEN
     POP_ASSUM MP_TAC THEN
-    `valid_ctxt ((x,τ₁):: Γ)` by METIS_TAC [hastype_valid_ctxt] THEN
-    `x # Γ` by FULL_SIMP_TAC (srw_ss()) [] THEN
+    ‘valid_ctxt ((x,τ₁):: Γ)’ by METIS_TAC [hastype_valid_ctxt] THEN
+    ‘x # Γ’ by FULL_SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][ctxtswap_fresh],
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val hastype_var_inv = store_thm(
-  "hastype_var_inv",
-  ``Γ ⊢ VAR v ◁ τ ⇔ MEM (v,τ) Γ ∧ valid_ctxt Γ``,
-  SRW_TAC [][Once hastype_cases] THEN METIS_TAC []);
-val _ = export_rewrites ["hastype_var_inv"]
+Theorem hastype_var_inv[simp]:
+  Γ ⊢ VAR v ⦂ τ ⇔ MEM (v,τ) Γ ∧ valid_ctxt Γ
+Proof
+  SRW_TAC [][Once hastype_cases] THEN METIS_TAC []
+QED
 
-val hastype_app_inv = store_thm(
-  "hastype_app_inv",
-  ``Γ ⊢ M @@ N ◁ τ₂ ⇔ ∃τ₁. Γ ⊢ M ◁ τ₁ → τ₂ ∧ Γ ⊢ N ◁ τ₁``,
-  SRW_TAC [][Once hastype_cases]);
+Theorem hastype_app_inv:
+  Γ ⊢ M @@ N ⦂ τ₂ ⇔ ∃τ₁. Γ ⊢ M ⦂ τ₁ → τ₂ ∧ Γ ⊢ N ⦂ τ₁
+Proof
+  SRW_TAC [][Once hastype_cases]
+QED
 
-val weakening = store_thm(
-  "weakening",
-  ``∀Γ m τ. Γ ⊢ m ◁ τ ⇒ ∀Δ. valid_ctxt Δ ∧ Γ ⊆ Δ ⇒ Δ ⊢ m ◁ τ``,
-  HO_MATCH_MP_TAC hastype_bvc_ind THEN REPEAT CONJ_TAC THEN
-  Q.EXISTS_TAC `ctxtFV` THEN SRW_TAC [][] THENL [
-    (* var case *) METIS_TAC [hastype_rules, subctxt_def],
-    (* app case *) METIS_TAC [hastype_rules],
+Theorem weakening:
+  ∀Γ m τ. Γ ⊢ m ⦂ τ ⇒ ∀Δ. valid_ctxt Δ ∧ Γ ⊆ Δ ⇒ Δ ⊢ m ⦂ τ
+Proof
+  Induct_on ‘hastype’ using hastype_bvc_ind >> qexists ‘ctxtFV’ >> rw[] >~
+  [‘MEM (s,τ) _’] >- metis_tac[hastype_rules, subctxt_def] >~
+  [‘Δ ⊢ M @@ N ⦂ τ₂’] >- metis_tac[hastype_rules] >>
+  gs [subctxt_def, hastype_lam_inv, DISJ_IMP_THM, FORALL_AND_THM]
+QED
 
-    (* abs case *)
-    FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [subctxt_def, hastype_lam_inv]
-  ]);
 
-open sortingTheory
-
-val permutation = store_thm(
-  "permutation",
-  ``∀Γ₁ m A. Γ₁ ⊢ m ◁ A ⇒ ∀Γ₂. PERM Γ₁ Γ₂ ⇒ Γ₂ ⊢ m ◁ A``,
-  HO_MATCH_MP_TAC hastype_bvc_ind THEN Q.EXISTS_TAC `ctxtFV` THEN
+Theorem permutation:
+  ∀Γ₁ m A. Γ₁ ⊢ m ⦂ A ⇒ ∀Γ₂. PERM Γ₁ Γ₂ ⇒ Γ₂ ⊢ m ⦂ A
+Proof
+  Induct_on ‘hastype’ using hastype_bvc_ind >> qexists ‘ctxtFV’ THEN
   SRW_TAC [][] THENL [
     METIS_TAC [PERM_MEM_EQ],
     METIS_TAC [valid_ctxt_PERM],
     SRW_TAC [][hastype_app_inv] THEN METIS_TAC [],
     SRW_TAC [][hastype_lam_inv]
-  ]);
+  ]
+QED
 
-val strengthening_FV = store_thm(
-  "strengthening_FV",
-  ``∀Γ m A. Γ ⊢ m ◁ A ⇒ Γ ∩ FV m ⊢ m ◁ A``,
-  HO_MATCH_MP_TAC hastype_indX THEN Q.EXISTS_TAC `{}` THEN
-  SRW_TAC [][valid_ctxt_domfilter, domfilter_delete] THENL [
-    SRW_TAC [][hastype_app_inv] THEN Q.EXISTS_TAC `A` THEN
-    `valid_ctxt Γ` by METIS_TAC [hastype_valid_ctxt] THEN
-    `valid_ctxt (Γ ∩ (FV m ∪ FV m'))`
-       by SRW_TAC [][valid_ctxt_domfilter] THEN
-    Q_TAC SUFF_TAC
-      `Γ ∩ FV m ⊆ Γ ∩ (FV m ∪ FV m') ∧ Γ ∩ FV m' ⊆ Γ ∩ (FV m ∪ FV m')`
-      THEN1 METIS_TAC [weakening] THEN
-    SRW_TAC [][subctxt_def],
+Theorem strengthening_FV:
+  ∀Γ m A. Γ ⊢ m ⦂ A ⇒ Γ ∩ FV m ⊢ m ⦂ A
+Proof
+  Induct_on ‘hastype’ >> qexists ‘{}’ THEN
+  SRW_TAC [][valid_ctxt_domfilter, domfilter_delete] >~
+  [‘_ ⊢ m1 @@ m2 ⦂ τ₂’, ‘Γ ⊢ m1 ⦂ τ₁ → τ₂’]
+  >- (SRW_TAC [][hastype_app_inv] THEN qexists ‘τ₁’ THEN
+      ‘valid_ctxt Γ’ by METIS_TAC [hastype_valid_ctxt] THEN
+      ‘valid_ctxt (Γ ∩ (FV m1 ∪ FV m2))’
+        by SRW_TAC [][valid_ctxt_domfilter] THEN
+      ‘Γ ∩ FV m1 ⊆ Γ ∩ (FV m1 ∪ FV m2) ∧ Γ ∩ FV m2 ⊆ Γ ∩ (FV m1 ∪ FV m2)’
+        suffices_by metis_tac [weakening] THEN
+      SRW_TAC [][subctxt_def]) >~
+  [‘(v,τ₁)::Γ ∩ FV M ⊢ M ⦂ τ₂’] >- SRW_TAC [][hastype_lam_inv] >>
+  SRW_TAC [][hastype_lam_inv] THEN
+  irule weakening >> rpt conj_tac >~
+  [‘valid_ctxt _’] >- metis_tac[hastype_valid_ctxt, valid_ctxt_def,
+                                IN_ctxtFV_domfilter] THEN
+  rename [‘(v,A) :: Γ ∩ FV M’] >>
+  ‘(Γ ∩ FV M) ⊆ ((v,A) :: (Γ ∩ FV M))’
+    by SRW_TAC [][subctxt_def] THEN
+  metis_tac []
+QED
 
-    SRW_TAC [][hastype_lam_inv],
-
-    SRW_TAC [][hastype_lam_inv] THEN
-    `valid_ctxt ((v,A) :: (Γ ∩ FV m))`
-       by METIS_TAC[hastype_valid_ctxt, valid_ctxt_def,
-                    IN_ctxtFV_domfilter] THEN
-    `(Γ ∩ FV m) ⊆ ((v,A) :: (Γ ∩ FV m))`
-        by SRW_TAC [][subctxt_def] THEN
-    METIS_TAC [weakening]
-  ]);
-
-val hastype_FV = store_thm(
-  "hastype_FV",
-  ``∀Γ m A. Γ ⊢ m ◁ A ⇒ ∀v. v ∈ FV m ⇒ v ∈ ctxtFV Γ``,
-  HO_MATCH_MP_TAC hastype_ind THEN
+Theorem hastype_FV:
+  ∀Γ m A. Γ ⊢ m ⦂ A ⇒ ∀v. v ∈ FV m ⇒ v ∈ ctxtFV Γ
+Proof
+  Induct_on ‘hastype’ >> qexists ‘∅’ >>
   SRW_TAC [][IN_supp_listpm, pairTheory.EXISTS_PROD] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 (* Preservation of typing under β-reduction *)
-val typing_sub0 = prove(
-  ``∀t vGt' v G A B t'.
+Theorem typing_sub0[local]:
+  ∀t vGt' v G A B t'.
       (vGt' = (v,G,t')) ∧
-      (v,A) :: G ⊢ t ◁ B ∧
-      G ⊢ t' ◁ A
+      (v,A) :: G ⊢ t ⦂ B ∧
+      G ⊢ t' ⦂ A
     ⇒
-      G ⊢ [t'/v]t ◁ B``,
-  HO_MATCH_MP_TAC chap3Theory.strong_bvc_term_ind THEN
+      G ⊢ [t'/v]t ⦂ B
+Proof
+  ho_match_mp_tac chap3Theory.strong_bvc_term_ind THEN
   Q.EXISTS_TAC `λ(v,G,t'). {v} ∪ ctxtFV G ∪ FV t'` THEN
-  SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-  SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, hastype_app_inv, hastype_lam_inv] THENL [
-    SRW_TAC [][],
-    FULL_SIMP_TAC (srw_ss()) [NOT_IN_supp_listpm, pairTheory.FORALL_PROD],
-    METIS_TAC [],
-    Q.MATCH_ABBREV_TAC `(v,σ) :: Γ ⊢ [M/u]N ◁ τ` THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    markerLib.RM_ALL_ABBREVS_TAC THEN
-    `Γ ⊆ (v,σ) :: Γ`  by SRW_TAC [][subctxt_def] THEN
-    METIS_TAC [PERM_SWAP_AT_FRONT, PERM_REFL, permutation, weakening,
-               hastype_valid_ctxt, valid_ctxt_def]
-  ]);
+  simp[pairTheory.FORALL_PROD] >> rpt strip_tac >>
+  gvs[SUB_THM, SUB_VAR, hastype_app_inv, hastype_lam_inv] >> rw[] >>
+  simp[] >~
+  [‘n # G’, ‘MEM (n, _) G’]
+  >- (gs[NOT_IN_supp_listpm, pairTheory.FORALL_PROD]) >~
+  [‘G ⊢ [M/v] N1 ⦂ _ ∧ G ⊢ [M/v] N2 ⦂ _’]
+  >- metis_tac[] >~
+  [‘(v,σ) :: Γ ⊢ [M/u]N ⦂ τ’] >>
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  ‘Γ ⊆ (v,σ) :: Γ’  by SRW_TAC [][subctxt_def] THEN
+  METIS_TAC [PERM_SWAP_AT_FRONT, PERM_REFL, permutation, weakening,
+             hastype_valid_ctxt, valid_ctxt_def]
+QED
 
-val typing_sub = save_thm("typing_sub", SIMP_RULE (srw_ss()) [] typing_sub0);
+Theorem typing_sub = SRULE [] typing_sub0
 
-val preservation = store_thm(
-  "preservation",
-  ``∀t t'. t -β-> t' ⇒ ∀Γ A. Γ ⊢ t ◁ A ⇒ Γ ⊢ t' ◁ A``,
-  HO_MATCH_MP_TAC (GEN_ALL ccbeta_gen_ind) THEN
-  Q.EXISTS_TAC `ctxtFV` THEN
-  SRW_TAC [][hastype_app_inv, hastype_lam_inv] THENL [
-    METIS_TAC [typing_sub],
-    METIS_TAC [],
-    METIS_TAC []
-  ]);
+Theorem preservation:
+  ∀t t'. t -β-> t' ⇒ ∀Γ A. Γ ⊢ t ⦂ A ⇒ Γ ⊢ t' ⦂ A
+Proof
+  ho_match_mp_tac $ GEN_ALL ccbeta_gen_ind THEN
+  Q.EXISTS_TAC ‘ctxtFV’ THEN
+  SRW_TAC [][hastype_app_inv, hastype_lam_inv] THEN
+  METIS_TAC [typing_sub]
+QED
+
+Theorem progress:
+  ∀t A B. [] ⊢ t ⦂ A → B ∧ ¬is_abs t ⇒ ∃t'. t -β-> t'
+Proof
+  Induct_on ‘hastype’ using hastype_strongind >> rw[] >> gvs[] >>
+  rename [‘[] ⊢ M1 ⦂ A → B1 → B2’, ‘[] ⊢ M2 ⦂ A’, ‘M1 @@ M2’] >>
+  Cases_on ‘is_abs M1’ >> gvs[]
+  >- (qspec_then ‘M1’ FULL_STRUCT_CASES_TAC term_CASES >> gvs[] >>
+      simp[ccbeta_rwt, EXISTS_OR_THM]) >>
+  simp[ccbeta_rwt, EXISTS_OR_THM] >> metis_tac[]
+QED
+
+Definition subtype_def[simp]:
+  (subtype A base ⇔ A = base) ∧
+  (subtype A (B → C) ⇔ A = B → C ∨ subtype A B ∨ subtype A C)
+End
+
+Theorem subtype_refl[simp]:
+  subtype A A
+Proof
+  Induct_on ‘A’ >> simp[]
+QED
+
+Theorem FV_tpm_EQ_EMPTY[simp,local]:
+  FV (tpm pi t) = ∅ ⇔ FV t = ∅
+Proof
+  simp[EQ_IMP_THM, pred_setTheory.EXTENSION] >> rpt strip_tac >~
+  [‘v ∈ FV M’, ‘π⁻¹ · _ # _’] >>
+  first_x_assum $ qspec_then ‘π · v’ mp_tac >> simp[]
+QED
+
+Theorem FVEMPTY_DELETE_tpm[simp,local]:
+  FV (tpm [(x,y)] t) DELETE swapstr x y v = ∅ ⇔
+  FV t DELETE v = ∅
+Proof
+  simp[EQ_IMP_THM, pred_setTheory.EXTENSION,basic_swapTheory.swapstr_def] >>
+  metis_tac[]
+QED
+
+Theorem FVEMPTY_DELETE_tpm'[simp,local] =
+        FVEMPTY_DELETE_tpm |> Q.INST [‘v’ |-> ‘y’]
+                           |> SRULE[Excl "FVEMPTY_DELETE_tpm"]
+
+
+Theorem FVEMPTY_tpm[simp,local]:
+  FV M = ∅ ⇒ tpm pi M = M
+Proof
+  qid_spec_tac ‘M’ >> Induct_on ‘pi’ >> simp[pairTheory.FORALL_PROD] >>
+  ONCE_REWRITE_TAC [tpm_CONS] >> rpt strip_tac >> simp[] >>
+  irule tpm_fresh >> gvs[FV_EMPTY]
+QED
+
+Theorem FVEMPTY_tpm'[simp,local]:
+  FV M DELETE v = ∅ ⇒
+  LAM u (tpm [(u,v)] M) = LAM v M ∧
+  LAM (swapstr x y v) (tpm [(x,y)] M) = LAM v M
+Proof
+  Cases_on ‘u = v’ >> simp[] >> strip_tac >>
+  rw[basic_swapTheory.swapstr_def] >>
+  rename [‘FV M DELETE v = ∅’] >>
+  ‘∀x. x ≠ v ⇒ x # M’ by (gs[pred_setTheory.EXTENSION] >> metis_tac[]) >>
+  first_assum $ C (resolve_then Any (assume_tac o GSYM)) tpm_ALPHA >>
+  simp[tpm_fresh] >>
+  rename [‘LAM y (tpm [(v,y)] M)’] >>
+  Cases_on ‘v = y’ >> simp[] >>
+  metis_tac[pmact_flip_args]
+QED
+
+val (ground_subterms_def, _) = define_recursive_term_function ‘
+  ground_subterms (VAR s : term) = ∅ ∧
+  ground_subterms (M @@ N) =
+     (if FV (M @@ N) = ∅ then {M @@ N} else ∅) ∪ ground_subterms M ∪
+     ground_subterms N ∧
+  ground_subterms (LAM v M) =
+  (if FV (LAM v M) = ∅ then {LAM v M} else ∅) ∪ ground_subterms M
+’
+val _ = export_rewrites ["ground_subterms_def"]
+
+Theorem APP_EQ_LAMl[simp]:
+  M @@ N = LAMl vs P ⇔ vs = [] ∧ P = M @@ N
+Proof
+  Cases_on ‘vs’ >> simp[] >> metis_tac[]
+QED
+
+Theorem is_abs_appstar[simp]:
+  is_abs (M ·· Ms) ⇔ is_abs M ∧ Ms = []
+Proof
+  qid_spec_tac ‘M’ >> Induct_on ‘Ms’ >> simp[]
+QED
+
+Theorem appstar_EQ_LAMl:
+  x ·· Ms = LAMl vs M ⇔ vs = [] ∧ M = x ·· Ms ∨ Ms = [] ∧ x = LAMl vs M
+Proof
+  Cases_on ‘vs’ >> simp[] >> Cases_on ‘Ms’ >> simp[] >> metis_tac[]
+QED
+
+Theorem tpm_LAMl:
+  tpm π (LAMl vs M) = LAMl (listpm string_pmact π vs) (tpm π M)
+Proof
+  Induct_on ‘vs’ >> simp[]
+QED
+
+Theorem tpm_appstar:
+  tpm π (M ·· Ms) = tpm π M ·· listpm term_pmact π Ms
+Proof
+  qid_spec_tac ‘M’ >> Induct_on ‘Ms’ >> simp[]
+QED
+
+Theorem ALL_DISTINCT_listpm[simp]:
+  ALL_DISTINCT (listpm act π xs) = ALL_DISTINCT xs
+Proof
+  Induct_on ‘xs’ >> simp[MEM_listpm]
+QED
+
+Theorem bnf_characterisation:
+  ∀M.
+    bnf M ⇔
+      ∃vs v Ms. ALL_DISTINCT vs ∧ M = LAMl vs (VAR v ·· Ms) ∧
+                (∀M. MEM M Ms ⇒ bnf M)
+Proof
+  ho_match_mp_tac nc_INDUCTION2 >> qexists ‘∅’ >> rw[] >~
+  [‘VAR s = LAMl _ (VAR _ ·· _)’]
+  >- (qexistsl  [‘[]’, ‘s’, ‘[]’] >> simp[]) >~
+  [‘VAR _ ·· _ = M1 @@ M2’]
+  >- (simp[] >> eq_tac >> rpt strip_tac >~
+      [‘M1 = LAMl vs1 _’, ‘M1 @@ M2’]
+      >- (‘vs1 = []’ by (Cases_on ‘vs1’ >> gvs[]) >> gvs[appstar_SNOC] >>
+          metis_tac[]) >>
+      Cases_on ‘Ms’ using rich_listTheory.SNOC_CASES >>
+      gvs[rich_listTheory.SNOC_APPEND, appstar_APPEND] >>
+      dsimp[appstar_EQ_LAMl] >> irule_at Any EQ_REFL >> simp[]) >>
+  pop_assum SUBST_ALL_TAC >> eq_tac >> rpt strip_tac >> gvs[] >~
+  [‘LAM y (LAMl vs _)’]
+  >- (reverse (Cases_on ‘MEM y vs’)
+      >- (qexists ‘y::vs’ >> simp[]) >>
+      ‘y # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
+      Q_TAC (NEW_TAC "z") ‘y INSERT set vs ∪ FV (VAR v ·· Ms)’ >>
+      ‘z # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
+      dxrule_then (qspec_then ‘y’ mp_tac) tpm_ALPHA >>
+      simp[tpm_fresh, FV_LAMl] >> strip_tac >> qexists ‘z::vs’ >> simp[]) >>
+  rename [‘LAM y M = LAMl vs (VAR v ·· Ms)’] >>
+  Cases_on ‘vs’ >> gvs[] >> gvs[LAM_eq_thm]
+  >- metis_tac[] >>
+  simp[tpm_LAMl, tpm_appstar] >> irule_at Any EQ_REFL >>
+  simp[MEM_listpm] >> rpt strip_tac >> first_assum drule >> simp[]
+QED
+
+
+(*
+
+
+Theorem subformula_property:
+  ∀Γ t A.
+    Γ ⊢ t ⦂ A ∧ bnf t ⇒
+    ∀t0. t0 ∈ ground_subterms t ⇒
+         ∃B B'. subtype B B' ∧ B' ∈ A INSERT (set $ MAP SND Γ) ∧ Γ ⊢ t0 ⦂ B
+Proof
+  Induct_on ‘hastype’ >> qexists ‘∅’ >> simp[] >> rpt strip_tac >> gvs[] >>~-
+  ([‘¬is_abs M’, ‘bnf M’, ‘_ ⊢ M ⦂ τ1 → τ2’],
+   drule_all progress >> metis_tac[corollary3_2_1, beta_normal_form_bnf]) >~
+
+*)
+
+
+
 
 val _ = export_theory ()

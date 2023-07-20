@@ -6,6 +6,7 @@ fun x |> f = f x
 
 exception LEX_ERROR of string
 type result = (string,int) Binarymap.dict
+open HOLFileSys
 
 datatype char_reader = CR of {reader : unit -> string,
                               current : char option,
@@ -30,11 +31,11 @@ in
            closer = close}
 end
 fun fromFile f = let
-  val is = TextIO.openIn f
+  val is = openIn f
 in
-  make (fn () => TextIO.input is) (fn () => TextIO.closeIn is)
+  make (fn () => input is) (fn () => closeIn is)
 end
-fun fromStream is = make (fn () => TextIO.input is) (fn () => ())
+fun fromStream is = make (fn () => input is) (fn () => ())
 fun fromReader uc = make (fn () => case uc() of NONE => "" | SOME c => str c)
                          (fn () => ())
 fun closeCR (CR {closer,...}) = closer()

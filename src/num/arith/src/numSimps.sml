@@ -92,7 +92,6 @@ val arithmetic_rewrites =
       "SUB_RIGHT_LESS", "SUB_RIGHT_GREATER_EQ", "SUB_RIGHT_LESS_EQ",
 
       (* exponentiation *)
-      "ZERO_LT_EXP",
       "EXP_EXP_INJECTIVE", "EXP_BASE_INJECTIVE", "EXP_BASE_LT_MONO",
       "EXP_BASE_LE_MONO", "EXP_EXP_LT_MONO", "EXP_EXP_LE_MONO",
 
@@ -515,8 +514,8 @@ val old_dp_ss =
 (* not REDUCE_ss (since that is a component of std_ss already).              *)
 (*---------------------------------------------------------------------------*)
 
-val ARITH_ss = merge_ss [ARITH_RWTS_ss, ARITH_DP_ss];
-val old_ARITH_ss = merge_ss [ARITH_RWTS_ss, old_dp_ss];
+val ARITH_ss = named_merge_ss "ARITH" [ARITH_RWTS_ss, ARITH_DP_ss];
+val old_ARITH_ss = named_merge_ss "old_ARITH" [ARITH_RWTS_ss, old_dp_ss];
 
 fun clear_arith_caches() = clear_cache arith_cache;
 
@@ -624,7 +623,7 @@ val MOD_ss = let
                                MODEQ_EXP_CONG],
                       filter = NONE, convs = [], name = NONE}
 in
-  merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
+  merge_ss [RSD_ss, congs] |> name_ss "MOD"
 end
 
 val _ = add_frags [MOD_ss]

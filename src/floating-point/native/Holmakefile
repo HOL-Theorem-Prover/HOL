@@ -9,9 +9,9 @@ selftest.exe: selftest.uo
 EXTRA_CLEANS = selftest.exe floating-point-selftest.log
 
 ifdef HOLSELFTESTLEVEL
-all: floating-point-selftest.log
+all: native-floating-point-selftest.log
 
-floating-point-selftest.log: selftest.exe
+native-floating-point-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1,$@)
 
 endif

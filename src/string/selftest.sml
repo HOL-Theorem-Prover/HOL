@@ -141,11 +141,14 @@ val _ = temp_add_strliteral_form {inj = “strinj”, ldelim = "«"}
 val _ = tpp "«foo bar»"
 val _ = tpp "«foo\\n bar»"
 val _ = ptpp "«foo\\n bar»"
+val _ = tpp "[«foo»; «bar»]"
+val _ = tpp "[\"foo\"; \"bar\"]"
 
 val _ = quietly Datatype ‘newtype2 = strinj2 string | boring2 num’
 val _ = temp_add_strliteral_form {inj = “strinj2”, ldelim = "‹"}
 
 val _ = tpp "‹foo bar›"
+val _ = tpp "f (g ‹bar›)"
 
 val _ = quietly Datatype ‘newtype3 = strinj3 string | boring3 num newtype3’
 val _ = temp_add_strliteral_form {inj = “strinj3”, ldelim = "\""}

@@ -21,7 +21,7 @@
 
 open HolKernel Parse bossLib boolLib;
 
-open boolTheory powserTheory PairedLambda Diff mesonLib RealArith tautLib
+open boolTheory powserTheory PairedLambda Diff mesonLib tautLib
      limTheory numLib reduceLib pairLib real_sigmaTheory
      pairTheory arithmeticTheory numTheory prim_recTheory jrhUtils realTheory
      realLib metricTheory netsTheory seqTheory pred_setTheory relationTheory;
@@ -46,7 +46,6 @@ val _ = Parse.reveal "B";
 val LE_0   = arithmeticTheory.ZERO_LESS_EQ;
 val LT_0   = prim_recTheory.LESS_0;
 val EQ_SUC = prim_recTheory.INV_SUC_EQ;
-val LE_LT  = arithmeticTheory.LESS_OR_EQ;
 
 fun LE_MATCH_TAC th (asl,w) =
   let val thi = PART_MATCH (rand o rator) th (rand(rator w))
@@ -71,6 +70,16 @@ local
 in
   val STRONG_CONJ_TAC = MATCH_MP_TAC th >> CONJ_TAC;
 end;
+
+(* ------------------------------------------------------------------------ *)
+(* Some miscellaneous lemmas                                                *)
+(* ------------------------------------------------------------------------ *)
+
+Theorem LESS_1[local] :
+    !n:num. n < 1 <=> (n = 0)
+Proof
+  INDUCT_TAC >> REWRITE_TAC [ONE,LESS_0,LESS_MONO_EQ,NOT_LESS_0,GSYM SUC_NOT]
+QED
 
 (* ------------------------------------------------------------------------ *)
 (* Divisions and tagged divisions etc.                                      *)
@@ -168,18 +177,21 @@ End
 (* Useful lemmas about the size of `trivial` divisions etc.                 *)
 (* ------------------------------------------------------------------------ *)
 
-val DIVISION_0 = store_thm("DIVISION_0",
- Term `!a b. (a = b) ==> (dsize(\n:num. if (n = 0) then a else b) = 0)`,
+Theorem DIVISION_0 :
+    !a b. (a = b) ==> dsize(\n:num. if (n = 0) then a else b) = 0
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC[COND_ID] THEN
   REWRITE_TAC[dsize] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
   X_GEN_TAC (Term `n:num`) THEN BETA_TAC THEN
   REWRITE_TAC[REAL_LT_REFL, NOT_LESS] THEN EQ_TAC THENL
    [DISCH_THEN(MP_TAC o SPEC (Term `0:num`)) THEN
      REWRITE_TAC[LESS_OR_EQ,NOT_LESS_0],
-    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[ZERO_LESS_EQ]]);;
+    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[ZERO_LESS_EQ]]
+QED
 
-val DIVISION_1 = store_thm("DIVISION_1",
-  Term `!a b. a < b ==> (dsize(\n. if (n = 0) then a else b) = 1)`,
+Theorem DIVISION_1 :
+    !a b. a < b ==> dsize(\n. if (n = 0) then a else b) = 1
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[dsize] THEN
   MATCH_MP_TAC SELECT_UNIQUE THEN X_GEN_TAC (Term `n:num`) THEN BETA_TAC THEN
   REWRITE_TAC[NOT_SUC] THEN EQ_TAC THENL
@@ -199,11 +211,8 @@ val DIVISION_1 = store_thm("DIVISION_1",
       DISCH_THEN SUBST1_TAC THEN ASM_REWRITE_TAC[],
       X_GEN_TAC (Term `n:num`) THEN REWRITE_TAC[GREATER_EQ,ONE]
       THEN ASM_CASES_TAC (Term `n:num = 0`) THEN
-      ASM_REWRITE_TAC[CONJUNCT1 LE, GSYM NOT_SUC, NOT_SUC]]]);
-
-val LESS_1 = prove (Term`!x:num. x < 1 <=> (x = 0)`,
- INDUCT_TAC THEN
-  REWRITE_TAC [ONE,LESS_0,LESS_MONO_EQ,NOT_LESS_0,GSYM SUC_NOT]);
+      ASM_REWRITE_TAC[CONJUNCT1 LE, GSYM NOT_SUC, NOT_SUC]]]
+QED
 
 Theorem DIVISION_SINGLE :
     !a b. a <= b ==> division(a,b)(\n. if (n = 0) then a else b)
@@ -229,12 +238,10 @@ Proof
 QED
 
 Theorem DIVISION_THM :
-    !D a b.
-         division(a,b) D
-           <=>
+  !D a b. division(a,b) D <=>
          (D(0) = a) /\
-         (!n. n < (dsize D) ==> D(n) < D(SUC n)) /\
-         (!n. n >= (dsize D) ==> (D(n) = b))
+         (!n. n < dsize D ==> D(n) < D(SUC n)) /\
+         (!n. n >= dsize D ==> D(n) = b)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[division] THEN
   EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THENL
@@ -448,19 +455,15 @@ val D_tm = Term`\n. if n < dsize D1 then D1(n) else D2(n - dsize D1)`
 and p_tm = Term`\n. if n < dsize D1 then (p1:num->real)(n) else p2(n - dsize D1)`;
 
 Theorem DIVISION_APPEND_LEMMA1[local] :
-  !a b c D1 D2.
-   division(a,b) D1 /\ division(b,c) D2
-    ==>
-    (!n. n < dsize D1 + dsize D2
-         ==>
+  !a b c D1 D2. division(a,b) D1 /\ division(b,c) D2 ==>
+    (!n. n < dsize D1 + dsize D2 ==>
          (\n. if n < dsize D1 then D1(n) else D2(n - dsize D1)) (n)
             <
          (\n. if n < dsize D1 then D1(n) else D2(n - dsize D1)) (SUC n)) /\
-    (!n. n >= dsize D1 + dsize D2
-         ==>
-         ((\n. if n<dsize D1 then D1(n) else D2(n - dsize D1)) (n)
-           =
-          (\n. if n<dsize D1 then D1(n) else D2(n - dsize D1)) (dsize D1 + dsize D2)))
+    (!n. n >= dsize D1 + dsize D2 ==>
+         (\n. if n<dsize D1 then D1(n) else D2(n - dsize D1)) (n)
+            =
+         (\n. if n<dsize D1 then D1(n) else D2(n - dsize D1)) (dsize D1 + dsize D2))
 Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN CONJ_TAC THEN
   X_GEN_TAC (Term`n:num`) THEN DISCH_TAC THEN BETA_TAC THENL
@@ -509,9 +512,7 @@ Proof
 QED
 
 Theorem DIVISION_APPEND_LEMMA2[local] :
-   !a b c D1 D2.
-    division(a,b) D1 /\ division(b,c) D2
-      ==>
+   !a b c D1 D2. division(a,b) D1 /\ division(b,c) D2 ==>
       (dsize(\n. if n < dsize D1 then D1(n) else D2(n - dsize D1))
          =
        dsize D1 + dsize D2)

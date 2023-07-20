@@ -15,6 +15,7 @@ fun DECIDE_TAC (g as (asl, _)) =
     THEN CONV_TAC Arith.ARITH_CONV) g
 
 val DECIDE = EQT_ELIM o Arith.ARITH_CONV
+fun simp ths = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
 
 val Define = TotalDefn.Define
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
@@ -284,6 +285,75 @@ val LOG_add_digit = store_thm("LOG_add_digit",
   IMP_RES_TAC LESS_DIV_EQ_ZERO THEN
   ASM_SIMP_TAC(srw_ss()++ARITH_ss)[])
 
+Theorem LT_EXP_LOG:
+  x < b ** e <=> b = 0 /\ e = 0 /\ x = 0 \/ b = 1 /\ x = 0 \/
+                 2 <= b /\ (LOG b x < e \/ x = 0)
+Proof
+  Cases_on ‘b = 0’
+  >- (Cases_on ‘e = 0’ >> simp[ZERO_EXP]) >>
+  simp[] >> Cases_on ‘b = 1’ >> simp[] >> iff_tac >>
+  simp[DISJ_IMP_THM]
+  >- (Cases_on ‘x = 0’ >> simp[] >>
+      CCONTR_TAC >> FULL_SIMP_TAC (srw_ss()) [NOT_LESS]>>
+      ‘0 < b /\ 1 < b’ by simp[] >>
+      drule_all_then assume_tac EXP_BASE_LEQ_MONO_IMP >>
+      ‘b ** LOG b x <= x’ by simp[LOG] >>
+      DECIDE_TAC) >>
+  strip_tac >> Cases_on ‘x = 0’ >> simp[] >>
+  CCONTR_TAC >> full_simp_tac (srw_ss()) [NOT_LESS]>>
+  ‘x < b ** (SUC (LOG b x))’ by simp[LOG] >>
+  ‘b ** e < b ** (SUC (LOG b x))’ by DECIDE_TAC >>
+  pop_assum mp_tac >> ‘1 < b’ by simp[] >>
+  pop_assum mp_tac >>
+  simp_tac (srw_ss()) [] >> simp[]
+QED
+
+Theorem NB12_NEQ0[local]:
+  NUMERAL (BIT1 n) <> 0 /\ NUMERAL (BIT2 n) <> 0 /\
+  0 < NUMERAL (BIT1 n) /\ 0 < NUMERAL (BIT2 n) /\
+  (NUMERAL (BIT2 n) <= 1 <=> F) /\ (NUMERAL (BIT2 n) <> 1) /\
+  (NUMERAL (BIT1 n) <= 1 <=> NUMERAL (BIT1 n) = 1) /\
+  NUMERAL (BIT1 (BIT1 n)) <> 1 /\ NUMERAL (BIT1 (BIT2 n)) <> 1
+Proof
+  REWRITE_TAC[NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, numTheory.NOT_SUC,
+              GSYM NOT_ZERO_LT_ZERO, LESS_EQ_MONO] >>
+  REWRITE_TAC[ALT_ZERO, ADD_CLAUSES, NOT_SUC_LESS_EQ_0,
+              prim_recTheory.INV_SUC_EQ, numTheory.NOT_SUC] >>
+  REWRITE_TAC [LESS_OR_EQ, LT]
+QED
+
+Theorem LT_EXP_LOG_SIMP[simp] =
+        CONJ
+        (LT_EXP_LOG |> Q.INST [‘x’ |-> ‘NUMERAL $ BIT1 x’, ‘b’ |-> ‘NUMERAL b’])
+        (LT_EXP_LOG |> Q.INST [‘x’ |-> ‘NUMERAL $ BIT2 x’, ‘b’ |-> ‘NUMERAL b’])
+        |> REWRITE_RULE[NB12_NEQ0]
+
+Theorem EXP_LE_LOG_SIMP[simp] =
+        LT_EXP_LOG_SIMP
+          |> ONCE_REWRITE_RULE [tautLib.TAUT_PROVE “(x <=> y) <=> (~x <=> ~y)”]
+          |> REWRITE_RULE [NOT_LESS, DE_MORGAN_THM, NOT_LESS_EQUAL]
+
+fun trip f g h x = (f x, g x, h x)
+fun conj3 (x,y,z) = CONJ x (CONJ y z)
+
+Theorem LE_EXP_LOG_SIMP[simp] =
+        LT_EXP_LOG
+        |> Q.INST [‘x’ |-> ‘x - 1’, ‘b’ |-> ‘NUMERAL b’]
+        |> SIMP_RULE bool_ss
+                     [DECIDE “0 < x ==> (x - 1 < y <=> x <= y)”, ASSUME “0 < x”]
+        |> DISCH_ALL
+        |> trip (Q.INST [‘x’ |-> ‘NUMERAL (BIT1 (BIT1 x))’])
+                (Q.INST [‘x’ |-> ‘NUMERAL (BIT1 (BIT2 x))’])
+                (Q.INST [‘x’ |-> ‘NUMERAL (BIT2 x)’])
+        |> conj3
+        |> REWRITE_RULE[NB12_NEQ0,SUB_RIGHT_EQ, ADD_CLAUSES, LESS_EQ_REFL,
+                        DECIDE “x = y \/ x <= y <=> x <= y”]
+
+Theorem EXP_LT_LOG_SIMP[simp] =
+        LE_EXP_LOG_SIMP
+          |> ONCE_REWRITE_RULE [tautLib.TAUT_PROVE “(x <=> y) <=> (~x <=> ~y)”]
+          |> REWRITE_RULE [NOT_LESS, DE_MORGAN_THM, NOT_LESS_EQUAL]
+
 val less_lemma1 = Q.prove(
    `a <= c /\ b <= d ==> a * b <= c * d:num`,
    REPEAT STRIP_TAC
@@ -429,6 +499,22 @@ val LOG_MOD = Q.store_thm("LOG_MOD",
   THEN Q.EXISTS_TAC `0`
   THEN Q.EXISTS_TAC `SUC c`
   THEN RW_TAC arith_ss [EXP]);
+
+local
+val numtac = REWRITE_TAC[NUMERAL_DEF, BIT1, BIT2, ALT_ZERO, ADD_CLAUSES,
+                         prim_recTheory.LESS_0, prim_recTheory.LESS_MONO_EQ]
+fun numpr t = prove(t,numtac)
+val one_lt_ths = map numpr [“1 < NUMERAL (BIT1 (BIT1 b))”,
+                            “1 < NUMERAL (BIT1 (BIT2 b))”,
+                            “1 < NUMERAL (BIT2 b)”]
+val zero_lt_ths = map numpr [“0 < NUMERAL (BIT1 n)”,
+                             “0 < NUMERAL (BIT2 n)”]
+val allths = List.concat $ map (fn lt1 => map (CONJ lt1) zero_lt_ths) one_lt_ths
+in
+Theorem LOG_NUMERAL[compute,simp] =
+        map (MATCH_MP LOG_RWT) allths |> LIST_CONJ |> REWRITE_RULE [ADD1];
+end (* local *)
+
 
 val lem = prove(``0 < r ==> (0 ** r = 0)``, RW_TAC arith_ss [EXP_EQ_0])
 

@@ -38,6 +38,7 @@ sig
   val PairCases_on      : term quotation -> tactic
   val Induct            : tactic
   val Induct_on         : term quotation -> tactic
+  val update_induction  : thm -> unit
   val recInduct         : thm -> tactic
   val namedCases        : string list -> tactic
   val namedCases_on     : term quotation -> string list -> tactic
@@ -108,6 +109,7 @@ sig
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
   val Excl           : string -> thm
+  val ExclSF         : string -> thm
   val SF             : ssfrag -> thm
   val Req0           : thm -> thm
   val ReqD           : thm -> thm
@@ -209,6 +211,7 @@ sig
   val qexists : term quotation -> tactic
   val qexistsl : term quotation list -> tactic
   val qrefine : term quotation -> tactic
+  val qrefinel : term quotation list -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
   val qspec_tac : term quotation * term quotation -> tactic

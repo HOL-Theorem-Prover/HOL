@@ -13,7 +13,6 @@ val _ = new_theory "polyDivides";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -69,7 +68,6 @@ open dividesTheory;
 (* Overloading:
    upoly p      = p IN (Invertibles (PolyRing r).prod).carrier
    pdivides     = poly_divides r
-   x =~ y       = unit_eq r x y
    p ~~ q       = unit_eq (PolyRing r) p q
 *)
 (* Definitions and Theorems (# are exported):
@@ -231,15 +229,7 @@ open dividesTheory;
                                   !p c. poly p /\ p <> |0| /\ c IN R /\ root p c ==>
                                   ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * factor c)
 
-   Ring Unit Equivalence:
-   unit_eq_def       |- !r x y. x =~ y <=> ?u. unit u /\ (x = u * y)
-   unit_eq_refl      |- !r. Ring r ==> !x. x IN R ==> x =~ x
-   unit_eq_sym       |- !r. Ring r ==> !x y. x IN R /\ y IN R /\ x =~ y ==> y =~ x
-   unit_eq_trans     |- !r. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R /\ x =~ y /\ y =~ z ==> x =~ z
-   ring_eq_unit_eq   |- !r. Ring r ==> !x y. x IN R /\ y IN R /\ (x = y) ==> x =~ y
-   field_eq_unit_eq  |- !r. Field r ==> !x y. x IN R /\ y IN R /\ (x = y) ==> x =~ y
-   field_divides_antisym  |- !r. Field r ==> !x y. x IN R /\ y IN R /\ x rdivides y /\ y rdivides x ==> x =~ y
-
+   Polynomial Ring Unit Equivalence:
    poly_unit_eq_property  |- !r x y. x ~~ y <=> ?u. upoly u /\ (x = u * y)
    poly_unit_eq_one       |- !r. Ring r ==> !u. upoly u <=> u ~~ |1|
    poly_unit_eq_zero      |- !r. Ring r ==> !p. poly p ==> (p ~~ |0| <=> (p = |0|))
@@ -373,7 +363,7 @@ val poly_unit_one = store_thm(
    If part: upoly p /\ monic p ==> (p = |1|)
       Since upoly p
         ==> ?q. upoly q /\ (p * q = |1|)  by poly_unit_property
-        Now monic |1|`                    by poly_monic_one
+        Now monic |1|                     by poly_monic_one
          so monic q                       by poly_monic_monic_mult, poly_unit_poly
        Thus deg p + deg q = deg |1| = 0   by poly_monic_deg_mult, poly_deg_one
      Giving deg p = 0, hence p = |1|      by poly_monic_deg_0
@@ -1288,7 +1278,7 @@ val poly_divides_exp = store_thm(
 (* Theorem: Ring r ==> !p. poly p ==> !m n. m <= n ==> p ** m pdivides p ** n *)
 (* Proof:
    Note n = (n - m) + m                 by SUB_ADD
-     so p ** n = p ** (n - m) * p ** m` by poly_exp_add
+     so p ** n = p ** (n - m) * p ** m  by poly_exp_add
    Thus p ** m pdivides p ** n          by poly_divides_def
 *)
 val poly_divides_exp_le = store_thm(
@@ -1980,110 +1970,8 @@ val poly_field_root_factor_eqn = store_thm(
   rw[poly_root_factor_eqn]);
 
 (* ------------------------------------------------------------------------- *)
-(* Ring Unit Equivalence                                                     *)
+(* Polynomial Ring Unit Equivalence                                          *)
 (* ------------------------------------------------------------------------- *)
-
-(* Define unit equivalence for ring *)
-val unit_eq_def = Define `
-    unit_eq (r:'a ring) (x:'a) (y:'a) = ?(u:'a). unit u /\ (x = u * y)
-`;
-(* overload on unit equivalence *)
-val _ = overload_on("=~", ``unit_eq r``);
-val _ = set_fixity "=~" (Infix(NONASSOC, 450)); (* same as relation *)
-(*
-> unit_eq_def;
-val it = |- !r x y. x =~ y <=> ?u. unit u /\ (x = u * y): thm
-*)
-
-(* Theorem: Ring r ==> !x. x IN R ==> x =~ x *)
-(* Proof:
-   Since unit #1      by ring_unit_one
-     and x = #1 * x   by ring_mult_lone
-   Hence x =~ x       by unit_eq_def
-*)
-val unit_eq_refl = store_thm(
-  "unit_eq_refl",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> x =~ x``,
-  metis_tac[unit_eq_def, ring_unit_one, ring_mult_lone]);
-
-(* Theorem: Ring r ==> !x y. x IN R /\ y IN R /\ x =~ y ==> y =~ x *)
-(* Proof:
-   Since x =~ y
-     ==> ?u. unit u /\ (x = u * y)    by unit_eq_def
-     and unit ( |/ u)                 by ring_unit_has_inv
-     and |/ u * u = #1                by ring_unit_linv
-      so y = #1 * y                   by ring_mult_lone
-           = ( |/ u * u) * y          by above
-           = |/ u * (u * y)           by ring_mult_assoc, ring_unit_element
-           = |/ u * x                 by above
-   Hence y =~ x  by taking ( |/ u)    by unit_eq_def
-*)
-val unit_eq_sym = store_thm(
-  "unit_eq_sym",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R /\ x =~ y ==> y =~ x``,
-  rw[unit_eq_def] >>
-  `unit ( |/ u)` by rw[ring_unit_has_inv] >>
-  `|/ u * u = #1` by rw[ring_unit_linv] >>
-  metis_tac[ring_mult_assoc, ring_unit_element, ring_mult_lone]);
-
-(* Theorem: Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R /\ x =~ y /\ y =~ z ==> x =~ z *)
-(* Proof:
-   Since x =~ y
-     ==> ?u. unit u /\ (x = u * y)    by unit_eq_def
-     and y =~ z
-     ==> ?v. unit v /\ (y = v * z)    by unit_eq_def
-   Hence x = u * (v * z)              by above
-           = (u * v) * z              by ring_mult_assoc, ring_unit_element
-     and unit (u * v)                 by ring_unit_mult_unit
-    Thus x =~ z                       by unit_eq_def
-*)
-val unit_eq_trans = store_thm(
-  "unit_eq_trans",
-  ``!r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R /\ x =~ y /\ y =~ z ==> x =~ z``,
-  rw[unit_eq_def] >>
-  qexists_tac `u * u'` >>
-  rw[ring_unit_element, ring_unit_mult_unit, ring_mult_assoc]);
-
-(* Theorem: Ring r ==> !x. x IN R /\ y IN R /\ (x = y) ==> x =~ y *)
-(* Proof: by unit_eq_refl *)
-val ring_eq_unit_eq = store_thm(
-  "ring_eq_unit_eq",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R /\ (x = y) ==> x =~ y``,
-  rw[unit_eq_refl]);
-
-(* Theorem: Field r ==> !x y. x IN R /\ y IN R /\ (x = y) ==> x =~ y*)
-(* Proof: by ring_eq_unit_eq, field_is_ring *)
-val field_eq_unit_eq = store_thm(
-  "field_eq_unit_eq",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R /\ (x = y) ==> x =~ y``,
-  rw[ring_eq_unit_eq]);
-
-(* Theorem: Field r ==> !x y. x IN R /\ y IN R /\ x rdivides y /\ y rdivides x ==> x =~ y *)
-(* Proof:
-   If x = #0,
-      then y = #0                                by field_zero_divides
-        so x =~ y                                by field_eq_unit_eq
-   If x <> #0,
-      x IN R+                                    by field_nonzero_eq
-   x rdivides y ==> ?u. u IN R /\ (y = u * x)    by ring_divides_def
-   y rdivides x ==> ?v. v IN R /\ (x = v * y)    by ring_divides_def
-   Hence  x = v * (u * x) = (v * u) * x          by field_mult_assoc
-      or  v * u = #1                             by field_nonzero_mult_eq_self
-      or  unit v                                 by ring_unit_property
-    Thus  x =~ y                                 by unit_eq_def
-*)
-val field_divides_antisym = store_thm(
-  "field_divides_antisym",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R /\ x rdivides y /\ y rdivides x ==> x =~ y``,
-  rpt strip_tac >>
-  Cases_on `x = #0` >-
-  metis_tac[field_zero_divides, field_eq_unit_eq] >>
-  `x IN R+` by rw[field_nonzero_eq] >>
-  `?u. u IN R /\ (y = u * x)` by rw[GSYM ring_divides_def] >>
-  `?v. v IN R /\ (x = v * y)` by rw[GSYM ring_divides_def] >>
-  `x = (v * u) * x` by metis_tac[field_mult_assoc] >>
-  `v * u = #1` by metis_tac[field_nonzero_mult_eq_self, field_mult_element] >>
-  metis_tac[ring_unit_property, unit_eq_def, field_is_ring]);
 
 (* Overload unit equivalence for polynomial *)
 val _ = overload_on("~~", ``unit_eq (PolyRing r)``);

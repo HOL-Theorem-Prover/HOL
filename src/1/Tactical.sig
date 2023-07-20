@@ -61,6 +61,7 @@ sig
   val VALIDATE_LT    : list_tactic -> list_tactic
   val GEN_VALIDATE   : bool -> tactic -> tactic
   val GEN_VALIDATE_LT: bool -> list_tactic -> list_tactic
+  val CONJ_VALIDATE  : tactic -> tactic
   val ADD_SGS_TAC    : term list -> tactic -> tactic
   val EVERY          : tactic list -> tactic
   val EVERY_LT       : list_tactic list -> list_tactic

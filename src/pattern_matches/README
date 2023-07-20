@@ -11,15 +11,15 @@ are not sure, whether we can really trust them.
 Usually this is not a big issue. One can use simple pattern matches in
 a definition and then prove theorems expressing the semantics of the new
 definition not using pattern matching. This is advisable anyhow, since
-the command `Define` can behave unexpectedly anyhow. However, as soon as
+the command `Define` can behave unexpectedly. However, as soon as
 pattern matching is used extensively, this becomes infeasible. For
 example consider the ARM disassembler function `arm_decode` in
-`examples/ARM/v7/arm_decoderScript.sml`. Why should we trust the result
+`examples/arm/v7/arm_decoderScript.sml`. Why should we trust the result
 of the pattern match compilation in such definitions?
 
 This pattern matching library tries to solve this problem. It provides
 a representation of case-expressions that closely follows
-the input syntax. The parsing and pretty printing of these 
+the input syntax. The parsing and pretty printing of these
 case-expressions is much simpler and therefore more trustworthy. The
 complicated, untrusted pattern match compilation can then be performed
 inside the logic. Therefore, the need to trust the implementation of
@@ -28,7 +28,7 @@ deep pattern compilation now.
 
 Moreover, the new case-expressions provide additional features like
 guards, views, free variables in patterns or multiple occurrences of a
-bound variable inside a pattern. 
+bound variable inside a pattern.
 
 Most of the example consists of tool support for working with the new
 case-expressions inside the logic. There are simplification and

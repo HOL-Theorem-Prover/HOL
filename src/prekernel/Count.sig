@@ -19,6 +19,7 @@ sig
    | Beta
    | Ccontr
    | Choose
+   | Compute
    | Conj
    | Conjunct1
    | Conjunct2
@@ -59,6 +60,7 @@ sig
               BETA_CONV: int,
               CCONTR: int,
               CHOOSE: int,
+              COMPUTE: int,
               CONJ: int,
               CONJUNCT1: int,
               CONJUNCT2: int,

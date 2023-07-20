@@ -131,6 +131,10 @@ fun prim_find_subterm FVs tm (asl,w) =
                       val v = Lib.first (name_eq name) BV
                   in ([v], v)
                   end)
+            handle HOL_ERR _ =>
+                   raise ERR "find_subterm"
+                         ("No var with name \"" ^ name ^
+                          "\" free in goal, or in outer universal quantifiers")
       end
  else if List.exists (free_in tm) (w::asl) then Free tm
  else let val (V,body) = strip_forall w
@@ -507,6 +511,23 @@ fun Induct (g as (_,w)) =
  end
  handle e => raise wrap_exn "BasicProvers" "Induct" e
 
+
+(* deliberately masking what is in TypeBase as we may instead update
+   something stored for an inductive relation *)
+fun update_induction th =
+    let
+      val (_, body) = strip_forall $ concl $ th
+      val (_, c) = strip_imp body
+      val cs = strip_conj c (* possibility of mutual recursion *)
+      fun looks_typeish c =
+          let val (cvs, cbody) = strip_forall c
+          in
+            length cvs = 1 andalso is_var (rator cbody)
+          end handle HOL_ERR _ => false
+    in
+      if List.all looks_typeish cs then TypeBase.update_induction th
+      else IndDefLib.add_rule_induction th
+    end
 
 (*---------------------------------------------------------------------------
      Assertional style reasoning
@@ -1060,12 +1081,13 @@ val bool_ss = boolSimps.bool_ss;
 
 datatype srw_update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
 type srw_state = simpset * bool * srw_update list
-  (* simpset, initialised-flag, update list (most recent first), ssfrag *)
+  (* simpset, initialised-flag, update list (most recent first) *)
 
 val initial_simpset = bool_ss ++ combinSimps.COMBIN_ss
                               ++ boolSimps.NORMEQ_ss
                               ++ boolSimps.ABBREV_ss
                               ++ boolSimps.LABEL_CONG_ss
+                              ++ boolSimps.HIDE_ss
 
 fun ssf1 nth = simpLib.empty_ssfrag |> simpLib.add_named_rwt nth
 
@@ -1103,6 +1125,9 @@ fun opt_partition f g ls =
       recurse [] [] ls
     end
 
+(* stale-ness is important for derived values. Derived values will get
+   re-calculated if their flag is true when the value is requested.
+*)
 val stale_flags = Sref.new ([] : bool Sref.t list)
 fun notify () =
     List.app (fn br => Sref.update br (K true)) (Sref.value stale_flags)
@@ -1189,6 +1214,10 @@ val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
 fun srw_ss () =
     (update_global_value init_state;
      #1 (get_global_value()))
+
+fun with_simpset_updates f g x =
+    (notify();
+     AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x)
 
 val update_log =
     Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
@@ -1305,6 +1334,24 @@ fun make_simpset_derived_value (deriver : simpset -> 'a -> 'a) init =
       {get=get,set=set}
     end
 
-
+fun mk_tacmod s =
+    let
+      open AttributeSyntax
+      val (_, attrs0) = dest_name_attrs s
+      val alist = key_vallist attrs0
+      fun key_to_f k =
+          case k of
+              "exclude_simps" => simpLib.remove_simps
+            | "exclude_frags" => simpLib.remove_ssfrags
+            | _ => (fn vs => fn ss => ss)
+      val f =
+          gen_mktm { values = (fn vs => vs),
+                     combine = (fn (f1,f2) => f1 o f2),
+                     null = (fn x => x),
+                     perkey = (fn k => fn vs => key_to_f k vs) }
+                   alist
+    in
+      {tacm = with_simpset_updates f, ltacm = with_simpset_updates f}
+    end
 
 end

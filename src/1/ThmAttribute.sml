@@ -37,6 +37,7 @@ struct
         funstore := newm
       end
 
+  fun all_attributes () = Map.keys (!funstore)
   fun is_attribute a = Map.defined (!funstore) a
   fun at_attribute nm sel (arg as {name,attrname,thm}) =
       case Map.lookup (!funstore) attrname of

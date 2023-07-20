@@ -50,12 +50,12 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
 	val os = TextIO.openOut outfile
 	fun out s = TextIO.output(os, s)
 	fun href anchor target =
-	    app out ["<A HREF=\"file://", target, "\">", anchor, "</A>"]
+	    app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
 	fun idhref file line anchor =
 	    href anchor (concat [file, ".html#line", Int.toString line])
 	fun strhref file anchor = href anchor (file ^ ".html")
 	fun mkref line file = idhref file line file
-        val sigspath = normPath[HOLpath,"help","src-sml","htmlsigs"]
+        val sigspath = normPath["src-sml","htmlsigs"]
         fun path front file = normPath[front, file^".html"]
 
         fun class_of drop {comp=Str, file, line} =
@@ -105,7 +105,7 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
         out"<DT><STRONG>THEORIES</STRONG>\n";
         out "&nbsp;&nbsp;&nbsp;\n";
         href "(Theory Graph)"
-             (normPath [HOLpath,"help/theorygraph/theories.html"]);
+             (normPath ["theorygraph","theories.html"]);
         out "\n";
         out"<DD>"; prtree theory_of db;
         out "<P>";
@@ -123,9 +123,11 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
         out "<P>";
 
         out"<DT><STRONG>";
-        href "IDENTIFIERS" idIndex;
+        href "IDENTIFIERS"
+             (normPath["src-sml","htmlsigs","idIndex.html"]); (* was: idIndex *)
         out "&nbsp;&nbsp;&nbsp;&nbsp;";
-        href "THEORY BINDINGS" TheoryIndex;
+        href "THEORY BINDINGS"
+             (normPath["src-sml","htmlsigs","TheoryIndex.html"]); (* was: TheoryIndex *)
         out "</STRONG>";
         out "<P>";
 	out "</DL>\n";

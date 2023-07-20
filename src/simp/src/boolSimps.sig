@@ -71,6 +71,9 @@ sig
      val LABEL_CONG_ss : simpLib.ssfrag
        (* stops the simplifier from changing labelled terms *)
 
+     val HIDE_ss : simpLib.ssfrag
+       (* stops simplifier from changing hidden terms *)
+
      val SimpLHS : thm
      val SimpRHS : thm
      val SimpL   : term -> thm

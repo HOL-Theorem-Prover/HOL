@@ -1,41 +1,38 @@
 structure realSyntax :> realSyntax =
 struct
 
-  local open realTheory in end;
-  open HolKernel Abbrev
+  local open realaxTheory in end;
+  open HolKernel Abbrev;
 
-  val ERR = mk_HOL_ERR "realSyntax"
-
+  val ERR = mk_HOL_ERR "realSyntax";
 
   (* Fundamental terms, mainly constants *)
-
   fun mk_raconst (n, ty) = mk_thy_const {Thy = "realax", Name = n, Ty = ty}
-  fun mk_rconst (n, ty) = mk_thy_const {Thy = "real", Name = n, Ty = ty}
 
   val real_ty = mk_thy_type {Thy = "realax", Tyop = "real", Args = []}
   val bop_ty = real_ty --> real_ty --> real_ty
   val rel_ty = real_ty --> real_ty --> bool
 
-  val real_injection = mk_rconst("real_of_num", numSyntax.num --> real_ty)
+  val real_injection = mk_raconst("real_of_num", numSyntax.num --> real_ty)
 
   val zero_tm = mk_comb(real_injection, numSyntax.zero_tm)
   val one_tm = mk_comb(real_injection, numSyntax.mk_numeral (Arbnum.fromInt 1))
   val negate_tm = mk_raconst("real_neg", real_ty --> real_ty)
-  val absval_tm = mk_rconst("abs", real_ty --> real_ty)
+  val absval_tm = mk_raconst("abs", real_ty --> real_ty)
   val plus_tm = mk_raconst("real_add", bop_ty)
-  val minus_tm = mk_rconst("real_sub", bop_ty)
+  val minus_tm = mk_raconst("real_sub", bop_ty)
   val mult_tm = mk_raconst("real_mul", bop_ty)
-  val div_tm = mk_rconst("/", bop_ty)
-  val exp_tm = mk_rconst("pow", real_ty --> numSyntax.num --> real_ty)
+  val div_tm = mk_raconst("/", bop_ty)
+  val exp_tm = mk_raconst("pow", real_ty --> numSyntax.num --> real_ty)
 
   val real_eq_tm = mk_thy_const { Thy = "min", Name = "=", Ty = rel_ty}
   val less_tm = mk_raconst("real_lt", rel_ty)
-  val leq_tm = mk_rconst("real_lte", rel_ty)
-  val greater_tm = mk_rconst("real_gt", rel_ty)
-  val geq_tm = mk_rconst("real_ge", rel_ty)
+  val leq_tm = mk_raconst("real_lte", rel_ty)
+  val greater_tm = mk_raconst("real_gt", rel_ty)
+  val geq_tm = mk_raconst("real_ge", rel_ty)
 
-  val min_tm = mk_rconst("min", bop_ty)
-  val max_tm = mk_rconst("max", bop_ty)
+  val min_tm = mk_raconst("min", bop_ty)
+  val max_tm = mk_raconst("max", bop_ty)
 
   (* Functions *)
 
@@ -62,8 +59,6 @@ in
   val is_injected = can dest_injected
   fun mk_injected t = mk_comb(real_injection, t)
 
-
-
   fun is_real_literal t = let
     (* returns true if a term is in the range of the implicit injection from
        the integers *)
@@ -80,7 +75,6 @@ in
     if Arbint.<(i,Arbint.zero) then mk_negated(posint(Arbint.~ i))
     else posint i
   end
-
 
   fun flip f (x,y) = f (y, x)
   val dest_plus = dest2 plus_tm "dest_plus" "plus"
@@ -129,7 +123,6 @@ in
     recurse [] [t]
   end
 
-
   val dest_div = dest2 div_tm "dest_div" "division"
   val is_div = can dest_div
   fun mk_div(t1, t2) = list_mk_comb(div_tm, [t1, t2])
@@ -166,7 +159,6 @@ in
   val is_pow = can dest_pow
   fun mk_pow(t1,t2) = list_mk_comb(exp_tm, [t1, t2])
 
-
   fun int_of_term t = let
     val (is_pos, n) =
         case Lib.total dest_negated t of
@@ -178,6 +170,5 @@ in
   end
 
   val (inv_tm,mk_inv,dest_inv,is_inv) = syntax_fns1 "realax" "inv"
-  val (sqrt_tm,mk_sqrt,dest_sqrt,is_sqrt) = syntax_fns1 "real" "sqrt"
 
 end ;

@@ -3,7 +3,7 @@ open pairTheory boolSimps relationTheory
 
 val _ = new_theory "alist";
 
-val _ = diminish_srw_ss ["NORMEQ_ss"]
+val _ = diminish_srw_ss ["NORMEQ"]
 
 val _ = type_abbrev("alist",``:(('a # 'b) list)``);
 
@@ -752,6 +752,17 @@ Theorem ADELKEY_AFUPDKEY:
 Proof
   Induct >>  rw[ADELKEY_def,AFUPDKEY_def] >>
   Cases_on`h` >> fs[AFUPDKEY_def] >> TRY CASE_TAC >> fs[ADELKEY_def]
+QED
+
+Theorem FLOOKUP_FUPDATE_LIST:
+  !xs k m. FLOOKUP (m |++ xs) k =
+           case ALOOKUP (REVERSE xs) k of
+           | NONE => FLOOKUP m k
+           | SOME x => SOME x
+Proof
+  Induct \\ fs [FUPDATE_LIST,pairTheory.FORALL_PROD,ALOOKUP_APPEND]
+  \\ fs [FLOOKUP_UPDATE] \\ rw [] \\ fs []
+  \\ Cases_on ‘ALOOKUP (REVERSE xs) k’ \\ fs []
 QED
 
 val _ = export_theory ();

@@ -169,6 +169,10 @@ in
   infloop_protect "SimpL on operator returning non-boolean" check doit t
 end
 
+val _ = shouldfail {testfn = (fn () => remove_ssfrags ["FOOBAR"] bool_ss),
+                    printresult = PP.pp_to_string 65 simpLib.pp_simpset,
+                    printarg = fn () => "remove_ssfrags throws UNCHANGED",
+                    checkexn = fn Conv.UNCHANGED => true | _ => false} ()
 
 val _ = let
   open boolSimps
@@ -276,17 +280,23 @@ end (* local fun testb ... *);
 val _ = let
   open simpLib boolSimps
   fun del ss s = ss -* ("bool_case_thm" :: s)
+  val booleta_ss = bool_ss ++ ETA_ss
   val T_t = “if T then (p:'b) else q”
   val F_t = “if F then (p:'b) else q”
   val beta_t = “(\x:'b. f T x : bool) z”
+  val eta_t = “f (\x:'a. g (z:'b) x:'c) : 'd”
   val unwind_t = “?x:'a. p x /\ (x = y) /\ q x y”
   val unwind_beta_t = “?x:'a. p x /\ (\y. y /\ z) q /\ (x = a) /\ r x z”
+  val ub_beta_applied_t = “?x:'a. p x /\ (q /\ z) /\ x = a /\ r x z”
   fun mkC ss sl = QCONV (SIMP_CONV (del ss sl) [])
   fun mktag s = "rewrite deletion: " ^ s
   fun mkex_tag s = "deletion via Excl: " ^ s
+  fun mkexsf_tag s = "deletion via ExclSF: " ^ s
   fun mktest ss (t,dels) = mkC ss dels t
   fun mkexcltest (dels, t) =
       QCONV (SIMP_CONV bool_ss (map Excl ("bool_case_thm" :: dels))) t
+  fun mkexclsftest (dels, t) =
+      QCONV (SIMP_CONV booleta_ss (map ExclSF dels)) t
   fun test0 (s,l,ss,t1,t2) =
       (tprint s;
        require_msg (check_result (aconv t2 o rhs o concl))
@@ -298,6 +308,11 @@ val _ = let
        require_msg (check_result (aconv t2 o rhs o concl))
                    (term_to_string o concl)
                    mkexcltest (l, t1))
+  fun exclsftest (s,l,t1,t2) =
+      (tprint s;
+       require_msg (check_result (aconv t2 o rhs o concl))
+                   (term_to_string o concl)
+                   mkexclsftest(l,t1))
   fun rmsfs (s, ss, rms, t1, t2) =
       (tprint ("Fragment removal: "^s);
        require_msg (check_result (aconv t2 o rhs o concl))
@@ -326,6 +341,14 @@ in
     (mkex_tag "bool_ss & \"COND_CLAUSES.1\"", ["COND_CLAUSES.1"],
      T_t, T_t),
     (mkex_tag "bool_ss & \"BETA_CONV\"", ["BETA_CONV"], beta_t, beta_t)
+  ];
+  List.app (ignore o exclsftest) [
+    (mkexsf_tag "booleta_ss & ETA_ss", ["ETA"], eta_t, eta_t),
+    (mkexsf_tag "booleta_ss & UNWIND_ss", ["UNWIND"], unwind_beta_t,
+     ub_beta_applied_t),
+    (mkexsf_tag "booleta_ss & UNWIND_ss", ["UNWIND"], unwind_t, unwind_t),
+    (mkexsf_tag "booleta_ss & CONG_ss", ["CONG"], “if p /\ q then p else q”,
+     “if p /\ q then p else q”)
   ];
   List.app (ignore o rmsfs) [
     ("UNWIND", bool_ss, ["UNWIND"], unwind_t, unwind_t),

@@ -1,15 +1,11 @@
 (* this is an -*- sml -*- file, or near enough *)
+open AttributeSyntax
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 infix |>
 fun x |> f = f x
 fun warn iref s =
     TextIO.output(TextIO.stdErr,"Line " ^ Int.toString (!iref) ^ ": " ^ s ^ "\n")
-
-fun bslash_escape c =
-    "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
-
-fun bslash_escape_s s = bslash_escape (String.sub(s, 0))
 
 fun pfx_replace oldpfx newpfx s =
     if String.isPrefix oldpfx s then
@@ -26,10 +22,6 @@ fun strlit_match _ NONE = false
   | strlit_match "\226\128\186" (SOME "\226\128\185") = true
   | strlit_match "\194\187" (SOME "\194\171") = true
   | strlit_match _ _ = false
-
-val mk_strsafe =
-    String.translate (fn c => if Char.isPrint c then str c else
-                              bslash_escape c)
 
 datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE | inDTYQUOTE;
 datatype mltype = inTHMVAL | inTERMINATION_VAL | inINITIAL;
@@ -80,44 +72,13 @@ fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,
 fun ECHO (QFS _) s = s
 fun print (QFS _) s = s
 
-fun dest_ml_thm_binding s =
-    let
-      (* s matches {keyword}{ws}+{ident}[attrs]
-         ident is either a standard ML identifier, or something in double quotes
-         NB: If it's in double quotes, the thing in quotes might include square
-         brackets!
-
-         returns the ident, the original string corresponding to the string +
-         attributes, and the attributes as a separate list of strings
-      *)
-      val ss = s |> Substring.full
-                 |> Substring.dropl Char.isAlpha
-                 |> Substring.dropl Char.isSpace
-      val (nmss, attrs) =
-          if Substring.sub(ss, 0) = #"\"" then
-            let val ss' = Substring.slice(ss, 1, NONE)
-                val (nm,rest) = Substring.position "\"" ss'
-            in
-              (nm, Substring.slice(rest,1,NONE))
-            end
-          else
-            Substring.position "[" ss
-      val nms = nmss |> Substring.string |> mk_strsafe
-    in
-      (nms, Substring.string ss (* bogus if quotes used *),
-       if Substring.isEmpty attrs then []
-       else
-         Substring.slice(attrs, 1, SOME (Substring.size attrs - 2))
-                        |> Substring.string
-                        |> String.fields (fn c => c = #",")
-      )
-    end
 
 fun dest_ml_thm_binding_triv s =
     let
-      val (thmname, with_attrs, attrs) = dest_ml_thm_binding s
+      val {keyword,name=thmname, name_attr_original = with_attrs,
+           attributes = attrs} = dest_ml_thm_binding s
       val (with_attrs, attrs) =
-          if String.isPrefix "Triviality" s then
+          if keyword = "Triviality" then
             if null attrs then (thmname ^ "[local]", ["local"])
             else
               (String.substring(with_attrs, 0, size with_attrs - 1) ^ ",local]",
@@ -129,12 +90,12 @@ fun dest_ml_thm_binding_triv s =
 
 fun extra_binds stem (s,i) =
     let
-      val (mlname, withattrs, _) = dest_ml_thm_binding ("x " ^ s)
+      val (mlname, _) = dest_name_attrs s
       val f = if String.sub(mlname,0) = #"~" then
                 fn s => stem ^ "_" ^ String.extract(s,1,NONE)
               else fn s => s
     in
-      "val " ^ f mlname ^ " = boolLib.save_thm(\"" ^ f withattrs ^
+      "val " ^ f mlname ^ " = boolLib.save_thm(\"" ^ f s ^
       "\", Drule.cj " ^ Int.toString i ^ " " ^ stem ^ "_rules);"
     end
 
@@ -189,6 +150,16 @@ nised
 fun newline (arg as QFS q) (yypos,yytext) =
   (nextline arg (yypos + size yytext); ECHO arg "\n");
 
+fun countchar c s = (* ASCII chars only *)
+    CharVector.foldl (fn (d,n) => if d = c then n + 1 else n) 0 s
+
+fun update_position (arg as QFS {row,rowstart,...}) yytext =
+  let val lines = String.fields (fn c => c = #"\n") yytext
+  in
+    row := !row + (length lines - 1);
+    rowstart := String.size (List.last lines)
+  end
+
 fun qnewline arg (yypos,yytext) =
     (nextline arg (yypos + size yytext);
      ECHO arg "\\n\\\n\\")
@@ -229,11 +200,17 @@ alphaMLid_tailchar = ({letter} | {digit} | _ | "'");
 alphaMLid = {letter} {alphaMLid_tailchar}*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
 quotedsymbolid = "\"" [^\034]+ "\"";
-defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
-defn_attribute_list = {defn_attribute} (","{defn_attribute})*;
-MLid =  {alphaMLid} | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\013\n";
+optallws = ({ws}|{newline})*;
+forcedallws = ({ws}|{newline})+;
+attributeValue_tailchar = {alphaMLid_tailchar} | ".";
+attributeValue = {letter} {attributeValue_tailchar}*;
+attributeEqnRHS = {attributeValue}({forcedallws}{attributeValue})*;
+defn_attribute =
+  {alphaMLid}{optallws} ("="{optallws}{attributeEqnRHS}{optallws})?;
+defn_attribute_list = {defn_attribute} (","({ws}|{newline})*{defn_attribute})*;
+MLid =  {alphaMLid} | {symbol}+;
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 fullquotebegin = "``" | "\226\128\156" ;
@@ -244,12 +221,14 @@ Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{alphaMLid_list}"]
 DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+;
 DefinitionLabel = "["{ws}*{DefinitionLabelID}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]";
 Definitionpfx =
-  "Definition"{ws}+{alphaMLid}({ws}*"["{defn_attribute_list}"]")?{ws}*":";
+  "Definition"{ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";
 HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
 HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
+ProofLine =
+  {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]")?;
 %%
 
 {locpragma} => ((yypos,
@@ -300,21 +279,22 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
      let
        infix |> fun x |> f = f x
        fun extract (s,p) l =
-           if List.exists (fn a => a = s) l then
-             (p, List.filter (fn a => a <> s) l)
+           if List.exists (fn (a,_) => a = s) l then
+             (p, List.filter (fn (a,_) => a <> s) l)
            else ("", l)
        val pfx = mlswitch (!mltype_stack) "" "" ");"
        val s0 = String.substring(yytext,0,size yytext - 1) (* drop = *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop wspace after name *)
-       val (tyname, _, attrs) = dest_ml_thm_binding s
-       val core_name = if String.isPrefix "Overload" yytext then "overload_on"
+       val {keyword,name=tyname, attributes=attrs,...} = dest_ml_thm_binding s
+       val core_name = if keyword = "Overload" then "overload_on"
                        else "type_abbrev"
-       val (infpfx, attrs) = extract ("inferior", "inferior_") attrs
-       val (temppfx, attrs) = extract ("local", "temp_") attrs
+       val kvalist = key_vallist attrs
+       val (infpfx, kvalist) = extract ("inferior", "inferior_") kvalist
+       val (temppfx, kvalist) = extract ("local", "temp_") kvalist
        val fnm =
            temppfx ^ infpfx ^ core_name ^
-           String.concat (map (fn s => "_" ^ s) attrs)
+           String.concat (map (fn (s,_) => "_" ^ s) kvalist)
      in
        mltype_stack := [];
        YYBEGIN INITIAL;
@@ -334,7 +314,7 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                  |> Substring.string (* drop wspace between name and lparen *)
-       val (thmname,with_attrs,attrs) = dest_ml_thm_binding_triv s
+       val (thmname, with_attrs, _) = dest_ml_thm_binding_triv s
     in
       mltype_stack := [];
       YYBEGIN quote;
@@ -347,7 +327,7 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
     yytext
 )));
 <INITIAL>^"QED" => (
-  (yypos, if inscript andalso not quotefix then ECHO yyarg ");" else yytext)
+  (yypos, if inscript andalso not quotefix then ECHO yyarg ") HOL__GOAL__foo));" else yytext)
 );
 <INITIAL,thmval>^{Definitionpfx} => (
   (yypos,
@@ -358,11 +338,14 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
        val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop w/space between name and : *)
-       val (thname, with_attrs_string, attrs) = dest_ml_thm_binding s
+       val {name = thname, name_attr_original = with_attrs_string,
+            attributes = attrs,...} = dest_ml_thm_binding s
+       val kvalist = key_vallist attrs
        val ind_thm =
-           case List.find (String.isPrefix "induction=") attrs of
-               NONE => indthm_munge thname
-             | SOME s => String.extract(s, size "induction=", NONE)
+           case List.find (fn (k,v) => k = "induction") kvalist of
+              SOME (_, s::_) => s
+            | _ => indthm_munge thname
+
      in
        mltype_stack := [];
        induction_thm := ind_thm;
@@ -587,10 +570,24 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
     YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
     if quotefix then pfx_replace "``" rdquo yytext else ECHO yyarg "\"])"))
 );
-<qcomment>{newline}"Proof" => (
+<qcomment,quote>{ProofLine} => (
   (yypos,
-   (comdepth := 0; YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
-    if quotefix then yytext else ECHO yyarg "\"],")
+   (comdepth := 0; YYBEGIN INITIAL;
+    update_position yyarg yytext;
+    if quotefix then yytext
+    else
+      let val (_, attrs) = dest_name_attrs yytext
+          val attr_alist = key_vallist attrs
+          val nls = CharVector.tabulate(countchar #"\n" yytext, (fn _ => #"\n"))
+          val goalabs = "fn HOL__GOAL__foo => ("
+      in
+        case attr_alist of
+          [] => ECHO yyarg ("\"],(" ^ goalabs ^ nls)
+        | _ => ECHO yyarg
+                  ("\"]," ^ 
+                   mk_tacmodifier_string attr_alist ^ "(" ^ goalabs ^ nls)
+      end
+   )
   )
 );
 <qcomment>{quoteend} => (
@@ -760,12 +757,6 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
      if quotefix then yytext else ECHO yyarg "\"] (SOME ("
    ))
 );
-<quote>{newline}"Proof" => ((yypos,
-(
-  (* can't happen in a thmval *)
-  YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
-  if quotefix then yytext else ECHO yyarg "\"],\n"
-)));
 <tmquote,tyquote>{fullquoteend} => (
   (yypos,
    (YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);

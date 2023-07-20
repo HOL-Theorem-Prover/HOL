@@ -6,7 +6,6 @@ struct
 
 open HolKernel Parse boolLib realTheory simpLib realSyntax
 
-
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
@@ -479,7 +478,8 @@ fun is_arith_thm thm =
 
 val is_arith_asm = is_arith_thm o ASSUME
 
-val ARITH = RealArith.REAL_ARITH
+(* The old d.p. is faster *)
+val ARITH = RealArith.OLD_REAL_ARITH
 
 open Trace Cache Traverse
 fun CTXT_ARITH thms tm = let
@@ -534,13 +534,13 @@ fun dpvars t = let
         recurse bnds (recurse bnds (recurse bnds acc t1) t2) t3
       end
     | SOME ("realax", "real_add") => go2()
-    | SOME ("real", "real_sub") => go2()
-    | SOME ("real", "real_gt") => go2()
+    | SOME ("realax", "real_sub") => go2()
+    | SOME ("realax", "real_gt") => go2()
     | SOME ("realax", "real_lt") => go2()
-    | SOME ("real", "real_lte") => go2()
-    | SOME ("real", "real_ge") => go2()
+    | SOME ("realax", "real_lte") => go2()
+    | SOME ("realax", "real_ge") => go2()
     | SOME ("realax", "real_neg") => go1()
-    | SOME ("real", "abs") => go1()
+    | SOME ("realax", "abs") => go1()
     | SOME ("realax", "real_mul") => let
         val args = realSyntax.strip_mult t
         val arg_vs = map (HOLset.listItems o recurse bnds empty_tmset) args
@@ -870,7 +870,7 @@ end (* local *)
 
 val RMULCANON_ss = SSFRAG {
       ac = [], congs = [], dprocs = [], filter = NONE,
-      name = SOME "RMULCANON_ss",
+      name = SOME "RMULCANON",
       rewrs = [],
       convs = [
         {conv = K (K REALMULCANON), trace = 2,
@@ -938,7 +938,7 @@ end (* local *)
 
 val RADDCANON_ss = SSFRAG {
       ac = [], congs = [], dprocs = [], filter = NONE,
-      name = SOME "RADDCANON_ss",
+      name = SOME "RADDCANON",
       rewrs = [],
       convs = [
         {conv = K (K REALADDCANON), trace = 2,
@@ -995,9 +995,7 @@ val R = “$< : real -> real -> bool”
 val Rthms = [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)]
 
 *)
-fun giveexp t =
-    if is_pow t then ALL_CONV t
-    else REWR_CONV POW_1' t
+val giveexp = REWR_CONV POW_1'
 fun mulrelnorm0 R Rthms solver0 stk t =
     let
       val mkERR = mk_HOL_ERR "realSimps" "mulrelnorm"
@@ -1115,14 +1113,18 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                         (REWR_CONV REAL_MUL_COMM THENC stage2 THENC
                          RAND_CONV NUM_REDUCE ) mul_t |> SYM
                       end
+                val lge = if Arbint.abs el = Arbint.one then giveexp
+                          else ALL_CONV
+                val rge = if Arbint.abs er = Arbint.one then giveexp
+                          else ALL_CONV
             in
               FORK_CONV (mul_extract (chk (l_t,el)) THENC
-                         ifMULT (LAND_CONV (giveexp THENC common false ld))
-                                (giveexp THENC common true ld) THENC
+                         ifMULT (LAND_CONV (lge THENC common false ld))
+                                (lge THENC common true ld) THENC
                          TRY_CONV (REWR_CONV REAL_MUL_ASSOC'),
                          mul_extract (chk (r_t,er)) THENC
-                         ifMULT (LAND_CONV (giveexp THENC common false rd))
-                                (giveexp THENC common true rd) THENC
+                         ifMULT (LAND_CONV (rge THENC common false rd))
+                                (rge THENC common true rd) THENC
                          TRY_CONV (REWR_CONV REAL_MUL_ASSOC')) THENC
               apply_thms
             end t
@@ -1169,6 +1171,8 @@ fun elim_bare_negations t =
       | SOME a => if is_literalish a then raise UNCHANGED
                   else REWR_CONV REAL_NEG_MINUS1 t
 
+(* if t is of form -c * x = y, then ensure that the r.h.s. has a constant
+   coefficient at the front, adding a multiplication by one if necessary *)
 fun negatedL_eq t =
     let
       val (l,r) = dest_eq t handle HOL_ERR _ => raise UNCHANGED
@@ -1204,9 +1208,9 @@ val ex4 = lenorm “x pow 3 * 10 <= x pow 5 * y”
 val ex5 = lenorm “z pow 3 * 10 <= z pow 5 * y”
 *)
 fun V s = mk_var(s, real_ty)
-val x = V "x" and y = V "y" and z = V "z"
+val x = V "x" and y = V "y" and z = V "z" and n = mk_var("n", numSyntax.num)
 val RMULRELNORM_ss = SSFRAG {
-  ac = [], congs = [], dprocs = [], filter = NONE, name = SOME "RMULRELNORM_ss",
+  ac = [], congs = [], dprocs = [], filter = NONE, name = SOME "RMULRELNORM",
   rewrs = [],
   convs = [
     {key = SOME ([], mk_leq(x,y)),
@@ -1220,6 +1224,22 @@ val RMULRELNORM_ss = SSFRAG {
     {key = SOME ([], mk_eq(mk_mult(x,y),z)),
      conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM2", trace = 2
+    },
+    {key = SOME ([], mk_eq(mk_div(x,y), z)),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM3", trace = 2
+    },
+    {key = SOME ([], mk_eq(z, mk_div(x,y))),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM4", trace = 2
+    },
+    {key = SOME ([], mk_eq(mk_pow(x,n), z)),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM5", trace = 2
+    },
+    {key = SOME ([], mk_eq(z, mk_pow(x,n))),
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM6", trace = 2
     },
     {key = SOME ([], mk_less(x,y)),
      conv = mulrelnorm less_tm [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)],

@@ -21,9 +21,6 @@ val _ = List.app parsetest [
       ("[ 1 ;   2 ; 3 ; 4 ; ]", [1,2,3,4])
     ]
 
-datatype 'a exnsum = Some of 'a | Exn of exn
-fun total f x = Some (f x) handle Interrupt => raise Interrupt | e => Exn e
-
 fun test0 nm cmp pr f (x, expected_opt) =
     case expected_opt of
         SOME t => convtest(nm ^ " " ^ term_to_string x,f,x,t)
@@ -106,10 +103,18 @@ val _ = Lib.appi (fn i => fn t =>
                   (``FOLDR (-) 0 [3;2;1]``, SOME ``2``),
                   (``FOLDR $* 1 []``, SOME ``1``)]
 
-val cs = listSimps.list_compset()
-val _ = indexedListsSimps.add_indexedLists_compset cs
-fun ct(s,inp,out) =
-  testutils.convtest ("list_compset - " ^ s, computeLib.CBV_CONV cs, inp, out)
+local
+  val cs = listSimps.list_compset()
+  val () = List.app (fn f => f cs)
+             [indexedListsSimps.add_indexedLists_compset,
+              numposrepLib.add_numposrep_compset,
+              bitLib.add_bit_compset]
+in
+  fun ct(s,inp,out) =
+    testutils.convtest
+      ("list_compset++ - " ^ s, computeLib.CBV_CONV cs, inp, out)
+end
+
 val _ = List.app ct [
   ("oHD-NONE", “oHD ([]:'a list)”, “NONE : 'a option”),
   ("oHD-SOME", “oHD ([3;4]:num list)”, “SOME 3n”),
@@ -131,7 +136,32 @@ val _ = List.app ct [
   ("SHORTLEX(1)", “SHORTLEX (<) [1;1] [1;2;3]”, “T”),
   ("SHORTLEX(2)", “SHORTLEX (<) [1;1;4] [1;1;3]”, “F”),
   ("SHORTLEX(3)", “SHORTLEX (<) [1;1;4] [1;1]”, “F”),
-  ("LLEX(1)", “LLEX (<) [1;1;1] [1;2]”, “T”)
+  ("LLEX(1)", “LLEX (<) [1;1;1] [1;2]”, “T”),
+  ("l2n_empty",      ``l2n v []``, ``0n``),
+  ("l2n_base_v",     ``l2n v [1]``, ``l2n v [1]``),
+  ("l2n_base_3",     ``l2n 3 [1]``, ``l2n 3 [1]``),
+  ("l2n_base_2_v",   ``l2n 2 v``, ``l2n 2 v``),
+  ("l2n_base_8_v",   ``l2n 8 v``, ``l2n 8 v``),
+  ("l2n_base_10_v",  ``l2n 10 v``, ``l2n 10 v``),
+  ("l2n_base_16_v",  ``l2n 16 v``, ``l2n 16 v``),
+  ("l2n_base_256_v", ``l2n 256 v``, ``l2n 256 v``),
+  ("l2n_base_2",     ``l2n 2 [1; 0; 1; 1; 1]``, ``0b11101n``),
+  ("l2n_base_8",     ``l2n 8 [1; 2; 3; 4; 5]``, ``22737n``),
+  ("l2n_base_10",    ``l2n 10 [1; 2; 3; 4; 5]``, ``54321n``),
+  ("l2n_base_16",    ``l2n 16 [1; 2; 3; 4; 5]``, ``344865n``),
+  ("l2n_base_256",   ``l2n 256 [1; 2; 3; 4; 5]``, ``21542142465n``),
+  ("n2l_base_v",     ``n2l v 12345``, ``n2l v 12345``),
+  ("n2l_base_3",     ``n2l 3 12345``, ``n2l 3 12345``),
+  ("n2l_base_2_v",   ``n2l 2 v``, ``n2l 2 v``),
+  ("n2l_base_8_v",   ``n2l 8 v``, ``n2l 8 v``),
+  ("n2l_base_10_v",  ``n2l 10 v``, ``n2l 10 v``),
+  ("n2l_base_16_v",  ``n2l 16 v``, ``n2l 16 v``),
+  ("n2l_base_256_v", ``n2l 256 v``, ``n2l 256 v``),
+  ("n2l_base_2",     ``n2l 2 0b11101``, ``[1; 0; 1; 1; 1n]``),
+  ("n2l_base_8",     ``n2l 8 22737``, ``[1; 2; 3; 4; 5n]``),
+  ("n2l_base_10",    ``n2l 10 54321``, ``[1; 2; 3; 4; 5n]``),
+  ("n2l_base_16",    ``n2l 16 344865``, ``[1; 2; 3; 4; 5n]``),
+  ("n2l_base_256",   ``n2l 256 21542142465``, ``[1; 2; 3; 4; 5n]``)
 ]
 
 val _ = let

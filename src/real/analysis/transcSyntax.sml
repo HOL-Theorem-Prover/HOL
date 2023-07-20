@@ -2,7 +2,7 @@ structure transcSyntax :> transcSyntax =
 struct
 
 open Abbrev HolKernel
-open realSyntax transcTheory
+open realSyntax transcTheory isqrtLib
 
 (* ------------------------------------------------------------------------- *)
 

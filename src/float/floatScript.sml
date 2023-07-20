@@ -11,7 +11,7 @@ open numLib realSimps RealArith Ho_Rewrite
 val () = new_theory "float"
 
 val _ = ParseExtras.temp_loose_equality()
-val _ = diminish_srw_ss ["RMULCANON_ss", "RMULRELNORM_ss"]
+val _ = diminish_srw_ss ["RMULCANON", "RMULRELNORM"]
 
 
 (* Compute some constant values *)

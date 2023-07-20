@@ -311,6 +311,7 @@ fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
          dprocs = filter_dprocs_by_names nms dprocs,
          travrules = travrules,
          limit = limit}
+fun remove_simps nms ss = ss -* nms
 
 
   (* ---------------------------------------------------------------------
@@ -661,9 +662,11 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
       val nil_included = Set.member(s, "")
       fun member (SSFRAG_CON{name = SOME n,...}) = Binaryset.member(s,n)
         | member (SSFRAG_CON{name = NONE,...}) = nil_included
-      fun mapthis (hi as ADDFRAG f) = if member f then NONE else SOME hi
-        | mapthis hi = SOME hi
-      val history' = List.mapPartial mapthis history
+      fun filterthis (hi as ADDFRAG f) = not(member f)
+        | filterthis hi = true
+      val history' = List.filter filterthis history
+      val _ = length history' < length history orelse
+              raise Conv.UNCHANGED
     in
       build_from_history history' |> fupdlimit (fn _ => limit)
     end
@@ -706,23 +709,27 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
 
  fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);
 
-val Cong = markerLib.Cong
-val AC   = markerLib.AC;
-val Excl = markerLib.Excl
-val Req0 = markerLib.mk_Req0
-val ReqD = markerLib.mk_ReqD
+val Cong   = markerLib.Cong
+val AC     = markerLib.AC;
+val Excl   = markerLib.Excl
+val ExclSF = markerLib.ExclSF
+val Req0   = markerLib.mk_Req0
+val ReqD   = markerLib.mk_ReqD
 
 local open markerSyntax markerLib
 in
 fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
 fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
-fun extract_excls (excls, rest) l =
+fun extract_excls (excls, exfrags, rest) l =
     case l of
-        [] => (List.rev excls, List.rev rest)
-      | th::ths => case markerLib.destExcl th of
-                       NONE => extract_excls (excls, th::rest) ths
-                     | SOME nm => extract_excls (nm::excls, rest) ths
+        [] => (List.rev excls, List.rev exfrags, List.rev rest)
+      | th::ths =>
+        case markerLib.destExcl th of
+            SOME nm => extract_excls (nm::excls, exfrags, rest) ths
+          | NONE => case markerLib.destExclSF th of
+                        NONE => extract_excls (excls, exfrags, th::rest) ths
+                      | SOME nm => extract_excls (excls, nm::exfrags, rest) ths
 
 fun extract_frags (frags, rest) l =
     case l of
@@ -752,20 +759,23 @@ fun SF ssfrag =
 fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst) = Lib.partition is_AC rst
-        val (excludes, rst) = extract_excls ([],[]) rst
+        val (excludes, exclfrags, rst) = extract_excls ([],[],[]) rst
         val (frags, rst) = extract_frags ([],[]) rst
     in
-      if null Congs andalso null ACs andalso null excludes andalso null frags
+      if null Congs andalso null ACs andalso null excludes andalso
+         null frags andalso null exclfrags
       then (ss,thl)
-      else (
-        List.foldl (flip op++) ss (
-          SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                     ac=map unAC ACs, congs=map (normCong o unCong) Congs,
-                     convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
-          frags
-        ) -* excludes,
-        rst
-      )
+      else
+        let val base = remove_ssfrags exclfrags ss handle Conv.UNCHANGED => ss
+        in
+          (List.foldl (flip op++) base (
+            SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+                       ac=map unAC ACs, congs=map (normCong o unCong) Congs,
+                       convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
+            frags
+           ) -* excludes,
+           rst)
+        end
     end
 
 fun SIMP_CONV ss l tm =

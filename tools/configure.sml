@@ -48,8 +48,8 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 14
-val release_string = "Kananaskis"
+val version_number = 1
+val release_string = "Trindemossen"
 
 
 val _ = Meta.quietdec := true;
@@ -312,10 +312,17 @@ val _ =
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";
     compile [] "parse_glob.sml";
-    compile [] "internal_functions.sig";
-    compile [] "internal_functions.sml";
+    compile [] "HOLFS_dtype.sml";
+    compile [] "HFS_NameMunge.sig";
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "HFS_NameMunge.sml";
+    FileSys.chDir "..";
+    compile [] "HOLFileSys.sig";
+    compile [] "HOLFileSys.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
+    compile [] "AttributeSyntax.sig";
+    compile [] "AttributeSyntax.sml";
     compile [] "QuoteFilter.sml";
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";
@@ -326,6 +333,8 @@ val _ =
     compile ["-I", "mosml"] "Holdep.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
+    compile [] "internal_functions.sig";
+    compile [] "internal_functions.sml";
     compile [] "Holmake_types.sig";
     compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
@@ -337,7 +346,7 @@ val _ =
     compile [] "HM_Core_Cline.sml";
     compile [] "holdeptool.sml";
     compile [] "mosml_holdeptool.sml";
-    link{extras = [], srcobj = "mosml_holdeptool.uo",
+    link{extras = ["-I", "mosml"], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     compile [] "HM_DepGraph.sig";
     compile [] "HM_DepGraph.sml";

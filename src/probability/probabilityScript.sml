@@ -3,10 +3,10 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
-(* Further enriched by Chun Tian <binghe.lisp@gmail.com> (2019 - 2022)       *)
+(* Further enriched by Chun Tian <binghe.lisp@gmail.com> (2019 - 2023)       *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
-(* Based on the work of Joe Hurd [7] and Aaron Coble [8]                     *)
+(* Originally based on the work of Joe Hurd [7] and Aaron Coble [8]          *)
 (* Cambridge University.                                                     *)
 (* ========================================================================= *)
 
@@ -49,8 +49,8 @@ val _ = hide "W";
 (* Basic probability theory definitions.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-Type "p_space" = “:'a m_space”
-Type events = “:'a set set”
+Type p_space = “:'a m_space”
+Type events  = “:'a set set”
 
 val p_space_def = Define `p_space = m_space`;
 
@@ -114,7 +114,7 @@ val conditional_distribution_def = Define
       joint_distribution p X Y (a CROSS b) / distribution p Y b`;
 
 Definition expectation_def :
-    expectation = integral
+    expectation = lebesgue$integral
 End
 
 (* not used *)
@@ -195,6 +195,12 @@ val PROB_EMPTY = store_thm
 val PROB_UNIV = store_thm
   ("PROB_UNIV", ``!p. prob_space p ==> (prob p (p_space p) = 1)``,
     RW_TAC std_ss [PROB_SPACE]);
+
+Theorem PROB_SPACE_NOT_EMPTY :
+    !p. prob_space p ==> p_space p <> {}
+Proof
+    METIS_TAC [PROB_EMPTY, PROB_UNIV, ne_01]
+QED
 
 val PROB_SPACE_POSITIVE = store_thm
   ("PROB_SPACE_POSITIVE", ``!p. prob_space p ==> positive p``,
@@ -1128,20 +1134,20 @@ val distribution_le_1 = store_thm
  >> MATCH_MP_TAC PROB_LE_1
  >> RW_TAC std_ss [IN_POW, INTER_SUBSET]);
 
-(* Theorem 3.1.3 [2, p.36], cf. measure_space_distr *)
-val distribution_prob_space = store_thm (* was: prob_space_distr *)
-  ("distribution_prob_space",
-  ``!p X s. prob_space p /\ random_variable X p s ==>
-            prob_space (space s, subsets s, distribution p X)``,
+(* Theorem 3.1.3 [2, p.36], cf. measure_space_distr
+
+   NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’
+ *)
+Theorem distribution_prob_space : (* was: prob_space_distr *)
+    !p X s. prob_space p /\ sigma_algebra s /\ random_variable X p s ==>
+            prob_space (space s, subsets s, distribution p X)
+Proof
     RW_TAC std_ss [random_variable_def, distribution_def, prob_space_def, measure_def, PSPACE,
                    measure_space_def, m_space_def, measurable_sets_def, IN_MEASURABLE,
                    SPACE, positive_def, PREIMAGE_EMPTY, INTER_EMPTY, PROB_EMPTY,
                    PROB_POSITIVE, space_def, subsets_def, countably_additive_def]
  >- (Q.PAT_X_ASSUM
-       `!f. f IN (UNIV -> measurable_sets p) /\
-            (!m n. m <> n ==> DISJOINT (f m) (f n)) /\
-            BIGUNION (IMAGE f UNIV) IN measurable_sets p ==>
-            (measure p (BIGUNION (IMAGE f univ(:num))) = suminf (measure p o f))`
+       `!f. _ ==> measure p (BIGUNION (IMAGE f univ(:num))) = suminf (measure p o f)`
        (MP_TAC o Q.SPEC `(\x. PREIMAGE X x INTER p_space p) o f`) \\
      RW_TAC std_ss [prob_def, o_DEF, PREIMAGE_BIGUNION, IMAGE_IMAGE] \\
     `(BIGUNION (IMAGE (\x. PREIMAGE X (f x)) UNIV) INTER p_space p) =
@@ -1165,12 +1171,16 @@ val distribution_prob_space = store_thm (* was: prob_space_distr *)
  >> Suff `PREIMAGE X (space s) INTER p_space p = p_space p`
  >- RW_TAC std_ss [prob_def, p_space_def]
  >> FULL_SIMP_TAC std_ss [IN_FUNSET, EXTENSION, IN_PREIMAGE, IN_INTER]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
-(* `prob_space p` is added since it's not provided by random_variable_def *)
+(* `prob_space p` is added since it's not provided by random_variable_def
+
+   NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’
+ *)
 Theorem uniform_distribution_prob_space :
     !X p s. prob_space p /\ FINITE (p_space p) /\
-            FINITE (space s) /\ random_variable X p s ==>
+            FINITE (space s) /\ sigma_algebra s /\ random_variable X p s ==>
             prob_space (space s, subsets s, uniform_distribution s)
 Proof
     RW_TAC std_ss []
@@ -1213,23 +1223,23 @@ Proof
  >> ASM_SIMP_TAC real_ss [extreal_div_eq, extreal_add_def]
 QED
 
-val distribution_partition = store_thm
-  ("distribution_partition",
-  ``!p X. prob_space p /\ (!x. x IN p_space p ==> {x} IN events p) /\
+Theorem distribution_partition :
+    !p X. prob_space p /\ (!x. x IN p_space p ==> {x} IN events p) /\
           FINITE (p_space p) /\ random_variable X p Borel ==>
-         (SIGMA (\x. distribution p X {x}) (IMAGE X (p_space p)) = 1)``,
+         (SIGMA (\x. distribution p X {x}) (IMAGE X (p_space p)) = 1)
+Proof
     RW_TAC std_ss []
  >> `random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p)))`
-      by (RW_TAC std_ss [random_variable_def]
-          >> RW_TAC std_ss [IN_MEASURABLE, IN_FUNSET, space_def, subsets_def,
-                            IN_IMAGE,POW_SIGMA_ALGEBRA]
-          >| [METIS_TAC [IN_MEASURABLE, random_variable_def],
-              METIS_TAC [],
-              METIS_TAC [PROB_DISCRETE_EVENTS, INTER_SUBSET]])
+      by (RW_TAC std_ss [random_variable_def] \\
+          RW_TAC std_ss [IN_MEASURABLE, IN_FUNSET, space_def, subsets_def,
+                         IN_IMAGE,POW_SIGMA_ALGEBRA]
+          >- METIS_TAC [] \\
+          METIS_TAC [PROB_DISCRETE_EVENTS, INTER_SUBSET])
  >> `prob_space (space (IMAGE X (p_space p), POW (IMAGE X (p_space p))),
                  subsets (IMAGE X (p_space p), POW (IMAGE X (p_space p))),
                  distribution p X)`
-     by METIS_TAC [distribution_prob_space]
+     by (MATCH_MP_TAC distribution_prob_space >> art [] \\
+         REWRITE_TAC [POW_SIGMA_ALGEBRA])
  >> (MP_TAC o Q.ISPEC `(space (IMAGE (X :'a->extreal) (p_space p), POW (IMAGE X (p_space p))),
                         subsets (IMAGE X (p_space p),POW (IMAGE X (p_space p))),
                         distribution p X)`) PROB_EXTREAL_SUM_IMAGE_SPACE
@@ -1239,7 +1249,8 @@ val distribution_partition = store_thm
  >> `FINITE (IMAGE X (m_space p))` by METIS_TAC [IMAGE_FINITE]
  >> `(!x. x IN IMAGE X (m_space p) ==> {x} IN POW (IMAGE X (m_space p)))`
      by RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_IMAGE, IN_SING]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 Theorem distribution_space_eq_1 : (* was: lemma1 (normal_rvScript.sml) *)
     !p X. prob_space p ==> (distribution p X (IMAGE X (p_space p)) = 1)
@@ -1252,18 +1263,23 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-val distribution_lebesgue_thm1 = store_thm
-  ("distribution_lebesgue_thm1",
- ``!X p s A. prob_space p /\ random_variable X p s /\ A IN subsets s ==>
-      (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))``,
+(* NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’ (‘random_variable’) *)
+Theorem distribution_lebesgue_thm1 :
+   !X p s A. prob_space p /\ sigma_algebra s /\
+             random_variable X p s /\ A IN subsets s ==>
+      (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))
+Proof
    RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def,
                   IN_MEASURABLE, p_space_def, prob_def, subsets_def, space_def,
-                  GSYM integral_indicator]);
+                  GSYM integral_indicator]
+QED
 
-val distribution_lebesgue_thm2 = store_thm
-  ("distribution_lebesgue_thm2",
-  ``!X p s A. prob_space p /\ random_variable X p s /\ A IN subsets s ==>
-      (distribution p X A = integral (space s, subsets s, distribution p X) (indicator_fn A))``,
+(* NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’ (‘random_variable’) *)
+Theorem distribution_lebesgue_thm2 :
+    !X p s A. prob_space p /\ sigma_algebra s /\
+              random_variable X p s /\ A IN subsets s ==>
+      (distribution p X A = integral (space s, subsets s, distribution p X) (indicator_fn A))
+Proof
     rpt STRIP_TAC
  >> `prob_space (space s,subsets s,distribution p X)`
      by RW_TAC std_ss [distribution_prob_space]
@@ -1277,7 +1293,8 @@ val distribution_lebesgue_thm2 = store_thm
  >> (MP_TAC o Q.SPECL [`(space s,subsets s,\A. measure p (PREIMAGE X A INTER m_space p))`,`A`]
      o INST_TYPE [``:'a``|->``:'b``]) integral_indicator
  >> FULL_SIMP_TAC std_ss [measurable_sets_def, prob_space_def, distribution_def,
-                          prob_def, p_space_def]);
+                          prob_def, p_space_def]
+QED
 
 (* ************************************************************************* *)
 
@@ -1398,22 +1415,86 @@ Proof
       RW_TAC std_ss [] ]
 QED
 
+(* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
 Theorem real_random_variable_fn_plus :
-    !p X. real_random_variable X p ==> real_random_variable (fn_plus X) p
+    !p X. prob_space p /\ real_random_variable X p ==>
+          real_random_variable (fn_plus X) p
 Proof
-    rw [real_random_variable, p_space_def, events_def]
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
+ >> fs [real_random_variable, p_space_def, events_def]
+ >> CONJ_TAC
  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS >> art [])
+ >> NTAC 3 STRIP_TAC
  >- (MATCH_MP_TAC pos_not_neginf >> rw [FN_PLUS_POS])
  >> MATCH_MP_TAC FN_PLUS_NOT_INFTY >> rw []
 QED
 
+(* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
 Theorem real_random_variable_fn_minus :
-    !p X. real_random_variable X p ==> real_random_variable (fn_minus X) p
+    !p X. prob_space p /\ real_random_variable X p ==>
+          real_random_variable (fn_minus X) p
 Proof
-    rw [real_random_variable, p_space_def, events_def]
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
+ >> fs [real_random_variable, p_space_def, events_def]
+ >> CONJ_TAC
  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS >> art [])
+ >> NTAC 3 STRIP_TAC
  >- (MATCH_MP_TAC pos_not_neginf >> rw [FN_MINUS_POS])
  >> MATCH_MP_TAC FN_MINUS_NOT_INFTY >> rw []
+QED
+
+Theorem real_random_variable_mul_indicator :
+    !p E X. prob_space p /\ E IN events p /\ real_random_variable X p ==>
+            real_random_variable (\x. X x * indicator_fn E x) p
+Proof
+    RW_TAC std_ss [real_random_variable]
+ >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR \\
+     fs [prob_space_def, measure_space_def, p_space_def, events_def])
+ >> ‘?r. 0 <= r /\ r <= 1 /\ indicator_fn E x = Normal r’
+        by METIS_TAC [indicator_fn_normal] >> POP_ORW
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> METIS_TAC [mul_not_infty]
+QED
+
+Theorem random_variable_cong :
+    !p X Y A. (!x. x IN p_space p ==> X x = Y x) ==>
+              (random_variable X p A <=> random_variable Y p A)
+Proof
+    rw [random_variable_def]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 2) *)
+      fs [p_space_def, events_def, IN_MEASURABLE, IN_FUNSET, PREIMAGE_def] \\
+      CONJ_TAC >- METIS_TAC [] \\
+      rpt STRIP_TAC \\
+      Suff ‘{x | Y x IN s} INTER m_space p =
+            {x | X x IN s} INTER m_space p’ >- METIS_TAC [] \\
+      rw [Once EXTENSION] >> METIS_TAC [],
+      (* goal 2 (of 2) *)
+      fs [p_space_def, events_def, IN_MEASURABLE, IN_FUNSET, PREIMAGE_def] \\
+      rpt STRIP_TAC \\
+      Suff ‘{x | X x IN s} INTER m_space p =
+            {x | Y x IN s} INTER m_space p’ >- METIS_TAC [] \\
+      rw [Once EXTENSION] >> METIS_TAC [] ]
+QED
+
+Theorem real_random_variable_cong :
+    !p X Y. (!x. x IN p_space p ==> X x = Y x) ==>
+            (real_random_variable X p <=> real_random_variable Y p)
+Proof
+    rw [real_random_variable]
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 2) *)
+      fs [p_space_def, events_def] \\
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
+      Q.EXISTS_TAC ‘X’ >> rw [],
+      (* goal 2 (of 2) *)
+      fs [p_space_def, events_def] \\
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
+      Q.EXISTS_TAC ‘Y’ >> rw [] ]
 QED
 
 (* added `integrable p X`, otherwise `expectation p X` is not defined *)
@@ -1566,17 +1647,17 @@ val prob_x_eq_1_imp_prob_y_eq_0 = store_thm
  >- RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_SING]
  >> METIS_TAC [PROB_EMPTY]);
 
-(* this is the last theorem in HVG's "probability_hvgScript.sml" *)
-val distribution_x_eq_1_imp_distribution_y_eq_0 = store_thm
-  ("distribution_x_eq_1_imp_distribution_y_eq_0",
-  ``!X p x. prob_space p /\
+(* NOTE: this is the last theorem in HVG's "probability_hvgScript.sml" *)
+Theorem distribution_x_eq_1_imp_distribution_y_eq_0 :
+    !X p x. prob_space p /\
             random_variable X p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
            (distribution p X {x} = 1)
-        ==> !y. y <> x ==> (distribution p X {y} = 0)``,
+        ==> !y. y <> x ==> (distribution p X {y} = 0)
+Proof
     rpt STRIP_TAC
  >> (MP_TAC o Q.SPECL [`p`, `X`, `(IMAGE X (p_space p),POW (IMAGE X (p_space p)))`])
         distribution_prob_space
- >> RW_TAC std_ss [space_def, subsets_def]
+ >> RW_TAC std_ss [space_def, subsets_def, POW_SIGMA_ALGEBRA]
  >> (MP_TAC o Q.ISPECL [`(IMAGE (X :'a -> 'b) (p_space (p :'a p_space)),
                                 POW (IMAGE X (p_space p)),distribution p X)`, `x:'b`])
         prob_x_eq_1_imp_prob_y_eq_0
@@ -1597,7 +1678,8 @@ val distribution_x_eq_1_imp_distribution_y_eq_0 = store_thm
          >> METIS_TAC [])
  >> POP_ORW
  >> MATCH_MP_TAC PROB_EMPTY
- >> FULL_SIMP_TAC std_ss [random_variable_def]);
+ >> FULL_SIMP_TAC std_ss [random_variable_def]
+QED
 
 val joint_distribution_sym = store_thm
   ("joint_distribution_sym",
@@ -1845,7 +1927,8 @@ Proof
      Q.ABBREV_TAC ‘s = (IMAGE X (p_space p),POW (IMAGE X (p_space p)))’ \\
     ‘(IMAGE X (p_space p),POW (IMAGE X (p_space p)),distribution p X) =
      (space s,subsets s,distribution p X)’ by rw [Abbr ‘s’] >> POP_ORW \\
-     MATCH_MP_TAC distribution_prob_space >> art [])
+     MATCH_MP_TAC distribution_prob_space \\
+     rw [POW_SIGMA_ALGEBRA, Abbr ‘s’])
  >> DISCH_TAC
  >> (MP_TAC o Q.SPEC `p1` o INST_TYPE [``:'a`` |-> ``:'b``]) PROB_EXTREAL_SUM_IMAGE_SPACE
  >> `FINITE (p_space p1)` by METIS_TAC [PSPACE, IMAGE_FINITE]
@@ -1859,7 +1942,7 @@ QED
 Theorem joint_distribution_sum_mul1 :
     !p X Y f. prob_space p /\ FINITE (p_space p) /\
               (events p = POW (p_space p)) /\
-              (!x. f x <> PosInf /\ f x <> NegInf)  ==>
+              (!x. f x <> PosInf /\ f x <> NegInf) ==>
         (SIGMA (\(x,y). joint_distribution p X Y {(x,y)} * (f x))
                (IMAGE X (p_space p) CROSS IMAGE Y (p_space p)) =
          SIGMA (\x. distribution p X {x} * (f x)) (IMAGE X (p_space p)))
@@ -1876,12 +1959,10 @@ Proof
  >> (MP_TAC o GSYM o Q.SPECL [`s1`,`s2`,`(\a b. joint_distribution p X Y {(a,b)} * (f a))`] o
      INST_TYPE [``:'a`` |-> ``:'b``, ``:'b`` |-> ``:'c``]) EXTREAL_SUM_IMAGE_SUM_IMAGE
  >> RW_TAC std_ss []
- >> Know `(!x.
-             x IN s1 CROSS s2 ==>
-             NegInf <> joint_distribution p X Y {x} * f (FST x)) \/
-          (!x.
-             x IN s1 CROSS s2 ==>
-             PosInf <> joint_distribution p X Y {x} * f (FST x))`
+ >> Know `(!x. x IN s1 CROSS s2 ==>
+               NegInf <> joint_distribution p X Y {x} * f (FST x)) \/
+          (!x. x IN s1 CROSS s2 ==>
+               PosInf <> joint_distribution p X Y {x} * f (FST x))`
  >- (DISJ2_TAC >> RW_TAC std_ss [] \\
      Suff `joint_distribution p X Y {x} * f (FST x) <> PosInf` >- rw [] \\
     `joint_distribution p X Y {x} <> NegInf /\
@@ -2228,6 +2309,17 @@ Proof
     rpt STRIP_TAC
  >> rw [variance_alt, expectation_const, extreal_sub_def]
  >> rw [extreal_pow_def, expectation_zero]
+QED
+
+Theorem expectation_sum :
+    !p X J.
+        FINITE J /\ prob_space p /\ (!i. i IN J ==> integrable p (X i)) /\
+       (!i. i IN J ==> real_random_variable (X i) p) ==>
+        expectation p (\x. SIGMA (\i. X i x) J) = SIGMA (\i. expectation p (X i)) J
+Proof
+    RW_TAC std_ss [expectation_def, real_random_variable_def, prob_space_def,
+                   p_space_def]
+ >> MATCH_MP_TAC integral_sum >> rw []
 QED
 
 (* |- !p. prob_space p ==> variance p (\x. 0) = 0 *)
@@ -2582,6 +2674,59 @@ Proof
  >> MATCH_MP_TAC pow_le >> rw [abs_pos]
 QED
 
+(* NOTE: ‘integrable p X’ makes sure that ‘expectation p X’ exists and is finite *)
+Theorem bounded_imp_finite_second_moments' :
+    !p X. prob_space p /\ random_variable X p Borel /\ integrable p X /\
+         (?r. !x. x IN p_space p ==> abs (X x - expectation p X) <= Normal r) ==>
+          finite_second_moments p X
+Proof
+    qx_genl_tac [‘p’, ‘Y’] >> rpt STRIP_TAC
+ >> MATCH_MP_TAC bounded_imp_finite_second_moments >> art []
+ >> Q.ABBREV_TAC ‘M = expectation p Y’
+ >> ‘M <> PosInf /\ M <> NegInf’ by METIS_TAC [integrable_imp_finite_expectation]
+ >> ‘r < 0 \/ 0 <= r’ by PROVE_TAC [REAL_LTE_TOTAL]
+ >- (‘?x. x IN p_space p’ by METIS_TAC [PROB_SPACE_NOT_EMPTY, MEMBER_NOT_EMPTY] \\
+     ‘Normal r < 0’ by METIS_TAC [extreal_of_num_def, extreal_lt_eq] \\
+     ‘abs (Y x - M) < 0’ by METIS_TAC [let_trans] \\
+     METIS_TAC [abs_pos, let_antisym])
+ >> ‘?m. M = Normal m’ by METIS_TAC [extreal_cases] >> fs []
+ >> rename1 ‘0 <= a’
+ >> Know ‘!x. x IN p_space p ==> Y x <> NegInf /\ Y x <> PosInf’
+ >- (NTAC 2 STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!x. x IN p_space p ==> P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] >> CCONTR_TAC >> fs [extreal_abs_def, extreal_sub_def])
+ >> DISCH_TAC
+ >> Q.EXISTS_TAC ‘max (m + a) (abs (m - a))’
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘!x. x IN p_space p ==> Y x <> NegInf /\ Y x <> PosInf’
+       (MP_TAC o (Q.SPEC ‘x’))
+ >> Q.PAT_X_ASSUM ‘!x. x IN p_space p ==> abs _ <= Normal a’ (MP_TAC o (Q.SPEC ‘x’))
+ >> RW_TAC std_ss []
+ >> ‘?y. Y x = Normal y’ by METIS_TAC [extreal_cases]
+ >> gs [extreal_sub_def, extreal_abs_def]
+ >> rw [REAL_LE_MAX]
+ >> ‘0 <= m \/ m <= 0’ by PROVE_TAC [REAL_LE_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+      DISJ1_TAC \\
+     ‘abs m + abs (y - m) <= m + a’ by PROVE_TAC [REAL_LE_LADD, ABS_REFL] \\
+      MATCH_MP_TAC REAL_LE_TRANS \\
+      Q.EXISTS_TAC ‘abs m + abs (y - m)’ >> art [] \\
+     ‘abs y = abs (m + (y - m))’ by REAL_ARITH_TAC >> POP_ORW \\
+      REWRITE_TAC [ABS_TRIANGLE],
+      (* goal 2 (of 2) *)
+      DISJ2_TAC \\
+      MATCH_MP_TAC REAL_LE_TRANS \\
+      Q.EXISTS_TAC ‘abs m + abs (y - m)’ >> REWRITE_TAC [ABS_TRIANGLE_SUB] \\
+      Suff ‘abs (m - a) = abs m + a’ >- rw [REAL_LE_LADD] \\
+     ‘abs (m - a) = abs (a - m)’ by REAL_ARITH_TAC >> POP_ORW \\
+      Know ‘abs (a - m) = a - m’
+      >- (rw [ABS_REFL, REAL_SUB_LE] \\
+          MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC ‘0’ >> art []) >> Rewr' \\
+      Know ‘abs (--m) = -m’ >- art [Once ABS_NEG, ABS_REFL, REAL_NEG_GE0] \\
+      REWRITE_TAC [REAL_NEG_NEG] >> Rewr' \\
+      REAL_ARITH_TAC ]
+QED
+
 Theorem finite_second_moments_imp_integrable :
     !p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
           integrable p X
@@ -2702,7 +2847,7 @@ Theorem finite_second_moments_sum :
 Proof
     rpt STRIP_TAC
  >> NTAC 3 (POP_ASSUM MP_TAC)
- >> Q.SPEC_TAC (‘J’,‘J’)
+ >> qid_spec_tac ‘J’
  >> Induct_on ‘J’
  >> rw [EXTREAL_SUM_IMAGE_EMPTY]
  >- (IMP_RES_TAC real_random_variable_zero \\
@@ -2946,6 +3091,8 @@ Proof
      MATCH_MP_TAC lt_imp_le >> art [])
  >> fs [real_random_variable, prob_space_def, p_space_def, events_def]
  >> Q.ABBREV_TAC ‘Y = \x. X x - expectation p X’ >> simp []
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
  >> Know ‘Y IN measurable (m_space p,measurable_sets p) Borel’
  >- (rw [Abbr ‘Y’] \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB' \\
@@ -3073,12 +3220,177 @@ Proof
  >> METIS_TAC [SUBSET_DEF]
 QED
 
-(* 9. extension of `indep-rv`: total independent random variables. *)
-val indep_vars_def = Define
-   `indep_vars p X A (J :'index set) <=>
-      !E. E IN (J --> (subsets o A)) ==>
-          indep_events p (\n. (PREIMAGE (X n) (E n)) INTER p_space p) J`;
+(* 9. extension of `indep-rv`: totally/mutually independent r.v.'s
 
+  See indep_vars_alt_indep_events for a weaker equivalent condition for testing
+      independence.
+
+  NOTE: ‘indep_vars’ has been modified to make sure [indep_vars_subset] holds.
+
+  old definition:
+
+Definition old_indep_vars_def :
+    old_indep_vars p X A (J :'index set) =
+      !E. E IN (J --> (subsets o A)) ==>
+          indep_events p (\n. (PREIMAGE (X n) (E n)) INTER p_space p) J
+End
+
+> REWRITE_RULE [indep_events_def] old_indep_vars_def;
+val it =
+  |- !p X A J.
+        old_indep_vars p X A J <=>
+        !E. E IN J --> subsets o A ==>
+            !N. N SUBSET J /\ N <> {} /\ FINITE N ==>
+                prob p (BIGINTER (IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) N)) =
+                PI (prob p o (\n. PREIMAGE (X n) (E n) INTER p_space p)) N:
+
+  new definition:
+ *)
+Definition indep_vars_def :
+    indep_vars p X A (J :'index set) =
+      !E N. N SUBSET J /\ N <> {} /\ FINITE N /\
+            E IN (N --> subsets o A) ==>
+            prob p (BIGINTER (IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) N)) =
+            PI (prob p o (\n. PREIMAGE (X n) (E n) INTER p_space p)) N
+End
+
+(* NOTE: If a set of r.v.'s is (totally) independent, so is any subset of them.
+         With the new definition of ‘indep_vars’, this proof is very easy now.
+ *)
+Theorem indep_vars_subset :
+    !p X A (s :'index set) (t :'index set).
+       indep_vars p X A t /\ s SUBSET t ==> indep_vars p X A s
+Proof
+    RW_TAC std_ss [indep_vars_def, IN_DFUNSET, indep_events_def]
+ >> FIRST_X_ASSUM irule >> simp []
+ >> PROVE_TAC [SUBSET_TRANS]
+QED
+
+(* NOTE: the old and new definitions are actually equivalent, given ‘A n’ is indeed
+   a sigma-algebra (which can be actually weakened to ‘?x. x IN subsets (A n)’), or
+   ring, semiring, algebra, etc.
+ *)
+Theorem indep_vars_alt_indep_events :
+    !p X A (J :'index set).
+       (!n. n IN J ==> sigma_algebra (A n)) ==>
+       (indep_vars p X A (J :'index set) <=>
+        !E. E IN (J --> (subsets o A)) ==>
+            indep_events p (\n. (PREIMAGE (X n) (E n)) INTER p_space p) J)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC
+ >> RW_TAC std_ss [indep_vars_def, indep_events_def]
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> fs [IN_DFUNSET] \\
+     METIS_TAC [SUBSET_DEF])
+ (* The key is to choose V such that, for each indexes ‘n NOTIN N’, an arbitrary
+    element ‘E n’ is choosen such that ‘E n IN subsets (A n)’ holds. Here we chose
+   ‘{}’, assuming ‘sigma_algebra (A n)’.
+  *)
+ >> Q.ABBREV_TAC ‘V = \n. if n IN N then E n else {}’
+ >> Q.PAT_X_ASSUM ‘!E. E IN J --> subsets o A ==> P’ (MP_TAC o (Q.SPEC ‘V’))
+ >> Know ‘V IN J --> subsets o A’
+ >- (fs [Abbr ‘V’, IN_DFUNSET] >> rw [] \\
+     METIS_TAC [SIGMA_ALGEBRA_EMPTY])
+ >> RW_TAC std_ss []
+ >> POP_ASSUM (MP_TAC o (Q.SPEC ‘N’))
+ >> RW_TAC std_ss []
+ >> Suff ‘IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) N =
+          IMAGE (\n. PREIMAGE (X n) (V n) INTER p_space p) N /\
+          PI (prob p o (\n. PREIMAGE (X n) (E n) INTER p_space p)) N =
+          PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) N’ >- rw []
+ >> CONJ_TAC
+ >- (rw [Once EXTENSION] >> EQ_TAC >> rw [Abbr ‘V’] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> MATCH_MP_TAC EXTREAL_PROD_IMAGE_EQ
+ >> Q.X_GEN_TAC ‘n’ >> rw [Abbr ‘V’]
+QED
+
+(* Alternative definition of independent r.v.'s for index set as ‘univ(:num)’
+
+   It's sufficient that the increasing first n r.v.'s are mutually independent,
+   and no need for arbitrary (non-empty) subset N of univ(:num).
+ *)
+Theorem indep_vars_alt_univ :
+    !p X A. prob_space p /\ (!n. sigma_algebra (A n)) /\
+           (!n. random_variable (X n) p (A n)) ==>
+       (indep_vars p X A univ(:num) <=>
+        !E n. E IN (count1 n --> subsets o A) ==>
+              prob p (BIGINTER (IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) (count1 n))) =
+              PI (prob p o (\n. PREIMAGE (X n) (E n) INTER p_space p)) (count1 n))
+Proof
+    RW_TAC std_ss [indep_vars_def]
+ >> EQ_TAC >> rw [] (* only one goal remains *)
+ >> Q.ABBREV_TAC ‘V = \n. if n IN N then E n else space (A n)’
+ (* find the maximal element m of N *)
+ >> MP_TAC (FINITE_is_measure_maximal |> Q.GEN ‘m’
+                                      |> INST_TYPE [“:'a” |-> “:num”]
+                                      |> Q.SPECL [‘I’, ‘N’])
+ >> rw [is_measure_maximal_def] >> rename1 ‘m IN N’
+ >> Q.PAT_X_ASSUM ‘!E n. E IN count1 n --> subsets o A ==> P’
+      (MP_TAC o (Q.SPECL [‘V’, ‘m’]))
+ >> Know ‘V IN count1 m --> subsets o A’
+ >- (rw [IN_DFUNSET, Abbr ‘V’] \\
+     Cases_on ‘n IN N’ >- fs [IN_DFUNSET] \\
+     simp [SIGMA_ALGEBRA_SPACE])
+ >> RW_TAC std_ss []
+ >> Suff ‘prob p (BIGINTER (IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) N)) =
+          prob p (BIGINTER (IMAGE (\n. PREIMAGE (X n) (V n) INTER p_space p) (count1 m))) /\
+          PI (prob p o (\n. PREIMAGE (X n) (E n) INTER p_space p)) N =
+          PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) (count1 m)’ >- rw []
+ >> Q.ABBREV_TAC ‘D = count1 m DIFF N’
+ >> ‘DISJOINT N D’ by rw [DISJOINT_ALT, Abbr ‘D’]
+ >> Know ‘count1 m = N UNION D’
+ >- (rw [Once EXTENSION, Abbr ‘D’] \\
+     EQ_TAC >> rw [] >> rw [LT_SUC_LE]) >> Rewr'
+ >> Know ‘IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) N =
+          IMAGE (\n. PREIMAGE (X n) (V n) INTER p_space p) N’
+ >- (rw [Once EXTENSION, IN_IMAGE, Abbr ‘V’] \\
+     EQ_TAC >> rw [] >> Q.EXISTS_TAC ‘n’ >> rw [])
+ >> Rewr'
+ >> Know ‘PI (prob p o (\n. PREIMAGE (X n) (E n) INTER p_space p)) N =
+          PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) N’
+ >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_EQ >> rw [Abbr ‘V’])
+ >> Rewr'
+ >> Cases_on ‘D = {}’ >- rw []
+ >> Know ‘!n. n IN D ==> PREIMAGE (X n) (V n) INTER p_space p = p_space p’
+ >- (rw [Abbr ‘D’, Abbr ‘V’, PREIMAGE_def] \\
+     rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] \\
+     fs [random_variable_def, measurable_def, IN_FUNSET])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >- (rw [IMAGE_UNION, BIGINTER_UNION] \\
+     Know ‘IMAGE (\n. PREIMAGE (X n) (V n) INTER p_space p) D =
+           IMAGE (\n. p_space p) D’
+     >- (rw [Once EXTENSION] \\
+         EQ_TAC >> rw [] >> Q.EXISTS_TAC ‘n’ >> rw []) >> Rewr' \\
+     Know ‘BIGINTER (IMAGE (\n. p_space p) D) = p_space p’
+     >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
+         EQ_TAC >> rw [] \\
+         FIRST_X_ASSUM MATCH_MP_TAC \\
+         METIS_TAC [MEMBER_NOT_EMPTY]) >> Rewr' \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC PROB_UNDER_UNIV >> art [] \\
+     MATCH_MP_TAC EVENTS_BIGINTER_FN >> art [COUNTABLE_NUM] \\
+     rw [SUBSET_DEF] \\
+     fs [random_variable_def, measurable_def, IN_DFUNSET, Abbr ‘V’])
+ >> Know ‘FINITE D’
+ >- (irule SUBSET_FINITE >> Q.EXISTS_TAC ‘count1 m’ >> rw [Abbr ‘D’])
+ >> DISCH_TAC
+ >> Know ‘PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) (N UNION D) =
+          PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) N *
+          PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) D’
+ >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_DISJOINT_UNION >> art [])
+ >> Rewr'
+ >> Suff ‘PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) D = 1’ >- rw []
+ >> Know ‘PI (prob p o (\n. PREIMAGE (X n) (V n) INTER p_space p)) D =
+          PI (prob p o (\n. p_space p)) D’
+ >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_EQ >> rw [])
+ >> Rewr'
+ >> simp [o_DEF, PROB_UNIV, EXTREAL_PROD_IMAGE_ONE]
+QED
+
+(* not used *)
 val indep_function_def = Define
    `indep_function p =
    {f | indep_families p (IMAGE (PREIMAGE (FST o f)) UNIV)
@@ -3088,6 +3400,13 @@ val PROB_INDEP = store_thm
   ("PROB_INDEP",
   ``!p s t u. indep p s t /\ (u = s INTER t) ==> (prob p u = prob p s * prob p t)``,
     RW_TAC std_ss [indep_def]);
+
+Theorem INDEP :
+  !p a b. a IN events p /\ b IN events p /\
+          prob p (a INTER b) = prob p a * prob p b ==> indep p a b
+Proof
+  rw [indep_def]
+QED
 
 val INDEP_EMPTY = store_thm
   ("INDEP_EMPTY", ``!p s. prob_space p /\ s IN events p ==> indep p {} s``,
@@ -3205,50 +3524,44 @@ Proof
  >> POP_ASSUM MATCH_MP_TAC >> art []
 QED
 
-(* total ==> pairwise independence (of random variables) *)
+(* total ==> pairwise independence (of random variables)
+
+   NOTE: added ‘prob_space p /\ !i. i IN J ==> sigma_algebra (A i)’ due to
+         changes of ‘measurable’
+ *)
 Theorem total_imp_pairwise_indep_vars :
-    !p X A (J :'index set).
-       (!i. i IN J ==> random_variable (X i) p (A i)) /\ indep_vars p X A J ==>
-       pairwise_indep_vars p X A J
+    !p X A (J :'index set). prob_space p /\
+        (!i. i IN J ==> random_variable (X i) p (A i)) /\
+        (!i. i IN J ==> sigma_algebra (A i)) /\
+        indep_vars p X A J ==> pairwise_indep_vars p X A J
 Proof
     RW_TAC std_ss [indep_vars_def, pairwise_indep_vars_def, indep_rv_def,
                    indep_events_def, random_variable_def]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> REWRITE_TAC [indep_def]
  >> STRONG_CONJ_TAC
- >- (`X i IN measurable (p_space p,events p) (A i)` by PROVE_TAC [] \\
+ >- (‘X i IN measurable (p_space p,events p) (A i)’ by PROVE_TAC [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_MEASURABLE, space_def, subsets_def])) \\
      POP_ASSUM MATCH_MP_TAC >> art []) >> DISCH_TAC
  >> STRONG_CONJ_TAC
- >- (`X j IN measurable (p_space p,events p) (A j)` by PROVE_TAC [] \\
+ >- (‘X j IN measurable (p_space p,events p) (A j)’ by PROVE_TAC [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_MEASURABLE, space_def, subsets_def])) \\
      POP_ASSUM MATCH_MP_TAC >> art []) >> DISCH_TAC
- >> Q.ABBREV_TAC `E = \x. if x = i then a else if x = j then b else {}`
- >> Q.PAT_X_ASSUM `!E. E IN (J --> subsets o A) => P` (MP_TAC o (Q.SPEC `E`))
+ >> Q.ABBREV_TAC ‘E = \x. if x = i then a else if x = j then b else {}’
+ >> Q.PAT_X_ASSUM ‘!E N. _’ (MP_TAC o (Q.SPEC ‘E’))
  >> SIMP_TAC std_ss [IN_DFUNSET, o_DEF]
- >> Know `!x. x IN J ==> E x IN subsets (A x)`
- >- (Q.UNABBREV_TAC `E` >> RW_TAC std_ss [] \\
-     `X x IN measurable (p_space p,events p) (A x)` by PROVE_TAC [] \\
-     POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_MEASURABLE, space_def, subsets_def])) \\
-     MATCH_MP_TAC ALGEBRA_EMPTY \\
-     fs [sigma_algebra_def])
- >> RW_TAC std_ss []
- >> Q.PAT_X_ASSUM `!N. N SUBSET J /\ N <> {} /\ FINITE N ==> P`
-      (MP_TAC o (Q.SPEC `{i; j}`))
- >> Know `{i; j} SUBSET J` >- ASM_SET_TAC []
- >> Know `{i; j} <> {}` >- SET_TAC []
- >> Know `FINITE {i; j}` >- PROVE_TAC [FINITE_INSERT, FINITE_SING]
- >> Know `BIGINTER (IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) {i; j}) =
-           (\n. PREIMAGE (X n) (E n) INTER p_space p) i INTER
-           (\n. PREIMAGE (X n) (E n) INTER p_space p) j`
- >- (RW_TAC std_ss [Once EXTENSION, IN_BIGINTER_IMAGE, IN_SING, IN_INSERT, IN_INTER] \\
-     METIS_TAC [])
- >> Know `PI (\n. prob p (PREIMAGE (X n) (E n) INTER p_space p)) {i; j} =
+ >> ‘{i; j} SUBSET J’ by rw [SUBSET_DEF]
+ >> DISCH_THEN (MP_TAC o Q.SPEC ‘{i; j}’) >> simp [FINITE_TWO]
+ >> Know ‘PI (\n. prob p (PREIMAGE (X n) (E n) INTER p_space p)) {i; j} =
              (\n. prob p (PREIMAGE (X n) (E n) INTER p_space p)) i *
-             (\n. prob p (PREIMAGE (X n) (E n) INTER p_space p)) j`
+             (\n. prob p (PREIMAGE (X n) (E n) INTER p_space p)) j’
  >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_PAIR >> art [])
- >> Know `E i = a` >- (Q.UNABBREV_TAC `E` >> RW_TAC std_ss [])
- >> Know `E j = b` >- (Q.UNABBREV_TAC `E` >> RW_TAC std_ss [])
- >> RW_TAC std_ss []
+ >> BETA_TAC >> Rewr'
+ >> Know ‘E i = a’ >- RW_TAC std_ss [Abbr ‘E’] >> Rewr'
+ >> Know ‘E j = b’ >- RW_TAC std_ss [Abbr ‘E’] >> Rewr'
+ >> DISCH_THEN MATCH_MP_TAC
+ >> rw [Abbr ‘E’]
 QED
 
 (* alternative definition of ‘indep_rv’ in ‘indep_vars’ *)
@@ -3259,27 +3572,24 @@ Theorem indep_rv_alt_indep_vars :
 Proof
     rw [indep_vars_def, indep_rv_def, indep_events_def]
  >> reverse EQ_TAC >> rw []
- >- (Q.PAT_X_ASSUM ‘!E. P’ (MP_TAC o (Q.SPEC ‘binary a b’)) \\
+ >- (Q.PAT_X_ASSUM ‘!E N. P’ (MP_TAC o (Q.SPECL [‘binary a b’, ‘{0;1}’])) \\
      Know ‘binary a b IN {0; 1} --> subsets o binary A B’
-     >- (rw [IN_DFUNSET, binary_def] >> simp []) >> rw [] \\
-     Q.PAT_X_ASSUM ‘!N. P’ (MP_TAC o (Q.SPEC ‘{0; 1}’)) \\
+     >- (rw [IN_DFUNSET, binary_def] >> simp []) >> Rewr \\
+     simp [binary_def] \\
     ‘{1} DELETE (0 :num) = {1}’ by rw [GSYM DELETE_NON_ELEMENT] \\
-     rw [EXTREAL_PROD_IMAGE_THM, FINITE_TWO] \\
-     fs [indep_def, random_variable_def, IN_MEASURABLE, binary_def])
+     rw [EXTREAL_PROD_IMAGE_THM, FINITE_TWO, indep_def] \\
+     fs [random_variable_def, IN_MEASURABLE])
  >> ‘N = {0} \/ N = {1} \/ N = {0; 1}’ by METIS_TAC [SUBSET_TWO]
  >- rw [EXTREAL_PROD_IMAGE_SING]
  >- rw [EXTREAL_PROD_IMAGE_SING]
- >> POP_ORW >> NTAC 3 (POP_ASSUM K_TAC) (* clear N *)
+ >> POP_ASSUM (fs o wrap)
  >> ‘{1} DELETE (0 :num) = {1}’ by rw [GSYM DELETE_NON_ELEMENT]
  >> rw [EXTREAL_PROD_IMAGE_THM, FINITE_TWO, binary_def]
- >> fs [IN_DFUNSET, binary_def]
- >> Know ‘E 0 IN subsets A’
- >- (Q.PAT_X_ASSUM ‘!x. x = 0 \/ x = 1 ==> P’ (MP_TAC o (Q.SPEC ‘0’)) \\
-     rw [])
- >> DISCH_TAC
+ >> fs [IN_DFUNSET]
+ >> ‘E 0 IN subsets A’ by METIS_TAC [binary_def]
  >> Know ‘E 1 IN subsets B’
  >- (Q.PAT_X_ASSUM ‘!x. x = 0 \/ x = 1 ==> P’ (MP_TAC o (Q.SPEC ‘1’)) \\
-     rw [])
+     rw [binary_def])
  >> DISCH_TAC
  >> Q.PAT_X_ASSUM ‘!a b. P’ (MP_TAC o (Q.SPECL [‘E (0 :num)’, ‘E (1 :num)’]))
  >> rw [indep_def]
@@ -5102,7 +5412,7 @@ Definition converge_def :
          ((\n. real (prob p {x | x IN p_space p /\ e < abs (X n x - Y x)})) --> 0)
            sequentially) /\
 
-   (* X(n) converges to Y (in L^r) *)
+   (* X(n) converges to Y (in `lp_space r p`) *)
    (converge (X :num->'a->extreal) (Y :'a->extreal) (in_lebesgue r p) <=>
      0 < r /\ r <> PosInf /\
      (!n. expectation p (\x. (abs (X n x)) powr r) <> PosInf) /\
@@ -5121,17 +5431,136 @@ End
 (* "-->" is defined in util_probTheory; *)
 Overload "-->" = “converge”
 
-(* AE x::p. X_n(x) --> Y(x) *)
+(* |- !p X Y.
+        (X --> Y) (almost_everywhere p) <=>
+        AE x::p. ((\n. real (X n x)) --> real (Y x)) sequentially
+ *)
 Theorem converge_AE_def =
    (List.nth (CONJUNCTS converge_def, 0)) |> SPEC_ALL |> (Q.GENL [`p`, `X`, `Y`]);
 
-(* !e. 0 < e ==> Prob {e < |X_n - Y|} --> 0 *)
+(* An equivalent definition using extreal_lim (ext_tendsto) *)
+Theorem converge_AE :
+    !p X Y. (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
+       ((X --> Y) (almost_everywhere p) <=>
+        AE x::p. ((\n. X n x) --> (Y x)) sequentially)
+Proof
+    rw [converge_AE_def, real_random_variable_def, p_space_def]
+ >> EQ_TAC >> rw [AE_DEF]
+ >> Q.EXISTS_TAC ‘N’ >> rw []
+ >> Q.PAT_X_ASSUM ‘!x. x IN m_space p /\ x NOTIN N ==> P’ (MP_TAC o (Q.SPEC ‘x’))
+ >> RW_TAC std_ss [] (* 2 subgoals, same ending tactics *)
+ >| [ (* goal 1 (of 2) *)
+      Suff ‘((\n. X n x) --> Y x) sequentially <=>
+            (real o (\n. X n x) --> real (Y x)) sequentially’ >- rw [o_DEF],
+      (* goal 2 (of 2) *)
+      Suff ‘((\n. X n x) --> Y x) sequentially <=>
+            (real o (\n. X n x) --> real (Y x)) sequentially’ >- fs [o_DEF] ]
+ >> MATCH_MP_TAC extreal_lim_sequentially_eq >> rw []
+QED
+
+(* |- !p X Y.
+        (X --> Y) (in_probability p) <=>
+        !e. 0 < e /\ e <> PosInf ==>
+            ((\n. real (prob p {x | x IN p_space p /\ e < abs (X n x - Y x)})) --> 0)
+              sequentially
+ *)
 Theorem converge_PR_def =
    (List.nth (CONJUNCTS converge_def, 1)) |> SPEC_ALL |> (Q.GENL [`p`, `X`, `Y`]);
 
-(* X_n IN L^p /\ Y IN L^p /\ E [|X_n - Y|^p] --> 0 *)
+(* An equivalent definition using extreal_lim (ext_tendsto) *)
+Theorem converge_PR :
+    !p X Y. prob_space p /\
+           (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
+           ((X --> Y) (in_probability p) <=>
+            !e. 0 < e /\ e <> PosInf ==>
+               ((\n. prob p {x | x IN p_space p /\ e < abs (X n x - Y x)}) --> 0)
+                sequentially)
+Proof
+    rw [converge_PR_def, real_random_variable_def]
+ >> Q.ABBREV_TAC ‘f = \n x. X n x - Y x’
+ >> Know ‘!n. (f n) IN measurable (m_space p,measurable_sets p) Borel’
+ >- (rw [Abbr ‘f’] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
+     qexistsl_tac [‘X n’, ‘Y’] \\
+     fs [prob_space_def, p_space_def, events_def, space_def,
+         measure_space_def, random_variable_def])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘A = \e n. {x | x IN p_space p /\ e < abs (f n x)}’
+ >> Know ‘!e n. A e n IN events p’
+ >- (RW_TAC std_ss [Abbr ‘A’] \\
+    ‘{x | x IN p_space p /\ e < abs (f n x)} =
+        p_space p DIFF {x | x IN p_space p /\ abs (f n x) <= e}’
+        by (RW_TAC set_ss [Once EXTENSION, GSYM extreal_lt_def] >> METIS_TAC []) >> POP_ORW \\
+     MATCH_MP_TAC EVENTS_COMPL >> art [] \\
+     REWRITE_TAC [abs_bounds] \\
+    ‘{x | x IN p_space p /\ -e <= f n x /\ f n x <= e} =
+     ({x | -e <= f n x} INTER p_space p) INTER ({x | f n x <= e} INTER p_space p)’
+        by SET_TAC [] >> POP_ORW \\
+     MATCH_MP_TAC EVENTS_INTER >> fs [events_def, p_space_def] \\
+    ‘sigma_algebra (measurable_space p)’ by fs [prob_space_def, measure_space_def] \\
+     METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘g = \e n. prob p (A e n)’
+ >> Know ‘!e. (\n. prob p {x | x IN p_space p /\ e < abs (X n x - Y x)}) = g e’
+ >- rw [Abbr ‘A’, Abbr ‘g’, FUN_EQ_THM]
+ >> Rewr'
+ >> Know ‘!e. (\n. real (prob p {x | x IN p_space p /\ e < abs (X n x - Y x)})) = real o (g e)’
+ >- rw [Abbr ‘A’, Abbr ‘g’, FUN_EQ_THM]
+ >> Rewr'
+ >> EQ_TAC >> rw []
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e /\ e <> PosInf ==> P’ (MP_TAC o (Q.SPEC ‘e’))
+ >> RW_TAC std_ss [] (* 2 subgoals, same initial & ending tactics *)
+ >| [ (* goal 1 (of 2) *)
+      Suff ‘(g e --> 0) sequentially <=> (real o g e --> real 0) sequentially’
+      >- rw [real_0],
+      (* goal 2 (of 2) *)
+      Suff ‘(g e --> 0) sequentially <=> (real o g e --> real 0) sequentially’
+      >- fs [real_0] ]
+ >> MATCH_MP_TAC extreal_lim_sequentially_eq >> rw []
+ >> Q.EXISTS_TAC ‘0’ >> GEN_TAC >> simp [Abbr ‘g’]
+ >> PROVE_TAC [PROB_FINITE]
+QED
+
+(* |- !p X Y r.
+        (X --> Y) (in_lebesgue r p) <=>
+        0 < r /\ r <> PosInf /\ (!n. expectation p (\x. abs (X n x) powr r) <> PosInf) /\
+        expectation p (\x. abs (Y x) powr r) <> PosInf /\
+        ((\n. real (expectation p (\x. abs (X n x - Y x) powr r))) --> 0) sequentially
+ *)
 Theorem converge_LP_def =
    (List.nth (CONJUNCTS converge_def, 2)) |> SPEC_ALL |> (Q.GENL [`p`, `X`, `Y`, `r`]);
+
+(* An equivalent definition using extreal_lim (ext_tendsto) and lp_space *)
+Theorem converge_LP :
+    !p X Y r. prob_space p /\
+             (!n. real_random_variable (X n) p) /\ real_random_variable Y p /\
+              0 < r /\ r <> PosInf ==>
+       ((X --> Y) (in_lebesgue r p) <=>
+        (!n. X n IN lp_space r p) /\ Y IN lp_space r p /\
+        ((\n. expectation p (\x. abs (X n x - Y x) powr r)) --> 0) sequentially)
+Proof
+    rw [converge_LP_def, real_random_variable, expectation_def, prob_space_def,
+        p_space_def, events_def]
+ >> EQ_TAC >> rw [lp_space_alt_finite']
+ (* 2 subgoals, same initial & ending tactics *)
+ >> ‘(!n. X n IN lp_space r p) /\ Y IN lp_space r p’
+      by METIS_TAC [lp_space_alt_finite']
+ >> ‘!n. (\x. X n x - Y x) IN lp_space r p’ by METIS_TAC [lp_space_sub]
+ >> ‘!n. integral p (\x. abs (X n x - Y x) powr r) <> PosInf’
+      by METIS_TAC [lp_space_alt_finite']
+ >> Q.ABBREV_TAC ‘f = (\n. integral p (\x. abs (X n x - Y x) powr r))’
+ >> ‘(\n. real (integral p (\x. abs (X n x - Y x) powr r))) = real o f’
+      by rw [Abbr ‘f’, FUN_EQ_THM] >> fs []
+ >| [ Suff ‘(f --> 0) sequentially <=> (real o f --> real 0) sequentially’
+      >- rw [real_0],
+      Suff ‘(f --> 0) sequentially <=> (real o f --> real 0) sequentially’
+      >- fs [real_0] ]
+ >> MATCH_MP_TAC extreal_lim_sequentially_eq >> rw []
+ >> Q.EXISTS_TAC ‘0’ >> rw []
+ >> MATCH_MP_TAC pos_not_neginf
+ >> simp [Abbr ‘f’]
+ >> MATCH_MP_TAC integral_pos >> rw [powr_pos]
+QED
 
 (* tidy up theory exports, learnt from Magnus Myreen *)
 val _ = List.app Theory.delete_binding
@@ -5172,7 +5601,14 @@ Proof
  >> METIS_TAC [extreal_of_num_def, extreal_lt_eq]
 QED
 
-(* alternative definition of converge_LP using `pow k` explicitly *)
+(* alternative definition of converge_LP using `pow k` explicitly;
+   |- !p X Y k.
+        prob_space p /\ (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
+        ((X --> Y) (in_lebesgue (&k) p) <=>
+         0 < k /\ (!n. expectation p (\x. abs (X n x) pow k) <> PosInf) /\
+         expectation p (\x. abs (Y x) pow k) <> PosInf /\
+         ((\n. real (expectation p (\x. abs (X n x - Y x) pow k))) --> 0) sequentially)
+ *)
 Theorem converge_LP_alt_pow =
         SIMP_RULE std_ss [absolute_moment_def, sub_rzero]
                   converge_LP_alt_absolute_moment;
@@ -5201,6 +5637,8 @@ Proof
      EQ_TAC >> RW_TAC std_ss [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o
                  (REWRITE_RULE [LESS_EQ_REFL]) o (Q.SPEC `m`))) >> Rewr'
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know `!e n. {x | x IN p_space p /\ abs (X n x - Y x) <= e} IN events p`
  >- (RW_TAC std_ss [abs_bounds] \\
      Q.ABBREV_TAC `f = \x. X n x - Y x` \\
@@ -5418,6 +5856,8 @@ Proof
      EQ_TAC >> RW_TAC std_ss [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o
                  (REWRITE_RULE [LESS_EQ_REFL]) o (Q.SPEC `m`))) >> Rewr'
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> fs [real_random_variable_def]
  >> Know `!e n. {x | x IN p_space p /\ abs (X n x - Y x) <= e} IN events p`
  >- (RW_TAC std_ss [abs_bounds] \\
@@ -5529,6 +5969,8 @@ Proof
  >> Know `!n. D n SUBSET B n`
  >- (RW_TAC set_ss [Abbr `D`, Abbr `B`, SUBSET_DEF] \\
      Q.EXISTS_TAC `n` >> art [LESS_EQ_REFL]) >> DISCH_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Q.ABBREV_TAC `f = \n x. X n x - Y x`
  >> Know `!n. (f n) IN measurable (m_space p,measurable_sets p) Borel`
  >- (GEN_TAC >> Q.UNABBREV_TAC `f` >> BETA_TAC \\
@@ -5637,6 +6079,8 @@ Proof
  >> rpt STRIP_TAC
  >> fs [real_random_variable_def]
  >> Q.ABBREV_TAC `f = \n x. X n x - Y x`
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know `!n. (f n) IN measurable (m_space p,measurable_sets p) Borel`
  >- (GEN_TAC >> Q.UNABBREV_TAC `f` >> BETA_TAC \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
@@ -5687,6 +6131,8 @@ Proof
              (prob p (limsup (\n. {x | x IN p_space p /\ e < abs (X n x - Y x)})) = 0))`
  >- METIS_TAC []
  >> rpt STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> fs [real_random_variable_def]
  >> Q.ABBREV_TAC `f = \n x. X n x - Y x`
  >> Know `!n. (f n) IN measurable (m_space p,measurable_sets p) Borel`
@@ -5786,6 +6232,8 @@ Proof
  >> `real_random_variable (\x. 0) p` by PROVE_TAC [real_random_variable_zero]
  >> RW_TAC real_ss [converge_LP_alt_pow, converge_PR_def, LIM_SEQUENTIALLY,
                     dist, expectation_def, sub_rzero, REAL_SUB_RZERO]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> fs [real_random_variable_def]
  >> rename1 `0 < d` (* the last assumption *)
  >> Know `!n. {x | x IN p_space p /\ e < abs (X n x)} IN events p`
@@ -5897,8 +6345,7 @@ Proof
      {x | Normal (E pow k) <= (\x. abs (X n x) pow k) x} INTER m_space p`
         by SET_TAC [] >> POP_ORW \\
      Suff `(\x. abs (X n x) pow k) IN measurable (m_space p,measurable_sets p) Borel`
-     >- (DISCH_THEN (REWRITE_TAC o wrap o
-                     (MATCH_MP IN_MEASURABLE_BOREL_ALL_MEASURE))) \\
+     >- rw [IN_MEASURABLE_BOREL_ALL_MEASURE] \\
     `!x. abs (X n x) = (\x. abs (X n x)) x` by METIS_TAC [] >> POP_ORW \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
      MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS >> Q.EXISTS_TAC `X n` \\
@@ -6058,49 +6505,6 @@ Proof
  >> Q.EXISTS_TAC ‘0’ >> rw []
 QED
 
-Theorem random_variable_cong :
-    !p X Y A. (!x. x IN p_space p ==> X x = Y x) ==>
-              (random_variable X p A <=> random_variable Y p A)
-Proof
-    rw [random_variable_def]
- >> EQ_TAC >> rw []
- >| [ (* goal 1 (of 2) *)
-      fs [p_space_def, events_def, IN_MEASURABLE, IN_FUNSET, PREIMAGE_def] \\
-      CONJ_TAC >- METIS_TAC [] \\
-      rpt STRIP_TAC \\
-      Suff ‘{x | Y x IN s} INTER m_space p =
-            {x | X x IN s} INTER m_space p’ >- METIS_TAC [] \\
-      rw [Once EXTENSION] >> METIS_TAC [],
-      (* goal 2 (of 2) *)
-      fs [p_space_def, events_def, IN_MEASURABLE, IN_FUNSET, PREIMAGE_def] \\
-      rpt STRIP_TAC \\
-      Suff ‘{x | X x IN s} INTER m_space p =
-            {x | Y x IN s} INTER m_space p’ >- METIS_TAC [] \\
-      rw [Once EXTENSION] >> METIS_TAC [] ]
-QED
-
-Theorem real_random_variable_cong :
-    !p X Y. (!x. x IN p_space p ==> X x = Y x) ==>
-            (real_random_variable X p <=> real_random_variable Y p)
-Proof
-    rw [real_random_variable]
- >> EQ_TAC >> rw []
- >| [ (* goal 1 (of 2) *)
-      fs [p_space_def, events_def] \\
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
-      Q.EXISTS_TAC ‘X’ >> rw [],
-      (* goal 2 (of 2) *)
-      fs [p_space_def, events_def] \\
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
-      Q.EXISTS_TAC ‘Y’ >> rw [] ]
-QED
-
-(*
-Theorem WLLN_uncorrelated :
-
-    has been moved to examples/probability/large_numberTheory with improved statements.
- *)
-
 Theorem converge_AE_alt_shift :
     !D p X Y. (X               --> Y) (almost_everywhere p) <=>
               ((\n. X (n + D)) --> Y) (almost_everywhere p)
@@ -6155,12 +6559,6 @@ Proof
       RW_TAC arith_ss [] ]
 QED
 
-(*
-Theorem SLLN_uncorrelated :
-
-    has been moved to large_numberTheory with improved statements.
- *)
-
 (* |- !p X Y. ((\n. X (SUC n)) --> Y) (almost_everywhere p) ==>
               (X               --> Y) (almost_everywhere p)
  *)
@@ -6210,6 +6608,8 @@ Proof
  >> rw [MAX_LE]
  >> NTAC 2 (Q.PAT_X_ASSUM ‘!n. _ <= n ==> P’ (MP_TAC o (Q.SPEC ‘n’)))
  >> RW_TAC std_ss []
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  (* stage work *)
  >> Know `!Z b. real_random_variable Z p ==>
                 {x | x IN p_space p /\ b < abs (Z x)} IN events p`
@@ -6801,6 +7201,8 @@ Theorem expectation_bounds :
           suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)})
 Proof
     rpt GEN_TAC >> STRIP_TAC
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Q.ABBREV_TAC ‘A = \n. {x | x IN p_space p /\ &n <= abs (X x) /\ abs (X x) < &SUC n}’
  >> Know ‘!n. A n IN events p’
  >- (RW_TAC std_ss [Abbr ‘A’] \\
@@ -7060,22 +7462,14 @@ Proof
             SIGMA (\n. &n * f (SUC n)) (count (PRE N)) (* d *))’
      >- (MATCH_MP_TAC EQ_SYM \\
          MATCH_MP_TAC add2_sub2 (* a - b + (c - d) = a + c - (b + d) *) \\
-         rw [extreal_of_num_def, extreal_not_infty] >| (* 6 subgoals *)
-         [ (* goal 1 (of 6) *)
+         rw [extreal_of_num_def, extreal_not_infty] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
            Suff ‘(0 :real) <= &PRE N’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 2 (of 6) *)
-           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [FINITE_COUNT] \\
-           Suff ‘(0 :real) <= &SUC x’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 3 (of 6) *)
-           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [FINITE_COUNT] \\
-           Suff ‘(0 :real) <= &x’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 4 (of 6) *)
-           Suff ‘(0 :real) <= &PRE N’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 5 (of 6) *)
+           (* goal 2 (of 3) *)
            MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [FINITE_COUNT] \\
            Suff ‘(0 :real) <= &SUC x’ >- METIS_TAC [mul_not_infty] >> rw [],
-           (* goal 6 (of 6) *)
-           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [FINITE_COUNT] \\
+           (* goal 3 (of 3) *)
+           MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [FINITE_COUNT] \\
            Suff ‘(0 :real) <= &x’ >- METIS_TAC [mul_not_infty] >> rw [] ]) >> Rewr' \\
      REWRITE_TAC [sub_lzero] \\
      Know ‘SIGMA (\x. &SUC x * f (SUC x)) (count (PRE N)) -
@@ -7362,6 +7756,8 @@ Proof
  >> MATCH_MP_TAC let_trans
  >> Q.EXISTS_TAC ‘1 + suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)})’
  >> FULL_SIMP_TAC std_ss [GSYM lt_infty]
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  >> Know ‘suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)}) <> NegInf’
  >- (MATCH_MP_TAC pos_not_neginf \\
      MATCH_MP_TAC ext_suminf_pos >> rw [] \\
@@ -7550,7 +7946,7 @@ Proof
  (* applying integral_cong_measure *)
  >> ‘prob_space (space Borel,subsets Borel,distribution p (X i)) /\
      prob_space (space Borel,subsets Borel,distribution p (X n))’
-       by METIS_TAC [distribution_prob_space]
+       by METIS_TAC [distribution_prob_space, SIGMA_ALGEBRA_BOREL]
  >> MATCH_MP_TAC integrable_cong_measure
  >> fs [prob_space_def]
 QED
@@ -7604,7 +8000,7 @@ Proof
  (* applying integral_cong_measure *)
  >> ‘prob_space (space Borel,subsets Borel,distribution p (X i)) /\
      prob_space (space Borel,subsets Borel,distribution p (X n))’
-       by METIS_TAC [distribution_prob_space]
+       by METIS_TAC [distribution_prob_space, SIGMA_ALGEBRA_BOREL]
  >> MATCH_MP_TAC integral_cong_measure
  >> fs [prob_space_def]
 QED
@@ -7640,7 +8036,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-(* Theorem 3.3.1 [2, p.54], slightly generalized *)
+(* Theorem 3.3.1 [2, p.54], slightly generalized to arbitrary index set *)
 Theorem indep_vars_cong :
     !p X B (J :'index set) f.
          indep_vars p (X :'index -> 'a -> 'b) B (J :'index set) /\
@@ -7676,10 +8072,16 @@ Proof
         (SIMP_RULE (srw_ss()) [random_variable_def, IN_MEASURABLE, IN_FUNSET])) \\
      PROVE_TAC [])
  >> Rewr'
- >> FIRST_X_ASSUM irule
+ >> FIRST_X_ASSUM MATCH_MP_TAC
  >> fs [Abbr ‘E'’, PREIMAGE_def, IN_DFUNSET, IN_MEASURABLE]
+ >> rw []
+ >> Q.PAT_X_ASSUM ‘!n. n IN J ==> f n IN (space (B n) -> space (B n)) /\ _’
+      (MP_TAC o (Q.SPEC ‘x’))
+ >> ‘x IN J’ by PROVE_TAC [SUBSET_DEF]
+ >> rw []
 QED
 
+(* A specialized version of previous theorem for only two r.v.'s *)
 Theorem indep_rv_cong :
     !p X Y A B f g. indep_rv p X Y A B /\
                     random_variable X p A /\ random_variable Y p B /\
@@ -7704,6 +8106,7 @@ Proof
  >> Cases_on ‘n = 0’ >> rw []
 QED
 
+(* Another version of "indep_vars_cong" for pairwise independent r.v.'s *)
 Theorem pairwise_indep_vars_cong :
     !p X B (J :'index set) f.
          pairwise_indep_vars p (X :'index -> 'a -> 'b) B (J :'index set) /\
@@ -7733,11 +8136,13 @@ Proof
  >> Q.ABBREV_TAC ‘f = \x. (X x,Y x)’
  >> Q.ABBREV_TAC ‘u = \(x,y). x * (y :extreal)’
  >> ‘(\x. X x * Y x) = u o f’ by rw [Abbr ‘u’, Abbr ‘f’, o_DEF] >> POP_ORW
+ >> ‘sigma_algebra (measurable_space p)’
+      by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def]
  (* applying MEASURABLE_PROD_SIGMA' *)
  >> Know ‘f IN measurable (m_space p,measurable_sets p) (Borel CROSS Borel)’
  >- (MATCH_MP_TAC MEASURABLE_PROD_SIGMA' \\
-     STRONG_CONJ_TAC >- fs [measure_space_def] >> DISCH_TAC \\
-     rw [Abbr ‘f’, o_DEF, ETA_AX])
+     simp [Abbr ‘f’, o_DEF, ETA_AX] \\
+     MP_TAC SIGMA_ALGEBRA_BOREL >> rw [sigma_algebra_def, algebra_def])
  >> DISCH_TAC
  >> Know ‘u IN measurable (Borel CROSS Borel) Borel’
  >- (Q.UNABBREV_TAC ‘u’ \\
@@ -7854,8 +8259,7 @@ Proof
  >> Q.PAT_X_ASSUM ‘f IN measurable (m_space p,measurable_sets p) (Borel CROSS Borel)’ K_TAC
  >> Q.UNABBREV_TAC ‘f’
  (* applying Fubini; finiteness / integrability is needed here. *)
- >> Know ‘integral (m1 CROSS m2) u =
-          integral m2 (\y. integral m1 (\x. u (x,y)))’
+ >> Know ‘integral (m1 CROSS m2) u = integral m2 (\y. integral m1 (\x. u (x,y)))’
  >- (MP_TAC (ISPECL [“m1 :extreal m_space”, “m2 :extreal m_space”,
                      “u :extreal # extreal -> extreal”] Fubini) \\
      Know ‘((m_space m1,measurable_sets m1) CROSS
@@ -7948,7 +8352,7 @@ Proof
        >- (MATCH_MP_TAC pos_fn_integral_distr \\
            rw [FN_PLUS_POS, SIGMA_ALGEBRA_BOREL] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS \\
-           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I]) >> Rewr' \\
+           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I, SIGMA_ALGEBRA_BOREL]) >> Rewr' \\
       ‘(fn_plus (\x. x) o X) = fn_plus X’ by rw [fn_plus_def, o_DEF] >> POP_ORW \\
        fs [integrable_def],
        (* goal 2 (of 2) *)
@@ -7957,7 +8361,7 @@ Proof
        >- (MATCH_MP_TAC pos_fn_integral_distr \\
            rw [FN_MINUS_POS, SIGMA_ALGEBRA_BOREL] \\
            MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS \\
-           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I]) >> Rewr' \\
+           REWRITE_TAC [IN_MEASURABLE_BOREL_BOREL_I, SIGMA_ALGEBRA_BOREL]) >> Rewr' \\
       ‘(fn_minus (\x. x) o X) = fn_minus X’ by rw [fn_minus_def, o_DEF] >> POP_ORW \\
        fs [integrable_def] ])
  >> Rewr'
@@ -8008,6 +8412,18 @@ Proof
  >> MATCH_MP_TAC indep_vars_expectation >> art []
  >> CONJ_TAC (* 2 subgoals, same tactics *)
  >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
+QED
+
+Theorem pairwise_indep_vars_imp_uncorrelated :
+    !p X A (J :'index set). prob_space p /\
+           (!i. i IN J ==> real_random_variable (X i) p) /\
+           (!i. i IN J ==> finite_second_moments p (X i)) /\
+            pairwise_indep_vars p X (\n. Borel) J ==>
+            uncorrelated_vars p X J
+Proof
+    RW_TAC std_ss [pairwise_indep_vars_def, uncorrelated_vars_def]
+ >> MATCH_MP_TAC indep_vars_imp_uncorrelated
+ >> ASM_SIMP_TAC std_ss []
 QED
 
 (* another version of variance_sum for pairwise independent r.v.'s *)
@@ -8540,6 +8956,21 @@ Proof
 QED
 
 (* ========================================================================= *)
+(*  Additional theorems of conditional probabilities on independent events   *)
+(* ========================================================================= *)
+
+Theorem indep_alt_cond_prob :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\ prob p B <> 0 ==>
+           (indep p A B <=> cond_prob p A B = prob p A)
+Proof
+    rw [indep_def]
+ >> rw [COND_PROB_MUL_RULE, Once mul_comm]
+ >> Suff ‘cond_prob p A B * prob p B = prob p A * prob p B <=>
+          prob p B = 0 \/ cond_prob p A B = prob p A’ >- rw []
+ >> MATCH_MP_TAC mul_rcancel >> rw [PROB_FINITE]
+QED
+
+(* ========================================================================= *)
 (*   Probability Density Function                                            *)
 (*  (see examples/probability/normal_rvScript.sml for the ‘lborel’ version)  *)
 (* ========================================================================= *)
@@ -8559,7 +8990,7 @@ Theorem pdf_le_pos :
 Proof
     rpt STRIP_TAC
  >> `measure_space (space Borel, subsets Borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space, prob_space_def]
+       by PROVE_TAC [distribution_prob_space, prob_space_def, SIGMA_ALGEBRA_BOREL]
  >> ASSUME_TAC SIGMA_FINITE_LBOREL
  >> ASSUME_TAC MEASURE_SPACE_LBOREL
  >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
@@ -8578,7 +9009,7 @@ Theorem expectation_pdf_1 :
 Proof
     rpt STRIP_TAC
  >> `prob_space (space Borel, subsets Borel, distribution p X)`
-       by PROVE_TAC [distribution_prob_space]
+       by PROVE_TAC [distribution_prob_space, SIGMA_ALGEBRA_BOREL]
  >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
  >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
                    expectation_def]

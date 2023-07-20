@@ -257,13 +257,14 @@ QED
 (* Characterize closed sets in a topological space                           *)
 (*---------------------------------------------------------------------------*)
 
-val closed_in = new_definition ("closed_in",
-  ``closed_in top s <=>
-        s SUBSET (topspace top) /\ open_in top (topspace top DIFF s)``);
+Definition closed_in:
+  closed_in top s <=>
+        s SUBSET (topspace top) /\ open_in top (topspace top DIFF s)
+End
 
 (* global (abstract) notion of closed sets *)
-val closed_DEF = new_definition
-  ("closed_DEF", ``closed (s :'a topology) = (closed_in s) UNIV``);
+Definition closed_DEF: closed (s :'a topology) = (closed_in s) UNIV
+End
 
 val closed_topspace = store_thm
   ("closed_topspace", ``!top. closed top ==> (topspace top = UNIV)``,
@@ -283,18 +284,22 @@ val CLOSED_IN_SUBSET = store_thm ("CLOSED_IN_SUBSET",
  ``!top s. closed_in top s ==> s SUBSET (topspace top)``,
   PROVE_TAC[closed_in]);
 
-val CLOSED_IN_EMPTY = store_thm ("CLOSED_IN_EMPTY",
- ``!top. closed_in top {}``,
-  REWRITE_TAC[closed_in, EMPTY_SUBSET, DIFF_EMPTY, OPEN_IN_TOPSPACE]);
+Theorem CLOSED_IN_EMPTY[simp]: !top. closed_in top {}
+Proof
+  REWRITE_TAC[closed_in, EMPTY_SUBSET, DIFF_EMPTY, OPEN_IN_TOPSPACE]
+QED
 
-val CLOSED_IN_TOPSPACE = store_thm ("CLOSED_IN_TOPSPACE",
- ``!top. closed_in top (topspace top)``,
-  REWRITE_TAC[closed_in, SUBSET_REFL, DIFF_EQ_EMPTY, OPEN_IN_EMPTY]);
+Theorem CLOSED_IN_TOPSPACE[simp]: !top. closed_in top (topspace top)
+Proof
+  REWRITE_TAC[closed_in, SUBSET_REFL, DIFF_EQ_EMPTY, OPEN_IN_EMPTY]
+QED
 
-val CLOSED_IN_UNION = store_thm ("CLOSED_IN_UNION",
- ``!top s t. closed_in top s /\ closed_in top t ==> closed_in top (s UNION t)``,
+Theorem CLOSED_IN_UNION:
+ !top s t. closed_in top s /\ closed_in top t ==> closed_in top (s UNION t)
+Proof
   SIMP_TAC std_ss [closed_in, UNION_SUBSET, OPEN_IN_INTER,
-           SET_RULE ``u DIFF (s UNION t) = (u DIFF s) INTER (u DIFF t)``]);
+                   SET_RULE “u DIFF (s UNION t) = (u DIFF s) INTER (u DIFF t)”]
+QED
 
 Theorem CLOSED_IN_BIGINTER:
  !top k:('a->bool)->bool.
@@ -315,18 +320,22 @@ Proof
   simp[PULL_EXISTS] THEN METIS_TAC[]
 QED
 
-val CLOSED_IN_INTER = store_thm ("CLOSED_IN_INTER",
- ``!top s t. closed_in top s /\ closed_in top t ==> closed_in top (s INTER t)``,
+Theorem CLOSED_IN_INTER:
+ !top s t. closed_in top s /\ closed_in top t ==> closed_in top (s INTER t)
+Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM BIGINTER_2] THEN
   MATCH_MP_TAC CLOSED_IN_BIGINTER THEN REPEAT (POP_ASSUM MP_TAC) THEN
-  SET_TAC[]);
+  SET_TAC[]
+QED
 
-val OPEN_IN_CLOSED_IN_EQ = store_thm ("OPEN_IN_CLOSED_IN_EQ",
- ``!top s. open_in top s <=>
-           s SUBSET topspace top /\ closed_in top (topspace top DIFF s)``,
+Theorem OPEN_IN_CLOSED_IN_EQ:
+ !top s. open_in top s <=>
+         s SUBSET topspace top /\ closed_in top (topspace top DIFF s)
+Proof
   REWRITE_TAC[closed_in, SET_RULE ``(u DIFF s) SUBSET u``] THEN
   REWRITE_TAC[SET_RULE ``u DIFF (u DIFF s) = u INTER s``] THEN
-  PROVE_TAC[OPEN_IN_SUBSET, SET_RULE ``s SUBSET t ==> (t INTER s = s)``]);
+  PROVE_TAC[OPEN_IN_SUBSET, SET_RULE ``s SUBSET t ==> (t INTER s = s)``]
+QED
 
 val OPEN_IN_CLOSED_IN = store_thm ("OPEN_IN_CLOSED_IN",
  ``!top s. s SUBSET topspace top
@@ -616,7 +625,7 @@ Proof
   simp[] THEN METIS_TAC []
 QED
 
-Theorem TOPSPACE_SUBTOPOLOGY :
+Theorem TOPSPACE_SUBTOPOLOGY[simp]:
   !top u. topspace(subtopology top u) = topspace top INTER u
 Proof
   REWRITE_TAC[topspace, OPEN_IN_SUBTOPOLOGY, INTER_BIGUNION] THEN
@@ -638,21 +647,21 @@ Proof
   REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
 QED
 
-Theorem OPEN_IN_SUBTOPOLOGY_EMPTY :
+Theorem OPEN_IN_SUBTOPOLOGY_EMPTY[simp]:
     !top s. open_in (subtopology top {}) s <=> (s = {})
 Proof
   REWRITE_TAC[OPEN_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
   MESON_TAC[OPEN_IN_EMPTY]
 QED
 
-Theorem CLOSED_IN_SUBTOPOLOGY_EMPTY :
+Theorem CLOSED_IN_SUBTOPOLOGY_EMPTY[simp]:
     !top s. closed_in (subtopology top {}) s <=> (s = {})
 Proof
   REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
   MESON_TAC[CLOSED_IN_EMPTY]
 QED
 
-Theorem OPEN_IN_SUBTOPOLOGY_REFL :
+Theorem OPEN_IN_SUBTOPOLOGY_REFL[simp]:
     !top u:'a->bool. open_in (subtopology top u) u <=> u SUBSET topspace top
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
@@ -663,7 +672,7 @@ Proof
     REWRITE_TAC[OPEN_IN_TOPSPACE] THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]
 QED
 
-Theorem CLOSED_IN_SUBTOPOLOGY_REFL :
+Theorem CLOSED_IN_SUBTOPOLOGY_REFL[simp]:
     !top u:'a->bool. closed_in (subtopology top u) u <=> u SUBSET topspace top
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
@@ -690,13 +699,13 @@ Proof
     REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]
 QED
 
-Theorem SUBTOPOLOGY_TOPSPACE :
+Theorem SUBTOPOLOGY_TOPSPACE[simp]:
     !top. subtopology top (topspace top) = top
 Proof
   SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_REFL]
 QED
 
-Theorem SUBTOPOLOGY_UNIV :
+Theorem SUBTOPOLOGY_UNIV[simp]:
     !top. subtopology top UNIV = top
 Proof
   SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_UNIV]
@@ -740,7 +749,7 @@ Proof
   REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
 QED
 
-Theorem SUBTOPOLOGY_SUBTOPOLOGY :
+Theorem SUBTOPOLOGY_SUBTOPOLOGY[simp] :
    !top s t:'a->bool.
         subtopology (subtopology top s) t = subtopology top (s INTER t)
 Proof

@@ -51,11 +51,6 @@ fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
 
 fun setStatus s = fupdStatus (fn _ => s)
 
-fun addDeps0 dps {target,command,status,dependencies,seqnum,phony,dir,extra} =
-  {target = target, status = status, command = command, phony = phony,
-   dependencies = dps @ dependencies, seqnum = seqnum, dir = dir, extra = extra}
-
-
 val node_compare = Int.compare
 fun bic_compare (BIC_Compile, BIC_Compile) = EQUAL
   | bic_compare (BIC_Compile, _) = LESS
@@ -93,12 +88,6 @@ fun find_nodes_by_command (g : 'a t) dc =
 fun size (g : 'a t) = Map.numItems (#nodes g)
 fun peeknode (g:'a t) n = Map.peek(#nodes g, n)
 val empty_nodeset = Binaryset.empty (pair_compare(node_compare, String.compare))
-
-fun addDeps (n,dps) g =
-  case peeknode g n of
-      NONE => raise NoSuchNode
-    | SOME nI =>
-      fupd_nodes (fn nm => Binarymap.insert(nm,n,addDeps0 dps nI)) g
 
 fun nodeStatus g n =
   case peeknode g n of

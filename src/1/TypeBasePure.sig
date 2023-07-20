@@ -121,6 +121,7 @@ sig
                          (hol_type -> term option) *
                          (hol_type -> term) -> hol_type -> term
 
+   val type_size_pre   : (hol_type -> term option) -> typeBase -> hol_type -> term
    val type_size       : typeBase -> hol_type -> term
    val type_encode     : typeBase -> hol_type -> term
    val type_lift       : typeBase -> hol_type -> term

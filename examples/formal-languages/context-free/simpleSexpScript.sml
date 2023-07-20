@@ -7,31 +7,23 @@ open monadsyntax pegTheory
 
 val _ = new_theory "simpleSexp";
 
-val _ = temp_add_monadsyntax()
-
-val _ = overload_on ("monad_bind", ``OPTION_BIND``)
-val _ = overload_on ("monad_unitbind", ``OPTION_IGNORE_BIND``)
-val _ = temp_overload_on ("return", ``SOME``)
-val _ = temp_overload_on ("SOME", ``SOME``)
+val _ = enable_monadsyntax()
+val _ = enable_monad "option"
 
 val _ = computeLib.add_persistent_funs ["option.OPTION_BIND_def",
                                         "option.OPTION_IGNORE_BIND_def",
                                         "option.OPTION_GUARD_def",
                                         "option.OPTION_CHOICE_def"]
 
-val _ = overload_on ("assert", ``option$OPTION_GUARD : bool -> unit option``)
-val _ = overload_on ("++", ``option$OPTION_CHOICE``)
-
-
-val _ = Datatype`
+Datatype:
   sexp = SX_CONS sexp sexp
        | SX_SYM string
        | SX_NUM num
        | SX_STR string
-`;
+End
 
 val _ = add_numeral_form(#"s", SOME "SX_NUM")
-val _ = overload_on ("nil", ``SX_SYM "nil"``)
+Overload nil = “SX_SYM "nil"”
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
                    fixity = Closefix,
                    paren_style = OnlyIfNecessary,
@@ -44,63 +36,78 @@ val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
                        nilstr = "nil", rightdelim = [Parse.TOK "⟫"],
                        separator = [Parse.TOK ";", BreakSpace(1,0)]}
 
-val _ = overload_on ("’", ``λs. ⟪ SX_SYM "quote" ; s ⟫``)
+Overload "’" = “λs. ⟪ SX_SYM "quote" ; s ⟫”
 
-val valid_first_symchar_def = Define`
-  valid_first_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"; #"."; #"\""} ∧ ¬isDigit c`;
+Definition valid_first_symchar_def[simp]:
+  valid_first_symchar c ⇔
+    isGraph c ∧ c ∉ {#"'"; #"("; #")"; #"."; #"\""} ∧ ¬isDigit c
+End
 
-val valid_symchar_def =  Define`
-  valid_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"}`;
+Definition valid_symchar_def[simp]:
+  valid_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"}
+End
 
-val valid_symbol_def = Define`
+Definition valid_symbol_def[simp]:
    (valid_symbol "" ⇔ F) ∧
-   (valid_symbol (c::cs) ⇔ valid_first_symchar c ∧ EVERY valid_symchar cs)`;
+   (valid_symbol (c::cs) ⇔ valid_first_symchar c ∧ EVERY valid_symchar cs)
+End
 
-val valid_sexp_def = Define`
+Definition valid_sexp_def[simp]:
   (valid_sexp (SX_SYM s) ⇔ valid_symbol s) ∧
   (valid_sexp (SX_CONS s1 s2) ⇔ valid_sexp s1 ∧ valid_sexp s2) ∧
   (valid_sexp (SX_STR s) ⇔ EVERY isPrint s) ∧
-  (valid_sexp s ⇔ T)`;
-val _ = export_rewrites["valid_first_symchar_def","valid_symchar_def","valid_symbol_def","valid_sexp_def"];
+  (valid_sexp s ⇔ T)
+End
 
-val arb_sexp_def = Define`arb_sexp = SX_NUM 0`;
+Definition arb_sexp_def: arb_sexp = SX_NUM 0
+End
 
-val destSXNUM_def = Define`
+Definition destSXNUM_def:
   destSXNUM (SX_NUM n) = n ∧
   destSXNUM _ = 0
-`;
+End
 
-val destSXSYM_def = Define`
+Definition destSXSYM_def:
   destSXSYM (SX_SYM s) = s ∧
   destSXSYM _ = ""
-`;
+End
 
-val destSXCONS_def = Define`
+Definition destSXCONS_def:
   destSXCONS (SX_CONS a d) = (a,d) ∧
   destSXCONS _ = (arb_sexp, arb_sexp)
-`;
+End
 
-val strip_sxcons_def = Define`
+Definition strip_sxcons_def:
   strip_sxcons s =
     case s of
         SX_CONS h t => OPTION_MAP (CONS h) (strip_sxcons t)
       | SX_SYM s => if s = "nil" then SOME []
                     else NONE
       | _ => NONE
-`;
+End
+
+Theorem strip_sxcons_thm[simp]:
+  strip_sxcons (SX_NUM n) = NONE ∧
+  strip_sxcons (SX_SYM s) = (if s = "nil" then SOME [] else NONE) ∧
+  strip_sxcons (SX_STR s) = NONE ∧
+  strip_sxcons (SX_CONS h t) = OPTION_MAP (CONS h) (strip_sxcons t)
+Proof
+  rpt strip_tac >> simp[SimpLHS, Once strip_sxcons_def]
+QED
 
 val sxMEM_def = Define`
   sxMEM e s ⇔ ∃l. strip_sxcons s = SOME l ∧ MEM e l
 `;
 
-val sexp_size_def = definition"sexp_size_def";
+Theorem sexp_size_def[simp] = definition"sexp_size_def";
 
-val sxMEM_sizelt = store_thm(
-  "sxMEM_sizelt",
-  ``∀s1 s2. sxMEM s1 s2 ⇒ sexp_size s1 < sexp_size s2``,
+Theorem sxMEM_sizelt:
+  ∀s1 s2. sxMEM s1 s2 ⇒ sexp_size s1 < sexp_size s2
+Proof
   dsimp[sxMEM_def] >> Induct_on `s2` >>
-  dsimp[Once strip_sxcons_def, sexp_size_def] >> rpt strip_tac >>
-  res_tac >> simp[]);
+  dsimp[sexp_size_def] >> rpt strip_tac >>
+  res_tac >> simp[]
+QED
 
 val dstrip_sexp_def = Define`
   (dstrip_sexp (SX_CONS sym args) =

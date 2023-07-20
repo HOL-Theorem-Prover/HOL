@@ -789,14 +789,19 @@ fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
              handle HOL_ERR _ =>
              raise ERR "type_size.Zero()" "Numbers not declared"
 
-fun type_size db ty =
+fun type_size_pre theta db ty =
  let fun K0 ty = mk_abs(mk_var("v",ty),Zero())
-     fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
+     fun theta2 ty = case theta ty of
+         NONE => if is_vartype ty then SOME (K0 ty) else NONE
+       | SOME sz => if type_of sz = (ty --> num()) then SOME sz
+         else raise (ERR "type_size_pre" "pre-supplied size has wrong type")
      val gamma = Option.map fst o
                  Option.composePartial (size_of,fetch db)
   in
     typeValue (theta,gamma,K0) ty
   end
+
+val type_size = type_size_pre (fn _ => NONE)
 
 (*---------------------------------------------------------------------------
     Encoding: map a HOL type (ty) into a term having type :ty -> bool list

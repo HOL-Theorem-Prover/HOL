@@ -350,15 +350,14 @@ open optionTheory; (* for Consecutive LCM Function *)
        If x <> 1,
           Then 1 < x, so true   by LOG
 *)
-val self_to_log_index_member = store_thm(
-  "self_to_log_index_member",
-  ``!n x. MEM x [1 .. n] ==> MEM (x ** LOG x n) [1 .. n]``,
-  rw[listRangeINC_MEM] >-
-  metis_tac[EXP_POS, DECIDE ``0 < n <=> 1 <= n``] >>
-  `0 < n /\ 1 <= n` by decide_tac >>
-  Cases_on `x = 1` >-
-  rw[EXP_1] >>
-  rw[LOG]);
+Theorem self_to_log_index_member:
+  !n x. MEM x [1 .. n] ==> MEM (x ** LOG x n) [1 .. n]
+Proof
+  rw[listRangeINC_MEM] >>
+  ‘0 < n /\ 1 <= n’ by decide_tac >>
+  Cases_on ‘x = 1’ >-
+  rw[EXP_1] >> rw[LOG]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Power or Coprime Factors                                            *)
@@ -2896,7 +2895,7 @@ val park_on_off_total_image_partition = store_thm(
                                                      prime_power_index_pos, prime_powers_eq
                    x DIFF u
                  = (IMAGE f pm) DIFF (IMAGE f pk) by notation
-                 = IMAGE f (pm DIFF pk)           by IMAGE_INJ_SUBSET_DIFF
+                 = IMAGE f (pm DIFF pk)           by IMAGE_DIFF
                  = h                              by notation
           Note FINITE x                           by prime_divisors_finite, IMAGE_FINITE
            and u SUBSET x                         by SUBSET_DEF, IMAGE_SUBSET
@@ -2916,7 +2915,7 @@ val park_on_off_total_image_partition = store_thm(
                                                      prime_power_index_pos, prime_powers_eq
                    y DIFF v
                  = (IMAGE f pn) DIFF (IMAGE f pk) by notation
-                 = IMAGE f (pn DIFF pk)           by IMAGE_INJ_SUBSET_DIFF
+                 = IMAGE f (pn DIFF pk)           by IMAGE_DIFF
                  = k                              by notation
           Note FINITE y                           by prime_divisors_finite, IMAGE_FINITE
            and v SUBSET y                         by SUBSET_DEF, IMAGE_SUBSET
@@ -3002,7 +3001,7 @@ Proof
                by (rw[INJ_DEF] >>
                    metis_tac[prime_divisors_element, prime_power_index_pos,
                              prime_powers_eq]) >>
-             metis_tac[IMAGE_INJ_SUBSET_DIFF]) >>
+             metis_tac[IMAGE_DIFF]) >>
         ‘FINITE x’ by rw[prime_divisors_finite, Abbr‘x’] >>
         ‘u SUBSET x’ by rw[SUBSET_DEF, Abbr‘u’, Abbr‘x’] >>
         ‘x =|= u # h’ by metis_tac[partition_by_subset] >>
@@ -3087,7 +3086,7 @@ val lcm_fun_def = Define`
                   | NONE   => lcm_fun (n - 1))
 `;
 
-` (* use a measure that is decreasing *)
+(* use a measure that is decreasing *)
 e (WF_REL_TAC `measure (\n k. k * n)`);
 e (rpt strip_tac);
 *)
@@ -4095,7 +4094,8 @@ Proof
   ‘1 < p’ by rw[ONE_LT_PRIME] >>
   ‘LOG p n <> 0’ by rw[LOG_EQ_0] >>
   metis_tac[prime_powers_eq, NOT_ZERO_LT_ZERO]) >>
-  metis_tac[PROD_SET_PRODUCT_GE_CONSTANT]);
+  metis_tac[PROD_SET_PRODUCT_GE_CONSTANT]
+QED
 
 (* Another significant result. *)
 

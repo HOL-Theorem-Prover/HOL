@@ -7,10 +7,10 @@
 structure Holmake =
 struct
 
-open Systeml Holmake_tools Holmake_types
+open Systeml Holmake_tools Holmake_types HOLFileSys
 infix forces_update_of depforces_update_of |>
 
-structure FileSys = OS.FileSys
+structure FileSys = HOLFileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
@@ -32,8 +32,6 @@ in
   map dequote (tokenize (perform_substitution env [VREF id]))
 end
 
-fun println s = TextIO.print(s ^ "\n")
-
 fun chattiness_level (switches : HM_Core_Cline.t) =
   case (#debug switches, #verbose switches, #quiet switches) of
       (SOME _, _, _) => 3
@@ -44,8 +42,7 @@ fun chattiness_level (switches : HM_Core_Cline.t) =
 fun main() = let
 
 val execname = Path.file (CommandLine.name())
-fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-              TextIO.flushOut TextIO.stdErr)
+fun warn s = stdErr_out (execname^": "^s^"\n")
 fun die s = (warn s; Process.exit Process.failure)
 val original_dir = hmdir.curdir()
 
@@ -111,7 +108,7 @@ fun read_holpathdb() =
     let
       val holpathdb_extensions =
           holpathdb.search_for_extensions (fn s => [])
-            {starter_dirs = [OS.FileSys.getDir()], skip = holpathdb.db_dirs()}
+            {starter_dirs = [FileSys.getDir()], skip = holpathdb.db_dirs()}
       val _ = List.app holpathdb.extend_db holpathdb_extensions
       open Holmake_types
       fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
@@ -139,7 +136,7 @@ val _ =
               ReadHMF.find_includes
               {diag = diag0 "read-preexecs"}
               {filename = ".hol_preexec",
-               starter_dirs = [OS.FileSys.getDir()],
+               starter_dirs = [FileSys.getDir()],
                skip = empty_strset}
 
         val _ = diag0 "startup"
@@ -164,7 +161,7 @@ val _ =
       in
         if #no_preexecs master_cline_option_value then ()
         else
-          let val _ = OS.FileSys.chDir k
+          let val _ = FileSys.chDir k
               val res = OS.Process.system c
           in
             if OS.Process.isSuccess res then hmdir.chdir original_dir
@@ -206,7 +203,7 @@ local
   val hmcache = ref (Binarymap.mkDict String.compare)
   val default = (base,empty_trdb,NONE)
   fun get_hmf0 d =
-      if OS.FileSys.access("Holmakefile", [OS.FileSys.A_READ]) then
+      if FileSys.access("Holmakefile", [FileSys.A_READ]) then
         let
           val (env, rdb, tgt0) =
               ReadHMF.diagread {warn=warn0,die=die,info=info0}
@@ -229,7 +226,7 @@ local
 in
 fun get_hmf () =
     let
-      val d = OS.FileSys.getDir()
+      val d = FileSys.getDir()
     in
       case Binarymap.peek(!hmcache, d) of
           NONE => let val result = get_hmf0 d
@@ -479,14 +476,14 @@ let
        data = data,
        incdirmap = extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
     else let
-      val _ = OS.FileSys.access
-                (hmdir.toAbsPath newdir, [OS.FileSys.A_READ, OS.FileSys.A_EXEC])
+      val _ = FileSys.access
+                (hmdir.toAbsPath newdir, [FileSys.A_READ, FileSys.A_EXEC])
               orelse
                 die ("Attempt to recurse into non-existent directory: " ^
                      hmdir.pretty_dir newdir ^
                      "\n  (Probably a result of bad INCLUDES spec.)")
       val _ = diag (fn _ => "recursively: Visited set = " ^ print_set visited)
-      val _ = OS.FileSys.chDir (hmdir.toAbsPath newdir)
+      val _ = FileSys.chDir (hmdir.toAbsPath newdir)
       val result =
           case recur_abbrev newdir data
                             {incdirmap=incdirmap, visited=visited,
@@ -496,7 +493,7 @@ let
               {visited = visited,
                incdirmap = extend_idmap dir (idm_lookup idm0 newdir) idm0,
                data = data'}
-      val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
+      val _ = FileSys.chDir (hmdir.toAbsPath dir)
     in
       case result of
           {visited,incdirmap,data} =>
@@ -542,9 +539,9 @@ val () = if do_logging_flag then
              warn "Make log exists; new logging will concatenate on this file"
            else let
                (* touch the file *)
-               val outs = TextIO.openOut logfilename
+               val outs = openOut logfilename
              in
-               TextIO.closeOut outs
+               closeOut outs
              end handle IO.Io _ => warn "Couldn't set up make log"
          else ()
 
@@ -995,7 +992,7 @@ in
               val _ = if is_phony then diag (fn _ => target_s ^" is phony")
                       else ()
               val needs_building_by_deps_existence =
-                  not (OS.FileSys.access(target_s, [])) orelse
+                  not (FileSys.access(target_s, [])) orelse
                   not (null unbuilt_deps) orelse
                   List.exists (fn d => d depforces_update_of tgt)
                               dependencies orelse
@@ -1217,10 +1214,10 @@ fun work() =
             List.filter (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
         fun visit_and_clean tgts d =
             let
-              val _ = OS.FileSys.chDir (hmdir.toAbsPath d)
+              val _ = FileSys.chDir (hmdir.toAbsPath d)
             in
               List.app do_clean_target tgts;
-              OS.FileSys.chDir (hmdir.toAbsPath original_dir)
+              FileSys.chDir (hmdir.toAbsPath original_dir)
             end
         fun transform_thy_target s =
             if String.isSuffix "Theory" s then s ^ ".uo"

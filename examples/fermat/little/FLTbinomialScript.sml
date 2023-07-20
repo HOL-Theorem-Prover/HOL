@@ -18,7 +18,7 @@ Proof:
     = SUM (GENLIST (\j. (binomial p j)* k**(p-j)) (SUC p))           by arithmetic
 
    By prime_iff_divides_binomials,
-      prime p <=> 1 < p /\ (!j. 0 < j /\ j < p ==> divides p (binomial p j))`;
+      prime p <=> 1 < p /\ (!j. 0 < j /\ j < p ==> divides p (binomial p j));
    Therefore in mod p,
       (k+1)^p = k^p + 1^p    (mod p)   just first and last terms
               = k   + 1^p    (mod p)   by induction hypothesis

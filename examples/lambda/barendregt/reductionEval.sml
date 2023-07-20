@@ -269,7 +269,7 @@ val NORMSTAR_ss = SSFRAG {
            {conv = mngcnv noreduct_CONV,
             key = SOME([], mk_comb(noreduct_t, Mv_t)),
             name = "noreduct_CONV", trace = 2}],
-  filter = SOME normstar_filter, dprocs = [], name = SOME "NORMSTAR_ss",
+  filter = SOME normstar_filter, dprocs = [], name = SOME "NORMSTAR",
   rewrs = [(SOME{Thy = "normal_order", Name = "normstar_nopath"},
             normstar_nopath),
            (SOME{Thy = "term", Name = "lemma14b"}, termTheory.lemma14b)]};

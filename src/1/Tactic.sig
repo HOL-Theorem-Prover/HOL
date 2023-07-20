@@ -23,7 +23,8 @@ sig
   val MP_TAC                : thm_tactic
   val mp_tac                : thm_tactic
   val EQ_TAC                : tactic
-  val eq_tac                : tactic
+  val eq_tac                : tactic (* alias for EQ_TAC *)
+  val iff_tac               : tactic (* alias for EQ_TAC *)
   val X_GEN_TAC             : term -> tactic
   val GEN_TAC               : tactic
   val gen_tac               : tactic
@@ -144,5 +145,10 @@ sig
 
   val mp_then      : match_position -> thm_tactic -> thm -> thm -> tactic
   val resolve_then : match_position -> thm_tactic -> thm -> thm -> tactic
+
+  val export_ignore : KernelSig.kernelname -> unit
+  val get_ignores : unit -> KernelSig.kernelname HOLset.set
+  val unignoringc : term -> ('a -> 'b) -> ('a -> 'b)
+  val unignoring : KernelSig.kernelname -> ('a -> 'b) -> ('a -> 'b)
 
 end

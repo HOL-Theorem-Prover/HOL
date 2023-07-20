@@ -32,9 +32,10 @@ All files are located under tools/vim
 
 1. Add the contents of `hol-config.sml` to your `~/.hol-config.sml` file
 2. Add the contents of `filetype.vim` to your `~/.vim/filetype.vim`
-3. Run hol to start the HOL session
+3. Run hol to start the HOL session (only necessary when using vim without
+   support for terminal buffers)
 4. Run vim and open a HOL script
-5. Select some SML value or declaration and type hs to send it to the HOL
+5. Select some SML value or declaration and type `hs` to send it to the HOL
    session. See below for more key mappings
 
 If you don't have `filetype on` in vim, then this won't work. In that case, you
@@ -52,9 +53,14 @@ are using a custom fifo path).
 ## HOL interactive session inside the vim editor
 
 Neovim and some versions of vim can run the interactive HOL session (HOL repl) in a terminal buffer within the editor, right next to a file buffer.
-Vim supports this feature if `:echo has('terminal')` prints `1`.
-For the supported versions, this plugin offers additional keyboard mappings to open and close a HOL session, as documented below in the section *key mappings for the HOL repl buffer*.
-Whenever a HOL session is started, a new unique fifo is created.
+Vim supports this feature if `:echo has('terminal')` prints `1`, neovim if `:echo exists(':terminal')` prints a non-zero value.
+For the supported versions, this plugin offers additional keyboard mappings to open and close a terminal buffer running hol, as documented below in the section *key mappings for the HOL repl buffer*.
+Whenever a new HOL interactive session is started, a new unique fifo is created.
+
+The `hol` executable that is run in the interactive session is determined in the following order:
+1. If `Holmake` was previously run in the current working directory of the loaded theory file before (and thus the file `.HOLMK/lastmaker` exists) the plugin attempts to run the `hol` that is relative to the previously used `Holmake`.
+2. Otherwise, if the `$HOLDIR` environment variable is set the plugin attempts to run `$HOLDIR/bin/hol`.
+3. Otherwise, simply `hol` will be run (expecting `hol` to be in the `$PATH` environment variable).
 
 Read more in the documentation on [vim terminal buffers](https://vimhelp.org/terminal.txt.html) (or [neovim terminal buffers](https://neovim.io/doc/user/nvim_terminal_emulator.html)).
 
@@ -99,7 +105,7 @@ Command     | Description
 `hy`        | Toggle HOL's show types trace.
 `hn`        | Toggle HOL's `PP.avoid_unicode` trace.
 
-## Key mappings for the HOL repl buffer
+## Key mappings for the hol terminal buffer
 
 For the HOL repl hosted by vim the following commands work in normal mode of
 any `*Script.sml` file:

@@ -719,7 +719,7 @@ QED
       Then n = k ** 2 + 4 * 0 * t       for any t,
              = windmill k 0 t           by windmill_def
         so (k,0,t) IN (mills n)
-      Let f = \t:num. (k,0,t)`);
+      Let f = \t:num. (k,0,t).
       Then INJ f univ(:num) (mills n)   by INJ_DEF
        But INFINITE univ(:num)          by INFINITE_NUM_UNIV
        ==> INFINITE (mills n)           by INFINITE_INJ
@@ -751,10 +751,10 @@ QED
 (* Proof:
    If part: (?y z. (0, y, z) IN mills n) ==> n MOD 4 = 0
           (0, y, z) IN mills n
-      ==> n = windmill 0 y z        by mills_def
-      ==> n = 0 ** 2 + 4 * y * z    by windmill_def
-      ==> n = 4 * y * z             by arithmetic
-      ==> n MOD 4 = 0               by MOD_EQ_0
+      ==> n = windmill 0 y z            by mills_def
+      ==> n = 0 ** 2 + 4 * y * z        by windmill_def
+      ==> n = 4 * y * z                 by arithmetic
+      ==> n MOD 4 = 0                   by MOD_EQ_0
    Only-if part: n MOD 4 = 0 ==> (?y z. (0, y, z) IN mills n)
       Note n = n DIV 4 * 4 + n MOD 4    by DIVISION
       Let y = n DIV 4, z = 1.

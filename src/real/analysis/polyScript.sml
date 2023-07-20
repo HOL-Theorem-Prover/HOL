@@ -2,34 +2,15 @@
 (* Properties of real polynomials (not canonically represented).             *)
 (* ========================================================================= *)
 
-(*
-app load ["numLib",
-          "mesonLib",
-          "tautLib",
-          "numLib",
-          "simpLib",
-          "boolSimps",
-          "arithSimps",
-          "pairSimps",
-          "Ho_Rewrite",
-          "jrhUtils",
-          "limTheory",
-          "listTheory",
-          "pred_setTheory",
-          "realSimps", "RealArith"];
-*)
+open HolKernel Parse boolLib hol88Lib;
 
-open HolKernel Parse boolLib hol88Lib reduceLib pairLib numLib
-     mesonLib tautLib simpLib boolSimps numSimps realSimps
+open reduceLib pairLib numLib mesonLib tautLib simpLib boolSimps numSimps realSimps
      pairTheory numTheory prim_recTheory arithmeticTheory listTheory
      Ho_Rewrite jrhUtils Canon_Port AC realTheory limTheory listTheory
-     pred_setTheory RealArith;
-
-infix THEN THENL ORELSE ORELSEC ## THENC ORELSE_TCL;
+     pred_setTheory realLib;
 
 val _ = new_theory "poly";
 val _ = ParseExtras.temp_loose_equality()
-
 
 (* ------------------------------------------------------------------------- *)
 (* Extras needed to port polyTheory to hol98.                                *)
@@ -71,8 +52,6 @@ val LEFT_IMP_EXISTS_THM = prove (
 
 val NOT_LE = arithmeticTheory.NOT_LESS_EQUAL;
 val SUC_INJ = prim_recTheory.INV_SUC_EQ
-
-val LT_SUC_LE = prove (Term`!m n. m < SUC n = m <= n`, ARITH_TAC);
 
 val LE_EXISTS = arithmeticTheory.LESS_EQ_EXISTS;
 

@@ -3716,7 +3716,7 @@ Lemma lieb_line n i k : lcmn 'L(n.+1, i) (\lcm_(j < k) 'L(n, i + j)) = \lcm_(j <
 
 translates to:
       !n i k. lcm (leibniz (n + 1) i) (big_lcm {leibniz n (i + j) | j | j < k}) =
-              big_lcm {leibniz (n+1) (i + j) | j | j < k + 1}`;
+              big_lcm {leibniz (n+1) (i + j) | j | j < k + 1};
 
 The picture is:
 
@@ -5668,7 +5668,7 @@ val leibniz_horizontal_member_divides = store_thm(
       Then lcm_run 0 = 1                         by lcm_run_0
       Hence true                                 by ONE_DIVIDES_ALL
    If n <> 0,
-      Then 0 < n, and 0 < m                      by n <= 2 * m`
+      Then 0 < n, and 0 < m                      by n <= 2 * m
       Thus m - 1 <= n - 1                        by m <= n
        and n - 1 <= 2 * m - 1                    by n <= 2 * m
                   = 2 * (m - 1) + 1

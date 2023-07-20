@@ -14,10 +14,12 @@ sig
     val lookup_rule : bool -> t -> term -> thm list
   end
 
+  val prove_relation_thm : bool -> term -> term -> thm
   val resolve_relhyps : bool -> ruledb.t -> thm -> thm seq.seq
   val resolveN : int -> bool -> ruledb.t -> term -> thm seq.seq
   val check_constraints : bool -> ruledb.t -> thm -> thm seq.seq
 
+  val build_skeleton : term -> term
   val transfer_skeleton : bool -> term -> thm
   val transfer_phase1   : bool -> ruledb.t -> term -> thm seq.seq
   val base_transfer     : bool -> ruledb.t -> term -> thm seq.seq

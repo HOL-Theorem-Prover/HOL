@@ -94,6 +94,7 @@ sig
   (* Query routines *)
 
   val is_eq                  : term -> bool
+  val is_iff                 : term -> bool
   val is_imp                 : term -> bool
   val is_imp_only            : term -> bool
   val is_select              : term -> bool

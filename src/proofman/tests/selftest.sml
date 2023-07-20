@@ -140,7 +140,7 @@ fun mkprfs t =
     let
       open Manager
       val prfs0 = PRFS []
-      val p = new_goalstack ([], t) (fn x => x)
+      val p = new_goalstack ([], t) id_tacm (fn x => x)
       val prfs = add p prfs0
     in
       narrow_uni_off pp_proofs prfs

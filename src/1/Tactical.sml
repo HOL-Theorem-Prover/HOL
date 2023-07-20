@@ -225,9 +225,12 @@ val op >- = op THEN1
 fun op>>-(tac1, n) tac2 g =
   op>- (tac1, tac2) g
   handle e as HOL_ERR {message,origin_structure,origin_function} =>
-    raise HOL_ERR {message = message ^ " (THEN1 on line "^Int.toString n^")",
-                   origin_function = origin_function,
-                   origin_structure = origin_structure}
+         if is_substring "THEN1" message then raise e
+         else
+           raise HOL_ERR {message = message ^
+                                    " (THEN1 on line "^Int.toString n^")",
+                          origin_function = origin_function,
+                          origin_structure = origin_structure}
 fun (f ?? x) = f x
 
 
@@ -458,11 +461,11 @@ local val validity_tag = "ValidityCheck"
       fun masquerade goal = Thm.mk_oracle_thm validity_tag goal ;
       fun achieves_concl th (asl, w) = Term.aconv (concl th) w ;
       fun hyps_not_in_goal th (asl, w) =
-        Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
-      fun extra_goals_tbp flag th (asl, w) =
-        List.map (fn eg => (asl, eg))
-          (case flag of true => hyps_not_in_goal th (asl, w)
-            | false => hyp th) ;
+        Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th)
+      fun extra_goals flag th g =
+          if flag then hyps_not_in_goal th g else hyp th
+      fun extra_goals_tbp flag th (g as (asl, w)) =
+        List.map (fn eg => (asl, eg)) (extra_goals flag th g)
 in
 (* GEN_VALIDATE : bool -> tactic -> tactic *)
 fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =
@@ -504,11 +507,57 @@ fun GEN_VALIDATE_LT (flag : bool) (ltac : list_tactic) (gl : goal list) =
       in Lib.map2 (itlist PROVE_HYP) extra_thm_lists (prf thlist) end ;
   in (List.concat extra_goal_lists @ glist, eprf) end ;
 
-end;
 
 val VALIDATE = GEN_VALIDATE true ;
 val VALIDATE_LT = GEN_VALIDATE_LT true ;
 
+(* ----------------------------------------------------------------------
+    CONJ_VALIDATE : tactic -> tactic
+
+    Applies tactic argument to goal and guarantees validity by adding
+    required extra hypotheses to head of new subgoal if only one is
+    generated, or as one extra goal as a big conjunction if there are
+    already multiple goals, or if there are no goals at all.
+   ---------------------------------------------------------------------- *)
+fun sing f [x] = f x
+  | sing f _ = raise ERR "sing" "Bind Error"
+fun CONJ_VALIDATE tac (g as (asl,_)) =
+    let val tacresult as (sgs, vfn) = tac g
+        val thprf = vfn (map masquerade sgs)
+        val _ = if achieves_concl thprf g then ()
+                else raise ERR "CONJ_VALIDATE"
+                           "Invalid tactic - wrong conclusion"
+        val newgoals = extra_goals true thprf g
+        val nextra = length newgoals
+        fun nullvfn th =
+            let val ths = CONJ_LIST nextra th
+            in
+              itlist PROVE_HYP ths thprf
+            end
+        fun singvfn th =
+            let val (th1, th2) = CONJ_PAIR th
+            in
+              itlist PROVE_HYP (CONJ_LIST nextra th1) (vfn [th2])
+            end
+        fun vfn' ths =
+            case ths of
+                [] => raise ERR "CONJ_VALIDATE" "Can't happen"
+              | th1 :: rest =>
+                itlist PROVE_HYP (CONJ_LIST nextra th1) (vfn rest)
+    in
+      if nextra = 0 then tacresult
+      else
+        case sgs of
+            [] => ([(asl, list_mk_conj newgoals)], sing nullvfn)
+          | [(asl',sg)] =>
+            if List.all (C tmem asl) asl' then
+              ([(asl',mk_conj(list_mk_conj newgoals, sg))], sing singvfn)
+            else
+              ((asl, list_mk_conj newgoals) :: sgs, vfn')
+          | _ => ((asl, list_mk_conj newgoals) :: sgs, vfn')
+    end
+
+end (* local *)
 (* could avoid duplication of code in the above by the following
 fun GEN_VALIDATE flag tac =
   ALL_TAC THEN_LT GEN_VALIDATE_LT flag (TACS_TO_LT [tac]) ;
@@ -547,7 +596,7 @@ val pop_last_assum = POP_LAST_ASSUM
 fun POP_ASSUM_LIST asltac (asl, w) = asltac (map ASSUME asl) ([], w)
 
 (*---------------------------------------------------------------------------
- * Pop the first assumption satisying the given predictae and give it to
+ * Pop the first assumption satisying the given predicate and give it to
  * a function (tactic).
  *---------------------------------------------------------------------------*)
 

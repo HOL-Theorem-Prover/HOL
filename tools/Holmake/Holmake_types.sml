@@ -1,7 +1,7 @@
 structure Holmake_types :> Holmake_types =
 struct
 
-open internal_functions
+open internal_functions HOLFileSys
 
 datatype pretoken =
          DEFN of string | DEFN_EXTEND of string | RULE of string | EOF
@@ -383,12 +383,16 @@ val base_environment0 = let
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
        ("HOLDIR", [LIT HOLDIR]),
        ("HOL_LNSIGOBJ",
-        [LIT "for i in *.uo *.ui *.sig ; do ln -fs `pwd`/$i ",
+        [LIT "for i in *.uo *.ui ; do ln -fs `pwd`/",
+         VREF "HOLOBJDIR",
+         LIT "/$i ",
          VREF "SIGOBJ",
-         LIT " ; done && \
-             \for i in *.sig ; do echo `pwd`/`basename $i .sig` >> ",
+         LIT " ; done && for i in *.sig ; do ln -fs `pwd`/$i ",
+         VREF "SIGOBJ",
+         LIT " ; echo `pwd`/`basename $i .sig` >> ",
          VREF "SIGOBJ",
          LIT "/SRCFILES ; done"]),
+       ("HOLOBJDIR", [LIT HFS_NameMunge.HOLOBJDIR]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),
        ("ML_SYSNAME", [LIT ML_SYSNAME]),
@@ -412,14 +416,14 @@ end
 fun base_environment () = let
   val kernelid =
       let
-        val strm = TextIO.openIn Holmake_tools.kernelid_fname
+        val strm = openIn Holmake_tools.kernelid_fname
         val s =
-            case TextIO.inputLine strm of
+            case inputLine strm of
                 NONE => ""
               | SOME s => hd (String.tokens Char.isSpace s) handle Empty => ""
 
       in
-        s before TextIO.closeIn strm
+        s before closeIn strm
       end handle IO.Io _ => ""
 in
   Binarymap.insert(base_environment0, "KERNELID", [LIT kernelid])

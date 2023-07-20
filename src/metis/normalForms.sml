@@ -403,6 +403,490 @@ fun NNF_CONV' c = SIMPLIFY_CONV THENC PURE_NNF_CONV' c;
 val NNF_CONV = NNF_CONV' NO_CONV;
 
 (* ------------------------------------------------------------------------- *)
+(* ACI rearrangements of conjunctions and disjunctions. This is much faster  *)
+(* than AC xxx_ACI on large problems, as well as being more controlled.      *)
+(*            (Ported from HOL-Light by Chun Tian, June 1, 2022)             *)
+(* ------------------------------------------------------------------------- *)
+
+local
+    open Redblackmap tautLib
+    type func = (term,thm)dict;
+    val undefined :func = mkDict Term.compare;
+in
+val CONJ_ACI_RULE = let
+  fun mk_fun th (f :func) :func =
+    let val tm = concl th in
+        if is_conj tm then
+            let val (th1,th2) = CONJ_PAIR th in
+                mk_fun th1 (mk_fun th2 f)
+            end
+        else insert (f,tm,th)
+    end
+  and use_fun (f :func) tm :thm =
+    if is_conj tm then
+        let val (l,r) = dest_conj tm in
+            CONJ (use_fun f l) (use_fun f r)
+        end
+    else find (f,tm)
+in
+  fn tm => let val (p,p') = dest_eq tm in
+               if p ~~ p' then REFL p else
+               let val th = use_fun (mk_fun (ASSUME p) undefined) p'
+                   and th' = use_fun (mk_fun (ASSUME p') undefined) p
+               in
+                   IMP_ANTISYM_RULE (DISCH_ALL th) (DISCH_ALL th')
+               end
+           end
+end; (* CONJ_ACI_RULE *)
+
+val DISJ_ACI_RULE = let
+  val pth_left = UNDISCH(TAUT `~(a \/ b) ==> ~a`)
+  and pth_right = UNDISCH(TAUT `~(a \/ b) ==> ~b`)
+  and pth = repeat UNDISCH (TAUT `~a ==> ~b ==> ~(a \/ b)`)
+  and pth_neg = UNDISCH(TAUT `(~a <=> ~b) ==> (a <=> b)`)
+  and a_tm = “a:bool” and b_tm = “b:bool”;
+  fun NOT_DISJ_PAIR th = let
+      val (p,q) = dest_disj(rand(concl th));
+      val ilist = [a_tm |-> p, b_tm |-> q]
+  in
+      (PROVE_HYP th (INST ilist pth_left),
+       PROVE_HYP th (INST ilist pth_right))
+  end
+  and NOT_DISJ th1 th2 = let
+      val th3 = INST [a_tm |-> rand(concl th1),
+                      b_tm |-> rand(concl th2)] pth
+  in
+      PROVE_HYP th1 (PROVE_HYP th2 th3)
+  end;
+  fun mk_fun th (f :func) :func =
+    let val tm = rand(concl th) in
+        if is_disj tm then
+            let val (th1,th2) = NOT_DISJ_PAIR th in
+                mk_fun th1 (mk_fun th2 f)
+            end
+        else insert (f,tm,th)
+    end
+  and use_fun (f :func) tm :thm =
+    if is_disj tm then
+        let val (l,r) = dest_disj tm in
+            NOT_DISJ (use_fun f l) (use_fun f r)
+        end
+    else find (f,tm)
+in
+  fn fm => let val (p,p') = dest_eq fm in
+               if p ~~ p' then REFL p else
+               let val th = use_fun (mk_fun (ASSUME(mk_neg p)) undefined) p'
+                   and th' = use_fun (mk_fun (ASSUME(mk_neg p')) undefined) p;
+                   val th1 = IMP_ANTISYM_RULE (DISCH_ALL th) (DISCH_ALL th')
+               in
+                   PROVE_HYP th1 (INST [a_tm |-> p, b_tm |-> p'] pth_neg)
+               end
+           end
+end; (* DISJ_ACI_RULE *)
+end; (* local open Redblackmap *)
+
+(* ------------------------------------------------------------------------- *)
+(* Order canonically, right-associate and remove duplicates.                 *)
+(* ------------------------------------------------------------------------- *)
+
+local open liteLib in
+fun CONJ_CANON_CONV tm =
+  let val tm' = list_mk_conj(setify_term(strip_conj tm)) in
+      CONJ_ACI_RULE(mk_eq(tm,tm'))
+  end;
+
+fun DISJ_CANON_CONV tm =
+  let val tm' = list_mk_disj(setify_term(strip_disj tm)) in
+      DISJ_ACI_RULE(mk_eq(tm,tm'))
+  end;
+end; (* local *)
+
+(* ------------------------------------------------------------------------- *)
+(* Eliminate conditionals; CONDS_ELIM_CONV aims for disjunctive splitting,   *)
+(* for refutation procedures, and CONDS_CELIM_CONV for conjunctive.          *)
+(* Both switch modes "sensibly" when going through a quantifier.             *)
+(*                                                                           *)
+(*       (Ported from HOL-Light's canon.ml by Chun Tian, June 2022)          *)
+(*                                                                           *)
+(* TODO: what's the difference between COND_ELIM_CONV and them?              *)
+(* ------------------------------------------------------------------------- *)
+
+val (CONDS_ELIM_CONV,CONDS_CELIM_CONV) = let
+  val th_cond = prove
+   (“((b <=> F) ==> x = x0) /\ ((b <=> T) ==> x = x1)
+     ==> x = (b /\ x1 \/ ~b /\ x0)”,
+    BOOL_CASES_TAC “b:bool” THEN ASM_REWRITE_TAC[])
+  and th_cond' = prove
+   (“((b <=> F) ==> x = x0) /\ ((b <=> T) ==> x = x1)
+     ==> x = ((~b \/ x1) /\ (b \/ x0))”,
+    BOOL_CASES_TAC “b:bool” THEN ASM_REWRITE_TAC[])
+  and propsimps = implicit_rewrites() (* was basic_net() *)
+  and false_tm = F and true_tm = T;
+  val match_th  = MATCH_MP th_cond
+  and match_th' = MATCH_MP th_cond'
+  and propsimp_conv = DEPTH_CONV(REWRITES_CONV propsimps)
+  and proptsimp_conv =
+    let val cnv = TRY_CONV(REWRITES_CONV propsimps) in
+      BINOP_CONV cnv THENC cnv
+    end;
+
+  (* The original HOL-Light code has been migrated to more efficient HOLset. *)
+  val find_conditional = let
+    fun find_cond (fvs :term set) (tm :term) :term =
+      if is_comb tm then
+         let val (s,t) = dest_comb tm in
+           if is_cond tm andalso
+             HOLset.isEmpty (HOLset.intersection (FVL [lhand s] empty_tmset, fvs))
+          then tm
+          else ((find_cond fvs s)
+                handle HOL_ERR _ => find_cond fvs t)
+         end
+      else if is_abs tm then
+        let val (x,t) = dest_abs tm in
+          find_cond (HOLset.add (fvs, x)) t
+        end
+      else failwith "find_conditional"
+  in
+      find_cond empty_tmset
+  end;
+
+  fun CONDS_ELIM_CONV dfl tm =
+    let val t = find_conditional tm;
+        val p = lhand(rator t);
+        val th_new =
+          if p ~~ false_tm orelse p ~~ true_tm then propsimp_conv tm else
+          let val asm_0 = mk_eq(p,false_tm)
+              and asm_1 = mk_eq(p,true_tm);
+              val simp_0 = add_rewrites propsimps [ASSUME asm_0]
+              and simp_1 = add_rewrites propsimps [ASSUME asm_1];
+              val th_0 = DISCH asm_0 (DEPTH_CONV(REWRITES_CONV simp_0) tm)
+              and th_1 = DISCH asm_1 (DEPTH_CONV(REWRITES_CONV simp_1) tm);
+              val th_2 = CONJ th_0 th_1;
+              val th_3 = if dfl then match_th th_2 else match_th' th_2
+          in
+              TRANS th_3 (proptsimp_conv(rand(concl th_3)))
+              handle UNCHANGED => th_3
+          end;
+    in
+        CONV_RULE (RAND_CONV (CONDS_ELIM_CONV dfl)) th_new
+    end
+    handle HOL_ERR _ =>
+    if is_neg tm then
+       RAND_CONV (CONDS_ELIM_CONV (not dfl)) tm
+    else if is_conj tm orelse is_disj tm then
+       BINOP_CONV (CONDS_ELIM_CONV dfl) tm
+    else if is_imp tm orelse is_eq tm then
+       COMB2_CONV (RAND_CONV (CONDS_ELIM_CONV (not dfl)),
+                   CONDS_ELIM_CONV dfl) tm
+    else if is_forall tm then
+         BINDER_CONV (CONDS_ELIM_CONV false) tm
+    else if is_exists tm orelse is_exists1 tm then
+         BINDER_CONV (CONDS_ELIM_CONV true) tm
+    else raise UNCHANGED;
+in
+  (CONDS_ELIM_CONV true,CONDS_ELIM_CONV false)
+end
+
+(* ------------------------------------------------------------------------- *)
+(* General NNF conversion. The user supplies some conversion to be applied   *)
+(* to atomic formulas. (Ported by Chun Tian from HOL-Light's canon.ml)       *)
+(* ------------------------------------------------------------------------- *)
+
+local open liteLib tautLib in
+val alpha = Type.alpha; (* conflict with liteLib.alpha *)
+val GEN_REWRITE_TAC = Rewrite.GEN_REWRITE_TAC;
+
+(* The type of "double" conversion *)
+type dconv = term -> thm * thm;
+
+(* NOTE: the first bool argument means "conjuctively" (see above) *)
+val GEN_NNF_CONV : bool -> conv * dconv -> conv = let
+  val not_tm = boolSyntax.negation
+  and pth_not_not = TAUT `~ ~ p = p`
+  and pth_not_and = TAUT `~(p /\ q) <=> ~p \/ ~q`
+  and pth_not_or = TAUT `~(p \/ q) <=> ~p /\ ~q`
+  and pth_imp = TAUT `p ==> q <=> ~p \/ q`
+  and pth_not_imp = TAUT `~(p ==> q) <=> p /\ ~q`
+  and pth_eq = TAUT `(p <=> q) <=> p /\ q \/ ~p /\ ~q`
+  and pth_not_eq = TAUT `~(p <=> q) <=> p /\ ~q \/ ~p /\ q`
+  and pth_eq' = TAUT `(p <=> q) <=> (p \/ ~q) /\ (~p \/ q)`
+  and pth_not_eq' = TAUT `~(p <=> q) <=> (p \/ q) /\ (~p \/ ~q)`;
+  val pths = (CONJUNCTS o prove)
+   (“(~((!) P) <=> ?x:'a. ~(P x)) /\
+     (~((?) P) <=> !x:'a. ~(P x)) /\
+     (~((?!) P) <=> (!x:'a. ~(P x)) \/ ?x y. P x /\ P y /\ ~(y = x))”,
+    REPEAT CONJ_TAC THEN
+    GEN_REWRITE_TAC (LAND_CONV o funpow 2 RAND_CONV) empty_rewrites [GSYM ETA_AX] THEN
+    SIMP_TAC boolSimps.bool_ss
+      [NOT_EXISTS_THM, NOT_FORALL_THM, EXISTS_UNIQUE_DEF,
+       DE_MORGAN_THM, NOT_IMP, GSYM CONJ_ASSOC] THEN
+    GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [EQ_SYM_EQ] THEN
+    REWRITE_TAC []);
+  val pth_not_forall = el 1 pths
+  and pth_not_exists = el 2 pths
+  and pth_not_exu    = el 3 pths;
+  val pth_exu = prove
+   (“((?!) P) <=> (?x:'a. P x) /\ !x y. ~(P x) \/ ~(P y) \/ (y = x)”,
+    GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) empty_rewrites [GSYM ETA_AX] THEN
+    SIMP_TAC boolSimps.bool_ss
+      [EXISTS_UNIQUE_DEF, TAUT `a /\ b ==> c <=> ~a \/ ~b \/ c`] THEN
+    GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [EQ_SYM_EQ] THEN
+    REWRITE_TAC []);
+  val p_tm = “p:bool” and q_tm = “q:bool”;
+
+  fun NNF_DCONV cf baseconvs tm =
+    if is_neg tm then let
+        val t = dest_neg tm;
+        val (th1,th2) = NNF_DCONV cf baseconvs t
+    in (th2,TRANS (INST [p_tm |-> t] pth_not_not) th1)
+    end
+    else if is_conj tm then let
+        val (l,r) = dest_conj tm;
+        val (th_lp,th_ln) = NNF_DCONV cf baseconvs l
+        and (th_rp,th_rn) = NNF_DCONV cf baseconvs r
+    in (MK_CONJ th_lp th_rp,
+        TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_and)
+              (MK_DISJ th_ln th_rn))
+    end
+    else if is_disj tm then let
+        val (l,r) = dest_disj tm;
+        val (th_lp,th_ln) = NNF_DCONV cf baseconvs l
+        and (th_rp,th_rn) = NNF_DCONV cf baseconvs r
+    in (MK_DISJ th_lp th_rp,
+        TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_or)
+              (MK_CONJ th_ln th_rn))
+    end
+    else if is_imp_only tm then let
+        val (l,r) = dest_imp_only tm;
+        val (th_lp,th_ln) = NNF_DCONV cf baseconvs l
+        and (th_rp,th_rn) = NNF_DCONV cf baseconvs r
+    in (TRANS (INST [p_tm |-> l, q_tm |-> r] pth_imp)
+              (MK_DISJ th_ln th_rp),
+        TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_imp)
+              (MK_CONJ th_lp th_rn))
+    end
+    else if is_iff tm then let
+        val (l,r) = dest_eq tm;
+        val (th_lp,th_ln) = NNF_DCONV cf baseconvs l
+        and (th_rp,th_rn) = NNF_DCONV cf baseconvs r
+    in if cf then
+           (TRANS (INST [p_tm |-> l, q_tm |-> r] pth_eq')
+                  (MK_CONJ (MK_DISJ th_lp th_rn) (MK_DISJ th_ln th_rp)),
+            TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_eq')
+                  (MK_CONJ (MK_DISJ th_lp th_rp) (MK_DISJ th_ln th_rn)))
+        else
+           (TRANS (INST [p_tm |-> l, q_tm |-> r] pth_eq)
+                  (MK_DISJ (MK_CONJ th_lp th_rp) (MK_CONJ th_ln th_rn)),
+            TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_eq)
+                  (MK_DISJ (MK_CONJ th_lp th_rn) (MK_CONJ th_ln th_rp)))
+    end
+    else if is_forall tm then let
+        val (x,t) = dest_forall tm and bod = snd(dest_comb tm);
+        val ty = type_of x
+        and (th_p,th_n) = NNF_DCONV true baseconvs t
+    in (MK_FORALL x th_p,
+        let val th1 = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                           (INST_TYPE [alpha |-> ty] pth_not_forall)
+            and th2 = TRANS (AP_TERM not_tm (BETA_CONV(mk_comb(bod,x)))) th_n
+        in
+            TRANS th1 (MK_EXISTS x th2)
+        end)
+    end
+    else if is_exists tm then let
+        val (x,t) = dest_exists tm and bod = snd(dest_comb tm);
+        val ty = type_of x
+        and (th_p,th_n) = NNF_DCONV cf baseconvs t
+    in (MK_EXISTS x th_p,
+        let val th1 = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                           (INST_TYPE [alpha |-> ty] pth_not_exists)
+            and th2 = TRANS (AP_TERM not_tm (BETA_CONV(mk_comb(bod,x)))) th_n
+        in
+            TRANS th1 (MK_FORALL x th2)
+        end)
+    end
+    else if is_exists1 tm then let
+        val (x,t) = dest_exists1 tm and bod = snd(dest_comb tm);
+        val ty = type_of x
+        and y = variant (x::free_vars t) x
+        and (th_p,th_n) = NNF_DCONV cf baseconvs t;
+        val eq = mk_eq(y,x);
+        val (eth_p,eth_n) = baseconvs eq
+        and bth = BETA_CONV(mk_comb(bod,x))
+        and bth' = BETA_CONV(mk_comb(bod,y));
+        val th_p' = INST [x |-> y] th_p and th_n' = INST [x |-> y] th_n;
+        val th1 = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                       (INST_TYPE [alpha |-> ty] pth_exu)
+        and th1' = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                        (INST_TYPE [alpha |-> ty] pth_not_exu)
+        and th2 =
+            MK_CONJ (MK_EXISTS x (TRANS bth th_p))
+                    (MK_FORALL x (MK_FORALL y
+                      (MK_DISJ (TRANS (AP_TERM not_tm bth) th_n)
+                               (MK_DISJ (TRANS (AP_TERM not_tm bth') th_n')
+                                        eth_p))))
+        and th2' =
+            MK_DISJ (MK_FORALL x (TRANS (AP_TERM not_tm bth) th_n))
+                    (MK_EXISTS x (MK_EXISTS y
+                      (MK_CONJ (TRANS bth th_p)
+                               (MK_CONJ (TRANS bth' th_p') eth_n))))
+    in (TRANS th1 th2,TRANS th1' th2')
+    end
+    else ((baseconvs tm)
+          handle UNCHANGED => (REFL tm,REFL(mk_neg tm)));
+
+  fun NNF_CONV cf (baseconvs as (base1,base2)) tm =
+    if is_neg tm then let val t = dest_neg tm
+    in NNF_CONV' cf baseconvs t end
+    else if is_conj tm then let
+        val (l,r) = dest_conj tm;
+        val th_lp = NNF_CONV cf baseconvs l
+        and th_rp = NNF_CONV cf baseconvs r
+    in MK_CONJ th_lp th_rp end
+    else if is_disj tm then let
+        val (l,r) = dest_disj tm;
+        val th_lp = NNF_CONV cf baseconvs l
+        and th_rp = NNF_CONV cf baseconvs r
+    in MK_DISJ th_lp th_rp end
+    else if is_imp_only tm then let
+        val (l,r) = dest_imp_only tm;
+        val th_ln = NNF_CONV' cf baseconvs l
+        and th_rp = NNF_CONV cf baseconvs r
+    in TRANS (INST [p_tm |-> l, q_tm |-> r] pth_imp)
+             (MK_DISJ th_ln th_rp)
+    end
+    else if is_iff tm then let
+        val (l,r) = dest_eq tm;
+        val (th_lp,th_ln) = NNF_DCONV cf base2 l
+        and (th_rp,th_rn) = NNF_DCONV cf base2 r
+    in if cf then
+           TRANS (INST [p_tm |-> l, q_tm |-> r] pth_eq')
+                 (MK_CONJ (MK_DISJ th_lp th_rn)
+                          (MK_DISJ th_ln th_rp))
+       else
+           TRANS (INST [p_tm |-> l, q_tm |-> r] pth_eq)
+                 (MK_DISJ (MK_CONJ th_lp th_rp)
+                          (MK_CONJ th_ln th_rn))
+    end
+    else if is_forall tm then let
+        val (x,t) = dest_forall tm;
+        val th_p = NNF_CONV true baseconvs t
+    in MK_FORALL x th_p end
+    else if is_exists tm then let
+        val (x,t) = dest_exists tm;
+        val th_p = NNF_CONV cf baseconvs t
+    in MK_EXISTS x th_p end
+    else if is_exists1 tm then let
+        val (x,t) = dest_exists1 tm and bod = snd(dest_comb tm);
+        val ty = type_of x
+        and y = variant (x::free_vars t) x
+        and (th_p,th_n) = NNF_DCONV cf base2 t;
+        val eq = mk_eq(y,x);
+        val (eth_p,eth_n) = base2 eq
+        and bth = BETA_CONV(mk_comb(bod,x))
+        and bth' = BETA_CONV(mk_comb(bod,y));
+        val th_n' = INST [x |-> y] th_n;
+        val th1 = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                       (INST_TYPE [alpha |-> ty] pth_exu)
+        and th2 =
+            MK_CONJ (MK_EXISTS x (TRANS bth th_p))
+                    (MK_FORALL x (MK_FORALL y
+                      (MK_DISJ (TRANS (AP_TERM not_tm bth) th_n)
+                               (MK_DISJ (TRANS (AP_TERM not_tm bth') th_n')
+                                        eth_p))))
+    in TRANS th1 th2 end
+    else ((base1 tm) handle UNCHANGED => REFL tm)
+
+  and NNF_CONV' cf (baseconvs as (base1,base2)) tm =
+    if is_neg tm then let
+        val t = dest_neg tm;
+        val th1 = NNF_CONV cf baseconvs t
+    in TRANS (INST [p_tm |-> t] pth_not_not) th1 end
+    else if is_conj tm then let
+        val (l,r) = dest_conj tm;
+        val th_ln = NNF_CONV' cf baseconvs l
+        and th_rn = NNF_CONV' cf baseconvs r
+    in TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_and)
+             (MK_DISJ th_ln th_rn) end
+    else if is_disj tm then let
+        val (l,r) = dest_disj tm;
+        val th_ln = NNF_CONV' cf baseconvs l
+        and th_rn = NNF_CONV' cf baseconvs r
+    in TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_or)
+             (MK_CONJ th_ln th_rn) end
+    else if is_imp_only tm then let
+        val (l,r) = dest_imp_only tm;
+        val th_lp = NNF_CONV cf baseconvs l
+        and th_rn = NNF_CONV' cf baseconvs r
+    in TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_imp)
+             (MK_CONJ th_lp th_rn) end
+    else if is_iff tm then let
+        val (l,r) = dest_eq tm;
+        val (th_lp,th_ln) = NNF_DCONV cf base2 l
+        and (th_rp,th_rn) = NNF_DCONV cf base2 r
+    in if cf then
+           TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_eq')
+                 (MK_CONJ (MK_DISJ th_lp th_rp)
+                          (MK_DISJ th_ln th_rn))
+       else
+           TRANS (INST [p_tm |-> l, q_tm |-> r] pth_not_eq)
+                 (MK_DISJ (MK_CONJ th_lp th_rn)
+                          (MK_CONJ th_ln th_rp))
+    end
+    else if is_forall tm then let
+        val (x,t) = dest_forall tm and bod = snd(dest_comb tm);
+        val ty = type_of x;
+        val th_n = NNF_CONV' cf baseconvs t;
+        val th1 = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                       (INST_TYPE [alpha |-> ty] pth_not_forall)
+        and th2 = TRANS (AP_TERM not_tm (BETA_CONV(mk_comb(bod,x)))) th_n
+    in TRANS th1 (MK_EXISTS x th2) end
+    else if is_exists tm then let
+        val (x,t) = dest_exists tm and bod = snd(dest_comb tm);
+        val ty = type_of x;
+        val th_n = NNF_CONV' true baseconvs t;
+        val th1 = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                       (INST_TYPE [alpha |-> ty] pth_not_exists)
+        and th2 = TRANS (AP_TERM not_tm (BETA_CONV(mk_comb(bod,x)))) th_n
+    in TRANS th1 (MK_FORALL x th2) end
+    else if is_exists1 tm then let
+        val (x,t) = dest_exists1 tm and bod = snd(dest_comb tm);
+        val ty = type_of x
+        and y = variant (x::free_vars t) x
+        and (th_p,th_n) = NNF_DCONV cf base2 t;
+        val eq = mk_eq(y,x);
+        val (eth_p,eth_n) = base2 eq
+        and bth = BETA_CONV (mk_comb(bod,x))
+        and bth' = BETA_CONV(mk_comb(bod,y));
+        val th_p' = INST [x |-> y] th_p;
+        val th1' = INST [mk_var("P",mk_fun_ty ty bool_ty) |-> bod]
+                        (INST_TYPE [alpha |-> ty] pth_not_exu)
+        and th2' =
+            MK_DISJ (MK_FORALL x (TRANS (AP_TERM not_tm bth) th_n))
+                    (MK_EXISTS x (MK_EXISTS y
+                      (MK_CONJ (TRANS bth th_p)
+                               (MK_CONJ (TRANS bth' th_p') eth_n))))
+    in TRANS th1' th2' end
+    else let val tm' = mk_neg tm in
+             (base1 tm') handle UNCHANGED => REFL tm'
+         end
+in
+  NNF_CONV
+end;
+
+(* Sample applications for Boolean expressions *)
+val NNFC_CONV :conv =
+    GEN_NNF_CONV true (ALL_CONV,fn t => (REFL t,REFL(mk_neg t)));
+
+(* NOTE: in HOL-Light this is the "standard" NNF_CONV, but I found that the
+   behaviour of the existing NNF_CONV here is more like NNFC_CONV, where
+  "Iff"s are split conjunctively: (P <=> Q) <=> (P \/ ~Q) /\ (~P \/ Q).
+ *)
+val NNFD_CONV :conv =
+    GEN_NNF_CONV false (ALL_CONV,fn t => (REFL t,REFL(mk_neg t)));
+
+end (* local *)
+
+(* ------------------------------------------------------------------------- *)
 (* Skolemization.                                                            *)
 (*                                                                           *)
 (* Example:                                                                  *)
@@ -700,6 +1184,148 @@ fun find_nnf find_f =
   end;
 
 fun ATOM_CONV c tm = (if is_neg tm then RAND_CONV c else c) tm;
+
+(* ------------------------------------------------------------------------- *)
+(* Weak and normal DNF conversion. The "weak" form gives a disjunction of    *)
+(* conjunctions, but has no particular associativity at either level and     *)
+(* may contain duplicates. The regular forms give canonical right-associate  *)
+(* lists without duplicates, but do not remove subsumed disjuncts.           *)
+(*                                                                           *)
+(* In both cases the input term is supposed to be in NNF already. We do go   *)
+(* inside quantifiers and transform their body, but don't move them.         *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: DNF_CONV (HOL-Light compatible) has been renamed to STRONG_DNF_CONV *)
+local
+    open tautLib liteLib
+in
+val (WEAK_DNF_CONV,STRONG_DNF_CONV) = let
+  val pth1 = TAUT `a /\ (b \/ c) <=> a /\ b \/ a /\ c`
+  and pth2 = TAUT `(a \/ b) /\ c <=> a /\ c \/ b /\ c`
+  and a_tm = “a:bool” and b_tm = “b:bool” and c_tm = “c:bool”;
+
+  fun distribute tm =
+    if is_conj tm then
+       let val (l,r) = dest_conj tm in
+           if is_disj r then
+               let val a = l and (b,c) = dest_disj r;
+                   val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth1
+               in
+                   TRANS th (BINOP_CONV distribute (rand(concl th)))
+               end
+           else if is_disj l then
+               let val (a,b) = dest_disj l and c = r;
+                   val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth2
+               in
+                   TRANS th (BINOP_CONV distribute (rand(concl th)))
+               end
+           else REFL tm
+       end
+    else REFL tm;
+
+  val strengthen =
+      DEPTH_BINOP_CONV disjunction CONJ_CANON_CONV THENC DISJ_CANON_CONV;
+
+  fun weakdnf tm =
+      if is_forall tm andalso is_exists tm then
+          BINDER_CONV weakdnf tm
+      else if is_disj tm then
+          BINOP_CONV weakdnf tm
+      else if is_conj tm then
+          let val (l,r) = dest_conj tm;
+              val th = MK_CONJ (weakdnf l) (weakdnf r)
+          in
+              TRANS th (distribute(rand(concl th)))
+          end
+      else REFL tm
+
+  and substrongdnf tm =
+      if is_forall tm andalso is_exists tm then
+          BINDER_CONV strongdnf tm
+      else if is_disj tm then
+          BINOP_CONV substrongdnf tm
+      else if is_conj tm then
+          let val (l,r) = dest_conj tm;
+              val th = MK_CONJ (substrongdnf l) (substrongdnf r)
+          in
+              TRANS th (distribute(rand(concl th)))
+          end
+      else REFL tm
+
+  and strongdnf tm =
+    let val th = substrongdnf tm in
+        TRANS th (strengthen(rand(concl th)))
+    end
+in
+    (UNCHANGED_CONV weakdnf, UNCHANGED_CONV strongdnf)
+end;
+
+(* ------------------------------------------------------------------------- *)
+(* Likewise for CNF.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: CNF_CONV (HOL-Light compatible) has been renamed to STRONG_CNF_CONV *)
+val (WEAK_CNF_CONV,STRONG_CNF_CONV) = let
+  val pth1 = TAUT `a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`
+  and pth2 = TAUT `(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`
+  and a_tm = “a:bool” and b_tm = “b:bool” and c_tm = “c:bool”;
+
+  fun distribute tm =
+    if is_disj tm then
+       let val (l,r) = dest_disj tm in
+            if is_conj r then
+                let val a = l and (b,c) = dest_conj r;
+                    val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth1
+                in
+                    TRANS th (BINOP_CONV distribute (rand(concl th)))
+                end
+            else if is_conj l then
+                let val (a,b) = dest_conj l and c = r;
+                    val th = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c] pth2
+                in
+                    TRANS th (BINOP_CONV distribute (rand(concl th)))
+                end
+            else REFL tm
+       end
+    else REFL tm;
+
+  val strengthen =
+      DEPTH_BINOP_CONV conjunction DISJ_CANON_CONV THENC CONJ_CANON_CONV;
+
+  fun weakcnf tm =
+    if is_forall tm andalso is_exists tm then
+        BINDER_CONV weakcnf tm
+    else if is_conj tm then
+        BINOP_CONV weakcnf tm
+    else if is_disj tm then
+        let val (l,r) = dest_disj tm;
+            val th = MK_DISJ (weakcnf l) (weakcnf r)
+        in
+            TRANS th (distribute(rand(concl th)))
+        end
+    else REFL tm
+
+  and substrongcnf tm =
+    if is_forall tm andalso is_exists tm then
+        BINDER_CONV strongcnf tm
+    else if is_conj tm then
+        BINOP_CONV substrongcnf tm
+    else if is_disj tm then
+        let val (l,r) = dest_disj tm;
+            val th = MK_DISJ (substrongcnf l) (substrongcnf r)
+        in
+            TRANS th (distribute(rand(concl th)))
+        end
+    else REFL tm
+
+  and strongcnf tm =
+    let val th = substrongcnf tm in
+        TRANS th (strengthen(rand(concl th)))
+    end
+in
+  (UNCHANGED_CONV weakcnf, UNCHANGED_CONV strongcnf)
+end
+end; (* local *)
 
 (* ------------------------------------------------------------------------- *)
 (* Definitional Conjunctive Normal Form                                      *)

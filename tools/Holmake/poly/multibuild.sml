@@ -73,7 +73,7 @@ fun graphbuild optinfo g =
     fun genLF {tag, dir} =
         let
           val ldir = dir ++ loggingdir
-          val _ = OS.FileSys.mkDir ldir handle _ => ()
+          val _ = HOLFileSys.mkDir ldir handle _ => ()
         in
           ldir ++ safetag dir tag
         end

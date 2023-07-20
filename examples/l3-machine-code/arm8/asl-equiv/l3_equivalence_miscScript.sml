@@ -356,7 +356,7 @@ Theorem extract_bit:
 Proof
   rw[] >> bitstringLib.Cases_on_v2w `w` >>
   simp[word_extract_v2w] >>
-  irule $ iffLR WORD_EQ >> rw[] >> Cases_on `x` >> gvs[] >>
+  irule $ iffLR WORD_EQ >> rw[] >>
   simp[bit_v2w, testbit_el, word_bits_v2w, field_def, shiftr_def, fixwidth] >>
   simp[DROP_TAKE, TAKE1, HD_DROP] >>
   Cases_on `EL (dimindex (:α) - (i + 1)) v` >> gvs[] >> WORD_DECIDE_TAC
@@ -477,14 +477,11 @@ Proof
   qspec_then `w` assume_tac integer_wordTheory.w2i_ge >>
   qspec_then `w` assume_tac integer_wordTheory.w2i_le >>
   gvs[INT_MAX_def, wordsTheory.INT_MIN_def] >>
-  rename1 `ABS a` >> qmatch_goalsub_abbrev_tac `dim - 1` >>
-  `0 < dim` by (unabbrev_all_tac >> gvs[]) >> qpat_x_assum `Abbrev _` kall_tac >>
-  `ABS a ≤ 2 ** (dim - 1)` by (
-    simp[INT_ABS_LE] >> Cases_on `dim` >> gvs[ADD1] >>
-    last_x_assum kall_tac >> ARITH_TAC) >>
-  ntac 2 $ last_x_assum kall_tac >>
-  qspec_then `a` assume_tac INT_ABS_POS >> rename1 `Num posve` >>
-  Cases_on `posve` >> gvs[] >> Cases_on `dim` >> gvs[EXP]
+  rename1 `ABS a` >>
+  qmatch_abbrev_tac ‘N MOD D1 ≤ D2’ >>
+  ‘D2 < D1’ by simp[Abbr‘D1’, Abbr‘D2’] >>
+  ‘N ≤ D2’ by (simp[Abbr‘N’, Abbr‘D2’] >> Cases_on ‘a’ >> gs[INT_SUB]) >>
+  simp[]
 QED
 
 (* copied from HOL/examples/machine-code/hoare-triple/addressScript.sml  *)
@@ -560,7 +557,7 @@ Theorem LENGTH_add:
 Proof
   rw[] >> gvs[]
   >- (
-    gvs[LENGTH_add_MAX] >> reverse $ rw[MAX_DEF] >- (Cases_on `ys` >> gvs[]) >>
+    gvs[LENGTH_add_MAX] >> reverse $ rw[MAX_DEF] >- gvs[] >>
     qpat_x_assum `LENGTH _ < _` mp_tac >>
     simp[LENGTH_n2v, NOT_LESS, LE_LT1, ADD1] >>
     irule LOG_LT >> simp[v2n_add_less_limit]

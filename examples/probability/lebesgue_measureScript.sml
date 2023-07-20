@@ -433,8 +433,7 @@ Theorem borel_imp_lebesgue_measurable : (* was: borel_measurable_lebesgueI *)
         f IN borel_measurable (m_space lebesgue, measurable_sets lebesgue)
 Proof
     RW_TAC std_ss [measurable_def, GSPECIFICATION]
- >| [ SIMP_TAC std_ss [sigma_algebra_lebesgue, sets_lebesgue, space_lebesgue],
-      FULL_SIMP_TAC std_ss [space_lebesgue, space_borel, space_def],
+ >| [ FULL_SIMP_TAC std_ss [space_lebesgue, space_borel, space_def],
       FULL_SIMP_TAC std_ss [space_def, subsets_def] ]
  >> FULL_SIMP_TAC std_ss [space_borel, space_lebesgue, INTER_UNIV]
  >> MATCH_MP_TAC lebesgueI_borel >> ASM_SET_TAC []

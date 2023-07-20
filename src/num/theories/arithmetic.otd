@@ -5,8 +5,8 @@ delconst >
 delconst >=
 delconst MIN
 delconst MAX
-delconst DIV
-delconst MOD
+delconst OT_DIV
+delconst OT_MOD
 delconst EVEN
 delconst ODD
 delconst LOG

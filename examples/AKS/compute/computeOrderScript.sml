@@ -364,7 +364,7 @@ val ordz_seek_next = store_thm(
    By induction on ordz_seek_def, to show:
       ordz_seek m n c j <> 0 ==> j <= ordz_seek m n c j
    Note ordz_seek m n c j <> 0              by given
-    ==> 0 < j                                  by ordz_seek_not_0
+    ==> 0 < j                               by ordz_seek_not_0
    If n ** j MOD m = 1,
       Then ordz_seek m n c j = j            by ordz_seek_exit, 0 < m
    If n ** j MOD m <> 1,
@@ -400,7 +400,7 @@ val ordz_seek_when_next = store_thm(
 (* Proof:
    By contradiction, suppose n ** j MOD m <> 1.
    Note ordz_seek m n c j <> 0                         by ordz_seek m n c j = j, 0 < j
-   Thus 0 < j                                             by ordz_seek_not_0
+   Thus 0 < j                                          by ordz_seek_not_0
     ==> ordz_seek m n c j = ordz_seek m n c (SUC j)    by ordz_seek_next, n ** j MOD m <> 1
     But SUC j <= ordz_seek m n c (SUC j)               by ordz_seek_not_0_lower
     ==> SUC j <= j                                     by ordz_seek m n c j = j
@@ -1235,7 +1235,7 @@ val ordz_search_success = store_thm(
          >= k                          by LESS_OR_EQ
         If ~(k divides c /\ (n ** k MOD m = 1)),
            ordz_search m n c k
-         = ordz_search m n c (k + 1)  by ordz_search_alt, k < c
+         = ordz_search m n c (k + 1)   by ordz_search_alt, k < c
          >= k + 1                      by induction hypothesis
          >= k                          by arithmetic
 *)
@@ -1273,7 +1273,7 @@ val ordz_search_lower = store_thm(
          <= c                          by LESS_OR_EQ
         If ~(k divides c /\ (n ** k MOD m = 1)),
            ordz_search m n c k
-         = ordz_search m n c (k + 1)  by ordz_search_alt, k < c
+         = ordz_search m n c (k + 1)   by ordz_search_alt, k < c
          <= MAX (k + 1) c              by induction hypothesis
          <= MAX k c                    by k < c ==> (k + 1) <= c
         Indeed, MAX (k + 1) c = c = MAX k c   by MAX_DEF

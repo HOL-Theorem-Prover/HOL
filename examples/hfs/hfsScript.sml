@@ -2,10 +2,9 @@
 
    Single (recursive) constructor is
 
-     fromSet : hfs set -> hfs
+     fromSet : hfs fset -> hfs
 
-   where the set must be finite.  (Perhaps an argument to have a finite set
-   type in the core distribution?)
+   where the fset type operator is that of finite sets.
 
    Because there is just one constructor, there is a total inverse to
    fromSet, called toSet
@@ -17,9 +16,7 @@
      fromSet (toSet h) = h
 
    Future work:
-   - define empty hfs value
-   - define other operations such as insert, intersection, union and
-     cardinality
+   - define other operations such as intersection, union and cardinality
    - prove induction principle
    - prove recursion principle
 
@@ -34,38 +31,42 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory
+open pred_setTheory finite_setTheory
 
 val _ = new_theory "hfs";
 
-val _ = ParseExtras.tight_equality()
+Overload mk[local] = “fSUM_IMAGE ((EXP) 2)”
 
-val _ = temp_overload_on ("mk", ``SUM_IMAGE ((EXP) 2)``)
+Theorem numeq_wlog[local]:
+  ∀P. (∀n m. P n m ⇔ P m n) ∧ (∀n m. P n m ⇒ n ≤ m) ⇒
+      (∀n m. P n m ⇒ (n = m))
+Proof metis_tac [DECIDE ``∀n m. n ≤ m ∧ m ≤ n ⇒ m = n``]
+QED
 
-val numeq_wlog = prove(
-  ``∀P. (∀n m. P n m ⇔ P m n) ∧ (∀n m. P n m ⇒ n ≤ m) ⇒
-        (∀n m. P n m ⇒ (n = m))``,
-  metis_tac [DECIDE ``∀n m. n ≤ m ∧ m ≤ n ⇒ m = n``]);
-
-val strictly_increasing_SUC_extends = prove(
-  ``(∀n. f n < f (n + 1)) ⇒ (∀n m. n < m ⇒ f n < f m)``,
+Theorem strictly_increasing_SUC_extends[local]:
+  (∀n. f n < f (n + 1)) ⇒ (∀n m. n < m ⇒ f n < f m)
+Proof
   strip_tac >> Induct_on `m` >> simp[] >> rpt strip_tac >>
   rename1 `n < SUC m` >>
   `n = m ∨ n < m` by simp[] >>
   simp[arithmeticTheory.ADD1] >>
-  metis_tac [DECIDE ``∀m n p. m < n ⇒ n < p ⇒ m < p``]);
+  metis_tac [DECIDE ``∀m n p. m < n ⇒ n < p ⇒ m < p``]
+QED
 
-val strictly_increasing_injective = prove(
-  ``(∀n. f n < f (n + 1)) ⇒ ∀n1 n2. f n1 = f n2 ⇔ n1 = n2``,
+Theorem strictly_increasing_injective[local]:
+  (∀n. f n < f (n + 1)) ⇒ ∀n1 n2. f n1 = f n2 ⇔ n1 = n2
+Proof
   simp[EQ_IMP_THM] >> rpt strip_tac >>
   qspec_then `λn m. f n = f m` (irule o BETA_RULE) numeq_wlog >>
   qexists_tac `f` >> simp[] >> spose_not_then strip_assume_tac >>
   rename1 `¬(n ≤ m)` >> `m < n` by simp[] >>
   `f m < f n` by metis_tac [strictly_increasing_SUC_extends] >>
-  metis_tac[DECIDE ``¬(x < x)``]);
+  metis_tac[DECIDE ``¬(x < x)``]
+QED
 
-val strictly_increasing_nobounds = prove(
-  ``(∀n. f n < f (n + 1)) ⇒ ∀b. ∃n. b < f n``,
+Theorem strictly_increasing_nobounds[local]:
+  (∀n. f n < f (n + 1)) ⇒ ∀b. ∃n. b < f n
+Proof
   rpt strip_tac >> spose_not_then strip_assume_tac >>
   rename1 `bnd < f _` >>
   `∀n. f n ≤ bnd` by metis_tac[DECIDE ``¬(x < y) ⇒ y ≤ x``] >>
@@ -74,148 +75,163 @@ val strictly_increasing_nobounds = prove(
     by simp[INJ_DEF, DECIDE ``x < y + 1 ⇔ x ≤ y``] >>
   `FINITE (count (bnd + 1))` by simp[] >>
   `CARD (count (bnd + 1)) < CARD (count (bnd + 2))` by simp[] >>
-  metis_tac[PHP]);
+  metis_tac[PHP]
+QED
 
-val TWO_EXP_BOUNDS = prove(
-  ``∀n. ∃j. n < 2 ** j``,
-  match_mp_tac strictly_increasing_nobounds >> simp[arithmeticTheory.EXP_ADD]);
+Theorem TWO_EXP_BOUNDS[local]:
+  ∀n. ∃j. n < 2 ** j
+Proof
+  match_mp_tac strictly_increasing_nobounds >> simp[arithmeticTheory.EXP_ADD]
+QED
 
-val bound_exists = prove(
-  ``∀n. n < 2 ** (LEAST m. n < 2 ** m) ∧
-        ∀p. p < (LEAST m. n < 2 ** m) ⇒ 2 ** p ≤ n``,
+Theorem bound_exists[local]:
+  ∀n. n < 2 ** (LEAST m. n < 2 ** m) ∧
+      ∀p. p < (LEAST m. n < 2 ** m) ⇒ 2 ** p ≤ n
+Proof
   qx_gen_tac `n` >>
   qspec_then `λm. n < 2 ** m`
     (match_mp_tac o SIMP_RULE (srw_ss()) [arithmeticTheory.NOT_LESS])
      whileTheory.LEAST_EXISTS_IMP >>
-  metis_tac[TWO_EXP_BOUNDS]);
+  metis_tac[TWO_EXP_BOUNDS]
+QED
 
-val mk_minimum = prove(
-  ``∀s. FINITE s ⇒ ∀j. j ∈ s ⇒ 2 ** j ≤ mk s``,
-  ho_match_mp_tac FINITE_INDUCT >> simp[] >>
-  dsimp[SUM_IMAGE_THM, DELETE_NON_ELEMENT_RWT] >>
-  rpt strip_tac >> res_tac >> simp[]);
+Theorem mk_minimum[local]:
+  ∀s j. fIN j s ⇒ 2 ** j ≤ mk s
+Proof
+  Induct >> rw[fSUM_IMAGE_THM] >> simp[] >>
+  first_x_assum drule >> simp[]
+QED
 
 Triviality mk_onto:
-  ∀n. ∃s. FINITE s ∧ mk s = n
+  ∀n. ∃s. mk s = n
 Proof
   completeInduct_on `n` >>
   qspec_then `n` strip_assume_tac bound_exists >>
   qabbrev_tac `m = LEAST m. n < 2 EXP m` >>
   Cases_on `m = 0`
-  >- (Q.UNABBREV_TAC ‘m’ >> fs[] >> `n = 0` by simp[] >> qexists_tac `∅` >>
-      simp[SUM_IMAGE_THM]) >>
+  >- (Q.UNABBREV_TAC ‘m’ >> fs[] >> `n = 0` by simp[] >> qexists_tac `fEMPTY` >>
+      simp[fSUM_IMAGE_THM]) >>
   `m - 1 < m` by simp[] >>
   `2 ** (m - 1) ≤ n` by simp[] >>
   qabbrev_tac `M = 2 ** (m - 1)` >>
   `0 < M` by simp[Abbr`M`] >>
   `n - M < n` by simp[] >>
-  `∃s0. FINITE s0 ∧ mk s0 = n - M` by metis_tac[] >>
-  qexists_tac `(m - 1) INSERT s0` >>
-  simp[SUM_IMAGE_THM] >>
-  Cases_on `m - 1 ∈ s0`
+  `∃s0. mk s0 = n - M` by metis_tac[] >>
+  qexists_tac `fINSERT (m - 1) s0` >>
+  simp[fSUM_IMAGE_THM] >>
+  Cases_on `fIN (m - 1) s0`
   >- (`M ≤ mk s0` by metis_tac[mk_minimum] >>
       `2 * M ≤ n` by simp[] >>
       `2 * M = 2 ** m` suffices_by simp[] >>
       simp[Abbr`M`]  >> fs[GSYM arithmeticTheory.EXP] >>
       `SUC (m - 1) = m` by simp[] >> lfs[]) >>
-  simp[DELETE_NON_ELEMENT_RWT]
+  simp[]
 QED
 
-val split_sets = prove(
-  ``s1 = (s1 ∩ s2) ∪ (s1 DIFF s2)``,
-  simp[EXTENSION] >> metis_tac[]);
+Theorem split_sets[local]:
+  s1 = fUNION (fINTER s1 s2) (fDIFF s1 s2)
+Proof simp[EXTENSION] >> metis_tac[]
+QED
 
-val DISJOINT_DIFF = prove(
-  ``DISJOINT (s1 DIFF s2) (s2 DIFF s1)``,
-  simp[DISJOINT_DEF, EXTENSION] >> metis_tac[]);
+Theorem DISJOINT_DIFF[local]:
+  fINTER (fDIFF s1 s2) (fDIFF s2 s1) = fEMPTY
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
 
-val DIFF_NONEMPTY = prove(
-  ``s1 ≠ s2 ⇔ s1 DIFF s2 ≠ ∅ ∨ s2 DIFF s1 ≠ ∅``,
-  simp[EXTENSION] >> metis_tac[]);
+Theorem DIFF_NONEMPTY[local]:
+  s1 ≠ s2 ⇔ fDIFF s1 s2 ≠ fEMPTY ∨ fDIFF s2 s1 ≠ fEMPTY
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
 
-val disjoint_inequal_has_maximum = prove(
-  ``FINITE s1 ∧ FINITE s2 ∧ DISJOINT s1 s2 ∧ s1 ≠ s2 ⇒
-    (∃m. m ∈ s1 ∧ (∀n. n ∈ s2 ⇒ n < m)) ∨
-    (∃m. m ∈ s2 ∧ (∀n. n ∈ s1 ⇒ n < m))``,
-  Cases_on `s1 = ∅`
-  >- (simp[] >> strip_tac >>
-      `∃m s0. s2 = m INSERT s0` by metis_tac[SET_CASES] >> dsimp[]) >>
-  Cases_on `s2 = ∅` >> simp[]
-  >- (`∃m s0. s1 = m INSERT s0` by metis_tac[SET_CASES] >> dsimp[]) >>
-  qabbrev_tac `m1 = MAX_SET s1` >>
-  qabbrev_tac `m2 = MAX_SET s2` >>
+Theorem disjoint_inequal_has_maximum[local]:
+  fINTER s1 s2 = fEMPTY ∧ s1 ≠ s2 ⇒
+    (∃m. fIN m s1 ∧ (∀n. fIN n s2 ⇒ n < m)) ∨
+    (∃m. fIN m s2 ∧ (∀n. fIN n s1 ⇒ n < m))
+Proof
+  Cases_on `s1 = fEMPTY` >- metis_tac[fset_cases, IN_INSERT, NOT_IN_EMPTY] >>
+  Cases_on `s2 = fEMPTY` >> simp[]
+  >- metis_tac[fset_cases, IN_INSERT, NOT_IN_EMPTY] >>
+  qabbrev_tac `m1 = fMAX_SET s1` >>
+  qabbrev_tac `m2 = fMAX_SET s2` >>
   strip_tac >>
-  `m1 ∈ s1 ∧ (∀a. a ∈ s1 ⇒ a ≤ m1) ∧ m2 ∈ s2 ∧ (∀b. b ∈ s2 ⇒ b ≤ m2)`
-    by metis_tac[MAX_SET_DEF] >>
+  `fIN m1 s1 ∧ (∀a. fIN a s1 ⇒ a ≤ m1) ∧ fIN m2 s2 ∧ (∀b. fIN b s2 ⇒ b ≤ m2)`
+    by metis_tac[fMAX_SET_fIN, fIN_fMAX_SET] >>
   Cases_on `m1 < m2`
   >- (disj2_tac >> qexists_tac `m2` >> simp[] >> rpt strip_tac >> res_tac >>
       simp[]) >>
   disj1_tac >> qexists_tac `m1` >> simp[] >> rpt strip_tac >>
-  `m1 ≠ m2` by (strip_tac >> fs[DISJOINT_DEF, EXTENSION] >> metis_tac[]) >>
-  res_tac >> simp[]);
+  `m1 ≠ m2` by (strip_tac >> fs[EXTENSION] >> metis_tac[]) >>
+  res_tac >> simp[]
+QED
 
-val topdown_induct = prove(
-  ``P ∅ ∧
-    (∀e s0. P s0 ∧ e ∉ s0 ∧ (∀n. n ∈ s0 ⇒ n < e) ∧ FINITE s0 ⇒
-            P (e INSERT s0)) ⇒
-    (∀s. FINITE s ⇒ P s)``,
-  strip_tac >> gen_tac >> Induct_on `CARD s`
-  >- (rpt strip_tac >> `s = ∅` by metis_tac[CARD_EQ_0] >> simp[]) >>
-  rpt strip_tac >> `s ≠ ∅` by (strip_tac >> fs[]) >>
-  qabbrev_tac `M = MAX_SET s` >>
-  `M ∈ s ∧ ∀n. n ∈ s ⇒ n ≤ M` by metis_tac[MAX_SET_DEF] >>
-  `s = M INSERT (s DELETE M)` by metis_tac[INSERT_DELETE] >>
-  qabbrev_tac `s0 = s DELETE M` >>
-  `M ∉ s0 ∧ FINITE s0` by simp[Abbr`s0`] >>
-  rename1 `SUC n = CARD s` >>
-  `CARD s = SUC (CARD s0)` by simp[] >>
-  `n = CARD s0` by simp[] >>
+Theorem topdown_induct[local]:
+  P fEMPTY ∧
+  (∀e s0. P s0 ∧ ~fIN e s0 ∧ (∀n. fIN n s0 ⇒ n < e) ⇒ P (fINSERT e s0)) ⇒
+  (∀s. P s)
+Proof
+  strip_tac >> gen_tac >> Induct_on ‘fCARD s’ >> simp[] >>
+  rpt strip_tac >> `s ≠ fEMPTY` by (strip_tac >> fs[]) >>
+  qabbrev_tac `M = fMAX_SET s` >>
+  `fIN M s ∧ ∀n. fIN n s ⇒ n ≤ M` by metis_tac[fMAX_SET_fIN, fIN_fMAX_SET] >>
+  `s = fINSERT M (fDELETE M s)` by (simp[EXTENSION] >> metis_tac[]) >>
+  qabbrev_tac `s0 = fDELETE M s` >>
+  `~fIN M s0` by simp[Abbr`s0`] >>
+  rename1 `SUC n = fCARD s` >>
+  `fCARD s = SUC (fCARD s0)` by simp[] >>
+  `n = fCARD s0` by simp[] >>
   `P s0` by metis_tac[] >>
-  `∀n. n ∈ s0 ⇒ n < M`
-    by (fs[] >> metis_tac[DECIDE ``x ≤ y ∧ x ≠ y ⇒ x < y``]) >>
-  metis_tac[]);
+  `∀n. fIN n s0 ⇒ n < M`
+     by (fs[] >> metis_tac[DECIDE ``x ≤ y ∧ x ≠ y ⇒ x < y``]) >>
+    metis_tac[]
+QED
 
-val mk_upper_bound = prove(
-  ``∀s. FINITE s ⇒ ∀b. (∀n. n ∈ s ⇒ n < b) ⇒ mk s < 2 ** b``,
+Theorem mk_upper_bound[local]:
+  ∀s b. (∀n. fIN n s ⇒ n < b) ⇒ mk s < 2 ** b
+Proof
   ho_match_mp_tac topdown_induct >>
-  dsimp[SUM_IMAGE_THM, DELETE_NON_ELEMENT_RWT] >> rpt strip_tac >>
-  rename1 `e ∉ s` >>
+  dsimp[fSUM_IMAGE_THM] >> rpt strip_tac >>
+  rename1 `~fIN e s` >>
   `mk s < 2 ** e` by metis_tac[] >>
   rename1 `e < b` >>
   `∃d. b = SUC d + e` by metis_tac[arithmeticTheory.LESS_STRONG_ADD] >>
   simp[arithmeticTheory.EXP_ADD, arithmeticTheory.EXP] >>
   match_mp_tac arithmeticTheory.LESS_LESS_EQ_TRANS >>
-  qexists_tac `2 * 2 ** e` >> simp[]);
+  qexists_tac `2 * 2 ** e` >> simp[]
+QED
 
-val mk_11 = prove(
-  ``FINITE s1 ∧ FINITE s2 ⇒ (mk s1 = mk s2 ⇔ s1 = s2)``,
+Theorem mk_11[local]:
+  mk s1 = mk s2 ⇔ s1 = s2
+Proof
   simp[EQ_IMP_THM] >> rpt strip_tac >>
   spose_not_then strip_assume_tac >>
-  qabbrev_tac `c = s1 ∩ s2` >>
-  qabbrev_tac `t1 = s1 DIFF s2` >>
-  qabbrev_tac `t2 = s2 DIFF s1` >>
-  `s1 = c ∪ t1 ∧ s2 = c ∪ t2` by metis_tac[split_sets, INTER_COMM] >>
-  `FINITE c ∧ FINITE t1 ∧ FINITE t2` by simp[Abbr`c`, Abbr`t1`, Abbr`t2`] >>
-  `c ∩ t1 = ∅ ∧ c ∩ t2 = ∅`
+  qabbrev_tac `c = fINTER s1 s2` >>
+  qabbrev_tac `t1 = fDIFF s1 s2` >>
+  qabbrev_tac `t2 = fDIFF s2 s1` >>
+  `s1 = fUNION c t1 ∧ s2 = fUNION c t2` by metis_tac[split_sets, fINTER_COMM] >>
+  `fINTER c t1 = fEMPTY ∧ fINTER c t2 = fEMPTY`
     by (simp[Abbr`c`, Abbr`t1`, Abbr`t2`, EXTENSION] >> metis_tac[]) >>
   `mk s1 = mk c + mk t1 ∧ mk s2 = mk c + mk t2`
     by (rpt BasicProvers.VAR_EQ_TAC >>
-        Q.UNDISCH_THEN `mk (c ∪ t1) = mk (c ∪ t2)` kall_tac >>
-        simp[SUM_IMAGE_UNION, SUM_IMAGE_THM]) >>
+        Q.UNDISCH_THEN `mk (fUNION c t1) = mk (fUNION c t2)` kall_tac >>
+        simp[fSUM_IMAGE_UNION, fSUM_IMAGE_THM]) >>
   `mk t1 = mk t2` by simp[] >>
-  `DISJOINT t1 t2` by metis_tac[DISJOINT_DIFF] >>
+  `fINTER t1 t2 = fEMPTY` by (simp[EXTENSION, Abbr‘t1’, Abbr‘t2’] >> metis_tac[]) >>
   `t1 ≠ t2` by metis_tac[] >>
-  `(∃m1. m1 ∈ t1 ∧ (∀n. n ∈ t2 ⇒ n < m1)) ∨
-   (∃m2. m2 ∈ t2 ∧ (∀n. n ∈ t1 ⇒ n < m2))`
+  `(∃m1. fIN m1 t1 ∧ (∀n. fIN n t2 ⇒ n < m1)) ∨
+   (∃m2. fIN m2 t2 ∧ (∀n. fIN n t1 ⇒ n < m2))`
      by metis_tac[disjoint_inequal_has_maximum]
   >- (`mk t2 < 2 ** m1` by metis_tac[mk_upper_bound] >>
-      `2 ** m1 ≤ mk t1` by metis_tac[mk_minimum] >> lfs[]) >>
+      `2 ** m1 ≤ mk t1` by metis_tac[mk_minimum] >> gvs[]) >>
   `mk t1 < 2 ** m2` by metis_tac[mk_upper_bound] >>
-  `2 ** m2 ≤ mk t2` by metis_tac[mk_minimum] >> lfs[])
+  `2 ** m2 ≤ mk t2` by metis_tac[mk_minimum] >> gvs[]
+QED
 
-val mk_BIJ = prove(
-  ``BIJ mk {s | FINITE s} univ(:num)``,
-  simp[BIJ_DEF, INJ_DEF, SURJ_DEF, mk_11, mk_onto]);
+Theorem mk_BIJ[local]: BIJ mk UNIV UNIV
+Proof
+  simp[BIJ_DEF, INJ_DEF, SURJ_DEF, mk_11, mk_onto]
+QED
 
 val hfs = new_type_definition(
   "hfs",
@@ -226,124 +242,142 @@ val HFS_TYBIJ =
                                  name = "HFS_TYBIJ", tyax = hfs}
                                |> SIMP_RULE (srw_ss()) []
 
-val mkHFS_11 = store_thm(
-  "mkHFS_11[simp]",
-  ``mkHFS n1 = mkHFS n2 ⇔ n1 = n2``,
-  metis_tac[HFS_TYBIJ]);
+Theorem mkHFS_11[simp]: mkHFS n1 = mkHFS n2 ⇔ n1 = n2
+Proof metis_tac[HFS_TYBIJ]
+QED
 
-val destHFS_11 = store_thm(
-  "destHFS_11[simp]",
-  ``destHFS h1 = destHFS h2 ⇔ h1 = h2``,
-  metis_tac[HFS_TYBIJ]);
+Theorem destHFS_11[simp]: destHFS h1 = destHFS h2 ⇔ h1 = h2
+Proof metis_tac[HFS_TYBIJ]
+QED
 
-val toSet_def = Define`
-  toSet hfs = IMAGE mkHFS (LINV mk { s | FINITE s } (destHFS hfs))
-`;
+Definition toSet_def:
+  toSet hfs = fIMAGE mkHFS (LINV mk UNIV (destHFS hfs))
+End
 
-val LINV_mk_11 = store_thm(
-  "LINV_mk_11[simp]",
-  ``LINV mk {s | FINITE s} x = LINV mk {s | FINITE s} y ⇔ x = y``,
-  `BIJ (LINV mk {s | FINITE s}) univ(:num) { s | FINITE s}`
+Theorem LINV_mk_11[simp]:
+  LINV mk UNIV x = LINV mk UNIV y ⇔ x = y
+Proof
+  `BIJ (LINV mk UNIV) univ(:num) UNIV`
     by simp[BIJ_LINV_BIJ, mk_BIJ] >>
-  fs[BIJ_DEF, INJ_DEF, EQ_IMP_THM]);
+  fs[BIJ_DEF, INJ_DEF, EQ_IMP_THM]
+QED
 
-val toSet_11 = store_thm(
-  "toSet_11[simp]",
-  ``toSet h1 = toSet h2 ⇔ h1 = h2``,
-  simp[toSet_def, IMAGE_11]);
+Theorem toSet_11[simp]: toSet h1 = toSet h2 ⇔ h1 = h2
+Proof
+  simp[toSet_def, fIMAGE_11]
+QED
 
-val FINITE_toSet = store_thm(
-  "FINITE_toSet[simp]",
-  ``FINITE (toSet h)``,
-  simp[toSet_def] >>
-  `BIJ (LINV mk {s | FINITE s}) univ(:num) { s | FINITE s}`
-    by simp[BIJ_LINV_BIJ, mk_BIJ] >>
-  fs[BIJ_DEF, INJ_DEF]);
+Definition fromSet_def:
+  fromSet s = mkHFS (mk (fIMAGE destHFS s))
+End
 
-val fromSet_def = Define`
-  fromSet s = mkHFS (mk (IMAGE destHFS s))
-`;
-
-val fromSet_toSet = store_thm(
-  "fromSet_toSet",
-  ``fromSet (toSet h) = h``,
-  simp[fromSet_def, toSet_def] >> simp[GSYM IMAGE_COMPOSE] >>
+Theorem fromSet_toSet[simp]:
+  fromSet (toSet h) = h
+Proof
+  simp[fromSet_def, toSet_def] >> simp[GSYM fIMAGE_COMPOSE] >>
   simp[combinTheory.o_DEF, HFS_TYBIJ] >>
-  strip_assume_tac (MATCH_MP BIJ_LINV_INV mk_BIJ) >> fs[HFS_TYBIJ]);
+  strip_assume_tac (MATCH_MP BIJ_LINV_INV mk_BIJ) >> fs[HFS_TYBIJ]
+QED
 
-val LINV_mk = prove(
-  ``∀s. FINITE s ⇒ (LINV mk { s | FINITE s} (mk s) = s)``,
+Triviality LINV_mk:
+  ∀s. LINV mk UNIV (mk s) = s
+Proof
   rpt strip_tac >> irule LINV_DEF >> simp[INJ_DEF, mk_11] >>
-  qexists_tac `IMAGE mk {s | FINITE s}` >> simp[]);
+  qexists_tac `UNIV` >> simp[]
+QED
 
-val toSet_fromSet = Q.store_thm(
-  "toSet_fromSet",
-  `∀hs. FINITE hs ⇒ (toSet (fromSet hs) = hs)`,
-  Induct_on `FINITE` >> csimp[toSet_def, fromSet_def, LINV_mk, HFS_TYBIJ]);
+Theorem toSet_fromSet[simp]:
+  ∀hs. toSet (fromSet hs) = hs
+Proof
+  csimp[toSet_def, fromSet_def, HFS_TYBIJ, LINV_mk, GSYM fIMAGE_COMPOSE] >>
+  simp[combinTheory.o_DEF, HFS_TYBIJ]
+QED
 
-val fromSet_11 = Q.store_thm(
-  "fromSet_11",
-  `FINITE s1 ∧ FINITE s2 ⇒ ((fromSet s1 = fromSet s2) ⇔ (s1 = s2))`,
-  metis_tac[toSet_fromSet]);
+Theorem fromSet_11[simp]:
+  fromSet s1 = fromSet s2 ⇔ s1 = s2
+Proof
+  metis_tac[toSet_fromSet]
+QED
 
-val hINSERT_def = Define`
-  hINSERT h1 h2 = fromSet (h1 INSERT toSet h2)
-`;
+Definition hINSERT_def: hINSERT h1 h2 = fromSet (fINSERT h1 $ toSet h2)
+End
 
-val hEMPTY_def = Define`hEMPTY = fromSet ∅`
+Definition hEMPTY_def: hEMPTY = fromSet fEMPTY
+End
 
-val hf_CASES = Q.store_thm(
-  "hf_CASES",
-  `∀h. (h = hEMPTY) ∨ ∃h1 h2. h = hINSERT h1 h2`,
+Theorem hf_CASES:
+  ∀h. h = hEMPTY ∨ ∃h1 h2. h = hINSERT h1 h2
+Proof
   gen_tac >>
-  simp_tac bool_ss [GSYM toSet_11, hEMPTY_def, hINSERT_def, toSet_fromSet,
-                    FINITE_EMPTY, FINITE_INSERT, FINITE_toSet] >>
-  `toSet h = ∅ ∨ ∃e s. toSet h = e INSERT s` by metis_tac[SET_CASES] >>
-  simp[] >>
-  `FINITE (toSet h)` by simp[] >>
-  `FINITE s` by metis_tac[FINITE_INSERT] >>
-  map_every qexists_tac [`e`, `fromSet s`] >> simp[toSet_fromSet])
+  simp_tac bool_ss [GSYM toSet_11, hEMPTY_def, hINSERT_def, toSet_fromSet] >>
+  `toSet h = fEMPTY ∨ ∃e s. toSet h = fINSERT e s ∧ ~fIN e s`
+                            by (Cases_on ‘toSet h’ >> metis_tac[]) >>
+  simp[] >> qexistsl [`e`, `fromSet s`] >> simp[]
+QED
 
-val hINSERT_NEQ_hEMPTY = Q.store_thm(
-  "hINSERT_NEQ_hEMPTY[simp]",
-  `hINSERT h hs ≠ hEMPTY`,
-  simp[hINSERT_def, hEMPTY_def, fromSet_11]);
+Theorem hINSERT_NEQ_hEMPTY[simp]: hINSERT h hs ≠ hEMPTY
+Proof
+  simp[hINSERT_def, hEMPTY_def]
+QED
 
-val hINSERT_hINSERT = Q.store_thm(
-  "hINSERT_hINSERT",
-  `hINSERT x (hINSERT x s) = hINSERT x s`,
-  simp[hINSERT_def, toSet_fromSet]);
+Theorem hINSERT_hINSERT[simp]:
+  hINSERT x (hINSERT x s) = hINSERT x s
+Proof
+  simp[hINSERT_def, toSet_fromSet]
+QED
 
-val hINSERT_COMMUTES = Q.store_thm(
-  "hINSERT_COMMUTES",
-  `hINSERT x (hINSERT y s) = hINSERT y (hINSERT x s)`,
-  simp[hINSERT_def, toSet_fromSet] >> metis_tac[INSERT_COMM]);
+Theorem hINSERT_COMMUTES:
+  hINSERT x (hINSERT y s) = hINSERT y (hINSERT x s)
+Proof
+  simp[hINSERT_def, EXTENSION] >> metis_tac[]
+QED
 
-val hIN_def = Define`
+Definition hIN_def:
   hIN h hs ⇔ (hINSERT h hs = hs)
-`;
+End
 
-val hIN_toSet = Q.store_thm(
-  "hIN_toSet",
-  `hIN h hs ⇔ h ∈ toSet hs`,
+Theorem hIN_toSet:
+  hIN h hs ⇔ fIN h $ toSet hs
+Proof
   simp[hIN_def, hINSERT_def] >> eq_tac
   >- (disch_then (mp_tac o Q.AP_TERM `toSet`) >>
-      simp_tac bool_ss [toSet_fromSet, FINITE_INSERT, FINITE_toSet] >>
-      simp[ABSORPTION]) >>
-  simp[ABSORPTION, fromSet_toSet]);
+      simp_tac bool_ss [toSet_fromSet] >>
+      simp[fABSORPTION]) >>
+  simp[fABSORPTION]
+QED
 
-val hIN_hEMPTY = Q.store_thm(
-  "hIN_hEMPTY[simp]",
-  `¬(hIN h hEMPTY)`,
-  simp[hIN_def]);
+Theorem hIN_hEMPTY[simp]: ¬(hIN h hEMPTY)
+Proof simp[hIN_def]
+QED
 
-val hIN_hINSERT = Q.store_thm(
-  "hIN_hINSERT[simp]",
-  `hIN h1 (hINSERT h2 hs) ⇔ (h1 = h2) ∨ hIN h1 hs`,
-  simp[hIN_def] >> simp[hINSERT_def, fromSet_11, toSet_fromSet] >>
-  simp[GSYM ABSORPTION, EQ_IMP_THM] >> rpt strip_tac >> simp[] >>
-  metis_tac[toSet_11, toSet_fromSet, ABSORPTION, FINITE_INSERT, FINITE_toSet]);
+Theorem hIN_hINSERT[simp]:
+  hIN h1 (hINSERT h2 hs) ⇔ h1 = h2 ∨ hIN h1 hs
+Proof
+  simp[hIN_toSet, hINSERT_def]
+QED
 
-val _ = hide "mk"
+Theorem EXP_LT[local,simp]:
+  ∀n. n < 2 ** n
+Proof
+  Induct >> simp[arithmeticTheory.EXP]
+QED
+
+Theorem hIN_reduces[local]:
+  hIN h0 h ⇒ destHFS h0 < destHFS h
+Proof
+  simp[hIN_toSet, toSet_def, PULL_EXISTS, HFS_TYBIJ] >> rpt strip_tac >>
+  drule mk_minimum >> simp[MATCH_MP BIJ_LINV_INV mk_BIJ] >> strip_tac >>
+  irule arithmeticTheory.LESS_LESS_EQ_TRANS >> first_assum $ irule_at Any >>
+  simp[]
+QED
+
+Theorem hf_induction:
+  ∀P. (∀h. (∀h0. hIN h0 h ⇒ P h0) ⇒ P h) ⇒ (∀h. P h)
+Proof
+  rpt strip_tac >>
+  completeInduct_on ‘destHFS h’ >> gs[PULL_FORALL] >> rw[] >>
+  last_x_assum irule >> rw[] >> last_x_assum irule >>
+  simp[hIN_reduces]
+QED
 
 val _ = export_theory();

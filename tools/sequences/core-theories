@@ -21,6 +21,7 @@ src/coretypes
 [poly]!!src/meson/test
 src/tfl/src
 src/num/theories
+src/num/theories/cv_compute
 src/num/reduce/src
 src/num/arith/src
 src/num

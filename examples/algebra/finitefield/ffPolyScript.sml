@@ -1834,8 +1834,8 @@ val poly_prime_field_shift_1 = store_thm(
          pfshift (h::t) (SUC n)
        = (PF r).sum.id :: pfshift (h::t) n  by poly_shift_def
        = #0 :: pfshift (h::t) n             by PF_property
-       = #0 :: (h::t) >> n                 by induction hypothesis
-       = (h::t) >> SUC n                   by poly_shift_def
+       = #0 :: (h::t) >> n                  by induction hypothesis
+       = (h::t) >> SUC n                    by poly_shift_def
 *)
 val poly_prime_field_shift = store_thm(
   "poly_prime_field_shift",
@@ -1857,7 +1857,7 @@ val poly_prime_field_shift = store_thm(
       By weak_mult_cons, this is to show:
          weak_add (PF r) (weak_cmult (PF r) h q) (pfshift (weak_mult (PF r) p q) 1) = h o q || p o q >> 1
         weak_add (PF r) (weak_cmult (PF r) h q) (pfshift (weak_mult (PF r) p q) 1)
-      = weak_add (PF r) (weak_cmult (PF r) h q) (pfshift (p o q) 1)   by induction hypothesis
+      = weak_add (PF r) (weak_cmult (PF r) h q) (pfshift (p o q) 1)  by induction hypothesis
       = weak_add (PF r) (weak_cmult (PF r) h q) ((p o q) >> 1)       by poly_prime_field_shift
       = weak_add (PF r) (h o q) ((p o q) >> 1)                       by poly_prime_field_weak_cmult
       = (h o q) || ((p o q) >> 1)                                    by poly_prime_field_weak_add
@@ -1874,8 +1874,8 @@ val poly_prime_field_weak_mult = store_thm(
       pfcmult c p
     = pfchop (weak_cmult (PF r) c p)    by poly_cmult_def
     = pfchop (c o p)                    by poly_prime_field_weak_cmult
-    = chop (c o p)                     by poly_prime_field_chop
-    = c * p                            by poly_cmult_def
+    = chop (c o p)                      by poly_prime_field_chop
+    = c * p                             by poly_cmult_def
 *)
 val poly_prime_field_cmult = store_thm(
   "poly_prime_field_cmult",
@@ -1887,8 +1887,8 @@ val poly_prime_field_cmult = store_thm(
       pfadd p q
     = pfchop (weak_add (PF r) p q)      by poly_add_def
     = pfchop (p || q)                   by poly_prime_field_weak_add
-    = chop (p || q)                    by poly_prime_field_chop
-    = p + q                            by poly_add_def
+    = chop (p || q)                     by poly_prime_field_chop
+    = p + q                             by poly_add_def
 *)
 val poly_prime_field_add = store_thm(
   "poly_prime_field_add",
@@ -1900,8 +1900,8 @@ val poly_prime_field_add = store_thm(
       pfmult p q
     = pfchop (weak_mult (PF r) p q)    by poly_mult_def
     = pfchop (p o q)                   by poly_prime_field_weak_mult
-    = chop (p o q)                    by poly_prime_field_chop
-    = p * q                           by poly_mult_def
+    = chop (p o q)                     by poly_prime_field_chop
+    = p * q                            by poly_mult_def
 *)
 val poly_prime_field_mult = store_thm(
   "poly_prime_field_mult",
@@ -1937,7 +1937,7 @@ val it =
            ==> x IN (PolyRing (PF r)).carrier   by poly_prime_field_carriers
            ==> x IN (PolyRing r).carrier        by poly_prime_field_carrier_subset, SUBSET_DEF
            ==> x IN (PolyRing r).sum.carrier    by poly_ring_carriers
-       (2) pfadd x y = x + y, true               by poly_prime_field_add
+       (2) pfadd x y = x + y, true              by poly_prime_field_add
    (3) MonoidHomo I (PolyRing (PF r)).prod (PolyRing r).prod
        By MonoidHomo_def, poly_prime_field_ids, this is to show:
        (1) x IN (PolyRing (PF r)).prod.carrier ==> x IN (PolyRing r).prod.carrier
@@ -1945,7 +1945,7 @@ val it =
            ==> x IN (PolyRing (PF r)).carrier   by poly_prime_field_carriers
            ==> x IN (PolyRing r).carrier        by poly_prime_field_carrier_subset, SUBSET_DEF
            ==> x IN (PolyRing r).prod.carrier   by poly_ring_carriers
-       (2) pfmult x y = x * y, true              by poly_prime_field_mult
+       (2) pfmult x y = x * y, true             by poly_prime_field_mult
 *)
 val poly_prime_field_subring = store_thm(
   "poly_prime_field_subring",
@@ -1992,7 +1992,7 @@ val pf_common_poly_poly = store_thm(
 (* Proof:
    By induction on p.
    Base case: pfcpoly [] ==> pfpoly []
-      True sinc pfpoly [] = T         zero_poly_poly
+      True since pfpoly [] = T         by zero_poly_poly
    Step case: pfcpoly p ==> pfpoly p ==> !h. pfcpoly (h::p) ==> pfpoly (h::p)
         pfcpoly (h::p)
       = poly (h::p) /\ EVERY (\e. e IN Fp) (h::p)   by pf_common_poly_def
@@ -2001,11 +2001,11 @@ val pf_common_poly_poly = store_thm(
       = h IN R /\ poly p /\ ~zerop(h::p) /\
         (h IN Fp) /\ (EVERY (\e. e IN Fp) p)        by EVERY_DEF
       Now  h IN R /\ (EVERY (\e. e IN Fp) p)
-       ==> pfcpoly p                                  by pf_common_poly_def
-       ==> pfpoly p                                  by induction hypothesis
-      Also ~zerop(h::p) ==> ~pfzerop(h::p)           by poly_prime_field_zero_poly
+       ==> pfcpoly p                                by pf_common_poly_def
+       ==> pfpoly p                                 by induction hypothesis
+      Also ~zerop(h::p) ==> ~pfzerop(h::p)          by poly_prime_field_zero_poly
        so h IN Fp /\ pfpoly p /\ ~pfzerop(h::p)
-       ==> pfpoly (h::p)                             by Poly_def
+       ==> pfpoly (h::p)                            by Poly_def
 *)
 val pf_common_poly_pfpoly = store_thm(
   "pf_common_poly_pfpoly",
@@ -2052,11 +2052,11 @@ val poly_prime_field_poly_alt = store_thm(
    Step case: pfpoly p ==> (pfneg p = -p) ==>
               !h. pfpoly (h::p) ==> (pfneg (h::p) = -(h::p))
      Note pfpoly (h::p)
-      ==> h IN Fp /\ pfpoly p        by poly_cons_poly
-      and pfpoly p ==> poly p        by poly_prime_field_element_poly
+      ==> h IN Fp /\ pfpoly p       by poly_cons_poly
+      and pfpoly p ==> poly p       by poly_prime_field_element_poly
        pfneg (h::p)
-     = (PF r).sum.inv h::pfneg p     by poly_neg_cons, Ring (PF r), pfpoly (h::p)
-     = -h :: pfneg p                 by prime_field_neg, h IN Fp
+     = (PF r).sum.inv h::pfneg p    by poly_neg_cons, Ring (PF r), pfpoly (h::p)
+     = -h :: pfneg p                by prime_field_neg, h IN Fp
      = -h :: -p                     by induction hypothesis
      = -(h::p)                      by poly_neg_cons, Ring r, poly p
 *)
@@ -2081,8 +2081,8 @@ val poly_prime_field_neg = store_thm(
    Step case: !p. pfexp p n = p ** n ==>
               !p. pfexp p (SUC n) = p ** SUC n
         pfexp p (SUC n)
-      = pfmult p (pfexp p n)          by poly_exp_SUC
-      = pfmult p (p ** n)            by induction hypothesis
+      = pfmult p (pfexp p n)        by poly_exp_SUC
+      = pfmult p (p ** n)           by induction hypothesis
       = p * (p ** n)                by poly_prime_field_mult
       = p ** SUC n                  by poly_exp_SUC
 *)
@@ -2598,9 +2598,9 @@ val poly_eval_freshman_thm = store_thm(
    Let m = char r ** n.
     Note rfun (\k. p ' k)          by ring_fun_def, poly_coeff_element
     Note Ring (PF r)               by prime_field_field, field_is_ring
-     and pfpoly p ==> poly p        by poly_prime_field_element_poly
-     and pfcoeff p k = p ' k        by poly_prime_field_coeff
-   Since pfcoeff p k IN Fp          by poly_coeff_element, Ring (PF r), prime (char r)
+     and pfpoly p ==> poly p       by poly_prime_field_element_poly
+     and pfcoeff p k = p ' k       by poly_prime_field_coeff
+   Since pfcoeff p k IN Fp         by poly_coeff_element, Ring (PF r), prime (char r)
     thus p ' k IN Fp               by p ' k = pfcoeff p k
      and !k. (p ' k) ** m = p ' k  by prime_field_fermat_all, [1]
      (eval p x) ** m

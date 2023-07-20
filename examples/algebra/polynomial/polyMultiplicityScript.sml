@@ -487,7 +487,7 @@ val _ = temp_overload_on("term", ``\p c. factor c ** multiplicity p c``);
 
 (* Theorem: poly p /\ p <> |0| /\ c IN roots p ==> term p c pdivides p *)
 (* Proof:
-   Note `#1 <> #0   by poly_one_eq_poly_zero, poly_one_eq_zero, p <> |0|
+   Note #1 <> #0   by poly_one_eq_poly_zero, poly_one_eq_zero, p <> |0|
    Let s = multiplicity_set p c.
    Note FINITE s                     by poly_root_multiplicity_set_finite, p <> |0|
     and 1 IN s                       by poly_root_multiplicity_set_has_1
@@ -722,7 +722,7 @@ val poly_root_multiplicity_out_root = store_thm(
     and poly h                              by poly_div_poly, pmonic (term p c)
    Note c NOTIN roots h                     by poly_root_multiplicity_out_root
     ==> ~(factor c pdivides h)              by poly_root_factor, c NOTIN (roots h)
-    and ~(factor c pdivides q)              by poly_root_factor, c` NOTIN (roots q)
+    and ~(factor c pdivides q)              by poly_root_factor, c NOTIN (roots q)
 
    Part 4: assert ~(factor c ** (SUC n) pdivides p * q)
    By contradiction, assume factor c ** (SUC n) pdivides p * q

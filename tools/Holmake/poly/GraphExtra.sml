@@ -27,7 +27,7 @@ fun get_extra0 {master_dir,master_cline : HM_Cline.t, envlist} =
         )
       | [s] => SOME (filestr_to_tgt s)
       | _ => die_with ("Can't interpret HOLHEAP spec. in " ^
-                       OS.FileSys.getDir())
+                       HOLFileSys.getDir())
 
 fun get_extra i = {holheap = get_extra0 i}
 

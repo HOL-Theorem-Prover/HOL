@@ -13,7 +13,6 @@ val _ = new_theory "AKSshift";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -318,9 +317,9 @@ val ring_homo_ZN_to_ZN_X_add_c = store_thm(
        and Ring (ZN m)                       by ZN_ring, 0 < m
        and (ZN m).prod.id <> (ZN m).sum.id   by ZN_property, m <> 1
    Let f = \x. x MOD m, then
-       RingHomo f (ZN n) (ZN m)               by ZN_to_ZN_ring_homo, 0 < n, m divides n
-   ==> (MAP f (x+ n c) = x+ m c)              by ring_homo_ZN_to_ZN_X_add_c, 1 < m, s < m
-   ==> poly_intro (ZN m) k h (x+ m c)         by ring_homo_poly_intro_X_add_c, 0 < k
+       RingHomo f (ZN n) (ZN m)              by ZN_to_ZN_ring_homo, 0 < n, m divides n
+   ==> (MAP f (x+ n c) = x+ m c)             by ring_homo_ZN_to_ZN_X_add_c, 1 < m, s < m
+   ==> poly_intro (ZN m) k h (x+ m c)        by ring_homo_poly_intro_X_add_c, 0 < k
 *)
 val ring_homo_intro_ZN_to_ZN_X_add_c = store_thm(
   "ring_homo_intro_ZN_to_ZN_X_add_c",

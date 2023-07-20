@@ -2,7 +2,7 @@ structure BuildCommand :> BuildCommand =
 struct
 
 open Systeml Holmake_tools Holmake_types
-structure FileSys = OS.FileSys
+structure FileSys = HOLFileSys
 structure Path = OS.Path
 structure Process = OS.Process
 

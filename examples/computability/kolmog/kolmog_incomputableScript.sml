@@ -372,13 +372,13 @@ Proof
      ) >>
   completeInduct_on ‘j’ >>
   simp[Once num_to_bool_list_def] >> rw[] >> fs[]
-  >- (Cases_on ‘i’ >> fs[EXP] >> fs[DECIDE “x ≤ 1n ⇔ x = 0 ∨ x = 1”]) >>
-  simp[DECIDE “SUC x = y ⇔ y ≠ 0 ∧ x = y - 1”] >>
-  simp[BIT1_smaller, BIT2_smaller] >> csimp[] >>
-  Cases_on ‘i’ >> simp[]
-  >- (fs[EVEN_EXISTS] >> rw[] >> fs[] >> rename [‘j0 ≠ 0’] >> Cases_on ‘j0’ >>
+  >- (Cases_on ‘i’ >> fs[EXP] >> fs[DECIDE “x ≤ 1n ⇔ x = 0 ∨ x = 1”] >>
+      fs[EVEN_EXISTS] >> rw[] >> fs[] >> rename [‘j0 ≠ 0’] >> Cases_on ‘j0’ >>
       simp[ADD1, LEFT_ADD_DISTRIB] >> rename [‘2 ** n ≤ m + 1 /\ m + 1 < _’] >>
       simp[EXP_ADD]) >>
+  simp[DECIDE “SUC x = y ⇔ y ≠ 0 ∧ x = y - 1”] >>
+  simp[BIT1_smaller, BIT2_smaller] >> csimp[] >>
+  Cases_on ‘i’ >> simp[] >>
   fs[GSYM ODD_EVEN, ODD_EXISTS, ADD1, EXP_ADD]
 QED
 

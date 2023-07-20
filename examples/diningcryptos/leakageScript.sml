@@ -298,10 +298,8 @@ val unif_prog_space_highlowrandom_distribution = store_thm
    >> POP_ORW
    >> RW_TAC std_ss [CARD_CROSS, CARD_SING]);
 
-
-val unif_prog_space_leakage_reduce = store_thm
-  ("unif_prog_space_leakage_reduce",
-   ``!high low random f. FINITE high /\ FINITE low /\ FINITE random /\
+Theorem unif_prog_space_leakage_reduce :
+    !high low random f. FINITE high /\ FINITE low /\ FINITE random /\
            ~((high CROSS low) CROSS random={}) ==>
            (leakage (unif_prog_space high low random) f =
             SIGMA (\x. (\(x,y,z).
@@ -313,7 +311,8 @@ val unif_prog_space_leakage_reduce = store_thm
                   joint_distribution (unif_prog_space high low random) f L {(x,z)} *
                   lg (joint_distribution (unif_prog_space high low random) f L {(x,z)} *
                       & (CARD low))) x)
-                  (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random)))``,
+                  (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random)))
+Proof
    RW_TAC std_ss [leakage_def]
    >> Q.ABBREV_TAC `foo =
                   SIGMA (\x. (\(x,y,z).
@@ -354,6 +353,8 @@ val unif_prog_space_leakage_reduce = store_thm
       by RW_TAC std_ss [unif_prog_space_def, FINITE_CROSS, PSPACE]
    >> `POW (p_space (unif_prog_space high low random)) = events (unif_prog_space high low random)`
       by RW_TAC std_ss [unif_prog_space_def, PSPACE, EVENTS]
+ (* stage work *)
+   >> ‘prob_space (unif_prog_space high low random)’ by PROVE_TAC [prob_space_unif_prog_space]
    >> RW_TAC std_ss [finite_conditional_mutual_information_reduce]
    >> `p_space (unif_prog_space high low random) =
        (high CROSS low CROSS random)`
@@ -514,7 +515,8 @@ val unif_prog_space_leakage_reduce = store_thm
               >> RW_TAC std_ss [joint_distribution_def]
               >> Suff `PREIMAGE (\x. (f x,H x,L x)) {(f x',SND x)} INTER (high CROSS low CROSS random) = {}`
               >- METIS_TAC [prob_space_unif_prog_space, PROB_EMPTY]
-              >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [NOT_IN_EMPTY, IN_INTER, IN_PREIMAGE, IN_SING, IN_CROSS,
+              >> ONCE_REWRITE_TAC [EXTENSION]
+              >> RW_TAC std_ss [NOT_IN_EMPTY, IN_INTER, IN_PREIMAGE, IN_SING, IN_CROSS,
                                 low_state_def, high_state_def, PAIR]
               >> Q.PAT_X_ASSUM `FST x = f x'` (MP_TAC o GSYM) >> RW_TAC std_ss []
               >> POP_ASSUM (K ALL_TAC) >> POP_ASSUM (MP_TAC o Q.SPEC `x''`)
@@ -561,11 +563,11 @@ val unif_prog_space_leakage_reduce = store_thm
    >> Rewr'
    >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_IN_IF]
    >> ONCE_REWRITE_TAC [REAL_ADD_COMM] >> RW_TAC std_ss [GSYM real_sub]
-   >> Q.UNABBREV_TAC `foo` >> RW_TAC std_ss []);
+   >> Q.UNABBREV_TAC `foo` >> RW_TAC std_ss []
+QED
 
-val unif_prog_space_visible_leakage_reduce = store_thm
-  ("unif_prog_space_visible_leakage_reduce",
-   ``!high low random f. FINITE high /\ FINITE low /\ FINITE random /\
+Theorem unif_prog_space_visible_leakage_reduce :
+    !high low random f. FINITE high /\ FINITE low /\ FINITE random /\
            ~((high CROSS low) CROSS random={}) ==>
            (visible_leakage (unif_prog_space high low random) f =
             SIGMA
@@ -587,7 +589,8 @@ SIGMA
         lg
           (joint_distribution (unif_prog_space high low random) f (\s. (L s,R s))
              {(x,z)} * & (CARD low * CARD random))) x)
-  (IMAGE (\s. (f s,SND (FST s),SND s)) (high CROSS low CROSS random)))``,
+  (IMAGE (\s. (f s,SND (FST s),SND s)) (high CROSS low CROSS random)))
+Proof
    RW_TAC std_ss [visible_leakage_def]
    >> Q.ABBREV_TAC `foo = SIGMA
   (\x.
@@ -643,6 +646,8 @@ SIGMA
       by RW_TAC std_ss [unif_prog_space_def, FINITE_CROSS, PSPACE]
    >> `POW (p_space (unif_prog_space high low random)) = events (unif_prog_space high low random)`
       by RW_TAC std_ss [unif_prog_space_def, PSPACE, EVENTS]
+ (* stage work *)
+   >> ‘prob_space (unif_prog_space high low random)’ by PROVE_TAC [prob_space_unif_prog_space]
    >> RW_TAC std_ss [finite_conditional_mutual_information_reduce]
    >> `p_space (unif_prog_space high low random) =
        (high CROSS low CROSS random)`
@@ -855,7 +860,8 @@ SIGMA
    >> POP_ORW
    >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_IN_IF]
    >> ONCE_REWRITE_TAC [REAL_ADD_COMM] >> RW_TAC std_ss [GSYM real_sub]
-   >> Q.UNABBREV_TAC `foo` >> RW_TAC std_ss []);
+   >> Q.UNABBREV_TAC `foo` >> RW_TAC std_ss []
+QED
 
 val unif_prog_space_leakage_lemma1 = store_thm
   ("unif_prog_space_leakage_lemma1",
@@ -1332,8 +1338,9 @@ val unif_prog_space_leakage_lemma2 = store_thm
         (high CROSS low CROSS
          IMAGE SND ({FST (FST s')} CROSS {SND (FST s')} CROSS random)) then
             1 else 0))`
-        by (ONCE_REWRITE_TAC [FUN_EQ_THM] >> RW_TAC std_ss [IN_INTER, IN_SING, IN_CROSS, IN_PREIMAGE,
-                           IN_IMAGE, SND, high_state_def, low_state_def]
+        by (ONCE_REWRITE_TAC [FUN_EQ_THM]
+            >> RW_TAC std_ss [IN_INTER, IN_SING, IN_CROSS, IN_PREIMAGE,
+                              IN_IMAGE, SND, high_state_def, low_state_def]
             >> RW_TAC std_ss []
             >> METIS_TAC [PAIR])
    >> POP_ORW
@@ -1418,7 +1425,8 @@ val unif_prog_space_visible_leakage_lemma2 = store_thm
    >> RW_TAC std_ss []
    >> `(PREIMAGE f {f s'} INTER PREIMAGE (\s. (H s,L s,R s)) {(FST (FST s'),SND (FST s'),SND s')} INTER
         (high CROSS low CROSS random)) = {s'}`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_SING, IN_PREIMAGE, high_state_def,
+        by (ONCE_REWRITE_TAC [EXTENSION]
+            >> RW_TAC std_ss [IN_INTER, IN_SING, IN_PREIMAGE, high_state_def,
                            low_state_def, random_state_def, IN_CROSS]
             >> METIS_TAC [PAIR, FST, SND])
    >> RW_TAC std_ss [REAL_SUM_IMAGE_SING, IN_CROSS]);

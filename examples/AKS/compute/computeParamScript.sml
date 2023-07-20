@@ -987,10 +987,10 @@ val power_factors_coprime_nondivisor_element = store_thm(
 (* Theorem: 1 < m ==> !x. x IN power_factors_coprime_nondivisor n m ==> 1 < x *)
 (* Proof:
    Since ~(x divides (product_factors n m))  by power_factors_coprime_nondivisor_element
-         x <> 1                            by ONE_DIVIDES_ALL
-      If x = 0, coprime x n ==> n = 1      by coprime_0L
-    But then product_factors 1 m = 0       by product_factors_zero, 1 < m.
-    making x divides (product_factors 1 m) by ALL_DIVIDES_0
+         x <> 1                              by ONE_DIVIDES_ALL
+      If x = 0, coprime x n ==> n = 1        by coprime_0L
+    But then product_factors 1 m = 0         by product_factors_zero, 1 < m.
+    making x divides (product_factors 1 m)   by ALL_DIVIDES_0
     Hence x <> 0. Overall, 1 < x.
 *)
 val power_factors_coprime_nondivisor_property = store_thm(
@@ -1251,7 +1251,7 @@ Then prove that c = list_lcm (leibniz_vertical (n-1)).
          Thus 0 < q,
          and q * c IN (residue_common_multiple n)  by residue_common_multiple_has_multiple
          Therefore, r = m - q * c, and q * c < m   by arithmetic
-         so      r IN (residue_common_multiple n)` by residue_common_multiple_has_sub, q*c < m.
+         so      r IN (residue_common_multiple n)  by residue_common_multiple_has_sub, q*c < m.
          giving  c <= r                      by MIN_SET_LEM
          which contradicts r < c.
    (3) !m. m IN residue_common_multiple n ==> c divides m ==> c = MIN_SET (residue_common_multiple n)
@@ -2059,7 +2059,7 @@ val aks_param_search_nice = store_thm(
 (* Theorem: 0 < n /\ (aks_param_search n m 2 c = nice k) ==> k <= n *)
 (* Proof:
    By contradiction, suppose ~(k <= n), or n < k.
-   Then k divides n      by aks_param_search_nice
+   Then k divides n                by aks_param_search_nice
    But k divides n ==> k <= n      by DIVIDES_LE, 0 < n
    This is a contradiction.
 *)
@@ -2136,7 +2136,7 @@ val aks_param_search_nice_coprime_all = store_thm(
    (1) h <= j /\ j <= h /\ ~(h divides n) ==> ~(j divides n)
        Note j = h, hence true                   by h <= j /\ j <= h
    (2) ~(c < h) /\ ~(m <= h /\ m <= ordz h n) /\ (aks_param_search n m (h + 1) c = good k) /\ ~(h divides n) ==> h <= k
-       Note !j. h + 1 <= j /\ m <= ordz j n    by induction hypothesis, ordz_compute_eqn
+       Note !j. h + 1 <= j /\ m <= ordz j n     by induction hypothesis, ordz_compute_eqn
        Take j = k + 1, then h + 1 <= k + 1, or h <= k.
    (3) ~(c < h) /\ ~(m <= h /\ m <= ordz h n) /\ (aks_param_search n m (h + 1) c = good k) /\ ~(h divides n) ==> m <= ordz k n, true trivially.
        True                                     by induction hypothesis, ordz_compute_eqn
@@ -2327,9 +2327,9 @@ val aks_param_nice_bound = store_thm(
 (* Theorem: (aks_param n = nice k) ==> !j. 1 < j /\ j < k ==> coprime j n *)
 (* Proof:
    If n <= 2,
-      Then aks_param n = nice n        by aks_param_def
+      Then aks_param n = nice n         by aks_param_def
       so k = n,
-      and n = 0, or n = 1, or n = 2    by n <= 2
+      and n = 0, or n = 1, or n = 2     by n <= 2
       and there is no j such that 1 < j /\ j < k.
    If ~(n <= 2),
       Then 2 < n                        by n <> 2, 1 < n
@@ -2562,7 +2562,7 @@ val param_seek_thm = store_thm(
 
 (* Theorem: param n = aks_param n *)
 (* Proof:
-   If n <= 2, param n = nice n = aks_param n               by param_def, aks_param_def
+   If n <= 2, param n = nice n = aks_param n                  by param_def, aks_param_def
    Otherwise,
      param n
    = param_seek (SQ (ulog n)) (2 + HALF (ulog n ** 5)) n 2    by param_def

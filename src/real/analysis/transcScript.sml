@@ -25,7 +25,7 @@ open reduceLib
      numTheory
      prim_recTheory
      arithmeticTheory
-     realTheory realSimps
+     realTheory realSimps realLib
      metricTheory
      netsTheory
      real_sigmaTheory
@@ -33,11 +33,10 @@ open reduceLib
      jrhUtils
      Diff
      pred_setTheory
-     mesonLib
-     RealArith;
+     mesonLib;
 
-open seqTheory limTheory powserTheory;
 open iterateTheory real_topologyTheory derivativeTheory;
+open seqTheory limTheory powserTheory;
 
 val _ = new_theory "transc";
 val _ = Parse.reveal "B";
@@ -52,26 +51,8 @@ val art = ASM_REWRITE_TAC;
 
 val MVT            = limTheory.MVT;
 val ROLLE          = limTheory.ROLLE;
+val summable       = seqTheory.summable;
 val differentiable = limTheory.differentiable;
-
-(*---------------------------------------------------------------------------*)
-(* Some miscellaneous lemmas                                                 *)
-(*---------------------------------------------------------------------------*)
-
-val MULT_DIV_2 = prove
- (“!n. (2 * n) DIV 2 = n”,
-  GEN_TAC THEN ONCE_REWRITE_TAC[MULT_SYM] THEN
-  MP_TAC(SPECL [“2:num”, “0:num”] DIV_MULT) THEN REDUCE_TAC THEN
-  REWRITE_TAC[ADD_CLAUSES] THEN DISCH_THEN MATCH_ACCEPT_TAC);
-
-val EVEN_DIV2 = prove
- (“!n. ~(EVEN n) ==> ((SUC n) DIV 2 = SUC((n - 1) DIV 2))”,
-  GEN_TAC THEN REWRITE_TAC[EVEN_ODD, ODD_EXISTS] THEN
-  DISCH_THEN(X_CHOOSE_THEN “m:num” SUBST1_TAC) THEN
-  REWRITE_TAC[SUC_SUB1] THEN REWRITE_TAC[ADD1, GSYM ADD_ASSOC] THEN
-  SUBST1_TAC(EQT_ELIM(REDUCE_CONV “1 + 1:num = 2 * 1”)) THEN
-  REWRITE_TAC[GSYM LEFT_ADD_DISTRIB, MULT_DIV_2]);
-
 
 (*---------------------------------------------------------------------------*)
 (* The three functions we define by series are exp, sin, cos                 *)
@@ -86,7 +67,11 @@ val cos_ser =
 
 val exp_ser = “\n. inv(&(FACT n))”;
 
-Theorem exp = derivativeTheory.exp
+Theorem exp :
+    !x. exp(x) = suminf (\n. (^exp_ser) n * (x pow n))
+Proof
+    REWRITE_TAC [exp_def, suminf_univ]
+QED
 
 val cos = new_definition("cos",
   “cos(x) = suminf(\n. (^cos_ser) n * (x pow n))”);
@@ -98,40 +83,13 @@ val sin = new_definition("sin",
 (* Show the series for exp converges, using the ratio test                   *)
 (*---------------------------------------------------------------------------*)
 
-(* TODO: use derivativeTheory.EXP_CONVERGES to simply this proof *)
-val EXP_CONVERGES = store_thm("EXP_CONVERGES",
-  “!x. (\n. (^exp_ser) n * (x pow n)) sums exp(x)”,
-  let fun fnz tm =
-    (GSYM o MATCH_MP REAL_LT_IMP_NE o
-     REWRITE_RULE[GSYM REAL_LT] o C SPEC FACT_LESS) tm in
-  GEN_TAC THEN REWRITE_TAC[exp] THEN MATCH_MP_TAC SUMMABLE_SUM THEN
-  MATCH_MP_TAC SER_RATIO THEN
-  MP_TAC (SPEC “&1” REAL_DOWN) THEN REWRITE_TAC[REAL_LT_01] THEN
-  DISCH_THEN(X_CHOOSE_THEN “c:real” STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC “c:real” THEN ASM_REWRITE_TAC[] THEN
-  MP_TAC(SPEC “c:real” REAL_ARCH) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MP_TAC o SPEC “abs(x)”) THEN
-  DISCH_THEN(X_CHOOSE_TAC “N:num”) THEN EXISTS_TAC “N:num” THEN
-  X_GEN_TAC “n:num” THEN REWRITE_TAC[GREATER_EQ] THEN DISCH_TAC THEN BETA_TAC THEN
-  REWRITE_TAC[ADD1, POW_ADD, ABS_MUL, REAL_MUL_ASSOC, POW_1] THEN
-  GEN_REWR_TAC LAND_CONV  [REAL_MUL_SYM] THEN
-  REWRITE_TAC[REAL_MUL_ASSOC] THEN MATCH_MP_TAC REAL_LE_RMUL_IMP THEN
-  REWRITE_TAC[ABS_POS] THEN REWRITE_TAC[GSYM ADD1, FACT] THEN
-  REWRITE_TAC[GSYM REAL_MUL, MATCH_MP REAL_INV_MUL (CONJ
-   (REWRITE_RULE[GSYM REAL_INJ] (SPEC “n:num” NOT_SUC)) (fnz “n:num”))] THEN
-  REWRITE_TAC[ABS_MUL, REAL_MUL_ASSOC] THEN
-  MATCH_MP_TAC REAL_LE_RMUL_IMP THEN REWRITE_TAC[ABS_POS] THEN
-  MP_TAC(SPEC “n:num” LESS_0) THEN REWRITE_TAC[GSYM REAL_LT] THEN
-  DISCH_THEN(ASSUME_TAC o GSYM o MATCH_MP REAL_LT_IMP_NE) THEN
-  FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP ABS_INV th]) THEN
-  REWRITE_TAC[GSYM real_div] THEN MATCH_MP_TAC REAL_LE_LDIV THEN
-  ASM_REWRITE_TAC[GSYM ABS_NZ] THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
-  REWRITE_TAC[REWRITE_RULE[GSYM ABS_REFL, GSYM REAL_LE] ZERO_LESS_EQ] THEN
-  MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “&N * c” THEN CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_ASSUM ACCEPT_TAC,
-    FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP REAL_LE_RMUL th]) THEN
-    REWRITE_TAC[REAL_LE] THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
-    EXISTS_TAC “n:num” THEN ASM_REWRITE_TAC[LESS_EQ_SUC_REFL]] end);
+Theorem EXP_CONVERGES :
+    !x. (\n. (^exp_ser) n * (x pow n)) sums exp(x)
+Proof
+    RW_TAC std_ss [Once REAL_MUL_COMM, GSYM real_div]
+ >> REWRITE_TAC [REWRITE_RULE [sums_univ, FROM_0]
+                 derivativeTheory.EXP_CONVERGES]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Show by the comparison test that sin and cos converge                     *)
@@ -175,6 +133,7 @@ val COS_CONVERGES = store_thm("COS_CONVERGES",
 (* Show what the formal derivatives of these series are                      *)
 (*---------------------------------------------------------------------------*)
 
+(* also known as REAL_EXP_FDIFF *)
 val EXP_FDIFF = store_thm("EXP_FDIFF",
   “diffs ^exp_ser = ^exp_ser”,
   REWRITE_TAC[diffs] THEN BETA_TAC THEN
@@ -217,7 +176,7 @@ val COS_FDIFF = store_thm("COS_FDIFF",
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   REWRITE_TAC[real_div, REAL_NEG_LMUL] THEN
   REWRITE_TAC[GSYM REAL_MUL_ASSOC] THEN BINOP_TAC THENL
-   [POP_ASSUM(SUBST1_TAC o MATCH_MP EVEN_DIV2) THEN
+   [POP_ASSUM(SUBST1_TAC o MATCH_MP EVEN_DIV_2) THEN
     REWRITE_TAC[pow] THEN REWRITE_TAC[GSYM REAL_NEG_MINUS1],
     REWRITE_TAC[FACT, GSYM REAL_MUL] THEN
     SUBGOAL_THEN “~(&(SUC n) = &0) /\ ~(&(FACT n) = &0)” ASSUME_TAC THENL
@@ -299,7 +258,6 @@ Proof
     REWRITE_TAC[REAL_LT, ONE, LESS_0]]
 QED
 
-
 (* ------------------------------------------------------------------------- *)
 (* Processed versions of composition theorems.                               *)
 (* ------------------------------------------------------------------------- *)
@@ -335,6 +293,7 @@ QED
 (* Properties of the exponential function                                    *)
 (*---------------------------------------------------------------------------*)
 
+(* also known as REAL_EXP_0 *)
 val EXP_0 = store_thm("EXP_0",
   “exp(&0) = &1”,
   REWRITE_TAC[exp] THEN CONV_TAC SYM_CONV THEN
@@ -349,6 +308,7 @@ val EXP_0 = store_thm("EXP_0",
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
   REWRITE_TAC[GSYM ADD1, POW_0, REAL_MUL_RZERO, ADD_CLAUSES]);
 
+(* also known as REAL_EXP_LE_X *)
 val EXP_LE_X = store_thm("EXP_LE_X",
 “!x. &0 <= x ==> (&1 + x) <= exp(x)”,
 GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
@@ -374,6 +334,7 @@ GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
     POP_ASSUM(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[EXP_0, REAL_ADD_RID, REAL_LE_REFL]]);
 
+(* also known REAL_EXP_LT_1 *)
 val EXP_LT_1 = store_thm("EXP_LT_1",
   “!x. &0 < x ==> &1 < exp(x)”,
   GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC REAL_LTE_TRANS THEN
@@ -381,6 +342,7 @@ val EXP_LT_1 = store_thm("EXP_LT_1",
   MATCH_MP_TAC EXP_LE_X THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
   POP_ASSUM ACCEPT_TAC);
 
+(* also known as REAL_EXP_ADD_MUL *)
 val EXP_ADD_MUL = store_thm("EXP_ADD_MUL",
   “!x y. exp(x + y) * exp(~x) = exp(y)”,
   REPEAT GEN_TAC THEN
@@ -396,15 +358,18 @@ val EXP_ADD_MUL = store_thm("EXP_ADD_MUL",
     REWRITE_TAC[GSYM real_sub, REAL_SUB_0, REAL_MUL_RID, REAL_ADD_RID] THEN
     MATCH_ACCEPT_TAC REAL_MUL_SYM]);
 
+(* also known as REAL_EXP_NEG_MUL *)
 val EXP_NEG_MUL = store_thm("EXP_NEG_MUL",
   “!x. exp(x) * exp(~x) = &1”,
   GEN_TAC THEN MP_TAC(SPECL [“x:real”, “&0”] EXP_ADD_MUL) THEN
   REWRITE_TAC[REAL_ADD_RID, EXP_0]);
 
+(* also known as REAL_EXP_NEG_MUL2 *)
 val EXP_NEG_MUL2 = store_thm("EXP_NEG_MUL2",
   “!x. exp(~x) * exp(x) = &1”,
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN MATCH_ACCEPT_TAC EXP_NEG_MUL);
 
+(* also known as REAL_EXP_NEG *)
 val EXP_NEG = store_thm("EXP_NEG",
   “!x. exp(~x) = inv(exp(x))”,
   GEN_TAC THEN MATCH_MP_TAC REAL_RINV_UNIQ THEN
@@ -421,12 +386,14 @@ val EXP_ADD = store_thm("EXP_ADD",
 
 Theorem REAL_EXP_ADD = EXP_ADD
 
+(* also known as REAL_EXP_POS_LE *)
 val EXP_POS_LE = store_thm("EXP_POS_LE",
   “!x. &0 <= exp(x)”,
   GEN_TAC THEN
   GEN_REWR_TAC (funpow 2 RAND_CONV)  [GSYM REAL_HALF_DOUBLE] THEN
   REWRITE_TAC[EXP_ADD] THEN MATCH_ACCEPT_TAC REAL_LE_SQUARE);
 
+(* also known as REAL_EXP_NZ *)
 val EXP_NZ = store_thm("EXP_NZ",
   “!x. ~(exp(x) = &0)”,
   GEN_TAC THEN DISCH_TAC THEN
@@ -435,12 +402,14 @@ val EXP_NZ = store_thm("EXP_NZ",
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   MATCH_ACCEPT_TAC REAL_10);
 
+(* also known as REAL_EXP_POS_LT *)
 val EXP_POS_LT = store_thm("EXP_POS_LT",
   “!x. &0 < exp(x)”,
   GEN_TAC THEN REWRITE_TAC[REAL_LT_LE] THEN
   CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
   REWRITE_TAC[EXP_POS_LE, EXP_NZ]);
 
+(* also known as REAL_EXP_N *)
 val EXP_N = store_thm("EXP_N",
   “!n x. exp(&n * x) = exp(x) pow n”,
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, EXP_0, pow] THEN
@@ -448,11 +417,13 @@ val EXP_N = store_thm("EXP_N",
   REWRITE_TAC[GSYM REAL_ADD, EXP_ADD, REAL_RDISTRIB] THEN
   GEN_TAC THEN ASM_REWRITE_TAC[REAL_MUL_LID]);
 
+(* also known as REAL_EXP_SUB *)
 val EXP_SUB = store_thm("EXP_SUB",
   “!x y. exp(x - y) = exp(x) / exp(y)”,
   REPEAT GEN_TAC THEN
   REWRITE_TAC[real_sub, real_div, EXP_ADD, EXP_NEG]);
 
+(* also known as REAL_EXP_MONO_IMP *)
 val EXP_MONO_IMP = store_thm("EXP_MONO_IMP",
   “!x y. x < y ==> exp(x) < exp(y)”,
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o
@@ -465,6 +436,7 @@ val EXP_MONO_IMP = store_thm("EXP_MONO_IMP",
     REWRITE_TAC[real_div, GSYM REAL_MUL_ASSOC, EXP_NEG_MUL2, GSYM EXP_NEG] THEN
     REWRITE_TAC[REAL_MUL_LID, REAL_MUL_RID]]);
 
+(* also known as REAL_EXP_MONO_LT *)
 val EXP_MONO_LT = store_thm("EXP_MONO_LT",
   “!x y. exp(x) < exp(y) <=> x < y”,
   REPEAT GEN_TAC THEN EQ_TAC THENL
@@ -475,16 +447,19 @@ val EXP_MONO_LT = store_thm("EXP_MONO_LT",
     POP_ASSUM ACCEPT_TAC,
     MATCH_ACCEPT_TAC EXP_MONO_IMP]);
 
+(* also known as REAL_EXP_MONO_LE *)
 val EXP_MONO_LE = store_thm("EXP_MONO_LE",
   “!x y. exp(x) <= exp(y) <=> x <= y”,
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_NOT_LT] THEN
   REWRITE_TAC[EXP_MONO_LT]);
 
+(* also known as REAL_EXP_INJ *)
 val EXP_INJ = store_thm("EXP_INJ",
   “!x y. (exp(x) = exp(y)) <=> (x = y)”,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
   REWRITE_TAC[EXP_MONO_LE]);
 
+(* also known as REAL_EXP_TOTAL_LEMMA *)
 val EXP_TOTAL_LEMMA = store_thm("EXP_TOTAL_LEMMA",
   “!y. &1 <= y ==> ?x. &0 <= x /\ x <= y - &1 /\ (exp(x) = y)”,
   GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC IVT THEN
@@ -495,6 +470,7 @@ val EXP_TOTAL_LEMMA = store_thm("EXP_TOTAL_LEMMA",
     MATCH_MP_TAC DIFF_CONT THEN EXISTS_TAC “exp(x)” THEN
     MATCH_ACCEPT_TAC DIFF_EXP]);
 
+(* also known as REAL_EXP_TOTAL *)
 val EXP_TOTAL = store_thm("EXP_TOTAL",
   “!y. &0 < y ==> ?x. exp(x) = y”,
   GEN_TAC THEN DISCH_TAC THEN
@@ -508,55 +484,67 @@ val EXP_TOTAL = store_thm("EXP_TOTAL",
     MATCH_MP_TAC REAL_INVINV THEN CONV_TAC(RAND_CONV SYM_CONV) THEN
     MATCH_MP_TAC REAL_LT_IMP_NE THEN ASM_REWRITE_TAC[]]);
 
-(* new
-let REAL_EXP_BOUND_LEMMA = prove
- (`!x. &0 <= x /\ x <= inv(&2) ==> exp(x) <= &1 + &2 * x`,
-  GEN_TAC THEN DISCH_TAC THEN
+(* recovered from transc.ml *)
+Theorem REAL_EXP_BOUND_LEMMA :
+    !x. &0 <= x /\ x <= inv(&2) ==> exp(x) <= &1 + &2 * x
+Proof
+  GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC REAL_LE_TRANS THEN
-  EXISTS_TAC `suminf (\n. x pow n)` THEN CONJ_TAC THENL
-   [REWRITE_TAC[exp; BETA_THM] THEN MATCH_MP_TAC SER_LE THEN
-    REWRITE_TAC[summable; BETA_THM] THEN REPEAT CONJ_TAC THENL
-     [GEN_TAC THEN
-      GEN_REWRITE_TAC RAND_CONV [GSYM REAL_MUL_LID] THEN
-      MATCH_MP_TAC REAL_LE_RMUL_IMP THEN CONJ_TAC THENL
-       [MATCH_MP_TAC REAL_POW_LE THEN ASM_REWRITE_TAC[];
+  Q.EXISTS_TAC `suminf (\n. x pow n)` THEN CONJ_TAC >| (* 2 subgoals *)
+  [ (* goal 1 (of 2) *)
+    SIMP_TAC std_ss [exp] THEN MATCH_MP_TAC SER_LE THEN
+    SIMP_TAC std_ss [summable] THEN REPEAT CONJ_TAC >| (* 3 subgoals *)
+    [ (* goal 1.1 (of 3) *)
+      GEN_TAC THEN
+      GEN_REWRITE_TAC RAND_CONV empty_rewrites [GSYM REAL_MUL_LID] THEN
+      MATCH_MP_TAC REAL_LE_RMUL_IMP THEN CONJ_TAC >| (* 2 subgoals *)
+      [ (* goal 1.1.1 (of 2) *)
+        MATCH_MP_TAC REAL_POW_LE THEN ASM_REWRITE_TAC[],
+        (* goal 1.1.2 (of 2) *)
         MATCH_MP_TAC REAL_INV_LE_1 THEN
-        REWRITE_TAC[REAL_OF_NUM_LE; num_CONV `1`; LE_SUC_LT] THEN
-        REWRITE_TAC[FACT_LESS]];
-      EXISTS_TAC `exp x` THEN REWRITE_TAC[BETA_RULE REAL_EXP_CONVERGES];
-      EXISTS_TAC `inv(&1 - x)` THEN MATCH_MP_TAC GP THEN
-      ASM_REWRITE_TAC[real_abs] THEN
-      MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC `inv(&2)` THEN
-      ASM_REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV];
-    SUBGOAL_THEN `suminf (\n. x pow n) = inv (&1 - x)` SUBST1_TAC THENL
-     [CONV_TAC SYM_CONV THEN MATCH_MP_TAC SUM_UNIQ THEN
+        REWRITE_TAC[REAL_OF_NUM_LE, num_CONV ``1:num``, GSYM LESS_EQ] THEN
+        REWRITE_TAC[FACT_LESS] ],
+      (* goal 1.2 (of 3) *)
+      Q.EXISTS_TAC `exp x` THEN REWRITE_TAC[BETA_RULE EXP_CONVERGES],
+      (* goal 1.3 (of 3) *)
+      Q.EXISTS_TAC `inv(&1 - x)` THEN MATCH_MP_TAC GP THEN
+      ASM_REWRITE_TAC[abs] THEN
+      MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `inv(&2)` >> rw [] ],
+    (* goal 2 (of 2) *)
+    Q.SUBGOAL_THEN `suminf (\n. x pow n) = inv (&1 - x)` SUBST1_TAC >| (* 2 subgoals *)
+    [ (* goal 2.1 (of 2) *)
+      CONV_TAC SYM_CONV THEN MATCH_MP_TAC SUM_UNIQ THEN
       MATCH_MP_TAC GP THEN
-      ASM_REWRITE_TAC[real_abs] THEN
-      MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC `inv(&2)` THEN
-      ASM_REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV;
+      ASM_REWRITE_TAC[abs] THEN
+      MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `inv(&2)` >> rw [],
+      (* goal 2.2 (of 2) *)
       MATCH_MP_TAC REAL_LE_LCANCEL_IMP THEN
-      EXISTS_TAC `&1 - x` THEN
-      SUBGOAL_THEN `(&1 - x) * inv (&1 - x) = &1` SUBST1_TAC THENL
-       [MATCH_MP_TAC REAL_MUL_RINV THEN
-        REWRITE_TAC[REAL_ARITH `(&1 - x = &0) = (x = &1)`] THEN
+      Q.EXISTS_TAC `&1 - x` THEN
+      Q.SUBGOAL_THEN `(&1 - x) * inv (&1 - x) = &1` SUBST1_TAC >| (* 2 subgoals *)
+      [ (* goal 2.2.1 (of 2) *)
+        MATCH_MP_TAC REAL_MUL_RINV THEN
+        REWRITE_TAC[REAL_ARITH ``(&1 - x = &0) <=> (x = &1)``] THEN
         DISCH_THEN SUBST_ALL_TAC THEN
-        POP_ASSUM MP_TAC THEN CONV_TAC REAL_RAT_REDUCE_CONV;
-        CONJ_TAC THENL
-         [MATCH_MP_TAC REAL_LET_TRANS THEN
-          EXISTS_TAC `inv(&2) - x` THEN
-          ASM_REWRITE_TAC[REAL_ARITH `&0 <= x - y = y <= x`] THEN
-          ASM_REWRITE_TAC[REAL_ARITH `a - x < b - x = a < b`] THEN
-          CONV_TAC REAL_RAT_REDUCE_CONV;
-          REWRITE_TAC[REAL_ADD_LDISTRIB; REAL_SUB_RDISTRIB] THEN
-          REWRITE_TAC[REAL_MUL_RID; REAL_MUL_LID] THEN
-          REWRITE_TAC[REAL_ARITH `&1 <= (&1 + &2 * x) - (x + x * &2 * x) =
-                                  x * (&2 * x) <= x * &1`] THEN
+        POP_ASSUM MP_TAC >> rw [],
+        (* goal 2.2.2 (of 2) *)
+        CONJ_TAC >| (* 2 subgoals *)
+        [ (* goal 2.2.2.1 (of 2) *)
+          MATCH_MP_TAC REAL_LET_TRANS THEN
+          Q.EXISTS_TAC `inv(&2) - x` THEN
+          ASM_REWRITE_TAC[REAL_ARITH ``&0 <= x - y <=> y <= x``] THEN
+          ASM_REWRITE_TAC[REAL_ARITH ``a - x < b - x <=> a < b``] THEN
+          rw [],
+          (* goal 2.2.2.2 (of 2) *)
+          REWRITE_TAC[REAL_ADD_LDISTRIB, REAL_SUB_RDISTRIB] THEN
+          REWRITE_TAC[REAL_MUL_RID, REAL_MUL_LID] THEN
+          REWRITE_TAC[REAL_ARITH ``&1 <= (&1 + &2 * x) - (x + x * (&2 * x)) <=>
+                                   x * (&2 * x) <= x * &1``] THEN
           MATCH_MP_TAC REAL_LE_LMUL_IMP THEN ASM_REWRITE_TAC[] THEN
-          MATCH_MP_TAC REAL_LE_LCANCEL_IMP THEN EXISTS_TAC `inv(&2)` THEN
+          MATCH_MP_TAC REAL_LE_LCANCEL_IMP THEN Q.EXISTS_TAC `inv(&2)` THEN
           REWRITE_TAC[REAL_MUL_ASSOC] THEN
-          CONV_TAC REAL_RAT_REDUCE_CONV THEN
-          ASM_REWRITE_TAC[REAL_MUL_LID; real_div]]]]]);;
-end new*)
+          CONJ_TAC >- REWRITE_TAC [REAL_INV_1OVER, REAL_HALF_BETWEEN] \\
+          ASM_SIMP_TAC real_ss [REAL_MUL_RID, REAL_MUL_LINV] ] ] ] ]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Properties of the logarithmic function                                    *)
@@ -572,6 +560,7 @@ val LN_EXP = store_thm("LN_EXP",
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN MATCH_MP_TAC SELECT_AX THEN
   EXISTS_TAC “x:real” THEN REFL_TAC);
 
+(* also known as REAL_EXP_LN *)
 val EXP_LN = store_thm("EXP_LN",
   “!x. (exp(ln x) = x) <=> &0 < x”,
   GEN_TAC THEN EQ_TAC THENL
@@ -1560,7 +1549,6 @@ val SIN_POS_PI_LE = store_thm("SIN_POS_PI_LE",
    [DISJ1_TAC THEN MATCH_MP_TAC SIN_POS_PI THEN ASM_REWRITE_TAC[],
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[SIN_0]]);
 
-
 val COS_TOTAL = store_thm("COS_TOTAL",
   “!y. ~(&1) <= y /\ y <= &1 ==> ?!x. &0 <= x /\ x <= pi /\ (cos(x) = y)”,
   GEN_TAC THEN STRIP_TAC THEN
@@ -2186,7 +2174,7 @@ val DIFF_ACS_LEMMA = store_thm("DIFF_ACS_LEMMA",
     MATCH_MP_TAC SIN_ACS_NZ THEN ASM_REWRITE_TAC[]]);
 
 Theorem DIFF_ACS[difftool]:
-  !x. ~(&1) < x /\ x <  &1 ==> (acs diffl ~(inv(sqrt(&1 - (x pow 2)))))(x)
+  !x. ~(&1) < x /\ x < &1 ==> (acs diffl ~(inv(sqrt(&1 - (x pow 2)))))(x)
 Proof
   GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP DIFF_ACS_LEMMA) THEN
@@ -2487,7 +2475,7 @@ QED
 
 Theorem MCLAURIN_NEG:
   !f diff h n.
-    h < &0 /\ 0<n /\ (diff(0) = f) /\
+    h < &0 /\ 0 < n /\ (diff(0) = f) /\
     (!m t. m < n /\ h <= t /\ t <= &0 ==>
            (diff(m) diffl diff(SUC m)(t))(t)) ==>
     (?t. h < t /\ t < &0 /\
@@ -2566,11 +2554,8 @@ Proof
 QED
 
 Theorem MCLAURIN_ZERO :
-   !diff n x. (x = &0) /\ 0 < n
-       ==>
-       (sum(0,n) (\m. (diff m (&0) / &(FACT m)) * x pow m)
-        =
-       diff 0 (&0))
+   !diff n x. (x = &0) /\ 0 < n ==>
+       (sum(0,n) (\m. (diff m (&0) / &(FACT m)) * x pow m) = diff 0 (&0))
 Proof
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 SUBST1_TAC MP_TAC) THEN
   SPEC_TAC(Term`n:num`,Term`n:num`) THEN INDUCT_TAC THEN
@@ -3080,8 +3065,8 @@ Proof
       REWRITE_TAC[real_div, real_pow, REAL_MUL_LNEG, REAL_MUL_RNEG] THEN
       REWRITE_TAC[REAL_NEG_NEG, REAL_MUL_RID, REAL_MUL_LID] THEN
       REWRITE_TAC[REAL_MUL_ASSOC] THEN
-      Q_TAC KNOW_TAC ‘&FACT m * -1 pow m * inv ((1 + u) * (1 + u) pow m) =
-                      &FACT m * inv ((1 + u) * (1 + u) pow m) * -1 pow m’
+      Know ‘&FACT m * -1 pow m * inv ((1 + u) * (1 + u) pow m) =
+            &FACT m * inv ((1 + u) * (1 + u) pow m) * -1 pow m’
       >- (METIS_TAC [REAL_MUL_COMM, REAL_MUL_ASSOC]) THEN
       DISCH_THEN (fn th => ONCE_REWRITE_TAC [th]) THEN
       AP_THM_TAC THEN AP_TERM_TAC THEN
@@ -3090,8 +3075,8 @@ Proof
       REWRITE_TAC[SUC_SUB1, PRE] THEN REWRITE_TAC[FACT] THEN
       REWRITE_TAC[GSYM REAL_OF_NUM_MUL] THEN
       REWRITE_TAC[REAL_MUL_ASSOC] THEN
-      Q_TAC KNOW_TAC ‘&SUC p * &FACT p * inv ((1 + u) * (1 + u) pow SUC p) =
-                      &SUC p * inv ((1 + u) * (1 + u) pow SUC p) * &FACT p’
+      Know ‘&SUC p * &FACT p * inv ((1 + u) * (1 + u) pow SUC p) =
+            &SUC p * inv ((1 + u) * (1 + u) pow SUC p) * &FACT p’
       >- (METIS_TAC [REAL_MUL_COMM, REAL_MUL_ASSOC]) THEN
       DISCH_THEN (fn th => ONCE_REWRITE_TAC [th]) THEN
       AP_THM_TAC THEN AP_TERM_TAC THEN
@@ -3159,7 +3144,7 @@ Proof
     ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN REWRITE_TAC[GSYM real_div] THEN
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
   REWRITE_TAC[real_div] THEN
-  Q_TAC KNOW_TAC ‘!m. inv (&m) * x pow m = x pow m * inv (&m)’
+  Know ‘!m. inv (&m) * x pow m = x pow m * inv (&m)’
   >- METIS_TAC [REAL_MUL_COMM] >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th]) THEN
   DISCH_THEN MATCH_MP_TAC THEN
   qx_genl_tac [`m:num`, `u:real`] THEN STRIP_TAC THEN
@@ -3169,7 +3154,7 @@ Proof
     REWRITE_TAC[PRE, pow, FACT, REAL_SUB_LZERO] THEN
     REWRITE_TAC[REAL_MUL_RNEG, REAL_NEG_NEG, REAL_MUL_RID, REAL_MUL_LID] THEN
     DISCH_THEN MATCH_MP_TAC THEN
-    Q_TAC KNOW_TAC ‘u < 1’ >- PROVE_TAC [REAL_LET_TRANS] THEN
+    Know ‘u < 1’ >- PROVE_TAC [REAL_LET_TRANS] THEN
     REAL_ARITH_TAC,
     (* goal 2 (of 2) *)
     W(MP_TAC o Q.SPEC `u:real` o DIFF_CONV o lhand o rator o snd) THEN
@@ -3188,8 +3173,8 @@ Proof
       REWRITE_TAC[SUC_SUB1, PRE] THEN REWRITE_TAC[FACT] THEN
       REWRITE_TAC[GSYM REAL_OF_NUM_MUL] THEN
       REWRITE_TAC[REAL_MUL_ASSOC] THEN
-      Q_TAC KNOW_TAC ‘&SUC p * &FACT p * inv ((1 - u) pow SUC (SUC p)) =
-                      &SUC p * inv ((1 - u) pow SUC (SUC p)) * &FACT p’
+      Know ‘&SUC p * &FACT p * inv ((1 - u) pow SUC (SUC p)) =
+            &SUC p * inv ((1 - u) pow SUC (SUC p)) * &FACT p’
       >- (METIS_TAC [REAL_MUL_COMM, REAL_MUL_ASSOC]) THEN
       DISCH_THEN (fn th => ONCE_REWRITE_TAC [th]) THEN
       AP_THM_TAC THEN AP_TERM_TAC THEN
@@ -3337,9 +3322,9 @@ val exp_convex = store_thm
 (* ------------ ln and lg are concave on (0,infty] ------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val pos_concave_ln = store_thm
-  ("pos_concave_ln",
-   ``ln IN pos_concave_fn``,
+Theorem pos_concave_ln :
+    ln IN pos_concave_fn
+Proof
    RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
    >> Cases_on `t = 0` >- RW_TAC real_ss []
    >> Cases_on `t = 1` >- RW_TAC real_ss []
@@ -3361,7 +3346,9 @@ val pos_concave_ln = store_thm
    >> RW_TAC std_ss [] >- (MATCH_MP_TAC EXP_TOTAL >> RW_TAC std_ss [])
    >> ONCE_REWRITE_TAC [GSYM EXP_MONO_LE]
    >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
-   >> MP_TAC exp_convex >> RW_TAC std_ss [convex_fn, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]);
+   >> MP_TAC exp_convex
+   >> RW_TAC std_ss [convex_fn, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
+QED
 
 Theorem convex_lemma[local] :
     !x y t. 0 < x /\ 0 < y /\ 0 <= t /\ t <= 1 ==> 0 < x * t + y * (1 - t)
@@ -3384,7 +3371,7 @@ Proof
  >> STRIP_TAC
  >> ‘x <> 0 /\ y <> 0’ by PROVE_TAC [REAL_POS_NZ]
  >> Know ‘t * inv x + inv y * (1 - t) = (y * t + x * (1 - t)) / (x * y)’
- >- (rw [real_div, REAL_ADD_RDISTRIB])
+ >- (rw [real_div, REAL_ADD_RDISTRIB, REAL_ADD_LDISTRIB])
  >> Rewr'
  >> Know ‘(y * t + x * (1 - t)) / (x * y) = inv (x * y / (y * t + x * (1 - t)))’
  >- (rw [real_div, REAL_INV_MUL'])
@@ -3653,6 +3640,182 @@ Proof
  >> ‘0 <= p /\ 0 <= q’ by PROVE_TAC [REAL_LT_IMP_LE]
  >> MP_TAC (Q.SPECL [`a rpow p`, `b rpow q`, `inv p:real`, `inv q:real`] AGM_2)
  >> rw [RPOW_RPOW, RPOW_1, RPOW_POS_LT, real_div]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Real-valued power, log, and log base 2 functions (from util_probTheory)  *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "powr" (Infixr 700);
+val _ = overload_on ("powr", ``$rpow``);
+
+Definition logr_def :
+    logr a x = ln x / ln a
+End
+
+Definition lg_def :
+    lg x = logr 2 x
+End
+
+Theorem lg_1 :
+    lg 1 = 0
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_1]
+QED
+
+Theorem logr_1 :
+    !b. logr b 1 = 0
+Proof
+    RW_TAC real_ss [logr_def, LN_1]
+QED
+
+Theorem lg_nonzero :
+    !x. x <> 0 /\ 0 <= x ==> (lg x <> 0 <=> x <> 1)
+Proof
+    RW_TAC std_ss [REAL_ARITH ``x <> 0 /\ 0 <= x <=> 0 < x``]
+ >> RW_TAC std_ss [GSYM lg_1]
+ >> RW_TAC std_ss [lg_def, logr_def, real_div, REAL_EQ_RMUL, REAL_INV_EQ_0]
+ >> (MP_TAC o Q.SPECL [`2`, `1`]) LN_INJ >> RW_TAC real_ss [LN_1]
+ >> RW_TAC std_ss [GSYM LN_1]
+ >> MATCH_MP_TAC LN_INJ
+ >> RW_TAC real_ss []
+QED
+
+Theorem lg_mul :
+    !x y. 0 < x /\ 0 < y ==> (lg (x * y) = lg x + lg y)
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_MUL]
+QED
+
+Theorem logr_mul :
+    !b x y. 0 < x /\ 0 < y ==> (logr b (x * y) = logr b x + logr b y)
+Proof
+    RW_TAC real_ss [logr_def, LN_MUL]
+QED
+
+Theorem lg_2 :
+    lg 2 = 1
+Proof
+    RW_TAC real_ss [lg_def, logr_def]
+ >> MATCH_MP_TAC REAL_DIV_REFL
+ >> (ASSUME_TAC o Q.SPECL [`1`, `2`]) LN_MONO_LT
+ >> FULL_SIMP_TAC real_ss [LN_1]
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC REAL_LT_IMP_NE >> art []
+QED
+
+Theorem lg_inv :
+    !x. 0 < x ==> (lg (inv x) = ~lg x)
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_INV, real_div]
+QED
+
+Theorem logr_inv :
+    !b x. 0 < x ==> (logr b (inv x) = ~ logr b x)
+Proof
+    RW_TAC real_ss [logr_def, LN_INV, real_div]
+QED
+
+Theorem logr_div :
+    !b x y. 0 < x /\ 0 < y ==> (logr b (x/y) = logr b x - logr b y)
+Proof
+    RW_TAC real_ss [real_div, logr_mul, logr_inv, GSYM real_sub]
+QED
+
+Theorem neg_lg :
+    !x. 0 < x ==> ((~(lg x)) = lg (inv x))
+Proof
+    RW_TAC real_ss [lg_def, logr_def, real_div]
+ >> `~(ln x * inv (ln 2)) = (~ ln x) * inv (ln 2)` by REAL_ARITH_TAC
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> RW_TAC real_ss [REAL_EQ_RMUL]
+ >> DISJ2_TAC >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC LN_INV
+ >> RW_TAC std_ss []
+QED
+
+Theorem neg_logr :
+    !b x. 0 < x ==> ((~(logr b x)) = logr b (inv x))
+Proof
+    RW_TAC real_ss [logr_def, real_div]
+ >> `~(ln x * inv (ln b)) = (~ ln x) * inv (ln b)` by REAL_ARITH_TAC
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> RW_TAC real_ss [REAL_EQ_RMUL]
+ >> DISJ2_TAC >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC LN_INV
+ >> RW_TAC std_ss []
+QED
+
+Theorem lg_pow :
+    !n. lg (2 pow n) = &n
+Proof
+    RW_TAC real_ss [lg_def, logr_def, LN_POW]
+ >> `~(ln 2 = 0)`
+      by (ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC REAL_LT_IMP_NE
+          >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `ln 1`
+          >> RW_TAC real_ss [LN_POS, LN_MONO_LT])
+ >> RW_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_RINV]
+QED
+
+(* cf. LN_MONO_LT *)
+Theorem LOGR_MONO_LT :
+    !x :real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x < logr b y <=> x < y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+ >> METIS_TAC [REAL_LT_INV_EQ, REAL_LT_RMUL, LN_MONO_LT]
+QED
+
+Theorem LOGR_MONO_LE :
+    !x:real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x <= logr b y <=> x <= y)
+Proof
+  RW_TAC std_ss [logr_def,real_div]
+  >> `0 < ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LT_TRANS, LN_MONO_LT]
+  >> METIS_TAC [REAL_LT_INV_EQ, REAL_LE_RMUL, LN_MONO_LE]
+QED
+
+Theorem LOGR_MONO_LE_IMP :
+    !x:real y b. 0 < x /\ x <= y /\ 1 <= b ==> (logr b x <= logr b y)
+Proof
+    RW_TAC std_ss [logr_def,real_div]
+ >> `0 <= ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LTE_TRANS, LN_MONO_LE]
+ >> METIS_TAC [REAL_LE_INV_EQ, REAL_LE_RMUL_IMP, LN_MONO_LE, REAL_LTE_TRANS]
+QED
+
+(* from extra_realScript.sml of "miller" example *)
+Theorem pos_concave_lg :
+    lg IN pos_concave_fn
+Proof
+    RW_TAC std_ss [lg_def, logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+ >> `~(ln (t * x + (1 - t) * y) / ln 2) =
+      (inv (ln 2))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> `t * ~(ln x / ln 2) + (1 - t) * ~(ln y / ln 2) =
+     (inv (ln 2)) * (t * ~ ln x + (1-t) * ~ln y)`  by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> MATCH_MP_TAC REAL_LE_LMUL_IMP
+ >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
+ >> MP_TAC pos_concave_ln
+ >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
+(* from extra_realScript.sml of "miller" example *)
+Theorem pos_concave_logr :
+    !b. 1 <= b ==> (logr b) IN pos_concave_fn
+Proof
+    RW_TAC std_ss [logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+ >> `~(ln (t * x + (1 - t) * y) / ln b) =
+      (inv (ln b))*(~(ln (t * x + (1 - t) * y)))` by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> `t * ~(ln x / ln b) + (1 - t) * ~(ln y / ln b) =
+     (inv (ln b)) * (t * ~ ln x + (1-t) * ~ln y)`  by (RW_TAC real_ss [real_div] >> REAL_ARITH_TAC)
+ >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
+ >> MATCH_MP_TAC REAL_LE_LMUL_IMP
+ >> CONJ_TAC >- (RW_TAC real_ss [REAL_LE_INV_EQ] >> MATCH_MP_TAC LN_POS >> RW_TAC real_ss [])
+ >> MP_TAC pos_concave_ln
+ >> RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION,
+                   NOT_IN_EMPTY, GSPECIFICATION]
 QED
 
 val _ = export_theory();

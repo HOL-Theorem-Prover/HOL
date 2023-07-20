@@ -544,7 +544,8 @@ Proof
   REWRITE_TAC[REAL_ADD_RID_UNIQ] THEN
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   MATCH_MP_TAC REAL_LT_IMP_NE THEN
-  ASM_REWRITE_TAC[REAL_LT_HALF1]);
+  ASM_REWRITE_TAC[REAL_LT_HALF1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* F_sigma and G_delta sets in a topological space (ported from HOL Light)   *)

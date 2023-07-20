@@ -438,7 +438,7 @@ val poly_monic_deg_mult = store_thm(
    monic p * q ==> lead (p * q) = #1   by poly_monic_def
    If #1 = #0, |1| = |0|               by poly_zero_eq_one
    hence q = |0|                       by poly_one_eq_zero
-   and   lead q`
+   and   lead q
        = lead |0|                      by above
        = #0                            by poly_lead_zero
        = #1                            by #1 = #0

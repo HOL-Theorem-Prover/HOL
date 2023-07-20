@@ -177,25 +177,21 @@ val RTC_RTC = store_thm(
   ``!R (x:'a) y. RTC R x y ==> !z. RTC R y z ==> RTC R x z``,
   GEN_TAC THEN HO_MATCH_MP_TAC RTC_STRONG_INDUCT THEN MESON_TAC [RTC_RULES]);
 
-val RTC_TRANSITIVE = store_thm(
-  "RTC_TRANSITIVE[simp]",
-  ``!R:'a->'a->bool. transitive (RTC R)``,
-  REWRITE_TAC [transitive_def] THEN MESON_TAC [RTC_RTC]);
-val transitive_RTC = save_thm("transitive_RTC", RTC_TRANSITIVE);
+Theorem RTC_TRANSITIVE[simp]: !R:'a->'a->bool. transitive (RTC R)
+Proof REWRITE_TAC [transitive_def] THEN MESON_TAC [RTC_RTC]
+QED
+Theorem transitive_RTC = RTC_TRANSITIVE
 
-val RTC_REFLEXIVE = store_thm(
-  "RTC_REFLEXIVE",
-  ``!R:'a->'a->bool. reflexive (RTC R)``,
-  MESON_TAC [reflexive_def, RTC_RULES]);
-val reflexive_RTC = save_thm("reflexive_RTC", RTC_REFLEXIVE);
-val _ = export_rewrites ["reflexive_RTC"]
+Theorem RTC_REFLEXIVE[simp]: !R:'a->'a->bool. reflexive (RTC R)
+Proof MESON_TAC [reflexive_def, RTC_RULES]
+QED
+Theorem reflexive_RTC = RTC_REFLEXIVE
 
-val RC_REFLEXIVE = store_thm(
-  "RC_REFLEXIVE",
-  ``!R:'a->'a->bool. reflexive (RC R)``,
-  MESON_TAC [reflexive_def, RC_DEF]);
-val reflexive_RC = save_thm("reflexive_RC", RC_REFLEXIVE);
-val _ = export_rewrites ["reflexive_RC"]
+Theorem RC_REFLEXIVE[simp]:
+  !R:'a->'a->bool. reflexive (RC R)
+Proof MESON_TAC [reflexive_def, RC_DEF]
+QED
+Theorem reflexive_RC = RC_REFLEXIVE
 
 Theorem RC_REFL[simp]:
   RC R x x
@@ -203,26 +199,26 @@ Proof
   MESON_TAC [RC_DEF]
 QED
 
-val RC_lifts_monotonicities = store_thm(
-  "RC_lifts_monotonicities",
-  ``(!x y. R x y ==> R (f x) (f y)) ==> !x y. RC R x y ==> RC R (f x) (f y)``,
-  METIS_TAC [RC_DEF]);
+Theorem RC_lifts_monotonicities:
+  (!x y. R x y ==> R (f x) (f y)) ==> !x y. RC R x y ==> RC R (f x) (f y)
+Proof METIS_TAC [RC_DEF]
+QED
 
-val RC_MONOTONE = store_thm(
-  "RC_MONOTONE[mono]",
-  ``(!x y. R x y ==> Q x y) ==> RC R x y ==> RC Q x y``,
+Theorem RC_MONOTONE[mono]: (!x y. R x y ==> Q x y) ==> RC R x y ==> RC Q x y
+Proof
   STRIP_TAC THEN REWRITE_TAC [RC_DEF] THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC [] THEN RES_TAC THEN ASM_REWRITE_TAC [])
+  ASM_REWRITE_TAC [] THEN RES_TAC THEN ASM_REWRITE_TAC []
+QED
 
-val RC_lifts_invariants = store_thm(
-  "RC_lifts_invariants",
-  ``(!x y. P x /\ R x y ==> P y) ==> (!x y. P x /\ RC R x y ==> P y)``,
-  METIS_TAC [RC_DEF]);
+Theorem RC_lifts_invariants:
+  (!x y. P x /\ R x y ==> P y) ==> (!x y. P x /\ RC R x y ==> P y)
+Proof METIS_TAC [RC_DEF]
+QED
 
-val RC_lifts_equalities = store_thm(
-  "RC_lifts_equalities",
-  ``(!x y. R x y ==> (f x = f y)) ==> (!x y. RC R x y ==> (f x = f y))``,
-  METIS_TAC [RC_DEF]);
+Theorem RC_lifts_equalities:
+  (!x y. R x y ==> (f x = f y)) ==> (!x y. RC R x y ==> (f x = f y))
+Proof METIS_TAC [RC_DEF]
+QED
 
 val SC_lifts_monotonicities = store_thm(
   "SC_lifts_monotonicities",

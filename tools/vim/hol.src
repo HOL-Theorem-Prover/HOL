@@ -249,63 +249,123 @@ nn <buffer><silent> <LocalLeader>y :call HOLCall(function("HOLF"),["Globals.show
 nn <buffer><silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
 no <buffer><LocalLeader>h h
 
-if ! exists('$HOLDIR') || (!has('terminal') && ! has('nvim'))
-  let b:did_hol = 1
+if (!has('terminal') && ! has('nvim'))
+    \ || (has('nvim') && !exists(':terminal'))
   " skip terminal feature
+  let b:did_hol = 1
+  echomsg "vimhol: no support for (n)vim terminal feature"
   finish
 endif
 
-" if exists use readline wrapper
-if executable('rlwrap')
-  let s:rlwrap_str = 'rlwrap '
-else
-  let s:rlwrap_str = ''
+" finds hol located next Holmake (the lastmaker)
+function! LastmakerHOL()
+  let lastmakerfile = ".HOLMK/lastmaker"
+  if filereadable(lastmakerfile)
+    let lm = readfile(lastmakerfile,"",1)
+    if 0 < len(lm)
+      " assumes only one Holmake string in lastmaker path
+      return fnamemodify(lm[0],":s?Holmake?hol?")
+    endif
+  endif
+  return ""
+endfunction
+
+" finds a HOL executable
+function! WhichHOL()
+  let lm = LastmakerHOL()
+  let holdir = $HOLDIR . '/bin/hol'
+  " honouring 'hol' next to lastmaker
+  if executable(lm)
+    return lm
+  elseif executable(holdir)
+    return holdir
+  elseif executable('hol')
+    return 'hol'
+  endif
+  return ""
+endfunction
+
+" initialise
+if ! has_key(g:,'hol_repl')
+  let g:hol_repl = []
 endif
 
 function! HOLREPLnew()
-  let l:cmd = getenv('HOLDIR') . '/bin/hol'
-  if ! executable(l:cmd)
-    echoerr 'hol command not found: ' . l:cmd
+  let l:cmd = WhichHOL()
+  if ! (0 < len(l:cmd) && executable(l:cmd))
+    echoerr 'vimhol: hol command not found ' . l:cmd . ' Set HOLDIR environment variable'
     return 0
   endif
   let s:holpipe = tempname()
   call system('mkfifo '. s:holpipe)
-  "echom "holrepl pipe " . s:holpipe
+  "echomsg "holrepl pipe " . s:holpipe
   let options = {
   \  "cwd": expand('%:p:h'),
   \  "vertical": 1,
   \  "env": {
   \    "VIMHOL_FIFO": s:holpipe
   \  }}
-  echom 'holrepl cmd: ' . s:rlwrap_str . l:cmd
+  let altname = expand("%:r:t") " alternate name for terminal buffer
+  echomsg 'vimhol repl cmd: ' . l:cmd
   if has('nvim') " neovim terminal
     let options.stdin = "null"
     vsplit | enew
-    let l:terminal_job_id = termopen(s:rlwrap_str . l:cmd, options)
-    let g:hol_repl = {'buf': bufnr(''), 'job': l:terminal_job_id}
+    let l:terminal_job_id = termopen(l:cmd, options)
+    call add(g:hol_repl, {'buf': bufnr(''), 'job': l:terminal_job_id, 'pipe': s:holpipe})
     " scroll to end of terminal buffer
     silent! normal G
   else " vim terminal
-    rightbelow let g:hol_repl = term_start(s:rlwrap_str . l:cmd, options)
-    call term_setkill(g:hol_repl, 'term')
+    " Uncomment the next vimscript let-assignment to automatically close any
+    " terminated terminal buffer window. This is encouraged for advanced users
+    " only, because also any buffer with a failing hol command will be closed.
+    "let options.term_finish = "close"
+    rightbelow let s:replbuf = term_start(l:cmd, options)
+    call add(g:hol_repl, {'buf': s:replbuf, 'pipe': s:holpipe})
+    call term_setkill(g:hol_repl[-1].buf, 'term')
   endif
+  " set (unique) buffer name containing the origin
+  let g:hol_repl[-1].altname = 'hol ('. g:hol_repl[-1].buf . '): ' . altname
+  exec 'file ' . g:hol_repl[-1].altname
   wincmd p
 endfunction
 
 if has('nvim')
   function! HOLREPLsend(text)
-    call chansend(g:hol_repl.job, a:text)
+    " only send commands if a terminal buffer exists
+    if has_key(g:,'hol_repl') && len(g:hol_repl) > 0
+      call chansend(g:hol_repl[-1].job, a:text)
+    else
+      echoerr "vimhol: no active hol repl found"
+    endif
   endfunction
 else
   function! HOLREPLsend(text)
-    call term_sendkeys(g:hol_repl, a:text)
+    " only send commands if a terminal buffer exists
+    if has_key(g:,'hol_repl') && len(g:hol_repl) > 0
+      call term_sendkeys(g:hol_repl[-1].buf, a:text)
+    else
+      echoerr "vimhol: no active hol repl found"
+    endif
   endfunction
 endif
 
+" close terminal
+function! HOLREPLclose()
+  if has_key(g:,'hol_repl') && len(g:hol_repl) > 0
+    call HOLREPLsend("\<C-D>")
+    call remove(g:hol_repl, -1)
+    " (re)set the current holpipe
+    if len(g:hol_repl) > 0
+      let s:holpipe = g:hol_repl[-1].pipe
+    else
+      unlet s:holpipe
+    endif
+  endif
+endfunction
 " open a new hol terminal
 nn <buffer><silent> <LocalLeader>x :call HOLREPLnew()<CR>
 " close a hol_repl buffer
-nn <buffer><silent> <LocalLeader>X :call HOLREPLsend("\<C-D>")<CR>
+nn <buffer><silent> <LocalLeader>X :call HOLREPLclose()<CR>
 " send current line (or highlighted section) to terminal
 vn <buffer><silent> <LocalLeader>w "0y:call HOLREPLsend(getreg('0',1) . ";\n")<CR>
 nm <buffer><silent><expr> <LocalLeader>w "V".maplocalleader."w"

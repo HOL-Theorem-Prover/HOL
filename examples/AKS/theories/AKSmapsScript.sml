@@ -1396,10 +1396,10 @@ reduceP_poly_def   |- !r n. PPM n = IMAGE (\s. PPIMAGE (\c. X + |c|) s) (PPOW (n
        This is to show: deg q < CARD M
        Now, since SUC is injective,
          CARD (IMAGE SUC (count z))
-       = CARD (count z)              by FINITE_CARD_IMAGE
-       = z                           by CARD_COUNT
+       = CARD (count z)                               by FINITE_CARD_IMAGE
+       = z                                            by CARD_COUNT
        Since s' PSUBSET IMAGE SUC count z)
-       Hence CARD s' < CARD (IMAGE SUC (count z))   by CARD_PSUBSET
+       Hence CARD s' < CARD (IMAGE SUC (count z))     by CARD_PSUBSET
        Therefore deg (PPROD (IMAGE (\c. X + |c|) s')) < z <= t.
 *)
 val reduceP_poly_subset_reduceP = store_thm(
@@ -1500,8 +1500,8 @@ val modP_card_lower_0 = store_thm(
      and  CARD PM <= CARD (Q z)             by INJ_CARD
      But  PPM n SUBSET PM                   by reduceP_poly_subset_reduceP, 0 < k, 0 < s, s < char r.
      and  |0| IN PM                         by reduceP_has_zero, 1 < k.
-   Hence ( |0| INSERT PPM n) SUBSET PM       by INSERT_SUBSET
-   So CARD ( |0| INSERT PPM n) <= CARD PM    by CARD_SUBSET
+   Hence ( |0| INSERT PPM n) SUBSET PM      by INSERT_SUBSET
+   So CARD ( |0| INSERT PPM n) <= CARD PM   by CARD_SUBSET
    Since |0| NOTIN PPM n                    by reduceP_poly_has_no_zero
      and FINITE (PPM n)                     by reduceP_poly_finite
      CARD ( |0| INSERT PPM n)
@@ -1736,8 +1736,8 @@ val reduceP_mod_modP_inj_2 = store_thm(
      and  CARD PM <= CARD (Q z)            by INJ_CARD
      But  PPM n SUBSET PM                  by reduceP_poly_subset_reduceP, 0 < k, 0 < s, s < char r
      and  |0| IN PM                        by reduceP_has_zero
-   Hence ( |0| INSERT PPM n) SUBSET PM      by INSERT_SUBSET
-   So CARD ( |0| INSERT PPM n) <= CARD PM   by CARD_SUBSET
+   Hence ( |0| INSERT PPM n) SUBSET PM     by INSERT_SUBSET
+   So CARD ( |0| INSERT PPM n) <= CARD PM  by CARD_SUBSET
    Since |0| NOTIN PPM n                   by reduceP_poly_has_no_zero
      and FINITE (PPM n)                    by reduceP_poly_finite
      CARD ( |0| INSERT PPM n)

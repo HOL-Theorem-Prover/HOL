@@ -24,17 +24,17 @@ constant.
 \EXAMPLE
 The following shows a couple of typical cases:
 {
-   > variant [``y:bool``, ``z:bool``] ``x:bool``;
-   val it = ``x`` : term
+   > variant [“y:bool”, “z:bool”] “x:bool”;
+   val it = “x” : term
 
-   > variant [``x:bool``, ``x':num``, ``x'':num``] ``x:bool``;
-   > val it = ``x'''`` : term
+   > variant [“x:bool”, “x':num”, “x'':num”] “x:bool”;
+   > val it = “x'''” : term
 }
 while the following shows that clashes with the names of constants
 are also avoided:
 {
    > variant [] (mk_var("T",bool));
-   val it = ``T'`` : term
+   val it = “T'” : term
 }
 
 \USES
@@ -43,10 +43,10 @@ rules which need to rename variables to avoid free variable capture
 while still making the role of the variable obvious to the user.
 
 \COMMENTS
-There is a `Term.numvariant` function that has the same type
+There is a {Term.numvariant} function that has the same type
 signature, but which varies by adding and then incrementing a numeric
 suffix to the variable’s stem.
 
 \SEEALSO
-Term.genvar, Term.prim_variant, Globals.priming.
+Term.genvar, Term.prim_variant.
 \ENDDOC

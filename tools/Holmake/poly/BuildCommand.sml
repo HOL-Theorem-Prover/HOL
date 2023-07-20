@@ -2,7 +2,7 @@ structure BuildCommand :> BuildCommand =
 struct
 
 open Systeml Holmake_tools Holmake_types
-structure FileSys = OS.FileSys
+structure FileSys = HOLFileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
@@ -88,7 +88,7 @@ end
 
 fun addPath incs (file : string) : dep =
     let
-      val dir = OS.FileSys.getDir()
+      val dir = FileSys.getDir()
       open hm_target
     in
       if OS.Path.dir file <> "" then filestr_to_tgt file
@@ -113,7 +113,7 @@ fun finish_compilation warn depMods0 filename tgt =
         val filename_base = OS.Path.base filename
         val depMods = List.filter (fn s => s <> filename_base) depMods0
         fun getFTime fname =
-          SOME (OS.FileSys.modTime fname) handle OS.SysErr _ => NONE
+          SOME (FileSys.modTime fname) handle OS.SysErr _ => NONE
         fun combine fname t =
           case getFTime fname of NONE => t | SOME t0 => time_max(t0,t)
         fun foldthis (modn, t) =
@@ -125,7 +125,7 @@ fun finish_compilation warn depMods0 filename tgt =
                          Time.zeroTime)
               | SOME t => t
       in
-        OS.FileSys.setTime (tgt, SOME (List.foldl foldthis startTime depMods));
+        FileSys.setTime (tgt, SOME (List.foldl foldthis startTime depMods));
         OS.Process.success
       end
     | SOME s =>
@@ -160,7 +160,7 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
   fun usePathVars p = holpathdb.reverse_lookup {path = p}
   val depMods = List.map usePathVars (depMods @ map tgt_toString objMods)
   val say = if quietp then (fn s => ())
-            else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
+            else (fn s => FileSys.output(FileSys.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
   val filename = tgt_toString (filestr_to_tgt (fromFile file))
   val _ = diag (fn _ => "Writing target with dependencies: " ^
@@ -170,30 +170,30 @@ case file of
   SIG _ =>
     (let
       val tgt = modName ^ ".ui"
-      val outUi = TextIO.openOut tgt
+      val outUi = FileSys.openOut tgt
      in
-       TextIO.output (outUi, String.concatWith "\n" depMods);
-       TextIO.output (outUi, "\n");
-       TextIO.output (outUi, usePathVars filename ^ "\n");
-       TextIO.closeOut outUi;
+       FileSys.output (outUi, String.concatWith "\n" depMods);
+       FileSys.output (outUi, "\n");
+       FileSys.output (outUi, usePathVars filename ^ "\n");
+       FileSys.closeOut outUi;
        finish_compilation warn depMods filename tgt
      end
      handle IO.Io _ => OS.Process.failure)
 | SML _ =>
     (let
       val tgt = modName ^ ".uo"
-      val outUo = TextIO.openOut tgt
+      val outUo = FileSys.openOut tgt
      in
-       TextIO.output (outUo, String.concatWith "\n" depMods);
-       TextIO.output (outUo, "\n");
-       TextIO.output (outUo, usePathVars filename ^ "\n");
-       TextIO.closeOut outUo;
-       (if OS.FileSys.access (modName ^ ".sig", []) then
+       FileSys.output (outUo, String.concatWith "\n" depMods);
+       FileSys.output (outUo, "\n");
+       FileSys.output (outUo, usePathVars filename ^ "\n");
+       FileSys.closeOut outUo;
+       (if FileSys.access (modName ^ ".sig", []) then
           ()
         else
-          let val outUi = TextIO.openOut (modName ^ ".ui")
+          let val outUi = FileSys.openOut (modName ^ ".ui")
           in
-            TextIO.closeOut outUi;
+            FileSys.closeOut outUi;
             ignore (finish_compilation warn depMods filename (modName ^ ".ui"))
           end);
        finish_compilation warn depMods filename tgt
@@ -238,15 +238,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   let
     open hm_target
     val _ = if not quietp then
-              TextIO.output(TextIO.stdOut,
-                            "HOLMOSMLC -o " ^ result ^ " " ^
-                            String.concatWith " "
-                                              (map (fn s => s ^ ".uo") files) ^
-                            "\n")
+              FileSys.output(FileSys.stdOut,
+                             "HOLMOSMLC -o " ^ result ^ " " ^
+                             String.concatWith " "
+                                               (map (fn s => s ^ ".uo") files) ^
+                             "\n")
             else ()
-    val out = TextIO.openOut result
+    val out = FileSys.openOut result
     fun p s =
-        (TextIO.output (out, s); TextIO.output (out, "\n"))
+        (FileSys.output (out, s); FileSys.output (out, "\n"))
   in
     p "#!/bin/sh";
     p ("set -e");
@@ -257,7 +257,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
        String.concatWith " " (extra_poly_cline()) ^ " " ^
        String.concatWith " " (map protect files));
     p ("exit 0");
-    TextIO.closeOut out;
+    FileSys.closeOut out;
     Systeml.mk_xable result;
     OS.Process.success
   end handle IO.Io _ => OS.Process.failure

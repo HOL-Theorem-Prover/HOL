@@ -191,6 +191,7 @@ fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
   in
     y <> s2
   end handle base_tokens.LEX_ERR _ => true
+  val rstr_quotes = [0x0022, 0x00BB, 0x203A]
   fun new_addxstring f (xstr as {s,sz,ann}) ls = let
     val allspaces = str_all (equal #" ") s
   in
@@ -198,7 +199,7 @@ fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
       "" => nothing
     | _ => (if ls = " " orelse allspaces then f xstr
             else if not (!avoid_symbol_merges) then f xstr
-            else if String.sub(ls, size ls - 1) = #"\"" then f xstr
+            else if mem (snd $ valOf $ UTF8.lastChar ls) rstr_quotes then f xstr
             (* special case the quotation because term_tokens relies on
                the base token technology (see base_lexer) to separate the
                end of a string from the next character *)

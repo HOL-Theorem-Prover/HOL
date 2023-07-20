@@ -48,6 +48,12 @@ val prob_measure_def = Define
    `prob_measure s =
         inf {r | ?c. (s = prob_embed c) /\ (prob_premeasure c = r)}`;
 
+(* NOTE: in sigma_algebraTheory, the definition of ‘measurable’ has been
+   modified by removing all sigma-algebra requirements. The following
+   definition of ‘premeasurable’ is not changed accordingly, as it's only
+   used in the ‘miller’ example, but some related theorems may have to
+   add sigma_algebra antecedents.  -- Chun Tian, 24/10/2022
+ *)
 val premeasurable_def = Define
    `premeasurable a b = {f | algebra a /\ algebra b /\
                              f IN (space a -> space b) /\
@@ -61,11 +67,17 @@ val IN_PREMEASURABLE = store_thm
                 (!s. s IN subsets b ==> (PREIMAGE f s) INTER (space a) IN subsets a)``,
    RW_TAC std_ss [premeasurable_def, GSPECIFICATION]);
 
-val MEASURABLE_IMP_PREMEASURABLE = store_thm
-  ("MEASURABLE_IMP_PREMEASURABLE", ``!f a b. f IN measurable a b ==> f IN premeasurable a b``,
+(* NOTE: added ‘sigma_algebra a /\ sigma_algebra b’ into antecedents,
+         due to changes of ‘measurable’
+ *)
+Theorem MEASURABLE_IMP_PREMEASURABLE :
+    !f a b. sigma_algebra a /\ sigma_algebra b /\ f IN measurable a b ==>
+            f IN premeasurable a b
+Proof
    rpt GEN_TAC
    >> RW_TAC std_ss [measurable_def, premeasurable_def, GSPECIFICATION,
-                     SIGMA_ALGEBRA_ALGEBRA]);
+                     SIGMA_ALGEBRA_ALGEBRA]
+QED
 
 val MEASURABLE_IS_PREMEASURABLE = store_thm
   ("MEASURABLE_IS_PREMEASURABLE",
@@ -75,15 +87,17 @@ val MEASURABLE_IS_PREMEASURABLE = store_thm
    >> IMP_RES_TAC SIGMA_ALGEBRA_ALGEBRA
    >> METIS_TAC []);
 
-val PREMEASURABLE_SIGMA = store_thm
-  ("PREMEASURABLE_SIGMA",
-   ``!f a b sp.
+Theorem PREMEASURABLE_SIGMA :
+    !f a b sp.
        sigma_algebra a /\ subset_class sp b /\ f IN (space a -> sp) /\
        (!s. s IN b ==> (PREIMAGE f s) INTER (space a) IN subsets a) ==>
-       f IN premeasurable a (sigma sp b)``,
-   rpt STRIP_TAC
-   >> MATCH_MP_TAC MEASURABLE_IMP_PREMEASURABLE
-   >> RW_TAC std_ss [MEASURABLE_SIGMA]);
+       f IN premeasurable a (sigma sp b)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC MEASURABLE_IMP_PREMEASURABLE
+ >> RW_TAC std_ss [SIGMA_ALGEBRA_SIGMA]
+ >> MATCH_MP_TAC MEASURABLE_SIGMA >> art []
+QED
 
 val PREMEASURABLE_SUBSET = store_thm
   ("PREMEASURABLE_SUBSET",
@@ -123,6 +137,7 @@ val PREMEASURABLE_COMP = store_thm
         by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [])
    >> METIS_TAC []);
 
+(* NOTE: there's also prob_preserving_def in real_probabilityTheory *)
 val prob_preserving_def = Define
    `prob_preserving m1 m2 =
    {f |

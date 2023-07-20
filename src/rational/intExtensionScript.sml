@@ -18,7 +18,7 @@ app load ["integerTheory","intLib",
 open
         arithmeticTheory pairTheory
         integerTheory intLib
-        ringTheory ringLib integerRingLib
+        EVAL_ringTheory EVAL_ringLib integerRingLib
         schneiderUtils;
 
 val _ = new_theory "intExtension";

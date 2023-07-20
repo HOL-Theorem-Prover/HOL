@@ -3225,15 +3225,16 @@ QED
 
 (* Shared lemma for unique_solution_of_obs_contractions and
    unique_solution_of_rooted_contractions. *)
-val shared_lemma = Q.prove (
-   `CCS_equation Xs Es /\
-    EVERY (weakly_guarded Xs) Es /\
-    CCS_solution OBS_contracts Xs Es Ps /\
-    CCS_solution OBS_contracts Xs Es Qs
-   ==>
-    WEAK_BISIM (\R S. ?C. context Xs C /\ DISJOINT (BV C) (set Xs) /\
-                          WEAK_EQUIV R (CCS_SUBST (fromList Xs Ps) C) /\
-                          WEAK_EQUIV S (CCS_SUBST (fromList Xs Qs) C))`,
+Theorem shared_lemma[local]:
+   CCS_equation Xs Es /\
+   EVERY (weakly_guarded Xs) Es /\
+   CCS_solution OBS_contracts Xs Es Ps /\
+   CCS_solution OBS_contracts Xs Es Qs
+  ==>
+   WEAK_BISIM (\R S. ?C. context Xs C /\ DISJOINT (BV C) (set Xs) /\
+                         WEAK_EQUIV R (CCS_SUBST (fromList Xs Ps) C) /\
+                         WEAK_EQUIV S (CCS_SUBST (fromList Xs Qs) C))
+Proof
  (* proof *)
     rpt STRIP_TAC >> REWRITE_TAC [WEAK_BISIM]
  >> BETA_TAC >> rpt STRIP_TAC (* 4 sub-goals here *)

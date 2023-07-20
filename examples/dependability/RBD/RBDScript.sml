@@ -1567,7 +1567,8 @@ RW_TAC list_ss[]
 >> POP_ORW
 >> MATCH_MP_TAC  mutual_indep_cons_append11
 >> EXISTS_TAC(``L1:'a  event list``)
->> RW_TAC list_ss[])
+>> RW_TAC list_ss[]
+QED
 (*-------mutual_indep_cons_append18-----------*)
 Theorem mutual_indep_cons_append18 :
 !h L1 L p.  mutual_indep p (FLAT ((h::L1)::L)) ==> mutual_indep p (FLAT (L1::L))

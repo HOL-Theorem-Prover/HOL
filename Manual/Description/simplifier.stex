@@ -1,0 +1,1617 @@
+\section{Simplification---\texttt{simpLib}}
+\label{sec:simpLib}
+\index{simplification|(}
+
+The simplifier is \HOL's most sophisticated rewriting engine.  It is
+recommended as a general purpose work-horse during interactive
+theorem-proving.  As a rewriting tool, the simplifier's general role
+is to apply theorems of the general form
+\[
+\vdash l = r
+\]
+to terms, replacing instances of $l$ in the term with $r$. Thus, the
+basic simplification routine is a \emph{conversion}, taking a term
+$t$, and returning a theorem $\vdash t = t'$, or the exception
+\ml{UNCHANGED}.
+
+The basic conversion is
+\begin{hol}
+\begin{verbatim}
+   simpLib.SIMP_CONV : simpLib.simpset -> thm list -> term -> thm
+\end{verbatim}
+\end{hol}
+The first argument, a \simpset, is the standard way of providing a
+collection of rewrite rules (and other data, to be explained below) to
+the simplifier.  There are \simpset{}s accompanying most of \HOL's
+major theories.  For example, the \simpset{} \ml{bool\_ss}
+in \ml{boolSimps} embodies all of the usual rewrite theorems one would want over boolean
+formulas:
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{alltt}
+>>__ show_types := false;
+>> SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
+\end{alltt}
+\end{session}
+In addition to rewriting with the obvious theorems, \ml{bool\_ss} is
+also capable of performing simplifications that are not expressible as
+simple theorems:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
+\end{alltt}
+\end{session}
+In this example, the simplifier performed a $\beta$-reduction in the
+first conjunct under the existential quantifier, and then did an
+``unwinding'' or ``one-point'' reduction, recognising that the only
+possible value for the quantified variable \holtxt{x} was the value
+\holtxt{z}.
+
+The second argument to \ml{SIMP\_CONV} is a list of theorems to be
+added to the provided \simpset, and used as additional rewrite rules.
+In this way, users can temporarily augment standard \simpset{}s with
+their own rewrites.  If a particular set of theorems is often used as
+such an argument, then it is possible to build a \simpset{} value to
+embody these new rewrites.
+
+For example, the rewrite \ml{arithmeticTheory.LEFT\_ADD\_DISTRIB}, which
+states that $p(m + n) = pm + pn$ is not part of any of \HOL's standard
+\simpset{}s.  This is because it can cause an unappealing increase in
+term size (there are two occurrences of $p$ on the right hand
+side of the theorem).  Nonetheless, it is clear that this theorem may
+be appropriate on occasion:
+\begin{session}
+\begin{alltt}
+>>_ open arithmeticTheory;
+>> SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
+\end{alltt}
+\end{session}
+Note how the \ml{arith\_ss} \simpset{} has not only simplified the
+intermediate \ml{(p * 1)} term, but also re-ordered the addition to
+put the simpler term on the left, and sorted the multiplication's
+arguments.
+
+
+\subsection{High-Level Simplification Tactics}
+\label{sec:simplification-tactics}
+\index{simplification!tactics}
+
+The simplifier is implemented around the conversion \ml{SIMP\_CONV} introduced above.
+This is a function for `converting' terms into theorems.
+To apply the simplifier to goals (alternatively, to perform tactic-based proofs with the simplifier), \HOL{} provides a number of tactics, all of which are available in \ml{bossLib}.
+These tactics divide into two classes.
+
+The first and more commonly used class is of high-level tactics used in the form
+\[
+\ml{tactic\_name}[\mathit{th}_1,\dots,\mathit{th}_n]
+\]
+where the various $\mathit{th}_i$ are theorems that are passed to the simplifier and used as additional rewrites.
+There is a \simpset{} used here, but it is implicit: the global, ``stateful'' \simpset, embodying all of a theory and a theory's ancestors' useful simplification technology.
+For more on the stateful \simpset, see Section~\ref{sec:srw-ss} below.
+
+The commonly used tactics of this sort are \ml{simp}, \ml{rw}, \ml{fs} and \ml{gs}.
+\index{gs (simplification tactic)@\ml{gs} (simplification tactic)}
+\index{fs (simplification tactic)@\ml{fs} (simplification tactic)}
+\index{rw (simplification tactic)@\ml{rw} (simplification tactic)}
+\index{simp (simplification tactic)@\ml{simp} (simplification tactic)}
+All of these tactics use the stateful simpset, and (by default), add the arithmetic decision procedure for $\mathbb{N}$, as well as a handling of \ml{let}-terms that turns \holtxt{let~x~=~v~in~M} into \holtxt{M} with free occurrences of \holtxt{x} replaced by \holtxt{v}.
+
+The exact behaviour of these tactics can be further adjusted with the use of special theorem forms, described below in Section~\ref{sec:simp-special-rewrite-forms}.
+
+\subsubsection{\ml{simp : thm list -> tactic}}
+\index{simp (simplification tactic)@\ml{simp} (simplification tactic)}
+
+A call to \ml{simp[$\mathit{th}_1,\dots,\mathit{th}_n$]} simplifies the current goal, using the augmented stateful simpset described above, as well as the theorems passed in the argument list.
+Finally, all of the goal's assumptions are also used as a source of rewrites.
+When an assumption is used by \ml{simp}, it is converted into rewrite rules in the same way as theorems passed in the list given as the tactic's argument.  For example, an
+assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{$\vdash$ P = F}.
+
+\begin{session}
+\begin{alltt}
+>>_ g `x < 3 /\ P x ==> x < 20 DIV 2`;
+>> e (simp[]);
+\end{alltt}
+\end{session}
+
+The \ml{simp} tactic is implemented with the low-level tactic \ml{asm\_simp\_tac} (described below).
+
+\subsubsection{\ml{rw : thm list -> tactic}}
+\index{rw (simplification tactic)@\ml{rw} (simplification tactic)}
+
+A call to \ml{rw[$\mathit{th}_1\dots,\mathit{th}_n$]} is similar in behaviour to \ml{simp} with the same arguments but does its simplification while interspersing phases of aggressive ``goal-stripping''.
+In particular, \ml{rw} begins by stripping all outermost universal quantifiers and conjunctions.
+It follows this with elimination of variables \holtxt{v} that appear in assumptions of the form \holtxt{v~=~e} or \holtxt{e~=~v} (where \holtxt{v} cannot be free in \holtxt{e}).
+After a phase of simplification (as \emph{per} \ml{simp}), the \ml{rw} tactic then does a case-split on all free \holtxt{if}-\holtxt{then}-\holtxt{else} subterms within the goal,%
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic!case-splitting on}%
+strips away universal quantifiers, implications and conjunctions (\emph{\`a la} \ml{STRIP\_TAC}), and then simplifies equalities involving data type constructors in the assumptions and goal.
+(Such equalities will simplify to falsity if the constructors are different, or will simplify with an injectivity result.)
+
+This last phase of stripping may result in a goal that could simplify yet further but there is no final simplification to catch this possibility.
+Despite peculiarities such as this, \ml{rw} is often a useful way to simplify and remove unnecessary propositional structure.
+
+The \ml{rw} tactic performs the same mixture of simplification and goal-splitting as the low-level tactic \ml{rw\_tac}.
+
+\subsubsection{\ml{gs : thm list -> tactic}}
+\index{gs (simplification tactic)@\ml{gs} (simplification tactic)}
+
+The \ml{gs} tactic (where ``gs'' should be read as ``global simplification'') simplifies both the assumptions of a goal as well as its conclusion.
+The assumptions are repeatedly simplified with respect to each other, meaning that the process begins by simplifying the oldest assumption with all the other (newer) assumptions available as possible rewrites.
+Then, the next oldest assumption is simplified, using all the other assumptions (including the just-simplified oldest assumption).
+This process passes through the list of all assumptions and then repeats if any of the assumptions changed.
+When no further change occurs among the assumptions, all of the assumptions are used to simplify the goal's conclusion.
+
+When an assumption $A_i$ is simplified, a theorem of the form $\vdash A_i \Leftrightarrow A_i'$ is produced.
+Then $A_i'$ is added to the goal as a new assumption, using the theorem-tactical \ml{strip\_assume\_tac}.
+This latter will (recursively) split conjunctions into multiple assumptions (\emph{i.e.}, an assumption $p \land q$ will turn into two assumptions, $p$ and $q$), will cause a case-split if the assumption is a disjunction, and will choose fresh variable names to eliminate existential quantifiers.
+
+\index{gns (simplification tactic)@\ml{gs} (simplification tactic)}
+If this ``stripping'' is not desired, the \ml{gns} variant of \ml{gs} can be used (`n' for ``no strip'').
+
+\index{gvs (simplification tactic)@\ml{gvs} (simplification tactic)}
+\index{gnvs (simplification tactic)@\ml{gvs} (simplification tactic)}
+It can often be useful to eliminate variable equalities among assumptions (as is done by \ml{rw} above).
+If this behaviour is also desired, the \ml{gvs} variant can be used.
+The \ml{gnvs} tactic, which combines both options, is also available.
+
+\index{rgs (simplification tactic)@\ml{rgs} (simplification tactic)}
+Finally, the \ml{rgs} variant sweeps through the assumption list in the opposite order, simplifying the newest assumption first.
+
+\subsubsection{\ml{fs : thm list -> tactic}}
+\index{fs (simplification tactic)@\ml{fs} (simplification tactic)}
+
+The \ml{fs} tactic is similar to \ml{gs} in that it simplifies not only a goal's
+conclusion but its assumptions as well.
+
+It simplifies each assumption in turn, additionally using earlier assumptions in the simplification of later assumptions.
+After being simplified, each assumption is added back into the goal's assumption list with the \ml{strip\_assume\_tac} theorem-tactical.
+
+\ml{fs} attacks the assumptions in the order in which they appear in the list of terms that represent the goal's assumptions.
+Typically then, the first assumption to be simplified
+will be the assumption most recently added.
+Viewed in the light of \ml{goalstackLib}'s printing of goals, \ml{FULL\_SIMP\_TAC} works its way up the list of assumptions, from bottom to top.
+
+Unlike \ml{gs}, the \ml{fs} tactic makes exactly one pass over the assumptions before proceeding to simplify the goal.
+Though this is in principle more efficient, this comes at the cost of frequently being annoying to use.
+\index{rfs (simplification tactic)@\ml{rfs} (simplification tactic)}
+As with \ml{gs}, there is an \ml{rfs} variant to this tactic, which simplifies the goal's assumptions in reverse order (but again, only once).
+
+The \ml{fs} tactic is based on the low-level tactic \ml{full\_simp\_tac}.
+
+\subsection{Low-Level Simplification Tactics}
+\label{sec:low-level-simplification-tactics}
+\index{simplification!tactics}
+
+The second class of simplification tactics are more primitive and explicitly take a \simpset{} as an argument.
+This ability to specify a \simpset{} to use allows for finer-grained control of just what the tactic will do.
+In particular, the \ml{bool\_ss} \simpset{} is relatively common as an argument to these tactics precisely because it does so little.
+
+All these tactics have upper-case aliases (\emph{e.g.}, \ml{SIMP\_TAC} and \ml{simp\_tac} are the same function).
+It is up to the user to decide which they prefer to see in their proof scripts.
+
+\subsubsection{\ml{simp\_tac : simpset -> thm list -> tactic}}
+\index{simp_tac@\ml{simp\_tac}}
+
+The tactic \ml{simp\_tac} is the simplest simplification function: it attempts to simplify the current goal (ignoring the assumptions) using the given \simpset{} and the additional theorems.
+It is no more than the lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic level through the use of the standard function \ml{CONV\_TAC}.
+
+\subsubsection{\ml{asm\_simp\_tac : simpset -> thm list -> tactic}}
+\index{asm_simp_tac@\ml{asm\_simp\_tac}}
+
+Like \ml{simp\_tac}, \ml{asm\_simp\_tac} simplifies the current goal (leaving the assumptions untouched), but includes the goal's assumptions as extra rewrite rules.
+Thus:
+\begin{session}
+\begin{alltt}
+>>__ g `(x = 3) ==> P x`;
+>>- e strip_tac;
+
+>> e (asm_simp_tac bool_ss []);
+\end{alltt}
+\end{session}
+\noindent
+In this example, \ml{asm\_simp\_tac} used \holtxt{x = 3} as an
+additional rewrite rule, and replaced the \holtxt{x} of \holtxt{P x}
+with \holtxt{3}.  When an assumption is used by \ml{asm\_simp\_tac} it
+is converted into rewrite rules in the same way as theorems passed in
+the list given as the tactic's second argument.  For example, an
+assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{|- P = F}.
+
+\subsubsection{\ml{full\_simp\_tac : simpset -> thm list -> tactic}}
+\index{full_simp_tac@\ml{full\_simp\_tac}}
+
+\noindent
+The tactic \ml{full\_simp\_tac} simplifies not only a goal's
+conclusion but its assumptions as well.  It proceeds by simplifying
+each assumption in turn, additionally using earlier assumptions in the
+simplification of later assumptions.  After being simplified, each
+assumption is added back into the goal's assumption list with the
+\ml{strip\_assume\_tac} theorem-tactical.  This means that assumptions that
+become conjunctions will have each conjunct assumed separately.
+Assumptions that become disjunctions will cause one new sub-goal to be
+created for each disjunct.  If an assumption is simplified to false,
+this will solve the goal.
+
+The \ml{full\_simp\_tac} tactic attacks the assumptions in the order in which they appear in the list of terms that represent the goal's assumptions.
+Typically then, the first assumption to be simplified will be the assumption most recently added.
+Viewed in the light of \ml{goalstackLib}'s printing of goals, \ml{full\_simp\_tac} works its way up the list of assumptions, from bottom to top.
+
+The following demonstrates a simple use of \ml{full\_simp\_tac}:
+\begin{session}
+\begin{alltt}
+>>__ drop();
+>>__ g `f (x:num) < 10  /\ (x = 4) ==> 4 + x < 10`;
+>>- e strip_tac;
+
+>> e (full_simp_tac bool_ss []);
+\end{alltt}
+\end{session}
+In this example, the assumption \holtxt{x = 4} caused the \holtxt{x}
+in the assumption \holtxt{f x < 10} to be replaced by \holtxt{4}.  The
+\holtxt{x} in the goal was similarly replaced.  If the assumptions had
+appeared in the opposite order, only the \holtxt{x} of the goal would
+have changed.
+
+The next session demonstrates more interesting behaviour:
+\begin{session}
+\begin{alltt}
+>>__ drop(); g`x <= 4n ==> f x + 1 < 10`;
+>>- e strip_tac;
+
+>> e (full_simp_tac bool_ss [arithmeticTheory.LESS_OR_EQ]);
+\end{alltt}
+\end{session}
+In this example, the goal was rewritten with the theorem stating
+\[
+\vdash x \leq y \iff x < y \lor x = y
+\]
+Turning the assumption into a disjunction resulted in two sub-goals.
+In the second of these, the assumption \holtxt{x = 4} further
+simplified the rest of the goal.
+
+\subsubsection{\ml{rw\_tac : simpset -> thm list -> tactic}}
+\index{rw_tac@\ml{rw\_tac}}
+
+Though its type is the same as the simplification tactics already
+described, \ml{rw\_tac} is ``augmented'' in two ways:
+\begin{itemize}
+\item
+When simplifying the goal, the provided \simpset{} is augmented not only with the theorems explicitly passed in the second argument, but also with all of the rewrite rules from the \ml{TypeBase}, as well as  with the goal's assumptions.
+%
+  \index{TypeBase@\ml{TypeBase}}
+These rewrites include results about record field selectors and updators, as well as distinctness and injectivity theorems for data type constructors.
+\item \ml{rw\_tac} also repeatedly ``strips'' the goal in the same way as the high-level \ml{rw} tactic (see above).
+\end{itemize}
+The augmentation of the provided \simpset{} that occurs before \ml{rw\_tac} does any simplification work can be slow when the \ml{TypeBase} is large.
+
+\subsection{The standard \simpset{}s}
+\label{sec:standard-simpsets}
+
+\HOL{} comes with a number of standard \simpset{}s.  All of these are
+accessible from within \ml{bossLib}, though some originate in other
+structures.
+
+\subsubsection{\ml{pure\_ss} and \ml{bool\_ss}}
+\label{sec:purebool-ss}
+%
+\index{pure_ss@\ml{pure\_ss}}
+%
+The \ml{pure\_ss} \simpset{} (defined in structure \ml{pureSimps})
+contains no rewrite theorems at all, and plays the role of a blank
+slate within the space of possible \simpset{}s.  When constructing a
+completely new \simpset, \ml{pure\_ss} is a possible starting point.
+The \ml{pure\_ss} \simpset{} has just two components: congruence rules
+for specifying how to traverse terms, and a function that turns
+theorems into rewrite rules.  Congruence rules are further described
+in Section~\ref{sec:advanced-simplifier}; the generation of rewrite
+rules from theorems is described in
+Section~\ref{sec:simplifier-rewriting}.
+
+\index{bool_ss (simplification set)@\ml{bool\_ss} (simplification set)}
+%
+The \ml{bool\_ss} \simpset{} (defined in structure \ml{boolSimps}) is
+often used when other \simpset{}s might do too much.  It contains
+rewrite rules for the boolean connectives, and little more.  It
+contains all of the de~Morgan theorems for moving negations in over
+the connectives (conjunction, disjunction, implication and conditional
+expressions), including the quantifier rules that have $\neg(\forall
+x.\,P(x))$ and $\neg(\exists x.\,P (x))$ on their left-hand sides.  It
+also contains the rules specifying the behaviour of the connectives
+when the constants \holtxt{T} and \holtxt{F} appear as their
+arguments.  (One such rule is \holtxt{|- T /\bs{} p = p}.)
+
+As in the example above, \ml{bool\_ss} also performs
+$\beta$-reductions and one-point unwindings.  The latter turns terms
+of the form \[
+\exists x.\;P(x)\land\dots (x = e) \dots\land Q(x)
+\]
+into
+\[
+P(e) \land \dots \land Q(e)
+\]
+Similarly, unwinding will turn $\forall x.\;(x = e)
+\Rightarrow P(x)$ into $P(e)$.
+
+Finally, \ml{bool\_ss} also includes congruence rules that allow
+the simplifier to make additional assumptions when simplifying
+implications and conditional expressions.  This feature is further
+explained in Section~\ref{sec:simplifier-rewriting} below, but can be
+illustrated by some examples (the first also demonstrates unwinding
+under a universal quantifier):
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV bool_ss [] ``!x. (x = 3) /\ P x ==> Q x /\ P 3``;
+
+>> SIMP_CONV bool_ss [] ``if x <> 3 then P x else Q x``;
+\end{alltt}
+\end{session}
+
+\subsubsection{\ml{std\_ss}}
+%
+\index{std_ss (simplification set)@\ml{std\_ss} (simplification set)}
+%
+The \ml{std\_ss} \simpset{} is defined in \ml{bossLib}, and adds
+rewrite rules pertinent to the types of sums, pairs, options and
+natural numbers to \ml{bool\_ss}.
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
+
+>> SIMP_CONV std_ss [] ``case SOME x of NONE => P | SOME y => f y``;
+\end{alltt}
+\end{session}
+
+With the natural numbers, the \ml{std\_ss} \simpset{} can calculate
+with ground values, and also includes a suite of ``obvious rewrites''
+for formulas including variables.
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV std_ss [] ``P (0 <= x) /\ Q (y + x - y)``;
+
+>> SIMP_CONV std_ss [] ``23 * 6 + 7 ** 2 - 31 DIV 3``;
+\end{alltt}
+\end{session}
+
+\subsubsection{\ml{arith\_ss}}
+%
+\index{arith_ss (simplification set)@\ml{arith\_ss} (simplification set)}
+%
+The \ml{arith\_ss} \simpset{} (defined in \ml{bossLib}) extends
+\ml{std\_ss} by adding the ability to decide formulas of Presburger
+arithmetic, and to normalise arithmetic expressions (collecting
+coefficients, and re-ordering summands).  The underlying natural
+number decision procedure is that described in
+Section~\ref{sec:numLib} below.
+
+These two facets of the \ml{arith\_ss} \simpset{} are demonstrated
+here:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV arith_ss [] ``x < 3 /\ P x ==> x < 20 DIV 2``;
+
+>> SIMP_CONV arith_ss [] ``2 * x + y - x + y``;
+\end{alltt}
+\end{session}
+Note that subtraction over the natural numbers works in ways that can
+seem unintuitive.  In particular, coefficient normalisation may not
+occur when first expected:
+\begin{session}
+\begin{alltt}
+>>+ SIMP_CONV arith_ss [] ``2 * x + y - z + y``;
+\end{alltt}
+\end{session}
+Over the natural numbers, the expression $2 x + y - z + y$ is not
+equal to $2 x + 2 y - z$.  In particular, these expressions are not
+equal when $2x + y < z$.
+
+\subsubsection{\ml{list\_ss}}
+%
+\index{list_ss (simplification set)@\ml{list\_ss} (simplification set)}
+%
+The last pure \simpset{} value in \ml{bossLib}, \ml{list\_ss} adds
+rewrite theorems about the type of lists to \ml{arith\_ss}.  These
+rewrites include the obvious facts about the list type's constructors
+\holtxt{NIL} and \holtxt{CONS}, such as the fact that \holtxt{CONS} is
+injective:
+\begin{hol}
+\begin{verbatim}
+   (h1 :: t1 = h2 :: t2) = (h1 = h2) /\ (t1 = t2)
+\end{verbatim}
+\end{hol}
+Conveniently, \ml{list\_ss} also includes rewrites for the functions
+defined by primitive recursion over lists.  Examples include
+\holtxt{MAP}, \holtxt{FILTER} and \holtxt{LENGTH}.  Thus:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV list_ss [] ``MAP (\x. x + 1) [1;2;3;4]``;
+
+>> SIMP_CONV list_ss [] ``FILTER (\x. x < 4) [1;2;y + 4]``;
+
+>> SIMP_CONV list_ss [] ``LENGTH (FILTER ODD [1;2;3;4;5])``;
+\end{alltt}
+\end{session}
+These examples demonstrate how the simplifier can be used as a general
+purpose symbolic evaluator for terms that look a great deal like those
+that appear in a functional programming language.  Note that
+this functionality is also provided by \ml{computeLib} (see
+Section~\ref{sec:computeLib} below); \ml{computeLib} is more
+efficient, but less general than the simplifier.  For example:
+\begin{session}
+\begin{alltt}
+>> EVAL ``FILTER (\x. x < 4) [1;2;y + 4]``;
+\end{alltt}
+\end{session}
+
+\subsubsection{The ``stateful'' \simpset---\ml{srw\_ss()}}
+\label{sec:srw-ss}
+\index{srw_ss (simplification set)@\ml{srw\_ss} (simplification set)}
+
+The last \simpset{} exported by \ml{bossLib} is hidden behind a
+function.  The \ml{srw\_ss} value has type \ml{unit -> simpset}, so
+that one must type \ml{srw\_ss()} in order to get a \simpset{} value.
+This use of a function type allows the underlying \simpset{} to be
+stored in an \ML{} reference, and allows it to be updated
+dynamically.  In this way, referential transparency is deliberately
+broken.  All of the other \simpset{}s will always behave identically:
+\ml{SIMP\_CONV~bool\_ss} is the same simplification routine wherever
+and whenever it is called.
+
+In contrast, \ml{srw\_ss} is designed to be updated.  When a theory is
+loaded, when a new type is defined, the value behind \ml{srw\_ss()}
+changes, and the behaviour of \ml{SIMP\_CONV} applied to
+\ml{(srw\_ss())} changes with it.  The design philosophy behind
+\ml{srw\_ss} is that it should always be a reasonable first choice in
+all situations where the simplifier is used.
+
+This versatility is illustrated in the following example:
+\begin{session}
+\begin{alltt}
+>> Datatype `tree = Leaf | Node num tree tree`;
+
+>> SIMP_CONV (srw_ss()) [] ``Node x Leaf Leaf = Node 3 t1 t2``;
+
+>> load "pred_setTheory";
+
+>> SIMP_CONV (srw_ss()) [] ``x IN { y | y < 6}``;
+\end{alltt}
+\end{session}
+%
+Users can augment the stateful \simpset{} themselves with the function
+%
+\begin{holboxed}
+\index{export_rewrites@\ml{export\_rewrites}}
+\begin{verbatim}
+   BasicProvers.export_rewrites : string list -> unit
+\end{verbatim}
+\end{holboxed}
+The strings passed to \ml{export\_rewrites} are the names of theorems
+in the current segment (those that will be exported when
+\ml{export\_theory} is called).  Not only are these theorems added to
+the underlying \simpset{} in the current session, but they will be
+added in future sessions when the current theory is reloaded.
+\begin{session}
+\begin{alltt}
+>> val tsize_def = Define`
+     (tsize Leaf = 0) /\
+     (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
+   `;
+
+>> val _ = BasicProvers.export_rewrites ["tsize_def"];
+
+>> SIMP_CONV (srw_ss()) [] ``tsize (Node 4 (Node 6 Leaf Leaf) Leaf)``;
+\end{alltt}
+\end{session}
+
+\index{theorem attributes!simp@\ml{simp}}
+Alternatively, the user may also flag theorems directly when using \ml{store\_thm}, \ml{save\_thm}, or the \ml{Theorem} and \ml{Definition} syntaxes by appending the \ml{simp} attribute to the name of the theorem.
+Thus:
+\begin{session}
+\begin{verbatim}
+Theorem useful_rwt[simp]:
+  ...term...
+Proof ...tactic...
+QED
+\end{verbatim}
+\end{session}
+is a way of avoiding having to write a call to \ml{export\_rewrites}.
+Equally, the example above could be written:
+\begin{session}
+\begin{alltt}
+>>_ Definition tsize_def[simp]:
+      (tsize Leaf = 0) /\
+      (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
+    End
+\end{alltt}
+\end{session}
+
+As a general rule, \ml{(srw\_ss())} includes all of its context's
+``obvious rewrites'', as well as code to do standard calculations
+(such as the arithmetic performed in the above example).  It does not
+include decision procedures that may exhibit occasional poor
+performance, so the \simpset{} fragments containing these procedures
+should be added manually to those simplification invocations that need
+them.
+
+\subsection{\Simpset{} fragments}
+\label{sec:simpset-fragments}
+\index{simplification!simpset fragments}
+
+The \simpset{} fragment is the basic building block that is used to
+construct \simpset{} values.  There is one basic function that
+performs this construction:
+\begin{hol}
+\begin{verbatim}
+   op ++  : simpset * ssfrag -> simpset
+\end{verbatim}
+\end{hol}
+where \ml{++} is an infix.  In general, it is best to build on top of
+the \ml{pure\_ss} \simpset{} or one of its descendants in order to
+pick up the default ``filter'' function for converting theorems to
+rewrite rules.  (This filtering process is described below in
+Section~\ref{sec:generating-rewrite-rules}.)
+
+For major theories (or groups thereof), a collection of relevant
+\simpset{} fragments is usually found in the module \ml{<thy>Simps},
+with \ml{<thy>} the name of the theory.  For example, \simpset{}
+fragments for the theory of natural numbers are found in
+\ml{numSimps}, and fragments for lists are found in \ml{listSimps}.
+
+Some of the distribution's standard \simpset{} fragments are described
+in Table~\ref{table:ssfrags}.  These and other \simpset{} fragments
+are described in more detail in the \REFERENCE.
+
+\begin{table}[htbp]
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lp{0.7\textwidth}}
+\ml{ARITH\_ss} &
+Embodies decision
+procedure for universal Presburger arithmetic over $\mathbb{N}$.
+(Defined in \ml{numSimps}; used in high-level simplification tactics.)
+\\
+\ml{BOOL\_ss} &
+Standard rewrites for the boolean operators
+(conjunction, negation \emph{etc.}), and conversion for performing
+$\beta$-reduction.  (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
+\\
+\ml{CONG\_ss} & Congruence rules for implication and conditional
+expressions. (Defined in \ml{boolSimps}; part of \ml{bool\_ss}.)
+\\
+\ml{CONJ\_ss} &
+Lets conjuncts be used as assumptions when rewriting other conjuncts.
+If simplifying $c_1\land c_2$, $c_2$ is assumed while $c_1$ is simplified to $c_1'$.
+Then $c_1'$ is assumed while $c_2$ is simplified.
+(Defined in \ml{boolSimps}.)
+\\
+\ml{DNF_ss} &
+Normalises to disjunctive normal form; quantifiers moved for elimination over equalities.
+(Defined in \ml{boolSimps}.)\\
+\ml{ETA_ss} &
+Eliminates eta-redexes, \emph{i.e.}, terms of form $(\lambda x. M x)$ with $x$ not free in $M$.
+(Defined in \ml{boolSimps}.)\\
+\end{tabular}
+\end{center}
+\caption{Some of \HOL's standard \simpset{} fragments}
+\label{table:ssfrags}
+\end{table}
+
+\Simpset{} fragments are ultimately constructed with the \ml{SSFRAG}
+constructor:
+\begin{hol}
+\begin{verbatim}
+   SSFRAG : {
+     convs  : convdata list,
+     rewrs  : thm list,
+     ac     : (thm * thm) list,
+     filter : (controlled_thm -> controlled_thm list) option,
+     dprocs : Traverse.reducer list,
+     congs  : thm list,
+     name   : string option
+   } -> ssfrag
+\end{verbatim}
+\end{hol}
+A complete description of the various fields of the record passed to
+\ml{SSFRAG}, and their meaning is given in \REFERENCE.  The
+\ml{rewrites} function provides an easy route to constructing a
+fragment that just includes a list of rewrites:
+\begin{hol}
+\begin{verbatim}
+   rewrites : thm list -> ssfrag
+\end{verbatim}
+\end{hol}
+
+\subsubsection{Removing rewrites and conversions from \simpset{}s}
+\label{sec:removing-rewrites-from-simpsets}
+\index{simplification!removing rewrites|(}
+The \ml{-*} (infix) function can be used to remove elements from \simpset{}s.
+This can be done to temporarily affect the simplifier when it is applied to a particular goal.
+For example:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV (srw_ss()) [] “x ++ (y ++ z)”;
+
+>>+ SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [] “x ++ (y ++ z)”;
+\end{alltt}
+\end{session}
+The second argument to \ml{-*} is a list of strings, naming rewrite theorems, conversions or decision procedures.
+The names to use are visible if \simpset{} values are printed out in the interactive session.
+The example below demonstrates removing beta-conversion:
+\begin{session}
+\begin{alltt}
+##assert Exn.capture (SIMP_CONV (bool_ss -* ["BETA_CONV"]) []) “(\x. x + 3) 10” |> Exn.get_exn |> isSome
+>>+ SIMP_CONV (bool_ss -* ["BETA_CONV"]) [] “(\x. x + 3) 10”;
+\end{alltt}
+\end{session}
+Further, because a theorem like \ml{AND\_CLAUSES}
+\begin{alltt}
+>>__ val oldlw = !linewidth; linewidth := 60;
+##thm AND_CLAUSES
+>>__ linewidth := oldlw;
+\end{alltt}
+has multiple conjuncts, one theorem can generate multiple different rewrites.
+Specific sub-rewrites can be removed from a \simpset{} without affecting  others derived from the same original theorem by appending numbers to the theorem name:
+\begin{session}
+\begin{alltt}
+>>+ SIMP_CONV (bool_ss -* ["AND_CLAUSES"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+
+##assert SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)” |> concl |> rhs |> aconv “(T ∧ p) ∧ q”
+>> SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+\end{alltt}
+\end{session}
+
+If using a high-level tactic such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
+\index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Excl@\ml{Excl}}
+Instead, one must use a special theorem form (see Section~\ref{sec:simp-special-rewrite-forms} below), \ml{Excl} to exclude a rewrite.
+For example, sometimes the associativity of list-append can be annoying (here it masks the rewrite defining list-append):
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.drop_all();
+>>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
+>> e (simp[]);
+\end{alltt}
+\end{session}
+
+We can prevent the application of this normalising rewrite with the \ml{Excl} form:
+\begin{session}
+\begin{alltt}
+>>_ b();
+>> e (simp[Excl "APPEND_ASSOC"]);
+\end{alltt}
+\end{session}
+
+\index{ExclSF (simplification theorem modifier)@\ml{ExclSF} (simplification theorem modifier)}
+\index{simplification theorem modifiers!ExclSF@\ml{ExclSF}}
+One can exclude whole \simpset{} fragments from the high-level tactics with the special \ml{ExclSF} form, which also takes a string argument.
+This string is the name of the fragment to be removed, where by convention fragments have the same name as their \ML{} identifier with the \ml{\_ss} suffix removed.
+Thus, one can use high-level tactics with the arithmetic decision procedure removed:
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.drop_all();
+>>_ g ‘x < 5*2 ==> x < 13’;
+>> e (simp[ExclSF "ARITH"]);
+##assert aconv (#2 (top_goal())) ``x < 10 ==> x < 13``
+\end{alltt}
+\end{session}
+\index{simplification!removing rewrites|)}
+
+\subsection{Rewriting with the simplifier}
+\label{sec:simplifier-rewriting}
+
+Rewriting is the simplifier's ``core operation''.  This section
+describes the action of rewriting in more detail.
+
+
+\subsubsection{Basic rewriting}
+\label{sec:basic-rewriting}
+
+Given a rewrite rule of the form \[
+\vdash \ell = r
+\]
+the simplifier will perform a top-down scan of the input term $t$,
+looking for \emph{matches}~(see Section~\ref{sec:simp-homatch} below)
+of $\ell$ inside $t$.  This match will occur at a sub-term of $t$
+(call it $t_0$) and will return an instantiation.  When this
+instantiation is applied to the rewrite rule, the result will be a new
+equation of the form \[
+\vdash t_0 = r'
+\]
+Because the system then has a theorem expressing an equivalence for
+$t_0$ it can create the new equation \[
+  \vdash \underbrace{(\dots t_0\dots)}_t = (\dots r' \dots)
+\]
+The traversal of the term to be simplified is repeated until no
+further matches for the simplifier's rewrite rules are found.  The
+traversal strategy is
+\begin{enumerate}
+\item \label{enum:simp-traverse-toplevel}%
+  While there are any matches for stored rewrite rules at this level,
+  continue to apply them.  The order in which rewrite rules are
+  applied can \emph{not} be relied on, except that when a \simpset{}
+  includes two rewrites with exactly the same left-hand sides, the
+  rewrite added later will get matched in preference.  (This allows a
+  certain amount of rewrite-overloading in the construction of
+  \simpset{}s.)
+%% may not wish to own up to above detail
+\item \label{enum:simp-traverse-recurse}%
+  Recurse into the term's sub-terms.  The way in which terms are
+  traversed at this step can be controlled by \emph{congruence
+    rules}~(an advanced feature, see Section~\ref{sec:simp-congruences}
+  below)
+\item If step~\ref{enum:simp-traverse-recurse} changed the term at
+  all, try another phase of rewriting at this level.  If this fails,
+  or if there was no change from the traversal of the sub-terms, try
+  any embedded decision procedures (see
+  Section~\ref{sec:simp-embedding-code}).  If the rewriting phase or
+  any of the decision procedures altered the term, return to
+  step~\ref{enum:simp-traverse-toplevel}.  Otherwise, finish.
+\end{enumerate}
+
+\subsubsection{Conditional rewriting}
+\index{simplification!conditional rewriting}
+
+The above description is a slight simplification of the true state of
+affairs.  One particularly powerful feature of the simplifier is that
+it really uses \emph{conditional} rewrite rules.  These are theorems
+of the form
+\[
+\vdash P \Rightarrow (\ell = r)
+\]
+When the simplifier finds a match for term $\ell$ during its traversal
+of the term, it attempts to discharge the condition $P$.  If the
+simplifier can simplify the term $P$ to truth, then the instance of
+$\ell$ in the term being traversed can be replaced by the appropriate
+instantiation of $r$.
+
+When simplifying $P$ (a term that does not necessarily even occur in
+the original), the simplifier may find itself applying another
+conditional rewrite rule.  In order to stop excessive recursive
+applications, the simplifier keeps track of a stack of all the
+side-conditions it is working on.  The simplifier will give up on
+side-condition proving if it notices a repetition in this stack.
+There is also a user-accessible variable, \ml{Cond\_rewr.stack\_limit}
+which specifies the maximum size of stack the simplifier is allowed to
+use.
+
+Conditional rewrites can be extremely useful.  For example, theorems
+about division and modulus are frequently accompanied by conditions
+requiring the divisor to be non-zero.  The simplifier can often
+discharge these, particularly if it includes an arithmetic decision
+procedure.  For example, the theorem \ml{MOD\_MOD} from the theory
+\ml{arithmetic} states
+\[
+\vdash 0 < n \;\Rightarrow \; (k\,\textsf{MOD}\,n)\,\textsf{MOD}\,n = k
+\,\textsf{MOD}\,n
+\]
+The simplifier (specifically, \ml{SIMP\_CONV~arith\_ss~[MOD\_MOD]})
+can use this theorem to simplify the term
+\holtxt{(k~MOD~(x~+~1))~MOD~(x~+~1)}: the arithmetic decision
+procedure can prove that \holtxt{0 < x + 1}, justifying the rewrite.
+
+Though conditional rewrites are powerful, not every theorem of the
+form described above is an appropriate choice.  A badly chosen rewrite
+may cause the simplifier's performance to degrade considerably, as it
+wastes time attempting to prove impossible side-conditions.  For
+example, the simplifier is not very good at finding existential
+witnesses.  This means that the conditional rewrite \[
+\vdash x < y \land y < z \Rightarrow (x < z = \top)
+\]
+will not work as one might hope.  In general, the simplifier is not a
+good tool for performing transitivity reasoning.  (Try first-order
+tools such as \ml{PROVE\_TAC} instead.)
+
+\subsubsection{Generating rewrite rules from theorems}
+\label{sec:generating-rewrite-rules}
+\index{equational theorems, in HOL logic@equational theorems, in \HOL{} logic!use of in the simplifier}
+
+There are two routes by which a theorem for rewriting can be passed to
+the simplifier: either as an explicit argument to one of the \ML{}
+functions (\ml{SIMP\_CONV}, \ml{ASM\_SIMP\_TAC} etc.) that take theorem
+lists as arguments, or by being included in a \simpset{} fragment
+which is merged into a \simpset.  In both cases, these theorems are
+transformed before being used.  The transformations applied are
+designed to make interactive use as convenient as possible.
+
+In particular, it is not necessary to pass the simplifier theorems
+that are exactly of the form
+\[
+\vdash P \Rightarrow (\ell = r)
+\]
+Instead, the simplifier will transform its input theorems to extract
+rewrites of this form itself.  The exact transformation performed is
+dependent on the \simpset{} being used: each \simpset{} contains its
+own ``filter'' function which is applied to theorems that are added to
+it.  Most \simpset{}s use the filter function from the \ml{pure\_ss}
+\simpset{} (see Section~\ref{sec:purebool-ss}).  However, when a
+\simpset{} fragment is added to a full simpset, the fragment can
+specify an additional filter component.  If specified, this function
+is of type \ml{controlled\_thm~->~controlled\_thm~list}, and is applied
+to each of the theorems produced by the existing \simpset's filter.
+%
+\index{simplification!guaranteeing termination}
+(A ``controlled'' theorem is one that is accompanied by a piece of
+``control'' data expressing the limit (if any) on the number of times
+it can be applied.  See Section~\ref{sec:simp-special-rewrite-forms}
+for how users can introduce these limits.  The ``control'' type
+appears in the \ML{} module \ml{BoundedRewrites}.)
+
+The rewrite-producing filter in \ml{pure\_ss} strips away
+conjunctions, implications and universal quantifications until it has
+either an equality theorem, or some other boolean form.  For example,
+the theorem \ml{ADD\_MODULUS} states
+\[
+\vdash
+\begin{array}[t]{l}
+(\forall n\;x.\;\;0 < n \Rightarrow ((x + n)\,\textsf{MOD}\,n =
+ x\,\textsf{MOD}\,n)) \;\;\land\\
+(\forall n\;x.\;\;0 < n \Rightarrow ((n + x)\,\textsf{MOD}\,n =
+ x\,\textsf{MOD}\,n))
+\end{array}
+\]
+This theorem becomes two rewrite rules \[
+\begin{array}{l}
+\vdash 0 < n \Rightarrow ((x + n)\,\textsf{MOD}\,n = x\,\textsf{MOD}\,n)\\
+\vdash 0 < n \Rightarrow ((n + x)\,\textsf{MOD}\,n = x\,\textsf{MOD}\,n)
+\end{array}
+\]
+
+If looking at an equality where there are variables on the
+right-hand side that do not occur on the left-hand side, the
+simplifier transforms this to the rule \[
+\vdash (\ell = r) = \top
+\]
+Similarly, if a boolean negation $\neg P$, becomes the rule \[
+\vdash P = \bot
+\]
+and other boolean formulas $P$ become \[
+\vdash P = \top
+\]
+
+Finally, if looking at an equality whose left-hand side is itself an
+equality, and where the right-hand side is not an equality as well,
+the simplifier transforms $(x = y) = P$ into the two rules
+\[
+\begin{array}{l}
+\vdash (x = y) = P\\
+\vdash (y = x) = P
+\end{array}
+\]
+This is generally useful.  For example, a theorem such as
+\[
+\vdash \neg(\textsf{SUC}\,n = 0)
+\]
+will cause the simplifier to rewrite both $(\textsf{SUC}\,n = 0)$ and
+$(0 = \textsf{SUC}\,n)$ to false.
+
+The restriction that the right-hand side of such a rule not itself be
+an equality is a simple heuristic that prevents some forms of looping.
+
+
+\subsubsection{Matching rewrite rules}
+\label{sec:simp-homatch}
+
+Given a rewrite theorem $\vdash \ell = r$, the first stage of
+performing a rewrite is determining whether or not $\ell$ can be
+instantiated so as to make it equal to the term that is being
+rewritten.  This process is known as matching.  For example, if $\ell$
+is the term $\textsf{SUC}(n)$, then matching it against the term
+$\textsf{SUC}(3)$ will succeed, and find the instantiation $n\mapsto
+3$. In contrast with unification, matching is not symmetrical: a
+pattern $\textsf{SUC}(3)$ will not match the term $\textsf{SUC}(n)$.
+
+\index{higher-order matching} \index{matching!higher-order} The
+simplifier uses a special form of higher-order matching.  If a pattern
+includes a variable of some function type ($f$ say), and that variable
+is applied to an argument $a$ that includes no variables except those
+that are bound by an abstraction at a higher scope, then the combined
+term $f(a)$ will match any term of the appropriate type as long as the
+only occurrences of the bound variables in $a$ are in sub-terms
+matching $a$.
+
+Assume for the following examples that the variable $x$ is bound at a
+higher scope.  Then, if $f(x)$ is to match $x + 4$, the variable $f$
+will be instantiated to $(\lambda x.\; x + 4)$.  If $f(x)$ is to match
+$3 + z$, then $f$ will be instantiated to $(\lambda x.\;3 + z)$.
+Further $f(x + 1)$ matches $x + 1 < 7$, but does not match $x + 2 <
+7$.
+
+Higher-order matching of this sort makes it easy to express quantifier
+movement results as rewrite rules, and have these rules applied by the
+simplifier.  For example, the theorem
+\[
+\vdash (\exists x. \;P(x)\lor Q(x)) = (\exists x.\;P(x)) \lor (\exists
+x.\;Q(x))
+\]
+has two variables of a function-type ($P$ and $Q$), and both are
+applied to the bound variable $x$.  This means that when applied to
+the input \[
+\exists z. \;z < 4 \lor z + x = 5 * z
+\]
+the matcher will find the instantiation \[
+\begin{array}{l}
+P \mapsto (\lambda z.\;z < 4)\\
+Q \mapsto (\lambda z.\;z + x = 5 * z)
+\end{array}
+\]
+
+Performing this instantiation, and then doing some $\beta$-reduction
+on the rewrite rule, produces the theorem\[
+\vdash (\exists z. \;z < 4 \lor z + x = 5 * z) =
+(\exists z. \;z < 4) \lor (\exists z.\;z + x = 5 * z)
+\]
+as required.
+
+Another example of a rule that the simplifier will use successfully is
+\[
+\vdash f \circ (\lambda x.\; g(x)) = (\lambda x.\;f(g(x)))
+\]
+The presence of the abstraction on the left-hand side of the rule
+requires an abstraction to appear in the term to be matched, so this
+rule can be seen as an implementation of a method to move abstractions
+up over function compositions.
+
+An example of a possible left-hand side that will \emph{not} match as
+generally as might be liked is $(\exists x.\;P(x + y))$.  This is
+because the predicate $P$ is applied to an argument that includes the
+free variable $y$.
+
+\subsection{Advanced features}
+\label{sec:advanced-simplifier}
+
+This section describes some of the simplifier's advanced features.
+
+\subsubsection{Congruence rules}
+\label{sec:simp-congruences}
+\index{simplification!congruence rules}
+\index{congruence rules!in simplification}
+Congruence rules control the way the simplifier traverses a term.
+They also provide a mechanism by which additional assumptions can be
+added to the simplifier's context, representing information about the
+containing context.  The simplest congruence rules are built into the
+\ml{pure\_ss} simpset.  They specify how to traverse application and
+abstraction terms.  At this fundamental level, these congruence rules
+are little more than the rules of inference \ml{ABS}
+\[
+\frac{\Gamma \turn t_1 = t_2}
+{\Gamma \turn (\lquant{x}t_1) = (\lquant{x}t_2)}
+\]
+(where $x\not\in\Gamma$) and \ml{MK\_COMB}
+\[
+\frac{\Gamma \turn f = g \qquad \qquad \Delta \turn x = y}
+{\Gamma \cup \Delta \turn f(x) = g(y)}
+\]
+When specifying the action of the simplifier, these rules should be
+read upwards.  With \ml{ABS}, for example, the rule says ``when
+simplifying an abstraction, simplify the body $t_1$ to some new $t_2$,
+and then the result is formed by re-abstracting with the bound
+variable~$x$.''
+
+Further congruence rules should be added to the simplifier in the form
+of theorems, via the \ml{congs} field of the records passed to the
+\ml{SSFRAG} constructor.  Such congruence rules should be of the form
+\[
+\mathit{cond_1} \Rightarrow \mathit{cond_2} \Rightarrow \dots (E_1 =
+E_2)
+\]
+where $E_1$ is the form to be rewritten.  Each $\mathit{cond}_i$ can
+either be an arbitrary boolean formula (in which case it is treated as
+a side-condition to be discharged) or an equation of the general form
+\[
+\forall \vec{v}. \;\mathit{ctxt}_1 \Rightarrow \mathit{ctxt}_2
+\Rightarrow \dots (V_1(\vec{v}) = V_2(\vec{v}))
+\]
+where the variable $V_2$ must occur free in $E_2$.
+
+For example, the theorem form of \ml{MK\_COMB} would be
+\[
+\vdash (f = g) \Rightarrow (x = y) \Rightarrow (f(x) = g(y))
+\]
+and the theorem form of \ml{ABS} would be
+\[
+\vdash (\forall x. \;f (x) = g (x)) \Rightarrow (\lambda x. \;f(x)) = (\lambda
+x.\;g(x))
+\]
+The form for \ml{ABS} demonstrates how it is possible for congruence
+rules to handle bound variables.  Because the congruence rules are
+matched with the higher-order match of Section~\ref{sec:simp-homatch},
+this rule will match all possible abstraction terms.
+
+These simple examples have not yet demonstrated the use of
+$\mathit{ctxt}$ conditions on sub-equations.  An example of this is
+the congruence rule (found in \ml{CONG\_ss}) for implications.  This
+states
+\[
+\vdash (P = P') \Rightarrow (P' \Rightarrow (Q = Q')) \Rightarrow
+(P \Rightarrow Q = P' \Rightarrow Q')
+\]
+This rule should be read: ``When simplifying $P\Rightarrow Q$, first
+simplify $P$ to $P'$.  Then assume $P'$, and simplify $Q$ to $Q'$.
+Then the result is $P' \Rightarrow Q'$.''
+
+The rule for conditional expressions is
+\[
+\vdash \begin{array}[t]{l}
+  (P = P') \Rightarrow (P' \Rightarrow (x = x')) \Rightarrow
+  (\neg P' \Rightarrow (y = y')) \;\Rightarrow\\
+       (\textsf{if}\;P\;\textsf{then}\;x\;\textsf{else}\;y =
+       \textsf{if}\;P'\;\textsf{then}\;x'\;\textsf{else}\;y')
+\end{array}
+\]
+This rule allows the guard to be assumed when simplifying the
+true-branch of the conditional, and its negation to be assumed when
+simplifying the false-branch.
+
+The contextual assumptions from congruence rules are turned into
+rewrites using the mechanisms described in
+Section~\ref{sec:generating-rewrite-rules}.
+
+Congruence rules can be used to achieve a number of interesting
+effects.  For example, a congruence can specify that sub-terms
+\emph{not} be simplified if desired.  This might be used to prevent
+simplification of the branches of conditional expressions:
+\[
+\vdash (P = P') \Rightarrow
+       (\textsf{if}\;P\;\textsf{then}\;x\;\textsf{else}\;y =
+       \textsf{if}\;P'\;\textsf{then}\;x\;\textsf{else}\;y)
+\]
+If added to the simplifier, this rule will take precedence over any
+other rules for conditional expressions (masking the one above from
+\ml{CONG\_ss}, say), and will cause the simplifier to only descend
+into the guard.  With the standard rewrites (from \ml{BOOL\_ss}):
+\[
+\begin{array}{l}
+\vdash \;\textsf{if}\;\top\;\textsf{then}\;x\;\textsf{else}\;y \,\;=\,\; x\\
+\vdash \;\textsf{if}\;\bot\;\textsf{then}\;x\;\textsf{else}\;y \,\;=\,\; y
+\end{array}
+\]
+users can choose to have the simplifier completely ignore
+a conditional's branches until that conditional's guard is simplified
+to either true or false.
+
+As a convenience, congruence rules expressed in the format used by termination analysis in defining recursive functions (see Section~\ref{sec:tfl-congruence}), can also be passed to the simplifier.
+
+
+\subsubsection{AC-normalisation}
+\index{simplification!AC-normalisation}
+
+The simplifier can be used to normalise terms involving associative
+and commutative constants.  This process is known as
+\emph{AC-normalisation}.  The simplifier will perform AC-normalisation
+for those constants which have their associativity and commutativity
+theorems provided in a constituent \simpset{} fragment's \ml{ac}
+field.
+
+For example, the following \simpset{} fragment will cause
+AC-normalisation of disjunctions
+\begin{session}
+\begin{alltt}
+>>__ load "simpLib";
+>>__ open simpLib;
+##eval[DISJ_ss] SSFRAG { name = NONE,
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
+           dprocs = [] }
+\end{alltt}
+\end{session}
+The pair of provided theorems must state
+\begin{eqnarray*}
+x \oplus y &=& y \oplus x\\
+x \oplus (y \oplus z) &=& (x \oplus y) \oplus z
+\end{eqnarray*}
+for a constant $\oplus$.  The theorems may be universally quantified,
+and the associativity theorem may be oriented either way.  Further,
+either the associativity theorem or the commutativity theorem may be
+the first component of the pair.  Assuming the \simpset{} fragment
+above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
+demonstrated in the following example:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
+\end{alltt}
+\end{session}
+
+\index{arith_ss (simplification set)@\ml{arith\_ss} (simplification set)}
+The order of operands in the AC-normal form that the simplifer's
+AC-normalisation works toward is unspecified.  However, the normal
+form is always right-associated.  Note also that the \ml{arith\_ss}
+\simpset, and the \ml{ARITH\_ss} fragment which is its basis, have
+their own bespoke normalisation procedures for addition over the
+natural numbers.  Mixing AC-normalisation, as described here, with
+\ml{arith\_ss} can cause the simplifier to go into an infinite loop.
+
+AC theorems can also be added to \simpset{}s via the theorem-list part
+of the tactic and conversion interface, using the special rewrite form
+\ml{AC}:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
+\end{alltt}
+\end{session}
+See Section~\ref{sec:simp-special-rewrite-forms} for more on special
+rewrite forms.
+
+\subsubsection{Embedding code}
+\label{sec:simp-embedding-code}
+
+The simplifier features two different ways in which user-code can be
+embedded into its traversal and simplification of input terms.  By
+embedding their own code, users can customise the behaviour of the
+simplifier to a significant extent.
+
+\paragraph{User conversions}
+The simpler of the two methods allows the simplifier to include
+user-supplied conversions.  These are added to \simpset{}s in the
+{convs} field of \simpset{} fragments.  This field takes lists of
+values of type
+\begin{hol}
+\begin{verbatim}
+   { name: string,
+    trace: int,
+      key: (term list * term) option,
+     conv: (term list -> term -> thm) -> term list -> term -> thm}
+\end{verbatim}
+\end{hol}
+
+The \ml{name} and \ml{trace} fields are used when simplifier tracing
+is turned on.  If the conversion is applied, and if the simplifier
+trace level is greater than or equal to the \ml{trace} field, then a
+message about the conversion's application (including its \ml{name})
+will be emitted.
+
+The \ml{key} field of the above record is used to specify the
+sub-terms to which the conversion should be applied.  If the value is
+\ml{NONE}, then the conversion will be tried at every position.
+Otherwise, the conversion is applied at term positions matching the
+provided pattern.  The first component of the pattern is a list of
+variables that should be treated as constants when finding pattern
+matches.  The second component is the term pattern itself.  Matching
+against this component is \emph{not} done by the higher-order match of
+Section~\ref{sec:simp-homatch}, but by a higher-order ``term-net''.
+This form of matching does not aim to be precise; it is used to
+efficiently eliminate clearly impossible matches.  It does not check
+types, and does not check multiple bindings.  This means that the
+conversion will not only be applied to terms that are exact matches
+for the supplied pattern.
+
+Finally, the conversion itself.  Most uses of this facility are to add
+normal \HOL{} conversions (of type \ml{term->thm}), and this can be
+done by ignoring the \ml{conv} field's first two parameters.  For a
+conversion \ml{myconv}, the standard idiom is to write
+\ml{K~(K~myconv)}.  If the user desires, however, their code
+\emph{can} refer to the first two parameters.  The second parameter is
+the stack of side-conditions that have been attempted so far.  The
+first enables the user's code to call back to the simplifier, passing
+the stack of side-conditions, and a new side-condition to solve.  The
+\ml{term} argument must be of type \holtxt{:bool}, and the recursive
+call will simplify it to true (and call \ml{EQT\_ELIM} to turn a term
+$t$ into the theorem $\vdash t$).  This restriction is lifted for
+decision procedures (see below), but for conversions the recursive call can
+\emph{only} be used for side-condition discharge. Note also that it
+is the user's responsibility to pass an appropriately updated stack of
+side-conditions to the recursive invocation of the simplifier.
+
+A user-supplied conversion should never return the reflexive identity
+(an instance of $\vdash t = t$).  This will cause the simplifier to
+loop.  Rather than return such a result, raise a \ml{HOL\_ERR} or
+\ml{Conv.UNCHANGED} exception.  (Both are treated the same by the simplifier.)
+
+
+
+\paragraph{Context-aware decision procedures}
+Another, more involved, method for embedding user code into the
+simplifier is \emph{via} the \ml{dprocs} field of the \simpset{}
+fragment structure.  This method is more general than adding
+conversions, and also allows user code to construct and maintain its
+own bespoke logical contexts.
+
+The \ml{dprocs} field requires lists of values of the type
+\ml{Traverse.reducer}.  These values are constructed with the
+constructor \ml{REDUCER}:
+\begin{hol}
+\begin{alltt}
+>>__ val SOME trav_str = #lookupStruct PolyML.globalNameSpace "Traverse";
+>>__ val travns = PolyML.NameSpace.Structures.contents trav_str
+>>__ val SOME redval = #lookupVal travns "REDUCER"
+>>__ val pp = PolyML.NameSpace.Values.printWithType (redval,300,NONE)
+>>__ val safeprint =
+        TextIO.print o
+        String.translate
+          (fn #"{" => "\\{" | #"}" => "\\}" | c => str c)
+>>__ val _ = PP.prettyPrint(safeprint, 70) pp
+\end{alltt}
+\end{hol}
+The \ml{context} type is an alias for the built-in \ML{} type
+\ml{exn}, that of exceptions.  The exceptions here are used as a
+``universal type'', capable of storing data of any type.  For example,
+if the desired data is a pair of an integer and a boolean, then the
+following declaration could be made:
+\begin{hol}
+\begin{verbatim}
+   exception my_data of int * bool
+\end{verbatim}
+\end{hol}
+It is not necessary to make this declaration visible with a wide
+scope.  Indeed, only functions accessing and creating contexts of this
+form need to see it. For example:
+\begin{hol}
+\begin{verbatim}
+  fun get_data c = (raise c) handle my_data (i,b) => (i,b)
+  fun mk_ctxt (i,b) = my_data(i,b)
+\end{verbatim}
+\end{hol}
+
+When creating a value of \ml{reducer} type, the user must provide an
+initial context, and two functions.  The first, \ml{addcontext}, is
+called by the simplifier's traversal mechanism to give every embedded
+decision procedure access to theorems representing new context
+information.  For example, this function is called with theorems from
+the current assumptions in \ml{ASM\_SIMP\_TAC}, and with the theorems
+from the theorem-list arguments to all of the various simplification
+functions.  As a term is traversed, the congruence rules governing
+this traversal may also provide additional theorems; these will also
+be passed to the \ml{addcontext} function.  (Of course, it is entirely
+up to the \ml{addcontext} function as to how these theorems will be
+handled; they may even be ignored entirely.)
+
+When an embedded reducer is applied to a term, the provided \ml{apply}
+function is called.  As well as the term to be transformed, the
+\ml{apply} function is also passed a record containing a
+side-condition solver, a more general call-back to the simplifier,
+the decision procedure's current context, and the
+stack of side-conditions attempted so far.  The stack and solver are
+the same as the additional arguments provided to user-supplied
+conversions. The \ml{conv} argument is call-back to the simplifier,
+which given a term $t$ returns a theorem of the form $\vdash t = t'$
+or fails. In contrast, the \ml{solver} either returns the theorem
+$\vdash t$ or fails. The power of the reducer abstraction is having
+access to a context that can be built appropriately for each decision
+procedure.
+
+Decision procedures are applied last when a term is encountered by the
+simplifier.  More, they are applied \emph{after} the simplifier has
+already recursed into any sub-terms and tried to do as much rewriting
+as possible.  This means that although simplifier rewriting occurs in
+a top-down fashion, decision procedures will be applied bottom-up and
+only as a last resort.
+
+As with user-conversions, decision procedures must raise an exception
+rather than return instances of reflexivity.
+
+\subsubsection{Special rewrite forms}
+\label{sec:simp-special-rewrite-forms}
+
+Some of the simplifier's features can be accessed in a relatively
+simple way by using \ML{} functions to construct special theorem
+forms.  These special theorems can then be passed in the
+simplification tactics' theorem-list arguments.
+
+\index{simplification theorem modifiers!AC@\ml{AC}}
+\index{AC (simplification theorem modifier)@\ml{AC} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Cong@\ml{Cong}}
+\index{Cong (simplification theorem modifier)@\ml{Cong} (simplification theorem modifier)}
+Two of the simplifier's advanced features, AC-normalisation and
+congruence rules can be accessed in this way.  Rather than construct a
+custom \simpset{} fragment including the required AC or congruence
+rules, the user can instead use the functions \ml{AC} or \ml{Cong}:
+\begin{hol}
+\begin{verbatim}
+   AC : thm -> thm -> thm
+   Cong : thm -> thm
+\end{verbatim}
+\end{hol}
+For example, if the theorem value
+\begin{hol}
+\begin{verbatim}
+   AC DISJ_ASSOC DISJ_COMM
+\end{verbatim}
+\end{hol}
+appears amongst the theorems passed to a simplification tactic, then
+the simplifier will perform AC-normalisation of disjunctions.  The
+\ml{Cong} function provides a similar interface for the addition of
+new congruence rules.
+
+\index{simplification!guaranteeing termination}
+\index{Once (simplification theorem modifier)@\ml{Once} (simplifier theorem modifier)|pin}%
+\index{simplification theorem modifiers!Once@\ml{Once}|pin}%
+\index{Ntimes (simplification theorem modifier)@\ml{Ntimes} (simplifier theorem modifier)|pin}%
+\index{simplification theorem modifiers!Ntimes@\ml{Ntimes}|pin}%
+Two other functions provide a crude mechanism for controlling the
+number of times an individual rewrite will be applied.
+\begin{hol}
+\begin{verbatim}
+   Once : thm -> thm
+   Ntimes : thm -> int -> thm
+\end{verbatim}
+\end{hol}
+A theorem ``wrapped'' in the \ml{Once} function will only be applied
+once when the simplifier is applied to a given term.  A theorem
+wrapped in \ml{Ntimes} will be applied as many times as given in the
+integer parameter.
+
+\index{simplification!requiring rewrite application}
+Another pair of special forms allow the user to \emph{require} that certain rewrites are applied.
+Both forms check the count of instances of rewrite-redexes appearing in the goal that results after simplification has happened.
+If the requirement is not satisfied, the relevant tactic fails.
+In this context, a rewrite redex is the LHS of a theorem being used as a rewrite, so that, for example, the redex of the theorem $\vdash x + 0 = x$ is $x + 0$.
+\index{Req0 (simplification theorem modifier)@\ml{Req0} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Req0@\ml{Req0}}
+The \ml{Req0} form checks that the number of redexes of the corresponding rewrite is zero in the resulting goal.
+For unconditional rewrites, such a requirement is usually redundant, but this form can be useful when rewrites are conditional and the simplifier may have failed to discharge side-conditions.
+For example:
+\begin{session}
+\begin{alltt}
+>> val th = arithmeticTheory.ZERO_MOD;
+>>+ simp[Req0 th] ([], ``0 MOD z``);
+
+>> simp[Req0 th] ([], ``0 MOD (z + 1)``)
+    (* succeeds because arithmetic d.p. knows z + 1 is nonzero *);
+\end{alltt}
+\end{session}
+
+\index{ReqD (simplification theorem modifier)@\ml{ReqD} (simplification theorem modifier)}
+\index{simplification theorem modifiers!ReqD@\ml{ReqD}}
+The \ml{ReqD} modifier requires that the redex count should have decreased.
+This is implicitly a check on the original goal as well: it must have a non-zero count of redexes itself.
+
+Both \ml{Req0} and \ml{ReqD} can be combined with \ml{Once} and \ml{Ntimes}.
+
+\paragraph{Excluding rewrites}
+\index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
+\index{simplification theorem modifiers!Excl@\ml{Excl}}
+\index{simplification!removing rewrites}
+As also described above in Section~\ref{sec:removing-rewrites-from-simpsets}, various built-in (named) components can be removed from invocations of the simplifier through the use of the \ml{Excl} form.
+This function is of type \ml{string~->~thm}, so takes a string naming the rewrite or other component that is to be removed.
+For example, the standard stateful simpset includes the theorem stating that $x < x + y \Leftrightarrow 0 < y$, with name \ml{X\_LT\_X\_PLUS}:
+\begin{session}
+\begin{alltt}
+>> simp[] ([], “x < x + 2 * y”);
+
+>> simp[Excl "X_LT_X_PLUS"] ([], “x < x + 2 * y”);
+\end{alltt}
+\end{session}
+In addition to rewrites, conversions and decision procedures can also be temporarily excluded in this way:
+\begin{session}
+\begin{alltt}
+>> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
+\end{alltt}
+\end{session}
+
+\paragraph{Including \simpset{} fragments}
+\index{SF (simplification theorem modifier)@\ml{SF} (simplification theorem modifier)}
+\index{simplification theorem modifiers!SF@\ml{SF}}
+The \ml{SF} theorem form provides a way to augment a simplification with a \simpset{} fragment.
+For example, one can rewrite with conjunctions as assumptions using the \ml{CONJ\_ss} fragment:
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.drop_all();
+>>_ g ‘x = 10 ∧ x < 16’;
+>> e (simp[SF CONJ_ss]);
+##assert aconv (#2 (top_goal())) ``x = 10``
+\end{alltt}
+\end{session}
+
+\paragraph{Simplifying at particular sub-terms}
+\index{simplification!at particular sub-terms}
+We have already seen (Section~\ref{sec:simp-congruences} above) that
+the simplifier's congruence technology can be used to force the
+simplifier to ignore particular terms.  The example in the section
+above discussed how a congruence rule might be used to ensure that
+only the guards of conditional expressions should be simplified.
+
+In many proofs, it is common to want to rewrite only on one side or
+the other of a binary connective (often, this connective is an
+equality).  For example, this occurs when rewriting with equations
+from complicated recursive definitions that are not just structural
+recursions.  In such definitions, the left-hand side of the equation
+will have a function symbol attached to a sequence of variables, \eg:
+\begin{hol}
+\begin{verbatim}
+   |- f x y = ... f (g x y) z ...
+\end{verbatim}
+\end{hol}
+Theorems of a similar shape are also returned as the ``cases''
+theorems from inductive definitions.
+
+Whatever their origin, such theorems are the classic example of
+something to which one would want to attach the \ml{Once} qualifier.
+However, this may not be enough:  one may wish to prove a result such
+as
+\begin{hol}
+\begin{verbatim}
+   f (constructor x) y = ... f (h x y) z ...
+\end{verbatim}
+\end{hol}
+(With relations, the goal may often feature an implication instead of
+an equality.)  In this situation, one often wants to expand just the
+instance of \holtxt{f} on the left, leaving the other occurrence
+alone.  Using \ml{Once} will expand only one of them, but without
+specifying which one is to be expanded.
+
+The solution to this problem is to use special congruence rules,
+constructed as special forms that can be passed as theorems like
+\ml{Once}.  The functions
+\begin{hol}
+\begin{verbatim}
+   SimpL : term -> thm
+   SimpR : term -> thm
+\end{verbatim}
+\end{hol}
+construct congruence rules to force rewriting to the left or right of
+particular terms.  For example, if \holtxt{opn} is a binary operator,
+\ml{SimpL~\holquote{(opn)}} returns \ml{Cong} applied to the theorem
+\begin{hol}
+\begin{verbatim}
+   |- (x = x') ==> (opn x y = opn x' y)
+\end{verbatim}
+\end{hol}
+\index{SimpLHS (simplification theorem modifier)@\ml{SimpLHS} (simplification theorem modifier)|pin}
+\index{simplification theorem modifiers!SimpLHS@\ml{SimpLHS}}
+\index{SimpRHS (simplification theorem modifier)@\ml{SimpRHS} (simplification theorem modifier)|pin}
+\index{simplification theorem modifiers!SimpRHS@\ml{SimpRHS}}
+Because the equality case is so common, the special values
+\ml{SimpLHS} and \ml{SimpRHS} are provided to force
+simplification on the left or right of an equality respectively.
+These are just defined to be applications of \ml{SimpL} and \ml{SimpR}
+to equality.
+
+Note that these rules apply throughout a term, not just to the
+uppermost occurrence of an operator.  Also, the topmost operator in
+the term need not be that of the congruence rule.  This behaviour is
+an automatic consequence of the implementation in terms of congruence
+rules.
+
+\subsubsection{Limiting simplification}
+\label{sec:limit-simpl}
+
+\index{simplification!guaranteeing termination}
+In addition to the \ml{Once} and \ml{Ntimes} theorem-forms just
+discussed, which limit the number of times a particular rewrite is
+applied, the simplifier can also be limited in the total number of
+rewrites it performs. The \ml{limit} function (in \ml{simpLib} and
+\ml{bossLib})
+\begin{hol}
+\begin{verbatim}
+   limit : int -> simpset -> simpset
+\end{verbatim}
+\end{hol}
+records a numeric limit in a \simpset{}.  When a limited \simpset{}
+then works over a term, it will never apply more than the given number
+of rewrites to that term.  When conditional rewrites are used, the
+rewriting done in the discharge of side-conditions counts against the
+limit, as long as the rewrite is ultimately applied.  The application
+of user-provided congruence rules, user-provided conversions and
+decision procedures also all count against the limit.
+
+When the simplifier yields control to a user-provided conversion or
+decision procedure it cannot guarantee that these functions will ever
+return (and they may also take arbitrarily long to work, often a worry
+with arithmetic decision procedures), but use of \ml{limit} is
+otherwise a good method for ensuring that simplification terminates.
+
+\subsubsection{Rewriting with arbitrary pre-orders}
+\label{sec:preorder-rewriting}
+\index{simplification!with pre-orders}
+
+In addition to simplifying with respect to equality, it is also
+possible to use the simplifier to ``rewrite'' with respect to a relation
+that is reflexive and transitive (a \emph{preorder}).  This can be a
+very powerful way of working with transition relations in operational
+semantics.
+
+{\newcommand{\bred}{\ensuremath{\rightarrow^*_\beta}}
+
+  Imagine, for example, that one has set up a ``deep embedding'' of the
+  $\lambda$-calculus.  This will entail the definition of a new type
+  (\texttt{lamterm}, say) within the logic, as well as definitions of
+  appropriate functions (\eg, substitution) and relations over
+  \texttt{lamterm}.  One is likely to work with the reflexive and
+  transitive closure of $\beta$-reduction (\bred).  This relation has
+  congruence rules such as
+\[
+\begin{array}{c@{\qquad\qquad}c}
+\infer{M_1 \,N\;\bred\;M_2\,N}{M_1 \;\bred\;M_2} &
+\infer{M \,N_1\;\bred\;M\,N_2}{N_1 \;\bred\;N_2}\\[3mm]
+\multicolumn{2}{c}{\infer{(\lambda v.M_1)\;\bred\;(\lambda v.M_2)}{M_1\;\bred M_2}}
+\end{array}
+\] and one important rewrite
+\[
+\infer{(\lambda v. M)\,N \;\bred\; M[v := N]}{}
+\]
+Having to apply these rules manually in order to show that a
+given starting term can reduce to particular destination is usually
+very painful, involving many applications, not only of the theorems
+above, but also of the theorems describing reflexive and transitive
+closure (see Section~\ref{relation}).
+
+Though the $\lambda$-calculus is non-deterministic, it is also confluent, so
+the following theorem holds:
+\[
+\infer{
+  M_1 \;\bred\;N\;\;=\;\;M_2\;\bred\; N
+}{
+  \beta\textrm{-nf}\;N & M_1 \;\bred\;M_2
+}
+\]
+This is the critical theorem that justifies the switch from rewriting
+with equality to rewriting with \bred.  It says that if one has a term
+$M_1\bred N$, with $N$ a $\beta$-normal form, and if $M_1$ rewrites to
+$M_2$ under \bred, then the original term is equal to $M_2\bred N$.
+With luck, $M_2$ will actually be syntactically identical to $N$, and
+the reflexivity of \bred{} will prove the desired result.  Theorems
+such as these, that justify the switch from one rewriting relation to
+another are known as \emph{weakening congruences}.
+
+When adjusted appropriately, the simplifier can be modified to exploit
+the five theorems above, and automatically prove results such as
+\[
+u ((\lambda f\,x. f (f\,x)) v) \bred u (\lambda x. v(v\,x))
+\]
+(on the assumption that the terms $u$ and $v$ are $\lambda$-calculus
+variables, making the result a $\beta$-normal form).
+
+In addition, one will quite probably have various rewrite theorems
+that one will want to use in addition to those specified above.  For
+example, if one has earlier proved a theorem such as
+\[
+K\,x\,y \bred x
+\]
+then the simplifier can take this into account as well.
+
+The function achieving all this is
+\index{add_relsimp@\ml{add\_relsimp}}
+\begin{verbatim}
+   simpLib.add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
+                           subsets: thm list, rewrs : thm list} ->
+                          simpset -> simpset
+\end{verbatim}
+The fields of the record that is the first argument are:
+\begin{description}
+\item[\texttt{trans}] The theorem stating that the relation is
+  transitive, in the form $\forall x y z. R\,x\,y \land R\,y\,z \Rightarrow R x z$.
+\item[\texttt{refl}] The theorem stating that the relation is
+  reflexive, in the form $\forall x. R\,x\,x$.
+\item[\texttt{weakenings}] A list of weakening congruences, of the
+  general form $P_1 \Rightarrow P_2 \Rightarrow \cdots (t_1 = t_2)$, where at least one of the
+  $P_i$ will presumably mention the new relation $R$ applied to a
+  variable that appears in $t_1$.  Other
+  antecedents may be side-conditions such as the requirement in the
+  example above that the term $N$ be in $\beta$-normal form.
+\item[\texttt{subsets}] Theorems of the form $R'\,x\,y \Rightarrow R\,x\,y$.
+  These are used to augment the resulting \simpset's ``filter'' so that
+  theorems in the context mentioning $R'$ will derive useful rewrites
+  involving $R$.  In the example of $\beta$-reduction, one might also have
+  a relation $\rightarrow_{wh}^*$ for weak-head reduction.  Any weak-head
+  reduction is also a $\beta$-reduction, so it can be useful to have the
+  simplifier automatically ``promote'' facts about weak-head reduction
+  to facts about $\beta$-reduction, and to then use them as rewrites.
+\item[\texttt{rewrs}] Possibly conditional rewrites, presumably mostly
+  of the form $P \Rightarrow R\,t_1\,t_2$.  Rewrites over equality can also be
+  included here, allowing useful additional facts to be included.  For
+  example, when working with the $\lambda$-calculus, one might include both
+  the rewrite for $K$ above, as well as the definition of
+  substitution.
+\end{description}
+} % end of block defining \bred
+
+The application of this function to a \simpset{} \texttt{ss} will
+produce an augmented \texttt{ss} that has all of \texttt{ss}'s
+existing behaviours, as well as the ability to rewrite with the given
+relation.
+
+
+\subsubsection{Tracing the Simplifier}
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!simplification}
+There is a trace variable associated with the simplifier that can be used to obtain a log of its activities printed to the screen as simplification proceeds.
+(The tracing system is described generally in Section~\ref{sec:traces} below.)
+With the name \texttt{"simplifier"}, this trace can be set to have integer values between 0 and 7, inclusive.
+The default value of 0 means that no logging will be printed.
+Larger values result in more output.
+
+Tracing can be useful in trying to determine why a simplification theorem is not being applied, perhaps because of a failure to simplify side-conditions.
+At high values of the trace, output can be particularly voluminous.
+
+\index{simplification|)}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

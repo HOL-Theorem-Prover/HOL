@@ -25,19 +25,23 @@ endif
 
 ifdef HOLSELFTESTLEVEL
 # example directories to build at selftest level 1
-EXDIRS = ARM/arm6-verification CCS Crypto/RSA Hoare-for-divergence MLsyntax \
+EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
+         CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-         RL_Environment \
-	 STE algorithms computability dependability dev \
+	 STE algorithms computability countchars cv_compute dependability dev \
          developers/ThmSetData \
+	 fermat \
 	 formal-languages formal-languages/context-free \
-	 formal-languages/lambek formal-languages/regular/regular-play \
-	 fun-op-sem/lprefix_lub fun-op-sem/for \
+         formal-languages/contig \
+         formal-languages/lambek formal-languages/regular/regular-play \
+         fun-op-sem/lprefix_lub fun-op-sem/for \
          hardware hfs \
          imperative ind_def \
-         l3-machine-code/common lambda/barendregt lassie \
-         logic logic/folcompactness logic/modal-tableaux logic/ncfolproofs \
-	 logic/propositional_logic \
+         l3-machine-code/common \
+         lambda/barendregt lambda/wcbv-reasonable \
+#         lassie \
+         logic logic/folcompactness logic/modal-models logic/modal-tableaux \
+         logic/ncfolproofs logic/propositional_logic logic/relevant-logic \
          misc parity rings set-theory/zfset set-theory/vbg zipper
 
 # selftest directories under src/quotient
@@ -51,6 +55,7 @@ SRCTESTDIRS = \
 
 ifdef POLY
 SRCTESTDIRS += n-bit/interactive_tests
+EXDIRS += RL_Environment
 endif
 
 INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
@@ -62,8 +67,8 @@ ifneq($(HOLSELFTESTLEVEL),1)
 EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/nominal \
             algorithms/unification/triangular/first-order \
-            ARM/arm6-verification/correctness \
-            ARM/v4 ARM/v7 \
+            arm/arm6-verification/correctness \
+            arm/v4 arm/v7 \
           balanced_bst \
           category computability/kolmog computability/lambda \
             computability/recdegrees \
@@ -75,7 +80,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             logic/ltl logic/ltl-transformations \
             l3-machine-code/decompilers \
           miller \
-	  probability \
+          probability vector \
           separationLogic/src separationLogic/src/holfoot simple_complexity \
           temporal_deep
 
@@ -92,7 +97,7 @@ endif
 endif
 
 ifeq($(HOLSELFTESTLEVEL),3)
-EX3DIRS = ARM_security_properties \
+EX3DIRS = arm/ARM_security_properties \
           diningcryptos \
           l3-machine-code/cheri/step
 

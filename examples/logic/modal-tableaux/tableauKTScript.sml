@@ -146,13 +146,15 @@ Proof
 QED
 
 Theorem scmap2_MEM:
-  ∀l0 l e f S. scmap2 f S l0 = SOME l ∧ MEM e l ⇒ ∃e0. MEM e0 l0 ∧ f S e0 = SOME e
+  ∀l0 l e f S.
+    scmap2 f S l0 = SOME l ∧ MEM e l ⇒ ∃e0. MEM e0 l0 ∧ f S e0 = SOME e
 Proof
   Induct >> dsimp[AllCaseEqs()]
 QED
 
 Theorem scmap2_MEM2:
-  ∀l0 l e0 f S. scmap2 f S l0 = SOME l ∧ MEM e0 l0 ⇒ ∃e. MEM e l ∧ f S e0 = SOME e
+  ∀l0 l e0 f S.
+    scmap2 f S l0 = SOME l ∧ MEM e0 l0 ⇒ ∃e. MEM e l ∧ f S e0 = SOME e
 Proof
   Induct >> dsimp[AllCaseEqs()]
 QED
@@ -171,7 +173,7 @@ Proof
 QED
 
 Theorem max_list_diff[simp]:
-  ∀l1 l2 l3. (max_list l2 < max_list l3) ⇒ max_list (l1++l2) <= max_list (l1++l3)
+  ∀l1 l2 l3. max_list l2 < max_list l3 ⇒ max_list (l1++l2) <= max_list (l1++l3)
 Proof
   rw[]
 QED
@@ -292,22 +294,27 @@ Definition tableau_KT_def:
           SOME Γ' => tableau_KT Σ Γ'
         | NONE => case disjsplit Γ of
                     SOME (Γ1, Γ2) =>
-                        (case tableau_KT Σ Γ1 of
-                            SOME m => SOME m
-                          | NONE =>
-                            case tableau_KT Σ Γ2 of SOME m => SOME m | NONE => NONE)
-                  | NONE => if EXISTS is_box Γ then tableau_KT (FST (trule Σ Γ)) (SND (trule Σ Γ))
+                      (case tableau_KT Σ Γ1 of
+                         SOME m => SOME m
+                       | NONE =>
+                           case tableau_KT Σ Γ2 of
+                           | SOME m => SOME m
+                           | NONE => NONE)
+                  | NONE => if EXISTS is_box Γ then
+                              tableau_KT (FST (trule Σ Γ)) (SND (trule Σ Γ))
                             else  if EXISTS is_dia Γ then
-                                    let
-                                      children = scmap2 tableau_KT [] (MAP (λd. d :: (unbox Σ))
-                                                                      (undia Γ))
-                                    in
-                                      case children of
-                                          SOME ms => SOME (Nd (unvar Γ) ms)
-                                        | NONE => NONE
-                                  else SOME (Nd (unvar Γ) [])
+                              let
+                                children = scmap2 tableau_KT []
+                                                  (MAP (λd. d :: (unbox Σ))
+                                                   (undia Γ))
+                              in
+                                case children of
+                                  SOME ms => SOME (Nd (unvar Γ) ms)
+                                | NONE => NONE
+                            else SOME (Nd (unvar Γ) [])
 Termination
-  WF_REL_TAC `(inv_image ((<) LEX (<)) (λ(Σ,Γ). (degree (Σ,Γ), SUM $ MAP form_size Γ)))`
+  WF_REL_TAC ‘inv_image ((<) LEX (<))
+              (λ(Σ,Γ). (degree (Σ,Γ), SUM $ MAP form_size Γ))’
   >> rw[]
   >- rw[KT_K_degree]
   >- rw[conjsplit_degree]
@@ -592,7 +599,8 @@ Proof
   fs[]
 QED
 
-(* TODO: wrap it: for all Σ Γ, if tableau_KT Σ Γ closes, then there must exist a tree model ... *)
+(* TODO: wrap it: for all Σ Γ, if tableau_KT Σ Γ closes, then there must exist
+   a tree model ... *)
 Theorem tableau_KT_sound:
    ∀Σ Γ t. tableau_KT Σ Γ = SOME t ⇒
             (∀f. MEM f Σ ⇒ is_box f) ⇒
@@ -617,7 +625,8 @@ Proof
          metis_tac[])
 (* K rule *)
   >- (fs[MEM_MAP, PULL_EXISTS] >>
-      qpat_x_assum `EXISTS _ _ ⇒ _` (fn _ => all_tac) >> (* removes assumption 1 *)
+      qpat_x_assum `EXISTS _ _ ⇒ _` (fn _ => all_tac) >>
+      (* removes assumption 1 *)
       fs[reflexive_sequent_def, DISJ_IMP_THM, FORALL_AND_THM, RC_DEF,
       tree_rel_def] >> rw[]
       (* MEM f history *)
@@ -635,9 +644,11 @@ Proof
                   >> fs[MEM_undia] >> last_x_assum (drule_then assume_tac) >>
                   fs[scmap2_MAP] >> drule scmap2_MEM2 >> rw[] >>
                   fs[MEM_undia] >>
-                  first_x_assum (drule_then (qx_choose_then `w` strip_assume_tac)) >>
+                  first_x_assum
+                    (drule_then (qx_choose_then `w` strip_assume_tac)) >>
                   qexists_tac `w` >> rw[]
-                  >- (rw[T_tree_model_def] >> irule RTC_SINGLE >> simp[tree_rel_def])
+                  >- (rw[T_tree_model_def] >> irule RTC_SINGLE >>
+                      simp[tree_rel_def])
                   >- (rw[RC_DEF, tree_rel_def])
                   >> first_x_assum (drule_then strip_assume_tac) >>
                   metis_tac[forces_single_step_back])

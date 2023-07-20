@@ -130,7 +130,8 @@ SRW_TAC [][] THENL [
   Q.SPECL_THEN [`n''`,`s`] MP_TAC
     (Q.INST[`sx`|->`s1`] (UNDISCH vwalk_SUBMAP)) THEN
   SRW_TAC [][]
-]);
+]
+QED
 
 val unify_same_lemma = prove(
   ``∀s t1 t2. wfs s ∧ (t1 = t2) ⇒ (unify s t1 t2 = SOME s)``,

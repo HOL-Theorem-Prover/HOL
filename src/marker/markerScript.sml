@@ -113,6 +113,7 @@ val Req0_def = new_definition("Req0_def", “Req0 = T”);
 val ReqD_def = new_definition("ReqD_def", “ReqD = T”);
 val Cong_def = new_definition("Cong_def", ``Cong (x:bool) = x``);
 val Exclude_def = new_definition("Exclude_def", “Exclude (x:'a) = T”);
+val ExcludeFrag_def = new_definition("ExcludeFrag_def", “ExcludeFrag (x:'a) = T”);
 val FRAG_def = new_definition("FRAG_def", “FRAG (x:'a) = T”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="AC"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="bool",Name="/\\"},name=(["Data","Bool"],"/\\")}
@@ -168,5 +169,23 @@ val elim_Case = store_thm (
     (Case X ==> Y) = Y``,
   REWRITE_TAC [Case_def]
   );
+
+(* ----------------------------------------------------------------------
+    hide
+
+    for hiding assumptions from both the user and many tools
+   ---------------------------------------------------------------------- *)
+
+val hide_def = new_definition(
+  "hide_def",
+  “hide (nm:bool) (x:bool) = x”);
+
+val hideCONG = store_thm(
+  "hideCONG",
+  “hide nm x = hide nm x”,
+  REWRITE_TAC[]);
+
+val _ = Tactic.export_ignore {Name = "hide", Thy = "marker"}
+val _ = permahide “hide”
 
 val _ = export_theory();

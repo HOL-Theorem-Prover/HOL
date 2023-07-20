@@ -8,7 +8,7 @@ val res = OS.Process.system (Systeml.HOLDIR ^
 
 val _ =
     if OS.Process.isSuccess res andalso
-       not (OS.FileSys.access ("includethis/ATheory.sml", [OS.FileSys.A_READ]))
+       not (HOLFileSys.access ("includethis/ATheory.sml", [OS.FileSys.A_READ]))
     then
       OK()
     else die ""

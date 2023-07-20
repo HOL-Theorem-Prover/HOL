@@ -8,6 +8,7 @@ sig
    type ('a, 'b) istream
    type ('a, 'b) subst = {redex: 'a, residue: 'b} list
    type 'a set = 'a HOLset.set
+   type ('a, 'b) dict = ('a, 'b) HOLdict.dict
    val $  : ('a -> 'b) * 'a -> 'b
    val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
    val ?> : ('a, 'c)verdict * ('a -> ('b, 'c)verdict) -> ('b, 'c)verdict
@@ -27,6 +28,8 @@ sig
 
    val all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
    val all : ('a -> bool) -> 'a list -> bool
+   val allpairs : ('a -> 'b -> ''c) -> 'a list -> 'b list -> ''c list
+   val allpairs' : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
    val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
    val append : 'a list -> 'a list -> 'a list
    val appi : (int -> 'a -> unit) -> 'a list -> unit
@@ -42,6 +45,7 @@ sig
    val can : ('a -> 'b) -> 'a -> bool
    val combine : 'a list * 'b list -> ('a * 'b) list
    val commafy : string list -> string list
+   val count : int -> int list
    val cons : 'a -> 'a list -> 'a list
    val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
    val deinitcomment : string -> string
@@ -51,7 +55,7 @@ sig
    val delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta
    val delta_pair :
       ('a -> 'a delta) -> ('b -> 'b delta) -> 'a * 'b -> ('a * 'b) delta
-   val dict_topsort : ('a, 'a list) Redblackmap.dict -> 'a list
+   val dict_topsort : ('a, 'a list) dict -> 'a list
    val el : int -> 'a list -> 'a
    val end_itlist : ('a -> 'a -> 'a) -> 'a list -> 'a
    val end_real_time : Timer.real_timer -> unit
@@ -69,6 +73,8 @@ sig
    val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
    val for : int -> int -> (int -> 'a) -> 'a list
    val for_se : int -> int -> (int -> unit) -> unit
+   val forall : ('a -> bool) -> 'a list -> bool
+   val forall2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
    val front_last : 'a list -> 'a list * 'a
    val fst : 'a * 'b -> 'a
    val funpow : int -> ('a -> 'a) -> 'a -> 'a
@@ -103,6 +109,7 @@ sig
    val next : ('a, 'b) istream -> ('a, 'b) istream
    val null_intersection : ''a list -> ''a list -> bool
    val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
+   val op_allpairs : ('a -> 'a -> bool) -> ('b -> 'c -> 'a) -> 'b list -> 'c list -> 'a list
    val op_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
    val op_assoc1 : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
    val op_insert : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
@@ -139,6 +146,7 @@ sig
    val separate : 'a -> 'a list -> 'a list
    val set_diff : ''a list -> ''a list -> ''a list
    val set_eq : ''a list -> ''a list -> bool
+   val setify : (''a -> ''a -> bool) -> ''a list -> ''a list
    val single : 'a -> 'a list
    val singleton_of_list : 'a list -> 'a
    val snd : 'a * 'b -> 'b
@@ -168,6 +176,7 @@ sig
    val trypluck : ('a -> 'b) -> 'a list -> 'b * 'a list
    val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
    val union : ''a list -> ''a list -> ''a list
+   val uniq : ''a list -> ''a list
    val unprefix : string -> string -> string
    val unprime : string -> string
    val unzip : ('a * 'b) list -> 'a list * 'b list

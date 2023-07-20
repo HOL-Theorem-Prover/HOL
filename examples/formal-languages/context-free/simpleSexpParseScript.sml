@@ -181,69 +181,51 @@ Theorem print_space_separated_cons:
 Proof Cases_on`xs` \\ rw[print_space_separated_def]
 QED
 
-Definition strip_dot_def:
-  strip_dot x =
-  case x of
-  | SX_CONS a d =>
-      let (ls,n) = strip_dot d in (a::ls,n)
-  | SX_SYM s => if s = "nil" then ([],NONE) else ([],SOME x)
-  | _ => ([],SOME x)
+Definition strip_dot_def[simp]:
+  strip_dot (SX_NUM n) = ([], SOME $ SX_NUM n) ∧
+  strip_dot (SX_STR s) = ([], SOME $ SX_STR s) ∧
+  strip_dot (SX_SYM s) =
+    (if s = "nil" then ([], NONE) else ([], SOME $ SX_SYM s)) ∧
+  strip_dot (SX_CONS a d) = let (ls,n) = strip_dot d in (a::ls,n)
 End
 
-val strip_dot_strip_sxcons = Q.store_thm("strip_dot_strip_sxcons",
-  `∀s ls. strip_sxcons s = SOME ls ⇔ strip_dot s = (ls,NONE)`,
-  ho_match_mp_tac strip_sxcons_ind \\ rw[]
-  \\ rw[Once strip_sxcons_def]
-  \\ CASE_TAC \\ fs[]
-  \\ TRY(simp[Once strip_dot_def] \\ rw[] \\ NO_TAC)
-  \\ CONV_TAC(RAND_CONV(SIMP_CONV (srw_ss()) [Once strip_dot_def]))
-  \\ simp[] \\ pairarg_tac \\ fs[] \\ rw[EQ_IMP_THM]);
+Theorem strip_dot_strip_sxcons:
+  ∀s ls. strip_sxcons s = SOME ls ⇔ strip_dot s = (ls,NONE)
+Proof
+  Induct >> simp[AllCaseEqs()] >>
+  pairarg_tac >> simp[] >> metis_tac[]
+QED
 
-val strip_dot_last_sizeleq = Q.store_thm("strip_dot_last_sizeleq",
-  `∀x ls last. strip_dot x  = (ls,SOME last) ⇒ sexp_size last ≤ sexp_size x`,
-  ho_match_mp_tac strip_dot_ind \\ rw[]
-  \\ pop_assum mp_tac
-  \\ simp[Once strip_dot_def]
-  \\ CASE_TAC \\ fs[]
-  \\ TRY(pairarg_tac \\ fs[])
-  \\ rw[sexp_size_def] \\ simp[]
-  \\ rw[sexp_size_def]);
+Theorem strip_dot_last_sizeleq:
+  ∀x ls last. strip_dot x  = (ls,SOME last) ⇒ sexp_size last ≤ sexp_size x
+Proof
+  Induct >> simp[AllCaseEqs()] >> pairarg_tac >> simp[] >> rw[] >>
+  first_x_assum drule >> simp[]
+QED
 
-val strip_dot_last_sizelt = Q.store_thm("strip_dot_last_sizelt",
-  `∀x ls last. strip_dot x  = (ls,SOME last) ∧ ¬NULL ls ⇒ sexp_size last < sexp_size x`,
-  ho_match_mp_tac strip_dot_ind \\ rw[]
-  \\ qpat_x_assum`strip_dot x = _` mp_tac
-  \\ simp[Once strip_dot_def]
-  \\ CASE_TAC \\ fs[]
-  \\ TRY(pairarg_tac \\ fs[])
-  \\ rw[sexp_size_def] \\ simp[]
-  \\ rw[sexp_size_def]
-  \\ fs[]
-  \\ TRY (spose_not_then strip_assume_tac \\ fs[] \\ rw[] \\ fs[] \\ NO_TAC)
-  \\ qpat_x_assum`strip_dot x = _` mp_tac
-  \\ simp[Once strip_dot_def]
-  \\ CASE_TAC \\ fs[]
-  \\ TRY(pairarg_tac \\ fs[])
-  \\ rw[] \\ fs[]);
+Theorem strip_dot_last_sizelt:
+  ∀x ls last.
+    strip_dot x  = (ls,SOME last) ∧ ¬NULL ls ⇒ sexp_size last < sexp_size x
+Proof
+  Induct >> simp[AllCaseEqs()] >> pairarg_tac >> simp[] >> rw[] >>
+  first_x_assum drule >> rename [‘strip_dot s = (ls, SOME last)’] >>
+  Cases_on ‘s’ >> gvs[AllCaseEqs()] >> pairarg_tac >> gvs[]
+QED
 
-val strip_dot_MEM_sizelt = Q.store_thm("strip_dot_MEM_sizelt",
-  `∀x ls n a. strip_dot x = (ls,n) ∧ MEM a ls ⇒ sexp_size a < sexp_size x`,
-  ho_match_mp_tac strip_dot_ind \\ rw[]
-  \\ qpat_x_assum`strip_dot x = _` mp_tac
-  \\ simp[Once strip_dot_def]
-  \\ CASE_TAC \\ fs[]
-  \\ TRY(pairarg_tac \\ fs[])
-  \\ rw[sexp_size_def] \\ fs[]
-  \\ res_tac \\  simp[]);
+Theorem strip_dot_MEM_sizelt:
+  ∀x ls n a. strip_dot x = (ls,n) ∧ MEM a ls ⇒ sexp_size a < sexp_size x
+Proof
+  Induct >> dsimp[AllCaseEqs()] >> pairarg_tac >> dsimp[] >> rpt strip_tac >>
+  first_x_assum drule_all >> simp[]
+QED
 
-val strip_dot_valid_sexp = Q.store_thm("strip_dot_valid_sexp",
-  `∀x ls n. strip_dot x = (ls,n) ∧ valid_sexp x ⇒
-    EVERY valid_sexp ls ∧ (case n of NONE => T | SOME last => valid_sexp last)`,
-  ho_match_mp_tac strip_dot_ind \\ rw[]
-  \\ qpat_x_assum`strip_dot x = _` mp_tac
-  \\ simp[Once strip_dot_def]
-  \\ CASE_TAC \\ fs[] \\ rw[] \\ rw[]
-  \\ pairarg_tac \\ fs[] \\ rw[]);
+Theorem strip_dot_valid_sexp:
+  ∀x ls n. strip_dot x = (ls,n) ∧ valid_sexp x ⇒
+           EVERY valid_sexp ls ∧
+           (case n of NONE => T | SOME last => valid_sexp last)
+Proof
+  Induct >> dsimp[AllCaseEqs()] >> pairarg_tac >> simp[]
+QED
 
 Definition print_sexp_def:
   (print_sexp (SX_SYM s) = s) ∧
@@ -711,7 +693,7 @@ QED
 Theorem strip_dot_EQ_NILNONE[simp]:
   strip_dot s = ([], NONE) ⇔ s = ⟪ ⟫
 Proof
-  ONCE_REWRITE_TAC [strip_dot_def] >> simp[AllCaseEqs(), UNCURRY]
+  Cases_on ‘s’ >> simp[UNCURRY, AllCaseEqs()]
 QED
 
 Theorem strip_dot_EQ_E:
@@ -1131,54 +1113,30 @@ Proof
   \\ `n = NONE ⇒ ¬b`
   by (
     qmatch_asmsub_rename_tac`dest_quote (SX_CONS a d)`
-    \\ qhdtm_x_assum`strip_dot`mp_tac
-    \\ simp[Once strip_dot_def]
+    \\ qpat_x_assum ‘_ (strip_dot _) = (_, _)’ mp_tac
     \\ pairarg_tac \\ fs[]
     \\ ntac 2 strip_tac \\ rpt var_eq_tac
     \\ simp[Abbr`b`] \\ spose_not_then strip_assume_tac
-    \\ fs[LENGTH_EQ_NUM_compute]
-    \\ qhdtm_x_assum`strip_dot`mp_tac
-    \\ simp[Once strip_dot_def]
-    \\ CASE_TAC \\ fs[] \\ rw[]
-    \\ pairarg_tac \\ fs[]
-    \\ spose_not_then strip_assume_tac \\ rw[]
-    \\ qhdtm_x_assum`strip_dot`mp_tac
-    \\ simp[Once strip_dot_def]
-    \\ CASE_TAC \\ fs[] \\ rw[]
-    \\ pairarg_tac \\ fs[] )
+    \\ gvs[LENGTH_EQ_NUM_compute]
+    \\ rename [‘strip_dot d = _’]
+    \\ Cases_on ‘d’ \\ gvs[AllCaseEqs()]
+    \\ pairarg_tac \\ gvs[] )
   \\ Cases_on`n` \\ fs[]
   >- (
     fs[option_sequence_SOME]
-    \\ imp_res_tac strip_dot_valid_sexp \\ rfs[]
-    \\ fs[EVERY_MEM,MEM_MAP,optionTheory.IS_SOME_EXISTS,PULL_EXISTS]
-    \\ conj_tac
-    >- (
-      rw[]
-      \\ last_x_assum(qspec_then`a`mp_tac)
-      \\ impl_tac >- metis_tac[markerTheory.Abbrev_def]
-      \\ rw[print_nt_def] )
-    \\ AP_TERM_TAC
-    \\ simp[MAP_MAP_o,MAP_EQ_f]
-    \\ rw[]
-    \\ last_x_assum(qspec_then`a`mp_tac)
-    \\ impl_tac >- metis_tac[markerTheory.Abbrev_def]
-    \\ rw[print_nt_def] )
-  \\ fs[markerTheory.Abbrev_def] \\ rw[]
-  \\ fs[option_sequence_SOME]
-  \\ qhdtm_x_assum`strip_dot`mp_tac
-  \\ simp[Once strip_dot_def]
-  \\ pairarg_tac \\ fs[]
-  \\ strip_tac \\ rpt var_eq_tac
-  \\ fs[]
-  \\ imp_res_tac strip_dot_valid_sexp
-  \\ rfs[]
-  \\ simp[PULL_EXISTS,optionTheory.IS_SOME_EXISTS]
-  \\ fs[print_nt_def]
-  \\ fs[EVERY_MEM,MEM_MAP,PULL_EXISTS]
-  \\ simp[print_space_separated_cons,NULL_EQ]
-  \\ rw[]
-  \\ AP_TERM_TAC
-  \\ simp[MAP_MAP_o,MAP_EQ_f]
+    \\ pairarg_tac
+    \\ gvs[DISJ_IMP_THM, FORALL_AND_THM]
+    \\ drule_all_then strip_assume_tac strip_dot_valid_sexp \\ gs[]
+    \\ fs[EVERY_MEM,MEM_MAP,optionTheory.IS_SOME_EXISTS,PULL_EXISTS,
+          print_nt_def]
+    \\ MK_COMB_TAC \\ simp[Cong MAP_CONG, MAP_MAP_o] \\ simp[SF ETA_ss] )
+  \\ gs[PULL_EXISTS, option_sequence_SOME, print_nt_def, Abbr‘b’]
+  \\ pairarg_tac \\ gvs[]
+  \\ drule_all_then strip_assume_tac strip_dot_valid_sexp
+  \\ gs[DISJ_IMP_THM, FORALL_AND_THM]
+  \\ gs[EVERY_MEM,MEM_MAP,PULL_EXISTS, MAP_MAP_o, combinTheory.o_ABS_R,
+        Cong MAP_CONG]
+  \\ simp[SF ETA_ss]
 QED
 
 Theorem peg_eval_print_sexp:

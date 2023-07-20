@@ -1,5 +1,5 @@
 name: hol-large-numbers
-version: 1.0
+version: 1.1
 description: HOL theories up to the Law of Large Numbers (including OpenTheory base)
 author: Chun Tian <binghe.lisp@gmail.com>
 license: MIT
@@ -110,7 +110,6 @@ hol-probability {
   import: hol-analysis
   import: hol-extreal
   import: hol-words
-  import: hol-sort
   package: hol-probability-1.1
 }
 large-number {

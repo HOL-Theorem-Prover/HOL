@@ -296,7 +296,8 @@ With a prefix ARG, uses `expandf' rather than `e'."
                               ") before "
                               "Feedback.set_trace " ste " old end"))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-       (tactic-string (format "%s (%s)" e-string region-string))
+       (tactic-string (format "%s (fn HOL__GOAL__foo => (%s) HOL__GOAL__foo)"
+                              e-string region-string))
        (sender (if hol-emit-time-elapsed-p
                    'send-timed-string-to-hol
                  'send-string-to-hol)))
@@ -316,8 +317,14 @@ With a prefix ARG, uses `expandf' rather than `e'."
                    'send-string-to-hol)))
     (funcall sender tactic-string hol-echo-commands-p)))
 
-(defun send-string-as-hol-goal (s)
-  (let ((goal-string (format  "proofManagerLib.g `%s`" s)))
+(defun send-string-as-hol-goal (s &optional attr-string)
+  (let ((goal-string
+         (if attr-string
+             (progn
+               (message (format "Using tactic-modifier %s" attr-string))
+               (format "proofManagerLib.new_goalstack ([], “%s”) \
+                         (BasicProvers.mk_tacmod %s) I" s attr-string))
+           (format  "proofManagerLib.g `%s`" s))))
     (send-raw-string-to-hol goal-string hol-echo-commands-p)
     (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil)))
 
@@ -337,6 +344,27 @@ With a prefix ARG, uses `expandf' rather than `e'."
         s)))
 
 
+(defun hol-get-proof-attribute-string ()
+  "Get attribute string following a Proof keyword that follows point."
+  (save-mark-and-excursion
+    (let ((pos (point))
+          (proof-pos (re-search-forward "^Proof" nil t)))
+      (if proof-pos
+          (let ((prev-term (re-search-backward "[”’`]" pos t)))
+            (if prev-term nil
+              (goto-char (match-end 0))
+              (skip-chars-forward "[:space:]")
+              (if (equal (char-after) ?\[)
+                  (let ((sq-start (point)))
+                    (condition-case nil
+                        (progn
+                          (skip-chars-forward "^]")
+                          (forward-char)
+                          (buffer-substring-no-properties sq-start (point)))
+                      (error nil)))
+                nil)))
+        nil))))
+
 (defun hol-do-goal (arg)
   "Send term around point to HOL process as goal.
 If prefix ARG is true, or if in transient mark mode, region is active and
@@ -345,12 +373,21 @@ the region contains no term-delimiters, then send region instead."
   (let ((txt (condition-case nil
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
-               (error nil))))
+               (error nil)))
+        (attr-string (hol-get-proof-attribute-string)))
     (if (or (and (is-region-active)
                  (not (hol-string-contains-term-delimiters-p txt)))
             arg)
       (send-string-as-hol-goal txt)
-    (send-string-as-hol-goal (hol-term-at-point)))))
+      (let ((attr-s
+             (if attr-string
+                 (concat "\""
+                         (replace-regexp-in-string
+                          "[[:space:]\n]+" " "
+                          attr-string)
+                         "\"")
+               nil)))
+        (send-string-as-hol-goal (hol-term-at-point) attr-s)))))
 
 
 (defun send-string-as-hol-goaltree (s)
@@ -525,7 +562,7 @@ starts >%s%s<"
                           (error "Unbalanced “ in region")))
                      ((string= ms "‘")
                       (if (not (re-search-forward "’" nil t))
-                          (error "Unbalanced “ in region")))
+                          (error "Unbalanced ‘ in region")))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
                            (char-equal (char-before) ?:))
@@ -586,8 +623,21 @@ starts >%s%s<"
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
-                      (if hol-auto-load-p
-                          (hol-load-string (match-string 6))))))))
+                      (let ((mod-name (match-string 6)))
+                        (if hol-auto-load-p
+                            ;; need to check if we're in a Proof[...] block
+                            (let
+                                ((in-proof
+                                  (save-mark-and-excursion
+                                    (skip-chars-backward "A-Za-z0-9._, =\n")
+                                    (if(equal (char-before) ?\[)
+                                        (progn
+                                          (backward-char)
+                                          (skip-chars-backward " \n")
+                                          (looking-back "Proof"
+                                                        (- (point) 6)))))))
+                              (if (not in-proof)
+                                  (hol-load-string mod-name))))))))))
           ;; send the string
           (goto-char (point-min))
             (send-buffer-to-hol-maybe-via-file echoit)))
@@ -1040,7 +1090,8 @@ argument N, sets the trace to that value in particular."
       (progn
         (message (concat "Toggling " s))
         (send-raw-string-to-hol
-         (format "val _ = let val nm = \"%s\"
+         (format "local open Int in
+                  val _ = let val nm = \"%s\"
                       fun findfn r = #name r = nm
                       val old =
                             #trace_level (valOf (List.find findfn (traces())))
@@ -1049,8 +1100,8 @@ argument N, sets the trace to that value in particular."
                       if 0 < old then (set_trace nm 0; print \"off\\n\")
                       else (set_trace nm 1; print \"on\\n\")
                   end handle Option =>
-                        print \"** No such trace var: \\\"%s\\\"\\n\""
-                 s s)
+                        print \"** No such trace var: \\\"%s\\\"\\n\"
+                  end" s s)
          nil))
     (let ((n (prefix-numeric-value arg)))
       (message (format "Setting %s to %d" s n))
@@ -1065,7 +1116,6 @@ argument N, sets the trace to that value in particular."
   "Toggles the \"Unicode\" trace."
   (interactive)
   (hol-toggle-trace "Unicode"))
-
 
 (defun hol-toggle-emacs-tooltips ()
   "Toggles whether HOL produces tooltip information while pretty-printing."
@@ -2148,6 +2198,9 @@ the surrounding text (as done by ‘hol-do-goal’ and
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
   '("Start HOL" . hol))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-with-region]
+  '("Start HOL & run to cursor" . hol-with-region))
 
 ;; Support for snippet expansion, if yasnippet is installed.
 (when (require 'yasnippet nil 'noerror)

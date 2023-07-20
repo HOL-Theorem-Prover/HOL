@@ -3,11 +3,13 @@
    ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib
-open binary_ieeeTheory realTheory wordsLib RealArith
+open binary_ieeeTheory realTheory wordsLib realLib
 open realSimps
-val () = new_theory "lift_ieee"
+
+val _ = new_theory "lift_ieee";
+
 val _ = ParseExtras.temp_loose_equality()
-val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss"]
+val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM"]
 
 val () =  Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 
@@ -1040,6 +1042,24 @@ val error_bound_norm_strong = Q.prove(
         ]
   );
 
+Theorem absolute_error_denormal:
+  !x. abs x < threshold (:'t # 'w) /\ abs x < 2 * 1 / 2 pow (bias (:'w) - 1) /\
+      1 < bias (:'w) ==>
+      ?e. abs (float_to_real(round roundTiesToEven x:('t,'w) float) - x) <= e /\
+          e <= 1 / 2 pow (bias (:'w) + dimindex (:'t))
+Proof
+  rw[] \\ qspecl_then [‘x’,‘0’] mp_tac error_bound_norm_strong
+  \\ impl_tac >- gs[]
+  \\ once_rewrite_tac[realaxTheory.real_abs]
+  \\ gs[error_def] \\ COND_CASES_TAC
+  \\ rpt strip_tac
+  >- (
+    qexists_tac ‘float_to_real ((round roundTiesToEven x):('t,'w) float) - x’
+    \\ gs[])
+  \\ qexists_tac ‘- (float_to_real ((round roundTiesToEven x):('t,'w) float) - x)’
+  \\ gs[]
+QED
+
 (* -------------------------------------------------------------------------
    "1 + Epsilon" property (relative error bounding).
    ------------------------------------------------------------------------- *)
@@ -1656,7 +1676,7 @@ val finite_float_within_threshold = Q.store_thm (
   \\ fs[realTheory.abs]
   \\ BasicProvers.every_case_tac
   \\ res_tac
-  \\ RealArith.REAL_ASM_ARITH_TAC);
+  \\ REAL_ASM_ARITH_TAC);
 
 val round_finite_normal_float_id = Q.store_thm(
 "round_finite_normal_float_id",
@@ -1681,7 +1701,7 @@ val round_finite_normal_float_id = Q.store_thm(
       \\ fs[realTheory.REAL_SUB_REFL]
       \\ strip_tac
       \\ `float_to_real b - float_to_real f = 0`
-           by (RealArith.REAL_ASM_ARITH_TAC)
+           by (REAL_ASM_ARITH_TAC)
       \\ fs[float_to_real_eq]
       \\ rfs[])
   \\ CCONTR_TAC
@@ -1691,7 +1711,7 @@ val round_finite_normal_float_id = Q.store_thm(
   \\ fs[realTheory.REAL_SUB_REFL]
   \\ rpt strip_tac
   \\ `float_to_real x - float_to_real f = 0`
-        by (RealArith.REAL_ASM_ARITH_TAC)
+        by (REAL_ASM_ARITH_TAC)
   \\ fs[float_to_real_eq]
   \\ rfs[]);
 

@@ -48,7 +48,7 @@ val ORD_ONTO = save_thm("ORD_ONTO",
 val CHR_ONTO = save_thm("CHR_ONTO",
                          BETA_RULE (prove_abs_fn_onto CHAR_TYPE_FACTS));
 
-val CHR_ORD  = save_thm("CHR_ORD", CONJUNCT1 CHAR_TYPE_FACTS);
+Theorem CHR_ORD[simp] = CONJUNCT1 CHAR_TYPE_FACTS
 val ORD_CHR  = save_thm("ORD_CHR",BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS));
 
 val ORD_CHR_RWT = Q.store_thm

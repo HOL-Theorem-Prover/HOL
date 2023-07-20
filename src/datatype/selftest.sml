@@ -460,15 +460,13 @@ val _ = quiet_warnings (fn () =>
           handle _ => die "FAILED!"
 val _ = OK()
 
-val _ = tprint "Testing indirect recursion size eqs with basic types";
+val _ = tprint "Initial test of indirect datatype recursion with basic types";
+(* there are more thorough tests of this in the datatypes_basic_test theory *)
 val _ = quiet_warnings (fn () =>
            (Datatype `v_rec = V (v_rec + num) | W`)
            ) () handle _ => die "FAILED!"
 val _ = quiet_warnings (fn () =>
            (Datatype`a_rec = A ((a_rec # unit # num option # (unit + num)) list) | B unit`)
            ) () handle _ => die "FAILED!"
-fun is_ls t = is_const t andalso fst (dest_const t) = "list_size"
-val ls = DB.theorem "a_rec_size_eq" |> concl |> can (find_term is_ls)
-val _ = if ls then OK () else die "FAILED: size_eq does not contain list_size"
 
 val _ = Process.exit Process.success;

@@ -2,27 +2,11 @@
 (* Properties of power series.                                               *)
 (*===========================================================================*)
 
-(*
-app load ["numLib",
-          "reduceLib",
-          "pairTheory",
-          "numLib",
-          "PairedLambda",
-          "jrhUtils",
-          "metricTheory",
-          "netsTheory",
-          "seqTheory",
-          "limTheory"];
-*)
-
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
      jrhUtils realTheory metricTheory netsTheory seqTheory limTheory;
 
-infix THEN THENL ORELSE ORELSEC ##;
-
 val _ = new_theory "powser";
-
 
 (*---------------------------------------------------------------------------*)
 (* More theorems about rearranging finite sums                               *)
