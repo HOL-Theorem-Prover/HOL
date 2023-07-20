@@ -1,4 +1,4 @@
-INCLUDES = $(dprot $(HOLDIR)/src/n-bit) $(dprot $(HOLDIR)/src/quotient/src)
+INCLUDES = $(dprot $(HOLDIR)/src/n-bit)
 
 
 all: $(DEFAULT_TARGETS)

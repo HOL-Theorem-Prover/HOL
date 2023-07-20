@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib numLib quotient BasicProvers
 
+val _ = new_theory "quotient_test"
+
 val _ = print "Attempting quotient where reln has symbolic name\n"
 val _ = temp_remove_termtok {term_name = "<=>", tok = "<=>"}
 val _ = hide "<=>"
@@ -34,3 +36,5 @@ val thms = define_equivalence_type {
              name = "lfoo2",
              old_thms = [],
              welldefs = []}
+
+val _ = export_theory()

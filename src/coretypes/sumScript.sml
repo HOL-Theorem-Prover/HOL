@@ -30,12 +30,15 @@
 
 
 open HolKernel Parse boolLib BasicProvers;
+open quotientLib boolSimps simpLib
 
 (* done to keep Holmake happy - satTheory is an ancestor of BasicProvers *)
 local open satTheory in end
 
 local open DefnBase in end
 val _ = new_theory "sum";
+
+fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta reduce *)
 
 val o_DEF = combinTheory.o_DEF
 and o_THM = combinTheory.o_THM;
@@ -378,10 +381,11 @@ val SUM_MAP_CASE = store_thm (
          (f ++ g) z = sum_CASE z (INL o f) (INR o g) :'c + 'd``,
   SIMP_TAC (srw_ss()) [FORALL_SUM]);
 
-val SUM_MAP_I = store_thm (
-  "SUM_MAP_I",
-  ``(I ++ I) = (I : 'a + 'b -> 'a + 'b)``,
-  SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]);
+Theorem SUM_MAP_I[simp,quotient_simp]:
+  (I ++ I) = (I : 'a + 'b -> 'a + 'b)
+Proof
+  simp[FORALL_SUM, FUN_EQ_THM]
+QED
 
 Theorem SUM_MAP_o:
   (f ++ g) o (h ++ k) = (f o h) ++ (g o k)
@@ -471,7 +475,7 @@ Proof
   SIMP_TAC (srw_ss()) [SUM_REL_def]
 QED
 
-Theorem SUM_REL_EQ[simp]:
+Theorem SUM_REL_EQ[simp,quotient_simp]:
   SUM_REL $= $= = ($= : 'a + 'b -> 'a + 'b -> bool)
 Proof
   REWRITE_TAC [FUN_EQ_THM] >> SIMP_TAC (srw_ss()) [FORALL_SUM]
@@ -565,6 +569,134 @@ val datatype_sum = store_thm(
   "datatype_sum",
   ``DATATYPE (sum (INL:'a -> 'a + 'b) (INR:'b -> 'a + 'b))``,
   REWRITE_TAC[DATATYPE_TAG_THM]);
+
+(* ----------------------------------------------------------------------
+    Theorems to support the quotient package
+   ---------------------------------------------------------------------- *)
+
+Theorem SUM_EQUIV[quotient_equiv]:
+  !(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
+    EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)
+Proof
+  simp[EQUIV_def, EQUIV_REFL_SYM_TRANS, FORALL_SUM] >> PROVE_TAC[]
+QED
+
+Theorem SUM_QUOTIENT[quotient]:
+  !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         QUOTIENT (R1 +++ R2) (abs1 ++ abs2) (rep1 ++ rep2)
+Proof
+  REPEAT STRIP_TAC
+  THEN REWRITE_TAC[QUOTIENT_def]
+  THEN REPEAT CONJ_TAC
+    THENL
+      [ rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >> simp[FORALL_SUM],
+
+        rpt (dxrule_then assume_tac QUOTIENT_REP_REFL) >> simp[FORALL_SUM],
+
+        simp[FORALL_SUM] >>
+        rpt (dxrule_then (fn th => simp[Once th, SimpLHS]) QUOTIENT_REL)
+      ]
+QED
+
+(* sum theory: INL, INR, ISL, ISR, ++ *)
+fun prs_tac ths =
+  rpt (rpt gen_tac >> disch_tac) >>
+  rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+  simp(FORALL_SUM::ths)
+
+Theorem INL_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a. INL a = (abs1 ++ abs2) (INL (rep1 a))
+Proof prs_tac[]
+QED
+
+Theorem INL_RSP[quotient_rsp]:
+   !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a1 a2.
+          R1 a1 a2 ==>
+          (R1 +++ R2) (INL a1) (INL a2)
+Proof
+  simp[]
+QED
+
+Theorem INR_PRS[quotient_prs]:
+   !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !b. INR b = (abs1 ++ abs2) (INR (rep2 b))
+Proof prs_tac[]
+QED
+
+Theorem INR_RSP[quotient_rsp]:
+  !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !b1 b2.
+          R2 b1 b2 ==>
+          (R1 +++ R2) (INR b1) (INR b2)
+Proof
+  simp[]
+QED
+
+Theorem ISL_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a. ISL a = ISL ((rep1 ++ rep2) a)
+Proof prs_tac[]
+QED
+
+Theorem ISL_RSP[quotient_rsp]:
+   !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a1 a2.
+          (R1 +++ R2) a1 a2 ==>
+          (ISL a1 = ISL a2)
+Proof
+  simp[FORALL_SUM]
+QED
+
+Theorem ISR_PRS[quotient_prs]:
+    !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a. ISR a = ISR ((rep1 ++ rep2) a)
+Proof prs_tac[]
+QED
+
+Theorem ISR_RSP[quotient_rsp]:
+    !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a1 a2.
+          (R1 +++ R2) a1 a2 ==>
+          (ISR a1 = ISR a2)
+Proof
+   simp[FORALL_SUM]
+QED
+
+(* OUTL and OUTR are not completely defined, so do not lift. *)
+
+Theorem SUM_MAP_PRS[quotient_prs]:
+   !R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'f) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'g) rep3. QUOTIENT R3 abs3 rep3 ==>
+        !R4 (abs4:'d -> 'h) rep4. QUOTIENT R4 abs4 rep4 ==>
+         !f g. (f ++ g) =
+               ((rep1 ++ rep3) --> (abs2 ++ abs4))
+                   (((abs1 --> rep2) f) ++ ((abs3 --> rep4) g))
+Proof prs_tac[FUN_MAP_THM, FUN_EQ_THM]
+QED
+
+Theorem SUM_MAP_RSP[quotient_rsp]:
+    !R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'f) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'g) rep3. QUOTIENT R3 abs3 rep3 ==>
+        !R4 (abs4:'d -> 'h) rep4. QUOTIENT R4 abs4 rep4 ==>
+         !f1 f2 g1 g2.
+          (R1 ===> R2) f1 f2 /\ (R3 ===> R4) g1 g2 ==>
+          ((R1 +++ R3) ===> (R2 +++ R4)) (f1 ++ g1) (f2 ++ g2)
+Proof
+  simp[FUN_REL, FORALL_SUM]
+QED
 
 val _ = temp_remove_termtok {term_name = "SUM_MAP", tok = "++"}
 

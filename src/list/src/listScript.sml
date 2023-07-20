@@ -35,7 +35,7 @@ in end;
 
 open HolKernel Parse boolLib Num_conv BasicProvers mesonLib
      simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
-     relationTheory combinTheory
+     relationTheory combinTheory quotientLib
 
 val ERR = mk_HOL_ERR "listScript"
 
@@ -505,6 +505,12 @@ Theorem MAP_ID[simp]:
   (MAP (\x. x) l = l) /\ (MAP I l = l)
 Proof
   Induct_on ‘l’ THEN SRW_TAC [] [MAP]
+QED
+
+Theorem MAP_ID_I[quotient_simp]:
+  MAP I = I
+Proof
+  simp[FUN_EQ_THM]
 QED
 
 Theorem LENGTH_MAP[simp]:
@@ -3915,7 +3921,7 @@ val LIST_REL_trans = Q.store_thm("LIST_REL_trans",
    >> FIRST_X_ASSUM (Q.SPEC_THEN ‘SUC n’ MP_TAC)
    >> simp []);
 
-Theorem LIST_REL_eq[simp]:
+Theorem LIST_REL_eq[simp,quotient_simp]:
   LIST_REL (=) = (=)
 Proof
   simp[FUN_EQ_THM] >> Induct >> rpt gen_tac >>
@@ -4541,5 +4547,185 @@ val _ =
         unit = “SINGL”, choice = SOME “APPEND”, fail = SOME “[]”,
         guard = SOME “LIST_GUARD” }
     )
+
+(* ----------------------------------------------------------------------
+    Supporting the quotient package
+   ---------------------------------------------------------------------- *)
+
+Theorem LIST_EQUIV[quotient_equiv]:
+  !R:'a -> 'a -> bool. EQUIV R ==> EQUIV (LIST_REL R)
+Proof
+  simp[EQUIV_def] >> simp[GSYM ALT_equivalence] >>
+  simp[equivalence_def, reflexive_def, symmetric_def, transitive_def] >>
+  rpt strip_tac
+  >- (irule EVERY2_refl >> simp[])
+  >- (‘!l1 l2. LIST_REL R l1 l2 ==> LIST_REL R l2 l1’ suffices_by metis_tac[] >>
+      Induct_on ‘LIST_REL’ >> simp[]) >>
+  irule LIST_REL_trans >> first_assum $ irule_at Any >>
+  fs[LIST_REL_EL_EQN] >> metis_tac[]
+QED
+
+Theorem LIST_QUOTIENT[quotient]:
+  !R (abs:'a -> 'b) rep.
+    QUOTIENT R abs rep ==>
+    QUOTIENT (LIST_REL R) (MAP abs) (MAP rep)
+Proof
+  rw[] >> simp[QUOTIENT_def] >> rpt conj_tac
+  >- (drule QUOTIENT_ABS_REP >> simp[MAP_MAP_o, o_DEF])
+  >- (dxrule QUOTIENT_REP_REFL >> simp[LIST_REL_EL_EQN, EL_MAP]) >>
+  dxrule_then assume_tac QUOTIENT_REL >>
+  Induct >- simp[SF CONJ_ss] >>
+  pop_assum (fn lrth => pop_assum (fn rth =>
+    simp[] >> simp[Once rth, Once lrth, SimpLHS])) >>
+  Cases_on ‘s’ >> simp[] >> metis_tac[]
+QED
+
+Theorem NIL_RSP[quotient_rsp]:
+  !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==> LIST_REL R [] []
+Proof
+  simp[]
+QED
+
+Theorem NIL_PRS[quotient_prs]:
+  !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==> [] = (MAP abs) []
+Proof
+  simp[]
+QED
+
+Theorem CONS_PRS[quotient_prs]:
+  !R (abs:'a -> 'b) rep.
+    QUOTIENT R abs rep ==>
+    !t h. CONS h t = (MAP abs) (CONS (rep h) (MAP rep t))
+Proof
+  rpt strip_tac >> drule_then assume_tac QUOTIENT_ABS_REP >>
+  simp[MAP_MAP_o, o_DEF]
+QED
+
+Theorem CONS_RSP[quotient_rsp]:
+  !R (abs:'a -> 'b) rep.
+    QUOTIENT R abs rep ==>
+    !t1 t2 h1 h2.
+      R h1 h2 /\ (LIST_REL R) t1 t2 ==> (LIST_REL R) (CONS h1 t1) (CONS h2 t2)
+Proof
+  simp[]
+QED
+
+
+Theorem EVERY_PRS[quotient_prs]:
+  !R (abs:'a -> 'b) rep.
+    QUOTIENT R abs rep ==>
+    !l P. EVERY P l = EVERY ((abs --> I) P) (MAP rep l)
+Proof
+  rpt strip_tac >> drule_then assume_tac QUOTIENT_ABS_REP >>
+  simp[EVERY_MAP, FUN_MAP_THM, SF ETA_ss]
+QED
+
+Theorem LIST_TO_SET_PRS[quotient_prs]:
+  !R (abs : 'a -> 'b) rep.
+    QUOTIENT R abs rep ==>
+    !l. LIST_TO_SET l = IMAGE abs (LIST_TO_SET (MAP rep l))
+Proof
+  rpt strip_tac >> drule_then assume_tac QUOTIENT_ABS_REP >>
+  simp[GSYM LIST_TO_SET_MAP, MAP_MAP_o, combinTheory.o_DEF]
+QED
+
+Definition SET_REL_def:
+  SET_REL R s1 s2 <=>
+  ?ps. IMAGE FST ps = s1 /\ IMAGE SND ps = s2 /\
+       !p. p IN ps ==> R (FST p) (SND p)
+End
+
+Theorem SET_REL_EQ:
+  SET_REL (=) = (=)
+Proof
+  simp[Once FUN_EQ_THM] >> simp[Once FUN_EQ_THM] >>
+  simp[SET_REL_def, EQ_IMP_THM, FORALL_AND_THM, FORALL_PROD] >>
+  conj_tac
+  >- (simp[EXTENSION, EXISTS_PROD, PULL_EXISTS] >> metis_tac[]) >>
+  Q.X_GEN_TAC ‘s’ >> Q.EXISTS_TAC ‘{(a,a) | a IN s}’ >>
+  simp[EXTENSION, EXISTS_PROD]
+QED
+
+Theorem SET_REL_THM:
+  SET_REL R s1 s2 <=>
+  (!x. x IN s1 ==> ?y. y IN s2 /\ R x y) /\
+  (!y. y IN s2 ==> ?x. x IN s1 /\ R x y)
+Proof
+  simp[SET_REL_def, EQ_IMP_THM] >> rw[] >>
+  FULL_SIMP_TAC (srw_ss()) [FORALL_PROD, PULL_EXISTS, EXISTS_PROD]
+  >- metis_tac[]
+  >- metis_tac[] >>
+  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >>
+  Q.RENAME_TAC [‘f _ IN s2 /\ R _ (f _)’, ‘g _ IN s1 /\ R (g _) _’] >>
+  Q.EXISTS_TAC ‘{(x,f x) | x IN s1} UNION {(g y, y) | y IN s2}’ >>
+  simp[EXTENSION, PULL_EXISTS, SF DNF_ss, EXISTS_PROD] >> metis_tac[]
+QED
+
+Theorem SET_QUOTIENT:
+  !R abs rep.
+    QUOTIENT R (abs : 'a -> 'b) rep ==>
+    QUOTIENT (SET_REL R) (IMAGE abs) (IMAGE rep)
+Proof
+  simp[QUOTIENT_def] >> rpt strip_tac >>
+  pop_assum (assume_tac o GSYM)
+  >- simp[IMAGE_IMAGE, combinTheory.o_DEF]
+  >- (simp[SET_REL_THM, PULL_EXISTS] >> metis_tac[]) >>
+  eq_tac >> simp[SET_REL_THM] >> rw[]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (simp[EXTENSION] >> metis_tac[]) >>
+  Q.PAT_X_ASSUM ‘IMAGE _ _ = IMAGE _ _’ MP_TAC >>
+  simp[EXTENSION, PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem LIST_TO_SET_RSP[quotient_rsp]:
+  !R (abs:'a -> 'b) rep.
+    QUOTIENT R abs rep ==>
+    !l1 l2. LIST_REL R l1 l2 ==>
+            SET_REL R (LIST_TO_SET l1) (LIST_TO_SET l2)
+Proof
+  simp[SET_REL_THM, LIST_REL_EL_EQN, MEM_EL, PULL_EXISTS] >>
+  metis_tac[]
+QED
+
+Theorem EVERY_RSP[quotient_rsp]:
+  !R (abs:'a -> 'b) rep.
+    QUOTIENT R abs rep ==>
+    !l1 l2 P1 P2.
+      (R ===> $=) P1 P2 /\ (LIST_REL R) l1 l2 ==>
+      (EVERY P1 l1 <=> EVERY P2 l2)
+Proof
+  simp[EVERY_MEM, FUN_REL] >> rpt strip_tac >>
+  Q.PAT_X_ASSUM ‘LIST_REL _ _ _’ MP_TAC >>
+  Induct_on ‘LIST_REL’ >> simp[DISJ_IMP_THM, FORALL_AND_THM] >>
+  metis_tac[]
+QED
+
+Theorem MAP_RSP[quotient_rsp]:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !l1 l2 f1 f2.
+        (R1 ===> R2) f1 f2 /\ (LIST_REL R1) l1 l2 ==>
+        (LIST_REL R2) (MAP f1 l1) (MAP f2 l2)
+Proof
+  simp[FUN_REL] >> rpt strip_tac >>
+  Q.PAT_X_ASSUM ‘LIST_REL _ _ _ ’ MP_TAC >>
+  Induct_on ‘LIST_REL’ >> simp[]
+QED
+
+Theorem MAP_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !l f. MAP f l = (MAP abs2) (MAP ((abs1 --> rep2) f) (MAP rep1 l))
+Proof
+  rpt strip_tac >> rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+  simp[MAP_MAP_o, FUN_MAP, combinTheory.o_DEF, SF ETA_ss]
+QED
 
 val _ = export_theory();

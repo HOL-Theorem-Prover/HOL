@@ -1,4 +1,4 @@
-INCLUDES = ../../../transfer ../../../quotient/src
+INCLUDES = ../../../transfer
 
 EXTRA_CLEANS = ordinalML.sig ordinalML.sml selftest.exe more-set-selftest.log
 

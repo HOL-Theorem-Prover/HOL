@@ -1,1 +1,3 @@
 INCLUDES = .. ../../../string
+
+EXTRA_CLEANS = $(patsubst %,%.lst,alpha beta eta lift reduction term variable)
