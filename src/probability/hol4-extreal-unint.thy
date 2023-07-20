@@ -4,13 +4,13 @@ description: HOL4 extended reals (before re-interpretation)
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
-  import: util-prob
+  import: extreal-base
   import: extreal
 }
-util-prob {
-  article: "util_prob.ot.art"
+extreal-base {
+  article: "../real/extreal_base.ot.art"
 }
 extreal {
-  import: util-prob
+  import: extreal-base
   article: "extreal.ot.art"
 }
