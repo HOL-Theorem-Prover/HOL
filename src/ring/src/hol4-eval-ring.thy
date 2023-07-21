@@ -1,4 +1,4 @@
-name: hol-ring
+name: hol-eval-ring
 version: 1.2
 description: HOL ring theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
@@ -14,6 +14,6 @@ show: "Function"
 show: "Number.Natural"
 show: "Relation"
 main {
-  article: "hol4-ring-unint.art"
+  article: "hol4-ring-eval-unint.art"
   interpretation: "../../opentheory/hol4.int"
 }

@@ -18,11 +18,11 @@
 *)
 
 open HolKernel Parse boolLib relationTheory mesonLib metisLib
-open simpLib boolSimps
+open quotientLib simpLib boolSimps BasicProvers
 
 val _ = new_theory "pair";
 
-fun simp ths = ASM_SIMP_TAC (BasicProvers.srw_ss()) ths (* don't eta-reduce *)
+fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
 
 (*---------------------------------------------------------------------------*)
 (* Define the type of pairs and tell the grammar about it.                   *)
@@ -451,6 +451,13 @@ Theorem SND_PAIR_MAP[simp]:
 Proof REWRITE_TAC [PAIR_MAP, SND]
 QED
 
+Theorem PAIR_MAP_I[simp,quotient_simp]:
+  (I ## I) = (I : 'a # 'b -> 'a # 'b)
+Proof
+  simp[FUN_EQ_THM, FORALL_PROD]
+QED
+
+
 (*---------------------------------------------------------------------------
         Distribution laws for paired lets. Only will work for the
         exact form given. See also boolTheory.
@@ -470,8 +477,6 @@ val LET2_RATOR = Q.store_thm("LET2_RATOR",
 REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
   THEN REWRITE_TAC[]);
-
-open BasicProvers
 
 val o_UNCURRY_R = store_thm(
   "o_UNCURRY_R",
@@ -765,7 +770,7 @@ Proof
   SIMP_TAC (srw_ss()) [PAIR_REL]
 QED
 
-Theorem PAIR_REL_EQ[simp]:
+Theorem PAIR_REL_EQ[simp,quotient_simp]:
   ($= ### $=) = $=
 Proof
   SIMP_TAC (srw_ss()) [FUN_EQ_THM, FORALL_PROD]
@@ -792,6 +797,16 @@ Theorem PAIR_REL_TRANS:
              (R1 ### R2) xy uv
 Proof
   SIMP_TAC (srw_ss()) [FORALL_PROD] >> METIS_TAC[]
+QED
+
+Theorem PAIR_EQUIV[quotient_equiv]:
+  !(R1:'a -> 'a -> bool) (R2 : 'b -> 'b -> bool).
+    EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 ### R2)
+Proof
+  rpt gen_tac >> simp[EQUIV_def, EQUIV_REFL_SYM_TRANS, PAIR_REL_REFL] >>
+  rpt strip_tac
+  >- (irule $ iffLR PAIR_REL_SYM >> simp[EQ_IMP_THM]) >>
+  irule PAIR_REL_TRANS >> METIS_TAC[]
 QED
 
 (* ----------------------------------------------------------------------
@@ -834,6 +849,181 @@ Proof
   Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD] >>
   METIS_TAC[]
 QED
+
+(* ----------------------------------------------------------------------
+    Theorems to support the quotient package
+   ---------------------------------------------------------------------- *)
+
+Theorem PAIR_QUOTIENT[quotient]:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      QUOTIENT (R1 ### R2) (abs1 ## abs2) (rep1 ## rep2)
+Proof
+    REPEAT STRIP_TAC
+    THEN REWRITE_TAC[QUOTIENT_def]
+    THEN REPEAT CONJ_TAC
+    THENL
+      [ rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+        simp[FORALL_PROD],
+
+        rpt (dxrule_then assume_tac QUOTIENT_REP_REFL) >>
+        simp[FORALL_PROD],
+
+        simp[FORALL_PROD] >>
+        rpt (dxrule_then (fn th => simp[Once th, SimpLHS]) QUOTIENT_REL) >>
+        simp[AC CONJ_ASSOC CONJ_COMM]
+      ]
+QED
+
+
+
+(* Here are some definitional and well-formedness theorems
+   for some standard polymorphic operators.  Could almost certainly be
+   generated and proved automatically.
+*)
+
+(* FST, SND, COMMA, CURRY, UNCURRY, ## *)
+
+Theorem FST_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !p. FST p = abs1 (FST ((rep1 ## rep2) p))
+Proof
+  REPEAT (rpt GEN_TAC THEN DISCH_TAC) >>
+  rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+  simp[FORALL_PROD]
+QED
+
+Theorem FST_RSP[quotient_rsp]:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !p1 p2. (R1 ### R2) p1 p2 ==> R1 (FST p1) (FST p2)
+Proof
+  simp[FORALL_PROD]
+QED
+
+Theorem SND_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !p. SND p = abs2 (SND ((rep1 ## rep2) p))
+Proof
+  REPEAT GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC >>
+  rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+  simp[FORALL_PROD]
+QED
+
+Theorem SND_RSP[quotient_rsp]:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+                              !p1 p2.
+                                (R1 ### R2) p1 p2 ==> R2 (SND p1) (SND p2)
+Proof
+  simp[FORALL_PROD]
+QED
+
+Theorem COMMA_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a b. (a,b) = (abs1 ## abs2) (rep1 a, rep2 b)
+Proof
+  REPEAT GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC >>
+  rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+  simp[]
+QED
+
+Theorem COMMA_RSP[quotient_rsp]:
+  !R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !a1 a2 b1 b2.
+          R1 a1 b1 /\ R2 a2 b2 ==>
+          (R1 ### R2) (a1,a2) (b1,b2)
+Proof
+  simp[]
+QED
+
+Theorem CURRY_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'e) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'f) rep3. QUOTIENT R3 abs3 rep3 ==>
+         !f a b. CURRY f a b =
+                 abs3 (CURRY (((abs1 ## abs2) --> rep3) f)
+                             (rep1 a) (rep2 b))
+Proof
+  ntac 3 (REPEAT GEN_TAC THEN DISCH_TAC) >>
+  rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+  simp[FUN_MAP_THM]
+QED
+
+Theorem CURRY_RSP[quotient_rsp]:
+   !R1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'e) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'f) rep3. QUOTIENT R3 abs3 rep3 ==>
+         !f1 f2.
+          ((R1 ### R2) ===> R3) f1 f2 ==>
+          (R1 ===> R2 ===> R3) (CURRY f1) (CURRY f2)
+Proof
+  simp[FUN_REL]
+QED
+
+Theorem UNCURRY_PRS[quotient_prs]:
+  !R1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'e) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'f) rep3. QUOTIENT R3 abs3 rep3 ==>
+         !f p. UNCURRY f p =
+               abs3 (UNCURRY ((abs1 --> abs2 --> rep3) f)
+                             ((rep1 ## rep2) p))
+Proof
+  REPEAT (REPEAT GEN_TAC THEN DISCH_TAC) >>
+  rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+  simp[FUN_MAP_THM, FORALL_PROD]
+QED
+
+Theorem UNCURRY_RSP[quotient_rsp]:
+   !R1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'e) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'f) rep3. QUOTIENT R3 abs3 rep3 ==>
+         !f1 f2.
+          (R1 ===> R2 ===> R3) f1 f2 ==>
+          ((R1 ### R2) ===> R3) (UNCURRY f1) (UNCURRY f2)
+Proof
+  simp[FUN_REL, FORALL_PROD]
+QED
+
+Theorem PAIR_MAP_PRS[quotient_prs]:
+    !R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'f) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'g) rep3. QUOTIENT R3 abs3 rep3 ==>
+        !R4 (abs4:'d -> 'h) rep4. QUOTIENT R4 abs4 rep4 ==>
+         !f g. (f ## g) =
+               ((rep1 ## rep3) --> (abs2 ## abs4))
+                   (((abs1 --> rep2) f) ## ((abs3 --> rep4) g))
+Proof
+    REPEAT (REPEAT GEN_TAC THEN DISCH_TAC) >>
+    rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
+    simp[FUN_EQ_THM, FORALL_PROD, FUN_MAP_THM]
+QED
+
+Theorem PAIR_MAP_RSP[quotient_rsp]:
+   !R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'f) rep2. QUOTIENT R2 abs2 rep2 ==>
+        !R3 (abs3:'c -> 'g) rep3. QUOTIENT R3 abs3 rep3 ==>
+        !R4 (abs4:'d -> 'h) rep4. QUOTIENT R4 abs4 rep4 ==>
+         !f1 f2 g1 g2.
+          (R1 ===> R2) f1 f2 /\ (R3 ===> R4) g1 g2 ==>
+          ((R1 ### R3) ===> (R2 ### R4)) (f1 ## g1) (f2 ## g2)
+Proof
+  simp[FUN_REL, FORALL_PROD]
+QED
+
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.

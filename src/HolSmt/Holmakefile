@@ -1,5 +1,5 @@
 INCLUDES = ../n-bit ../integer ../real ../res_quan/src \
-           ../quotient/src ../hol88 ../string ../sort
+           ../hol88 ../string ../sort
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all

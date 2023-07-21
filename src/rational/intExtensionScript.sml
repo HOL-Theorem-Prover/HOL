@@ -27,49 +27,60 @@ val _ = new_theory "intExtension";
    operations
  *--------------------------------------------------------------------------*)
 
-val SGN_def = Define `SGN x = (if x = 0i then 0i else (if x < 0i then ~1 else 1i))`;
+Definition SGN_def:
+  SGN x = if x = 0i then 0i else if x < 0i then ~1 else 1i
+End
+
+(*--------------------------------------------------------------------------
+   INT_SGN_TOTAL : thm
+   |- !a. (SGN a = ~1) \/ (SGN a = 0) \/ (SGN a = 1)
+ *--------------------------------------------------------------------------*)
+
+Theorem INT_SGN_TOTAL: !a. (SGN a = ~1) \/ (SGN a = 0) \/ (SGN a = 1)
+Proof
+  RW_TAC int_ss[SGN_def]
+QED
+
+Theorem INT_SGN_CASES:
+  !a P. (SGN a = ~1 /\ a < 0 ==> P) /\ (SGN a = 0i /\ a = 0 ==> P) /\
+        (SGN a = 1i /\ 0 < a ==> P) ==> P
+Proof
+  rw[] >> qspec_then ‘a’ strip_assume_tac INT_SGN_TOTAL >> gvs[] >>
+  gvs[SGN_def,AllCaseEqs()] >> metis_tac[INT_LT_TOTAL]
+QED
 
 (*--------------------------------------------------------------------------
    linking ABS and SGN: |- ABS x = x * SGN x, |- ABS x * SGN x = x
  *--------------------------------------------------------------------------*)
 
-val ABS_EQ_MUL_SGN = store_thm ("ABS_EQ_MUL_SGN", ``ABS x = x * SGN x``,
-  REWRITE_TAC [INT_ABS, SGN_def] THEN
-  REPEAT COND_CASES_TAC THEN
-  ASM_SIMP_TAC int_ss [GSYM INT_NEG_RMUL]) ;
+Theorem ABS_EQ_MUL_SGN: ABS x = x * SGN x
+Proof
+  rw[SGN_def, INT_ABS, GSYM INT_NEG_RMUL]
+QED
 
-val MUL_ABS_SGN = store_thm ("MUL_ABS_SGN", ``ABS x * SGN x = x``,
-  REWRITE_TAC [INT_ABS, SGN_def] THEN
-  REPEAT COND_CASES_TAC THEN
-  ASM_SIMP_TAC int_ss []) ;
+Theorem MUL_ABS_SGN: ABS x * SGN x = x
+Proof
+  rw[INT_ABS, SGN_def]
+QED
 
 (*--------------------------------------------------------------------------
    INT_MUL_POS_SIGN: thm
    |- !a b. 0 < a ==> 0 < b ==> 0 < a * b
  *--------------------------------------------------------------------------*)
 
-val INT_MUL_POS_SIGN =
-let
-        val lemma01 = #2 (EQ_IMP_RULE (CONJUNCT1 (SPEC_ALL INT_MUL_SIGN_CASES)));
-in
-        store_thm("INT_MUL_POS_SIGN", ``!a:int b:int. 0i<a ==> 0i<b ==> 0i<a * b``, RW_TAC int_ss[lemma01])
-end;
+Theorem INT_MUL_POS_SIGN: !a:int b:int. 0 < a ==> 0 < b ==> 0i < a * b
+Proof
+  rw[INT_MUL_SIGN_CASES]
+QED
 
 (*--------------------------------------------------------------------------
    INT_NE_IMP_LTGT: thm
    |- !x. ~(x = 0) = (0 < x) \/ (x < 0)
  *--------------------------------------------------------------------------*)
 
-Theorem INT_NE_IMP_LTGT: !x. x <> 0i <=> 0i<x \/ x<0i
+Theorem INT_NE_IMP_LTGT: !x:int. x <> 0 <=> 0 < x \/ x < 0
 Proof
-        GEN_TAC THEN
-        EQ_TAC THENL
-        [
-                REWRITE_TAC[IMP_DISJ_THM] THEN
-                PROVE_TAC[INT_LT_TOTAL]
-        ,
-                PROVE_TAC[INT_LT_IMP_NE]
-        ]
+  metis_tac[INT_LT_TOTAL, INT_LT_REFL]
 QED
 
 (*--------------------------------------------------------------------------
@@ -77,35 +88,9 @@ QED
    |- !n. ~(n < 0) = (0 = n) \/ 0 < n
  *--------------------------------------------------------------------------*)
 
-Theorem INT_NOTGT_IMP_EQLT: !n. ~(n < 0i) <=> (0i = n) \/ 0i < n
+Theorem INT_NOTGT_IMP_EQLT: !n:int. ~(n < 0) <=> (0 = n) \/ 0 < n
 Proof
-        GEN_TAC THEN
-        EQ_TAC THEN
-        STRIP_TAC THENL
-        [
-                LEFT_DISJ_TAC THEN
-                PROVE_TAC[INT_LT_TOTAL]
-        ,
-                PROVE_TAC[INT_LT_IMP_NE]
-        ,
-                PROVE_TAC[INT_LT_GT]
-        ]
-QED
-
-(*--------------------------------------------------------------------------
-   INT_NO_ZERODIV : thm
-   |- !x y. (x = 0) \/ (y = 0) = (x * y = 0)
- *--------------------------------------------------------------------------*)
-
-Theorem INT_NO_ZERODIV: !x y. (x = 0i) \/ (y = 0i) = (x * y = 0i)
-Proof
-        REPEAT GEN_TAC THEN
-        ASM_CASES_TAC ``x=0i`` THEN
-        ASM_CASES_TAC ``y=0i`` THEN
-        RW_TAC int_ss[INT_MUL_LZERO, INT_MUL_RZERO] THEN
-        REWRITE_TAC[INT_NE_IMP_LTGT] THEN
-        REWRITE_TAC[INT_MUL_SIGN_CASES] THEN
-        PROVE_TAC[INT_LT_TOTAL]
+  metis_tac[INT_LT_TOTAL, INT_LT_REFL, INT_LT_TRANS]
 QED
 
 (*--------------------------------------------------------------------------
@@ -124,82 +109,50 @@ val INT_NOTPOS0_NEG = store_thm("INT_NOTPOS0_NEG", ``!a. ~(0i<a) ==> ~(a=0i) ==>
    |- !a b. ~(a = 0) ==> ~(b = 0) ==> ~(a * b = 0)
  *--------------------------------------------------------------------------*)
 
-val INT_NOT0_MUL = store_thm("INT_NOT0_MUL", ``!a b. ~(a=0i) ==> ~(b=0i) ==> ~(a*b=0i)``,
-        PROVE_TAC[INT_NO_ZERODIV] );
+Theorem INT_NOT0_MUL: !a b. ~(a=0i) ==> ~(b=0i) ==> ~(a*b=0i)
+Proof
+  PROVE_TAC[INT_ENTIRE]
+QED
 
 (*--------------------------------------------------------------------------
    INT_GT0_IMP_NOT0 : thm
    |- !a. 0 < a ==> ~(a = 0)
  *--------------------------------------------------------------------------*)
 
-val INT_GT0_IMP_NOT0 = store_thm("INT_GT0_IMP_NOT0",``!a. 0i<a ==> ~(a=0i)``,
+Theorem INT_GT0_IMP_NOT0: !a. 0i<a ==> ~(a=0i)
+Proof
         REPEAT STRIP_TAC THEN
         ASM_CASES_TAC ``a = 0i`` THEN
         ASM_CASES_TAC ``a < 0i`` THEN
-        PROVE_TAC[INT_LT_ANTISYM,INT_LT_TOTAL] );
+        PROVE_TAC[INT_LT_ANTISYM,INT_LT_TOTAL]
+QED
 
 (*--------------------------------------------------------------------------
    INT_NOTLTEQ_GT : thm
    |- !a. ~(a < 0) ==> ~(a = 0) ==> 0 < a
  *--------------------------------------------------------------------------*)
 
-val INT_NOTLTEQ_GT = store_thm("INT_NOTLTEQ_GT", ``!a. ~(a<0i) ==> ~(a=0i) ==> 0i<a``,
-        REPEAT STRIP_TAC THEN
-        PROVE_TAC[INT_LT_TOTAL] );
+Theorem INT_NOTLTEQ_GT: !a:int. ~(a<0i) ==> a <> 0 ==> 0 < a
+Proof
+        PROVE_TAC[INT_LT_TOTAL]
+QED
 
 (*--------------------------------------------------------------------------
    INT_ABS_NOT0POS : thm
    |- !x. ~(x = 0) ==> 0 < ABS x
  *--------------------------------------------------------------------------*)
 
-val INT_ABS_NOT0POS = store_thm("INT_ABS_NOT0POS", ``!x:int. ~(x = 0i) ==> 0i < ABS x``,
-        REPEAT STRIP_TAC THEN
-        REWRITE_TAC[INT_ABS] THEN
-        ASM_CASES_TAC ``x<0i`` THENL
-        [
-                RW_TAC int_ss[] THEN
-                ONCE_REWRITE_TAC[GSYM INT_NEG_0] THEN
-                REWRITE_TAC[INT_LT_NEG] THEN
-                PROVE_TAC[]
-        ,
-                RW_TAC int_ss[] THEN
-                UNDISCH_TAC ``~(x < 0i)`` THEN
-                UNDISCH_TAC ``~(x = 0i)`` THEN
-                REWRITE_TAC[IMP_DISJ_THM] THEN
-                PROVE_TAC[INT_LT_TOTAL]
-        ]);
+Theorem INT_ABS_NOT0POS = iffRL INT_ABS_0LT |> GEN_ALL
 
 (*--------------------------------------------------------------------------
    INT_SGN_NOTPOSNEG : thm
    |- !x. ~(SGN x = ~1) ==> ~(SGN x = 1) ==> (SGN x = 0)
  *--------------------------------------------------------------------------*)
 
-val INT_SGN_NOTPOSNEG = store_thm("INT_SGN_NOTPOSNEG", ``!x. ~(SGN x = ~1) ==> ~(SGN x = 1) ==> (SGN x = 0)``,
-        GEN_TAC THEN
-        REWRITE_TAC[SGN_def] THEN
-        RW_TAC int_ss[] );
-
-(*--------------------------------------------------------------------------
-   INT_SGN_CASES : thm
-   |- !x P.
-        ((SGN x = ~1) /\ (x < 0) ==> P) /\
-        ((SGN x = 0i) /\ (x = 0) ==> P) /\
-        ((SGN x = 1i) /\ (0 < x) ==> P) ==> P
- *--------------------------------------------------------------------------*)
-
-val INT_SGN_CASES = store_thm
-  ("INT_SGN_CASES", ``!x P. ((SGN x = ~1) /\ (x < 0) ==> P) /\
-                            ((SGN x = 0i) /\ (x = 0) ==> P) /\
-                            ((SGN x = 1i) /\ (0 < x) ==> P) ==> P``,
-        REPEAT GEN_TAC THEN
-        ASM_CASES_TAC ``(SGN x = ~1) /\ (x < 0)`` THEN
-        UNDISCH_HD_TAC THEN
-        ASM_CASES_TAC ``(SGN x = 1i) /\ (0 < x)`` THEN
-        UNDISCH_HD_TAC THEN
-        REWRITE_TAC[SGN_def] THEN
-        REWRITE_TAC[DE_MORGAN_THM] THEN
-        RW_TAC int_ss[] THEN
-        PROVE_TAC[INT_LT_TOTAL, INT_SGN_NOTPOSNEG] );
+Theorem INT_SGN_NOTPOSNEG: !x. ~(SGN x = ~1) ==> ~(SGN x = 1) ==> (SGN x = 0)
+Proof
+  rw[SGN_def]
+QED
 
 (*--------------------------------------------------------------------------
    LESS_IMP_NOT_0 : thm
@@ -262,100 +215,55 @@ val INT_ABS_CALCULATE_NEG = store_thm("INT_ABS_CALCULATE_NEG", ``!a. a<0 ==> (AB
 val INT_ABS_CALCULATE_0 = store_thm("INT_ABS_CALCULATE_0", ``ABS 0i = 0i``,
         RW_TAC int_ss[INT_ABS] );
 
-(*--------------------------------------------------------------------------
-   INT_ABS_CALCULATE_POS : thm
-   |- !a. 0<a ==> (ABS(a) = a)
- *--------------------------------------------------------------------------*)
-
-val INT_ABS_CALCULATE_POS = store_thm("INT_ABS_CALCULATE_POS", ``!a. 0<a ==> (ABS(a) = a)``,
-        GEN_TAC THEN
-        STRIP_TAC THEN
-        RW_TAC int_ss[INT_ABS, INT_LT_GT] );
+Theorem INT_ABS_CALCULATE_POS: !a. 0<a ==> (ABS(a) = a)
+Proof
+  RW_TAC int_ss[INT_ABS, INT_LT_GT]
+QED
 
 (*--------------------------------------------------------------------------
    INT_NOT0_SGNNOT0 : thm
    |- !x. ~(x = 0) ==> ~(SGN x = 0)
  *--------------------------------------------------------------------------*)
 
-val INT_NOT0_SGNNOT0 = store_thm("INT_NOT0_SGNNOT0", ``!x. ~(x = 0) ==> ~(SGN x = 0)``,
-        REPEAT GEN_TAC THEN
-        STRIP_TAC THEN
-        MATCH_MP_TAC (SPEC ``x:int`` INT_SGN_CASES) THEN
-        REPEAT CONJ_TAC THEN
-        STRIP_TAC  THEN
-        RW_TAC intLib.int_ss [] );
+Theorem INT_NOT0_SGNNOT0:
+  !x. ~(x = 0) ==> ~(SGN x = 0)
+Proof
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  MATCH_MP_TAC (SPEC ``x:int`` INT_SGN_CASES) THEN
+  REPEAT CONJ_TAC THEN
+  STRIP_TAC  THEN
+  RW_TAC intLib.int_ss []
+QED
 
-(*--------------------------------------------------------------------------
-   INT_SGN_CLAUSES : thm
-   |- !x. (SGN x = ~1) =
-          (x < 0)) /\ ((SGN x = 0i) = (x = 0)) /\ ((SGN x = 1i) = (x > 0)
- *--------------------------------------------------------------------------*)
+Theorem INT_SGN_CLAUSES:
+  !x. (SGN x = ~1 <=> x < 0) /\ (SGN x = 0i <=> x = 0) /\
+      (SGN x = 1i <=> 0 < x)
+Proof
+  GEN_TAC >> qspec_then ‘x’ strip_assume_tac INT_SGN_CASES >>
+  rpt conj_tac >> pop_assum irule >> simp[] >>
+  metis_tac[INT_LT_TRANS, INT_LT_REFL]
+QED
 
-val INT_SGN_CLAUSES = store_thm("INT_SGN_CLAUSES", ``!x. ((SGN x = ~1) = (x < 0)) /\ ((SGN x = 0i) = (x = 0)) /\ ((SGN x = 1i) = (x > 0))``,
-        GEN_TAC THEN
-        RW_TAC int_ss[SGN_def] THEN
-        REWRITE_TAC[int_gt] THEN
-        PROVE_TAC[INT_LT_GT, INT_LT_TOTAL] );
-
-(*--------------------------------------------------------------------------
-   INT_SGN_MUL : thm
-   |- !x1 x2 y1 y2. (SGN x1 = y1) ==> (SGN x2 = y2) ==>
-                    (SGN (x1 * x2) = y1 * y2)
- *--------------------------------------------------------------------------*)
-
-val INT_SGN_MUL = store_thm("INT_SGN_MUL", ``!x1 x2 y1 y2. (SGN x1 = y1) ==> (SGN x2 = y2) ==> (SGN (x1 * x2) = y1 * y2)``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[SGN_def] THEN
-        RW_TAC int_ss[] THEN
-        UNDISCH_ALL_TAC THEN
-        RW_TAC int_ss[INT_MUL_LZERO, INT_MUL_RZERO] THEN
-        PROVE_TAC[INT_NO_ZERODIV, INT_MUL_SIGN_CASES, INT_LT_ANTISYM, INT_LT_TOTAL] );
-
-(*--------------------------------------------------------------------------
-   INT_SGN_MUL2 : thm
-   |- !x y. SGN (x * y) = SGN x * SGN y
- *--------------------------------------------------------------------------*)
-
-val INT_SGN_MUL2 = store_thm("INT_SGN_MUL2", ``!x y. SGN (x * y) = SGN x * SGN y``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[SGN_def] THEN
-        RW_TAC int_ss[] THEN
-        UNDISCH_ALL_TAC THEN
-        RW_TAC int_ss[INT_MUL_LZERO, INT_MUL_RZERO] THEN
-        PROVE_TAC[INT_NO_ZERODIV, INT_MUL_SIGN_CASES, INT_LT_ANTISYM, INT_LT_TOTAL] );
-
-(*--------------------------------------------------------------------------
-   INT_SGN_TOTAL : thm
-   |- !a. (SGN a = ~1) \/ (SGN a = 0) \/ (SGN a = 1)
- *--------------------------------------------------------------------------*)
-
-val INT_SGN_TOTAL = store_thm("INT_SGN_TOTAL",``!a. (SGN a = ~1) \/ (SGN a = 0) \/ (SGN a = 1)``,
-        GEN_TAC THEN
-        REWRITE_TAC[SGN_def] THEN
-        RW_TAC int_ss[] );
-
-(*--------------------------------------------------------------------------
-   INT_SGN_CASES : thm
-   |- !a P. ((SGN a = ~1) ==> P) /\ ((SGN a = 0i) ==> P) /\
-                                    ((SGN a = 1i) ==> P) ==> P
- *--------------------------------------------------------------------------*)
-
-val INT_SGN_CASES = store_thm("INT_SGN_CASES", ``!a P. ((SGN a = ~1) ==> P) /\ ((SGN a = 0i) ==> P) /\ ((SGN a = 1i) ==> P) ==> P``,
-        REPEAT GEN_TAC THEN
-        ASM_CASES_TAC ``SGN a = ~1`` THEN
-        ASM_CASES_TAC ``SGN a = 0i`` THEN
-        ASM_CASES_TAC ``SGN a = 1i`` THEN
-        UNDISCH_ALL_TAC THEN
-        PROVE_TAC[INT_SGN_TOTAL] );
+Theorem INT_SGN_MUL2: !x y. SGN (x * y) = SGN x * SGN y
+Proof
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[SGN_def] THEN
+  RW_TAC int_ss[] THEN
+  UNDISCH_ALL_TAC THEN
+  RW_TAC int_ss[INT_MUL_LZERO, INT_MUL_RZERO] THEN
+  PROVE_TAC[INT_ENTIRE, INT_MUL_SIGN_CASES, INT_LT_ANTISYM, INT_LT_TOTAL]
+QED
 
 (*--------------------------------------------------------------------------
    INT_LT_ADD_NEG : thm
    |- !x y. x < 0i /\ y < 0i ==> x + y < 0i
  *--------------------------------------------------------------------------*)
 
-val INT_LT_ADD_NEG = store_thm("INT_LT_ADD_NEG", ``!x y. x < 0i /\ y < 0i ==> x + y < 0i``,
+Theorem INT_LT_ADD_NEG: !x y. x < 0i /\ y < 0i ==> x + y < 0i
+Proof
         REWRITE_TAC[GSYM INT_NEG_GT0, INT_NEG_ADD] THEN
-        PROVE_TAC[INT_LT_ADD] );
+        PROVE_TAC[INT_LT_ADD]
+QED
 
 
 val _ = export_theory();
