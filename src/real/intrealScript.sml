@@ -549,7 +549,7 @@ Proof
  >> METIS_TAC [REAL_LT_IMP_NE, INT_FLOOR_BOUNDS, real_of_int_add]
 QED
 
-Theorem is_int_thm :
+Theorem is_int_thm_lemma[local] :
     !x. is_int x <=> real_of_int (INT_FLOOR x) = real_of_int (INT_CEILING x)
 Proof
     Q.X_GEN_TAC ‘x’
@@ -560,6 +560,12 @@ Proof
  >> fs [INT_CEILING_INT_FLOOR]
  >> Suff ‘INT_FLOOR x < INT_FLOOR x + 1’ >- PROVE_TAC [INT_LT_IMP_NE]
  >> rw [INT_LT_ADDR]
+QED
+
+Theorem is_int_thm :
+    !x. is_int x <=> INT_FLOOR x = INT_CEILING x
+Proof
+    rw [is_int_thm_lemma, real_of_int_11]
 QED
 
 Theorem INT_CEILING_ADD_NUM :
