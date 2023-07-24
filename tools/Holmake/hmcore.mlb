@@ -13,6 +13,8 @@ HOLFileSys.sig
 HOLFileSys.sml
 Holdep_tokens.sig
 Holdep_tokens.sml
+AttributeSyntax.sig
+AttributeSyntax.sml
 QuoteFilter.sml
 QFRead.sig
 QFRead.sml

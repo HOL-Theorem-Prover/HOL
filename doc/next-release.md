@@ -5,7 +5,8 @@
 
 (Released: xxxxxx)
 
-We are pleased to announce the ?????? release of HOL4.
+We are pleased to announce the Trindemossen 1 release of HOL4.
+We have changed the name (from Kananaskis) because of the kernel change reflected by the new efficient compute tool (see below).
 
 Contents
 --------
@@ -62,6 +63,7 @@ New theories:
 New tools:
 ----------
 
+
 -   The linear decision procedure for the reals (`REAL_ARITH`, `REAL_ARITH_TAC`
     and `REAL_ASM_ARITH_TAC`) have been updated by porting the latest code from
     HOL-Light. There are two versions: those in the existing `RealArith` package
@@ -88,6 +90,20 @@ New tools:
     multiplication algorithm.
     To use the library, it has to be loaded before the functions that should be
     evaluated are **defined**.
+
+- **Fast in-logic computation primitive**:
+  A port of the Candle theorem prover's primitive rule for computation, described in the paper *"Fast, Verified Computation for Candle"* (ITP 2023), has been added to the kernel.
+  The new compute primitive works on certain operations on a lisp-like datatype of pairs of numbers:
+
+           Datatype: cv = Pair cv cv
+                        | Num num
+           End
+
+  This datatype and its operations are defined in `cvScript.sml`, and the compute primitive `cv_compute` is accessible via the library `cv_computeLib.sml` (both in `src/cv_compute`).
+  Some usage examples are located in `examples/cv_compute`.
+  See the DESCRIPTION manual for a full description of the functionality offered by `cv_compute`.
+
+  The definitions of `DIV` and `MOD` over natural numbers `num` have been given specifications for the case when the second operand is zero. We follow HOL Light and Candle in defining `n DIV 0 = 0` and `n MOD 0 = n`. These changes make `DIV` and `MOD` match the way Candle's compute primitive handles `DIV` and `MOD`.
 
 New examples:
 -------------
@@ -130,6 +146,15 @@ number of components.
 Incompatibilities:
 ------------------
 
+*   Some new automatic rewrites to do with natural number arithmetic (particularly exponentiation) have been added.
+    The most potentially disruptive of these is probably `LT1_EQ0`, which states
+
+           ⊢ n < 1 ⇔ n = 0
+
+    The other new rewrites will simplify terms such as `10 < 2 ** x` (where both the base of the exponentiation and the other argument to the relation are numerals).
+    By taking a natural number logarithm, it is possible to turn the above into `3 < x` and `5 ** n < 10654` into `n ≤ 5`.
+    The theorems to exclude (using `Excl`, or `temp_delsimps`, or ...) if these new rules break proofs are: `EXP_LE_LOG_SIMP`, `EXP_LT_LOG_SIMP`, `LE_EXP_LOG_SIMP`, `LT_EXP_LOG_SIMP`, `LOG_NUMERAL`, `EXP_LT_1`, `ONE_LE_EXP`, and `TWO_LE_EXP`.
+
 *   The small `productTheory` (products of natural numbers and real numbers, ported from HOL-Light) has been merged into `iterateTheory` (on which `extrealTheory` now depends).
 
 *   Changes in the `formal-languages/context-free` example:
@@ -168,10 +193,23 @@ Incompatibilities:
     (With the `Definition` syntax, this is done by using the `schematic` attribute.)
     This brings this flavour of definition into line with the others, where the presence of extra free variables on the RHS of a definition’s equation is usually flagged as an error.
 
+*   In `real_topologyTheory`, some definitions (only the theorem names but the
+    underlying logical constants) have been renamed to avoid conflicts with
+    similar definitions in `seqTheory`: from `sums` to `sums_def`, from
+    `summable` to `summable_def`. Besides, `infsum` has been renamed to
+    `suminf_def` to reflect its overloading to `suminf`. (All these definitions
+    are generalized versions of those in `seqTheory`.)
+
+*   The constant `lg` (logarithm with base 2) has moved from the `util_prob` theory to `transc`.
+
+*   The theories under `src/ring/src` have all been prefixed with the string `EVAL_` reflecting the way they are exclusively used within the system, to provide polynomial normalisation using reflection and `computeLib`.
+    This frees up the name `ring` to be used only by the material under `examples/algebra`.
+    (In the absence of this change, theories that depended on what was in `src/ring/src` could not be used in a development alongside what is in `examples/algebra`.)
+
 * * * * *
 
 <div class="footer">
-*[HOL4, ??????](http://hol-theorem-prover.org)*
+*[HOL4, Trindemossen 1](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](kananaskis-14.release.html)
 

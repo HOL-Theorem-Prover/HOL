@@ -11,9 +11,18 @@ fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
 local open finite_mapTheory in end
 Type F[pp] = “:(num |-> β) + num # (α # β) list”
+
 (* view this as
 
+       F(X) = (num |-> X) + num * (A * X) list
+
+       or with datatype syntax
+
+          foo = C1 (num |-> foo)
+              | C2 num (('a # foo) list)
+
        SUM [fmap[γ](β), PAIR [C[num], LIST [PAIR [α,β]]]]
+
  *)
 Definition pairsetA_def:
   pairsetA (x,y) = {x}

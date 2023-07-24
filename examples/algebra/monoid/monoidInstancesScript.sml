@@ -352,14 +352,14 @@ val times_mod_exp = store_thm(
 
 (* Theorem: For n > 0, Multiplication Modulo n is a monoid. *)
 (* Proof: check monoid definitions, use MOD_MULT_ASSOC. *)
-val times_mod_monoid = store_thm(
-  "times_mod_monoid",
-  ``!n. 0 < n ==> Monoid (times_mod n)``,
+Theorem times_mod_monoid:
+  !n. 0 < n ==> Monoid (times_mod n)
+Proof
   rw_tac std_ss[Monoid_def, times_mod_def, count_def, GSPECIFICATION] >| [
-    decide_tac,
     rw[MOD_MULT_ASSOC],
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: For n > 0, Multiplication Modulo n is an Abelian monoid. *)
 (* Proof: by times_mod_monoid and MULT_COMM. *)

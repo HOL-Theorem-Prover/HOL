@@ -544,8 +544,36 @@ Theorem LE_LT = LESS_OR_EQ;
 Theorem LT_SUC_LE : (* was: LESS_SUC_EQ *)
     !m n. m < SUC n <=> m <= n
 Proof
-  REPEAT GEN_TAC THEN REWRITE_TAC[CONJUNCT2 LT, LE_LT] THEN
-  EQ_TAC THEN DISCH_THEN(DISJ_CASES_THEN(fn th => REWRITE_TAC[th]))
+    rpt GEN_TAC >> REWRITE_TAC[CONJUNCT2 LT, LE_LT]
+ >> EQ_TAC >> DISCH_THEN(DISJ_CASES_THEN(fn th => REWRITE_TAC[th]))
+QED
+
+Theorem LE_CASES :
+   !m n:num. m <= n \/ n <= m
+Proof
+  rpt INDUCT_TAC >> ASM_REWRITE_TAC[ZERO_LESS_EQ, LESS_EQ_MONO]
+QED
+
+Theorem LT_CASES :
+   !m n:num. (m < n) \/ (n < m) \/ (m = n)
+Proof
+  METIS_TAC [LESS_CASES, LESS_OR_EQ]
+QED
+
+(* moved here from real_topologyTheory *)
+Theorem WLOG_LT :
+   (!m:num. P m m) /\ (!m n. P m n <=> P n m) /\ (!m n. m < n ==> P m n)
+   ==> !m y. P m y
+Proof
+  METIS_TAC [LT_CASES]
+QED
+
+(* moved here from iterateTheory *)
+Theorem WLOG_LE :
+   (!m n:num. P m n <=> P n m) /\ (!m n:num. m <= n ==> P m n) ==>
+    !m n:num. P m n
+Proof
+  METIS_TAC [LE_CASES]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -777,6 +805,13 @@ val LESS_EQ_TRANS = store_thm ("LESS_EQ_TRANS",
    “!m n p. (m <= n) /\ (n <= p) ==> (m <= p)”,
    REWRITE_TAC[LESS_OR_EQ_ALT, REWRITE_RULE
      [relationTheory.transitive_def] relationTheory.transitive_RTC]) ;
+
+Theorem transitive_LE[simp]:
+  transitive $<=
+Proof
+  REWRITE_TAC[relationTheory.transitive_def] >>
+  MATCH_ACCEPT_TAC LESS_EQ_TRANS
+QED
 
 val LESS_EQ_LESS_TRANS = store_thm ("LESS_EQ_LESS_TRANS",
   “!m n p. m <= n /\ n < p ==> m < p”,
@@ -1296,11 +1331,7 @@ Proof
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
 QED
 
-val LESS_EQ_CASES = store_thm ("LESS_EQ_CASES",
-  “!m n. m <= n \/ n <= m”,
-  REPEAT GEN_TAC THEN
-  DISJ_CASES_THEN2 (ASSUME_TAC o MATCH_MP LESS_IMP_LESS_OR_EQ) ASSUME_TAC
-    (SPECL [(“m:num”), (“n:num”)] LESS_CASES) THEN ASM_REWRITE_TAC[]);
+Theorem LESS_EQ_CASES = LE_CASES
 
 val LESS_EQUAL_ADD = store_thm ("LESS_EQUAL_ADD",
   “!m n. m <= n ==> ?p. n = m + p”,
@@ -1625,17 +1656,19 @@ Theorem LT_MULT_CANCEL_LBARE =
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`m`, `1`, `n`] LT_MULT_LCANCEL))
     (REWRITE_RULE [MULT_CLAUSES] (Q.SPECL [`1`,`m`, `n`] LT_MULT_RCANCEL))
 
-val lt1_eq0 = prove(
-  “x < 1 <=> (x = 0)”,
+Theorem LT1_EQ0[simp]:
+  x < 1 <=> (x = 0)
+Proof
   Q.SPEC_THEN `x`  STRUCT_CASES_TAC num_CASES THEN
-  REWRITE_TAC [ONE, LESS_0, NOT_LESS_0, LESS_MONO_EQ, NOT_SUC])
+  REWRITE_TAC [ONE, LESS_0, NOT_LESS_0, LESS_MONO_EQ, NOT_SUC]
+QED
 
 (* |- (m * n < m = 0 < m /\ (n = 0)) /\ (m * n < n = 0 < n /\ (m = 0)) *)
 Theorem LT_MULT_CANCEL_RBARE =
   CONJ
-    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0]
+    (REWRITE_RULE [MULT_CLAUSES, LT1_EQ0]
                   (Q.SPECL [`m`,`n`,`1`] LT_MULT_LCANCEL))
-    (REWRITE_RULE [MULT_CLAUSES, lt1_eq0]
+    (REWRITE_RULE [MULT_CLAUSES, LT1_EQ0]
                   (Q.SPECL [`m`,`n`,`1`] LT_MULT_RCANCEL))
 
 val le1_lt0 = prove(“1 <= n <=> 0 < n”, REWRITE_TAC [LESS_EQ, ONE]);
@@ -1889,10 +1922,29 @@ val MOD_DIV_exist = prove(
             Now define MOD and DIV by a constant specification.
  ---------------------------------------------------------------------------*)
 
-val DIVISION = new_specification ("DIVISION", ["MOD", "DIV"], MOD_DIV_exist);
+val OT_DIVISION =
+  new_specification ("OT_DIVISION", ["OT_MOD", "OT_DIV"], MOD_DIV_exist);
+
+(* HOL4 now switches to HOL-Light compatible version of DIV and MOD *)
+val DIV_def = new_definition
+  ("DIV_def", “DIV m n = if n = 0 then 0 else OT_DIV m n”);
+
+val MOD_def = new_definition
+  ("MOD_def", “MOD m n = if n = 0 then m else OT_MOD m n”);
 
 val _ = set_fixity "MOD" (Infixl 650);
 val _ = set_fixity "DIV" (Infixl 600);
+
+Theorem DIVISION:
+  !n. 0 < n ==> !k. k = k DIV n * n + k MOD n /\ k MOD n < n
+Proof
+  NTAC 2 STRIP_TAC
+  THEN IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
+  THEN POP_ASSUM (ASSUME_TAC o GSYM)
+  THEN ASM_REWRITE_TAC [DIV_def,MOD_def]
+  THEN MATCH_MP_TAC OT_DIVISION
+  THEN ASM_REWRITE_TAC []
+QED
 
 val DIV2_def = new_definition("DIV2_def", “DIV2 n = n DIV 2”);
 
@@ -2088,6 +2140,24 @@ val ZERO_DIV = store_thm ("ZERO_DIV",
      MATCH_MP_TAC DIV_UNIQUE THEN
      EXISTS_TAC (“0”) THEN
      ASM_REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
+
+Theorem DIV_0[simp]:
+  k DIV 0 = 0 /\ 0 DIV n = 0
+Proof
+  conj_tac >- REWRITE_TAC [DIV_def] >> Cases_on ‘0 < n’ >>
+  ASM_SIMP_TAC bool_ss [ZERO_DIV] >>
+  RULE_ASSUM_TAC (REWRITE_RULE[NOT_LT_ZERO_EQ_ZERO]) >>
+  ASM_REWRITE_TAC [DIV_def]
+QED
+
+Theorem MOD_0[simp]:
+  k MOD 0 = k /\ 0 MOD n = 0
+Proof
+  conj_tac >- REWRITE_TAC [MOD_def] >> Cases_on ‘0 < n’ >>
+  ASM_SIMP_TAC bool_ss [ZERO_MOD] >>
+  RULE_ASSUM_TAC (REWRITE_RULE[NOT_LT_ZERO_EQ_ZERO]) >>
+  ASM_REWRITE_TAC [MOD_def]
+QED
 
 val MOD_MULT = store_thm ("MOD_MULT",
  “!n r. r < n ==> !q. (q * n + r) MOD n = r”,
@@ -2997,9 +3067,19 @@ Proof
   ]
 QED
 
-val ZERO_LT_EXP = store_thm ("ZERO_LT_EXP",
-  “0 < x EXP y <=> 0 < x \/ (y = 0)”,
-  METIS_TAC [NOT_ZERO_LT_ZERO, EXP_EQ_0]);
+Theorem EXP_LT_1[simp] =
+        REWRITE_CONV [LT1_EQ0, EXP_EQ_0] “m EXP n < 1”
+
+Theorem ZERO_LT_EXP[simp]:
+  0 < x EXP y <=> 0 < x \/ (y = 0)
+Proof METIS_TAC [NOT_ZERO_LT_ZERO, EXP_EQ_0]
+QED
+
+Theorem ONE_LE_EXP[simp]:
+  1 <= x EXP y <=> 0 < x \/ y = 0
+Proof
+  REWRITE_TAC[LESS_EQ_IFF_LESS_SUC, ONE, LESS_MONO_EQ, ZERO_LT_EXP]
+QED
 
 Theorem EXP_1[simp]:
   !n. (1 EXP n = 1) /\ (n EXP 1 = n)
@@ -3913,6 +3993,12 @@ Proof
  GEN_TAC THEN INDUCT_TAC THEN
  RW_TAC bool_ss [EXP,ONE_LT_MULT,LESS_REFL,LESS_0,ZERO_LT_EXP] THEN
  METIS_TAC [SUC_LESS, ONE]
+QED
+
+Theorem TWO_LE_EXP[simp]:
+  !x y. 2 <= x ** y <=> 1 < x /\ 0 < y
+Proof
+  REWRITE_TAC[LESS_EQ_IFF_LESS_SUC, TWO, LESS_MONO_EQ, ONE_LT_EXP]
 QED
 
 (*---------------------------------------------------------------------------*)

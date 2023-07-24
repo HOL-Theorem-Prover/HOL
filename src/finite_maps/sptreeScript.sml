@@ -2222,9 +2222,9 @@ Proof
   \\ BasicProvers.EVERY_CASE_TAC
   \\ fs [rich_listTheory.EL_REPLICATE, spt_center_def]
   \\ simp [Q.SPEC `a` EQ_SYM_EQ |> Q.ISPEC `b + c`, EVAL ``REPLICATE 1 v``]
-  \\ rename [`EL (a - b) _`]
-  \\ qexists_tac `a - b`
-  \\ simp []
+  \\ gvs[EVAL “REPLICATE 1 v”] >>~-
+  ([‘_ + 1 = k /\ _’], qexists ‘k - 1’ >> simp[]) >>
+  rename [‘EL (a - b) _’] \\ qexists_tac `a - b` \\ simp []
 QED
 
 Theorem spt_centers_expand_rle_imp:

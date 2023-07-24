@@ -350,15 +350,14 @@ open optionTheory; (* for Consecutive LCM Function *)
        If x <> 1,
           Then 1 < x, so true   by LOG
 *)
-val self_to_log_index_member = store_thm(
-  "self_to_log_index_member",
-  ``!n x. MEM x [1 .. n] ==> MEM (x ** LOG x n) [1 .. n]``,
-  rw[listRangeINC_MEM] >-
-  metis_tac[EXP_POS, DECIDE ``0 < n <=> 1 <= n``] >>
-  `0 < n /\ 1 <= n` by decide_tac >>
-  Cases_on `x = 1` >-
-  rw[EXP_1] >>
-  rw[LOG]);
+Theorem self_to_log_index_member:
+  !n x. MEM x [1 .. n] ==> MEM (x ** LOG x n) [1 .. n]
+Proof
+  rw[listRangeINC_MEM] >>
+  ‘0 < n /\ 1 <= n’ by decide_tac >>
+  Cases_on ‘x = 1’ >-
+  rw[EXP_1] >> rw[LOG]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Power or Coprime Factors                                            *)
@@ -4095,7 +4094,8 @@ Proof
   ‘1 < p’ by rw[ONE_LT_PRIME] >>
   ‘LOG p n <> 0’ by rw[LOG_EQ_0] >>
   metis_tac[prime_powers_eq, NOT_ZERO_LT_ZERO]) >>
-  metis_tac[PROD_SET_PRODUCT_GE_CONSTANT]);
+  metis_tac[PROD_SET_PRODUCT_GE_CONSTANT]
+QED
 
 (* Another significant result. *)
 

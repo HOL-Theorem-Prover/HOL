@@ -643,6 +643,7 @@ fun CompileConvert defth = Compile(Convert defth);
 (* Convert a recursive definition to an expression and then compile it.      *)
 (*****************************************************************************)
 
+fun prove(t,tac) = Tactical.TAC_PROOF(([],t), tac)
 fun RecCompileConvert defth totalth =
  let val previousShowTypes = !show_types
      val (l,r) = dest_eq(concl(SPEC_ALL defth))

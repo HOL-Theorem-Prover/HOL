@@ -170,6 +170,8 @@ Proof
    SRW_TAC [FCP_ss][vec_def]
 QED
 
+Theorem VEC_0_COMPONENT = Q.SPEC ‘0’ VEC_COMPONENT
+
 Theorem VECTOR_ADD_COMPONENT :
    !x:real['N] y i. i < dimindex (:'N) ==> ((x + y) ' i = (x ' i) + (y ' i))
 Proof
@@ -2333,6 +2335,7 @@ Proof
   MP_TAC(Q.ISPEC `f:real['N]->real['N]` LINEAR_SURJECTIVE_ISOMORPHISM) THEN
   PROVE_TAC[]
 QED
+
 
 val _ = export_theory ();
 val _ = html_theory "vector";

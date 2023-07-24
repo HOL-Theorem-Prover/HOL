@@ -7,7 +7,7 @@ open HolKernel Parse boolLib;
 app load ["ringLib","ratTheory","ratRingTheory","ratLib"]
 *)
 
-open ringLib ratTheory ratRingTheory ratSyntax ratLib;
+open EVAL_ringLib ratTheory ratRingTheory ratSyntax ratLib;
 
 (*--------------------------------------------------------------------------
  * is_computable_frac, is_computable_rat

@@ -1,10 +1,6 @@
-INCLUDES = ../../res_quan/src
 
-all: $(DEFAULT_TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS)
 .PHONY: all
-
-selftest.exe: selftest.uo quotient.uo
-	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
@@ -22,21 +18,13 @@ install: hol4-quotient.thy hol4-quotient.art
 
 endif
 
-EXTRA_CLEANS = selftest.exe quotient-selftest.log
+EXTRA_CLEANS = quotientTheory.html
 
-ifdef HOLSELFTESTLEVEL
-all: quotient-selftest.log
+# ifdef HOLBUILD
+# all: link-to-sigobj
 
-quotient-selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1,$@)
+# link-to-sigobj: $(DEFAULT_TARGETS)
+# 	$(HOL_LNSIGOBJ)
 
-endif
-
-ifdef HOLBUILD
-all: link-to-sigobj
-
-link-to-sigobj: $(DEFAULT_TARGETS)
-	$(HOL_LNSIGOBJ)
-
-.PHONY: link-to-sigobj
-endif
+# .PHONY: link-to-sigobj
+# endif

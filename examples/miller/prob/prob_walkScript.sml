@@ -287,7 +287,8 @@ Proof
                       PROB_WHILE_CUT_REV, BIND_DEF, UNIT_DEF, UNCURRY]
     >> FULL_SIMP_TAC arith_ss [SPECIFICATION, ADD1, RANDOM_LURCHES_TRANSLATION,
                                BIND_DEF, UNCURRY, UNIT_DEF, o_THM]
-    >> PROVE_TAC []]);
+    >> PROVE_TAC []]
+QED
 
 Theorem PROB_TERMINATES_RANDOM_WALK:
   prob_while_terminates ($< 0) random_lurch

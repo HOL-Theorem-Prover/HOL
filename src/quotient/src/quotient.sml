@@ -42,27 +42,75 @@ app load ["pairTheory", "sumTheory", "listTheory", "listLib"];
 *)
 
 
-open pairTheory;
-open pairSyntax;
-open pairTools;
-open sumTheory;
-open listTheory;
-open listLib;
 open combinTheory;
 open quotientTheory;
-open quotient_listTheory;
-open quotient_pairTheory;
-open quotient_sumTheory;
-open quotient_optionTheory;
 open Rsyntax;
+open simpLib boolSimps
 
 structure Parse =
 struct
   open Parse
-  val (Type,Term) = parse_from_grammars(quotient_option_grammars)
+  val (Type,Term) = parse_from_grammars(quotient_grammars)
   fun == q _ = Type q
 end
 open Parse
+
+(* versions of pairSyntax functions that don't induce a dependency on pairs
+   being in ancestry *)
+val ERR = mk_HOL_ERR "quotient"
+fun Etry e f x = with_exn f x e
+fun mk_pair_ty (ty1,ty2) =
+    mk_thy_type{Args = [ty1,ty2], Thy = "pair", Tyop = "prod"}
+fun mk_pair (t1, t2) =
+    let val ty1 = type_of t1 and ty2 = type_of t2
+    in
+      list_mk_comb(mk_thy_const{Name = ",", Thy = "pair",
+                                Ty = ty1 --> (ty2 --> mk_pair_ty (ty1,ty2))},
+                   [t1,t2])
+    end
+
+fun dest_pair tm =
+    let val (f, args) = strip_comb tm
+        val e = ERR "dest_pair" "Not a pair"
+        val (t1,t2) = case args of
+                          [t1,t2] => (t1,t2)
+                        | _ => raise e
+        val {Name,Thy,...} = Etry e dest_thy_const f
+    in
+      if Name = "," andalso Thy = "pair" then (t1,t2)
+      else raise e
+    end
+
+fun mk_pabs (vstr,body) =
+    if is_var vstr then Term.mk_abs (vstr, body)
+    else let val (fst,snd) = dest_pair vstr
+             val ty1 = type_of fst and ty2 = type_of snd and bty = type_of body
+             val unc_t = mk_thy_const{
+                   Thy = "pair", Name = "UNCURRY",
+                   Ty = (ty1 --> ty2 --> bty) -->
+                        (mk_pair_ty (ty1,ty2) --> type_of body)
+                 }
+         in
+           Psyntax.mk_comb(unc_t, mk_pabs(fst, mk_pabs(snd,body)))
+         end
+
+fun dest_pabs tm =
+  Term.dest_abs tm
+  handle HOL_ERR _ =>
+    let
+      val e = ERR "dest_pabs" "Not a pabs"
+      val (Rator, Rand) = Etry e Psyntax.dest_comb tm
+      val {Name,Thy,...} = Etry e dest_thy_const Rator
+    in
+      if Name = "UNCURRY" andalso Thy = "pair" then
+        let
+          val (lv,body) = dest_pabs Rand
+          val (rv,body) = dest_pabs body
+        in
+          (mk_pair(lv,rv), body)
+        end
+      else raise e
+    end
 
 
 (* In interactive sessions, omit the chatting section below. *)
@@ -102,17 +150,6 @@ fun list_cache () = (if !chatting andalso !caching then (
                               ^ "\n"))
                      else ();
                      Map.listItems (!quotient_cache))
-
-
-
-local
-     val tm = Term `!P:'a list -> bool.
-                       P [] /\ (!t. P t ==> !x. P (x::t)) ==> !l. P l`
-     val eq = Thm.ALPHA (concl listTheory.list_induction) tm
-     val list_induction' = EQ_MP eq listTheory.list_induction
-in
-val LIST_INDUCT_TAC =INDUCT_THEN list_induction' ASSUME_TAC
-end;
 
 fun del_imps tm = if is_imp tm then (del_imps o #conseq o dest_imp) tm
                                else tm;
@@ -1033,19 +1070,6 @@ fun mkRELty ty = ty --> ty --> bool;
 fun identity_equiv ty =
     INST_TYPE [{redex=alpha, residue=ty}] IDENTITY_EQUIV;
 
-fun pair_equiv left_EQUIV right_EQUIV =
-    MATCH_MP (MATCH_MP PAIR_EQUIV left_EQUIV) right_EQUIV;
-
-fun sum_equiv left_EQUIV right_EQUIV =
-    MATCH_MP (MATCH_MP SUM_EQUIV left_EQUIV) right_EQUIV;
-
-fun list_equiv elem_EQUIV =
-    MATCH_MP LIST_EQUIV elem_EQUIV;
-
-fun option_equiv elem_EQUIV =
-    MATCH_MP OPTION_EQUIV elem_EQUIV;
-
-
 fun find_base tm = (find_base o #conseq o dest_imp o snd o strip_forall) tm
                    handle _ => tm
 
@@ -1111,26 +1135,6 @@ fun make_equiv equivs tyop_equivs ty =
 
 fun identity_quotient ty =
     INST_TYPE [{redex=alpha, residue=ty}] IDENTITY_QUOTIENT;
-
-
-fun pair_quotient left_QUOTIENT right_QUOTIENT =
-    REWRITE_RULE[PAIR_REL_EQ,PAIR_MAP_I]
-     (C_MATCH_MP2 PAIR_QUOTIENT left_QUOTIENT right_QUOTIENT);
-
-
-fun sum_quotient left_QUOTIENT right_QUOTIENT =
-    REWRITE_RULE[SUM_REL_EQ,SUM_MAP_I]
-     (C_MATCH_MP2 SUM_QUOTIENT left_QUOTIENT right_QUOTIENT);
-
-
-fun list_quotient elem_QUOTIENT =
-    REWRITE_RULE[LIST_REL_EQ,LIST_MAP_I]
-     (C_MATCH_MP LIST_QUOTIENT elem_QUOTIENT);
-
-
-fun option_quotient base_QUOTIENT =
-    REWRITE_RULE[OPTION_REL_EQ,OPTION_MAP_I]
-     (C_MATCH_MP OPTION_QUOTIENT base_QUOTIENT);
 
 
 fun fun_quotient domain_QUOTIENT range_QUOTIENT =
@@ -2821,7 +2825,7 @@ R2 (f[x']) (g[y']).
               (* (f x) = ^(v(f) v(x)) *)
             prove (gl,
             REPEAT GEN_TAC
-            THEN REWRITE_TAC[FUN_MAP,FUN_MAP_I,(*SET_MAP_def,*)I_THM,PAIR_MAP]
+            THEN REWRITE_TAC[FUN_MAP,FUN_MAP_I,(*SET_MAP_def,*)I_THM]
             THEN REPEAT (CHANGED_TAC
                    (CONV_TAC (DEPTH_CONV BETA_CONV)
                     THEN REWRITE_TAC[]))
@@ -3152,8 +3156,7 @@ R2 (f[x']) (g[y']).
 
         fun regularize tm =
           let val ty = type_of tm
-              val regularize_abs = (pairLib.mk_pabs o (I ## regularize)
-                                                   o pairLib.dest_pabs)
+              val regularize_abs = mk_pabs o (I ## regularize) o dest_pabs
           in
             (* abstraction *)
             if is_abs tm then
@@ -3860,46 +3863,77 @@ fun define_quotient_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
     new_thms
   end;
 
+(* Five(!) different flavours of result to appeal to as part of the machinery
+   here :
+
+  equiv: equivalance relations lift through REL operators:
+          |- (/\_i EQUIV Ri) ==> EQUIV (OP_REL R1 ... Rn)
+  quotient:
+    |- (/\_i QUOTIENT Ri absi repi) ==>
+       QUOTIENT (OP_REL R1 ... Rn) (OP_MAP abs1 ... absn) (OP_MAP rep1 ... repn)
+  simps:  |- OP_MAP I ... I = I  &   |- OP_REL (=) ... (=) = (=)
+  rsp: "respects"
+       (* per interesting constant f with type as range or arg *)
+       |- (/\_i QUOTIENT Ri absi repi) /\ (* one per tyvar in f's type *)
+          (/\_k Rj ak bk) (* Rj depends on the type of ak, can be equality and
+                             omitted; can be compound, e.g. Ra ===> Rb *) ==>
+          OP_REL R1 ... Rn (f a1 .. am) (f b1 .. bm)
+  prs: "poly-preserves"
+       (* per interesting constant f with type as range or arg *)
+       |- (/\_i QUOTIENT Ri absi repi) ==> (* one per tyvar in f's type *)
+          f a1 a2 = map_r (f (map_1 a1) (map_2 a2))
+       (* where map's are derived/compounds based on types, and can always
+          be omitted to force equality *)
+*)
+
+(* quotient *)
+val {merge = quotient_merge, DB = quotient_DB, export = quotient_export,
+     temp_exclude = quotient_exclude, getDB = quotient_getDB,
+     temp_setDB = quotient_setDB, ...} =
+    ThmSetData.export_list {settype = "quotient", initial = [FUN_QUOTIENT]}
+(* equiv *)
+val {merge = quotient_equiv_merge, DB = quotient_equiv_DB,
+     export = quotient_equiv_export,
+     temp_exclude = quotient_equiv_exclude, getDB = quotient_equiv_getDB,
+     temp_setDB = quotient_equiv_setDB, ...} =
+    ThmSetData.export_list {settype = "quotient_equiv", initial = []}
+(* simp *)
+val {merge = quotient_simp_merge, DB = quotient_simp_DB,
+     export = quotient_simp_export,
+     temp_exclude = quotient_simp_exclude, getDB = quotient_simp_getDB,
+     temp_setDB = quotient_simp_setDB, ...} =
+    ThmSetData.export_list {settype = "quotient_simp",
+                            initial = [FUN_MAP_I, FUN_REL_EQ]}
+(* PRS, poly_preserves *)
+val {merge = quotient_prs_merge, DB = quotient_prs_DB,
+     export = quotient_prs_export,
+     temp_exclude = quotient_prs_exclude, getDB = quotient_prs_getDB,
+     temp_setDB = quotient_prs_setDB, ...} =
+    ThmSetData.export_list {settype = "quotient_prs",
+                            initial = [FORALL_PRS, EXISTS_PRS,
+                                       EXISTS_UNIQUE_PRS, ABSTRACT_PRS,
+                                       COND_PRS, LET_PRS,
+                                       literal_case_PRS, I_PRS, K_PRS, o_PRS,
+                                       C_PRS, W_PRS]}
+val {merge = quotient_rsp_merge, DB = quotient_rsp_DB,
+     export = quotient_rsp_export,
+     temp_exclude = quotient_rsp_exclude, getDB = quotient_rsp_getDB,
+     temp_setDB = quotient_rsp_setDB, ...} =
+    ThmSetData.export_list {settype = "quotient_rsp",
+                            initial = [RES_FORALL_RSP, RES_EXISTS_RSP,
+                                       RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP,
+                                       COND_RSP, LET_RSP, literal_case_RSP,
+                                       I_RSP, K_RSP, o_RSP, C_RSP, W_RSP]}
+    (* ?? EQUALS, LAMBDA, RES_FORALL, RES_EXISTS, APPLY ?? *)
 
 fun define_quotient_types_full_rule {types, defs, tyop_equivs, tyop_quotients,
                tyop_simps, respects, poly_preserves, poly_respects} =
   let
-      val tyop_equivs = tyop_equivs @
-                        [LIST_EQUIV, PAIR_EQUIV, SUM_EQUIV, OPTION_EQUIV]
-      val tyop_quotients = tyop_quotients @
-                        [LIST_QUOTIENT, PAIR_QUOTIENT,
-                            SUM_QUOTIENT, OPTION_QUOTIENT, FUN_QUOTIENT]
-      val tyop_simps = tyop_simps @
-                       [LIST_MAP_I, LIST_REL_EQ, PAIR_MAP_I, PAIR_REL_EQ,
-                        SUM_MAP_I, SUM_REL_EQ, OPTION_MAP_I, OPTION_REL_EQ,
-                        FUN_MAP_I, FUN_REL_EQ]
-      val poly_preserves = poly_preserves @
-                           [CONS_PRS, NIL_PRS, MAP_PRS, LENGTH_PRS, APPEND_PRS,
-                            FLAT_PRS, REVERSE_PRS, FILTER_PRS, NULL_PRS,
-                            SOME_EL_PRS, ALL_EL_PRS, FOLDL_PRS, FOLDR_PRS,
-                            FST_PRS, SND_PRS, COMMA_PRS, CURRY_PRS,
-                            UNCURRY_PRS, PAIR_MAP_PRS,
-                            INL_PRS, INR_PRS, ISL_PRS, ISR_PRS, SUM_MAP_PRS,
-                            NONE_PRS, SOME_PRS, IS_SOME_PRS, IS_NONE_PRS,
-                            OPTION_MAP_PRS,
-                            FORALL_PRS, EXISTS_PRS,
-                            EXISTS_UNIQUE_PRS, ABSTRACT_PRS,
-                            COND_PRS, LET_PRS, literal_case_PRS,
-                            I_PRS, K_PRS, o_PRS, C_PRS, W_PRS]
-      val poly_respects  = poly_respects @
-                           [CONS_RSP, NIL_RSP, MAP_RSP, LENGTH_RSP, APPEND_RSP,
-                            FLAT_RSP, REVERSE_RSP, FILTER_RSP, NULL_RSP,
-                            SOME_EL_RSP, ALL_EL_RSP, FOLDL_RSP, FOLDR_RSP,
-                            FST_RSP, SND_RSP, COMMA_RSP, CURRY_RSP,
-                            UNCURRY_RSP, PAIR_MAP_RSP,
-                            INL_RSP, INR_RSP, ISL_RSP, ISR_RSP, SUM_MAP_RSP,
-                            NONE_RSP, SOME_RSP, IS_SOME_RSP, IS_NONE_RSP,
-                            OPTION_MAP_RSP,
-                            RES_FORALL_RSP, RES_EXISTS_RSP,
-                            RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP,
-                            COND_RSP, LET_RSP, literal_case_RSP,
-                            I_RSP, K_RSP, o_RSP, C_RSP, W_RSP]
-(* ?? EQUALS, LAMBDA, RES_FORALL, RES_EXISTS, APPLY ?? *)
+      val tyop_equivs = tyop_equivs @ quotient_equiv_getDB()
+      val tyop_quotients = tyop_quotients @ quotient_getDB()
+      val tyop_simps = tyop_simps @ quotient_simp_getDB()
+      val poly_preserves = poly_preserves @ quotient_prs_getDB()
+      val poly_respects  = poly_respects @ quotient_rsp_getDB()
   in
     define_quotient_types_rule
           {types=types, defs=defs,
@@ -3954,15 +3988,16 @@ fun define_quotient_types_std {types, defs, respects, old_thms} =
 
 
 fun define_equivalence_type {name, equiv, defs, welldefs, old_thms} =
-    define_quotient_types {types=[{name=name, equiv=equiv}],
-                           defs=defs,
-                           tyop_equivs=[],
-                           tyop_quotients=[FUN_QUOTIENT],
-                           tyop_simps=[FUN_REL_EQ,FUN_MAP_I],
-                           respects=welldefs,
-                           poly_preserves=[FORALL_PRS,EXISTS_PRS],
-                           poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
-                           old_thms=old_thms};
+    define_quotient_types_full {
+      types=[{name=name, equiv=equiv}],
+      defs=defs,
+      tyop_equivs=[],
+      tyop_quotients=[FUN_QUOTIENT],
+      tyop_simps=[FUN_REL_EQ,FUN_MAP_I],
+      respects=welldefs,
+      poly_preserves=[FORALL_PRS,EXISTS_PRS],
+      poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
+      old_thms=old_thms};
 
 (* Subset types: *)
 
@@ -4020,7 +4055,7 @@ val inhab = TAC_PROOF (([],``?x:bool list. ~(x = [])``),
 *)
 
 fun define_subset_reln {name:string, inhab:thm} =
-  let open Psyntax bossLib
+  let open Psyntax
       val _ = check_inhab inhab
       val P = tryconv eta_conv (snd (dest_comb (concl inhab)))
       val ty = fst (dom_rng (type_of P)) (* P : ty -> bool *)

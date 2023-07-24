@@ -1432,7 +1432,8 @@ Proof
   irule (DECIDE “(p ==> ~p) /\ (~p ==> p) ==> Q”) >>
   qexists_tac ‘f CS IN CS’ >> conj_tac >> strip_tac >>
   qpat_x_assum ‘!s. s IN CS <=> P’ (fn th => REWRITE_TAC [th]) >>
-  csimp[] >> simp[] >> metis_tac[]);
+  csimp[] >> simp[] >> metis_tac[]
+QED
 
 val cardlt_cardle = Q.store_thm(
   "cardlt_cardle",
@@ -2109,14 +2110,6 @@ val INFINITE_DIFF_FINITE = store_thm ("INFINITE_DIFF_FINITE",
 (* ------------------------------------------------------------------------- *)
 (* misc.                                                                     *)
 (* ------------------------------------------------------------------------- *)
-
-val LE_CASES = store_thm ("LE_CASES",
- ``!m n:num. m <= n \/ n <= m``,
-  REPEAT INDUCT_TAC THEN ASM_REWRITE_TAC[ZERO_LESS_EQ, LESS_EQ_MONO]);
-
-val LT_CASES = store_thm ("LT_CASES",
- ``!m n:num. (m < n) \/ (n < m) \/ (m = n)``,
-  METIS_TAC [LESS_CASES, LESS_OR_EQ]);
 
 val GE = store_thm ("GE",
   ``!n m:num. m >= n <=> n <= m``,

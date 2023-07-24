@@ -1215,6 +1215,10 @@ fun srw_ss () =
     (update_global_value init_state;
      #1 (get_global_value()))
 
+fun with_simpset_updates f g x =
+    (notify();
+     AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x)
+
 val update_log =
     Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
 fun ap13 f (x,y,z) = (f x, y, z)
@@ -1330,6 +1334,24 @@ fun make_simpset_derived_value (deriver : simpset -> 'a -> 'a) init =
       {get=get,set=set}
     end
 
-
+fun mk_tacmod s =
+    let
+      open AttributeSyntax
+      val (_, attrs0) = dest_name_attrs s
+      val alist = key_vallist attrs0
+      fun key_to_f k =
+          case k of
+              "exclude_simps" => simpLib.remove_simps
+            | "exclude_frags" => simpLib.remove_ssfrags
+            | _ => (fn vs => fn ss => ss)
+      val f =
+          gen_mktm { values = (fn vs => vs),
+                     combine = (fn (f1,f2) => f1 o f2),
+                     null = (fn x => x),
+                     perkey = (fn k => fn vs => key_to_f k vs) }
+                   alist
+    in
+      {tacm = with_simpset_updates f, ltacm = with_simpset_updates f}
+    end
 
 end

@@ -1553,12 +1553,13 @@ val poly_X_expM_value = store_thm(
        = PAD_RIGHT 0 k lt                               by PAD_RIGHT_BY_RIGHT, LENGTH lt = (m MOD k) + 1
        = PAD_RIGHT 0 k (PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0])
 *)
-val poly_X_expM_zero = store_thm(
-  "poly_X_expM_zero",
-  ``!k m. valueOf (poly_X_expM 0 k m) =
-          if k = 0 then [] else PAD_RIGHT 0 k (PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0])``,
-  rpt strip_tac >>
-  Cases_on `k <= 1` >| [
+
+Theorem poly_X_expM_zero:
+  !k m. valueOf (poly_X_expM 0 k m) =
+        if k = 0 then []
+        else PAD_RIGHT 0 k (PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0])
+Proof[exclude_simps = MOD_0]
+  rpt strip_tac >> Cases_on `k <= 1` >| [
     `k = 0 \/ k = 1` by decide_tac >-
     rw[poly_X_expM_def] >>
     rw[poly_X_expM_def, PAD_LEFT, PAD_RIGHT],
@@ -1572,7 +1573,8 @@ val poly_X_expM_zero = store_thm(
     qabbrev_tac `s = PAD_RIGHT 0 (m MOD k) [] ++ [x]` >>
     `LENGTH s = m MOD k + 1` by rw[PAD_RIGHT_LENGTH, Abbr`s`] >>
     metis_tac[PAD_RIGHT_BY_RIGHT]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> Weak (ZN n) (valueOf (poly_X_expM n k m)) *)
 (* Proof:

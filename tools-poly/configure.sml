@@ -67,8 +67,8 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 14
-val release_string = "Kananaskis"
+val version_number = 1
+val release_string = "Trindemossen"
 
 (*
 val _ = Meta.quietdec := true;

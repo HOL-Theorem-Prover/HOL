@@ -13,9 +13,7 @@ val _ = new_theory "update";
    Definitions
    ------------------------------------------------------------------------ *)
 
-val FIND_def = Define`
-  (FIND P [] = NONE) /\
-  (FIND P (h::t) = if P h then SOME h else FIND P t)`;
+Theorem FIND_def = listTheory.FIND_thm
 
 Definition OVERRIDE_def:
   (OVERRIDE [] = []) /\

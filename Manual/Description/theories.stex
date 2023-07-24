@@ -1,3 +1,4 @@
+%%% -*- Mode: LaTeX; -*-
 \chapter{Core Theories}\label{HOLtheories}
 
 % LaTeX macros in HOL manuals
@@ -1640,6 +1641,8 @@ A full set of comparison operators is defined in terms of \verb+<+.
 \end{alltt}
 \end{hol}
 
+Note that in all of \HOL{}'s standard numeric theories, it is usual practice to avoid uses of the ``greater-than'' constants and to express everything with either \holtxt{$<$} or \holtxt{$\le$}.
+
 \paragraph{Division and modulus}
 
 A constant specification is used to introduce division ({\small\verb+DIV+}, infix) and
@@ -1935,21 +1938,32 @@ Constant & Overloaded symbol & Strength & Associativity \\ \hline
 \end{tabular}}
 \end{center}
 
-The overloaded symbol {\small\verb+& : num -> int+} denotes the
+The overloaded symbol \holtxt{\& : num~$\rightarrow$~int} denotes the
 injection function from natural numbers to integers. The following
 session illustrates how overloading and integers literals are treated.
 
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->> Term `1i = &(1n + 0n)`;
+>> “1i = &(1n + 0n)”;
 
 >> show_numeral_types := true;
 
->> Term `&1 = &(1n + 0n)`;
+>> “&1 = &(1n + 0n)”;
+>>_ show_numeral_types := false;
 \end{alltt}
 \end{session}
 
+In addition, there is an absolute value function \holtxt{ABS}:
+\begin{alltt}
+##thm integerTheory.INT_ABS
+\end{alltt}
+with the obvious definition.
+
+This then characterises the \holtxt{Num} function which maps from integers back into natural numbers (of type \holtxt{:int~$\rightarrow$~num} therefore):
+\begin{alltt}
+##thm integerTheory.Num_EQ_ABS
+\end{alltt}
 
 \subsection{Rational numbers}\label{rationals}
 \index{rational numbers, the HOL theory of@rationals, the \HOL{} theory of|(}
@@ -2326,6 +2340,7 @@ approach comes from an idea of John Harrison, which was presented at TPHOLs
 2005.\footnote{The current theory subsumes previous word theories -- it evolved from a development based on an equivalence class construction.  Wai Wong's word theory, which was based on Paul Curzon's \ml{rich\_list} theory, is no longer distributed with HOL.  The principle advantages of the current theory are that there is just one theory for all word sizes and that word length side conditions are not required.}
 
 \subsubsection{Finite Cartesian products}
+\label{ss:fcpTheory}
 
 The \HOL{} theory \theoryimp{fcp} introduces an infix type operator
 \holtxt{**}, which is used to represent finite Cartesian products.\footnote{The theory of
@@ -2344,26 +2359,34 @@ indexing function
    fcp_index : \fcp{'a}{'b}\rarr\num\rarr\ty{'a}
 \end{alltt}
 \end{hol}
-which is typically written with an infixed apostrophe:
-\oo{x}{i} denotes the value of vector \holtxt{x} at position \holtxt{i}.
-Typically, indices are constrained to be less than the size of \ty{'b}.
+which is typically written with an infixed apostrophe: \oo{x}{i}
+denotes the value of vector \holtxt{x} at position \holtxt{i}.
+Typically, indices are constrained to be less than the size of
+\ty{'b}.\footnote{Note that FCP indices in HOL Light are ranged from 1
+  to \holtxt{dimindex('b)}, while in HOL4 they are ranged from 0 to
+  \holtxt{dimindex('b) - 1}, thus is \emph{less} than the size of
+  \ty{'b}. Also note that the function
+  \holtxt{fcp_index} in HOL Light is specified for index values:
+  \texttt{f ' i = 0} when \holtxt{i = 0} or \holtxt{i > dimindex('b)}. In HOL4, however,
+  \texttt{f ' i} is unspecified when \holtxt{i >= dimindex('b)}.}
 
 The following theorem shows that two Cartesian products \holtxt{x} and
 \holtxt{y} are equal if, and only if, all of their components \oo{x}{i} and
 \oo{y}{i} are equal:
 \begin{hol}
-\begin{verbatim}
-CART_EQ: |- !x y. (x = y) = !i. i < dimindex (:'a) ==> (x ' i = y ' i)
-\end{verbatim}
+\begin{alltt}
+>>__ load "fcpTheory"; open fcpTheory;
+##thm CART_EQ
+\end{alltt}
 \end{hol}
 
 In order to construct Cartesian products, the theory \theoryimp{fcp} introduces a
 binder \holtxt{FCP}, which is characterised by the following theorems:
 \begin{hol}
-\begin{verbatim}
-FCP_BETA: |- !i. i < dimindex (:'a) ==> ($FCP g ' i = g i)
-FCP_ETA:  |- !x. (FCP i. x ' i) = x
-\end{verbatim}
+\begin{alltt}
+##thm FCP_BETA
+##thm FCP_ETA
+\end{alltt}
 \end{hol}
 The theorem \ml{FCP\_BETA} shows that the components of \holtxt{\$FCP g} are
 determined by the function \holtxt{g:\num\rarr\ty{'a}}.  The theorem
@@ -2379,15 +2402,29 @@ provides a flexible means for defining words -- one can supply a function
 \holtxt{f:\num\rarr\bool} that gives the word's bit values, each of which can be accessed using the indexing map \holtxt{fcp\_index}.
 
 \subsubsection{Bit theory}
+\label{ss:bitTheory}
 
 The theory \theoryimp{bit} defines some bit operations over the natural numbers,
 \eg, \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
 \holtxt{BIT\_MODIFY}. In this context, natural numbers are treated as binary words of
 unbounded length.  The operations in \theoryimp{bit} are primarily defined using \holtxt{DIV}, \holtxt{MOD} and \holtxt{EXP}.  For example, from the definition of \holtxt{BIT}, the following theorem holds:
 \begin{hol}
-\begin{verbatim}
-|- !b n. BIT b n = ((n DIV 2 ** b) MOD 2 = 1)
-\end{verbatim}
+\begin{alltt}
+>>__ load "bitTheory"; open bitTheory;
+##thm BIT_DEF
+\end{alltt}
+\end{hol}
+Here \holtxt{BIT b n} states that the $b$-th bit (counted from the least significant bit, starting by 0) of $n$ is 1.
+(In other words, \holtxt{BIT b n} maps the $b$-th bit of $n$ from 0 to \holtxt{false} and 1 to \holtxt{true}.)
+
+On the other hand, \holtxt{SBIT} can be used to construct a number by summing up
+values corresponding to each bits.
+\holtxt{SBIT b n} represents the \emph{single} $n$-th bit value indicated by the Boolean value $b$,
+to be accumulated for constructing the destination number:
+\begin{hol}
+\begin{alltt}
+##thm SBIT_def
+\end{alltt}
 \end{hol}
 
 This theory is used in the development of the word theory and it also provides
@@ -2416,21 +2453,24 @@ representing an $n$-bit word then its natural number value is:
 \textbf{ else } 0\ .\]
 The length of a word (the number $n$) is given by the function
 \holtxt{word\_len:\worda\rarr\num}.
-The function \holtxt{n2w:\num\rarr\worda} maps from a number to a word and is
+The function \holtxt{n2w:\num\rarr\worda} maps from a number to a word,
+and the function \holtxt{w2n:\worda\rarr\num} maps from a word to a number. They are
 defined in \HOL{} by:
 \begin{hol}
-\begin{verbatim}
-|- !n. n2w n = FCP i. BIT i n
-\end{verbatim}
+\begin{alltt}
+>>__ load "wordsTheory"; open wordsTheory;
+##thm n2w_def
+##thm w2n_def
+\end{alltt}
 \end{hol}
 The suffix \holtxt{w} is used to denote word literals, \eg,
 \holtxt{255w} is the same as \holtxt{n2w 255}.
 
 The function \holtxt{w2w:\worda\rarr\wordb} provides word-to-word conversion (casting):
 \begin{hol}
-\begin{verbatim}
-|- !w. w2w w = n2w (w2n w)
-\end{verbatim}
+\begin{alltt}
+##thm w2w_def
+\end{alltt}
 \end{hol}
 If $\beta$ is smaller than $\alpha$ then the higher bits of \holtxt{w} will be
 lost (it performs bit extraction), otherwise the longer word will have the same value as the original (in effect providing zero padding).
@@ -3333,10 +3373,10 @@ They are characterised by the following theorems
 
 \paragraph{Concatenation}
 
-Two lazy lists may be concatenated by \ml{LAPPEND}. If the first lazy
-list is infinite, elements of the second are inaccessible in the
-result.  A lazy list of lazy lists can be flattened to a lazy list by
-\ml{LFLATTEN}.
+Two lazy lists may be concatenated by \ml{LAPPEND} (written below using its infix Unicode form \texttt{++$_l$}).
+If the first lazy list is infinite, elements of the second are inaccessible in the
+result.
+A lazy list of lazy lists can be flattened to a lazy list by \ml{LFLATTEN}.
 \begin{hol}
 \begin{alltt}
 ##thm LAPPEND
@@ -3555,8 +3595,6 @@ Thus:
 >> dest_comb ``#"\t"``;
 \end{alltt}
 \end{session}
-
-
 
 \paragraph {Strings}
 

@@ -11,6 +11,7 @@ open HolKernel Abbrev;
 
 type proof = Manager.proof
 type proofs = Manager.proofs
+type tacmodifier = Manager.tacmodifier
 
 val chatting = goalStack.chatting;
 fun say s = if !chatting then Lib.say s else ();
@@ -21,16 +22,16 @@ fun proofs() = !the_proofs;
 fun top_proof() = Manager.current_proof(proofs());
 
 
-fun new_goalstack g f =
-   (the_proofs := Manager.add (Manager.new_goalstack g f) (proofs());
+fun new_goalstack g tm f =
+   (the_proofs := Manager.add (Manager.new_goalstack g tm f) (proofs());
     proofs());
 
-fun new_goaltree g =
-   (the_proofs := Manager.add (Manager.new_goaltree g) (proofs());
+fun new_goaltree g tm =
+   (the_proofs := Manager.add (Manager.new_goaltree g tm) (proofs());
     proofs());
 
-fun set_goal g = new_goalstack g Lib.I;
-fun set_goaltree g = new_goaltree g;
+fun set_goal g = new_goalstack g Manager.id_tacm Lib.I;
+fun set_goaltree g = new_goaltree g Manager.id_tacm;
 
 fun g q = set_goal([],Parse.Term q);
 fun gt q = set_goaltree([],Parse.Term q);

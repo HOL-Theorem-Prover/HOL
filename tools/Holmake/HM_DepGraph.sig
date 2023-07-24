@@ -34,7 +34,6 @@ sig
   val add_node : 'a nodeInfo -> 'a t -> 'a t * node
   val updnode : node * target_status -> 'a t -> 'a t
   val nodeStatus : 'a t -> node -> target_status
-  val addDeps : node * (node * dep) list -> 'a t -> 'a t
   val peeknode : 'a t -> node -> 'a nodeInfo option
   val target_node : 'a t -> dep -> node option
   val size : 'a t -> int

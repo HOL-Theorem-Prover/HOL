@@ -120,21 +120,6 @@ val ABS_BETWEEN_LE = store_thm
      >> KILL_TAC
      >> REAL_ARITH_TAC]]);
 
-val ONE_MINUS_HALF = store_thm
-  ("ONE_MINUS_HALF",
-   ``1 - 1 / 2 = 1 / 2``,
-   MP_TAC (Q.SPEC `1` X_HALF_HALF)
-   >> RW_TAC real_ss []
-   >> MATCH_MP_TAC (REAL_ARITH ``(x + 1 / 2 = y + 1 / 2) ==> (x = y)``)
-   >> RW_TAC std_ss [REAL_SUB_ADD]);
-
-val REAL_POW = store_thm
-  ("REAL_POW",
-   ``!m n. &m pow n = &(m EXP n)``,
-   STRIP_TAC
-   >> Induct >- RW_TAC real_ss [pow, EXP]
-   >> RW_TAC real_ss [pow, EXP, REAL_MUL]);
-
 val POW_HALF_EXP = store_thm
   ("POW_HALF_EXP",
    ``!n. (1 / 2) pow n = inv (&(2 EXP n))``,

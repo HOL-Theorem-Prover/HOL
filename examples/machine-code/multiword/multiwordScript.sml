@@ -11,7 +11,6 @@ open ASCIInumbersTheory
 
 val _ = numLib.prefer_num();
 
-infix \\ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 val REV = Tactical.REVERSE;
@@ -1535,9 +1534,8 @@ Proof
   `w2n d = 0` by DECIDE_TAC >>
   METIS_TAC[w2n_eq_0]) >>
   Cases_on `m` THEN1 METIS_TAC[EXP,ONE_LT_dimword,prim_recTheory.LESS_NOT_EQ] >>
-  `2 < dimword(:'a)` by (srw_tac[][] >>
-  Cases_on `n'` THEN1 DECIDE_TAC >>
-  srw_tac[][EXP] >> METIS_TAC[LE_MULT_CANCEL_LBARE,ZERO_LT_EXP,DECIDE ``0 < 2 /\ 1 < 2``, LESS_LESS_EQ_TRANS] ) >>
+  `2 < dimword(:'a)`
+    by (srw_tac[][] >> DECIDE_TAC) >>
   qpat_x_assum `dimword(:'a) = xxx` (fn x => REWRITE_TAC [GSYM x] \\ (ASSUME_TAC x)) >>
   srw_tac[][LESS_MOD,DECIDE ``2 ** n * 2 = 2 * 2 ** n``,GSYM EXP] >>
   `SUC n < SUC n'`
@@ -1919,7 +1917,7 @@ Theorem mw_div_range2:
     dimword(:'a) DIV 2 <= w2n v1 ==>
     MIN ((w2n u1 * dimword(:'a) + w2n u2) DIV w2n v1) (dimword(:'a)-1)
     <= mw2n (REVERSE (u1::u2::us)) DIV mw2n (REVERSE (v1::vs)) + 2
-Proof
+Proof[exclude_simps = DIV_0 MOD_0]
 
     REPEAT GEN_TAC >>
     Q.PAT_ABBREV_TAC`V = mw2n (REVERSE (v1::vs))` >>
@@ -1968,7 +1966,7 @@ Proof
                                        `q' * (a * l) <= (w2n u1 * b + w2n u2) * l` by METIS_TAC[MULT_ASSOC,Abbr`a`,DIV_thm3,LESS_EQ_TRANS,LESS_MONO_MULT,Abbr`q'`] >>
                                        `U = (w2n u1 * b + w2n u2) * l + mw2n (REVERSE us)` by lrw[Abbr`U`,Abbr`b`,Abbr`l`,mw2n_msf,dimwords_dimword,EXP,GSYM ADD1] >>
                                        `q' * (a * l) <= U` by METIS_TAC[Abbr`a`,LESS_EQ_ADD,LESS_EQ_TRANS,Abbr`q'`] >>
-                                       Cases_on `U = 0` THEN1 full_simp_tac (srw_ss())[ENC] >>
+                                       Cases_on `U = 0` THEN1 gvs[ENC] >>
                                        `q' * X < U` by( Cases_on `0 < q'`
                                               THEN1( `V = a * l + mw2n(REVERSE vs)` by lrw[Abbr`V`,Abbr`l`,Abbr`a`,mw2n_msf,dimwords_dimword] >>
                                                      `V < a * l + l` by (full_simp_tac (srw_ss())[Abbr`l`,Abbr`b`,Abbr`a`] >> METIS_TAC[mw2n_lt,LENGTH_REVERSE,dimwords_dimword]) >>

@@ -1,5 +1,5 @@
 INCLUDES = ../string ../finite_maps ../sort ../integer ../coalgebras \
-           ../monad/more_monads ../n-bit ../quotient/src ../res_quan/src \
+           ../monad/more_monads ../n-bit ../res_quan/src \
            ../TeX
 
 all: $(DEFAULT_TARGETS) selftest.exe

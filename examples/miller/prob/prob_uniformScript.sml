@@ -10,25 +10,10 @@ open arithmeticTheory pred_setTheory
 open util_probTheory real_measureTheory real_probabilityTheory;
 open prob_algebraTheory probTheory;
 
-(* interactive mode
-quietdec := false;
-*)
-
 val _ = new_theory "prob_uniform";
 val _ = ParseExtras.temp_loose_equality()
 
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of the uniform random number generator.                    *)

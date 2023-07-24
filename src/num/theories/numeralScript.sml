@@ -820,9 +820,9 @@ val onecount_lemma3 = prove(
   HO_MATCH_MP_TAC bit_induction THEN
   SRW_TAC [][onecount_def, ALT_ZERO, LESS_REFL]);
 
-val onecount_characterisation = store_thm(
-  "onecount_characterisation",
-  ``!n a. 0 < onecount n a /\ 0 < n ==> (n = 2 EXP (onecount n a - a) - 1)``,
+Theorem onecount_characterisation:
+  !n a. 0 < onecount n a /\ 0 < n ==> (n = 2 EXP (onecount n a - a) - 1)
+Proof
   HO_MATCH_MP_TAC bit_induction THEN
   SRW_TAC [][onecount_def] THENL [
     FULL_SIMP_TAC (srw_ss()) [ALT_ZERO, LESS_REFL],
@@ -841,12 +841,11 @@ val onecount_characterisation = store_thm(
         Q.ABBREV_TAC `X = onecount n a - a` THEN
         Q_TAC SUFF_TAC `n = 2 ** X - 1` THENL [
           DISCH_THEN SUBST1_TAC THEN
-          SRW_TAC [][Once BIT1, sub_add'] THENL [
-            SRW_TAC [][SYM ONE, ADD_SUB, TIMES2],
-            FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL] THEN
-            FULL_SIMP_TAC (srw_ss()) [ONE, LESS_THM, NOT_LESS_0, EXP_EQ_0] THEN
-            FULL_SIMP_TAC (srw_ss()) [TWO, ONE, NOT_SUC]
-          ],
+          SRW_TAC [][Once BIT1, sub_add', EXP0] THEN
+          SIMP_TAC bool_ss [EXP0, GSYM ONE, ADD_SUB, TIMES2]
+          >- FULL_SIMP_TAC bool_ss [LESS_REFL] >>
+          FULL_SIMP_TAC bool_ss [TWO, ONE, LESS_0],
+
           Q.UNABBREV_TAC `X` THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
           SRW_TAC [][]
         ],
@@ -856,16 +855,36 @@ val onecount_characterisation = store_thm(
       ]
     ],
     FULL_SIMP_TAC (srw_ss()) [ALT_ZERO, LESS_REFL]
-  ]);
+  ]
+QED
 
 val onecount_thm = SIMP_RULE (srw_ss()) [SUB_0]
                              (Q.SPECL [`n`, `0`] onecount_characterisation)
 
 val bit_cases = hd (Prim_rec.prove_cases_thm bit_induction)
 
-val exactlog_characterisation = store_thm(
-  "exactlog_characterisation",
-  ``!n m. (exactlog n = BIT1 m) ==> (n = 2 ** (m + 1))``,
+Theorem SUC_LE1[local,simp]:
+  SUC x <= 1 <=> x = 0
+Proof
+  iff_tac >- REWRITE_TAC[ONE,LESS_EQ_MONO,LESS_EQ_0] >>
+  SIMP_TAC bool_ss [ONE, LESS_EQ_REFL]
+QED
+
+Theorem SUC_SUB1[simp,local]:
+  SUC x - 1 = x
+Proof
+  REWRITE_TAC[ONE,SUB_MONO_EQ,SUB_0]
+QED
+
+Theorem TWO_NE0[simp,local]:
+  2 <> 0
+Proof
+  REWRITE_TAC[TWO,NOT_SUC]
+QED
+
+Theorem exactlog_characterisation:
+  !n m. (exactlog n = BIT1 m) ==> (n = 2 ** (m + 1))
+Proof
   REPEAT GEN_TAC THEN
   Q.SPEC_THEN `n` STRUCT_CASES_TAC bit_cases THEN
   SRW_TAC [][exactlog_def, numeral_eq, LET_THM] THEN
@@ -880,17 +899,14 @@ val exactlog_characterisation = store_thm(
     Q.ABBREV_TAC `X = onecount n' 0` THEN
     Q.SUBGOAL_THEN `onecount n' ZERO = X` SUBST_ALL_TAC THEN1
       SRW_TAC [][ALT_ZERO] THEN
-    SRW_TAC [][sub_add', SUB_LEFT_ADD] THENL [
-      FULL_SIMP_TAC (srw_ss()) [ADD_CLAUSES, ONE, LESS_EQ_MONO,
-                                NOT_SUC_LESS_EQ_0],
-      SRW_TAC [][ADD_CLAUSES, SUC_SUB1, EXP_ADD, EXP_1] THEN
-      METIS_TAC [MULT_COMM, TIMES2],
-      FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL, ONE, LESS_THM, NOT_LESS_0,
-                                EXP_EQ_0] THEN
-      FULL_SIMP_TAC (srw_ss()) [TWO, ONE, NOT_SUC]
-    ],
+    SRW_TAC [][sub_add', SUB_LEFT_ADD] THEN
+    FULL_SIMP_TAC (srw_ss()) [LESS_REFL, ADD_CLAUSES]
+    >- REWRITE_TAC[GSYM ADD1, EXP, TIMES2] >>
+    REWRITE_TAC[ADD_CLAUSES,TWO,ONE],
+
     FULL_SIMP_TAC (srw_ss()) [onecount0, NOT_LESS, LESS_EQ_0, LESS_REFL]
-  ]);
+  ]
+QED
 
 val internal_mult_def = new_definition(
   "internal_mult_def",

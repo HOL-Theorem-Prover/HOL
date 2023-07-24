@@ -6,6 +6,7 @@ sig
   val register_attribute : string * attrfuns -> unit
 
   val is_attribute : string -> bool
+  val all_attributes : unit -> string list
   val store_at_attribute : attrfun
   val local_attribute    : attrfun
   val extract_attributes : string -> string * string list
@@ -13,5 +14,12 @@ sig
 
   val insert_attribute : {attr: string} -> string -> string
 
-
 end
+
+(*
+   [extract_attributes thmstr] takes a string of the form
+   thmname[attr1,attr2,...] or of the form thmname and returns the thmname
+   along with the list of attributes.
+
+   [toString thmname attrs] reverses the extract_attributes function above.
+*)

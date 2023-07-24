@@ -48,8 +48,8 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 14
-val release_string = "Kananaskis"
+val version_number = 1
+val release_string = "Trindemossen"
 
 
 val _ = Meta.quietdec := true;
@@ -321,6 +321,8 @@ val _ =
     compile [] "HOLFileSys.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
+    compile [] "AttributeSyntax.sig";
+    compile [] "AttributeSyntax.sml";
     compile [] "QuoteFilter.sml";
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";

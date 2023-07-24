@@ -756,7 +756,7 @@ val FRAC_SGN_MUL = store_thm("FRAC_SGN_MUL", ``!f1 f2. frac_sgn (frac_mul f1 f2)
         ASM_CASES_TAC ``frac_nmr f2=0i`` THEN
         ASM_CASES_TAC ``frac_nmr f2 < 0i`` THEN
         RW_TAC int_ss [INT_MUL_LZERO, INT_MUL_RZERO] THEN
-        PROVE_TAC[INT_NO_ZERODIV,INT_MUL_SIGN_CASES,INT_LT_GT,INT_LT_TOTAL] );
+        PROVE_TAC[INT_ENTIRE,INT_MUL_SIGN_CASES,INT_LT_GT,INT_LT_TOTAL] );
 
 
 (*--------------------------------------------------------------------------
@@ -781,20 +781,6 @@ val FRAC_SGN_MUL2 = store_thm("FRAC_SGN_MUL2", ``!f1 f2. frac_sgn (frac_mul f1 f
         REWRITE_TAC[frac_sgn_def, frac_mul_def] THEN
         FRAC_NMRDNM_TAC THEN
         PROVE_TAC[INT_SGN_MUL2] );
-
-(*--------------------------------------------------------------------------
- *  FRAC_SGN_MUL : thm
- *  |- !f1 f2 i1 i2. (frac_sgn f1 = i1) ==> (frac_sgn f2 = i2) ==>
- *      (frac_sgn (frac_mul f1 f2) = i1 * i2)
- * deleted
- *--------------------------------------------------------------------------*)
-
-(*val FRAC_SGN_MUL = store_thm("FRAC_SGN_MUL", ``!f1 f2 i1 i2. (frac_sgn f1 = i1) ==> (frac_sgn f2 = i2) ==> (frac_sgn (frac_mul f1 f2) = i1 * i2)``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[frac_sgn_def] THEN
-        FRAC_CALC_TAC THEN
-        FRAC_NMRDNM_TAC THEN
-        PROVE_TAC[INT_SGN_MUL] );*)
 
 (*--------------------------------------------------------------------------
  *  FRAC_SGN_CASES : thm

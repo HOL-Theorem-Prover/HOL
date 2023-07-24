@@ -1280,17 +1280,19 @@ val poly_sum_by_weak_sum_genlist = store_thm(
      = poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) ' k        by poly_sum_by_weak_sum_genlist
      = f k                                                      by induction hypothesis
 *)
-val poly_coeff_sum_genlist = store_thm(
-  "poly_coeff_sum_genlist",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n k. rfun f /\ k < SUC n ==>
-      ((poly_sum (GENLIST (\j. (f j) * (X ** j)) (SUC n))) ' k = f k)``,
+
+Theorem poly_coeff_sum_genlist:
+  !r:'a ring.
+    Ring r /\ #1 <> #0 ==>
+    !f n k. rfun f /\ k < SUC n ==>
+            ((poly_sum (GENLIST (\j. (f j) * (X ** j)) (SUC n))) ' k = f k)
+Proof
   rpt strip_tac >>
   `!j. f j IN R` by metis_tac [ring_fun_def] >>
   `|1| <> |0| /\ ( |1| = [#1])` by metis_tac [poly_zero_eq_one, poly_one] >>
   `[#1] <> |0|` by rw[] >>
   Induct_on `n` >| [
     rw[] >>
-    `k = 0` by decide_tac >>
     Cases_on `f 0 = #0` >-
     rw[] >>
     `f 0 * [#1] = [f 0]` by metis_tac [poly_cmult_one] >>
@@ -1321,7 +1323,8 @@ val poly_coeff_sum_genlist = store_thm(
       `_ = poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) ' k` by metis_tac[poly_sum_by_weak_sum_genlist] >>
       rw[]
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Identity only for Primes                                       *)

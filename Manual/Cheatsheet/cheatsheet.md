@@ -127,9 +127,9 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
 <code>Ntimes <i>theorem int</i></code>
 : Uses the supplied theorem at most the given number of times when rewriting.
 
-<code>Excl <i>theorem</i></code>
-: Do not use the supplied theorem when rewriting.
-  This allows temporary exclusion of a theorem from the stateful simpset.
+<code>Excl <i>"theorem_name"</i></code><br><code>Excl <i>"conversion_name"</i></code>
+: Do not use the supplied theorem/conversion when rewriting.
+  This allows temporary exclusion of theorems/conversions from the stateful simpset.
 
 <code>Simp{L,R}HS <i>theorem</i></code>
 : Uses the supplied theorem to simplify on the left-/right-hand side of equalities.
@@ -148,6 +148,11 @@ Also commonly used when rewriting are:
 
 <code>iff{LR,RL} <i>theorem</i></code>
 : Turns a bi-implication into an implication, going left-to-right or right-to-left respectively.
+
+<code>cj <i>n</i> <i>theorem</i></code>
+: Returns the <code><i>n</i></code>th conjunct of the theorem, handling universal quantifiers and implications.
+  For example, for `thm = ⊢ ∀ P Q R . P ==> Q /\ R`, `cj 2 thm` gives `⊢ ∀ P R . P ==> R)`.
+  **NB** indexing begins at `1`.
 
 <code>SRULE [<i>rewrites</i>] <i>theorem</i></code>
 : Uses the stateful simpset and supplied rewrites to rewrite the theorem.
@@ -216,7 +221,7 @@ Many proofs rely on induction, and there are several ways to induct in HOL4.
   This can be used similarly to `Induct` - e.g. to prove `P (n : num)` we can use <code>Induct_on &grave;n&grave;</code>.
   However, we can also induct over an inductive relation - given a relation `is_even` and a goal `is_even n`, we can use <code>Induct_on &grave;is_even&grave;</code>.
 
-<code>_ using <i>theorem</i></code>
+<code>... using <i>theorem</i></code>
 : Used as as suffix to `Induct` or <code>Induct_on &grave;<i>term</i>&grave;</code> to specify a particular induction theorem for use.
   For example, <code>Induct_on &grave;l&grave; using SNOC_INDUCT</code> begins induction over list `l` from the tail, rather than the head (`SNOC` is the reverse of `CONS`).
 
@@ -262,6 +267,9 @@ It is often useful to perform case splits over the course of a proof.
 `every_case_tac`
 : Splits every possible `case` expression.
   This can be slow and explode the number of subgoals!
+
+`IF_CASES_TAC`
+: Case splits on an `if ... then ... else ...` expression in the goal.
 
 <code>CaseEq "<i>string</i>"</code>
 : Returns a theorem of the form `(case x of ...) = v <=> ...`, where the type of `x` is given by the supplied string.
@@ -347,14 +355,14 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 <code>qexists &grave;<i>term</i>&grave;</code>
 : Instantiates a top-level `∃` quantifier with the supplied term.
 
-<code>qexistsl &grave;<i>terms</i>&grave;</code>
+<code>qexistsl [&grave;<i>term</i>&grave;s]</code>
 : Like `qexists`, but accepts a list of terms to instantiate multiple `∃` quantifiers.
 
 <code>qrefine &grave;<i>term</i>&grave;</code>
 : Refines a top-level `∃` quantifier using the supplied term - any free variables in the term become`∃`-quantified.
   For example, for a goal `∃ n : num. if n = 0 then P n else Q n`, applying ``qrefine `SUC k` >> simp[]`` produces the goal `∃ k : num. Q (SUC k)` (where `SUC` is the successor function).
 
-<code>qrefinel &grave;<i>terms</i>&grave;</code>
+<code>qrefinel [&grave;<i>term</i>&grave;s]</code>
 : Like `qrefine`, but accepts a list of terms to instantiate multiple `∃` quantifiers.
   Also can be passed underscores, to avoid refining selected `∃` quantifiers.
   For example, for a goal `n = 2 /\ c = 5 ==> ∃ a b c d. a + b = c + d`, the tactic <code>strip_tac >> qrefinel [&grave;_&grave;,&grave;SUC c&grave;,&grave;_&grave;,&grave;n + m&grave;]</code> produces the new goal `∃ a c' m. a + SUC c = c' + (n + m)` .
@@ -417,6 +425,10 @@ The latter usually have a `"_x_"` in their names.
 <code>L "<i>label</i>"</code>
 : Found in `markerLib`.
   When used in a stateful simplifier, produces the theorem `assumption` from labelled assumption `label :- assumption`.
+
+<code>kall_tac</code>
+: Equivalent to `K ALL_TAC`, i.e. accepts any input and leaves the goal unchanged.
+  Most useful to delete assumptions, e.g. `pop_assum kall_tac` removes the most recent assumption.
 
 
 ## Instantiations and generalisations
@@ -562,7 +574,7 @@ Some patterns arise very often in proofs.
     Case splits introduce fresh variable names and equalities.
     Simplification can use the equalities, and renaming cleans up the fresh names.
     - ``TOP_CASE_TAC >> gvs[] >> rename1 `...` ``
-    - ``Cases_on _ >> simp[] >> qmatch_goalsub_abbrev_tac `...` ``
+    - ``Cases_on ... >> simp[] >> qmatch_goalsub_abbrev_tac `...` ``
     - *and so on*
   - **Simpler targeted [simplification](#rewriting).**
     Sometimes when `fs`, `gvs`, and so on do too much, it can be useful to select an assumption, move it to the goal as an implication, and then use `simp` instead.

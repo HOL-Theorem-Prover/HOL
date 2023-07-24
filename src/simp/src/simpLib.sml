@@ -311,6 +311,7 @@ fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
          dprocs = filter_dprocs_by_names nms dprocs,
          travrules = travrules,
          limit = limit}
+fun remove_simps nms ss = ss -* nms
 
 
   (* ---------------------------------------------------------------------

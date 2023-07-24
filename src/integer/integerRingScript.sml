@@ -1,13 +1,4 @@
-(*
-load "ringLib";
-load "integerTheory";
-load "bossLib";
-*)
-
-open HolKernel Parse boolLib bossLib integerTheory ringTheory;
-
-infix THEN THENL THENC o;
-infix 8 by;
+open HolKernel Parse boolLib bossLib integerTheory EVAL_ringTheory;
 
 val _ = new_theory "integerRing";
 val _ = ParseExtras.temp_loose_equality()
@@ -22,7 +13,8 @@ ARW_TAC [ is_ring_def, ring_accessors, INT_0, INT_1,
           INT_ADD_ASSOC, INT_MUL_ASSOC, INT_ADD_LID, INT_MUL_LID] THEN
 MAP_FIRST MATCH_ACCEPT_TAC [ INT_ADD_SYM, INT_MUL_SYM ]);
 
-val int_ring_thms = ringLib.store_ring { Name = "int", Theory = int_is_ring };
+val int_ring_thms =
+  EVAL_ringLib.store_ring { Name = "int", Theory = int_is_ring }
 
 
 (* equations to put any expression build on + * ~ & int_0 int_1

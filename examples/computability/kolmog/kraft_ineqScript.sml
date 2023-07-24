@@ -20,6 +20,8 @@ val _ = new_theory "kraft_ineq";
 
 val _ = intLib.deprecate_int()
 
+val _ = hide "lg" (* transc$lg is now log base 2 *)
+
 Theorem bool_list_card[simp]:
   CARD {s | LENGTH (s:bool list) = n} = 2**n
 Proof

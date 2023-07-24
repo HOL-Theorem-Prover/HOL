@@ -4175,6 +4175,14 @@ Proof
    \\ simp[]
 QED
 
+Theorem float_is_zero_impl:
+  !x. float_is_zero x <=> float_equal (float_plus_zero (:'w # 't)) x
+Proof
+  simp[float_is_zero_def, float_equal_def, float_compare_def, AllCaseEqs(),
+       SF CONJ_ss] >> qx_gen_tac ‘x’ >>
+  Cases_on `float_value x` >> simp[EQ_SYM_EQ]
+QED
+
 (* ------------------------------------------------------------------------ *)
 
 val () = export_theory ()

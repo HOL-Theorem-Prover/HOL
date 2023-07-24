@@ -23,7 +23,8 @@ sig
   val MP_TAC                : thm_tactic
   val mp_tac                : thm_tactic
   val EQ_TAC                : tactic
-  val eq_tac                : tactic
+  val eq_tac                : tactic (* alias for EQ_TAC *)
+  val iff_tac               : tactic (* alias for EQ_TAC *)
   val X_GEN_TAC             : term -> tactic
   val GEN_TAC               : tactic
   val gen_tac               : tactic

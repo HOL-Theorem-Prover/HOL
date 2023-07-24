@@ -397,15 +397,16 @@ val KRIPKE_STRUCTURE___PATHS_AND_TRACES_PATH_SUBSET =
 
 
 
-val DET_TOTAL_KRIPKE_STRUCTURES_THM =
- store_thm ("DET_TOTAL_KRIPKE_STRUCTURES_THM",
-
-  ``INFINITE (UNIV:'b set) ==>
+Theorem DET_TOTAL_KRIPKE_STRUCTURES_THM:
+  INFINITE (UNIV:'b set) ==>
   (!S i. ((IS_ULTIMATIVELY_PERIODIC_PATH i /\ FINITE S /\ PATH_SUBSET i S)=
-      (?M:('a, 'b) kripke_structure. IS_WELL_FORMED_KRIPKE_STRUCTURE M /\
-          (M.P = S) /\
-          IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M i /\
-          (!j. IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M j ==> (j = i)))))``,
+          (?M:('a, 'b) kripke_structure.
+             IS_WELL_FORMED_KRIPKE_STRUCTURE M /\
+             (M.P = S) /\
+             IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M i /\
+             (!j. IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M j ==>
+                  (j = i)))))
+Proof
 
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   FULL_SIMP_TAC std_ss [IS_ULTIMATIVELY_PERIODIC_PATH_def,
@@ -489,16 +490,6 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
           METIS_TAC[SUC_MOD_CASES]
         ]
       ],
-
-
-      ASM_SIMP_TAC std_ss [ZERO_MOD] THEN
-      Cases_on `0 < n0` THENL [
-        ASM_SIMP_TAC std_ss [],
-
-        `n0 = 0` by DECIDE_TAC THEN
-        ASM_SIMP_TAC std_ss []
-      ],
-
 
       ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
       SIMP_TAC std_ss [] THEN
@@ -660,7 +651,8 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   PROVE_TAC[],
 
   METIS_TAC [KRIPKE_STRUCTURE___PATHS_AND_TRACES_PATH_SUBSET]
-])
+]
+QED
 
 
 

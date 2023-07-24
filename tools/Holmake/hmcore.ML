@@ -20,7 +20,7 @@ in
   app (myuse hmakedir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
   myuse (OS.Path.concat(hmakedir, "poly")) "HFS_NameMunge.sml";
   app appthis ["HOLFileSys", "regexpMatch", "parse_glob",
-               "Holdep_tokens"] ;
+               "Holdep_tokens", "AttributeSyntax"] ;
   app (myuse hmakedir) ["QuoteFilter.sml", "Holmake_tools_dtype.sml",
                         "terminal_primitives.sig",
                         "poly-terminal-prims.ML"];

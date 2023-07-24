@@ -99,7 +99,8 @@ Theorem zip_append :
    (LENGTH l1 = LENGTH l2) /\
    (LENGTH l3 = LENGTH l4)
    ==>
-    (ZIP (l1 ++ l3, l2 ++ l4) = ZIP (l1,l2) ++ ZIP (l3,l4))`,
+    (ZIP (l1 ++ l3, l2 ++ l4) = ZIP (l1,l2) ++ ZIP (l3,l4))
+Proof
  recInduct ZIP_ind >> rw_tac list_ss [ZIP_def]
 QED
 
@@ -937,7 +938,8 @@ Theorem regexp_leq_antisym' = REWRITE_RULE [antisymmetric_def] regexp_leq_antisy
 Theorem regexp_compare_id :
  !r. regexp_compare r r = Equal
 Proof
- metis_tac [regexp_compare_good, good_cmp_def])
+ metis_tac [regexp_compare_good, good_cmp_def]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -960,9 +962,9 @@ Termination
   >- rw_tac arith_ss [rsize_def]
 End
 
-val regexp_empty_thm = Q.store_thm
-("regexp_empty_thm",
- `!r.  is_regexp_empty r ==> !w. ~regexp_lang r w`,
+Theorem regexp_empty_thm:
+  !r.  is_regexp_empty r ==> !w. ~regexp_lang r w
+Proof
  recInduct (fetch "-" "is_regexp_empty_ind")
   >> rw [is_regexp_empty_def, regexp_lang_thm, EVERY_EL,charset_mem_empty]
   >> metis_tac[MEM_EL]

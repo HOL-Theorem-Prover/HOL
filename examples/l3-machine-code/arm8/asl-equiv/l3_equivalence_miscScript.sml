@@ -356,7 +356,7 @@ Theorem extract_bit:
 Proof
   rw[] >> bitstringLib.Cases_on_v2w `w` >>
   simp[word_extract_v2w] >>
-  irule $ iffLR WORD_EQ >> rw[] >> Cases_on `x` >> gvs[] >>
+  irule $ iffLR WORD_EQ >> rw[] >>
   simp[bit_v2w, testbit_el, word_bits_v2w, field_def, shiftr_def, fixwidth] >>
   simp[DROP_TAKE, TAKE1, HD_DROP] >>
   Cases_on `EL (dimindex (:α) - (i + 1)) v` >> gvs[] >> WORD_DECIDE_TAC
@@ -557,7 +557,7 @@ Theorem LENGTH_add:
 Proof
   rw[] >> gvs[]
   >- (
-    gvs[LENGTH_add_MAX] >> reverse $ rw[MAX_DEF] >- (Cases_on `ys` >> gvs[]) >>
+    gvs[LENGTH_add_MAX] >> reverse $ rw[MAX_DEF] >- gvs[] >>
     qpat_x_assum `LENGTH _ < _` mp_tac >>
     simp[LENGTH_n2v, NOT_LESS, LE_LT1, ADD1] >>
     irule LOG_LT >> simp[v2n_add_less_limit]

@@ -1328,10 +1328,13 @@ Induct_on `h` >> simp[ENCODE_def] >> simp[GENLIST_CONS] >> simp[ENCODE_def] >>rw
 `2 * (2 ** h − 1 + 2 * (ENCODE b * 2 ** h)) = 2*2 ** h − 2*1 + 4 * (ENCODE b * 2 ** h)` by fs[]>>
 rw[] >> `2<=2*2**h` by (rpt (pop_assum kall_tac) >> Induct_on `h` >> simp[])  >> simp[])
 
-val ENCODE_GENLIST_O = Q.store_thm("ENCODE_GENLIST_O",
-`ENCODE (GENLIST (K O) h) = 2 ** h − 1`,
-Induct_on `h` >> simp[ENCODE_def,GENLIST_CONS,EXP] >> `1<=2**h` suffices_by simp[] >>
-          `0<2**h` suffices_by decide_tac >> simp[])
+Theorem ENCODE_GENLIST_O:
+  ENCODE (GENLIST (K O) h) = 2 ** h − 1
+Proof
+  Induct_on `h` >> simp[ENCODE_def,GENLIST_CONS,EXP] >>
+  simp[LEFT_SUB_DISTRIB] >>
+  `2 <= 2 * 2**h` suffices_by decide_tac >> simp[]
+QED
 
 val encode_concat_corr = Q.store_thm("encode_concat_corr",
 `ENCODE (concatWith [Z] (MAP (GENLIST (K O)) args)) = encode_concat (nlist_of args)`,

@@ -4,6 +4,8 @@ val _ = PolyML.print_depth 0;
 
 use "../Holmake/Systeml.sig";
 use "../../tools-poly/Holmake/Systeml.sml";
+use "../Holmake/AttributeSyntax.sig";
+use "../Holmake/AttributeSyntax.sml";
 use "../Holmake/QuoteFilter.sml";
 open OS.Process
 

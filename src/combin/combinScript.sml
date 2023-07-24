@@ -83,7 +83,6 @@ end
  * superset of those on the rhs.                                             *
  *---------------------------------------------------------------------------*)
 
-
 val o_THM = store_thm("o_THM",
    “!f g x. (f o g) x = f(g x)”,
    REPEAT GEN_TAC
@@ -116,6 +115,13 @@ val K_THM = store_thm("K_THM",
     THEN PURE_REWRITE_TAC [ K_DEF ]
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
+
+Theorem K_PARTIAL : (* from seqTheory *)
+    !x. K x = \z. x
+Proof
+    GEN_TAC >> PURE_REWRITE_TAC [K_DEF]
+ >> BETA_TAC >> REFL_TAC
+QED
 
 val S_THM = store_thm("S_THM",
    “!f g x. S f g x = f x (g x)”,

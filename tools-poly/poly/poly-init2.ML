@@ -4,6 +4,8 @@ val _ = use "poly/poly-init.ML";
 val _ = use "../tools/Holmake/Systeml.sig";
 val _ = use "Holmake/Systeml.sml"
 
+val _ = use "../tools/Holmake/AttributeSyntax.sig";
+val _ = use "../tools/Holmake/AttributeSyntax.sml";
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sig";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sml";

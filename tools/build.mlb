@@ -1,6 +1,7 @@
 $(SML_LIB)/basis/basis.mlb
 ../tools-poly/poly/polytools-basic.mlb
 Holmake/hmcore.mlb
+Holmake/mlton/PolyML.sml
 buildcline_dtype.sml
 buildcline.sig
 buildcline.sml

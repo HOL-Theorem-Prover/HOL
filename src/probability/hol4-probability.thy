@@ -1,5 +1,5 @@
 name: hol-probability
-version: 1.1
+version: 1.2
 description: HOL probability theory
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

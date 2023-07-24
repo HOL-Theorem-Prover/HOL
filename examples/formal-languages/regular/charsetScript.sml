@@ -222,8 +222,8 @@ Proof
  Cases >> Cases
  >> rw_tac std_ss [charset_cmp_def]
  >> BasicProvers.EVERY_CASE_TAC
- >> metis_tac [num_cmp_good,good_cmp_thm,comparison_distinct])
-;
+ >> metis_tac [num_cmp_good,good_cmp_thm,comparison_distinct]
+QED
 
 Theorem charset_cmp_trans :
  !cs1 cs2 cs3.

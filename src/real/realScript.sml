@@ -1137,7 +1137,8 @@ QED
 val REAL_ABS_ZERO = ABS_ZERO;
 
 Theorem ABS_0[simp]:      abs(0) = 0
-Proof REWRITE_TAC[ABS_ZERO]);
+Proof REWRITE_TAC[ABS_ZERO]
+QED
 
 Theorem ABS_1[simp]:      abs(&1) = &1
 Proof REWRITE_TAC[abs, REAL_LE, ZERO_LESS_EQ]
@@ -1479,11 +1480,18 @@ QED
 (* Define integer powers                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val pow = save_thm("pow", real_pow); (* moved to realaxTheory *)
+(* |- (!x. x pow 0 = 1) /\ !x n. x pow SUC n = x * x pow n *)
+Theorem pow = real_pow
 
 (* from arithmeticTheory.EXP *)
 val _ = overload_on (UnicodeChars.sup_2, “\x. x pow 2”);
 val _ = overload_on (UnicodeChars.sup_3, “\x. x pow 3”);
+
+Theorem REAL_POW : (* from examples/miller *)
+    !m n. &m pow n = &(m EXP n)
+Proof
+    REWRITE_TAC [REAL_OF_NUM_POW]
+QED
 
 Theorem pow0[simp] = CONJUNCT1 pow;
 
@@ -5121,7 +5129,7 @@ val lemma = Q.prove
  *)
 Theorem REAL_LT_INV2 = REAL_LT_INV
 
-(* |- !x. 0 < x ==> 0 < realinv x *)
+(* |- !x. 0 < x ==> 0 < inv x *)
 Theorem REAL_LT_INV' = REAL_INV_POS
 
 Theorem RAT_LEMMA4 :
@@ -5143,6 +5151,54 @@ Proof
   REPEAT DISCH_TAC THEN REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
   MATCH_MP_TAC(TAUT `(a <=> a') /\ (b <=> b') ==> (a /\ b <=> a' /\ b')`) THEN
   CONJ_TAC THEN MATCH_MP_TAC RAT_LEMMA4 THEN ASM_REWRITE_TAC[]
+QED
+
+(* The following common used HALF theorems were moved from seqTheory *)
+Theorem HALF_POS :
+    0:real < 1/2
+Proof
+    PROVE_TAC [REAL_LT_01, REAL_LT_HALF1]
+QED
+
+Theorem HALF_LT_1 :
+    1 / 2 < 1:real
+Proof
+    ONCE_REWRITE_TAC [GSYM REAL_INV_1OVER, GSYM REAL_INV1]
+ >> MATCH_MP_TAC REAL_LT_INV
+ >> RW_TAC arith_ss [REAL_LT]
+QED
+
+Theorem HALF_CANCEL :
+    2 * (1 / 2) = 1:real
+Proof
+    Suff `2 * inv 2 = 1:real` >- PROVE_TAC [REAL_INV_1OVER]
+ >> PROVE_TAC [REAL_MUL_RINV, REAL_ARITH ``~(2:real = 0)``]
+QED
+
+Theorem X_HALF_HALF :
+    !x:real. 1/2 * x + 1/2 * x = x
+Proof
+    STRIP_TAC
+ >> MATCH_MP_TAC (REAL_ARITH ``(2 * (a:real) = 2 * b) ==> (a = b)``)
+ >> RW_TAC std_ss [REAL_ADD_LDISTRIB, REAL_MUL_ASSOC, HALF_CANCEL]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem ONE_MINUS_HALF :
+    (1:real) - 1 / 2 = 1 / 2
+Proof
+    MP_TAC (Q.SPEC `1` X_HALF_HALF)
+ >> RW_TAC std_ss [REAL_MUL_RID]
+ >> MATCH_MP_TAC (REAL_ARITH ``((x:real) + 1 / 2 = y + 1 / 2) ==> (x = y)``)
+ >> RW_TAC std_ss [REAL_SUB_ADD]
+QED
+
+Theorem POW_HALF_POS :
+    !n. 0:real < (1/2) pow n
+Proof
+    STRIP_TAC
+ >> Cases_on `n` >- PROVE_TAC [REAL_LT_01, pow]
+ >> PROVE_TAC [HALF_POS, POW_POS_LT]
 QED
 
 val _ = export_theory();
