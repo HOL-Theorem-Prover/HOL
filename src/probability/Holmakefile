@@ -56,7 +56,6 @@ install: hol4-extreal.thy hol4-extreal.art hol4-probability.thy hol4-probability
 	opentheory install --reinstall hol4-extreal.thy
 	opentheory install --reinstall hol4-probability.thy
 
-extreal.art: extreal.otd
 probability.art: probability.otd
 
 endif

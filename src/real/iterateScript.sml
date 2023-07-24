@@ -5027,4 +5027,71 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
+(* moved here from extrealTheory *)
+Theorem ABS_LE_HALF_POW2 :
+  !x y :real. abs (x * y) <= 1/2 * (x pow 2 + y pow 2)
+Proof
+    rpt GEN_TAC
+ >> Cases_on `0 <= x * y`
+ >- (ASM_SIMP_TAC real_ss [abs] \\
+     Know `x * y = (1 / 2) * 2 * x * y`
+     >- (Suff `1 / 2 * 2 = 1r`
+         >- (Rewr' >> REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_MUL_LID]) \\
+         MATCH_MP_TAC REAL_DIV_RMUL >> SIMP_TAC real_ss []) >> Rewr' \\
+     REWRITE_TAC [GSYM REAL_MUL_ASSOC] \\
+     MATCH_MP_TAC REAL_LE_MUL2 >> SIMP_TAC real_ss [REAL_LE_REFL] \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LT_LE_MUL >> ASM_SIMP_TAC real_ss []) \\
+     ONCE_REWRITE_TAC [GSYM REAL_SUB_LE] \\
+     Suff `x pow 2 + y pow 2 - 2 * (x * y) = (x - y) pow 2`
+     >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2]) \\
+     SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
+                       REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                       GSYM REAL_DOUBLE] \\
+     REAL_ARITH_TAC)
+ >> ASM_SIMP_TAC real_ss [abs]
+ >> fs [GSYM real_lt]
+ >> REWRITE_TAC [Once (GSYM REAL_SUB_LE), REAL_SUB_RNEG, REAL_MUL_RNEG]
+ >> Suff `x pow 2 + y pow 2 - -2 * (x * y) = (x + y) pow 2`
+ >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2])
+ >> SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
+                      REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                      GSYM REAL_DOUBLE]
+ >> REAL_ARITH_TAC
+QED
+
+(* moved here from extrealTheory *)
+Theorem REAL_LE_MUL_EPSILON :
+    !x y:real. (!z. 0 < z /\ z < 1 ==> z * x <= y) ==> x <= y
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `x = 0`
+ >- (Q.PAT_X_ASSUM `!z. P z` (MP_TAC o Q.SPEC `1/2`)
+     >> RW_TAC real_ss [REAL_HALF_BETWEEN])
+ >> Cases_on `0 < x`
+ >- (MATCH_MP_TAC REAL_LE_EPSILON \\
+     RW_TAC std_ss [GSYM REAL_LE_SUB_RADD] \\
+     Cases_on `e < x`
+     >- (MATCH_MP_TAC REAL_LE_TRANS \\
+         Q.EXISTS_TAC `(1 - e/x) * x` \\
+         CONJ_TAC
+         >- (RW_TAC real_ss [REAL_SUB_RDISTRIB] \\
+             METIS_TAC [REAL_DIV_RMUL, REAL_LE_REFL]) \\
+         Q.PAT_X_ASSUM `!z. P z` MATCH_MP_TAC \\
+         RW_TAC real_ss [REAL_LT_SUB_RADD, REAL_LT_ADDR, REAL_LT_DIV, REAL_LT_SUB_LADD,
+                         REAL_LT_1, REAL_LT_IMP_LE]) \\
+     FULL_SIMP_TAC std_ss [REAL_NOT_LT] \\
+     MATCH_MP_TAC REAL_LE_TRANS \\
+     Q.EXISTS_TAC `0` \\
+     RW_TAC real_ss [REAL_LE_SUB_RADD] \\
+     MATCH_MP_TAC REAL_LE_TRANS \\
+     Q.EXISTS_TAC `(1 / 2) * x` \\
+     RW_TAC real_ss [REAL_LE_MUL, REAL_LT_IMP_LE])
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC `(1/2)*x`
+ >> RW_TAC real_ss []
+ >> RW_TAC std_ss [Once (GSYM REAL_LE_NEG), GSYM REAL_MUL_RNEG]
+ >> Suff `1/2 * ~x <= 1 * ~x` >- RW_TAC real_ss []
+ >> METIS_TAC [REAL_NEG_GT0, REAL_LT_TOTAL, REAL_LE_REFL, REAL_HALF_BETWEEN, REAL_LE_RMUL]
+QED
+
 val _ = export_theory();
