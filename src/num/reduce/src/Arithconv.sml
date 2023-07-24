@@ -150,7 +150,7 @@ ODD_CONV “ODD 7000000001”
 *)
 val ODD_CONV =
   REWR_CONV cvTheory.ODD_to_cv
-  THENC RAND_CONV (RAND_CONV cv_eval)
+  THENC RAND_CONV cv_eval
   THENC REWRITE_CONV [c2b_thm]
 
 val _ = Parse.temp_set_grammars ambient_grammars
