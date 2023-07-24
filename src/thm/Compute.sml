@@ -328,10 +328,19 @@ fun mk_num ({cv_num_tm, numeral_tm, ...} : ctsyntax) t =
 fun mk_pair ({cv_pair_tm, ...} : ctsyntax) s t =
   mk_comb (mk_comb (cv_pair_tm, s), t);
 
-fun mk_cval_term ct cv =
-  case cv of
-    Num n => mk_num ct (mk_numeral ct n)
-  | Pair (p, q) => mk_pair ct (mk_cval_term ct p) (mk_cval_term ct q);
+local
+  fun mk_cv_zero ({cv_num_tm, zero_tm, ...} : ctsyntax) =
+    mk_comb (cv_num_tm, zero_tm)
+in
+  fun mk_cval_term ct cv =
+    case cv of
+      Num n =>
+        if n = Arbnum.zero then
+          mk_cv_zero ct
+        else
+          mk_num ct (mk_numeral ct n)
+    | Pair (p, q) => mk_pair ct (mk_cval_term ct p) (mk_cval_term ct q);
+end (* local *)
 
 (* -------------------------------------------------------------------------
  * [dest_code_eqn] takes apart a code equation and performs a type check at the
