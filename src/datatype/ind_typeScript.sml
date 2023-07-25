@@ -1,5 +1,6 @@
 open HolKernel boolLib Prim_rec Parse simpLib boolSimps
-     numTheory prim_recTheory arithmeticTheory InductiveDefinition;
+     numTheory prim_recTheory arithmeticTheory InductiveDefinition
+     numpairTheory
 
 val hol_ss = bool_ss ++ numSimps.old_ARITH_ss ++ numSimps.REDUCE_ss
 
@@ -29,33 +30,8 @@ val INJ_INVERSE2 = store_thm(
 (* Define an injective pairing function on ":num".                           *)
 (* ------------------------------------------------------------------------- *)
 
-val NUMPAIR = new_definition(
-  "NUMPAIR",
-  Term`NUMPAIR x y = (2 EXP x) * (2 * y + 1)`);
+val NUMPAIR_DEST = CONJ (SPEC_ALL nfst_npair) (SPEC_ALL nsnd_npair) |> GEN_ALL
 
-val NUMPAIR_INJ_LEMMA = store_thm(
-  "NUMPAIR_INJ_LEMMA",
-  ``!x1 y1 x2 y2. (NUMPAIR x1 y1 = NUMPAIR x2 y2) ==> (x1 = x2)``,
-  REWRITE_TAC[NUMPAIR] THEN REPEAT(numLib.INDUCT_TAC THEN GEN_TAC) THEN
-  ASM_SIMP_TAC hol_ss [EXP, GSYM MULT_ASSOC, EQ_MULT_LCANCEL,
-                       NOT_SUC, GSYM NOT_SUC, INV_SUC_EQ] THEN
-  TRY (FIRST_ASSUM MATCH_ACCEPT_TAC) THEN
-  DISCH_THEN(MP_TAC o Q.AP_TERM `EVEN`) THEN
-  SIMP_TAC hol_ss [EVEN_MULT, EVEN_ADD]);
-
-val NUMPAIR_INJ = store_thm (
-  "NUMPAIR_INJ",
-  ``!x1 y1 x2 y2. (NUMPAIR x1 y1 = NUMPAIR x2 y2) <=> (x1 = x2) /\ (y1 = y2)``,
-  REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP NUMPAIR_INJ_LEMMA) THEN
-  POP_ASSUM MP_TAC THEN REWRITE_TAC[NUMPAIR] THEN
-  SIMP_TAC hol_ss [EQ_MULT_LCANCEL, EQ_ADD_RCANCEL, EXP_EQ_0]);
-
-val NUMPAIR_DEST = Rsyntax.new_specification {
-  consts = [{const_name = "NUMFST", fixity = NONE},
-            {const_name = "NUMSND", fixity = NONE}],
-  name = "NUMPAIR_DEST[notuserdef]",
-  sat_thm = MATCH_MP INJ_INVERSE2 NUMPAIR_INJ};
 
 (* ------------------------------------------------------------------------- *)
 (* Also, an injective map bool->num->num (even easier!)                      *)
@@ -118,7 +94,7 @@ val INJA_INJ = store_thm(
 
 val INJF = new_definition(
   "INJF",
-  Term`INJF (f:num->(num->'a->bool)) = \n. f (NUMFST n) (NUMSND n)`);
+  Term`INJF (f:num->(num->'a->bool)) = \n. f (nfst n) (nsnd n)`);
 
 val INJF_INJ = store_thm(
   "INJF_INJ",
@@ -127,7 +103,7 @@ val INJF_INJ = store_thm(
   REWRITE_TAC[FUN_EQ_THM] THEN
   MAP_EVERY Q.X_GEN_TAC [`n:num`, `m:num`, `a:'a`] THEN
   POP_ASSUM(MP_TAC o REWRITE_RULE[INJF]) THEN
-  DISCH_THEN(MP_TAC o C Q.AP_THM `a:'a` o C Q.AP_THM `NUMPAIR n m`) THEN
+  DISCH_THEN(MP_TAC o C Q.AP_THM `a:'a` o C Q.AP_THM `n *, m`) THEN
   SIMP_TAC bool_ss [NUMPAIR_DEST]);
 
 (* ------------------------------------------------------------------------- *)
@@ -403,7 +379,7 @@ val ISO_USAGE = store_thm(
    ---------------------------------------------------------------------- *)
 
 val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "ind_type"})
-            ["NUMPAIR", "NUMSUM", "INJN", "INJA", "INJF", "INJP",
+            ["NUMSUM", "INJN", "INJA", "INJF", "INJP",
              "FCONS", "ZCONSTR", "ZBOT", "BOTTOM", "CONSTR", "FNIL", "ISO"]
 
 local open OpenTheoryMap in

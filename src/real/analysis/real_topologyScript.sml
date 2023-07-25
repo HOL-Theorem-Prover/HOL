@@ -49,6 +49,9 @@ val SUM_ABS_LE         = SUM_ABS_LE';        (* iterateTheory *)
 val SUM_EQ             = SUM_EQ';            (* iterateTheory *)
 val SUM_LE             = SUM_LE';            (* iterateTheory *)
 
+Overload "*_c"[local,inferior] = “pred_set$CROSS”;
+val _ = temp_set_fixity "*_c" (Infixl 600)
+
 (* experimental overloads *)
 Overload uncountable           = “\s. ~countable s”
 Overload UNCOUNTABLE[inferior] = “uncountable”
