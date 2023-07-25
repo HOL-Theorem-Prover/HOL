@@ -13,12 +13,11 @@ HOLHEAP = heap
 OBJS = real/realLib n-bit/fcpLib res_quan/src/hurdUtils probability/probabilityTheory
 FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
                 $(HOLDIR)/sigobj/posetTheory.uo
-HEAP0 = $(HOLDIR)/src/probability/probheap
 
 all: $(HOLHEAP)
 
-$(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state $(HEAP0)
-	$(protect $(HOLDIR)/bin/buildheap) -b $(HEAP0) -o $@ $(FULL_OBJPATHS)
+$(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(FULL_OBJPATHS)
 endif
 
 all: $(DEFAULT_TARGETS)

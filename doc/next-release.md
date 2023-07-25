@@ -60,6 +60,9 @@ New theories:
   variable length arrays. The soundness of a parameterized matcher is
   proved.
 
+- `permutes`: The theory of permutations for general and finite sets, originally
+  ported from HOL-Light's `Library/permutations.ml`.
+
 New tools:
 ----------
 

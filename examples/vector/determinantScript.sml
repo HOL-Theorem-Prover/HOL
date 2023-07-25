@@ -11,9 +11,9 @@ open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory combinTheory pred_setTheory pairTheory boolTheory
      PairedLambda pred_setLib fcpTheory fcpLib tautLib numLib realTheory
-     realLib InductiveDefinition hurdUtils;
+     realLib InductiveDefinition hurdUtils cardinalTheory;
 
-open permutationTheory iterateTheory vectorTheory vectorLib matrixTheory;
+open permutesTheory iterateTheory vectorTheory vectorLib matrixTheory;
 
 open Q;
 
@@ -21,10 +21,9 @@ val _ = new_theory "determinant";
 
 Overload PRODUCT[local]  = “iterate$product”
 Overload SUM[local]      = “iterate$Sum”
-Overload SIGN[local]     = “permutation$sign”
-Overload SWAP[local]     = “permutation$swap”
-Overload INVERSE[local]  = “permutation$inverse”
-Overload PERMUTES[local] = “permutation$permutes”
+Overload SWAP[local]     = “permutes$swap”
+Overload INVERSE[local]  = “permutes$inverse”
+Overload PERMUTES[local] = “permutes$permutes”
 Overload VSUM[local]     = “vector$vsum”
 Overload TRANSP[local]   = “matrix$transp”
 Overload MAT[local]      = “matrix$mat”
@@ -37,8 +36,8 @@ Overload VECTOR_0[local] = “vector$vec 0”
 val SUM_EQ       = iterateTheory.SUM_EQ';
 val SUM_EQ_0     = iterateTheory.SUM_EQ_0';
 val SUM_ADD      = iterateTheory.SUM_ADD';
-val SWAP_DEF     = permutationTheory.swap_def;
-val PERMUTES_DEF = permutationTheory.permutes;
+val SWAP_DEF     = permutesTheory.swap_def;
+val PERMUTES_DEF = permutesTheory.permutes;
 val VSUM_DEF     = vectorTheory.vsum_def;
 val TRANSP_DEF   = matrixTheory.transp_def;
 val MAT_DEF      = matrixTheory.mat_def;
@@ -52,14 +51,67 @@ val EQ_IMP       = SPECL [‘a’, ‘b’] boolTheory.EQ_IMPLIES;
 val ASSUME = Thm.ASSUME;
 val AP_TERM = Thm.AP_TERM;
 
-Theorem LT_REFL :
-    !n:num. ~(n < n)
-Proof
-    rw []
-QED
+(* |- !n. ~(n < n) *)
+val LT_REFL = prim_recTheory.LESS_REFL;
 
 (* prioritize_real() *)
 val _ = prefer_real();
+
+(* ------------------------------------------------------------------------- *)
+(* Sign of a permutation as a real number.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+Definition sign_def :
+   (sign p):real = if evenperm p then &1 else - &1
+End
+
+Overload SIGN[local] = “sign”
+
+Theorem SIGN_NZ :
+   !p. ~(sign p = &0)
+Proof
+  REWRITE_TAC[sign_def] THEN GEN_TAC THEN COND_CASES_TAC THEN REAL_ARITH_TAC
+QED
+
+Theorem SIGN_I :
+   sign I = &1
+Proof
+  REWRITE_TAC[sign_def, EVENPERM_I]
+QED
+
+Theorem SIGN_INVERSE :
+   !p. permutation p ==> (sign (inverse p) = sign p)
+Proof
+  SIMP_TAC bool_ss[sign_def, EVENPERM_INVERSE]
+QED
+
+Theorem SIGN_COMPOSE :
+   !p q. permutation p /\ permutation q ==> (sign (p o q) = sign (p) * sign (q))
+Proof
+  SIMP_TAC bool_ss[sign_def, EVENPERM_COMPOSE] THEN REPEAT STRIP_TAC THEN
+  MAP_EVERY Q.ASM_CASES_TAC [`evenperm p`, `evenperm q`] THEN
+  ASM_REWRITE_TAC[] THEN REAL_ARITH_TAC
+QED
+
+Theorem SIGN_SWAP :
+   !a b. sign (swap(a,b)) = if a = b then &1 else - &1
+Proof
+  REWRITE_TAC[sign_def, EVENPERM_SWAP]
+QED
+
+Theorem SIGN_IDEMPOTENT :
+   !p. sign (p) * sign (p) = &1
+Proof
+  GEN_TAC THEN REWRITE_TAC[sign_def] THEN
+  COND_CASES_TAC THEN REAL_ARITH_TAC
+QED
+
+Theorem REAL_ABS_SIGN :
+   !p. abs(sign p) = &1
+Proof
+  GEN_TAC THEN REWRITE_TAC[sign_def] THEN
+  COND_CASES_TAC THEN REAL_ARITH_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of determinant.                                                *)
