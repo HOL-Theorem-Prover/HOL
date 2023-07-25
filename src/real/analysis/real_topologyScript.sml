@@ -18,13 +18,13 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numTheory numLib unwindLib tautLib Arith prim_recTheory
-     combinTheory quotientTheory arithmeticTheory realTheory real_sigmaTheory
+open numTheory numLib unwindLib tautLib prim_recTheory
+     combinTheory quotientTheory arithmeticTheory realTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
-     sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
+     sumTheory InductiveDefinition listTheory mesonLib
      realLib topologyTheory metricTheory netsTheory;
 
-open wellorderTheory cardinalTheory iterateTheory hurdUtils;
+open wellorderTheory cardinalTheory permutesTheory iterateTheory hurdUtils;
 
 val _ = new_theory "real_topology";
 
@@ -57,22 +57,6 @@ Overload uncountable           = “\s. ~countable s”
 Overload UNCOUNTABLE[inferior] = “uncountable”
 
 (* ------------------------------------------------------------------------- *)
-(* Permutes                                                                  *)
-(* ------------------------------------------------------------------------- *)
-
-val _ = set_fixity "permutes" (Infix(NONASSOC, 450));
-
-(* This is different with pred_setTheory.PERMUTES *)
-val permutes = new_definition ("permutes",
- ``p permutes s <=> (!x. ~(x IN s) ==> (p(x) = x)) /\ (!y. ?!x. (p x = y))``);
-
-val PERMUTES_IMAGE = store_thm ("PERMUTES_IMAGE",
- ``!p s. p permutes s ==> (IMAGE p s = s)``,
-  REWRITE_TAC[permutes, EXTENSION, IN_IMAGE] THEN MESON_TAC[]);
-
-val PERMUTES_INJECTIVE = store_thm ("PERMUTES_INJECTIVE",
- ``!p s. p permutes s ==> !x y. (p(x) = p(y)) <=> (x = y)``,
-  REWRITE_TAC[permutes] THEN MESON_TAC[]);
 
 val EXISTS_IN_INSERT = store_thm ("EXISTS_IN_INSERT",
  ``!P a s. (?x. x IN (a INSERT s) /\ P x) <=> P a \/ ?x. x IN s /\ P x``,
@@ -1428,7 +1412,7 @@ val EXCHANGE_LEMMA = store_thm ("EXCHANGE_LEMMA",
       FINITE t /\ independent s /\ s SUBSET span t ==>
       ?t'. t' HAS_SIZE CARD t /\ s SUBSET t' /\ t' SUBSET s UNION t /\
         s SUBSET span t') ==>
-    (!t'':real->bool s':real->bool'. (CARD (t'' DIFF s') < CARD (t DIFF s)) ==>
+    (!t'':real->bool s':real->bool. (CARD (t'' DIFF s') < CARD (t DIFF s)) ==>
       FINITE t'' /\ independent s' /\ s' SUBSET span t'' ==>
       ?t'. t' HAS_SIZE CARD t'' /\ s' SUBSET t' /\ t' SUBSET s' UNION t'' /\
         s' SUBSET span t')`` THENL

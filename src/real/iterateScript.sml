@@ -19,8 +19,8 @@
 open HolKernel Parse boolLib bossLib;
 
 open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
-     arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory hurdUtils
-     optionTheory relationTheory;
+     arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory pred_setLib
+     optionTheory relationTheory permutesTheory hurdUtils;
 
 open realTheory RealArith realSimps wellorderTheory cardinalTheory;
 
@@ -5092,6 +5092,216 @@ Proof
  >> RW_TAC std_ss [Once (GSYM REAL_LE_NEG), GSYM REAL_MUL_RNEG]
  >> Suff `1/2 * ~x <= 1 * ~x` >- RW_TAC real_ss []
  >> METIS_TAC [REAL_NEG_GT0, REAL_LT_TOTAL, REAL_LE_REFL, REAL_HALF_BETWEEN, REAL_LE_RMUL]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Permutations of index set for iterated operations.                        *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem ITERATE_PERMUTE :
+  !op. monoidal op ==>
+       !(f:'a -> 'b) p s. p permutes s ==>
+                          (iterate op s f = iterate op s (f o p))
+Proof
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP ITERATE_BIJECTION) THEN
+  PROVE_TAC[permutes]
+QED
+
+Theorem NSUM_PERMUTE :
+   !f p s. p permutes s ==> (nsum s f = nsum s (f o p))
+Proof
+  REWRITE_TAC[nsum] THEN MATCH_MP_TAC ITERATE_PERMUTE THEN
+  REWRITE_TAC[MONOIDAL_ADD]
+QED
+
+Theorem NSUM_PERMUTE_COUNT :
+   !f p n. p permutes (count n) ==> (nsum (count n) f = nsum (count n) (f o p))
+Proof
+  PROVE_TAC[NSUM_PERMUTE, FINITE_COUNT]
+QED
+
+Theorem NSUM_PERMUTE_NUMSEG :
+   !f p m n.
+  p permutes (count n DIFF count m) ==>
+   (nsum (count n DIFF count m) f = nsum (count n DIFF count m) (f o p))
+Proof
+  PROVE_TAC[NSUM_PERMUTE, FINITE_COUNT, FINITE_DIFF]
+QED
+
+Theorem SUM_PERMUTE :
+   !f p s. p permutes s ==> (sum s f = sum s (f o p))
+Proof
+  REWRITE_TAC[sum_def] THEN MATCH_MP_TAC ITERATE_PERMUTE THEN
+  REWRITE_TAC[MONOIDAL_REAL_ADD]
+QED
+
+Theorem SUM_PERMUTE_COUNT :
+   !f p n. p permutes (count n) ==> (sum (count n) f = sum (count n) (f o p))
+Proof
+  PROVE_TAC[SUM_PERMUTE, FINITE_COUNT]
+QED
+
+Theorem SUM_PERMUTE_NUMSEG :
+   !f p m n.
+  p permutes (count n DIFF count m) ==>
+   (sum (count n DIFF count m) f = sum (count n DIFF count m) (f o p))
+Proof
+  PROVE_TAC[SUM_PERMUTE, FINITE_COUNT, FINITE_DIFF]
+QED
+
+Theorem PRODUCT_PERMUTE :
+   !f p s. p permutes s ==> (product s f = product s (f o p))
+Proof
+  REWRITE_TAC[product] THEN MATCH_MP_TAC ITERATE_PERMUTE THEN
+  REWRITE_TAC[MONOIDAL_REAL_MUL]
+QED
+
+Theorem PRODUCT_PERMUTE_COUNT :
+   !f p n.
+    p permutes (count n) ==> (product (count n) f = product (count n) (f o p))
+Proof
+  PROVE_TAC[PRODUCT_PERMUTE, FINITE_COUNT]
+QED
+
+Theorem PRODUCT_PERMUTE_NUMSEG :
+  !f p m n.
+    p permutes (count n DIFF count m) ==>
+    (product (count n DIFF count m) f = product (count n DIFF count m) (f o p))
+Proof
+  PROVE_TAC[PRODUCT_PERMUTE, FINITE_COUNT, FINITE_DIFF]
+QED
+
+Theorem PERMUTES_IN_NUMSEG :
+   !p n i. p permutes {1 .. n} /\ i IN {1 .. n} ==> 1 <= p(i) /\ p(i) <= n
+Proof
+  REWRITE_TAC[permutes, IN_NUMSEG] THEN PROVE_TAC[]
+QED
+
+Theorem SUM_PERMUTATIONS_INVERSE :
+   !f n. sum {p | p permutes count n } f =
+         sum {p | p permutes count n } (\p. f(inverse p))
+Proof
+  REPEAT GEN_TAC THEN
+  GEN_REWRITE_TAC (funpow 2 LAND_CONV) empty_rewrites
+   [GSYM IMAGE_INVERSE_PERMUTATIONS] THEN
+  SIMP_TAC bool_ss
+   [Once (Q.prove(`{f x | p x} = IMAGE f {x | p x}`,
+     REWRITE_TAC[EXTENSION, IN_IMAGE] THEN
+     CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN REWRITE_TAC[]))] THEN
+  GEN_REWRITE_TAC (RAND_CONV o RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites
+                  [GSYM o_DEF] THEN
+  MATCH_MP_TAC SUM_IMAGE THEN
+  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
+  PROVE_TAC[PERMUTES_INVERSE_INVERSE]
+QED
+
+Theorem SUM_PERMUTATIONS_COMPOSE_L :
+   !f s q. q permutes s ==>
+           sum {p | p permutes s} f =
+           sum {p | p permutes s} (\p. f(q o p))
+Proof
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(fn th => GEN_REWRITE_TAC (funpow 2 LAND_CONV) empty_rewrites
+   [GSYM(MATCH_MP IMAGE_COMPOSE_PERMUTATIONS_L th)]) THEN
+  SIMP_TAC bool_ss
+   [Once (Q.prove(`{f x | p x} = IMAGE f {x | p x}`,
+     REWRITE_TAC[EXTENSION, IN_IMAGE] THEN
+     CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN REWRITE_TAC[]))] THEN
+  REWRITE_TAC[GSYM o_DEF, ETA_THM] THEN
+  MATCH_MP_TAC SUM_IMAGE THEN
+  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM ``\p:'a-> 'a. inverse(q:'a-> 'a) o p``) THEN
+  BETA_TAC THEN REWRITE_TAC[o_ASSOC] THEN
+  EVERY_ASSUM(CONJUNCTS_THEN SUBST1_TAC o MATCH_MP PERMUTES_INVERSES_o) THEN
+  REWRITE_TAC[I_o_ID]
+QED
+
+Theorem SUM_PERMUTATIONS_COMPOSE_L_COUNT :
+   !f n q. q permutes count n ==>
+           sum {p | p permutes count n} f =
+           sum {p | p permutes count n} (\p. f(q o p))
+Proof
+  REWRITE_TAC[SUM_PERMUTATIONS_COMPOSE_L]
+QED
+
+Theorem SUM_PERMUTATIONS_COMPOSE_L_NUMSEG :
+   !f m n q.
+        q permutes (count n DIFF count m)
+        ==> sum {p | p permutes (count n DIFF count m)} f =
+            sum {p | p permutes (count n DIFF count m)} (\p. f(q o p))
+Proof
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(fn th => GEN_REWRITE_TAC (funpow 2 LAND_CONV) empty_rewrites
+   [GSYM(MATCH_MP IMAGE_COMPOSE_PERMUTATIONS_L th)]) THEN
+  SIMP_TAC bool_ss
+   [Once (Q.prove(`{f x | p x} = IMAGE f {x | p x}`,
+     REWRITE_TAC[EXTENSION, IN_IMAGE] THEN
+     CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN REWRITE_TAC[]))] THEN
+  REWRITE_TAC[GSYM o_DEF, ETA_THM] THEN
+  MATCH_MP_TAC SUM_IMAGE THEN
+  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM “\p:num-> num. inverse(q:num-> num) o p”) THEN
+  BETA_TAC THEN REWRITE_TAC[o_ASSOC] THEN
+  EVERY_ASSUM(CONJUNCTS_THEN SUBST1_TAC o MATCH_MP PERMUTES_INVERSES_o) THEN
+  REWRITE_TAC[I_o_ID]
+QED
+
+Theorem SUM_PERMUTATIONS_COMPOSE_R :
+   !f s q.
+        q permutes s
+        ==> sum {p | p permutes s} f =
+            sum {p | p permutes s} (\p. f(p o q))
+Proof
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(fn th => GEN_REWRITE_TAC (funpow 2 LAND_CONV) empty_rewrites
+   [GSYM(MATCH_MP IMAGE_COMPOSE_PERMUTATIONS_R th)]) THEN
+  SIMP_TAC bool_ss
+   [Once (Q.prove(`{f x | p x} = IMAGE f {x | p x}`,
+     REWRITE_TAC[EXTENSION, IN_IMAGE] THEN
+     CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN REWRITE_TAC[]))] THEN
+  SIMP_TAC bool_ss[GSYM o_ABS_R] THEN
+  MATCH_MP_TAC SUM_IMAGE THEN
+  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM ``\p:'a-> 'a. p o inverse(q:'a-> 'a)``) THEN
+  BETA_TAC THEN REWRITE_TAC[GSYM o_ASSOC] THEN
+  EVERY_ASSUM(CONJUNCTS_THEN SUBST1_TAC o MATCH_MP PERMUTES_INVERSES_o) THEN
+  REWRITE_TAC[I_o_ID]
+QED
+
+Theorem SUM_PERMUTATIONS_COMPOSE_R_COUNT :
+   !f n q.
+        q permutes count n
+        ==> sum {p | p permutes count n} f =
+            sum {p | p permutes count n} (\p. f(p o q))
+Proof
+  REWRITE_TAC[SUM_PERMUTATIONS_COMPOSE_R]
+QED
+
+Theorem SUM_PERMUTATIONS_COMPOSE_R_NUMSEG :
+   !f m n q.
+        q permutes (count n DIFF count m)
+        ==> sum {p | p permutes (count n DIFF count m)} f =
+            sum {p | p permutes (count n DIFF count m)} (\p. f(p o q))
+Proof
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(fn th => GEN_REWRITE_TAC (funpow 2 LAND_CONV) empty_rewrites
+   [GSYM(MATCH_MP IMAGE_COMPOSE_PERMUTATIONS_R th)]) THEN
+  SIMP_TAC bool_ss
+   [Once (Q.prove(`{f x | p x} = IMAGE f {x | p x}`,
+     REWRITE_TAC[EXTENSION, IN_IMAGE] THEN
+     CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN REWRITE_TAC[]))] THEN
+  SIMP_TAC bool_ss[GSYM o_ABS_R] THEN
+  MATCH_MP_TAC SUM_IMAGE THEN
+  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM “\p:num-> num. p o inverse(q:num-> num)”) THEN
+  BETA_TAC THEN REWRITE_TAC[GSYM o_ASSOC] THEN
+  EVERY_ASSUM(CONJUNCTS_THEN SUBST1_TAC o MATCH_MP PERMUTES_INVERSES_o) THEN
+  REWRITE_TAC[I_o_ID]
 QED
 
 val _ = export_theory();

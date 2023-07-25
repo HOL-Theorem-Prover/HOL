@@ -3,28 +3,6 @@ INCLUDES = ../real ../real/analysis ../sort ../res_quan/src ../n-bit \
 
 EXTRA_CLEANS = selftest.exe prob-selftest.log
 
-ifdef POLY
-HOLHEAP = probheap
-EXTRA_CLEANS += $(HOLHEAP)
-
-REAL_OBJNAMES = Diff transcTheory
-
-OTHER_OBJNAMES = ../res_quan/src/res_quanTools ../res_quan/src/hurdUtils \
-	../res_quan/src/jrhUtils
-
-SIGOBJ_OBJNAMES = pred_setLib logrootTheory
-
-OBJS = $(patsubst %,../real/analysis/%.uo,$(REAL_OBJNAMES)) \
-       $(patsubst %,%.uo,$(OTHER_OBJNAMES)) \
-       $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(SIGOBJ_OBJNAMES))
-
-all: $(HOLHEAP)
-
-$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/src/real/analysis/realheap)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ \
-		-b $(protect $(HOLDIR)/src/real/analysis/realheap) $(OBJS)
-endif
-
 all: $(DEFAULT_TARGETS) selftest.exe
 
 selftest.exe: selftest.uo

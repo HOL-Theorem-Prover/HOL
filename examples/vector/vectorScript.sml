@@ -17,7 +17,7 @@ open arithmeticTheory combinTheory pred_setTheory pairTheory PairedLambda
      topologyTheory InductiveDefinition;
 
 open realTheory realLib iterateTheory real_sigmaTheory RealArith mesonLib;
-open hurdUtils cardinalTheory permutationTheory;
+open hurdUtils cardinalTheory permutesTheory;
 
 val _ = new_theory "vector";
 

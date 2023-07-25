@@ -1867,8 +1867,6 @@ val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
   SIMP_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_IMAGE] THEN
   METIS_TAC[SUBSET_DEF, IN_IMAGE]);
 
-Theorem CARD_IMAGE_LE = pred_setTheory.CARD_IMAGE
-
 val SURJECTIVE_IFF_INJECTIVE_GEN = store_thm ("SURJECTIVE_IFF_INJECTIVE_GEN",
  ``!s t f:'a->'b.
         FINITE s /\ FINITE t /\ (CARD s = CARD t) /\ (IMAGE f s) SUBSET t
