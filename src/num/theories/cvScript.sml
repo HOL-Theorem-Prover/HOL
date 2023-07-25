@@ -172,10 +172,10 @@ Proof
 QED
 
 Theorem c2b_thm[simp]:
-  (c2b (Num (SUC n)) = T) ∧
-  (c2b (Num 1) = T) ∧
-  (c2b (Num 0) = F) ∧
-  (c2b (Num (NUMERAL ZERO)) = F) ∧
+  (c2b (Num (SUC n)) = T) /\
+  (c2b (Num 1) = T) /\
+  (c2b (Num 0) = F) /\
+  (c2b (Num (NUMERAL ZERO)) = F) /\
   (c2b (Pair x y) = F)
 Proof
   rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ]
