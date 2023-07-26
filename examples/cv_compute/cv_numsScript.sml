@@ -14,6 +14,8 @@ val _ = new_theory "cv_nums";
 
 val _ = augment_srw_ss [rewrites [c2b_def]]
 
+Overload "Num" = ``cv$Num``
+
 Definition n2c_def:
   n2c n = Num n
 End

@@ -3,8 +3,8 @@ open arithmeticTheory
 
 fun simp ths = simpLib.ASM_SIMP_TAC (BasicProvers.srw_ss()) ths
 
-val M = “(λf n. cv_if (cv_lt n (Num 1)) (Num 1)
-             (cv_mul n (f (cv_sub n (Num 1)))))”
+val M = “(λf n. cv_if (cv_lt n (cv$Num 1)) (cv$Num 1)
+             (cv_mul n (f (cv_sub n (cv$Num 1)))))”
 val factc_def0 = new_definition("factc_def0",
   “factc = WFREC (measure cv_size_alt) ^M”);
 
