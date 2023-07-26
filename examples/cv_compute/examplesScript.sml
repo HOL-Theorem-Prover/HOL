@@ -44,6 +44,9 @@ open arithmeticTheory listTheory prim_recTheory cvTheory;
 
 val _ = new_theory "examples";
 
+Overload Num = ``cv$Num``
+Overload Pair = ``cv$Pair``
+
 (* -------------------------------------------------------------------------
  * Example 1: factorial
  *

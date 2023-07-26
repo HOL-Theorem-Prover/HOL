@@ -5,6 +5,14 @@ open cvTheory transferTheory transferLib cvxferTheory
 
 val _ = new_theory "cvxferExamples";
 
+Overload Num = “cv$Num”
+Overload Pair = “cv$Pair”
+
+Definition c2n_def[simp]:
+  c2n (Num n) = n /\
+  c2n _ = 0
+End
+
 (* ----------------------------------------------------------------------
     factorial
    ---------------------------------------------------------------------- *)

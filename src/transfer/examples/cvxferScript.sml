@@ -4,6 +4,9 @@ open transferLib transferTheory cvTheory arithmeticTheory
 
 val _ = new_theory "cvxfer";
 
+Overload Num = “cv$Num”
+Overload Pair = “cv$Pair”
+
 Definition NC_def:
   NC n c <=> c = Num n
 End
