@@ -584,17 +584,17 @@ val _ = List.app Theory.delete_binding
    "itree_el_TY_DEF", "itree_absrep", "itree_next_TY_DEF"];
 
 Definition iflat_def:
-iflat itr = itree_unfold (λx. case x of
+iflat itr = itree_unfold (\x. case x of
                                 INL(Ret r) =>
                                   (case r of
                                      Ret r0 => Ret' r0
                                    | Div => Div'
-                                   | Vis e f => Vis' e (λi. INR (f i)))
+                                   | Vis e f => Vis' e (\i. INR (f i)))
                               | INL(Div) => Div'
-                              | INL(Vis e f) => Vis' e (λi. INL (f i))
+                              | INL(Vis e f) => Vis' e (\i. INL (f i))
                               | INR(Ret r) => Ret' r
                               | INR(Div) => Div'
-                              | INR(Vis e f) => Vis' e (λi. INR (f i))
+                              | INR(Vis e f) => Vis' e (\i. INR (f i))
                          ) (INL itr)
 End
 
@@ -608,9 +608,9 @@ Theorem iflat_ret[simp]:
   iflat (Ret r) = r
 Proof
   simp[iflat_def,itree_unfold] >> Cases_on ‘r’ >> simp[] >>
-  qmatch_abbrev_tac ‘itree_unfold FF o (λi. INR (g i)) = g’ >> simp[FUN_EQ_THM] >>
+  qmatch_abbrev_tac ‘itree_unfold FF o (\i. INR (g i)) = g’ >> simp[FUN_EQ_THM] >>
   simp[Once itree_bisimulation] >> gen_tac >>
-  qexists ‘λi1 i2.
+  qexists ‘\i1 i2.
             i1 = itree_unfold FF (INR i2)’ >> rw[]
   >- gs[itree_unfold, AllCaseEqs(),Abbr ‘FF’]
   >- gs[itree_unfold, AllCaseEqs(),Abbr ‘FF’]
@@ -625,26 +625,26 @@ Proof
 QED
 
 Theorem iflat_eq_ret[simp]:
-  (iflat itr = Ret rv ⇔ itr = Ret (Ret rv)) ∧ (Ret rv = iflat itr ⇔ itr = Ret (Ret rv))           
+  (iflat itr = Ret rv <=> itr = Ret (Ret rv)) /\ (Ret rv = iflat itr <=> itr = Ret (Ret rv))           
 Proof
   Cases_on ‘itr’ >> rw[] >> metis_tac[]
 QED
 
 Theorem iflat_eq_vis:
-  iflat itr = Vis ov f ⇔ (∃ g. itr = Vis ov g ∧ iflat o g = f) ∨
+  iflat itr = Vis ov f <=> (? g. itr = Vis ov g /\ iflat o g = f) \/
                          itr = Ret (Vis ov f)
 Proof
   Cases_on ‘itr’ >> simp[] 
 QED
 
 Theorem iflat_eq_div[simp]:
-  iflat itr = Div ⇔ itr = Div ∨ itr = Ret Div
+  iflat itr = Div <=> itr = Div \/ itr = Ret Div
 Proof
   Cases_on ‘itr’ >> simp[]
 QED
 
 Definition imap_def:
-imap g itr = itree_unfold (λx. case x of
+imap g itr = itree_unfold (\x. case x of
                                 Ret r => Ret' (g r)
                               | Div => Div'
                               | Vis e f => Vis' e f
@@ -670,28 +670,28 @@ Proof
 QED
 
 Theorem imap_eq_ret[simp]:
-   Ret r = imap g itr <=> ∃x. itr = Ret x ∧ g x = r
+   Ret r = imap g itr <=> ?x. itr = Ret x /\ g x = r
 Proof
   simp[imap_def,itree_unfold,AllCaseEqs()]
 QED
 
 Theorem imap_eq_vis:
-  Vis rv f = imap g itr ⇔ ∃h. itr = Vis rv h ∧ imap g o h = f
+  Vis rv f = imap g itr <=> ?h. itr = Vis rv h /\ imap g o h = f
 Proof
   simp[imap_def,itree_unfold,AllCaseEqs()] >> simp[itree_unfold, imap_def,FUN_EQ_THM]
 QED
 
 Theorem imap_eq_div[simp]:
-  (imap g itr = Div ⇔ itr = Div) ∧ (Div = imap g itr ⇔ itr = Div)
+  (imap g itr = Div <=> itr = Div) /\ (Div = imap g itr <=> itr = Div)
 Proof
   gs[imap_def,itree_unfold,AllCaseEqs()]
 QED
 
 Theorem imap_id:
-  imap (λx. x) itr = itr
+  imap (\x. x) itr = itr
 Proof
   simp[Once itree_bisimulation] >>
-  qexists ‘λ itr1 itr2. itr1 = imap (λx. x) itr2’ >> simp[] >> rw[]
+  qexists ‘\ itr1 itr2. itr1 = imap (\x. x) itr2’ >> simp[] >> rw[]
   >> gvs[imap_eq_vis]
 QED
 
@@ -699,7 +699,7 @@ Theorem imap_composition:
   imap (f o g) itr = imap f (imap g itr)
 Proof
   simp[Once itree_bisimulation] >>
-  qexists ‘λi1 i2. ∃itr. i2 = imap f (imap g itr) ∧ i1 = imap (f o g) itr’
+  qexists ‘\i1 i2. ?itr. i2 = imap f (imap g itr) /\ i1 = imap (f o g) itr’
   >> rw[]
   >- metis_tac[]
   >- simp[]
@@ -721,36 +721,36 @@ QED
 Theorem ibind_right_id:
   ibind itr ireturn = itr
 Proof
-  simp[Once itree_bisimulation] >> qexists ‘λi1 i2. i1 = iflat (imap ireturn i2)’
+  simp[Once itree_bisimulation] >> qexists ‘\i1 i2. i1 = iflat (imap ireturn i2)’
   >> rw[iflat_eq_vis]
   >- simp[ibind_def]
   >> gvs[imap_eq_vis]
 QED
 
 Theorem ibind_eq_ret:
-  ibind itr f = Ret v ⇔ ∃v'. itr = Ret v' ∧ f v' = Ret v
+  ibind itr f = Ret v <=> ?v'. itr = Ret v' /\ f v' = Ret v
 Proof
   simp[ibind_def]
 QED
 
 Theorem ibind_eq_div:
-  ibind itr f = Div ⇔ itr = Div ∨ (∃x. itr = Ret x ∧ f x = Div)
+  ibind itr f = Div <=> itr = Div \/ (?x. itr = Ret x /\ f x = Div)
 Proof
   simp[ibind_def]
 QED
 
 Theorem ibind_eq_vis:
-  ibind itr f = Vis rv g ⇔ (∃h. itr = Vis rv h ∧ iflat ∘ imap f ∘ h = g) ∨
-                           (∃x. itr = ireturn x ∧ f x = Vis rv g)
+  ibind itr f = Vis rv g <=> (?h. itr = Vis rv h /\ iflat ∘ imap f ∘ h = g) \/
+                           (?x. itr = ireturn x /\ f x = Vis rv g)
 Proof
   simp[ibind_def,iflat_eq_vis,imap_eq_vis, PULL_EXISTS]
 QED
         
 Theorem ibind_assoc:
-  ibind itr (λx. ibind (f x) g) = ibind (ibind itr f) g
+  ibind itr (\x. ibind (f x) g) = ibind (ibind itr f) g
 Proof
   simp[Once itree_bisimulation] >>
-  qexists ‘λi1 i2. ∃itr. i1 = ibind itr (λx. ibind (f x) g) ∧ i2 = ibind (ibind itr f) g ∨ i1 = i2’
+  qexists ‘\i1 i2. ∃itr. i1 = ibind itr (\x. ibind (f x) g) /\ i2 = ibind (ibind itr f) g \/ i1 = i2’
   >> rw[]
   >- metis_tac[]
   >- gvs[ibind_eq_ret]
@@ -760,37 +760,37 @@ QED
 
 Inductive iset:
 [~ret:]
-  (∀e. iset (Ret e) e) ∧
+  (!e. iset (Ret e) e) /\
 [~vis:]
-  (iset (f i) e  ⇒ iset (Vis ov f) e)
+  (iset (f i) e  ==> iset (Vis ov f) e)
 End
 
 Theorem iset_thm[simp]:
-  (iset (Ret e) e' ⇔ e = e') ∧
-  (iset Div e = F) ∧
-  (iset (Vis ov f) e ⇔ ∃i. iset (f i) e)
+  (iset (Ret e) e' <=> e = e') /\
+  (iset Div e = F) /\
+  (iset (Vis ov f) e <=> ?i. iset (f i) e)
 Proof
   rpt strip_tac >> simp[Once iset_cases]
 QED
 
 Inductive ifinite:
 [~ret:]
-  ifinite (Ret e) ∧
+  ifinite (Ret e) /\
 [~div:]
-  ifinite Div ∧
+  ifinite Div /\
 [~vis:]
-  ((∀ iv. ifinite (f iv)) ==> ifinite (Vis ov f))
+  ((! iv. ifinite (f iv)) ==> ifinite (Vis ov f))
 End
 
 Definition itruncate_def:
-  itruncate 0 itr = Div ∧
-  itruncate n Div = Div ∧
-  itruncate n (Ret rv) = Ret rv ∧
-  itruncate n (Vis ov f) = Vis ov (λx. itruncate (n-1) (f x))
+  itruncate 0 itr = Div /\
+  itruncate n Div = Div /\
+  itruncate n (Ret rv) = Ret rv /\
+  itruncate n (Vis ov f) = Vis ov (\x. itruncate (n-1) (f x))
 End
 
 Theorem itruncate_ret[simp]:
-  ∀n. itruncate n itr = Ret r ⇔ (itr = Ret r ∧ n ≠ 0)
+  !n. itruncate n itr = Ret r <=> (itr = Ret r /\ n ≠ 0)
 Proof
   strip_tac >> eq_tac >> rpt strip_tac
   >- (Cases_on ‘itr’ >> Cases_on ‘n’ >> gs[itruncate_def])
@@ -798,45 +798,45 @@ Proof
 QED
 
 Theorem itruncate_implies_ifinite:
-  ∀itr. itruncate n itr = itr ⇒ ifinite itr
+  ∀itr. itruncate n itr = itr ==> ifinite itr
 Proof
   Induct_on ‘n’ >- gs[itruncate_def,ifinite_div] >> Cases_on ‘itr’ >- simp[ifinite_ret]
   >- simp[ifinite_div] >> rw[] >> gs[itruncate_def,FUN_EQ_THM] >> gs[ifinite_vis]
 QED
 
 Theorem iset_truncate:
-  iset itr elem ⇒ ∃ n. iset (itruncate n itr) elem
+  iset itr elem ==> ? n. iset (itruncate n itr) elem
 Proof
   Induct_on ‘iset’ >> rw[] >- metis_tac[itruncate_def,iset_ret] >>
   qexists ‘SUC n’ >> simp[itruncate_def] >> metis_tac[iset_vis]
 QED
 
 Theorem iset_flat_1:
-  ∀ itr e. iset (iflat itr) e ⇒ ∃t0. iset itr t0 ∧ iset t0 e
+  ! itr e. iset (iflat itr) e ==> ?t0. iset itr t0 /\ iset t0 e
 Proof
   Induct_on ‘iset’ >> rpt strip_tac >> gvs[iflat_eq_vis] >> metis_tac[]
 QED
 
 Theorem iset_flat_2:
-  ∀ itr t0 e. iset itr t0 ∧ iset t0 e ==> iset (iflat itr) e
+  ! itr t0 e. iset itr t0 /\ iset t0 e ==> iset (iflat itr) e
 Proof
   Induct_on ‘iset’ >> rw[] >> metis_tac[]
 QED
 
 Theorem iset_flat:
-  ∀ itr e. iset (iflat itr) e ⇔ ∃t0. iset itr t0 ∧ iset t0 e
+  ! itr e. iset (iflat itr) e <=> ?t0. iset itr t0 /\ iset t0 e
 Proof
   metis_tac[iset_flat_1,iset_flat_2]
 QED
         
 Theorem iset_map_1:
-  ∀ itr x. iset (imap f itr) x ⇒ ∃y. x = f y ∧ iset itr y
+  ! itr x. iset (imap f itr) x ==> ?y. x = f y /\ iset itr y
 Proof
   Induct_on ‘iset’ >> rpt strip_tac >> gvs[imap_eq_vis] >> metis_tac[]
 QED
 
 Theorem iset_map_2:
-  ∀ itr. iset itr y ⇒ iset (imap f itr) (f y)
+  ! itr. iset itr y ==> iset (imap f itr) (f y)
 Proof
   Induct_on ‘iset’ >> rpt strip_tac >> simp[] >> metis_tac[]
 QED
@@ -849,27 +849,27 @@ QED
 
 Inductive at_path:
 [~ret:]
-  at_path (Ret e) [] e ∧
+  at_path (Ret e) [] e /\
 [~vis:]
-  (at_path (f i) p e ⇒ at_path (Vis ov f) ((ov,i)::p) e)
+  (at_path (f i) p e ==> at_path (Vis ov f) ((ov,i)::p) e)
 End
 
 Theorem at_path_thm[simp]:
-  (at_path Div p e = F) ∧
-  (at_path (Ret e) p a ⇔ (p = [] ∧ a = e)) ∧
-  (at_path (Vis ov f) p e ⇔ ∃i l. (p = (ov,i)::l ∧ at_path (f i) l e))
+  (at_path Div p e = F) /\
+  (at_path (Ret e) p a <=> (p = [] /\ a = e)) /\
+  (at_path (Vis ov f) p e <=> ?i l. (p = (ov,i)::l /\ at_path (f i) l e))
 Proof
   rpt strip_tac >> simp[Once at_path_cases] >- metis_tac[]
 QED
 
 Theorem at_path_implies_iset:
-  at_path itree p e ⇒ iset itree e
+  at_path itree p e ==> iset itree e
 Proof
   Induct_on ‘at_path’ >> rpt strip_tac >> simp[] >> metis_tac[]
 QED
 
 Theorem iset_iff_exists_path:
-  iset itree e ⇔ ∃p. at_path itree p e
+  iset itree e <=> ?p. at_path itree p e
 Proof
   eq_tac >> simp[at_path_implies_iset] >> Induct_on ‘iset’ >> rpt strip_tac
   >> metis_tac[at_path_thm]
@@ -877,38 +877,38 @@ QED
 
 CoInductive ievery:
 [~div:]
-  (ievery P Div) ∧
+  (ievery P Div) /\
 [~ret:]
-  (P e ⇒ ievery P (Ret e)) ∧
+  (P e ==> ievery P (Ret e)) /\
 [~vis:]
-  ((∀ iv. ievery P (f iv)) ⇒ ievery P (Vis ov f))
+  ((! iv. ievery P (f iv)) ==> ievery P (Vis ov f))
 End
 
 Theorem ievery_thm[simp]:
-  (ievery P Div = T) ∧
-  (ievery P (Ret e) ⇔ P e) ∧
-  (ievery P (Vis ov f) ⇔ ∀ iv. ievery P (f iv))
+  (ievery P Div = T) /\
+  (ievery P (Ret e) <=> P e) /\
+  (ievery P (Vis ov f) <=> ! iv. ievery P (f iv))
 Proof
   rpt strip_tac >> simp[Once ievery_cases]
 QED
 
 Inductive iexists:
 [~ret:]
-  (P e ⇒ iexists P (Ret e)) ∧
+  (P e ==> iexists P (Ret e)) /\
 [~vis:]
-  ((∃ iv. iexists P (f iv)) ⇒ iexists P (Vis ov f))
+  ((? iv. iexists P (f iv)) ==> iexists P (Vis ov f))
 End
 
 Theorem iexists_thm[simp]:
-  (iexists P Div = F) ∧
-  (iexists P (Ret e) ⇔ P e) ∧
-  (iexists P (Vis ov f) ⇔ ∃ iv. iexists P (f iv))
+  (iexists P Div = F) /\
+  (iexists P (Ret e) <=> P e) /\
+  (iexists P (Vis ov f) <=> ? iv. iexists P (f iv))
 Proof
   rpt strip_tac >> simp[Once iexists_cases]
 QED
 
 Theorem not_ievery_exists:
-  ¬ ievery P itr ⇔ iexists (λx. ¬ P x) itr
+  ~ ievery P itr <=> iexists (\x. ~ P x) itr
 Proof
   eq_tac
   >- (CONV_TAC CONTRAPOS_CONV >> simp[] >> qid_spec_tac ‘itr’ >> ho_match_mp_tac ievery_coind
@@ -917,7 +917,7 @@ Proof
 QED
 
 Theorem ievery_set:
-  ∀ itr. ievery P itr ⇔ ∀ rv. (iset itr rv ⇒ P rv)
+  ! itr. ievery P itr <=> ! rv. (iset itr rv ==> P rv)
 Proof
   simp[EQ_IMP_THM, FORALL_AND_THM] >> strip_tac
   >- (gen_tac >> CONV_TAC CONTRAPOS_CONV >> simp[PULL_EXISTS] >> Induct_on ‘iset’ >> simp[]
@@ -925,7 +925,7 @@ Proof
   >> ho_match_mp_tac ievery_coind >> rw[] >> Cases_on ‘itr’ >> gs[] >> metis_tac[]
 QED
 
-Theorem iexists_set = not_ievery_exists |> SYM |> Q.INST [‘P’ |-> ‘λx. ¬ P x’]
+Theorem iexists_set = not_ievery_exists |> SYM |> Q.INST [‘P’ |-> ‘\x. ~ P x’]
                                                |> SRULE[SF ETA_ss,ievery_set]
                                        
 
