@@ -55,7 +55,7 @@ To install the scripts, add the following lines to your emacs initialisation fil
 (load "<path>/HOL/tools/hol-unicode")
 \end{code}
 
-If your version of emacs does not highlight the active region be default,
+If your version of emacs does not highlight the active region by default,
 also add the following line to your initialisation file:
 \begin{code}
 (transient-mark-mode 1)
@@ -66,7 +66,7 @@ Restart emacs to make these changes take effect.
 
 \begin{enum}
 \item Start emacs.
-\item Press {\tt C-x C-f} to open a file with file with a name ending in {\tt Script.sml}
+\item Press {\tt C-x C-f} to open a file (its name should have suffix {\tt Script.sml})
 \item Press {\tt M-h H}, then press {\tt RET} or down arrow and then {\tt RET}.
 \end{enum}
 The HOL window should look something like this:
@@ -398,7 +398,7 @@ Replace {\tt <path>} with the path to your HOL4 installation.
 <path>/HOL/help/HOLindex.html
 \end{code}
 
-Once theories has been opened (see Section~\ref{copy}), one can search for theorems in the current
+Once theories have been opened (see Section~\ref{copy}), one can search for theorems in the current
 context using {\tt print\_match}. For example, with {\tt arithmeticTheory} opened, doing {\tt M-h~M-r}
 with the following selected,
 \begin{code}

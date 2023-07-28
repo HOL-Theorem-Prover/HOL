@@ -1108,10 +1108,10 @@ Compiling euclidTheory.sml
 \end{verbatim}
 \end{session}
 
-Now we have created four new files, various forms of \ml{euclidTheory}
-with four different suffixes.  Only \ml{euclidTheory.sig} is really
-suitable for human consumption.  While still in the \ml{euclid}
-directory that we created, we can demonstrate:
+Now we have created four new files: various forms of \ml{euclidTheory}
+with four different suffixes (three of which are hidden in the \texttt{.holobjs} directory).
+Only \ml{euclidTheory.sig} is really suitable for human consumption, and this is put into the same directory as the \texttt{euclidScript.sml} file.
+While still in the \ml{euclid} directory that we created, we can demonstrate:
 
 \begin{session}
 \begin{alltt}
