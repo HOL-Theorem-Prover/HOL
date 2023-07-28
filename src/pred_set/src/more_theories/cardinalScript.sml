@@ -710,32 +710,28 @@ val CARD_MUL_LT_INFINITE = store_thm("CARD_MUL_LT_INFINITE",
   metis_tac[CARD_MUL_LT_LEMMA,cardleq_lteq])
 
 (* set exponentiation *)
-val set_exp_def = Define`
-  set_exp A B = { f | (!b. b IN B ==> ?a. a IN A /\ (f b = SOME a)) /\
-                      !b. b NOTIN B ==> (f b = NONE) }
-`;
-val _ = overload_on ("**", ``set_exp``)
+Definition set_exp_def:
+  set_exp A B = { f | (!b. b IN B ==> ?a. a IN A /\ (f b = a)) /\
+                      !b. b NOTIN B ==> (f b = ARB) }
+End
+Overload "**" = “set_exp”
 
 Theorem UNIV_fun_exp:
-  univ(:'a -> 'b) =~ univ(:'b) ** univ(:'a)
+  univ(:'a -> 'b) = univ(:'b) ** univ(:'a)
 Proof
-  simp[set_exp_def] >>
-  irule cardleq_ANTISYM >> simp[cardleq_def, INJ_IFF] >> rw[]
-  >- (qexists_tac ‘λf a. SOME (f a)’ >> simp[] >>
-      simp[FUN_EQ_THM]) >>
-  qexists_tac ‘λf a. THE (f a)’ >> simp[FUN_EQ_THM] >> rw[] >>
-  gs[SKOLEM_THM]
+  simp[set_exp_def]
 QED
 
-val BIJ_functions_agree = store_thm(
-  "BIJ_functions_agree",
-  ``!f g s t. BIJ f s t /\ (!x. x IN s ==> (f x = g x)) ==> BIJ g s t``,
+Theorem BIJ_functions_agree:
+  !f g s t. BIJ f s t /\ (!x. x IN s ==> (f x = g x)) ==> BIJ g s t
+Proof
   simp[BIJ_DEF, SURJ_DEF, INJ_DEF] >> rw[] >>
-  full_simp_tac (srw_ss() ++ boolSimps.CONJ_ss) []);
+  full_simp_tac (srw_ss() ++ boolSimps.CONJ_ss) []
+QED
 
-val CARD_CARDEQ_I = store_thm(
-  "CARD_CARDEQ_I",
-  ``FINITE s1 /\ FINITE s2 /\ (CARD s1 = CARD s2) ==> s1 =~ s2``,
+Theorem CARD_CARDEQ_I:
+  FINITE s1 /\ FINITE s2 /\ (CARD s1 = CARD s2) ==> s1 =~ s2
+Proof
   Cases_on `FINITE s1` >> simp[] >> qid_spec_tac `s2` >> pop_assum mp_tac >>
   qid_spec_tac `s1` >> ho_match_mp_tac FINITE_INDUCT >> simp[] >> conj_tac
   >- metis_tac [CARD_EQ_0, cardeq_REFL, CARDEQ_0] >>
@@ -748,7 +744,8 @@ val CARD_CARDEQ_I = store_thm(
   simp[cardeq_def] >> qexists_tac `\x. if x = a then b else f x` >>
   simp[BIJ_INSERT] >>
   `(b INSERT s) DELETE b = s` by (simp[EXTENSION] >> metis_tac[]) >>
-  match_mp_tac BIJ_functions_agree >> qexists_tac `f` >> rw[]);
+  match_mp_tac BIJ_functions_agree >> qexists_tac `f` >> rw[]
+QED
 
 val CARDEQ_CARD_EQN = store_thm(
   "CARDEQ_CARD_EQN",
@@ -770,54 +767,58 @@ val CARD_LT_CARD = store_thm("CARD_LT_CARD",
   ``FINITE s1 /\ FINITE s2 ==> (s1 <</= s2 <=> CARD s1 < CARD s2)``,
   rw[] >> simp[cardlt_lenoteq,CARDLEQ_CARD,CARDEQ_CARD_EQN])
 
-val EMPTY_set_exp = store_thm(
-  "EMPTY_set_exp",
-  ``(A ** {} = { K NONE }) /\ (B <> {} ==> ({} ** B = {}))``,
+Theorem EMPTY_set_exp:
+  A ** {} = { K ARB } /\ (B <> {} ==> {} ** B = {})
+Proof
   simp[set_exp_def] >> conj_tac >- simp[EXTENSION, FUN_EQ_THM] >>
   strip_tac >> qsuff_tac `(!b. b NOTIN B) = F`
   >- (disch_then SUBST_ALL_TAC >> simp[]) >>
-  fs[EXTENSION] >> metis_tac[]);
+  fs[EXTENSION] >> metis_tac[]
+QED
 
-val EMPTY_set_exp_CARD = store_thm(
-  "EMPTY_set_exp_CARD",
-  ``A ** {} =~ count 1``,
-  simp[EMPTY_set_exp, CARDEQ_CARD_EQN]);
+Theorem EMPTY_set_exp_CARD:
+  A ** {} =~ count 1
+Proof
+  simp[EMPTY_set_exp, CARDEQ_CARD_EQN]
+QED
 
-val SING_set_exp = store_thm(
-  "SING_set_exp",
-  ``({x} ** B = { (\b. if b IN B then SOME x else NONE) }) /\
-    (A ** {x} = { (\b. if b = x then SOME a else NONE) | a IN A })``,
+Theorem SING_set_exp:
+  {x} ** B = { (\b. if b IN B then x else ARB) } /\
+  A ** {x} = { (\b. if b = x then a else ARB) | a IN A }
+Proof
   rw[set_exp_def, EXTENSION] >> rw[FUN_EQ_THM, EQ_IMP_THM] >> rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val SING_set_exp_CARD = store_thm(
-  "SING_set_exp_CARD",
-  ``{x} ** B =~ count 1 /\ A ** {x} =~ A``,
+Theorem SING_set_exp_CARD:
+  {x} ** B =~ count 1 /\ A ** {x} =~ A
+Proof
   simp[SING_set_exp, CARDEQ_CARD_EQN] >> simp[Once cardeq_SYM] >>
-  simp[cardeq_def] >> qexists_tac `\a b. if b = x then SOME a else NONE` >>
+  simp[cardeq_def] >> qexists `\a b. if b = x then a else ARB` >>
   qmatch_abbrev_tac `BIJ f A s` >>
   qsuff_tac `s = IMAGE f A`
   >- (rw[] >> match_mp_tac (GEN_ALL INJ_BIJ_SUBSET) >>
       map_every qexists_tac [`IMAGE f A`, `A`] >> rw[INJ_DEF, Abbr`f`]
       >- metis_tac[]
-      >> (fs[FUN_EQ_THM] >> first_x_assum (qspec_then `x` mp_tac) >> simp[]))>>
-  rw[Abbr`s`, Abbr`f`, EXTENSION]);
+      >> (fs[FUN_EQ_THM] >> first_x_assum (qspec_then `x` mp_tac) >> simp[])) >>
+  rw[Abbr`s`, Abbr`f`, EXTENSION]
+QED
 
 Theorem POW_TWO_set_exp:
   POW A =~ count 2 ** A
 Proof
   simp[POW_DEF, set_exp_def, BIJ_IFF_INV, cardeq_def] >>
-  qexists_tac `\s a. if a IN A then if a IN s then SOME 1 else SOME 0
-                     else NONE` >> simp[] >> conj_tac
+  qexists_tac `\s a. if a IN A then if a IN s then 1 else 0
+                     else ARB` >> simp[] >> conj_tac
   >- (qx_gen_tac `s` >> strip_tac >> qx_gen_tac `b` >> strip_tac >>
       Cases_on `b IN s` >> simp[]) >>
-  qexists_tac `\f. { a | a IN A /\ (f a = SOME 1) }` >> simp[] >> rpt conj_tac
+  qexists `\f. { a | a IN A /\ f a = 1 }` >> simp[] >> rpt conj_tac
   >- simp[SUBSET_DEF]
   >- (qx_gen_tac `s` >> csimp[] >> simp[EXTENSION, SUBSET_DEF] >>
       rw[] >> rw[]) >>
   qx_gen_tac `f` >> simp[FUN_EQ_THM] >> strip_tac >> qx_gen_tac `a` >>
   Cases_on `a IN A` >> simp[] >>
-  `?n. n < 2 /\ (f a = SOME n)` by metis_tac[] >>
+  `?n. n < 2 /\ (f a = n)` by metis_tac[] >>
   rw[] >> decide_tac
 QED
 
@@ -825,11 +826,11 @@ Theorem set_exp_count:
   A ** count n =~ { l | (LENGTH l = n) /\ !e. MEM e l ==> e IN A }
 Proof
   simp[cardeq_def, BIJ_IFF_INV] >>
-  qexists_tac `\f. GENLIST (THE o f) n` >> simp[listTheory.MEM_GENLIST] >>
+  qexists_tac `\f. GENLIST f n` >> simp[listTheory.MEM_GENLIST] >>
   conj_tac
   >- (qx_gen_tac `f` >> dsimp[set_exp_def] >> rpt strip_tac >> res_tac >>
       simp[]) >>
-  qexists_tac `\l m. if m < n then SOME (EL m l) else NONE` >> rpt conj_tac
+  qexists ‘λl m. if m < n then EL m l else ARB’ >> rpt conj_tac
   >- (simp[] >> qx_gen_tac `l` >> strip_tac >>
       simp[set_exp_def] >> metis_tac [listTheory.MEM_EL])
   >- (qx_gen_tac `f` >> rw[set_exp_def] >> simp[FUN_EQ_THM] >>
@@ -838,80 +839,45 @@ Proof
   match_mp_tac listTheory.LIST_EQ >> simp[]
 QED
 
-val set_exp_card_cong = store_thm(
-  "set_exp_card_cong",
-  ``(a1:'a1 set) =~ (a2:'a2 set) ==>
-    (b1:'b1 set) =~ (b2:'b2 set) ==> (a1 ** b1 =~ a2 ** b2)``,
-  disch_then (Q.X_CHOOSE_THEN `rf` assume_tac o
-              SIMP_RULE bool_ss [cardeq_def]) >>
-  disch_then (Q.X_CHOOSE_THEN `df` assume_tac o
-              SIMP_RULE bool_ss [cardeq_def] o
-              SIMP_RULE bool_ss [Once cardeq_SYM]) >>
-  simp[cardeq_def] >>
-  qexists_tac `\f1 b. if b IN b2 then
-                        case f1 (df b) of NONE => NONE | SOME a => SOME (rf a)
-                      else NONE` >>
-  fs[BIJ_DEF, SURJ_DEF, INJ_DEF] >>
+Theorem set_exp_card_cong:
+  (a1:'a1 set) =~ (a2:'a2 set) ==> (b1:'b1 set) =~ (b2:'b2 set) ==>
+  (a1 ** b1 =~ a2 ** b2)
+Proof
+  rw[cardeq_def, BIJ_IFF_INV] >>
+  rename [‘_ IN a1 ** b1 ==> _ IN a2 ** b2’,
+          ‘_ IN a1 ==> rf1 _ IN a2’, ‘_ IN a2 ==> rf2 _ IN a1’,
+          ‘_ IN b1 ==> df1 _ IN b2’, ‘_ IN b2 ==> df2 _ IN b1’] >>
+  qexists ‘λf b. if b IN b2 then
+                   if f (df2 b) IN a1 then rf1 $ f $ df2 b else ARB
+                 else ARB’ >>
   simp[set_exp_def, FUN_EQ_THM] >>
-  `!x y. x IN b2 /\ y IN b2 ==> ((df x = df y) <=> (x = y))` by metis_tac[] >>
-  rpt conj_tac
-  >- (qx_gen_tac `f` >> strip_tac >>
-      qx_gen_tac `b` >> strip_tac >>
-      `df b IN b1` by res_tac >>
-      `?a. a IN a1 /\ (f (df b) = SOME a)` by metis_tac[] >> simp[])
-  >- (map_every qx_gen_tac [`f1`, `f2`] >> strip_tac >> strip_tac >>
-      qx_gen_tac `b` >> REVERSE (Cases_on `b IN b1`) >- (res_tac >> simp[]) >>
-      `?b0. b0 IN b2 /\ (df b0 = b)` by metis_tac[] >>
-      first_x_assum (qspec_then `b0` mp_tac) >> simp[] >> res_tac >> simp[])
-  >- (qx_gen_tac `f` >> strip_tac >>
-      qx_gen_tac `b` >> strip_tac >>
-      `df b IN b1` by res_tac >>
-      `?a. a IN a1 /\ (f (df b) = SOME a)` by metis_tac[] >> simp[]) >>
-  qx_gen_tac `f` >> strip_tac >>
-  qexists_tac `\b. if b IN b1 then
-                     case f (@b0. b0 IN b2 /\ (df b0 = b)) of
-                       NONE => NONE
-                     | SOME a => SOME (@a0. a0 IN a1 /\ (rf a0 = a))
-                   else NONE` >>
-  simp[] >> conj_tac
-  >- (qx_gen_tac `b:'b1` >> strip_tac >>
-      `?b0. b0 IN b2 /\ (df b0 = b)` by metis_tac[] >>
-      rw[] >> csimp[] >> csimp[] >>
-      `?a. a IN a2 /\ (f b0 = SOME a)` by metis_tac [] >> simp[] >>
-      SELECT_ELIM_TAC >> simp[]) >>
-  qx_gen_tac `b:'b2` >> Cases_on `b IN b2` >> simp[] >>
-  csimp[] >> csimp[] >>
-  `(f b = NONE) \/ ?a. f b = SOME a` by (Cases_on `f b` >> simp[]) >> simp[] >>
-  SELECT_ELIM_TAC >> simp[] >>
-  metis_tac [SOME_11]);
+  qexists ‘λg b. if b IN b1 then
+                   if g (df1 b) IN a2 then rf2 $ g $ df1 b else ARB
+                 else ARB’ >>
+  simp[] >> metis_tac[]
+QED
 
-val set_exp_cardle_cong = Q.store_thm(
-  "set_exp_cardle_cong",
-  ‘((b = {}) ==> (d = {})) ==> a <<= b /\ c <<= d ==> a ** c <<= b ** d’,
+Theorem set_exp_cardle_cong:
+  (b = {} ==> d = {}) ==>
+  (a:'a set) <<= (b:'b set) /\ (c:'c set) <<= (d:'d set) ==>
+  a ** c <<= b ** d
+Proof
   simp[set_exp_def, cardleq_def] >> strip_tac >>
   disch_then (CONJUNCTS_THEN2 (qx_choose_then `abf` assume_tac)
                               (qx_choose_then `cdf` assume_tac)) >>
-  qexists_tac ‘
-    \caf. \di. if di IN d then
-                 case some ci. ci IN c /\ (cdf ci = di) of
-                     NONE => if b = {} then NONE else SOME (CHOICE b)
-                   | SOME ci => OPTION_MAP abf (caf ci)
-               else NONE’ >>
-  Cases_on ‘b = {}’ >> fs[] >> rfs[]
+  qexists ‘
+    λcaf di. if di IN d then
+               case some ci. ci IN c /\ (cdf ci = di) of
+                     NONE => CHOICE b
+                   | SOME ci => abf (caf ci)
+             else ARB
+  ’ >>
+  Cases_on ‘b = {}’ >> gvs[]
   >- simp[INJ_DEF, FUN_EQ_THM] >>
   rw[INJ_DEF]
-  >- (rename [‘INJ cdf c d’, ‘di IN d’] >>
-      simp[TypeBase.case_eq_of“:'a option”] >>
-      dsimp[] >>
-      Cases_on ‘?ci. ci IN c /\ (cdf ci = di)’ >> fs[]
-      >- (‘(some ci. ci IN c /\ (cdf ci = di)) = SOME ci’
-             by (DEEP_INTRO_TAC some_intro >> simp[] >>
-                 metis_tac[INJ_DEF]) >>
-          simp[] >>
-          ‘?ai. ai IN a /\ (caf ci = SOME ai)’ by metis_tac[] >>
-          metis_tac[INJ_DEF]) >>
-      ‘(some ci. ci IN c /\ (cdf ci = di)) = NONE’
-         by (DEEP_INTRO_TAC some_intro >> simp[]) >>
+  >- (rename [‘_ IN c /\ cdf _ = di’] >>
+      DEEP_INTRO_TAC some_intro >> simp[] >>
+      rpt strip_tac >- metis_tac[INJ_DEF] >>
       simp[CHOICE_DEF]) >>
   rename [‘caf1 = caf2’] >> simp[FUN_EQ_THM] >>
   qx_gen_tac ‘ci’ >> Cases_on‘ci IN c’ >> simp[] >>
@@ -920,28 +886,26 @@ val set_exp_cardle_cong = Q.store_thm(
     by (DEEP_INTRO_TAC some_intro >> simp[] >>
         metis_tac[INJ_DEF]) >>
   first_assum (fn th => Q_TAC (mp_tac o AP_THM th) ‘cdf ci’) >> BETA_TAC >>
-  simp[] >>
-  ‘(?a1. (caf1 ci = SOME a1) /\ a1 IN a) /\ (?a2. (caf2 ci = SOME a2) /\ a2 IN a)’
-    by metis_tac[] >> simp[] >> metis_tac[INJ_DEF]);
+  simp[] >> metis_tac[INJ_DEF]
+QED
 
-val exp_INSERT_cardeq = store_thm(
-  "exp_INSERT_cardeq",
-  ``e NOTIN s ==> (A ** (e INSERT s) =~ A CROSS A ** s)``,
+Theorem exp_INSERT_cardeq:
+  e NOTIN s ==> (A ** (e INSERT s) =~ A CROSS A ** s)
+Proof
   simp[set_exp_def, cardeq_def] >> strip_tac >> simp[BIJ_IFF_INV] >>
-  qexists_tac `\f. (THE (f e), (\a. if a = e then NONE else f a))` >> conj_tac
-  >- (qx_gen_tac `f` >> strip_tac >> simp[] >> conj_tac
-      >- (`?a. a IN A /\ (f e = SOME a)` by metis_tac[] >> simp[]) >>
-      metis_tac[]) >>
-  qexists_tac `\(a1,f) a2. if a2 = e then SOME a1 else f a2` >>
+  qexists_tac ‘\f. (f e, (λa. if a = e then ARB else f a))’ >> conj_tac
+  >- (qx_gen_tac `f` >> strip_tac >> simp[] >> metis_tac[]) >>
+  qexists ‘λ(a1,f) a2. if a2 = e then a1 else f a2’ >>
   simp[pairTheory.FORALL_PROD] >> rpt conj_tac
-  >- (map_every qx_gen_tac [`a`, `f`] >> strip_tac >> qx_gen_tac `b` >> rw[])
+  >- (rw[] >> rw[])
   >- (qx_gen_tac `f` >> strip_tac >> simp[FUN_EQ_THM] >> qx_gen_tac `a` >>
-      rw[] >> `?a'. f a = SOME a'` by metis_tac[] >> simp[]) >>
-  rw[FUN_EQ_THM] >> rw[]);
+      simp[AllCaseEqs()]) >>
+  rw[FUN_EQ_THM] >> rw[]
+QED
 
-val exp_count_cardeq = store_thm(
-  "exp_count_cardeq",
-  ``INFINITE A /\ 0 < n ==> A ** count n =~ A``,
+Theorem exp_count_cardeq:
+  INFINITE A /\ 0 < n ==> A ** count n =~ A
+Proof
   strip_tac >> Induct_on `n` >> simp[] >>
   `(n = 0) \/ ?m. n = SUC m` by (Cases_on `n` >> simp[])
   >- simp[count_EQN, SING_set_exp_CARD] >>
@@ -951,12 +915,27 @@ val exp_count_cardeq = store_thm(
   `A ** count n =~ A` by simp[] >>
   `A CROSS A ** count n =~ A CROSS A` by metis_tac[CARDEQ_CROSS, cardeq_REFL] >>
   `A CROSS A =~ A` by simp[SET_SQUARED_CARDEQ_SET] >>
-  metis_tac [cardeq_TRANS]);
+  metis_tac [cardeq_TRANS]
+QED
 
 Theorem K_lemma[local]:
   (!x. f x = y) <=> f = K y
 Proof
   simp[FUN_EQ_THM]
+QED
+
+Theorem finite_image_lemma[local]:
+  !A. FINITE (IMAGE f A) /\ (!x y. x IN A /\ y IN A /\ f x = f y ==> x = y) ==>
+      FINITE A
+Proof
+  Induct_on ‘FINITE’ >> simp[] >> rw[] >>
+  rename [‘IMAGE f A = e0 INSERT A0’] >>
+  ‘?e. e IN A /\ f e = e0’
+    by (qpat_x_assum ‘IMAGE f A = _’ mp_tac >> simp[EXTENSION] >> metis_tac[])>>
+  ‘IMAGE f (A DELETE e) = A0’
+    by (qpat_x_assum ‘IMAGE f A = _’ mp_tac >> simp[EXTENSION] >> metis_tac[])>>
+  ‘FINITE (A DELETE e)’ suffices_by simp[] >>
+  first_x_assum irule >> simp[]
 QED
 
 Theorem FINITE_setexp[simp]:
@@ -975,7 +954,7 @@ Proof
       >- (CCONTR_TAC >>
           qpat_x_assum ‘FINITE _’ mp_tac >> simp[] >>
           ‘?b. b IN B’ by simp[MEMBER_NOT_EMPTY] >>
-          qabbrev_tac ‘ff = λa b. if b IN B then SOME a else NONE’ >>
+          qabbrev_tac ‘ff = λa b. if b IN B then a else ARB’ >>
           ‘(!a1 a2. ff a1 = ff a2 ==> a1 = a2)’
             by (simp[Abbr‘ff’, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]) >>
           drule_then (drule_then assume_tac) IMAGE_11_INFINITE >>
@@ -983,11 +962,14 @@ Proof
           ‘IMAGE ff A SUBSET s’ suffices_by metis_tac[SUBSET_FINITE] >>
           simp[Abbr‘ff’, Abbr‘s’, SUBSET_DEF, PULL_EXISTS]) >>
       CCONTR_TAC >> qpat_x_assum ‘FINITE _’ mp_tac >> simp[] >>
-      qabbrev_tac ‘ff = λb1 b2. if b1 = b2 then SOME a1
-                                else if b2 IN B then SOME a2 else NONE’ >>
-      ‘(!b1 b2. ff b1 = ff b2 ==> b1 = b2)’
-        by (simp[Abbr‘ff’, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]) >>
-      drule_then (drule_then assume_tac) IMAGE_11_INFINITE >>
+      qabbrev_tac ‘ff = λb1 b2. if b1 NOTIN B then ARB
+                                else if b2 NOTIN B then ARB
+                                else if b1 = b2 then a2 else a1’ >>
+      ‘(!b1 b2. b1 IN B /\ b2 IN B /\ ff b1 = ff b2 ==> b1 = b2)’
+        by (simp[Abbr‘ff’, FUN_EQ_THM, SF CONJ_ss] >>
+            rpt strip_tac >> CCONTR_TAC >>
+            first_x_assum $ qspec_then‘b1’ mp_tac >> simp[]) >>
+      drule_at (Pos last) finite_image_lemma >> simp[] >> strip_tac >>
       qmatch_abbrev_tac ‘INFINITE s’ >>
       ‘IMAGE ff B SUBSET s’ suffices_by metis_tac[SUBSET_FINITE] >>
       first_x_assum $ qspecl_then [‘ARB : 'b’, ‘ARB : 'b’] kall_tac >>
@@ -1000,20 +982,20 @@ Proof
             rename [‘a IN A’] >> qexists_tac ‘a’ >> simp[EXTENSION] >>
             metis_tac[]) >>
       gvs[] >> qmatch_abbrev_tac ‘FINITE s’ >>
-      ‘s = {λb. if b IN B then SOME a else NONE}’ suffices_by simp[] >>
+      ‘s = {λb. if b IN B then a else ARB}’ suffices_by simp[] >>
       simp[Abbr‘s’, Once FUN_EQ_THM, AllCaseEqs(), EQ_IMP_THM] >>
       rpt strip_tac >> csimp[FUN_EQ_THM, AllCaseEqs()])
   >- (‘FINITE (A CROSS B)’ by simp[] >>
       ‘FINITE (POW (A CROSS B))’ by simp[] >>
       first_assum $ C (resolve_then (Pos hd) irule) CARDLEQ_FINITE >>
       simp[INJ_IFF, cardleq_def, IN_POW, SUBSET_DEF, FORALL_PROD] >>
-      qexists_tac ‘λf. { (a,b) | f b = SOME a}’ >> simp[] >> rw[] >~
+      qexists_tac ‘λf. { (a,b) | b IN B /\ f b = a }’ >>
+      simp[] >> rw[] >~
       [‘GSPEC _ = GSPEC _ <=> _ = _’]
       >- (simp[EXTENSION] >> simp[FUN_EQ_THM, FORALL_PROD] >>
           simp[Once EQ_IMP_THM] >> rw[] >> rename [‘f1 a = f2 a’] >>
-          Cases_on ‘f1 a’ >>
-          metis_tac[SOME_11, NOT_SOME_NONE]) >>
-      metis_tac[SOME_11, NOT_SOME_NONE])
+          metis_tac[]) >>
+      metis_tac[])
 QED
 
 Theorem CARD_LE_EXP:
@@ -1021,11 +1003,15 @@ Theorem CARD_LE_EXP:
 Proof
   simp[cardleq_def, set_exp_def, INJ_IFF] >>
   disch_then $ qx_choose_then ‘bf’ strip_assume_tac >>
-  qexists_tac ‘λa1 a2. if a1 = a2 then SOME (bf T)
-                       else if a2 IN A then SOME (bf F)
-                       else NONE’ >>
-  simp[AllCaseEqs()] >> simp[FUN_EQ_THM, AllCaseEqs()] >> rw[] >>
-  metis_tac[]
+  qexists_tac ‘λa1 a2. if a1 = a2 then bf T
+                       else if a2 IN A then bf F
+                       else ARB’ >>
+  simp[] >> rw[]
+  >- rw[]
+  >- metis_tac[] >>
+  simp[EQ_IMP_THM] >>
+  disch_then (assume_tac o SRULE[FUN_EQ_THM]) >>
+  pop_assum $ qspec_then ‘x’ mp_tac >> simp[] >> rw[]
 QED
 
 val INFINITE_Unum = store_thm(
@@ -1092,65 +1078,53 @@ Theorem UNIV_list:
 Proof simp[EXTENSION, list_def]
 QED
 
-val list_BIGUNION_EXP = store_thm(
-  "list_BIGUNION_EXP",
-  ``list A =~ BIGUNION (IMAGE (\n. A ** count n) univ(:num))``,
+Theorem list_BIGUNION_EXP:
+  list A =~ BIGUNION (IMAGE (\n. {n} CROSS (A ** count n)) univ(:num))
+Proof
   match_mp_tac cardleq_ANTISYM >> simp[cardleq_def] >> conj_tac
   >- (dsimp[INJ_DEF, list_def] >>
-      qexists_tac `\l n. if n < LENGTH l then SOME (EL n l)
-                         else NONE` >> simp[] >>
+      qexists ‘\l. (LENGTH l, (λn. if n < LENGTH l then EL n l else ARB))’ >>
+      simp[] >>
       conj_tac
-      >- (qx_gen_tac `l` >> strip_tac >> qexists_tac `LENGTH l` >>
+      >- (qx_gen_tac `l` >> strip_tac >>
           simp[set_exp_def] >> metis_tac[listTheory.MEM_EL]) >>
       simp[FUN_EQ_THM, listTheory.LIST_EQ_REWRITE] >>
-      metis_tac[NOT_SOME_NONE, SOME_11,
-                DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``]) >>
-  qexists_tac `\f. GENLIST (THE o f) (LEAST n. f n = NONE)` >>
-  dsimp[INJ_DEF, set_exp_def] >> conj_tac
-  >- (map_every qx_gen_tac [`f`, `n`] >> strip_tac >>
-      dsimp[list_def, listTheory.MEM_GENLIST] >>
-      `(LEAST n. f n = NONE) = n`
-        by (numLib.LEAST_ELIM_TAC >> conj_tac
-            >- (qexists_tac `n` >> simp[]) >>
-            metis_tac[DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``,
-                      NOT_SOME_NONE, DECIDE ``~(x < x)``]) >>
-      simp[] >> rpt strip_tac >> res_tac >> simp[]) >>
-  map_every qx_gen_tac [`f`, `g`, `m`, `n`] >> rpt strip_tac >>
-  `((LEAST n. f n = NONE) = m) /\ ((LEAST n. g n = NONE) = n)`
-    by (conj_tac >> numLib.LEAST_ELIM_TAC >> conj_tac >| [
-          qexists_tac `m` >> simp[],
-          all_tac,
-          qexists_tac `n` >> simp[],
-          all_tac
-        ] >>
-        metis_tac[DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``,
-                  NOT_SOME_NONE, DECIDE ``~(x < x)``]) >>
-  ntac 2 (pop_assum SUBST_ALL_TAC) >>
-  `m = n` by metis_tac[listTheory.LENGTH_GENLIST] >>
-  pop_assum SUBST_ALL_TAC >> simp[FUN_EQ_THM] >> qx_gen_tac `i` >>
-  reverse (Cases_on `i < n`) >- simp[] >>
-  res_tac >>
-  first_x_assum (MP_TAC o AP_TERM ``EL i : 'a list -> 'a``) >>
-  simp[listTheory.EL_GENLIST])
+      metis_tac[DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``]) >>
+  qexists ‘λ(n,f). GENLIST f n’ >>
+  simp[INJ_DEF, set_exp_def, FORALL_PROD, PULL_EXISTS] >> conj_tac
+  >- simp[list_def, listTheory.MEM_GENLIST, PULL_EXISTS] >>
+  rpt gen_tac >> strip_tac >>
+  disch_then (fn th => assume_tac th >> mp_tac (Q.AP_TERM ‘LENGTH’ th)) >>
+  simp_tac (srw_ss()) [] >> strip_tac >> gvs[] >>
+  gs[listTheory.LIST_EQ_REWRITE] >> metis_tac[]
+QED
 
-val INFINITE_A_list_BIJ_A = store_thm(
-  "INFINITE_A_list_BIJ_A",
-  ``INFINITE A ==> list A =~ A``,
+Theorem CARDEQ_CROSS_1:
+  {x} CROSS A =~ A /\ A CROSS {x} =~ A
+Proof
+  simp[cardeq_def] >> conj_tac >| [qexists ‘SND’, qexists ‘FST’] >>
+  simp[BIJ_DEF, INJ_DEF, SURJ_DEF, FORALL_PROD, EXISTS_PROD]
+QED
+
+Theorem INFINITE_A_list_BIJ_A:
+  INFINITE A ==> list A =~ A
+Proof
   strip_tac >>
   assume_tac list_BIGUNION_EXP >>
-  `BIGUNION (IMAGE (\n. A ** count n) univ(:num)) =~ A`
+  `BIGUNION (IMAGE (\n. {n} CROSS (A ** count n)) univ(:num)) =~ A`
     suffices_by metis_tac[cardeq_TRANS] >>
   match_mp_tac cardleq_ANTISYM >> reverse conj_tac
   >- (simp[cardleq_def] >>
-      qexists_tac `\e n. if n = 0 then SOME e else NONE` >>
-      dsimp[INJ_DEF, set_exp_def] >> conj_tac
-      >- (rpt strip_tac >> qexists_tac `1` >> simp[]) >>
-      simp[FUN_EQ_THM] >> metis_tac[SOME_11]) >>
+      qexists_tac ‘\e. (1, λn. if n = 0 then e else ARB)’ >>
+      simp[INJ_DEF, set_exp_def, PULL_EXISTS] >>
+      simp[FUN_EQ_THM] >> metis_tac[]) >>
   match_mp_tac CARD_BIGUNION >> dsimp[] >> conj_tac
   >- simp[IMAGE_cardleq_rwt, GSYM INFINITE_Unum] >>
   qx_gen_tac `n` >> Cases_on `0 < n` >> fs[]
-  >- metis_tac[CARDEQ_SUBSET_CARDLEQ, exp_count_cardeq, cardeq_SYM] >>
-  simp[EMPTY_set_exp, INFINITE_cardleq_INSERT]);
+  >- metis_tac[CARDEQ_SUBSET_CARDLEQ, exp_count_cardeq, cardeq_SYM,
+               CARDEQ_CROSS_1, cardeq_TRANS] >>
+  simp[EMPTY_set_exp, INFINITE_cardleq_INSERT]
+QED
 
 val finite_subsets_bijection = store_thm(
   "finite_subsets_bijection",
@@ -1447,33 +1421,20 @@ val cardlt_cardle = Q.store_thm(
   ‘A <</= B ==> A <<= B’,
   metis_tac[cardlt_lenoteq]);
 
-val set_exp_product = Q.store_thm(
-  "set_exp_product",
-  ‘(A ** B1) ** B2 =~ A ** (B1 CROSS B2)’,
+Theorem set_exp_product:
+  (A ** B1) ** B2 =~ A ** (B1 CROSS B2)
+Proof
   simp[cardeq_def] >>
-  qexists_tac ‘\cf bp. OPTION_BIND (cf (SND bp)) (\f. f (FST bp))’ >>
+  qexists ‘\cf bp. if bp IN B1 CROSS B2 then cf (SND bp) (FST bp) else ARB’ >>
   simp[BIJ_DEF, INJ_IFF, SURJ_DEF, set_exp_def, FORALL_PROD] >>
-  rpt strip_tac
-  >- metis_tac[]
-  >- metis_tac[]
-  >- metis_tac[]
-  >- (simp[FUN_EQ_THM, FORALL_PROD, EQ_IMP_THM] >> rw[] >>
-      rename [‘f1 a = f2 a’] >>
-      Cases_on ‘a IN B2’ >> simp[] >>
-      rpt (first_x_assum (drule_then strip_assume_tac)) >>
-      rename [‘f1 a = f2 a’, ‘f1 a = SOME bf1’, ‘f2 a = SOME bf2’] >>
-      simp[FUN_EQ_THM] >> qx_gen_tac ‘b’ >> Cases_on ‘b IN B1’ >> simp[] >>
-      rpt (first_x_assum (drule_then strip_assume_tac)) >>
-      first_x_assum (qspecl_then [‘b’, ‘a’] mp_tac) >> simp[])
-  >- metis_tac[]
-  >- metis_tac[]
-  >- metis_tac[] >>
-  rename [‘uf (_,_) = NONE’] >>
-  qexists_tac ‘\b2. if b2 IN B2 then
-                      SOME (\b1. if b1 IN B1 then uf(b1,b2) else NONE)
-                    else NONE’ >> simp[] >>
-  simp[FUN_EQ_THM, FORALL_PROD] >> qx_genl_tac [‘b1’, ‘b2’] >>
-  Cases_on ‘b2 IN B2’ >> simp[] >> rw[]);
+  rpt strip_tac >> simp[]
+  >- (simp[FUN_EQ_THM, FORALL_PROD] >> iff_tac >> simp[] >> metis_tac[]) >>
+  rename [‘uf (_,_) IN A’] >>
+  qexists ‘\b2. if b2 IN B2 then
+                  \b1. if b1 IN B1 then uf(b1,b2) else ARB
+                else ARB’ >> simp[] >>
+  simp[FUN_EQ_THM, FORALL_PROD] >> metis_tac[]
+QED
 
 Theorem CARD1_SING:
   (A:'a set) =~ {()} <=> ?a. A = {a}
@@ -1491,13 +1452,13 @@ Proof
   Cases_on ‘x = {}’ >> simp[] >>
   Cases_on ‘e = {}’ >> simp[EMPTY_set_exp, CARD1_SING]
   >- (simp[INJ_IFF, EQ_IMP_THM, PULL_EXISTS] >> reverse (rpt strip_tac)
-      >- (simp[INJ_IFF, cardleq_def] >> qexists_tac ‘λa. K NONE’ >> simp[]) >>
+      >- (simp[INJ_IFF, cardleq_def] >> qexists_tac ‘λa. K ARB’ >> simp[]) >>
       gs[cardleq_def, INJ_IFF, GSYM MEMBER_NOT_EMPTY] >> simp[EXTENSION] >>
       metis_tac[]) >>
   simp[cardleq_def, INJ_IFF] >> gs[GSYM MEMBER_NOT_EMPTY] >>
   rename [‘X ** E’, ‘x IN X’, ‘e IN E’] >>
-  qexists_tac ‘λx0 e0. if e0 IN E then SOME x0 else NONE’ >>
-  simp[set_exp_def, FUN_EQ_THM, AllCaseEqs()] >> metis_tac[]
+  qexists ‘λx0 e0. if e0 IN E then x0 else ARB’ >>
+  simp[set_exp_def, FUN_EQ_THM] >> metis_tac[]
 QED
 
 
@@ -1536,15 +1497,14 @@ Proof
   simp[set_exp_def] >> simp[SimpLHS, EXTENSION] >>
   simp[] >> eq_tac >> rpt strip_tac
   >- (Cases_on ‘B = {}’ >> gvs[]
-      >- (pop_assum $ qspec_then ‘K NONE’ mp_tac >> simp[]) >>
+      >- (pop_assum $ qspec_then ‘K ARB’ mp_tac >> simp[]) >>
       CCONTR_TAC >> gs[GSYM MEMBER_NOT_EMPTY] >>
-      rename [‘_ = SOME _ ==> _ NOTIN A’, ‘_ NOTIN B /\ _’, ‘b IN B’, ‘a IN A’] >>
-      first_x_assum $ qspec_then ‘λb0. if b0 IN B then SOME a else NONE’ mp_tac>>
-      simp[])
-  >- (gvs[] >> pop_assum $ qspec_then ‘K NONE’ mp_tac >> simp[]) >>
+      rename [‘_ IN B /\ _ NOTIN A’, ‘b IN B’, ‘a IN A’] >>
+      first_x_assum $ qspec_then ‘λb0. if b0 IN B then a else ARB’ mp_tac>>
+      csimp[] >> metis_tac[])
+  >- (gvs[] >> pop_assum $ qspec_then ‘K ARB’ mp_tac >> simp[]) >>
   simp[] >> metis_tac[MEMBER_NOT_EMPTY]
 QED
-
 
 Theorem FINITE_EXPONENT_SETEXP_UNCOUNTABLE:
   FINITE B /\ B <> {} /\ ~countable A ==>
@@ -1579,41 +1539,39 @@ QED
 
 
 
-(* bijections modelled as functions into options so that they can be everywhere
+(* bijections modelled as functions  options so that they can be everywhere
    NONE outside of their domains *)
 val bijns_def = Define‘
   bijns A = { f | BIJ (THE o f) A A /\ !a. a IN A <=> ?b. f a = SOME b}
 ’;
 
-val cardeq_bijns_cong = Q.store_thm(
-  "cardeq_bijns_cong",
-  ‘A =~ B ==> bijns A =~ bijns B’,
+Definition bijns_def:
+  bijns A = { f | BIJ f A A /\ !a. a NOTIN A ==> f a = a }
+End
+
+Theorem cardeq_bijns_cong:
+  A =~ B ==> bijns A =~ bijns B
+Proof
   strip_tac >> ONCE_REWRITE_TAC [cardeq_SYM] >>
   fs[cardeq_def, bijns_def] >>
   RULE_ASSUM_TAC (REWRITE_RULE [BIJ_IFF_INV]) >> fs[] >>
-  qexists_tac ‘\bf a. if a IN A then SOME (g (THE (bf (f a)))) else NONE’ >>
+  qexists ‘\bf a. if a IN A then g (bf (f a)) else a’ >>
+  ‘!a1 a2. a1 IN A /\ a2 IN A ==> (f a1 = f a2 <=> a1 = a2)’ by metis_tac[] >>
+  ‘!b1 b2. b1 IN B /\ b2 IN B ==> (g b1 = g b2 <=> b1 = b2)’ by metis_tac[] >>
   simp[BIJ_DEF, INJ_IFF, SURJ_DEF] >> rpt strip_tac >> csimp[]
   >- metis_tac[]
-  >- metis_tac[]
   >- (simp[EQ_IMP_THM, FUN_EQ_THM] >> rw[] >>
-      rename [‘bf1 b = bf2 b’] >> reverse (Cases_on ‘b IN B’)
-      >- metis_tac[option_nchotomy] >>
+      rename [‘bf1 b = bf2 b’] >> reverse (Cases_on ‘b IN B’) >> simp[] >>
       ‘b = f (g b)’ by metis_tac[] >> pop_assum SUBST1_TAC >>
       ‘g b IN A’ by metis_tac[] >> first_x_assum (qspec_then ‘g b’ mp_tac) >>
-      simp[] >>
-      ‘(?b1'. bf1 b = SOME b1') /\ (?b2'. bf2 b = SOME b2')’ by metis_tac[] >>
-      simp[] >> ‘b1' IN B /\ b2' IN B’ by metis_tac[THE_DEF] >>
-      metis_tac[])
-  >- metis_tac[]
+      simp[])
   >- metis_tac[]
   >- (simp[PULL_EXISTS] >> csimp[] >>
-      rename [‘THE (ff _) = _’] >>
-      qexists_tac ‘\b. if b IN B then SOME (f (THE (ff (g b)))) else NONE’ >>
-      simp[] >> rpt strip_tac
-      >- metis_tac[THE_DEF]
-      >- metis_tac[THE_DEF] >>
-      simp[FUN_EQ_THM] >>
-      metis_tac[THE_DEF, option_nchotomy]))
+      rename [‘(ff:'a -> 'a) _ = ff _ <=> _’] >>
+      qexists ‘\b. if b IN B then f (ff (g b)) else b’ >>
+      simp[] >> rpt strip_tac >> csimp[] >> metis_tac[] >>
+      simp[FUN_EQ_THM] >> metis_tac[])
+QED
 
 Theorem bijections_cardeq:
   INFINITE s ==> bijns s =~ POW s
@@ -1622,31 +1580,26 @@ Proof
   irule cardleq_ANTISYM >> conj_tac
   >- (‘POW s =~ s ** s’ by simp[POW_EQ_X_EXP_X] >>
       ‘bijns s <<= s ** s’ suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL] >>
-      irule SUBSET_CARDLEQ >>
-      simp[bijns_def, SUBSET_DEF, BIJ_DEF, INJ_IFF, set_exp_def] >>
-      qx_gen_tac `f` >> rpt strip_tac
-      >- (simp[] >> rename [‘f a = SOME b’] >> ‘a IN s’ by metis_tac[] >>
-          ‘b IN s’ by metis_tac[THE_DEF] >> metis_tac[]) >>
-      qmatch_abbrev_tac ‘f x = NONE’ >> Cases_on ‘f x’ >> simp[] >> fs[]) >>
+      simp[cardleq_def] >>
+      simp[bijns_def, BIJ_DEF, INJ_IFF, set_exp_def] >>
+      qexists ‘λf x. if x IN s then f x else ARB’ >> simp[] >>
+      rpt strip_tac >> simp[FUN_EQ_THM] >> metis_tac[]) >>
   ‘s =~ {T;F} CROSS s’ by simp[SET_SUM_CARDEQ_SET] >>
   ‘bijns s =~ bijns ({T;F} CROSS s)’ by metis_tac[cardeq_bijns_cong] >>
   ‘POW s <<= bijns ({T;F} CROSS s)’
     suffices_by metis_tac[CARDEQ_CARDLEQ,cardeq_REFL] >>
   simp[cardleq_def] >>
-  qexists_tac ‘\ss (bool,a). if a IN s then if a IN ss then SOME (bool,a)
-                                           else SOME (~bool,a)
-                             else NONE’ >>
-  simp[INJ_IFF, IN_POW, bijns_def] >> rpt strip_tac
+  qexists_tac ‘\ss (bool,a). if a IN s then if a IN ss then (bool,a)
+                                            else (~bool,a)
+                             else (bool,a)’ >>
+  simp[INJ_IFF, IN_POW, bijns_def, FORALL_PROD] >> rpt strip_tac
   >- (simp[BIJ_DEF, INJ_IFF, SURJ_DEF, FORALL_PROD] >> rpt strip_tac
       >- rw[]
       >- (rw[] >> metis_tac[])
       >- rw[] >>
       simp[pairTheory.EXISTS_PROD] >> csimp[] >>
-      simp_tac (bool_ss ++ boolSimps.COND_elim_ss) [] >> simp[] >>
-      dsimp[] >> csimp[] >> metis_tac[])
-  >- (rename [‘SND ba IN s’] >> Cases_on ‘ba’ >> simp[pairTheory.EXISTS_PROD] >>
-      dsimp[TypeBase.case_eq_of bool] >> metis_tac[]) >>
-  simp[EQ_IMP_THM] >> simp[SimpL ``(==>)``, FUN_EQ_THM] >> rw[] >>
+      dsimp[AllCaseEqs()] >> metis_tac[]) >>
+  simp[SimpLHS,FUN_EQ_THM] >> iff_tac >> rw[] >>
   simp[EXTENSION] >> qx_gen_tac `a` >> reverse (Cases_on `a IN s`)
   >- metis_tac[SUBSET_DEF] >>
   rename [‘a IN ss1 <=> a IN ss2’] >>
