@@ -12,6 +12,14 @@ val ERR = Feedback.mk_HOL_ERR "cheri_stepLib"
 
 val () = show_assums := true
 
+structure Parse =
+struct
+   open Parse
+   val (Type, Term) = parse_from_grammars cheri_step_grammars
+end
+open Parse
+
+
 (* ------------------------------------------------------------------------- *)
 
 (* Fetch *)

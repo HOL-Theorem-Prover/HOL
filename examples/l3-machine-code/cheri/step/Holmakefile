@@ -2,12 +2,12 @@ INCLUDES = ../.. ..
 
 ifdef POLY
 HOLHEAP = cheri-heap
-EXTRA_CLEANS = $(HOLHEAP) selftest.exe
+EXTRA_CLEANS = $(HOLHEAP) selftest.exe cheri-steplib-selftest.log
 
 BARE_THYS = ../cheriTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
-all: $(DEFAULT_TARGETS) $(HOLHEAP) selftest.exe
+all: $(DEFAULT_TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): ../../l3-heap $(DEPS)
@@ -15,5 +15,10 @@ $(HOLHEAP): ../../l3-heap $(DEPS)
 
 endif
 
-selftest.exe: selftest.uo
-	$(HOLMOSMLC) -o $@ $<
+ifdef HOLSELFTESTLEVEL
+all: cheri-steplib-selftest.log
+
+cheri-steplib-selftest.log: ../../common/testscript.ML cheri_stepLib.uo
+	tmp=`mktemp "$${TMPDIR:-.}/stepLibXXXX"` && TESTLIB=cheri_stepLib $(protect $(HOLDIR)/bin/hol) < $< > $$tmp && $(MV) $$tmp $@
+
+endif

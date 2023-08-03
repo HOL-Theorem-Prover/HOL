@@ -10,17 +10,13 @@ open blastLib mipsTheory mips_stepTheory
 
 local open mips in end
 
-structure Parse =
-struct
-   open Parse
-   val (tyg, tmg) =
-      mipsTheory.mips_grammars
+val ambient_grammars = (type_grammar(), term_grammar())
+
+val _ = temp_set_grammars
+      (mipsTheory.mips_grammars
         |> apsnd (#1 o term_grammar.mfupdate_overload_info
                          (Overload.remove_overloaded_form "add"))
-        |> apsnd ParseExtras.grammar_loose_equality
-   val (Type, Term) = parse_from_grammars (tyg, tmg)
-end
-open Parse
+        |> apsnd ParseExtras.grammar_loose_equality)
 
 val ERR = Feedback.mk_HOL_ERR "mips_stepLib"
 
@@ -1193,6 +1189,8 @@ fun mips_step_code be =
    end
 
 (* ========================================================================= *)
+
+val _ = temp_set_grammars ambient_grammars
 
 (* Testing
 

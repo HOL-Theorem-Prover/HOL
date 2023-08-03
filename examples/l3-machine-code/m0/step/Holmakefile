@@ -2,7 +2,7 @@ INCLUDES = ../.. ../model
 
 ifdef POLY
 HOLHEAP = m0-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+EXTRA_CLEANS = $(HOLHEAP) m0-steplib-selftest.log
 
 BARE_THYS = ../model/m0Lib ../model/m0AssemblerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
@@ -15,5 +15,12 @@ all: $(TARGETS) $(HOLHEAP)
 
 $(HOLHEAP): ../../l3-heap $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -b $< -o $(HOLHEAP) $(BARE_THYS)
+
+endif
+ifdef HOLSELFTESTLEVEL
+all: m0-steplib-selftest.log
+
+m0-steplib-selftest.log: ../../common/testscript.ML m0_stepLib.uo
+	tmp=`mktemp "$${TMPDIR:-.}/stepLibXXXX"` && TESTLIB=m0_stepLib $(protect $(HOLDIR)/bin/hol) < $< > $$tmp && $(MV) $$tmp $@
 
 endif

@@ -10,12 +10,8 @@ open HolKernel boolLib bossLib
 open m0Theory m0_stepTheory
 open state_transformerSyntax blastLib
 
-structure Parse =
-struct
-   open Parse
-   val (Type, Term) = parse_from_grammars m0_stepTheory.m0_step_grammars
-end
-open Parse
+val ambient_grammars = (type_grammar(), term_grammar())
+val _ = temp_set_grammars m0_stepTheory.m0_step_grammars
 
 val ERR = Feedback.mk_HOL_ERR "m0_stepLib"
 val WARN = Feedback.HOL_WARNING "m0_stepLib"
@@ -2018,6 +2014,8 @@ end
 fun thumb_step_code config =
    List.map (thumb_step_hex config) o
    (m0AssemblerLib.m0_code: string quotation -> string list)
+
+val _ = temp_set_grammars ambient_grammars
 
 (* ---------------------------- *)
 

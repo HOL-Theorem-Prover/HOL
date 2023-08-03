@@ -15,3 +15,11 @@ $(HOLHEAP): ../../l3-heap $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -b $< -o $(HOLHEAP) $(BARE_THYS)
 
 endif
+
+ifdef HOLSELFTESTLEVEL
+all: arm8-steplib-selftest.log
+
+arm8-steplib-selftest.log: ../../common/testscript.ML arm8_stepLib.uo
+	tmp=`mktemp "$${TMPDIR:-.}/stepLibXXXX"` && TESTLIB=arm8_stepLib $(protect $(HOLDIR)/bin/hol) < $< > $$tmp && $(MV) $$tmp $@
+
+endif

@@ -8,15 +8,9 @@ struct
 open HolKernel boolLib bossLib
 open updateLib utilsLib x64Lib x64Theory x64_stepTheory
 
-structure Parse =
-struct
-   open Parse
-   val (Type, Term) =
-       x64Theory.x64_grammars |> apsnd ParseExtras.grammar_loose_equality
-                              |> parse_from_grammars
-end
-
-open Parse
+val ambient_grammars = (type_grammar(), term_grammar())
+val _ = temp_set_grammars
+          (x64Theory.x64_grammars |> apsnd ParseExtras.grammar_loose_equality)
 
 val ERR = Feedback.mk_HOL_ERR "x64_stepLib"
 
@@ -1168,6 +1162,8 @@ val x64_decode_code =
    List.map x64_decode_hex o x64AssemblerLib.x64_code_no_spaces
 
 val x64_step_code = List.map x64_step_hex o x64AssemblerLib.x64_code_no_spaces
+
+val _ = temp_set_grammars ambient_grammars
 
 (*
 

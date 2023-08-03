@@ -3,7 +3,7 @@ CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = mips-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o mips-steplib-selftest.log
 
 BARE_THYS = ../model/mipsLib ../model/mips
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
@@ -16,5 +16,13 @@ all: $(TARGETS) $(HOLHEAP)
 
 $(HOLHEAP): ../../l3-heap $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -b $< -o $(HOLHEAP) $(BARE_THYS)
+
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: mips-steplib-selftest.log
+
+mips-steplib-selftest.log: ../../common/testscript.ML mips_stepLib.uo
+	tmp=`mktemp "$${TMPDIR:-.}/stepLibXXXX"` && TESTLIB=mips_stepLib $(protect $(HOLDIR)/bin/hol) < $< > $$tmp && $(MV) $$tmp $@
 
 endif
