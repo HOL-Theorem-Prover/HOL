@@ -3,7 +3,7 @@ CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = riscv-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+EXTRA_CLEANS = $(HOLHEAP) riscv-steplib-selftest.log
 
 BARE_THYS = ../model/riscvTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
@@ -14,4 +14,11 @@ all: $(DEFAULT_TARGETS) $(HOLHEAP)
 $(HOLHEAP): ../../l3-heap $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -b $< -o $(HOLHEAP) $(BARE_THYS)
 
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: riscv-steplib-selftest.log
+
+riscv-steplib-selftest.log: ../../common/testscript.ML riscv_stepLib.uo
+	tmp=`mktemp "$${TMPDIR:-.}/stepLibXXXX"` && TESTLIB=riscv_stepLib $(protect $(HOLDIR)/bin/hol) < $< > $$tmp && $(MV) $$tmp $@
 endif

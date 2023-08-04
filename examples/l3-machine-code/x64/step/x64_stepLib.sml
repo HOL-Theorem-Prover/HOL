@@ -5,7 +5,7 @@
 structure x64_stepLib :> x64_stepLib =
 struct
 
-open HolKernel boolLib bossLib
+open HolKernel Parse boolLib bossLib
 open updateLib utilsLib x64Lib x64Theory x64_stepTheory
 
 val ambient_grammars = (type_grammar(), term_grammar())

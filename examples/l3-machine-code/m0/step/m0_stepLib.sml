@@ -9,6 +9,7 @@ open HolKernel boolLib bossLib
 
 open m0Theory m0_stepTheory
 open state_transformerSyntax blastLib
+open Parse
 
 val ambient_grammars = (type_grammar(), term_grammar())
 val _ = temp_set_grammars m0_stepTheory.m0_step_grammars

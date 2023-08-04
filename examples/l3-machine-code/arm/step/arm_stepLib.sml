@@ -8,22 +8,14 @@ struct
 open HolKernel boolLib bossLib
 
 open armTheory arm_stepTheory arm_configLib
-open state_transformerSyntax blastLib
+open state_transformerSyntax blastLib Parse
 
-structure Parse =
-struct
-   open Parse
-   val (tyg, (tmg, _)) =
-      apsnd (term_grammar.mfupdate_overload_info
-               (Overload.remove_overloaded_form "add") o
-             ParseExtras.grammar_loose_equality
-            )
-      arm_stepTheory.arm_step_grammars
-   val (Type, Term) = parse_from_grammars (tyg, tmg)
-end
-
-open Parse
-val _ = Parse.hide "add"
+val ambient_grammars = (type_grammar(), term_grammar())
+val _ = temp_set_grammars
+          (arm_stepTheory.arm_step_grammars
+             |> apsnd (#1 o term_grammar.mfupdate_overload_info
+                              (Overload.remove_overloaded_form "add") o
+                       ParseExtras.grammar_loose_equality))
 
 val ERR = Feedback.mk_HOL_ERR "arm_stepLib"
 val WARN = Feedback.HOL_WARNING "arm_stepLib"
@@ -4318,7 +4310,7 @@ in
       end
 end
 
-val () = Parse.reveal "add"
+val _ = temp_set_grammars ambient_grammars
 
 (* ---------------------------- *)
 

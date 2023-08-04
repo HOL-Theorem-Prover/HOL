@@ -5,7 +5,7 @@
 structure mips_stepLib :> mips_stepLib =
 struct
 
-open HolKernel boolLib bossLib
+open HolKernel Parse boolLib bossLib
 open blastLib mipsTheory mips_stepTheory
 
 local open mips in end
