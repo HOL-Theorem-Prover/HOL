@@ -1,5 +1,4 @@
-open HolKernel Parse boolLib bossLib BasicProvers
-               pred_setLib stringLib
+open HolKernel Parse boolLib bossLib BasicProvers pred_setLib stringLib;
 
 open pairTheory arithmeticTheory listTheory rich_listTheory pred_setTheory
      stringTheory combinTheory optionTheory;
@@ -22,13 +21,14 @@ QED
 Theorem strlen_eq :
  !(s:string) m. (STRLEN L = m)
        <=>
-       (m = 0 ∧ L = []) ∨
-       (0 < m ∧ ∃n t. L = CHR n::t ∧ n < 256 ∧ STRLEN t = m - 1)
+       (m = 0 /\ L = []) \/
+       (0 < m /\ ?n t. L = CHR n::t /\ n < 256 /\ STRLEN t = m - 1)
 Proof
  Induct \\ rw[STRLEN_DEF,EQ_IMP_THM]
  >- (Cases_on ‘L’ >> gvs[STRLEN_DEF] >> metis_tac[CHR_ONTO])
  >- gvs[STRLEN_DEF]
  >- gvs[STRLEN_DEF]
+
 QED
 
 Theorem strlen_eq_1 :
@@ -36,7 +36,6 @@ Theorem strlen_eq_1 :
 Proof
  rw [Once strlen_eq] \\ metis_tac[]
 QED
-
 
 (*---------------------------------------------------------------------------*)
 (* Some supporting definitions                                               *)

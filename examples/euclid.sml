@@ -259,14 +259,13 @@ Theorem EUCLID_AGAIN[local]:
   !n. ?p. n < p /\ prime p
 Proof
    CCONTR_TAC >>
-   `?n. !p. n < p ==> ~prime p` by metis_tac[] >>
-   `FACT n + 1 ≠ 1`
-        by rw [FACT_LESS, DECIDE ``x<>0 <=> 0<x``] >>
-   ‘∃p. prime p ∧
-        p divides (FACT n + 1)’ by metis_tac [PRIME_FACTOR] >>
+   `?n. !p. n < p ==> ~prime p`
+                      by metis_tac[] >>
+   `FACT n + 1 ≠ 1`   by rw [FACT_LESS, DECIDE ``x<>0 <=> 0<x``] >>
+   ‘∃p. prime p ∧ p divides (FACT n + 1)’
+                      by metis_tac [PRIME_FACTOR]    >>
    `0 < p`            by metis_tac [PRIME_POS]       >>
-   `p <= n`           by metis_tac [NOT_LESS]        >>
-   `p divides FACT n` by metis_tac [LE_DIVIDES_FACT] >>
+   `p divides FACT n` by metis_tac [NOT_LESS,LE_DIVIDES_FACT] >>
    `p divides 1`      by metis_tac [DIVIDES_ADDL]    >>
    `p = 1`            by metis_tac [DIVIDES_ONE]     >>
    `~prime p`         by metis_tac [NOT_PRIME_1]     >>
