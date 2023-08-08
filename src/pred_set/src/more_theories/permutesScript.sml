@@ -99,8 +99,9 @@ Proof
       PROVE_TAC [] ]
 QED
 
-Theorem permutes_bijn:
-  f permutes s <=> f IN bijns s
+(* connection to ‘cardinal$bijns’ *)
+Theorem permutes_alt_bijns:
+    !f s. f permutes s <=> f IN bijns s
 Proof
   simp[permutes_alt, bijns_def]
 QED

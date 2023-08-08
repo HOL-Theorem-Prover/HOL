@@ -1537,14 +1537,7 @@ Proof
   Induct_on ‘FINITE’ >> simp[] >> rw[] >> gvs[CARD1_SING]
 QED
 
-
-
-(* bijections modelled as functions  options so that they can be everywhere
-   NONE outside of their domains *)
-val bijns_def = Define‘
-  bijns A = { f | BIJ (THE o f) A A /\ !a. a IN A <=> ?b. f a = SOME b}
-’;
-
+(* cf. permutesTheory.permutes_alt_bijns *)
 Definition bijns_def:
   bijns A = { f | BIJ f A A /\ !a. a NOTIN A ==> f a = a }
 End
