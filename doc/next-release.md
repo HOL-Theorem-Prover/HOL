@@ -66,7 +66,6 @@ New theories:
 New tools:
 ----------
 
-
 -   The linear decision procedure for the reals (`REAL_ARITH`, `REAL_ARITH_TAC`
     and `REAL_ASM_ARITH_TAC`) have been updated by porting the latest code from
     HOL-Light. There are two versions: those in the existing `RealArith` package
@@ -134,7 +133,9 @@ number of components.
 
    Some case studies are also formalized and placed with dependability theories, for illustration purposes, including smart grids, WSN data transport protocols, satellite solar arrays, virtual data centers, oil and gas pipeline systems and an air traffic management system.
 
--   __large_numberTheory__ (in `examples/probability`): various versions of The Law of Large Numbers (LLN) of Probability Theory.
+-   __Law of Large Numbers__ (at `examples/probability/large_numberScript.sml`):
+    The Law of Large Numbers (LLN) in Probability Theory, including both strong and weak versions
+    for IID (Independent with Identical Distribution) and uncorrelated random variables.
 
     Some LLN theorems (`WLLN_uncorrelated` and `SLLN_uncorrelated`) previously in `probabilityTheory`
     are now moved to `large_numberTheory` with unified statements.
@@ -145,6 +146,9 @@ number of components.
     Three proof systems (two Hilbert, one natural deduction) are shown equivalent, and two model theories (the Routley-Meyer ternary-relation Kripke semantics, and Goldblatt’s “cover” semantics) are shown sound and complete with respect to the proof systems.
 
 -   __armv8-memory-model__ (in `examples/arm`): a port by Anthony Fox of Viktor Vafeiadis’s [Coq formalization of the Armv8 Memory Model](https://github.com/vafeiadis/arm-model), which is based on the official [mixed-size Armv8 memory model](https://github.com/herd/herdtools7/blob/95785c747750be4a3b64adfab9d5f5ee0ead8240/herd/libdir/aarch64.cat) and associated [paper](https://doi.org/10.1145/3458926).
+
+- __Data Encryption Standard (DES)__ (in `examples/Crypto/DES`) is added to HOL's existing
+collection of block ciphers.
 
 Incompatibilities:
 ------------------
@@ -208,6 +212,11 @@ Incompatibilities:
 *   The theories under `src/ring/src` have all been prefixed with the string `EVAL_` reflecting the way they are exclusively used within the system, to provide polynomial normalisation using reflection and `computeLib`.
     This frees up the name `ring` to be used only by the material under `examples/algebra`.
     (In the absence of this change, theories that depended on what was in `src/ring/src` could not be used in a development alongside what is in `examples/algebra`.)
+
+*   In `pred_setTheory`, the definition of `pairwise` has been changed to require
+    pairs of distinct elements as in HOL-Light. The previous HOL-Light compatible
+    version of `pairwise` (in `topologyTheory`) and related theorems are moved to
+   `pred_setTheory`.
 
 * * * * *
 

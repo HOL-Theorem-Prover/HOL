@@ -21,7 +21,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open prim_recTheory arithmeticTheory optionTheory pairTheory combinTheory
-     pred_setTheory pred_setLib;
+     pred_setTheory pred_setLib topologyTheory;
 
 open realTheory realLib metricTheory seqTheory transcTheory real_sigmaTheory
      real_topologyTheory;
@@ -1757,7 +1757,7 @@ Theorem has_exhausting_sequence_alt =
 
    The new definition based on ‘exhausting_sequence’ (was in martingaleTheory):
  *)
-Definition sigma_finite :
+Definition sigma_finite[nocompute] :
     sigma_finite m = ?f. exhausting_sequence (m_space m,measurable_sets m) f /\
                          !n. measure m (f n) < PosInf
 End

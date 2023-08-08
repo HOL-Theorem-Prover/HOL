@@ -2,8 +2,7 @@
 (* The (shared) theory of sigma-algebra and other systems of sets (ring,     *)
 (* semiring, and dynkin system) used in measureTheory/real_measureTheory     *)
 (*                                                                           *)
-(* Author: Chun Tian (2018-2020)                                             *)
-(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
+(* Author: Chun Tian (2018 - 2023)                                           *)
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Tarek Mhamdi, Osman Hasan, Sofiene Tahar [3]         *)
 (* HVG Group, Concordia University, Montreal (2013, 2015)                    *)
@@ -18,6 +17,8 @@ open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory optionTheory pairTheory combinTheory pred_setTheory
      pred_setLib numLib realLib seqTheory hurdUtils util_probTheory;
+
+open topologyTheory;
 
 val _ = new_theory "sigma_algebra";
 

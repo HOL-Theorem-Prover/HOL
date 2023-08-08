@@ -5286,6 +5286,10 @@ val max_lemma = prove(
     ]
   ])
 
+(* |- !s. FINITE s ==>
+          (s <> {} ==> MAX_SET s IN s /\ !y. y IN s ==> y <= MAX_SET s) /\
+          (s = {} ==> MAX_SET s = 0)
+ *)
 val MAX_SET_DEF = new_specification (
   "MAX_SET_DEF", ["MAX_SET"],
   CONV_RULE (BINDER_CONV RIGHT_IMP_EXISTS_CONV THENC
@@ -5335,6 +5339,7 @@ val MAX_SET_ELIM = store_thm(
           Q (MAX_SET P)``,
   PROVE_TAC [MAX_SET_DEF]);
 
+(* NOTE: “MIN_SET {}” is undefined *)
 val MIN_SET_DEF = new_definition("MIN_SET_DEF", ``MIN_SET = $LEAST``);
 
 val MIN_SET_ELIM = store_thm(
@@ -5375,6 +5380,18 @@ val MIN_SET_THM = store_thm(
                       FORALL_AND_THM] THEN
     REPEAT STRIP_TAC THEN RES_TAC THEN ASM_SIMP_TAC arith_ss [MIN_DEF]
   ]);
+
+(* This version of MIN_SET_THM may be more useful when doing induction on s *)
+Theorem MIN_SET_THM' :
+    (!e. MIN_SET {e} = e) /\
+    (!e s. s <> {} ==> MIN_SET (e INSERT s) = MIN e (MIN_SET s))
+Proof
+    CONJ_TAC >- REWRITE_TAC [MIN_SET_THM]
+ >> rpt GEN_TAC
+ >> DISCH_THEN (fn th =>
+                   ONCE_REWRITE_TAC [SYM (MATCH_MP CHOICE_INSERT_REST th)])
+ >> REWRITE_TAC [MIN_SET_THM]
+QED
 
 val MIN_SET_LEM = Q.store_thm
 ("MIN_SET_LEM",
@@ -6238,25 +6255,71 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
-    Assert a predicate on all pairs of elements in a set.
-    Take the RC of the P argument to consider only pairs of distinct elements.
+    Assert a predicate on all (disjoint) pairs of elements in a set.
    ---------------------------------------------------------------------- *)
 
-val pairwise_def = new_definition(
-  "pairwise_def",
-  ``pairwise P s = !e1 e2. e1 IN s /\ e2 IN s ==> P e1 e2``);
+(* NOTE: The involved pairs are now required to be disjoint: ‘e1 <> e2’ *)
+Definition pairwise_def :
+    pairwise P s = !e1 e2. e1 IN s /\ e2 IN s /\ e1 <> e2 ==> P e1 e2
+End
 
-val pairwise_UNION = Q.store_thm(
-"pairwise_UNION",
-`pairwise R (s1 UNION s2) <=>
- pairwise R s1 /\ pairwise R s2 /\ (!x y. x IN s1 /\ y IN s2 ==> R x y /\ R y x)`,
-SRW_TAC [boolSimps.DNF_ss][pairwise_def] THEN METIS_TAC []);
+(* HOL-Light's equivalent definition (sets.ml) *)
+Theorem pairwise :
+    !r s. pairwise r s <=> !x y. x IN s /\ y IN s /\ ~(x = y) ==> r x y
+Proof
+    rw [pairwise_def]
+QED
 
-val pairwise_SUBSET = Q.store_thm(
-"pairwise_SUBSET",
-`!R s t. pairwise R t /\ s SUBSET t ==> pairwise R s`,
-SRW_TAC [][SUBSET_DEF,pairwise_def]);
+Theorem PAIRWISE_EMPTY :
+    !r. pairwise r {} <=> T
+Proof
+  REWRITE_TAC[pairwise, NOT_IN_EMPTY] THEN MESON_TAC[]
+QED
 
+Theorem PAIRWISE_SING :
+    !r x. pairwise r {x} <=> T
+Proof
+  REWRITE_TAC[pairwise, IN_SING] THEN MESON_TAC[]
+QED
+
+(* NOTE: added ‘x <> y’ to adapt the changed definition of ‘pairwise’ *)
+Theorem pairwise_UNION :
+    !R s1 s2. pairwise R (s1 UNION s2) <=>
+              pairwise R s1 /\ pairwise R s2 /\
+             (!x y. x IN s1 /\ y IN s2 /\ x <> y ==> R x y /\ R y x)
+Proof
+    SRW_TAC [boolSimps.DNF_ss][pairwise_def] THEN METIS_TAC []
+QED
+
+Theorem pairwise_SUBSET :
+    !R s t. pairwise R t /\ s SUBSET t ==> pairwise R s
+Proof
+  SRW_TAC [][SUBSET_DEF, pairwise_def]
+QED
+
+Theorem PAIRWISE_MONO :
+    !r s t. pairwise r s /\ t SUBSET s ==> pairwise r t
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC pairwise_SUBSET
+ >> Q.EXISTS_TAC ‘s’ >> ASM_REWRITE_TAC []
+QED
+
+Theorem PAIRWISE_INSERT :
+    !r x s.
+        pairwise r (x INSERT s) <=>
+        (!y. y IN s /\ ~(y = x) ==> r x y /\ r y x) /\
+        pairwise r s
+Proof
+  REWRITE_TAC[pairwise, IN_INSERT] THEN MESON_TAC[]
+QED
+
+Theorem PAIRWISE_IMAGE :
+    !r f s. pairwise r (IMAGE f s) <=>
+            pairwise (\x y. ~(f x = f y) ==> r (f x) (f y)) s
+Proof
+  REWRITE_TAC[pairwise, IN_IMAGE] THEN MESON_TAC[]
+QED
 
 (* ----------------------------------------------------------------------
     A proof of Koenig's Lemma
