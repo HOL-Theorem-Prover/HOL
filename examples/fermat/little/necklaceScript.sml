@@ -54,7 +54,7 @@ open helperListTheory; (* for LENGTH_NON_NIL, LIST_TO_SET_SING_IFF *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Necklace:
    necklace_def      |- !n a. necklace n a =

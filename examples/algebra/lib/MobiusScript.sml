@@ -77,16 +77,16 @@ open EulerTheory;
    sq_free_disjoint_even_odd  |- !s. DISJOINT (even_sq_free s) (odd_sq_free s)
 
    Less Divisors of a number:
-   less_divisors_element       |- !n x. x IN less_divisors n <=> x < n /\ x divides n
+   less_divisors_element       |- !n x. x IN less_divisors n <=> 0 < x /\ x < n /\ x divides n
    less_divisors_0             |- less_divisors 0 = {}
    less_divisors_1             |- less_divisors 1 = {}
-   less_divisors_subset_divisors   |- !n. less_divisors n SUBSET divisors n
+   less_divisors_subset_divisors
+                               |- !n. less_divisors n SUBSET divisors n
    less_divisors_finite        |- !n. FINITE (less_divisors n)
    less_divisors_prime         |- !n. prime n ==> (less_divisors n = {1})
-   less_divisors_has_one       |- !n. 1 < n ==> 1 IN less_divisors n
+   less_divisors_has_1         |- !n. 1 < n ==> 1 IN less_divisors n
    less_divisors_nonzero       |- !n x. x IN less_divisors n ==> 0 < x
-   less_divisors_has_cofactor  |- !n. 0 < n ==>
-                                  !d. 1 < d /\ d IN less_divisors n ==> n DIV d IN less_divisors n
+   less_divisors_has_cofactor  |- !n d. 1 < d /\ d IN less_divisors n ==> n DIV d IN less_divisors n
 
    Proper Divisors of a number:
    proper_divisors_element     |- !n x. x IN proper_divisors n <=> 1 < x /\ x < n /\ x divides n
@@ -94,10 +94,11 @@ open EulerTheory;
    proper_divisors_1           |- proper_divisors 1 = {}
    proper_divisors_subset      |- !n. proper_divisors n SUBSET less_divisors n
    proper_divisors_finite      |- !n. FINITE (proper_divisors n)
-   proper_divisors_not_one     |- !n. 1 NOTIN proper_divisors n
-   proper_divisors_by_less_divisors   |- !n. proper_divisors n = less_divisors n DELETE 1
+   proper_divisors_not_1       |- !n. 1 NOTIN proper_divisors n
+   proper_divisors_by_less_divisors
+                               |- !n. proper_divisors n = less_divisors n DELETE 1
    proper_divisors_prime       |- !n. prime n ==> (proper_divisors n = {})
-   proper_divisors_has_cofactor   |- !n d. d IN proper_divisors n ==> n DIV d IN proper_divisors n
+   proper_divisors_has_cofactor|- !n d. d IN proper_divisors n ==> n DIV d IN proper_divisors n
    proper_divisors_min_gt_1    |- !n. proper_divisors n <> {} ==> 1 < MIN_SET (proper_divisors n)
    proper_divisors_max_min     |- !n. proper_divisors n <> {} ==>
                                       (MAX_SET (proper_divisors n) = n DIV MIN_SET (proper_divisors n)) /\
@@ -261,22 +262,30 @@ val sq_free_disjoint = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the prime divisors of a number *)
-val prime_factors_def = Define`
+val prime_factors_def = zDefine`
     prime_factors n = {p | prime p /\ p IN (divisors n)}
 `;
+(* use zDefine as this cannot be computed. *)
 (* prime_divisors is used in triangle.hol *)
 
 (* Theorem: p IN prime_factors n <=> prime p /\ p <= n /\ p divides n *)
-(* Proof: by prime_factors_def, divisors_def *)
-val prime_factors_element = store_thm(
-  "prime_factors_element",
-  ``!n p. p IN prime_factors n <=> prime p /\ p <= n /\ p divides n``,
-  rw[prime_factors_def, divisors_def]);
+(* Proof:
+       p IN prime_factors n
+   <=> prime p /\ p IN (divisors n)                by prime_factors_def
+   <=> prime p /\ 0 < p /\ p <= n /\ p divides n   by divisors_def
+   <=> prime p /\ p <= n /\ p divides n            by PRIME_POS
+*)
+Theorem prime_factors_element:
+  !n p. p IN prime_factors n <=> prime p /\ p <= n /\ p divides n
+Proof
+  rw[prime_factors_def, divisors_def] >>
+  metis_tac[PRIME_POS]
+QED
 
 (* Theorem: (prime_factors n) SUBSET (divisors n) *)
 (* Proof:
        p IN (prime_factors n)
-   ==> p IN (divisors n)              by prime_factors_def
+   ==> p IN (divisors n)                         by prime_factors_def
    Hence (prime_factors n) SUBSET (divisors n)   by SUBSET_DEF
 *)
 val prime_factors_subset = store_thm(
@@ -286,9 +295,9 @@ val prime_factors_subset = store_thm(
 
 (* Theorem: FINITE (prime_factors n) *)
 (* Proof:
-   Since (prime_factors n) SUBSET (divisors n)    by prime_factors_subset
-     and FINITE (divisors n)           by divisors_finite
-    Thus FINITE (prime_factors n)                 by SUBSET_FINITE
+   Since (prime_factors n) SUBSET (divisors n)   by prime_factors_subset
+     and FINITE (divisors n)                     by divisors_finite
+    Thus FINITE (prime_factors n)                by SUBSET_FINITE
 *)
 val prime_factors_finite = store_thm(
   "prime_factors_finite",
@@ -386,11 +395,11 @@ val sq_free_disjoint_even_odd = store_thm(
 (* Overload the set of divisors less than n *)
 val _ = overload_on("less_divisors", ``\n. {x | x IN (divisors n) /\ x <> n}``);
 
-(* Theorem: x IN (less_divisors n) <=> (x < n /\ x divides n) *)
+(* Theorem: x IN (less_divisors n) <=> (0 < x /\ x < n /\ x divides n) *)
 (* Proof: by divisors_element. *)
 val less_divisors_element = store_thm(
   "less_divisors_element",
-  ``!n x. x IN (less_divisors n) <=> (x < n /\ x divides n)``,
+  ``!n x. x IN (less_divisors n) <=> (0 < x /\ x < n /\ x divides n)``,
   rw[divisors_element, EQ_IMP_THM]);
 
 (* Theorem: less_divisors 0 = {} *)
@@ -450,36 +459,32 @@ val less_divisors_prime = store_thm(
    <=> 1 < n /\ 1 divides n     by less_divisors_element
    <=> T                        by ONE_DIVIDES_ALL
 *)
-val less_divisors_has_one = store_thm(
-  "less_divisors_has_one",
+val less_divisors_has_1 = store_thm(
+  "less_divisors_has_1",
   ``!n. 1 < n ==> 1 IN (less_divisors n)``,
   rw[less_divisors_element]);
 
 (* Theorem: x IN (less_divisors n) ==> 0 < x *)
-(* Proof:
-   Since x IN (less_divisors n),
-         x < n /\ x divides n                 by less_divisors_element
-   By contradiction, if x = 0, then n = 0     by ZERO_DIVIDES
-   This contradicts x < n.
-*)
+(* Proof: by less_divisors_element. *)
 val less_divisors_nonzero = store_thm(
   "less_divisors_nonzero",
   ``!n x. x IN (less_divisors n) ==> 0 < x``,
-  metis_tac[less_divisors_element, ZERO_DIVIDES, NOT_ZERO_LT_ZERO]);
+  rw[less_divisors_element]);
 
-(* Theorem: 0 < n ==> !d. 1 < d /\ d IN (less_divisors n) ==> (n DIV d) IN (less_divisors n) *)
+(* Theorem: 1 < d /\ d IN (less_divisors n) ==> (n DIV d) IN (less_divisors n) *)
 (* Proof:
       d IN (less_divisors n)
-  ==> d IN (divisors n)                   by notation
+  ==> d IN (divisors n)                   by less_divisors_subset_divisors
   ==> (n DIV d) IN (divisors n)           by divisors_has_cofactor
+   Note 0 < d /\ d <= n ==> 0 < n         by divisors_element
    Also n DIV d < n                       by DIV_LESS, 0 < n /\ 1 < d
    thus n DIV d <> n                      by LESS_NOT_EQ
   Hence (n DIV d) IN (less_divisors n)    by notation
 *)
 val less_divisors_has_cofactor = store_thm(
   "less_divisors_has_cofactor",
-  ``!n. 0 < n ==> !d. 1 < d /\ d IN (less_divisors n) ==> (n DIV d) IN (less_divisors n)``,
-  rw[divisors_has_cofactor, DIV_LESS, LESS_NOT_EQ]);
+  ``!n d. 1 < d /\ d IN (less_divisors n) ==> (n DIV d) IN (less_divisors n)``,
+  rw[divisors_has_cofactor, divisors_element, DIV_LESS, LESS_NOT_EQ]);
 
 (* ------------------------------------------------------------------------- *)
 (* Proper Divisors of a number.                                              *)
@@ -491,18 +496,14 @@ val _ = overload_on("proper_divisors", ``\n. {x | x IN (divisors n) /\ x <> 1 /\
 (* Theorem: x IN (proper_divisors n) <=> (1 < x /\ x < n /\ x divides n) *)
 (* Proof:
    Since x IN (divisors n)
-     ==> x <= n /\ x divides n       by divisors_element
+     ==> 0 < x /\ x <= n /\ x divides n  by divisors_element
    Since x <= n but x <> n, x < n.
-   If x = 0, x divides n ==> n = 0   by ZERO_DIVIDES
-   But x <> n, so x <> 0.
    With x <> 0 /\ x <> 1 ==> 1 < x.
 *)
 val proper_divisors_element = store_thm(
   "proper_divisors_element",
   ``!n x. x IN (proper_divisors n) <=> (1 < x /\ x < n /\ x divides n)``,
-  rw[divisors_element, EQ_IMP_THM] >>
-  `x <> 0` by metis_tac[ZERO_DIVIDES] >>
-  decide_tac);
+  rw[divisors_element, EQ_IMP_THM]);
 
 (* Theorem: proper_divisors 0 = {} *)
 (* Proof: by proper_divisors_element. *)
@@ -538,8 +539,8 @@ val proper_divisors_finite = store_thm(
 
 (* Theorem: 1 NOTIN (proper_divisors n) *)
 (* Proof: proper_divisors_element *)
-val proper_divisors_not_one = store_thm(
-  "proper_divisors_not_one",
+val proper_divisors_not_1 = store_thm(
+  "proper_divisors_not_1",
   ``!n. 1 NOTIN (proper_divisors n)``,
   rw[proper_divisors_element]);
 
@@ -668,7 +669,7 @@ val proper_divisors_max_min = store_thm(
 (* Theorem: 1 < n ==> (MIN_SET (less_divisors n) = 1) *)
 (* Proof:
    Let s = less_divisors n.
-   Since 1 < n ==> 1 IN s         by less_divisors_has_one
+   Since 1 < n ==> 1 IN s         by less_divisors_has_1
       so s <> {}                  by MEMBER_NOT_EMPTY
      and !y. y IN s ==> 0 < y     by less_divisors_nonzero
       or !y. y IN s ==> 1 <= y    by LESS_EQ
@@ -677,7 +678,7 @@ val proper_divisors_max_min = store_thm(
 val less_divisors_min = store_thm(
   "less_divisors_min",
   ``!n. 1 < n ==> (MIN_SET (less_divisors n) = 1)``,
-  metis_tac[less_divisors_has_one, MEMBER_NOT_EMPTY,
+  metis_tac[less_divisors_has_1, MEMBER_NOT_EMPTY,
              MIN_SET_TEST, less_divisors_nonzero, LESS_EQ, ONE]);
 
 (* Theorem: MAX_SET (less_divisors n) <= n DIV 2 *)
@@ -688,7 +689,7 @@ val less_divisors_min = store_thm(
        and 0 <= n DIV 2 is trivial.
    If s <> {},
       Then n <> 0 /\ n <> 1            by less_divisors_0, less_divisors_1
-   Note 1 IN s                         by less_divisors_has_one
+   Note 1 IN s                         by less_divisors_has_1
    Consider t = s DELETE 1.
    Then t = proper_divisors n          by proper_divisors_by_less_divisors
    If t = {},
@@ -720,7 +721,7 @@ Proof
   Cases_on `s = {}` >- rw[MAX_SET_EMPTY, Abbr`m`] >>
   `n <> 0 /\ n <> 1` by metis_tac[less_divisors_0, less_divisors_1] >>
   `1 < n` by decide_tac >>
-  `1 IN s` by rw[less_divisors_has_one, Abbr`s`] >>
+  `1 IN s` by rw[less_divisors_has_1, Abbr`s`] >>
   qabbrev_tac `t = proper_divisors n` >>
   `t = s DELETE 1`  by rw[proper_divisors_by_less_divisors, Abbr`t`, Abbr`s`] >>
   Cases_on `t = {}` >| [

@@ -190,9 +190,9 @@ val binomial_less_0 = store_thm(
   "binomial_less_0",
   ``!n k. n < k ==> (binomial n k = 0)``,
   Induct_on `n` >-
-  metis_tac[binomial_def, num_CASES, NOT_ZERO_LT_ZERO] >>
+  metis_tac[binomial_def, num_CASES, NOT_ZERO] >>
   rw[binomial_def] >>
-  `?h. k = SUC h` by metis_tac[SUC_NOT, NOT_ZERO_LT_ZERO, LESS_EQ_SUC, LESS_TRANS] >>
+  `?h. k = SUC h` by metis_tac[SUC_NOT, NOT_ZERO, SUC_EXISTS, LESS_TRANS] >>
   metis_tac[binomial_def, LESS_MONO_EQ, LESS_TRANS, LESS_SUC, ADD_0]);
 
 (* Theorem: C(n,0) = 1 *)
@@ -312,7 +312,7 @@ val binomial_formula2 = store_thm(
 val binomial_formula3 = store_thm(
   "binomial_formula3",
   ``!n k. k <= n ==> (binomial n k = (FACT n) DIV ((FACT k) * (FACT (n - k))))``,
-  metis_tac[binomial_formula2, MULT_COMM, MULT_DIV, MULT_EQ_0, FACT_LESS, NOT_ZERO_LT_ZERO]);
+  metis_tac[binomial_formula2, MULT_COMM, MULT_DIV, MULT_EQ_0, FACT_LESS, NOT_ZERO]);
 
 (* Theorem alias. *)
 val binomial_fact = save_thm("binomial_fact", binomial_formula3);
@@ -327,7 +327,7 @@ val binomial_fact = save_thm("binomial_fact", binomial_formula3);
 val binomial_n_k = store_thm(
   "binomial_n_k",
   ``!n k. k <= n ==> (binomial n k = (FACT n) DIV (FACT k) DIV (FACT (n - k)))``,
-  metis_tac[DIV_DIV_DIV_MULT, binomial_formula3, MULT_EQ_0, FACT_LESS, NOT_ZERO_LT_ZERO]);
+  metis_tac[DIV_DIV_DIV_MULT, binomial_formula3, MULT_EQ_0, FACT_LESS, NOT_ZERO]);
 
 (* Theorem: binomial n 1 = n *)
 (* Proof:
@@ -402,7 +402,7 @@ val binomial_pos = store_thm(
    If part: (binomial n k = 0) ==> n < k
       By contradiction, suppose k <= n.
       Then 0 < binomial n k                by binomial_pos
-      This contradicts binomial n k = 0    by NOT_ZERO_LT_ZERO
+      This contradicts binomial n k = 0    by NOT_ZERO
    Only-if part: n < k ==> (binomial n k = 0)
       This is true                         by binomial_less_0
 *)
@@ -412,7 +412,7 @@ val binomial_eq_0 = store_thm(
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `k <= n` by decide_tac >>
-    metis_tac[binomial_pos, NOT_ZERO_LT_ZERO],
+    metis_tac[binomial_pos, NOT_ZERO],
     rw[binomial_less_0]
   ]);
 
@@ -592,7 +592,7 @@ val binomial_monotone = store_thm(
   `(k + 1) * binomial n (k + 1) = (n - k) * binomial n k` by rw[binomial_right_eqn] >>
   `HALF n <= n` by rw[DIV_LESS_EQ] >>
   `0 < binomial n k` by rw[binomial_pos] >>
-  `0 < binomial n (k + 1)` by metis_tac[MULT_0, MULT_EQ_0, NOT_ZERO_LT_ZERO] >>
+  `0 < binomial n (k + 1)` by metis_tac[MULT_0, MULT_EQ_0, NOT_ZERO] >>
   metis_tac[MULT_EQ_LESS_TO_MORE]);
 
 (* Theorem: binomial n k <= binomial n (HALF n) *)
@@ -1217,7 +1217,7 @@ val binomial_product_identity = store_thm(
   `FACT (n - k) = binomial (n - k) (m - k) * (FACT (n - m) * FACT (m - k))` by metis_tac[binomial_formula2] >>
   `FACT n = FACT (n - m) * (FACT k * (FACT (m - k) * ((binomial m k) * (binomial n m))))` by metis_tac[MULT_ASSOC, MULT_COMM] >>
   `FACT n = FACT (n - m) * (FACT k * (FACT (m - k) * ((binomial n k) * (binomial (n - k) (m - k)))))` by metis_tac[MULT_ASSOC, MULT_COMM] >>
-  metis_tac[MULT_LEFT_CANCEL, FACT_LESS, NOT_ZERO_LT_ZERO]);
+  metis_tac[MULT_LEFT_CANCEL, FACT_LESS, NOT_ZERO]);
 
 (* Theorem: binomial n (HALF n) <= 4 ** (HALF n) *)
 (* Proof:
@@ -1372,7 +1372,7 @@ val binomial_middle_by_stirling = store_thm(
   qabbrev_tac `k = HALF n` >>
   `0 < k` by decide_tac >>
   `n DIV k = 2` by metis_tac[MULT_TO_DIV, MULT_COMM] >>
-  `0 < pi * n` by metis_tac[MULT_EQ_0, NOT_ZERO_LT_ZERO] >>
+  `0 < pi * n` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
   `0 < 2 * pi * n` by decide_tac >>
   `(FACT k) ** 2 = (SQRT (2 * pi * k)) ** 2 * ((k DIV e) ** k) ** 2` by rw[EXP_BASE_MULT] >>
   `_ = (SQRT (2 * pi * k)) ** 2 * (k DIV e) ** n` by rw[GSYM EXP_EXP_MULT] >>
@@ -1384,7 +1384,7 @@ val binomial_middle_by_stirling = store_thm(
   (rpt strip_tac >>
   qabbrev_tac `c = b ** h` >>
   `b = c * c` by rw[GSYM EXP_EXP_MULT, Abbr`c`] >>
-  `0 < c` by metis_tac[MULT_EQ_0, NOT_ZERO_LT_ZERO] >>
+  `0 < c` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
   `a * (c DIV b) = (a * c) DIV (c * c)` by metis_tac[MULT_COMM] >>
   `_ = (a DIV c) * (c DIV c)` by metis_tac[] >>
   metis_tac[DIVMOD_ID, MULT_RIGHT_1]) >>

@@ -23,6 +23,7 @@ open helperSetTheory;
 open helperFunctionTheory;
 open arithmeticTheory pred_setTheory;
 open dividesTheory; (* for divides_def, prime_def *)
+open logPowerTheory; (* for prime_non_square *)
 
 open windmillTheory;
 
@@ -58,7 +59,7 @@ open pairTheory; (* for ELIM_UNCURRY, PAIR_FST_SND_EQ, PAIR_EQ, FORALL_PROD *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Helper Theorems:
 
@@ -82,7 +83,7 @@ open pairTheory; (* for ELIM_UNCURRY, PAIR_FST_SND_EQ, PAIR_EQ, FORALL_PROD *)
 
    Fermat Two-Squares Existence:
    fermat_two_squares_exists_windmill
-                   |- !p. prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill x y y
+                   |- !p. prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill (x, y, y)
    fermat_two_squares_exists_odd_even
                    |- !p. prime p /\ (p MOD 4 = 1) ==>
                           ?(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
@@ -158,7 +159,6 @@ open pairTheory; (* for ELIM_UNCURRY, PAIR_FST_SND_EQ, PAIR_EQ, FORALL_PROD *)
 (* Two Squares Fixes.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-
 (* Theorem: prime p /\ (p MOD 4 = 1) ==> (fixes zagier (mills p) = {(1,1,p DIV 4)}) *)
 (* Proof:
    Let s = mills p,
@@ -172,12 +172,12 @@ open pairTheory; (* for ELIM_UNCURRY, PAIR_FST_SND_EQ, PAIR_EQ, FORALL_PROD *)
             zagier (x,y,z) = (x,y,z)  by fixes_element
         but x <> 0                    by mills_prime_triple_nonzero
          so x = y                     by zagier_fix
-        Now p = windmill x x z        by mills_element
+        Now p = windmill (x, x, z)    by mills_element
         ==> x = 1, y = 1, z = k       by windmill_trivial_prime
    (2) (1,1,k) IN a
        Note p = k * 4 + p MOD 4       by DIVISION
               = 4 * k + 1             by p MOD 4 = 1
-              = windmill 1 1 k        by windmill_trivial
+              = windmill (1, 1, k)    by windmill_trivial
          so (1,1,k) IN s              by mills_element
         and zagier (1,1,k) = (1,1,k)  by zagier_1_1_z
         ==> (1,1,k) IN a              by fixes_element
@@ -195,7 +195,7 @@ Proof
     `p_1 = p_1'` by metis_tac[zagier_fix, mills_prime_triple_nonzero] >>
     metis_tac[windmill_trivial_prime, mills_element],
     `p = k * 4 + p MOD 4` by rw[DIVISION, Abbr`k`] >>
-    `_ = windmill 1 1 k` by rw[windmill_trivial] >>
+    `_ = windmill (1, 1, k)` by rw[windmill_trivial] >>
     `(1,1,k) IN s` by rw[mills_element, Abbr`s`] >>
     fs[fixes_element, zagier_1_1_z, Abbr`a`]
   ]
@@ -322,7 +322,6 @@ Proof
   metis_tac[EVEN_ODD]
 QED
 
-
 (* Theorem: prime p /\ (p MOD 4 = 1) ==> CARD (fixes flip (mills p)) <= 1 *)
 (* Proof:
    Let s = mills p,
@@ -330,28 +329,28 @@ QED
    The goal is: CARD b <= 1.
    By contradiction, suppose CARD b > 1.
    Then CARD b <> 0,
-     so ?u. u IN b           by CARD_EMPTY, MEMBER_NOT_EMPTY
-   Note u IN s               by fixes_element
-    and ?x y. u = (x,y,y)    by triple_parts, flip_fix
-   Thus p = windmill x y y   by mills_element
+     so ?u. u IN b             by CARD_EMPTY, MEMBER_NOT_EMPTY
+   Note u IN s                 by fixes_element
+    and ?x y. u = (x,y,y)      by triple_parts, flip_fix
+   Thus p = windmill (x, y, y) by mills_element
 
    Also CARD b <> 1,
-   Then ~SING b              by SING_CARD_1
-     so b <> EMPTY           by MEMBER_NOT_EMPTY
-    and ?v. v IN b /\ v <> u by SING_ONE_ELEMENT, b <> EMPTY
-   Note v IN s               by fixes_element
-    and ?h k. v = (h,k,k)    by triple_parts, flip_fix
-   Thus p = windmill h k k   by mills_element
+   Then ~SING b                by SING_CARD_1
+     so b <> EMPTY             by MEMBER_NOT_EMPTY
+    and ?v. v IN b /\ v <> u   by SING_ONE_ELEMENT, b <> EMPTY
+   Note v IN s                 by fixes_element
+    and ?h k. v = (h,k,k)      by triple_parts, flip_fix
+   Thus p = windmill (h, k, k) by mills_element
 
    Let c = 2 * y,
        d = 2 * k.
-    Now ODD p               by odd_by_mod_4, p MOD 4 = 1
+    Now ODD p                  by odd_by_mod_4, p MOD 4 = 1
     and (p = x ** 2 + c ** 2) /\ ODD x   by windmill_x_y_y
     and (p = h ** 2 + d ** 2) /\ ODD h   by windmill_x_y_y
     but EVEN c /\ EVEN d                 by EVEN_DOUBLE
-    ==> (x = h) /\ (c = d)  by fermat_two_squares_unique_odd_even
-     so (x = h) /\ (y = k)  by EQ_MULT_LCANCEL
-     or v = u               by PAIR_EQ
+    ==> (x = h) /\ (c = d)     by fermat_two_squares_unique_odd_even
+     so (x = h) /\ (y = k)     by EQ_MULT_LCANCEL
+     or v = u                  by PAIR_EQ
    This contradicts v <> u.
 *)
 Theorem flip_fixes_prime_card_upper:
@@ -364,12 +363,12 @@ Proof
   `CARD b <> 0 /\ CARD b <> 1` by decide_tac >>
   `?u. u IN b` by metis_tac[CARD_EMPTY, MEMBER_NOT_EMPTY] >>
   `u IN s /\ ?x y. u = (x,y,y)` by metis_tac[fixes_element, triple_parts, flip_fix] >>
-  `p = windmill x y y` by fs[mills_element, Abbr`s`] >>
+  `p = windmill (x, y, y)` by fs[mills_element, Abbr`s`] >>
   `~SING b` by metis_tac[SING_CARD_1] >>
   `b <> EMPTY` by metis_tac[MEMBER_NOT_EMPTY] >>
   `?v. v IN b /\ v <> u` by metis_tac[SING_ONE_ELEMENT] >>
   `v IN s /\ ?h k. v = (h,k,k)` by metis_tac[fixes_element, triple_parts, flip_fix] >>
-  `p = windmill h k k` by fs[mills_element, Abbr`s`] >>
+  `p = windmill (h, k, k)` by fs[mills_element, Abbr`s`] >>
   qabbrev_tac `c = 2 * y` >>
   qabbrev_tac `d = 2 * k` >>
   `ODD p` by rfs[odd_by_mod_4] >>
@@ -386,7 +385,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 
-(* Theorem: prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill x y y *)
+(* Theorem: prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill (x, y, y) *)
 (* Proof:
    Let m = mills p, the solutions (x,y,z) of p = x ** 2 + 4 * y * z.
    Note ~square p                 by prime_non_square
@@ -410,10 +409,10 @@ QED
         (flip (x, y, z) = (x, y, z))   by fixes_element
      so y = z                          by flip_fix
      or (x,y,y) in m                   by above
-   Thus p = windmill x y y             by mills_element
+   Thus p = windmill (x, y, y)         by mills_element
 *)
 Theorem fermat_two_squares_exists_windmill:
-  !p. prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill x y y
+  !p. prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill (x, y, y)
 Proof
   rpt strip_tac >>
   qabbrev_tac `m = mills p` >>
@@ -441,7 +440,7 @@ QED
 (* Theorem: prime p /\ (p MOD 4 = 1) ==>
             ?(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) *)
 (* Proof:
-   Note ?x y. p = windmill x y y          by fermat_two_squares_exists_windmill
+   Note ?x y. p = windmill (x, y, y)      by fermat_two_squares_exists_windmill
                 = x ** 2 + (2 * y) ** 2   by windmill_by_squares
    Put (u, v) = (x, 2 * y).
    Remains to show: ODD u /\ EVEN v.
@@ -459,7 +458,7 @@ Theorem fermat_two_squares_exists_odd_even:
    ?(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)
 Proof
   rw[ELIM_UNCURRY] >>
-  `?x y. p = windmill x y y` by rw[fermat_two_squares_exists_windmill] >>
+  `?x y. p = windmill (x, y, y)` by rw[fermat_two_squares_exists_windmill] >>
   `_ = x ** 2 + (2 * y) ** 2` by rw[windmill_by_squares] >>
   qabbrev_tac `u = x` >>
   qabbrev_tac `v = 2 * y` >>
@@ -479,13 +478,12 @@ QED
 (* Fermat Two-Squares Theorem.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-
 (* Theorem: prime p /\ (p MOD 4 = 1) ==> SING (fixes flip (mills p)) *)
 (* Proof:
    Let s = mills p,
        b = fixes flip s.
    The goal is: SING b.
-   Note ?x y. p = windmill x y y
+   Note ?x y. p = windmill (x, y, y)
                             by fermat_two_squares_exists_windmill
     Let u = (x,y,y).
    Then u IN s              by mills_element
@@ -494,7 +492,7 @@ QED
       !t. t IN b ==> t = u.
    Note t IN s              by fixes_element
     and ?h k. t = (h,k,k)   by triple_parts, flip_fix
-   Thus p = windmill h k k  by mills_element
+   Thus p = windmill (h, k, k) by mills_element
 
    Let c = 2 * y,
        d = 2 * k.
@@ -510,7 +508,7 @@ Theorem flip_fixes_prime_sing:
   !p. prime p /\ (p MOD 4 = 1) ==> SING (fixes flip (mills p))
 Proof
   rpt strip_tac >>
-  `?x y. p = windmill x y y` by rw[fermat_two_squares_exists_windmill] >>
+  `?x y. p = windmill (x, y, y)` by rw[fermat_two_squares_exists_windmill] >>
   qabbrev_tac `s = mills p` >>
   qabbrev_tac `b = fixes flip s` >>
   qabbrev_tac `u = (x,y,y)` >>
@@ -521,7 +519,7 @@ Proof
   (rewrite_tac[EQ_IMP_THM] >> simp[]) >>
   rpt strip_tac >>
   `x' IN s /\ ?h k. x' = (h,k,k)` by metis_tac[fixes_element, triple_parts, flip_fix] >>
-  `p = windmill h k k` by fs[mills_element, Abbr`s`] >>
+  `p = windmill (h, k, k)` by fs[mills_element, Abbr`s`] >>
   qabbrev_tac `c = 2 * y` >>
   qabbrev_tac `d = 2 * k` >>
   `ODD p` by rfs[odd_by_mod_4] >>
@@ -532,7 +530,6 @@ Proof
   `y = k` by fs[Abbr`c`, Abbr`d`] >>
   simp[Abbr`u`]
 QED
-
 
 (* Theorem: prime p /\ (p MOD 4 = 1) ==>
             (fixes flip (mills p) =
@@ -652,7 +649,6 @@ QED
 (* Fermat Two-Squares Algorithm.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-
 (* Theorem: (iterate_period (zagier o flip) (1,1,z) = 1) <=> (z = 1) *)
 (* Proof:
    By iterate_period_thm, this is to show:
@@ -666,7 +662,6 @@ Theorem zagier_flip_1_1_z_period:
 Proof
   rw[iterate_period_thm, zagier_flip_1_1_z]
 QED
-
 
 (* Theorem: prime p /\ (p MOD 4 = 1) /\ (u = (1, 1, p DIV 4)) /\
             (n = iterate_period (zagier o flip) u) /\ (g = \(x,y,z). y <> z) ==>
@@ -686,7 +681,7 @@ QED
      so f PERMUTES s              by involute_involute_permutes
    Also u IN s                    by mills_element_trivial
     and 0 < n                     by iterate_period_pos
-     so h < n                     by HALF_LESS, 0 < n
+     so h < n                     by HALF_LT, 0 < n
 
    Without assuming the following:
    Note fixes flip s = {v}        by flip_fixes_prime
@@ -694,8 +689,7 @@ QED
    Note fixes zagier s = {u}      by zagier_fixes_prime
      so ODD n                     by involute_involute_fix_sing_period_odd
    Then use involute_involute_fix_odd_period_fix:
-   !j. 0 < j /\ j < n ==>
-       (FUNPOW (zagier o flip) j u IN fixes flip s <=> (j = h))
+   !j. j < n ==> (FUNPOW (zagier o flip) j u IN fixes flip s <=> (j = h))
 
    Case: n = 1,
    Then h = 0                     by HALF_EQ_0, n <> 0
@@ -722,11 +716,7 @@ QED
     Now w IN s                    by FUNPOW_closure
     and flip w = w                by flip_fix
     ==> w IN (fixes flip u}       by fixes_element
-   If j = 0, w = u                by FUNPOW_0
-   Then z = 1, so n = 1           by zagier_flip_1_1_z_period, PAIR_EQ
-   which contradicts n <> 1.
-   If j <> 0,
-   Then j = h                     by involute_involute_fix_odd_period_fix
+   Then j = h                     by involute_involute_fix_odd_period_fix, j < n
    which contradicts j < h.
 *)
 Theorem flip_fixes_iterates_prime:
@@ -744,26 +734,30 @@ Proof
   `FINITE s` by metis_tac[mills_non_square_finite] >>
   `zagier involute s` by metis_tac[zagier_involute_mills_prime] >>
   `flip involute s` by metis_tac[flip_involute_mills] >>
-  `f PERMUTES s` by fs[involute_involute_permutes, Abbr`f`] >>
-  `u IN s` by rw[mills_element_trivial, Abbr`s` ] >>
-  `0 < n` by metis_tac[iterate_period_pos] >>
-  `h < n` by rw[HALF_LESS, Abbr`h`] >>
   `fixes zagier s = {u}` by metis_tac[zagier_fixes_prime] >>
-  drule_then strip_assume_tac (involute_involute_fix_sing_period_odd |> ISPEC ``zagier``) >>
-  last_x_assum (qspecl_then [`flip`, `n`, `u`] strip_assume_tac) >>
-  `ODD n` by rfs[] >>
+  qabbrev_tac `X = (u = (1,1,p DIV 4))` >>
+  qabbrev_tac `Y = (n = iterate_period f u)` >>
+  qabbrev_tac `Z = (g = (\(x,y,z). y <> z))` >>
+  drule_then strip_assume_tac involute_involute_fix_sing_period_odd >>
+  last_x_assum (qspecl_then [`zagier`, `flip`, `n`, `u`] strip_assume_tac) >>
+  rfs[] >>
+  `f PERMUTES s` by fs[involute_involute_permutes, Abbr`f`] >>
+  `u IN s` by rw[mills_element_trivial, Abbr`s`, Abbr`X`] >>
+  `0 < n` by metis_tac[iterate_period_pos] >>
+  `h < n` by rw[HALF_LT, Abbr`h`] >>
   Cases_on `n = 1` >| [
     `h = 0` by rw[Abbr`h`] >>
     `v = u` by rw[Abbr`v`] >>
     `_ = (1,1,1)` by metis_tac[zagier_flip_1_1_z_period] >>
-    rfs[],
+    rfs[Abbr`Z`],
     `h <> 0` by rw[HALF_EQ_0, Abbr`h`] >>
     `0 < h` by decide_tac >>
-    drule_then strip_assume_tac (involute_involute_fix_odd_period_fix |> ISPEC ``f: num # num # num -> num # num # num``) >>
-    `!j. 0 < j /\ j < n ==>
-        (FUNPOW (zagier o flip) j u IN fixes flip s <=> (j = HALF n))` by rfs[] >>
+    drule_then strip_assume_tac involute_involute_fix_odd_period_fix >>
+    last_x_assum (qspecl_then [`zagier`, `flip`, `n`, `u`] strip_assume_tac) >>
+    rfs[] >>
+    qunabbrev_tac `Z` >>
     `~g v` by
-  (`FUNPOW (zagier o flip) h u IN fixes flip s <=> (h = HALF n)` by rfs[] >>
+  (`FUNPOW (zagier o flip) h u IN fixes flip s <=> (h = HALF n)` by metis_tac[] >>
     `v IN fixes flip s` by metis_tac[] >>
     `?x y z. v = (x,y,z)` by rw[triple_parts] >>
     `y = z` by metis_tac[fixes_element, flip_fix] >>
@@ -776,19 +770,14 @@ Proof
     `y = z` by fs[] >>
     `w IN s` by rw[FUNPOW_closure, Abbr`w`] >>
     `w IN (fixes flip s)` by fs[flip_fix, fixes_element] >>
-    Cases_on `j = 0` >| [
-      `w = u` by fs[Abbr`w`] >>
-      metis_tac[zagier_flip_1_1_z_period, PAIR_EQ],
-      `0 < j` by decide_tac >>
-      `FUNPOW (zagier o flip) j u IN fixes flip s <=> (j = HALF n)` by rfs[] >>
-      `j = h` by metis_tac[] >>
-      decide_tac
-    ]
+    `FUNPOW (zagier o flip) j u IN fixes flip s <=> (j = HALF n)` by metis_tac[LESS_TRANS] >>
+    `j = h` by metis_tac[] >>
+    decide_tac
   ]
 QED
 
 (* This proof is using:
-   zagier_flip_1_1_z_period and involute_involute_fix_odd_period_fix.
+   involute_involute_fix_odd_period_fix.
    In part4, there is another proof using:
    flip_fixes_prime, which depends on fermat_two_squares_unique_odd_even.
 *)
@@ -798,10 +787,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the exit condition *)
-val found_def = Define`
+Definition found_def:
     found (x:num, y:num, z:num) <=> (y = z)
-`;
-
+End
 
 (* Theorem: $~ o found = (\(x,y,z). y <> z) *)
 (* Proof: by found_def, FUN_EQ_THM. *)
@@ -814,9 +802,9 @@ QED
 (* Idea: use WHILE for search. Develop theory in iterateCompute. *)
 
 (* Compute two squares of Fermat's theorem by WHILE loop. *)
-val two_sq_def = Define`
+Definition two_sq_def:
     two_sq n = WHILE ($~ o found) (zagier o flip) (1,1,n DIV 4)
-`;
+End
 
 (*
 > EVAL ``two_sq 5``; = (1,2): thm   (1,1,1)
@@ -825,7 +813,6 @@ val two_sq_def = Define`
 > EVAL ``two_sq 29``; = (5,2): thm  (5,1,1)
 > EVAL ``two_sq 97``; = (9,4): thm  (9,2,2)
 *)
-
 
 (* Theorem: two_sq n = WHILE (\(x,y,z). y <> z) (zagier o flip) (1, 1, n DIV 4) *)
 (* Proof: by two_sq_def, found_not. *)
@@ -885,7 +872,6 @@ QED
 
 (* Very good -- nice and simple! *)
 
-
 (* Theorem: prime p /\ (p MOD 4 = 1) ==>
             HOARE_SPEC (fixes zagier (mills p))
                        (WHILE ($~ o found) (zagier o flip))
@@ -924,7 +910,7 @@ QED
    Also 0 < n               by iterate_period_pos, u IN s
     and ODD n               by involute_involute_fix_sing_period_odd
      so n <> 2              by EVEN_2, ODD_EVEN
-    ==> 1 + h < n           by half_add1_lt, 2 < n
+    ==> 1 + h < n           by HALF_ADD1_LT, 2 < n
      or h < n - 1           by arithmetic
 
     Now ~g v /\ (!j. j < h ==> g (FUNPOW f j u))
@@ -967,7 +953,7 @@ Proof
     last_x_assum (qspecl_then [`zagier`, `flip`, `n`, `u`] strip_assume_tac) >>
     `ODD n` by rfs[] >>
     `n <> 2` by metis_tac[EVEN_2, ODD_EVEN] >>
-    `1 + h < n` by rw[half_add1_lt, Abbr`h`] >>
+    `1 + h < n` by rw[HALF_ADD1_LT, Abbr`h`] >>
     `h < n - 1` by decide_tac >>
     drule_then strip_assume_tac iterate_while_hoare >>
     last_x_assum (qspecl_then [`u`, `f`, `n-1`, `n`, `g`, `h`] strip_assume_tac) >>
@@ -975,7 +961,6 @@ Proof
     rfs[]
   ]
 QED
-
 
 (* Theorem: prime p /\ (p MOD 4 = 1) ==>
             let (x,y,z) = WHILE ($~ o found) (zagier o flip) (1,1,p DIV 4)
@@ -999,8 +984,8 @@ QED
     and w IN b                    by b w, function as set
      so w IN s /\ y = z           by fixes_element, flip_fix
    Thus p
-      = windmill x y z            by mills_element, w IN s
-      = windmill x y y            by y = z
+      = windmill (x, y, z)        by mills_element, w IN s
+      = windmill (x, y, y)        by y = z
       = x ** 2 + (2 * y) ** 2     by windmill_by_squares
       = x ** 2 + (y + z) ** 2     by arithmetic, y = z
 *)
@@ -1023,9 +1008,9 @@ QED
 (* A beautiful theorem! *)
 
 (* Define the algorithm. *)
-val two_squares_def = Define`
+Definition two_squares_def:
     two_squares n = let (x,y,z) = two_sq n in (x, y + z)
-`;
+End
 
 (*
 > EVAL ``two_squares 5``; = (1,2)
@@ -1036,7 +1021,6 @@ val two_squares_def = Define`
 > EVAL ``MAP two_squares [5; 13; 17; 29; 37; 41; 53; 61; 73; 89; 97]``;
 = [(1,2); (3,2); (1,4); (5,2); (1,6); (5,4); (7,2); (5,6); (3,8); (5,8); (9,4)]: thm
 *)
-
 
 (* Theorem: prime p /\ (p MOD 4 = 1) ==>
             let (u,v) = two_squares p in (p = u ** 2 + v ** 2) *)
@@ -1061,7 +1045,7 @@ QED
    Then t IN fixes flip (mills p)        by two_sq_thm
     and ?x y z. t = (x,y,z)              by triple_parts
     ==> (x,y,z) IN mills p /\ (y = z)    by fixes_element, flip_fix
-     so p = windmill x y y               by mills_element
+     so p = windmill (x, y, y)           by mills_element
           = x ** 2 + (2 * y) ** 2        by windmill_by_squares
           = x ** 2 + (y + z) ** 2        by y = z
           = u ** 2 + v ** 2              by two_squares_def
@@ -1075,7 +1059,7 @@ Proof
   `t IN fixes flip (mills p)` by rw[two_sq_thm, Abbr`t`] >>
   `?x y z. t = (x,y,z)` by rw[triple_parts] >>
   `(x,y,z) IN mills p /\ (y = z)` by fs[fixes_element, flip_fix] >>
-  `p = windmill x y y` by fs[mills_element] >>
+  `p = windmill (x, y, y)` by fs[mills_element] >>
   simp[windmill_by_squares]
 QED
 
@@ -1152,12 +1136,12 @@ QED
             fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)} *)
 (* Proof:
    By fixes_def, mills_def, this is to show:
-   (1) p = windmill x y z /\ zagier (x,y,z) = (x,y,z) ==> (x,y,z) = (1,1,p DIV 4)
+   (1) p = windmill (x, y, z) /\ zagier (x,y,z) = (x,y,z) ==> (x,y,z) = (1,1,p DIV 4)
        Note ~square p                 by prime_non_square
         and x <> 0                    by mills_element, mills_triple_nonzero
          so x = y                     by zagier_fix
         ==> (x,y,z) = (1,1,p DIV 4)   by windmill_trivial_prime
-   (2) p MOD 4 = 1 ==> p = windmill 1 1 (p DIV 4)
+   (2) p MOD 4 = 1 ==> p = windmill (1, 1, p DIV 4)
        This is true                   by windmill_trivial_prime
    (3) a < 2 ==> FUNPOW zagier p (1,1,p DIV 4) = (1,1,p DIV 4)
        When a = 0, true               by FUNPOW_0
@@ -1199,7 +1183,7 @@ QED
          so ?x y z. t = (x, y, z)   by triple_parts
         and x <> 0                  by mills_triple_nonzero, ~square p, p MOD 4 = 1
         ==> x = y                   by zagier_fix
-       Note p = windmill x y z      by mills_element
+       Note p = windmill (x, y, z)      by mills_element
         ==> (x,y,z) = (1,1,p DIV 4) by windmill_trivial_prime
 
    (2) (1,1,p DIV 4) IN a

@@ -39,7 +39,7 @@ open whileTheory; (* for WHILE definition *)
 (* Overloading:
 !  iterate x f j  = FUNPOW f j x
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Helper Theorems:
 
@@ -887,7 +887,7 @@ WHILE |> ISPEC ``g:'a -> bool`` |> ISPEC ``b:'a -> 'a`` |> ISPEC ``FUNPOW b n x`
             (WHILE g b x =
                 if g (FUNPOW b k x) then WHILE g b (FUNPOW b (k + 1) x) else FUNPOW b k x) *)
 (* Proof:
-   Note FUNPOW b (k + 1) x to b (FUNPOW b k x)                 by FUNPOW_SUC, ADD1
+   Note FUNPOW b (k + 1) x = b (FUNPOW b k x)                  by FUNPOW_SUC, ADD1
    By induction on k.
    Base: WHILE g b x =
          if g (FUNPOW b 0 x) then WHILE g b (b (FUNPOW b 0 x)) else FUNPOW b 0 x
@@ -929,6 +929,13 @@ Proof
   metis_tac[iterate_while_eqn]
 QED
 
+(*
+It is not possible to prove the following, which would be nice;
+WHILE g b x = FUNPOW b k x <=> (~g (FUNPOW b k x) /\ !j. j < k ==> g (FUNPOW b j x))
+
+This is because WHILE is not known to terminate.
+Those are pre-conditions for WHILE to terminate.
+*)
 
 
 (* ------------------------------------------------------------------------- *)

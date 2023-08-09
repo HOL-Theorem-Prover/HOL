@@ -58,7 +58,8 @@ open gcdTheory; (* for GCD_0R, LINEAR_GCD *)
 (* Overloading:
 !  rotate1 ls    = DROP 1 ls ++ TAKE 1 ls
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
+
    Cycle Theory:
    cycle_def     |- !n ls. cycle n ls = FUNPOW (\ls. rotate1 ls) n ls
    cycle_0       |- !ls. cycle 0 ls = ls

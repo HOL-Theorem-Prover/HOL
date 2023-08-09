@@ -59,7 +59,7 @@ open dividesTheory; (* for divides_def, prime_def *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    From groupInstances:
    Zadd_def          |- !n. Zadd n = <|carrier := count n;

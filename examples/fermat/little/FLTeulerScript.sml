@@ -61,7 +61,8 @@ open groupOrderTheory; (* for finite_group_Fermat *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
+
    From helperFunction:
    coprime_mod         |- !m n. 0 < m /\ coprime m n ==> coprime m (n MOD m)
    coprime_sym         |- !x y. coprime x y <=> coprime y x

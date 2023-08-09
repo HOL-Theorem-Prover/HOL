@@ -52,7 +52,8 @@ open groupActionTheory;
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
+
    From groupInstances:
    Zadd_element        |- !n x. x IN (Zadd n).carrier <=> x < n
    Zadd_card           |- !n. CARD (Zadd n).carrier = n

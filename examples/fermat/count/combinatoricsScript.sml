@@ -43,7 +43,7 @@ open necklaceTheory; (* for necklace_def, necklace_finite *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading (# is temporary):
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Counting number of combinations:
    sub_count_def       |- !n k. sub_count n k = {s | s SUBSET count n /\ CARD s = k}

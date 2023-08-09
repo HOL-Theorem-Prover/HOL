@@ -1097,7 +1097,7 @@ val cyclic_eq_order_partition = store_thm(
     ==> 0 < CARD G         by finite_group_card_pos, FiniteGroup g
         partition (eq_order g) G
       = {orders g n | n | n divides (CARD G)}      by cyclic_eq_order_partition
-      = {orders g n | n | n IN divisors (CARD G)}  by rw[divisors_element_alt
+      = {orders g n | n | n IN divisors (CARD G)}  by divisors_element_alt, 0 < CARD G
 *)
 val cyclic_eq_order_partition_alt = store_thm(
   "cyclic_eq_order_partition_alt",
@@ -1137,7 +1137,7 @@ val cyclic_eq_order_partition_alt = store_thm(
    (2) x' IN divisors m ==> ?x''. (phi x' = CARD x'') /\ ?x. x IN orders g x'
        Let n = x', y = z ** (m DIV n).
        Since n IN divisors m,
-         ==> n divides m            by divisors_element
+         ==> n <= m /\ n divides m  by divisors_element
          Let s = orders g n,
         Then CARD s = phi n         by cyclic_orders_card
          and y IN G                 by group_exp_element
@@ -1206,20 +1206,21 @@ QED
    If part: x IN G ==> ord x <= CARD G /\ (ord x) divides (CARD G)
       Since FiniteGroup g ==> 0 < CARD G        by finite_group_card_pos
        also ==> (ord x) divides (CARD G)        by group_order_divides
-      Hence ord x <= CARD G                     by DIVIDES_LE
+      Hence ord x IN divisors (CARD G)          by divisors_element_alt, 0 < CARD G
    Only-if part: n <= CARD G /\ n divides CARD G ==> ?x. x IN G /\ (ord x = n)
       True by cyclic_finite_has_order_divisor.
 *)
-val cyclic_image_ord_is_divisors = store_thm(
-  "cyclic_image_ord_is_divisors",
-  ``!g:'a group. cyclic g /\ FINITE G ==> (IMAGE ord G = divisors (CARD G))``,
+Theorem cyclic_image_ord_is_divisors:
+  !g:'a group. cyclic g /\ FINITE G ==> (IMAGE ord G = divisors (CARD G))
+Proof
   rpt strip_tac >>
   `Group g` by rw[] >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def] >>
-  rw[EXTENSION, divisors_def, EQ_IMP_THM] >-
-  rw[group_order_divides, DIVIDES_LE, finite_group_card_pos] >-
+  `0 < CARD G` by simp[finite_group_card_pos] >>
+  rw[EXTENSION, divisors_element_alt, EQ_IMP_THM] >-
   rw[group_order_divides] >>
-  metis_tac[cyclic_finite_has_order_divisor]);
+  metis_tac[cyclic_finite_has_order_divisor]
+QED
 
 (* Theorem: cyclic g /\ FINITE G ==> (partition (eq_order g) G = IMAGE (orders g) (divisors (CARD G))) *)
 (* Proof:
@@ -1228,17 +1229,18 @@ val cyclic_image_ord_is_divisors = store_thm(
       so 0 < CARD G                 by finite_group_card_pos
     Then partition (eq_order g) G
        = {orders g n | n | n divides CARD G}  by cyclic_eq_order_partition
-       = IMAGE (orders g) (divisors (CARD G)) by divisors_def, EXTENSION, DIVIDES_LE
+       = IMAGE (orders g) (divisors (CARD G)) by divisors_element_alt, 0 < CARD G
 *)
-val cyclic_orders_partition = store_thm(
-  "cyclic_orders_partition",
-  ``!g:'a group. cyclic g /\ FINITE G ==> (partition (eq_order g) G = IMAGE (orders g) (divisors (CARD G)))``,
+Theorem cyclic_orders_partition:
+  !g:'a group. cyclic g /\ FINITE G ==>
+       (partition (eq_order g) G = IMAGE (orders g) (divisors (CARD G)))
+Proof
   rpt strip_tac >>
   `FiniteGroup g` by metis_tac[FiniteGroup_def, cyclic_group] >>
   `0 < CARD G` by rw[finite_group_card_pos] >>
   `partition (eq_order g) G = {orders g n | n | n divides CARD G}` by rw[cyclic_eq_order_partition] >>
-  rw[divisors_def, EXTENSION] >>
-  metis_tac[DIVIDES_LE]);
+  rw[divisors_element_alt, EXTENSION]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Cyclic Group Existence.                                            *)

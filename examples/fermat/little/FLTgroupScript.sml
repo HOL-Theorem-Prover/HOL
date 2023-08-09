@@ -59,7 +59,8 @@ open groupOrderTheory; (* for finite_group_Fermat *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
+
    From helperNum:
    EUCLID_LEMMA        |- !p x y. prime p ==> ((x * y) MOD p = 0 <=>
                                               x MOD p = 0 \/ y MOD p = 0)

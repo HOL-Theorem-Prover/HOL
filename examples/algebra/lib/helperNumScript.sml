@@ -41,6 +41,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    THREE             |- 3 = SUC 2
    FOUR              |- 4 = SUC 3
    FIVE              |- 5 = SUC 4
+   num_nchotomy      |- !m n. m = n \/ m < n \/ n < m
    ZERO_LE_ALL       |- !n. 0 <= n
    NOT_ZERO          |- !n. n <> 0 <=> 0 < n
    ONE_LT_POS        |- !n. 1 < n ==> 0 < n
@@ -50,7 +51,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    LE_ONE            |- !n. n <= 1 <=> (n = 0) \/ (n = 1)
    LESS_SUC          |- !n. n < SUC n
    PRE_LESS          |- !n. 0 < n ==> PRE n < n
-   LESS_EQ_SUC       |- !n. 0 < n ==> ?m. n = SUC m
+   SUC_EXISTS        |- !n. 0 < n ==> ?m. n = SUC m
    SUC_POS           |- !n. 0 < SUC n
    SUC_NOT_ZERO      |- !n. SUC n <> 0
    ONE_NOT_ZERO      |- 1 <> 0
@@ -97,7 +98,6 @@ open gcdTheory; (* for P_EUCLIDES *)
    Arithmetic Manipulations:
    MULT_POS          |- !m n. 0 < m /\ 0 < n ==> 0 < m * n
    MULT_COMM_ASSOC   |- !m n p. m * (n * p) = n * (m * p)
-   EQ_MULT_RCANCEL   |- !m n p. (n * m = p * m) <=> (m = 0) \/ (n = p)
    MULT_RIGHT_CANCEL |- !m n p. (n * p = m * p) <=> (p = 0) \/ (n = m)
    MULT_LEFT_CANCEL  |- !m n p. (p * n = p * m) <=> (p = 0) \/ (n = m)
    MULT_TO_DIV       |- !m n. 0 < n ==> (n * m DIV n = m)
@@ -137,15 +137,21 @@ open gcdTheory; (* for P_EUCLIDES *)
    ODD_SUC_HALF      |- !n. ODD n ==> (HALF (SUC n) = SUC (HALF n))
    HALF_EQ_0         |- !n. (HALF n = 0) <=> (n = 0) \/ (n = 1)
    HALF_EQ_SELF      |- !n. (HALF n = n) <=> (n = 0)
-   HALF_LESS         |- !n. 0 < n ==> HALF n < n
+   HALF_LT           |- !n. 0 < n ==> HALF n < n
+   HALF_ADD1_LT      |- !n. 2 < n ==> 1 + HALF n < n
    HALF_TWICE        |- !n. HALF (TWICE n) = n
    HALF_MULT         |- !m n. n * HALF m <= HALF (n * m)
-   TWO_HALF_LESS_EQ  |- !n. 2 * HALF n <= n /\ n <= SUC (2 * HALF n)
+   TWO_HALF_LE_THM   |- !n. 2 * HALF n <= n /\ n <= SUC (2 * HALF n)
    TWO_HALF_TIMES_LE |- !m n. TWICE (HALF n * m) <= n * m
    SUC_HALF_LE       |- !n. 0 < n ==> 1 + HALF n <= n
    HALF_SQ_LE        |- !n. HALF n ** 2 <= n ** 2 DIV 4
-   HALF_LE                |- !n. HALF n <= n
-   HALF_LE_MONO           |- !x y. x <= y ==> HALF x <= HALF y
+   HALF_LE           |- !n. HALF n <= n
+   HALF_LE_MONO      |- !x y. x <= y ==> HALF x <= HALF y
+   HALF_SUC          |- !n. HALF (SUC n) <= n
+   HALF_SUC_SUC      |- !n. 0 < n ==> HALF (SUC (SUC n)) <= n
+   HALF_SUC_LE       |- !n m. n < HALF (SUC m) ==> 2 * n + 1 <= m
+   HALF_EVEN_LE      |- !n m. 2 * n < m ==> n <= HALF m
+   HALF_ODD_LT       |- !n m. 2 * n + 1 < m ==> n < HALF m
    MULT_EVEN         |- !n. EVEN n ==> !m. m * n = TWICE m * HALF n
    MULT_ODD          |- !n. ODD n ==> !m. m * n = m + TWICE m * HALF n
    EVEN_MOD_EVEN     |- !m. EVEN m /\ m <> 0 ==> !n. EVEN n <=> EVEN (n MOD m)
@@ -328,7 +334,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    binomial_2           |- !m n. (m + n) ** 2 = m ** 2 + n ** 2 + TWICE m * n
    SUC_SQ               |- !n. SUC n ** 2 = SUC (n ** 2) + TWICE n
    SQ_LE                |- !m n. m <= n ==> SQ m <= SQ n
-   EVEN_PRIME           |- !n. EVEN n /\ prime n ==> (n = 2)
+   EVEN_PRIME           |- !n. EVEN n /\ prime n <=> n = 2
    ODD_PRIME            |- !n. prime n /\ n <> 2 ==> ODD n
    TWO_LE_PRIME         |- !p. prime p ==> 2 <= p
    NOT_PRIME_4          |- ~prime 4
@@ -349,10 +355,12 @@ open gcdTheory; (* for P_EUCLIDES *)
    ONE_LT_HALF_SQ       |- !n. 1 < n ==> 1 < HALF (n ** 2)
    EXP_2_HALF           |- !n. 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1))
    HALF_MULT_EVEN       |- !m n. EVEN n ==> (HALF (m * n) = m * HALF n)
-   MULT_LESS_IMP_LESS   |- !m n k. 0 < k /\ k * m < n ==> m < n
+   MULT_LT_IMP_LT       |- !m n k. 0 < k /\ k * m < n ==> m < n
+   MULT_LE_IMP_LE       |- !m n k. 0 < k /\ k * m <= n ==> m <= n
    HALF_EXP_5           |- !n. n * HALF (SQ n ** 2) <= HALF (n ** 5)
    LE_TWICE_ALT         |- !m n. n <= TWICE m <=> n <> 0 ==> HALF (n - 1) < m
    HALF_DIV_TWO_POWER   |- !m n. HALF n DIV 2 ** m = n DIV 2 ** SUC m
+   fit_for_10           |- 1 + 2 + 3 + 4 = 10
    fit_for_100          |- 1 * 2 + 3 * 4 + 5 * 6 + 7 * 8 = 100
 *)
 
@@ -394,11 +402,16 @@ val _ = overload_on("TWICE", ``\n. 2 * n``);
 val _ = set_fixity "divides" (Infixl 480); (* relation is 450, +/- is 500, * is 600. *)
 
 (* Theorem alias *)
+Theorem num_nchotomy = arithmeticTheory.LESS_LESS_CASES;
+(* val num_nchotomy = |- !m n. m = n \/ m < n \/ n < m: thm *)
+
+(* Theorem alias *)
 val ZERO_LE_ALL = save_thm("ZERO_LE_ALL", ZERO_LESS_EQ);
 (* val ZERO_LE_ALL = |- !n. 0 <= n: thm *)
 
 (* Theorem alias *)
 val NOT_ZERO = save_thm("NOT_ZERO", NOT_ZERO_LT_ZERO);
+(* val NOT_ZERO = |- !n. n <> 0 <=> 0 < n: thm *)
 
 (* Theorem: !n. 1 < n ==> 0 < n *)
 (* Proof: by arithmetic. *)
@@ -451,9 +464,9 @@ val PRE_LESS = store_thm(
   decide_tac);
 
 (* Theorem: 0 < n ==> ?m. n = SUC m *)
-(* Proof: by NOT_ZERO_LT_ZERO. *)
-val LESS_EQ_SUC = store_thm(
-  "LESS_EQ_SUC",
+(* Proof: by NOT_ZERO_LT_ZERO, num_CASES. *)
+val SUC_EXISTS = store_thm(
+  "SUC_EXISTS",
   ``!n. 0 < n ==> ?m. n = SUC m``,
   metis_tac[NOT_ZERO_LT_ZERO, num_CASES]);
 
@@ -844,16 +857,6 @@ val MULT_COMM_ASSOC = store_thm(
   "MULT_COMM_ASSOC",
   ``!m n p. m * (n * p) = n * (m * p)``,
   metis_tac[MULT_COMM, MULT_ASSOC]);
-
-(* The missing theorem in arithmeticTheory. Only has EQ_MULT_LCANCEL:
-   |- !m n p. (m * n = m * p) <=> (m = 0) \/ (n = p): thm
-*)
-(* Theorem: (n * m = p * m) <=> (m = 0) \/ (n = p) *)
-(* Proof: by EQ_MULT_LCANCEL, MULT_COMM *)
-val EQ_MULT_RCANCEL = store_thm(
-  "EQ_MULT_RCANCEL",
-  ``!m n p. (n * m = p * m) <=> (m = 0) \/ (n = p)``,
-  rw[EQ_MULT_LCANCEL, MULT_COMM]);
 
 (* Theorem: n * p = m * p <=> p = 0 \/ n = m *)
 (* Proof:
@@ -1310,13 +1313,37 @@ val HALF_EQ_SELF = store_thm(
     and HALF n <> n     by HALF_EQ_SELF, n <> 0
      so HALF n < n      by arithmetic
 *)
-val HALF_LESS = store_thm(
-  "HALF_LESS",
+val HALF_LT = store_thm(
+  "HALF_LT",
   ``!n. 0 < n ==> HALF n < n``,
   rpt strip_tac >>
   `HALF n <= n` by rw[DIV_LESS_EQ] >>
   `HALF n <> n` by rw[HALF_EQ_SELF] >>
   decide_tac);
+
+(* Theorem: 2 < n ==> (1 + HALF n < n) *)
+(* Proof:
+   If EVEN n,
+      then     2 * HALF n = n      by EVEN_HALF
+        so 2 + 2 * HALF n < n + n  by 2 < n
+        or     1 + HALF n < n      by arithmetic
+   If ~EVEN n, then ODD n          by ODD_EVEN
+      then 1 + 2 * HALF n = 2      by ODD_HALF
+        so 1 + 2 * HALF n < n      by 2 < n
+      also 2 + 2 * HALF n < n + n  by 1 < n
+        or     1 + HALF n < n      by arithmetic
+*)
+Theorem HALF_ADD1_LT:
+  !n. 2 < n ==> 1 + HALF n < n
+Proof
+  rpt strip_tac >>
+  Cases_on `EVEN n` >| [
+    `2 * HALF n = n` by rw[EVEN_HALF] >>
+    decide_tac,
+    `1 + 2 * HALF n = n` by rw[ODD_HALF, ODD_EVEN] >>
+    decide_tac
+  ]
+QED
 
 (* Theorem: HALF (2 * n) = n *)
 (* Proof:
@@ -1374,8 +1401,8 @@ QED
         or n - 1 <= n <= n,
       Giving 2 * HALF n <= n /\ n <= SUC (2 * HALF n)
 *)
-val TWO_HALF_LESS_EQ = store_thm(
-  "TWO_HALF_LESS_EQ",
+val TWO_HALF_LE_THM = store_thm(
+  "TWO_HALF_LE_THM",
   ``!n. 2 * HALF n <= n /\ n <= SUC (2 * HALF n)``,
   strip_tac >>
   Cases_on `EVEN n` >-
@@ -1391,7 +1418,7 @@ val TWO_HALF_LESS_EQ = store_thm(
       2 * ((HALF n) * m)
     = 2 * (m * HALF n)      by MULT_COMM
    <= 2 * (HALF (m * n))    by HALF_MULT
-   <= m * n                 by TWO_HALF_LESS_EQ
+   <= m * n                 by TWO_HALF_LE_THM
     = n * m                 by MULT_COMM
 *)
 val TWO_HALF_TIMES_LE = store_thm(
@@ -1399,7 +1426,7 @@ val TWO_HALF_TIMES_LE = store_thm(
   ``!m n. 2 * ((HALF n) * m) <= n * m``,
   rpt strip_tac >>
   `2 * (m * HALF n) <= 2 * (HALF (m * n))` by rw[HALF_MULT] >>
-  `2 * (HALF (m * n)) <= m * n` by rw[TWO_HALF_LESS_EQ] >>
+  `2 * (HALF (m * n)) <= m * n` by rw[TWO_HALF_LE_THM] >>
   fs[]);
 
 (* Theorem: 0 < n ==> 1 + HALF n <= n *)
@@ -1411,7 +1438,7 @@ val TWO_HALF_TIMES_LE = store_thm(
       Thus 1 + HALF n
         <= HALF n + HALF n   by 1 <= HALF n
          = 2 * HALF n
-        <= n                 by TWO_HALF_LESS_EQ
+        <= n                 by TWO_HALF_LE_THM
 *)
 val SUC_HALF_LE = store_thm(
   "SUC_HALF_LE",
@@ -1420,13 +1447,13 @@ val SUC_HALF_LE = store_thm(
   (Cases_on `n = 1` >> simp[]) >>
   `HALF n <> 0` by metis_tac[HALF_EQ_0, NOT_ZERO] >>
   `1 + HALF n <= 2 * HALF n` by decide_tac >>
-  `2 * HALF n <= n` by rw[TWO_HALF_LESS_EQ] >>
+  `2 * HALF n <= n` by rw[TWO_HALF_LE_THM] >>
   decide_tac);
 
 (* Theorem: (HALF n) ** 2 <= (n ** 2) DIV 4 *)
 (* Proof:
    Let k = HALF n.
-   Then 2 * k <= n                by TWO_HALF_LESS_EQ
+   Then 2 * k <= n                by TWO_HALF_LE_THM
      so (2 * k) ** 2 <= n ** 2                by EXP_EXP_LE_MONO
     and (2 * k) ** 2 DIV 4 <= n ** 2 DIV 4    by DIV_LE_MONOTONE, 0 < 4
     But (2 * k) ** 2 DIV 4
@@ -1439,7 +1466,7 @@ val HALF_SQ_LE = store_thm(
   ``!n. (HALF n) ** 2 <= (n ** 2) DIV 4``,
   rpt strip_tac >>
   qabbrev_tac `k = HALF n` >>
-  `2 * k <= n` by rw[TWO_HALF_LESS_EQ, Abbr`k`] >>
+  `2 * k <= n` by rw[TWO_HALF_LE_THM, Abbr`k`] >>
   `(2 * k) ** 2 <= n ** 2` by rw[] >>
   `(2 * k) ** 2 DIV 4 <= n ** 2 DIV 4` by rw[DIV_LE_MONOTONE] >>
   `(2 * k) ** 2 DIV 4 = 4 * k ** 2 DIV 4` by rw[EXP_BASE_MULT] >>
@@ -1453,6 +1480,152 @@ val HALF_LE = save_thm("HALF_LE",
 val HALF_LE_MONO = save_thm("HALF_LE_MONO",
     DIV_LE_MONOTONE |> SPEC ``2`` |> SIMP_RULE (arith_ss) []);
 (* val HALF_LE_MONO = |- !x y. x <= y ==> HALF x <= HALF y: thm *)
+
+(* Theorem: HALF (SUC n) <= n *)
+(* Proof:
+   If EVEN n,
+      Then ?k. n = 2 * k                       by EVEN_EXISTS
+       and SUC n = 2 * k + 1
+        so HALF (SUC n) = k <= k + k = n       by ineqaulities
+   Otherwise ODD n,                            by ODD_EVEN
+      Then ?k. n = 2 * k + 1                   by ODD_EXISTS
+       and SUC n = 2 * k + 2
+        so HALF (SUC n) = k + 1 <= k + k + 1 = n
+*)
+Theorem HALF_SUC:
+  !n. HALF (SUC n) <= n
+Proof
+  rpt strip_tac >>
+  Cases_on `EVEN n` >| [
+    `?k. n = 2 * k` by metis_tac[EVEN_EXISTS] >>
+    `HALF (SUC n) = k` by simp[ADD1] >>
+    decide_tac,
+    `?k. n = 2 * k + 1` by metis_tac[ODD_EXISTS, ODD_EVEN, ADD1] >>
+    `HALF (SUC n) = k + 1` by simp[ADD1] >>
+    decide_tac
+  ]
+QED
+
+(* Theorem: 0 < n ==> HALF (SUC (SUC n)) <= n *)
+(* Proof:
+   Note SUC (SUC n) = n + 2        by ADD1
+   If EVEN n,
+      then ?k. n = 2 * k           by EVEN_EXISTS
+      Since n = 2 * k <> 0         by NOT_ZERO, 0 < n
+        so k <> 0, or 1 <= k       by MULT_EQ_0
+           HALF (n + 2)
+         = k + 1                   by arithmetic
+        <= k + k                   by above
+         = n
+   Otherwise ODD n,                by ODD_EVEN
+      then ?k. n = 2 * k + 1       by ODD_EXISTS
+           HALF (n + 2)
+         = HALF (2 * k + 3)        by arithmetic
+         = k + 1                   by arithmetic
+        <= k + k + 1               by ineqaulities
+         = n
+*)
+Theorem HALF_SUC_SUC:
+  !n. 0 < n ==> HALF (SUC (SUC n)) <= n
+Proof
+  rpt strip_tac >>
+  Cases_on `EVEN n` >| [
+    `?k. n = 2 * k` by metis_tac[EVEN_EXISTS] >>
+    `0 < k` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
+    `1 <= k` by decide_tac >>
+    `HALF (SUC (SUC n)) = k + 1` by simp[ADD1] >>
+    fs[],
+    `?k. n = 2 * k + 1` by metis_tac[ODD_EXISTS, ODD_EVEN, ADD1] >>
+    `HALF (SUC (SUC n)) = k + 1` by simp[ADD1] >>
+    fs[]
+  ]
+QED
+
+(* Theorem: n < HALF (SUC m) ==> 2 * n + 1 <= m *)
+(* Proof:
+   If EVEN m,
+      Then m = 2 * HALF m                      by EVEN_HALF
+       and SUC m = 2 * HALF m + 1              by ADD1
+        so     n < (2 * HALF m + 1) DIV 2      by given
+        or     n < HALF m                      by arithmetic
+           2 * n < 2 * HALF m                  by LT_MULT_LCANCEL
+           2 * n < m                           by above
+       2 * n + 1 <= m                          by arithmetic
+    Otherwise, ODD m                           by ODD_EVEN
+       Then m = 2 * HALF m + 1                 by ODD_HALF
+        and SUC m = 2 * HALF m + 2             by ADD1
+         so     n < (2 * HALF m + 2) DIV 2     by given
+         or     n < HALF m + 1                 by arithmetic
+        2 * n + 1 < 2 * HALF m + 1             by LT_MULT_LCANCEL, LT_ADD_RCANCEL
+         or 2 * n + 1 < m                      by above
+    Overall, 2 * n + 1 <= m.
+*)
+Theorem HALF_SUC_LE:
+  !n m. n < HALF (SUC m) ==> 2 * n + 1 <= m
+Proof
+  rpt strip_tac >>
+  Cases_on `EVEN m` >| [
+    `m = 2 * HALF m` by simp[EVEN_HALF] >>
+    `HALF (SUC m) =  HALF (2 * HALF m + 1)` by metis_tac[ADD1] >>
+    `_ = HALF m` by simp[] >>
+    simp[],
+    `m = 2 * HALF m + 1` by simp[ODD_HALF, ODD_EVEN] >>
+    `HALF (SUC m) =  HALF (2 * HALF m + 1 + 1)` by metis_tac[ADD1] >>
+    `_ = HALF m + 1` by simp[] >>
+    simp[]
+  ]
+QED
+
+(* Theorem: 2 * n < m ==> n <= HALF m *)
+(* Proof:
+   If EVEN m,
+      Then m = 2 * HALF m                      by EVEN_HALF
+        so 2 * n < 2 * HALF m                  by above
+        or     n < HALF m                      by LT_MULT_LCANCEL
+    Otherwise, ODD m                           by ODD_EVEN
+       Then m = 2 * HALF m + 1                 by ODD_HALF
+         so 2 * n < 2 * HALF m + 1             by above
+         so 2 * n <= 2 * HALF m                by removing 1
+         or     n <= HALF m                    by LE_MULT_LCANCEL
+    Overall, n <= HALF m.
+*)
+Theorem HALF_EVEN_LE:
+  !n m. 2 * n < m ==> n <= HALF m
+Proof
+  rpt strip_tac >>
+  Cases_on `EVEN m` >| [
+    `2 * n < 2 * HALF m` by metis_tac[EVEN_HALF] >>
+    simp[],
+    `2 * n < 2 * HALF m + 1` by metis_tac[ODD_HALF, ODD_EVEN] >>
+    simp[]
+  ]
+QED
+
+(* Theorem: 2 * n + 1 < m ==> n < HALF m *)
+(* Proof:
+   If EVEN m,
+      Then m = 2 * HALF m                      by EVEN_HALF
+        so 2 * n + 1 < 2 * HALF m              by above
+        or     2 * n < 2 * HALF m              by removing 1
+        or     n < HALF m                      by LT_MULT_LCANCEL
+    Otherwise, ODD m                           by ODD_EVEN
+       Then m = 2 * HALF m + 1                 by ODD_HALF
+         so 2 * n + 1 < 2 * HALF m + 1         by above
+         or     2 * n < 2 * HALF m             by LT_ADD_RCANCEL
+         or         n < HALF m                 by LT_MULT_LCANCEL
+    Overall, n < HALF m.
+*)
+Theorem HALF_ODD_LT:
+  !n m. 2 * n + 1 < m ==> n < HALF m
+Proof
+  rpt strip_tac >>
+  Cases_on `EVEN m` >| [
+    `2 * n + 1 < 2 * HALF m` by metis_tac[EVEN_HALF] >>
+    simp[],
+    `2 * n + 1 < 2 * HALF m + 1` by metis_tac[ODD_HALF, ODD_EVEN] >>
+    simp[]
+  ]
+QED
 
 (* Theorem: EVEN n ==> !m. m * n = (TWICE m) * (HALF n) *)
 (* Proof:
@@ -2380,13 +2553,13 @@ val LE_MULT_LE_DIV = store_thm(
    Only-if part: 0 DIV m = 0            by ZERO_DIV
                  0 MOD m = 0            by ZERO_MOD
 *)
-val DIV_MOD_EQ_0 = store_thm(
-  "DIV_MOD_EQ_0",
-  ``!m n. 0 < m ==> ((n DIV m = 0) /\ (n MOD m = 0) <=> (n = 0))``,
+Theorem DIV_MOD_EQ_0:
+  !m n. 0 < m ==> ((n DIV m = 0) /\ (n MOD m = 0) <=> (n = 0))
+Proof
   rpt strip_tac >>
-  rw[EQ_IMP_THM] >-
-  metis_tac[DIV_EQUAL_0, LESS_MOD] >>
-  rw[ZERO_DIV]);
+  rw[EQ_IMP_THM] >>
+  metis_tac[DIV_EQUAL_0, LESS_MOD]
+QED
 
 (* Theorem: 0 < m /\ 0 < n /\ (n MOD m = 0) ==> n DIV (SUC m) < n DIV m *)
 (* Proof:
@@ -3842,19 +4015,29 @@ val SQ_LE = store_thm(
   ``!m n. m <= n ==> SQ m <= SQ n``,
   rw[]);
 
-(* Theorem: EVEN n /\ prime n ==> (n = 2) *)
+(* Theorem: EVEN n /\ prime n <=> n = 2 *)
+(* Proof:
+   If part: EVEN n /\ prime n ==> n = 2
+      EVEN n ==> n MOD 2 = 0       by EVEN_MOD2
+             ==> 2 divides n       by DIVIDES_MOD_0, 0 < 2
+             ==> n = 2             by prime_def, 2 <> 1
+   Only-if part: n = 2 ==> EVEN n /\ prime n
+      Note EVEN 2                  by EVEN_2
+       and prime 2                 by prime_2
+*)
 (* Proof:
    EVEN n ==> n MOD 2 = 0    by EVEN_MOD2
           ==> 2 divides n    by DIVIDES_MOD_0, 0 < 2
           ==> n = 2          by prime_def, 2 <> 1
 *)
-val EVEN_PRIME = store_thm(
-  "EVEN_PRIME",
-  ``!n. EVEN n /\ prime n ==> (n = 2)``,
-  rpt strip_tac >>
+Theorem EVEN_PRIME:
+  !n. EVEN n /\ prime n <=> n = 2
+Proof
+  rw[EQ_IMP_THM] >>
   `0 < 2 /\ 2 <> 1` by decide_tac >>
   `2 divides n` by rw[DIVIDES_MOD_0, GSYM EVEN_MOD2] >>
-  metis_tac[prime_def]);
+  metis_tac[prime_def]
+QED
 
 (* Theorem: prime n /\ n <> 2 ==> ODD n *)
 (* Proof:
@@ -4426,14 +4609,29 @@ val HALF_MULT_EVEN = store_thm(
    Since 0 <= h * m,
       so k * m < n ==> m < n.
 *)
-val MULT_LESS_IMP_LESS = store_thm(
-  "MULT_LESS_IMP_LESS",
+val MULT_LT_IMP_LT = store_thm(
+  "MULT_LT_IMP_LT",
   ``!m n k. 0 < k /\ k * m < n ==> m < n``,
   rpt strip_tac >>
   `k <> 0` by decide_tac >>
   `?h. k = SUC h` by metis_tac[num_CASES] >>
   `k * m = h * m + m` by rw[ADD1] >>
   decide_tac);
+
+(* Theorem: 0 < k /\ k * m <= n ==> m <= n *)
+(* Proof:
+   Note     1 <= k                 by 0 < k
+     so 1 * m <= k * m             by LE_MULT_RCANCEL
+     or     m <= k * m <= n        by inequalities
+*)
+Theorem MULT_LE_IMP_LE:
+  !m n k. 0 < k /\ k * m <= n ==> m <= n
+Proof
+  rpt strip_tac >>
+  `1 <= k` by decide_tac >>
+  `1 * m <= k * m` by simp[] >>
+  decide_tac
+QED
 
 (* Theorem: n * HALF ((SQ n) ** 2) <= HALF (n ** 5) *)
 (* Proof:
@@ -4530,12 +4728,21 @@ val HALF_DIV_TWO_POWER = store_thm(
   ``!m n. (HALF n) DIV 2 ** m = n DIV (2 ** SUC m)``,
   rw[DIV_DIV_DIV_MULT, EXP]);
 
+(* Theorem: 1 + 2 + 3 + 4 = 10 *)
+(* Proof: by calculation. *)
+Theorem fit_for_10:
+  1 + 2 + 3 + 4 = 10
+Proof
+  decide_tac
+QED
+
 (* Theorem: 1 * 2 + 3 * 4 + 5 * 6 + 7 * 8 = 100 *)
 (* Proof: by calculation. *)
-val fit_for_100 = store_thm(
-  "fit_for_100",
-  ``1 * 2 + 3 * 4 + 5 * 6 + 7 * 8 = 100``,
-  decide_tac);
+Theorem fit_for_100:
+  1 * 2 + 3 * 4 + 5 * 6 + 7 * 8 = 100
+Proof
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 

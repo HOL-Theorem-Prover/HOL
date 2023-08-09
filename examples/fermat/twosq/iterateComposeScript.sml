@@ -38,7 +38,7 @@ open iterateComputeTheory; (* for iterate_while_thm *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Helper Theorems:
 
@@ -132,7 +132,7 @@ open iterateComputeTheory; (* for iterate_while_thm *)
    involute_involute_fix_odd_period_fix
                    |- !f g s p x. FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
                          p = iterate_period (f o g) x /\ ODD p ==>
-                        !j. 0 < j /\ j < p ==> (FUNPOW (f o g) j x IN fixes g s <=> (j = HALF p))
+                        !j. j < p ==> (FUNPOW (f o g) j x IN fixes g s <=> (j = HALF p))
 
    Iteration Mate Involution:
    iterate_mate_def      |- !f g x. iterate_mate f g x =
@@ -1162,14 +1162,13 @@ QED
    <=> p - 1 - j MOD p = j MOD p  by iterate_period_mod_eq
    <=> p - 1 - j = j              by LESS_MOD, p - 1 - j < p, j < p
    <=> 2 * j + 1 = p                  by arithmetic
-   <=> 2 * j + 1 = 2 * p DIV 2 + 1       by ODD_HALF
-   <=> j = p DIV 2                by EQ_MULT_LCANCEL
+   <=> 2 * j + 1 = 2 * p DIV 2 + 1    by ODD_HALF
+   <=> j = p DIV 2                    by EQ_MULT_LCANCEL
 *)
 Theorem involute_involute_fix_odd_period_fix:
   !f g s p x. FINITE s /\ f involute s /\ g involute s /\
               x IN fixes f s /\ p = iterate_period (f o g) x /\ ODD p ==>
-              !j. 0 < j /\ j < p ==>
-                  (FUNPOW (f o g) j x IN fixes g s <=> j = p DIV 2)
+              !j. j < p ==> (FUNPOW (f o g) j x IN fixes g s <=> j = p DIV 2)
 Proof
   rpt strip_tac >>
   `f o g PERMUTES s` by rw[involute_involute_permutes] >>
@@ -1569,7 +1568,7 @@ iterate_while_thm
    Let h = HALF p,
        z = FUNPOW (f o g) h x.
    Then h <> 0                     by HALF_EQ_0, p <> 0, p <> 1
-    and h < p                      by HALF_LESS, p <> 0
+    and h < p                      by HALF_LT, p <> 0
    Note (f o g) PERMUTES s         by involute_involute_permutes
     and p <> 0                     by given ODD p
     and z IN fixes g s             by involute_involute_fix_orbit_fix_odd [1]
@@ -1620,7 +1619,7 @@ Proof
       last_x_assum (qspecl_then [`f`, `g`, `s`, `p`, `x`] strip_assume_tac) >>
       rfs[],
       `p <> 0` by metis_tac[EVEN, ODD_EVEN] >>
-      `h < p` by rw[HALF_LESS, Abbr`h`] >>
+      `h < p` by rw[HALF_LT, Abbr`h`] >>
       spose_not_then strip_assume_tac >>
       qabbrev_tac `y = FUNPOW (f o g) j x` >>
       `y IN s` by rfs[fixes_element, FUNPOW_closure, Abbr`y`] >>

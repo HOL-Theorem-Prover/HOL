@@ -29,7 +29,8 @@ open arithmeticTheory pred_setTheory;
    s bij_eq t      = ?f. BIJ f s t
    s =b= t         = ?f. BIJ f s t
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
+
    Set Theorems:
    over_inj            |- !f s t. INJ f s t ==> over f s t
    over_surj           |- !f s t. SURJ f s t ==> over f s t

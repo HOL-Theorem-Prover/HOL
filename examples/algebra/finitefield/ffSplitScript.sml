@@ -2083,7 +2083,7 @@ val poly_unity_cyclo_factors_alt = store_thm(
        Let p = IMAGE (Phi k) (divisors k).
        Then unity k = PPROD p                 by poly_unity_cyclo_factors
        Note 0 < k                             by finite_field_card_coprime_pos
-        Now n IN (divisors k)                 by divisors_element, DIVIDES_LE
+        Now n IN (divisors k)                 by divisors_element_alt
          so (Phi k n) IN p                    by IN_IMAGE
        Note FINITE (divisors k)               by divisors_finite
          so FINITE p                          by IMAGE_FINITE
@@ -2101,7 +2101,7 @@ val poly_phi_divides_unity = store_thm(
     `!x. x IN p <=> ?m. (x = Phi k m) /\ m IN divisors k` by rw[Abbr`p`] >>
     `unity k = PPROD p` by rw[poly_unity_cyclo_factors] >>
     `0 < k` by metis_tac[finite_field_card_coprime_pos] >>
-    `n IN (divisors k)` by rw[divisors_element, DIVIDES_LE] >>
+    `n IN (divisors k)` by rw[divisors_element_alt] >>
     `(Phi k n) IN p` by metis_tac[] >>
     `FINITE (divisors k)` by rw[divisors_finite] >>
     `FINITE p` by rw[Abbr`p`] >>

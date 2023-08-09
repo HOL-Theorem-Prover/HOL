@@ -49,7 +49,7 @@ open groupActionTheory;
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    From groupInstances:
    Zadd_group          |- !n. 0 < n ==> Group (Zadd n)

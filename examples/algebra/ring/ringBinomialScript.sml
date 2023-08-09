@@ -1159,7 +1159,7 @@ val ring_freshman_thm_sub = store_thm(
   rw[] >>
   `(x + -y) ** m = x ** m + (-y) ** m` by rw[ring_freshman_thm, Abbr`m`] >>
   Cases_on `EVEN m` >-
-  rw[EVEN_PRIME, ring_neg_exp, ring_neg_char_2, Abbr`m`] >>
+  rw[GSYM EVEN_PRIME, ring_neg_exp, ring_neg_char_2, Abbr`m`] >>
   rw[ring_neg_exp]);
 
 (* Theorem: Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>

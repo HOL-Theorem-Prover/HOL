@@ -244,6 +244,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    SUM_IMAGE_INSERT     |- !f s. FINITE s ==> !e. e NOTIN s ==> (SIGMA f (e INSERT s) = f e + SIGMA f s)
    SUM_IMAGE_AS_SUM_SET |- !s. FINITE s ==> !f. (!x y. (f x = f y) ==> (x = y)) ==>
                                (SIGMA f s = SUM_SET (IMAGE f s))
+   SUM_IMAGE_DOUBLET    |- !f x y. x <> y ==> SIGMA f {x; y} = f x + f y
+   SUM_IMAGE_TRIPLET    |- !f x y z. x <> y /\ y <> z /\ z <> x ==> SIGMA f {x; y; z} = f x + f y + f z
    SIGMA_CONSTANT       |- !s. FINITE s ==> !f k. (!x. x IN s ==> (f x = k)) ==> (SIGMA f s = k * CARD s)
    SUM_IMAGE_CONSTANT   |- !s. FINITE s ==> !c. SIGMA (K c) s = c * CARD s
    SIGMA_CARD_CONSTANT  |- !n s. FINITE s /\ (!e. e IN s ==> CARD e = n) ==> SIGMA CARD s = n * CARD s
@@ -324,6 +326,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    set_additive_card           |- SET_ADDITIVE CARD
    disjoint_bigunion_card      |- !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
                                   (CARD (BIGUNION P) = SIGMA CARD P)
+   CARD_BIGUNION_PAIR_DISJOINT |- !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
+                                      CARD (BIGUNION P) = SIGMA CARD P
    set_additive_sigma          |- !f. SET_ADDITIVE (SIGMA f)
    disjoint_bigunion_sigma     |- !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
                                   !f. SIGMA f (BIGUNION P) = SIGMA (SIGMA f) P
@@ -1607,7 +1611,7 @@ val MAX_SET_IMAGE_SUC_COUNT = store_thm(
    Let s = {f x | HALF x <= c}
    Note !x. HALF x <= c
     ==> SUC (2 * HALF x) <= SUC (2 * c)         by arithmetic
-    and x <= SUC (2 * HALF x)                   by TWO_HALF_LESS_EQ
+    and x <= SUC (2 * HALF x)                   by TWO_HALF_LE_THM
      so x <= SUC (2 * c) < 2 * c + 2            by arithmetic
    Thus s SUBSET (IMAGE f (count (2 * c + 2)))  by SUBSET_DEF
    Note FINITE (count (2 * c + 2))              by FINITE_COUNT
@@ -1623,7 +1627,7 @@ val MAX_SET_IMAGE_with_HALF = store_thm(
   `s SUBSET (IMAGE f (count (2 * c + 2)))` by
   (rw[SUBSET_DEF, Abbr`s`] >>
   `SUC (2 * HALF x'') <= SUC (2 * c)` by rw[] >>
-  `x'' <= SUC (2 * HALF x'')` by rw[TWO_HALF_LESS_EQ] >>
+  `x'' <= SUC (2 * HALF x'')` by rw[TWO_HALF_LE_THM] >>
   `x'' < 2 * c + 2` by decide_tac >>
   metis_tac[]) >>
   `FINITE s` by metis_tac[FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE] >>
@@ -2605,6 +2609,58 @@ val SUM_IMAGE_AS_SUM_SET = store_thm(
   rw[SUM_IMAGE_THM] >>
   rw[SUM_IMAGE_THM, SUM_IMAGE_DELETE] >>
   metis_tac[]);
+
+(* Theorem: x <> y ==> SIGMA f {x; y} = f x + f y *)
+(* Proof:
+   Let s = {x; y}.
+   Then FINITE s                   by FINITE_UNION, FINITE_SING
+    and x INSERT s                 by INSERT_DEF
+    and s DELETE x = {y}           by DELETE_DEF
+        SIGMA f s
+      = SIGMA f (x INSERT s)       by above
+      = f x + SIGMA f (s DELETE x) by SUM_IMAGE_THM
+      = f x + SIGMA f {y}          by above
+      = f x + f y                  by SUM_IMAGE_SING
+*)
+Theorem SUM_IMAGE_DOUBLET:
+  !f x y. x <> y ==> SIGMA f {x; y} = f x + f y
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `s = {x; y}` >>
+  `FINITE s` by fs[Abbr`s`] >>
+  `x INSERT s = s` by fs[Abbr`s`] >>
+  `s DELETE x = {x; y} DELETE x` by simp[Abbr`s`] >>
+  `_ = if y = x then {} else {y}` by EVAL_TAC >>
+  `_ = {y}` by simp[] >>
+  metis_tac[SUM_IMAGE_THM, SUM_IMAGE_SING]
+QED
+
+(* Theorem: x <> y /\ y <> z /\ z <> x ==> SIGMA f {x; y; z} = f x + f y + f z *)
+(* Proof:
+   Let s = {x; y; z}.
+   Then FINITE s                   by FINITE_UNION, FINITE_SING
+    and x INSERT s                 by INSERT_DEF
+    and s DELETE x = {y; z}        by DELETE_DEF
+        SIGMA f s
+      = SIGMA f (x INSERT s)       by above
+      = f x + SIGMA f (s DELETE x) by SUM_IMAGE_THM
+      = f x + SIGMA f {y; z}       by above
+      = f x + f y + f z            by SUM_IMAGE_DOUBLET
+*)
+Theorem SUM_IMAGE_TRIPLET:
+  !f x y z. x <> y /\ y <> z /\ z <> x ==> SIGMA f {x; y; z} = f x + f y + f z
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `s = {x; y; z}` >>
+  `FINITE s` by fs[Abbr`s`] >>
+  `x INSERT s = s` by fs[Abbr`s`] >>
+  `s DELETE x = {x; y; z} DELETE x` by simp[Abbr`s`] >>
+  `_ = if y = x then if z = x then {} else {z}
+      else y INSERT if z = x then {} else {z}` by EVAL_TAC >>
+  `_ = {y; z}` by simp[] >>
+  `SIGMA f s = f x + (f y + f z)` by metis_tac[SUM_IMAGE_THM, SUM_IMAGE_DOUBLET, SUM_IMAGE_SING] >>
+  decide_tac
+QED
 
 (* Theorem: FINITE s ==> !f k. (!x. x IN s ==> (f x = k)) ==> (SIGMA f s = k * CARD s) *)
 (* Proof:
@@ -3818,6 +3874,14 @@ val disjoint_bigunion_card = store_thm(
   "disjoint_bigunion_card",
   ``!P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==> (CARD (BIGUNION P) = SIGMA CARD P)``,
   rw[disjoint_bigunion_add_fun, set_additive_card]);
+
+(* Theorem alias *)
+Theorem CARD_BIGUNION_PAIR_DISJOINT = disjoint_bigunion_card;
+(*
+val CARD_BIGUNION_PAIR_DISJOINT =
+   |- !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
+          CARD (BIGUNION P) = SIGMA CARD P: thm
+*)
 
 (* Theorem: SET_ADDITIVE (SIGMA f) *)
 (* Proof:

@@ -34,6 +34,10 @@ open helperNumTheory helperSetTheory helperFunctionTheory;
 (* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
 open dividesTheory gcdTheory;
 
+(* for SQRT and related theorems *)
+(* val _ = load "logPowerTheory"; *)
+open logrootTheory logPowerTheory;
+
 
 (* ------------------------------------------------------------------------- *)
 (* Gauss' Little Theorem                                                     *)
@@ -105,26 +109,31 @@ open dividesTheory gcdTheory;
    phi_lt            |- !n. 1 < n ==> phi n < n
 
    Divisors:
-   divisors_def            |- !n. divisors n = {d | d <= n /\ d divides n}
-   divisors_element        |- !n d. d IN divisors n <=> d <= n /\ d divides n
+   divisors_def            |- !n. divisors n = {d | 0 < d /\ d <= n /\ d divides n}
+   divisors_element        |- !n d. d IN divisors n <=> 0 < d /\ d <= n /\ d divides n
    divisors_element_alt    |- !n. 0 < n ==> !d. d IN divisors n <=> d divides n
-   divisors_has_one        |- !n. 0 < n ==> 1 IN divisors n
-   divisors_has_last       |- !n. n IN divisors n
-   divisors_not_empty      |- !n. divisors n <> {}
-!  divisors_eqn            |- !n. divisors n =
-                                  if n = 0 then {0}
-                                  else IMAGE (\j. if j + 1 divides n then j + 1 else 1) (count n)
-   divisors_cofactor       |- !n d. 0 < n /\ d IN divisors n ==> n DIV d IN divisors n
-   divisors_delete_last    |- !n. 0 < n ==> (divisors n DELETE n = {m | m < n /\ m divides n})
-   divisors_nonzero        |- !n. 0 < n ==> !d. d IN divisors n ==> 0 < d
-   divisors_has_cofactor   |- !n. 0 < n ==> !d. d IN divisors n ==> n DIV d IN divisors n
-   divisors_subset_upto    |- !n. divisors n SUBSET upto n
-   divisors_subset_natural |- !n. 0 < n ==> divisors n SUBSET natural n
-   divisors_finite         |- !n. FINITE (divisors n)
-   divisors_0              |- divisors 0 = {0}
+   divisors_has_element    |- !n d. d IN divisors n ==> 0 < n
+   divisors_has_1          |- !n. 0 < n ==> 1 IN divisors n
+   divisors_has_last       |- !n. 0 < n ==> n IN divisors n
+   divisors_not_empty      |- !n. 0 < n ==> divisors n <> {}
+   divisors_0              |- divisors 0 = {}
    divisors_1              |- divisors 1 = {1}
-   divisors_has_0          |- !n. 0 IN divisors n <=> (n = 0)
-   divisors_divisors_bij   |- !n. 0 < n ==> (\d. n DIV d) PERMUTES divisors n
+   divisors_eq_empty       |- !n. divisors n = {} <=> n = 0
+!  divisors_eqn            |- !n. divisors n =
+                                  IMAGE (\j. if j + 1 divides n then j + 1 else 1) (count n)
+   divisors_has_factor     |- !n p q. 0 < n /\ n = p * q ==> p IN divisors n /\ q IN divisors n
+   divisors_has_cofactor   |- !n d. d IN divisors n ==> n DIV d IN divisors n
+   divisors_delete_last    |- !n. divisors n DELETE n = {m | 0 < m /\ m < n /\ m divides n}
+   divisors_nonzero        |- !n d. d IN divisors n ==> 0 < d
+   divisors_subset_natural |- !n. divisors n SUBSET natural n
+   divisors_finite         |- !n. FINITE (divisors n)
+   divisors_divisors_bij   |- !n. (\d. n DIV d) PERMUTES divisors n
+
+   An upper bound for divisors:
+   divisor_le_cofactor_ge  |- !n p. 0 < p /\ p divides n /\ p <= SQRT n ==> SQRT n <= n DIV p
+   divisor_gt_cofactor_le  |- !n p. 0 < p /\ p divides n /\ SQRT n < p ==> n DIV p <= SQRT n
+   divisors_cofactor_inj   |- !n. INJ (\j. n DIV j) (divisors n) univ(:num)
+   divisors_card_upper     |- !n. CARD (divisors n) <= TWICE (SQRT n)
 
    Gauss' Little Theorem:
    gcd_matches_divisor_element  |- !n d. d divides n ==>
@@ -133,24 +142,24 @@ open dividesTheory gcdTheory;
                                    BIJ (\j. j DIV d) (gcd_matches n d) (coprimes_by n d)
    gcd_matches_bij_coprimes     |- !n d. 0 < n /\ d divides n ==>
                                    BIJ (\j. j DIV d) (gcd_matches n d) (coprimes (n DIV d))
-   divisors_eq_gcd_image    |- !n. 0 < n ==> (divisors n = IMAGE (gcd n) (natural n))
-   gcd_eq_equiv_class       |- !n d. feq_class (gcd n) (natural n) d = gcd_matches n d
-   gcd_eq_equiv_class_fun   |- !n. feq_class (gcd n) (natural n) = gcd_matches n
-   gcd_eq_partition_by_divisors |- !n. 0 < n ==> (partition (feq (gcd n)) (natural n) =
-                                   IMAGE (gcd_matches n) (divisors n))
-   gcd_eq_equiv_on_natural        |- !n. feq (gcd n) equiv_on natural n
+   divisors_eq_gcd_image        |- !n. divisors n = IMAGE (gcd n) (natural n)
+   gcd_eq_equiv_class           |- !n d. feq_class (gcd n) (natural n) d = gcd_matches n d
+   gcd_eq_equiv_class_fun       |- !n. feq_class (gcd n) (natural n) = gcd_matches n
+   gcd_eq_partition_by_divisors |- !n. partition (feq (gcd n)) (natural n) =
+                                       IMAGE (gcd_matches n) (divisors n)
+   gcd_eq_equiv_on_natural      |- !n. feq (gcd n) equiv_on natural n
    sum_over_natural_by_gcd_partition
-                                  |- !f n. SIGMA f (natural n) =
-                                           SIGMA (SIGMA f) (partition (feq (gcd n)) (natural n))
-   sum_over_natural_by_divisors   |- !f n. SIGMA f (natural n) =
-                                              SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n))
-   gcd_matches_from_divisors_inj  |- !n. INJ (gcd_matches n) (divisors n) univ(:num -> bool)
+                                |- !f n. SIGMA f (natural n) =
+                                         SIGMA (SIGMA f) (partition (feq (gcd n)) (natural n))
+   sum_over_natural_by_divisors |- !f n. SIGMA f (natural n) =
+                                         SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n))
+   gcd_matches_from_divisors_inj         |- !n. INJ (gcd_matches n) (divisors n) univ(:num -> bool)
    gcd_matches_and_coprimes_by_same_size |- !n. CARD o gcd_matches n = CARD o coprimes_by n
-   coprimes_by_with_card      |- !n. 0 < n ==> (CARD o coprimes_by n =
-                                               (\d. phi (if d IN divisors n then n DIV d else 0)))
-   coprimes_by_divisors_card  |- !n. 0 < n ==> !x. x IN divisors n ==>
-                                               ((CARD o coprimes_by n) x = (\d. phi (n DIV d)) x)
-   Gauss_little_thm           |- !n. n = SIGMA phi (divisors n)
+   coprimes_by_with_card      |- !n. 0 < n ==> CARD o coprimes_by n =
+                                               (\d. phi (if d IN divisors n then n DIV d else 0))
+   coprimes_by_divisors_card  |- !n x. x IN divisors n ==>
+                                       (CARD o coprimes_by n) x = (\d. phi (n DIV d)) x
+   Gauss_little_thm           |- !n. SIGMA phi (divisors n) = n
 
    Euler phi function is multiplicative for coprimes:
    coprimes_mult_by_image
@@ -200,32 +209,40 @@ open dividesTheory gcdTheory;
    rec_phi_eq_phi   |- !n. rec_phi n = phi n
 
    Useful Theorems:
-   coprimes_from_notone_inj       |- INJ coprimes (univ(:num) DIFF {1}) univ(:num -> bool)
-   divisors_eq_image_gcd_upto     |- !n. divisors n = IMAGE (gcd n) (upto n)
-   gcd_eq_equiv_on_upto           |- !n. feq (gcd n) equiv_on upto n
-   gcd_eq_upto_partition_by_divisors   |- !n. partition (feq (gcd n)) (upto n) =
-                                          IMAGE (preimage (gcd n) (upto n)) (divisors n)
-   sum_over_upto_by_gcd_partition |- !f n. SIGMA f (upto n) =
-                                           SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n))
-   sum_over_upto_by_divisors      |- !f n. SIGMA f (upto n) =
-                                           SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))
+   coprimes_from_not_1_inj     |- INJ coprimes (univ(:num) DIFF {1}) univ(:num -> bool)
+   divisors_eq_image_gcd_upto  |- !n. 0 < n ==> divisors n = IMAGE (gcd n) (upto n)
+   gcd_eq_equiv_on_upto        |- !n. feq (gcd n) equiv_on upto n
+   gcd_eq_upto_partition_by_divisors
+                               |- !n. 0 < n ==>
+                                      partition (feq (gcd n)) (upto n) =
+                                      IMAGE (preimage (gcd n) (upto n)) (divisors n)
+   sum_over_upto_by_gcd_partition
+                               |- !f n. SIGMA f (upto n) =
+                                        SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n))
+   sum_over_upto_by_divisors   |- !f n. 0 < n ==>
+                                        SIGMA f (upto n) =
+                                        SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))
 
-   divisors_eq_image_gcd_count    |- !n. 0 < n ==> (divisors n = IMAGE (gcd n) (count n))
-   gcd_eq_equiv_on_count          |- !n. feq (gcd n) equiv_on count n
-   gcd_eq_count_partition_by_divisors  |- !n. 0 < n ==> (partition (feq (gcd n)) (count n) =
-                                          IMAGE (preimage (gcd n) (count n)) (divisors n))
-   sum_over_count_by_gcd_partition     |- !f n. SIGMA f (count n) =
-                                          SIGMA (SIGMA f) (partition (feq (gcd n)) (count n))
-   sum_over_count_by_divisors     |- !f n. 0 < n ==> (SIGMA f (count n) =
-                                     SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n)))
+   divisors_eq_image_gcd_count |- !n. divisors n = IMAGE (gcd n) (count n)
+   gcd_eq_equiv_on_count       |- !n. feq (gcd n) equiv_on count n
+   gcd_eq_count_partition_by_divisors
+                               |- !n. partition (feq (gcd n)) (count n) =
+                                      IMAGE (preimage (gcd n) (count n)) (divisors n)
+   sum_over_count_by_gcd_partition
+                               |- !f n. SIGMA f (count n) =
+                                        SIGMA (SIGMA f) (partition (feq (gcd n)) (count n))
+   sum_over_count_by_divisors  |- !f n. SIGMA f (count n) =
+                                        SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n))
 
-   divisors_eq_image_gcd_natural  |- !n. 0 < n ==> (divisors n = IMAGE (gcd n) (natural n))
-   gcd_eq_natural_partition_by_divisors   |- !n. 0 < n ==> (partition (feq (gcd n)) (natural n) =
-                                             IMAGE (preimage (gcd n) (natural n)) (divisors n))
-   sum_over_natural_by_preimage_divisors  |- !f n. 0 < n ==> (SIGMA f (natural n) =
-                                     SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (natural n)) (divisors n)))
-   sum_image_divisors_cong        |- !f g. (f 1 = g 1) /\
-                                           (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==> (f = g)
+   divisors_eq_image_gcd_natural
+                               |- !n. divisors n = IMAGE (gcd n) (natural n)
+   gcd_eq_natural_partition_by_divisors
+                               |- !n. partition (feq (gcd n)) (natural n) =
+                                      IMAGE (preimage (gcd n) (natural n)) (divisors n)
+   sum_over_natural_by_preimage_divisors
+                               |- !f n. SIGMA f (natural n) =
+                                        SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (natural n)) (divisors n))
+   sum_image_divisors_cong     |- !f g. f 0 = g 0 /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==> f = g
 *)
 
 (* Theory:
@@ -959,91 +976,138 @@ val phi_lt = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of divisors of a number. *)
-val divisors_def = zDefine `
-   divisors n = {d | d <= n /\ d divides n}
-`;
-(* use zDefine as this is not computationally effective. *)
-(* Note: use of d <= n to give bounded divisors, so that divisors_0 = {0} only. *)
+Definition divisors_def[nocompute]:
+   divisors n = {d | 0 < d /\ d <= n /\ d divides n}
+End
+(* use [nocompute] as this is not computationally effective. *)
+(* Note: use of 0 < d to have positive divisors, as only 0 divides 0. *)
+(* Note: use of d <= n to give divisors_0 = {}, since ALL_DIVIDES_0. *)
 (* Note: for 0 < n, d <= n is redundant, as DIVIDES_LE implies it. *)
 
-(* Theorem: d IN divisors n <=> d <= n /\ d divides n *)
+(* Theorem: d IN divisors n <=> 0 < d /\ d <= n /\ d divides n *)
 (* Proof: by divisors_def *)
-val divisors_element = store_thm(
-  "divisors_element",
-  ``!n d. d IN divisors n <=> d <= n /\ d divides n``,
-  rw[divisors_def]);
+Theorem divisors_element:
+  !n d. d IN divisors n <=> 0 < d /\ d <= n /\ d divides n
+Proof
+  rw[divisors_def]
+QED
 
 (* Theorem: 0 < n ==> !d. d IN divisors n <=> d divides n *)
 (* Proof:
    If part: d IN divisors n ==> d divides n
-      True by divisors_element
+      This is true                 by divisors_element
    Only-if part: 0 < n /\ d divides n ==> d IN divisors n
       Since 0 < n /\ d divides n
-        ==> 0 < d /\ d <= n      by divides_pos
-       Hence d IN divisors n     by divisors_element
+        ==> 0 < d /\ d <= n        by divides_pos
+      Hence d IN divisors n        by divisors_element
 *)
-val divisors_element_alt = store_thm(
-  "divisors_element_alt",
-  ``!n. 0 < n ==> !d. d IN divisors n <=> d divides n``,
-  metis_tac[divisors_element, divides_pos]);
+Theorem divisors_element_alt:
+  !n. 0 < n ==> !d. d IN divisors n <=> d divides n
+Proof
+  metis_tac[divisors_element, divides_pos]
+QED
+
+(* Theorem: d IN divisors n ==> 0 < n *)
+(* Proof:
+   Note 0 < d /\ d <= n /\ d divides n         by divisors_def
+     so 0 < n                                  by inequality
+*)
+Theorem divisors_has_element:
+  !n d. d IN divisors n ==> 0 < n
+Proof
+  simp[divisors_def]
+QED
 
 (* Theorem: 0 < n ==> 1 IN (divisors n) *)
 (* Proof:
-    Note 0 < n ==> 1 <= n    by arithmetic
-     and 1 divides n         by ONE_DIVIDES_ALL
-   Hence 1 IN (divisors n)   by divisors_element
+    Note 1 divides n         by ONE_DIVIDES_ALL
+   Hence 1 IN (divisors n)   by divisors_element_alt
 *)
-val divisors_has_one = store_thm(
-  "divisors_has_one",
-  ``!n. 0 < n ==> 1 IN (divisors n)``,
-  rw[divisors_element]);
+Theorem divisors_has_1:
+  !n. 0 < n ==> 1 IN (divisors n)
+Proof
+  simp[divisors_element_alt]
+QED
 
-(* Theorem: n IN (divisors n) *)
-(* Proof: by divisors_element *)
-val divisors_has_last = store_thm(
-  "divisors_has_last",
-  ``!n. n IN (divisors n)``,
-  rw[divisors_element]);
+(* Theorem: 0 < n ==> n IN (divisors n) *)
+(* Proof:
+    Note n divides n         by DIVIDES_REFL
+   Hence n IN (divisors n)   by divisors_element_alt
+*)
+Theorem divisors_has_last:
+  !n. 0 < n ==> n IN (divisors n)
+Proof
+  simp[divisors_element_alt]
+QED
 
-(* Theorem: divisors n <> {} *)
+(* Theorem: 0 < n ==> divisors n <> {} *)
 (* Proof: by divisors_has_last, MEMBER_NOT_EMPTY *)
-val divisors_not_empty = store_thm(
-  "divisors_not_empty",
-  ``!n. divisors n <> {}``,
-  metis_tac[divisors_has_last, MEMBER_NOT_EMPTY]);
+Theorem divisors_not_empty:
+  !n. 0 < n ==> divisors n <> {}
+Proof
+  metis_tac[divisors_has_last, MEMBER_NOT_EMPTY]
+QED
+
+(* Theorem: divisors 0 = {} *)
+(* Proof: by divisors_def, 0 < d /\ d <= 0 is impossible. *)
+Theorem divisors_0:
+  divisors 0 = {}
+Proof
+  simp[divisors_def]
+QED
+
+(* Theorem: divisors 1 = {1} *)
+(* Proof: by divisors_def, 0 < d /\ d <= 1 ==> d = 1. *)
+Theorem divisors_1:
+  divisors 1 = {1}
+Proof
+  rw[divisors_def, EXTENSION]
+QED
+
+(* Theorem: divisors n = {} <=> n = 0 *)
+(* Proof:
+   By EXTENSION, this is to show:
+   (1) divisors n = {} ==> n = 0
+       By contradiction, suppose n <> 0.
+       Then 1 IN (divisors n)                  by divisors_has_1
+       This contradicts divisors n = {}        by MEMBER_NOT_EMPTY
+   (2) n = 0 ==> divisors n = {}
+       This is true                            by divisors_0
+*)
+Theorem divisors_eq_empty:
+  !n. divisors n = {} <=> n = 0
+Proof
+  rw[EQ_IMP_THM] >-
+  metis_tac[divisors_has_1, MEMBER_NOT_EMPTY, NOT_ZERO] >>
+  simp[divisors_0]
+QED
 
 (* Idea: a method to evaluate divisors. *)
 
-(* Theorem: divisors n =
-            if n = 0 then {0}
-            else IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n) *)
+(* Theorem: divisors n = IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n) *)
 (* Proof:
+   Let f = \j. if (j + 1) divides n then j + 1 else 1.
    If n = 0,
         divisors 0
-      = {d | d <= 0 /\ d divides 0}      by divisors_def
-      = {0}                              by d <= 0, and ALL_DIVIDES_0
+      = {d | 0 < d /\ d <= 0 /\ d divides 0}   by divisors_def
+      = {}                                     by 0 < d /\ d <= 0
+      = IMAGE f {}                             by IMAGE_EMPTY
+      = IMAGE f (count 0)                      by COUNT_0
    If n <> 0,
         divisors n
-      = {d | d <= n /\ d divides n}      by divisors_def
-      = {d | d <> 0 /\ d <= n /\ d divides n}
-                                         by ZERO_DIVIDES
+      = {d | 0 < d /\ d <= n /\ d divides n}   by divisors_def
+      = {d | d <> 0 /\ d <= n /\ d divides n}  by 0 < d
       = {k + 1 | (k + 1) <= n /\ (k + 1) divides n}
-                                         by num_CASES, d <> 0
-      = {k + 1 | k < n /\ (k + 1) divides n}
-                                         by arithmetic
-      = IMAGE (\j. if (j + 1) divides n then j + 1 else 1) {k | k < n}
-                                         by IMAGE_DEF
-      = IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n)
-                                         by count_def
+                                               by num_CASES, d <> 0
+      = {k + 1 | k < n /\ (k + 1) divides n}   by arithmetic
+      = IMAGE f {k | k < n}                    by IMAGE_DEF
+      = IMAGE f (count n)                      by count_def
 *)
 Theorem divisors_eqn[compute]:
-  !n. divisors n =
-       if n = 0 then {0}
-       else IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n)
+  !n. divisors n = IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n)
 Proof
   (rw[divisors_def, EXTENSION, EQ_IMP_THM] >> rw[]) >>
-  `x <> 0` by metis_tac[ZERO_DIVIDES] >>
-  `?k. x = SUC k` by metis_tac[num_CASES] >>
+  `?k. x = SUC k` by metis_tac[num_CASES, NOT_ZERO] >>
   qexists_tac `k` >>
   fs[ADD1]
 QED
@@ -1058,161 +1122,319 @@ QED
 > EVAL ``divisors 9``; = {9; 3; 1}: thm
 *)
 
+(* Idea: each factor of a product divides the product. *)
+
+(* Theorem: 0 < n /\ n = p * q ==> p IN divisors n /\ q IN divisors n *)
+(* Proof:
+   Note 0 < p /\ 0 < q             by MULT_EQ_0
+     so p <= n /\ q <= n           by arithmetic
+    and p divides n                by divides_def
+    and q divides n                by divides_def, MULT_COMM
+    ==> p IN divisors n /\
+        q IN divisors n            by divisors_element_alt, 0 < n
+*)
+Theorem divisors_has_factor:
+  !n p q. 0 < n /\ n = p * q ==> p IN divisors n /\ q IN divisors n
+Proof
+  (rw[divisors_element_alt] >> metis_tac[MULT_EQ_0, NOT_ZERO])
+QED
+
 (* Idea: when factor divides, its cofactor also divides. *)
 
-(* Theorem: 0 < n /\ d IN divisors n ==> (n DIV d) IN divisors n *)
+(* Theorem: d IN divisors n ==> (n DIV d) IN divisors n *)
 (* Proof:
-   Note d <= n /\ d divides n      by divisors_def
-     so 0 < d                      by ZERO_DIVIDES
-    and n DIV d <= n               by DIV_LESS_EQ, 0 < d
-    and n DIV d divides n          by DIVIDES_COFACTOR, 0 < d
+   Note 0 < d /\ d <= n /\ d divides n         by divisors_def
+    and 0 < n                                  by 0 < d /\ d <= n
+     so 0 < n DIV d                            by DIV_POS, 0 < n
+    and n DIV d <= n                           by DIV_LESS_EQ, 0 < d
+    and n DIV d divides n                      by DIVIDES_COFACTOR, 0 < d
+     so (n DIV d) IN divisors n                by divisors_def
 *)
-Theorem divisors_cofactor:
-  !n d. 0 < n /\ d IN divisors n ==> (n DIV d) IN divisors n
+Theorem divisors_has_cofactor:
+  !n d. d IN divisors n ==> (n DIV d) IN divisors n
 Proof
   simp [divisors_def] >>
   ntac 3 strip_tac >>
-  `0 < d` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
-  rw[DIV_LESS_EQ, DIVIDES_COFACTOR]
+  `0 < n` by decide_tac >>
+  rw[DIV_POS, DIV_LESS_EQ, DIVIDES_COFACTOR]
 QED
 
-(* Theorem: 0 < n ==> ((divisors n) DELETE n = {m | m < n /\ m divides n}) *)
+(* Theorem: (divisors n) DELETE n = {m | 0 < m /\ m < n /\ m divides n} *)
 (* Proof:
      (divisors n) DELETE n
-   = {m | m <= n /\ m divides n} DELETE n     by divisors_def
-   = {m | m <= n /\ m divides n} DIFF {n}     by DELETE_DEF
-   = {m | m <> n /\ m <= n /\ m divides n}    by IN_DIFF
-   = {m | m < n /\ m divides n}               by LESS_OR_EQ
+   = {m | 0 < m /\ m <= n /\ m divides n} DELETE n     by divisors_def
+   = {m | 0 < m /\ m <= n /\ m divides n} DIFF {n}     by DELETE_DEF
+   = {m | 0 < m /\ m <> n /\ m <= n /\ m divides n}    by IN_DIFF
+   = {m | 0 < m /\ m < n /\ m divides n}               by LESS_OR_EQ
 *)
-val divisors_delete_last = store_thm(
-  "divisors_delete_last",
-  ``!n. 0 < n ==> ((divisors n) DELETE n = {m | m < n /\ m divides n})``,
-  rw[divisors_def, EXTENSION, EQ_IMP_THM]);
+Theorem divisors_delete_last:
+  !n. (divisors n) DELETE n = {m | 0 < m /\ m < n /\ m divides n}
+Proof
+  rw[divisors_def, EXTENSION, EQ_IMP_THM]
+QED
 
-(* Theorem: 0 < n ==> !d. d IN (divisors n) ==> 0 < d *)
-(* Proof:
-   Since d IN (divisors n), d divides n      by divisors_element
-   By contradiction, if d = 0, then n = 0    by ZERO_DIVIDES
-   This contradicts 0 < n.
-*)
-val divisors_nonzero = store_thm(
-  "divisors_nonzero",
-  ``!n. 0 < n ==> !d. d IN (divisors n) ==> 0 < d``,
-  metis_tac[divisors_element, ZERO_DIVIDES, NOT_ZERO_LT_ZERO]);
+(* Theorem: d IN (divisors n) ==> 0 < d *)
+(* Proof: by divisors_def. *)
+Theorem divisors_nonzero:
+  !n d. d IN (divisors n) ==> 0 < d
+Proof
+  simp[divisors_def]
+QED
 
-(* Theorem: 0 < n ==> !d. d IN divisors n ==> n DIV d IN divisors n *)
-(* Proof:
-   By divisors_element, this is to show:
-      0 < n /\ d <= n /\ d divides n ==> n DIV d <= n /\ n DIV d divides n
-   Since 0 < n /\ d divides n ==> 0 < d   by divisor_pos
-      so n = (n DIV d) * d                by DIVIDES_EQN, 0 < d
-           = d * (n DIV d)                by MULT_COMM
-   Hence (n DIV d) divides n              by divides_def
-     and (n DIV d) <= n                   by DIVIDES_LE, 0 < n
-*)
-val divisors_has_cofactor = store_thm(
-  "divisors_has_cofactor",
-  ``!n. 0 < n ==> !d. d IN divisors n ==> n DIV d IN divisors n``,
-  rewrite_tac[divisors_element] >>
-  ntac 4 strip_tac >>
-  `0 < d` by metis_tac[divisor_pos] >>
-  `n = (n DIV d) * d` by rw[GSYM DIVIDES_EQN] >>
-  `_ = d * (n DIV d)` by rw[MULT_COMM] >>
-  metis_tac[divides_def, DIVIDES_LE]);
-
-(* Theorem: divisors n SUBSET upto n *)
-(* Proof: by divisors_def, SUBSET_DEF *)
-val divisors_subset_upto = store_thm(
-  "divisors_subset_upto",
-  ``!n. divisors n SUBSET upto n``,
-  rw[divisors_def, SUBSET_DEF]);
-
-(* Theorem: 0 < n ==> (divisors n) SUBSET (natural n) *)
+(* Theorem: (divisors n) SUBSET (natural n) *)
 (* Proof:
    By SUBSET_DEF, this is to show:
-      x IN (divisors n) ==> x IN (natural n)
-   Since x IN (divisors n)
-     ==> x <= n /\ x divides n    by divisors_element
-     ==> x <= n /\ 0 < x          since n <> 0, so x <> 0 by ZERO_DIVIDES
-     ==> x IN (natural n)         by natural_element
+       x IN (divisors n) ==> x IN (natural n)
+       x IN (divisors n)
+   ==> 0 < x /\ x <= n /\ x divides n          by divisors_element
+   ==> 0 < x /\ x <= n
+   ==> x IN (natural n)                        by natural_element
 *)
-val divisors_subset_natural = store_thm(
-  "divisors_subset_natural",
-  ``!n. 0 < n ==> (divisors n) SUBSET (natural n)``,
-  rw[divisors_element, natural_element, SUBSET_DEF] >>
-  metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO]);
+Theorem divisors_subset_natural:
+  !n. (divisors n) SUBSET (natural n)
+Proof
+  rw[divisors_element, natural_element, SUBSET_DEF]
+QED
 
 (* Theorem: FINITE (divisors n) *)
 (* Proof:
-   Since (divisors n) SUBSET count (SUC n)   by divisors_subset_upto
-     and FINITE (count (SUC n))              by FINITE_COUNT
-      so FINITE (divisors n)                 by SUBSET_FINITE
+   Since (divisors n) SUBSET (natural n)       by divisors_subset_natural
+     and FINITE (naturnal n)                   by natural_finite
+      so FINITE (divisors n)                   by SUBSET_FINITE
 *)
-val divisors_finite = store_thm(
-  "divisors_finite",
-  ``!n. FINITE (divisors n)``,
-  metis_tac[divisors_subset_upto, SUBSET_FINITE, FINITE_COUNT]);
+Theorem divisors_finite:
+  !n. FINITE (divisors n)
+Proof
+  metis_tac[divisors_subset_natural, natural_finite, SUBSET_FINITE]
+QED
 
-(* Theorem: divisors 0 = {0} *)
-(* Proof: divisors_def *)
-val divisors_0 = store_thm(
-  "divisors_0",
-  ``divisors 0 = {0}``,
-  rw[divisors_def]);
-
-(* Theorem: divisors 1 = {1} *)
-(* Proof: divisors_def *)
-val divisors_1 = store_thm(
-  "divisors_1",
-  ``divisors 1 = {1}``,
-  rw[divisors_def, EXTENSION]);
-
-(* Theorem: 0 IN divisors n <=> (n = 0) *)
-(* Proof:
-       0 IN divisors n
-   <=> 0 <= n /\ 0 divides n    by divisors_element
-   <=> n = 0                    by ZERO_DIVIDES
-*)
-val divisors_has_0 = store_thm(
-  "divisors_has_0",
-  ``!n. 0 IN divisors n <=> (n = 0)``,
-  rw[divisors_element]);
-
-(* Theorem: 0 < n ==> BIJ (\d. n DIV d) (divisors n) (divisors n) *)
+(* Theorem: BIJ (\d. n DIV d) (divisors n) (divisors n) *)
 (* Proof:
    By BIJ_DEF, INJ_DEF, SURJ_DEF, this is to show:
    (1) d IN divisors n ==> n DIV d IN divisors n
-       True by divisors_has_cofactor.
+       This is true                                       by divisors_has_cofactor
    (2) d IN divisors n /\ d' IN divisors n /\ n DIV d = n DIV d' ==> d = d'
-       d IN divisors n ==> d divides n /\ 0 < d           by divisors_element, divisor_pos
-       d' IN divisors n ==> d' divides n /\ 0 < d'        by divisors_element, divisor_pos
+       d IN divisors n ==> d divides n /\ 0 < d           by divisors_element
+       d' IN divisors n ==> d' divides n /\ 0 < d'        by divisors_element
+       Also d IN divisors n ==> 0 < n                     by divisors_has_element
        Hence n = (n DIV d) * d  and n = (n DIV d') * d'   by DIVIDES_EQN
        giving   (n DIV d) * d = (n DIV d') * d'
-       Now (n DIV d) <> 0, otherwise contradicts 0 < n    by MULT
+       Now (n DIV d) <> 0, otherwise contradicts n <> 0   by MULT
        Hence                d = d'                        by EQ_MULT_LCANCEL
-   (3) same as (1), true by divisors_has_cofactor.
+   (3) same as (1), true                                  by divisors_has_cofactor
    (4) x IN divisors n ==> ?d. d IN divisors n /\ (n DIV d = x)
-       x IN divisors n ==> x divides n                    by divisors_element
+       Note x IN divisors n ==> x divides n               by divisors_element
+        and 0 < n                                         by divisors_has_element
        Let d = n DIV x.
        Then d IN divisors n                               by divisors_has_cofactor
-       and  n DIV d = n DIV (n DIV x) = x                 by divide_by_cofactor
+       and  n DIV d = n DIV (n DIV x) = x                 by divide_by_cofactor, 0 < n
 *)
-val divisors_divisors_bij = store_thm(
-  "divisors_divisors_bij",
-  ``!n. 0 < n ==> BIJ (\d. n DIV d) (divisors n) (divisors n)``,
+Theorem divisors_divisors_bij:
+  !n. (\d. n DIV d) PERMUTES divisors n
+Proof
   rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >-
   rw[divisors_has_cofactor] >-
- (`n = (n DIV d) * d` by metis_tac[DIVIDES_EQN, divisors_element, divisor_pos] >>
-  `n = (n DIV d') * d'` by metis_tac[DIVIDES_EQN, divisors_element, divisor_pos] >>
-  `n DIV d <> 0` by metis_tac[MULT, NOT_ZERO_LT_ZERO] >>
+ (`n = (n DIV d) * d` by metis_tac[DIVIDES_EQN, divisors_element] >>
+  `n = (n DIV d') * d'` by metis_tac[DIVIDES_EQN, divisors_element] >>
+  `0 < n` by metis_tac[divisors_has_element] >>
+  `n DIV d <> 0` by metis_tac[MULT, NOT_ZERO] >>
   metis_tac[EQ_MULT_LCANCEL]) >-
   rw[divisors_has_cofactor] >>
-  metis_tac[divisors_element, divisors_has_cofactor, divide_by_cofactor]);
+  `0 < n` by metis_tac[divisors_has_element] >>
+  metis_tac[divisors_element, divisors_has_cofactor, divide_by_cofactor]
+QED
 
-(*
-> divisors_divisors_bij;
-val it = |- !n. 0 < n ==> (\d. n DIV d) PERMUTES divisors n: thm
+(* ------------------------------------------------------------------------- *)
+(* An upper bound for divisors.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: if a divisor of n is less or equal to (SQRT n), its cofactor is more or equal to (SQRT n) *)
+
+(* Theorem: 0 < p /\ p divides n /\ p <= SQRT n ==> SQRT n <= (n DIV p) *)
+(* Proof:
+   Let m = SQRT n, then p <= m.
+   By contradiction, suppose (n DIV p) < m.
+   Then  n = (n DIV p) * p         by DIVIDES_EQN, 0 < p
+          <= (n DIV p) * m         by p <= m
+           < m * m                 by (n DIV p) < m
+          <= n                     by SQ_SQRT_LE
+   giving n < n, which is a contradiction.
 *)
+Theorem divisor_le_cofactor_ge:
+  !n p. 0 < p /\ p divides n /\ p <= SQRT n ==> SQRT n <= (n DIV p)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `m = SQRT n` >>
+  spose_not_then strip_assume_tac >>
+  `n = (n DIV p) * p` by rfs[DIVIDES_EQN] >>
+  `(n DIV p) * p <= (n DIV p) * m` by fs[] >>
+  `(n DIV p) * m < m * m` by fs[] >>
+  `m * m <= n` by simp[SQ_SQRT_LE, Abbr`m`] >>
+  decide_tac
+QED
+
+(* Idea: if a divisor of n is greater than (SQRT n), its cofactor is less or equal to (SQRT n) *)
+
+(* Theorem: 0 < p /\ p divides n /\ SQRT n < p ==> (n DIV p) <= SQRT n *)
+(* Proof:
+   Let m = SQRT n, then m < p.
+   By contradiction, suppose m < (n DIV p).
+   Let q = (n DIV p).
+   Then SUC m <= p, SUC m <= q     by m < p, m < q
+   and   n = q * p                 by DIVIDES_EQN, 0 < p
+          >= (SUC m) * (SUC m)     by LESS_MONO_MULT2
+           = (SUC m) ** 2          by EXP_2
+           > n                     by SQRT_PROPERTY
+   which is a contradiction.
+*)
+Theorem divisor_gt_cofactor_le:
+  !n p. 0 < p /\ p divides n /\ SQRT n < p ==> (n DIV p) <= SQRT n
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `m = SQRT n` >>
+  spose_not_then strip_assume_tac >>
+  `n = (n DIV p) * p` by rfs[DIVIDES_EQN] >>
+  qabbrev_tac `q = n DIV p` >>
+  `SUC m <= p /\ SUC m <= q` by decide_tac >>
+  `(SUC m) * (SUC m) <= q * p` by simp[LESS_MONO_MULT2] >>
+  `n < (SUC m) * (SUC m)` by metis_tac[SQRT_PROPERTY, EXP_2] >>
+  decide_tac
+QED
+
+(* Idea: for (divisors n), the map (\j. n DIV j) is injective. *)
+
+(* Theorem: INJ (\j. n DIV j) (divisors n) univ(:num) *)
+(* Proof:
+   By INJ_DEF, this is to show:
+   (1) !x. x IN (divisors n) ==> (\j. n DIV j) x IN univ(:num)
+       True by types, n DIV j is a number, with type :num.
+   (2) !x y. x IN (divisors n) /\ y IN (divisors n) /\ n DIV x = n DIV y ==> x = y
+       Note x divides n /\ 0 < x         by divisors_def
+        and y divides n /\ 0 < y         by divisors_def
+        Let p = n DIV x, q = n DIV y.
+       Note 0 < n                        by divisors_has_element
+       then 0 < p, 0 < q                 by DIV_POS, 0 < n
+       Then  n = p * x = q * y           by DIVIDES_EQN, 0 < x, 0 < y
+        But          p = q               by given
+         so          x = y               by EQ_MULT_LCANCEL
+*)
+Theorem divisors_cofactor_inj:
+  !n. INJ (\j. n DIV j) (divisors n) univ(:num)
+Proof
+  rw[INJ_DEF, divisors_def] >>
+  `n = n DIV j * j` by fs[GSYM DIVIDES_EQN] >>
+  `n = n DIV j' * j'` by fs[GSYM DIVIDES_EQN] >>
+  `0 < n` by fs[GSYM divisors_has_element] >>
+  metis_tac[EQ_MULT_LCANCEL, DIV_POS, NOT_ZERO]
+QED
+
+(* Idea: an upper bound for CARD (divisors n).
+
+To prove: 0 < n ==> CARD (divisors n) <= 2 * SQRT n
+Idea of proof:
+   Consider the two sets,
+      s = {x | x IN divisors n /\ x <= SQRT n}
+      t = {x | x IN divisors n /\ SQRT n <= x}
+   Note s SUBSET (natural (SQRT n)), so CARD s <= SQRT n.
+   Also t SUBSET (natural (SQRT n)), so CARD t <= SQRT n.
+   There is a bijection between the two parts:
+      BIJ (\j. n DIV j) s t
+   Now divisors n = s UNION t
+      CARD (divisors n)
+    = CARD s + CARD t - CARD (s INTER t)
+   <= CARD s + CARD t
+   <= SQRT n + SQRT n
+    = 2 * SQRT n
+
+   The BIJ part will be quite difficult.
+   So the actual proof is a bit different.
+*)
+
+(* Theorem: CARD (divisors n) <= 2 * SQRT n *)
+(* Proof:
+   Let m = SQRT n,
+       d = divisors n,
+       s = {x | x IN d /\ x <= m},
+       f = \j. n DIV j,
+       t = IMAGE f s.
+
+   Claim: s SUBSET natural m
+   Proof: By SUBSET_DEF, this is to show:
+             x IN d /\ x <= m ==> ?y. x = SUC y /\ y < m
+          Note 0 < x               by divisors_nonzero
+          Let y = PRE x.
+          Then x = SUC (PRE x)     by SUC_PRE
+           and PRE x < x           by PRE_LESS
+            so PRE x < m           by inequality, x <= m
+
+   Claim: BIJ f s t
+   Proof: Note s SUBSET d          by SUBSET_DEF
+           and INJ f d univ(:num)  by divisors_cofactor_inj
+            so INJ f s univ(:num)  by INJ_SUBSET, SUBSET_REFL
+           ==> BIJ f s t           by INJ_IMAGE_BIJ_ALT
+
+   Claim: d = s UNION t
+   Proof: By EXTENSION, EQ_IMP_THM, this is to show:
+          (1) x IN divisors n ==> x <= m \/ ?j. x = n DIV j /\ j IN divisors n /\ j <= m
+              If x <= m, this is trivial.
+              Otherwise, m < x.
+              Let j = n DIV x.
+              Then x = n DIV (n DIV x)         by divide_by_cofactor
+               and (n DIV j) IN divisors n     by divisors_has_cofactor
+               and (n DIV j) <= m              by divisor_gt_cofactor_le
+          (2) j IN divisors n ==> n DIV j IN divisors n
+              This is true                     by divisors_has_cofactor
+
+    Now FINITE (natural m)         by natural_finite
+     so FINITE s                   by SUBSET_FINITE
+    and FINITE t                   by IMAGE_FINITE
+     so CARD s <= m                by CARD_SUBSET, natural_card
+   Also CARD t = CARD s            by FINITE_BIJ_CARD
+
+        CARD d <= CARD s + CARD t  by CARD_UNION_LE, d = s UNION t
+               <= m + m            by above
+                = 2 * m            by arithmetic
+*)
+Theorem divisors_card_upper:
+  !n. CARD (divisors n) <= 2 * SQRT n
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `m = SQRT n` >>
+  qabbrev_tac `d = divisors n` >>
+  qabbrev_tac `s = {x | x IN d /\ x <= m}` >>
+  qabbrev_tac `f = \j. n DIV j` >>
+  qabbrev_tac `t = (IMAGE f s)` >>
+  `s SUBSET (natural m)` by
+  (rw[SUBSET_DEF, Abbr`s`] >>
+  `0 < x` by metis_tac[divisors_nonzero] >>
+  qexists_tac `PRE x` >>
+  simp[]) >>
+  `BIJ f s t` by
+    (simp[Abbr`t`] >>
+  irule INJ_IMAGE_BIJ_ALT >>
+  `s SUBSET d` by rw[SUBSET_DEF, Abbr`s`] >>
+  `INJ f d univ(:num)` by metis_tac[divisors_cofactor_inj] >>
+  metis_tac[INJ_SUBSET, SUBSET_REFL]) >>
+  `d = s UNION t` by
+      (rw[EXTENSION, Abbr`d`, Abbr`s`, Abbr`t`, Abbr`f`, EQ_IMP_THM] >| [
+    (Cases_on `x <= m` >> simp[]) >>
+    qexists_tac `n DIV x` >>
+    `0 < x /\ x <= n /\ x divides n` by fs[divisors_element] >>
+    simp[divide_by_cofactor, divisors_has_cofactor] >>
+    `m < x` by decide_tac >>
+    simp[divisor_gt_cofactor_le, Abbr`m`],
+    simp[divisors_has_cofactor]
+  ]) >>
+  `FINITE (natural m)` by simp[natural_finite] >>
+  `FINITE s /\ FINITE t` by metis_tac[SUBSET_FINITE, IMAGE_FINITE] >>
+  `CARD s <= m` by metis_tac[CARD_SUBSET, natural_card] >>
+  `CARD t = CARD s` by metis_tac[FINITE_BIJ_CARD] >>
+  `CARD d <= CARD s + CARD t` by metis_tac[CARD_UNION_LE] >>
+  decide_tac
+QED
+
+(* This is a remarkable result! *)
+
 
 (* ------------------------------------------------------------------------- *)
 (* Gauss' Little Theorem                                                     *)
@@ -1390,34 +1612,43 @@ val gcd_matches_bij_coprimes = store_thm(
    which is not possible.
 *)
 
-(* Theorem: 0 < n ==> (divisors n = IMAGE (gcd n) (natural n)) *)
+(* Theorem: divisors n = IMAGE (gcd n) (natural n) *)
 (* Proof:
      divisors n
-   = {d | d <= n /\ d divides n}                by divisors_def
-   = {d | 0 < d /\ d <= n /\ d divides n}       by divisor_pos
+   = {d | 0 < d /\ d <= n /\ d divides n}       by divisors_def
    = {d | d IN (natural n) /\ d divides n}      by natural_element
    = {d | d IN (natural n) /\ (gcd d n = d)}    by divides_iff_gcd_fix
    = {d | d IN (natural n) /\ (gcd n d = d)}    by GCD_SYM
    = {gcd n d | d | d IN (natural n)}           by replacemnt
    = IMAGE (gcd n) (natural n)                  by IMAGE_DEF
+   The replacemnt requires:
+       d IN (natural n) ==> gcd n d IN (natural n)
+       d IN (natural n) ==> gcd n (gcd n d) = gcd n d
+   which are given below.
 
    Or, by divisors_def, natuarl_elemnt, IN_IMAGE, this is to show:
-   (1) 0 < n /\ x <= n /\ x divides n ==> ?x'. (x = gcd n x') /\ 0 < x' /\ x' <= n
-       Note x divides n ==> 0 < x               by divisor_pos
-       Also x divides n ==> gcd x n = x         by divides_iff_gcd_fix
+   (1) 0 < x /\ x <= n /\ x divides n ==> ?y. (x = gcd n y) /\ 0 < y /\ y <= n
+       Note x divides n ==> gcd x n = x         by divides_iff_gcd_fix
          or                 gcd n x = x         by GCD_SYM
        Take this x, and the result follows.
-   (2) 0 < n /\ 0 < x' /\ x' <= n ==> gcd n x' <= n /\ gcd n x' divides n
-       Note gcd n x' divides n                  by GCD_IS_GREATEST_COMMON_DIVISOR
-        and gcd n x' <= n                       by DIVIDES_LE, 0 < n.
+   (2) 0 < y /\ y <= n ==> 0 < gcd n y /\ gcd n y <= n /\ gcd n y divides n
+       Note 0 < n                               by arithmetic
+        and gcd n y divides n                   by GCD_IS_GREATEST_COMMON_DIVISOR, 0 < n
+        and 0 < gcd n y                         by GCD_EQ_0, n <> 0
+        and gcd n y <= n                        by DIVIDES_LE, 0 < n
 *)
-val divisors_eq_gcd_image = store_thm(
-  "divisors_eq_gcd_image",
-  ``!n. 0 < n ==> (divisors n = IMAGE (gcd n) (natural n))``,
-  rw_tac std_ss[divisors_def, GSPECIFICATION, EXTENSION, IN_IMAGE, natural_element, EQ_IMP_THM] >-
-  metis_tac[divisor_pos, divides_iff_gcd_fix, GCD_SYM] >-
-  metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_LE] >>
-  metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR]);
+Theorem divisors_eq_gcd_image:
+  !n. divisors n = IMAGE (gcd n) (natural n)
+Proof
+  rw_tac std_ss[divisors_def, GSPECIFICATION, EXTENSION, IN_IMAGE, natural_element, EQ_IMP_THM] >| [
+    `0 < n` by decide_tac >>
+    metis_tac[divides_iff_gcd_fix, GCD_SYM],
+    metis_tac[GCD_EQ_0, NOT_ZERO],
+    `0 < n` by decide_tac >>
+    metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_LE],
+    metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR]
+  ]
+QED
 
 (* Theorem: feq_class (gcd n) (natural n) d = gcd_matches n d *)
 (* Proof:
@@ -1439,18 +1670,18 @@ val gcd_eq_equiv_class_fun = store_thm(
   ``!n. feq_class (gcd n) (natural n) = gcd_matches n``,
   rw[FUN_EQ_THM, gcd_eq_equiv_class]);
 
-(* Theorem: 0 < n ==> (partition (feq (gcd n)) (natural n) = IMAGE (gcd_matches n) (divisors n)) *)
+(* Theorem: partition (feq (gcd n)) (natural n) = IMAGE (gcd_matches n) (divisors n) *)
 (* Proof:
      partition (feq (gcd n)) (natural n)
-   = IMAGE (equiv_class (feq (gcd n)) (natural n)) (natural n)    by partition_elements
+   = IMAGE (equiv_class (feq (gcd n)) (natural n)) (natural n)      by partition_elements
    = IMAGE ((feq_class (gcd n) (natural n)) o (gcd n)) (natural n)  by feq_class_fun
    = IMAGE ((gcd_matches n) o (gcd n)) (natural n)       by gcd_eq_equiv_class_fun
    = IMAGE (gcd_matches n) (IMAGE (gcd n) (natural n))   by IMAGE_COMPOSE
-   = IMAGE (gcd_matches n) (divisors n)      by divisors_eq_gcd_image, 0 < n
+   = IMAGE (gcd_matches n) (divisors n)                  by divisors_eq_gcd_image, 0 < n
 *)
-val gcd_eq_partition_by_divisors = store_thm(
-  "gcd_eq_partition_by_divisors",
-  ``!n. 0 < n ==> (partition (feq (gcd n)) (natural n) = IMAGE (gcd_matches n) (divisors n))``,
+Theorem gcd_eq_partition_by_divisors:
+  !n. partition (feq (gcd n)) (natural n) = IMAGE (gcd_matches n) (divisors n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = natural n` >>
@@ -1459,7 +1690,8 @@ val gcd_eq_partition_by_divisors = store_thm(
   `_ = IMAGE ((gcd_matches n) o f) s` by rw[gcd_eq_equiv_class_fun, Abbr`f`, Abbr`s`] >>
   `_ = IMAGE (gcd_matches n) (IMAGE f s)` by rw[IMAGE_COMPOSE] >>
   `_ = IMAGE (gcd_matches n) (divisors n)` by rw[divisors_eq_gcd_image, Abbr`f`, Abbr`s`] >>
-  rw[]);
+  simp[]
+QED
 
 (* Theorem: (feq (gcd n)) equiv_on (natural n) *)
 (* Proof:
@@ -1485,64 +1717,38 @@ val sum_over_natural_by_gcd_partition = store_thm(
 
 (* Theorem: SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n)) *)
 (* Proof:
-   If n = 0,
-      LHS = SIGMA f (natural 0)
-          = SIGMA f {}             by natural_0
-          = 0                      by SUM_IMAGE_EMPTY
-      RHS = SIGMA (SIGMA f) (IMAGE (gcd_matches 0) (divisors 0))
-          = SIGMA (SIGMA f) (IMAGE (gcd_matches 0) {0})   by divisors_0
-          = SIGMA (SIGMA f) {gcd_matches 0 0}             by IMAGE_SING
-          = SIGMA (SIGMA f) {{}}                          by gcd_matches_0
-          = SIGMA f {}                                    by SUM_IMAGE_SING
-          = 0 = LHS                                       by SUM_IMAGE_EMPTY
-   Otherwise 0 < n,
      SIGMA f (natural n)
    = SIGMA (SIGMA f) (partition (feq (gcd n)) (natural n)) by sum_over_natural_by_gcd_partition
-   = SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n))  by gcd_eq_partition_by_divisors, 0 < n
+   = SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n))  by gcd_eq_partition_by_divisors
 *)
-val sum_over_natural_by_divisors = store_thm(
-  "sum_over_natural_by_divisors",
-  ``!f n. SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n))``,
-  rpt strip_tac >>
-  Cases_on `n = 0` >| [
-    `natural n = {}` by rw_tac std_ss[natural_0] >>
-    `divisors n = {0}` by rw_tac std_ss[divisors_0] >>
-    `IMAGE (gcd_matches n) (divisors n) = {{}}` by rw[gcd_matches_0] >>
-    rw[SUM_IMAGE_SING],
-    rw[sum_over_natural_by_gcd_partition, gcd_eq_partition_by_divisors]
-  ]);
+Theorem sum_over_natural_by_divisors:
+  !f n. SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (gcd_matches n) (divisors n))
+Proof
+  simp[sum_over_natural_by_gcd_partition, gcd_eq_partition_by_divisors]
+QED
 
-(* Theorem: 0 < n ==> INJ (gcd_matches n) (divisors n) univ(num) *)
+(* Theorem: INJ (gcd_matches n) (divisors n) univ(num) *)
 (* Proof:
    By INJ_DEF, this is to show:
       x IN divisors n /\ y IN divisors n /\ gcd_matches n x = gcd_matches n y ==> x = y
-   If n = 0,
-      then divisors n = {}                by divisors_0
-      hence trivially true.
-   Otherwise 0 < n,
-    Note x IN divisors n
-     ==> x <= n /\ x divides n            by divisors_element
-    also y IN divisors n
-     ==> y <= n /\ y divides n            by divisors_element
-   Hence (gcd x n = x) /\ (gcd y n = y)   by divides_iff_gcd_fix
-   Since x divides n,  0 < x              by divisor_pos, 0 < n
-   Giving x IN gcd_matches n x            by gcd_matches_element
-       so x IN gcd_matches n y            by gcd_matches n x = gcd_matches n y
-     with gcd x n = y                     by gcd_matches_element
-   Therefore y = gcd x n = x.
+    Note 0 < x /\ x <= n /\ x divides n        by divisors_def
+    also 0 < y /\ y <= n /\ y divides n        by divisors_def
+   Hence (gcd x n = x) /\ (gcd y n = y)        by divides_iff_gcd_fix
+     ==> x IN gcd_matches n x                  by gcd_matches_element
+      so x IN gcd_matches n y                  by gcd_matches n x = gcd_matches n y
+    with gcd x n = y                           by gcd_matches_element
+    Therefore y = gcd x n = x.
 *)
-val gcd_matches_from_divisors_inj = store_thm(
-  "gcd_matches_from_divisors_inj",
-  ``!n. INJ (gcd_matches n) (divisors n) univ(:num -> bool)``,
+Theorem gcd_matches_from_divisors_inj:
+  !n. INJ (gcd_matches n) (divisors n) univ(:num -> bool)
+Proof
   rw[INJ_DEF] >>
-  Cases_on `n = 0` >>
-  fs[divisors_0] >>
-  `0 < n` by decide_tac >>
-  `x <= n /\ x divides n /\ y <= n /\ y divides n` by metis_tac[divisors_element] >>
+  fs[divisors_def] >>
   `(gcd x n = x) /\ (gcd y n = y)` by rw[GSYM divides_iff_gcd_fix] >>
-  metis_tac[divisor_pos, gcd_matches_element]);
+  metis_tac[gcd_matches_element]
+QED
 
-(* Theorem: 0 < n ==> (CARD o (gcd_matches n) = CARD o (coprimes_by n)) *)
+(* Theorem: CARD o (gcd_matches n) = CARD o (coprimes_by n) *)
 (* Proof:
    By composition and FUN_EQ_THM, this is to show:
       !x. CARD (gcd_matches n x) = CARD (coprimes_by n x)
@@ -1584,8 +1790,9 @@ val gcd_matches_and_coprimes_by_same_size = store_thm(
     = CARD (coprimes_by n x)       by composition, combinTheory.o_THM
     = CARD (if x divides n then coprimes (n DIV x) else {})    by coprimes_by_def, 0 < n
     If x divides n,
-       x <= n                      by DIVIDES_LE
-       so x IN (divisors n)        by divisors_element
+       then x <= n                 by DIVIDES_LE
+        and 0 < x                  by divisor_pos, 0 < n
+         so x IN (divisors n)      by divisors_element
        CARD o (coprimes_by n) x
      = CARD (coprimes (n DIV x))
      = phi (n DIV x)               by phi_def
@@ -1598,38 +1805,34 @@ val gcd_matches_and_coprimes_by_same_size = store_thm(
     Hence the same function as:
     \d. phi (if d IN (divisors n) then n DIV d else 0)
 *)
-val coprimes_by_with_card = store_thm(
-  "coprimes_by_with_card",
-  ``!n. 0 < n ==> (CARD o (coprimes_by n) = \d. phi (if d IN (divisors n) then n DIV d else 0))``,
+Theorem coprimes_by_with_card:
+  !n. 0 < n ==> (CARD o (coprimes_by n) = \d. phi (if d IN (divisors n) then n DIV d else 0))
+Proof
   rw[coprimes_by_def, phi_def, divisors_def, FUN_EQ_THM] >>
-  metis_tac[DIVIDES_LE, coprimes_0]);
+  metis_tac[DIVIDES_LE, divisor_pos, coprimes_0]
+QED
 
-(* Theorem: 0 < n ==> !x. x IN (divisors n) ==> ((CARD o (coprimes_by n)) x = (\d. phi (n DIV d)) x) *)
+(* Theorem: x IN (divisors n) ==> (CARD o (coprimes_by n)) x = (\d. phi (n DIV d)) x *)
 (* Proof:
-   Since x IN (divisors n) ==> x divides n    by divisors_element
+   Since x IN (divisors n) ==> x divides n     by divisors_element
        CARD o (coprimes_by n) x
-     = CARD (coprimes (n DIV x))   by coprimes_by_def
-     = phi (n DIV x)               by phi_def
+     = CARD (coprimes (n DIV x))               by coprimes_by_def
+     = phi (n DIV x)                           by phi_def
 *)
-val coprimes_by_divisors_card = store_thm(
-  "coprimes_by_divisors_card",
-  ``!n. 0 < n ==> !x. x IN (divisors n) ==> ((CARD o (coprimes_by n)) x = (\d. phi (n DIV d)) x)``,
-  rw[coprimes_by_def, phi_def, divisors_def]);
+Theorem coprimes_by_divisors_card:
+  !n x. x IN (divisors n) ==> (CARD o (coprimes_by n)) x = (\d. phi (n DIV d)) x
+Proof
+  rw[coprimes_by_def, phi_def, divisors_def]
+QED
 
 (*
 SUM_IMAGE_CONG |- (s1 = s2) /\ (!x. x IN s2 ==> (f1 x = f2 x)) ==> (SIGMA f1 s1 = SIGMA f2 s2)
 *)
 
-(* Theorem: n = SIGMA phi (divisors n) *)
+(* Theorem: SIGMA phi (divisors n) = n *)
 (* Proof:
-   If n = 0,
-        SIGMA phi (divisors 0)
-      = SIGMA phi {0}               by divisors_0
-      = phi 0                       by SUM_IMAGE_SING
-      = 0                           by phi_0
-   If n <> 0, 0 < n.
    Note INJ (gcd_matches n) (divisors n) univ(:num -> bool)  by gcd_matches_from_divisors_inj
-    and (\d. n DIV d) PERMUTES (divisors n)              by divisors_divisors_bij, 0 < n
+    and (\d. n DIV d) PERMUTES (divisors n)              by divisors_divisors_bij
    n = CARD (natural n)                                  by natural_card
      = SIGMA CARD (partition (feq (gcd n)) (natural n))  by partition_CARD
      = SIGMA CARD (IMAGE (gcd_matches n) (divisors n))   by gcd_eq_partition_by_divisors
@@ -1638,13 +1841,10 @@ SUM_IMAGE_CONG |- (s1 = s2) /\ (!x. x IN s2 ==> (f1 x = f2 x)) ==> (SIGMA f1 s1 
      = SIGMA (\d. phi (n DIV d)) (divisors n)            by SUM_IMAGE_CONG, coprimes_by_divisors_card
      = SIGMA phi (divisors n)                            by sum_image_by_permutation
 *)
-val Gauss_little_thm = store_thm(
-  "Gauss_little_thm",
-  ``!n. n = SIGMA phi (divisors n)``,
+Theorem Gauss_little_thm:
+  !n. SIGMA phi (divisors n) = n
+Proof
   rpt strip_tac >>
-  Cases_on `n = 0` >-
-  rw[divisors_0, SUM_IMAGE_SING, phi_0] >>
-  `0 < n` by decide_tac >>
   `FINITE (natural n)` by rw[natural_finite] >>
   `(feq (gcd n)) equiv_on (natural n)` by rw[gcd_eq_equiv_on_natural] >>
   `INJ (gcd_matches n) (divisors n) univ(:num -> bool)` by rw[gcd_matches_from_divisors_inj] >>
@@ -1657,7 +1857,8 @@ val Gauss_little_thm = store_thm(
   `_ = SIGMA (CARD o (coprimes_by n)) (divisors n)` by rw[gcd_matches_and_coprimes_by_same_size] >>
   `_ = SIGMA (\d. phi (n DIV d)) (divisors n)` by rw[SUM_IMAGE_CONG, coprimes_by_divisors_card] >>
   `_ = SIGMA phi (divisors n)` by metis_tac[sum_image_by_permutation] >>
-  rw[]);
+  decide_tac
+QED
 
 (* This is a milestone theorem. *)
 
@@ -2370,7 +2571,7 @@ val rec_phi_1 = store_thm(
    If n = 1,
       rec_phi 1 = 1      by rec_phi_1
                 = phi 1  by phi_1
-   Othewise,
+   Othewise, 0 < n, 1 < n.
       Let s = {m | m < n /\ m divides n}.
       Note s SUBSET (count n)       by SUBSET_DEF
       thus FINITE s                 by SUBSET_FINITE, FINITE_COUNT
@@ -2379,6 +2580,7 @@ val rec_phi_1 = store_thm(
       Also n NOTIN s                by EXTENSION
        and n INSERT s
          = {m | m <= n /\ m divides n}
+         = {m | 0 < m /\ m <= n /\ m divides n}      by divisor_pos, 0 < n
          = divisors n               by divisors_def, EXTENSION, LESS_OR_EQ
 
         rec_phi n
@@ -2390,9 +2592,9 @@ val rec_phi_1 = store_thm(
       = (phi n + SIGMA phi s) - (SIGMA phi s)              by DELETE_NON_ELEMENT
       = phi n                                              by ADD_SUB
 *)
-val rec_phi_eq_phi = store_thm(
-  "rec_phi_eq_phi",
-  ``!n. rec_phi n = phi n``,
+Theorem rec_phi_eq_phi:
+  !n. rec_phi n = phi n
+Proof
   completeInduct_on `n` >>
   Cases_on `n = 0` >-
   rw[rec_phi_0, phi_0] >>
@@ -2407,12 +2609,13 @@ val rec_phi_eq_phi = store_thm(
   `s SUBSET (count n)` by rw[SUBSET_DEF] >>
   `FINITE s` by metis_tac[SUBSET_FINITE, FINITE_COUNT] >>
   `n NOTIN s` by rw[] >>
-  (`n INSERT s = divisors n` by (rw[divisors_def, EXTENSION] >> metis_tac[LESS_OR_EQ, DIVIDES_REFL])) >>
+  (`n INSERT s = divisors n` by (rw[divisors_def, EXTENSION] >> metis_tac[divisor_pos, LESS_OR_EQ, DIVIDES_REFL])) >>
   `n = SIGMA phi (divisors n)` by rw[Gauss_little_thm] >>
   `_ = phi n + SIGMA phi (s DELETE n)` by rw[GSYM SUM_IMAGE_THM] >>
   `_ = phi n + t` by metis_tac[DELETE_NON_ELEMENT] >>
   `rec_phi n = n - t` by metis_tac[rec_phi_def] >>
-  decide_tac);
+  decide_tac
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -2434,8 +2637,8 @@ val rec_phi_eq_phi = store_thm(
                  x - 1 = y - 1       by above
       Hence          x = y           by CANCEL_SUB
 *)
-val coprimes_from_notone_inj = store_thm(
-  "coprimes_from_notone_inj",
+val coprimes_from_not_1_inj = store_thm(
+  "coprimes_from_not_1_inj",
   ``INJ (coprimes) (univ(:num) DIFF {1}) univ(:num -> bool)``,
   rw[INJ_DEF] >>
   Cases_on `x = 0` >-
@@ -2447,48 +2650,36 @@ val coprimes_from_notone_inj = store_thm(
   decide_tac);
 (* Not very useful. *)
 
-(* Theorem: divisors n = IMAGE (gcd n) (upto n) *)
-(* Proof:
-     divisors n
-   = {d | d <= n /\ d divides n}      by divisors_def
-   = {d | d <= n /\ (gcd d n = d)}    by divides_iff_gcd_fix
-   = {d | d <= n /\ (gcd n d = d)}    by GCD_SYM
-   = {gcd n d | d | d <= n}           by replacemnt
-   = IMAGE (gcd n) {d | d <= n}       by IMAGE_DEF
-   = IMAGE (gcd n) (count (SUC n))    by count_def
-   = IMAGE (gcd n) (upto n)           by notation
+(* Here is group of related theorems for (divisors n):
+   divisors_eq_image_gcd_upto
+   divisors_eq_image_gcd_count
+   divisors_eq_image_gcd_natural
 
-   By divisors_def, IN_IMAGE and EXTENSION, this is to show:
-   (1) x <= n /\ x divides n ==> ?x'. (x = gcd n x') /\ x' < SUC n
-       x <= n ==> x < SUC n           by LESS_EQ_IMP_LESS_SUC
-       x divides n ==> x = gcd x n    by divides_iff_gcd_fix
-                         = gcd n x    by GCD_SYM
-   (2) x' < SUC n ==> gcd n x' <= n /\ gcd n x' divides n
-       gcd n x' divides n             by GCD_IS_GREATEST_COMMON_DIVISOR
-       If n = 0, x' < 1.
-          That is, x' = 0             by arithmetic
-           so gcd 0 0 = 0 <= 0        by GCD_0R
-          and 0 divides 0             by ZERO_DIVIDES
-       If n <> 0, 0 < n.
-          gcd n x' divides n
-          ==> gcd n x' <= n           by DIVIDES_LE
+   This first one is proved independently, then the second and third are derived.
+   Of course, the best is the third one, which is now divisors_eq_gcd_image (above)
+   Here, I rework all proofs of these three from divisors_eq_gcd_image,
+   so divisors_eq_image_gcd_natural = divisors_eq_gcd_image.
 *)
-val divisors_eq_image_gcd_upto = store_thm(
-  "divisors_eq_image_gcd_upto",
-  ``!n. divisors n = IMAGE (gcd n) (upto n)``,
-  rw[divisors_def, EXTENSION, EQ_IMP_THM] >| [
-    `x < SUC n` by decide_tac >>
-    metis_tac[divides_iff_gcd_fix, GCD_SYM],
-    Cases_on `n = 0` >| [
-      `x' = 0` by decide_tac >>
-      `gcd 0 0 = 0` by rw[GCD_0R] >>
-      rw[],
-      `0 < n` by decide_tac >>
-      `(gcd n x') divides n` by rw[GCD_IS_GREATEST_COMMON_DIVISOR] >>
-      rw[DIVIDES_LE]
-    ],
-    rw[GCD_IS_GREATEST_COMMON_DIVISOR]
-  ]);
+
+(* Theorem: 0 < n ==> divisors n = IMAGE (gcd n) (upto n) *)
+(* Proof:
+   Note gcd n 0 = n                                by GCD_0
+    and n IN divisors n                            by divisors_has_last, 0 < n
+     divisors n
+   = (gcd n 0) INSERT (divisors n)                 by ABSORPTION
+   = (gcd n 0) INSERT (IMAGE (gcd n) (natural n))  by divisors_eq_gcd_image
+   = IMAGE (gcd n) (0 INSERT (natural n))          by IMAGE_INSERT
+   = IMAGE (gcd n) (upto n)                        by upto_by_natural
+*)
+Theorem divisors_eq_image_gcd_upto:
+  !n. 0 < n ==> divisors n = IMAGE (gcd n) (upto n)
+Proof
+  rpt strip_tac >>
+  `IMAGE (gcd n) (upto n) = IMAGE (gcd n) (0 INSERT natural n)` by simp[upto_by_natural] >>
+  `_ = (gcd n 0) INSERT (IMAGE (gcd n) (natural n))` by fs[] >>
+  `_ = n INSERT (divisors n)` by fs[divisors_eq_gcd_image] >>
+  metis_tac[divisors_has_last, ABSORPTION]
+QED
 
 (* Theorem: (feq (gcd n)) equiv_on (upto n) *)
 (* Proof:
@@ -2500,18 +2691,18 @@ val gcd_eq_equiv_on_upto = store_thm(
   ``!n. (feq (gcd n)) equiv_on (upto n)``,
   rw[feq_equiv]);
 
-(* Theorem: partition (feq (gcd n)) (upto n) = IMAGE (preimage (gcd n) (upto n)) (divisors n) *)
+(* Theorem: 0 < n ==> partition (feq (gcd n)) (upto n) = IMAGE (preimage (gcd n) (upto n)) (divisors n) *)
 (* Proof:
    Let f = gcd n, s = upto n.
      partition (feq f) s
    = IMAGE (preimage f s o f) s                      by feq_partition
    = IMAGE (preimage f s) (IMAGE f s)                by IMAGE_COMPOSE
    = IMAGE (preimage f s) (IMAGE (gcd n) (upto n))   by expansion
-   = IMAGE (preimage f s) (divisors n)               by divisors_eq_image_gcd_upto
+   = IMAGE (preimage f s) (divisors n)               by divisors_eq_image_gcd_upto, 0 < n
 *)
 val gcd_eq_upto_partition_by_divisors = store_thm(
   "gcd_eq_upto_partition_by_divisors",
-  ``!n. partition (feq (gcd n)) (upto n) = IMAGE (preimage (gcd n) (upto n)) (divisors n)``,
+  ``!n. 0 < n ==> partition (feq (gcd n)) (upto n) = IMAGE (preimage (gcd n) (upto n)) (divisors n)``,
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = upto n` >>
@@ -2531,23 +2722,29 @@ val sum_over_upto_by_gcd_partition = store_thm(
   ``!f n. SIGMA f (upto n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n))``,
   rw[feq_equiv, set_sigma_by_partition]);
 
-(* Theorem: SIGMA f (upto n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n)) *)
+(* Theorem: 0 < n ==> SIGMA f (upto n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n)) *)
 (* Proof:
      SIGMA f (upto n)
    = SIGMA (SIGMA f) (partition (feq (gcd n)) (upto n))                by sum_over_upto_by_gcd_partition
-   = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))  by gcd_eq_upto_partition_by_divisors
+   = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))  by gcd_eq_upto_partition_by_divisors, 0 < n
 *)
 val sum_over_upto_by_divisors = store_thm(
   "sum_over_upto_by_divisors",
-  ``!f n. SIGMA f (upto n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))``,
+  ``!f n. 0 < n ==> SIGMA f (upto n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (upto n)) (divisors n))``,
   rw[sum_over_upto_by_gcd_partition, gcd_eq_upto_partition_by_divisors]);
 
 (* Similar results based on count *)
 
-(* Theorem: 0 < n ==> (divisors n = IMAGE (gcd n) (count n)) *)
+(* Theorem: divisors n = IMAGE (gcd n) (count n) *)
 (* Proof:
+   If n = 0,
+      LHS = divisors 0 = {}                      by divisors_0
+      RHS = IMAGE (gcd 0) (count 0)
+          = IMAGE (gcd 0) {}                     by COUNT_0
+          = {} = LHS                             by IMAGE_EMPTY
+  If n <> 0, 0 < n.
      divisors n
-   = IMAGE (gcd n) (upto n)                      by divisors_eq_image_gcd_upto
+   = IMAGE (gcd n) (upto n)                      by divisors_eq_image_gcd_upto, 0 < n
    = IMAGE (gcd n) (n INSERT (count n))          by upto_by_count
    = (gcd n n) INSERT (IMAGE (gcd n) (count n))  by IMAGE_INSERT
    = n INSERT (IMAGE (gcd n) (count n))          by GCD_REF
@@ -2555,16 +2752,20 @@ val sum_over_upto_by_divisors = store_thm(
    = IMAGE (gcd n) (0 INSERT (count n))          by IMAGE_INSERT
    = IMAGE (gcd n) (count n)                     by IN_COUNT, ABSORPTION, 0 < n.
 *)
-val divisors_eq_image_gcd_count = store_thm(
-  "divisors_eq_image_gcd_count",
-  ``!n. 0 < n ==> (divisors n = IMAGE (gcd n) (count n))``,
+Theorem divisors_eq_image_gcd_count:
+  !n. divisors n = IMAGE (gcd n) (count n)
+Proof
   rpt strip_tac >>
+  Cases_on `n = 0` >-
+  simp[divisors_0] >>
+  `0 < n` by decide_tac >>
   `divisors n = IMAGE (gcd n) (upto n)` by rw[divisors_eq_image_gcd_upto] >>
   `_ = IMAGE (gcd n) (n INSERT (count n))` by rw[upto_by_count] >>
   `_ = n INSERT (IMAGE (gcd n) (count n))` by rw[GCD_REF] >>
   `_ = (gcd n 0) INSERT (IMAGE (gcd n) (count n))` by rw[GCD_0R] >>
   `_ = IMAGE (gcd n) (0 INSERT (count n))` by rw[] >>
-  metis_tac[IN_COUNT, ABSORPTION]);
+  metis_tac[IN_COUNT, ABSORPTION]
+QED
 
 (* Theorem: (feq (gcd n)) equiv_on (count n) *)
 (* Proof:
@@ -2576,24 +2777,25 @@ val gcd_eq_equiv_on_count = store_thm(
   ``!n. (feq (gcd n)) equiv_on (count n)``,
   rw[feq_equiv]);
 
-(* Theorem: 0 < n ==> (partition (feq (gcd n)) (count n) = IMAGE (preimage (gcd n) (count n)) (divisors n)) *)
+(* Theorem: partition (feq (gcd n)) (count n) = IMAGE (preimage (gcd n) (count n)) (divisors n) *)
 (* Proof:
    Let f = gcd n, s = count n.
      partition (feq f) s
    = IMAGE (preimage f s o f) s                      by feq_partition
    = IMAGE (preimage f s) (IMAGE f s)                by IMAGE_COMPOSE
    = IMAGE (preimage f s) (IMAGE (gcd n) (count n))  by expansion
-   = IMAGE (preimage f s) (divisors n)               by divisors_eq_image_gcd_count, 0 < n
+   = IMAGE (preimage f s) (divisors n)               by divisors_eq_image_gcd_count
 *)
-val gcd_eq_count_partition_by_divisors = store_thm(
-  "gcd_eq_count_partition_by_divisors",
-  ``!n. 0 < n ==> (partition (feq (gcd n)) (count n) = IMAGE (preimage (gcd n) (count n)) (divisors n))``,
+Theorem gcd_eq_count_partition_by_divisors:
+  !n. partition (feq (gcd n)) (count n) = IMAGE (preimage (gcd n) (count n)) (divisors n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = count n` >>
   `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition] >>
   `_ = IMAGE (preimage f s) (IMAGE f s)` by rw[IMAGE_COMPOSE] >>
-  rw[divisors_eq_image_gcd_count, Abbr`f`, Abbr`s`]);
+  rw[divisors_eq_image_gcd_count, Abbr`f`, Abbr`s`]
+QED
 
 (* Theorem: SIGMA f (count n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (count n)) *)
 (* Proof:
@@ -2607,108 +2809,124 @@ val sum_over_count_by_gcd_partition = store_thm(
   ``!f n. SIGMA f (count n) = SIGMA (SIGMA f) (partition (feq (gcd n)) (count n))``,
   rw[feq_equiv, set_sigma_by_partition]);
 
-(* Theorem: 0 < n ==> (SIGMA f (count n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n))) *)
+(* Theorem: SIGMA f (count n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n)) *)
 (* Proof:
      SIGMA f (count n)
    = SIGMA (SIGMA f) (partition (feq (gcd n)) (count n))                by sum_over_count_by_gcd_partition
    = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n))  by gcd_eq_count_partition_by_divisors
 *)
-val sum_over_count_by_divisors = store_thm(
-  "sum_over_count_by_divisors",
-  ``!f n. 0 < n ==> (SIGMA f (count n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n)))``,
-  rw[sum_over_count_by_gcd_partition, gcd_eq_count_partition_by_divisors]);
+Theorem sum_over_count_by_divisors:
+  !f n. SIGMA f (count n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (count n)) (divisors n))
+Proof
+  rw[sum_over_count_by_gcd_partition, gcd_eq_count_partition_by_divisors]
+QED
 
 (* Similar results based on natural *)
 
-(* Theorem: 0 < n ==> (divisors n = IMAGE (gcd n) (natural n)) *)
+(* Theorem: divisors n = IMAGE (gcd n) (natural n) *)
 (* Proof:
+   If n = 0,
+      LHS = divisors 0 = {}                      by divisors_0
+      RHS = IMAGE (gcd 0) (natural 0)
+          = IMAGE (gcd 0) {}                     by natural_0
+          = {} = LHS                             by IMAGE_EMPTY
+  If n <> 0, 0 < n.
      divisors n
-   = IMAGE (gcd n) (upto n)                      by divisors_eq_image_gcd_upto
-   = IMAGE (gcd n) (0 INSERT natural n)          by upto_by_natural
+   = IMAGE (gcd n) (upto n)                        by divisors_eq_image_gcd_upto, 0 < n
+   = IMAGE (gcd n) (0 INSERT natural n)            by upto_by_natural
    = (gcd 0 n) INSERT (IMAGE (gcd n) (natural n))  by IMAGE_INSERT
    = n INSERT (IMAGE (gcd n) (natural n))          by GCD_0L
    = (gcd n n) INSERT (IMAGE (gcd n) (natural n))  by GCD_REF
    = IMAGE (gcd n) (n INSERT (natural n))          by IMAGE_INSERT
    = IMAGE (gcd n) (natural n)                     by natural_has_last, ABSORPTION, 0 < n.
 *)
-val divisors_eq_image_gcd_natural = store_thm(
-  "divisors_eq_image_gcd_natural",
-  ``!n. 0 < n ==> (divisors n = IMAGE (gcd n) (natural n))``,
+Theorem divisors_eq_image_gcd_natural:
+  !n. divisors n = IMAGE (gcd n) (natural n)
+Proof
   rpt strip_tac >>
+  Cases_on `n = 0` >-
+  simp[divisors_0, natural_0] >>
+  `0 < n` by decide_tac >>
   `divisors n = IMAGE (gcd n) (upto n)` by rw[divisors_eq_image_gcd_upto] >>
   `_ = IMAGE (gcd n) (0 INSERT (natural n))` by rw[upto_by_natural] >>
   `_ = n INSERT (IMAGE (gcd n) (natural n))` by rw[GCD_0L] >>
   `_ = (gcd n n) INSERT (IMAGE (gcd n) (natural n))` by rw[GCD_REF] >>
   `_ = IMAGE (gcd n) (n INSERT (natural n))` by rw[] >>
-  metis_tac[natural_has_last, ABSORPTION]);
+  metis_tac[natural_has_last, ABSORPTION]
+QED
+(* This is the same as divisors_eq_gcd_image *)
 
-(* Theorem: 0 < n ==> (partition (feq (gcd n)) (natural n) = IMAGE (preimage (gcd n) (natural n)) (divisors n)) *)
+(* Theorem: partition (feq (gcd n)) (natural n) = IMAGE (preimage (gcd n) (natural n)) (divisors n) *)
 (* Proof:
    Let f = gcd n, s = natural n.
      partition (feq f) s
    = IMAGE (preimage f s o f) s                        by feq_partition
    = IMAGE (preimage f s) (IMAGE f s)                  by IMAGE_COMPOSE
    = IMAGE (preimage f s) (IMAGE (gcd n) (natural n))  by expansion
-   = IMAGE (preimage f s) (divisors n)                 by divisors_eq_image_gcd_natural, 0 < n
+   = IMAGE (preimage f s) (divisors n)                 by divisors_eq_image_gcd_natural
 *)
-val gcd_eq_natural_partition_by_divisors = store_thm(
-  "gcd_eq_natural_partition_by_divisors",
-  ``!n. 0 < n ==> (partition (feq (gcd n)) (natural n) = IMAGE (preimage (gcd n) (natural n)) (divisors n))``,
+Theorem gcd_eq_natural_partition_by_divisors:
+  !n. partition (feq (gcd n)) (natural n) = IMAGE (preimage (gcd n) (natural n)) (divisors n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = gcd n` >>
   qabbrev_tac `s = natural n` >>
   `partition (feq f) s = IMAGE (preimage f s o f) s` by rw[feq_partition] >>
   `_ = IMAGE (preimage f s) (IMAGE f s)` by rw[IMAGE_COMPOSE] >>
-  rw[divisors_eq_image_gcd_natural, Abbr`f`, Abbr`s`]);
+  rw[divisors_eq_image_gcd_natural, Abbr`f`, Abbr`s`]
+QED
 
-(* Theorem: 0 < n ==> (SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (natural n)) (divisors n))) *)
+(* Theorem: SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (natural n)) (divisors n)) *)
 (* Proof:
      SIGMA f (natural n)
    = SIGMA (SIGMA f) (partition (feq (gcd n)) (natural n))                by sum_over_natural_by_gcd_partition
    = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (natural n)) (divisors n))  by gcd_eq_natural_partition_by_divisors
 *)
-val sum_over_natural_by_preimage_divisors = store_thm(
-  "sum_over_natural_by_preimage_divisors",
-  ``!f n. 0 < n ==> (SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (natural n)) (divisors n)))``,
-  rw[sum_over_natural_by_gcd_partition, gcd_eq_natural_partition_by_divisors]);
+Theorem sum_over_natural_by_preimage_divisors:
+  !f n. SIGMA f (natural n) = SIGMA (SIGMA f) (IMAGE (preimage (gcd n) (natural n)) (divisors n))
+Proof
+  rw[sum_over_natural_by_gcd_partition, gcd_eq_natural_partition_by_divisors]
+QED
 
-(* Theorem: (f 1 = g 1) /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==> (f = g) *)
+(* Theorem: (f 0 = g 0) /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==> (f = g) *)
 (* Proof:
    By FUN_EQ_THM, this is to show: !x. f x = g x.
    By complete induction on x.
    Let s = divisors x, t = s DELETE x.
-   Then x IN s                            by divisors_has_last
-    and (s = x INSERT t) /\ x NOTIN t     by INSERT_DELETE, IN_DELETE
+   If x = 0, f 0 = g 0 is true            by given
+   Otherwise x <> 0.
+   Then x IN s                            by divisors_has_last, 0 < x
+    and s = x INSERT t /\ x NOTIN t       by INSERT_DELETE, IN_DELETE
    Note FINITE s                          by divisors_finite
      so FINITE t                          by FINITE_DELETE
 
    Claim: SIGMA f t = SIGMA g t
    Proof: By SUM_IMAGE_CONG, this is to show:
              !z. z IN t ==> (f z = g z)
-          But z IN s <=> z <= x /\ z divides x     by divisors_element
-           so z IN t <=> z < x /\ z divides x      by IN_DELETE
-          ==> f z = g z                            by induction hypothesis
+          But z IN s <=> 0 < z /\ z <= x /\ z divides x     by divisors_element
+           so z IN t <=> 0 < z /\ z < x /\ z divides x      by IN_DELETE
+          ==> f z = g z                                     by induction hypothesis, [1]
 
    Now      SIGMA f s = SIGMA g s         by implication
    or f x + SIGMA f t = g x + SIGMA g t   by SUM_IMAGE_INSERT
-   or             f x = g x               by SIGMA f t = SIGMA g t
+   or             f x = g x               by [1], SIGMA f t = SIGMA g t
 *)
 Theorem sum_image_divisors_cong:
-  !f g. f 1 = g 1 /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==>
-        f = g
+  !f g. (f 0 = g 0) /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==> (f = g)
 Proof
   rw[FUN_EQ_THM] >>
   completeInduct_on `x` >>
   qabbrev_tac `s = divisors x` >>
   qabbrev_tac `t = s DELETE x` >>
+  (Cases_on `x = 0` >> simp[]) >>
   `x IN s` by rw[divisors_has_last, Abbr`s`] >>
-  `(s = x INSERT t) /\ x NOTIN t` by rw[Abbr`t`] >>
-  `SIGMA f t = SIGMA g t`
-    by (irule SUM_IMAGE_CONG >> simp[] >>
-        rw[divisors_element, Abbr`t`, Abbr`s`]) >>
+  `s = x INSERT t /\ x NOTIN t` by rw[Abbr`t`] >>
+  `SIGMA f t = SIGMA g t` by
+  ((irule SUM_IMAGE_CONG >> simp[]) >>
+  rw[divisors_element, Abbr`t`, Abbr`s`]) >>
   `FINITE t` by rw[divisors_finite, Abbr`t`, Abbr`s`] >>
-  `SIGMA f s = f x + SIGMA f t` by simp[SUM_IMAGE_INSERT] >>
-  `SIGMA g s = g x + SIGMA g t` by simp[SUM_IMAGE_INSERT] >>
+  `SIGMA f s = f x + SIGMA f t` by rw[SUM_IMAGE_INSERT] >>
+  `SIGMA g s = g x + SIGMA g t` by rw[SUM_IMAGE_INSERT] >>
   `SIGMA f s = SIGMA g s` by metis_tac[] >>
   decide_tac
 QED
