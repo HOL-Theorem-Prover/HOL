@@ -33,7 +33,7 @@ fun typeidentp (part1, part2) s = let
   open UnicodeChars
   (* record whether or not we're onto part2 by checking if part2 is non-null *)
 in
-  if isAlphaNum s orelse s = "_" then
+  if isAlphaNum s orelse s = "_" orelse s = "'" then
     if not (null part2) then
       SOME (part1, s :: part2)
     else SOME (s :: part1, part2)

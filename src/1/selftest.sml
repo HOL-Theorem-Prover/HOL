@@ -1296,3 +1296,9 @@ val _ = let
 in
   OK()
 end handle _ => die "FAILED"
+
+val _ = shouldfail {checkexn = is_struct_HOL_ERR "Parse",
+                    printarg = (fn s => "Type parser fails on bool'"),
+                    printresult = with_flag (show_types, true) term_to_string,
+                    testfn = Parse.Term o single o QUOTE}
+                   "!b:bool'. p /\\ b"

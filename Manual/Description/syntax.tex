@@ -43,9 +43,15 @@ a constant of arity $n$ applied to a list of $n$ types.
   & | & (\type_1,\ldots,\type_n) \ident & \mbox{(compound type)}
 \end{array}
 \]
-Type constants are also known as type operators. They must be
-alphanumeric. Type variables are alphanumerics written with a leading
-prime ('). In \HOL{}, the type constants {\tt bool}, {\tt fun}, and
+Type constants are also known as type operators.
+Lexically, they either
+\begin{itemize}
+\item look like an \ML{} variable: beginning with an ASCII letter character (upper or lower case) or a Unicode letter (except for Greek lower-case letters), with the rest of the operator being composed of Unicode characters that are alphabetic characters, numeric digits, the apostrophe character or the underscore; or
+\item are composed entirely of ASCII digits (appearing to be a number)
+\end{itemize}
+Type variables are alphanumerics written with a leading apostrophe character ('), also known as the prime character, or are a lower-case Greek letter ($\alpha$, $\beta$, \etc.).
+
+In \HOL{}, the type constants {\tt bool}, {\tt fun}, and
 {\tt ind} are primitive. The introduction of new type constants is
 described in Section~\ref{type-defs}. {\tt bool} is the two element type
 of truth values. The binary operator {\tt fun} is used to denote
