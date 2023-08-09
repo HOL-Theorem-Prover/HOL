@@ -1851,7 +1851,7 @@ The following example shows how to define a (very simple) function and use it in
 >> Definition square_def:
      square x = cv_mul x x
    End
->> cv_computeLib.cv_compute [square_def] ``square (Num 7)``;
+>> cv_computeLib.cv_compute [square_def] ``square (cv$Num 7)``;
 \end{alltt}
 \end{session}
 To reduce a term involving the constant \holtxt{square}, \ml{cv\_compute} must be given its defining equation (\ml{square\_def}), and both the input term and this equation must be written in a special style, using a special set of operations (such as \holtxt{cv\_mul}).
@@ -1924,7 +1924,7 @@ The following example is taken from the \ml{cv\_computeLib} examples, available 
 
 >>_ Definition fact_def:
      fact n =
-       let one = Num 1 in
+       let one = cv$Num 1 in
        cv_if (cv_lt n one)
              one
              (cv_mul n (fact (cv_sub n one)))
@@ -1935,7 +1935,7 @@ The following example is taken from the \ml{cv\_computeLib} examples, available 
    End
 
 ##linelen_limit 75
->> time (cv_computeLib.cv_compute [fact_def]) ``fact (Num 1234)``;
+>> time (cv_computeLib.cv_compute [fact_def]) ``fact (cv$Num 1234)``;
 ##nolinelen_limit
 \end{alltt}
 \end{session}
