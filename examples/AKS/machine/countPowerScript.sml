@@ -502,7 +502,7 @@ suitable for: loop2_div_rise_count_cover_le
         cover k n
       = 1 + 5 * size n + size k ** 2 + size k * size (SQ k ** HALF n)
       = 1 + 5 * size n + size k ** 2 + size k * size (k ** (2 * HALF n))   by EXP_EXP_MULT
-     <= 1 + 5 * size n + size k ** 2 + size k * size (k ** n)              by TWO_HALF_LESS_EQ, size_exp_base_le
+     <= 1 + 5 * size n + size k ** 2 + size k * size (k ** n)              by TWO_HALF_LE_THM, size_exp_base_le
      <= 1 + 5 * size n + size k ** 2 + size k * (n * size k)               by size_exp_upper_alt, 0 < n
       = 1 + 5 * size n + size k ** 2 + n * size k ** 2                     by EXP_2
      <= 1 + 5 * size n + (1 + n) * size k ** 2
@@ -554,7 +554,7 @@ val expM_steps_upper = store_thm(
     `cover k n <= 1 + 5 * size n + 8 * n ** 3 * size b ** 2` by
   (rw[Abbr`cover`, Abbr`f`] >>
     `(k ** 2) ** HALF n = k ** (2 * HALF n)` by rw[EXP_EXP_MULT] >>
-    `2 * HALF n <= n` by rw[TWO_HALF_LESS_EQ] >>
+    `2 * HALF n <= n` by rw[TWO_HALF_LE_THM] >>
     `size (k ** TWICE (HALF n)) <= size (k ** n)` by rw[size_exp_base_le] >>
     `size (k ** n) <= n * size k` by rw[size_exp_upper_alt] >>
     `size k * size ((k ** 2) ** HALF n) <= size k * (n * size k)` by rw[] >>

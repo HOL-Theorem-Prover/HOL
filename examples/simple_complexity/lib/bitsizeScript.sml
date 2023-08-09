@@ -228,7 +228,7 @@ val encode_2 = |- encode 2 = [0; 1]: thm
    Step: !m. m < n ==> (decode (encode m) = m) ==>
          n <> 0 ==> decode (encode n) = n
       Note ?m. n = SUC m        by num_CASES
-       and HALF n < n           by HALF_LESS, 0 < n
+       and HALF n < n           by HALF_LT, 0 < n
            decode (encode n)
          = decode (n MOD 2::encode (HALF n))       by encode_def
          = n MOD 2 + 2 * decode (encode (HALF n))  by decode_def
@@ -243,7 +243,7 @@ val decode_encode_eq_id = store_thm(
   Cases_on `n = 0` >-
   rw_tac std_ss[encode_def, decode_def] >>
   `?m. n = SUC m` by metis_tac[num_CASES] >>
-  `HALF n < n` by rw[HALF_LESS] >>
+  `HALF n < n` by rw[HALF_LT] >>
   `decode (encode n) = decode (n MOD 2::encode (HALF n))` by rw[encode_def] >>
   `_ = n MOD 2 + 2 * decode (encode (HALF n))` by rw[decode_def] >>
   `_ = n MOD 2 + 2 * (HALF n)` by rw[] >>
@@ -367,7 +367,7 @@ val binary_1 = save_thm("binary_1", EVAL ``binary 1``);
    If n <> 0,
       By complete induction on n.
       Note 0 < n           by n <> 0
-      Thus HALF n < n      by HALF_LESS
+      Thus HALF n < n      by HALF_LT
       Let m = HALF n.
 
       If m = 0,
@@ -392,7 +392,7 @@ val binary_length = store_thm(
   rw[binary_def] >>
   completeInduct_on `n` >>
   rpt strip_tac >>
-  `HALF n < n` by rw[HALF_LESS] >>
+  `HALF n < n` by rw[HALF_LT] >>
   qabbrev_tac `m = HALF n` >>
   Cases_on `m = 0` >| [
     `n = 1` by metis_tac[HALF_EQ_0] >>
@@ -469,7 +469,7 @@ logPowerTheory.halves_def
          RHS = halves 1 = 1      by halves_1
       If n <> 1,
           HALF n <> 0            by HALF_EQ_0, 1 < n
-      and HALF n < n             by HALF_LESS
+      and HALF n < n             by HALF_LT
          size n
        = SUC (size (HALF n))     by size_def, 1 < n
        = SUC (halves (HALF n))   by induction hypothesis
@@ -484,7 +484,7 @@ val size_by_halves = store_thm(
   Cases_on `HALF n = 0` >| [
     `n = 1` by fs[HALF_EQ_0] >>
     simp[halves_1],
-    `HALF n < n` by rw[HALF_LESS] >>
+    `HALF n < n` by rw[HALF_LT] >>
     `size n = SUC (size (HALF n))` by rw[Once size_def] >>
     `_ = SUC (halves (HALF n))` by rw[] >>
     `_ = halves n` by metis_tac[halves_def] >>
@@ -1627,7 +1627,7 @@ val to_bits_element = store_thm(
       Otherwise, m <> 0,
       Note ?k. m = SUC k        by num_CASES
       Let h = 2 ** k.
-      Note HALF n < n           by HALF_LESS, 0 < n
+      Note HALF n < n           by HALF_LT, 0 < n
        and 0 < h                by EXP_POS, 0 < 2
            decode (to_bits n m)
          = decode (to_bits n (SUC k))                    by m = SUC k
@@ -1653,7 +1653,7 @@ val decode_to_bits_eq_mod = store_thm(
   rw[decode_def, to_bits_def] >>
   qabbrev_tac `m = SUC n'` >>
   qabbrev_tac `h = 2 ** n'` >>
-  `HALF n < n` by rw[HALF_LESS] >>
+  `HALF n < n` by rw[HALF_LT] >>
   `0 < h` by rw[EXP_POS, Abbr`h`] >>
   `decode (to_bits n m) = decode (n MOD 2 :: to_bits (HALF n) n')` by rw[to_bits_def, Abbr`m`] >>
   `_ = n MOD 2 + TWICE (decode (to_bits (HALF n) n'))` by rw[decode_def] >>

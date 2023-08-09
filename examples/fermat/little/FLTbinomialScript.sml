@@ -49,7 +49,8 @@ open dividesTheory; (* for PRIME_POS *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
+
    From helpers:
    PRIME_FACTOR_PROPER |- !n. 1 < n /\ ~prime n ==> ?p. prime p /\ p < n /\ p divides n
    MULTIPLE_INTERVAL   |- !n m. n divides m ==>

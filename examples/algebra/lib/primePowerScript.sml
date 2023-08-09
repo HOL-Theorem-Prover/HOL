@@ -1259,9 +1259,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the prime divisors of a number *)
-val prime_divisors_def = Define`
+val prime_divisors_def = zDefine`
     prime_divisors n = {p | prime p /\ p divides n}
 `;
+(* use zDefine as this is not effective. *)
 
 (* Theorem: p IN prime_divisors n <=> prime p /\ p divides n *)
 (* Proof: by prime_divisors_def *)

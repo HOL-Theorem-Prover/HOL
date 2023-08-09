@@ -33,12 +33,13 @@ open arithmeticTheory pred_setTheory;
    f endo s            = !x. x IN s ==> f x IN s
    f involute s        = !x. x IN s ==> f x IN s /\ (f (f x) = x)
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Helper Theorem:
 
    Involution:
    involute_endo         |- !f s. f involute s ==> f endo s
+   involute_empty        |- !f. f involute {}
    involute_inj          |- !f s. f involute s ==> INJ f s s
    involute_surj         |- !f s. f involute s ==> SURJ f s s
    involute_bij          |- !f s. f involute s ==> f PERMUTES s
@@ -78,6 +79,14 @@ val _ = set_fixity "involute" (Infix(NONASSOC, 450)); (* same as relation *)
 (* Proof: by notation *)
 Theorem involute_endo:
   !f s. f involute s ==> f endo s
+Proof
+  simp[]
+QED
+
+(* Theorem: f involute {} *)
+(* Proof: by MEMBER_NOT_EMPTY. *)
+Theorem involute_empty:
+  !f. f involute {}
 Proof
   simp[]
 QED

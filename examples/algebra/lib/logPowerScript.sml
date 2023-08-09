@@ -57,17 +57,9 @@ open logrootTheory; (* for ROOT *)
    ROOT_EQ_0        |- !m. 0 < m ==> !n. (ROOT m n = 0) <=> (n = 0)
 #  ROOT_1           |- !n. ROOT 1 n = n
    ROOT_THM         |- !r. 0 < r ==> !n p. (ROOT r n = p) <=> p ** r <= n /\ n < SUC p ** r
-   ROOT_compute     |- !r n. 0 < r ==> (ROOT r 0 = 0) /\
-                            (ROOT r n = (let x = 2 * ROOT r (n DIV 2 ** r)
-                                          in if n < SUC x ** r then x else SUC x))
    ROOT_EQN         |- !r n. 0 < r ==> (ROOT r n =
                              (let m = TWICE (ROOT r (n DIV 2 ** r))
                                in m + if (m + 1) ** r <= n then 1 else 0))
-   ROOT_EVAL        |- !r n. ROOT r n =
-                             if r = 0 then ROOT 0 n
-                             else if n = 0 then 0
-                             else (let m = TWICE (ROOT r (n DIV 2 ** r))
-                                    in m + if SUC m ** r <= n then 1 else 0)
    ROOT_SUC         |- !r n. 0 < r ==>
                              ROOT r (SUC n) = ROOT r n +
                                               if SUC n = SUC (ROOT r n) ** r then 1 else 0
@@ -79,6 +71,7 @@ open logrootTheory; (* for ROOT *)
 
    Square Root:
    SQRT_PROPERTY    |- !n. 0 < n ==> SQRT n ** 2 <= n /\ n < SUC (SQRT n) ** 2
+   SQRT_UNIQUE      |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p
    SQRT_THM         |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2
    SQ_SQRT_LE       |- !n. SQ (SQRT n) <= n
    SQRT_LE          |- !n m. n <= m ==> SQRT n <= SQRT m
@@ -94,6 +87,15 @@ open logrootTheory; (* for ROOT *)
    SQRT_GE_SELF     |- !n. n <= SQRT n <=> (n = 0) \/ (n = 1)
    SQRT_EQ_SELF     |- !n. (SQRT n = n) <=> (n = 0) \/ (n = 1)
    SQRT_LE_IMP      |- !n m. SQRT n <= m ==> n <= 3 * m ** 2
+   SQRT_MULT_LE     |- !n m. SQRT n * SQRT m <= SQRT (n * m)
+
+   Square predicate:
+   square_def       |- !n. square n <=> ?k. n = k * k
+   square_alt       |- !n. square n <=> ?k. n = k ** 2
+!  square_eqn       |- !n. square n <=> SQRT n ** 2 = n
+   square_0         |- square 0
+   square_1         |- square 1
+   prime_non_square |- !p. prime p ==> ~square p
 
    Logarithm:
    LOG_EXACT_EXP    |- !a. 1 < a ==> !n. LOG a (a ** n) = n
@@ -436,63 +438,6 @@ val ROOT_1 = store_thm(
   ``!n. ROOT 1 n = n``,
   rw[ROOT_UNIQUE]);
 
-(* This is a rework of logrootTheory.ROOT_COMPUTE *)
-
-(* Theorem: 0 < r ==> (ROOT r 0 = 0) /\
-           (ROOT r n = let x = 2 * ROOT r (n DIV 2 ** r) in if n < SUC x ** r then x else SUC x) *)
-(* Proof:
-   This is to show:
-   (1) ROOT r 0 = 0, true     by ROOT_EQ_0
-   (2) ROOT r n = (let x = 2 * ROOT r (n DIV 2 ** r) in if n < SUC x ** r then x else SUC x)
-       Let x = 2 * ROOT r (n DIV 2 ** r).
-       To show: ROOT r n = if n < SUC x ** r then x else SUC x
-       By ROOT_UNIQUE, this is to show:
-       (1) n < SUC (if n < SUC x ** r then x else SUC x) ** r
-           If n < SUC x ** r, to show: n < SUC x ** r, true trivially
-           If ~(n < SUC x ** r), to show: n < SUC (SUC x) ** r
-           Let y = SUC (ROOT r n) ** r.
-           Then n < y                                   by ROOT
-            and ROOT r n <= SUC (2 * HALF (ROOT r n))   by TWO_HALF_LESS_EQ
-            But x = 2 * HALF (ROOT r n)                 by ROOT_DIV
-             so ROOT r n <= SUC x                       by above
-             or        y <= SUC (SUC x) ** r            by EXP_LE_ISO
-           Thus         n < SUC (SUC x) ** r            by LESS_LESS_EQ_TRANS
-
-       (2) (if n < SUC x ** r then x else SUC x) ** r <= n
-           If n < SUC x ** r, to show: x ** r <= n
-           Let y = ROOT r n ** r.
-           Then y <= n                                  by ROOT
-            and 2 * HALF (ROOT r n) <= ROOT r n         by TWO_HALF_LESS_EQ
-            But x = 2 * HALF (ROOT r n)                 by ROOT_DIV
-             so x <= ROOT r n                           by above
-             or        x ** r <= y                      by EXP_LE_ISO
-           Thus        x ** r <= n                      by LESS_EQ_TRANS
-
-*)
-val ROOT_compute = store_thm(
-  "ROOT_compute",
-  ``!r n. 0 < r ==> (ROOT r 0 = 0) /\
-                   (ROOT r n = let x = 2 * ROOT r (n DIV 2 ** r) in
-                               if n < SUC x ** r then x else SUC x)``,
-  rpt strip_tac >-
-  rw[ROOT_EQ_0] >>
-  rw_tac std_ss[] >>
-  (irule ROOT_UNIQUE >> rpt conj_tac >> simp[]) >| [
-    rw[] >>
-    `x = 2 * HALF (ROOT r n)` by rw[ROOT_DIV, Abbr`x`] >>
-    qabbrev_tac `y = SUC (ROOT r n) ** r` >>
-    `n < y` by rw[ROOT, Abbr`y`] >>
-    `ROOT r n <= SUC x` by rw[TWO_HALF_LESS_EQ] >>
-    `y <= SUC (SUC x) ** r` by rw[EXP_LE_ISO, Abbr`y`] >>
-    decide_tac,
-    rw[] >>
-    `x = 2 * HALF (ROOT r n)` by rw[ROOT_DIV, Abbr`x`] >>
-    qabbrev_tac `y = ROOT r n ** r` >>
-    `y <= n` by rw[ROOT, Abbr`y`] >>
-    `x <= ROOT r n` by rw[TWO_HALF_LESS_EQ] >>
-    `x ** r <= y` by rw[EXP_LE_ISO, Abbr`y`] >>
-    decide_tac
-  ]);
 
 (* Theorem: 0 < r ==> (ROOT r n =
             let m = 2 * ROOT r (n DIV 2 ** r) in m + if (m + 1) ** r <= n then 1 else 0) *)
@@ -512,32 +457,6 @@ val ROOT_EQN = store_thm(
   rw[ROOT_COMPUTE, ADD1] >>
   rw[ROOT_COMPUTE, ADD1]);
 
-(* Theorem: ROOT r n =
-    if r = 0 then ROOT 0 n else
-    if n = 0 then 0 else
-    let m = TWICE (ROOT r (n DIV 2 ** r)) in
-    m + if (SUC m) ** r <= n then 1 else 0 *)
-(* Proof: by ROOT_OF_0, ROOT_EQN *)
-val ROOT_EVAL = store_thm(
-  "ROOT_EVAL[compute]", (* put in computeLib *)
-  ``!r n. ROOT r n =
-    if r = 0 then ROOT 0 n else
-    if n = 0 then 0 else
-    let m = TWICE (ROOT r (n DIV 2 ** r)) in
-    m + if (SUC m) ** r <= n then 1 else 0``,
-  metis_tac[ROOT_OF_0, ROOT_EQN, ADD1, NOT_ZERO_LT_ZERO]);
-(* Put ROOT_EVAL into computeLib *)
-
-(*
-> EVAL ``ROOT 3 125``;
-val it = |- ROOT 3 125 = 5: thm
-> EVAL ``ROOT 3 100``;
-val it = |- ROOT 3 100 = 4: thm
-> EVAL ``MAP (ROOT 3) [1 .. 20]``; =
-      [1; 1; 1; 1; 1; 1; 1; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2]: thm
-> EVAL ``MAP (ROOT 3) [1 .. 30]``; =
-      [1; 1; 1; 1; 1; 1; 1; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 3; 3; 3; 3]: thm
-*)
 
 (* Theorem: 0 < r ==>
             (ROOT r (SUC n) = ROOT r n + if SUC n = (SUC (ROOT r n)) ** r then 1 else 0) *)
@@ -760,6 +679,10 @@ val SQRT_PROPERTY = store_thm(
   ``!n. (SQRT n) ** 2 <= n /\ n < SUC (SQRT n) ** 2``,
   rw[ROOT]);
 
+(* Get a useful theorem *)
+Theorem SQRT_UNIQUE = logrootTheory.ROOT_UNIQUE |> SPEC ``2``;
+(* val SQRT_UNIQUE = |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p: thm *)
+
 (* Obtain a theorem *)
 val SQRT_THM = save_thm("SQRT_THM",
     ROOT_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
@@ -952,6 +875,106 @@ val SQRT_LE_IMP = store_thm(
   `2 * m <= 2 * m * m` by rw[] >>
   `2 * m * m = 2 * m ** 2` by rw[] >>
   decide_tac);
+
+(* Theorem: (SQRT n) * (SQRT m) <= SQRT (n * m) *)
+(* Proof:
+   Note (SQRT n) ** 2 <= n                         by SQRT_PROPERTY
+    and (SQRT m) ** 2 <= m                         by SQRT_PROPERTY
+     so (SQRT n) ** 2 * (SQRT m) ** 2 <= n * m     by LE_MONO_MULT2
+     or    ((SQRT n) * (SQRT m)) ** 2 <= n * m     by EXP_BASE_MULT
+    ==>     (SQRT n) * (SQRT m) <= SQRT (n * m)    by SQRT_LE, SQRT_OF_SQ
+*)
+Theorem SQRT_MULT_LE:
+  !n m. (SQRT n) * (SQRT m) <= SQRT (n * m)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `h = SQRT n` >>
+  qabbrev_tac `k = SQRT m` >>
+  `h ** 2 <= n` by simp[SQRT_PROPERTY, Abbr`h`] >>
+  `k ** 2 <= m` by simp[SQRT_PROPERTY, Abbr`k`] >>
+  `(h * k) ** 2 <= n * m` by metis_tac[LE_MONO_MULT2, EXP_BASE_MULT] >>
+  metis_tac[SQRT_LE, SQRT_OF_SQ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Square predicate                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* Define square predicate. *)
+
+Definition square_def[nocompute]:
+    square (n:num) = ?k. n = k * k
+End
+(* use [nocompute] as this is not effective. *)
+
+(* Theorem: square n = ?k. n = k ** 2 *)
+(* Proof: by square_def. *)
+Theorem square_alt:
+  !n. square n = ?k. n = k ** 2
+Proof
+  simp[square_def]
+QED
+
+(* Theorem: square n <=> (SQRT n) ** 2 = n *)
+(* Proof:
+   If part: square n ==> (SQRT n) ** 2 = n
+      This is true         by SQRT_SQ, EXP_2
+   Only-if part: (SQRT n) ** 2 = n ==> square n
+      Take k = SQRT n for n = k ** 2.
+*)
+Theorem square_eqn[compute]:
+  !n. square n <=> (SQRT n) ** 2 = n
+Proof
+  metis_tac[square_def, SQRT_SQ, EXP_2]
+QED
+
+(*
+EVAL ``square 10``; F
+EVAL ``square 16``; T
+*)
+
+(* Theorem: square 0 *)
+(* Proof: by 0 = 0 * 0. *)
+Theorem square_0:
+  square 0
+Proof
+  simp[square_def]
+QED
+
+(* Theorem: square 1 *)
+(* Proof: by 1 = 1 * 1. *)
+Theorem square_1:
+  square 1
+Proof
+  simp[square_def]
+QED
+
+(* Theorem: prime p ==> ~square p *)
+(* Proof:
+   By contradiction, suppose (square p).
+   Then    p = k * k                 by square_def
+   thus    k divides p               by divides_def
+   so      k = 1  or  k = p          by prime_def
+   If k = 1,
+      then p = 1 * 1 = 1             by arithmetic
+       but p <> 1                    by NOT_PRIME_1
+   If k = p,
+      then p * 1 = p * p             by arithmetic
+        or     1 = p                 by EQ_MULT_LCANCEL, NOT_PRIME_0
+       but     p <> 1                by NOT_PRIME_1
+*)
+Theorem prime_non_square:
+  !p. prime p ==> ~square p
+Proof
+  rpt strip_tac >>
+  `?k. p = k * k` by rw[GSYM square_def] >>
+  `k divides p` by metis_tac[divides_def] >>
+  `(k = 1) \/ (k = p)` by metis_tac[prime_def] >-
+  fs[NOT_PRIME_1] >>
+  `p * 1 = p * p` by metis_tac[MULT_RIGHT_1] >>
+  `1 = p` by metis_tac[EQ_MULT_LCANCEL, NOT_PRIME_0] >>
+  metis_tac[NOT_PRIME_1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Logarithm                                                                 *)
@@ -1517,7 +1540,7 @@ val halves_pos = store_thm(
    By complete induction on n.
     Assume: !m. m < n ==> 0 < m ==> (halves m = 1 + LOG2 m)
    To show: 0 < n ==> (halves n = 1 + LOG2 n)
-   Note HALF n < n            by HALF_LESS, 0 < n
+   Note HALF n < n            by HALF_LT, 0 < n
    Need 0 < HALF n to apply induction hypothesis.
    If HALF n = 0,
       Then n = 1              by HALF_EQ_0
@@ -1542,7 +1565,7 @@ val halves_by_LOG2 = store_thm(
   rw[Once halves_def] >>
   Cases_on `n = 1` >-
   simp[Once halves_def] >>
-  `HALF n < n` by rw[HALF_LESS] >>
+  `HALF n < n` by rw[HALF_LT] >>
   `HALF n <> 0` by fs[HALF_EQ_0] >>
   simp[LOG2_BY_HALF]);
 
@@ -2382,7 +2405,7 @@ val count_up_suc = store_thm(
        and 2 ** SUC t * m
          = 2 * 2 ** t * m         by EXP
          = 2 * (2 ** t * m)       by MULT_ASSOC
-      Thus (2 ** t * m) < n       by MULT_LESS_IMP_LESS, 0 < 2
+      Thus (2 ** t * m) < n       by MULT_LT_IMP_LT, 0 < 2
          count_up n m k
        = count_up n (2 ** SUC t * m) (SUC k + t)             by induction hypothesis
        = count_up n (2 * (2 ** SUC t * m)) (SUC (SUC k + t)) by count_up_suc
@@ -2400,7 +2423,7 @@ val count_up_suc_eqn = store_thm(
   `2 ** SUC t <> 0` by metis_tac[EXP_EQ_0, DECIDE``2 <> 0``] >>
   `2 ** SUC t * m <> 0` by metis_tac[MULT_EQ_0] >>
   `2 ** SUC t * m = 2 * q` by rw_tac std_ss[EXP, MULT_ASSOC, Abbr`q`] >>
-  `q < n` by rw[MULT_LESS_IMP_LESS] >>
+  `q < n` by rw[MULT_LT_IMP_LT] >>
   rw[count_up_suc, EXP, ADD1]);
 
 (* Theorem: m <> 0 ==> !n t. 2 ** t * m < 2 * n /\ n <= 2 ** t * m ==> !k. count_up n m k = k + t *)

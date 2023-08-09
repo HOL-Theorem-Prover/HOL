@@ -621,7 +621,7 @@ val exp_step_odd = store_thm(
       = r * 1                                by MULT_RIGHT_1
       = r * m ** 0                           by EXP_0
    If n <> 0,
-      then HALF n < n                        by HALF_LESS, 0 < n
+      then HALF n < n                        by HALF_LT, 0 < n
    If EVEN n,
         exp_step m n r
       = exp_step (SQ m) (HALF n) r           by exp_step_even
@@ -949,7 +949,7 @@ val exp_mod_binary_eqn = store_thm(
       = 1 MOD m                  by ONE_MOD, 1 < m
       = (a ** 0) MOD m           by EXP
    If n <> 0,
-      Then HALF n < n            by HALF_LESS
+      Then HALF n < n            by HALF_LT
       If EVEN n,
          Then n MOD 2 = 0        by EVEN_MOD2
            exp_mod_binary a n m
@@ -986,7 +986,7 @@ val exp_mod_binary_eqn = store_thm(
   Cases_on `n = 0` >-
   rw[exp_mod_binary_0, EXP] >>
   `0 < m` by decide_tac >>
-  `HALF n < n` by rw[HALF_LESS] >>
+  `HALF n < n` by rw[HALF_LT] >>
   rw[Once exp_mod_binary_def] >| [
     `((a ** 2) ** HALF n) MOD m = (a ** (2 * HALF n)) MOD m` by rw[EXP_EXP_MULT] >>
     `_ = (a ** n) MOD m` by rw[GSYM EVEN_HALF, EVEN_MOD2] >>
@@ -1113,7 +1113,7 @@ val exp_mod_step_odd = store_thm(
       = (r * 1) MOD k                        by MULT_RIGHT_1
       = (r * m ** 0) MOD k                   by EXP_0
    If n <> 0,
-      then HALF n < n                        by HALF_LESS, 0 < n
+      then HALF n < n                        by HALF_LT, 0 < n
    If EVEN n,
         exp_mod_step m n k r
       = exp_mod_step ((SQ m) MOD k) (HALF n) k r     by exp_mod_step_even
@@ -1308,7 +1308,7 @@ val root_compute_0 = store_thm(
    Assume !m. m < n ==> (root_compute 1 m = m)
    To show: root_compute 1 n = n
 
-   Note HALF n < n       by HALF_LESS, 0 < n
+   Note HALF n < n       by HALF_LT, 0 < n
 
      root_compute 1 n
    = let x = 2 * root_compute 1 (n DIV (2 ** 1))
@@ -1901,13 +1901,13 @@ val gcd_compute_odd_odd = store_thm(
    (2) n <> 0 ==> n = gcd n 0, true      by GCD_0
    (3) m <> 0 ==> m = gcd m m            by GCD_REF
    (4) n <> 0 /\ m <> 0 /\ n <> m /\ EVEN n /\ EVEN m ==> 2 * gcd_compute (HALF n) (HALF m) = gcd n m
-       Note HALF n < n /\ HALF m < m     by HALF_LESS, 0 < n, 0 < m
+       Note HALF n < n /\ HALF m < m     by HALF_LT, 0 < n, 0 < m
          so HALF n + HALF m < n + m      by arithmetic
             2 * gcd_compute (HALF n) (HALF m)
           = 2 * gcd (HALF n) (HALF m)    by induction hypothesis
           = gcd n m                      by BINARY_GCD
    (5) n <> 0 /\ m <> 0 /\ n <> m /\ EVEN n /\ ~EVEN m ==> gcd_compute (HALF n) m = gcd n m
-       Note HALF n < n                   by HALF_LESS, 0 < n
+       Note HALF n < n                   by HALF_LT, 0 < n
          so HALF n + m < n + m           by arithmetic
         Now ODD m                        by EVEN_ODD
             gcd_compute (HALF n) m
@@ -1915,7 +1915,7 @@ val gcd_compute_odd_odd = store_thm(
           = gcd n m                      by BINARY_GCD
    (6) n <> 0 /\ m <> 0 /\ n <> m /\ ~EVEN n /\ EVEN m ==> gcd_compute n (HALF m) = gcd n m
        Note ODD n                        by EVEN_ODD
-        and HALF m < m                   by HALF_LESS, 0 < m
+        and HALF m < m                   by HALF_LT, 0 < m
          so n + HALF m < n + m           by arithmetic
             gcd_compute n (HALF m)
           = gcd n (HALF m)               by induction hypothesis
@@ -1943,7 +1943,7 @@ val gcd_compute_eqn = store_thm(
   completeInduct_on `n + m` >>
   rpt strip_tac >>
   rw[Once gcd_compute_def] >| [
-    `HALF n < n /\ HALF m < m` by rw[HALF_LESS] >>
+    `HALF n < n /\ HALF m < m` by rw[HALF_LT] >>
     `HALF n + HALF m < n + m` by rw[] >>
     rw[BINARY_GCD],
     metis_tac[BINARY_GCD, EVEN_ODD],

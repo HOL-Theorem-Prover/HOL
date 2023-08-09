@@ -1549,30 +1549,31 @@ val poly_X_expM_value = store_thm(
        = PAD_RIGHT 0 (m MOD k) [] ++ [x] ++ ls          by unity_mod_zero_alt, ZN_property
        = PAD_LEFT 0 (m MOD k + 1) [x] ++ ls             by PAD_LEFT_BY_RIGHT
        = lt ++ unity_mod_zero (ZN 0) (k - (m MOD k + 1)) where lt = PAD_LEFT 0 (m MOD k + 1) [x]
-       = lt ++ PAD_RIGHT 0 (k - (m MOD k + 1)) []       by by unity_mod_zero_alt, ZN_property
+       = lt ++ PAD_RIGHT 0 (k - (m MOD k + 1)) []       by unity_mod_zero_alt, ZN_property
        = PAD_RIGHT 0 k lt                               by PAD_RIGHT_BY_RIGHT, LENGTH lt = (m MOD k) + 1
        = PAD_RIGHT 0 k (PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0])
 *)
-
 Theorem poly_X_expM_zero:
   !k m. valueOf (poly_X_expM 0 k m) =
-        if k = 0 then []
-        else PAD_RIGHT 0 k (PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0])
-Proof[exclude_simps = MOD_0]
-  rpt strip_tac >> Cases_on `k <= 1` >| [
+         if k = 0 then [] else PAD_RIGHT 0 k (PAD_LEFT 0 ((m MOD k) + 1) [1 MOD 0])
+Proof
+  rpt strip_tac >>
+  Cases_on `k <= 1` >| [
     `k = 0 \/ k = 1` by decide_tac >-
     rw[poly_X_expM_def] >>
     rw[poly_X_expM_def, PAD_LEFT, PAD_RIGHT],
-    rw[poly_X_expM_def] >>
+    rw[] >>
     qabbrev_tac `x = 1 MOD 0` >>
     qabbrev_tac `ls = unity_mod_zero (ZN 0) (k - (m MOD k + 1))` >>
-    `valueOf (poly_extendM (x::ls) (m MOD k)) = unity_mod_zero (ZN n) (m MOD k) ++ (x :: ls)` by rw[poly_extendM_value] >>
-    `ls = PAD_RIGHT 0 (k - (m MOD k + 1)) []` by rw[unity_mod_zero_alt, ZN_property, Abbr`ls`] >>
-    rw[unity_mod_zero_alt, ZN_property] >>
-    rw[PAD_LEFT_BY_RIGHT] >>
-    qabbrev_tac `s = PAD_RIGHT 0 (m MOD k) [] ++ [x]` >>
-    `LENGTH s = m MOD k + 1` by rw[PAD_RIGHT_LENGTH, Abbr`s`] >>
-    metis_tac[PAD_RIGHT_BY_RIGHT]
+    qabbrev_tac `lt = PAD_LEFT 0 (m MOD k + 1) [x]` >>
+    `LENGTH lt = m MOD k + 1` by rw[PAD_LEFT_LENGTH, MAX_DEF, Abbr`lt`] >>
+    `valueOf (poly_X_expM 0 k m) = valueOf (poly_extendM (x::ls) (m MOD k))` by rw[poly_X_expM_def, poly_zeroM_value, Abbr`ls`] >>
+    `_ = unity_mod_zero (ZN n) (m MOD k) ++ (x :: ls)` by rw[poly_extendM_value] >>
+    `_ = PAD_RIGHT 0 (m MOD k) [] ++ [x] ++ ls` by rw[unity_mod_zero_alt, ZN_property] >>
+    `_ = lt ++ ls` by rw[PAD_LEFT_BY_RIGHT, Abbr`lt`] >>
+    `_ = lt ++ PAD_RIGHT 0 (k - (m MOD k + 1)) []` by rw[unity_mod_zero_alt, ZN_property, Abbr`ls`] >>
+    `_ = PAD_RIGHT 0 k lt`  by metis_tac[PAD_RIGHT_BY_RIGHT] >>
+    fs[Abbr`lt`]
   ]
 QED
 

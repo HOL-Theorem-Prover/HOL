@@ -2926,10 +2926,10 @@ val poly_cyclo_mod_exp_char_eq = store_thm(
    Claim: (BIGUNION s) <> {}
    Proof: By BIGUNION_EQ_EMPTY, this is to show:
       (1) s <> {}
-          Since (divisors n) <> {}        by divisors_not_empty
+          Since (divisors n) <> {}              by divisors_eq_empty, 0 < n
           Thus s = IMAGE f (divisors n) <> {}   by IMAGE_EQ_EMPTY
       (2) s <> {{}}
-          Note !k. k IN (divisors n) ==> k divides n             by divisors_element_alt
+          Note !k. k IN (divisors n) ==> k divides n             by divisors_element_alt, 0 < n
                                      ==> k divides (CARD R+)     by DIVIDES_TRANS, 0 < n, n divides (CARD R+)
           Also !x. x IN s
            ==> ?k. k IN (divisors n) /\ (x = IMAGE factor (orders f* k))  by IN_IMAGE
@@ -2965,7 +2965,7 @@ val poly_unity_by_distinct_irreducibles = store_thm(
   `FINITE (BIGUNION s)` by rw[FINITE_BIGUNION] >>
   `(BIGUNION s) <> {}` by
     (rw[BIGUNION_EQ_EMPTY] >-
-  rw[divisors_not_empty, IMAGE_EQ_EMPTY, Abbr`s`] >>
+  rw[divisors_eq_empty, IMAGE_EQ_EMPTY, Abbr`s`] >>
   `!k. k IN (divisors n) ==> k divides (CARD R+)` by metis_tac[divisors_element_alt, DIVIDES_TRANS] >>
   `!n. f n = IMAGE factor (orders f* n)` by rw[Abbr`f`] >>
   `!x. x IN s ==> ?k. k IN (divisors n) /\ (x = IMAGE factor (orders f* k))` by metis_tac[IN_IMAGE] >>

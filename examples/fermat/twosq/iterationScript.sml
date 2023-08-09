@@ -28,7 +28,9 @@ open dividesTheory; (* for divides_def *)
 (* ------------------------------------------------------------------------- *)
 (* Iteration Period Documentation                                            *)
 (* ------------------------------------------------------------------------- *)
-(*
+(* Overloading:
+*)
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Helper Theorems:
 
@@ -98,9 +100,9 @@ open dividesTheory; (* for divides_def *)
                                     p = iterate_period f x ==>
                                     iterate_period (LINV f s) x = p
    iterate_period_iterate
-                       |- !f s x y. FINITE s /\ f PERMUTES s /\ x IN s /\
-                                    y = FUNPOW f j x ==>
-                                    iterate_period f y = iterate_period f x
+                       |- !f s x y j. FINITE s /\ f PERMUTES s /\ x IN s /\
+                                      y = FUNPOW f j x ==>
+                                      iterate_period f y = iterate_period f x
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -878,8 +880,8 @@ QED
    Thus p = q                          by DIVIDES_ANTISYM, [1][2]
 *)
 Theorem iterate_period_iterate:
-  !f s x y. FINITE s /\ f PERMUTES s /\ x IN s /\ y = FUNPOW f j x ==>
-            iterate_period f y = iterate_period f x
+  !f s x y j. FINITE s /\ f PERMUTES s /\ x IN s /\ y = FUNPOW f j x ==>
+              iterate_period f y = iterate_period f x
 Proof
   rpt strip_tac >>
   qabbrev_tac `p = iterate_period f x` >>

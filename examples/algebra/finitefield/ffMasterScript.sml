@@ -160,8 +160,9 @@ open fieldBinomialTheory; (* for finite_field_freshman_all *)
                                               BIGUNION (IMAGE (monic_irreducibles_degree r) (divisors n))
    monic_irreducibles_degree_member  |- !r n p. p IN monic_irreducibles_degree r n <=>
                                                 monic p /\ ipoly p /\ (deg p = n)
-   monic_irreducibles_bounded_member |- !r n p. p IN monic_irreducibles_bounded r n <=>
-                                                monic p /\ ipoly p /\ deg p <= n /\ deg p divides n
+   monic_irreducibles_bounded_member |- !r n p. Field r ==>
+                                                (p IN monic_irreducibles_bounded r n <=>
+                                                 monic p /\ ipoly p /\ deg p <= n /\ deg p divides n)
    monic_irreducibles_degree_finite  |- !r. FINITE R /\ #0 IN R ==>
                                         !n. FINITE (monic_irreducibles_degree r n)
    monic_irreducibles_bounded_finite |- !r. FINITE R /\ #0 IN R ==>
@@ -1341,11 +1342,12 @@ val monic_irreducibles_degree_member = store_thm(
   ``!(r:'a field) n p. p IN (monic_irreducibles_degree r n) <=> monic p /\ ipoly p /\ (deg p = n)``,
   rw[monic_irreducibles_degree_def]);
 
-(* Theorem: p IN (monic_irreducibles_bounded r n) <=>
-            monic p /\ ipoly p /\ (deg p <= n) /\ (deg p) divides n *)
+(* Theorem: Field r ==> (p IN (monic_irreducibles_bounded r n) <=>
+            monic p /\ ipoly p /\ (deg p <= n) /\ (deg p) divides n) *)
 (* Proof:
+   Note 0 < deg p                                by poly_irreducible_deg_nonzero
        p IN (monic_irreducibles_bounded r n)
-   <=> p IN BIGUNION (IMAGE (monic_irreducibles_degree r) (divisors n))  by monic_irreducibles_bounded_def
+   <=> p IN BIGUNION (IMAGE (monic_irreducibles_degree r) (divisors n))        by monic_irreducibles_bounded_def
    <=> ?s. p IN s /\ s IN (IMAGE (monic_irreducibles_degree r) (divisors n))   by IN_BIGUNION
    Take s = monic_irreducibles_degree r (deg p),
    Then p IN s
@@ -1356,13 +1358,14 @@ val monic_irreducibles_degree_member = store_thm(
 *)
 val monic_irreducibles_bounded_member = store_thm(
   "monic_irreducibles_bounded_member",
-  ``!(r:'a field) n p. p IN (monic_irreducibles_bounded r n) <=>
-     monic p /\ ipoly p /\ (deg p <= n) /\ (deg p) divides n``,
+  ``!(r:'a field) n p. Field r ==>
+      (p IN (monic_irreducibles_bounded r n) <=>
+       monic p /\ ipoly p /\ (deg p <= n) /\ (deg p) divides n)``,
   (rw[monic_irreducibles_bounded_def, monic_irreducibles_degree_member, divisors_element, EXTENSION, EQ_IMP_THM] >> simp[]) >>
   qexists_tac `monic_irreducibles_degree r (deg p)` >>
   simp[monic_irreducibles_degree_member] >>
   qexists_tac `deg p` >>
-  simp[]);
+  simp[poly_irreducible_deg_nonzero]);
 
 (* Theorem: FINITE R /\ #0 IN R ==> !n. FINITE (monic_irreducibles_degree r n) *)
 (* Proof:
@@ -2574,9 +2577,6 @@ val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_1 = store_thm(
 (* Theorem: FiniteField r /\ s <<= r /\ 0 < n ==>
             (master (CARD B ** n) = poly_prod_set s {poly_psi s d | d divides n}) *)
 (* Proof: by poly_master_subfield_eq_monic_irreducibles_prod_image *)
-(* Theorem: FiniteField r /\ 0 < n ==>
-    (master (CARD R ** n) = PPROD {PPROD (monic_irreducibles_degree r d) | d | d divides n}) *)
-(* Proof: by poly_master_eq_monic_irreducibles_prod_image *)
 val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
   "poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2",
   ``!(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==>
@@ -2588,7 +2588,7 @@ val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
     `x' = monic_irreducibles_degree s x''` suffices_by fs[divisors_def] >>
     rw[EXTENSION] >>
     metis_tac[],
-    metis_tac[DIVIDES_LE, divisors_element]
+    metis_tac[DIVIDES_LE, divisors_element_alt]
   ]);
 
 (* Next is better than above. *)
@@ -2635,7 +2635,7 @@ val poly_master_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
     `x' = monic_irreducibles_degree r x''` suffices_by fs[divisors_def] >>
     rw[EXTENSION] >>
     metis_tac[],
-    metis_tac[DIVIDES_LE, divisors_element]
+    metis_tac[DIVIDES_LE, divisors_element_alt]
   ]);
 
 (* ------------------------------------------------------------------------- *)
@@ -2789,7 +2789,7 @@ val monic_irreducibles_degree_prod_set_divides_master = store_thm(
 
    Note FINITE (natural n)                by natural_finite
     ==> FINITE t                          by IMAGE_FINITE
-   Note (divisors n) SUBSET (natural n)   by divisors_subset_natural, 0 < n
+   Note (divisors n) SUBSET (natural n)   by divisors_subset_natural
     ==> s SUBSET t                        by IMAGE_SUBSET
    Claim: pset t
    Proof: This is to show: poly (PPROD (monic_irreducibles_degree r (SUC x'')))

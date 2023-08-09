@@ -94,7 +94,7 @@ open EulerTheory; (* for residue_def *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Mapping residues to a row of residues:
    row_def             |- !n a x. row n a x = (a * x) MOD n

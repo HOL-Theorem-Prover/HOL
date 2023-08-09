@@ -1280,7 +1280,6 @@ val poly_sum_by_weak_sum_genlist = store_thm(
      = poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) ' k        by poly_sum_by_weak_sum_genlist
      = f k                                                      by induction hypothesis
 *)
-
 Theorem poly_coeff_sum_genlist:
   !r:'a ring.
     Ring r /\ #1 <> #0 ==>
@@ -1325,6 +1324,7 @@ Proof
     ]
   ]
 QED
+
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Identity only for Primes                                       *)

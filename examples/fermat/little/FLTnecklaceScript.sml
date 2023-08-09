@@ -50,7 +50,7 @@ open gcdTheory; (* for PRIME_GCD *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Cycle and Necklaces:
    necklace_cycle      |- !n a ls k. ls IN necklace n a ==> cycle k ls IN necklace n a

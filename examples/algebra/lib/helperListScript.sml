@@ -3017,7 +3017,7 @@ val SUM_GENLIST_APPEND = store_thm(
 val SUM_DECOMPOSE_FIRST_LAST = store_thm(
   "SUM_DECOMPOSE_FIRST_LAST",
   ``!f n. 0 < n ==> (SUM (GENLIST f (SUC n)) = f 0 + SUM (GENLIST (f o SUC) (PRE n)) + f n)``,
-  metis_tac[SUM_DECOMPOSE_LAST, SUM_DECOMPOSE_FIRST, LESS_EQ_SUC, PRE_SUC_EQ]);
+  metis_tac[SUM_DECOMPOSE_LAST, SUM_DECOMPOSE_FIRST, SUC_EXISTS, PRE_SUC_EQ]);
 
 (* Theorem: (SUM l) MOD n = (SUM (MAP (\x. x MOD n) l)) MOD n *)
 (* Proof: by list induction.
@@ -6420,7 +6420,7 @@ val GENLIST_MONO_DEC = store_thm(
          RHS = LAST [h] = h = LHS      by LAST_DEF
        If ls <> [],
          Note h <= LAST ls             by LAST_EL_CONS, increasing property
-          and MONO_INC ls            by EL, m <= n ==> SUC m <= SUC n
+          and MONO_INC ls              by EL, m <= n ==> SUC m <= SUC n
          MAX_LIST (h::ls)
        = MAX h (MAX_LIST ls)           by MAX_LIST_def
        = MAX h (LAST ls)               by induction hypothesis
@@ -6459,7 +6459,7 @@ val MAX_LIST_MONO_INC = store_thm(
          RHS = HD [h] = h = LHS        by HD
        If ls <> [],
          Note HD ls <= h               by HD, decreasing property
-          and MONO_DEC ls            by EL, m <= n ==> SUC m <= SUC n
+          and MONO_DEC ls              by EL, m <= n ==> SUC m <= SUC n
          MAX_LIST (h::ls)
        = MAX h (MAX_LIST ls)           by MAX_LIST_def
        = MAX h (HD ls)                 by induction hypothesis
@@ -6499,7 +6499,7 @@ val MAX_LIST_MONO_DEC = store_thm(
          RHS = HD [h] = h = LHS        by HD
        If ls <> [],
          Note h <= HD ls               by HD, increasing property
-          and MONO_INC ls            by EL, m <= n ==> SUC m <= SUC n
+          and MONO_INC ls              by EL, m <= n ==> SUC m <= SUC n
          MIN_LIST (h::ls)
        = MIN h (MIN_LIST ls)           by MIN_LIST_def
        = MIN h (HD ls)                 by induction hypothesis
@@ -6539,7 +6539,7 @@ val MIN_LIST_MONO_INC = store_thm(
          RHS = LAST [h] = h = LHS      by LAST_DEF
        If ls <> [],
          Note LAST ls <= h             by LAST_EL_CONS, decreasing property
-          and MONO_DEC ls            by EL, m <= n ==> SUC m <= SUC n
+          and MONO_DEC ls              by EL, m <= n ==> SUC m <= SUC n
          MIN_LIST (h::ls)
        = MIN h (MIN_LIST ls)           by MIN_LIST_def
        = MIN h (LAST ls)               by induction hypothesis

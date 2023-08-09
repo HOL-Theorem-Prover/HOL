@@ -718,10 +718,9 @@ field_order_equal_card_choices
       Let m = CARD R+, s = divisors m.
       Then 0 < m                       by field_nonzero_card_pos
        and FINITE s                    by divisors_finite
-       ==> FINITE t                    by IMAGE_FINITE
 
       Step 1: partition s
-      Let u = {n | n IN s /\ (forder_eq n = {})},
+      Let u = {n | n IN s /\ forder_eq n = {}},
           v = {n | n IN s /\ forder_eq n <> {}}.
       Then FINITE u /\ FINITE v /\ split s u v   by finite_partition_by_predicate
 
@@ -743,7 +742,7 @@ field_order_equal_card_choices
       Claim: SIGMA (CARD o forder_eq) v = SIGMA phi v
       Proof: Note !x. x IN s /\ forder_eq x <> {}
               ==> CARD (forder_eq x) <> 0          by field_order_equal_finite, CARD_EQ_0
-              and x <> 0, or 0 < x                 by divisors_has_0, x IN s, m <> 0
+              and 0 < x                            by divisors_nonzero, x IN s
                so CARD (forder_eq x) = phi x       by field_order_equal_card_eqn
                or (CARD o forder_eq) x = phi x     by o_THM
 
@@ -758,13 +757,13 @@ field_order_equal_card_choices
 
       Step 3: get a contradiction
       Note n <= m                        by DIVIDES_LE, n divides m
-        so n IN s                        by divisors_element
+        so n IN s                        by divisors_element_alt, 0 < m
        ==> forder n IN u                 by IN_IMAGE
         or u <> {}                       by MEMBER_NOT_EMPTY
        ==> v <> s                        by finite_partition_property
        But v SUBSET s                    by SUBSET_UNION
         so v PSUBSET s                   by PSUBSET_DEF, v <> s
-      Also !x. x IN s ==> phi x <> 0     by phi_eq_0, divisors_has_0, m <> 0
+      Also !x. x IN s ==> phi x <> 0     by phi_eq_0, divisors_nonzero
       Thus SIGMA phi v < SIGMA phi s     by SUM_IMAGE_PSUBSET_LT, [2]
 
        Now SIGMA phi s = m               by Gauss_little_thm
@@ -790,24 +789,24 @@ val field_order_equal_nonempty = store_thm(
     `!n. n IN v <=> n IN s /\ forder_eq n <> {}` by rw[Abbr`v`] >>
     `FINITE u /\ FINITE v /\ split s u v` by metis_tac[finite_partition_by_predicate] >>
     `SIGMA (CARD o forder_eq) u = 0` by
-  (`!x. x IN u ==> ((CARD o forder_eq) x = (K 0) x)` by metis_tac[CARD_EMPTY, IN_IMAGE, combinTheory.K_THM, combinTheory.o_THM] >>
+  (`!x. x IN u ==> (CARD o forder_eq) x = (K 0) x` by metis_tac[CARD_EMPTY, IN_IMAGE, combinTheory.K_THM, combinTheory.o_THM] >>
     `SIGMA (CARD o forder_eq) u = SIGMA (K 0) u` by metis_tac[SUM_IMAGE_CONG] >>
     rw[SUM_IMAGE_CONSTANT]) >>
     `SIGMA (CARD o forder_eq) v = SIGMA phi v` by
     ((irule SUM_IMAGE_CONG >> rpt conj_tac) >| [
       rw_tac std_ss[] >>
       `CARD (forder_eq x) <> 0` by metis_tac[field_order_equal_finite, CARD_EQ_0] >>
-      `0 < x` by metis_tac[divisors_has_0, NOT_ZERO_LT_ZERO] >>
+      `0 < x` by metis_tac[divisors_nonzero] >>
       metis_tac[field_order_equal_card_eqn],
       decide_tac
     ]) >>
     `m = SIGMA (CARD o forder_eq) s` by rw[field_order_equal_over_divisors_sigma_card, Abbr`s`, Abbr`m`] >>
     `_ = SIGMA phi v` by rw[SUM_IMAGE_DISJOINT] >>
-    `n IN s` by rw[divisors_element, DIVIDES_LE, Abbr`s`] >>
+    `n IN s` by rw[divisors_element_alt, Abbr`s`] >>
     `u <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
     `v <> s` by metis_tac[finite_partition_property] >>
     `v PSUBSET s` by metis_tac[PSUBSET_DEF, SUBSET_UNION] >>
-    `!x. x IN s ==> phi x <> 0` by metis_tac[phi_eq_0, divisors_has_0, NOT_ZERO_LT_ZERO] >>
+    `!x. x IN s ==> phi x <> 0` by metis_tac[phi_eq_0, divisors_nonzero, NOT_ZERO] >>
     `SIGMA phi v < SIGMA phi s` by metis_tac[SUM_IMAGE_PSUBSET_LT] >>
     `SIGMA phi s = m` by rw[Gauss_little_thm, Abbr`s`] >>
     decide_tac

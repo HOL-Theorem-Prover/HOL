@@ -135,7 +135,7 @@ open dividesTheory; (* for prime_def, NOT_PRIME_0 *)
    l1 == l2      = similar l1 l2 (infix)
    closed R s    = !x y. x IN s /\ R x y ==> y IN s
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Pattern Theory:
    similar_def         |- !l1 l2. l1 == l2 <=> ?n. l2 = cycle n l1

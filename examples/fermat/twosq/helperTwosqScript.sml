@@ -37,15 +37,9 @@ open whileTheory; (* for HOARE_SPEC_DEF *)
    pairing f         = !u x y. f u x /\ f u y ==> x = y
    unique_bool f a b = f a b /\ !x y. f x y ==> (x = a) /\ (y = b)
 *)
-(*
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    Number Theorems:
-   square_def        |- !n. square n <=> ?k. n = k * k
-   square_alt        |- !n. square n <=> ?k. n = k ** 2
-   square_eqn        |- !n. square n <=> SQRT n ** 2 = n
-   square_0          |- square 0
-   square_1          |- square 1
-   prime_non_square  |- !p. prime p ==> ~square p
    prime_non_quad    |- !p. prime p ==> ~(4 divides p)
    prime_mod_eq_0    |- !p q. prime p /\ 1 < q ==> (p MOD q = 0 <=> q = p)
    even_by_mod_4     |- !n. EVEN n <=> n MOD 4 = 0 \/ n MOD 4 = 2
@@ -54,7 +48,6 @@ open whileTheory; (* for HOARE_SPEC_DEF *)
    mod_4_odd         |- !n. ODD n <=> n MOD 4 IN {1; 3}
    mod_4_square      |- !n. n ** 2 MOD 4 IN {0; 1}
    mod_4_not_squares |- !n. n MOD 4 = 3 ==> !x y. n <> x ** 2 + y ** 2
-   half_add1_lt      |- !n. 2 < n ==> 1 + HALF n < n
 
    Arithmetic Theorems:
    four_squares_identity     |- !a b c d. b * d <= a * c ==>
@@ -147,82 +140,7 @@ val _ = clear_overloads_on "SQ";
 (* Overloading for a square n *)
 (* val _ = overload_on ("square", ``\n:num. ?k. n = k ** 2``); *)
 (* Make square in computeLib, cannot be an overload. *)
-
-(* Define square predicate. *)
-
-Definition square_def[nocompute]:
-    square (n:num) = ?k. n = k * k
-End
-(* use [nocompute] as this is not effective. *)
-
-(* Theorem: square n = ?k. n = k ** 2 *)
-(* Proof: by square_def. *)
-Theorem square_alt:
-  !n. square n = ?k. n = k ** 2
-Proof
-  simp[square_def]
-QED
-
-(* Theorem: square n <=> (SQRT n) ** 2 = n *)
-(* Proof:
-   If part: square n ==> (SQRT n) ** 2 = n
-      This is true         by SQRT_SQ, EXP_2
-   Only-if part: (SQRT n) ** 2 = n ==> square n
-      Take k = SQRT n for n = k ** 2.
-*)
-Theorem square_eqn[compute]:
-  !n. square n <=> (SQRT n) ** 2 = n
-Proof
-  metis_tac[square_def, SQRT_SQ, EXP_2]
-QED
-
-(*
-EVAL ``square 10``; F
-EVAL ``square 16``; T
-*)
-
-(* Theorem: square 0 *)
-(* Proof: by 0 = 0 * 0. *)
-Theorem square_0:
-  square 0
-Proof
-  simp[square_def]
-QED
-
-(* Theorem: square 1 *)
-(* Proof: by 1 = 1 * 1. *)
-Theorem square_1:
-  square 1
-Proof
-  simp[square_def]
-QED
-
-(* Theorem: prime p ==> ~square p *)
-(* Proof:
-   By contradiction, suppose (square p).
-   Then    p = k * k                 by square_def
-   thus    k divides p               by divides_def
-   so      k = 1  or  k = p          by prime_def
-   If k = 1,
-      then p = 1 * 1 = 1             by arithmetic
-       but p <> 1                    by NOT_PRIME_1
-   If k = p,
-      then p * 1 = p * p             by arithmetic
-        or     1 = p                 by EQ_MULT_LCANCEL, NOT_PRIME_0
-       but     p <> 1                by NOT_PRIME_1
-*)
-Theorem prime_non_square:
-  !p. prime p ==> ~square p
-Proof
-  rpt strip_tac >>
-  `?k. p = k * k` by rw[GSYM square_def] >>
-  `k divides p` by metis_tac[divides_def] >>
-  `(k = 1) \/ (k = p)` by metis_tac[prime_def] >-
-  fs[NOT_PRIME_1] >>
-  `p * 1 = p * p` by metis_tac[MULT_RIGHT_1] >>
-  `1 = p` by metis_tac[EQ_MULT_LCANCEL, NOT_PRIME_0] >>
-  metis_tac[NOT_PRIME_1]
-QED
+(* see square_def in logPowerTheory. *)
 
 (* Theorem: prime p ==> ~(4 divides p) *)
 (* Proof:
@@ -437,30 +355,6 @@ Proof
   fs[]
 QED
 
-
-(* Theorem: 2 < n ==> (1 + HALF n < n) *)
-(* Proof:
-   If EVEN n,
-      then     2 * HALF n = n      by EVEN_HALF
-        so 2 + 2 * HALF n < n + n  by 2 < n
-        or     1 + HALF n < n      by arithmetic
-   If ~EVEN n, then ODD n          by ODD_EVEN
-      then 1 + 2 * HALF n = 2      by ODD_HALF
-        so 1 + 2 * HALF n < n      by 2 < n
-      also 2 + 2 * HALF n < n + n  by 1 < n
-        or     1 + HALF n < n      by arithmetic
-*)
-Theorem half_add1_lt:
-  !n. 2 < n ==> 1 + HALF n < n
-Proof
-  rpt strip_tac >>
-  Cases_on `EVEN n` >| [
-    `2 * HALF n = n` by rw[EVEN_HALF] >>
-    decide_tac,
-    `1 + 2 * HALF n = n` by rw[ODD_HALF, ODD_EVEN] >>
-    decide_tac
-  ]
-QED
 
 (* ------------------------------------------------------------------------- *)
 (* Arithmetic Theorems                                                       *)

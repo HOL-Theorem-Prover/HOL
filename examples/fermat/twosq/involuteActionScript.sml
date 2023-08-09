@@ -37,7 +37,9 @@ open groupActionTheory; (* for fixed_points_def *)
 (* ------------------------------------------------------------------------- *)
 (* Involution and Action Documentation                                       *)
 (* ------------------------------------------------------------------------- *)
-(*
+(* Overloading:
+*)
+(* Definitions and Theorems (# are exported, ! are in compute):
 
    FUNPOW Action:
    funpow_action   |- !f X. f involute X ==> (Z2 act X) (FUNPOW f)

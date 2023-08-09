@@ -951,7 +951,7 @@ We really need ffUnity, for the following:
 (* Proof:
    Let m = CARD R+.
    Then 0 < m                    by field_nonzero_card_pos
-   By EXTENSION, IN_BIGUNION, divisors_element, this is to show:
+   By EXTENSION, IN_BIGUNION, divisors_element_alt, this is to show:
    (1) x IN s ==> x IN R+   where s = forder_eq n for some n divides m
        Note x IN s ==> x IN R /\ forder x divides m    by field_order_equal_element
        But x <> #0, for otherwise
@@ -972,7 +972,7 @@ val field_order_equal_bigunion = store_thm(
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD R+` >>
   `0 < m` by rw[field_nonzero_card_pos, Abbr`m`] >>
-  rw[EXTENSION, IN_BIGUNION, divisors_element, EQ_IMP_THM] >| [
+  rw[EXTENSION, IN_BIGUNION, divisors_element_alt, EQ_IMP_THM] >| [
     `x IN R /\ (forder x) divides m` by metis_tac[field_order_equal_element] >>
     `x <> #0` by metis_tac[field_order_eq_0, ZERO_DIVIDES, NOT_ZERO_LT_ZERO] >>
     metis_tac[field_nonzero_eq],
