@@ -977,15 +977,29 @@ QED
 Theorem PAIRWISE_SING :
    !r x. pairwise r {x} <=> T
 Proof
-  REWRITE_TAC[pairwise, IN_SING] >> MESON_TAC[]
+  REWRITE_TAC[pairwise, IN_SING] THEN MESON_TAC[]
+QED
+
+Theorem PAIRWISE_IMP :
+   !P Q s.
+        pairwise P s /\
+        (!x y. x IN s /\ y IN s /\ P x y /\ ~(x = y) ==> Q x y)
+        ==> pairwise Q s
+Proof
+  REWRITE_TAC[pairwise] THEN SET_TAC[]
 QED
 
 Theorem PAIRWISE_MONO :
    !r s t. pairwise r s /\ t SUBSET s ==> pairwise r t
 Proof
-    rw [pairwiseD_alt_pairwiseN]
- >> MATCH_MP_TAC pairwise_SUBSET
- >> Q.EXISTS_TAC ‘s’ >> ASM_REWRITE_TAC []
+  REWRITE_TAC[pairwise] THEN SET_TAC[]
+QED
+
+Theorem PAIRWISE_AND :
+   !R R' s. pairwise R s /\ pairwise R' s <=>
+            pairwise (\x y. R x y /\ R' x y) s
+Proof
+  REWRITE_TAC[pairwise] THEN SET_TAC[]
 QED
 
 Theorem PAIRWISE_INSERT :
@@ -994,22 +1008,22 @@ Theorem PAIRWISE_INSERT :
         (!y. y IN s /\ ~(y = x) ==> r x y /\ r y x) /\
         pairwise r s
 Proof
-  REWRITE_TAC[pairwise, IN_INSERT] >> MESON_TAC[]
+  REWRITE_TAC[pairwise, IN_INSERT] THEN MESON_TAC[]
 QED
 
 Theorem PAIRWISE_IMAGE :
    !r f. pairwise r (IMAGE f s) <=>
          pairwise (\x y. ~(f x = f y) ==> r (f x) (f y)) s
 Proof
-  REWRITE_TAC[pairwise, IN_IMAGE] >> MESON_TAC[]
+  REWRITE_TAC[pairwise, IN_IMAGE] THEN MESON_TAC[]
 QED
 
 Theorem PAIRWISE_UNION :
-   !r s1 s2. pairwise r (s1 UNION s2) <=>
-             pairwise r s1 /\ pairwise r s2 /\
-            (!x y. x IN s1 /\ y IN s2 /\ x <> y ==> r x y /\ r y x)
+   !R s t. pairwise R (s UNION t) <=>
+           pairwise R s /\ pairwise R t /\
+           (!x y. x IN s DIFF t /\ y IN t DIFF s ==> R x y /\ R y x)
 Proof
-  SRW_TAC [boolSimps.DNF_ss][pairwise] >> METIS_TAC []
+  REWRITE_TAC[pairwise] >> SET_TAC[]
 QED
 
 (* ------------------------------------------------------------------------- *)
