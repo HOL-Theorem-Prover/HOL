@@ -426,13 +426,33 @@ QED
     Perambulations
    ---------------------------------------------------------------------- *)
 
+(* NOTE: added ‘!v. v IN nodes g’ to make sure vertices of single-vertex
+   walks are indeed vertices in the graph.
+
+   The existing ‘adjacent vs v1 v2 ==> adjacent g v1 v2’ can only guarantee
+   it for walks of two or more vectices.  -- Chun Tian, August 10, 2023.
+ *)
 Definition walk_def:
-  walk g vs ⇔ vs ≠ [] ∧ ∀v1 v2. adjacent vs v1 v2 ⇒ adjacent g v1 v2
+  walk g vs <=> vs <> [] /\ (!v. MEM v vs ==> v IN nodes g) /\
+               !v1 v2. adjacent vs v1 v2 ==> adjacent g v1 v2
 End
 
+Theorem trivial_walk[simp] :
+    !g v. v IN nodes g ==> walk g [v]
+Proof
+    rw [walk_def]
+QED
+
+(* NOTE: A path is a walk without duplicated nodes/vertices. *)
 Definition path_def:
   path g vs ⇔ walk g vs ∧ ALL_DISTINCT vs
 End
+
+Theorem trivial_path[simp] :
+    !g v. v IN nodes g ==> path g [v]
+Proof
+    rw [path_def]
+QED
 
 Definition adjpairs_def[simp]:
   adjpairs [] = [] ∧
@@ -446,6 +466,8 @@ Proof
   recInduct adjpairs_ind >> simp[]
 QED
 
+(* NOTE: A trail may go through some vertices more than once but only traverses
+         each edge of the graph at most once. *)
 Definition trail_def:
   trail g vs ⇔ walk g vs ∧ ALL_DISTINCT (adjpairs vs)
 End
@@ -470,7 +492,6 @@ Proof
   gs[listTheory.adjacent_iff, listTheory.adjacent_rules]
 QED
 
-
 Theorem walks_contain_paths:
   ∀g vs. walk g vs ⇒
          ∃vs'. path g vs' ∧ HD vs' = HD vs ∧ LAST vs' = LAST vs ∧
@@ -481,11 +502,15 @@ Proof
   >- (qexists‘[v1]’ >> simp[]) >>
   gs[listTheory.adjacent_iff, DISJ_IMP_THM, FORALL_AND_THM] >>
   rename [‘LAST _ = LAST (v2::vs)’] >>
-  first_x_assum $ drule_then strip_assume_tac >> rename [‘ALL_DISTINCT vs'’] >>
+ (* stage work *)
+  rpt (first_x_assum $ drule_then strip_assume_tac) >>
+  rename [‘ALL_DISTINCT vs'’] >>
   reverse $ Cases_on ‘MEM v1 vs'’
   >- (qexists ‘v1::vs'’ >> gvs[] >> rpt strip_tac >~
       [‘adjacent (v1::vs') a b’, ‘adjacent g a b’]
-      >- (Cases_on ‘vs'’ >> gvs[listTheory.adjacent_iff]) >>
+      >- (Cases_on ‘vs'’ >> gvs[listTheory.adjacent_iff])
+      >- PROVE_TAC [] (* v IN nodes g *)
+      >- PROVE_TAC [] (* v IN nodes g *) >>
       rename [‘LAST (v1::vs') = LAST (HD vs'::vs)’] >>
       ‘LAST (v1::vs') = LAST vs'’ suffices_by simp[] >>
       qpat_x_assum ‘LAST vs' = LAST (_ :: _)’ kall_tac >>
@@ -498,7 +523,9 @@ Proof
   simp[] >> rpt strip_tac >~
   [‘LAST (HD _ :: _) = LAST (p ++ [v1] ++ s)’,
    ‘LAST (v1 :: s) = LAST (p ++ [v1] ++ s)’]
-  >- (simp[Excl "APPEND_ASSOC", GSYM listTheory.APPEND_ASSOC]) >>
+  >- (simp[Excl "APPEND_ASSOC", GSYM listTheory.APPEND_ASSOC])
+  >- PROVE_TAC [] (* v IN nodes g *)
+  >- PROVE_TAC [] (* v IN nodes g *) >>
   first_x_assum irule >> REWRITE_TAC[GSYM listTheory.APPEND_ASSOC] >>
   irule adjacent_append2 >> simp[]
 QED
