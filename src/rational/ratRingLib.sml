@@ -39,7 +39,7 @@ is_computable_rat ``abs_rat (frac_save 3 3)``*)
  * ring declaration
  *--------------------------------------------------------------------------*)
 
-val _ = ringLib.declare_ring
+val _ = EVAL_ringLib.declare_ring
     { RingThm = rat_ring_thms,
       IsConst = is_computable_rat,
       Rewrites = (ratLib.int_rewrites @ ratLib.rat_rewrites) };
@@ -51,8 +51,9 @@ val _ = ringLib.declare_ring
 val PRE_CONV = RAT_PRECALC_CONV;
 val POST_CONV = RAT_POSTCALC_CONV;
 
-val RAT_RING_NORM_CONV = PRE_CONV THENC ringLib.RING_NORM_CONV THENC POST_CONV;
-val RAT_RING_CONV = PRE_CONV THENC ringLib.RING_CONV THENC POST_CONV;
+val RAT_RING_NORM_CONV =
+    PRE_CONV THENC EVAL_ringLib.RING_NORM_CONV THENC POST_CONV;
+val RAT_RING_CONV = PRE_CONV THENC EVAL_ringLib.RING_CONV THENC POST_CONV;
 
 val RAT_RING_NORM_TAC = CONV_TAC RAT_RING_NORM_CONV;
 val RAT_RING_TAC = CONV_TAC RAT_RING_CONV;

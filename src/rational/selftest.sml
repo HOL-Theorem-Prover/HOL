@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib;
 
-open ratLib ratReduce;
+open ratLib ratReduce ratRingLib;
 
 open testutils;
 
@@ -69,5 +69,19 @@ val _ = require_msg (check_result (aconv expected3)) term_to_string
                     (quietly Parse.Term) ‘0 < x’
 
 val _ = temp_set_grammars grammars;
+
+(* check ring norm code *)
+val _ = convtest ("RAT_RING_NORM_CONV (01)",
+                  RAT_RING_NORM_CONV,
+                  “2q * q + 3 * r - 6 * q”, “-4q * q + 3 * r”);
+val _ = convtest ("RAT_RING_NORM_CONV (02)",
+                  RAT_RING_NORM_CONV,
+                  “2q * q + 3 * r - 2 * q”, “3 * r”);
+val _ = convtest ("RAT_RING_NORM_CONV (03)",
+                  RAT_RING_NORM_CONV,
+                  “-2 * r + 2q * q + 3 * r - 2 * q - r ”, “0q”);
+val _ = convtest ("RAT_RING_NORM_CONV (04)",
+                  RAT_RING_NORM_CONV,
+                  “(r:rat) * 1 + 3 * r”, “4q * r”);
 
 val _ = Process.exit Process.success
