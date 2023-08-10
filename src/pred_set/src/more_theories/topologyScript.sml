@@ -24,8 +24,8 @@
 
 open HolKernel Parse bossLib boolLib;
 
-open boolSimps simpLib mesonLib metisLib pairTheory pairLib tautLib
-     pred_setTheory arithmeticTheory cardinalTheory;
+open boolSimps simpLib mesonLib metisLib pairTheory pairLib tautLib combinTheory
+     pred_setTheory arithmeticTheory relationTheory cardinalTheory;
 
 val _ = new_theory "topology";
 
@@ -953,32 +953,223 @@ QED
 
 val _ = hide "pairwise"; (* pred_setTheory *)
 
+(* NOTE: this definition is HOL-Light compatible, originally from "sets.ml". *)
 val pairwise = new_definition ("pairwise",
   ``pairwise r s <=> !x y. x IN s /\ y IN s /\ ~(x = y) ==> r x y``);
 
-val PAIRWISE_EMPTY = store_thm ("PAIRWISE_EMPTY",
- ``!r. pairwise r {} <=> T``,
-  REWRITE_TAC[pairwise, NOT_IN_EMPTY] THEN MESON_TAC[]);
+Overload pairwiseD        = “topology$pairwise”
+Overload pairwiseN[local] = “pred_set$pairwise”
 
-val PAIRWISE_SING = store_thm ("PAIRWISE_SING",
- ``!r x. pairwise r {x} <=> T``,
-  REWRITE_TAC[pairwise, IN_SING] THEN MESON_TAC[]);
+(* connection between pairwiseD and pairwiseN, originally by Michael Norrish *)
+Theorem pairwiseD_alt_pairwiseN :
+    !R. pairwiseD R = pairwiseN (RC R)
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, pairwise, pairwise_def, RC_DEF]
+ >> METIS_TAC []
+QED
 
-val PAIRWISE_MONO = store_thm ("PAIRWISE_MONO",
- ``!r s t. pairwise r s /\ t SUBSET s ==> pairwise r t``,
-  REWRITE_TAC[pairwise] THEN SET_TAC[]);
+Theorem PAIRWISE_EMPTY :
+   !r. pairwise r {} <=> T
+Proof
+   rw [pairwiseD_alt_pairwiseN, pairwise_EMPTY]
+QED
 
-val PAIRWISE_INSERT = store_thm ("PAIRWISE_INSERT",
- ``!r x s.
+Theorem PAIRWISE_SING :
+   !r x. pairwise r {x} <=> T
+Proof
+  REWRITE_TAC[pairwise, IN_SING] >> MESON_TAC[]
+QED
+
+Theorem PAIRWISE_MONO :
+   !r s t. pairwise r s /\ t SUBSET s ==> pairwise r t
+Proof
+    rw [pairwiseD_alt_pairwiseN]
+ >> MATCH_MP_TAC pairwise_SUBSET
+ >> Q.EXISTS_TAC ‘s’ >> ASM_REWRITE_TAC []
+QED
+
+Theorem PAIRWISE_INSERT :
+   !r x s.
         pairwise r (x INSERT s) <=>
         (!y. y IN s /\ ~(y = x) ==> r x y /\ r y x) /\
-        pairwise r s``,
-  REWRITE_TAC[pairwise, IN_INSERT] THEN MESON_TAC[]);
+        pairwise r s
+Proof
+  REWRITE_TAC[pairwise, IN_INSERT] >> MESON_TAC[]
+QED
 
-val PAIRWISE_IMAGE = store_thm ("PAIRWISE_IMAGE",
- ``!r f. pairwise r (IMAGE f s) <=>
-         pairwise (\x y. ~(f x = f y) ==> r (f x) (f y)) s``,
-  REWRITE_TAC[pairwise, IN_IMAGE] THEN MESON_TAC[]);
+Theorem PAIRWISE_IMAGE :
+   !r f. pairwise r (IMAGE f s) <=>
+         pairwise (\x y. ~(f x = f y) ==> r (f x) (f y)) s
+Proof
+  REWRITE_TAC[pairwise, IN_IMAGE] >> MESON_TAC[]
+QED
+
+Theorem PAIRWISE_UNION :
+   !r s1 s2. pairwise r (s1 UNION s2) <=>
+             pairwise r s1 /\ pairwise r s2 /\
+            (!x y. x IN s1 /\ y IN s2 /\ x <> y ==> r x y /\ r y x)
+Proof
+  SRW_TAC [boolSimps.DNF_ss][pairwise] >> METIS_TAC []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Disjoint system of sets (‘disjoint’, originally from Isabelle/HOL)       *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem DISJOINT_RESTRICT_L :
+  !s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)
+Proof SET_TAC []
+QED
+
+Theorem DISJOINT_RESTRICT_R :
+  !s t c. DISJOINT s t ==> DISJOINT (c INTER s) (c INTER t)
+Proof SET_TAC []
+QED
+
+Theorem DISJOINT_CROSS_L :
+    !s t c. DISJOINT s t ==> DISJOINT (s CROSS c) (t CROSS c)
+Proof
+    RW_TAC std_ss [DISJOINT_ALT, CROSS_DEF, Once EXTENSION, IN_INTER,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
+Theorem DISJOINT_CROSS_R :
+    !s t c. DISJOINT s t ==> DISJOINT (c CROSS s) (c CROSS t)
+Proof
+    RW_TAC std_ss [DISJOINT_ALT, CROSS_DEF, Once EXTENSION, IN_INTER,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
+Theorem SUBSET_RESTRICT_L :
+  !r s t. s SUBSET t ==> (s INTER r) SUBSET (t INTER r)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_RESTRICT_R :
+  !r s t. s SUBSET t ==> (r INTER s) SUBSET (r INTER t)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_RESTRICT_DIFF :
+  !r s t. s SUBSET t ==> (r DIFF t) SUBSET (r DIFF s)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_INTER_SUBSET_L :
+  !r s t. s SUBSET t ==> (s INTER r) SUBSET t
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_INTER_SUBSET_R :
+  !r s t. s SUBSET t ==> (r INTER s) SUBSET t
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_MONO_DIFF :
+  !r s t. s SUBSET t ==> (s DIFF r) SUBSET (t DIFF r)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_DIFF_SUBSET :
+  !r s t. s SUBSET t ==> (s DIFF r) SUBSET t
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_DIFF_DISJOINT :
+  !s1 s2 s3. (s1 SUBSET (s2 DIFF s3)) ==> DISJOINT s1 s3
+Proof
+    PROVE_TAC [SUBSET_DIFF]
+QED
+
+Overload disjoint = “pairwiseD DISJOINT”
+
+Theorem disjoint_def :
+    !A. disjoint A = !a b. a IN A /\ b IN A /\ (a <> b) ==> DISJOINT a b
+Proof
+    RW_TAC std_ss [pairwise]
+QED
+
+(* |- !A. disjoint A <=> !a b. a IN A /\ b IN A /\ a <> b ==> (a INTER b = {} ) *)
+Theorem disjoint = REWRITE_RULE [DISJOINT_DEF] disjoint_def
+
+Theorem disjointI :
+    !A. (!a b . a IN A ==> b IN A ==> (a <> b) ==> DISJOINT a b) ==> disjoint A
+Proof
+    METIS_TAC [disjoint_def]
+QED
+
+Theorem disjointD :
+    !A a b. disjoint A ==> a IN A ==> b IN A ==> (a <> b) ==> DISJOINT a b
+Proof
+    METIS_TAC [disjoint_def]
+QED
+
+Theorem disjoint_empty :
+    disjoint {}
+Proof
+    rw [PAIRWISE_EMPTY]
+QED
+
+Theorem disjoint_union :
+    !A B. disjoint A /\ disjoint B /\ (BIGUNION A INTER BIGUNION B = {}) ==>
+          disjoint (A UNION B)
+Proof
+    SET_TAC [disjoint_def]
+QED
+
+Theorem disjoint_sing :
+    !a. disjoint {a}
+Proof
+    rw [PAIRWISE_SING]
+QED
+
+Theorem disjoint_same :
+    !s t. (s = t) ==> disjoint {s; t}
+Proof
+    RW_TAC std_ss [IN_INSERT, IN_SING, disjoint_def]
+QED
+
+Theorem disjoint_two :
+    !s t. s <> t /\ DISJOINT s t ==> disjoint {s; t}
+Proof
+    RW_TAC std_ss [IN_INSERT, IN_SING, disjoint_def]
+ >> ASM_REWRITE_TAC [DISJOINT_SYM]
+QED
+
+Theorem disjoint_image :
+    !f. (!i j. i <> j ==> DISJOINT (f i) (f j)) ==> disjoint (IMAGE f UNIV)
+Proof
+    rw [PAIRWISE_IMAGE, pairwise]
+QED
+
+Theorem disjoint_insert_imp :
+    !e c. disjoint (e INSERT c) ==> disjoint c
+Proof
+    rw [PAIRWISE_INSERT]
+QED
+
+Theorem disjoint_insert_notin :
+    !e c. disjoint (e INSERT c) /\ e NOTIN c ==> !s. s IN c ==> DISJOINT e s
+Proof
+    rw [PAIRWISE_INSERT]
+ >> METIS_TAC []
+QED
+
+Theorem disjoint_insert :
+    !e c. disjoint c /\ (!x. x IN c ==> DISJOINT x e) ==> disjoint (e INSERT c)
+Proof
+    rw [PAIRWISE_INSERT]
+ >> rw [Once DISJOINT_SYM]
+QED
+
+Theorem disjoint_restrict :
+    !e c. disjoint c ==> disjoint (IMAGE ($INTER e) c)
+Proof
+    RW_TAC std_ss [disjoint_def, IN_IMAGE, o_DEF]
+ >> MATCH_MP_TAC DISJOINT_RESTRICT_R
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> ASM_REWRITE_TAC []
+ >> CCONTR_TAC >> fs []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful idioms for being a suitable union/intersection of somethings.      *)

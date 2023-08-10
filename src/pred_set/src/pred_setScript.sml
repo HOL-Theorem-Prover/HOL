@@ -6257,6 +6257,11 @@ val pairwise_SUBSET = Q.store_thm(
 `!R s t. pairwise R t /\ s SUBSET t ==> pairwise R s`,
 SRW_TAC [][SUBSET_DEF,pairwise_def]);
 
+Theorem pairwise_EMPTY :
+    !r. pairwise r {}
+Proof
+  REWRITE_TAC[pairwise_def, NOT_IN_EMPTY] THEN MESON_TAC[]
+QED
 
 (* ----------------------------------------------------------------------
     A proof of Koenig's Lemma
