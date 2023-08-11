@@ -438,7 +438,7 @@ Definition walk_def:
 End
 
 Theorem trivial_walk[simp] :
-    !g v. v IN nodes g ==> walk g [v]
+  !g v. walk g [v] ⇔ v IN nodes g
 Proof
     rw [walk_def]
 QED
@@ -449,7 +449,7 @@ Definition path_def:
 End
 
 Theorem trivial_path[simp] :
-    !g v. v IN nodes g ==> path g [v]
+  !g v. path g [v] ⇔ v IN nodes g
 Proof
     rw [path_def]
 QED
