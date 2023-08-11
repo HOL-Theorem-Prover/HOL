@@ -1,0 +1,14 @@
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo reduceLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe reduce-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: reduce-selftest.log
+
+reduce-selftest.log: selftest.exe
+	$(tee ./$<,$@)
+endif
