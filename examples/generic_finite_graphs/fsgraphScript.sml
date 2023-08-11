@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open pairTheory pred_setTheory sortingTheory genericGraphTheory
+open pairTheory listTheory pred_setTheory sortingTheory genericGraphTheory
 
 val _ = new_theory "fsgraph";
 
@@ -166,8 +166,8 @@ Proof
   Induct_on ‘FINITE’ using FINITE_LEAST_MEASURE_INDUCTION >> qexists ‘f’ >>
   simp[PULL_EXISTS] >> rpt strip_tac >>
   rename [‘¬MEM a es’] >> qexists ‘es ++ [a]’ >>
-  simp[EXTENSION, AC DISJ_ASSOC DISJ_COMM, listTheory.ALL_DISTINCT_APPEND] >>
-  simp[SORTED_APPEND, listTheory.MEM_MAP, PULL_EXISTS]
+  simp[EXTENSION, AC DISJ_ASSOC DISJ_COMM, ALL_DISTINCT_APPEND] >>
+  simp[SORTED_APPEND, MEM_MAP, PULL_EXISTS]
 QED
 
 Theorem descending_measure_lists_unique:
@@ -175,9 +175,9 @@ Theorem descending_measure_lists_unique:
             set es1 = set es2 ∧ ALL_DISTINCT es1 ∧ ALL_DISTINCT es2 ⇒
             MAP f es1 = MAP f es2
 Proof
-  Induct >> simp[SORTED_EQ, listTheory.MEM_MAP, PULL_EXISTS] >>
-  rpt strip_tac >> simp[listTheory.MAP_EQ_CONS] >>
-  Cases_on ‘es2’ >> gvs[SORTED_EQ, listTheory.MEM_MAP, PULL_EXISTS] >>
+  Induct >> simp[SORTED_EQ, MEM_MAP, PULL_EXISTS] >>
+  rpt strip_tac >> simp[MAP_EQ_CONS] >>
+  Cases_on ‘es2’ >> gvs[SORTED_EQ, MEM_MAP, PULL_EXISTS] >>
   rename [‘h1 INSERT set es1 = h2 INSERT set es2’] >>
   Cases_on ‘h1 = h2’
   >- (gvs[] >> first_x_assum irule >> simp[] >>
@@ -186,11 +186,11 @@ Proof
   ‘MEM h1 es2 ∧ MEM h2 es1’ by (gs[EXTENSION] >> metis_tac[]) >>
   ‘f h1 = f h2’ by metis_tac[arithmeticTheory.EQ_LESS_EQ] >> simp[] >>
   ‘∃p2 s2. es2 = p2 ++ [h1] ++ s2’
-    by metis_tac[listTheory.MEM_SPLIT_APPEND_first] >>
-  gvs[listTheory.ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
+    by metis_tac[MEM_SPLIT_APPEND_first] >>
+  gvs[ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
   first_x_assum $ qspec_then ‘p2 ++ [h2] ++ s2’ mp_tac >> simp[] >>
   disch_then irule >>
-  simp[listTheory.ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
+  simp[ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
   qpat_x_assum ‘_ INSERT _ = _’ mp_tac >>
   simp[EXTENSION] >> metis_tac[]
 QED
@@ -489,7 +489,7 @@ Theorem adjacent_append2:
   adjacent ys a b ⇒ adjacent (xs ++ ys) a b
 Proof
   Induct_on ‘xs’ >> simp[] >> Cases_on ‘xs’ >>
-  gs[listTheory.adjacent_iff, listTheory.adjacent_rules]
+  gs[adjacent_iff, adjacent_rules]
 QED
 
 Theorem walks_contain_paths:
@@ -500,7 +500,7 @@ Proof
   simp[walk_def, path_def] >> Induct_on ‘vs’ >> simp[] >> rpt strip_tac >>
   rename [‘LAST (v1::vs)’] >> Cases_on ‘vs’ >> gs[]
   >- (qexists‘[v1]’ >> simp[]) >>
-  gs[listTheory.adjacent_iff, DISJ_IMP_THM, FORALL_AND_THM] >>
+  gs[adjacent_iff, DISJ_IMP_THM, FORALL_AND_THM] >>
   rename [‘LAST _ = LAST (v2::vs)’] >>
  (* stage work *)
   rpt (first_x_assum $ drule_then strip_assume_tac) >>
@@ -508,25 +508,25 @@ Proof
   reverse $ Cases_on ‘MEM v1 vs'’
   >- (qexists ‘v1::vs'’ >> gvs[] >> rpt strip_tac >~
       [‘adjacent (v1::vs') a b’, ‘adjacent g a b’]
-      >- (Cases_on ‘vs'’ >> gvs[listTheory.adjacent_iff])
+      >- (Cases_on ‘vs'’ >> gvs[adjacent_iff])
       >- PROVE_TAC [] (* v IN nodes g *)
       >- PROVE_TAC [] (* v IN nodes g *) >>
       rename [‘LAST (v1::vs') = LAST (HD vs'::vs)’] >>
       ‘LAST (v1::vs') = LAST vs'’ suffices_by simp[] >>
       qpat_x_assum ‘LAST vs' = LAST (_ :: _)’ kall_tac >>
       Cases_on ‘vs'’ >> gs[]) >>
-  drule_then strip_assume_tac (iffLR listTheory.MEM_SPLIT_APPEND_last) >>
+  drule_then strip_assume_tac (iffLR MEM_SPLIT_APPEND_last) >>
   rename [‘vs' = p ++ [v1] ++ s’] >>
-  gvs[listTheory.ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
+  gvs[ALL_DISTINCT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
   qexists ‘v1::s’ >> simp[] >>
   qpat_x_assum ‘LAST (_ ++ _ ++ _) = LAST _’ (assume_tac o SYM) >>
   simp[] >> rpt strip_tac >~
   [‘LAST (HD _ :: _) = LAST (p ++ [v1] ++ s)’,
    ‘LAST (v1 :: s) = LAST (p ++ [v1] ++ s)’]
-  >- (simp[Excl "APPEND_ASSOC", GSYM listTheory.APPEND_ASSOC])
+  >- (simp[Excl "APPEND_ASSOC", GSYM APPEND_ASSOC])
   >- PROVE_TAC [] (* v IN nodes g *)
   >- PROVE_TAC [] (* v IN nodes g *) >>
-  first_x_assum irule >> REWRITE_TAC[GSYM listTheory.APPEND_ASSOC] >>
+  first_x_assum irule >> REWRITE_TAC[GSYM APPEND_ASSOC] >>
   irule adjacent_append2 >> simp[]
 QED
 
