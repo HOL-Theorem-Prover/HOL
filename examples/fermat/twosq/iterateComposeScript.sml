@@ -40,8 +40,6 @@ open iterateComputeTheory; (* for iterate_while_thm *)
 *)
 (* Definitions and Theorems (# are exported, ! are in compute):
 
-   Helper Theorems:
-
    Involution Composition Orbits:
    involute_involute_permutes
                    |- !f g s. f involute s /\ g involute s ==> f o g PERMUTES s
@@ -95,6 +93,14 @@ open iterateComputeTheory; (* for iterate_while_thm *)
                    |- !f g s p x. FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
                          p = iterate_period (f o g) x /\ ODD p ==>
                          FUNPOW (f o g) (HALF p) x IN fixes g s
+   involute_involute_fix_orbit_fix_even_inv
+                   |- !f g s p x.  FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
+                                   p = iterate_period (g o f) x /\ EVEN p ==>
+                                   FUNPOW (g o f) (HALF p) x IN fixes f s
+   involute_involute_fix_orbit_fix_odd_inv
+                   |- !f g s p x. FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
+                                  p = iterate_period (g o f) x /\ ODD p ==>
+                                  FUNPOW (g o f) (1 + HALF p) x IN fixes g s
    involute_involute_fix_orbit_fix_even_distinct
                    |- !f g s p x y. FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
                          p = iterate_period (f o g) x /\
@@ -879,6 +885,89 @@ Proof
   last_x_assum (qspecl_then [`f`, `g`, `x`, `p`, `h`, `h`] strip_assume_tac) >>
   `g y = y` by rfs[Abbr`y`] >>
   fs[fixes_element]
+QED
+
+(* Idea: for inverse composition (g o f) with period p from f fixed point, another f fixed point occurs at HALF p for EVEN p. *)
+
+(* Theorem: FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
+            p = iterate_period (g o f) x /\ EVEN p ==> FUNPOW (g o f) (HALF p) x IN fixes f s *)
+(* Proof:
+   Note x IN s /\ f x = x                      by fixes_element
+     so p = iterate_period (f o g) x           by involute_involute_period_inv
+   Let y = FUNPOW (f o g) (HALF p) x.
+   Then y IN fixes f s                         by involute_involute_fix_orbit_fix_even, [1]
+   Let n = HALF p.
+   Note (g o f) PERMUTES s                     by involute_involute_permutes
+     so FUNPOW (g o f) n x IN s                by FUNPOW_closure, [2]
+
+     y
+   = f y                                       by fixes_element
+   = f (FUNPOW (f o g) n x)                    by notation
+   = f (FUNPOW (f o g) n (f x))                by f x = x
+   = f (f (FUNPOW (g o f) n x))                by iterate_involute_compose_shift
+   = (f o f) (FUNPOW (g o f) n x)              by composition
+   = FUNPOW (g o f) n x                        by f involute s, [2]
+
+   Thus FUNPOW (g o f) n x IN fixes f s        by [1]
+*)
+Theorem involute_involute_fix_orbit_fix_even_inv:
+  !f g s p x. FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
+              p = iterate_period (g o f) x /\ EVEN p ==> FUNPOW (g o f) (HALF p) x IN fixes f s
+Proof
+  rpt strip_tac >>
+  `x IN s /\ f x = x` by fs[fixes_element] >>
+  qabbrev_tac `n = HALF p` >>
+  qabbrev_tac `y = FUNPOW (f o g) n x` >>
+  assume_tac (involute_involute_period_inv |> SPEC_ALL) >>
+  rfs[] >>
+  `y IN fixes f s` by simp[involute_involute_fix_orbit_fix_even, Abbr`y`, Abbr`n`] >>
+  assume_tac (iterate_involute_compose_shift |> SPEC_ALL) >>
+  rfs[] >>
+  `FUNPOW (g o f) n x IN s` by fs[involute_involute_permutes, FUNPOW_closure] >>
+  `y = f y` by fs[fixes_element] >>
+  `_ = f (FUNPOW (f o g) n x)` by simp[Abbr`y`] >>
+  `_ = f (f (FUNPOW (g o f) n x))` by metis_tac[] >>
+  `_ = FUNPOW (g o f) n x` by fs[] >>
+  fs[]
+QED
+
+(* Idea: for inverse composition (g o f) with period p from f fixed point, the g fixed point occurs at 1 + HALF p for ODD p. *)
+
+(* Theorem: FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
+               p = iterate_period (g o f) x /\ ODD p ==> FUNPOW (g o f) (1 + HALF p) x IN fixes g s *)
+(* Proof:
+   Note x IN s /\ f x = x                      by fixes_element
+     so p = iterate_period (f o g) x           by involute_involute_period_inv
+   Let y = FUNPOW (f o g) (HALF p) x.
+   Then y IN fixes g s                         by involute_involute_fix_orbit_fix_odd, [1]
+   Let n = HALF p.
+     y
+   = g y                                       by fixes_element
+   = g (FUNPOW (f o g) n x)                    by notation
+   = g (FUNPOW (f o g) n (f x))                by f x = x
+   = g (f (FUNPOW (g o f) n x))                by iterate_involute_compose_shift
+   = (g o f) (FUNPOW (g o f) n x)              by composition
+   = FUNPOW (g o f) (SUC n) x                  by FUNPOW_SUC
+   = FUNPOW (g o f) (1 + n) x                  by SUC_ONE_ADD
+
+   Thus FUNPOW (g o f) (1 + n) x IN fixes f s  by [1]
+*)
+Theorem involute_involute_fix_orbit_fix_odd_inv:
+  !f g s p x. FINITE s /\ f involute s /\ g involute s /\ x IN fixes f s /\
+               p = iterate_period (g o f) x /\ ODD p ==> FUNPOW (g o f) (1 + HALF p) x IN fixes g s
+Proof
+  rpt strip_tac >>
+  `x IN s /\ f x = x` by fs[fixes_element] >>
+  qabbrev_tac `n = HALF p` >>
+  qabbrev_tac `y = FUNPOW (f o g) n x` >>
+  assume_tac (involute_involute_period_inv |> SPEC_ALL) >>
+  `p = iterate_period (f o g) x` by fs[] >>
+  `y IN fixes g s` by simp[involute_involute_fix_orbit_fix_odd, Abbr`y`, Abbr`n`] >>
+  assume_tac (iterate_involute_compose_shift |> SPEC_ALL) >>
+  `y = g y` by fs[fixes_element] >>
+  `_ = g (FUNPOW (f o g) n x)` by simp[Abbr`y`] >>
+  `_ = FUNPOW (g o f) (SUC n) x` by rfs[FUNPOW_SUC] >>
+  metis_tac[SUC_ONE_ADD]
 QED
 
 (* Idea: when f fixes x, and (f o g) has even period p for x,

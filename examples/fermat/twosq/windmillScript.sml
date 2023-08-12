@@ -40,19 +40,23 @@ open logrootTheory logPowerTheory GaussTheory EulerTheory; (* for SQRT, divisors
 (* Definitions and Theorems (# are exported, ! are in compute):
 
    Helper Theorem:
-   triple_parts        |- !t. ?x y z. t = (x,y,z)
+   triple_parts            |- !t. ?x y z. t = (x,y,z)
 
    Windmill Theory:
-   windmill_def        |- !x y z. windmill (x, y, z) = x ** 2 + 4 * y * z
-   windmill_eq_0       |- !x y z. windmill (x, y, z) = 0 <=> x = 0 /\ y * z = 0
-   windmill_comm       |- !x y z. windmill (x, y, z) = windmill (x, z, y)
-   windmill_trivial    |- !k. windmill (1, 1, k) = 4 * k + 1
-   windmill_by_squares |- !x y. windmill (x, y, y) = x ** 2 + (2 * y) ** 2
-   windmill_x_y_y      |- !n x y. n = windmill (x, y, y) ==>
+   windmill_def            |- !x y z. windmill (x, y, z) = x ** 2 + 4 * y * z
+   windmill_eq_0           |- !x y z. windmill (x, y, z) = 0 <=> x = 0 /\ y * z = 0
+   windmill_comm           |- !x y z. windmill (x, y, z) = windmill (x, z, y)
+   windmill_trivial        |- !k. windmill (1, 1, k) = 4 * k + 1
+   windmill_by_squares     |- !x y. windmill (x, y, y) = x ** 2 + (2 * y) ** 2
+   windmill_x_y_y          |- !n x y. n = windmill (x, y, y) ==>
                                   n = x ** 2 + (2 * y) ** 2 /\ (ODD n <=> ODD x)
-   windmill_trivial_prime
-                       |- !p. prime p /\ p MOD 4 = 1 ==>
-                          !x z. p = windmill (x, x, z) <=> x = 1 /\ z = p DIV 4
+   windmill_trivial_prime  |- !p. p MOD 4 = 1 /\ prime p ==>
+                                  !x z. p = windmill (x, x, z) <=> x = 1 /\ z = p DIV 4
+   windmill_yz_product     |- !n x y z. n = windmill (x, y, z) ==> y * z = (n - x ** 2) DIV 4
+   windmill_yz_eq_0        |- !n x y z. n = windmill (x, y, z) ==> ((n - x ** 2) DIV 4 = 0 <=> y = 0 \/ z = 0)
+   windmill_nonsquare      |- !n x y z. ~square n /\ n = windmill (x, y, z) ==> y * z <> 0
+   windmill_arm_divisors   |- !n x y z. ~square n /\ n = windmill (x, y, z) ==>
+                                        (let p = (n - x * x) DIV 4 in y IN divisors p /\ z = p DIV y)
 
    Set of windmills:
    mills_def               |- !n. mills n = {(x,y,z) | n = windmill (x, y, z)}
@@ -453,7 +457,7 @@ QED
              = windmill (1, 1, k)        by windmill_trivial
 *)
 Theorem windmill_trivial_prime:
-  !p. prime p /\ p MOD 4 = 1 ==>
+  !p. p MOD 4 = 1 /\ prime p ==>
       !x z. p = windmill (x, x, z) <=> x = 1 /\ z = p DIV 4
 Proof
   rpt strip_tac >>
@@ -470,6 +474,62 @@ Proof
     fs[] >>
     fs[],
     rw[windmill_trivial]
+  ]
+QED
+
+(* Theorem: n = windmill (x, y, z) ==> y * z = (n - x ** 2) DIV 4 *)
+(* Proof:
+   Note n = x ** 2 + 4 * y * z                 by windmill_def
+     so y * z = (n - x ** 2) DIV 4             by arithmetic
+*)
+Theorem windmill_yz_product:
+  !n x y z. n = windmill (x, y, z) ==> y * z = (n - x ** 2) DIV 4
+Proof
+  rw[windmill_def]
+QED
+
+(* Theorem: ~square n /\ n = windmill (x, y, z) ==> y * z <> 0 *)
+(* Proof:
+   Note n = x ** 2 + 4 * y * z                 by windmill_def
+   By contradiction, assume y * z = 0.
+   Then n = x ** 2, contradicting ~square n    by square_def
+*)
+Theorem windmill_nonsquare:
+  !n x y z. ~square n /\ n = windmill (x, y, z) ==> y * z <> 0
+Proof
+  rw_tac bool_ss[windmill_def] >>
+  spose_not_then strip_assume_tac >>
+  `x ** 2 + 4 * y * z = x * x` by fs[GSYM EXP_2] >>
+  metis_tac[square_def]
+QED
+
+(* Theorem: ~square n /\ n = windmill (x, y, z) ==>
+     let p = (n - x * x) DIV 4 in y IN divisors p /\ z = p DIV y *)
+(* Proof:
+   Note n = x ** 2 + 4 * y * z     by windmill_def
+     so p = y * z                  by p = (n - x * x) DIV 4
+    but 0 < p                      by square_def, ~square n
+     so y IN divisors p            by divisors_has_factor
+   Also 0 < y                      by MULT_EQ_0
+     so z = p DIV y                by DIV_SOLVE_COMM
+*)
+Theorem windmill_arm_divisors:
+  !n x y z. ~square n /\ n = windmill (x, y, z) ==>
+     let p = (n - x * x) DIV 4 in y IN divisors p /\ z = p DIV y
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `foo = (n = windmill (x, y, z))` >>
+  rw_tac bool_ss[] >| [
+    qabbrev_tac `foo = (~square n)` >>
+    fs[windmill_def] >>
+    `y * z = p` by fs[Abbr`p`] >>
+    `0 < p` by metis_tac[MULT_0, ADD, square_def, NOT_ZERO, EXP_2] >>
+    metis_tac[divisors_has_factor],
+    qabbrev_tac `foo = (~square n)` >>
+    fs[windmill_def] >>
+    `y * z = p` by fs[Abbr`p`] >>
+    `p <> 0` by metis_tac[MULT_0, ADD, square_def, EXP_2] >>
+    metis_tac[DIV_SOLVE_COMM, MULT_EQ_0, NOT_ZERO]
   ]
 QED
 

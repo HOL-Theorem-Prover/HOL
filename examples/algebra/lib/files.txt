@@ -13,75 +13,77 @@
 * pred_set
 * 0 helperNum
 
-1 helperList -- extends HOL library on lists.
+2 helperList -- extends HOL library on lists.
 * pred_set
 * list
 * rich_list
 * listRange
 * 0 helperNum
-
-2 helperFunction -- useful theorems on functions.
-* 0 helperNum
-* 1 helperList
 * 1 helperSet
 
-2 sublist -- order-preserving sublist and properties.
-* 0 listRange
-* 1 helperList
+3 helperFunction -- useful theorems on functions.
+* 0 helperNum
+* 1 helperSet
+* 2 helperList
 
-3 logPower -- properties of perfect power, power free, and upper logarithm.
+3 sublist -- order-preserving sublist and properties.
+* 0 listRange
+* 2 helperList
+
+4 logPower -- properties of perfect power, power free, and upper logarithm.
 * logroot
 * 0 helperNum
-* 0 helperSet
-* 2 helperFunction
+* 1 helperSet
+* 3 helperFunction
 
-3 binomial -- properties of binomial coefficients in Pascal's Triangle.
+4 binomial -- properties of binomial coefficients in Pascal's Triangle.
 * 0 helperNum
 * 1 helperSet
-* 1 helperList
-* 2 helperFunction
+* 2 helperList
+* 3 helperFunction
 
-3 Euler -- number-theoretic sets, and Euler's phi function.
+4 Euler -- number-theoretic sets, and Euler's phi function.
 * 0 helperNum
 * 1 helperSet
-* 2 helperFunction
+* 3 helperFunction
 
-4 Gauss -- coprimes, properties of phi function, and Gauss' Little Theorem.
+5 Gauss -- coprimes, properties of phi function, and Gauss' Little Theorem.
 * 0 helperNum
 * 1 helperSet
-* 1 helperList
-* 2 helperFunction
-* 3 Euler
+* 2 helperList
+* 3 helperFunction
+* 4 logPower
+* 4 Euler
 
-4 primes -- properties of two-factors, and a primality test.
+5 primes -- properties of two-factors, and a primality test.
 * 0 helperNum
-* 2 helperFunction
-* 3 logPower
+* 3 helperFunction
+* 4 logPower
 
-4 triangle -- properties of Leibniz's Denominator Triangle, relating to consecutive LCM.
+5 triangle -- properties of Leibniz's Denominator Triangle, relating to consecutive LCM.
 * listRange
 * relation
 * 0 helperNum
 * 1 helperSet
-* 1 helperList
-* 2 helperFunction
-* 3 binomial
-* 3 Euler
+* 2 helperList
+* 3 helperFunction
+* 4 binomial
+* 4 Euler
 
-5 primePower -- properties of prime powers and divisors, an investigation on consecutive LCM.
+6 primePower -- properties of prime powers and divisors, an investigation on consecutive LCM.
 * listRange
 * option
 * 0 helperNum
 * 1 helperSet
-* 1 helperList
-* 2 helperFunction
-* 3 logPower
-* 3 Euler
-* 4 triangle
+* 2 helperList
+* 3 helperFunction
+* 4 logPower
+* 4 Euler
+* 5 triangle
 
-5 Mobius -- work on Mobius Inversion.
+6 Mobius -- work on Mobius Inversion.
 * 0 helperNum
 * 1 helperSet
-* 1 helperList
-* 3 Euler
-* 4 Gauss
+* 2 helperList
+* 4 Euler
+* 5 Gauss

@@ -47,3 +47,7 @@
 0 iteration
 0 groupAction
 0 helperTwosq
+
+2 quarity        -- bound and listing of mills and search for sum of two squares.
+1 windmill
+0 helperTwosq
