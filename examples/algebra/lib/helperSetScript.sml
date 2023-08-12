@@ -109,6 +109,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    BIJ_IS_SURJ         |- !f s t. BIJ f s t ==> !x. x IN t ==> ?y. y IN s /\ f y = x
    BIJ_FINITE_IFF      |- !f s t. BIJ f s t ==> (FINITE s <=> FINITE t)
    INJ_EQ_11           |- !f s x y. INJ f s s /\ x IN s /\ y IN s ==> ((f x = f y) <=> (x = y))
+   INJ_IMP_11          |- !f. INJ f univ(:'a) univ(:'b) ==> !x y. f x = f y <=> x = y
    BIJ_I_SAME          |- !s. BIJ I s s
    IMAGE_K             |- !s. s <> {} ==> !e. IMAGE (K e) s = {e}
    IMAGE_ELEMENT_CONDITION  |- !f. (!x y. (f x = f y) ==> (x = y)) ==> !s e. e IN s <=> f e IN IMAGE f s
@@ -1033,6 +1034,15 @@ Theorem INJ_EQ_11:
 Proof
   metis_tac[INJ_DEF]
 QED
+
+(* Theorem: INJ f univ(:'a) univ(:'b) ==> !x y. f x = f y <=> x = y *)
+(* Proof: by INJ_DEF, IN_UNIV. *)
+Theorem INJ_IMP_11:
+  !f. INJ f univ(:'a) univ(:'b) ==> !x y. f x = f y <=> x = y
+Proof
+  metis_tac[INJ_DEF, IN_UNIV]
+QED
+(* This is better than INJ_EQ_11 above. *)
 
 (* Theorem: BIJ I s s *)
 (* Proof: by definitions. *)

@@ -44,6 +44,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    num_nchotomy      |- !m n. m = n \/ m < n \/ n < m
    ZERO_LE_ALL       |- !n. 0 <= n
    NOT_ZERO          |- !n. n <> 0 <=> 0 < n
+   ONE_NOT_0         |- 1 <> 0
    ONE_LT_POS        |- !n. 1 < n ==> 0 < n
    ONE_LT_NONZERO    |- !n. 1 < n ==> n <> 0
    NOT_LT_ONE        |- !n. ~(1 < n) <=> (n = 0) \/ (n = 1)
@@ -65,6 +66,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    MULT3_EQ_1        |- !x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))
    SQ_0              |- 0 ** 2 = 0
    EXP_2_EQ_0        |- !n. (n ** 2 = 0) <=> (n = 0)
+   LE_MULT_LCANCEL_IMP |- !m n p. n <= p ==> m * n <= m * p
 
    Maximum and minimum:
    MAX_ALT           |- !m n. MAX m n = if m <= n then n else m
@@ -107,7 +109,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    MULT_EQ_SELF      |- !n. 0 < n ==> !m. (n * m = n) <=> (m = 1)
    SQ_EQ_SELF        |- !n. (n * n = n) <=> (n = 0) \/ (n = 1)
    EXP_EXP_BASE_LE   |- !b c m n. m <= n /\ 0 < c ==> b ** c ** m <= b ** c ** n
-   EXP_EXP_LE_MONO_IMP|- !a b n. a <= b ==> a ** n <= b ** n
+   EXP_EXP_LE_MONO_IMP |- !a b n. a <= b ==> a ** n <= b ** n
    EXP_BY_ADD_SUB_LE |- !m n. m <= n ==> !p. p ** n = p ** m * p ** (n - m)
    EXP_BY_ADD_SUB_LT |- !m n. m < n ==> !p. p ** n = p ** m * p ** (n - m)
    EXP_SUC_DIV       |- !m n. 0 < m ==> m ** SUC n DIV m = m ** n
@@ -205,7 +207,9 @@ open gcdTheory; (* for P_EUCLIDES *)
 
    DIVIDES Theorems:
    DIV_EQUAL_0       |- !m n. 0 < n ==> ((m DIV n = 0) <=> m < n)
-   DIV_POS           |- !m n. 0 < n /\ m divides n ==> 0 < n DIV m
+   DIV_POS           |- !m n. 0 < m /\ m <= n ==> 0 < n DIV m
+   DIV_EQ            |- !x y z. 0 < z ==> (x DIV z = y DIV z <=> x - x MOD z = y - y MOD z)
+   ADD_DIV_EQ        |- !n a b. a MOD n + b < n ==> (a + b) DIV n = a DIV n
    DIV_LE            |- !x y z. 0 < y /\ x <= y * z ==> x DIV y <= z
    DIV_SOLVE         |- !n. 0 < n ==> !x y. (x * n = y) ==> (x = y DIV n)
    DIV_SOLVE_COMM    |- !n. 0 < n ==> !x y. (n * x = y) ==> (x = y DIV n)
@@ -319,14 +323,15 @@ open gcdTheory; (* for P_EUCLIDES *)
                            0 < MOD_MULT_INV p x /\ MOD_MULT_INV p x < p /\ ((MOD_MULT_INV p x * x) MOD p = 1)
 
    FACTOR Theorems:
-   PRIME_FACTOR_PROPER    |- !n. 1 < n /\ ~prime n ==> ?p. prime p /\ p < n /\ (p divides n)
-   FACTOR_OUT_POWER       |- !n p. 0 < n /\ 1 < p /\ p divides n ==>
-                             ?m. (p ** m) divides n /\ ~(p divides (n DIV p ** m))
+   PRIME_FACTOR_PROPER |- !n. 1 < n /\ ~prime n ==> ?p. prime p /\ p < n /\ (p divides n)
+   FACTOR_OUT_POWER    |- !n p. 0 < n /\ 1 < p /\ p divides n ==>
+                                ?m. (p ** m) divides n /\ ~(p divides (n DIV p ** m))
 
    Useful Theorems:
    binomial_add         |- !a b. (a + b) ** 2 = a ** 2 + b ** 2 + 2 * a * b
    binomial_sub         |- !a b. b <= a ==> ((a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b)
    binomial_means       |- !a b. 2 * a * b <= a ** 2 + b ** 2
+   binomial_sub_sum     |- !a b. b <= a ==> (a - b) ** 2 + 2 * a * b = a ** 2 + b ** 2
    binomial_sub_add     |- !a b. b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2)
    difference_of_squares|- !a b. a ** 2 - b ** 2 = (a - b) * (a + b)
    difference_of_squares_alt
@@ -412,6 +417,10 @@ val ZERO_LE_ALL = save_thm("ZERO_LE_ALL", ZERO_LESS_EQ);
 (* Theorem alias *)
 val NOT_ZERO = save_thm("NOT_ZERO", NOT_ZERO_LT_ZERO);
 (* val NOT_ZERO = |- !n. n <> 0 <=> 0 < n: thm *)
+
+(* Extract theorem *)
+Theorem ONE_NOT_0  = DECIDE``1 <> 0``;
+(* val ONE_NOT_0 = |- 1 <> 0: thm *)
 
 (* Theorem: !n. 1 < n ==> 0 < n *)
 (* Proof: by arithmetic. *)
@@ -571,6 +580,19 @@ QED
 (* Proof: by EXP_2, MULT_EQ_0 *)
 Theorem EXP_2_EQ_0:
   !n. (n ** 2 = 0) <=> (n = 0)
+Proof
+  simp[]
+QED
+
+(* LE_MULT_LCANCEL |- !m n p. m * n <= m * p <=> m = 0 \/ n <= p *)
+
+(* Theorem: n <= p ==> m * n <= m * p *)
+(* Proof:
+   If m = 0, this is trivial.
+   If m <> 0, this is true by LE_MULT_LCANCEL.
+*)
+Theorem LE_MULT_LCANCEL_IMP:
+  !m n p. n <= p ==> m * n <= m * p
 Proof
   simp[]
 QED
@@ -2219,25 +2241,63 @@ val DIV_EQUAL_0 = store_thm(
 (* This is an improvement of
    arithmeticTheory.DIV_EQ_0 = |- 1 < b ==> (n DIV b = 0 <=> n < b) *)
 
-(* Theorem: 0 < n /\ m divides n ==> 0 < (n DIV m) *)
+(* Theorem: 0 < m /\ m <= n ==> 0 < n DIV m *)
 (* Proof:
-   Given 0 < n /\ m divides n,
-     ==> 0 < m              by ZERO_DIVIDES, n <> 0, so m <> 0
-     and m <= n             by DIVIDES_LE
-   By contradiction, suppose ~(0 < n DIV m).
-   That means n DIV m = 0   by arithmetic
-   Thus n < m               by DIV_EQUAL_0
-   This contradicts m <= n.
+   Note n = (n DIV m) * m + n MOD m /\
+        n MDO m < m                            by DIVISION, 0 < m
+    ==> n MOD m < n                            by m <= n
+   Thus 0 < (n DIV m) * m                      by inequality
+     so 0 < n DIV m                            by ZERO_LESS_MULT
 *)
-val DIV_POS = store_thm(
-  "DIV_POS",
-  ``!m n. 0 < n /\ m divides n ==> 0 < (n DIV m)``,
+Theorem DIV_POS:
+  !m n. 0 < m /\ m <= n ==> 0 < n DIV m
+Proof
   rpt strip_tac >>
-  `0 < m /\ m <= n` by metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO, DIVIDES_LE] >>
-  spose_not_then strip_assume_tac >>
-  `n DIV m = 0` by decide_tac >>
-  `n < m` by rw[GSYM DIV_EQUAL_0] >>
-  decide_tac);
+  imp_res_tac (DIVISION |> SPEC_ALL) >>
+  first_x_assum (qspec_then `n` strip_assume_tac) >>
+  first_x_assum (qspec_then `n` strip_assume_tac) >>
+  `0 < (n DIV m) * m` by decide_tac >>
+  metis_tac[ZERO_LESS_MULT]
+QED
+
+(* Theorem: 0 < z ==> (x DIV z = y DIV z <=> x - x MOD z = y - y MOD z) *)
+(* Proof:
+   Note x = (x DIV z) * z + x MOD z            by DIVISION
+    and y = (y DIV z) * z + y MDO z            by DIVISION
+        x DIV z = y DIV z
+    <=> (x DIV z) * z = (y DIV z) * z          by EQ_MULT_RCANCEL
+    <=> x - x MOD z = y - y MOD z              by arithmetic
+*)
+Theorem DIV_EQ:
+  !x y z. 0 < z ==> (x DIV z = y DIV z <=> x - x MOD z = y - y MOD z)
+Proof
+  rpt strip_tac >>
+  `x = (x DIV z) * z + x MOD z` by simp[DIVISION] >>
+  `y = (y DIV z) * z + y MOD z` by simp[DIVISION] >>
+  `x DIV z = y DIV z <=> (x DIV z) * z = (y DIV z) * z` by simp[] >>
+  decide_tac
+QED
+
+(* Theorem: a MOD n + b < n ==> (a + b) DIV n = a DIV n *)
+(* Proof:
+   Note 0 < n                                  by a MOD n + b < n
+     a + b
+   = ((a DIV n) * n + a MOD n) + b             by DIVISION, 0 < n
+   = (a DIV n) * n + (a MOD n + b)             by ADD_ASSOC
+
+   If a MOD n + b < n,
+   Then (a + b) DIV n = a DIV n /\
+        (a + b) MOD n = a MOD n + b            by DIVMOD_UNIQ
+*)
+Theorem ADD_DIV_EQ:
+  !n a b. a MOD n + b < n ==> (a + b) DIV n = a DIV n
+Proof
+  rpt strip_tac >>
+  `0 < n` by decide_tac >>
+  `a = (a DIV n) * n + a MOD n` by simp[DIVISION] >>
+  `a + b = (a DIV n) * n + (a MOD n + b)` by decide_tac >>
+  metis_tac[DIVMOD_UNIQ]
+QED
 
 (*
 DIV_LE_MONOTONE  |- !n x y. 0 < n /\ x <= y ==> x DIV n <= y DIV n
@@ -3929,6 +3989,21 @@ Proof
     `_ = a ** 2 + b ** 2 - 2 * a * b` by rw[binomial_sub] >>
     decide_tac
   ]
+QED
+
+(* Theorem: b <= a ==> (a - b) ** 2 + 2 * a * b = a ** 2 + b ** 2 *)
+(* Proof:
+   Note (a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b     by binomial_sub
+    and 2 * a * b <= a ** 2 + b ** 2                   by binomial_means
+   Thus (a - b) ** 2 + 2 * a * b = a ** 2 + b ** 2
+*)
+Theorem binomial_sub_sum:
+  !a b. b <= a ==> (a - b) ** 2 + 2 * a * b = a ** 2 + b ** 2
+Proof
+  rpt strip_tac >>
+  imp_res_tac binomial_sub >>
+  assume_tac (binomial_means |> SPEC_ALL) >>
+  decide_tac
 QED
 
 (* Theorem: b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2) *)

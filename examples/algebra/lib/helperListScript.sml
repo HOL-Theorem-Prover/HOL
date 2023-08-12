@@ -22,6 +22,9 @@ open pred_setTheory listTheory rich_listTheory;
 (* val _ = load "helperNumTheory"; *)
 open helperNumTheory;
 
+(* val _ = load "helperSetTheory"; *)
+open helperSetTheory;
+
 (* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
 (* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
 open arithmeticTheory dividesTheory gcdTheory;
@@ -30,6 +33,7 @@ open arithmeticTheory dividesTheory gcdTheory;
 (* val _ = load "listRangeTheory"; *)
 open listRangeTheory;
 open rich_listTheory; (* for EVERY_REVERSE *)
+open indexedListsTheory; (* for findi_def *)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -67,6 +71,7 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    SNOC_LAST_FRONT  |- !l. l <> [] ==> (l = SNOC (LAST l) (FRONT l))
    MAP_COMPOSE      |- !f g l. MAP f (MAP g l) = MAP (f o g) l
    MAP_SING         |- !f x. MAP f [x] = [f x]
+   MAP_HD           |- !f ls. ls <> [] ==> HD (MAP f ls) = f (HD ls)
    LAST_EL_CONS     |- !h t. t <> [] ==> LAST t = EL (LENGTH t) (h::t)
    FRONT_LENGTH     |- !l. l <> [] ==> (LENGTH (FRONT l) = PRE (LENGTH l))
    FRONT_EL         |- !l n. l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l)
@@ -74,6 +79,7 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    FRONT_NON_NIL    |- !l. 1 < LENGTH l ==> FRONT l <> []
    HEAD_MEM         |- !ls. ls <> [] ==> MEM (HD ls) ls
    LAST_MEM         |- !ls. ls <> [] ==> MEM (LAST ls) ls
+   LAST_EQ_HD       |- !h t. ~MEM h t /\ LAST (h::t) = h <=> t = []
    NIL_NO_MEM       |- !ls. ls = [] <=> !x. ~MEM x ls
    MEM_APPEND_3     |- !l1 x l2 h. MEM h (l1 ++ [x] ++ l2) <=> MEM h (x::(l1 ++ l2))
    DROP_1           |- !h t. DROP 1 (h::t) = t
@@ -95,6 +101,14 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    REVERSE_HD        |- !ls. ls <> [] ==> (HD (REVERSE ls) = LAST ls)
    REVERSE_TL        |- !ls. ls <> [] ==> (TL (REVERSE ls) = REVERSE (FRONT ls))
 
+   List Index:
+   findi_nil         |- !x. findi x [] = 0
+   findi_cons        |- !x h t. findi x (h::t) = if x = h then 0 else 1 + findi x t
+   findi_none        |- !ls x. ~MEM x ls ==> findi x ls = LENGTH ls
+   findi_APPEND      |- !l1 l2 x. findi x (l1 ++ l2) =
+                                  if MEM x l1 then findi x l1 else LENGTH l1 + findi x l2
+   findi_EL_iff      |- !ls x n. ALL_DISTINCT ls /\ MEM x ls /\ n < LENGTH ls ==>
+                                 (x = EL n ls <=> findi x ls = n)
 
    Extra List Theorems:
    EVERY_ELEMENT_PROPERTY  |- !p R. EVERY (\c. c IN R) p ==> !k. k < LENGTH p ==> EL k p IN R
@@ -105,6 +119,8 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    ZIP_MAP_MAP      |- !ls f g. ZIP (MAP f ls,MAP g ls) = MAP (\x. (f x,g x)) ls
    MAP2_MAP_MAP     |- !ls f g1 g2. MAP2 f (MAP g1 ls) (MAP g2 ls) = MAP (\x. f (g1 x) (g2 x)) ls
    EL_APPEND        |- !n l1 l2. EL n (l1 ++ l2) = if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2
+   EL_SPLIT         |- !ls j. j < LENGTH ls ==> ?l1 l2. ls = l1 ++ EL j ls::l2
+   EL_SPLIT_2       |- !ls j k. j < k /\ k < LENGTH ls ==> ?l1 l2 l3. ls = l1 ++ EL j ls::l2 ++ EL k ls::l3
    EL_ALL_PROPERTY  |- !h1 t1 h2 t2 P. (LENGTH (h1::t1) = LENGTH (h2::t2)) /\
                          (!k. k < LENGTH (h1::t1) ==> P (EL k (h1::t1)) (EL k (h2::t2))) ==>
                          P h1 h2 /\ !k. k < LENGTH t1 ==> P (EL k t1) (EL k t2)
@@ -124,7 +140,7 @@ open rich_listTheory; (* for EVERY_REVERSE *)
 
    DROP and TAKE:
    DROP_LENGTH_NIL       |- !l. DROP (LENGTH l) l = []
-   HD_DROP               |- !ls n. n < LENGTH ls ==> HD (DROP n ls) = EL n ls
+   TL_DROP               |- !ls n. n < LENGTH ls ==> TL (DROP n ls) = DROP n (TL ls)
    TAKE_1_APPEND         |- !x y. x <> [] ==> (TAKE 1 (x ++ y) = TAKE 1 x)
    DROP_1_APPEND         |- !x y. x <> [] ==> (DROP 1 (x ++ y) = DROP 1 x ++ y)
    DROP_SUC              |- !n x. DROP (SUC n) x = DROP 1 (DROP n x)
@@ -140,6 +156,13 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    ALL_DISTINCT_TAKE_DROP|- !ls. ALL_DISTINCT ls ==>
                             !k e. MEM e (TAKE k ls) /\ MEM e (DROP k ls) ==> F
    ALL_DISTINCT_SWAP     |- !ls x y. ALL_DISTINCT (x::y::ls) <=> ALL_DISTINCT (y::x::ls)
+   ALL_DISTINCT_LAST_EL_IFF
+                         |- !ls j. ALL_DISTINCT ls /\ ls <> [] /\ j < LENGTH ls ==>
+                                   (EL j ls = LAST ls <=> j + 1 = LENGTH ls)
+   ALL_DISTINCT_FRONT    |- !ls. ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (FRONT ls)
+   ALL_DISTINCT_EL_APPEND
+                         |- !ls l1 l2 j. ALL_DISTINCT ls /\ j < LENGTH ls /\
+                                         ls = l1 ++ [EL j ls] ++ l2 ==> j = LENGTH l1
    ALL_DISTINCT_APPEND_3 |- !l1 x l2. ALL_DISTINCT (l1 ++ [x] ++ l2) <=> ALL_DISTINCT (x::(l1 ++ l2))
    MEM_SPLIT_APPEND_distinct
                          |- !l. ALL_DISTINCT l ==>
@@ -158,6 +181,28 @@ open rich_listTheory; (* for EVERY_REVERSE *)
                              ?k. k < LENGTH ls /\ x = EL k ls /\
                                  ls = TAKE k ls ++ x::DROP (k + 1) ls /\
                                  ~MEM x (TAKE k ls) /\ ~MEM x (DROP (k + 1) ls)
+
+   List Filter:
+   FILTER_EL_IMP       |- !P ls l1 l2 x. (let fs = FILTER P ls
+                                           in ls = l1 ++ x::l2 /\ P x ==> x = EL (LENGTH (FILTER P l1)) fs)
+   FILTER_EL_IFF       |- !P ls l1 l2 x j. (let fs = FILTER P ls
+                                             in ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ j < LENGTH fs ==>
+                                                (x = EL j fs <=> P x /\ j = LENGTH (FILTER P l1)))
+   FILTER_HD           |- !P ls l1 l2 x. ls = l1 ++ x::l2 /\ P x /\ FILTER P l1 = [] ==> x = HD (FILTER P ls)
+   FILTER_HD_IFF       |- !P ls l1 l2 x. ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ P x ==>
+                                         (x = HD (FILTER P ls) <=> FILTER P l1 = [])
+   FILTER_LAST         |- !P ls l1 l2 x. ls = l1 ++ x::l2 /\ P x /\ FILTER P l2 = [] ==> x = LAST (FILTER P ls)
+   FILTER_LAST_IFF     |- !P ls l1 l2 x. ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ P x ==>
+                                         (x = LAST (FILTER P ls) <=> FILTER P l2 = [])
+   FILTER_EL_NEXT      |- !P ls l1 l2 l3 x y. (let fs = FILTER P ls; j = LENGTH (FILTER P l1)
+                                                in ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y /\ FILTER P l2 = [] ==>
+                                                   x = EL j fs /\ y = EL (j + 1) fs)
+   FILTER_EL_NEXT_IFF  |- !P ls l1 l2 l3 x y. (let fs = FILTER P ls; j = LENGTH (FILTER P l1)
+                                                in ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
+                                                   (x = EL j fs /\ y = EL (j + 1) fs <=> FILTER P l2 = []))
+   FILTER_EL_NEXT_IDX  |- !P ls l1 l2 l3 x y. (let fs = FILTER P ls
+                                                in ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
+                                                   (findi y fs = 1 + findi x fs <=> FILTER P l2 = []))
 
    List Rotation:
    rotate_def              |- !n l. rotate n l = DROP n l ++ TAKE n l
@@ -325,6 +370,34 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    PROD_POS_ALT      |- !l. POSITIVE l ==> 0 < PROD l
    PROD_SQUARING_LIST|- !m n. PROD (GENLIST (\j. n ** 2 ** j) m) = n ** (2 ** m - 1)
 
+   Range Conjunction and Disjunction:
+   every_range_sing    |- !a j. a <= j /\ j <= a <=> (j = a)
+   every_range_cons    |- !f a b. a <= b ==>
+                                  ((!j. a <= j /\ j <= b ==> f j) <=>
+                                   f a /\ !j. a + 1 <= j /\ j <= b ==> f j)
+   every_range_split_head
+                       |- !f a b. a <= b ==>
+                                  ((!j. PRE a <= j /\ j <= b ==> f j) <=>
+                                   f (PRE a) /\ !j. a <= j /\ j <= b ==> f j)
+   every_range_split_last
+                       |- !f a b. a <= b ==>
+                                  ((!j. a <= j /\ j <= SUC b ==> f j) <=>
+                                    f (SUC b) /\ !j. a <= j /\ j <= b ==> f j)
+   every_range_less_ends
+                       |- !f a b. a <= b ==>
+                                  ((!j. a <= j /\ j <= b ==> f j) <=>
+                                   f a /\ f b /\ !j. a < j /\ j < b ==> f j)
+   every_range_span_max|- !f a b. a < b /\ f a /\ ~f b ==>
+                                  ?m. a <= m /\ m < b /\
+                                      (!j. a <= j /\ j <= m ==> f j) /\ ~f (SUC m)
+   every_range_span_min|- !f a b. a < b /\ ~f a /\ f b ==>
+                                  ?m. a < m /\ m <= b /\
+                                      (!j. m <= j /\ j <= b ==> f j) /\ ~f (PRE m)
+   exists_range_sing   |- !a. ?j. a <= j /\ j <= a <=> (j = a)
+   exists_range_cons   |- !f a b. a <= b ==>
+                                  ((?j. a <= j /\ j <= b /\ f j) <=>
+                                   f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)
+
    List Range:
    listRangeINC_to_LHI       |- !m n. [m .. n] = [m ..< SUC n]
    listRangeINC_SET          |- !n. set [1 .. n] = IMAGE SUC (count n)
@@ -350,6 +423,7 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    listRangeINC_1_n          |- !n. [1 .. n] = GENLIST SUC n
    listRangeINC_MAP          |- !f n. MAP f [1 .. n] = GENLIST (f o SUC) n
    listRangeINC_SUM_MAP      |- !f n. SUM (MAP f [1 .. SUC n]) = f (SUC n) + SUM (MAP f [1 .. n])
+   listRangeINC_SPLIT        |- !m n j. m < j /\ j <= n ==> [m .. n] = [m .. j - 1] ++ j::[j + 1 .. n]
 
    listRangeLHI_to_INC       |- !m n. [m ..< n + 1] = [m .. n]
    listRangeLHI_SET          |- !n. set [0 ..< n] = count n
@@ -372,6 +446,16 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    listRangeLHI_0_n          |- !n. [0 ..< n] = GENLIST I n
    listRangeLHI_MAP          |- !f n. MAP f [0 ..< n] = GENLIST f n
    listRangeLHI_SUM_MAP      |- !f n. SUM (MAP f [0 ..< SUC n]) = f n + SUM (MAP f [0 ..< n])
+   listRangeLHI_SPLIT        |- !m n j. m <= j /\ j < n ==> [m ..< n] = [m ..< j] ++ j::[j + 1 ..< n]
+
+   listRangeINC_ALL_DISTINCT       |- !m n. ALL_DISTINCT [m .. n]
+   listRangeINC_EVERY_split_head   |- !P m n. m <= n ==> (EVERY P [m - 1 .. n] <=> P (m - 1) /\ EVERY P [m .. n])
+   listRangeINC_EVERY_split_last   |- !P m n. m <= n ==> (EVERY P [m .. n + 1] <=> P (n + 1) /\ EVERY P [m .. n])
+   listRangeINC_EVERY_less_last    |- !P m n. m <= n ==> (EVERY P [m .. n] <=> P n /\ EVERY P [m ..< n])
+   listRangeINC_EVERY_span_max     |- !P m n. m < n /\ P m /\ ~P n ==>
+                                              ?k. m <= k /\ k < n /\ EVERY P [m .. k] /\ ~P (SUC k)
+   listRangeINC_EVERY_span_min     |- !P m n. m < n /\ ~P m /\ P n ==>
+                                              ?k. m < k /\ k <= n /\ EVERY P [k .. n] /\ ~P (PRE k)
 
    List Summation and Product:
    sum_1_to_n_eq_tri_n       |- !n. SUM [1 .. n] = tri n
@@ -442,12 +526,20 @@ open rich_listTheory; (* for EVERY_REVERSE *)
                        !lx ly lz. SUM (MAP3 f lx ly lz) <= f (MAX_LIST lx) (MAX_LIST ly) (MAX_LIST lz) * LENGTH (MAP3 f lx ly lz)
 
    Increasing and decreasing list bounds:
-   GENLIST_MONO_INC   |- !f n. MONO f ==> MONO_INC (GENLIST f n)
-   GENLIST_MONO_DEC   |- !f n. RMONO f ==> MONO_DEC (GENLIST f n)
-   MAX_LIST_MONO_INC  |- !ls. ls <> [] /\ MONO_INC ls ==> MAX_LIST ls = LAST ls
-   MAX_LIST_MONO_DEC  |- !ls. ls <> [] /\ MONO_DEC ls ==> MAX_LIST ls = HD ls
-   MIN_LIST_MONO_INC  |- !ls. ls <> [] /\ MONO_INC ls ==> MIN_LIST ls = HD ls
-   MIN_LIST_MONO_DEC  |- !ls. ls <> [] /\ MONO_DEC ls ==> MIN_LIST ls = LAST ls
+   MONO_INC_NIL        |- MONO_INC []
+   MONO_INC_CONS       |- !h t. MONO_INC (h::t) ==> MONO_INC t
+   MONO_INC_HD         |- !h t x. MONO_INC (h::t) /\ MEM x t ==> h <= x
+   MONO_DEC_NIL        |- MONO_DEC []
+   MONO_DEC_CONS       |- !h t. MONO_DEC (h::t) ==> MONO_DEC t
+   MONO_DEC_HD         |- !h t x. MONO_DEC (h::t) /\ MEM x t ==> x <= h
+   GENLIST_MONO_INC    |- !f n. MONO f ==> MONO_INC (GENLIST f n)
+   GENLIST_MONO_DEC    |- !f n. RMONO f ==> MONO_DEC (GENLIST f n)
+   MAX_LIST_MONO_INC   |- !ls. ls <> [] /\ MONO_INC ls ==> MAX_LIST ls = LAST ls
+   MAX_LIST_MONO_DEC   |- !ls. ls <> [] /\ MONO_DEC ls ==> MAX_LIST ls = HD ls
+   MIN_LIST_MONO_INC   |- !ls. ls <> [] /\ MONO_INC ls ==> MIN_LIST ls = HD ls
+   MIN_LIST_MONO_DEC   |- !ls. ls <> [] /\ MONO_DEC ls ==> MIN_LIST ls = LAST ls
+   listRangeINC_MONO_INC  |- !m n. MONO_INC [m .. n]
+   listRangeLHI_MONO_INC  |- !m n. MONO_INC [m ..< n]
 
    List Dilation:
 
@@ -490,15 +582,6 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    DILATE_0_EQ_NIL  |- !l e n. (DILATE e 0 n l = []) <=> (l = [])
    DILATE_0_LAST    |- !l e n. LAST (DILATE e 0 n l) = LAST l
 
-   Range Conjunction and Disjunction:
-   every_range_sing    |- !a j. a <= j /\ j <= a <=> (j = a)
-   every_range_cons    |- !f a b. a <= b ==>
-                                    ((!j. a <= j /\ j <= b ==> f j) <=>
-                                      f a /\ !j. a + 1 <= j /\ j <= b ==> f j)
-   exists_range_sing   |- !a. ?j. a <= j /\ j <= a <=> (j = a)
-   exists_range_cons   |- !f a b. a <= b ==>
-                                    ((?j. a <= j /\ j <= b /\ f j) <=>
-                                     f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -632,6 +715,22 @@ val MAP_SING = store_thm(
   ``!f x. MAP f [x] = [f x]``,
   rw[]);
 
+(* listTheory.MAP_TL  |- !l f. MAP f (TL l) = TL (MAP f l) *)
+
+(* Theorem: ls <> [] ==> HD (MAP f ls) = f (HD ls) *)
+(* Proof:
+   Note 0 < LENGTH ls              by LENGTH_NON_NIL
+        HD (MAP f ls)
+      = EL 0 (MAP f ls)            by EL
+      = f (EL 0 ls)                by EL_MAP, 0 < LENGTH ls
+      = f (HD ls)                  by EL
+*)
+Theorem MAP_HD:
+  !ls f. ls <> [] ==> HD (MAP f ls) = f (HD ls)
+Proof
+  metis_tac[EL_MAP, EL, LENGTH_NON_NIL]
+QED
+
 
 (*
 LAST_EL  |- !ls. ls <> [] ==> LAST ls = EL (PRE (LENGTH ls)) ls
@@ -743,6 +842,27 @@ val LAST_MEM = store_thm(
   Induct >-
   decide_tac >>
   (Cases_on `ls = []` >> rw[LAST_DEF]));
+
+(* Idea: the last equals the head when there is no tail. *)
+
+(* Theorem: ~MEM h t /\ LAST (h::t) = h <=> t = [] *)
+(* Proof:
+   If part: ~MEM h t /\ LAST (h::t) = h ==> t = []
+      By contradiction, suppose t <> [].
+      Then h = LAST (h::t) = LAST t            by LAST_CONS_cond, t <> []
+        so MEM h t                             by LAST_MEM
+      This contradicts ~MEM h t.
+   Only-if part: t = [] ==> ~MEM h t /\ LAST (h::t) = h
+      Note MEM h [] = F, so ~MEM h [] = T      by MEM
+       and LAST [h] = h                        by LAST_CONS
+*)
+Theorem LAST_EQ_HD:
+  !h t. ~MEM h t /\ LAST (h::t) = h <=> t = []
+Proof
+  rw[EQ_IMP_THM] >>
+  spose_not_then strip_assume_tac >>
+  metis_tac[LAST_CONS_cond, LAST_MEM]
+QED
 
 (* Theorem: ls = [] <=> !x. ~MEM x ls *)
 (* Proof:
@@ -980,6 +1100,107 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
+(* List Index.                                                               *)
+(* ------------------------------------------------------------------------- *)
+
+(* Extract theorems for findi *)
+
+Theorem findi_nil = findi_def |> CONJUNCT1;
+(* val findi_nil = |- !x. findi x [] = 0: thm *)
+
+Theorem findi_cons = findi_def |> CONJUNCT2;
+(* val findi_cons = |- !x h t. findi x (h::t) = if x = h then 0 else 1 + findi x t: thm *)
+
+(* Theorem: ~MEM x ls ==> findi x ls = LENGTH ls *)
+(* Proof:
+   By induction on ls.
+   Base: ~MEM x [] ==> findi x [] = LENGTH []
+         findi x []
+       = 0                         by findi_nil
+       = LENGTH []                 by LENGTH
+   Step:  ~MEM x ls ==> findi x ls = LENGTH ls ==>
+         !h. ~MEM x (h::ls) ==> findi x (h::ls) = LENGTH (h::ls)
+       Note ~MEM x (h::ls)
+        ==> x <> h /\ ~MEM x ls    by MEM
+       Thus findi x (h::ls)
+          = 1 + findi x ls         by findi_cons
+          = 1 + LENGTH ls          by induction hypothesis
+          = SUC (LENGTH ls)        by ADD1
+          = LENGTH (h::ls)         by LENGTH
+*)
+Theorem findi_none:
+  !ls x. ~MEM x ls ==> findi x ls = LENGTH ls
+Proof
+  rpt strip_tac >>
+  Induct_on `ls` >-
+  simp[findi_nil] >>
+  simp[findi_cons]
+QED
+
+(* Theorem: findi x (l1 ++ l2) = if MEM x l1 then findi x l1 else LENGTH l1 + findi x l2 *)
+(* Proof:
+   By induction on l1.
+   Base: findi x ([] ++ l2) = if MEM x [] then findi x [] else LENGTH [] + findi x l2
+      Note MEM x [] = F            by MEM
+        so findi x ([] ++ l2)
+         = findi x l2              by APPEND
+         = 0 + findi x l2          by ADD
+         = LENGTH [] + findi x l2  by LENGTH
+   Step: findi x (l1 ++ l2) = if MEM x l1 then findi x l1 else LENGTH l1 + findi x l2 ==>
+         !h. findi x (h::l1 ++ l2) = if MEM x (h::l1) then findi x (h::l1)
+                                     else LENGTH (h::l1) + findi x l2
+
+      Note findi x (h::l1 ++ l2)
+         = if x = h then 0 else 1 + findi x (l1 ++ l2)     by findi_cons
+
+      Case: MEM x (h::l1).
+      To show: findi x (h::l1 ++ l2) = findi x (h::l1).
+      Note MEM x (h::l1)
+       <=> x = h \/ MEM x l1       by MEM
+      If x = h,
+           findi x (h::l1 ++ l2)
+         = 0 = findi x (h::l1)     by findi_cons
+      If x <> h, then MEM x l1.
+           findi x (h::l1 ++ l2)
+         = 1 + findi x (l1 ++ l2)  by x <> h
+         = 1 + findi x l1          by induction hypothesis
+         = findi x (h::l1)         by findi_cons
+
+      Case: ~MEM x (h::l1).
+      To show: findi x (h::l1 ++ l2) = LENGTH (h::l1) + findi x l2.
+      Note ~MEM x (h::l1)
+       <=> x <> h /\ ~MEM x l1     by MEM
+           findi x (h::l1 ++ l2)
+         = 1 + findi x (l1 ++ l2)  by x <> h
+         = 1 + (LENGTH l1 + findi x l2)        by induction hypothesis
+         = (1 + LENGTH l1) + findi x l2        by arithmetic
+         = LENGTH (h::l1) + findi x l2         by LENGTH
+*)
+Theorem findi_APPEND:
+  !l1 l2 x. findi x (l1 ++ l2) = if MEM x l1 then findi x l1 else LENGTH l1 + findi x l2
+Proof
+  rpt strip_tac >>
+  Induct_on `l1` >-
+  simp[] >>
+  (rw[findi_cons] >> fs[])
+QED
+
+(* Theorem: ALL_DISTINCT ls /\ MEM x ls /\ n < LENGTH ls ==> (x = EL n ls <=> findi x ls = n) *)
+(* Proof:
+   If part: x = EL n ls ==> findi x ls = n
+      Given ALL_DISTINCT ls /\ n < LENGTH ls
+      This is true             by findi_EL
+   Only-if part: findi x ls = n ==> x = EL n ls
+      Given MEM x ls
+      This is true             by EL_findi
+*)
+Theorem findi_EL_iff:
+  !ls x n. ALL_DISTINCT ls /\ MEM x ls /\ n < LENGTH ls ==> (x = EL n ls <=> findi x ls = n)
+Proof
+  metis_tac[findi_EL, EL_findi]
+QED
+
+(* ------------------------------------------------------------------------- *)
 (* Extra List Theorems                                                       *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1090,6 +1311,55 @@ val EL_APPEND = store_thm(
   "EL_APPEND",
   ``!n l1 l2. EL n (l1 ++ l2) = if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2``,
   rw[EL_APPEND1, EL_APPEND2]);
+
+(* Theorem: j < LENGTH ls ==> ?l1 l2. ls = l1 ++ (EL j ls)::l2 *)
+(* Proof:
+   Let x = EL j ls.
+   Then MEM x ls                   by EL_MEM, j < LENGTH ls
+     so ?l1 l2. l = l1 ++ x::l2    by MEM_SPLIT
+   Pick these l1 and l2.
+*)
+Theorem EL_SPLIT:
+  !ls j. j < LENGTH ls ==> ?l1 l2. ls = l1 ++ (EL j ls)::l2
+Proof
+  metis_tac[EL_MEM, MEM_SPLIT]
+QED
+
+(* Theorem: j < k /\ k < LENGTH ls ==>
+            ?l1 l2 l3. ls = l1 ++ (EL j ls)::l2 ++ (EL k ls)::l3 *)
+(* Proof:
+   Let a = EL j ls,
+       b = EL k ls.
+   Note j < LENGTH ls          by j < k, k < LENGTH ls
+     so MEM a ls /\ MEM b ls   by MEM_EL
+
+    Now ls
+      = TAKE k ls ++ DROP k ls                 by TAKE_DROP
+      = TAKE k ls ++ b::(DROP (k+1) ls)        by DROP_EL_CONS
+    Let lt = TAKE k ls.
+    Then LENGTH lt = k                         by LENGTH_TAKE
+     and a = EL j lt                           by EL_TAKE
+     and lt
+       = TAKE j lt ++ DROP j lt                by TAKE_DROP
+       = TAKE j lt ++ a::(DROP (j+1) lt)       by DROP_EL_CONS
+    Pick l1 = TAKE j lt, l2 = DROP (j+1) lt, l3 = DROP (k+1) ls.
+*)
+Theorem EL_SPLIT_2:
+  !ls j k. j < k /\ k < LENGTH ls ==>
+           ?l1 l2 l3. ls = l1 ++ (EL j ls)::l2 ++ (EL k ls)::l3
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `a = EL j ls` >>
+  qabbrev_tac `b = EL k ls` >>
+  `j < LENGTH ls` by decide_tac >>
+  `MEM a ls /\ MEM b ls` by metis_tac[MEM_EL] >>
+  `ls = TAKE k ls ++ b::(DROP (k+1) ls)` by metis_tac[TAKE_DROP, DROP_EL_CONS] >>
+  qabbrev_tac `lt = TAKE k ls` >>
+  `LENGTH lt = k` by simp[Abbr`lt`] >>
+  `a = EL j lt` by simp[EL_TAKE, Abbr`a`, Abbr`lt`] >>
+  `lt = TAKE j lt ++ a::(DROP (j+1) lt)` by metis_tac[TAKE_DROP, DROP_EL_CONS] >>
+  metis_tac[]
+QED
 
 (* Theorem: (LENGTH (h1::t1) = LENGTH (h2::t2)) /\
             (!k. k < LENGTH (h1::t1) ==> P (EL k (h1::t1)) (EL k (h2::t2))) ==>
@@ -1325,16 +1595,29 @@ val DROP_LENGTH_NIL = store_thm(
   ``!l. DROP (LENGTH l) l = []``,
   Induct >> rw[]);
 
-(* Theorem: n < LENGTH ls ==> (HD (DROP n ls) = EL n ls) *)
+(* listTheory.HD_DROP  |- !n l. n < LENGTH l ==> HD (DROP n l) = EL n l *)
+
+(* Theorem: n < LENGTH ls ==> TL (DROP n ls) = DROP n (TL ls) *)
 (* Proof:
-     HD (DROP n ls)
-   = HD (EL n ls :: DROP (n + 1) ls)    by DROP_EL_CONS, n < LENGTH ls
-   = EL n ls
+   Note 0 < LENGTH ls, so ls <> []             by LENGTH_NON_NIL
+     so ?h t. ls = h::t                        by NOT_NIL_CONS
+        TL (DROP n ls)
+      = TL (EL n ls::DROP (SUC n) ls)          by DROP_CONS_EL
+      = DROP (SUC n) ls                        by TL
+      = DROP (SUC n) (h::t)                    by above
+      = DROP n t                               by DROP
+      = DROP n (TL ls)                         by TL
 *)
-val HD_DROP = store_thm(
-  "HD_DROP",
-  ``!ls n. n < LENGTH ls ==> (HD (DROP n ls) = EL n ls)``,
-  rw[DROP_EL_CONS]);
+Theorem TL_DROP:
+  !ls n. n < LENGTH ls ==> TL (DROP n ls) = DROP n (TL ls)
+Proof
+  rpt strip_tac >>
+  `0 < LENGTH ls` by decide_tac >>
+  `TL (DROP n ls) = TL (EL n ls::DROP (SUC n) ls)` by simp[DROP_CONS_EL] >>
+  `_ = DROP (SUC n) ls` by simp[] >>
+  `_ = DROP (SUC n) (HD ls::TL ls)` by metis_tac[LIST_HEAD_TAIL] >>
+  simp[]
+QED
 
 (* Theorem: x <> [] ==> (TAKE 1 (x ++ y) = TAKE 1 x) *)
 (* Proof:
@@ -1719,6 +2002,53 @@ Proof
   metis_tac[]
 QED
 
+(* Theorem: ALL_DISTINCT ls /\ ls <> [] /\ j < LENGTH ls ==> (EL j ls = LAST ls <=> j + 1 = LENGTH ls) *)
+(* Proof:
+   Note 0 < LENGTH ls                          by LENGTH_EQ_0
+       EL j ls = LAST ls
+   <=> EL j ls = EL (PRE (LENGTH ls)) ls       by LAST_EL
+   <=> j = PRE (LENGTH ls)                     by ALL_DISTINCT_EL_IMP, j < LENGTH ls
+   <=> j + 1 = LENGTH ls                       by SUC_PRE, ADD1, 0 < LENGTH ls
+*)
+Theorem ALL_DISTINCT_LAST_EL_IFF:
+  !ls j. ALL_DISTINCT ls /\ ls <> [] /\ j < LENGTH ls ==> (EL j ls = LAST ls <=> j + 1 = LENGTH ls)
+Proof
+  rw[LAST_EL] >>
+  `0 < LENGTH ls` by metis_tac[LENGTH_EQ_0, NOT_ZERO] >>
+  `PRE (LENGTH ls) + 1 = LENGTH ls` by decide_tac >>
+  `EL j ls = EL (PRE (LENGTH ls)) ls <=> j = PRE (LENGTH ls)` by fs[ALL_DISTINCT_EL_IMP] >>
+  simp[]
+QED
+
+(* Theorem: ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (FRONT ls) *)
+(* Proof:
+   Let k = LENGTH ls.
+       ALL_DISTINCT ls
+   ==> ALL_DISTINCT (TAKE (k - 1) ls)          by ALL_DISTINCT_TAKE
+   ==> ALL_DISTINCT (FRONT ls)                 by FRONT_BY_TAKE, ls <> []
+*)
+Theorem ALL_DISTINCT_FRONT:
+  !ls. ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (FRONT ls)
+Proof
+  simp[ALL_DISTINCT_TAKE, FRONT_BY_TAKE]
+QED
+
+(* Theorem: ALL_DISTINCT ls /\ j < LENGTH ls /\ ls = l1 ++ [EL j ls] ++ l2 ==> j = LENGTH l1 *)
+(* Proof:
+   Note EL j ls = EL (LENGTH l1) ls            by el_append3
+    and LENGTH l1 < LENGTH ls                  by LENGTH_APPEND
+     so j = LENGTH l1                          by ALL_DISTINCT_EL_IMP
+*)
+Theorem ALL_DISTINCT_EL_APPEND:
+  !ls l1 l2 j. ALL_DISTINCT ls /\ j < LENGTH ls /\ ls = l1 ++ [EL j ls] ++ l2 ==> j = LENGTH l1
+Proof
+  rpt strip_tac >>
+  `EL j ls = EL (LENGTH l1) ls` by metis_tac[el_append3] >>
+  `LENGTH ls = LENGTH l1 + 1 + LENGTH l2` by metis_tac[LENGTH_APPEND, LENGTH_SING] >>
+  `LENGTH l1 < LENGTH ls` by decide_tac >>
+  metis_tac[ALL_DISTINCT_EL_IMP]
+QED
+
 (* Theorem: ALL_DISTINCT (l1 ++ [x] ++ l2) <=> ALL_DISTINCT (x::(l1 ++ l2)) *)
 (* Proof:
    By induction on l1.
@@ -1916,6 +2246,369 @@ Proof
     fs[],
     fs[EL_MEM]
   ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* List Filter.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: the j-th element of FILTER must have j elements filtered beforehand. *)
+
+(* Theorem: let fs = FILTER P ls in ls = l1 ++ x::l2 /\ P x ==>
+            x = EL (LENGTH (FILTER P l1)) fs *)
+(* Proof:
+   Let l3 = x::l2, then ls = l1 ++ l3.
+   Let j = LENGTH (FILTER P l1).
+     EL j fs
+   = EL j (FILTER P ls)                        by given
+   = EL j (FILTER P l1 ++ FILTER P l3)         by FILTER_APPEND_DISTRIB
+   = EL 0 (FILTER P l3)                        by EL_APPEND, j = LENGTH (FILTER P l1)
+   = EL 0 (FILTER P (x::l2))                   by notation
+   = EL 0 (x::FILTER P l2)                     by FILTER, P x
+   = x                                         by HD
+*)
+Theorem FILTER_EL_IMP:
+  !P ls l1 l2 x. let fs = FILTER P ls in ls = l1 ++ x::l2 /\ P x ==>
+                 x = EL (LENGTH (FILTER P l1)) fs
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `l3 = x::l2` >>
+  qabbrev_tac `j = LENGTH (FILTER P l1)` >>
+  `EL j fs = EL j (FILTER P l1 ++ FILTER P l3)` by simp[FILTER_APPEND_DISTRIB, Abbr`fs`] >>
+  `_ = EL 0 (FILTER P (x::l2))` by simp[EL_APPEND, Abbr`j`, Abbr`l3`] >>
+  fs[]
+QED
+
+(* Theorem: let fs = FILTER P ls in ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ j < LENGTH fs ==>
+            (x = EL j fs <=> P x /\ j = LENGTH (FILTER P l1)) *)
+(* Proof:
+   Let k = LENGTH (FILTER P l1).
+   If part: j < LENGTH fs /\ x = EL j fs ==> P x /\ j = k
+      Note j < LENGTH fs /\ x = EL j fs        by given
+       ==> MEM x fs                            by MEM_EL
+       ==> P x                                 by MEM_FILTER
+      Thus x = EL k fs                         by FILTER_EL_IMP
+      Let l3 = x::l2, then ls = l1 ++ l3.
+      Then FILTER P l3 = x :: FILTER P l2      by FILTER
+        or FILTER P l3 <> []                   by NOT_NIL_CONS
+        or LENGTH (FILTER P l3) <> 0           by LENGTH_EQ_0, [1]
+
+           LENGTH fs
+         = LENGTH (FILTER P ls)                by notation
+         = LENGTH (FILTER P l1 ++ FILTER P l3) by FILTER_APPEND_DISTRIB
+         = k + LENGTH (FILTER P l3)            by LENGTH_APPEND
+      Thus k < LENGTH fs                       by [1]
+
+      Note ALL_DISTINCT ls
+       ==> ALL_DISTINCT fs                     by FILTER_ALL_DISTINCT
+      With x = EL j fs = EL k fs               by above
+       and j < LENGTH fs /\ k < LENGTH fs      by above
+       ==>           j = k                     by ALL_DISTINCT_EL_IMP
+
+   Only-if part: j < LENGTH fs /\ P x /\ j = k ==> x = EL j fs
+      This is true                             by FILTER_EL_IMP
+*)
+Theorem FILTER_EL_IFF:
+  !P ls l1 l2 x j. let fs = FILTER P ls in ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ j < LENGTH fs ==>
+                   (x = EL j fs <=> P x /\ j = LENGTH (FILTER P l1))
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `k = LENGTH (FILTER P l1)` >>
+  simp[EQ_IMP_THM] >>
+  ntac 2 strip_tac >| [
+    `MEM x fs` by metis_tac[MEM_EL] >>
+    `P x` by fs[MEM_FILTER, Abbr`fs`] >>
+    qabbrev_tac `ls = l1 ++ x::l2` >>
+    `EL j fs = EL k fs` by metis_tac[FILTER_EL_IMP] >>
+    qabbrev_tac `l3 = x::l2` >>
+    `FILTER P l3 = x :: FILTER P l2` by simp[Abbr`l3`] >>
+    `LENGTH (FILTER P l3) <> 0` by fs[] >>
+    `fs = FILTER P l1 ++ FILTER P l3` by fs[FILTER_APPEND_DISTRIB, Abbr`fs`, Abbr`ls`] >>
+    `LENGTH fs = k + LENGTH (FILTER P l3)` by fs[Abbr`k`] >>
+    `k < LENGTH fs` by decide_tac >>
+    `ALL_DISTINCT fs` by simp[FILTER_ALL_DISTINCT, Abbr`fs`] >>
+    metis_tac[ALL_DISTINCT_EL_IMP],
+    metis_tac[FILTER_EL_IMP]
+  ]
+QED
+
+(* Derive theorems for head = (EL 0 fs) *)
+
+(* Theorem: ls = l1 ++ x::l2 /\ P x /\ FILTER P l1 = [] ==> x = HD (FILTER P ls) *)
+(* Proof:
+   Note FILTER P l1 = []           by given
+    ==> LENGTH (FILTER P l1) = 0   by LENGTH
+   Thus x = EL 0 (FILTER P ls)     by FILTER_EL_IMP
+          = HD (FILTER P ls)       by EL
+*)
+Theorem FILTER_HD:
+  !P ls l1 l2 x. ls = l1 ++ x::l2 /\ P x /\ FILTER P l1 = [] ==> x = HD (FILTER P ls)
+Proof
+  metis_tac[LENGTH, FILTER_EL_IMP, EL]
+QED
+
+(* Theorem: ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ P x ==>
+            (x = HD (FILTER P ls) <=> FILTER P l1 = []) *)
+(* Proof:
+   Let fs = FILTER P ls.
+   Note MEM x ls                   by MEM_APPEND, MEM
+    and P x ==> fs <> []           by MEM_FILTER, NIL_NO_MEM
+     so 0 < LENGTH fs              by LENGTH_EQ_0
+   Thus x = HD fs
+          = EL 0 fs                by EL
+    <=> LENGTH (FILTER P l1) = 0   by FILTER_EL_IFF
+    <=> FILTER P l1 = []           by LENGTH_EQ_0
+*)
+Theorem FILTER_HD_IFF:
+  !P ls l1 l2 x. ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ P x ==>
+                 (x = HD (FILTER P ls) <=> FILTER P l1 = [])
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `fs = FILTER P ls` >>
+  `MEM x ls` by metis_tac[MEM_APPEND, MEM] >>
+  `MEM x fs` by fs[MEM_FILTER, Abbr`fs`] >>
+  `0 < LENGTH fs` by metis_tac[NIL_NO_MEM, LENGTH_EQ_0, NOT_ZERO] >>
+  metis_tac[FILTER_EL_IFF, EL, LENGTH_EQ_0]
+QED
+
+(* Derive theorems for last = (EL (LENGTH fs - 1) fs) *)
+
+(* Theorem: ls = l1 ++ x::l2 /\ P x /\ FILTER P l2 = [] ==>
+            x = LAST (FILTER P ls) *)
+(* Proof:
+   Let fs = FILTER P ls,
+        k = LENGTH fs.
+   Note MEM x ls                   by MEM_APPEND, MEM
+    and P x ==> fs <> []           by MEM_FILTER, NIL_NO_MEM
+     so 0 < LENGTH fs = k          by LENGTH_EQ_0
+
+   Note FILTER P l2 = []           by given
+    ==> LENGTH (FILTER P l2) = 0   by LENGTH
+    k = LENGTH fs
+      = LENGTH (FILTER P ls)       by notation
+      = LENGTH (FILTER P l1) + 1   by FILTER_APPEND_DISTRIB, ONE
+     or LENGTH (FILTER P l1) = PRE k
+   Thus x = EL (PRE k) fs          by FILTER_EL_IMP
+          = LAST fs                by LAST_EL, fs <> []
+*)
+Theorem FILTER_LAST:
+  !P ls l1 l2 x. ls = l1 ++ x::l2 /\ P x /\ FILTER P l2 = [] ==>
+                 x = LAST (FILTER P ls)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `fs = FILTER P ls` >>
+  qabbrev_tac `k = LENGTH fs` >>
+  `MEM x ls` by metis_tac[MEM_APPEND, MEM] >>
+  `MEM x fs` by fs[MEM_FILTER, Abbr`fs`] >>
+  `fs <> [] /\ 0 < k` by metis_tac[NIL_NO_MEM, LENGTH_EQ_0, NOT_ZERO] >>
+  `k = LENGTH (FILTER P l1) + 1` by fs[FILTER_APPEND_DISTRIB, Abbr`k`, Abbr`fs`] >>
+  `LENGTH (FILTER P l1) = PRE k` by decide_tac >>
+  metis_tac[FILTER_EL_IMP, LAST_EL]
+QED
+
+(* Theorem: ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ P x ==>
+            (x = LAST (FILTER P ls) <=> FILTER P l2 = []) *)
+(* Proof:
+   Let fs = FILTER P ls,
+        k = LENGTH fs,
+        j = LENGTH (FILTER P l1).
+   Note MEM x ls                   by MEM_APPEND, MEM
+    and P x ==> fs <> []           by MEM_FILTER, NIL_NO_MEM
+     so 0 < LENGTH fs = k          by LENGTH_EQ_0
+    and PRE k < k                  by arithmetic
+
+    k = LENGTH fs
+      = LENGTH (FILTER P ls)                   by notation
+      = j + 1 + LENGTH (FILTER P l2)           by FILTER_APPEND_DISTRIB, ONE
+     so j = PRE k <=> LENGTH (FILTER P l2) = 0 by arithmetic
+
+   Thus x = LAST fs
+          = EL (PRE k) fs          by LAST_EL
+    <=> PRE k = j                  by FILTER_EL_IFF
+    <=> LENGTH (FILTER P l2) = 0   by above
+    <=> FILTER P l2 = []           by LENGTH_EQ_0
+*)
+Theorem FILTER_LAST_IFF:
+  !P ls l1 l2 x. ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ P x ==>
+                 (x = LAST (FILTER P ls) <=> FILTER P l2 = [])
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `fs = FILTER P ls` >>
+  qabbrev_tac `k = LENGTH fs` >>
+  qabbrev_tac `j = LENGTH (FILTER P l1)` >>
+  `MEM x ls` by metis_tac[MEM_APPEND, MEM] >>
+  `MEM x fs` by fs[MEM_FILTER, Abbr`fs`] >>
+  `fs <> [] /\ 0 < k` by metis_tac[NIL_NO_MEM, LENGTH_EQ_0, NOT_ZERO] >>
+  `k = j + 1 + LENGTH (FILTER P l2)` by fs[FILTER_APPEND_DISTRIB, Abbr`fs`, Abbr`k`, Abbr`j`] >>
+  `PRE k < k /\ (j = PRE k <=> LENGTH (FILTER P l2) = 0)` by decide_tac >>
+  metis_tac[FILTER_EL_IFF, LAST_EL, LENGTH_EQ_0]
+QED
+
+(* Idea: for FILTER over a range, the range between successive filter elements is filtered. *)
+
+(* Theorem: let fs = FILTER P ls; j = LENGTH (FILTER P l1) in
+            ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y /\ FILTER P l2 = [] ==>
+            x = EL j fs /\ y = EL (j + 1) fs *)
+(* Proof:
+   Let l4 = y::l3, then
+       ls = l1 ++ x::l2 ++ l4
+          = l1 ++ x::(l2 ++ l4)                by APPEND_ASSOC_CONS
+   Thus x = EL j fs                            by FILTER_EL_IMP
+
+   Now let l5 = l1 ++ x::l2,
+           k = LENGTH (FILTER P l5).
+   Then ls = l5 ++ y::l3                       by APPEND_ASSOC
+    and y = EL k fs                            by FILTER_EL_IMP
+
+   Note FILTER P l5
+      = FILTER P l1 ++ FILTER P (x::l2)        by FILTER_APPEND_DISTRIB
+      = FILTER P l1 ++ x :: FILTER P l2        by FILTER
+      = FILTER P l1 ++ [x]                     by FILTER P l2 = []
+    and k = LENGTH (FILTER P l5)
+          = LENGTH (FILTER P l1 ++ [x])        by above
+          = j + 1                              by LENGTH_APPEND
+*)
+Theorem FILTER_EL_NEXT:
+  !P ls l1 l2 l3 x y. let fs = FILTER P ls; j = LENGTH (FILTER P l1) in
+                      ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y /\ FILTER P l2 = [] ==>
+                      x = EL j fs /\ y = EL (j + 1) fs
+Proof
+  rw_tac std_ss[] >| [
+    qabbrev_tac `l4 = y::l3` >>
+    qabbrev_tac `ls = l1 ++ x::l2 ++ l4` >>
+    `ls = l1 ++ x::(l2 ++ l4)` by simp[Abbr`ls`] >>
+    metis_tac[FILTER_EL_IMP],
+    qabbrev_tac `l5 = l1 ++ x::l2` >>
+    qabbrev_tac `ls = l5 ++ y::l3` >>
+    `FILTER P l5 = FILTER P l1 ++ [x]` by fs[FILTER_APPEND_DISTRIB, Abbr`l5`] >>
+    `LENGTH (FILTER P l5) = j + 1` by fs[Abbr`j`] >>
+    metis_tac[FILTER_EL_IMP]
+  ]
+QED
+
+(* Theorem: let fs = FILTER P ls; j = LENGTH (FILTER P l1) in
+             ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
+             (x = EL j fs /\ y = EL (j + 1) fs <=> FILTER P l2 = []) *)
+(* Proof:
+   Note fs = FILTER P ls
+           = FILTER P (l1 ++ x::l2 ++ y::l3)   by given
+           = FILTER P l1 ++
+             x :: FILTER P l2 ++
+             y :: FILTER P l3                  by FILTER_APPEND_DISTRIB, FILTER
+   Thus LENGTH fs
+      = j + SUC (LENGTH (FILTER P l2))
+          + SUC (LENGTH (FILTER P l3))         by LENGTH_APPEND
+     or j + 2 <= LENGTH fs                     by arithmetic
+     or j < LENGTH fs, j + 1 < LENGTH fs       by inequality
+
+   Let l4 = y::l3, then
+       ls = l1 ++ x::l2 ++ l4
+          = l1 ++ x::(l2 ++ l4)                by APPEND_ASSOC_CONS
+   Thus x = EL j fs                            by FILTER_EL_IFF, j < LENGTH fs
+
+   Now let l5 = l1 ++ x::l2,
+           k = LENGTH (FILTER P l5).
+   Then ls = l5 ++ y::l3                       by APPEND_ASSOC
+    and fs = FILTER P l5 ++
+             y :: FILTER P l3                  by FILTER_APPEND_DISTRIB, FILTER
+     so LENGTH fs = k + SUC (LENGTH P l3)      by LENGTH_APPEND
+   Thus k < LENGTH fs
+    and y = EL k fs                            by FILTER_EL_IFF
+
+   Also FILTER P l5 = FILTER P l1 ++
+                      x :: FILTER P l2         by FILTER_APPEND_DISTRIB, FILTER
+     so k = j + SUC (LENGTH (FILTER P l2))     by LENGTH_APPEND
+   Thus k = j + 1
+    <=> LENGTH (FILTER P l2) = 0               by arithmetic
+
+   Note ALL_DISTINCT fs                        by FILTER_ALL_DISTINCT
+     so EL k fs = EL (j + 1) fs
+    <=> k = j + 1
+    <=> LENGTH (FILTER P l2) = 0               by above
+    <=> FILTER P l2 = []                       by LENGTH_EQ_0
+*)
+Theorem FILTER_EL_NEXT_IFF:
+  !P ls l1 l2 l3 x y. let fs = FILTER P ls; j = LENGTH (FILTER P l1) in
+                      ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
+                      (x = EL j fs /\ y = EL (j + 1) fs <=> FILTER P l2 = [])
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `ls = l1 ++ x::l2 ++ y::l3` >>
+  `j + 2 <= LENGTH fs` by
+  (`fs = FILTER P l1 ++ x::FILTER P l2 ++ y::FILTER P l3` by simp[FILTER_APPEND_DISTRIB, Abbr`fs`, Abbr`ls`] >>
+  `LENGTH fs = j + SUC (LENGTH (FILTER P l2)) + SUC (LENGTH (FILTER P l3))` by fs[Abbr`j`] >>
+  decide_tac) >>
+  `j < LENGTH fs` by decide_tac >>
+  qabbrev_tac `l4 = y::l3` >>
+  `ls = l1 ++ x::(l2 ++ l4)` by simp[Abbr`ls`] >>
+  `x = EL j fs` by metis_tac[FILTER_EL_IFF] >>
+  qabbrev_tac `l5 = l1 ++ x::l2` >>
+  qabbrev_tac `k = LENGTH (FILTER P l5)` >>
+  `ls = l5 ++ y::l3` by simp[Abbr`l5`, Abbr`ls`] >>
+  `k < LENGTH fs /\ (k = j + 1 <=> FILTER P l2 = [])` by
+    (`fs = FILTER P l5 ++ y::FILTER P l3` by rfs[FILTER_APPEND_DISTRIB, Abbr`fs`] >>
+  `LENGTH fs = k + SUC (LENGTH (FILTER P l3))` by fs[Abbr`k`] >>
+  `FILTER P l5 = FILTER P l1 ++ x :: FILTER P l2` by rfs[FILTER_APPEND_DISTRIB, Abbr`l5`] >>
+  `k = j + SUC (LENGTH (FILTER P l2))` by fs[Abbr`k`, Abbr`j`] >>
+  simp[]) >>
+  `y = EL k fs` by metis_tac[FILTER_EL_IFF] >>
+  `j + 1 < LENGTH fs` by decide_tac >>
+  `ALL_DISTINCT fs` by simp[FILTER_ALL_DISTINCT, Abbr`fs`] >>
+  metis_tac[ALL_DISTINCT_EL_IMP]
+QED
+
+(* Theorem: let fs = FILTER P ls in
+            ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
+            (findi y fs = 1 + findi x fs <=> FILTER P l2 = []) *)
+(* Proof:
+   Let j = LENGTH (FILTER P l1).
+
+   Note fs = FILTER P l1 ++ x::FILTER P l2 ++
+                            y::FILTER P l3     by FILTER_APPEND_DISTRIB
+   Thus LENGTH fs = j +
+                    SUC (LENGTH (FILTER P l2)) +
+                    SUC (LENGTH (FILTER P l3)) by LENGTH_APPEND
+     or j + 2 <= LENGTH fs                     by arithmetic
+     or j < LENGTH fs /\ j + 1 < LENGTH fs     by j + 2 <= LENGTH fs
+
+   Let l4 = y::l3,
+   Then ls = l1 ++ x::l2 ++ l4
+           = l1 ++ x::(l2 ++ l4)               by APPEND_ASSOC_CONS
+    ==> x = EL j fs                            by FILTER_EL_IMP
+
+   Note ALL_DISTINCT fs                        by FILTER_ALL_DISTINCT
+    and MEM x ls /\ MEM y ls                   by MEM_APPEND
+     so MEM x fs /\ MEM y fs                   by MEM_FILTER
+    and x = EL j fs <=> findi x fs = j            by findi_EL_iff
+    and y = EL (j + 1) fs <=> findi y fs = j + 1  by findi_EL_iff
+
+        FILTER P l2 = []
+     <=> x = EL j fs /\ y = EL (j + 1) fs      by FILTER_EL_NEXT_IFF
+     <=> findi y fs = 1 + findi x fs           by above
+*)
+Theorem FILTER_EL_NEXT_IDX:
+  !P ls l1 l2 l3 x y. let fs = FILTER P ls in
+                      ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
+                      (findi y fs = 1 + findi x fs <=> FILTER P l2 = [])
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `ls = l1 ++ x::l2 ++ y::l3` >>
+  qabbrev_tac `j = LENGTH (FILTER P l1)` >>
+  `j + 2 <= LENGTH fs` by
+  (`fs = FILTER P l1 ++ x::FILTER P l2 ++ y::FILTER P l3` by simp[FILTER_APPEND_DISTRIB, Abbr`fs`, Abbr`ls`] >>
+  `LENGTH fs = j + SUC (LENGTH (FILTER P l2)) + SUC (LENGTH (FILTER P l3))` by fs[Abbr`j`] >>
+  decide_tac) >>
+  `j < LENGTH fs /\ j + 1 < LENGTH fs` by decide_tac >>
+  `x = EL j fs` by
+    (qabbrev_tac `l4 = y::l3` >>
+  `ls = l1 ++ x::(l2 ++ l4)` by simp[Abbr`ls`] >>
+  metis_tac[FILTER_EL_IMP]) >>
+  `MEM x ls /\ MEM y ls` by fs[Abbr`ls`] >>
+  `MEM x fs /\ MEM y fs` by fs[MEM_FILTER, Abbr`fs`] >>
+  `ALL_DISTINCT fs` by simp[FILTER_ALL_DISTINCT, Abbr`fs`] >>
+  `x = EL j fs <=> findi x fs = j` by fs[findi_EL_iff] >>
+  `y = EL (j + 1) fs <=> findi y fs = 1 + j` by fs[findi_EL_iff] >>
+  metis_tac[FILTER_EL_NEXT_IFF]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -4457,6 +5150,202 @@ val PROD_SQUARING_LIST = store_thm(
   rw[EXP]);
 
 (* ------------------------------------------------------------------------- *)
+(* Range Conjunction and Disjunction                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: a <= j /\ j <= a <=> (j = a) *)
+(* Proof: trivial by arithmetic. *)
+val every_range_sing = store_thm(
+  "every_range_sing",
+  ``!a j. a <= j /\ j <= a <=> (j = a)``,
+  decide_tac);
+
+(* Theorem: a <= b ==>
+    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j)) *)
+(* Proof:
+   If part: !j. a <= j /\ j <= b ==> f j ==>
+              f a /\ !j. a + 1 <= j /\ j <= b ==> f j
+      This is trivial since a + 1 = SUC a.
+   Only-if part: f a /\ !j. a + 1 <= j /\ j <= b ==> f j ==>
+                 !j. a <= j /\ j <= b ==> f j
+      Note a <= j <=> a = j or a < j      by arithmetic
+      If a = j, this is trivial.
+      If a < j, then a + 1 <= j, also trivial.
+*)
+val every_range_cons = store_thm(
+  "every_range_cons",
+  ``!f a b. a <= b ==>
+    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j))``,
+  rw[EQ_IMP_THM] >>
+  `(a = j) \/ (a < j)` by decide_tac >-
+  fs[] >>
+  fs[]);
+
+(* Theorem: a <= b ==> ((!j. PRE a <= j /\ j <= b ==> f j) <=> (f (PRE a) /\ !j. a <= j /\ j <= b ==> f j)) *)
+(* Proof:
+       !j. PRE a <= j /\ j <= b ==> f j
+   <=> !j. (PRE a = j \/ a <= j) /\ j <= b ==> f j             by arithmetic
+   <=> !j. (j = PRE a ==> f j) /\ a <= j /\ j <= b ==> f j     by RIGHT_AND_OVER_OR, DISJ_IMP_THM
+   <=> !j. a <= j /\ j <= b ==> f j /\ f (PRE a)
+*)
+Theorem every_range_split_head:
+  !f a b. a <= b ==>
+          ((!j. PRE a <= j /\ j <= b ==> f j) <=> (f (PRE a) /\ !j. a <= j /\ j <= b ==> f j))
+Proof
+  rpt strip_tac >>
+  `!j. PRE a <= j <=> PRE a = j \/ a <= j` by decide_tac >>
+  metis_tac[]
+QED
+
+(* Theorem: a <= b ==> ((!j. a <= j /\ j <= SUC b ==> f j) <=> (f (SUC b) /\ !j. a <= j /\ j <= b ==> f j)) *)
+(* Proof:
+       !j. a <= j /\ j <= SUC b ==> f j
+   <=> !j. a <= j /\ (j <= b \/ j = SUC b) ==> f j             by arithmetic
+   <=> !j. a <= j /\ j <= b ==> f j /\ (j = SUC b ==> f j)     by LEFT_AND_OVER_OR, DISJ_IMP_THM
+   <=> !j. a <= j /\ j <= b ==> f j /\ f (SUC b)
+*)
+Theorem every_range_split_last:
+  !f a b. a <= b ==>
+          ((!j. a <= j /\ j <= SUC b ==> f j) <=> (f (SUC b) /\ !j. a <= j /\ j <= b ==> f j))
+Proof
+  rpt strip_tac >>
+  `!j. j <= SUC b <=> j <= b \/ j = SUC b` by decide_tac >>
+  metis_tac[]
+QED
+
+(* Theorem: a <= b ==> ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ f b /\ !j. a < j /\ j < b ==> f j)) *)
+(* Proof:
+       !j. a <= j /\ j <= b ==> f j
+   <=> !j. (a < j \/ a = j) /\ (j < b \/ j = b) ==> f j                  by arithmetic
+   <=> !j. a = j ==> f j /\ j = b ==> f j /\ !j. a < j /\ j < b ==> f j  by LEFT_AND_OVER_OR, DISJ_IMP_THM
+   <=> f a /\ f b /\ !j. a < j /\ j < b ==> f j
+*)
+Theorem every_range_less_ends:
+  !f a b. a <= b ==>
+          ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ f b /\ !j. a < j /\ j < b ==> f j))
+Proof
+  rpt strip_tac >>
+  `!m n. m <= n <=> m < n \/ m = n` by decide_tac >>
+  metis_tac[]
+QED
+
+(* Theorem: a < b /\ f a /\ ~f b ==>
+            ?m. a <= m /\ m < b /\ (!j. a <= j /\ j <= m ==> f j) /\ ~f (SUC m) *)
+(* Proof:
+   Let s = {p | a <= p /\ p < b /\ (!j. a <= j /\ j <= p ==> f j)}
+   Pick m = MAX_SET s.
+   Note f a ==> a IN s             by every_range_sing
+     so s <> {}                    by MEMBER_NOT_EMPTY
+   Also s SUBSET (count b)         by SUBSET_DEF
+     so FINITE s                   by FINITE_COUNT, SUBSET_FINITE
+    ==> m IN s                     by MAX_SET_IN_SET
+   Thus a <= m /\ m < b /\ (!j. a <= j /\ j <= m ==> f j)
+   It remains to show: ~f (SUC m).
+   By contradiction, suppose f (SUC m).
+   Since m < b, SUC m <= b.
+   But ~f b, so SUC m <> b         by given
+   Thus a <= m < SUC m, and SUC m < b,
+    and !j. a <= j /\ j <= SUC m ==> f j)
+    ==> SUC m IN s                 by every_range_split_last
+   Then SUC m <= m                 by X_LE_MAX_SET
+   which is impossible             by LESS_SUC
+*)
+Theorem every_range_span_max:
+  !f a b. a < b /\ f a /\ ~f b ==>
+          ?m. a <= m /\ m < b /\ (!j. a <= j /\ j <= m ==> f j) /\ ~f (SUC m)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `s = {p | a <= p /\ p < b /\ (!j. a <= j /\ j <= p ==> f j)}` >>
+  qabbrev_tac `m = MAX_SET s` >>
+  qexists_tac `m` >>
+  `a IN s` by fs[every_range_sing, Abbr`s`] >>
+  `s SUBSET (count b)` by fs[SUBSET_DEF, Abbr`s`] >>
+  `FINITE s /\ s <> {}` by metis_tac[FINITE_COUNT, SUBSET_FINITE, MEMBER_NOT_EMPTY] >>
+  `m IN s` by fs[MAX_SET_IN_SET, Abbr`m`] >>
+  rfs[Abbr`s`] >>
+  spose_not_then strip_assume_tac >>
+  qabbrev_tac `s = {p | a <= p /\ p < b /\ (!j. a <= j /\ j <= p ==> f j)}` >>
+  `SUC m <> b` by metis_tac[] >>
+  `a <= SUC m /\ SUC m < b` by decide_tac >>
+  `SUC m IN s` by fs[every_range_split_last, Abbr`s`] >>
+  `SUC m <= m` by simp[X_LE_MAX_SET, Abbr`m`] >>
+  decide_tac
+QED
+
+(* Theorem: a < b /\ ~f a /\ f b ==>
+           ?m. a < m /\ m <= b /\ (!j. m <= j /\ j <= b ==> f j) /\ ~f (PRE m) *)
+(* Proof:
+   Let s = {p | a < p /\ p <= b /\ (!j. p <= j /\ j <= b ==> f j)}
+   Pick m = MIN_SET s.
+   Note f b ==> b IN s             by every_range_sing
+     so s <> {}                    by MEMBER_NOT_EMPTY
+    ==> m IN s                     by MIN_SET_IN_SET
+   Thus a < m /\ m <= b /\ (!j. m <= j /\ j <= b ==> f j)
+   It remains to show: ~f (PRE m).
+   By contradiction, suppose f (PRE m).
+   Since a < m, a <= PRE m.
+   But ~f a, so PRE m <> a         by given
+   Thus a < PRE m, and PRE m <= b,
+    and !j. PRE m <= j /\ j <= b ==> f j)
+    ==> PRE m IN s                 by every_range_split_head
+   Then m <= PRE m                 by MIN_SET_PROPERTY
+   which is impossible             by PRE_LESS, a < m ==> 0 < m
+*)
+Theorem every_range_span_min:
+  !f a b. a < b /\ ~f a /\ f b ==>
+          ?m. a < m /\ m <= b /\ (!j. m <= j /\ j <= b ==> f j) /\ ~f (PRE m)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `s = {p | a < p /\ p <= b /\ (!j. p <= j /\ j <= b ==> f j)}` >>
+  qabbrev_tac `m = MIN_SET s` >>
+  qexists_tac `m` >>
+  `b IN s` by fs[every_range_sing, Abbr`s`] >>
+  `s <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
+  `m IN s` by fs[MIN_SET_IN_SET, Abbr`m`] >>
+  rfs[Abbr`s`] >>
+  spose_not_then strip_assume_tac >>
+  qabbrev_tac `s = {p | a < p /\ p <= b /\ (!j. p <= j /\ j <= b ==> f j)}` >>
+  `PRE m <> a` by metis_tac[] >>
+  `a < PRE m /\ PRE m <= b` by decide_tac >>
+  `PRE m IN s` by fs[every_range_split_head, Abbr`s`] >>
+  `m <= PRE m` by simp[MIN_SET_PROPERTY, Abbr`m`] >>
+  decide_tac
+QED
+
+(* Theorem: ?j. a <= j /\ j <= a <=> (j = a) *)
+(* Proof: trivial by arithmetic. *)
+val exists_range_sing = store_thm(
+  "exists_range_sing",
+  ``!a. ?j. a <= j /\ j <= a <=> (j = a)``,
+  metis_tac[LESS_EQ_REFL]);
+
+(* Theorem: a <= b ==>
+    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)) *)
+(* Proof:
+   If part: ?j. a <= j /\ j <= b /\ f j ==>
+              f a \/ ?j. a + 1 <= j /\ j <= b /\ f j
+      This is trivial since a + 1 = SUC a.
+   Only-if part: f a /\ ?j. a + 1 <= j /\ j <= b /\ f j ==>
+                 ?j. a <= j /\ j <= b /\ f j
+      Note a <= j <=> a = j or a < j      by arithmetic
+      If a = j, this is trivial.
+      If a < j, then a + 1 <= j, also trivial.
+*)
+val exists_range_cons = store_thm(
+  "exists_range_cons",
+  ``!f a b. a <= b ==>
+    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j))``,
+  rw[EQ_IMP_THM] >| [
+    `(a = j) \/ (a < j)` by decide_tac >-
+    fs[] >>
+    `a + 1 <= j` by decide_tac >>
+    metis_tac[],
+    metis_tac[LESS_EQ_REFL],
+    `a <= j` by decide_tac >>
+    metis_tac[]
+  ]);
+
+(* ------------------------------------------------------------------------- *)
 (* List Range                                                                *)
 (* ------------------------------------------------------------------------- *)
 
@@ -4850,6 +5739,22 @@ val listRangeINC_SUM_MAP = store_thm(
   ``!f n. SUM (MAP f [1 .. (SUC n)]) = f (SUC n) + SUM (MAP f [1 .. n])``,
   rw[listRangeINC_SNOC, MAP_SNOC, SUM_SNOC, ADD1]);
 
+(* Theorem: m < j /\ j <= n ==> [m .. n] = [m .. j-1] ++ j::[j+1 .. n] *)
+(* Proof:
+   Note m < j implies m <= j-1.
+     [m .. n]
+   = [m .. j-1] ++ [j .. n]        by listRangeINC_APPEND, m <= j-1
+   = [m .. j-1] ++ j::[j+1 .. n]   by listRangeINC_CONS, j <= n
+*)
+Theorem listRangeINC_SPLIT:
+  !m n j. m < j /\ j <= n ==> [m .. n] = [m .. j-1] ++ j::[j+1 .. n]
+Proof
+  rpt strip_tac >>
+  `m <= j - 1 /\ j - 1 <= n /\ (j - 1) + 1 = j` by decide_tac >>
+  `[m .. n] = [m .. j-1] ++ [j .. n]` by metis_tac[listRangeINC_APPEND] >>
+  simp[listRangeINC_CONS]
+QED
+
 (* Theorem: [m ..< (n + 1)] = [m .. n] *)
 (* Proof:
      [m ..< (n + 1)]
@@ -5198,6 +6103,116 @@ val listRangeLHI_SUM_MAP = store_thm(
   "listRangeLHI_SUM_MAP",
   ``!f n. SUM (MAP f [0 ..< (SUC n)]) = f n + SUM (MAP f [0 ..< n])``,
   rw[listRangeLHI_SNOC, MAP_SNOC, SUM_SNOC, ADD1]);
+
+(* Theorem: m <= j /\ j < n ==> [m ..< n] = [m ..< j] ++ j::[j+1 ..< n] *)
+(* Proof:
+   Note j < n implies j <= n.
+     [m ..< n]
+   = [m ..< j] ++ [j ..< n]        by listRangeLHI_APPEND, j <= n
+   = [m ..< j] ++ j::[j+1 ..< n]   by listRangeLHI_CONS, j < n
+*)
+Theorem listRangeLHI_SPLIT:
+  !m n j. m <= j /\ j < n ==> [m ..< n] = [m ..< j] ++ j::[j+1 ..< n]
+Proof
+  rpt strip_tac >>
+  `[m ..< n] = [m ..< j] ++ [j ..< n]` by simp[listRangeLHI_APPEND] >>
+  simp[listRangeLHI_CONS]
+QED
+
+(* listRangeTheory.listRangeLHI_ALL_DISTINCT  |- ALL_DISTINCT [lo ..< hi] *)
+
+(* Theorem: ALL_DISTINCT [m .. n] *)
+(* Proof:
+       ALL_DISTINCT [m .. n]
+   <=> ALL_DISTINCT [m ..< n + 1]              by listRangeLHI_to_INC
+   <=> T                                       by listRangeLHI_ALL_DISTINCT
+*)
+Theorem listRangeINC_ALL_DISTINCT:
+  !m n. ALL_DISTINCT [m .. n]
+Proof
+  metis_tac[listRangeLHI_to_INC, listRangeLHI_ALL_DISTINCT]
+QED
+
+(* Theorem:  m <= n ==> EVERY P [m - 1 .. n] <=> (P (m - 1) /\ EVERY P [m ..n]) *)
+(* Proof:
+       EVERY P [m - 1 .. n]
+   <=> !x. m - 1 <= x /\ x <= n ==> P x                by listRangeINC_EVERY
+   <=> !x. (m - 1 = x \/ m <= x) /\ x <= n ==> P x     by arithmetic
+   <=> !x. (x = m - 1 ==> P x) /\ m <= x /\ x <= n ==> P x
+                                                       by RIGHT_AND_OVER_OR, DISJ_IMP_THM
+   <=> P (m - 1) /\ EVERY P [m .. n]                   by listRangeINC_EVERY
+*)
+Theorem listRangeINC_EVERY_split_head:
+  !P m n. m <= n ==> (EVERY P [m - 1 .. n] <=> P (m - 1) /\ EVERY P [m ..n])
+Proof
+  rw[listRangeINC_EVERY] >>
+  `!x. m <= x + 1 <=> m - 1 = x \/ m <= x` by decide_tac >>
+  (rw[EQ_IMP_THM] >> metis_tac[])
+QED
+
+(* Theorem: m <= n ==> (EVERY P [m .. (n + 1)] <=> P (n + 1) /\ EVERY P [m .. n]) *)
+(* Proof:
+       EVERY P [m .. (n + 1)]
+   <=> !x. m <= x /\ x <= n + 1 ==> P x                by listRangeINC_EVERY
+   <=> !x. m <= x /\ (x <= n \/ x = n + 1) ==> P x     by arithmetic
+   <=> !x. m <= x /\ x <= n ==> P x /\ P (n + 1)       by LEFT_AND_OVER_OR, DISJ_IMP_THM
+   <=> P (n + 1) /\ EVERY P [m .. n]                   by listRangeINC_EVERY
+*)
+Theorem listRangeINC_EVERY_split_last:
+  !P m n. m <= n ==> (EVERY P [m .. (n + 1)] <=> P (n + 1) /\ EVERY P [m .. n])
+Proof
+  rw[listRangeINC_EVERY] >>
+  `!x. x <= n + 1 <=> x <= n \/ x = n + 1` by decide_tac >>
+  metis_tac[]
+QED
+
+(* Theorem: m <= n ==> (EVERY P [m .. n] <=> P n /\ EVERY P [m ..< n]) *)
+(* Proof:
+       EVERY P [m .. n]
+   <=> !x. m <= x /\ x <= n ==> P x                by listRangeINC_EVERY
+   <=> !x. m <= x /\ (x < n \/ x = n) ==> P x      by arithmetic
+   <=> !x. m <= x /\ x < n ==> P x /\ P n          by LEFT_AND_OVER_OR, DISJ_IMP_THM
+   <=> P n /\ EVERY P [m ..< n]                    by listRangeLHI_EVERY
+*)
+Theorem listRangeINC_EVERY_less_last:
+  !P m n. m <= n ==> (EVERY P [m .. n] <=> P n /\ EVERY P [m ..< n])
+Proof
+  rw[listRangeINC_EVERY, listRangeLHI_EVERY] >>
+  `!x. x <= n <=> x < n \/ x = n` by decide_tac >>
+  metis_tac[]
+QED
+
+(* Theorem: m < n /\ P m /\ ~P n ==>
+            ?k. m <= k /\ k < n /\ EVERY P [m .. k] /\ ~P (SUC k) *)
+(* Proof:
+       m < n /\ P m /\ ~P n
+   ==> ?k. m <= k /\ k < m /\
+       (!j. m <= j /\ j <= k ==> P j) /\ ~P (SUC k)    by every_range_span_max
+   ==> ?k. m <= k /\ k < m /\
+       EVERY P [m .. k] /\ ~P (SUC k)                  by listRangeINC_EVERY
+*)
+Theorem listRangeINC_EVERY_span_max:
+  !P m n. m < n /\ P m /\ ~P n ==>
+          ?k. m <= k /\ k < n /\ EVERY P [m .. k] /\ ~P (SUC k)
+Proof
+  simp[listRangeINC_EVERY, every_range_span_max]
+QED
+
+(* Theorem: m < n /\ ~P m /\ P n ==>
+            ?k. m < k /\ k <= n /\ EVERY P [k .. n] /\ ~P (PRE k) *)
+(* Proof:
+       m < n /\ P m /\ ~P n
+   ==> ?k. m < k /\ k <= n /\
+       (!j. k <= j /\ j <= n ==> P j) /\ ~P (PRE k)    by every_range_span_min
+   ==> ?k. m < k /\ k <= n /\
+       EVERY P [k .. n] /\ ~P (PRE k)                  by listRangeINC_EVERY
+*)
+Theorem listRangeINC_EVERY_span_min:
+  !P m n. m < n /\ ~P m /\ P n ==>
+          ?k. m < k /\ k <= n /\ EVERY P [k .. n] /\ ~P (PRE k)
+Proof
+  simp[listRangeINC_EVERY, every_range_span_min]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Summation and Product                                                *)
@@ -6384,6 +7399,92 @@ val _ = overload_on("MONO_INC",
 val _ = overload_on("MONO_DEC",
           ``\ls:num list. !m n. m <= n /\ n < LENGTH ls ==> EL n ls <= EL m ls``);
 
+(* Theorem: MONO_INC []*)
+(* Proof: no member to falsify. *)
+Theorem MONO_INC_NIL:
+  MONO_INC []
+Proof
+  simp[]
+QED
+
+(* Theorem: MONO_INC (h::t) ==> MONO_INC t *)
+(* Proof:
+   This is to show: m <= n /\ n < LENGTH t ==> EL m t <= EL n t
+   Note m <= n <=> SUC m <= SUC n              by arithmetic
+    and n < LENGTH t <=> SUC n < LENGTH (h::t) by LENGTH
+   Thus EL (SUC m) (h::t) <= EL (SUC n) (h::t) by MONO_INC (h::t)
+     or            EL m t <= EL n t            by EL
+*)
+Theorem MONO_INC_CONS:
+  !h t. MONO_INC (h::t) ==> MONO_INC t
+Proof
+  rw[] >>
+  first_x_assum (qspecl_then [`SUC m`, `SUC n`] strip_assume_tac) >>
+  rfs[]
+QED
+
+(* Theorem: MONO_INC (h::t) /\ MEM x t ==> h <= x *)
+(* Proof:
+   Note MEM x t
+    ==> ?n. n < LENGTH t /\ x = EL n t         by MEM_EL
+     or SUC n < SUC (LENGTH t)                 by inequality
+    Now 0 < SUC n, or 0 <= SUC n,
+    and SUC n < SUC (LENGTH t) = LENGTH (h::t) by LENGTH
+     so EL 0 (h::t) <= EL (SUC n) (h::t)       by MONO_INC (h::t)
+     or           h <= EL n t = x              by EL
+*)
+Theorem MONO_INC_HD:
+  !h t x. MONO_INC (h::t) /\ MEM x t ==> h <= x
+Proof
+  rpt strip_tac >>
+  fs[MEM_EL] >>
+  last_x_assum (qspecl_then [`0`,`SUC n`] strip_assume_tac) >>
+  rfs[]
+QED
+
+(* Theorem: MONO_DEC []*)
+(* Proof: no member to falsify. *)
+Theorem MONO_DEC_NIL:
+  MONO_DEC []
+Proof
+  simp[]
+QED
+
+(* Theorem: MONO_DEC (h::t) ==> MONO_DEC t *)
+(* Proof:
+   This is to show: m <= n /\ n < LENGTH t ==> EL n t <= EL m t
+   Note m <= n <=> SUC m <= SUC n              by arithmetic
+    and n < LENGTH t <=> SUC n < LENGTH (h::t) by LENGTH
+   Thus EL (SUC n) (h::t) <= EL (SUC m) (h::t) by MONO_DEC (h::t)
+     or            EL n t <= EL m t            by EL
+*)
+Theorem MONO_DEC_CONS:
+  !h t. MONO_DEC (h::t) ==> MONO_DEC t
+Proof
+  rw[] >>
+  first_x_assum (qspecl_then [`SUC m`, `SUC n`] strip_assume_tac) >>
+  rfs[]
+QED
+
+(* Theorem: MONO_DEC (h::t) /\ MEM x t ==> x <= h *)
+(* Proof:
+   Note MEM x t
+    ==> ?n. n < LENGTH t /\ x = EL n t         by MEM_EL
+     or SUC n < SUC (LENGTH t)                 by inequality
+    Now 0 < SUC n, or 0 <= SUC n,
+    and SUC n < SUC (LENGTH t) = LENGTH (h::t) by LENGTH
+     so EL (SUC n) (h::t) <= EL 0 (h::t)       by MONO_DEC (h::t)
+     or        x = EL n t <= h                 by EL
+*)
+Theorem MONO_DEC_HD:
+  !h t x. MONO_DEC (h::t) /\ MEM x t ==> x <= h
+Proof
+  rpt strip_tac >>
+  fs[MEM_EL] >>
+  last_x_assum (qspecl_then [`0`,`SUC n`] strip_assume_tac) >>
+  rfs[]
+QED
+
 (* Theorem: MONO f ==> MONO_INC (GENLIST f n) *)
 (* Proof:
    Let ls = GENLIST f n.
@@ -6565,6 +7666,40 @@ val MIN_LIST_MONO_DEC = store_thm(
   `EL (SUC n) (h::ls) <= EL (SUC m) (h::ls)` by rw[] >>
   fs[]) >>
   rw[MIN_DEF, LAST_DEF]);
+
+(* Theorem: MONO_INC [m .. n] *)
+(* Proof:
+   This is to show:
+        !j k. j <= k /\ k < LENGTH [m .. n] ==> EL j [m .. n] <= EL k [m .. n]
+   Note LENGTH [m .. n] = n + 1 - m            by listRangeINC_LEN
+     so m + j <= n                             by j < LENGTH [m .. n]
+    ==> EL j [m .. n] = m + j                  by listRangeINC_EL
+   also m + k <= n                             by k < LENGTH [m .. n]
+    ==> EL k [m .. n] = m + k                  by listRangeINC_EL
+   Thus EL j [m .. n] <= EL k [m .. n]         by arithmetic
+*)
+Theorem listRangeINC_MONO_INC:
+  !m n. MONO_INC [m .. n]
+Proof
+  simp[listRangeINC_EL, listRangeINC_LEN]
+QED
+
+(* Theorem: MONO_INC [m ..< n] *)
+(* Proof:
+   This is to show:
+        !j k. j <= k /\ k < LENGTH [m ..< n] ==> EL j [m ..< n] <= EL k [m ..< n]
+   Note LENGTH [m ..< n] = n - m               by listRangeLHI_LEN
+     so m + j < n                              by j < LENGTH [m ..< n]
+    ==> EL j [m ..< n] = m + j                 by listRangeLHI_EL
+   also m + k < n                              by k < LENGTH [m ..< n]
+    ==> EL k [m ..< n] = m + k                 by listRangeLHI_EL
+   Thus EL j [m ..< n] <= EL k [m ..< n]       by arithmetic
+*)
+Theorem listRangeLHI_MONO_INC:
+  !m n. MONO_INC [m ..< n]
+Proof
+  simp[listRangeLHI_EL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List Dilation                                                             *)
@@ -7461,72 +8596,6 @@ val DILATE_0_LAST = store_thm(
   `k < LENGTH (DILATE e 0 n l)` by simp[Abbr`k`] >>
   Q.RM_ABBREV_TAC ‘k’ >>
   rw[DILATE_0_EL]);
-
-(* ------------------------------------------------------------------------- *)
-(* Range Conjunction and Disjunction                                         *)
-(* ------------------------------------------------------------------------- *)
-
-(* Theorem: a <= j /\ j <= a <=> (j = a) *)
-(* Proof: trivial by arithmetic. *)
-val every_range_sing = store_thm(
-  "every_range_sing",
-  ``!a j. a <= j /\ j <= a <=> (j = a)``,
-  decide_tac);
-
-(* Theorem: a <= b ==>
-    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j)) *)
-(* Proof:
-   If part: !j. a <= j /\ j <= b ==> f j ==>
-              f a /\ !j. a + 1 <= j /\ j <= b ==> f j
-      This is trivial since a + 1 = SUC a.
-   Only-if part: f a /\ !j. a + 1 <= j /\ j <= b ==> f j ==>
-                 !j. a <= j /\ j <= b ==> f j
-      Note a <= j <=> a = j or a < j      by arithmetic
-      If a = j, this is trivial.
-      If a < j, then a + 1 <= j, also trivial.
-*)
-val every_range_cons = store_thm(
-  "every_range_cons",
-  ``!f a b. a <= b ==>
-    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j))``,
-  rw[EQ_IMP_THM] >>
-  `(a = j) \/ (a < j)` by decide_tac >-
-  fs[] >>
-  fs[]);
-
-(* Theorem: ?j. a <= j /\ j <= a <=> (j = a) *)
-(* Proof: trivial by arithmetic. *)
-val exists_range_sing = store_thm(
-  "exists_range_sing",
-  ``!a. ?j. a <= j /\ j <= a <=> (j = a)``,
-  metis_tac[LESS_EQ_REFL]);
-
-(* Theorem: a <= b ==>
-    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)) *)
-(* Proof:
-   If part: ?j. a <= j /\ j <= b /\ f j ==>
-              f a \/ ?j. a + 1 <= j /\ j <= b /\ f j
-      This is trivial since a + 1 = SUC a.
-   Only-if part: f a /\ ?j. a + 1 <= j /\ j <= b /\ f j ==>
-                 ?j. a <= j /\ j <= b /\ f j
-      Note a <= j <=> a = j or a < j      by arithmetic
-      If a = j, this is trivial.
-      If a < j, then a + 1 <= j, also trivial.
-*)
-val exists_range_cons = store_thm(
-  "exists_range_cons",
-  ``!f a b. a <= b ==>
-    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j))``,
-  rw[EQ_IMP_THM] >| [
-    `(a = j) \/ (a < j)` by decide_tac >-
-    fs[] >>
-    `a + 1 <= j` by decide_tac >>
-    metis_tac[],
-    metis_tac[LESS_EQ_REFL],
-    `a <= j` by decide_tac >>
-    metis_tac[]
-  ]);
-
 
 
 (* ------------------------------------------------------------------------- *)

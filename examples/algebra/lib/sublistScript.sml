@@ -23,8 +23,9 @@ open jcLib;
 open helperListTheory;
 
 (* open dependent theories *)
-open listTheory arithmeticTheory;
+open pred_setTheory listTheory rich_listTheory arithmeticTheory;
 open listRangeTheory; (* for listRangeINC_def *)
+open indexedListsTheory; (* for MEM_findi *)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -63,6 +64,9 @@ open listRangeTheory; (* for listRangeINC_def *)
    sublist_induct          |- !P. (!y. P [] y) /\
                                   (!h x y. P x y /\ x <= y ==> P (h::x) (h::y)) /\
                                   (!h x y. P x y /\ x <= y ==> P x (h::y)) ==> !x y. x <= y ==> P x y
+   sublist_mem             |- !p q x. p <= q /\ MEM x p ==> MEM x q
+   sublist_subset          |- !ls sl. sl <= ls ==> set sl SUBSET set ls
+   sublist_ALL_DISTINCT    |- !p q. p <= q /\ ALL_DISTINCT q ==> ALL_DISTINCT p
    sublist_append_remove   |- !p q x. x ++ p <= q ==> p <= q
    sublist_append_include  |- !p q x. p <= q ==> p <= x ++ q
    sublist_append_suffix   |- !p q. p <= p ++ q
@@ -81,6 +85,22 @@ open listRangeTheory; (* for listRangeINC_def *)
    SUM_SUBLIST           |- !p q. p <= q ==> SUM p <= SUM q
    listRangeINC_sublist  |- !m n. m < n ==> [m; n] <= [m .. n]
    listRangeLHI_sublist  |- !m n. m + 1 < n ==> [m; n - 1] <= [m ..< n]
+   sublist_order         |- !ls sl x. sl <= ls /\ MEM x sl ==>
+                                      ?l1 l2 l3 l4. ls = l1 ++ [x] ++ l2 /\ sl = l3 ++ [x] ++ l4 /\
+                                                    l3 <= l1 /\ l4 <= l2
+   sublist_element_order |- !ls sl j h. sl <= ls /\ ALL_DISTINCT ls /\ j < h /\ h < LENGTH sl ==>
+                                        findi (EL j sl) ls < findi (EL h sl) ls
+   sublist_MONO_INC      |- !ls sl. sl <= ls /\ MONO_INC ls ==> MONO_INC sl
+   sublist_MONO_DEC      |- !ls sl. sl <= ls /\ MONO_DEC ls ==> MONO_DEC sl
+
+   FILTER as sublist:
+   FILTER_sublist        |- !P ls. FILTER P ls <= ls
+   FILTER_element_order  |- !P ls j h. (let fs = FILTER P ls
+                                         in ALL_DISTINCT ls /\ j < h /\ h < LENGTH fs ==>
+                                            findi (EL j fs) ls < findi (EL h fs) ls)
+   FILTER_MONO_INC       |- !P ls. MONO_INC ls ==> MONO_INC (FILTER P ls)
+   FILTER_MONO_DEC       |- !P ls. MONO_DEC ls ==> MONO_DEC (FILTER P ls)
+
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -542,6 +562,98 @@ val sublist_induct = store_thm(
   rpt strip_tac >>
   (Cases_on `x` >> fs[sublist_def]));
 
+(*
+Note that from definition:
+sublist_ind
+|- !P. (!x. P [] x) /\ (!h1 t1. P (h1::t1) []) /\
+             (!h1 t1 h2 t2. P t1 t2 /\ P (h1::t1) t2 ==> P (h1::t1) (h2::t2)) ==>
+             !v v1. P v v1
+
+sublist_induct
+|- !P. (!y. P [] y) /\ (!h x y. P x y /\ x <= y ==> P (h::x) (h::y)) /\
+             (!h x y. P x y /\ x <= y ==> P x (h::y)) ==>
+             !x y. x <= y ==> P x y
+
+The second is better.
+*)
+
+(* Theorem: p <= q /\ MEM x p ==> MEM x q *)
+(* Proof:
+   By sublist_induct, this is to show:
+   (1) MEM x [] ==> MEM x q
+       Note MEM x [] = F                       by MEM
+       Hence true.
+   (2) MEM x p ==> MEM x q /\ p <= q /\ MEM x (h::p) ==> MEM x (h::q)
+       If x = h, then MEM h (h::q) = T         by MEM
+       If x <> h,     MEM x (h::p)
+                  ==> MEM x p                  by MEM, x <> h
+                  ==> MEM x q                  by induction hypothesis
+                  ==> MEM x (h::q)             by MEM, x <> h
+   (3) MEM x p ==> MEM x q /\ p <= q /\ MEM x p ==> MEM x (h::q)
+       If x = h, then MEM h (h::q) = T         by MEM
+       If x <> h,     MEM x p
+                  ==> MEM x q                  by induction hypothesis
+                  ==> MEM x (h::q)             by MEM, x <> h
+*)
+Theorem sublist_mem:
+  !p q x. p <= q /\ MEM x p ==> MEM x q
+Proof
+  rpt strip_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  qid_spec_tac `q` >>
+  qid_spec_tac `p` >>
+  ho_match_mp_tac sublist_induct >>
+  rpt strip_tac >-
+  fs[] >-
+  (Cases_on `x = h` >> fs[]) >>
+  (Cases_on `x = h` >> fs[])
+QED
+
+(* Theorem: sl <= ls ==> set sl SUBSET set ls *)
+(* Proof:
+       set sl SUBSET set ls
+   <=> !x. x IN set (sl) ==> x IN set ls       by SUBSET_DEF
+   <=> !x.      MEM x sl ==> MEM x ls          by notation
+   ==> T                                       by sublist_mem
+*)
+Theorem sublist_subset:
+  !ls sl. sl <= ls ==> set sl SUBSET set ls
+Proof
+  metis_tac[SUBSET_DEF, sublist_mem]
+QED
+
+(* Theorem: p <= q /\ ALL_DISTINCT q ==> ALL_DISTINCT p *)
+(* Proof:
+   By sublist_induct, this is to show:
+   (1) ALL_DISTINCT q ==> ALL_DISTINCT []
+       Note ALL_DISTINCT [] = T                by ALL_DISTINCT
+   (2) ALL_DISTINCT q ==> ALL_DISTINCT p /\ p <= q /\ ALL_DISTINCT (h::q) ==> ALL_DISTINCT (h::p)
+           ALL_DISTINCT (h::q)
+       <=> ~MEM h q /\ ALL_DISTINCT q          by ALL_DISTINCT
+       ==> ~MEM h q /\ ALL_DISTINCT p          by induction hypothesis
+       ==> ~MEM h p /\ ALL_DISTINCT p          by sublist_mem
+       <=> ALL_DISTINCT (h::p)                 by ALL_DISTINCT
+   (3) ALL_DISTINCT q ==> ALL_DISTINCT p /\ p <= q /\ ALL_DISTINCT (h::q) ==> ALL_DISTINCT p
+           ALL_DISTINCT (h::q)
+       ==> ALL_DISTINCT q                      by ALL_DISTINCT
+       ==> ALL_DISTINCT p                      by induction hypothesis
+*)
+Theorem sublist_ALL_DISTINCT:
+  !p q. p <= q /\ ALL_DISTINCT q ==> ALL_DISTINCT p
+Proof
+  rpt strip_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  qid_spec_tac `q` >>
+  qid_spec_tac `p` >>
+  ho_match_mp_tac sublist_induct >>
+  rpt strip_tac >-
+  simp[] >-
+  (fs[] >> metis_tac[sublist_mem]) >>
+  fs[]
+QED
+
 (* Theorem: [Eliminate append from left]: (x ++ p) <= q ==> sublist p <= q *)
 (* Proof:
    By induction on the extra list x.
@@ -840,7 +952,7 @@ val sublist_append_extend = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-(* Application of sublist.                                                   *)
+(* Applications of sublist.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
 (* Theorem: p <= q ==> (MAP f p) <= (MAP f q) *)
@@ -975,6 +1087,360 @@ val listRangeLHI_sublist = store_thm(
     `[m; SUC n - 1] <= [m; n - 1; n]` by rw[sublist_def] >>
     metis_tac[sublist_trans]
   ]);
+
+(* Idea: express order-preserving in sublist *)
+
+(* Note:
+A simple statement of order-preserving:
+
+g `p <= q /\ MEM x p /\ MEM y p /\ findi x p <= findi y p ==> findi x q <= findi y q`;
+
+This simple statement has a counter-example:
+q = [1;2;3;4;3;5;1]
+p = [2;4;1]
+MEM 4 p /\ MEM 1 p /\ findi 4 p = 1 <= findi 1 p = 2, but findi 4 q = 3, yet findi 1 q = 0.
+This is because findi gives the first appearance of the member.
+This can be fixed by ALL_DISTINCT, but the idea of order-preserving should not depend on ALL_DISTINCT.
+*)
+
+(* Theorem: sl <= ls /\ MEM x sl ==>
+            ?l1 l2 l3 l4. ls = l1 ++ [x] ++ l2 /\ sl = l3 ++ [x] ++ l4 /\ l3 <= l1 /\ l4 <= l2 *)
+(* Proof:
+   By sublist_induct, this is to show:
+   (1) MEM x [] ==> ?l1 l2 l3 l4...
+       Note MEM x [] = F                       by MEM
+       hence true.
+   (2) MEM x sl ==> ?l1 l2 l3 l4... /\ sl <= ls /\ MEM x (h::sl) ==>
+       ?l1 l2 l3 l4. h::ls = l1 ++ [x] ++ l2 /\ h::sl = l3 ++ [x] ++ l4 /\ l3 <= l1 /\ l4 <= l2
+       Note MEM x (h::sl)
+        ==> x = h \/ MEM x sl                  by MEM
+       If x = h,
+          Then h::ls = [h] ++ ls               by CONS_APPEND
+           and h::sl = [h] ++ sl               by CONS_APPEND
+       Pick l1 = [], l2 = ls, l3 = [], l4 = sl.
+       Then l3 <= l1 since                     by sublist_nil
+        and l4 <= l2 since sl <= ls            by induction hypothesis
+       Otherwise, MEM x sl,
+           Note ?l1 l2 l3 l4.
+                ls = l1 ++ [x] ++ l2 /\ sl = l3 ++ [x] ++ l4 /\ l3 <= l1 /\ l4 <= l2
+                                               by induction hypothesis
+           Then h::ls = h::(l1 ++ [x] ++ l2)
+                      = h::l1 ++ [x] ++ l2     by APPEND
+            and h::sl = h::(l3 ++ [x] ++ l4)
+                      = h::l3 ++ [x] ++ l4     by APPEND
+           Pick new l1 = h::l1, l2 = l2, l3 = h::l3, l4 = l4.
+           Then l3 <= l1 ==> h::l3 <= h::l1    by sublist_cons
+   (3) MEM x sl ==> ?l1 l2 l3 l4... /\ sl <= ls /\ MEM x sl ==>
+       ?l1 l2 l3 l4. h::ls = l1 ++ [x] ++ l2 /\ sl = l3 ++ [x] ++ l4 /\ l3 <= l1 /\ l4 <= l2
+       Note ?l1 l2 l3 l4.
+            ls = l1 ++ [x] ++ l2 /\ sl = l3 ++ [x] ++ l4 /\ l3 <= l1 /\ l4 <= l2
+                                               by induction hypothesis
+       Then h::ls = h::(l1 ++ [x] ++ l2)
+                  = h::l1 ++ [x] ++ l2         by APPEND
+        Pick new l1 = h::l1, l2 = l2, l3 = l3, l4 = l4.
+        Then l3 <= l1 ==> l3 <= h::l1          by sublist_cons_include
+*)
+Theorem sublist_order:
+  !ls sl x. sl <= ls /\ MEM x sl ==>
+            ?l1 l2 l3 l4. ls = l1 ++ [x] ++ l2 /\ sl = l3 ++ [x] ++ l4 /\ l3 <= l1 /\ l4 <= l2
+Proof
+  rpt strip_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  qid_spec_tac `ls` >>
+  qid_spec_tac `sl` >>
+  ho_match_mp_tac sublist_induct >>
+  rpt strip_tac >-
+  fs[] >-
+ (fs[] >| [
+    map_every qexists_tac [`[]`, `ls`, `[]`, `sl`] >>
+    simp[sublist_nil],
+    fs[] >>
+    map_every qexists_tac [`h::l1`, `l2`, `h::l3`, `l4`] >>
+    simp[GSYM sublist_cons]
+  ]) >>
+  fs[] >>
+  map_every qexists_tac [`h::l1`, `l2`, `l3`, `l4`] >>
+  simp[sublist_cons_include]
+QED
+
+(* Theorem: sl <= ls /\ ALL_DISTINCT ls /\ j < h /\ h < LENGTH sl ==>
+            findi (EL j sl) ls < findi (EL h sl) ls *)
+(* Proof:
+   Let x = EL j sl,
+       y = EL h sl,
+       p = findi x ls,
+       q = findi y ls.
+   Then MEM x sl /\ MEM y sl                   by EL_MEM
+    and ALL_DISTINCT sl                        by sublist_ALL_DISTINCT
+
+   With MEM x sl,
+   Note ?l1 l2 l3 l4. ls = l1 ++ [x] ++ l2 /\
+                      sl = l3 ++ [x] ++ l4 /\
+                      l3 <= l1 /\ l4 <= l2     by sublist_order, sl <= ls
+   Thus j = LENGTH l3                          by ALL_DISTINCT_EL_APPEND, j < LENGTH sl
+
+   Claim: MEM y l4
+   Proof: By contradiction, suppose ~MEM y l4.
+          Note y <> x                          by ALL_DISTINCT_EL_IMP, j <> h
+           ==> MEM y l3                        by MEM_APPEND
+           ==> ?k. k < LENGTH l3 /\ y = EL k l3   by MEM_EL
+           But LENGTH l3 < LENGTH sl           by LENGTH_APPEND
+           and y = EL k sl                     by EL_APPEND1
+          Thus k = h                           by ALL_DISTINCT_EL_IMP, k < LENGTH sl
+            or h < j, contradicting j < h      by j = LENGTH l3
+
+   Thus ?l5 l6 l7 l8. l2 = l5 ++ [x] ++ l6 /\
+                      l4 = l7 ++ [x] ++ l8 /\
+                      l7 <= l5 /\ l8 <= l6     by sublist_order, l4 <= l2
+
+   Hence, ls = l1 ++ [x] ++ l5 ++ [y] ++ l6.
+    Now p < LENGTH ls /\ q < LENGTH ls         by MEM_findi
+     so x = EL p ls /\ y = EL q ls             by findi_EL_iff
+    and p = LENGTH l1                          by ALL_DISTINCT_EL_APPEND
+    and q = LENGTH (l1 ++ [x] ++ l5)           by ALL_DISTINCT_EL_APPEND
+   Thus p < q                                  by LENGTH_APPEND
+*)
+Theorem sublist_element_order:
+  !ls sl j h. sl <= ls /\ ALL_DISTINCT ls /\ j < h /\ h < LENGTH sl ==>
+              findi (EL j sl) ls < findi (EL h sl) ls
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `x = EL j sl` >>
+  qabbrev_tac `y = EL h sl` >>
+  qabbrev_tac `p = findi x ls` >>
+  qabbrev_tac `q = findi y ls` >>
+  `MEM x sl /\ MEM y sl` by fs[EL_MEM, Abbr`x`, Abbr`y`] >>
+  assume_tac sublist_order >>
+  last_x_assum (qspecl_then [`ls`, `sl`, `x`] strip_assume_tac) >>
+  rfs[] >>
+  `ALL_DISTINCT sl` by metis_tac[sublist_ALL_DISTINCT] >>
+  `j = LENGTH l3` by metis_tac[ALL_DISTINCT_EL_APPEND, LESS_TRANS] >>
+  `MEM y l4` by
+  (spose_not_then strip_assume_tac >>
+  `y <> x` by fs[ALL_DISTINCT_EL_IMP, Abbr`x`, Abbr`y`] >>
+  `MEM y l3` by fs[] >>
+  `?k. k < LENGTH l3 /\ y = EL k l3` by simp[GSYM MEM_EL] >>
+  `LENGTH l3 < LENGTH sl` by fs[] >>
+  `y = EL k sl` by fs[EL_APPEND1] >>
+  `k = h` by metis_tac[ALL_DISTINCT_EL_IMP, LESS_TRANS] >>
+  decide_tac) >>
+  assume_tac sublist_order >>
+  last_x_assum (qspecl_then [`l2`, `l4`, `y`] strip_assume_tac) >>
+  rfs[] >>
+  rename1 `l2 = l5 ++ [y] ++ l6` >>
+  `p < LENGTH ls /\ q < LENGTH ls` by fs[MEM_findi, Abbr`p`, Abbr`q`] >>
+  `x = EL p ls /\ y = EL q ls` by fs[findi_EL_iff, Abbr`p`, Abbr`q`] >>
+  `p = LENGTH l1` by metis_tac[ALL_DISTINCT_EL_APPEND] >>
+  `ls = l1 ++ [x] ++ l5 ++ [y] ++ l6` by fs[] >>
+  `q = LENGTH (l1 ++ [x] ++ l5)` by metis_tac[ALL_DISTINCT_EL_APPEND] >>
+  fs[]
+QED
+
+(* Theorem: sl <= ls /\ MONO_INC ls ==> MONO_INC sl *)
+(* Proof:
+   By sublist induction, this is to show:
+   (1) n < LENGTH [] /\ m <= n ==> EL m [] <= EL n []
+       Note LENGTH [] = 0                      by LENGTH
+         so assumption is F, hence T.
+   (2) MONO_INC ls ==> MONO_INC sl /\ sl <= ls /\
+       MONO_INC (h::ls) /\ m <= n /\ n < LENGTH (h::sl) ==> EL m (h::sl) <= EL n (h::sl)
+       Note MONO_INC (h::ls) ==> MONO_INC ls   by MONO_INC_CONS
+       If m = 0,
+          If n = 0,
+             Then EL 0 (h::sl) = h, hence T.
+          If 0 < n,
+             Then 0 <= PRE n,
+               so EL n (h::sl) = EL (PRE n) sl
+             Let x = EL 0 sl.
+             Then x <= EL (PRE n) sl           by MONO_INC sl
+              But MEM x sl                     by EL_MEM
+              ==> MEM x ls                     by sublist_mem
+               so h <= x                       by MONO_INC (h::ls)
+              Thus h <= EL n (h::sl)           by inequality
+       If 0 < m,
+          Then m <= n means 0 < n.
+          Thus PRE m <= PRE n
+                EL m (h::sl)
+              = EL (PRE m) sl                  by EL_CONS, 0 < m
+             <= EL (PRE n) sl                  by induction hypothesis
+              = EL n (h::sl)                   by EL_CONS, 0 < n
+
+   (3) MONO_INC ls ==> MONO_INC sl /\ sl <= ls /\
+       MONO_INC (h::ls) /\ m <= n /\ n < LENGTH sl ==> EL m sl <= EL n sl
+       Note MONO_INC (h::ls) ==> MONO_INC ls   by MONO_INC_CONS
+       Thus MONO_INC sl                        by induction hypothesis
+         so m <= n ==> EL m sl <= EL n sl      by MONO_INC sl
+*)
+Theorem sublist_MONO_INC:
+  !ls sl. sl <= ls /\ MONO_INC ls ==> MONO_INC sl
+Proof
+  ntac 3 strip_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  qid_spec_tac `ls` >>
+  qid_spec_tac `sl` >>
+  ho_match_mp_tac sublist_induct >>
+  rpt strip_tac >-
+  fs[] >-
+ (`MONO_INC ls` by metis_tac[MONO_INC_CONS] >>
+  `m = 0 \/ 0 < m` by decide_tac >| [
+    `n = 0 \/ 0 < n` by decide_tac >-
+    simp[] >>
+    `0 <= PRE n` by decide_tac >>
+    qabbrev_tac `x = EL 0 sl` >>
+    `x <= EL (PRE n) sl` by fs[Abbr`x`] >>
+    `MEM x sl` by fs[EL_MEM, Abbr`x`] >>
+    `h <= x` by metis_tac[MONO_INC_HD, sublist_mem] >>
+    simp[EL_CONS],
+    `0 < n /\ PRE m <= PRE n` by decide_tac >>
+    `EL (PRE m) sl <= EL (PRE n) sl` by fs[] >>
+    simp[EL_CONS]
+  ]) >>
+  `MONO_INC ls` by metis_tac[MONO_INC_CONS] >>
+  fs[]
+QED
+
+(* Theorem: sl <= ls /\ MONO_DEC ls ==> MONO_DEC sl *)
+(* Proof:
+   By sublist induction, this is to show:
+   (1) n < LENGTH [] /\ m <= n ==> EL n [] <= EL m []
+       Note LENGTH [] = 0                      by LENGTH
+         so assumption is F, hence T.
+   (2) MONO_DEC ls ==> MONO_DEC sl /\ sl <= ls /\
+       MONO_DEC (h::ls) /\ m <= n /\ n < LENGTH (h::sl) ==> EL n (h::sl) <= EL m (h::sl)
+       Note MONO_DEC (h::ls) ==> MONO_DEC ls   by MONO_DEC_CONS
+       If m = 0,
+          If n = 0,
+             Then EL 0 (h::sl) = h, hence T.
+          If 0 < n,
+             Then 0 <= PRE n,
+               so EL n (h::sl) = EL (PRE n) sl
+             Let x = EL 0 sl.
+             Then EL (PRE n) sl <= x           by MONO_DEC sl
+              But MEM x sl                     by EL_MEM
+              ==> MEM x ls                     by sublist_mem
+               so x <= h                       by MONO_DEC (h::ls)
+              Thus EL n (h::sl) <= h           by inequality
+       If 0 < m,
+          Then m <= n means 0 < n.
+          Thus PRE m <= PRE n
+                EL n (h::sl)
+              = EL (PRE n) sl                  by EL_CONS, 0 < n
+             <= EL (PRE m) sl                  by induction hypothesis
+              = EL m (h::sl)                   by EL_CONS, 0 < m
+
+   (3) MONO_DEC ls ==> MONO_DEC sl /\ sl <= ls /\
+       MONO_DEC (h::ls) /\ m <= n /\ n < LENGTH sl ==> EL n sl <= EL m sl
+       Note MONO_DEC (h::ls) ==> MONO_DEC ls   by MONO_DEC_CONS
+       Thus MONO_DEC sl                        by induction hypothesis
+         so m <= n ==> EL n sl <= EL m sl      by MONO_DEC sl
+*)
+Theorem sublist_MONO_DEC:
+  !ls sl. sl <= ls /\ MONO_DEC ls ==> MONO_DEC sl
+Proof
+  ntac 3 strip_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  qid_spec_tac `ls` >>
+  qid_spec_tac `sl` >>
+  ho_match_mp_tac sublist_induct >>
+  rpt strip_tac >-
+  fs[] >-
+ (`MONO_DEC ls` by metis_tac[MONO_DEC_CONS] >>
+  `m = 0 \/ 0 < m` by decide_tac >| [
+    `n = 0 \/ 0 < n` by decide_tac >-
+    simp[] >>
+    `0 <= PRE n` by decide_tac >>
+    qabbrev_tac `x = EL 0 sl` >>
+    `EL (PRE n) sl <= x` by fs[Abbr`x`] >>
+    `MEM x sl` by fs[EL_MEM, Abbr`x`] >>
+    `x <= h` by metis_tac[MONO_DEC_HD, sublist_mem] >>
+    simp[EL_CONS],
+    `0 < n /\ PRE m <= PRE n` by decide_tac >>
+    `EL (PRE n) sl <= EL (PRE m) sl` by fs[] >>
+    simp[EL_CONS]
+  ]) >>
+  `MONO_DEC ls` by metis_tac[MONO_DEC_CONS] >>
+  fs[]
+QED
+
+(* Yes, finally! *)
+
+(* ------------------------------------------------------------------------- *)
+(* FILTER as sublist.                                                        *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: FILTER P ls <= ls *)
+(* Proof:
+   By induction on ls.
+   Base: FILTER P [] <= [],
+      Note FILTER P [] = []        by FILTER
+       and [] <= []                by sublist_refl
+   Step: FILTER P ls <= ls ==>
+         !h. FILTER P (h::ls) <= h::ls
+     If P h,
+             FILTER P ls <= ls                 by induction hypothesis
+         ==> h::FILTER P ls <= h::ls           by sublist_cons
+         ==> FILTER P (h::ls) <= h::ls         by FILTER, P h.
+
+     If ~P h,
+             FILTER P ls <= ls                 by induction hypothesis
+         ==> FILTER P ls <= h::ls              by sublist_cons_include
+         ==> FILTER P (h::ls) <= h::ls         by FILTER, ~P h.
+*)
+Theorem FILTER_sublist:
+  !P ls. FILTER P ls <= ls
+Proof
+  strip_tac >>
+  Induct >-
+  simp[sublist_refl] >>
+  rpt strip_tac >>
+  Cases_on `P h` >-
+  metis_tac[FILTER, sublist_cons] >>
+  metis_tac[FILTER, sublist_cons_include]
+QED
+
+(* Theorem: let fs = FILTER P ls in ALL_DISTINCT ls /\ j < h /\ h < LENGTH fs ==>
+            findi (EL j fs) ls < findi (EL h fs) l *)
+(* Proof:
+   Let fs = FILTER P ls.
+   Then fs <= ls                   by FILTER_sublist
+   Thus findi (EL j fs) ls
+      < findi (EL h fs) ls         by sublist_element_order
+*)
+Theorem FILTER_element_order:
+  !P ls j h. let fs = FILTER P ls in ALL_DISTINCT ls /\ j < h /\ h < LENGTH fs ==>
+             findi (EL j fs) ls < findi (EL h fs) ls
+Proof
+  rw_tac std_ss[] >>
+  `fs <= ls` by simp[FILTER_sublist, Abbr`fs`] >>
+  fs[sublist_element_order]
+QED
+
+(* Theorem: MONO_INC ls ==> MONO_INC (FILTER P ls) *)
+(* Proof:
+   Note (FILTER P ls) <= ls        by FILTER_sublist
+   With MONO_INC ls
+    ==> MONO_INC (FILTER P ls)     by sublist_MONO_INC
+*)
+Theorem FILTER_MONO_INC:
+  !P ls. MONO_INC ls ==> MONO_INC (FILTER P ls)
+Proof
+  metis_tac[FILTER_sublist, sublist_MONO_INC]
+QED
+
+(* Theorem: MONO_DEC ls ==> MONO_DEC (FILTER P ls) *)
+(* Proof:
+   Note (FILTER P ls) <= ls        by FILTER_sublist
+   With MONO_DEC ls
+    ==> MONO_DEC (FILTER P ls)     by sublist_MONO_DEC
+*)
+Theorem FILTER_MONO_DEC:
+  !P ls. MONO_DEC ls ==> MONO_DEC (FILTER P ls)
+Proof
+  metis_tac[FILTER_sublist, sublist_MONO_DEC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
