@@ -1309,14 +1309,14 @@ QED
    (1) !x. x IN (divisors n) ==> (\j. n DIV j) x IN univ(:num)
        True by types, n DIV j is a number, with type :num.
    (2) !x y. x IN (divisors n) /\ y IN (divisors n) /\ n DIV x = n DIV y ==> x = y
-       Note x divides n /\ 0 < x         by divisors_def
-        and y divides n /\ 0 < y         by divisors_def
+       Note x divides n /\ 0 < x /\ x <= n     by divisors_def
+        and y divides n /\ 0 < y /\ x <= n     by divisors_def
         Let p = n DIV x, q = n DIV y.
-       Note 0 < n                        by divisors_has_element
-       then 0 < p, 0 < q                 by DIV_POS, 0 < n
-       Then  n = p * x = q * y           by DIVIDES_EQN, 0 < x, 0 < y
-        But          p = q               by given
-         so          x = y               by EQ_MULT_LCANCEL
+       Note 0 < n                              by divisors_has_element
+       then 0 < p, 0 < q                       by DIV_POS, 0 < n
+       Then  n = p * x = q * y                 by DIVIDES_EQN, 0 < x, 0 < y
+        But          p = q                     by given
+         so          x = y                     by EQ_MULT_LCANCEL
 *)
 Theorem divisors_cofactor_inj:
   !n. INJ (\j. n DIV j) (divisors n) univ(:num)

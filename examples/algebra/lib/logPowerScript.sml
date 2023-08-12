@@ -74,6 +74,7 @@ open logrootTheory; (* for ROOT *)
    SQRT_UNIQUE      |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p
    SQRT_THM         |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2
    SQ_SQRT_LE       |- !n. SQ (SQRT n) <= n
+   SQ_SQRT_LE_alt   |- !n. SQRT n ** 2 <= n
    SQRT_LE          |- !n m. n <= m ==> SQRT n <= SQRT m
    SQRT_LT          |- !n m. n < m ==> SQRT n <= SQRT m
 #  SQRT_0           |- SQRT 0 = 0
@@ -88,6 +89,9 @@ open logrootTheory; (* for ROOT *)
    SQRT_EQ_SELF     |- !n. (SQRT n = n) <=> (n = 0) \/ (n = 1)
    SQRT_LE_IMP      |- !n m. SQRT n <= m ==> n <= 3 * m ** 2
    SQRT_MULT_LE     |- !n m. SQRT n * SQRT m <= SQRT (n * m)
+   SQRT_LT_IMP      |- !n m. SQRT n < m ==> n < m ** 2
+   LT_SQRT_IMP      |- !n m. n < SQRT m ==> n ** 2 < m
+   SQRT_LT_SQRT     |- !n m. SQRT n < SQRT m ==> n < m
 
    Square predicate:
    square_def       |- !n. square n <=> ?k. n = k * k
@@ -96,6 +100,8 @@ open logrootTheory; (* for ROOT *)
    square_0         |- square 0
    square_1         |- square 1
    prime_non_square |- !p. prime p ==> ~square p
+   SQ_SQRT_LT       |- !n. ~square n ==> SQRT n * SQRT n < n
+   SQ_SQRT_LT_alt   |- !n. ~square n ==> SQRT n ** 2 < n
 
    Logarithm:
    LOG_EXACT_EXP    |- !a. 1 < a ==> !n. LOG a (a ** n) = n
@@ -712,6 +718,10 @@ val SQRT_LT = store_thm(
   ``!n m. n < m ==> SQRT n <= SQRT m``,
   rw[ROOT_LE_MONO, LESS_IMP_LESS_OR_EQ]);
 
+(* Extract theorem *)
+Theorem SQ_SQRT_LE_alt = SQRT_PROPERTY |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL;
+(* val SQ_SQRT_LE_alt = |- !n. SQRT n ** 2 <= n: thm *)
+
 (* Theorem: SQRT 0 = 0 *)
 (* Proof: by ROOT_OF_0 *)
 val SQRT_0 = store_thm(
@@ -896,6 +906,64 @@ Proof
   metis_tac[SQRT_LE, SQRT_OF_SQ]
 QED
 
+(* Theorem: SQRT n < m ==> n < m ** 2 *)
+(* Proof:
+                     SQRT n < m
+   ==>        SUC (SQRT n) <= m                by arithmetic
+   ==> (SUC (SQRT m)) ** 2 <= m ** 2           by EXP_EXP_LE_MONO
+   But n < (SUC (SQRT n)) ** 2                 by SQRT_PROPERTY
+   Thus n < m ** 2                             by inequality
+*)
+Theorem SQRT_LT_IMP:
+  !n m. SQRT n < m ==> n < m ** 2
+Proof
+  rpt strip_tac >>
+  `SUC (SQRT n) <= m` by decide_tac >>
+  `SUC (SQRT n) ** 2 <= m ** 2` by simp[EXP_EXP_LE_MONO] >>
+  `n < SUC (SQRT n) ** 2` by simp[SQRT_PROPERTY] >>
+  decide_tac
+QED
+
+(* Theorem: n < SQRT m ==> n ** 2 < m *)
+(* Proof:
+                   n < SQRT m
+   ==>        n ** 2 < (SQRT m) ** 2           by EXP_EXP_LT_MONO
+   But        (SQRT m) ** 2 <= m               by SQRT_PROPERTY
+   Thus       n ** 2 < m                       by inequality
+*)
+Theorem LT_SQRT_IMP:
+  !n m. n < SQRT m ==> n ** 2 < m
+Proof
+  rpt strip_tac >>
+  `n ** 2 < (SQRT m) ** 2` by simp[EXP_EXP_LT_MONO] >>
+  `(SQRT m) ** 2 <= m` by simp[SQRT_PROPERTY] >>
+  decide_tac
+QED
+
+(* Theorem: SQRT n < SQRT m ==> n < m *)
+(* Proof:
+       SQRT n < SQRT m
+   ==>      n < (SQRT m) ** 2      by SQRT_LT_IMP
+   and (SQRT m) ** 2 <= m          by SQRT_PROPERTY
+    so      n < m                  by inequality
+*)
+Theorem SQRT_LT_SQRT:
+  !n m. SQRT n < SQRT m ==> n < m
+Proof
+  rpt strip_tac >>
+  imp_res_tac SQRT_LT_IMP >>
+  `(SQRT m) ** 2 <= m` by simp[SQRT_PROPERTY] >>
+  decide_tac
+QED
+
+(* Non-theorems:
+   SQRT n <= SQRT m ==> n <= m
+   counter-example: SQRT 5 = 2 = SQRT 4, but 5 > 4.
+
+   n < m ==> SQRT n < SQRT m
+   counter-example: 4 < 5, but SQRT 4 = 2 = SQRT 5.
+*)
+
 (* ------------------------------------------------------------------------- *)
 (* Square predicate                                                          *)
 (* ------------------------------------------------------------------------- *)
@@ -974,6 +1042,29 @@ Proof
   `p * 1 = p * p` by metis_tac[MULT_RIGHT_1] >>
   `1 = p` by metis_tac[EQ_MULT_LCANCEL, NOT_PRIME_0] >>
   metis_tac[NOT_PRIME_1]
+QED
+
+(* Theorem: ~square n ==> (SQRT n) * (SQRT n) < n *)
+(* Proof:
+   Note (SQRT n) * (SQRT n) <= n   by SQ_SQRT_LE
+    but (SQRT n) * (SQRT n) <> n   by square_def
+     so (SQRT n) * (SQRT n)  < n   by inequality
+*)
+Theorem SQ_SQRT_LT:
+  !n. ~square n ==> (SQRT n) * (SQRT n) < n
+Proof
+  rpt strip_tac >>
+  `(SQRT n) * (SQRT n) <= n` by simp[SQ_SQRT_LE] >>
+  `(SQRT n) * (SQRT n) <> n` by metis_tac[square_def] >>
+  decide_tac
+QED
+
+(* Theorem: ~square n ==> SQRT n ** 2 < n *)
+(* Proof: by SQ_SQRT_LT, EXP_2. *)
+Theorem SQ_SQRT_LT_alt:
+  !n. ~square n ==> SQRT n ** 2 < n
+Proof
+  metis_tac[SQ_SQRT_LT, EXP_2]
 QED
 
 (* ------------------------------------------------------------------------- *)
