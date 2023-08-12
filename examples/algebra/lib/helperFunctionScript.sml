@@ -24,6 +24,7 @@ open helperSetTheory;
 
 (* open dependent theories *)
 open pred_setTheory prim_recTheory arithmeticTheory;
+open listTheory rich_listTheory listRangeTheory;
 open dividesTheory gcdTheory;
 
 
@@ -110,7 +111,35 @@ open dividesTheory gcdTheory;
    FUNPOW_PAIR         |- !f g n x y. FUNPOW (\(x,y). (f x,g y)) n (x,y) = (FUNPOW f n x,FUNPOW g n y)
    FUNPOW_TRIPLE       |- !f g h n x y z. FUNPOW (\(x,y,z). (f x,g y,h z)) n (x,y,z) =
                                           (FUNPOW f n x,FUNPOW g n y,FUNPOW h n z)
+
+   More FUNPOW Theorems:
+   LINV_permutes       |- !f s. f PERMUTES s ==> LINV f s PERMUTES s
+   FUNPOW_permutes     |- !f s n. f PERMUTES s ==> FUNPOW f n PERMUTES s
    FUNPOW_closure      |- !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s
+   FUNPOW_LINV_permutes|- !f s n. f PERMUTES s ==> FUNPOW (LINV f s) n PERMUTES s
+   FUNPOW_LINV_closure |- !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW (LINV f s) n x IN s
+   FUNPOW_LINV_EQ      |- !f s x n. f PERMUTES s /\ x IN s ==>
+                                    FUNPOW f n (FUNPOW (LINV f s) n x) = x
+   FUNPOW_EQ_LINV      |- !f s x n. f PERMUTES s /\ x IN s ==>
+                                    FUNPOW (LINV f s) n (FUNPOW f n x) = x
+   FUNPOW_SUB_LINV1    |- !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+                          FUNPOW f (n - m) x = FUNPOW f n (FUNPOW (LINV f s) m x)
+   FUNPOW_SUB_LINV2    |- !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+                          FUNPOW f (n - m) x = FUNPOW (LINV f s) m (FUNPOW f n x)
+   FUNPOW_LINV_SUB1    |- !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+                          FUNPOW (LINV f s) (n - m) x = FUNPOW (LINV f s) n (FUNPOW f m x)
+   FUNPOW_LINV_SUB2    |- !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+                          FUNPOW (LINV f s) (n - m) x = FUNPOW f m (FUNPOW (LINV f s) n x)
+   FUNPOW_LINV_INV     |- !f s x y n. f PERMUTES s /\ x IN s /\ y IN s ==>
+                          (x = FUNPOW f n y <=> y = FUNPOW (LINV f s) n x)
+
+   FUNPOW with incremental cons:
+   FUNPOW_cons_head    |- !f n ls. HD (FUNPOW (\ls. f (HD ls)::ls) n ls) = FUNPOW f n (HD ls)
+   FUNPOW_cons_eq_map_0|- !f u n. FUNPOW (\ls. f (HD ls)::ls) n [u] =
+                                  MAP (\j. FUNPOW f j u) (n downto 0)
+   FUNPOW_cons_eq_map_1|- !f u n. 0 < n ==>
+                                  FUNPOW (\ls. f (HD ls)::ls) (n - 1) [f u] =
+                                  MAP (\j. FUNPOW f j u) (n downto 1)
 
    Factorial:
    FACT_0              |- FACT 0 = 1
@@ -1114,6 +1143,43 @@ val FUNPOW_TRIPLE = store_thm(
   Induct_on `n` >>
   rw[FUNPOW_SUC]);
 
+(* ------------------------------------------------------------------------- *)
+(* More FUNPOW Theorems                                                      *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: f PERMUTES s ==> (LINV f s) PERMUTES s *)
+(* Proof: by BIJ_LINV_BIJ *)
+Theorem LINV_permutes:
+  !f s. f PERMUTES s ==> (LINV f s) PERMUTES s
+Proof
+  rw[BIJ_LINV_BIJ]
+QED
+
+(* Theorem: f PERMUTES s ==> (FUNPOW f n) PERMUTES s *)
+(* Proof:
+   By induction on n.
+   Base: FUNPOW f 0 PERMUTES s
+      Note FUNPOW f 0 = I         by FUN_EQ_THM, FUNPOW_0
+       and I PERMUTES s           by BIJ_I_SAME
+      thus true.
+   Step: f PERMUTES s /\ FUNPOW f n PERMUTES s ==>
+         FUNPOW f (SUC n) PERMUTES s
+      Note FUNPOW f (SUC n)
+         = f o (FUNPOW f n)       by FUN_EQ_THM, FUNPOW_SUC
+      Thus true                   by BIJ_COMPOSE
+*)
+Theorem FUNPOW_permutes:
+  !f s n. f PERMUTES s ==> (FUNPOW f n) PERMUTES s
+Proof
+  rpt strip_tac >>
+  Induct_on `n` >| [
+    `FUNPOW f 0 = I` by rw[FUN_EQ_THM] >>
+    simp[BIJ_I_SAME],
+    `FUNPOW f (SUC n) = f o (FUNPOW f n)` by rw[FUN_EQ_THM, FUNPOW_SUC] >>
+    metis_tac[BIJ_COMPOSE]
+  ]
+QED
+
 (* Theorem: f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s *)
 (* Proof:
    By induction on n.
@@ -1133,6 +1199,354 @@ Proof
   Induct_on `n` >-
   rw[] >>
   metis_tac[FUNPOW_SUC, BIJ_ELEMENT]
+QED
+
+(* Theorem: f PERMUTES s ==> FUNPOW (LINV f s) n PERMUTES s *)
+(* Proof: by LINV_permutes, FUNPOW_permutes *)
+Theorem FUNPOW_LINV_permutes:
+  !f s n. f PERMUTES s ==> FUNPOW (LINV f s) n PERMUTES s
+Proof
+  simp[LINV_permutes, FUNPOW_permutes]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s *)
+(* Proof:
+   By induction on n.
+   Base: FUNPOW (LINV f s) 0 x IN s
+         Since FUNPOW (LINV f s) 0 x = x   by FUNPOW_0
+         This is trivially true.
+   Step: FUNPOW (LINV f s) n x IN s ==> FUNPOW (LINV f s) (SUC n) x IN s
+           FUNPOW (LINV f s) (SUC n) x
+         = (LINV f s) (FUNPOW (LINV f s) n x)   by FUNPOW_SUC
+         But FUNPOW (LINV f s) n x IN s         by induction hypothesis
+         and (LINV f s) PERMUTES s              by LINV_permutes
+          so (LINV f s) (FUNPOW (LINV f s) n x) IN s
+                                                by BIJ_ELEMENT
+*)
+Theorem FUNPOW_LINV_closure:
+  !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW (LINV f s) n x IN s
+Proof
+  rpt strip_tac >>
+  Induct_on `n` >-
+  rw[] >>
+  `(LINV f s) PERMUTES s` by rw[LINV_permutes] >>
+  prove_tac[FUNPOW_SUC, BIJ_ELEMENT]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s ==> FUNPOW f n (FUNPOW (LINV f s) n x) = x *)
+(* Proof:
+   By induction on n.
+   Base: FUNPOW f 0 (FUNPOW (LINV f s) 0 x) = x
+           FUNPOW f 0 (FUNPOW (LINV f s) 0 x)
+         = FUNPOW f 0 x              by FUNPOW_0
+         = x                         by FUNPOW_0
+   Step: FUNPOW f n (FUNPOW (LINV f s) n x) = x ==>
+         FUNPOW f (SUC n) (FUNPOW (LINV f s) (SUC n) x) = x
+         Note (FUNPOW (LINV f s) n x) IN s        by FUNPOW_LINV_closure
+           FUNPOW f (SUC n) (FUNPOW (LINV f s) (SUC n) x)
+         = FUNPOW f (SUC n) ((LINV f s) (FUNPOW (LINV f s) n x))  by FUNPOW_SUC
+         = FUNPOW f n (f ((LINV f s) (FUNPOW (LINV f s) n x)))    by FUNPOW
+         = FUNPOW f n (FUNPOW (LINV f s) n x)                     by BIJ_LINV_THM
+         = x                                      by induction hypothesis
+*)
+Theorem FUNPOW_LINV_EQ:
+  !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW f n (FUNPOW (LINV f s) n x) = x
+Proof
+  rpt strip_tac >>
+  Induct_on `n` >-
+  rw[] >>
+  `FUNPOW f (SUC n) (FUNPOW (LINV f s) (SUC n) x)
+    = FUNPOW f (SUC n) ((LINV f s) (FUNPOW (LINV f s) n x))` by rw[FUNPOW_SUC] >>
+  `_ = FUNPOW f n (f ((LINV f s) (FUNPOW (LINV f s) n x)))` by rw[FUNPOW] >>
+  `_ = FUNPOW f n (FUNPOW (LINV f s) n x)` by metis_tac[BIJ_LINV_THM, FUNPOW_LINV_closure] >>
+  simp[]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s ==> FUNPOW (LINV f s) n (FUNPOW f n x) = x *)
+(* Proof:
+   By induction on n.
+   Base: FUNPOW (LINV f s) 0 (FUNPOW f 0 x) = x
+           FUNPOW (LINV f s) 0 (FUNPOW f 0 x)
+         = FUNPOW (LINV f s) 0 x     by FUNPOW_0
+         = x                         by FUNPOW_0
+   Step: FUNPOW (LINV f s) n (FUNPOW f n x) = x ==>
+         FUNPOW (LINV f s) (SUC n) (FUNPOW f (SUC n) x) = x
+         Note (FUNPOW f n x) IN s                 by FUNPOW_closure
+           FUNPOW (LINV f s) (SUC n) (FUNPOW f (SUC n) x)
+         = FUNPOW (LINV f s) (SUC n) (f (FUNPOW f n x))           by FUNPOW_SUC
+         = FUNPOW (LINV f s) n ((LINV f s) (f (FUNPOW f n x)))    by FUNPOW
+         = FUNPOW (LINV f s) n (FUNPOW f n x)                     by BIJ_LINV_THM
+         = x                                      by induction hypothesis
+*)
+Theorem FUNPOW_EQ_LINV:
+  !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW (LINV f s) n (FUNPOW f n x) = x
+Proof
+  rpt strip_tac >>
+  Induct_on `n` >-
+  rw[] >>
+  `FUNPOW (LINV f s) (SUC n) (FUNPOW f (SUC n) x)
+    = FUNPOW (LINV f s) (SUC n) (f (FUNPOW f n x))` by rw[FUNPOW_SUC] >>
+  `_ = FUNPOW (LINV f s) n ((LINV f s) (f (FUNPOW f n x)))` by rw[FUNPOW] >>
+  `_ = FUNPOW (LINV f s) n (FUNPOW f n x)` by metis_tac[BIJ_LINV_THM, FUNPOW_closure] >>
+  simp[]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s /\ m <= n ==>
+            FUNPOW f (n - m) x = FUNPOW f n (FUNPOW (LINV f s) m x) *)
+(* Proof:
+     FUNPOW f n (FUNPOW (LINV f s) m x)
+   = FUNPOW f (n - m + m) (FUNPOW (LINV f s) m x)   by SUB_ADD, m <= n
+   = FUNPOW f (n - m) (FUNPOW f m (FUNPOW (LINV f s) m x))  by FUNPOW_ADD
+   = FUNPOW f (n - m) x                             by FUNPOW_LINV_EQ
+*)
+Theorem FUNPOW_SUB_LINV1:
+  !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+              FUNPOW f (n - m) x = FUNPOW f n (FUNPOW (LINV f s) m x)
+Proof
+  rpt strip_tac >>
+  `FUNPOW f n (FUNPOW (LINV f s) m x)
+  = FUNPOW f (n - m + m) (FUNPOW (LINV f s) m x)` by simp[] >>
+  `_ = FUNPOW f (n - m) (FUNPOW f m (FUNPOW (LINV f s) m x))` by rw[FUNPOW_ADD] >>
+  `_ = FUNPOW f (n - m) x` by rw[FUNPOW_LINV_EQ] >>
+  simp[]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s /\ m <= n ==>
+            FUNPOW f (n - m) x = FUNPOW (LINV f s) m (FUNPOW f n x) *)
+(* Proof:
+   Note FUNPOW f (n - m) x IN s                      by FUNPOW_closure
+     FUNPOW (LINV f s) m (FUNPOW f n x)
+   = FUNPOW (LINV f s) m (FUNPOW f (n - m + m) x)    by SUB_ADD, m <= n
+   = FUNPOW (LINV f s) m (FUNPOW f (m + (n - m)) x)  by ADD_COMM
+   = FUNPOW (LINV f s) m (FUNPOW f m (FUNPOW f (n - m) x))  by FUNPOW_ADD
+   = FUNPOW f (n - m) x                              by FUNPOW_EQ_LINV
+*)
+Theorem FUNPOW_SUB_LINV2:
+  !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+              FUNPOW f (n - m) x = FUNPOW (LINV f s) m (FUNPOW f n x)
+Proof
+  rpt strip_tac >>
+  `FUNPOW (LINV f s) m (FUNPOW f n x)
+  = FUNPOW (LINV f s) m (FUNPOW f (n - m + m) x)` by simp[] >>
+  `_ = FUNPOW (LINV f s) m (FUNPOW f (m + (n - m)) x)` by metis_tac[ADD_COMM] >>
+  `_ = FUNPOW (LINV f s) m (FUNPOW f m (FUNPOW f (n - m) x))` by rw[FUNPOW_ADD] >>
+  `_ = FUNPOW f (n - m) x` by rw[FUNPOW_EQ_LINV, FUNPOW_closure] >>
+  simp[]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s /\ m <= n ==>
+            FUNPOW (LINV f s) (n - m) x = FUNPOW (LINV f s) n (FUNPOW f m x) *)
+(* Proof:
+     FUNPOW (LINV f s) n (FUNPOW f m x)
+   = FUNPOW (LINV f s) (n - m + m) (FUNPOW f m x)    by SUB_ADD, m <= n
+   = FUNPOW (LINV f s) (n - m) (FUNPOW (LINV f s) m (FUNPOW f m x))  by FUNPOW_ADD
+   = FUNPOW (LINV f s) (n - m) x                     by FUNPOW_EQ_LINV
+*)
+Theorem FUNPOW_LINV_SUB1:
+  !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+              FUNPOW (LINV f s) (n - m) x = FUNPOW (LINV f s) n (FUNPOW f m x)
+Proof
+  rpt strip_tac >>
+  `FUNPOW (LINV f s) n (FUNPOW f m x)
+  = FUNPOW (LINV f s) (n - m + m) (FUNPOW f m x)` by simp[] >>
+  `_ = FUNPOW (LINV f s) (n - m) (FUNPOW (LINV f s) m (FUNPOW f m x))` by rw[FUNPOW_ADD] >>
+  `_ = FUNPOW (LINV f s) (n - m) x` by rw[FUNPOW_EQ_LINV] >>
+  simp[]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s /\ m <= n ==>
+            FUNPOW (LINV f s) (n - m) x = FUNPOW f m (FUNPOW (LINV f s) n x) *)
+(* Proof:
+   Note FUNPOW (LINV f s) (n - m) x IN s             by FUNPOW_LINV_closure
+     FUNPOW f m (FUNPOW (LINV f s) n x)
+   = FUNPOW f m (FUNPOW (LINV f s) (n - m + m) x)    by SUB_ADD, m <= n
+   = FUNPOW f m (FUNPOW (LINV f s) (m + (n - m)) x)  by ADD_COMM
+   = FUNPOW f m (FUNPOW (LINV f s) m (FUNPOW (LINV f s) (n - m) x))  by FUNPOW_ADD
+   = FUNPOW (LINV f s) (n - m) x                     by FUNPOW_LINV_EQ
+*)
+Theorem FUNPOW_LINV_SUB2:
+  !f s x m n. f PERMUTES s /\ x IN s /\ m <= n ==>
+              FUNPOW (LINV f s) (n - m) x = FUNPOW f m (FUNPOW (LINV f s) n x)
+Proof
+  rpt strip_tac >>
+  `FUNPOW f m (FUNPOW (LINV f s) n x)
+  = FUNPOW f m (FUNPOW (LINV f s) (n - m + m) x)` by simp[] >>
+  `_ = FUNPOW f m (FUNPOW (LINV f s) (m + (n - m)) x)` by metis_tac[ADD_COMM] >>
+  `_ = FUNPOW f m (FUNPOW (LINV f s) m (FUNPOW (LINV f s) (n - m) x))` by rw[FUNPOW_ADD] >>
+  `_ = FUNPOW (LINV f s) (n - m) x` by rw[FUNPOW_LINV_EQ, FUNPOW_LINV_closure] >>
+  simp[]
+QED
+
+(* Theorem: f PERMUTES s /\ x IN s /\ y IN s ==>
+            (x = FUNPOW f n y <=> y = FUNPOW (LINV f s) n x) *)
+(* Proof:
+   If part: x = FUNPOW f n y ==> y = FUNPOW (LINV f s) n x)
+        FUNPOW (LINV f s) n x)
+      = FUNPOW (LINV f s) n (FUNPOW f n y))   by x = FUNPOW f n y
+      = y                                     by FUNPOW_EQ_LINV
+   Only-if part: y = FUNPOW (LINV f s) n x) ==> x = FUNPOW f n y
+        FUNPOW f n y
+      = FUNPOW f n (FUNPOW (LINV f s) n x))   by y = FUNPOW (LINV f s) n x)
+      = x                                     by FUNPOW_LINV_EQ
+*)
+Theorem FUNPOW_LINV_INV:
+  !f s x y n. f PERMUTES s /\ x IN s /\ y IN s ==>
+              (x = FUNPOW f n y <=> y = FUNPOW (LINV f s) n x)
+Proof
+  rw[EQ_IMP_THM] >-
+  rw[FUNPOW_EQ_LINV] >>
+  rw[FUNPOW_LINV_EQ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* FUNPOW with incremental cons.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+(* Note from HelperList: m downto n = REVERSE [m .. n] *)
+
+(* Idea: when applying incremental cons (f head) to a list for n times,
+         head of the result is f^n (head of list). *)
+
+(* Theorem: HD (FUNPOW (\ls. f (HD ls)::ls) n ls) = FUNPOW f n (HD ls) *)
+(* Proof:
+   Let h = (\ls. f (HD ls)::ls).
+   By induction on n.
+   Base: !ls. HD (FUNPOW h 0 ls) = FUNPOW f 0 (HD ls)
+           HD (FUNPOW h 0 ls)
+         = HD ls                by FUNPOW_0
+         = FUNPOW f 0 (HD ls)   by FUNPOW_0
+   Step: !ls. HD (FUNPOW h n ls) = FUNPOW f n (HD ls) ==>
+         !ls. HD (FUNPOW h (SUC n) ls) = FUNPOW f (SUC n) (HD ls)
+           HD (FUNPOW h (SUC n) ls)
+         = HD (FUNPOW h n (h ls))    by FUNPOW
+         = FUNPOW f n (HD (h ls))    by induction hypothesis
+         = FUNPOW f n (f (HD ls))    by definition of h
+         = FUNPOW f (SUC n) (HD ls)  by FUNPOW
+*)
+Theorem FUNPOW_cons_head:
+  !f n ls. HD (FUNPOW (\ls. f (HD ls)::ls) n ls) = FUNPOW f n (HD ls)
+Proof
+  strip_tac >>
+  qabbrev_tac `h = \ls. f (HD ls)::ls` >>
+  Induct >-
+  simp[] >>
+  rw[FUNPOW, Abbr`h`]
+QED
+
+(* Idea: when applying incremental cons (f head) to a singleton [u] for n times,
+         the result is the list [f^n(u), .... f(u), u]. *)
+
+(* Theorem: FUNPOW (\ls. f (HD ls)::ls) n [u] =
+            MAP (\j. FUNPOW f j u) (n downto 0) *)
+(* Proof:
+   Let g = (\ls. f (HD ls)::ls),
+       h = (\j. FUNPOW f j u).
+   By induction on n.
+   Base: FUNPOW g 0 [u] = MAP h (0 downto 0)
+           FUNPOW g 0 [u]
+         = [u]                       by FUNPOW_0
+         = [FUNPOW f 0 u]            by FUNPOW_0
+         = MAP h [0]                 by MAP
+         = MAP h (0 downto 0)  by REVERSE
+   Step: FUNPOW g n [u] = MAP h (n downto 0) ==>
+         FUNPOW g (SUC n) [u] = MAP h (SUC n downto 0)
+           FUNPOW g (SUC n) [u]
+         = g (FUNPOW g n [u])             by FUNPOW_SUC
+         = g (MAP h (n downto 0))   by induction hypothesis
+         = f (HD (MAP h (n downto 0))) ::
+             MAP h (n downto 0)     by definition of g
+         Now f (HD (MAP h (n downto 0)))
+           = f (HD (MAP h (MAP (\x. n - x) [0 .. n])))    by listRangeINC_REVERSE
+           = f (HD (MAP h o (\x. n - x) [0 .. n]))        by MAP_COMPOSE
+           = f ((h o (\x. n - x)) 0)                      by MAP
+           = f (h n)
+           = f (FUNPOW f n u)             by definition of h
+           = FUNPOW (n + 1) u             by FUNPOW_SUC
+           = h (n + 1)                    by definition of h
+          so h (n + 1) :: MAP h (n downto 0)
+           = MAP h ((n + 1) :: (n downto 0))         by MAP
+           = MAP h (REVERSE (SNOC (n+1) [0 .. n]))   by REVERSE_SNOC
+           = MAP h (SUC n downto 0)                  by listRangeINC_SNOC
+*)
+Theorem FUNPOW_cons_eq_map_0:
+  !f u n. FUNPOW (\ls. f (HD ls)::ls) n [u] =
+          MAP (\j. FUNPOW f j u) (n downto 0)
+Proof
+  ntac 2 strip_tac >>
+  Induct >-
+  rw[] >>
+  qabbrev_tac `g = \ls. f (HD ls)::ls` >>
+  qabbrev_tac `h = \j. FUNPOW f j u` >>
+  rw[] >>
+  `f (HD (MAP h (n downto 0))) = h (n + 1)` by
+  (`[0 .. n] = 0 :: [1 .. n]` by rw[listRangeINC_CONS] >>
+  fs[listRangeINC_REVERSE, MAP_COMPOSE, GSYM FUNPOW_SUC, ADD1, Abbr`h`]) >>
+  `FUNPOW g (SUC n) [u] = g (FUNPOW g n [u])` by rw[FUNPOW_SUC] >>
+  `_ = g (MAP h (n downto 0))` by fs[] >>
+  `_ = h (n + 1) :: MAP h (n downto 0)` by rw[Abbr`g`] >>
+  `_ = MAP h ((n + 1) :: (n downto 0))` by rw[] >>
+  `_ = MAP h (REVERSE (SNOC (n+1) [0 .. n]))` by rw[REVERSE_SNOC] >>
+  rw[listRangeINC_SNOC, ADD1]
+QED
+
+(* Idea: when applying incremental cons (f head) to a singleton [f(u)] for (n-1) times,
+         the result is the list [f^n(u), .... f(u)]. *)
+
+(* Theorem: 0 < n ==> (FUNPOW (\ls. f (HD ls)::ls) (n - 1) [f u] =
+            MAP (\j. FUNPOW f j u) (n downto 1)) *)
+(* Proof:
+   Let g = (\ls. f (HD ls)::ls),
+       h = (\j. FUNPOW f j u).
+   By induction on n.
+   Base: FUNPOW g 0 [f u] = MAP h (REVERSE [1 .. 1])
+           FUNPOW g 0 [f u]
+         = [f u]                     by FUNPOW_0
+         = [FUNPOW f 1 u]            by FUNPOW_1
+         = MAP h [1]                 by MAP
+         = MAP h (REVERSE [1 .. 1])  by REVERSE
+   Step: 0 < n ==> FUNPOW g (n-1) [f u] = MAP h (n downto 1) ==>
+         FUNPOW g n [f u] = MAP h (REVERSE [1 .. SUC n])
+         The case n = 0 is the base case. For n <> 0,
+           FUNPOW g n [f u]
+         = g (FUNPOW g (n-1) [f u])       by FUNPOW_SUC
+         = g (MAP h (n downto 1))         by induction hypothesis
+         = f (HD (MAP h (n downto 1))) ::
+             MAP h (n downto 1)           by definition of g
+         Now f (HD (MAP h (n downto 1)))
+           = f (HD (MAP h (MAP (\x. n + 1 - x) [1 .. n])))  by listRangeINC_REVERSE
+           = f (HD (MAP h o (\x. n + 1 - x) [1 .. n]))      by MAP_COMPOSE
+           = f ((h o (\x. n + 1 - x)) 1)                    by MAP
+           = f (h n)
+           = f (FUNPOW f n u)             by definition of h
+           = FUNPOW (n + 1) u             by FUNPOW_SUC
+           = h (n + 1)                    by definition of h
+          so h (n + 1) :: MAP h (n downto 1)
+           = MAP h ((n + 1) :: (n downto 1))         by MAP
+           = MAP h (REVERSE (SNOC (n+1) [1 .. n]))   by REVERSE_SNOC
+           = MAP h (REVERSE [1 .. SUC n])            by listRangeINC_SNOC
+*)
+Theorem FUNPOW_cons_eq_map_1:
+  !f u n. 0 < n ==> (FUNPOW (\ls. f (HD ls)::ls) (n - 1) [f u] =
+          MAP (\j. FUNPOW f j u) (n downto 1))
+Proof
+  ntac 2 strip_tac >>
+  Induct >-
+  simp[] >>
+  rw[] >>
+  qabbrev_tac `g = \ls. f (HD ls)::ls` >>
+  qabbrev_tac `h = \j. FUNPOW f j u` >>
+  Cases_on `n = 0` >-
+  rw[Abbr`g`, Abbr`h`] >>
+  `f (HD (MAP h (n downto 1))) = h (n + 1)` by
+  (`[1 .. n] = 1 :: [2 .. n]` by rw[listRangeINC_CONS] >>
+  fs[listRangeINC_REVERSE, MAP_COMPOSE, GSYM FUNPOW_SUC, ADD1, Abbr`h`]) >>
+  `n = SUC (n-1)` by decide_tac >>
+  `FUNPOW g n [f u] = g (FUNPOW g (n - 1) [f u])` by metis_tac[FUNPOW_SUC] >>
+  `_ = g (MAP h (n downto 1))` by fs[] >>
+  `_ = h (n + 1) :: MAP h (n downto 1)` by rw[Abbr`g`] >>
+  `_ = MAP h ((n + 1) :: (n downto 1))` by rw[] >>
+  `_ = MAP h (REVERSE (SNOC (n+1) [1 .. n]))` by rw[REVERSE_SNOC] >>
+  rw[listRangeINC_SNOC, ADD1]
 QED
 
 (* ------------------------------------------------------------------------- *)
