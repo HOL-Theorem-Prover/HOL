@@ -51,3 +51,9 @@
 2 quarity        -- bound and listing of mills and search for sum of two squares.
 1 windmill
 0 helperTwosq
+
+3 corner         -- an adaptation of a partition proof using corner pieces.
+2 quarity
+2 involuteFix
+1 involute
+0 helperTwosq

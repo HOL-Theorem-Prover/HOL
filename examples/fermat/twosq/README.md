@@ -16,3 +16,4 @@ These theories support the formalisation of an algorithm for Fermat's Two Square
 * __windmill__, definitions of windmill, mill, flip, and zagier.
 * __twoSquares__, existence, uniqueness and algorithm of two squares theorem.
 * __quarity__, zig and zag, tik and tok, mill structure, and search for two squares.
+* __corner__, an adaptation of a partition proof using corner pieces.
