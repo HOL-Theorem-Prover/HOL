@@ -1,6 +1,9 @@
 open HolKernel Parse boolLib bossLib;
 
-open pairTheory listTheory pred_setTheory sortingTheory genericGraphTheory
+open arithmeticTheory pairTheory listTheory pred_setTheory sortingTheory hurdUtils
+     topologyTheory;
+
+open genericGraphTheory;
 
 val _ = new_theory "fsgraph";
 
@@ -12,6 +15,27 @@ Theorem adjacent_fsg:
 Proof
   simp[udedges_thm] >> iff_tac >> rw[] >> gvs[INSERT2_lemma] >>
   metis_tac[adjacent_SYM]
+QED
+
+Definition fsgAddNode_def :
+  fsgAddNode n (g :'a fsgraph) = addNode n () g
+End
+
+Theorem nodes_fsgAddNode[simp] :
+    nodes (fsgAddNode n g) = n INSERT nodes g
+Proof
+    rw [fsgAddNode_def]
+QED
+
+Definition fsgAddEdge_def :
+  fsgAddEdge x y (g :'a fsgraph) = addUDEdge x y () g
+End
+
+Theorem nodes_fsgAddEdge[simp] :
+    !x y g. x IN nodes g /\ y IN nodes g ==> nodes (fsgAddEdge x y g) = nodes g
+Proof
+    rw [fsgAddEdge_def]
+ >> ASM_SET_TAC []
 QED
 
 Definition fsgAddEdges_def:
@@ -36,6 +60,12 @@ Theorem fsgedges_addNode[simp]:
   fsgedges (addNode n u g) = fsgedges g
 Proof
   simp[]
+QED
+
+Theorem fsgedges_fsgAddNode[simp]:
+  fsgedges (fsgAddNode n g) = fsgedges g
+Proof
+  simp[fsgAddNode_def]
 QED
 
 Theorem nodes_fsgAddEdges[simp]:
@@ -229,7 +259,7 @@ Proof
   metis_tac[]
 QED
 
-Theorem fsedges_remove_fsedge[simp]:
+Theorem fsgedges_remove_fsedge[simp]:
   fsgedges (remove_fsedge e g) = fsgedges g DELETE e
 Proof
   simp[remove_fsedge_def] >>
@@ -265,6 +295,120 @@ QED
 Definition fsgsize_def:
   fsgsize (g : α fsgraph) = CARD (fsgedges g)
 End
+
+Theorem fsgsize_empty[simp]:
+  fsgsize emptyG = 0
+Proof
+  simp[fsgsize_def]
+QED
+
+Theorem fsgsize_remove_fsedge[simp] :
+    e IN fsgedges g ==> fsgsize (remove_fsedge e g) = fsgsize g - 1
+Proof
+    rw [fsgsize_def, CARD_DELETE]
+QED
+
+Theorem fsgedges_members :
+    !g x y. {x;y} IN fsgedges g ==> x <> y /\ x IN nodes g /\ y IN nodes g
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> POP_ASSUM (STRIP_ASSUME_TAC o (MATCH_MP alledges_valid))
+ >> Cases_on ‘x = a’
+ >- (Q.PAT_X_ASSUM ‘{x;y} = {a;b}’ MP_TAC \\
+     rw [Once EXTENSION] >> METIS_TAC [])
+ >> Cases_on ‘x = b’
+ >- (Q.PAT_X_ASSUM ‘{x;y} = {a;b}’ MP_TAC \\
+     rw [Once EXTENSION] >> METIS_TAC [])
+ >> Q.PAT_X_ASSUM ‘{x;y} = {a;b}’ MP_TAC
+ >> rw [Once EXTENSION]
+ >> METIS_TAC []
+QED
+
+Theorem fsgedges_fsgAddEdge[simp] :
+    a <> b /\ a IN nodes g /\ b IN nodes g ==>
+    fsgedges (fsgAddEdge a b g) = {a;b} INSERT fsgedges g
+Proof
+    rw [fsgAddEdge_def, udedges_thm]
+ >> rw [Once EXTENSION]
+ >> METIS_TAC []
+QED
+
+Theorem fsgAddEdge_remove_fsedge[simp] :
+    {x; y} IN fsgedges g ==> fsgAddEdge x y (remove_fsedge {x;y} g) = g
+Proof
+    STRIP_TAC
+ >> ‘x <> y /\ x IN nodes g /\ y IN nodes g’ by PROVE_TAC [fsgedges_members]
+ >> rw [fsgraph_component_equality]
+QED
+
+Definition fsgAddNodes_def :
+  fsgAddNodes N g = ITSET fsgAddNode N g
+End
+
+Theorem nodes_fsgAddNodes[simp] :
+    !g N. FINITE N ==> nodes (fsgAddNodes N g) = N UNION nodes g
+Proof
+    Q.X_GEN_TAC ‘g’
+ >> simp [fsgAddNodes_def]
+ >> Induct using FINITE_INDUCT >> simp [fsgAddNode_def]
+ >> rpt STRIP_TAC
+ >> Suff ‘ITSET fsgAddNode (e INSERT N) g =
+          fsgAddNode e (ITSET fsgAddNode (N DELETE e) g)’
+ >- (‘N DELETE e = N’ by PROVE_TAC [DELETE_NON_ELEMENT] >> POP_ORW \\
+     rw [] >> SET_TAC [])
+ >> MATCH_MP_TAC COMMUTING_ITSET_RECURSES
+ >> rw [fsgraph_component_equality] >> SET_TAC []
+QED
+
+Theorem fsgedges_fsgAddNodes[simp] :
+    !g N. FINITE N ==> fsgedges (fsgAddNodes N g) = fsgedges g
+Proof
+    Q.X_GEN_TAC ‘g’
+ >> simp [fsgAddNodes_def]
+ >> Induct using FINITE_INDUCT >> simp [fsgAddNode_def]
+ >> rpt STRIP_TAC
+ >> Suff ‘ITSET fsgAddNode (e INSERT N) g =
+          fsgAddNode e (ITSET fsgAddNode (N DELETE e) g)’
+ >- (‘N DELETE e = N’ by PROVE_TAC [DELETE_NON_ELEMENT] >> POP_ORW \\
+     rw [])
+ >> MATCH_MP_TAC COMMUTING_ITSET_RECURSES
+ >> rw [fsgraph_component_equality] >> SET_TAC []
+QED
+
+Theorem fsgraph_edge_decomposition:
+  !g. fsgsize (g :'a fsgraph) = 0 \/
+      ?x y g0.
+        x <> y /\ {x; y} SUBSET nodes g0 /\
+        {x; y} NOTIN fsgedges g0 /\ g = fsgAddEdge x y g0 /\
+        fsgsize g = fsgsize g0 + 1
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘fsgsize g = 0’ >- rw []
+ >> DISJ2_TAC
+ >> ‘0 < fsgsize g’ by rw []
+ >> ‘fsgedges g <> {}’ by fs [CARD_EQ_0, fsgsize_def]
+ >> ‘?e. e IN fsgedges g’ by METIS_TAC [MEMBER_NOT_EMPTY]
+ >> ‘?a b. e = {a; b} /\ a IN nodes g /\ b IN nodes g /\ a <> b’
+      by METIS_TAC [alledges_valid]
+ >> qexistsl_tac [‘a’, ‘b’, ‘remove_fsedge {a;b} g’] >> fs []
+QED
+
+Theorem fsg_edge_induction :
+  !g P. P (fsgAddNodes (nodes g) emptyG) /\
+        (!g0 x y. nodes g0 = nodes g /\
+                  x <> y /\ {x; y} SUBSET nodes g /\ {x; y} NOTIN fsgedges g0 /\
+                  P g0 ==> P (fsgAddEdge x y g0)) ==> P g
+Proof
+    rpt STRIP_TAC
+ >> Induct_on ‘fsgsize g’
+ >- (rw [] \\
+     Suff ‘fsgAddNodes (nodes g) emptyG = g’ >- DISCH_THEN (fs o wrap) \\
+     Q.PAT_X_ASSUM ‘fsgsize g = 0’ MP_TAC >> KILL_TAC \\
+     rw [fsgsize_def, udul_component_equality])
+ >> rpt STRIP_TAC
+ >> qspec_then ‘g’ strip_assume_tac fsgraph_edge_decomposition
+ >> fs []
+QED
 
 (* vertices not even in the graph at all have degree 0 *)
 Definition degree_def:
