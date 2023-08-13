@@ -313,15 +313,7 @@ Theorem fsgedges_members :
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> POP_ASSUM (STRIP_ASSUME_TAC o (MATCH_MP alledges_valid))
- >> Cases_on ‘x = a’
- >- (Q.PAT_X_ASSUM ‘{x;y} = {a;b}’ MP_TAC \\
-     rw [Once EXTENSION] >> METIS_TAC [])
- >> Cases_on ‘x = b’
- >- (Q.PAT_X_ASSUM ‘{x;y} = {a;b}’ MP_TAC \\
-     rw [Once EXTENSION] >> METIS_TAC [])
- >> Q.PAT_X_ASSUM ‘{x;y} = {a;b}’ MP_TAC
- >> rw [Once EXTENSION]
- >> METIS_TAC []
+ >> fs [INSERT2_lemma]
 QED
 
 Theorem fsgedges_fsgAddEdge[simp] :
