@@ -27,17 +27,6 @@ Proof
     rw [fsgAddNode_def]
 QED
 
-Definition fsgAddEdge_def :
-  fsgAddEdge x y (g :'a fsgraph) = addUDEdge x y () g
-End
-
-Theorem nodes_fsgAddEdge[simp] :
-    !x y g. x IN nodes g /\ y IN nodes g ==> nodes (fsgAddEdge x y g) = nodes g
-Proof
-    rw [fsgAddEdge_def]
- >> ASM_SET_TAC []
-QED
-
 Definition fsgAddEdges_def:
   fsgAddEdges (es0: α set set) (g:α fsgraph) =
   let
@@ -316,21 +305,16 @@ Proof
  >> fs [INSERT2_lemma]
 QED
 
-Theorem fsgedges_fsgAddEdge[simp] :
-    a <> b /\ a IN nodes g /\ b IN nodes g ==>
-    fsgedges (fsgAddEdge a b g) = {a;b} INSERT fsgedges g
+Theorem fsgAddEdges_remove_fsedge[simp] :
+    e IN fsgedges g ==> fsgAddEdges {e} (remove_fsedge e g) = g
 Proof
-    rw [fsgAddEdge_def, udedges_thm]
- >> rw [Once EXTENSION]
- >> METIS_TAC []
-QED
-
-Theorem fsgAddEdge_remove_fsedge[simp] :
-    {x; y} IN fsgedges g ==> fsgAddEdge x y (remove_fsedge {x;y} g) = g
-Proof
-    STRIP_TAC
- >> ‘x <> y /\ x IN nodes g /\ y IN nodes g’ by PROVE_TAC [fsgedges_members]
- >> rw [fsgraph_component_equality]
+    rpt STRIP_TAC
+ >> Suff ‘valid_edges {e} (nodes g)’
+ >- (rw [fsgraph_component_equality] \\
+     ASM_SET_TAC [])
+ >> ‘?a b. e = {a; b} /\ a IN nodes g /\ b IN nodes g /\ a <> b’
+       by METIS_TAC [alledges_valid]
+ >> rw [valid_edges_def]
 QED
 
 Definition fsgAddNodes_def :
@@ -369,10 +353,8 @@ QED
 
 Theorem fsgraph_edge_decomposition:
   !g. fsgsize (g :'a fsgraph) = 0 \/
-      ?x y g0.
-        x <> y /\ {x; y} SUBSET nodes g0 /\
-        {x; y} NOTIN fsgedges g0 /\ g = fsgAddEdge x y g0 /\
-        fsgsize g = fsgsize g0 + 1
+      ?e g0. valid_edges {e} (nodes g0) /\ e NOTIN fsgedges g0 /\
+             g = fsgAddEdges {e} g0 /\ fsgsize g = fsgsize g0 + 1
 Proof
     rpt STRIP_TAC
  >> Cases_on ‘fsgsize g = 0’ >- rw []
@@ -380,16 +362,16 @@ Proof
  >> ‘0 < fsgsize g’ by rw []
  >> ‘fsgedges g <> {}’ by fs [CARD_EQ_0, fsgsize_def]
  >> ‘?e. e IN fsgedges g’ by METIS_TAC [MEMBER_NOT_EMPTY]
- >> ‘?a b. e = {a; b} /\ a IN nodes g /\ b IN nodes g /\ a <> b’
-      by METIS_TAC [alledges_valid]
- >> qexistsl_tac [‘a’, ‘b’, ‘remove_fsedge {a;b} g’] >> fs []
+ >> qexistsl_tac [‘e’, ‘remove_fsedge e g’]
+ >> fs [valid_edges_def]
+ >> qspec_then ‘g’ strip_assume_tac alledges_valid >> gs []
 QED
 
 Theorem fsg_edge_induction :
   !g P. P (fsgAddNodes (nodes g) emptyG) /\
-        (!g0 x y. nodes g0 = nodes g /\
-                  x <> y /\ {x; y} SUBSET nodes g /\ {x; y} NOTIN fsgedges g0 /\
-                  P g0 ==> P (fsgAddEdge x y g0)) ==> P g
+        (!e g0. nodes g0 = nodes g /\
+                valid_edges {e} (nodes g0) /\ e NOTIN fsgedges g0 /\
+                P g0 ==> P (fsgAddEdges {e} g0)) ==> P g
 Proof
     rpt STRIP_TAC
  >> Induct_on ‘fsgsize g’
