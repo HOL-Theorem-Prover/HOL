@@ -826,12 +826,6 @@ Proof
 QED
 (* This is the same as iterate_while_thm_0. *)
 
-Theorem iterate_while_none:
-  !g b x. ~g x ==> WHILE g b x = x
-Proof
-  rw[Once whileTheory.WHILE]
-QED
-
 (* Theorem alias *)
 Theorem iterate_while_none = iterate_while_thm_0
                              |> CONV_RULE (RENAME_VARS_CONV ["x"]) |> SPEC_ALL

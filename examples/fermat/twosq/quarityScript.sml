@@ -137,7 +137,7 @@ open logrootTheory logPowerTheory GaussTheory EulerTheory; (* for SQRT, divisors
 
    Windmills for squares:
    mills_square_def            |- !n. mills_square n = {(x,y,z) | n = windmill (x, y, z) /\ y * z = 0}
-   mills_square_elemnent       |- !n x y z. (x,y,z) IN mills_square n <=> n = windmill (x, y, z) /\ (y = 0 \/ z = 0)
+   mills_square_element        |- !n x y z. (x,y,z) IN mills_square n <=> n = windmill (x, y, z) /\ (y = 0 \/ z = 0)
    mills_tik_square_eqn        |- !n. tik n /\ square n ==> mills n = mills_tik n UNION mills_square n
    mills_zig_square_eqn        |- !n. zig n /\ square n ==> mills n = mills_zig n UNION mills_square n
 
@@ -675,7 +675,7 @@ Proof
 QED
 
 (* Theorem alias *)
-Theorem mills_tik_nonempty = windmillTheory.mills_quad_suc_non_empty;
+Theorem mills_tik_nonempty = windmillTheory.mills_non_empty;
 (* val mills_tik_nonempty = |- !n. tik n ==> mills n <> {}: thm *)
 
 (* Theorem: tik n /\ n = windmill (x, y, z) ==> ODD x /\ x <= SQRT n *)
@@ -1957,24 +1957,10 @@ End
 
 (* Theorem: (x, y, z) IN mills_square n <=> n = windmill (x, y, z) /\ (y = 0 \/ z = 0) *)
 (* Proof: by mills_square_def, MULT_EQ_0. *)
-Theorem mills_square_elemnent:
+Theorem mills_square_element:
   !n x y z. (x, y, z) IN mills_square n <=> n = windmill (x, y, z) /\ (y = 0 \/ z = 0)
 Proof
   simp[mills_square_def]
-QED
-
-(* Theorem: n = windmill (x, y, z) ==> ((n - x ** 2) DIV 4 = 0 <=> y = 0 \/ z = 0) *)
-(* Proof:
-   Note n = x ** 2 + 4 * y * z                 by windmill_def
-     so (n - x ** 2) DIV 4 = y * z             by arithmetic
-   Thus     (n - x ** 2) DIV 4 = 0
-         <=> y * z = 0                         by above
-    or   <=> y = 0 \/ z = 0                    by MULT_EQ_0
-*)
-Theorem windmill_yz_eq_0:
-  !n x y z. n = windmill (x, y, z) ==> ((n - x ** 2) DIV 4 = 0 <=> y = 0 \/ z = 0)
-Proof
-  rw[windmill_def]
 QED
 
 (* Theorem: tik n /\ square n ==> mills n = (mills_tik n) UNION (mills_square n) *)
