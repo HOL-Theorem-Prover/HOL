@@ -2923,6 +2923,75 @@ val RAT_MINV_RATND = Q.store_thm(
        GSYM RAT_AINV_RMUL]);
 
 (* ----------------------------------------------------------------------
+    relating RAT{N,D} back to abs_frac etc
+   ---------------------------------------------------------------------- *)
+
+Theorem rat_of_int_EQN[simp]:
+  ((rat_of_int i = &n) <=> (i = &n)) /\
+  ((&n = rat_of_int i) <=> (i = &n))
+Proof
+  Cases_on ‘i’ >> simp[rat_of_int_def]
+QED
+
+Theorem frac_dnm_EQ0[simp]:
+  frac_dnm f <> 0
+Proof
+  metis_tac[INT_LT_REFL, FRAC_DNMPOS]
+QED
+
+Theorem rep_rat_of_int:
+  !i. ?j. 0 < j /\ (rep_rat (rat_of_int i) = abs_frac (j * i, j))
+Proof
+  gen_tac >> simp[FRAC_EQ_ALT, SF CONJ_ss, NMR, DNM, FRAC_DNMPOS] >>
+  qabbrev_tac ‘IR = rep_rat (rat_of_int i)’ >>
+  ‘rat_equiv (abs_frac (i,1)) IR’
+    by (simp[RAT_OF_INT_CALCULATE, Abbr‘IR’] >>
+        metis_tac[RAT_EQUIV_SYM, rat_equiv_rep_abs]) >>
+  gs[rat_equiv_def, NMR, DNM] >> metis_tac[INT_MUL_COMM]
+QED
+
+Theorem rat_of_int_nmrdnm:
+  rat_of_int (frac_nmr (rep_rat q)) / rat_of_int (frac_dnm (rep_rat q)) = q
+Proof
+  simp[RAT_OF_INT_CALCULATE, RAT_DIV_CALCULATE, NMR] >>
+  simp[frac_div_def, frac_mul_def, NMR, DNM, frac_minv_def, frac_sgn_def] >>
+  ‘q = abs_rat (rep_rat q)’ by simp[rat_type_thm] >>
+  pop_assum (fn th => simp[Once th, SimpRHS]) >>
+  irule $ iffLR $ cj 2 rat_type_thm >>
+  simp[rat_equiv_def, NMR, DNM] >>
+  simp[ABS_EQ_MUL_SGN, AC INT_MUL_ASSOC INT_MUL_COMM]
+QED
+
+Theorem RAT_DIVMUL_CANCEL:
+  d <> 0 ==> (n / d * d = n)
+Proof
+  simp[LDIV_MUL_OUT, RAT_LDIV_EQ] >> simp[AC RAT_MUL_COMM RAT_MUL_ASSOC]
+QED
+
+Theorem ABS_RATFRAC_DIV:
+  0 < d ==> (abs_rat (abs_frac (n, d)) = rat_of_int n / rat_of_int d)
+Proof
+  rw[rat_div_def, frac_div_def, frac_mul_def, frac_minv_def, DNM, NMR,
+     frac_sgn_def, RAT_NMREQ0_CONG, RAT_OF_INT_CALCULATE,
+     intLib.ARITH_PROVE “0i < d ==> d <> 0”, RAT_EQ, INT_MUL_SIGN_CASES,
+     FRAC_DNMPOS] >>
+  simp[ABS_EQ_MUL_SGN, AC INT_MUL_ASSOC INT_MUL_COMM] >>
+  simp[GSYM RAT_OF_INT_CALCULATE, INT_MUL_ASSOC, INT_EQ_RMUL,
+       INT_SGN_CLAUSES] >>
+  ‘(?dj. 0 < dj /\ (rep_rat (rat_of_int d) = abs_frac(dj * d, dj))) /\
+   (?nj. 0 < nj /\ (rep_rat (rat_of_int n) = abs_frac(nj * n, nj)))’
+    by metis_tac[rep_rat_of_int] >>
+  simp[NMR, DNM] >>
+  simp[AC INT_MUL_COMM INT_MUL_ASSOC]
+QED
+
+Theorem ABS_RATFRAC_RATND:
+  abs_rat (abs_frac (RATN q, &RATD q)) = q
+Proof
+  simp[ABS_RATFRAC_DIV]
+QED
+
+(* ----------------------------------------------------------------------
     rational min and max
    ---------------------------------------------------------------------- *)
 
