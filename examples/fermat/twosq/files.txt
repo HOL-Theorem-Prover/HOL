@@ -10,13 +10,15 @@
 * helperSet
 * helperFunction
 
-1 windmill       -- definitions of windmill, mill, flip, and zagier.
-0 helperTwosq
-
 1 involute       -- basic properties of involution.
 0 helperTwosq
 
 2 involuteFix    -- pairs and fixes of involution.
+1 involute
+0 helperTwosq
+
+3 windmill       -- definitions of windmill, mill, flip, and zagier.
+2 involuteFix
 1 involute
 0 helperTwosq
 
@@ -41,19 +43,30 @@
 4 twoSquares     -- existence, uniqueness and algorithm (clean version for paper).
 2 involuteFix
 1 involute
-1 windmill
+3 windmill
 3 iterateCompose
 1 iterateCompute
 0 iteration
-0 groupAction
 0 helperTwosq
+* groupAction
 
-2 quarity        -- bound and listing of mills and search for sum of two squares.
-1 windmill
+4 quarity        -- bound and listing of mills and search for sum of two squares.
+3 windmill
 0 helperTwosq
 
 3 corner         -- an adaptation of a partition proof using corner pieces.
 2 quarity
 2 involuteFix
 1 involute
+0 helperTwosq
+
+5 hopping        -- path and nodes justifying the hopping algorithm for two squares.
+3 iterateCompose
+1 iterateCompute
+0 iteration
+2 involuteFix
+1 involute
+3 windmill
+4 quarity
+4 twoSquares
 0 helperTwosq
