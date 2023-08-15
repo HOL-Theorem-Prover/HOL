@@ -111,7 +111,7 @@ open involuteFixTheory;
    prime_corners_more_fix      |- !p. prime p ==> corners_more_fix p = {}
    tik_prime_corners_less_fix  |- !p. tik p /\ prime p ==> corners_less_fix p <> {}
    fermat_two_squares_by_corners
-                               |- !p. tik p /\ prime p ==> ?(a,b). p = a ** 2 + b ** 2 /\ a < b
+                               |- !p. tik p /\ prime p ==> ?a b. p = a ** 2 + b ** 2 /\ a < b
 
 *)
 
@@ -1017,7 +1017,7 @@ Proof
   metis_tac[corners_transpose_fixes_card, ADD, ODD_EVEN]
 QED
 
-(* Theorem: tik p /\ prime p ==> ?(a, b). p = a ** 2 + b ** 2 /\ a < b *)
+(* Theorem: tik p /\ prime p ==> ?a b. p = a ** 2 + b ** 2 /\ a < b *)
 (* Proof:
    Let s = corners_less_fix p.
    Note s <> {}                                by tik_prime_corners_less_fix
@@ -1027,13 +1027,12 @@ QED
    Take them and form a pair (a,b).
 *)
 Theorem fermat_two_squares_by_corners:
-  !p. tik p /\ prime p ==> ?(a, b). p = a ** 2 + b ** 2 /\ a < b
+  !p. tik p /\ prime p ==> ?a b. p = a ** 2 + b ** 2 /\ a < b
 Proof
   rpt strip_tac >>
   imp_res_tac tik_prime_corners_less_fix >>
   fs[corners_less_fix_def, EXTENSION] >>
-  rw[ELIM_UNCURRY] >>
-  qexists_tac `(a,b)` >>
+  map_every qexists_tac [`a`,`b`] >>
   simp[]
 QED
 
