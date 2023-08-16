@@ -1024,7 +1024,7 @@ QED
     ==> ?q. q IN s                             by MEMBER_NOT_EMPTY
     ==> ?a b. q = (a,a,b,b) /\
               p = a ** 2 + b ** 2 /\ a < b     by corners_less_fix_def
-   Take them and form a pair (a,b).
+   Take these values of a and b.
 *)
 Theorem fermat_two_squares_by_corners:
   !p. tik p /\ prime p ==> ?a b. p = a ** 2 + b ** 2 /\ a < b
