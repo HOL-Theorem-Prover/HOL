@@ -6263,6 +6263,110 @@ Proof
   REWRITE_TAC[pairwise_def, NOT_IN_EMPTY] THEN MESON_TAC[]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Disjoint system of sets (‘disjoint’, originally from Isabelle/HOL)       *)
+(* ------------------------------------------------------------------------- *)
+
+Definition disjoint :
+    disjoint = pairwise (RC DISJOINT)
+End
+
+Theorem disjoint_def :
+    !A. disjoint A = !a b. a IN A /\ b IN A /\ (a <> b) ==> DISJOINT a b
+Proof
+    RW_TAC std_ss [disjoint, pairwise_def, RC_DEF]
+ >> METIS_TAC []
+QED
+
+Theorem disjointI :
+    !A. (!a b . a IN A ==> b IN A ==> (a <> b) ==> DISJOINT a b) ==> disjoint A
+Proof
+    METIS_TAC [disjoint_def]
+QED
+
+Theorem disjointD :
+    !A a b. disjoint A ==> a IN A ==> b IN A ==> (a <> b) ==> DISJOINT a b
+Proof
+    METIS_TAC [disjoint_def]
+QED
+
+Theorem disjoint_empty :
+    disjoint {}
+Proof
+    rw [disjoint, pairwise_EMPTY]
+QED
+
+Theorem disjoint_sing :
+    !a. disjoint {a}
+Proof
+    rw [disjoint_def]
+QED
+
+Theorem disjoint_same :
+    !s t. (s = t) ==> disjoint {s; t}
+Proof
+    RW_TAC std_ss [IN_INSERT, IN_SING, disjoint_def]
+QED
+
+Theorem disjoint_two :
+    !s t. s <> t /\ DISJOINT s t ==> disjoint {s; t}
+Proof
+    RW_TAC std_ss [IN_INSERT, IN_SING, disjoint_def]
+ >> ASM_REWRITE_TAC [DISJOINT_SYM]
+QED
+
+Theorem disjoint_union :
+    !A B. disjoint A /\ disjoint B /\ (BIGUNION A INTER BIGUNION B = {}) ==>
+          disjoint (A UNION B)
+Proof
+    rw [disjoint_def, DISJOINT_DEF] >> rw []
+ >> (Q.PAT_X_ASSUM ‘_ = {}’ MP_TAC >>
+     rw [Once EXTENSION, IN_BIGUNION] \\
+     rw [Once EXTENSION] >> METIS_TAC [])
+QED
+
+Theorem disjoint_image :
+    !f. (!i j. i <> j ==> DISJOINT (f i) (f j)) ==> disjoint (IMAGE f UNIV)
+Proof
+    rw [disjoint_def, DISJOINT_DEF]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> CCONTR_TAC >> fs []
+QED
+
+Theorem disjoint_insert_imp :
+    !e c. disjoint (e INSERT c) ==> disjoint c
+Proof
+    rw [disjoint_def, DISJOINT_DEF]
+QED
+
+Theorem disjoint_insert_notin :
+    !e c. disjoint (e INSERT c) /\ e NOTIN c ==> !s. s IN c ==> DISJOINT e s
+Proof
+    rw [disjoint_def, DISJOINT_DEF]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
+ >> CCONTR_TAC >> fs []
+QED
+
+Theorem disjoint_insert :
+    !e c. disjoint c /\ (!x. x IN c ==> DISJOINT x e) ==> disjoint (e INSERT c)
+Proof
+    rw [disjoint_def, DISJOINT_DEF] >> rw []
+ >> ONCE_REWRITE_TAC [INTER_COMM]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
+QED
+
+Theorem disjoint_restrict :
+    !e c. disjoint c ==> disjoint (IMAGE ($INTER e) c)
+Proof
+    rw [disjoint_def, o_DEF, DISJOINT_DEF]
+ >> ‘x <> x'’ by (CCONTR_TAC >> fs [])
+ >> ‘e INTER x INTER (e INTER x') = e INTER (x INTER x')’
+     by METIS_TAC [INTER_ASSOC, INTER_COMM, INTER_IDEMPOT]
+ >> POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
+ >> SUFF_TAC “x INTER x' = {}” >- rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
+QED
+
 (* ----------------------------------------------------------------------
     A proof of Koenig's Lemma
    ---------------------------------------------------------------------- *)

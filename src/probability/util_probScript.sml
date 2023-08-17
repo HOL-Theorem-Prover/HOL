@@ -146,6 +146,71 @@ val GBIGUNION_IMAGE = store_thm
    ``!s p n. {s | ?n. p s n} = BIGUNION (IMAGE (\n. {s | p s n}) UNIV)``,
    RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV]);
 
+Theorem DISJOINT_RESTRICT_L :
+  !s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)
+Proof SET_TAC []
+QED
+
+Theorem DISJOINT_RESTRICT_R :
+  !s t c. DISJOINT s t ==> DISJOINT (c INTER s) (c INTER t)
+Proof SET_TAC []
+QED
+
+Theorem DISJOINT_CROSS_L :
+    !s t c. DISJOINT s t ==> DISJOINT (s CROSS c) (t CROSS c)
+Proof
+    RW_TAC std_ss [DISJOINT_ALT, CROSS_DEF, Once EXTENSION, IN_INTER,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
+Theorem DISJOINT_CROSS_R :
+    !s t c. DISJOINT s t ==> DISJOINT (c CROSS s) (c CROSS t)
+Proof
+    RW_TAC std_ss [DISJOINT_ALT, CROSS_DEF, Once EXTENSION, IN_INTER,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
+Theorem SUBSET_RESTRICT_L :
+  !r s t. s SUBSET t ==> (s INTER r) SUBSET (t INTER r)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_RESTRICT_R :
+  !r s t. s SUBSET t ==> (r INTER s) SUBSET (r INTER t)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_RESTRICT_DIFF :
+  !r s t. s SUBSET t ==> (r DIFF t) SUBSET (r DIFF s)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_INTER_SUBSET_L :
+  !r s t. s SUBSET t ==> (s INTER r) SUBSET t
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_INTER_SUBSET_R :
+  !r s t. s SUBSET t ==> (r INTER s) SUBSET t
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_MONO_DIFF :
+  !r s t. s SUBSET t ==> (s DIFF r) SUBSET (t DIFF r)
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_DIFF_SUBSET :
+  !r s t. s SUBSET t ==> (s DIFF r) SUBSET t
+Proof SET_TAC []
+QED
+
+Theorem SUBSET_DIFF_DISJOINT :
+  !s1 s2 s3. (s1 SUBSET (s2 DIFF s3)) ==> DISJOINT s1 s3
+Proof
+    PROVE_TAC [SUBSET_DIFF]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Binary Unions                                                             *)
 (* ------------------------------------------------------------------------- *)
