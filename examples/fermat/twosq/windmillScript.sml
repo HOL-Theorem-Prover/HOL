@@ -1354,9 +1354,11 @@ Theorem zagier_fixes:
   !n. n MOD 4 <> 0 ==> fixes zagier (mills n) = {(x,x,z) | n = windmill (x,x,z)}
 Proof
   rw[fixes_def, mills_def, EXTENSION, EQ_IMP_THM] >| [
-    `x' <> 0` by metis_tac[windmill_with_no_mind] >>
+    rename1 `windmill (x,y,z)` >>
+    `x <> 0` by metis_tac[windmill_with_no_mind] >>
     fs[zagier_fix, windmill_def],
-    `x' <> 0` by metis_tac[windmill_with_no_mind] >>
+    rename1 `windmill (x,x,z)` >>
+    `x <> 0` by metis_tac[windmill_with_no_mind] >>
     simp[zagier_fix]
   ]
 QED
