@@ -211,5 +211,20 @@ fun term_diff t1 t2 =
     recurse [] t1 t2
   end
 
+fun tyvar_sequence n =
+    let
+      fun pretty A n =
+          if n <= 0 then A
+          else if n > 26 then
+            pretty (mk_vartype ("'a" ^ Int.toString (n - 26))::A) (n - 1)
+          else
+            pretty
+              (mk_vartype ("'" ^ str (Char.chr (Char.ord #"a" + (n - 1))))::A)
+              (n - 1)
+    in
+      pretty [] n
+    end
+
+
 
 end;
