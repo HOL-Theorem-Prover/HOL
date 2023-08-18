@@ -56,4 +56,8 @@ Definition sexpPEG_def:
   #"\\";
 End
 
-Theorem sexpPEG_start[simp] = SIMP_CONV(srw_ss())[sexpPEG_def]“sexpPEG.start”;
+Theorem sexpPEG_start[simp] = SIMP_CONV(srw_ss())[sexpPEG_def]“sexpPEG.start”
+
+Datatype : foo = bar
+End
+

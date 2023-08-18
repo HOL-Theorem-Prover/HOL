@@ -265,11 +265,14 @@ ProofLine =
 <INITIAL,thmval>^"Datatype"{ws}*":" => (
   (yypos,
    if inscript andalso not quotefix then
-     (YYBEGIN datatypequote;
-      mltype_stack := [];
-      ECHO yyarg (mlswitch (!mltype_stack) "" "" ");" ^
-                  "val _ = bossLib.Datatype [QUOTE \"" ^
-                  locpragma yyarg (yytext, yypos) 0))
+     let
+     in
+       YYBEGIN datatypequote;
+       ECHO yyarg (mlswitch (!mltype_stack) "" "" ");" ^
+                   "val _ = bossLib.Datatype [QUOTE \"" ^
+                   locpragma yyarg (yytext, yypos) 0) before
+       mltype_stack := []
+     end
    else yytext
   )
 );

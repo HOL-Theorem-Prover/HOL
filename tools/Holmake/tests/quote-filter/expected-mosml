@@ -55,4 +55,8 @@ val sexpPEG_def = TotalDefn.qDefine "sexpPEG_def" [QUOTE " (*#loc 54 24*)\n\
 \  #\"\\\\\";"
 ] NONE; val sexpPEG_ind = DB.fetch "-" "sexpPEG_ind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;
 
-val sexpPEG_start = (fn rule => boolLib.save_thm("sexpPEG_start[simp]",rule)) ( SIMP_CONV(srw_ss())[sexpPEG_def](Parse.Term [QUOTE " (*#loc 58 66*)sexpPEG.start"]));;
+val sexpPEG_start = (fn rule => boolLib.save_thm("sexpPEG_start[simp]",rule)) ( SIMP_CONV(srw_ss())[sexpPEG_def](Parse.Term [QUOTE " (*#loc 58 66*)sexpPEG.start"])
+
+);val _ = bossLib.Datatype [QUOTE " (*#loc 60 11*) foo = bar"
+];
+
