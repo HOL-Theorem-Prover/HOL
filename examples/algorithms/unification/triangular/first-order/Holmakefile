@@ -1,2 +1,2 @@
 OPTIONS = QUIT_ON_FAILURE
-INCLUDES = ..
+INCLUDES = .. $(HOLDIR)/src/transfer/examples
