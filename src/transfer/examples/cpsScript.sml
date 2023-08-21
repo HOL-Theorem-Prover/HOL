@@ -56,7 +56,18 @@ Proof
   simp[contify_def] >> Cases_on ‘x’ >> simp[]
 QED
 
+Theorem contify_pair_case:
+  contify k (pair_CASE p f) =
+  contify (λp. pair_CASE p (λx y. contify k (f x y))) p
+Proof
+  Cases_on ‘p’  >> simp[contify_def]
+QED
 
-
+Theorem contify_option_case:
+  contify k (option_CASE ov n sf) =
+  contify (λov. option_CASE ov (contify k n) (λx. contify k (sf x))) ov
+Proof
+  Cases_on ‘ov’ >> simp[contify_def]
+QED
 
 val _ = export_theory();

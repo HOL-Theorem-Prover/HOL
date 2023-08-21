@@ -25,8 +25,10 @@ fun cwcp t0 =
       PART_MATCH I cwc_def eqn
     end
 
-fun contify_CONV ths t =
+fun contify_CONV ths0 t =
   let val (f,xs) = strip_comb t
+      val ths = contify_option_case :: contify_pair_case ::
+                contify_list_case :: ths0
   in
     if same_const f contify_t then
       if length xs = 2 then
@@ -39,6 +41,7 @@ fun contify_CONV ths t =
             if is_var t0 then base t
             else if is_const t0 then base t
             else if numSyntax.is_numeral t0 then base t
+            else if is_cond t0 then REWR_CONV contify_COND t
             else if is_comb t0 then REWR_CONV contify_app t
             else NO_CONV t
           end
