@@ -86,12 +86,9 @@ Proof
 QED
 
 Theorem trec_thm:
-  WF R /\ (!s. hascgd e opts s ==> R (execcgd e opts s) s) ==>
   !x. trec e opts x = tcall e opts (trec e opts) x
 Proof
   strip_tac >>
-  first_assum (ho_match_mp_tac o MATCH_MP relationTheory.WF_INDUCTION_THM) >>
-  rpt strip_tac >>
   simp[Once trec_thm0] >> rw[]
   >- (drule tcall_calls >> simp[]) >>
   drule tcall_terms >> simp[]
@@ -123,21 +120,44 @@ QED
 
 Theorem callsites_exec = callsites_exec0 |> Q.SPECL[‘P’, ‘P’] |> SRULE[]
 
+
 Theorem guard_elimination:
+  (!x. P x /\ hascgd e opts x ==> P (execcgd e opts x)) /\
+  (!x. P x ==>
+       ?R. WFP R x /\
+           !y. P y /\ R^* y x /\ hascgd e opts y ==>
+               R (execcgd e opts y) y) /\
+  (!x. P x ==> f x = tcall e opts f x) ==>
+  (!x. P x ==> f x = trec e opts x)
+Proof
+  rpt strip_tac >>
+  qpat_x_assum ‘!x. P x ==> ?R. _’ (drule_then strip_assume_tac) >>
+  qpat_x_assum ‘WFP R x’ (fn th => ntac 2 (pop_assum mp_tac) >> mp_tac th) >>
+  qid_spec_tac ‘x’ >>
+  ho_match_mp_tac relationTheory.WFP_STRONG_INDUCT >> rpt strip_tac >>
+  simp[] >> simp[Once tcall_EQN]>> rw[]
+  >- (simp[trec_thm] >> drule_then (simp o single) tcall_calls >>
+      ‘P (execcgd e opts x)’ by metis_tac[] >>
+      ‘tcall e opts f (execcgd e opts x) = f (execcgd e opts x)’ by simp[] >>
+      pop_assum SUBST1_TAC >> first_x_assum irule >> simp[] >>
+      rpt strip_tac >> first_assum irule >> simp[] >>
+      irule (cj 2 relationTheory.RTC_RULES_RIGHT1) >>
+      first_assum $ irule_at (Pat ‘RTC _ _ _’) >> first_assum irule >>
+      simp[]) >>
+  simp[trec_thm] >> drule tcall_terms >> simp[]
+QED
+
+Theorem guard_elimination_simpler:
   WF R /\
   (!x. hascgd e opts x ==> R (execcgd e opts x) x) /\
   (!x. P x /\ hascgd e opts x ==> P (execcgd e opts x)) /\
   (!x. P x ==> f x = tcall e opts f x) ==>
   (!x. P x ==> f x = trec e opts x)
 Proof
-  strip_tac >>
-  first_assum (ho_match_mp_tac o MATCH_MP relationTheory.WF_INDUCTION_THM) >>
-  rw[] >> rw[tcall_EQN]
-  >- (drule_all trec_thm >> disch_then (fn th => simp[SimpRHS, th]) >>
-      simp[tcall_EQN]) >>
-  drule_all trec_thm >> disch_then (fn th => simp[SimpRHS, th]) >>
-  simp[tcall_EQN]
+  strip_tac >> MATCH_MP_TAC guard_elimination >> rw[] >>
+  qexists ‘R’ >> gs[relationTheory.WF_EQ_WFP]
 QED
+
 
 Theorem COND_moveright:
   COND g1 (COND g2 t e1) e2 =
@@ -207,7 +227,7 @@ Proof
 QED
 
 val th5 =
-  PART_MATCH (last o strip_conj o lhand) guard_elimination (concl th4)
+  PART_MATCH (last o strip_conj o lhand) guard_elimination_simpler (concl th4)
    |> REWRITE_RULE[GSYM AND_IMP_INTRO] |> UNDISCH_ALL |> PROVE_HYP th4
    |> DISCH_ALL |> REWRITE_RULE[AND_IMP_INTRO]
    |> SIMP_RULE std_ss []
@@ -221,16 +241,15 @@ val termination_t =
     |> Term.subst[“R : cv # cv -> cv # cv -> bool” |->
                   “measure (λ(c,d). c2n (cv_sub d c))”]
 
-val termination_thm = TAC_PROOF(([], termination_t),
-                                simp[pairTheory.FORALL_PROD] >> Cases >> Cases >>
-                                simp[cvTheory.c2b_def])
+val termination_thm = TAC_PROOF(
+  ([], termination_t),
+  simp[pairTheory.FORALL_PROD] >> Cases >> Cases >> simp[cvTheory.c2b_def]);
 
 val th6 = MATCH_MP th5 termination_thm
 val newc = th6 |> concl |> strip_forall |> #2 |> rand |> rhs |> rator
 val def = new_definition("aux'_def", “aux' = ^newc”)
 
-val trec_expanded = MATCH_MP trec_thm termination_thm
-val th7 = (AP_THM def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [trec_expanded]
+val th7 = (AP_THM def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [trec_thm]
                                        |> REWRITE_RULE[SYM def]
 
 val th3' = th3 |> Q.INST[‘f’ |-> ‘CURRY g’]
