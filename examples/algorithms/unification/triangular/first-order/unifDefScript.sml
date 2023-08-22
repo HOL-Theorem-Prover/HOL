@@ -109,7 +109,8 @@ SRW_TAC [][allvars_def,UNION_COMM]);
 Definition uR_def:
   uR (sx,c1,c2) (s,t1,t2) <=>
   wfs sx ∧ s SUBMAP sx ∧ allvars sx c1 c2 SUBSET allvars s t1 t2 ∧
-  measure (pair_count o (walkstar sx)) c1 t1`;
+  measure (pair_count o (walkstar sx)) c1 t1
+End
 
 val FDOM_allvars = prove(
   ``FDOM s ⊆ allvars s t1 t2``,

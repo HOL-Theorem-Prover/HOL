@@ -1,5 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
+open pairTheory
 open walkTheory walkstarTheory unifDefTheory
 open tailcallsTheory
 open substTheory
@@ -233,7 +234,7 @@ Theorem jointoc_tcallish:
     jointoc v x =
     tcall (K F) ^oc_code (jointoc v) x
 Proof
-  simp[FUN_EQ_THM, sumTheory.FORALL_SUM, pairTheory.FORALL_PROD] >>
+  simp[FUN_EQ_THM, sumTheory.FORALL_SUM, FORALL_PROD] >>
   rw[jointoc_def]
   >- (rename [‘walk_alt s t’] >> Cases_on ‘walk_alt s t’ >>
       simp[jointoc_def] >> simp[Once dfkoc_thm]) >>
@@ -271,12 +272,12 @@ Theorem WF_ocR:
 Proof
   strip_tac >> simp[ocR_def] >>
   irule relationTheory.WF_inv_image >>
-  irule pairTheory.WF_LEX >> simp[] >>
+  irule WF_LEX >> simp[] >>
   irule relationTheory.WF_SUBSET >>
-  simp[pairTheory.FORALL_PROD] >>
+  simp[FORALL_PROD] >>
   qexists ‘inv_image (mlt1 (walkstarR s)) SND’ >>
   simp[walkstar_thWF, bagTheory.WF_mlt1, relationTheory.WF_inv_image,
-       pairTheory.PAIR_REL]
+       PAIR_REL]
 QED
 
 Theorem mlt1_BAG_INSERT:
@@ -292,8 +293,8 @@ QED
 Theorem RTC_ocR_preserves_subst:
   !x y. (ocR s0)^* (s1, x) (s2, y) ==> s1 = s2
 Proof
-  Induct_on ‘RTC’ >> simp[ocR_def, pairTheory.PAIR_REL] >>
-  simp[pairTheory.FORALL_PROD, pairTheory.LEX_DEF] >> metis_tac[]
+  Induct_on ‘RTC’ >> simp[ocR_def, PAIR_REL] >>
+  simp[FORALL_PROD, LEX_DEF] >> metis_tac[]
 QED
 
 
@@ -301,17 +302,17 @@ Theorem jointoc_cleaned0:
   !x. (λ(s,sm). wfs s) x ==> jointoc v x = trec (K F) ^oc_code x
 Proof
   match_mp_tac guard_elimination >> rpt conj_tac
-  >- (simp[pairTheory.FORALL_PROD, sumTheory.FORALL_SUM] >> rw[]
+  >- (simp[FORALL_PROD, sumTheory.FORALL_SUM] >> rw[]
       >- (rename [‘walk_alt s t’] >> Cases_on ‘walk_alt s t’ >> simp[]) >>
       rename [‘k <> ocIDk’] >> Cases_on ‘k’ >> gs[])
-  >- (simp[pairTheory.FORALL_PROD] >> rw[] >>
+  >- (simp[FORALL_PROD] >> rw[] >>
       rename [‘wfs th’] >>
       qexists ‘ocR th’ >> simp[] >> conj_tac
       >- (irule $ iffLR relationTheory.WF_EQ_WFP >> simp[WF_ocR]) >>
-      simp[sumTheory.FORALL_SUM, pairTheory.FORALL_PROD] >> rw[]
+      simp[sumTheory.FORALL_SUM, FORALL_PROD] >> rw[]
       >- (rename [‘walk_alt s t’] >> Cases_on ‘walk_alt s t’ >>
-          simp[ocR0_def, ocR_def, ocklist_def, pairTheory.PAIR_REL,
-               pairTheory.LEX_DEF, mlt1_BAG_INSERT] >>
+          simp[ocR_def, ocklist_def, PAIR_REL,
+               LEX_DEF, mlt1_BAG_INSERT] >>
           simp[bagTheory.mlt1_def] >>
           rename [‘walk_alt s t = Pair t1 t2’] >>
           qexistsl [‘t’, ‘{| t1; t2 |}’] >>
@@ -321,8 +322,8 @@ Proof
           dxrule_then strip_assume_tac RTC_ocR_preserves_subst >>
           metis_tac[walkstar_th1, walkstar_th2]) >>
       rename [‘k <> ocIDk’] >> Cases_on ‘k’ >> gvs[] >>
-      simp[ocR_def, ocklist_def, pairTheory.LEX_DEF]) >>
-  simp[sumTheory.FORALL_SUM, pairTheory.FORALL_PROD, jointoc_def] >>
+      simp[ocR_def, ocklist_def, LEX_DEF]) >>
+  simp[sumTheory.FORALL_SUM, FORALL_PROD, jointoc_def] >>
   rw[]
   >- (rename [‘walk_alt s t’] >> Cases_on ‘walk_alt s t’ >>
       simp[jointoc_def] >> simp[Once dfkoc_thm]) >>
