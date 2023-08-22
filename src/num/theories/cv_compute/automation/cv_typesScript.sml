@@ -364,8 +364,8 @@ fun term_all_distinct [] = []
 exception UnusedTypeVars of hol_type list;
 
 (*
-val ignore_tyvars = tl [alpha]
 val ignore_tyvars = [alpha,gamma]
+val ignore_tyvars = tl [alpha]
 val ty = “:('a,'b,'c) word_tree”
 val ty = “:('d, 'c) b”
 *)
@@ -377,11 +377,13 @@ fun define_from_to_aux ignore_tyvars ty = let
   val tyvars = dest_type (type_of (hd inputs)) |> snd
                |> filter (fn tyvar => not (mem tyvar ignore_tyvars))
   val first_name = inputs |> hd |> type_of |> dest_type |> fst
+  val thy_name = inputs |> hd |> type_of |> dest_thy_type |> #Thy
+  val name_prefix = (if thy_name <> current_theory() then thy_name ^ "_" else "")
   val names = inputs |> mapi (fn i => fn v =>
     if i < mutrec_count then
-      ((v |> type_of |> dest_type |> fst), type_of v)
+      (name_prefix ^ (v |> type_of |> dest_type |> fst), type_of v)
     else
-      (first_name ^ int_to_string (i - mutrec_count + 1), type_of v))
+      (name_prefix ^ first_name ^ int_to_string (i - mutrec_count + 1), type_of v))
   fun should_be_headless pat =
     (* should return true if pat has at least two variables and belongs
        to a type where all other constructors take no arguments *)
@@ -709,5 +711,8 @@ End
 val ty = “:('a,'b,'c) word_tree”
 val res = define_from_to ty
 val _ = (type_of “from_word_tree f0 t” = “:cv”) orelse fail()
+
+open sptreeTheory
+val res = define_from_to “:'a spt”
 
 val _ = export_theory();
