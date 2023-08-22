@@ -334,10 +334,13 @@ fun from_to_for ty =
   if ty = “:bool” then from_to_bool else
   if ty = “:num” then from_to_num else
   if ty = “:int” then from_to_int else
-  if listSyntax.is_list_type ty then
+  if wordsSyntax.is_word_type ty then
+    let val ty = wordsSyntax.dest_word_type ty
+    in INST_TYPE [alpha|->ty] from_to_word end
+  else if listSyntax.is_list_type ty then
     let val a = from_to_for (listSyntax.dest_list_type ty)
     in MATCH_MP from_to_list a end
-  else fail()
+  else failwith ("from_to_for: " ^ type_to_string ty)
 
 fun from_for ty = from_to_for ty |> concl |> rator |> rand;
 fun to_for ty = from_to_for ty |> concl |> rand;
@@ -355,15 +358,24 @@ fun list_dest_comb tm =
     in (f,xs @ [rand tm]) end
   else (tm,[]);
 
+fun term_all_distinct [] = []
+  | term_all_distinct (x::xs) = x :: term_all_distinct (filter (fn c => not (aconv c x)) xs)
+
+exception UnusedTypeVars of hol_type list;
+
 (*
+val ignore_tyvars = tl [alpha]
+val ignore_tyvars = [alpha,gamma]
+val ty = “:('a,'b,'c) word_tree”
 val ty = “:('d, 'c) b”
 *)
-fun define_from_to ty = let
+fun define_from_to_aux ignore_tyvars ty = let
   (* extract target structure from induction theorem *)
   val mutrec_count = length (find_mutrec_types ty)
   val ind = TypeBase.induction_of ty
   val inputs = ind |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCTS |> map (fst o dest_forall o concl)
   val tyvars = dest_type (type_of (hd inputs)) |> snd
+               |> filter (fn tyvar => not (mem tyvar ignore_tyvars))
   val first_name = inputs |> hd |> type_of |> dest_type |> fst
   val names = inputs |> mapi (fn i => fn v =>
     if i < mutrec_count then
@@ -417,6 +429,14 @@ fun define_from_to ty = let
     in lines end
   val all_lines = map from_lines from_names |> flatten
   val tm = list_mk_conj all_lines
+  val _ = let (* check which tyvar encoders are actually used *)
+    val cs = map (rator o fst o dest_eq) all_lines |> term_all_distinct
+    val substs = map (fn c => c |-> mk_arb(type_of c)) cs
+    val fvs = free_vars (subst substs tm)
+    val unused = filter (fn f => not (exists (fn t => aconv t f) fvs)) tyvar_encoders
+    in if null ignore_tyvars andalso not (null unused) then
+         raise UnusedTypeVars (map (fst o dest_fun_type o type_of) unused)
+       else () end
   val from_def = zDefine [ANTIQUOTE tm]
   (* define decoding from cv type, i.e. "to function" *)
   val tyvar_decoders = mapi (fn i => fn ty =>
@@ -528,8 +548,6 @@ fun define_from_to ty = let
     map2 (fn f => fn t => ISPECL [f,t] from_to_def |> concl |> dest_eq |> fst)
      (tyvar_encoders) (tyvar_decoders)
   val assum = if null assums then T else list_mk_conj assums
-  fun term_all_distinct [] = []
-    | term_all_distinct (x::xs) = x :: term_all_distinct (filter (fn c => not (aconv c x)) xs)
   val to_cs = to_def |> CONJUNCTS |> map (rator o fst o dest_eq o concl o SPEC_ALL)
   val from_cs = from_def |> CONJUNCTS |> map (rator o fst o dest_eq o concl o SPEC_ALL)
                                       |> term_all_distinct
@@ -648,6 +666,9 @@ fun define_from_to ty = let
     in save_thm("from_" ^ to_name ^ "_thm", th) end
   val thms = List.map save_from_to_thms from_to_thms
   in (from_def,to_def,from_to_thms) end
+  handle UnusedTypeVars ignore_tyvars => define_from_to_aux ignore_tyvars ty;
+
+fun define_from_to ty = define_from_to_aux [] ty;
 
 (* tests *)
 
@@ -676,5 +697,17 @@ Datatype:
 End
 
 val res = define_from_to “:t1”
+
+Datatype:
+  word_tree =
+    | Fork word_tree word_tree
+    | Word1 ('a word)
+    | Other 'b
+    | Word2 ('c word)
+End
+
+val ty = “:('a,'b,'c) word_tree”
+val res = define_from_to ty
+val _ = (type_of “from_word_tree f0 t” = “:cv”) orelse fail()
 
 val _ = export_theory();
