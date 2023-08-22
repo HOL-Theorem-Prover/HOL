@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib cvTheory;
-open integerTheory wordsTheory;
+open integerTheory wordsTheory sptreeTheory;
 
 val _ = new_theory "cv_types";
 
@@ -333,10 +333,24 @@ fun from_to_for ty =
   if ty = “:unit” then from_to_unit else
   if ty = “:bool” then from_to_bool else
   if ty = “:num” then from_to_num else
+  if ty = “:char” then from_to_char else
   if ty = “:int” then from_to_int else
   if wordsSyntax.is_word_type ty then
     let val ty = wordsSyntax.dest_word_type ty
     in INST_TYPE [alpha|->ty] from_to_word end
+  else if can pairSyntax.dest_prod ty then let
+    val (a,b) = pairSyntax.dest_prod ty
+    val a = from_to_for a
+    val b = from_to_for b
+    in MATCH_MP from_to_pair (CONJ a b) end
+  else if can sumSyntax.dest_sum ty then let
+    val (a,b) = sumSyntax.dest_sum ty
+    val a = from_to_for a
+    val b = from_to_for b
+    in MATCH_MP from_to_sum (CONJ a b) end
+  else if can optionSyntax.dest_option ty then let
+    val a = from_to_for (optionSyntax.dest_option ty)
+    in MATCH_MP from_to_option a end
   else if listSyntax.is_list_type ty then
     let val a = from_to_for (listSyntax.dest_list_type ty)
     in MATCH_MP from_to_list a end
@@ -712,7 +726,6 @@ val ty = “:('a,'b,'c) word_tree”
 val res = define_from_to ty
 val _ = (type_of “from_word_tree f0 t” = “:cv”) orelse fail()
 
-open sptreeTheory
-val res = define_from_to “:'a spt”
+val res = define_from_to “:'a sptree$spt”
 
 val _ = export_theory();
