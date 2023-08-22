@@ -10,30 +10,34 @@ val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
-val vR_update = Q.prove(
-  `v NOTIN FDOM s /\ x <> v ==> (vR (s |+ (v,t)) y x <=> vR s y x)`,
+Theorem vR_update[local]:
+  v NOTIN FDOM s /\ x <> v ==> (vR (s |+ (v,t)) y x <=> vR s y x)
+Proof
   SRW_TAC [][vR_def] THEN
   Cases_on `x IN FDOM s` THEN
-  SRW_TAC [][FLOOKUP_DEF,FAPPLY_FUPDATE_THM]);
+  SRW_TAC [][FLOOKUP_DEF,FAPPLY_FUPDATE_THM]
+QED
 
-val TC_vR_update = Q.prove(
-`!y x. (vR (s |+ (v,t)))^+ y x ==> v NOTIN FDOM s ==>
-    (vR s)^+ y x \/ ?u. (vR s)^* v x /\ u IN vars t /\ (vR s)^* y u`,
-HO_MATCH_MP_TAC TC_STRONG_INDUCT THEN
-CONJ_TAC
-THENL [
-  MAP_EVERY Q.X_GEN_TAC [`y`,`x`] THEN SRW_TAC [][] THEN
-  Cases_on `x = v` THENL [
-    DISJ2_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [vR_def,FLOOKUP_DEF] THEN
-    Q.EXISTS_TAC `y` THEN SRW_TAC [] [],
-    METIS_TAC [vR_update,TC_RULES]
-  ],
-  SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
+Theorem TC_vR_update:
+  !y x. (vR (s |+ (v,t)))^+ y x ==> v NOTIN FDOM s ==>
+        (vR s)^+ y x \/ ?u. (vR s)^* v x /\ u IN vars t /\ (vR s)^* y u
+Proof
+  HO_MATCH_MP_TAC TC_STRONG_INDUCT THEN
+  CONJ_TAC
+  THENL [
+    MAP_EVERY Q.X_GEN_TAC [`y`,`x`] THEN SRW_TAC [][] THEN
+    Cases_on `x = v` THENL [
+      DISJ2_TAC THEN
+      FULL_SIMP_TAC (srw_ss()) [vR_def,FLOOKUP_DEF] THEN
+      Q.EXISTS_TAC `y` THEN SRW_TAC [] [],
+      METIS_TAC [vR_update,TC_RULES]
+    ],
+    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
     THEN1 METIS_TAC [TC_RULES] THEN
-  DISJ2_TAC THEN Q.EXISTS_TAC `u` THEN
-  METIS_TAC [TC_RTC,RTC_TRANSITIVE,transitive_def]
-]);
+    DISJ2_TAC THEN Q.EXISTS_TAC `u` THEN
+    METIS_TAC [TC_RTC,RTC_TRANSITIVE,transitive_def]
+  ]
+QED
 
 val wfs_extend = Q.store_thm(
   "wfs_extend",
@@ -102,11 +106,10 @@ val allvars_sym = Q.store_thm(
 `allvars s t1 t2 = allvars s t2 t1`,
 SRW_TAC [][allvars_def,UNION_COMM]);
 
-val uR_def = Define`
-uR (sx,c1,c2) (s,t1,t2) <=>
-  wfs sx ∧ s SUBMAP sx
-  ∧ allvars sx c1 c2 SUBSET allvars s t1 t2
-  ∧ measure (pair_count o (walkstar sx)) c1 t1`;
+Definition uR_def:
+  uR (sx,c1,c2) (s,t1,t2) <=>
+  wfs sx ∧ s SUBMAP sx ∧ allvars sx c1 c2 SUBSET allvars s t1 t2 ∧
+  measure (pair_count o (walkstar sx)) c1 t1`;
 
 val FDOM_allvars = prove(
   ``FDOM s ⊆ allvars s t1 t2``,
@@ -129,27 +132,28 @@ Definition uR_lex_def:
               (λ(s,t1,t2). (s,allvars s t1 t2,walk* s t1))
 End
 
-val uR_RSUBSET_uR_lex = Q.store_thm(
-"uR_RSUBSET_uR_lex",
-`uR RSUBSET uR_lex`,
-srw_tac [][RSUBSET] >>
-PairCases_on`x` >> PairCases_on`y` >>
-Q.MATCH_RENAME_TAC `uR_lex (sx,c1,c2) (s,t1,t2)` >>
-fs[uR_def,uR_lex_def,measure_thm,inv_image_def,LEX_DEF] >>
-Cases_on `sx = s` >> srw_tac [][PSUBSET_DEF])
+Theorem uR_RSUBSET_uR_lex:
+  uR RSUBSET uR_lex
+Proof
+  srw_tac [][RSUBSET] >>
+  PairCases_on`x` >> PairCases_on`y` >>
+  Q.MATCH_RENAME_TAC `uR_lex (sx,c1,c2) (s,t1,t2)` >>
+  fs[uR_def,uR_lex_def,measure_thm,inv_image_def,LEX_DEF] >>
+  Cases_on `sx = s` >> srw_tac [][PSUBSET_DEF]
+QED
 
-val WF_FINITE_PSUBSET = Q.store_thm(
-"WF_FINITE_PSUBSET",
-`WF (λs1 s2. s1 PSUBSET s2 ∧ FINITE s2)`,
-srw_tac [][WF_EQ_WFP] >>
-REVERSE (Cases_on `FINITE x`) >- (
-  srw_tac [][WFP_DEF] ) >>
-POP_ASSUM mp_tac >>
-Q.ID_SPEC_TAC `x` >>
-match_mp_tac FINITE_COMPLETE_INDUCTION >>
-srw_tac [][] >>
-match_mp_tac WFP_RULES >>
-srw_tac [][])
+Theorem WF_FINITE_PSUBSET:
+  WF (λs1 s2. s1 PSUBSET s2 ∧ FINITE s2)
+Proof
+  srw_tac [][WF_EQ_WFP] >>
+  REVERSE (Cases_on `FINITE x`) >- (srw_tac [][WFP_DEF]) >>
+  POP_ASSUM mp_tac >>
+  Q.ID_SPEC_TAC `x` >>
+  match_mp_tac FINITE_COMPLETE_INDUCTION >>
+  srw_tac [][] >>
+  match_mp_tac WFP_RULES >>
+  srw_tac [][]
+QED
 
 val WF_uR = Q.store_thm(
 "WF_uR",
