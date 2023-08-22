@@ -311,6 +311,8 @@ local
   val pat = list_mk_comb(sum_case,pat_args)
   val thm = REFL pat |> GENL pat_args
 in
+  val sum_ty = hd tys
+  val is_sum_type = can (match_type sum_ty)
   fun mk_sum_case x y z = ISPECL [x,y,z] thm |> concl |> rand
 end
 
@@ -347,6 +349,12 @@ val cv_has_shape_tm =
 fun replicate 0 x = []
   | replicate n x = x :: replicate (n-1) x;
 
+fun list_dest_comb tm =
+  if is_comb tm then
+    let val (f,xs) = list_dest_comb (rator tm)
+    in (f,xs @ [rand tm]) end
+  else (tm,[]);
+
 (*
 val ty = “:('d, 'c) b”
 *)
@@ -362,6 +370,17 @@ fun define_from_to ty = let
       ((v |> type_of |> dest_type |> fst), type_of v)
     else
       (first_name ^ int_to_string (i - mutrec_count + 1), type_of v))
+  fun should_be_headless pat =
+    (* should return true if pat has at least two variables and belongs
+       to a type where all other constructors take no arguments *)
+    let
+      val (cons_tm,args) = list_dest_comb pat
+      fun all_other_patterns_are_nil () = let
+        val cs = TypeBase.constructors_of (type_of pat)
+        val others = filter (fn t => not (can (match_term t) cons_tm)) cs
+        val non_nil = filter (fn t => can dest_fun_type (type_of t)) others
+        in null non_nil end
+    in 1 < length args andalso all_other_patterns_are_nil () end
   (* define encoding into cv type, i.e. "from function" *)
   val tyvar_encoders = mapi (fn i => fn ty =>
     mk_var("f" ^ int_to_string i,mk_type("fun",[ty,cvSyntax.cv]))) tyvars
@@ -390,17 +409,15 @@ fun define_from_to ty = let
           SOME tm => mk_comb(tm,v)
         | NONE => mk_comb(from_for (type_of v),v)
       val args = map process_arg pat_args
-      val smart_mk_pairs =
-        (if listSyntax.is_cons pat then mk_pairs o tl else
-         if pairSyntax.is_pair pat then mk_pairs o tl else
-           mk_pairs)
+      val special = should_be_headless pat
+      val smart_mk_pairs = (if special then mk_pairs o tl else mk_pairs)
       val rhs_tm = smart_mk_pairs (tag_num :: args)
       in mk_eq(lhs_tm,rhs_tm) end
     val lines = mapi from_line conses
     in lines end
   val all_lines = map from_lines from_names |> flatten
   val tm = list_mk_conj all_lines
-  val from_def = Define [ANTIQUOTE tm]
+  val from_def = zDefine [ANTIQUOTE tm]
   (* define decoding from cv type, i.e. "to function" *)
   val tyvar_decoders = mapi (fn i => fn ty =>
     mk_var("t" ^ int_to_string i,mk_type("fun",[cvSyntax.cv,ty]))) tyvars
@@ -414,7 +431,8 @@ fun define_from_to ty = let
   val to_f = el 2 to_names
   *)
   fun to_lines to_f = let
-    val conses = to_f |> type_of |> dest_type |> snd |> el 2 |> constructors_of
+    val cons_ty = to_f |> type_of |> dest_type |> snd |> el 2
+    val conses = cons_ty |> constructors_of
     val lhs_tm = mk_comb(to_f,cv_var)
     (*
       val i = 0
@@ -428,7 +446,7 @@ fun define_from_to ty = let
         | get_args v [x] = [(x,v)]
         | get_args v (x::xs) =
             (x,cvSyntax.mk_cv_fst v) :: get_args (cvSyntax.mk_cv_snd v) xs
-      val special = (listSyntax.is_cons pat orelse pairSyntax.is_pair pat)
+      val special = should_be_headless pat
       val init_var = (if special then cv_var else cvSyntax.mk_cv_snd cv_var)
       val args = get_args init_var tys
       fun process_arg (ty,v) =
@@ -469,8 +487,9 @@ fun define_from_to ty = let
     val (lines1,lines2) =
       partition (fn (x,tm) => not (subset (free_vars tm) common_vars)) lines
     val lines = lines1 @ lines2
+    val needs_final_arb = (null lines2 orelse is_sum_type cons_ty)
     fun mk_rhs [] = fail()
-      | mk_rhs [(t,x)] = if null lines2 then mk_cond(t,x,mk_arb(type_of x)) else x
+      | mk_rhs [(t,x)] = if needs_final_arb then mk_cond(t,x,mk_arb(type_of x)) else x
       | mk_rhs ((t,x)::xs) = mk_cond(t,x,mk_rhs xs)
     in (mk_eq(lhs_tm,mk_rhs lines),lemmas) end
   val (all_lines,lemmas1) = unzip (map to_lines to_names)
@@ -496,10 +515,14 @@ fun define_from_to ty = let
   val measure_tm = mk_cases all_lines
   val full_measure_tm = ISPEC measure_tm prim_recTheory.WF_measure |> concl |> rand
   val to_def_name = (to_names |> hd |> repeat rator |> dest_var |> fst)
-  val to_def = tDefine to_def_name [ANTIQUOTE tm]
-    (WF_REL_TAC [ANTIQUOTE full_measure_tm]
-     \\ rewrite_tac [cv_has_shape_expand]
-     \\ rpt strip_tac \\ gvs [cv_size_def])
+  val (to_def, to_ind) =
+    let
+      val to_defn = Hol_defn to_def_name [ANTIQUOTE tm]
+    in Defn.tprove(to_defn,
+                   WF_REL_TAC [ANTIQUOTE full_measure_tm]
+                   \\ rewrite_tac [cv_has_shape_expand]
+                   \\ rpt strip_tac \\ gvs [cv_size_def])
+           end
   (* from from_to theorems *)
   val assums =
     map2 (fn f => fn t => ISPECL [f,t] from_to_def |> concl |> dest_eq |> fst)
@@ -643,10 +666,15 @@ val res = define_from_to ty
 
 Datatype:
   tree = Leaf
-       | Branch ((tree list + tree) option list)
+       | Branch ((tree list + bool) option list)
 End
 
-val ty = “:tree”
-val res = define_from_to ty
+val res = define_from_to “:tree”
+
+Datatype:
+  t1 = T1 num (t1 list)
+End
+
+val res = define_from_to “:t1”
 
 val _ = export_theory();
