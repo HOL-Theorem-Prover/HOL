@@ -109,7 +109,7 @@ End
 
 Definition to_option_def:
   to_option t (Num n) = NONE /\
-  to_option t (Pair x y) = if x = Num 1 then SOME (t y) else NONE
+  to_option t (Pair x y) = SOME (t y)
 End
 
 Theorem from_to_option:
@@ -149,8 +149,7 @@ End
 Definition to_sum_def:
   to_sum t1 t2 (Num n) = ARB /\
   to_sum t1 t2 (Pair x y) =
-    if x = Num 0 then INL (t1 y) else
-    if x = Num 1 then INR (t2 y) else ARB
+    if x = Num 0 then INL (t1 y) else INR (t2 y)
 End
 
 Theorem from_to_sum:
@@ -209,7 +208,7 @@ Proof
 QED
 
 Theorem get_to_option:
-  (if cv_has_shape [SOME 1] v then SOME (t (cv_snd v)) else NONE) = to_option t v
+  (if cv_has_shape [NONE] v then SOME (t (cv_snd v)) else NONE) = to_option t v
 Proof
   Cases_on ‘v’
   \\ fs [to_option_def,cv_has_shape_def]
@@ -217,7 +216,7 @@ QED
 
 Theorem get_to_sum:
   (if cv_has_shape [SOME 0] v then INL (t1 (cv_snd v))
-   else if cv_has_shape [SOME 1] v then INR (t2 (cv_snd v))
+   else if cv_has_shape [NONE] v then INR (t2 (cv_snd v))
    else ARB) = to_sum t1 t2 v
 Proof
   Cases_on ‘v’
