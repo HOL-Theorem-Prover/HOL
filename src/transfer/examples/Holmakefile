@@ -1,1 +1,1 @@
-INCLUDES = ../../finite_maps
+INCLUDES = ../../finite_maps ..
