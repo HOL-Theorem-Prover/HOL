@@ -316,11 +316,7 @@ QED
     Pairs
    ---------------------------------------------------------------------- *)
 
-Definition PAIR_REL_def:     PAIR_REL AB CD (a,c) (b,d) <=> AB a b /\ CD c d
-End
-val _ =
-    set_mapped_fixity {fixity = Infixr 601, term_name = "PAIR_REL", tok = "###"}
-
+Theorem PAIR_REL_def = pairTheory.PAIR_REL
 Theorem equalityp_PAIR_REL:
   equalityp AB /\ equalityp CD ==> equalityp (AB ### CD)
 Proof
