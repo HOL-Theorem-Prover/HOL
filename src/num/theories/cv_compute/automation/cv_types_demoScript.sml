@@ -52,4 +52,18 @@ val _ = (type_of “from_word_tree f0 t” = “:cv”) orelse fail()
 
 val res = define_from_to “:'a sptree$spt”
 
+Datatype:
+  op = Add | Sub
+End
+
+Datatype:
+  exp = Var string | Const int | Op op (exp list)
+End
+
+Datatype:
+  prog = Skip | Seq prog prog | Assign string exp
+End
+
+val thms = rec_define_from_to “:prog”;
+
 val _ = export_theory();
