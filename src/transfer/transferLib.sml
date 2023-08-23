@@ -301,28 +301,40 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
 fun check_constraints cleftp rdb th =
     check{cleftp=cleftp,forceprogress=false} rdb th
 
-fun resolve_relhyps cleftp rdb th =
+fun resolve_relhyps hints cleftp rdb th =
     let
       val argsel = if cleftp then lhand else rand
       val ctys = type_vars_in_term (th |> concl |> argsel)
       val fail = seq.empty
+      fun goodname nm t = #Name (dest_thy_const (argsel t)) = nm
+                          handle HOL_ERR _ => false
       fun goodhyp h = not (is_relconstraint h)
+      val goods0 = HOLset.filter goodhyp (hypset th)
+      fun check_hints [] s = HOLset.find (K true) s
+        | check_hints (h::hs) s =
+          case HOLset.find (goodname h) s of
+              NONE => check_hints hs s
+            | SOME hy => SOME hy
     in
-      case HOLset.find goodhyp (hypset th) of
-          NONE => fail
-        | SOME h =>
-          let
-            val candidate_rules = case ruledb.lookup_rule cleftp rdb h of
-                                      [] => [UNDISCH equalityp_applied]
-                                    | xs => xs
-            fun kont candidate_rule =
-                case eliminate_with_unifier ctys candidate_rule h th of
-                    NONE => fail
-                  | SOME th' => sqreturn th'
-          in
-            seq.fromList candidate_rules ~> kont ~>
+      if HOLset.isEmpty goods0 then fail
+      else
+        case check_hints hints goods0 of
+            NONE => fail
+          | SOME h =>
+            let
+              val candidate_rules =
+                  case ruledb.lookup_rule cleftp rdb h of
+                      [] => [UNDISCH equalityp_applied]
+                    | ths => ths @ [UNDISCH equalityp_applied]
+
+              fun kont candidate_rule =
+                  case eliminate_with_unifier ctys candidate_rule h th of
+                      NONE => fail
+                    | SOME th' => sqreturn th'
+            in
+              seq.fromList candidate_rules ~> kont ~>
             check {cleftp=cleftp,forceprogress=false} rdb
-          end
+            end
     end
 
 fun mksel cleftp = if cleftp then lhand else rand
@@ -437,10 +449,13 @@ val ruledb =
         |> addrule EXISTS_bitotal
         |> addrule UREL_EQ
         |> addrule PAIRU_COMMA
+        |> addrule pair_CASE_CONG
         |> addrule LET_rule
         |> addrule FST_CORRECT
         |> addrule SND_CORRECT
         |> addrule COMMA_CORRECT
+        |> addrule option_CASE_CONG
+        |> addrule list_CASE_CONG
         |> addrule cimp_imp
         |> addrule (equalityp_applied
                       |> INST_TYPE [alpha |-> (bool --> bool --> bool)]
@@ -511,30 +526,31 @@ fun transfer_skeleton cleftp t =
       (* eliminate_booleans_and_equalities cleftp *) th0
     end
 
-fun resolveN n cleftp ruledb t =
+fun resolveN n hints cleftp ruledb t =
     let
       fun recurse n th =
           if n < 1 then sqreturn th
-          else resolve_relhyps cleftp ruledb th ~> recurse (n - 1)
+          else resolve_relhyps hints cleftp ruledb th ~> recurse (n - 1)
     in
       recurse n (transfer_skeleton cleftp t)
     end
 
-fun transfer_phase1 cleftp ruledb t =
+fun transfer_phase1 hints cleftp ruledb t =
     let
       open simpLib boolSimps
     in
-      seqrpt (resolve_relhyps cleftp ruledb) (transfer_skeleton cleftp t) ~>
+      seqrpt (resolve_relhyps hints cleftp ruledb)
+             (transfer_skeleton cleftp t) ~>
       seqrptUntil (List.all (is_var o rand) o hyp)
                   (check{cleftp=cleftp,forceprogress=true} ruledb)
     end
 
-fun base_transfer cleftp ruledb t =
+fun base_transfer hints cleftp ruledb t =
     let
       open simpLib boolSimps
       val argsel = if cleftp then RAND_CONV else LAND_CONV
     in
-      transfer_phase1 cleftp ruledb t |>
+      transfer_phase1 hints cleftp ruledb t |>
       seq.map (mkrelsyms_eq cleftp) ~>
       check {cleftp=cleftp,forceprogress=false} ruledb |>
       seq.map (CONV_RULE (argsel $ SIMP_CONV transfer_ss (#DOMRNG_ss ruledb)))|>
@@ -542,15 +558,15 @@ fun base_transfer cleftp ruledb t =
       seq.filter (not o const_occurs RDOM_tm o concl)
     end
 
-fun transfer_tm depth cleftp ruledb t =
-    base_transfer cleftp ruledb t |> search_for is_eq depth
+fun transfer_tm depth hints cleftp ruledb t =
+    base_transfer hints cleftp ruledb t |> search_for is_eq depth
 
-fun transfer_thm depth cleftp ruledb th =
+fun transfer_thm depth hints cleftp ruledb th =
     let
       fun goodconcl c =
           is_eq c orelse
           aconv (#1 (dest_imp c)) (concl th) handle HOL_ERR _ => false
-      val th0 = base_transfer cleftp ruledb (concl th)
+      val th0 = base_transfer hints cleftp ruledb (concl th)
                               |> search_for goodconcl depth
     in
       if is_eq (concl th0) then
@@ -560,9 +576,9 @@ fun transfer_thm depth cleftp ruledb th =
 
 val default_depth = Sref.new 4
 val the_ruledb = Sref.new ruledb
-fun xfer_back_tac (g as (asl,c)) =
+fun xfer_back_tac hints (g as (asl,c)) =
     let
-      val th = transfer_tm (Sref.value default_depth) false
+      val th = transfer_tm (Sref.value default_depth) hints false
                            (Sref.value the_ruledb) c
       val con = concl th
       val mkE = mk_HOL_ERR "transferLib" "xfer_back_tac"

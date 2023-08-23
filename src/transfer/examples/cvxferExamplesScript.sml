@@ -34,8 +34,10 @@ Proof
   Induct_on ‘n’ >> simp[FACT]
 QED
 
-Theorem cFACT_COND = time (transfer_thm 10 true (global_ruledb())) FACT_COND
-                       |> SPEC_ALL |> UNDISCH_ALL
+Theorem cFACT_COND =
+        time (transfer_thm 10 ["FACT"] true (global_ruledb()))
+             FACT_COND
+          |> SPEC_ALL |> UNDISCH_ALL
 
 (* ----------------------------------------------------------------------
     exponentiation (handling of let)
@@ -69,7 +71,7 @@ Proof
   disch_then $ qspec_then ‘e’ mp_tac >> simp[]
 QED
 
-Theorem cEXP = transfer_thm 10 true (global_ruledb()) (GEN_ALL EXP_COND)
+Theorem cEXP = transfer_thm 1 ["EXP"] true (global_ruledb()) (GEN_ALL EXP_COND)
                  |> repeat (UNDISCH o SPEC_ALL)
 
 (* ----------------------------------------------------------------------
@@ -101,7 +103,7 @@ Proof
   simp[isprime_auxc_def, NC_def, FUN_REL_def]
 QED
 
-Theorem cISPRIME_AUX = time (transfer_thm 10 true (global_ruledb()))
+Theorem cISPRIME_AUX = time (transfer_thm 10 [] true (global_ruledb()))
                             isprime_aux_def
                         |> repeat (UNDISCH o SPEC_ALL)
 
@@ -124,7 +126,7 @@ Proof
   simp[isprimec_def, FUN_REL_def, NC_def]
 QED
 
-Theorem cISPRIME = transfer_thm 10 true (global_ruledb()) isprime_def
+Theorem cISPRIME = transfer_thm 10 [] true (global_ruledb()) isprime_def
                      |> repeat (UNDISCH o SPEC_ALL)
 
 (* ----------------------------------------------------------------------
@@ -154,7 +156,7 @@ Proof
 QED
 
 Theorem cPRIMES_UPTO =
-        time (transfer_thm 10 true (global_ruledb())) primes_upto_def
+        time (transfer_thm 10 [] true (global_ruledb())) primes_upto_def
 
 (* ----------------------------------------------------------------------
     pairing example, rather artificial
@@ -205,7 +207,7 @@ Proof
        NC_def, NLC_NC]
 QED
 
-val th = transfer_thm 10 true (global_ruledb()) (GEN_ALL addl_oneline)
+val th = transfer_thm 10 ["addl"] true (global_ruledb()) (GEN_ALL addl_oneline)
 
 
 val _ = export_theory()
