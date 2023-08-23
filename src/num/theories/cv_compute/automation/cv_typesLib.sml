@@ -170,6 +170,8 @@ fun to_for ty = from_to_for ty |> concl |> rand;
 
 exception UnusedTypeVars of hol_type list;
 
+datatype tag_sum = TagNil of int | TagCons of (int * (int option) list);
+
 (*
 val ignore_tyvars = [alpha,gamma]
 val ignore_tyvars = tl [alpha]
@@ -289,16 +291,9 @@ fun define_from_to_aux ignore_tyvars ty = let
         | NONE => [from_to_for ty]
       val ys = map lemmas_for_arg args |> flatten
       val build = list_mk_comb (cons_tm,xs)
-      val tag_num = cvSyntax.mk_cv_num(numSyntax.term_of_int i)
-      val c2b = c2b_def |> SPEC_ALL |> concl |> dest_eq |> fst |> rator
-      val none_num = optionSyntax.mk_none(num_ty)
-      val test = if null tys then mk_eq(cv_var,tag_num) else
-                   list_mk_comb(cv_has_shape_tm,
-                     [listSyntax.mk_list(
-                       (if special then [] else [optionSyntax.mk_some(tag_num |> rand)])
-                      @ replicate (length tys - 1) none_num,
-                      type_of none_num),
-                      cv_var])
+      val test = if null tys then TagNil i else
+                   (TagCons (i,(if special then [] else [SOME i])
+                      @ replicate (length tys - 1) NONE))
       in (ys,(test,build)) end
     val lemmas_lines = mapi to_line conses
     val lemmas = map fst lemmas_lines |> flatten
@@ -316,6 +311,25 @@ fun define_from_to_aux ignore_tyvars ty = let
     val (lines1,lines2) =
       partition (fn (x,tm) => not (subset (free_vars tm) common_vars)) lines
     val lines = lines1 @ lines2
+    fun make_last_non_nil_all_none [] = (false,[])
+      | make_last_non_nil_all_none ((tag,tm)::rest) = let
+      val (has_marked,res) = make_last_non_nil_all_none rest
+      in if has_marked then (has_marked,(tag,tm)::res) else
+         case tag of
+           TagNil i => (has_marked,(tag,tm)::res)
+         | TagCons (i,ns) => (true,(TagCons (i,map (K NONE) ns),tm)::res)
+      end
+    val lines = lines |> make_last_non_nil_all_none |> snd
+    val none_num = optionSyntax.mk_none(num_ty)
+    fun cv_num_from_int i = cvSyntax.mk_cv_num(numSyntax.term_of_int i)
+    fun opt_num_from_opt_int NONE = none_num
+      | opt_num_from_opt_int (SOME i) = optionSyntax.mk_some(numSyntax.term_of_int i)
+    fun test_to_term (TagNil i,tm) = (mk_eq(cv_var,cv_num_from_int i),tm:term)
+      | test_to_term (TagCons (i,ns),tm) =
+         (list_mk_comb(cv_has_shape_tm,
+            [listSyntax.mk_list(map opt_num_from_opt_int ns,type_of none_num),
+             cv_var]),tm)
+    val lines = lines |> map test_to_term
     val needs_final_arb = (null lines2 orelse is_sum_type cons_ty)
     fun mk_rhs [] = fail()
       | mk_rhs [(t,x)] = if needs_final_arb then mk_cond(t,x,mk_arb(type_of x)) else x
@@ -437,15 +451,15 @@ fun define_from_to_aux ignore_tyvars ty = let
     val ty = to_eq |> concl |> dest_eq |> snd |> type_of
     val tyname = dest_type ty |> fst
     in if tyname = "option" then
-         to_eq |> REWRITE_RULE [get_to_option] |> GEN cv_var
+         to_eq |> CONV_RULE (RAND_CONV $ REWR_CONV get_to_option) |> GEN cv_var
                |> SIMP_RULE std_ss [GSYM FUN_EQ_THM]
                |> CONV_RULE (DEPTH_CONV ETA_CONV)
        else if tyname = "sum" then
-         to_eq |> REWRITE_RULE [get_to_sum] |> GEN cv_var
+         to_eq |> CONV_RULE (RAND_CONV $ REWR_CONV get_to_sum) |> GEN cv_var
                |> SIMP_RULE std_ss [GSYM FUN_EQ_THM]
                |> CONV_RULE (DEPTH_CONV ETA_CONV)
        else if tyname = "prod" then
-         to_eq |> REWRITE_RULE [get_to_pair] |> GEN cv_var
+         to_eq |> CONV_RULE (RAND_CONV $ REWR_CONV get_to_pair) |> GEN cv_var
                |> SIMP_RULE std_ss [GSYM FUN_EQ_THM]
                |> CONV_RULE (DEPTH_CONV ETA_CONV)
        else if tyname = "list" then
