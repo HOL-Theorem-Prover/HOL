@@ -371,6 +371,43 @@ Proof simp[]
 QED
 
 (* ----------------------------------------------------------------------
+    Options
+   ---------------------------------------------------------------------- *)
+
+Theorem OPTREL_MAP:
+  ((AB |==> CD) |==> OPTREL AB |==> OPTREL CD) OPTION_MAP OPTION_MAP
+Proof
+  simp[FUN_REL_def] >> simp[optionTheory.FORALL_OPTION]
+QED
+
+Theorem OPTREL_total:
+  total AB ==> total (OPTREL AB)
+Proof
+  simp[optionTheory.OPTREL_def, total_def, EXISTS_OR_THM] >> strip_tac >>
+  Cases >> simp[]
+QED
+
+Theorem OPTREL_surj:
+  surj AB ==> surj (OPTREL AB)
+Proof
+  simp[optionTheory.OPTREL_def, surj_def, EXISTS_OR_THM] >> strip_tac >>
+  Cases >> simp[]
+QED
+
+Theorem OPTREL_left_unique:
+  left_unique AB ==> left_unique (OPTREL AB)
+Proof
+  simp[left_unique_def, optionTheory.OPTREL_def, optionTheory.FORALL_OPTION]
+QED
+
+Theorem OPTREL_right_unique:
+  right_unique AB ==> right_unique (OPTREL AB)
+Proof
+  simp[right_unique_def, optionTheory.OPTREL_def, optionTheory.FORALL_OPTION]
+QED
+
+
+(* ----------------------------------------------------------------------
     Lists
    ---------------------------------------------------------------------- *)
 
