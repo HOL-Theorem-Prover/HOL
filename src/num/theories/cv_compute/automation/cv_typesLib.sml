@@ -402,13 +402,14 @@ fun define_from_to_aux ignore_tyvars ty = let
   val full_measure_tm = ISPEC measure_tm prim_recTheory.WF_measure |> concl |> rand
   val to_def_name = (to_names |> hd |> repeat rator |> dest_var |> fst)
   val (to_def, to_ind) =
+    (new_definition(to_def_name,tm),TRUTH) handle HOL_ERR _ =>
     let
       val to_defn = Hol_defn to_def_name [ANTIQUOTE tm]
     in Defn.tprove(to_defn,
                    WF_REL_TAC [ANTIQUOTE full_measure_tm]
                    \\ rewrite_tac [cv_has_shape_expand]
                    \\ rpt strip_tac \\ gvs [cv_size_def])
-           end
+    end
   (* from from_to theorems *)
   val assum = if null tyvar_assums then T else list_mk_conj tyvar_assums
   val to_cs = to_def |> CONJUNCTS |> map (rator o fst o dest_eq o concl o SPEC_ALL)
